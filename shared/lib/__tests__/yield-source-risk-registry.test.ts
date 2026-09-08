@@ -67,13 +67,19 @@ describe("yield-source-risk-registry (shared/lib structural integrity)", () => {
     expect(resolveDependencyConcentration(null)).toBeNull();
   });
 
-  it("flags venue-risk scores older than the max age oldest-first", () => {
-    // Every entry was reviewed 2026-05-15..2026-07-01, so nothing is stale soon after.
-    expect(findStaleVenueRiskScores(Date.parse("2026-06-16T00:00:00Z"))).toEqual([]);
-
-    const stale = findStaleVenueRiskScores(Date.parse("2026-09-01T00:00:00Z"));
-    expect(stale.length).toBeGreaterThan(0);
-    expect(stale.every((s) => s.ageDays > 90)).toBe(true);
-    expect(stale[0]!.ageDays).toBeGreaterThanOrEqual(stale[stale.length - 1]!.ageDays);
+  it("applies the strict 90-day boundary independently of registry refresh dates", () => {
+    const dates = YIELD_RISK_CONFIG_PROTOCOLS.map((protocol) => ({
+      protocol,
+      reviewedAt: YIELD_RISK_CONFIG[protocol].reviewedAt,
+    }));
+    for (const entry of dates) {
+      expect(Number.isFinite(Date.parse(`${entry.reviewedAt}T00:00:00Z`)), entry.protocol).toBe(true);
+    }
+    const oldestDate = dates.map((entry) => entry.reviewedAt).sort()[0];
+    const oldestMs = Date.parse(`${oldestDate}T00:00:00Z`);
+    expect(findStaleVenueRiskScores(oldestMs + 90 * 86_400_000)).toEqual([]);
+    expect(findStaleVenueRiskScores(oldestMs + 91 * 86_400_000).map((entry) => entry.protocol)).toEqual(
+      dates.filter((entry) => entry.reviewedAt === oldestDate).map((entry) => entry.protocol),
+    );
   });
 });

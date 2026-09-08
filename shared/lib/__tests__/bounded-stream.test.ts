@@ -20,6 +20,62 @@ describe("parseDeclaredLength", () => {
 });
 
 describe("bufferReadableStream", () => {
+  it("preserves all chunks below and at the cap, including empty zero-cap input", async () => {
+    for (const maxBytes of [3, 4]) {
+      const stream = new ReadableStream<Uint8Array>({
+        start(controller) {
+          controller.enqueue(new Uint8Array([1]));
+          controller.enqueue(new Uint8Array([2, 3]));
+          controller.close();
+        },
+      });
+      await expect(bufferReadableStream(stream, { maxBytes }))
+        .resolves.toEqual({ bytes: new Uint8Array([1, 2, 3]), truncated: false });
+    }
+    const empty = new ReadableStream<Uint8Array>({ start: (controller) => controller.close() });
+    await expect(bufferReadableStream(empty, { maxBytes: 0 }))
+      .resolves.toEqual({ bytes: new Uint8Array(), truncated: false });
+    const nonempty = new ReadableStream<Uint8Array>({
+      start(controller) { controller.enqueue(new Uint8Array([1])); controller.close(); },
+    });
+    await expect(bufferReadableStream(nonempty, { maxBytes: 0 }))
+      .rejects.toMatchObject({ maxBytes: 0, observedBytes: 1 });
+  });
+
+  it("treats an exact-cap diagnostic as truncated without waiting for EOF", async () => {
+    const cancel = vi.fn();
+    const stream = new ReadableStream<Uint8Array>({
+      start(controller) { controller.enqueue(new Uint8Array([1, 2])); },
+      cancel,
+    });
+    // Diagnostics stop at the cap; truncated means EOF was not established.
+    await expect(bufferReadableStream(stream, { maxBytes: 2, overflowMode: "truncate" }))
+      .resolves.toEqual({ bytes: new Uint8Array([1, 2]), truncated: true });
+    expect(cancel).toHaveBeenCalledOnce();
+  });
+
+  it("cancels pre-aborted input with its original reason", async () => {
+    const cancel = vi.fn();
+    const controller = new AbortController();
+    const reason = new Error("already stopped");
+    controller.abort(reason);
+    const stream = new ReadableStream<Uint8Array>({ cancel });
+    await expect(bufferReadableStream(stream, { maxBytes: 1, signal: controller.signal }))
+      .rejects.toBe(reason);
+    expect(cancel).toHaveBeenCalledWith(reason);
+  });
+
+  it("rejects invalid caps before locking or consuming the input", async () => {
+    for (const maxBytes of [-1, 0.5, Infinity, Number.MAX_SAFE_INTEGER + 1]) {
+      const pull = vi.fn();
+      const stream = new ReadableStream<Uint8Array>({ pull }, { highWaterMark: 0 });
+      await expect(bufferReadableStream(stream, { maxBytes })).rejects.toBeInstanceOf(RangeError);
+      expect(() => createCappedReadableStream(stream, { maxBytes })).toThrow(RangeError);
+      expect(stream.locked).toBe(false);
+      expect(pull).not.toHaveBeenCalled();
+    }
+  });
+
   it("cancels and throws as soon as a streamed body crosses the cap", async () => {
     const cancel = vi.fn();
     const stream = new ReadableStream<Uint8Array>({
@@ -82,6 +138,26 @@ describe("bufferReadableStream", () => {
 });
 
 describe("createCappedReadableStream", () => {
+  it("delivers the final permitted chunk and EOF, and forwards downstream cancellation", async () => {
+    const source = new ReadableStream<Uint8Array>({
+      start(controller) {
+        controller.enqueue(new Uint8Array([1]));
+        controller.enqueue(new Uint8Array([2, 3]));
+        controller.close();
+      },
+    });
+    const reader = createCappedReadableStream(source, { maxBytes: 3 }).getReader();
+    await expect(reader.read()).resolves.toEqual({ done: false, value: new Uint8Array([1]) });
+    await expect(reader.read()).resolves.toEqual({ done: false, value: new Uint8Array([2, 3]) });
+    await expect(reader.read()).resolves.toEqual({ done: true, value: undefined });
+
+    const cancel = vi.fn();
+    const pending = createCappedReadableStream(new ReadableStream<Uint8Array>({ cancel }), { maxBytes: 3 });
+    const reason = new Error("consumer stopped");
+    await pending.cancel(reason);
+    expect(cancel).toHaveBeenCalledWith(reason);
+  });
+
   it("forwards chunks until overflow, then invokes the policy hook and cancels upstream", async () => {
     const cancel = vi.fn();
     const onOverflow = vi.fn();

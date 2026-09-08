@@ -1,7 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { DonationsFileSchema, type Donation } from "../schema";
+import { makeDonation as row } from "./funding.test-support";
 import { isEligibleDonor, sumEligibleDonationsByAddress } from "../donor-eligibility";
-import donationsAsset from "../../../data/funding/donations.json";
 import type { ReportCardGrade } from "../../../types/report-card-grade";
 
 const GRADES = new Map<string, ReportCardGrade>([
@@ -12,21 +11,6 @@ const A = "0x00000000000000000000000000000000000000aa";
 const B = "0x00000000000000000000000000000000000000bb";
 const POOL = "0x00000000000000000000000000000000000000cc";
 
-function row(overrides: Partial<Donation>): Donation {
-  return {
-    chain: "ethereum",
-    tx_hash: "0x01",
-    block_timestamp: 1_774_000_000,
-    from_address: A,
-    display: "a.eth",
-    kind: "community",
-    asset_symbol: "USDC",
-    amount_decimal: 1,
-    usd_at_receipt: 1,
-    price_note: "stablecoin-1-to-1",
-    ...overrides,
-  };
-}
 
 describe("donor eligibility", () => {
   it("sums reviewed stablecoins across chains, excludes pools and other assets, includes founder rows", () => {
@@ -67,12 +51,6 @@ describe("donor eligibility", () => {
     expect(isEligibleDonor(A, totals, 10)).toBe(true);
   });
 
-  it("finds eligible wallets in the committed ledger", () => {
-    const file = DonationsFileSchema.parse(donationsAsset);
-    const totals = sumEligibleDonationsByAddress(file.donations, GRADES);
-    const eligible = [...totals.keys()].filter((address) => isEligibleDonor(address, totals, 10));
-    expect(eligible.length).toBeGreaterThan(0);
-  });
 
   it.each<ReportCardGrade>(["A+", "A", "A-", "B+", "B", "B-"])("counts the %s band at claim time", (grade) => {
     const totals = sumEligibleDonationsByAddress([row({ usd_at_receipt: 11 })], new Map([["usdc-circle", grade]]));

@@ -90,7 +90,7 @@ describe("Safety Score v9 local control-domain scope", () => {
     expect(assess(assetWithControl(), supplyExposure({ complete: false }))).toEqual(globalClaim);
     expect(assess(assetWithControl(), supplyExposure({ unattributedShare: 0.1 }))).toEqual(globalClaim);
     expect(assess(assetWithControl({
-      status: { ...knownStatus(), observationState: "unknown" },
+      status: { ...knownStatus(), observationState: "bounded-unknown" },
     }), supplyExposure())).toEqual(globalClaim);
   });
 

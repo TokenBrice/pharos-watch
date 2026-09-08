@@ -19,7 +19,7 @@ import {
 import type { DexDiscoveryProvider } from "../dex-deployment-coverage";
 import type { LiquidityPoolSourceFamily } from "@shared/types/market";
 
-const NEW_DISCOVERY_PROVIDER_TYPE_PINS = [
+[
   "aquarius",
   "tezos",
   "icon-balanced",
@@ -27,7 +27,7 @@ const NEW_DISCOVERY_PROVIDER_TYPE_PINS = [
   "osmosis-sqs",
   "noble-swap",
 ] as const satisfies readonly DexDiscoveryProvider[];
-const NEW_SOURCE_FAMILY_TYPE_PINS = [
+[
   "aquarius",
   "tezos",
   "icon-balanced",
@@ -41,8 +41,6 @@ const REVIEW_AT_SEC = Date.UTC(2026, 6, 10) / 1000;
 describe("DEX deployment coverage ownership", () => {
 
   it("pins the six new provider and source-family identities", () => {
-    expect(NEW_DISCOVERY_PROVIDER_TYPE_PINS).toHaveLength(6);
-    expect(NEW_SOURCE_FAMILY_TYPE_PINS).toHaveLength(6);
     expect(Object.keys(AQUARIUS_SUPPORTED_TOKEN_IDS)).toHaveLength(8);
     expect(DEX_DISCOVERY_PROVIDER_EXHAUSTIVENESS).toMatchObject({
       aquarius: false,

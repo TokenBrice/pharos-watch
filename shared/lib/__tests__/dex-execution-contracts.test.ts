@@ -16,7 +16,6 @@ import {
   DEX_EXECUTION_PERSISTENCE_MODE,
   DEX_EXECUTION_PROFILE_SCHEMA_VERSION,
   DEX_EXECUTION_TARGET_SCHEMA_VERSION,
-  DEX_MEASURED_EXECUTION_SCHEMA_VERSION,
   DEX_MEASURED_TARGET_SCHEMA_VERSION,
   DexExecutionProfileV2Schema,
   DexExecutionTargetV2Schema,
@@ -27,6 +26,7 @@ import {
   type DexMeasuredExecutionProfile,
   type DexMeasuredExecutionTarget,
 } from "../../types/measured-execution";
+import { profile } from "./dex-measured-execution.test-support";
 
 const address = (digit: string) => `0x${digit.repeat(40)}` as `0x${string}`;
 const hash = (digit: string) => `0x${digit.repeat(64)}` as `0x${string}`;
@@ -51,27 +51,9 @@ function v1Target(): DexMeasuredExecutionTarget {
 }
 
 function v1Profile(target: DexMeasuredExecutionTarget): DexMeasuredExecutionProfile {
-  return {
-    schemaVersion: DEX_MEASURED_EXECUTION_SCHEMA_VERSION,
-    kind: "measured-executable-depth",
-    targetId: target.targetId,
-    targetGenerationId: "targets-1",
-    quoteGenerationId: "quotes-1",
-    adapterProfileId: target.adapterProfileId,
-    protocol: target.protocol,
-    chain: target.chain,
-    poolId: target.poolId,
-    poolTokenAddresses: target.poolTokenAddresses,
-    tokenIn: target.tokenIn,
-    tokenOut: target.tokenOut,
-    feePips: target.feePips,
-    retainedTvlUsdAtQuote: target.retainedTvlUsd,
-    retainedPoolPriceUsdAtQuote: target.retainedPoolPriceUsd,
-    quotedAt: target.capturedAt + 60,
+  return profile(target.capturedAt + 120, target, {
     blockNumber: 20_000_000,
     executionEndpoint: { address: address("4"), codeHash: hash("a") },
-    maxCostBps: 200,
-    marginalOutputRatio: 0.999,
     capacityCurve: [100_000, 1_000_000, 10_000_000, 25_000_000].map((requestedNotionalUsd) => ({
       requestedNotionalUsd,
       maxCostBps: 200,
@@ -88,7 +70,7 @@ function v1Profile(target: DexMeasuredExecutionTarget): DexMeasuredExecutionProf
       costBps: 10,
       passesCostBound: true,
     }],
-  };
+  });
 }
 
 describe("DEX execution V2 envelopes", () => {
@@ -135,7 +117,38 @@ describe("DEX execution V2 envelopes", () => {
     });
     expect(target.payload.platform).toBe("solana");
     expect(projectDexExecutionTargetToV1(target)).toBeNull();
-    expect(DexExecutionProfileV2Schema.shape.payload).toBeDefined();
+    const nativeProfile = {
+      ...target,
+      schemaVersion: DEX_EXECUTION_PROFILE_SCHEMA_VERSION,
+      kind: "measured-executable-depth",
+      targetGenerationId: "targets-1",
+      quoteGenerationId: "quotes-1",
+      retainedTvlUsdAtQuote: 1_000_000,
+      retainedPoolPriceUsdAtQuote: 1,
+      quotedAt: target.capturedAt,
+      maxCostBps: 200,
+      demandedInputAmountsUsd: [1_000],
+      outputAmountsUsd: [999],
+      capacityCurve: v1Profile(v1Target()).capacityCurve,
+      payload: {
+        ...target.payload,
+        slot: 123,
+        blockHash: solanaIdentity,
+        accountProof: [{ account: solanaIdentity, owner: solanaIdentity, dataHash: "ab".repeat(32) }],
+      },
+    };
+    const parsed = DexExecutionProfileV2Schema.parse(nativeProfile);
+    expect(parsed.payload).toMatchObject({
+      platform: "solana", slot: 123, blockHash: solanaIdentity,
+      accountProof: [{ account: solanaIdentity, owner: solanaIdentity, dataHash: "ab".repeat(32) }],
+    });
+    expect(projectDexExecutionProfileToV1(parsed)).toBeNull();
+    expect(DexExecutionProfileV2Schema.safeParse({
+      ...nativeProfile, payload: { ...nativeProfile.payload, accountProof: [] },
+    }).success).toBe(false);
+    expect(DexExecutionProfileV2Schema.safeParse({
+      ...nativeProfile, outputAmountsUsd: [999, 998],
+    }).success).toBe(false);
   });
 });
 
@@ -156,6 +169,21 @@ describe("DEX capability gates", () => {
     expect(isDexExecutionProfileAdmittedForScoring({ profileId: shadow.profileId, identity: { chain: "solana" } }, shadow)).toBe(false);
   });
 
+  it("normalizes both profile shapes while independently enforcing identity, chain, lifecycle and deployment", () => {
+    const active = getDexExecutionCapabilityRegistration("uniswap-v3-quoter-v2")!;
+    const legacy = { adapterProfileId: active.profileId, chain: " Ethereum " };
+    const native = { profileId: active.profileId, identity: { chain: " Ethereum " } };
+    expect(isDexExecutionProfileAdmittedForScoring(legacy, active)).toBe(true);
+    expect(isDexExecutionProfileAdmittedForScoring(native, active)).toBe(true);
+    expect(isDexExecutionProfileAdmittedForScoring({ ...legacy, adapterProfileId: "other" }, active)).toBe(false);
+    expect(isDexExecutionProfileAdmittedForScoring({ ...native, identity: { chain: "solana" } }, active)).toBe(false);
+    expect(isDexExecutionProfileAdmittedForScoring(legacy, { ...active, lifecycle: "disabled" })).toBe(false);
+    expect(isDexExecutionProfileAdmittedForScoring(legacy, { ...active, eligibleDeploymentKeys: [] })).toBe(false);
+    expect(isDexExecutionProfileAdmittedForScoring(native, {
+      ...active, eligibleDeploymentKeys: [`${active.profileId}:ethereum`],
+    })).toBe(true);
+  });
+
   it("keeps producer admission distinct from the final route-semantics gate", () => {
     const route = {
       producerScoreEligible: true,
@@ -172,6 +200,15 @@ describe("DEX capability gates", () => {
     };
     expect(isDexExitRouteScoreEligible(route)).toBe(true);
     expect(isDexExitRouteScoreEligible({ ...route, coverageClass: "diagnostic" })).toBe(false);
+    expect(isDexExitRouteScoreEligible({ ...route, producerScoreEligible: false })).toBe(false);
+    expect(isDexExitRouteScoreEligible({ ...route, routeState: "missing" })).toBe(false);
+    expect(isDexExitRouteScoreEligible({ ...route, outputState: "missing" })).toBe(false);
+    for (const field of ["holderAccess", "executionModel", "executionCertainty", "observationConfidence", "settlementModel"]) {
+      expect(isDexExitRouteScoreEligible({ ...route, [field]: "unknown" }), field).toBe(false);
+    }
+    expect(isDexExitRouteScoreEligible({ ...route, physicalResourceKeys: [] })).toBe(false);
+    expect(isDexExitRouteScoreEligible({ ...route, settlementModel: "queued" })).toBe(false);
+    expect(isDexExitRouteScoreEligible({ ...route, settlementModel: "queued", settlementSlaSec: 3600 })).toBe(true);
   });
 });
 

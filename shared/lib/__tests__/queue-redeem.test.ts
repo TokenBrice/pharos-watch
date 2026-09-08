@@ -1,114 +1,40 @@
 import { describe, expect, it } from "vitest";
-import { REDEMPTION_BACKSTOP_CONFIGS } from "../redemption-backstop-configs";
+import { REDEMPTION_BACKSTOP_CONFIGS } from "@shared/lib/redemption-backstop-configs";
 
 describe("queue-redeem Nest NAV vault configs", () => {
-  it("preserves the golden queued-NAV configuration family", () => {
-    const nestNavVaultIds = ["ntbill-nest", "nbasis-nest", "nopal-nest", "nwisdom-nest"] as const;
-    const configs = Object.fromEntries(
-      nestNavVaultIds.map((stablecoinId) => [stablecoinId, REDEMPTION_BACKSTOP_CONFIGS[stablecoinId]]),
-    );
-
-    expect(configs).toEqual({
-      "ntbill-nest": {
-        routeFamily: "queue-redeem",
-        accessModel: "issuer-api",
-        settlementModel: "days",
-        executionModel: "rules-based-nav",
-        outputAssetType: "stable-basket",
-        capacityModel: { kind: "supply-full", confidence: "documented-bound" },
-        costModel: {
-          kind: "dynamic-or-unclear",
-          feeDescription:
-            "Nest docs describe nTBILL redemptions through the Nest app; public materials reviewed do not publish one fixed redemption fee",
-          confidence: "undisclosed-reviewed",
-          feeModelKind: "undisclosed-reviewed",
-        },
-        reviewedAt: "2026-07-15",
-        docs: [
-          {
-            label: "Nest available vaults",
-            url: "https://docs.nest.credit/about/available-vaults",
-            supports: ["route", "capacity", "fees", "access", "settlement"],
-          },
-        ],
-        outputAssets: ["usdc-circle", "pusd-plume"],
-        notes: ["Nest's current vault directory lists a nTBILL redemption estimate of 4 days."],
+  it.each([
+    ["ntbill-nest", ["usdc-circle", "pusd-plume"]],
+    ["nbasis-nest", ["usdc-circle", "pusd-plume"]],
+    ["nopal-nest", ["usdc-circle", "pusd-plume", "usdt-tether"]],
+    ["nwisdom-nest", ["usdc-circle", "pusd-plume"]],
+  ] as const)("preserves queued NAV redemption and evidence for %s", (id, outputAssets) => {
+    const config = REDEMPTION_BACKSTOP_CONFIGS[id];
+    expect(config).toMatchObject({
+      routeFamily: "queue-redeem",
+      accessModel: "issuer-api",
+      settlementModel: "days",
+      executionModel: "rules-based-nav",
+      outputAssetType: "stable-basket",
+      capacityModel: { kind: "supply-full", confidence: "documented-bound" },
+      costModel: {
+        kind: "dynamic-or-unclear",
+        confidence: "undisclosed-reviewed",
+        feeModelKind: "undisclosed-reviewed",
       },
-      "nbasis-nest": {
-        routeFamily: "queue-redeem",
-        accessModel: "issuer-api",
-        settlementModel: "days",
-        executionModel: "rules-based-nav",
-        outputAssetType: "stable-basket",
-        capacityModel: { kind: "supply-full", confidence: "documented-bound" },
-        costModel: {
-          kind: "dynamic-or-unclear",
-          feeDescription:
-            "Nest docs describe nBASIS redemptions through the Nest app; public materials reviewed do not publish one fixed redemption fee",
-          confidence: "undisclosed-reviewed",
-          feeModelKind: "undisclosed-reviewed",
-        },
-        reviewedAt: "2026-07-15",
-        docs: [
-          {
-            label: "Nest available vaults",
-            url: "https://docs.nest.credit/about/available-vaults",
-            supports: ["route", "capacity", "fees", "access", "settlement"],
-          },
-        ],
-        outputAssets: ["usdc-circle", "pusd-plume"],
-        notes: ["Nest's current vault directory lists a nBASIS redemption estimate of 4 days."],
-      },
-      "nopal-nest": {
-        routeFamily: "queue-redeem",
-        accessModel: "issuer-api",
-        settlementModel: "days",
-        executionModel: "rules-based-nav",
-        outputAssetType: "stable-basket",
-        capacityModel: { kind: "supply-full", confidence: "documented-bound" },
-        costModel: {
-          kind: "dynamic-or-unclear",
-          feeDescription:
-            "Nest docs describe nOPAL redemptions through the Nest app; public materials reviewed do not publish one fixed redemption fee",
-          confidence: "undisclosed-reviewed",
-          feeModelKind: "undisclosed-reviewed",
-        },
-        reviewedAt: "2026-07-15",
-        docs: [
-          {
-            label: "Nest available vaults",
-            url: "https://docs.nest.credit/about/available-vaults",
-            supports: ["route", "capacity", "fees", "access", "settlement"],
-          },
-        ],
-        outputAssets: ["usdc-circle", "pusd-plume", "usdt-tether"],
-        notes: ["Nest's current vault directory lists a nOPAL redemption estimate of 4 days."],
-      },
-      "nwisdom-nest": {
-        routeFamily: "queue-redeem",
-        accessModel: "issuer-api",
-        settlementModel: "days",
-        executionModel: "rules-based-nav",
-        outputAssetType: "stable-basket",
-        capacityModel: { kind: "supply-full", confidence: "documented-bound" },
-        costModel: {
-          kind: "dynamic-or-unclear",
-          feeDescription:
-            "Nest docs describe nWISDOM redemptions through the Nest app; public materials reviewed do not publish one fixed redemption fee",
-          confidence: "undisclosed-reviewed",
-          feeModelKind: "undisclosed-reviewed",
-        },
-        reviewedAt: "2026-07-15",
-        docs: [
-          {
-            label: "Nest available vaults",
-            url: "https://docs.nest.credit/about/available-vaults",
-            supports: ["route", "capacity", "fees", "access", "settlement"],
-          },
-        ],
-        outputAssets: ["usdc-circle", "pusd-plume"],
-        notes: ["Nest's current vault directory lists a nWISDOM redemption estimate of 4 days."],
-      },
+      outputAssets,
     });
+    expect(config.costModel.feeDescription?.trim()).toBeTruthy();
+    expect(config.reviewedAt).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+    expect(Number.isFinite(Date.parse(config.reviewedAt!))).toBe(true);
+    expect(config.docs).toBeDefined();
+    expect(config.docs!.length).toBeGreaterThan(0);
+    const supportedClaims = new Set(config.docs!.flatMap((doc) => doc.supports ?? []));
+    for (const claim of ["route", "capacity", "fees", "access", "settlement"] as const) {
+      expect(supportedClaims.has(claim)).toBe(true);
+    }
+    for (const doc of config.docs!) {
+      expect(doc.label.trim()).not.toBe("");
+      expect(new URL(doc.url).protocol).toBe("https:");
+    }
   });
 });

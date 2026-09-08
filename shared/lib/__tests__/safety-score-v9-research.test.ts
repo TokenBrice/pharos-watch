@@ -17,6 +17,26 @@ import { projectV9ScoringInput } from "../safety-score-v9/score";
 
 const AS_OF = "2026-07-01T00:00:00.000Z";
 
+function scoringInput(
+  assetId: string,
+  overrides: Partial<Parameters<typeof scoreV9Input>[0]> = {},
+): Parameters<typeof scoreV9Input>[0] {
+  return {
+    assetId,
+    pillars: { backing: 95, exit: 95, control: 95 },
+    pegScore: 100,
+    pegApplicable: true,
+    evidenceLevel: "strong",
+    trackRecordMonths: 48,
+    activeDepegBps: null,
+    parentRequired: false,
+    parentScore: null,
+    structuralSignals: [],
+    unresolved: [],
+    ...overrides,
+  };
+}
+
 function compiled(assetId: string, parentId?: string): CompiledV9AssetInput {
   const evidence = [{ sourceId: "fixture", observedAt: AS_OF }];
   return {
@@ -85,19 +105,10 @@ describe("v9 research handoff contracts", () => {
 
   it("gives an active depeg precedence over an equal structural cap", () => {
     const trace = scoreV9ResearchScenarioInput(
-      {
-        assetId: "active-depeg-tie",
+      scoringInput("active-depeg-tie", {
         pillars: { backing: 90, exit: 90, control: 90 },
-        pegScore: 100,
-        pegApplicable: true,
-        evidenceLevel: "strong",
-        trackRecordMonths: 48,
         activeDepegBps: 2_500,
-        parentRequired: false,
-        parentScore: null,
-        structuralSignals: [],
-        unresolved: [],
-      },
+      }),
       V9_CANDIDATE_POLICY_V1,
       [{ kind: "structural:f", limit: 39, reason: "Independent structural F cap." }],
     );
@@ -114,19 +125,12 @@ describe("v9 research handoff contracts", () => {
     // score while the required parent was unrated. The card publishes no
     // binding cap for NR, so the compile-time schema rejected the attribution.
     const trace = scoreV9Input(
-      {
-        assetId: "nr-active-depeg-child",
+      scoringInput("nr-active-depeg-child", {
         pillars: { backing: 60, exit: 55, control: 50 },
-        pegScore: 100,
-        pegApplicable: true,
-        evidenceLevel: "strong",
         trackRecordMonths: 12,
         activeDepegBps: 10_000,
         parentRequired: true,
-        parentScore: null,
-        structuralSignals: [],
-        unresolved: [],
-      },
+      }),
       V9_CANDIDATE_POLICY_V1,
     );
 
@@ -142,17 +146,7 @@ describe("v9 research handoff contracts", () => {
     ["partial-reserve-review", "issuer-undisclosed", 69],
   ] as const)("executes the %s issuer-evidence ceiling", (code, responsibility, expectedLimit) => {
     const trace = scoreV9Input(
-      {
-        assetId: `bounded-unknown-${code}`,
-        pillars: { backing: 95, exit: 95, control: 95 },
-        pegScore: 100,
-        pegApplicable: true,
-        evidenceLevel: "strong",
-        trackRecordMonths: 48,
-        activeDepegBps: null,
-        parentRequired: false,
-        parentScore: null,
-        structuralSignals: [],
+      scoringInput(`bounded-unknown-${code}`, {
         unresolved: [
           {
             code,
@@ -162,7 +156,7 @@ describe("v9 research handoff contracts", () => {
             responsibility,
           },
         ],
-      },
+      }),
       V9_CANDIDATE_POLICY_V1,
     );
 
@@ -177,17 +171,7 @@ describe("v9 research handoff contracts", () => {
 
   it("applies the configured ceiling to an integration-owned implementation-date gap", () => {
     const trace = scoreV9Input(
-      {
-        assetId: "integration-owned-implementation-date",
-        pillars: { backing: 95, exit: 95, control: 95 },
-        pegScore: 100,
-        pegApplicable: true,
-        evidenceLevel: "strong",
-        trackRecordMonths: 48,
-        activeDepegBps: null,
-        parentRequired: false,
-        parentScore: null,
-        structuralSignals: [],
+      scoringInput("integration-owned-implementation-date", {
         unresolved: [{
           code: "missing-implementation-date",
           reason: "Pharos has not integrated the reviewed launch date.",
@@ -195,7 +179,7 @@ describe("v9 research handoff contracts", () => {
           path: "fixture",
           responsibility: "integration-missing",
         }],
-      },
+      }),
       V9_CANDIDATE_POLICY_V1,
     );
 
@@ -248,19 +232,10 @@ describe("v9 research handoff contracts", () => {
 
   it("does not apply a parent ceiling when the parent is informational", () => {
     const trace = scoreV9Input(
-      {
-        assetId: "informational-parent",
+      scoringInput("informational-parent", {
         pillars: { backing: 90, exit: 90, control: 90 },
-        pegScore: 100,
-        pegApplicable: true,
-        evidenceLevel: "strong",
-        trackRecordMonths: 48,
-        activeDepegBps: null,
-        parentRequired: false,
         parentScore: 40,
-        structuralSignals: [],
-        unresolved: [],
-      },
+      }),
       V9_CANDIDATE_POLICY_V1,
     );
 

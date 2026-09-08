@@ -47,7 +47,7 @@ function scan(file: string, source: string) {
   } else {
     const sourceFile = ts.createSourceFile(file, source, ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX);
     const visit = (node: ts.Node): void => {
-      if (ts.isStringLiteralLike(node)) {
+      if (ts.isStringLiteralLike(node) || ts.isTemplateHead(node) || ts.isTemplateMiddle(node) || ts.isTemplateTail(node)) {
         units.push({ text: node.text, offset: node.getStart(sourceFile) + 1 });
       } else if (ts.isJsxText(node)) {
         units.push({ text: node.getText(sourceFile), offset: node.getStart(sourceFile) });
@@ -96,6 +96,21 @@ describe("selector editorial policy", () => {
       { file: "fixture.md", line: 2, rule: "no-investment-recommendation", match: "Buy USDC", excerpt: "Buy USDC." },
     ]);
     expect(scan("fixture.md", "safer safety safely safeguard unsafe fail-safe")).toEqual([]);
+  });
+
+  it("scans TS/TSX literals and every interpolated template segment at its source line", () => {
+    const source = [
+      'const ordinary = "Buy USDC";',
+      'const plain = `Buy USDC`;',
+      'const template = `Buy USDC ${name}',
+      'Buy USDC ${count}',
+      'Buy USDC`;',
+      'const jsx = <p>Buy USDC</p>;',
+      'const allowed = `Buy USDC ${name}`; // banned-phrase-allow: quoted policy',
+    ].join("\n");
+    expect(scan("fixture.tsx", source).map(({ line, rule }) => ({ line, rule }))).toEqual(
+      [1, 2, 3, 4, 5, 6].map((line) => ({ line, rule: "no-investment-recommendation" })),
+    );
   });
 
   it("fails missing targets and skips tests, dot dirs, specs, and non-target extensions", () => {

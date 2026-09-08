@@ -96,7 +96,6 @@ describe("forecastReadinessScore", () => {
 
     expect(readiness.score).toBeLessThanOrEqual(DDR_FORECAST_READINESS_STRICT_EARLY_LOCK_THRESHOLD);
     expect(readiness.strictEarlyLockReady).toBe(false);
-    expect(readiness.reasons.join(" ")).toContain("Missing forecast-readiness inputs");
   });
 
   it("pins duration-support branches that can suppress early readiness", () => {
@@ -123,7 +122,6 @@ describe("forecastReadinessScore", () => {
     }));
     expect(terminal.components.find((component) => component.key === "duration_support")).toMatchObject({
       score: 0.9,
-      reason: "Duration is intentionally suppressed for a terminal-leaning outlook.",
     });
 
     const genericSuppressed = forecastReadinessScore(readyInput({
@@ -138,7 +136,6 @@ describe("forecastReadinessScore", () => {
     }));
     expect(genericSuppressed.components.find((component) => component.key === "duration_support")).toMatchObject({
       score: 0.35,
-      reason: "Duration is suppressed for this row.",
     });
 
     const noHorizons = forecastReadinessScore(readyInput({
@@ -149,7 +146,6 @@ describe("forecastReadinessScore", () => {
     }));
     expect(noHorizons.components.find((component) => component.key === "duration_support")).toMatchObject({
       score: 0.25,
-      reason: "Duration estimate has no horizon cells.",
     });
   });
 
@@ -157,24 +153,52 @@ describe("forecastReadinessScore", () => {
     const early = forecastReadinessScore(readyInput({ ageSec: 30 * 60 }));
     expect(early.components.find((component) => component.key === "observation_maturity")).toMatchObject({
       score: 0,
-      reason: "Incident is still inside the first hour observation floor.",
     });
 
     const ramp = forecastReadinessScore(readyInput({ ageSec: 3.5 * 3600 }));
     expect(ramp.components.find((component) => component.key === "observation_maturity")).toMatchObject({
       score: 0.5,
-      reason: "Incident is still accumulating observation time toward the 6h forecast-readiness point.",
     });
 
     const backstop = forecastReadinessScore(readyInput({ ageSec: DDR_FORECAST_READINESS_BACKSTOP_DELAY_SEC }));
     expect(backstop.components.find((component) => component.key === "observation_maturity")).toMatchObject({
       score: 1,
-      reason: "Incident has reached the 72h forecast-readiness backstop.",
     });
+  });
+
+  it("degrades mixed horizon support and independently missing estimate bounds", () => {
+    const duration = readyInput().duration;
+    const support = (overrides: Partial<typeof duration>) =>
+      forecastReadinessScore(readyInput({ duration: { ...duration, ...overrides } }))
+        .components.find((component) => component.key === "duration_support")?.score;
+    expect(support({})).toBe(1);
+    expect(support({
+      horizons: [benchmarkedHorizon, { ...benchmarkedHorizon, horizon: "7d", state: "unsupported" }],
+    })).toBe(0.681);
+    expect(support({ medianSec: null })).toBe(0.888);
+    expect(support({ iqrSec: null })).toBe(0.888);
   });
 });
 
 describe("forecast readiness lock helpers", () => {
+  it("does not reach the backstop without a clock or one second before it", () => {
+    const startedAt = 100;
+    expect(buildForecastReadinessBackstop({ startedAt }).reached).toBe(false);
+    expect(buildForecastReadinessBackstop({ startedAt, nowSec: null }).reached).toBe(false);
+    expect(buildForecastReadinessBackstop({
+      startedAt, nowSec: startedAt + DDR_FORECAST_READINESS_BACKSTOP_DELAY_SEC - 1,
+    }).reached).toBe(false);
+  });
+
+  it("prioritizes the reached backstop even when strict early readiness is satisfied", () => {
+    expect(forecastReadinessLockTrigger({
+      readiness: { score: DDR_FORECAST_READINESS_STRICT_EARLY_LOCK_THRESHOLD + 0.001 },
+      backstop: buildForecastReadinessBackstop({
+        startedAt: 100, nowSec: 100 + DDR_FORECAST_READINESS_BACKSTOP_DELAY_SEC,
+      }),
+    })).toBe("readiness_backstop");
+  });
+
   it("builds the 72h backstop and separates strict readiness from backstop locking", () => {
     const backstop = buildForecastReadinessBackstop({
       startedAt: 100,

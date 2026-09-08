@@ -256,6 +256,8 @@ function tierFromAttributions(
   return "at_risk";
 }
 
+// Synthetic attribution reconstruction only: the fixture lacks original lock-time
+// status/raw inputs. This answer-derived status is not historical replay evidence.
 function inferFrozenTerminal(row: LockedVerdictRow): boolean {
   return (
     tierFromAttributions(row.direction, row.sourceFactors) !== row.expectedTier &&
@@ -401,7 +403,7 @@ function reconstructResolutionInput(row: LockedVerdictRow): DdrResolveInput {
   };
 }
 
-describe("locked DDR verdict replay fixture", () => {
+describe("synthetic DDR attribution reconstruction (not historical-input replay)", () => {
   it("pins the 72-row corpus, 13 reviewed above-peg controls, and six known misses", () => {
     expect(fixture.schemaVersion).toBe(1);
     expect(fixture.rows).toHaveLength(72);
@@ -429,7 +431,7 @@ describe("locked DDR verdict replay fixture", () => {
     ]);
   });
 
-  it("faithfully ports the stored-factor verdict reconstruction", () => {
+  it("checks the synthetic stored-factor reconstruction, not the production resolver", () => {
     for (const row of fixture.rows) {
       const frozenTerminal = inferFrozenTerminal(row);
       expect(
@@ -439,7 +441,7 @@ describe("locked DDR verdict replay fixture", () => {
     }
   });
 
-  it("replays every reconstructed input through resolveOutlook and resolveDepeg", () => {
+  it("compares synthetic attribution scenarios through resolveOutlook and resolveDepeg", () => {
     const observedDeltas: Pick<ExpectedDelta, "rowId" | "from" | "to">[] = [];
     const fingerprintFactorRows: Pick<ExpectedFactorOnlyDelta, "rowId" | "code">[] = [];
 
@@ -464,12 +466,19 @@ describe("locked DDR verdict replay fixture", () => {
           to: resolved.resolution.tier,
         });
       }
-      const fingerprintFactor = resolved.resolution.factors.find(
-        (factor) =>
-          factor.code === "K6_wind_down" &&
-          factor.label.includes("wind-down fingerprint"),
+      const fingerprintOnly = resolveDepeg({
+        ...input,
+        coin: { ...input.coin, windDownAnnouncedAt: undefined },
+      });
+      const fingerprintFactor = fingerprintOnly.resolution.factors.find(
+        (factor) => factor.code === "K6_wind_down",
       );
       if (fingerprintFactor) {
+        expect(fingerprintFactor).toMatchObject({ kind: "kill", severity: "elevated" });
+        expect(fingerprintOnly.resolution.tier).toBe("at_risk");
+        expect(resolved.resolution.factors.find((factor) => factor.code === "K6_wind_down"))
+          .toMatchObject({ kind: "kill", severity: "severe" });
+        expect(resolved.resolution.tier).toBe("recovery_unlikely");
         fingerprintFactorRows.push({
           rowId: row.rowId,
           code: fingerprintFactor.code,

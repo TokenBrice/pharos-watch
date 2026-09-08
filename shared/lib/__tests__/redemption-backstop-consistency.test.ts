@@ -96,26 +96,39 @@ describe("redemption backstop config consistency", () => {
       capacityModel: { kind: "reserve-sync-metadata", eventualCapacityModel: "supply-full" },
       costModel: { kind: "fee-bps", feeBps: 0 },
     } as const;
-    expect(RedemptionBackstopConfigSchema.safeParse(base).success).toBe(false);
-    expect(
-      RedemptionBackstopConfigSchema.safeParse({
-        ...base,
-        reviewedAt: "2026-07-29",
-        docs: [{ label: "Route terms", url: "https://example.com/terms", supports: ["capacity"] }],
-      }).success,
-    ).toBe(true);
+    const valid = {
+      ...base,
+      reviewedAt: "2026-07-29",
+      docs: [{ label: "Route terms", url: "https://example.com/terms", supports: ["capacity"] }],
+    };
+    expect(RedemptionBackstopConfigSchema.safeParse(valid).success).toBe(true);
+    for (const override of [
+      { reviewedAt: undefined },
+      { docs: [{ label: "Fee terms", url: "https://example.com/fees", supports: ["fees"] }] },
+    ]) {
+      const result = RedemptionBackstopConfigSchema.safeParse({ ...valid, ...override });
+      expect(result.success).toBe(false);
+      if (result.success) throw new Error("Expected missing capacity evidence to fail validation");
+      expect(result.error.issues.map((issue) => issue.path)).toContainEqual(["capacityModel", "eventualCapacityModel"]);
+    }
   });
 
-  it("rejects a faster reviewed model without an explicit cited SLA", () => {
-    const result = RedemptionBackstopConfigSchema.safeParse(
-      settlementReviewConfig("days", { settlementModel: "same-day" }),
-    );
-
-    expect(result.success).toBe(false);
-    if (result.success) throw new Error("Expected faster reviewed settlement to fail validation");
-    expect(result.error.issues.map((issue) => issue.message)).toContain(
-      "Faster V9 reviewed settlement requires settlementDelaySec, reviewedAt, and at least one docs source",
-    );
+  it("requires each prerequisite of a faster reviewed settlement SLA independently", () => {
+    const terms = {
+      settlementModel: "same-day",
+      settlementDelaySec: 86_400,
+      reviewedAt: "2026-07-29",
+      docs: [{ label: "Settlement SLA", url: "https://example.com/settlement" }],
+    };
+    expect(RedemptionBackstopConfigSchema.safeParse(settlementReviewConfig("days", terms)).success).toBe(true);
+    for (const field of ["settlementDelaySec", "reviewedAt", "docs"] as const) {
+      const result = RedemptionBackstopConfigSchema.safeParse(
+        settlementReviewConfig("days", { ...terms, [field]: undefined }),
+      );
+      expect(result.success, field).toBe(false);
+      if (result.success) throw new Error("Expected missing SLA evidence to fail validation");
+      expect(result.error.issues.map((issue) => issue.path)).toContainEqual(["v9RouteReviewTerms", "settlementModel"]);
+    }
   });
 
   it("rejects an uncited explicit reviewed settlement SLA", () => {
@@ -128,12 +141,10 @@ describe("redemption backstop config consistency", () => {
 
     expect(result.success).toBe(false);
     if (result.success) throw new Error("Expected uncited reviewed settlement SLA to fail validation");
-    expect(result.error.issues.map((issue) => issue.message)).toContain(
-      "Explicit V9 reviewed settlement SLA requires reviewedAt and at least one docs source",
-    );
+    expect(result.error.issues.map((issue) => issue.path)).toContainEqual(["v9RouteReviewTerms", "settlementDelaySec"]);
   });
 
-  it("admits a faster reviewed settlement with an explicit cited SLA", () => {
+  it("admits an unchanged reviewed settlement with an explicit cited SLA", () => {
     expect(
       RedemptionBackstopConfigSchema.safeParse(
         settlementReviewConfig("days", {
@@ -155,53 +166,6 @@ describe("redemption backstop config consistency", () => {
   it("every config ID exists in TRACKED_META_BY_ID", () => {
     const missing = entries.filter(([id]) => !TRACKED_META_BY_ID.has(id)).map(([id]) => id);
     expect(missing).toEqual([]);
-  });
-
-  it("no duplicate config IDs", () => {
-    const ids = Object.keys(REDEMPTION_BACKSTOP_CONFIGS);
-    const seen = new Set<string>();
-    const dupes: string[] = [];
-    for (const id of ids) {
-      if (seen.has(id)) dupes.push(id);
-      seen.add(id);
-    }
-    expect(dupes).toEqual([]);
-  });
-
-  it("offchain-issuer route requires issuer-api or manual access", () => {
-    const violations = entries
-      .filter(
-        ([, c]) => c.routeFamily === "offchain-issuer" && c.accessModel !== "issuer-api" && c.accessModel !== "manual",
-      )
-      .map(([id, c]) => `${id}: offchain-issuer + ${c.accessModel}`);
-    expect(violations).toEqual([]);
-  });
-
-  it("permissionless-onchain access excludes offchain-issuer route", () => {
-    const violations = entries
-      .filter(([, c]) => c.accessModel === "permissionless-onchain" && c.routeFamily === "offchain-issuer")
-      .map(([id]) => id);
-    expect(violations).toEqual([]);
-  });
-
-  it("atomic settlement excludes offchain-issuer route", () => {
-    const violations = entries
-      .filter(([, c]) => c.settlementModel === "atomic" && c.routeFamily === "offchain-issuer")
-      .map(([id]) => id);
-    expect(violations).toEqual([]);
-  });
-
-  it("queue-redeem route requires queued, days, or same-day settlement", () => {
-    const violations = entries
-      .filter(
-        ([, c]) =>
-          c.routeFamily === "queue-redeem" &&
-          c.settlementModel !== "queued" &&
-          c.settlementModel !== "days" &&
-          c.settlementModel !== "same-day",
-      )
-      .map(([id, c]) => `${id}: queue-redeem + ${c.settlementModel}`);
-    expect(violations).toEqual([]);
   });
 
   it("algorithmic backing excludes offchain-issuer route", () => {
@@ -238,9 +202,9 @@ describe("redemption backstop config consistency", () => {
     const duplicates: string[] = [];
 
     for (const moduleEntry of familyModules) {
-      for (const id of Object.keys(configsFromBackstopEntries(moduleEntry.entries))) {
+      for (const { id, overrideReason } of moduleEntry.entries) {
         const previous = seenById.get(id);
-        if (previous) {
+        if (previous && (previous !== moduleEntry.name || !overrideReason)) {
           duplicates.push(`${id}: ${previous}, ${moduleEntry.name}`);
           continue;
         }
@@ -279,14 +243,6 @@ describe("redemption backstop config consistency", () => {
 
   // --- Cross-family invariants (TG-3) ---
 
-  it("issuer-api access should only appear in offchain-issuer or queue-redeem families", () => {
-    const allowedFamilies = new Set<RedemptionRouteFamily>(["offchain-issuer", "queue-redeem"]);
-    const violations = entries
-      .filter(([, c]) => c.accessModel === "issuer-api" && !allowedFamilies.has(c.routeFamily))
-      .map(([id, c]) => `${id}: ${c.routeFamily} + issuer-api`);
-    expect(violations).toEqual([]);
-  });
-
   it("stablecoin-redeem and psm-swap should not use opaque execution", () => {
     const violations = entries
       .filter(
@@ -294,40 +250,6 @@ describe("redemption backstop config consistency", () => {
           (c.routeFamily === "stablecoin-redeem" || c.routeFamily === "psm-swap") && c.executionModel === "opaque",
       )
       .map(([id, c]) => `${id}: ${c.routeFamily} + opaque`);
-    expect(violations).toEqual([]);
-  });
-
-  it("all fee-bps values are non-negative", () => {
-    const violations = entries
-      .filter(([, c]) => c.costModel.kind === "fee-bps" && c.costModel.feeBps < 0)
-      .map(([id, c]) => `${id}: feeBps=${c.costModel.kind === "fee-bps" ? c.costModel.feeBps : "?"}`);
-    expect(violations).toEqual([]);
-  });
-
-  it("supply-ratio values are between 0 and 1", () => {
-    const violations = entries
-      .filter(
-        ([, c]) => c.capacityModel.kind === "supply-ratio" && (c.capacityModel.ratio <= 0 || c.capacityModel.ratio > 1),
-      )
-      .map(([id, c]) => `${id}: ratio=${c.capacityModel.kind === "supply-ratio" ? c.capacityModel.ratio : "?"}`);
-    expect(violations).toEqual([]);
-  });
-
-  it("reserve-sync fallback ratios and score caps stay in range", () => {
-    const violations = entries.flatMap(([id, c]) => {
-      const issues: string[] = [];
-      if (
-        c.capacityModel.kind === "reserve-sync-metadata" &&
-        c.capacityModel.fallbackRatio != null &&
-        (c.capacityModel.fallbackRatio <= 0 || c.capacityModel.fallbackRatio > 1)
-      ) {
-        issues.push(`${id}: fallbackRatio=${c.capacityModel.fallbackRatio}`);
-      }
-      if (c.totalScoreCap != null && (c.totalScoreCap <= 0 || c.totalScoreCap > 100)) {
-        issues.push(`${id}: totalScoreCap=${c.totalScoreCap}`);
-      }
-      return issues;
-    });
     expect(violations).toEqual([]);
   });
 
@@ -363,16 +285,43 @@ describe("redemption backstop config consistency", () => {
     expect(violations).toEqual([]);
   });
 
-  it("review dates are valid YYYY-MM-DD calendar dates", () => {
-    const violations = entries
-      .filter(([, c]) => {
-        if (!c.reviewedAt) return false;
-        if (!/^\d{4}-\d{2}-\d{2}$/.test(c.reviewedAt)) return true;
-        const parsed = new Date(`${c.reviewedAt}T00:00:00.000Z`);
-        return !Number.isFinite(parsed.getTime()) || parsed.toISOString().slice(0, 10) !== c.reviewedAt;
-      })
-      .map(([id, c]) => `${id}: reviewedAt=${c.reviewedAt}`);
-    expect(violations).toEqual([]);
+  it("enforces numeric and calendar boundaries independently of the catalog", () => {
+    const base = RedemptionBackstopConfigSchema.parse(settlementReviewConfig("days", undefined));
+    const cases = [
+      [{ costModel: { kind: "fee-bps", feeBps: 0 } }, { costModel: { kind: "fee-bps", feeBps: -1 } }, ["costModel", "feeBps"]],
+      [{ capacityModel: { kind: "supply-ratio", ratio: 1 } }, { capacityModel: { kind: "supply-ratio", ratio: 0 } }, ["capacityModel", "ratio"]],
+      [{ capacityModel: { kind: "supply-ratio", ratio: 0.1 } }, { capacityModel: { kind: "supply-ratio", ratio: 1.01 } }, ["capacityModel", "ratio"]],
+      [{ capacityModel: { kind: "reserve-sync-metadata", fallbackRatio: 1 } }, { capacityModel: { kind: "reserve-sync-metadata", fallbackRatio: 0 } }, ["capacityModel", "fallbackRatio"]],
+      [{ capacityModel: { kind: "reserve-sync-metadata", fallbackRatio: 0.1 } }, { capacityModel: { kind: "reserve-sync-metadata", fallbackRatio: 1.01 } }, ["capacityModel", "fallbackRatio"]],
+      [{ totalScoreCap: 100 }, { totalScoreCap: 0 }, ["totalScoreCap"]],
+      [{ totalScoreCap: 1 }, { totalScoreCap: 101 }, ["totalScoreCap"]],
+      [{ reviewedAt: "2024-02-29" }, { reviewedAt: "2023-02-29" }, ["reviewedAt"]],
+    ] as const;
+    for (const [valid, invalid, path] of cases) {
+      expect(RedemptionBackstopConfigSchema.safeParse({ ...base, ...valid }).success).toBe(true);
+      const result = RedemptionBackstopConfigSchema.safeParse({ ...base, ...invalid });
+      expect(result.success).toBe(false);
+      if (result.success) throw new Error("Expected invalid boundary to fail validation");
+      expect(result.error.issues.map((issue) => issue.path)).toContainEqual(path);
+    }
+  });
+
+  it("rejects incompatible route access and settlement while admitting neighboring models", () => {
+    const base = RedemptionBackstopConfigSchema.parse(settlementReviewConfig("days", undefined));
+    const cases = [
+      [{ routeFamily: "offchain-issuer", accessModel: "issuer-api" }, { accessModel: "whitelisted-onchain" }, ["accessModel"]],
+      [{ routeFamily: "offchain-issuer", accessModel: "manual" }, { accessModel: "permissionless-onchain" }, ["routeFamily"]],
+      [{ routeFamily: "offchain-issuer" }, { settlementModel: "atomic" }, ["settlementModel"]],
+      [{ routeFamily: "queue-redeem" }, { settlementModel: "immediate" }, ["settlementModel"]],
+      [{ routeFamily: "stablecoin-redeem", accessModel: "permissionless-onchain" }, { accessModel: "issuer-api" }, ["accessModel"]],
+    ] as const;
+    for (const [valid, invalid, path] of cases) {
+      expect(RedemptionBackstopConfigSchema.safeParse({ ...base, ...valid }).success).toBe(true);
+      const result = RedemptionBackstopConfigSchema.safeParse({ ...base, ...valid, ...invalid });
+      expect(result.success).toBe(false);
+      if (result.success) throw new Error("Expected incompatible route to fail validation");
+      expect(result.error.issues.map((issue) => issue.path)).toContainEqual(path);
+    }
   });
 
   it("expanded shared configs receive per-coin reviewed docs instead of shared first-id docs", () => {

@@ -165,6 +165,66 @@ describe("Safety Score v9 wrapper-local risk", () => {
     expect(result.limit).toBe(87.8);
   });
 
+  it("saturates documented credit at the remaining score headroom", () => {
+    const localFacts = facts();
+    localFacts.riskTransfer = {
+      ...localFacts.riskTransfer,
+      disposition: "reviewed",
+      mechanism: "first-loss-capital",
+      maximumParentLossAbsorptionPoints: 4,
+    };
+    expect(resolveV9WrapperParentLimit(input({ parentScore: 99, localFacts }))).toMatchObject({
+      limit: 100,
+      riskTransfer: { requestedCredit: 4, appliedCredit: 1 },
+    });
+  });
+
+  it("denies requested credit when a local fact, form, or transfer review is unavailable", () => {
+    for (const missing of ["withdrawalTerms", "wrapperForm", "riskTransfer"] as const) {
+      const localFacts = facts();
+      localFacts.riskTransfer = {
+        ...localFacts.riskTransfer,
+        disposition: "reviewed",
+        mechanism: "first-loss-capital",
+        maximumParentLossAbsorptionPoints: 4,
+      };
+      if (missing === "wrapperForm") localFacts.formDisposition = "producer-failed";
+      else if (missing === "riskTransfer") localFacts.riskTransfer.disposition = "producer-failed";
+      else localFacts.facts.withdrawalTerms.disposition = "producer-failed";
+      expect(resolveV9WrapperParentLimit(input({ localFacts })), missing).toMatchObject({
+        limit: 81,
+        factsComplete: false,
+        treatment: "fallback-discount",
+        missingFacts: [{ factClass: missing, disposition: "producer-failed" }],
+        riskTransfer: { requestedCredit: 0, appliedCredit: 0 },
+      });
+    }
+  });
+
+  it("floors a parent below the local risk discount at zero", () => {
+    expect(resolveV9WrapperParentLimit(input({
+      parentScore: 1,
+      localFacts: facts({ leverage: "critical" }),
+    }))).toMatchObject({ limit: 0, localRiskDiscount: 4 });
+  });
+
+  it("rejects invalid parent, fallback, and eligible credit values independently", () => {
+    for (const invalid of [-1, 101, Number.NaN, Number.POSITIVE_INFINITY]) {
+      expect(() => resolveV9WrapperParentLimit(input({ parentScore: invalid }))).toThrow();
+      expect(() => resolveV9WrapperParentLimit(input({
+        fallbackDiscounts: { ...DISCOUNTS, pure: invalid },
+      }))).toThrow();
+      const localFacts = facts();
+      localFacts.riskTransfer = {
+        ...localFacts.riskTransfer,
+        disposition: "reviewed",
+        mechanism: "first-loss-capital",
+        maximumParentLossAbsorptionPoints: invalid,
+      };
+      expect(() => resolveV9WrapperParentLimit(input({ localFacts }))).toThrow();
+    }
+  });
+
   it("cannot improve when its serial parent score falls", () => {
     const localFacts = facts({ measuredUnwind: "moderate" }, "native-staked");
     const higherParent = resolveV9WrapperParentLimit(input({ parentScore: 84, localFacts })).limit;

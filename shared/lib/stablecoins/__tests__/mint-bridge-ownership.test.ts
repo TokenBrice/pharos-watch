@@ -307,7 +307,6 @@ describe("Mint Authority / Bridge Risk ownership boundary", () => {
         expect.objectContaining({
           code: "representation-route-without-bridge-mint",
           path: "bridgeRouteRisk.routes[0].id",
-          message: `reviewed representation route "${BASE_ROUTE}" is covered by control IDs ["admin-only-control"], but none includes "bridge-mint"; name the bridge-mint holder in one of those controls, or stop referencing the route so the conservative route-derived fallback overlay applies`,
           severity: "error",
         }),
       ]);

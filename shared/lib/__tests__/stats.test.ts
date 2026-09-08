@@ -10,7 +10,7 @@ import {
   ratioToPercentage,
   relativeChangeRatio,
   weightedMedian,
-} from "../stats";
+} from "@shared/lib/stats";
 
 describe("mean", () => {
   it("averages finite samples", () => {
@@ -76,6 +76,7 @@ describe("percentileNearestRank", () => {
   it("uses nearest-rank semantics on a 0-100 scale", () => {
     expect(percentileNearestRank([1, 2, 3, 4], 50)).toBe(2);
     expect(percentileNearestRank([1, 2, 3, 4], 75)).toBe(3);
+    expect(percentileNearestRank([10, 20, 30], 50)).toBe(20);
   });
 
   it("clamps percentile bounds and returns null for empty finite input", () => {
@@ -97,6 +98,18 @@ describe("percentileLinear", () => {
     expect(percentileLinear([3, 1, 2], 110)).toBe(3);
     expect(percentileLinear([], 50)).toBeNull();
     expect(percentileLinear([1], Infinity)).toBeNull();
+  });
+});
+
+describe("finite order statistics", () => {
+  it.each([
+    ["median", median, 20],
+    ["nearest rank", (values: number[]) => percentileNearestRank(values, 25), 10],
+    ["linear percentile", (values: number[]) => percentileLinear(values, 25), 15],
+  ] as const)("%s filters nonfinite samples without changing caller order", (_name, calculate, expected) => {
+    const values = [30, NaN, 10, Infinity, 20, -Infinity];
+    expect(calculate(values)).toBe(expected);
+    expect(values).toEqual([30, NaN, 10, Infinity, 20, -Infinity]);
   });
 });
 

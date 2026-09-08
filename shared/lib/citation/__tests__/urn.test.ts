@@ -3,38 +3,17 @@ import { describe, expect, it } from "vitest";
 import { formatPharosUrn, parsePharosUrn } from "../urn";
 
 describe("formatPharosUrn", () => {
-  it("formats coin URN without qualifier", () => {
-    expect(formatPharosUrn("coin", "usdc-circle")).toBe("urn:pharos:coin:usdc-circle");
+  it.each([
+    ["coin", "usdc-circle", undefined, "urn:pharos:coin:usdc-circle"],
+    ["methodology", "safety-score", "v7.2", "urn:pharos:methodology:safety-score@v7.2"],
+    ["coin", "usdc-circle", "2026-05-16", "urn:pharos:coin:usdc-circle@2026-05-16"],
+    ["depeg-event", "usdc-2023-03-11", undefined, "urn:pharos:depeg-event:usdc-2023-03-11"],
+  ] as const)("formats %s:%s qualifier %s", (entityClass, id, qualifier, expected) => {
+    expect(formatPharosUrn(entityClass, id, qualifier)).toBe(expected);
   });
 
-  it("formats methodology URN with version qualifier", () => {
-    expect(formatPharosUrn("methodology", "safety-score", "v7.2")).toBe(
-      "urn:pharos:methodology:safety-score@v7.2",
-    );
-  });
-
-  it("formats coin URN with date qualifier", () => {
-    expect(formatPharosUrn("coin", "usdc-circle", "2026-05-16")).toBe(
-      "urn:pharos:coin:usdc-circle@2026-05-16",
-    );
-  });
-
-  it("formats depeg-event URN", () => {
-    expect(formatPharosUrn("depeg-event", "usdc-2023-03-11")).toBe(
-      "urn:pharos:depeg-event:usdc-2023-03-11",
-    );
-  });
-
-  it("rejects uppercase id", () => {
-    expect(() => formatPharosUrn("coin", "USDC")).toThrow();
-  });
-
-  it("rejects id with underscore", () => {
-    expect(() => formatPharosUrn("coin", "usdc_circle")).toThrow();
-  });
-
-  it("rejects empty id", () => {
-    expect(() => formatPharosUrn("coin", "")).toThrow();
+  it.each(["USDC", "usdc_circle", ""])("rejects malformed id %j", (id) => {
+    expect(() => formatPharosUrn("coin", id)).toThrow();
   });
 
   it("rejects unknown entity class", () => {
@@ -48,50 +27,23 @@ describe("formatPharosUrn", () => {
 });
 
 describe("parsePharosUrn", () => {
-  it("parses coin URN without qualifier", () => {
-    expect(parsePharosUrn("urn:pharos:coin:usdc-circle")).toEqual({
-      entityClass: "coin",
-      id: "usdc-circle",
-    });
+  it.each([
+    ["urn:pharos:coin:usdc-circle", { entityClass: "coin", id: "usdc-circle" }],
+    ["urn:pharos:methodology:safety-score@v7.2", { entityClass: "methodology", id: "safety-score", qualifier: "v7.2" }],
+    ["urn:pharos:depeg-event:usdc-2023-03-11", { entityClass: "depeg-event", id: "usdc-2023-03-11" }],
+  ] as const)("parses %s", (urn, expected) => {
+    expect(parsePharosUrn(urn)).toEqual(expected);
   });
 
-  it("parses methodology URN with version qualifier", () => {
-    expect(parsePharosUrn("urn:pharos:methodology:safety-score@v7.2")).toEqual({
-      entityClass: "methodology",
-      id: "safety-score",
-      qualifier: "v7.2",
-    });
-  });
-
-  it("parses depeg-event URN", () => {
-    expect(parsePharosUrn("urn:pharos:depeg-event:usdc-2023-03-11")).toEqual({
-      entityClass: "depeg-event",
-      id: "usdc-2023-03-11",
-    });
-  });
-
-  it("rejects missing prefix", () => {
-    expect(parsePharosUrn("pharos:coin:usdc-circle")).toBeNull();
-  });
-
-  it("rejects unknown entity class", () => {
-    expect(parsePharosUrn("urn:pharos:rogue:usdc-circle")).toBeNull();
-  });
-
-  it("rejects uppercase id", () => {
-    expect(parsePharosUrn("urn:pharos:coin:USDC")).toBeNull();
-  });
-
-  it("rejects underscore in id", () => {
-    expect(parsePharosUrn("urn:pharos:coin:usdc_circle")).toBeNull();
-  });
-
-  it("rejects empty qualifier", () => {
-    expect(parsePharosUrn("urn:pharos:methodology:safety-score@")).toBeNull();
-  });
-
-  it("rejects empty id", () => {
-    expect(parsePharosUrn("urn:pharos:coin:")).toBeNull();
+  it.each([
+    "pharos:coin:usdc-circle",
+    "urn:pharos:rogue:usdc-circle",
+    "urn:pharos:coin:USDC",
+    "urn:pharos:coin:usdc_circle",
+    "urn:pharos:methodology:safety-score@",
+    "urn:pharos:coin:",
+  ])("rejects malformed URN %j", (urn) => {
+    expect(parsePharosUrn(urn)).toBeNull();
   });
 
   it("rejects non-string input", () => {
@@ -113,11 +65,8 @@ describe("round-trip", () => {
     { entityClass: "snapshot", id: "2026-05-16" },
   ];
 
-  for (const { entityClass, id, qualifier } of cases) {
-    it(`round-trips ${entityClass}:${id}${qualifier ? `@${qualifier}` : ""}`, () => {
-      const urn = formatPharosUrn(entityClass, id, qualifier);
-      const parsed = parsePharosUrn(urn);
-      expect(parsed).toEqual(qualifier ? { entityClass, id, qualifier } : { entityClass, id });
-    });
-  }
+  it.each(cases)("round-trips $entityClass:$id qualifier $qualifier", ({ entityClass, id, qualifier }) => {
+    const urn = formatPharosUrn(entityClass, id, qualifier);
+    expect(parsePharosUrn(urn)).toEqual(qualifier ? { entityClass, id, qualifier } : { entityClass, id });
+  });
 });

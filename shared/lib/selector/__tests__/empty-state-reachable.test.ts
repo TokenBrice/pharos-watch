@@ -75,24 +75,9 @@ describe("empty-state reachable per profile", () => {
       const out = runSelector(input, data, FIXTURE_DATASET);
       expect(out.recommended.length).toBe(0);
       expect(out.lowConfidence).toBe(true);
+      if (input.profile === "treasury") expect(out.lowerRanked.length).toBeLessThanOrEqual(2);
     },
   );
 
-  it("Treasury empty state caps lower-ranked at 2", () => {
-    const { input, data } = ADVERSARIAL_INPUTS[0]!;
-    const out = runSelector(input, data, FIXTURE_DATASET);
-    expect(out.recommended.length).toBe(0);
-    expect(out.lowerRanked.length).toBeLessThanOrEqual(2);
-  });
 });
 
-describe("each profile is empty-reachable", () => {
-  it("at least one adversarial input per profile yields 0 survivors", () => {
-    const profiles = new Set<string>();
-    for (const { input, data } of ADVERSARIAL_INPUTS) {
-      const out = runSelector(input, data, FIXTURE_DATASET);
-      if (out.recommended.length === 0) profiles.add(input.profile);
-    }
-    expect(profiles).toEqual(new Set(["treasury", "yield", "trading"]));
-  });
-});

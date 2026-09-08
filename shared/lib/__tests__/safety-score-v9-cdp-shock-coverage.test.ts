@@ -227,23 +227,99 @@ describe("Safety Score v9 CDP shock-coverage selection", () => {
     });
   });
 
-  it("degrades a complete fact without an exact replay attestation to legacyLCR", () => {
-    const unverified = stressFact(0.9);
-    const selection = selectV9CdpLiquidationCapacity(
-      "test-cdp",
-      review({ liquidationCapacityRatio: 0.25 }),
-      { ...unverified, exactReplayPassed: false, replayVerification: null },
-      V9_CANDIDATE_POLICY_V1,
-      AS_OF_SEC,
-    );
+  it("requires both replay success and the attestation independently", () => {
+    for (const mutation of [{ exactReplayPassed: false }, { replayVerification: null }]) {
+      const selection = selectV9CdpLiquidationCapacity(
+        "test-cdp", review(), { ...stressFact(0.9), ...mutation }, V9_CANDIDATE_POLICY_V1, AS_OF_SEC,
+      );
+      expect(selection).toMatchObject({
+        selectedPath: "legacyLCR",
+        coverageRatio: 0.25,
+        fallbackReason: "stress-measurement-exact-replay-not-passed",
+        selectedEvidenceRefIds: ["evidence:legacy-liquidation"],
+        stressEvidenceRefIds: ["evidence:stress"],
+      });
+    }
+  });
 
-    expect(selection).toMatchObject({
-      selectedPath: "legacyLCR",
-      coverageRatio: 0.25,
-      reason: "Selected legacyLCR fallback: stress-measurement-exact-replay-not-passed.",
-      fallbackReason: "stress-measurement-exact-replay-not-passed",
-      stressEvidenceRefIds: ["evidence:stress"],
-    });
+  it("accepts the publication timestamp but rejects one second in the future", () => {
+    for (const delta of [0, 1]) {
+      const selection = selectV9CdpLiquidationCapacity(
+        "test-cdp", review(), stressFact(0.9, AS_OF_SEC + delta), V9_CANDIDATE_POLICY_V1, AS_OF_SEC,
+      );
+      expect(selection).toMatchObject({
+        selectedPath: delta === 0 ? "stress-measurement" : "legacyLCR",
+        coverageRatio: delta === 0 ? 0.9 : 0.25,
+        fallbackReason: delta === 0 ? null : "stress-measurement-future-dated",
+        stressEvidenceRefIds: ["evidence:stress"],
+      });
+    }
+  });
+
+  it("rejects either inconsistent shock representation and an excessive reconciliation tolerance", () => {
+    const mutations: [Partial<V9CdpStressCoverageFact>, string][] = [
+      [{ stressShockFraction: 0.4 }, "stress-shock-fraction-mismatch"],
+      [{ shockPolicy: { ...stressFact(0.9).shockPolicy, scoreShockFractionPpm: 400_000 } }, "stress-shock-fraction-mismatch"],
+      [{ shockPolicy: { ...stressFact(0.9).shockPolicy, debtReconciliationTolerancePpm: 1_001 } }, "stress-measurement-reconciliation-bound-exceeded"],
+    ];
+    for (const [mutation, fallbackReason] of mutations) {
+      expect(selectV9CdpLiquidationCapacity(
+        "test-cdp", review(), { ...stressFact(0.9), ...mutation }, V9_CANDIDATE_POLICY_V1, AS_OF_SEC,
+      )).toMatchObject({
+        selectedPath: "legacyLCR", coverageRatio: 0.25, fallbackReason,
+        stressEvidenceRefIds: ["evidence:stress"],
+      });
+    }
+  });
+
+  it("reconciles multiple branches and rejects independent debt and ratio mismatches", () => {
+    const fact = stressFact(0.5);
+    fact.branchContributions = [
+      { branchIndex: 0, stressLiquidatableDebt: "400", stressPoolOffsetDebt: "100", stressLiquidationCoverageRatio: 0.25 },
+      { branchIndex: 1, stressLiquidatableDebt: "600", stressPoolOffsetDebt: "400", stressLiquidationCoverageRatio: 0.666666666666 },
+    ];
+    expect(selectV9CdpLiquidationCapacity(
+      "test-cdp", review(), fact, V9_CANDIDATE_POLICY_V1, AS_OF_SEC,
+    )).toMatchObject({ selectedPath: "stress-measurement", coverageRatio: 0.5, fallbackReason: null });
+    const mutations: ((value: V9CdpStressCoverageFact) => void)[] = [
+      (value) => { value.stressLiquidatableDebt = "1001"; },
+      (value) => { value.stressPoolOffsetDebt = "501"; },
+      (value) => { value.stressLiquidationCoverageRatio = 0.51; },
+      (value) => { value.branchContributions[0].stressLiquidationCoverageRatio = 0.26; },
+    ];
+    for (const mutate of mutations) {
+      const inconsistent = structuredClone(fact);
+      mutate(inconsistent);
+      expect(selectV9CdpLiquidationCapacity(
+        "test-cdp", review(), inconsistent, V9_CANDIDATE_POLICY_V1, AS_OF_SEC,
+      )).toMatchObject({
+        selectedPath: "legacyLCR", coverageRatio: 0.25,
+        fallbackReason: "stress-measurement-incomplete-or-inconsistent",
+        stressEvidenceRefIds: ["evidence:stress"],
+      });
+    }
+  });
+
+  it("accepts zero debt only with zero offset and full coverage", () => {
+    for (const [offset, ratio] of [["0", 1], ["1", 1], ["0", 0]] as const) {
+      const fact = stressFact(1);
+      fact.stressLiquidatableDebt = "0";
+      fact.stressPoolOffsetDebt = offset;
+      fact.stressLiquidationCoverageRatio = ratio;
+      fact.branchContributions = [{
+        branchIndex: 0, stressLiquidatableDebt: "0",
+        stressPoolOffsetDebt: offset, stressLiquidationCoverageRatio: ratio,
+      }];
+      const valid = offset === "0" && ratio === 1;
+      expect(selectV9CdpLiquidationCapacity(
+        "test-cdp", review(), fact, V9_CANDIDATE_POLICY_V1, AS_OF_SEC,
+      )).toMatchObject({
+        selectedPath: valid ? "stress-measurement" : "legacyLCR",
+        coverageRatio: valid ? 1 : 0.25,
+        fallbackReason: valid ? null : "stress-measurement-incomplete-or-inconsistent",
+        stressEvidenceRefIds: ["evidence:stress"],
+      });
+    }
   });
 
   it("keeps the current-CR critical signal unchanged when stress coverage passes", () => {

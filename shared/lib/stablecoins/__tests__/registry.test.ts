@@ -2,12 +2,10 @@ import { describe, expect, it } from "vitest";
 import {
   ACTIVE_IDS,
   ACTIVE_STABLECOINS,
-  DELISTED_IDS,
   DELISTED_STABLECOINS,
   FROZEN_IDS,
   FROZEN_STABLECOINS,
   PRE_LAUNCH_STABLECOINS,
-  QUARANTINED_IDS,
   QUARANTINED_STABLECOINS,
   READABLE_IDS,
   READABLE_STABLECOINS,
@@ -72,21 +70,17 @@ describe("registry universes", () => {
   });
 
   it("TRACKED is the disjoint union of every lifecycle registry", () => {
-    expect(TRACKED_STABLECOINS.length).toBe(
-      ACTIVE_STABLECOINS.length
-        + FROZEN_STABLECOINS.length
-        + PRE_LAUNCH_STABLECOINS.length
-        + QUARANTINED_STABLECOINS.length
-        + DELISTED_STABLECOINS.length,
-    );
-  });
-
-  it("ACTIVE_IDS and FROZEN_IDS are disjoint", () => {
-    for (const id of FROZEN_IDS) {
-      expect(ACTIVE_IDS.has(id)).toBe(false);
-    }
-    for (const id of [...QUARANTINED_IDS, ...DELISTED_IDS]) {
-      expect(ACTIVE_IDS.has(id)).toBe(false);
+    const partitions = [
+      ACTIVE_STABLECOINS, FROZEN_STABLECOINS, PRE_LAUNCH_STABLECOINS,
+      QUARANTINED_STABLECOINS, DELISTED_STABLECOINS,
+    ].map((coins) => coins.map((coin) => coin.id));
+    const ids = partitions.flat();
+    expect(ids.toSorted()).toEqual(TRACKED_STABLECOINS.map((coin) => coin.id).toSorted());
+    expect(new Set(ids).size).toBe(ids.length);
+    for (let i = 0; i < partitions.length; i++) {
+      for (const other of partitions.slice(i + 1)) {
+        expect(partitions[i].filter((id) => other.includes(id))).toEqual([]);
+      }
     }
   });
 });

@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { ENGINE_VERSION, runSelector } from "../engine";
 import { scoreRow } from "../scoring";
 import {
@@ -7,7 +7,9 @@ import {
   type SelectorInput,
   type SelectorProfile,
 } from "../types";
-import { buildFixtureData, FIXTURE_DATASET, makeInput } from "./fixture";
+import { buildFixtureData, FIXTURE_DATASET, makeInput, makeMergedRowWithIdentity } from "./fixture";
+
+afterEach(() => vi.restoreAllMocks());
 
 type RouteVenue = readonly ["custody" | "some" | "active"] | readonly ["lend" | "dex" | "wrap" | "all"] | readonly ["cex" | "perps" | "spot" | "all"];
 
@@ -45,12 +47,6 @@ function routeInputs(): SelectorInput[] {
   const out: SelectorInput[] = [];
   for (const pegCurrency of SELECTOR_ELIGIBLE_PEG_CURRENCIES) {
     for (const profile of SELECTOR_PROFILES_FOR_ROUTES) {
-      if (
-        profile === "yield" &&
-        !(SELECTOR_ELIGIBLE_PEG_CURRENCIES as readonly string[]).includes(pegCurrency)
-      ) {
-        continue;
-      }
       for (const horizon of ROUTE_HORIZONS) {
         for (const depegTolerance of ROUTE_DEPEGS) {
           for (const venue of ROUTE_VENUES[profile]) {
@@ -70,7 +66,7 @@ function routeInputs(): SelectorInput[] {
       }
     }
   }
-  return out;
+  return [...new Map(out.map((input) => [JSON.stringify(input), input])).values()];
 }
 
 const SELECTOR_PROFILES_FOR_ROUTES = ["treasury", "yield", "trading"] as const;
@@ -111,7 +107,9 @@ describe("runSelector — Treasury happy path", () => {
     // Two runs with different timestamps must differ only in `timestamp`.
     expect(a.timestamp).toBe(1000);
     expect(b.timestamp).toBe(2000);
-    expect(a.recommended.map((r) => r.id)).toEqual(b.recommended.map((r) => r.id));
+    const { timestamp: _a, ...resultA } = a;
+    const { timestamp: _b, ...resultB } = b;
+    expect(resultA).toEqual(resultB);
   });
 
   it("variant dedup: only one USDC variant in top-3", () => {
@@ -198,7 +196,11 @@ describe("runSelector — Yield happy path", () => {
   const input = makeInput({ profile: "yield", depegTolerance: "tight" });
 
   it("emits recommendedSource for Yield entries", () => {
-    const out = runSelector(input, buildFixtureData(), FIXTURE_DATASET);
+    const row = makeMergedRowWithIdentity({ id: "yield", symbol: "Y", name: "Yield" }, {
+      yieldProtocolSlug: "issuer", yieldVenueChain: "ethereum",
+    });
+    const out = runSelector(input, { rows: new Map([[row.id, row]]) }, FIXTURE_DATASET);
+    expect(out.recommended.map((rec) => rec.id)).toEqual(["yield"]);
     for (const rec of out.recommended) {
       expect(rec.profile).toBe("yield");
       expect(rec.recommendedSource).not.toBeNull();
@@ -299,23 +301,12 @@ describe("runSelector — Yield happy path", () => {
   });
 
   it("removes Yield rows without a usable source before ranking and alternates", () => {
-    const base = buildFixtureData().rows.get("usds-sky");
-    expect(base).toBeDefined();
-    const makeYieldRow = (
-      id: string,
-      overrides: Partial<MergedRow>,
-    ): MergedRow => ({
-      ...base!,
-      id,
-      symbol: id.slice(0, 5).toUpperCase(),
-      name: id,
-      protocolSlug: id,
-      variantOf: null,
-      yieldProtocolSlug: `source-${id}`,
-      yieldVenueChain: "ethereum",
-      yieldSources: undefined,
-      ...overrides,
-    });
+    const { id: _id, symbol: _symbol, name: _name, ...base } = buildFixtureData().rows.get("usds-sky")!;
+    const makeYieldRow = (id: string, overrides: Partial<MergedRow>): MergedRow =>
+      makeMergedRowWithIdentity({ id, symbol: id.slice(0, 5).toUpperCase(), name: id }, {
+        ...base, protocolSlug: id, variantOf: null, yieldProtocolSlug: `source-${id}`,
+        yieldVenueChain: "ethereum", yieldSources: undefined, ...overrides,
+      });
     const phantom = makeYieldRow("phantom-yield-no-source", {
       safetyScore: 87,
       pharosYieldScore: 83,
@@ -325,54 +316,17 @@ describe("runSelector — Yield happy path", () => {
       yieldVenueChain: null,
       yieldSources: [],
     });
-    const rows = new Map<string, MergedRow>([
-      [
-        "valid-a",
-        makeYieldRow("valid-a", {
-          safetyScore: 92,
-          pharosYieldScore: 88,
-          apy30d: 5.5,
-          supplyUsd: 100_000_000_000,
-        }),
-      ],
-      [
-        "valid-b",
-        makeYieldRow("valid-b", {
-          safetyScore: 90,
-          pharosYieldScore: 86,
-          apy30d: 5.3,
-          supplyUsd: 90_000_000_000,
-        }),
-      ],
-      [
-        "valid-c",
-        makeYieldRow("valid-c", {
-          safetyScore: 88,
-          pharosYieldScore: 84,
-          apy30d: 5.1,
-          supplyUsd: 80_000_000_000,
-        }),
-      ],
-      [
-        "valid-d",
-        makeYieldRow("valid-d", {
-          safetyScore: 70,
-          pharosYieldScore: 60,
-          apy30d: 4.2,
-          supplyUsd: 10_000_000_000,
-        }),
-      ],
-      [
-        "valid-e",
-        makeYieldRow("valid-e", {
-          safetyScore: 65,
-          pharosYieldScore: 58,
-          apy30d: 4.1,
-          supplyUsd: 9_000_000_000,
-        }),
-      ],
-      [phantom.id, phantom],
-    ]);
+    const candidates = [
+      ["valid-a", 92, 88, 5.5, 100_000_000_000],
+      ["valid-b", 90, 86, 5.3, 90_000_000_000],
+      ["valid-c", 88, 84, 5.1, 80_000_000_000],
+      ["valid-d", 70, 60, 4.2, 10_000_000_000],
+      ["valid-e", 65, 58, 4.1, 9_000_000_000],
+    ] as const;
+    const rows = new Map<string, MergedRow>(candidates.map(([id, safetyScore, pharosYieldScore, apy30d, supplyUsd]) =>
+      [id, makeYieldRow(id, { safetyScore, pharosYieldScore, apy30d, supplyUsd })],
+    ));
+    rows.set(phantom.id, phantom);
 
     const out = runSelector(input, { rows }, FIXTURE_DATASET);
 
@@ -401,7 +355,11 @@ describe("runSelector — Trading happy path", () => {
   const input = makeInput({ profile: "trading", exitSpeed: "any" });
 
   it("emits perInputStaleness on Trading entries", () => {
-    const out = runSelector(input, buildFixtureData(), FIXTURE_DATASET);
+    const row = makeMergedRowWithIdentity({ id: "trading", symbol: "T", name: "Trading" }, {
+      pegSummaryAgeSec: 10, dexTvlAgeSec: 20, dewsAgeSec: 30,
+    });
+    const out = runSelector(input, { rows: new Map([[row.id, row]]) }, FIXTURE_DATASET);
+    expect(out.recommended.map((rec) => rec.id)).toEqual(["trading"]);
     for (const rec of out.recommended) {
       expect(rec.profile).toBe("trading");
       expect(rec.recommendedSource).toBeNull();
@@ -429,6 +387,7 @@ describe("runSelector — Trading happy path", () => {
       },
     ]));
     const out = runSelector(input, data, FIXTURE_DATASET);
+    expect(out.recommended.map((rec) => rec.id)).toContain("usdc-circle");
     for (const rec of out.recommended) {
       if (rec.profile === "trading") {
         expect(rec.perInputStaleness).toEqual({});
@@ -436,14 +395,19 @@ describe("runSelector — Trading happy path", () => {
     }
   });
 
-  it("skips confidence demotion (R2 Active Trader P2)", () => {
-    const data = buildFixtureData();
-    const out = runSelector(input, data, FIXTURE_DATASET);
-    // We only assert the engine reaches the trading branch without throwing
-    // and that the top entry's confidence is reported (rank stays as-scored).
-    if (out.recommended.length > 0) {
-      expect(out.recommended[0]!.confidence).toBeGreaterThanOrEqual(0);
-    }
+  it("keeps score order when the higher-scored trading candidate has lower confidence", () => {
+    const high = makeMergedRowWithIdentity({ id: "high", symbol: "HIGH", name: "High" }, {
+      protocolSlug: "high", safetyScore: 99, liquidityScore: 99, pegScore: 99,
+      safetyEvidenceLevel: "insufficient",
+    });
+    const low = makeMergedRowWithIdentity({ id: "low", symbol: "LOW", name: "Low" }, {
+      protocolSlug: "low", safetyScore: 70, liquidityScore: 60, pegScore: 85,
+    });
+    const out = runSelector(input, { rows: new Map([[low.id, low], [high.id, high]]) }, FIXTURE_DATASET);
+    expect(out.recommended.map((rec) => rec.id)).toEqual(["high", "low"]);
+    expect(out.recommended[0]!.score).toBeGreaterThan(out.recommended[1]!.score);
+    expect(out.recommended[0]!.confidence).toBeLessThan(70);
+    expect(out.recommended[1]!.confidence).toBeGreaterThanOrEqual(70);
   });
 });
 
@@ -603,6 +567,30 @@ describe("runSelector — universal properties", () => {
     }
   });
 
+  it.each([
+    { input: { decentralization: "required" }, row: { governance: "centralized" } },
+    { input: { custodyOk: "onchain-only" }, row: { custodyModel: "institutional-regulated" } },
+    { input: { yieldNativeOnly: true }, row: { deploymentPlace: "lp" } },
+  ] as Array<{ input: Partial<SelectorInput>; row: Partial<MergedRow> }>)(
+    "does not relax a peg failure past mandatory constraints: $input",
+    ({ input, row }) => {
+      const candidate = makeMergedRowWithIdentity({ id: "blocked", symbol: "BLK", name: "Blocked" }, {
+        pegScore: 40, yieldProtocolSlug: "issuer", yieldVenueChain: "ethereum", ...row,
+      });
+      const data = { rows: new Map([[candidate.id, candidate]]) };
+      const control = runSelector(makeInput({ profile: "yield" }), data, FIXTURE_DATASET);
+      expect(control.recommended.map((rec) => rec.id)).toEqual(["blocked"]);
+      expect(control.usedRelaxedFallback).toBe(true);
+      const out = runSelector(makeInput({ profile: "yield", ...input }), data, FIXTURE_DATASET);
+      expect(out.recommended).toEqual([]);
+      expect(out.usedRelaxedFallback).toBe(false);
+      expect(out.relaxedReasons).toEqual([]);
+      expect(out.exclusionSummary).toContainEqual(
+        expect.objectContaining({ reason: "peg-score-floor", sampleIds: ["blocked"] }),
+      );
+    },
+  );
+
   it("emits authored explanation text and confidence reasons instead of raw keys", () => {
     const rows = new Map(buildFixtureData().rows);
     const base = rows.get("usds-sky");
@@ -638,25 +626,12 @@ describe("runSelector — universal properties", () => {
   });
 
   it("uses a close substitute to reduce top-3 protocol concentration", () => {
-    const base = buildFixtureData().rows.get("usdc-circle");
-    expect(base).toBeDefined();
-    const makeCandidate = (
-      id: string,
-      protocolSlug: string,
-      safetyScore: number,
-      supplyUsd: number,
-    ): MergedRow => ({
-      ...base!,
-      id,
-      symbol: id.toUpperCase(),
-      name: id,
-      protocolSlug,
-      variantOf: null,
-      safetyScore,
-      safetyResilienceScore: safetyScore,
-      liquidityScore: safetyScore,
-      supplyUsd,
-    });
+    const { id: _id, symbol: _symbol, name: _name, ...base } = buildFixtureData().rows.get("usdc-circle")!;
+    const makeCandidate = (id: string, protocolSlug: string, safetyScore: number, supplyUsd: number): MergedRow =>
+      makeMergedRowWithIdentity({ id, symbol: id.toUpperCase(), name: id }, {
+        ...base, protocolSlug, variantOf: null, safetyScore,
+        safetyResilienceScore: safetyScore, liquidityScore: safetyScore, supplyUsd,
+      });
 
     const rows = new Map<string, MergedRow>([
       ["issuer-a-1", makeCandidate("issuer-a-1", "issuer-a", 96, 100_000_000_000)],
@@ -827,12 +802,20 @@ describe("runSelector — universal properties", () => {
     }
   });
 
-  it("lowConfidence flips when sparse OR top confidence < 70", () => {
-    const out = runSelector(makeInput(), buildFixtureData(), FIXTURE_DATASET);
-    const top = out.recommended[0];
-    if (top != null && top.confidence >= 70 && !out.coverageWarnings.sparse) {
-      expect(out.lowConfidence).toBe(false);
-    }
+  it.each([
+    { recent: false, events: 0, bluechip: "A" as const, confidence: 100, low: false },
+    { recent: true, events: 4, bluechip: null, confidence: 73, low: false },
+    { recent: true, events: 4, bluechip: null, confidence: 65, low: true, evidence: "insufficient" as const },
+  ])("sets lowConfidence from controlled non-sparse confidence $confidence", (testCase) => {
+    const row = makeMergedRowWithIdentity({ id: "confidence", symbol: "C", name: "Confidence" }, {
+      isRecentListing: testCase.recent, depegEventCount: testCase.events,
+      bluechipGrade: testCase.bluechip, safetyEvidenceLevel: testCase.evidence,
+    });
+    const out = runSelector(makeInput(), { rows: new Map([[row.id, row]]) }, FIXTURE_DATASET);
+    expect(out.recommended.map((rec) => rec.id)).toEqual(["confidence"]);
+    expect(out.recommended[0]!.confidence).toBe(testCase.confidence);
+    expect(out.coverageWarnings.sparse).toBe(false);
+    expect(out.lowConfidence).toBe(testCase.low);
   });
 });
 
@@ -842,10 +825,18 @@ describe("runSelector — purity", () => {
     expect(output).not.toHaveProperty("debug");
   });
 
-  it("no Date.now() / Math.random in the runSelector return shape", () => {
-    // Run twice with the same dataset.timestamp; output must be byte-identical.
-    const a = runSelector(makeInput(), buildFixtureData(), FIXTURE_DATASET);
-    const b = runSelector(makeInput(), buildFixtureData(), FIXTURE_DATASET);
-    expect(JSON.stringify(a)).toBe(JSON.stringify(b));
+  it("does not mutate inputs or depend on ambient clocks and randomness", () => {
+    const first = structuredClone(buildFixtureData());
+    const before = structuredClone(first);
+    const second = structuredClone(first);
+    vi.spyOn(Date, "now").mockReturnValue(1000);
+    vi.spyOn(Math, "random").mockReturnValue(0.1);
+    const a = runSelector(makeInput(), first, FIXTURE_DATASET);
+    expect(first).toEqual(before);
+    vi.mocked(Date.now).mockReturnValue(9_000_000_000_000);
+    vi.mocked(Math.random).mockReturnValue(0.9);
+    const b = runSelector(makeInput(), second, FIXTURE_DATASET);
+    expect(second).toEqual(before);
+    expect(a).toEqual(b);
   });
 });

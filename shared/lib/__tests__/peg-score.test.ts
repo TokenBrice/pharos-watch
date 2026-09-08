@@ -44,6 +44,11 @@ describe("coinTrackingStart", () => {
 });
 
 describe("computePegScore", () => {
+  it("becomes eligible at exactly seven days, not one second earlier", () => {
+    expect(computePegScore([], NOW - 7 * DAY + 1, NOW).pegScore).toBeNull();
+    expect(computePegScore([], NOW - 7 * DAY, NOW).pegScore).toBe(100);
+  });
+
   it("returns null pegScore with stable defaults when no tracking start exists", () => {
     const result = computePegScore([], null, NOW);
 
@@ -82,14 +87,7 @@ describe("computePegScore", () => {
 
   it("penalizes active depeg events", () => {
     const start = NOW - 90 * DAY;
-    const events = [
-      {
-        startedAt: NOW - DAY,
-        endedAt: null,
-        peakDeviationBps: 500,
-        direction: "below" as const,
-      },
-    ];
+    const events = [makeEvent({ startedAt: NOW - DAY, endedAt: null, peakDeviationBps: 500 })];
     const result = computePegScore(events as never, start, NOW);
     expect(result.pegScore).toBeLessThan(100);
     expect(result.activeDepeg).toBe(true);
@@ -98,14 +96,11 @@ describe("computePegScore", () => {
   it("uses the magnitude floor for brief high-deviation events", () => {
     const start = NOW - 30 * DAY;
     const eventStart = NOW - DAY;
-    const events = [
-      {
-        startedAt: eventStart,
-        endedAt: eventStart + 2 * 60 * 60,
-        peakDeviationBps: 400,
-        direction: "below" as const,
-      },
-    ];
+    const events = [makeEvent({
+      startedAt: eventStart,
+      endedAt: eventStart + 2 * 60 * 60,
+      peakDeviationBps: 400,
+    })];
 
     const recencyWeight = 1 / (1 + (NOW - eventStart) / (365.25 * DAY));
     const durationPenalty = (400 / 100) * (2 / 24 / 30) * recencyWeight;
@@ -118,22 +113,8 @@ describe("computePegScore", () => {
 
   it("weights recent events more heavily than old ones", () => {
     const start = NOW - 365 * DAY;
-    const recentEvent = [
-      {
-        startedAt: NOW - 30 * DAY,
-        endedAt: NOW - 20 * DAY,
-        peakDeviationBps: 5000,
-        direction: "below" as const,
-      },
-    ];
-    const oldEvent = [
-      {
-        startedAt: NOW - 350 * DAY,
-        endedAt: NOW - 340 * DAY,
-        peakDeviationBps: 5000,
-        direction: "below" as const,
-      },
-    ];
+    const recentEvent = [makeEvent({ startedAt: NOW - 30 * DAY, endedAt: NOW - 20 * DAY, peakDeviationBps: 5000 })];
+    const oldEvent = [makeEvent({ startedAt: NOW - 350 * DAY, endedAt: NOW - 340 * DAY, peakDeviationBps: 5000 })];
     const recentResult = computePegScore(recentEvent as never, start, NOW);
     const oldResult = computePegScore(oldEvent as never, start, NOW);
     expect(recentResult.pegScore!).toBeLessThan(oldResult.pegScore!);
@@ -142,24 +123,16 @@ describe("computePegScore", () => {
   it("handles NaN peakDeviationBps without producing NaN score", () => {
     const start = NOW - 90 * DAY;
     const events = [
-      {
-        startedAt: NOW - 30 * DAY,
-        endedAt: NOW - 29 * DAY,
-        peakDeviationBps: NaN,
-        direction: "below" as const,
-      },
-      {
-        startedAt: NOW - 20 * DAY,
-        endedAt: NOW - 19 * DAY,
-        peakDeviationBps: 200,
-        direction: "below" as const,
-      },
+      makeEvent({ startedAt: NOW - 30 * DAY, endedAt: NOW - 29 * DAY, peakDeviationBps: NaN }),
+      makeEvent({ startedAt: NOW - 20 * DAY, endedAt: NOW - 19 * DAY, peakDeviationBps: 200 }),
     ];
     const result = computePegScore(events as never, start, NOW);
-    // Score must be a finite number or null — never NaN
-    if (result.pegScore !== null) {
-      expect(Number.isFinite(result.pegScore)).toBe(true);
-    }
+    expect(Number.isFinite(result.pegScore)).toBe(true);
+    expect(result.pegScore).toBe(computePegScore(
+      events.map((event) => ({ ...event, peakDeviationBps: Number.isNaN(event.peakDeviationBps) ? 0 : event.peakDeviationBps })) as never,
+      start,
+      NOW,
+    ).pegScore);
   });
 
   it("excludes false-positive and disputed events from PegScore inputs", () => {
@@ -227,40 +200,38 @@ describe("computePegScore", () => {
   describe("spreadPenalty (severity-weighted stddev path)", () => {
     const start = NOW - 90 * DAY;
 
-    function makeEvent(startOffset: number, bps: number, confidence?: "low" | "high") {
-      return {
+    function eventAtOffset(startOffset: number, bps: number) {
+      return makeEvent({
         startedAt: NOW - startOffset * DAY,
         endedAt: NOW - (startOffset - 1) * DAY,
         peakDeviationBps: bps,
-        direction: "below" as const,
-        ...(confidence ? { provenance: { confidenceTier: confidence } } : {}),
-      };
+      });
     }
 
     it("returns spreadPenalty=0 with a single event (< 2 scored events)", () => {
-      const result = computePegScore([makeEvent(30, 400)] as never, start, NOW);
+      const result = computePegScore([eventAtOffset(30, 400)] as never, start, NOW);
       expect(result.spreadPenalty).toBe(0);
     });
 
     it("returns spreadPenalty=0 when two events have equal |bps| (zero stddev)", () => {
-      const result = computePegScore([makeEvent(40, 300), makeEvent(20, 300)] as never, start, NOW);
+      const result = computePegScore([eventAtOffset(40, 300), eventAtOffset(20, 300)] as never, start, NOW);
       expect(result.spreadPenalty).toBe(0);
     });
 
     it("returns spreadPenalty>0 when two events have differing |bps|", () => {
-      const result = computePegScore([makeEvent(60, 100), makeEvent(30, 900)] as never, start, NOW);
+      const result = computePegScore([eventAtOffset(60, 100), eventAtOffset(30, 900)] as never, start, NOW);
       expect(result.spreadPenalty).toBeGreaterThan(0);
       expect(result.spreadPenalty).toBeLessThanOrEqual(15);
     });
 
     it("low-confidence half-weight changes spreadPenalty vs high-confidence same bps", () => {
       const eventsHigh = [
-        { ...makeEvent(60, 200), provenance: { confidenceTier: "high" } },
-        { ...makeEvent(30, 800), provenance: { confidenceTier: "high" } },
+        { ...eventAtOffset(60, 200), provenance: { confidenceTier: "high" } },
+        { ...eventAtOffset(30, 800), provenance: { confidenceTier: "high" } },
       ];
       const eventsLow = [
-        { ...makeEvent(60, 200), provenance: { confidenceTier: "low" } },
-        { ...makeEvent(30, 800), provenance: { confidenceTier: "high" } },
+        { ...eventAtOffset(60, 200), provenance: { confidenceTier: "low" } },
+        { ...eventAtOffset(30, 800), provenance: { confidenceTier: "high" } },
       ];
       const high = computePegScore(eventsHigh as never, start, NOW);
       const low = computePegScore(eventsLow as never, start, NOW);
@@ -270,7 +241,7 @@ describe("computePegScore", () => {
     });
 
     it("caps spreadPenalty at 15 for extreme variance", () => {
-      const result = computePegScore([makeEvent(80, 1), makeEvent(40, 100_000)] as never, start, NOW);
+      const result = computePegScore([eventAtOffset(80, 1), eventAtOffset(40, 100_000)] as never, start, NOW);
       expect(result.spreadPenalty).toBe(15);
     });
   });
@@ -323,26 +294,31 @@ describe("computePegScoreWithWindow", () => {
 describe("active depeg penalty thresholds", () => {
   const now = 1_700_000_000;
   const trackingStart = now - 365 * DAY;
-  const noDepegResult = computePegScore([], trackingStart, now);
+  // One day out of 365 reduces the time component by 0.137 points;
+  // the severity magnitude floors contribute 0.025, 0.125 and 1.247.
   const cases = [
-    { name: "uses the 5-point floor at 100 bps", peakDeviationBps: -100, minimumScoreDrop: 5, maximumScore: null },
-    { name: "scales a 500 bps depeg to 10 points", peakDeviationBps: -500, minimumScoreDrop: 10, maximumScore: null },
-    { name: "caps a 5000 bps depeg at 50 points", peakDeviationBps: -5000, minimumScoreDrop: null, maximumScore: 50 },
+    { name: "uses the 5-point floor at 100 bps", peakDeviationBps: -100, expected: 95 },
+    { name: "scales a 500 bps depeg to 10 points", peakDeviationBps: -500, expected: 90 },
+    { name: "caps a 5000 bps depeg at 50 points", peakDeviationBps: -5000, expected: 49 },
   ];
 
-  it.each(cases)("$name", ({ peakDeviationBps, minimumScoreDrop, maximumScore }) => {
+  it.each(cases)("$name", ({ peakDeviationBps, expected }) => {
     const result = computePegScore(
       [makeEvent({ startedAt: now - DAY, peakDeviationBps })] as never,
       trackingStart,
       now,
     );
 
-    if (minimumScoreDrop != null) {
-      expect(noDepegResult.pegScore! - result.pegScore!).toBeGreaterThanOrEqual(minimumScoreDrop);
-    }
-    if (maximumScore != null) {
-      expect(result.pegScore!).toBeLessThanOrEqual(maximumScore);
-    }
+    expect(result.pegScore).toBe(expected);
+  });
+
+  it("uses the worst concurrent active penalty rather than summing penalties", () => {
+    const result = computePegScore([
+      makeEvent({ startedAt: now - DAY, peakDeviationBps: -100 }),
+      makeEvent({ startedAt: now - DAY, peakDeviationBps: -500 }),
+    ] as never, trackingStart, now);
+    // 49.863 time half + 49.850 severity half - 10 active - 3 spread = 86.713.
+    expect(result.pegScore).toBe(87);
   });
 });
 
@@ -374,6 +350,37 @@ describe("young coin with chronic depegs", () => {
 });
 
 describe("computeRecentPegStats", () => {
+  it("requires a past tracking anchor", () => {
+    for (const anchor of [null, NOW, NOW + DAY]) {
+      expect(computeRecentPegStats([], anchor, NOW)).toBeNull();
+    }
+  });
+
+  it("excludes boundary-ended incidents but clips straddling time to the recent window", () => {
+    const boundary = NOW - 90 * DAY;
+    const ended = makeEvent({ startedAt: boundary - DAY, endedAt: boundary, peakDeviationBps: -9000 });
+    const straddling = makeEvent({ startedAt: boundary - DAY, endedAt: boundary + DAY, peakDeviationBps: -200 });
+    const result = computeRecentPegStats([ended, straddling] as never, boundary - 30 * DAY, NOW);
+    expect(result).toMatchObject({ observedDays: 90, coverageLimited: false, incidentCount: 1, thresholdCrossingCount: 1, worstDeviationBps: -200 });
+    expect(result!.pegPct).toBeCloseTo(98.8888888889);
+  });
+
+  it("ignores future-start incidents in both score and recent summaries", () => {
+    const event = makeEvent({ startedAt: NOW + 1, peakDeviationBps: -9000 });
+    expect(computeRecentPegStats([event] as never, NOW - 90 * DAY, NOW)).toEqual(
+      computeRecentPegStats([], NOW - 90 * DAY, NOW),
+    );
+    expect(computePegScore([event] as never, NOW - 90 * DAY, NOW)).toEqual(
+      computePegScore([], NOW - 90 * DAY, NOW),
+    );
+  });
+
+  it("counts one crossing for absent or zero constituent counts", () => {
+    const event = makeEvent({ startedAt: NOW - DAY, endedAt: NOW, peakDeviationBps: -200 });
+    const result = computeRecentPegStats([event, { ...event, constituentEventCount: 0 }] as never, NOW - 90 * DAY, NOW);
+    expect(result).toMatchObject({ incidentCount: 2, thresholdCrossingCount: 2 });
+  });
+
   it("uses only observed coverage and exposes grouped threshold crossings", () => {
     const coverageStart = NOW - 20 * DAY;
     const result = computeRecentPegStats(

@@ -207,15 +207,59 @@ describe("aggregateChains", () => {
     ]);
   });
 
-  it("computes health score factors", () => {
-    const result = aggregateChains(makeInput());
-    const eth = result.chains.find((c) => c.id === "ethereum")!;
-    expect(eth.healthFactors.concentration).toBeGreaterThan(0);
-    expect(eth.healthFactors.quality).toBeGreaterThan(0);
-    expect(eth.healthFactors.pegStability).toBeGreaterThan(0);
-    expect(eth.healthFactors.chainEnvironment).toBeGreaterThan(0);
-    expect(eth.healthScore).toBeGreaterThan(0);
-    expect(eth.healthBand).toBeTruthy();
+  it("rewards diversified holdings with identical total supply and coin quality", () => {
+    const input = makeInput({ safetyScores: { "usdt-tether": 80, "usdc-circle": 80 } });
+    for (const coin of input.peggedAssets) coin.price = 1;
+    const diversified = aggregateChains(input).chains.find((chain) => chain.id === "ethereum")!;
+    input.peggedAssets[0].chainCirculating = { ethereum: { current: 550 } };
+    input.peggedAssets[1].chainCirculating = { ethereum: { current: 0 } };
+    const concentrated = aggregateChains(input).chains.find((chain) => chain.id === "ethereum")!;
+    expect(diversified.totalUsd).toBe(concentrated.totalUsd);
+    expect(diversified.healthFactors.concentration).toBe(50);
+    expect(concentrated.healthFactors.concentration).toBe(0);
+    expect(diversified.healthFactors.quality).toBe(concentrated.healthFactors.quality);
+    expect(diversified.healthFactors.pegStability).toBe(concentrated.healthFactors.pegStability);
+    expect(diversified.healthScore).toBeGreaterThan(concentrated.healthScore!);
+  });
+
+  it("propagates independent safety-score and price deterioration into health", () => {
+    const input = makeInput();
+    const baseline = aggregateChains(input).chains.find((chain) => chain.id === "ethereum")!;
+    const lowerQuality = aggregateChains({
+      ...input, safetyScores: { "usdt-tether": 20, "usdc-circle": 30 },
+    }).chains.find((chain) => chain.id === "ethereum")!;
+    expect(baseline.healthFactors.quality).toBe(81);
+    expect(lowerQuality.healthFactors.quality).toBe(25);
+    expect(lowerQuality.healthFactors.pegStability).toBe(baseline.healthFactors.pegStability);
+    expect(baseline.healthBand).toBe("healthy");
+    expect(lowerQuality.healthBand).toBe("mixed");
+    expect(lowerQuality.healthScore).toBeLessThan(baseline.healthScore!);
+    input.peggedAssets[0].price = 0.9;
+    const depegged = aggregateChains(input).chains.find((chain) => chain.id === "ethereum")!;
+    expect(depegged.healthFactors.quality).toBe(baseline.healthFactors.quality);
+    expect(depegged.healthFactors.pegStability).toBeLessThan(baseline.healthFactors.pegStability);
+    expect(depegged.healthScore).toBeLessThan(baseline.healthScore!);
+  });
+
+  it("withholds composite health when rated supply is unavailable", () => {
+    const eth = aggregateChains(makeInput({ safetyScores: {} })).chains.find((chain) => chain.id === "ethereum")!;
+    expect(eth.healthFactors.quality).toBeNull();
+    expect(eth.healthScore).toBeNull();
+    expect(eth.healthBand).toBeNull();
+  });
+
+  it("excludes non-USD holdings lacking a reference rather than assuming dollar parity", () => {
+    const input = makeInput();
+    input.peggedAssets[0].pegType = "peggedEUR";
+    input.peggedAssets[0].price = 1.2;
+    input.peggedAssets[1].price = 1;
+    const missing = aggregateChains(input).chains.find((chain) => chain.id === "ethereum")!;
+    const referenced = aggregateChains({
+      ...input, pegRates: { peggedUSD: 1, peggedEUR: 1 },
+    }).chains.find((chain) => chain.id === "ethereum")!;
+    expect(missing.healthFactors.pegStability).toBe(100);
+    expect(referenced.healthFactors.pegStability).toBe(45);
+    expect(missing.healthScore).toBeGreaterThan(referenced.healthScore!);
   });
 
   it("assigns tier 1 chain environment to ethereum", () => {

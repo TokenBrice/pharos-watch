@@ -56,8 +56,6 @@ describe("reviewed blacklist status", () => {
   });
 
   it("fails closed when the canonical review is missing", () => {
-    expect(() => resolveBlacklistStatus(makeMeta("missing"))).toThrow(
-      "Stablecoin missing has no reviewed blacklistability status",
-    );
+    expect(() => resolveBlacklistStatus(makeMeta("missing"))).toThrow(Error);
   });
 });

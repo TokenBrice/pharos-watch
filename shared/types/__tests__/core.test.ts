@@ -7,6 +7,7 @@ import {
   type StablecoinMeta,
 } from "../core";
 import { OracleRiskBranchSchema } from "../stablecoin-meta-schemas";
+import { StablecoinMetaSourceAssetSchema } from "@shared/lib/stablecoins/schema";
 
 function makeCoin(overrides: Partial<StablecoinMeta> = {}): StablecoinMeta {
   return {
@@ -22,7 +23,7 @@ function makeCoin(overrides: Partial<StablecoinMeta> = {}): StablecoinMeta {
       navToken: false,
     },
     ...overrides,
-  } as StablecoinMeta;
+  };
 }
 
 describe("STABLECOIN_STATUS_VALUES", () => {
@@ -47,11 +48,8 @@ describe("DETAIL_PROVIDER_VALUES", () => {
 
 describe("StablecoinMeta", () => {
   it("accepts a frozen coin with obituary block", () => {
-    const meta: StablecoinMeta = {
-      id: "fixture-frozen",
-      name: "Fixture",
-      symbol: "FXT",
-      flags: { pegCurrency: "USD", governance: "centralized", backing: "fiat" } as never,
+    const meta = {
+      ...makeCoin({ id: "fixture-frozen", name: "Fixture", symbol: "FXT" }),
       status: "frozen",
       frozenAt: "2026-04-27",
       obituary: {
@@ -63,7 +61,15 @@ describe("StablecoinMeta", () => {
         sourceLabel: "Issuer announcement",
       },
     };
-    expect(meta.status).toBe("frozen");
+    expect(StablecoinMetaSourceAssetSchema.parse(meta).obituary).toEqual(meta.obituary);
+    const result = StablecoinMetaSourceAssetSchema.safeParse({
+      ...meta,
+      obituary: { ...meta.obituary, sourceUrl: "not-a-url" },
+    });
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      expect(result.error.issues).toContainEqual(expect.objectContaining({ path: ["obituary", "sourceUrl"] }));
+    }
   });
 });
 
@@ -124,79 +130,15 @@ describe("getFilterTags — infrastructures", () => {
 
 describe("getFilterTags — tracked variants", () => {
   it("emits no variant tags when variant metadata is absent", () => {
-    const tags = getFilterTags(makeCoin());
-    expect(tags).not.toContain("variant-tracked");
-    expect(tags).not.toContain("variant-pure-wrapper");
-    expect(tags).not.toContain("variant-savings-passthrough");
-    expect(tags).not.toContain("variant-strategy-vault");
-    expect(tags).not.toContain("variant-risk-absorption");
-    expect(tags).not.toContain("variant-bond-maturity");
+    expect(getFilterTags(makeCoin()).filter((tag) => tag.startsWith("variant-"))).toEqual([]);
   });
 
-  it("emits tracked pure-wrapper tags", () => {
-    const tags = getFilterTags(makeCoin({
-      variantOf: "base-coin",
-      variantKind: "pure-wrapper",
-    }));
-
-    expect(tags).toContain("variant-tracked");
-    expect(tags).toContain("variant-pure-wrapper");
-    expect(tags).not.toContain("variant-savings-passthrough");
-    expect(tags).not.toContain("variant-strategy-vault");
-    expect(tags).not.toContain("variant-risk-absorption");
-    expect(tags).not.toContain("variant-bond-maturity");
-  });
-
-  it("emits tracked savings variant tags", () => {
-    const tags = getFilterTags(makeCoin({
-      variantOf: "base-coin",
-      variantKind: "savings-passthrough",
-    }));
-
-    expect(tags).toContain("variant-tracked");
-    expect(tags).toContain("variant-savings-passthrough");
-    expect(tags).not.toContain("variant-strategy-vault");
-    expect(tags).not.toContain("variant-risk-absorption");
-    expect(tags).not.toContain("variant-bond-maturity");
-  });
-
-  it("emits tracked strategy variant tags", () => {
-    const tags = getFilterTags(makeCoin({
-      variantOf: "base-coin",
-      variantKind: "strategy-vault",
-    }));
-
-    expect(tags).toContain("variant-tracked");
-    expect(tags).toContain("variant-strategy-vault");
-    expect(tags).not.toContain("variant-savings-passthrough");
-    expect(tags).not.toContain("variant-risk-absorption");
-    expect(tags).not.toContain("variant-bond-maturity");
-  });
-
-  it("emits tracked risk-absorption variant tags", () => {
-    const tags = getFilterTags(makeCoin({
-      variantOf: "base-coin",
-      variantKind: "risk-absorption",
-    }));
-
-    expect(tags).toContain("variant-tracked");
-    expect(tags).toContain("variant-risk-absorption");
-    expect(tags).not.toContain("variant-savings-passthrough");
-    expect(tags).not.toContain("variant-strategy-vault");
-    expect(tags).not.toContain("variant-bond-maturity");
-  });
-
-  it("emits tracked bond variant tags", () => {
-    const tags = getFilterTags(makeCoin({
-      variantOf: "base-coin",
-      variantKind: "bond-maturity",
-    }));
-
-    expect(tags).toContain("variant-tracked");
-    expect(tags).toContain("variant-bond-maturity");
-    expect(tags).not.toContain("variant-savings-passthrough");
-    expect(tags).not.toContain("variant-strategy-vault");
-    expect(tags).not.toContain("variant-risk-absorption");
+  it.each([
+    "pure-wrapper", "savings-passthrough", "strategy-vault", "risk-absorption", "bond-maturity",
+  ] as const)("emits exactly the tracked and %s tags", (variantKind) => {
+    const tags = getFilterTags(makeCoin({ variantOf: "base-coin", variantKind }));
+    expect(tags.filter((tag) => tag.startsWith("variant-")).sort())
+      .toEqual([`variant-${variantKind}`, "variant-tracked"].sort());
   });
 });
 

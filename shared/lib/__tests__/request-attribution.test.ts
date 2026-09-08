@@ -3,6 +3,7 @@ import {
   createBufferedAttributionRecorder,
   type AttributionDb,
   type BufferedAttributionEntry,
+  type CreateBufferedAttributionRecorderOptions,
 } from "../request-attribution";
 
 interface TestEntry extends BufferedAttributionEntry {
@@ -18,10 +19,10 @@ function makeEntry(routeKey: string): TestEntry {
   };
 }
 
-function createRecorder(flushDelayMs = 100) {
+function createRecorder(overrides: Partial<CreateBufferedAttributionRecorderOptions<TestEntry>> = {}) {
   return createBufferedAttributionRecorder<TestEntry>({
     batchSize: 1,
-    flushDelayMs,
+    flushDelayMs: 100,
     pruneIntervalSec: 3_600,
     retentionSec: 86_400,
     insertSql: "INSERT test attribution",
@@ -32,7 +33,23 @@ function createRecorder(flushDelayMs = 100) {
     mergeBuffered: (existing, incoming) => {
       existing.requestCount += incoming.requestCount;
     },
+    ...overrides,
   });
+}
+
+function persistedDb(beforeCommit: () => Promise<void> = async () => {}) {
+  const rows: unknown[][] = [];
+  const db: AttributionDb = {
+    prepare: () => ({
+      bind: (...values: unknown[]) => ({ values, run: async () => ({}) }),
+    }),
+    batch: async (statements) => {
+      await beforeCommit();
+      rows.push(...(statements as unknown as { values: unknown[] }[]).map((statement) => statement.values));
+      return [];
+    },
+  };
+  return { db, rows };
 }
 
 describe("createBufferedAttributionRecorder", () => {
@@ -126,20 +143,7 @@ describe("createBufferedAttributionRecorder", () => {
         return [];
       },
     };
-    const recorder = createBufferedAttributionRecorder<TestEntry>({
-      batchSize: 1,
-      flushDelayMs: 100,
-      pruneIntervalSec: 3_600,
-      retentionSec: 86_400,
-      insertSql: "INSERT test attribution",
-      pruneSql: ["PRUNE test attribution"],
-      logLabel: "test",
-      buildKey: (entry) => `${entry.bucketStart}:${entry.route.routeKey}:${entry.source}`,
-      bindInsertParams: (entry) => [entry.bucketStart, entry.route.routeKey, entry.requestCount],
-      mergeBuffered: (existing, incoming) => {
-        existing.requestCount += incoming.requestCount;
-      },
-    });
+    const recorder = createRecorder({ pruneSql: ["PRUNE test attribution"] });
 
     const firstRecord = recorder.record(db, makeEntry("first"), 1_700_000_000);
     await vi.advanceTimersByTimeAsync(100);
@@ -153,5 +157,71 @@ describe("createBufferedAttributionRecorder", () => {
     await lateRecord;
 
     expect(attemptedRouteKeys).toEqual(["first", "late"]);
+  });
+
+  it("coalesces same-key traffic into one persisted count", async () => {
+    vi.useFakeTimers();
+    const { db, rows } = persistedDb();
+    const recorder = createRecorder();
+    const records = [1, 3].map((requestCount) =>
+      recorder.record(db, { ...makeEntry("same"), requestCount }, 1_700_000_000));
+    await vi.runAllTimersAsync();
+    await Promise.all(records);
+    expect(rows).toEqual([[1_700_000_000, "same", 4]]);
+  });
+
+  it("merges newer same-key traffic into a failed atomic chunk without replaying committed chunks", async () => {
+    vi.useFakeTimers();
+    vi.spyOn(console, "warn").mockImplementation(() => {});
+    const recorder = createRecorder({ batchSize: 2 });
+    let attempt = 0;
+    let lateRecord: Promise<void> | undefined;
+    const { db, rows } = persistedDb(async () => {
+      if (++attempt === 2) {
+        lateRecord = recorder.record(db, { ...makeEntry("third"), requestCount: 5 }, 1_700_000_001);
+        throw new Error("atomic rejection");
+      }
+    });
+    const records = ["first", "second", "third", "fourth", "fifth"].map((key) =>
+      recorder.record(db, makeEntry(key), 1_700_000_000));
+    await vi.runAllTimersAsync();
+    await Promise.all([...records, lateRecord]);
+    expect(rows).toEqual([
+      [1_700_000_000, "first", 1], [1_700_000_000, "second", 1],
+      [1_700_000_000, "third", 6], [1_700_000_000, "fourth", 1],
+      [1_700_000_000, "fifth", 1],
+    ]);
+  });
+
+  it("discards the old generation before its scheduled callback", async () => {
+    vi.useFakeTimers();
+    const { db, rows } = persistedDb();
+    const recorder = createRecorder();
+    const old = recorder.record(db, { ...makeEntry("same"), requestCount: 9 }, 1_700_000_000);
+    recorder.reset();
+    const current = recorder.record(db, makeEntry("same"), 1_700_000_001);
+    await vi.runAllTimersAsync();
+    await Promise.all([old, current]);
+    expect(rows).toEqual([[1_700_000_000, "same", 1]]);
+  });
+
+  it("retains exhausted counts until new traffic restarts flushing", async () => {
+    vi.useFakeTimers();
+    vi.spyOn(console, "warn").mockImplementation(() => {});
+    let unavailable = true;
+    const { db, rows } = persistedDb(async () => {
+      if (unavailable) throw new Error("unavailable");
+    });
+    const recorder = createRecorder();
+    const old = recorder.record(db, { ...makeEntry("same"), requestCount: 3 }, 1_700_000_000);
+    await vi.runAllTimersAsync();
+    await old;
+    expect(rows).toEqual([]);
+    expect(vi.getTimerCount()).toBe(0);
+    unavailable = false;
+    const current = recorder.record(db, makeEntry("same"), 1_700_000_001);
+    await vi.runAllTimersAsync();
+    await current;
+    expect(rows).toEqual([[1_700_000_000, "same", 4]]);
   });
 });

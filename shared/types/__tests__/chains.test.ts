@@ -102,6 +102,35 @@ describe("ChainsResponseSchema", () => {
     }).success).toBe(false);
   });
 
+  it("caps positive-supply cargo at exactly five rows", () => {
+    const cargo = Array.from({ length: 6 }, (_, index) => ({
+      id: `coin-${index}`, symbol: `C${index}`, share: 0.1, supplyUsd: 100,
+    }));
+    const payload = {
+      ...validChainsPayload,
+      chains: [{ ...validChainsPayload.chains[0], stablecoinCount: 8, topStablecoins: cargo.slice(0, 5) }],
+    };
+    expect(ChainsResponseSchema.safeParse(payload).success).toBe(true);
+    expect(ChainsResponseSchema.safeParse({
+      ...payload, chains: [{ ...payload.chains[0], topStablecoins: cargo }],
+    }).success).toBe(false);
+  });
+
+  it("rejects oversized cargo below the five-row cap", () => {
+    expect(ChainsResponseSchema.safeParse(validChainsPayload).success).toBe(true);
+    expect(ChainsResponseSchema.safeParse({
+      ...validChainsPayload,
+      chains: [{ ...validChainsPayload.chains[0], stablecoinCount: 1 }],
+    }).success).toBe(false);
+  });
+
+  it("allows empty cargo for zero supply despite a nonzero coin count", () => {
+    expect(ChainsResponseSchema.safeParse({
+      ...validChainsPayload,
+      chains: [{ ...validChainsPayload.chains[0], totalUsd: 0, topStablecoins: [] }],
+    }).success).toBe(true);
+  });
+
   it("rejects a non-finite global 7d ratio", () => {
     expect(ChainsResponseSchema.safeParse({
       ...validChainsPayload,

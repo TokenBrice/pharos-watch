@@ -93,21 +93,26 @@ describe("mint posture predicates", () => {
     }
   });
 
-  it("keeps the strict subsets strict", () => {
-    for (const posture of MINT_AUTHORITY_POSTURE_VALUES) {
-      if (isNoPrivilegedMintChainPosture(posture)) expect(isNoPrivilegedMintPosture(posture)).toBe(true);
-      if (isUnboundedMintPosture(posture)) expect(isFragileMintPosture(posture)).toBe(true);
-      expect(isNoPrivilegedMintPosture(posture) && isFragileMintPosture(posture)).toBe(false);
-    }
-  });
 });
 
 describe("V9 curated mint posture queue", () => {
+  it("projects curated-only mint posture before classifying disagreement", () => {
+    expect(buildV9CuratedMintPostureQueue([
+      { assetId: "mint-only", curatedPosture: "none-resolved-mint", derivedPosture: "concentrated-admin" },
+    ]).entries).toEqual([
+      expect.objectContaining({
+        assetId: "mint-only", curatedBand: "hardened", derivedBand: "concentrated",
+        disagreement: "curated-optimistic",
+      }),
+    ]);
+  });
+
   it("stays silent when the annotation and the derivation agree", () => {
     const queue = buildV9CuratedMintPostureQueue([
       { assetId: "agree-exact", curatedPosture: "bounded-admin", derivedPosture: "bounded-admin" },
       { assetId: "agree-band", curatedPosture: "none-resolved", derivedPosture: "bounded-admin" },
       { assetId: "agree-reconciled", curatedPosture: "unbounded-reconciled", derivedPosture: "unbounded-reconciled" },
+      { assetId: "agree-mint-only", curatedPosture: "none-resolved-mint", derivedPosture: "bounded-admin" },
       { assetId: "neither", curatedPosture: "unknown", derivedPosture: "unknown" },
     ]);
     expect(queue.entries).toEqual([]);
@@ -151,13 +156,15 @@ describe("V9 curated mint posture queue", () => {
   it("digests its content so two runs over one publication are byte-identical", () => {
     const inputs = [
       { assetId: "a", curatedPosture: "bounded-admin" as const, derivedPosture: "concentrated-admin" },
+      { assetId: "z", curatedPosture: "none-resolved-mint" as const, derivedPosture: "unknown" },
+      { assetId: "z-nr", curatedPosture: "unknown" as const, derivedPosture: null, publishesBreakdowns: false },
+      { assetId: "b-nr", curatedPosture: "bounded-admin" as const, derivedPosture: null, publishesBreakdowns: false },
     ];
-    expect(buildV9CuratedMintPostureQueue(inputs).queueDigest).toBe(
-      buildV9CuratedMintPostureQueue(inputs).queueDigest,
-    );
+    expect(buildV9CuratedMintPostureQueue([...inputs].reverse())).toEqual(buildV9CuratedMintPostureQueue(inputs));
     expect(
       buildV9CuratedMintPostureQueue([
-        { assetId: "a", curatedPosture: "bounded-admin", derivedPosture: "unbounded-or-compromised" },
+        ...inputs.slice(1),
+        { ...inputs[0]!, derivedPosture: "unbounded-or-compromised" },
       ]).queueDigest,
     ).not.toBe(buildV9CuratedMintPostureQueue(inputs).queueDigest);
   });

@@ -5,9 +5,10 @@ import { StablecoinMetaSourceAssetSchema } from "../schema";
 import { deriveEffectiveDependencies } from "../../dependency-derivation";
 import { resolveBlacklistStatuses } from "../../report-card-blacklist-matchers";
 import type { StablecoinMeta, VariantKind } from "../../../types";
-import { ACTIVE_META_BY_ID, ACTIVE_STABLECOINS, TRACKED_STABLECOINS } from "../registry";
+import { ACTIVE_META_BY_ID, ACTIVE_STABLECOINS } from "../registry";
 import { isActiveStablecoinMeta } from "../status";
 import { createVariantRelationshipHelpers } from "../variant-relationships";
+import { makeStablecoinMeta } from "@shared/test-utils/stablecoin";
 
 function hasTrackedVariantMeta(
   meta: StablecoinMeta | undefined,
@@ -15,33 +16,51 @@ function hasTrackedVariantMeta(
   return meta?.variantOf != null && meta.variantKind != null && isActiveStablecoinMeta(meta);
 }
 
+const graph = [
+  makeStablecoinMeta({ id: "parent" }),
+  makeStablecoinMeta({ id: "child", variantOf: "parent", variantKind: "risk-absorption" }),
+  makeStablecoinMeta({ id: "sibling", variantOf: "parent", variantKind: "pure-wrapper" }),
+  makeStablecoinMeta({ id: "unrelated", variantOf: "other", variantKind: "pure-wrapper" }),
+  makeStablecoinMeta({ id: "orphan", variantOf: "absent", variantKind: "pure-wrapper" }),
+  makeStablecoinMeta({ id: "childless" }),
+];
 const { getVariantParent, getVariantRelationship, getVariants, isTrackedVariant } = createVariantRelationshipHelpers({
-  activeMetaById: ACTIVE_META_BY_ID,
-  activeStablecoins: ACTIVE_STABLECOINS,
+  activeMetaById: new Map(graph.map((coin) => [coin.id, coin])),
+  activeStablecoins: graph,
   hasTrackedVariantMeta,
 });
 
-const trackedBlacklistStatuses = resolveBlacklistStatuses(TRACKED_STABLECOINS);
-
 describe("stablecoin variants", () => {
-  it("resolves a tracked variant parent", () => {
-    expect(getVariantParent("susds-sky")?.id).toBe("usds-sky");
-    expect(getVariantParent("usds-sky")).toBeNull();
-  });
-
-  it("returns parent relationship details and siblings", () => {
-    const relationship = getVariantRelationship("stusds-sky");
-
-    expect(relationship?.parent.id).toBe("usds-sky");
+  it("resolves a parent and exactly its other children, excluding unrelated variants", () => {
+    expect(getVariantParent("child")?.id).toBe("parent");
+    expect(getVariantParent("parent")).toBeNull();
+    const relationship = getVariantRelationship("child");
+    expect(relationship?.parent.id).toBe("parent");
     expect(relationship?.kind).toBe("risk-absorption");
-    expect(relationship?.siblings.map((coin) => coin.id)).toContain("susds-sky");
+    expect(relationship?.siblings.map((coin) => coin.id)).toEqual(["sibling"]);
+    expect(getVariants("parent").map((coin) => coin.id)).toEqual(["child", "sibling"]);
   });
 
-  it("returns tracked child variants for a parent", () => {
-    expect(getVariants("usds-sky").map((coin) => coin.id)).toEqual(["susds-sky", "stusds-sky"]);
+  it("returns no relationships or tracked status for an unknown id", () => {
+    expect(getVariantParent("unknown")).toBeNull();
+    expect(getVariantRelationship("unknown")).toBeNull();
+    expect(isTrackedVariant("unknown")).toBe(false);
+  });
+
+  it("does not invent a parent relationship for an authored orphan", () => {
+    expect(isTrackedVariant("orphan")).toBe(true);
+    expect(getVariantParent("orphan")).toBeNull();
+    expect(getVariantRelationship("orphan")).toBeNull();
+  });
+
+  it("returns an empty variant list for a childless parent", () => {
+    expect(getVariants("childless")).toEqual([]);
   });
 
   it("marks only authored tracked variants", () => {
+    const { isTrackedVariant } = createVariantRelationshipHelpers({
+      activeMetaById: ACTIVE_META_BY_ID, activeStablecoins: ACTIVE_STABLECOINS, hasTrackedVariantMeta,
+    });
     expect(isTrackedVariant("susde-ethena")).toBe(true);
     expect(isTrackedVariant("susdai-usd-ai")).toBe(true);
     expect(isTrackedVariant("busd0-usual")).toBe(false);
@@ -52,11 +71,17 @@ describe("stablecoin variants", () => {
     expect(isTrackedVariant("usde-ethena")).toBe(false);
   });
 
-  it("keeps stkgho's direct pause authority above gho-aave's upstream status", () => {
-    // GHO crosses the strict majority upstream threshold through GSM exposure,
-    // while stkGHO keeps its local pause authority.
-    expect(trackedBlacklistStatuses.get("gho-aave")).toBe("inherited");
-    expect(trackedBlacklistStatuses.get("stkgho-umbrella-aave")).toBe(true);
+  it("preserves a direct reviewed blacklist status independently of upstream status", () => {
+    const review = {
+      sourceFreeRationale: "Synthetic reviewed fixture", evidence: "Explicit local authority review",
+      reviewer: "test", reviewedAt: "2026-01-01",
+    };
+    const statuses = resolveBlacklistStatuses([
+      makeStablecoinMeta({ id: "upstream", blacklistabilityReview: { ...review, reviewedStatus: "inherited" } }),
+      makeStablecoinMeta({ id: "wrapper", variantOf: "upstream", blacklistabilityReview: { ...review, reviewedStatus: true } }),
+    ]);
+    expect(statuses.get("upstream")).toBe("inherited");
+    expect(statuses.get("wrapper")).toBe(true);
   });
 
   it("normalizes variant-aware dependencies to a single synthetic wrapper edge", () => {

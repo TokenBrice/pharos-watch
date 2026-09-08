@@ -142,6 +142,22 @@ describe("deriveStablecoinVerdict — rule precedence", () => {
     expect(archetype).toBe("yield-bearing-hybrid");
   });
 
+  it("does not let non-yielding NAV tokens bypass the low-grade rule", () => {
+    expect(archetypeOf({
+      navToken: true,
+      yieldBearing: false,
+      mechanismArchetype: undefined,
+      reportCardGrade: "F",
+    })).toBe("low-safety-score");
+  });
+
+  it.each(["tbill", "synthetic-delta-neutral"] as const)(
+    "does not classify non-yielding %s assets as yield hybrids",
+    (mechanismArchetype) => {
+      expect(archetypeOf({ mechanismArchetype, yieldBearing: false })).toBe("uncategorized");
+    },
+  );
+
   it("still returns distressed for NAV tokens with an explicit active depeg signal", () => {
     const archetype = archetypeOf({
       navToken: true,

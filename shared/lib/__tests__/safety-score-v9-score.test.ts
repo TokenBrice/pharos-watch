@@ -441,6 +441,53 @@ describe("scoreV9EvaluatedAsset", () => {
     ).toBe(false);
   });
 
+  it("does not let a blocked matching parent make an unattributed child rateable", () => {
+    const parents = [{
+      upstreamAssetId: "blocked", score: 45, blocked: true,
+      adverseAttribution: [ROOT_ADVERSE],
+      boundedUncertaintyAttribution: [ROOT_BOUNDED_UNCERTAINTY],
+    }];
+    const trace = scoreV9EvaluatedAsset(input({
+      parent: {
+        required: true, score: 45, propagatedReasons: [],
+        propagatedAdverseAttribution: resolveV9SerialParentAdverseAttribution(45, parents),
+        propagatedBoundedUncertaintyAttribution: resolveV9SerialParentBoundedUncertaintyAttribution(45, parents),
+      },
+    }), V9_CANDIDATE_POLICY_V1);
+    expect(trace.finalGrade).toBe("NR");
+    expect(trace.adverseAttribution).toEqual([]);
+    expect(trace.boundedUncertaintyAttribution).toEqual([]);
+  });
+
+  it("retains every causal tied parent once under reversal and duplication", () => {
+    const parents = ["alpha", "beta", "higher"].map((upstreamAssetId) => ({
+      upstreamAssetId, score: upstreamAssetId === "higher" ? 60 : 45, blocked: false,
+      adverseAttribution: [ROOT_ADVERSE],
+      boundedUncertaintyAttribution: [ROOT_BOUNDED_UNCERTAINTY],
+    }));
+    for (const ordered of [parents, [...parents].reverse(), [...parents, ...parents]]) {
+      const trace = scoreV9EvaluatedAsset(input({
+        parent: {
+          required: true, score: 45, propagatedReasons: [],
+          propagatedAdverseAttribution: resolveV9SerialParentAdverseAttribution(45, ordered),
+          propagatedBoundedUncertaintyAttribution: resolveV9SerialParentBoundedUncertaintyAttribution(45, ordered),
+        },
+      }), V9_CANDIDATE_POLICY_V1);
+      expect(trace.finalGrade).toBe("D");
+      expect(trace.finalScore).toBe(45);
+      expect(trace.adverseAttribution).toEqual(["alpha", "beta"].map((id) => ({
+        ...ROOT_ADVERSE, source: "parent-score",
+        path: `parent:${id}:${ROOT_ADVERSE.path}`,
+        message: `Required parent ${id}: ${ROOT_ADVERSE.message}`,
+      })));
+      expect(trace.boundedUncertaintyAttribution).toEqual(["alpha", "beta"].map((id) => ({
+        ...ROOT_BOUNDED_UNCERTAINTY, source: "parent-score",
+        path: `parent:${id}:${ROOT_BOUNDED_UNCERTAINTY.path}`,
+        message: `Required parent ${id}: ${ROOT_BOUNDED_UNCERTAINTY.message}`,
+      })));
+    }
+  });
+
   it("creates stable compact traces and result digests across input order", () => {
     const left = scoreV9EvaluatedAsset(input({ assetId: "left" }), V9_CANDIDATE_POLICY_V1);
     const right = scoreV9EvaluatedAsset(input({ assetId: "right" }), V9_CANDIDATE_POLICY_V1);

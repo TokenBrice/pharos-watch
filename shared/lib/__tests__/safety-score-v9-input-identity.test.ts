@@ -35,10 +35,15 @@ describe("Safety Score V9 input identity", () => {
     }
   });
 
-  it("requires every persisted identity field to match", () => {
+  it("requires methodology, generation, publication, and build identities to match", () => {
     const identity = buildSafetyScoreV9InputIdentity(input);
 
-    expect(safetyScoreV9InputIdentitiesMatch(identity, identity)).toBe(true);
+    expect(safetyScoreV9InputIdentitiesMatch(identity, buildSafetyScoreV9InputIdentity({ ...input }))).toBe(true);
+    expect(safetyScoreV9InputIdentitiesMatch(identity, { ...identity, methodologyVersion: "9.1" })).toBe(false);
+    expect(safetyScoreV9InputIdentitiesMatch(identity, {
+      ...identity,
+      baseInputGenerationId: `report-cards-input:v1:${"b".repeat(64)}`,
+    })).toBe(false);
     expect(
       safetyScoreV9InputIdentitiesMatch(identity, {
         ...identity,

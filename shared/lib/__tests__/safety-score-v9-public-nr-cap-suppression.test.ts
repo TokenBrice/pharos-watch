@@ -187,11 +187,17 @@ describe("Safety Score v9 public NR cap suppression", () => {
   });
 
   it("keeps the rated binding cap unchanged", () => {
-    const card = projectSafetyScoreV9Card(fixture("rated", true));
+    const input = fixture("rated", true);
+    const nonBindingCap: V9CapTrace = { ...CAP, kind: "reason:missing-peg-input", limit: 69, binding: false };
+    input.trace.caps = [nonBindingCap, CAP];
+    const card = projectSafetyScoreV9Card(input);
 
     expect(card.score).not.toBeNull();
-    expect(card.caps[0]?.binding).toBe(true);
-    expect(card.bindingCap).toEqual(card.caps[0]);
+    expect(card.caps).toEqual([
+      expect.objectContaining({ kind: nonBindingCap.kind, source: nonBindingCap.source, limit: 69, binding: false }),
+      expect.objectContaining({ kind: CAP.kind, source: CAP.source, limit: 55, binding: true }),
+    ]);
+    expect(card.bindingCap).toMatchObject({ kind: CAP.kind, source: CAP.source, limit: 55, binding: true });
   });
 
   it("rejects hand-built NR cards with a binding cap or binding candidate", () => {

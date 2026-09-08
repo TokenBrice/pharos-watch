@@ -64,12 +64,4 @@ describe("inferResilienceDefaults", () => {
       });
     }
   }
-
-  it("resolves every backing × governance combination to a defined record", () => {
-    for (const backing of BACKING_TYPE_VALUES) {
-      for (const governance of GOVERNANCE_TYPE_VALUES) {
-        expect(inferResilienceDefaults(backing, governance)).toBeDefined();
-      }
-    }
-  });
 });

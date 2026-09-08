@@ -76,4 +76,42 @@ describe("critical control identities", () => {
       },
     ]);
   });
+  it("does not mistake repeated identities within one path for common control", () => {
+    const meta = {
+      mintAuthority: { controls: [
+        { chain: "ethereum", address: "0xABC", label: "One", failureDomainKeys: ["issuer"] },
+        { chain: "ethereum", address: "0xabc", label: "Two", failureDomainKeys: ["issuer", "issuer"] },
+      ] },
+    } as unknown as StablecoinMeta;
+    expect(findCommonCriticalControls(meta)).toEqual([]);
+  });
+
+  it("keeps matching address bytes on different chains independent", () => {
+    const meta = {
+      mintAuthority: { controls: [{ chain: "ethereum", address: "0xABC", label: "Mint" }] },
+      bridgeRouteRisk: { routes: [{ id: "Bridge", controllerChain: "base", controllerAddress: "0xabc" }] },
+    } as unknown as StablecoinMeta;
+    expect(findCommonCriticalControls(meta)).toEqual([]);
+  });
+
+  it("joins bridge controllers, oracle feeds, and reviewed oracle keys to mint controls", () => {
+    const meta = {
+      mintAuthority: { controls: [{
+        chain: "ethereum", address: "0xABC", label: "Mint",
+        failureDomainKeys: ["branch", "feed"],
+      }] },
+      bridgeRouteRisk: { routes: [{
+        id: "Bridge", controllerChain: "ethereum", controllerAddress: "0xabc",
+      }] },
+      oracleRisk: { branches: [{
+        label: "Oracle", failureDomainKeys: ["branch"],
+        feeds: [{ chain: "ethereum", address: "0xabc", provider: "Feed", failureDomainKeys: ["feed"] }],
+      }] },
+    } as unknown as StablecoinMeta;
+    expect(findCommonCriticalControls(meta)).toEqual([
+      { key: "address:ethereum:0xabc", paths: ["bridge", "mint", "oracle"], labels: ["Bridge", "Mint", "Oracle: Feed"] },
+      { key: "reviewed:branch", paths: ["mint", "oracle"], labels: ["Mint", "Oracle"] },
+      { key: "reviewed:feed", paths: ["mint", "oracle"], labels: ["Mint", "Oracle: Feed"] },
+    ]);
+  });
 });

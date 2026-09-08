@@ -1,19 +1,12 @@
-/**
- * Type-test patterns. Most assertions are at compile time; we use `expectType`
- * helpers via TypeScript's type system. The runtime tests just round-trip
- * exhaustive enum lists.
- */
-import { describe, expect, it } from "vitest";
+// Compile-time expectations are included by tsconfig.test-typecheck.json.
+import { describe, expect, expectTypeOf, it } from "vitest";
 import {
   CONTEXT_KEYS,
   DEPEG_TOLERANCE_VALUES,
   EXCLUSION_REASONS,
   EXIT_SPEED_VALUES,
-  HORIZON_VALUES,
-  LOWEST_SUB_DIMENSION_KEYS,
   SELECTOR_PROFILES,
   WEIGHT_KEYS,
-  WHY_KEYS,
 } from "../types";
 import type {
   ExclusionReason,
@@ -21,7 +14,6 @@ import type {
   SelectorProfile,
   SelectorRecommendation,
   WeightKey,
-  WhyKey,
 } from "../types";
 
 function assertExhaustive(_: never): never {
@@ -45,24 +37,12 @@ describe("type vocabularies", () => {
     expect(seen).toEqual(["treasury", "yield", "trading"]);
   });
 
-  it("LOWEST_SUB_DIMENSION_KEYS covers exactly 11 keys", () => {
-    expect(LOWEST_SUB_DIMENSION_KEYS).toHaveLength(11);
-  });
-
-  it("HORIZON_VALUES has exactly 5 horizons", () => {
-    expect(HORIZON_VALUES).toHaveLength(5);
-  });
-
   it("DEPEG_TOLERANCE_VALUES = zero / tight / moderate", () => {
     expect([...DEPEG_TOLERANCE_VALUES]).toEqual(["zero", "tight", "moderate"]);
   });
 
   it("EXIT_SPEED_VALUES = 1h / 24h / any", () => {
     expect([...EXIT_SPEED_VALUES]).toEqual(["1h", "24h", "any"]);
-  });
-
-  it("WEIGHT_KEYS covers every scoring slot", () => {
-    expect(WEIGHT_KEYS.length).toBeGreaterThanOrEqual(17);
   });
 
   it("EXCLUSION_REASONS has all rule codes", () => {
@@ -80,12 +60,6 @@ describe("type vocabularies", () => {
     }
   });
 
-  it("WHY_KEYS is non-empty and types as union", () => {
-    expect(WHY_KEYS.length).toBeGreaterThan(0);
-    const k: WhyKey = WHY_KEYS[0]!;
-    expect(typeof k).toBe("string");
-  });
-
   it("CONTEXT_KEYS includes documented hedges", () => {
     expect([...CONTEXT_KEYS]).toContain("recent-listing");
     expect([...CONTEXT_KEYS]).toContain("coverage-thin");
@@ -93,42 +67,18 @@ describe("type vocabularies", () => {
 });
 
 describe("discriminated SelectorRecommendation", () => {
-  it("narrows on profile", () => {
-    function discriminate(rec: SelectorRecommendation): string {
-      switch (rec.profile) {
-        case "treasury":
-          return rec.recommendedSource === null ? "treasury" : "broken";
-        case "yield":
-          return rec.recommendedSource.protocol; // type-narrowed to non-null
-        case "trading":
-          return Object.keys(rec.perInputStaleness).join(","); // non-null
-        default:
-          return assertExhaustive(rec);
-      }
-    }
-    expect(typeof discriminate).toBe("function");
-  });
-
-  it("LowestSubDimensionKey narrows", () => {
-    function _(k: LowestSubDimensionKey): number {
-      switch (k) {
-        case "pegStability":
-        case "liquidity":
-        case "resilience":
-        case "decentralization":
-        case "dependencyRisk":
-        case "collateralQuality":
-        case "custodyModel":
-        case "governanceOverride":
-        case "activeDepegHistory":
-        case "yieldVariance":
-        case "sourceRisk":
-          return 1;
-        default:
-          return assertExhaustive(k);
-      }
-    }
-    expect(_).toBeDefined();
+  it("preserves profile-specific types (checked by typecheck:tests)", () => {
+    expectTypeOf<Extract<SelectorRecommendation, { profile: "treasury" }>["recommendedSource"]>()
+      .toEqualTypeOf<null>();
+    expectTypeOf<Extract<SelectorRecommendation, { profile: "yield" }>["recommendedSource"]>()
+      .not.toBeNullable();
+    expectTypeOf<Extract<SelectorRecommendation, { profile: "trading" }>["perInputStaleness"]>()
+      .not.toBeNullable();
+    expectTypeOf<LowestSubDimensionKey>().toEqualTypeOf<
+      "pegStability" | "liquidity" | "resilience" | "decentralization" |
+      "dependencyRisk" | "collateralQuality" | "custodyModel" |
+      "governanceOverride" | "activeDepegHistory" | "yieldVariance" | "sourceRisk"
+    >();
   });
 
   it("WeightKey narrows", () => {

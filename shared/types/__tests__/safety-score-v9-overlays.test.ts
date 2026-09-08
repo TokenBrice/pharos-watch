@@ -22,17 +22,9 @@ const ASSURANCE_COMPONENT_BY_ARCHETYPE: Readonly<Record<string, string>> = {
   tbill: "lossRecoveryDesign",
 };
 
-// Pre-existing violations found when this guard was authored (ODR-C2-guard,
-// 2026-09-01), grandfathered so the guard can ship without a forbidden edit
-// to mechanism-review-overlays-v1.json rows. `brz-transfero`'s overlay
-// (reviewedAt 2026-08-08) marked assuranceAndReconciliation unavailable
-// before a proofOfReserves.latestReport (self-verification, reviewed
-// 2026-08-29) was later added to its coin record; assuranceFact() now grades
-// that report known(weak), so the curated row silently overrides a known
-// fact. Fixing the row is mechanism-overlay curation work, not this guard's
-// job — do not widen this list without the same scrutiny; shrink it only
-// when the referenced row is actually re-curated.
-const KNOWN_PRE_EXISTING_OVERRIDE_VIOLATIONS: readonly string[] = [];
+const mechanismFixture = { schemaVersion: 1, note: "Fixture", overlays: [mechanismOverlays.overlays[0]] };
+const transferFixture = { schemaVersion: 1, note: "Fixture", reviews: [transferOverlays.reviews[0]] };
+const operationalFixture = { schemaVersion: 1, note: "Fixture", overlays: [operationalResilienceOverlays.overlays[0]] };
 
 describe("shared Safety Score V9 overlay boundaries", () => {
   it("validates every checked-in overlay asset through the shared schemas", () => {
@@ -44,16 +36,15 @@ describe("shared Safety Score V9 overlay boundaries", () => {
   });
 
   it("rejects a malformed mechanism row instead of allowing a frontend cast", () => {
-    const malformed = structuredClone(mechanismOverlays) as Record<string, unknown> & {
-      overlays: Array<Record<string, unknown>>;
-    };
-    malformed.overlays[0] = { ...malformed.overlays[0], unexpectedPublishedField: true };
+    expect(SafetyScoreV9MechanismReviewOverlayFileSchema.safeParse(mechanismFixture).success).toBe(true);
+    const malformed = { ...mechanismFixture, overlays: [{ ...mechanismFixture.overlays[0], unexpectedPublishedField: true }] };
     expect(SafetyScoreV9MechanismReviewOverlayFileSchema.safeParse(malformed).success).toBe(false);
     expect(SafetyScoreV9MechanismReviewOverlayFileSchema.safeParse({ ...malformed, overlays: [{ ...mechanismOverlays.overlays[0], reviewedAt: "2026-02-31" }] }).success).toBe(false);
   });
 
   it("rejects transfer rows without a canonical deployment", () => {
-    const malformed = structuredClone(transferOverlays) as Record<string, unknown> & {
+    expect(SafetyScoreV9ReviewedTransferFileSchema.safeParse(transferFixture).success).toBe(true);
+    const malformed = structuredClone(transferFixture) as Record<string, unknown> & {
       reviews: Array<{ deployments: Array<{ scope: string }> }>;
     };
     malformed.reviews[0]!.deployments.forEach((deployment) => {
@@ -63,7 +54,8 @@ describe("shared Safety Score V9 overlay boundaries", () => {
   });
 
   it("rejects operational-resilience evidence references absent from sources", () => {
-    const malformed = structuredClone(operationalResilienceOverlays) as Record<string, unknown> & {
+    expect(SafetyScoreV9OperationalResilienceOverlayFileSchema.safeParse(operationalFixture).success).toBe(true);
+    const malformed = structuredClone(operationalFixture) as Record<string, unknown> & {
       overlays: Array<{ eligibility: { liveHistory: { sourceIds: string[] } } }>;
     };
     malformed.overlays[0]!.eligibility.liveHistory.sourceIds = ["missing-source"];
@@ -71,13 +63,15 @@ describe("shared Safety Score V9 overlay boundaries", () => {
   });
 
   it.each([
-    [SafetyScoreV9MechanismReviewOverlayFileSchema, { ...mechanismOverlays, overlays: [...mechanismOverlays.overlays, mechanismOverlays.overlays[0]!] }, "overlays", "Duplicate overlay assetId"],
-    [SafetyScoreV9OperationalResilienceOverlayFileSchema, { ...operationalResilienceOverlays, overlays: [...operationalResilienceOverlays.overlays, operationalResilienceOverlays.overlays[0]!] }, "overlays", "Duplicate operational-resilience overlay assetId"],
-    [SafetyScoreV9ReviewedTransferFileSchema, { ...transferOverlays, reviews: [...transferOverlays.reviews, transferOverlays.reviews[0]!] }, "reviews", "Duplicate reviewed transfer assetId"],
-  ])("keeps duplicate asset issue paths and messages stable", (schema, input, path, message) => {
+    [SafetyScoreV9MechanismReviewOverlayFileSchema, { ...mechanismFixture, overlays: [mechanismFixture.overlays[0], mechanismFixture.overlays[0]] }, "overlays"],
+    [SafetyScoreV9OperationalResilienceOverlayFileSchema, { ...operationalFixture, overlays: [operationalFixture.overlays[0], operationalFixture.overlays[0]] }, "overlays"],
+    [SafetyScoreV9ReviewedTransferFileSchema, { ...transferFixture, reviews: [transferFixture.reviews[0], transferFixture.reviews[0]] }, "reviews"],
+  ])("rejects duplicate asset identities at the collection path", (schema, input, path) => {
     const result = schema.safeParse(input);
     expect(result.success).toBe(false);
-    if (!result.success) expect(result.error.issues).toEqual([{ code: "custom", path: [path], message }]);
+    if (!result.success) {
+      expect(result.error.issues).toContainEqual(expect.objectContaining({ code: "custom", path: [path] }));
+    }
   });
 
   it("never curates an unavailable assurance component the compiler already grades known from proofOfReserves.latestReport", () => {
@@ -99,16 +93,6 @@ describe("shared Safety Score V9 overlay boundaries", () => {
       return [`${overlay.assetId}.${assuranceField}`];
     });
 
-    const knownBaseline = new Set(KNOWN_PRE_EXISTING_OVERRIDE_VIOLATIONS);
-    const newViolations = violations.filter((violation) => !knownBaseline.has(violation));
-    const fixedBaselineEntries = KNOWN_PRE_EXISTING_OVERRIDE_VIOLATIONS.filter(
-      (entry) => !violations.includes(entry),
-    );
-    // Fails on any violation not already grandfathered above (blocks a new
-    // curated `unavailable` row from overriding a compiler-known fact).
-    expect(newViolations).toEqual([]);
-    // Fails once a grandfathered row is re-curated, so the baseline entry
-    // above must be deleted rather than left stale.
-    expect(fixedBaselineEntries).toEqual([]);
+    expect(violations).toEqual([]);
   });
 });

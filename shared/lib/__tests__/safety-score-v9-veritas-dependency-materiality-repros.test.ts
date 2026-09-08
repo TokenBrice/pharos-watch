@@ -1,11 +1,9 @@
 /**
  * VERITAS dependency / materiality repros (VER-003, VER-004, VER2-001 and the
- * VERITAS-II dependency invariant sweep). Consolidated from three
- * single-incident files; each origin keeps its own fixture scope in a block so
- * every assertion and finding name survives verbatim.
+ * VERITAS-II dependency invariant sweep).
  */
 import { describe, expect, it } from "vitest";
-import type { V9FactStatusV2, V9ReserveExposureFactV2 } from "@shared/types/safety-score-v9-facts";
+import type { V9AssetFactsV2, V9FactStatusV2, V9ReserveExposureFactV2 } from "@shared/types/safety-score-v9-facts";
 import {
   evaluateV9ReserveExposures,
   type V9BackingAssetInput,
@@ -17,12 +15,28 @@ import {
   type V9DependencyPlanningAsset,
   type V9DependencyPlanningEdge,
 } from "../safety-score-v9/dependencies";
-import { V9_LEGACY_RESPONSIBILITY_BY_REASON } from "../safety-score-v9/facts";
-import { scoreV9Input } from "../safety-score-v9/formula";
 import { V9_CANDIDATE_POLICY_V1 } from "../safety-score-v9/policy";
+import {
+  coreFixture,
+  compileNativeV3FactSet,
+  evaluateV9FactSet,
+  minimalAsset,
+  knownStatus as fixtureKnownStatus,
+  SOURCE_FINGERPRINTS,
+} from "./safety-score-v9-facts.fixture-support";
+import { unresolvedArchetype } from "./safety-score-v9-facts.test-support";
 
-// Folded in from `safety-score-v9-veritas-dependency-repros.test.ts` (VER-003 / VER-004).
-{
+  function planningAsset(assetId: string, edges: readonly V9DependencyPlanningEdge[]): V9DependencyPlanningAsset {
+    return {
+      assetId,
+      dependencies: { edges },
+      reserveExposures: [],
+      exitRoutes: [],
+      controls: [],
+      peg: { failureDomains: [] },
+      supply: { failureDomains: [] },
+    };
+  }
   function knownStatus(evidenceId: string): V9FactStatusV2 {
     return {
       applicability: { state: "required", policyRuleId: "veritas.required", rationale: null, gapId: null },
@@ -32,28 +46,29 @@ import { V9_CANDIDATE_POLICY_V1 } from "../safety-score-v9/policy";
     };
   }
 
-  function exposure(args: {
-    key: string;
-    weight: number;
-    trackedAssetId?: string | null;
-    custodian?: string;
-  }): V9ReserveExposureFactV2 {
+  function exposure(
+    key: string,
+    weight: number,
+    trackedAssetId: string | null = null,
+    overrides: Partial<V9ReserveExposureFactV2> = {},
+  ): V9ReserveExposureFactV2 {
     return {
-      exposureKey: args.key,
-      classificationKey: "class:" + args.key,
+      exposureKey: key,
+      classificationKey: "class:" + key,
       sourceGenerationId: "reserves:veritas",
       provenance: "curated",
       evidenceClass: "independent",
-      status: knownStatus("evidence:" + args.key),
-      name: args.key,
-      weight: args.weight,
-      trackedAssetId: args.trackedAssetId ?? null,
-      assetClass: args.trackedAssetId ? "stablecoin" : "cash",
+      status: knownStatus("evidence:" + key),
+      name: key,
+      weight,
+      trackedAssetId,
+      assetClass: trackedAssetId ? "stablecoin" : "cash",
       issuerOrObligorKey: null,
       riskFactors: [],
       liquidityHorizon: "immediate",
       maturityDaysMax: null,
-      failureDomains: [{ kind: "reserve-custodian", key: args.custodian ?? "custodian:" + args.key }],
+      failureDomains: [],
+      ...overrides,
     };
   }
 
@@ -73,16 +88,20 @@ import { V9_CANDIDATE_POLICY_V1 } from "../safety-score-v9/policy";
   function unavailable(
     exposureKey: string,
     code: "material-dependency-unavailable" | "nonmaterial-dependency-unavailable",
+    upstreamAssetId = "upstream",
   ): V9ResolvedUpstreamExposure {
     return {
       exposureKey,
-      upstreamAssetId: "upstream",
+      upstreamAssetId,
       score: null,
       evidenceLevel: "insufficient",
       reasonCodes: [code],
       failureDomains: [],
     };
   }
+
+// VER-003 / VER-004 backing regressions.
+{
 
   // VER-003: the evaluator declares this reason diagnostic, but backing rewrites
   // it to pillar treatment and the production projection applies a global cap.
@@ -91,8 +110,8 @@ import { V9_CANDIDATE_POLICY_V1 } from "../safety-score-v9/policy";
       const result = evaluateV9ReserveExposures(
         asset(
           [
-            exposure({ key: "cash", weight: 0.99 }),
-            exposure({ key: "upstream", weight: 0.01, trackedAssetId: "upstream" }),
+            exposure("cash", 0.99),
+            exposure("upstream", 0.01, "upstream"),
           ],
           [unavailable("upstream", "nonmaterial-dependency-unavailable")],
         ),
@@ -115,8 +134,8 @@ import { V9_CANDIDATE_POLICY_V1 } from "../safety-score-v9/policy";
       const single = evaluateV9ReserveExposures(
         asset(
           [
-            exposure({ key: "cash", weight: 0.88 }),
-            exposure({ key: "upstream", weight: 0.12, trackedAssetId: "upstream", custodian: "upstream" }),
+            exposure("cash", 0.88),
+            exposure("upstream", 0.12, "upstream", { failureDomains: [{ kind: "reserve-custodian", key: "upstream" }] }),
           ],
           [unavailable("upstream", "material-dependency-unavailable")],
         ),
@@ -125,9 +144,9 @@ import { V9_CANDIDATE_POLICY_V1 } from "../safety-score-v9/policy";
       const split = evaluateV9ReserveExposures(
         asset(
           [
-            exposure({ key: "cash", weight: 0.88 }),
-            exposure({ key: "upstream-a", weight: 0.06, trackedAssetId: "upstream", custodian: "upstream" }),
-            exposure({ key: "upstream-b", weight: 0.06, trackedAssetId: "upstream", custodian: "upstream" }),
+            exposure("cash", 0.88),
+            exposure("upstream-a", 0.06, "upstream", { failureDomains: [{ kind: "reserve-custodian", key: "upstream" }] }),
+            exposure("upstream-b", 0.06, "upstream", { failureDomains: [{ kind: "reserve-custodian", key: "upstream" }] }),
           ],
           [
             unavailable("upstream-a", "nonmaterial-dependency-unavailable"),
@@ -159,17 +178,6 @@ import { V9_CANDIDATE_POLICY_V1 } from "../safety-score-v9/policy";
     ["c", "d"],
   ] as const;
 
-  function planningAsset(assetId: string, edges: readonly V9DependencyPlanningEdge[]): V9DependencyPlanningAsset {
-    return {
-      assetId,
-      dependencies: { edges },
-      reserveExposures: [],
-      exitRoutes: [],
-      controls: [],
-      peg: { failureDomains: [] },
-      supply: { failureDomains: [] },
-    };
-  }
 
   function dependencyEdge(upstreamAssetId: string, assetId: string, role: "serial" | "basket"): V9DependencyPlanningEdge {
     return {
@@ -195,34 +203,6 @@ import { V9_CANDIDATE_POLICY_V1 } from "../safety-score-v9/policy";
     return ASSET_IDS.map((assetId) => planningAsset(assetId, edgesByAsset.get(assetId) ?? []));
   }
 
-  function knownStatus(evidenceId: string): V9FactStatusV2 {
-    return {
-      applicability: { state: "required", policyRuleId: "veritas-2.required", rationale: null, gapId: null },
-      observationState: "known",
-      evidenceRefIds: [evidenceId],
-      gapIds: [],
-    };
-  }
-
-  function exposure(key: string, weight: number, trackedAssetId: string | null): V9ReserveExposureFactV2 {
-    return {
-      exposureKey: key,
-      classificationKey: `class:${key}`,
-      sourceGenerationId: "reserves:veritas-2",
-      provenance: "curated",
-      evidenceClass: "independent",
-      status: knownStatus(`evidence:${key}`),
-      name: key,
-      weight,
-      trackedAssetId,
-      assetClass: trackedAssetId === null ? "cash" : "stablecoin",
-      issuerOrObligorKey: null,
-      riskFactors: [],
-      liquidityHorizon: "immediate",
-      maturityDaysMax: null,
-      failureDomains: [],
-    };
-  }
 
   function compositions(total: number, parts: number): number[][] {
     if (parts === 1) return [[total]];
@@ -233,19 +213,6 @@ import { V9_CANDIDATE_POLICY_V1 } from "../safety-score-v9/policy";
     return result;
   }
 
-  function unavailableProjection(
-    exposureKey: string,
-    code: "material-dependency-unavailable" | "nonmaterial-dependency-unavailable",
-  ): V9ResolvedUpstreamExposure {
-    return {
-      exposureKey,
-      upstreamAssetId: "shared-upstream",
-      score: null,
-      evidenceLevel: "insufficient",
-      reasonCodes: [code],
-      failureDomains: [],
-    };
-  }
 
   describe("VERITAS II dependency invariants", () => {
     it("keeps all 729 four-node DAG role assignments ordered, resolved, and permutation-stable", () => {
@@ -336,7 +303,7 @@ import { V9_CANDIDATE_POLICY_V1 } from "../safety-score-v9/policy";
               exposure(baselineKey, totalPercent / 100, "shared-upstream"),
             ],
             gaps: [],
-            resolvedUpstreamExposures: [unavailableProjection(baselineKey, code)],
+            resolvedUpstreamExposures: [unavailable(baselineKey, code, "shared-upstream")],
           },
           V9_CANDIDATE_POLICY_V1,
         );
@@ -353,7 +320,7 @@ import { V9_CANDIDATE_POLICY_V1 } from "../safety-score-v9/policy";
                 reserveExposures: [exposure("cash", (99 - totalPercent) / 100, null), ...upstreamExposures],
                 gaps: [],
                 resolvedUpstreamExposures: upstreamExposures.map((entry) =>
-                  unavailableProjection(entry.exposureKey, code),
+                  unavailable(entry.exposureKey, code, "shared-upstream"),
                 ),
               },
               V9_CANDIDATE_POLICY_V1,
@@ -381,183 +348,81 @@ import { V9_CANDIDATE_POLICY_V1 } from "../safety-score-v9/policy";
   });
 }
 
-// Folded in from `safety-score-v9-veritas-2-transitive-materiality-repro.test.ts` (VER2-001).
-{
-  function knownStatus(evidenceId: string): V9FactStatusV2 {
-    return {
-      applicability: { state: "required", policyRuleId: "veritas-2.required", rationale: null, gapId: null },
-      observationState: "known",
-      evidenceRefIds: [evidenceId],
-      gapIds: [],
-    };
-  }
-
-  function exposure(key: string, weight: number, trackedAssetId: string | null): V9ReserveExposureFactV2 {
-    return {
-      exposureKey: key,
-      classificationKey: `class:${key}`,
-      sourceGenerationId: "reserves:veritas-2",
-      provenance: "curated",
-      evidenceClass: "independent",
-      status: knownStatus(`evidence:${key}`),
-      name: key,
-      weight,
-      trackedAssetId,
-      assetClass: trackedAssetId === null ? "cash" : "stablecoin",
-      issuerOrObligorKey: null,
-      riskFactors: [],
-      liquidityHorizon: "immediate",
-      maturityDaysMax: null,
-      failureDomains: [],
-    };
-  }
-
-  function edge(
-    edgeKey: string,
-    upstreamAssetId: string,
-    role: "serial" | "basket",
-    weight: number,
-  ): V9DependencyPlanningEdge {
-    return {
-      edgeKey,
-      upstreamAssetId,
-      dependencyType: role === "serial" ? "wrapper" : "collateral",
-      economicRole: role === "serial" ? "serial-claim" : "basket-exposure",
-      weight,
-      failureDomains: [{ kind: "reserve-issuer", key: `asset:${upstreamAssetId}` }],
-    };
-  }
-
-  function planningAsset(assetId: string, edges: readonly V9DependencyPlanningEdge[]): V9DependencyPlanningAsset {
-    return {
-      assetId,
-      dependencies: { edges },
-      reserveExposures: [],
-      exitRoutes: [],
-      controls: [],
-      peg: { failureDomains: [] },
-      supply: { failureDomains: [] },
-    };
-  }
-
-  function scoreBacking(result: ReturnType<typeof evaluateV9ReserveExposures>) {
-    const evidenceLevel = result.unresolved.some((reason) => reason.treatment !== "diagnostic")
-      ? ("limited" as const)
-      : ("strong" as const);
-    return scoreV9Input(
-      {
-        assetId: "child",
-        pillars: { backing: result.score, exit: 95, control: 95 },
-        pegScore: 100,
-        pegApplicable: true,
-        evidenceLevel,
-        trackRecordMonths: 48,
-        activeDepegBps: null,
-        parentRequired: false,
-        parentScore: null,
-        structuralSignals: result.structuralReasons.map((reason) => ({
-          kind: reason.kind,
-          severity: reason.severity,
-          reason: `${reason.kind} at ${reason.pathKey}`,
-          ...(reason.materialShare === null ? {} : { materialSharePct: reason.materialShare * 100 }),
-          failureDomainKeys: reason.failureDomains.map((domain) => `${domain.kind}:${domain.key}`),
-          evidence: [],
-        })),
-        unresolved: result.unresolved.map((reason) => ({
-          code: reason.code,
-          reason: `${reason.code} at ${reason.pathKey}`,
-          critical: false,
-          responsibility: V9_LEGACY_RESPONSIBILITY_BY_REASON[reason.code],
-        })),
-      },
-      V9_CANDIDATE_POLICY_V1,
-    );
-  }
-
-  describe("VERITAS-II finding VER2-001: transitive wrapper splits evade aggregate materiality", () => {
-    it("keeps two 6% wrappers sharing one failed serial root as material", () => {
-      const plan = buildV9DependencyEvaluationPlan({
-        activeAssetIds: ["root", "wrapper-a", "wrapper-b", "child"],
-        assets: [
-          planningAsset("root", []),
-          planningAsset("wrapper-a", [edge("wrapper-a:root", "root", "serial", 1)]),
-          planningAsset("wrapper-b", [edge("wrapper-b:root", "root", "serial", 1)]),
-          planningAsset("child", [
-            edge("child:wrapper-a", "wrapper-a", "basket", 0.06),
-            edge("child:wrapper-b", "wrapper-b", "basket", 0.06),
-          ]),
-        ],
+describe("VERITAS-II finding VER2-001: transitive wrapper splits evade aggregate materiality", () => {
+  it("propagates the shared failed root through serial wrappers into basket materiality", () => {
+    function evaluate(split: boolean) {
+      const root = minimalAsset("root") as unknown as V9AssetFactsV2;
+      unresolvedArchetype(root, "root:missing-archetype");
+      const wrappers = ["wrapper-a", "wrapper-b"].map((assetId) => {
+        const wrapper = minimalAsset(assetId) as unknown as V9AssetFactsV2;
+        // Both wrapper backing reviews are unavailable; serial ancestry must
+        // identify their common terminal root rather than treating them separately.
+        unresolvedArchetype(wrapper, `${assetId}:missing-archetype`);
+        wrapper.variantKind = "pure-wrapper";
+        wrapper.dependencies.source = "variant";
+        wrapper.dependencies.edges = [{
+          edgeKey: "wrapper:root",
+          upstreamAssetId: "root",
+          dependencyType: "wrapper",
+          pathKind: "serial-dependency",
+          economicRole: "serial-claim",
+          weight: 1,
+          evidenceRefIds: ["evidence:base"],
+          failureDomains: [],
+        }];
+        return wrapper;
       });
-      const resolved = resolveV9DependencyInputs(plan, [
-        { assetId: "root", score: null, backingScore: null },
-        { assetId: "wrapper-a", score: null, backingScore: null },
-        { assetId: "wrapper-b", score: null, backingScore: null },
-      ]);
-      expect(resolved.find((entry) => entry.assetId === "wrapper-a")?.serial[0]?.blocked).toBe(true);
-      expect(resolved.find((entry) => entry.assetId === "wrapper-b")?.serial[0]?.blocked).toBe(true);
-      expect(resolved.find((entry) => entry.assetId === "child")?.basket).toEqual([
-        expect.objectContaining({ upstreamAssetId: "wrapper-a", score: null, weight: 0.06 }),
-        expect.objectContaining({ upstreamAssetId: "wrapper-b", score: null, weight: 0.06 }),
-      ]);
+      const child = minimalAsset("child") as unknown as V9AssetFactsV2;
+      const upstreamIds = split ? ["wrapper-a", "wrapper-b"] : ["root"];
+      child.dependencies.source = "manual";
+      child.dependencies.baseSource = "manual";
+      child.reserveStatus = fixtureKnownStatus();
+      child.reserveExposures = [
+        exposure("cash", 0.88),
+        ...upstreamIds.map((id) => exposure(id, split ? 0.06 : 0.12, id)),
+      ].map((row) => ({
+        ...row,
+        sourceGenerationId: SOURCE_FINGERPRINTS.researchOverlays.generationId,
+        status: fixtureKnownStatus(),
+        failureDomains: [{ kind: "reserve-issuer", key: `issuer:${row.exposureKey}` }],
+      }));
+      child.dependencies.edges = upstreamIds.map((id) => ({
+        edgeKey: `collateral:${id}`,
+        upstreamAssetId: id,
+        dependencyType: "collateral",
+        pathKind: "collateral-exposure",
+        economicRole: "basket-exposure",
+        weight: split ? 0.06 : 0.12,
+        evidenceRefIds: ["evidence:base"],
+        failureDomains: [],
+      }));
+      const input = coreFixture();
+      input.activeAssetIds = ["root", "wrapper-a", "wrapper-b", "child"];
+      input.assets = [root, ...wrappers, child] as unknown as typeof input.assets;
+      return evaluateV9FactSet(compileNativeV3FactSet(input), V9_CANDIDATE_POLICY_V1);
+    }
 
-      const split = evaluateV9ReserveExposures(
-        {
-          assetId: "child",
-          reserveStatus: knownStatus("evidence:reserve-envelope"),
-          reserveExposures: [
-            exposure("cash", 0.88, null),
-            exposure("wrapper-a", 0.06, "wrapper-a"),
-            exposure("wrapper-b", 0.06, "wrapper-b"),
-          ],
-          gaps: [],
-          resolvedUpstreamExposures: [
-            {
-              exposureKey: "wrapper-a",
-              upstreamAssetId: "wrapper-a",
-              score: null,
-              evidenceLevel: "insufficient",
-              reasonCodes: ["nonmaterial-dependency-unavailable"],
-              failureDomains: [{ kind: "reserve-issuer", key: "asset:root" }],
-            },
-            {
-              exposureKey: "wrapper-b",
-              upstreamAssetId: "wrapper-b",
-              score: null,
-              evidenceLevel: "insufficient",
-              reasonCodes: ["nonmaterial-dependency-unavailable"],
-              failureDomains: [{ kind: "reserve-issuer", key: "asset:root" }],
-            },
-          ],
-        },
-        V9_CANDIDATE_POLICY_V1,
-      );
-      const direct = evaluateV9ReserveExposures(
-        {
-          assetId: "child",
-          reserveStatus: knownStatus("evidence:reserve-envelope"),
-          reserveExposures: [exposure("cash", 0.88, null), exposure("root", 0.12, "root")],
-          gaps: [],
-          resolvedUpstreamExposures: [
-            {
-              exposureKey: "root",
-              upstreamAssetId: "root",
-              score: null,
-              evidenceLevel: "insufficient",
-              reasonCodes: ["material-dependency-unavailable"],
-              failureDomains: [{ kind: "reserve-issuer", key: "asset:root" }],
-            },
-          ],
-        },
-        V9_CANDIDATE_POLICY_V1,
-      );
-      const splitTrace = scoreBacking(split);
-      const directTrace = scoreBacking(direct);
-
-      expect(directTrace).toMatchObject({ finalScore: 59, finalGrade: "C" });
-      expect(splitTrace.finalScore).toBeLessThanOrEqual(directTrace.finalScore!);
-      expect(splitTrace.caps).toContainEqual(
-        expect.objectContaining({ kind: "signal:unsafe-backing:high", limit: 59, binding: true }),
-      );
-    });
+    const splitSet = evaluate(true);
+    const directSet = evaluate(false);
+    for (const id of ["root", "wrapper-a", "wrapper-b"]) {
+      expect(splitSet.assets.find((asset) => asset.assetId === id)?.trace.finalGrade, id).toBe("NR");
+    }
+    const split = splitSet.assets.find((asset) => asset.assetId === "child")!;
+    const direct = directSet.assets.find((asset) => asset.assetId === "child")!;
+    for (const child of [direct, split]) {
+      expect(child.backing.structuralReasons).toContainEqual(expect.objectContaining({
+        kind: "unsafe-backing", severity: "high", ceiling: 59,
+      }));
+      expect(child.backing.unresolved).toContainEqual(expect.objectContaining({
+        code: "material-dependency-unavailable",
+      }));
+      expect(child.trace.caps).toContainEqual(expect.objectContaining({
+        kind: "reason:material-dependency-unavailable", limit: 69,
+      }));
+      // Reserve-claim risk is already priced in backing, not a second whole-asset cap.
+      expect(child.trace.caps.map((cap) => cap.kind)).not.toContain("signal:unsafe-backing:high");
+    }
+    expect(split.backing.score).toBe(direct.backing.score);
+    expect(split.trace.finalScore).toBe(direct.trace.finalScore);
   });
-}
+});

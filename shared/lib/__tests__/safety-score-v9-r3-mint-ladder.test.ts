@@ -95,12 +95,6 @@ describe("R3 kept rungs — active fail-closed baseline", () => {
     expect(centralizedMintSeverity("unknown", "continuous")).toBe("high");
   });
 
-  it("keeps the policy rungs R3 does not move (moderate@74, high@59, critical@39)", () => {
-    const ladder = V9_CANDIDATE_POLICY_V1.policy.semantic.structural.signalLimits["centralized-mint"];
-    expect(ladder.moderate).toBe(74);
-    expect(ladder.high).toBe(59);
-    expect(ladder.critical).toBe(39);
-  });
 });
 
 describe("R3 ruled ladder — live policy", () => {
@@ -116,11 +110,13 @@ describe("R3 ruled ladder — live policy", () => {
     }
   });
 
-  it("sets the ruled attestation rung: policy centralized-mint low limit is 83", () => {
-    expect(V9_CANDIDATE_POLICY_V1.policy.semantic.structural.signalLimits["centralized-mint"].low).toBe(83);
-  });
-
-  it("caps an attestation-only + reconciled flagship at 83 at the score level", () => {
+  it.each([
+    [null, 95, "A+"],
+    ["low", 83, "A"],
+    ["moderate", 74, "B"],
+    ["high", 59, "C"],
+    ["critical", 39, "F"],
+  ] as const)("scores the %s mint rung independently", (severity, expectedScore, expectedGrade) => {
     const trace = scoreV9Input(
       {
         assetId: "r3-attestation-flagship",
@@ -132,10 +128,11 @@ describe("R3 ruled ladder — live policy", () => {
         activeDepegBps: null,
         parentRequired: false,
         parentScore: null,
-        structuralSignals: [
+        structuralSignals: severity === null ? [] : [
           {
             kind: "centralized-mint",
-            severity: "low",
+            severity,
+            responsibility: "measured-adverse",
             reason: "Minting is economically unbounded but supply is reconciled against reserves.",
             failureDomainKeys: ["mint-control:fixture"],
             evidence: [],
@@ -145,19 +142,13 @@ describe("R3 ruled ladder — live policy", () => {
       },
       V9_CANDIDATE_POLICY_V1,
     );
-    expect(trace.bindingCap).toMatchObject({ kind: "signal:centralized-mint:low", limit: 83 });
-    expect(trace.finalScore).toBe(83);
-    // The cap limits the score; it does not override the policy's 83-point A
-    // threshold. The real flagship can remain A- when its pre-cap score is <83.
-    expect(trace.finalGrade).toBe("A");
+    expect(trace.bindingCap).toEqual(severity === null ? null : expect.objectContaining({
+      source: "structural",
+      kind: `signal:centralized-mint:${severity}`,
+      limit: expectedScore,
+    }));
+    expect(trace.finalScore).toBe(expectedScore);
+    expect(trace.finalGrade).toBe(expectedGrade);
   });
 
-  it("keeps the full ruled ladder ordered: uncapped > 83 > 59 > 39", () => {
-    const ladder = V9_CANDIDATE_POLICY_V1.policy.semantic.structural.signalLimits["centralized-mint"];
-    expect(ladder.low).toBe(83);
-    expect(ladder.high).toBe(59);
-    expect(ladder.critical).toBe(39);
-    expect(ladder.low!).toBeGreaterThan(ladder.high!);
-    expect(ladder.high!).toBeGreaterThan(ladder.critical!);
-  });
 });

@@ -34,7 +34,9 @@ const SHADOW_ID = SHADOW_STABLECOINS[0]?.id;
 
 describe("REGISTRY_BY_ID", () => {
   it("contains all tracked stablecoins", () => {
-    expect(REGISTRY_BY_ID.size).toBeGreaterThanOrEqual(TRACKED_STABLECOINS.length);
+    for (const metadata of TRACKED_STABLECOINS) {
+      expect(REGISTRY_BY_ID.get(metadata.id), metadata.id).toEqual(metadata);
+    }
   });
 
   it("contains shadow stablecoins", () => {
@@ -47,9 +49,6 @@ describe("REGISTRY_BY_ID", () => {
     expect(REGISTRY_BY_ID.size).toBe(TRACKED_STABLECOINS.length + SHADOW_STABLECOINS.length);
   });
 
-  it("module loads without duplicate-key assertion errors", () => {
-    expect(REGISTRY_BY_ID).toBeInstanceOf(Map);
-  });
 });
 
 describe("REGISTRY_BY_LLAMA_ID", () => {
@@ -179,8 +178,13 @@ describe("REGISTRY_BY_CMC_SLUG", () => {
     expect(REGISTRY_BY_CMC_SLUG.size).toBe(cmcSlugCount);
   });
 
-  it("skips entries without cmcSlug", () => {
-    expect(REGISTRY_BY_CMC_SLUG.size).toBeLessThan(TRACKED_STABLECOINS.length);
+  it("indexes exactly the records with populated CMC slugs", () => {
+    const expected = [...TRACKED_STABLECOINS, ...SHADOW_STABLECOINS]
+      .filter((metadata) => metadata.cmcSlug)
+      .map((metadata) => [metadata.cmcSlug, metadata] as const);
+    expect(REGISTRY_BY_CMC_SLUG).toEqual(new Map(expected));
+    expect([...REGISTRY_BY_CMC_SLUG.keys()]).not.toContain("");
+    expect([...REGISTRY_BY_CMC_SLUG.keys()]).not.toContain(undefined);
   });
 });
 

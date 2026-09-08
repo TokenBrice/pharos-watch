@@ -9,6 +9,10 @@ import {
   getCronSlotStartedAtForSchedule,
 } from "../cron-jobs";
 
+function isHourlyCpuTrigger(schedule: string): boolean {
+  return /^(?:[0-5]?\d) \* \* \* \*$/.test(schedule);
+}
+
 describe("cron job schedule metadata", () => {
   it("keeps the DEX source lane hourly while preserving the half-hourly consumer aliases", () => {
     expect(CRON_SCHEDULES.halfHourlyOffset).toBe("10 * * * *");
@@ -49,13 +53,8 @@ describe("cron job schedule metadata", () => {
       const key = scheduleKey as keyof typeof hourlyCpuClassLanes;
       expect(CRON_TRIGGER_SCHEDULES[key], scheduleKey).toEqual(triggerSchedules);
 
-      for (const triggerSchedule of triggerSchedules) {
-        const [minute, hour] = triggerSchedule.split(" ");
-        expect(
-          minute.includes(",") || minute.includes("/") || minute === "*",
-          `${scheduleKey} trigger "${triggerSchedule}" must fire on exactly one minute so the interval stays hourly`,
-        ).toBe(false);
-        expect(hour, `${scheduleKey} trigger "${triggerSchedule}" must run every hour`).toBe("*");
+      for (const triggerSchedule of CRON_TRIGGER_SCHEDULES[key]) {
+        expect(isHourlyCpuTrigger(triggerSchedule), `${scheduleKey}: ${triggerSchedule}`).toBe(true);
       }
     }
 
@@ -70,21 +69,16 @@ describe("cron job schedule metadata", () => {
     expect(CRON_SCHEDULES.halfHourlyMintBurnExtended).toBe("18,48 * * * *");
 
     // Every physical alias must normalize to the logical slot it fired in.
-    expect(getCronSlotStartedAtForSchedule("quarterHourly", Date.parse("2026-08-21T19:45:03Z"))).toBe(
-      Math.floor(Date.parse("2026-08-21T19:45:00Z") / 1000),
-    );
-    expect(
-      getCronSlotStartedAtForSchedule("v9SupplyAttributionOffset", Date.parse("2026-08-21T19:53:04Z")),
-    ).toBe(Math.floor(Date.parse("2026-08-21T19:53:00Z") / 1000));
-    expect(
-      getCronSlotStartedAtForSchedule("depegResolverOffset", Date.parse("2026-08-21T19:58:04Z")),
-    ).toBe(Math.floor(Date.parse("2026-08-21T19:58:00Z") / 1000));
-    expect(
-      getCronSlotStartedAtForSchedule("v9PublicationOffset", Date.parse("2026-08-21T19:52:04Z")),
-    ).toBe(Math.floor(Date.parse("2026-08-21T19:52:00Z") / 1000));
-    expect(
-      getCronSlotStartedAtForSchedule("statusSelfCheckOffset", Date.parse("2026-08-21T19:24:07Z")),
-    ).toBe(Math.floor(Date.parse("2026-08-21T19:24:00Z") / 1000));
+    for (const [key, minute, second] of [
+      ["quarterHourly", "45", "03"],
+      ["v9SupplyAttributionOffset", "53", "04"],
+      ["depegResolverOffset", "58", "04"],
+      ["v9PublicationOffset", "52", "04"],
+      ["statusSelfCheckOffset", "24", "07"],
+    ] as const) {
+      expect(getCronSlotStartedAtForSchedule(key, Date.parse(`2026-08-21T19:${minute}:${second}Z`)))
+        .toBe(Date.parse(`2026-08-21T19:${minute}:00Z`) / 1000);
+    }
 
     const physicalTriggers = Object.values(CRON_TRIGGER_SCHEDULES).flat();
     expect(physicalTriggers).toHaveLength(40);
@@ -103,46 +97,18 @@ describe("cron job schedule metadata", () => {
     );
   });
 
-  it("normalizes monthly audits to the current UTC calendar month", () => {
-    expect(
-      getCronSlotStartedAtForSchedule("monthlyYieldAudit", Date.parse("2026-09-01T06:00:03Z")),
-    ).toBe(Math.floor(Date.parse("2026-09-01T06:00:00Z") / 1000));
-  });
+  it.each(["2026-09", "2027-01", "2027-02", "2027-03", "2028-02", "2028-03"])(
+    "normalizes the monthly audit to UTC month %s",
+    (month) => {
+      expect(getCronSlotStartedAtForSchedule("monthlyYieldAudit", Date.parse(`${month}-01T06:00:03Z`)))
+        .toBe(Date.parse(`${month}-01T06:00:00Z`) / 1000);
+    },
+  );
 
-  it("keeps the January monthly audit in January across the year boundary", () => {
-    expect(
-      getCronSlotStartedAtForSchedule("monthlyYieldAudit", Date.parse("2027-01-01T06:00:03Z")),
-    ).toBe(Math.floor(Date.parse("2027-01-01T06:00:00Z") / 1000));
-  });
-
-  it("does not collapse the short February 2027 month into the March slot", () => {
-    const februarySlot = getCronSlotStartedAtForSchedule(
-      "monthlyYieldAudit",
-      Date.parse("2027-02-01T06:00:03Z"),
-    );
-    const marchSlot = getCronSlotStartedAtForSchedule(
-      "monthlyYieldAudit",
-      Date.parse("2027-03-01T06:00:03Z"),
-    );
-
-    expect(februarySlot).toBe(Math.floor(Date.parse("2027-02-01T06:00:00Z") / 1000));
-    expect(marchSlot).toBe(Math.floor(Date.parse("2027-03-01T06:00:00Z") / 1000));
-    expect(marchSlot).not.toBe(februarySlot);
-  });
-
-  it("normalizes the monthly audit across leap-year February", () => {
-    const februarySlot = getCronSlotStartedAtForSchedule(
-      "monthlyYieldAudit",
-      Date.parse("2028-02-01T06:00:03Z"),
-    );
-    const marchSlot = getCronSlotStartedAtForSchedule(
-      "monthlyYieldAudit",
-      Date.parse("2028-03-01T06:00:03Z"),
-    );
-
-    expect(februarySlot).toBe(Math.floor(Date.parse("2028-02-01T06:00:00Z") / 1000));
-    expect(marchSlot).toBe(Math.floor(Date.parse("2028-03-01T06:00:00Z") / 1000));
-    expect(marchSlot - februarySlot).toBe(29 * 86400);
+  it("preserves the leap-day interval between monthly slots", () => {
+    const slot = (month: string) =>
+      getCronSlotStartedAtForSchedule("monthlyYieldAudit", Date.parse(`${month}-01T06:00:03Z`));
+    expect(slot("2028-03") - slot("2028-02")).toBe(29 * 86400);
   });
 
   // applySafetyScoreV9SupplyAttributionGeneration admits a generation only when
@@ -199,15 +165,6 @@ describe("cron job schedule metadata", () => {
   });
 
   it("captures V9 supply attribution before its dedicated publication trigger", () => {
-    expect(CRON_SCHEDULES.v9SupplyAttributionOffset).toBe(
-      "8,23,38,53 * * * *",
-    );
-    expect(CRON_SCHEDULES.v9PublicationOffset).toBe(
-      "22,52 * * * *",
-    );
-    expect(CRON_SCHEDULES.halfHourlyMintBurnExtended).toBe(
-      "18,48 * * * *",
-    );
     expect(
       CRON_JOB_DEFINITIONS.find(
         (definition) =>
@@ -254,12 +211,18 @@ describe("cron job schedule metadata", () => {
     // outage 2026-08-18, 11:20-15:00 UTC). Each physical trigger must therefore
     // carry a single minute value, either directly or via the paired-trigger
     // form used by halfHourlyChartsOffset.
-    const minutesOf = (schedule: string): number[] =>
-      schedule.split(" ")[0]!.split(",").map(Number);
-
     for (const trigger of CRON_TRIGGER_SCHEDULES.hourlyYieldSync) {
-      expect(minutesOf(trigger)).toHaveLength(1);
+      expect(isHourlyCpuTrigger(trigger), trigger).toBe(true);
     }
+  });
+
+  it.each(["* * * * *", "*/5 * * * *", "0,30 * * * *", "0-30 * * * *", "60 * * * *", "5 */2 * * *"])(
+    "rejects non-hourly CPU trigger %s",
+    (trigger) => expect(isHourlyCpuTrigger(trigger)).toBe(false),
+  );
+
+  it.each(["0 * * * *", "59 * * * *"])("accepts hourly CPU trigger %s", (trigger) => {
+    expect(isHourlyCpuTrigger(trigger)).toBe(true);
   });
 
   it("starts yield publication only after the active V9 identity has settled", () => {

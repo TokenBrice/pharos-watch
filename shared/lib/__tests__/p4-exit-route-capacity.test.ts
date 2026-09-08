@@ -7,7 +7,6 @@ import {
   type DexMeasuredExecutionPublicProfile,
 } from "@shared/types/measured-execution";
 import {
-  DEX_ROUTE_SOURCE_CAPABILITIES,
   P4_AMM_MODELED_TVL_MAX_RATIO,
   P4_AMM_MODELED_TVL_MIN_RATIO,
   buildP4DexExitRouteObservations,
@@ -18,6 +17,7 @@ import {
 import { makeMeasuredProfile, withMeasuredObservationHistory } from "@shared/test-utils/measured-execution.test-support";
 import { validateMeasuredExecutionProfile } from "../p4-exit-route-measured-profile-validation";
 
+import { retainedMeasuredPool, twoTokenReserveModel } from "./p4-exit-route-capacity.test-support";
 
 /** Structural mutation target for deployment-proof drift tests (fields the mutators write). */
 interface MutableMeasuredProfile {
@@ -211,7 +211,7 @@ describe("P4 DEX exit route observations", () => {
     });
   }
 
-  function curveThreePoolAmmModel() {
+  function curveThreePoolAmmModel(balances = [28_348_143, 28_486_107, 103_289_773]) {
     return {
       source: "curve" as const,
       invariant: "stableswap" as const,
@@ -223,7 +223,7 @@ describe("P4 DEX exit route observations", () => {
           address: "0x6b175474e89094c44da98b954eedeac495271d0f",
           symbol: "DAI",
           decimals: 18,
-          balance: 28_348_143,
+          balance: balances[0]!,
           referencePriceUsd: 1,
           referencePriceSource: "source-token-usd" as const,
           trackedAssetId: "dai-makerdao",
@@ -232,7 +232,7 @@ describe("P4 DEX exit route observations", () => {
           address: "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
           symbol: "USDC",
           decimals: 6,
-          balance: 28_486_107,
+          balance: balances[1]!,
           referencePriceUsd: 1,
           referencePriceSource: "source-token-usd" as const,
           trackedAssetId: "usdc-circle",
@@ -241,7 +241,7 @@ describe("P4 DEX exit route observations", () => {
           address: "0xdac17f958d2ee523a2206206994597c13d831ec7",
           symbol: "USDT",
           decimals: 6,
-          balance: 103_289_773,
+          balance: balances[2]!,
           referencePriceUsd: 0.9992518040104241,
           referencePriceSource: "source-token-usd" as const,
           trackedAssetId: "usdt-tether",
@@ -495,21 +495,7 @@ describe("P4 DEX exit route observations", () => {
     const result = buildP4DexExitRouteObservations({
       stablecoinId: "usdc-circle",
       observedAt,
-      retainedPools: [
-        {
-          poolId: "defillama-yields-uuid",
-          project: "uniswap-v3",
-          chain: "ethereum",
-          tvlUsd: 2_000_000,
-          symbol: "USDC-USDT",
-          poolType: "uniswap-v3",
-          source: "dl",
-          extra: {
-            measuredExecution: makeMeasuredProfile(observedAt - 60),
-            measuredExecutionPhysicalPoolId: physicalPoolId,
-          },
-        },
-      ],
+      retainedPools: [retainedMeasuredPool(makeMeasuredProfile(observedAt - 60))],
     });
 
     expect(result.coverage).toMatchObject({
@@ -532,7 +518,6 @@ describe("P4 DEX exit route observations", () => {
 
   it("uses the pointwise-minimum curve and requires two successful cycles for high confidence", () => {
     const observedAt = 1_752_560_000;
-    const physicalPoolId = "ethereum:0x3333333333333333333333333333333333333333";
     const profile = withMeasuredObservationHistory(makeMeasuredProfile(observedAt - 60), 2, 750_000);
     profile.observationHistory = {
       ...profile.observationHistory!,
@@ -543,21 +528,7 @@ describe("P4 DEX exit route observations", () => {
     const result = buildP4DexExitRouteObservations({
       stablecoinId: "usdc-circle",
       observedAt,
-      retainedPools: [
-        {
-          poolId: "defillama-yields-uuid",
-          project: "uniswap-v3",
-          chain: "ethereum",
-          tvlUsd: 2_000_000,
-          symbol: "USDC-USDT",
-          poolType: "uniswap-v3",
-          source: "dl",
-          extra: {
-            measuredExecution: profile,
-            measuredExecutionPhysicalPoolId: physicalPoolId,
-          },
-        },
-      ],
+      retainedPools: [retainedMeasuredPool(profile)],
     });
 
     expect(result.observations[0]).toMatchObject({
@@ -577,23 +548,76 @@ describe("P4 DEX exit route observations", () => {
     const immatureResult = buildP4DexExitRouteObservations({
       stablecoinId: "usdc-circle",
       observedAt,
-      retainedPools: [
-        {
-          poolId: "defillama-yields-uuid",
-          project: "uniswap-v3",
-          chain: "ethereum",
-          tvlUsd: 2_000_000,
-          symbol: "USDC-USDT",
-          poolType: "uniswap-v3",
-          source: "dl",
-          extra: {
-            measuredExecution: immature,
-            measuredExecutionPhysicalPoolId: physicalPoolId,
-          },
-        },
-      ],
+      retainedPools: [retainedMeasuredPool(immature)],
     });
     expect(immatureResult.observations[0]?.confidence).toBe("medium");
+  });
+
+  it("admits quotes through the 60-second future boundary only", () => {
+    const observedAt = 1_752_560_000;
+    for (const offset of [60, 61]) {
+      const profile = makeMeasuredProfile(observedAt + offset);
+      const pool = retainedMeasuredPool(profile);
+      const context = { stablecoinId: "usdc-circle", observedAt, pool };
+      expect(validateMeasuredExecutionProfile(profile, context)).toEqual(offset === 60 ? [] : ["future-profile"]);
+      const result = buildP4DexExitRouteObservations({ ...context, retainedPools: [pool] });
+      if (offset === 60) {
+        expect(result.observations).toHaveLength(1);
+      } else {
+        expect(result.observations).toEqual([]);
+        expect(result.coverage.unsupportedReasons).toEqual({ "invalidMeasuredExecution:future-profile": 1 });
+      }
+    }
+  });
+
+  it.each([
+    ["history-before-selected-quote", (profile: DexMeasuredExecutionPublicProfile) => {
+      profile.observationHistory!.observationWindowEndedAt = profile.quotedAt - 1;
+    }],
+    ["future-history", (profile: DexMeasuredExecutionPublicProfile) => {
+      profile.observationHistory!.observationWindowEndedAt = 1_752_560_061;
+    }],
+    ["invalid-conservative-history", (profile: DexMeasuredExecutionPublicProfile) => {
+      const point = profile.observationHistory!.conservativeCapacityCurve[3]!;
+      point.executableUsd = profile.capacityCurve[3]!.executableUsd + 0.02;
+      point.completionRatio = point.executableUsd / point.requestedNotionalUsd;
+    }],
+    ["invalid-conservative-history", (profile: DexMeasuredExecutionPublicProfile) => {
+      profile.capacityCurve = profile.capacityCurve.slice(1);
+    }],
+  ])("rejects adversarial measured history: %s (%#)", (reason, mutate) => {
+    const observedAt = 1_752_560_000;
+    const profile = withMeasuredObservationHistory(makeMeasuredProfile(observedAt - 60), 2, 750_000);
+    const pool = retainedMeasuredPool(profile);
+    const context = { stablecoinId: "usdc-circle", observedAt, pool };
+    expect(validateMeasuredExecutionProfile(profile, context)).toEqual([]);
+    expect(buildP4DexExitRouteObservations({ ...context, retainedPools: [pool] }).observations)
+      .toHaveLength(1);
+    mutate(profile);
+    expect(validateMeasuredExecutionProfile(profile, context)).toContain(reason);
+    const result = buildP4DexExitRouteObservations({ ...context, retainedPools: [pool] });
+    expect(result.observations).toEqual([]);
+    expect(result.coverage.unsupportedReasons[`invalidMeasuredExecution:${reason}`]).toBe(1);
+  });
+
+  it.each(["duplicate output", "mixed input"])("rejects a two-direction packet with %s", (mutation) => {
+    const observedAt = 1_784_877_551;
+    const profiles = curveStableSwapMeasuredProfiles(observedAt - 60, 3);
+    const pool = retainedMeasuredPool(profiles[0]!, {
+      poolType: "curve-stableswap-high-a",
+      extra: {
+        ammExecutionModel: curveThreePoolAmmModel(),
+        measuredExecutions: profiles,
+        measuredExecutionPhysicalPoolId: profiles[0]!.poolId,
+      },
+    });
+    const params = { stablecoinId: "usdt-tether", observedAt, retainedPools: [pool] };
+    expect(buildP4DexExitRouteObservations(params).observations).toHaveLength(2);
+    if (mutation === "duplicate output") profiles[1] = structuredClone(profiles[0]!);
+    else profiles[1]!.tokenIn = { ...profiles[0]!.tokenOut };
+    const result = buildP4DexExitRouteObservations(params);
+    expect(result.observations).toEqual([]);
+    expect(result.coverage.unsupportedReasons).toEqual({ invalidAtomicMeasuredPacket: 1 });
   });
 
   it("accepts the active Curve CryptoSwap measured adapter in the existing exact capability matrix", () => {
@@ -602,21 +626,7 @@ describe("P4 DEX exit route observations", () => {
     const result = buildP4DexExitRouteObservations({
       stablecoinId: "crvusd-curve",
       observedAt,
-      retainedPools: [
-        {
-          poolId: "defillama-yields-uuid",
-          project: "curve",
-          chain: "ethereum",
-          tvlUsd: 2_000_000,
-          symbol: "CRVUSD-WBTC",
-          poolType: "curve-cryptoswap",
-          source: "dl",
-          extra: {
-            measuredExecution: profile,
-            measuredExecutionPhysicalPoolId: profile.poolId,
-          },
-        },
-      ],
+      retainedPools: [retainedMeasuredPool(profile, { poolType: "curve-cryptoswap" })],
     });
 
     expect(result.coverage).toMatchObject({
@@ -681,19 +691,7 @@ describe("P4 DEX exit route observations", () => {
       const result = buildP4DexExitRouteObservations({
         stablecoinId: "usdc-circle",
         observedAt,
-        retainedPools: [{
-          poolId: "defillama-yields-uuid",
-          project,
-          chain: "base",
-          tvlUsd: 2_000_000,
-          symbol: "USDC-USDT",
-          poolType: "aerodrome-slipstream",
-          source: "dl",
-          extra: {
-            measuredExecution: profile,
-            measuredExecutionPhysicalPoolId: profile.poolId,
-          },
-        }],
+        retainedPools: [retainedMeasuredPool(profile, { project })],
       });
 
       expect(result.observations[0]).toMatchObject({
@@ -848,6 +846,10 @@ describe("P4 DEX exit route observations", () => {
         },
       }],
     });
+    expect(mixed.observations.map((observation) => observation.output.trackedAssetIds)).toEqual([
+      ["dai-makerdao"],
+      ["usdc-circle"],
+    ]);
     expect(mixed.observations.every(
       (observation) => observation.evidenceKind === "reserve-based-amm-simulation",
     )).toBe(true);
@@ -1678,8 +1680,9 @@ describe("P4 DEX exit route observations", () => {
         observedAt: 1_720_000_000,
         retainedPools: [stableswapPool(amplification, [5_000_000, 5_000_000])],
       }).observations[0]!.capacityCurve!.reduce((total, entry) => total + entry.executableUsd, 0);
-    expect(capacityAt(1000)).toBeGreaterThanOrEqual(capacityAt(200));
-    expect(capacityAt(200)).toBeGreaterThan(capacityAt(5));
+    const balancedCapacity = observation.capacityCurve!.reduce((total, entry) => total + entry.executableUsd, 0);
+    expect(capacityAt(1000)).toBeGreaterThanOrEqual(balancedCapacity);
+    expect(balancedCapacity).toBeGreaterThan(capacityAt(5));
 
     // A pool drained on the output side executes less than a balanced one.
     const drained = buildP4DexExitRouteObservations({
@@ -1687,13 +1690,7 @@ describe("P4 DEX exit route observations", () => {
       observedAt: 1_720_000_000,
       retainedPools: [stableswapPool(200, [9_000_000, 1_000_000])],
     }).observations[0]!.capacityCurve!;
-    const balanced = buildP4DexExitRouteObservations({
-      stablecoinId: "usdc-circle",
-      observedAt: 1_720_000_000,
-      retainedPools: [stableswapPool(200, [5_000_000, 5_000_000])],
-    }).observations[0]!.capacityCurve!;
-    const totalOf = (curve: typeof drained) => curve.reduce((total, entry) => total + entry.executableUsd, 0);
-    expect(totalOf(drained)).toBeLessThan(totalOf(balanced));
+    expect(drained.reduce((total, entry) => total + entry.executableUsd, 0)).toBeLessThan(balancedCapacity);
   });
 
   it("matches a pinned static-fee rate-bearing Curve StableSwap-NG quote", () => {
@@ -1768,44 +1765,9 @@ describe("P4 DEX exit route observations", () => {
           poolType: "curve-stableswap",
           source: "dl",
           extra: {
-            ammExecutionModel: {
-              source: "curve",
-              invariant: "stableswap",
-              trackedTokenIndex: 2,
-              // The pools endpoint omits the fee, so production uses its
-              // documented 10 bps source-API fallback for this legacy model.
-              feeRate: 0.001,
-              amplification: 4000 / 9,
-              tokens: [
-                {
-                  address: "0x6b175474e89094c44da98b954eedeac495271d0f",
-                  symbol: "DAI",
-                  decimals: 18,
-                  balance: 28_348_143.889771747,
-                  referencePriceUsd: 1,
-                  referencePriceSource: "source-token-usd",
-                  trackedAssetId: "dai-makerdao",
-                },
-                {
-                  address: "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
-                  symbol: "USDC",
-                  decimals: 6,
-                  balance: 28_486_107.228271,
-                  referencePriceUsd: 1,
-                  referencePriceSource: "source-token-usd",
-                  trackedAssetId: "usdc-circle",
-                },
-                {
-                  address: "0xdac17f958d2ee523a2206206994597c13d831ec7",
-                  symbol: "USDT",
-                  decimals: 6,
-                  balance: 103_289_773.79734,
-                  referencePriceUsd: 0.9992518040104241,
-                  referencePriceSource: "source-token-usd",
-                  trackedAssetId: "usdt-tether",
-                },
-              ],
-            },
+            ammExecutionModel: curveThreePoolAmmModel([
+              28_348_143.889771747, 28_486_107.228271, 103_289_773.79734,
+            ]),
           },
         },
       ],
@@ -2036,32 +1998,9 @@ describe("P4 DEX exit route observations", () => {
           poolType: "raydium-amm",
           source: "direct_api",
           extra: {
-            ammExecutionModel: {
-              source: "raydium",
-              invariant: "constant-product",
-              trackedTokenIndex: 0,
-              feeRate: 0.003,
-              tokens: [
-                {
-                  address: "UsdcMint",
-                  symbol: "USDC",
-                  decimals: 6,
-                  balance: 5_000_000,
-                  referencePriceUsd: 1,
-                  referencePriceSource: "tracked-market",
-                  trackedAssetId: "usdc-circle",
-                },
-                {
-                  address: "UsdtMint",
-                  symbol: "USDT",
-                  decimals: 6,
-                  balance: 5_000_000,
-                  referencePriceUsd: 1,
-                  referencePriceSource: "tracked-market",
-                  trackedAssetId: "usdt-tether",
-                },
-              ],
-            },
+            ammExecutionModel: twoTokenReserveModel(
+              { balance: 5_000_000 }, { balance: 5_000_000 }, { feeRate: 0.003 },
+            ),
           },
         },
       ],
@@ -2195,6 +2134,8 @@ describe("P4 DEX exit route observations", () => {
     });
 
     expect(result.observations).toHaveLength(1);
+    expect(result.observations[0]!.capacityCurve!.map((point) => point.requestedNotionalUsd))
+      .toEqual([100_000, 1_000_000, 10_000_000, 25_000_000]);
     expect(result.observations[0]!.capacityCurve!.every((point) => point.executableUsd === 0)).toBe(true);
     expect(
       result.observations[0]!.capacityCurve!.every(
@@ -2213,32 +2154,7 @@ describe("P4 DEX exit route observations", () => {
       poolType: "raydium-amm",
       source: "direct_api" as const,
       extra: {
-        ammExecutionModel: {
-          source: "raydium" as const,
-          invariant: "constant-product" as const,
-          trackedTokenIndex: 0,
-          feeRate: 0.0025,
-          tokens: [
-            {
-              address: "TrackedMint",
-              symbol: "USDC",
-              decimals: 6,
-              balance: 2_000_000,
-              referencePriceUsd: 1,
-              referencePriceSource: "tracked-market" as const,
-              trackedAssetId: "usdc-circle",
-            },
-            {
-              address: outputMint,
-              symbol: "USDT",
-              decimals: 6,
-              balance: 2_000_000,
-              referencePriceUsd: 1,
-              referencePriceSource: "tracked-market" as const,
-              trackedAssetId: "usdt-tether",
-            },
-          ],
-        },
+        ammExecutionModel: twoTokenReserveModel({ address: "TrackedMint" }, { address: outputMint }),
       },
     });
     const result = buildP4DexExitRouteObservations({
@@ -2326,32 +2242,10 @@ describe("P4 DEX exit route observations", () => {
           poolType: "raydium-amm",
           source: "direct_api",
           extra: {
-            ammExecutionModel: {
-              source: "raydium",
-              invariant: "constant-product",
-              trackedTokenIndex: 0,
-              feeRate: 0.0025,
-              tokens: [
-                {
-                  address: "UsdtMint",
-                  symbol: "USDT",
-                  decimals: 6,
-                  balance: 2_000_000,
-                  referencePriceUsd: 1,
-                  referencePriceSource: "tracked-market",
-                  trackedAssetId: "usdt-tether",
-                },
-                {
-                  address: "UsdcMint",
-                  symbol: "USDC",
-                  decimals: 6,
-                  balance: 2_000_000,
-                  referencePriceUsd: 1,
-                  referencePriceSource: "tracked-market",
-                  trackedAssetId: "usdc-circle",
-                },
-              ],
-            },
+            ammExecutionModel: twoTokenReserveModel(
+              { address: "UsdtMint", symbol: "USDT", trackedAssetId: "usdt-tether" },
+              { address: "UsdcMint", symbol: "USDC", trackedAssetId: "usdc-circle" },
+            ),
           },
         },
       ],
@@ -2375,32 +2269,7 @@ describe("P4 DEX exit route observations", () => {
       poolType: "raydium-amm",
       source: "direct_api" as const,
       extra: {
-        ammExecutionModel: {
-          source: "raydium" as const,
-          invariant: "constant-product" as const,
-          trackedTokenIndex: 0,
-          feeRate: 0.0025,
-          tokens: [
-            {
-              address: "UsdcMint",
-              symbol: "USDC",
-              decimals: 6,
-              balance: 1_000_000,
-              referencePriceUsd: 1,
-              referencePriceSource: "tracked-market" as const,
-              trackedAssetId: "usdc-circle",
-            },
-            {
-              address: "UsdtMint",
-              symbol: "USDT",
-              decimals: 6,
-              balance: 1_000_000,
-              referencePriceUsd: 1,
-              referencePriceSource: "tracked-market" as const,
-              trackedAssetId: "usdt-tether",
-            },
-          ],
-        },
+        ammExecutionModel: twoTokenReserveModel({ balance: 1_000_000 }, { balance: 1_000_000 }),
       },
     });
     const result = buildP4DexExitRouteObservations({
@@ -2547,46 +2416,6 @@ describe("P4 DEX exit route observations", () => {
     ).toEqual(expect.arrayContaining(["cost-executable-decreased:1000000", "cost-completion-decreased:1000000"]));
   });
 
-  it("documents that retained AMM inputs cannot support exact reserve simulation", () => {
-    const orderbook = DEX_ROUTE_SOURCE_CAPABILITIES.find(
-      (capability) => capability.id === "cg-tickers-orderbook-depth-2pct",
-    );
-    const curve = DEX_ROUTE_SOURCE_CAPABILITIES.find((capability) => capability.id === "curve-stableswap-shaped");
-    const concentrated = DEX_ROUTE_SOURCE_CAPABILITIES.find((capability) => capability.id === "direct-api-amm-shaped");
-    const raydium = DEX_ROUTE_SOURCE_CAPABILITIES.find(
-      (capability) => capability.id === "raydium-constant-product-exact",
-    );
-    const evmV2 = DEX_ROUTE_SOURCE_CAPABILITIES.find((capability) => capability.id === "evm-v2-constant-product-exact");
-    expect(orderbook).toMatchObject({
-      outputEvidenceKind: "direct-orderbook-depth",
-      confidence: "medium",
-      outputKinds: ["fiat"],
-      commonModeKeyKinds: ["venue", "protocol", "pool", "fiat"],
-      scoreEligible: false,
-    });
-    expect(curve).toMatchObject({
-      exactBalancesOrReserves: "partial",
-      poolInvariantParameters: "partial",
-      outputEvidenceKind: "generic-tvl-proxy",
-    });
-    expect(concentrated).toMatchObject({
-      exactBalancesOrReserves: "partial",
-      poolInvariantParameters: "absent",
-      outputEvidenceKind: "generic-tvl-proxy",
-    });
-    expect(raydium).toMatchObject({
-      exactBalancesOrReserves: "exact",
-      poolInvariantParameters: "exact",
-      outputEvidenceKind: "reserve-based-amm-simulation",
-      scoreEligible: true,
-    });
-    expect(evmV2).toMatchObject({
-      exactBalancesOrReserves: "exact",
-      poolInvariantParameters: "exact",
-      outputEvidenceKind: "reserve-based-amm-simulation",
-      scoreEligible: true,
-    });
-  });
 
   it.each([
     ["hook", (profile: MutableMeasuredProfile) => { profile.hookAddress = "0x1111111111111111111111111111111111111111"; }],
@@ -2621,18 +2450,23 @@ describe("P4 DEX exit route observations", () => {
     ["registry tokens", (profiles: MutableMeasuredProfile[]) => profiles.forEach((profile) => { profile.registryProvenance.poolTokenAddresses[0] = "0x1111111111111111111111111111111111111111"; })],
   ])("rejects Curve StableSwap deployment-proof drift in %s", (_field, mutate) => {
     const profiles = curveStableSwapMeasuredProfiles(1_784_877_491, 3);
-    mutate(profiles as unknown as MutableMeasuredProfile[]);
-    const issues = profiles.flatMap((profile) => validateMeasuredExecutionProfile(profile, {
+    const validate = (profile: DexMeasuredExecutionPublicProfile) => validateMeasuredExecutionProfile(profile, {
       stablecoinId: "usdt-tether",
       observedAt: 1_784_877_551,
       pool: {
         poolId: "retained-3pool", project: "curve", chain: "ethereum", tvlUsd: 160_047_206,
         symbol: "DAI-USDC-USDT", source: "dl", poolType: "curve-stableswap-high-a", extra: { measuredExecutionPhysicalPoolId: profile.poolId },
       },
-    }));
-    expect(issues).toEqual(expect.arrayContaining([
-      expect.stringMatching(/invalid-curve-stableswap-identity|physical-pool-provenance-mismatch/),
-    ]));
+    });
+    for (const profile of profiles) {
+      expect(validate(profile), `${profile.tokenOut.symbol} baseline`).toEqual([]);
+    }
+    mutate(profiles as unknown as MutableMeasuredProfile[]);
+    for (const profile of profiles) {
+      expect(validate(profile), profile.tokenOut.symbol).toEqual(expect.arrayContaining([
+        expect.stringMatching(/invalid-curve-stableswap-identity|physical-pool-provenance-mismatch/),
+      ]));
+    }
   });
 
   it.each([

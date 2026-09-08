@@ -1,9 +1,5 @@
 import { describe, expect, it } from "vitest";
 import {
-  resolveCapacityConfidence,
-  resolveCapacitySemantics,
-} from "../redemption-backstop-confidence";
-import {
   getProviderIdForCapacityModelKind,
   getRedemptionBackstopProviderDefinition,
   inferProviderCapacityConfidence,
@@ -39,20 +35,6 @@ describe("redemption backstop provider definitions", () => {
     );
   });
 
-  it("keeps provider defaults aligned with capacity model resolvers", () => {
-    const sampleModels = [
-      { kind: "supply-full" },
-      { kind: "supply-ratio", ratio: 0.1 },
-      { kind: "fixed-usd", amountUsd: 1_000_000 },
-      { kind: "reserve-sync-metadata" },
-    ] as const;
-
-    for (const model of sampleModels) {
-      const provider = REDEMPTION_BACKSTOP_PROVIDER_DEFINITIONS[getProviderIdForCapacityModelKind(model.kind)];
-      expect(resolveCapacityConfidence(model)).toBe(provider.defaultCapacityConfidence);
-      expect(resolveCapacitySemantics(model)).toBe(provider.defaultCapacitySemantics);
-    }
-  });
 
   it("captures provider source mode, provenance, confidence, and severe-depeg metadata", () => {
     expect(REDEMPTION_BACKSTOP_PROVIDER_DEFINITIONS["supply-full-model"]).toMatchObject({

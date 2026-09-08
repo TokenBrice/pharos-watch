@@ -1,7 +1,22 @@
-import { describe, expect, it } from "vitest";
-import { buildSelectorRows } from "../data-adapter";
-import { CLIENT_ACTIVE_META_BY_ID } from "../../stablecoins/client-registry";
-import { inferResilienceDefaults } from "../../report-card-policy";
+import { describe, expect, it, vi } from "vitest";
+import { buildSelectorRows, type BuildSelectorRowsArgs } from "../data-adapter";
+import { hasRequiredSignals } from "../exclusions";
+import { selectYieldSource } from "../yield-source";
+import { makeInput } from "./fixture";
+import type * as ClientRegistry from "@shared/lib/stablecoins/client-registry";
+
+vi.mock("@shared/lib/stablecoins/client-registry", async (importOriginal) => {
+  const actual = await importOriginal<typeof ClientRegistry>();
+  const base = actual.CLIENT_ACTIVE_META_BY_ID.get("usdc-circle")!;
+  const reviewed = { ...base, custodyModel: "cex" as const };
+  const unreviewed = { ...base, id: "unreviewed", custodyModel: undefined };
+  const coins = [reviewed, unreviewed];
+  return {
+    ...actual,
+    CLIENT_TRACKED_STABLECOINS: coins,
+    CLIENT_ACTIVE_META_BY_ID: new Map(coins.map((coin) => [coin.id, coin])),
+  };
+});
 import type {
   BluechipRatingsMap,
   DexLiquidityMap,
@@ -10,6 +25,20 @@ import type {
   StablecoinListResponse,
   StressSignalsAllResponse,
 } from "../../../types";
+
+const EMPTY_ARGS: BuildSelectorRowsArgs = {
+  stablecoinsData: null, pegCurrency: null, pegData: null, reportData: null,
+  stressData: null, dexData: null, yieldData: null, bluechipData: null, now: 1_700_000_000_000,
+};
+
+function adaptYield(ranking: Record<string, unknown>, response: Record<string, unknown> = {}, now = NOW) {
+  return buildSelectorRows({
+    ...EMPTY_ARGS,
+    now,
+    yieldData: { rankings: [{ id: "usdc-circle", yieldType: "lending", yieldSource: "Aave",
+      apy30d: 5, pharosYieldScore: 80, ...ranking }], ...response } as unknown as BuildSelectorRowsArgs["yieldData"],
+  }).rows.get("usdc-circle")!;
+}
 
 const NOW = 1_700_000_000_000;
 
@@ -113,10 +142,7 @@ describe("buildSelectorRows", () => {
       dewsScore: 42,
       liquidityScore: 88,
       canBeBlacklisted: true,
-      // Curated review, not the V8 `backing × governance` inference table.
-      // USDC is reviewed `institutional-top`; the table can only ever answer
-      // `onchain` or `institutional-regulated`, and answered the latter here.
-      custodyModel: "institutional-top",
+      custodyModel: "cex",
       bluechipGrade: "A",
       currentDeviationBps: 4,
       supplyUsd: 32_000_000_000,
@@ -129,64 +155,65 @@ describe("buildSelectorRows", () => {
   });
 });
 
-/**
- * `selector-v2.1` custody projection.
- *
- * The row used to derive `custodyModel` from `inferResilienceDefaults`, a
- * 9-cell `backing × governance` table whose entire range is `onchain` and
- * `institutional-regulated`. That made the Selector structurally unable to
- * observe the other four `CUSTODY_MODEL_VALUES`, so exchange-custodied coins
- * cleared the "on-chain only" custody rail and unregulated institutional
- * custody cleared the "regulated only" rail. Curated review is now the
- * authority; the inference survives only as the fallback.
- *
- * These assertions are curation-independent: they pin the projection rule and
- * the fact that the out-of-range values are reachable, not any one coin.
- */
-describe("custody-model projection", () => {
-  const rows = buildSelectorRows({
-    stablecoinsData: null,
-    pegCurrency: null,
-    pegData: null,
-    reportData: null,
-    stressData: null,
-    dexData: null,
-    yieldData: null,
-    bluechipData: null,
-    now: NOW,
-  }).rows;
+describe("controlled custody-model projection", () => {
+  it("prefers an opposing curated value and still exercises unreviewed inference", () => {
+    const rows = buildSelectorRows(EMPTY_ARGS).rows;
+    expect([...rows.keys()]).toEqual(["usdc-circle", "unreviewed"]);
+    expect(rows.get("usdc-circle")!.custodyModel).toBe("cex");
+    expect(rows.get("unreviewed")!.custodyModel).toBe("institutional-regulated");
+  });
+});
 
-  it("prefers curated custody over the inference table", () => {
-    const mismatched: string[] = [];
-    for (const [id, row] of rows) {
-      const curated = CLIENT_ACTIVE_META_BY_ID.get(id)?.custodyModel;
-      if (curated != null && row.custodyModel !== curated) {
-        mismatched.push(`${id}: ${row.custodyModel} != ${curated}`);
-      }
-    }
-    expect(mismatched).toEqual([]);
+describe("yield ingestion", () => {
+  it("marks structured-tranche model substitution ineligible for V9 coverage", () => {
+    const row = adaptYield({ yieldType: "structured-tranche", safetyScore: 99, safetyGrade: "A+" });
+    expect(row).toMatchObject({ safetyScore: 99, safetyGrade: "A+", safetyProvenance: "yield-opportunity" });
+    expect(hasRequiredSignals(row, "yield").missing).toContain("safety-score-v9");
+    expect(adaptYield({ yieldType: "structured-tranche", safetyScore: 99 }).safetyScore).toBeNull();
   });
 
-  it("falls back to the inference table when no custody review exists", () => {
-    const mismatched: string[] = [];
-    for (const [id, row] of rows) {
-      const meta = CLIENT_ACTIVE_META_BY_ID.get(id);
-      if (meta == null || meta.custodyModel != null) continue;
-      const inferred = inferResilienceDefaults(meta.flags.backing, meta.flags.governance).custodyModel;
-      if (row.custodyModel !== inferred) mismatched.push(`${id}: ${row.custodyModel} != ${inferred}`);
+  it("honors benchmark precedence and explicit false source-switch evidence", () => {
+    const response = { provenance: { benchmark: { rate: 3 } }, riskFreeRate: 4 };
+    const cases = [
+      { ranking: { benchmarkRate: 1, provenance: { benchmarkRate: 2, sourceSwitch: false },
+        decisionLedger: { sourceSwitch: true }, sourceRisk: { sourceSwitchCount30d: 2 } }, rate: 1, switched: false },
+      { ranking: { provenance: { benchmarkRate: 2 }, decisionLedger: { sourceSwitch: false },
+        sourceRisk: { sourceSwitchCount30d: 2 } }, rate: 2, switched: false },
+      { ranking: { sourceRisk: { sourceSwitchCount30d: 2 } }, rate: 3, switched: true },
+    ];
+    for (const { ranking, rate, switched } of cases) {
+      expect(adaptYield(ranking, response)).toMatchObject({ benchmarkRate: rate, sourceSwitch: switched });
     }
-    expect(mismatched).toEqual([]);
+    expect(adaptYield({}, { riskFreeRate: 4 }).benchmarkRate).toBe(4);
   });
 
-  it("reaches custody models the inference table cannot produce", () => {
-    const observed = new Set(Array.from(rows.values(), (row) => row.custodyModel));
-    // `cex` is the value the old projection was blind to and the one both
-    // custody rails must now reject.
-    expect(observed.has("cex")).toBe(true);
-    expect(
-      ["institutional-top", "institutional-unregulated", "institutional-sanctioned"].some((model) =>
-        observed.has(model),
-      ),
-    ).toBe(true);
+  it("normalizes primary and alternate venues before preference-based source selection", () => {
+    const row = adaptYield({
+      sourceRisk: { venueProtocol: "Aave", venueChain: "ethereum", venueRiskTier: "medium",
+        deploymentPlace: "lending-market", sourceAgeSeconds: 60 },
+      altSources: [{ sourceKey: "curve-lp", yieldSource: "Curve", yieldType: "lp-receipt", apy30d: 4,
+        sourceRisk: { venueProtocol: "Curve", venueChain: "ethereum", venueRiskTier: "low",
+          deploymentPlace: "lp-or-dex", sourceAgeSeconds: 120 } }],
+    });
+    expect(row.yieldSources).toMatchObject([
+      { sourceKey: "Aave:ethereum:lending", venueRiskTier: "mid", deploymentPlace: "lending", isPrimary: true },
+      { sourceKey: "curve-lp", venueRiskTier: "low", deploymentPlace: "lp", isPrimary: false },
+    ]);
+    expect(selectYieldSource(row, makeInput({ profile: "yield", venuePreferences: ["dex"] })))
+      .toMatchObject({ sourceKey: "curve-lp", selectionReason: "venue-preference" });
+    expect(selectYieldSource(row, makeInput({ profile: "yield", venuePreferences: ["lend"] })))
+      .toMatchObject({ sourceKey: "Aave:ethereum:lending" });
+  });
+
+  it("prefers observed freshness and derives risk freshness equally from seconds and milliseconds", () => {
+    for (const now of [NOW, NOW / 1000]) {
+      expect(adaptYield({ provenance: { sourceObservedAt: 123, sourceAgeSeconds: 7 },
+        sourceRisk: { sourceAgeSeconds: 60 } }, {}, now).yieldFreshness)
+        .toEqual({ capturedAt: 123, ageSeconds: 7 });
+      const row = adaptYield({ sourceRisk: { sourceAgeSeconds: 60 },
+        altSources: [{ sourceKey: "alt", sourceRisk: { sourceAgeSeconds: 120 } }] }, {}, now);
+      expect(row.yieldFreshness).toEqual({ capturedAt: 1_699_999_940, ageSeconds: 60 });
+      expect(row.yieldSources![1]!.freshness).toEqual({ capturedAt: 1_699_999_880, ageSeconds: 120 });
+    }
   });
 });

@@ -11,10 +11,9 @@ import { makeCatalogCoin, NON_RWA_STABLECOIN_FLAGS } from "./test-support";
 
 describe("countActiveByArchetype", () => {
   it("returns a count for every mechanism archetype", () => {
-    const counts = countActiveByArchetype();
+    const counts = countActiveByArchetype([], new Map());
     for (const archetype of MECHANISM_ARCHETYPE_VALUES) {
-      expect(typeof counts[archetype]).toBe("number");
-      expect(counts[archetype]).toBeGreaterThanOrEqual(0);
+      expect(counts[archetype]).toBe(0);
     }
   });
 
@@ -83,46 +82,22 @@ describe("countActiveByArchetype", () => {
     }
   });
 
-  it("rwa-credit-fund bucket is populated after T8 migration", () => {
-    const counts = countActiveByArchetype();
-    expect(counts["rwa-credit-fund"]).toBeGreaterThan(0);
-  });
-
-  it("fiat-cash bucket is populated", () => {
-    const counts = countActiveByArchetype();
-    expect(counts["fiat-cash"]).toBeGreaterThan(0);
-  });
 });
 
 describe("getActiveByArchetype", () => {
-  it("returns coins for fiat-cash archetype", () => {
-    const coins = getActiveByArchetype("fiat-cash");
-    expect(coins.length).toBeGreaterThan(0);
-    for (const coin of coins) {
-      expect(coin.flags.pegCurrency).not.toBe("GOLD");
-      expect(coin.flags.pegCurrency).not.toBe("SILVER");
-    }
+  it("sorts unsorted supplies with missing supply last without mutating the input", () => {
+    const coins = ["missing", "small", "large"].map((id) =>
+      makeCatalogCoin({ id, flags: NON_RWA_STABLECOIN_FLAGS, mechanismArchetype: "fiat-cash" }),
+    );
+    const registry = new Map(coins.map((coin) => [coin.id, coin]));
+    const supplyById = new Map([["small", 10], ["large", 100]]);
+    expect(getActiveByArchetype("fiat-cash", supplyById, coins, registry).map((coin) => coin.id))
+      .toEqual(["large", "small", "missing"]);
+    expect(coins.map((coin) => coin.id)).toEqual(["missing", "small", "large"]);
+    expect(getActiveByArchetype("fiat-cash", undefined, coins, registry).map((coin) => coin.id))
+      .toEqual(["missing", "small", "large"]);
   });
 
-  it("sorts by supply descending when supply map is provided", () => {
-    const coins = getActiveByArchetype("fiat-cash");
-    if (coins.length < 2) return;
-
-    const supplyById = new Map<string, number>();
-    coins.forEach((c, i) => supplyById.set(c.id, (coins.length - i) * 1000));
-
-    const sorted = getActiveByArchetype("fiat-cash", supplyById);
-    for (let i = 0; i < sorted.length - 1; i++) {
-      const a = supplyById.get(sorted[i].id) ?? 0;
-      const b = supplyById.get(sorted[i + 1].id) ?? 0;
-      expect(a).toBeGreaterThanOrEqual(b);
-    }
-  });
-
-  it("returns rwa-credit-fund coins after T8 migration", () => {
-    const coins = getActiveByArchetype("rwa-credit-fund");
-    expect(coins.length).toBeGreaterThan(0);
-  });
 });
 
 describe("getCoinsByLifecycleStatus", () => {
@@ -141,20 +116,24 @@ describe("getCoinsByLifecycleStatus", () => {
     });
   }
 
-  it("returns active coins for fiat-cash archetype", () => {
-    const coins = getCoinsByLifecycleStatus("fiat-cash", "active");
-    expect(coins.length).toBeGreaterThan(0);
-  });
-
-  it("returns frozen coins only for an explicit frozen status", () => {
-    const frozenCoins = getCoinsByLifecycleStatus("fiat-cash", "frozen");
-    const invalidCoins = getCoinsByLifecycleStatus(
-      "fiat-cash",
-      "dead" as "active" | "pre-launch" | "frozen",
+  it("selects each lifecycle pool independently and filters archetypes and commodities", () => {
+    const statuses = ["active", "pre-launch", "frozen", "quarantined", "delisted"] as const;
+    const pools = Object.fromEntries(statuses.map((status) => [
+      status, [makeLifecycleCoin(status, "fiat-cash")],
+    ]));
+    pools.quarantined.push(
+      makeLifecycleCoin("wrong-archetype", "algorithmic"),
+      makeCatalogCoin({
+        id: "commodity", mechanismArchetype: "fiat-cash",
+        flags: { ...NON_RWA_STABLECOIN_FLAGS, pegCurrency: "GOLD", rwa: true },
+      }),
     );
-
-    expect(frozenCoins.length).toBeGreaterThan(0);
-    expect(invalidCoins).toEqual([]);
+    const registry = new Map(Object.values(pools).flat().map((coin) => [coin.id, coin]));
+    for (const status of statuses) {
+      expect(getCoinsByLifecycleStatus("fiat-cash", status, { pools, registry }).map((coin) => coin.id))
+        .toEqual([status]);
+    }
+    expect(getCoinsByLifecycleStatus("fiat-cash", "dead" as "active", { pools, registry })).toEqual([]);
   });
 
   it("resolves variants against the full tracked registry across lifecycle buckets", () => {

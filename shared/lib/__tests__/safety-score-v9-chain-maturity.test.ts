@@ -98,9 +98,14 @@ describe("Safety Score v9 chain-maturity registry", () => {
   it("records an own document date or an explicit dated access for every gate source", () => {
     for (const review of CHAIN_MATURITY_REVIEWS_V1) {
       for (const gateId of CHAIN_MATURITY_GATE_IDS) {
+        expect(review.gates[gateId].sources.length, `${review.chainSlug}/${gateId}`).toBeGreaterThan(0);
         for (const evidence of review.gates[gateId].sources) {
-          expect(evidence.documentDate ?? `accessed ${evidence.accessedAt}`, `${review.chainSlug}/${gateId}`)
-            .not.toBe("");
+          const date = evidence.documentDate ?? evidence.accessedAt;
+          expect(date, `${review.chainSlug}/${gateId}`).toMatch(/^\d{4}(?:-\d{2}(?:-\d{2})?)?$/);
+          // Authored documents may disclose only a year or month; access dates are full dates.
+          if (evidence.documentDate == null) expect(date).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+          const fullDate = date.length === 4 ? `${date}-01-01` : date.length === 7 ? `${date}-01` : date;
+          expect(new Date(`${fullDate}T00:00:00Z`).toISOString().slice(0, 10)).toBe(fullDate);
         }
       }
     }

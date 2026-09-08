@@ -212,14 +212,16 @@ function executeInvariant(invariant: MatchedV9Invariant): void {
       return;
     }
   }
+  const unsupported: never = invariant;
+  throw new Error(`Unsupported invariant: ${JSON.stringify(unsupported)}`);
 }
 
 describe("separate matched v9 invariant corpus", () => {
-  it("keeps the transformation registry versioned, unique, and fully executable", () => {
-    expect(MATCHED_V9_INVARIANTS).toHaveLength(8);
-    expect(new Set(MATCHED_V9_INVARIANTS.map((entry) => entry.id)).size).toBe(8);
-    for (const invariant of MATCHED_V9_INVARIANTS) executeInvariant(invariant);
+  it("keeps invariant identities unique", () => {
+    expect(new Set(MATCHED_V9_INVARIANTS.map((entry) => entry.id)).size).toBe(MATCHED_V9_INVARIANTS.length);
   });
+
+  it.each(MATCHED_V9_INVARIANTS)("$id", executeInvariant);
 
   it("validates reserve-loss fact percentages before deriving a signal", () => {
     expect(() =>

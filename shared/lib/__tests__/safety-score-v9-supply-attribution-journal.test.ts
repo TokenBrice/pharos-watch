@@ -36,6 +36,15 @@ function payload(
   };
 }
 
+function xautPayload(overrides: Partial<SupplyAttributionJournalV1Payload> = {}): SupplyAttributionJournalV1Payload {
+  return payload({
+    assetId: "xaut-tether",
+    sourceId: "xaut.canonical-lock-mint-group-partition.v2",
+    sourceOriginClass: "issuer-disclosure-plus-onchain",
+    ...overrides,
+  });
+}
+
 describe("Safety Score V9 supply attribution journal runtime", () => {
   it("content-addresses bounded accepted and rejected attempt records", () => {
     const accepted = createSupplyAttributionJournalV1(payload());
@@ -100,10 +109,7 @@ describe("Safety Score V9 supply attribution journal runtime", () => {
 
   it("retains exact bounded XAUT rejection diagnostics", () => {
     const stale = createSupplyAttributionJournalV1(
-      payload({
-        assetId: "xaut-tether",
-        sourceId: "xaut.canonical-lock-mint-group-partition.v2",
-        sourceOriginClass: "issuer-disclosure-plus-onchain",
+      xautPayload({
         admissionCode: "supply-attribution.admission.rejected-stale",
         fallbackCode: "supply-attribution.fallback.aggregate-only",
         rejectionCode: "transparency-stale",
@@ -118,10 +124,7 @@ describe("Safety Score V9 supply attribution journal runtime", () => {
     });
     expect(() =>
       createSupplyAttributionJournalV1(
-        payload({
-          assetId: "xaut-tether",
-          sourceId: "xaut.canonical-lock-mint-group-partition.v2",
-          sourceOriginClass: "issuer-disclosure-plus-onchain",
+        xautPayload({
           admissionCode: "supply-attribution.admission.rejected-stale",
           fallbackCode: "supply-attribution.fallback.aggregate-only",
           rejectionCode: "transparency-stale",
@@ -142,10 +145,7 @@ describe("Safety Score V9 supply attribution journal runtime", () => {
   it("binds each exact rejection leaf to its aggregate admission class", () => {
     expect(() =>
       createSupplyAttributionJournalV1(
-        payload({
-          assetId: "xaut-tether",
-          sourceId: "xaut.canonical-lock-mint-group-partition.v2",
-          sourceOriginClass: "issuer-disclosure-plus-onchain",
+        xautPayload({
           admissionCode: "supply-attribution.admission.rejected-upstream",
           fallbackCode: "supply-attribution.fallback.aggregate-only",
           rejectionCode: "transparency-stale",
@@ -159,13 +159,7 @@ describe("Safety Score V9 supply attribution journal runtime", () => {
   });
 
   it("records XAUT issuer disclosure plus onchain evidence distinctly", () => {
-    const hybrid = createSupplyAttributionJournalV1(
-      payload({
-        assetId: "xaut-tether",
-        sourceId: "xaut.canonical-lock-mint-group-partition.v2",
-        sourceOriginClass: "issuer-disclosure-plus-onchain",
-      }),
-    );
+    const hybrid = createSupplyAttributionJournalV1(xautPayload());
     expect(hybrid).toMatchObject({
       assetId: "xaut-tether",
       sourceOriginClass: "issuer-disclosure-plus-onchain",
@@ -187,24 +181,11 @@ describe("Safety Score V9 supply attribution journal runtime", () => {
     });
   });
 
-  it("rejects source and origin pairings that misstate evidence provenance", () => {
-    expect(() =>
-      createSupplyAttributionJournalV1(
-        payload({
-          sourceOriginClass: "issuer-disclosure-plus-onchain",
-        }),
-      ),
-    ).toThrow(/requires onchain-observation origin/);
-    expect(() =>
-      createSupplyAttributionJournalV1(
-        payload({
-          assetId: "xaut-tether",
-          sourceId:
-            "xaut.canonical-lock-mint-group-partition.v2",
-          sourceOriginClass: "onchain-observation",
-        }),
-      ),
-    ).toThrow(/requires issuer-disclosure-plus-onchain origin/);
+  it.each([
+    [payload({ sourceOriginClass: "issuer-disclosure-plus-onchain" }), /requires onchain-observation origin/],
+    [xautPayload({ sourceOriginClass: "onchain-observation" }), /requires issuer-disclosure-plus-onchain origin/],
+  ])("rejects a mismatched provenance tuple %#", (record, error) => {
+    expect(() => createSupplyAttributionJournalV1(record)).toThrow(error);
   });
 
   it("admits only the bounded wM finality exception after the scoring clock", () => {
@@ -234,10 +215,7 @@ describe("Safety Score V9 supply attribution journal runtime", () => {
     ).toThrow(/scoring clock/);
     expect(() =>
       createSupplyAttributionJournalV1(
-        payload({
-          assetId: "xaut-tether",
-          sourceId: "xaut.canonical-lock-mint-group-partition.v2",
-          sourceOriginClass: "issuer-disclosure-plus-onchain",
+        xautPayload({
           sourceObservedAtSec: 101,
         }),
       ),
@@ -258,16 +236,6 @@ describe("Safety Score V9 supply attribution journal runtime", () => {
     ).toThrow(/aggregate-only fallback/);
     expect(() =>
       createSupplyAttributionJournalV1(
-        payload({
-          assetId: "xaut-tether",
-          sourceId: "xaut.canonical-lock-mint-group-partition.v2",
-          sourceOriginClass: "issuer-disclosure-plus-onchain",
-          sourceObservedAtSec: 101,
-        }),
-      ),
-    ).toThrow(/scoring clock/);
-    expect(() =>
-      createSupplyAttributionJournalV1(
         payload({ failedRouteId: "https://rpc.example" }),
       ),
     ).toThrow();
@@ -282,6 +250,50 @@ describe("Safety Score V9 supply attribution journal runtime", () => {
         payload({ contentSha256: "not-a-digest" }),
       ),
     ).toThrow();
+  });
+
+  it("retains future XAUT timestamps only as rejected clock-skew diagnostics", () => {
+    const record = createSupplyAttributionJournalV1(xautPayload({
+      sourceObservedAtSec: 200,
+      admissionCode: "supply-attribution.admission.rejected-skew",
+      rejectionCode: "transparency-clock-skew",
+      fallbackCode: "supply-attribution.fallback.aggregate-only",
+      contentSha256: null,
+    }));
+    expect(record).toMatchObject({
+      sourceObservedAtSec: 200,
+      admissionCode: "supply-attribution.admission.rejected-skew",
+      rejectionCode: "transparency-clock-skew",
+      contentSha256: null,
+    });
+  });
+
+  it("rejects completion before attempt independently of source chronology", () => {
+    expect(() => createSupplyAttributionJournalV1(payload({ completedAtSec: 100 }))).toThrow(/predate/);
+  });
+
+  it("requires accepted content, source time, and a successful route independently", () => {
+    for (const override of [
+      { contentSha256: null },
+      { sourceObservedAtSec: null },
+      { failedRouteId: "base:0x437cc33344a0b27a429f795ff6b469c72698b291" },
+    ]) {
+      expect(() => createSupplyAttributionJournalV1(payload(override))).toThrow(/requires content and source time/);
+    }
+  });
+
+  it("rejects content retained by an otherwise coherent rejected record", () => {
+    expect(() => createSupplyAttributionJournalV1(payload({
+      admissionCode: "supply-attribution.admission.rejected-upstream",
+      rejectionCode: "chain-rpc-unavailable",
+      fallbackCode: "supply-attribution.fallback.aggregate-only",
+    }))).toThrow(/rejected attribution cannot carry content/);
+  });
+
+  it("rejects a source-allowed rejection code on accepted evidence", () => {
+    expect(() => createSupplyAttributionJournalV1(payload({
+      rejectionCode: "chain-rpc-unavailable",
+    }))).toThrow(/cannot carry a rejection code/);
   });
 
   it("enforces the canonical serialized entry-size bound", () => {
