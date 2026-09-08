@@ -288,7 +288,7 @@ const db = mockD1([
 - `rows` — array of row objects for `.all()` results
 - `first` — explicit `.first()` result, object or `null`; a provided value wins over first-row and cache-key inference, so `{ first: null }` is an explicit empty result, not a request to infer one
 - `batch()` — executes each statement and returns an array of results (SELECT statements use `.all()`; writes use `.run()`, falling back to `.all()`/`.first()`)
-- Unmatched SQL always throws — there is no permissive mode and no `allowUnmatched` option. Add a `{ match, rows }` entry (or `allowUnused: true` on a shared fallback entry you do not expect to fire) instead. The `requireMatch` option is deprecated and no longer changes behavior.
+- Unmatched SQL always throws — there is no permissive mode. Add a `{ match, rows }` entry (or `allowUnused: true` on a shared fallback entry you do not expect to fire) instead. The `requireMatch` option is deprecated and no longer changes behavior.
 - `mockD1(tables, { strictSql: true })` — matches normalized SQL exactly instead of substring search
 - `mockD1(tables, { strict: true })` — exact normalized SQL matching (`mockD1Strict(tables)` is the shorthand). Matching is always required, so unlike the deprecated `requireMatch` this only tightens how SQL is compared.
 - `db.assertAllMatchesUsed()` — optional assertion that every configured match was actually selected at least once. Accounting counts selections, not SQL history: a fallback entry shadowed by a `matchBinds` entry stays unused, and `allowUnused: true` entries are exempt.
