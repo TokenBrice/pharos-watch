@@ -424,7 +424,7 @@ When adding tests, prefer colocating them near the module under test unless an e
 ### Default test boundaries
 
 - **Broad DOM-rendered React integration tests** — jsdom is available only when a test opts in via `// @vitest-environment jsdom` (for example `src/hooks/__tests__/use-chart-container-ready.test.tsx`). Most existing tests stay pure or use server rendering instead of full browser-like component integration.
-- **API/worker handlers** — use `mockD1()` for response-shape and branch tests. When correctness depends on transactions, constraints, migrations, concurrency, or SQL semantics, use the latest-schema SQLite harness `createLatestSchemaSqlite()` in `worker/src/test-helpers/latest-schema-sqlite.ts` rather than treating substring-matched mocks as persistence proof.
+- **API/worker handlers** — use `mockD1()` for response-shape and branch tests. When correctness depends on transactions, constraints, migrations, concurrency, or SQL semantics, use the latest-schema SQLite harness `createLatestSchemaSqlite()` in `shared/test-utils/latest-schema-sqlite.ts` rather than treating substring-matched mocks as persistence proof.
 - **React-rendering behavior inside hooks/components** — prefer pure derivation tests and mocked query tests unless there is high-value UI coupling.
 - **Full external-service integration for cron orchestrators** — orchestration tests should mock `fetch`/D1 boundaries and assert status/metadata contracts, not live upstream behavior.
 
