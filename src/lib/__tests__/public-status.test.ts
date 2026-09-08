@@ -12,58 +12,68 @@ import {
 
 const BASE_HEALTH: HealthResponse = makeHealthyHealthResponse();
 
+type ActivePriceCoverageFixture = NonNullable<HealthResponse["activePriceCoverage"]>;
+type MissingActiveAssetFixture = ActivePriceCoverageFixture["missingActiveAssets"][number];
+
+function makeMissingAsset(overrides: Partial<MissingActiveAssetFixture> = {}): MissingActiveAssetFixture {
+  return {
+    stablecoinId: "test-dollar",
+    symbol: "TUSD",
+    marketCapUsd: 500_000,
+    currentPrice: null,
+    currentSource: null,
+    currentObservedAt: null,
+    currentConfidence: null,
+    consecutiveMissingGenerations: 1,
+    lastAcceptedPrice: null,
+    lastAcceptedSource: null,
+    lastAcceptedObservedAt: null,
+    rejectionReason: "no-accepted-price",
+    alertEligible: false,
+    ...overrides,
+  };
+}
+
+/** Derives counts/ids from the supplied missing assets so fixture scenarios cannot drift apart. */
+function makeCoverage(
+  missingAssets: MissingActiveAssetFixture[],
+  overrides: Partial<ActivePriceCoverageFixture> = {},
+): ActivePriceCoverageFixture {
+  const alertEligibleIds = missingAssets.filter((asset) => asset.alertEligible).map((asset) => asset.stablecoinId);
+  return {
+    status: "incomplete",
+    expectedActiveCount: 190,
+    presentActiveCount: 190,
+    pricedActiveCount: 190 - missingAssets.length,
+    missingPriceCount: missingAssets.length,
+    pricedActiveIds: [],
+    missingActiveIds: missingAssets.map((asset) => asset.stablecoinId),
+    affectedMarketCapUsd: missingAssets.reduce((sum, asset) => sum + (asset.marketCapUsd ?? 0), 0),
+    missingActiveAssets: missingAssets,
+    alertEligibleCount: alertEligibleIds.length,
+    alertEligibleIds,
+    maxConsecutiveMissingGenerations: Math.max(0, ...missingAssets.map((asset) => asset.consecutiveMissingGenerations)),
+    observedAt: 1_700_000_000,
+    ...overrides,
+  };
+}
+
 describe("public status helpers", () => {
   it("renders active-price warnings with impacted assets without a public surface incident", () => {
     const health: HealthResponse = {
       ...BASE_HEALTH,
       status: "healthy",
       warnings: ["active-price-coverage-incomplete:nxusd-nereus,test-dollar"],
-      activePriceCoverage: {
-        status: "incomplete",
-        expectedActiveCount: 190,
-        presentActiveCount: 190,
-        pricedActiveCount: 188,
-        missingPriceCount: 2,
-        pricedActiveIds: [],
-        missingActiveIds: ["nxusd-nereus", "test-dollar"],
-        affectedMarketCapUsd: 2_000_000,
-        missingActiveAssets: [
-          {
-            stablecoinId: "nxusd-nereus",
-            symbol: "NXUSD",
-            marketCapUsd: 1_500_000,
-            currentPrice: null,
-            currentSource: null,
-            currentObservedAt: null,
-            currentConfidence: null,
-            consecutiveMissingGenerations: 2,
-            lastAcceptedPrice: 1,
-            lastAcceptedSource: "coingecko",
-            lastAcceptedObservedAt: 1_699_999_000,
-            rejectionReason: "no-accepted-price",
-            alertEligible: true,
-          },
-          {
-            stablecoinId: "test-dollar",
-            symbol: "TUSD",
-            marketCapUsd: 500_000,
-            currentPrice: null,
-            currentSource: null,
-            currentObservedAt: null,
-            currentConfidence: null,
-            consecutiveMissingGenerations: 1,
-            lastAcceptedPrice: null,
-            lastAcceptedSource: null,
-            lastAcceptedObservedAt: null,
-            rejectionReason: "no-accepted-price",
-            alertEligible: false,
-          },
-        ],
-        alertEligibleCount: 1,
-        alertEligibleIds: ["nxusd-nereus"],
-        maxConsecutiveMissingGenerations: 2,
-        observedAt: 1_700_000_000,
-      },
+      activePriceCoverage: makeCoverage([
+        makeMissingAsset({
+          stablecoinId: "nxusd-nereus",
+          symbol: "NXUSD",
+          marketCapUsd: 1_500_000,
+          consecutiveMissingGenerations: 2,
+          alertEligible: true,
+        }),
+        makeMissingAsset(),
+      ]),
     };
 
     expect(getPublicHealthWarningPresentation(health.warnings[0]!, health)).toEqual({
@@ -107,6 +117,44 @@ describe("public status helpers", () => {
       ratio: null,
       status: "stale",
       impactedCount: 1,
+    });
+  });
+
+  it("selects the worst severity across caches and counts every impacted cache", () => {
+    const summary = getPublicWorstCacheSummary({
+      stablecoins: { ageSeconds: 11_700, maxAge: 900, healthy: false }, // ratio 13 → stale
+      "stablecoin-charts": { ageSeconds: 8_100, maxAge: 900, healthy: false }, // ratio 9 → degraded
+      "fx-rates": { ageSeconds: 90, maxAge: 900, healthy: true }, // ratio 0.1 → healthy
+    });
+
+    expect(summary).toEqual({ ratio: 13, status: "stale", impactedCount: 2 });
+  });
+
+  it("breaks severity ties by the largest freshness ratio regardless of insertion order", () => {
+    const caches = {
+      "stablecoin-charts": { ageSeconds: 880, maxAge: 100, healthy: false }, // ratio 8.8 → degraded
+      "fx-rates": { ageSeconds: 920, maxAge: 100, healthy: false }, // ratio 9.2 → degraded
+    };
+
+    expect(getPublicWorstCacheSummary(caches)).toEqual({ ratio: 9.2, status: "degraded", impactedCount: 2 });
+    expect(
+      getPublicWorstCacheSummary({ "fx-rates": caches["fx-rates"], "stablecoin-charts": caches["stablecoin-charts"] }),
+    ).toEqual({ ratio: 9.2, status: "degraded", impactedCount: 2 });
+  });
+
+  it("prefers a missing freshness row over a numeric ratio within a severity tie, in any order", () => {
+    const missingRow = { ageSeconds: null, maxAge: 900, healthy: false }; // stale, no freshness ratio
+    const numericStale = { ageSeconds: 1_300, maxAge: 100, healthy: false }; // ratio 13 → stale
+
+    expect(getPublicWorstCacheSummary({ stablecoins: missingRow, "stablecoin-charts": numericStale })).toEqual({
+      ratio: null,
+      status: "stale",
+      impactedCount: 2,
+    });
+    expect(getPublicWorstCacheSummary({ "stablecoin-charts": numericStale, stablecoins: missingRow })).toEqual({
+      ratio: null,
+      status: "stale",
+      impactedCount: 2,
     });
   });
 
@@ -190,37 +238,7 @@ describe("getImpactedPublicSurfaces", () => {
       ...BASE_HEALTH,
       status: "healthy",
       warnings: [],
-      activePriceCoverage: {
-        status: "incomplete",
-        expectedActiveCount: 190,
-        presentActiveCount: 190,
-        pricedActiveCount: 189,
-        missingPriceCount: 1,
-        pricedActiveIds: [],
-        missingActiveIds: ["test-dollar"],
-        affectedMarketCapUsd: 500_000,
-        missingActiveAssets: [
-          {
-            stablecoinId: "test-dollar",
-            symbol: "TUSD",
-            marketCapUsd: 500_000,
-            currentPrice: null,
-            currentSource: null,
-            currentObservedAt: null,
-            currentConfidence: null,
-            consecutiveMissingGenerations: 1,
-            lastAcceptedPrice: null,
-            lastAcceptedSource: null,
-            lastAcceptedObservedAt: null,
-            rejectionReason: "no-accepted-price",
-            alertEligible: false,
-          },
-        ],
-        alertEligibleCount: 0,
-        alertEligibleIds: [],
-        maxConsecutiveMissingGenerations: 1,
-        observedAt: 1_700_000_000,
-      },
+      activePriceCoverage: makeCoverage([makeMissingAsset()]),
     };
     expect(getImpactedPublicSurfaces(transient).some((s) => s.id === "active-price-coverage")).toBe(false);
   });
@@ -230,39 +248,34 @@ describe("getImpactedPublicSurfaces", () => {
       ...BASE_HEALTH,
       status: "healthy",
       warnings: ["active-price-coverage-incomplete:test-dollar"],
-      activePriceCoverage: {
-        status: "incomplete",
-        expectedActiveCount: 190,
-        presentActiveCount: 190,
-        pricedActiveCount: 189,
-        missingPriceCount: 1,
-        pricedActiveIds: [],
-        missingActiveIds: ["test-dollar"],
-        affectedMarketCapUsd: 500_000,
-        missingActiveAssets: [],
-        alertEligibleCount: 1,
-        alertEligibleIds: ["test-dollar"],
-        maxConsecutiveMissingGenerations: 2,
-        observedAt: 1_700_000_000,
-      },
+      activePriceCoverage: makeCoverage([makeMissingAsset({ alertEligible: true })]),
     };
     expect(getImpactedPublicSurfaces(alertEligible).some((surface) => surface.id === "active-price-coverage")).toBe(false);
   });
 
-  it("surfaces mint-burn when critical lane is unhealthy", () => {
+  it("fails closed with a degraded surface when exact price coverage is unknown", () => {
     const health: HealthResponse = {
       ...BASE_HEALTH,
-      mintBurn: {
-        ...BASE_HEALTH.mintBurn,
-        sync: {
-          ...BASE_HEALTH.mintBurn.sync,
-          criticalLaneHealthy: false,
-          warning: "critical lane errored",
-        },
+      activePriceCoverage: {
+        status: "unknown",
+        expectedActiveCount: 0,
+        presentActiveCount: 0,
+        pricedActiveCount: 0,
+        missingPriceCount: 0,
+        pricedActiveIds: [],
+        missingActiveIds: [],
+        affectedMarketCapUsd: 0,
+        missingActiveAssets: [],
+        alertEligibleCount: 0,
+        alertEligibleIds: [],
+        maxConsecutiveMissingGenerations: 0,
+        observedAt: null,
       },
     };
-    const surfaces = getImpactedPublicSurfaces(health);
-    expect(surfaces.some((s) => s.id === "mint-burn")).toBe(true);
+
+    expect(getImpactedPublicSurfaces(health)).toContainEqual(
+      expect.objectContaining({ id: "active-price-coverage", tone: "degraded" }),
+    );
   });
 
   it("surfaces both mint-burn and blacklist when both are degraded", () => {
@@ -287,7 +300,7 @@ describe("getImpactedPublicSurfaces", () => {
     expect(ids).toContain("blacklist");
   });
 
-  it("tone reflects severity — stale mint/burn reports 'stale' tone, warning-only reports 'degraded'", () => {
+  it("maps a stale mint/burn lane to the stale public surface tone", () => {
     const staleHealth: HealthResponse = {
       ...BASE_HEALTH,
       mintBurn: {
@@ -295,19 +308,13 @@ describe("getImpactedPublicSurfaces", () => {
         sync: {
           ...BASE_HEALTH.mintBurn.sync,
           freshnessStatus: "stale",
-          warning: "mint/burn sync has been stale for hours",
-          lastSuccessfulSyncAt: BASE_HEALTH.mintBurn.sync.lastSuccessfulSyncAt,
         },
       },
     };
-    const staleSurfaces = getImpactedPublicSurfaces(staleHealth);
-    const mintBurn = staleSurfaces.find((s) => s.id === "mint-burn");
-    if (mintBurn) {
-      // Either degraded or stale tone is acceptable depending on the helper's
-      // internal mapping. Both are "impacted" and the test guards the surface
-      // renders at all.
-      expect(["degraded", "stale"]).toContain(mintBurn.tone);
-    }
+
+    expect(getImpactedPublicSurfaces(staleHealth)).toContainEqual(
+      expect.objectContaining({ id: "mint-burn", tone: "stale" }),
+    );
   });
 });
 
@@ -320,9 +327,9 @@ describe("getPublicMintBurnStatus — additional fixtures", () => {
     const sync = {
       ...BASE_HEALTH.mintBurn.sync,
       freshnessStatus: "stale" as const,
+      criticalLaneHealthy: false,
     };
-    const status = getPublicMintBurnStatus(sync);
-    expect(["stale", "degraded"]).toContain(status);
+    expect(getPublicMintBurnStatus(sync)).toBe("stale");
   });
 });
 

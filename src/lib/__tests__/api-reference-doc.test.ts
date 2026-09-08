@@ -79,10 +79,7 @@ describe("loadApiReferenceDocument", () => {
     if (stablecoinDataTable?.type !== "table") return;
 
     const geckoIdRow = stablecoinDataTable.rows.find((row) => row[0] === "`geckoId`");
-    expect(geckoIdRow).toEqual([
-      "`geckoId`",
-      "`string | null`",
-      "CoinGecko ID (normalized output key; upstream DefiLlama uses `gecko_id`)",
-    ]);
+    // The escaped union must stay one cell; the description column is editorial.
+    expect(geckoIdRow).toEqual(["`geckoId`", "`string | null`", expect.any(String)]);
   });
 });

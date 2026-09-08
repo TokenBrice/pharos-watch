@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, vi } from "vitest";
+import { afterEach, beforeEach, vi, type Mock } from "vitest";
 import { cleanup, render } from "@testing-library/react";
 import type { ApiKeyListResponse, ApiKeySummary } from "@shared/types";
 
@@ -37,6 +37,39 @@ export function makeKey(overrides: Partial<ApiKeySummary> = {}): ApiKeySummary {
     lastUsedAt: overrides.lastUsedAt ?? null,
     lastUsedRoute: overrides.lastUsedRoute ?? null,
   };
+}
+
+export const ONE_TIME_TOKEN = "ph_live_aaaaaaaaaaaaaaaa_bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb";
+
+/** JSON `Response` for an API-key endpoint. Pass to `mockResolvedValueOnce` for one-consumption fixtures. */
+export function keyResponse(
+  body: Record<string, unknown>,
+  { status = 201, headers = {} }: { status?: number; headers?: Record<string, string> } = {},
+): Response {
+  return new Response(JSON.stringify(body), {
+    status,
+    headers: { "Content-Type": "application/json", ...headers },
+  });
+}
+
+/** Overrides the audit-log query envelope; returns its `refetch` spy. */
+export function setAuditLog(
+  overrides: {
+    data?: { entries: unknown[] };
+    error?: Error | null;
+    isLoading?: boolean;
+    isFetching?: boolean;
+  } = {},
+): Mock {
+  const refetch = vi.fn().mockResolvedValue(undefined);
+  useApiKeyAuditLogMock.mockReturnValue({
+    data: overrides.data,
+    error: overrides.error ?? null,
+    isLoading: overrides.isLoading ?? false,
+    isFetching: overrides.isFetching ?? false,
+    refetch,
+  });
+  return refetch;
 }
 
 export function renderPanel(keys: ApiKeySummary[], refetch = vi.fn().mockResolvedValue(undefined)) {

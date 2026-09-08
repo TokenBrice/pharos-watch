@@ -7,16 +7,16 @@ describe("trackSearch debounce + clearAllTrackingTimers", () => {
   beforeEach(() => {
     vi.useFakeTimers();
     gtag = vi.fn();
-    (globalThis as { window?: unknown }).window = {
+    vi.stubGlobal("window", {
       gtag,
       location: { pathname: "/", hostname: "pharos.watch" },
-    };
+    });
   });
 
   afterEach(() => {
     clearAllTrackingTimers();
     vi.useRealTimers();
-    delete (globalThis as { window?: unknown }).window;
+    vi.unstubAllGlobals();
   });
 
   it("fires search_performed once after the debounce window elapses", () => {
@@ -35,6 +35,32 @@ describe("trackSearch debounce + clearAllTrackingTimers", () => {
     // user navigates away mid-debounce
     clearAllTrackingTimers();
     vi.advanceTimersByTime(1000);
+    expect(gtag).not.toHaveBeenCalled();
+  });
+
+  it("restarts the full quiet window and delivers only the newest search", () => {
+    trackSearch("depeg", 4);
+    vi.advanceTimersByTime(600);
+    trackSearch("yield", 7);
+    vi.advanceTimersByTime(999);
+    expect(gtag).not.toHaveBeenCalled();
+    vi.advanceTimersByTime(1);
+    expect(gtag.mock.calls).toEqual([["event", "search_performed", { page: "yield", query_length: 7 }]]);
+  });
+
+  it("clearing the query cancels a pending search", () => {
+    trackSearch("depeg", 4);
+    vi.advanceTimersByTime(500);
+    trackSearch("depeg", 0);
+    vi.advanceTimersByTime(1500);
+    expect(gtag).not.toHaveBeenCalled();
+  });
+
+  it("rechecks route privacy when a pending search is delivered", () => {
+    trackSearch("depeg", 4);
+    vi.advanceTimersByTime(500);
+    window.location.pathname = "/admin/";
+    vi.advanceTimersByTime(500);
     expect(gtag).not.toHaveBeenCalled();
   });
 

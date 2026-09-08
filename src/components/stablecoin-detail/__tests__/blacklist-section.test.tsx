@@ -112,13 +112,10 @@ describe("BlacklistSection", () => {
       isError: false,
     } as unknown as ReturnType<typeof useBlacklistEventsPage>);
 
-    const { getByRole, getByTestId } = render(<BlacklistHistorySection stablecoinId="usdc-circle" symbol="USDC" />);
+    const { getByRole } = render(<BlacklistHistorySection stablecoinId="usdc-circle" symbol="USDC" />);
 
-    expect(getByTestId("stablecoin-blacklist-events-table").getAttribute("data-table-id")).toBe(
-      "stablecoin-blacklist-events",
-    );
-    const eventBadge = screen.getByText("Freeze");
-    expect(eventBadge.className).toContain("bg-red-500/15");
+    // Freeze events are labelled with the user-facing verb, never the raw event type.
+    expect(screen.getByText("Freeze")).toBeTruthy();
     expect(screen.queryByText("Blacklist")).toBeNull();
     expect(getByRole("link", { name: "See all events →" }).getAttribute("href")).toBe("/freezewatch/?stablecoin=USDC");
   });

@@ -49,16 +49,31 @@ function tape(partial: Partial<TapeEvent> & Pick<TapeEvent, "id" | "type" | "ts"
   };
 }
 
+function queryResult(events: TapeEvent[], overrides: Record<string, unknown> = {}) {
+  return {
+    data: {
+      events,
+      nextCursor: null,
+      total: events.length,
+      totalExact: true,
+    },
+    isLoading: false,
+    ...overrides,
+  };
+}
+
 describe("useChartAnnotations", () => {
   beforeEach(() => {
     useRegisteredApiQueryMock.mockReset();
     isChartAnnotationsEnabledMock.mockReset();
     getCuratedAnnotationsMock.mockReset();
+    isChartAnnotationsEnabledMock.mockReturnValue(true);
+    useRegisteredApiQueryMock.mockReturnValue({ data: undefined, isLoading: false });
+    getCuratedAnnotationsMock.mockReturnValue([]);
   });
 
   it("returns empty + suspends the query when the flag is off", () => {
     isChartAnnotationsEnabledMock.mockReturnValue(false);
-    useRegisteredApiQueryMock.mockReturnValue({ data: undefined, isLoading: false });
     getCuratedAnnotationsMock.mockReturnValue([
       { ts: Date.UTC(2023, 2, 11), kind: "depeg", label: "curated", severity: "high" },
     ]);
@@ -73,8 +88,6 @@ describe("useChartAnnotations", () => {
   });
 
   it("returns empty when from/to are missing", () => {
-    isChartAnnotationsEnabledMock.mockReturnValue(true);
-    useRegisteredApiQueryMock.mockReturnValue({ data: undefined, isLoading: false });
     getCuratedAnnotationsMock.mockReturnValue([
       { ts: Date.UTC(2023, 2, 11), kind: "depeg", label: "curated", severity: "high" },
     ]);
@@ -87,10 +100,6 @@ describe("useChartAnnotations", () => {
   });
 
   it("uses the events producer polling interval for tape event annotations", () => {
-    isChartAnnotationsEnabledMock.mockReturnValue(true);
-    useRegisteredApiQueryMock.mockReturnValue({ data: undefined, isLoading: false });
-    getCuratedAnnotationsMock.mockReturnValue([]);
-
     renderHook(() =>
       useChartAnnotations("usdc-circle", Date.UTC(2023, 0, 1), Date.UTC(2023, 5, 1)),
     );
@@ -99,8 +108,6 @@ describe("useChartAnnotations", () => {
   });
 
   it("clamps curated annotations to the [fromMs, toMs] window", () => {
-    isChartAnnotationsEnabledMock.mockReturnValue(true);
-    useRegisteredApiQueryMock.mockReturnValue({ data: undefined, isLoading: false });
     getCuratedAnnotationsMock.mockReturnValue([
       { ts: Date.UTC(2022, 11, 31), kind: "depeg", label: "before", severity: "low" },
       { ts: Date.UTC(2023, 2, 11), kind: "depeg", label: "in range", severity: "high" },
@@ -115,42 +122,32 @@ describe("useChartAnnotations", () => {
   });
 
   it("uses a bucketed event query window across brush moves while preserving the raw display clamp", () => {
-    isChartAnnotationsEnabledMock.mockReturnValue(true);
     const bucketStart = 30 * DAY_MS * 650;
     const rawFrom = bucketStart + 5 * DAY_MS;
     const rawTo = bucketStart + 10 * DAY_MS;
-    useRegisteredApiQueryMock.mockReturnValue({
-      data: {
-        events: [
-          tape({
-            id: "before-raw-window",
-            type: "depeg.opened",
-            severity: "warning",
-            ts: rawFrom - DAY_MS,
-            title: "Before raw window",
-          }),
-          tape({
-            id: "inside-raw-window",
-            type: "depeg.opened",
-            severity: "warning",
-            ts: rawFrom + DAY_MS,
-            title: "Inside raw window",
-          }),
-          tape({
-            id: "after-raw-window",
-            type: "depeg.opened",
-            severity: "warning",
-            ts: rawTo + DAY_MS,
-            title: "After raw window",
-          }),
-        ],
-        nextCursor: null,
-        total: 3,
-        totalExact: true,
-      },
-      isLoading: false,
-    });
-    getCuratedAnnotationsMock.mockReturnValue([]);
+    useRegisteredApiQueryMock.mockReturnValue(queryResult([
+      tape({
+        id: "before-raw-window",
+        type: "depeg.opened",
+        severity: "warning",
+        ts: rawFrom - DAY_MS,
+        title: "Before raw window",
+      }),
+      tape({
+        id: "inside-raw-window",
+        type: "depeg.opened",
+        severity: "warning",
+        ts: rawFrom + DAY_MS,
+        title: "Inside raw window",
+      }),
+      tape({
+        id: "after-raw-window",
+        type: "depeg.opened",
+        severity: "warning",
+        ts: rawTo + DAY_MS,
+        title: "After raw window",
+      }),
+    ]));
 
     const { result, rerender } = renderHook(
       ({ from, to }) => useChartAnnotations("usdc-circle", from, to),
@@ -167,6 +164,7 @@ describe("useChartAnnotations", () => {
     expect(firstUrl.searchParams.get("severityFloor")).toBe("warning");
     expect(firstUrl.searchParams.getAll("type")).toEqual(["depeg.opened", "depeg.peak_worsened"]);
     expect(firstUrl.searchParams.getAll("class")).toEqual(["methodology"]);
+    expect(firstUrl.searchParams.get("limit")).toBe("200");
 
     rerender({ from: rawFrom + 60_000, to: rawTo + 60_000 });
 
@@ -176,50 +174,24 @@ describe("useChartAnnotations", () => {
     expect(result.current.data.map((a) => a.label)).toEqual(["Inside raw window"]);
   });
 
-  it("pushes chart annotation relevance filters into the bucketed API request", () => {
-    isChartAnnotationsEnabledMock.mockReturnValue(true);
-    useRegisteredApiQueryMock.mockReturnValue({ data: undefined, isLoading: false });
-    getCuratedAnnotationsMock.mockReturnValue([]);
-
-    renderHook(() =>
-      useChartAnnotations("usdc-circle", Date.UTC(2023, 0, 1), Date.UTC(2023, 0, 2)),
-    );
-
-    const path = useRegisteredApiQueryMock.mock.calls.at(-1)?.[0]?.path as string;
-    const url = new URL(path, "https://pharos.test");
-    expect(url.searchParams.get("severityFloor")).toBe("warning");
-    expect(url.searchParams.getAll("type")).toEqual(["depeg.opened", "depeg.peak_worsened"]);
-    expect(url.searchParams.getAll("class")).toEqual(["methodology"]);
-    expect(url.searchParams.get("limit")).toBe("200");
-  });
-
   it("merges curated + tape sources and dedupes same-day same-kind (curated wins)", () => {
-    isChartAnnotationsEnabledMock.mockReturnValue(true);
-    useRegisteredApiQueryMock.mockReturnValue({
-      data: {
-        events: [
-          tape({
-            id: "tape-depeg",
-            type: "depeg.opened",
-            severity: "critical",
-            ts: Date.UTC(2023, 2, 11, 6, 30),
-            title: "Tape depeg row",
-            sourceUrl: "https://example.com/tape",
-          }),
-          tape({
-            id: "tape-methodology",
-            type: "methodology.bump",
-            severity: "warning",
-            ts: Date.UTC(2023, 3, 1),
-            title: "Tape methodology bump",
-          }),
-        ],
-        nextCursor: null,
-        total: 2,
-        totalExact: true,
-      },
-      isLoading: false,
-    });
+    useRegisteredApiQueryMock.mockReturnValue(queryResult([
+      tape({
+        id: "tape-depeg",
+        type: "depeg.opened",
+        severity: "critical",
+        ts: Date.UTC(2023, 2, 11, 6, 30),
+        title: "Tape depeg row",
+        sourceUrl: "https://example.com/tape",
+      }),
+      tape({
+        id: "tape-methodology",
+        type: "methodology.bump",
+        severity: "warning",
+        ts: Date.UTC(2023, 3, 1),
+        title: "Tape methodology bump",
+      }),
+    ]));
     getCuratedAnnotationsMock.mockReturnValue([
       {
         ts: Date.UTC(2023, 2, 11),
@@ -250,32 +222,22 @@ describe("useChartAnnotations", () => {
   });
 
   it("drops mint_burn and freeze tape rows from chart annotations", () => {
-    isChartAnnotationsEnabledMock.mockReturnValue(true);
-    useRegisteredApiQueryMock.mockReturnValue({
-      data: {
-        events: [
-          tape({
-            id: "tape-mint",
-            type: "mint_burn.usdt.spike",
-            severity: "warning",
-            ts: Date.UTC(2023, 3, 1),
-            title: "Tape mint",
-          }),
-          tape({
-            id: "tape-freeze",
-            type: "freeze.usdt.surge",
-            severity: "severe",
-            ts: Date.UTC(2023, 3, 2),
-            title: "Tape freeze",
-          }),
-        ],
-        nextCursor: null,
-        total: 2,
-        totalExact: true,
-      },
-      isLoading: false,
-    });
-    getCuratedAnnotationsMock.mockReturnValue([]);
+    useRegisteredApiQueryMock.mockReturnValue(queryResult([
+      tape({
+        id: "tape-mint",
+        type: "mint_burn.usdt.spike",
+        severity: "warning",
+        ts: Date.UTC(2023, 3, 1),
+        title: "Tape mint",
+      }),
+      tape({
+        id: "tape-freeze",
+        type: "freeze.usdt.surge",
+        severity: "severe",
+        ts: Date.UTC(2023, 3, 2),
+        title: "Tape freeze",
+      }),
+    ]));
 
     const { result } = renderHook(() =>
       useChartAnnotations("usdt-tether", Date.UTC(2023, 0, 1), Date.UTC(2023, 5, 1)),
@@ -285,30 +247,20 @@ describe("useChartAnnotations", () => {
   });
 
   it("ignores tape rows with unmapped event-type prefixes", () => {
-    isChartAnnotationsEnabledMock.mockReturnValue(true);
-    useRegisteredApiQueryMock.mockReturnValue({
-      data: {
-        events: [
-          tape({
-            id: "psi-1",
-            type: "score.psi.drop",
-            ts: Date.UTC(2023, 2, 11),
-            title: "PSI drop",
-          }),
-          tape({
-            id: "yield-1",
-            type: "yield.spike",
-            ts: Date.UTC(2023, 2, 12),
-            title: "Yield spike",
-          }),
-        ],
-        nextCursor: null,
-        total: 2,
-        totalExact: true,
-      },
-      isLoading: false,
-    });
-    getCuratedAnnotationsMock.mockReturnValue([]);
+    useRegisteredApiQueryMock.mockReturnValue(queryResult([
+      tape({
+        id: "psi-1",
+        type: "score.psi.drop",
+        ts: Date.UTC(2023, 2, 11),
+        title: "PSI drop",
+      }),
+      tape({
+        id: "yield-1",
+        type: "yield.spike",
+        ts: Date.UTC(2023, 2, 12),
+        title: "Yield spike",
+      }),
+    ]));
 
     const { result } = renderHook(() =>
       useChartAnnotations("usdc-circle", Date.UTC(2023, 0, 1), Date.UTC(2023, 5, 1)),
@@ -318,38 +270,29 @@ describe("useChartAnnotations", () => {
   });
 
   it("drops low-severity tape rows (info, notice) but keeps curated annotations", () => {
-    isChartAnnotationsEnabledMock.mockReturnValue(true);
-    useRegisteredApiQueryMock.mockReturnValue({
-      data: {
-        events: [
-          tape({
-            id: "tape-notice",
-            type: "depeg.opened",
-            severity: "notice",
-            ts: Date.UTC(2023, 2, 11),
-            title: "Threshold-skimming depeg",
-          }),
-          tape({
-            id: "tape-info",
-            type: "depeg.opened",
-            severity: "info",
-            ts: Date.UTC(2023, 2, 12),
-            title: "Info depeg",
-          }),
-          tape({
-            id: "tape-warn",
-            type: "depeg.opened",
-            severity: "warning",
-            ts: Date.UTC(2023, 2, 13),
-            title: "Real depeg",
-          }),
-        ],
-        nextCursor: null,
-        total: 3,
-        totalExact: true,
-      },
-      isLoading: false,
-    });
+    useRegisteredApiQueryMock.mockReturnValue(queryResult([
+      tape({
+        id: "tape-notice",
+        type: "depeg.opened",
+        severity: "notice",
+        ts: Date.UTC(2023, 2, 11),
+        title: "Threshold-skimming depeg",
+      }),
+      tape({
+        id: "tape-info",
+        type: "depeg.opened",
+        severity: "info",
+        ts: Date.UTC(2023, 2, 12),
+        title: "Info depeg",
+      }),
+      tape({
+        id: "tape-warn",
+        type: "depeg.opened",
+        severity: "warning",
+        ts: Date.UTC(2023, 2, 13),
+        title: "Real depeg",
+      }),
+    ]));
     getCuratedAnnotationsMock.mockReturnValue([
       {
         ts: Date.UTC(2023, 2, 10),
@@ -370,32 +313,22 @@ describe("useChartAnnotations", () => {
   });
 
   it("drops depeg.resolved tape rows even when severity passes the filter", () => {
-    isChartAnnotationsEnabledMock.mockReturnValue(true);
-    useRegisteredApiQueryMock.mockReturnValue({
-      data: {
-        events: [
-          tape({
-            id: "tape-resolved",
-            type: "depeg.resolved",
-            severity: "warning",
-            ts: Date.UTC(2023, 2, 11),
-            title: "Depeg resolved (should be dropped)",
-          }),
-          tape({
-            id: "tape-opened",
-            type: "depeg.opened",
-            severity: "warning",
-            ts: Date.UTC(2023, 2, 12),
-            title: "Depeg opened (kept)",
-          }),
-        ],
-        nextCursor: null,
-        total: 2,
-        totalExact: true,
-      },
-      isLoading: false,
-    });
-    getCuratedAnnotationsMock.mockReturnValue([]);
+    useRegisteredApiQueryMock.mockReturnValue(queryResult([
+      tape({
+        id: "tape-resolved",
+        type: "depeg.resolved",
+        severity: "warning",
+        ts: Date.UTC(2023, 2, 11),
+        title: "Depeg resolved (should be dropped)",
+      }),
+      tape({
+        id: "tape-opened",
+        type: "depeg.opened",
+        severity: "warning",
+        ts: Date.UTC(2023, 2, 12),
+        title: "Depeg opened (kept)",
+      }),
+    ]));
 
     const { result } = renderHook(() =>
       useChartAnnotations("usdc-circle", Date.UTC(2023, 0, 1), Date.UTC(2023, 5, 1)),
@@ -405,26 +338,16 @@ describe("useChartAnnotations", () => {
   });
 
   it("keeps material depeg peak-worsened tape rows", () => {
-    isChartAnnotationsEnabledMock.mockReturnValue(true);
-    useRegisteredApiQueryMock.mockReturnValue({
-      data: {
-        events: [
-          tape({
-            id: "tape-peak-worsened",
-            type: "depeg.peak_worsened",
-            severity: "critical",
-            ts: Date.UTC(2023, 3, 11),
-            title: "Active depeg widened",
-            sourceUrl: "https://example.com/depeg-peak",
-          }),
-        ],
-        nextCursor: null,
-        total: 1,
-        totalExact: true,
-      },
-      isLoading: false,
-    });
-    getCuratedAnnotationsMock.mockReturnValue([]);
+    useRegisteredApiQueryMock.mockReturnValue(queryResult([
+      tape({
+        id: "tape-peak-worsened",
+        type: "depeg.peak_worsened",
+        severity: "critical",
+        ts: Date.UTC(2023, 3, 11),
+        title: "Active depeg widened",
+        sourceUrl: "https://example.com/depeg-peak",
+      }),
+    ]));
 
     const { result } = renderHook(() =>
       useChartAnnotations("test-coin", Date.UTC(2023, 0, 1), Date.UTC(2023, 5, 1)),
@@ -442,24 +365,15 @@ describe("useChartAnnotations", () => {
   });
 
   it("sorts merged output by timestamp ascending", () => {
-    isChartAnnotationsEnabledMock.mockReturnValue(true);
-    useRegisteredApiQueryMock.mockReturnValue({
-      data: {
-        events: [
-          tape({
-            id: "tape-late",
-            type: "depeg.opened",
-            severity: "severe",
-            ts: Date.UTC(2023, 4, 1),
-            title: "Late tape",
-          }),
-        ],
-        nextCursor: null,
-        total: 1,
-        totalExact: true,
-      },
-      isLoading: false,
-    });
+    useRegisteredApiQueryMock.mockReturnValue(queryResult([
+      tape({
+        id: "tape-late",
+        type: "depeg.opened",
+        severity: "severe",
+        ts: Date.UTC(2023, 4, 1),
+        title: "Late tape",
+      }),
+    ]));
     getCuratedAnnotationsMock.mockReturnValue([
       { ts: Date.UTC(2023, 1, 1), kind: "governance", label: "Early curated", severity: "med" },
       { ts: Date.UTC(2023, 3, 1), kind: "regulatory", label: "Mid curated", severity: "med" },

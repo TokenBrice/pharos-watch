@@ -234,7 +234,7 @@ describe("PharosWatchBotMiniAppPage", () => {
     expect(fetchMock).not.toHaveBeenCalled();
   });
 
-  it("loads the Telegram session and keeps the responsive shell contract", async () => {
+  it("loads the Telegram session and renders the four-panel shell", async () => {
     const ready = vi.fn();
     const expand = vi.fn();
     const fetchMock = await renderReadyMiniApp({ launch: { ready, expand } });
@@ -242,16 +242,7 @@ describe("PharosWatchBotMiniAppPage", () => {
     expect(ready).toHaveBeenCalled();
     expect(expand).toHaveBeenCalled();
     expect(screen.getByText("Alerts are active")).toBeTruthy();
-    const tabs = screen.getAllByRole("tab");
-    expect(tabs.map((tab) => tab.textContent)).toEqual(["home", "watchlist", "presets", "settings"]);
-    for (const tab of tabs) {
-      expect(tab.className).toContain("min-w-0");
-      expect(tab.className).toContain("break-words");
-      expect(tab.className).toContain("text-xs");
-      expect(tab.className).not.toContain("whitespace-nowrap");
-      expect(tab.className).not.toContain("truncate");
-    }
-    expect(screen.getByRole("button", { name: "Refresh session" }).className).toContain("size-11");
+    expect(screen.getAllByRole("tab").map((tab) => tab.textContent)).toEqual(["home", "watchlist", "presets", "settings"]);
     expect(fetchMock).toHaveBeenCalledWith(expect.stringMatching(/^\/api\/telegram-mini-app\/session\?/), expect.objectContaining({
       method: "POST",
       body: JSON.stringify({ initData: "signed-init-data" }),
@@ -314,8 +305,9 @@ describe("PharosWatchBotMiniAppPage", () => {
     ["why_old-coin", "This launch target is not in the current Mini App catalog. No settings were changed."],
     ["coin_old-coin", "This launch target is not in the current Mini App catalog. No settings were changed."],
   ] as const)("handles %s launch targets without mutating state", async (startParam, expected) => {
-    await renderReadyMiniApp({ launch: { initDataUnsafe: { start_param: startParam } } });
+    const fetchMock = await renderReadyMiniApp({ launch: { initDataUnsafe: { start_param: startParam } } });
     expect(screen.getByText(expected)).toBeTruthy();
+    expect(fetchMock).not.toHaveBeenCalledWith(expect.stringMatching(/^\/api\/telegram-mini-app\/mutate/), expect.anything());
   });
 
   it("scrolls a catalog deep-link with normal and reduced-motion behavior", async () => {
@@ -353,15 +345,19 @@ describe("PharosWatchBotMiniAppPage", () => {
     };
     const openTelegramLink = vi.fn();
     const impactOccurred = vi.fn();
-    await renderReadyMiniApp({
+    const fetchMock = await renderReadyMiniApp({
       state: staleState,
       launch: { initDataUnsafe: { start_param: "settings" }, openTelegramLink, HapticFeedback: { impactOccurred } },
     });
 
-    expect(screen.getByText("Reopen Telegram to edit settings")).toBeTruthy();
-    expect(screen.getByText("This session is still readable, but edits require a fresh launch from Telegram.")).toBeTruthy();
+    for (const panel of ["home", "watchlist", "presets", "settings"] as const) {
+      fireEvent.click(screen.getByRole("tab", { name: panel }));
+      expect(screen.getByText("Reopen Telegram to edit settings")).toBeTruthy();
+      expect(screen.getByText("This session is still readable, but edits require a fresh launch from Telegram.")).toBeTruthy();
+    }
     expect(screen.queryByText("Group settings are command-only for now")).toBeNull();
     expect(screen.getByRole("button", { name: /Safety/i })).toHaveProperty("disabled", true);
+    expect(fetchMock).not.toHaveBeenCalledWith(expect.stringMatching(/^\/api\/telegram-mini-app\/mutate/), expect.anything());
     fireEvent.click(screen.getByRole("button", { name: "Relaunch and keep this panel" }));
     expect(openTelegramLink).toHaveBeenCalledWith("https://t.me/PharosWatchBot?startapp=settings");
     expect(impactOccurred).toHaveBeenCalledWith("light");

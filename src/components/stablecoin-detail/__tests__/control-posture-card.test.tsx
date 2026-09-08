@@ -1,3 +1,5 @@
+// @vitest-environment node
+
 import { describe, expect, it } from "vitest";
 import { renderToStaticMarkup } from "react-dom/server";
 import { ControlPostureCard } from "../control-posture-card";
@@ -25,7 +27,7 @@ const VIEW: ControlPostureView = {
 };
 
 describe("ControlPostureCard", () => {
-  it("renders the active category, critical facts, folded detail, and methodology link", () => {
+  it("renders the full classification map with the active category, facts, folded detail, and methodology link", () => {
     const html = renderToStaticMarkup(<ControlPostureCard view={VIEW} />);
 
     expect(html).toContain("Control posture");
@@ -41,11 +43,6 @@ describe("ControlPostureCard", () => {
     expect(html).not.toContain("Sources");
     expect(html).not.toContain("/100");
     expect(html).not.toContain("right = safer");
-  });
-
-  it("renders all six categories in the classification map", () => {
-    const html = renderToStaticMarkup(<ControlPostureCard view={VIEW} />);
-
     for (const label of ["Code", "DAO", "Multisig", "Regulated", "Operator", "Wrapper"]) {
       expect(html).toContain(`>${label}<`);
     }

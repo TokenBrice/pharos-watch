@@ -1,4 +1,5 @@
-// src/components/stablecoin-detail/__tests__/custody-card.test.tsx
+// @vitest-environment node
+
 import { describe, expect, it } from "vitest";
 import { renderToStaticMarkup } from "react-dom/server";
 import { CustodyCard } from "../custody-card";
@@ -40,6 +41,7 @@ describe("CustodyCard", () => {
     expect(html).toContain("Verified");
     expect(html).toContain("Reviewed 2026-07-17");
     expect(html).toContain("https://example.com/10k");
+    expect(html).toContain('aria-label="Custody providers"');
     expect(html).toContain('hidden=""'); // sources folded by default
   });
 
@@ -61,10 +63,5 @@ describe("CustodyCard", () => {
     );
     expect(html).not.toContain('aria-label="Custody providers"');
     expect(html).toContain("not individually disclosed");
-  });
-
-  it("labels the provider list for assistive tech", () => {
-    const html = renderToStaticMarkup(<CustodyCard summary={SUMMARY} />);
-    expect(html).toContain('aria-label="Custody providers"');
   });
 });

@@ -4,6 +4,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it, vi } from "vitest";
 import AboutPage from "./page";
 import { CEMETERY_ENTRIES } from "@shared/lib/cemetery-merged";
+import { extractJsonLd } from "@/test/json-ld";
 
 vi.mock("next/font/local", () => ({
   default: () => ({ className: "mock-local-font", variable: "--mock-local-font" }),
@@ -24,22 +25,15 @@ vi.mock("@/lib/page-metadata", () => ({
   buildPageMetadata: (input: unknown) => input,
 }));
 
-function parseStaticDocument(html: string) {
-  const parsed = document.implementation.createHTMLDocument();
-  parsed.documentElement.innerHTML = html;
-  return parsed;
-}
-
-function extractJsonLd(document: Document) {
-  return [...document.querySelectorAll('script[type="application/ld+json"]')].map((script) =>
-    JSON.parse(script.textContent ?? "null"),
-  );
-}
+const html = renderToStaticMarkup(<AboutPage />);
+const jsonLd = extractJsonLd(html);
+const visibleDocument = document.implementation.createHTMLDocument();
+visibleDocument.documentElement.innerHTML = html;
+visibleDocument.querySelectorAll("script").forEach((script) => script.remove());
 
 describe("AboutPage", () => {
   it("emits AboutPage JSON-LD tying Pharos to trust and data surfaces", () => {
-    const html = renderToStaticMarkup(<AboutPage />);
-    const aboutJsonLd = extractJsonLd(parseStaticDocument(html)).find((block) => {
+    const aboutJsonLd = jsonLd.find((block) => {
       return Boolean(block && typeof block === "object" && (block as { "@type"?: string })["@type"] === "AboutPage");
     }) as { mentions: Array<{ "@id": string }> } | undefined;
 
@@ -62,11 +56,8 @@ describe("AboutPage", () => {
   });
 
   it("renders visible FAQ content matching the emitted FAQPage JSON-LD", () => {
-    const html = renderToStaticMarkup(<AboutPage />);
-    const document = parseStaticDocument(html);
-    document.querySelectorAll("script").forEach((script) => script.remove());
-    const visibleText = document.body.textContent ?? "";
-    const faqJsonLdBlocks = extractJsonLd(parseStaticDocument(html)).filter((block) => {
+    const visibleText = visibleDocument.body.textContent ?? "";
+    const faqJsonLdBlocks = jsonLd.filter((block) => {
       return Boolean(block && typeof block === "object" && (block as { "@type"?: string })["@type"] === "FAQPage");
     }) as Array<{ mainEntity: Array<{ name: string; acceptedAnswer: { text: string } }> }>;
     const [faqJsonLd] = faqJsonLdBlocks;
@@ -76,9 +67,16 @@ describe("AboutPage", () => {
     expect(visibleText).toContain("About Pharos FAQ");
     expect(visibleText).toContain(`${CEMETERY_ENTRIES.length} dead ones`);
 
-    for (const item of faqJsonLd?.mainEntity ?? []) {
-      expect(visibleText).toContain(item.name);
-      expect(visibleText).toContain(item.acceptedAnswer.text);
-    }
+    const faqSection = [...visibleDocument.querySelectorAll("section")].find(
+      (section) => section.querySelector("h2")?.textContent === "About Pharos FAQ",
+    );
+    expect(faqSection).toBeDefined();
+    const visibleItems = [...faqSection!.querySelectorAll("details")].map((item) => ({
+      "@type": "Question",
+      name: item.querySelector("summary")!.textContent,
+      acceptedAnswer: { "@type": "Answer", text: item.querySelector("p")!.textContent },
+    }));
+    expect(visibleItems.length).toBeGreaterThan(0);
+    expect(faqJsonLd.mainEntity).toEqual(visibleItems);
   });
 });

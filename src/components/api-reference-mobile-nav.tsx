@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { Menu } from "lucide-react";
-import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { ApiReferenceSidebar, type SidebarSection } from "@/components/api-reference-sidebar";
 
 interface ApiReferenceMobileNavProps {
@@ -31,21 +31,22 @@ export function ApiReferenceMobileNav({ sections, activeId, onNavigate }: ApiRef
 
   return (
     <div className="sticky top-0 z-30 -mx-4 border-b border-border/60 bg-background px-4 py-2.5 lg:hidden">
-      <div className="flex items-center justify-between">
-        <div>
-          <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">Section</p>
-          <p className="text-sm font-semibold text-foreground">{getActiveLabel(sections, activeId)}</p>
-        </div>
-        <button
-          type="button"
-          onClick={() => setOpen(true)}
-          aria-label="Open API navigation"
-          className="pharos-focus-ring inline-flex size-11 items-center justify-center rounded-lg border border-border/60 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground sm:size-9"
-        >
-          <Menu className="size-4" />
-        </button>
-      </div>
       <Sheet open={open} onOpenChange={setOpen}>
+        <div className="flex items-center justify-between">
+          <div>
+            <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">Section</p>
+            <p className="text-sm font-semibold text-foreground">{getActiveLabel(sections, activeId)}</p>
+          </div>
+          <SheetTrigger asChild>
+            <button
+              type="button"
+              aria-label="Open API navigation"
+              className="pharos-focus-ring inline-flex size-11 items-center justify-center rounded-lg border border-border/60 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground sm:size-9"
+            >
+              <Menu className="size-4" />
+            </button>
+          </SheetTrigger>
+        </div>
         <SheetContent side="left" className="w-72 overflow-y-auto">
           <SheetHeader>
             <SheetTitle>API Reference</SheetTitle>

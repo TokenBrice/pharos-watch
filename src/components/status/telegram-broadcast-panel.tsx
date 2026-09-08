@@ -55,6 +55,7 @@ export function TelegramBroadcastPanel() {
     canaryChatId: "",
   });
   const [receipt, setReceipt] = useState<{ receipt: AdminMutationReceiptMetadata; message: string } | null>(null);
+  const [previewedDraft, setPreviewedDraft] = useState<{ messageHtml: string; scope: BroadcastScope } | null>(null);
   const { executions, runIntent } = useAdminMutationIntents();
 
   const dryRunExecution = executions[DRY_RUN_LANE];
@@ -66,7 +67,13 @@ export function TelegramBroadcastPanel() {
   const messageTooLong = state.messageHtml.length > MESSAGE_HTML_MAX_LENGTH;
   const canPreview = trimmedMessage.length > 0 && !messageTooLong;
   const canaryValid = /^[1-9]\d*$/.test(canaryChatId);
-  const previewConfirmed = dryRunExecution?.status === "succeeded";
+  // A lane-level success alone would let an edited message/audience go out
+  // unreviewed: the live send may only transmit the exact draft that was
+  // previewed.
+  const previewConfirmed =
+    dryRunExecution?.status === "succeeded" &&
+    previewedDraft?.messageHtml === state.messageHtml &&
+    previewedDraft?.scope === state.scope;
   const canSendLive = canPreview && canaryValid && previewConfirmed;
 
   function patch(next: Partial<BroadcastFormState>) {
@@ -85,6 +92,9 @@ export function TelegramBroadcastPanel() {
     });
     if (execution === null) return;
     if (execution.status === "succeeded") {
+      // Record the click-time draft: `state` here is the render snapshot this
+      // request was built from, so it is exactly what the preview reviewed.
+      if (dryRun) setPreviewedDraft({ messageHtml: state.messageHtml, scope: state.scope });
       setReceipt({
         receipt: buildAdminMutationReceiptMetadata(execution),
         message: dryRun

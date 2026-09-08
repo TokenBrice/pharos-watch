@@ -2,43 +2,14 @@
 import { fireEvent, render, screen } from "@testing-library/react";
 import { createElement, type ImgHTMLAttributes } from "react";
 import { describe, expect, it, vi } from "vitest";
-import type { ChainSummary } from "@shared/types/chains";
-import { ZERO_RATIO } from "@shared/types/ratio";
 import { NauticalChart } from "./nautical-chart";
+import { makeChain } from "./harbor-map.test-support";
 
 vi.mock("next/image", () => ({
   default: (props: ImgHTMLAttributes<HTMLImageElement>) =>
     createElement("img", { ...props, alt: props.alt ?? "" }),
 }));
 
-function makeChain(overrides: Partial<ChainSummary>): ChainSummary {
-  return {
-    id: overrides.id ?? "ethereum",
-    name: overrides.name ?? "Ethereum",
-    logoPath: overrides.logoPath ?? "/logos/chains/ethereum.svg",
-    type: overrides.type ?? "evm",
-    totalUsd: overrides.totalUsd ?? 100,
-    change24h: 0, change24hPct: ZERO_RATIO,
-    change7d: 0, change7dPct: overrides.change7dPct ?? ZERO_RATIO,
-    change30d: 0, change30dPct: ZERO_RATIO,
-    stablecoinCount: overrides.stablecoinCount ?? 3,
-    dominantStablecoin: overrides.dominantStablecoin ?? { id: "usdc-circle", symbol: "USDC", share: 0.6 },
-    topStablecoins: overrides.topStablecoins ?? [
-      { id: "usdc-circle", symbol: "USDC", share: 0.5, supplyUsd: 50 },
-      { id: "usdt-tether", symbol: "USDT", share: 0.3, supplyUsd: 30 },
-      { id: "dai-makerdao", symbol: "DAI", share: 0.2, supplyUsd: 20 },
-    ],
-    dominanceShare: overrides.dominanceShare ?? 0.5,
-    healthScore: overrides.healthScore ?? 82,
-    healthBand: overrides.healthBand ?? "healthy",
-    healthFactors: { concentration: 80, quality: 85, pegStability: 90, backingDiversity: 70, chainEnvironment: 80 },
-    chainEnvironmentEvidence: overrides.chainEnvironmentEvidence ?? {
-      source: "pharos-chain-tier",
-      score: 80,
-      resilienceTier: 2,
-    },
-  };
-}
 
 describe("NauticalChart", () => {
   it("renders nothing when no chains", () => {
@@ -85,7 +56,7 @@ describe("NauticalChart", () => {
     expect(container.querySelector('[id="chain-harbor-heading"]')).toBeNull();
   });
 
-  it("emits harbor selection from interactive ships", () => {
+  it("emits harbor selection from hover and Enter/Space activation only", () => {
     const onSelectChain = vi.fn();
     const chains = [
       makeChain({ id: "ethereum", name: "Ethereum", totalUsd: 60 }),
@@ -99,11 +70,24 @@ describe("NauticalChart", () => {
     }));
 
     const baseShip = screen.getByRole("button", { name: "Select Base harbor" });
-    fireEvent.mouseEnter(baseShip);
-    expect(onSelectChain).toHaveBeenCalledWith("base");
 
+    fireEvent.mouseEnter(baseShip);
+    expect(onSelectChain).toHaveBeenCalledTimes(1);
+    expect(onSelectChain).toHaveBeenLastCalledWith("base");
+
+    onSelectChain.mockClear();
     fireEvent.keyDown(baseShip, { key: "Enter" });
-    expect(onSelectChain).toHaveBeenCalledWith("base");
+    expect(onSelectChain).toHaveBeenCalledTimes(1);
+    expect(onSelectChain).toHaveBeenLastCalledWith("base");
+
+    onSelectChain.mockClear();
+    fireEvent.keyDown(baseShip, { key: " " });
+    expect(onSelectChain).toHaveBeenCalledTimes(1);
+    expect(onSelectChain).toHaveBeenLastCalledWith("base");
+
+    onSelectChain.mockClear();
+    fireEvent.keyDown(baseShip, { key: "Tab" });
+    expect(onSelectChain).not.toHaveBeenCalled();
   });
 
   it("aims the lighthouse beam at the selected harbor", () => {

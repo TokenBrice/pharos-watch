@@ -1,9 +1,29 @@
 import { describe, expect, it } from "vitest";
 import { renderToStaticMarkup } from "react-dom/server";
 import { ReserveQualitySection } from "../reserve-quality-section";
+import { SEVERITY_TONE_CLASS } from "@/lib/severity-tone";
 import type { ReserveQualityClientSummary } from "@/lib/stablecoin-detail-reserve-quality-client";
 
 const AMBER_VALUE_CLASS = "text-amber-600 dark:text-amber-400";
+
+/**
+ * One ladder row's markup, so a row can lose its own tone or figure without
+ * another row's tone satisfying the assertion.
+ */
+function ladderRow(html: string, label: string): string {
+  const ladder = html.split('aria-label="Liquidity horizon ladder"')[1] ?? "";
+  const rows = ladder.split("<li ").slice(1).map((chunk) => chunk.split("</li>")[0] ?? "");
+  const row = rows.find((chunk) => chunk.includes(`>${label}</span>`));
+  expect(row, `ladder row ${label}`).toBeDefined();
+  return row!;
+}
+
+/** A fact-grid cell's own value text and tone classes, scoped to its label. */
+function factCell(html: string, label: string): { value: string; valueClass: string } {
+  const match = new RegExp(`>${label}</span><span class="([^"]*)">([^<]*)</span>`).exec(html);
+  expect(match, `fact cell ${label}`).not.toBeNull();
+  return { valueClass: match![1]!, value: match![2]! };
+}
 
 const SUMMARY: ReserveQualityClientSummary = {
   chipLabel: "Highly liquid",
@@ -57,9 +77,11 @@ const SUMMARY: ReserveQualityClientSummary = {
 describe("ReserveQualitySection", () => {
   it("folds the slice detail disclosure closed by default", () => {
     const html = renderToStaticMarkup(<ReserveQualitySection summary={SUMMARY} />);
-    // detail disclosure closed by default (native <details> without open attr)
-    expect(html).toContain("<details");
-    expect(html).not.toContain("<details open");
+    expect(html).toContain("Slice detail &amp; risk factors");
+    // Native <details> renders `open` after its class/id attributes when set,
+    // so the absence check has to allow for preceding attributes.
+    expect(html).toMatch(/<details[^>]*>/);
+    expect(html).not.toMatch(/<details[^>]*\sopen[\s>]/);
   });
 
   it("renders nothing without a reserve quality summary", () => {
@@ -74,15 +96,26 @@ describe("ReserveQualitySection", () => {
     expect(html).toContain("Bank deposits");
   });
 
-  it("keeps the ladder neutral, including the unknown horizon", () => {
+  it("tones each ladder row by its own horizon severity", () => {
     const html = renderToStaticMarkup(<ReserveQualitySection summary={SUMMARY} />);
     expect(html).toContain('aria-label="Liquidity horizon ladder"');
-    expect(html).not.toContain(AMBER_VALUE_CLASS);
-    expect(html).not.toContain("bg-amber-500/50");
 
+    const immediate = ladderRow(html, "Immediate");
+    expect(immediate).toContain(SEVERITY_TONE_CLASS.ok.bar);
+    expect(immediate).toContain(SEVERITY_TONE_CLASS.ok.text);
+    expect(immediate).toContain("20%");
+
+    const oneDay = ladderRow(html, "≤ 1 day");
+    expect(oneDay).toContain(SEVERITY_TONE_CLASS.info.bar);
+    expect(oneDay).toContain(SEVERITY_TONE_CLASS.info.text);
+    expect(oneDay).toContain("80%");
+    expect(oneDay).not.toContain(SEVERITY_TONE_CLASS.ok.bar);
+  });
+
+  it("reads an unknown horizon as a neutral share, not as a severity step", () => {
     // A share of the basket is not a risk level: the unknown row reads as a
     // label, not as a severity tone (design polish F4 / §5.3, §5.4).
-    const opaque = renderToStaticMarkup(
+    const html = renderToStaticMarkup(
       <ReserveQualitySection
         summary={{
           ...SUMMARY,
@@ -91,10 +124,12 @@ describe("ReserveQualitySection", () => {
         }}
       />,
     );
-    expect(opaque).toContain("Unknown");
-    expect(opaque).toContain("45%");
-    expect(opaque).not.toContain("bg-amber-500/50");
-    expect(opaque).not.toContain(AMBER_VALUE_CLASS);
+    const unknown = ladderRow(html, "Unknown");
+    expect(unknown).toContain("45%");
+    expect(unknown).toContain(SEVERITY_TONE_CLASS.neutral.bar);
+    expect(unknown).toContain(SEVERITY_TONE_CLASS.neutral.text);
+    expect(unknown).not.toContain(SEVERITY_TONE_CLASS.watch.bar);
+    expect(unknown).not.toContain(SEVERITY_TONE_CLASS.watch.text);
   });
 
   it("keeps a fractional ladder share visible instead of an empty track", () => {
@@ -127,21 +162,22 @@ describe("ReserveQualitySection", () => {
 
   it("renders a zero unidentified-obligor share without an amber tone", () => {
     const html = renderToStaticMarkup(<ReserveQualitySection summary={SUMMARY} />);
-    expect(html).toContain("Unidentified obligors");
-    // Delimited so the assertion cannot pass on the mix legend's "80%".
-    expect(html).toContain(">0%<");
-    expect(html).not.toContain(AMBER_VALUE_CLASS);
+    const unidentified = factCell(html, "Unidentified obligors");
+    expect(unidentified.value).toBe("0%");
+    expect(unidentified.valueClass).not.toContain(AMBER_VALUE_CLASS);
   });
 
-  it("tones a non-zero unidentified-obligor share and self-exposure amber", () => {
+  it("tones a non-zero unidentified-obligor share and self-exposure amber, per fact", () => {
     const html = renderToStaticMarkup(
       <ReserveQualitySection summary={{ ...SUMMARY, unidentifiedObligorsPct: 12.6, selfExposurePct: 8.8 }} />,
     );
-    expect(html).toContain("Unidentified obligors");
-    expect(html).toContain("12.6%");
-    expect(html).toContain("Self-exposure");
-    expect(html).toContain("8.8%");
-    expect(html).toContain(AMBER_VALUE_CLASS);
+    const unidentified = factCell(html, "Unidentified obligors");
+    expect(unidentified.value).toBe("12.6%");
+    expect(unidentified.valueClass).toContain(AMBER_VALUE_CLASS);
+
+    const selfExposure = factCell(html, "Self-exposure");
+    expect(selfExposure.value).toBe("8.8%");
+    expect(selfExposure.valueClass).toContain(AMBER_VALUE_CLASS);
   });
 
   it("names the concentrated top position in the fact tooltip", () => {

@@ -26,10 +26,10 @@ describe("TableToolbar", () => {
     expect(screen.getByRole("radio", { name: "Compact rows" }).getAttribute("aria-checked")).toBe("true");
     expect(screen.getByRole("radio", { name: "Spacious rows" }).getAttribute("aria-checked")).toBe("false");
     fireEvent.pointerDown(screen.getByRole("button", { name: "Columns" }), { button: 0, ctrlKey: false });
-    fireEvent.click(await screen.findByRole("menuitemcheckbox", { name: "Price", exact: true }));
-    expect(screen.getByRole("menuitemcheckbox", { name: "Price", exact: true }).getAttribute("aria-checked")).toBe("false");
+    fireEvent.click(await screen.findByRole("menuitemcheckbox", { name: "Price" }));
+    expect(screen.getByRole("menuitemcheckbox", { name: "Price" }).getAttribute("aria-checked")).toBe("false");
     fireEvent.click(screen.getByRole("menuitemcheckbox", { name: "Reset to defaults" }));
-    expect(screen.getByRole("menuitemcheckbox", { name: "Price", exact: true }).getAttribute("aria-checked")).toBe("true");
+    expect(screen.getByRole("menuitemcheckbox", { name: "Price" }).getAttribute("aria-checked")).toBe("true");
     expect(screen.queryByRole("menuitemcheckbox", { name: "Reset to defaults" })).toBeNull();
   });
 

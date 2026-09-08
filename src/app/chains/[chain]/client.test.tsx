@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import type { ImgHTMLAttributes, ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { RatioSchema } from "@shared/types/ratio";
@@ -149,7 +149,7 @@ describe("ChainProfileClient", () => {
     expect(screen.getByText(/report-card inputs are stale/i)).toBeTruthy();
   });
 
-  it("filters stablecoins by backing and navigates on row click", () => {
+  it("filters the stablecoin table by backing and restores all rows when cleared", () => {
     useChainProfileDataMock.mockReturnValue(makeHookState({
       coins: [
         makeCoin(),
@@ -167,16 +167,19 @@ describe("ChainProfileClient", () => {
 
     render(<ChainProfileClient chainId="ethereum" />);
 
-    expect(screen.getAllByRole("link", { name: /USD Coin/ }).length).toBeGreaterThan(0);
-    expect(screen.getAllByRole("link", { name: /DAI/ }).length).toBeGreaterThan(0);
+    const table = within(screen.getByTestId("chain-detail-stablecoins-table"));
+    expect(table.getByRole("link", { name: /USD Coin/ })).toBeTruthy();
+    expect(table.getByRole("link", { name: /DAI/ })).toBeTruthy();
 
     fireEvent.click(screen.getByRole("button", { name: /Crypto/i }));
 
     expect(screen.getByText(/Showing only/i)).toBeTruthy();
-    expect(screen.getAllByText("DAI").length).toBeGreaterThan(0);
+    expect(table.queryByRole("link", { name: /USD Coin/ })).toBeNull();
+    expect(table.getByRole("link", { name: /DAI/ })).toBeTruthy();
 
-    fireEvent.click(screen.getAllByRole("link", { name: /DAI/ }).at(-1)!);
-    expect(push).toHaveBeenCalledWith("/stablecoin/dai-maker/");
+    fireEvent.click(screen.getByRole("button", { name: /Clear filter/i }));
+    expect(table.getByRole("link", { name: /USD Coin/ })).toBeTruthy();
+    expect(table.getByRole("link", { name: /DAI/ })).toBeTruthy();
   });
 
   it("shows a route loading state before the chain response completes initial load", () => {

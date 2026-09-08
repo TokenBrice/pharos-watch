@@ -56,14 +56,19 @@ export function TableExportMenu<T>({
   disabled = false,
 }: TableExportMenuProps<T>): React.ReactElement {
   const [status, setStatus] = useState<Status>("idle");
-  const resetTimer = useRef<ReturnType<typeof setTimeout>>(null);
+  const resetTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  const mounted = useRef(false);
 
-  useEffect(() => () => {
-    if (resetTimer.current) clearTimeout(resetTimer.current);
+  useEffect(() => {
+    mounted.current = true;
+    return () => {
+      mounted.current = false;
+      clearTimeout(resetTimer.current);
+    };
   }, []);
 
   const resetStatusAfterDelay = useCallback(() => {
-    if (resetTimer.current) clearTimeout(resetTimer.current);
+    clearTimeout(resetTimer.current);
     resetTimer.current = setTimeout(() => setStatus("idle"), 2000);
   }, []);
 
@@ -84,6 +89,7 @@ export function TableExportMenu<T>({
       columns,
       buildPreamble(endpoint, methodologyLabel),
     );
+    if (!mounted.current) return;
     setStatus(ok ? "copied" : "error");
     resetStatusAfterDelay();
   }, [columns, data, disabled, endpoint, methodologyLabel, resetStatusAfterDelay]);

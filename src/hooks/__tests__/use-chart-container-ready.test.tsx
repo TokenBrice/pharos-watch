@@ -113,4 +113,127 @@ describe("useChartContainerReady", () => {
     expect(result.current.width).toBe(240);
     expect(result.current.height).toBe(120);
   });
+
+  it("resets dimensions and disconnects observation when the ref detaches", () => {
+    let callback: ResizeCallback | null = null;
+
+    const observers: ResizeObserverMock[] = [];
+
+    class ResizeObserverMock {
+      observe = vi.fn();
+      disconnect = vi.fn();
+
+      constructor(cb: ResizeCallback) {
+        callback = cb;
+        observers.push(this);
+      }
+    }
+
+    vi.stubGlobal("ResizeObserver", ResizeObserverMock);
+
+    const node = document.createElement("div");
+
+    const { result } = renderHook(() => useChartContainerReady<HTMLDivElement>());
+
+    act(() => {
+      result.current.ref(node);
+    });
+    act(() => {
+      callback?.([makeResizeEntry(node, 320, 180)]);
+    });
+    expect(result.current.ready).toBe(true);
+
+    act(() => {
+      result.current.ref(null);
+    });
+
+    expect(observers[0]?.disconnect).toHaveBeenCalledTimes(1);
+    expect(result.current.ready).toBe(false);
+    expect(result.current.width).toBe(0);
+    expect(result.current.height).toBe(0);
+  });
+
+  it("cancels the stale fallback frame and measures the replacement node", () => {
+    const scheduled: FrameRequestCallback[] = [];
+    const cancelledFrameIds: number[] = [];
+    vi.stubGlobal("ResizeObserver", undefined);
+    vi.stubGlobal("requestAnimationFrame", vi.fn((cb: FrameRequestCallback) => {
+      scheduled.push(cb);
+      return scheduled.length;
+    }));
+    vi.stubGlobal("cancelAnimationFrame", vi.fn((frameId: number) => {
+      cancelledFrameIds.push(frameId);
+    }));
+
+    const nodeA = document.createElement("div");
+    Object.defineProperty(nodeA, "clientWidth", { configurable: true, get: () => 100 });
+    Object.defineProperty(nodeA, "clientHeight", { configurable: true, get: () => 50 });
+    const nodeB = document.createElement("div");
+    Object.defineProperty(nodeB, "clientWidth", { configurable: true, get: () => 200 });
+    Object.defineProperty(nodeB, "clientHeight", { configurable: true, get: () => 120 });
+
+    const { result } = renderHook(() => useChartContainerReady<HTMLDivElement>());
+
+    act(() => {
+      result.current.ref(nodeA);
+    });
+    act(() => {
+      result.current.ref(nodeB);
+    });
+
+    expect(cancelledFrameIds).toEqual([1]);
+    expect(scheduled).toHaveLength(2);
+
+    act(() => {
+      scheduled[1]?.(0);
+    });
+
+    expect(result.current.width).toBe(200);
+    expect(result.current.height).toBe(120);
+    expect(result.current.ready).toBe(true);
+  });
+
+  it("reports ready only once both delivered dimensions are positive", () => {
+    let callback: ResizeCallback | null = null;
+
+    class ResizeObserverMock {
+      observe = vi.fn();
+      disconnect = vi.fn();
+
+      constructor(cb: ResizeCallback) {
+        callback = cb;
+      }
+    }
+
+    vi.stubGlobal("ResizeObserver", ResizeObserverMock);
+
+    const node = document.createElement("div");
+
+    const { result } = renderHook(() => useChartContainerReady<HTMLDivElement>());
+
+    act(() => {
+      result.current.ref(node);
+    });
+
+    act(() => {
+      callback?.([makeResizeEntry(node, 0, 0)]);
+    });
+    expect(result.current.ready).toBe(false);
+    expect(result.current.width).toBe(0);
+    expect(result.current.height).toBe(0);
+
+    act(() => {
+      callback?.([makeResizeEntry(node, 123.8, -4)]);
+    });
+    expect(result.current.width).toBe(123);
+    expect(result.current.height).toBe(0);
+    expect(result.current.ready).toBe(false);
+
+    act(() => {
+      callback?.([makeResizeEntry(node, 123.8, 45.6)]);
+    });
+    expect(result.current.ready).toBe(true);
+    expect(result.current.width).toBe(123);
+    expect(result.current.height).toBe(45);
+  });
 });

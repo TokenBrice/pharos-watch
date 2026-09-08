@@ -6,6 +6,7 @@ import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import { useStablecoinDetailViewModel } from "../use-stablecoin-detail-view-model";
+import { DISABLED_DETAIL_QUERY_CONTROLS } from "./use-stablecoin-detail-view-model.test-support";
 import { StablecoinDetailSnapshotHydrator } from "@/app/stablecoin/[id]/client";
 import { seedStablecoinDetailQueryCache, type StablecoinDetailSnapshot } from "@/lib/api";
 
@@ -137,16 +138,7 @@ describe("stablecoin detail request budget", () => {
         id: coin.id,
         coin,
         summary: null,
-        supplementalQueryControls: {
-          liquidity: false,
-          reportCards: false,
-          redemption: false,
-          yield: false,
-          stress: false,
-          flows: false,
-          blacklist: false,
-          reserves: false,
-        },
+        supplementalQueryControls: DISABLED_DETAIL_QUERY_CONTROLS,
       }), { wrapper });
       return { queryClient, ...rendered };
     };

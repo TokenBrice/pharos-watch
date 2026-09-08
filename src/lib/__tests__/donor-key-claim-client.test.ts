@@ -84,6 +84,8 @@ describe("claimDonorKey", () => {
     expect(String(path)).toContain("/api/donor-key-claims");
     expect(new Headers((init as RequestInit | undefined)?.headers).get("Accept")).toContain(PHAROS_WEB_ACCEPT_MARKER);
     expect((init as RequestInit | undefined)?.method).toBe("POST");
+    expect(new Headers(init?.headers).get("Content-Type")).toBe("application/json");
+    expect(JSON.parse(init?.body as string)).toEqual({ message: "siwe", signature: SIGNATURE });
   });
 
   it("surfaces the ledger timestamp from a 403 ineligible body", async () => {

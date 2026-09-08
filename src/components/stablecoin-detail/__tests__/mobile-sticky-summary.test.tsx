@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 
 import { act, render } from "@testing-library/react";
-import { createRef, type ImgHTMLAttributes } from "react";
+import { createRef, type ImgHTMLAttributes, type RefObject } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { makeStablecoin } from "@shared/test-utils/stablecoin";
 import { makeV9Card } from "@/test/fixtures/safety-score-v9";
@@ -54,25 +54,35 @@ const REPORT_CARD = makeV9Card({
   score: 79,
 });
 
+const HEIGHT_VAR = "--pharos-sticky-summary-h";
+
 type IOTrigger = (isIntersecting: boolean) => void;
 
-function makeObserverHook() {
-  let trigger: IOTrigger | null = null;
-  const observe = vi.fn();
-  const disconnect = vi.fn();
+/**
+ * Layout is supplied explicitly: jsdom measures every element as zero, so a
+ * broken measurement (or a hard-coded constant) would otherwise satisfy any
+ * published-height assertion.
+ */
+function makeObserverHook(initialHeight: number) {
+  let ioTrigger: IOTrigger | null = null;
+  let roTrigger: (() => void) | null = null;
+  let height = initialHeight;
+  const ioObserve = vi.fn();
+  const ioDisconnect = vi.fn();
+  const roObserve = vi.fn();
+  const roDisconnect = vi.fn();
+
   class FakeIntersectionObserver {
-    private callback: IntersectionObserverCallback;
-    constructor(cb: IntersectionObserverCallback) {
-      this.callback = cb;
-      trigger = (isIntersecting: boolean) => {
+    constructor(private callback: IntersectionObserverCallback) {
+      ioTrigger = (isIntersecting: boolean) => {
         this.callback([{ isIntersecting } as IntersectionObserverEntry], this as unknown as IntersectionObserver);
       };
     }
     observe(target: Element) {
-      observe(target);
+      ioObserve(target);
     }
     disconnect() {
-      disconnect();
+      ioDisconnect();
     }
     unobserve() {}
     takeRecords() {
@@ -82,19 +92,71 @@ function makeObserverHook() {
     rootMargin = "";
     thresholds = [];
   }
+
   class FakeResizeObserver {
-    observe() {}
-    disconnect() {}
+    constructor(private callback: ResizeObserverCallback) {
+      roTrigger = () => {
+        this.callback([], this as unknown as ResizeObserver);
+      };
+    }
+    observe(target: Element) {
+      roObserve(target);
+    }
+    disconnect() {
+      roDisconnect();
+    }
     unobserve() {}
   }
+
   vi.stubGlobal("IntersectionObserver", FakeIntersectionObserver);
   vi.stubGlobal("ResizeObserver", FakeResizeObserver);
+  vi.spyOn(Element.prototype, "getBoundingClientRect").mockImplementation(
+    () => ({ height, width: 390, top: 0, left: 0, right: 390, bottom: height, x: 0, y: 0, toJSON: () => ({}) }) as DOMRect,
+  );
+
   return {
-    fireIntersecting: (val: boolean) => {
-      if (trigger) trigger(val);
+    ioObserve,
+    ioDisconnect,
+    roObserve,
+    roDisconnect,
+    resizeTo(next: number) {
+      height = next;
+      act(() => {
+        roTrigger?.();
+      });
     },
-    observe,
-    disconnect,
+    fireIntersecting(isIntersecting: boolean) {
+      act(() => {
+        ioTrigger?.(isIntersecting);
+      });
+    },
+  };
+}
+
+function Summary({ targetRef }: { targetRef: RefObject<HTMLElement | null> }) {
+  return (
+    <>
+      <section ref={targetRef as RefObject<HTMLElement>} />
+      <MobileStickySummary
+        coin={COIN}
+        coinData={COIN_DATA}
+        pegRef={1}
+        logoSrc="/logos/usdc.svg"
+        reportCard={REPORT_CARD}
+        observeTarget={targetRef}
+      />
+    </>
+  );
+}
+
+function renderSummary() {
+  const targetRef = createRef<HTMLElement>();
+  const view = render(<Summary targetRef={targetRef} />);
+  return {
+    unmount: view.unmount,
+    rerender: () => view.rerender(<Summary targetRef={targetRef} />),
+    sticky: () => view.container.querySelector("[class*='sticky']"),
+    publishedHeight: () => document.documentElement.style.getPropertyValue(HEIGHT_VAR),
   };
 }
 
@@ -105,80 +167,92 @@ describe("MobileStickySummary", () => {
 
   afterEach(() => {
     vi.unstubAllGlobals();
-    document.documentElement.style.removeProperty("--pharos-sticky-summary-h");
+    vi.restoreAllMocks();
+    document.documentElement.style.removeProperty(HEIGHT_VAR);
   });
 
   it("returns null when the feature flag is off", () => {
     isMobileStickySummaryEnabledMock.mockReturnValue(false);
-    makeObserverHook();
-    const targetRef = createRef<HTMLElement>();
-    const { container } = render(
-      <>
-        <section ref={targetRef as React.RefObject<HTMLElement>} />
-        <MobileStickySummary
-          coin={COIN}
-          coinData={COIN_DATA}
-          pegRef={1}
-          logoSrc="/logos/usdc.svg"
-          reportCard={REPORT_CARD}
-          observeTarget={targetRef}
-        />
-      </>,
-    );
-    // The <section> renders; the sticky summary does not.
-    expect(container.querySelector("[class*='sticky']")).toBeNull();
+    const io = makeObserverHook(57.6);
+    const view = renderSummary();
+
+    expect(view.sticky()).toBeNull();
+    expect(io.ioObserve).not.toHaveBeenCalled();
   });
 
   it("returns null while the observe target is in view (no IO fire yet)", () => {
     isMobileStickySummaryEnabledMock.mockReturnValue(true);
-    makeObserverHook();
-    const targetRef = createRef<HTMLElement>();
-    const { container } = render(
-      <>
-        <section ref={targetRef as React.RefObject<HTMLElement>} />
-        <MobileStickySummary
-          coin={COIN}
-          coinData={COIN_DATA}
-          pegRef={1}
-          logoSrc="/logos/usdc.svg"
-          reportCard={REPORT_CARD}
-          observeTarget={targetRef}
-        />
-      </>,
-    );
-    // Default visible=false on mount; the sticky DOM should be absent.
-    expect(container.querySelector("[class*='sticky']")).toBeNull();
+    makeObserverHook(57.6);
+    const view = renderSummary();
+
+    expect(view.sticky()).toBeNull();
+    expect(view.publishedHeight()).toBe("");
   });
 
-  it("renders the summary and publishes --pharos-sticky-summary-h once the target leaves the viewport", () => {
+  it("publishes its rounded measured height once the target leaves the viewport, and republishes it on resize", () => {
     isMobileStickySummaryEnabledMock.mockReturnValue(true);
-    const io = makeObserverHook();
-    const targetRef = createRef<HTMLElement>();
-    const { container } = render(
-      <>
-        <section ref={targetRef as React.RefObject<HTMLElement>} />
-        <MobileStickySummary
-          coin={COIN}
-          coinData={COIN_DATA}
-          pegRef={1}
-          logoSrc="/logos/usdc.svg"
-          reportCard={REPORT_CARD}
-          observeTarget={targetRef}
-        />
-      </>,
-    );
+    const io = makeObserverHook(57.6);
+    const view = renderSummary();
 
-    expect(io.observe).toHaveBeenCalled();
+    expect(io.ioObserve).toHaveBeenCalledTimes(1);
+    io.fireIntersecting(false);
 
-    act(() => {
-      io.fireIntersecting(false);
-    });
-
-    const sticky = container.querySelector("[class*='sticky']");
+    const sticky = view.sticky();
     expect(sticky).not.toBeNull();
     expect(sticky?.textContent).toContain("USDC");
-    // The CSS var is set on document.documentElement after mount.
-    const heightVar = document.documentElement.style.getPropertyValue("--pharos-sticky-summary-h");
-    expect(heightVar).toMatch(/px$/);
+    expect(view.publishedHeight()).toBe("58px");
+    expect(io.roObserve).toHaveBeenCalledWith(sticky);
+
+    io.resizeTo(40.2);
+    expect(view.publishedHeight()).toBe("40px");
+  });
+
+  it("hides the summary and drops the published height when the target scrolls back into view", () => {
+    isMobileStickySummaryEnabledMock.mockReturnValue(true);
+    const io = makeObserverHook(57.6);
+    const view = renderSummary();
+
+    io.fireIntersecting(false);
+    expect(view.publishedHeight()).toBe("58px");
+
+    io.fireIntersecting(true);
+
+    expect(view.sticky()).toBeNull();
+    expect(view.publishedHeight()).toBe("");
+    expect(io.roDisconnect).toHaveBeenCalledTimes(1);
+  });
+
+  it("disconnects both observers and drops the published height on unmount while visible", () => {
+    isMobileStickySummaryEnabledMock.mockReturnValue(true);
+    const io = makeObserverHook(57.6);
+    const view = renderSummary();
+
+    io.fireIntersecting(false);
+    expect(view.publishedHeight()).toBe("58px");
+
+    view.unmount();
+
+    expect(io.ioDisconnect).toHaveBeenCalledTimes(1);
+    expect(io.roDisconnect).toHaveBeenCalledTimes(1);
+    expect(view.publishedHeight()).toBe("");
+  });
+
+  it("cleans up when the feature is disabled while the summary is visible", () => {
+    isMobileStickySummaryEnabledMock.mockReturnValue(true);
+    const io = makeObserverHook(57.6);
+    const view = renderSummary();
+
+    io.fireIntersecting(false);
+    expect(view.publishedHeight()).toBe("58px");
+
+    isMobileStickySummaryEnabledMock.mockReturnValue(false);
+    act(() => {
+      view.rerender();
+    });
+
+    expect(view.sticky()).toBeNull();
+    expect(view.publishedHeight()).toBe("");
+    expect(io.ioDisconnect).toHaveBeenCalledTimes(1);
+    expect(io.roDisconnect).toHaveBeenCalledTimes(1);
   });
 });

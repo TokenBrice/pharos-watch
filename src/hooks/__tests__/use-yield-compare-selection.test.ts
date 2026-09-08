@@ -9,9 +9,6 @@ describe("useYieldCompareSelection", () => {
 
   beforeEach(() => {
     window.gtag = gtag;
-    vi.spyOn(window, "queueMicrotask").mockImplementation((callback) => {
-      callback();
-    });
     window.history.replaceState(null, "", "/yield/");
   });
 
@@ -31,17 +28,26 @@ describe("useYieldCompareSelection", () => {
     expect(result.current.has("usds-sky")).toBe(false);
   });
 
-  it("toggles ids in and out of the URL", () => {
+  it("toggles ids in and out of the URL under the real scheduler", async () => {
     const { result } = renderHook(() => useYieldCompareSelection());
 
-    act(() => result.current.toggle("usdc-circle"));
+    await act(async () => {
+      result.current.toggle("usdc-circle");
+      await Promise.resolve();
+    });
     expect(window.location.search).toBe("?compare=usdc-circle");
     expect(result.current.ids).toEqual(["usdc-circle"]);
 
-    act(() => result.current.toggle("usdt-tether"));
+    await act(async () => {
+      result.current.toggle("usdt-tether");
+      await Promise.resolve();
+    });
     expect(result.current.ids).toEqual(["usdc-circle", "usdt-tether"]);
 
-    act(() => result.current.toggle("usdc-circle"));
+    await act(async () => {
+      result.current.toggle("usdc-circle");
+      await Promise.resolve();
+    });
     expect(result.current.ids).toEqual(["usdt-tether"]);
     expect(window.location.search).toBe("?compare=usdt-tether");
     expect(gtag).toHaveBeenCalledWith("event", "yield_compare_changed", {
@@ -56,15 +62,18 @@ describe("useYieldCompareSelection", () => {
     });
   });
 
-  it("clears the param when no ids remain", () => {
+  it("clears the param when no ids remain", async () => {
     window.history.replaceState(null, "", "/yield/?compare=usdc-circle");
     const { result } = renderHook(() => useYieldCompareSelection());
 
-    act(() => result.current.toggle("usdc-circle"));
+    await act(async () => {
+      result.current.toggle("usdc-circle");
+      await Promise.resolve();
+    });
     expect(window.location.search).toBe("");
   });
 
-  it("caps the selection at MAX_YIELD_COMPARE_IDS and no-ops on new ids past the cap", () => {
+  it("caps the selection at MAX_YIELD_COMPARE_IDS and no-ops on new ids past the cap", async () => {
     const initial = Array.from({ length: MAX_YIELD_COMPARE_IDS }, (_, i) => `coin-${i}`);
     window.history.replaceState(null, "", `/yield/?compare=${initial.join(",")}`);
     const { result } = renderHook(() => useYieldCompareSelection());
@@ -72,12 +81,18 @@ describe("useYieldCompareSelection", () => {
     expect(result.current.ids).toHaveLength(MAX_YIELD_COMPARE_IDS);
     expect(result.current.canAdd).toBe(false);
 
-    act(() => result.current.toggle("coin-extra"));
+    await act(async () => {
+      result.current.toggle("coin-extra");
+      await Promise.resolve();
+    });
     expect(result.current.ids).toEqual(initial);
     expect(result.current.has("coin-extra")).toBe(false);
 
     // Existing ids can still be removed even at the cap.
-    act(() => result.current.toggle("coin-0"));
+    await act(async () => {
+      result.current.toggle("coin-0");
+      await Promise.resolve();
+    });
     expect(result.current.ids).toEqual(initial.slice(1));
     expect(result.current.canAdd).toBe(true);
   });
@@ -89,11 +104,14 @@ describe("useYieldCompareSelection", () => {
     expect(result.current.ids).toEqual(["usdc-circle", "usdt-tether"]);
   });
 
-  it("clear() removes the compare param entirely", () => {
+  it("clear() removes the compare param entirely", async () => {
     window.history.replaceState(null, "", "/yield/?compare=usdc-circle,usdt-tether&keep=1");
     const { result } = renderHook(() => useYieldCompareSelection());
 
-    act(() => result.current.clear());
+    await act(async () => {
+      result.current.clear();
+      await Promise.resolve();
+    });
     expect(result.current.ids).toEqual([]);
     expect(window.location.search).toBe("?keep=1");
     expect(gtag).toHaveBeenCalledWith("event", "yield_compare_changed", {

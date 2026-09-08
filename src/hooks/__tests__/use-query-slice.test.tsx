@@ -61,28 +61,47 @@ describe("useQuerySlice", () => {
     });
   });
 
-  it("produces a new identity when any transported field changes", () => {
+  it("produces a new identity when exactly one transported field changes", () => {
+    const stableData = { n: 1 };
+    const stableError = new Error("stable");
+    const baseline: QueryResultLike<{ n: number }> = {
+      data: stableData,
+      isLoading: true,
+      isError: true,
+      error: stableError,
+      dataUpdatedAt: 1,
+      meta: META,
+    };
     const { result, rerender } = renderHook(
       (props: QueryResultLike<{ n: number }>) => useQuerySlice(makeQueryResult(props)),
-      { initialProps: { dataUpdatedAt: 1 } as QueryResultLike<{ n: number }> },
+      { initialProps: baseline },
     );
 
-    const identities = [result.current];
-    for (const next of [
-      { dataUpdatedAt: 1, data: { n: 1 } },
-      { dataUpdatedAt: 2, data: { n: 1 } },
-      { dataUpdatedAt: 2, data: { n: 1 }, isLoading: true },
-      { dataUpdatedAt: 2, data: { n: 1 }, isLoading: true, isError: true },
-      { dataUpdatedAt: 2, data: { n: 1 }, isLoading: true, isError: true, error: new Error("x") },
-      { dataUpdatedAt: 2, data: { n: 1 }, isLoading: true, isError: true, error: new Error("x"), meta: META },
-    ] satisfies QueryResultLike<{ n: number }>[]) {
-      const previous = result.current;
-      rerender(next);
-      expect(result.current).not.toBe(previous);
-      identities.push(result.current);
-    }
+    const baselineSlice = result.current;
+    expect(baselineSlice.data).toBe(stableData);
+    expect(baselineSlice.error).toBe(stableError);
+    expect(baselineSlice.meta).toBe(META);
 
-    expect(new Set(identities).size).toBe(identities.length);
+    // One axis moves per case; every other input keeps its identity, so a dropped
+    // dependency cannot be masked by an incidentally reallocated neighbour.
+    // (Same-props identity stability is pinned separately by the rebuild test above.)
+    for (const changed of [
+      { data: { n: 2 } },
+      { dataUpdatedAt: 2 },
+      { isLoading: false },
+      { isError: false },
+      { error: null },
+      { meta: null },
+    ] satisfies Partial<QueryResultLike<{ n: number }>>[]) {
+      rerender({ ...baseline, ...changed });
+      expect(result.current).not.toBe(baselineSlice);
+      expect(result.current).toMatchObject(changed);
+
+      // Unmoved members keep their exact identities across the rebuild.
+      if (!("data" in changed)) expect(result.current.data).toBe(stableData);
+      if (!("error" in changed)) expect(result.current.error).toBe(stableError);
+      if (!("meta" in changed)) expect(result.current.meta).toBe(META);
+    }
   });
 });
 
@@ -118,13 +137,14 @@ describe("useQuerySlices", () => {
     expect(result.current.peg).toBe(first.peg);
   });
 
-  it("rebuilds when one member changes and exposes normalized slices", () => {
+  it("rebuilds only the changed member and exposes normalized slices", () => {
     const listData = { peggedAssets: [] };
+    const pegError = new Error("peg down");
     const { result, rerender } = renderHook(
       (props: { updatedAt: number }) =>
         useQuerySlices({
           list: makeQueryResult({ data: listData, dataUpdatedAt: props.updatedAt }),
-          peg: makeQueryResult({ dataUpdatedAt: 20, error: new Error("peg down") }),
+          peg: makeQueryResult({ dataUpdatedAt: 20, error: pegError }),
         }),
       { initialProps: { updatedAt: 10 } },
     );
@@ -133,9 +153,12 @@ describe("useQuerySlices", () => {
     rerender({ updatedAt: 11 });
 
     expect(result.current).not.toBe(first);
+    expect(result.current.list).not.toBe(first.list);
     expect(result.current.list.dataUpdatedAt).toBe(11);
     expect(result.current.list.data).toBe(listData);
-    expect(result.current.peg.error).toBeInstanceOf(Error);
+    // The untouched member keeps its exact transported values across the rebuild.
+    expect(result.current.peg.error).toBe(pegError);
+    expect(result.current.peg.dataUpdatedAt).toBe(20);
     expect(result.current.peg.meta).toBeNull();
   });
 });

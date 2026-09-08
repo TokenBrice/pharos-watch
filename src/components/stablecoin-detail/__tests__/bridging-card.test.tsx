@@ -1,3 +1,5 @@
+// @vitest-environment node
+
 import { describe, expect, it } from "vitest";
 import { renderToStaticMarkup } from "react-dom/server";
 import { BridgingCard } from "../bridging-card";
@@ -30,16 +32,12 @@ describe("BridgingCard", () => {
     expect(html).toContain("Reviewed 2026-07-15");
     expect(html).toContain("https://example.com/usdt0");
     expect(html).toContain('hidden=""'); // sources folded by default
+    expect(html).not.toContain("Read more"); // short summary stays un-collapsed
   });
 
   it("renders nothing without a bridge review", () => {
     expect(renderToStaticMarkup(<BridgingCard summary={null} />)).toBe("");
     expect(renderToStaticMarkup(<BridgingCard />)).toBe("");
-  });
-
-  it("keeps short summaries un-collapsed with no Read more control", () => {
-    const html = renderToStaticMarkup(<BridgingCard summary={SUMMARY} />);
-    expect(html).not.toContain("Read more");
   });
 
   it("cuts long summaries to a lead behind Read more", () => {

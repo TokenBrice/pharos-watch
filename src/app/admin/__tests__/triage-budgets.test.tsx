@@ -2,12 +2,8 @@
 
 import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { buildStatusDashboardData } from "@/lib/status-dashboard-model";
-import {
-  STATUS_FIXTURE_NOW_MS,
-  makeHealthyHealthResponse,
-  makeHealthyStatusResponse,
-} from "@/test-utils/status-fixtures";
+import { STATUS_FIXTURE_NOW_MS } from "@/test-utils/status-fixtures";
+import { makeCriticalOpsResult } from "./admin-client.test-support";
 
 const { useCriticalOpsModelMock, useCredentialLifecycleSummaryMock } = vi.hoisted(() => ({
   useCriticalOpsModelMock: vi.fn(),
@@ -24,42 +20,6 @@ vi.mock("@/hooks/admin-api-hooks", () => ({
 
 import TriageClient from "../client";
 
-function makeCriticalOpsResult() {
-  const data = makeHealthyStatusResponse();
-  const healthData = makeHealthyHealthResponse();
-  const model = buildStatusDashboardData({
-    data,
-    healthData,
-    probes: [
-      { path: "/api/health", status: 200, latencyMs: 20 },
-      { path: "/api/status", status: 200, latencyMs: 30 },
-    ],
-    probeLabel: "Critical browser probes",
-    querySyncs: {
-      statusUpdatedAt: STATUS_FIXTURE_NOW_MS,
-      healthUpdatedAt: STATUS_FIXTURE_NOW_MS,
-      probesUpdatedAt: STATUS_FIXTURE_NOW_MS,
-      historyUpdatedAt: 0,
-      requestSourceUpdatedAt: 0,
-    },
-    nowMs: STATUS_FIXTURE_NOW_MS,
-    healthError: null,
-    probesError: null,
-    historyError: null,
-    requestSourceError: null,
-    historyTransitions: undefined,
-  });
-
-  return {
-    data,
-    handleRefresh: vi.fn(),
-    healthData,
-    initialLoadError: null,
-    isLoading: false,
-    lastUpdated: STATUS_FIXTURE_NOW_MS,
-    model,
-  };
-}
 
 beforeEach(() => {
   vi.spyOn(Date, "now").mockReturnValue(STATUS_FIXTURE_NOW_MS);

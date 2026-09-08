@@ -1,8 +1,10 @@
 import { describe, expect, it } from "vitest";
-import type { CoverageRow, CoverageStatus } from "@/lib/coverage";
-import type { CoverageFeatureKey } from "@/lib/coverage";
+import { COVERAGE_FEATURES, type CoverageFeatureKey, type CoverageRow, type CoverageStatus } from "@/lib/coverage";
 import type { CoverageFilterKey } from "@/lib/coverage-page-config";
 import { filterCoverageRows, hasCoverageFilters, matchesCoverageFilter, sortCoverageRows } from "@/lib/coverage-filtering";
+
+// The full-coverage filters are defined against the shipped feature registry.
+const FEATURE_COUNT = COVERAGE_FEATURES.length;
 
 function status(kind: string, available: boolean, sortRank = available ? 1 : 0): CoverageStatus {
   return {
@@ -16,9 +18,8 @@ function status(kind: string, available: boolean, sortRank = available ? 1 : 0):
   };
 }
 
-function makeRow(overrides: Partial<CoverageRow> & Pick<CoverageRow, "id" | "name" | "symbol">): CoverageRow {
-  const { blacklistStatus = null, ...rowOverrides } = overrides;
-  const statuses: Record<CoverageFeatureKey, CoverageStatus> = {
+function defaultStatuses(): Record<CoverageFeatureKey, CoverageStatus> {
+  return {
     price: status("tracked", true),
     safety: status("tracked", true),
     dex: status("tracked", true),
@@ -32,7 +33,13 @@ function makeRow(overrides: Partial<CoverageRow> & Pick<CoverageRow, "id" | "nam
     mica: status("unassessed", false),
     genius: status("unassessed", false),
   };
+}
 
+type RowOverrides = Partial<Omit<CoverageRow, "statuses">> &
+  Pick<CoverageRow, "id" | "name" | "symbol"> & { statuses?: Partial<Record<CoverageFeatureKey, CoverageStatus>> };
+
+function makeRow(overrides: RowOverrides): CoverageRow {
+  const { blacklistStatus = null, statuses, ...rowOverrides } = overrides;
   return {
     marketCapUsd: 0,
     pegLabel: "Tracked",
@@ -42,7 +49,7 @@ function makeRow(overrides: Partial<CoverageRow> & Pick<CoverageRow, "id" | "nam
     headlineCoverageCount: 0,
     advancedCoverageCount: 0,
     blacklistStatus,
-    statuses,
+    statuses: { ...defaultStatuses(), ...statuses },
     ...rowOverrides,
   };
 }
@@ -58,17 +65,7 @@ const rows: CoverageRow[] = [
     advancedCoverageCount: 1,
     statuses: {
       price: { ...status("tracked", true, 2), sourceCount: 2 },
-      safety: status("tracked", true),
       dex: status("none", false),
-      reserves: status("none", false),
-      redemption: status("none", false),
-      yield: status("none", false),
-      flows: status("none", false),
-      blacklist: status("none", false),
-      dependency: status("tracked", true),
-      mintAuthority: status("unknown", false),
-      mica: status("unassessed", false),
-      genius: status("unassessed", false),
     },
   }),
   makeRow({
@@ -81,17 +78,12 @@ const rows: CoverageRow[] = [
     advancedCoverageCount: 2,
     statuses: {
       price: { ...status("tracked", true, 4), sourceCount: 4 },
-      safety: status("tracked", true),
       dex: status("tracked", true, 2),
       reserves: status("live", true),
       redemption: status("configured", true),
       yield: status("available", true),
-      flows: status("none", false),
       blacklist: status("live", true),
-      dependency: status("tracked", true),
       mintAuthority: status("issuer-or-backend-mint", true),
-      mica: status("unassessed", false),
-      genius: status("unassessed", false),
     },
   }),
   makeRow({
@@ -104,17 +96,8 @@ const rows: CoverageRow[] = [
     advancedCoverageCount: 1,
     statuses: {
       price: { ...status("tracked", true, 3), sourceCount: 3 },
-      safety: status("tracked", true),
       dex: status("tracked", true, 1),
-      reserves: status("none", false),
-      redemption: status("none", false),
-      yield: status("none", false),
       flows: status("available", true),
-      blacklist: status("none", false),
-      dependency: status("tracked", true),
-      mintAuthority: status("unknown", false),
-      mica: status("unassessed", false),
-      genius: status("unassessed", false),
     },
   }),
   makeRow({
@@ -125,21 +108,15 @@ const rows: CoverageRow[] = [
     coverageCount: 5,
     headlineCoverageCount: 5,
     advancedCoverageCount: 5,
-    statuses: {
-      price: { ...status("tracked", true, 5), sourceCount: 5 },
-      safety: status("tracked", true),
-      dex: status("tracked", true),
-      reserves: status("none", false),
-      redemption: status("none", false),
-      yield: status("none", false),
-      flows: status("none", false),
-      blacklist: status("none", false),
-      dependency: status("tracked", true),
-      mintAuthority: status("unknown", false),
-      mica: status("unassessed", false),
-      genius: status("unassessed", false),
-    },
+    statuses: { price: { ...status("tracked", true, 5), sourceCount: 5 } },
   }),
+];
+
+// Sort fixtures stay minimal; filter fixtures add the safety/dependency gaps.
+const filterRows: CoverageRow[] = [
+  ...rows,
+  makeRow({ id: "unsafe", name: "Unsafe Yield", symbol: "UNF", statuses: { safety: status("unassessed", false) } }),
+  makeRow({ id: "nodep", name: "No Dependency", symbol: "NDP", statuses: { dependency: status("unassessed", false) } }),
 ];
 
 describe("coverage filtering", () => {
@@ -173,91 +150,100 @@ describe("coverage filtering", () => {
     expect(sorted.map((row) => row.id)).toEqual(["alpha", "beta", "delta", "gamma"]);
   });
 
+  it("orders most/least-headline by headline count even when coverage and market cap disagree", () => {
+    const conflict = [
+      makeRow({ id: "wide", name: "Wide Coin", symbol: "WID", marketCapUsd: 100, coverageCount: 6, headlineCoverageCount: 2 }),
+      makeRow({ id: "deep", name: "Deep Coin", symbol: "DEP", marketCapUsd: 100, coverageCount: 2, headlineCoverageCount: 6 }),
+    ];
+
+    expect(sortCoverageRows(conflict, "most-headline").map((row) => row.id)).toEqual(["deep", "wide"]);
+    expect(sortCoverageRows(conflict, "least-headline").map((row) => row.id)).toEqual(["wide", "deep"]);
+    expect(sortCoverageRows(conflict, "most-covered").map((row) => row.id)).toEqual(["wide", "deep"]);
+    expect(sortCoverageRows(conflict, "least-covered").map((row) => row.id)).toEqual(["deep", "wide"]);
+  });
+
+  it("breaks headline ties by coverage count and then market cap in both directions", () => {
+    const tied = [
+      makeRow({ id: "small", name: "Small Cap", symbol: "SML", marketCapUsd: 10, coverageCount: 5, headlineCoverageCount: 3 }),
+      makeRow({ id: "large", name: "Large Cap", symbol: "LRG", marketCapUsd: 900, coverageCount: 5, headlineCoverageCount: 3 }),
+    ];
+
+    expect(sortCoverageRows(tied, "most-headline").map((row) => row.id)).toEqual(["large", "small"]);
+    expect(sortCoverageRows(tied, "least-headline").map((row) => row.id)).toEqual(["large", "small"]);
+  });
+
+  it("resolves coverage ties by market cap and leaves the input array untouched", () => {
+    const input = [
+      makeRow({ id: "small", name: "Small Cap", symbol: "SML", marketCapUsd: 1, coverageCount: 3, headlineCoverageCount: 3 }),
+      makeRow({ id: "large", name: "Large Cap", symbol: "LRG", marketCapUsd: 500, coverageCount: 3, headlineCoverageCount: 3 }),
+    ];
+
+    expect(sortCoverageRows(input, "most-covered").map((row) => row.id)).toEqual(["large", "small"]);
+    expect(input.map((row) => row.id)).toEqual(["small", "large"]);
+  });
+
   it.each<[CoverageFilterKey, string[]]>([
     ["redemption", ["beta"]],
     ["live-reserves", ["beta"]],
     ["yield", ["beta"]],
     ["flows", ["gamma"]],
+    ["weak-price", ["alpha", "unsafe", "nodep"]],
     ["blacklist", ["beta"]],
-    ["weak-price", ["alpha"]],
     ["price-2-sources", ["alpha"]],
-    ["missing-safety", []],
+    ["missing-safety", ["unsafe"]],
     ["missing-dex", ["alpha"]],
-    ["missing-live-reserves", ["alpha", "gamma", "delta"]],
-    ["missing-flows", ["alpha", "beta", "delta"]],
-    ["missing-dependency", []],
+    ["missing-live-reserves", ["alpha", "gamma", "delta", "unsafe", "nodep"]],
+    ["missing-dependency", ["nodep"]],
+    ["missing-flows", ["alpha", "beta", "delta", "unsafe", "nodep"]],
     ["full-available", []],
     ["full-headline", []],
   ])("matches %s coverage against the expected rows", (filter, expectedIds) => {
-    const matches = rows.filter((row) => matchesCoverageFilter(row, filter));
+    const matches = filterRows.filter((row) => matchesCoverageFilter(row, filter));
 
     expect(matches.map((row) => row.id)).toEqual(expectedIds);
   });
 
-  it("matches redemption quick filter for configured states but excludes Data n/a", () => {
-    const redemptionRows = [
-      makeRow({
-        id: "none",
-        name: "No Route",
-        symbol: "NONE",
-        statuses: {
-          ...rows[0].statuses,
-          redemption: status("none", false),
-        },
-      }),
-      makeRow({
-        id: "data-na",
-        name: "Data NA",
-        symbol: "DNA",
-        statuses: {
-          ...rows[0].statuses,
-          redemption: status("data-unavailable", false),
-        },
-      }),
-      makeRow({
-        id: "heuristic",
-        name: "Heuristic Route",
-        symbol: "HEUR",
-        statuses: {
-          ...rows[0].statuses,
-          redemption: status("modeled-heuristic", false),
-        },
-      }),
-      makeRow({
-        id: "resolved",
-        name: "Resolved Route",
-        symbol: "RES",
-        statuses: {
-          ...rows[0].statuses,
-          redemption: status("resolved-unscored", false),
-        },
-      }),
-      makeRow({
-        id: "impaired",
-        name: "Impaired Route",
-        symbol: "IMP",
-        statuses: {
-          ...rows[0].statuses,
-          redemption: status("impaired", false),
-        },
-      }),
-      makeRow({
-        id: "scored",
-        name: "Scored Route",
-        symbol: "SCR",
-        statuses: {
-          ...rows[0].statuses,
-          redemption: status("offchain-issuer", true),
-        },
-      }),
-    ];
+  it("matches full-coverage filters only at the exact feature-count boundary", () => {
+    const full = makeRow({ id: "full", name: "Full House", symbol: "FUL", coverageCount: FEATURE_COUNT, headlineCoverageCount: FEATURE_COUNT });
+    const coverageOnly = makeRow({ id: "cov-only", name: "Coverage Only", symbol: "COV", coverageCount: FEATURE_COUNT, headlineCoverageCount: FEATURE_COUNT - 1 });
+    const short = makeRow({ id: "short", name: "Short One", symbol: "SRT", coverageCount: FEATURE_COUNT - 1, headlineCoverageCount: FEATURE_COUNT - 1 });
+    const candidates = [full, coverageOnly, short];
 
-    expect(redemptionRows.filter((row) => matchesCoverageFilter(row, "redemption")).map((row) => row.id)).toEqual([
-      "heuristic",
-      "resolved",
-      "impaired",
-      "scored",
-    ]);
+    expect(candidates.filter((row) => matchesCoverageFilter(row, "full-available")).map((row) => row.id)).toEqual(["full", "cov-only"]);
+    expect(candidates.filter((row) => matchesCoverageFilter(row, "full-headline")).map((row) => row.id)).toEqual(["full"]);
+  });
+
+  it("excludes price-only rows from weak-price regardless of source count and reads a missing count as zero", () => {
+    const priceOnly = makeRow({
+      id: "p-only",
+      name: "Price Only",
+      symbol: "PON",
+      statuses: { price: { ...status("price-only", false), sourceCount: 1 } },
+    });
+    const uncounted = makeRow({ id: "no-count", name: "No Count", symbol: "NOC" });
+
+    expect(matchesCoverageFilter(priceOnly, "weak-price")).toBe(false);
+    expect(matchesCoverageFilter(priceOnly, "price-2-sources")).toBe(false);
+    expect(matchesCoverageFilter(uncounted, "weak-price")).toBe(true);
+    expect(matchesCoverageFilter(uncounted, "price-2-sources")).toBe(false);
+  });
+
+  it.each<[string, boolean]>([
+    ["none", false],
+    ["data-unavailable", false],
+    ["modeled-heuristic", true],
+    ["resolved-unscored", true],
+    ["impaired", true],
+    ["offchain-issuer", true],
+  ])("redemption quick filter admits the %s state only outside none/data-unavailable", (kind, expected) => {
+    const row = makeRow({
+      id: kind,
+      name: kind,
+      symbol: kind.toUpperCase(),
+      statuses: { redemption: status(kind, kind === "offchain-issuer") },
+    });
+
+    expect(matchesCoverageFilter(row, "redemption")).toBe(expected);
   });
 
   it("filters by search across names and tickers with trimming and case folding", () => {
@@ -266,6 +252,12 @@ describe("coverage filtering", () => {
 
     expect(byName.map((row) => row.id)).toEqual(["gamma"]);
     expect(bySymbol.map((row) => row.id)).toEqual(["alpha"]);
+  });
+
+  it("intersects search with an active feature filter instead of widening it", () => {
+    expect(filterCoverageRows(rows, "yield", "market-cap", "bet").map((row) => row.id)).toEqual(["beta"]);
+    // Alpha matches the search but has no yield data, so it must stay excluded.
+    expect(filterCoverageRows(rows, "yield", "market-cap", "alp").map((row) => row.id)).toEqual([]);
   });
 
   it("reports whether any filters are active", () => {

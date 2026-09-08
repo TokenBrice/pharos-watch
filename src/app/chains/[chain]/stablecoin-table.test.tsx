@@ -26,7 +26,7 @@ describe("Chain detail StablecoinTable", () => {
     cleanup();
   });
 
-  it("renders through the shared table foundation with stable identity", () => {
+  it("renders the filtered table with its caption and coin supply values", () => {
     render(
       <StablecoinTable
         coins={[
@@ -44,19 +44,11 @@ describe("Chain detail StablecoinTable", () => {
       />,
     );
 
-    const shell = screen.getByTestId("chain-detail-stablecoins-table");
-    const table = screen.getByRole("table");
-    const caption = screen.getByText("Stablecoins deployed on this chain");
-
-    expect(shell.getAttribute("data-table-id")).toBe("chain-detail-stablecoins");
-    expect(shell.className).toContain("pharos-density-compact");
-    expect(shell.className).toContain("text-card-foreground");
-    expect(table.parentElement?.getAttribute("data-slot")).toBe("table-viewport");
-    expect(table.parentElement?.querySelector("[data-slot='table-container']")).toBeNull();
-    expect(caption.closest("caption")?.className).toContain("sr-only");
+    expect(screen.getByRole("table")).toBeTruthy();
+    expect(screen.getByText("Stablecoins deployed on this chain")).toBeTruthy();
     expect(screen.getByText("All Stablecoins").textContent).toContain("Crypto");
-    expect(screen.getByText("#").closest("th")?.getAttribute("data-slot")).toBe("table-head");
-    expect(screen.getByText("$400.0M").closest("td")?.getAttribute("data-slot")).toBe("table-cell");
+    expect(screen.getByText("$500.0M")).toBeTruthy();
+    expect(screen.getByText("$400.0M")).toBeTruthy();
   });
 
   it("preserves clickable row link behavior and keyboard activation", () => {

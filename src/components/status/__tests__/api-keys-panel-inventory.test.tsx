@@ -41,7 +41,7 @@ describe("ApiKeysPanel inventory", () => {
     expect(screen.getByText(/Expired 1h ago at/i)).toBeTruthy();
   });
 
-  it("defaults to the attention queue and searches every operator-facing identity field", () => {
+  it("defaults to the attention queue and hides rows the search rejects", () => {
     renderPanel([
       makeKey({ id: 1, name: "Routine Active", expiresAt: GENERATED_AT + 30 * 24 * 60 * 60 }),
       makeKey({
@@ -53,22 +53,37 @@ describe("ApiKeysPanel inventory", () => {
         tier: "priority",
         lastUsedRoute: "/api/beacon/latest",
       }),
+      // Same attention status as Route Beacon, disjoint identity fields.
+      makeKey({
+        id: 3,
+        name: "Attention Decoy",
+        ownerEmail: "decoy@example.invalid",
+        keyPrefix: "decoy-prefix",
+        maskedToken: "ph_live_decoy-prefix_********",
+        lastUsedRoute: "/api/decoy/latest",
+      }),
     ]);
 
-    expect(screen.queryByText("Routine Active")).toBeNull();
     expect(screen.getByText("Route Beacon")).toBeTruthy();
+    expect(screen.getByText("Attention Decoy")).toBeTruthy();
+    expect(screen.queryByText("Routine Active")).toBeNull();
 
     fireEvent.change(screen.getByLabelText("Search keys"), { target: { value: "beacon@example.invalid latest" } });
     expect(screen.getByText("Route Beacon")).toBeTruthy();
-    fireEvent.change(screen.getByLabelText("Search keys"), { target: { value: "beacon-prefix priority" } });
-    expect(screen.getByText("Route Beacon")).toBeTruthy();
+    expect(screen.queryByText("Attention Decoy")).toBeNull();
+
+    // Every term must match: a single unmatched term rejects the row.
+    fireEvent.change(screen.getByLabelText("Search keys"), { target: { value: "beacon-prefix absent-term" } });
+    expect(screen.queryByText("Route Beacon")).toBeNull();
+    expect(screen.queryByText("Attention Decoy")).toBeNull();
 
     fireEvent.change(screen.getByLabelText("Status"), { target: { value: "all" } });
     fireEvent.change(screen.getByLabelText("Search keys"), { target: { value: "" } });
     expect(screen.getByText("Routine Active")).toBeTruthy();
   });
 
-  it("combines expiration, owner, tier, and traffic filters and resets to attention", () => {
+  it("excludes rows failing each expiration, owner, tier, and traffic filter and resets to attention", () => {
+    const expiringSoon = GENERATED_AT + 2 * 24 * 60 * 60;
     renderPanel([
       makeKey({
         id: 1,
@@ -76,6 +91,7 @@ describe("ApiKeysPanel inventory", () => {
         ownerEmail: "priority@example.invalid",
         tier: "priority",
         trafficClass: "external",
+        expiresAt: expiringSoon,
       }),
       makeKey({
         id: 2,
@@ -87,16 +103,51 @@ describe("ApiKeysPanel inventory", () => {
         isActive: false,
       }),
       makeKey({ id: 3, name: "Unassigned", ownerEmail: null, expiresAt: null }),
+      // Decoys differ from key 1 in exactly one filtered dimension.
+      makeKey({
+        id: 4,
+        name: "Other Owner",
+        ownerEmail: "other@example.invalid",
+        tier: "priority",
+        trafficClass: "external",
+        expiresAt: expiringSoon,
+      }),
+      makeKey({
+        id: 5,
+        name: "Other Tier",
+        ownerEmail: "priority@example.invalid",
+        tier: "standard",
+        trafficClass: "external",
+        expiresAt: expiringSoon,
+      }),
+      makeKey({
+        id: 6,
+        name: "Other Traffic",
+        ownerEmail: "priority@example.invalid",
+        tier: "priority",
+        trafficClass: "site",
+        expiresAt: expiringSoon,
+      }),
     ]);
 
     fireEvent.change(screen.getByLabelText("Expiration"), { target: { value: "next-7-days" } });
     expect(screen.getByText("Priority External")).toBeTruthy();
     expect(screen.queryByText("Standard Site")).toBeNull();
+    expect(screen.queryByText("Unassigned")).toBeNull();
 
     fireEvent.change(screen.getByLabelText("Owner filter"), { target: { value: "priority@example.invalid" } });
+    expect(screen.getByText("Priority External")).toBeTruthy();
+    expect(screen.queryByText("Other Owner")).toBeNull();
+    expect(screen.getByText("Other Tier")).toBeTruthy();
+
     fireEvent.change(screen.getByLabelText("Tier filter"), { target: { value: "priority" } });
+    expect(screen.getByText("Priority External")).toBeTruthy();
+    expect(screen.queryByText("Other Tier")).toBeNull();
+    expect(screen.getByText("Other Traffic")).toBeTruthy();
+
     fireEvent.change(screen.getByLabelText("Traffic filter"), { target: { value: "external" } });
     expect(screen.getByText("Priority External")).toBeTruthy();
+    expect(screen.queryByText("Other Traffic")).toBeNull();
 
     fireEvent.click(screen.getByRole("button", { name: "Reset view" }));
     expect(screen.getByText("Standard Site")).toBeTruthy();

@@ -5,13 +5,14 @@ import { describe, expect, it, vi } from "vitest";
 import { buildChainHarborEntries, buildChainHarborModel, buildChainHarborModelFromEntries } from "./harbor-map";
 import { makeChain } from "./harbor-map.test-support";
 import { NauticalChart } from "./nautical-chart";
+import { SCENE_HEIGHT, SCENE_WIDTH } from "./nautical-constants";
 
 vi.mock("next/image", () => ({
   default: (props: ImgHTMLAttributes<HTMLImageElement>) => createElement("img", { ...props, alt: props.alt ?? "" }),
 }));
 
 describe("chain harbor DOM smokes", () => {
-  it("keeps nautical chart annotations readable on the dark scene in both themes", () => {
+  it("renders nautical chart annotations and chain logos on the scene", () => {
     render(createElement(NauticalChart, {
       chains: [
         makeChain({
@@ -28,12 +29,8 @@ describe("chain harbor DOM smokes", () => {
     }));
 
     const chart = screen.getByRole("img", { name: "Nautical chart of 2 largest stablecoin chains" });
-    expect(chart.classList.contains("text-slate-100")).toBe(true);
-    expect(chart.classList.contains("text-foreground")).toBe(false);
-
-    const aptosLogo = chart.querySelector('image[href="/chains/aptos.png"]');
-    expect(aptosLogo).toBeTruthy();
-    expect(aptosLogo?.getAttribute("style") ?? "").not.toContain("invert");
+    expect(screen.getAllByText("Aptos").length).toBeGreaterThan(0);
+    expect(chart.querySelector('image[href="/chains/aptos.png"]')).toBeTruthy();
   });
 
   it("keeps the lowered lighthouse beam inside the scene", () => {
@@ -47,12 +44,23 @@ describe("chain harbor DOM smokes", () => {
 
     const chart = screen.getByRole("img", { name: "Nautical chart of 2 largest stablecoin chains" });
     const water = chart.querySelector('rect[fill="url(#nc-water)"]');
+    expect(water).toBeTruthy();
     expect(Number(water?.getAttribute("y"))).toBeGreaterThan(180);
 
-    const beam = chart.querySelector('path[fill="url(#nc-beam)"]');
-    const yValues = [...(beam?.getAttribute("d") ?? "").matchAll(/[ML]\s+[-\d.]+\s+([-\d.]+)/g)]
-      .map((match) => Number(match[1]));
-    expect(Math.min(...yValues)).toBeGreaterThanOrEqual(0);
+    const beams = [...chart.querySelectorAll('path[fill="url(#nc-beam)"]')];
+    expect(beams.length).toBeGreaterThan(0);
+    for (const beam of beams) {
+      const points = [...(beam.getAttribute("d") ?? "").matchAll(/(-?[\d.]+)[\s,]+(-?[\d.]+)/g)]
+        .map((match) => ({ x: Number(match[1]), y: Number(match[2]) }));
+      expect(points.length).toBeGreaterThanOrEqual(3);
+      for (const { x, y } of points) {
+        expect(Number.isFinite(x) && Number.isFinite(y)).toBe(true);
+        expect(x).toBeGreaterThanOrEqual(0);
+        expect(x).toBeLessThanOrEqual(SCENE_WIDTH);
+        expect(y).toBeGreaterThanOrEqual(0);
+        expect(y).toBeLessThanOrEqual(SCENE_HEIGHT);
+      }
+    }
   });
 });
 

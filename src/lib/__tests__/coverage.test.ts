@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { RedemptionBackstopEntry, StablecoinMeta } from "@shared/types";
 import type { MintAuthorityCoverageSummary } from "@shared/types/stablecoin-client-meta";
-import type { CoverageFeatureKey } from "@/lib/coverage-types";
+import type { CoverageFeatureDefinition, CoverageFeatureKey } from "@/lib/coverage-types";
 import { buildCoverageFeatureSummary, buildCoverageRow, COVERAGE_FEATURES } from "@/lib/coverage";
 import { coverageFeature as blacklistCoverageFeature } from "@/lib/coverage/blacklist";
 import { coverageFeature as dependencyCoverageFeature } from "@/lib/coverage/dependency";
@@ -64,6 +64,30 @@ function makeRedemptionEntry(overrides?: Partial<RedemptionBackstopEntry>): Rede
   };
 }
 
+const LIVE_RESERVE_CONFIGS = {
+  live: {
+    adapter: "infinifi",
+    version: 1,
+    semantics: "collateral-mix",
+    inputs: { primary: { kind: "http-json", url: "https://example.com/reserves" } },
+  },
+  curatedValidated: {
+    adapter: "curated-validated",
+    version: 1,
+    semantics: "attestation-mix",
+    inputs: { primary: { kind: "onchain-evm", chain: "ethereum", rpcMode: "public-rpc" } },
+  },
+  proof: {
+    adapter: "single-asset",
+    version: 1,
+    semantics: "single-asset",
+    inputs: { primary: { kind: "onchain-evm", chain: "ethereum", rpcMode: "public-rpc" } },
+    params: { label: "Issuer reserves", risk: "very-low" },
+  },
+} satisfies Record<string, NonNullable<StablecoinMeta["liveReservesConfig"]>>;
+
+const CURATED_RESERVES: StablecoinMeta["reserves"] = [{ name: "Cash", pct: 100, risk: "very-low" }];
+
 type CoverageRowOverrides = Partial<Parameters<typeof buildCoverageRow>[0]>;
 type CoverageRowIdentity = readonly [id: string, symbol: string];
 
@@ -117,14 +141,7 @@ describe("coverage helpers", () => {
     expect(
       reserveCoverageFeature.resolve(
         makeCoin({
-          liveReservesConfig: {
-            adapter: "infinifi",
-            version: 1,
-            semantics: "collateral-mix",
-            inputs: {
-              primary: { kind: "http-json", url: "https://example.com/reserves" },
-            },
-          },
+          liveReservesConfig: LIVE_RESERVE_CONFIGS.live,
         }),
         true,
       ).kind,
@@ -133,14 +150,7 @@ describe("coverage helpers", () => {
     expect(
       reserveCoverageFeature.resolve(
         makeCoin({
-          liveReservesConfig: {
-            adapter: "curated-validated",
-            version: 1,
-            semantics: "attestation-mix",
-            inputs: {
-              primary: { kind: "onchain-evm", chain: "ethereum", rpcMode: "public-rpc" },
-            },
-          },
+          liveReservesConfig: LIVE_RESERVE_CONFIGS.curatedValidated,
         }),
         false,
       ).kind,
@@ -149,18 +159,7 @@ describe("coverage helpers", () => {
     expect(
       reserveCoverageFeature.resolve(
         makeCoin({
-          liveReservesConfig: {
-            adapter: "single-asset",
-            version: 1,
-            semantics: "single-asset",
-            inputs: {
-              primary: { kind: "onchain-evm", chain: "ethereum", rpcMode: "public-rpc" },
-            },
-            params: {
-              label: "Issuer reserves",
-              risk: "very-low",
-            },
-          },
+          liveReservesConfig: LIVE_RESERVE_CONFIGS.proof,
         }),
         false,
       ).kind,
@@ -169,7 +168,7 @@ describe("coverage helpers", () => {
     expect(
       reserveCoverageFeature.resolve(
         makeCoin({
-          reserves: [{ name: "Cash", pct: 100, risk: "very-low" }],
+          reserves: CURATED_RESERVES,
         }),
       ).kind,
     ).toBe("curated");
@@ -193,14 +192,7 @@ describe("coverage helpers", () => {
 
   it("does not count configured live reserve adapters as fresh live coverage without current live data", () => {
     const liveConfiguredCoin = makeCoin({
-      liveReservesConfig: {
-        adapter: "infinifi",
-        version: 1,
-        semantics: "collateral-mix",
-        inputs: {
-          primary: { kind: "http-json", url: "https://example.com/reserves" },
-        },
-      },
+      liveReservesConfig: LIVE_RESERVE_CONFIGS.live,
     });
 
     expect(reserveCoverageFeature.resolve(liveConfiguredCoin, false).kind).toBe("live-configured");
@@ -605,6 +597,80 @@ describe("coverage helpers", () => {
     ]);
   });
 
+  it("returns zeroed summaries and a null market-cap share for empty or zero-cap inputs", () => {
+    const empty = buildCoverageFeatureSummary(coverageFeature("price"), [], 0);
+
+    expect(empty.availableCount).toBe(0);
+    expect(empty.totalCount).toBe(0);
+    expect(empty.coveragePct).toBe(0);
+    expect(empty.coveredMcapUsd).toBe(0);
+    expect(empty.mcapSharePct).toBeNull();
+
+    const zeroCap = buildCoverageFeatureSummary(
+      coverageFeature("blacklist"),
+      [
+        makeCoverageRow(["freezable", "FRZ"], { marketCapUsd: 0, blacklistStatus: false }),
+        makeCoverageRow(["tracked", "TRK"], { marketCapUsd: 0, blacklistStatus: true }),
+      ],
+      0,
+    );
+
+    expect(zeroCap.coveragePct).toBe(100);
+    expect(zeroCap.mcapSharePct).toBeNull();
+  });
+
+  it("scopes count and market-cap denominators to the feature's own rows", () => {
+    const scopedFeature: CoverageFeatureDefinition = {
+      key: "safety",
+      label: "Scoped safety",
+      shortLabel: "Safety",
+      description: "Safety scoped to tracked rows.",
+      scopeFilter: (row) => row.id !== "excluded",
+      statusKinds: ["graded"],
+      legendItems: [],
+      formatBreakdown: (_rows, breakdownMap) =>
+        Array.from(breakdownMap, ([key, count]) => ({ key, label: key, count })),
+    };
+    const rows = [
+      makeCoverageRow(["excluded", "EXC"], { marketCapUsd: 9_000 }),
+      makeCoverageRow(["kept", "KEPT"], { marketCapUsd: 1_000 }),
+    ];
+
+    const summary = buildCoverageFeatureSummary(scopedFeature, rows, 10_000);
+
+    expect(summary.availableCount).toBe(1);
+    expect(summary.totalCount).toBe(1);
+    expect(summary.coveragePct).toBe(100);
+    expect(summary.coveredMcapUsd).toBe(1_000);
+    expect(summary.mcapSharePct).toBe(100);
+  });
+
+  it("lets headlineFilter take precedence over headlineKinds and generic availability", () => {
+    const conflictingFeature: CoverageFeatureDefinition = {
+      key: "dex",
+      label: "Conflicting dex",
+      shortLabel: "DEX",
+      description: "Filter and kinds disagree on purpose.",
+      headlineFilter: (row) => row.statuses.dex.kind === "primary",
+      headlineKinds: ["fallback"],
+      statusKinds: ["primary", "fallback"],
+      legendItems: [],
+      formatBreakdown: (_rows, breakdownMap) =>
+        Array.from(breakdownMap, ([key, count]) => ({ key, label: key, count })),
+    };
+    const rows = [
+      makeCoverageRow(["primary", "PRI"], { marketCapUsd: 300, dexCoverageClass: "primary" }),
+      makeCoverageRow(["fallback", "FALL"], { marketCapUsd: 700, dexCoverageClass: "fallback" }),
+    ];
+
+    const summary = buildCoverageFeatureSummary(conflictingFeature, rows, 1_000);
+
+    expect(summary.availableCount).toBe(1);
+    expect(summary.coveragePct).toBe(50);
+    expect(summary.coveredMcapUsd).toBe(300);
+    expect(summary.mcapSharePct).toBe(30);
+  });
+
   it("summarizes mint-authority coverage as reviewed authority breadth", () => {
     const rows = [
       makeCoverageRow(["reviewed", "REV"], {
@@ -743,51 +809,26 @@ describe("coverage helpers", () => {
     const rows = [
       makeCoverageRow(["live", "LIVE"], {
         coin: makeCoin({
-          liveReservesConfig: {
-            adapter: "infinifi",
-            version: 1,
-            semantics: "collateral-mix",
-            inputs: {
-              primary: { kind: "http-json", url: "https://example.com/reserves" },
-            },
-          },
+          liveReservesConfig: LIVE_RESERVE_CONFIGS.live,
         }),
         marketCapUsd: 700,
         liveReserveFresh: true,
       }),
       makeCoverageRow(["validated", "VAL"], {
         coin: makeCoin({
-          liveReservesConfig: {
-            adapter: "curated-validated",
-            version: 1,
-            semantics: "attestation-mix",
-            inputs: {
-              primary: { kind: "onchain-evm", chain: "ethereum", rpcMode: "public-rpc" },
-            },
-          },
+          liveReservesConfig: LIVE_RESERVE_CONFIGS.curatedValidated,
         }),
         liveReserveFresh: false,
       }),
       makeCoverageRow(["proof", "PROOF"], {
         coin: makeCoin({
-          liveReservesConfig: {
-            adapter: "single-asset",
-            version: 1,
-            semantics: "single-asset",
-            inputs: {
-              primary: { kind: "onchain-evm", chain: "ethereum", rpcMode: "public-rpc" },
-            },
-            params: {
-              label: "Issuer reserves",
-              risk: "very-low",
-            },
-          },
+          liveReservesConfig: LIVE_RESERVE_CONFIGS.proof,
         }),
         liveReserveFresh: false,
       }),
       makeCoverageRow(["curated", "CUR"], {
         coin: makeCoin({
-          reserves: [{ name: "Cash", pct: 100, risk: "very-low" }],
+          reserves: CURATED_RESERVES,
         }),
         marketCapUsd: 300,
       }),

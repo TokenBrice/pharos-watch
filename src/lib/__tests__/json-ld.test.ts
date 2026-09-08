@@ -1,6 +1,16 @@
 import { describe, expect, it } from "vitest";
 import { PHAROS_ORG_NODE, safeJsonLd } from "@/lib/json-ld";
 
+describe("safeJsonLd", () => {
+  const nested = { item: { text: '</script><script>alert("x")</script>\\path café \u2028\u2029' } };
+
+  it.each([{ data: nested }, { data: [nested] }])("escapes HTML script delimiters without corrupting nested data: %j", ({ data }) => {
+    const serialized = safeJsonLd(data);
+    expect(serialized).not.toMatch(/<\/script/i);
+    expect(JSON.parse(serialized)).toEqual(data);
+  });
+});
+
 describe("PHAROS_ORG_NODE", () => {
   it("carries policy, funding, contact, and ecosystem links as valid JSON-LD", () => {
     const parsed = JSON.parse(safeJsonLd(PHAROS_ORG_NODE));

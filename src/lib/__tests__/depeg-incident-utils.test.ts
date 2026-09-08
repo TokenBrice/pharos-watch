@@ -68,6 +68,58 @@ describe("extractPendingDepegIncidents", () => {
       "fallback-last",
     ]);
   });
+
+  it("prefers an authoritative empty carrier over a populated later alias", () => {
+    expect(extractPendingDepegIncidents({ pendingIncidents: [], pendingDepegs: [pending()] })).toEqual([]);
+    expect(
+      extractPendingDepegIncidents({ pendingDepegs: [], pending: [pending()] }),
+    ).toEqual([]);
+  });
+
+  it("falls through nullish carriers to the next alias", () => {
+    const fromDepegs = extractPendingDepegIncidents({
+      pendingIncidents: null,
+      pendingDepegs: [pending({ stablecoinId: "from-depegs" })],
+    });
+    const fromPending = extractPendingDepegIncidents({
+      pendingIncidents: undefined,
+      pendingDepegs: null,
+      pending: [pending({ stablecoinId: "from-pending" })],
+    });
+
+    expect(fromDepegs.map((incident) => incident.stablecoinId)).toEqual(["from-depegs"]);
+    expect(fromPending.map((incident) => incident.stablecoinId)).toEqual(["from-pending"]);
+  });
+
+  it("reads availableConfirmationCategories only when confirmationCategories is absent", () => {
+    const [fallback] = extractPendingDepegIncidents({
+      pendingIncidents: [
+        pending({ confirmationCategories: undefined, availableConfirmationCategories: ["cex", "native"] }),
+      ],
+    });
+    const [primaryEmpty] = extractPendingDepegIncidents({
+      pendingIncidents: [pending({ confirmationCategories: [], availableConfirmationCategories: ["cex"] })],
+    });
+
+    expect(fallback?.confirmationCategories).toEqual(["cex", "native"]);
+    expect(primaryEmpty?.confirmationCategories).toEqual([]);
+  });
+
+  it("ranks by the oldest available deviation when peak and last are missing", () => {
+    const incidents = extractPendingDepegIncidents({
+      pendingIncidents: [
+        pending({ stablecoinId: "no-deviation", firstSeenAt: 50, peakSeenBps: null, lastSeenBps: null, firstSeenBps: null }),
+        pending({ stablecoinId: "first-seen-only", firstSeenAt: 40, peakSeenBps: null, lastSeenBps: null, firstSeenBps: -75 }),
+        pending({ stablecoinId: "last-seen-wins", firstSeenAt: 30, peakSeenBps: null, lastSeenBps: 90, firstSeenBps: -400 }),
+      ],
+    });
+
+    expect(incidents.map((incident) => incident.stablecoinId)).toEqual([
+      "last-seen-wins",
+      "first-seen-only",
+      "no-deviation",
+    ]);
+  });
 });
 
 describe("mapPendingIncidentsByCoin", () => {

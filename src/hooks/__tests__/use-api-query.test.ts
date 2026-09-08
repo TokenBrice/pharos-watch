@@ -5,7 +5,7 @@
 // the schema validation and contractMode paths in apiFetch are exercised for real.
 
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { QueryClient } from "@tanstack/react-query";
+import { QueryClient, QueryObserver } from "@tanstack/react-query";
 import { z } from "zod";
 import { jsonResponse as makeJsonResponse } from "@shared/test-utils/mock-fetch";
 
@@ -72,8 +72,9 @@ describe("use-api-query", () => {
   });
 
   describe("createApiPollingQueryOptions", () => {
-    it("sets default retry=2 and propagates opts overrides", () => {
+    it("sets the query key and default timing/retry policy", () => {
       const opts = createApiPollingQueryOptions(["k"], "/api/x", 15_000);
+      expect(opts.queryKey).toEqual(["k"]);
       expect(opts.staleTime).toBe(15_000);
       expect(opts.refetchInterval).toBe(30_000);
       expect(opts.retry).toBe(2);
@@ -87,6 +88,15 @@ describe("use-api-query", () => {
       });
       expect(opts.enabled).toBe(false);
       expect(opts.retry).toBe(0);
+    });
+
+    it("passes explicit falsy controls through to the built options", () => {
+      const opts = createApiPollingQueryOptions(["k"], "/api/x", 15_000, {
+        staleTime: 0,
+        refetchInterval: false,
+      });
+      expect(opts.staleTime).toBe(0);
+      expect(opts.refetchInterval).toBe(false);
     });
   });
 
@@ -184,75 +194,140 @@ describe("use-api-query", () => {
     it("aborts the in-flight fetch when the context signal is aborted", async () => {
       const controller = new AbortController();
       let capturedSignal: AbortSignal | undefined;
-
-      vi.spyOn(globalThis, "fetch").mockImplementation(async (_url, init) => {
+      vi.spyOn(globalThis, "fetch").mockImplementation((_url, init) => {
         capturedSignal = init?.signal ?? undefined;
-        return makeJsonResponse({ value: 7 });
+        return new Promise<Response>((_resolve, reject) => {
+          capturedSignal!.addEventListener("abort", () => {
+            reject(capturedSignal!.reason ?? new DOMException("aborted", "AbortError"));
+          });
+        });
       });
 
       const fn = createApiQueryFn<SomeData>("/api/test", SomeSchema);
-      await fn({ signal: controller.signal });
-
-      // apiFetch wraps the caller's signal with a timeout signal via
-      // AbortSignal.any([parent, timeout]), so the reference won't be identical.
-      // Assert the composed signal aborts when the parent is aborted.
-      expect(capturedSignal).toBeDefined();
+      const promise = fn({ signal: controller.signal });
+      await vi.waitFor(() => expect(capturedSignal).toBeDefined());
       expect(capturedSignal!.aborted).toBe(false);
+
+      // apiFetch composes the caller signal with a timeout signal, so the
+      // fetch-level reference is a merged signal rather than the caller's.
       controller.abort();
       expect(capturedSignal!.aborted).toBe(true);
+      await expect(promise).rejects.toThrow();
     });
 
-    it("falls back when AbortSignal.any is absent and either merged signal aborts", async () => {
+    it("rejects the pending query when either merged signal aborts without AbortSignal.any", async () => {
       await withAbortSignalAnyAbsent(async () => {
         const fetchSpy = vi.spyOn(globalThis, "fetch");
 
         for (const abortSource of ["fetchInit", "context"] as const) {
-          const response = deferred<Response>();
           const fetchInitController = new AbortController();
           const contextController = new AbortController();
           let capturedSignal: AbortSignal | undefined;
 
-          fetchSpy.mockImplementationOnce(async (_url, init) => {
+          fetchSpy.mockImplementationOnce((_url, init) => {
             capturedSignal = init?.signal ?? undefined;
-            return response.promise;
+            return new Promise<Response>((_resolve, reject) => {
+              capturedSignal!.addEventListener("abort", () => {
+                reject(capturedSignal!.reason ?? new DOMException("aborted", "AbortError"));
+              });
+            });
           });
 
           const fn = createApiQueryFn<SomeData>("/api/test", SomeSchema, { signal: fetchInitController.signal });
           const promise = fn({ signal: contextController.signal });
-          await Promise.resolve();
+          await vi.waitFor(() => expect(capturedSignal).toBeDefined());
+          expect(capturedSignal!.aborted).toBe(false);
 
-          expect(capturedSignal).toBeDefined();
-          const signal = capturedSignal!;
-          expect(signal.aborted).toBe(false);
-
+          const abortReason = new Error(`${abortSource}-abort`);
           if (abortSource === "fetchInit") {
-            fetchInitController.abort(new Error("fetch-init-abort"));
+            fetchInitController.abort(abortReason);
           } else {
-            contextController.abort(new Error("context-abort"));
+            contextController.abort(abortReason);
           }
-          expect(signal.aborted).toBe(true);
 
-          response.resolve(makeJsonResponse({ value: abortSource === "fetchInit" ? 8 : 9 }));
-          await expect(promise).resolves.toEqual({ value: abortSource === "fetchInit" ? 8 : 9 });
+          expect(capturedSignal!.aborted).toBe(true);
+          await expect(promise).rejects.toThrow(`${abortSource}-abort`);
         }
       });
     });
   });
 
   // ------------------------------------------------------------------
-  // createApiPollingQueryOptions — option shape
+  // createApiPollingQueryOptions — key transitions and queryFn wiring
   // ------------------------------------------------------------------
-  describe("createApiPollingQueryOptions", () => {
-    it("produces options with correct key, staleTime, refetchInterval", () => {
-      const opts = createApiPollingQueryOptions<SomeData>(["test-key"], "/api/test", 60_000, { schema: SomeSchema });
+  describe("createApiPollingQueryOptions — key transitions", () => {
+    function installPendingFetch() {
+      const pending = new Map<string, (payload: SomeData) => void>();
+      vi.spyOn(globalThis, "fetch").mockImplementation((input: RequestInfo | URL) => {
+        return new Promise<Response>((resolve) => {
+          pending.set(String(input), (payload) => resolve(makeJsonResponse(payload)));
+        });
+      });
+      return {
+        async release(pathSuffix: string, payload: SomeData) {
+          await vi.waitFor(() => {
+            const match = [...pending.keys()].find((url) => url.includes(pathSuffix));
+            if (!match) throw new Error(`no pending request matching ${pathSuffix}`);
+            pending.get(match)!(payload);
+          });
+        },
+      };
+    }
 
-      expect(opts.queryKey).toEqual(["test-key"]);
-      expect(opts.staleTime).toBe(60_000);
-      expect(opts.refetchInterval).toBe(120_000);
-      expect(opts.retry).toBe(2);
+    function filterOptions(filter: string, keepPreviousData?: boolean) {
+      return createApiPollingQueryOptions<SomeData>(
+        ["filter-surface", filter],
+        `/api/filter-${filter}`,
+        15_000,
+        { keepPreviousData, staleTime: 0, refetchInterval: false, retry: false },
+      );
+    }
+
+    it("keeps prior data visible while a replacement key fetch is pending", async () => {
+      const http = installPendingFetch();
+      const observer = new QueryObserver(new QueryClient(), filterOptions("a", true));
+      const unsubscribe = observer.subscribe(() => undefined);
+
+      await http.release("filter-a", { value: 1 });
+      await vi.waitFor(() => expect(observer.getCurrentResult().data).toEqual({ value: 1 }));
+
+      observer.setOptions(filterOptions("b", true));
+
+      await vi.waitFor(() => {
+        expect(observer.getCurrentResult()).toMatchObject({
+          data: { value: 1 },
+          isPlaceholderData: true,
+        });
+      });
+
+      await http.release("filter-b", { value: 2 });
+      await vi.waitFor(() => {
+        expect(observer.getCurrentResult()).toMatchObject({
+          data: { value: 2 },
+          isPlaceholderData: false,
+        });
+      });
+      unsubscribe();
     });
 
-    it("calls apiFetch with correct path when queryFn is invoked", async () => {
+    it("drops visible data while a replacement key fetch is pending without keepPreviousData", async () => {
+      const http = installPendingFetch();
+      const observer = new QueryObserver(new QueryClient(), filterOptions("a"));
+      const unsubscribe = observer.subscribe(() => undefined);
+
+      await http.release("filter-a", { value: 1 });
+      await vi.waitFor(() => expect(observer.getCurrentResult().data).toEqual({ value: 1 }));
+
+      observer.setOptions(filterOptions("b"));
+
+      await vi.waitFor(() => expect(observer.getCurrentResult().data).toBeUndefined());
+      // The replacement request is still in flight; the surface stays empty.
+      await http.release("filter-b", { value: 2 });
+      await vi.waitFor(() => expect(observer.getCurrentResult().data).toEqual({ value: 2 }));
+      unsubscribe();
+    });
+
+    it("calls apiFetch with the configured path when queryFn is invoked", async () => {
       vi.spyOn(globalThis, "fetch").mockResolvedValue(makeJsonResponse({ value: 99 }));
 
       const opts = createApiPollingQueryOptions<SomeData>(["test-key"], "/api/test", 60_000, { schema: SomeSchema });

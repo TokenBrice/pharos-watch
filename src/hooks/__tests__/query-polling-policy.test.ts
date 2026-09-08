@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const { useQueryMock } = vi.hoisted(() => ({ useQueryMock: vi.fn() }));
 
@@ -36,6 +36,10 @@ describe("query polling policy", () => {
       dataUpdatedAt: 0,
     });
     vi.restoreAllMocks();
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
   });
 
   it.each([

@@ -26,16 +26,20 @@ const series = [
   { id: "alpha", label: "Alpha coin", color: "#111", data: [{ ts: 1, value: 10 }, { ts: 2, value: 12 }] },
   { id: "beta", label: "Beta coin", color: "#222", data: [{ ts: 1, value: 20 }] },
 ];
+const scrambledSeries = [
+  { id: "alpha", label: "Alpha coin", color: "#111", data: [{ ts: 2, value: 12 }, { ts: 1, value: 10 }] },
+  { id: "beta", label: "Beta coin", color: "#222", data: [{ ts: 1, value: 20 }] },
+];
 
 describe("MultiSeriesLineChart", () => {
-  it("merges series chronologically without changing payload ids", () => {
-    expect(mergeMultiSeriesData(series, (datum) => datum.value)).toEqual([
+  it("merges scrambled series chronologically without changing payload ids", () => {
+    expect(mergeMultiSeriesData(scrambledSeries, (datum) => datum.value)).toEqual([
       { ts: 1, alpha: 10, beta: 20 },
       { ts: 2, alpha: 12 },
     ]);
   });
 
-  it("owns the accessible figure, data table, axes, lines, and tooltip contract", () => {
+  it("owns the accessible figure and exposes chronological table values", () => {
     render(
       <MultiSeriesLineChart
         series={series}
@@ -55,11 +59,37 @@ describe("MultiSeriesLineChart", () => {
     expect(screen.getByRole("figure", { name: "Supply comparison chart with 2 series" })).toBeTruthy();
     const table = screen.getByRole("table", { hidden: true });
     expect(within(table).getByText("Supply comparison — 2 data points")).toBeTruthy();
-    expect(within(table).getByRole("columnheader", { name: "Alpha coin", hidden: true })).toBeTruthy();
-    expect(screen.getByTestId("chart-tooltip")).toBeTruthy();
-    expect(screen.getByTestId("x-axis")).toBeTruthy();
-    expect(screen.getByTestId("y-axis")).toBeTruthy();
-    expect(document.querySelector('[data-line-key="alpha"][data-line-name="alpha"]')).toBeTruthy();
+    expect(within(table).getByRole("columnheader", { name: "Beta coin", hidden: true })).toBeTruthy();
+    const rows = within(table).getAllByRole("row", { hidden: true });
+    expect(rows).toHaveLength(3);
+    expect(rows[1].textContent).toBe("Date 1$10$20");
+    // Beta has no ts=2 point: the missing series cell renders an em dash.
+    expect(rows[2].textContent).toBe("Date 2$12—");
+  });
+
+  it("renders the explicit data override instead of merged series data", () => {
+    render(
+      <MultiSeriesLineChart
+        series={series}
+        getValue={(datum) => datum.value}
+        data={[{ ts: 9, alpha: 42 }]}
+        ariaLabel="Override chart"
+        height={200}
+        margin={{ top: 0, right: 0, bottom: 0, left: 0 }}
+        xTickFormatter={String}
+        yTickFormatter={String}
+        valueFormatter={(value) => `$${value}`}
+        tooltipLabelFormatter={(timestamp) => `Tooltip ${timestamp}`}
+        tableDateFormatter={(timestamp) => `Date ${timestamp}`}
+        tableCaption={(rows) => `${rows.length} override rows`}
+      />,
+    );
+
+    const table = screen.getByRole("table", { hidden: true });
+    expect(within(table).getByText("1 override rows")).toBeTruthy();
+    const rows = within(table).getAllByRole("row", { hidden: true });
+    expect(rows).toHaveLength(2);
+    expect(rows[1].textContent).toBe("Date 9$42—");
   });
 
   it("preserves feature labels in Pharos tooltip payload rows", () => {

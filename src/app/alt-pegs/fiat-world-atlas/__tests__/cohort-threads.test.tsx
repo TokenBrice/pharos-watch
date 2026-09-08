@@ -1,25 +1,10 @@
 // @vitest-environment jsdom
-import { act, render } from "@testing-library/react";
+import { act } from "@testing-library/react";
 import { useEffect } from "react";
 import { describe, expect, it } from "vitest";
 import { CohortThreads } from "@/app/alt-pegs/fiat-world-atlas/cohort-threads";
-import { HoverProvider, useHoverState } from "@/app/alt-pegs/fiat-world-atlas/hover-context";
-import type { PlacedCoin } from "@/lib/alt-peg-hero";
-
-function makeCoin(id: string, peg: PlacedCoin["pegCurrency"], x: number, y: number): PlacedCoin {
-  return {
-    id,
-    symbol: id.toUpperCase(),
-    name: id,
-    href: `/s/${id}`,
-    logoSrc: `/l/${id}.png`,
-    pegCurrency: peg,
-    marketCap: 1_000_000,
-    x,
-    y,
-    sizePx: 40,
-  };
-}
+import { useHoverState } from "@/app/alt-pegs/fiat-world-atlas/hover-context";
+import { makePlacedCoin, renderAtlas } from "./atlas.test-support";
 
 type HoverState = ReturnType<typeof useHoverState>;
 
@@ -47,45 +32,41 @@ describe("CohortThreads", () => {
   }
 
   it("renders nothing when no coin is hovered", () => {
-    const coins = [makeCoin("a", "EUR", 50, 20), makeCoin("b", "EUR", 60, 25)];
-    const { container } = render(
-      <HoverProvider>
-        <CohortThreads coins={coins} colorHex="#60a5fa" />
-      </HoverProvider>,
-    );
+    const coins = [makePlacedCoin({ id: "a" }), makePlacedCoin({ id: "b", x: 60, y: 25 })];
+    const { container } = renderAtlas(<><CohortThreads coins={coins} colorHex="#60a5fa" /></>);
     expect(container.querySelectorAll("line").length).toBe(0);
   });
 
-  it("draws N-1 lines when hovering a coin with N siblings", () => {
+  it("connects only same-peg peers and updates or removes connections with hover", () => {
     const { getHoverHandle, setHoverHandle } = makeHandleCapture();
     const coins = [
-      makeCoin("a", "EUR", 50, 20),
-      makeCoin("b", "EUR", 60, 25),
-      makeCoin("c", "EUR", 40, 25),
-      makeCoin("d", "JPY", 80, 30),
+      makePlacedCoin({ id: "a" }),
+      makePlacedCoin({ id: "b", x: 60, y: 25 }),
+      makePlacedCoin({ id: "c", x: 40, y: 25 }),
+      makePlacedCoin({ id: "d", pegCurrency: "JPY", x: 80, y: 30 }),
     ];
-    const { container } = render(
-      <HoverProvider>
-        <Grabber onState={setHoverHandle} />
-        <CohortThreads coins={coins} colorHex="#60a5fa" />
-      </HoverProvider>,
-    );
+    const { container } = renderAtlas(<><Grabber onState={setHoverHandle} />
+    <CohortThreads coins={coins} colorHex="#60a5fa" /></>);
     act(() => {
       getHoverHandle().setHoveredCoin({ id: "a", pegCurrency: "EUR" });
     });
-    const lines = container.querySelectorAll("line");
-    expect(lines.length).toBe(2);
+    const endpoints = () => Array.from(container.querySelectorAll("line"), (line) =>
+      ["x1", "y1", "x2", "y2"].map((attribute) => Number(line.getAttribute(attribute))),
+    ).sort((a, b) => a[2] - b[2]);
+    expect(endpoints()).toEqual([[50, 20, 40, 25], [50, 20, 60, 25]]);
+    act(() => getHoverHandle().setHoveredCoin({ id: "b", pegCurrency: "EUR" }));
+    expect(endpoints()).toEqual([[60, 25, 40, 25], [60, 25, 50, 20]]);
+    act(() => getHoverHandle().setHoveredCoin(null));
+    expect(endpoints()).toEqual([]);
+    act(() => getHoverHandle().setHoveredCoin({ id: "d", pegCurrency: "JPY" }));
+    expect(endpoints()).toEqual([]);
   });
 
   it("renders nothing when the hovered coin is not in this layer", () => {
     const { getHoverHandle, setHoverHandle } = makeHandleCapture();
-    const coins = [makeCoin("a", "EUR", 50, 20), makeCoin("b", "EUR", 60, 25)];
-    const { container } = render(
-      <HoverProvider>
-        <Grabber onState={setHoverHandle} />
-        <CohortThreads coins={coins} colorHex="#60a5fa" />
-      </HoverProvider>,
-    );
+    const coins = [makePlacedCoin({ id: "a" }), makePlacedCoin({ id: "b", x: 60, y: 25 })];
+    const { container } = renderAtlas(<><Grabber onState={setHoverHandle} />
+    <CohortThreads coins={coins} colorHex="#60a5fa" /></>);
     act(() => {
       getHoverHandle().setHoveredCoin({ id: "xaut", pegCurrency: "GOLD" });
     });

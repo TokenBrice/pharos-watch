@@ -2,44 +2,25 @@
 
 import { render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
-import type { StatusResponse } from "@shared/types";
+import { makeReserveComposition } from "@shared/types/__tests__/status.test-support";
+import type { StatusResponse } from "@shared/types/status";
 import { ReserveSyncHealthCard } from "../reserve-sync-health";
 
 function makeReserveHealth(
   overrides: Partial<StatusResponse["reserveComposition"]> = {},
 ): StatusResponse["reserveComposition"] {
-  return {
+  return makeReserveComposition({
     status: "healthy",
     configuredCoins: 100,
     freshCoins: 100,
-    errorCoins: 0,
-    corruptCoins: 0,
-    degradedCoins: 0,
-    staleCoins: 0,
-    missingCoins: 0,
-    deferredCoins: 0,
-    lastSuccessAt: 1_712_600_000,
-    oldestFreshAgeSec: 600,
     freshCoverageRatio: 1,
     authoritativeFreshCoverageRatio: 1,
-    nextCursorStablecoinId: null,
-    runBudgetTruncated: false,
-    deferredAt: null,
-    cursorTailState: null,
-    cursorTailError: null,
-    cursorRecordedAt: null,
-    cursorTailCompletedAt: null,
-    cursorTailFailedAt: null,
-    runBudgetTruncationCount: 0,
-    historyWriteGaps: [],
+    lastSuccessAt: 1_712_600_000,
+    oldestFreshAgeSec: 600,
     independentFreshEligible: 90,
-    independentFreshUnverified: 0,
     staticValidatedFresh: 10,
-    weakProbeFresh: 0,
-    writeTimeoutUncertain: 0,
-    persistentlyStaleIndependentCoins: [],
     ...overrides,
-  } as StatusResponse["reserveComposition"];
+  });
 }
 
 describe("ReserveSyncHealthCard", () => {

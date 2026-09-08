@@ -13,6 +13,17 @@ interface RenderedDiagram {
   mobileSvg: SVGSVGElement;
 }
 
+/** Every return/loop caption an archetype can draw, used for absence checks. */
+const RETURN_CAPTIONS = [
+  "redeem",
+  "or liquidated",
+  "reflexive collapse",
+  "quarterly redemption",
+  "physical delivery",
+  "funding",
+  "carry",
+] as const;
+
 function renderDiagram(
   archetype: MechanismArchetype,
   symbol: string,
@@ -30,141 +41,207 @@ function renderDiagram(
   };
 }
 
+/** One variant's own captions — the desktop copy cannot stand in for mobile. */
+function textNodes(svg: SVGSVGElement): string[] {
+  return Array.from(svg.querySelectorAll("text")).map((node) => node.textContent ?? "");
+}
+
 function expectText(container: HTMLElement, labels: readonly string[]) {
   for (const label of labels) {
     expect(container.textContent).toContain(label);
   }
 }
 
-function expectThreeStepStructure(
-  diagram: RenderedDiagram,
-  {
-    desktopViewBox,
-    desktopPathCount,
-  }: {
-    desktopViewBox: string;
-    desktopPathCount: number;
-  },
-) {
-  expect(diagram.desktopSvg.getAttribute("viewBox")).toBe(desktopViewBox);
-  expect(diagram.mobileSvg.getAttribute("viewBox")).toBe("0 0 220 288");
-  expect(diagram.desktopSvg.querySelectorAll('rect[width="150"], rect[width="200"]')).toHaveLength(3);
-  expect(diagram.mobileSvg.querySelectorAll('rect[width="200"]')).toHaveLength(3);
-  expect(diagram.desktopSvg.querySelectorAll("line")).toHaveLength(2);
-  expect(diagram.mobileSvg.querySelectorAll("line")).toHaveLength(2);
-  expect(diagram.desktopSvg.querySelectorAll("path")).toHaveLength(desktopPathCount);
+/** Each expected caption appears, and appears after the previous one. */
+function expectSequence(nodes: readonly string[], expected: readonly string[]) {
+  let cursor = -1;
+  for (const label of expected) {
+    const index = nodes.findIndex((text, position) => position > cursor && text.includes(label));
+    expect(index, `caption "${label}" after position ${cursor}`).toBeGreaterThan(cursor);
+    cursor = index;
+  }
 }
+
+type MechanismDiagramCase = {
+  archetype: MechanismArchetype;
+  symbol: string;
+  ariaPhrase: string;
+  descPhrase: string;
+  steps: readonly string[];
+  desktopSteps?: readonly string[];
+  returnCaption: string | null;
+  stress: string;
+};
 
 const ARCHETYPE_CASES = [
   {
     archetype: "fiat-cash",
     symbol: "USDC",
-    desktopViewBox: "0 0 600 155",
-    desktopPathCount: 1,
-    labels: ["User USD", "Issuer reserves", "USDC minted", "redeem"],
-    subtitles: ["wire / ACH", "custodied 1:1", "redeem any time"],
+    ariaPhrase: "custodied 1:1, redeemable on demand",
+    descPhrase: "custodies the dollars in cash, repos",
+    steps: ["User USD", "wire / ACH", "Issuer reserves", "custodied 1:1", "USDC minted", "redeem any time"],
+    returnCaption: "redeem",
     stress: "stress: banking-rail freeze (USDC, Mar 2023)",
   },
   {
     archetype: "tbill",
     symbol: "USDC",
-    desktopViewBox: "0 0 600 120",
-    desktopPathCount: 0,
-    labels: ["Investor cash", "T-Bills + Repos", "USDC units"],
-    subtitles: ["subscribed via fund", "short-duration RWA", "NAV accrues daily"],
+    ariaPhrase: "units accrue NAV daily",
+    descPhrase: "NAV accrues daily from the underlying yield",
+    steps: [
+      "Investor cash",
+      "subscribed via fund",
+      "T-Bills + Repos",
+      "short-duration RWA",
+      "USDC units",
+      "NAV accrues daily",
+    ],
+    // NAV-accreting fund shares are drawn without a redemption loop.
+    returnCaption: null,
     stress: "stress: instant-redemption cap / stablecoin-rail constraint",
   },
   {
     archetype: "cdp",
     symbol: "USDC",
-    desktopViewBox: "0 0 600 155",
-    desktopPathCount: 1,
-    labels: ["Crypto collateral", "Vault / PSM", "USDC minted", "or liquidated"],
-    subtitles: ["overcollateralized", "mint debt vs collateral", "liquidates below ratio"],
+    ariaPhrase: "liquidated if collateral falls below the safety ratio",
+    descPhrase: "mints USDC as debt against the collateral",
+    steps: [
+      "Crypto collateral",
+      "overcollateralized",
+      "Vault / PSM",
+      "mint debt vs collateral",
+      "USDC minted",
+      "liquidates below ratio",
+    ],
+    returnCaption: "or liquidated",
     stress: "stress: collateral cascade (DAI, Mar 2020)",
   },
   {
     archetype: "synthetic-delta-neutral",
     symbol: "USDC",
-    desktopViewBox: "0 0 600 120",
-    desktopPathCount: 1,
-    labels: ["Crypto deposit", "Long spot", "Short perp", "Long spot + short perp", "USDC minted", "funding"],
-    subtitles: ["spot collateral", "delta-neutral hedge", "funding-rate yield"],
+    ariaPhrase: "hedged with equal short perp positions",
+    descPhrase: "funding rate paid by perp longs flows to USDC holders",
+    steps: [
+      "Crypto deposit",
+      "spot collateral",
+      "Long spot + short perp",
+      "delta-neutral hedge",
+      "USDC minted",
+      "funding-rate yield",
+    ],
+    // The desktop box splits the hedge into its two legs; the mobile stack
+    // states the combined step instead, so each variant is read separately.
+    desktopSteps: [
+      "Crypto deposit",
+      "spot collateral",
+      "Long spot",
+      "Short perp",
+      "USDC minted",
+      "funding-rate yield",
+    ],
+    returnCaption: "funding",
     stress: "stress: funding-rate inversion",
   },
   {
     archetype: "algorithmic",
     symbol: "USDC",
-    desktopViewBox: "0 0 600 155",
-    desktopPathCount: 1,
-    labels: ["Burn governance token", "Mint/burn AMO", "USDC minted", "reflexive collapse"],
-    subtitles: ["algorithmic mint", "defends peg via arbitrage", "no 1:1 backing"],
+    ariaPhrase: "no 1:1 reserve backing",
+    descPhrase: "defends the peg through arbitrage incentives",
+    steps: [
+      "Burn governance token",
+      "algorithmic mint",
+      "Mint/burn AMO",
+      "defends peg via arbitrage",
+      "USDC minted",
+      "no 1:1 backing",
+    ],
+    returnCaption: "reflexive collapse",
     stress: "stress: reflexive collapse (UST, May 2022)",
   },
   {
     archetype: "rwa-credit-fund",
     symbol: "ACRED",
-    desktopViewBox: "0 0 600 155",
-    desktopPathCount: 1,
-    labels: ["Investor cash", "Private credit / CLO", "ACRED fund-share", "quarterly redemption"],
-    subtitles: ["subscribed via fund (KYC)", "credit risk, illiquid", "NAV reflects credit losses"],
+    ariaPhrase: "quarterly redemption gates",
+    descPhrase: "private credit, CLOs, or structured debt",
+    steps: [
+      "Investor cash",
+      "subscribed via fund (KYC)",
+      "Private credit / CLO",
+      "credit risk, illiquid",
+      "ACRED fund-share",
+      "NAV reflects credit losses",
+    ],
+    returnCaption: "quarterly redemption",
     stress: "stress: NAV markdown / quarterly gate",
   },
-] as const satisfies ReadonlyArray<{
-  archetype: MechanismArchetype;
-  symbol: string;
-  desktopViewBox: string;
-  desktopPathCount: number;
-  labels: readonly string[];
-  subtitles: readonly string[];
-  stress: string;
-}>;
-
-function structureSignature(diagram: RenderedDiagram): string {
-  const markerLabels = Array.from(diagram.desktopSvg.querySelectorAll("text"))
-    .map((node) => node.textContent ?? "")
-    .filter((label) =>
-      [
-        "redeem",
-        "or liquidated",
-        "Long spot",
-        "Short perp",
-        "funding",
-        "reflexive collapse",
-        "quarterly redemption",
-      ].includes(label),
-    )
-    .join("|");
-
-  return [
-    diagram.desktopSvg.getAttribute("viewBox"),
-    `paths:${diagram.desktopSvg.querySelectorAll("path").length}`,
-    `dashedLines:${diagram.desktopSvg.querySelectorAll("line[stroke-dasharray]").length}`,
-    `dashedRects:${diagram.desktopSvg.querySelectorAll("rect[stroke-dasharray]").length}`,
-    `markers:${markerLabels}`,
-  ].join(";");
-}
+  {
+    archetype: "commodity-claim",
+    symbol: "XAUT",
+    ariaPhrase: "title claim on numbered bars",
+    descPhrase: "allocates specific numbered bars in a named vault",
+    steps: [
+      "Buyer funds",
+      "metal purchased",
+      "Allocated vault",
+      "numbered bars, segregated",
+      "XAUT minted",
+      "title to specific metal",
+    ],
+    returnCaption: "physical delivery",
+    stress: "stress: vault or title failure; whole-bar redemption minimums",
+  },
+] as const satisfies ReadonlyArray<MechanismDiagramCase>;
 
 describe("mechanismDiagramFor", () => {
-  it.each(ARCHETYPE_CASES)("renders the $archetype diagram structure", (testCase) => {
+  it.each(ARCHETYPE_CASES)("states the $archetype mechanism in both variants", (testCase: MechanismDiagramCase) => {
     const diagram = renderDiagram(testCase.archetype, testCase.symbol);
-    expectThreeStepStructure(diagram, testCase);
-    expectText(diagram.container, [...testCase.labels, ...testCase.subtitles, testCase.stress]);
+    const desktopNodes = textNodes(diagram.desktopSvg);
+    const mobileNodes = textNodes(diagram.mobileSvg);
+
+    // One accessible description, shared by both variants.
+    const ariaLabel = diagram.desktopSvg.getAttribute("aria-label");
+    expect(ariaLabel).toContain(testCase.ariaPhrase);
+    expect(diagram.mobileSvg.getAttribute("aria-label")).toBe(ariaLabel);
+    const description = diagram.desktopSvg.querySelector("desc")?.textContent;
+    expect(description).toContain(testCase.descPhrase);
+    expect(diagram.mobileSvg.querySelector("desc")?.textContent).toBe(description);
+
+    // Each variant carries the whole step sequence in order on its own, so a
+    // dropped mobile override cannot hide behind the desktop copy.
+    expectSequence(desktopNodes, testCase.desktopSteps ?? testCase.steps);
+    expectSequence(mobileNodes, testCase.steps);
+
+    if (testCase.returnCaption) {
+      expect(desktopNodes).toContain(testCase.returnCaption);
+    } else {
+      expect(desktopNodes.filter((text) => RETURN_CAPTIONS.includes(text as never))).toEqual([]);
+    }
+    // The stress footnote is desktop chrome outside both SVGs.
+    expect(diagram.container.querySelector("p")?.textContent).toBe(testCase.stress);
   });
 
-  it("renders archetype variants with distinct structural markers", () => {
-    const signatures = ARCHETYPE_CASES.map((testCase) =>
-      structureSignature(renderDiagram(testCase.archetype, testCase.symbol)),
+  it("marks the algorithmic variant with the danger tone, not just a dash pattern", () => {
+    const algorithmic = renderDiagram("algorithmic", "USDC");
+    const dangerFilled = Array.from(algorithmic.desktopSvg.querySelectorAll("rect")).filter((rect) =>
+      (rect.getAttribute("fill") ?? "").includes("--severity-severe"),
     );
-    expect(new Set(signatures).size).toBe(ARCHETYPE_CASES.length);
-  });
+    expect(dangerFilled).toHaveLength(3);
+    expect(algorithmic.desktopSvg.querySelectorAll('rect[stroke-dasharray="5 3"]')).toHaveLength(3);
+    const collapse = Array.from(algorithmic.desktopSvg.querySelectorAll("text")).find(
+      (node) => node.textContent === "reflexive collapse",
+    );
+    expect(collapse?.getAttribute("fill")).toBe("var(--severity-severe)");
+    // Mobile carries the fragility as a dashed border (it has no tone fill).
+    expect(algorithmic.mobileSvg.querySelectorAll('rect[stroke-dasharray="3 3"]')).toHaveLength(3);
+    cleanup();
 
-  it("marks the algorithmic variant as dashed and danger-toned", () => {
-    const { desktopSvg, mobileSvg } = renderDiagram("algorithmic", "USDC");
-    expect(desktopSvg.querySelectorAll('rect[stroke-dasharray="5 3"]')).toHaveLength(3);
-    expect(desktopSvg.querySelectorAll('line[stroke-dasharray="4 3"]')).toHaveLength(2);
-    expect(desktopSvg.querySelectorAll('path[stroke-dasharray="4 3"]')).toHaveLength(1);
-    expect(mobileSvg.querySelectorAll('rect[stroke-dasharray="3 3"]')).toHaveLength(3);
+    const fiatCash = renderDiagram("fiat-cash", "USDC");
+    expect(
+      Array.from(fiatCash.desktopSvg.querySelectorAll("rect")).every(
+        (rect) => rect.getAttribute("fill") === "var(--card)",
+      ),
+    ).toBe(true);
+    expect(fiatCash.desktopSvg.querySelectorAll("rect[stroke-dasharray]")).toHaveLength(0);
   });
 
   it("returns null for an unknown archetype", () => {
@@ -205,7 +282,7 @@ describe("mechanismDiagramFor", () => {
   });
 
   describe("wrapper diagram", () => {
-    it("renders the parent's archetype + variant box", () => {
+    it("renders the parent's archetype + variant box with a variant-aware stress footnote", () => {
       const node = mechanismDiagramFor("synthetic-delta-neutral", "sUSDe", {
         isWrapper: true,
         parentSymbol: "USDe",
@@ -221,6 +298,8 @@ describe("mechanismDiagramFor", () => {
       expect(variantBox?.textContent).toContain("sUSDe");
       expect(variantBox?.textContent).toContain("savings vault");
       expect(container.textContent).toContain("USDe mechanism");
+      const footnote = container.querySelector('[data-testid="wrapper-stress-footnote"]');
+      expect(footnote?.textContent).toContain("redemption queue");
     });
 
     it("falls back to plain archetype when wrapper context is incomplete", () => {
@@ -229,31 +308,6 @@ describe("mechanismDiagramFor", () => {
       });
       expect(container.querySelector('[data-testid="wrapper-diagram"]')).toBeNull();
       expect(container.querySelectorAll("svg[role='img']")).toHaveLength(2);
-    });
-
-    it("renders WrapperDiagram when isWrapper context is complete", () => {
-      const node = mechanismDiagramFor("synthetic-delta-neutral", "sUSDe", {
-        isWrapper: true,
-        parentSymbol: "USDe",
-        parentArchetype: "synthetic-delta-neutral",
-        variantKind: "savings-passthrough",
-      });
-      const { container } = render(<>{node}</>);
-      expect(container.querySelector('[data-testid="wrapper-diagram"]')).not.toBeNull();
-      expect(container.textContent).toContain("USDe mechanism");
-    });
-
-    it("renders a variant-aware stress footnote on the wrapper diagram", () => {
-      const node = mechanismDiagramFor("synthetic-delta-neutral", "sUSDe", {
-        isWrapper: true,
-        parentSymbol: "USDe",
-        parentArchetype: "synthetic-delta-neutral",
-        variantKind: "savings-passthrough",
-      });
-      const { container } = render(<>{node}</>);
-      const footnote = container.querySelector('[data-testid="wrapper-stress-footnote"]');
-      expect(footnote).not.toBeNull();
-      expect(footnote?.textContent).toContain("redemption queue");
     });
   });
 
@@ -279,7 +333,8 @@ describe("mechanismDiagramFor", () => {
       const { container, desktopSvg } = renderDiagram("tbill", "OUSG", { navToken: true });
       expectText(container, ["OUSG units", "NAV accrues daily", "stress: instant-redemption cap / stablecoin-rail constraint"]);
       expect(container.textContent).not.toContain("redeem 1:1");
-      expect(desktopSvg.querySelectorAll("path")).toHaveLength(0);
+      // The NAV template draws no redemption loop at all.
+      expect(textNodes(desktopSvg)).not.toContain("redeem");
     });
 
     it("renders par redemption, not NAV accrual, for a non-NAV coin", () => {
@@ -294,7 +349,7 @@ describe("mechanismDiagramFor", () => {
       expect(container.textContent).not.toContain("NAV accrues daily");
       expect(container.textContent).not.toContain("GUSD units");
       // The redeem loop the NAV template omits entirely.
-      expect(desktopSvg.querySelectorAll("path")).toHaveLength(1);
+      expect(textNodes(desktopSvg)).toContain("redeem");
       expect(desktopSvg.getAttribute("aria-label")).toContain("redeemed 1:1");
     });
 

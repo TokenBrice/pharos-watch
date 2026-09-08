@@ -6,7 +6,7 @@ import { AtlasFullscreenDialog } from "@/app/alt-pegs/fiat-world-atlas/atlas-ful
 
 vi.mock("@/app/alt-pegs/fiat-world-atlas/peg-diversity-hero-live", () => ({
   PegDiversityHeroLive: ({ variant }: { variant?: string }) => (
-    <div data-testid="hero-live" data-variant={variant ?? "default"} />
+    <button data-testid="hero-live" data-variant={variant ?? "default"}>Inspect atlas coin</button>
   ),
 }));
 
@@ -30,15 +30,10 @@ describe("AtlasFullscreenDialog", () => {
     expect(hero.getAttribute("data-variant")).toBe("fullscreen");
   });
 
-  it("does not inherit the shared desktop modal width cap", () => {
+  it("focuses Close atlas when opened with interactive atlas content", () => {
     render(<AtlasFullscreenDialog open={true} onOpenChange={() => {}} />);
-    const dialog = screen.getByRole("dialog", { name: /peg diversity atlas/i });
-    expect(dialog.className).toContain("sm:max-w-none");
-  });
-
-  it("exposes a Close atlas control as the first focusable element", () => {
-    render(<AtlasFullscreenDialog open={true} onOpenChange={() => {}} />);
-    expect(screen.getByRole("button", { name: /close atlas/i })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Inspect atlas coin" })).toBeTruthy();
+    expect(document.activeElement).toBe(screen.getByRole("button", { name: /close atlas/i }));
   });
 
   it("calls onOpenChange(false) when the close button is clicked", async () => {

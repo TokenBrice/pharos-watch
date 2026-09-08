@@ -12,16 +12,19 @@ import {
 } from "./use-mini-app-mutations";
 import type { TelegramWebAppSdk } from "./telegram-sdk";
 import type { TelegramMiniAppOperation, TelegramMiniAppState } from "./types";
+import type { TelegramMiniAppPortabilityResponse } from "./types";
 
 const apiMocks = vi.hoisted(() => ({
   postMiniAppSnapshot: vi.fn(),
   refreshMiniAppBundleOnce: vi.fn(),
+  postMiniAppPortability: vi.fn(),
 }));
 
 vi.mock("./mini-app-api", async (importOriginal) => ({
   ...(await importOriginal<typeof import("./mini-app-api")>()),
   postMiniAppSnapshot: apiMocks.postMiniAppSnapshot,
   refreshMiniAppBundleOnce: apiMocks.refreshMiniAppBundleOnce,
+  postMiniAppPortability: apiMocks.postMiniAppPortability,
 }));
 
 function makeSnapshot(state: TelegramMiniAppState = baseState): TelegramMiniAppClientSnapshot {
@@ -57,9 +60,71 @@ afterEach(() => {
   vi.useRealTimers();
   apiMocks.postMiniAppSnapshot.mockReset();
   apiMocks.refreshMiniAppBundleOnce.mockReset();
+  apiMocks.postMiniAppPortability.mockReset();
 });
 
 describe("useMiniAppMutations", () => {
+  it("never dispatches writes without signed data, session permission, or viewer permission", async () => {
+    for (const overrides of [
+      { initData: "" },
+      { mutationsAllowed: false },
+      { state: { ...baseState, viewer: { ...baseState.viewer, canMutate: false } } },
+    ]) {
+      const { result, unmount } = renderHook(() => useMiniAppMutations(makeArgs(overrides)));
+      await act(async () => { expect(await result.current.performMutation({ kind: "pause" })).toBeNull(); });
+      expect(result.current.isMutating).toBe(false);
+      unmount();
+    }
+    expect(apiMocks.postMiniAppSnapshot).not.toHaveBeenCalled();
+  });
+
+  it("allows signed export in read-only mode but requires private chat identity", async () => {
+    const exported: TelegramMiniAppPortabilityResponse = {
+      contractVersion: "3", catalogVersion: "catalog-v1",
+      result: { kind: "watchlist-export", token: "export-token", directCount: 1, presetCount: 0 },
+    };
+    apiMocks.postMiniAppPortability.mockResolvedValue(exported);
+    const args = makeArgs({ mutationsAllowed: false, state: { ...baseState, viewer: { ...baseState.viewer, canMutate: false } } });
+    const { result, rerender } = renderHook((props) => useMiniAppMutations(props), { initialProps: args });
+    await act(async () => {
+      expect(await result.current.performPortability({ kind: "export-watchlist" })).toEqual(exported);
+    });
+    expect(apiMocks.postMiniAppPortability).toHaveBeenCalledWith(expect.any(String), {
+      initData: "signed-init-data", operation: { kind: "export-watchlist" },
+    });
+    rerender({ ...args, state: { ...baseState, viewer: { ...baseState.viewer, chatId: null } } });
+    await act(async () => { expect(await result.current.performPortability({ kind: "export-watchlist" })).toBeNull(); });
+    expect(apiMocks.postMiniAppPortability).toHaveBeenCalledOnce();
+    expect(args.onSnapshotReplaced).not.toHaveBeenCalled();
+  });
+
+  it("clears a failed pending signed read without replacing confirmed state", async () => {
+    const { promise, reject: rejectRead } = Promise.withResolvers<TelegramMiniAppPortabilityResponse>();
+    apiMocks.postMiniAppPortability.mockReturnValue(promise);
+    const args = makeArgs();
+    const { result } = renderHook(() => useMiniAppMutations(args));
+    let read!: Promise<TelegramMiniAppPortabilityResponse | null>;
+    act(() => { read = result.current.performPortability({ kind: "export-watchlist" }); });
+    expect(result.current.isMutating).toBe(true);
+    expect(result.current.pendingOperation).toEqual({ kind: "export-watchlist" });
+    await act(async () => { rejectRead(new Error("offline")); expect(await read).toBeNull(); });
+    expect(result.current.isMutating).toBe(false);
+    expect(result.current.pendingOperation).toBeNull();
+    expect(args.onSnapshotReplaced).not.toHaveBeenCalled();
+    expect(result.current.message).not.toBeNull();
+  });
+
+  it("invalidates a remove undo when unsubscribing all", async () => {
+    const showConfirm = vi.fn((_message: string, callback: (confirmed: boolean) => void) => callback(true));
+    apiMocks.postMiniAppSnapshot.mockResolvedValue(makeSnapshot({ ...baseState, subscriptions: [] }));
+    const { result } = renderHook(() => useMiniAppMutations(makeArgs({ webApp: makeWebApp({ showConfirm }) })));
+    await act(async () => { result.current.remove(baseState.subscriptions[0]!); });
+    expect(result.current.pendingUndo).toEqual(baseState.subscriptions[0]);
+    await act(async () => { result.current.unsubscribeAll(); });
+    expect(result.current.pendingUndo).toBeNull();
+    await act(async () => { result.current.undoRemove(); });
+    expect(apiMocks.postMiniAppSnapshot.mock.calls.map((call) => call[1].operation.kind)).toEqual(["remove-coin", "unsubscribe-all"]);
+  });
   it("locks mutation state until the returned server snapshot replaces the owner state", async () => {
     const nextState: TelegramMiniAppState = {
       ...baseState,
@@ -191,7 +256,11 @@ describe("useMiniAppMutations", () => {
   });
 
   it("keeps the remove undo subject for its five-second window and restores it with set-coin", async () => {
-    const coin = baseState.subscriptions[0]!;
+    const coin = {
+      ...baseState.subscriptions[0]!,
+      alertTypes: { ...baseState.subscriptions[0]!.alertTypes, safety: false },
+      alertOverrides: { dews: false, depeg: false, safety: true, launch: false, reserve: false, freeze: false },
+    };
     const showConfirm = vi.fn((_message: string, callback: (confirmed: boolean) => void) => callback(true));
     const webApp = makeWebApp({ showConfirm });
     apiMocks.postMiniAppSnapshot.mockResolvedValue(makeSnapshot({ ...baseState, subscriptions: [] }));
@@ -208,7 +277,7 @@ describe("useMiniAppMutations", () => {
       operation: {
         kind: "set-coin",
         stablecoinId: "usdc-circle",
-        patch: { alertTypes: { dews: true, depeg: true }, dewsMinBand: "ALERT", depegStepBps: 250 },
+        patch: { alertTypes: { dews: true, depeg: true, safety: false }, dewsMinBand: "ALERT", depegStepBps: 250 },
       },
     });
     expect(result.current.pendingUndo).toBeNull();

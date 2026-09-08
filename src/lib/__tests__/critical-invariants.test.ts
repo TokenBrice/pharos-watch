@@ -153,4 +153,23 @@ describe("critical invariants", () => {
     expect(mergeDepegSeconds(events, 0, 500)).toBe(210);
     expect(worstDeviation(events)).toBe(-310);
   });
+
+  // audit: s092-src/C2 — the mergeDepegSeconds doc contract clamps intervals to
+  // [windowStart, now]; the upper bound was unenforced. The one-line source clamp
+  // ships alongside this reproduction; generic merge cases stay in
+  // shared/lib/__tests__/peg-utils.test.ts.
+  it("clamps resolved depeg intervals at the observation window's upper bound", () => {
+    const events = [makeDepegEvent({ startedAt: 100, endedAt: 600, peakDeviationBps: -120 })];
+
+    expect(mergeDepegSeconds(events, 0, 500)).toBe(400);
+  });
+
+  it("applies the upper-window clamp while merging overlapping intervals", () => {
+    const events = [
+      makeDepegEvent({ startedAt: 400, endedAt: 700, peakDeviationBps: -120 }),
+      makeDepegEvent({ id: 2, startedAt: 450, endedAt: 480, peakDeviationBps: 95 }),
+    ];
+
+    expect(mergeDepegSeconds(events, 0, 500)).toBe(100);
+  });
 });

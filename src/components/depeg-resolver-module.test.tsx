@@ -416,4 +416,57 @@ describe("StablecoinDepegResolverRows", () => {
     ).toBeTruthy();
     expect(screen.getByText("At Risk")).toBeTruthy();
   });
+
+  it("renders the unsuppressed duration alongside the stale-snapshot warning", () => {
+    // audit: s077-src/C1 — stale-duration suppression ownership is disputed
+    // (upstream payload invariant vs UI defect); pins the current forwarding behavior.
+    const sourceRow = makeSourceRow({
+      duration: {
+        suppressed: false,
+        suppressedReason: null,
+        stratum: "below · moderate · USD",
+        medianSec: 7200,
+        iqrSec: [3600, 10_800],
+        ageStatus: "ordinary",
+        horizons: [],
+      },
+    });
+    render(
+      <StablecoinDepegResolverRows
+        stablecoinId="lusd-liquity"
+        data={response({
+          _meta: { ...meta, degraded: true, degradedReason: "stale-cache" },
+          rows: [makePredictionRow(sourceRow)],
+        })}
+      />,
+    );
+
+    expect(
+      screen.getByText("Resolver snapshot is stale; duration estimates are suppressed until the next refresh."),
+    ).toBeTruthy();
+    expect(screen.getByText("anchored duration")).toBeTruthy();
+    expect(screen.getByText("~2h (1h-3h)")).toBeTruthy();
+  });
+
+  it("stays hidden for degraded snapshots whose reason is not stale-cache", () => {
+    render(
+      <StablecoinDepegResolverRows
+        stablecoinId="lusd-liquity"
+        data={response({ _meta: { ...meta, degraded: true, degradedReason: "missing-cache" }, rows: [row] })}
+      />,
+    );
+
+    expect(screen.queryByLabelText(/Depeg Duration Resolver/)).toBeNull();
+    expect(screen.queryByText("At Risk")).toBeNull();
+    expect(screen.queryByText(/Resolver snapshot is stale/)).toBeNull();
+  });
+
+  it("renders only the row matching the requested stablecoin when others are present", () => {
+    const other = makePredictionRow(makeSourceRow({ stablecoinId: "usdc-circle", symbol: "USDC", eventId: 2 }));
+    render(<StablecoinDepegResolverRows stablecoinId="lusd-liquity" data={response({ rows: [other, row] })} />);
+
+    expect(screen.getAllByLabelText(/Depeg Duration Resolver for /)).toHaveLength(1);
+    expect(screen.getByLabelText("Depeg Duration Resolver for LUSD")).toBeTruthy();
+    expect(screen.queryByText("USDC")).toBeNull();
+  });
 });

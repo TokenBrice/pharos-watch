@@ -193,7 +193,7 @@ describe("buildRedemptionBackstopCardViewModel", () => {
     });
   });
 
-  it("preserves telemetry warning notes while removing redundant eventual-redeemability notes", () => {
+  it("removes only the redundant modeled-supply note and keeps substantive warnings", () => {
     const viewModel = buildRedemptionBackstopCardViewModel(
       entry({
         capacitySemantics: "eventual-only",
@@ -203,7 +203,8 @@ describe("buildRedemptionBackstopCardViewModel", () => {
         liveHolderEligibility: "pre-incident-holder",
         notes: [
           "Stale live capacity telemetry was ignored by the runtime adapter",
-          "Modeled as eventual redeemability of current supply",
+          "Modeled as eventual redeemability of current supply; immediate liquidity is not separately quantified",
+          "Redeemability suspended pending issuer review",
         ],
       }),
     );
@@ -214,47 +215,109 @@ describe("buildRedemptionBackstopCardViewModel", () => {
     });
     expect(telemetryValue(viewModel, "Freshness")).toBe("unverified");
     expect(telemetryValue(viewModel, "Live eligibility")).toBe("pre incident holder");
-    expect(viewModel.filteredNotes).toEqual(["Stale live capacity telemetry was ignored by the runtime adapter"]);
+    expect(viewModel.filteredNotes).toEqual([
+      "Stale live capacity telemetry was ignored by the runtime adapter",
+      "Redeemability suspended pending issuer review",
+    ]);
   });
 
-  it("maps every route family to the stable detail label", () => {
-    expect(buildRedemptionBackstopCardViewModel(entry({ routeFamily: "stablecoin-redeem" })).routeFamilyLabel).toBe(
-      "Stablecoin redeem",
-    );
-    expect(buildRedemptionBackstopCardViewModel(entry({ routeFamily: "basket-redeem" })).routeFamilyLabel).toBe(
-      "Basket redeem",
-    );
-    expect(buildRedemptionBackstopCardViewModel(entry({ routeFamily: "collateral-redeem" })).routeFamilyLabel).toBe(
-      "Collateral redeem",
-    );
-    expect(buildRedemptionBackstopCardViewModel(entry({ routeFamily: "psm-swap" })).routeFamilyLabel).toBe(
-      "PSM / swap floor",
-    );
-    expect(buildRedemptionBackstopCardViewModel(entry({ routeFamily: "queue-redeem" })).routeFamilyLabel).toBe(
-      "Queue redeem",
-    );
-    expect(buildRedemptionBackstopCardViewModel(entry({ routeFamily: "offchain-issuer" })).routeFamilyLabel).toBe(
-      "Offchain issuer",
-    );
+  it("keeps every note when capacity is not eventual-only", () => {
+    expect(
+      buildRedemptionBackstopCardViewModel(
+        entry({
+          capacitySemantics: "immediate-bounded",
+          notes: [
+            "Modeled as eventual redeemability of current supply; immediate liquidity is not separately quantified",
+            "Redeemability suspended pending issuer review",
+          ],
+        }),
+      ).filteredNotes,
+    ).toEqual([
+      "Modeled as eventual redeemability of current supply; immediate liquidity is not separately quantified",
+      "Redeemability suspended pending issuer review",
+    ]);
   });
 
-  it("maps route status and docs provenance labels", () => {
-    expect(buildRedemptionBackstopCardViewModel(entry({ routeStatus: "open" }))).toMatchObject({
-      showRouteStatusBadge: false,
-      routeStatusLabel: "open",
+  it("publishes size-aware cost scenarios and confidence detail as distinct labelled values", () => {
+    const viewModel = buildRedemptionBackstopCardViewModel(
+      entry({
+        costScenarioScores: { retail: 40, activeUser: 80, institutional: 100 },
+        confidenceDetails: {
+          capacityEvidenceQuality: 90,
+          feeEvidenceQuality: 70,
+          routeStatusFreshness: 80,
+          holderCohortBreadth: 60,
+          sourceQuality: 95,
+          reviewedDocAgeDays: 12,
+          reasons: ["live telemetry reviewed"],
+        },
+      }),
+    );
+
+    expect(viewModel.costScenarioContext).toEqual([
+      { label: "Retail cost", value: "40/100" },
+      { label: "Active-user cost", value: "80/100" },
+      { label: "Institutional cost", value: "100/100" },
+    ]);
+    expect(viewModel.confidenceContext).toEqual([
+      { label: "Capacity evidence", value: "90/100" },
+      { label: "Fee evidence", value: "70/100" },
+      { label: "Route freshness", value: "80/100" },
+      { label: "Holder breadth", value: "60/100" },
+      { label: "Source quality", value: "95/100" },
+      { label: "Reviewed docs age", value: "12d" },
+    ]);
+    expect(viewModel.confidenceReasons).toEqual(["live telemetry reviewed"]);
+  });
+
+  it("omits unmeasured cost scenarios and the docs age instead of scoring them zero", () => {
+    const viewModel = buildRedemptionBackstopCardViewModel(
+      entry({
+        costScenarioScores: { retail: 0, activeUser: null, institutional: 55 },
+        confidenceDetails: {
+          capacityEvidenceQuality: 0,
+          feeEvidenceQuality: 70,
+          routeStatusFreshness: 80,
+          holderCohortBreadth: 60,
+          sourceQuality: 95,
+          reviewedDocAgeDays: null,
+          reasons: [],
+        },
+      }),
+    );
+
+    expect(viewModel.costScenarioContext).toEqual([
+      { label: "Retail cost", value: "0/100" },
+      { label: "Institutional cost", value: "55/100" },
+    ]);
+    expect(viewModel.confidenceContext.map((item) => item.label)).not.toContain("Reviewed docs age");
+    expect(viewModel.confidenceContext[0]).toEqual({ label: "Capacity evidence", value: "0/100" });
+  });
+
+  it.each([
+    ["stablecoin-redeem", "Stablecoin redeem"],
+    ["basket-redeem", "Basket redeem"],
+    ["collateral-redeem", "Collateral redeem"],
+    ["psm-swap", "PSM / swap floor"],
+    ["queue-redeem", "Queue redeem"],
+    ["offchain-issuer", "Offchain issuer"],
+  ] as const)("labels the %s route family as %s", (routeFamily, routeFamilyLabel) => {
+    expect(buildRedemptionBackstopCardViewModel(entry({ routeFamily })).routeFamilyLabel).toBe(routeFamilyLabel);
+  });
+
+  it.each([
+    ["open", false, "open"],
+    ["degraded", true, "degraded"],
+    ["cohort-limited", true, "cohort limited"],
+    ["unknown", true, "status unknown"],
+  ] as const)("badges the %s route status as %s", (routeStatus, showRouteStatusBadge, routeStatusLabel) => {
+    expect(buildRedemptionBackstopCardViewModel(entry({ routeStatus }))).toMatchObject({
+      showRouteStatusBadge,
+      routeStatusLabel,
     });
-    expect(buildRedemptionBackstopCardViewModel(entry({ routeStatus: "degraded" }))).toMatchObject({
-      showRouteStatusBadge: true,
-      routeStatusLabel: "degraded",
-    });
-    expect(buildRedemptionBackstopCardViewModel(entry({ routeStatus: "cohort-limited" }))).toMatchObject({
-      showRouteStatusBadge: true,
-      routeStatusLabel: "cohort limited",
-    });
-    expect(buildRedemptionBackstopCardViewModel(entry({ routeStatus: "unknown" }))).toMatchObject({
-      showRouteStatusBadge: true,
-      routeStatusLabel: "status unknown",
-    });
+  });
+
+  it("maps docs provenance labels", () => {
 
     const provenanceCases = [
       ["config-reviewed", "Reviewed route source"],
