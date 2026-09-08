@@ -316,7 +316,7 @@ describe("EventCard enrichment", () => {
     } else {
       expect(screen.getByText(badge)).toBeTruthy();
       expect(screen.getByText(blocked ? "frozen" : "unfrozen")).toBeTruthy();
-      expect(screen.getByText(new RegExp(`freeze ${action}`))).toBeTruthy();
+      expect(screen.getByText((content) => content.includes(`freeze ${action}`))).toBeTruthy();
     }
   });
 

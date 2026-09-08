@@ -101,7 +101,7 @@ describe("Safety Score v9 chain-maturity registry", () => {
         expect(review.gates[gateId].sources.length, `${review.chainSlug}/${gateId}`).toBeGreaterThan(0);
         for (const evidence of review.gates[gateId].sources) {
           const date = evidence.documentDate ?? evidence.accessedAt;
-          expect(date, `${review.chainSlug}/${gateId}`).toMatch(/^\d{4}(?:-\d{2}(?:-\d{2})?)?$/);
+          expect(date, `${review.chainSlug}/${gateId}`).toMatch(/^\d{4}$|^\d{4}-\d{2}$|^\d{4}-\d{2}-\d{2}$/);
           // Authored documents may disclose only a year or month; access dates are full dates.
           if (evidence.documentDate == null) expect(date).toMatch(/^\d{4}-\d{2}-\d{2}$/);
           const fullDate = date.length === 4 ? `${date}-01-01` : date.length === 7 ? `${date}-01` : date;

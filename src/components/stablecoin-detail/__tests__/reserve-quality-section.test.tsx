@@ -20,9 +20,16 @@ function ladderRow(html: string, label: string): string {
 
 /** A fact-grid cell's own value text and tone classes, scoped to its label. */
 function factCell(html: string, label: string): { value: string; valueClass: string } {
-  const match = new RegExp(`>${label}</span><span class="([^"]*)">([^<]*)</span>`).exec(html);
-  expect(match, `fact cell ${label}`).not.toBeNull();
-  return { valueClass: match![1]!, value: match![2]! };
+  // Locates `>${label}</span><span class="…">…</span>` without building a
+  // RegExp from the label: quoted class value, then plain text to `</span>`.
+  const marker = `>${label}</span><span class="`;
+  const at = html.indexOf(marker);
+  const classEnd = at === -1 ? -1 : html.indexOf('"', at + marker.length);
+  const valueStart = classEnd !== -1 && html[classEnd + 1] === ">" ? classEnd + 2 : -1;
+  const valueLt = valueStart === -1 ? -1 : html.indexOf("<", valueStart);
+  const matched = valueStart !== -1 && valueLt !== -1 && html.startsWith("</span>", valueLt);
+  expect(matched, `fact cell ${label}`).toBe(true);
+  return { valueClass: html.slice(at + marker.length, classEnd), value: html.slice(valueStart, valueLt) };
 }
 
 const SUMMARY: ReserveQualityClientSummary = {

@@ -52,7 +52,7 @@ describe("PsiLighthouseScene", () => {
     expect(primaryLow?.getAttribute("d")).toBeTruthy();
     expect(primaryHigh?.getAttribute("d")).toBeTruthy();
     const extent = (path: SVGPathElement | null) => {
-      const coordinates = (path?.getAttribute("d")?.match(/-?\d+(?:\.\d+)?/g) ?? []).map(Number);
+      const coordinates = (path?.getAttribute("d")?.match(/-?\d+\.\d+|-?\d+/g) ?? []).map(Number);
       expect(coordinates.length).toBeGreaterThan(0);
       expect(coordinates.every(Number.isFinite)).toBe(true);
       return Math.max(...coordinates.filter((_, index) => index % 2 === 0));

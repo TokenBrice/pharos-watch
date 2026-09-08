@@ -63,10 +63,20 @@ describe("adapter registry completeness", () => {
         expect(parseLiveReserveAdapterParams(key, config.params)).toEqual(expect.any(Object));
       }
       // An array is invalid even for no-params adapters; missing schemas and
-      // unrelated TypeErrors must not masquerade as schema validation.
-      expect(() => parseLiveReserveAdapterParams(key, [] as never)).toThrow(
-        new RegExp(`^${key} adapter params invalid(?:\\.|:)`),
-      );
+      // unrelated TypeErrors must not masquerade as schema validation, so the
+      // message must open with "<key> adapter params invalid" followed by "."
+      // or ":" — not merely contain the adapter name somewhere.
+      let message: string | undefined;
+      try {
+        parseLiveReserveAdapterParams(key, [] as never);
+      } catch (error) {
+        message = error instanceof Error ? error.message : String(error);
+      }
+      const prefix = `${key} adapter params invalid`;
+      expect(
+        message !== undefined && message.startsWith(prefix) && /^[.:]/.test(message.slice(prefix.length)),
+        `expected "${key} adapter params invalid." (or ": …") error, got: ${message}`,
+      ).toBe(true);
     },
   );
 

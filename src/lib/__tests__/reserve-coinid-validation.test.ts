@@ -162,7 +162,7 @@ const WRAPPER_TICKERS: Record<string, string> = {
 
 function mentionsTicker(label: string, ticker: string): boolean {
   const upperTicker = ticker.toUpperCase();
-  const tokens = label.toUpperCase().match(/[A-Z0-9]+(?:-[A-Z0-9]+)*/g) ?? [];
+  const tokens = label.toUpperCase().match(/[A-Z0-9](?:[A-Z0-9]|-[A-Z0-9])*/g) ?? [];
   return tokens.some((token) => {
     if (token.startsWith("NON-")) return false;
     return token.split("-").some((part) => part === upperTicker || WRAPPER_TICKERS[part] === upperTicker);

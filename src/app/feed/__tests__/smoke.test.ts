@@ -79,8 +79,17 @@ function writeShard(raw: string) {
 
 function parseItems(xml: string): Array<{ title: string; link: string; guid: string; description: string }> {
   const text = (body: string, tag: string) => {
-    const match = new RegExp(`<${tag}[^>]*>([\\s\\S]*?)</${tag}>`).exec(body)?.[1] ?? "";
-    return match.replace(/^<!\[CDATA\[/, "").replace(/\]\]>$/, "");
+    // Same element slice as `<tag[^>]*>([\s\S]*?)</tag>`: skip attributes to
+    // the opening tag's `>`, then take plain text to the first close tag.
+    const open = `<${tag}`;
+    const openAt = body.indexOf(open);
+    const gt = openAt === -1 ? -1 : body.indexOf(">", openAt + open.length);
+    const closeAt = gt === -1 ? -1 : body.indexOf(`</${tag}>`, gt + 1);
+    if (openAt === -1 || gt === -1 || closeAt === -1) return "";
+    return body
+      .slice(gt + 1, closeAt)
+      .replace(/^<!\[CDATA\[/, "")
+      .replace(/\]\]>$/, "");
   };
   return Array.from(xml.matchAll(/<item>([\s\S]*?)<\/item>/g), ([, body]) => ({
     title: text(body!, "title"),
