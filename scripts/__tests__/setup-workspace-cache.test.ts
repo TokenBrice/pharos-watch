@@ -58,6 +58,13 @@ describe("setup-workspace caches", () => {
     }
   });
 
+  it.each(["generated", "history"])("runs the %s bootstrap only with dependencies and its explicit input enabled", (kind) => {
+    const command = kind === "generated" ? "npm run bootstrap:generated" : "npm run bootstrap:generated:history";
+    const input = kind === "generated" ? "bootstrap-generated" : "bootstrap-history";
+    expect(steps.find((step) => step.run === command)?.if)
+      .toBe(`\${{ inputs.install-deps == 'true' && inputs.${input} == 'true' }}`);
+  });
+
   it.each(["chromium", "firefox"])("installs %s only on explicit request", (browser) => {
     const install = steps.find((step) => step.run === `npx --no-install playwright install --with-deps ${browser}`)!;
     expect(install.if).toBe(`\${{ inputs.install-playwright-${browser} == 'true' }}`);

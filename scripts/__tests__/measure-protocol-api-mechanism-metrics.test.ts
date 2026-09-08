@@ -1,12 +1,12 @@
 import { createHash } from "node:crypto";
-import { spawnSync } from "node:child_process";
-import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { dirname, join } from "node:path";
+import { runProtocolCli } from "./measure-protocol-api-mechanism-metrics.test-support";
 
 import { describe, expect, it, vi } from "vitest";
 
-import { fetchProtocolApiObservation } from "../maintenance/measure-protocol-api-mechanism-metrics";
+import { fetchProtocolApiObservation, parseProtocolApiCliOptions } from "../maintenance/measure-protocol-api-mechanism-metrics";
 
 import {
   buildProtocolApiMeasurement,
@@ -171,7 +171,7 @@ describe("protocol API response transport", () => {
 
   it("sanitizes URLs and bounds the allowlisted edge headers", async () => {
     const logs: string[] = [];
-    const configured = { ...source, url: `${source.url}?configured-secret=value#fragment` };
+    const configured = { ...source, url: source.url.replace("https://", "https://configured-user:configured-password@") + "?configured-secret=value#fragment" };
     const observation = await fetchProtocolApiObservation(configured, {
       fetchImpl: async () =>
         response('{"ok":true}', {
@@ -182,7 +182,7 @@ describe("protocol API response transport", () => {
           },
           redirected: true,
           status: 200,
-          url: `${source.url}?redirect-secret=value#fragment`,
+          url: source.url.replace("https://", "https://redirect-user:redirect-password@") + "?redirect-secret=value#fragment",
         }),
       log: (message) => logs.push(message),
     });
@@ -199,8 +199,29 @@ describe("protocol API response transport", () => {
       redirected: true,
     });
     expect(provenance.headers["x-vercel-id"]).toHaveLength(160);
-    expect(logs[0]).not.toMatch(/configured-secret|redirect-secret|body-sentinel/);
+    expect(logs[0]).not.toMatch(/configured-secret|redirect-secret|body-sentinel|configured-user|configured-password|redirect-user|redirect-password/);
     expect(observation.url).toBe(configured.url);
+  });
+
+  it("removes configured and redirected userinfo from rejection diagnostics", async () => {
+    const logs: string[] = [];
+    const request = fetchProtocolApiObservation({
+      ...source, url: "https://configured-user:configured-password@example.com/configured",
+    }, {
+      fetchImpl: async () => response("denied", {
+        status: 403,
+        url: "https://redirect-user:redirect-password@example.com/redirected",
+        redirected: true,
+      }),
+      log: (message) => logs.push(message),
+    });
+    await expect(request).rejects.toThrow(/HTTP 403/);
+    const error = await request.catch((caught: Error) => caught.message);
+    expect(`${logs.join("\n")}\n${error}`).not.toMatch(/configured-user|configured-password|redirect-user|redirect-password/);
+    expect(transportRecord(logs[0]!)).toMatchObject({
+      configuredUrl: "https://example.com/configured",
+      finalUrl: "https://example.com/redirected",
+    });
   });
 
   it("leaves malformed JSON rejection with the existing lossless parser", async () => {
@@ -465,7 +486,6 @@ describe("Falcon transparency target", () => {
 });
 
 describe("protocol API CLI policy", () => {
-  const script = "scripts/maintenance/measure-protocol-api-mechanism-metrics.ts";
 
   it.each([
     [["--asset", "unknown"], /unknown --asset/],
@@ -475,9 +495,7 @@ describe("protocol API CLI policy", () => {
     [["--replay", "one.json", "--replay", "two.json", "--asset", "usde-ethena"], /exclusive/],
     [[], /requires at least one --asset/],
   ] as const)("rejects invalid arguments before I/O: %j", (args, expected) => {
-    const result = spawnSync("npx", ["tsx", script, ...args], { cwd: process.cwd(), encoding: "utf8" });
-    expect(result.status).toBe(2);
-    expect(result.stderr).toMatch(expected);
+    expect(() => parseProtocolApiCliOptions([...args])).toThrow(expected);
   });
 
   it("accepts repeated canonical replays, sorts full time vectors newest first, and rejects noncanonical bytes", () => {
@@ -498,18 +516,14 @@ describe("protocol API CLI policy", () => {
       const newerPath = join(directory, "newer.json");
       writeFileSync(olderPath, serializeProtocolApiMeasurement(older));
       writeFileSync(newerPath, serializeProtocolApiMeasurement(newer));
-      const repeated = spawnSync("npx", ["tsx", script, "--replay", olderPath, "--replay", newerPath], {
-        cwd: process.cwd(),
-        encoding: "utf8",
-      });
-      expect(repeated.status).toBe(0);
+      const repeated = runProtocolCli(["--replay", olderPath, "--replay", newerPath], directory);
+      expect(repeated.status, repeated.stderr).toBe(0);
+      expect(repeated.stdout).toContain(olderPath);
+      expect(repeated.stdout).toContain(newerPath);
 
       const noncanonicalPath = join(directory, "noncanonical.json");
       writeFileSync(noncanonicalPath, JSON.stringify(older, null, 2));
-      const noncanonical = spawnSync("npx", ["tsx", script, "--replay", noncanonicalPath], {
-        cwd: process.cwd(),
-        encoding: "utf8",
-      });
+      const noncanonical = runProtocolCli(["--replay", noncanonicalPath], directory);
       expect(noncanonical.status).toBe(1);
       expect(noncanonical.stderr).toMatch(/not canonical/);
     } finally {
@@ -517,45 +531,60 @@ describe("protocol API CLI policy", () => {
     }
   });
 
-  it("accepts only the frozen committed V1 artifact as normalized-only legacy evidence", () => {
+  it("checks legacy summary and body fingerprints independently at the designated path", () => {
     const legacyPath =
       "shared/data/safety-score-v9/mechanism-measurements/usde-ethena/2026-07-22T20-00-16.250Z-protocol-api.json";
-    const result = spawnSync("npx", ["tsx", script, "--replay", legacyPath], {
-      cwd: process.cwd(),
-      encoding: "utf8",
-    });
-    expect(result.status).toBe(0);
-    expect(result.stdout).toMatch(/frozen legacy V1 fingerprint passed/);
-    expect(result.stdout).toMatch(/raw replay unavailable/);
-
+    const summaryPath = legacyPath.replace(/\.json$/, ".summary.json");
+    const frozenSummary = JSON.parse(readFileSync(summaryPath, "utf8"));
     const directory = mkdtempSync(join(tmpdir(), "pharos-legacy-protocol-api-test-"));
     try {
-      const copiedPath = join(directory, "copied-protocol-api.json");
-      writeFileSync(copiedPath, JSON.stringify({ schemaVersion: 1, kind: "protocol-api-mechanism-measurement" }));
-      const copied = spawnSync("npx", ["tsx", script, "--replay", copiedPath], {
-        cwd: process.cwd(),
-        encoding: "utf8",
-      });
-      expect(copied.status).toBe(1);
-      expect(copied.stderr).toMatch(/Unknown or modified legacy protocol API artifact/);
+      mkdirSync(dirname(join(directory, legacyPath)), { recursive: true });
+      const localSummary = join(directory, summaryPath);
+      writeFileSync(localSummary, JSON.stringify(frozenSummary));
+      const accepted = runProtocolCli(["--replay", legacyPath], directory);
+      expect(accepted.status, accepted.stderr).toBe(0);
+      expect(accepted.stdout).toMatch(/frozen legacy V1 fingerprint passed/);
+      expect(accepted.stdout).toMatch(/raw replay unavailable/);
+
+      writeFileSync(localSummary, JSON.stringify({ ...frozenSummary, sha256: "0".repeat(64) }));
+      const changedSummary = runProtocolCli(["--replay", legacyPath], directory);
+      expect(changedSummary.status).toBe(1);
+      expect(changedSummary.stderr).toMatch(/Unknown or modified legacy protocol API artifact/);
+
+      writeFileSync(localSummary, JSON.stringify(frozenSummary));
+      writeFileSync(join(directory, legacyPath), JSON.stringify({ schemaVersion: 1, kind: "protocol-api-mechanism-measurement" }));
+      const changedBody = runProtocolCli(["--replay", legacyPath], directory);
+      expect(changedBody.status).toBe(1);
+      expect(changedBody.stderr).toMatch(/Unknown or modified legacy protocol API artifact/);
     } finally {
       rmSync(directory, { recursive: true, force: true });
     }
   });
 
   it("keeps replay-all scoped to protocol API refresh target directories", () => {
-    const unrelatedSummaryPath =
-      "shared/data/safety-score-v9/mechanism-measurements/iusd-infinifi/2026-07-27-protocol-api.summary.json";
-    expect(JSON.parse(readFileSync(unrelatedSummaryPath, "utf8"))).toMatchObject({
-      mechanism: "iusd-infinifi",
-      summary: { assetId: "iusd-infinifi" },
-    });
+    const directory = mkdtempSync(join(tmpdir(), "pharos-protocol-discovery-"));
+    try {
+      const root = join(directory, "shared/data/safety-score-v9/mechanism-measurements");
+      const target = join(root, "usde-ethena");
+      const unrelated = join(root, "iusd-infinifi");
+      mkdirSync(target, { recursive: true });
+      mkdirSync(unrelated);
+      const artifact = buildProtocolApiMeasurement("usde-ethena", usdeInputs(), CAPTURED_AT);
+      const artifactPath = join(target, protocolApiEvidenceFilename(artifact));
+      writeFileSync(artifactPath, serializeProtocolApiMeasurement(artifact));
+      writeFileSync(join(unrelated, "invalid-protocol-api.json"), "{invalid unrelated artifact");
+      const accepted = runProtocolCli(["--replay-all"], directory);
+      expect(accepted.status, accepted.stderr).toBe(0);
+      expect(accepted.stdout).toContain("1 V2 artifact(s), 0 frozen legacy V1 artifact(s)");
 
-    const result = spawnSync("npx", ["tsx", script, "--replay-all"], {
-      cwd: process.cwd(),
-      encoding: "utf8",
-    });
-    expect(result.status).toBe(0);
-    expect(result.stdout).toMatch(/replay-all passed/);
+      // The selected target is actually read, not merely counted during discovery.
+      writeFileSync(artifactPath, JSON.stringify(artifact, null, 2));
+      const corrupted = runProtocolCli(["--replay-all"], directory);
+      expect(corrupted.status).toBe(1);
+      expect(corrupted.stderr).toContain(artifactPath);
+      expect(corrupted.stderr).toMatch(/not canonical/);
+    } finally {
+      rmSync(directory, { recursive: true, force: true });
+    }
   });
 });

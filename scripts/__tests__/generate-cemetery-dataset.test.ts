@@ -2,6 +2,7 @@ import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 import { buildFrozenCemeteryProjection } from "@shared/lib/cemetery-merged";
+import { FROZEN_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import { sha256Hex } from "@shared/lib/sha256";
 import { stableJsonStringifyV1 } from "@shared/lib/stable-json";
 
@@ -28,8 +29,15 @@ describe("cemetery dataset provenance", () => {
     expect(entry?.checksum).toBe(`sha256:${sha256Hex(stableJsonStringifyV1(buildFrozenCemeteryProjection()))}`);
   });
 
+  it("preserves the independently reviewed WEMIX archive facts", () => {
+    expect(buildFrozenCemeteryProjection().find((row) => row.id === "wemix-dollar-wemix"))
+      .toMatchObject({ name: "WEMIX Dollar", symbol: "WEMIX$", causeOfDeath: "abandoned",
+        deathDate: "2026-04", peakMcap: 22400000, archivedDataAvailable: true });
+  });
+
   it("projects every frozen coin exactly once, ordered by id", () => {
     const ids = buildFrozenCemeteryProjection().map((entry) => entry.id);
+    expect(ids).toEqual(FROZEN_STABLECOINS.map((coin) => coin.id).sort((a, b) => a.localeCompare(b)));
     expect(ids).toEqual([...new Set(ids)].sort((left, right) => left.localeCompare(right)));
     expect(buildFrozenCemeteryProjection().every((entry) => entry.archivedDataAvailable === true)).toBe(true);
   });

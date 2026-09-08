@@ -1,7 +1,6 @@
-import { mkdtempSync, readFileSync, writeFileSync } from "node:fs";
-import { tmpdir } from "node:os";
+import { readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it } from "vitest";
 import {
   buildDexPricingSourceGapAudit,
   parseCliArgs,
@@ -12,6 +11,10 @@ import {
   type DexGapStablecoinRow,
 } from "../maintenance/audit-dex-pricing-source-gaps";
 
+import { createTempRepoTracker } from "./helpers/test-state";
+
+const { makeRoot, cleanup } = createTempRepoTracker("dex-pricing-source-gaps");
+afterEach(cleanup);
 function dexPriceRow(overrides: Partial<DexGapDexPriceRow>): DexGapDexPriceRow {
   return {
     stablecoin_id: "test-usd",
@@ -77,7 +80,7 @@ describe("audit-dex-pricing-source-gaps", () => {
   });
 
   it("routes JSON output through the shared runner byte-for-byte", async () => {
-    const cwd = mkdtempSync(join(tmpdir(), "dex-pricing-source-gaps-"));
+    const cwd = makeRoot();
     const stablecoins = [stablecoinRow({})];
     const dexPrices = [dexPriceRow({})];
     writeFileSync(join(cwd, "stablecoins.json"), JSON.stringify(stablecoins), "utf8");

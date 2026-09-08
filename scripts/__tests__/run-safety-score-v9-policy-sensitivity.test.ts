@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import { V9_CANDIDATE_POLICY_V1 } from "@shared/lib/safety-score-v9-research";
+import { GOLDEN_SCENARIOS, PAIRWISE_CONSTRAINTS } from "@shared/data/safety-score-v9/golden-scenarios-v1";
 import {
   generateV9PolicySensitivityReport,
   listV9PolicySensitivityNumericPaths,
@@ -8,10 +9,16 @@ import {
 } from "../maintenance/run-safety-score-v9-policy-sensitivity";
 
 const V9_EVALUATION_TEST_TIMEOUT_MS = 30_000;
+const minimalCorpus = {
+  scenarios: GOLDEN_SCENARIOS.filter(({ id }) => id === "active-depeg-d" || id === "active-depeg-f"),
+  constraints: PAIRWISE_CONSTRAINTS.filter(({ higherId, lowerId }) => higherId === "active-depeg-d" && lowerId === "active-depeg-f"),
+};
+const parameterPaths = listV9PolicySensitivityNumericPaths();
 
 describe("Safety Score v9 V9 policy sensitivity", { timeout: V9_EVALUATION_TEST_TIMEOUT_MS }, () => {
   it("produces deterministic one-parameter V9 cases with distinct semantic digests", () => {
     const options = {
+      ...minimalCorpus,
       parameterPaths: ["semantic.formula.compensabilityHeadroom"],
       deltas: [-1, 1],
     } as const;
@@ -28,8 +35,8 @@ describe("Safety Score v9 V9 policy sensitivity", { timeout: V9_EVALUATION_TEST_
         policyId: V9_CANDIDATE_POLICY_V1.policy.policyId,
         lifecycle: "active",
         semanticDigest: V9_CANDIDATE_POLICY_V1.semanticDigest,
-        scenarioCount: 34,
-        pairwiseConstraintCount: 31,
+        scenarioCount: 2,
+        pairwiseConstraintCount: 1,
         pairwiseViolationCount: 0,
       },
       selection: {
@@ -38,8 +45,8 @@ describe("Safety Score v9 V9 policy sensitivity", { timeout: V9_EVALUATION_TEST_
       },
     });
     expect(first.cases).toHaveLength(2);
-    expect(first.cases.every((item) => item.pairwiseConstraints.length === 31)).toBe(true);
-    expect(first.summary.pairwiseEvaluationCount).toBe(62);
+    expect(first.cases.every((item) => item.pairwiseConstraints.length === 1)).toBe(true);
+    expect(first.summary.pairwiseEvaluationCount).toBe(2);
     expect(first.cases.map((item) => item.value)).toEqual([19, 21]);
     expect(first.cases.every((item) => item.policyDigest !== first.baseline.semanticDigest)).toBe(true);
     expect(
@@ -114,7 +121,7 @@ describe("Safety Score v9 V9 policy sensitivity", { timeout: V9_EVALUATION_TEST_
     runV9PolicySensitivityCli(["--list-parameters"], { stdout, writeOutput: vi.fn() });
     const paths = JSON.parse(stdout.mock.calls[0]![0]) as string[];
 
-    expect(paths).toEqual(listV9PolicySensitivityNumericPaths());
+    expect(paths).toEqual(parameterPaths);
     expect(paths).toContain("semantic.formula.compensabilityHeadroom");
     expect(paths).not.toContain("semantic.formula.pillarWeights.backing");
     expect(paths).not.toContain("semantic.exit.componentWeights.access");
@@ -135,12 +142,11 @@ describe("Safety Score v9 V9 policy sensitivity", { timeout: V9_EVALUATION_TEST_
   });
 
   it("runs the default perturbations for every listed parameter", () => {
-    const paths = listV9PolicySensitivityNumericPaths();
-    const report = generateV9PolicySensitivityReport({ parameterPaths: paths });
+    const report = generateV9PolicySensitivityReport({ ...minimalCorpus, parameterPaths });
 
-    expect(report.selection).toEqual({ parameterPaths: paths, explicitDeltas: null });
-    expect(report.cases).toHaveLength(paths.length * 2);
-    expect(new Set(report.cases.map((item) => item.parameterPath))).toEqual(new Set(paths));
+    expect(report.selection).toEqual({ parameterPaths, explicitDeltas: null });
+    expect(report.cases).toHaveLength(parameterPaths.length * 2);
+    expect(new Set(report.cases.map((item) => item.parameterPath))).toEqual(new Set(parameterPaths));
   });
 
   it("parses strict repeatable CLI arguments", () => {

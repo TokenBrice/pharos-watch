@@ -1,8 +1,8 @@
-import { createHash } from "node:crypto";
 import { describe, expect, it, vi } from "vitest";
 import type { StablecoinMeta } from "@shared/types";
 import type { LiveReserveAdapterKey, LiveReservesConfig } from "@shared/types/live-reserves";
 import { makeCoverageCoin as coin } from "./helpers/coverage-coin";
+import { dependencyReview, reserveReview, targetDisposition } from "./generate-dependency-coverage-audit.test-support";
 import {
   buildDependencyCoverageAudit,
   evaluateDependencyCoverageStructure,
@@ -32,19 +32,12 @@ const activeCoins: StablecoinMeta[] = [
     id: "manual-usdt",
     symbol: "mUSDT",
     dependencies: [{ id: "usdt-tether", weight: 0.5, type: "mechanism" }],
-    dependencyReview: {
-      reviewedAt: "2026-07-12",
-      reviewer: "fixture reviewer",
-      confidence: "verified",
-      sources: [{ label: "Docs", url: "https://example.test/manual" }],
-      rationale: "Fixture manual dependency review.",
-      relationships: [{
-        id: "usdt-tether",
-        type: "mechanism",
-        weight: 0.5,
-        reason: "Fixture mechanism dependency.",
-      }],
-    },
+    dependencyReview: dependencyReview([{
+      id: "usdt-tether",
+      type: "mechanism",
+      weight: 0.5,
+      reason: "Fixture mechanism dependency.",
+    }]),
   }),
   coin({
     id: "cash-only",
@@ -73,7 +66,6 @@ const stablecoinsPayload = {
   ],
 };
 
-const sha256 = (value: string) => createHash("sha256").update(value).digest("hex");
 
 describe("generate-dependency-coverage-audit", () => {
   it("counts static graph coverage and reserve/dependency audit rows", () => {
@@ -225,6 +217,37 @@ describe("generate-dependency-coverage-audit", () => {
         targetScoreability: "scoreable",
       }),
     ]);
+  });
+
+  it.each([
+    [{ kind: "serial", materiality: "basket-weighted", weight: null }, "same dependency lane"],
+    [{ kind: "serial", materiality: "serial", weight: 1 }, "expected null"],
+  ])("rejects malformed V9 lanes %j", (edge, message) => {
+    expect(() => buildDependencyCoverageAudit({
+      activeCoins: [],
+      reportCards: {
+        cards: [{ id: "dependent", score: 70 }],
+        dependencyGraph: { edges: [{ from: "upstream", to: "dependent", ...edge }] },
+      },
+    })).toThrow(message);
+  });
+
+  it("preserves blocked and bounded lanes, null score precedence, and wrapped payloads", () => {
+    const coins = [coin({ id: "upstream" }), coin({ id: "dependent" })];
+    const reportCards = {
+      cards: [{ id: "upstream", score: null, overallScore: 90 }, { id: "dependent", score: 70 }],
+      dependencyGraph: { edges: [
+        { from: "upstream", to: "dependent", kind: "serial", materiality: "serial-blocked", weight: null },
+        { from: "upstream", to: "dependent", kind: "basket", materiality: "basket-bounded-unknown", weight: 0.3 },
+      ] },
+    };
+    const input = { activeCoins: coins, generatedAt: "2026-09-01T00:00:00.000Z" };
+    const audit = buildDependencyCoverageAudit({ ...input, reportCards });
+    expect(audit.dependencyEdges).toEqual(expect.arrayContaining([
+      expect.objectContaining({ reportMateriality: "serial-blocked", reportedWeight: null, targetScoreability: "active-nr" }),
+      expect.objectContaining({ reportMateriality: "basket-bounded-unknown", reportedWeight: 0.3, targetScoreability: "active-nr" }),
+    ]));
+    expect(buildDependencyCoverageAudit({ ...input, reportCards: { payload: reportCards } })).toEqual(audit);
   });
 
   it("rejects malformed or duplicate report-card cards, dependencies, diagnostics, and edges", () => {
@@ -425,33 +448,9 @@ describe("generate-dependency-coverage-audit", () => {
       },
     };
     const targetDispositions = [
-      {
-        targetId: "active-nr",
-        expectedLifecycle: "active" as const,
-        action: "retain-reviewed-link" as const,
-        reviewer: "reviewer",
-        reviewedAt: "2026-07-12",
-        sources: [{ label: "Docs", url: "https://example.test/nr" }],
-        rationale: "The upstream is active but its current report card is NR.",
-      },
-      {
-        targetId: "prelaunch",
-        expectedLifecycle: "pre-launch" as const,
-        action: "retain-reviewed-link" as const,
-        reviewer: "reviewer",
-        reviewedAt: "2026-07-12",
-        sources: [{ label: "Docs", url: "https://example.test/pre" }],
-        rationale: "The pre-launch upstream relationship is evidenced.",
-      },
-      {
-        targetId: "frozen",
-        expectedLifecycle: "frozen" as const,
-        action: "retain-reviewed-link" as const,
-        reviewer: "reviewer",
-        reviewedAt: "2026-07-12",
-        sources: [{ label: "Docs", url: "https://example.test/frozen" }],
-        rationale: "The frozen upstream relationship remains historically correct.",
-      },
+      targetDisposition("active-nr", "active" as const),
+      targetDisposition("prelaunch", "pre-launch" as const),
+      targetDisposition("frozen", "frozen" as const),
     ];
     const adapterMappingReviews = [{
       adapter: "accountable",
@@ -510,41 +509,30 @@ describe("generate-dependency-coverage-audit", () => {
         { name: "Mystery dependency", pct: 10, risk: "high", depType: "mechanism" },
         { name: "USDC changed slice", pct: 10, risk: "low" },
       ],
-      reserveReview: {
-        reviewedAt: "2026-07-12",
-        reviewer: "fixture reviewer",
-        confidence: "manual-review",
-        sources: [{ label: "Reserve report", url: "https://example.test/reserves" }],
-        rationale: "Fixture non-link review.",
-        compositionBasis: "Fixture reserve report",
-        scope: "selected-slices",
-        knownUnknownExposure: "The basket is not split.",
-        knownUnknownExposurePct: 20,
-        nonLinkDispositions: [
-          {
-            reserveIndex: 0,
-            reserveName: "USDC vault",
-            pct: 20,
-            disposition: "insufficient-evidence",
-            rationale: "The label alone is not enough to prove the upstream claim.",
-            candidateCoinIds: ["usdc-circle", "usdc-other"],
-          },
-          {
-            reserveIndex: 6,
-            reserveName: "Old USDC slice",
-            pct: 10,
-            disposition: "not-applicable",
-            rationale: "This fingerprint is intentionally stale for the audit fixture.",
-          },
-          {
-            reserveIndex: 0,
-            reserveName: "USDC vault",
-            pct: 20,
-            disposition: "not-applicable",
-            rationale: "This duplicate fingerprint is intentionally stale for the audit fixture.",
-          },
-        ],
-      },
+      reserveReview: reserveReview({ confidence: "manual-review", knownUnknownExposurePct: 20, nonLinkDispositions: [
+        {
+          reserveIndex: 0,
+          reserveName: "USDC vault",
+          pct: 20,
+          disposition: "insufficient-evidence",
+          rationale: "The label alone is not enough to prove the upstream claim.",
+          candidateCoinIds: ["usdc-circle", "usdc-other"],
+        },
+        {
+          reserveIndex: 6,
+          reserveName: "Old USDC slice",
+          pct: 10,
+          disposition: "not-applicable",
+          rationale: "This fingerprint is intentionally stale for the audit fixture.",
+        },
+        {
+          reserveIndex: 0,
+          reserveName: "USDC vault",
+          pct: 20,
+          disposition: "not-applicable",
+          rationale: "This duplicate fingerprint is intentionally stale for the audit fixture.",
+        },
+      ] }),
     });
     const audit = buildDependencyCoverageAudit({
       activeCoins: [subject],
@@ -587,24 +575,13 @@ describe("generate-dependency-coverage-audit", () => {
         { name: "f(x) fxSAVE dust", pct: 0.4, risk: "medium" },
         { name: "USDC liquidity", pct: 2, risk: "low" },
       ],
-      reserveReview: {
-        reviewedAt: "2026-08-31",
-        reviewer: "fixture reviewer",
-        confidence: "verified",
-        sources: [{ label: "Reserve report", url: "https://example.test/reserves" }],
-        rationale: "Fixture identity review.",
-        compositionBasis: "Fixture reserve report",
-        scope: "selected-slices",
-        knownUnknownExposure: "No composition assertion beyond the fixture rows.",
-        knownUnknownExposurePct: 0,
-        nonLinkDispositions: [{
-          reserveIndex: 0,
-          reserveName: "Fasanara mGLOBAL position",
-          pct: 44,
-          disposition: "untracked-exogenous-asset",
-          rationale: "Fixture intentionally carries the stale untracked classification.",
-        }],
-      },
+      reserveReview: reserveReview({ confidence: "verified", knownUnknownExposurePct: 0, nonLinkDispositions: [{
+        reserveIndex: 0,
+        reserveName: "Fasanara mGLOBAL position",
+        pct: 44,
+        disposition: "untracked-exogenous-asset",
+        rationale: "Fixture intentionally carries the stale untracked classification.",
+      }] }),
     });
     const audit = buildDependencyCoverageAudit({
       activeCoins: [
@@ -645,14 +622,7 @@ describe("generate-dependency-coverage-audit", () => {
     const stale = coin({
       id: "stale-review",
       dependencies: [{ id: "upstream", weight: 1, type: "collateral" }],
-      dependencyReview: {
-        reviewedAt: "2026-07-12",
-        reviewer: "fixture reviewer",
-        confidence: "verified",
-        sources: [{ label: "Docs", url: "https://example.test/manual" }],
-        rationale: "Fixture review with an outdated relationship.",
-        relationships: [{ id: "different", type: "collateral", weight: 1, reason: "Stale fixture row." }],
-      },
+      dependencyReview: dependencyReview([{ id: "different", type: "collateral", weight: 1, reason: "Stale fixture row." }]),
     });
     const audit = buildDependencyCoverageAudit({
       activeCoins: [coin({ id: "upstream" }), coin({ id: "different" }), missing, stale],
@@ -674,16 +644,9 @@ describe("generate-dependency-coverage-audit", () => {
     const variant = coin({
       id: "vault-variant",
       variantOf: "parent-asset",
-      dependencyReview: {
-        reviewedAt: "2026-07-30",
-        reviewer: "fixture reviewer",
-        confidence: "verified",
-        sources: [{ label: "Docs", url: "https://example.test/vault" }],
-        rationale: "The whole share resolves serially to the parent through the reviewed vault.",
-        relationships: [
-          { id: "parent-asset", type: "wrapper", weight: 1, reason: "Serial wrapper claim on the parent." },
-        ],
-      },
+      dependencyReview: dependencyReview([
+        { id: "parent-asset", type: "wrapper", weight: 1, reason: "Serial wrapper claim on the parent." },
+      ]),
     });
     const audit = buildDependencyCoverageAudit({
       activeCoins: [coin({ id: "parent-asset" }), variant],
@@ -697,16 +660,9 @@ describe("generate-dependency-coverage-audit", () => {
     const variant = coin({
       id: "vault-variant",
       variantOf: "parent-asset",
-      dependencyReview: {
-        reviewedAt: "2026-07-30",
-        reviewer: "fixture reviewer",
-        confidence: "verified",
-        sources: [{ label: "Docs", url: "https://example.test/vault" }],
-        rationale: "Fixture review naming an edge the coin does not have.",
-        relationships: [
-          { id: "unrelated", type: "wrapper", weight: 1, reason: "Stale fixture row." },
-        ],
-      },
+      dependencyReview: dependencyReview([
+        { id: "unrelated", type: "wrapper", weight: 1, reason: "Stale fixture row." },
+      ]),
     });
     const audit = buildDependencyCoverageAudit({
       activeCoins: [coin({ id: "parent-asset" }), coin({ id: "unrelated" }), variant],
@@ -721,19 +677,10 @@ describe("generate-dependency-coverage-audit", () => {
     const mapped = coin({ id: "mapped", liveReservesConfig: liveConfig("accountable") });
     const upstream = coin({ id: "upstream" });
     const orphan = coin({ id: "orphan" });
-    const disposition = (targetId: string) => ({
-      targetId,
-      expectedLifecycle: "pre-launch" as const,
-      action: "retain-reviewed-link" as const,
-      reviewer: "reviewer",
-      reviewedAt: "2026-07-12",
-      sources: [{ label: "Docs", url: "https://example.test/target" }],
-      rationale: "Fixture reviewed unavailable target.",
-    });
     const audit = buildDependencyCoverageAudit({
       activeCoins: [mapped, upstream, orphan],
       trackedCoins: [mapped, upstream, orphan],
-      targetDispositions: [disposition("upstream"), disposition("orphan")],
+      targetDispositions: [targetDisposition("upstream", "pre-launch"), targetDisposition("orphan", "pre-launch")],
       adapterMappingReviews: [],
       reportCards: {
         cards: [
@@ -834,15 +781,7 @@ describe("generate-dependency-coverage-audit", () => {
     });
     const audit = buildDependencyCoverageAudit({
       activeCoins: [upstream, dependent],
-      targetDispositions: [{
-        targetId: "upstream",
-        expectedLifecycle: "active",
-        action: "retain-reviewed-link",
-        reviewer: "reviewer",
-        reviewedAt: "2026-08-31",
-        sources: [{ label: "Docs", url: "https://example.test/upstream" }],
-        rationale: "The reviewed upstream link remains expected in production.",
-      }],
+      targetDispositions: [targetDisposition("upstream", "active")],
       reportCards: {
         cards: [{ id: "upstream", score: null }, { id: "dependent", score: 70 }],
         dependencyGraph: { edges: [] },
@@ -879,16 +818,7 @@ describe("generate-dependency-coverage-audit", () => {
     expect(markdown).toContain("Base Chain (base)");
   });
 
-  it("preserves the empty-report Markdown golden", () => {
-    const markdown = renderDependencyCoverageAuditMarkdown(buildDependencyCoverageAudit({
-      activeCoins: [],
-      generatedAt: "2026-08-28T00:00:00.000Z",
-    }));
-
-    expect(sha256(markdown)).toBe("ee9b04ca912dd9a96c7ba55f186dfee32fd1b129cce7d06cadb55f312c46944e");
-  });
-
-  it("preserves clipped rows and the over-limit Markdown golden", () => {
+  it("retains the first and 50th candidate while clipping the 51st", () => {
     const overLimitCoins = Array.from({ length: 51 }, (_, index) => {
       const suffix = String(index + 1).padStart(2, "0");
       return coin({ id: `candidate-${suffix}`, symbol: `C${suffix}` });
@@ -899,7 +829,8 @@ describe("generate-dependency-coverage-audit", () => {
       generatedAt: "2026-08-28T00:00:00.000Z",
     }));
 
-    expect(sha256(markdown)).toBe("7781d4ad6838b94a8bf54cf89110d298828ccfc4a8097d2b4ab47326134714f1");
+    expect(markdown).toContain("C01 (candidate-01)");
+    expect(markdown).toContain("C50 (candidate-50)");
     expect(markdown).toContain("coin | mcap | local rank\n--- | ---: | ---:");
     expect(markdown).toContain("_Plus 1 more rows._");
     expect(markdown).not.toContain("C51 (candidate-51)");

@@ -47,11 +47,6 @@ describe("check-doc-symbols", () => {
     expect(result.violations).toEqual([
       { doc: "docs/fixture.md", line: 2, token: "staleSymbol" },
     ]);
-    expect(result.violations.some(({ token }) => token === "presentSymbol")).toBe(false);
-    expect(result.violations.some(({ token }) => token === "ALL_CAPS")).toBe(false);
-    expect(result.violations.some(({ token }) => token === "src/hooks/staleSymbol")).toBe(false);
-    expect(result.violations.some(({ token }) => token === "abcDe")).toBe(false);
-    expect(result.violations.some(({ token }) => token === "missingInFence")).toBe(false);
   });
 
   it("finds exact symbols with the in-process search used when ripgrep is unavailable", () => {

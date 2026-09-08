@@ -1,12 +1,19 @@
-import { mkdtempSync, readFileSync } from "node:fs";
-import { tmpdir } from "node:os";
+import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { execFileSync, spawnSync } from "node:child_process";
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { validateRedemptionBackstopRegistry } from "../lib/redemption-backstop-validation";
 import { defineRecordEntries } from "@shared/lib/redemption-backstop-configs/factory";
 import type { RedemptionBackstopConfigManifestEntry } from "@shared/lib/redemption-backstop-configs";
 import type { RedemptionBackstopConfig } from "@shared/lib/redemption-backstop-configs/shared";
+import { createTempRepoTracker } from "./helpers/test-state";
+import { ACTIVE_META_BY_ID } from "@shared/lib/stablecoins/registry";
+
+const { makeRoot, cleanup } = createTempRepoTracker("redemption-backstops");
+afterEach(() => {
+  vi.restoreAllMocks();
+  cleanup();
+});
 
 const GATE_LOAD_TIMEOUT_MS = 15_000;
 
@@ -43,102 +50,53 @@ function validateFixture(
 }
 
 describe("check-redemption-backstops CLI", () => {
-  it("prints machine-readable JSON when --json is passed", () => {
-    const stdout = execFileSync("npx", ["tsx", "scripts/ci/check-redemption-backstops.ts", "--json"], {
+  it("serializes a valid production registry to stdout and a nested report file", () => {
+    const reportPath = join(makeRoot(), "nested", "reports", "report.json");
+    const stdout = execFileSync("node_modules/.bin/tsx", [
+      "scripts/ci/check-redemption-backstops.ts", "--json", "--report", reportPath,
+    ], {
       cwd: process.cwd(),
       encoding: "utf8",
       stdio: ["ignore", "pipe", "pipe"],
     });
 
+    expect(readFileSync(reportPath, "utf8")).toBe(stdout);
     const report = JSON.parse(stdout) as {
       summary: { configuredCount: number };
       findings: Array<{ severity: string }>;
-      auditRows: unknown[];
+      auditRows: Array<{ stablecoinId: string }>;
     };
-    expect(report.summary.configuredCount).toBe(327);
-    expect(report.auditRows).toHaveLength(327);
-    expect(report.findings.some((finding) => finding.severity === "error")).toBe(false);
+    expect(report.summary.configuredCount).toBeGreaterThan(0);
+    expect(report.auditRows).toHaveLength(report.summary.configuredCount);
+    expect(new Set(report.auditRows.map((row) => row.stablecoinId)).size).toBe(report.auditRows.length);
+    expect(report.findings.filter((finding) => finding.severity === "error")).toEqual([]);
   }, GATE_LOAD_TIMEOUT_MS);
 
-  it("writes deterministic JSON report data", () => {
-    const reportPath = join(mkdtempSync(join(tmpdir(), "redemption-backstops-")), "report.json");
+  it("orders fixture audit rows deterministically regardless of insertion order", () => {
+    const first = validateFixture({ "usdt-tether": baseConfig, "usdc-circle": baseConfig });
+    const second = validateFixture({ "usdc-circle": baseConfig, "usdt-tether": baseConfig });
 
-    execFileSync("npx", ["tsx", "scripts/ci/check-redemption-backstops.ts", "--report", reportPath], {
-      cwd: process.cwd(),
-      encoding: "utf8",
-      stdio: ["ignore", "pipe", "pipe"],
-    });
+    expect(first.auditRows.map((row) => row.stablecoinId)).toEqual(["usdc-circle", "usdt-tether"]);
+    expect(JSON.stringify(first)).toBe(JSON.stringify(second));
+  });
 
-    const report = JSON.parse(readFileSync(reportPath, "utf8"));
-    expect(report.summary.configuredCount).toBe(327);
-    expect(report.auditRows).toHaveLength(327);
-    expect(report.auditRows[0]).toMatchObject({
-      stablecoinId: expect.any(String),
-      routeFamily: expect.any(String),
-      capacityConfidence: expect.any(String),
-      resolvedCapacityBasis: expect.any(String),
-      capacityFallbackSource: expect.any(String),
-    });
-    expect(report.auditRows[0]).toHaveProperty("reviewedAt");
-    expect(
-      report.auditRows.find((row: { stablecoinId: string }) => row.stablecoinId === "ybold-yearn"),
-    ).toMatchObject({
-      filePath: "shared/lib/redemption-backstop-configs/stablecoin-redeem/configs.ts",
-    });
-    expect(
-      report.auditRows.find((row: { stablecoinId: string }) => row.stablecoinId === "fdusd-first-digital"),
-    ).toMatchObject({
-      feeModelKind: "undisclosed-reviewed",
-    });
-  }, GATE_LOAD_TIMEOUT_MS);
-
-  it("preserves warning findings in reports while exiting successfully", () => {
-    const reportPath = join(mkdtempSync(join(tmpdir(), "redemption-backstops-warnings-")), "report.json");
-
-    execFileSync("npx", ["tsx", "scripts/ci/check-redemption-backstops.ts", "--report", reportPath], {
-      cwd: process.cwd(),
-      encoding: "utf8",
-      stdio: ["ignore", "pipe", "pipe"],
-    });
-
-    const report = JSON.parse(readFileSync(reportPath, "utf8")) as {
-      findings: Array<{ severity: string; code: string; stablecoinId?: string }>;
-    };
-    expect(report.findings).toEqual(
-      expect.arrayContaining([
-        expect.objectContaining({
-          severity: "warning",
-          code: "unconfigured-active-coin",
-          stablecoinId: "mai-qidao",
-        }),
-      ]),
-    );
-    expect(report.findings.some((finding) => finding.severity === "error")).toBe(false);
-  }, GATE_LOAD_TIMEOUT_MS);
-
-  it("creates parent directories for nested JSON reports", () => {
-    const cwd = mkdtempSync(join(tmpdir(), "redemption-backstops-nested-"));
-    const reportPath = join(cwd, "nested", "reports", "report.json");
-
-    execFileSync("npx", ["tsx", "scripts/ci/check-redemption-backstops.ts", "--report", reportPath], {
-      cwd: process.cwd(),
-      encoding: "utf8",
-      stdio: ["ignore", "pipe", "pipe"],
-    });
-
-    const report = JSON.parse(readFileSync(reportPath, "utf8")) as {
-      summary: { configuredCount: number };
-    };
-    expect(report.summary.configuredCount).toBe(327);
-  }, GATE_LOAD_TIMEOUT_MS);
+  it("reports precisely the unconfigured fixture cohort without warning for configured coins", () => {
+    vi.spyOn(ACTIVE_META_BY_ID, "keys").mockImplementation(() => new Map([
+      ["usdt-tether", true], ["unconfigured-fixture", true],
+    ]).keys());
+    const result = validateFixture({ "usdt-tether": baseConfig });
+    expect(result.auditRows.map((row) => row.stablecoinId)).toEqual(["usdt-tether"]);
+    expect(result.findings.filter((finding) => finding.code === "unconfigured-active-coin")).toEqual([
+      expect.objectContaining({ severity: "warning", stablecoinId: "unconfigured-fixture" }),
+    ]);
+  });
 
   it("rejects unknown CLI arguments", () => {
-    const result = spawnSync("npx", ["tsx", "scripts/ci/check-redemption-backstops.ts", "--bad-arg"], {
+    const result = spawnSync("node_modules/.bin/tsx", ["scripts/ci/check-redemption-backstops.ts", "--bad-arg"], {
       cwd: process.cwd(),
       encoding: "utf8",
       stdio: ["ignore", "pipe", "pipe"],
     });
-
     expect(result.status).toBe(1);
     expect(result.stderr).toContain("Unknown argument: --bad-arg");
   }, GATE_LOAD_TIMEOUT_MS);

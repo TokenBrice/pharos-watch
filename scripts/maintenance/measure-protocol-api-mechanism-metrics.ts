@@ -113,6 +113,8 @@ function parseOptions(argv: string[]): CliOptions | null {
 function sanitizeDiagnosticUrl(input: string): string {
   try {
     const url = new URL(input);
+    url.username = "";
+    url.password = "";
     url.search = "";
     url.hash = "";
     return url.toString();

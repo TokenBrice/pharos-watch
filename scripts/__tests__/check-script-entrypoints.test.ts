@@ -1,14 +1,17 @@
-import { mkdirSync, mkdtempSync, writeFileSync } from "node:fs";
-import { tmpdir } from "node:os";
+import { mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it } from "vitest";
 import {
   collectScriptEntrypointErrors,
   collectScriptEntrypoints,
 } from "../ci/check-script-entrypoints.ts";
+import { createTempRepoTracker } from "./helpers/test-state";
+
+const { makeRoot, cleanup } = createTempRepoTracker("pharos-script-entrypoints");
+afterEach(cleanup);
 
 function fixtureRoot(): string {
-  const root = mkdtempSync(join(tmpdir(), "pharos-script-entrypoints-"));
+  const root = makeRoot();
   for (const directory of [
     "scripts/ci",
     "scripts/maintenance",
@@ -53,6 +56,22 @@ describe("script entrypoint validation", () => {
       "steps:\n  - run: " + "node " + ".github/scripts/deploy-helper.mjs\n",
     );
 
+    expect(collectScriptEntrypointErrors({ root }).errors).toEqual([]);
+  });
+
+  it.each(["none", "docs", "self", "test"])("rejects an orphan with only a %s reference", (reference) => {
+    const root = fixtureRoot();
+    const helper = ".github/scripts/orphan.mjs";
+    const command = `node ${helper}\n`;
+    writeFileSync(join(root, helper), "#!/usr/bin/env node\n" + (reference === "self" ? `// ${command}` : ""));
+    if (reference === "docs") writeFileSync(join(root, "docs/usage.md"), command);
+    if (reference === "test") writeFileSync(join(root, ".github/scripts/orphan.test.mjs"), `// ${command}`);
+
+    const errors = collectScriptEntrypointErrors({ root }).errors;
+    expect(errors).toHaveLength(1);
+    expect(errors[0]).toContain(helper);
+
+    writeFileSync(join(root, "package.json"), JSON.stringify({ scripts: { orphan: command.trim() } }));
     expect(collectScriptEntrypointErrors({ root }).errors).toEqual([]);
   });
 });

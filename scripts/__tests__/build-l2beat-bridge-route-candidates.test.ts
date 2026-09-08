@@ -1,4 +1,4 @@
-import { mkdtempSync } from "node:fs";
+import { mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it, vi } from "vitest";
@@ -65,19 +65,25 @@ describe("build-l2beat-bridge-route-candidates", () => {
     expect(markdown).toContain("never mutates stablecoin metadata");
   });
 
-  it("writes advisory output under the requested report path", async () => {
+  it("writes advisory output under the requested report path", async ({ onTestFinished }) => {
     const cwd = mkdtempSync(join(tmpdir(), "pharos-l2beat-bridge-candidates-"));
+    onTestFinished(() => rmSync(cwd, { recursive: true, force: true }));
     const stdout = { write: vi.fn(() => true) };
 
     await expect(runCli([
       "--coin",
       "usdc-circle",
       "--report",
-      "agents/l2beat-bridge.md",
+      "agents/l2beat-bridge.json",
+      "--json",
       "--generated-at",
       "2026-06-12T00:00:00.000Z",
     ], cwd, stdout)).resolves.toBe(0);
-    expect(stdout.write).toHaveBeenCalledWith(expect.stringContaining("wrote"));
+    const report = JSON.parse(readFileSync(join(cwd, "agents/l2beat-bridge.json"), "utf8"));
+    expect(report.generatedAt).toBe("2026-06-12T00:00:00.000Z");
+    expect(report.summary.stablecoinCount).toBe(1);
+    expect(report.reviewRows.map((row: { coinId: string }) => row.coinId)).toEqual(["usdc-circle"]);
+    expect(report.summary.reviewRowCount).toBe(1);
   });
 
   it("refuses report writes into stablecoin source data", async () => {

@@ -16,10 +16,6 @@ const ENTRY_FILES = collectChangelogEntryFiles(
 
 describe("changelog registry generator", () => {
   it("includes every dated entry in the current ascending order with byte parity", () => {
-    expect(ENTRY_FILES).toHaveLength(27);
-    expect(ENTRY_FILES[0]).toBe("2026-03-08.ts");
-    expect(ENTRY_FILES[ENTRY_FILES.length - 1]).toBe("2026-09-06.ts");
-
     const dates = ENTRY_FILES.map((fileName) => fileName.slice(0, -3));
     const current = readFileSync(INDEX_PATH, "utf8");
     const imports = [...current.matchAll(/^import \{ entry as (e\d{8}) \} from "\.\/(\d{4}-\d{2}-\d{2})";$/gm)];
@@ -45,20 +41,12 @@ describe("changelog registry generator", () => {
     ]);
   });
 
-  it("registers the generated barrel as an auto-staged deterministic artifact", () => {
-    expect(GENERATED_ARTIFACT_REGISTRY).toContainEqual(
-      expect.objectContaining({
-        id: "changelog-registry",
-        autoStage: true,
-        buildLifecycle: "maintenance-only",
-        checkCommand: "node --import tsx scripts/maintenance/generate-changelog-registry.ts --check",
-        command: "node --import tsx scripts/maintenance/generate-changelog-registry.ts",
-        outputPaths: ["src/data/changelogs/index.ts"],
-        reproducibility: "deterministic",
-        script: "scripts/maintenance/generate-changelog-registry.ts",
-        sourcePaths: ["scripts/maintenance/generate-changelog-registry.ts", "src/data/changelogs/*.ts"],
-      }),
-    );
-    expect(selectChangedGeneratedArtifactIds(["src/data/changelogs/2026-08-23.ts"])).toContain("changelog-registry");
+  it("selects dated additions and deletions but not unrelated paths", () => {
+    for (const path of ["src/data/changelogs/2027-01-03.ts", "src/data/changelogs/2026-03-08.ts"]) {
+      expect(selectChangedGeneratedArtifactIds([path])).toContain("changelog-registry");
+    }
+    expect(selectChangedGeneratedArtifactIds(["public/logos/coin.png"])).not.toContain("changelog-registry");
+    expect(GENERATED_ARTIFACT_REGISTRY.find((artifact) => artifact.id === "changelog-registry"))
+      .toMatchObject({ autoStage: true, reproducibility: "deterministic" });
   });
 });

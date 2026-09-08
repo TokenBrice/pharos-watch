@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { JSDOM } from "jsdom";
 import {
   BAND_GUIDE_DASHARRAY,
   CHART_KEY_PANEL,
@@ -33,10 +34,20 @@ describe("Safety Map PSI footer", () => {
     "themes %s with the canonical band colour while keeping small text neutral",
     (band, color) => {
       const svg = renderPsiStatus({ score: 92.6, band, basis: "24H AVG", computedAt: 1_777_000_000 }, 48, 886);
-      expect(svg).toContain(`data-psi-band="${band}"`);
-      expect(svg).toContain(`data-psi-color="${color}"`);
-      expect(svg).toContain(`data-psi-band-marker="true" cx="52" cy="882.5" r="3.5" fill="${color}"`);
-      expect(svg).toContain(`font-size="10.5" font-weight="750" fill="#f5f7fb" letter-spacing="0.25">PSI 92.6 · ${band} · 24H AVG</text>`);
+      const { window } = new JSDOM(`<svg xmlns="http://www.w3.org/2000/svg">${svg}</svg>`, {
+        contentType: "image/svg+xml",
+      });
+      try {
+        const { document } = window;
+        expect(document.querySelector("[data-psi-band]")?.getAttribute("data-psi-band")).toBe(band);
+        expect(document.querySelector("[data-psi-color]")?.getAttribute("data-psi-color")).toBe(color);
+        expect(document.querySelector('[data-psi-band-marker="true"]')?.getAttribute("fill")).toBe(color);
+        const text = document.querySelector("text");
+        expect(text?.getAttribute("fill")).toBe("#f5f7fb");
+        expect(text?.textContent).toBe(`PSI 92.6 · ${band} · 24H AVG`);
+      } finally {
+        window.close();
+      }
     },
   );
 

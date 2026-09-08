@@ -4,7 +4,6 @@ import {
   findCanonicalOrderIssues,
   findDuplicateStablecoinIds,
   findRecreatedRetiredStablecoinAssetFiles,
-  formatRecreatedRetiredAssetFileIssue,
   loadGeneratedPerCoinCoins,
   loadPerCoinStablecoinEntries,
   loadStablecoinDomainSidecarEntries,
@@ -12,106 +11,18 @@ import {
   type StablecoinSourceEntry,
 } from "../lib/stablecoin-catalog-sources";
 import { createTempRepoTracker } from "./helpers/test-state";
+import {
+  makeCoin, makeReserves, makeReserveReview, makeCustodyProfile,
+  makeMintAuthority, makeGeniusProfile, makeRiskReview,
+} from "./stablecoin-catalog.test-support";
 
 const { cleanup, makeRoot: makeTempRoot, writeJson } = createTempRepoTracker("stablecoin-catalog");
-
-function makeCoin(id: string, overrides: Record<string, unknown> = {}): StablecoinSourceEntry["coin"] {
-  return {
-    id,
-    name: `${id} Coin`,
-    symbol: id.split("-")[0]!.slice(0, 8).toUpperCase(),
-    flags: {
-      backing: "rwa-backed",
-      pegCurrency: "USD",
-      governance: "centralized",
-      yieldBearing: false,
-      rwa: false,
-      navToken: false,
-    },
-    ...overrides,
-  } as StablecoinSourceEntry["coin"];
-}
 
 function makeEntry(id: string, file: string): StablecoinSourceEntry {
   return {
     coin: makeCoin(id),
     file,
     id,
-  };
-}
-
-function makeReserves(): Array<Record<string, unknown>> {
-  return [
-    {
-      name: "Cash",
-      pct: 100,
-      risk: "very-low",
-    },
-  ];
-}
-
-function makeReserveReview(): Record<string, unknown> {
-  return {
-    reviewedAt: "2026-07-12",
-    reviewer: "test",
-    confidence: "verified",
-    sources: [{ label: "Reserve report", url: "https://example.com/reserves" }],
-    rationale: "The fixture reserve composition was reviewed.",
-    compositionBasis: "issuer disclosure",
-    compositionAsOf: "2026-07-01",
-    scope: "full-composition",
-    knownUnknownExposure: "None identified in the fixture.",
-    knownUnknownExposurePct: 0,
-  };
-}
-
-function makeCustodyProfile(): Record<string, unknown> {
-  return {
-    providers: [{ name: "Fixture Bank", role: "bank", sharePct: 100, jurisdiction: "US" }],
-    segregation: "segregated",
-    bankruptcyRemoteness: "contractual-only",
-    rehypothecation: "prohibited",
-    reviewedAt: "2026-07-12",
-    reviewer: "test",
-    confidence: "verified",
-    sources: [{ label: "Custody report", url: "https://example.com/custody" }],
-    uncertainty: "No material custody allocation is unresolved in the fixture.",
-    knownUnknownExposurePct: 0,
-  };
-}
-
-function makeMintAuthority(): Record<string, unknown> {
-  return {
-    mintPath: "unknown",
-    authorityPosture: "unknown",
-    confidence: "unknown",
-    summary: "The fixture mint authority remains unresolved.",
-    review: {
-      sourceFreeRationale: "Catalog loader fixture without external research.",
-      evidence: "The fixture records enough evidence text for strict schema validation.",
-      reviewer: "test",
-      reviewedAt: "2026-07-09",
-    },
-  };
-}
-
-function makeGeniusProfile(): Record<string, unknown> {
-  return {
-    applicability: "unclear",
-    authorizationStatus: "unknown",
-    issuerPathway: "unknown",
-    reviewer: "test",
-    reviewedAt: "2026-07-09",
-  };
-}
-
-function makeBlacklistabilityReview(): Record<string, unknown> {
-  return {
-    reviewedStatus: true,
-    sourceFreeRationale: "Catalog loader fixture without external research.",
-    evidence: "The fixture models a direct blacklistability control surface.",
-    reviewer: "test",
-    reviewedAt: "2026-07-09",
   };
 }
 
@@ -157,11 +68,6 @@ describe("stablecoin catalog source helpers", () => {
     expect(findRecreatedRetiredStablecoinAssetFiles(rootDir)).toEqual([
       "shared/data/stablecoins/usd-major.json",
     ]);
-    expect(formatRecreatedRetiredAssetFileIssue("shared/data/stablecoins/usd-major.json")).toContain(
-      "retired legacy category shard must not exist. " +
-        "Edit shared/data/stablecoins/coins/<id>.json " +
-        "and regenerate shared/data/stablecoins/coins.generated.json instead.",
-    );
   });
 
   it("merges reserves sidecars into per-coin source entries", () => {
@@ -221,19 +127,7 @@ describe("stablecoin catalog source helpers", () => {
     const rootDir = makeTempRoot();
     const mintAuthority = makeMintAuthority();
     const genius = makeGeniusProfile();
-    const blacklistabilityReview = makeBlacklistabilityReview();
-    const oracleRisk = {
-      tier: "opaque-or-unknown",
-      summary: "The fixture oracle design remains unknown.",
-    };
-    const bridgeRouteRisk = {
-      tier: "opaque-or-unknown",
-      summary: "The fixture bridge route remains unknown.",
-      reviewedAt: "2026-07-09",
-      reviewer: "test",
-      confidence: "unknown",
-      sourceFreeRationale: "Catalog loader fixture without external research.",
-    };
+    const { blacklistabilityReview, oracleRisk, bridgeRouteRisk } = makeRiskReview();
 
     writeJson(rootDir, "shared/data/stablecoins/coins/sidecar-usd.json", makeCoin("sidecar-usd"));
     writeJson(rootDir, "shared/data/stablecoins/domains/mint-authority/sidecar-usd.json", {

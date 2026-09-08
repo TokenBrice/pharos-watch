@@ -1,6 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { mkdtempSync, readFileSync, rmSync } from "node:fs";
-import { tmpdir } from "node:os";
+import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import type { DepegEvent, DepegEventEntry } from "@shared/types/market";
 import {
@@ -10,12 +9,13 @@ import {
   preserveStaticDepegArchiveEntries,
   runDepegSync,
 } from "../maintenance/sync-depeg-events";
+import { createTempRepoTracker } from "./helpers/test-state";
 
-const tempRoots: string[] = [];
+const { cleanup, makeRoot } = createTempRepoTracker("depeg-event-shards-test");
 
 afterEach(() => {
   vi.unstubAllGlobals();
-  for (const root of tempRoots.splice(0)) rmSync(root, { recursive: true, force: true });
+  cleanup();
 });
 
 function event(overrides: Partial<DepegEvent> = {}): DepegEvent {
@@ -103,8 +103,7 @@ describe("sync-depeg-events", () => {
   });
 
   it("writes full UTC-year shards and changes only the affected shard for a new event", async () => {
-    const root = mkdtempSync(join(tmpdir(), "depeg-event-shards-test-"));
-    tempRoots.push(root);
+    const root = makeRoot();
     const indexPath = join(root, "data/depeg-events/index.json");
     const older = event({ id: 1, peakDeviationBps: 300, startedAt: Date.UTC(2025, 4, 15) / 1000 });
     const current = event({ id: 2, peakDeviationBps: 800, startedAt: Date.UTC(2026, 4, 15) / 1000 });

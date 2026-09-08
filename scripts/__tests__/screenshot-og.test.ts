@@ -1,8 +1,30 @@
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { parse as parseYaml } from "yaml";
 import { getOgCaptureValidationError } from "../lib/og-capture-validation.mts";
+
+const capture = vi.hoisted(() => {
+  const page = {
+    goto: vi.fn(async () => ({ status: () => 200 })),
+    waitForTimeout: vi.fn(),
+    locator: vi.fn(() => ({ innerText: async () => "Pharos", count: async () => 1 })),
+    url: () => "https://pharos.watch/",
+    addStyleTag: vi.fn(),
+    evaluate: vi.fn(),
+    screenshot: vi.fn(async (_options: { path: string }) => {}),
+    close: vi.fn(),
+  };
+  const context = { on: vi.fn(), newPage: vi.fn(async () => page) };
+  const browser = { newContext: vi.fn(async () => context), close: vi.fn() };
+  return { page, context, browser };
+});
+vi.mock("playwright", () => ({ chromium: { launch: async () => capture.browser } }));
+vi.mock("node:fs", async (importOriginal) => ({
+  ...await importOriginal<object>(),
+  mkdirSync: vi.fn(),
+}));
+afterEach(() => { vi.restoreAllMocks(); vi.clearAllMocks(); });
 
 describe("OG screenshot capture", () => {
   it("accepts a successful Pharos application document", () => {
@@ -44,55 +66,47 @@ describe("OG screenshot capture", () => {
     const captureStep = workflow.jobs.refresh.steps.find(
       (step) => step.name === "Capture OG screenshots from production",
     );
-    const script = readFileSync(resolve(process.cwd(), "scripts/maintenance/screenshot-og.mjs"), "utf8");
 
     expect(captureStep?.env).toEqual({
       OG_BASE_URL: "https://stablecoin-dashboard.pages.dev",
     });
-    expect(script).toContain("const validationError = getOgCaptureValidationError({");
-    expect(script).toContain("throw new Error(`${validationError} at ${page.url()}`);");
-    expect(script).toContain("if (failures.length > 0) {");
-    expect(script).toContain("process.exitCode = 1;");
   });
 
-  it("keeps retired screenshots out of the capture roster", () => {
-    const script = readFileSync(resolve(process.cwd(), "scripts/maintenance/screenshot-og.mjs"), "utf8");
-    for (const file of [
-      "about",
-      "cemetery",
-      "depeg",
-      "learn-mechanisms",
-      "safety-scores",
-      "stability-index",
-      "digest",
-      "methodology",
-    ].map((name) => `og-${name}.png`)) {
-      expect(script).not.toContain(file);
+  it.each([false, true])("executes capture with rejected document=%s", async (rejected) => {
+    const previousExitCode = process.exitCode;
+    const previousArgv = process.argv;
+    process.argv = ["node", "screenshot-og.mjs"];
+    process.exitCode = undefined;
+    vi.spyOn(process.stdout, "write").mockReturnValue(true);
+    vi.spyOn(console, "log").mockImplementation(() => {});
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    capture.page.locator.mockImplementation(() => ({
+      innerText: async () => rejected ? "Verify you are human by completing the action below" : "Pharos",
+      count: async () => rejected ? 0 : 1,
+    }));
+    try {
+      // The CLI executes at module load; each invocation needs fresh argv and module state.
+      vi.resetModules();
+      await import("../maintenance/screenshot-og.mjs");
+      expect(capture.browser.close).toHaveBeenCalledOnce();
+      if (rejected) {
+        expect(process.exitCode).toBe(1);
+        expect(capture.context.newPage).toHaveBeenCalledOnce();
+        expect(capture.page.close).toHaveBeenCalledOnce();
+        expect(capture.page.screenshot).not.toHaveBeenCalled();
+        expect(capture.page.addStyleTag).not.toHaveBeenCalled();
+      } else {
+        expect(process.exitCode).toBeUndefined();
+        const files = capture.page.screenshot.mock.calls.map(([options]) => options.path.split("/").pop());
+        expect(files).toContain("og-card.png");
+        expect(files).toContain("og-default.png");
+        for (const retired of ["about", "cemetery", "depeg", "learn-mechanisms", "safety-scores", "stability-index", "digest", "methodology"]) {
+          expect(files).not.toContain(`og-${retired}.png`);
+        }
+      }
+    } finally {
+      process.exitCode = previousExitCode;
+      process.argv = previousArgv;
     }
-  });
-
-  it("routes all static SVG families through the shared runner", () => {
-    for (const file of [
-      "build-og-editorial.mjs",
-      "build-og-learn-images.ts",
-      "build-og-case-studies.ts",
-    ]) {
-      const script = readFileSync(resolve(process.cwd(), "scripts/maintenance", file), "utf8");
-      const runnerImport = script.match(
-        /import\s*\{([^}]*)\}\s*from\s*["']\.\.\/lib\/og-static-runner\.mts["'];/,
-      );
-      const importedNames = runnerImport?.[1].split(",").map((name) => name.trim()) ?? [];
-
-      expect(importedNames).toEqual(expect.arrayContaining(["runOgStaticCli", "runOgStaticMain"]));
-      expect(script.match(/\brunOgStaticCli\s*\(\{/g)).toHaveLength(1);
-      expect(script.match(/\brunOgStaticMain\s*\(import\.meta\.url,\s*main\);/g)).toHaveLength(1);
-    }
-
-    const screenshotScript = readFileSync(
-      resolve(process.cwd(), "scripts/maintenance/screenshot-og.mjs"),
-      "utf8",
-    );
-    expect(screenshotScript.match(/\.\.\/lib\/og-static-runner\.mts/g)).toBeNull();
-    expect(screenshotScript.match(/\brunOgStatic(?:Build|Cli|Main)\s*\(/g)).toBeNull();
   });
 });

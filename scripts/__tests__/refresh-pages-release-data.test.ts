@@ -114,4 +114,71 @@ describe("Pages release data refresh", () => {
     expect(JSON.parse(readFileSync(join(paths.repoRoot, "data/digests.json"), "utf8"))).toHaveLength(3);
     expect(JSON.parse(readFileSync(join(paths.repoRoot, "data/depeg-events/index.json"), "utf8"))).toEqual([{ id: "new" }]);
   });
+  it.each(["digests", "depegEvents"] as const)("isolates a rejected %s promise and persists the result", async (failed) => {
+    vi.spyOn(process.stdout, "write").mockImplementation(() => true);
+    const paths = fixture();
+    const digestPath = join(paths.repoRoot, "data/digests.json");
+    const depegPath = join(paths.repoRoot, "data/depeg-events/index.json");
+    const failedPath = failed === "digests" ? digestPath : depegPath;
+    const original = readFileSync(failedPath);
+    const datasetPath = join(paths.repoRoot, "public/datasets/latest.json");
+    const resultPath = join(paths.repoRoot, "custom-result.json");
+    const result = await refreshPagesReleaseData({
+      dependencies: {
+        digests: async ({ outputPath }) => {
+          writeFileSync(outputPath!, JSON.stringify([{ id: 3 }, { id: 4 }]));
+          if (failed === "digests") throw new Error("producer sentinel");
+          return ok();
+        },
+        depegEvents: async ({ outputPath }) => {
+          writeFileSync(outputPath!, JSON.stringify([{ id: "new" }]));
+          if (failed === "depegEvents") throw new Error("producer sentinel");
+          return ok();
+        },
+        publicDatasets: () => {
+          writeFileSync(datasetPath, "refreshed\n");
+          return ok();
+        },
+      },
+      env: { NODE_ENV: "test" },
+      refreshDir: paths.refreshDir,
+      repoRoot: paths.repoRoot,
+      resultPath,
+    });
+    expect(result[failed].ok).toBe(false);
+    expect(result[failed === "digests" ? "depegEvents" : "digests"].ok).toBe(true);
+    expect(readFileSync(failedPath)).toEqual(original);
+    expect(JSON.parse(readFileSync(failed === "digests" ? depegPath : digestPath, "utf8")))
+      .toEqual(failed === "digests" ? [{ id: "new" }] : [{ id: 3 }, { id: 4 }]);
+    expect(result.publicDatasets).toEqual({ ok: true, rolledBack: false });
+    expect(readFileSync(datasetPath, "utf8")).toBe("refreshed\n");
+    expect(result.resultPath).toBe(resultPath);
+    expect(JSON.parse(readFileSync(resultPath, "utf8"))).toEqual(result);
+    expect(readFileSync(join(paths.refreshDir, failed === "digests" ? "digest.log" : "depeg.log"), "utf8"))
+      .toContain("producer sentinel");
+  });
+
+  it("reports a failed rollback without claiming the partial dataset was restored", async () => {
+    vi.spyOn(process.stdout, "write").mockImplementation(() => true);
+    const paths = fixture();
+    const datasetPath = join(paths.repoRoot, "public/datasets/latest.json");
+    const result = await refreshPagesReleaseData({
+      dependencies: {
+        digests: () => ok(),
+        depegEvents: () => ok(),
+        publicDatasets: () => {
+          writeFileSync(datasetPath, "partial\n");
+          return Promise.resolve({ status: 1, aborted: false });
+        },
+        rollbackPublicDatasets: () => Promise.resolve({ status: 2, aborted: false, output: "rollback sentinel\n" }),
+      },
+      env: { NODE_ENV: "test" },
+      refreshDir: paths.refreshDir,
+      repoRoot: paths.repoRoot,
+    });
+    expect(result.publicDatasets).toEqual({ ok: false, rolledBack: false });
+    expect(readFileSync(datasetPath, "utf8")).toBe("partial\n");
+    expect(JSON.parse(readFileSync(result.resultPath, "utf8"))).toEqual(result);
+    expect(readFileSync(join(paths.refreshDir, "datasets.log"), "utf8")).toContain("rollback sentinel");
+  });
 });

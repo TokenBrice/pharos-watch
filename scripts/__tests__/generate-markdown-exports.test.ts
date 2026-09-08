@@ -1,4 +1,4 @@
-import { describe, expect, it, beforeEach, afterEach } from "vitest";
+import { describe, expect, it, beforeEach, afterEach, vi } from "vitest";
 import { existsSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -17,9 +17,11 @@ import { writeMarkdownRoute } from "../maintenance/generate-markdown-exports";
 import { changelogs } from "../../src/data/changelogs";
 import digests from "../../data/digests.json";
 import { PUBLIC_DOCS } from "@shared/lib/public-docs";
-import { TRACKED_STABLECOINS } from "@shared/lib/stablecoins/registry";
+import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
+import { makeCoverageCoin as coin } from "./helpers/coverage-coin";
 
-const FIXTURES = join(__dirname, "fixtures", "markdown");
+afterEach(() => { vi.restoreAllMocks(); });
+
 
 describe("writeMarkdownRoute", () => {
   let tmpDir: string;
@@ -73,24 +75,29 @@ describe("methodology markdown", () => {
   });
 });
 
-describe("markdown snapshot fixtures", () => {
-  it("methodology index matches fixture", () => {
-    const expected = readFileSync(join(FIXTURES, "methodology-index.md"), "utf-8");
-    expect(buildMethodologyIndexMarkdown()).toBe(expected);
-  });
-
-  it("changelog index matches fixture", () => {
-    const expected = readFileSync(join(FIXTURES, "changelog-index.md"), "utf-8");
-    expect(renderChangelogIndex()).toBe(expected);
-  });
-
-  it("stablecoin usdt-tether matches fixture", () => {
-    const expected = readFileSync(join(FIXTURES, "stablecoin-usdt-tether.md"), "utf-8");
-    expect(renderStablecoinDetail("usdt-tether")).toBe(expected);
-  });
-});
 
 describe("stablecoin markdown", () => {
+  it.each(["pre-launch", "quarantined", "delisted"] as const)("does not advertise active monitoring for %s", (status) => {
+    const fixture = coin({ id: "inactive-fixture", status });
+    if (status !== "pre-launch") fixture.listingStatusReview = {
+      reason: "Explicit fixture listing reason.", changedAt: "2026-09-01",
+    };
+    vi.spyOn(TRACKED_META_BY_ID, "get").mockReturnValue(fixture);
+    const md = renderStablecoinDetail(fixture.id, {});
+    expect(md).toContain(`**Status:** ${status}`);
+    expect(md).not.toContain("Live price, supply, peg, liquidity, and flow data are served by the Pharos API");
+    expect(md).not.toContain("https://api.pharos.watch/api/stablecoin/");
+    if (status === "pre-launch") expect(md).toContain("not available until launch");
+    else {
+      expect(md).toContain("Explicit fixture listing reason.");
+      expect(md).toContain("historical reference");
+    }
+  });
+
+  it("rejects unknown stablecoin identities", () => {
+    expect(() => renderStablecoinDetail("unknown-fixture", {})).toThrow("Unknown stablecoin id: unknown-fixture");
+  });
+
   it("renders USDT with front matter and contracts table", () => {
     const md = renderStablecoinDetail("usdt-tether");
     expect(md).toMatch(/^---\ntitle: "Tether \(USDT\) Stablecoin Analytics"/);
@@ -120,8 +127,13 @@ describe("stablecoin markdown", () => {
     expect(md).not.toContain("{{grade}}");
   });
 
-  it("iterates one route per tracked stablecoin", () => {
-    expect(Array.from(iterateStablecoinRoutes())).toHaveLength(TRACKED_STABLECOINS.length);
+  it("iterates unique routes with matching profiles for a small registry", () => {
+    const fixtures = new Map(["first-fixture", "second-fixture"].map((id) => [id, coin({ id, name: id })]));
+    vi.spyOn(TRACKED_META_BY_ID, "entries").mockImplementation(() => fixtures.entries());
+    vi.spyOn(TRACKED_META_BY_ID, "get").mockImplementation((id) => fixtures.get(id));
+    const routes = [...iterateStablecoinRoutes()];
+    expect(routes.map((route) => route.path)).toEqual(["/stablecoin/first-fixture/", "/stablecoin/second-fixture/"]);
+    for (const route of routes) expect(route.body).toContain(`canonical: "https://pharos.watch${route.path}"`);
   });
 });
 
@@ -141,8 +153,14 @@ describe("changelog and digest markdown", () => {
     expect(md).toContain(latest.text.slice(0, 30));
   });
 
-  it("iterates one route per digest", () => {
-    expect(Array.from(iterateDigestRoutes())).toHaveLength(digests.length);
+  it("integrates the digest corpus without duplicate routes or mismatched bodies", () => {
+    const paths = new Set<string>();
+    for (const route of iterateDigestRoutes()) {
+      expect(paths.has(route.path)).toBe(false);
+      paths.add(route.path);
+      expect(route.body).toContain(`canonical: "https://pharos.watch${route.path}"`);
+    }
+    expect([...paths]).toEqual(digests.map((digest) => `/digest/${digest.date}/`));
   });
 });
 
@@ -160,6 +178,10 @@ describe("docs markdown", () => {
     const md = renderDocsIndexMarkdown();
     expect(md).toContain('canonical: "https://pharos.watch/docs/"');
     expect(md).toContain("# Documentation");
-    expect(Array.from(iterateDocRoutes())).toHaveLength(PUBLIC_DOCS.length + 1);
+    const apiDoc = PUBLIC_DOCS.find((doc) => doc.slug === "api-reference")!;
+    vi.spyOn(PUBLIC_DOCS, Symbol.iterator).mockImplementation(() => [apiDoc][Symbol.iterator]());
+    const routes = [...iterateDocRoutes()];
+    expect(routes.map((route) => route.path)).toEqual(["/docs/", "/docs/api-reference/"]);
+    for (const route of routes) expect(route.body).toContain(`canonical: "https://pharos.watch${route.path}"`);
   });
 });

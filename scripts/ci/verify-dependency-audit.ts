@@ -220,7 +220,7 @@ export function verifyDependencyAuditReport(
 
   for (const exception of matchedExceptions.values()) {
     const allowedPackages = new Set(exception.affectedPackages);
-    for (const name of reachable) {
+    for (const name of reachableVulnerabilities([exception.dependency], highVulnerabilities)) {
       if (!allowedPackages.has(name)) {
         throw new Error(`Accepted ${exception.advisoryId} reached unreviewed package ${name}.`);
       }

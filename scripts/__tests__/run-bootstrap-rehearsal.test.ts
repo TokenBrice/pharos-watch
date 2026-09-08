@@ -88,7 +88,7 @@ describe("bootstrap rehearsal generated imports", () => {
     })).toBe("/repo/src/generated/metadata.json");
   });
 
-  it("returns null when a generated target does not exist or escapes src/generated", () => {
+  it("returns null when a generated target does not exist", () => {
     const options = {
       existsImpl: () => false,
       importingFile: resolve("/repo/src/app/page.tsx"),
@@ -96,6 +96,15 @@ describe("bootstrap rehearsal generated imports", () => {
     };
 
     expect(resolveGeneratedSpecifier("@/generated/missing", options)).toBeNull();
-    expect(resolveGeneratedSpecifier("../lib/not-generated", options)).toBeNull();
+  });
+
+  it("rejects existing targets outside src/generated, including alias traversal", () => {
+    const options = {
+      existsImpl: () => true,
+      importingFile: resolve("/repo/src/app/page.tsx"),
+      repoRoot: "/repo",
+    };
+    expect(resolveGeneratedSpecifier("../lib/existing", options)).toBeNull();
+    expect(resolveGeneratedSpecifier("@/generated/../lib/existing", options)).toBeNull();
   });
 });

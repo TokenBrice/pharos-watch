@@ -552,11 +552,18 @@ export function getAnalyticsPayloadUrls(url) {
 }
 
 export function isExpectedGaCollectUrl(url, expectedGaId) {
-  if (!expectedGaId || !/\/g\/collect\b/.test(url)) return false;
-  if (!/google-analytics\.com|analytics\.google\.com/.test(url)) return false;
-
-  const collectUrl = new URL(url);
-  return collectUrl.searchParams.get("tid") === expectedGaId;
+  if (!expectedGaId) return false;
+  let collectUrl;
+  try {
+    collectUrl = new URL(url);
+  } catch {
+    return false;
+  }
+  const host = collectUrl.hostname;
+  return collectUrl.protocol === "https:"
+    && (host === "google-analytics.com" || host.endsWith(".google-analytics.com") || host === "analytics.google.com")
+    && collectUrl.pathname === "/g/collect"
+    && collectUrl.searchParams.get("tid") === expectedGaId;
 }
 
 export function isExpectedGaPageViewCollectUrl(url, expectedGaId) {

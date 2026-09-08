@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, beforeAll, describe, expect, it } from "vitest";
 
 import {
   buildQueryPlanChecks,
@@ -10,7 +10,6 @@ import {
   findProductionDispatchBreaches,
   findRecapLoadBreaches,
   findTtlMarginBreaches,
-  loadProductionPendingClaimSql,
   runStatusPathBudgetChecks,
   simulateLoadScenarios,
   simulateProductionCalibratedDispatch,
@@ -20,8 +19,17 @@ import {
   type QueryPlanCheckDefinition,
   type TelegramLoadCheckReport,
 } from "../ci/check-telegram-load";
+import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
+
+const databases = createLatestSchemaFixtureTracker();
+afterEach(databases.closeAll);
 
 describe("Telegram load simulation", () => {
+  let report: TelegramLoadCheckReport;
+  beforeAll(() => {
+    report = buildTelegramLoadCheckReport({ targets: [5_000], skipQueryPlans: true });
+  });
+
   it("builds fixtures that cover the required subscriber states", () => {
     const fixture = buildSyntheticTelegramFixture(5_000);
     const summary = summarizeFixture(fixture);
@@ -69,7 +77,6 @@ describe("Telegram load simulation", () => {
   });
 
   it("meets the required 5000-watcher delivery SLO scenarios", () => {
-    const report = buildTelegramLoadCheckReport({ targets: [5_000], skipQueryPlans: true });
     const requiredScenarios = report.scenarios.filter((scenario) =>
       scenario.scenarioId === "single-depeg" ||
       scenario.scenarioId === "market-wide-burst" ||
@@ -89,7 +96,6 @@ describe("Telegram load simulation", () => {
   });
 
   it("computes a per-invocation CPU estimate and keeps the required burst under the safety fraction", () => {
-    const report = buildTelegramLoadCheckReport({ targets: [5_000], skipQueryPlans: true });
 
     expect(report.assumptions.dispatchCpuMs).toBeGreaterThan(0);
     expect(report.assumptions.cpuBudgetSafetyFraction).toBe(0.5);
@@ -111,7 +117,6 @@ describe("Telegram load simulation", () => {
 
   it("enforces the production-calibrated candidate, fanout, handoff, and wall-time bounds", () => {
     const scenario = simulateProductionCalibratedDispatch();
-    const report = buildTelegramLoadCheckReport({ targets: [5_000], skipQueryPlans: true });
 
     expect(scenario).toMatchObject({
       subscriberCount: 855,
@@ -143,7 +148,6 @@ describe("Telegram load simulation", () => {
   });
 
   it("caps the modeled format-count at the fresh budget post-C102 reorder", () => {
-    const report = buildTelegramLoadCheckReport({ targets: [5_000], skipQueryPlans: true });
     const burst = report.scenarios.find(
       (scenario) =>
         scenario.targetActiveWatchers === 5_000 && scenario.scenarioId === "market-wide-burst",
@@ -161,7 +165,6 @@ describe("Telegram load simulation", () => {
   });
 
   it("flags a synthetic over-budget scenario and passes the real fixtures", () => {
-    const report = buildTelegramLoadCheckReport({ targets: [5_000], skipQueryPlans: true });
 
     // Real fixtures stay under the CPU safety fraction.
     expect(findCpuBudgetBreaches(report)).toEqual([]);
@@ -235,23 +238,28 @@ describe("Telegram query-plan evaluation", () => {
     requiredDetails: ["idx_needed"],
   };
 
-  it("keeps only the claim-based pending drain readiness guard", () => {
-    const pendingDrainChecks = buildQueryPlanChecks()
-      .filter((check) => check.category === "pending-drain");
-    const pendingDrainIds = pendingDrainChecks.map((check) => check.id);
+  it("excludes terminal job targets from otherwise eligible pending claims", () => {
+    const { sqlite } = databases.open();
+    const claimCheck = buildQueryPlanChecks().find((candidate) => candidate.id === "pending-claim-ready")!;
+    const pending = sqlite.prepare(`INSERT INTO telegram_pending_alerts
+      (id, chat_id, message_html, created_at, dedupe_key, priority, delivery_state)
+      VALUES (?, 'chat', 'message', 1799999990, ?, 10, ?)`);
+    const target = sqlite.prepare(`INSERT INTO telegram_alert_job_targets
+      (job_id, target_key, chat_id, alert_type, status, pending_dedupe_key, created_at)
+      VALUES ('job', ?, 'chat', 'depeg', ?, ?, 1799999990)`);
+    for (const [index, status] of ["sent", "expired", "queued", "planned", "failed"].entries()) {
+      const key = `target-${index}`;
+      pending.run(index + 1, key, "pending");
+      target.run(key, status, key);
+    }
+    pending.run(6, null, "pending");
+    pending.run(7, "already-delivered", "sent");
 
-    expect(pendingDrainIds).toContain("pending-claim-ready");
-    expect(pendingDrainIds).not.toContain("pending-drain-ready");
-
-    const claimCheck = pendingDrainChecks.find((check) => check.id === "pending-claim-ready");
-    expect(claimCheck?.sql).toBe(loadProductionPendingClaimSql());
-    expect(claimCheck?.sql).toContain("p.delivery_state = 'pending'");
-    expect(claimCheck?.sql).toContain("FROM telegram_alert_job_targets t");
-    expect(claimCheck?.sql).toContain("t.status IN ('sent', 'expired')");
-    expect(claimCheck?.requiredDetails).toEqual([
-      "idx_tpa_delivery_reconcile",
-      "idx_tajt_pending_status",
+    expect(sqlite.prepare(claimCheck.sql).all(...claimCheck.binds)).toEqual([
+      { id: 3 }, { id: 4 }, { id: 5 }, { id: 6 },
     ]);
+    expect(evaluateQueryPlan(claimCheck, sqlite.prepare(`EXPLAIN QUERY PLAN ${claimCheck.sql}`)
+      .all(...claimCheck.binds).map((row) => String(row.detail))).status).toBe("ok");
   });
 
   it("reviews bounded recap planning reads and guarded handoff query plans", () => {
@@ -336,17 +344,25 @@ describe("Telegram status-path budgets", () => {
     }
   });
 
-  it("models the two production top-followed aggregate queries", () => {
-    const check = buildQueryPlanChecks().find((candidate) => candidate.id === "status-top-stablecoins");
+  it("counts active direct and preset memberships independently without multiplying shared chats", () => {
+    const { sqlite } = databases.open();
+    const check = buildQueryPlanChecks().find((candidate) => candidate.id === "status-top-stablecoins")!;
+    sqlite.exec(`
+      INSERT INTO telegram_subscriptions (chat_id, stablecoin_id, alert_dews, alert_depeg, alert_freeze)
+      VALUES ('a', 'coin-a', 1, 1, 0), ('b', 'coin-a', 0, 0, 1),
+             ('a', 'coin-b', 0, 1, 0), ('c', 'coin-a', 0, 0, 0);
+      INSERT INTO telegram_preset_subscriptions
+        (chat_id, preset_id, alert_dews, alert_safety, created_at, updated_at)
+      VALUES ('a', 'preset-a', 1, 1, 1, 1), ('b', 'preset-a', 0, 1, 1, 1),
+             ('a', 'preset-b', 1, 0, 1, 1), ('c', 'preset-a', 0, 0, 1, 1);
+    `);
 
-    expect(check?.sql).toContain("COUNT(DISTINCT chat_id)");
-    expect(check?.sql.match(/COUNT\(DISTINCT chat_id\)/g)).toHaveLength(2);
-    expect(check?.sql).toContain("GROUP BY stablecoin_id");
-    expect(check?.sql).toContain("GROUP BY preset_id");
-    expect(check?.sql).not.toContain("GROUP BY source_id");
-    expect(check?.allowedFullScanTables).toEqual([
-      "telegram_subscriptions",
-      "telegram_preset_subscriptions",
+    expect(sqlite.prepare(check.sql).all(...check.binds)
+      .sort((a, b) => String(a.source_id).localeCompare(String(b.source_id)))).toEqual([
+      { source_id: "coin-a", subscribers: 2 },
+      { source_id: "coin-b", subscribers: 1 },
+      { source_id: "preset-a", subscribers: 2 },
+      { source_id: "preset-b", subscribers: 1 },
     ]);
   });
 

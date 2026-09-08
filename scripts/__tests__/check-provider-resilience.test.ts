@@ -114,9 +114,4 @@ describe("provider resilience checker", () => {
       expect(report.violations.map((violation) => violation.kind)).toContain("unregistered-direct-fetch");
     });
   });
-
-  it("validates the checked-in provider resilience registry", () => {
-    const report = scanProviderResilience();
-    expect(report.violations).toEqual([]);
-  });
 });

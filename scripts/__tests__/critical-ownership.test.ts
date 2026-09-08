@@ -63,6 +63,7 @@ describe("critical ownership derivation", () => {
       'import type { Target } from "./target";',
       'import { type Target } from "./target";',
       'const computed = import("./target" + suffix);',
+      'const variableImport = import(variable);',
     ].join("\n"));
     expect(deriveCriticalOwnership({ cwd }).has("src/target.ts")).toBe(false);
   });

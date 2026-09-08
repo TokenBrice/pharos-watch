@@ -1,24 +1,21 @@
 import {
   lstatSync,
   mkdirSync,
-  mkdtempSync,
   readFileSync,
   readlinkSync,
   rmSync,
   symlinkSync,
   writeFileSync,
 } from "node:fs";
-import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 
 import { inspectAgentSkills, syncAgentSkills } from "../maintenance/sync-agent-skills.mjs";
+import { createTempRepoTracker } from "./helpers/test-state";
 
-const temporaryRoots: string[] = [];
+const { cleanup, makeRoot } = createTempRepoTracker("pharos-agent-skills");
 
-afterEach(() => {
-  for (const root of temporaryRoots.splice(0)) rmSync(root, { recursive: true, force: true });
-});
+afterEach(cleanup);
 
 function makeFixture({
   facade = true,
@@ -33,8 +30,7 @@ function makeFixture({
   allowlistedAgentMetadata?: boolean;
   extraAgentMetadata?: boolean;
 } = {}) {
-  const root = mkdtempSync(join(tmpdir(), "pharos-agent-skills-"));
-  temporaryRoots.push(root);
+  const root = makeRoot();
 
   const canonicalSkill = join(root, ".codex/skills/example-skill");
   mkdirSync(canonicalSkill, { recursive: true });

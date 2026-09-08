@@ -4,7 +4,6 @@ import {
   captureProcessExit,
   mockConsole,
   mockExecFileSync,
-  mockFsImpl,
   testEnv,
 } from "../test-utils/ci-script-test-helpers";
 
@@ -14,7 +13,6 @@ import {
   isAllZeroSha,
   parseChangedFilesFromEnv,
   runCriticalCoverageCompletenessGuard,
-  runCriticalCoverageCheck,
 } from "../ci/check-critical-coverage.ts";
 import {
   CRITICAL_COVERAGE_WAIVERS,
@@ -24,26 +22,8 @@ import {
   findCriticalCoverageCandidatesMissingEnrollment,
   validateCriticalCoverageWaiverMetadata,
 } from "../lib/critical-coverage.mjs";
+import { buildCriticalLcov, runCoverageFixture } from "./check-critical-coverage.test-support";
 
-type CoverageFixture = {
-  branchCoverage?: Partial<Record<string, { brf?: number; brh?: number }>>;
-  lineCoverage?: Partial<Record<string, { lf?: number; lh?: number }>>;
-};
-
-function buildCriticalLcov({ branchCoverage = {}, lineCoverage = {} }: CoverageFixture = {}) {
-  return CRITICAL_FILES.map((file) => {
-    const { lf = 10, lh = 10 } = lineCoverage[file] ?? {};
-    const { brf, brh } = branchCoverage[file] ?? {};
-    return [
-      `SF:${file}`,
-      `DA:1,${lh > 0 ? 1 : 0}`,
-      `LF:${lf}`,
-      `LH:${lh}`,
-      ...(brf == null ? [] : [`BRF:${brf}`, `BRH:${brh}`]),
-      "end_of_record",
-    ].join("\n");
-  }).join("\n");
-}
 
 describe("critical coverage changed-file detection", () => {
   it("parses explicit changed files before falling back to git", () => {
@@ -93,27 +73,11 @@ describe("critical coverage changed-file detection", () => {
   });
 
   it("fails closed when the configured compare ref cannot be diffed", () => {
-    const errors: string[] = [];
-    const exits: number[] = [];
-    const logs: string[] = [];
-
-    runCriticalCoverageCheck({
-      env: testEnv({ CRITICAL_COVERAGE_COMPARE_REF: "missing-ref" }),
-      fsImpl: mockFsImpl({
-        existsSync: () => true,
-        readFileSync: (path: string) => path === "coverage/lcov.info" ? "" : JSON.stringify({ files: {} }),
-      }),
-      execFile: mockExecFileSync(() => {
-        throw new Error("unknown revision");
-      }),
-      consoleImpl: mockConsole({
-        log: (message: string) => logs.push(message),
-        error: (message: string) => errors.push(message),
-      }),
-      completenessOptions: { candidateFiles: [], criticalFiles: [], ownership: new Map(), waivers: {}, ownershipWaivers: {} },
-      exit: captureProcessExit((code) => {
-        if (code !== undefined) exits.push(code);
-      }),
+    const { errors, exits, logs } = runCoverageFixture({
+      env: { CRITICAL_COVERAGE_COMPARE_REF: "missing-ref" },
+      lcov: "",
+      baseline: { files: {} },
+      execFile: mockExecFileSync(() => { throw new Error("unknown revision"); }),
     });
 
     expect(exits).toEqual([1]);
@@ -249,6 +213,8 @@ describe("critical coverage changed-file detection", () => {
         candidateFiles,
         criticalFiles: [],
         waivers,
+        ownership: new Map(),
+        ownershipWaivers: {},
         reviewToday: new Date("2026-06-20T00:00:00.000Z"),
         consoleImpl: mockConsole({
           error: (message: string) => errors.push(message),
@@ -276,6 +242,8 @@ describe("critical coverage changed-file detection", () => {
         candidateFiles: ["worker/src/cron/sync-stablecoins/new-price-path.ts"],
         criticalFiles: [],
         waivers: {},
+        ownership: new Map(),
+        ownershipWaivers: {},
         consoleImpl: mockConsole({
           error: (message: string) => errors.push(message),
         }),
@@ -307,49 +275,13 @@ describe("critical coverage changed-file detection", () => {
   });
 
   it("ratchets all critical files when CRITICAL_COVERAGE_RATCHET_ALL is enabled", () => {
-    const lcov = CRITICAL_FILES.map((file) => [
-      `SF:${file}`,
-      "DA:1,1",
-      "DA:2,1",
-      "LF:2",
-      "LH:2",
-      ...(CRITICAL_COVERAGE_BRANCH_FLOORS[file] == null ? [] : ["BRF:2", "BRH:2"]),
-      "end_of_record",
-    ].join("\n")).join("\n");
-    const baseline = {
-      files: Object.fromEntries(CRITICAL_FILES.map((file) => [file, 100])),
-    };
-    const logs: string[] = [];
-    const errors: string[] = [];
-    const files = new Map<string, string>([
-      ["coverage/lcov.info", lcov],
-      [".ci/critical-coverage-baseline.json", JSON.stringify(baseline)],
-    ]);
-    const exits: number[] = [];
-
-    runCriticalCoverageCheck({
-      env: testEnv({
+    const { logs, errors, exits } = runCoverageFixture({
+      env: {
         CRITICAL_COVERAGE_CHANGED_FILES: CRITICAL_FILES[0],
         CRITICAL_COVERAGE_RATCHET_ALL: "1",
-      }),
-      fsImpl: mockFsImpl({
-        existsSync: (path: string) => files.has(path),
-        readFileSync: (path: string) => {
-          const value = files.get(path);
-          if (value == null) throw new Error(`missing ${path}`);
-          return value;
-        },
-      }),
-      execFile: mockExecFileSync(() => ""),
-      consoleImpl: mockConsole({
-        log: (message: string) => logs.push(message),
-        error: (message: string) => errors.push(message),
-        warn: (message: string) => logs.push(message),
-      }),
-      completenessOptions: { candidateFiles: [], criticalFiles: [], ownership: new Map(), waivers: {}, ownershipWaivers: {} },
-      exit: captureProcessExit((code) => {
-        if (code !== undefined) exits.push(code);
-      }),
+      },
+      lcov: buildCriticalLcov(),
+      baseline: { files: Object.fromEntries(CRITICAL_FILES.map((file) => [file, 100])) },
     });
 
     expect(errors).toEqual([]);
@@ -369,28 +301,9 @@ describe("critical coverage changed-file detection", () => {
       "BRH:2",
       "end_of_record",
     ].join("\n");
-    const files = new Map<string, string>([["coverage/lcov.info", lcov]]);
-    const logs: string[] = [];
-    const errors: string[] = [];
-    const exits: number[] = [];
-
-    runCriticalCoverageCheck({
-      env: testEnv({
-        CI: "1",
-        CRITICAL_COVERAGE_CHANGED_FILES: file,
-      }),
-      fsImpl: mockFsImpl({
-        existsSync: (path: string) => files.has(path),
-        readFileSync: (path: string) => files.get(path) ?? "",
-      }),
-      consoleImpl: mockConsole({
-        log: (message: string) => logs.push(message),
-        error: (message: string) => errors.push(message),
-      }),
-      completenessOptions: { candidateFiles: [], criticalFiles: [], ownership: new Map(), waivers: {}, ownershipWaivers: {} },
-      exit: captureProcessExit((code) => {
-        if (code !== undefined) exits.push(code);
-      }),
+    const { logs, errors, exits } = runCoverageFixture({
+      env: { CI: "1", CRITICAL_COVERAGE_CHANGED_FILES: file },
+      lcov,
     });
 
     expect(exits).toEqual([]);
@@ -402,40 +315,17 @@ describe("critical coverage changed-file detection", () => {
   it.each(["source", "edited owner", "deleted owner"])("ratchets coverage regressions for a changed %s", (change) => {
     const file = "worker/src/lib/price-consensus.ts";
     const owner = change === "deleted owner" ? "worker/src/lib/__tests__/removed.test.ts" : "worker/src/lib/__tests__/price-consensus.test.ts";
-    const errors: string[] = [];
-    const exits: number[] = [];
-    const files = new Map<string, string>([
-      [
-        "coverage/lcov.info",
-        buildCriticalLcov({
-          branchCoverage: Object.fromEntries(Object.keys(CRITICAL_COVERAGE_BRANCH_FLOORS).map((path) => [path, { brf: 10, brh: 10 }])),
-          lineCoverage: { [file]: { lf: 10, lh: 5 } },
-        }),
-      ],
-      [".ci/critical-coverage-baseline.json", JSON.stringify({ files: { [file]: 51 } })],
-    ]);
-
-    runCriticalCoverageCheck({
-      env: testEnv({
+    const { errors, exits } = runCoverageFixture({
+      env: {
         CRITICAL_COVERAGE_CHANGED_FILES: change === "source" ? file : owner,
         ...(change === "deleted owner" ? { CRITICAL_COVERAGE_COMPARE_REF: "base" } : {}),
-      }),
-      fsImpl: mockFsImpl({
-        existsSync: (path: string) => files.has(path),
-        readFileSync: (path: string) => files.get(path) ?? "",
-      }),
+      },
+      lcov: buildCriticalLcov({ lineCoverage: { [file]: { lf: 10, lh: 5 } } }),
+      baseline: { files: { [file]: 51 } },
       execFile: mockExecFileSync((_cmd, args) => {
         if (args?.[0] === "ls-tree") return `${owner}\0${file}\0`;
         if (args?.[0] === "show") return 'import "../price-consensus";';
         throw new Error("Unexpected Git command");
-      }),
-      consoleImpl: mockConsole({
-        log: () => {},
-        error: (message: string) => errors.push(message),
-      }),
-      completenessOptions: { candidateFiles: [], criticalFiles: [], ownership: new Map(), waivers: {}, ownershipWaivers: {} },
-      exit: captureProcessExit((code) => {
-        if (code !== undefined) exits.push(code);
       }),
     });
 
@@ -445,36 +335,10 @@ describe("critical coverage changed-file detection", () => {
 
   it.each([3, 4])("enforces the provider branch floor independently at %i/10 branches", (brh) => {
     const file = "worker/src/lib/evm-rpc.ts";
-    const errors: string[] = [];
-    const exits: number[] = [];
-    const files = new Map<string, string>([
-      [
-        "coverage/lcov.info",
-        buildCriticalLcov({
-          branchCoverage: {
-            ...Object.fromEntries(Object.keys(CRITICAL_COVERAGE_BRANCH_FLOORS).map((path) => [path, { brf: 10, brh: 10 }])),
-            [file]: { brf: 10, brh },
-          },
-        }),
-      ],
-      [".ci/critical-coverage-baseline.json", JSON.stringify({ files: { [file]: 100 } })],
-    ]);
-
-    runCriticalCoverageCheck({
-      env: testEnv({ CRITICAL_COVERAGE_CHANGED_FILES: file }),
-      fsImpl: mockFsImpl({
-        existsSync: (path: string) => files.has(path),
-        readFileSync: (path: string) => files.get(path) ?? "",
-      }),
-      execFile: mockExecFileSync(() => ""),
-      consoleImpl: mockConsole({
-        log: () => {},
-        error: (message: string) => errors.push(message),
-      }),
-      completenessOptions: { candidateFiles: [], criticalFiles: [], ownership: new Map(), waivers: {}, ownershipWaivers: {} },
-      exit: captureProcessExit((code) => {
-        if (code !== undefined) exits.push(code);
-      }),
+    const { errors, exits } = runCoverageFixture({
+      env: { CRITICAL_COVERAGE_CHANGED_FILES: file },
+      lcov: buildCriticalLcov({ branchCoverage: { [file]: { brf: 10, brh } } }),
+      baseline: { files: { [file]: 100 } },
     });
 
     expect(exits).toEqual(brh < 4 ? [1] : []);

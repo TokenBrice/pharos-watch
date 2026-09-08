@@ -13,13 +13,21 @@ async function lintFixture(fixture: string, filePath: string) {
 
 describe("ESLint import boundaries", () => {
   it.each([
+    ["frontend-to-worker.fixture", "src/lib/__boundary-fixture.ts", "no-restricted-imports"],
     ["frontend-to-worker.fixture", "scripts/ci/__boundary-fixture.ts", "no-restricted-imports"],
     ["worker-to-frontend.fixture", "worker/src/__boundary-fixture.ts", "pharos/worker-import-boundaries"],
     ["api-to-cron.fixture", "worker/src/api/__boundary-fixture.ts", "pharos/worker-import-boundaries"],
     ["cron-to-api.fixture", "worker/src/cron/__boundary-fixture.ts", "pharos/worker-import-boundaries"],
-  ])("rejects %s", async (fixture, filePath, ruleId) => {
+  ])("rejects %s at %s", async (fixture, filePath, ruleId) => {
     const messages = await lintFixture(fixture, filePath);
     expect(messages.some((message) => message.ruleId === ruleId && message.severity === 2)).toBe(true);
+  });
+
+  it("permits shared imports from the frontend", async () => {
+    const [result] = await eslint.lintText('export { sha256Hex } from "@shared/lib/sha256";', {
+      filePath: "src/lib/__boundary-fixture.ts",
+    });
+    expect(result.messages.filter((message) => message.severity === 2)).toEqual([]);
   });
 
   it("keeps the documented frozen-invariants waiver", async () => {

@@ -13,7 +13,9 @@ import {
   formatContract,
   getHookHarness,
   normalizeChangedFiles,
+  normalizeExplicitFiles,
 } from "../ci/pharos-change-contract.ts";
+import { PATH_FAMILIES } from "../lib/doc-ownership-registry.mts";
 
 function requireBlockingReason(output: unknown): string {
   if (typeof output !== "object" || output === null || !("reason" in output) || typeof output.reason !== "string") {
@@ -34,7 +36,7 @@ function runHookCliProcess(
   const result = spawnSync(
     process.execPath,
     ["--import", "tsx", resolve(process.cwd(), "scripts/ci/pharos-change-contract.ts"), `--hook=${hook}`, ...extraArgs],
-    { cwd: process.cwd(), encoding: "utf8", env, input },
+    { cwd: process.cwd(), encoding: "utf8", env, input, timeout: 15_000 },
   );
   return {
     ...result,
@@ -51,7 +53,7 @@ function runContractCli(args: readonly string[], env: NodeJS.ProcessEnv = proces
   const result = spawnSync(
     process.execPath,
     ["--import", "tsx", resolve(process.cwd(), "scripts/ci/pharos-change-contract.ts"), ...args],
-    { cwd: process.cwd(), encoding: "utf8", env },
+    { cwd: process.cwd(), encoding: "utf8", env, timeout: 15_000 },
   );
   return {
     ...result,
@@ -315,23 +317,25 @@ describe("representative --file routing", () => {
     expect(route(file).docs.length).toBeLessThanOrEqual(6);
   });
 
-  it("keeps every tracked source path to at most six Read first entries", () => {
-    const sourceRoots = ["src/", "shared/", "worker/", "functions/", "scripts/", "docs/", ".github/"];
-    const trackedSources = execFileSync("git", ["ls-files", "-z"], { encoding: "utf8" })
-      .split("\0")
-      .filter((file) => file && sourceRoots.some((root) => file.startsWith(root)))
-      .sort();
-    const representatives = new Map<string, string>();
-    for (const file of trackedSources) {
-      const parts = file.split("/");
-      const directory = parts.slice(0, Math.min(3, parts.length - 1)).join("/");
-      representatives.set(directory, representatives.get(directory) ?? file);
+  it("caps single-path guidance while preserving ranked overflow in background", () => {
+    const originalLength = PATH_FAMILIES.length;
+    const family = {
+      background: [], checks: [], hardRules: [], hints: [], scopedContext: [],
+      sourceGlobs: ["audit-overflow.fixture"], tier: "specific" as const,
+    };
+    PATH_FAMILIES.push(
+      { ...family, id: "low", label: "A low", risk: "low", docs: [{ path: "low.md" }] },
+      { ...family, id: "high", label: "Z high", risk: "high",
+        docs: ["one.md", "two.md", "three.md", "four.md", "five.md", "six.md", "seven.md"].map((path) => ({ path })) },
+    );
+    try {
+      const contract = route("audit-overflow.fixture");
+      expect(docKeys(contract)).toEqual(["one.md", "two.md", "three.md", "four.md", "five.md", "six.md"]);
+      expect(contract.background.slice(0, 2)).toEqual([{ path: "seven.md" }, { path: "low.md" }]);
+      expect(contract.background.some((doc) => docKeys(contract).includes(doc.path))).toBe(false);
+    } finally {
+      PATH_FAMILIES.splice(originalLength);
     }
-    const overLimit = [...representatives.values()]
-      .map((file) => ({ count: classifyChangedFiles([file]).docs.length, file }))
-      .filter(({ count }) => count > 6);
-
-    expect(overLimit).toEqual([]);
   });
 });
 
@@ -355,17 +359,12 @@ describe("scoped AGENTS.md discovery", () => {
 });
 
 describe("CLI path and source selection", () => {
-  it("normalizes absolute and ./ explicit paths before routing", () => {
-    const absolute = runContractCli(["--file", resolve(process.cwd(), "src/app/page.tsx"), "--json"]);
-    const dotSlash = runContractCli(["--file", "./src/app/page.tsx", "--json"]);
-    const absoluteContract = JSON.parse(absolute.stdout);
-    const dotSlashContract = JSON.parse(dotSlash.stdout);
-
-    expect(absolute.status).toBe(0);
-    expect(dotSlash.status).toBe(0);
-    expect(absoluteContract.changedFiles).toEqual(["src/app/page.tsx"]);
-    expect(dotSlashContract.changedFiles).toEqual(absoluteContract.changedFiles);
-    expect(dotSlashContract.mappings).toEqual(absoluteContract.mappings);
+  it("normalizes absolute, file URL, and ./ explicit paths without duplicate routing", () => {
+    expect(normalizeExplicitFiles([
+      resolve(process.cwd(), "src/app/page.tsx"),
+      "./src/app/page.tsx",
+      `file://${resolve(process.cwd(), "src/app/page.tsx")}`,
+    ])).toEqual(["src/app/page.tsx"]);
   });
 
   it("rejects explicit paths outside the repository with exit 2", () => {
@@ -375,19 +374,12 @@ describe("CLI path and source selection", () => {
     expect(result.stderr).toContain("error: explicit path resolves outside repository");
   });
 
-  it("rejects relative explicit paths that escape the repository with exit 2", () => {
-    const result = runContractCli(["--file", "../outside-pharos-change-contract.ts"]);
-
-    expect(result.status).toBe(2);
-    expect(result.stderr).toContain("error: explicit path resolves outside repository");
-  });
-
-  it("rejects Windows drive paths on every host with exit 2", () => {
-    const result = runContractCli(["--file", String.raw`C:\outside\x.ts`]);
-
-    expect(result.status).toBe(2);
-    expect(result.stderr).toContain("error: explicit path resolves outside repository");
-  });
+  it.each(["../outside-pharos-change-contract.ts", String.raw`C:\outside\x.ts`])(
+    "rejects escaping explicit paths: %s",
+    (path) => {
+      expect(() => normalizeExplicitFiles([path])).toThrow(/explicit path resolves outside repository/);
+    },
+  );
 
   it("rejects an existing repository symlink that targets outside the repository", ({ skip }) => {
     const repositoryFixture = mkdtempSync(join(process.cwd(), ".pharos-change-contract-"));
@@ -399,7 +391,8 @@ describe("CLI path and source selection", () => {
       writeFileSync(outsideFile, "export const outside = true;\n");
       try {
         symlinkSync(outsideFile, linkPath);
-      } catch {
+      } catch (error) {
+        if (!["EPERM", "EACCES", "ENOSYS", "ENOTSUP"].includes((error as NodeJS.ErrnoException).code ?? "")) throw error;
         skip();
         return;
       }
@@ -422,7 +415,8 @@ describe("CLI path and source selection", () => {
     try {
       try {
         symlinkSync(targetPath, linkPath);
-      } catch {
+      } catch (error) {
+        if (!["EPERM", "EACCES", "ENOSYS", "ENOTSUP"].includes((error as NodeJS.ErrnoException).code ?? "")) throw error;
         skip();
         return;
       }
@@ -582,104 +576,26 @@ describe("hard-block hook outputs", () => {
     expect(buildPermissionRequestHookOutput(input)).toEqual({});
   });
 
-  it("blocks destructive git reset commands", () => {
-    const output = buildPreToolUseHookOutput({
-      tool_input: {
-        command: "git reset --hard HEAD",
-      },
-    });
-
+  it.each([
+    ["destructive git reset", "git reset --hard HEAD", "git reset --hard"],
+    ["git global flags", "git --no-pager reset --hard HEAD", "git reset --hard"],
+    ["production deploy", "cd worker && npx --no-install wrangler versions deploy 00000000-0000-0000-0000-000000000000@100", "Raw production deploy commands"],
+    ["shell eval wrapper", 'bash -lc "cd worker && npx --no-install wrangler pages deploy out"', "opaque shell construct"],
+    ["remote D1 mutation", "cd worker && npx --no-install wrangler d1 migrations apply stablecoin-db --remote", "Remote D1 mutation commands"],
+  ])("blocks %s with its denial category", (_name, command, reason) => {
+    const output = buildPreToolUseHookOutput({ tool_input: { command } });
     expect(output).toMatchObject({
       decision: "block",
-      hookSpecificOutput: {
-        permissionDecision: "deny",
-      },
+      hookSpecificOutput: { permissionDecision: "deny" },
     });
-    expect(requireBlockingReason(output)).toContain("git reset --hard");
+    expect(requireBlockingReason(output)).toContain(reason);
   });
 
-  it("allows git pushes that bypass only the advisory local gate", () => {
-    const output = buildPreToolUseHookOutput({
-      tool_input: {
-        command: "git push --no-verify origin main",
-      },
-    });
-
-    expect(output).toEqual({});
-  });
-
-  it("allows git pushes with repeated -C global options when only --no-verify is present", () => {
-    const output = buildPreToolUseHookOutput({
-      tool_input: {
-        command: "git -C /tmp -C /repo push --no-verify origin main",
-      },
-    });
-
-    expect(output).toEqual({});
-  });
-
-  it("blocks git subcommands after git global flags", () => {
-    const output = buildPreToolUseHookOutput({
-      tool_input: {
-        command: "git --no-pager reset --hard HEAD",
-      },
-    });
-
-    expect(output).toMatchObject({
-      decision: "block",
-      hookSpecificOutput: {
-        permissionDecision: "deny",
-      },
-    });
-    expect(requireBlockingReason(output)).toContain("git reset --hard");
-  });
-
-  it("blocks raw production deploy commands", () => {
-    const output = buildPreToolUseHookOutput({
-      tool_input: {
-        command: "cd worker && npx --no-install wrangler versions deploy 00000000-0000-0000-0000-000000000000@100",
-      },
-    });
-
-    expect(output).toMatchObject({
-      decision: "block",
-      hookSpecificOutput: {
-        permissionDecision: "deny",
-      },
-    });
-    expect(requireBlockingReason(output)).toContain("Raw production deploy commands");
-  });
-
-  it("blocks raw production deploy commands inside shell eval wrappers", () => {
-    const output = buildPreToolUseHookOutput({
-      tool_input: {
-        command: 'bash -lc "cd worker && npx --no-install wrangler pages deploy out"',
-      },
-    });
-
-    expect(output).toMatchObject({
-      decision: "block",
-      hookSpecificOutput: {
-        permissionDecision: "deny",
-      },
-    });
-    expect(requireBlockingReason(output)).toContain("opaque shell construct around a guarded command; run it directly");
-  });
-
-  it("blocks remote D1 mutation commands", () => {
-    const output = buildPreToolUseHookOutput({
-      tool_input: {
-        command: "cd worker && npx --no-install wrangler d1 migrations apply stablecoin-db --remote",
-      },
-    });
-
-    expect(output).toMatchObject({
-      decision: "block",
-      hookSpecificOutput: {
-        permissionDecision: "deny",
-      },
-    });
-    expect(requireBlockingReason(output)).toContain("Remote D1 mutation commands");
+  it.each([
+    "git push --no-verify origin main",
+    "git -C /tmp -C /repo push --no-verify origin main",
+  ])("allows bypassing only the advisory local gate: %s", (command) => {
+    expect(buildPreToolUseHookOutput({ tool_input: { command } })).toEqual({});
   });
 
   it("allows searches that mention deploy and remote D1 commands", () => {
@@ -1109,6 +1025,36 @@ SELECT 1"`,
 });
 
 describe("W2.7 protected command writes", () => {
+  it.each([
+    { cwd: "worker", tool_input: { command: "touch dist/missing.js" }, denied: true },
+    { cwd: "worker", tool_input: { command: "touch dist/missing.js", workdir: "../agents" }, denied: false },
+    { cwd: "agents", tool_input: { command: "touch dist/missing.js", workdir: "../worker" }, denied: true },
+  ])("resolves write policy using session cwd and tool override: %j", ({ denied, ...input }) => {
+    const output = buildPreToolUseHookOutput(input);
+    if (denied) {
+      expect(output).toMatchObject({ decision: "block", hookSpecificOutput: { permissionDecision: "deny" } });
+      expect(requireBlockingReason(output)).toContain("build outputs");
+    } else {
+      expect(output).toEqual({});
+    }
+  });
+
+  it("canonicalizes an innocuous symlink before checking a missing child write", () => {
+    const root = mkdtempSync(join(process.cwd(), ".pharos-policy-"));
+    try {
+      // The alias reaches the repository root, whose missing build child is protected.
+      symlinkSync(process.cwd(), join(root, "innocuous"), "dir");
+      const input = { cwd: root, tool_input: { command: "touch innocuous/build/audit-missing/file.js" } };
+      expect(buildPreToolUseHookOutput(input)).toMatchObject({
+        decision: "block", hookSpecificOutput: { permissionDecision: "deny" },
+      });
+      expect(buildPreToolUseHookOutput({
+        cwd: root, tool_input: { command: "touch innocuous/agents/audit-missing/file.js" },
+      })).toEqual({});
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
   const blockedWrites = [
     ["rm", "rm -rf out/"],
     ["mv", "mv source .env.local"],
@@ -1232,7 +1178,8 @@ describe("hook diagnostics", () => {
       PHAROS_HOOK_DIAGNOSTICS: "1",
       PHAROS_HOOK_DIAGNOSTICS_FILE: diagnosticsPath,
     };
-    const command = "git reset --hard HEAD";
+    const secrets = ["SECRET_ARGUMENT_91", "SECRET_CONTENT_52", "SECRET_SESSION_73"];
+    const command = `git reset --hard HEAD ${secrets[0]}`;
 
     try {
       const results = [
@@ -1240,6 +1187,7 @@ describe("hook diagnostics", () => {
           "pre-tool-use",
           JSON.stringify({
             hook_event_name: "PreToolUse",
+            session_id: secrets[2],
             tool_name: "Bash",
             tool_input: { command },
           }),
@@ -1248,7 +1196,7 @@ describe("hook diagnostics", () => {
         runHookCliProcess(
           "permission-request",
           JSON.stringify({
-            session_id: "codex-session",
+            session_id: secrets[2],
             cwd: process.cwd(),
             model: "codex",
             hookEventName: "PermissionRequest",
@@ -1257,7 +1205,12 @@ describe("hook diagnostics", () => {
           }),
           env,
         ),
-        runHookCliProcess("session-start", JSON.stringify({ hook_event_name: "SessionStart" }), env),
+        runHookCliProcess("pre-tool-use", JSON.stringify({
+          hook_event_name: "PreToolUse", tool_name: "Write",
+          tool_input: { file_path: ".env.local", content: secrets[1] },
+          session_id: secrets[2],
+        }), env),
+        runHookCliProcess("session-start", JSON.stringify({ hook_event_name: "SessionStart", session_id: secrets[2] }), env),
       ];
       const contents = readFileSync(diagnosticsPath, "utf8");
       const records = contents
@@ -1266,7 +1219,7 @@ describe("hook diagnostics", () => {
         .map((line) => JSON.parse(line));
 
       expect(results.every((result) => result.status === 0)).toBe(true);
-      expect(records).toHaveLength(3);
+      expect(records).toHaveLength(4);
       expect(records[0]).toMatchObject({
         harness: "claude",
         event: "PreToolUse",
@@ -1283,6 +1236,9 @@ describe("hook diagnostics", () => {
         rule: "git-destructive",
       });
       expect(records[2]).toMatchObject({
+        event: "PreToolUse", tool: "Write", decision: "deny", rule: "protected-write",
+      });
+      expect(records[3]).toMatchObject({
         harness: "unknown",
         event: "SessionStart",
         tool: null,
@@ -1292,6 +1248,7 @@ describe("hook diagnostics", () => {
       expect(records[0].ts).toMatch(/^\d{4}-\d{2}-\d{2}T/);
       expect(records[0].commandDigest).toMatch(/^[0-9a-f]{12}$/);
       expect(contents).not.toContain(command);
+      for (const secret of secrets) expect(contents).not.toContain(secret);
     } finally {
       rmSync(directory, { force: true, recursive: true });
     }

@@ -1,6 +1,6 @@
 import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { dirname, join } from "node:path";
+import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 
 import {
@@ -11,18 +11,21 @@ import {
   parseWranglerWorkerConfigBindings,
 } from "../ci/check-env-contract";
 
-function withTempEnvSource(source: string): string {
+function withTempEnvSource<T>(source: string, run: (filePath: string) => T, filename = "env.ts"): T {
   const dir = mkdtempSync(join(tmpdir(), "pharos-env-contract-"));
-  const filePath = join(dir, "env.ts");
-  writeFileSync(filePath, source);
-  return filePath;
+  try {
+    const filePath = join(dir, filename);
+    writeFileSync(filePath, source);
+    return run(filePath);
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
 }
 
 describe("check-env-contract worker Env parser", () => {
   it("extracts the exported Env interface body through nested braces", () => {
     expect(extractExportedEnvInterfaceBody("export interface Other {}\n")).toBeNull();
-    expect(
-      extractExportedEnvInterfaceBody(`
+    const body = extractExportedEnvInterfaceBody(`
         export interface Env {
           DB: D1Database;
           NESTED?: {
@@ -33,12 +36,16 @@ describe("check-env-contract worker Env parser", () => {
         export interface After {
           SHOULD_NOT_APPEAR: string;
         }
-      `),
-    ).toContain("API_KEY?: string;");
+      `);
+    expect(body).toContain("INNER_KEY: string;");
+    expect(body).toContain("API_KEY?: string;");
+    expect(body).not.toContain("interface After");
+    expect(body).not.toContain("SHOULD_NOT_APPEAR");
+    expect(extractExportedEnvInterfaceBody("export interface Env { NESTED: { KEY: string; }")).toBeNull();
   });
 
   it("parses only top-level uppercase Env bindings", () => {
-    const filePath = withTempEnvSource(`
+    withTempEnvSource(`
       export interface Env {
         DB: D1Database;
         REQUIRED_KEY: string;
@@ -52,22 +59,18 @@ describe("check-env-contract worker Env parser", () => {
         lower_key: string;
         "QUOTED_KEY": string;
       }
-    `);
-
-    try {
+    `, (filePath) => {
       expect([...parseWorkerEnvInterfaceKeys(filePath)].sort()).toEqual([
         "DB",
         "NESTED",
         "OPTIONAL_KEY",
         "REQUIRED_KEY",
       ]);
-    } finally {
-      rmSync(dirname(filePath), { recursive: true, force: true });
-    }
+    });
   });
 
   it("parses top-level Env binding types", () => {
-    const filePath = withTempEnvSource(`
+    withTempEnvSource(`
       export interface Env {
         DB: D1Database;
         CORS_ORIGIN: string;
@@ -76,47 +79,71 @@ describe("check-env-contract worker Env parser", () => {
           INNER_KEY: string;
         };
       }
-    `);
-
-    try {
+    `, (filePath) => {
       expect([...parseWorkerEnvInterfaceBindings(filePath)]).toEqual([
         ["DB", { optional: false, type: "D1Database" }],
         ["CORS_ORIGIN", { optional: false, type: "string" }],
         ["OPTIONAL_KEY", { optional: true, type: "string" }],
         ["NESTED", { optional: true, type: "{" }],
       ]);
-    } finally {
-      rmSync(dirname(filePath), { recursive: true, force: true });
-    }
+    });
   });
 
   it("fails closed when worker env.ts does not export Env", () => {
-    const filePath = withTempEnvSource("export interface NotEnv { API_KEY: string; }\n");
-    try {
+    withTempEnvSource("export interface NotEnv { API_KEY: string; }\n", (filePath) => {
       expect(() => parseWorkerEnvInterfaceKeys(filePath)).toThrow(/missing export interface Env/);
-    } finally {
-      rmSync(dirname(filePath), { recursive: true, force: true });
-    }
+    });
   });
 });
 
 describe("check-env-contract source references", () => {
   it("finds env names passed through shared helper APIs", () => {
-    const filePath = withTempEnvSource(`
+    withTempEnvSource(`
       const TOOL_ENV_NAMES = ["TOOL_API_KEY"];
       requireEnv("ACCESS_CLIENT_ID");
       apiFetchHeaders(["DIRECT_API_KEY"]);
-    `);
-
-    try {
+    `, (filePath) => {
       expect([...collectSourceEnvKeys([filePath])].sort()).toEqual([
         "ACCESS_CLIENT_ID",
         "DIRECT_API_KEY",
         "TOOL_API_KEY",
       ]);
-    } finally {
-      rmSync(dirname(filePath), { recursive: true, force: true });
-    }
+    });
+  });
+
+  it("finds direct process, Worker and GitHub references without duplicates or invalid candidates", () => {
+    withTempEnvSource(`
+      process.env.PROCESS_KEY; env.WORKER_KEY; context.env.CONTEXT_KEY;
+      secrets.SECRET_KEY; vars.VARIABLE_KEY; process.env.PROCESS_KEY;
+      process.env.lower_key; env.PLAIN; secrets.lower_key;
+      requireEnv("BAD-KEY"); requireEnv("lower_key"); requireEnv("_INVALID");
+    `, (filePath) => {
+      expect([...collectSourceEnvKeys([filePath])].sort()).toEqual([
+        "CONTEXT_KEY", "PROCESS_KEY", "SECRET_KEY", "VARIABLE_KEY", "WORKER_KEY",
+      ]);
+    });
+  });
+
+  it("finds scalar and array helper declarations", () => {
+    withTempEnvSource(`
+      readEnvFirst("SCALAR_KEY");
+      readEnvFirst(["FIRST_KEY", "SECOND_KEY", "FIRST_KEY", "lower_key", "BAD-KEY"]);
+      const options = { envNames: ["OPTION_KEY"], apiKeyEnv: "PROVIDER_KEY" };
+    `, (filePath) => {
+      expect([...collectSourceEnvKeys([filePath])].sort()).toEqual([
+        "FIRST_KEY", "OPTION_KEY", "PROVIDER_KEY", "SCALAR_KEY", "SECOND_KEY",
+      ]);
+    });
+  });
+
+  it("scans shell expansion only in shell files", () => {
+    const source = 'echo "$DIRECT_KEY ${DEFAULT_KEY:-fallback} $DIRECT_KEY $lower_key $PLAIN $_INVALID"';
+    withTempEnvSource(source, (filePath) => {
+      expect([...collectSourceEnvKeys([filePath])].sort()).toEqual(["DEFAULT_KEY", "DIRECT_KEY"]);
+    }, "env.sh");
+    withTempEnvSource(source, (filePath) => {
+      expect([...collectSourceEnvKeys([filePath])]).toEqual([]);
+    });
   });
 });
 

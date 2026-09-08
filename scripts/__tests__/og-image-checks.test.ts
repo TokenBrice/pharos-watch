@@ -4,6 +4,7 @@ import { join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 import sharp from "sharp";
 import {
+  comparePngContent,
   contentSha256,
   formatOgWriteStatus,
   promoteGeneratedPngIfChanged,
@@ -24,10 +25,34 @@ afterEach(() => {
 });
 
 describe("OG image file promotion", () => {
-  it("pins deterministic artifact filenames and content hashes", () => {
-    expect([{ file: "og-editorial-digest.png" }, { file: "og-learn-case-ust.png" }].map((entry) => entry.file))
-      .toEqual(["og-editorial-digest.png", "og-learn-case-ust.png"]);
+  it("computes an independently pinned content hash", () => {
     expect(contentSha256("pharos")).toBe("8653057a4b57183ce71278ca80dbd82a61196fa182652f4cba355614b768d063");
+  });
+
+  it("rejects different PNG dimensions", async () => {
+    const root = makeTempDir();
+    const paths = [join(root, "one.png"), join(root, "two.png")];
+    for (const [index, path] of paths.entries()) {
+      await sharp({ create: { width: index + 1, height: 1, channels: 4, background: "black" } }).png().toFile(path);
+    }
+    expect((await comparePngContent(paths[0]!, paths[1]!)).matches).toBe(false);
+  });
+
+  it.each([
+    { maxMeanAbsPerChannel: 1, maxChangedPixelRatio: 1, changedPixelThreshold: 0, matches: true },
+    { maxMeanAbsPerChannel: 0.99, maxChangedPixelRatio: 1, changedPixelThreshold: 0, matches: false },
+    { maxMeanAbsPerChannel: 2, maxChangedPixelRatio: 0.5, changedPixelThreshold: 0, matches: true },
+    { maxMeanAbsPerChannel: 2, maxChangedPixelRatio: 0.49, changedPixelThreshold: 0, matches: false },
+    { maxMeanAbsPerChannel: 2, maxChangedPixelRatio: 0, changedPixelThreshold: 2, matches: true },
+  ])("compares independent tolerance boundaries: %j", async ({ matches, ...tolerance }) => {
+    const root = makeTempDir();
+    const expected = join(root, "expected.png");
+    const actual = join(root, "actual.png");
+    const raw = { width: 2, height: 1, channels: 4 as const };
+    await sharp(Buffer.from([0, 0, 0, 255, 0, 0, 0, 255]), { raw }).png().toFile(expected);
+    // Eight channel units / eight channels = mean 1; one of two pixels changes.
+    await sharp(Buffer.from([8, 0, 0, 255, 0, 0, 0, 255]), { raw }).png().toFile(actual);
+    expect((await comparePngContent(expected, actual, tolerance)).matches).toBe(matches);
   });
 
   it("leaves a visually identical public PNG untouched", async () => {
@@ -102,6 +127,20 @@ describe("OG image file promotion", () => {
     });
     expect(unchanged.changedFiles).toEqual([]);
     expect(readFileSync(join(publicDir, "card.png"))).toEqual(bytes);
+
+    await expect(runOgArtifactBuild({
+      check: true, family: "Test", publicDir, refreshCommand: "refresh",
+      roster: [{ file: "card.png", color: 255 }], stagingDir, render,
+    })).rejects.toThrow("Test OG images are stale: card.png");
+    expect(readFileSync(join(publicDir, "card.png"))).toEqual(bytes);
+    expect(existsSync(stagingDir)).toBe(false);
+
+    await expect(runOgArtifactBuild({
+      check: false, family: "Test", publicDir, refreshCommand: "refresh", roster, stagingDir,
+      render: async (_entry, { stagedPath }) => { writeFileSync(stagedPath, ""); },
+    })).rejects.toThrow("Generated PNG is missing or empty");
+    expect(readFileSync(join(publicDir, "card.png"))).toEqual(bytes);
+    expect(existsSync(stagingDir)).toBe(false);
 
     await expect(runOgArtifactBuild({
       check: true, family: "Test", publicDir, refreshCommand: "refresh", roster, stagingDir, render,

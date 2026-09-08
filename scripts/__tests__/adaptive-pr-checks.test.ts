@@ -136,7 +136,11 @@ describe("adaptive PR checks", () => {
   it("keeps unique required contracts including real OG rendering for dependency changes", () => {
     expect(new Set(ALWAYS_RUN_TEST_FILES).size).toBe(ALWAYS_RUN_TEST_FILES.length);
     for (const source of ["worker/package.json", "package-lock.json", "worker/src/api/og.tsx"]) {
-      expect(selectPrTestFiles([], undefined, [source])).toContain("scripts/__tests__/og-worker-runtime.test.ts");
+      expect(selectPrTestFiles([], undefined, [source])).toEqual(expect.arrayContaining([
+        "scripts/__tests__/og-worker-runtime.test.ts",
+        "src/lib/__tests__/reserve-coinid-validation.test.ts",
+        "worker/src/cron/__tests__/telegram-recap-cost-boundary.test.ts",
+      ]));
     }
   });
 

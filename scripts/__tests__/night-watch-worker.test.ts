@@ -1,7 +1,7 @@
 import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, relative, resolve } from "node:path";
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   assertNightWatchRegistryFixture,
   buildNightWatchCoverage,
@@ -15,6 +15,11 @@ import {
 } from "../maintenance/night-watch-worker.mjs";
 
 const generatedAt = "2026-06-24T10:00:00.000Z";
+const tempDirs: string[] = [];
+
+afterEach(() => {
+  for (const path of tempDirs.splice(0)) rmSync(path, { recursive: true, force: true });
+});
 
 function scheduleMatrix() {
   return {
@@ -221,6 +226,7 @@ describe("night-watch-worker", () => {
 
   it("atomically checkpoints redacted samples and resumes only the matching window", () => {
     const dir = mkdtempSync(join(tmpdir(), "pharos-night-watch-checkpoint-"));
+    tempDirs.push(dir);
     const checkpointPath = relative(process.cwd(), join(dir, "samples.jsonl"));
     const window = { start: generatedAt, end: "2026-06-24T14:00:00.000Z" };
     persistNightWatchCheckpoint(checkpointPath, [{
@@ -408,6 +414,7 @@ describe("night-watch-worker", () => {
 
   it("renders from a fixture while honoring output paths", async () => {
     const dir = mkdtempSync(join(tmpdir(), "pharos-night-watch-fixture-"));
+    tempDirs.push(dir);
     const fixturePath = relative(process.cwd(), join(dir, "fixture.json"));
     const reportPath = relative(process.cwd(), join(dir, "fixture-report.md"));
     const evidencePath = relative(process.cwd(), join(dir, "fixture-evidence.json"));

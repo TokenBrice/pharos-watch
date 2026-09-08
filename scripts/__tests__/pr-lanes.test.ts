@@ -15,7 +15,12 @@ const stepSchema = z.object({
   "continue-on-error": z.boolean().optional(),
   with: z.record(z.string(), z.unknown()).default({}), env: z.record(z.string(), z.string()).default({}),
 });
-const workflowSchema = z.object({ jobs: z.record(z.string(), z.object({ steps: z.array(stepSchema) })) });
+const workflowSchema = z.object({ jobs: z.record(z.string(), z.object({
+  steps: z.array(stepSchema),
+  needs: z.union([z.string(), z.array(z.string())]).optional(),
+  outputs: z.record(z.string(), z.string()).optional(),
+  strategy: z.object({ matrix: z.string() }).passthrough().optional(),
+})) });
 const actionSchema = z.object({ runs: z.object({ steps: z.array(stepSchema) }) });
 const REPO_ROOT = resolve(import.meta.dirname, "../..");
 const WORKFLOW = workflowSchema.parse(parseYaml(readFileSync(resolve(REPO_ROOT, ".github/workflows/pull-request-checks.yml"), "utf8")));
@@ -32,10 +37,17 @@ describe("PR lane manifest", () => {
       "docs",
       "gate",
     ]);
-    const steps = Object.values(WORKFLOW.jobs).flatMap((job) => job.steps);
-    const commands = steps.flatMap((step) => step.run ? [step.run] : []);
-    expect(commands).toContain("echo \"matrix=$(node --experimental-strip-types scripts/maintenance/generate-pr-workflow-matrix.ts --matrix)\" >> \"$GITHUB_OUTPUT\"");
-    expect(commands).toContain("node --experimental-strip-types scripts/maintenance/generate-pr-workflow-matrix.ts --run");
+    const preflight = WORKFLOW.jobs.preflight;
+    const validation = WORKFLOW.jobs.validation;
+    const generator = preflight.steps.find((step) => step.id === "matrix");
+    expect(generator?.run).toMatch(/^echo "matrix=\$\(node [^\n]*generate-pr-workflow-matrix\.ts --matrix\)" >> "\$GITHUB_OUTPUT"$/);
+    expect(preflight.outputs?.matrix).toBe("${{ steps.matrix.outputs.matrix }}");
+    expect(validation.needs).toEqual(expect.arrayContaining(["preflight", "prepare"]));
+    expect(validation.strategy?.matrix).toBe("${{ fromJSON(needs.preflight.outputs.matrix) }}");
+    const runner = validation.steps.find((step) => step.env.PR_LANE_ID === "${{ matrix.lane }}");
+    expect(runner?.run).toMatch(/^node [^\n]*generate-pr-workflow-matrix\.ts --run$/);
+    expect(runner?.env.PR_LANE_SHARD).toBe("${{ matrix.shard }}");
+    expect(runner?.env.PR_LANE_SHARD_COUNT).toBe("${{ matrix.shardCount }}");
   });
 
   it("generates four test shards and the selected number of coverage shards", () => {

@@ -2,12 +2,14 @@ import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { expect, it } from "vitest";
 import sharp from "sharp";
-import { unstable_dev, unstable_readConfig } from "wrangler";
+import { unstable_dev, unstable_readConfig, type Unstable_DevWorker } from "wrangler";
 
 it("renders a PNG through the production Satori and resvg pipeline in workerd", async () => {
   const root = resolve(import.meta.dirname, "../..");
   mkdirSync(resolve(root, "agents"), { recursive: true });
   const scratch = mkdtempSync(resolve(root, "agents/og-worker-test-"));
+  let worker: Unstable_DevWorker | undefined;
+  try {
   const config = resolve(scratch, "wrangler.json");
   const entry = resolve(scratch, "worker.ts");
   const production = unstable_readConfig({ config: resolve(root, "worker/wrangler.toml") });
@@ -32,8 +34,6 @@ it("renders a PNG through the production Satori and resvg pipeline in workerd", 
       },
     };
   `);
-  let worker: Awaited<ReturnType<typeof unstable_dev>> | undefined;
-  try {
     worker = await unstable_dev(entry, {
       config, local: true, persist: false, logLevel: "error", port: 0,
       experimental: { disableExperimentalWarning: true, disableDevRegistry: true },
@@ -48,7 +48,10 @@ it("renders a PNG through the production Satori and resvg pipeline in workerd", 
       await image.raw().toBuffer();
     }
   } finally {
-    await worker?.stop();
-    rmSync(scratch, { recursive: true, force: true });
+    try {
+      await worker?.stop();
+    } finally {
+      rmSync(scratch, { recursive: true, force: true });
+    }
   }
 }, 60_000);

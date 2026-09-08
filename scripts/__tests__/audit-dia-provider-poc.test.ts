@@ -1,7 +1,6 @@
-import { mkdtempSync, readFileSync, writeFileSync } from "node:fs";
-import { tmpdir } from "node:os";
+import { readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { jsonResponse } from "@shared/test-utils/mock-fetch";
 import {
   parseDiaQuotation,
@@ -12,92 +11,18 @@ import {
   type DiaAuditReport,
 } from "../maintenance/audit-dia-provider-poc";
 import type { PriceSourceDepthAudit } from "../maintenance/audit-price-source-depth";
+import { createTempRepoTracker } from "./helpers/test-state";
+import { diaAuditRow } from "./audit-dia-provider-poc.test-support";
+
+const { makeRoot, cleanup } = createTempRepoTracker("dia-provider-poc");
+afterEach(cleanup);
 
 function makeAudit(): Pick<PriceSourceDepthAudit, "rows"> {
-  return {
-    rows: [
-      {
-        coinId: "alpha-usd",
-        symbol: "ALPHA",
-        name: "Alpha USD",
-        status: "active",
-        marketCapUsd: 500,
-        price: 1,
-        priceSource: "coingecko",
-        priceConfidence: "single-source",
-        primaryTrust: "single-source",
-        pegSummaryPresent: true,
-        stablecoinPresent: true,
-        consensusSources: ["coingecko", "pyth"],
-        agreeSources: ["coingecko", "pyth"],
-        authoritativeAgreeSources: [],
-        candidateSourceCount: 2,
-        agreeSourceCount: 2,
-        authoritativeAgreeSourceCount: 0,
-        sourceClassifications: [],
-        metadata: {
-          geckoId: true,
-          llamaId: false,
-          cmcSlug: false,
-          contracts: 1,
-          tradedContracts: 0,
-        },
-        candidateTriage: {
-          currentSources: ["coingecko", "pyth"],
-          missingFields: [],
-          fieldAlreadyPresent: ["contracts"],
-          potentialNewSource: null,
-          pipelineLane: "primary",
-          expectedMetricImpact: "needs-runtime-provider-change",
-          expectedTrustImpact: "unknown",
-          verificationSourceUrl: "",
-          blocker: "",
-        },
-        fallbackOnlyFill: false,
-        missingOrUnusablePrice: false,
-      },
-      {
-        coinId: "beta-usd",
-        symbol: "BETA",
-        name: "Beta USD",
-        status: "active",
-        marketCapUsd: 250,
-        price: 1,
-        priceSource: "coingecko",
-        priceConfidence: "high",
-        primaryTrust: "high",
-        pegSummaryPresent: true,
-        stablecoinPresent: true,
-        consensusSources: ["coingecko", "pyth", "kraken"],
-        agreeSources: ["coingecko", "pyth", "kraken"],
-        authoritativeAgreeSources: [],
-        candidateSourceCount: 3,
-        agreeSourceCount: 3,
-        authoritativeAgreeSourceCount: 0,
-        sourceClassifications: [],
-        metadata: {
-          geckoId: true,
-          llamaId: false,
-          cmcSlug: false,
-          contracts: 1,
-          tradedContracts: 0,
-        },
-        candidateTriage: {
-          currentSources: ["coingecko", "pyth", "kraken"],
-          missingFields: [],
-          fieldAlreadyPresent: ["contracts"],
-          potentialNewSource: null,
-          pipelineLane: "primary",
-          expectedMetricImpact: "no-count-impact",
-          expectedTrustImpact: "unknown",
-          verificationSourceUrl: "",
-          blocker: "",
-        },
-        fallbackOnlyFill: false,
-        missingOrUnusablePrice: false,
-      },
-    ],
-  };
+  return { rows: [
+    diaAuditRow(),
+    diaAuditRow({ coinId: "beta-usd", symbol: "BETA", name: "Beta USD", marketCapUsd: 250,
+      priceConfidence: "high", primaryTrust: "high", consensusSources: ["coingecko", "pyth", "kraken"] }),
+  ] };
 }
 
 describe("audit-dia-provider-poc", () => {
@@ -122,7 +47,7 @@ describe("audit-dia-provider-poc", () => {
   });
 
   it("writes JSON through the shared report runner", async () => {
-    const cwd = mkdtempSync(join(tmpdir(), "dia-provider-poc-report-"));
+    const cwd = makeRoot();
     writeFileSync(join(cwd, "audit.json"), JSON.stringify(makeAudit()), "utf8");
     const stdout = vi.spyOn(process.stdout, "write").mockImplementation(() => true);
     let writes: string[] = [];
@@ -250,5 +175,55 @@ describe("audit-dia-provider-poc", () => {
         headers: { Accept: "application/json" },
       }),
     );
+  });
+
+  it("records HTTP, transport and JSON failures while continuing to later targets", async () => {
+    const rows = ["http", "transport", "json", "valid"].map((coinId) => diaAuditRow({ coinId }));
+    const fetchImpl = vi.fn<typeof fetch>()
+      .mockResolvedValueOnce(new Response("unavailable", { status: 503 }))
+      .mockRejectedValueOnce(new Error("transport failed"))
+      .mockResolvedValueOnce(new Response("{", { status: 200 }))
+      .mockResolvedValueOnce(jsonResponse({ Price: 1, Time: "2026-05-12T00:00:00Z" }));
+    const report = await runDiaProviderPocAudit({
+      audit: { rows } as PriceSourceDepthAudit, fetchImpl, nowMs: Date.parse("2026-05-12T00:00:00Z"),
+      coinMetaById: new Map(rows.map((row) => [row.coinId, { contracts: [{ chain: "ethereum", address: row.coinId, decimals: 18 }] }])),
+    });
+    expect(report).toMatchObject({ targetCount: 4, checkedCount: 4, hitCount: 1, freshHitCount: 1, agreementWithin50BpsCount: 1 });
+    expect(report.results.map((row) => [row.stablecoinId, row.ok, row.httpStatus])).toEqual([
+      ["http", false, 503], ["transport", false, null], ["json", false, null], ["valid", true, 200],
+    ]);
+    expect(report.results[1].error).toBe("transport failed");
+    expect(report.results[2].error).toEqual(expect.any(String));
+    expect(report.results[2].error).not.toBe("");
+  });
+
+  it("separates missing and invalid timestamps from the exact freshness boundary", async () => {
+    const rows = ["missing", "invalid", "boundary", "stale"].map((coinId) => diaAuditRow({ coinId }));
+    const times = [undefined, "not-a-date", "2026-05-12T00:00:00Z", "2026-05-11T23:59:59Z"];
+    const fetchImpl = vi.fn<typeof fetch>();
+    for (const Time of times) fetchImpl.mockResolvedValueOnce(jsonResponse({ Price: 1, Time }));
+    const report = await runDiaProviderPocAudit({
+      audit: { rows } as PriceSourceDepthAudit, fetchImpl, nowMs: Date.parse("2026-05-12T01:00:00Z"),
+      coinMetaById: new Map(rows.map((row) => [row.coinId, { contracts: [{ chain: "ethereum", address: row.coinId, decimals: 18 }] }])),
+    });
+    expect(report).toMatchObject({ checkedCount: 4, hitCount: 4, freshHitCount: 1 });
+    expect(report.results.map((row) => [row.timestampQuality, row.diaAgeSec])).toEqual([
+      ["missing", null], ["invalid", null], ["fresh", 3600], ["stale", 3601],
+    ]);
+  });
+
+  it("excludes unusable prices and includes only agreement at or below 50 bps", async () => {
+    // A reference price of 200 makes the 50-bps boundary exactly representable.
+    const rows = ["zero", "missing", "boundary", "outside"].map((coinId) => diaAuditRow({ coinId, price: 200 }));
+    const fetchImpl = vi.fn<typeof fetch>();
+    for (const Price of [0, undefined, 201, 201.01]) fetchImpl.mockResolvedValueOnce(jsonResponse({ Price, Time: "2026-05-12T00:00:00Z" }));
+    const report = await runDiaProviderPocAudit({
+      audit: { rows } as PriceSourceDepthAudit, fetchImpl, nowMs: Date.parse("2026-05-12T00:00:00Z"),
+      coinMetaById: new Map(rows.map((row) => [row.coinId, { contracts: [{ chain: "ethereum", address: row.coinId, decimals: 18 }] }])),
+    });
+    expect(report).toMatchObject({ checkedCount: 4, hitCount: 2, freshHitCount: 2, agreementWithin50BpsCount: 1 });
+    expect(report.results.map((row) => row.ok)).toEqual([false, false, true, true]);
+    expect(report.results[2].agreementBps).toBe(50);
+    expect(report.results[3].agreementBps).toBeGreaterThan(50);
   });
 });

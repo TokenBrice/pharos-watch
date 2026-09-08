@@ -1,7 +1,9 @@
-import { createServer, type Server } from "node:http";
+import { createServer, get, type Server } from "node:http";
+import type { IncomingHttpHeaders } from "node:http";
 import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
+import { brotliDecompressSync, gunzipSync } from "node:zlib";
 import { afterEach, describe, expect, it } from "vitest";
 
 import { createStaticExportServer, resolveMissingYieldWorkbenchLocation } from "../maintenance/serve-static-export";
@@ -46,6 +48,21 @@ async function listen(server: Server) {
   return `http://127.0.0.1:${address.port}`;
 }
 
+async function startExport(rootDir: string, overrides: Parameters<typeof createStaticExportServer>[0] = {}) {
+  return listen(createStaticExportServer({ port: 0, rootDir, apiBaseUrl: "http://127.0.0.1:1", ...overrides }).server);
+}
+
+function rawGet(baseUrl: string, requestPath: string, encoding = "identity") {
+  return new Promise<{ status: number; headers: IncomingHttpHeaders; body: Buffer }>((resolve, reject) => {
+    get(`${baseUrl}${requestPath}`, { headers: { "Accept-Encoding": encoding } }, (response) => {
+      const chunks: Buffer[] = [];
+      response.on("data", (chunk: Buffer) => chunks.push(chunk));
+      response.on("error", reject);
+      response.on("end", () => resolve({ status: response.statusCode!, headers: response.headers, body: Buffer.concat(chunks) }));
+    }).on("error", reject);
+  });
+}
+
 function directive(csp: string, name: string): string {
   return (
     csp
@@ -70,11 +87,7 @@ describe("serve-static-export", () => {
       ),
     ).toBeNull();
 
-    const app = createStaticExportServer({
-      port: 0,
-      rootDir: await makeRoot(),
-    });
-    const baseUrl = await listen(app.server);
+    const baseUrl = await startExport(await makeRoot());
     const response = await fetch(`${baseUrl}/stablecoin/usdc-circle/yield/?days=90`, {
       redirect: "manual",
     });
@@ -107,12 +120,7 @@ describe("serve-static-export", () => {
     await mkdir(path.join(root, "api"), { recursive: true });
     await writeFile(path.join(root, "api", "index.html"), "<h1>API access</h1>");
 
-    const app = createStaticExportServer({
-      apiBaseUrl: "http://127.0.0.1:1",
-      port: 0,
-      rootDir: root,
-    });
-    const baseUrl = await listen(app.server);
+    const baseUrl = await startExport(root);
 
     const exactResponse = await fetch(`${baseUrl}/api`);
     const slashResponse = await fetch(`${baseUrl}/api/`);
@@ -128,12 +136,7 @@ describe("serve-static-export", () => {
     await mkdir(path.join(root, "api"), { recursive: true });
     await writeFile(path.join(root, "api", "__next.api.txt"), "static api route asset");
 
-    const app = createStaticExportServer({
-      apiBaseUrl: "http://127.0.0.1:1",
-      port: 0,
-      rootDir: root,
-    });
-    const baseUrl = await listen(app.server);
+    const baseUrl = await startExport(root);
 
     const response = await fetch(`${baseUrl}/api/__next.api.txt?_rsc=test`);
 
@@ -141,25 +144,29 @@ describe("serve-static-export", () => {
     expect(await response.text()).toBe("static api route asset");
   });
 
-  it("compresses static text assets when the browser accepts Brotli", async () => {
+  it.each(["br", "gzip", "br;q=0, gzip"] as const)("serves valid compressed bytes for %s", async (accepted) => {
     const root = await makeRoot();
-    await writeFile(path.join(root, "app.css"), ".a{color:red;}\n".repeat(200));
-
-    const app = createStaticExportServer({
-      apiBaseUrl: "http://127.0.0.1:1",
-      port: 0,
-      rootDir: root,
-    });
-    const baseUrl = await listen(app.server);
-
-    const response = await fetch(`${baseUrl}/app.css`, {
-      method: "HEAD",
-      headers: { "Accept-Encoding": "br, gzip" },
-    });
-
+    const body = Buffer.from(".a{color:red;}\n".repeat(200));
+    await writeFile(path.join(root, "app.css"), body);
+    const response = await rawGet(await startExport(root), "/app.css", accepted);
+    const encoding = accepted === "br" ? "br" : "gzip";
     expect(response.status).toBe(200);
-    expect(response.headers.get("Content-Encoding")).toBe("br");
-    expect(response.headers.get("Vary")).toBe("Accept-Encoding");
+    expect(response.headers["content-encoding"]).toBe(encoding);
+    expect(response.headers.vary).toBe("Accept-Encoding");
+    expect(Number(response.headers["content-length"])).toBe(response.body.length);
+    expect((encoding === "br" ? brotliDecompressSync : gunzipSync)(response.body)).toEqual(body);
+  });
+
+  it("compresses at 1024 bytes but not below the threshold or for binary content", async () => {
+    const root = await makeRoot();
+    const baseUrl = await startExport(root);
+    for (const [file, size, compressed] of [["small.css", 1023, false], ["large.css", 1024, true], ["image.png", 2048, false]] as const) {
+      const body = Buffer.alloc(size, 65);
+      await writeFile(path.join(root, file), body);
+      const response = await rawGet(baseUrl, `/${file}`, "br");
+      expect(response.headers["content-encoding"]).toBe(compressed ? "br" : undefined);
+      expect(compressed ? brotliDecompressSync(response.body) : response.body).toEqual(body);
+    }
   });
 
   it("serves Mini App HTML with Telegram-specific CSP", async () => {
@@ -167,12 +174,7 @@ describe("serve-static-export", () => {
     await mkdir(path.join(root, "pharoswatchbot", "app"), { recursive: true });
     await writeFile(path.join(root, "pharoswatchbot", "app", "index.html"), "<html><script>1</script></html>");
 
-    const app = createStaticExportServer({
-      apiBaseUrl: "http://127.0.0.1:1",
-      port: 0,
-      rootDir: root,
-    });
-    const baseUrl = await listen(app.server);
+    const baseUrl = await startExport(root);
 
     const response = await fetch(`${baseUrl}/pharoswatchbot/app/`);
     const csp = response.headers.get("Content-Security-Policy") ?? "";
@@ -181,19 +183,22 @@ describe("serve-static-export", () => {
     expect(csp).toContain("https://telegram.org");
     expect(csp).toContain("frame-ancestors https://telegram.org https://*.telegram.org");
     expect(response.headers.get("X-Robots-Tag")).toBe("noindex, nofollow");
-    expect(await response.text()).toMatch(/<script nonce="[^"]+">1<\/script>/);
+    const nonce = (await response.text()).match(/<script nonce="([^"]+)">1<\/script>/)?.[1];
+    expect(nonce).toBeTruthy();
+    expect(directive(csp, "script-src").split(/\s+/)).toContain(`'nonce-${nonce}'`);
+    const second = await fetch(`${baseUrl}/pharoswatchbot/app/`);
+    const secondNonce = (await second.text()).match(/<script nonce="([^"]+)">1<\/script>/)?.[1];
+    expect(secondNonce).toBeTruthy();
+    expect(secondNonce).not.toBe(nonce);
+    expect(directive(second.headers.get("Content-Security-Policy") ?? "", "script-src").split(/\s+/))
+      .toContain(`'nonce-${secondNonce}'`);
   });
 
   it("allows analytics image beacons in local static-export CSP", async () => {
     const root = await makeRoot();
     await writeFile(path.join(root, "index.html"), "<html><script>1</script></html>");
 
-    const app = createStaticExportServer({
-      apiBaseUrl: "http://127.0.0.1:1",
-      port: 0,
-      rootDir: root,
-    });
-    const baseUrl = await listen(app.server);
+    const baseUrl = await startExport(root);
 
     const response = await fetch(`${baseUrl}/`);
     const csp = response.headers.get("Content-Security-Policy") ?? "";
@@ -204,54 +209,20 @@ describe("serve-static-export", () => {
     expect(imgSrc).toContain("https://*.googletagmanager.com");
   });
 
-  it("continues proxying nested /api paths when no static export file exists", async () => {
-    const upstream = createServer((req, res) => {
+  it.each([
+    { requestPath: "/api/peg-summary?range=7d", adminHeader: null },
+    { requestPath: "/api/api-key-requests-admin?limit=1", adminHeader: "1" },
+  ])("proxies nested $requestPath with its admin header", async ({ requestPath, adminHeader }) => {
+    const upstreamBaseUrl = await listen(createServer((req, res) => {
       res.writeHead(200, { "Content-Type": "application/json; charset=utf-8" });
-      res.end(JSON.stringify({ url: req.url }));
+      res.end(JSON.stringify({ url: req.url, adminHeader: req.headers["x-pharos-admin"] ?? null }));
+    }));
+    const baseUrl = await startExport(await makeRoot(), { apiBaseUrl: upstreamBaseUrl });
+    const response = await fetch(`${baseUrl}${requestPath}`, {
+      headers: adminHeader ? { "X-Pharos-Admin": adminHeader } : {},
     });
-    const upstreamBaseUrl = await listen(upstream);
-
-    const app = createStaticExportServer({
-      apiBaseUrl: upstreamBaseUrl,
-      port: 0,
-      rootDir: await makeRoot(),
-    });
-    const baseUrl = await listen(app.server);
-
-    const response = await fetch(`${baseUrl}/api/peg-summary?range=7d`);
-
     expect(response.status).toBe(200);
-    await expect(response.json()).resolves.toEqual({ url: "/api/peg-summary?range=7d" });
-  });
-
-  it("proxies nested admin API paths during local static-export smoke runs", async () => {
-    const upstream = createServer((req, res) => {
-      res.writeHead(200, { "Content-Type": "application/json; charset=utf-8" });
-      res.end(
-        JSON.stringify({
-          url: req.url,
-          adminHeader: req.headers["x-pharos-admin"] ?? null,
-        }),
-      );
-    });
-    const upstreamBaseUrl = await listen(upstream);
-
-    const app = createStaticExportServer({
-      apiBaseUrl: upstreamBaseUrl,
-      port: 0,
-      rootDir: await makeRoot(),
-    });
-    const baseUrl = await listen(app.server);
-
-    const response = await fetch(`${baseUrl}/api/api-key-requests-admin?limit=1`, {
-      headers: { "X-Pharos-Admin": "1" },
-    });
-
-    expect(response.status).toBe(200);
-    await expect(response.json()).resolves.toEqual({
-      url: "/api/api-key-requests-admin?limit=1",
-      adminHeader: "1",
-    });
+    await expect(response.json()).resolves.toEqual({ url: requestPath, adminHeader });
   });
 
   it("proxies allowlisted /_site-data paths to their API upstream paths", async () => {
@@ -266,13 +237,7 @@ describe("serve-static-export", () => {
     });
     const upstreamBaseUrl = await listen(upstream);
 
-    const app = createStaticExportServer({
-      apiBaseUrl: "http://127.0.0.1:1",
-      siteApiBaseUrl: upstreamBaseUrl,
-      port: 0,
-      rootDir: await makeRoot(),
-    });
-    const baseUrl = await listen(app.server);
+    const baseUrl = await startExport(await makeRoot(), { siteApiBaseUrl: upstreamBaseUrl });
     const previousSecret = process.env.STATIC_EXPORT_SITE_API_SHARED_SECRET;
     process.env.STATIC_EXPORT_SITE_API_SHARED_SECRET = "site-secret";
 
@@ -317,12 +282,7 @@ describe("serve-static-export", () => {
     });
     const upstreamBaseUrl = await listen(upstream);
 
-    const app = createStaticExportServer({
-      apiBaseUrl: upstreamBaseUrl,
-      port: 0,
-      rootDir: await makeRoot(),
-    });
-    const baseUrl = await listen(app.server);
+    const baseUrl = await startExport(await makeRoot(), { apiBaseUrl: upstreamBaseUrl });
 
     const requestResponse = await fetch(`${baseUrl}/api/api-key-requests`, {
       method: "POST",
@@ -349,5 +309,43 @@ describe("serve-static-export", () => {
       contentType: "application/json",
       body: "{not-json",
     });
+  });
+
+  it("refuses encoded traversal and unallowlisted site data without contacting upstream", async () => {
+    let requests = 0;
+    const upstream = await listen(createServer((_req, res) => { requests++; res.end("unexpected"); }));
+    const baseUrl = await startExport(await makeRoot(), { apiBaseUrl: upstream, siteApiBaseUrl: upstream });
+    for (const requestPath of ["/..%2fsecret.txt", "/api/..%2f..%2fsecret.txt"]) {
+      expect((await rawGet(baseUrl, requestPath)).status).toBe(403);
+    }
+    expect((await rawGet(baseUrl, "/_site-data/not-allowlisted")).status).toBe(404);
+    expect(requests).toBe(0);
+  });
+
+  it("refuses POST to static and site-data routes", async () => {
+    const baseUrl = await startExport(await makeRoot());
+    for (const requestPath of ["/", "/_site-data/stablecoins"]) {
+      const response = await fetch(`${baseUrl}${requestPath}`, { method: "POST" });
+      expect(response.status).toBe(405);
+      expect(response.headers.get("allow")).toBe("GET, HEAD");
+    }
+  });
+
+  it("returns 502 when the upstream terminates the connection", async () => {
+    const upstream = await listen(createServer((req) => req.socket.destroy()));
+    const baseUrl = await startExport(await makeRoot(), { apiBaseUrl: upstream });
+    expect((await fetch(`${baseUrl}/api/peg-summary`)).status).toBe(502);
+  });
+
+  it("prefers an existing workbench and leaves unknown missing workbenches at 404", async () => {
+    const root = await makeRoot();
+    const directory = path.join(root, "stablecoin/usdc-circle/yield");
+    await mkdir(directory, { recursive: true });
+    await writeFile(path.join(directory, "index.html"), "existing workbench");
+    const baseUrl = await startExport(root);
+    const existing = await fetch(`${baseUrl}/stablecoin/usdc-circle/yield/`, { redirect: "manual" });
+    expect(existing.status).toBe(200);
+    expect(await existing.text()).toBe("existing workbench");
+    expect((await fetch(`${baseUrl}/stablecoin/not-tracked/yield/`, { redirect: "manual" })).status).toBe(404);
   });
 });

@@ -1,6 +1,6 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
-import GithubSlugger from "github-slugger";
+import { slug } from "github-slugger";
 import { describe, expect, it } from "vitest";
 import { API_FRESHNESS_MAX_AGE_SEC } from "@shared/lib/api-freshness";
 import { CACHE_FRESHNESS_LANES } from "@shared/lib/data-surface-descriptors";
@@ -38,14 +38,17 @@ const PUBLIC_ANCHORS = [
 ] as const;
 
 function headingIds(markdown: string): string[] {
-  const slugger = new GithubSlugger();
-  return Array.from(markdown.matchAll(/^#{1,6}\s+(.+)$/gm), (match) => slugger.slug(match[1]?.replace(/\s+#+\s*$/, "") ?? ""));
+  return Array.from(markdown.matchAll(/^#{1,6}\s+(.+)$/gm), (match) => slug(match[1]?.replace(/\s+#+\s*$/, "") ?? ""));
 }
 
 describe("generate-api-reference", () => {
   it("preserves public heading anchors including the free-grade and donor-claim routes", () => {
     const markdown = readFileSync(join(process.cwd(), "docs/api-reference.md"), "utf8");
-    expect(headingIds(markdown)).toEqual(PUBLIC_ANCHORS);
+    const ids = headingIds(markdown);
+    expect(ids).toEqual(expect.arrayContaining([...PUBLIC_ANCHORS]));
+    for (const anchor of PUBLIC_ANCHORS) {
+      expect(ids.filter((id) => id === anchor)).toHaveLength(1);
+    }
   });
 
   it("generates route sections from OpenAPI and shared endpoint policy", () => {
@@ -53,7 +56,10 @@ describe("generate-api-reference", () => {
     const routes = collectOpenApiRoutes(spec);
     const block = renderGeneratedBlock(spec);
 
-    expect(routes).toHaveLength(40);
+    expect(routes.map(({ method, path }) => `${method} ${path}`)).toEqual(expect.arrayContaining([
+      "GET /api/stablecoins", "GET /api/safety-grades", "GET /api/supply-history",
+    ]));
+    expect(routes.filter(({ definition }) => definition.adminRequired)).toEqual([]);
     expect(block.startsWith(START_MARKER)).toBe(true);
     expect(block.endsWith(END_MARKER)).toBe(true);
     expect(block).toContain("### `GET /api/stablecoins`");

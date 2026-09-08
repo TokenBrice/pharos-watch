@@ -2,6 +2,7 @@
 
 import { existsSync, readFileSync } from "node:fs";
 import { extname, relative, resolve } from "node:path";
+import ts from "typescript";
 import { collectSourceFiles, runAsCli } from "../lib/source-files.mts";
 
 const SOURCE_EXTENSIONS = new Set([".ts", ".tsx"]);
@@ -26,10 +27,6 @@ interface TrackedFetchAssignment {
   assignmentText: string;
 }
 
-interface ArrayItem {
-  text: string;
-  start: number;
-}
 
 interface FetchBodyTimeoutReport {
   violations: FetchBodyTimeoutViolation[];
@@ -58,232 +55,97 @@ export function makeViolationKey(violation: FetchBodyTimeoutViolation): string {
   return `${violation.file}::${violation.assignmentText}::${violation.bodyReadText}`;
 }
 
-function escapeRegExp(value: string): string {
-  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-}
-
-function collectFetchWithRetryCallees(lines: readonly string[]): Set<string> {
-  const callees = new Set(["fetchWithRetry"]);
-  for (const line of lines) {
-    const trimmed = line.trim();
-    if (trimmed.startsWith("//") || trimmed.startsWith("*")) continue;
-
-    const directAlias = trimmed.match(/\b(?:const|let|var)\s+([A-Za-z_$][\w$]*)\s*=\s*fetchWithRetry\s*;/);
-    if (directAlias) {
-      callees.add(directAlias[1]);
-      continue;
-    }
-
-    const destructuredAlias = trimmed.match(/\b(?:const|let|var)\s*\{[^}]*\bfetchWithRetry\s*:\s*([A-Za-z_$][\w$]*)[^}]*\}/);
-    if (destructuredAlias) {
-      callees.add(destructuredAlias[1]);
-    }
-  }
-  return callees;
-}
-
-function fetchWithRetryCalleePattern(callees: ReadonlySet<string>): RegExp {
-  const names = [...callees].map(escapeRegExp).join("|");
-  // eslint-disable-next-line security/detect-non-literal-regexp
-  return new RegExp(`(?:^|[^\\w$])(?:[A-Za-z_$][\\w$]*\\s*\\.\\s*)*(?:${names})\\s*\\(`);
-}
-
-function assignmentPattern(callees: ReadonlySet<string>, declaration: boolean): RegExp {
-  const names = [...callees].map(escapeRegExp).join("|");
-  const prefix = declaration
-    ? "\\b(?:const|let|var)\\s+([A-Za-z_$][\\w$]*)\\s*=\\s*await\\s+"
-    : "^([A-Za-z_$][\\w$]*)\\s*=\\s*await\\s+";
-  // eslint-disable-next-line security/detect-non-literal-regexp
-  return new RegExp(`${prefix}(?:[A-Za-z_$][\\w$]*\\s*\\.\\s*)*(?:${names})\\s*\\(`);
-}
-
-function lineForOffset(lineStarts: readonly number[], offset: number): number {
-  let low = 0;
-  let high = lineStarts.length - 1;
-  while (low <= high) {
-    const mid = Math.floor((low + high) / 2);
-    if (lineStarts[mid] <= offset) {
-      low = mid + 1;
-    } else {
-      high = mid - 1;
-    }
-  }
-  return high + 1;
-}
-
-function computeLineStarts(source: string): number[] {
-  const starts = [0];
-  for (let index = 0; index < source.length; index++) {
-    if (source[index] === "\n") starts.push(index + 1);
-  }
-  return starts;
-}
-
-function findMatchingBracket(source: string, openIndex: number): number {
-  let depth = 0;
-  let quote: string | null = null;
-  let escaped = false;
-  for (let index = openIndex; index < source.length; index++) {
-    const char = source[index];
-    if (quote) {
-      if (escaped) {
-        escaped = false;
-      } else if (char === "\\") {
-        escaped = true;
-      } else if (char === quote) {
-        quote = null;
-      }
-      continue;
-    }
-    if (char === "\"" || char === "'" || char === "`") {
-      quote = char;
-      continue;
-    }
-    if (char === "[") depth++;
-    if (char === "]") {
-      depth--;
-      if (depth === 0) return index;
-    }
-  }
-  return -1;
-}
-
-function splitTopLevelArrayItems(source: string, openIndex: number, closeIndex: number): ArrayItem[] {
-  const items: ArrayItem[] = [];
-  let itemStart = openIndex + 1;
-  let parenDepth = 0;
-  let bracketDepth = 0;
-  let braceDepth = 0;
-  let quote: string | null = null;
-  let escaped = false;
-
-  for (let index = openIndex + 1; index < closeIndex; index++) {
-    const char = source[index];
-    if (quote) {
-      if (escaped) {
-        escaped = false;
-      } else if (char === "\\") {
-        escaped = true;
-      } else if (char === quote) {
-        quote = null;
-      }
-      continue;
-    }
-
-    if (char === "\"" || char === "'" || char === "`") {
-      quote = char;
-      continue;
-    }
-    if (char === "(") parenDepth++;
-    if (char === ")") parenDepth--;
-    if (char === "[") bracketDepth++;
-    if (char === "]") bracketDepth--;
-    if (char === "{") braceDepth++;
-    if (char === "}") braceDepth--;
-
-    if (char === "," && parenDepth === 0 && bracketDepth === 0 && braceDepth === 0) {
-      items.push({ text: source.slice(itemStart, index), start: itemStart });
-      itemStart = index + 1;
-    }
-  }
-
-  items.push({ text: source.slice(itemStart, closeIndex), start: itemStart });
-  return items;
-}
-
-function trackDestructuredPromiseAllAssignments(
-  source: string,
-  lineStarts: readonly number[],
-  callees: ReadonlySet<string>,
-): TrackedFetchAssignment[] {
-  const tracked: TrackedFetchAssignment[] = [];
-  const fetchCallPattern = fetchWithRetryCalleePattern(callees);
-  const promiseAllPattern = /\b(?:const|let|var)\s*\[([^\]]+)]\s*=\s*await\s+Promise\.all\s*\(\s*\[/g;
-  let match;
-
-  while ((match = promiseAllPattern.exec(source)) !== null) {
-    const fullMatch = match[0];
-    const declarationLine = lineForOffset(lineStarts, match.index);
-    const declarationText = source
-      .slice(lineStarts[declarationLine - 1], source.indexOf("\n", lineStarts[declarationLine - 1]) === -1
-        ? source.length
-        : source.indexOf("\n", lineStarts[declarationLine - 1]))
-      .trim();
-    const names = match[1]
-      .split(",")
-      .map((name) => name.trim())
-      .filter((name) => /^[A-Za-z_$][\w$]*$/.test(name));
-    const arrayOpenIndex = match.index + fullMatch.lastIndexOf("[");
-    const arrayCloseIndex = findMatchingBracket(source, arrayOpenIndex);
-    if (arrayCloseIndex === -1) continue;
-
-    const items = splitTopLevelArrayItems(source, arrayOpenIndex, arrayCloseIndex);
-    for (let itemIndex = 0; itemIndex < Math.min(items.length, names.length); itemIndex++) {
-      const item = items[itemIndex];
-      if (!fetchCallPattern.test(item.text)) continue;
-      tracked.push({
-        name: names[itemIndex],
-        line: lineForOffset(lineStarts, item.start),
-        assignmentText: declarationText,
-      });
-    }
-    promiseAllPattern.lastIndex = arrayCloseIndex + 1;
-  }
-
-  return tracked;
-}
-
 export function findFetchBodyTimeoutViolations(
   source: string,
   file = "<source>",
 ): FetchBodyTimeoutViolation[] {
+  const sourceFile = ts.createSourceFile("scan.ts", source, ts.ScriptTarget.Latest, true);
+  const options: ts.CompilerOptions = { noLib: true, noResolve: true };
+  const host = ts.createCompilerHost(options);
+  host.getSourceFile = (name) => name === "scan.ts" ? sourceFile : undefined;
+  const checker = ts.createProgram(["scan.ts"], options, host).getTypeChecker();
+  const tracked = new Map<ts.Symbol, TrackedFetchAssignment>();
+  const aliases = new Set<ts.Symbol>();
   const lines = source.split(/\r?\n/g);
-  const lineStarts = computeLineStarts(source);
-  const callees = collectFetchWithRetryCallees(lines);
-  const declarationPattern = assignmentPattern(callees, true);
-  const reassignmentPattern = assignmentPattern(callees, false);
-  const tracked = trackDestructuredPromiseAllAssignments(source, lineStarts, callees);
   const violations: FetchBodyTimeoutViolation[] = [];
 
-  for (let index = 0; index < lines.length; index++) {
-    const line = lines[index] ?? "";
-    const trimmed = line.trim();
-    if (trimmed.startsWith("//") || trimmed.startsWith("*")) continue;
+  function isFetchCallee(node: ts.Expression): boolean {
+    if (ts.isPropertyAccessExpression(node)) return node.name.text === "fetchWithRetry";
+    if (!ts.isIdentifier(node)) return false;
+    const symbol = checker.getSymbolAtLocation(node);
+    return node.text === "fetchWithRetry" || (symbol !== undefined && aliases.has(symbol));
+  }
 
-    const declarationMatch = trimmed.match(declarationPattern);
-    const assignmentMatch = declarationMatch
-      ? null
-      : trimmed.match(reassignmentPattern);
-    const assignedName = declarationMatch?.[1] ?? assignmentMatch?.[1] ?? null;
-    if (assignedName) {
-      tracked.push({
-        name: assignedName,
-        line: index + 1,
-        assignmentText: trimmed,
-      });
+  function assign(name: ts.Identifier, value: ts.Expression | undefined, declaration: ts.Node): void {
+    const symbol = checker.getSymbolAtLocation(name);
+    if (!symbol) return;
+    tracked.delete(symbol);
+    aliases.delete(symbol);
+    if (!value) return;
+    if (isFetchCallee(value)) aliases.add(symbol);
+    const expression = ts.isAwaitExpression(value) ? value.expression : value;
+    if (!ts.isCallExpression(expression) || !isFetchCallee(expression.expression)) return;
+    const line = sourceFile.getLineAndCharacterOfPosition(declaration.getStart(sourceFile)).line + 1;
+    tracked.set(symbol, { name: name.text, line, assignmentText: lines[line - 1].trim() });
+  }
+
+  function visit(node: ts.Node): void {
+    if (ts.isVariableDeclaration(node)) {
+      if (node.initializer) visit(node.initializer);
+      if (ts.isIdentifier(node.name)) {
+        assign(node.name, node.initializer, node);
+      } else if (ts.isArrayBindingPattern(node.name) && node.initializer) {
+        const expression = ts.isAwaitExpression(node.initializer) ? node.initializer.expression : node.initializer;
+        if (ts.isCallExpression(expression)
+          && ts.isPropertyAccessExpression(expression.expression)
+          && expression.expression.expression.getText(sourceFile) === "Promise"
+          && expression.expression.name.text === "all"
+          && expression.arguments[0] && ts.isArrayLiteralExpression(expression.arguments[0])) {
+          const items = expression.arguments[0].elements;
+          node.name.elements.forEach((binding, index) => {
+            if (ts.isBindingElement(binding) && ts.isIdentifier(binding.name) && !binding.dotDotDotToken) {
+              assign(binding.name, items[index], node);
+            }
+          });
+        }
+      } else if (ts.isObjectBindingPattern(node.name)) {
+        for (const binding of node.name.elements) {
+          if (binding.propertyName?.getText(sourceFile) === "fetchWithRetry" && ts.isIdentifier(binding.name)) {
+            const symbol = checker.getSymbolAtLocation(binding.name);
+            if (symbol) aliases.add(symbol);
+          }
+        }
+      }
+      return;
     }
-
-    const bodyReadMatches = [...trimmed.matchAll(/\b([A-Za-z_$][\w$]*)\s*\.\s*(json|text)\s*\(/g)];
-    if (bodyReadMatches.length === 0) continue;
-
-    for (const candidate of tracked) {
-      if (index + 1 <= candidate.line) continue;
-      if (index + 1 - candidate.line > 80) continue;
-      for (const bodyReadMatch of bodyReadMatches) {
-        if (bodyReadMatch[1] !== candidate.name) continue;
+    if (ts.isBinaryExpression(node) && node.operatorToken.kind === ts.SyntaxKind.EqualsToken
+      && ts.isIdentifier(node.left)) {
+      visit(node.right);
+      assign(node.left, node.right, node);
+      return;
+    }
+    if (ts.isCallExpression(node) && ts.isPropertyAccessExpression(node.expression)
+      && ts.isIdentifier(node.expression.expression)
+      && (node.expression.name.text === "json" || node.expression.name.text === "text")) {
+      const symbol = checker.getSymbolAtLocation(node.expression.expression);
+      const candidate = symbol && tracked.get(symbol);
+      const bodyLine = sourceFile.getLineAndCharacterOfPosition(node.getStart(sourceFile)).line + 1;
+      if (candidate && bodyLine - candidate.line <= 80) {
         violations.push({
           file,
           fetchLine: candidate.line,
-          bodyLine: index + 1,
+          bodyLine,
           variable: candidate.name,
-          method: bodyReadMatch[2],
+          method: node.expression.name.text,
           assignmentText: candidate.assignmentText,
-          bodyReadText: trimmed,
+          bodyReadText: lines[bodyLine - 1].trim(),
         });
       }
     }
+    ts.forEachChild(node, visit);
   }
 
+  visit(sourceFile);
   return violations;
 }
 

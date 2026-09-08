@@ -51,4 +51,57 @@ describe("prepare-workspace", () => {
     expect(result.status).toBe(2);
     expect(calls).toEqual(["npm run bootstrap:generated"]);
   });
+
+  it("executes every local step in order when all succeed", () => {
+    const calls: string[] = [];
+    expect(runPrepareWorkspace({
+      env: testEnv(),
+      runCommand: (command, args) => {
+        calls.push([command, ...args].join(" "));
+        return { status: 0 };
+      },
+    }).status).toBe(0);
+    expect(calls).toEqual([
+      "npm run bootstrap:generated",
+      "npm run bootstrap:generated:history",
+      "git config core.hooksPath .githooks",
+    ]);
+  });
+
+  it.each([2, null])("stops before hook setup when history exits with %s", (status) => {
+    const calls: string[] = [];
+    expect(runPrepareWorkspace({
+      env: testEnv(),
+      runCommand: (command, args) => {
+        calls.push([command, ...args].join(" "));
+        return { status: calls.length === 2 ? status : 0 };
+      },
+    }).status).toBe(status ?? 1);
+    expect(calls).toEqual(["npm run bootstrap:generated", "npm run bootstrap:generated:history"]);
+  });
+
+  it("propagates a launch error without executing later steps", () => {
+    const error = new Error("spawn npm ENOENT");
+    const calls: string[] = [];
+    expect(() => runPrepareWorkspace({
+      env: testEnv(),
+      runCommand: (command, args) => {
+        calls.push([command, ...args].join(" "));
+        return { status: null, error };
+      },
+    })).toThrow(error);
+    expect(calls).toEqual(["npm run bootstrap:generated"]);
+  });
+
+  it("performs no execution under GITHUB_ACTIONS alone", () => {
+    const calls: string[] = [];
+    expect(runPrepareWorkspace({
+      env: testEnv({ CI: undefined, GITHUB_ACTIONS: "true" }),
+      runCommand: (command) => {
+        calls.push(command);
+        return { status: 0 };
+      },
+    }).status).toBe(0);
+    expect(calls).toEqual([]);
+  });
 });

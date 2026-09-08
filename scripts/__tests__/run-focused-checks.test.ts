@@ -17,6 +17,12 @@ function writer() {
   };
 }
 
+const frontendCommands = [
+  "npm run lint:changed",
+  "npm run typecheck",
+  "npx vitest related --run --passWithNoTests=false src/components/query-error-notice.tsx",
+];
+
 describe("focused checks", () => {
   it("retains source-reading and CLI script contracts without unrelated generated artifacts", () => {
     const plan = buildFocusedCheckPlan(["scripts/maintenance/screenshot-og.mjs", "scripts/maintenance/run-focused-checks.ts"]);
@@ -117,17 +123,6 @@ describe("focused checks", () => {
     }
   });
 
-  it("uses the collapsed frontend route checks without selecting Worker checks", () => {
-    const plan = buildFocusedCheckPlan(["src/components/query-error-notice.tsx"]);
-
-    expect(plan.checks).toMatchObject([
-      { command: "npm run lint:changed", source: "frontend-routes" },
-      { command: "npm run typecheck", source: "frontend-routes" },
-      { command: "npx vitest related --run --passWithNoTests=false src/components/query-error-notice.tsx", source: "frontend-routes" },
-    ]);
-    expect(plan.fallbackOnlyPaths).toBe(0);
-  });
-
   it("uses the collapsed frontend defaults for an unclassified source path", () => {
     const plan = buildFocusedCheckPlan(["src/unclassified.ts"]);
 
@@ -161,8 +156,7 @@ describe("focused checks", () => {
 
     expect(plan.checks.map((check) => check.command)).toEqual([
       "npm run lint:changed -- --base=origin/main",
-      "npm run typecheck",
-      "npx vitest related --run --passWithNoTests=false src/components/query-error-notice.tsx",
+      ...frontendCommands.slice(1),
     ]);
   });
 
@@ -213,11 +207,7 @@ describe("focused checks", () => {
       planOnly: true,
       status: "planned",
     });
-    expect(report.checks).toMatchObject([
-      { command: "npm run lint:changed", source: "frontend-routes" },
-      { command: "npm run typecheck", source: "frontend-routes" },
-      { command: "npx vitest related --run --passWithNoTests=false src/components/query-error-notice.tsx", source: "frontend-routes" },
-    ]);
+    expect(report.checks).toMatchObject(frontendCommands.map((command) => ({ command, source: "frontend-routes" })));
     expect(report.lanes).toEqual(expect.arrayContaining([
       expect.objectContaining({
         command: "npm run typecheck",
@@ -274,7 +264,7 @@ describe("smallest-adequate matrix routing", () => {
     {
       area: "src/components",
       file: "src/components/query-error-notice.tsx",
-      checks: ["npm run lint:changed", "npm run typecheck", "npx vitest related --run --passWithNoTests=false src/components/query-error-notice.tsx"],
+      checks: frontendCommands,
     },
     {
       area: "API route",
@@ -312,6 +302,6 @@ describe("smallest-adequate matrix routing", () => {
     },
   ])("keeps the $area row exactly represented by routed checks", ({ file, checks }) => {
     const routed = buildFocusedCheckPlan([file]).checks.map((check) => check.command);
-    expect([...routed].sort()).toEqual([...checks].sort());
+    expect(routed).toEqual(checks);
   });
 });
