@@ -5,6 +5,13 @@ export interface RecordedPutCall {
   options?: { expirationTtl?: number; metadata?: unknown };
 }
 
+export interface TestKVTextStore {
+  get(key: string): string | undefined;
+  set(key: string, value: string): TestKVTextStore;
+  has(key: string): boolean;
+  readonly size: number;
+}
+
 /**
  * In-memory KVNamespace stub for Pages Functions suites.
  *
@@ -14,7 +21,7 @@ export interface RecordedPutCall {
  * corrupt-value and unavailable-binding failure paths.
  */
 export interface TestKVNamespace extends KVNamespace {
-  __getStore(): Map<string, string>;
+  __getStore(): TestKVTextStore;
   __getPutCalls(): RecordedPutCall[];
   __setReadHandler(handler: ((key: string) => string | null | Promise<string | null>) | null): void;
   __setWriteHandler(handler: ((key: string, value: string) => void | Promise<void>) | null): void;
@@ -27,24 +34,36 @@ export interface TestKVNamespace extends KVNamespace {
 }
 
 export function makeKV(): TestKVNamespace {
-  const store = new Map<string, string>();
-  const binaryStore = new Map<string, Uint8Array>();
-  const metaStore = new Map<string, unknown>();
+  const store = new Map<string, { value: string | Uint8Array; metadata: unknown }>();
   const putCalls: RecordedPutCall[] = [];
   let readHandler: ((key: string) => string | null | Promise<string | null>) | null = null;
   let writeHandler: ((key: string, value: string) => void | Promise<void>) | null = null;
+  const textValue = (key: string): string | undefined => {
+    const entry = store.get(key);
+    return entry === undefined ? undefined
+      : typeof entry.value === "string" ? entry.value : new TextDecoder().decode(entry.value);
+  };
+  const textStore: TestKVTextStore = {
+    get: textValue,
+    set: (key, value) => {
+      store.set(key, { value, metadata: null });
+      return textStore;
+    },
+    has: (key) => store.has(key),
+    get size() { return store.size; },
+  };
 
   const readValue = async (key: string): Promise<string | null> => {
     if (readHandler) {
       return readHandler(key);
     }
-    return store.has(key) ? (store.get(key) ?? null) : null;
+    return textValue(key) ?? null;
   };
 
   const readArrayBuffer = async (key: string): Promise<ArrayBuffer | null> => {
-    const binary = binaryStore.get(key);
-    if (binary) {
-      return binary.buffer.slice(binary.byteOffset, binary.byteOffset + binary.byteLength) as ArrayBuffer;
+    const value = store.get(key)?.value;
+    if (!readHandler && value instanceof Uint8Array) {
+      return value.buffer.slice(value.byteOffset, value.byteOffset + value.byteLength) as ArrayBuffer;
     }
     const text = await readValue(key);
     return text === null ? null : (new TextEncoder().encode(text).buffer as ArrayBuffer);
@@ -59,23 +78,20 @@ export function makeKV(): TestKVNamespace {
       return readValue(key);
     }) as KVNamespace["get"],
     getWithMetadata: (async (key: string, _options?: KVNamespaceGetOptions<"text">) => {
-      return { value: await readValue(key), metadata: metaStore.get(key) ?? null, cacheStatus: null };
+      return { value: await readValue(key), metadata: store.get(key)?.metadata ?? null, cacheStatus: null };
     }) as KVNamespace["getWithMetadata"],
     put: (async (key: string, value: string, options?: RecordedPutCall["options"]) => {
       if (writeHandler) {
         await writeHandler(key, value);
       }
-      store.set(key, value);
-      metaStore.set(key, options?.metadata ?? null);
+      store.set(key, { value, metadata: options?.metadata ?? null });
       putCalls.push({ key, options });
     }) as KVNamespace["put"],
     delete: (async (key: string) => {
       store.delete(key);
-      binaryStore.delete(key);
-      metaStore.delete(key);
     }) as KVNamespace["delete"],
     list: (async () => ({ keys: [], list_complete: true, cacheStatus: null })) as KVNamespace["list"],
-    __getStore: () => store,
+    __getStore: () => textStore,
     __getPutCalls: () => putCalls,
     __setReadHandler: (handler) => {
       readHandler = handler;
@@ -84,7 +100,7 @@ export function makeKV(): TestKVNamespace {
       writeHandler = handler;
     },
     __putBinary: (key, bytes) => {
-      binaryStore.set(key, bytes);
+      store.set(key, { value: bytes.slice(), metadata: null });
     },
   };
 

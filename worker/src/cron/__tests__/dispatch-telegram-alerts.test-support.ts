@@ -700,12 +700,13 @@ function withDispatchOperationFaults(
   operations: DispatchOperationTranscriptEntry[],
 ): D1Database {
   const prepare = db.prepare.bind(db);
+  const originals = new WeakMap<D1PreparedStatement, D1PreparedStatement>();
   const wrappedPrepare = (sql: string): D1PreparedStatement => {
     const statement = prepare(sql);
     const operation = dispatchOperationForSql(sql);
     if (!operation) return statement;
-    const wrap = (bound: D1PreparedStatement, binds: unknown[] = []): D1PreparedStatement =>
-      ({
+    const wrap = (bound: D1PreparedStatement, binds: unknown[] = []): D1PreparedStatement => {
+      const wrapped = {
         ...bound,
         bind: (...args: unknown[]) => wrap(bound.bind(...args), args),
         all: async <T>() => {
@@ -726,10 +727,18 @@ function withDispatchOperationFaults(
           }
           return bound.first<T>();
         },
-      }) as D1PreparedStatement;
+      } as D1PreparedStatement;
+      originals.set(wrapped, bound);
+      return wrapped;
+    };
     return wrap(statement);
   };
-  return { ...db, prepare: wrappedPrepare } as D1Database;
+  return {
+    ...db,
+    prepare: wrappedPrepare,
+    batch: <T = unknown>(statements: D1PreparedStatement[]) =>
+      db.batch<T>(statements.map((statement) => originals.get(statement) ?? statement)),
+  } as D1Database;
 }
 
 function seedDispatchFixture(sqlite: DatabaseSync, input: DispatchSeed): void {

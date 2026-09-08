@@ -117,15 +117,19 @@ export function buildPrLaneCommandArgs(
   context: PrLaneCommandContext = {},
 ): string[] {
   const args = [...command.args];
+  const sharded = command.id === "critical-coverage-shard"
+    || (command.id === "pr-tests" && (context.shard !== undefined || context.shardCount !== undefined));
+  if (sharded && (
+    !Number.isInteger(context.shard) || !Number.isInteger(context.shardCount)
+    || context.shard! < 1 || context.shardCount! < 1 || context.shard! > context.shardCount!
+  )) throw new Error("Invalid shard coordinates: require 1 <= shard <= shardCount");
   switch (command.id) {
     case "pr-tests":
       if (context.base) args.push(`--base=${context.base}`);
-      if (context.shard) args.push(`--shard=${context.shard}/4`);
+      if (sharded) args.push(`--shard=${context.shard}/${context.shardCount}`);
       args.push(...(context.forwardedTestArgs ?? []));
       break;
     case "critical-coverage-shard":
-      if (!context.shard) throw new Error("Critical coverage shards require a shard number");
-      if (!context.shardCount) throw new Error("Critical coverage shards require a shard count");
       args.push(`--shard=${context.shard}/${context.shardCount}`);
       break;
     case "pr-static":

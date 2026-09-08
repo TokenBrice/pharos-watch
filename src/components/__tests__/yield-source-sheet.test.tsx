@@ -394,7 +394,7 @@ describe("YieldSourceSheet", () => {
             ...baseRanking.provenance!,
             sourceFreshness: "stale",
           },
-          sourceRisk: mergeSourceRiskGoldenFixtures(["reward-heavy", "stale-source-age"]),
+          sourceRisk: mergeSourceRiskGoldenFixtures(["reward-heavy", "stale-source-age"], { sourceRiskPenalty: 1.65 }),
         }}
         logo={undefined}
         riskFreeRate={0.02}

@@ -65,7 +65,7 @@ describe("buildYieldSourceExplorerModel", () => {
         "stale-source-age",
         "bootstrap-observation-count",
         "source-switch-churn",
-      ]),
+      ], { sourceRiskPenalty: 2.5 }),
       provenance: {
         sourceKey: "aave-usdc",
         sourceObservedAt: 1_700_000_000,

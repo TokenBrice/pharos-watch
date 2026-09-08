@@ -4,6 +4,7 @@ import { isValidIsoDateOnly } from "../../shared/types/date-primitives.ts";
 import {
   CRITICAL_OWNERSHIP_WAIVERS,
   deriveCriticalOwnership,
+  deriveBaseCriticalOwnership,
 } from "./critical-ownership.mts";
 import { collectSourceFilesUnderRoot } from "./source-files.mts";
 
@@ -118,9 +119,29 @@ export const CRITICAL_COVERAGE_WAIVERS = {
   "shared/lib/psi-view-model.ts": "2026-09-05",
   "shared/lib/redemption-backstop-scoring.ts": "2026-09-05",
 };
-const generatedCriticalOwnership = deriveCriticalOwnership();
+export const CRITICAL_OWNERSHIP = deriveCriticalOwnership();
 export const CRITICAL_FILES = collectCriticalCoverageCandidates()
-  .filter((file) => (generatedCriticalOwnership.get(file)?.length ?? 0) > 0 && !Object.hasOwn(CRITICAL_COVERAGE_WAIVERS, file));
+  .filter((file) => (CRITICAL_OWNERSHIP.get(file)?.length ?? 0) > 0 && !Object.hasOwn(CRITICAL_COVERAGE_WAIVERS, file));
+
+/**
+ * @param {readonly string[]} changedFiles
+ * @param {ReadonlyMap<string, readonly string[]>} [baseOwnership]
+ * @param {ReadonlyMap<string, readonly string[]>} [ownership]
+ */
+export function selectChangedCriticalSources(changedFiles, baseOwnership = new Map(), ownership = CRITICAL_OWNERSHIP) {
+  const changed = new Set(changedFiles);
+  const candidates = collectCriticalCoverageCandidates().filter((file) => !Object.hasOwn(CRITICAL_COVERAGE_WAIVERS, file));
+  return candidates.filter((file) => (CRITICAL_FILES.includes(file) && changed.has(file))
+    || (ownership.get(file) ?? []).some((test) => changed.has(test))
+    || (baseOwnership.get(file) ?? []).some((test) => changed.has(test)));
+}
+
+export function criticalCoverageFilesForChanges(changedFiles, baseRef) {
+  if (!changedFiles) return CRITICAL_FILES;
+  const baseOwnership = baseRef ? deriveBaseCriticalOwnership(baseRef, changedFiles) : new Map();
+  const affected = selectChangedCriticalSources(changedFiles, baseOwnership);
+  return [...new Set([...CRITICAL_FILES, ...affected])];
+}
 
 export function normalizePath(value) {
   return value.replaceAll("\\", "/");

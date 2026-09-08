@@ -1,3 +1,5 @@
+import { buildStablecoinRegistryIndexes } from "@shared/lib/stablecoins/registry-indexes";
+
 /**
  * Factory for stubbing `@shared/lib/stablecoins/registry` in cron tests.
  *
@@ -25,7 +27,7 @@ export interface MockRegistryStablecoin {
 }
 
 export interface MockRegistryOptions {
-  /** The active stablecoin list. Drives ACTIVE_*, TRACKED_*, READABLE_*. */
+  /** The active stablecoin list. READABLE_* also includes supplied frozen assets. */
   stablecoins: MockRegistryStablecoin[];
   /** Optional override for the tracked-meta map; defaults to active map. */
   trackedMetaById?: Map<string, unknown>;
@@ -58,6 +60,9 @@ export function mockRegistry(options: MockRegistryOptions): MockRegistryExports 
   const { stablecoins, trackedMetaById, frozenStablecoins = [] } = options;
   const activeMetaById = new Map(stablecoins.map((coin) => [coin.id, coin]));
   const frozenMetaById = new Map(frozenStablecoins.map((coin) => [coin.id, coin]));
+  const readable = buildStablecoinRegistryIndexes([...stablecoins, ...frozenStablecoins], {
+    isActive: (coin) => activeMetaById.has(coin.id),
+  }).tracked;
   return {
     TRACKED_STABLECOINS: stablecoins,
     TRACKED_IDS: new Set(stablecoins.map((coin) => coin.id)),
@@ -68,8 +73,8 @@ export function mockRegistry(options: MockRegistryOptions): MockRegistryExports 
     FROZEN_STABLECOINS: frozenStablecoins,
     FROZEN_IDS: new Set(frozenStablecoins.map((coin) => coin.id)),
     FROZEN_META_BY_ID: frozenMetaById,
-    READABLE_STABLECOINS: stablecoins,
-    READABLE_IDS: new Set(stablecoins.map((coin) => coin.id)),
-    READABLE_META_BY_ID: activeMetaById,
+    READABLE_STABLECOINS: [...readable.stablecoins],
+    READABLE_IDS: readable.ids,
+    READABLE_META_BY_ID: readable.metaById,
   };
 }

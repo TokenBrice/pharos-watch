@@ -29,7 +29,7 @@ describe("yield source risk UI helpers", () => {
         "stale-source-age",
         "bootstrap-observation-count",
         "source-switch-churn",
-      ]),
+      ], { sourceRiskPenalty: 2.5 }),
     });
 
     expect(drivers.map((driver) => driver.label)).toEqual(SOURCE_RISK_GOLDEN_UI_DRIVER_LABELS);

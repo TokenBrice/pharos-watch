@@ -33,6 +33,7 @@ export function buildPrWorkflowMatrix(selection: PrLaneSelection): { include: Wo
     const shards = lane.id === "critical-coverage-shards"
       ? selection.criticalCoverageShards
       : lane.shards ?? 1;
+    if (!Number.isInteger(shards) || shards < 1) throw new Error(`Invalid shard count for ${lane.id}: ${shards}`);
     for (let shard = 1; shard <= shards; shard += 1) {
       include.push({
         lane: lane.id,
@@ -51,8 +52,8 @@ function bool(value: string | undefined): boolean {
 
 function runLane(laneId: PrLaneId, env: NodeJS.ProcessEnv): number {
   const lane = getPrLane(laneId);
-  const shard = env.PR_LANE_SHARD ? Number.parseInt(env.PR_LANE_SHARD, 10) : undefined;
-  const shardCount = env.PR_LANE_SHARD_COUNT ? Number.parseInt(env.PR_LANE_SHARD_COUNT, 10) : undefined;
+  const shard = env.PR_LANE_SHARD ? Number(env.PR_LANE_SHARD) : undefined;
+  const shardCount = env.PR_LANE_SHARD_COUNT ? Number(env.PR_LANE_SHARD_COUNT) : undefined;
   for (const command of lane.commands) {
     if (laneId === "critical-coverage" && command.id !== "critical-coverage-merge") continue;
     const program = command.program === "npm" ? "npm" : process.execPath;

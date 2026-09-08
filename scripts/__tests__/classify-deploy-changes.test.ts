@@ -14,6 +14,23 @@ import {
 } from "../ci/classify-deploy-changes.ts";
 import { DEPLOY_IMPACT_REGISTRY } from "../lib/automation-registry.mjs";
 
+describe("critical owner coverage selection", () => {
+  it("selects coverage for edited owners and deleted base-only owners, but not unrelated tests", () => {
+    expect(classifyChangedFiles(["worker/src/lib/__tests__/auth.test.ts"]).criticalCoverageChanged).toBe(true);
+    const deleted = "worker/src/lib/__tests__/removed.test.ts";
+    expect(classifyChangedFiles([deleted], {
+      baseOwnership: new Map([["worker/src/lib/auth.ts", [deleted]]]),
+    }).criticalCoverageChanged).toBe(true);
+    expect(classifyChangedFiles(["src/unrelated.test.ts"]).criticalCoverageChanged).toBe(false);
+  });
+
+  it("selects coverage for lane and matrix policy changes", () => {
+    for (const file of ["scripts/lib/pr-lanes.mts", "scripts/maintenance/generate-pr-workflow-matrix.ts", ".github/actions/setup-workspace/action.yml"]) {
+      expect(classifyChangedFiles([file]).criticalCoverageChanged).toBe(true);
+    }
+  });
+});
+
 describe("normalizeChangedFiles", () => {
   it("normalizes separators and removes blank entries", () => {
     expect(normalizeChangedFiles("worker\\src\\index.ts\0\0src/app/page.tsx\0")).toEqual([

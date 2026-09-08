@@ -12,10 +12,12 @@ import {
   normalizePath,
   parseLcov,
   validateCriticalCoverageWaiverMetadata,
+  selectChangedCriticalSources,
 } from "../lib/critical-coverage.mjs";
 import {
   CRITICAL_OWNERSHIP_WAIVERS,
   deriveCriticalOwnership,
+  deriveBaseCriticalOwnership,
   findCriticalOwnershipGaps,
   type CriticalOwnership,
 } from "../lib/critical-ownership.mts";
@@ -275,8 +277,8 @@ export function runCriticalCoverageCheck({
     if (env.CI) {
       const { base, head } = parseChangedFileArgs([], env);
       changedFiles = collectGitPaths(
-        { kind: "range", base, head, diffFilter: "ACMR" },
-        { execFile, failure: "empty" },
+        { kind: "range", base: compareRef || base, head, noRenames: true },
+        { execFile },
       );
     } else {
       try {
@@ -287,7 +289,9 @@ export function runCriticalCoverageCheck({
       }
     }
   }
-  const touchedCritical = CRITICAL_FILES.filter((file) => changedFiles.includes(file));
+  const ownershipBase = compareRef || env.PR_BASE_SHA;
+  const baseOwnership = ownershipBase ? deriveBaseCriticalOwnership(ownershipBase, changedFiles, execFile) : new Map();
+  const touchedCritical = selectChangedCriticalSources(changedFiles, baseOwnership);
   // A plumbing-only diff has no touched source to scope, matching the shard's
   // fallback to a full include set. Local/manual runs also keep full coverage.
   const coverageScope = ratchetAll || touchedCritical.length === 0 ? CRITICAL_FILES : touchedCritical;

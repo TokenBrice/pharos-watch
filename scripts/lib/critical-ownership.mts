@@ -1,24 +1,52 @@
 import { existsSync, readFileSync, statSync } from "node:fs";
-import { dirname, extname, isAbsolute, join, relative, resolve } from "node:path";
+import { execFileSync } from "node:child_process";
+import { dirname, extname, isAbsolute, join, matchesGlob, relative, resolve } from "node:path";
 
 import { collectSourceFilesUnderRoot } from "./source-files.mts";
 
 const TEST_SCAN_ROOTS = [
   "src",
-  "shared/lib",
-  "worker/src",
-  "worker/scripts",
+  "shared",
+  "worker",
   "functions",
-  "scripts/__tests__",
+  "scripts",
 ] as const;
 const TEST_FILE_EXTENSIONS = new Set([".js", ".jsx", ".mjs", ".cjs", ".ts", ".tsx", ".mts", ".cts"]);
 const RESOLVABLE_SOURCE_EXTENSIONS = [".ts", ".tsx", ".mts", ".cts", ".js", ".jsx", ".mjs", ".cjs"] as const;
 const TEST_FILE_PATTERN = /\.(?:test|spec)\.[cm]?[jt]sx?$/;
-const IMPORT_KEYWORD_PATTERN = /\bimport\b/g;
-const DYNAMIC_IMPORT_PATTERN = /\bimport\s*\(/g;
-const FROM_SPECIFIER_PATTERN = /from\s+["']([^"']+)["']/;
-const SIDE_EFFECT_IMPORT_PATTERN = /^\s*["']([^"']+)["']/;
-const VI_MOCK_PATTERN = /\bvi\.mock\s*\(\s*["']([^"']+)["']/g;
+
+export const ISOLATED_NODE_TESTS = [
+  "scripts/__tests__/remote-d1.test.ts",
+  "scripts/__tests__/serve-static-export.test.ts",
+  "shared/lib/__tests__/psi-eligible.test.ts",
+  "shared/lib/__tests__/stablecoin-id-registry.test.ts",
+];
+export const THREADED_WORKER_TESTS = [
+  "worker/src/lib/__tests__/safety-score-v9-native-input-pipeline.test.ts",
+];
+export const EXECUTABLE_TEST_PROJECTS = [
+  { name: "node", include: ["{functions,scripts,shared}/**/*.{test,spec}.?(c|m)[jt]s?(x)"], exclude: ISOLATED_NODE_TESTS },
+  { name: "node-isolated", include: ISOLATED_NODE_TESTS, exclude: [] },
+  { name: "worker", include: ["worker/**/*.{test,spec}.?(c|m)[jt]s?(x)"], exclude: THREADED_WORKER_TESTS },
+  { name: "worker-threads", include: THREADED_WORKER_TESTS, exclude: [] },
+  { name: "src", include: ["src/**/*.{test,spec}.?(c|m)[jt]s?(x)"], exclude: [] },
+];
+
+export function assertExecutableTestFiles(
+  files: readonly string[],
+  { cwd = process.cwd(), exists = (path: string) => existsSync(path) && statSync(path).isFile(), projects = EXECUTABLE_TEST_PROJECTS } = {},
+): void {
+  if (files.length === 0) throw new Error("Empty executable test selection");
+  for (const input of files) {
+    const file = normalizeOwnershipPath(isAbsolute(input) ? relative(cwd, input) : input);
+    const owners = projects.filter((project) =>
+      project.include.some((pattern) => matchesGlob(file, pattern))
+      && !project.exclude.some((pattern) => matchesGlob(file, pattern)));
+    if (!TEST_FILE_PATTERN.test(file) || owners.length !== 1 || !exists(resolve(cwd, file))) {
+      throw new Error(`Invalid executable test ${file}: expected an existing file owned by exactly one project (found ${owners.length})`);
+    }
+  }
+}
 
 export type CriticalOwnership = ReadonlyMap<string, readonly string[]>;
 
@@ -85,7 +113,7 @@ export function collectCriticalOwnershipTestFiles(cwd = process.cwd()): string[]
   const files = TEST_SCAN_ROOTS.flatMap((root) =>
     collectSourceFilesUnderRoot(root, cwd, {
       extensions: TEST_FILE_EXTENSIONS,
-      excludedDirs: [],
+      excludedDirs: ["node_modules", "dist"],
       skipDotEntries: true,
     }),
   );
@@ -95,8 +123,8 @@ export function collectCriticalOwnershipTestFiles(cwd = process.cwd()): string[]
 }
 
 /**
- * Resolve the repository module named by a test's static or dynamic import, or
- * vi.mock call. Package imports are intentionally ignored; only paths that
+ * Resolve the repository module named by a test's runtime import.
+ * Package imports are intentionally ignored; only paths that
  * resolve inside this checkout can own a critical source.
  */
 export function resolveCriticalImport(
@@ -136,40 +164,37 @@ export function resolveCriticalImport(
 }
 
 function collectImportSpecifiers(source: string): string[] {
+  // Lex strings/comments atomically so their text cannot manufacture imports.
+  // This remains dependency-free for pre-install PR preflight (including TSX).
+  const tokens = [...source.matchAll(
+    /\/\/[^\n]*|\/\*[\s\S]*?\*\/|"(?:\\.|[^"\\])*"|'(?:\\.|[^'\\])*'|`(?:\\.|[^`\\])*`|[A-Za-z_$][\w$]*|[^\s]/g,
+  )].map(([token]) => token).filter((token) => !token.startsWith("//") && !token.startsWith("/*"));
   const specifiers = new Set<string>();
-  for (const match of source.matchAll(IMPORT_KEYWORD_PATTERN)) {
-    const start = (match.index ?? 0) + match[0].length;
-    if (source.slice(start).trimStart().startsWith("(")) continue;
-    const statement = readImportStatement(source, start);
-    const fromMatch = FROM_SPECIFIER_PATTERN.exec(statement);
-    const sideEffectMatch = SIDE_EFFECT_IMPORT_PATTERN.exec(statement);
-    if (fromMatch) specifiers.add(fromMatch[1]);
-    else if (sideEffectMatch) specifiers.add(sideEffectMatch[1]);
+  const quoted = (token: string | undefined): token is string => token !== undefined && /^["']/.test(token);
+  for (let index = 0; index < tokens.length; index++) {
+    if (tokens[index] !== "import" || tokens[index - 1] === ".") continue;
+    if (tokens[index + 1] === "type" && tokens[index + 2] !== "from") continue;
+    if (tokens[index + 1] === "{") {
+      const end = tokens.indexOf("}", index + 2);
+      const bindings = tokens.slice(index + 2, end).join(" ").split(",").map((binding) => binding.trim()).filter(Boolean);
+      if (end >= 0 && bindings.length > 0 && bindings.every((binding) => /^type\s+\w/.test(binding))) continue;
+    }
+    let specifier: string | undefined;
+    if (tokens[index + 1] === "(") {
+      if (quoted(tokens[index + 2]) && [")", ","].includes(tokens[index + 3])) specifier = tokens[index + 2];
+    } else if (quoted(tokens[index + 1])) {
+      specifier = tokens[index + 1];
+    } else {
+      for (let cursor = index + 1; cursor < tokens.length && tokens[cursor] !== ";"; cursor++) {
+        if (tokens[cursor] === "from" && quoted(tokens[cursor + 1])) {
+          specifier = tokens[cursor + 1];
+          break;
+        }
+      }
+    }
+    if (specifier) specifiers.add(specifier.slice(1, -1));
   }
-  for (const match of source.matchAll(DYNAMIC_IMPORT_PATTERN)) {
-    const start = (match.index ?? 0) + match[0].length;
-    const closingParen = source.indexOf(")", start);
-    if (closingParen < 0) continue;
-    const sideEffectMatch = SIDE_EFFECT_IMPORT_PATTERN.exec(source.slice(start, closingParen));
-    if (sideEffectMatch) specifiers.add(sideEffectMatch[1]);
-  }
-  for (const match of source.matchAll(VI_MOCK_PATTERN)) specifiers.add(match[1]);
   return [...specifiers];
-}
-
-function readImportStatement(source: string, start: number): string {
-  const semicolon = source.indexOf(";", start);
-  const limit = semicolon >= 0 ? semicolon : source.length;
-  const segment = source.slice(start, limit);
-  const fromMatch = FROM_SPECIFIER_PATTERN.exec(segment);
-  if (fromMatch) {
-    const fromEnd = start + fromMatch.index + fromMatch[0].length;
-    const newline = source.indexOf("\n", fromEnd);
-    const end = newline >= 0 && newline < limit ? newline : limit;
-    return source.slice(start, end);
-  }
-  const newline = source.indexOf("\n", start);
-  return newline >= 0 && newline < limit ? source.slice(start, newline) : segment;
 }
 
 /** Derive source → importing test files from each test's static or dynamic imports. */
@@ -183,6 +208,7 @@ export function deriveCriticalOwnership({
     ? new Set([...sourceFiles].map((file) => normalizeOwnershipPath(isAbsolute(file) ? relative(cwd, file) : file)))
     : null;
   const ownership = new Map<string, Set<string>>();
+  if (testFiles.length > 0) assertExecutableTestFiles(testFiles, { cwd, exists: fsImpl.existsSync });
   for (const inputTestFile of testFiles) {
     const testFile = normalizeOwnershipPath(isAbsolute(inputTestFile) ? relative(cwd, inputTestFile) : inputTestFile);
     const source = fsImpl.readFileSync(resolve(cwd, testFile), "utf8");
@@ -221,3 +247,21 @@ export function collectOwningTests(
   return [...tests].sort();
 }
 
+
+export function deriveBaseCriticalOwnership(
+  ref: string,
+  changedFiles: readonly string[],
+  execFile: (file: string, args: readonly string[], options: { encoding: "utf8" }) => string = execFileSync,
+): CriticalOwnership {
+  const tests = changedFiles.filter((file) => TEST_FILE_PATTERN.test(file));
+  if (tests.length === 0) return new Map();
+  const cwd = process.cwd();
+  const inventory = new Set(execFile("git", ["ls-tree", "-r", "--name-only", "-z", ref], { encoding: "utf8" }).split("\0").filter(Boolean));
+  return deriveCriticalOwnership({
+    testFiles: tests.filter((file) => inventory.has(file)),
+    fsImpl: {
+      existsSync: (file) => inventory.has(normalizeOwnershipPath(relative(cwd, file))),
+      readFileSync: (file) => execFile("git", ["show", `${ref}:${normalizeOwnershipPath(relative(cwd, file))}`], { encoding: "utf8" }),
+    },
+  });
+}

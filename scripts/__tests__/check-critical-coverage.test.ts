@@ -95,6 +95,7 @@ describe("critical coverage changed-file detection", () => {
   it("fails closed when the configured compare ref cannot be diffed", () => {
     const errors: string[] = [];
     const exits: number[] = [];
+    const logs: string[] = [];
 
     runCriticalCoverageCheck({
       env: testEnv({ CRITICAL_COVERAGE_COMPARE_REF: "missing-ref" }),
@@ -106,10 +107,10 @@ describe("critical coverage changed-file detection", () => {
         throw new Error("unknown revision");
       }),
       consoleImpl: mockConsole({
-        log: () => {},
+        log: (message: string) => logs.push(message),
         error: (message: string) => errors.push(message),
       }),
-      completenessOptions: { candidateFiles: [], waivers: {} },
+      completenessOptions: { candidateFiles: [], criticalFiles: [], ownership: new Map(), waivers: {}, ownershipWaivers: {} },
       exit: captureProcessExit((code) => {
         if (code !== undefined) exits.push(code);
       }),
@@ -117,7 +118,7 @@ describe("critical coverage changed-file detection", () => {
 
     expect(exits).toEqual([1]);
     expect(errors).toContainEqual(expect.stringContaining('Could not diff against explicit ref "missing-ref"'));
-    expect(errors).not.toContain("[coverage] Critical coverage gate passed.");
+    expect(logs).not.toContain("[coverage] Critical coverage gate passed.");
   });
 
   it("derives high-stakes pricing, depeg, reserve, score, publication, and proxy candidates from source paths", () => {
@@ -345,7 +346,7 @@ describe("critical coverage changed-file detection", () => {
         error: (message: string) => errors.push(message),
         warn: (message: string) => logs.push(message),
       }),
-      completenessOptions: { candidateFiles: [], waivers: {} },
+      completenessOptions: { candidateFiles: [], criticalFiles: [], ownership: new Map(), waivers: {}, ownershipWaivers: {} },
       exit: captureProcessExit((code) => {
         if (code !== undefined) exits.push(code);
       }),
@@ -386,7 +387,7 @@ describe("critical coverage changed-file detection", () => {
         log: (message: string) => logs.push(message),
         error: (message: string) => errors.push(message),
       }),
-      completenessOptions: { candidateFiles: [], waivers: {} },
+      completenessOptions: { candidateFiles: [], criticalFiles: [], ownership: new Map(), waivers: {}, ownershipWaivers: {} },
       exit: captureProcessExit((code) => {
         if (code !== undefined) exits.push(code);
       }),
@@ -398,8 +399,9 @@ describe("critical coverage changed-file detection", () => {
     expect(logs.some((line) => line.includes("MISSING:"))).toBe(false);
   });
 
-  it("fails a touched critical file when its line coverage regresses from the baseline", () => {
+  it.each(["source", "edited owner", "deleted owner"])("ratchets coverage regressions for a changed %s", (change) => {
     const file = "worker/src/lib/price-consensus.ts";
+    const owner = change === "deleted owner" ? "worker/src/lib/__tests__/removed.test.ts" : "worker/src/lib/__tests__/price-consensus.test.ts";
     const errors: string[] = [];
     const exits: number[] = [];
     const files = new Map<string, string>([
@@ -414,17 +416,24 @@ describe("critical coverage changed-file detection", () => {
     ]);
 
     runCriticalCoverageCheck({
-      env: testEnv({ CRITICAL_COVERAGE_CHANGED_FILES: file }),
+      env: testEnv({
+        CRITICAL_COVERAGE_CHANGED_FILES: change === "source" ? file : owner,
+        ...(change === "deleted owner" ? { CRITICAL_COVERAGE_COMPARE_REF: "base" } : {}),
+      }),
       fsImpl: mockFsImpl({
         existsSync: (path: string) => files.has(path),
         readFileSync: (path: string) => files.get(path) ?? "",
       }),
-      execFile: mockExecFileSync(() => ""),
+      execFile: mockExecFileSync((_cmd, args) => {
+        if (args?.[0] === "ls-tree") return `${owner}\0${file}\0`;
+        if (args?.[0] === "show") return 'import "../price-consensus";';
+        throw new Error("Unexpected Git command");
+      }),
       consoleImpl: mockConsole({
         log: () => {},
         error: (message: string) => errors.push(message),
       }),
-      completenessOptions: { candidateFiles: [], waivers: {} },
+      completenessOptions: { candidateFiles: [], criticalFiles: [], ownership: new Map(), waivers: {}, ownershipWaivers: {} },
       exit: captureProcessExit((code) => {
         if (code !== undefined) exits.push(code);
       }),
@@ -434,7 +443,7 @@ describe("critical coverage changed-file detection", () => {
     expect(errors).toContain("[coverage] REGRESSION worker/src/lib/price-consensus.ts: 50.0% < baseline 51.0% (tolerance 0.0%)");
   });
 
-  it("fails boundary coverage when a provider error branch falls below its floor", () => {
+  it.each([3, 4])("enforces the provider branch floor independently at %i/10 branches", (brh) => {
     const file = "worker/src/lib/evm-rpc.ts";
     const errors: string[] = [];
     const exits: number[] = [];
@@ -444,11 +453,11 @@ describe("critical coverage changed-file detection", () => {
         buildCriticalLcov({
           branchCoverage: {
             ...Object.fromEntries(Object.keys(CRITICAL_COVERAGE_BRANCH_FLOORS).map((path) => [path, { brf: 10, brh: 10 }])),
-            [file]: { brf: 10, brh: 3 },
+            [file]: { brf: 10, brh },
           },
         }),
       ],
-      [".ci/critical-coverage-baseline.json", JSON.stringify({ files: {} })],
+      [".ci/critical-coverage-baseline.json", JSON.stringify({ files: { [file]: 100 } })],
     ]);
 
     runCriticalCoverageCheck({
@@ -462,14 +471,14 @@ describe("critical coverage changed-file detection", () => {
         log: () => {},
         error: (message: string) => errors.push(message),
       }),
-      completenessOptions: { candidateFiles: [], waivers: {} },
+      completenessOptions: { candidateFiles: [], criticalFiles: [], ownership: new Map(), waivers: {}, ownershipWaivers: {} },
       exit: captureProcessExit((code) => {
         if (code !== undefined) exits.push(code);
       }),
     });
 
-    expect(exits).toEqual([1]);
-    expect(errors).toContain("[coverage] BRANCH FAIL worker/src/lib/evm-rpc.ts: 30.0% (3/10) < 40.0%");
+    expect(exits).toEqual(brh < 4 ? [1] : []);
+    expect(errors).toEqual(brh < 4 ? ["[coverage] BRANCH FAIL worker/src/lib/evm-rpc.ts: 30.0% (3/10) < 40.0%"] : []);
   });
 
   it("keeps branch/error-path floors at provider, auth, scoring, and publication boundaries", () => {

@@ -1,15 +1,25 @@
-import { readFileSync } from "node:fs";
-import { resolve } from "node:path";
+import { chmodSync, mkdirSync, mkdtempSync, readFileSync, readlinkSync, rmSync, statSync, symlinkSync, writeFileSync } from "node:fs";
+import { dirname, join, resolve } from "node:path";
+import { tmpdir } from "node:os";
 import { describe, expect, it } from "vitest";
+import { parse as parseYaml } from "yaml";
+import { z } from "zod";
 
 import { execFileSync } from "node:child_process";
 import { PR_LANES, buildPrLaneCommandArgs, getPrLane } from "../lib/pr-lanes.mts";
 import { GENERATED_ARTIFACT_REGISTRY } from "../lib/automation-registry.mjs";
 import { buildPrWorkflowMatrix } from "../maintenance/generate-pr-workflow-matrix.ts";
 
+const stepSchema = z.object({
+  name: z.string().optional(), id: z.string().optional(), uses: z.string().optional(), run: z.string().optional(),
+  "continue-on-error": z.boolean().optional(),
+  with: z.record(z.string(), z.unknown()).default({}), env: z.record(z.string(), z.string()).default({}),
+});
+const workflowSchema = z.object({ jobs: z.record(z.string(), z.object({ steps: z.array(stepSchema) })) });
+const actionSchema = z.object({ runs: z.object({ steps: z.array(stepSchema) }) });
 const REPO_ROOT = resolve(import.meta.dirname, "../..");
-const WORKFLOW = readFileSync(resolve(REPO_ROOT, ".github/workflows/pull-request-checks.yml"), "utf8");
-const SETUP_WORKSPACE = readFileSync(resolve(REPO_ROOT, ".github/actions/setup-workspace/action.yml"), "utf8");
+const WORKFLOW = workflowSchema.parse(parseYaml(readFileSync(resolve(REPO_ROOT, ".github/workflows/pull-request-checks.yml"), "utf8")));
+const SETUP_WORKSPACE = actionSchema.parse(parseYaml(readFileSync(resolve(REPO_ROOT, ".github/actions/setup-workspace/action.yml"), "utf8")));
 
 describe("PR lane manifest", () => {
   it("is the workflow matrix source of truth", () => {
@@ -22,10 +32,10 @@ describe("PR lane manifest", () => {
       "docs",
       "gate",
     ]);
-    expect(WORKFLOW).toContain("generate-pr-workflow-matrix.ts --matrix");
-    expect(WORKFLOW).toContain("generate-pr-workflow-matrix.ts --run");
-    expect(WORKFLOW).not.toContain("npm run check:pr:static");
-    expect(WORKFLOW).not.toContain("npm run test:pr");
+    const steps = Object.values(WORKFLOW.jobs).flatMap((job) => job.steps);
+    const commands = steps.flatMap((step) => step.run ? [step.run] : []);
+    expect(commands).toContain("echo \"matrix=$(node --experimental-strip-types scripts/maintenance/generate-pr-workflow-matrix.ts --matrix)\" >> \"$GITHUB_OUTPUT\"");
+    expect(commands).toContain("node --experimental-strip-types scripts/maintenance/generate-pr-workflow-matrix.ts --run");
   });
 
   it("generates four test shards and the selected number of coverage shards", () => {
@@ -93,8 +103,8 @@ describe("PR lane manifest", () => {
     const tests = getPrLane("tests").commands[0];
     expect(gitleaks?.args).toContain("--range");
     expect(gitleaks?.args).not.toContain("--lenient-platform");
-    expect(buildPrLaneCommandArgs(tests, { base: "base", shard: 2 })).toEqual([
-      "run", "test:pr", "--", "--base=base", "--shard=2/4",
+    expect(buildPrLaneCommandArgs(tests, { base: "base", shard: 2, shardCount: 3 })).toEqual([
+      "run", "test:pr", "--", "--base=base", "--shard=2/3",
     ]);
     expect(buildPrLaneCommandArgs(tests, { base: "base" })).toEqual([
       "run", "test:pr", "--", "--base=base",
@@ -109,15 +119,24 @@ describe("PR lane manifest", () => {
     ]);
   });
 
-  it("caches every gitignored bootstrap output so matrix jobs see what prepare generated", () => {
-    // Collect every `path: |` block's entries (ten-space indented lines) from the action.
-    const cachedPaths: string[] = [];
-    let inPathBlock = false;
-    for (const line of SETUP_WORKSPACE.split("\n")) {
-      if (line.trim() === "path: |") { inPathBlock = true; continue; }
-      if (inPathBlock && line.startsWith("          ") && line.trim()) cachedPaths.push(line.trim());
-      else inPathBlock = false;
+  it("rejects incomplete and out-of-range shard coordinates", () => {
+    for (const lane of ["tests", "critical-coverage-shards"] as const) {
+      for (const context of [{ shard: 1 }, { shardCount: 2 }, { shard: 0, shardCount: 2 }, { shard: 3, shardCount: 2 }, { shard: 1.5, shardCount: 2 }]) {
+        expect(() => buildPrLaneCommandArgs(getPrLane(lane).commands[0], context)).toThrow(/shard/i);
+      }
     }
+  });
+
+  it("fails closed instead of dropping a selected coverage lane with no shards", () => {
+    expect(() => buildPrWorkflowMatrix({
+      criticalCoverageChanged: true, criticalCoverageShards: 0, docsChanged: false, docsOnly: false,
+    })).toThrow(/shard/);
+  });
+
+  it("transports every ignored bootstrap output through the required archive, not optional caches", () => {
+    const steps = SETUP_WORKSPACE.runs.steps;
+    const packaging = steps.find((step) => step.name === "Package required workspace");
+    const cachedPaths = packaging!.env.WORKSPACE_PATHS.trim().split("\n");
     const bootstrapOutputs = GENERATED_ARTIFACT_REGISTRY
       .filter((artifact) => artifact.bootstrap)
       .flatMap((artifact) => artifact.outputPaths)
@@ -130,5 +149,56 @@ describe("PR lane manifest", () => {
       !cachedPaths.some((cached) => output === cached || output.startsWith(`${cached}/`)),
     );
     expect(uncached).toEqual([]);
+  });
+
+  it("requires run-scoped publication and restoration independently of optional caches", () => {
+    const steps = SETUP_WORKSPACE.runs.steps;
+    const upload = steps.find((step) => step.uses?.startsWith("actions/upload-artifact@"));
+    const download = steps.find((step) => step.uses?.startsWith("actions/download-artifact@"));
+    expect(upload!.with["if-no-files-found"]).toBe("error");
+    expect(download!.with.name).toBe(upload!.with.name);
+    expect(upload!.with.name).toContain("github.run_id");
+    expect(upload!.with.name).toContain("github.run_attempt");
+    expect(upload!.with.name).toContain("github.sha");
+    for (const step of [upload, download]) expect(step!["continue-on-error"]).toBeUndefined();
+    for (const job of ["validation", "critical-coverage"]) {
+      const setup = WORKFLOW.jobs[job].steps.find((step) => step.uses === "./.github/actions/setup-workspace");
+      expect(setup!.with["workspace-artifact"]).toBe("restore");
+      expect(setup!.with["install-deps"]).toBe("false");
+    }
+    expect(steps.find((step) => step.id === "static-cache")!.uses).toMatch(/^actions\/cache\/restore@/);
+  });
+
+  it("roundtrips executable dependencies without caches and fails on missing transport", () => {
+    const root = mkdtempSync(join(tmpdir(), "pharos-workspace-transport-"));
+    try {
+      const source = join(root, "source");
+      const destination = join(root, "destination");
+      mkdirSync(source);
+      mkdirSync(destination);
+      const packaging = SETUP_WORKSPACE.runs.steps.find((step) => step.name === "Package required workspace")!;
+      const restoring = SETUP_WORKSPACE.runs.steps.find((step) => step.run?.startsWith("tar -xzf"))!;
+      const paths = packaging.env.WORKSPACE_PATHS.trim().split("\n");
+      for (const file of paths) {
+        mkdirSync(dirname(join(source, file)), { recursive: true });
+        if (file === "node_modules") mkdirSync(join(source, file));
+        else writeFileSync(join(source, file), file);
+      }
+      writeFileSync(join(source, "node_modules/tool"), "#!/bin/sh\nexit 0\n");
+      chmodSync(join(source, "node_modules/tool"), 0o755);
+      symlinkSync("tool", join(source, "node_modules/link"));
+      const env = { ...process.env, RUNNER_TEMP: root, ...packaging.env };
+      execFileSync("bash", ["-e", "-c", packaging.run!], { cwd: source, env, stdio: "pipe" });
+      execFileSync("bash", ["-e", "-c", restoring.run!], { cwd: destination, env, stdio: "pipe" });
+      expect(readFileSync(join(destination, paths[1]), "utf8")).toBe(paths[1]);
+      expect(statSync(join(destination, "node_modules/tool")).mode & 0o777).toBe(0o755);
+      expect(readlinkSync(join(destination, "node_modules/link"))).toBe("tool");
+      rmSync(join(root, "pharos-workspace/workspace.tar.gz"));
+      expect(() => execFileSync("bash", ["-e", "-c", restoring.run!], { cwd: destination, env, stdio: "pipe" })).toThrow();
+      rmSync(join(source, paths[1]));
+      expect(() => execFileSync("bash", ["-e", "-c", packaging.run!], { cwd: source, env, stdio: "pipe" })).toThrow();
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
   });
 });
