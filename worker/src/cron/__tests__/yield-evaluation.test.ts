@@ -7,7 +7,7 @@ import { buildHardcodedUsdBenchmark, withYieldBenchmarkStaticMeta } from "../yie
 import { buildHistoryKey, evaluateYieldSources, evaluateYieldSourcesCooperative } from "../yield-sync/evaluation";
 import type { EvaluateYieldSourcesInput } from "../yield-sync/evaluation";
 import type { ResolvedYield } from "../yield-sync/types";
-import { baseEvaluationInput, freshUsdBenchmark, resolvedYield } from "./yield-evaluation.test-support";
+import { baseEvaluationInput, resolvedYield } from "./yield-evaluation.test-support";
 
 
 function gbpBenchmark(observedAt: number, ageSeconds: number, rate = 4.5) {

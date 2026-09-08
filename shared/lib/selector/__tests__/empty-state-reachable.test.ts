@@ -80,4 +80,3 @@ describe("empty-state reachable per profile", () => {
   );
 
 });
-

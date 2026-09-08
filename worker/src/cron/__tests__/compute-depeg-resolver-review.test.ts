@@ -240,7 +240,7 @@ describe("buildDepegResolverReviewSnapshot", () => {
           stablecoinId: "lusd-liquity",
           startedAt: STARTED_AT,
           eligibleAt: STARTED_AT + 86_400,
-          
+
         }),
       ]),
       loadSealedPublicPredictions: vi.fn(async () => [
@@ -962,7 +962,7 @@ describe("buildDepegResolverReviewSnapshot", () => {
       stablecoinId: "usr-resolv",
       startedAt: USR_FROZEN_EVENT_STARTED_AT,
       eligibleAt: USR_FROZEN_ELIGIBLE_AT,
-      
+
     });
     const db = reviewDb([
       {

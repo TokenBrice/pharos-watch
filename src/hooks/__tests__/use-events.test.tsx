@@ -25,7 +25,7 @@ vi.mock("../api-hooks", () => ({
 
 import { CRON_TAPE } from "@/lib/cron-intervals";
 import { useEvents, useLatestEvents } from "../use-events";
-import { latestInfiniteQueryOptions, makeInfiniteQueryResult } from "./infinite-event-hooks.test-support";
+import { makeInfiniteQueryResult } from "./infinite-event-hooks.test-support";
 import type { CursorPageFixture } from "./infinite-event-hooks.test-support";
 
 /**

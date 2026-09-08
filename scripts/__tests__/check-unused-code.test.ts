@@ -1,9 +1,9 @@
 import { execFileSync } from "node:child_process";
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { scanForUnusedCode } from "../ci/check-unused-code";
-import { afterEach, describe, expect, it } from "vitest";
+import { describe, expect, it } from "vitest";
 
 const CHECKER = resolve(process.cwd(), "scripts/ci/check-unused-code.ts");
 const TSX_LOADER = resolve(process.cwd(), "node_modules/tsx/dist/loader.mjs");

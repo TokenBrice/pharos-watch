@@ -398,7 +398,7 @@ describe("generate-ddrr-calibration-report", () => {
       const input = join(dir, "ddrr.json");
       const generatedAt = "2026-06-29T00:00:00.000Z";
       writeFileSync(input, JSON.stringify(response([prediction()])), "utf8");
-  
+
       await expect(runCli(["--input", input, "--json", "--generated-at", generatedAt], dir)).resolves.toBe(0);
       const output = join(dir, DEFAULT_DDRR_CALIBRATION_REPORT_PATH);
       const expected = buildDdrrCalibrationReport(response([prediction()]), {

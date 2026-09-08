@@ -32,11 +32,11 @@ function nonOkStreamingResponse(status = 503): { response: Response; cancel: Ret
 describe("runPaginatedDirectApiFetch", () => {
   afterEach(() => {
     vi.unstubAllGlobals();
-    
+
   });
 
   it("collects rows from multiple pages and stops on short page", async () => {
-    
+
     mockFetch([{
       match: "api.example.com",
       outcomes: [
@@ -55,7 +55,7 @@ describe("runPaginatedDirectApiFetch", () => {
   });
 
   it("returns first page rows and an error on HTTP failure mid-pagination", async () => {
-    
+
     const failure = nonOkStreamingResponse(503);
     mockFetch([{
       match: "api.example.com",
@@ -75,7 +75,7 @@ describe("runPaginatedDirectApiFetch", () => {
   });
 
   it("reports error and breaks on JSON parse failure", async () => {
-    
+
     mockFetch([{
       match: "api.example.com",
       outcomes: [{ body: "{bad-json" }],
@@ -90,7 +90,7 @@ describe("runPaginatedDirectApiFetch", () => {
   });
 
   it("skips malformed rows while preserving valid ones", async () => {
-    
+
     mockFetch([{
       match: "api.example.com",
       body: { items: ["valid", 42, "also-valid"] },
@@ -104,7 +104,7 @@ describe("runPaginatedDirectApiFetch", () => {
   });
 
   it("stops at maxPages cap", async () => {
-    
+
     const fetchSpy = mockFetch([{
       match: "api.example.com",
       body: { items: ["a", "b"] },
@@ -121,7 +121,7 @@ describe("runPaginatedDirectApiFetch", () => {
   });
 
   it("reports error when parsePage returns null (invalid root shape)", async () => {
-    
+
     mockFetch([{
       match: "api.example.com",
       body: { unexpected: "shape" },
@@ -136,7 +136,7 @@ describe("runPaginatedDirectApiFetch", () => {
   });
 
   it("reports error on network fetch failure", async () => {
-    
+
     mockFetch([{
       match: "api.example.com",
       outcomes: [new Error("network timeout")],
@@ -158,7 +158,7 @@ describe("runPaginatedDirectApiFetch", () => {
   });
 
   it("stops on empty page without error", async () => {
-    
+
     mockFetch([{
       match: "api.example.com",
       outcomes: [
@@ -177,7 +177,7 @@ describe("runPaginatedDirectApiFetch", () => {
   });
 
   it("builds page-dependent POST requests while retaining shared headers and signals", async () => {
-    
+
     const fetchSpy = mockFetch([{
       match: "api.example.com",
       body: { items: ["a"] },

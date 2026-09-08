@@ -1,5 +1,5 @@
-import type { DdrV2ResponseRow } from "@shared/types/depeg-resolver";
-import { attachDdrPublicRowHash, computeDdrPublicRowHash, type validateDdrPublicCacheContract } from "@shared/lib/depeg-resolver/public-contract";
+import type { DdrV2ResponseRow } from "../../../types/depeg-resolver";
+import { attachDdrPublicRowHash, computeDdrPublicRowHash, type validateDdrPublicCacheContract } from "../public-contract";
 
 export function basePublicRow(incidentKey = "ddr2:test", prediction: Partial<DdrV2ResponseRow["prediction"]> = {}) {
   return {

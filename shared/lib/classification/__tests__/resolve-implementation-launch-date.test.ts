@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { makeStablecoinMeta as meta } from "@shared/test-utils/stablecoin";
+import { makeStablecoinMeta as meta } from "../../../test-utils/stablecoin";
 import {
   conservativeImplementationDate,
   fuzzyDateRange,

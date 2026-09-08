@@ -3,9 +3,9 @@ import { buildSelectorRows, type BuildSelectorRowsArgs } from "../data-adapter";
 import { hasRequiredSignals } from "../exclusions";
 import { selectYieldSource } from "../yield-source";
 import { makeInput } from "./fixture";
-import type * as ClientRegistry from "@shared/lib/stablecoins/client-registry";
+import type * as ClientRegistry from "../../stablecoins/client-registry";
 
-vi.mock("@shared/lib/stablecoins/client-registry", async (importOriginal) => {
+vi.mock("../../stablecoins/client-registry", async (importOriginal) => {
   const actual = await importOriginal<typeof ClientRegistry>();
   const base = actual.CLIENT_ACTIVE_META_BY_ID.get("usdc-circle")!;
   const reviewed = { ...base, custodyModel: "cex" as const };

@@ -28,16 +28,6 @@ import {
 const SomeSchema = z.object({ value: z.number() });
 type SomeData = z.infer<typeof SomeSchema>;
 
-function deferred<T>() {
-  let resolve!: (value: T) => void;
-  let reject!: (reason?: unknown) => void;
-  const promise = new Promise<T>((innerResolve, innerReject) => {
-    resolve = innerResolve;
-    reject = innerReject;
-  });
-  return { promise, resolve, reject };
-}
-
 async function withAbortSignalAnyAbsent<T>(run: () => Promise<T>): Promise<T> {
   const descriptor = Object.getOwnPropertyDescriptor(AbortSignal, "any");
   Object.defineProperty(AbortSignal, "any", {

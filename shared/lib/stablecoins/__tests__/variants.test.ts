@@ -8,7 +8,7 @@ import type { StablecoinMeta, VariantKind } from "../../../types";
 import { ACTIVE_META_BY_ID, ACTIVE_STABLECOINS } from "../registry";
 import { isActiveStablecoinMeta } from "../status";
 import { createVariantRelationshipHelpers } from "../variant-relationships";
-import { makeStablecoinMeta } from "@shared/test-utils/stablecoin";
+import { makeStablecoinMeta } from "../../../test-utils/stablecoin";
 
 function hasTrackedVariantMeta(
   meta: StablecoinMeta | undefined,

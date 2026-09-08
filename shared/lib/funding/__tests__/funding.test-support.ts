@@ -1,4 +1,4 @@
-import type { Donation } from "@shared/lib/funding/schema";
+import type { Donation } from "../schema";
 
 export function makeDonation(overrides: Partial<Donation> = {}): Donation {
   return {
