@@ -1,5 +1,6 @@
 import type { PublicHealthAssessment } from "../public-health-assessment";
 import { ACTIVE_IDS } from "@shared/lib/stablecoins/registry";
+import { makeHealthyHealthResponse } from "@shared/test-utils/health-fixtures";
 
 export function makePriceCoverageMetadata(
   nowSec: number,
@@ -39,6 +40,8 @@ export function makePublicHealth(
   overallStatus: PublicHealthAssessment["overallStatus"] = "healthy",
   overrides: Partial<PublicHealthAssessment> = {},
 ): PublicHealthAssessment {
+  const healthy = makeHealthyHealthResponse();
+
   return {
     dbHealthy: true,
     overallStatus,
@@ -49,29 +52,10 @@ export function makePublicHealth(
     cacheFailures: [],
     cacheDiagnostics: [],
     cacheWarnings: [],
-    blacklist: {
-      totalEvents: 0,
-      missingAmounts: 0,
-      recentMissingAmounts: 0,
-      recentWindowSec: 86_400,
-      missingRatio: 0,
-    },
+    blacklist: healthy.blacklist,
     blacklistMetrics: null,
     blacklistQueryError: null,
-    mintBurn: {
-      totalEvents: 0,
-      latestEventTs: null,
-      latestHourlyTs: null,
-      freshnessAgeSec: null,
-      majorStaleCount: 0,
-      staleMajorSymbols: [],
-      sync: {
-        lastSuccessfulSyncAt: null,
-        freshnessStatus: "fresh",
-        warning: null,
-        criticalLaneHealthy: true,
-      },
-    },
+    mintBurn: healthy.mintBurn,
     mintBurnImpactStatus: "healthy",
     mintBurnQueryError: null,
     mintBurnLastRunStatus: "ok",

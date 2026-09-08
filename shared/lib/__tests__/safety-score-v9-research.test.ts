@@ -14,6 +14,7 @@ import {
   scoreV9Input,
 } from "../safety-score-v9-research";
 import { projectV9ScoringInput } from "../safety-score-v9/score";
+import { makeV9ScoringInput } from "./safety-score-v9-score.test-support";
 
 const AS_OF = "2026-07-01T00:00:00.000Z";
 
@@ -21,20 +22,7 @@ function scoringInput(
   assetId: string,
   overrides: Partial<Parameters<typeof scoreV9Input>[0]> = {},
 ): Parameters<typeof scoreV9Input>[0] {
-  return {
-    assetId,
-    pillars: { backing: 95, exit: 95, control: 95 },
-    pegScore: 100,
-    pegApplicable: true,
-    evidenceLevel: "strong",
-    trackRecordMonths: 48,
-    activeDepegBps: null,
-    parentRequired: false,
-    parentScore: null,
-    structuralSignals: [],
-    unresolved: [],
-    ...overrides,
-  };
+  return makeV9ScoringInput({ assetId, ...overrides });
 }
 
 function compiled(assetId: string, parentId?: string): CompiledV9AssetInput {

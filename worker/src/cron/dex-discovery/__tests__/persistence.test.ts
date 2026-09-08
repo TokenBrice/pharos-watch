@@ -13,7 +13,7 @@ import {
   writeDiscoveryTargetCursors,
 } from "../persistence";
 import { STAGED_POOL_MAX_TVL_USD } from "../types";
-import { makeNoopD1 } from "../../../test-helpers/noop-d1";
+import { makeNoopD1, makeRunCountingNoopD1 } from "../../../test-helpers/noop-d1";
 import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
 import { stagedPool } from "./discovery.test-support";
 
@@ -91,44 +91,25 @@ describe("upsertStagedPools", () => {
 describe("discovery persistence D1 retry coverage", () => {
   it("retries discovery meta writes on transient D1 overload", async () => {
     vi.useFakeTimers();
-    let attempts = 0;
-    const db = makeNoopD1({
-      prepare: () => ({
-        bind: () => ({
-          run: async () => {
-            attempts++;
-            if (attempts === 1) throw new Error("D1 DB is overloaded");
-            return { success: true, meta: { changes: 1 } };
-          },
-        }),
-      }),
-    });
+    const db = makeRunCountingNoopD1((attempt) =>
+      attempt === 1 ? new Error("D1 DB is overloaded") : null,
+    );
 
     const pending = updateDiscoveryMeta(db, "usdc-circle", 2, 1_710_000_000);
     await vi.runAllTimersAsync();
     await pending;
 
-    expect(attempts).toBe(2);
+    expect(db.getRunCount()).toBe(2);
   });
 
   it("does not retry miss-counter arithmetic after an ambiguous D1 overload", async () => {
-    let attempts = 0;
-    const db = makeNoopD1({
-      prepare: () => ({
-        bind: () => ({
-          run: async () => {
-            attempts++;
-            throw new Error("D1 DB storage operation exceeded timeout");
-          },
-        }),
-      }),
-    });
+    const db = makeRunCountingNoopD1(() => new Error("D1 DB storage operation exceeded timeout"));
 
     await expect(updateDiscoveryMeta(db, "usdc-circle", 0, 1_710_000_000)).rejects.toThrow(
       "D1 DB storage operation exceeded timeout",
     );
 
-    expect(attempts).toBe(1);
+    expect(db.getRunCount()).toBe(1);
   });
 
   it("uses bounded oldest-first 30h/4h staging cleanup and retries transient D1 overload", async () => {

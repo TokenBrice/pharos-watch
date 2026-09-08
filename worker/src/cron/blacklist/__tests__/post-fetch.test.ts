@@ -7,6 +7,7 @@ import type { BlacklistRunBudget } from "../../../lib/blacklist/run-budget";
 import type { BlacklistRow } from "../../../lib/blacklist/shared";
 import { makeNoopD1 } from "../../../test-helpers/noop-d1";
 import { makePendingBlacklistRow } from "./blacklist.test-support";
+import { ethereumConfig } from "./balance.test-support";
 
 vi.mock("../../../lib/blacklist/amount-recovery", () => ({
   enrichRowBalances: vi.fn(),
@@ -33,21 +34,7 @@ import { syncCurrentBalanceCacheForRows } from "../../../lib/blacklist/current-b
 import { insertBlacklistRows } from "../persistence";
 import { processFetchedBlacklistRows } from "../post-fetch";
 
-const config: ContractEventConfig = {
-  configKey: "ethereum-0xdac17f958d2ee523a2206206994597c13d831ec7",
-  chain: {
-    chainId: "ethereum",
-    chainName: "Ethereum",
-    evmChainId: 1,
-    explorerUrl: "https://etherscan.io",
-    type: "evm",
-  },
-  stablecoinId: "usdt-tether",
-  stablecoin: "USDT",
-  contractAddress: "0xdAC17F958D2ee523a2206206994597C13D831ec7",
-  decimals: 6,
-  events: [],
-};
+const config = ethereumConfig;
 
 function makeRunBudget(): BlacklistRunBudget {
   return {

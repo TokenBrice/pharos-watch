@@ -10,7 +10,7 @@ import {
   runDigestChannelDelivery,
 } from "../platform";
 import { createLatestSchemaSqlite } from "@shared/test-utils/latest-schema-sqlite";
-import { makeNoopD1 } from "../../../test-helpers/noop-d1";
+import { makeNoopD1, makeRunCountingNoopD1 } from "../../../test-helpers/noop-d1";
 import {
   buildTelegramCreds,
   buildTwitterCreds,
@@ -292,24 +292,15 @@ describe("insertDigestRecord", () => {
 
   it("retries transient D1 overloads", async () => {
     vi.useFakeTimers();
-    let attempts = 0;
-    const db = makeNoopD1({
-      prepare: () => ({
-        bind: () => ({
-          run: async () => {
-            attempts++;
-            if (attempts === 1) throw new Error("D1 DB is overloaded");
-            return { success: true, meta: { changes: 1 } };
-          },
-        }),
-      }),
-    });
+    const db = makeRunCountingNoopD1((attempt) =>
+      attempt === 1 ? new Error("D1 DB is overloaded") : null,
+    );
 
     const pending = expect(insertDigestRecord(makeOptions(db))).resolves.toBeUndefined();
     await vi.runAllTimersAsync();
     await pending;
 
-    expect(attempts).toBe(2);
+    expect(db.getRunCount()).toBe(2);
   });
 
   it("does not duplicate the digest row when a retried D1 write already committed", async () => {

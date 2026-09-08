@@ -3,6 +3,7 @@ import { resolve } from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { parse as parseYaml } from "yaml";
 import { getOgCaptureValidationError } from "../lib/og-capture-validation.mts";
+import { runScreenshotOgCli } from "../maintenance/screenshot-og.mjs";
 
 const capture = vi.hoisted(() => {
   const page = {
@@ -74,8 +75,6 @@ describe("OG screenshot capture", () => {
 
   it.each([false, true])("executes capture with rejected document=%s", async (rejected) => {
     const previousExitCode = process.exitCode;
-    const previousArgv = process.argv;
-    process.argv = ["node", "screenshot-og.mjs"];
     process.exitCode = undefined;
     vi.spyOn(process.stdout, "write").mockReturnValue(true);
     vi.spyOn(console, "log").mockImplementation(() => {});
@@ -85,9 +84,7 @@ describe("OG screenshot capture", () => {
       count: async () => rejected ? 0 : 1,
     }));
     try {
-      // The CLI executes at module load; each invocation needs fresh argv and module state.
-      vi.resetModules();
-      await import("../maintenance/screenshot-og.mjs");
+      await runScreenshotOgCli([]);
       expect(capture.browser.close).toHaveBeenCalledOnce();
       if (rejected) {
         expect(process.exitCode).toBe(1);
@@ -106,7 +103,6 @@ describe("OG screenshot capture", () => {
       }
     } finally {
       process.exitCode = previousExitCode;
-      process.argv = previousArgv;
     }
   });
 });

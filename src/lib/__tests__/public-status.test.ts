@@ -256,21 +256,13 @@ describe("getImpactedPublicSurfaces", () => {
   it("fails closed with a degraded surface when exact price coverage is unknown", () => {
     const health: HealthResponse = {
       ...BASE_HEALTH,
-      activePriceCoverage: {
+      activePriceCoverage: makeCoverage([], {
         status: "unknown",
         expectedActiveCount: 0,
         presentActiveCount: 0,
         pricedActiveCount: 0,
-        missingPriceCount: 0,
-        pricedActiveIds: [],
-        missingActiveIds: [],
-        affectedMarketCapUsd: 0,
-        missingActiveAssets: [],
-        alertEligibleCount: 0,
-        alertEligibleIds: [],
-        maxConsecutiveMissingGenerations: 0,
         observedAt: null,
-      },
+      }),
     };
 
     expect(getImpactedPublicSurfaces(health)).toContainEqual(

@@ -5,6 +5,23 @@ type CurrentResponse = z.input<typeof SafetyScoreV9CurrentResponseSchema>;
 
 const DIGEST = "a".repeat(64);
 
+const EVIDENCE_RESPONSIBILITIES = [
+  "integration-missing",
+  "issuer-undisclosed",
+  "measured-adverse",
+  "method-unsupported",
+  "producer-failed",
+  "published-evidence-expired",
+] as const;
+
+function emptyAttribution<S extends string>(semantics: S) {
+  return { semantics, items: [] as never[] };
+}
+
+function emptyEvidenceSummary<R extends string>(responsibility: R) {
+  return { responsibility, factCount: 0, criticalFactCount: 0, reasonCodes: [] as never[] };
+}
+
 function pillar(score: number): CurrentResponse["cards"][number]["pillars"]["backing"] {
   return {
     score,
@@ -192,26 +209,13 @@ export function currentResponse() {
       adjustments: [],
       unresolvedExposures: [],
     },
-    adverseAttribution: {
-      semantics: "causal-measured-adverse-v1",
-      items: [],
-    },
-    boundedUncertaintyAttribution: {
-      semantics: "causal-bounded-uncertainty-v1",
-      items: [],
-    },
+    adverseAttribution: emptyAttribution("causal-measured-adverse-v1"),
+    boundedUncertaintyAttribution: emptyAttribution("causal-bounded-uncertainty-v1"),
     evidenceResponsibility: {
       semantics: "limiting-fact-owner-v1",
       totalFactCount: 0,
       facts: [],
-      summaries: [
-        { responsibility: "integration-missing", factCount: 0, criticalFactCount: 0, reasonCodes: [] },
-        { responsibility: "issuer-undisclosed", factCount: 0, criticalFactCount: 0, reasonCodes: [] },
-        { responsibility: "measured-adverse", factCount: 0, criticalFactCount: 0, reasonCodes: [] },
-        { responsibility: "method-unsupported", factCount: 0, criticalFactCount: 0, reasonCodes: [] },
-        { responsibility: "producer-failed", factCount: 0, criticalFactCount: 0, reasonCodes: [] },
-        { responsibility: "published-evidence-expired", factCount: 0, criticalFactCount: 0, reasonCodes: [] },
-      ],
+      summaries: EVIDENCE_RESPONSIBILITIES.map(emptyEvidenceSummary),
     },
     scoreAdjustments: [],
     wrapperParentLimit: null,

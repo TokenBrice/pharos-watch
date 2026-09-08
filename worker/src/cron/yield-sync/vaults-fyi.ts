@@ -43,7 +43,7 @@ interface VaultsFyiSourceParams {
   startSec?: number;
 }
 
-function emptyTelemetry(overrides: Partial<VaultsFyiTelemetry> = {}): VaultsFyiTelemetry {
+export function emptyTelemetry(overrides: Partial<VaultsFyiTelemetry> = {}): VaultsFyiTelemetry {
   return {
     enabled: false,
     hasKey: false,
