@@ -46,6 +46,13 @@ export default defineConfig({
   plugins: [wasmStubPlugin()],
   test: {
     execArgv: nodeExecArgv,
+    // Vitest's 5s default is below what several honest suites need on a
+    // two-core CI runner: full-registry scoring, workerd rendering, migrated
+    // SQLite fixtures and whole-tree AST scans all cost seconds of real work.
+    // 20s still fails a genuine hang while removing that false-failure class;
+    // individually budgeted tests keep their own larger explicit timeouts.
+    testTimeout: 20_000,
+    hookTimeout: 30_000,
     exclude: baseTestExcludes,
     // The gitignored stablecoin catalog artifacts are static imports in many
     // suites; a stale local copy fails them with misleading validation errors.

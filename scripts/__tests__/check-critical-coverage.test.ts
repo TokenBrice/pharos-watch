@@ -324,7 +324,7 @@ describe("critical coverage changed-file detection", () => {
       baseline: { files: { [file]: 51 } },
       execFile: mockExecFileSync((_cmd, args) => {
         if (args?.[0] === "ls-tree") return `${owner}\0${file}\0`;
-        if (args?.[0] === "show") return 'import "../price-consensus";';
+        if (args?.[0] === "cat-file") return `deadbeef blob 26\0import "../price-consensus";\0`;
         throw new Error("Unexpected Git command");
       }),
     });

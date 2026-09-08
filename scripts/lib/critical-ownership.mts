@@ -248,20 +248,69 @@ export function collectOwningTests(
 }
 
 
+type BaseBlobExec = (
+  file: string,
+  args: readonly string[],
+  options: { encoding: "utf8"; input?: string; maxBuffer?: number },
+) => string;
+
+// `git cat-file --batch` buffers every requested blob in one response; the
+// default 1 MiB `execFileSync` buffer overflows on a large test-file diff.
+const BASE_BLOB_BATCH_MAX_BUFFER = 512 * 1024 * 1024;
+
+/**
+ * Read a set of base-revision blobs in a single `git cat-file --batch -Z`
+ * invocation. NUL-terminated records make each blob's content recoverable
+ * without a byte-precise header parse, and one subprocess replaces the former
+ * per-file `git show` fan-out on a blob:none partial clone.
+ */
+function readBaseBlobs(
+  ref: string,
+  paths: readonly string[],
+  execFile: BaseBlobExec,
+): Map<string, string> {
+  const specs = paths.map((path) => `${ref}:${normalizeOwnershipPath(path)}`);
+  const output = execFile("git", ["cat-file", "--batch", "-Z"], {
+    encoding: "utf8",
+    input: specs.map((spec) => `${spec}\0`).join(""),
+    maxBuffer: BASE_BLOB_BATCH_MAX_BUFFER,
+  });
+  const records = output.split("\0");
+  const contents = new Map<string, string>();
+  let record = 0;
+  for (let index = 0; index < specs.length; index++) {
+    const header = records[record++];
+    if (header === undefined) break;
+    if (header.endsWith(" missing")) continue; // absent at `ref` (new file)
+    contents.set(normalizeOwnershipPath(paths[index]), records[record++] ?? "");
+  }
+  return contents;
+}
+
 export function deriveBaseCriticalOwnership(
   ref: string,
   changedFiles: readonly string[],
-  execFile: (file: string, args: readonly string[], options: { encoding: "utf8" }) => string = execFileSync,
+  execFile: BaseBlobExec = execFileSync as BaseBlobExec,
 ): CriticalOwnership {
-  const tests = changedFiles.filter((file) => TEST_FILE_PATTERN.test(file));
+  const tests = changedFiles
+    .map(normalizeOwnershipPath)
+    .filter((file) => TEST_FILE_PATTERN.test(file) && TEST_SCAN_ROOTS.some((root) => file.startsWith(`${root}/`)));
   if (tests.length === 0) return new Map();
   const cwd = process.cwd();
   const inventory = new Set(execFile("git", ["ls-tree", "-r", "--name-only", "-z", ref], { encoding: "utf8" }).split("\0").filter(Boolean));
+  const existingTests = tests.filter((file) => inventory.has(file));
+  if (existingTests.length === 0) return new Map();
+  const contents = readBaseBlobs(ref, existingTests, execFile);
   return deriveCriticalOwnership({
-    testFiles: tests.filter((file) => inventory.has(file)),
+    testFiles: existingTests,
     fsImpl: {
       existsSync: (file) => inventory.has(normalizeOwnershipPath(relative(cwd, file))),
-      readFileSync: (file) => execFile("git", ["show", `${ref}:${normalizeOwnershipPath(relative(cwd, file))}`], { encoding: "utf8" }),
+      readFileSync: (file) => {
+        const key = normalizeOwnershipPath(relative(cwd, file));
+        const content = contents.get(key);
+        if (content === undefined) throw new Error(`Base blob unavailable for ${key}`);
+        return content;
+      },
     },
   });
 }

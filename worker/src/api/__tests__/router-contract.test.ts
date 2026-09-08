@@ -52,7 +52,9 @@ describe("router contract: strict frontend paths are routable", () => {
     }));
     expect(coinResponse).not.toBeNull();
     expect(coinResponse!.status).toBe(404);
-  });
+    // Both routes lazily import their handler module; that import, not the
+    // routing decision, dominates this case on a small CI runner.
+  }, 30_000);
 
   it("returns a router-level JSON 500 when an unwrapped route handler throws", async () => {
     const consoleError = vi.spyOn(console, "error").mockImplementation(() => undefined);

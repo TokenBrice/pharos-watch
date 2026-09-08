@@ -38,7 +38,7 @@ const CRITICAL_COVERAGE_INFRA_PATHS = new Set([
 type GitExec = (
   file: string,
   args: readonly string[],
-  options: { encoding: "utf8" },
+  options: { encoding: "utf8"; input?: string; maxBuffer?: number },
 ) => string;
 
 interface DeployClassification {
