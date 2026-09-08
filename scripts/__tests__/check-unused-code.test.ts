@@ -2,6 +2,7 @@ import { execFileSync } from "node:child_process";
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
+import { scanForUnusedCode } from "../ci/check-unused-code";
 import { afterEach, describe, expect, it } from "vitest";
 
 const CHECKER = resolve(process.cwd(), "scripts/ci/check-unused-code.ts");
@@ -32,21 +33,42 @@ const SCAFFOLD: Record<string, string> = {
   "src/components/chart-primitives/data-table.tsx": "export const ChartDataTable = 1;\n",
 };
 
-function runChecker(
+function writeFixture(
   files: Record<string, string>,
-  args: string[] = [],
   scaffold: Record<string, string> = SCAFFOLD,
-): { status: number; output: string } {
+): string {
   workspace = mkdtempSync(join(tmpdir(), "pharos-unused-code-"));
   for (const [relativePath, contents] of Object.entries({ ...scaffold, ...files })) {
     const absolute = join(workspace, relativePath);
     mkdirSync(resolve(absolute, ".."), { recursive: true });
     writeFileSync(absolute, contents);
   }
+  return workspace;
+}
 
+/**
+ * Scan a fixture workspace in-process. This is the same pipeline the CLI
+ * executes, without paying a child-process startup per case; the real-process
+ * exit contract is owned by the single `runCheckerCli` case below.
+ */
+function runChecker(
+  files: Record<string, string>,
+  args: string[] = [],
+  scaffold: Record<string, string> = SCAFFOLD,
+): { status: number; output: string } {
+  return scanForUnusedCode({ root: writeFixture(files, scaffold), argv: args });
+}
+
+/** The suite's single real-process invocation: it spawns the actual CLI. */
+function runCheckerCli(
+  files: Record<string, string>,
+  args: string[] = [],
+  scaffold: Record<string, string> = SCAFFOLD,
+): { status: number; output: string } {
+  const root = writeFixture(files, scaffold);
   try {
     const output = execFileSync(process.execPath, ["--import", TSX_LOADER, CHECKER, ...args], {
-      cwd: workspace,
+      cwd: root,
       encoding: "utf8",
       stdio: ["ignore", "pipe", "pipe"],
     });
@@ -57,17 +79,15 @@ function runChecker(
   }
 }
 
-afterEach(() => {
-  if (workspace) rmSync(workspace, { recursive: true, force: true });
-  workspace = undefined;
-});
 
 describe("check-unused-code export resolution", () => {
   it("credits a named use that reaches the declaring module through a wildcard re-export", () => {
     // `used` is imported from the barrel, never from its declaring module. The
     // scan must follow `export *` back to the owner, while the sibling export
     // that nothing imports is still reported.
-    const { status, output } = runChecker({
+    // This case is the suite's single real-process invocation: it pins the
+    // checker's exit code and output through an actual child process.
+    const { status, output } = runCheckerCli({
       "shared/owner.ts": "export const used = 1;\nexport const neverImported = 2;\n",
       "shared/barrel.ts": 'export * from "./owner";\n',
       "src/app/page.tsx": 'import { used } from "../../shared/barrel";\nexport const entry = used;\n',

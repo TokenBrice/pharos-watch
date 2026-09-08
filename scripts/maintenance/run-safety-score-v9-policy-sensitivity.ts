@@ -244,11 +244,31 @@ function numericValueAtPath(policy: V9MethodologyPolicy, path: string): number {
   return current;
 }
 
+const mutatedPolicyCache = new WeakMap<V9ValidatedPolicyEnvelope, Map<string, V9ValidatedPolicyEnvelope>>();
+
+/**
+ * Validate a mutated copy of the baseline policy at one numeric path.
+ *
+ * Validation is pure but expensive, and one invocation repeats the same
+ * (policy, path, value) triples: `--list-parameters` probes every candidate
+ * perturbation and report generation then repeats the ones that survived. The
+ * cache is keyed on the baseline envelope object, which the harness treats as
+ * immutable, so repeated calls replay earlier validations instead of
+ * re-cloning and re-validating identical policies.
+ */
 function mutateNumericPolicyParameter(
   baseline: V9ValidatedPolicyEnvelope,
   path: string,
   value: number,
 ): V9ValidatedPolicyEnvelope {
+  let byMutation = mutatedPolicyCache.get(baseline);
+  if (!byMutation) {
+    byMutation = new Map();
+    mutatedPolicyCache.set(baseline, byMutation);
+  }
+  const mutationKey = `${path}=${value}`;
+  const cached = byMutation.get(mutationKey);
+  if (cached) return cached;
   const policy = structuredClone(baseline.policy) as V9MethodologyPolicy;
   const segments = pathSegments(path);
   let current: Record<string, unknown> = policy as unknown as Record<string, unknown>;
@@ -284,7 +304,9 @@ function mutateNumericPolicyParameter(
       premium.points = Math.max(premium.points, aPlusFloor - aFloor);
     }
   }
-  return loadV9MethodologyPolicy(policy);
+  const mutated = loadV9MethodologyPolicy(policy);
+  byMutation.set(mutationKey, mutated);
+  return mutated;
 }
 
 function defaultDeltasFor(value: number): number[] {

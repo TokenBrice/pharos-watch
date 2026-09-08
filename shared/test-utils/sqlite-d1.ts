@@ -1,5 +1,5 @@
 import type { D1Database, D1PreparedStatement, D1Result } from "@shared/types/cloudflare-runtime";
-import type { DatabaseSync } from "node:sqlite";
+import type { DatabaseSync, StatementSync } from "node:sqlite";
 
 export interface SqliteD1Options {
   onAll?: (sql: string) => void;
@@ -20,17 +20,31 @@ export function createSqliteD1(
     return pending;
   };
   const batchExecutors = new WeakMap<D1PreparedStatement, () => unknown>();
+  // node:sqlite re-parses SQL on every prepare() call, and hot suites execute
+  // tens of thousands of statements through batch(); StatementSync objects are
+  // stateless between run/all/get calls, so caching them by SQL text keeps
+  // semantics identical while avoiding repeated parsing.
+  const preparedStatements = new Map<string, StatementSync>();
+  const prepareCached = (sql: string): StatementSync => {
+    const cached = preparedStatements.get(sql);
+    if (cached) return cached;
+    const prepared = sqlite.prepare(sql);
+    preparedStatements.set(sql, prepared);
+    return prepared;
+  };
+  const totalChangesStatement = prepareCached("SELECT total_changes() AS count");
+  const changesStatement = prepareCached("SELECT changes() AS count");
   const makeStatement = (sql: string, boundValues: unknown[] = []): D1PreparedStatement => {
     const execute = () => {
       options.onRun?.(sql);
-      const prepared = sqlite.prepare(sql);
+      const prepared = prepareCached(sql);
       let results: unknown[] = [];
       let changes: number;
       if (prepared.columns().length > 0) {
-        const before = sqlite.prepare("SELECT total_changes() AS count").get()!.count;
+        const before = totalChangesStatement.get()!.count;
         results = prepared.all(...(boundValues as never[]));
-        const after = sqlite.prepare("SELECT total_changes() AS count").get()!.count;
-        changes = before === after ? 0 : Number(sqlite.prepare("SELECT changes() AS count").get()!.count);
+        const after = totalChangesStatement.get()!.count;
+        changes = before === after ? 0 : Number(changesStatement.get()!.count);
       } else {
         changes = Number(prepared.run(...(boundValues as never[])).changes);
       }
@@ -43,7 +57,7 @@ export function createSqliteD1(
     const statement = {
       bind: (...args: unknown[]) => makeStatement(sql, args),
       all: <T>() => schedule(() => {
-        const results = sqlite.prepare(sql).all(...(boundValues as never[])) as T[];
+        const results = prepareCached(sql).all(...(boundValues as never[])) as T[];
         options.onAll?.(sql);
         return {
           results,
@@ -52,7 +66,7 @@ export function createSqliteD1(
         };
       }),
       first: <T>(columnName?: string) => schedule(() => {
-        const row = sqlite.prepare(sql).get(...(boundValues as never[]));
+        const row = prepareCached(sql).get(...(boundValues as never[]));
         if (!row) return null;
         if (columnName === undefined) return row as T;
         if (!Object.prototype.hasOwnProperty.call(row, columnName)) {

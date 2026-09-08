@@ -6,15 +6,28 @@ import { createSqliteD1, type SqliteD1Options } from "./sqlite-d1";
 
 const MIGRATIONS_DIR = path.resolve(__dirname, "../../worker/migrations");
 
-function openLatestSchemaSqlite(options: SqliteD1Options, openDatabases?: Set<DatabaseSync>) {
+// Migration files are immutable during a test run, so their ordered SQL text is
+// read once per process and replayed into every fresh :memory: database.
+let cachedMigrationSql: string[] | undefined;
+
+function readMigrationSql(): string[] {
+  return readdirSync(MIGRATIONS_DIR)
+    .filter((name) => /^\d+.*\.sql$/.test(name))
+    .sort()
+    .map((name) => readFileSync(path.join(MIGRATIONS_DIR, name), "utf8"));
+}
+
+function migrationSql(uncached: boolean): string[] {
+  if (uncached) return readMigrationSql();
+  return (cachedMigrationSql ??= readMigrationSql());
+}
+
+function openLatestSchemaSqlite(options: SqliteD1Options, openDatabases?: Set<DatabaseSync>, uncached = false) {
   const sqlite = new DatabaseSync(":memory:");
   openDatabases?.add(sqlite);
   try {
-    const migrations = readdirSync(MIGRATIONS_DIR)
-      .filter((name) => /^\d+.*\.sql$/.test(name))
-      .sort();
-    for (const migration of migrations) {
-      sqlite.exec(readFileSync(path.join(MIGRATIONS_DIR, migration), "utf8"));
+    for (const sql of migrationSql(uncached)) {
+      sqlite.exec(sql);
     }
     return { sqlite, db: createSqliteD1(sqlite, options) };
   } catch (error) {
@@ -28,9 +41,15 @@ export function createLatestSchemaSqlite(options: SqliteD1Options = {}): { sqlit
   return openLatestSchemaSqlite(options);
 }
 
-export function createLatestSchemaFixtureTracker() {
+/** Reads `worker/migrations` fresh on every open, bypassing the per-process cache. Use when the migration inventory itself is under test. */
+export function createLatestSchemaSqliteUncached(options: SqliteD1Options = {}): { sqlite: DatabaseSync; db: D1Database } {
+  return openLatestSchemaSqlite(options, undefined, true);
+}
+
+export function createLatestSchemaFixtureTracker(options: { uncached?: boolean } = {}) {
+  const uncached = options.uncached === true;
   const openDatabases = new Set<DatabaseSync>();
-  const open = () => openLatestSchemaSqlite({}, openDatabases);
+  const open = () => openLatestSchemaSqlite({}, openDatabases, uncached);
   const closeAll = () => {
     const errors: unknown[] = [];
     for (const sqlite of openDatabases) {

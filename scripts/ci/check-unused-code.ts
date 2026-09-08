@@ -3,6 +3,7 @@
 import { readFileSync, statSync } from "node:fs";
 import { dirname, join, relative, resolve } from "node:path";
 import ts from "typescript";
+import { isDirectRun } from "../lib/smoke-runtime.mjs";
 import { collectSourceFilesUnderRoot } from "../lib/source-files.mts";
 import { parseSourceFile } from "../lib/ts-ast.mts";
 import { collectScriptEntrypoints } from "./check-script-entrypoints";
@@ -55,8 +56,45 @@ interface StaleAllowlistEntry {
   reason: string;
 }
 
-const ROOT = process.cwd();
-const AUDIT_ALLOWLIST = !process.argv.includes("--skip-allowlist-audit");
+// The scan is a single-shot pipeline: `scanForUnusedCode` rebuilds every piece
+// of state below on each call, so the CLI runs once per process while tests
+// drive repeated fixture-workspace scans in-process. The pipeline is
+// synchronous top to bottom, so sequential invocations never observe partial
+// state.
+let ROOT = process.cwd();
+let VITEST_ALIASES = new Map<string, string>();
+let files: string[] = [];
+let fileSet = new Set<string>();
+let relPathByFile = new Map<string, string>();
+let moduleInfo = new Map<string, ModuleInfo>();
+let runtimeInbound = new Map<string, Set<string>>();
+let namedExportUsage = new Map<string, Set<string>>();
+let ambiguousUsage = new Set<string>();
+let stringReferencedEntrypoints = new Set<string>();
+let productionReachable = new Set<string>();
+let deadModules: DeadModule[] = [];
+let unusedExports: UnusedExport[] = [];
+let unusedModuleKeys = new Set<string>();
+let unusedExportKeys = new Set<string>();
+
+export interface UnusedCodeScanOptions {
+  /** Workspace root to scan; defaults to `process.cwd()`. */
+  root?: string;
+  /** CLI arguments; defaults to `process.argv.slice(2)`. */
+  argv?: readonly string[];
+  /** Output sinks; default to the process streams. */
+  io?: {
+    out: (text: string) => void;
+    err: (text: string) => void;
+  };
+}
+
+export interface UnusedCodeScanResult {
+  /** Process exit code: 0 clean, 1 findings or stale allowlist entries. */
+  status: number;
+  /** Everything the CLI printed on either stream, in emission order. */
+  output: string;
+}
 // Consumer surfaces that are walked for imports. `scripts/` and `worker/scripts/`
 // are scanned but never reported on: they are legitimate consumers of shared and
 // worker modules (build-data generators, maintenance CLIs, CI checks), and before
@@ -151,16 +189,42 @@ const EXPORT_ALLOWLIST = new Map([
   ...withSection(DEBT_EXPORTS as Record<string, string>, "DEBT"),
 ]);
 
-const VITEST_ALIASES = loadVitestAliases();
+/**
+ * Run the unused-code scan against one workspace root. This is the whole
+ * pipeline that used to execute at module load: discovery, import analysis,
+ * re-export usage propagation, production reachability, findings, and the
+ * optional allowlist audit. Findings and the allowlist audit report exit
+ * code 1; a clean scan reports 0.
+ */
+export function scanForUnusedCode(options: UnusedCodeScanOptions = {}): UnusedCodeScanResult {
+  const io = options.io ?? {
+    out: (text: string) => process.stdout.write(text),
+    err: (text: string) => process.stderr.write(text),
+  };
+  ROOT = options.root ?? process.cwd();
+  const argv = options.argv ?? process.argv.slice(2);
+  const AUDIT_ALLOWLIST = !argv.includes("--skip-allowlist-audit");
+  let output = "";
+  const out = (text: string) => {
+    output += text;
+    io.out(text);
+  };
+  const err = (text: string) => {
+    output += text;
+    io.err(text);
+  };
 
-const files = collectSourceFiles();
-const fileSet = new Set(files);
-const relPathByFile = new Map(files.map((file) => [file, relative(ROOT, file).replaceAll("\\", "/")]));
-const moduleInfo = new Map(files.map((file) => [file, analyzeModule(file)]));
+  VITEST_ALIASES = loadVitestAliases();
 
-const runtimeInbound = new Map<string, Set<string>>(files.map((file) => [file, new Set<string>()]));
-const namedExportUsage = new Map<string, Set<string>>(files.map((file) => [file, new Set<string>()]));
-const ambiguousUsage = new Set<string>();
+  files = collectSourceFiles();
+  fileSet = new Set(files);
+  relPathByFile = new Map(files.map((file) => [file, relative(ROOT, file).replaceAll("\\", "/")]));
+  moduleInfo = new Map(files.map((file) => [file, analyzeModule(file)]));
+
+  runtimeInbound = new Map<string, Set<string>>(files.map((file) => [file, new Set<string>()]));
+  namedExportUsage = new Map<string, Set<string>>(files.map((file) => [file, new Set<string>()]));
+  ambiguousUsage = new Set<string>();
+
 
 for (const [file, info] of moduleInfo.entries()) {
   for (const dependency of info.dependencies) {
@@ -212,7 +276,7 @@ while (usageChanged) {
   }
 }
 
-const stringReferencedEntrypoints = collectStringReferencedEntrypoints();
+stringReferencedEntrypoints = collectStringReferencedEntrypoints();
 
 // Production reachability. Roots are explicit entrypoints — Next.js app-router
 // filename conventions, the Pages Functions route tree, the wrangler-loaded
@@ -222,7 +286,7 @@ const stringReferencedEntrypoints = collectStringReferencedEntrypoints();
 // production file imports or re-exports it. Test files and test-support
 // fixtures never vouch, so a production module whose only consumers are its
 // tests is reported as dead instead of being kept alive by them.
-const productionReachable = new Set<string>();
+productionReachable = new Set<string>();
 const reachableQueue: string[] = [];
 for (const file of files) {
   const rel = relPathByFile.get(file);
@@ -244,10 +308,10 @@ while (reachableQueue.length > 0) {
   }
 }
 
-const deadModules: DeadModule[] = [];
-const unusedExports: UnusedExport[] = [];
-const unusedModuleKeys = new Set<string>();
-const unusedExportKeys = new Set<string>();
+deadModules = [];
+unusedExports = [];
+unusedModuleKeys = new Set<string>();
+unusedExportKeys = new Set<string>();
 
 for (const file of files) {
   const rel = relative(ROOT, file).replaceAll("\\", "/");
@@ -288,16 +352,16 @@ for (const file of files) {
 }
 
 if (deadModules.length > 0) {
-  console.error("Dead internal modules:");
+  err("Dead internal modules:\n");
   for (const moduleEntry of deadModules) {
-    console.error(`  ${moduleEntry.file} (${moduleEntry.reason})`);
+    err(`  ${moduleEntry.file} (${moduleEntry.reason})\n`);
   }
 }
 
 if (unusedExports.length > 0) {
-  console.error("Unused named exports:");
+  err("Unused named exports:\n");
   for (const item of unusedExports) {
-    console.error(`  ${item.file} :: ${item.name}`);
+    err(`  ${item.file} :: ${item.name}\n`);
   }
 }
 
@@ -310,7 +374,7 @@ if (AUDIT_ALLOWLIST) {
       continue;
     }
     try {
-      statSync(file);
+      statSync(resolve(ROOT, file));
     } catch {
       stale.push({ entry, reason: "file does not exist" });
       continue;
@@ -344,7 +408,7 @@ if (AUDIT_ALLOWLIST) {
       continue;
     }
     try {
-      statSync(mod);
+      statSync(resolve(ROOT, mod));
     } catch {
       stale.push({ entry: mod, reason: "module does not exist" });
       continue;
@@ -359,26 +423,33 @@ if (AUDIT_ALLOWLIST) {
     }
   }
   if (stale.length > 0) {
-    process.stderr.write("\nStale allowlist entries:\n");
+    err("\nStale allowlist entries:\n");
     for (const s of stale) {
-      process.stderr.write(`  ${s.entry} — ${s.reason}\n`);
+      err(`  ${s.entry} — ${s.reason}\n`);
     }
-    process.stderr.write(`\n${stale.length} stale entry/entries.\n`);
-    process.exit(1);
+    err(`\n${stale.length} stale entry/entries.\n`);
+    return { status: 1, output };
   }
   const debtCount = Object.keys(DEBT_MODULES).length + Object.keys(DEBT_EXPORTS).length;
   const blindSpotCount = Object.keys(SCANNER_BLIND_SPOT_MODULES).length + Object.keys(SCANNER_BLIND_SPOT_EXPORTS).length;
-  process.stdout.write(
+  out(
     `Allowlist audit: all entries valid (${blindSpotCount} SCANNER_BLIND_SPOTS, ${debtCount} DEBT).\n`,
   );
 }
 
 if (deadModules.length === 0 && unusedExports.length === 0) {
-  console.log("No dead internal modules or unused named exports found.");
-  process.exit(0);
+  out("No dead internal modules or unused named exports found.\n");
+  return { status: 0, output };
 }
 
-process.exit(1);
+return { status: 1, output };
+}
+
+if (isDirectRun(import.meta.url, process.argv[1])) {
+  const { status } = scanForUnusedCode();
+  if (status !== 0) process.exit(status);
+}
+
 
 function collectSourceFiles(): string[] {
   const excludedDirs = new Set(["node_modules", ".next", "out"]);

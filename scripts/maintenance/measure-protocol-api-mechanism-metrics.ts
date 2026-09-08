@@ -5,8 +5,8 @@ import { gunzipSync } from "node:zlib";
 
 import {
   assertCliUsage,
+  CliUsageError,
   parseStrictCliArgs,
-  runCliEntrypoint,
   writeCliHelpIfRequested,
 } from "../lib/cli-args.mjs";
 import { isDirectRun } from "../lib/smoke-runtime.mjs";
@@ -76,7 +76,17 @@ interface FetchObservationOptions {
 const TRANSPORT_DIAGNOSTIC_HEADERS = ["server", "x-vercel-id", "x-vercel-cache", "x-matched-path"] as const;
 const MAX_DIAGNOSTIC_HEADER_LENGTH = 160;
 
-function parseOptions(argv: string[]): CliOptions | null {
+export interface ProtocolApiMeasurementCliIo {
+  log: (message: string) => void;
+  error: (message: string) => void;
+}
+
+const DEFAULT_CLI_IO: ProtocolApiMeasurementCliIo = {
+  log: (message) => process.stdout.write(`${message}\n`),
+  error: (message) => process.stderr.write(message),
+};
+
+function parseOptions(argv: readonly string[]): CliOptions | null {
   const { values } = parseStrictCliArgs(argv, {
     options: {
       asset: { type: "string", multiple: true },
@@ -281,16 +291,18 @@ async function readArtifact(
   path: string,
   r2Client?: R2MeasurementsClient,
   summaryOnly = false,
+  rootDir: string = process.cwd(),
+  io: ProtocolApiMeasurementCliIo = DEFAULT_CLI_IO,
 ): Promise<ProtocolApiMechanismMeasurement | null> {
-  const absolutePath = resolve(path);
-  if (absolutePath === resolve(FROZEN_LEGACY_V1_PATH) && !existsSync(absolutePath)) {
+  const absolutePath = resolve(rootDir, path);
+  if (absolutePath === resolve(rootDir, FROZEN_LEGACY_V1_PATH) && !existsSync(absolutePath)) {
     const summaryPath = `${absolutePath.slice(0, -".json".length)}${CAPTURE_SUMMARY_SUFFIX}`;
     if (existsSync(summaryPath)) {
       const summary = parseMechanismCaptureSummary(JSON.parse(readFileSync(summaryPath, "utf8")), summaryPath);
       if (summary.sha256 !== FROZEN_LEGACY_V1_SHA256) {
         throw new Error(`Unknown or modified legacy protocol API artifact: ${absolutePath}`);
       }
-      console.log(
+      io.log(
         `[protocol-api-measurement] frozen legacy V1 fingerprint passed (normalized-only; raw replay unavailable) -> ${absolutePath}`,
       );
       return null;
@@ -305,7 +317,7 @@ async function readArtifact(
       error instanceof Error &&
       error.message === "Missing CLOUDFLARE_ACCOUNT_ID for R2 measurements"
     ) {
-      console.log(`[protocol-api-measurement] summary-only replay (raw body unavailable) -> ${absolutePath}`);
+      io.log(`[protocol-api-measurement] summary-only replay (raw body unavailable) -> ${absolutePath}`);
       return null;
     }
     throw error;
@@ -314,10 +326,10 @@ async function readArtifact(
   const parsed = JSON.parse(source) as unknown;
   if (parsed && typeof parsed === "object" && "schemaVersion" in parsed && parsed.schemaVersion === 1) {
     const fingerprint = createHash("sha256").update(source).digest("hex");
-    if (absolutePath !== resolve(FROZEN_LEGACY_V1_PATH) || fingerprint !== FROZEN_LEGACY_V1_SHA256) {
+    if (absolutePath !== resolve(rootDir, FROZEN_LEGACY_V1_PATH) || fingerprint !== FROZEN_LEGACY_V1_SHA256) {
       throw new Error(`Unknown or modified legacy protocol API artifact: ${absolutePath}`);
     }
-    console.log(
+    io.log(
       `[protocol-api-measurement] frozen legacy V1 fingerprint passed (normalized-only; raw replay unavailable) -> ${absolutePath}`,
     );
     return null;
@@ -329,22 +341,31 @@ async function readArtifact(
   return replayed;
 }
 
-async function replayEvidence(path: string): Promise<ProtocolApiMechanismMeasurement | null> {
-  const absolutePath = resolve(path);
-  const replayed = await readArtifact(absolutePath);
+async function replayEvidence(
+  path: string,
+  io: ProtocolApiMeasurementCliIo = DEFAULT_CLI_IO,
+  rootDir: string = process.cwd(),
+): Promise<ProtocolApiMechanismMeasurement | null> {
+  const absolutePath = resolve(rootDir, path);
+  const replayed = await readArtifact(absolutePath, undefined, false, rootDir, io);
   if (!replayed) return null;
-  console.log(`[protocol-api-measurement] ${replayed.assetId}: offline raw-byte replay passed -> ${absolutePath}`);
+  io.log(`[protocol-api-measurement] ${replayed.assetId}: offline raw-byte replay passed -> ${absolutePath}`);
   return replayed;
 }
 
-async function acceptExistingSnapshot(path: string, incoming: ProtocolApiMechanismMeasurement): Promise<boolean> {
+async function acceptExistingSnapshot(
+  path: string,
+  incoming: ProtocolApiMechanismMeasurement,
+  io: ProtocolApiMeasurementCliIo = DEFAULT_CLI_IO,
+  rootDir: string = process.cwd(),
+): Promise<boolean> {
   try {
-    const existing = await readArtifact(path);
+    const existing = await readArtifact(path, undefined, false, rootDir, io);
     if (!existing) throw new Error(`Legacy V1 evidence cannot occupy a V2 snapshot path: ${path}`);
     if (!isSameProtocolApiSourceSnapshot(existing, incoming)) {
       throw new Error(`Evidence ${path} exists with different source content or derivation`);
     }
-    console.log(`[protocol-api-measurement] identical source snapshot already recorded at ${path}`);
+    io.log(`[protocol-api-measurement] identical source snapshot already recorded at ${path}`);
     return true;
   } catch (error) {
     if (error instanceof Error && (error.message.includes("ENOENT") || error.message.startsWith("Missing protocol API"))) {
@@ -367,7 +388,11 @@ async function existingArtifacts(outDir: string): Promise<ProtocolApiMechanismMe
     throw error;
   }
 }
-async function measureTarget(outDir: string, assetId: ProtocolApiAssetId): Promise<void> {
+async function measureTarget(
+  outDir: string,
+  assetId: ProtocolApiAssetId,
+  io: ProtocolApiMeasurementCliIo = DEFAULT_CLI_IO,
+): Promise<void> {
   const target = PROTOCOL_API_TARGETS[assetId];
   const observations: RawProtocolApiObservationInput[] = [];
   for (const source of target.sources) observations.push(await fetchRawObservation(source));
@@ -376,7 +401,7 @@ async function measureTarget(outDir: string, assetId: ProtocolApiAssetId): Promi
 
   const outPath = resolve(join(outDir, assetId, protocolApiEvidenceFilename(artifact)));
   try {
-    if (await acceptExistingSnapshot(outPath, artifact)) return;
+    if (await acceptExistingSnapshot(outPath, artifact, io)) return;
   } catch (error) {
     if (!(error && typeof error === "object" && "code" in error && error.code === "ENOENT")) throw error;
   }
@@ -387,49 +412,71 @@ async function measureTarget(outDir: string, assetId: ProtocolApiAssetId): Promi
     writeFileSync(outPath, serializeProtocolApiMeasurement(artifact), { flag: "wx" });
   } catch (error) {
     if (!(error && typeof error === "object" && "code" in error && error.code === "EEXIST")) throw error;
-    await acceptExistingSnapshot(outPath, artifact);
+    await acceptExistingSnapshot(outPath, artifact, io);
     return;
   }
 
   const measured = Object.fromEntries(
     artifact.metrics.filter((metric) => metric.state === "measured").map((metric) => [metric.id, metric.value]),
   );
-  console.log(
+  io.log(
     `[protocol-api-measurement] ${assetId}: snapshot=${artifact.snapshotId} metrics=${JSON.stringify(measured)} -> ${outPath}`,
   );
 }
 
+/**
+ * In-process entrypoint with the CLI's process semantics: usage mistakes
+ * report 2, runtime failures report 1, success reports 0. `cwd` scopes the
+ * relative `--replay` paths, the frozen legacy artifact comparison, and
+ * `--replay-all` discovery, so tests can drive scratch roots without a child
+ * process; the direct-run block below stays the real-process owner of the
+ * exit contract.
+ */
+export async function runProtocolApiMeasurementCli(
+  argv: readonly string[],
+  io: ProtocolApiMeasurementCliIo = DEFAULT_CLI_IO,
+  cwd: string = process.cwd(),
+): Promise<number> {
+  try {
+    const options = parseOptions([...argv]);
+    if (!options) return 0;
+    if (options.replayPaths.length > 0) {
+      const artifacts: ProtocolApiMechanismMeasurement[] = [];
+      for (const path of options.replayPaths) {
+        const artifact = await replayEvidence(path, io, cwd);
+        if (artifact) artifacts.push(artifact);
+      }
+      validateProtocolApiArtifactSet(artifacts);
+      return 0;
+    }
+    if (options.replayAll) {
+      const paths = discoverProtocolArtifacts(resolve(cwd, DEFAULT_OUT_DIR));
+      const artifacts: ProtocolApiMechanismMeasurement[] = [];
+      for (const path of paths) {
+        const artifact = await readArtifact(path, undefined, true, cwd, io);
+        if (artifact) artifacts.push(artifact);
+      }
+      validateProtocolApiArtifactSet(artifacts);
+      io.log(
+        `[protocol-api-measurement] replay-all passed: ${artifacts.length} V2 artifact(s), ${paths.length - artifacts.length} frozen legacy V1 artifact(s)`,
+      );
+      return 0;
+    }
+    for (const asset of options.assets) await measureTarget(options.outDir, asset, io);
+    return 0;
+  } catch (error) {
+    const usageError = error instanceof CliUsageError;
+    const message = error instanceof Error ? error.message : String(error);
+    io.error(`measure-protocol-api-mechanism-metrics: ${message}\n`);
+    if (usageError) io.error(`\n${USAGE.trimEnd()}\n`);
+    return usageError ? 2 : 1;
+  }
+}
+
 if (isDirectRun(import.meta.url, process.argv[1])) {
-  void runCliEntrypoint(
-    async () => {
-      const options = parseOptions(process.argv.slice(2));
-      if (!options) return;
-      if (options.replayPaths.length > 0) {
-        const artifacts: ProtocolApiMechanismMeasurement[] = [];
-        for (const path of options.replayPaths) {
-          const artifact = await replayEvidence(path);
-          if (artifact) artifacts.push(artifact);
-        }
-        validateProtocolApiArtifactSet(artifacts);
-        return;
-      }
-      if (options.replayAll) {
-        const paths = discoverProtocolArtifacts(DEFAULT_OUT_DIR);
-        const artifacts: ProtocolApiMechanismMeasurement[] = [];
-        for (const path of paths) {
-          const artifact = await readArtifact(path, undefined, true);
-          if (artifact) artifacts.push(artifact);
-        }
-        validateProtocolApiArtifactSet(artifacts);
-        console.log(
-          `[protocol-api-measurement] replay-all passed: ${artifacts.length} V2 artifact(s), ${paths.length - artifacts.length} frozen legacy V1 artifact(s)`,
-        );
-        return;
-      }
-      for (const asset of options.assets) await measureTarget(options.outDir, asset);
-    },
-    { label: "measure-protocol-api-mechanism-metrics", usage: USAGE },
-  );
+  void runProtocolApiMeasurementCli(process.argv.slice(2)).then((status) => {
+    if (status !== 0) process.exitCode = status;
+  });
 }
 
 export { fetchRawObservation as fetchProtocolApiObservation, parseOptions as parseProtocolApiCliOptions };

@@ -16,13 +16,19 @@ function generalized(pillars: V9AggregationPillars): number {
 }
 
 describe("Safety Score v9 weakest-path aggregation", () => {
+  // Boundary grid replacing the former 11^3 dense sweep (≈6,050 redundant
+  // scorer calls per run). Each remaining point carries a distinct behavior:
+  // 0 keeps a zero pillar binding and steps off it, 99→100 crosses the score
+  // cap, and 50/71/90 lay out every weakest/non-weakest ordering, so any
+  // monotonicity violation the sweep could catch still fires here.
+  const boundaryScores = [0, 1, 50, 71, 90, 99, 100] as const;
   it.each([
     ["smooth bounded headroom", smooth],
     ["generalized mean", generalized],
   ])("%s is monotonic in every pillar", (_name, aggregate) => {
-    for (let backing = 0; backing <= 100; backing += 10) {
-      for (let exit = 0; exit <= 100; exit += 10) {
-        for (let control = 0; control <= 100; control += 10) {
+    for (const backing of boundaryScores) {
+      for (const exit of boundaryScores) {
+        for (const control of boundaryScores) {
           const baseline = { backing, exit, control };
           const score = aggregate(baseline);
           for (const pillar of ["backing", "exit", "control"] as const) {

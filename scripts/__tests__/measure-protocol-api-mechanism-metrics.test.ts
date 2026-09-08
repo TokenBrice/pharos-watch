@@ -6,7 +6,11 @@ import { runProtocolCli } from "./measure-protocol-api-mechanism-metrics.test-su
 
 import { describe, expect, it, vi } from "vitest";
 
-import { fetchProtocolApiObservation, parseProtocolApiCliOptions } from "../maintenance/measure-protocol-api-mechanism-metrics";
+import {
+  fetchProtocolApiObservation,
+  parseProtocolApiCliOptions,
+  runProtocolApiMeasurementCli,
+} from "../maintenance/measure-protocol-api-mechanism-metrics";
 
 import {
   buildProtocolApiMeasurement,
@@ -498,7 +502,20 @@ describe("protocol API CLI policy", () => {
     expect(() => parseProtocolApiCliOptions([...args])).toThrow(expected);
   });
 
-  it("accepts repeated canonical replays, sorts full time vectors newest first, and rejects noncanonical bytes", () => {
+  // Captures the CLI's output streams the way the spawned process would
+  // surface them, without paying child-process startup per case.
+  async function runCli(args: string[], cwd = process.cwd()) {
+    const logs: string[] = [];
+    const errors: string[] = [];
+    const status = await runProtocolApiMeasurementCli(
+      args,
+      { log: (message) => logs.push(message), error: (message) => errors.push(message) },
+      cwd,
+    );
+    return { status, stdout: logs.join(""), stderr: errors.join("") };
+  }
+
+  it("accepts repeated canonical replays, sorts full time vectors newest first, and rejects noncanonical bytes", async () => {
     const directory = mkdtempSync(join(tmpdir(), "pharos-protocol-api-test-"));
     try {
       const older = buildProtocolApiMeasurement("usde-ethena", usdeInputs(), CAPTURED_AT);
@@ -516,6 +533,9 @@ describe("protocol API CLI policy", () => {
       const newerPath = join(directory, "newer.json");
       writeFileSync(olderPath, serializeProtocolApiMeasurement(older));
       writeFileSync(newerPath, serializeProtocolApiMeasurement(newer));
+      // The suite's single real-process invocation: it pins the CLI exit code
+      // and stdout contract for repeated canonical replays. Every other CLI
+      // case below drives the same exported entrypoint in-process.
       const repeated = runProtocolCli(["--replay", olderPath, "--replay", newerPath], directory);
       expect(repeated.status, repeated.stderr).toBe(0);
       expect(repeated.stdout).toContain(olderPath);
@@ -523,7 +543,7 @@ describe("protocol API CLI policy", () => {
 
       const noncanonicalPath = join(directory, "noncanonical.json");
       writeFileSync(noncanonicalPath, JSON.stringify(older, null, 2));
-      const noncanonical = runProtocolCli(["--replay", noncanonicalPath], directory);
+      const noncanonical = await runCli(["--replay", noncanonicalPath], directory);
       expect(noncanonical.status).toBe(1);
       expect(noncanonical.stderr).toMatch(/not canonical/);
     } finally {
@@ -531,7 +551,7 @@ describe("protocol API CLI policy", () => {
     }
   });
 
-  it("checks legacy summary and body fingerprints independently at the designated path", () => {
+  it("checks legacy summary and body fingerprints independently at the designated path", async () => {
     const legacyPath =
       "shared/data/safety-score-v9/mechanism-measurements/usde-ethena/2026-07-22T20-00-16.250Z-protocol-api.json";
     const summaryPath = legacyPath.replace(/\.json$/, ".summary.json");
@@ -541,19 +561,19 @@ describe("protocol API CLI policy", () => {
       mkdirSync(dirname(join(directory, legacyPath)), { recursive: true });
       const localSummary = join(directory, summaryPath);
       writeFileSync(localSummary, JSON.stringify(frozenSummary));
-      const accepted = runProtocolCli(["--replay", legacyPath], directory);
+      const accepted = await runCli(["--replay", legacyPath], directory);
       expect(accepted.status, accepted.stderr).toBe(0);
       expect(accepted.stdout).toMatch(/frozen legacy V1 fingerprint passed/);
       expect(accepted.stdout).toMatch(/raw replay unavailable/);
 
       writeFileSync(localSummary, JSON.stringify({ ...frozenSummary, sha256: "0".repeat(64) }));
-      const changedSummary = runProtocolCli(["--replay", legacyPath], directory);
+      const changedSummary = await runCli(["--replay", legacyPath], directory);
       expect(changedSummary.status).toBe(1);
       expect(changedSummary.stderr).toMatch(/Unknown or modified legacy protocol API artifact/);
 
       writeFileSync(localSummary, JSON.stringify(frozenSummary));
       writeFileSync(join(directory, legacyPath), JSON.stringify({ schemaVersion: 1, kind: "protocol-api-mechanism-measurement" }));
-      const changedBody = runProtocolCli(["--replay", legacyPath], directory);
+      const changedBody = await runCli(["--replay", legacyPath], directory);
       expect(changedBody.status).toBe(1);
       expect(changedBody.stderr).toMatch(/Unknown or modified legacy protocol API artifact/);
     } finally {
@@ -561,7 +581,7 @@ describe("protocol API CLI policy", () => {
     }
   });
 
-  it("keeps replay-all scoped to protocol API refresh target directories", () => {
+  it("keeps replay-all scoped to protocol API refresh target directories", async () => {
     const directory = mkdtempSync(join(tmpdir(), "pharos-protocol-discovery-"));
     try {
       const root = join(directory, "shared/data/safety-score-v9/mechanism-measurements");
@@ -573,13 +593,13 @@ describe("protocol API CLI policy", () => {
       const artifactPath = join(target, protocolApiEvidenceFilename(artifact));
       writeFileSync(artifactPath, serializeProtocolApiMeasurement(artifact));
       writeFileSync(join(unrelated, "invalid-protocol-api.json"), "{invalid unrelated artifact");
-      const accepted = runProtocolCli(["--replay-all"], directory);
+      const accepted = await runCli(["--replay-all"], directory);
       expect(accepted.status, accepted.stderr).toBe(0);
       expect(accepted.stdout).toContain("1 V2 artifact(s), 0 frozen legacy V1 artifact(s)");
 
       // The selected target is actually read, not merely counted during discovery.
       writeFileSync(artifactPath, JSON.stringify(artifact, null, 2));
-      const corrupted = runProtocolCli(["--replay-all"], directory);
+      const corrupted = await runCli(["--replay-all"], directory);
       expect(corrupted.status).toBe(1);
       expect(corrupted.stderr).toContain(artifactPath);
       expect(corrupted.stderr).toMatch(/not canonical/);

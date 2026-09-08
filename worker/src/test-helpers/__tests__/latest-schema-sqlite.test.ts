@@ -19,7 +19,7 @@ vi.mock("node:fs", () => ({
   readFileSync: () => state.migration,
 }));
 
-import { createLatestSchemaFixtureTracker, createLatestSchemaSqlite } from "@shared/test-utils/latest-schema-sqlite";
+import { createLatestSchemaFixtureTracker, createLatestSchemaSqlite, createLatestSchemaSqliteUncached } from "@shared/test-utils/latest-schema-sqlite";
 
 afterEach(() => {
   vi.restoreAllMocks();
@@ -31,14 +31,14 @@ afterEach(() => {
 
 it.each(["direct", "tracked"])("closes a %s connection when migrations fail", (mode) => {
   state.migration = "INVALID SQL";
-  const tracker = createLatestSchemaFixtureTracker();
-  expect(() => mode === "direct" ? createLatestSchemaSqlite() : tracker.open()).toThrow();
+  const tracker = createLatestSchemaFixtureTracker({ uncached: true });
+  expect(() => mode === "direct" ? createLatestSchemaSqliteUncached() : tracker.open()).toThrow();
   expect(state.connections[0].isOpen).toBe(false);
   expect(() => tracker.closeAll()).not.toThrow();
 });
 
 it("closes remaining registered connections even when one close fails", () => {
-  const tracker = createLatestSchemaFixtureTracker();
+  const tracker = createLatestSchemaFixtureTracker({ uncached: true });
   const first = tracker.open();
   const second = tracker.open();
   vi.spyOn(first.sqlite, "close").mockImplementationOnce(() => { throw new Error("close failed"); });
@@ -48,7 +48,7 @@ it("closes remaining registered connections even when one close fails", () => {
 });
 
 it("keeps tracked fixtures independent and closes all handles", () => {
-  const tracker = createLatestSchemaFixtureTracker();
+  const tracker = createLatestSchemaFixtureTracker({ uncached: true });
   const first = tracker.open();
   const second = tracker.open();
   first.sqlite.exec("INSERT INTO items VALUES (1)");
@@ -56,4 +56,24 @@ it("keeps tracked fixtures independent and closes all handles", () => {
   tracker.closeAll();
   expect(first.sqlite.isOpen).toBe(false);
   expect(second.sqlite.isOpen).toBe(false);
+});
+
+it("keeps databases opened from the cached inventory independent", () => {
+  const first = createLatestSchemaSqlite();
+  const second = createLatestSchemaSqlite();
+  first.sqlite.exec("INSERT INTO items VALUES (1)");
+  expect(second.sqlite.prepare("SELECT * FROM items").all()).toEqual([]);
+  state.migration = "CREATE TABLE other (id INTEGER)";
+  const third = createLatestSchemaSqlite();
+  third.sqlite.exec("INSERT INTO items VALUES (2)");
+  expect(first.sqlite.prepare("SELECT * FROM items").all()).toEqual([{ id: 1 }]);
+  expect(second.sqlite.prepare("SELECT * FROM items").all()).toEqual([]);
+});
+
+it("re-reads the migration inventory on the uncached path", () => {
+  state.migration = "CREATE TABLE replacement (id INTEGER)";
+  const uncached = createLatestSchemaSqliteUncached();
+  expect(
+    uncached.sqlite.prepare("SELECT name FROM sqlite_master WHERE type = 'table' AND name NOT LIKE 'sqlite_%'").all(),
+  ).toEqual([{ name: "replacement" }]);
 });
