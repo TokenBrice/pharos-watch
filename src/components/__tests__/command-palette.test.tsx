@@ -136,11 +136,10 @@ describe("CommandPalette", () => {
     fireEvent.change(screen.getByRole("combobox", { name: "Search" }), {
       target: { value: "USDC" },
     });
-    const optionLabels = screen.getAllByRole("option").map((option) => option.textContent ?? "");
-
-    expect(optionLabels.findIndex((label) => label.includes("Maple syrupUSDC"))).toBeLessThan(
-      optionLabels.findIndex((label) => label.includes("Movement USDCx")),
-    );
+    const options = screen.getAllByRole("option");
+    const maple = screen.getByRole("option", { name: /Maple syrupUSDC/i });
+    const movement = screen.getByRole("option", { name: /Movement USDCx/i });
+    expect(options.indexOf(maple)).toBeLessThan(options.indexOf(movement));
   });
 
   it("keeps static stablecoin search available when the validated list cache is absent", () => {

@@ -1,14 +1,23 @@
-import { describe, expect, it } from "vitest";
-import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
+import { describe, expect, it, vi } from "vitest";
+import { makeStablecoinMeta } from "@shared/test-utils/stablecoin";
 import {
   buildPreLaunchStablecoinJsonLd,
   buildStablecoinDatasetJsonLd,
   CONTRACT_IDENTIFIER_JSON_LD_LIMIT,
 } from "@/lib/stablecoin-detail-json-ld";
 
+vi.mock("@shared/lib/stablecoins/registry", () => ({
+  TRACKED_META_BY_ID: new Map([["usdc-circle", { symbol: "USDC" }]]),
+}));
+
 describe("buildStablecoinDatasetJsonLd", () => {
   it("caps contract identifiers without exposing private site-data downloads", () => {
-    const coin = TRACKED_META_BY_ID.get("usdt-tether")!;
+    const coin = makeStablecoinMeta({
+      id: "usdt-tether", name: "Tether", symbol: "USDT", llamaId: "1", geckoId: "tether",
+      contracts: Array.from({ length: CONTRACT_IDENTIFIER_JSON_LD_LIMIT + 1 }, (_, index) => ({
+        chain: "ethereum", address: `0x${index.toString(16).padStart(40, "0")}`, decimals: 6,
+      })),
+    });
     const jsonLd = buildStablecoinDatasetJsonLd(coin, {
       dateModified: "2026-05-13T00:00:00.000Z",
       logoPath: "/logos/usdt-tether.png",
@@ -17,8 +26,9 @@ describe("buildStablecoinDatasetJsonLd", () => {
       (identifier) => typeof identifier.propertyID === "string" && identifier.propertyID.startsWith("contract:"),
     );
 
-    expect((coin.contracts ?? []).length).toBeGreaterThan(CONTRACT_IDENTIFIER_JSON_LD_LIMIT);
-    expect(identifiers).toHaveLength(CONTRACT_IDENTIFIER_JSON_LD_LIMIT);
+    expect(identifiers.map((identifier) => identifier.value)).toEqual(
+      coin.contracts!.slice(0, CONTRACT_IDENTIFIER_JSON_LD_LIMIT).map((contract) => contract.address),
+    );
     expect(jsonLd.identifier).toContainEqual({
       "@type": "PropertyValue",
       propertyID: "Pharos URN",
@@ -67,7 +77,7 @@ describe("buildStablecoinDatasetJsonLd", () => {
   });
 
   it("describes only the catalog fields actually present in the markdown profile", () => {
-    const coin = TRACKED_META_BY_ID.get("usdc-circle")!;
+    const coin = makeStablecoinMeta();
     const jsonLd = buildStablecoinDatasetJsonLd(coin);
 
     expect(jsonLd.description).toContain("Build-time profile");
@@ -80,7 +90,10 @@ describe("buildStablecoinDatasetJsonLd", () => {
   });
 
   it("uses NAV-aware descriptions for yield-bearing strategy shares", () => {
-    const coin = TRACKED_META_BY_ID.get("dusd-dialectic")!;
+    const coin = makeStablecoinMeta({
+      flags: { ...makeStablecoinMeta().flags, navToken: true, yieldBearing: true },
+      pegReferenceId: "usdc-circle",
+    });
     const jsonLd = buildStablecoinDatasetJsonLd(coin);
 
     expect(jsonLd.description).toContain("yield-bearing token with USDC-denominated NAV");
@@ -88,7 +101,7 @@ describe("buildStablecoinDatasetJsonLd", () => {
   });
 
   it("omits dateModified unless an explicit source date is provided", () => {
-    const coin = TRACKED_META_BY_ID.get("usdt-tether")!;
+    const coin = makeStablecoinMeta();
     const withoutDate = buildStablecoinDatasetJsonLd(coin);
     const withDate = buildStablecoinDatasetJsonLd(coin, { dateModified: "2026-05-13T00:00:00.000Z" });
 
@@ -97,7 +110,7 @@ describe("buildStablecoinDatasetJsonLd", () => {
   });
 
   it("uses archive wording for frozen stablecoin datasets", () => {
-    const coin = TRACKED_META_BY_ID.get("usnd-nerite")!;
+    const coin = makeStablecoinMeta({ status: "frozen" });
     const jsonLd = buildStablecoinDatasetJsonLd(coin, { dateModified: "2026-05-13" });
 
     expect(jsonLd.name).toContain("Frozen Stablecoin Archive");
@@ -109,7 +122,7 @@ describe("buildStablecoinDatasetJsonLd", () => {
 
 describe("buildPreLaunchStablecoinJsonLd", () => {
   it("uses conservative WebPage and Thing schema for pre-launch stablecoins", () => {
-    const coin = TRACKED_META_BY_ID.get("fiusd-fiserv")!;
+    const coin = makeStablecoinMeta({ id: "fiusd-fiserv", status: "pre-launch" });
     const jsonLd = buildPreLaunchStablecoinJsonLd(coin);
 
     expect(jsonLd).toHaveLength(2);

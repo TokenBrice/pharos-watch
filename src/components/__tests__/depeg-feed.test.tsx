@@ -4,7 +4,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { act, render, screen } from "@testing-library/react";
 import { DepegFeed } from "@/components/depeg-feed";
 import { installMatchMediaMock } from "@/test-utils/frontend";
-import type { DepegEvent } from "@shared/types";
+import { makeEvent } from "./depeg.test-support";
 
 vi.mock("@/hooks/use-prefetch-stablecoin", () => ({
   usePrefetchStablecoin: () => vi.fn(),
@@ -20,28 +20,6 @@ beforeEach(() => {
 });
 
 
-function makeEvent(overrides: Partial<DepegEvent>): DepegEvent {
-  return {
-    id: 1,
-    stablecoinId: "usdc-circle",
-    symbol: "USDC",
-    pegType: "peggedUSD",
-    direction: "below",
-    peakDeviationBps: -150,
-    startedAt: 1_700_000_000,
-    endedAt: 1_700_001_000,
-    startPrice: 0.99,
-    peakPrice: 0.985,
-    recoveryPrice: 1,
-    pegReference: 1,
-    source: "live",
-    confirmationSources: null,
-    pendingReason: null,
-    closeReason: null,
-    provenance: null,
-    ...overrides,
-  };
-}
 
 describe("DepegFeed", () => {
   it("renders ongoing incidents before newer closed events", () => {

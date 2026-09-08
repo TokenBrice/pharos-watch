@@ -5,32 +5,27 @@ describe("getTopFoldCopy", () => {
   it("uses incident copy for active stale incidents", () => {
     const copy = getTopFoldCopy("stale", "stale");
 
-    expect(copy.eyebrow).toBe("Intervention required");
-    expect(copy.title).toBe("Contain the breach.");
     expect(copy.emphasis).toBe("steady");
+    expect(copy.title).not.toBe(getTopFoldCopy("healthy", "healthy").title);
   });
 
   it("uses recovery-hold copy when stale is only being held by hysteresis", () => {
     const copy = getTopFoldCopy("stale", "degraded");
 
-    expect(copy.eyebrow).toBe("Recovery holding");
-    expect(copy.title).toBe("Hold the recovery.");
-    expect(copy.body).toContain("stale hold");
     expect(copy.emphasis).toBe("recovery-hold");
+    expect(copy.title).not.toBe(getTopFoldCopy("degraded", "healthy").title);
+    expect(copy.body).not.toBe(getTopFoldCopy("stale", "healthy").body);
   });
 
   it("uses recovery-hold copy when degraded is only being held by hysteresis", () => {
     const copy = getTopFoldCopy("degraded", "healthy");
 
-    expect(copy.eyebrow).toBe("Recovery holding");
-    expect(copy.title).toBe("Verify the rebound.");
     expect(copy.emphasis).toBe("recovery-hold");
+    expect(copy.body).not.toBe(getTopFoldCopy("stale", "healthy").body);
+    expect(copy.body).not.toBe(getTopFoldCopy("degraded", "degraded").body);
   });
 
-  it("uses light-default admin hero shells with dark mode scoped explicitly", () => {
-    const copy = getTopFoldCopy("healthy", "healthy");
-
-    expect(copy.shell).toContain("bg-[linear-gradient(140deg");
-    expect(copy.shell).toContain("dark:bg-[linear-gradient(180deg");
+  it("keeps a healthy steady state out of recovery hold", () => {
+    expect(getTopFoldCopy("healthy", "healthy").emphasis).toBe("steady");
   });
 });

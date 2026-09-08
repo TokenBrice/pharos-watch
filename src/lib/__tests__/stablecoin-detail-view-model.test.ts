@@ -1,12 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { resolveMechanismArchetype } from "@shared/lib/classification";
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
-import { CLIENT_TRACKED_META_BY_ID } from "@shared/lib/stablecoins/client-registry";
 import type { PegSummaryCoin, PegSummaryResponse, StablecoinData } from "@shared/types";
 import { makePegSummaryCoin as makePegSummaryCoinBase } from "@/test-utils/peg-summary-fixtures";
 import { makeStablecoin } from "@shared/test-utils/stablecoin";
+import { makeYieldRanking } from "@shared/test-utils/yield-ranking-fixtures";
 import { makeV9Card } from "@/test/fixtures/safety-score-v9";
-import { buildStablecoinDetailHeroViewModel } from "../stablecoin-detail-hero-view-model";
 import { buildStablecoinDetailViewModel } from "../stablecoin-detail-view-model";
 import {
   makeBuildStablecoinDetailViewModelParams,
@@ -134,46 +132,33 @@ describe("stablecoin detail view-model builder", () => {
     expect(viewModel.reportCardUpdatedAt).toBe(1_700_000_123_000);
   });
 
-  it("builds the ready hero through the pure hero projection", () => {
-    const coin = TRACKED_META_BY_ID.get("usdt-tether");
-    expect(coin).toBeDefined();
-
-    const viewModel = buildStablecoinDetailViewModel(
-      makeReadyDetailParams({ id: "usdt-tether", coin: coin! }),
-    );
-
+  it("projects distinct raw market and peg inputs into the ready hero", () => {
+    const coin = TRACKED_META_BY_ID.get("usdt-tether")!;
+    const viewModel = buildStablecoinDetailViewModel(makeReadyDetailParams({
+      id: coin.id,
+      coin,
+      asset: {
+        price: 0.98,
+        circulating: { peggedUSD: 200 },
+        circulatingPrevDay: { peggedUSD: 250 },
+        circulatingPrevWeek: { peggedUSD: 100 },
+        circulatingPrevMonth: { peggedUSD: 0 },
+      },
+      queries: {
+        pegSummary: { data: { coins: [makePegSummaryCoin({ pegScore: 45, eventCount: 2 })] } as PegSummaryResponse },
+        reportCards: { data: { cards: [makeV9Card({ id: coin.id, grade: "B+", score: 79 })] } as never },
+      },
+    }));
     expect(viewModel.status).toBe("ready");
     if (viewModel.status !== "ready") return;
-
-    const expectedHero = buildStablecoinDetailHeroViewModel({
-      coin: viewModel.coin,
-      coinData: viewModel.coinData,
-      logoSrc: viewModel.logoSrc,
-      isNavToken: viewModel.isNavToken,
-      mcap: viewModel.mcap,
-      supply: viewModel.supply,
-      prevDay: viewModel.prevDay,
-      prevWeek: viewModel.prevWeek,
-      prevMonth: viewModel.prevMonth,
-      performanceVsUsd1y: viewModel.performanceVsUsd1y,
-      pegRef: viewModel.pegRef,
-      deviationBps: viewModel.deviationBps,
-      gaugeDeviationBps: viewModel.gaugeDeviationBps,
-      pegReferenceUnavailable: viewModel.pegReferenceUnavailable,
-      pegScoreResult: viewModel.pegScoreResult,
-      liquidityData: viewModel.liquidityData,
-      yieldRanking: viewModel.yieldRanking,
-      stressSignal: viewModel.stressSignal,
-      reportCard: viewModel.reportCard ?? null,
-      verdict: viewModel.verdict,
-      variantParent: viewModel.variantParent,
-      variantKind: viewModel.coin.variantKind ?? null,
-      resolvedMechanismArchetype: resolveMechanismArchetype(viewModel.coin, CLIENT_TRACKED_META_BY_ID),
-      mintAuthority: viewModel.mintAuthority,
-      redemptionBackstop: viewModel.redemptionBackstop ?? null,
-    });
-
-    expect(viewModel.hero).toEqual(expectedHero);
+    expect(viewModel.mcap).toBe(200);
+    expect(viewModel.hero.market.safePrevMonth).toBeNull();
+    expect(viewModel.hero.market.prevDayTrendClass).toContain("text-red-700");
+    expect(viewModel.hero.market.prevWeekTrendClass).toContain("text-green-700");
+    expect(viewModel.hero.tertiaryMetrics.find((metric) => metric.key === "peg-score")?.display)
+      .toMatchObject({ value: "45", sub: "2 incidents" });
+    expect(viewModel.hero.signalRailItems.find((item) => item.key === "safety"))
+      .toMatchObject({ primary: "B+", secondary: "79/100" });
   });
 
   it("uses only compact mint-authority summaries for client detail presentation", () => {
@@ -686,16 +671,11 @@ describe("stablecoin detail view-model builder", () => {
 
     expect(viewModel.status).toBe("ready");
     if (viewModel.status !== "ready") return;
-    expect(viewModel.staleQueries.map((query) => query.preset)).not.toEqual(
-      expect.arrayContaining([
-        "dexLiquidity",
-        "reportCards",
-        "redemptionBackstops",
-        "yieldRankings",
-        "stressSignals",
-        "mintBurnFlows",
-      ]),
-    );
+    const presets = viewModel.staleQueries.map((query) => query.preset);
+    expect(presets).toContain("stablecoins");
+    for (const disabled of ["dexLiquidity", "reportCards", "redemptionBackstops", "yieldRankings", "stressSignals", "mintBurnFlows"]) {
+      expect(presets).not.toContain(disabled);
+    }
   });
 
   it("distinguishes optional-source failure from unsupported or valid empty coverage", () => {
@@ -766,31 +746,7 @@ describe("stablecoin detail view-model builder", () => {
         supplemental: {
           yieldRankingsData: {
             rankings: [
-              {
-                id: "usdc-circle",
-                symbol: "USDC",
-                name: "USD Coin",
-                currentApy: 4.2,
-                apy7d: 4.2,
-                apy30d: 4.1,
-                apyBase: 4.2,
-                apyReward: null,
-                yieldSource: "Aave v3",
-                yieldType: "lending-opportunity",
-                dataSource: "defillama-auto",
-                sourceTvlUsd: 1_000_000,
-                pharosYieldScore: 50,
-                safetyScore: 82,
-                safetyGrade: "A-",
-                yieldToRisk: 0.2,
-                excessYield: 0.5,
-                yieldStability: 0.9,
-                apyVariance30d: 0.1,
-                apyMin30d: 3.9,
-                apyMax30d: 4.3,
-                warningSignals: [],
-                altSources: [],
-              },
+              makeYieldRanking({ id: "usdc-circle", symbol: "USDC", name: "USD Coin" }),
             ],
           } as never,
         },
@@ -882,31 +838,7 @@ describe("stablecoin detail view-model builder", () => {
         supplemental: {
           yieldRankingsData: {
             rankings: [
-              {
-                id: "xaut-tether",
-                symbol: "XAUT",
-                name: "Tether Gold",
-                currentApy: 11,
-                apy7d: 11,
-                apy30d: 11,
-                apyBase: 1,
-                apyReward: 10,
-                yieldSource: "Yo Protocol",
-                yieldType: "lending-opportunity",
-                dataSource: "defillama",
-                sourceTvlUsd: 3_000_000,
-                pharosYieldScore: 48,
-                safetyScore: 73,
-                safetyGrade: "B",
-                yieldToRisk: 0.39,
-                excessYield: 7.2,
-                yieldStability: 0.98,
-                apyVariance30d: 0.2,
-                apyMin30d: 10.9,
-                apyMax30d: 11.3,
-                warningSignals: [],
-                altSources: [],
-              },
+              makeYieldRanking({ id: "xaut-tether", symbol: "XAUT", name: "Tether Gold" }),
             ],
           } as never,
         },
@@ -918,6 +850,30 @@ describe("stablecoin detail view-model builder", () => {
 
     expect(viewModel.yieldRanking?.id).toBe("xaut-tether");
     expect(viewModel.hasYieldSection).toBe(true);
+  });
+
+  it.each([
+    { label: "inclusive tolerance", points: [[14 * 86400, 2]], price: 3, expected: 50 },
+    { label: "outside tolerance", points: [[14 * 86400 + 1, 2]], price: 3, expected: null },
+    { label: "closest valid anchor, not first or invalid", points: [[-10 * 86400, 1], [-86400, 2], [0, null], [1, 0]], price: 3, expected: 50 },
+    { label: "missing current price", points: [[0, 2]], price: null, expected: null },
+    { label: "invalid current price", points: [[0, 2]], price: 0, expected: null },
+  ])("selects annual performance for $label", ({ points, price, expected }) => {
+    const coin = TRACKED_META_BY_ID.get("zchf-frankencoin")!;
+    const nowSec = 1_720_000_000;
+    const anchorSec = nowSec - 365 * 86400;
+    const viewModel = buildStablecoinDetailViewModel(makeReadyDetailParams({
+      id: coin.id,
+      coin,
+      asset: { price },
+      queries: { supplyHistory: { data: points.map(([offset, historicPrice]) => ({
+        date: anchorSec + offset!, circulatingUsd: 100, price: historicPrice,
+      })) } },
+      supplemental: { nowMs: nowSec * 1000 },
+    }));
+    expect(viewModel.status).toBe("ready");
+    if (viewModel.status !== "ready") return;
+    expect(viewModel.performanceVsUsd1y).toBe(expected);
   });
 
   it("derives 1Y vs USD performance for eligible non-USD pegs", () => {

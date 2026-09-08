@@ -156,6 +156,32 @@ describe("projectOracleRiskClientSummary", () => {
     ]);
   });
 
+  it("aggregates the worst later branch instead of the first", () => {
+    const summary = projectOracleRiskClientSummary(coinWith({
+      ...BOLD_LIKE_PROFILE,
+      branches: [
+        { ...BOLD_LIKE_PROFILE.branches![0], liquidationDelaySec: 60,
+          collateralParameters: [{ asset: "WETH", maximumLtvPct: 75, minimumCollateralRatioPct: 140 }] },
+        { ...BOLD_LIKE_PROFILE.branches![1], liquidationDelaySec: 3600,
+          collateralParameters: [{ asset: "wstETH", maximumLtvPct: 90, minimumCollateralRatioPct: 110 }] },
+      ],
+    }));
+    expect(summary).toMatchObject({ worstMaxLtvPct: 90, worstMinCrPct: 110, maxLiquidationDelayLabel: "1h" });
+  });
+
+  it("omits zero feed timings but preserves instant liquidation", () => {
+    const summary = projectOracleRiskClientSummary(coinWith({
+      ...BOLD_LIKE_PROFILE,
+      branches: [{ ...BOLD_LIKE_PROFILE.branches![0],
+        feeds: [{ provider: "Chainlink", heartbeatSec: 0, stalenessBoundSec: 0 }],
+        liquidationDelaySec: 0,
+      }],
+    }));
+    expect(summary!.branches[0].feeds[0]).toMatchObject({ heartbeatLabel: null, stalenessLabel: null });
+    expect(summary!.branches[0].liquidationDelayLabel).toBe("None");
+    expect(summary!.maxLiquidationDelayLabel).toBe("None");
+  });
+
   it("tolerates a single-path profile with no branches", () => {
     const summary = projectOracleRiskClientSummary(
       coinWith({ tier: "privileged-internal-pricing", summary: "Internal exchange-rate accounting only." }),

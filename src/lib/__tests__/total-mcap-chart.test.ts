@@ -105,4 +105,35 @@ describe("buildTotalMcapChartRows", () => {
     expect(rows.map((row) => row.nonUsd)).toEqual([10, 13]);
     expect(rows.map((row) => row.total)).toEqual([110, 153]);
   });
+
+  it("sorts history and includes a snapshot exactly at the chart timestamp", () => {
+    expect(buildTotalMcapChartRows(
+      [{ date: 100, totalCirculatingUSD: { peggedUSD: 100 } }],
+      {
+        usdtHistory: [
+          { date: 200, circulatingUsd: 80, price: 1 },
+          { date: 100, circulatingUsd: 30, price: 1 },
+          { date: 90, circulatingUsd: 10, price: 1 },
+        ],
+        usdcHistory: [], usdsHistory: [], daiHistory: [],
+      },
+    )).toEqual([{ ts: 100000, usdt: 30, usdc: 0, sky: 0, others: 70, nonUsd: 0, total: 100 }]);
+  });
+
+  it("clamps others when major cohorts exceed the aggregate", () => {
+    expect(buildTotalMcapChartRows(
+      [{ date: 100, totalCirculatingUSD: { peggedUSD: 20 } }],
+      {
+        usdtHistory: [{ date: 100, circulatingUsd: 30, price: 1 }],
+        usdcHistory: [], usdsHistory: [], daiHistory: [],
+      },
+    )).toEqual([{ ts: 100000, usdt: 30, usdc: 0, sky: 0, others: 0, nonUsd: 0, total: 20 }]);
+  });
+
+  it("returns no rows for an empty chart", () => {
+    expect(buildTotalMcapChartRows([], {
+      usdtHistory: [{ date: 100, circulatingUsd: 30, price: 1 }],
+      usdcHistory: [], usdsHistory: [], daiHistory: [],
+    })).toEqual([]);
+  });
 });

@@ -251,7 +251,7 @@ describe("StablecoinSafetyScoreV9Card", () => {
     })).toBeTruthy();
   });
 
-  it("renders held publication wording across the card with an exact time value", () => {
+  it("uses the held-since timestamp in the held publication notice", () => {
     const card = makeV9Card();
     const response = makeReportCardsV9Response({
       cards: [card],
@@ -278,8 +278,7 @@ describe("StablecoinSafetyScoreV9Card", () => {
 
     const notice = screen.getByText(/Ratings held at the last verified snapshot/).closest('[role="status"]')!;
     expect(notice.textContent).toContain("Ratings held at the last verified snapshot");
-    expect(notice.querySelector("time")?.getAttribute("datetime")).toBeTruthy();
-    expect(notice.nextElementSibling?.className).toContain("grid");
+    expect(notice.querySelector("time")?.getAttribute("datetime")).toBe(new Date(1_752_534_060 * 1000).toISOString());
   });
 
   it("renders an NR result without manufacturing score stages", () => {

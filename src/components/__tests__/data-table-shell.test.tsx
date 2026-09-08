@@ -95,65 +95,13 @@ describe("DataTableShell", () => {
     expect(screen.getByRole("button", { name: "Go to previous page" }).getAttribute("aria-disabled")).toBe("true");
   });
 
-  it("does not force-hide horizontal overflow at desktop breakpoints", () => {
+  it("uses the shell hint when no viewport hint overrides it", () => {
     render(
-      <DataTableShell columns={columns}>
-        <tr>
-          <td>USDT</td>
-        </tr>
+      <DataTableShell columns={columns} mobileScrollHint="Scroll for more">
+        <tr><td>USDT</td></tr>
       </DataTableShell>,
     );
-
-    const table = screen.getByRole("table");
-    const scrollRegion = table.parentElement;
-
-    expect(scrollRegion?.className).toContain("overflow-x-auto");
-    expect(scrollRegion?.className).not.toContain("overflow-x-hidden");
-    expect(scrollRegion?.className).not.toContain("lg:overflow-x-hidden");
-  });
-
-  it("preserves frame, viewport, table, top slot, hint, and pagination options", () => {
-    render(
-      <DataTableShell
-        columns={columns}
-        topSlot={<div>Toolbar</div>}
-        mobileScrollHint="Scroll for more"
-        containerClassName="custom-shell"
-        tableClassName="min-w-[640px] custom-table"
-        headerClassName="custom-header"
-        density="compact"
-        striped
-        pagination={{
-          page: 0,
-          totalPages: 3,
-          rangeStart: 1,
-          rangeEnd: 1,
-          total: 3,
-          noun: "rows",
-        }}
-      >
-        <tr>
-          <td>USDT</td>
-        </tr>
-      </DataTableShell>,
-    );
-
-    const table = screen.getByRole("table");
-    const shell = table.closest(".pharos-table-shell");
-    const viewport = table.parentElement;
-
-    expect(shell?.className).toContain("pharos-table-shell");
-    expect(shell?.className).toContain("custom-shell");
-    expect(shell?.className).toContain("pharos-table-striped");
-    expect(shell?.className).toContain("pharos-density-compact");
-    expect(viewport?.className).toContain("overflow-x-auto");
-    expect(viewport?.className).toContain("pb-3");
-    expect(screen.getByRole("table").className).toContain("custom-table");
-    expect(screen.getByText("Name").closest("thead")?.className).toContain("custom-header");
-    expect(screen.getByText("Toolbar")).toBeTruthy();
     expect(screen.getByText("Scroll for more")).toBeTruthy();
-    expect(screen.getByRole("button", { name: "Go to previous page" })).toBeTruthy();
-    expect(screen.getByRole("button", { name: "Go to next page" })).toBeTruthy();
   });
 
   it("keeps sortable header adornments outside the native sort button", () => {

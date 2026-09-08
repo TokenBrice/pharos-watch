@@ -1,3 +1,6 @@
+// @vitest-environment jsdom
+
+import { fireEvent, render, screen, within } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { renderToStaticMarkup } from "react-dom/server";
 
@@ -145,15 +148,14 @@ describe("SafetyScoreHistorySection", () => {
       error: null,
     });
 
-    const html = renderToStaticMarkup(<SafetyScoreHistorySection stablecoinId="usdt-tether" />);
-
-    // Show more button should indicate 2 hidden entries
-    expect(html).toContain("Show 2 more");
-
-    // Newest 3 entries visible (reversed: A, A-, B+)
-    // The 4th newest (B) should NOT appear in the rendered list.
-    // The B entry date is 1_740_200_000; the visible B+ entry date is 1_740_400_000.
-    // Both contain "B" in grade text, so we check the "Show 2 more" presence as proxy.
+    render(<SafetyScoreHistorySection stablecoinId="usdt-tether" />);
+    const dates = () => within(screen.getByRole("list")).getAllByRole("listitem")
+      .map((row) => row.querySelector("span")?.textContent);
+    expect(dates()).toEqual(["March 1, 2025", "February 26, 2025", "February 24, 2025"]);
+    fireEvent.click(screen.getByRole("button", { name: "Show 2 more" }));
+    expect(dates()).toEqual(["March 1, 2025", "February 26, 2025", "February 24, 2025", "February 22, 2025", "February 19, 2025"]);
+    fireEvent.click(screen.getByRole("button", { name: "Show less" }));
+    expect(dates()).toEqual(["March 1, 2025", "February 26, 2025", "February 24, 2025"]);
   });
 
   it("shows downgrade indicator for downgrades", () => {
@@ -238,6 +240,6 @@ describe("SafetyScoreHistorySection", () => {
     });
 
     const html = renderToStaticMarkup(<SafetyScoreHistorySection stablecoinId="usdt-tether" />);
-    expect(html).not.toContain("Updated:");
+    expect(html).not.toContain("Updated at ");
   });
 });

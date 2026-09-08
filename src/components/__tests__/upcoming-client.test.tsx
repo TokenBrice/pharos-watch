@@ -2,6 +2,7 @@
 
 import { render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
+import { makeStablecoinMeta } from "@shared/test-utils/stablecoin";
 
 vi.mock("next/link", async () => {
   const { createNextLinkMock } = await import("@/test-utils/frontend");
@@ -13,25 +14,22 @@ vi.mock("next/image", () => ({
 }));
 
 const { UpcomingClient } = await import("../upcoming-client");
-const { PRE_LAUNCH_STABLECOINS } = await import("@shared/lib/stablecoins/registry");
-const { logosById } = await import("@/lib/logos");
-
-const upcomingLogos = Object.fromEntries(
-  PRE_LAUNCH_STABLECOINS.map((coin) => [coin.id, logosById[coin.id]]),
-);
+const PRE_LAUNCH_STABLECOINS = [
+  makeStablecoinMeta({ id: "fixture-announced", name: "Announced Coin", status: "pre-launch", launchPhase: "announced" }),
+  makeStablecoinMeta({ id: "fixture-beta", name: "Beta Coin", status: "pre-launch", launchPhase: "beta" }),
+];
 
 describe("UpcomingClient", () => {
 
   it("renders AI-summary term markers as plain labels inside linked teaser cards", () => {
-    const preLaunchId = PRE_LAUNCH_STABLECOINS[0]?.id;
-    expect(preLaunchId).toBeTruthy();
+    const preLaunchId = "fixture-announced";
 
     const { container } = render(
       <UpcomingClient
         coins={PRE_LAUNCH_STABLECOINS}
-        logos={upcomingLogos}
+        logos={{}}
         teasers={{
-          [preLaunchId as string]:
+          [preLaunchId]:
             "An {{term:overcollateralization}}overcollateralized{{/term}} note parked in {{term:money-market-fund}}MMFs{{/term}}.",
         }}
       />,
@@ -50,7 +48,7 @@ describe("UpcomingClient", () => {
     render(
       <UpcomingClient
         coins={PRE_LAUNCH_STABLECOINS}
-        logos={upcomingLogos}
+        logos={{}}
         teasers={{}}
       />,
     );

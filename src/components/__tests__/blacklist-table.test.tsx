@@ -4,17 +4,19 @@ import { fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { BlacklistTable } from "@/components/blacklist-table";
 import type { BlacklistEvent } from "@shared/types";
+import type * as DownloadModule from "@/lib/exports/download";
 
-const { downloadCsvMock } = vi.hoisted(() => ({
-  downloadCsvMock: vi.fn(),
+const { downloadMock } = vi.hoisted(() => ({
+  downloadMock: vi.fn(),
 }));
 
-vi.mock("@/lib/exports/csv", () => ({
-  downloadCsv: downloadCsvMock,
+vi.mock("@/lib/exports/download", async (importOriginal) => ({
+  ...(await importOriginal<typeof DownloadModule>()),
+  triggerFileDownload: downloadMock,
 }));
 
 afterEach(() => {
-  downloadCsvMock.mockReset();
+  downloadMock.mockReset();
 });
 
 const event = {
@@ -71,18 +73,20 @@ describe("BlacklistTable", () => {
 
     fireEvent.click(screen.getByRole("button", { name: /export current page csv/i }));
 
-    expect(downloadCsvMock).toHaveBeenCalledTimes(1);
-    expect(downloadCsvMock.mock.calls[0][0]).toEqual([event]);
-    const [, columns] = downloadCsvMock.mock.calls[0];
-    expect(columns.map((column: { header: string }) => column.header)).toEqual(
-      expect.arrayContaining([
-        "Amount Source",
-        "Amount Status",
-        "Contract Address",
-        "Config Key",
-        "Event Signature",
-        "Event Topic0",
-      ]),
+    expect(downloadMock).toHaveBeenCalledTimes(1);
+    const csv = downloadMock.mock.calls[0][0].join("").replace(/^\uFEFF/, "");
+    const [header, row] = csv.trim().split("\n").map((line: string) =>
+      Array.from(line.matchAll(/(?:^|,)("(?:[^"]|"")*"|[^,]*)/g), (match) =>
+        match[1].replace(/^"|"$/g, "").replaceAll('""', '"')),
     );
+    const values = Object.fromEntries(header.map((name: string, index: number) => [name, row[index]]));
+    expect(values).toMatchObject({
+      "Amount Source": "current_balance_snapshot",
+      "Amount Status": "provider_failed",
+      "Contract Address": "0xdac17f958d2ee523a2206206994597c13d831ec7",
+      "Config Key": "ethereum-0xdac17f958d2ee523a2206206994597c13d831ec7",
+      "Event Signature": "AddedBlackList(address)",
+      "Event Topic0": "0x42e160154868087d6bfdc0ca23d96a1c1cfa32f1b72ba9ba27b69b98a0d819dc",
+    });
   });
 });

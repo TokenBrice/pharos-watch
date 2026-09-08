@@ -5,17 +5,13 @@ import {
   mergeSourceRiskGoldenFixtures,
 } from "@shared/test-utils/yield-source-risk-golden-fixtures";
 import type { AltYieldSource, YieldRanking, YieldSourceRisk } from "@shared/types";
+import { makeAltYieldSource, makeYieldProvenance, makeYieldRanking } from "@shared/test-utils/yield-ranking-fixtures";
 
 function ranking(overrides: Partial<YieldRanking> = {}): YieldRanking {
-  return {
-    id: "usdc-circle",
-    symbol: "USDC",
-    name: "USD Coin",
+  return makeYieldRanking({
     currentApy: 0.052,
     apy7d: 0.051,
     apy30d: 0.05,
-    apyBase: null,
-    apyReward: null,
     yieldSource: "Aave",
     yieldSourceUrl: null,
     yieldType: "lending-vault",
@@ -23,37 +19,24 @@ function ranking(overrides: Partial<YieldRanking> = {}): YieldRanking {
     sourceTvlUsd: 10_000_000,
     pharosYieldScore: 42,
     safetyScore: 90,
-    safetyGrade: "A",
     yieldToRisk: 1,
     excessYield: 0.01,
     benchmarkRate: 0.04,
     benchmarkLabel: "T-bill",
     benchmarkSelectionMode: "native",
     benchmarkIsFallback: false,
-    yieldStability: 0.9,
     apyVariance30d: 0.001,
     apyMin30d: 0.04,
     apyMax30d: 0.06,
-    warningSignals: [],
-    altSources: [],
-    provenance: {
+    provenance: makeYieldProvenance({
       sourceKey: "aave-usdc",
       sourceObservedAt: 1_700_000_000,
       sourceAgeSeconds: 60,
-      confidenceTier: "curated",
-      selectionMethod: "confidence-weighted",
       selectionReason: "Higher confidence than retained alternates.",
-      sourceSwitch: false,
-      previousBestSourceKey: null,
-      usedLegacyHistory: false,
-      usedDefaultSafety: false,
       benchmarkRecordDate: null,
-      benchmarkIsFallback: false,
-      benchmarkFallbackMode: null,
-      anomalies: [],
-    },
+    }),
     ...overrides,
-  };
+  });
 }
 
 describe("buildYieldSourceExplorerModel", () => {
@@ -141,17 +124,17 @@ describe("buildYieldSourceExplorerModel", () => {
 });
 
 function altSource(overrides: Partial<AltYieldSource> & Pick<AltYieldSource, "sourceKey">): AltYieldSource {
-  return {
-    sourceKey: overrides.sourceKey,
-    yieldSource: overrides.yieldSource ?? "Alt",
-    yieldSourceUrl: overrides.yieldSourceUrl ?? null,
-    yieldType: overrides.yieldType ?? "lending-vault",
-    currentApy: overrides.currentApy ?? 0.04,
-    apy30d: overrides.apy30d ?? 0.039,
-    sourceTvlUsd: overrides.sourceTvlUsd ?? 10_000_000,
-    dataSource: overrides.dataSource ?? "defillama",
-    sourceRisk: overrides.sourceRisk ?? null,
-  };
+  return makeAltYieldSource({
+    yieldSource: "Alt",
+    yieldSourceUrl: null,
+    yieldType: "lending-vault",
+    currentApy: 0.04,
+    apy30d: 0.039,
+    sourceTvlUsd: 10_000_000,
+    dataSource: "defillama",
+    sourceRisk: null,
+    ...overrides,
+  });
 }
 
 function selectedRisk(overrides: Partial<YieldSourceRisk> = {}): YieldSourceRisk {

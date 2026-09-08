@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 
-import { render, waitFor } from "@testing-library/react";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { act, render } from "@testing-library/react";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { GoogleAnalytics } from "@/components/google-analytics";
 
 const { pathnameMock } = vi.hoisted(() => ({
@@ -12,7 +12,14 @@ vi.mock("next/navigation", () => ({
   usePathname: pathnameMock,
 }));
 
+beforeEach(() => {
+  vi.useFakeTimers();
+  vi.stubGlobal("requestIdleCallback", undefined);
+});
+
 afterEach(() => {
+  vi.useRealTimers();
+  vi.unstubAllGlobals();
   document.head.innerHTML = "";
   delete window.dataLayer;
   delete window.gtag;
@@ -47,7 +54,7 @@ describe("GoogleAnalytics", () => {
 
     render(<GoogleAnalytics measurementId="G-TEST" />);
 
-    await new Promise((resolve) => window.setTimeout(resolve, 10));
+    act(() => vi.runAllTimers());
     expect(window.gtag).toBeUndefined();
     expect(window.dataLayer).toBeUndefined();
     expect(document.getElementById("pharos-google-analytics")).toBeNull();
@@ -58,7 +65,7 @@ describe("GoogleAnalytics", () => {
 
     render(<GoogleAnalytics measurementId="G-TEST" />);
 
-    await waitFor(() => expect(window.dataLayer?.length).toBeGreaterThanOrEqual(4));
+    expect(window.dataLayer).toHaveLength(4);
     expect(Array.from(window.dataLayer?.at(-1) ?? [])).toEqual([
       "event",
       "page_view",
@@ -71,7 +78,7 @@ describe("GoogleAnalytics", () => {
 
     render(<GoogleAnalytics measurementId="G-TEST" />);
 
-    await waitFor(() => expect(window.dataLayer?.length).toBeGreaterThanOrEqual(4));
+    expect(window.dataLayer).toHaveLength(4);
 
     const entries = window.dataLayer ?? [];
     expect(entries.every((entry) => !Array.isArray(entry))).toBe(true);
@@ -94,13 +101,10 @@ describe("GoogleAnalytics", () => {
     // The gtag.js download is deferred to an idle window (requestIdleCallback,
     // or a setTimeout fallback in jsdom) so its execution stays off the load
     // critical path; the injected script still carries the measurement id.
-    await waitFor(
-      () =>
-        expect(document.getElementById("pharos-google-analytics")).toHaveProperty(
-          "src",
-          "https://www.googletagmanager.com/gtag/js?id=G-TEST",
-        ),
-      { timeout: 2500 },
+    expect(document.getElementById("pharos-google-analytics")).toBeNull();
+    act(() => vi.advanceTimersByTime(2_000));
+    expect(document.getElementById("pharos-google-analytics")).toHaveProperty(
+      "src", "https://www.googletagmanager.com/gtag/js?id=G-TEST",
     );
   });
 
@@ -110,7 +114,7 @@ describe("GoogleAnalytics", () => {
 
     render(<GoogleAnalytics measurementId="G-TEST" />);
 
-    await waitFor(() => expect(window.dataLayer?.length).toBeGreaterThanOrEqual(4));
+    expect(window.dataLayer).toHaveLength(4);
     const pageViewEntry = Array.from(window.dataLayer?.at(3) ?? []);
     expect(window.location.search).toBe("?utm_source=email");
     expect(pageViewEntry).toEqual([
@@ -127,11 +131,11 @@ describe("GoogleAnalytics", () => {
     pathnameMock.mockReturnValue("/");
     const view = render(<GoogleAnalytics measurementId="G-TEST" />);
 
-    await waitFor(() => expect(window.dataLayer?.length).toBeGreaterThanOrEqual(4));
+    expect(window.dataLayer).toHaveLength(4);
     pathnameMock.mockReturnValue("/liquidity/");
     view.rerender(<GoogleAnalytics measurementId="G-TEST" />);
 
-    await waitFor(() => expect(window.dataLayer?.length).toBeGreaterThanOrEqual(5));
+    expect(window.dataLayer).toHaveLength(5);
     const lastEntry = Array.from(window.dataLayer?.at(-1) ?? []);
     expect(lastEntry).toEqual([
       "event",
@@ -139,4 +143,17 @@ describe("GoogleAnalytics", () => {
       expect.objectContaining({ page_path: "/liquidity/" }),
     ]);
   });
+  it.each(["unmount", "private-route"])("cancels pending script injection on %s", (transition) => {
+    pathnameMock.mockReturnValue("/");
+    const view = render(<GoogleAnalytics measurementId="G-TEST" />);
+    expect(document.getElementById("pharos-google-analytics")).toBeNull();
+    if (transition === "unmount") view.unmount();
+    else {
+      pathnameMock.mockReturnValue("/admin/");
+      view.rerender(<GoogleAnalytics measurementId="G-TEST" />);
+    }
+    act(() => vi.runAllTimers());
+    expect(document.getElementById("pharos-google-analytics")).toBeNull();
+  });
+
 });

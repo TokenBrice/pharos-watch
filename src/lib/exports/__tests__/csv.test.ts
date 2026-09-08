@@ -1,19 +1,8 @@
 // @vitest-environment jsdom
 
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { buildCsvWithPreamble, downloadCsvWithPreamble } from "@/lib/exports/csv";
-import type { ExportPreamble } from "@/lib/exports/preamble";
-
-const PREAMBLE: ExportPreamble = {
-  endpoint: "stablecoins",
-  asOfISO: "2026-05-16T12:00:00.000Z",
-  sourceUrl: "https://pharos.watch/",
-  methodologyLabel: "safety-score v7.25",
-};
-
-function expectBlob(value: Blob | MediaSource | undefined): asserts value is Blob {
-  expect(value).toBeInstanceOf(Blob);
-}
+import { PREAMBLE, expectBlob, useDownloadHarness } from "./exports.test-support";
 
 describe("buildCsvWithPreamble", () => {
   it("prepends the `#` preamble, then header, then escaped rows", () => {
@@ -83,28 +72,8 @@ describe("buildCsvWithPreamble", () => {
 });
 
 describe("downloadCsvWithPreamble", () => {
-  const createObjectURL = vi.fn<(object: Blob | MediaSource) => string>(() => "blob:pharos-csv");
-  const revokeObjectURL = vi.fn();
-  let clickSpy: ReturnType<typeof vi.spyOn>;
-
-  beforeEach(() => {
-    vi.useFakeTimers();
-    vi.setSystemTime(new Date("2026-05-16T12:00:00.000Z"));
-    vi.stubGlobal("URL", {
-      ...URL,
-      createObjectURL,
-      revokeObjectURL,
-    });
-    clickSpy = vi.spyOn(HTMLAnchorElement.prototype, "click").mockImplementation(() => {});
-  });
-
-  afterEach(() => {
-    clickSpy.mockRestore();
-    vi.useRealTimers();
-    vi.unstubAllGlobals();
-    createObjectURL.mockClear();
-    revokeObjectURL.mockClear();
-  });
+  const harness = useDownloadHarness("blob:pharos-csv");
+  const { createObjectURL, revokeObjectURL } = harness;
 
   it("creates a BOM-prefixed CSV blob, dated filename, and defers revoke", async () => {
     downloadCsvWithPreamble(
@@ -120,8 +89,8 @@ describe("downloadCsvWithPreamble", () => {
     expect(blob.type).toBe("text/csv;charset=utf-8;");
     const bytes = new Uint8Array(await blob.arrayBuffer());
     expect(Array.from(bytes.slice(0, 3))).toEqual([239, 187, 191]); // UTF-8 BOM
-    expect(clickSpy).toHaveBeenCalledTimes(1);
-    const anchor = clickSpy.mock.instances[0] as HTMLAnchorElement | undefined;
+    expect(harness.clickSpy).toHaveBeenCalledTimes(1);
+    const anchor = harness.clickSpy.mock.instances[0] as HTMLAnchorElement | undefined;
     expect(anchor?.download).toBe("stablecoins-2026-05-16.csv");
     expect(revokeObjectURL).not.toHaveBeenCalled();
 
@@ -131,7 +100,7 @@ describe("downloadCsvWithPreamble", () => {
   });
 
   it("still revokes the object URL when the anchor click throws", async () => {
-    clickSpy.mockImplementation(() => {
+    harness.clickSpy.mockImplementation(() => {
       throw new Error("click blocked by browser policy");
     });
 
