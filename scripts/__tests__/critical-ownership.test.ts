@@ -84,12 +84,28 @@ describe("critical ownership derivation", () => {
   it("recovers the deleted owner's runtime imports from the base tree", () => {
     const source = "worker/src/lib/auth.ts";
     const test = "worker/src/lib/__tests__/removed.test.ts";
-    const ownership = deriveBaseCriticalOwnership("base", [test], (_file, args) => {
+    const gitReads: string[] = [];
+    const ownership = deriveBaseCriticalOwnership("base", [test], (_file, args, options) => {
+      gitReads.push(args.join(" "));
       if (args[0] === "ls-tree") return `${source}\0${test}\0`;
-      if (args[0] === "show" && args[1] === `base:${test}`) return 'import "../auth";';
+      if (args[0] === "cat-file") {
+        expect(args.slice(1)).toEqual(["--batch", "-Z"]);
+        expect(options.input).toBe(`base:${test}\0`);
+        return `deadbeef blob 18\0import "../auth";\0`;
+      }
       throw new Error(`Unexpected Git read: ${args.join(" ")}`);
     });
     expect(ownership.get(source)).toEqual([test]);
+    // One batched read replaces one `git show` per candidate file.
+    expect(gitReads).toEqual(["ls-tree -r --name-only -z base", "cat-file --batch -Z"]);
+  });
+
+  it("ignores test files that do not exist at the base revision", () => {
+    const ownership = deriveBaseCriticalOwnership("base", ["worker/src/lib/__tests__/added.test.ts"], (_file, args) => {
+      if (args[0] === "ls-tree") return "worker/src/lib/auth.ts\0";
+      throw new Error(`Unexpected Git read: ${args.join(" ")}`);
+    });
+    expect(ownership.size).toBe(0);
   });
 
   it("reports an enrolled source without an owner unless it has a cutover waiver", () => {
