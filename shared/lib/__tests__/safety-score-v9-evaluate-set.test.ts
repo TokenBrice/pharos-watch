@@ -70,19 +70,75 @@ describe("Safety Score v9 local control-domain scope", () => {
     ).toBe("low");
   });
 
-  it("keeps an unresolved liability partition at global-claim scope", () => {
-    const assessment = assessV9ControlDomainScope(
-      DOMAIN,
-      [MEMBER],
-      assetWithControl({ materialSupplyShare: null }),
-      supplyExposure({ complete: false }),
-    );
-
-    expect(assessment).toEqual({
-      economicLossScope: "global-claim",
-      deploymentKeys: [],
-      materialShare: null,
+  it("uses chain exposure only when a control share is unavailable", () => {
+    const asset = assetWithControl({ materialSupplyShare: null });
+    expect(assessV9ControlDomainScope(DOMAIN, [MEMBER], asset, supplyExposure())).toEqual({
+      economicLossScope: "deployment",
+      deploymentKeys: ["solana:fixture-mint"],
+      materialShare: 0.0581,
     });
+    expect(assessV9ControlDomainScope(
+      DOMAIN, [MEMBER], asset, supplyExposure({ shareBySlug: new Map() }),
+    )).toEqual({ economicLossScope: "global-claim", deploymentKeys: [], materialShare: null });
+  });
+
+  it("independently fails closed on incomplete supply, unattributed supply, or unknown control evidence", () => {
+    const assess = (asset: V9AssetFactsBase, supply: V9SupplyChainExposure) =>
+      assessV9ControlDomainScope(DOMAIN, [MEMBER], asset, supply);
+    expect(assess(assetWithControl(), supplyExposure()).economicLossScope).toBe("deployment");
+    const globalClaim = { economicLossScope: "global-claim", deploymentKeys: [], materialShare: null };
+    expect(assess(assetWithControl(), supplyExposure({ complete: false }))).toEqual(globalClaim);
+    expect(assess(assetWithControl(), supplyExposure({ unattributedShare: 0.1 }))).toEqual(globalClaim);
+    expect(assess(assetWithControl({
+      status: { ...knownStatus(), observationState: "unknown" },
+    }), supplyExposure())).toEqual(globalClaim);
+  });
+
+  it("counts repeated deployment members once and rejects contradictory shares", () => {
+    const asset = assetWithControl({ materialSupplyShare: 0.2 });
+    const second = { ...MEMBER, pathKey: "control:second" };
+    asset.controls = [...asset.controls, { ...asset.controls[0]!, controlKey: second.pathKey }];
+    expect(assessV9ControlDomainScope(DOMAIN, [MEMBER, second], asset, supplyExposure())).toEqual({
+      economicLossScope: "deployment", deploymentKeys: ["solana:fixture-mint"], materialShare: 0.2,
+    });
+    asset.controls[1]!.materialSupplyShare = 0.3;
+    expect(assessV9ControlDomainScope(DOMAIN, [MEMBER, second], asset, supplyExposure())).toEqual({
+      economicLossScope: "global-claim", deploymentKeys: [], materialShare: null,
+    });
+  });
+
+  it("sums distinct deployments and rejects a nonconserved aggregate", () => {
+    const asset = assetWithControl({ materialSupplyShare: 0.2 });
+    const second = { ...MEMBER, pathKey: "control:second" };
+    asset.controls = [...asset.controls, {
+      ...asset.controls[0]!, controlKey: second.pathKey, deploymentKey: "ethereum:second", materialSupplyShare: 0.3,
+    }];
+    const assessment = assessV9ControlDomainScope(DOMAIN, [MEMBER, second], asset, supplyExposure());
+    expect(assessment).toEqual({
+      economicLossScope: "deployment",
+      deploymentKeys: ["ethereum:second", "solana:fixture-mint"],
+      materialShare: 0.5,
+    });
+    asset.controls[1]!.materialSupplyShare = 0.9;
+    expect(assessV9ControlDomainScope(DOMAIN, [MEMBER, second], asset, supplyExposure())).toEqual({
+      economicLossScope: "global-claim", deploymentKeys: [], materialShare: null,
+    });
+  });
+
+  it("grades deployment boundaries and unresolved whole-claim exposure", () => {
+    const materiality = V9_CANDIDATE_POLICY_V1.policy.semantic.materiality;
+    for (const [share, severity] of [[0.1, "moderate"], [0.25, "high"]] as const) {
+      const assessment = assessV9ControlDomainScope(
+        DOMAIN, [MEMBER], assetWithControl({ materialSupplyShare: share }), supplyExposure(),
+      );
+      expect(deploymentControlDomainSeverity(assessment, materiality)).toBe(severity);
+    }
+    expect(deploymentControlDomainSeverity({
+      economicLossScope: "global-claim", deploymentKeys: [], materialShare: null,
+    }, materiality)).toBe("high");
+    expect(deploymentControlDomainSeverity({
+      economicLossScope: "deployment", deploymentKeys: ["solana:fixture-mint"], materialShare: null,
+    }, materiality)).toBe("high");
   });
 
   it("keeps an authority that reaches the root claim at global-claim scope", () => {

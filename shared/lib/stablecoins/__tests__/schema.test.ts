@@ -10,19 +10,10 @@ import {
 } from "../schema";
 import { OracleRiskProfileSchema } from "../../../types/stablecoin-meta-schemas";
 import { CANONICAL_STABLECOIN_FLAGS, makeRawStablecoinMeta as makeCoin } from "./test-support";
+import { makeSafeControl } from "./schema.test-support";
 
 const baseFlags = CANONICAL_STABLECOIN_FLAGS;
 
-describe("raw StablecoinMeta fixture", () => {
-  it("pins the schema-test defaults independently of parser behavior", () => {
-    expect(makeCoin()).toEqual({
-      id: "fixture-usd",
-      name: "Fixture USD",
-      symbol: "FUSD",
-      flags: CANONICAL_STABLECOIN_FLAGS,
-    });
-  });
-});
 
 describe("StablecoinMeta schema — MiCA profile", () => {
   it("requires source references for assessed in-scope MiCA statuses", () => {
@@ -72,29 +63,7 @@ function makeMintAuthority(overrides: Record<string, unknown> = {}): Record<stri
     authorityPosture: "partially-bounded-admin",
     confidence: "verified",
     summary: "Issuer minting is controlled by a reviewed Safe.",
-    controls: [
-      {
-        chain: "ethereum",
-        address: "0x1234567890abcdef1234567890abcdef12345678",
-        label: "Issuer mint Safe",
-        role: "direct-minter",
-        authorityType: "safe",
-        directMintAbility: "direct",
-        threshold: 2,
-        signerCount: 3,
-        modulesOrGuardsStatus: "none-detected",
-        safe: {
-          owners: [
-            "0x1111111111111111111111111111111111111111",
-            "0x2222222222222222222222222222222222222222",
-            "0x3333333333333333333333333333333333333333",
-          ],
-          threshold: 2,
-          observedBlock: 123456,
-          source: "onchain",
-        },
-      },
-    ],
+    controls: [makeSafeControl()],
     review: {
       sources: [mintAuthoritySource],
       evidence: "The verified contract source and Safe state identify the mint authority.",
@@ -105,81 +74,78 @@ function makeMintAuthority(overrides: Record<string, unknown> = {}): Record<stri
   };
 }
 
+function makeInheritanceChain(ids: string[], terminal = makeCoin({
+  id: "terminal",
+  mintAuthority: makeMintAuthority({
+    mintPath: "immutable-user-collateralized",
+    authorityPosture: "none-resolved",
+    controls: undefined,
+  }),
+})) {
+  return [
+    ...ids.map((id, index) => makeCoin({
+      id,
+      mintAuthority: makeMintAuthority({
+        mintPath: "wrapped-or-variant-inherited",
+        inheritedFrom: ids[index + 1] ?? terminal.id,
+        controls: undefined,
+      }),
+    })),
+    terminal,
+  ];
+}
+
 describe("StablecoinMeta schema — frozen status", () => {
   it("accepts a well-formed frozen coin", () => {
     const json = [
-      {
-        id: "fixture-frozen",
-        name: "Fixture Frozen",
-        symbol: "FXT",
-        flags: baseFlags,
-        status: "frozen",
-        frozenAt: "2026-04-27",
-        obituary: {
-          causeOfDeath: "abandoned",
-          deathDate: "2026-04",
-          epitaph: "Closed without ceremony.",
-          obituary: "FXT was sunset by its issuer.",
-          sourceUrl: "https://example.com/x",
-          sourceLabel: "Issuer announcement",
-        },
-      },
+      makeCoin({ id: "fixture-frozen", status: "frozen",
+      frozenAt: "2026-04-27",
+      obituary: {
+        causeOfDeath: "abandoned",
+        deathDate: "2026-04",
+        epitaph: "Closed without ceremony.",
+        obituary: "FXT was sunset by its issuer.",
+        sourceUrl: "https://example.com/x",
+        sourceLabel: "Issuer announcement",
+      }, }),
     ];
     expect(() => parseStablecoinMetaAssets(json, "fixture")).not.toThrow();
   });
 
   it("rejects a frozen coin missing the obituary block", () => {
     const json = [
-      {
-        id: "fixture-frozen-bad",
-        name: "Fixture",
-        symbol: "FXT",
-        flags: baseFlags,
-        status: "frozen",
-        frozenAt: "2026-04-27",
-      },
+      makeCoin({ id: "fixture-frozen-bad", status: "frozen",
+      frozenAt: "2026-04-27", }),
     ];
     expect(() => parseStablecoinMetaAssets(json, "fixture")).toThrow(/obituary/);
   });
 
   it("rejects a frozen coin missing frozenAt", () => {
     const json = [
-      {
-        id: "fixture-frozen-bad-2",
-        name: "Fixture",
-        symbol: "FXT",
-        flags: baseFlags,
-        status: "frozen",
-        obituary: {
-          causeOfDeath: "abandoned",
-          deathDate: "2026-04",
-          epitaph: "x",
-          obituary: "x",
-          sourceUrl: "https://example.com/x",
-          sourceLabel: "x",
-        },
-      },
+      makeCoin({ id: "fixture-frozen-bad-2", status: "frozen",
+      obituary: {
+        causeOfDeath: "abandoned",
+        deathDate: "2026-04",
+        epitaph: "x",
+        obituary: "x",
+        sourceUrl: "https://example.com/x",
+        sourceLabel: "x",
+      }, }),
     ];
     expect(() => parseStablecoinMetaAssets(json, "fixture")).toThrow(/frozenAt/);
   });
 
   it("rejects an active coin with a stray obituary field", () => {
     const json = [
-      {
-        id: "fixture-active-bad",
-        name: "Fixture",
-        symbol: "FXT",
-        flags: baseFlags,
-        status: "active",
-        obituary: {
-          causeOfDeath: "abandoned",
-          deathDate: "2026-04",
-          epitaph: "x",
-          obituary: "x",
-          sourceUrl: "https://example.com/x",
-          sourceLabel: "x",
-        },
-      },
+      makeCoin({ id: "fixture-active-bad", status: "active",
+      obituary: {
+        causeOfDeath: "abandoned",
+        deathDate: "2026-04",
+        epitaph: "x",
+        obituary: "x",
+        sourceUrl: "https://example.com/x",
+        sourceLabel: "x",
+      }, }),
     ];
     expect(() => parseStablecoinMetaAssets(json, "fixture")).toThrow(/obituary is only allowed when status is frozen/);
   });
@@ -263,13 +229,7 @@ describe("StablecoinMeta schema — listing lifecycle status", () => {
 describe("StablecoinMeta schema — blacklistability review", () => {
   it("rejects the retired canBeBlacklisted field", () => {
     const json = [
-      {
-        id: "fixture-blacklist-legacy",
-        name: "Fixture",
-        symbol: "FXT",
-        flags: baseFlags,
-        canBeBlacklisted: true,
-      },
+      makeCoin({ id: "fixture-blacklist-legacy", canBeBlacklisted: true, }),
     ];
     expect(() => parseStablecoinMetaAssets(json, "fixture")).toThrow(/canBeBlacklisted/);
   });
@@ -440,30 +400,7 @@ describe("StablecoinMeta schema — mint authority", () => {
             reviewer: "Fixture Reviewer",
             reviewedAt: "2026-05-24",
           },
-          controls: [
-            {
-              chain: "ethereum",
-              address: "0x1234567890abcdef1234567890abcdef12345678",
-              label: "Issuer mint Safe",
-              role: "direct-minter",
-              authorityType: "safe",
-              directMintAbility: "direct",
-              threshold: 2,
-              signerCount: 3,
-              modulesOrGuardsStatus: "none-detected",
-              sources: [mintAuthoritySource],
-              safe: {
-                owners: [
-                  "0x1111111111111111111111111111111111111111",
-                  "0x2222222222222222222222222222222222222222",
-                  "0x3333333333333333333333333333333333333333",
-                ],
-                threshold: 2,
-                observedBlock: 123456,
-                source: "onchain",
-              },
-            },
-          ],
+          controls: [makeSafeControl({ sources: [mintAuthoritySource] })],
         }),
       }),
     ], "fixture")).not.toThrow();
@@ -485,23 +422,7 @@ describe("StablecoinMeta schema — mint authority", () => {
       makeCoin({
         id: "fixture-mint-threshold",
         mintAuthority: makeMintAuthority({
-          controls: [
-            {
-              label: "Broken Safe",
-              role: "direct-minter",
-              authorityType: "safe",
-              directMintAbility: "direct",
-              threshold: 4,
-              signerCount: 3,
-              modulesOrGuardsStatus: "none-detected",
-              safe: {
-                owners: ["owner-1", "owner-2", "owner-3"],
-                threshold: 4,
-                observedBlock: 123456,
-                source: "onchain",
-              },
-            },
-          ],
+          controls: [makeSafeControl({ threshold: 4 }, { threshold: 4 })],
         }),
       }),
     ], "fixture")).toThrow(/threshold/);
@@ -512,22 +433,7 @@ describe("StablecoinMeta schema — mint authority", () => {
       makeCoin({
         id: "fixture-mint-modules",
         mintAuthority: makeMintAuthority({
-          controls: [
-            {
-              label: "Incomplete Safe",
-              role: "direct-minter",
-              authorityType: "safe",
-              directMintAbility: "direct",
-              threshold: 2,
-              signerCount: 3,
-              safe: {
-                owners: ["owner-1", "owner-2", "owner-3"],
-                threshold: 2,
-                observedBlock: 123456,
-                source: "onchain",
-              },
-            },
-          ],
+          controls: [makeSafeControl({ modulesOrGuardsStatus: undefined })],
         }),
       }),
     ], "fixture")).toThrow(/modulesOrGuardsStatus/);
@@ -867,52 +773,9 @@ describe("StablecoinMeta schema — mint authority", () => {
       }),
     ], "fixture")).toThrow(/must not form a cycle/);
 
-    expect(() => parseStablecoinMetaAssets([
-      makeCoin({
-        id: "depth-0",
-        mintAuthority: makeMintAuthority({
-          mintPath: "wrapped-or-variant-inherited",
-          authorityPosture: "partially-bounded-admin",
-          inheritedFrom: "depth-1",
-          controls: undefined,
-        }),
-      }),
-      makeCoin({
-        id: "depth-1",
-        mintAuthority: makeMintAuthority({
-          mintPath: "wrapped-or-variant-inherited",
-          authorityPosture: "partially-bounded-admin",
-          inheritedFrom: "depth-2",
-          controls: undefined,
-        }),
-      }),
-      makeCoin({
-        id: "depth-2",
-        mintAuthority: makeMintAuthority({
-          mintPath: "wrapped-or-variant-inherited",
-          authorityPosture: "partially-bounded-admin",
-          inheritedFrom: "depth-3",
-          controls: undefined,
-        }),
-      }),
-      makeCoin({
-        id: "depth-3",
-        mintAuthority: makeMintAuthority({
-          mintPath: "wrapped-or-variant-inherited",
-          authorityPosture: "partially-bounded-admin",
-          inheritedFrom: "depth-4",
-          controls: undefined,
-        }),
-      }),
-      makeCoin({
-        id: "depth-4",
-        mintAuthority: makeMintAuthority({
-          mintPath: "immutable-user-collateralized",
-          authorityPosture: "none-resolved",
-          controls: undefined,
-        }),
-      }),
-    ], "fixture")).toThrow(/depth/);
+    expect(() => parseStablecoinMetaAssets(
+      makeInheritanceChain(["depth-0", "depth-1", "depth-2", "depth-3"]), "fixture",
+    )).toThrow(/depth/);
   });
 
   it("requires wrapper none-resolved posture to inherit from a none-resolved parent", () => {
@@ -933,6 +796,41 @@ describe("StablecoinMeta schema — mint authority", () => {
         }),
       }),
     ], "fixture")).toThrow(/parent is none-resolved/);
+  });
+
+  it("accepts the last valid inheritance depth of three links", () => {
+    const parsed = parseStablecoinMetaAssets(
+      makeInheritanceChain(["depth-0", "depth-1", "depth-2"]), "fixture",
+    );
+    expect(parsed.map((coin) => coin.id)).toEqual(["depth-0", "depth-1", "depth-2", "terminal"]);
+  });
+
+  it("rejects inheritance disagreeing with variantOf even when both parents exist", () => {
+    const chain = makeInheritanceChain(["child"], makeCoin({
+      id: "mint-parent", mintAuthority: makeMintAuthority(),
+    }));
+    chain[0]!.variantOf = "other-parent";
+    chain[0]!.variantKind = "savings-passthrough";
+    expect(() => parseStablecoinMetaAssets([
+      ...chain, makeCoin({ id: "other-parent", mintAuthority: makeMintAuthority() }),
+    ], "fixture")).toThrow(/inheritedFrom must match variantOf/);
+  });
+
+  it("allows mint-only none-resolved inheritance from an administered parent", () => {
+    const parent = makeCoin({ id: "admin-parent", mintAuthority: makeMintAuthority() });
+    const child = makeCoin({
+      id: "child",
+      variantOf: parent.id,
+      variantKind: "savings-passthrough",
+      mintAuthority: makeMintAuthority({
+        mintPath: "wrapped-or-variant-inherited",
+        authorityPosture: "none-resolved-mint",
+        inheritedFrom: parent.id,
+        controls: undefined,
+      }),
+    });
+    const parsed = parseStablecoinMetaAssets([parent, child], "fixture");
+    expect(parsed[1]!.mintAuthority?.authorityPosture).toBe("none-resolved-mint");
   });
 });
 
@@ -956,21 +854,15 @@ describe("StablecoinMeta schema — variantOf / pegReferenceId coherence (Rule 1
           controls: undefined,
         }),
       }),
-      {
-        id: "fixture-variant-ok",
-        name: "Fixture Variant",
-        symbol: "FVT",
-        flags: baseFlags,
-        variantOf: "variant-parent-ok",
-        variantKind: "savings-passthrough",
-        pegReferenceId: "variant-parent-ok",
-        mintAuthority: makeMintAuthority({
-          mintPath: "wrapped-or-variant-inherited",
-          authorityPosture: "none-resolved",
-          inheritedFrom: "variant-parent-ok",
-          controls: undefined,
-        }),
-      },
+      makeCoin({ id: "fixture-variant-ok", variantOf: "variant-parent-ok",
+      variantKind: "savings-passthrough",
+      pegReferenceId: "variant-parent-ok",
+      mintAuthority: makeMintAuthority({
+        mintPath: "wrapped-or-variant-inherited",
+        authorityPosture: "none-resolved",
+        inheritedFrom: "variant-parent-ok",
+        controls: undefined,
+      }), }),
     ];
     expect(() => parseStablecoinMetaAssets(json, "fixture")).not.toThrow();
   });
@@ -985,48 +877,30 @@ describe("StablecoinMeta schema — variantOf / pegReferenceId coherence (Rule 1
           controls: undefined,
         }),
       }),
-      {
-        id: "fixture-variant-no-peg",
-        name: "Fixture Variant No Peg",
-        symbol: "FVP",
-        flags: baseFlags,
-        variantOf: "variant-parent-no-peg",
-        variantKind: "savings-passthrough",
-        mintAuthority: makeMintAuthority({
-          mintPath: "wrapped-or-variant-inherited",
-          authorityPosture: "none-resolved",
-          inheritedFrom: "variant-parent-no-peg",
-          controls: undefined,
-        }),
-      },
+      makeCoin({ id: "fixture-variant-no-peg", variantOf: "variant-parent-no-peg",
+      variantKind: "savings-passthrough",
+      mintAuthority: makeMintAuthority({
+        mintPath: "wrapped-or-variant-inherited",
+        authorityPosture: "none-resolved",
+        inheritedFrom: "variant-parent-no-peg",
+        controls: undefined,
+      }), }),
     ];
     expect(() => parseStablecoinMetaAssets(json, "fixture")).not.toThrow();
   });
 
   it("accepts a coin with pegReferenceId only (no variantOf)", () => {
     const json = [
-      {
-        id: "fixture-peg-only",
-        name: "Fixture Peg Only",
-        symbol: "FPG",
-        flags: baseFlags,
-        pegReferenceId: "usdt-tether",
-      },
+      makeCoin({ id: "fixture-peg-only", pegReferenceId: "usdt-tether", }),
     ];
     expect(() => parseStablecoinMetaAssets(json, "fixture")).not.toThrow();
   });
 
   it("rejects a coin where variantOf and pegReferenceId disagree", () => {
     const json = [
-      {
-        id: "fixture-variant-mismatch",
-        name: "Fixture Mismatch",
-        symbol: "FMM",
-        flags: baseFlags,
-        variantOf: "usdt-tether",
-        variantKind: "savings-passthrough",
-        pegReferenceId: "usdc-circle",
-      },
+      makeCoin({ id: "fixture-variant-mismatch", variantOf: "usdt-tether",
+      variantKind: "savings-passthrough",
+      pegReferenceId: "usdc-circle", }),
     ];
     expect(() => parseStablecoinMetaAssets(json, "fixture")).toThrow(/pegReferenceId/);
   });
@@ -1076,69 +950,56 @@ describe("StablecoinMeta schema — variantOf / pegReferenceId coherence (Rule 1
 describe("StablecoinMeta schema — reserves depType valid cases", () => {
   it("accepts a reserves entry with depType 'wrapper' and coinId set", () => {
     const json = [
-      {
-        id: "fixture-wrapper-ok",
-        name: "Fixture Wrapper OK",
-        symbol: "FWO",
-        flags: baseFlags,
-        reserves: [
-          { name: "Parent token shares", pct: 100, risk: "low", coinId: "usdt-tether", depType: "wrapper" },
-        ],
-      },
+      makeCoin({ id: "fixture-wrapper-ok", reserves: [
+        { name: "Parent token shares", pct: 100, risk: "low", coinId: "usdt-tether", depType: "wrapper" },
+      ], }),
     ];
     expect(() => parseStablecoinMetaAssets(json, "fixture")).not.toThrow();
   });
 
   it("accepts a reserves entry with depType 'collateral' and no coinId (real-world asset)", () => {
     const json = [
-      {
-        id: "fixture-collateral-no-coinid",
-        name: "Fixture Collateral",
-        symbol: "FCC",
-        flags: baseFlags,
-        reserves: [
-          { name: "Tokenized Treasury Bonds", pct: 100, risk: "low", depType: "collateral" },
-        ],
-      },
+      makeCoin({ id: "fixture-collateral-no-coinid", reserves: [
+        { name: "Tokenized Treasury Bonds", pct: 100, risk: "low", depType: "collateral" },
+      ], }),
     ];
     expect(() => parseStablecoinMetaAssets(json, "fixture")).not.toThrow();
   });
 
   it("rejects curated reserves that do not describe a full composition", () => {
     const json = [
-      {
-        id: "fixture-reserves-partial",
-        name: "Fixture Partial Reserves",
-        symbol: "FPR",
-        flags: baseFlags,
-        reserves: [
-          { name: "USDC", pct: 40, risk: "low" },
-          { name: "Treasuries", pct: 20, risk: "very-low" },
-        ],
-      },
+      makeCoin({ id: "fixture-reserves-partial", reserves: [
+        { name: "USDC", pct: 40, risk: "low" },
+        { name: "Treasuries", pct: 20, risk: "very-low" },
+      ], }),
     ];
     expect(() => parseStablecoinMetaAssets(json, "fixture")).toThrow(/Reserve composition must sum to 100%/);
   });
 });
 
 describe("StablecoinMeta schema — error formatting", () => {
-  it("appends a hidden-issue count when more than 8 issues are surfaced", () => {
-    // Ten fully-empty objects each fail multiple required-field checks, so the
-    // aggregate ZodError carries well over 8 issues.
-    const json = Array.from({ length: 10 }, () => ({}));
-    expect(() => parseStablecoinMetaAssets(json, "fixture")).toThrow(/… \(\+\d+ more\)/);
-  });
-
-  it("does not append a suffix when 8 or fewer issues exist", () => {
-    // A single object missing only its required top-level fields stays at or
-    // below the 8-issue cap, so no truncation suffix should appear.
-    let message = "";
+  it.each([8, 9])("formats exactly %i missing-field issues", (count) => {
+    // Each otherwise-valid record omits only its name: one issue per row.
+    const json = Array.from({ length: count }, (_, index) =>
+      makeCoin({ id: `missing-name-${index}`, name: undefined }),
+    );
+    let error: unknown;
     try {
-      parseStablecoinMetaAssets([{ id: "fixture-few-issues" }], "fixture");
-    } catch (err) {
-      message = err instanceof Error ? err.message : String(err);
+      parseStablecoinMetaAssets(json, "format-boundary");
+    } catch (caught) {
+      error = caught;
     }
-    expect(message).not.toMatch(/more\)/);
+    expect(error).toBeInstanceOf(Error);
+    const message = (error as Error).message;
+    expect(message).toContain("format-boundary");
+    expect(message).toContain("0.name");
+    expect(message).toContain("7.name");
+    if (count === 8) {
+      expect(message).not.toMatch(/more\)/);
+    } else {
+      expect(message).toContain("… (+1 more)");
+      expect(message).not.toContain("8.name");
+    }
   });
 });
 

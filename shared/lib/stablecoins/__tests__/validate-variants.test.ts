@@ -6,6 +6,7 @@ import {
   NON_RWA_STABLECOIN_FLAGS,
   YIELD_BEARING_NAV_STABLECOIN_FLAGS,
 } from "./test-support";
+import { makeWrapperReview } from "./validate-variants.test-support";
 
 function makeParent(id: string, archetype: MechanismArchetype | null): StablecoinMeta {
   return makeCoin({
@@ -27,6 +28,59 @@ function makeChild(id: string, variantOf: string, overrides: Partial<StablecoinM
 }
 
 describe("validateVariantRelationships", () => {
+  it("requires both halves of the variant relationship", () => {
+    const parent = makeParent("parent-a", "fiat-cash");
+    expect(validateVariantRelationships([parent, makeChild("child-a", parent.id)])).toEqual([]);
+    for (const overrides of [{ variantOf: undefined }, { variantKind: undefined }]) {
+      expect(validateVariantRelationships([parent, makeChild("child-a", parent.id, overrides)])).toEqual([
+        expect.stringContaining("variantOf and variantKind must both be set"),
+      ]);
+    }
+  });
+
+  it("requires active parents only for active children, not quarantined children", () => {
+    const parent = makeParent("parent-a", "fiat-cash");
+    parent.status = "quarantined";
+    const child = makeChild("child-a", parent.id);
+    expect(validateVariantRelationships([parent, child])).toEqual([
+      expect.stringContaining("variantOf must point to an active tracked stablecoin"),
+    ]);
+    child.status = "quarantined";
+    expect(validateVariantRelationships([parent, child])).toEqual([]);
+  });
+
+  it("independently rejects variant and NAV parents", () => {
+    const root = makeParent("root", "fiat-cash");
+    const parent = makeParent("parent-a", "fiat-cash");
+    const child = makeChild("child-a", parent.id);
+    expect(validateVariantRelationships([root, parent, child])).toEqual([]);
+    const wrappedParent = makeChild(parent.id, root.id, {
+      variantKind: "pure-wrapper", flags: NON_RWA_STABLECOIN_FLAGS,
+    });
+    expect(validateVariantRelationships([root, wrappedParent, child])).toEqual([
+      expect.stringContaining("variant parent parent-a must not itself declare variantOf"),
+    ]);
+    expect(validateVariantRelationships([
+      { ...parent, flags: YIELD_BEARING_NAV_STABLECOIN_FLAGS }, child,
+    ])).toEqual([expect.stringContaining("variant parent parent-a must not be a navToken")]);
+  });
+
+  it("requires the validator's peg reference even when the schema permits its absence", () => {
+    const parent = makeParent("parent-a", "fiat-cash");
+    for (const pegReferenceId of [undefined, "other-parent"]) {
+      expect(validateVariantRelationships([
+        parent, makeChild("child-a", parent.id, { pegReferenceId }),
+      ])).toEqual([expect.stringContaining("pegReferenceId must equal variantOf")]);
+    }
+  });
+
+  it("rejects a non-pure variant without NAV accrual", () => {
+    const parent = makeParent("parent-a", "fiat-cash");
+    expect(validateVariantRelationships([
+      parent, makeChild("child-a", parent.id, { flags: NON_RWA_STABLECOIN_FLAGS }),
+    ])).toEqual([expect.stringContaining("non-pure tracked variants must keep flags.navToken === true")]);
+  });
+
   it("passes when a child shares the parent's archetype", () => {
     const parent = makeParent("parent-a", "fiat-cash");
     const child = makeChild("child-a", "parent-a", {
@@ -175,14 +229,7 @@ describe("validateVariantRelationships", () => {
     const child = makeCoin({
       id: "missing-variant",
       pegReferenceId: "parent-a",
-      flags: {
-        backing: "rwa-backed",
-        pegCurrency: "USD",
-        governance: "centralized",
-        yieldBearing: true,
-        rwa: false,
-        navToken: true,
-      },
+      flags: YIELD_BEARING_NAV_STABLECOIN_FLAGS,
       reserves: [
         {
           name: "Parent wrapper exposure",
@@ -213,22 +260,7 @@ describe("validateVariantRelationships", () => {
           depType: "wrapper",
         },
       ],
-      dependencyReview: {
-        reviewedAt: "2026-07-21",
-        reviewer: "test",
-        confidence: "verified",
-        sources: [{ label: "Wrapper evidence", url: "https://example.com/wrapper" }],
-        rationale: "The reviewed relationship is a direct 1:1 wrapper claim.",
-        relationships: [
-          {
-            id: "parent-a",
-            weight: 1,
-            type: "wrapper",
-            economicRole: "serial-claim",
-            reason: "Every child unit is a direct claim on one parent unit.",
-          },
-        ],
-      },
+      dependencyReview: makeWrapperReview(true),
     });
 
     const errors = validateVariantRelationships([parent, child]);
@@ -241,21 +273,7 @@ describe("validateVariantRelationships", () => {
     const parent = makeParent("parent-a", "fiat-cash");
     const child = makeCoin({
       id: "missing-default-role-variant",
-      dependencyReview: {
-        reviewedAt: "2026-07-21",
-        reviewer: "test",
-        confidence: "verified",
-        sources: [{ label: "Wrapper evidence", url: "https://example.com/wrapper" }],
-        rationale: "The reviewed relationship is a direct 1:1 wrapper claim.",
-        relationships: [
-          {
-            id: "parent-a",
-            weight: 1,
-            type: "wrapper",
-            reason: "Every child unit is a direct claim on one parent unit.",
-          },
-        ],
-      },
+      dependencyReview: makeWrapperReview(false),
     });
 
     const errors = validateVariantRelationships([parent, child]);
@@ -269,14 +287,7 @@ describe("validateVariantRelationships", () => {
     const parentB = makeParent("parent-b", "fiat-cash");
     const child = makeCoin({
       id: "mixed-strategy",
-      flags: {
-        backing: "rwa-backed",
-        pegCurrency: "USD",
-        governance: "centralized",
-        yieldBearing: true,
-        rwa: false,
-        navToken: true,
-      },
+      flags: YIELD_BEARING_NAV_STABLECOIN_FLAGS,
       reserves: [
         {
           name: "First parent",
@@ -303,14 +314,7 @@ describe("validateVariantRelationships", () => {
     const collateralParent = makeChild("collateral-parent", "wrapper-parent");
     const child = makeCoin({
       id: "basket-nav-token",
-      flags: {
-        backing: "rwa-backed",
-        pegCurrency: "USD",
-        governance: "centralized",
-        yieldBearing: true,
-        rwa: false,
-        navToken: true,
-      },
+      flags: YIELD_BEARING_NAV_STABLECOIN_FLAGS,
       reserves: [
         {
           name: "Wrapper leg",
