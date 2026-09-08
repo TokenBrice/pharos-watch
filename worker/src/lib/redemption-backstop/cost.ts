@@ -35,7 +35,7 @@ export interface RedemptionStaticFields {
   notes: string[];
 }
 
-export const REDEMPTION_FEE_SCORE_BREAKPOINTS = [
+const REDEMPTION_FEE_SCORE_BREAKPOINTS = [
   { maxFeeBps: 10, score: 100 },
   { maxFeeBps: 50, score: 80 },
   { maxFeeBps: 100, score: 60 },

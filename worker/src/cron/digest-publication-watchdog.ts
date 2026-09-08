@@ -16,7 +16,7 @@ import { deliverOperatorAlert } from "./cron-sentinel-rules";
 
 const DIGEST_WATCHDOG_STATE_KEY = "digest-publication-watchdog:state:v1";
 const DIGEST_WATCHDOG_ALERT_KEY = "digest-publication-watchdog:alert:v1";
-export const DIGEST_PUBLICATION_ALERT_COOLDOWN_SEC = 30 * 60;
+const DIGEST_PUBLICATION_ALERT_COOLDOWN_SEC = 30 * 60;
 
 const MAP_READY_AFTER_SEC = 7 * 3600 + 45 * 60;
 const DAILY_DIGEST_DUE_AFTER_SEC = 8 * 3600 + 30 * 60;

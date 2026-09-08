@@ -63,7 +63,7 @@ export type PerAlertMetricDescriptor = {
   };
 };
 
-export const PER_ALERT_METRICS = [
+const PER_ALERT_METRICS = [
   {
     key: "sent",
     label: "Sent",

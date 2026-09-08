@@ -22,7 +22,7 @@ import {
 } from "./strata";
 
 const MERGE_GAP_SEC = 6 * 3600;
-export const DURATION_LABEL_MERGE_GAP_SEC = 24 * 3600;
+const DURATION_LABEL_MERGE_GAP_SEC = 24 * 3600;
 // Quarantine targets the pathological flap tail only (corpus counts sit at
 // 765/412/382/334/215, then a gap to 151); ordinary high-frequency coins stay
 // in the corpus because coin-dedup already bounds their band influence and

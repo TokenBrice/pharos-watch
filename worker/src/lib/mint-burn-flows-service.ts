@@ -15,7 +15,6 @@ import { FLOW_CACHE_PREFIX } from "./mint-burn-flow-cache-keys";
 
 export {
   aggregateFlowCacheKey,
-  FLOW_CACHE_PREFIX,
   perCoinFlowCacheKey,
 } from "./mint-burn-flow-cache-keys";
 

@@ -41,31 +41,31 @@ const PRIORITY_REGISTRY_ABI = parseAbi([
   "function getRedeemablesCap() view returns (uint256)",
 ]);
 
-export const YAMATO_GET_STATES_SELECTOR = encodeFunctionData({
+const YAMATO_GET_STATES_SELECTOR = encodeFunctionData({
   abi: YAMATO_ABI,
   functionName: "getStates",
 });
-export const YAMATO_PRICE_FEED_SELECTOR = encodeFunctionData({
+const YAMATO_PRICE_FEED_SELECTOR = encodeFunctionData({
   abi: YAMATO_ABI,
   functionName: "priceFeed",
 });
-export const YAMATO_GET_PRICE_SELECTOR = encodeFunctionData({
+const YAMATO_GET_PRICE_SELECTOR = encodeFunctionData({
   abi: YAMATO_PRICE_FEED_ABI,
   functionName: "getPrice",
 });
-export const YAMATO_PAUSED_SELECTOR = encodeFunctionData({
+const YAMATO_PAUSED_SELECTOR = encodeFunctionData({
   abi: YAMATO_REDEMPTION_ABI,
   functionName: "paused",
 });
-export const YAMATO_PRIORITY_REGISTRY_SELECTOR = encodeFunctionData({
+const YAMATO_PRIORITY_REGISTRY_SELECTOR = encodeFunctionData({
   abi: YAMATO_REDEMPTION_ABI,
   functionName: "priorityRegistry",
 });
-export const PRIORITY_REGISTRY_YAMATO_SELECTOR = encodeFunctionData({
+const PRIORITY_REGISTRY_YAMATO_SELECTOR = encodeFunctionData({
   abi: PRIORITY_REGISTRY_ABI,
   functionName: "yamato",
 });
-export const PRIORITY_REGISTRY_GET_REDEEMABLES_CAP_SELECTOR = encodeFunctionData({
+const PRIORITY_REGISTRY_GET_REDEEMABLES_CAP_SELECTOR = encodeFunctionData({
   abi: PRIORITY_REGISTRY_ABI,
   functionName: "getRedeemablesCap",
 });

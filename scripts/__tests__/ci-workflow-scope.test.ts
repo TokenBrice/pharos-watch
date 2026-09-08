@@ -106,4 +106,45 @@ describe("CI workflow scope", () => {
     expect(job.permissions).toEqual({ contents: "read" });
     expect(job.outputs).toEqual({ outcome: "${{ steps.acceptance.outputs.outcome }}" });
   });
+
+  it("fans the nightly Node 24 validation out from one prepared workspace artifact", () => {
+    const workflow = parseYaml(readRepoFile(".github/workflows/nightly-validation.yml")) as {
+      jobs: Record<string, {
+        needs?: string | string[];
+        steps?: Array<{ uses?: string; with?: Record<string, unknown> }>;
+      }>;
+    };
+    const prepareSetup = workflow.jobs.prepare.steps?.find(
+      (step) => step.uses === "./.github/actions/setup-workspace");
+    expect(prepareSetup?.with?.["workspace-artifact"]).toBe("publish");
+    expect(prepareSetup?.with?.["bootstrap-history"]).toBe("true");
+    for (const job of ["full-static", "full-tests"]) {
+      const setup = workflow.jobs[job].steps?.find(
+        (step) => step.uses === "./.github/actions/setup-workspace");
+      expect(workflow.jobs[job].needs).toContain("prepare");
+      expect(setup?.with?.["workspace-artifact"]).toBe("restore");
+      expect(setup?.with?.["install-deps"]).toBe("false");
+    }
+    // The artifact carries Node 24 state; the Node 26 probe installs independently.
+    const node26Setup = workflow.jobs["node26-proof"].steps?.find(
+      (step) => step.uses === "./.github/actions/setup-workspace");
+    expect(node26Setup?.with?.["node-version"]).toBe("26");
+    expect(node26Setup?.with?.["workspace-artifact"]).toBeUndefined();
+    expect(node26Setup?.with?.["install-deps"]).toBeUndefined();
+  });
+
+  it("runs the weekly gitleaks scan without npm installation", () => {
+    const workflow = parseYaml(readRepoFile(".github/workflows/weekly-validation.yml")) as {
+      jobs: Record<string, { steps?: Array<{ uses?: string; run?: string; with?: Record<string, string> }> }>;
+    };
+    const steps = workflow.jobs.gitleaks.steps ?? [];
+    expect(steps.some((step) => step.uses === "./.github/actions/setup-workspace")).toBe(false);
+    // Type stripping for the dependency-free runner needs the pinned Node 24.
+    expect(steps.find((step) => step.uses?.startsWith("actions/setup-node@"))?.with).toMatchObject({
+      "node-version": "24.16.0",
+    });
+    const scan = steps.find((step) => step.run?.includes("run-gitleaks.ts"));
+    expect(scan?.run).toBe(
+      "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/ci/run-gitleaks.ts --range");
+  });
 });
