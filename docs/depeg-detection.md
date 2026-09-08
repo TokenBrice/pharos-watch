@@ -593,7 +593,7 @@ high-magnitude depegs from being scored as nearly free.
 **Active depeg penalty**: Floor of 5, scales at `|peakBps| / 50`, capped at 50.
 A 500 bps ongoing depeg costs 10 points; 2500+ bps hits the cap.
 
-Returns `null` if < 7 days tracking. Scores based on 7–30 days are flagged as "Early score" in the UI.
+Returns `null` if < 7 days tracking. The 7–30 day "Early score" label described on /methodology and /depeg is not currently rendered anywhere: the detail hero shows `NR` with an `<N>d tracked` subline below 7 days, and a plain score at or above 7 days (`buildPegScoreDisplay` in `src/lib/stablecoin-detail-hero-metrics.ts`).
 
 ## Edge Cases & Guardrails
 

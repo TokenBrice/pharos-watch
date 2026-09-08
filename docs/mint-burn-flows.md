@@ -162,7 +162,7 @@ When omitted, the default is the Transfer convention: mint → `topics[2]` (reci
 11. **Sweep cross-run roundtrips** — on non-error runs, query up to 200 `(tx_hash, stablecoin_id, chain_id)` groups within the last 7 days where both mint and burn directions exist but `flow_type = 'standard'`. Reclassify to `atomic_roundtrip` and re-aggregate affected hourly buckets. This catches roundtrips where the mint and burn were ingested in separate cron runs. The HAVING clause mirrors `ROUNDTRIP_AMOUNT_TOLERANCE` from the in-memory detector so partial same-tx groups (e.g. mint 100 / burn 50) are not mis-tagged as atomic roundtrips.
 12. **Invalidate flow API caches** — on successful runs (`status ∈ {ok, degraded}`), purge `mint-burn-flows:v3:*` rows from the shared `cache` table using a PK-range predicate over the versioned `FLOW_CACHE_PREFIX` (`key >= 'mint-burn-flows:v3:' AND key < 'mint-burn-flows:v3:\uffff'`). This drops stale pre-sync aggregate payloads so the next `/api/mint-burn-flows` request rebuilds against the freshly written buckets.
 
-**Counterparty resolution:** For mints, `topics[2]` (recipient). For burns, `topics[1]` (sender).
+**Counterparty resolution (default):** mints read `topics[2]` (recipient), burns read `topics[1]` (sender); a config's `counterpartyEncoding` override changes the slot (see Event Detection).
 
 **Event ID format:** `"{chainId}-{txHash}-{logIndex}"` — deterministic, prevents duplicates via `INSERT OR IGNORE`.
 

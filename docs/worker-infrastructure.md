@@ -865,7 +865,7 @@ The V9 route probe shares the public projection path: the storage decoder checks
 
 ### GET /api/health
 
-Returns cache availability for key data sources. The table values are `maxAge` baselines used to calculate age ratios; they are not immediate stale cutoffs. Public health degrades above `8x maxAge` and becomes stale above `12x maxAge`, subject to stricter route-specific checks and other health floors.
+Returns cache availability for key data sources. The table values are `maxAge` baselines used to calculate age ratios; they are not immediate stale cutoffs. Public health degrades above `8x maxAge` and becomes stale above `12x maxAge`. One per-cache override applies: `yield-data` degrades above `2x maxAge` and goes stale above `4x maxAge`, and its `healthy` flag flips at the same 2x point (`STATUS_CACHE_RATIO_OVERRIDES` in `shared/lib/status-thresholds.ts`). These bands are subject to stricter route-specific checks and other health floors.
 
 The response uses the realtime cache profile (`public, s-maxage=60, max-age=10`) and participates in the Worker edge cache. This keeps the no-key public health surface bounded to roughly 60 seconds of cache lag while reducing repeated D1-backed health recomputation during browser polling and external probes.
 
