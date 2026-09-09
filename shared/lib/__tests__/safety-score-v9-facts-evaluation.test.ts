@@ -595,6 +595,80 @@ describe("Safety Score v9 fact evaluation", () => {
       responsibility: "integration-missing",
     });
   });
+  it("keeps merged and disjoint split mint-controller domains score-neutral while the diagnostic signal rekeys", () => {
+    const evaluateSharedMint = (mintKey: (assetId: string) => string) => {
+      const input = coreFixture();
+      const beta = input.assets[1]! as unknown as V9AssetFactsV2;
+      const gamma = input.assets[2]! as unknown as V9AssetFactsV2;
+      const delta = structuredClone(beta);
+      delta.assetId = "delta";
+      const epsilon = structuredClone(beta);
+      epsilon.assetId = "epsilon";
+      input.activeAssetIds.push(delta.assetId, epsilon.assetId);
+      input.assets.push(delta as never, epsilon as never);
+      for (const asset of [beta, gamma, delta, epsilon]) {
+        asset.assetIssuerKey = "issuer:circle";
+        asset.dependencies = {
+          status: knownStatus(),
+          sourceGenerationId: SOURCE_FINGERPRINTS.researchOverlays.generationId,
+          source: "manual",
+          baseSource: "manual",
+          dependencyFromLive: false,
+          mappedLiveReserveWeight: null,
+          fallbackReason: null,
+          edges: [
+            {
+              edgeKey: canonicalV9DependencyEdgeKey("mechanism", "alpha"),
+              upstreamAssetId: "alpha",
+              dependencyType: "mechanism",
+              pathKind: "serial-dependency",
+              weight: 1,
+              economicRole: "serial-claim",
+              evidenceRefIds: ["evidence:base"],
+              failureDomains: [{ kind: "mint-control", key: mintKey(asset.assetId) }],
+            },
+          ],
+          diagnostics: { graphState: "valid", issueCodes: [], sccMemberAssetIds: [] },
+        };
+      }
+      return evaluateV9FactSet(compileNativeV3FactSet(input), V9_CANDIDATE_POLICY_V1);
+    };
+    const asset = (evaluated: ReturnType<typeof evaluateV9FactSet>, assetId: string) =>
+      evaluated.assets.find((candidate) => candidate.assetId === assetId)!;
+    const mintSignal = (evaluated: ReturnType<typeof evaluateV9FactSet>, assetId: string) =>
+      asset(evaluated, assetId).scoreInput.dependencyStructuralSignals.find((candidate) =>
+        candidate.failureDomainKeys.some((key) => key.startsWith("mint-control:")),
+      );
+
+    const merged = evaluateSharedMint(() => "shared:mint");
+    const split = evaluateSharedMint((assetId) =>
+      assetId === "beta" || assetId === "gamma" ? "shared:mint-a" : "shared:mint-b",
+    );
+
+    // The merged run emits one diagnostic common-mode signal for the whole
+    // group; the disjoint split emits two, keyed per slice, and the merged key
+    // is absent. Both stay same-issuer diagnostic ("low"), so neither binds.
+    for (const assetId of ["beta", "gamma", "delta", "epsilon"]) {
+      expect(mintSignal(merged, assetId)).toMatchObject({
+        severity: "low",
+        failureDomainKeys: ["mint-control:shared:mint"],
+      });
+      expect(mintSignal(merged, assetId)?.reason).toContain("same-issuer controller, diagnostic only");
+
+      const expectedKey =
+        assetId === "beta" || assetId === "gamma" ? "mint-control:shared:mint-a" : "mint-control:shared:mint-b";
+      expect(mintSignal(split, assetId)).toMatchObject({ severity: "low", failureDomainKeys: [expectedKey] });
+      expect(mintSignal(split, assetId)?.reason).toContain("same-issuer controller, diagnostic only");
+      expect(mintSignal(split, assetId)?.failureDomainKeys).not.toContain("mint-control:shared:mint");
+
+      // Score neutrality: merging the split domains back together changes the
+      // diagnostic grouping but never the score, caps, or binding cap.
+      expect(asset(merged, assetId).trace.finalScore).toBe(asset(split, assetId).trace.finalScore);
+      expect(asset(merged, assetId).trace.caps).toEqual(asset(split, assetId).trace.caps);
+      expect(asset(merged, assetId).trace.bindingCap).toEqual(asset(split, assetId).trace.bindingCap);
+    }
+  });
+
   it("keeps a shared upgrade-control ceiling adverse when one member is bounded-unknown", () => {
     const evaluateSharedUpgrade = (boundedUnknownAssetId: string | null) => {
       const input = coreFixture();

@@ -633,6 +633,13 @@ describe("fetchJsonWithRetry", () => {
       "https://api.mainnet.solana.com",
       "https://solana-rpc.publicnode.com",
     ]);
+    expect(vi.mocked(fetchWithRetry)).toHaveBeenNthCalledWith(
+      1,
+      "https://solana-mainnet.g.alchemy.com/v2/alchemy-key",
+      expect.objectContaining({ method: "POST", signal }),
+      2,
+      { timeoutMs: 10_000, returnFinalResponse: true },
+    );
   });
 
   it("attaches the registered Alchemy auth header to keyed Solana RPC POSTs", async () => {
@@ -698,6 +705,13 @@ describe("fetchJsonWithRetry", () => {
       "https://runtime-fallback.example/solana",
       "https://explicit.example/solana",
     ]);
+    expect(vi.mocked(fetchWithRetry)).toHaveBeenNthCalledWith(
+      1,
+      "https://runtime.example/solana",
+      expect.objectContaining({ method: "POST", signal }),
+      2,
+      { timeoutMs: 10_000, returnFinalResponse: true },
+    );
   });
 });
 

@@ -20,7 +20,7 @@ import {
   postMiniAppState,
   refreshMiniAppBundleOnce,
 } from "./mini-app-api";
-import { makeMiniAppState } from "./mini-app-state.test-support";
+import { makeMiniAppState } from "./mini-app-test-fixtures";
 
 const { catalog: _catalog, ...mutableState } = makeMiniAppState({
   subscriber: { recap: { available: false } },

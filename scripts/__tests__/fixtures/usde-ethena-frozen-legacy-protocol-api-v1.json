@@ -1,0 +1,1634 @@
+{
+  "schemaVersion": 1,
+  "kind": "protocol-api-mechanism-measurement",
+  "assetId": "usde-ethena",
+  "archetype": "synthetic-delta-neutral",
+  "capturedAt": "2026-07-22T20:31:00.643Z",
+  "observations": {
+    "collateralizationStatus": {
+      "url": "https://app.ethena.fi/api/collateralization/status",
+      "observedAt": "2026-07-22T20:00:16.250Z",
+      "payload": {
+        "timestamp": "2026-07-22 20:00:16.250683 UTC",
+        "totalBackingAssetsInUsd": 4032944678.04,
+        "totalReserveFundInUsd": 62097782.084185585,
+        "totalTokenSupplyInUsd": 4028272966.14659
+      }
+    },
+    "proofOfReserves": {
+      "url": "https://app.ethena.fi/api/por",
+      "observedAt": "2026-07-17T00:06:43.000Z",
+      "payload": {
+        "lastUpdatedAt": "2026-07-17T00:06:43.000Z",
+        "reports": [
+          {
+            "auditors": [
+              {
+                "name": "HarrisAndTrotter",
+                "is_confirmed": true
+              },
+              {
+                "name": "Chainlink",
+                "is_confirmed": true
+              },
+              {
+                "name": "LlamaRisk",
+                "is_confirmed": true
+              }
+            ],
+            "date": "2026-07-17T00:06:43.000Z",
+            "deltaNeutral": true,
+            "overCollateralized": true
+          },
+          {
+            "auditors": [
+              {
+                "name": "LlamaRisk",
+                "is_confirmed": true
+              },
+              {
+                "name": "HarrisAndTrotter",
+                "is_confirmed": true
+              },
+              {
+                "name": "Chainlink",
+                "is_confirmed": true
+              }
+            ],
+            "date": "2026-07-10T00:06:56.000Z",
+            "deltaNeutral": true,
+            "overCollateralized": true
+          },
+          {
+            "auditors": [
+              {
+                "name": "HarrisAndTrotter",
+                "is_confirmed": true
+              },
+              {
+                "name": "Chainlink",
+                "is_confirmed": true
+              },
+              {
+                "name": "LlamaRisk",
+                "is_confirmed": true
+              }
+            ],
+            "date": "2026-07-03T00:06:35.000Z",
+            "deltaNeutral": true,
+            "overCollateralized": true
+          },
+          {
+            "auditors": [
+              {
+                "name": "HarrisAndTrotter",
+                "is_confirmed": true
+              },
+              {
+                "name": "Chainlink",
+                "is_confirmed": true
+              },
+              {
+                "name": "LlamaRisk",
+                "is_confirmed": true
+              }
+            ],
+            "date": "2026-06-26T00:06:44.000Z",
+            "deltaNeutral": true,
+            "overCollateralized": true
+          },
+          {
+            "auditors": [
+              {
+                "name": "HarrisAndTrotter",
+                "is_confirmed": true
+              },
+              {
+                "name": "Chainlink",
+                "is_confirmed": true
+              },
+              {
+                "name": "LlamaRisk",
+                "is_confirmed": true
+              }
+            ],
+            "date": "2026-06-19T00:06:06.000Z",
+            "deltaNeutral": true,
+            "overCollateralized": true
+          },
+          {
+            "auditors": [
+              {
+                "name": "LlamaRisk",
+                "is_confirmed": true
+              },
+              {
+                "name": "Chainlink",
+                "is_confirmed": true
+              },
+              {
+                "name": "HarrisAndTrotter",
+                "is_confirmed": true
+              }
+            ],
+            "date": "2026-06-12T00:05:07.000Z",
+            "deltaNeutral": true,
+            "overCollateralized": true
+          },
+          {
+            "auditors": [
+              {
+                "name": "HarrisAndTrotter",
+                "is_confirmed": true
+              },
+              {
+                "name": "LlamaRisk",
+                "is_confirmed": true
+              },
+              {
+                "name": "Chainlink",
+                "is_confirmed": true
+              }
+            ],
+            "date": "2026-06-05T00:04:27.000Z",
+            "deltaNeutral": true,
+            "overCollateralized": true
+          },
+          {
+            "auditors": [
+              {
+                "name": "HarrisAndTrotter",
+                "is_confirmed": true
+              },
+              {
+                "name": "Chainlink",
+                "is_confirmed": true
+              },
+              {
+                "name": "LlamaRisk",
+                "is_confirmed": true
+              },
+              {
+                "name": "ChaosLabs",
+                "is_confirmed": true
+              }
+            ],
+            "date": "2026-05-29T00:04:34.000Z",
+            "deltaNeutral": true,
+            "overCollateralized": true
+          },
+          {
+            "auditors": [
+              {
+                "name": "HarrisAndTrotter",
+                "is_confirmed": true
+              },
+              {
+                "name": "LlamaRisk",
+                "is_confirmed": true
+              },
+              {
+                "name": "Chainlink",
+                "is_confirmed": true
+              },
+              {
+                "name": "ChaosLabs",
+                "is_confirmed": true
+              }
+            ],
+            "date": "2026-05-22T14:29:25.000Z",
+            "deltaNeutral": true,
+            "overCollateralized": true
+          },
+          {
+            "auditors": [
+              {
+                "name": "HarrisAndTrotter",
+                "is_confirmed": true
+              },
+              {
+                "name": "ChaosLabs",
+                "is_confirmed": true
+              },
+              {
+                "name": "Chainlink",
+                "is_confirmed": true
+              },
+              {
+                "name": "LlamaRisk",
+                "is_confirmed": true
+              }
+            ],
+            "date": "2026-05-15T01:09:24.000Z",
+            "deltaNeutral": true,
+            "overCollateralized": true
+          },
+          {
+            "auditors": [
+              {
+                "name": "HarrisAndTrotter",
+                "is_confirmed": true
+              },
+              {
+                "name": "Chainlink",
+                "is_confirmed": true
+              },
+              {
+                "name": "LlamaRisk",
+                "is_confirmed": true
+              },
+              {
+                "name": "ChaosLabs",
+                "is_confirmed": true
+              }
+            ],
+            "date": "2026-05-07T23:59:14.000Z",
+            "deltaNeutral": true,
+            "overCollateralized": true
+          },
+          {
+            "auditors": [
+              {
+                "name": "HarrisAndTrotter",
+                "is_confirmed": true
+              },
+              {
+                "name": "LlamaRisk",
+                "is_confirmed": true
+              },
+              {
+                "name": "Chainlink",
+                "is_confirmed": true
+              },
+              {
+                "name": "ChaosLabs",
+                "is_confirmed": true
+              }
+            ],
+            "date": "2026-04-30T23:44:13.000Z",
+            "deltaNeutral": true,
+            "overCollateralized": true
+          },
+          {
+            "auditors": [
+              {
+                "name": "HarrisAndTrotter",
+                "is_confirmed": true
+              },
+              {
+                "name": "Chainlink",
+                "is_confirmed": true
+              },
+              {
+                "name": "LlamaRisk",
+                "is_confirmed": true
+              },
+              {
+                "name": "ChaosLabs",
+                "is_confirmed": true
+              }
+            ],
+            "date": "2026-04-23T23:49:23.000Z",
+            "deltaNeutral": true,
+            "overCollateralized": true
+          },
+          {
+            "auditors": [
+              {
+                "name": "HarrisAndTrotter",
+                "is_confirmed": true
+              },
+              {
+                "name": "Chainlink",
+                "is_confirmed": true
+              },
+              {
+                "name": "LlamaRisk",
+                "is_confirmed": true
+              },
+              {
+                "name": "ChaosLabs",
+                "is_confirmed": true
+              }
+            ],
+            "date": "2026-04-19T17:54:36.000Z",
+            "deltaNeutral": true,
+            "overCollateralized": true
+          },
+          {
+            "auditors": [
+              {
+                "name": "HarrisAndTrotter",
+                "is_confirmed": true
+              },
+              {
+                "name": "Chainlink",
+                "is_confirmed": true
+              },
+              {
+                "name": "LlamaRisk",
+                "is_confirmed": true
+              },
+              {
+                "name": "ChaosLabs",
+                "is_confirmed": true
+              }
+            ],
+            "date": "2026-04-16T23:54:22.000Z",
+            "deltaNeutral": true,
+            "overCollateralized": true
+          },
+          {
+            "auditors": [
+              {
+                "name": "LlamaRisk",
+                "is_confirmed": true
+              },
+              {
+                "name": "HarrisAndTrotter",
+                "is_confirmed": true
+              },
+              {
+                "name": "Chainlink",
+                "is_confirmed": true
+              },
+              {
+                "name": "ChaosLabs",
+                "is_confirmed": true
+              }
+            ],
+            "date": "2026-04-09T23:34:11.000Z",
+            "deltaNeutral": true,
+            "overCollateralized": true
+          },
+          {
+            "auditors": [
+              {
+                "name": "HarrisAndTrotter",
+                "is_confirmed": true
+              },
+              {
+                "name": "Chainlink",
+                "is_confirmed": true
+              },
+              {
+                "name": "ChaosLabs",
+                "is_confirmed": true
+              },
+              {
+                "name": "LlamaRisk",
+                "is_confirmed": true
+              }
+            ],
+            "date": "2026-04-02T23:49:04.000Z",
+            "deltaNeutral": true,
+            "overCollateralized": true
+          },
+          {
+            "auditors": [
+              {
+                "name": "HarrisAndTrotter",
+                "is_confirmed": true
+              },
+              {
+                "name": "Chainlink",
+                "is_confirmed": true
+              },
+              {
+                "name": "LlamaRisk",
+                "is_confirmed": true
+              },
+              {
+                "name": "ChaosLabs",
+                "is_confirmed": true
+              }
+            ],
+            "date": "2026-03-27T00:04:04.000Z",
+            "deltaNeutral": true,
+            "overCollateralized": true
+          },
+          {
+            "auditors": [
+              {
+                "name": "HarrisAndTrotter",
+                "is_confirmed": true
+              },
+              {
+                "name": "Chainlink",
+                "is_confirmed": true
+              },
+              {
+                "name": "ChaosLabs",
+                "is_confirmed": true
+              },
+              {
+                "name": "LlamaRisk",
+                "is_confirmed": true
+              }
+            ],
+            "date": "2026-03-20T00:04:02.000Z",
+            "deltaNeutral": true,
+            "overCollateralized": true
+          },
+          {
+            "auditors": [
+              {
+                "name": "ChaosLabs",
+                "is_confirmed": true
+              },
+              {
+                "name": "Chainlink",
+                "is_confirmed": true
+              },
+              {
+                "name": "LlamaRisk",
+                "is_confirmed": true
+              },
+              {
+                "name": "HarrisAndTrotter",
+                "is_confirmed": true
+              }
+            ],
+            "date": "2026-03-13T00:03:42.000Z",
+            "deltaNeutral": true,
+            "overCollateralized": true
+          },
+          {
+            "auditors": [
+              {
+                "name": "HarrisAndTrotter",
+                "is_confirmed": true
+              },
+              {
+                "name": "Chainlink",
+                "is_confirmed": true
+              },
+              {
+                "name": "LlamaRisk",
+                "is_confirmed": true
+              },
+              {
+                "name": "ChaosLabs",
+                "is_confirmed": true
+              }
+            ],
+            "date": "2026-03-06T00:03:42.000Z",
+            "deltaNeutral": true,
+            "overCollateralized": true
+          },
+          {
+            "auditors": [
+              {
+                "name": "LlamaRisk",
+                "is_confirmed": true
+              },
+              {
+                "name": "HarrisAndTrotter",
+                "is_confirmed": true
+              },
+              {
+                "name": "Chainlink",
+                "is_confirmed": true
+              },
+              {
+                "name": "ChaosLabs",
+                "is_confirmed": true
+              }
+            ],
+            "date": "2026-02-27T00:03:43.000Z",
+            "deltaNeutral": true,
+            "overCollateralized": true
+          },
+          {
+            "auditors": [
+              {
+                "name": "LlamaRisk",
+                "is_confirmed": true
+              },
+              {
+                "name": "Chainlink",
+                "is_confirmed": true
+              },
+              {
+                "name": "ChaosLabs",
+                "is_confirmed": true
+              },
+              {
+                "name": "HarrisAndTrotter",
+                "is_confirmed": true
+              }
+            ],
+            "date": "2026-02-20T00:09:02.000Z",
+            "deltaNeutral": true,
+            "overCollateralized": true
+          },
+          {
+            "auditors": [
+              {
+                "name": "HarrisAndTrotter",
+                "is_confirmed": true
+              },
+              {
+                "name": "Chainlink",
+                "is_confirmed": true
+              },
+              {
+                "name": "LlamaRisk",
+                "is_confirmed": true
+              },
+              {
+                "name": "ChaosLabs",
+                "is_confirmed": true
+              }
+            ],
+            "date": "2026-02-13T00:40:47.000Z",
+            "deltaNeutral": true,
+            "overCollateralized": true
+          },
+          {
+            "auditors": [
+              {
+                "name": "HarrisAndTrotter",
+                "is_confirmed": true
+              },
+              {
+                "name": "LlamaRisk",
+                "is_confirmed": true
+              },
+              {
+                "name": "ChaosLabs",
+                "is_confirmed": true
+              },
+              {
+                "name": "Chainlink",
+                "is_confirmed": true
+              }
+            ],
+            "date": "2026-02-06T00:08:37.000Z",
+            "deltaNeutral": true,
+            "overCollateralized": true
+          },
+          {
+            "auditors": [
+              {
+                "name": "HarrisAndTrotter",
+                "is_confirmed": true
+              },
+              {
+                "name": "Chainlink",
+                "is_confirmed": true
+              },
+              {
+                "name": "LlamaRisk",
+                "is_confirmed": true
+              },
+              {
+                "name": "ChaosLabs",
+                "is_confirmed": true
+              }
+            ],
+            "date": "2026-01-29T23:57:33.000Z",
+            "deltaNeutral": true,
+            "overCollateralized": true
+          },
+          {
+            "auditors": [
+              {
+                "name": "HarrisAndTrotter",
+                "is_confirmed": true
+              },
+              {
+                "name": "LlamaRisk",
+                "is_confirmed": true
+              },
+              {
+                "name": "ChaosLabs",
+                "is_confirmed": true
+              },
+              {
+                "name": "Chainlink",
+                "is_confirmed": true
+              }
+            ],
+            "date": "2026-01-23T00:07:38.000Z",
+            "deltaNeutral": true,
+            "overCollateralized": true
+          },
+          {
+            "auditors": [
+              {
+                "name": "LlamaRisk",
+                "is_confirmed": true
+              },
+              {
+                "name": "HarrisAndTrotter",
+                "is_confirmed": true
+              },
+              {
+                "name": "Chainlink",
+                "is_confirmed": true
+              },
+              {
+                "name": "ChaosLabs",
+                "is_confirmed": true
+              }
+            ],
+            "date": "2026-01-16T00:07:29.000Z",
+            "deltaNeutral": true,
+            "overCollateralized": true
+          },
+          {
+            "auditors": [
+              {
+                "name": "HarrisAndTrotter",
+                "is_confirmed": true
+              },
+              {
+                "name": "LlamaRisk",
+                "is_confirmed": true
+              },
+              {
+                "name": "Chainlink",
+                "is_confirmed": true
+              },
+              {
+                "name": "ChaosLabs",
+                "is_confirmed": true
+              }
+            ],
+            "date": "2026-01-09T00:08:03.000Z",
+            "deltaNeutral": true,
+            "overCollateralized": true
+          },
+          {
+            "auditors": [
+              {
+                "name": "LlamaRisk",
+                "is_confirmed": true
+              },
+              {
+                "name": "ChaosLabs",
+                "is_confirmed": true
+              },
+              {
+                "name": "HarrisAndTrotter",
+                "is_confirmed": true
+              },
+              {
+                "name": "Chainlink",
+                "is_confirmed": true
+              }
+            ],
+            "date": "2026-01-01T23:54:18.000Z",
+            "deltaNeutral": true,
+            "overCollateralized": true
+          },
+          {
+            "auditors": [
+              {
+                "name": "HarrisAndTrotter",
+                "is_confirmed": true
+              },
+              {
+                "name": "LlamaRisk",
+                "is_confirmed": true
+              },
+              {
+                "name": "ChaosLabs",
+                "is_confirmed": true
+              },
+              {
+                "name": "Chainlink",
+                "is_confirmed": true
+              }
+            ],
+            "date": "2025-12-26T09:15:14.000Z",
+            "deltaNeutral": true,
+            "overCollateralized": true
+          },
+          {
+            "auditors": [
+              {
+                "name": "LlamaRisk",
+                "is_confirmed": true
+              },
+              {
+                "name": "ChaosLabs",
+                "is_confirmed": true
+              },
+              {
+                "name": "Chainlink",
+                "is_confirmed": true
+              },
+              {
+                "name": "HarrisAndTrotter",
+                "is_confirmed": true
+              }
+            ],
+            "date": "2025-12-19T01:35:26.000Z",
+            "deltaNeutral": true,
+            "overCollateralized": true
+          },
+          {
+            "auditors": [
+              {
+                "name": "LlamaRisk",
+                "is_confirmed": true
+              },
+              {
+                "name": "Chainlink",
+                "is_confirmed": true
+              },
+              {
+                "name": "HarrisAndTrotter",
+                "is_confirmed": true
+              },
+              {
+                "name": "ChaosLabs",
+                "is_confirmed": true
+              }
+            ],
+            "date": "2025-12-12T00:04:34.000Z",
+            "deltaNeutral": true,
+            "overCollateralized": true
+          },
+          {
+            "auditors": [
+              {
+                "name": "LlamaRisk",
+                "is_confirmed": true
+              },
+              {
+                "name": "ChaosLabs",
+                "is_confirmed": true
+              },
+              {
+                "name": "Chainlink",
+                "is_confirmed": true
+              },
+              {
+                "name": "HarrisAndTrotter",
+                "is_confirmed": true
+              }
+            ],
+            "date": "2025-12-05T00:16:31.000Z",
+            "deltaNeutral": true,
+            "overCollateralized": true
+          },
+          {
+            "auditors": [
+              {
+                "name": "LlamaRisk",
+                "is_confirmed": true
+              },
+              {
+                "name": "Chainlink",
+                "is_confirmed": true
+              },
+              {
+                "name": "HarrisAndTrotter",
+                "is_confirmed": true
+              },
+              {
+                "name": "ChaosLabs",
+                "is_confirmed": true
+              }
+            ],
+            "date": "2025-11-28T00:08:21.000Z",
+            "deltaNeutral": true,
+            "overCollateralized": true
+          },
+          {
+            "auditors": [
+              {
+                "name": "LlamaRisk",
+                "is_confirmed": true
+              },
+              {
+                "name": "ChaosLabs",
+                "is_confirmed": true
+              },
+              {
+                "name": "Chainlink",
+                "is_confirmed": true
+              },
+              {
+                "name": "HarrisAndTrotter",
+                "is_confirmed": true
+              }
+            ],
+            "date": "2025-11-21T00:13:21.000Z",
+            "deltaNeutral": true,
+            "overCollateralized": true
+          },
+          {
+            "auditors": [
+              {
+                "name": "LlamaRisk",
+                "is_confirmed": true
+              },
+              {
+                "name": "Chainlink",
+                "is_confirmed": true
+              },
+              {
+                "name": "ChaosLabs",
+                "is_confirmed": true
+              },
+              {
+                "name": "HarrisAndTrotter",
+                "is_confirmed": true
+              }
+            ],
+            "date": "2025-11-14T00:08:23.000Z",
+            "deltaNeutral": true,
+            "overCollateralized": true
+          },
+          {
+            "auditors": [
+              {
+                "name": "LlamaRisk",
+                "is_confirmed": true
+              },
+              {
+                "name": "Chainlink",
+                "is_confirmed": true
+              },
+              {
+                "name": "ChaosLabs",
+                "is_confirmed": true
+              },
+              {
+                "name": "HarrisAndTrotter",
+                "is_confirmed": true
+              }
+            ],
+            "date": "2025-11-07T00:08:21.000Z",
+            "deltaNeutral": true,
+            "overCollateralized": true
+          },
+          {
+            "auditors": [
+              {
+                "name": "LlamaRisk",
+                "is_confirmed": true
+              },
+              {
+                "name": "Chainlink",
+                "is_confirmed": true
+              },
+              {
+                "name": "ChaosLabs",
+                "is_confirmed": true
+              },
+              {
+                "name": "HarrisAndTrotter",
+                "is_confirmed": true
+              }
+            ],
+            "date": "2025-10-31T00:08:14.000Z",
+            "deltaNeutral": true,
+            "overCollateralized": true
+          },
+          {
+            "auditors": [
+              {
+                "name": "LlamaRisk",
+                "is_confirmed": true
+              },
+              {
+                "name": "Chainlink",
+                "is_confirmed": true
+              },
+              {
+                "name": "HarrisAndTrotter",
+                "is_confirmed": true
+              },
+              {
+                "name": "ChaosLabs",
+                "is_confirmed": true
+              }
+            ],
+            "date": "2025-10-24T00:03:13.000Z",
+            "deltaNeutral": true,
+            "overCollateralized": true
+          },
+          {
+            "auditors": [
+              {
+                "name": "LlamaRisk",
+                "is_confirmed": true
+              },
+              {
+                "name": "Chainlink",
+                "is_confirmed": true
+              },
+              {
+                "name": "HarrisAndTrotter",
+                "is_confirmed": true
+              },
+              {
+                "name": "ChaosLabs",
+                "is_confirmed": true
+              },
+              {
+                "name": "ALocal",
+                "is_confirmed": true
+              }
+            ],
+            "date": "2025-10-17T00:08:14.000Z",
+            "deltaNeutral": true,
+            "overCollateralized": true
+          },
+          {
+            "auditors": [
+              {
+                "name": "LlamaRisk",
+                "is_confirmed": true
+              },
+              {
+                "name": "ChaosLabs",
+                "is_confirmed": true
+              },
+              {
+                "name": "Chainlink",
+                "is_confirmed": true
+              },
+              {
+                "name": "HarrisAndTrotter",
+                "is_confirmed": true
+              }
+            ],
+            "date": "2025-10-11T10:48:08.000Z",
+            "deltaNeutral": true,
+            "overCollateralized": true
+          },
+          {
+            "auditors": [
+              {
+                "name": "LlamaRisk",
+                "is_confirmed": true
+              },
+              {
+                "name": "Chainlink",
+                "is_confirmed": true
+              },
+              {
+                "name": "ChaosLabs",
+                "is_confirmed": true
+              },
+              {
+                "name": "HarrisAndTrotter",
+                "is_confirmed": true
+              }
+            ],
+            "date": "2025-10-10T00:08:15.000Z",
+            "deltaNeutral": true,
+            "overCollateralized": true
+          },
+          {
+            "auditors": [
+              {
+                "name": "LlamaRisk",
+                "is_confirmed": true
+              },
+              {
+                "name": "Chainlink",
+                "is_confirmed": true
+              },
+              {
+                "name": "ChaosLabs",
+                "is_confirmed": true
+              },
+              {
+                "name": "HarrisAndTrotter",
+                "is_confirmed": true
+              }
+            ],
+            "date": "2025-10-03T00:18:14.000Z",
+            "deltaNeutral": true,
+            "overCollateralized": true
+          },
+          {
+            "auditors": [
+              {
+                "name": "LlamaRisk",
+                "is_confirmed": true
+              },
+              {
+                "name": "Chainlink",
+                "is_confirmed": true
+              },
+              {
+                "name": "ChaosLabs",
+                "is_confirmed": true
+              },
+              {
+                "name": "HarrisAndTrotter",
+                "is_confirmed": true
+              }
+            ],
+            "date": "2025-09-26T00:08:12.000Z",
+            "deltaNeutral": true,
+            "overCollateralized": true
+          },
+          {
+            "auditors": [
+              {
+                "name": "Chainlink",
+                "is_confirmed": true
+              },
+              {
+                "name": "ChaosLabs",
+                "is_confirmed": true
+              },
+              {
+                "name": "HarrisAndTrotter",
+                "is_confirmed": true
+              },
+              {
+                "name": "LlamaRisk",
+                "is_confirmed": true
+              }
+            ],
+            "date": "2025-09-19T00:08:01.000Z",
+            "deltaNeutral": true,
+            "overCollateralized": true
+          },
+          {
+            "auditors": [
+              {
+                "name": "LlamaRisk",
+                "is_confirmed": true
+              },
+              {
+                "name": "Chainlink",
+                "is_confirmed": true
+              },
+              {
+                "name": "HarrisAndTrotter",
+                "is_confirmed": true
+              },
+              {
+                "name": "ChaosLabs",
+                "is_confirmed": true
+              }
+            ],
+            "date": "2025-09-12T00:08:01.000Z",
+            "deltaNeutral": true,
+            "overCollateralized": true
+          },
+          {
+            "auditors": [
+              {
+                "name": "LlamaRisk",
+                "is_confirmed": true
+              },
+              {
+                "name": "Chainlink",
+                "is_confirmed": true
+              },
+              {
+                "name": "HarrisAndTrotter",
+                "is_confirmed": true
+              },
+              {
+                "name": "ChaosLabs",
+                "is_confirmed": true
+              }
+            ],
+            "date": "2025-09-05T00:08:02.000Z",
+            "deltaNeutral": true,
+            "overCollateralized": true
+          },
+          {
+            "auditors": [
+              {
+                "name": "LlamaRisk",
+                "is_confirmed": true
+              },
+              {
+                "name": "Chainlink",
+                "is_confirmed": true
+              },
+              {
+                "name": "ChaosLabs",
+                "is_confirmed": true
+              },
+              {
+                "name": "HarrisAndTrotter",
+                "is_confirmed": true
+              }
+            ],
+            "date": "2025-08-29T00:08:03.000Z",
+            "deltaNeutral": true,
+            "overCollateralized": true
+          },
+          {
+            "auditors": [
+              {
+                "name": "LlamaRisk",
+                "is_confirmed": true
+              },
+              {
+                "name": "Chainlink",
+                "is_confirmed": true
+              },
+              {
+                "name": "ChaosLabs",
+                "is_confirmed": true
+              },
+              {
+                "name": "HarrisAndTrotter",
+                "is_confirmed": true
+              }
+            ],
+            "date": "2025-08-22T00:07:35.000Z",
+            "deltaNeutral": true,
+            "overCollateralized": true
+          },
+          {
+            "auditors": [
+              {
+                "name": "LlamaRisk",
+                "is_confirmed": true
+              },
+              {
+                "name": "Chainlink",
+                "is_confirmed": true
+              },
+              {
+                "name": "HarrisAndTrotter",
+                "is_confirmed": true
+              },
+              {
+                "name": "ChaosLabs",
+                "is_confirmed": true
+              }
+            ],
+            "date": "2025-08-15T00:07:40.000Z",
+            "deltaNeutral": true,
+            "overCollateralized": true
+          },
+          {
+            "auditors": [
+              {
+                "name": "LlamaRisk",
+                "is_confirmed": true
+              },
+              {
+                "name": "Chainlink",
+                "is_confirmed": true
+              },
+              {
+                "name": "ChaosLabs",
+                "is_confirmed": true
+              },
+              {
+                "name": "HarrisAndTrotter",
+                "is_confirmed": true
+              }
+            ],
+            "date": "2025-08-08T00:07:40.000Z",
+            "deltaNeutral": true,
+            "overCollateralized": true
+          },
+          {
+            "auditors": [
+              {
+                "name": "LlamaRisk",
+                "is_confirmed": true
+              },
+              {
+                "name": "Chainlink",
+                "is_confirmed": true
+              },
+              {
+                "name": "ChaosLabs",
+                "is_confirmed": true
+              },
+              {
+                "name": "HarrisAndTrotter",
+                "is_confirmed": true
+              }
+            ],
+            "date": "2025-08-01T00:07:39.000Z",
+            "deltaNeutral": true,
+            "overCollateralized": true
+          },
+          {
+            "auditors": [
+              {
+                "name": "LlamaRisk",
+                "is_confirmed": true
+              },
+              {
+                "name": "Chainlink",
+                "is_confirmed": true
+              },
+              {
+                "name": "HarrisAndTrotter",
+                "is_confirmed": true
+              },
+              {
+                "name": "ChaosLabs",
+                "is_confirmed": true
+              }
+            ],
+            "date": "2025-07-25T00:07:45.000Z",
+            "deltaNeutral": true,
+            "overCollateralized": true
+          },
+          {
+            "auditors": [
+              {
+                "name": "Chainlink",
+                "is_confirmed": true
+              },
+              {
+                "name": "ChaosLabs",
+                "is_confirmed": true
+              },
+              {
+                "name": "HarrisAndTrotter",
+                "is_confirmed": true
+              },
+              {
+                "name": "LlamaRisk",
+                "is_confirmed": true
+              }
+            ],
+            "date": "2025-07-18T00:07:37.000Z",
+            "deltaNeutral": true,
+            "overCollateralized": true
+          },
+          {
+            "auditors": [
+              {
+                "name": "LlamaRisk",
+                "is_confirmed": true
+              },
+              {
+                "name": "Chainlink",
+                "is_confirmed": true
+              },
+              {
+                "name": "ChaosLabs",
+                "is_confirmed": true
+              },
+              {
+                "name": "HarrisAndTrotter",
+                "is_confirmed": true
+              }
+            ],
+            "date": "2025-07-11T00:07:33.000Z",
+            "deltaNeutral": true,
+            "overCollateralized": true
+          },
+          {
+            "auditors": [
+              {
+                "name": "LlamaRisk",
+                "is_confirmed": true
+              },
+              {
+                "name": "Chainlink",
+                "is_confirmed": true
+              },
+              {
+                "name": "HarrisAndTrotter",
+                "is_confirmed": true
+              },
+              {
+                "name": "ChaosLabs",
+                "is_confirmed": true
+              }
+            ],
+            "date": "2025-07-04T00:07:34.000Z",
+            "deltaNeutral": true,
+            "overCollateralized": true
+          },
+          {
+            "auditors": [
+              {
+                "name": "LlamaRisk",
+                "is_confirmed": true
+              },
+              {
+                "name": "Chainlink",
+                "is_confirmed": true
+              },
+              {
+                "name": "ChaosLabs",
+                "is_confirmed": true
+              },
+              {
+                "name": "HarrisAndTrotter",
+                "is_confirmed": true
+              }
+            ],
+            "date": "2025-06-27T00:07:30.000Z",
+            "deltaNeutral": true,
+            "overCollateralized": true
+          },
+          {
+            "auditors": [
+              {
+                "name": "LlamaRisk",
+                "is_confirmed": true
+              },
+              {
+                "name": "Chainlink",
+                "is_confirmed": true
+              },
+              {
+                "name": "HarrisAndTrotter",
+                "is_confirmed": true
+              },
+              {
+                "name": "ChaosLabs",
+                "is_confirmed": true
+              }
+            ],
+            "date": "2025-06-20T00:07:35.000Z",
+            "deltaNeutral": true,
+            "overCollateralized": true
+          },
+          {
+            "auditors": [
+              {
+                "name": "LlamaRisk",
+                "is_confirmed": true
+              },
+              {
+                "name": "Chainlink",
+                "is_confirmed": true
+              },
+              {
+                "name": "HarrisAndTrotter",
+                "is_confirmed": true
+              },
+              {
+                "name": "ChaosLabs",
+                "is_confirmed": true
+              }
+            ],
+            "date": "2025-06-13T00:07:34.000Z",
+            "deltaNeutral": true,
+            "overCollateralized": true
+          },
+          {
+            "auditors": [
+              {
+                "name": "LlamaRisk",
+                "is_confirmed": true
+              },
+              {
+                "name": "Chainlink",
+                "is_confirmed": true
+              },
+              {
+                "name": "HarrisAndTrotter",
+                "is_confirmed": true
+              },
+              {
+                "name": "ChaosLabs",
+                "is_confirmed": true
+              }
+            ],
+            "date": "2025-06-06T00:07:21.000Z",
+            "deltaNeutral": true,
+            "overCollateralized": true
+          },
+          {
+            "auditors": [
+              {
+                "name": "LlamaRisk",
+                "is_confirmed": true
+              },
+              {
+                "name": "Chainlink",
+                "is_confirmed": true
+              },
+              {
+                "name": "ChaosLabs",
+                "is_confirmed": true
+              },
+              {
+                "name": "HarrisAndTrotter",
+                "is_confirmed": true
+              }
+            ],
+            "date": "2025-05-30T00:11:45.000Z",
+            "deltaNeutral": true,
+            "overCollateralized": true
+          },
+          {
+            "auditors": [
+              {
+                "name": "LlamaRisk",
+                "is_confirmed": true
+              },
+              {
+                "name": "Chainlink",
+                "is_confirmed": true
+              },
+              {
+                "name": "HarrisAndTrotter",
+                "is_confirmed": true
+              },
+              {
+                "name": "ChaosLabs",
+                "is_confirmed": true
+              }
+            ],
+            "date": "2025-05-23T00:06:43.000Z",
+            "deltaNeutral": true,
+            "overCollateralized": true
+          },
+          {
+            "auditors": [
+              {
+                "name": "LlamaRisk",
+                "is_confirmed": true
+              },
+              {
+                "name": "Chainlink",
+                "is_confirmed": true
+              },
+              {
+                "name": "HarrisAndTrotter",
+                "is_confirmed": true
+              },
+              {
+                "name": "ChaosLabs",
+                "is_confirmed": true
+              }
+            ],
+            "date": "2025-05-16T00:06:45.000Z",
+            "deltaNeutral": true,
+            "overCollateralized": true
+          },
+          {
+            "auditors": [
+              {
+                "name": "Chainlink",
+                "is_confirmed": true
+              },
+              {
+                "name": "HarrisAndTrotter",
+                "is_confirmed": true
+              },
+              {
+                "name": "ChaosLabs",
+                "is_confirmed": true
+              },
+              {
+                "name": "LlamaRisk",
+                "is_confirmed": true
+              }
+            ],
+            "date": "2025-05-09T00:31:45.000Z",
+            "deltaNeutral": true,
+            "overCollateralized": true
+          },
+          {
+            "auditors": [
+              {
+                "name": "LlamaRisk",
+                "is_confirmed": true
+              },
+              {
+                "name": "Chainlink",
+                "is_confirmed": true
+              },
+              {
+                "name": "HarrisAndTrotter",
+                "is_confirmed": true
+              },
+              {
+                "name": "ChaosLabs",
+                "is_confirmed": true
+              }
+            ],
+            "date": "2025-05-02T00:21:43.000Z",
+            "deltaNeutral": true,
+            "overCollateralized": true
+          },
+          {
+            "auditors": [
+              {
+                "name": "LlamaRisk",
+                "is_confirmed": true
+              },
+              {
+                "name": "Chainlink",
+                "is_confirmed": true
+              },
+              {
+                "name": "ChaosLabs",
+                "is_confirmed": true
+              },
+              {
+                "name": "HarrisAndTrotter",
+                "is_confirmed": true
+              }
+            ],
+            "date": "2025-04-25T00:01:45.000Z",
+            "deltaNeutral": true,
+            "overCollateralized": true
+          },
+          {
+            "auditors": [
+              {
+                "name": "LlamaRisk",
+                "is_confirmed": true
+              },
+              {
+                "name": "Chainlink",
+                "is_confirmed": true
+              },
+              {
+                "name": "ChaosLabs",
+                "is_confirmed": true
+              },
+              {
+                "name": "HarrisAndTrotter",
+                "is_confirmed": true
+              }
+            ],
+            "date": "2025-04-18T00:01:39.000Z",
+            "deltaNeutral": true,
+            "overCollateralized": true
+          },
+          {
+            "auditors": [
+              {
+                "name": "Chainlink",
+                "is_confirmed": true
+              },
+              {
+                "name": "HarrisAndTrotter",
+                "is_confirmed": true
+              },
+              {
+                "name": "LlamaRisk",
+                "is_confirmed": true
+              },
+              {
+                "name": "ChaosLabs",
+                "is_confirmed": true
+              }
+            ],
+            "date": "2025-04-11T00:06:44.000Z",
+            "deltaNeutral": true,
+            "overCollateralized": true
+          }
+        ]
+      }
+    }
+  },
+  "derived": {
+    "collateralizationRatio": 1.001159731,
+    "latestPorReportAt": "2026-07-17T00:06:43.000Z",
+    "deltaNeutralAttested": true,
+    "overCollateralizedAttested": true,
+    "confirmedAuditors": [
+      "Chainlink",
+      "HarrisAndTrotter",
+      "LlamaRisk"
+    ]
+  },
+  "metrics": {
+    "hedgeCoverageRatio": null,
+    "liquidationCapacityUsd": null,
+    "marginBufferPct": 0.115973,
+    "lossAbsorptionShare": 0.015415
+  },
+  "checks": [
+    {
+      "id": "status.fresh",
+      "status": "pass",
+      "detail": "collateralization status observed at 2026-07-22T20:00:16.250Z"
+    },
+    {
+      "id": "por.fresh",
+      "status": "pass",
+      "detail": "proof of reserves observed at 2026-07-17T00:06:43.000Z"
+    },
+    {
+      "id": "por.confirmed-auditors",
+      "status": "pass",
+      "detail": "latest report confirmed by Chainlink, HarrisAndTrotter, LlamaRisk"
+    },
+    {
+      "id": "ratios.plausible",
+      "status": "pass",
+      "detail": "collateralization is within 0.5x-2x and reserve-fund share is at most 1x supply"
+    }
+  ],
+  "tool": {
+    "name": "measure-protocol-api-mechanism-metrics",
+    "version": "1"
+  }
+}

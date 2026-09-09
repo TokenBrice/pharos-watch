@@ -67,6 +67,13 @@ function sourceDepthScore(candidate: YieldSourceCandidate): number {
 function sourceFreshnessScore(candidate: YieldSourceCandidate): number {
   const age = candidate.freshness?.ageSeconds;
   if (age == null) return 50;
+  // Fail closed on an age the freshness contract cannot produce, exactly where
+  // `clamp` already sends NaN: a non-finite or future-dated capture must never
+  // outrank a genuinely fresh reading. Ages are floored at zero by
+  // `data-adapter.ts` and `validateSelectorSnapshot` requires a nonnegative
+  // finite `ageSeconds`, so no storable snapshot's ordering changes here and
+  // the engine version stays put.
+  if (!Number.isFinite(age) || age < 0) return 0;
   return clamp(100 - (age / 172_800) * 100, 0, 100);
 }
 

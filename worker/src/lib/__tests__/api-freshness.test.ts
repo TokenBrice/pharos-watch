@@ -502,6 +502,28 @@ describe("buildCacheStatuses sentinel validation", () => {
 });
 
 describe("buildCacheStatuses", () => {
+  it("ignores an unknown provider instead of evaluating its freshness", async () => {
+    const nowSec = 1_800_000_000;
+    const unknownProviderKey = "unknown-provider";
+    const db = freshnessDb({
+      cacheRows: [
+        cacheRow("stablecoins", nowSec - 60),
+        cacheRow("stablecoin-charts", nowSec - 60),
+        cacheRow("usds-status", nowSec - 60),
+        cacheRow("fx-rates", nowSec - 60, { peggedEUR: 1.08 }),
+        cacheRow("bluechip-ratings", nowSec - 60),
+        sentinelRow("dex-liquidity", nowSec - 60),
+        sentinelRow("yield-data", nowSec - 60),
+        sentinelRow("dews", nowSec - 60),
+        cacheRow(unknownProviderKey, nowSec - 86_400),
+      ],
+    });
+
+    const { caches, statusFloor } = await buildCacheStatuses(db, nowSec);
+
+    expect(caches).not.toHaveProperty(unknownProviderKey);
+    expect(statusFloor).toBe("healthy");
+  });
 
   it("uses table timestamps for table-backed datasets and the publication pointer for DEWS", async () => {
     const nowSec = Math.floor(Date.now() / 1000);

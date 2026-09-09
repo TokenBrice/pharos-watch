@@ -4,13 +4,14 @@ import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import { type MockD1Database, type MockTableConfig } from "@shared/test-utils/mock-d1";
 import {
   CONFIGURED_COINS,
-  LIVE_RESERVE_QUEUE_HASH,
   SYNC_ORDERED_CONFIGURED_COINS,
   orderConfiguredCoinsForSync,
   type ConfiguredCoin,
 } from "../sync-live-reserves-shared";
 import { resolveLiveReserveSyncBudgetConfig } from "../sync-live-reserves-config";
 import {
+  checkpointIdentity,
+  checkpointTable,
   mockLiveReserveAdapterRegistry,
   mockLiveReserveD1,
   recordOutcomeSafeMock,
@@ -57,66 +58,9 @@ interface RunMetadata {
   attemptedCoins?: number;
 }
 
-
 function parseMetadata(metadata: string | undefined): RunMetadata {
   return JSON.parse(metadata ?? "{}") as RunMetadata;
 }
-
-
-function checkpointTable(input: {
-  attemptNo: number;
-  invocationId: string;
-  nextItemKey: string | null;
-  itemsDone: number;
-  state?: "running" | "recovering";
-  sourceAttemptNo?: number | null;
-  slotStartedAt?: number;
-  currentItemKey?: string | null;
-  currentDomainAttemptId?: string | null;
-}): MockTableConfig {
-  const slotStartedAt = input.slotStartedAt ?? 1_000;
-  return {
-    match: "FROM worker_scheduled_checkpoints",
-    rows: [{
-      schedule_key: "fourHourlyReserveSync",
-      slot_started_at: slotStartedAt,
-      job: "sync-live-reserves",
-      attempt_no: input.attemptNo,
-      execution_generation: input.attemptNo,
-      invocation_id: input.invocationId,
-      worker_version: "version-a",
-      queue_hash: LIVE_RESERVE_QUEUE_HASH,
-      state: input.state ?? "recovering",
-      next_item_key: input.nextItemKey,
-      current_item_key: input.currentItemKey ?? null,
-      current_domain_attempt_id: input.currentDomainAttemptId ?? null,
-      items_done: input.itemsDone,
-      items_total: CONFIGURED_COIN_COUNT,
-      child_dispositions_json: JSON.stringify({ "sync-live-reserves": "not_started" }),
-      recovery_owner: input.invocationId,
-      recovery_lease_until: 2_000,
-      source_attempt_no: input.sourceAttemptNo === undefined
-        ? input.attemptNo - 1
-        : input.sourceAttemptNo,
-      error: null,
-      created_at: slotStartedAt,
-      updated_at: slotStartedAt + 100,
-      completed_at: null,
-    }],
-  };
-}
-
-function checkpointIdentity(attemptNo: number, invocationId: string, slotStartedAt = 1_000) {
-  return {
-    scheduleKey: "fourHourlyReserveSync",
-    slotStartedAt,
-    job: "sync-live-reserves",
-    attemptNo,
-    executionGeneration: attemptNo,
-    invocationId,
-  };
-}
-
 
 describe("syncLiveReserves orchestrator run-budget behavior", () => {
   let nowMs = 0;
@@ -220,9 +164,8 @@ describe("syncLiveReserves orchestrator run-budget behavior", () => {
         attemptNo: 2,
         invocationId: identity.invocationId,
         nextItemKey: crashedCoin.id,
-        currentItemKey: crashedCoin.id,
-        currentDomainAttemptId: "crashed-authoritative-attempt",
         itemsDone: 0,
+        currentDomainAttemptId: "crashed-authoritative-attempt",
       }),
       {
         match: "FROM reserve_composition c",

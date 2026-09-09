@@ -4,6 +4,7 @@ import { adaptBtcfi, fetchBtcfiReserves } from "../btcfi";
 import { mockFetchStrict, jsonResponse } from "@shared/test-utils/mock-fetch";
 import type { StablecoinMeta } from "@shared/types/core";
 import type { LiveReservesConfig } from "@shared/types/live-reserves";
+import { BTCFI_HANDLER_ROWS, BTCFI_MARKET_ROWS } from "./reserve-adapter-payloads.test-support";
 
 afterEach(() => vi.unstubAllGlobals());
 
@@ -15,20 +16,7 @@ describe("adaptBtcfi", () => {
   });
 
   it("emits per-symbol BTC slices with canonical risk mapping", () => {
-    const result = adaptBtcfi(
-      [
-        { token_handler_id: 0, deposit_value: "5000" },
-        { token_handler_id: 1, deposit_value: "3000" },
-        { token_handler_id: 2, deposit_value: "1000" },
-        { token_handler_id: 3, deposit_value: "1000" },
-      ],
-      [
-        { id: 0, symbol: "WBTC", isStable: false },
-        { id: 1, symbol: "BTCB", isStable: false },
-        { id: 2, symbol: "CBBTC", isStable: false },
-        { id: 3, symbol: "BtcUSD", isStable: true },
-      ],
-    );
+    const result = adaptBtcfi(BTCFI_MARKET_ROWS, BTCFI_HANDLER_ROWS);
 
     const sliceNames = result.slices.map((s) => s.name).sort();
     expect(sliceNames).toEqual(["BTCB", "CBBTC", "WBTC"]);

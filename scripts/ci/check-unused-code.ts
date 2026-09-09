@@ -892,8 +892,8 @@ function deadModuleReason(file: string, info: ModuleInfo): string {
  * metadata keys, prose, and comments never root anything. Inside a body the
  * recognizer honors actual `node`/`tsx` command targets (the reused
  * check-script-entrypoints extractor) and actual import expressions — the
- * workflow-heredoc form deploy-cloudflare.yml uses — after stripping `#` and
- * `//` comment lines. Repo script source is deliberately NOT text-scanned:
+ * inline `node` form setup-workspace's composite action uses — after stripping
+ * `#` and `//` comment lines. Repo script source is deliberately NOT text-scanned:
  * script imports are AST edges like every other module, and script-to-script
  * spawn references stay the reverse audit's concern in
  * check-script-entrypoints.

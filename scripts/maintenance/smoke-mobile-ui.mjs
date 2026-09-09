@@ -239,9 +239,12 @@ async function waitForSettledPage(page, waitMs) {
 function buildRouteCaptureScript() {
   const allowlistFn = isAllowedSmallTouchTarget.toString();
   const measurableRowFn = isMeasurableTableRow.toString();
-  return `async ({ scanTableGeometry, scanTouchTargets, touchHardFloorPx, touchTargetPx }) => {
+  return `async ({ scanTableGeometry, scanTouchTargets, touchHardFloorPx, touchTargetPx, deps = {} }) => {
     const isAllowedSmallTouchTarget = ${allowlistFn};
     const isMeasurableTableRow = ${measurableRowFn};
+    // Browser-lane test seam: the capture normally reads the page realm's bare
+    // globals; injected deps let script tests drive it from a jsdom fixture.
+    const { document = globalThis.document, window = globalThis.window, getComputedStyle = globalThis.getComputedStyle } = deps;
     const text = document.body?.innerText ?? "";
     const doc = document.documentElement;
     const body = document.body;
@@ -509,6 +512,11 @@ function buildRouteCaptureScript() {
 }
 
 const ROUTE_CAPTURE_FN = Function(`return (${buildRouteCaptureScript()});`)();
+
+// Exported as the browser-lane test seam: script tests evaluate this exact
+// capture function against a controlled jsdom page to exercise the real
+// table-scan logic (skeleton transition, header overlap, sr-only exclusion).
+export { ROUTE_CAPTURE_FN };
 
 async function captureRoute(page, { route, scanTableGeometry, scanTouchTargets, timeoutMs, url, viewport, waitMs }) {
   const routeUrl = joinUrl(url, route);

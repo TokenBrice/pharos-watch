@@ -20,38 +20,61 @@ export async function fetchDefiLlamaPrices(
 ): Promise<Map<string, number>> {
   if (assets.length === 0) return new Map();
 
-  const assetKeys = assets.map(({ chain, address }) => getDefiLlamaPriceAssetKey(chain, address));
-  return getCachedRequest(
-    `defillama-prices:${assetKeys.join(",")}`,
-    async () => runAdapterIo(ctx, `defillama-prices:${assetKeys.length}`, async () => {
-      const result = await fetchTextWithRetry(
-        `${DEFILLAMA_COINS}/prices/current/${assetKeys.join(",")}`,
-        { signal },
-        2,
-        { timeoutMs: 10_000, returnFinalResponse: true },
+  const lookups = assets.map(({ key, chain, address }) => ({
+    key,
+    assetKey: getDefiLlamaPriceAssetKey(chain, address),
+  }));
+  const assetKeys = lookups.map(({ assetKey }) => assetKey);
+  // The upstream entry is keyed by asset identity alone, so callers asking for the
+  // same assets share one fetch. Resolved prices carry each caller's own logical
+  // keys, so they need one entry per caller-key set: sharing an entry across
+  // aliases hands a caller another caller's keys. Callers such as
+  // `fetchBranchPriceMap` extend the returned map with fallback prices, so cached
+  // entries stay pristine and every call gets its own map.
+  const upstreamCacheKey = `defillama-prices:${assetKeys.join(",")}`;
+  const resolvedPrices = await getCachedRequest(
+    `${upstreamCacheKey}|keys:${JSON.stringify(lookups.map(({ key }) => key))}`,
+    async (): Promise<Array<[string, number]>> => {
+      const upstreamPrices = await getCachedRequest(
+        upstreamCacheKey,
+        async () => runAdapterIo(ctx, `defillama-prices:${assetKeys.length}`, async () => {
+          const result = await fetchTextWithRetry(
+            `${DEFILLAMA_COINS}/prices/current/${assetKeys.join(",")}`,
+            { signal },
+            2,
+            { timeoutMs: 10_000, returnFinalResponse: true },
+          );
+          if (!result) {
+            throw new Error("DefiLlama price fetch failed (no-response)");
+          }
+          if (!result.response.ok) {
+            throw new Error(`DefiLlama price fetch failed (${result.response.status})`);
+          }
+
+          const body = JSON.parse(result.body) as {
+            coins?: Record<string, { price?: number }>;
+          };
+          const prices: Record<string, number> = {};
+
+          for (const assetKey of assetKeys) {
+            const price = body.coins?.[assetKey]?.price;
+            if (typeof price === "number" && price > 0) {
+              prices[assetKey] = price;
+            }
+          }
+
+          return prices;
+        }),
+        ctx,
       );
-      if (!result) {
-        throw new Error("DefiLlama price fetch failed (no-response)");
-      }
-      if (!result.response.ok) {
-        throw new Error(`DefiLlama price fetch failed (${result.response.status})`);
-      }
 
-      const body = JSON.parse(result.body) as {
-        coins?: Record<string, { price?: number }>;
-      };
-      const priceMap = new Map<string, number>();
-
-      for (const asset of assets) {
-        const lookupKey = getDefiLlamaPriceAssetKey(asset.chain, asset.address);
-        const price = body.coins?.[lookupKey]?.price;
-        if (typeof price === "number" && price > 0) {
-          priceMap.set(asset.key, price);
-        }
-      }
-
-      return priceMap;
-    }),
+      return lookups.flatMap(({ key, assetKey }) => {
+        const price = upstreamPrices[assetKey];
+        return price === undefined ? [] : [[key, price] as [string, number]];
+      });
+    },
     ctx,
   );
+
+  return new Map(resolvedPrices);
 }

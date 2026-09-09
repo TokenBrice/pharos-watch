@@ -14,7 +14,7 @@ vi.mock("../helpers", async (importOriginal) => {
 import { adaptListaReserves, fetchListaReserves } from "../lista";
 import { fetchDefiLlamaPrices, fetchErc20Balance } from "../helpers";
 
-import { TEST_SIGNAL as signal } from "./reserve-adapter.test-support";
+let signal: AbortSignal;
 const coin = { id: "lisusd-lista" } as unknown as StablecoinMeta;
 
 function wbnbBranch() {
@@ -35,6 +35,7 @@ function listaConfig(params: Record<string, unknown>): LiveReservesConfig {
 }
 
 beforeEach(() => {
+  signal = new AbortController().signal;
   vi.clearAllMocks();
 });
 

@@ -239,7 +239,7 @@ describe("runTelegramDegradationWatchdog · pending backlog", () => {
     expect(prepare.mock.calls.some(([sql]) => isPendingCapacityQuery(String(sql)))).toBe(false);
   });
 
-  it("does not trigger on first observation above threshold", async () => {
+  it("records an onset without triggering on first observation above threshold", async () => {
     const store = installCacheStore();
     const db = makeDb({ pendingCount: PENDING_BACKLOG_THRESHOLD + 5 });
 
@@ -247,6 +247,8 @@ describe("runTelegramDegradationWatchdog · pending backlog", () => {
     const meta = JSON.parse(result.metadata ?? "{}");
 
     expect(meta.pendingBacklog.triggered).toBe(false);
+    expect(meta.pendingBacklog.detail).toContain("newly tripped");
+    expect(result.status).toBe("ok");
     expect(store.values.has(WATCHDOG_KEYS.pendingSince)).toBe(true);
   });
 
@@ -318,12 +320,16 @@ describe("runTelegramDegradationWatchdog · pending backlog", () => {
     expect(meta.pendingBacklog.estimatedDrainTimeSec).toBe(35 * 60);
   });
 
-  it("triggers near-TTL escalation once an onset exists, including one created this run", async () => {
+  it("triggers near-TTL escalation after onset, including one created this run", async () => {
     const store = installCacheStore();
     const nowSec = Math.floor(Date.now() / 1000);
-    await runTelegramDegradationWatchdog(makeDb({ pendingCount: 3, nearTtl: 1 }));
+    const onsetResult = await runTelegramDegradationWatchdog(makeDb({ pendingCount: 3, nearTtl: 1 }));
+    const onsetMeta = JSON.parse(onsetResult.metadata ?? "{}");
+
+    expect(onsetMeta.pendingBacklog.triggered).toBe(false);
+    expect(onsetMeta.pendingBacklog.detail).toContain("newly tripped");
+    expect(onsetResult.status).toBe("ok");
     expect(store.values.get(WATCHDOG_KEYS.pendingSince)?.value).toBe(String(nowSec));
-    // audit: g031/C3 — first-observation escalation policy remains deferred.
     const db = makeDb({ pendingCount: 3, nearTtl: 1 });
 
     const result = await runTelegramDegradationWatchdog(db);
@@ -332,6 +338,7 @@ describe("runTelegramDegradationWatchdog · pending backlog", () => {
     expect(meta.pendingBacklog.triggered).toBe(true);
     expect(meta.pendingBacklog.detail).toContain("nearTtl=1");
     expect(meta.pendingBacklog.nearTtl).toBe(1);
+    expect(result.status).toBe("degraded");
   });
 });
 

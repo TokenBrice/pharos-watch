@@ -1,5 +1,6 @@
 import type { CompiledV9AssetInput, V9ScoringInput } from "@shared/types/safety-score-v9";
 import { V9_CANDIDATE_POLICY_V1 } from "../safety-score-v9/policy";
+import type { V9WrapperParentLimit } from "../safety-score-v9/wrapper-risk";
 import type {
   V9PillarEvaluation,
   V9ProductionScoreIdentity,
@@ -39,6 +40,27 @@ export function makeV9ProductionScoreInput(
     dependencyStructuralSignals: [],
     ...overrides,
     identity,
+  };
+}
+
+export type V9WrapperParentLimitOptions = Omit<V9WrapperParentLimit, "schemaVersion" | "riskTransfer"> & {
+  riskTransfer?: Partial<V9WrapperParentLimit["riskTransfer"]>;
+};
+
+export function makeV9WrapperParentLimit({
+  riskTransfer,
+  ...overrides
+}: V9WrapperParentLimitOptions): V9WrapperParentLimit {
+  return {
+    schemaVersion: 1,
+    ...overrides,
+    riskTransfer: {
+      disposition: "reviewed",
+      mechanism: "none",
+      requestedCredit: 0,
+      appliedCredit: 0,
+      ...riskTransfer,
+    },
   };
 }
 

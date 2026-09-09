@@ -6,11 +6,11 @@ export function supplyMetadata(): StablecoinMeta[] {
   const contract = (chain: string, decimals: number) => ({
     chain, decimals, address: "0x1111111111111111111111111111111111111111",
   });
-  const euroFlags = { ...makeStablecoinMeta().flags, pegCurrency: "EUR" as const };
+  const euroFlags = () => ({ ...makeStablecoinMeta().flags, pegCurrency: "EUR" as const });
   return [
     makeStablecoinMeta({ id: "usdt-tether", symbol: "USDT", detailProvider: "defillama", llamaId: "1", geckoId: "tether" }),
-    makeStablecoinMeta({ id: "euro3-3a-dao", symbol: "EURO3", detailProvider: "defillama", llamaId: "170", flags: euroFlags }),
-    makeStablecoinMeta({ id: "eurc-circle", symbol: "EURC", detailProvider: "defillama", llamaId: "50", geckoId: "euro-coin", flags: euroFlags }),
+    makeStablecoinMeta({ id: "euro3-3a-dao", symbol: "EURO3", detailProvider: "defillama", llamaId: "170", flags: euroFlags() }),
+    makeStablecoinMeta({ id: "eurc-circle", symbol: "EURC", detailProvider: "defillama", llamaId: "50", geckoId: "euro-coin", flags: euroFlags() }),
     makeStablecoinMeta({ id: "susdt-spark", symbol: "spUSDT", detailProvider: "coingecko", geckoId: "spark-savings-usdt",
       contracts: [contract("ethereum", 6), contract("arbitrum", 6)] }),
     makeStablecoinMeta({ id: "acred-apollo-securitize", symbol: "ACRED", detailProvider: "coingecko",

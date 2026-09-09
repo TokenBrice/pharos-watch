@@ -39,60 +39,32 @@ describe("router contract: strict frontend paths are routable", () => {
   });
 
   it("routes public snapshot date and coin URLs through dynamic descriptors", async () => {
-    const dayResponse = await route(makeRouteCtx({
-      url: new URL("https://api.pharos.watch/api/snapshots/2026-05-16.json"),
-      request: new Request("https://api.pharos.watch/api/snapshots/2026-05-16.json"),
-    }));
-    expect(dayResponse).not.toBeNull();
-    expect(dayResponse!.status).toBe(404);
+    const urls = [
+      new URL("https://api.pharos.watch/api/snapshots/2026-05-16.json"),
+      new URL("https://api.pharos.watch/api/snapshot/2026-05-16/stablecoin/usdt-tether"),
+    ];
 
-    const coinResponse = await route(makeRouteCtx({
-      url: new URL("https://api.pharos.watch/api/snapshot/2026-05-16/stablecoin/usdt-tether"),
-      request: new Request("https://api.pharos.watch/api/snapshot/2026-05-16/stablecoin/usdt-tether"),
-    }));
-    expect(coinResponse).not.toBeNull();
-    expect(coinResponse!.status).toBe(404);
-    // Both routes lazily import their handler module; that import, not the
-    // routing decision, dominates this case on a small CI runner.
-  }, 30_000);
-
-  it("returns a router-level JSON 500 when an unwrapped route handler throws", async () => {
-    const consoleError = vi.spyOn(console, "error").mockImplementation(() => undefined);
-    vi.resetModules();
-    vi.doMock("../../routes/registry", () => ({
-      ROUTER_STATIC_PATHS: [],
-      getRouteDependencies: () => [],
-      getRouteMatch: () => ({
-        dependencies: [],
-        methods: ["GET"],
-        handle: async () => {
-          throw new Error("boom");
+    for (const url of urls) {
+      const resolved = resolveRoute(url, "GET");
+      expect(resolved).not.toBeNull();
+      expect(resolved).toMatchObject({
+        methodValidation: null,
+        routeMatch: {
+          dependencies: [],
+          methods: ["GET"],
+          handle: expect.any(Function),
         },
-      }),
-    }));
-
-    try {
-      const { route: routeWithMock } = await import("../../router");
-      const response = await routeWithMock(makeRouteCtx({
-        url: new URL("https://api.pharos.watch/api/health"),
-      }));
-      expect(response).not.toBeNull();
-      expect(response!.status).toBe(500);
-      expect(response!.headers.get("Content-Type")).toBe("application/json");
-      await expect(response!.json()).resolves.toEqual({ error: "Internal Server Error" });
-      const [payload] = consoleError.mock.calls[consoleError.mock.calls.length - 1] ?? [];
-      expect(JSON.parse(String(payload))).toMatchObject({
-        scope: "http",
-        level: "error",
-        event: "route_handler_error",
-        route: "/api/health",
-        errorName: "Error",
-        errorMessage: "boom",
       });
-    } finally {
-      vi.doUnmock("../../routes/registry");
-      vi.resetModules();
-      consoleError.mockRestore();
+
+      const sentinel = vi.fn(async () => new Response(null, { status: 204 }));
+      resolved!.routeMatch = { ...resolved!.routeMatch, handle: sentinel };
+      const response = await route(makeRouteCtx({
+        url,
+        request: new Request(url.toString()),
+      }), resolved);
+      expect(response).not.toBeNull();
+      expect(response!.status).toBe(204);
+      expect(sentinel).toHaveBeenCalledOnce();
     }
   });
 
@@ -237,5 +209,45 @@ describe("router contract: strict frontend paths are routable", () => {
     }));
     expect(getResult).not.toBeNull();
     expect(getResult!.status).toBe(405);
+  });
+
+  it("returns a router-level JSON 500 when an unwrapped route handler throws", async () => {
+    const consoleError = vi.spyOn(console, "error").mockImplementation(() => undefined);
+    vi.resetModules();
+    vi.doMock("../../routes/registry", () => ({
+      ROUTER_STATIC_PATHS: [],
+      getRouteDependencies: () => [],
+      getRouteMatch: () => ({
+        dependencies: [],
+        methods: ["GET"],
+        handle: async () => {
+          throw new Error("boom");
+        },
+      }),
+    }));
+
+    try {
+      const { route: routeWithMock } = await import("../../router");
+      const response = await routeWithMock(makeRouteCtx({
+        url: new URL("https://api.pharos.watch/api/health"),
+      }));
+      expect(response).not.toBeNull();
+      expect(response!.status).toBe(500);
+      expect(response!.headers.get("Content-Type")).toBe("application/json");
+      await expect(response!.json()).resolves.toEqual({ error: "Internal Server Error" });
+      const [payload] = consoleError.mock.calls[consoleError.mock.calls.length - 1] ?? [];
+      expect(JSON.parse(String(payload))).toMatchObject({
+        scope: "http",
+        level: "error",
+        event: "route_handler_error",
+        route: "/api/health",
+        errorName: "Error",
+        errorMessage: "boom",
+      });
+    } finally {
+      vi.doUnmock("../../routes/registry");
+      vi.resetModules();
+      consoleError.mockRestore();
+    }
   });
 });

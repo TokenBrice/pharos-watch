@@ -165,6 +165,8 @@ A current response emits `X-Safety-Score-Status: current`. A held response serve
 
 Endpoint freshness for `/api/report-cards/v9` follows the publication cadence: the shared surface descriptor sets the `X-Data-Age` / `Warning` budget at 2x `compute-safety-score-v9` (3600 s), so the endpoint tolerates exactly one missed 30-minute publication — the same basis as the V9 consumer fail-close — instead of the historical sub-cadence 900 s budget.
 
+The V9 consumer fail-close itself (`worker/src/lib/safety-score-v9/consumer-freshness.ts`) treats an unusable clock as unavailable, not fresh: a non-finite `updatedAt` (or `now`) and any publication time later than `now` are both rejected on the same path as the age limit. No clock-skew allowance is granted, so the read instant is the newest acceptable publication time. Consumers reading the age constant directly keep their own bounds.
+
 The response includes:
 
 - complete V9 identity and source digests

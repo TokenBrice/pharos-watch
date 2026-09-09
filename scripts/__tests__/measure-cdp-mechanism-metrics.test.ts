@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import { existsSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -6,11 +7,17 @@ import { encodeWord, ReplayEthCaller } from "../lib/mechanism-measurement/core";
 import { measureConfiguredTarget } from "../lib/mechanism-measurement/measure";
 import { measureLiquityV1 } from "../lib/mechanism-measurement/families/liquity-v1";
 import { measureLiquityV2 } from "../lib/mechanism-measurement/families/liquity-v2";
-import { MechanismMeasurementEvidenceV1Schema, type MeasurementCall } from "../lib/mechanism-measurement/schema";
+import {
+  MechanismMeasurementEvidenceV1Schema,
+  type MeasurementCall,
+  type MeasurementLog,
+  type MeasurementLogQuery,
+  type MechanismMeasurementEvidenceV1,
+} from "../lib/mechanism-measurement/schema";
 import { redactRpcUrlForEvidence } from "../lib/mechanism-measurement/rpc-provenance";
 import { captureFixture, cleanupCaptures, remote } from "./measure-cdp-mechanism-metrics.test-support";
 import { gzipSync } from "node:zlib";
-import { resolveCaptureBody } from "../maintenance/measure-cdp-mechanism-metrics";
+import { resolveCaptureBody, run } from "../maintenance/measure-cdp-mechanism-metrics";
 import { CDP_MEASUREMENT_TARGETS } from "../lib/mechanism-measurement/targets";
 
 interface RecordedFixture {
@@ -23,6 +30,7 @@ interface RecordedFixture {
 function loadFixture(name: string): RecordedFixture {
   return JSON.parse(readFileSync(join(__dirname, "fixtures", name), "utf8")) as RecordedFixture;
 }
+const FIXTURE_PATH = join(__dirname, "fixtures", "lusd-liquity-mechanism-measurement-block-25533257.json");
 
 // Recorded live returndata from block 25533257 (finalized at capture time);
 // replaying it must reproduce the committed measurement exactly, no network.
@@ -30,12 +38,23 @@ const FIXTURE = loadFixture("lusd-liquity-mechanism-measurement-block-25533257.j
   derived: { priceWei: string; lastGoodPrice: { deltaPct: number } };
 };
 
-function callerFromFixture(fixture: RecordedFixture, overrides: Map<string, string> = new Map()): EthCallJournal {
+interface RecordedCalls {
+  calls: readonly MeasurementCall[];
+  logQueries?: readonly MeasurementLogQuery[];
+}
+
+/**
+ * Keyed replay with per-call returndata overrides, for mutating one recorded
+ * observation while the rest of the journal stays authentic. Log queries are
+ * served in recorded order, as the pipelines issue them once each.
+ */
+function callerFromFixture(fixture: RecordedCalls, overrides: Map<string, string> = new Map()): EthCallJournal {
   const byCallData = new Map(fixture.calls.map((call) => [`${call.to}:${call.callData}`, call.returnData]));
   const calls: MeasurementCall[] = [];
+  const logQueries: MeasurementLogQuery[] = [];
   return {
     calls,
-    logQueries: [],
+    logQueries,
     async call(spec: EthCallSpec): Promise<string> {
       const callData = `${spec.selector}${(spec.args ?? []).map(encodeWord).join("")}`;
       const key = `${spec.to.toLowerCase()}:${callData}`;
@@ -55,11 +74,14 @@ function callerFromFixture(fixture: RecordedFixture, overrides: Map<string, stri
     recordDecoded(decoded: string): void {
       calls[calls.length - 1]!.decoded = decoded;
     },
-    async queryLogs(): Promise<never> {
-      throw new Error("Fixture has no recorded log queries");
+    async queryLogs(): Promise<readonly MeasurementLog[]> {
+      const recorded = fixture.logQueries?.[logQueries.length];
+      if (!recorded) throw new Error("Fixture has no further recorded log queries");
+      logQueries.push({ ...recorded, logs: recorded.logs.map((log) => ({ ...log })), decoded: "" });
+      return recorded.logs;
     },
-    recordLogsDecoded(): void {
-      throw new Error("Fixture has no recorded log queries");
+    recordLogsDecoded(decoded: string): void {
+      logQueries[logQueries.length - 1]!.decoded = decoded;
     },
   };
 }
@@ -171,6 +193,216 @@ describe("measureLiquityV2", () => {
     ).rejects.toThrow(/branch\[0\]\.price/);
   });
 });
+
+/**
+ * Original recorded journals for the remaining configured families, recovered
+ * byte-identically from the history that moved capture bodies to R2; each one
+ * still hashes to its committed capture summary (asserted below), so replaying
+ * them exercises the real family pipelines against authentic returndata.
+ */
+const FAMILY_JOURNALS = [
+  {
+    assetId: "audm-mento",
+    fixture: "audm-mento-mechanism-measurement-block-72202914.json",
+    capture: "audm-mento/2026-07-15-block-72202914.summary.json",
+  },
+  {
+    assetId: "gho-aave",
+    fixture: "gho-aave-mechanism-measurement-block-25536894.json",
+    capture: "gho-aave/2026-07-15-block-25536894.summary.json",
+  },
+  {
+    assetId: "usdq-quill",
+    fixture: "usdq-quill-mechanism-measurement-block-34367075.json",
+    capture: "usdq-quill/2026-07-15-block-34367075.summary.json",
+  },
+  {
+    assetId: "fxusd-f-x-protocol",
+    fixture: "fxusd-f-x-protocol-mechanism-measurement-block-25536894.json",
+    capture: "fxusd-f-x-protocol/2026-07-15-block-25536894.summary.json",
+  },
+  {
+    assetId: "fxsave-f-x-protocol",
+    fixture: "fxsave-f-x-protocol-mechanism-measurement-block-25536894.json",
+    capture: "fxsave-f-x-protocol/2026-07-15-block-25536894.summary.json",
+  },
+] as const;
+
+type FamilyAssetId = (typeof FAMILY_JOURNALS)[number]["assetId"];
+
+function loadJournal(assetId: FamilyAssetId): MechanismMeasurementEvidenceV1 {
+  const entry = FAMILY_JOURNALS.find((candidate) => candidate.assetId === assetId)!;
+  return MechanismMeasurementEvidenceV1Schema.parse(
+    JSON.parse(readFileSync(join(__dirname, "fixtures", entry.fixture), "utf8")),
+  );
+}
+
+function configuredTarget(assetId: string) {
+  const target = CDP_MEASUREMENT_TARGETS.find((candidate) => candidate.assetId === assetId);
+  if (!target) throw new Error(`No configured measurement target for ${assetId}`);
+  return target;
+}
+
+/**
+ * Recompute evidence from a recorded journal through the configured target.
+ * Without overrides the strict ordered replayer is used, so a pipeline that
+ * skips, reorders or invents a call fails instead of silently agreeing.
+ */
+async function recomputeFromJournal(
+  recorded: MechanismMeasurementEvidenceV1,
+  overrides?: Map<string, string>,
+): Promise<MechanismMeasurementEvidenceV1> {
+  const target = configuredTarget(recorded.assetId);
+  const caller = overrides
+    ? callerFromFixture(recorded, overrides)
+    : new ReplayEthCaller(recorded.calls, recorded.logQueries ?? []);
+  const evidence = MechanismMeasurementEvidenceV1Schema.parse(
+    await measureConfiguredTarget(caller, target, recorded.block, recorded.rpcUrl),
+  );
+  if (caller instanceof ReplayEthCaller) caller.assertExhausted();
+  return evidence;
+}
+
+describe("recorded family measurement replay", () => {
+  it.each(FAMILY_JOURNALS)("replays the original $assetId capture byte-identically", async ({ assetId, capture }) => {
+    const summary = JSON.parse(
+      readFileSync(
+        join(__dirname, "..", "..", "shared", "data", "safety-score-v9", "mechanism-measurements", capture),
+        "utf8",
+      ),
+    ) as { sha256: string; bytes: number };
+    const entry = FAMILY_JOURNALS.find((candidate) => candidate.assetId === assetId)!;
+    const bytes = readFileSync(join(__dirname, "fixtures", entry.fixture));
+    // Provenance: the fixture is the capture the committed summary pins.
+    expect(createHash("sha256").update(bytes).digest("hex")).toBe(summary.sha256);
+    expect(bytes.byteLength).toBe(summary.bytes);
+
+    const recorded = MechanismMeasurementEvidenceV1Schema.parse(JSON.parse(bytes.toString("utf8")));
+    expect(await recomputeFromJournal(recorded)).toEqual(recorded);
+  });
+
+  it("reports analogous capacity instead of liquidation capacity for conversion, facilitator and wrapper mechanisms", async () => {
+    const mento = await recomputeFromJournal(loadJournal("audm-mento"));
+    const gho = await recomputeFromJournal(loadJournal("gho-aave"));
+    const wrapper = await recomputeFromJournal(loadJournal("fxsave-f-x-protocol"));
+    for (const evidence of [mento, gho, wrapper]) {
+      expect(evidence.metrics.collateralizationRatio).toBeNull();
+      expect(evidence.metrics.liquidationCapacityRatio).toBeNull();
+      const applicability = evidence.metrics.applicability;
+      if (applicability?.liquidationCapacityRatio.state !== "not-applicable") {
+        throw new Error(`${evidence.assetId} must classify liquidation capacity as not-applicable`);
+      }
+      expect(applicability.collateralizationRatio.state).toBe("not-applicable");
+      expect(applicability.liquidationCapacityRatio.rationale.length).toBeGreaterThan(0);
+    }
+
+    // Each family keeps its own measured analogue rather than reporting it as capacity.
+    if (mento.family !== "mento-conversion-evidence-v1") throw new Error("Expected Mento conversion evidence");
+    expect(mento.analogousMetrics.conversionCapacityCounterUnits).toBeGreaterThan(0);
+    if (gho.family !== "gho-facilitator-evidence-v1") throw new Error("Expected GHO facilitator evidence");
+    expect(gho.analogousMetrics.facilitatorUnusedCapacityRatio).toBeGreaterThan(0);
+    if (wrapper.family !== "wrapper-mechanism-v1") throw new Error("Expected wrapper evidence");
+    expect(wrapper.analogousMetrics.localBackingRatio).toBeGreaterThan(0);
+
+    for (const assetId of ["usdq-quill", "fxusd-f-x-protocol"] as const) {
+      const evidence = await recomputeFromJournal(loadJournal(assetId));
+      expect(evidence.metrics.applicability).toEqual({
+        collateralizationRatio: { state: "measured" },
+        liquidationCapacityRatio: { state: "measured" },
+      });
+      expect(evidence.metrics.collateralizationRatio).toBeGreaterThan(0);
+      expect(evidence.metrics.liquidationCapacityRatio).toBeGreaterThan(0);
+    }
+  });
+
+  it("holds the wrapper incomplete on its unattached parent while the parent itself clears", async () => {
+    const wrapper = await recomputeFromJournal(loadJournal("fxsave-f-x-protocol"));
+    const parentTarget = configuredTarget("fxsave-f-x-protocol");
+    if (parentTarget.family !== "wrapper-mechanism-v1") throw new Error("fxsave must be a wrapper target");
+    expect(wrapper.completeness).toEqual({ complete: false, blockers: [parentTarget.blocker] });
+    // The blocker is surfaced to overlay consumers, not only recorded internally.
+    expect(wrapper.warnings).toEqual([parentTarget.blocker]);
+    if (wrapper.family !== "wrapper-mechanism-v1") throw new Error("Expected wrapper evidence");
+    expect(wrapper.derived.parentAssetId).toBe(parentTarget.parentAssetId);
+
+    const parent = await recomputeFromJournal(loadJournal("fxusd-f-x-protocol"));
+    expect(parent.completeness).toEqual({ complete: true, blockers: [] });
+  });
+
+  it("derives branch shutdown and non-redeemability from recorded enumerated state", async () => {
+    const recorded = loadJournal("usdq-quill");
+    const evidence = await recomputeFromJournal(recorded);
+    if (evidence.family !== "liquity-v2-enumerated-v1") throw new Error("Expected enumerated Liquity evidence");
+    const unhealthy = evidence.derived.branches.filter((branch) => branch.shutdownTime !== 0 || !branch.redeemable);
+    expect(unhealthy.map((branch) => branch.index)).toEqual([3]);
+    const checkIds = evidence.checks.map((check) => check.id);
+    expect(checkIds).toContain("branch[3].health-state-captured");
+    expect(checkIds).not.toContain("branch[0].health-state-captured");
+    // Both the shutdown and the non-redeemable oracle state raise their own warning.
+    expect(evidence.warnings).toHaveLength(2);
+
+    const branch0 = evidence.derived.branches[0]!;
+    const shutDown = await recomputeFromJournal(
+      recorded,
+      new Map([[`${branch0.troveManager}:0x58569081`, `0x${encodeWord(1_784_100_000n)}`]]),
+    );
+    if (shutDown.family !== "liquity-v2-enumerated-v1") throw new Error("Expected enumerated Liquity evidence");
+    expect(shutDown.derived.branches[0]!.shutdownTime).toBe(1_784_100_000);
+    expect(shutDown.checks.map((check) => check.id)).toContain("branch[0].health-state-captured");
+    expect(shutDown.warnings).toHaveLength(3);
+    // A shut-down branch is retained in the aggregate, not silently dropped.
+    expect(shutDown.metrics).toEqual(evidence.metrics);
+  });
+
+  it("raises an f(x) pause warning only when a recorded pool reports borrowing paused", async () => {
+    const recorded = loadJournal("fxusd-f-x-protocol");
+    const evidence = await recomputeFromJournal(recorded);
+    if (evidence.family !== "fx-protocol-v1") throw new Error("Expected f(x) evidence");
+    expect(evidence.derived.pools.map((pool) => pool.borrowPaused)).toEqual([false, false]);
+    expect(evidence.warnings).toBeUndefined();
+
+    const paused = await recomputeFromJournal(
+      recorded,
+      new Map([[`${evidence.derived.pools[0]!.address}:0x70f3c4b1`, `0x${encodeWord(1n)}`]]),
+    );
+    if (paused.family !== "fx-protocol-v1") throw new Error("Expected f(x) evidence");
+    expect(paused.derived.pools.map((pool) => pool.borrowPaused)).toEqual([true, false]);
+    expect(paused.warnings).toHaveLength(1);
+    expect(paused.completeness).toEqual({ complete: true, blockers: [] });
+  });
+});
+describe("CDP replay CLI seam", () => {
+  it("replays a committed artifact in-process without using the process streams", async () => {
+    const logs: string[] = [];
+    const warnings: string[] = [];
+    const errors: string[] = [];
+    const status = await run({
+      argv: ["--replay", FIXTURE_PATH],
+      io: {
+        error: (message) => errors.push(message),
+        log: (message) => logs.push(message),
+        warn: (message) => warnings.push(message),
+      },
+    });
+
+    expect(status).toBe(0);
+    expect(logs.join("")).toContain("[measure-cdp] lusd-liquity: offline byte replay passed");
+    expect(warnings).toEqual([]);
+    expect(errors).toEqual([]);
+  });
+
+  it("returns a runtime status and captured diagnostic for a missing artifact", async () => {
+    const errors: string[] = [];
+    const status = await run({
+      argv: ["--replay", "missing-cdp-artifact.json"],
+      io: { error: (message) => errors.push(message) },
+    });
+
+    expect(status).toBe(1);
+    expect(errors.join("")).toContain("measure-cdp-mechanism-metrics: Missing mechanism evidence capture or summary:");
+  });
+});
+
 
 afterEach(cleanupCaptures);
 

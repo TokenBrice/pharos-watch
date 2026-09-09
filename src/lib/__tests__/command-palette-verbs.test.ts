@@ -1,6 +1,14 @@
 import { describe, expect, it } from "vitest";
 import { parsePaletteInput } from "@/lib/command-palette-verbs";
 
+function parseCompareInput(input: string) {
+  const parsed = parsePaletteInput(input);
+  if (parsed.kind !== "compare") {
+    throw new Error(`Expected compare verb for input: ${input}`);
+  }
+  return parsed;
+}
+
 describe("parsePaletteInput", () => {
   it("builds a runnable screener URL from score and taxonomy filters", () => {
     const parsed = parsePaletteInput(
@@ -66,12 +74,12 @@ describe("parsePaletteInput", () => {
     });
 
     // Either order, "versus", and "vs." all resolve to the same canonical pair.
-    expect(parsePaletteInput("USDC versus USDe").href).toBe("/compare/usdc-circle-vs-usde-ethena/");
-    expect(parsePaletteInput("usdt vs. usdc").href).toBe("/compare/usdt-tether-vs-usdc-circle/");
-    expect(parsePaletteInput("usdc vs usdt").href).toBe("/compare/usdt-tether-vs-usdc-circle/");
+    expect(parseCompareInput("USDC versus USDe").href).toBe("/compare/usdc-circle-vs-usde-ethena/");
+    expect(parseCompareInput("usdt vs. usdc").href).toBe("/compare/usdt-tether-vs-usdc-circle/");
+    expect(parseCompareInput("usdc vs usdt").href).toBe("/compare/usdt-tether-vs-usdc-circle/");
 
     // Separator tolerated after the explicit verb keyword too.
-    expect(parsePaletteInput("compare usdt vs usdc").resolvedCoinIds).toEqual(["usdt-tether", "usdc-circle"]);
+    expect(parseCompareInput("compare usdt vs usdc").resolvedCoinIds).toEqual(["usdt-tether", "usdc-circle"]);
   });
 
   it("falls back to the live compare URL for pairs without a static page", () => {

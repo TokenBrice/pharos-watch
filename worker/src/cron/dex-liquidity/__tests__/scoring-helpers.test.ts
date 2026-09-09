@@ -10,7 +10,7 @@ import {
 } from "../scoring-helpers";
 import { isPlausibleDexObservationPrice } from "../price-sanity";
 import type { LiquiditySourceMixByFamily } from "../types";
-import { makeObs, makePool } from "./scoring-test-support";
+import { makeObs, makePool } from "./scoring-test-builders";
 
 describe("isPlausibleDexObservationPrice guards peg", () => {
   it("rejects extreme off-peg prices for usdc-circle", () => {
@@ -150,10 +150,10 @@ describe("aggregateProtocolSources", () => {
 });
 
 describe("collapseDuplicateObservations", () => {
-  it("collapses two observations sharing the same exactPoolKey to one", () => {
+  it("collapses two observations sharing the same pool key to one", () => {
     const obs = [
-      makeObs({ poolKey: "ethereum:0xabc", identityConfidence: "exact", price: 0.999, tvl: 2_000_000 }),
-      makeObs({ poolKey: "ethereum:0xabc", identityConfidence: "exact", price: 1.001, tvl: 1_000_000 }),
+      makeObs({ poolKey: "ethereum:0xabc", price: 0.999, tvl: 2_000_000 }),
+      makeObs({ poolKey: "ethereum:0xabc", price: 1.001, tvl: 1_000_000 }),
     ];
     const { collapsed, duplicateGroups, duplicateObservations } = collapseDuplicateObservations(obs);
     expect(collapsed).toHaveLength(1);

@@ -45,6 +45,17 @@ describe("IANA local time helpers", () => {
       .toBe(Date.UTC(2026, 0, 1, 3, 15));
   });
 
+  it("computes zone-specific instants when timezones interleave and repeat", () => {
+    const nowMs = Date.UTC(2026, 0, 1, 12);
+    const zones = ["America/New_York", "Asia/Kathmandu", "UTC", "America/New_York"];
+    expect(zones.map((zone) => nextIanaLocalHourDueAt(nowMs, zone, 9))).toEqual([
+      Date.UTC(2026, 0, 1, 14),
+      Date.UTC(2026, 0, 2, 3, 15),
+      Date.UTC(2026, 0, 2, 9),
+      Date.UTC(2026, 0, 1, 14),
+    ]);
+  });
+
   it("rejects invalid scheduling inputs", () => {
     for (const [now, zone, hour] of [
       [0, "Mars/Olympus_Mons", 9],

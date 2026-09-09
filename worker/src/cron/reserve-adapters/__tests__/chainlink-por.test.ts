@@ -42,10 +42,12 @@ import {
   fetchTronErc20TotalSupply,
 } from "../helpers";
 
-import { TEST_SIGNAL as signal } from "./reserve-adapter.test-support";
 import { makePorCoin, makePorSupply } from "./chainlink-por.test-support";
 
+let signal: AbortSignal;
+
 beforeEach(() => {
+  signal = new AbortController().signal;
   vi.clearAllMocks();
 });
 

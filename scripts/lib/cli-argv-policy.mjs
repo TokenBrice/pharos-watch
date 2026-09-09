@@ -86,6 +86,7 @@ export const CLI_ARGV_POLICY = Object.freeze({
     exempt("scripts/ci/check-site-csp-sync.ts", "build"),
     exempt("scripts/ci/check-sql-interpolation-safety.ts", "read-only"),
     exempt("scripts/ci/check-stablecoin-data.ts", "read-only"),
+    exempt("scripts/ci/check-stale-flags.ts", "read-only"),
     exempt("scripts/ci/check-table-primitives.ts", "read-only"),
     exempt("scripts/ci/check-telegram-load.ts", "test"),
     exempt("scripts/ci/check-unused-code.ts", "read-only"),
@@ -167,6 +168,7 @@ export const CLI_ARGV_POLICY = Object.freeze({
     exempt("scripts/maintenance/prepare-workspace.ts", "build"),
     exempt("scripts/maintenance/profile-vitest.mjs", "test"),
     exempt("scripts/maintenance/refresh-independent-assurance-reports.ts", "build"),
+    exempt("scripts/maintenance/refresh-reserve-html-fixtures.ts", "build"),
     exempt(
       "scripts/maintenance/replay-safety-score-v9-aggregation.ts",
       "build",

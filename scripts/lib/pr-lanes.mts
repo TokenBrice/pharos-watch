@@ -13,6 +13,12 @@ export interface PrLaneDefinition {
   commands: readonly PrLaneCommandDefinition[];
   id: PrLaneId;
   selector: PrLaneSelector;
+  /**
+   * Even fan-out: Vitest's own `--shard=<n>/<count>` owns file assignment.
+   * Duration weighting stays out of this manifest until the published shard
+   * timings (`PR_SHARD_TIMINGS_FILE`, uploaded as `pr-test-timings-<shard>`)
+   * show a wall spread above 25% of the median shard.
+   */
   shards?: number;
   timeoutMinutes: number;
 }

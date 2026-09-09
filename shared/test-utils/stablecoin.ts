@@ -47,3 +47,33 @@ export function makeStablecoinMeta(overrides: Partial<StablecoinMeta> = {}): Sta
     ...overrides,
   };
 }
+
+export function makeStablecoinVariantRegistry() {
+  const parent = makeStablecoinMeta({
+    id: "usds-sky",
+    name: "Sky Dollar",
+    symbol: "USDS",
+  });
+  const relatedVariants = [
+    makeStablecoinMeta({
+      id: "fixture-savings-usds",
+      name: "Fixture Savings Sky Dollar",
+      symbol: "fsUSDS",
+      variantOf: parent.id,
+      variantKind: "savings-passthrough",
+    }),
+    makeStablecoinMeta({
+      id: "fixture-yield-usds",
+      name: "Fixture Yield Sky Dollar",
+      symbol: "fyUSDS",
+      variantOf: parent.id,
+      variantKind: "pure-wrapper",
+    }),
+  ];
+  const trackedStablecoins = [parent, ...relatedVariants];
+
+  return {
+    TRACKED_META_BY_ID: new Map(trackedStablecoins.map((stablecoin) => [stablecoin.id, stablecoin])),
+    TRACKED_STABLECOINS: trackedStablecoins,
+  };
+}

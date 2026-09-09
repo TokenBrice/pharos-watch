@@ -2,8 +2,13 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import worker from "../index";
 import { mockD1, type MockD1Database, type MockTableConfig } from "@shared/test-utils/mock-d1";
 import { createWorkerEnv } from "../test-helpers/__shared/worker-env";
-import { hmacSha256Hex, makeExecutionContext } from "../test-helpers/__shared/auth";
-import { makeRequestAttributionTables } from "../test-helpers/api-key-test-support";
+import { makeExecutionContext } from "../test-helpers/__shared/auth";
+import {
+  makeApiKeyPrefixLookup,
+  makeApiKeyPrefixLookupError,
+  makeAuthenticatedApiKeyRow,
+  makeRequestAttributionTables,
+} from "../test-helpers/api-key-test-support";
 import { API_KEY_AUTH_CACHE_TTL_MS, resetApiKeyStateForTests } from "../lib/api-keys";
 import { resetRequestAttributionStateForTests } from "../lib/request-source-attribution";
 import { PHAROS_WEB_ACCEPT_MARKER } from "@shared/lib/request-source-marker";
@@ -27,12 +32,14 @@ const VALID_KEY_PREFIX = "0123456789abcdef";
 const VALID_KEY_SECRET = "abcdefghijklmnopqrstuvwxyzABCDEF";
 const VALID_API_KEY = `ph_live_${VALID_KEY_PREFIX}_${VALID_KEY_SECRET}`;
 
-async function validKeyRow(): Promise<Record<string, unknown>> {
-  const secretHash = await hmacSha256Hex(VALID_KEY_PEPPER, VALID_KEY_SECRET);
-  return {
-    id: 7,
+
+async function validKeyDbTables(
+  extra: MockTableConfig[] = [],
+): Promise<MockTableConfig[]> {
+  const row = await makeAuthenticatedApiKeyRow({
+    pepper: VALID_KEY_PEPPER,
     key_prefix: VALID_KEY_PREFIX,
-    secret_hash: secretHash,
+    secret: VALID_KEY_SECRET,
     name: "Test",
     owner_email: null,
     tier: "standard",
@@ -44,15 +51,9 @@ async function validKeyRow(): Promise<Record<string, unknown>> {
     updated_at: 1,
     last_used_at: null,
     last_used_route: null,
-  };
-}
-
-async function validKeyDbTables(
-  extra: MockTableConfig[] = [],
-): Promise<MockTableConfig[]> {
-  const row = await validKeyRow();
+  });
   return [
-    { match: "FROM api_keys", matchBinds: [VALID_KEY_PREFIX], rows: [row] },
+    makeApiKeyPrefixLookup({ prefix: VALID_KEY_PREFIX, row }),
     { match: "INSERT INTO api_key_rate_limit", rows: [], first: { count: 1 } },
     { match: "UPDATE api_keys SET last_used_at", rows: [], runMeta: { changes: 1 } },
     { match: "DELETE FROM api_key_rate_limit", rows: [], runMeta: { changes: 0 } },
@@ -247,12 +248,10 @@ describe("worker.fetch", () => {
           "GET",
           mockD1(
             [
-              {
-                match: "FROM api_keys",
-                matchBinds: [VALID_KEY_PREFIX],
-                rows: [],
-                throwError: new Error("api key lookup unavailable"),
-              },
+              makeApiKeyPrefixLookupError(
+                VALID_KEY_PREFIX,
+                new Error("api key lookup unavailable"),
+              ),
               ...makeRequestAttributionTables(),
             ],
             { requireMatch: true },
@@ -753,12 +752,10 @@ describe("worker.fetch", () => {
       name: "returns 503 when API key lookup storage fails",
       dependency: "auth",
       keyCache: "cold",
-      failure: {
-        match: "FROM api_keys",
-        matchBinds: [VALID_KEY_PREFIX],
-        rows: [],
-        throwError: new Error("api key lookup unavailable"),
-      },
+      failure: makeApiKeyPrefixLookupError(
+        VALID_KEY_PREFIX,
+        new Error("api key lookup unavailable"),
+      ),
       expectedStatus: 503,
       failureReached: true,
       reachesEdgeCache: false,
@@ -768,12 +765,10 @@ describe("worker.fetch", () => {
       name: "serves hot protected edge-cache reads from the verified-key cache without D1 auth or limiter writes",
       dependency: "auth",
       keyCache: "warm",
-      failure: {
-        match: "FROM api_keys",
-        matchBinds: [VALID_KEY_PREFIX],
-        rows: [],
-        throwError: new Error("api key lookup unavailable"),
-      },
+      failure: makeApiKeyPrefixLookupError(
+        VALID_KEY_PREFIX,
+        new Error("api key lookup unavailable"),
+      ),
       expectedStatus: 200,
       expectedBody: { cached: true, warm: 2 },
       failureReached: false,
@@ -803,7 +798,25 @@ describe("worker.fetch", () => {
     const tables: MockTableConfig[] = [];
     if (testCase.dependency === "rate-limit") {
       tables.push(
-        { match: "FROM api_keys", matchBinds: [VALID_KEY_PREFIX], rows: [await validKeyRow()] },
+        makeApiKeyPrefixLookup({
+          prefix: VALID_KEY_PREFIX,
+          row: await makeAuthenticatedApiKeyRow({
+            pepper: VALID_KEY_PEPPER,
+            key_prefix: VALID_KEY_PREFIX,
+            secret: VALID_KEY_SECRET,
+            name: "Test",
+            owner_email: null,
+            tier: "standard",
+            traffic_class: "external",
+            rate_limit_per_minute: 120,
+            is_active: 1,
+            expires_at: null,
+            created_at: 1,
+            updated_at: 1,
+            last_used_at: null,
+            last_used_route: null,
+          }),
+        }),
         testCase.failure,
         { match: "UPDATE api_keys SET last_used_at", rows: [], runMeta: { changes: 1 } },
       );
@@ -886,12 +899,7 @@ describe("worker.fetch", () => {
     cacheMatch.mockClear();
     cacheMatch.mockResolvedValue(undefined);
     const db = expired
-      ? mockD1([{
-          match: "FROM api_keys",
-          matchBinds: [VALID_KEY_PREFIX],
-          rows: [],
-          throwError: new Error("auth unavailable"),
-        }], { requireMatch: true })
+      ? mockD1([makeApiKeyPrefixLookupError(VALID_KEY_PREFIX, new Error("auth unavailable"))], { requireMatch: true })
       : mockD1(await validKeyDbTables([{
           match: "cache",
           rows: [],
@@ -921,13 +929,15 @@ describe("worker.fetch", () => {
         headers: { "Content-Type": "application/json" },
       }));
 
-    const row = {
-      ...(await validKeyRow()),
+    const row = await makeAuthenticatedApiKeyRow({
+      pepper: VALID_KEY_PEPPER,
+      key_prefix: VALID_KEY_PREFIX,
+      secret: VALID_KEY_SECRET,
       rate_limit_per_minute: 1,
-    };
+    });
     const env = makeEnv({
       DB: mockD1([
-        { match: "FROM api_keys", matchBinds: [VALID_KEY_PREFIX], rows: [row] },
+        makeApiKeyPrefixLookup({ prefix: VALID_KEY_PREFIX, row }),
         {
           match: "INSERT INTO api_key_rate_limit",
           rows: [],

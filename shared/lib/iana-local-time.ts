@@ -16,6 +16,27 @@ const LOCAL_DATE_FORMATTER_OPTIONS: Intl.DateTimeFormatOptions = {
   hourCycle: "h23",
 };
 
+const localFormatterCache = new Map<string, Intl.DateTimeFormat>();
+
+/**
+ * One formatter per timezone. The minute-by-minute due-time scan below asks for
+ * local parts ~1,100 times per scheduling call, and constructing a formatter is
+ * about ten times the cost of formatting with an existing one, so a fresh
+ * formatter per candidate dominated the whole helper. Throws for a timezone the
+ * runtime does not recognize, exactly as direct construction does, and only
+ * caches zones that constructed successfully.
+ */
+function localFormatter(timezone: string): Intl.DateTimeFormat {
+  const cached = localFormatterCache.get(timezone);
+  if (cached) return cached;
+  const formatter = new Intl.DateTimeFormat("en-US", {
+    ...LOCAL_DATE_FORMATTER_OPTIONS,
+    timeZone: timezone,
+  });
+  localFormatterCache.set(timezone, formatter);
+  return formatter;
+}
+
 function numberPart(parts: Intl.DateTimeFormatPart[], type: Intl.DateTimeFormatPartTypes): number | null {
   const value = parts.find((part) => part.type === type)?.value;
   const parsed = value == null ? Number.NaN : Number(value);
@@ -24,10 +45,7 @@ function numberPart(parts: Intl.DateTimeFormatPart[], type: Intl.DateTimeFormatP
 
 function localParts(atMs: number, timezone: string): IanaLocalDate & { hour: number; minute: number; second: number } | null {
   try {
-    const parts = new Intl.DateTimeFormat("en-US", {
-      ...LOCAL_DATE_FORMATTER_OPTIONS,
-      timeZone: timezone,
-    }).formatToParts(new Date(atMs));
+    const parts = localFormatter(timezone).formatToParts(new Date(atMs));
     const year = numberPart(parts, "year");
     const month = numberPart(parts, "month");
     const day = numberPart(parts, "day");
@@ -55,11 +73,16 @@ function followingLocalDate(date: IanaLocalDate): IanaLocalDate {
   return { year: next.getUTCFullYear(), month: next.getUTCMonth() + 1, day: next.getUTCDate() };
 }
 
-/** Returns whether the runtime recognizes the supplied IANA timezone. */
+/**
+ * Returns whether the runtime recognizes the supplied IANA timezone. Resolving
+ * the shared cached formatter keeps a repeated check free and warms the zone a
+ * scheduling call is about to scan; only zone recognition can fail here, since
+ * the fixed field options are always valid.
+ */
 export function isValidIanaTimezone(timezone: string): boolean {
   if (!timezone || timezone.length > 64) return false;
   try {
-    new Intl.DateTimeFormat("en-US", { timeZone: timezone });
+    localFormatter(timezone);
     return true;
   } catch {
     return false;

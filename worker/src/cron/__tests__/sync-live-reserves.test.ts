@@ -4,8 +4,10 @@ import { type MockTableConfig } from "@shared/test-utils/mock-d1";
 import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import { buildChainRpcs } from "../../lib/chain-registry";
 import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
-import { buildSharedSourceCacheKey, LIVE_RESERVE_QUEUE_HASH, SYNC_ORDERED_CONFIGURED_COINS } from "../sync-live-reserves-shared";
+import { buildSharedSourceCacheKey, SYNC_ORDERED_CONFIGURED_COINS } from "../sync-live-reserves-shared";
 import {
+  checkpointIdentity as makeCheckpointIdentity,
+  checkpointTable as makeCheckpointTable,
   getReserveAdapterMock,
   mockLiveReserveAdapterRegistry,
   mockLiveReserveD1,
@@ -96,41 +98,14 @@ describe("syncLiveReserves", () => {
   });
 
   it("refuses a recovery suffix when the configured queue hash changed", async () => {
-    const checkpointIdentity = {
-      scheduleKey: "fourHourlyReserveSync",
-      slotStartedAt: 1_000,
-      job: "sync-live-reserves",
-      attemptNo: 2,
-      executionGeneration: 2,
-      invocationId: "recovery-owner",
-    };
-    const db = mockD1([{
-      match: "FROM worker_scheduled_checkpoints",
-      rows: [{
-        schedule_key: checkpointIdentity.scheduleKey,
-        slot_started_at: checkpointIdentity.slotStartedAt,
-        job: checkpointIdentity.job,
-        attempt_no: checkpointIdentity.attemptNo,
-        execution_generation: checkpointIdentity.executionGeneration,
-        invocation_id: checkpointIdentity.invocationId,
-        worker_version: "version-a",
-        queue_hash: "stale-queue-hash",
-        state: "recovering",
-        next_item_key: SYNC_ORDERED_CONFIGURED_COINS[0]?.id ?? null,
-        current_item_key: null,
-        current_domain_attempt_id: null,
-        items_done: 0,
-        items_total: SYNC_ORDERED_CONFIGURED_COINS.length,
-        child_dispositions_json: "{}",
-        recovery_owner: checkpointIdentity.invocationId,
-        recovery_lease_until: 2_000,
-        source_attempt_no: 1,
-        error: null,
-        created_at: 1_000,
-        updated_at: 1_100,
-        completed_at: null,
-      }],
-    }]);
+    const checkpointIdentity = makeCheckpointIdentity(2, "recovery-owner");
+    const db = mockD1([makeCheckpointTable({
+      attemptNo: checkpointIdentity.attemptNo,
+      invocationId: checkpointIdentity.invocationId,
+      nextItemKey: SYNC_ORDERED_CONFIGURED_COINS[0]?.id ?? null,
+      itemsDone: 0,
+      queueHash: "stale-queue-hash",
+    })]);
     const { syncLiveReserves } = await import("../sync-live-reserves");
 
     await expect(syncLiveReserves(
@@ -145,14 +120,7 @@ describe("syncLiveReserves", () => {
   });
 
   it("rejects a recovery attempt when its checkpoint is missing", async () => {
-    const checkpointIdentity = {
-      scheduleKey: "fourHourlyReserveSync",
-      slotStartedAt: 1_000,
-      job: "sync-live-reserves",
-      attemptNo: 2,
-      executionGeneration: 2,
-      invocationId: "missing-owner",
-    };
+    const checkpointIdentity = makeCheckpointIdentity(2, "missing-owner");
     const db = mockD1([{ match: "FROM worker_scheduled_checkpoints", rows: [] }]);
     const { syncLiveReserves } = await import("../sync-live-reserves");
 
@@ -190,42 +158,16 @@ describe("syncLiveReserves", () => {
       expected: "live reserve checkpoint item removed-coin no longer exists in the queue",
     },
   ])("rejects unsafe recovery when $label", async ({ nextItemKey, currentDomainAttemptId, repaired, expected }) => {
-    const checkpointIdentity = {
-      scheduleKey: "fourHourlyReserveSync",
-      slotStartedAt: 1_000,
-      job: "sync-live-reserves",
-      attemptNo: 2,
-      executionGeneration: 2,
-      invocationId: "recovery-owner",
-    };
+    const checkpointIdentity = makeCheckpointIdentity(2, "recovery-owner");
     const db = mockD1([
-      {
-        match: "FROM worker_scheduled_checkpoints",
-        rows: [{
-          schedule_key: checkpointIdentity.scheduleKey,
-          slot_started_at: checkpointIdentity.slotStartedAt,
-          job: checkpointIdentity.job,
-          attempt_no: checkpointIdentity.attemptNo,
-          execution_generation: checkpointIdentity.executionGeneration,
-          invocation_id: checkpointIdentity.invocationId,
-          worker_version: "version-a",
-          queue_hash: LIVE_RESERVE_QUEUE_HASH,
-          state: "recovering",
-          next_item_key: nextItemKey,
-          current_item_key: currentDomainAttemptId ? nextItemKey : null,
-          current_domain_attempt_id: currentDomainAttemptId,
-          items_done: 0,
-          items_total: SYNC_ORDERED_CONFIGURED_COINS.length,
-          child_dispositions_json: "{}",
-          recovery_owner: checkpointIdentity.invocationId,
-          recovery_lease_until: 2_000,
-          source_attempt_no: 1,
-          error: null,
-          created_at: 1_000,
-          updated_at: 1_100,
-          completed_at: null,
-        }],
-      },
+      makeCheckpointTable({
+        attemptNo: checkpointIdentity.attemptNo,
+        invocationId: checkpointIdentity.invocationId,
+        nextItemKey,
+        currentItemKey: currentDomainAttemptId ? nextItemKey : null,
+        currentDomainAttemptId,
+        itemsDone: 0,
+      }),
       ...(currentDomainAttemptId
         ? [
             { match: "SELECT 1 AS finalized", rows: [{ finalized: 1 }] },
@@ -249,14 +191,7 @@ describe("syncLiveReserves", () => {
   it("repairs crash-omitted history before advancing an authoritative item on retry", async () => {
     const lastCoin = SYNC_ORDERED_CONFIGURED_COINS[SYNC_ORDERED_CONFIGURED_COINS.length - 1];
     expect(lastCoin).toBeDefined();
-    const checkpointIdentity = {
-      scheduleKey: "fourHourlyReserveSync",
-      slotStartedAt: 2_000,
-      job: "sync-live-reserves",
-      attemptNo: 2,
-      executionGeneration: 2,
-      invocationId: "recovery-owner",
-    };
+    const checkpointIdentity = makeCheckpointIdentity(2, "recovery-owner", 2_000);
     const checkpointAdvanceError = new Error("checkpoint advance interrupted");
     const checkpointAdvanceConfig: MockTableConfig = {
       match: "items_done = ?",
@@ -264,33 +199,16 @@ describe("syncLiveReserves", () => {
       throwError: checkpointAdvanceError,
     };
     const db = mockD1([
-      {
-        match: "FROM worker_scheduled_checkpoints",
-        rows: [{
-          schedule_key: checkpointIdentity.scheduleKey,
-          slot_started_at: checkpointIdentity.slotStartedAt,
-          job: checkpointIdentity.job,
-          attempt_no: checkpointIdentity.attemptNo,
-          execution_generation: checkpointIdentity.executionGeneration,
-          invocation_id: checkpointIdentity.invocationId,
-          worker_version: "version-a",
-          queue_hash: LIVE_RESERVE_QUEUE_HASH,
-          state: "recovering",
-          next_item_key: lastCoin!.id,
-          current_item_key: lastCoin!.id,
-          current_domain_attempt_id: "authoritative-attempt",
-          items_done: SYNC_ORDERED_CONFIGURED_COINS.length - 1,
-          items_total: SYNC_ORDERED_CONFIGURED_COINS.length,
-          child_dispositions_json: "{}",
-          recovery_owner: checkpointIdentity.invocationId,
-          recovery_lease_until: 3_000,
-          source_attempt_no: 1,
-          error: null,
-          created_at: 2_000,
-          updated_at: 2_100,
-          completed_at: null,
-        }],
-      },
+      makeCheckpointTable({
+        attemptNo: checkpointIdentity.attemptNo,
+        invocationId: checkpointIdentity.invocationId,
+        nextItemKey: lastCoin!.id,
+        currentItemKey: lastCoin!.id,
+        currentDomainAttemptId: "authoritative-attempt",
+        itemsDone: SYNC_ORDERED_CONFIGURED_COINS.length - 1,
+        slotStartedAt: checkpointIdentity.slotStartedAt,
+        recoveryLeaseUntil: 3_000,
+      }),
       {
         match: "FROM reserve_composition c",
         rows: [{ finalized: 1, repaired: 1 }],

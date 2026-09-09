@@ -66,8 +66,7 @@ describe("fetchDefiLlamaPrices", () => {
     expect(prices).toEqual(new Map([["first", 2], ["second", 2]]));
   });
 
-  // audit: g042/C2 — disputed contract
-  it.fails("returns each caller's logical keys when an asset is reused in a request cache", async () => {
+  it("returns each caller's logical keys while sharing one upstream fetch for the same asset", async () => {
     vi.mocked(fetchTextWithRetry).mockResolvedValue({
       response: new Response(),
       body: JSON.stringify({ coins: { "ethereum:0xabc": { price: 2 } } }),
@@ -78,5 +77,27 @@ describe("fetchDefiLlamaPrices", () => {
       .toEqual(new Map([["first", 2]]));
     expect(await fetchDefiLlamaPrices([{ key: "second", chain: "ethereum", address: "0xabc" }], signal, ctx))
       .toEqual(new Map([["second", 2]]));
+    expect(await fetchDefiLlamaPrices([{ key: "second", chain: "ethereum", address: "0xabc" }], signal, ctx))
+      .toEqual(new Map([["second", 2]]));
+    expect(fetchTextWithRetry).toHaveBeenCalledTimes(1);
+  });
+
+  it("does not let a caller's fallback prices leak into a later cached request", async () => {
+    vi.mocked(fetchTextWithRetry).mockResolvedValue({
+      response: new Response(),
+      body: JSON.stringify({ coins: { "ethereum:0xabc": { price: 2 } } }),
+    });
+    const ctx = { requestCache: new Map<string, Promise<unknown>>() };
+    const signal = new AbortController().signal;
+    const assets = [
+      { key: "priced", chain: "ethereum", address: "0xABC" },
+      { key: "unpriced", chain: "ethereum", address: "0xDEF" },
+    ];
+
+    const first = await fetchDefiLlamaPrices(assets, signal, ctx);
+    first.set("unpriced", 99);
+
+    expect(await fetchDefiLlamaPrices(assets, signal, ctx)).toEqual(new Map([["priced", 2]]));
+    expect(fetchTextWithRetry).toHaveBeenCalledTimes(1);
   });
 });

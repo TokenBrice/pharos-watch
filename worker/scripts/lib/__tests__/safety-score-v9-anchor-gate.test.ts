@@ -154,10 +154,12 @@ describe("evaluateSafetyScoreV9AnchorGate", () => {
     expect(report.decision).toBe("gate-passed");
   });
 
-  it("fails a max-score adverse pin above its bound", () => {
+  it("uses the integer max-score boundary: 32 passes and 33 fails", () => {
     // The production contract retired its last max-score pin (U released
     // 2026-08-08 after pre-drifting in production), so the rule kind is
     // exercised through an injected contract, mirroring the pair-rule test.
+    // Decision D5 fixes this pin to integer scores; fractional cases are not
+    // part of the comparator contract.
     const contract: V9AnchorContract = {
       schemaVersion: 1, anchors: [], relative: [],
       adverse: [{ kind: "max-score", id: "u-united-stables", maxScore: 32, label: "U adverse pin" }],
@@ -165,12 +167,14 @@ describe("evaluateSafetyScoreV9AnchorGate", () => {
     const atBound = evaluateAtCaptureClock({ cards: [card("u-united-stables", 32)], contract });
     expect(atBound.decision).toBe("gate-passed");
     expect(verdict(atBound, "adverse:u-united-stables").status).toBe("pass");
-    const report = evaluateAtCaptureClock({
+    expect(verdict(atBound, "adverse:u-united-stables").required).toBe("score ≤ 32");
+
+    const aboveBound = evaluateAtCaptureClock({
       cards: [card("u-united-stables", 33)],
       contract,
     });
-    expect(report.decision).toBe("no-go");
-    const entry = verdict(report, "adverse:u-united-stables");
+    expect(aboveBound.decision).toBe("no-go");
+    const entry = verdict(aboveBound, "adverse:u-united-stables");
     expect(entry.status).toBe("fail");
     expect(entry.code).toBe("adverse-above-bound");
     expect(entry.required).toBe("score ≤ 32");

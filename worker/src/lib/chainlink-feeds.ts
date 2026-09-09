@@ -5,7 +5,6 @@ import { throwIfAborted } from "./abort";
 import { parseChainlinkLatestRoundData } from "./chainlink-round-data";
 import { fetchEtherscanProxyHex, fetchEvmCallHexAtBlock, fetchJsonRpcHexAtUrl } from "./evm-rpc";
 import { DECIMALS_SELECTOR, LATEST_ROUND_DATA_SELECTOR } from "./evm-selectors";
-export { parseChainlinkLatestRoundData, parseSignedInt256Word } from "./chainlink-round-data";
 import { DRPC_NETWORK } from "./drpc";
 import { mapWithConcurrency } from "./concurrency";
 
@@ -225,10 +224,11 @@ async function fetchSingleFeedQuote(
     if (!roundHex) {
       return { counter: "roundDataUnavailable", quote: null };
     }
-    const { answer, updatedAt } = parseChainlinkLatestRoundData(roundHex);
-    if (answer <= 0n || updatedAt <= 0) {
+    const round = parseChainlinkLatestRoundData(roundHex, `chainlink-feeds:${feed.pegKey}`);
+    if (round.invalidReason) {
       return { counter: "invalidAnswers", quote: null };
     }
+    const { answer, updatedAt } = round;
     if ((nowSec - updatedAt) > feed.staleAfterSec) {
       return { counter: "staleQuotes", quote: null };
     }

@@ -56,6 +56,37 @@ describe("buildStaticContentSecurityPolicy", () => {
         return [name, sources] as const;
       }));
     expect(directives.get("script-src")).toEqual(["'self'", `'nonce-${nonce}'`, origin]);
+    expect(directives.get("img-src")).toEqual(
+      telegramMiniApp
+        ? ["'self'", "https://coin-images.coingecko.com", "https://pbs.twimg.com", "https://abs.twimg.com", "data:"]
+        : [
+          "'self'",
+          "https://coin-images.coingecko.com",
+          "https://www.google-analytics.com",
+          "https://*.google-analytics.com",
+          "https://analytics.google.com",
+          "https://*.analytics.google.com",
+          "https://www.googletagmanager.com",
+          "https://*.googletagmanager.com",
+          "https://pbs.twimg.com",
+          "https://abs.twimg.com",
+          "data:",
+        ],
+    );
+    expect(directives.get("connect-src")).toEqual(
+      telegramMiniApp
+        ? ["'self'", "https://api.pharos.watch"]
+        : [
+          "'self'",
+          "https://api.pharos.watch",
+          "https://www.google-analytics.com",
+          "https://*.google-analytics.com",
+          "https://analytics.google.com",
+          "https://*.analytics.google.com",
+          "https://www.googletagmanager.com",
+          "https://*.googletagmanager.com",
+        ],
+    );
     expect(addNonceToInlineScripts("<script>run()</script>", nonce)).toContain(`nonce="${nonce}"`);
     expect(directives.get("frame-ancestors")).toEqual(
       telegramMiniApp ? ["https://telegram.org", "https://*.telegram.org"] : ["'none'"],

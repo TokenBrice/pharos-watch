@@ -220,6 +220,16 @@ describe("dispatchTelegramAlerts", () => {
     expect(formatConsolidatedMessageSpy).not.toHaveBeenCalled();
   });
 
+  // This case is the file's whole runtime (6.45s of 7.95s, measured 2026-09-09),
+  // and the 3,665-subscriber burst is load-bearing: it is the smallest burst
+  // above the production format budget, so a smaller one would make the
+  // per-cycle bound below trivially true. The cost is production-side and
+  // superlinear in the burst — per-flush target-plan verification (2.43s over
+  // 204 correlated-count reads of the generation's target rows) plus per-send
+  // job-counter reconciliation that re-aggregates every target of the job
+  // (2.35s over 916 transition batches). The same file at 400 subscribers costs
+  // 194ms, and the only phase seeding could skip (subscriber capture) is 110ms,
+  // so pre-seeding target-plan state does not pay here.
   it("C102: caps hot-path formatting at the fresh budget under a market-wide burst", async () => {
     const subscriberCount = TELEGRAM_MAX_MESSAGES_PER_RUN + TELEGRAM_FORMAT_BUDGET_ALLOWANCE + 1;
     const harness = createDispatchHarness();

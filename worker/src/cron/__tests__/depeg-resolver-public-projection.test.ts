@@ -303,6 +303,57 @@ describe("depeg-resolver public projection", () => {
     });
   });
 
+  it("flags a frozen prediction whose median duration has been outlived as stale", () => {
+    const row = resolverRow({ eventId: 9 });
+    const incident = canonicalIncident(row);
+    // lockedAt two hours ago with a one-hour median remaining duration means the
+    // predicted median resolution is already in the past at NOW_SEC.
+    const sealed = sealedPrediction(row, incident, 9, { lockedAt: NOW_SEC - 2 * 3600 });
+    const publication = firstPublication(sealed);
+    const response = buildDdrResponse({
+      candidateRows: [row],
+      incidentsByEventId: new Map([[row.eventId, incident]]),
+      sealed: [sealed],
+      firstPublication: [publication],
+      manifest: null,
+      errata: [],
+      lineage: LINEAGE,
+      nowSec: NOW_SEC,
+    });
+    const projected = response.rows[0];
+    if (projected?.kind !== "prediction") {
+      throw new Error("Expected projected prediction");
+    }
+    expect(projected.frozen.duration.medianResolveAt).toBe(NOW_SEC - 3600);
+    expect(projected.live.stale).toBe(true);
+    expect(projected.live.degradedReason).toBe("duration-exceeded");
+  });
+
+  it("keeps a frozen prediction whose median duration is still ahead fresh", () => {
+    const row = resolverRow({ eventId: 10 });
+    const incident = canonicalIncident(row);
+    // Default lock (NOW_SEC - 60) plus the one-hour median stays in the future.
+    const sealed = sealedPrediction(row, incident, 10);
+    const publication = firstPublication(sealed);
+    const response = buildDdrResponse({
+      candidateRows: [row],
+      incidentsByEventId: new Map([[row.eventId, incident]]),
+      sealed: [sealed],
+      firstPublication: [publication],
+      manifest: null,
+      errata: [],
+      lineage: LINEAGE,
+      nowSec: NOW_SEC,
+    });
+    const projected = response.rows[0];
+    if (projected?.kind !== "prediction") {
+      throw new Error("Expected projected prediction");
+    }
+    expect(projected.frozen.duration.medianResolveAt).toBeGreaterThan(NOW_SEC);
+    expect(projected.live.stale).toBe(false);
+    expect(projected.live.degradedReason).toBeNull();
+  });
+
   it("preserves hash-addressed retired safety contexts in immutable sealed predictions", () => {
     const row = resolverRow({ eventId: 6 });
     const incident = canonicalIncident(row);

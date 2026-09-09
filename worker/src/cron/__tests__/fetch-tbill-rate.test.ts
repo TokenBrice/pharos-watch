@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { RISK_FREE_RATE_FALLBACK } from "../../lib/constants";
 import { mockCircuitOutcomeRecord, mockFetchRetry } from "../../test-helpers/cron";
 import {
+  BOE_SONIA_COMPOUNDED_INDEX_CSV_SNIPPET,
   installCacheByKey,
   installBenchmarkFetch,
   makeBenchmarkCacheEntry,
@@ -9,6 +10,7 @@ import {
   makeRiskFreeRatesCacheRow,
   makeTbillFetchRoutes,
   makeUnavailableTbillFetchRoutes,
+  TREASURY_XML_SNIPPET,
   type BenchmarkFetchRoutes,
 } from "./rates-cron.test-support";
 import { YIELD_BENCHMARK_KEY_VALUES } from "@shared/types/yield";
@@ -63,18 +65,6 @@ import { getCache, setCache } from "../../lib/db-cache";
 import { logCronEvent } from "../../lib/cron-logger";
 import { shouldAttemptFetch, recordOutcome } from "../../lib/circuit-breaker";
 
-const TREASURY_XML_SNIPPET = `<QR_BC_CM><LIST_G_WEEK_OF_MONTH>
-<G_WEEK_OF_MONTH><LIST_G_NEW_DATE>
-<G_NEW_DATE><LIST_G_BC_CAT><G_BC_CAT>
-<BC_3MONTH>3.71</BC_3MONTH>
-</G_BC_CAT></LIST_G_BC_CAT><NEW_DATE>03-12-2026</NEW_DATE></G_NEW_DATE>
-<G_NEW_DATE><LIST_G_BC_CAT><G_BC_CAT>
-<BC_3MONTH>3.72</BC_3MONTH>
-</G_BC_CAT></LIST_G_BC_CAT><NEW_DATE>03-13-2026</NEW_DATE></G_NEW_DATE>
-</LIST_G_NEW_DATE></G_WEEK_OF_MONTH>
-</LIST_G_WEEK_OF_MONTH></QR_BC_CM>`;
-
-const BOE_SONIA_COMPOUNDED_INDEX_CSV_SNIPPET = "DATE,IUDZOS2\n01 Jan 2026,100\n01 Apr 2026,101\n";
 // ALFRED graph CSV uses the same observation shape with a date-stamped series column.
 const ALFRED_SONIA_COMPOUNDED_INDEX_CSV_SNIPPET = "observation_date,IUDZOS2_20260625\n2026-01-01,100\n2026-04-01,101\n";
 function mockTbillByUrl(overrides: BenchmarkFetchRoutes = {}, calls?: string[]) {

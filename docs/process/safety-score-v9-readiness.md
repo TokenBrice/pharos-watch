@@ -40,6 +40,27 @@ raw body leaves `captures/`, but a new replay or an integrity mismatch fails
 closed. Registries and attestations therefore remain byte-stable while the raw
 retention policy is enforced.
 
+## Test-owned replay fixtures
+
+Offline replay coverage needs original capture bodies, which no longer live in
+`shared/data/`. The recorded journals under
+`scripts/__tests__/fixtures/<assetId>-mechanism-measurement-block-<number>.json`
+are those bodies, recovered byte-identically from the commit that moved captures
+to R2 (`ade03b84b`):
+
+```bash
+git show ade03b84b^:shared/data/safety-score-v9/mechanism-measurements/<assetId>/<date>.json
+```
+
+`scripts/__tests__/measure-cdp-mechanism-metrics.test.ts` asserts each fixture's
+SHA-256 and byte count against the committed `<date>.summary.json` before
+replaying it through the configured family pipeline, so a hand-edited or
+regenerated fixture fails rather than becoming new evidence.
+`scripts/__tests__/fixtures/usde-ethena-frozen-legacy-protocol-api-v1.json` is
+the frozen legacy V1 protocol-API body recovered the same way; the protocol-API
+refresh pins its SHA-256, so the test replays it at the designated path and
+rejects the identical bytes under any other capture name.
+
 ## Recovered capture-time registries
 
 The September 2026 replay repair recovered these registry identities by exporting

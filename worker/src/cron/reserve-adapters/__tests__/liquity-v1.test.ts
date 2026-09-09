@@ -18,7 +18,7 @@ vi.mock("../helpers", async (importOriginal) => {
 import { fetchLiquityV1Reserves } from "../liquity-v1";
 import { fetchDefiLlamaPrices, fetchOnchainUint256, probeOptionalRedemptionRateBps } from "../helpers";
 
-import { TEST_SIGNAL as signal } from "./reserve-adapter.test-support";
+let signal: AbortSignal;
 const coin = { id: "lusd-liquity" } as StablecoinMeta;
 
 const config: LiveReservesConfig = {
@@ -44,6 +44,7 @@ const config: LiveReservesConfig = {
 
 describe("fetchLiquityV1Reserves", () => {
   beforeEach(() => {
+    signal = new AbortController().signal;
     vi.clearAllMocks();
   });
 

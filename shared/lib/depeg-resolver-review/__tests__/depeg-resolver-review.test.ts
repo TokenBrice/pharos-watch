@@ -627,8 +627,7 @@ describe("DDRR coverage metrics", () => {
     expect(summary.headline.operationalMissRatePct).toBe(1);
   });
 
-  // audit: s049-shared/B1 — disputed contract
-  it.fails("counts an incident once when its assigned state also has an operational cause", () => {
+  it("counts an incident once when its assigned state also has an operational cause", () => {
     const { summary } = reviewDdrrV2Rows({
       coverageRows: [
         coverage({
@@ -646,6 +645,29 @@ describe("DDRR coverage metrics", () => {
     expect(summary.headline.dataQualityGapCount).toBe(1);
     expect(summary.headline.missedLockDataQualityGapCount).toBe(1);
     expect(summary.headline.stateAssignedPct).toBe(1);
+  });
+
+  it("reports an incident with conflicting rows as unassigned instead of over-assigning the universe", () => {
+    const { summary } = reviewDdrrV2Rows({
+      assessments: [assessment({ incidentKey: "ddr2:conflict" })],
+      coverageRows: [
+        coverage({
+          incidentKey: "ddr2:conflict",
+          predictionState: "pending_lock",
+          coverageCause: "active_pending_lock",
+          sourceEventState: "active",
+          actualEndedAt: null,
+        }),
+      ],
+      actualEventsById: new Map([[1, actualEvent({ endedAt: LOCKED_AT + 3_600, recoveryPrice: 1 })]]),
+      nowSec: REVIEWED_AT,
+    });
+
+    expect(summary.headline.policyUniverseIncidentCount).toBe(1);
+    expect(summary.headline.lockedPredictionCount).toBe(1);
+    expect(summary.headline.pendingLockCount).toBe(1);
+    expect(summary.headline.stateAssignedPct).toBe(0);
+    expect(summary.headline.finalizedCoveragePct).toBe(0);
   });
 
   it("pins coverage state counts separately from operational-cause filters", () => {
@@ -769,7 +791,7 @@ describe("DDRR coverage metrics", () => {
         "confirmationTimeUnknownCount": 1,
         "currentEligibleOpportunityCount": 7,
         "dataQualityGapCount": 2,
-        "finalizedCoveragePct": 0.9166666666666666,
+        "finalizedCoveragePct": 0.75,
         "finalizedOpportunityCount": 5,
         "lockDeferredCount": 1,
         "missedLockDataQualityGapCount": 1,

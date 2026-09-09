@@ -176,6 +176,31 @@ describe("Lever 1 — insufficient-evidence withhold", () => {
     expect(trace.finalGrade).not.toBe("NR");
     expect(trace.finalGrade).toBe("F");
   });
+
+  it("flips pegMultiplier 0.85 from rated F to NR when the withhold danger floor drops below it", () => {
+    const changedPolicy = structuredClone(POLICY.policy);
+    changedPolicy.semantic.formula.danger.withholdPegMultiplierFloor = 0.84;
+    const counterfactual = loadV9MethodologyPolicy(changedPolicy);
+
+    const input = rawInput({
+      pillars: { backing: 40, exit: 40, control: 50 },
+      pegScore: 67, // pegMultiplier ≈ 0.85
+      evidenceLevel: "limited",
+    });
+
+    const baseline = scoreV9Input(input, POLICY, [], 2, true);
+    const changed = scoreV9Input(input, counterfactual, [], 2, true);
+
+    // Floor 0.9: 0.85 is danger, so the measured-adverse peg stays rated.
+    expect(baseline.finalGrade).toBe("F");
+    expect(baseline.finalScore).not.toBeNull();
+    expect(baseline.nrReasons.map((reason) => reason.code)).not.toContain("insufficient-evidence");
+
+    // Floor 0.84: 0.85 is no longer danger, so the two-limited-pillar input is withheld.
+    expect(changed.finalGrade).toBe("NR");
+    expect(changed.finalScore).toBeNull();
+    expect(changed.nrReasons.map((reason) => reason.code)).toContain("insufficient-evidence");
+  });
 });
 
 describe("Workstream A — attributable D/F ratings", () => {

@@ -4,8 +4,6 @@ import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import {
   DEX_PRICE_SCENARIOS,
   insertPublicPrice,
-  makeObservationMap,
-  makePricePoolMap,
   readPublicPriceRows,
   readPublicPrices,
   seedPublishedDexGeneration as createPublishedDexGeneration,
@@ -14,6 +12,10 @@ import {
   type SeedGenerationOptions,
   makeUsdPricePools,
 } from "../dex-liquidity/__tests__/scoring-test-support";
+import {
+  makeObservationMap,
+  makePricePoolMap,
+} from "../dex-liquidity/__tests__/scoring-test-builders";
 import {
   computeDepthStability,
   computeDexPrices,

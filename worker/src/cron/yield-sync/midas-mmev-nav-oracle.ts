@@ -109,6 +109,7 @@ export async function fetchMidasMmevNavOracleSource(
     if (decimals == null || rawRoundData == null) return null;
 
     const round = parseChainlinkLatestRoundData(rawRoundData, "midas-mmev-nav-oracle");
+    if (round.invalidReason) return null;
     if (!isFreshMidasNavOracleUpdate(round.updatedAt, nowSec)) return null;
 
     const currentPriceFloat = finiteDecimalNumberFromBigInt(round.answer, decimals);

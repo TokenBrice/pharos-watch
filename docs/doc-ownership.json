@@ -217,7 +217,7 @@
       "background": [
         { "path": "docs/depeg-detection.md", "anchor": "thresholds--constants" },
         "docs/dews.md",
-        "docs/depeg-resolver.md",
+        { "path": "docs/depeg-resolver.md", "anchor": "methodology-versioning" },
         { "path": "docs/dex-liquidity.md", "anchor": "dex-liquidity-score" },
         "docs/mint-authority-scoring.md",
         "docs/stability-index.md",

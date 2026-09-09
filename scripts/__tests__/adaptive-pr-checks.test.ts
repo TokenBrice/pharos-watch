@@ -127,7 +127,7 @@ describe("adaptive PR checks", () => {
     expect(selected).toEqual(
       expect.arrayContaining([
         "src/lib/__tests__/reserve-coinid-validation.test.ts",
-        "worker/src/cron/__tests__/telegram-recap-cost-boundary.test.ts",
+        "scripts/ci/check-architecture-boundaries.test.ts",
         "src/components/unrelated-source.test.ts",
       ]),
     );
@@ -139,7 +139,7 @@ describe("adaptive PR checks", () => {
       expect(selectPrTestFiles([], undefined, [source])).toEqual(expect.arrayContaining([
         "scripts/__tests__/og-worker-runtime.test.ts",
         "src/lib/__tests__/reserve-coinid-validation.test.ts",
-        "worker/src/cron/__tests__/telegram-recap-cost-boundary.test.ts",
+        "scripts/ci/check-architecture-boundaries.test.ts",
       ]));
     }
   });

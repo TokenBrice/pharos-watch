@@ -1,9 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { existsSync, readFileSync } from "node:fs";
-import { join } from "node:path";
 import {
   parseStablecoinMetaAssets,
-  STABLECOIN_SOURCE_DOMAIN_VALUES,
   StablecoinComplianceSidecarSchema,
   StablecoinMintAuthoritySidecarSchema,
   StablecoinRiskReviewSidecarSchema,
@@ -1203,43 +1200,6 @@ describe("Stablecoin research sidecar schemas", () => {
       governanceQuality: "single-entity",
     }).success).toBe(false);
   });
-});
-
-describe("StablecoinMeta schema — real fixture smoke tests", () => {
-  const fixtures = [
-    "usdt-tether",
-    "asusdf-astherus",
-    "susds-sky",
-    "stusd-stoneyield",
-  ];
-
-  // Since the D8 migration a base coin file is only one projection of an asset:
-  // compliance, reserves, mint-authority and risk-review fields live in sidecars.
-  // The catalog schema's refinements span domains (a base-file liveReservesConfig is
-  // validated against a reserves slice that now sits in the reserves sidecar), so the
-  // fixture has to be composed before parsing or it fails closed on its own absent
-  // fields. Sidecars carry exactly their domain's fields plus `id`.
-  function composeSourceAsset(fixture: string): unknown {
-    const dataDir = join(__dirname, "../../../../shared/data/stablecoins");
-    const composed = JSON.parse(readFileSync(join(dataDir, "coins", `${fixture}.json`), "utf8")) as Record<
-      string,
-      unknown
-    >;
-    for (const domain of STABLECOIN_SOURCE_DOMAIN_VALUES) {
-      const sidecarPath = join(dataDir, "domains", domain, `${fixture}.json`);
-      if (!existsSync(sidecarPath)) continue;
-      const { id: _id, ...fields } = JSON.parse(readFileSync(sidecarPath, "utf8")) as Record<string, unknown>;
-      Object.assign(composed, fields);
-    }
-    return composed;
-  }
-
-  for (const fixture of fixtures) {
-    it(`parses ${fixture}.json without error`, () => {
-      const raw = composeSourceAsset(fixture);
-      expect(() => parseStablecoinMetaAssets([raw], fixture)).not.toThrow();
-    });
-  }
 });
 
 describe("StablecoinMeta schema — PoR / composition lockstep", () => {

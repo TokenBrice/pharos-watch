@@ -53,6 +53,36 @@ describe("Safety Score V9 consumer freshness", () => {
     }, 1_800_000_000)).toBe(false);
   });
 
+  it("rejects a nonfinite publication time under current health", () => {
+    const nowSec = 1_800_000_000;
+    expect(isSafetyScoreV9SnapshotFresh({
+      updatedAt: Number.POSITIVE_INFINITY,
+      publicationHealth: currentHealth,
+    }, nowSec)).toBe(false);
+    expect(isSafetyScoreV9SnapshotFresh({
+      updatedAt: Number.NEGATIVE_INFINITY,
+      publicationHealth: currentHealth,
+    }, nowSec)).toBe(false);
+    expect(isSafetyScoreV9SnapshotFresh({
+      updatedAt: nowSec,
+      publicationHealth: currentHealth,
+    }, Number.NaN)).toBe(false);
+  });
+
+  it("accepts the present instant but rejects any future publication time", () => {
+    const nowSec = 1_800_000_000;
+
+    expect(
+      isSafetyScoreV9SnapshotFresh({ updatedAt: nowSec, publicationHealth: currentHealth }, nowSec),
+    ).toBe(true);
+    expect(
+      isSafetyScoreV9SnapshotFresh(
+        { updatedAt: nowSec + 1, publicationHealth: currentHealth },
+        nowSec,
+      ),
+    ).toBe(false);
+  });
+
   it("treats a held snapshot as unavailable even when its accepted time is fresh", () => {
     const nowSec = 1_800_000_000;
     expect(

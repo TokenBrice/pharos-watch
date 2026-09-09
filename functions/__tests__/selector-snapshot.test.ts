@@ -748,10 +748,11 @@ describe("selector-snapshot Pages Function", () => {
     expect(db.__getQuotaRows().get(`2026-06-19:${hash}`)).toBe(100);
     vi.setSystemTime(new Date("2026-06-20T00:00:00Z"));
     expect((await send()).status).toBe(200);
-    expect([...db.__getQuotaRows()]).toEqual([
+    // The quota lookup has no ORDER BY, so compare key/value pairs independent of row order.
+    expect(db.__getQuotaRows()).toEqual(new Map([
       [`2026-06-19:${hash}`, 100],
       [`2026-06-20:${hash}`, 1],
-    ]);
+    ]));
   });
 
   it("uses deterministic, IP-separated and configured-pepper HMAC quota identities", async () => {

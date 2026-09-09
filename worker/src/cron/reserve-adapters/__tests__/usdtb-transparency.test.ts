@@ -20,6 +20,7 @@ import {
   expectValidAdapterOutput,
   mockedReserveHelper,
 } from "./reserve-adapter.test-support";
+import { USDTB_BACKING_AND_SUPPLY_PAYLOAD as USDTB_BACKING } from "./reserve-adapter-payloads.test-support";
 let signal: AbortSignal;
 
 function makeCoin(): StablecoinMeta {
@@ -36,20 +37,6 @@ function makeConfig(): LiveReservesConfig {
     },
   } as unknown as LiveReservesConfig;
 }
-
-// Captured 2026-07-09 from GET https://usdtb.money/api/transparency/backing-and-supply/current
-const USDTB_BACKING: UsdtbBackingAndSupplyPayload = {
-  assetsInMotion: 9115451.68,
-  backingAssets: {
-    BUIDL: [{ amount: 767603510.39, custodian: "0x2004F7f7B600d962170d7f28114Cc123c5e98451" }],
-    "BUIDL-I": [{ amount: 0, custodian: "0x2004F7f7B600d962170d7f28114Cc123c5e98451" }],
-    USDC: [{ amount: 0.000458, custodian: "0x2004F7f7B600d962170d7f28114Cc123c5e98451" }],
-    USDT: [{ amount: 0, custodian: "0x2004F7f7B600d962170d7f28114Cc123c5e98451" }],
-    USDtb: [{ amount: 0, custodian: "0x2004F7f7B600d962170d7f28114Cc123c5e98451" }],
-  },
-  lastUpdatedAt: "2026-07-09T16:08:11.000Z",
-  supply: 775334449.6661826,
-};
 
 beforeEach(() => {
   vi.clearAllMocks();

@@ -14,6 +14,27 @@ const FX_FRANKFURTER_RATES = {
 };
 const FX_SECONDARY_USD = { cnh: 7.28, rub: 90, uah: 41, ars: 1400, kgs: 87, ngn: 1370, xof: 560 };
 
+export const TREASURY_XML_SNIPPET = `<QR_BC_CM><LIST_G_WEEK_OF_MONTH>
+<G_WEEK_OF_MONTH><LIST_G_NEW_DATE>
+<G_NEW_DATE><LIST_G_BC_CAT><G_BC_CAT>
+<BC_3MONTH>3.71</BC_3MONTH>
+</G_BC_CAT></LIST_G_BC_CAT><NEW_DATE>03-12-2026</NEW_DATE></G_NEW_DATE>
+<G_NEW_DATE><LIST_G_BC_CAT><G_BC_CAT>
+<BC_3MONTH>3.72</BC_3MONTH>
+</G_BC_CAT></LIST_G_BC_CAT><NEW_DATE>03-13-2026</NEW_DATE></G_NEW_DATE>
+</LIST_G_NEW_DATE></G_WEEK_OF_MONTH>
+</LIST_G_WEEK_OF_MONTH></QR_BC_CM>`;
+
+export const BOE_SONIA_COMPOUNDED_INDEX_CSV_SNIPPET = "DATE,IUDZOS2\n01 Jan 2026,100\n01 Apr 2026,101\n";
+
+export const CBRT_TLREF_JSON_SNIPPET = JSON.stringify({
+  totalCount: 2,
+  items: [
+    { Tarih: "06-05-2026", TP_BISTTLREF_ORAN: "39.99" },
+    { Tarih: "06-08-2026", TP_BISTTLREF_ORAN: "40.00" },
+  ],
+});
+
 export function frankfurterBody(extraRates: Record<string, number> = {}) {
   return { base: "USD", date: "2025-06-15", rates: { ...FX_FRANKFURTER_RATES, ...extraRates } };
 }
@@ -184,7 +205,7 @@ const HEALTHY_BENCHMARK_ROUTES: BenchmarkFetchRoutes = {
     "observation_date,IUDZOS2\n2026-01-01,100\n2026-04-01,101\n",
     { status: 200 },
   ),
-  "bankofengland.co.uk": new Response("DATE,IUDZOS2\n01 Jan 2026,100\n01 Apr 2026,101\n", { status: 200 }),
+  "bankofengland.co.uk": new Response(BOE_SONIA_COMPOUNDED_INDEX_CSV_SNIPPET, { status: 200 }),
   "stat-search.boj.or.jp": new Response(JSON.stringify({
     RESULTSET: [{ SERIES_CODE: "STRDCLUCON", VALUES: { SURVEY_DATES: [20260302], VALUES: [0.1] } }],
   }), { status: 200 }),
@@ -216,13 +237,7 @@ const HEALTHY_BENCHMARK_ROUTES: BenchmarkFetchRoutes = {
 </soap:Envelope>`,
     { status: 200, headers: { "Content-Type": "text/xml" } },
   ),
-  "evds3.tcmb.gov.tr/igmevdsms-dis/fe": new Response(JSON.stringify({
-    totalCount: 2,
-    items: [
-      { Tarih: "06-05-2026", TP_BISTTLREF_ORAN: "39.99" },
-      { Tarih: "06-08-2026", TP_BISTTLREF_ORAN: "40.00" },
-    ],
-  }), { status: 200 }),
+  "evds3.tcmb.gov.tr/igmevdsms-dis/fe": new Response(CBRT_TLREF_JSON_SNIPPET, { status: 200 }),
 };
 
 export function makeBenchmarkFetchRoutes(overrides: BenchmarkFetchRoutes = {}): BenchmarkFetchRoutes {

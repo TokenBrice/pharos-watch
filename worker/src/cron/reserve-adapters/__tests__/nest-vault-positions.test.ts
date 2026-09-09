@@ -13,14 +13,13 @@ vi.mock("../helpers", async (importOriginal) => {
 
 import { fetchNestVaultPositionsReserves } from "../nest-vault-positions";
 import { fetchJsonWithRetry } from "../helpers";
-import {
-  expectValidAdapterOutput,
-  mockedReserveHelper,
-  TEST_SIGNAL,
-} from "./reserve-adapter.test-support";
+import { expectValidAdapterOutput, mockedReserveHelper } from "./reserve-adapter.test-support";
+
+let signal: AbortSignal;
 
 describe("fetchNestVaultPositionsReserves", () => {
   beforeEach(() => {
+    signal = new AbortController().signal;
     vi.clearAllMocks();
   });
 
@@ -89,7 +88,7 @@ describe("fetchNestVaultPositionsReserves", () => {
     const result = await fetchNestVaultPositionsReserves(
       coin!,
       coin!.liveReservesConfig!,
-      TEST_SIGNAL,
+      signal,
     );
 
     expect(result.slices).toEqual([
@@ -172,7 +171,7 @@ describe("fetchNestVaultPositionsReserves", () => {
     const result = await fetchNestVaultPositionsReserves(
       coin!,
       coin!.liveReservesConfig!,
-      TEST_SIGNAL,
+      signal,
     );
 
     expect(result.slices).toEqual([
@@ -243,7 +242,7 @@ describe("fetchNestVaultPositionsReserves", () => {
     await expect(fetchNestVaultPositionsReserves(
       coin!,
       coin!.liveReservesConfig!,
-      TEST_SIGNAL,
+      signal,
     )).rejects.toThrow(error);
   });
 });

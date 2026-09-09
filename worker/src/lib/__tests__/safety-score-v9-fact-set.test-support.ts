@@ -15,16 +15,60 @@ import {
   makeV9TwoAssetFixedInput as exactTwoAssetFixedInput,
   makeV9Extension as makeV9Extension,
   makeV9QueuedRedemptionFixedInput as queuedRedemptionFixedInput,
+  v9CoinMaxReviewedAtSec,
   v9Status as status,
 } from "../../test-helpers/v9-fixed-input";
 import { ACTIVE_META_BY_ID } from "@shared/lib/stablecoins/registry";
+import type { V9FixedInputOptions } from "../../test-helpers/v9-fixed-input";
 import usdtMetaSource from "@shared/data/stablecoins/coins/usdt-tether.json";
 import usdtComplianceSource from "@shared/data/stablecoins/domains/compliance/usdt-tether.json";
 import usdtMintAuthoritySource from "@shared/data/stablecoins/domains/mint-authority/usdt-tether.json";
 import usdtReserveSource from "@shared/data/stablecoins/domains/reserves/usdt-tether.json";
 import usdtRiskReviewSource from "@shared/data/stablecoins/domains/risk-review/usdt-tether.json";
+import wrappedMSource from "@shared/data/stablecoins/coins/wm-m0.json";
+import xautMetaSource from "@shared/data/stablecoins/coins/xaut-tether.json";
+import wrappedMRiskReview from "@shared/data/stablecoins/domains/risk-review/wm-m0.json";
+import xautRiskReview from "@shared/data/stablecoins/domains/risk-review/xaut-tether.json";
+import wrappedMMintAuthority from "@shared/data/stablecoins/domains/mint-authority/wm-m0.json";
+import xautMintAuthority from "@shared/data/stablecoins/domains/mint-authority/xaut-tether.json";
 
 export type FixedInput = ReturnType<typeof exactFixedInput>;
+
+export const WM_FACT_SET_CLOCK_SEC = v9CoinMaxReviewedAtSec("wm-m0") + 9 * 3_600;
+export const XAUT_FACT_SET_CLOCK_SEC = v9CoinMaxReviewedAtSec("xaut-tether") + 9 * 3_600;
+
+export function wmFactSetMeta(): V9ExtensionRegistryMeta {
+  return {
+    ...structuredClone(wrappedMSource),
+    bridgeRouteRisk: structuredClone(wrappedMRiskReview.bridgeRouteRisk),
+    mintAuthority: structuredClone(wrappedMMintAuthority.mintAuthority),
+  } as unknown as V9ExtensionRegistryMeta;
+}
+
+export function xautFactSetMeta(): V9ExtensionRegistryMeta {
+  return {
+    ...structuredClone(xautMetaSource),
+    bridgeRouteRisk: structuredClone(xautRiskReview.bridgeRouteRisk),
+    mintAuthority: structuredClone(xautMintAuthority.mintAuthority),
+  } as unknown as V9ExtensionRegistryMeta;
+}
+
+export function wmFactSetFixedInput(options: V9FixedInputOptions = {}): FixedInput {
+  return exactFixedInput({
+    assetId: "wm-m0",
+    clockSec: WM_FACT_SET_CLOCK_SEC,
+    ...options,
+  });
+}
+
+export function xautFactSetFixedInput(options: V9FixedInputOptions = {}): FixedInput {
+  return exactFixedInput({
+    assetId: "xaut-tether",
+    clockSec: XAUT_FACT_SET_CLOCK_SEC,
+    ...options,
+  });
+}
+
 type ExtensionAsset = SafetyScoreV9FactSetExtensionV2["assets"][number];
 type ControlOverlay = NonNullable<Extract<NonNullable<ExtensionAsset["controlReview"]>, { state: "partially-reviewed-controls" }>>["controls"][number];
 type BridgeRoute = NonNullable<NonNullable<V9ExtensionRegistryMeta["bridgeRouteRisk"]>["routes"]>[number];

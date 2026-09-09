@@ -55,7 +55,7 @@ import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import type { DexMeasuredExecutionTarget } from "@shared/types/measured-execution";
 import type { ExitRouteObservation } from "@shared/types/market";
 import { buildPoolFingerprint, initMetrics } from "../dex-liquidity/pool-helpers";
-import { makePool } from "../dex-liquidity/__tests__/scoring-test-support";
+import { makePool } from "../dex-liquidity/__tests__/scoring-test-builders";
 import {
   computeDepthStability,
   computeDexPrices,

@@ -34,7 +34,7 @@ import {
   probeOptionalRedemptionRateBps,
 } from "../helpers";
 
-import { TEST_SIGNAL as signal } from "./reserve-adapter.test-support";
+let signal: AbortSignal;
 const coin = { id: "test-coin" } as unknown as StablecoinMeta;
 
 const HONEY_FACTORY = "0xa4afef880f5ce1f63c9fb48f661e27f8b4216401";
@@ -227,6 +227,7 @@ function makeBranchConfig(
 }
 
 beforeEach(() => {
+  signal = new AbortController().signal;
   vi.clearAllMocks();
   vi.mocked(fetchOnchainMulticall3).mockReset().mockResolvedValue(null);
 });

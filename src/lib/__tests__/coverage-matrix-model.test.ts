@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import complianceAsset from "@shared/data/stablecoins/coins.compliance.generated.json";
 import { CLIENT_TRACKED_META_BY_ID } from "@shared/lib/stablecoins/client-registry";
 import { buildCoverageMatrixModel } from "@/lib/coverage-matrix-model";
 import { makeReportCardsV9Response, makeV9Card } from "@/test/fixtures/safety-score-v9";
@@ -17,6 +18,40 @@ function resource<T>(
 }
 
 describe("buildCoverageMatrixModel", () => {
+  it("joins compliance profiles onto compact registry rows and aggregates assessed coverage", () => {
+    const model = buildCoverageMatrixModel({
+      stablecoins: resource({
+        peggedAssets: [
+          { id: "usdc-circle", circulating: { peggedUSD: 1_000 } },
+        ],
+      } as never),
+      pegSummary: resource({ coins: [] } as never),
+      dexLiquidity: resource({} as never),
+      redemptionBackstops: resource({ coins: {} } as never),
+      yieldRankings: resource({ rankings: [] } as never),
+      mintBurnFlows: resource({ coins: [] } as never),
+      reportCards: resource(makeReportCardsV9Response({ cards: [] })),
+    });
+    const profiles = new Map(complianceAsset.map((entry) => [entry.id, entry]));
+
+    for (const key of ["mica", "genius"] as const) {
+      const assessedRows = model.rows.filter((row) => profiles.get(row.id)?.[key]);
+      expect(assessedRows.length).toBeGreaterThan(0);
+      for (const row of model.rows) {
+        const profile = profiles.get(row.id);
+        const expectedKind = key === "mica" ? profile?.mica?.status : profile?.genius?.authorizationStatus;
+        expect(row.statuses[key].kind, `${row.id}: ${key}`).toBe(expectedKind ?? "unassessed");
+        expect(row.statuses[key].available).toBe(expectedKind !== undefined);
+      }
+      expect(model.featureSummaries.find((summary) => summary.feature.key === key)).toMatchObject({
+        availableCount: assessedRows.length,
+        totalCount: model.rows.length,
+        coveragePct: (assessedRows.length / model.rows.length) * 100,
+        mcapSharePct: 100,
+      });
+    }
+  });
+
   it("builds the pure coverage matrix model from query snapshots", () => {
     const coin = CLIENT_TRACKED_META_BY_ID.get("usdc-circle");
     expect(coin).toBeDefined();

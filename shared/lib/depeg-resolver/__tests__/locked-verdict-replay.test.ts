@@ -11,14 +11,54 @@ import {
   resolveOutlook,
   type DdrResolveInput,
   type DdrSafetyContextProvenance,
+  type DdrSafetyContextStatus,
   type DdrWindDownFingerprintContext,
 } from "../index";
 import lockedVerdictFixtureJson from "./fixtures/locked-verdict-replay.json";
+
+/**
+ * The fixture's `lockTime` / `recordedDuration` blocks are read back from the
+ * sealed public-prediction payloads in production D1 — see
+ * `./fixtures/locked-verdict-replay.README.md` for the extraction query. Those
+ * fields, plus `expectedTier` and `sourceFactors`, are lock-time evidence.
+ *
+ * Registry structure is *not* recoverable: nothing stores the lock-time value of
+ * `mechanismArchetype`, `mintPath`, `authorityPosture`, `collateralQuality`,
+ * `custodyModel`, `reserves`, `canBeBlacklisted`, `dependencyImpaired`,
+ * `windDownAnnouncedAt`, the redemption-backstop fields, the incident history
+ * behind R5, or the DEX/TVL trend inputs. Those stay a synthetic reconstruction
+ * back-solved from the recorded attributions, so a matching resolver verdict is
+ * scenario agreement rather than historical replay.
+ */
 
 interface LockedFactorAttribution {
   code: DdrFactorCode;
   kind: DdrFactorKind;
   severity: DdrFactorSeverity;
+}
+
+/** Lock-time context recorded in `sealed_payload_json`. */
+interface LockedTimeEvidence {
+  registryStatus: string | null;
+  peakDeviationBps: number;
+  currentDeviationBps: number;
+  supplyChange7dPct: number | null;
+  supplyChange30dPct: number | null;
+  mintSurge: boolean;
+  liquidityScore: number | null;
+  dewsBand: string | null;
+  dewsScore: number | null;
+  safetyGrade: string | null;
+  safetyScore: number | null;
+  safetyContextStatus: string | null;
+}
+
+/** Duration verdict recorded alongside the sealed resolution. */
+interface LockedRecordedDuration {
+  suppressed: boolean;
+  suppressedReason: string | null;
+  medianSec: number | null;
+  ageStatus: string | null;
 }
 
 interface LockedVerdictRow {
@@ -37,11 +77,18 @@ interface LockedVerdictRow {
   abovePegControl: boolean;
   knownMiss: "risk_noted_terminal" | "false_terminal" | null;
   sourceFactors: LockedFactorAttribution[];
+  lockTime: LockedTimeEvidence;
+  recordedDuration: LockedRecordedDuration;
 }
 
 interface LockedVerdictFixture {
-  schemaVersion: 1;
+  schemaVersion: 2;
   source: string;
+  lockTimeEvidence: {
+    database: string;
+    columns: string[];
+    extraction: string;
+  };
   rows: LockedVerdictRow[];
 }
 
@@ -60,16 +107,15 @@ interface ExpectedFactorOnlyDelta {
   reason: string;
 }
 
-interface LockedFingerprintCalibration {
-  supplyChange30dPct: number | null;
+/** DEX / TVL trend inputs, which no lock-time record preserves. */
+interface LockedDexContext {
   tvlChange7d: number | null;
   tvlChange30d: number | null;
   volumeChange30d: number | null;
-  peakDeviationBps?: number;
   totalVolume24hUsd?: number | null;
 }
 
-const fixture = lockedVerdictFixtureJson as LockedVerdictFixture;
+const fixture = lockedVerdictFixtureJson as unknown as LockedVerdictFixture;
 
 const WIND_DOWN_ANNOUNCEMENTS: Readonly<Record<string, string>> = {
   "usdr-stablr": "2026-05-24",
@@ -78,33 +124,39 @@ const WIND_DOWN_ANNOUNCEMENTS: Readonly<Record<string, string>> = {
   "mim-abracadabra": "2026-06-24",
 };
 
-const K6_FINGERPRINT_CALIBRATION: Readonly<Record<string, LockedFingerprintCalibration>> = {
-  "ddrr-66": { supplyChange30dPct: -1.415, tvlChange7d: -7.3013, tvlChange30d: -8.7959, volumeChange30d: -100 },
-  "ddrr-48": { supplyChange30dPct: -0.3147, tvlChange7d: -0.0228, tvlChange30d: -16.6083, volumeChange30d: -100 },
-  "ddrr-30": { supplyChange30dPct: -98.3528, tvlChange7d: 15.3012, tvlChange30d: -87.0387, volumeChange30d: -99.9989 },
+// Synthetic reconstruction: DEX/TVL trends are not part of the sealed record.
+const SYNTHETIC_DEX_CONTEXT: Readonly<Record<string, LockedDexContext>> = {
+  "ddrr-66": { tvlChange7d: -7.3013, tvlChange30d: -8.7959, volumeChange30d: -100 },
+  "ddrr-48": { tvlChange7d: -0.0228, tvlChange30d: -16.6083, volumeChange30d: -100 },
+  "ddrr-30": { tvlChange7d: 15.3012, tvlChange30d: -87.0387, volumeChange30d: -99.9989 },
   "ddrr-29": {
-    supplyChange30dPct: 0.0063,
     tvlChange7d: 0.0015,
     tvlChange30d: -0.0572,
     volumeChange30d: 790,
-    peakDeviationBps: -5_465,
     totalVolume24hUsd: 89,
   },
-  "ddrr-24": { supplyChange30dPct: 0.3033, tvlChange7d: 24.9452, tvlChange30d: 37.3423, volumeChange30d: 306.8819 },
-  "ddrr-22": { supplyChange30dPct: -0.1668, tvlChange7d: 13.8109, tvlChange30d: 35.9855, volumeChange30d: 68.9466 },
-  "ddrr-18": { supplyChange30dPct: -1.0911, tvlChange7d: -0.4497, tvlChange30d: -7.2195, volumeChange30d: 4.2618 },
-  "ddrr-17": { supplyChange30dPct: null, tvlChange7d: 11.1406, tvlChange30d: null, volumeChange30d: null },
-  "ddrr-13": { supplyChange30dPct: null, tvlChange7d: 11.0998, tvlChange30d: null, volumeChange30d: null },
-  "ddrr-12": { supplyChange30dPct: -51.2341, tvlChange7d: -74.5135, tvlChange30d: 12982.6316, volumeChange30d: 40.2108 },
-  "ddrr-8": { supplyChange30dPct: -15.2485, tvlChange7d: -4.3924, tvlChange30d: -62.1001, volumeChange30d: -42.7978 },
-  "ddrr-7": { supplyChange30dPct: -22.8461, tvlChange7d: -0.7994, tvlChange30d: -0.5038, volumeChange30d: -90.723 },
-  "ddrr-4": { supplyChange30dPct: -0.0019, tvlChange7d: 96.5062, tvlChange30d: 518.8116, volumeChange30d: null },
-  "ddrr-1": { supplyChange30dPct: null, tvlChange7d: null, tvlChange30d: null, volumeChange30d: null },
+  "ddrr-24": { tvlChange7d: 24.9452, tvlChange30d: 37.3423, volumeChange30d: 306.8819 },
+  "ddrr-22": { tvlChange7d: 13.8109, tvlChange30d: 35.9855, volumeChange30d: 68.9466 },
+  "ddrr-18": { tvlChange7d: -0.4497, tvlChange30d: -7.2195, volumeChange30d: 4.2618 },
+  "ddrr-17": { tvlChange7d: 11.1406, tvlChange30d: null, volumeChange30d: null },
+  "ddrr-13": { tvlChange7d: 11.0998, tvlChange30d: null, volumeChange30d: null },
+  "ddrr-12": { tvlChange7d: -74.5135, tvlChange30d: 12982.6316, volumeChange30d: 40.2108 },
+  "ddrr-8": { tvlChange7d: -4.3924, tvlChange30d: -62.1001, volumeChange30d: -42.7978 },
+  "ddrr-7": { tvlChange7d: -0.7994, tvlChange30d: -0.5038, volumeChange30d: -90.723 },
+  "ddrr-4": { tvlChange7d: 96.5062, tvlChange30d: 518.8116, volumeChange30d: null },
+};
+
+// Sealed payloads predate the V9-only provenance union: a v8 identification
+// supplies no V9 anchors, which the current union spells `unsupported-model`.
+const SAFETY_CONTEXT_STATUS_BY_RECORD: Readonly<Record<string, DdrSafetyContextStatus>> = {
+  "v9-identified": "v9-identified",
+  "v8-identified": "unsupported-model",
+  "unsupported-model": "unsupported-model",
 };
 
 // Rubric tasks append only intentional verdict changes here. Any other replay
 // delta remains a failure.
-export const EXPECTED_DELTAS: ExpectedDelta[] = [
+const EXPECTED_DELTAS: ExpectedDelta[] = [
   {
     taskId: "REM-D",
     rowId: "ddrr-67",
@@ -171,24 +223,18 @@ export const EXPECTED_DELTAS: ExpectedDelta[] = [
   },
 ];
 
-export const EXPECTED_FACTOR_ONLY_DELTAS: ExpectedFactorOnlyDelta[] = [
+const EXPECTED_FACTOR_ONLY_DELTAS: ExpectedFactorOnlyDelta[] = [
   {
     taskId: "T2.2",
     rowId: "ddrr-30",
     code: "K6_wind_down",
-    reason: "USDR's lock-time supply and DEX trends add the wind-down fingerprint to its existing severe K6 factor.",
+    reason: "USDR's recorded lock-time supply collapse plus synthetic DEX trends add the wind-down fingerprint to its existing severe K6 factor.",
   },
   {
     taskId: "T2.3",
     rowId: "ddrr-29",
     code: "K6_wind_down",
-    reason: "GYEN's catastrophic depth, flat supply, and $89 DEX volume add calm-catastrophic evidence to its existing severe K6 factor.",
-  },
-  {
-    taskId: "T2.2",
-    rowId: "ddrr-12",
-    code: "K6_wind_down",
-    reason: "EURR's lock-time supply and DEX trends add the wind-down fingerprint to its existing severe K6 factor.",
+    reason: "GYEN's catastrophic recorded depth, flat recorded supply, and $89 synthetic DEX volume add calm-catastrophic evidence to its existing severe K6 factor.",
   },
 ];
 
@@ -227,12 +273,10 @@ function sourceFactor(
 function tierFromAttributions(
   direction: DepegDirection,
   factors: LockedFactorAttribution[],
-  frozenTerminal = false,
 ): DdrResolutionTier {
   const kills = factors.filter((factor) => factor.kind === "kill");
   const anchors = factors.filter((factor) => factor.kind === "anchor");
 
-  if (frozenTerminal) return "recovery_unlikely";
   if (direction === "above") {
     return kills.some((factor) => factor.code === "K5_exit_collapse")
       ? "at_risk"
@@ -256,15 +300,6 @@ function tierFromAttributions(
   return "at_risk";
 }
 
-// Synthetic attribution reconstruction only: the fixture lacks original lock-time
-// status/raw inputs. This answer-derived status is not historical replay evidence.
-function inferFrozenTerminal(row: LockedVerdictRow): boolean {
-  return (
-    tierFromAttributions(row.direction, row.sourceFactors) !== row.expectedTier &&
-    tierFromAttributions(row.direction, row.sourceFactors, true) === row.expectedTier
-  );
-}
-
 function reconstructResolutionInput(row: LockedVerdictRow): DdrResolveInput {
   const k1 = sourceFactor(row, "K1_supply_weaponization");
   const k2 = sourceFactor(row, "K2_backing_impairment");
@@ -273,23 +308,22 @@ function reconstructResolutionInput(row: LockedVerdictRow): DdrResolveInput {
   const k5 = sourceFactor(row, "K5_exit_collapse");
   const r1 = sourceFactor(row, "R1_noninflatable_supply");
   const r2 = sourceFactor(row, "R2_hard_collateral_redemption");
-  const r3 = sourceFactor(row, "R3_no_supply_anomaly");
   const r4 = sourceFactor(row, "R4_no_freeze_point");
-  const r5 = sourceFactor(row, "R5_proven_meanreversion");
-
-  const calibration = K6_FINGERPRINT_CALIBRATION[row.rowId];
-  const peakMagnitude = k4?.severity === "severe" ? 3_000 : 500;
-  const peakDeviationBps =
-    calibration?.peakDeviationBps ??
-    (row.direction === "above" ? peakMagnitude : -peakMagnitude);
-  const safetyContext: DdrSafetyContextProvenance | undefined = r5
-    ? { status: "v9-identified", reason: null, identity: null }
-    : undefined;
+  const evidence = row.lockTime;
+  const dex = SYNTHETIC_DEX_CONTEXT[row.rowId];
+  const safetyContext: DdrSafetyContextProvenance | undefined =
+    evidence.safetyContextStatus == null
+      ? undefined
+      : {
+          status: SAFETY_CONTEXT_STATUS_BY_RECORD[evidence.safetyContextStatus] ?? "unsupported-model",
+          reason: null,
+          identity: null,
+        };
   const supply: DdrResolveInput["supply"] = {
-    covered: true,
-    change7dPct: r3?.severity === "strong" ? 0 : r3?.severity === "weak" ? 15 : 25,
-    change30dPct: calibration?.supplyChange30dPct ?? null,
-    mintSurge: r3 != null ? false : true,
+    covered: evidence.supplyChange7dPct != null,
+    change7dPct: evidence.supplyChange7dPct,
+    change30dPct: evidence.supplyChange30dPct,
+    mintSurge: evidence.mintSurge,
   };
   const coin: DdrResolveInput["coin"] = {
     id: row.stablecoinId,
@@ -297,17 +331,22 @@ function reconstructResolutionInput(row: LockedVerdictRow): DdrResolveInput {
     name: row.symbol,
     pegCurrency: row.pegCurrency,
     governance: row.governance,
-    status: inferFrozenTerminal(row) ? "frozen" : "active",
+    status: evidence.registryStatus,
     authorityPosture: "reviewed-non-risky",
     dependencyImpaired: false,
     windDownAnnouncedAt: WIND_DOWN_ANNOUNCEMENTS[row.stablecoinId],
   };
   const live: DdrResolveInput["live"] & DdrWindDownFingerprintContext = {
     safetyContext,
-    tvlChange7d: calibration?.tvlChange7d ?? null,
-    tvlChange30d: calibration?.tvlChange30d ?? null,
-    volumeChange30d: calibration?.volumeChange30d ?? null,
-    totalVolume24hUsd: calibration?.totalVolume24hUsd ?? null,
+    dewsBand: evidence.dewsBand,
+    dewsScore: evidence.dewsScore,
+    liquidityScore: evidence.liquidityScore,
+    safetyGrade: evidence.safetyGrade,
+    safetyScore: evidence.safetyScore,
+    tvlChange7d: dex?.tvlChange7d ?? null,
+    tvlChange30d: dex?.tvlChange30d ?? null,
+    volumeChange30d: dex?.volumeChange30d ?? null,
+    totalVolume24hUsd: dex?.totalVolume24hUsd ?? null,
   };
 
   if (r1?.severity === "strong") {
@@ -329,8 +368,6 @@ function reconstructResolutionInput(row: LockedVerdictRow): DdrResolveInput {
     coin.authorityPosture =
       k1.severity === "severe" ? "unbounded-or-compromised" : "concentrated-admin";
     coin.mintPath = "issuer-direct-mint";
-    supply.change7dPct = 25;
-    supply.mintSurge = true;
   }
 
   if (k2) {
@@ -357,15 +394,10 @@ function reconstructResolutionInput(row: LockedVerdictRow): DdrResolveInput {
 
   if (k4) {
     coin.mechanismArchetype = "algorithmic";
-    supply.change7dPct = 25;
-    supply.mintSurge = true;
   }
 
   if (k5?.severity === "severe") {
-    live.liquidityScore = 10;
     live.tvlChange7d = -50;
-  } else if (k5?.severity === "elevated") {
-    live.liquidityScore = 25;
   }
 
   if (r4?.severity === "strong") {
@@ -376,12 +408,6 @@ function reconstructResolutionInput(row: LockedVerdictRow): DdrResolveInput {
     coin.custodyModel = "onchain";
   }
 
-  if (r5?.severity === "strong") {
-    live.safetyGrade = "A-";
-  } else if (r5?.severity === "weak") {
-    live.safetyGrade = "B-";
-  }
-
   return {
     active: {
       id: row.eventId,
@@ -389,10 +415,10 @@ function reconstructResolutionInput(row: LockedVerdictRow): DdrResolveInput {
       symbol: row.symbol,
       pegType: `pegged${row.pegCurrency}`,
       direction: row.direction,
-      peakDeviationBps,
+      peakDeviationBps: evidence.peakDeviationBps,
       startedAt: row.startedAt,
       pegReference: 1,
-      currentDeviationBps: peakDeviationBps,
+      currentDeviationBps: evidence.currentDeviationBps,
     },
     coin,
     supply,
@@ -403,9 +429,9 @@ function reconstructResolutionInput(row: LockedVerdictRow): DdrResolveInput {
   };
 }
 
-describe("synthetic DDR attribution reconstruction (not historical-input replay)", () => {
+describe("locked DDR verdicts: recorded lock-time evidence plus synthetic registry structure", () => {
   it("pins the 72-row corpus, 13 reviewed above-peg controls, and six known misses", () => {
-    expect(fixture.schemaVersion).toBe(1);
+    expect(fixture.schemaVersion).toBe(2);
     expect(fixture.rows).toHaveLength(72);
     expect(new Set(fixture.rows.map((row) => row.rowId)).size).toBe(72);
 
@@ -431,17 +457,53 @@ describe("synthetic DDR attribution reconstruction (not historical-input replay)
     ]);
   });
 
-  it("checks the synthetic stored-factor reconstruction, not the production resolver", () => {
+  it("carries a lock-time registry status for every row and never a frozen one", () => {
+    // Both independent records — the sealed payload's own `sourceRow.status` and
+    // the incident policy-membership registry snapshot — hold JSON null at lock
+    // time, so no row may be reconstructed as a frozen/terminal coin.
+    expect(
+      fixture.rows.filter((row) => row.lockTime.registryStatus !== null).map((row) => row.rowId),
+    ).toEqual([]);
+    expect(
+      fixture.rows
+        .map((row) => row.lockTime.safetyContextStatus)
+        .filter((status) => status != null && !(status in SAFETY_CONTEXT_STATUS_BY_RECORD)),
+    ).toEqual([]);
+  });
+
+  it("suppresses the recorded duration exactly on the recorded terminal verdicts", () => {
+    const terminalRows = fixture.rows.filter((row) => row.expectedTier === "recovery_unlikely");
+    expect(terminalRows.map((row) => row.rowId)).toEqual([
+      "ddrr-66",
+      "ddrr-48",
+      "ddrr-28",
+      "ddrr-27",
+      "ddrr-24",
+      "ddrr-17",
+      "ddrr-8",
+      "ddrr-3",
+    ]);
+    expect(
+      terminalRows.filter(
+        (row) => !row.recordedDuration.suppressed || row.recordedDuration.medianSec != null,
+      ),
+    ).toEqual([]);
+    expect(
+      fixture.rows
+        .filter((row) => row.recordedDuration.suppressedReason === "verdict_terminal")
+        .map((row) => row.rowId),
+    ).toEqual(terminalRows.map((row) => row.rowId));
+  });
+
+  it("derives every recorded tier from its recorded attributions with no frozen-status escape", () => {
     for (const row of fixture.rows) {
-      const frozenTerminal = inferFrozenTerminal(row);
-      expect(
-        tierFromAttributions(row.direction, row.sourceFactors, frozenTerminal),
-        row.rowId,
-      ).toBe(row.expectedTier);
+      expect(tierFromAttributions(row.direction, row.sourceFactors), row.rowId).toBe(
+        row.expectedTier,
+      );
     }
   });
 
-  it("compares synthetic attribution scenarios through resolveOutlook and resolveDepeg", () => {
+  it("compares recorded-context scenarios through resolveOutlook and resolveDepeg", () => {
     const observedDeltas: Pick<ExpectedDelta, "rowId" | "from" | "to">[] = [];
     const fingerprintFactorRows: Pick<ExpectedFactorOnlyDelta, "rowId" | "code">[] = [];
 
@@ -500,19 +562,18 @@ describe("synthetic DDR attribution reconstruction (not historical-input replay)
     expect(observedDeltas).toEqual(
       EXPECTED_DELTAS.map(({ rowId, from, to }) => ({ rowId, from, to })),
     );
-    console.info(
-      `[locked-verdict-replay] verified deltas: ${EXPECTED_DELTAS.map(
-        ({ taskId, rowId, from, to }) => `${taskId} ${rowId} ${from} -> ${to}`,
-      ).join("; ")}`,
-    );
     for (const delta of EXPECTED_FACTOR_ONLY_DELTAS) {
       expect(fixture.rows.some((row) => row.rowId === delta.rowId)).toBe(true);
       expect(["T2.2", "T2.3"]).toContain(delta.taskId);
       expect(delta.reason.length).toBeGreaterThan(0);
     }
+    // EURR (`ddrr-12`) previously carried a T2.2 fingerprint expectation resting
+    // on a -51% 30d supply value; the sealed record shows +18.7% at lock, so the
+    // wind-down supply fingerprint legitimately no longer fires for it.
     expect(fingerprintFactorRows).toEqual(
       EXPECTED_FACTOR_ONLY_DELTAS.map(({ rowId, code }) => ({ rowId, code })),
     );
+    expect(fingerprintFactorRows.map((row) => row.rowId)).not.toContain("ddrr-12");
     expect(fingerprintFactorRows.map((row) => row.rowId)).not.toContain("ddrr-18");
     expect(fingerprintFactorRows.map((row) => row.rowId)).not.toContain("ddrr-7");
   });

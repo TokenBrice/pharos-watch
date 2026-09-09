@@ -18,7 +18,7 @@ import { adaptAbracadabraReserves, fetchAbracadabraReserves } from "../abracadab
 import type { CauldronCollateralReading } from "../abracadabra";
 import { fetchDefiLlamaPrices, fetchOnchainUint256 } from "../helpers";
 
-import { TEST_SIGNAL as signal } from "./reserve-adapter.test-support";
+let signal: AbortSignal;
 const coin = { id: "mim-abracadabra" } as StablecoinMeta;
 const BENTOBOX = "0xd96f48665a1410c0cd669a88898eca36b9fc2cce";
 const YVDAI_ADDRESS = "0x1111111111111111111111111111111111111111";
@@ -26,6 +26,7 @@ const WSTETH_ADDRESS = "0x2222222222222222222222222222222222222222";
 const YVUSDC_ADDRESS = "0x3333333333333333333333333333333333333333";
 
 beforeEach(() => {
+  signal = new AbortController().signal;
   vi.clearAllMocks();
 });
 

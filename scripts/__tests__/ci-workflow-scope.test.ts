@@ -82,8 +82,11 @@ describe("CI workflow scope", () => {
       }>;
     };
     const steps = workflow.jobs["deploy-worker"].steps ?? [];
+    const verify = steps.find((step) => step.id === "verify-worker-deployment");
     const marker = steps.find((step) => step.name === "Record Worker activation marker");
 
+    // The activation second is selected by the tested entrypoint, not inline YAML.
+    expect(verify?.run).toContain("scripts/ci/verify-worker-deployment.ts");
     expect(marker?.env?.WORKER_ACTIVATED_AT).toBe(
       "${{ steps.verify-worker-deployment.outputs.worker_activation_at }}",
     );
@@ -100,11 +103,13 @@ describe("CI workflow scope", () => {
       }>;
     };
     const job = workflow.jobs["post-deploy-acceptance"];
+    const acceptance = job.steps?.find((step) => step.id === "acceptance");
 
     expect(job.needs).toEqual(["plan", "deploy-worker", "pages-release"]);
     expect(job.environment).toBeUndefined();
     expect(job.permissions).toEqual({ contents: "read" });
     expect(job.outputs).toEqual({ outcome: "${{ steps.acceptance.outputs.outcome }}" });
+    expect(acceptance?.run).toContain("scripts/ci/run-post-deploy-acceptance.ts");
   });
 
   it("fans the nightly Node 24 validation out from one prepared workspace artifact", () => {

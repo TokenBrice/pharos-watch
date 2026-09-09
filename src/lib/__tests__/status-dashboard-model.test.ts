@@ -1,8 +1,10 @@
 import { describe, expect, it } from "vitest";
 import type { EndpointProbeResult, StatusCause } from "@shared/types";
 import {
+  makeActivePriceCoverage,
   makeHealthyHealthResponse,
   makeHealthyStatusResponse,
+  makeMissingActiveAsset,
   makeActionRecommendedStatusResponse,
   makePublicationFailureStatusResponse,
   makeScheduledSlotEventMarkerQueryFailedStatusResponse,
@@ -310,37 +312,18 @@ describe("status dashboard model", () => {
       ...BASE_HEALTH,
       status: "healthy" as const,
       warnings: ["active-price-coverage-incomplete:nxusd-nereus"],
-      activePriceCoverage: {
-        status: "incomplete" as const,
-        expectedActiveCount: 190,
-        presentActiveCount: 190,
-        pricedActiveCount: 189,
-        missingPriceCount: 1,
-        pricedActiveIds: [],
-        missingActiveIds: ["nxusd-nereus"],
-        affectedMarketCapUsd: 1_500_000,
-        missingActiveAssets: [
-          {
-            stablecoinId: "nxusd-nereus",
-            symbol: "NXUSD",
-            marketCapUsd: 1_500_000,
-            currentPrice: null,
-            currentSource: null,
-            currentObservedAt: null,
-            currentConfidence: null,
-            consecutiveMissingGenerations: 2,
-            lastAcceptedPrice: 1,
-            lastAcceptedSource: "coingecko",
-            lastAcceptedObservedAt: BASE_HEALTH.timestamp - 900,
-            rejectionReason: "no-accepted-price",
-            alertEligible: true,
-          },
-        ],
-        alertEligibleCount: 1,
-        alertEligibleIds: ["nxusd-nereus"],
-        maxConsecutiveMissingGenerations: 2,
-        observedAt: BASE_HEALTH.timestamp,
-      },
+      activePriceCoverage: makeActivePriceCoverage([
+        makeMissingActiveAsset({
+          stablecoinId: "nxusd-nereus",
+          symbol: "NXUSD",
+          marketCapUsd: 1_500_000,
+          consecutiveMissingGenerations: 2,
+          lastAcceptedPrice: 1,
+          lastAcceptedSource: "coingecko",
+          lastAcceptedObservedAt: BASE_HEALTH.timestamp - 900,
+          alertEligible: true,
+        }),
+      ]),
     };
 
     const model = buildModel(statusData, { healthData });
@@ -365,21 +348,13 @@ describe("status dashboard model", () => {
       ...BASE_HEALTH,
       status: "healthy" as const,
       warnings: [],
-      activePriceCoverage: {
-        status: "incomplete" as const,
-        expectedActiveCount: 190,
-        presentActiveCount: 190,
+      activePriceCoverage: makeActivePriceCoverage([], {
         pricedActiveCount: 189,
         missingPriceCount: 1,
-        pricedActiveIds: [],
         missingActiveIds: ["test-dollar"],
         affectedMarketCapUsd: 500_000,
-        missingActiveAssets: [],
-        alertEligibleCount: 0,
-        alertEligibleIds: [],
         maxConsecutiveMissingGenerations: 1,
-        observedAt: BASE_HEALTH.timestamp,
-      },
+      }),
     };
 
     const model = buildModel(BASE_STATUS, { healthData });

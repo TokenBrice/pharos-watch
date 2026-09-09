@@ -3,14 +3,23 @@
 import { render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import { HomeAltUpcomingHorizonConstellation } from "@/components/home-alt-upcoming-horizon-constellation";
-import { HORIZON_PRE_LAUNCH_STABLECOINS } from "@/lib/horizon-constellation-layout";
+import type * as HorizonConstellationLayoutModule from "@/lib/horizon-constellation-layout";
 
-vi.mock("@shared/lib/stablecoins/client-registry", () => ({
-  CLIENT_TRACKED_STABLECOINS: Array.from({ length: 13 }, (_, index) => ({
+const horizonFixture = vi.hoisted(() =>
+  Array.from({ length: 13 }, (_, index) => ({
     id: `coin-${index}`, name: `Coin ${index}`, symbol: `C${index}`,
     status: "pre-launch", launchPhase: "announced",
     expectedLaunchDate: `2027-01-${String(index + 1).padStart(2, "0")}`,
   })),
+);
+
+vi.mock("@/lib/horizon-constellation-layout", async (importOriginal) => ({
+  ...(await importOriginal<typeof HorizonConstellationLayoutModule>()),
+  HORIZON_PRE_LAUNCH_STABLECOINS: horizonFixture,
+}));
+
+vi.mock("@shared/lib/stablecoins/client-registry", () => ({
+  CLIENT_TRACKED_STABLECOINS: horizonFixture,
 }));
 vi.mock("@/lib/logos", () => ({ logosById: {} }));
 
@@ -28,12 +37,12 @@ describe("HomeAltUpcomingHorizonConstellation", () => {
   });
 
   it("renders nothing for an empty registry", () => {
-    const coins = HORIZON_PRE_LAUNCH_STABLECOINS.splice(0);
+    const coins = horizonFixture.splice(0);
     try {
       const { container } = render(<HomeAltUpcomingHorizonConstellation />);
       expect(container.firstChild).toBeNull();
     } finally {
-      HORIZON_PRE_LAUNCH_STABLECOINS.push(...coins);
+      horizonFixture.push(...coins);
     }
   });
 });

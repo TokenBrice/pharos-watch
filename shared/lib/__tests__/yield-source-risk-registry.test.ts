@@ -4,6 +4,7 @@ import {
   YIELD_RISK_CONFIG_PROTOCOLS,
   YIELD_RISK_CONFIG_REVIEW_CADENCE,
   findStaleVenueRiskScores,
+  findStaleVenueRiskScoresByEntries,
   resolveDependencyConcentration,
   resolveReviewedYieldRiskConfig,
   venueRiskTierOf,
@@ -67,19 +68,52 @@ describe("yield-source-risk-registry (shared/lib structural integrity)", () => {
     expect(resolveDependencyConcentration(null)).toBeNull();
   });
 
-  it("applies the strict 90-day boundary independently of registry refresh dates", () => {
-    const dates = YIELD_RISK_CONFIG_PROTOCOLS.map((protocol) => ({
-      protocol,
-      reviewedAt: YIELD_RISK_CONFIG[protocol].reviewedAt,
-    }));
-    for (const entry of dates) {
-      expect(Number.isFinite(Date.parse(`${entry.reviewedAt}T00:00:00Z`)), entry.protocol).toBe(true);
+  it("flags exactly the strictly-older-than-90d controlled entries, newest first", () => {
+    const baseMs = Date.parse("2026-01-01T00:00:00Z");
+    const reviewedAt = (daysOld: number) =>
+      new Date(baseMs - daysOld * 86_400_000).toISOString().slice(0, 10);
+    const stale = findStaleVenueRiskScoresByEntries(
+      // Deliberately unsorted to require the sort, not the input order.
+      {
+        "controlled-90d": { reviewedAt: reviewedAt(90) },
+        "controlled-120d": { reviewedAt: reviewedAt(120) },
+        "controlled-91d": { reviewedAt: reviewedAt(91) },
+        "controlled-100d": { reviewedAt: reviewedAt(100) },
+      },
+      baseMs,
+    );
+    expect(stale.map((entry) => [entry.protocol, entry.ageDays])).toEqual([
+      ["controlled-120d", 120],
+      ["controlled-100d", 100],
+      ["controlled-91d", 91],
+    ]);
+  });
+
+  it("keeps the default 90-day threshold and skips an unparseable reviewedAt", () => {
+    const baseMs = Date.parse("2026-01-01T00:00:00Z");
+    const stale = findStaleVenueRiskScoresByEntries(
+      {
+        "controlled-90d": { reviewedAt: new Date(baseMs - 90 * 86_400_000).toISOString().slice(0, 10) },
+        "controlled-91d": { reviewedAt: new Date(baseMs - 91 * 86_400_000).toISOString().slice(0, 10) },
+        "controlled-bad": { reviewedAt: "not-a-date" },
+      },
+      baseMs,
+    );
+    expect(stale.map((entry) => entry.protocol)).toEqual(["controlled-91d"]);
+  });
+
+  it("scans every enrolled protocol with parseable reviewedAt by default", () => {
+    for (const protocol of YIELD_RISK_CONFIG_PROTOCOLS) {
+      expect(
+        Number.isFinite(Date.parse(`${YIELD_RISK_CONFIG[protocol].reviewedAt}T00:00:00Z`)),
+        protocol,
+      ).toBe(true);
     }
-    const oldestDate = dates.map((entry) => entry.reviewedAt).sort()[0];
-    const oldestMs = Date.parse(`${oldestDate}T00:00:00Z`);
-    expect(findStaleVenueRiskScores(oldestMs + 90 * 86_400_000)).toEqual([]);
-    expect(findStaleVenueRiskScores(oldestMs + 91 * 86_400_000).map((entry) => entry.protocol)).toEqual(
-      dates.filter((entry) => entry.reviewedAt === oldestDate).map((entry) => entry.protocol),
+    // Far-future clock ages every enrolled entry past the default threshold, so
+    // the default scan must surface the full registry (no entry lost to parsing).
+    const stale = findStaleVenueRiskScores(Date.parse("2100-01-01T00:00:00Z"));
+    expect(stale.map((entry) => entry.protocol).sort()).toEqual(
+      [...YIELD_RISK_CONFIG_PROTOCOLS].sort(),
     );
   });
 });
