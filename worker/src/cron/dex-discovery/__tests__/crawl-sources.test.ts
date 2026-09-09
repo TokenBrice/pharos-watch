@@ -146,6 +146,29 @@ describe("crawlCoin DexScreener hardening", () => {
     vi.restoreAllMocks();
   });
 
+  it("reports supported provider boundaries before their fetches", async () => {
+    const stages: string[] = [];
+    vi.mocked(fetchDsTokenPairsWithStatus).mockImplementation(async () => {
+      expect(stages[stages.length - 1]).toBe("dexscreener");
+      return { ok: true, pairs: [] };
+    });
+    vi.mocked(fetchJsonWithRetry).mockImplementation(async () => {
+      expect(stages[stages.length - 1]).toBe("curve");
+      return { response: new Response(null), body: { data: { poolData: [] } } } as never;
+    });
+
+    await crawlCoin(
+      createMockDb(), "test-coin",
+      [{ chain: "ethereum", address: "0x1111111111111111111111111111111111111111", decimals: 18 }],
+      null, new Set(), undefined, undefined, undefined, undefined,
+      async (provider) => { stages.push(provider); },
+    );
+
+    expect(stages).toEqual(["coingecko", "geckoterminal", "dexscreener", "curve"]);
+    expect(fetchDsTokenPairsWithStatus).toHaveBeenCalledOnce();
+    expect(fetchJsonWithRetry).toHaveBeenCalledOnce();
+  });
+
   it("skips malformed DexScreener pairs and keeps valid pairs in the same response", async () => {
     const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
 
@@ -475,7 +498,7 @@ describe("crawlCoin DexScreener hardening", () => {
       "https://api.curve.finance/v1/getPools/all/ethereum",
       expect.anything(),
       1,
-      { timeoutMs: 8_000, maxResponseBytes: 4 * 1024 * 1024 },
+      { timeoutMs: 8_000, maxResponseBytes: 8 * 1024 * 1024 },
     );
   });
 
