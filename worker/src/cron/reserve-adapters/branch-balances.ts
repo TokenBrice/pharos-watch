@@ -9,6 +9,7 @@ import {
   fetchDefiLlamaPrices,
   fetchErc20Balance,
   fetchOnchainMulticall3,
+  fetchOnchainUint256,
   notApplicableFreshnessMetadata,
   requireOnchainInput,
   reserveDegradedWarning,
@@ -31,6 +32,8 @@ export interface BranchBalanceEntry {
   balanceRaw: bigint | null;
   /** decimals() read from the branch token; undefined = not probed, null = call reverted. */
   observedDecimals?: bigint | null;
+  /** Converted underlying scale; the original token scale remains the identity gate. */
+  balanceDecimals?: number;
 }
 
 export interface AdaptBranchBalanceInput {
@@ -142,32 +145,65 @@ export async function fetchBranchBalances(
   signal: AbortSignal,
   ctx?: AdapterContext,
 ): Promise<BranchBalanceEntry[]> {
+  const balanceCall = (branch: BranchConfig) => ({
+    contract: branch.balanceRead?.contract ?? branch.token.address,
+    data: branch.balanceRead
+      ? branch.balanceRead.selector + (branch.balanceRead.args ?? []).map((word) => word.slice(2)).join("")
+      : encodeBalanceOfCallData(branch.holder),
+  });
+  const convertReceipts = async (entries: BranchBalanceEntry[]): Promise<BranchBalanceEntry[]> =>
+    Promise.all(entries.map(async (entry) => {
+      const { branch } = entry;
+      if (!branch.receipt || entry.balanceRaw == null || entry.balanceRaw === 0n) return entry;
+      if (!branch.priceToken || branch.priceToken.chain !== input.chain) {
+        throw new Error(`Compound receipt ${branch.name} requires a same-chain underlying priceToken`);
+      }
+      const read = (contract: string, data: string) => fetchOnchainUint256({
+        contract, data, chain: input.chain, signal, ctx,
+        rpcUrl: params.rpcUrl, fallbackRpcUrl: params.fallbackRpcUrl,
+      });
+      const [rate, underlying, decimals] = await Promise.all([
+        read(branch.token.address, branch.receipt.exchangeRateSelector ?? "0x182df0f5"),
+        read(branch.token.address, "0x6f307dc3"),
+        read(branch.priceToken.address, DECIMALS_SELECTOR),
+      ]);
+      if (underlying !== BigInt(branch.priceToken.address) || decimals == null || decimals > 36n || rate == null || rate <= 0n) {
+        throw new Error(`Compound receipt ${branch.name} underlying identity or exchange rate unavailable`);
+      }
+      // cToken human units × rate / 10^(18 + underlyingDecimals - cTokenDecimals).
+      // In raw units the token decimal factors cancel; floor to whole underlying units.
+      return { ...entry, balanceRaw: entry.balanceRaw * rate / 10n ** 18n, balanceDecimals: Number(decimals) };
+    }));
   const fetchIndividually = () => Promise.all(
     params.branches.map(async (branch) => {
-      const raw = await fetchErc20Balance(
-        input,
-        branch.token.address,
-        branch.holder,
-        signal,
-        ctx,
-        params.rpcUrl,
-        params.fallbackRpcUrl,
-      );
-      return { branch, balanceRaw: raw };
+      const raw = branch.balanceRead
+        ? await fetchOnchainUint256({
+            ...balanceCall(branch), chain: input.chain, signal, ctx,
+            rpcUrl: params.rpcUrl, fallbackRpcUrl: params.fallbackRpcUrl,
+          })
+        : await fetchErc20Balance(
+            input, branch.token.address, branch.holder, signal, ctx, params.rpcUrl, params.fallbackRpcUrl,
+          );
+      const observedDecimals = branch.balanceRead || branch.receipt
+        ? await fetchOnchainUint256({
+            contract: branch.token.address, data: DECIMALS_SELECTOR, chain: input.chain, signal, ctx,
+            rpcUrl: params.rpcUrl, fallbackRpcUrl: params.fallbackRpcUrl,
+          })
+        : undefined;
+      return { branch, balanceRaw: raw, ...(observedDecimals !== undefined ? { observedDecimals } : {}) };
     }),
   );
   const isSingleChainEvmConfig = params.branches.every((branch) =>
-    branch.token.chain === input.chain
+    (branch.chain ?? branch.token.chain) === input.chain
     && /^0x[0-9a-fA-F]{40}$/.test(branch.token.address)
     && /^0x[0-9a-fA-F]{40}$/.test(branch.holder)
   );
-  if (!isSingleChainEvmConfig) return fetchIndividually();
+  if (!isSingleChainEvmConfig) return convertReceipts(await fetchIndividually());
 
   const calls = params.branches.flatMap((branch, index) => [
     {
       label: `branch-balance:${index}`,
-      contract: branch.token.address,
-      data: encodeBalanceOfCallData(branch.holder),
+      ...balanceCall(branch),
       allowFailure: true,
     },
     {
@@ -189,14 +225,14 @@ export async function fetchBranchBalances(
     const rawByLabel = new Map(
       results.map((result) => [result.label, result.success ? result.returnData : null]),
     );
-    return params.branches.map((branch, index) => ({
+    return convertReceipts(params.branches.map((branch, index) => ({
       branch,
       balanceRaw: decodeUint256Word(rawByLabel.get(`branch-balance:${index}`)),
       observedDecimals: decodeUint256Word(rawByLabel.get(`branch-decimals:${index}`)),
-    }));
+    })));
   }
 
-  return fetchIndividually();
+  return convertReceipts(await fetchIndividually());
 }
 
 export async function fetchBranchPriceMap(
@@ -297,7 +333,7 @@ export function adaptBranchBalanceReserves(input: AdaptBranchBalanceInput): Adap
     }
   }
 
-  const values = pricedBranches.map(({ branch, balanceRaw }) => {
+  const values = pricedBranches.map(({ branch, balanceRaw, balanceDecimals }) => {
     const price = branch.priceUsd ?? priceMap.get(branch.name);
     if (price == null) {
       throw new Error(`Missing DefiLlama price for ${branch.name}`);
@@ -320,8 +356,8 @@ export function adaptBranchBalanceReserves(input: AdaptBranchBalanceInput): Adap
     return {
       ...(adapterKey === "lista"
         ? {}
-        : { sourceKey: `${adapterKey}:${branch.token.chain}:${branch.token.address.toLowerCase()}` }),
-      value: valueUsdFromBigIntPrice(balanceRaw ?? 0n, branch.token.decimals, price),
+        : { sourceKey: `${adapterKey}:${branch.chain ?? branch.token.chain}:${branch.token.address.toLowerCase()}` }),
+      value: valueUsdFromBigIntPrice(balanceRaw ?? 0n, balanceDecimals ?? branch.token.decimals, price),
       name: branch.name,
       risk: branch.risk,
       ...(branch.coinId ? { coinId: branch.coinId } : {}),

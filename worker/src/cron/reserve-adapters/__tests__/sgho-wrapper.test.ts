@@ -1,76 +1,56 @@
-import { describe, expect, it, vi } from "vitest";
-import type { StablecoinMeta } from "@shared/types/core";
-import type { LiveReservesConfig } from "@shared/types/live-reserves";
-import { encodeUint256 } from "../../../lib/evm-selectors";
-import { fetchSghoWrapperReserves } from "../sgho-wrapper";
-import { fetchOnchainRawCall } from "../helpers";
+import { describe, expect, it } from "vitest";
+import { runAdapter } from "./reserve-adapter.test-support";
 
-vi.mock("../helpers", async () => {
-  const actual = await vi.importActual<typeof import("../helpers")>("../helpers");
-  const { makeOnchainCallersMock } = await import("./helpers/onchain-callers-mock");
-  const fetchOnchainRawCall = vi.fn(async ({ data }: { data: string }) => {
-    if (data === "0x18160ddd") return `0x${(1000n * 10n ** 18n).toString(16).padStart(64, "0")}`;
-    if (data === `0x4cdad506${encodeUint256(1000n * 10n ** 18n)}`) {
-      return `0x${(1005n * 10n ** 18n).toString(16).padStart(64, "0")}`;
-    }
-    return null;
-  });
+const SUPPLY = 1000n * 10n ** 18n;
+const PREVIEW_REDEEM = 1005n * 10n ** 18n;
+
+function sghoNetwork(previewRedeem: bigint | null) {
   return {
-    ...actual,
-    fetchOnchainRawCall,
-    makeOnchainCallers: makeOnchainCallersMock({ raw: fetchOnchainRawCall }),
-  };
-});
-
-const COIN = {
-  id: "sgho-aave",
-  contracts: [{ chain: "ethereum", address: "0x1a88df1cfe15af22b3c4c783d4e6f7f9e0c1885d", decimals: 18 }],
-} as StablecoinMeta;
-
-const CONFIG: LiveReservesConfig = {
-  adapter: "sgho-wrapper",
-  version: 1,
-  semantics: "single-asset",
-  inputs: { primary: { kind: "onchain-evm", chain: "ethereum", rpcMode: "public-rpc" } },
-  params: {
-    slice: {
-      name: "GHO deposited in Aave Savings module",
-      risk: "low",
-      coinId: "gho-aave",
-      depType: "wrapper",
+    rpc: {
+      "totalSupply()": SUPPLY,
+      // previewRedeem(uint256) carries the supply as its argument, so the
+      // selector-keyed answer covers every argument the adapter can send.
+      "0x4cdad506": previewRedeem,
     },
-  },
-};
+  };
+}
 
 describe("sgho-wrapper adapter", () => {
   it("rejects an absent configured chain", async () => {
-    await expect(fetchSghoWrapperReserves({ ...COIN, contracts: [] }, CONFIG, new AbortController().signal))
-      .rejects.toThrow(/No ethereum contract/);
+    await expect(
+      runAdapter("sgho-wrapper", "sgho-aave", { coin: { contracts: [] }, network: sghoNetwork(PREVIEW_REDEEM) }),
+    ).rejects.toThrow(/No ethereum contract/);
   });
 
-  it("rejects unavailable or zero supply", async () => {
-    for (const value of [null, "0x0"]) {
-      vi.mocked(fetchOnchainRawCall).mockResolvedValueOnce(value);
-      await expect(fetchSghoWrapperReserves(COIN, CONFIG, new AbortController().signal))
-        .rejects.toThrow(/totalSupply/);
-    }
+  it("rejects an unavailable supply read", async () => {
+    await expect(
+      runAdapter("sgho-wrapper", "sgho-aave", {
+        network: { rpc: { "totalSupply()": null, "0x4cdad506": PREVIEW_REDEEM } },
+      }),
+    ).rejects.toThrow(/totalSupply/);
   });
 
-  it("rejects unavailable or zero redemption preview", async () => {
-    for (const value of [null, "0x0"]) {
-      vi.mocked(fetchOnchainRawCall)
-        .mockResolvedValueOnce(`0x${(1000n * 10n ** 18n).toString(16)}`)
-        .mockResolvedValueOnce(value);
-      await expect(fetchSghoWrapperReserves(COIN, CONFIG, new AbortController().signal))
-        .rejects.toThrow(/previewRedeem/);
+  it("rejects a zero supply", async () => {
+    await expect(
+      runAdapter("sgho-wrapper", "sgho-aave", {
+        network: { rpc: { "totalSupply()": 0n, "0x4cdad506": PREVIEW_REDEEM } },
+      }),
+    ).rejects.toThrow(/totalSupply/);
+  });
+
+  it("rejects an unavailable or zero redemption preview", async () => {
+    for (const previewRedeem of [null, 0n]) {
+      await expect(
+        runAdapter("sgho-wrapper", "sgho-aave", { network: sghoNetwork(previewRedeem) }),
+      ).rejects.toThrow(/previewRedeem/);
     }
   });
 
   it("preserves a positive backing shortfall without clamping upward", async () => {
-    vi.mocked(fetchOnchainRawCall)
-      .mockResolvedValueOnce(`0x${(1000n * 10n ** 18n).toString(16)}`)
-      .mockResolvedValueOnce(`0x${(800n * 10n ** 18n).toString(16)}`);
-    const result = await fetchSghoWrapperReserves(COIN, CONFIG, new AbortController().signal);
+    const { result } = await runAdapter("sgho-wrapper", "sgho-aave", {
+      network: sghoNetwork(800n * 10n ** 18n),
+    });
+
     expect(result.metadata).toMatchObject({
       details: { sharePrice: 0.8 },
       redemption: { capacityUsd: 800, capacityRatioOfSupply: 0.8 },
@@ -78,23 +58,24 @@ describe("sgho-wrapper adapter", () => {
   });
 
   it("uses previewRedeem(totalSupply) as same-run backing evidence", async () => {
-    const result = await fetchSghoWrapperReserves(COIN, CONFIG, new AbortController().signal);
+    const { result, network } = await runAdapter("sgho-wrapper", "sgho-aave", {
+      network: sghoNetwork(PREVIEW_REDEEM),
+    });
 
     expect(result.slices).toEqual([
-      {
+      expect.objectContaining({
         sourceKey: "sgho-wrapper:gho",
-        name: "GHO deposited in Aave Savings module",
         pct: 100,
-        risk: "low",
         coinId: "gho-aave",
         depType: "wrapper",
-      },
+      }),
     ]);
+    expect(network.rpcCalls.map((call) => call.selector)).toEqual(["0x18160ddd", "0x4cdad506"]);
     expect(result.metadata).toMatchObject({
       freshnessMode: "not-applicable",
       details: { proofKind: "aave-sgho-preview-redeem", sharePrice: 1.005 },
-      totalSupplyRaw: (1000n * 10n ** 18n).toString(),
-      previewRedeemRaw: (1005n * 10n ** 18n).toString(),
+      totalSupplyRaw: SUPPLY.toString(),
+      previewRedeemRaw: PREVIEW_REDEEM.toString(),
       supplyUsd: 1000,
       previewRedeemUsd: 1005,
       redemption: {

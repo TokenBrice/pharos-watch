@@ -56,15 +56,17 @@ export function adaptAsymmetry(payload: AsymmetryPayload): AdapterResult {
   const entries = branchRows.filter((entry) => entry.usd > 0);
 
   const total = entries.reduce((acc, entry) => acc + entry.usd, 0);
-  const supply = Number(payload.usdaf?.total_bold_supply ?? "0");
+  const supply = Number(payload.usdaf?.total_bold_supply);
+  if (!Number.isFinite(supply) || supply <= 0) {
+    throw new Error("Asymmetry missing or invalid usdaf.total_bold_supply");
+  }
   if (total <= 0) return { slices: [] };
 
   // Clamp redemption capacity to the lesser of declared supply and measured
   // collateral; surface under-collateralization explicitly.
-  const supplyValid = Number.isFinite(supply) && supply > 0;
-  const capacityUsd = supplyValid ? Math.min(supply, total) : 0;
-  const capacityRatioOfSupply = supplyValid ? capacityUsd / supply : undefined;
-  if (supplyValid && supply > total) {
+  const capacityUsd = Math.min(supply, total);
+  const capacityRatioOfSupply = capacityUsd / supply;
+  if (supply > total) {
     warnings.push(reserveDegradedWarning(
       "under-collateralization",
       `Asymmetry branch collateral (${total.toFixed(0)}) covers only ${((total / supply) * 100).toFixed(2)}% of BOLD supply`,
@@ -98,31 +100,23 @@ export function adaptAsymmetry(payload: AsymmetryPayload): AdapterResult {
       unknownBranchCount: warnings.filter((w) => w.code === "unknown-branch").length,
       unknownExposurePct: total > 0 ? (unknownExposureUsd / total) * 100 : 0,
       totalReserveUsd: total,
-      ...(supplyValid
-        ? {
-            supplyUsd: supply,
-            collateralizationRatio: total / supply,
-          }
-        : {}),
-      ...(supplyValid
-        ? {
-            redemption: {
-              capacityUsd,
-              ...(capacityRatioOfSupply != null ? { capacityRatioOfSupply } : {}),
-              capacityKind: "live-direct-bounded" as const,
-              freshnessKind: sourceTimestamp != null ? "verified-source-timestamp" as const : "same-run-api" as const,
-              ...(sourceTimestamp != null ? { sourceTimestamp } : {}),
-              routeStatus: "open" as const,
-              routeStatusSource: "protocol-api" as const,
-              holderEligibility: "any-holder",
-              settlementDelaySec: 0,
-              sourceUrls: [
-                "https://app.asymmetry.finance/api/stats",
-                "https://docs.asymmetry.finance/usdaf-stablecoin/redemptions",
-              ],
-            },
-          }
-        : {}),
+      supplyUsd: supply,
+      collateralizationRatio: total / supply,
+      redemption: {
+        capacityUsd,
+        capacityRatioOfSupply,
+        capacityKind: "live-direct-bounded",
+        freshnessKind: sourceTimestamp != null ? "verified-source-timestamp" : "same-run-api",
+        ...(sourceTimestamp != null ? { sourceTimestamp } : {}),
+        routeStatus: "open",
+        routeStatusSource: "protocol-api",
+        holderEligibility: "any-holder",
+        settlementDelaySec: 0,
+        sourceUrls: [
+          "https://app.asymmetry.finance/api/stats",
+          "https://docs.asymmetry.finance/usdaf-stablecoin/redemptions",
+        ],
+      },
       ...freshnessMetadataFromTimestamp(
         sourceTimestamp,
         "protocol-branch-api",

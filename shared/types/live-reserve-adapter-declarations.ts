@@ -200,6 +200,9 @@ const EVM_ADDRESS_PATTERN = /^0x[0-9a-fA-F]{40}$/;
 const EvmAddressSchema = z.string().regex(EVM_ADDRESS_PATTERN);
 const EvmWordSchema = z.string().regex(/^0x[0-9a-fA-F]{64}$/);
 const EvmSelectorSchema = z.string().regex(/^0x[0-9a-fA-F]{8}$/);
+// eslint-disable-next-line security/detect-unsafe-regex -- anchored fixed-width base32 principal pattern; finite quantifiers, no backtracking ambiguity.
+const ICP_CANISTER_ID_PATTERN = /^[a-z2-7]{5}(-[a-z2-7]{5}){3}-[a-z2-7]{3}$/;
+const IcpCanisterIdSchema = z.string().regex(ICP_CANISTER_ID_PATTERN);
 
 const OptionalEvmRpcFields = {
   rpcUrl: AbsoluteUrlSchema.optional(),
@@ -221,6 +224,29 @@ const riskRecordSchema = z.record(z.string(), LiveReserveRiskSchema);
 const depTypeRecordSchema = z.record(z.string(), LiveReserveDependencyTypeSchema);
 
 const noParamsSchema = z.object({}).strict();
+
+const hyloAddressSchema = z.string().regex(/^[1-9A-HJ-NP-Za-km-z]{32,44}$/);
+const hyloSolanaParamsSchema = z.object({
+  program: hyloAddressSchema,
+  state: hyloAddressSchema,
+  registry: hyloAddressSchema,
+  hyusdMint: hyloAddressSchema,
+  solOracle: hyloAddressSchema,
+  usdcPair: hyloAddressSchema,
+  usdcVault: hyloAddressSchema,
+  usdcMint: hyloAddressSchema,
+  lsts: z.array(z.object({
+    mint: hyloAddressSchema, name: z.string().min(1),
+    priceChain: z.string().min(1), priceAddress: z.string().min(1),
+  }).strict()).min(1).max(16),
+  exoPairs: z.array(z.object({
+    pair: hyloAddressSchema, vault: hyloAddressSchema, mint: hyloAddressSchema,
+    oracle: hyloAddressSchema, feedId: z.string().regex(/^[0-9a-f]{64}$/),
+    pool: z.enum(["cbbtc-pool", "hype-pool"]), name: z.string().min(1),
+    priceAddress: z.string().min(1),
+  }).strict()).length(2),
+  inactiveExoPairs: z.array(hyloAddressSchema).max(16),
+}).strict();
 
 const usd1BundleOracleParamsSchema = z
   .object({
@@ -496,6 +522,7 @@ const chainlinkNavParamsSchema = z
 
 const chronicleNavParamsSchema = z
   .object({
+    navScope: z.enum(["native-fund-share", "portfolio"]),
     consumerAddress: EvmAddressSchema,
     tokenAddress: EvmAddressSchema,
     assetLabel: z.string(),
@@ -1216,6 +1243,16 @@ const evmBranchBalanceBranchSchema = z
   .object({
     /** Reviewed 1:1 conversion for underlying/cross-chain price substitution. */
     underlyingPrice1to1: z.literal(true).optional(),
+    chain: z.string().min(1).optional(),
+    balanceRead: z.object({
+      contract: EvmAddressSchema,
+      selector: EvmSelectorSchema,
+      args: z.array(EvmWordSchema).optional(),
+    }).strict().optional(),
+    receipt: z.object({
+      kind: z.literal("compound-v2"),
+      exchangeRateSelector: EvmSelectorSchema.optional(),
+    }).strict().optional(),
     name: z.string(),
     holder: EvmAddressSchema,
     token: z
@@ -1746,7 +1783,101 @@ const fdusdAssuranceParamsSchema = z
 
 const mocDocParamsSchema = z.object({ rpcUrl: AbsoluteUrlSchema }).strict();
 
+// Kerne's hourly EIP-191-signed proof of reserves: the adapter verifies the
+// signature against the pinned `signerAddress` and cross-checks the combined
+// USDC balance at the configured PSM contracts on Base. The issuer publishes
+// `_meta.stale_threshold_seconds = 7800`, so an attestation older than that is
+// stale rather than merely old.
+const KERNE_ATTESTATION_MAX_AGE_SEC = 7_800;
+
+const kerneSignedPorParamsSchema = z
+  .object({
+    signerAddress: EvmAddressSchema,
+    psmAddresses: z.array(EvmAddressSchema).min(1),
+  })
+  .strict();
+
+// Djed (Cardano) bank read: the ADA reserve, the unissued DJED stock, and the
+// pool marker NFT live in the single bank script address; `asset_info`
+// supplies the (fixed) minted supplies so circulating DJED = minted - bank
+// stock. The SHEN unit is optional diagnostics (junior equity), not a slice.
+const cardanoUnitSchema = z
+  .object({
+    policyId: z.string().regex(/^[0-9a-f]{56}$/i),
+    assetNameHex: z.string().regex(/^[0-9a-f]+$/i).min(1),
+    decimals: z.number().int().nonnegative().max(36),
+  })
+  .strict();
+
+const djedCardanoParamsSchema = z
+  .object({
+    bankAddress: z.string().trim().regex(/^addr1[a-z0-9]+$/),
+    djedUnit: cardanoUnitSchema,
+    shenUnit: cardanoUnitSchema.optional(),
+  })
+  .strict();
+
+// DGLD's Gold Token SA bar registry emits a single allocated-PAMP-gold slice
+// (untracked-exogenous-asset, no coinId), so params carry only the reviewed
+// slice identity; the reserve-oz / supply ratio is measured from the registry.
+const dgldGoldMapperParamsSchema = z
+  .object({
+    label: z.string(),
+    risk: LiveReserveRiskSchema,
+  })
+  .strict();
+
+// Matrixdock XAGm FallbackReserveFeed: an issuer-transmitted on-chain silver
+// reserve. The slice is physical silver (no tracked coinId), so params pin the
+// two Ethereum contracts plus the Sui coin type whose supply completes the
+// cross-chain liability denominator.
+const matrixdockFrsParamsSchema = z
+  .object({
+    label: z.string(),
+    risk: LiveReserveRiskSchema,
+    feedAddress: EvmAddressSchema,
+    tokenAddress: EvmAddressSchema,
+    suiCoinType: z.string().min(1),
+    ...OptionalEvmRpcFields,
+  })
+  .strict();
+
+// Gold DAO GLDT: a single allocated-gold slice whose reserve mass is measured
+// on-chain as the swap canister's locked GLD NFT balances (gram-denominated
+// via each canister's `division`) against the ICRC-1 GLDT ledger supply. The
+// swap and ledger canisters are pinned; the NFT canisters are read from
+// `get_swap_configs` at runtime.
+const icpGldtParamsSchema = z
+  .object({
+    swapCanisterId: IcpCanisterIdSchema,
+    ledgerCanisterId: IcpCanisterIdSchema,
+    label: z.string(),
+    risk: LiveReserveRiskSchema,
+  })
+  .strict();
+
+// AFI aggregate proof-of-reserves envelope: the proof verifies only aggregate
+// reserve/liability totals, so the params pin the expected feed symbol and the
+// adapter refuses payloads that carry a different symbol.
+const afiProofParamsSchema = z
+  .object({
+    symbol: z.string().min(1),
+  })
+  .strict();
+
 export const LIVE_RESERVE_ADAPTER_DESCRIPTOR_DECLARATIONS = {
+  "hylo-solana": {
+    primaryInputKinds: ["onchain-solana"],
+    paramsSchema: hyloSolanaParamsSchema,
+    sourceModel: "dynamic-mix",
+    evidenceClass: "independent",
+    sourceOriginClass: "onchain-observation",
+    preferredFreshnessMode: "not-applicable",
+    sharedSourceMode: "none",
+    configValidation: CONFIG_COLLATERAL_V1,
+    redemptionTelemetry: { capacity: "none", fee: "none" },
+    validation: LATEST_STATE_VALIDATION,
+  },
   "3jane-usd3": {
     primaryInputKinds: ["onchain-evm"],
     paramsSchema: noParamsSchema,
@@ -1909,7 +2040,8 @@ export const LIVE_RESERVE_ADAPTER_DESCRIPTOR_DECLARATIONS = {
     primaryInputKinds: ["onchain-evm"],
     paramsSchema: chronicleNavParamsSchema,
     sourceModel: "single-bucket",
-    // P5: ACRDX/STAC prove native fund-share NAV, not look-through portfolio holdings.
+    // P5: native fund-share exposure only (ACRDX/STAC/BUIDL); portfolio scope
+    // emits a scoring-degraded warning like chainlink-nav.
     evidenceClass: "independent",
     sourceOriginClass: "independent-assurance",
     sharedSourceMode: "none",
@@ -2160,6 +2292,17 @@ export const LIVE_RESERVE_ADAPTER_DESCRIPTOR_DECLARATIONS = {
     // official index is JSON rather than server-rendered HTML.
     primaryInputKinds: ["http-json"],
   }),
+  "sodax-sonic": {
+    primaryInputKinds: ["onchain-evm"],
+    paramsSchema: noParamsSchema,
+    sourceModel: "dynamic-mix",
+    evidenceClass: "weak-live-probe",
+    sourceOriginClass: "onchain-observation",
+    sharedSourceMode: "none",
+    configValidation: CONFIG_COLLATERAL_V1,
+    redemptionTelemetry: { capacity: "none", fee: "none" },
+    validation: LATEST_STATE_WITH_UNKNOWN_CAP_VALIDATION,
+  },
   gho: {
     primaryInputKinds: ["onchain-evm"],
     paramsSchema: ghoParamsSchema,
@@ -2254,6 +2397,41 @@ export const LIVE_RESERVE_ADAPTER_DESCRIPTOR_DECLARATIONS = {
     // redemption route), so capacity/fee telemetry would fabricate a route.
     redemptionTelemetry: { capacity: "none", fee: "none" },
     validation: LATEST_STATE_WITH_UNKNOWN_CAP_VALIDATION,
+  },
+  "hliquity-hedera": {
+    primaryInputKinds: ["http-json"],
+    paramsSchema: noParamsSchema,
+    sourceModel: "single-bucket",
+    evidenceClass: "independent",
+    sourceOriginClass: "onchain-observation",
+    preferredFreshnessMode: "not-applicable",
+    sharedSourceMode: "none",
+    configValidation: CONFIG_COLLATERAL_V1,
+    // Holder-facing Liquity-style redemptions exist, but the redemption fee
+    // (baseRate + 0.5%) is not read, so fee telemetry is omitted.
+    redemptionTelemetry: { capacity: "direct", fee: "none" },
+    validation: LATEST_STATE_VALIDATION,
+  },
+  "kerne-signed-por": {
+    primaryInputKinds: ["http-json"],
+    paramsSchema: kerneSignedPorParamsSchema,
+    sourceModel: "single-bucket",
+    evidenceClass: "independent",
+    preferredFreshnessMode: "verified",
+    sourceOriginClass: "onchain-observation",
+    sharedSourceMode: "none",
+    configValidation: CONFIG_SINGLE_ASSET_V1,
+    redemptionTelemetry: { capacity: "none", fee: "none" },
+    provenance: {
+      status: "staged",
+      rationale: "bound to pre-launch kusd-kerne; activates at launch",
+      parkedSince: "2026-09-09",
+      nextReview: "2027-03-09",
+    },
+    validation: {
+      maxSourceAgeSec: KERNE_ATTESTATION_MAX_AGE_SEC,
+      allowedFreshnessModes: VERIFIED_ONLY_FRESHNESS,
+    },
   },
   "krwq-custodian": {
     primaryInputKinds: ["http-json"],
@@ -2358,6 +2536,17 @@ export const LIVE_RESERVE_ADAPTER_DESCRIPTOR_DECLARATIONS = {
     configValidation: CONFIG_COLLATERAL_V1,
     redemptionTelemetry: { capacity: "direct", fee: "current-bps" },
     validation: DASHBOARD_VALIDATION,
+  },
+  "money-llamma": {
+    primaryInputKinds: ["onchain-evm"],
+    paramsSchema: noParamsSchema,
+    sourceModel: "dynamic-mix",
+    evidenceClass: "independent",
+    preferredFreshnessMode: "not-applicable",
+    sharedSourceMode: "none",
+    configValidation: CONFIG_COLLATERAL_V1,
+    redemptionTelemetry: { capacity: "none", fee: "none" },
+    validation: LATEST_STATE_WITH_UNKNOWN_CAP_VALIDATION,
   },
   "nest-vault-positions": {
     primaryInputKinds: ["http-json"],
@@ -2687,7 +2876,156 @@ export const LIVE_RESERVE_ADAPTER_DESCRIPTOR_DECLARATIONS = {
     validation: DASHBOARD_VALIDATION,
   },
   yamato: declareAdapter(yamatoParamsSchema, ONCHAIN_SINGLE_ASSET_V1),
+  "youves-tezos": {
+    primaryInputKinds: ["http-json"],
+    paramsSchema: noParamsSchema,
+    sourceModel: "dynamic-mix",
+    evidenceClass: "independent",
+    sourceOriginClass: "onchain-observation",
+    preferredFreshnessMode: "not-applicable",
+    sharedSourceMode: "none",
+    configValidation: CONFIG_COLLATERAL_V1,
+    // The legacy CDP's exit is borrower repay-only (no holder-facing
+    // redemption route on a long-depegged token), so capacity/fee telemetry
+    // would fabricate a route.
+    redemptionTelemetry: { capacity: "none", fee: "none" },
+    validation: LATEST_STATE_WITH_UNKNOWN_CAP_VALIDATION,
+  },
   "zephyr-scanner": declareAdapter(noParamsSchema, HTTP_PROTOCOL_V1),
+  "usdy-holdings-report": {
+    primaryInputKinds: ["http-html"],
+    paramsSchema: noParamsSchema,
+    sourceModel: "validated-static",
+    evidenceClass: "static-validated",
+    sourceOriginClass: "independent-assurance",
+    preferredFreshnessMode: "verified",
+    sharedSourceMode: "none",
+    configValidation: CONFIG_COLLATERAL_V1,
+    redemptionTelemetry: { capacity: "none", fee: "none" },
+    provenance: {
+      status: "parked",
+      rationale: "USDY is suspended until the daily Ankura archive has proven newest-report discovery. The pinned September 3 manifest remains reviewed static evidence only.",
+      parkedSince: "2026-09-09",
+      nextReview: "2026-10-09",
+    },
+    validation: {
+      allowedFreshnessModes: VERIFIED_ONLY_FRESHNESS,
+      maxSourceAgeSec: BUSINESS_DAY_NAV_SOURCE_MAX_AGE_SEC,
+      maxUnknownExposurePct: MATERIAL_UNKNOWN_EXPOSURE_PCT,
+    },
+  },
+  "djed-cardano": {
+    primaryInputKinds: ["http-json"],
+    paramsSchema: djedCardanoParamsSchema,
+    sourceModel: "single-bucket",
+    evidenceClass: "independent",
+    sourceOriginClass: "onchain-observation",
+    preferredFreshnessMode: "not-applicable",
+    sharedSourceMode: "none",
+    configValidation: CONFIG_COLLATERAL_V1,
+    redemptionTelemetry: { capacity: "none", fee: "none" },
+    validation: LATEST_STATE_VALIDATION,
+  },
+  "dgld-gold-mapper": {
+    primaryInputKinds: ["http-json"],
+    paramsSchema: dgldGoldMapperParamsSchema,
+    sourceModel: "single-bucket",
+    evidenceClass: "weak-live-probe",
+    sourceOriginClass: "issuer-attested",
+    sharedSourceMode: "none",
+    configValidation: CONFIG_SINGLE_ASSET_V1,
+    redemptionTelemetry: { capacity: "none", fee: "none" },
+    validation: {
+      maxSourceAgeSec: DASHBOARD_SOURCE_MAX_AGE_SEC,
+      maxUnknownExposurePct: 0,
+      allowedFreshnessModes: VERIFIED_ONLY_FRESHNESS,
+    },
+  },
+  "matrixdock-frs": {
+    primaryInputKinds: ["onchain-evm"],
+    paramsSchema: matrixdockFrsParamsSchema,
+    sourceModel: "single-bucket",
+    evidenceClass: "weak-live-probe",
+    sourceOriginClass: "issuer-attested",
+    sharedSourceMode: "none",
+    configValidation: CONFIG_SINGLE_ASSET_V1,
+    redemptionTelemetry: { capacity: "none", fee: "none" },
+    validation: LATEST_STATE_VALIDATION,
+  },
+  "icp-gldt": {
+    primaryInputKinds: ["http-json"],
+    paramsSchema: icpGldtParamsSchema,
+    sourceModel: "single-bucket",
+    evidenceClass: "independent",
+    sourceOriginClass: "onchain-observation",
+    preferredFreshnessMode: "not-applicable",
+    sharedSourceMode: "none",
+    configValidation: CONFIG_SINGLE_ASSET_V1,
+    redemptionTelemetry: { capacity: "none", fee: "none" },
+    validation: LATEST_STATE_VALIDATION,
+  },
+  "onre-holdings-csv": {
+    primaryInputKinds: ["http-html"],
+    paramsSchema: noParamsSchema,
+    sourceModel: "dynamic-mix",
+    // The sheet is an issuer-published schedule, not an independently examined
+    // census: issuer-attested provenance with a weak probe class until the
+    // total/AUM reconciliation drift is resolved and the cadence is reviewed.
+    evidenceClass: "weak-live-probe",
+    sourceOriginClass: "issuer-attested",
+    preferredFreshnessMode: "verified",
+    sharedSourceMode: "none",
+    configValidation: CONFIG_COLLATERAL_V1,
+    redemptionTelemetry: { capacity: "none", fee: "none" },
+    validation: {
+      // Dated Schedule of Assets snapshots; the observed 2026-08-14 snapshot
+      // was 26 days old at implementation, so use the monthly disclosure tier.
+      maxSourceAgeSec: MONTHLY_DISCLOSURE_SOURCE_MAX_AGE_SEC,
+      maxUnknownExposurePct: MATERIAL_UNKNOWN_EXPOSURE_PCT,
+      allowedFreshnessModes: VERIFIED_OR_UNVERIFIED_FRESHNESS,
+    },
+  },
+  "avant-reserves-api": {
+    primaryInputKinds: ["http-json"],
+    paramsSchema: noParamsSchema,
+    sourceModel: "dynamic-mix",
+    // Gross long legs of a leveraged book are not a reconciled holder-exitable
+    // allocation; issuer-attested weak probe until provenance/completeness is
+    // resolved. Debt is published as separate totals, never netted.
+    evidenceClass: "weak-live-probe",
+    sourceOriginClass: "issuer-attested",
+    preferredFreshnessMode: "verified",
+    sharedSourceMode: "none",
+    configValidation: CONFIG_COLLATERAL_V1,
+    redemptionTelemetry: { capacity: "none", fee: "none" },
+    validation: {
+      // Weekly Tuesday reserve snapshots (2026-08-25, 2026-09-01) with grace
+      // for one missed period; the yield-refresh clock is not reserve freshness.
+      maxSourceAgeSec: 10 * 86_400,
+      allowedFreshnessModes: VERIFIED_OR_UNVERIFIED_FRESHNESS,
+    },
+  },
+  "afi-proof": {
+    primaryInputKinds: ["http-json"],
+    paramsSchema: afiProofParamsSchema,
+    sourceModel: "single-bucket",
+    // Proof generation is not asset observation: the envelope verifies only
+    // aggregate totals, so this stays a weak live probe with ratio telemetry.
+    evidenceClass: "weak-live-probe",
+    sourceOriginClass: "issuer-attested",
+    displayBadgeKind: "proof",
+    sharedSourceMode: "none",
+    configValidation: CONFIG_SINGLE_ASSET_V1,
+    redemptionTelemetry: { capacity: "none", fee: "none" },
+    freshnessLimitation:
+      "The AFI proof carries a generation timestamp, but proof generation does not establish the as-of dates of the underlying assets; ratio telemetry publishes as unverified.",
+    validation: {
+      // The basket is 100% opaque by design: a permanent structural fact
+      // surfaced as info, not a per-run degradation.
+      maxUnknownExposurePct: 100,
+      allowedFreshnessModes: ["unverified"],
+    },
+  },
 } as const satisfies Record<string, LiveReserveAdapterDescriptor>;
 
 export type LiveReserveAdapterKey = keyof typeof LIVE_RESERVE_ADAPTER_DESCRIPTOR_DECLARATIONS;

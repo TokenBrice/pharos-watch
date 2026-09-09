@@ -19,6 +19,15 @@ afterEach(() => {
 });
 
 describe("adaptJupUsdData", () => {
+  it("rejects drift removing totalSupply", () => {
+    const payload = {
+      totalSupply: "1000000",
+      holdings: [{ name: "USDC", amount: "1000000", decimals: 6 }],
+    };
+    Reflect.deleteProperty(payload, "totalSupply");
+    expect(() => adaptJupUsdData(payload)).toThrow(/totalSupply/);
+  });
+
   it("groups published JupUSD holdings and emits whitelisted redemption capacity", () => {
     const result = adaptJupUsdData({
       totalSupply: "75000000000000",
@@ -77,6 +86,7 @@ describe("adaptJupUsdData", () => {
 
   it("keeps unknown holdings explicit instead of defaulting them to medium risk", () => {
     const result = adaptJupUsdData({
+      totalSupply: "100000000",
       holdings: [
         { name: "USDC", amount: "99000000", decimals: 6 },
         { name: "MYSTERY", amount: "1000000", decimals: 6 },
@@ -99,6 +109,7 @@ describe("adaptJupUsdData", () => {
 
   it("degrades material unknown holdings", () => {
     const result = adaptJupUsdData({
+      totalSupply: "100000000",
       holdings: [
         { name: "USDC", amount: "90000000", decimals: 6 },
         { name: "MYSTERY", amount: "10000000", decimals: 6 },
@@ -114,6 +125,7 @@ describe("adaptJupUsdData", () => {
 
   it("converts large raw integer holdings through bounded decimal parsing", () => {
     const result = adaptJupUsdData({
+      totalSupply: "100000000000000000",
       holdings: [
         {
           name: "USDC",
@@ -131,6 +143,7 @@ describe("adaptJupUsdData", () => {
 
   it("ignores provider amounts with unsafe decimal scales", () => {
     const result = adaptJupUsdData({
+      totalSupply: "1000000",
       holdings: [
         { name: "USDC", amount: "1000000", decimals: 6 },
         { name: "USDtb", amount: "1", decimals: 1_000_000_000 },
@@ -146,6 +159,7 @@ describe("adaptJupUsdData", () => {
   it("passes through extra warnings from the fetch layer", () => {
     const result = adaptJupUsdData(
       {
+        totalSupply: "1000000",
         holdings: [{ name: "USDC", amount: "1000000", decimals: 6 }],
       },
       {

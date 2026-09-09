@@ -145,6 +145,7 @@
       }
     },
     "params": {
+      "navScope": "native-fund-share",
       "consumerAddress": "0x9a3bF392f86acd1b1EC07d026B326302eAED7488",
       "tokenAddress": "0x9477724bb54ad5417de8baff29e59df3fb4da74f",
       "assetLabel": "Apollo Diversified Credit Fund NAV",

@@ -133,6 +133,10 @@ const REVIEWED_WARNING_IDS = new Map<string, string>([
     "The reserve label names the subject fund itself, not an upstream OUSG dependency edge.",
   ],
   [
+    "buidl-blackrock::BlackRock BUIDL fund shares::BUIDL",
+    "The reserve label names the subject fund itself, not an upstream BUIDL dependency edge.",
+  ],
+  [
     "pht-pht::Current apcxUSDT-referenced collateral envelope (unreconciled)::USDT",
     "APACX identifies apcxUSDT as an eligible collateral wrapper but does not establish its current PHT balance or reconcile the wrapper to underlying USDT reserves.",
   ],

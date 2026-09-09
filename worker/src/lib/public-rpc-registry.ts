@@ -11,6 +11,7 @@ const PUBLIC_RPC_URLS: Record<string, string> = {
   bsc: "https://bsc-dataseed.binance.org",
   gnosis: "https://rpc.gnosischain.com",
   fantom: "https://rpc.ftm.tools",
+  sonic: "https://rpc.soniclabs.com",
   celo: "https://forno.celo.org",
   tron: "https://api.trongrid.io",
   blast: "https://rpc.blast.io",
@@ -29,6 +30,21 @@ const PUBLIC_RPC_URLS: Record<string, string> = {
   "morph-l2": "https://rpc.morphl2.io",
   abcore: "https://rpc.core.ab.org",
   xlayer: "https://rpc.xlayer.tech",
+  // Sui's public transport is GraphQL, not the retired JSON-RPC methods.
+  sui: "https://graphql.mainnet.sui.io/graphql",
+  // Hedera's public read surface is the mirror node REST API (contracts/call
+  // for EVM-equivalent view calls, blocks, tokens) — not a JSON-RPC endpoint.
+  // Consumed by the hliquity-hedera reserve adapter family.
+  hedera: "https://mainnet-public.mirrornode.hedera.com/api/v1",
+  // Cardano's public query surface is the Koios REST API (tip, address_info,
+  // asset_info) — not a JSON-RPC endpoint. Consumed by the djed-cardano
+  // reserve adapter through the koios.ts bounded reader.
+  cardano: "https://api.koios.rest/api/v1",
+  // Tezos's public query surface is the TzKT indexer REST API (head, contract
+  // storage, bigmap keys at a pinned level) — not a JSON-RPC endpoint.
+  // Consumed by the youves-tezos reserve adapter through the tzkt.ts bounded
+  // reader.
+  tezos: "https://api.tzkt.io",
 };
 
 const EXTRA_FALLBACK_RPC_URLS: Record<string, string[]> = {
@@ -37,6 +53,7 @@ const EXTRA_FALLBACK_RPC_URLS: Record<string, string[]> = {
   optimism: ["https://optimism-rpc.publicnode.com"],
   blast: ["https://blast.blockpi.network/v1/rpc/public"],
   manta: ["https://manta-pacific.drpc.org"],
+  sonic: ["https://sonic-rpc.publicnode.com"],
   // dRPC as an independent second operator behind publicnode; polygon-rpc.com
   // is deliberately absent (it served zero-valued eth_call results 2026-07-09).
   polygon: ["https://polygon.drpc.org"],

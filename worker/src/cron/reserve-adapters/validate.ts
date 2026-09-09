@@ -13,17 +13,17 @@ import type { ReserveAdapterDefinition } from "./types";
 import { isReserveRisk, PCT_SUM_ERROR_TOLERANCE } from "./helpers";
 import { reserveDegradedWarning, reserveFatalWarning, reserveInfoWarning } from "./warnings";
 
-interface ValidationInput {
+export interface ValidationInput {
   slices: ReserveSlice[];
   metadata?: Record<string, unknown>;
 }
 
-interface ValidationResult {
+export interface ValidationResult {
   valid: boolean;
   warnings: LiveReserveWarning[];
 }
 
-interface ValidationOptions {
+export interface ValidationOptions {
   adapter?: ReserveAdapterDefinition;
   now?: number;
   maxSourceAgeSec?: number;

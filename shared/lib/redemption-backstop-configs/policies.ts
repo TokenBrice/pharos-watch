@@ -142,6 +142,14 @@ export const REDEMPTION_BACKSTOP_POLICY_ENTRIES: readonly RedemptionBackstopPoli
     owner: POLICY_OWNER,
     reviewedAt: "2026-09-09",
   },
+  {
+    kind: "unused-live-redemption-telemetry",
+    stablecoinId: "hchf-hedera-swiss-franc",
+    reason:
+      "HCHF's HLiquity adapter publishes same-run debt-bounded redemption capacity, but the CHF-denominated route has no reviewed public redemption backstop config yet; the telemetry is reserve evidence only until a route is configured.",
+    owner: POLICY_OWNER,
+    reviewedAt: "2026-09-09",
+  },
 ];
 
 const UNVERIFIED_FRESHNESS_APPROVALS = new Set<string>(

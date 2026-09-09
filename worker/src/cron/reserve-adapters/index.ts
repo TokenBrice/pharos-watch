@@ -1,6 +1,7 @@
 import { LIVE_RESERVE_ADAPTER_DEFINITIONS } from "@shared/lib/live-reserve-adapters";
 import type { LiveReserveAdapterKey } from "@shared/types/live-reserves";
 import { fetchThreeJaneUsd3Reserves } from "./3jane-usd3";
+import { fetchHyloSolanaReserves } from "./hylo-solana";
 import { fetchAbracadabraReserves } from "./abracadabra";
 import { fetchAccountableReserves } from "./accountable";
 import { fetchAgoraIndependentAssuranceReserves } from "./agora-independent-assurance";
@@ -24,6 +25,8 @@ import { fetchChronicleNavReserves } from "./chronicle-nav";
 import { fetchCollateralPositionsApiReserves } from "./collateral-positions-api";
 import { fetchCrvUsdReserves } from "./crvusd";
 import { fetchCuratedValidatedReserves } from "./curated-validated";
+import { fetchDgldGoldMapperReserves } from "./dgld-gold-mapper";
+import { fetchDjedCardanoReserves } from "./djed-cardano";
 import { fetchDolaInverseReserves } from "./dola-inverse";
 import { fetchEscrowBalanceReserves } from "./escrow-balance";
 import { fetchEvmBranchBalancesReserves } from "./evm-branch-balances";
@@ -38,11 +41,15 @@ import { fetchFraxBalanceSheetReserves, fetchFraxFpiCollateralReserves } from ".
 import { fetchFxReserves } from "./fx";
 import { fetchGeminiIndependentAssuranceReserves } from "./gemini-independent-assurance";
 import { fetchGhoReserves } from "./gho";
+import { fetchSodaxSonicReserves } from "./sodax-sonic";
 import { fetchHiveHbdProtocolReserves } from "./hive-hbd-protocol";
+import { fetchHliquityHederaReserves } from "./hliquity-hedera";
 import { fetchIdleCdoEpochVariantReserves } from "./idle-cdo-epoch-variant";
+import { fetchIcpGldtReserves } from "./icp-gldt";
 import { fetchInfiniFiReserves } from "./infinifi";
 import { fetchJupUsdReserves } from "./jupusd";
 import { fetchKavaCdpReserves } from "./kava-cdp";
+import { fetchKerneSignedPorReserves } from "./kerne-signed-por";
 import { fetchKrwqCustodianReserves } from "./krwq-custodian";
 import { fetchListaReserves } from "./lista";
 import { fetchLiquityV1Reserves } from "./liquity-v1";
@@ -51,9 +58,11 @@ import { fetchLiquityV2BranchReserves } from "./liquity-v2-branches";
 import { fetchM0Reserves } from "./m0";
 import { fetchM0WrapperUnderlyingReserves } from "./m0-wrapper-underlying";
 import { fetchMakinaStrategyReserves } from "./makina-strategy";
+import { fetchMatrixdockFrsReserves } from "./matrixdock-frs";
 import { fetchMegausdCustodyReserves } from "./megausd-custody";
 import { fetchMentoReserves } from "./mento";
 import { fetchMocDocReserves } from "./moc-doc";
+import { fetchMoneyReserves } from "./money-llamma";
 import { fetchUsdrifRifReserves } from "./usdrif-rif";
 import { fetchNestVaultPositionsReserves } from "./nest-vault-positions";
 import { fetchOpenEdenUsdoReserves } from "./openeden";
@@ -91,10 +100,16 @@ import { fetchUsdaiHubReserves } from "./usdai-hub";
 import { fetchUsd1BundleOracleReserves } from "./usd1-bundle-oracle";
 import { fetchUsddDataPlatformReserves } from "./usdd-data-platform";
 import { fetchUsdtbTransparencyReserves } from "./usdtb-transparency";
+import { fetchUsdyHoldingsReserves } from "./usdy-holdings-report";
+
 import { fetchYamatoReserves } from "./yamato";
+import { fetchYouvesTezosReserves } from "./youves-tezos";
 import { fetchXdaiBridgeReserves } from "./xdai-bridge";
 import { fetchXprAccountBalancesReserves } from "./xpr-account-balances";
 import { fetchZephyrScannerReserves } from "./zephyr-scanner";
+import { fetchOnreHoldingsCsvReserves } from "./onre-holdings-csv";
+import { fetchAvantReservesApiReserves } from "./avant-reserves-api";
+import { fetchAfiProofReserves } from "./afi-proof";
 import type { AdapterFn, ReserveAdapterDefinition } from "./types";
 
 export type { AdapterContext, AdapterResult, AdapterFn, ReserveAdapterDefinition } from "./types";
@@ -103,6 +118,8 @@ export type { AdapterContext, AdapterResult, AdapterFn, ReserveAdapterDefinition
 // makes a declaration key with no fetcher a compile error here, so the
 // declaration table stays the single source of adapter identity.
 export const LIVE_RESERVE_ADAPTER_FETCHERS: Record<LiveReserveAdapterKey, AdapterFn> = {
+  "hylo-solana": fetchHyloSolanaReserves,
+  "usdy-holdings-report": fetchUsdyHoldingsReserves,
   "3jane-usd3": fetchThreeJaneUsd3Reserves,
   abracadabra: fetchAbracadabraReserves,
   accountable: fetchAccountableReserves,
@@ -127,6 +144,8 @@ export const LIVE_RESERVE_ADAPTER_FETCHERS: Record<LiveReserveAdapterKey, Adapte
   "collateral-positions-api": fetchCollateralPositionsApiReserves,
   crvusd: fetchCrvUsdReserves,
   "curated-validated": fetchCuratedValidatedReserves,
+  "dgld-gold-mapper": fetchDgldGoldMapperReserves,
+  "djed-cardano": fetchDjedCardanoReserves,
   "dola-inverse": fetchDolaInverseReserves,
   "erc4626-single-asset": fetchErc4626SingleAssetReserves,
   "escrow-balance": fetchEscrowBalanceReserves,
@@ -144,13 +163,17 @@ export const LIVE_RESERVE_ADAPTER_FETCHERS: Record<LiveReserveAdapterKey, Adapte
   fx: fetchFxReserves,
   "gemini-independent-assurance": fetchGeminiIndependentAssuranceReserves,
   gho: fetchGhoReserves,
+  "sodax-sonic": fetchSodaxSonicReserves,
   "hive-hbd-protocol": fetchHiveHbdProtocolReserves,
+  "hliquity-hedera": fetchHliquityHederaReserves,
   "idle-cdo-epoch-variant": fetchIdleCdoEpochVariantReserves,
+  "icp-gldt": fetchIcpGldtReserves,
   infinifi: fetchInfiniFiReserves,
   "initia-wrapper-vault": fetchInitiaWrapperVaultReserves,
   "issuer-attested-report": fetchIndependentAssuranceAdapter,
   jupusd: fetchJupUsdReserves,
   "kava-cdp": fetchKavaCdpReserves,
+  "kerne-signed-por": fetchKerneSignedPorReserves,
   "krwq-custodian": fetchKrwqCustodianReserves,
   lista: fetchListaReserves,
   "liquity-v1": fetchLiquityV1Reserves,
@@ -159,10 +182,12 @@ export const LIVE_RESERVE_ADAPTER_FETCHERS: Record<LiveReserveAdapterKey, Adapte
   m0: fetchM0Reserves,
   "m0-wrapper-underlying": fetchM0WrapperUnderlyingReserves,
   "makina-strategy": fetchMakinaStrategyReserves,
+  "matrixdock-frs": fetchMatrixdockFrsReserves,
   "megausd-custody": fetchMegausdCustodyReserves,
   mento: fetchMentoReserves,
   "moc-doc": fetchMocDocReserves,
   "moc-v3-buckets": fetchUsdrifRifReserves,
+  "money-llamma": fetchMoneyReserves,
   "nest-vault-positions": fetchNestVaultPositionsReserves,
   "openeden-usdo": fetchOpenEdenUsdoReserves,
   "origin-vault-balances": fetchOriginVaultBalancesReserves,
@@ -201,7 +226,11 @@ export const LIVE_RESERVE_ADAPTER_FETCHERS: Record<LiveReserveAdapterKey, Adapte
   "xdai-bridge": fetchXdaiBridgeReserves,
   "xpr-account-balances": fetchXprAccountBalancesReserves,
   yamato: fetchYamatoReserves,
+  "youves-tezos": fetchYouvesTezosReserves,
   "zephyr-scanner": fetchZephyrScannerReserves,
+  "onre-holdings-csv": fetchOnreHoldingsCsvReserves,
+  "avant-reserves-api": fetchAvantReservesApiReserves,
+  "afi-proof": fetchAfiProofReserves,
 };
 
 // Cast (not satisfies) below: Object.fromEntries widens keys to string, so the

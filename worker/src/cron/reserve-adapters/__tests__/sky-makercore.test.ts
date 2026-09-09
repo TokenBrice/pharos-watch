@@ -95,6 +95,17 @@ const SAMPLE_GROUPS: SkyGroupResult[] = [
 ];
 
 describe("adaptSkyModules", () => {
+  it("rejects drift removing stablecoins.collateral", async () => {
+    const groups = structuredClone(SAMPLE_GROUPS);
+    Reflect.deleteProperty(groups[0], "collateral");
+    vi.mocked(fetchJsonAdapterInput).mockResolvedValue({ count: groups.length, results: groups });
+    await expect(fetchSkyMakercoreReserves(
+      {} as StablecoinMeta,
+      { inputs: { primary: { kind: "http-json", url: "https://example.com/groups" } } } as LiveReservesConfig,
+      signal,
+    )).rejects.toThrow(/stablecoins.collateral/);
+  });
+
   it("produces 7 slices from all known modules", () => {
     const slices = adaptSkyModules(SAMPLE_GROUPS);
     expect(slices).toHaveLength(7);

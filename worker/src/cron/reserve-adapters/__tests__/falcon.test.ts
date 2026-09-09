@@ -9,6 +9,12 @@ function falconPayload(
 }
 
 describe("adaptFalconTransparency", () => {
+  it("rejects drift removing usdf.supply", () => {
+    const payload = falconPayload([{ label: "USDC", ceffu: "100" }]);
+    Reflect.deleteProperty(payload.usdf!, "supply");
+    expect(() => adaptFalconTransparency(payload)).toThrow(/usdf.supply/);
+  });
+
   it("groups Falcon asset-level reserves into reserve buckets", () => {
     const payload = falconPayload([
       { label: "USDC", ceffu: "20", fireblocks: "10" },

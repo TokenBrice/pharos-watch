@@ -9,6 +9,12 @@ import { BTCFI_HANDLER_ROWS, BTCFI_MARKET_ROWS } from "./reserve-adapter-payload
 afterEach(() => vi.unstubAllGlobals());
 
 describe("adaptBtcfi", () => {
+  it("rejects drift removing a collateral row deposit_value", () => {
+    const market = structuredClone(BTCFI_MARKET_ROWS);
+    Reflect.deleteProperty(market[0], "deposit_value");
+    expect(() => adaptBtcfi(market, BTCFI_HANDLER_ROWS)).toThrow(/deposit_value/);
+  });
+
   it("declares latest-state API aggregation as not-applicable freshness", () => {
     expect(LIVE_RESERVE_ADAPTER_DEFINITIONS.btcfi.validation.allowedFreshnessModes).toEqual([
       "not-applicable",
@@ -125,16 +131,23 @@ describe("adaptBtcfi", () => {
     expect(result.metadata?.unknownExposurePct).toBe(10);
   });
 
-  it("ignores unmatched, stable, missing, invalid and nonpositive deposits", () => {
+  it("ignores unmatched, stable and zero deposits", () => {
     const ignored = [
       { token_handler_id: 99, deposit_value: "999" },
       { token_handler_id: 1, deposit_value: "999" },
-      ...[undefined, "NaN", "Infinity", "0", "-1"].map((deposit_value) => ({ token_handler_id: 0, deposit_value })),
+      { token_handler_id: 0, deposit_value: "0" },
     ];
     const handlers = [{ id: 0, symbol: "WBTC", isStable: false }, { id: 1, symbol: "USD", isStable: true }];
     expect(adaptBtcfi(ignored, handlers)).toEqual({ slices: [] });
     expect(adaptBtcfi([...ignored, { token_handler_id: 0, deposit_value: "1" }], handlers).slices)
       .toEqual([{ sourceKey: "btcfi:wbtc", name: "WBTC", pct: 100, risk: "medium" }]);
+  });
+
+  it.each([undefined, "", "NaN", "Infinity", "-1"])("rejects invalid collateral deposit %s", (deposit_value) => {
+    expect(() => adaptBtcfi(
+      [{ token_handler_id: 0, deposit_value }, { token_handler_id: 0, deposit_value: "1" }],
+      [{ id: 0, symbol: "WBTC", isStable: false }],
+    )).toThrow(/deposit_value/);
   });
 
   it("fetches distinct market and handler payloads and rejects either endpoint failure", async () => {

@@ -1,4 +1,5 @@
 import { pinnedBlockPlan } from "./evm-observation-plan";
+import { createAdapterIoLimiter } from "./concurrency";
 import { toErrorMessage } from "@shared/lib/error-utils";
 import type { StablecoinMeta } from "@shared/types/core";
 import type { LiveReservesConfig, LiveReserveWarning } from "@shared/types/live-reserves";
@@ -552,8 +553,29 @@ export async function fetchEvmBranchBalancesReserves(
 ): Promise<AdapterResult> {
   const input = requireOnchainInput(config.inputs.primary, ADAPTER_KEY);
   const params = readBranchBalanceParams(config, ADAPTER_KEY);
-  const plan = await pinnedBlockPlan({ chain: input.chain, signal, ctx, ...params });
+  const attemptCtx = { ...ctx, ioLimiter: ctx?.ioLimiter ?? createAdapterIoLimiter(2) };
+  const plan = await pinnedBlockPlan({ chain: input.chain, signal, ctx: attemptCtx, ...params });
   ctx = plan.ctx;
+  const chainPlans = new Map([[input.chain, plan]]);
+  for (const branch of params.branches) {
+    const chain = branch.chain ?? input.chain;
+    if (!chainPlans.has(chain)) {
+      chainPlans.set(chain, await pinnedBlockPlan({
+        chain, signal, ctx: { ...attemptCtx, observedBlock: undefined },
+      }));
+    }
+  }
+  const balanceGroups = [...chainPlans].map(([chain, chainPlan]) => {
+    const branches = params.branches.filter((branch) => (branch.chain ?? input.chain) === chain);
+    return branches.length === 0 ? Promise.resolve([]) : fetchBranchBalances(
+      { ...input, chain },
+      { ...params, branches, ...(chain !== input.chain ? { rpcUrl: undefined, fallbackRpcUrl: undefined } : {}) },
+      signal, chainPlan.ctx,
+    );
+  });
+  const observationDetails = chainPlans.size > 1
+    ? { observedBlocks: [...chainPlans.values()].map((entry) => entry.observedBlock) }
+    : undefined;
   const debtSelector = params.debtSelector;
   const debtDecimals = params.debtDecimals ?? DEFAULT_DEBT_DECIMALS;
   const onchain = makeOnchainCallers(input, {
@@ -567,7 +589,7 @@ export async function fetchEvmBranchBalancesReserves(
   ).redemptionCapacity;
 
   const [balances, redemptionFeeBps, debtRaw, redemptionCapacity] = await Promise.all([
-    fetchBranchBalances(input, params, signal, ctx),
+    Promise.all(balanceGroups).then((groups) => groups.flat()),
     probeOptionalRedemptionRateBps(
       input,
       params.redemptionRateProbe,
@@ -636,7 +658,7 @@ export async function fetchEvmBranchBalancesReserves(
       if (entry.balanceRaw == null || entry.balanceRaw <= 0n) return sum;
       const price = entry.branch.priceUsd ?? priceMap.get(entry.branch.name);
       if (price == null) return sum;
-      return sum + decimalNumberFromBigInt(entry.balanceRaw, entry.branch.token.decimals) * price;
+      return sum + decimalNumberFromBigInt(entry.balanceRaw, entry.balanceDecimals ?? entry.branch.token.decimals) * price;
     }, 0);
     const collateralizationRatio = totalDebtUsd > 0 ? totalCollateralUsd / totalDebtUsd : null;
     const warnings: LiveReserveWarning[] = [];
@@ -650,6 +672,7 @@ export async function fetchEvmBranchBalancesReserves(
       adapterKey: ADAPTER_KEY,
       balances,
       priceMap,
+      details: observationDetails,
       metadata: {
         ...(baseMetadata ?? {}),
         totalDebtUsd,
@@ -666,6 +689,7 @@ export async function fetchEvmBranchBalancesReserves(
     adapterKey: ADAPTER_KEY,
     balances,
     priceMap,
+    details: observationDetails,
     metadata: baseMetadata,
   });
   return commonWarnings.length > 0

@@ -76,7 +76,7 @@
   "custodyModel": "institutional-regulated",
   "governanceQuality": "single-entity",
   "liveReservesConfig": {
-    "adapter": "single-asset",
+    "adapter": "matrixdock-frs",
     "version": 1,
     "semantics": "single-asset",
     "breakerScope": "xagm-matrixdock",
@@ -93,7 +93,10 @@
     },
     "params": {
       "label": "Physical silver bars (LBMA Good Delivery, Asian vault custody)",
-      "risk": "medium"
+      "risk": "medium",
+      "feedAddress": "0x20377b5e38e0e992bbdcf3502ec72ded6a5e28ab",
+      "tokenAddress": "0x123ffe0a3c62878dcbee2742227dc8990058d9e1",
+      "suiCoinType": "0x64bddec0f898ccaa022b8a6e0a5f75d80f53177b87a9795dd15aefe9ac12ee6c::xagm::XAGM"
     }
   },
   "notices": [

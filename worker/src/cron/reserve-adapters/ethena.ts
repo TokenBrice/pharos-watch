@@ -77,6 +77,10 @@ export function adaptEthenaCollateral(
   payload: EthenaCollateralResponse,
   _sourceUrl?: string,
 ): AdapterResult {
+  if (!Number.isFinite(payload.totalBackingAssetsInUsd) || payload.totalBackingAssetsInUsd <= 0) {
+    throw new Error("Ethena missing or invalid totalBackingAssetsInUsd");
+  }
+
   const knownAssets = new Set([
     ...ETHENA_STABLE_ASSETS,
     ...ETHENA_BTC_ASSETS,

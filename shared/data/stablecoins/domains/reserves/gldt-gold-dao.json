@@ -2,6 +2,7 @@
   "id": "gldt-gold-dao",
   "reserves": [
     {
+      "sourceKey": "icp-gldt:locked-gld-nft",
       "name": "Locked GLD NFTs representing physical gold bars in Swiss vaults",
       "pct": 100,
       "risk": "low",

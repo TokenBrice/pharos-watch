@@ -55,19 +55,21 @@
     "yieldType": "nav-appreciation"
   },
   "liveReservesConfig": {
-    "adapter": "curated-validated",
+    "adapter": "onre-holdings-csv",
     "version": 1,
     "semantics": "collateral-mix",
     "breakerScope": "onyc-onre",
     "display": {
-      "url": "https://onre.finance",
-      "label": "OnRe"
+      "url": "https://app.onre.finance/earn/transparency",
+      "label": "OnRe Transparency Hub"
     },
     "inputs": {
       "primary": {
-        "kind": "onchain-solana"
+        "kind": "http-html",
+        "url": "https://docs.google.com/spreadsheets/d/e/2PACX-1vT-bLCCxKNCB2GHgFV5Jo6_fbv4t3CT60dwPMbUDfwhHglt5GBoLp47jp1wcCOY8Ob1ZgjA6KXNczdq/pub?output=csv&gid=1591707661&single=true"
       }
-    }
+    },
+    "params": {}
   },
   "proofOfReserves": {
     "type": "agreed-upon-procedures",

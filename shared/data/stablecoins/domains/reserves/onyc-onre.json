@@ -2,6 +2,7 @@
   "id": "onyc-onre",
   "reserves": [
     {
+      "sourceKey": "onre-holdings-csv:us-t-bills",
       "name": "Short-term U.S. Treasury bills",
       "pct": 48.28294380,
       "risk": "very-low",
@@ -15,6 +16,7 @@
       "liquidityHorizon": "one-day"
     },
     {
+      "sourceKey": "onre-holdings-csv:usdg",
       "name": "USDG",
       "pct": 24.42205823,
       "risk": "low",
@@ -31,6 +33,7 @@
       "liquidityHorizon": "immediate"
     },
     {
+      "sourceKey": "onre-holdings-csv:susds",
       "name": "sUSDS",
       "pct": 6.29358175,
       "risk": "low",
@@ -47,6 +50,7 @@
       "liquidityHorizon": "immediate"
     },
     {
+      "sourceKey": "onre-holdings-csv:syrup-usdc",
       "name": "syrupUSDC",
       "pct": 3.83518853,
       "risk": "medium",
@@ -64,6 +68,7 @@
       "liquidityHorizon": "seven-days"
     },
     {
+      "sourceKey": "onre-holdings-csv:susde",
       "name": "sUSDe",
       "pct": 2.01185756,
       "risk": "high",
@@ -82,6 +87,7 @@
       "liquidityHorizon": "seven-days"
     },
     {
+      "sourceKey": "onre-holdings-csv:uscc",
       "name": "USCC",
       "pct": 1.73359674,
       "risk": "medium",
@@ -98,6 +104,7 @@
       "liquidityHorizon": "unknown"
     },
     {
+      "sourceKey": "onre-holdings-csv:usdg-kamino-lending",
       "name": "USDG (Kamino lending)",
       "pct": 1.40554714,
       "risk": "medium",
@@ -114,6 +121,7 @@
       "liquidityHorizon": "unknown"
     },
     {
+      "sourceKey": "onre-holdings-csv:usdc-kamino-lending",
       "name": "USDC (Kamino lending)",
       "pct": 3.62887001,
       "risk": "medium",
@@ -130,6 +138,7 @@
       "liquidityHorizon": "unknown"
     },
     {
+      "sourceKey": "onre-holdings-csv:usyc",
       "name": "USYC",
       "pct": 0.14857651,
       "risk": "low",
@@ -148,6 +157,7 @@
       "liquidityHorizon": "one-day"
     },
     {
+      "sourceKey": "onre-holdings-csv:usdc",
       "name": "USDC",
       "pct": 3.47613803,
       "risk": "low",
@@ -163,6 +173,7 @@
       "liquidityHorizon": "immediate"
     },
     {
+      "sourceKey": "onre-holdings-csv:usd-cash",
       "name": "USD cash",
       "pct": 4.76164170,
       "risk": "very-low",
@@ -202,7 +213,7 @@
         "url": "https://docs.onre.finance/reinsurance-framework/portfolio-makeup"
       }
     ],
-    "rationale": "OnRe's issuer-hosted Transparency Hub loads its Schedule of Assets from the cited public sheet. The 2026-08-14 sheet reports $289,757,448.67 of collateral across twelve asset rows and a separate $286,583,982.27 AUM row. The two Treasury rows were combined, while USDG (Lending) and USDC (Lending) remain Kamino protocol-position slices linked to their upstream assets. The published allocation column sums to 100.2902573392%, so the reviewed weights are normalized pro-rata to exactly 100%. OnRe separately publishes bound and offered reinsurance contracts: those are contingent underwriting obligations secured by the assets, not additional reserve assets, so adding them would double-count the balance sheet. This remains consistent with the 2026-07-15 mechanism overlay's tokenized-reinsurance classification; only the reserve composition is refreshed here.",
+    "rationale": "OnRe's issuer-hosted Transparency Hub loads its Schedule of Assets from the cited public sheet. The 2026-08-14 sheet reports $289,757,448.67 of collateral across twelve asset rows and a separate $286,583,982.27 AUM row. The two Treasury rows were combined, while USDG (Lending) and USDC (Lending) remain Kamino protocol-position slices linked to their upstream assets. The published allocation column sums to 100.2902573392%, so the reviewed weights are normalized pro-rata to exactly 100%. Re-fetched 2026-09-09, the same sheet now reports a $290,132,322.20 total against a $289,656,147.33 AUM with a 100.1905729% allocation sum; the live producer (onre-holdings-csv) reconciles that unreconciled drift with tight tolerances and publishes it as degraded warnings rather than absorbing it. OnRe separately publishes bound and offered reinsurance contracts: those are contingent underwriting obligations secured by the assets, not additional reserve assets, so adding them would double-count the balance sheet. This remains consistent with the 2026-07-15 mechanism overlay's tokenized-reinsurance classification; only the reserve composition is refreshed here.",
     "compositionBasis": "OnRe live Schedule of Assets dated 2026-08-14; $289,757,448.67 total collateral, $286,583,982.27 AUM, and source-native allocation percentages totaling 100.2902573392%, normalized pro-rata to 100%",
     "compositionAsOf": "2026-08-14",
     "scope": "full-composition",

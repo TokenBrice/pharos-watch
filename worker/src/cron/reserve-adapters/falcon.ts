@@ -161,6 +161,9 @@ export function adaptFalconTransparency(payload: FalconTransparencyResponse): Ad
     typeof payload.usdf?.supply === "string"
       ? Number(payload.usdf.supply)
       : NaN;
+  if (!Number.isFinite(supplyUsd) || supplyUsd <= 0) {
+    throw new Error("Falcon missing or invalid usdf.supply");
+  }
   const { slices, immediateRedeemableUsd: stableBucketUsd } = buildBucketSlices(
     bucketTotals,
     [
@@ -226,7 +229,7 @@ export function adaptFalconTransparency(payload: FalconTransparencyResponse): Ad
       snapshotDate: payload.snapshot_date,
       supply: payload.usdf?.supply,
       insuranceFund: payload.usdf?.insurance_fund,
-      ...(Number.isFinite(supplyUsd) && supplyUsd > 0 ? { supplyUsd } : {}),
+      supplyUsd,
       assetCount: assets.length,
       ...freshnessMetadataFromTimestamp(
         sourceTimestamp,
@@ -236,7 +239,7 @@ export function adaptFalconTransparency(payload: FalconTransparencyResponse): Ad
       unknownExposurePct: totalAssetUsd > 0 ? (unknownExposureUsd / totalAssetUsd) * 100 : 0,
       ...buildRedemptionSnapshotMetadata({
         capacityUsd: stableBucketUsd,
-        ...(Number.isFinite(supplyUsd) && supplyUsd > 0 ? { capacityRatioOfSupply: stableBucketUsd / supplyUsd } : {}),
+        capacityRatioOfSupply: stableBucketUsd / supplyUsd,
         capacityKind: "live-queue",
         freshnessKind: sourceTimestamp != null ? "verified-source-timestamp" : "unverified",
         ...(sourceTimestamp != null ? { sourceTimestamp } : {}),

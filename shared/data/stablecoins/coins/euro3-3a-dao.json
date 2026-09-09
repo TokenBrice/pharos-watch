@@ -62,12 +62,367 @@
   "collateralQuality": "alt-lst-bridged-or-mixed",
   "custodyModel": "onchain",
   "governanceQuality": "single-entity",
-  "notices": [
-    {
-      "type": "info",
-      "title": "Live collateral mix not modeled",
-      "message": "3A documents the approved vault collateral set and redemption mechanics, but no Pharos-supported live adapter or stable public mainnet collateral-composition feed was found during this addition."
+  "launchDate": "2023-11-01",
+  "liveReservesConfig": {
+    "adapter": "evm-branch-balances",
+    "version": 1,
+    "semantics": "collateral-mix",
+    "breakerScope": "euro3-3a-dao",
+    "inputs": {
+      "primary": {
+        "kind": "onchain-evm",
+        "chain": "linea",
+        "rpcMode": "public-rpc"
+      }
+    },
+    "params": {
+      "rpcUrl": "https://rpc.linea.build",
+      "sourceUrls": [
+        "https://docs.3adao.org/3a-protocol/technical-documentation/smart-contracts/linea-mainnet-contracts",
+        "https://docs.3adao.org/3a-protocol/technical-documentation/smart-contracts/polygon-mainnet-contracts",
+        "https://docs.mendi.finance/protocol/developer-docs"
+      ],
+      "branches": [
+        {
+          "name": "Mendi meUSDC collateral (Linea)",
+          "chain": "linea",
+          "holder": "0x65c6FD9B3a2A892096881e28f07c732ed128893E",
+          "token": {
+            "chain": "linea",
+            "address": "0x333d8b480bdb25ea7be4dd87eeb359988ce1b30d",
+            "decimals": 8
+          },
+          "balanceRead": {
+            "contract": "0x65c6FD9B3a2A892096881e28f07c732ed128893E",
+            "selector": "0xa5fdc5de",
+            "args": [
+              "0x000000000000000000000000333d8b480bdb25ea7be4dd87eeb359988ce1b30d"
+            ]
+          },
+          "risk": "high",
+          "coinId": "usdc-circle",
+          "depType": "collateral",
+          "receipt": {
+            "kind": "compound-v2"
+          },
+          "priceToken": {
+            "chain": "linea",
+            "address": "0x176211869ca2b568f2a7d4ee941e073a821ee1ff"
+          }
+        },
+        {
+          "name": "Mendi meUSDT collateral (Linea)",
+          "chain": "linea",
+          "holder": "0x65c6FD9B3a2A892096881e28f07c732ed128893E",
+          "token": {
+            "chain": "linea",
+            "address": "0xf669c3c03d9fdf4339e19214a749e52616300e89",
+            "decimals": 8
+          },
+          "balanceRead": {
+            "contract": "0x65c6FD9B3a2A892096881e28f07c732ed128893E",
+            "selector": "0xa5fdc5de",
+            "args": [
+              "0x000000000000000000000000f669c3c03d9fdf4339e19214a749e52616300e89"
+            ]
+          },
+          "risk": "high",
+          "coinId": "usdt-tether",
+          "depType": "collateral",
+          "receipt": {
+            "kind": "compound-v2"
+          },
+          "priceToken": {
+            "chain": "linea",
+            "address": "0xa219439258ca9da29e9cc4ce5596924745e12b93"
+          }
+        },
+        {
+          "name": "WETH collateral (Linea)",
+          "chain": "linea",
+          "holder": "0x65c6FD9B3a2A892096881e28f07c732ed128893E",
+          "token": {
+            "chain": "linea",
+            "address": "0xe5d7c2a44ffddf6b295a15c148167daaaf5cf34f",
+            "decimals": 18
+          },
+          "balanceRead": {
+            "contract": "0x65c6FD9B3a2A892096881e28f07c732ed128893E",
+            "selector": "0xa5fdc5de",
+            "args": [
+              "0x000000000000000000000000e5d7c2a44ffddf6b295a15c148167daaaf5cf34f"
+            ]
+          },
+          "risk": "very-low"
+        },
+        {
+          "name": "WBTC collateral (Linea)",
+          "chain": "linea",
+          "holder": "0x65c6FD9B3a2A892096881e28f07c732ed128893E",
+          "token": {
+            "chain": "linea",
+            "address": "0x3aab2285ddcddad8edf438c1bab47e1a9d05a9b4",
+            "decimals": 8
+          },
+          "balanceRead": {
+            "contract": "0x65c6FD9B3a2A892096881e28f07c732ed128893E",
+            "selector": "0xa5fdc5de",
+            "args": [
+              "0x0000000000000000000000003aab2285ddcddad8edf438c1bab47e1a9d05a9b4"
+            ]
+          },
+          "risk": "medium"
+        },
+        {
+          "name": "mewETH collateral (Linea)",
+          "chain": "linea",
+          "holder": "0x65c6FD9B3a2A892096881e28f07c732ed128893E",
+          "token": {
+            "chain": "linea",
+            "address": "0xad7f33984bed10518012013d4ab0458d37fee6f3",
+            "decimals": 8
+          },
+          "balanceRead": {
+            "contract": "0x65c6FD9B3a2A892096881e28f07c732ed128893E",
+            "selector": "0xa5fdc5de",
+            "args": [
+              "0x000000000000000000000000ad7f33984bed10518012013d4ab0458d37fee6f3"
+            ]
+          },
+          "risk": "high",
+          "receipt": {
+            "kind": "compound-v2"
+          },
+          "priceToken": {
+            "chain": "linea",
+            "address": "0xe5d7c2a44ffddf6b295a15c148167daaaf5cf34f"
+          }
+        },
+        {
+          "name": "wstETH collateral (Linea)",
+          "chain": "linea",
+          "holder": "0x65c6FD9B3a2A892096881e28f07c732ed128893E",
+          "token": {
+            "chain": "linea",
+            "address": "0xb5bedd42000b71fdde22d3ee8a79bd49a568fc8f",
+            "decimals": 18
+          },
+          "balanceRead": {
+            "contract": "0x65c6FD9B3a2A892096881e28f07c732ed128893E",
+            "selector": "0xa5fdc5de",
+            "args": [
+              "0x000000000000000000000000b5bedd42000b71fdde22d3ee8a79bd49a568fc8f"
+            ]
+          },
+          "risk": "low"
+        },
+        {
+          "name": "USDC collateral (Linea)",
+          "chain": "linea",
+          "holder": "0x65c6FD9B3a2A892096881e28f07c732ed128893E",
+          "token": {
+            "chain": "linea",
+            "address": "0x176211869ca2b568f2a7d4ee941e073a821ee1ff",
+            "decimals": 6
+          },
+          "balanceRead": {
+            "contract": "0x65c6FD9B3a2A892096881e28f07c732ed128893E",
+            "selector": "0xa5fdc5de",
+            "args": [
+              "0x000000000000000000000000176211869ca2b568f2a7d4ee941e073a821ee1ff"
+            ]
+          },
+          "risk": "low",
+          "coinId": "usdc-circle",
+          "depType": "collateral"
+        },
+        {
+          "name": "USDC.e collateral (Polygon)",
+          "chain": "polygon",
+          "holder": "0x4760847023fa0833221ae76E01Db1E483A5D20e0",
+          "token": {
+            "chain": "polygon",
+            "address": "0x2791bca1f2de4661ed88a30c99a7a9449aa84174",
+            "decimals": 6
+          },
+          "balanceRead": {
+            "contract": "0x4760847023fa0833221ae76E01Db1E483A5D20e0",
+            "selector": "0xa5fdc5de",
+            "args": [
+              "0x0000000000000000000000002791bca1f2de4661ed88a30c99a7a9449aa84174"
+            ]
+          },
+          "risk": "low",
+          "coinId": "usdc-circle",
+          "depType": "collateral"
+        },
+        {
+          "name": "USDT collateral (Linea)",
+          "chain": "linea",
+          "holder": "0x65c6FD9B3a2A892096881e28f07c732ed128893E",
+          "token": {
+            "chain": "linea",
+            "address": "0xa219439258ca9da29e9cc4ce5596924745e12b93",
+            "decimals": 6
+          },
+          "balanceRead": {
+            "contract": "0x65c6FD9B3a2A892096881e28f07c732ed128893E",
+            "selector": "0xa5fdc5de",
+            "args": [
+              "0x000000000000000000000000a219439258ca9da29e9cc4ce5596924745e12b93"
+            ]
+          },
+          "risk": "low",
+          "coinId": "usdt-tether",
+          "depType": "collateral"
+        },
+        {
+          "name": "DAI collateral (Linea)",
+          "chain": "linea",
+          "holder": "0x65c6FD9B3a2A892096881e28f07c732ed128893E",
+          "token": {
+            "chain": "linea",
+            "address": "0x4af15ec2a0bd43db75dd04e62faa3b8ef36b00d5",
+            "decimals": 18
+          },
+          "balanceRead": {
+            "contract": "0x65c6FD9B3a2A892096881e28f07c732ed128893E",
+            "selector": "0xa5fdc5de",
+            "args": [
+              "0x0000000000000000000000004af15ec2a0bd43db75dd04e62faa3b8ef36b00d5"
+            ]
+          },
+          "risk": "low",
+          "coinId": "dai-makerdao",
+          "depType": "collateral"
+        },
+        {
+          "name": "mewstETH collateral (Linea)",
+          "chain": "linea",
+          "holder": "0x65c6FD9B3a2A892096881e28f07c732ed128893E",
+          "token": {
+            "chain": "linea",
+            "address": "0xceed853798ff1c95ceb4dc48f68394eb7a86a782",
+            "decimals": 8
+          },
+          "balanceRead": {
+            "contract": "0x65c6FD9B3a2A892096881e28f07c732ed128893E",
+            "selector": "0xa5fdc5de",
+            "args": [
+              "0x000000000000000000000000ceed853798ff1c95ceb4dc48f68394eb7a86a782"
+            ]
+          },
+          "risk": "high",
+          "receipt": {
+            "kind": "compound-v2"
+          },
+          "priceToken": {
+            "chain": "linea",
+            "address": "0xb5bedd42000b71fdde22d3ee8a79bd49a568fc8f"
+          }
+        },
+        {
+          "name": "WMATIC collateral (Polygon)",
+          "chain": "polygon",
+          "holder": "0x4760847023fa0833221ae76E01Db1E483A5D20e0",
+          "token": {
+            "chain": "polygon",
+            "address": "0x0d500b1d8e8ef31e21c99d1db9a6444d3adf1270",
+            "decimals": 18
+          },
+          "balanceRead": {
+            "contract": "0x4760847023fa0833221ae76E01Db1E483A5D20e0",
+            "selector": "0xa5fdc5de",
+            "args": [
+              "0x0000000000000000000000000d500b1d8e8ef31e21c99d1db9a6444d3adf1270"
+            ]
+          },
+          "risk": "medium"
+        },
+        {
+          "name": "DAI collateral (Polygon)",
+          "chain": "polygon",
+          "holder": "0x4760847023fa0833221ae76E01Db1E483A5D20e0",
+          "token": {
+            "chain": "polygon",
+            "address": "0x8f3cf7ad23cd3cadbd9735aff958023239c6a063",
+            "decimals": 18
+          },
+          "balanceRead": {
+            "contract": "0x4760847023fa0833221ae76E01Db1E483A5D20e0",
+            "selector": "0xa5fdc5de",
+            "args": [
+              "0x0000000000000000000000008f3cf7ad23cd3cadbd9735aff958023239c6a063"
+            ]
+          },
+          "risk": "low",
+          "coinId": "dai-makerdao",
+          "depType": "collateral"
+        },
+        {
+          "name": "WETH collateral (Polygon)",
+          "chain": "polygon",
+          "holder": "0x4760847023fa0833221ae76E01Db1E483A5D20e0",
+          "token": {
+            "chain": "polygon",
+            "address": "0x7ceb23fd6bc0add59e62ac25578270cff1b9f619",
+            "decimals": 18
+          },
+          "balanceRead": {
+            "contract": "0x4760847023fa0833221ae76E01Db1E483A5D20e0",
+            "selector": "0xa5fdc5de",
+            "args": [
+              "0x0000000000000000000000007ceb23fd6bc0add59e62ac25578270cff1b9f619"
+            ]
+          },
+          "risk": "very-low"
+        },
+        {
+          "name": "PAXG collateral (Polygon)",
+          "chain": "polygon",
+          "holder": "0x4760847023fa0833221ae76E01Db1E483A5D20e0",
+          "token": {
+            "chain": "polygon",
+            "address": "0x553d3d295e0f695b9228246232edf400ed3560b5",
+            "decimals": 18
+          },
+          "balanceRead": {
+            "contract": "0x4760847023fa0833221ae76E01Db1E483A5D20e0",
+            "selector": "0xa5fdc5de",
+            "args": [
+              "0x000000000000000000000000553d3d295e0f695b9228246232edf400ed3560b5"
+            ]
+          },
+          "risk": "low",
+          "coinId": "paxg-paxos",
+          "depType": "collateral"
+        },
+        {
+          "name": "mewBTC collateral (Linea)",
+          "chain": "linea",
+          "holder": "0x65c6FD9B3a2A892096881e28f07c732ed128893E",
+          "token": {
+            "chain": "linea",
+            "address": "0x9be5e24f05bbafc28da814bd59284878b388a40f",
+            "decimals": 8
+          },
+          "balanceRead": {
+            "contract": "0x65c6FD9B3a2A892096881e28f07c732ed128893E",
+            "selector": "0xa5fdc5de",
+            "args": [
+              "0x0000000000000000000000009be5e24f05bbafc28da814bd59284878b388a40f"
+            ]
+          },
+          "risk": "high",
+          "receipt": {
+            "kind": "compound-v2"
+          },
+          "priceToken": {
+            "chain": "linea",
+            "address": "0x3aab2285ddcddad8edf438c1bab47e1a9d05a9b4"
+          }
+        }
+      ]
     }
-  ],
-  "launchDate": "2023-11-01"
+  }
 }

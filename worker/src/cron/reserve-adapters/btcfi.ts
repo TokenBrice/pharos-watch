@@ -43,8 +43,13 @@ export function adaptBtcfi(market: BtcfiMarketRow[], handlers: BtcfiHandlerRow[]
   for (const row of market) {
     const handler = handlerMap.get(row.token_handler_id);
     if (!handler || handler.isStable) continue;
-    const value = Number(row.deposit_value ?? "0");
-    if (!Number.isFinite(value) || value <= 0) continue;
+    const value = typeof row.deposit_value === "string" && row.deposit_value.trim()
+      ? Number(row.deposit_value)
+      : NaN;
+    if (!Number.isFinite(value) || value < 0) {
+      throw new Error(`btcfi missing or invalid deposit_value for handler ${row.token_handler_id}`);
+    }
+    if (value === 0) continue;
 
     const normalized = handler.symbol.trim().toUpperCase();
     const canonicalRisk = getCanonicalReserveAssetRisk(normalized);

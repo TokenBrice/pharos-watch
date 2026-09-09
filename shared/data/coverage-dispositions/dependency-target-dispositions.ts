@@ -127,6 +127,7 @@ export const DEPENDENCY_TARGET_DISPOSITIONS: readonly DependencyTargetDispositio
 
 /** Exact adapters observed producing mapped live dependency sets in the P1b replay. */
 export const DEPENDENCY_ADAPTER_MAPPING_REVIEWS: readonly DependencyAdapterMappingReview[] = [
+  adapterReview("hylo-solana", "worker/src/cron/reserve-adapters/hylo-solana.ts", "Maps only the pinned SPL USDC vault/mint to usdc-circle; the registry-enumerated LST pool and pinned cbBTC/HYPE pools remain untracked cryptoasset exposures. Unknown LSTs or activation of an unreviewed exogenous pair fail closed.", "2026-09-09"),
   adapterReview("3jane-usd3", "worker/src/cron/reserve-adapters/3jane-usd3.ts", "Maps the liquid waUSDC/USDC reserve bucket to the canonical Circle USDC dependency while leaving the private-credit receivables unlinked.", "2026-07-13"),
   adapterReview("accountable", "worker/src/cron/reserve-adapters/accountable.ts", "Maps only configured, canonical asset rows from the Accountable reserve payload."),
   adapterReview("asymmetry", "worker/src/cron/reserve-adapters/asymmetry.ts", "Maps the reviewed afCVX and stablecoin branches to canonical upstream IDs."),
@@ -143,6 +144,7 @@ export const DEPENDENCY_ADAPTER_MAPPING_REVIEWS: readonly DependencyAdapterMappi
   adapterReview("frax-balance-sheet", "worker/src/cron/reserve-adapters/frax.ts", "Uses the subject-aware reviewed Frax reserve mapping and suppresses self-links."),
   adapterReview("frax-fpi-collateral", "worker/src/cron/reserve-adapters/frax.ts", "Maps the reviewed FPI collateral roster to canonical upstream IDs."),
   adapterReview("gho", "worker/src/cron/reserve-adapters/gho.ts", "Maps only reviewed GHO facilitator reserve assets while leaving issuance-only labels unlinked."),
+  adapterReview("sodax-sonic", "worker/src/cron/reserve-adapters/sodax-sonic.ts", "Maps exact reviewed Sonic reserve wrapper addresses to USDC, USDT, and ftUSD; API borrower candidates must reconcile exactly to pinned non-transferable scaled debt supply. Unknown reserves are quantified, and v1/v2 inventory uncertainty keeps the adapter weak-live-probe.", "2026-09-09"),
   adapterReview("idle-cdo-epoch-variant", "worker/src/cron/reserve-adapters/idle-cdo-epoch-variant.ts", "Maps only the CDO's unlent underlying balance to its canonical deposit-token dependency; the borrower receivable is deliberately unlinked because a single-obligor credit claim is not a claim on that token.", "2026-09-01"),
   adapterReview("infinifi", "worker/src/cron/reserve-adapters/infinifi.ts", "Maps exact infiniFi reserve assets and leaves mixed unnamed baskets unresolved.", "2026-08-27"),
   adapterReview("jupusd", "worker/src/cron/reserve-adapters/jupusd.ts", "Maps Jupiter reserve assets through its reviewed canonical token roster."),
@@ -256,5 +258,12 @@ export const DEPENDENCY_ADAPTER_MAPPING_REVIEWS: readonly DependencyAdapterMappi
     reviewedAt: "2026-09-09",
     sourceFiles: ["worker/src/cron/reserve-adapters/single-asset.ts"],
     rationale: "Preserves only explicitly reviewed configured canonical IDs on static reserve slices, including the Plume USDC receivable; it does not infer dependencies from labels.",
+  },
+  {
+    adapter: "onre-holdings-csv",
+    reviewer: "pharos-live-reserve-upgrade",
+    reviewedAt: "2026-09-09",
+    sourceFiles: ["worker/src/cron/reserve-adapters/onre-holdings-csv.ts"],
+    rationale: "Maps the reviewed Schedule of Assets rows through a fixed table mirroring the sidecar: USDG/sUSDS/syrupUSDC/sUSDe/USYC/USDC to canonical tracked IDs with Kamino lending rows as protocol positions of their upstream assets; T-bills, USCC and cash stay unlinked.",
   },
 ];

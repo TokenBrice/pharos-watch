@@ -4,6 +4,15 @@ import { validateAdapterOutput } from "../validate";
 import { getReserveAdapter } from "../index";
 
 describe("adaptAsymmetry", () => {
+  it("rejects drift removing usdaf.total_bold_supply", () => {
+    const payload = {
+      timestamp: 1776239429591,
+      usdaf: { total_bold_supply: "100", branch: { ysyBOLD: { coll_value: "100" } } },
+    };
+    Reflect.deleteProperty(payload.usdaf, "total_bold_supply");
+    expect(() => adaptAsymmetry(payload)).toThrow(/usdaf.total_bold_supply/);
+  });
+
   it("maps branch collateral values into normalized reserve slices", () => {
     const slices = adaptAsymmetry({
       timestamp: 1776239429591,

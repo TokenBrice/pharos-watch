@@ -69,7 +69,7 @@ const DRPC_CHAINS: Record<string, string> = {
 // `plume`, `monad`, `mantle`, `morph-l2`, `abcore`, and `xlayer` are public-only
 // EVM chains required for usd1-bundle-oracle's multichain totalSupply() supply
 // aggregation.
-const PUBLIC_ONLY_EVM_CHAINS = ["tempo", "plasma", "plume", "monad", "mantle", "morph-l2", "abcore", "xlayer"] as const;
+const PUBLIC_ONLY_EVM_CHAINS = ["tempo", "plasma", "plume", "monad", "mantle", "morph-l2", "abcore", "xlayer", "sonic"] as const;
 const PUBLIC_ONLY_OTHER_CHAINS = ["movement"] as const;
 const SOLANA_PUBLIC_RPC_CHAIN_ID = "solana";
 

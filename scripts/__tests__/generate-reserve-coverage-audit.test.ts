@@ -52,9 +52,9 @@ const activeCoins = [
   }),
   coin({ id: "plain", symbol: "PLN", name: "Plain Coin", reserves: [{ name: "Cash", pct: 100, risk: "very-low" }] }),
   coin({
-    id: "buidl-blackrock",
-    symbol: "BUIDL",
-    name: "BlackRock USD Institutional Digital Liquidity Fund",
+    id: "usdo-openeden",
+    symbol: "USDO",
+    name: "OpenEden USDO",
     reserves: [{ name: "US Treasuries", pct: 100, risk: "low", coinId: "usdc-circle" }],
   }),
 ] satisfies StablecoinMeta[];
@@ -62,7 +62,7 @@ const activeCoins = [
 const stablecoinsPayload = {
   peggedAssets: [
     { id: "plain", circulating: { peggedUSD: 20_000_000 } },
-    { id: "buidl-blackrock", circulating: { peggedUSD: 10_000_000 } },
+    { id: "usdo-openeden", circulating: { peggedUSD: 10_000_000 } },
   ],
 };
 
@@ -79,7 +79,7 @@ describe("generate-reserve-coverage-audit", () => {
           { id: "live-b", backingFromLiveReserves: false },
           { id: "live-c", backingFromLiveReserves: false },
           { id: "plain", backingFromLiveReserves: false },
-          { id: "buidl-blackrock", backingFromLiveReserves: false },
+          { id: "usdo-openeden", backingFromLiveReserves: false },
           { id: "defunct", isDefunct: true, backingFromLiveReserves: true },
         ],
       },
@@ -117,8 +117,8 @@ describe("generate-reserve-coverage-audit", () => {
       "weak-live-probe": 1,
     });
     expect(audit.independentConfiguredButNotScoreGradeIds).toEqual([]);
-    expect(audit.curatedOnlyActiveCandidates.map((row) => row.coinId)).toEqual(["plain", "buidl-blackrock"]);
-    expect(audit.curatedOnlyActiveCandidates.find((row) => row.coinId === "buidl-blackrock")).toMatchObject({
+    expect(audit.curatedOnlyActiveCandidates.map((row) => row.coinId)).toEqual(["plain", "usdo-openeden"]);
+    expect(audit.curatedOnlyActiveCandidates.find((row) => row.coinId === "usdo-openeden")).toMatchObject({
       sourceQuality: "independent",
       scoreGradePlausible: true,
     });
@@ -304,14 +304,21 @@ describe("generate-reserve-coverage-audit", () => {
   });
 
   it("warns when a reviewed source-quality note no longer matches an active stablecoin", () => {
-    // buidl-blackrock is in activeCoins, so its note is in sync; every other
-    // table key is stale relative to this synthetic active list.
+    // scusd-rings is still curated-only with a reviewed note, so its note is
+    // in sync; every other table key is stale relative to this synthetic
+    // active list.
     const audit = buildReserveCoverageAudit({
-      activeCoins,
+      activeCoins: [
+        coin({
+          id: "scusd-rings",
+          symbol: "SCUSD",
+          reserves: [{ name: "Cash", pct: 100, risk: "low" }],
+        }),
+      ],
       generatedAt: "2026-06-03T00:00:00.000Z",
     });
 
-    const staleKeys = Object.keys(REVIEWED_LIVE_RESERVE_SOURCE_NOTES).filter((id) => id !== "buidl-blackrock");
+    const staleKeys = Object.keys(REVIEWED_LIVE_RESERVE_SOURCE_NOTES).filter((id) => id !== "scusd-rings");
     expect(staleKeys.length).toBeGreaterThan(0);
     for (const id of staleKeys) {
       expect(audit.warnings).toContain(
@@ -320,7 +327,7 @@ describe("generate-reserve-coverage-audit", () => {
     }
     // The in-sync key must not produce a stale warning.
     expect(audit.warnings).not.toContain(
-      'Reviewed reserve source-quality note for "buidl-blackrock" no longer matches any active stablecoin.',
+      'Reviewed reserve source-quality note for "scusd-rings" no longer matches any active stablecoin.',
     );
   });
 
@@ -328,8 +335,8 @@ describe("generate-reserve-coverage-audit", () => {
     const audit = buildReserveCoverageAudit({
       activeCoins: [
         coin({
-          id: "buidl-blackrock",
-          symbol: "BUIDL",
+          id: "scusd-rings",
+          symbol: "SCUSD",
           reserves: [{ name: "Cash", pct: 100, risk: "low" }],
           liveReservesConfig: liveConfig("chainlink-nav"),
         }),
@@ -338,7 +345,7 @@ describe("generate-reserve-coverage-audit", () => {
     });
 
     expect(audit.warnings).toContain(
-      'Reviewed reserve source-quality note for "buidl-blackrock" is now live-configured via chainlink-nav; delete the note.',
+      'Reviewed reserve source-quality note for "scusd-rings" is now live-configured via chainlink-nav; delete the note.',
     );
     // Live-configured coins leave the curated-only candidate table.
     expect(audit.curatedOnlyActiveCandidates).toEqual([]);

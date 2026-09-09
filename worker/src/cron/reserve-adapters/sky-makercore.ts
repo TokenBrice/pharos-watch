@@ -98,6 +98,16 @@ function parseNumericString(raw: string): number {
   return parsePositiveNumber(raw) ?? 0;
 }
 
+function parseSkyCollateral(group: SkyGroupResult): number {
+  const value = typeof group.collateral === "string" && group.collateral.trim()
+    ? Number(group.collateral)
+    : NaN;
+  if (!Number.isFinite(value) || value < 0) {
+    throw new Error(`sky-makercore: missing or invalid ${group.group}.collateral`);
+  }
+  return value;
+}
+
 function hasMalformedDebt(raw: string): boolean {
   if (raw.trim() === "") return true;
   const debt = Number(raw);
@@ -150,7 +160,7 @@ export function adaptSkyModules(groups: SkyGroupResult[]): AdapterResult["slices
 export function resolveSkyImmediateRedeemableUsd(groups: SkyGroupResult[]): number {
   const stableGroup = groups.find((g) => g.group === "stablecoins");
   if (!stableGroup) return 0;
-  return parseNumericString(stableGroup.collateral);
+  return parseSkyCollateral(stableGroup);
 }
 
 export function listUnknownGroups(groups: SkyGroupResult[]): string[] {
@@ -238,7 +248,7 @@ export async function fetchSkyMakercoreReserves(
     throw new Error("sky-makercore: all module debt values are zero or invalid");
   }
 
-  const totalCollateralUsd = groups.reduce((sum, g) => sum + parseNumericString(g.collateral), 0);
+  const totalCollateralUsd = groups.reduce((sum, g) => sum + parseSkyCollateral(g), 0);
   const immediateRedeemableUsd = resolveSkyImmediateRedeemableUsd(groups);
 
   const timestampSummary = resolveSkyTimestampSummary(groups);

@@ -25,7 +25,7 @@ export async function fetchDefiLlamaPrices(
   if (assets.length === 0) return new Map();
   const lookups = assets.map(({ key, chain, address }) => ({
     key,
-    assetKey: `${DEFILLAMA_PRICE_CHAIN_ALIASES[chain] ?? chain}:${address.toLowerCase()}`,
+    assetKey: `${DEFILLAMA_PRICE_CHAIN_ALIASES[chain] ?? chain}:${chain === "solana" ? address : address.toLowerCase()}`,
   }));
   const assetKeys = [...new Set(lookups.map(({ assetKey }) => assetKey))].sort();
   const quotes = await getCachedRequest(`defillama-prices:${assetKeys.join(",")}`, async () =>

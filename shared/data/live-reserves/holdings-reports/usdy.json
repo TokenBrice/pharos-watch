@@ -1,0 +1,137 @@
+{
+  "schemaVersion": 1,
+  "product": "USDY",
+  "scope": "Ondo USDY LLC only; excludes Ondo Global Markets (BVI) Limited issuance",
+  "reportUrl": "https://www.dropbox.com/scl/fo/375wdvar3rbc7o23nxsgp/AMxjiHeSg34U7xZZcGBk_ik/2026/09%20September/Ondo%20USDY%20LLC_ATCAttest_260903.pdf?rlkey=4icqn1z9bez725wywr30fx52a&dl=1",
+  "listingUrl": "https://www.dropbox.com/scl/fo/375wdvar3rbc7o23nxsgp/ABoF-avpNclglsNxAeWZO_k/2026/09%20September?rlkey=4icqn1z9bez725wywr30fx52a&dl=0",
+  "discoveryMode": "manual",
+  "reportSha256": "3be6d890d122c5365dcea7051ed101d77427feb71da4dabb7b3ebac01465b677",
+  "reportByteLength": 208633,
+  "reportDate": "2026-09-03",
+  "reportAsOf": "2026-09-03T23:59:59-04:00",
+  "reportTimeZone": "America/New_York",
+  "timeBasis": "Printed end-of-day date; 23:59:59 America/New_York assumed, not an upstream timestamp",
+  "preparer": "Ondo USDY LLC",
+  "reviewer": "Ankura Trust Company, LLC",
+  "holdings": [
+    {
+      "sourceId": "stonex:912797ul9",
+      "name": "BNY Mellon US Treasury 912797UL9",
+      "category": "treasury-bill",
+      "cusip": "912797UL9",
+      "marketValue": "75135470.40"
+    },
+    {
+      "sourceId": "stonex:912797tv9",
+      "name": "BNY Mellon US Treasury 912797TV9",
+      "category": "treasury-bill",
+      "cusip": "912797TV9",
+      "marketValue": "33229211.83"
+    },
+    {
+      "sourceId": "stonex:912797ud7",
+      "name": "BNY Mellon US Treasury 912797UD7",
+      "category": "treasury-bill",
+      "cusip": "912797UD7",
+      "marketValue": "45881950.68"
+    },
+    {
+      "sourceId": "marex:912797ug0",
+      "name": "Marex US Treasury 912797UG0",
+      "category": "treasury-bill",
+      "cusip": "912797UG0",
+      "marketValue": "121878014.14"
+    },
+    {
+      "sourceId": "marex:912797uh8",
+      "name": "Marex US Treasury 912797UH8",
+      "category": "treasury-bill",
+      "cusip": "912797UH8",
+      "marketValue": "132057030.77"
+    },
+    {
+      "sourceId": "marex:912797sa6",
+      "name": "Marex US Treasury 912797SA6",
+      "category": "treasury-bill",
+      "cusip": "912797SA6",
+      "marketValue": "262675931.65"
+    },
+    {
+      "sourceId": "marex:912797uk1",
+      "name": "Marex US Treasury 912797UK1",
+      "category": "treasury-bill",
+      "cusip": "912797UK1",
+      "marketValue": "259792887.66"
+    },
+    {
+      "sourceId": "marex:912797sk4",
+      "name": "Marex US Treasury 912797SK4",
+      "category": "treasury-bill",
+      "cusip": "912797SK4",
+      "marketValue": "51798106.08"
+    },
+    {
+      "sourceId": "marex:912797uz8",
+      "name": "Marex US Treasury 912797UZ8",
+      "category": "treasury-bill",
+      "cusip": "912797UZ8",
+      "marketValue": "112019806.06"
+    },
+    {
+      "sourceId": "marex:912797tv9",
+      "name": "Marex US Treasury 912797TV9",
+      "category": "treasury-bill",
+      "cusip": "912797TV9",
+      "marketValue": "126974869.13"
+    },
+    {
+      "sourceId": "marex:912797ud7",
+      "name": "Marex US Treasury 912797UD7",
+      "category": "treasury-bill",
+      "cusip": "912797UD7",
+      "marketValue": "174202435.49"
+    },
+    {
+      "sourceId": "marex:912797ue5",
+      "name": "Marex US Treasury 912797UE5",
+      "category": "treasury-bill",
+      "cusip": "912797UE5",
+      "marketValue": "201843460.45"
+    },
+    {
+      "sourceId": "marex:912797ux3",
+      "name": "Marex US Treasury 912797UX3",
+      "category": "treasury-bill",
+      "cusip": "912797UX3",
+      "marketValue": "154634520.25"
+    },
+    {
+      "sourceId": "marex:912797vf1",
+      "name": "Marex US Treasury 912797VF1",
+      "category": "treasury-bill",
+      "cusip": "912797VF1",
+      "marketValue": "244042677.08"
+    },
+    {
+      "sourceId": "marex:912797vq7",
+      "name": "Marex US Treasury 912797VQ7",
+      "category": "treasury-bill",
+      "cusip": "912797VQ7",
+      "marketValue": "150707773.48"
+    },
+    {
+      "sourceId": "first-citizens:mma",
+      "name": "First Citizens Select MMA",
+      "category": "bank-deposit",
+      "marketValue": "461417.76"
+    },
+    {
+      "sourceId": "stonex:cash",
+      "name": "StoneX brokerage cash",
+      "category": "cash",
+      "marketValue": "5373.88"
+    }
+  ],
+  "reportedAssetTotal": "2147340936.79",
+  "reportedLiabilityTotal": "2139209197.45"
+}

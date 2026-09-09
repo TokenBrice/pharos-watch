@@ -129,5 +129,28 @@
       "description": "A 13-call operation scheduled on 2026-08-03 and executed on 2026-08-06 after 65 hours 32 minutes completed the handover: the TimelockController holds kUSD and PSM default-admin roles plus PSM manager roles, while the Safe's direct downstream roles were removed. The 2-of-3 Safe remains the timelock's sole proposer, executor, and canceller. A fixed PauseGuardian can only forward an immediate pause to the three PSMs.",
       "sourceUrl": "https://basescan.org/tx/0xed24d495789540dae543793a5d8c9d884d8abfc386c0e726084da9183933d9b8"
     }
-  ]
+  ],
+  "liveReservesConfig": {
+    "adapter": "kerne-signed-por",
+    "version": 1,
+    "semantics": "single-asset",
+    "display": {
+      "url": "https://app.kerne.fi/api/por/signed",
+      "label": "Kerne signed proof of reserves"
+    },
+    "inputs": {
+      "primary": {
+        "kind": "http-json",
+        "url": "https://app.kerne.fi/api/por/signed"
+      }
+    },
+    "params": {
+      "signerAddress": "0x09a2780ac8Be6D5d2d1F85A8D92b09D40C9CA37e",
+      "psmAddresses": [
+        "0xaBDE1138aa1Ce88d1dF06422C0c3b05D70569803",
+        "0x07eBb486e11BD217e6085eb5ab663e4517595993",
+        "0xFf3025ec18e301855aB0f36Ec6ECa115a29A5Fbc"
+      ]
+    }
+  }
 }

@@ -3,6 +3,7 @@
   "reserves": [
     {
       "name": "USDt (Tether on Tezos)",
+      "sourceKey": "youves-tezos:usdt",
       "pct": 95.59179212,
       "risk": "low",
       "coinId": "usdt-tether",
@@ -20,6 +21,7 @@
     },
     {
       "name": "SIRS (XTZ/tzBTC LP tokens)",
+      "sourceKey": "youves-tezos:sirs",
       "pct": 2.60534637,
       "risk": "high",
       "assetClass": "protocol-position",
@@ -34,6 +36,7 @@
     },
     {
       "name": "XTZ (Tezos)",
+      "sourceKey": "youves-tezos:xtz",
       "pct": 0.97560694,
       "risk": "high",
       "assetClass": "cryptoasset",
@@ -47,6 +50,7 @@
     },
     {
       "name": "tzBTC (wrapped Bitcoin)",
+      "sourceKey": "youves-tezos:tzbtc",
       "pct": 0.82725457,
       "risk": "medium",
       "assetClass": "cryptoasset",

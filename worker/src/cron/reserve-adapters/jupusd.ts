@@ -156,12 +156,15 @@ export function adaptJupUsdData(
     ? (options.oracle.ripcordDetails || "JupUSD oracle reports ripcord mode")
     : undefined;
   const totalSupply = parseAmount(payload.totalSupply, 6);
+  if (totalSupply <= 0) {
+    throw new Error("jupusd missing or invalid totalSupply");
+  }
   // True assets ÷ liability: never clamped, so genuine overcollateralization
   // shows and a shortfall degrades per the undercollateralization policy.
-  const collateralizationRatio = totalSupply > 0 ? totalReserveUsd / totalSupply : undefined;
+  const collateralizationRatio = totalReserveUsd / totalSupply;
   // Redemption capacity is clamped to the supply that can actually be redeemed.
-  const capacityUsd = totalSupply > 0 ? Math.min(totalReserveUsd, totalSupply) : totalReserveUsd;
-  const ratio = totalSupply > 0 ? capacityUsd / totalSupply : undefined;
+  const capacityUsd = Math.min(totalReserveUsd, totalSupply);
+  const ratio = capacityUsd / totalSupply;
   const unknownExposurePct = totalReserveUsd > 0 ? (unknownValue / totalReserveUsd) * 100 : 0;
   const warnings: LiveReserveWarning[] = [];
   if (unknownValue > 0) {
@@ -193,13 +196,13 @@ export function adaptJupUsdData(
     ...(warnings.length > 0 ? { warnings } : {}),
     metadata: {
       totalReserveUsd,
-      ...(totalSupply > 0 ? { supplyUsd: totalSupply } : {}),
-      ...(collateralizationRatio != null ? { collateralizationRatio } : {}),
+      supplyUsd: totalSupply,
+      collateralizationRatio,
       unknownExposurePct,
       ...(unknownHoldingNames.size > 0 ? { unknownHoldingNames: Array.from(unknownHoldingNames).sort() } : {}),
       ...buildRedemptionSnapshotMetadata({
         capacityUsd,
-        ...(ratio != null ? { capacityRatioOfSupply: ratio } : {}),
+        capacityRatioOfSupply: ratio,
         capacityKind: "live-direct-bounded",
         freshnessKind: sourceTimestamp != null ? "verified-source-timestamp" : "same-run-api",
         ...(sourceTimestamp != null ? { sourceTimestamp } : {}),

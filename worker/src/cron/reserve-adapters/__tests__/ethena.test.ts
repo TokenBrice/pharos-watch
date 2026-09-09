@@ -10,6 +10,15 @@ import { getReserveAdapter } from "../index";
 import { validateAdapterOutput } from "../validate";
 
 describe("adaptEthenaCollateral", () => {
+  it("rejects drift removing totalBackingAssetsInUsd", () => {
+    const payload: EthenaCollateralResponse = {
+      totalBackingAssetsInUsd: 100,
+      collateral: [{ asset: "Liquid Cash", exchange: "Binance", timestamp: 1, usdAmount: 100 }],
+    };
+    Reflect.deleteProperty(payload, "totalBackingAssetsInUsd");
+    expect(() => adaptEthenaCollateral(payload)).toThrow(/totalBackingAssetsInUsd/);
+  });
+
   it("groups Ethena collateral into reserve buckets", () => {
     const payload: EthenaCollateralResponse = {
       totalBackingAssetsInUsd: 100,

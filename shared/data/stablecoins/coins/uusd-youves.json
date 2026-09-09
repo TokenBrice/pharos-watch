@@ -40,5 +40,21 @@
   ],
   "collateralQuality": "alt-lst-bridged-or-mixed",
   "governanceQuality": "multisig",
+  "liveReservesConfig": {
+    "adapter": "youves-tezos",
+    "version": 1,
+    "semantics": "collateral-mix",
+    "display": {
+      "url": "https://api.tzkt.io/v1/head",
+      "label": "Youves uUSD engine vault contexts (TzKT)"
+    },
+    "inputs": {
+      "primary": {
+        "kind": "http-json",
+        "url": "https://api.tzkt.io/v1/head"
+      }
+    },
+    "params": {}
+  },
   "launchDate": "2021-07-22"
 }

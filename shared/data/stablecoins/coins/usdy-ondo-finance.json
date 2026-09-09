@@ -121,36 +121,27 @@
   "custodyModel": "institutional-regulated",
   "governanceQuality": "multisig",
   "liveReservesConfig": {
-    "adapter": "chainlink-nav",
+    "adapter": "usdy-holdings-report",
     "version": 1,
-    "semantics": "single-asset",
-    "suspended": {
-      "reason": "The NAV oracle measures USDY price and token supply, not the holdings or weights of its multi-asset reserve portfolio. Use the separately dated reviewed Ondo holdings composition until a holdings producer is integrated.",
-      "since": "2026-09-05",
-      "reviewBy": "2026-09-12"
-    },
+    "semantics": "collateral-mix",
     "scoring": {
-      "maxSourceAgeSec": 4000000
+      "maxSourceAgeSec": 432000
     },
     "breakerScope": "usdy-ondo",
+    "suspended": {
+      "reason": "Newest daily Ankura report cannot be reliably discovered from the Dropbox archive as a dated HTML/JSON listing. Server probes returned ZIP downloads or Edison HTML with proprietary base64 protobuf data. The September 3 reviewed manifest is retained as static evidence only; a pinned PDF cannot validate daily-series freshness.",
+      "since": "2026-09-09",
+      "reviewBy": "2026-10-09"
+    },
     "display": {
       "url": "https://ondo.finance/usdy",
-      "label": "Ondo NAV Oracle"
+      "label": "Ankura-reviewed USDY LLC holdings"
     },
     "inputs": {
       "primary": {
-        "kind": "onchain-evm",
-        "chain": "ethereum",
-        "rpcMode": "etherscan-proxy"
+        "kind": "http-html",
+        "url": "https://www.dropbox.com/scl/fo/375wdvar3rbc7o23nxsgp/ABoF-avpNclglsNxAeWZO_k/2026/09%20September?rlkey=4icqn1z9bez725wywr30fx52a&dl=0"
       }
-    },
-    "params": {
-      "navScope": "portfolio",
-      "oracleAddress": "0xA0219AA5B31e65Bc920B5b6DFb8EdF0988121De0",
-      "tokenAddress": "0x96F6eF951840721AdBF46Ac996b59E0235CB985C",
-      "assetLabel": "Short-term U.S. Treasuries and bank deposits",
-      "assetRisk": "very-low",
-      "oracleMethod": "getPriceData"
     }
   },
   "yieldConfig": {
