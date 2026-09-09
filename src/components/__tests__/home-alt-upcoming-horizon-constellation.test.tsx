@@ -14,7 +14,7 @@ const horizonFixture = vi.hoisted(() =>
 );
 
 vi.mock("@/lib/horizon-constellation-layout", async (importOriginal) => ({
-  ...(await importOriginal<HorizonConstellationLayoutModule>()),
+  ...(await importOriginal<typeof HorizonConstellationLayoutModule>()),
   HORIZON_PRE_LAUNCH_STABLECOINS: horizonFixture,
 }));
 

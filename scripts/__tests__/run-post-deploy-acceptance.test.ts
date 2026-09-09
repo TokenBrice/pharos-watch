@@ -6,6 +6,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import {
   PAGES_SHELL_URL,
+  type PostDeployAcceptanceDependencies,
   runPostDeployAcceptance,
   runPostDeployAcceptanceCli,
   WORKER_API_URL,
@@ -45,10 +46,11 @@ function dependencies({
   shell = pagesShell(),
   health = workerHealth() as ProbeResponse | null,
 } = {}) {
+  const probes: Record<string, ProbeResponse> = health ? { health } : {};
   return {
-    collectWorkerProbes: vi.fn(() => Promise.resolve(health ? { health } : {})),
-    fetchJson: vi.fn(() => Promise.resolve(shell)),
-  };
+    collectWorkerProbes: vi.fn(async () => probes),
+    fetchJson: vi.fn(async () => shell),
+  } satisfies PostDeployAcceptanceDependencies;
 }
 
 function summaryDir(): string {
@@ -166,6 +168,7 @@ describe("run-post-deploy-acceptance CLI", () => {
       {
         GITHUB_OUTPUT: outputPath,
         GITHUB_STEP_SUMMARY: summaryPath,
+        NODE_ENV: "test",
         PAGES_DEPLOYED: "true",
         WORKER_DEPLOYED: "false",
       },
@@ -188,7 +191,7 @@ describe("run-post-deploy-acceptance CLI", () => {
     const outputPath = join(workDir, "github-output.txt");
 
     const exitCode = await runPostDeployAcceptanceCli(
-      { GITHUB_OUTPUT: outputPath, PAGES_DEPLOYED: "false", WORKER_DEPLOYED: "true" },
+      { GITHUB_OUTPUT: outputPath, NODE_ENV: "test", PAGES_DEPLOYED: "false", WORKER_DEPLOYED: "true" },
       dependencies({ health: workerHealth({ ok: false, payload: null, status: 502 }) }),
     );
 
