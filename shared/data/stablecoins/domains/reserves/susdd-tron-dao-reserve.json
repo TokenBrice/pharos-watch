@@ -2,6 +2,7 @@
   "id": "susdd-tron-dao-reserve",
   "reserves": [
     {
+      "sourceKey": "erc4626-single-asset:ethereum:0x4f8e5de400de08b164e7421b3ee387f461becd1a",
       "name": "USDD savings wrapper shares",
       "pct": 100,
       "risk": "medium",

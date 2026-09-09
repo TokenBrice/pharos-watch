@@ -1,9 +1,8 @@
-import { beforeEach, describe, expect, it } from "vitest";
+import { describe, expect, it } from "vitest";
 import { toFunctionSelector } from "viem/utils";
 import { jsonResponse } from "@shared/test-utils/mock-fetch";
 import type { LiveReservesConfig } from "@shared/types/live-reserves";
-import { resetRpcMocks } from "./helpers/rpc-mock";
-import { mockErc4626Rpc, runTrackedVault } from "./erc4626-single-asset.test-support";
+import { installErc4626Network, runTrackedVault } from "./erc4626-single-asset.test-support";
 
 const cooldownSelector = toFunctionSelector("cooldownDuration()");
 const windowSelector = toFunctionSelector("getUnstakeWindow()");
@@ -16,7 +15,7 @@ const withLocks = (config: LiveReservesConfig): LiveReservesConfig => ({
   ] },
 });
 function mockLocks(cooldown: bigint | null, paused = 0, window = 172800) {
-  mockErc4626Rpc({ idleBalance: 100_000_000n, paused, extraHandlers: [({ call }) => {
+  installErc4626Network({ idleBalance: 100_000_000n, paused, extraHandlers: [({ call }) => {
     if (call?.data !== cooldownSelector && call?.data !== windowSelector) return undefined;
     const value = call.data === cooldownSelector ? cooldown : BigInt(window);
     return value == null ? null : jsonResponse({ result: `0x${value.toString(16).padStart(64, "0")}` });
@@ -24,7 +23,6 @@ function mockLocks(cooldown: bigint | null, paused = 0, window = 172800) {
 }
 
 describe("ERC4626 redemption locks", () => {
-  beforeEach(resetRpcMocks);
   it("bounds fully backed capacity by the live cooldown, without adding the withdrawal window", async () => {
     mockLocks(1728000n);
     const result = await runTrackedVault("syrupusdc-maple", withLocks);
@@ -39,7 +37,7 @@ describe("ERC4626 redemption locks", () => {
     expect(result.warnings).toContainEqual(expect.objectContaining({ code: "erc4626-redemption-paused", effect: "degraded" }));
   });
   it("does not invent a lock when no lock is configured", async () => {
-    mockErc4626Rpc({ idleBalance: 100_000_000n });
+    installErc4626Network({ idleBalance: 100_000_000n });
     const result = await runTrackedVault("syrupusdc-maple");
     expect(result.metadata?.redemption).toMatchObject({ capacityKind: "live-direct", routeStatus: "open" });
     expect(result.metadata?.redemption).not.toHaveProperty("settlementDelaySec");
@@ -50,7 +48,7 @@ describe("ERC4626 redemption locks", () => {
     expect(result.metadata?.redemption).toMatchObject({ capacityKind: "live-direct", settlementDelaySec: 0 });
   });
   it("does not present asynchronous request backing as executable redemption capacity", async () => {
-    mockErc4626Rpc({ idleBalance: 100_000_000n });
+    installErc4626Network({ idleBalance: 100_000_000n });
     const result = await runTrackedVault("syrupusdc-maple", (config) => ({
       ...config, params: { ...config.params, redemptionRoute: "async-request" },
     }));

@@ -1,22 +1,6 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
-import { encodeBalanceOfCallData } from "../../../lib/evm-selectors";
-import { fetchSaturnPyusdxReserves } from "../saturn-pyusdx";
-
-const multicallCall = vi.hoisted(() => vi.fn());
-const storageCall = vi.hoisted(() => vi.fn());
-
-vi.mock("../helpers", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("../helpers")>();
-  return {
-    ...actual,
-    fetchOnchainMulticall3: multicallCall,
-  };
-});
-
-vi.mock("../../../lib/evm-rpc", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("../../../lib/evm-rpc")>();
-  return { ...actual, fetchEvmStorageAtBlock: storageCall };
-});
+import { describe, expect, it } from "vitest";
+import { EIP1967_IMPLEMENTATION_SLOT } from "../onchain-identity";
+import { installAdapterNetwork, runAdapter, type AdapterNetworkSpec } from "./reserve-adapter.test-support";
 
 const ADDRESSES = {
   wrapper: "0x23238f20b894f29041f48d88ee91131c395aaa71",
@@ -36,27 +20,6 @@ function addressWord(address: string): `0x${string}` {
   return word(BigInt(address));
 }
 
-const CONFIG = {
-  adapter: "saturn-pyusdx" as const,
-  version: 1,
-  semantics: "single-asset" as const,
-  breakerScope: "usdat-saturn",
-  inputs: {
-    primary: { kind: "onchain-evm" as const, chain: "ethereum", rpcMode: "public-rpc" as const },
-  },
-  params: {
-    wrapperAddress: ADDRESSES.wrapper,
-    expectedImplementation: ADDRESSES.implementation,
-    underlyingToken: ADDRESSES.pyusdx,
-    slice: {
-      name: "PYUSDx held by Saturn USDat",
-      risk: "low" as const,
-      coinId: "pyusd-paypal" as const,
-      depType: "wrapper" as const,
-    },
-  },
-};
-
 function installReads(overrides: {
   implementation?: string;
   pyusdx?: string;
@@ -64,41 +27,36 @@ function installReads(overrides: {
   balance?: bigint;
   paused?: bigint;
   decimals?: bigint;
-} = {}): void {
+} = {}): AdapterNetworkSpec {
   const decimals = overrides.decimals ?? 6n;
   const wrapper = ADDRESSES.wrapper.toLowerCase();
   const pyusdx = ADDRESSES.pyusdx.toLowerCase();
-  const values = new Map<string, `0x${string}`>([
-    [`${wrapper}:0xda6b76b8`, addressWord(overrides.pyusdx ?? ADDRESSES.pyusdx)],
-    [`${wrapper}:0x18160ddd`, word(overrides.supply ?? SUPPLY)],
-    [`${wrapper}:0x313ce567`, word(decimals)],
-    [`${pyusdx}:${encodeBalanceOfCallData(wrapper)}`, word(overrides.balance ?? BALANCE)],
-    [`${pyusdx}:0x313ce567`, word(decimals)],
-    [`${wrapper}:0x5c975abb`, word(overrides.paused ?? 0n)],
-  ]);
-  multicallCall.mockImplementation(async ({ calls }: { calls: Array<{ label: string; contract: string; data: string }> }) =>
-    calls.map((call) => {
-      const value = values.get(`${call.contract.toLowerCase()}:${call.data.toLowerCase()}`);
-      return { label: call.label, success: value != null, returnData: value ?? "0x" };
-    }),
-  );
-  storageCall.mockResolvedValue(addressWord(overrides.implementation ?? ADDRESSES.implementation));
+  return {
+    rpc: {
+      [`eth_getStorageAt:${wrapper}:${EIP1967_IMPLEMENTATION_SLOT}`]:
+        addressWord(overrides.implementation ?? ADDRESSES.implementation),
+      [`${wrapper}:pyusdx()`]: addressWord(overrides.pyusdx ?? ADDRESSES.pyusdx),
+      [`${wrapper}:totalSupply()`]: word(overrides.supply ?? SUPPLY),
+      [`${wrapper}:decimals()`]: word(decimals),
+      [`${pyusdx}:balanceOf(address)`]: word(overrides.balance ?? BALANCE),
+      [`${pyusdx}:decimals()`]: word(decimals),
+      [`${wrapper}:paused()`]: word(overrides.paused ?? 0n),
+    },
+  };
 }
 
-async function fetchFixture() {
-  return fetchSaturnPyusdxReserves(
-    { id: "usdat-saturn" } as never,
-    CONFIG as never,
-    new AbortController().signal,
-  );
+async function fetchFixture(
+  overrides: Parameters<typeof installReads>[0] = {},
+  options: { validate?: false } = {},
+) {
+  const { result } = await runAdapter("saturn-pyusdx", "usdat-saturn", {
+    network: installAdapterNetwork(installReads(overrides)),
+    ...options,
+  });
+  return result;
 }
 
 describe("saturn-pyusdx adapter", () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-    installReads();
-  });
-
   it("emits the measured 100% PYUSDx slice with the canonical PYUSD dependency", async () => {
     const output = await fetchFixture();
 
@@ -138,21 +96,15 @@ describe("saturn-pyusdx adapter", () => {
   });
 
   it("fails closed when the EIP-1967 implementation slot drifts", async () => {
-    installReads({ implementation: ADDRESSES.other });
-
-    await expect(fetchFixture()).rejects.toThrow("EIP-1967 implementation identity mismatch");
+    await expect(fetchFixture({ implementation: ADDRESSES.other })).rejects.toThrow("EIP-1967 implementation identity mismatch");
   });
 
   it("fails closed when pyusdx() does not resolve to the pinned PYUSDx token", async () => {
-    installReads({ pyusdx: ADDRESSES.other });
-
-    await expect(fetchFixture()).rejects.toThrow("pyusdx() identity mismatch");
+    await expect(fetchFixture({ pyusdx: ADDRESSES.other })).rejects.toThrow("pyusdx() identity mismatch");
   });
 
   it("publishes PYUSDx below supply as degraded instead of erroring (E4)", async () => {
-    installReads({ balance: 59_000_000_000000n });
-
-    const output = await fetchFixture();
+    const output = await fetchFixture({ balance: 59_000_000_000000n }, { validate: false });
     expect(output.slices).toEqual([
       {
         sourceKey: "saturn-pyusdx:pyusd",
@@ -175,9 +127,7 @@ describe("saturn-pyusdx adapter", () => {
   });
 
   it("degrades zero supply and reports a paused MultiMint route as paused", async () => {
-    installReads({ supply: 0n, paused: 1n });
-
-    const output = await fetchFixture();
+    const output = await fetchFixture({ supply: 0n, paused: 1n }, { validate: false });
     expect(output.metadata?.collateralizationRatio).toBeUndefined();
     expect(output.metadata?.redemption).toMatchObject({
       routeStatus: "paused",

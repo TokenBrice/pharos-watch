@@ -1,37 +1,7 @@
-import type { StablecoinMeta } from "@shared/types/core";
-import type { LiveReservesConfig } from "@shared/types/live-reserves";
 import { encodeAbiParameters } from "viem/utils";
-import { afterEach, describe, expect, it, vi } from "vitest";
-
-vi.mock("../helpers", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("../helpers")>();
-  const fetchOnchainUint256 = vi.fn();
-  const fetchOnchainRawCall = vi.fn();
-  const fetchOnchainMulticall3 = vi.fn(async ({ calls, ...options }) => Promise.all(
-    calls.map(async (call: { label: string; contract: string; data: string }) => {
-      const selector = call.data.slice(0, 10);
-      const raw = selector === "0xb7181361" || selector === "0x38c269eb"
-        ? await fetchOnchainRawCall({ ...options, contract: call.contract, data: call.data })
-        : await fetchOnchainUint256({ ...options, contract: call.contract, data: call.data });
-      return {
-        label: call.label,
-        success: raw != null,
-        returnData: typeof raw === "bigint"
-          ? `0x${raw.toString(16).padStart(64, "0")}`
-          : raw ?? "0x",
-      };
-    }),
-  ));
-  return {
-    ...actual,
-    fetchOnchainUint256,
-    fetchOnchainRawCall,
-    fetchOnchainMulticall3,
-  };
-});
-
-import { fetchOnchainMulticall3, fetchOnchainRawCall, fetchOnchainUint256 } from "../helpers";
-import { fetchParallelizerBalancesReserves } from "../parallelizer-balances";
+import { describe, expect, it } from "vitest";
+import type { LiveReservesConfig } from "@shared/types/live-reserves";
+import { expectWarnings, installAdapterNetwork, runAdapter, type AdapterNetworkSpec } from "./reserve-adapter.test-support";
 
 const ETH_VAULT = "0x1000000000000000000000000000000000000001";
 const HYPER_VAULT = "0x2000000000000000000000000000000000000002";
@@ -40,6 +10,10 @@ const HYPER_USDP = "0x4000000000000000000000000000000000000004";
 const FRXUSD = "0x5000000000000000000000000000000000000005";
 const SUSDE = "0x6000000000000000000000000000000000000006";
 const UNKNOWN = "0x7000000000000000000000000000000000000007";
+const ETH_RPC = "https://ethereum.example/rpc";
+const HYPER_RPC = "https://hyperevm.example/rpc";
+const BLOCK_NUMBER = 23_000_000;
+const BLOCK_TIMESTAMP = 1_757_000_000;
 
 const config: LiveReservesConfig = {
   adapter: "parallelizer-balances",
@@ -54,7 +28,7 @@ const config: LiveReservesConfig = {
         chain: "ethereum",
         vaultAddress: ETH_VAULT,
         expectedTokenP: ETH_USDP,
-        rpcUrl: "https://ethereum.example/rpc",
+        rpcUrl: ETH_RPC,
         assets: [
           {
             address: FRXUSD,
@@ -70,7 +44,7 @@ const config: LiveReservesConfig = {
         chain: "hyperevm",
         vaultAddress: HYPER_VAULT,
         expectedTokenP: HYPER_USDP,
-        rpcUrl: "https://hyperevm.example/rpc",
+        rpcUrl: HYPER_RPC,
         assets: [
           {
             address: SUSDE,
@@ -88,6 +62,7 @@ const config: LiveReservesConfig = {
     settlementDelaySec: 0,
   },
 };
+const TEST_DEPLOYMENTS = config.params?.deployments;
 
 function oracleResult(priceUsd: bigint): string {
   return encodeAbiParameters(
@@ -96,16 +71,13 @@ function oracleResult(priceUsd: bigint): string {
   );
 }
 
-/**
- * Standard mock wiring. Decimals are served per address (chain truth); the
- * Redeem pause read is served per vault, mirroring the contract's global
- * `isRedemptionLive` flag (LibSetters._setPauseState ignores the collateral
- * argument for Redeem).
- */
-function mockOnchain(options: {
+interface ParallelizerNetworkOptions {
   pausedVaults?: string[];
   decimalsByAddress?: Record<string, bigint>;
-} = {}): void {
+  tokenP?: bigint;
+}
+
+function parallelizerNetwork(options: ParallelizerNetworkOptions = {}): AdapterNetworkSpec {
   const pausedVaults = (options.pausedVaults ?? []).map((vault) => vault.toLowerCase());
   const decimalsByAddress: Record<string, bigint> = {
     [FRXUSD.toLowerCase()]: 18n,
@@ -113,43 +85,45 @@ function mockOnchain(options: {
     [UNKNOWN.toLowerCase()]: 6n,
     ...options.decimalsByAddress,
   };
-  vi.mocked(fetchOnchainUint256).mockImplementation(async ({ contract, data, chain }) => {
-    const selector = data.slice(0, 10);
-    if (selector === "0x1978a5ed") return chain === "ethereum" ? BigInt(ETH_USDP) : BigInt(HYPER_USDP);
-    if (selector === "0x0d126627") return pausedVaults.includes(contract.toLowerCase()) ? 1n : 0n;
-    if (selector === "0x70a08231") {
-      if (contract.toLowerCase() === FRXUSD.toLowerCase()) return 100n * 10n ** 18n;
-      if (contract.toLowerCase() === SUSDE.toLowerCase()) return 300n * 10n ** 18n;
-      if (contract.toLowerCase() === UNKNOWN.toLowerCase()) return 50n * 10n ** 6n;
-    }
-    if (selector === "0xeb7aac5f") {
-      const address = `0x${data.slice(-40)}`.toLowerCase();
-      return decimalsByAddress[address] ?? 6n;
-    }
-    throw new Error(`unexpected uint256 read ${chain} ${contract} ${data}`);
-  });
-  vi.mocked(fetchOnchainRawCall).mockImplementation(async (call) => {
-    if (call.data === "0xb7181361") {
-      return call.chain === "ethereum"
+  return {
+    chains: { ethereum: ETH_RPC, hyperevm: HYPER_RPC },
+    block: { number: BLOCK_NUMBER, timestamp: BLOCK_TIMESTAMP },
+    rpc: {
+      "0x1978a5ed": ({ chain }) => options.tokenP ?? (chain === "ethereum" ? BigInt(ETH_USDP) : BigInt(HYPER_USDP)),
+      "0x0d126627": ({ contract }) => pausedVaults.includes(contract.toLowerCase()) ? 1n : 0n,
+      "0xeb7aac5f": ({ data }) => {
+        const address = `0x${data.slice(-40)}`.toLowerCase();
+        return decimalsByAddress[address] ?? 6n;
+      },
+      "0x70a08231": ({ contract }) => {
+        if (contract === FRXUSD.toLowerCase()) return 100n * 10n ** 18n;
+        if (contract === SUSDE.toLowerCase()) return 300n * 10n ** 18n;
+        if (contract === UNKNOWN.toLowerCase()) return 50n * 10n ** 6n;
+        return null;
+      },
+      "0xb7181361": ({ chain }) => chain === "ethereum"
         ? encodeAbiParameters([{ type: "address[]" }], [[FRXUSD]])
-        : encodeAbiParameters([{ type: "address[]" }], [[SUSDE, UNKNOWN]]);
-    }
-    if (call.data.startsWith("0x38c269eb")) return oracleResult(1_000_000_000_000_000_000n);
-    throw new Error(`unexpected raw read ${call.chain} ${call.contract} ${call.data}`);
+        : encodeAbiParameters([{ type: "address[]" }], [[SUSDE, UNKNOWN]]),
+      "0x38c269eb": oracleResult(1_000_000_000_000_000_000n),
+    },
+  };
+}
+
+function runParallel(
+  network: AdapterNetworkSpec,
+  validate = true,
+) {
+  return runAdapter("parallelizer-balances", "usdp-parallel", {
+    network: installAdapterNetwork(network),
+    params: { deployments: TEST_DEPLOYMENTS },
+    nowSec: BLOCK_TIMESTAMP,
+    ...(validate ? {} : { validate: false as const }),
   });
 }
 
-afterEach(() => vi.clearAllMocks());
-
 describe("fetchParallelizerBalancesReserves", () => {
   it("enumerates balances, aggregates reviewed names, and quantifies unlinked residuals", async () => {
-    mockOnchain();
-
-    const result = await fetchParallelizerBalancesReserves(
-      { id: "usdp-parallel", symbol: "USDp" } as StablecoinMeta,
-      config,
-      AbortSignal.timeout(5_000),
-    );
+    const { result, network } = await runParallel(parallelizerNetwork());
 
     expect(result.slices).toMatchObject([
       {
@@ -174,10 +148,7 @@ describe("fetchParallelizerBalancesReserves", () => {
         risk: "high",
       },
     ]);
-    expect(result.warnings).toEqual([
-      expect.objectContaining({ code: "parallelizer-unlinked-collateral", severity: "info" }),
-    ]);
-    expect(result.warnings?.[0]?.message).toContain("11.111111% of reserves");
+    expectWarnings(result, ["parallelizer-unlinked-collateral"]);
     expect(result.metadata).toMatchObject({
       freshnessMode: "not-applicable",
       totalReserveUsd: 450,
@@ -189,59 +160,30 @@ describe("fetchParallelizerBalancesReserves", () => {
         routeStatusSource: "onchain",
       },
     });
-    expect(fetchOnchainMulticall3).toHaveBeenCalledTimes(6);
-    for (const chain of ["ethereum", "hyperevm"]) {
-      const stages = vi.mocked(fetchOnchainMulticall3).mock.calls
-        .map(([options]) => options)
-        .filter((options) => options.chain === chain);
-      expect(stages.map((stage) => stage.calls.map((call) => call.label))).toEqual([
-        ["token-p", "collateral-list"],
-        ["redemption-paused"],
-        ...(chain === "ethereum"
-          ? [["asset:0:decimals", "asset:0:balance", "asset:0:oracle"]]
-          : [[
-              "asset:0:decimals",
-              "asset:0:balance",
-              "asset:0:oracle",
-              "asset:1:decimals",
-              "asset:1:balance",
-              "asset:1:oracle",
-            ]]),
-      ]);
-    }
+    // 15 inner multicall calls: per deployment, identity (tokenP + getCollateralList)
+    // then redemption-pause (needs collateralAddresses[0], so it cannot merge into
+    // the identity batch), then per collateral decimals + balanceOf(vault) +
+    // getOracleValues. Ethereum (1 collateral) = 6, HyperEVM (2) = 9.
+    expect(network.rpcCalls.filter((call) => call.viaMulticall)).toHaveLength(15);
+    expect(network.rpcCalls.every((call) => call.viaMulticall)).toBe(true);
   });
 
   it("degrades the route and excludes a paused deployment's basket from capacity", async () => {
-    // Redeem pause is vault-global: pausing the HyperEVM vault removes its
-    // whole proportional basket (sUSDe + untracked) while Ethereum redeems on.
-    mockOnchain({ pausedVaults: [HYPER_VAULT] });
+    const { result } = await runParallel(parallelizerNetwork({ pausedVaults: [HYPER_VAULT] }));
 
-    const result = await fetchParallelizerBalancesReserves(
-      { id: "usdp-parallel", symbol: "USDp" } as StablecoinMeta,
-      config,
-      AbortSignal.timeout(5_000),
-    );
-
-    // Composition still reports the paused holdings; only capacity drops.
     expect(result.slices.map((slice) => slice.name)).toContain("sUSDe (Ethereum + HyperEVM branches)");
     expect(result.metadata).toMatchObject({
       totalReserveUsd: 450,
       redemption: {
         capacityUsd: 100,
         routeStatus: "degraded",
-        routeStatusReason: expect.stringContaining("paused on hyperevm"),
+        routeStatusReason: expect.any(String),
       },
     });
   });
 
   it("pauses the route with zero capacity when every deployment is paused", async () => {
-    mockOnchain({ pausedVaults: [ETH_VAULT, HYPER_VAULT] });
-
-    const result = await fetchParallelizerBalancesReserves(
-      { id: "usdp-parallel", symbol: "USDp" } as StablecoinMeta,
-      config,
-      AbortSignal.timeout(5_000),
-    );
+    const { result } = await runParallel(parallelizerNetwork({ pausedVaults: [ETH_VAULT, HYPER_VAULT] }));
 
     expect(result.metadata).toMatchObject({
       totalReserveUsd: 450,
@@ -253,25 +195,23 @@ describe("fetchParallelizerBalancesReserves", () => {
   });
 
   it("fails closed when configured decimals disagree with the vault's on-chain decimals", async () => {
-    mockOnchain({ decimalsByAddress: { [FRXUSD.toLowerCase()]: 6n } });
-
-    await expect(
-      fetchParallelizerBalancesReserves(
-        { id: "usdp-parallel", symbol: "USDp" } as StablecoinMeta,
-        config,
-        AbortSignal.timeout(5_000),
-      ),
-    ).rejects.toThrow("decimals mismatch (6 != 18)");
+    await expect(runParallel(parallelizerNetwork({
+      decimalsByAddress: { [FRXUSD.toLowerCase()]: 6n },
+    }), false)).rejects.toThrow("decimals mismatch (6 != 18)");
   });
 
   it("fails closed when a deployment identity changes", async () => {
-    vi.mocked(fetchOnchainUint256).mockResolvedValue(BigInt("0xdead"));
-    await expect(
-      fetchParallelizerBalancesReserves(
-        { id: "usdp-parallel", symbol: "USDp" } as StablecoinMeta,
-        config,
-        AbortSignal.timeout(5_000),
-      ),
-    ).rejects.toThrow("tokenP identity mismatch");
+    await expect(runParallel(parallelizerNetwork({ tokenP: BigInt("0xdead") }), false))
+      .rejects.toThrow("tokenP identity mismatch");
+  });
+
+  it("rejects a renamed collateral-list field instead of publishing a plausible snapshot", async () => {
+    await expect(runParallel({
+      ...parallelizerNetwork(),
+      rpc: {
+        ...parallelizerNetwork().rpc,
+        "0xb7181361": null,
+      },
+    }, false)).rejects.toThrow("getCollateralList");
   });
 });

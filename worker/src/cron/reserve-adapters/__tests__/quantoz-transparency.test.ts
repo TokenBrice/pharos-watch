@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { adaptQuantozTransparency } from "../quantoz-transparency";
-
+import { expectWarnings, installAdapterNetwork, runAdapter } from "./reserve-adapter.test-support";
 const QUANTOZ_HTML = `
 <div class="text-style-tagline gradient-normal">UPDATED: April 20th, 2026</div>
 <div>Reserve Status Overview</div>
@@ -51,16 +51,32 @@ describe("adaptQuantozTransparency", () => {
   it("emits a degraded warning when the reserve ratio is below threshold", () => {
     const result = adaptQuantozTransparency(QUANTOZ_HTML.replace("100,67%", "99,00%"), "USDQ");
 
-    expect(result.warnings).toEqual([
-      expect.objectContaining({
-        code: "reserve-undercollateralized",
-        effect: "degraded",
-      }),
-    ]);
+    expectWarnings(result, ["reserve-undercollateralized"]);
   });
 
   it("throws when the update timestamp is missing", () => {
     expect(() => adaptQuantozTransparency(QUANTOZ_HTML.replace("UPDATED: April 20th, 2026", ""), "EURQ"))
       .toThrow(/layout-changed/);
+  });
+});
+describe("fetchQuantozTransparencyReserves", () => {
+  const url = "https://www.quantoz.com/transparency";
+  const nowSec = Date.UTC(2026, 3, 20, 1) / 1000;
+
+  it("fetches the reviewed token through the shared network harness", async () => {
+    const { result, network } = await runAdapter("quantoz-transparency", "eurq-quantoz", {
+      network: installAdapterNetwork({ html: { [url]: QUANTOZ_HTML } }),
+      nowSec,
+    });
+    expect(result.metadata).toMatchObject({ token: "EURQ", totalSupply: 3_881_707 });
+    expect(network.requests).toEqual([{ url, method: "GET" }]);
+  });
+
+  it("rejects a renamed update field instead of publishing stale data", async () => {
+    await expect(runAdapter("quantoz-transparency", "eurq-quantoz", {
+      network: installAdapterNetwork({ html: { [url]: QUANTOZ_HTML.replace("UPDATED:", "REFRESHED:") } }),
+      nowSec,
+      validate: false,
+    })).rejects.toThrow("layout-changed");
   });
 });

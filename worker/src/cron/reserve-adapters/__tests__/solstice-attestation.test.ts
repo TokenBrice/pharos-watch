@@ -1,7 +1,8 @@
 import { describe, expect, it } from "vitest";
 import { adaptSolsticeAttestation } from "../solstice-attestation";
-import { validateAdapterOutput } from "../validate";
 import { getReserveAdapter } from "../index";
+import { validateAdapterOutput } from "../validate";
+import { installAdapterNetwork, runAdapter } from "./reserve-adapter.test-support";
 
 describe("adaptSolsticeAttestation", () => {
   it("selects the newest unsorted point and computes rather than trusts the published ratio", () => {
@@ -261,4 +262,37 @@ describe("adaptSolsticeAttestation", () => {
     }));
   });
 
+});
+
+describe("fetchSolsticeAttestationReserves", () => {
+  const url = "https://attestation-api.solstice.finance/dashboard";
+  const fixture = {
+    res: "ok",
+    data: {
+      collateralization: 1.2,
+      reserves: { timeline: [{ ts: 1_778_000_000, reserves: 120, supply: 100 }] },
+    },
+  };
+  const nowSec = 1_778_000_100;
+
+  it("fetches the attestation payload through the shared network harness", async () => {
+    const { result, network } = await runAdapter("solstice-attestation", "usx-solstice", {
+      network: installAdapterNetwork({ json: { [url]: fixture } }),
+      nowSec,
+    });
+    expect(result.metadata).toMatchObject({ totalReserveUsd: 120, supplyUsd: 100 });
+    expect(network.requests).toEqual([{ url, method: "GET" }]);
+  });
+
+  it("rejects a renamed latest timeline field instead of reusing an older point", async () => {
+    const drifted = {
+      ...fixture,
+      data: { ...fixture.data, reserves: { timeline: [{ ts: 1_778_000_000, supply: 100 }] } },
+    };
+    await expect(runAdapter("solstice-attestation", "usx-solstice", {
+      network: installAdapterNetwork({ json: { [url]: drifted } }),
+      nowSec,
+      validate: false,
+    })).rejects.toThrow("missing reserve/supply");
+  });
 });

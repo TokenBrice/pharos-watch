@@ -1,6 +1,8 @@
 import { createHash } from "node:crypto";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { getIndependentAssuranceManifest, reconcileIndependentAssuranceManifest } from "@shared/lib/independent-assurance";
+import { installAdapterNetwork } from "./reserve-adapter.test-support";
+import type { AdapterHttpResponse } from "./reserve-adapter.test-support";
 import { verifyPaxosDiscovery, type PaxosDiscoveryPin } from "../paxos-independent-assurance";
 
 const MAIN = "reviewed product route";
@@ -15,19 +17,21 @@ const PIN: PaxosDiscoveryPin = {
 const HTML = `<script src="${PIN.mainUrl}"></script>`;
 
 function installFetch(changedUrl?: string, redirect = false) {
-  const fetchMock = vi.fn(async (input: RequestInfo | URL) => {
-    const url = String(input);
-    const body = url === PIN.mainUrl ? MAIN : PAGE;
-    const response = new Response(url === changedUrl ? `${body} changed` : body);
-    Object.defineProperty(response, "url", { value: redirect ? "https://example.com/changed" : url });
-    return response;
+  const network = installAdapterNetwork({
+    html: {
+      [PIN.mainUrl]: (): string | AdapterHttpResponse => redirect
+        ? { body: MAIN, url: "https://example.com/changed" }
+        : (PIN.mainUrl === changedUrl ? `${MAIN} changed` : MAIN),
+      [PIN.pageUrl]: (): string | AdapterHttpResponse => redirect
+        ? { body: PAGE, url: "https://example.com/changed" }
+        : (PIN.pageUrl === changedUrl ? `${PAGE} changed` : PAGE),
+    },
   });
-  vi.stubGlobal("fetch", fetchMock);
-  return fetchMock;
+  return network.fetchSpy;
 }
 
 describe("Paxos reviewed Framer discovery", () => {
-  afterEach(() => vi.unstubAllGlobals());
+  afterEach(() => { vi.unstubAllGlobals(); });
 
   it("checks both module hashes before accepting the reviewed product selection", async () => {
     const fetchMock = installFetch();
@@ -36,8 +40,10 @@ describe("Paxos reviewed Framer discovery", () => {
   });
 
   it.each([PIN.mainUrl, PIN.pageUrl])("rejects a changed module at %s, including newer report selection", async (url) => {
-    installFetch(url);
+    const fetchMock = installFetch(url);
     await expect(verifyPaxosDiscovery(HTML, PIN, AbortSignal.timeout(1000))).rejects.toThrow("website module changed");
+    // The hash loop short-circuits on the first mismatch: a changed main module throws before the page is fetched.
+    expect(fetchMock).toHaveBeenCalledTimes(url === PIN.mainUrl ? 1 : 2);
   });
 
   it.each(["", HTML + HTML, HTML.replace("script_main.mjs", "script_main.new.mjs")])("rejects missing, ambiguous or changed official routing", async (html) => {

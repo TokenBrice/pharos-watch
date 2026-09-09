@@ -1,31 +1,29 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
-
-const fetchJsonWithRetryMock = vi.fn();
-
-vi.mock("../request", () => ({
-  fetchJsonWithRetry: (...args: unknown[]) => fetchJsonWithRetryMock(...args),
-  fetchJsonPostWithRetry: vi.fn(),
-}));
-
+import { describe, expect, it } from "vitest";
 import { fetchMovementFungibleAssetSupply } from "../token-supply";
+import { installAdapterNetwork } from "./reserve-adapter.test-support";
 
+const MOVEMENT_BASE = "https://mainnet.movementnetwork.xyz/v1";
 const METADATA_ADDRESS =
   "0xba11833544a2f99eec743f41a228ca6ffa7f13c3b6b04681d5a79a8b75ff225e";
+const LEDGER_VERSION = "199722477";
+const SUPPLY_URL = `${MOVEMENT_BASE}/accounts/${METADATA_ADDRESS}/resource/0x1::fungible_asset::ConcurrentSupply?ledger_version=${LEDGER_VERSION}`;
+const METADATA_URL = `${MOVEMENT_BASE}/accounts/${METADATA_ADDRESS}/resource/0x1::fungible_asset::Metadata?ledger_version=${LEDGER_VERSION}`;
 
 describe("fetchMovementFungibleAssetSupply", () => {
-  beforeEach(() => fetchJsonWithRetryMock.mockReset());
-
   it("pins supply and coin-resource decimals to the same ledger", async () => {
-    fetchJsonWithRetryMock
-      .mockResolvedValueOnce({ ledger_version: "199722477" })
-      .mockResolvedValueOnce({
-        type: "0x1::fungible_asset::ConcurrentSupply",
-        data: { current: { value: "1739632096715" } },
-      })
-      .mockResolvedValueOnce({
-        type: "0x1::fungible_asset::Metadata",
-        data: { decimals: 6 },
-      });
+    const network = installAdapterNetwork({
+      json: {
+        [MOVEMENT_BASE]: { ledger_version: LEDGER_VERSION },
+        [SUPPLY_URL]: {
+          type: "0x1::fungible_asset::ConcurrentSupply",
+          data: { current: { value: "1739632096715" } },
+        },
+        [METADATA_URL]: {
+          type: "0x1::fungible_asset::Metadata",
+          data: { decimals: 6 },
+        },
+      },
+    });
 
     await expect(fetchMovementFungibleAssetSupply(
       METADATA_ADDRESS,
@@ -33,35 +31,37 @@ describe("fetchMovementFungibleAssetSupply", () => {
     )).resolves.toEqual({
       rawSupply: 1_739_632_096_715n,
       decimals: 6,
-      ledgerVersion: "199722477",
+      ledgerVersion: LEDGER_VERSION,
     });
 
-    expect(fetchJsonWithRetryMock.mock.calls.slice(1).every(
-      ([url]) => String(url).endsWith("?ledger_version=199722477"),
+    expect(network.requests.slice(1).every(
+      ({ url }) => url.endsWith(`?ledger_version=${LEDGER_VERSION}`),
     )).toBe(true);
   });
 
   it("returns unresolved when the provider omits its ledger", async () => {
-    fetchJsonWithRetryMock.mockResolvedValueOnce({});
+    installAdapterNetwork({ json: { [MOVEMENT_BASE]: {} } });
 
     await expect(fetchMovementFungibleAssetSupply(
       METADATA_ADDRESS,
       new AbortController().signal,
     )).resolves.toBeNull();
-    expect(fetchJsonWithRetryMock).toHaveBeenCalledTimes(1);
   });
 
   it("returns unresolved for malformed supply instead of converting it to zero", async () => {
-    fetchJsonWithRetryMock
-      .mockResolvedValueOnce({ ledger_version: "199722477" })
-      .mockResolvedValueOnce({
-        type: "0x1::fungible_asset::ConcurrentSupply",
-        data: { current: {} },
-      })
-      .mockResolvedValueOnce({
-        type: "0x1::fungible_asset::Metadata",
-        data: { decimals: 6 },
-      });
+    installAdapterNetwork({
+      json: {
+        [MOVEMENT_BASE]: { ledger_version: LEDGER_VERSION },
+        [SUPPLY_URL]: {
+          type: "0x1::fungible_asset::ConcurrentSupply",
+          data: { current: {} },
+        },
+        [METADATA_URL]: {
+          type: "0x1::fungible_asset::Metadata",
+          data: { decimals: 6 },
+        },
+      },
+    });
 
     await expect(fetchMovementFungibleAssetSupply(
       METADATA_ADDRESS,

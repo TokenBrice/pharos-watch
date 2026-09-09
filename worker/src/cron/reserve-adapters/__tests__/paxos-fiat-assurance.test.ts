@@ -1,9 +1,8 @@
 import { createHash } from "node:crypto";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import * as assurance from "@shared/lib/independent-assurance";
-import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import * as hashing from "../../../lib/hash";
-import { fetchPaxosIndependentAssuranceReserves } from "../paxos-independent-assurance";
+import { runAdapter, installAdapterNetwork } from "./reserve-adapter.test-support";
 
 const MAIN_URL = "https://framerusercontent.com/sites/3XxgTiMfDKU2yZKNfef9sl/script_main.DbHh1PDb.mjs";
 const MAIN_HASH = "75246095328cd57d84ba6056ca26adcef441670acb707fbf6c58c2397c8af29d";
@@ -17,7 +16,6 @@ describe("Paxos fiat product assurance", () => {
   afterEach(() => { vi.restoreAllMocks(); vi.unstubAllGlobals(); });
 
   it.each(CASES)("$product selects its reviewed report, reconciles every liability and rejects module drift", async (row) => {
-    const coin = ACTIVE_STABLECOINS.find((candidate) => candidate.id === row.id)!;
     const original = assurance.getIndependentAssuranceManifest(row.product);
     const pdf = "%PDF-1.7 scoped assurance fixture";
     const manifest = { ...original, reportByteLength: pdf.length, reportSha256: createHash("sha256").update(pdf).digest("hex") };
@@ -28,19 +26,18 @@ describe("Paxos fiat product assurance", () => {
     const sha256 = hashing.sha256Hex;
     vi.spyOn(hashing, "sha256Hex").mockImplementation(async (body) => body === main ? MAIN_HASH : body === page ? row.hash : sha256(body));
     let drift = false;
-    vi.stubGlobal("fetch", vi.fn(async (input: RequestInfo | URL) => {
-      const url = String(input);
-      let body: string;
-      if (url === manifest.officialIndexUrl) body = `<script src="${MAIN_URL}"></script>`;
-      else if (url === MAIN_URL) body = main;
-      else if (url === new URL(row.module, MAIN_URL).href) body = drift ? `${page} changed` : page;
-      else if (url === manifest.reportUrl) body = pdf;
-      else throw new Error(`Unreviewed report or route requested: ${url}`);
-      const response = new Response(body);
-      Object.defineProperty(response, "url", { value: url });
-      return response;
-    }));
-    const result = await fetchPaxosIndependentAssuranceReserves(coin, coin.liveReservesConfig!, AbortSignal.timeout(5000));
+    const network = installAdapterNetwork({
+      html: {
+        [manifest.officialIndexUrl]: `<script src="${MAIN_URL}"></script>`,
+        [MAIN_URL]: main,
+        [new URL(row.module, MAIN_URL).href]: () => drift ? `${page} changed` : page,
+        [manifest.reportUrl]: { body: pdf, headers: { "content-type": "application/pdf" } },
+      },
+    });
+    const { result } = await runAdapter("paxos-independent-assurance", row.id, {
+      network,
+      nowSec: Math.floor(Date.parse("2026-08-01T00:00:00Z") / 1000),
+    });
     expect(result.metadata?.collateralizationRatio).toBeCloseTo(row.assets / row.liabilities, 12);
     expect(result.metadata?.sourceTimestamp).toBe(Date.parse("2026-07-31T17:00:00-04:00") / 1000);
     expect(result.slices.map((slice) => slice.assetClass).sort()).toEqual([...row.classes].sort());
@@ -48,6 +45,10 @@ describe("Paxos fiat product assurance", () => {
       ...original, liabilities: original.liabilities.map((liability, index) => index === 0 ? { ...liability, amount: String(Number(liability.amount) - 1) } : liability),
     })).toThrow(/liability total/);
     drift = true;
-    await expect(fetchPaxosIndependentAssuranceReserves(coin, coin.liveReservesConfig!, AbortSignal.timeout(5000))).rejects.toThrow("website module changed");
+    await expect(runAdapter("paxos-independent-assurance", row.id, {
+      network,
+      nowSec: Math.floor(Date.parse("2026-08-01T00:00:00Z") / 1000),
+      validate: false,
+    })).rejects.toThrow("website module changed");
   });
 });

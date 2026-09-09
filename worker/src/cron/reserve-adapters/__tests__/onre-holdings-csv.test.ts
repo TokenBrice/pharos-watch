@@ -1,34 +1,25 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
-import type { StablecoinMeta } from "@shared/types/core";
-import type { LiveReservesConfig } from "@shared/types/live-reserves";
+import { describe, expect, it } from "vitest";
 
-vi.mock("../helpers", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("../helpers")>();
-  return { ...actual, fetchTextWithRetry: vi.fn() };
-});
+import { adaptOnReSchedule, parseCsvRows, parseOnReSchedule } from "../onre-holdings-csv";
+import { expectWarnings, installAdapterNetwork, runAdapter } from "./reserve-adapter.test-support";
 
-import { adaptOnReSchedule, fetchOnreHoldingsCsvReserves, parseCsvRows, parseOnReSchedule } from "../onre-holdings-csv";
-import { fetchTextWithRetry } from "../helpers";
 
+const ONRE_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vT-bLCCxKNCB2GHgFV5Jo6_fbv4t3CT60dwPMbUDfwhHglt5GBoLp47jp1wcCOY8Ob1ZgjA6KXNczdq/pub?output=csv&gid=1591707661&single=true";
+const FIXTURE_NOW = Math.floor(Date.parse("2026-08-14T01:00:00Z") / 1000);
+
+function onreNetwork(csv: string | { status: number; body: string }) {
+  return installAdapterNetwork({ html: { [ONRE_URL]: csv } });
+}
+
+function runOnre(csv: string | { status: number; body: string }, validate = true) {
+  return runAdapter("onre-holdings-csv", "onyc-onre", {
+    network: onreNetwork(csv),
+    nowSec: FIXTURE_NOW,
+    ...(validate ? {} : { validate: false as const }),
+  });
+}
 const CSV = "Asset,Amount (USD),Allocation,APY,Liquidity Layer,Proof of Assets,,Snapshot date,14/08/2026\nShort-Term US T-Bills,\"142,768,536.03\",49.20807683,3.656,,\"\"\"T-Bills Collateral\"\"\",,Serve,TRUE\nShort-Term U.S. T-Bills,\"6,126,406.52\",2.111590489,3.656,,\"\"\"T-Bills Collateral\"\"\",,On-chain refreshed,14/08/2026\nUSDG,\"74,385,035.27\",25.63831382,3.600,Y,USDG (Solscan),,Statement date,14/08/2026\nsUSDS,\"18,289,053.60\",6.303693936,3.700,,sUSDS (Etherscan),,,\nsyrupUSDC,\"11,152,365.13\",3.843889245,5.000,,syrupUSDC (Solscan),,,\nsUSDe,\"5,852,215.92\",2.017085127,4.800,,sUSDe (Solscan),,,\nUSCC,\"5,038,080.52\",1.736476819,6.680,,USCC (Solscan),,,\nUSDG (Lending),\"3,750,767.96\",1.349950701,8.350,,USDG (Jupiter) (Kamino),,,\nUSDC (Lending),\"10,050,588.00\",3.597539938,7.360,,USDC (Jupiter) (Kamino),,,\nUSYC,\"431,761.09\",0.1488152326,3.190,,USYC (Etherscan),,,\nUSDC,\"1,529,100.25\",0.5270354707,0.000,,USDC (Solscan),,,\nUSD,\"10,758,411.91\",3.708105263,0.000,,\"\"\"T-Bills Collateral\"\"\",,,\nTotal,\"290,132,322.20\",100.1905729,,,,,,\nAUM,\"289,656,147.33\",,,,,,,";
 
-function makeCoin(): StablecoinMeta {
-  return { id: "onyc-onre", name: "ONyc", symbol: "ONyc" } as unknown as StablecoinMeta;
-}
-
-function makeConfig(): LiveReservesConfig {
-  return {
-    adapter: "onre-holdings-csv",
-    version: 1,
-    semantics: "collateral-mix",
-    inputs: { primary: { kind: "http-html", url: "https://docs.google.com/spreadsheets/d/e/2PACX-1vT-bLCCxKNCB2GHgFV5Jo6_fbv4t3CT60dwPMbUDfwhHglt5GBoLp47jp1wcCOY8Ob1ZgjA6KXNczdq/pub?output=csv&gid=1591707661&single=true" } },
-    params: {},
-  } as unknown as LiveReservesConfig;
-}
-
-beforeEach(() => {
-  vi.clearAllMocks();
-});
 
 describe("parseOnReSchedule", () => {
   it("parses quoted fields, the snapshot date and the Total/AUM rows", () => {
@@ -77,10 +68,7 @@ describe("adaptOnReSchedule", () => {
       totalVsAumUsd: expect.closeTo(476_174.87, 4),
     });
 
-    const codes = result.warnings!.map((w) => w.code);
-    expect(codes).toContain("total-aum-mismatch");
-    expect(codes).toContain("allocation-sum-drift");
-    expect(result.warnings!.every((w) => w.effect === "degraded")).toBe(true);
+    expectWarnings(result, ["allocation-sum-drift", "total-aum-mismatch"]);
   });
 
   it("fails closed when asset amounts disagree with the declared Total", () => {
@@ -124,17 +112,20 @@ describe("adaptOnReSchedule", () => {
 });
 
 describe("fetchOnreHoldingsCsvReserves", () => {
-  it("fetches and adapts the schedule", async () => {
-    vi.mocked(fetchTextWithRetry).mockResolvedValue(CSV);
-    const result = await fetchOnreHoldingsCsvReserves(makeCoin(), makeConfig(), new AbortController().signal);
+  it("fetches and adapts the schedule through the configured source", async () => {
+    const { result, network } = await runOnre(CSV);
     expect(result.slices).toHaveLength(11);
-    expect(fetchTextWithRetry).toHaveBeenCalledTimes(1);
+    expect(network.requests).toEqual([{ url: ONRE_URL, method: "GET" }]);
   });
 
   it("propagates upstream failures", async () => {
-    vi.mocked(fetchTextWithRetry).mockRejectedValue(new Error("HTTP 502"));
-    await expect(fetchOnreHoldingsCsvReserves(makeCoin(), makeConfig(), new AbortController().signal))
+    await expect(runOnre({ status: 502, body: "upstream unavailable" }, false))
       .rejects.toThrow("HTTP 502");
+  });
+
+  it("rejects a renamed reconciliation row instead of publishing a plausible snapshot", async () => {
+    const drifted = CSV.replace("Total,\"290,132,322.20\"", "GrandTotal,\"290,132,322.20\"");
+    await expect(runOnre(drifted, false)).rejects.toThrow("Total and/or AUM");
   });
 });
 

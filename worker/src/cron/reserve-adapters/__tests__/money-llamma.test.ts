@@ -1,28 +1,7 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { describe, expect, it } from "vitest";
 import type { Abi } from "abitype";
 import { encodeAbiParameters, encodeFunctionData, parseAbi, parseAbiParameters } from "viem/utils";
-import { fetchMoneyReserves } from "../money-llamma";
-
-const multicallCall = vi.hoisted(() => vi.fn());
-const defillamaPrices = vi.hoisted(() => vi.fn());
-const pinnedPlan = vi.hoisted(() => vi.fn());
-
-vi.mock("../helpers", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("../helpers")>();
-  return {
-    ...actual,
-    fetchOnchainMulticall3: multicallCall,
-    fetchDefiLlamaPrices: defillamaPrices,
-  };
-});
-
-vi.mock("../evm-observation-plan", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("../evm-observation-plan")>();
-  return {
-    ...actual,
-    pinnedBlockPlan: pinnedPlan,
-  };
-});
+import { expectWarnings, runAdapter, type AdapterNetworkSpec } from "./reserve-adapter.test-support";
 
 const CONTROLLER = "0x1337F001E280420EcCe9E7B934Fa07D67fdb62CD";
 const MONEY = "0x69420f9E38a4e60a62224C489be4BF7a94402496";
@@ -77,15 +56,8 @@ function addressListWord(addresses: readonly `0x${string}`[]): `0x${string}` {
   return encodeAbiParameters(parseAbiParameters("address[]"), [addresses]);
 }
 
-const CONFIG = {
-  adapter: "money-llamma" as const,
-  version: 1,
-  semantics: "collateral-mix" as const,
-  breakerScope: "money-defi-money",
-  inputs: {
-    primary: { kind: "onchain-evm" as const, chain: "arbitrum", rpcMode: "public-rpc" as const },
-  },
-};
+const NOW_SEC = 1_757_003_600;
+const PRICE_ENDPOINT = "https://coins.llama.fi/prices/current";
 
 interface Scenario {
   moneyPrice?: number;
@@ -98,19 +70,29 @@ const ARB_SUPPLY = 5_000_000n * 10n ** 18n;
 const BASE_SUPPLY = 5_000_000n * 10n ** 18n;
 const OP_SUPPLY = 100n * 10n ** 18n;
 
-function installReads(scenario: Partial<Scenario> = {}): void {
+function moneyNetwork(
+  scenario: Partial<Scenario> = {},
+  marketCountOverride = 2,
+): AdapterNetworkSpec {
   const moneyPrice = scenario.moneyPrice ?? 1;
   const [arbDebt1, arbDebt2] = scenario.arbitrumDebt ?? [1_000n * 10n ** 18n, 0n];
   const baseDebt = scenario.baseDebt ?? 500n * 10n ** 18n;
+  const rpc: NonNullable<AdapterNetworkSpec["rpc"]> = {};
 
-  const values = new Map<string, `0x${string}`>();
-
-  const put = (chain: string, contract: string, abi: Abi, fn: string, args: readonly unknown[], result: `0x${string}`) => {
-    values.set(`${chain}:${contract.toLowerCase()}:${encodeFunctionData({ abi, functionName: fn, args })}`, result);
+  const put = (
+    chain: string,
+    contract: string,
+    abi: Abi,
+    fn: string,
+    args: readonly unknown[],
+    result: `0x${string}`,
+  ) => {
+    const data = encodeFunctionData({ abi, functionName: fn, args });
+    rpc[`${chain}:${contract}:${data}`] = result;
   };
 
   // Arbitrum: WBTC market (2 bands) + WETH market (2 bands).
-  put("arbitrum", CONTROLLER, CONTROLLER_ABI, "get_market_count", [], word(2n));
+  put("arbitrum", CONTROLLER, CONTROLLER_ABI, "get_market_count", [], word(marketCountOverride));
   put("arbitrum", CONTROLLER, CONTROLLER_ABI, "get_all_markets", [], addressListWord([OP1, OP2]));
   put("arbitrum", MONEY, ERC20_ABI, "totalSupply", [], word(ARB_SUPPLY));
   put("arbitrum", OP1, OPERATOR_ABI, "COLLATERAL_TOKEN", [], addressWord(WBTC));
@@ -155,49 +137,52 @@ function installReads(scenario: Partial<Scenario> = {}): void {
   put("optimism", CONTROLLER, CONTROLLER_ABI, "get_all_markets", [], addressListWord([]));
   put("optimism", MONEY, ERC20_ABI, "totalSupply", [], word(OP_SUPPLY));
 
-  multicallCall.mockImplementation(
-    async ({ calls, chain }: { calls: Array<{ label: string; contract: string; data: string }>; chain: string }) =>
-      calls.map((call) => {
-        const value = values.get(`${chain}:${call.contract.toLowerCase()}:${call.data}`);
-        return { label: call.label, success: value != null, returnData: value ?? "0x" };
-      }),
-  );
-
-  let blockCounter = 0;
-  pinnedPlan.mockImplementation(async ({ chain }: { chain: string }) => {
-    blockCounter += 1;
-    return {
-      observedBlock: { chain, number: 280_000_000 + blockCounter, timestamp: 1_757_000_000 },
-      ctx: { observedBlock: { chain, number: 280_000_000 + blockCounter, timestamp: 1_757_000_000 } },
-    };
-  });
-
   const priceMap = new Map<string, number>([
-    [WBTC.toLowerCase(), 100_000],
-    [WETH.toLowerCase(), 3_000],
-    [WSTETH.toLowerCase(), 4_000],
-    ["money:arbitrum", moneyPrice],
-    ["money:base", moneyPrice],
-    ["money:optimism", moneyPrice],
+    [`arbitrum:${WBTC.toLowerCase()}`, 100_000],
+    [`arbitrum:${WETH.toLowerCase()}`, 3_000],
+    [`base:${WSTETH.toLowerCase()}`, 4_000],
+    [`arbitrum:${MONEY.toLowerCase()}`, moneyPrice],
+    [`base:${MONEY.toLowerCase()}`, moneyPrice],
+    [`optimism:${MONEY.toLowerCase()}`, moneyPrice],
   ]);
-  if (scenario.missingPriceFor) {
-    priceMap.delete(scenario.missingPriceFor.toLowerCase());
+  const missing = scenario.missingPriceFor?.toLowerCase();
+  if (missing === "money:arbitrum") {
+    priceMap.delete(`arbitrum:${MONEY.toLowerCase()}`);
+  } else if (missing) {
+    for (const key of priceMap.keys()) {
+      if (key.endsWith(`:${missing}`)) priceMap.delete(key);
+    }
   }
-  defillamaPrices.mockImplementation(async (assets: Array<{ key: string }>) => {
-    return new Map(assets.map((asset) => [asset.key, priceMap.get(asset.key.toLowerCase())]).filter(([, v]) => v != null) as Array<[string, number]>);
-  });
+
+  const json: NonNullable<AdapterNetworkSpec["json"]> = {};
+  const addPriceRoute = (assets: readonly string[]) => {
+    const sorted = [...assets].sort();
+    const coins = Object.fromEntries(
+      sorted
+        .filter((asset) => priceMap.has(asset))
+        .map((asset) => [asset, { price: priceMap.get(asset), timestamp: NOW_SEC, confidence: 1 }]),
+    );
+    json[`${PRICE_ENDPOINT}/${sorted.join(",")}`] = { coins };
+  };
+  addPriceRoute([`arbitrum:${WBTC.toLowerCase()}`, `arbitrum:${WETH.toLowerCase()}`]);
+  addPriceRoute([`base:${WSTETH.toLowerCase()}`]);
+  addPriceRoute([
+    `arbitrum:${MONEY.toLowerCase()}`,
+    `base:${MONEY.toLowerCase()}`,
+    `optimism:${MONEY.toLowerCase()}`,
+  ]);
+
+  return { rpc, json, block: { timestamp: 1_757_000_000 } };
 }
 
-async function fetchFixture() {
-  return fetchMoneyReserves({ id: "money-defi-money" } as never, CONFIG as never, new AbortController().signal);
+async function fetchFixture(scenario: Partial<Scenario> = {}, marketCountOverride = 2) {
+  return (await runAdapter("money-llamma", "money-defi-money", {
+    network: moneyNetwork(scenario, marketCountOverride),
+    nowSec: NOW_SEC,
+  })).result;
 }
 
 describe("money-llamma adapter", () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-    installReads();
-  });
-
   it("census across all three chains into priced collateral slices against MONEY debt", async () => {
     const output = await fetchFixture();
 
@@ -238,28 +223,22 @@ describe("money-llamma adapter", () => {
       softLiquidatedMoneyTokens: 2,
     });
     expect(output.metadata?.allChainBlocks).toHaveLength(3);
-    expect(output.warnings).toBeUndefined();
+    expectWarnings(output, []);
   });
 
   it("publishes an off-par MONEY price as info and market-values the debt", async () => {
-    installReads({ moneyPrice: 1.02 });
-
-    const output = await fetchFixture();
+    const output = await fetchFixture({ moneyPrice: 1.02 });
 
     expect(output.metadata?.moneyPriceUsd).toBe(1.02);
     expect(output.metadata?.totalLiabilitiesUsd).toBeCloseTo(1_500 * 1.02, 5);
-    expect(output.warnings).toEqual([
-      expect.objectContaining({ code: "money-off-par", effect: "info", severity: "info" }),
-    ]);
+    expectWarnings(output, ["money-off-par"]);
   });
 
   it("values the MONEY debt liability at par when DefiLlama has no MONEY price", async () => {
     // The adapter reads its MONEY quote from the first chain leg; with no
     // usable quote the debt falls back to par while collateral stays
     // DefiLlama-priced.
-    installReads({ missingPriceFor: "money:arbitrum" });
-
-    const output = await fetchFixture();
+    const output = await fetchFixture({ missingPriceFor: "money:arbitrum" });
 
     expect(output.metadata?.moneyPriceUsd).toBeUndefined();
     expect(output.metadata?.totalReserveUsd).toBe(380_000);
@@ -267,53 +246,22 @@ describe("money-llamma adapter", () => {
     expect(output.metadata?.supplyUsd).toBe(10_000_100);
     expect(output.metadata?.collateralizationRatio).toBeCloseTo(380_000 / 1_500, 5);
     expect(output.metadata?.details).toMatchObject({ liabilityValuation: "par" });
-    expect(output.warnings).toEqual([
-      expect.objectContaining({ code: "liability-valued-at-par", effect: "info", severity: "info" }),
-    ]);
+    expectWarnings(output, ["liability-valued-at-par"]);
   });
 
   it("degrades instead of erroring when collateral no longer covers debt (E4)", async () => {
-    installReads({ baseDebt: 400_000n * 10n ** 18n });
-
-    const output = await fetchFixture();
+    const output = await fetchFixture({ baseDebt: 400_000n * 10n ** 18n });
 
     expect(output.metadata?.totalLiabilitiesUsd).toBeCloseTo(400_000 + 1_000, 5);
     expect(output.metadata?.collateralizationRatio).toBeLessThan(1);
-    expect(output.warnings).toEqual(
-      expect.arrayContaining([
-        expect.objectContaining({ code: "reserve-undercollateralized", effect: "degraded" }),
-      ]),
-    );
+    expectWarnings(output, ["reserve-undercollateralized"]);
   });
 
   it("fails closed when a collateral token has no DefiLlama price", async () => {
-    installReads({ missingPriceFor: WSTETH });
-
-    await expect(fetchFixture()).rejects.toThrow("missing DefiLlama price");
+    await expect(fetchFixture({ missingPriceFor: WSTETH })).rejects.toThrow("missing DefiLlama price");
   });
 
   it("fails closed when the controller market list disagrees with its count", async () => {
-    const values = new Map<string, `0x${string}`>();
-    values.set(
-      `arbitrum:${CONTROLLER.toLowerCase()}:${encodeFunctionData({ abi: CONTROLLER_ABI, functionName: "get_market_count" })}`,
-      word(3n),
-    );
-    values.set(
-      `arbitrum:${CONTROLLER.toLowerCase()}:${encodeFunctionData({ abi: CONTROLLER_ABI, functionName: "get_all_markets" })}`,
-      addressListWord([OP1, OP2]),
-    );
-    values.set(
-      `arbitrum:${MONEY.toLowerCase()}:${encodeFunctionData({ abi: ERC20_ABI, functionName: "totalSupply" })}`,
-      word(ARB_SUPPLY),
-    );
-    multicallCall.mockImplementation(
-      async ({ calls, chain }: { calls: Array<{ label: string; contract: string; data: string }>; chain: string }) =>
-        calls.map((call) => {
-          const value = values.get(`${chain}:${call.contract.toLowerCase()}:${call.data}`);
-          return { label: call.label, success: true, returnData: value ?? "0x" };
-        }),
-    );
-
-    await expect(fetchFixture()).rejects.toThrow("get_all_markets returned 2 entries for count 3");
+    await expect(fetchFixture({}, 3)).rejects.toThrow("get_all_markets returned 2 entries for count 3");
   });
 });

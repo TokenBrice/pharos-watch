@@ -360,6 +360,7 @@ export async function fetchErc4626SingleAssetReserves(
   const slices: ReserveSlice[] = [];
   if (idlePct > 0) {
     slices.push({
+      sourceKey: `erc4626-single-asset:${primaryInput.chain}:${assetAddress}`,
       name: idlePct === 100 ? sliceConfig.name : `${coin.name} idle underlying`,
       pct: idlePct,
       risk: sliceConfig.risk,
@@ -369,6 +370,7 @@ export async function fetchErc4626SingleAssetReserves(
   }
   if (unknownExposurePct > 0) {
     slices.push({
+      sourceKey: `erc4626-single-asset:${primaryInput.chain}:${contractAddress.toLowerCase()}:deployed`,
       name: `${coin.name} ${idleUnderlyingBalanceRaw == null ? "unattributed reserve exposure" : "deployed strategy positions"}`,
       pct: unknownExposurePct,
       risk: "high",

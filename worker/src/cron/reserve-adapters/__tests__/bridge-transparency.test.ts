@@ -1,25 +1,18 @@
-import { describe, expect, it, vi, beforeEach } from "vitest";
-import type { StablecoinMeta } from "@shared/types/core";
-import type { LiveReservesConfig } from "@shared/types/live-reserves";
-
-vi.mock("../helpers", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("../helpers")>();
-  return {
-    ...actual,
-    fetchJsonAdapterInput: vi.fn(),
-  };
-});
+import { describe, expect, it } from "vitest";
 
 import {
   adaptBridgeTransparency,
-  fetchBridgeTransparencyReserves,
   type BridgeTransparencyPayload,
 } from "../bridge-transparency";
-import { fetchJsonAdapterInput } from "../helpers";
 import {
   expectValidAdapterOutput,
-  mockedReserveHelper,
+  expectWarnings,
+  runAdapter,
 } from "./reserve-adapter.test-support";
+
+const USDSUI_ENDPOINT = "https://transparency.bridge.xyz/v0/stablecoins/usd_sui";
+const PATHUSD_ENDPOINT = "https://transparency.bridge.xyz/v0/stablecoins/path_usd";
+const NOW_SEC = Math.floor(Date.parse("2026-09-09T16:50:36Z") / 1000);
 
 /** Live capture of https://transparency.bridge.xyz/v0/stablecoins/usd_sui on
  *  2026-09-09 (components reconcile to the cent against both totals). */
@@ -47,28 +40,6 @@ const PATHUSD_PAYLOAD: BridgeTransparencyPayload = {
   collateralization_ratio: "1.0",
 };
 
-let signal: AbortSignal;
-
-function makeCoin(): StablecoinMeta {
-  return { id: "usdsui-sui", name: "Sui Dollar", ticker: "USDSui" } as unknown as StablecoinMeta;
-}
-
-function makeConfig(slug = "usd_sui"): LiveReservesConfig {
-  return {
-    adapter: "bridge-transparency",
-    version: 1,
-    semantics: "collateral-mix",
-    inputs: {
-      primary: { kind: "http-json", url: `https://transparency.bridge.xyz/v0/stablecoins/${slug}` },
-    },
-    params: { slug },
-  } as unknown as LiveReservesConfig;
-}
-
-beforeEach(() => {
-  vi.clearAllMocks();
-  signal = new AbortController().signal;
-});
 
 describe("adaptBridgeTransparency", () => {
   it("maps cash and treasury components into slices and publishes the issuer liability ratio", () => {
@@ -219,37 +190,35 @@ describe("adaptBridgeTransparency", () => {
 
 describe("fetchBridgeTransparencyReserves", () => {
   it("fetches the configured stablecoin endpoint and adapts the payload", async () => {
-    mockedReserveHelper(fetchJsonAdapterInput).mockResolvedValue(USDSUI_PAYLOAD);
-    const config = makeConfig();
+    const { result, network } = await runAdapter("bridge-transparency", "usdsui-sui", {
+      network: { json: { [USDSUI_ENDPOINT]: USDSUI_PAYLOAD } },
+      nowSec: NOW_SEC,
+    });
 
-    const result = await fetchBridgeTransparencyReserves(makeCoin(), config, signal);
-
-    expect(fetchJsonAdapterInput).toHaveBeenCalledWith(
-      config,
-      "bridge-transparency",
-      signal,
-      12_000,
-      undefined,
-    );
+    expect(network.requests.map((request) => request.url)).toEqual([USDSUI_ENDPOINT]);
     expect(result.slices.find((slice) => slice.name === "Cash")).toMatchObject({ risk: "low" });
     expect(result.metadata?.details).toMatchObject({ slug: "usd_sui" });
+    expectWarnings(result, []);
   });
 
-  it("fails closed when the configured URL slug does not match params.slug", async () => {
-    const config = makeConfig("usd_sui");
-    config.params = { slug: "path_usd" };
+  it("accepts pathUSD's rounded component totals through the registered binding", async () => {
+    const { result } = await runAdapter("bridge-transparency", "pathusd-bridge", {
+      network: { json: { [PATHUSD_ENDPOINT]: PATHUSD_PAYLOAD } },
+      nowSec: NOW_SEC,
+    });
 
-    await expect(fetchBridgeTransparencyReserves(makeCoin(), config, signal)).rejects.toThrow(
-      "configured URL slug \"usd_sui\" does not match params.slug \"path_usd\"",
-    );
+    expect(result.metadata?.totalReserveUsd).toBeCloseTo(36_658_731.37, 4);
+    expect(result.metadata?.details).toMatchObject({
+      driftVsReservesUsd: expect.closeTo(0.32, 3),
+      driftVsLiabilitiesUsd: expect.closeTo(0.314959, 3),
+    });
+    expectWarnings(result, []);
   });
 
-  it("propagates an error when the endpoint request fails", async () => {
-    mockedReserveHelper(fetchJsonAdapterInput).mockRejectedValue(
-      new Error("HTTP 500 for https://transparency.bridge.xyz/v0/stablecoins/usd_sui"),
-    );
-    const config = makeConfig();
-
-    await expect(fetchBridgeTransparencyReserves(makeCoin(), config, signal)).rejects.toThrow("HTTP 500");
+  it("fails the attempt when the endpoint errors instead of publishing a partial mix", async () => {
+    await expect(runAdapter("bridge-transparency", "usdsui-sui", {
+      network: { json: { [USDSUI_ENDPOINT]: { status: 500, json: {} } } },
+      nowSec: NOW_SEC,
+    })).rejects.toThrow(/500/);
   });
 });

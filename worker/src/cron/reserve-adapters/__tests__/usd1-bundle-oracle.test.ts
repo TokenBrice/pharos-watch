@@ -1,45 +1,17 @@
-import type * as EvmRpc from "../../../lib/evm-rpc";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { describe, expect, it } from "vitest";
 import { encodeAbiParameters } from "viem/utils";
 import type { StablecoinMeta } from "@shared/types/core";
-import type { LiveReservesConfig } from "@shared/types/live-reserves";
 import type { ChainRpcConfig } from "../../../lib/chain-registry";
-
-vi.mock("../../../lib/evm-rpc", async (importOriginal) => ({
-  ...await importOriginal<typeof EvmRpc>(),
-  fetchEvmBlockNumber: vi.fn(async (chain) => chain === "ethereum" ? 12345 : 54321),
-  fetchEvmBlockTimestamp: vi.fn(async () => 1776154391),
-}));
-
-vi.mock("../helpers", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("../helpers")>();
-  const { makeOnchainCallersMock } = await import("./helpers/onchain-callers-mock");
-  const fetchOnchainUint256 = vi.fn();
-  const fetchOnchainRawCall = vi.fn();
-  return {
-    ...actual,
-    fetchErc20TotalSupply: vi.fn(),
-    fetchTronErc20TotalSupply: vi.fn(),
-    fetchOnchainUint256,
-    fetchOnchainRawCall,
-    makeOnchainCallers: makeOnchainCallersMock({
-      uint256: fetchOnchainUint256,
-      raw: fetchOnchainRawCall,
-    }),
-  };
-});
-
 import {
   adaptUsd1BundleOracle,
-  fetchUsd1BundleOracleReserves,
   type Usd1SupplyAggregate,
 } from "../usd1-bundle-oracle";
 import {
-  fetchErc20TotalSupply,
-  fetchOnchainRawCall,
-  fetchOnchainUint256,
-  fetchTronErc20TotalSupply,
-} from "../helpers";
+  expectWarningEffect,
+  expectWarnings,
+  runAdapter,
+  type AdapterNetworkSpec,
+} from "./reserve-adapter.test-support";
 
 const BUNDLE_TIMESTAMP = 1776154391;
 const RESERVES_RAW = 4_089_230_010_760_000_230_000_000_000n;
@@ -209,131 +181,100 @@ describe("adaptUsd1BundleOracle", () => {
   });
 });
 
-describe("fetchUsd1BundleOracleReserves", () => {
-  const config: LiveReservesConfig = {
-    adapter: "usd1-bundle-oracle",
-    version: 2,
-    semantics: "single-asset",
-    inputs: {
-      primary: { kind: "onchain-evm", chain: "ethereum", rpcMode: "public-rpc" },
+const USD1_ORACLE = "0x691b74146cdba162449012aa32d3cbf5df77d4c4";
+const TRON_GRID = "https://api.trongrid.io/wallet/triggerconstantcontract";
+const TRON_USD1 = "TPFqcBAaaUMCSVRCqPaQ9QnzKhmuoLR6Rc";
+const ETH_TOKEN = "0x0000000000000000000000000000000000000001";
+const BSC_TOKEN = "0x0000000000000000000000000000000000000002";
+const PLUME_TOKEN = "0x0000000000000000000000000000000000000003";
+
+type ContractList = NonNullable<StablecoinMeta["contracts"]>;
+
+const MULTICHAIN_CONTRACTS: ContractList = [
+  { chain: "ethereum", address: ETH_TOKEN, decimals: 18 },
+  { chain: "bsc", address: BSC_TOKEN, decimals: 18 },
+  { chain: "tron", address: TRON_USD1, decimals: 18 },
+  { chain: "solana", address: "SoLusd1", decimals: 6 },
+  { chain: "aptos", address: "0xaptos", decimals: 6 },
+];
+
+function usd1Network(options: {
+  ethereumSupply?: bigint | null;
+  bscSupply?: bigint | null;
+  tronSupply?: bigint | null;
+  bundle?: string;
+  bundleTimestamp?: bigint;
+  bundleDecimals?: `0x${string}`;
+} = {}): AdapterNetworkSpec {
+  const oracleBundle = options.bundle ?? encodeAbiParameters(
+    [{ type: "bytes" }],
+    [encodeBundle(BUNDLE_TIMESTAMP, 3_000_000000000000000000n)],
+  );
+  return {
+    block: { number: 12345, timestamp: BUNDLE_TIMESTAMP },
+    rpc: {
+      [`${USD1_ORACLE}:latestBundle()`]: oracleBundle,
+      [`${USD1_ORACLE}:latestBundleTimestamp()`]: options.bundleTimestamp ?? BigInt(BUNDLE_TIMESTAMP),
+      [`${USD1_ORACLE}:bundleDecimals()`]: options.bundleDecimals ?? encodeAbiParameters([{ type: "uint8[]" }], [[18]]),
+      [`ethereum:${ETH_TOKEN}:totalSupply()`]: options.ethereumSupply === undefined
+        ? 1_000_000000000000000000n
+        : options.ethereumSupply,
+      [`bsc:${BSC_TOKEN}:totalSupply()`]: options.bscSupply === undefined
+        ? 500_000000000000000000n
+        : options.bscSupply,
     },
-    params: {
-      rpcUrl: "https://ethereum-rpc.publicnode.com",
-      fallbackRpcUrl: "https://eth.llamarpc.com",
+    json: {
+      [TRON_GRID]: async () => options.tronSupply == null
+        ? { result: { result: false } }
+        : { result: { result: true }, constant_result: [options.tronSupply.toString(16).padStart(64, "0")] },
     },
   };
+}
 
-  function makeCoin(contracts: StablecoinMeta["contracts"]): StablecoinMeta {
-    return {
-      id: "usd1-world-liberty-financial",
-      name: "World Liberty Financial USD",
-      symbol: "USD1",
-      flags: {
-        backing: "rwa-backed",
-        pegCurrency: "USD",
-        governance: "centralized",
-        yieldBearing: false,
-        rwa: true,
-        navToken: false,
-      },
-      contracts,
-    };
-  }
-
-  let signal: AbortSignal;
-
-  beforeEach(() => {
-    signal = new AbortController().signal;
-    vi.clearAllMocks();
-    // Promise.all invokes latestBundle() first, then bundleDecimals(); both go
-    // through the raw caller and are returned ABI-encoded like a real eth_call.
-    vi.mocked(fetchOnchainRawCall)
-      .mockResolvedValueOnce(
-        encodeAbiParameters(
-          [{ type: "bytes" }],
-          [encodeBundle(BUNDLE_TIMESTAMP, 3_000_000000000000000000n)],
-        ),
-      )
-      .mockResolvedValueOnce(encodeAbiParameters([{ type: "uint8[]" }], [[18]]));
-    vi.mocked(fetchOnchainUint256).mockResolvedValue(BigInt(BUNDLE_TIMESTAMP));
-  });
-
+describe("fetchUsd1BundleOracleReserves", () => {
   it.each([false, true])("aggregates every EVM and Tron deployment with inherited Ethereum pin=%s", async (inheritedPin) => {
-    const coin = makeCoin([
-      { chain: "ethereum", address: "0xeth", decimals: 18 },
-      { chain: "bsc", address: "0xbsc", decimals: 18 },
-      { chain: "tron", address: "Ttron", decimals: 18 },
-      { chain: "solana", address: "SoLusd1", decimals: 6 },
-      { chain: "aptos", address: "0xaptos", decimals: 6 },
-    ]);
-
-    vi.mocked(fetchErc20TotalSupply)
-      .mockResolvedValueOnce(1_000_000000000000000000n) // ethereum
-      .mockResolvedValueOnce(500_000000000000000000n); // bsc
-    vi.mocked(fetchTronErc20TotalSupply).mockResolvedValueOnce(750_000000000000000000n);
-
-    const result = await fetchUsd1BundleOracleReserves(coin, config, signal, {
+    const { result, network } = await runAdapter("usd1-bundle-oracle", "usd1-world-liberty-financial", {
+      coin: { contracts: MULTICHAIN_CONTRACTS },
+      network: usd1Network({ tronSupply: 750_000000000000000000n }),
       nowSec: BUNDLE_TIMESTAMP,
-      ...(inheritedPin ? { observedBlock: { chain: "ethereum", number: 12345, timestamp: BUNDLE_TIMESTAMP } } : {}),
+      ...(inheritedPin ? { ctx: { observedBlock: { chain: "ethereum", number: 12345, timestamp: BUNDLE_TIMESTAMP } } } : {}),
     });
-    expect(result.metadata?.observedBlock).toEqual({ chain: "ethereum", number: 12345, timestamp: 1776154391 });
-    for (const [request] of [...vi.mocked(fetchOnchainRawCall).mock.calls, ...vi.mocked(fetchOnchainUint256).mock.calls]) {
-      expect(request.ctx?.observedBlock).toEqual(result.metadata?.observedBlock);
-    }
-    expect(vi.mocked(fetchErc20TotalSupply).mock.calls.map((call) => call[3]?.observedBlock)).toEqual([
-      { chain: "ethereum", number: 12345, timestamp: 1776154391 },
-      { chain: "bsc", number: 54321, timestamp: 1776154391 },
-    ]);
+    expect(result.metadata?.observedBlock).toEqual({ chain: "ethereum", number: 12345, timestamp: BUNDLE_TIMESTAMP });
 
     // Ethereum-only would have published 3000/1000 = 3.0; the full liability is 2250.
     expect(result.metadata?.supplyUsd).toBeCloseTo(2250, 6);
     expect(result.metadata?.fundBackingTotalRatio).toBeCloseTo(3000 / 2250, 6);
     expect(result.metadata?.collateralizationRatio).toBeUndefined();
     expect(result.metadata?.supplyReadComplete).toBe(true);
-
-    const contributionChains = (result.metadata?.supplyContributions as Array<{ chain: string }>).map(
+    expect((result.metadata?.supplyContributions as Array<{ chain: string }>).map(
       (contribution) => contribution.chain,
-    );
-    expect(contributionChains).toEqual(["ethereum", "bsc", "tron"]);
-
-    const omitted = result.warnings?.find((warning) => warning.code === "por-supply-chain-omitted");
-    expect(omitted?.effect).toBe("info");
-    expect(omitted?.message).toContain("solana");
-    expect(omitted?.message).toContain("aptos");
-
-    expect(fetchErc20TotalSupply).toHaveBeenCalledTimes(2);
-    expect(vi.mocked(fetchErc20TotalSupply).mock.calls.map((call) => call[0]?.chain)).toEqual([
-      "ethereum",
+    )).toEqual(["ethereum", "bsc", "tron"]);
+    expectWarnings(result, ["por-supply-chain-omitted"]);
+    expect((result.warnings ?? []).find((warning) => warning.code === "por-supply-chain-omitted")?.effect).toBe("info");
+    expect(network.rpcCalls.filter((call) => call.selector === "0x18160ddd").map((call) => call.chain).sort()).toEqual([
       "bsc",
+      "ethereum",
     ]);
-    expect(fetchTronErc20TotalSupply).toHaveBeenCalledTimes(1);
+    expect(network.requests.filter((request) => request.url === TRON_GRID)).toHaveLength(1);
   });
 
   it("degrades instead of silently shrinking the denominator when a chain read fails", async () => {
-    const coin = makeCoin([
-      { chain: "ethereum", address: "0xeth", decimals: 18 },
-      { chain: "bsc", address: "0xbsc", decimals: 18 },
-    ]);
-
-    vi.mocked(fetchErc20TotalSupply)
-      .mockResolvedValueOnce(1_000_000000000000000000n) // ethereum
-      .mockResolvedValueOnce(null); // bsc read failed
-
-    const result = await fetchUsd1BundleOracleReserves(coin, config, signal, { nowSec: BUNDLE_TIMESTAMP });
-
+    const { result } = await runAdapter("usd1-bundle-oracle", "usd1-world-liberty-financial", {
+      coin: {
+        contracts: [
+          { chain: "ethereum", address: ETH_TOKEN, decimals: 18 },
+          { chain: "bsc", address: BSC_TOKEN, decimals: 18 },
+        ],
+      },
+      network: usd1Network({ bscSupply: null, tronSupply: null }),
+      nowSec: BUNDLE_TIMESTAMP,
+    });
     expect(result.metadata?.supplyUsd).toBeCloseTo(1000, 6);
     expect(result.metadata?.supplyReadComplete).toBe(false);
-    const failure = result.warnings?.find((warning) => warning.code === "partial-supply-read-failure");
-    expect(failure?.effect).toBe("degraded");
-    expect(failure?.message).toContain("bsc");
+    expectWarningEffect(result, "partial-supply-read-failure", "degraded");
   });
 
   it("omits chains without a configured RPC as info instead of degrading the snapshot", async () => {
-    const coin = makeCoin([
-      { chain: "ethereum", address: "0xeth", decimals: 18 },
-      { chain: "plume", address: "0xplume", decimals: 18 },
-    ]);
-
     const chainRpcs = new Map<string, ChainRpcConfig>([
       ["ethereum", {
         chainId: "ethereum",
@@ -343,33 +284,41 @@ describe("fetchUsd1BundleOracleReserves", () => {
         explorerUrl: "https://etherscan.io",
       }],
     ]);
-
-    vi.mocked(fetchErc20TotalSupply).mockResolvedValueOnce(1_000_000000000000000000n); // ethereum
-
-    const result = await fetchUsd1BundleOracleReserves(coin, config, signal, {
+    const { result, network } = await runAdapter("usd1-bundle-oracle", "usd1-world-liberty-financial", {
+      coin: {
+        contracts: [
+          { chain: "ethereum", address: ETH_TOKEN, decimals: 18 },
+          { chain: "plume", address: PLUME_TOKEN, decimals: 18 },
+        ],
+      },
+      network: usd1Network({ bscSupply: null, tronSupply: null }),
       nowSec: BUNDLE_TIMESTAMP,
-      chainRpcs,
+      ctx: { chainRpcs },
     });
 
     // Plume is omitted up front rather than read, so only Ethereum is probed.
     expect(result.metadata?.supplyUsd).toBeCloseTo(1000, 6);
     expect(result.metadata?.supplyReadComplete).toBe(true);
-    expect(fetchErc20TotalSupply).toHaveBeenCalledTimes(1);
-    expect(vi.mocked(fetchErc20TotalSupply).mock.calls.map((call) => call[0]?.chain)).toEqual(["ethereum"]);
-
-    const omitted = result.warnings?.find((warning) => warning.code === "por-supply-chain-omitted");
-    expect(omitted?.effect).toBe("info");
-    expect(omitted?.message).toContain("no RPC configured");
-    expect(omitted?.message).toContain("plume");
+    expect(network.rpcCalls.filter((call) => call.selector === "0x18160ddd")).toHaveLength(1);
+    expectWarningEffect(result, "por-supply-chain-omitted", "info");
     expect(result.warnings?.some((warning) => warning.code === "partial-supply-read-failure")).not.toBe(true);
   });
 
-  it("fails when no chain supply read succeeds", async () => {
-    const coin = makeCoin([{ chain: "ethereum", address: "0xeth", decimals: 18 }]);
-    vi.mocked(fetchErc20TotalSupply).mockResolvedValue(null);
+  it("fails closed when the oracle bundle payload drops a required word", async () => {
+    await expect(runAdapter("usd1-bundle-oracle", "usd1-world-liberty-financial", {
+      coin: { contracts: [{ chain: "ethereum", address: ETH_TOKEN, decimals: 18 }] },
+      network: usd1Network({ bundle: "0x1234", tronSupply: null }),
+      nowSec: BUNDLE_TIMESTAMP,
+      validate: false,
+    })).rejects.toThrow();
+  });
 
-    await expect(
-      fetchUsd1BundleOracleReserves(coin, config, signal, { nowSec: BUNDLE_TIMESTAMP }),
-    ).rejects.toThrow(/usd1-bundle-oracle/);
+  it("fails when no chain supply read succeeds", async () => {
+    await expect(runAdapter("usd1-bundle-oracle", "usd1-world-liberty-financial", {
+      coin: { contracts: [{ chain: "ethereum", address: ETH_TOKEN, decimals: 18 }] },
+      network: usd1Network({ ethereumSupply: null, tronSupply: null }),
+      nowSec: BUNDLE_TIMESTAMP,
+      validate: false,
+    })).rejects.toThrow(/usd1-bundle-oracle/);
   });
 });

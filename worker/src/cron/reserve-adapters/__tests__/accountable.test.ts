@@ -1,8 +1,7 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { jsonResponse, mockFetchStrict } from "@shared/test-utils/mock-fetch";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import type { StablecoinMeta } from "@shared/types/core";
 import { adaptAccountableDashboard } from "../accountable";
 import type { LiveReservesConfig } from "@shared/types/live-reserves";
-import { fetchAccountableReserves } from "../accountable";
 import { getReserveAdapter } from "../index";
 import { validateAdapterOutput } from "../validate";
 import apxusd from "@shared/data/stablecoins/coins/apxusd-apyx.json";
@@ -13,9 +12,8 @@ import yzusd from "@shared/data/stablecoins/coins/yzusd-yuzu.json";
 import utyxsy from "@shared/data/stablecoins/coins/uty-xsy.json";
 import usn from "@shared/data/stablecoins/coins/usn-noon.json";
 import { makeTimestampedYuzuPayload } from "./accountable.test-support";
+import { installAdapterNetwork, runAdapter } from "./reserve-adapter.test-support";
 
-let signal: AbortSignal;
-beforeEach(() => { signal = new AbortController().signal; });
 // Production removed NUSD's live config after its endpoint stopped resolving.
 // Keep this inline mapping fixture to exercise the reviewed historical
 // Accountable shape without re-enabling that production feed.
@@ -54,22 +52,25 @@ const NEUTRL_ACCOUNTABLE_TEST_CONFIG: LiveReservesConfig = {
   },
 };
 
-function runAccountablePayload(config: LiveReservesConfig, data: Record<string, unknown>) {
+async function runAccountablePayload(config: LiveReservesConfig, data: Record<string, unknown>) {
   const primary = config.inputs.primary;
   if (primary.kind !== "http-json") {
     throw new Error("expected Accountable primary input to be http-json");
   }
 
-  return fetchAccountableReserves(
-    {} as never,
-    config,
-    signal,
-    {
-      requestCache: new Map([
-        [`json-get:${primary.url}:12000:null`, Promise.resolve({ res: "ok", data })],
-      ]),
+  const coin = {
+    id: config.breakerScope ?? "accountable-test",
+    symbol: "TEST",
+    liveReservesConfig: config,
+  } as StablecoinMeta;
+  const { result } = await runAdapter("accountable", coin, {
+    network: {
+      json: {
+        [primary.url]: { res: "ok", data },
+      },
     },
-  );
+  });
+  return result;
 }
 
 afterEach(() => {
@@ -543,37 +544,51 @@ describe("adaptAccountableDashboard", () => {
     }).valid).toBe(true);
   });
 
-  it("sends the Apyx dashboard Origin and Referer headers", async () => {
-    const fetchMock = mockFetchStrict([{
-      match: "https://api.accountable.apyx.fi/dashboard",
-      respond: (request) => {
-        expect(request.headers.get("origin")).toBe("https://accountable.apyx.fi");
-        expect(request.headers.get("referer")).toBe("https://accountable.apyx.fi/");
-        return jsonResponse({
+  it("fetches the Apyx dashboard through its catalog endpoint", async () => {
+    const config = apxusd.liveReservesConfig as LiveReservesConfig;
+    const primary = config.inputs.primary;
+    if (primary.kind !== "http-json") throw new Error("expected Apyx Accountable input to be http-json");
+
+    const network = installAdapterNetwork({
+      json: {
+        [primary.url]: {
           res: "ok",
           data: {
             collateralization: 1,
             ts: "1784376607058",
             reserves: {
               total_reserves: 100,
-              reserves_split: [
-                { value: 100, name: "Cash & Equivalents" },
-              ],
+              reserves_split: [{ value: 100, name: "Cash & Equivalents" }],
             },
           },
-        });
+        },
       },
+    });
+    const { result } = await runAdapter("accountable", "apxusd-apyx", {
+      network,
+      nowSec: 1_784_376_608,
+    });
+
+    expect(network.requests.map((request) => request.url)).toEqual([primary.url]);
+    expect(result.slices).toEqual([{
+      sourceKey: "accountable:apyx:deployment:cash-equivalents",
+      name: "Cash & Equivalents (USDC, U.S. Treasury Bills)",
+      pct: 100,
+      risk: "very-low",
     }]);
-
-    await fetchAccountableReserves(
-      apxusd as never,
-      apxusd.liveReservesConfig as LiveReservesConfig,
-      new AbortController().signal,
-    );
-
-    expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 
+  it("fails closed when the configured reserve bucket is dropped upstream", async () => {
+    const config = apxusd.liveReservesConfig as LiveReservesConfig;
+
+    await expect(runAccountablePayload(config, {
+      collateralization: 1,
+      ts: "1784376607058",
+      reserves: {
+        total_reserves: { value: 100, name: "Total Reserves" },
+      },
+    })).rejects.toThrow(/Unsupported Accountable bucket/);
+  });
   it("treats Unitas deployment buckets as the same high-risk strategy basket", async () => {
     const config = usdu.liveReservesConfig as LiveReservesConfig;
 

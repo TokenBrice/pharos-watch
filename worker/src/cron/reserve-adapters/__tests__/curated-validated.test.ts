@@ -1,14 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import type { ReserveSlice, StablecoinMeta } from "@shared/types/core";
 import type { LiveReservesConfig } from "@shared/types/live-reserves";
-
-vi.mock("../helpers", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("../helpers")>();
-  return {
-    ...actual,
-    probeTrackedTokenSupply: vi.fn(),
-  };
-});
+import { installAdapterNetwork, type AdapterNetwork } from "./reserve-adapter.test-support";
 
 vi.mock("@shared/lib/redemption-backstop-configs", () => ({
   REDEMPTION_BACKSTOP_CONFIGS: {
@@ -19,9 +12,12 @@ vi.mock("@shared/lib/redemption-backstop-configs", () => ({
 }));
 
 import { fetchCuratedValidatedReserves } from "../curated-validated";
-import { probeTrackedTokenSupply } from "../helpers";
 
 let signal: AbortSignal;
+
+const EVM_CONTRACT = "0x1111111111111111111111111111111111111111";
+const SOLANA_RPC = "https://solana-rpc.example";
+const SOLANA_MINT = "Mint1111111111111111111111111111111111";
 
 function makeCoin(
   reserves?: ReserveSlice[],
@@ -44,57 +40,75 @@ const MULTI_SLICE_RESERVES: ReserveSlice[] = [
   { name: "USDC", pct: 15, risk: "low", coinId: "usdc-circle", depType: "wrapper" },
 ];
 
-const unexpectedProbeRequests: unknown[] = [];
-afterEach(() => { expect(unexpectedProbeRequests).toEqual([]); });
+const installedNetworks: AdapterNetwork[] = [];
+
+/** Answer the supply probe at the fetch boundary: EVM `totalSupply()` and Solana `getTokenSupply`. */
+function installSupplyNetwork(supply: bigint): AdapterNetwork {
+  const network = installAdapterNetwork({
+    rpc: { [`${EVM_CONTRACT}:totalSupply()`]: supply },
+    chains: { solana: SOLANA_RPC },
+    json: {
+      [SOLANA_RPC]: async (request: Request) => {
+        const body = await request.json() as { method?: string; params?: [string] };
+        if (body.method !== "getTokenSupply") return {};
+        if (body.params?.[0] !== SOLANA_MINT) return {};
+        return { result: { context: { slot: 1 }, value: { amount: supply.toString(), decimals: 6, uiAmount: 1 } } };
+      },
+    },
+  });
+  installedNetworks.push(network);
+  return network;
+}
+
+const scheduledCtx = (network: AdapterNetwork) => ({ chainRpcs: network.chainRpcs });
+
 beforeEach(() => {
   signal = new AbortController().signal;
   vi.clearAllMocks();
-  unexpectedProbeRequests.length = 0;
+  installedNetworks.length = 0;
+});
+afterEach(() => {
+  // No request may leave the routing table: any unexpected URL is recorded as unmatched.
+  expect(installedNetworks.map((network) => network.unmatched)).toEqual([[]]);
 });
 
 describe("fetchCuratedValidatedReserves", () => {
   it("returns coin.reserves as slices when probe succeeds", async () => {
-    vi.mocked(probeTrackedTokenSupply).mockResolvedValue(1000000n);
+    const network = installSupplyNetwork(1000000n);
 
     const result = await fetchCuratedValidatedReserves(
-      makeCoin(MULTI_SLICE_RESERVES, [{ chain: "ethereum", address: "0x1234" }]),
+      makeCoin(MULTI_SLICE_RESERVES, [{ chain: "ethereum", address: EVM_CONTRACT }]),
       BASE_CONFIG,
       signal,
+      scheduledCtx(network),
     );
 
     expect(result.slices).toEqual(MULTI_SLICE_RESERVES);
     expect(result.metadata?.totalSupplyRaw).toBe("1000000");
   });
 
-  it("passes scheduled chain RPC context through to the supply probe", async () => {
-    vi.mocked(probeTrackedTokenSupply).mockResolvedValue(1000000n);
-    const adapterContext = { chainRpcs: new Map() };
+  it("resolves the supply through the scheduled chain RPC context", async () => {
+    const network = installSupplyNetwork(1000000n);
     const config: LiveReservesConfig = {
       ...BASE_CONFIG,
       inputs: { primary: { kind: "onchain-solana" } },
     };
-    const coin = makeCoin(MULTI_SLICE_RESERVES, [{ chain: "solana", address: "Mint123" }]);
+    const coin = makeCoin(MULTI_SLICE_RESERVES, [{ chain: "solana", address: SOLANA_MINT }]);
 
-    await fetchCuratedValidatedReserves(coin, config, signal, adapterContext);
+    const result = await fetchCuratedValidatedReserves(coin, config, signal, scheduledCtx(network));
 
-    expect(probeTrackedTokenSupply).toHaveBeenCalledWith(
-      coin,
-      config.inputs.primary,
-      signal,
-      "curated-validated",
-      adapterContext,
-      undefined,
-      undefined,
-    );
+    expect(result.metadata?.totalSupplyRaw).toBe("1000000");
+    expect(network.requests.map((request) => request.url)).toContain(`${SOLANA_RPC}/`);
   });
 
   it("preserves coinId and depType from curated reserves", async () => {
-    vi.mocked(probeTrackedTokenSupply).mockResolvedValue(500n);
+    const network = installSupplyNetwork(500n);
 
     const result = await fetchCuratedValidatedReserves(
-      makeCoin(MULTI_SLICE_RESERVES, [{ chain: "ethereum", address: "0xABCD" }]),
+      makeCoin(MULTI_SLICE_RESERVES, [{ chain: "ethereum", address: EVM_CONTRACT }]),
       BASE_CONFIG,
       signal,
+      scheduledCtx(network),
     );
 
     const usdcSlice = result.slices.find((s) => s.name === "USDC");
@@ -103,47 +117,45 @@ describe("fetchCuratedValidatedReserves", () => {
   });
 
   it("throws when coin.reserves is empty", async () => {
+    installSupplyNetwork(1000000n);
     await expect(
       fetchCuratedValidatedReserves(
-        makeCoin([], [{ chain: "ethereum", address: "0x1234" }]),
+        makeCoin([], [{ chain: "ethereum", address: EVM_CONTRACT }]),
         BASE_CONFIG,
         signal,
       ),
     ).rejects.toThrow("coin.reserves to be defined and non-empty");
   });
-
   it("throws when coin.reserves is undefined", async () => {
+    installSupplyNetwork(1000000n);
     await expect(
       fetchCuratedValidatedReserves(
-        makeCoin(undefined, [{ chain: "ethereum", address: "0x1234" }]),
+        makeCoin(undefined, [{ chain: "ethereum", address: EVM_CONTRACT }]),
         BASE_CONFIG,
         signal,
       ),
     ).rejects.toThrow("coin.reserves to be defined and non-empty");
   });
 
-  it("throws when on-chain probe fails", async () => {
-    vi.mocked(probeTrackedTokenSupply).mockRejectedValue(
-      new Error("curated-validated totalSupply probe failed for test-coin"),
-    );
+  it("throws when the probed supply reads zero", async () => {
+    const network = installSupplyNetwork(0n);
 
     await expect(
       fetchCuratedValidatedReserves(
-        makeCoin(MULTI_SLICE_RESERVES, [{ chain: "ethereum", address: "0x1234" }]),
+        makeCoin(MULTI_SLICE_RESERVES, [{ chain: "ethereum", address: EVM_CONTRACT }]),
         BASE_CONFIG,
         signal,
+        scheduledCtx(network),
       ),
     ).rejects.toThrow("totalSupply probe failed");
   });
 
   it("throws when probe cannot find contract", async () => {
-    vi.mocked(probeTrackedTokenSupply).mockRejectedValue(
-      new Error("curated-validated could not find a ethereum contract for test-coin"),
-    );
+    installSupplyNetwork(1000000n);
 
     await expect(
       fetchCuratedValidatedReserves(
-        makeCoin(MULTI_SLICE_RESERVES, [{ chain: "arbitrum", address: "0xABCD" }]),
+        makeCoin(MULTI_SLICE_RESERVES, [{ chain: "arbitrum", address: EVM_CONTRACT }]),
         BASE_CONFIG,
         signal,
       ),
@@ -151,10 +163,10 @@ describe("fetchCuratedValidatedReserves", () => {
   });
 
   it("supports non-EVM onchain probe paths when the helper resolves supply", async () => {
-    vi.mocked(probeTrackedTokenSupply).mockResolvedValue(42n);
+    const network = installSupplyNetwork(42n);
 
     const result = await fetchCuratedValidatedReserves(
-      makeCoin(MULTI_SLICE_RESERVES, [{ chain: "solana", address: "Mint1111111111111111111111111111111111" }]),
+      makeCoin(MULTI_SLICE_RESERVES, [{ chain: "solana", address: SOLANA_MINT }]),
       {
         ...BASE_CONFIG,
         inputs: {
@@ -162,6 +174,7 @@ describe("fetchCuratedValidatedReserves", () => {
         },
       },
       signal,
+      scheduledCtx(network),
     );
 
     expect(result.slices).toEqual(MULTI_SLICE_RESERVES);
@@ -169,11 +182,12 @@ describe("fetchCuratedValidatedReserves", () => {
   });
 
   it("derives routeStatus 'open' from the coin's redemption-backstop config", async () => {
-    vi.mocked(probeTrackedTokenSupply).mockResolvedValue(1n);
+    const network = installSupplyNetwork(1n);
     const result = await fetchCuratedValidatedReserves(
-      makeCoin(MULTI_SLICE_RESERVES, [{ chain: "ethereum", address: "0x1234" }], "coin-with-open-route"),
+      makeCoin(MULTI_SLICE_RESERVES, [{ chain: "ethereum", address: EVM_CONTRACT }], "coin-with-open-route"),
       BASE_CONFIG,
       signal,
+      scheduledCtx(network),
     );
     const redemption = result.metadata?.redemption as { routeStatus?: string; routeStatusSource?: string };
     expect(redemption.routeStatus).toBe("open");
@@ -181,33 +195,36 @@ describe("fetchCuratedValidatedReserves", () => {
   });
 
   it("falls back to routeStatus 'unknown' when the coin has no backstop config", async () => {
-    vi.mocked(probeTrackedTokenSupply).mockResolvedValue(1n);
+    const network = installSupplyNetwork(1n);
     const result = await fetchCuratedValidatedReserves(
-      makeCoin(MULTI_SLICE_RESERVES, [{ chain: "ethereum", address: "0x1234" }], "coin-unmapped"),
+      makeCoin(MULTI_SLICE_RESERVES, [{ chain: "ethereum", address: EVM_CONTRACT }], "coin-unmapped"),
       BASE_CONFIG,
       signal,
+      scheduledCtx(network),
     );
     const redemption = result.metadata?.redemption as { routeStatus?: string };
     expect(redemption.routeStatus).toBe("unknown");
   });
 
   it("falls back to routeStatus 'unknown' when the backstop config does not specify one", async () => {
-    vi.mocked(probeTrackedTokenSupply).mockResolvedValue(1n);
+    const network = installSupplyNetwork(1n);
     const result = await fetchCuratedValidatedReserves(
-      makeCoin(MULTI_SLICE_RESERVES, [{ chain: "ethereum", address: "0x1234" }], "coin-without-route"),
+      makeCoin(MULTI_SLICE_RESERVES, [{ chain: "ethereum", address: EVM_CONTRACT }], "coin-without-route"),
       BASE_CONFIG,
       signal,
+      scheduledCtx(network),
     );
     const redemption = result.metadata?.redemption as { routeStatus?: string };
     expect(redemption.routeStatus).toBe("unknown");
   });
 
   it("never opens an on-chain call for a coin without redemptionCapacity params", async () => {
-    vi.mocked(probeTrackedTokenSupply).mockResolvedValue(1n);
+    const network = installSupplyNetwork(1n);
     const result = await fetchCuratedValidatedReserves(
-      makeCoin(MULTI_SLICE_RESERVES, [{ chain: "ethereum", address: "0x1234" }], "coin-with-open-route"),
+      makeCoin(MULTI_SLICE_RESERVES, [{ chain: "ethereum", address: EVM_CONTRACT }], "coin-with-open-route"),
       BASE_CONFIG,
       signal,
+      scheduledCtx(network),
     );
     expect(result.metadata?.redemption).toMatchObject({
       capacityKind: "documented-eventual",

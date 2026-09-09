@@ -5,20 +5,11 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { LIVE_RESERVE_ADAPTER_DEFINITIONS } from "@shared/lib/live-reserve-adapters";
 import {
   getIndependentAssuranceManifest,
-  independentAssuranceSourceTimestamp,
   reconcileIndependentAssuranceManifest,
 } from "@shared/lib/independent-assurance";
-import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
-import {
-  CADD_INDEPENDENT_ASSURANCE_PROFILE,
-  fetchCaddIndependentAssuranceReserves,
-} from "../cadd-independent-assurance";
-import {
-  fetchIndependentAssuranceReserves,
-  verifyIndependentAssuranceReport,
-} from "../independent-assurance";
-import { getReserveAdapter } from "../index";
-import { validateAdapterOutput } from "../validate";
+import { CADD_INDEPENDENT_ASSURANCE_PROFILE } from "../cadd-independent-assurance";
+import { verifyIndependentAssuranceReport } from "../independent-assurance";
+import { installAdapterNetwork } from "./reserve-adapter.test-support";
 
 const TEST_DIR = dirname(fileURLToPath(import.meta.url));
 const PDF_BYTES = new TextEncoder().encode("%PDF-1.7\nfixture\n");
@@ -27,12 +18,6 @@ const REPORT_HOSTS = ["drive.google.com", "drive.usercontent.google.com"];
 const AUGUST_ANCHOR =
   '<li data-section-id="mpyslq"><a href="https://drive.google.com/file/d/1AugFailsClosedPlaceholderID/view?usp=sharing" target="_blank" rel="noopener">August 2026 attestation</a></li>';
 
-vi.mock("../independent-assurance", async () => {
-  const actual = await vi.importActual<
-    typeof import("../independent-assurance")
-  >("../independent-assurance");
-  return { ...actual, fetchIndependentAssuranceReserves: vi.fn() };
-});
 
 function indexFixture(): string {
   return readFileSync(
@@ -43,23 +28,18 @@ function indexFixture(): string {
 
 function installFetch(html: string) {
   const reviewed = getIndependentAssuranceManifest("CADD");
-  const fetchMock = vi.fn(async (input: RequestInfo | URL) => {
-    const url = String(input);
-    if (url === reviewed.officialIndexUrl) {
-      return new Response(html, { headers: { "content-type": "text/html" } });
-    }
-    if (url === reviewed.reportUrl) {
-      return new Response(PDF_BYTES, {
+  return installAdapterNetwork({
+    html: {
+      [reviewed.officialIndexUrl]: html,
+      [reviewed.reportUrl]: {
+        body: new TextDecoder().decode(PDF_BYTES),
         headers: {
           "content-type": "application/pdf",
           "content-length": String(PDF_BYTES.length),
         },
-      });
-    }
-    throw new Error(`unexpected fixture request ${url}`);
+      },
+    },
   });
-  vi.stubGlobal("fetch", fetchMock);
-  return fetchMock;
 }
 
 async function verifyIndex() {
@@ -160,60 +140,4 @@ describe("cadd-independent-assurance (Baker Tilly CSAE 3000)", () => {
     await expect(verifyIndex()).rejects.toThrow("ambiguous report date");
   });
 
-  it("dispatches the bound coin through the publisher adapter and validates output", async () => {
-    const coin = ACTIVE_STABLECOINS.find(
-      (candidate) => candidate.id === "cadd-cad-digital",
-    );
-    expect(coin?.liveReservesConfig).toMatchObject({
-      adapter: "cadd-independent-assurance",
-      semantics: "attestation-mix",
-    });
-    const sourceTimestamp = independentAssuranceSourceTimestamp(
-      getIndependentAssuranceManifest("CADD"),
-    );
-    vi.mocked(fetchIndependentAssuranceReserves).mockResolvedValue({
-      slices: [
-        {
-          name: "Canadian Dollar Cash",
-          pct: 100,
-          risk: "very-low",
-          assetClass: "cash",
-        },
-      ],
-      metadata: { sourceTimestamp, freshnessMode: "verified" },
-    });
-    const result = await fetchCaddIndependentAssuranceReserves(
-      coin!,
-      coin!.liveReservesConfig!,
-      new AbortController().signal,
-    );
-    expect(result.slices[0].name).toBe("Canadian Dollar Cash");
-    expect(vi.mocked(fetchIndependentAssuranceReserves)).toHaveBeenCalledWith(
-      coin!,
-      coin!.liveReservesConfig!,
-      expect.any(AbortSignal),
-      CADD_INDEPENDENT_ASSURANCE_PROFILE,
-      {
-        product: "CADD",
-        profile: "cadd-v1",
-        indexHost: INDEX_HOST,
-        reportHosts: REPORT_HOSTS,
-      },
-      undefined,
-    );
-
-    const adapter = getReserveAdapter("cadd-independent-assurance");
-    expect(adapter?.evidenceClass).toBe("independent");
-    expect(
-      validateAdapterOutput(
-        {
-          slices: [
-            { name: "Canadian Dollar Cash", pct: 100, risk: "very-low" },
-          ],
-          metadata: { sourceTimestamp, freshnessMode: "verified" },
-        },
-        { adapter: adapter!, now: sourceTimestamp + 3_000_000 },
-      ).valid,
-    ).toBe(true);
-  });
 });

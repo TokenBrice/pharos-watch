@@ -2,6 +2,7 @@
   "id": "stcusd-cap",
   "reserves": [
     {
+      "sourceKey": "erc4626-single-asset:ethereum:0xcccc62962d17b8914c62d74ffb843d73b2a3cccc",
       "name": "cUSD ERC-4626 vault shares and operator-lending receivable",
       "pct": 100,
       "risk": "high",

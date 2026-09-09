@@ -1,18 +1,6 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
-import type { StablecoinMeta } from "@shared/types/core";
-import type { LiveReservesConfig } from "@shared/types/live-reserves";
-
-vi.mock("../helpers", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("../helpers")>();
-  return {
-    ...actual,
-    fetchJsonWithRetry: vi.fn(),
-    fetchDefiLlamaPrices: vi.fn(),
-  };
-});
-
-import { fetchDefiLlamaPrices, fetchJsonWithRetry } from "../helpers";
-import { adaptYouvesTezosState, fetchYouvesTezosReserves, type YouvesTezosState } from "../youves-tezos";
+import { describe, expect, it } from "vitest";
+import { installAdapterNetwork, runAdapter, type AdapterNetwork } from "./reserve-adapter.test-support";
+import { adaptYouvesTezosState, type YouvesTezosState } from "../youves-tezos";
 
 const TZKT_ORIGIN = "https://api.tzkt.io";
 const LEVEL = 14873956;
@@ -20,6 +8,8 @@ const HEAD_TIME_ISO = "2026-09-09T19:13:46Z";
 const HEAD_TIME_SEC = Math.floor(Date.parse(HEAD_TIME_ISO) / 1000);
 
 const UUSD_TOKEN = "KT1XRPEPXbZK25r3Htzp2o1x7xdMMmfocKNW";
+const USDT_TOKEN = "KT1XnTn74bUtxHfDtBmm2bGZAQfhPbvKWR8o";
+const TZBTC_TOKEN = "KT1PWx2mnDueood7fEmfbBDKx1D9BAnnXitn";
 
 // Captured 2026-09-09 from api.tzkt.io at the pinned level (vault sums
 // reconciled against the engines' physical FA2 balances and per-vault KT1
@@ -95,22 +85,39 @@ function makeState(overrides: Partial<YouvesTezosState> = {}): YouvesTezosState 
     ...overrides,
   };
 }
+const DEFILLAMA_ASSETS = [
+  "tezos:tezos",
+  `tezos:${UUSD_TOKEN.toLowerCase()}`,
+  `tezos:${TZBTC_TOKEN.toLowerCase()}`,
+  `tezos:${USDT_TOKEN.toLowerCase()}`,
+].sort();
+const DEFILLAMA_ENDPOINT = `https://coins.llama.fi/prices/current/${DEFILLAMA_ASSETS.join(",")}`;
 
-function makeCoin(): StablecoinMeta {
-  return { id: "uusd-youves", name: "Youves uUSD", symbol: "UUSD" } as unknown as StablecoinMeta;
+function installYouvesNetwork(
+  payloads = buildPayloadMap(),
+  prices: Partial<typeof PRICES> = PRICES,
+): AdapterNetwork {
+  const json: Record<string, unknown> = Object.fromEntries(payloads);
+  const priceKeys: Record<keyof typeof PRICES, string> = {
+    xtz: "tezos:tezos",
+    tzbtc: `tezos:${TZBTC_TOKEN.toLowerCase()}`,
+    usdt: `tezos:${USDT_TOKEN.toLowerCase()}`,
+    uusd: `tezos:${UUSD_TOKEN.toLowerCase()}`,
+  };
+  json[DEFILLAMA_ENDPOINT] = {
+    coins: Object.fromEntries(
+      (Object.keys(priceKeys) as (keyof typeof PRICES)[])
+        .filter((key) => prices[key] != null)
+        .map((key) => [priceKeys[key], {
+          price: prices[key],
+          timestamp: HEAD_TIME_SEC,
+          confidence: 1,
+        }]),
+    ),
+  };
+  return installAdapterNetwork({ json });
 }
 
-function makeConfig(): LiveReservesConfig {
-  return {
-    adapter: "youves-tezos",
-    version: 1,
-    semantics: "collateral-mix",
-    inputs: {
-      primary: { kind: "http-json", url: `${TZKT_ORIGIN}/v1/head` },
-    },
-    params: {},
-  } as unknown as LiveReservesConfig;
-}
 
 function expectedValues() {
   const xtzUsd = (662545550671 / 1e6) * PRICES.xtz;
@@ -121,12 +128,6 @@ function expectedValues() {
   const supply = Number(BigInt(SUPPLY_RAW)) / 1e12;
   return { xtzUsd, tzbtcUsd, usdtUsd, sirsUsd, total, supply, liabilities: supply * PRICES.uusd };
 }
-
-beforeEach(() => {
-  vi.clearAllMocks();
-  vi.mocked(fetchDefiLlamaPrices).mockResolvedValue(new Map(Object.entries(PRICES)));
-});
-
 describe("adaptYouvesTezosState", () => {
   it("publishes the four reviewed collateral slices with pinned-level metadata", () => {
     const result = adaptYouvesTezosState(makeState());
@@ -178,64 +179,50 @@ describe("adaptYouvesTezosState", () => {
 });
 
 describe("fetchYouvesTezosReserves", () => {
-  it("reads head, storages, bigmaps and the SIRS oracle and adapts the census", async () => {
+  it("reads head, storages, bigmaps and the SIRS oracle through the shared network boundary", async () => {
     const payloads = buildPayloadMap();
-    vi.mocked(fetchJsonWithRetry).mockImplementation(async (url: string) => {
-      if (!payloads.has(url)) throw new Error(`unexpected URL ${url}`);
-      return payloads.get(url);
-    });
-
-    const result = await fetchYouvesTezosReserves(makeCoin(), makeConfig(), new AbortController().signal, {
+    const network = installYouvesNetwork(payloads);
+    const { result } = await runAdapter("youves-tezos", "uusd-youves", {
+      network,
       nowSec: HEAD_TIME_SEC,
     });
 
     expect(result.metadata).toMatchObject({ freshnessMode: "not-applicable" });
     expect(result.slices).toHaveLength(4);
-    expect(fetchJsonWithRetry).toHaveBeenCalledTimes(20);
-    expect(fetchDefiLlamaPrices).toHaveBeenCalledTimes(1);
+    expect(network.requests.filter(({ url }) => url.startsWith(TZKT_ORIGIN)).length).toBe(20);
+    expect(network.requests.some(({ url }) => url.startsWith("https://coins.llama.fi/prices/current/"))).toBe(true);
   });
 
   it("fails closed when an engine's token contract is not the uUSD token", async () => {
     const payloads = buildPayloadMap();
     const firstEngineUrl = `${TZKT_ORIGIN}/v1/contracts/${ENGINES[0]!.address}/storage?level=${LEVEL}`;
     payloads.set(firstEngineUrl, { token_contract: "KT1other", total_supply: ENGINES[0]!.minted, vault_contexts: ENGINES[0]!.vaults });
-    vi.mocked(fetchJsonWithRetry).mockImplementation(async (url: string) => {
-      if (!payloads.has(url)) throw new Error(`unexpected URL ${url}`);
-      return payloads.get(url);
-    });
 
-    await expect(fetchYouvesTezosReserves(makeCoin(), makeConfig(), new AbortController().signal, { nowSec: HEAD_TIME_SEC }))
-      .rejects.toThrow("token_contract is KT1other");
+    await expect(runAdapter("youves-tezos", "uusd-youves", {
+      network: installYouvesNetwork(payloads),
+      nowSec: HEAD_TIME_SEC,
+    })).rejects.toThrow("token_contract is KT1other");
   });
 
   it("fails closed when a material collateral price is missing", async () => {
-    const payloads = buildPayloadMap();
-    vi.mocked(fetchJsonWithRetry).mockImplementation(async (url: string) => {
-      if (!payloads.has(url)) throw new Error(`unexpected URL ${url}`);
-      return payloads.get(url);
-    });
-    vi.mocked(fetchDefiLlamaPrices).mockResolvedValue(
-      new Map([
-        ["tzbtc", PRICES.tzbtc],
-        ["usdt", PRICES.usdt],
-        ["uusd", PRICES.uusd],
-      ]),
-    );
-
-    await expect(fetchYouvesTezosReserves(makeCoin(), makeConfig(), new AbortController().signal, { nowSec: HEAD_TIME_SEC }))
-      .rejects.toThrow("no qualified DefiLlama price for xtz");
+    await expect(runAdapter("youves-tezos", "uusd-youves", {
+      network: installYouvesNetwork(buildPayloadMap(), {
+        tzbtc: PRICES.tzbtc,
+        usdt: PRICES.usdt,
+        uusd: PRICES.uusd,
+      }),
+      nowSec: HEAD_TIME_SEC,
+    })).rejects.toThrow("no qualified DefiLlama price for xtz");
   });
 
   it("fails closed when token supply is below the engine minted sum", async () => {
     const payloads = buildPayloadMap();
     payloads.set(`${TZKT_ORIGIN}/v1/bigmaps/7709/keys?key=0&active=true&level=${LEVEL}`, [{ key: "0", value: "1" }]);
-    vi.mocked(fetchJsonWithRetry).mockImplementation(async (url: string) => {
-      if (!payloads.has(url)) throw new Error(`unexpected URL ${url}`);
-      return payloads.get(url);
-    });
 
-    await expect(fetchYouvesTezosReserves(makeCoin(), makeConfig(), new AbortController().signal, { nowSec: HEAD_TIME_SEC }))
-      .rejects.toThrow("below the sum of engine total_supply");
+    await expect(runAdapter("youves-tezos", "uusd-youves", {
+      network: installYouvesNetwork(payloads),
+      nowSec: HEAD_TIME_SEC,
+    })).rejects.toThrow("below the sum of engine total_supply");
   });
 
   it("fails closed when the SIRS LP oracle token pair does not match the reviewed pair", async () => {
@@ -246,19 +233,21 @@ describe("fetchYouvesTezosReserves", () => {
       value_token_balance_of: "1",
       lpt_total_supply: "1",
     });
-    vi.mocked(fetchJsonWithRetry).mockImplementation(async (url: string) => {
-      if (!payloads.has(url)) throw new Error(`unexpected URL ${url}`);
-      return payloads.get(url);
-    });
 
-    await expect(fetchYouvesTezosReserves(makeCoin(), makeConfig(), new AbortController().signal, { nowSec: HEAD_TIME_SEC }))
-      .rejects.toThrow("SIRS LP oracle token addresses do not match");
+    await expect(runAdapter("youves-tezos", "uusd-youves", {
+      network: installYouvesNetwork(payloads),
+      nowSec: HEAD_TIME_SEC,
+    })).rejects.toThrow("SIRS LP oracle token addresses do not match");
   });
 
-  it("propagates the tzkt failure", async () => {
-    vi.mocked(fetchJsonWithRetry).mockRejectedValue(new Error("HTTP 503 for https://api.tzkt.io/v1/head"));
-
-    await expect(fetchYouvesTezosReserves(makeCoin(), makeConfig(), new AbortController().signal, { nowSec: HEAD_TIME_SEC }))
-      .rejects.toThrow("HTTP 503");
+  it("propagates a TzKT failure", async () => {
+    await expect(runAdapter("youves-tezos", "uusd-youves", {
+      network: {
+        json: {
+          [`${TZKT_ORIGIN}/v1/head`]: { status: 503, body: "upstream unavailable" },
+        },
+      },
+      nowSec: HEAD_TIME_SEC,
+    })).rejects.toThrow("503");
   });
 });

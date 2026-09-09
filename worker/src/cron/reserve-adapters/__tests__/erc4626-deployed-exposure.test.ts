@@ -1,12 +1,9 @@
-import { beforeEach, describe, expect, it } from "vitest";
-import { resetRpcMocks } from "./helpers/rpc-mock";
-import { mockErc4626Rpc, runTrackedVault } from "./erc4626-single-asset.test-support";
+import { describe, expect, it } from "vitest";
+import { installErc4626Network, runTrackedVault } from "./erc4626-single-asset.test-support";
 
 describe("ERC-4626 held versus deployed exposure", () => {
-  beforeEach(resetRpcMocks);
-
   it("does not claim USDC holdings for YieldFi's zero-idle live observation", async () => {
-    mockErc4626Rpc({
+    installErc4626Network({
       vault: "0x19ebd191f7a24ece672ba13a302212b5ef7f35cb",
       totalAssets: 10_696_286_730_934n,
       convertedAssets: 10_696_286_730_934n,
@@ -19,7 +16,7 @@ describe("ERC-4626 held versus deployed exposure", () => {
   });
 
   it("attributes only measured idle USDC while retaining the deployed remainder", async () => {
-    mockErc4626Rpc({ idleBalance: 25_000_000n });
+    installErc4626Network({ idleBalance: 25_000_000n });
     const result = await runTrackedVault("syrupusdc-maple");
     expect(result.slices).toEqual([
       expect.objectContaining({ pct: 25, coinId: "usdc-circle" }),
@@ -31,14 +28,14 @@ describe("ERC-4626 held versus deployed exposure", () => {
   });
 
   it.each([100_000_000n, 120_000_000n])("keeps a single underlying slice when holdings cover totalAssets (%s)", async (idleBalance) => {
-    mockErc4626Rpc({ idleBalance });
+    installErc4626Network({ idleBalance });
     const result = await runTrackedVault("syrupusdc-maple");
     expect(result.slices).toEqual([expect.objectContaining({ pct: 100, coinId: "usdc-circle", risk: "medium" })]);
     expect(result.metadata?.unknownExposurePct).toBe(0);
   });
 
   it("does not invent an idle holding when the balance probe is unreadable", async () => {
-    mockErc4626Rpc({ idleBalance: null });
+    installErc4626Network({ idleBalance: null });
     const result = await runTrackedVault("syrupusdc-maple");
     expect(result.slices).toEqual([expect.objectContaining({ pct: 100, risk: "high" })]);
     expect(result.slices[0]).not.toHaveProperty("coinId");

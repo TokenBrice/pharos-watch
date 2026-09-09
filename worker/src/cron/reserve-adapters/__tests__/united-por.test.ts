@@ -1,39 +1,18 @@
-import { describe, expect, it, vi, beforeEach } from "vitest";
-import type { StablecoinMeta } from "@shared/types/core";
-import type { LiveReservesConfig } from "@shared/types/live-reserves";
+import { describe, expect, it } from "vitest";
 
-vi.mock("../helpers", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("../helpers")>();
-  return {
-    ...actual,
-    fetchJsonWithRetry: vi.fn(),
-  };
-});
+import { adaptUnitedPorPayload, type UnitedPorPayload } from "../united-por";
+import {
+  expectWarningEffect,
+  expectWarnings,
+  runAdapter,
+} from "./reserve-adapter.test-support";
 
-import { adaptUnitedPorPayload, fetchUnitedPorReserves, type UnitedPorPayload } from "../united-por";
-import { fetchJsonWithRetry } from "../helpers";
-let signal: AbortSignal;
+const UNITED_POR_ENDPOINT = "https://u.tech/u-client-api/v1/public/u/por";
 
 const SLICE = {
   name: "Cash, U.S. Treasury bills, and fiat-referenced stablecoins (variable mix)",
   risk: "low" as const,
 };
-
-function makeCoin(): StablecoinMeta {
-  return { id: "u-united-stables", name: "United Stables", ticker: "U" } as unknown as StablecoinMeta;
-}
-
-function makeConfig(): LiveReservesConfig {
-  return {
-    adapter: "united-por",
-    version: 1,
-    semantics: "single-asset",
-    inputs: {
-      primary: { kind: "http-json", url: "https://u.tech/u-client-api/v1/public/u/por" },
-    },
-    params: { slice: SLICE },
-  } as unknown as LiveReservesConfig;
-}
 
 // Captured 2026-07-09 from GET https://u.tech/u-client-api/v1/public/u/por
 const UNITED_POR_PAYLOAD: UnitedPorPayload = {
@@ -45,10 +24,8 @@ const UNITED_POR_PAYLOAD: UnitedPorPayload = {
   ripcordDetails: [],
 };
 
-beforeEach(() => {
-  vi.clearAllMocks();
-  signal = new AbortController().signal;
-});
+const CAPTURE_NOW_SEC = Math.floor(Date.parse(UNITED_POR_PAYLOAD.updatedAt) / 1000) + 3_600;
+
 
 describe("adaptUnitedPorPayload", () => {
   it("computes the honest ratio and verified freshness for a clean, non-ripcord snapshot", () => {
@@ -86,15 +63,8 @@ describe("adaptUnitedPorPayload", () => {
       ripcord: true,
       ripcordDetails: ["reserve custodian reconciliation lag", "pending manual review"],
     });
-    expect(result.warnings).toEqual([
-      {
-        code: "united-por-ripcord",
-        message:
-          "United Stables PoR reports a ripcord data-quality alarm: reserve custodian reconciliation lag; pending manual review",
-        severity: "warning",
-        effect: "degraded",
-      },
-    ]);
+    expectWarnings(result, ["united-por-ripcord"]);
+    expectWarningEffect(result, "united-por-ripcord", "degraded");
   });
 
   it("still degrades a ripcord=true snapshot with no disclosed details", () => {
@@ -102,14 +72,8 @@ describe("adaptUnitedPorPayload", () => {
 
     const result = adaptUnitedPorPayload(payload, SLICE);
 
-    expect(result.warnings).toEqual([
-      {
-        code: "united-por-ripcord",
-        message: "United Stables PoR reports a ripcord data-quality alarm: no further detail disclosed",
-        severity: "warning",
-        effect: "degraded",
-      },
-    ]);
+    expectWarnings(result, ["united-por-ripcord"]);
+    expectWarningEffect(result, "united-por-ripcord", "degraded");
   });
 
   it("treats missing or malformed ripcordDetails as undisclosed provider detail", () => {
@@ -119,14 +83,8 @@ describe("adaptUnitedPorPayload", () => {
 
     expect(result.metadata!.details).toMatchObject({ ripcord: true });
     expect(result.metadata!.details).not.toHaveProperty("ripcordDetails");
-    expect(result.warnings).toEqual([
-      {
-        code: "united-por-ripcord",
-        message: "United Stables PoR reports a ripcord data-quality alarm: no further detail disclosed",
-        severity: "warning",
-        effect: "degraded",
-      },
-    ]);
+    expectWarnings(result, ["united-por-ripcord"]);
+    expectWarningEffect(result, "united-por-ripcord", "degraded");
   });
 
   it("emits a coverage-shortfall degraded warning when reserves cover less than 99.5% of token supply", () => {
@@ -139,14 +97,8 @@ describe("adaptUnitedPorPayload", () => {
     const result = adaptUnitedPorPayload(payload, SLICE);
 
     expect(result.metadata!.collateralizationRatio).toBeCloseTo(0.9, 9);
-    expect(result.warnings).toEqual([
-      {
-        code: "united-por-reserve-under-token",
-        message: "United PoR reserves cover 90.00% of outstanding U token supply",
-        severity: "warning",
-        effect: "degraded",
-      },
-    ]);
+    expectWarnings(result, ["united-por-reserve-under-token"]);
+    expectWarningEffect(result, "united-por-reserve-under-token", "degraded");
   });
 
   it("throws on a malformed payload with an invalid totalReserve", () => {
@@ -213,23 +165,23 @@ describe("adaptUnitedPorPayload", () => {
 });
 
 describe("fetchUnitedPorReserves", () => {
-  it("fetches the configured PoR endpoint and adapts the payload", async () => {
-    vi.mocked(fetchJsonWithRetry).mockResolvedValue(UNITED_POR_PAYLOAD);
+  it("fetches the catalog PoR endpoint and adapts the payload", async () => {
+    const { result } = await runAdapter("united-por", "u-united-stables", {
+      network: { json: { [UNITED_POR_ENDPOINT]: UNITED_POR_PAYLOAD } },
+      nowSec: CAPTURE_NOW_SEC,
+    });
 
-    const result = await fetchUnitedPorReserves(makeCoin(), makeConfig(), signal);
-
-    expect(fetchJsonWithRetry).toHaveBeenCalledWith(
-      "https://u.tech/u-client-api/v1/public/u/por",
-      signal,
-      12_000,
-      undefined,
-    );
     expect(result.slices).toMatchObject([{ ...SLICE, pct: 100 }]);
+    expect(result.metadata).toMatchObject({
+      sourceTimestamp: Math.floor(Date.parse(UNITED_POR_PAYLOAD.updatedAt) / 1000),
+      freshnessMode: "verified",
+    });
   });
 
-  it("propagates an error when the PoR endpoint fetch fails", async () => {
-    vi.mocked(fetchJsonWithRetry).mockRejectedValue(new Error("HTTP 503 for https://u.tech/u-client-api/v1/public/u/por"));
-
-    await expect(fetchUnitedPorReserves(makeCoin(), makeConfig(), signal)).rejects.toThrow("HTTP 503");
+  it("propagates an error when the catalog PoR endpoint fails", async () => {
+    await expect(runAdapter("united-por", "u-united-stables", {
+      network: { json: { [UNITED_POR_ENDPOINT]: { status: 503, body: "upstream down" } } },
+      nowSec: CAPTURE_NOW_SEC,
+    })).rejects.toThrow("503");
   });
 });

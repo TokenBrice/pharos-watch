@@ -1,83 +1,48 @@
-import type { StablecoinMeta } from "@shared/types/core";
-import type { LiveReservesConfig } from "@shared/types/live-reserves";
-import { afterEach, describe, expect, it, vi } from "vitest";
-import { fetchLiquityNativeActivePoolReserves } from "../liquity-native-active-pool";
-import { fetchOnchainRateBps, fetchOnchainUint256 } from "../helpers";
-
-vi.mock("../helpers", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("../helpers")>();
-  const { makeOnchainCallersMock } = await import("./helpers/onchain-callers-mock");
-  const fetchOnchainUint256 = vi.fn();
-  return {
-    ...actual,
-    fetchOnchainRateBps: vi.fn(),
-    fetchOnchainUint256,
-    makeOnchainCallers: makeOnchainCallersMock({ uint256: fetchOnchainUint256 }),
-  };
-});
+import type { AdapterNetworkSpec } from "./reserve-adapter.test-support";
+import { describe, expect, it } from "vitest";
+import { runAdapter } from "./reserve-adapter.test-support";
 
 const ACTIVE_POOL = "0x3012C2fE1240e3754E5C200A0946bb0E07474876";
 const PRICE_FEED = "0xc5aC5A8892230E0A3e1c473881A2de7353fFcA88";
 const TROVE_MANAGER = "0x94AfB503dBca74aC3E4929BACEeDfCe19B93c193";
 const BORROWER_OPERATIONS = "0x44b1bac67dDA612a41a58AAf779143B181dEe031";
+const DEBT_SELECTOR = "0x14a6bf0f";
+const COLLATERAL_SELECTOR = "0x1529a639";
+const PRICE_SELECTOR = "0x0fdb11cf";
+const MCR_SELECTOR = "0x794e5724";
+const TCR_SELECTOR = "0xb82f263d";
+const REDEMPTION_SELECTOR = "0x540385a3";
+const WAD = 10n ** 18n;
+const RATE_RAW = 75n * WAD / 10_000n;
 
-const config: LiveReservesConfig = {
-  adapter: "liquity-native-active-pool",
-  version: 1,
-  semantics: "collateral-mix",
-  inputs: {
-    primary: { kind: "onchain-evm", chain: "mezo", rpcMode: "public-rpc" },
-  },
-  params: {
-    rpcUrl: "https://mainnet.mezo.public.validationcloud.io",
-    activePoolAddress: ACTIVE_POOL,
-    collateralLabel: "BTC collateral in Mezo ActivePool",
-    collateralRisk: "medium",
-    collateralDecimals: 18,
-    debtSelector: "0x14a6bf0f",
-    collateralBalanceSelector: "0x1529a639",
-    priceFeedAddress: PRICE_FEED,
-    priceSelector: "0x0fdb11cf",
-    troveManagerAddress: TROVE_MANAGER,
-    tcrSelector: "0xb82f263d",
-    mcrSelector: "0x794e5724",
-    borrowerOperationsAddress: BORROWER_OPERATIONS,
-    redemptionRateSelector: "0x540385a3",
-  },
-};
+function networkFor(
+  tcr: bigint | null = 167n * 10n ** 16n,
+  invalid?: { selector: string; value: bigint | null },
+): AdapterNetworkSpec {
+  return {
+    chains: { mezo: "https://mainnet.mezo.public.validationcloud.io" },
+    block: { number: 23_000_123, timestamp: 1_800_000_000 },
+    rpc: {
+      [`mezo:${ACTIVE_POOL}:${DEBT_SELECTOR}`]: invalid?.selector === DEBT_SELECTOR ? invalid.value : 3_500_000n * WAD,
+      [`mezo:${ACTIVE_POOL}:${COLLATERAL_SELECTOR}`]: invalid?.selector === COLLATERAL_SELECTOR ? invalid.value : 90n * WAD,
+      [`mezo:${PRICE_FEED}:${PRICE_SELECTOR}`]: invalid?.selector === PRICE_SELECTOR ? invalid.value : 65_000n * WAD,
+      [`mezo:${TROVE_MANAGER}:${MCR_SELECTOR}`]: invalid?.selector === MCR_SELECTOR ? invalid.value : 110n * 10n ** 16n,
+      [`mezo:${TROVE_MANAGER}:${TCR_SELECTOR}`]: tcr,
+      [`mezo:${BORROWER_OPERATIONS}:${REDEMPTION_SELECTOR}`]: invalid?.selector === REDEMPTION_SELECTOR ? invalid.value : RATE_RAW,
+    },
+  };
+}
 
-function mockPool(tcr: bigint | null = 167n * 10n ** 16n, invalid?: { selector: string; value: bigint | null }) {
-  vi.mocked(fetchOnchainUint256).mockImplementation(async ({ contract, data }) => {
-    if (data === invalid?.selector) return invalid.value;
-    if (contract === ACTIVE_POOL && data === "0x14a6bf0f") return 3_500_000n * 10n ** 18n;
-    if (contract === ACTIVE_POOL && data === "0x1529a639") return 90n * 10n ** 18n;
-    if (contract === PRICE_FEED && data === "0x0fdb11cf") return 65_000n * 10n ** 18n;
-    if (contract === TROVE_MANAGER && data === "0x794e5724") return 110n * 10n ** 16n;
-    if (contract === TROVE_MANAGER && data.startsWith("0xb82f263d")) return tcr;
-    throw new Error(`Unexpected pool read: ${contract} ${data}`);
+function fetchPool(network = networkFor()) {
+  return runAdapter("liquity-native-active-pool", "meusd-mezo", {
+    network,
+    nowSec: 1_800_000_000,
   });
-  vi.mocked(fetchOnchainRateBps).mockResolvedValue(75);
 }
-
-function fetchPool() {
-  return fetchLiquityNativeActivePoolReserves(
-    { id: "meusd-mezo" } as StablecoinMeta, config, new AbortController().signal,
-  );
-}
-
-afterEach(() => {
-  vi.clearAllMocks();
-});
 
 describe("fetchLiquityNativeActivePoolReserves", () => {
   it("emits native active-pool collateral slices and bounded direct capacity", async () => {
-    mockPool();
-
-    const result = await fetchLiquityNativeActivePoolReserves(
-      { id: "meusd-mezo" } as StablecoinMeta,
-      config,
-      AbortSignal.timeout(5_000),
-    );
+    const { result } = await fetchPool();
 
     expect(result.slices).toEqual([
       { sourceKey: "liquity-native-active-pool:0x3012c2fe1240e3754e5c200a0946bb0e07474876", name: "BTC collateral in Mezo ActivePool", pct: 100, risk: "medium" },
@@ -105,22 +70,13 @@ describe("fetchLiquityNativeActivePoolReserves", () => {
         collateralRaw: "90000000000000000000",
       },
     });
-    expect(fetchOnchainRateBps).toHaveBeenCalledWith(
-      expect.objectContaining({ chain: "mezo" }),
-      expect.objectContaining({ contract: BORROWER_OPERATIONS, selector: "0x540385a3", decimals: 18 }),
-      expect.any(AbortSignal),
-      undefined,
-      "https://mainnet.mezo.public.validationcloud.io",
-      undefined,
-    );
   });
 
   it.each([
     [110n * 10n ** 16n, "open"],
     [110n * 10n ** 16n - 1n, "degraded"],
   ] as const)("compares raw TCR %s against MCR without rounded-ratio loss", async (tcr, status) => {
-    mockPool(tcr);
-    const result = await fetchPool();
+    const { result } = await fetchPool(networkFor(tcr));
     expect(result.metadata?.redemption?.routeStatus).toBe(status);
     expect(result.warnings?.map(({ code }) => code) ?? []).toEqual(
       status === "open" ? [] : ["redemption-route-status-degraded"],
@@ -128,8 +84,7 @@ describe("fetchLiquityNativeActivePoolReserves", () => {
   });
 
   it("distinguishes unreadable TCR from a degraded measured ratio", async () => {
-    mockPool(null);
-    const result = await fetchPool();
+    const { result } = await fetchPool(networkFor(null));
     expect(result.metadata?.redemption?.routeStatus).toBe("unknown");
     expect(result.metadata).not.toHaveProperty("totalCollateralRatio");
     expect(result.warnings).toEqual([
@@ -139,20 +94,17 @@ describe("fetchLiquityNativeActivePoolReserves", () => {
 
   it("rejects each required read when zero or unreadable", async () => {
     for (const [selector, message] of [
-      ["0x14a6bf0f", "active-pool debt"], ["0x1529a639", "native collateral balance"],
-      ["0x0fdb11cf", "collateral price"], ["0x794e5724", "MCR"],
-    ]) {
-      for (const value of [0n, null]) {
-        mockPool(undefined, { selector, value });
-        await expect(fetchPool()).rejects.toThrow(`${message} read is zero/unreadable`);
+      [DEBT_SELECTOR, "active-pool debt"], [COLLATERAL_SELECTOR, "native collateral balance"],
+      [PRICE_SELECTOR, "collateral price"], [MCR_SELECTOR, "MCR"],
+    ] as const) {
+      for (const value of [0n, null] as const) {
+        await expect(fetchPool(networkFor(undefined, { selector, value }))).rejects.toThrow(`${message} read is zero/unreadable`);
       }
     }
   });
 
   it("keeps valid reserves without inventing an unavailable optional fee", async () => {
-    mockPool();
-    vi.mocked(fetchOnchainRateBps).mockResolvedValue(null);
-    const result = await fetchPool();
+    const { result } = await fetchPool(networkFor(undefined, { selector: REDEMPTION_SELECTOR, value: null }));
     expect(result.slices).toEqual([{ sourceKey: "liquity-native-active-pool:0x3012c2fe1240e3754e5c200a0946bb0e07474876", name: "BTC collateral in Mezo ActivePool", pct: 100, risk: "medium" }]);
     expect(result.metadata?.redemption?.routeStatus).toBe("open");
     expect(result.metadata).not.toHaveProperty("redemptionFeeBps");

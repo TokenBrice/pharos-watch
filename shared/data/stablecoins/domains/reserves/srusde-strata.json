@@ -2,6 +2,7 @@
   "id": "srusde-strata",
   "reserves": [
     {
+      "sourceKey": "erc4626-single-asset:ethereum:0x4c9edd5852cd905f086c759e8383e09bff1e68b3",
       "name": "Senior tranche USDe vault shares",
       "pct": 100,
       "risk": "high",

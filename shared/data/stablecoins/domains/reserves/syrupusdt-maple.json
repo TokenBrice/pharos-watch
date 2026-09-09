@@ -2,6 +2,7 @@
   "id": "syrupusdt-maple",
   "reserves": [
     {
+      "sourceKey": "erc4626-single-asset:ethereum:0xdac17f958d2ee523a2206206994597c13d831ec7",
       "name": "USDT (deployed as overcollateralized institutional loans)",
       "pct": 100,
       "risk": "high",

@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { adaptFalconTransparency, type FalconTransparencyResponse } from "../falcon";
+import { runAdapter } from "./reserve-adapter.test-support";
 
 function falconPayload(
   assets: Array<{ label: string; [venue: string]: string | number }>,
@@ -7,6 +8,7 @@ function falconPayload(
 ): FalconTransparencyResponse {
   return { snapshot_date: timestamp, usdf: { supply, insurance_fund: insurance, breakdown: { assets } } };
 }
+const FALCON_URL = "https://api.falcon.finance/api/v1/transparency";
 
 describe("adaptFalconTransparency", () => {
   it("rejects drift removing usdf.supply", () => {
@@ -87,5 +89,35 @@ describe("adaptFalconTransparency", () => {
       sourceTimestamp: 1776067200,
       freshnessMode: "verified",
     });
+  });
+});
+
+describe("falcon fetch boundary", () => {
+  it("fetches the configured transparency endpoint through the shared network harness", async () => {
+    const { result, network } = await runAdapter("falcon", "usdf-falcon", {
+      network: {
+        json: {
+          [FALCON_URL]: falconPayload([
+            { label: "USDC", ceffu: "20", fireblocks: "10" },
+            { label: "BTC", multisig: "25" },
+            { label: "ETH", multisig: "10" },
+            { label: "USTB", fireblocks: "15" },
+            { label: "AVAX", fireblocks: "15" },
+          ]),
+        },
+      },
+      nowSec: 1_773_318_200,
+    });
+
+    expect(network.requests.map((request) => request.url)).toEqual([FALCON_URL]);
+    expect(result.metadata).toMatchObject({
+      freshnessMode: "verified",
+      sourceTimestamp: 1_773_316_982,
+      supplyUsd: 100,
+    });
+    expect(result.slices).toContainEqual(expect.objectContaining({
+      name: "USDC cash-equivalent assets",
+      coinId: "usdc-circle",
+    }));
   });
 });

@@ -1,34 +1,19 @@
 import { createHash } from "node:crypto";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { describe, expect, it } from "vitest";
 import type { StablecoinMeta } from "@shared/types/core";
 import type { LiveReservesConfig } from "@shared/types/live-reserves";
 import { hexToBytes, keccak256 } from "viem/utils";
 import { privateKeyToAccount } from "viem/accounts";
-
-vi.mock("../helpers", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("../helpers")>();
-  return {
-    ...actual,
-    fetchJsonAdapterInput: vi.fn(),
-    fetchOnchainMulticall3: vi.fn(),
-  };
-});
-
-import {
-  adaptKerneSignedPor,
-  fetchKerneSignedPorReserves,
-} from "../kerne-signed-por";
-import { fetchJsonAdapterInput, fetchOnchainMulticall3 } from "../helpers";
+import { adaptKerneSignedPor } from "../kerne-signed-por";
 import { getReserveAdapter } from "../index";
-import { expectValidAdapterOutput, mockedReserveHelper } from "./reserve-adapter.test-support";
-
-let signal: AbortSignal;
+import { expectValidAdapterOutput, runAdapter } from "./reserve-adapter.test-support";
 
 const PRIVATE_KEY = "0x59c6995e998f97a5a0044966f0945389dc9e86dae88c7a8412f4603b6b78690d";
 const account = privateKeyToAccount(PRIVATE_KEY as `0x${string}`);
 const SIGNER = account.address;
 
 const USDC_BASE = "0x833589fcd6edb6e08f4c7c32d4f71b54bda02913";
+const KERNE_URL = "https://app.kerne.fi/api/por/signed";
 const PSMS = [
   "0xaBDE1138aa1Ce88d1dF06422C0c3b05D70569803",
   "0x07eBb486e11BD217e6085eb5ab663e4517595993",
@@ -38,6 +23,7 @@ const PSMS = [
 const TIMESTAMP = 1_788_977_221;
 const PSM_USDC_RESERVE = 1110.888006;
 const OUTSTANDING_KUSD = 1109.707154;
+const ONCHAIN_MATCH_RAW = 1_110_888_006n;
 
 function eip191DigestHash(digestHex: string): `0x${string}` {
   const digest = hexToBytes(digestHex as `0x${string}`);
@@ -65,7 +51,7 @@ function makeParams() {
 }
 
 function makeCoin(): StablecoinMeta {
-  return { id: "kusd-kerne", symbol: "kUSD" } as unknown as StablecoinMeta;
+  return { id: "kusd-kerne", symbol: "kUSD", liveReservesConfig: makeConfig() } as unknown as StablecoinMeta;
 }
 
 function makeConfig(): LiveReservesConfig {
@@ -73,21 +59,11 @@ function makeConfig(): LiveReservesConfig {
     adapter: "kerne-signed-por",
     version: 1,
     semantics: "single-asset",
-    inputs: { primary: { kind: "http-json", url: "https://app.kerne.fi/api/por/signed" } },
+    inputs: { primary: { kind: "http-json", url: KERNE_URL } },
     params: makeParams(),
   } as unknown as LiveReservesConfig;
 }
 
-function toBalanceHex(value: bigint): `0x${string}` {
-  return `0x${value.toString(16).padStart(64, "0")}`;
-}
-
-const ONCHAIN_MATCH_RAW = 1_110_888_006n; // 1110.888006 USDC (6 decimals)
-
-beforeEach(() => {
-  vi.clearAllMocks();
-  signal = new AbortController().signal;
-});
 
 describe("adaptKerneSignedPor", () => {
   it("emits the signed PSM USDC slice with verified freshness when the on-chain balance matches", () => {
@@ -166,32 +142,41 @@ describe("adaptKerneSignedPor", () => {
 });
 
 describe("fetchKerneSignedPorReserves", () => {
-  it("verifies the signature, cross-checks the PSM balance, and adapts", async () => {
+  async function kerneNetwork(payloadOverrides: Record<string, unknown> = {}) {
     const { canonical, attestationHash, signature } = await makeSignedPayload();
-    mockedReserveHelper(fetchJsonAdapterInput).mockResolvedValue({
-      schema_version: 9,
-      signer: SIGNER,
-      signature,
-      attestation_hash: attestationHash,
-      signed_payload_canonical: canonical,
+    const balances = [30_000_000n, 995_003_000n, 85_885_006n];
+    return {
+      json: {
+        [KERNE_URL]: {
+          schema_version: 9,
+          signer: SIGNER,
+          signature,
+          attestation_hash: attestationHash,
+          signed_payload_canonical: canonical,
+          ...payloadOverrides,
+        },
+      },
+      rpc: {
+        [`base:${USDC_BASE}:balanceOf(address)`]: ({ data }: { data: string }) => {
+          const address = data.slice(-40);
+          const index = PSMS.findIndex((psm) => psm.slice(2).toLowerCase() === address);
+          return balances[index] ?? null;
+        },
+      },
+    };
+  }
+
+  it("verifies the signature, cross-checks the PSM balance, and adapts through the shared network harness", async () => {
+    const network = await kerneNetwork();
+    const { result, network: installed } = await runAdapter("kerne-signed-por", makeCoin(), {
+      network,
+      nowSec: TIMESTAMP + 60,
     });
-    mockedReserveHelper(fetchOnchainMulticall3).mockResolvedValue([
-      { label: "psm-0-balance", success: true, returnData: toBalanceHex(30_000_000n) },
-      { label: "psm-1-balance", success: true, returnData: toBalanceHex(995_003_000n) },
-      { label: "psm-2-balance", success: true, returnData: toBalanceHex(85_885_006n) },
-    ]);
 
-    const result = await fetchKerneSignedPorReserves(makeCoin(), makeConfig(), signal);
-
-    expect(fetchOnchainMulticall3).toHaveBeenCalledWith(expect.objectContaining({
-      chain: "base",
-      calls: PSMS.map((_address, index) => ({
-        label: `psm-${index}-balance`,
-        contract: USDC_BASE,
-        data: expect.any(String),
-        allowFailure: true,
-      })),
-    }));
+    expect(installed.requests.map((request) => request.url)).toContain(KERNE_URL);
+    expect(installed.rpcCalls).toEqual(expect.arrayContaining([
+      expect.objectContaining({ chain: "base", contract: USDC_BASE, viaMulticall: true }),
+    ]));
     expect(result.warnings).toBeUndefined();
     expect(result.slices).toHaveLength(1);
     expect(result.metadata?.sourceTimestamp).toBe(TIMESTAMP);
@@ -201,40 +186,42 @@ describe("fetchKerneSignedPorReserves", () => {
     const { canonical, attestationHash } = await makeSignedPayload();
     const stranger = privateKeyToAccount("0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80");
     const signature = await stranger.sign({ hash: eip191DigestHash(attestationHash) });
-    mockedReserveHelper(fetchJsonAdapterInput).mockResolvedValue({
-      schema_version: 9,
-      signer: stranger.address,
-      signature,
-      attestation_hash: attestationHash,
-      signed_payload_canonical: canonical,
-    });
 
-    await expect(fetchKerneSignedPorReserves(makeCoin(), makeConfig(), signal)).rejects.toThrow(
-      "does not recover the pinned signer",
-    );
+    await expect(runAdapter("kerne-signed-por", makeCoin(), {
+      network: await kerneNetwork({
+        signer: stranger.address,
+        signature,
+        attestation_hash: attestationHash,
+        signed_payload_canonical: canonical,
+      }),
+      nowSec: TIMESTAMP + 60,
+      validate: false,
+    })).rejects.toThrow("does not recover the pinned signer");
   });
 
   it("fails closed when the canonical bytes do not rehash to attestation_hash", async () => {
     const { canonical, signature } = await makeSignedPayload();
-    mockedReserveHelper(fetchJsonAdapterInput).mockResolvedValue({
-      schema_version: 9,
-      signer: SIGNER,
-      signature,
-      attestation_hash: "0x0000000000000000000000000000000000000000000000000000000000000000",
-      signed_payload_canonical: canonical,
-    });
 
-    await expect(fetchKerneSignedPorReserves(makeCoin(), makeConfig(), signal)).rejects.toThrow(
-      "do not rehash to attestation_hash",
-    );
+    await expect(runAdapter("kerne-signed-por", makeCoin(), {
+      network: await kerneNetwork({
+        signature,
+        attestation_hash: "0x0000000000000000000000000000000000000000000000000000000000000000",
+        signed_payload_canonical: canonical,
+      }),
+      nowSec: TIMESTAMP + 60,
+      validate: false,
+    })).rejects.toThrow("do not rehash to attestation_hash");
   });
 
-  it("propagates an error when the endpoint request fails", async () => {
-    mockedReserveHelper(fetchJsonAdapterInput).mockRejectedValue(
-      new Error("HTTP 500 for https://app.kerne.fi/api/por/signed"),
-    );
-
-    await expect(fetchKerneSignedPorReserves(makeCoin(), makeConfig(), signal)).rejects.toThrow("HTTP 500");
+  it("propagates an endpoint failure", async () => {
+    await expect(runAdapter("kerne-signed-por", makeCoin(), {
+      network: {
+        json: { [KERNE_URL]: { status: 500, body: "upstream unavailable" } },
+        rpc: { [`base:${USDC_BASE}:balanceOf(address)`]: 0n },
+      },
+      nowSec: TIMESTAMP + 60,
+      validate: false,
+    })).rejects.toThrow(/500/);
   });
 });
 

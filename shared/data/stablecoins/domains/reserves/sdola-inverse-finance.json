@@ -2,6 +2,7 @@
   "id": "sdola-inverse-finance",
   "reserves": [
     {
+      "sourceKey": "erc4626-single-asset:ethereum:0x865377367054516e17014ccded1e7d814edc9ce4",
       "name": "DOLA deposited in the sDOLA savings wrapper",
       "pct": 100,
       "risk": "high",

@@ -4,19 +4,14 @@ import { fileURLToPath } from "node:url";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { LIVE_RESERVE_ADAPTER_DEFINITIONS } from "@shared/lib/live-reserve-adapters";
 import { getIndependentAssuranceManifest, reconcileIndependentAssuranceManifest } from "@shared/lib/independent-assurance";
-import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
-import { AUDD_INDEPENDENT_ASSURANCE_PROFILE, fetchAuddIndependentAssuranceReserves } from "../audd-independent-assurance";
-import { fetchIndependentAssuranceReserves, verifyIndependentAssuranceReport } from "../independent-assurance";
-import { getReserveAdapter } from "../index";
-import { validateAdapterOutput } from "../validate";
+import { AUDD_INDEPENDENT_ASSURANCE_PROFILE } from "../audd-independent-assurance";
+import { verifyIndependentAssuranceReport } from "../independent-assurance";
+
+import { installAdapterNetwork } from "./reserve-adapter.test-support";
 
 const TEST_DIR = dirname(fileURLToPath(import.meta.url));
 const PDF_BYTES = new TextEncoder().encode("%PDF-1.7\nfixture\n");
 
-vi.mock("../independent-assurance", async () => {
-  const actual = await vi.importActual<typeof import("../independent-assurance")>("../independent-assurance");
-  return { ...actual, fetchIndependentAssuranceReserves: vi.fn() };
-});
 
 function indexFixture(): string {
   return readFileSync(resolve(TEST_DIR, "fixtures", "audd-independent-assurance.html"), "utf8");
@@ -24,20 +19,15 @@ function indexFixture(): string {
 
 function installFetch(html: string) {
   const reviewed = getIndependentAssuranceManifest("AUDD");
-  const fetchMock = vi.fn(async (input: RequestInfo | URL) => {
-    const url = String(input);
-    if (url === reviewed.officialIndexUrl) {
-      return new Response(html, { headers: { "content-type": "text/html" } });
-    }
-    if (url === reviewed.reportUrl) {
-      return new Response(PDF_BYTES, {
+  return installAdapterNetwork({
+    html: {
+      [reviewed.officialIndexUrl]: html,
+      [reviewed.reportUrl]: {
+        body: new TextDecoder().decode(PDF_BYTES),
         headers: { "content-type": "application/pdf", "content-length": String(PDF_BYTES.length) },
-      });
-    }
-    throw new Error(`unexpected fixture request ${url}`);
+      },
+    },
   });
-  vi.stubGlobal("fetch", fetchMock);
-  return fetchMock;
 }
 
 async function verifyIndex() {
@@ -104,34 +94,16 @@ describe("audd-independent-assurance (William Buck ASRS 4400 AUP)", () => {
     await expect(verifyIndex()).rejects.toThrow("ambiguous report date");
   });
 
-  it("dispatches the bound coin through the publisher adapter and validates output", async () => {
-    const coin = ACTIVE_STABLECOINS.find((candidate) => candidate.id === "audd-novatti");
-    expect(coin?.liveReservesConfig).toMatchObject({
-      adapter: "audd-independent-assurance",
-      semantics: "attestation-mix",
-    });
-    vi.mocked(fetchIndependentAssuranceReserves).mockResolvedValue({
-      slices: [{ name: "AUD cash", pct: 100, risk: "very-low", assetClass: "bank-deposit" }],
-      metadata: { sourceTimestamp: 1_787_219_940, freshnessMode: "verified" },
-    });
-    const result = await fetchAuddIndependentAssuranceReserves(
-      coin!, coin!.liveReservesConfig!, new AbortController().signal,
-    );
-    expect(result.slices[0].name).toBe("AUD cash");
-    expect(vi.mocked(fetchIndependentAssuranceReserves)).toHaveBeenCalledWith(
-      coin!, coin!.liveReservesConfig!, expect.any(AbortSignal), AUDD_INDEPENDENT_ASSURANCE_PROFILE,
-      { product: "AUDD", profile: "audd-v1", indexHost: "www.audd.digital", reportHosts: ["www.audd.digital"] },
-      undefined,
-    );
-
-    const adapter = getReserveAdapter("audd-independent-assurance");
-    expect(adapter?.evidenceClass).toBe("static-validated");
-    expect(validateAdapterOutput(
-      {
-        slices: [{ name: "AUD cash", pct: 100, risk: "very-low" }],
-        metadata: { sourceTimestamp: 1_787_219_940, freshnessMode: "verified" },
+  it("fails closed when the latest report href is renamed on the AUDD index", async () => {
+    const reviewed = getIndependentAssuranceManifest("AUDD");
+    const network = installAdapterNetwork({
+      html: {
+        [reviewed.officialIndexUrl]: "<a data-report-url=\"AUDC-Agreed-upon-procedures-report-Aug26_.pdf\">August 2026</a>",
       },
-      { adapter: adapter!, now: 1_787_219_940 + 3_000_000 },
-    ).valid).toBe(true);
+    });
+
+    await expect(verifyIndex()).rejects.toThrow(/reviewed report URL is missing or duplicated/);
+    expect(network.requests.map((request) => request.url)).toEqual([reviewed.officialIndexUrl]);
   });
+
 });

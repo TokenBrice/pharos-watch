@@ -20,7 +20,7 @@ import {
 } from "./helpers";
 import { decodeUint256Word } from "./abi-decode";
 
-export type BranchBalanceAdapterKey = Extract<LiveReserveAdapterKey, "evm-branch-balances" | "liquity-v2-branches" | "lista">;
+export type BranchBalanceAdapterKey = Extract<LiveReserveAdapterKey, "evm-branch-balances" | "liquity-v2-branches">;
 
 const STABLECOINS_CACHE_BRANCH_PRICE_MAX_AGE_SEC = 2 * 60 * 60;
 
@@ -354,9 +354,7 @@ export function adaptBranchBalanceReserves(input: AdaptBranchBalanceInput): Adap
       }
     }
     return {
-      ...(adapterKey === "lista"
-        ? {}
-        : { sourceKey: `${adapterKey}:${branch.chain ?? branch.token.chain}:${branch.token.address.toLowerCase()}` }),
+      sourceKey: `${adapterKey}:${branch.chain ?? branch.token.chain}:${branch.token.address.toLowerCase()}`,
       value: valueUsdFromBigIntPrice(balanceRaw ?? 0n, balanceDecimals ?? branch.token.decimals, price),
       name: branch.name,
       risk: branch.risk,

@@ -62,6 +62,8 @@ const NON_HTML_FIXTURE_EXEMPTIONS: Readonly<Record<string, string>> = {
   "makina-strategy.json": "JSON cannot carry an HTML-comment capture header",
   "fdusd-reserve-report.txt": "signed-report text extract; no capture header was recorded",
   "fdusd-isae3000-july-glyph-fragmented.txt": "signed-report text extract; no capture header was recorded",
+  "makina-async-redeemer-runtime-code.txt":
+    "deployed EVM runtime bytecode pinned by keccak hash (immutable); no capture header was recorded",
 };
 
 /**

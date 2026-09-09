@@ -1,18 +1,11 @@
-import { fetchWithRetryMock, resetRpcMocks } from "./helpers/rpc-mock";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { describe, expect, it } from "vitest";
 import type { LiveReservesConfig } from "@shared/types/live-reserves";
 import type { StablecoinMeta } from "@shared/types/core";
 import { adaptOpenEdenUsdo, fetchOpenEdenUsdoReserves } from "../openeden";
+import { installAdapterNetwork, runAdapter } from "./reserve-adapter.test-support";
 
-const forbiddenFetch = vi.fn(() => { throw new Error("Unexpected real network request"); });
-beforeEach(() => {
-  forbiddenFetch.mockClear();
-  vi.stubGlobal("fetch", forbiddenFetch);
-});
-afterEach(() => {
-  vi.unstubAllGlobals();
-  expect(forbiddenFetch).not.toHaveBeenCalled();
-});
+const OPENEDEN_URL = "https://prod-gw.openeden.com/usdo/sys/reserve-composition-last";
+const FIXTURE_NOW = Math.floor(Date.parse("2026-03-25T09:00:17.600Z") / 1000);
 
   const payload = {
     date: "2026-03-25T08:00:17.600Z",
@@ -117,19 +110,13 @@ describe("adaptOpenEdenUsdo", () => {
 });
 
 describe("fetchOpenEdenUsdoReserves", () => {
-  const coin = { id: "usdo-openeden" } as StablecoinMeta;
-  const url = "https://prod-gw.openeden.com/usdo/sys/reserve-composition-last";
-
-  function makeConfig(): LiveReservesConfig {
-    return {
-      adapter: "openeden-usdo",
-      version: 1,
-      semantics: "collateral-mix",
-      inputs: { primary: { kind: "http-json", url } },
-    };
-  }
-
-  beforeEach(resetRpcMocks);
+  const config: LiveReservesConfig = {
+    adapter: "openeden-usdo",
+    version: 1,
+    semantics: "collateral-mix",
+    inputs: { primary: { kind: "http-json", url: OPENEDEN_URL } },
+  };
+  const coin = { id: "usdo-openeden", liveReservesConfig: config } as StablecoinMeta;
 
   it.each([0.999, 1.001])("enforces the 1% component boundary: %s", (delta) => {
     const candidate = { ...payload, usdcAmount: 15 + delta };
@@ -151,19 +138,26 @@ describe("fetchOpenEdenUsdoReserves", () => {
   it.each(["browser", "neutral", "default"])("recovers through the %s HTTP identity", async (successfulIdentity) => {
     const observed: string[] = [];
     const unexpected: string[] = [];
-    fetchWithRetryMock.mockImplementation(async (requested: string, init?: RequestInit) => {
-      const headers = new Headers(init?.headers);
-      const identity = headers.has("origin") ? "browser" : headers.has("accept-language") ? "neutral" : "default";
-      observed.push(identity);
-      if (requested !== url || headers.get("accept") !== "application/json"
-        || (identity === "browser" && (headers.get("origin") !== "https://openeden.com"
-          || headers.get("referer") !== "https://openeden.com/usdo/transparency"))) {
-        unexpected.push(requested);
-        return null;
-      }
-      return new Response(JSON.stringify(payload), { status: identity === successfulIdentity ? 200 : 403 });
+    const network = installAdapterNetwork({
+      json: {
+        [OPENEDEN_URL]: (request: Request) => {
+          const headers = request.headers;
+          const identity = headers.has("origin") ? "browser" : headers.has("accept-language") ? "neutral" : "default";
+          observed.push(identity);
+          if (request.url !== OPENEDEN_URL || headers.get("accept") !== "application/json"
+            || (identity === "browser" && (headers.get("origin") !== "https://openeden.com"
+              || headers.get("referer") !== "https://openeden.com/usdo/transparency"))) {
+            unexpected.push(request.url);
+            return { status: 404, body: "unexpected request" };
+          }
+          return { status: identity === successfulIdentity ? 200 : 403, json: payload };
+        },
+      },
     });
-    const result = await fetchOpenEdenUsdoReserves(coin, makeConfig(), new AbortController().signal, { requestCache: new Map() });
+    const { result } = await runAdapter("openeden-usdo", coin, {
+      network,
+      nowSec: FIXTURE_NOW,
+    });
     expect(result.metadata?.redemption).toMatchObject({ capacityUsd: 15 });
     expect(result.slices).toContainEqual({ name: "OpenEden TBILL", pct: 70, risk: "very-low", coinId: "tbill-openeden" });
     expect(observed).toEqual(["browser", "neutral", "default"].slice(0, ["browser", "neutral", "default"].indexOf(successfulIdentity) + 1));
@@ -171,20 +165,32 @@ describe("fetchOpenEdenUsdoReserves", () => {
   });
 
   it("reuses a successful request from an initially empty cache", async () => {
-    fetchWithRetryMock.mockResolvedValue(new Response(JSON.stringify(payload)));
-    const ctx = { requestCache: new Map<string, Promise<unknown>>() };
-    const first = await fetchOpenEdenUsdoReserves(coin, makeConfig(), new AbortController().signal, ctx);
-    const second = await fetchOpenEdenUsdoReserves(coin, makeConfig(), new AbortController().signal, ctx);
+    const network = installAdapterNetwork({ json: { [OPENEDEN_URL]: payload } });
+    const ctx = { chainRpcs: network.chainRpcs, requestCache: new Map<string, Promise<unknown>>() };
+    const first = await fetchOpenEdenUsdoReserves(coin, config, new AbortController().signal, ctx);
+    const second = await fetchOpenEdenUsdoReserves(coin, config, new AbortController().signal, ctx);
     expect(second).toEqual(first);
-    expect(fetchWithRetryMock).toHaveBeenCalledTimes(1);
+    expect(network.fetchSpy).toHaveBeenCalledTimes(1);
   });
 
   it("retains each failed HTTP cause and adapter identity", async () => {
-    fetchWithRetryMock.mockImplementation(async (_url: string, init?: RequestInit) => {
-      const headers = new Headers(init?.headers);
-      return new Response("denied", { status: headers.has("origin") ? 401 : headers.has("accept-language") ? 403 : 404 });
+    const network = installAdapterNetwork({
+      json: {
+        [OPENEDEN_URL]: (request: Request) => {
+          const headers = request.headers;
+          return {
+            status: headers.has("origin") ? 401 : headers.has("accept-language") ? 403 : 404,
+            body: "denied",
+          };
+        },
+      },
     });
-    const error = await fetchOpenEdenUsdoReserves(coin, makeConfig(), new AbortController().signal, { requestCache: new Map() }).catch((error: unknown) => error);
+    const error = await fetchOpenEdenUsdoReserves(
+      coin,
+      config,
+      new AbortController().signal,
+      { chainRpcs: network.chainRpcs, requestCache: new Map() },
+    ).catch((error: unknown) => error);
     expect(error).toBeInstanceOf(Error);
     for (const cause of ["openeden-usdo", "HTTP 401", "HTTP 403", "HTTP 404"]) {
       expect((error as Error).message).toContain(cause);
@@ -192,10 +198,26 @@ describe("fetchOpenEdenUsdoReserves", () => {
   });
 
   it("rethrows the original abort without fallback", async () => {
+    const network = installAdapterNetwork();
     const abortError = new Error("adapter-timeout");
     const controller = new AbortController();
     controller.abort(abortError);
-    await expect(fetchOpenEdenUsdoReserves(coin, makeConfig(), controller.signal, { requestCache: new Map() })).rejects.toBe(abortError);
-    expect(fetchWithRetryMock).not.toHaveBeenCalled();
+    await expect(fetchOpenEdenUsdoReserves(
+      coin,
+      config,
+      controller.signal,
+      { chainRpcs: network.chainRpcs, requestCache: new Map() },
+    )).rejects.toBe(abortError);
+    expect(network.fetchSpy).not.toHaveBeenCalled();
+  });
+
+  it("rejects a renamed ratio field instead of publishing a plausible snapshot", async () => {
+    const drifted = { ...payload };
+    Reflect.deleteProperty(drifted, "ratio");
+    await expect(runAdapter("openeden-usdo", coin, {
+      network: installAdapterNetwork({ json: { [OPENEDEN_URL]: drifted } }),
+      nowSec: FIXTURE_NOW,
+      validate: false,
+    })).rejects.toThrow("ratio is non-numeric");
   });
 });

@@ -1,43 +1,18 @@
-import { describe, expect, it, vi, beforeEach } from "vitest";
-import type { StablecoinMeta } from "@shared/types/core";
-import type { LiveReservesConfig } from "@shared/types/live-reserves";
-
-vi.mock("../helpers", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("../helpers")>();
-  return {
-    ...actual,
-    fetchJsonAdapterInput: vi.fn(),
-  };
-});
+import { describe, expect, it } from "vitest";
 
 import {
   adaptEthenaWhitelabel,
-  fetchEthenaWhitelabelReserves,
   type EthenaWhitelabelPayload,
 } from "../ethena-whitelabel";
-import { fetchJsonAdapterInput } from "../helpers";
 import {
   expectValidAdapterOutput,
-  mockedReserveHelper,
+  expectWarnings,
+  runAdapter,
 } from "./reserve-adapter.test-support";
 
-let signal: AbortSignal;
+const ENDPOINT = "https://whitelabel.ethena.fi/api/transparency";
+const NOW_SEC = 1_788_912_032;
 
-function makeCoin(): StablecoinMeta {
-  return { id: "suiusde-sui", name: "eSui Dollar", ticker: "suiUSDe" } as unknown as StablecoinMeta;
-}
-
-function makeConfig(): LiveReservesConfig {
-  return {
-    adapter: "ethena-whitelabel",
-    version: 1,
-    semantics: "collateral-mix",
-    inputs: {
-      primary: { kind: "http-json", url: "https://whitelabel.ethena.fi/api/transparency" },
-    },
-    params: { stablecoin: "suiUSDe" },
-  } as unknown as LiveReservesConfig;
-}
 
 /** Verbatim mirror of the live suiUSDe entry, including the wire-only
  *  `partnerName` / `collateralizationRatio` fields and the `rows` display
@@ -82,10 +57,6 @@ const SUIUSDE_PAYLOAD: EthenaWhitelabelPayload = {
 const TOTAL_RESERVE_USD = 11865522.860536 + (449 + 18208.262082 + 1005464.50009 + 227162.434342) + 2901.362187;
 const SUPPLY_USD = 13096209.619346;
 
-beforeEach(() => {
-  vi.clearAllMocks();
-  signal = new AbortController().signal;
-});
 
 describe("adaptEthenaWhitelabel", () => {
   it("maps USDe/USDC custodian rows, keeps Coinbase Prime off-chain custody as an unlinked slice, and computes the honest ratio", () => {
@@ -183,26 +154,19 @@ describe("adaptEthenaWhitelabel", () => {
 
 describe("fetchEthenaWhitelabelReserves", () => {
   it("fetches the configured endpoint, parses the stablecoin param, and adapts the selected entry", async () => {
-    mockedReserveHelper(fetchJsonAdapterInput).mockResolvedValue(SUIUSDE_PAYLOAD);
-    const config = makeConfig();
+    const { result } = await runAdapter("ethena-whitelabel", "suiusde-sui", {
+      network: { json: { [ENDPOINT]: SUIUSDE_PAYLOAD } },
+      nowSec: NOW_SEC,
+    });
 
-    const result = await fetchEthenaWhitelabelReserves(makeCoin(), config, signal);
-
-    expect(fetchJsonAdapterInput).toHaveBeenCalledWith(
-      config,
-      "ethena-whitelabel",
-      signal,
-      12_000,
-      undefined,
-    );
     expect(result.slices[0]).toMatchObject({ name: "USDe (Ethena synthetic dollar)" });
+    expectWarnings(result, ["off-chain-custody"]);
   });
 
   it("propagates an error when the endpoint request fails", async () => {
-    mockedReserveHelper(fetchJsonAdapterInput).mockRejectedValue(
-      new Error("HTTP 500 for https://whitelabel.ethena.fi/api/transparency"),
-    );
-
-    await expect(fetchEthenaWhitelabelReserves(makeCoin(), makeConfig(), signal)).rejects.toThrow("HTTP 500");
+    await expect(runAdapter("ethena-whitelabel", "suiusde-sui", {
+      network: { json: { [ENDPOINT]: { status: 500, json: {} } } },
+      nowSec: NOW_SEC,
+    })).rejects.toThrow();
   });
 });

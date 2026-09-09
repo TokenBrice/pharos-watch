@@ -97,9 +97,12 @@ export function adaptUsddLatestCollateral(
   let unknownVaultUsd = 0;
   let totalVaultUsd = 0;
 
-  for (const item of items) {
-    const lockedValue = Number(item.lockedValue ?? 0);
-    if (!Number.isFinite(lockedValue) || lockedValue <= 0) continue;
+  for (const [index, item] of items.entries()) {
+    const lockedValue = item.lockedValue;
+    if (typeof lockedValue !== "number" || !Number.isFinite(lockedValue) || lockedValue < 0) {
+      throw new Error(`usdd-data-platform: collateral item ${index} lockedValue is missing or invalid`);
+    }
+    if (lockedValue === 0) continue;
     totalVaultUsd += lockedValue;
     switch (item.vaultType) {
       case "SA001-A":

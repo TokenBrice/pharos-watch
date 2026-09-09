@@ -1,27 +1,18 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { describe, expect, it } from "vitest";
 import type { StablecoinMeta } from "@shared/types/core";
 import type { LiveReservesConfig } from "@shared/types/live-reserves";
-
-vi.mock("../helpers", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("../helpers")>();
-  return {
-    ...actual,
-    fetchJsonWithRetry: vi.fn(),
-  };
-});
-
 import {
   adaptKavaCdpState,
-  fetchKavaCdpReserves,
   type KavaBankSupplyPayload,
   type KavaBlockPayload,
   type KavaCdpParamsPayload,
   type KavaCdpPrincipalPayload,
   type KavaCdpTotalsPayload,
-  type KavaPricefeedPricesPayload,
   type KavaCdpState,
+  type KavaPricefeedPricesPayload,
 } from "../kava-cdp";
-import { fetchJsonWithRetry } from "../helpers";
+import { runAdapter } from "./reserve-adapter.test-support";
+
 
 const LCD_ORIGIN = "https://api.data.kava.io";
 const TOTAL_COLLATERAL_URL = `${LCD_ORIGIN}/kava/cdp/v1beta1/totalCollateral`;
@@ -112,7 +103,7 @@ function makeState(overrides: Partial<KavaCdpState> = {}): KavaCdpState {
 }
 
 function makeCoin(): StablecoinMeta {
-  return { id: "usdx-kava", name: "USDX", symbol: "USDX" } as unknown as StablecoinMeta;
+  return { id: "usdx-kava", name: "USDX", symbol: "USDX", liveReservesConfig: makeConfig() } as unknown as StablecoinMeta;
 }
 
 function makeConfig(): LiveReservesConfig {
@@ -146,9 +137,6 @@ const expectedPrincipalTokens = TOTAL_PRINCIPAL.total_principal
 
 const USDX_PRICE = PRICE("usdx:usd");
 
-beforeEach(() => {
-  vi.clearAllMocks();
-});
 
 describe("adaptKavaCdpState", () => {
   it("publishes one slice per priced collateral denom with market-valued liability metrics", () => {
@@ -228,36 +216,47 @@ describe("adaptKavaCdpState", () => {
   });
 });
 
-describe("fetchKavaCdpReserves", () => {
-  it("reads the six LCD endpoints and adapts the payloads", async () => {
-    const payloads: Record<string, unknown> = {
-      [TOTAL_COLLATERAL_URL]: TOTAL_COLLATERAL,
-      [`${LCD_ORIGIN}/kava/cdp/v1beta1/totalPrincipal`]: TOTAL_PRINCIPAL,
-      [`${LCD_ORIGIN}/kava/cdp/v1beta1/params`]: CDP_PARAMS,
-      [`${LCD_ORIGIN}/kava/pricefeed/v1beta1/prices`]: PRICEFEED_PRICES,
-      [`${LCD_ORIGIN}/cosmos/bank/v1beta1/supply/by_denom?denom=usdx`]: BANK_SUPPLY,
-      [`${LCD_ORIGIN}/cosmos/base/tendermint/v1beta1/blocks/latest`]: LATEST_BLOCK,
-    };
-    vi.mocked(fetchJsonWithRetry).mockImplementation(async (url: string) => {
-      const payload = payloads[url];
-      if (payload === undefined) throw new Error(`unexpected URL ${url}`);
-      return payload;
-    });
+const KAVA_LCD_FIXTURES: Record<string, unknown> = {
+  [TOTAL_COLLATERAL_URL]: TOTAL_COLLATERAL,
+  [`${LCD_ORIGIN}/kava/cdp/v1beta1/totalPrincipal`]: TOTAL_PRINCIPAL,
+  [`${LCD_ORIGIN}/kava/cdp/v1beta1/params`]: CDP_PARAMS,
+  [`${LCD_ORIGIN}/kava/pricefeed/v1beta1/prices`]: PRICEFEED_PRICES,
+  [`${LCD_ORIGIN}/cosmos/bank/v1beta1/supply/by_denom?denom=usdx`]: BANK_SUPPLY,
+  [`${LCD_ORIGIN}/cosmos/base/tendermint/v1beta1/blocks/latest`]: LATEST_BLOCK,
+};
 
-    const signal = new AbortController().signal;
-    const result = await fetchKavaCdpReserves(makeCoin(), makeConfig(), signal, { nowSec: BLOCK_TIME_SEC });
+function kavaNetwork(overrides: Record<string, unknown> = {}) {
+  return { json: { ...KAVA_LCD_FIXTURES, ...overrides } };
+}
+
+describe("fetchKavaCdpReserves", () => {
+  it("reads the six LCD endpoints through the shared network harness", async () => {
+    const { result, network } = await runAdapter("kava-cdp", makeCoin(), {
+      network: kavaNetwork(),
+      nowSec: BLOCK_TIME_SEC,
+    });
 
     expect(result.metadata).toMatchObject({ freshnessMode: "not-applicable" });
     expect(result.slices.length).toBeGreaterThan(0);
-    expect(fetchJsonWithRetry).toHaveBeenCalledTimes(6);
+    expect(network.requests.map((request) => request.url)).toEqual(Object.keys(KAVA_LCD_FIXTURES));
   });
 
-  it("propagates the LCD failure", async () => {
-    vi.mocked(fetchJsonWithRetry).mockRejectedValue(
-      new Error(`HTTP 503 for ${TOTAL_COLLATERAL_URL}`),
-    );
+  it("propagates an LCD failure", async () => {
+    await expect(runAdapter("kava-cdp", makeCoin(), {
+      network: kavaNetwork({
+        [TOTAL_COLLATERAL_URL]: { status: 503, body: "upstream unavailable" },
+      }),
+      nowSec: BLOCK_TIME_SEC,
+    })).rejects.toThrow(/503/);
+  });
 
-    await expect(fetchKavaCdpReserves(makeCoin(), makeConfig(), new AbortController().signal, { nowSec: BLOCK_TIME_SEC }))
-      .rejects.toThrow("HTTP 503");
+  it("fails closed when an upstream response drops a required field", async () => {
+    await expect(runAdapter("kava-cdp", makeCoin(), {
+      network: kavaNetwork({
+        [TOTAL_COLLATERAL_URL]: { total_collateral: undefined },
+      }),
+      nowSec: BLOCK_TIME_SEC,
+      validate: false,
+    })).rejects.toThrow(/schema validation/);
   });
 });

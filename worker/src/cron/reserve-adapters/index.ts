@@ -7,7 +7,6 @@ import { fetchAccountableReserves } from "./accountable";
 import { fetchAgoraIndependentAssuranceReserves } from "./agora-independent-assurance";
 import { fetchAnzenUsdzReserves } from "./anzen-usdz";
 import { fetchAnchorageIndependentAssuranceReserves } from "./anchorage-independent-assurance";
-import { fetchAsymmetryReserves } from "./asymmetry";
 import { fetchAttestationPdfIndexReserves } from "./attestation-pdf-index";
 import { fetchAuddIndependentAssuranceReserves } from "./audd-independent-assurance";
 import { fetchBrlaIndependentAssuranceReserves } from "./brla-independent-assurance";
@@ -51,7 +50,6 @@ import { fetchJupUsdReserves } from "./jupusd";
 import { fetchKavaCdpReserves } from "./kava-cdp";
 import { fetchKerneSignedPorReserves } from "./kerne-signed-por";
 import { fetchKrwqCustodianReserves } from "./krwq-custodian";
-import { fetchListaReserves } from "./lista";
 import { fetchLiquityV1Reserves } from "./liquity-v1";
 import { fetchLiquityNativeActivePoolReserves } from "./liquity-native-active-pool";
 import { fetchLiquityV2BranchReserves } from "./liquity-v2-branches";
@@ -68,7 +66,6 @@ import { fetchNestVaultPositionsReserves } from "./nest-vault-positions";
 import { fetchOpenEdenUsdoReserves } from "./openeden";
 import { fetchOriginVaultBalancesReserves } from "./origin-vault-balances";
 import { fetchParallelizerBalancesReserves } from "./parallelizer-balances";
-import { fetchPusdVaultReserves } from "./pusd-vault";
 import { fetchQuantozTransparencyReserves } from "./quantoz-transparency";
 import { fetchReMetricsReserves } from "./re-metrics";
 import { fetchResupplyPairsReserves } from "./resupply-pairs";
@@ -83,7 +80,6 @@ import { fetchAstherusEarnWrapperReserves } from "./astherus-earn-wrapper";
 import { fetchInitiaWrapperVaultReserves } from "./initia-wrapper-vault";
 import { fetchStoneyieldRouterPoolReserves } from "./stoneyield-router-pool";
 import { fetchSgForgeCoinvertibleReserves } from "./sgforge-coinvertible";
-import { fetchSghoWrapperReserves } from "./sgho-wrapper";
 import { fetchSingleAssetReserves } from "./single-asset";
 import { fetchSkyMakercoreReserves } from "./sky-makercore";
 import { fetchSolomonProtocolReserves } from "./solomon-protocol";
@@ -127,7 +123,6 @@ export const LIVE_RESERVE_ADAPTER_FETCHERS: Record<LiveReserveAdapterKey, Adapte
   "anchorage-independent-assurance": fetchAnchorageIndependentAssuranceReserves,
   "anzen-usdz": fetchAnzenUsdzReserves,
   "astherus-earn-wrapper": fetchAstherusEarnWrapperReserves,
-  asymmetry: fetchAsymmetryReserves,
   "attestation-pdf-index": fetchAttestationPdfIndexReserves,
   "audd-independent-assurance": fetchAuddIndependentAssuranceReserves,
   "audx-independent-assurance": fetchIndependentAssuranceAdapter,
@@ -175,7 +170,6 @@ export const LIVE_RESERVE_ADAPTER_FETCHERS: Record<LiveReserveAdapterKey, Adapte
   "kava-cdp": fetchKavaCdpReserves,
   "kerne-signed-por": fetchKerneSignedPorReserves,
   "krwq-custodian": fetchKrwqCustodianReserves,
-  lista: fetchListaReserves,
   "liquity-v1": fetchLiquityV1Reserves,
   "liquity-native-active-pool": fetchLiquityNativeActivePoolReserves,
   "liquity-v2-branches": fetchLiquityV2BranchReserves,
@@ -192,7 +186,6 @@ export const LIVE_RESERVE_ADAPTER_FETCHERS: Record<LiveReserveAdapterKey, Adapte
   "openeden-usdo": fetchOpenEdenUsdoReserves,
   "origin-vault-balances": fetchOriginVaultBalancesReserves,
   "parallelizer-balances": fetchParallelizerBalancesReserves,
-  "pusd-vault": fetchPusdVaultReserves,
   "quantoz-transparency": fetchQuantozTransparencyReserves,
   "re-metrics": fetchReMetricsReserves,
   "resupply-pairs": fetchResupplyPairsReserves,
@@ -203,7 +196,6 @@ export const LIVE_RESERVE_ADAPTER_FETCHERS: Record<LiveReserveAdapterKey, Adapte
   "ripple-transparency": fetchRippleTransparencyReserves,
   "river-protocol-info": fetchRiverProtocolInfoReserves,
   "sgforge-coinvertible": fetchSgForgeCoinvertibleReserves,
-  "sgho-wrapper": fetchSghoWrapperReserves,
   "solstice-attestation": fetchSolsticeAttestationReserves,
   "single-asset": fetchSingleAssetReserves,
   "sky-makercore": fetchSkyMakercoreReserves,

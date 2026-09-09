@@ -6,7 +6,7 @@ import {
   fetchAndVerifyBrlaPdf,
   verifyBrlaNotionDiscovery,
 } from "../brla-independent-assurance";
-
+import { installAdapterNetwork } from "./reserve-adapter.test-support";
 const ROOT_RECORD = {
   recordMap: {
     block: {
@@ -57,12 +57,6 @@ const YEAR_RECORD = {
 
 const SIGNED_URL = `https://file.notion.so/f/f/space/${BRLA_NOTION_PIN.attachmentId}/Avenia_-_Transparency_Report_-_20260731_(Audit_Attestation).pdf?table=block&id=${BRLA_NOTION_PIN.reportBlockId}&spaceId=space&expirationTimestamp=1788998400000&signature=signature`;
 
-function jsonResponse(body: unknown, url: string) {
-  const response = new Response(JSON.stringify(body));
-  Object.defineProperty(response, "url", { value: url });
-  return response;
-}
-
 function installFetch(options: { rootRecord?: unknown; yearRecord?: unknown; signedUrl?: string; indexUrl?: string } = {}) {
   const {
     rootRecord = ROOT_RECORD,
@@ -70,30 +64,26 @@ function installFetch(options: { rootRecord?: unknown; yearRecord?: unknown; sig
     signedUrl = SIGNED_URL,
     indexUrl = "https://brladigital.notion.site/BRLA-Transparency-Page-238ba143aa2f4338902ee91ebe50298a",
   } = options;
-  const fetchMock = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
-    const url = String(input);
-    const method = init?.method ?? "GET";
-    if (method === "GET" && url === indexUrl) {
-      const response = new Response("<html>official index</html>");
-      Object.defineProperty(response, "url", { value: url });
-      return response;
-    }
-    if (method === "POST" && url.endsWith("/api/v3/loadPageChunk")) {
-      const body = JSON.parse(String(init?.body));
-      const record = body.pageId === BRLA_NOTION_PIN.rootPageId
-        ? rootRecord
-        : body.pageId === BRLA_NOTION_PIN.yearBlockId
-          ? yearRecord
-          : { recordMap: { block: {} } };
-      return jsonResponse(record, url);
-    }
-    if (method === "POST" && url.endsWith("/api/v3/getSignedFileUrls")) {
-      return jsonResponse({ signedUrls: [signedUrl] }, url);
-    }
-    throw new Error(`unexpected fetch ${method} ${url}`);
+  const loadPageChunkUrl = "https://brladigital.notion.site/api/v3/loadPageChunk";
+  const signedFileUrlsUrl = "https://brladigital.notion.site/api/v3/getSignedFileUrls";
+  return installAdapterNetwork({
+    html: { [indexUrl]: "<html>official index</html>" },
+    json: {
+      [loadPageChunkUrl]: async (request: Request) => {
+        const body = JSON.parse(await request.clone().text()) as { pageId?: string };
+        const record = body.pageId === BRLA_NOTION_PIN.rootPageId
+          ? rootRecord
+          : body.pageId === BRLA_NOTION_PIN.yearBlockId
+            ? yearRecord
+            : { recordMap: { block: {} } };
+        return { json: record, url: request.url };
+      },
+      [signedFileUrlsUrl]: { json: { signedUrls: [signedUrl] }, url: signedFileUrlsUrl },
+      [signedUrl]: new Response(new Uint8Array([0x25, 0x50, 0x44, 0x46]), {
+        headers: { "content-type": "application/pdf" },
+      }),
+    },
   });
-  vi.stubGlobal("fetch", fetchMock);
-  return fetchMock;
 }
 
 const discoveryArgs = (overrides: Record<string, unknown> = {}) => ({
@@ -232,14 +222,18 @@ describe("BRLA PDF byte verification", () => {
   };
 
   function installBinaryFetch(changed = false) {
-    const body = changed ? (() => { const next = new Uint8Array(bytes); next[next.length - 1] = 0xcc; return next; })() : bytes;
-    const fetchMock = vi.fn(async (input: RequestInfo | URL) => {
-      const response = new Response(body, { headers: { "content-type": "application/pdf" } });
-      Object.defineProperty(response, "url", { value: String(input) });
-      return response;
+    const body = changed
+      ? (() => {
+        const next = new Uint8Array(bytes);
+        next[next.length - 1] = 0xcc;
+        return next;
+      })()
+      : bytes;
+    return installAdapterNetwork({
+      json: {
+        [SIGNED_URL]: new Response(body, { headers: { "content-type": "application/pdf" } }),
+      },
     });
-    vi.stubGlobal("fetch", fetchMock);
-    return fetchMock;
   }
 
   it("accepts reviewed bytes", async () => {

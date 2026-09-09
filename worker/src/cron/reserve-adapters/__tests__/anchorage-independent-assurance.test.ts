@@ -4,19 +4,13 @@ import { fileURLToPath } from "node:url";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { LIVE_RESERVE_ADAPTER_DEFINITIONS } from "@shared/lib/live-reserve-adapters";
 import { getIndependentAssuranceManifest, reconcileIndependentAssuranceManifest } from "@shared/lib/independent-assurance";
-import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
-import { fetchAnchorageIndependentAssuranceReserves, USDPT_INDEPENDENT_ASSURANCE_PROFILE, USAT_INDEPENDENT_ASSURANCE_PROFILE } from "../anchorage-independent-assurance";
-import { fetchIndependentAssuranceReserves, verifyIndependentAssuranceReport } from "../independent-assurance";
-import { getReserveAdapter } from "../index";
-import { validateAdapterOutput } from "../validate";
+import { verifyIndependentAssuranceReport } from "../independent-assurance";
+import { installAdapterNetwork } from "./reserve-adapter.test-support";
+import { USAT_INDEPENDENT_ASSURANCE_PROFILE, USDPT_INDEPENDENT_ASSURANCE_PROFILE } from "../anchorage-independent-assurance";
 
 const TEST_DIR = dirname(fileURLToPath(import.meta.url));
 const PDF_BYTES = new TextEncoder().encode("%PDF-1.7\nfixture\n");
 
-vi.mock("../independent-assurance", async () => {
-  const actual = await vi.importActual<typeof import("../independent-assurance")>("../independent-assurance");
-  return { ...actual, fetchIndependentAssuranceReserves: vi.fn() };
-});
 
 function indexFixture(): string {
   return readFileSync(resolve(TEST_DIR, "fixtures", "anchorage-independent-assurance.html"), "utf8");
@@ -24,20 +18,15 @@ function indexFixture(): string {
 
 function installFetch(html: string, product: "USAT" | "USDPT" = "USAT") {
   const reviewed = getIndependentAssuranceManifest(product);
-  const fetchMock = vi.fn(async (input: RequestInfo | URL) => {
-    const url = String(input);
-    if (url === reviewed.officialIndexUrl) {
-      return new Response(html, { headers: { "content-type": "text/html" } });
-    }
-    if (url === reviewed.reportUrl) {
-      return new Response(PDF_BYTES, {
+  return installAdapterNetwork({
+    html: {
+      [reviewed.officialIndexUrl]: html,
+      [reviewed.reportUrl]: {
+        body: new TextDecoder().decode(PDF_BYTES),
         headers: { "content-type": "application/pdf", "content-length": String(PDF_BYTES.length) },
-      });
-    }
-    throw new Error(`unexpected fixture request ${url}`);
+      },
+    },
   });
-  vi.stubGlobal("fetch", fetchMock);
-  return fetchMock;
 }
 
 async function verifyIndex(product: "USAT" | "USDPT" = "USAT") {
@@ -52,12 +41,12 @@ async function verifyIndex(product: "USAT" | "USDPT" = "USAT") {
   });
 }
 
-describe("anchorage-independent-assurance (Deloitte Anchorage examinations)", () => {
-  afterEach(() => {
-    vi.unstubAllGlobals();
-    vi.restoreAllMocks();
-  });
 
+afterEach(() => {
+  vi.unstubAllGlobals();
+});
+
+describe("anchorage-independent-assurance (Deloitte Anchorage examinations)", () => {
   it("reviews the July 2026 examination and reconciles both chain liabilities", () => {
     const manifest = getIndependentAssuranceManifest("USAT");
     expect(manifest.assuranceTier).toBe("independent-assurance");
@@ -105,36 +94,18 @@ describe("anchorage-independent-assurance (Deloitte Anchorage examinations)", ()
     await expect(verifyIndex()).rejects.toThrow("reviewed report URL is missing or duplicated");
   });
 
-  it("dispatches the bound coin through the publisher adapter and validates output", async () => {
-    const coin = ACTIVE_STABLECOINS.find((candidate) => candidate.id === "usat-tether");
-    expect(coin?.liveReservesConfig).toMatchObject({
-      adapter: "anchorage-independent-assurance",
-      semantics: "attestation-mix",
-    });
-    vi.mocked(fetchIndependentAssuranceReserves).mockResolvedValue({
-      slices: [{ name: "Cash at major commercial banks", pct: 10, risk: "very-low", assetClass: "bank-deposit" }],
-      metadata: { sourceTimestamp: 1_785_542_399, freshnessMode: "verified" },
-    });
-    const result = await fetchAnchorageIndependentAssuranceReserves(
-      coin!, coin!.liveReservesConfig!, new AbortController().signal,
-    );
-    expect(result.slices[0].name).toBe("Cash at major commercial banks");
-    expect(vi.mocked(fetchIndependentAssuranceReserves)).toHaveBeenCalledWith(
-      coin!, coin!.liveReservesConfig!, expect.any(AbortSignal), USAT_INDEPENDENT_ASSURANCE_PROFILE,
-      { product: "USAT", profile: "usat-v1", indexHost: "www.anchorage.com", reportHosts: ["learn.anchorage.com"] },
-      undefined,
-    );
-
-    const adapter = getReserveAdapter("anchorage-independent-assurance");
-    expect(adapter?.evidenceClass).toBe("independent");
-    expect(validateAdapterOutput(
-      {
-        slices: [{ name: "Cash", pct: 100, risk: "very-low" }],
-        metadata: { sourceTimestamp: 1_785_542_399, freshnessMode: "verified" },
+  it("fails closed when the latest report href is dropped from the Anchorage index", async () => {
+    const reviewed = getIndependentAssuranceManifest("USAT");
+    const network = installAdapterNetwork({
+      html: {
+        [reviewed.officialIndexUrl]: "<a data-report-url=\"07.31.26_USAT-Stablecoin-Attestation-Report.pdf\">July</a>",
       },
-      { adapter: adapter!, now: 1_785_542_399 + 3_000_000 },
-    ).valid).toBe(true);
+    });
+
+    await expect(verifyIndex()).rejects.toThrow(/reviewed report URL is missing or duplicated/);
+    expect(network.requests.map((request) => request.url)).toEqual([reviewed.officialIndexUrl]);
   });
+
 
   it("reviews the July 2026 USDPT examination and reconciles the Solana liability", () => {
     const manifest = getIndependentAssuranceManifest("USDPT");
@@ -176,24 +147,4 @@ describe("anchorage-independent-assurance (Deloitte Anchorage examinations)", ()
     await expect(verifyIndex("USDPT")).rejects.toThrow("newer unreviewed report");
   });
 
-  it("dispatches the bound USDPT coin through the publisher adapter and validates output", async () => {
-    const coin = ACTIVE_STABLECOINS.find((candidate) => candidate.id === "usdpt-western-union");
-    expect(coin?.liveReservesConfig).toMatchObject({
-      adapter: "anchorage-independent-assurance",
-      semantics: "attestation-mix",
-    });
-    vi.mocked(fetchIndependentAssuranceReserves).mockResolvedValue({
-      slices: [{ name: "Money market funds, at net asset value", pct: 90.1391, risk: "low", assetClass: "money-market-fund" }],
-      metadata: { sourceTimestamp: 1_785_542_399, freshnessMode: "verified" },
-    });
-    const result = await fetchAnchorageIndependentAssuranceReserves(
-      coin!, coin!.liveReservesConfig!, new AbortController().signal,
-    );
-    expect(result.slices[0].name).toBe("Money market funds, at net asset value");
-    expect(vi.mocked(fetchIndependentAssuranceReserves)).toHaveBeenCalledWith(
-      coin!, coin!.liveReservesConfig!, expect.any(AbortSignal), USDPT_INDEPENDENT_ASSURANCE_PROFILE,
-      { product: "USDPT", profile: "usdpt-v1", indexHost: "www.anchorage.com", reportHosts: ["learn.anchorage.com"] },
-      undefined,
-    );
-  });
 });

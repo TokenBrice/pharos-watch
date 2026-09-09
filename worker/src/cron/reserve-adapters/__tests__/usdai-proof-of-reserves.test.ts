@@ -1,23 +1,17 @@
-import { afterEach, describe, expect, it, vi } from "vitest";
-import { mockFetch } from "@shared/test-utils/mock-fetch";
+import { describe, expect, it } from "vitest";
+import type { StablecoinMeta } from "@shared/types/core";
 import type { LiveReservesConfig } from "@shared/types/live-reserves";
-import { fetchEvmMulticall3Aggregate3AtBlock } from "../../../lib/evm-rpc";
-import type * as EvmRpc from "../../../lib/evm-rpc";
-
-vi.mock("../../../lib/evm-rpc", async (importOriginal) => ({
-  ...(await importOriginal<typeof EvmRpc>()),
-  fetchEvmMulticall3Aggregate3AtBlock: vi.fn(),
-}));
+import {
+  expectWarningEffect,
+  expectWarnings,
+  runAdapter,
+  type AdapterNetworkSpec,
+  type AdapterRpcValue,
+} from "./reserve-adapter.test-support";
 import {
   adaptUsdAiProofOfReserves,
-  fetchUsdAiProofOfReserves,
   parseUsdAiProofOfReserves,
 } from "../usdai-proof-of-reserves";
-
-afterEach(() => {
-  vi.unstubAllGlobals();
-  vi.resetAllMocks();
-});
 const SAMPLE_RAW_PAYLOAD = JSON.stringify([
   {
     type: "TBILL",
@@ -85,26 +79,72 @@ const ANCHORED_CONFIG = {
   },
 } satisfies LiveReservesConfig;
 
-async function fetchAnchored(values: Record<string, bigint> = {}, entries = MIXED_WEIGHT_PAYLOAD) {
-  mockFetch([{ match: "https://example.com/proof", body: JSON.stringify(entries.map((row) => ({
-    ...row,
-    ...(row.type === "TBILL" ? { reserveLink: "https://arbiscan.io/token/0x46850ad61c2b7d64d08c9c754f45254596696984#balances" } : {}),
-  }))) }], { requireMatch: true });
-  const words: Record<string, bigint> = {
-    block: 500_000_000n, timestamp: 1_788_975_000n,
-    assets: 1_000_000n * 10n ** 18n, supply: 950_000n * 10n ** 18n,
-    asset: BigInt(ANCHORED_CONFIG.params.anchor.assetAddress),
-    "vault-decimals": 18n, "asset-decimals": 18n, "decimals-0": 6n,
-    "balance-0": 944_000n * 10n ** 6n,
-    ...values,
+const ANCHORED_COIN = {
+  id: "susdai-usd-ai",
+  name: "sUSDai",
+  symbol: "sUSDai",
+  liveReservesConfig: ANCHORED_CONFIG,
+} as unknown as StablecoinMeta;
+const NO_ANCHOR_CONFIG = {
+  adapter: "usdai-proof-of-reserves", version: 2, semantics: "collateral-mix",
+  inputs: { primary: { kind: "http-json", url: "https://example.com/proof-no-anchor" } },
+  display: { url: "https://app.usd.ai/reserves" },
+} satisfies LiveReservesConfig;
+const NO_ANCHOR_COIN = {
+  id: "susdai-usd-ai",
+  name: "sUSDai",
+  symbol: "sUSDai",
+  liveReservesConfig: NO_ANCHOR_CONFIG,
+} as unknown as StablecoinMeta;
+const ARBSYS_ADDRESS = "0x0000000000000000000000000000000000000064";
+const MULTICALL3 = "0xca11bde05977b3631167028862be2a173976ca11";
+const PROOF_ENDPOINT = ANCHORED_CONFIG.inputs.primary.url;
+const ANCHOR_BLOCK = 500_000_000;
+const ANCHOR_TIMESTAMP = 1_788_975_000;
+
+function proofNetwork(
+  values: Record<string, AdapterRpcValue> = {},
+  entries = MIXED_WEIGHT_PAYLOAD,
+): AdapterNetworkSpec {
+  const anchor = ANCHORED_CONFIG.params.anchor;
+  const value = (label: string, fallback: AdapterRpcValue): AdapterRpcValue =>
+    values[label] === undefined ? fallback : values[label]!;
+  return {
+    json: {
+      [PROOF_ENDPOINT]: JSON.stringify(entries.map((row) => ({
+        ...row,
+        ...(row.type === "TBILL"
+          ? { reserveLink: `https://arbiscan.io/token/${anchor.liquidReserves[0]!.tokenAddress}#balances` }
+          : {}),
+      }))),
+    },
+    rpc: {
+      [`${ARBSYS_ADDRESS}:0xa3b1b31d`]: value("block", ANCHOR_BLOCK),
+      [`${MULTICALL3}:0x0f28c97d`]: value("timestamp", ANCHOR_TIMESTAMP),
+      [`${anchor.vaultAddress}:0x38d52e0f`]: value("asset", anchor.assetAddress),
+      [`${anchor.vaultAddress}:0x01e1d114`]: value("assets", 1_000_000n * 10n ** 18n),
+      [`${anchor.vaultAddress}:totalSupply()`]: value("supply", 950_000n * 10n ** 18n),
+      [`${anchor.vaultAddress}:decimals()`]: value("vault-decimals", 18n),
+      [`${anchor.assetAddress}:decimals()`]: value("asset-decimals", 18n),
+      [`${anchor.liquidReserves[0]!.tokenAddress}:balanceOf(address)`]: value("balance-0", 944_000n * 10n ** 6n),
+      [`${anchor.liquidReserves[0]!.tokenAddress}:decimals()`]: value("decimals-0", 6n),
+    },
   };
-  vi.mocked(fetchEvmMulticall3Aggregate3AtBlock).mockImplementation(async (_chain, calls) =>
-    calls.map((call) => ({
-      label: call.label, success: words[call.label] != null,
-      returnData: `0x${(words[call.label] ?? 0n).toString(16).padStart(64, "0")}` as `0x${string}`,
-    })),
+}
+
+async function fetchAnchored(
+  values: Record<string, AdapterRpcValue> = {},
+  entries = MIXED_WEIGHT_PAYLOAD,
+) {
+  const { result } = await runAdapter(
+    "usdai-proof-of-reserves",
+    ANCHORED_COIN,
+    {
+      network: proofNetwork(values, entries),
+      nowSec: ANCHOR_TIMESTAMP,
+    },
   );
-  return fetchUsdAiProofOfReserves({ id: "susdai-usd-ai" } as never, ANCHORED_CONFIG, new AbortController().signal);
+  return result;
 }
 
 describe("usdai-proof-of-reserves adapter", () => {
@@ -157,34 +197,36 @@ describe("usdai-proof-of-reserves adapter", () => {
   });
 
   it("degrades unavailable anchor reads without turning readable reserves into an error", async () => {
-    mockFetch([{ match: "https://example.com/proof", body: JSON.stringify([{
-      ...MIXED_WEIGHT_PAYLOAD[0],
-      share: "1000000000000000000",
-      reserveLink: "https://arbiscan.io/token/0x46850ad61c2b7d64d08c9c754f45254596696984#balances",
-    }]) }]);
-    vi.mocked(fetchEvmMulticall3Aggregate3AtBlock).mockResolvedValue(null);
-    const result = await fetchUsdAiProofOfReserves({ id: "susdai-usd-ai" } as never, ANCHORED_CONFIG, new AbortController().signal);
-    expect(result.slices[0].pct).toBe(100);
+    const result = await fetchAnchored(
+      { block: null },
+      [{ ...MIXED_WEIGHT_PAYLOAD[0]!, share: "1000000000000000000" }],
+    );
+    expect(result.slices[0]!.pct).toBe(100);
     expect(result.metadata?.freshnessMode).toBe("unverified");
-    expect(result.warnings).toContainEqual(expect.objectContaining({ code: "usdai-anchor-unavailable", effect: "degraded" }));
+    expectWarnings(result, ["usdai-anchor-unavailable"]);
+    expectWarningEffect(result, "usdai-anchor-unavailable", "degraded");
   });
 
   it("does not certify document-update clocks when no on-chain anchor is configured", async () => {
-    mockFetch([
-      { match: "https://example.com/proof", body: SAMPLE_RAW_PAYLOAD },
-      { match: "https://app.usd.ai/reserves", body: '\\"dealsDetailsCache\\":{\\"tokens\\":[{\\"timeLastUpdated\\":\\"2026-09-09T12:00:00Z\\"}]}' },
-    ]);
-    const result = await fetchUsdAiProofOfReserves(
-      { id: "susdai-usd-ai" } as never,
-      {
-        adapter: "usdai-proof-of-reserves", version: 2, semantics: "collateral-mix",
-        inputs: { primary: { kind: "http-json", url: "https://example.com/proof" } },
-        display: { url: "https://app.usd.ai/reserves" },
-      },
-      new AbortController().signal,
-    );
+    const { result } = await runAdapter("usdai-proof-of-reserves", NO_ANCHOR_COIN, {
+      network: { json: { [NO_ANCHOR_CONFIG.inputs.primary.url]: SAMPLE_RAW_PAYLOAD } },
+      nowSec: ANCHOR_TIMESTAMP,
+    });
     expect(result.metadata?.freshnessMode).toBe("unverified");
-    expect(result.warnings).toContainEqual(expect.objectContaining({ code: "usdai-anchor-unavailable", effect: "degraded" }));
+    expectWarnings(result, ["usdai-anchor-unavailable"]);
+    expectWarningEffect(result, "usdai-anchor-unavailable", "degraded");
+  });
+
+  it("rejects a proof row after the upstream drops both composition weights", async () => {
+    const drifted = JSON.stringify([
+      { type: "TBILL", name: "PYUSD", chain: 42161 },
+      { type: "DEAL", name: "NVIDIA B200 [8]", chain: 42161, share: "1000000000000000000" },
+    ]);
+    await expect(runAdapter("usdai-proof-of-reserves", NO_ANCHOR_COIN, {
+      network: { json: { [NO_ANCHOR_CONFIG.inputs.primary.url]: drifted } },
+      nowSec: ANCHOR_TIMESTAMP,
+      validate: false,
+    })).rejects.toThrow(/missing a valid share/);
   });
 
   it("preserves oversized share strings when parsing the raw API payload", () => {
@@ -405,31 +447,13 @@ describe("usdai-proof-of-reserves adapter", () => {
     });
   });
 
-  it("fetches the raw API payload through the shared text cache and adapts it", async () => {
-    const fetchSpy = mockFetch([
-      {
-        match: "https://example.com/usdai/proof-of-reserves?chainId=42161",
-        body: SAMPLE_RAW_PAYLOAD,
-      },
-    ], { requireMatch: true, strictUrl: true });
-    const result = await fetchUsdAiProofOfReserves(
-      { id: "susdai-usd-ai" } as never,
-      {
-        adapter: "usdai-proof-of-reserves",
-        version: 2,
-        semantics: "collateral-mix",
-        display: {
-          url: "https://app.usd.ai/reserves",
-        },
-        inputs: {
-          primary: { kind: "http-json", url: "https://example.com/usdai/proof-of-reserves?chainId=42161" },
-        },
-      },
-      new AbortController().signal,
-      { requestCache: new Map() },
-    );
-    fetchSpy.assertAllRoutesUsed();
+  it("fetches the raw API payload through the shared text boundary and adapts it", async () => {
+    const { result, network } = await runAdapter("usdai-proof-of-reserves", NO_ANCHOR_COIN, {
+      network: { json: { [NO_ANCHOR_CONFIG.inputs.primary.url]: SAMPLE_RAW_PAYLOAD } },
+      nowSec: ANCHOR_TIMESTAMP,
+    });
 
+    expect(network.requests.map(({ url }) => url)).toEqual([NO_ANCHOR_CONFIG.inputs.primary.url]);
     expect(result.slices[0]).toEqual({
       sourceKey: "usdai-proof-of-reserves:pyusd",
       name: "PYUSD (PayPal USD)",

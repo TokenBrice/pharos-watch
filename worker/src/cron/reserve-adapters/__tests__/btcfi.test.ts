@@ -1,10 +1,10 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { LIVE_RESERVE_ADAPTER_DEFINITIONS } from "@shared/lib/live-reserve-adapters";
 import { adaptBtcfi, fetchBtcfiReserves } from "../btcfi";
-import { mockFetchStrict, jsonResponse } from "@shared/test-utils/mock-fetch";
 import type { StablecoinMeta } from "@shared/types/core";
 import type { LiveReservesConfig } from "@shared/types/live-reserves";
 import { BTCFI_HANDLER_ROWS, BTCFI_MARKET_ROWS } from "./reserve-adapter-payloads.test-support";
+import { expectValidAdapterOutput, installAdapterNetwork } from "./reserve-adapter.test-support";
 
 afterEach(() => vi.unstubAllGlobals());
 
@@ -159,13 +159,31 @@ describe("adaptBtcfi", () => {
       params: { handlersUrl },
     } as LiveReservesConfig;
     for (const failing of [null, marketUrl, handlersUrl]) {
-      mockFetchStrict([
-        { match: marketUrl, respond: () => jsonResponse([{ token_handler_id: 7, deposit_value: "25" }], failing === marketUrl ? 400 : 200) },
-        { match: handlersUrl, respond: () => jsonResponse([{ id: 7, symbol: "WBTC", isStable: false }], failing === handlersUrl ? 400 : 200) },
-      ]);
-      const result = fetchBtcfiReserves({ id: "btcfi" } as StablecoinMeta, config, new AbortController().signal);
-      if (failing) await expect(result).rejects.toThrow();
-      else expect((await result).slices).toEqual([{ sourceKey: "btcfi:wbtc", name: "WBTC", pct: 100, risk: "medium" }]);
+      const network = installAdapterNetwork({
+        json: {
+          [marketUrl]: {
+            status: failing === marketUrl ? 400 : 200,
+            json: [{ token_handler_id: 7, deposit_value: "25" }],
+          },
+          [handlersUrl]: {
+            status: failing === handlersUrl ? 400 : 200,
+            json: [{ id: 7, symbol: "WBTC", isStable: false }],
+          },
+        },
+      });
+      const result = fetchBtcfiReserves(
+        { id: "btcfi" } as StablecoinMeta,
+        config,
+        new AbortController().signal,
+        { chainRpcs: network.chainRpcs, requestCache: new Map() },
+      );
+      if (failing) {
+        await expect(result).rejects.toThrow();
+      } else {
+        const output = await result;
+        expect(output.slices).toEqual([{ sourceKey: "btcfi:wbtc", name: "WBTC", pct: 100, risk: "medium" }]);
+        expectValidAdapterOutput("btcfi", output);
+      }
     }
   });
 });

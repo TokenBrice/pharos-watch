@@ -50,7 +50,10 @@ function network(overrides: { borrowers?: string[]; scaledTotal?: bigint; ethPri
   };
 }
 const run = (spec = network()) => runAdapter("sodax-sonic", "bnusd-balanced", { network: installAdapterNetwork(spec), nowSec: NOW });
-afterEach(() => vi.restoreAllMocks());
+afterEach(() => {
+  vi.unstubAllGlobals();
+  vi.restoreAllMocks();
+});
 const FIXED_SOURCE = "0x79fa150c700adeaf618475e8cb17933e7a9c3214";
 const FIXED_CODE = "0x6080604052348015600e575f5ffd5b50600436106044575f3560e01c8063313ce56714604857806350d25bcd14605c578063b15b37a514606c578063fcab1819146073575b5f5ffd5b604051600881526020015b60405180910390f35b5f545b6040519081526020016053565b605f5f5481565b6001605f56fea2646970667358221220f08e076d17e100786032c4baefdd8213b917a901e65779644f832b8f795cb2cb64736f6c634300081c0033";
 

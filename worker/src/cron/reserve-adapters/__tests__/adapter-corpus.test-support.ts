@@ -10,8 +10,10 @@
  * Adapter keys with no entry MUST appear in `CORPUS_EXEMPT` with a reason; the
  * gate fails on any key that is in neither map.
  */
-import type { AdapterNetworkSpec } from "./reserve-adapter.test-support";
+import { resolveAdapterCoin, type AdapterNetworkSpec, type AdapterRpcValue } from "./reserve-adapter.test-support";
+import { parseLiveReserveAdapterParams } from "@shared/lib/live-reserve-adapters";
 import { BTCFI_HANDLER_ROWS, BTCFI_MARKET_ROWS } from "./reserve-adapter-payloads.test-support";
+import { MAKINA_ALLOCATIONS_FIXTURE, makinaNetworkSpec } from "./makina-strategy.test-support";
 
 export interface AdapterCorpusDrift {
   /** What the upstream changed, in the words of the failure it must produce. */
@@ -140,8 +142,6 @@ export const CORPUS_EXEMPT: Record<string, string> = {
     "No committed wire capture yet; the happy path and its failure modes are owned by hliquity-hedera.test.ts.",
   "krwq-custodian":
     "No committed wire capture yet; the happy path and its failure modes are owned by krwq-custodian.test.ts.",
-  "lista":
-    "No bound catalog coin yet (retired, parked, staged or newly declared key), so there is nothing to replay; parser behaviour stays owned by lista.test.ts.",
   "liquity-v1":
     "No committed wire capture yet; the happy path and its failure modes are owned by liquity-v1.test.ts.",
   "liquity-native-active-pool":
@@ -152,8 +152,6 @@ export const CORPUS_EXEMPT: Record<string, string> = {
     "No committed wire capture yet; the happy path and its failure modes are owned by m0.test.ts.",
   "m0-wrapper-underlying":
     "No committed wire capture yet; the happy path and its failure modes are owned by m0-wrapper-underlying.test.ts.",
-  "makina-strategy":
-    "No committed wire capture yet; the happy path and its failure modes are owned by makina-strategy.test.ts.",
   "megausd-custody":
     "No committed wire capture yet; the happy path and its failure modes are owned by megausd-custody.test.ts.",
   "mento":
@@ -164,18 +162,12 @@ export const CORPUS_EXEMPT: Record<string, string> = {
     "No bound catalog coin yet (retired, parked, staged or newly declared key), so there is nothing to replay; parser behaviour stays owned by its adapter test file.",
   "origin-vault-balances":
     "No committed wire capture yet; the happy path and its failure modes are owned by origin-vault-balances.test.ts.",
-  "pusd-vault":
-    "No committed wire capture yet; the happy path and its failure modes are owned by pusd-vault.test.ts.",
   "quantoz-transparency":
     "No committed wire capture yet; the happy path and its failure modes are owned by quantoz-transparency.test.ts.",
   "re-metrics":
     "No committed wire capture yet; the happy path and its failure modes are owned by re-metrics.test.ts.",
-  "resupply-pairs":
-    "No committed wire capture yet; the happy path and its failure modes are owned by resupply-pairs.test.ts.",
   "reserve-protocol-dtf":
     "No committed wire capture yet; the happy path and its failure modes are owned by reserve-protocol-dtf.test.ts.",
-  "reservoir":
-    "No committed wire capture yet; the happy path and its failure modes are owned by reservoir.test.ts.",
   "ripple-transparency":
     "No committed wire capture yet; the happy path and its failure modes are owned by ripple-transparency.test.ts.",
   "sgforge-coinvertible":
@@ -184,24 +176,18 @@ export const CORPUS_EXEMPT: Record<string, string> = {
     "No committed wire capture yet; the happy path and its failure modes are owned by saturn-pyusdx.test.ts.",
   "sbc-independent-assurance":
     "Hash-pinned issuer report: the replayable capture is the byte-pinned PDF plus its discovery index, not a JSON/HTML wire payload; owned by sbc-independent-assurance.test.ts.",
+  "straitsx-independent-assurance":
+    "Hash-pinned issuer report: the replayable capture is the byte-pinned PDF plus its discovery index, not a JSON/HTML wire payload; owned by independent-assurance.test.ts.",
   "solstice-attestation":
     "No committed wire capture yet; the happy path and its failure modes are owned by solstice-attestation.test.ts.",
-  "single-asset":
-    "No committed wire capture yet; the happy path and its failure modes are owned by single-asset.test.ts.",
   "solomon-protocol":
     "No committed wire capture yet; the happy path and its failure modes are owned by solomon-protocol.test.ts.",
-  "spiko-api":
-    "No committed wire capture yet; the happy path and its failure modes are owned by spiko-api.test.ts.",
   "stoneyield-router-pool":
     "No bound catalog coin yet (retired, parked, staged or newly declared key), so there is nothing to replay; parser behaviour stays owned by stoneyield-router-pool.test.ts.",
   "superstate-liquidity":
     "No committed wire capture yet; the happy path and its failure modes are owned by superstate-liquidity.test.ts.",
   "paxos-independent-assurance":
     "Hash-pinned issuer report: the replayable capture is the byte-pinned PDF plus its discovery index, not a JSON/HTML wire payload; owned by paxos-independent-assurance.test.ts.",
-  "straitsx-independent-assurance":
-    "Hash-pinned issuer report: the replayable capture is the byte-pinned PDF plus its discovery index, not a JSON/HTML wire payload; owned by its adapter test file.",
-  "river-protocol-info":
-    "No committed wire capture yet; the happy path and its failure modes are owned by river-protocol-info.test.ts.",
   "united-por":
     "No committed wire capture yet; the happy path and its failure modes are owned by united-por.test.ts.",
   "usdgo-transparency":
@@ -212,8 +198,6 @@ export const CORPUS_EXEMPT: Record<string, string> = {
     "No committed wire capture yet; the happy path and its failure modes are owned by usdai-proof-of-reserves.test.ts.",
   "usd1-bundle-oracle":
     "No committed wire capture yet; the happy path and its failure modes are owned by usd1-bundle-oracle.test.ts.",
-  "usdd-data-platform":
-    "No committed wire capture yet; the happy path and its failure modes are owned by usdd-data-platform.test.ts.",
   "yamato":
     "No committed wire capture yet; the happy path and its failure modes are owned by yamato.test.ts.",
   "youves-tezos":
@@ -237,7 +221,7 @@ export const CORPUS_EXEMPT: Record<string, string> = {
   "afi-proof":
     "No committed wire capture yet; the happy path and its failure modes are owned by its adapter test file.",
   "kerne-signed-por":
-    "Pre-launch kUSD adapter; covered by kerne-signed-por.test.ts (legacy mock seam). Signature-verify + on-chain cross-check needs the installAdapterNetwork migration.",
+    "Pre-launch kUSD adapter; the signed payload is synthetic test data rather than a committed wire capture, so replay remains owned by kerne-signed-por.test.ts.",
 };
 
 const TETHER_ENDPOINT = "https://app.tether.to/transparency.json";
@@ -254,7 +238,6 @@ const TETHER_CAPTURE = {
     },
   ],
 };
-const SGHO_SUPPLY = 1000n * 10n ** 18n;
 
 export const CORPUS_CASES: Record<string, AdapterCorpusCase> = {
   "tether-transparency": {
@@ -270,15 +253,6 @@ export const CORPUS_CASES: Record<string, AdapterCorpusCase> = {
           },
         },
       },
-      outcome: "error",
-    },
-  },
-  "sgho-wrapper": {
-    coinId: "sgho-aave",
-    network: { rpc: { "totalSupply()": SGHO_SUPPLY, "0x4cdad506": 1005n * 10n ** 18n } },
-    drift: {
-      label: "previewRedeem(totalSupply) stops answering",
-      network: { rpc: { "totalSupply()": SGHO_SUPPLY, "0x4cdad506": null } },
       outcome: "error",
     },
   },
@@ -339,7 +313,6 @@ CORPUS_CASES["usdtb-transparency"] = {
 const ETHENA_ENDPOINT = "https://app.ethena.fi/api/positions/current/collateral";
 const SKY_ENDPOINT = "https://info-sky.blockanalitica.com/groups/?days_ago=1&order=-debt";
 const FALCON_ENDPOINT = "https://api.falcon.finance/api/v1/transparency";
-const ASYMMETRY_ENDPOINT = "https://app.asymmetry.finance/api/stats";
 const JUPUSD_ENDPOINT = "https://api.jupusd.money/api/data";
 const ETHENA_FIXTURE = {
   totalBackingAssetsInUsd: 100,
@@ -362,13 +335,6 @@ const FALCON_FIXTURE = {
     supply: "100",
     insurance_fund: "5",
     breakdown: { assets: [{ label: "USDC", ceffu: "30" }, { label: "BTC", multisig: "65" }] },
-  },
-};
-const ASYMMETRY_FIXTURE = {
-  timestamp: 1_757_000_000_000,
-  usdaf: {
-    total_bold_supply: "100",
-    branch: { ysyBOLD: { coll_value: "60" }, scrvUSD: { coll_value: "40" } },
   },
 };
 const JUPUSD_FIXTURE = {
@@ -431,18 +397,6 @@ CORPUS_CASES.falcon = {
     outcome: "error",
   },
 };
-CORPUS_CASES.asymmetry = {
-  coinId: "usdaf-asymmetry",
-  nowSec: 1_757_003_600,
-  network: { json: { [ASYMMETRY_ENDPOINT]: ASYMMETRY_FIXTURE } },
-  drift: {
-    label: "usdaf.total_bold_supply is dropped",
-    network: { json: { [ASYMMETRY_ENDPOINT]: {
-      ...ASYMMETRY_FIXTURE, usdaf: { ...ASYMMETRY_FIXTURE.usdaf, total_bold_supply: undefined },
-    } } },
-    outcome: "error",
-  },
-};
 CORPUS_CASES.jupusd = {
   coinId: "jupusd-jupiter",
   nowSec: 1_757_003_600,
@@ -454,6 +408,60 @@ CORPUS_CASES.jupusd = {
   },
 };
 
+const SINGLE_ASSET_ENDPOINT = "https://api.sdc.stablecorp.ca/reports/balances?type=unformatted_json";
+// Trimmed happy path from single-asset.test.ts; only fields read by the QCAD
+// catalog configuration are retained.
+const SINGLE_ASSET_FIXTURE = {
+  totalFiatReserves: "105000000",
+  totalSupply: "100000000",
+  chains: [{ lastSyncedAt: "2026-03-20T12:00:00Z" }],
+};
+CORPUS_CASES["single-asset"] = {
+  coinId: "qcad-stablecorp",
+  nowSec: Date.parse("2026-03-20T12:01:00Z") / 1000,
+  network: { json: { [SINGLE_ASSET_ENDPOINT]: SINGLE_ASSET_FIXTURE } },
+  drift: {
+    label: "the source timestamp is dropped",
+    network: {
+      json: {
+        [SINGLE_ASSET_ENDPOINT]: {
+          ...SINGLE_ASSET_FIXTURE,
+          chains: [{ lastSyncedAt: undefined }],
+        },
+      },
+    },
+    outcome: "error",
+  },
+};
+
+const SPIKO_ENDPOINT = "https://public-api.spiko.io/share-classes/SAFO/totals";
+// Trimmed happy path from spiko-api.test.ts; only fields read by the SAFO
+// catalog configuration are retained.
+const SPIKO_FIXTURE = {
+  totalShares: "1000000",
+  totalAssets: { value: "1010000", currency: "USD" },
+  netAssetValue: {
+    amount: { value: "1.0", currency: "USD" },
+    updatedAt: "2026-07-09T12:00:00.000Z",
+  },
+};
+CORPUS_CASES["spiko-api"] = {
+  coinId: "safo-spiko-usd",
+  nowSec: Date.parse("2026-07-09T12:01:00Z") / 1000,
+  network: { json: { [SPIKO_ENDPOINT]: SPIKO_FIXTURE } },
+  drift: {
+    label: "netAssetValue.updatedAt is dropped",
+    network: {
+      json: {
+        [SPIKO_ENDPOINT]: {
+          ...SPIKO_FIXTURE,
+          netAssetValue: { ...SPIKO_FIXTURE.netAssetValue, updatedAt: undefined },
+        },
+      },
+    },
+    outcome: "error",
+  },
+};
 const BTCFI_MARKET_ENDPOINT = "https://www.btcfi.one/api/getBtcfiMarket?isTestnet=false";
 const BTCFI_HANDLERS_ENDPOINT = "https://www.btcfi.one/api/getAvailableBtcfiHandlers?isTestnet=false";
 CORPUS_CASES.btcfi = {
@@ -465,6 +473,202 @@ CORPUS_CASES.btcfi = {
       [BTCFI_MARKET_ENDPOINT]: BTCFI_MARKET_ROWS.map((row, index) => index === 0 ? { ...row, deposit_value: undefined } : row),
       [BTCFI_HANDLERS_ENDPOINT]: BTCFI_HANDLER_ROWS,
     } },
+    outcome: "error",
+  },
+};
+
+// Trimmed happy path from usdd-data-platform.test.ts (USDD data-platform capture
+// values). The coin's real config is the chain=tron feed, so the replay also
+// answers the same-run TronGrid PSM probe from the adapter test's pinned words.
+const USDD_LATEST_ENDPOINT = "https://app-api.usdd.io/data-platform/latest-collateral?chain=tron";
+const USDD_HISTORY_ENDPOINT = "https://app-api.usdd.io/data-platform/collateral-history?interval=WEEKLY&chain=tron";
+const USDD_TRON_GRID_ENDPOINT = "https://api.trongrid.io/wallet/triggerconstantcontract";
+const USDD_LATEST_ITEMS = [
+  { vaultType: "TRX-A", lockedValue: 201_173_223.24 },
+  { vaultType: "TRX-B", lockedValue: 100_178_816.93 },
+  { vaultType: "TRX-C", lockedValue: 108_374_409.0 },
+  { vaultType: "USDT-A", lockedValue: 672_966.59 },
+  { vaultType: "STRX-A", lockedValue: 18_896_312.13 },
+  { vaultType: "PSM-USDT-A", lockedValue: 82_309_862.43 },
+  { vaultType: "SA001-A", lockedValue: 519_698_996.0 },
+];
+const USDD_HISTORY_CAPTURE = { code: 0, data: { items: [{ statisticTime: 1_774_281_600_000 }] } };
+const USDD_PSM_GEM_JOIN_WORD = "000000000000000000000000b50eb419ebeba06c80df5e9aaec494cef4297879";
+const USDD_PSM_USDD_WORD = "000000000000000000000000e91a7411e56ce79e83570570f49b9fc35b7727c5";
+const USDD_PSM_WORD = (value: bigint): string => value.toString(16).padStart(64, "0");
+const USDD_PSM_WORDS: Record<string, string> = {
+  "gemJoin()": USDD_PSM_GEM_JOIN_WORD,
+  "usdd()": USDD_PSM_USDD_WORD,
+  "buyEnabled()": USDD_PSM_WORD(1n),
+  "tout()": USDD_PSM_WORD(0n),
+  "balanceOf(address)": USDD_PSM_WORD(33_195_883_987_282n),
+};
+const respondToUsddTronGrid = async (request: Request) => {
+  const body = await request.clone().json() as { function_selector?: string };
+  const word = USDD_PSM_WORDS[body.function_selector ?? ""];
+  return word == null
+    ? { result: { result: false } }
+    : { result: { result: true }, constant_result: [word] };
+};
+
+CORPUS_CASES["usdd-data-platform"] = {
+  coinId: "usdd-tron-dao-reserve",
+  nowSec: 1_774_281_600 + 3_600,
+  network: {
+    json: {
+      [USDD_LATEST_ENDPOINT]: { code: 0, data: { items: USDD_LATEST_ITEMS } },
+      [USDD_HISTORY_ENDPOINT]: USDD_HISTORY_CAPTURE,
+      [USDD_TRON_GRID_ENDPOINT]: respondToUsddTronGrid,
+    },
+  },
+  drift: {
+    label: "a TRX-C vault row's lockedValue arrives as a formatted string",
+    network: {
+      json: {
+        [USDD_LATEST_ENDPOINT]: {
+          code: 0,
+          data: {
+            items: USDD_LATEST_ITEMS.map((row, index) =>
+              index === 2 ? { vaultType: row.vaultType, lockedValue: "108,374,409.00" } : row),
+          },
+        },
+        [USDD_HISTORY_ENDPOINT]: USDD_HISTORY_CAPTURE,
+        [USDD_TRON_GRID_ENDPOINT]: respondToUsddTronGrid,
+      },
+    },
+    outcome: "error",
+  },
+};
+
+const MAKINA_ALLOCATIONS_DRIFTED = structuredClone(MAKINA_ALLOCATIONS_FIXTURE);
+delete MAKINA_ALLOCATIONS_DRIFTED.data.positions[0].updated_at;
+
+CORPUS_CASES["makina-strategy"] = {
+  coinId: "dusd-dialectic",
+  // Just after the oldest captured position update, which bounds the result's
+  // freshness below both envelope generated_at instants.
+  nowSec: 1_785_265_103 + 600,
+  network: makinaNetworkSpec(),
+  drift: {
+    label: "a position's updated_at timestamp is dropped",
+    network: makinaNetworkSpec({ allocations: MAKINA_ALLOCATIONS_DRIFTED }),
+    outcome: "degraded",
+  },
+};
+
+// Trimmed happy-path fixture from reservoir.test.ts plus the same-run PSM
+// reads (underlying()/underlyingBalance()/paused() at the reviewed PSM).
+const RESERVOIR_ENDPOINT = "https://app.reservoir.xyz/api/reserves/raw";
+const RESERVOIR_CAPTURE = {
+  assets: [
+    { label: "Dolomite - USD1", totalBalanceValue: "30" },
+    { label: "Morpho - Sentora PYUSD Main V2", totalBalanceValue: "30" },
+    { label: "USDC", totalBalanceValue: "40" },
+  ],
+  liabilities: [],
+  totalAssets: "100",
+  totalLiabilities: "95",
+  equity: "5",
+};
+const RESERVOIR_RPC: Record<string, AdapterRpcValue> = {
+  "0x4809010926aec940b550d34a46a52739f996d75d:0x6f307dc3": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+  "0x4809010926aec940b550d34a46a52739f996d75d:0x59356c5c": 4_000000n,
+  "0x4809010926aec940b550d34a46a52739f996d75d:0x5c975abb": false,
+};
+CORPUS_CASES.reservoir = {
+  coinId: "rusd-reservoir",
+  network: { json: { [RESERVOIR_ENDPOINT]: RESERVOIR_CAPTURE }, rpc: RESERVOIR_RPC },
+  drift: {
+    label: "the balance-sheet assets array is dropped",
+    network: { json: { [RESERVOIR_ENDPOINT]: { ...RESERVOIR_CAPTURE, assets: undefined } }, rpc: RESERVOIR_RPC },
+    outcome: "error",
+  },
+};
+
+// Trimmed happy path from resupply-pairs.test.ts replayed against the coin's
+// real 11-pair catalog config; every pair's collateral vault is answered
+// synthetically with asset() round-tripping to the reviewed underlying.
+const RESUPPLY_HANDLER = "0x5eeb063d0abefbbc78f576e28d762a16b637a025";
+const RESUPPLY_CRVUSD = "0xf939e0a03fb07f59a73314e73794be0e57ac1b4e";
+const RESUPPLY_FRXUSD = "0xcacd6fd266af91b8aed52accc382b4e165586e29";
+const resupplyCorpusWord = (value: bigint) => value.toString(16).padStart(64, "0");
+const resupplyCorpusRpc = (mismatchedVault = false): Record<string, AdapterRpcValue> => {
+  const rpc: Record<string, AdapterRpcValue> = {
+    [`${RESUPPLY_HANDLER}:0x901654fc`]: true,
+    [`${RESUPPLY_HANDLER}:0x0e3d9f3c`]: 985_000_000_000_000_000n,
+    [`${RESUPPLY_HANDLER}:0xc6af1dda`]: 970_000_000_000_000_000n,
+    [`${RESUPPLY_HANDLER}:0x43bad45b`]: 0n,
+    [`${RESUPPLY_CRVUSD}:0x313ce567`]: 18n,
+    [`${RESUPPLY_FRXUSD}:0x313ce567`]: 18n,
+  };
+  const { config } = resolveAdapterCoin("resupply-pairs", "reusd-resupply");
+  const pairs = parseLiveReserveAdapterParams("resupply-pairs", config.params).pairs ?? [];
+  pairs.forEach((pair, index) => {
+    const underlying = pair.key.startsWith("PAIR_CURVELEND") ? RESUPPLY_CRVUSD : RESUPPLY_FRXUSD;
+    const collateral = `0x${(index + 1).toString(16).padStart(40, "0")}`;
+    const borrow = BigInt(index + 1) * 10n ** 23n;
+    const shares = 10n ** 24n;
+    rpc[`${pair.address}:0x6f307dc3`] = underlying;
+    rpc[`${pair.address}:0xd8dfeb45`] = collateral;
+    rpc[`${pair.address}:0xcdd72d52`] =
+      `0x${resupplyCorpusWord(0n)}${resupplyCorpusWord(borrow)}${resupplyCorpusWord(borrow)}${resupplyCorpusWord(shares)}`;
+    rpc[`${collateral}:0x07a2d13a`] = borrow;
+    rpc[`${collateral}:0x38d52e0f`] = mismatchedVault && index === 0 ? RESUPPLY_FRXUSD : underlying;
+  });
+  return rpc;
+};
+CORPUS_CASES["resupply-pairs"] = {
+  coinId: "reusd-resupply",
+  network: { rpc: resupplyCorpusRpc() },
+  drift: {
+    label: "a Curve-Lend collateral vault reports the wrong asset()",
+    network: { rpc: resupplyCorpusRpc(true) },
+    outcome: "error",
+  },
+};
+
+// Trimmed happy path from river-protocol-info.test.ts: the protocol-info JSON
+// payload plus same-run Satoshi app and branch reads for every pinned chain.
+const RIVER_ENDPOINT = "https://api.riverai.inc/protocol-info";
+const RIVER_CAPTURE = {
+  tvl: 250_000_000,
+  circulatingSupply: 159_000_000,
+  tvlData: [{ timestamp: 1_776_290_400, value: 250_000_000 }],
+  circulatingData: [{ timestamp: 1_776_290_400, value: 159_000_000 }],
+};
+const RIVER_WORD = (value: bigint) => value.toString(16).padStart(64, "0");
+const RIVER_APP_BY_CHAIN: Record<string, string> = {
+  ethereum: "0xb8374e4dff99202292da2fe34425e1de665b67e6",
+  arbitrum: "0x07bbc5a83b83a5c440d1caedbf1081426d0aa4ec",
+  base: "0x9a3c724ee9603a7550499be73dc743b371811dd3",
+  bsc: "0x07bbc5a83b83a5c440d1caedbf1081426d0aa4ec",
+};
+const riverCorpusRpc = (): Record<string, AdapterRpcValue> => {
+  const { coin } = resolveAdapterCoin("river-protocol-info", "satusd-river");
+  const rpc: Record<string, AdapterRpcValue> = {};
+  Object.entries(RIVER_APP_BY_CHAIN).forEach(([chain, app], index) => {
+    const satUsd = coin.contracts?.find((contract) => contract.chain === chain)?.address.toLowerCase() ?? "";
+    const manager = `0x${(index + 1).toString(16).padStart(40, "0")}`;
+    const debt = (chain === "ethereum" ? 100_000n : 50_000n) * 10n ** 18n;
+    rpc[`${app}:0xf8d89898`] = satUsd;
+    rpc[`${app}:0x716c53c2`] = `0x${RIVER_WORD(10n ** 18n)}${RIVER_WORD(debt)}`;
+    rpc[`${app}:0xb620115d`] = 3n * 10n ** 18n;
+    rpc[`${app}:0x679df0d9`] = 1n;
+    rpc[`${app}:0x3b707478`] = ({ data }) => (Number(BigInt(`0x${data.slice(10)}`)) === 0 ? manager : null);
+    rpc[`${manager}:0xf8d89898`] = satUsd;
+    rpc[`${manager}:0xc52861f2`] = 10n ** 18n / 200n;
+    rpc[`${manager}:0x794e5724`] = 11n * 10n ** 17n;
+    rpc[`${manager}:0x9484fb8e`] = false;
+  });
+  return rpc;
+};
+CORPUS_CASES["river-protocol-info"] = {
+  coinId: "satusd-river",
+  nowSec: 1_776_290_400 + 3_600,
+  network: { json: { [RIVER_ENDPOINT]: RIVER_CAPTURE }, rpc: riverCorpusRpc() },
+  drift: {
+    label: "the payload tvl field is dropped",
+    network: { json: { [RIVER_ENDPOINT]: { ...RIVER_CAPTURE, tvl: undefined } }, rpc: riverCorpusRpc() },
     outcome: "error",
   },
 };

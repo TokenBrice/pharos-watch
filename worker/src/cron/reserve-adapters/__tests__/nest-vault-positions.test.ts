@@ -1,31 +1,49 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
-import nopal from "@shared/data/stablecoins/coins/nopal-nest.json";
-import inalpha from "@shared/data/stablecoins/coins/inalpha-nest.json";
-import type { StablecoinMeta } from "@shared/types/core";
+import { describe, expect, it } from "vitest";
+import { expectWarnings, installAdapterNetwork, runAdapter, type AdapterNetworkSpec } from "./reserve-adapter.test-support";
 
-vi.mock("../helpers", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("../helpers")>();
+const NOPAL_POSITIONS_URL = "https://api.nest.credit/v1/vaults/nest-opal-vault/positions";
+const NOPAL_PRICE_URL = "https://api.nest.credit/v1/vaults/nest-opal-vault/price";
+const NOPAL_UPDATE_URL = "https://api.nest.credit/v1/vaults/nest-opal-vault/last-price-update";
+const INALPHA_POSITIONS_URL = "https://api.nest.credit/v1/vaults/nest-alpha-lp-vault/positions";
+const INALPHA_PRICE_URL = "https://api.nest.credit/v1/vaults/nest-alpha-lp-vault/price";
+const INALPHA_UPDATE_URL = "https://api.nest.credit/v1/vaults/nest-alpha-lp-vault/last-price-update";
+const FIXTURE_NOW = 1_778_474_625;
+
+function nestNetwork(
+  coinId: "nopal-nest" | "inalpha-nest",
+  positions: unknown,
+  price: unknown,
+  lastPriceUpdate: unknown,
+): AdapterNetworkSpec {
+  const nopal = coinId === "nopal-nest";
   return {
-    ...actual,
-    fetchJsonWithRetry: vi.fn(),
+    json: {
+      [nopal ? NOPAL_POSITIONS_URL : INALPHA_POSITIONS_URL]: positions,
+      [nopal ? NOPAL_PRICE_URL : INALPHA_PRICE_URL]: price,
+      [nopal ? NOPAL_UPDATE_URL : INALPHA_UPDATE_URL]: lastPriceUpdate,
+    },
   };
-});
+}
 
-import { fetchNestVaultPositionsReserves } from "../nest-vault-positions";
-import { fetchJsonWithRetry } from "../helpers";
-import { expectValidAdapterOutput, mockedReserveHelper } from "./reserve-adapter.test-support";
-
-let signal: AbortSignal;
+function runNest(
+  coinId: "nopal-nest" | "inalpha-nest",
+  positions: unknown,
+  price: unknown,
+  lastPriceUpdate: unknown,
+  validate = true,
+) {
+  return runAdapter("nest-vault-positions", coinId, {
+    network: installAdapterNetwork(nestNetwork(coinId, positions, price, lastPriceUpdate)),
+    nowSec: FIXTURE_NOW,
+    ...(validate ? {} : { validate: false as const }),
+  });
+}
 
 describe("fetchNestVaultPositionsReserves", () => {
-  beforeEach(() => {
-    signal = new AbortController().signal;
-    vi.clearAllMocks();
-  });
-
   it("groups Nest positions into stablecoin, treasury, and private credit slices", async () => {
-    mockedReserveHelper(fetchJsonWithRetry)
-      .mockResolvedValueOnce({
+    const { result } = await runNest(
+      "nopal-nest",
+      {
         data: {
           positions: {
             liquidAssets: [
@@ -65,30 +83,22 @@ describe("fetchNestVaultPositionsReserves", () => {
             ],
           },
         },
-      })
-      .mockResolvedValueOnce({
+      },
+      {
         data: {
           nav: 1_075,
           price: 1.05,
           totalSupply: 950,
         },
-      })
-      .mockResolvedValueOnce({
+      },
+      {
         data: {
           lastPriceUpdates: [
-            { updatedAt: 1778474591 },
-            { updatedAt: 1778474625 },
+            { updatedAt: 1_778_474_591 },
+            { updatedAt: FIXTURE_NOW },
           ],
         },
-      });
-
-    const coin = nopal as unknown as StablecoinMeta;
-    expect(coin?.liveReservesConfig).toBeDefined();
-
-    const result = await fetchNestVaultPositionsReserves(
-      coin!,
-      coin!.liveReservesConfig!,
-      signal,
+      },
     );
 
     expect(result.slices).toEqual([
@@ -104,7 +114,7 @@ describe("fetchNestVaultPositionsReserves", () => {
     ]);
     expect(result.metadata).toMatchObject({
       freshnessMode: "verified",
-      sourceTimestamp: 1778474625,
+      sourceTimestamp: FIXTURE_NOW,
       totalReserveUsd: 1_075,
       settledPositionUsd: 1_000,
       pendingDepositUsd: 50,
@@ -136,48 +146,28 @@ describe("fetchNestVaultPositionsReserves", () => {
         ],
       },
     });
-    expect(result.warnings).toEqual([
-      expect.objectContaining({ code: "nest-nav-coverage-gap", effect: "degraded" }),
-    ]);
-    expectValidAdapterOutput("nest-vault-positions", result, { now: 1778474625 });
+    expectWarnings(result, ["nest-nav-coverage-gap"]);
   });
 
   it("keeps other Nest assets on settled-only accounting without pending transaction arrays", async () => {
-    mockedReserveHelper(fetchJsonWithRetry)
-      .mockResolvedValueOnce({
+    const { result } = await runNest(
+      "inalpha-nest",
+      {
         data: {
           positions: {
-            liquidAssets: [
-              { symbol: "USDC", position: { value: 100 } },
-            ],
+            liquidAssets: [{ symbol: "USDC", position: { value: 100 } }],
             yieldAssets: [],
           },
         },
-      })
-      .mockResolvedValueOnce({
-        data: {
-          nav: 100,
-          price: 1,
-          totalSupply: 100,
-        },
-      })
-      .mockResolvedValueOnce({
-        data: {
-          lastPriceUpdates: [{ updatedAt: 1778474625 }],
-        },
-      });
-
-    const coin = inalpha as unknown as StablecoinMeta;
-    const result = await fetchNestVaultPositionsReserves(
-      coin!,
-      coin!.liveReservesConfig!,
-      signal,
+      },
+      { data: { nav: 100, price: 1, totalSupply: 100 } },
+      { data: { lastPriceUpdates: [{ updatedAt: FIXTURE_NOW }] } },
     );
 
     expect(result.slices).toEqual([
       { sourceKey: "nest-vault-positions:usdc", name: "Liquid USDC balances", pct: 100, risk: "low", coinId: "usdc-circle" },
     ]);
-    expect(result.warnings).toBeUndefined();
+    expectWarnings(result, []);
     expect(result.metadata).toMatchObject({
       totalReserveUsd: 100,
       navUsd: 100,
@@ -188,35 +178,18 @@ describe("fetchNestVaultPositionsReserves", () => {
   });
 
   it("emits a NAV reconciliation residual and unknown exposure for non-nOPAL Nest vaults when positions cover less than NAV", async () => {
-    mockedReserveHelper(fetchJsonWithRetry)
-      .mockResolvedValueOnce({
+    const { result } = await runNest(
+      "inalpha-nest",
+      {
         data: {
           positions: {
-            liquidAssets: [
-              { symbol: "pUSD", position: { value: 0.410183 } },
-            ],
+            liquidAssets: [{ symbol: "pUSD", position: { value: 0.410183 } }],
             yieldAssets: [],
           },
         },
-      })
-      .mockResolvedValueOnce({
-        data: {
-          nav: 1.8890182896,
-          price: 1,
-          totalSupply: 2,
-        },
-      })
-      .mockResolvedValueOnce({
-        data: {
-          lastPriceUpdates: [{ updatedAt: 1778474625 }],
-        },
-      });
-
-    const coin = inalpha as unknown as StablecoinMeta;
-    const result = await fetchNestVaultPositionsReserves(
-      coin!,
-      coin!.liveReservesConfig!,
-      signal,
+      },
+      { data: { nav: 1.8890182896, price: 1, totalSupply: 2 } },
+      { data: { lastPriceUpdates: [{ updatedAt: FIXTURE_NOW }] } },
     );
 
     expect(result.slices).toEqual([
@@ -231,9 +204,7 @@ describe("fetchNestVaultPositionsReserves", () => {
       navUsd: 1.8890182896,
       navCoverageRatio: expect.closeTo(0.410183 / 1.8890182896, 6),
     });
-    expect(result.warnings).toEqual([
-      expect.objectContaining({ code: "nest-nav-coverage-gap", effect: "degraded" }),
-    ]);
+    expectWarnings(result, ["nest-nav-coverage-gap"]);
   });
 
   it.each([
@@ -263,35 +234,36 @@ describe("fetchNestVaultPositionsReserves", () => {
       error: "cannot reconcile positive nOPAL pending withdrawals",
     },
   ])("fails nOPAL closed for $label", async ({ pendingTransactions, error }) => {
-    mockedReserveHelper(fetchJsonWithRetry)
-      .mockResolvedValueOnce({
+    await expect(runNest(
+      "nopal-nest",
+      {
         data: {
           positions: {
-            liquidAssets: [
-              { symbol: "USDC", position: { value: 100 }, pendingTransactions },
-            ],
+            liquidAssets: [{ symbol: "USDC", position: { value: 100 }, pendingTransactions }],
             yieldAssets: [],
           },
         },
-      })
-      .mockResolvedValueOnce({
-        data: {
-          nav: 100,
-          price: 1,
-          totalSupply: 100,
-        },
-      })
-      .mockResolvedValueOnce({
-        data: {
-          lastPriceUpdates: [{ updatedAt: 1778474625 }],
-        },
-      });
-
-    const coin = nopal as unknown as StablecoinMeta;
-    await expect(fetchNestVaultPositionsReserves(
-      coin!,
-      coin!.liveReservesConfig!,
-      signal,
+      },
+      { data: { nav: 100, price: 1, totalSupply: 100 } },
+      { data: { lastPriceUpdates: [{ updatedAt: FIXTURE_NOW }] } },
+      false,
     )).rejects.toThrow(error);
+  });
+
+  it("rejects a renamed positions field instead of publishing a zero snapshot", async () => {
+    await expect(runNest(
+      "nopal-nest",
+      {
+        data: {
+          positions: {
+            liquidAssetsRenamed: [{ symbol: "USDC", position: { value: 100 }, pendingTransactions: [] }],
+            yieldAssets: [],
+          },
+        },
+      },
+      { data: { nav: 100, price: 1, totalSupply: 100 } },
+      { data: { lastPriceUpdates: [{ updatedAt: FIXTURE_NOW }] } },
+      false,
+    )).rejects.toThrow("produced zero reserve value");
   });
 });

@@ -1,24 +1,5 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
-import { fetchUsdaiHubReserves, type UsdaiHubParams } from "../usdai-hub";
-
-const rawCall = vi.hoisted(() => vi.fn());
-const storageCall = vi.hoisted(() => vi.fn());
-
-vi.mock("../helpers", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("../helpers")>();
-  return {
-    ...actual,
-    makeOnchainCallers: vi.fn(() => ({
-      raw: rawCall,
-      uint256: vi.fn(),
-    })),
-  };
-});
-
-vi.mock("../../../lib/evm-rpc", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("../../../lib/evm-rpc")>();
-  return { ...actual, fetchEvmStorageAtBlock: storageCall };
-});
+import { describe, expect, it } from "vitest";
+import { runAdapter, type AdapterNetworkSpec } from "./reserve-adapter.test-support";
 
 const ADDRESSES = {
   hub: "0x0A1a1A107E45b7Ced86833863f482BC5f4ed82EF",
@@ -30,71 +11,43 @@ const ADDRESSES = {
 const TOTAL_SUPPLY = 200_750_740_926_947_878_099_813_249n;
 const BRIDGED_SUPPLY = 2_135_653_492_985_000_000_000_000n;
 const PYUSD_BALANCE = 202_886_394_432_337n;
+const IMPLEMENTATION_SLOT = "0x360894a13ba1a3210667c828492db98dca3e2076cc3735a920a3ca505d382bbc";
+const BALANCE_CALL = `0x70a08231${ADDRESSES.hub.slice(2).toLowerCase().padStart(64, "0")}`;
+const MALFORMED_BOOL = `0x${"12".repeat(33)}`;
 
-function word(value: bigint): `0x${string}` {
-  return `0x${value.toString(16).padStart(64, "0")}`;
-}
 
-function addressWord(address: string): `0x${string}` {
-  return word(BigInt(address));
-}
-
-const CONFIG = {
-  adapter: "usdai-hub" as const,
-  version: 1,
-  semantics: "single-asset" as const,
-  breakerScope: "usdai-usd-ai",
-  inputs: {
-    primary: { kind: "onchain-evm" as const, chain: "arbitrum", rpcMode: "public-rpc" as const },
-  },
-  params: {
-    hubAddress: ADDRESSES.hub,
-    baseTokenAddress: ADDRESSES.baseToken,
-    implementationAddress: ADDRESSES.implementation,
-    redemptionCapacity: {
-      holderEligibility: "whitelisted-primary" as const,
-      sourceUrls: ["https://usd.ai/insights/usdai-mint-redeem-upgrade"],
-    },
-  } satisfies UsdaiHubParams,
-};
-
-function installReads(overrides: {
+function usdaiNetwork(overrides: {
   baseToken?: string;
-  balance?: `0x${string}`;
-  totalSupply?: `0x${string}`;
-  bridgedSupply?: `0x${string}`;
-  paused?: `0x${string}`;
+  balance?: bigint;
+  totalSupply?: bigint;
+  bridgedSupply?: bigint;
+  paused?: bigint | string;
   implementation?: string;
-} = {}): void {
-  const values = new Map<string, `0x${string}`>([
-    [`${ADDRESSES.hub.toLowerCase()}:0xc55dae63`, addressWord(overrides.baseToken ?? ADDRESSES.baseToken)],
-    [`${ADDRESSES.baseToken.toLowerCase()}:0x70a08231${ADDRESSES.hub.slice(2).toLowerCase().padStart(64, "0")}`, word(overrides.balance === undefined ? PYUSD_BALANCE : BigInt(overrides.balance))],
-    [`${ADDRESSES.hub.toLowerCase()}:0x18160ddd`, overrides.totalSupply ?? word(TOTAL_SUPPLY)],
-    [`${ADDRESSES.hub.toLowerCase()}:0x11c301e0`, overrides.bridgedSupply ?? word(BRIDGED_SUPPLY)],
-    [`${ADDRESSES.hub.toLowerCase()}:0x5c975abb`, overrides.paused ?? word(0n)],
-  ]);
-  rawCall.mockImplementation(async (contract: string, data: string) => values.get(`${contract.toLowerCase()}:${data}`) ?? null);
-  storageCall.mockResolvedValue(addressWord(overrides.implementation ?? ADDRESSES.implementation));
+} = {}): AdapterNetworkSpec {
+  return {
+    rpc: {
+      [`${ADDRESSES.hub}:0xc55dae63`]: overrides.baseToken ?? ADDRESSES.baseToken,
+      [`${ADDRESSES.baseToken}:${BALANCE_CALL}`]: overrides.balance ?? PYUSD_BALANCE,
+      [`${ADDRESSES.hub}:0x18160ddd`]: overrides.totalSupply ?? TOTAL_SUPPLY,
+      [`${ADDRESSES.hub}:0x11c301e0`]: overrides.bridgedSupply ?? BRIDGED_SUPPLY,
+      [`${ADDRESSES.hub}:0x5c975abb`]: overrides.paused ?? 0n,
+      [`${ADDRESSES.hub}:${IMPLEMENTATION_SLOT}`]: overrides.implementation ?? ADDRESSES.implementation,
+    },
+  };
 }
 
-async function fetchFixture(config = CONFIG) {
-  return fetchUsdaiHubReserves(
-    { id: "usdai-usd-ai" } as never,
-    config as never,
-    new AbortController().signal,
-  );
+async function fetchFixture(overrides: Parameters<typeof usdaiNetwork>[0] = {}) {
+  return runAdapter("usdai-hub", "usdai-usd-ai", {
+    network: usdaiNetwork(overrides),
+    nowSec: 1_757_000_000,
+  });
 }
 
 describe("usdai-hub adapter", () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-    installReads();
-  });
-
   it("emits the measured 100% PYUSD slice and complete bridge-safe liability", async () => {
-    const output = await fetchFixture();
+    const { result } = await fetchFixture();
 
-    expect(output.slices).toEqual([
+    expect(result.slices).toEqual([
       {
         name: "PYUSD held by the canonical USDai hub",
         pct: 100,
@@ -103,7 +56,7 @@ describe("usdai-hub adapter", () => {
         depType: "collateral",
       },
     ]);
-    expect(output.metadata).toMatchObject({
+    expect(result.metadata).toMatchObject({
       freshnessMode: "not-applicable",
       totalSupplyRaw: TOTAL_SUPPLY.toString(),
       supplyUsd: 202_886_394.41993288,
@@ -126,57 +79,46 @@ describe("usdai-hub adapter", () => {
   });
 
   it("fails closed when baseToken() does not resolve to the pinned PYUSD", async () => {
-    installReads({ baseToken: ADDRESSES.otherToken });
-
-    await expect(fetchFixture()).rejects.toThrow("baseToken() identity mismatch");
+    await expect(fetchFixture({ baseToken: ADDRESSES.otherToken })).rejects.toThrow("baseToken() identity mismatch");
   });
 
   it("fails closed when the implementation slot drifts", async () => {
-    installReads({ implementation: ADDRESSES.otherToken });
-
-    await expect(fetchFixture()).rejects.toThrow("EIP-1967 implementation identity mismatch");
+    await expect(fetchFixture({ implementation: ADDRESSES.otherToken })).rejects.toThrow("EIP-1967 implementation identity mismatch");
   });
 
   it("publishes PYUSD below bridge-safe liabilities as degraded", async () => {
-    installReads({ balance: word(PYUSD_BALANCE - 20_000n) });
-    const output = await fetchFixture();
-    expect(output.slices[0].pct).toBe(100);
-    expect(output.metadata?.collateralizationRatio).toBeLessThan(1);
-    expect(output.warnings).toContainEqual(expect.objectContaining({ code: "reserve-undercollateralized", effect: "degraded" }));
+    const { result } = await fetchFixture({ balance: PYUSD_BALANCE - 20_000n });
+    expect(result.slices[0].pct).toBe(100);
+    expect(result.metadata?.collateralizationRatio).toBeLessThan(1);
+    expect(result.warnings).toContainEqual(expect.objectContaining({ code: "reserve-undercollateralized", effect: "degraded" }));
   });
 
   it("preserves redemption telemetry and marks a paused hub as paused", async () => {
-    installReads({ paused: word(1n) });
+    const { result } = await fetchFixture({ paused: 1n });
 
-    const output = await fetchFixture();
-
-    expect(output.slices).toHaveLength(1);
-    expect(output.metadata?.redemption).toMatchObject({
+    expect(result.slices).toHaveLength(1);
+    expect(result.metadata?.redemption).toMatchObject({
       routeStatus: "paused",
       routeStatusSource: "onchain",
       routeStatusReason: "USDai hub paused() returned true on-chain",
       capacityUsd: 202_886_394.432337,
     });
-    expect(output.metadata?.details).toMatchObject({ paused: true });
-    expect(output.warnings).toContainEqual(expect.objectContaining({ code: "route-paused", effect: "degraded" }));
+    expect(result.metadata?.details).toMatchObject({ paused: true });
+    expect(result.warnings).toContainEqual(expect.objectContaining({ code: "route-paused", effect: "degraded" }));
   });
 
   it("rejects malformed ABI payloads instead of publishing a partial snapshot", async () => {
-    installReads({ paused: "0x1234" as `0x${string}` });
-
-    await expect(fetchFixture()).rejects.toThrow("paused() returned malformed bool payload");
+    await expect(fetchFixture({ paused: MALFORMED_BOOL })).rejects.toThrow("paused() returned malformed bool payload");
   });
 
   it("retains bridged liabilities when canonical supply is zero", async () => {
-    installReads({ totalSupply: word(0n) });
-    const output = await fetchFixture();
-    expect(output.metadata?.supplyUsd).toBe(Number(BRIDGED_SUPPLY) / 1e18);
+    const { result } = await fetchFixture({ totalSupply: 0n });
+    expect(result.metadata?.supplyUsd).toBe(Number(BRIDGED_SUPPLY) / 1e18);
   });
 
   it("publishes zero total liabilities without inventing a ratio", async () => {
-    installReads({ totalSupply: word(0n), bridgedSupply: word(0n) });
-    const output = await fetchFixture();
-    expect(output.metadata?.collateralizationRatio).toBeUndefined();
-    expect(output.warnings).toContainEqual(expect.objectContaining({ effect: "degraded" }));
+    const { result } = await fetchFixture({ totalSupply: 0n, bridgedSupply: 0n });
+    expect(result.metadata?.collateralizationRatio).toBeUndefined();
+    expect(result.warnings).toContainEqual(expect.objectContaining({ effect: "degraded" }));
   });
 });

@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { adaptFlyingTulipFtUsd } from "../flying-tulip-ftusd";
 import { getReserveAdapter } from "../index";
-import { expectValidAdapterOutput } from "./reserve-adapter.test-support";
+import { expectValidAdapterOutput, runAdapter } from "./reserve-adapter.test-support";
 
 const BSC_USDC = "0x8AC76a51cc950d9822D68b83fE1Ad97B32Cd580d";
 const BSC_USDT = "0x55d398326f99059fF775485246999027B3197955";
@@ -184,5 +184,25 @@ describe("adaptFlyingTulipFtUsd", () => {
         message: expect.stringContaining("Polygon"),
       }),
     );
+  });
+});
+
+describe("flying-tulip-ftusd fetch boundary", () => {
+  it("fetches the configured dashboard through the shared network harness", async () => {
+    const endpoint = "https://api.flyingtulip.com/status/ftusd/dashboard?days=30&include_series=false&include_events=false";
+    const { result, network } = await runAdapter("flying-tulip-ftusd", "ftusd-flying-tulip", {
+      network: { json: { [endpoint]: payload() } },
+      nowSec: 1_786_311_000,
+    });
+
+    expect(network.requests.map((request) => request.url)).toEqual([endpoint]);
+    expect(result.metadata).toMatchObject({
+      freshnessMode: "verified",
+      sourceTimestamp: 1_786_310_565,
+    });
+    expect(result.slices).toContainEqual(expect.objectContaining({
+      name: "USDC strategy wrappers (Ethereum and Sonic)",
+      coinId: "usdc-circle",
+    }));
   });
 });

@@ -1,19 +1,13 @@
-import { beforeEach, describe, expect, it } from "vitest";
-import { decodeFunctionData, parseAbi } from "viem/utils";
+import { describe, expect, it } from "vitest";
 import { jsonResponse } from "@shared/test-utils/mock-fetch";
 import type { StablecoinMeta } from "@shared/types/core";
 import type { LiveReservesConfig } from "@shared/types/live-reserves";
-import { fetchWithRetryMock, resetRpcMocks, testChainRpcs } from "./helpers/rpc-mock";
-import { mockErc4626Rpc } from "./erc4626-single-asset.test-support";
+import { getErc4626Network, installErc4626Network } from "./erc4626-single-asset.test-support";
 
-const MULTICALL3_ABI = parseAbi([
-  "function aggregate3((address target, bool allowFailure, bytes callData)[] calls) payable returns ((bool success, bytes returnData)[] returnData)",
-]);
 
 const EARN_ADDRESS = "0xdb57a53c428a9fafcbfeffb6dd80d0f427543695";
 const UNDERLYING_ADDRESS = "0x5a110fc00474038f6c02e89c707d638602ea44b5";
 const SHARE_ADDRESS = "0x917af46b3c3c6e1bb7286b9f59637fb7c65851fb";
-const MULTICALL3 = "0xca11bde05977b3631167028862be2a173976ca11";
 const EARN_BALANCE_CALL_DATA = `0x70a08231${EARN_ADDRESS.slice(2).padStart(64, "0")}`;
 const UNDERLYING_BALANCE = 3_006_484_174_203_159_992_078_097n;
 const UNVESTED_AMOUNT = 55_099_977_083_333_333_333n;
@@ -63,13 +57,13 @@ function mockEarnState(overrides: {
   paused?: bigint | null;
   failedSelector?: string;
 } = {}): void {
-  mockErc4626Rpc({
+  installErc4626Network({
+    chain: "bsc",
     extraHandlers: [({ call }) => {
       if (!call?.data) return undefined;
       const to = call.to?.toLowerCase();
       const data = call.data.toLowerCase();
       if (data === overrides.failedSelector) return jsonResponse({ result: "0x" });
-
       if (to === EARN_ADDRESS && data === "0xb249b35d") {
         return jsonResponse({ result: addressResult(overrides.underlyingAddress ?? UNDERLYING_ADDRESS) });
       }
@@ -97,42 +91,24 @@ function mockEarnState(overrides: {
 }
 
 async function runTracked() {
-  // Load after rpc-mock registers the fetch-retry seam; a static import evaluates the transport too early.
   const { fetchAstherusEarnWrapperReserves } = await import("../astherus-earn-wrapper");
+  const network = getErc4626Network();
+  if (!network) throw new Error("missing astherus network");
   return fetchAstherusEarnWrapperReserves(
     coin,
     config,
     new AbortController().signal,
-    { chainRpcs: testChainRpcs },
+    { chainRpcs: network.chainRpcs },
   );
 }
 
 function assertSingleAggregate3Batch(): void {
-  expect(fetchWithRetryMock).toHaveBeenCalledTimes(1);
-  const init = fetchWithRetryMock.mock.calls[0]?.[1] as RequestInit | undefined;
-  const body = JSON.parse(String(init?.body ?? "{}")) as {
-    params?: Array<{ to?: string; data?: string }>;
-  };
-  const call = body.params?.[0];
-  expect(call?.to?.toLowerCase()).toBe(MULTICALL3);
-  expect(call?.data).toBeDefined();
-  expect(decodeFunctionData({
-    abi: MULTICALL3_ABI,
-    data: call!.data as `0x${string}`,
-  }).args[0]).toHaveLength(7);
+  const network = getErc4626Network();
+  if (!network) throw new Error("missing astherus network");
+  expect(network.rpcCalls.filter((call) => call.viaMulticall)).toHaveLength(7);
 }
 
 describe("fetchAstherusEarnWrapperReserves", () => {
-  beforeEach(() => {
-    resetRpcMocks();
-    testChainRpcs.set("bsc", {
-      chainId: "bsc",
-      chainName: "BNB Smart Chain",
-      type: "evm",
-      rpcUrl: "https://rpc.example",
-      explorerUrl: "https://bscscan.com",
-    });
-  });
 
   it("returns one 100% USDF slice from net asUSDFEarn backing", async () => {
     mockEarnState();

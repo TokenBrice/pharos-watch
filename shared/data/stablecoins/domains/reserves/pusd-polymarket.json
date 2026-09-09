@@ -19,7 +19,7 @@
         "concentration"
       ],
       "liquidityHorizon": "immediate",
-      "sourceKey": "pusd-vault:0xc417fd8e9661c0d2120b64a04bb3278c17e99db1"
+      "sourceKey": "escrow-balance:0x2791bca1f2de4661ed88a30c99a7a9449aa84174"
     }
   ],
   "reserveReview": {

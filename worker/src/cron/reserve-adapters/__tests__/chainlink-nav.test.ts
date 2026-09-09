@@ -1,4 +1,5 @@
-import { beforeEach, describe, it, expect, vi } from "vitest";
+import { describe, it, expect } from "vitest";
+import type { StablecoinMeta } from "@shared/types/core";
 import type { LiveReservesConfig } from "@shared/types/live-reserves";
 import { DECIMALS_SELECTOR, LATEST_ROUND_DATA_SELECTOR, TOTAL_SUPPLY_SELECTOR } from "../../../lib/evm-selectors";
 import {
@@ -6,27 +7,7 @@ import {
   parseOndoPriceData,
   type ChainlinkNavParams,
 } from "../chainlink-nav-core";
-
-vi.mock("../helpers", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("../helpers")>();
-  const { makeOnchainCallersMock, makeOnchainMulticall3Mock } = await import("./helpers/onchain-callers-mock");
-  const fetchOnchainUint256 = vi.fn();
-  const fetchOnchainRawCall = vi.fn();
-  const fetchOnchainMulticall3 = makeOnchainMulticall3Mock({
-    uint256: fetchOnchainUint256,
-    raw: fetchOnchainRawCall,
-  });
-  return {
-    ...actual,
-    fetchOnchainMulticall3,
-    fetchOnchainUint256,
-    fetchOnchainRawCall,
-    makeOnchainCallers: makeOnchainCallersMock({
-      uint256: fetchOnchainUint256,
-      raw: fetchOnchainRawCall,
-    }),
-  };
-});
+import { installAdapterNetwork, runAdapter, type AdapterNetwork, type AdapterNetworkSpec, type AdapterRpcValue } from "./reserve-adapter.test-support";
 
 const ORACLE_ADDRESS = "0x74f2199AEb743f68f05943e5715A33EaF2b61f53";
 const WRAPPER_ADDRESS = "0x00000000000000000000000000000000000000aa";
@@ -80,6 +61,67 @@ function encodeLatestRoundData(args: {
   return `0x${encodeUint256Word(args.roundId)}${encodeUint256Word(args.answer)}${
     encodeUint256Word(args.startedAt)
   }${encodeUint256Word(args.updatedAt)}${encodeUint256Word(args.answeredInRound)}`;
+}
+
+const NAV_COIN = {
+  id: "chainlink-nav-test",
+  name: "Chainlink NAV Test",
+  symbol: "NAV",
+} as unknown as StablecoinMeta;
+
+function navNetwork(overrides: {
+  tokenDecimals?: bigint;
+  totalSupply?: bigint;
+  oracleDecimals?: bigint;
+  latestRoundData?: `0x${string}`;
+  priceData?: `0x${string}`;
+  assetPrice?: bigint;
+  wrapperAddress?: string;
+  redemption?: boolean;
+  pauseValue?: string;
+} = {}): AdapterNetworkSpec {
+  const rpc: Record<string, AdapterRpcValue> = {
+    [`${TOKEN_ADDRESS}:${DECIMALS_SELECTOR}`]: overrides.tokenDecimals ?? 18n,
+    [`${TOKEN_ADDRESS}:${TOTAL_SUPPLY_SELECTOR}`]: overrides.totalSupply ?? 500_000_000_000_000_000_000n,
+    [`${ORACLE_ADDRESS}:${DECIMALS_SELECTOR}`]: overrides.oracleDecimals ?? 18n,
+    [`${ORACLE_ADDRESS}:${LATEST_ROUND_DATA_SELECTOR}`]: overrides.latestRoundData
+      ?? encodeLatestRoundData({
+        roundId: 44n,
+        answer: 106_766_689n,
+        startedAt: 1_781_083_007n,
+        updatedAt: 1_781_083_007n,
+        answeredInRound: 44n,
+      }),
+    [`${ORACLE_ADDRESS}:0xa4a28168`]: overrides.priceData
+      ?? "0x"
+        + "00000000000000000000000000000000000000000000000639e961576659e000"
+        + "0000000000000000000000000000000000000000000000000000000069d6caf3",
+    [`${ORACLE_ADDRESS}:0xb3596f07`]: overrides.assetPrice ?? 1_000_000_000_000_000_000n,
+  };
+  if (overrides.wrapperAddress) {
+    rpc[`${ORACLE_ADDRESS}:0xeca6f018`] = encodeAddressResult(overrides.wrapperAddress);
+    rpc[`${overrides.wrapperAddress}:0xa4a28168`] = "0xdeadbeef";
+  }
+  if (overrides.redemption) {
+    rpc[`${MANAGER_ADDRESS}:0x8f4f9613`] = encodeAddressResult(ROUTER_ADDRESS);
+    rpc[`${ROUTER_ADDRESS}:0x2021065d`] = encodeAddressResult(SOURCE_ADDRESS);
+    rpc[`${MANAGER_ADDRESS}:0xb235d468`] = overrides.pauseValue ?? encodeUint256Result(0n);
+    rpc[`${MANAGER_ADDRESS}:0x884a0501`] = encodeUint256Result(1n);
+    rpc[`${MANAGER_ADDRESS}:0x8f8eb812`] = 4_999_990_000_000_000_000_000n;
+    rpc[`${ROUTER_ADDRESS}:0x6cde714a`] = 8_499_999_997_683n;
+  }
+  return { rpc };
+}
+
+function runNav(
+  config: LiveReservesConfig,
+  network: AdapterNetworkSpec | AdapterNetwork,
+  nowSec: number,
+) {
+  return runAdapter("chainlink-nav", { ...NAV_COIN, liveReservesConfig: config }, {
+    network,
+    nowSec,
+  });
 }
 
 describe("adaptChainlinkNavResponse", () => {
@@ -175,94 +217,63 @@ describe("parseOndoPriceData", () => {
 });
 
 describe("fetchChainlinkNavCore", () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
-
   it("throws when standard Chainlink NAV round data exceeds the configured freshness window", async () => {
-    const helpers = await import("../helpers");
-    const { fetchChainlinkNavCore } = await import("../chainlink-nav-core");
     const updatedAt = 1_781_083_007;
     const maxOracleAgeSec = 604_800;
-    const staleRoundData = encodeLatestRoundData({
-      roundId: 44n,
-      answer: 106_766_689n,
-      startedAt: BigInt(updatedAt),
-      updatedAt: BigInt(updatedAt),
-      answeredInRound: 44n,
+    const network = navNetwork({
+      oracleDecimals: 8n,
+      tokenDecimals: 18n,
+      totalSupply: 1_000_000_000_000_000_000n,
+      latestRoundData: encodeLatestRoundData({
+        roundId: 44n,
+        answer: 106_766_689n,
+        startedAt: BigInt(updatedAt),
+        updatedAt: BigInt(updatedAt),
+        answeredInRound: 44n,
+      }),
     });
 
-    vi.mocked(helpers.fetchOnchainUint256).mockImplementation(async (opts) => {
-      if (opts.contract === ORACLE_ADDRESS && opts.data === DECIMALS_SELECTOR) return 8n;
-      if (opts.contract === TOKEN_ADDRESS && opts.data === DECIMALS_SELECTOR) return 18n;
-      if (opts.contract === TOKEN_ADDRESS && opts.data === TOTAL_SUPPLY_SELECTOR) return 1_000_000_000_000_000_000n;
-      return null;
-    });
-    vi.mocked(helpers.fetchOnchainRawCall).mockImplementation(async (opts) => {
-      if (opts.contract === ORACLE_ADDRESS && opts.data === LATEST_ROUND_DATA_SELECTOR) return staleRoundData;
-      return null;
-    });
-
-    const config = makeChainlinkNavConfig({
-      params: {
-        assetLabel: "Re7-managed DeFi yield strategy NAV",
-        assetRisk: "high",
-        maxOracleAgeSec,
-      },
-    });
-
-    await expect(fetchChainlinkNavCore(
-      {} as never,
-      config as never,
-      new AbortController().signal,
-      { nowSec: updatedAt + maxOracleAgeSec + 1 },
+    const installed = installAdapterNetwork(network);
+    await expect(runNav(
+      makeChainlinkNavConfig({
+        params: {
+          assetLabel: "Re7-managed DeFi yield strategy NAV",
+          assetRisk: "high",
+          maxOracleAgeSec,
+        },
+      }),
+      installed,
+      updatedAt + maxOracleAgeSec + 1,
     )).rejects.toThrow(`chainlink-nav: oracle data is stale (${maxOracleAgeSec + 1}s > ${maxOracleAgeSec}s)`);
 
-    expect(helpers.fetchOnchainMulticall3).toHaveBeenCalledTimes(1);
-    expect(helpers.fetchOnchainMulticall3).toHaveBeenCalledWith(expect.objectContaining({
-      chain: "ethereum",
-      calls: [
-        { label: "token-decimals", contract: TOKEN_ADDRESS, data: DECIMALS_SELECTOR },
-        { label: "token-total-supply", contract: TOKEN_ADDRESS, data: TOTAL_SUPPLY_SELECTOR },
-        { label: "oracle-decimals", contract: ORACLE_ADDRESS, data: DECIMALS_SELECTOR },
-        { label: "oracle-latest-round-data", contract: ORACLE_ADDRESS, data: LATEST_ROUND_DATA_SELECTOR },
-      ],
-    }));
+    expect(installed.rpcCalls.filter((call) => call.viaMulticall).map((call) => ({
+      contract: call.contract,
+      data: call.data,
+    }))).toEqual([
+      { contract: TOKEN_ADDRESS.toLowerCase(), data: DECIMALS_SELECTOR },
+      { contract: TOKEN_ADDRESS.toLowerCase(), data: TOTAL_SUPPLY_SELECTOR },
+      { contract: ORACLE_ADDRESS.toLowerCase(), data: DECIMALS_SELECTOR },
+      { contract: ORACLE_ADDRESS.toLowerCase(), data: LATEST_ROUND_DATA_SELECTOR },
+    ]);
   });
 
   it("reads getPriceData directly and marks freshness verified", async () => {
-    const helpers = await import("../helpers");
-    const { fetchChainlinkNavCore } = await import("../chainlink-nav-core");
     const updatedAt = 1_775_684_339;
     const rawPriceData = "0x"
       + "00000000000000000000000000000000000000000000000639e961576659e000"
-      + "0000000000000000000000000000000000000000000000000000000069d6caf3";
+      + "0000000000000000000000000000000000000000000000000000000069d6caf3" as `0x${string}`;
+    const network = navNetwork({ priceData: rawPriceData });
 
-    vi.mocked(helpers.fetchOnchainUint256).mockImplementation(async (opts) => {
-      if (opts.data === "0x313ce567") return 18n; // decimals()
-      if (opts.data === "0x18160ddd") return 500_000_000_000_000_000_000n; // totalSupply()
-      return null;
-    });
-    vi.mocked(helpers.fetchOnchainRawCall).mockImplementation(async (opts) => {
-      if (opts.data === "0xa4a28168" && opts.contract === ORACLE_ADDRESS) {
-        return rawPriceData;
-      }
-      return null;
-    });
-
-    const config = makeChainlinkNavConfig({
-      params: {
-        assetLabel: "Ondo T-Bills",
-        assetRisk: "very-low",
-        oracleMethod: "getPriceData",
-      },
-    });
-
-    const result = await fetchChainlinkNavCore(
-      {} as never,
-      config as never,
-      new AbortController().signal,
-      { nowSec: updatedAt + 60 },
+    const { result, network: installed } = await runNav(
+      makeChainlinkNavConfig({
+        params: {
+          assetLabel: "Ondo T-Bills",
+          assetRisk: "very-low",
+          oracleMethod: "getPriceData",
+        },
+      }),
+      network,
+      updatedAt + 60,
     );
 
     expect(result.warnings).toBeUndefined();
@@ -277,42 +288,17 @@ describe("fetchChainlinkNavCore", () => {
       capacityKind: "documented-bound",
       freshnessKind: "verified-source-timestamp",
     });
-    expect(helpers.fetchOnchainRawCall).toHaveBeenCalledTimes(1);
-    expect(helpers.fetchOnchainUint256).toHaveBeenCalledTimes(2);
+    expect(installed.rpcCalls.filter((call) => !call.viaMulticall)).toHaveLength(3);
   });
 
   it("emits opt-in OUSG InstantManager redemption capacity from the pinned default route", async () => {
-    const helpers = await import("../helpers");
-    const { fetchChainlinkNavCore } = await import("../chainlink-nav-core");
     const updatedAt = 1_775_684_339;
     const rawPriceData = "0x"
       + "00000000000000000000000000000000000000000000000639e961576659e000"
-      + "0000000000000000000000000000000000000000000000000000000069d6caf3";
+      + "0000000000000000000000000000000000000000000000000000000069d6caf3" as `0x${string}`;
+    const network = navNetwork({ priceData: rawPriceData, redemption: true });
 
-    vi.mocked(helpers.fetchOnchainUint256).mockImplementation(async (opts) => {
-      if (opts.data === DECIMALS_SELECTOR) return 18n;
-      if (opts.data === TOTAL_SUPPLY_SELECTOR) return 500_000_000_000_000_000_000n;
-      if (opts.contract === MANAGER_ADDRESS && opts.data === "0x8f8eb812") {
-        return 4_999_990_000_000_000_000_000n;
-      }
-      if (opts.contract === ROUTER_ADDRESS && opts.data.startsWith("0x6cde714a")) {
-        return 8_499_999_997_683n;
-      }
-      return null;
-    });
-    vi.mocked(helpers.fetchOnchainRawCall).mockImplementation(async (opts) => {
-      if (opts.contract === ORACLE_ADDRESS && opts.data === "0xa4a28168") return rawPriceData;
-      if (opts.contract === MANAGER_ADDRESS && opts.data === "0x8f4f9613") return encodeAddressResult(ROUTER_ADDRESS);
-      if (opts.contract === ROUTER_ADDRESS && opts.data.startsWith("0x2021065d")) {
-        return encodeAddressResult(SOURCE_ADDRESS);
-      }
-      if (opts.contract === MANAGER_ADDRESS && opts.data === "0xb235d468") return encodeUint256Result(0n);
-      if (opts.contract === MANAGER_ADDRESS && opts.data.startsWith("0x884a0501")) return encodeUint256Result(1n);
-      return null;
-    });
-
-    const result = await fetchChainlinkNavCore(
-      {} as never,
+    const { result } = await runNav(
       makeChainlinkNavConfig({
         params: {
           assetLabel: "Ondo T-Bills",
@@ -326,9 +312,9 @@ describe("fetchChainlinkNavCore", () => {
             pauseSelector: "0xb235d468",
           },
         },
-      }) as never,
-      new AbortController().signal,
-      { nowSec: updatedAt + 60 },
+      }),
+      network,
+      updatedAt + 60,
     );
 
     expect(result.metadata?.redemption).toMatchObject({
@@ -344,32 +330,17 @@ describe("fetchChainlinkNavCore", () => {
   });
 
   it("keeps NAV telemetry when the opt-in redemption probe fails closed", async () => {
-    const helpers = await import("../helpers");
-    const { fetchChainlinkNavCore } = await import("../chainlink-nav-core");
     const updatedAt = 1_775_684_339;
     const rawPriceData = "0x"
       + "00000000000000000000000000000000000000000000000639e961576659e000"
-      + "0000000000000000000000000000000000000000000000000000000069d6caf3";
-
-    vi.mocked(helpers.fetchOnchainUint256).mockImplementation(async (opts) => {
-      if (opts.data === DECIMALS_SELECTOR) return 18n;
-      if (opts.data === TOTAL_SUPPLY_SELECTOR) return 500_000_000_000_000_000_000n;
-      if (opts.contract === MANAGER_ADDRESS && opts.data === "0x8f8eb812") return 5_000n * 10n ** 18n;
-      if (opts.contract === ROUTER_ADDRESS && opts.data.startsWith("0x6cde714a")) return 8_500_000n * 10n ** 6n;
-      return null;
-    });
-    vi.mocked(helpers.fetchOnchainRawCall).mockImplementation(async (opts) => {
-      if (opts.contract === ORACLE_ADDRESS && opts.data === "0xa4a28168") return rawPriceData;
-      if (opts.contract === MANAGER_ADDRESS && opts.data === "0x8f4f9613") return encodeAddressResult(ROUTER_ADDRESS);
-      if (opts.contract === ROUTER_ADDRESS && opts.data.startsWith("0x2021065d")) {
-        return encodeAddressResult(SOURCE_ADDRESS);
-      }
-      if (opts.contract === MANAGER_ADDRESS && opts.data.startsWith("0x884a0501")) return encodeUint256Result(1n);
-      return null;
+      + "0000000000000000000000000000000000000000000000000000000069d6caf3" as `0x${string}`;
+    const network = navNetwork({
+      priceData: rawPriceData,
+      redemption: true,
+      pauseValue: encodeUint256Result(2n),
     });
 
-    const result = await fetchChainlinkNavCore(
-      {} as never,
+    const { result } = await runNav(
       makeChainlinkNavConfig({
         params: {
           assetLabel: "Ondo T-Bills",
@@ -383,9 +354,9 @@ describe("fetchChainlinkNavCore", () => {
             pauseSelector: "0xb235d468",
           },
         },
-      }) as never,
-      new AbortController().signal,
-      { nowSec: updatedAt + 60 },
+      }),
+      network,
+      updatedAt + 60,
     );
 
     expect(result.metadata?.navPerToken).toBe("114.853438");
@@ -394,41 +365,24 @@ describe("fetchChainlinkNavCore", () => {
   });
 
   it("emits chainlink-nav-wrapper-oracle-malformed when the wrapper oracle returns garbage", async () => {
-    const helpers = await import("../helpers");
-    const { fetchChainlinkNavCore } = await import("../chainlink-nav-core");
-
-    vi.mocked(helpers.fetchOnchainUint256).mockImplementation(async (opts) => {
-      if (opts.data === "0x313ce567") return 6n; // decimals()
-      if (opts.data === "0x18160ddd") return 500_000_000n; // totalSupply()
-      if (opts.data.startsWith("0xb3596f07")) return 1_000_000_000_000_000_000n; // getAssetPrice(addr) → 1e18
-      return null;
+    const network = navNetwork({
+      tokenDecimals: 6n,
+      totalSupply: 500_000_000n,
+      assetPrice: 1_000_000_000_000_000_000n,
+      wrapperAddress: WRAPPER_ADDRESS,
     });
-    vi.mocked(helpers.fetchOnchainRawCall).mockImplementation(async (opts) => {
-      if (opts.data.startsWith("0xeca6f018")) {
-        // tokenToRwaOracle(addr) returns wrapper address
-        return `0x000000000000000000000000${WRAPPER_ADDRESS.slice(2)}` as `0x${string}`;
-      }
-      if (opts.data === "0xa4a28168" && opts.contract === WRAPPER_ADDRESS) {
-        // Malformed getPriceData() payload — wrong length
-        return "0xdeadbeef";
-      }
-      return null;
-    });
-
-    const config = makeChainlinkNavConfig({
-      semantics: "collateral-mix",
-      params: {
-        navScope: "portfolio",
-        assetLabel: "Ondo T-Bills",
-        assetRisk: "very-low",
-        oracleMethod: "getAssetPrice",
-      },
-    });
-
-    const result = await fetchChainlinkNavCore(
-      {} as never,
-      config as never,
-      new AbortController().signal,
+    const { result } = await runNav(
+      makeChainlinkNavConfig({
+        semantics: "collateral-mix",
+        params: {
+          navScope: "portfolio",
+          assetLabel: "Ondo T-Bills",
+          assetRisk: "very-low",
+          oracleMethod: "getAssetPrice",
+        },
+      }),
+      network,
+      1_775_684_399,
     );
 
     expect(result.warnings?.some((w) => w.code === "chainlink-nav-wrapper-oracle-malformed")).toBe(true);

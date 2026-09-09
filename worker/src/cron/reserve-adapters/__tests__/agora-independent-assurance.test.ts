@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { getIndependentAssuranceManifest, reconcileIndependentAssuranceManifest } from "@shared/lib/independent-assurance";
 import { AGORA_INDEPENDENT_ASSURANCE_PROFILE } from "../agora-independent-assurance";
+import { installAdapterNetwork, runAdapter } from "./reserve-adapter.test-support";
 
 const manifest = getIndependentAssuranceManifest("AUSD");
 const prepareIndexHtml = AGORA_INDEPENDENT_ASSURANCE_PROFILE.prepareIndexHtml!;
@@ -69,5 +70,19 @@ describe("Agora reviewed index link verification", () => {
       ...manifest,
       assets: manifest.assets.filter((row) => row.code !== "stablecoins"),
     })).toThrow("computed asset total 235413169 does not match manifest 241476955");
+  });
+
+  it("fails closed when the reviewed report href is dropped from the official index", async () => {
+    const network = installAdapterNetwork({
+      html: {
+        [manifest.officialIndexUrl]: `<a data-report-url="${manifest.reportUrl}">July 2026</a>`,
+      },
+    });
+
+    await expect(runAdapter("agora-independent-assurance", "ausd-agora", {
+      network,
+      nowSec: 1_757_003_600,
+    })).rejects.toThrow(/reviewed July report link missing or ambiguous/);
+    expect(network.requests.map((request) => request.url)).toEqual([manifest.officialIndexUrl]);
   });
 });

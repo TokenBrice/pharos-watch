@@ -4,12 +4,11 @@ import ctusdReserves from "@shared/data/stablecoins/domains/reserves/ctusd-citre
 import usdatReserves from "@shared/data/stablecoins/domains/reserves/usdat-saturn.json";
 import ctusdCoin from "@shared/data/stablecoins/coins/ctusd-citrea.json";
 import usdatCoin from "@shared/data/stablecoins/coins/usdat-saturn.json";
-import type { LiveReservesConfig } from "@shared/types/live-reserves";
 import type { StablecoinMeta } from "@shared/types/core";
-import { adaptM0Collateral, fetchM0Reserves } from "../m0";
+import { adaptM0Collateral } from "../m0";
 import { getReserveAdapter } from "../index";
 import { validateAdapterOutput } from "../validate";
-
+import { runAdapter } from "./reserve-adapter.test-support";
 // Live payload shape observed against protocol-api.m0.org on 2026-08-20, after
 // M0 retired the off-chain CollateralCurrent composition feed and moved the
 // endpoint to keyed access. Values are 6-decimal token units.
@@ -242,19 +241,39 @@ describe("adaptM0Collateral", () => {
 });
 
 describe("fetchM0Reserves", () => {
-  it("fails closed before fetching when M0_API_KEY is not configured", async () => {
-    const config = {
-      adapter: "m0",
-      version: 1,
-      semantics: "protocol-reserve",
-      inputs: { primary: { kind: "http-json", url: "https://protocol-api.m0.org/graphql" } },
-    } as unknown as LiveReservesConfig;
+  it("fetches the keyed GraphQL payload through the shared network harness", async () => {
+    const { result, network } = await runAdapter("m0", "musd-metamask", {
+      network: {
+        json: {
+          "https://protocol-api.m0.org/graphql": (request: Request) => {
+            expect(request.method).toBe("POST");
+            expect(request.headers.get("authorization")).toBe("ApiKey test-key");
+            return SAMPLE_PAYLOAD;
+          },
+        },
+      },
+      ctx: { m0ApiKey: "test-key" },
+      nowSec: 1_787_171_387 + 3_600,
+    });
 
-    await expect(
-      fetchM0Reserves({} as StablecoinMeta, config, new AbortController().signal, {}),
-    ).rejects.toThrow(/M0_API_KEY not configured/);
-    await expect(
-      fetchM0Reserves({} as StablecoinMeta, config, new AbortController().signal, { m0ApiKey: "   " }),
-    ).rejects.toThrow(/M0_API_KEY not configured/);
+    expect(result.slices).toEqual([
+      {
+        sourceKey: "m0:eligible-collateral",
+        name: "U.S. Treasury bills & cash (M0 eligible collateral)",
+        pct: 100,
+        risk: "very-low",
+      },
+    ]);
+    expect(network.requests).toEqual([{ url: "https://protocol-api.m0.org/graphql", method: "POST" }]);
+  });
+
+  it("fails closed before fetching when M0_API_KEY is not configured", async () => {
+    for (const m0ApiKey of [undefined, "   "]) {
+      await expect(runAdapter("m0", "musd-metamask", {
+        network: { json: { "https://protocol-api.m0.org/graphql": SAMPLE_PAYLOAD } },
+        ctx: { m0ApiKey },
+        nowSec: 1_787_171_387 + 3_600,
+      })).rejects.toThrow(/M0_API_KEY not configured/);
+    }
   });
 });

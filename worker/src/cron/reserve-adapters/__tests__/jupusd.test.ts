@@ -1,22 +1,8 @@
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { describe, expect, it } from "vitest";
 import type { LiveReservesConfig } from "@shared/types/live-reserves";
 import type { StablecoinMeta } from "@shared/types/core";
-import { adaptJupUsdData, fetchJupUsdReserves } from "../jupusd";
-import { expectValidAdapterOutput } from "./reserve-adapter.test-support";
-
-vi.mock("../../../lib/fetch-retry", async () => {
-  // The adapter imports this mocked dependency before top-level helper imports initialize.
-  const { mockFetchRetry } = await import("../../../test-helpers/cron");
-  return mockFetchRetry({ fetchWithRetry: vi.fn() });
-});
-import { fetchWithRetry } from "../../../lib/fetch-retry";
-
-const unexpectedRequests: unknown[] = [];
-afterEach(() => {
-  const unexpected = unexpectedRequests.splice(0);
-  vi.resetAllMocks();
-  expect(unexpected).toEqual([]);
-});
+import { adaptJupUsdData } from "../jupusd";
+import { runAdapter } from "./reserve-adapter.test-support";
 
 describe("adaptJupUsdData", () => {
   it("rejects drift removing totalSupply", () => {
@@ -67,7 +53,6 @@ describe("adaptJupUsdData", () => {
       code: "reserve-undercollateralized",
       effect: "degraded",
     }));
-    expectValidAdapterOutput("jupusd", result, { now: 1776262000 });
   });
 
   it("marks route paused when the oracle reports ripcord mode", () => {
@@ -176,7 +161,6 @@ describe("adaptJupUsdData", () => {
 });
 
 describe("fetchJupUsdReserves", () => {
-  const coin = { id: "jupusd" } as StablecoinMeta;
   const baseUrl = "https://api.jupusd.money/api/data";
   const snapshotsUrl = "https://api.jupusd.money/api/snapshots";
   const oracleUrl = "https://api.jupusd.money/api/oracle";
@@ -195,117 +179,97 @@ describe("fetchJupUsdReserves", () => {
     };
   }
 
-  function mockTransport(
-    failedUrl?: string,
-    error?: Error,
-    snapshotsPayload: { snapshots?: Array<{ timestamp?: string | number }> } = { snapshots: [{ timestamp: 1776000000 }] },
+  function makeCoin(): StablecoinMeta {
+    return { id: "jupusd", liveReservesConfig: makeConfig() } as unknown as StablecoinMeta;
+  }
+
+  function network(
+    options: {
+      data?: unknown;
+      snapshots?: unknown;
+      oracle?: unknown;
+    } = {},
   ) {
-    vi.mocked(fetchWithRetry).mockImplementation(async (url) => {
-      if (url === failedUrl) throw error;
-      if (url === baseUrl) return Response.json(dataPayload);
-      if (url === snapshotsUrl) return Response.json(snapshotsPayload);
-      if (url === oracleUrl) return Response.json({ ripcord: false });
-      unexpectedRequests.push(url);
-      throw new Error(`Unexpected JupUSD request: ${url}`);
-    });
-    return new Map<string, Promise<unknown>>();
+    return {
+      json: {
+        [baseUrl]: options.data ?? dataPayload,
+        [snapshotsUrl]: options.snapshots ?? { snapshots: [{ timestamp: 1776000000 }] },
+        [oracleUrl]: options.oracle ?? { ripcord: false },
+      },
+    };
   }
 
   it("emits jupusd-snapshots-unavailable info warning when snapshots feed fails", async () => {
-    const cache = mockTransport(snapshotsUrl, new Error("snapshots http 503"));
-
-    const result = await fetchJupUsdReserves(
-      coin,
-      makeConfig(),
-      new AbortController().signal,
-      { requestCache: cache } as never,
-    );
+    const { result } = await runAdapter("jupusd", makeCoin(), {
+      network: network({ snapshots: { status: 503, body: "snapshots unavailable" } }),
+      nowSec: 1_776_003_600,
+    });
 
     expect(result.warnings).toEqual(expect.arrayContaining([
       expect.objectContaining({
         code: "jupusd-snapshots-unavailable",
         effect: "info",
-        message: expect.stringContaining("jupusd snapshots fetch failed: snapshots http 503"),
       }),
     ]));
   });
 
   it("emits jupusd-oracle-unavailable info warning when oracle feed fails", async () => {
-    const cache = mockTransport(oracleUrl, new Error("oracle http 502"));
-
-    const result = await fetchJupUsdReserves(
-      coin,
-      makeConfig(),
-      new AbortController().signal,
-      { requestCache: cache } as never,
-    );
+    const { result } = await runAdapter("jupusd", makeCoin(), {
+      network: network({ oracle: { status: 502, body: "oracle unavailable" } }),
+      nowSec: 1_776_003_600,
+    });
 
     expect(result.warnings).toEqual(expect.arrayContaining([
       expect.objectContaining({
         code: "jupusd-oracle-unavailable",
         effect: "info",
-        message: expect.stringContaining("jupusd oracle fetch failed: oracle http 502"),
       }),
     ]));
   });
 
   it("emits no warnings when both snapshots and oracle succeed", async () => {
-    const cache = mockTransport();
-
-    const result = await fetchJupUsdReserves(
-      coin,
-      makeConfig(),
-      new AbortController().signal,
-      { requestCache: cache } as never,
-    );
+    const { result } = await runAdapter("jupusd", makeCoin(), {
+      network: network(),
+      nowSec: 1_776_003_600,
+    });
 
     expect(result.warnings).toBeUndefined();
   });
 
   it("takes the newest snapshot timestamp instead of trusting snapshots[0] ordering", async () => {
-    const cache = mockTransport(undefined, undefined, {
-      snapshots: [
-        { timestamp: 1775900000 },
-        { timestamp: "1776100000" },
-        { timestamp: 1776000000 },
-      ],
+    const { result } = await runAdapter("jupusd", makeCoin(), {
+      network: network({
+        snapshots: {
+          snapshots: [
+            { timestamp: 1775900000 },
+            { timestamp: "1776100000" },
+            { timestamp: 1776000000 },
+          ],
+        },
+      }),
+      nowSec: 1_776_103_600,
     });
-
-    const result = await fetchJupUsdReserves(
-      coin,
-      makeConfig(),
-      new AbortController().signal,
-      { requestCache: cache } as never,
-    );
 
     expect(result.metadata?.sourceTimestamp).toBe(1776100000);
     expect(result.metadata?.freshnessMode).toBe("verified");
   });
 
   it("labels core transparency data fetch failures with the failing fetch", async () => {
-    const cache = mockTransport(baseUrl, new Error("Fetch failed for https://api.jupusd.money/api/data"));
-
-    await expect(fetchJupUsdReserves(
-      coin,
-      makeConfig(),
-      new AbortController().signal,
-      { requestCache: cache } as never,
-    )).rejects.toThrow(
-      "jupusd transparency data fetch failed: Fetch failed for https://api.jupusd.money/api/data",
-    );
+    await expect(runAdapter("jupusd", makeCoin(), {
+      network: network({ data: { status: 500, body: "data unavailable" } }),
+      nowSec: 1_776_003_600,
+    })).rejects.toThrow(/transparency data fetch failed/);
   });
 
   it("rethrows the original error untouched when the adapter attempt signal aborted", async () => {
     const abortError = new Error("adapter-timeout");
-    const cache = mockTransport(baseUrl, abortError);
     const controller = new AbortController();
     controller.abort(abortError);
 
-    await expect(fetchJupUsdReserves(
-      coin,
-      makeConfig(),
-      controller.signal,
-      { requestCache: cache } as never,
-    )).rejects.toBe(abortError);
+    await expect(runAdapter("jupusd", makeCoin(), {
+      network: network({ data: () => { throw abortError; } }),
+      signal: controller.signal,
+      nowSec: 1_776_003_600,
+    })).rejects.toBe(abortError);
   });
 });

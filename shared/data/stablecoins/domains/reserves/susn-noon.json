@@ -2,6 +2,7 @@
   "id": "susn-noon",
   "reserves": [
     {
+      "sourceKey": "erc4626-single-asset:ethereum:0xda67b4284609d2d48e5d10cfac411572727dc1ed",
       "name": "USN staking wrapper shares",
       "pct": 100,
       "risk": "high",

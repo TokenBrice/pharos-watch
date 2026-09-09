@@ -1,34 +1,16 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import type { StablecoinMeta } from "@shared/types/core";
-import type { LiveReservesConfig } from "@shared/types/live-reserves";
+import { describe, expect, it } from "vitest";
 
-vi.mock("../helpers", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("../helpers")>();
-  return {
-    ...actual,
-    fetchJsonWithRetry: vi.fn(),
-    fetchOnchainMulticall3: vi.fn(),
-  };
-});
-
-import { adaptCollateralPositions, fetchCollateralPositionsApiReserves } from "../collateral-positions-api";
-import { fetchJsonWithRetry, fetchOnchainMulticall3 } from "../helpers";
-import { mockedReserveHelper } from "./reserve-adapter.test-support";
+import { adaptCollateralPositions } from "../collateral-positions-api";
+import {
+  runAdapter,
+  type AdapterNetworkSpec,
+  type AdapterRpcValue,
+} from "./reserve-adapter.test-support";
 import {
   COLLATERAL_POSITION_MIN_SLICE_PCT,
   COLLATERAL_POSITION_PRICES,
   COLLATERAL_POSITIONS_BY_ASSET,
 } from "./reserve-adapter-payloads.test-support";
-
-let signal: AbortSignal;
-
-const unexpectedBridgeRequests: unknown[] = [];
-afterEach(() => { expect(unexpectedBridgeRequests).toEqual([]); });
-beforeEach(() => {
-  signal = new AbortController().signal;
-  vi.clearAllMocks();
-  unexpectedBridgeRequests.length = 0;
-});
 
 describe("adaptCollateralPositions", () => {
   it("uses the oldest active per-asset timestamp and refuses partial freshness coverage", () => {
@@ -387,144 +369,129 @@ describe("adaptCollateralPositions", () => {
   });
 });
 
-const DEURO = "0xbA3f535bbCcCcA2A154b573Ca6c5A49BAAE0a3ea";
-const EURS_BRIDGE = "0x73f38ca06b27eaefb1612d062d885f58924f5897";
-const EURS = "0xdb25f211ab05b1c97d595516f45794528a807ad8";
-const EURC_BRIDGE = "0xB4fF7412f08C22d7381885e8BdA9EE9825092fd1";
-const EURC = "0x1aBaEA1f7C830bD89Acc67eC4af516284b1bC33c";
 
-const BRIDGE_BASKET_CONFIG: LiveReservesConfig = {
-  adapter: "collateral-positions-api",
-  version: 1,
-  semantics: "collateral-mix",
-  inputs: { primary: { kind: "http-json", url: "https://example.com/positions" } },
-  params: {
-    pricesUrl: "https://example.com/prices",
-    redemptionBridgeBasket: {
-      chain: "ethereum",
-      rpcMode: "public-rpc",
-      dEuroAddress: DEURO,
-      eurUsdPriceAddress: DEURO,
-      bridges: [
-        { label: "EURS", bridgeAddress: EURS_BRIDGE, tokenAddress: EURS, tokenDecimals: 2 },
-        { label: "EURC", bridgeAddress: EURC_BRIDGE, tokenAddress: EURC, tokenDecimals: 6 },
-      ],
-      rpcUrl: "https://ethereum-rpc.publicnode.com",
-      sourceUrls: ["https://docs.deuro.com/smart-contracts"],
-    },
+// The catalog config for deuro-deuro owns the basket: runAdapter drives the
+// real nine-bridge roster, so a renamed param or dropped bridge fails the run
+// with the exact unanswered calldata. This mirror only carries the amounts the
+// assertions read back.
+const POSITIONS_URL = "https://api.deuro.com/ecosystem/collateral/positions/details";
+const PRICES_URL = "https://api.deuro.com/prices/mapping";
+const DEURO = "0xba3f535bbcccca2a154b573ca6c5a49baae0a3ea";
+const WBTC_ADDRESS = "0x2260fac5e5542a773aa44fbcfedf7c193bc2c599";
+
+const BRIDGE_INVENTORY: Array<{
+  label: string;
+  bridge: string;
+  token: string;
+  decimals: number;
+  inventoryRaw: bigint;
+}> = [
+  { label: "EURT", bridge: "0x2353d16869f717bfcd22dabc0adbf4dca62c609f", token: "0xc581b735a1688071a1746c968e0798d642ede491", decimals: 6, inventoryRaw: 1_000_000n },
+  { label: "EURS", bridge: "0x73f38ca06b27eaefb1612d062d885f58924f5897", token: "0xdb25f211ab05b1c97d595516f45794528a807ad8", decimals: 2, inventoryRaw: 51n },
+  { label: "VEUR", bridge: "0x76d8f514554a4a8e5d6103875f2dd7a67543692b", token: "0x6ba75d640bebfe5da1197bb5a2aff3327789b5d3", decimals: 18, inventoryRaw: 2n * 10n ** 18n },
+  { label: "EURC", bridge: "0xb4ff7412f08c22d7381885e8bda9ee9825092fd1", token: "0x1abaea1f7c830bd89acc67ec4af516284b1bc33c", decimals: 6, inventoryRaw: 100_250_000n },
+  { label: "EURR", bridge: "0x20b0a153ff16c7b1e962fd3d3352a00cf019f1a7", token: "0x50753cfaf86c094925bf976f218d043f8791e408", decimals: 6, inventoryRaw: 500_000n },
+  { label: "EUROP", bridge: "0x3ef3d03efcc1338d6210946f8cf5fb1a8b630341", token: "0x888883b5f5d21fb10dfeb70e8f9722b9fb0e5e51", decimals: 6, inventoryRaw: 10_000_000n },
+  { label: "EURI", bridge: "0xb66a40934a996373fa7602de9820c6bf3e8c9afe", token: "0x9d1a7a3191102e9f900faa10540837ba84dcbae7", decimals: 18, inventoryRaw: 3n * 10n ** 18n },
+  { label: "EURE", bridge: "0x4dfd460d54854087af195906a2f260aa483a13b1", token: "0x3231cb76718cdef2155fc47b5286d82e6eda273f", decimals: 18, inventoryRaw: 4n * 10n ** 18n },
+  { label: "EURA", bridge: "0x05620f4bb92246b4e067ebc0b6f5c7ff6b771702", token: "0x1a7e4e63778b4f12a199c062f3efdd288afcbce8", decimals: 18, inventoryRaw: 5n * 10n ** 18n },
+];
+
+const POSITIONS_PAYLOAD = {
+  wbtc: {
+    address: WBTC_ADDRESS,
+    name: "Wrapped BTC",
+    symbol: "WBTC",
+    decimals: 8,
+    positions: [{ collateralBalance: "100000000" }],
   },
 };
 
-const TEST_COIN = { id: "deuro-deuro", name: "dEURO", ticker: "DEURO" } as unknown as StablecoinMeta;
+const BASE_PRICES = {
+  [WBTC_ADDRESS]: { price: { usd: 100_000 } },
+  [DEURO]: { price: { usd: 1.2, eur: 1 } },
+};
 
-function word(value: bigint | boolean | string): `0x${string}` {
-  if (typeof value === "string") {
-    return `0x${value.replace(/^0x/, "").toLowerCase().padStart(64, "0")}` as `0x${string}`;
-  }
-  const uint = typeof value === "boolean" ? (value ? 1n : 0n) : value;
-  return `0x${uint.toString(16).padStart(64, "0")}` as `0x${string}`;
+interface BridgeBasketOptions {
+  inventories?: Record<string, bigint>;
+  failedInventoryLabel?: string;
+  mismatchedUnderlyingLabel?: string;
+  prices?: Record<string, { price?: { usd?: number; eur?: number } }>;
 }
 
-function primeBridgeBasketMocks(options: {
-  balances?: [bigint, bigint];
-  failedLabel?: string;
-  underlyingOverride?: string;
-} = {}) {
-  mockedReserveHelper(fetchJsonWithRetry).mockImplementation(async (url: string) => {
-    if (url.endsWith("/positions")) {
-      return {
-        wbtc: {
-          address: "0xBTC",
-          name: "Wrapped BTC",
-          symbol: "WBTC",
-          decimals: 8,
-          positions: [{ collateralBalance: "100000000" }],
-        },
-      };
-    }
-    return {
-      "0xbtc": { price: { usd: 100_000 } },
-      [DEURO.toLowerCase()]: { price: { usd: 1.2, eur: 1 } },
-    };
-  });
-
-  const balances = options.balances ?? [51n, 100_250_000n];
-  const defaults: Record<string, `0x${string}`> = {
-    "bridge:0:underlying": word(options.underlyingOverride ?? EURS),
-    "bridge:0:deuro": word(DEURO),
-    "bridge:0:decimals": word(2n),
-    "bridge:0:inventory": word(balances[0]),
-    "bridge:0:minter": word(true),
-    "bridge:1:underlying": word(EURC),
-    "bridge:1:deuro": word(DEURO),
-    "bridge:1:decimals": word(6n),
-    "bridge:1:inventory": word(balances[1]),
-    "bridge:1:minter": word(true),
+function bridgeBasketNetwork(options: BridgeBasketOptions = {}): AdapterNetworkSpec {
+  const rpc: Record<string, AdapterRpcValue> = {};
+  for (const bridge of BRIDGE_INVENTORY) {
+    rpc[`${bridge.bridge}:0x7439ae59`] = bridge.label === options.mismatchedUnderlyingLabel
+      ? "0x0000000000000000000000000000000000000001"
+      : bridge.token;
+    rpc[`${bridge.bridge}:0xd395d24b`] = DEURO;
+    rpc[`${bridge.token}:decimals()`] = BigInt(bridge.decimals);
+    rpc[`${bridge.token}:balanceOf(address)`] = bridge.label === options.failedInventoryLabel
+      ? null
+      : (options.inventories?.[bridge.token] ?? bridge.inventoryRaw);
+    rpc[`0xaa271e1a${bridge.bridge.slice(2).padStart(64, "0")}`] = true;
+  }
+  return {
+    json: {
+      [POSITIONS_URL]: POSITIONS_PAYLOAD,
+      [PRICES_URL]: options.prices ?? BASE_PRICES,
+    },
+    rpc,
   };
-  const requests: Record<string, { contract: string; data: string }> = {};
-  for (const [index, bridge, token] of [[0, EURS_BRIDGE, EURS], [1, EURC_BRIDGE, EURC]] as const) {
-    const owner = bridge.slice(2).toLowerCase().padStart(64, "0");
-    requests[`bridge:${index}:underlying`] = { contract: bridge, data: "0x7439ae59" };
-    requests[`bridge:${index}:deuro`] = { contract: bridge, data: "0xd395d24b" };
-    requests[`bridge:${index}:decimals`] = { contract: token, data: "0x313ce567" };
-    requests[`bridge:${index}:inventory`] = { contract: token, data: `0x70a08231${owner}` };
-    requests[`bridge:${index}:minter`] = { contract: DEURO, data: `0xaa271e1a${owner}` };
-  }
-  mockedReserveHelper(fetchOnchainMulticall3).mockImplementation(async ({ calls, chain }) => {
-    if (chain !== "ethereum") {
-      unexpectedBridgeRequests.push({ chain });
-      throw new Error(`Unexpected bridge chain ${chain}`);
-    }
-    return calls.map((call) => {
-      const expected = requests[call.label];
-      if (!expected || call.contract.toLowerCase() !== expected.contract.toLowerCase() || call.data !== expected.data) {
-        unexpectedBridgeRequests.push(call);
-        throw new Error(`Unexpected bridge request ${JSON.stringify(call)}`);
-      }
-      return { label: call.label, success: call.label !== options.failedLabel, returnData: defaults[call.label] };
-    });
-  });
 }
+
+const runBridgeBasket = (options: BridgeBasketOptions = {}) =>
+  runAdapter("collateral-positions-api", "deuro-deuro", { network: bridgeBasketNetwork(options) });
 
 describe("fetchCollateralPositionsApiReserves bridge basket", () => {
   it("sums every verified bridge inventory and converts the EUR total to USD", async () => {
-    primeBridgeBasketMocks();
-    const result = await fetchCollateralPositionsApiReserves(TEST_COIN, BRIDGE_BASKET_CONFIG, signal);
+    const { result, network } = await runBridgeBasket();
 
+    const jsonUrls = network.requests
+      .filter((request) => request.method === "GET")
+      .map((request) => request.url)
+      .sort();
+    expect(jsonUrls).toEqual([POSITIONS_URL, PRICES_URL].sort());
+    expect(network.rpcCalls).toHaveLength(BRIDGE_INVENTORY.length * 5);
+
+    expect(result.slices).toEqual([
+      { sourceKey: "collateral-positions-api:wbtc", name: "WBTC (Wrapped BTC)", pct: 100, risk: "medium" },
+    ]);
     expect(result.metadata).toMatchObject({
       redemption: {
-        capacityUsd: 120.912,
-        capacityEur: 100.76,
+        capacityEur: expect.closeTo(126.26, 6),
+        capacityUsd: expect.closeTo(151.512, 6),
         eurUsdReference: 1.2,
+        eurUsdReferenceSource: DEURO,
         capacityKind: "live-direct-bounded",
+        freshnessKind: "same-run-onchain",
         routeStatus: "open",
-        bridgeInventories: [
-          { label: "EURS", inventoryRaw: "51", inventoryEur: 0.51 },
-          { label: "EURC", inventoryRaw: "100250000", inventoryEur: 100.25 },
-        ],
+        routeStatusSource: "onchain",
+        sourceUrls: expect.arrayContaining(["https://docs.deuro.com/smart-contracts"]),
+        bridgeInventories: expect.arrayContaining([
+          expect.objectContaining({ label: "EURS", inventoryRaw: "51", inventoryEur: 0.51 }),
+          expect.objectContaining({ label: "EURC", inventoryRaw: "100250000", inventoryEur: 100.25 }),
+        ]),
       },
     });
   });
 
-  it("withholds the whole redemption block when one bridge read fails", async () => {
-    primeBridgeBasketMocks({ failedLabel: "bridge:1:inventory" });
-    const result = await fetchCollateralPositionsApiReserves(TEST_COIN, BRIDGE_BASKET_CONFIG, signal);
+  it("withholds the whole redemption block when one bridge inventory read fails", async () => {
+    const { result } = await runBridgeBasket({ failedInventoryLabel: "EURS" });
 
-    expect(result.metadata).not.toHaveProperty("immediateRedeemableUsd");
-    expect(result.metadata).not.toHaveProperty("redemption");
+    expect(result.metadata?.redemption).toBeUndefined();
   });
 
   it("withholds the whole redemption block on an underlying identity mismatch", async () => {
-    primeBridgeBasketMocks({ underlyingOverride: "0x0000000000000000000000000000000000000001" });
-    const result = await fetchCollateralPositionsApiReserves(TEST_COIN, BRIDGE_BASKET_CONFIG, signal);
+    const { result } = await runBridgeBasket({ mismatchedUnderlyingLabel: "EURS" });
 
-    expect(result.metadata).not.toHaveProperty("immediateRedeemableUsd");
-    expect(result.metadata).not.toHaveProperty("redemption");
+    expect(result.metadata?.redemption).toBeUndefined();
   });
 
   it("publishes zero capacity without asserting the route open", async () => {
-    primeBridgeBasketMocks({ balances: [0n, 0n] });
-    const result = await fetchCollateralPositionsApiReserves(TEST_COIN, BRIDGE_BASKET_CONFIG, signal);
+    const emptyInventories = Object.fromEntries(BRIDGE_INVENTORY.map((bridge) => [bridge.token, 0n]));
+    const { result } = await runBridgeBasket({ inventories: emptyInventories });
 
     expect(result.metadata?.redemption).toMatchObject({
       capacityUsd: 0,
@@ -532,5 +499,10 @@ describe("fetchCollateralPositionsApiReserves bridge basket", () => {
       routeStatus: "unknown",
       routeStatusSource: "onchain",
     });
+  });
+
+  it("fails the attempt when an active collateral price row disappears instead of publishing a partial mix", async () => {
+    await expect(runBridgeBasket({ prices: { [DEURO]: { price: { usd: 1.2, eur: 1 } } } }))
+      .rejects.toThrow("missing USD price");
   });
 });

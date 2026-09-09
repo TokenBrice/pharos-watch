@@ -824,6 +824,19 @@ export function adaptCrvUsd(
   extraWarnings: LiveReserveWarning[] = [],
 ): AdapterResult {
   const markets = payload.chains?.ethereum?.data ?? [];
+  // Upstream drift (renamed or dropped collateral fields) must not publish a
+  // silently empty collateral mix while markets are still being reported.
+  const hasReadableMarket = markets.some((market) =>
+    Boolean(market.collateral_token?.symbol)
+    && Number.isFinite(market.collateral_amount_usd)
+    && (market.collateral_amount_usd ?? 0) > 0
+  );
+  const unreadablePayloadWarnings = markets.length > 0 && !hasReadableMarket
+    ? [reserveDegradedWarning(
+        "curve-markets-unreadable",
+        `Curve market payload returned ${markets.length} markets with no readable collateral_amount_usd/collateral_token fields; refusing to publish an empty crvUSD collateral mix`,
+      )]
+    : [];
   const summary = summarizeCrvUsdCollateralBuckets([
     ...markets.map((market) => ({
       source: "direct" as const,
@@ -838,7 +851,7 @@ export function adaptCrvUsd(
       unknownWarning: (symbol: string) => `Unmapped crvUSD Yield Basis collateral market: ${symbol}`,
     })),
   ]);
-  if (!summary) return { slices: [], warnings: [] };
+  if (!summary) return { slices: [], warnings: unreadablePayloadWarnings };
 
   return buildCrvUsdResult(
     summary,
@@ -846,7 +859,7 @@ export function adaptCrvUsd(
       directMarketCount: markets.length,
       yieldBasisMarketCount: yieldBasisMarkets.length,
     },
-    extraWarnings,
+    [...unreadablePayloadWarnings, ...extraWarnings],
     unverifiedFreshnessMetadata(
       "curve-market-api + yield-basis-onchain",
       "Curve market payload does not expose a trustworthy source timestamp even though the Yield Basis leg is current-state on-chain",

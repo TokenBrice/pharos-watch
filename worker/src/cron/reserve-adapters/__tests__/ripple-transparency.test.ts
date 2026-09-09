@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { adaptRippleTransparency, parseRippleReserveBreakdown } from "../ripple-transparency";
+import { expectWarnings, installAdapterNetwork, runAdapter } from "./reserve-adapter.test-support";
 
 const RIPPLE_HTML = `
 <h5>Total Circulating RLUSD</h5>
@@ -33,13 +34,7 @@ describe("adaptRippleTransparency", () => {
       freshnessMode: "verified",
       sourceTimestamp: Date.UTC(2026, 3, 30) / 1000,
     });
-    expect(result.warnings).toEqual([
-      expect.objectContaining({
-        code: "attested-fallback-used",
-        effect: "degraded",
-        message: expect.stringContaining("no asset-class breakdown"),
-      }),
-    ]);
+    expectWarnings(result, ["attested-fallback-used"]);
   });
 
   it("itemizes slices per the attested May 2026 composition when the payload lacks a breakdown", () => {
@@ -173,5 +168,27 @@ describe("parseRippleReserveBreakdown", () => {
         "U.S. Treasury bills 60.1000000%, Government money-market funds 25.20%, Cash and deposit accounts 14.70%",
       ),
     ).toBeNull();
+  });
+});
+
+describe("fetchRippleTransparencyReserves", () => {
+  const url = "https://ripple.com/solutions/stablecoin/transparency/";
+  const nowSec = Date.UTC(2026, 4, 1) / 1000;
+
+  it("fetches RLUSD transparency through the shared network harness", async () => {
+    const { result, network } = await runAdapter("ripple-transparency", "rlusd-ripple", {
+      network: installAdapterNetwork({ html: { [url]: RIPPLE_HTML } }),
+      nowSec,
+    });
+    expect(result.metadata).toMatchObject({ reservesUsd: 1_546_600_000 });
+    expect(network.requests).toEqual([{ url, method: "GET" }]);
+  });
+
+  it("rejects a renamed reserve heading instead of publishing an attested fallback", async () => {
+    await expect(runAdapter("ripple-transparency", "rlusd-ripple", {
+      network: installAdapterNetwork({ html: { [url]: RIPPLE_HTML.replace("RLUSD Reserve Funds", "RLUSD Reserves") } }),
+      nowSec,
+      validate: false,
+    })).rejects.toThrow("layout-changed");
   });
 });

@@ -16,6 +16,7 @@ import {
   normalizeSlices,
   parseTimestampLikeToUnixSeconds,
   requireJsonInputFromConfig,
+  reserveDegradedWarning,
   reserveInfoWarning,
   verifiedFreshnessMetadata,
 } from "./helpers";
@@ -639,6 +640,7 @@ export function adaptMakinaStrategyReserves(
   let grossAssetsUsd = 0;
   let positionCount = 0;
   let debtPositionCount = 0;
+  let missingTimestampPositionCount = 0;
   let oldestPositionUpdatedAt: number | null = null;
   let oldestMaterialPositionUpdatedAt: number | null = null;
   const positionDetails: Array<Record<string, unknown>> = [];
@@ -701,7 +703,8 @@ export function adaptMakinaStrategyReserves(
     chainTotals.set(chainId, (chainTotals.get(chainId) ?? 0) + signedValue);
 
     const updatedAt = typeof entry.updated_at === "number" ? entry.updated_at : null;
-    if (updatedAt != null && (oldestPositionUpdatedAt == null || updatedAt < oldestPositionUpdatedAt)) {
+    if (updatedAt == null) missingTimestampPositionCount += 1;
+    else if (oldestPositionUpdatedAt == null || updatedAt < oldestPositionUpdatedAt) {
       oldestPositionUpdatedAt = updatedAt;
     }
     const protocol = protocolKey(entry.protocol);
@@ -761,6 +764,13 @@ export function adaptMakinaStrategyReserves(
     warnings.push(reserveInfoWarning(
       "makina-unknown-exposure",
       `Makina allocation includes ${unknownExposurePct.toFixed(2)}% unlabelled exposure`,
+    ));
+  }
+  if (missingTimestampPositionCount > 0) {
+    warnings.push(reserveDegradedWarning(
+      "makina-position-timestamp-missing",
+      `Makina allocation omitted updated_at for ${missingTimestampPositionCount} of ${positionCount} positions;`
+        + " position-accounting freshness cannot be fully bounded",
     ));
   }
   if (redemptionWarning) {

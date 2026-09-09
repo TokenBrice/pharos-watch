@@ -2,6 +2,7 @@ import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
+import { expectWarningEffect } from "./reserve-adapter.test-support";
 import { getReserveAdapter } from "../index";
 import { adaptMakinaStrategyReserves, buildMakinaRedemptionMetadata } from "../makina-strategy";
 import { validateAdapterOutput } from "../validate";
@@ -187,6 +188,16 @@ describe("makina-strategy adapter", () => {
 
     expect(result.metadata?.sourceTimestamp).toBe(1785265103);
     expect(validation.warnings.map((warning) => warning.code)).toContain("stale-source-data");
+  });
+
+  it("degrades when a counted position omits its updated_at timestamp", () => {
+    const allocations = structuredClone(ALLOCATIONS_FIXTURE);
+    delete allocations.data.positions[0].updated_at;
+
+    const result = adaptMakinaStrategyReserves(STRATEGY_FIXTURE, allocations, PARAMS);
+
+    expect(result.slices.length).toBeGreaterThan(0);
+    expectWarningEffect(result, "makina-position-timestamp-missing", "degraded");
   });
 
   it("publishes backlog-adjusted live queue capacity without score-bearing settlement delay", () => {

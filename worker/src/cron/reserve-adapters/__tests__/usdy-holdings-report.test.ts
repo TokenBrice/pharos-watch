@@ -1,31 +1,27 @@
-import { describe, expect, it, vi, beforeEach } from "vitest";
+import { describe, expect, it } from "vitest";
 import source from "@shared/data/live-reserves/holdings-reports/usdy.json";
 import { HoldingsReportManifestSchema } from "@shared/lib/holdings-report";
+import { StablecoinMetaSourceAssetSchema } from "@shared/lib/stablecoins/schema";
 import { withoutSuspendedLiveReserves } from "@shared/lib/stablecoins/registry";
 import coinSource from "@shared/data/stablecoins/coins/usdy-ondo-finance.json";
 import reservesSource from "@shared/data/stablecoins/domains/reserves/usdy-ondo-finance.json";
-import { adaptUsdyHoldings, fetchUsdyHoldingsReserves } from "../usdy-holdings-report";
-import { fetchBinaryResponseWithRetry, fetchTextResponseWithRetry } from "../request";
-import { loadStablecoinsCache } from "../../../lib/stablecoins-cache";
-import type { StablecoinMeta } from "@shared/types/core";
-import type { LiveReservesConfig } from "@shared/types/live-reserves";
-
-vi.mock("../request", () => ({ fetchBinaryResponseWithRetry: vi.fn(), fetchTextResponseWithRetry: vi.fn() }));
-vi.mock("../../../lib/stablecoins-cache", () => ({ loadStablecoinsCache: vi.fn(), hasUsableStablecoinsPayload: (value: unknown) => value != null }));
+import { adaptUsdyHoldings } from "../usdy-holdings-report";
+import { runAdapter, type AdapterNetworkSpec } from "./reserve-adapter.test-support";
 
 const report = HoldingsReportManifestSchema.parse(source);
-const coin = { id: "usdy-ondo-finance" } as StablecoinMeta;
-const config = { adapter: "usdy-holdings-report", version: 1, semantics: "collateral-mix" } as LiveReservesConfig;
-const signal = new AbortController().signal;
 
-beforeEach(() => {
-  vi.resetAllMocks();
-  vi.mocked(fetchTextResponseWithRetry).mockResolvedValue({ body: "<html>JS-rendered Dropbox folder</html>", finalUrl: report.listingUrl, headers: new Headers() });
-});
+function usdyNetwork(listingBody = "<html>JS-rendered Dropbox folder</html>", reportBody?: string, reportUrl = report.reportUrl): AdapterNetworkSpec {
+  return {
+    html: {
+      [report.listingUrl]: listingBody,
+      ...(reportBody === undefined ? {} : { [report.reportUrl]: { body: reportBody, url: reportUrl } }),
+    },
+  };
+}
 
 describe("USDY report reconciliation and scope", () => {
   it("keeps the undiscoverable daily series out of runtime live evidence", () => {
-    const usdy = withoutSuspendedLiveReserves({ ...coinSource, ...reservesSource } as StablecoinMeta);
+    const usdy = withoutSuspendedLiveReserves(StablecoinMetaSourceAssetSchema.parse({ ...coinSource, ...reservesSource }));
     expect(usdy?.reserves?.find((slice) => slice.sourceKey === "usdy-holdings-report:excluded-issuance"))
       .toMatchObject({ pct: 2.62, risk: "high" });
     expect(usdy?.liveReservesConfig).toBeUndefined();
@@ -57,21 +53,31 @@ describe("USDY report reconciliation and scope", () => {
   });
 
   it("fails closed when the listing exposes a newer report", async () => {
-    vi.mocked(fetchTextResponseWithRetry).mockResolvedValue({ body: "Ondo USDY LLC_ATCAttest_260904.pdf", finalUrl: report.listingUrl, headers: new Headers() });
-    await expect(fetchUsdyHoldingsReserves(coin, config, signal)).rejects.toThrow(/newer unreviewed report/);
-    expect(fetchBinaryResponseWithRetry).not.toHaveBeenCalled();
+    await expect(runAdapter("usdy-holdings-report", "usdy-ondo-finance", {
+      network: usdyNetwork("Ondo USDY LLC_ATCAttest_260904.pdf"),
+      nowSec: Date.parse(report.reportAsOf) / 1000 + 3_600,
+      validate: false,
+    })).rejects.toThrow(/newer unreviewed report/);
   });
 
   it("rejects hash drift even when the exact byte length is preserved", async () => {
-    vi.mocked(fetchBinaryResponseWithRetry).mockResolvedValue({ body: new Uint8Array(report.reportByteLength), finalUrl: report.reportUrl, headers: new Headers() });
-    await expect(fetchUsdyHoldingsReserves(coin, config, signal)).rejects.toThrow(/SHA-256 drift/);
-    expect(loadStablecoinsCache).not.toHaveBeenCalled();
+    await expect(runAdapter("usdy-holdings-report", "usdy-ondo-finance", {
+      network: usdyNetwork(undefined, "x".repeat(report.reportByteLength)),
+      nowSec: Date.parse(report.reportAsOf) / 1000 + 3_600,
+      validate: false,
+    })).rejects.toThrow(/SHA-256 drift/);
   });
 
   it("rejects size drift and foreign-host redirects", async () => {
-    vi.mocked(fetchBinaryResponseWithRetry).mockResolvedValue({ body: new Uint8Array(1), finalUrl: report.reportUrl, headers: new Headers() });
-    await expect(fetchUsdyHoldingsReserves(coin, config, signal)).rejects.toThrow(/byte length drift/);
-    vi.mocked(fetchBinaryResponseWithRetry).mockResolvedValue({ body: new Uint8Array(report.reportByteLength), finalUrl: "https://evil.example/report.pdf", headers: new Headers() });
-    await expect(fetchUsdyHoldingsReserves(coin, config, signal)).rejects.toThrow(/unapproved report host/);
+    await expect(runAdapter("usdy-holdings-report", "usdy-ondo-finance", {
+      network: usdyNetwork(undefined, "x"),
+      nowSec: Date.parse(report.reportAsOf) / 1000 + 3_600,
+      validate: false,
+    })).rejects.toThrow(/byte length drift/);
+    await expect(runAdapter("usdy-holdings-report", "usdy-ondo-finance", {
+      network: usdyNetwork(undefined, "x".repeat(report.reportByteLength), "https://evil.example/report.pdf"),
+      nowSec: Date.parse(report.reportAsOf) / 1000 + 3_600,
+      validate: false,
+    })).rejects.toThrow(/unapproved report host/);
   });
 });

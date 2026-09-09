@@ -1,35 +1,17 @@
-import type * as EvmRpc from "../../../lib/evm-rpc";
-import { beforeEach, describe, expect, it, vi } from "vitest";
-import type { StablecoinMeta } from "@shared/types/core";
-import type { LiveReservesConfig } from "@shared/types/live-reserves";
+import { describe, expect, it } from "vitest";
 import { encodeFunctionResult, parseAbi, toFunctionSelector } from "viem/utils";
-
-vi.mock("../../../lib/evm-rpc", async (importOriginal) => ({
-  ...await importOriginal<typeof EvmRpc>(),
-  fetchEvmBlockNumber: vi.fn(async () => 12345),
-  fetchEvmBlockTimestamp: vi.fn(async () => 1776154391),
-}));
-
-vi.mock("../helpers", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("../helpers")>();
-  const { makeOnchainCallersMock } = await import("./helpers/onchain-callers-mock");
-  const fetchOnchainRawCall = vi.fn();
-  return {
-    ...actual,
-    fetchOnchainRawCall,
-    fetchDefiLlamaPrices: vi.fn(),
-    makeOnchainCallers: makeOnchainCallersMock({ raw: fetchOnchainRawCall }),
-  };
-});
-
-import { fetchDefiLlamaPrices, fetchOnchainRawCall } from "../helpers";
+import { installAdapterNetwork, runAdapter, type AdapterNetwork } from "./reserve-adapter.test-support";
 import {
   adaptYamatoStates,
   decodeYamatoGetStates,
-  fetchYamatoReserves,
 } from "../yamato";
 
-let signal: AbortSignal;
+const ETHEREUM_RPC = "https://ethereum-rpc.publicnode.com";
+const BLOCK = { number: 12_345, timestamp: 1_776_154_391 };
+const NOW_SEC = BLOCK.timestamp + 30;
+const WETH_ADDRESS = "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2";
+const ETH_PRICE_KEY = `ethereum:${WETH_ADDRESS.toLowerCase()}`;
+const ETH_PRICE_URL = `https://coins.llama.fi/prices/current/${ETH_PRICE_KEY}`;
 const YAMATO_GET_STATES_SELECTOR = toFunctionSelector("getStates()");
 const YAMATO_PRICE_FEED_SELECTOR = toFunctionSelector("priceFeed()");
 const YAMATO_GET_PRICE_SELECTOR = toFunctionSelector("getPrice()");
@@ -37,7 +19,6 @@ const YAMATO_PAUSED_SELECTOR = toFunctionSelector("paused()");
 const YAMATO_PRIORITY_REGISTRY_SELECTOR = toFunctionSelector("priorityRegistry()");
 const PRIORITY_REGISTRY_YAMATO_SELECTOR = toFunctionSelector("yamato()");
 const PRIORITY_REGISTRY_GET_REDEEMABLES_CAP_SELECTOR = toFunctionSelector("getRedeemablesCap()");
-const coin = { id: "cjpy-yamato" } as StablecoinMeta;
 const YAMATO_ADDRESS = "0x1111111111111111111111111111111111111111" as const;
 const PRICE_FEED_ADDRESS = "0x2222222222222222222222222222222222222222" as const;
 const PRIORITY_REGISTRY_ADDRESS = "0x3333333333333333333333333333333333333333" as const;
@@ -109,13 +90,14 @@ function encodeAddress(
 function encodeRedeemablesCap(capRaw: bigint): `0x${string}` {
   return encodeFunctionResult({ abi: REDEMPTION_TEST_ABI, functionName: "getRedeemablesCap", result: capRaw });
 }
+type YamatoResponse = `0x${string}` | null;
+type NetworkOptions = {
+  responses?: Record<string, YamatoResponse>;
+  ethPrice?: number | null;
+};
 
-/**
- * The fetch path issues seven overlapping calls, so responses are dispatched by
- * selector rather than by call order.
- */
-function mockOnchainCalls(overrides: Record<string, `0x${string}` | null> = {}): void {
-  const responses: Record<string, `0x${string}` | null> = {
+function installYamatoNetwork(options: NetworkOptions = {}): AdapterNetwork {
+  const responses: Record<string, YamatoResponse> = {
     [YAMATO_GET_STATES_SELECTOR]: encodeStates(),
     [YAMATO_PRICE_FEED_SELECTOR]: encodePriceFeedAddress(),
     [YAMATO_GET_PRICE_SELECTOR]: encodeEthJpyPrice(),
@@ -123,36 +105,46 @@ function mockOnchainCalls(overrides: Record<string, `0x${string}` | null> = {}):
     [YAMATO_PRIORITY_REGISTRY_SELECTOR]: encodeAddress("priorityRegistry", PRIORITY_REGISTRY_ADDRESS),
     [PRIORITY_REGISTRY_YAMATO_SELECTOR]: encodeAddress("yamato", YAMATO_ADDRESS),
     [PRIORITY_REGISTRY_GET_REDEEMABLES_CAP_SELECTOR]: encodeRedeemablesCap(0n),
-    ...overrides,
+    ...options.responses,
   };
-  const targets: Record<string, string> = {
-    [YAMATO_GET_STATES_SELECTOR]: YAMATO_ADDRESS,
-    [YAMATO_PRICE_FEED_SELECTOR]: YAMATO_ADDRESS,
-    [YAMATO_GET_PRICE_SELECTOR]: PRICE_FEED_ADDRESS,
-    [YAMATO_PAUSED_SELECTOR]: YAMATO_ADDRESS,
-    [YAMATO_PRIORITY_REGISTRY_SELECTOR]: YAMATO_ADDRESS,
-    [PRIORITY_REGISTRY_YAMATO_SELECTOR]: PRIORITY_REGISTRY_ADDRESS,
-    [PRIORITY_REGISTRY_GET_REDEEMABLES_CAP_SELECTOR]: PRIORITY_REGISTRY_ADDRESS,
-  };
-  vi.mocked(fetchOnchainRawCall).mockImplementation(async ({ data, contract, chain }) => {
-    if (chain !== "ethereum" || targets[data] !== contract.toLowerCase() || !(data in responses)) {
-      throw new Error(`Unexpected Yamato call: ${chain}/${contract}/${data}`);
-    }
-    return responses[data];
+  const quote = options.ethPrice === null
+    ? {}
+    : {
+        [ETH_PRICE_KEY]: {
+          price: options.ethPrice ?? 3_000,
+          timestamp: NOW_SEC,
+          confidence: 1,
+        },
+      };
+  return installAdapterNetwork({
+    chains: { ethereum: ETHEREUM_RPC },
+    block: BLOCK,
+    rpc: {
+      [`ethereum:${YAMATO_ADDRESS}:${YAMATO_GET_STATES_SELECTOR}`]: responses[YAMATO_GET_STATES_SELECTOR],
+      [`ethereum:${YAMATO_ADDRESS}:${YAMATO_PRICE_FEED_SELECTOR}`]: responses[YAMATO_PRICE_FEED_SELECTOR],
+      [`ethereum:${PRICE_FEED_ADDRESS}:${YAMATO_GET_PRICE_SELECTOR}`]: responses[YAMATO_GET_PRICE_SELECTOR],
+      [`ethereum:${YAMATO_ADDRESS}:${YAMATO_PAUSED_SELECTOR}`]: responses[YAMATO_PAUSED_SELECTOR],
+      [`ethereum:${YAMATO_ADDRESS}:${YAMATO_PRIORITY_REGISTRY_SELECTOR}`]: responses[YAMATO_PRIORITY_REGISTRY_SELECTOR],
+      [`ethereum:${PRIORITY_REGISTRY_ADDRESS}:${PRIORITY_REGISTRY_YAMATO_SELECTOR}`]: responses[PRIORITY_REGISTRY_YAMATO_SELECTOR],
+      [`ethereum:${PRIORITY_REGISTRY_ADDRESS}:${PRIORITY_REGISTRY_GET_REDEEMABLES_CAP_SELECTOR}`]:
+        responses[PRIORITY_REGISTRY_GET_REDEEMABLES_CAP_SELECTOR],
+    },
+    json: { [ETH_PRICE_URL]: { coins: quote } },
   });
 }
 
-function makeConfig(params: Record<string, unknown> = { yamatoAddress: YAMATO_ADDRESS }): LiveReservesConfig {
-  return {
-    adapter: "yamato",
-    version: 1,
-    semantics: "single-asset",
-    inputs: {
-      primary: { kind: "onchain-evm", chain: "ethereum", rpcMode: "alchemy" },
-    },
-    params,
-  } as unknown as LiveReservesConfig;
+async function fetchFixture(
+  network = installYamatoNetwork(),
+  params: Record<string, unknown> = {},
+) {
+  const { result } = await runAdapter("yamato", "cjpy-yamato", {
+    network,
+    nowSec: NOW_SEC,
+    params: { yamatoAddress: YAMATO_ADDRESS, ...params },
+  });
+  return result;
 }
+
 
 describe("decodeYamatoGetStates", () => {
   it("decodes Yamato getStates() output into raw collateral, debt, and thresholds", () => {
@@ -363,54 +355,15 @@ describe("adaptYamatoStates", () => {
 });
 
 describe("fetchYamatoReserves", () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-    signal = new AbortController().signal;
-    vi.mocked(fetchDefiLlamaPrices).mockResolvedValue(new Map([["ETH", 3_000]]));
-  });
-
   it("rejects a malformed slice instead of silently defaulting it", async () => {
-    await expect(
-      fetchYamatoReserves(coin, makeConfig({ yamatoAddress: YAMATO_ADDRESS, slice: { name: "ETH" } }), signal),
-    ).rejects.toThrow("yamato adapter params invalid");
+    await expect(fetchFixture(installYamatoNetwork(), { slice: { name: "ETH" } }))
+      .rejects.toThrow("yamato adapter params invalid");
   });
 
   it("reads getStates(), resolves the price feed, and adapts same-run on-chain state", async () => {
-    mockOnchainCalls();
+    const result = await fetchFixture();
 
-    const result = await fetchYamatoReserves(coin, makeConfig(), signal);
-    expect(result.metadata?.observedBlock).toEqual({ chain: "ethereum", number: 12345, timestamp: 1776154391 });
-    for (const [request] of vi.mocked(fetchOnchainRawCall).mock.calls) {
-      expect(request.ctx?.observedBlock).toEqual(result.metadata?.observedBlock);
-    }
-
-    expect(fetchOnchainRawCall).toHaveBeenNthCalledWith(
-      1,
-      expect.objectContaining({
-        contract: YAMATO_ADDRESS,
-        data: YAMATO_GET_STATES_SELECTOR,
-        chain: "ethereum",
-        rpcMode: "alchemy",
-      }),
-    );
-    expect(fetchOnchainRawCall).toHaveBeenNthCalledWith(
-      2,
-      expect.objectContaining({
-        contract: YAMATO_ADDRESS,
-        data: YAMATO_PRICE_FEED_SELECTOR,
-        chain: "ethereum",
-        rpcMode: "alchemy",
-      }),
-    );
-    expect(fetchOnchainRawCall).toHaveBeenNthCalledWith(
-      3,
-      expect.objectContaining({
-        contract: PRICE_FEED_ADDRESS.toLowerCase(),
-        data: YAMATO_GET_PRICE_SELECTOR,
-        chain: "ethereum",
-        rpcMode: "alchemy",
-      }),
-    );
+    expect(result.metadata?.observedBlock).toEqual({ chain: "ethereum", number: BLOCK.number, timestamp: BLOCK.timestamp });
     expect(result.slices).toEqual([{ sourceKey: "yamato:eth", name: "ETH", pct: 100, risk: "very-low" }]);
     expect(result.metadata).toMatchObject({
       freshnessMode: "not-applicable",
@@ -423,47 +376,27 @@ describe("fetchYamatoReserves", () => {
   });
 
   it("uses a configured price feed address without calling priceFeed()", async () => {
-    mockOnchainCalls();
+    const network = installYamatoNetwork();
+    const result = await fetchFixture(network, { priceFeedAddress: PRICE_FEED_ADDRESS });
 
-    const result = await fetchYamatoReserves(
-      coin,
-      makeConfig({ yamatoAddress: YAMATO_ADDRESS, priceFeedAddress: PRICE_FEED_ADDRESS }),
-      signal,
-    );
-
-    expect(fetchOnchainRawCall).not.toHaveBeenCalledWith(
-      expect.objectContaining({ data: YAMATO_PRICE_FEED_SELECTOR }),
-    );
-    expect(fetchOnchainRawCall).toHaveBeenNthCalledWith(
-      2,
-      expect.objectContaining({
-        contract: PRICE_FEED_ADDRESS,
-        data: YAMATO_GET_PRICE_SELECTOR,
-      }),
-    );
+    expect(network.rpcCalls.some(
+      (call) => call.contract === YAMATO_ADDRESS.toLowerCase() && call.selector === YAMATO_PRICE_FEED_SELECTOR,
+    )).toBe(false);
     expect(result.metadata?.priceFeedAddress).toBe(PRICE_FEED_ADDRESS);
   });
 
   it("fails when getStates() is unreadable", async () => {
-    mockOnchainCalls({ [YAMATO_GET_STATES_SELECTOR]: null });
+    const network = installYamatoNetwork({ responses: { [YAMATO_GET_STATES_SELECTOR]: null } });
 
-    await expect(fetchYamatoReserves(coin, makeConfig(), signal)).rejects.toThrow("yamato getStates() call failed");
+    await expect(fetchFixture(network)).rejects.toThrow("yamato getStates() call failed");
   });
 
   it("publishes an open redemption route priced from the same-run redeemables cap", async () => {
-    // 6.5m JPY redeemable at 400k JPY/ETH is 16.25 ETH, valued at $3k/ETH.
-    mockOnchainCalls({
-      [PRIORITY_REGISTRY_GET_REDEEMABLES_CAP_SELECTOR]: encodeRedeemablesCap(6_500_000n * ONE),
+    const network = installYamatoNetwork({
+      responses: { [PRIORITY_REGISTRY_GET_REDEEMABLES_CAP_SELECTOR]: encodeRedeemablesCap(6_500_000n * ONE) },
     });
+    const result = await fetchFixture(network);
 
-    const result = await fetchYamatoReserves(coin, makeConfig(), signal);
-
-    expect(fetchOnchainRawCall).toHaveBeenCalledWith(
-      expect.objectContaining({
-        contract: PRIORITY_REGISTRY_ADDRESS.toLowerCase(),
-        data: PRIORITY_REGISTRY_GET_REDEEMABLES_CAP_SELECTOR,
-      }),
-    );
     expect(result.warnings).toBeUndefined();
     expect(result.metadata).toMatchObject({
       priorityRegistryAddress: PRIORITY_REGISTRY_ADDRESS.toLowerCase(),
@@ -481,11 +414,10 @@ describe("fetchYamatoReserves", () => {
   });
 
   it("publishes a zero capacity without pricing ETH when no pledge is redeemable", async () => {
-    mockOnchainCalls();
+    const network = installYamatoNetwork();
+    const result = await fetchFixture(network);
 
-    const result = await fetchYamatoReserves(coin, makeConfig(), signal);
-
-    expect(fetchDefiLlamaPrices).not.toHaveBeenCalled();
+    expect(network.requests.some(({ url }) => url.replace(/\/$/, "") === ETH_PRICE_URL)).toBe(false);
     expect(result.warnings).toBeUndefined();
     expect(result.metadata?.redemption).toMatchObject({
       capacityUsd: 0,
@@ -496,12 +428,13 @@ describe("fetchYamatoReserves", () => {
   });
 
   it("withholds capacity when the priority registry does not bind back to the Yamato proxy", async () => {
-    mockOnchainCalls({
-      [PRIORITY_REGISTRY_YAMATO_SELECTOR]: encodeAddress("yamato", PRICE_FEED_ADDRESS),
-      [PRIORITY_REGISTRY_GET_REDEEMABLES_CAP_SELECTOR]: encodeRedeemablesCap(6_500_000n * ONE),
+    const network = installYamatoNetwork({
+      responses: {
+        [PRIORITY_REGISTRY_YAMATO_SELECTOR]: encodeAddress("yamato", PRICE_FEED_ADDRESS),
+        [PRIORITY_REGISTRY_GET_REDEEMABLES_CAP_SELECTOR]: encodeRedeemablesCap(6_500_000n * ONE),
+      },
     });
-
-    const result = await fetchYamatoReserves(coin, makeConfig(), signal);
+    const result = await fetchFixture(network);
 
     expect(result.metadata?.redemption).not.toHaveProperty("capacityUsd");
     expect(result.metadata).not.toHaveProperty("redeemableCapJpy");
@@ -513,12 +446,11 @@ describe("fetchYamatoReserves", () => {
   });
 
   it("withholds capacity when ETH/USD is unavailable for a non-zero cap", async () => {
-    vi.mocked(fetchDefiLlamaPrices).mockResolvedValue(new Map());
-    mockOnchainCalls({
-      [PRIORITY_REGISTRY_GET_REDEEMABLES_CAP_SELECTOR]: encodeRedeemablesCap(6_500_000n * ONE),
+    const network = installYamatoNetwork({
+      ethPrice: null,
+      responses: { [PRIORITY_REGISTRY_GET_REDEEMABLES_CAP_SELECTOR]: encodeRedeemablesCap(6_500_000n * ONE) },
     });
-
-    const result = await fetchYamatoReserves(coin, makeConfig(), signal);
+    const result = await fetchFixture(network);
 
     expect(result.metadata?.redemption).not.toHaveProperty("capacityUsd");
     expect(result.metadata?.redemption).toMatchObject({ capacityRatioOfSupply: 0.325 });
@@ -528,9 +460,8 @@ describe("fetchYamatoReserves", () => {
   });
 
   it("reports the route as paused when Yamato paused() is true", async () => {
-    mockOnchainCalls({ [YAMATO_PAUSED_SELECTOR]: encodePaused(true) });
-
-    const result = await fetchYamatoReserves(coin, makeConfig(), signal);
+    const network = installYamatoNetwork({ responses: { [YAMATO_PAUSED_SELECTOR]: encodePaused(true) } });
+    const result = await fetchFixture(network);
 
     expect(result.metadata?.redemption).toMatchObject({
       routeStatus: "paused",

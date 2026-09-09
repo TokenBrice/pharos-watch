@@ -1,37 +1,10 @@
-import { describe, expect, it, vi, beforeEach } from "vitest";
-import type { StablecoinMeta } from "@shared/types/core";
-import type { LiveReservesConfig } from "@shared/types/live-reserves";
+import { describe, expect, it } from "vitest";
 import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import { buildReviewedReserveClassifications } from "../../../lib/safety-score-v9/extension-reserves";
+import { adaptSpikoShareClassTotals, type SpikoShareClassTotals } from "../spiko-api";
+import { installAdapterNetwork, runAdapter } from "./reserve-adapter.test-support";
 
-vi.mock("../helpers", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("../helpers")>();
-  return {
-    ...actual,
-    fetchJsonWithRetry: vi.fn(),
-  };
-});
-
-import { adaptSpikoShareClassTotals, fetchSpikoApiReserves, type SpikoShareClassTotals } from "../spiko-api";
-import { fetchJsonWithRetry } from "../helpers";
-
-let signal: AbortSignal;
-
-function makeCoin(): StablecoinMeta {
-  return { id: "eursafo-spiko", name: "Spiko Euro", ticker: "EURSAFO" } as unknown as StablecoinMeta;
-}
-
-function makeConfig(shareClassSymbol: string, slice: { name: string; risk: string }): LiveReservesConfig {
-  return {
-    adapter: "spiko-api",
-    version: 1,
-    semantics: "single-asset",
-    inputs: {
-      primary: { kind: "http-json", url: `https://public-api.spiko.io/share-classes/${shareClassSymbol}/totals` },
-    },
-    params: { shareClassSymbol, slice },
-  } as unknown as LiveReservesConfig;
-}
+const EURSAFO_URL = "https://public-api.spiko.io/share-classes/eurSAFO/totals";
 
 // Captured 2026-07-09 from GET https://public-api.spiko.io/share-classes/eurSAFO/totals
 const EURSAFO_TOTALS: SpikoShareClassTotals = {
@@ -59,10 +32,6 @@ const UKTBL_TOTALS: SpikoShareClassTotals = {
   },
 } as unknown as SpikoShareClassTotals;
 
-beforeEach(() => {
-  signal = new AbortController().signal;
-  vi.clearAllMocks();
-});
 
 describe("adaptSpikoShareClassTotals", () => {
   it("retains reviewed classification after a fund display-label change", () => {
@@ -256,32 +225,23 @@ describe("adaptSpikoShareClassTotals", () => {
 });
 
 describe("fetchSpikoApiReserves", () => {
-  it("fetches the configured totals endpoint and adapts the payload", async () => {
-    vi.mocked(fetchJsonWithRetry).mockResolvedValue(EURSAFO_TOTALS);
-    const config = makeConfig("eurSAFO", {
-      name: "Fully collateralized overnight total-return swap exposure",
-      risk: "medium",
+  it("fetches the catalog totals endpoint and adapts the payload through the shared harness", async () => {
+    const { result, network } = await runAdapter("spiko-api", "eursafo-spiko", {
+      network: installAdapterNetwork({ json: { [EURSAFO_URL]: EURSAFO_TOTALS } }),
+      nowSec: Date.parse("2026-07-09T13:41:41.205Z") / 1000,
     });
 
-    const result = await fetchSpikoApiReserves(makeCoin(), config, signal);
-
-    expect(fetchJsonWithRetry).toHaveBeenCalledWith(
-      "https://public-api.spiko.io/share-classes/eurSAFO/totals",
-      signal,
-      12_000,
-      undefined,
-    );
+    expect(network.requests).toEqual([{ url: EURSAFO_URL, method: "GET" }]);
     expect(result.slices).toMatchObject([
-      { name: "Fully collateralized overnight total-return swap exposure", pct: 100, risk: "medium" },
+      { name: "Spiko Amundi Overnight Swap Fund (EUR) shares", pct: 100, risk: "medium" },
     ]);
   });
 
-  it("propagates an error when the share class endpoint is missing (404)", async () => {
-    vi.mocked(fetchJsonWithRetry).mockRejectedValue(
-      new Error("HTTP 404 for https://public-api.spiko.io/share-classes/unknownSymbol/totals"),
-    );
-    const config = makeConfig("unknownSymbol", { name: "Test", risk: "medium" });
-
-    await expect(fetchSpikoApiReserves(makeCoin(), config, signal)).rejects.toThrow("HTTP 404");
+  it("propagates an error when the catalog totals endpoint returns 404", async () => {
+    await expect(runAdapter("spiko-api", "eursafo-spiko", {
+      network: installAdapterNetwork({
+        json: { [EURSAFO_URL]: { status: 404, body: "not found" } },
+      }),
+    })).rejects.toThrow("HTTP 404");
   });
 });

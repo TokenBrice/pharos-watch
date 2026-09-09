@@ -2,6 +2,7 @@
   "id": "apyusd-apyx",
   "reserves": [
     {
+      "sourceKey": "erc4626-single-asset:ethereum:0x98a878b1cd98131b271883b390f68d2c90674665",
       "name": "apxUSD yield vault shares",
       "pct": 100,
       "risk": "high",

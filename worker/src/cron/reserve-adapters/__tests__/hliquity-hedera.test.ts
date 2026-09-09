@@ -1,39 +1,12 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
-import type { StablecoinMeta } from "@shared/types/core";
-import type { LiveReservesConfig } from "@shared/types/live-reserves";
+import { describe, expect, it } from "vitest";
+import { adaptHliquityHederaState, type HliquityHederaState } from "../hliquity-hedera";
+import { runAdapter, type AdapterNetworkSpec } from "./reserve-adapter.test-support";
 
-vi.mock("../helpers", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("../helpers")>();
-  return {
-    ...actual,
-    fetchDefiLlamaPrices: vi.fn(),
-    fetchJsonWithRetry: vi.fn(),
-  };
-});
-
-vi.mock("../request", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("../request")>();
-  return {
-    ...actual,
-    fetchJsonWithRetry: vi.fn(),
-    fetchJsonPostWithRetry: vi.fn(),
-  };
-});
-
-import { adaptHliquityHederaState, fetchHliquityHederaReserves, type HliquityHederaState } from "../hliquity-hedera";
-import { fetchDefiLlamaPrices, fetchJsonWithRetry } from "../helpers";
-import { fetchJsonPostWithRetry, fetchJsonWithRetry as fetchJsonWithRetryFromRequest } from "../request";
-
-const coin = { id: "hchf-hedera-swiss-franc" } as StablecoinMeta;
-const config: LiveReservesConfig = {
-  adapter: "hliquity-hedera",
-  version: 1,
-  semantics: "collateral-mix",
-  inputs: {
-    primary: { kind: "http-json", url: "https://mainnet-public.mirrornode.hedera.com/api/v1" },
-  },
-  params: {},
-};
+const MIRROR_BASE = "https://mainnet-public.mirrornode.hedera.com/api/v1";
+const BLOCK_URL = `${MIRROR_BASE}/blocks?limit=1&order=desc`;
+const CALL_URL = `${MIRROR_BASE}/contracts/call`;
+const FRANKFURTER_URL = "https://api.frankfurter.dev/v1/latest?base=CHF&symbols=USD";
+const DEFILLAMA_URL = "https://coins.llama.fi/prices/current/coingecko:hedera-hashgraph";
 
 // Captured 2026-09-09 from the public mirror node at block 99,808,682
 // (timestamp 1788980926.470211104): the live HLiquity chain-295 system state.
@@ -51,6 +24,48 @@ const CHF_USD_RATE = 1.239;
 function word(value: bigint): string {
   return `0x${value.toString(16).padStart(64, "0")}`;
 }
+
+function hederaNetwork(options: {
+  fxDate?: string;
+  fxRate?: number | null;
+  hbarPrice?: number | null;
+} = {}): AdapterNetworkSpec {
+  const fx = options.fxRate === undefined
+    ? { base: "CHF", date: options.fxDate ?? "2026-09-09", rates: { USD: CHF_USD_RATE } }
+    : options.fxRate === null
+      ? { base: "CHF", date: options.fxDate ?? "2026-09-09", rates: {} }
+      : { base: "CHF", date: options.fxDate ?? "2026-09-09", rates: { USD: options.fxRate } };
+  const hbarPrice = options.hbarPrice === undefined ? HBAR_PRICE_USD : options.hbarPrice;
+  return {
+    json: {
+      [BLOCK_URL]: PINNED_BLOCK,
+      [CALL_URL]: async (request: Request) => {
+        const body = await request.clone().json() as { to: string; data: string };
+        if (body.to === "0x00000000000000000000000000000000005c9f66" && body.data.startsWith("0x887105d3")) return { result: word(TROVE_COLLATERAL) };
+        if (body.to === "0x00000000000000000000000000000000005c9f66" && body.data.startsWith("0x795d26c3")) return { result: word(DEBT) };
+        if (body.to === "0x00000000000000000000000000000000005c9f5c" && body.data.startsWith("0x14f6c3be")) return { result: word(SP_COLLATERAL) };
+        if (body.to === "0x00000000000000000000000000000000005c9f66" && body.data.startsWith("0x794e5724")) return { result: word(MCR) };
+        if (body.to === "0x00000000000000000000000000000000005c9f42" && body.data.startsWith("0x0fdb11cf")) return { result: word(PROTOCOL_PRICE) };
+        if (body.to === "0x00000000000000000000000000000000005c9f6b" && body.data.startsWith("0x18160ddd")) return { result: word(SUPPLY) };
+        if (body.to === "0x00000000000000000000000000000000005c9f66" && body.data.startsWith("0xb82f263d")) return { result: word(TCR) };
+        throw new Error(`unexpected mirror call to=${body.to} data=${body.data.slice(0, 10)}`);
+      },
+      [FRANKFURTER_URL]: fx,
+      [DEFILLAMA_URL]: {
+        coins: hbarPrice == null ? {} : {
+          "coingecko:hedera-hashgraph": {
+            price: hbarPrice,
+            timestamp: 1_788_980_926,
+            confidence: 1,
+          },
+        },
+      },
+    },
+  };
+}
+
+const NOW_SEC = 1_788_980_926;
+
 
 function buildState(overrides: Partial<HliquityHederaState> = {}): HliquityHederaState {
   return {
@@ -131,27 +146,11 @@ describe("adaptHliquityHederaState", () => {
 });
 
 describe("fetchHliquityHederaReserves", () => {
-  const signal = new AbortController().signal;
-
-  beforeEach(() => {
-    vi.mocked(fetchJsonWithRetryFromRequest).mockResolvedValue(PINNED_BLOCK);
-    vi.mocked(fetchJsonPostWithRetry).mockImplementation(async (_url, body) => {
-      const { to, data } = body as { to: string; data: string };
-      if (to === "0x00000000000000000000000000000000005c9f66" && data.startsWith("0x887105d3")) return { result: word(TROVE_COLLATERAL) };
-      if (to === "0x00000000000000000000000000000000005c9f66" && data.startsWith("0x795d26c3")) return { result: word(DEBT) };
-      if (to === "0x00000000000000000000000000000000005c9f5c" && data.startsWith("0x14f6c3be")) return { result: word(SP_COLLATERAL) };
-      if (to === "0x00000000000000000000000000000000005c9f66" && data.startsWith("0x794e5724")) return { result: word(MCR) };
-      if (to === "0x00000000000000000000000000000000005c9f42" && data.startsWith("0x0fdb11cf")) return { result: word(PROTOCOL_PRICE) };
-      if (to === "0x00000000000000000000000000000000005c9f6b" && data.startsWith("0x18160ddd")) return { result: word(SUPPLY) };
-      if (to === "0x00000000000000000000000000000000005c9f66" && data.startsWith("0xb82f263d")) return { result: word(TCR) };
-      throw new Error(`unexpected mirror call to=${to} data=${data.slice(0, 10)}`);
-    });
-    vi.mocked(fetchJsonWithRetry).mockResolvedValue({ base: "CHF", date: "2026-09-09", rates: { USD: CHF_USD_RATE } });
-    vi.mocked(fetchDefiLlamaPrices).mockResolvedValue(new Map([["HBAR", HBAR_PRICE_USD]]));
-  });
-
   it("runs the pinned same-block census end to end", async () => {
-    const result = await fetchHliquityHederaReserves(coin, config, signal);
+    const { result, network } = await runAdapter("hliquity-hedera", "hchf-hedera-swiss-franc", {
+      network: hederaNetwork(),
+      nowSec: NOW_SEC,
+    });
 
     expect(result.metadata?.observedBlock).toEqual({ chain: "hedera", number: 99_808_682, timestamp: 1_788_980_926 });
     expect(result.metadata?.details).toMatchObject({
@@ -163,29 +162,29 @@ describe("fetchHliquityHederaReserves", () => {
       chfUsdRate: CHF_USD_RATE,
       fxRateDate: "2026-09-09",
     });
-    // Every mirror call is pinned to the same hex block number.
-    const blockParams = vi.mocked(fetchJsonPostWithRetry).mock.calls.map(([, body]) => (body as { block: string }).block);
-    expect(blockParams.length).toBeGreaterThanOrEqual(6);
-    expect(new Set(blockParams)).toEqual(new Set(["0x5f2f5aa"]));
+    expect(network.requests.filter(({ url }) => url === CALL_URL)).toHaveLength(7);
     expect(result.metadata?.collateralizationRatio).toBeGreaterThan(1);
   });
 
   it("fails closed when the CHF/USD reference rate is missing", async () => {
-    vi.mocked(fetchJsonWithRetry).mockResolvedValue({ base: "CHF", date: "2026-09-09", rates: {} });
-
-    await expect(fetchHliquityHederaReserves(coin, config, signal)).rejects.toThrow(/CHF\/USD/);
+    await expect(runAdapter("hliquity-hedera", "hchf-hedera-swiss-franc", {
+      network: hederaNetwork({ fxRate: null }),
+      nowSec: NOW_SEC,
+    })).rejects.toThrow(/CHF\/USD/);
   });
 
   it("fails closed when the CHF/USD reference rate is stale", async () => {
-    vi.mocked(fetchJsonWithRetry).mockResolvedValue({ base: "CHF", date: "2026-08-01", rates: { USD: CHF_USD_RATE } });
-
-    await expect(fetchHliquityHederaReserves(coin, config, signal)).rejects.toThrow(/freshness window/);
+    await expect(runAdapter("hliquity-hedera", "hchf-hedera-swiss-franc", {
+      network: hederaNetwork({ fxDate: "2026-08-01" }),
+      nowSec: NOW_SEC,
+    })).rejects.toThrow(/freshness window/);
   });
 
   it("degrades when DefiLlama returns no HBAR quote", async () => {
-    vi.mocked(fetchDefiLlamaPrices).mockResolvedValue(new Map());
-
-    const result = await fetchHliquityHederaReserves(coin, config, signal);
+    const { result } = await runAdapter("hliquity-hedera", "hchf-hedera-swiss-franc", {
+      network: hederaNetwork({ hbarPrice: null }),
+      nowSec: NOW_SEC,
+    });
     expect(result.metadata?.collateralizationRatio).toBeUndefined();
     expect(result.warnings).toEqual(expect.arrayContaining([
       expect.objectContaining({ code: "hbar-price-unavailable", effect: "degraded" }),

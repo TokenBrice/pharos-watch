@@ -3,7 +3,7 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 import { adaptReMetrics } from "../re-metrics";
-import { expectValidAdapterOutput } from "./reserve-adapter.test-support";
+import { expectValidAdapterOutput, expectWarnings, installAdapterNetwork, runAdapter } from "./reserve-adapter.test-support";
 
 const FIXTURES_DIR = join(dirname(fileURLToPath(import.meta.url)), "fixtures");
 const SAMPLE_HTML = readFileSync(join(FIXTURES_DIR, "re-metrics-series.html"), "utf8");
@@ -45,12 +45,7 @@ describe("adaptReMetrics", () => {
         holderEligibility: "any-holder",
       },
     });
-    expect(result.warnings).toContainEqual(expect.objectContaining({
-      code: "re-metrics-offchain-capital-branch",
-      effect: "info",
-      message: expect.stringContaining("initialCards"),
-    }));
-    expectValidAdapterOutput("re-metrics", result);
+    expectWarnings(result, ["re-metrics-offchain-capital-branch"]);
   });
 
   it.each(["initialCards", "initialTvlData", "both"] as const)("parses %s with initialCards taking precedence and warns which branch fired", (format) => {
@@ -173,5 +168,28 @@ self.__next_f.push([1,"...\\"initialChainBreakdowns\\":{\\"ethereum\\":{\\"asOf\
 </html>
 `;
     expect(() => adaptReMetrics(malformedHtml)).toThrow("parse-failed");
+  });
+});
+
+describe("fetchReMetricsReserves", () => {
+  const url = "https://app.re.xyz/metrics";
+  const nowSec = Math.floor(Date.parse("2026-08-10T00:00:00Z") / 1000);
+
+  it("fetches the embedded metrics page through the shared network harness", async () => {
+    const { result, network } = await runAdapter("re-metrics", "reusd-re-protocol", {
+      network: installAdapterNetwork({ html: { [url]: SAMPLE_HTML } }),
+      nowSec,
+    });
+    expect(result.metadata).toMatchObject({ chainBreakdownCount: 4, trackedTokenCount: 6 });
+    expect(network.requests).toEqual([{ url, method: "GET" }]);
+  });
+
+  it("rejects a renamed chain-breakdown field instead of publishing stale composition", async () => {
+    const drifted = SAMPLE_HTML.replace("\\\"initialChainBreakdowns\\\":", "\\\"chainBreakdowns\\\":");
+    await expect(runAdapter("re-metrics", "reusd-re-protocol", {
+      network: installAdapterNetwork({ html: { [url]: drifted } }),
+      nowSec,
+      validate: false,
+    })).rejects.toThrow("layout-changed");
   });
 });

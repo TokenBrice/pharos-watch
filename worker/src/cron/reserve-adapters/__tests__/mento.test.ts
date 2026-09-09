@@ -1,9 +1,8 @@
-import { fetchWithRetryMock, resetRpcMocks } from "./helpers/rpc-mock";
 import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { encodeAbiParameters } from "viem/utils";
-import { beforeEach, afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   MENTO_BIPOOL_MANAGER_ADDRESS,
   MENTO_GET_EXCHANGE_IDS_SELECTOR,
@@ -16,56 +15,54 @@ import {
   adaptMentoReserveComposition,
   extractMentoDashboardTimestamp,
   fetchMentoReserves,
-  mentoCdpCoherenceError,
   parseMentoCdpComposition,
-  parseMentoDashboardCdpBackings,
   parseMentoReserveComposition,
 } from "../mento";
+import type { AdapterContext } from "../types";
 import {
-  fetchErc20Balance,
-  fetchErc20TotalSupply,
-  fetchOnchainRateBps,
-  fetchOnchainRawCall,
-  fetchOnchainUint256,
-} from "../helpers";
-import { expectValidAdapterOutput } from "./reserve-adapter.test-support";
+  expectValidAdapterOutput,
+  expectWarningEffect,
+  expectWarnings,
+  installAdapterNetwork,
+  resolveAdapterCoin,
+  runAdapter,
+  type AdapterNetwork,
+  type AdapterNetworkSpec,
+  type AdapterRpcValue,
+} from "./reserve-adapter.test-support";
 import { MENTO_RESERVE_COMPOSITION_PAYLOAD as SAMPLE_PAYLOAD } from "./reserve-adapter-payloads.test-support";
-
-vi.mock("../helpers", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("../helpers")>();
-  return {
-    ...actual,
-    fetchErc20Balance: vi.fn(),
-    fetchErc20TotalSupply: vi.fn(),
-    fetchOnchainRateBps: vi.fn(),
-    fetchOnchainRawCall: vi.fn(),
-    fetchOnchainUint256: vi.fn(),
-  };
-});
 
 const FIXTURES_DIR = join(dirname(fileURLToPath(import.meta.url)), "fixtures");
 const CURRENT_DASHBOARD_HTML = readFileSync(join(FIXTURES_DIR, "mento-reserve-composition.html"), "utf8");
 // `refresh:html-fixtures` prepends this header; it is the fixture's own notion
-// of "now", so dashboard-timestamp expectations ride it instead of a pinned second.
+// of "now", so dashboard-timestamp expectations and replay clocks ride it
+// instead of a pinned second.
 const CURRENT_DASHBOARD_CAPTURED_AT =
   /<!--\s*captured-at:\s*(\d{4}-\d{2}-\d{2}T[\d:]+Z)\s*-->/.exec(CURRENT_DASHBOARD_HTML)?.[1] ?? "";
+const CURRENT_DASHBOARD_NOW_SEC =
+  Math.floor(Date.parse(CURRENT_DASHBOARD_CAPTURED_AT) / 1000) + 5 * 60 * 60;
 /** A dashboard payload more than 3 days behind its own capture is a stale-upstream regression. */
 const CURRENT_DASHBOARD_MAX_PAYLOAD_LAG_SEC = 3 * 24 * 60 * 60;
 
-const MENTO_RESERVE_URL = "https://example.com/mento/reserve";
+// Real catalog endpoints for the mento adapter's two HTTP sources.
+const CATALOG_RESERVE_URL = "https://mento-analytics-api-12390052758.us-central1.run.app/api/v2/reserve";
 const MENTO_DASHBOARD_URL = "https://reserve.mento.org/";
-const MENTO_DASHBOARD_HTML_FIXTURE = String.raw`troves\":[{}],\"timestamp\":\"2026-05-11T23:21:16.007Z\"},\"dataUpdateCount\":1`;
 
 // --- Redemption telemetry fixtures ------------------------------------------
 const USDM_ADDRESS = "0x765de816845861e75a25fca122bb6898b8b1282a";
 const USDC_ADDRESS = "0xceba9300f2b948710d2653dd7b07f33a8b32118c";
 const USDT_ADDRESS = "0x48065fbbe25f71c9282ddf5e1cd6d6a887483d5e";
+const BRLM_TOKEN_ADDRESS = "0xe8537a3d056da446677b9e9d6c5db704eaab4787";
 const EXCHANGE_ID_1 = `0x${"11".repeat(32)}`;
 const EXCHANGE_ID_2 = `0x${"22".repeat(32)}`;
 const EXCHANGE_ID_3 = `0x${"33".repeat(32)}`;
 const ZERO_ADDRESS = "0x0000000000000000000000000000000000000000";
 const FPMM_LP_FEE_SELECTOR = "0x704ce43e";
 const FPMM_PROTOCOL_FEE_SELECTOR = "0xb0e21e8a";
+// The Mento fork's Liquity v2 selectors (see mento-redemption.ts).
+const LIQUITY_V2_DEBT_SELECTOR = "0x45507998"; // getBoldDebt()
+const LIQUITY_V2_SHUTDOWN_SELECTOR = "0x58569081"; // shutdownTime()
+const LIQUITY_V2_REDEMPTION_RATE_SELECTOR = "0xc52861f2"; // getRedemptionRateWithDecay()
 
 function encodeExchangeIds(ids: string[]): `0x${string}` {
   return encodeAbiParameters([{ type: "bytes32[]" }], [ids as `0x${string}`[]]) as `0x${string}`;
@@ -95,72 +92,99 @@ function encodePoolExchange(overrides: {
   }]) as `0x${string}`;
 }
 
-function makeMentoConfig(): LiveReservesConfig {
-  return {
-    adapter: "mento",
-    version: 2,
-    semantics: "protocol-reserve",
-    display: {
-      url: MENTO_DASHBOARD_URL,
-      label: "Mento Reserves",
-    },
-    inputs: {
-      primary: {
-        kind: "http-json",
-        url: MENTO_RESERVE_URL,
-      },
-    },
-  };
-}
+const BIPOOL_MANAGER = MENTO_BIPOOL_MANAGER_ADDRESS.toLowerCase();
+const rpcKey = (calldata: string) => `celo:${BIPOOL_MANAGER}:${calldata}`;
+const exchangeIdsKey = rpcKey(MENTO_GET_EXCHANGE_IDS_SELECTOR);
+const poolExchangeKey = (exchangeId: string) =>
+  rpcKey(`${MENTO_GET_POOL_EXCHANGE_SELECTOR}${exchangeId.slice(2)}`);
 
-const forbiddenFetch = vi.fn(() => { throw new Error("Unexpected real network request"); });
-const httpRequests: Array<{ url: string; identity: string; referer: string | null }> = [];
-const unexpectedHttpRequests: string[] = [];
-let rejectedIdentities: string[] = [];
-let reservePayloadOverride: Record<string, unknown> | null = null;
-let dashboardHtmlOverride: string | null = null;
+// The historical hand-built dashboard fragment used by the header-fallback
+// cases; its embedded timestamp is the verified-freshness clock those runs
+// publish.
+const MENTO_DASHBOARD_HTML_FIXTURE = String.raw`troves\":[{}],\"timestamp\":\"2026-05-11T23:21:16.007Z\"},\"dataUpdateCount\":1`;
+const DASHBOARD_FRAGMENT_TS_SEC = Math.floor(Date.parse("2026-05-11T23:21:16.007Z") / 1000);
 
-/** Builds a minimal dashboard payload carrying the given escaped `cdp_backings` rows. */
+/**
+ * Builds a minimal dashboard payload carrying the given escaped `cdp_backings`
+ * rows. `dataUpdatedAt` (2026-05-17T13:46:16.506Z) is the replay clock for
+ * runs that consume it.
+ */
 function dashboardHtmlWithCdpBackings(backings: Array<Record<string, unknown>>): string {
   const backingsJson = JSON.stringify(backings).replaceAll('"', '\\"');
   return `cdp_backings\\":${backingsJson},\\"dataUpdateCount\\":1,\\"dataUpdatedAt\\":1779025576506`;
 }
+const OVERRIDE_DASHBOARD_TS_SEC = 1_779_025_576;
+const OVERRIDE_DASHBOARD_NOW_SEC = OVERRIDE_DASHBOARD_TS_SEC + 120;
 
-beforeEach(() => {
-  forbiddenFetch.mockClear();
-  vi.stubGlobal("fetch", forbiddenFetch);
-  resetRpcMocks();
-  httpRequests.length = 0;
-  unexpectedHttpRequests.length = 0;
-  rejectedIdentities = [];
-  reservePayloadOverride = null;
-  dashboardHtmlOverride = null;
-  fetchWithRetryMock.mockImplementation(async (url: string, init?: RequestInit) => {
-    const headers = new Headers(init?.headers);
-    const identity = headers.has("origin") ? "browser" : "neutral";
-    httpRequests.push({ url, identity, referer: headers.get("referer") });
-    if (![MENTO_RESERVE_URL, MENTO_DASHBOARD_URL].includes(url)
-      || (identity === "browser" && headers.get("origin") !== "https://reserve.mento.org")) {
-      unexpectedHttpRequests.push(url);
-      return null;
-    }
-    if (rejectedIdentities.includes(`${url}:${identity}`)) {
-      return new Response("denied", { status: identity === "browser" ? 401 : 403 });
-    }
-    if (url === MENTO_RESERVE_URL) {
-      return new Response(JSON.stringify(reservePayloadOverride ?? SAMPLE_PAYLOAD));
-    }
-    return new Response(dashboardHtmlOverride ?? MENTO_DASHBOARD_HTML_FIXTURE);
+// Per-stablecoin cdp_backings rows whose totals match the SAMPLE_PAYLOAD
+// analytics trove sums exactly, so CDP-coin replays pass the dashboard-vs-API
+// coherence gate.
+const SAMPLE_CDP_TOTALS: Record<string, { collateral_usd: number; debt_usd: number }> = {
+  GBPm: { collateral_usd: 213_427.5, debt_usd: 102_821.25 },
+  JPYm: { collateral_usd: 171_960.48, debt_usd: 105_336.2 },
+  CHFm: { collateral_usd: 143_361.85, debt_usd: 90_307.02 },
+};
+
+function sampleMatchingDashboardHtml(stablecoin: keyof typeof SAMPLE_CDP_TOTALS): string {
+  return dashboardHtmlWithCdpBackings([{
+    stablecoin,
+    collateral_token: "USDm",
+    ...SAMPLE_CDP_TOTALS[stablecoin],
+    status: "active",
+  }]);
+}
+
+interface MentoNetworkOptions {
+  reserveJson?: unknown;
+  dashboardHtml?: string;
+  rpc?: Record<string, AdapterRpcValue>;
+}
+
+function mentoNetwork(options: MentoNetworkOptions = {}): AdapterNetworkSpec {
+  return {
+    json: { [CATALOG_RESERVE_URL]: options.reserveJson ?? SAMPLE_PAYLOAD },
+    html: { [MENTO_DASHBOARD_URL]: options.dashboardHtml ?? CURRENT_DASHBOARD_HTML },
+    ...(options.rpc ? { rpc: options.rpc } : {}),
+  };
+}
+
+/** The real catalog config of a mento coin, with test params swapped in. */
+function catalogConfig(coinId: string, params?: Record<string, unknown>): LiveReservesConfig {
+  const { config } = resolveAdapterCoin("mento", coinId);
+  return params ? { ...config, params: params as LiveReservesConfig["params"] } : config;
+}
+
+function brokerPoolConfig(coinId: string, pools: Array<{
+  selfTokenAddress: string;
+  counterAssetAddress: string;
+  counterAssetLabel?: string;
+  sourceUrls?: string[];
+}>): LiveReservesConfig {
+  return catalogConfig(coinId, {
+    redemption: {
+      kind: "broker-pool",
+      pools: pools.map((pool) => ({
+        selfTokenAddress: pool.selfTokenAddress,
+        counterAsset: {
+          address: pool.counterAssetAddress,
+          ...(pool.counterAssetLabel ? { label: pool.counterAssetLabel } : {}),
+        },
+      })),
+      ...(pools[0]?.sourceUrls ? { sourceUrls: pools[0]!.sourceUrls } : {}),
+    },
   });
-});
+}
+
+function directCtx(network: AdapterNetwork, requestCache: Map<string, Promise<unknown>>): AdapterContext {
+  return { chainRpcs: network.chainRpcs, requestCache };
+}
 
 afterEach(() => {
   vi.unstubAllGlobals();
-  expect(forbiddenFetch).not.toHaveBeenCalled();
-  expect(unexpectedHttpRequests).toEqual([]);
 });
 
 describe("mento adapter", () => {
+  // --- Pure parse/adapt units ------------------------------------------------
   it("parses reserve entries from the analytics API payload", () => {
     const entries = parseMentoReserveComposition(SAMPLE_PAYLOAD);
     expect(entries).toEqual([
@@ -237,9 +261,7 @@ describe("mento adapter", () => {
   });
 
   it("extracts the historical dashboard reserve payload timestamp", () => {
-    expect(extractMentoDashboardTimestamp(
-      String.raw`troves\":[{}],\"timestamp\":\"2026-05-11T23:21:16.007Z\"},\"dataUpdateCount\":1`,
-    )).toBe(Math.floor(Date.parse("2026-05-11T23:21:16.007Z") / 1000));
+    expect(extractMentoDashboardTimestamp(MENTO_DASHBOARD_HTML_FIXTURE)).toBe(DASHBOARD_FRAGMENT_TS_SEC);
   });
 
   it("extracts the current cdp_backings dashboard timestamp with deeper escaped quotes", () => {
@@ -265,21 +287,15 @@ describe("mento adapter", () => {
   it("falls back to numeric dashboard dataUpdatedAt milliseconds", () => {
     const html = String.raw`...\\"cdp_backings\\":[{\\"stablecoin\\":\\"GBPm\\"}],\\"dataUpdateCount\\":1,\\"dataUpdatedAt\\":1779025576506`;
 
-    expect(extractMentoDashboardTimestamp(html)).toBe(
-      Math.floor(Date.parse("2026-05-17T13:46:16.506Z") / 1000),
-    );
+    expect(extractMentoDashboardTimestamp(html)).toBe(OVERRIDE_DASHBOARD_TS_SEC);
   });
 
   it("ignores unrelated timestamps that appear outside the troves/dataUpdateCount anchor window", () => {
     const buildManifest =
       String.raw`buildManifest\":{\"timestamp\":\"2099-01-01T00:00:00.000Z\"},\"polyfillFiles\":[]`;
-    const anchoredPayload =
-      String.raw`troves\":[{}],\"timestamp\":\"2026-05-11T23:21:16.007Z\"},\"dataUpdateCount\":1`;
-    const html = `${buildManifest}${"x".repeat(1024)}${anchoredPayload}`;
+    const html = `${buildManifest}${"x".repeat(1024)}${MENTO_DASHBOARD_HTML_FIXTURE}`;
 
-    expect(extractMentoDashboardTimestamp(html)).toBe(
-      Math.floor(Date.parse("2026-05-11T23:21:16.007Z") / 1000),
-    );
+    expect(extractMentoDashboardTimestamp(html)).toBe(DASHBOARD_FRAGMENT_TS_SEC);
   });
 
   it("returns null when only a bare timestamp appears without troves/dataUpdateCount anchors", () => {
@@ -372,161 +388,14 @@ describe("mento adapter", () => {
     });
   });
 
-  it.each([
-    { reserveFails: false, dashboardFails: false },
-    { reserveFails: true, dashboardFails: false },
-    { reserveFails: false, dashboardFails: true },
-  ])("uses observed HTTP header fallback: $reserveFails / $dashboardFails", async ({ reserveFails, dashboardFails }) => {
-    rejectedIdentities = [
-      ...(reserveFails ? [`${MENTO_RESERVE_URL}:browser`] : []),
-      ...(dashboardFails ? [`${MENTO_DASHBOARD_URL}:browser`] : []),
-    ];
-    const result = await fetchMentoReserves(
-      { id: "cusd-celo" } as never, makeMentoConfig(), new AbortController().signal, { requestCache: new Map() },
-    );
-    expect(result.metadata).toMatchObject({
-      freshnessMode: "verified",
-      sourceTimestamp: Math.floor(Date.parse("2026-05-11T23:21:16.007Z") / 1000),
-    });
-    expect(result.slices).toContainEqual({ name: "sUSDS (Sky savings USDS)", pct: 50, risk: "low", coinId: "susds-sky" });
-    for (const [url, fallback] of [[MENTO_RESERVE_URL, reserveFails], [MENTO_DASHBOARD_URL, dashboardFails]] as const) {
-      expect(httpRequests.filter((request) => request.url === url).map(({ identity }) => identity))
-        .toEqual(fallback ? ["browser", "neutral"] : ["browser"]);
-    }
-    expect(httpRequests.filter(({ identity }) => identity === "browser").map(({ referer }) => referer))
-      .toEqual([MENTO_DASHBOARD_URL, MENTO_DASHBOARD_URL]);
-  });
-
-  it("retains both failed HTTP causes for reserve JSON", async () => {
-    rejectedIdentities = [`${MENTO_RESERVE_URL}:browser`, `${MENTO_RESERVE_URL}:neutral`];
-    const error = await fetchMentoReserves(
-      { id: "cusd-celo" } as never, makeMentoConfig(), new AbortController().signal, { requestCache: new Map() },
-    ).catch((error: unknown) => error);
-    expect(error).toBeInstanceOf(Error);
-    for (const cause of ["HTTP 401", "HTTP 403", MENTO_RESERVE_URL]) {
-      expect((error as Error).message).toContain(cause);
-    }
-    expect(httpRequests.filter(({ url }) => url === MENTO_RESERVE_URL).map(({ identity }) => identity)).toEqual(["browser", "neutral"]);
-  });
-
-  it("degrades freshness when both dashboard identities fail", async () => {
-    rejectedIdentities = [`${MENTO_DASHBOARD_URL}:browser`, `${MENTO_DASHBOARD_URL}:neutral`];
-    const result = await fetchMentoReserves(
-      { id: "cusd-celo" } as never, makeMentoConfig(), new AbortController().signal, { requestCache: new Map() },
-    );
-    expect(result.metadata?.freshnessMode).toBe("unverified");
-    expect(result.warnings?.map(({ code }) => code)).toContain("mento-dashboard-timestamp-failed");
-    expect(httpRequests.filter(({ url }) => url === MENTO_DASHBOARD_URL).map(({ identity }) => identity)).toEqual(["browser", "neutral"]);
-  });
-
   it("stamps CDP composition with verified dashboard freshness when available", () => {
-    const sourceTimestamp = Math.floor(Date.parse("2026-05-11T23:21:16.007Z") / 1000);
-    const result = adaptMentoCdpComposition(SAMPLE_PAYLOAD, "GBPm", sourceTimestamp);
+    const result = adaptMentoCdpComposition(SAMPLE_PAYLOAD, "GBPm", DASHBOARD_FRAGMENT_TS_SEC);
 
     expect(result.metadata).toMatchObject({
       freshnessMode: "verified",
-      sourceTimestamp,
+      sourceTimestamp: DASHBOARD_FRAGMENT_TS_SEC,
       details: { freshnessSource: "same-run-render-clock" },
     });
-  });
-
-  it("parses per-stablecoin CDP totals from the dashboard fixture", () => {
-    const backings = parseMentoDashboardCdpBackings(CURRENT_DASHBOARD_HTML);
-    expect(backings).not.toBeNull();
-    const gbpm = backings!.get("GBPm");
-    expect(gbpm).toBeDefined();
-    expect(Number.isFinite(gbpm!.collateralUsd)).toBe(true);
-    expect(Number.isFinite(gbpm!.debtUsd)).toBe(true);
-    expect(gbpm!.collateralUsd).toBeGreaterThan(0);
-    expect(gbpm!.debtUsd).toBeGreaterThan(0);
-  });
-
-  it("returns null from the coherence check for small matching drift", () => {
-    expect(mentoCdpCoherenceError(
-      "JPYm",
-      { collateralUsd: 171_960.48000001, debtUsd: 105_336.20000002 },
-      171_960.48000001,
-      105_336.20000002,
-    )).toBeNull();
-  });
-
-  it("fails closed when the dashboard and analytics API CDP totals diverge", async () => {
-    // Live 2026-09-09 discrepancy: the dashboard reported 2.05x the collateral
-    // and 2.52x the debt the analytics API troves summed for GBPm.
-    dashboardHtmlOverride = dashboardHtmlWithCdpBackings([
-      { stablecoin: "GBPm", collateral_token: "USDm", collateral_usd: 774785.9598798637, debt_usd: 315700.2296351052, status: "active" },
-    ]);
-    reservePayloadOverride = {
-      cdp_troves: {
-        troves: [
-          { stablecoin: "GBPm", collateral_token: "USDm", collateral_usd: 377712.75632851, debt_usd: 125192.04448356, status: "active" },
-        ],
-      },
-    };
-
-    const error = await fetchMentoReserves(
-      { id: "gbpm-mento" } as never,
-      { ...makeMentoConfig(), params: { cdpStablecoin: "GBPm" } },
-      new AbortController().signal,
-      { requestCache: new Map() } as never,
-    ).catch((caught: unknown) => caught);
-
-    expect(error).toBeInstanceOf(Error);
-    const message = (error as Error).message;
-    expect(message).toContain("mento dashboard-vs-API coherence failed for GBPm");
-    expect(message).toContain("774785.96");
-    expect(message).toContain("315700.23");
-    expect(message).toContain("377712.76");
-    expect(message).toContain("125192.04");
-  });
-
-  it.each([
-    { stablecoin: "JPYm", collateralUsd: 171_960.48000001, debtUsd: 105_336.20000002 },
-    { stablecoin: "CHFm", collateralUsd: 143_361.85000003, debtUsd: 90_307.02000004 },
-  ])("accepts $stablecoin when dashboard and API CDP totals agree to 8 decimals", async ({ stablecoin, collateralUsd, debtUsd }) => {
-    dashboardHtmlOverride = dashboardHtmlWithCdpBackings([
-      { stablecoin, collateral_token: "USDm", collateral_usd: collateralUsd, debt_usd: debtUsd, status: "active" },
-    ]);
-    reservePayloadOverride = {
-      cdp_troves: {
-        troves: [
-          { stablecoin, collateral_token: "USDm", collateral_usd: collateralUsd, debt_usd: debtUsd, status: "active" },
-        ],
-      },
-    };
-
-    const result = await fetchMentoReserves(
-      { id: "gbpm-mento" } as never,
-      { ...makeMentoConfig(), params: { cdpStablecoin: stablecoin } },
-      new AbortController().signal,
-      { requestCache: new Map() } as never,
-    );
-
-    expect(result.metadata).toMatchObject({
-      freshnessMode: "verified",
-      details: { freshnessSource: "same-run-render-clock" },
-      cdpStablecoin: stablecoin,
-      totalCollateralUsd: collateralUsd,
-      totalDebtUsd: debtUsd,
-      collateralizationRatio: collateralUsd / debtUsd,
-    });
-    expect(result.warnings).toBeUndefined();
-  });
-
-  it("throws when the requested CDP stablecoin has no active troves", () => {
-    expect(() => parseMentoCdpComposition({
-      cdp_troves: {
-        troves: [
-          {
-            stablecoin: "GBPm",
-            collateral_token: "USDm",
-            collateral_usd: 10,
-            debt_usd: 5,
-            status: "closed",
-          },
-        ],
-      },
-    }, "GBPm")).toThrow("no active GBPm entries");
   });
 
   it("annotates freshness as explicitly unverified with reason metadata", () => {
@@ -565,71 +434,282 @@ describe("mento adapter", () => {
     const result = adaptMentoCdpComposition(SAMPLE_PAYLOAD, "GBPm");
     expectValidAdapterOutput("mento", result);
   });
+
+  // --- Fetch-level, through the harness --------------------------------------
+  it("fetches the catalog-bound reserve composition and dashboard clock through the harness", async () => {
+    const { result } = await runAdapter("mento", "cusd-celo", {
+      network: mentoNetwork(),
+      nowSec: CURRENT_DASHBOARD_NOW_SEC,
+    });
+
+    expect(result.slices).toEqual([
+      { name: "sUSDS (Sky savings USDS)", pct: 50, risk: "low", coinId: "susds-sky" },
+      { name: "EURC (Circle euro stablecoin)", pct: 15, risk: "low", coinId: "eurc-circle" },
+      { name: "CELO", pct: 15, risk: "high" },
+      { name: "USDGLO (Glo Dollar)", pct: 5, risk: "low", coinId: "usdglo-glo" },
+      { name: "USDT", pct: 4, risk: "low", coinId: "usdt-tether" },
+      { name: "AUSD (Agora Dollar)", pct: 4, risk: "low", coinId: "ausd-agora" },
+      { name: "stETH (Lido staked ETH)", pct: 3, risk: "low" },
+      { name: "USDC", pct: 3, risk: "low", coinId: "usdc-circle" },
+      { name: "ETH", pct: 1, risk: "very-low" },
+    ]);
+    expect(result.metadata).toMatchObject({
+      freshnessMode: "verified",
+      details: { freshnessSource: "same-run-render-clock" },
+      stableReservePct: 81,
+    });
+    expect(result.metadata?.sourceTimestamp).toEqual(expect.any(Number));
+    expectWarnings(result, []);
+  });
+
+  it.each([
+    { reserveFails: false, dashboardFails: false },
+    { reserveFails: true, dashboardFails: false },
+    { reserveFails: false, dashboardFails: true },
+  ])("uses observed HTTP header fallback: $reserveFails / $dashboardFails", async ({ reserveFails, dashboardFails }) => {
+    const rejectedIdentities = [
+      ...(reserveFails ? [`${CATALOG_RESERVE_URL}:browser`] : []),
+      ...(dashboardFails ? [`${MENTO_DASHBOARD_URL}:browser`] : []),
+    ];
+    const identities: Array<{ url: string; identity: string; referer: string | null }> = [];
+    const respond = <T>(url: string, ok: T) =>
+      (request: Request): T | { status: number; body: string } => {
+        const identity = request.headers.get("origin") !== null ? "browser" : "neutral";
+        identities.push({ url, identity, referer: request.headers.get("referer") });
+        if (rejectedIdentities.includes(`${url}:${identity}`)) {
+          return { status: identity === "browser" ? 401 : 403, body: "denied" };
+        }
+        return ok;
+      };
+
+    const { result } = await runAdapter("mento", "cusd-celo", {
+      network: {
+        json: { [CATALOG_RESERVE_URL]: respond(CATALOG_RESERVE_URL, SAMPLE_PAYLOAD) },
+        html: { [MENTO_DASHBOARD_URL]: respond(MENTO_DASHBOARD_URL, MENTO_DASHBOARD_HTML_FIXTURE) },
+      },
+      nowSec: DASHBOARD_FRAGMENT_TS_SEC + 120,
+    });
+
+    expect(result.metadata).toMatchObject({
+      freshnessMode: "verified",
+      sourceTimestamp: DASHBOARD_FRAGMENT_TS_SEC,
+    });
+    expect(result.slices).toContainEqual({ name: "sUSDS (Sky savings USDS)", pct: 50, risk: "low", coinId: "susds-sky" });
+    for (const [url, fallback] of [[CATALOG_RESERVE_URL, reserveFails], [MENTO_DASHBOARD_URL, dashboardFails]] as const) {
+      expect(identities.filter((request) => request.url === url).map(({ identity }) => identity))
+        .toEqual(fallback ? ["browser", "neutral"] : ["browser"]);
+    }
+    expect(identities.filter(({ identity }) => identity === "browser").map(({ referer }) => referer))
+      .toEqual([MENTO_DASHBOARD_URL, MENTO_DASHBOARD_URL]);
+  });
+
+  it("retains both failed HTTP causes for reserve JSON", async () => {
+    const rejectedIdentities = [`${CATALOG_RESERVE_URL}:browser`, `${CATALOG_RESERVE_URL}:neutral`];
+    const respond = <T>(url: string, ok: T) =>
+      (request: Request): T | { status: number; body: string } => {
+        const identity = request.headers.get("origin") !== null ? "browser" : "neutral";
+        if (rejectedIdentities.includes(`${url}:${identity}`)) {
+          return { status: identity === "browser" ? 401 : 403, body: "denied" };
+        }
+        return ok;
+      };
+
+    const caught = await runAdapter("mento", "cusd-celo", {
+      network: {
+        json: { [CATALOG_RESERVE_URL]: respond(CATALOG_RESERVE_URL, SAMPLE_PAYLOAD) },
+        html: { [MENTO_DASHBOARD_URL]: respond(MENTO_DASHBOARD_URL, MENTO_DASHBOARD_HTML_FIXTURE) },
+      },
+      nowSec: DASHBOARD_FRAGMENT_TS_SEC + 120,
+    }).catch((error: unknown) => error);
+
+    expect(caught).toBeInstanceOf(Error);
+    for (const cause of ["HTTP 401", "HTTP 403", CATALOG_RESERVE_URL]) {
+      expect((caught as Error).message).toContain(cause);
+    }
+  });
+
+  it("degrades freshness when both dashboard identities fail", async () => {
+    const rejectedIdentities = [`${MENTO_DASHBOARD_URL}:browser`, `${MENTO_DASHBOARD_URL}:neutral`];
+    const respond = <T>(url: string, ok: T) =>
+      (request: Request): T | { status: number; body: string } => {
+        const identity = request.headers.get("origin") !== null ? "browser" : "neutral";
+        if (rejectedIdentities.includes(`${url}:${identity}`)) {
+          return { status: identity === "browser" ? 401 : 403, body: "denied" };
+        }
+        return ok;
+      };
+
+    const { result } = await runAdapter("mento", "cusd-celo", {
+      network: {
+        json: { [CATALOG_RESERVE_URL]: respond(CATALOG_RESERVE_URL, SAMPLE_PAYLOAD) },
+        html: { [MENTO_DASHBOARD_URL]: respond(MENTO_DASHBOARD_URL, MENTO_DASHBOARD_HTML_FIXTURE) },
+      },
+      nowSec: DASHBOARD_FRAGMENT_TS_SEC + 120,
+    });
+
+    expect(result.metadata?.freshnessMode).toBe("unverified");
+    expect(result.metadata).toMatchObject({ details: { freshnessSource: "mento-analytics-api" } });
+    expectWarnings(result, ["mento-dashboard-timestamp-failed"]);
+  });
+
+  it("fails closed when the dashboard and analytics API CDP totals diverge", async () => {
+    // Live 2026-09-09 discrepancy shape: the dashboard reports materially
+    // different GBPm totals than the analytics API troves sum to.
+    await expect(runAdapter("mento", "gbpm-mento", {
+      network: mentoNetwork({
+        dashboardHtml: dashboardHtmlWithCdpBackings([
+          { stablecoin: "GBPm", collateral_token: "USDm", collateral_usd: 774_785.9598798637, debt_usd: 315_700.2296351052, status: "active" },
+        ]),
+      }),
+      // The subject is the dashboard-vs-API gate, not the optional on-chain
+      // redemption telemetry.
+      params: { redemption: undefined },
+      nowSec: OVERRIDE_DASHBOARD_NOW_SEC,
+    })).rejects.toThrow(/mento dashboard-vs-API coherence failed for GBPm/);
+  });
+
+  it("reports both sides' totals in the coherence failure message", async () => {
+    const caught = await runAdapter("mento", "gbpm-mento", {
+      network: mentoNetwork({
+        dashboardHtml: dashboardHtmlWithCdpBackings([
+          { stablecoin: "GBPm", collateral_token: "USDm", collateral_usd: 774_785.9598798637, debt_usd: 315_700.2296351052, status: "active" },
+        ]),
+      }),
+      params: { redemption: undefined },
+      nowSec: OVERRIDE_DASHBOARD_NOW_SEC,
+    }).catch((error: unknown) => error);
+
+    const message = (caught as Error).message as string;
+    for (const value of ["774785.96", "315700.23", "213427.50", "102821.25"]) {
+      expect(message).toContain(value);
+    }
+  });
+
+  it.each([
+    { stablecoin: "JPYm", coinId: "jpym-mento" },
+    { stablecoin: "CHFm", coinId: "chfm-mento" },
+  ] as const)("accepts $stablecoin when dashboard and API CDP totals agree to 8 decimals", async ({ stablecoin, coinId }) => {
+    const { result } = await runAdapter("mento", coinId, {
+      network: mentoNetwork({ dashboardHtml: sampleMatchingDashboardHtml(stablecoin) }),
+      params: { redemption: undefined },
+      nowSec: OVERRIDE_DASHBOARD_NOW_SEC,
+    });
+
+    const { collateral_usd: collateralUsd, debt_usd: debtUsd } = SAMPLE_CDP_TOTALS[stablecoin];
+    expect(result.metadata).toMatchObject({
+      freshnessMode: "verified",
+      details: { freshnessSource: "same-run-render-clock" },
+      cdpStablecoin: stablecoin,
+      totalCollateralUsd: collateralUsd,
+      totalDebtUsd: debtUsd,
+      collateralizationRatio: collateralUsd / debtUsd,
+    });
+    expectWarnings(result, []);
+  });
+
+  it("degrades when the dashboard renames cdp_backings and the coherence gate cannot run", async () => {
+    const renamedDashboard = sampleMatchingDashboardHtml("GBPm").replace("cdp_backings", "cdp_backing_rows");
+
+    const { result } = await runAdapter("mento", "gbpm-mento", {
+      network: mentoNetwork({ dashboardHtml: renamedDashboard }),
+      params: { redemption: undefined },
+      nowSec: OVERRIDE_DASHBOARD_NOW_SEC,
+    });
+
+    // The CDP composition still publishes, but the lost cross-check must be
+    // surfaced as degraded — never silently skipped.
+    expectWarningEffect(result, "mento-cdp-coherence-unavailable", "degraded");
+    expect(result.metadata).toMatchObject({
+      cdpStablecoin: "GBPm",
+      totalCollateralUsd: SAMPLE_CDP_TOTALS.GBPm.collateral_usd,
+    });
+  });
 });
 
 describe("mento redemption telemetry", () => {
-  afterEach(() => {
-    vi.mocked(fetchOnchainRawCall).mockReset();
-    vi.mocked(fetchOnchainUint256).mockReset();
-    vi.mocked(fetchOnchainRateBps).mockReset();
-    vi.mocked(fetchErc20Balance).mockReset();
-    vi.mocked(fetchErc20TotalSupply).mockReset();
+  it("computes broker-pool capacity from the catalog-bound pool and converts a 5 bps spread", async () => {
+    const { result, network } = await runAdapter("mento", "brlm-mento", {
+      network: mentoNetwork({
+        rpc: {
+          [exchangeIdsKey]: encodeExchangeIds([EXCHANGE_ID_1, EXCHANGE_ID_2]),
+          [poolExchangeKey(EXCHANGE_ID_1)]: encodePoolExchange({
+            asset0: BRLM_TOKEN_ADDRESS,
+            asset1: USDM_ADDRESS,
+            bucket0: 0n,
+            bucket1: 1_000n * 10n ** 18n,
+            // 5e20 of the 1e24 Fixidity scale = 5 bps.
+            spread: 5n * 10n ** 20n,
+          }),
+          // A pool that matches no configured counter asset is skipped.
+          [poolExchangeKey(EXCHANGE_ID_2)]: encodePoolExchange({
+            asset0: USDT_ADDRESS,
+            asset1: USDC_ADDRESS,
+            bucket0: 5_000n * 10n ** 18n,
+            bucket1: 0n,
+            spread: 10n ** 22n,
+          }),
+        },
+      }),
+      nowSec: CURRENT_DASHBOARD_NOW_SEC,
+    });
+
+    const { coin } = resolveAdapterCoin("mento", "brlm-mento");
+    const redemption = coin.liveReservesConfig!.params!.redemption! as { sourceUrls: string[] };
+    expect(result.metadata?.redemption).toMatchObject({
+      capacityUsd: 1_000,
+      capacityKind: "live-direct-bounded",
+      freshnessKind: "same-run-onchain",
+      routeStatus: "open",
+      routeStatusSource: "onchain",
+      holderEligibility: "any-holder",
+      settlementDelaySec: 0,
+      feeBps: 5,
+      sourceUrls: redemption.sourceUrls,
+    });
+    // Redemption telemetry is additive: the analytics-API reserve composition
+    // is untouched.
+    expect(result.slices).toHaveLength(9);
+    expectWarnings(result, []);
+    expect(network.rpcCalls.map(({ data }) => data)).toEqual([
+      MENTO_GET_EXCHANGE_IDS_SELECTOR,
+      `${MENTO_GET_POOL_EXCHANGE_SELECTOR}${EXCHANGE_ID_1.slice(2)}`,
+    ]);
   });
 
-  function makeRedemptionConfig(params: Record<string, unknown>): LiveReservesConfig {
-    return { ...makeMentoConfig(), params };
-  }
-
-  function makeRequestCache(): Map<string, Promise<unknown>> {
-    return new Map<string, Promise<unknown>>();
-  }
-
-  it("computes broker-pool capacity as the summed counter-asset buckets and fee as the max matched spread", async () => {
-    vi.mocked(fetchOnchainRawCall).mockImplementation(async ({ contract, data }) => {
-      expect(contract).toBe(MENTO_BIPOOL_MANAGER_ADDRESS);
-      if (data === MENTO_GET_EXCHANGE_IDS_SELECTOR) {
-        return encodeExchangeIds([EXCHANGE_ID_1, EXCHANGE_ID_2]);
-      }
-      if (data === `${MENTO_GET_POOL_EXCHANGE_SELECTOR}${EXCHANGE_ID_1.slice(2)}`) {
-        // MGP-13 stable-pool spread: 5e20 of the 1e24 Fixidity scale = 5 bps.
-        return encodePoolExchange({
-          asset0: USDM_ADDRESS,
-          asset1: USDC_ADDRESS,
-          bucket0: 0n,
-          bucket1: 1_000n * 10n ** 18n,
-          spread: 5n * 10n ** 20n,
-        });
-      }
-      if (data === `${MENTO_GET_POOL_EXCHANGE_SELECTOR}${EXCHANGE_ID_2.slice(2)}`) {
-        // 1e22 of the 1e24 Fixidity scale = 100 bps (1%).
-        return encodePoolExchange({
-          asset0: USDT_ADDRESS,
-          asset1: USDM_ADDRESS,
-          bucket0: 2_500n * 10n ** 18n,
-          bucket1: 0n,
-          spread: 10n ** 22n,
-        });
-      }
-      return null;
-    });
-
-    const config = makeRedemptionConfig({
-      redemption: {
-        kind: "broker-pool",
-        pools: [
-          { selfTokenAddress: USDM_ADDRESS, counterAsset: { address: USDC_ADDRESS, label: "USDC" } },
-          { selfTokenAddress: USDM_ADDRESS, counterAsset: { address: USDT_ADDRESS, label: "USDT" } },
-        ],
-        sourceUrls: ["https://docs.mento.org/mento/build-on-mento/smart-contracts/bipoolmanager"],
+  it("sums matched counter-asset buckets and takes the max spread as the fee", async () => {
+    const { result } = await runAdapter("mento", "brlm-mento", {
+      network: mentoNetwork({
+        rpc: {
+          [exchangeIdsKey]: encodeExchangeIds([EXCHANGE_ID_1, EXCHANGE_ID_2]),
+          [poolExchangeKey(EXCHANGE_ID_1)]: encodePoolExchange({
+            asset0: BRLM_TOKEN_ADDRESS,
+            asset1: USDC_ADDRESS,
+            bucket0: 0n,
+            bucket1: 1_000n * 10n ** 18n,
+            spread: 5n * 10n ** 20n,
+          }),
+          [poolExchangeKey(EXCHANGE_ID_2)]: encodePoolExchange({
+            asset0: USDT_ADDRESS,
+            asset1: BRLM_TOKEN_ADDRESS,
+            bucket0: 2_500n * 10n ** 18n,
+            bucket1: 0n,
+            // 1e22 of the 1e24 Fixidity scale = 100 bps (1%).
+            spread: 10n ** 22n,
+          }),
+        },
+      }),
+      params: {
+        redemption: {
+          kind: "broker-pool",
+          pools: [
+            { selfTokenAddress: BRLM_TOKEN_ADDRESS, counterAsset: { address: USDC_ADDRESS, label: "USDC" } },
+            { selfTokenAddress: BRLM_TOKEN_ADDRESS, counterAsset: { address: USDT_ADDRESS, label: "USDT" } },
+          ],
+          sourceUrls: ["https://docs.mento.org/mento/build-on-mento/smart-contracts/bipoolmanager"],
+        },
       },
+      nowSec: CURRENT_DASHBOARD_NOW_SEC,
     });
-
-    const result = await fetchMentoReserves(
-      { id: "cusd-celo" } as never,
-      config,
-      new AbortController().signal,
-      { requestCache: makeRequestCache() } as never,
-    );
 
     expect(result.metadata?.redemption).toMatchObject({
       capacityUsd: 3_500,
@@ -642,112 +722,58 @@ describe("mento redemption telemetry", () => {
       feeBps: 100,
       sourceUrls: ["https://docs.mento.org/mento/build-on-mento/smart-contracts/bipoolmanager"],
     });
-    expect(result.metadata?.redemption?.feeBps).toBe(100);
-    // Redemption telemetry is additive: the analytics-API reserve composition
-    // is untouched.
-    expect(result.slices.length).toBeGreaterThan(0);
-    expect(result.warnings).toBeUndefined();
-  });
-
-  it("converts a single-pool 5 bps spread correctly", async () => {
-    vi.mocked(fetchOnchainRawCall).mockImplementation(async ({ data }) => {
-      if (data === MENTO_GET_EXCHANGE_IDS_SELECTOR) return encodeExchangeIds([EXCHANGE_ID_1]);
-      if (data === `${MENTO_GET_POOL_EXCHANGE_SELECTOR}${EXCHANGE_ID_1.slice(2)}`) {
-        return encodePoolExchange({
-          asset0: USDM_ADDRESS,
-          asset1: USDC_ADDRESS,
-          bucket0: 0n,
-          bucket1: 10n ** 18n,
-          spread: 5n * 10n ** 20n,
-        });
-      }
-      return null;
-    });
-
-    const config = makeRedemptionConfig({
-      redemption: {
-        kind: "broker-pool",
-        pools: [{ selfTokenAddress: USDM_ADDRESS, counterAsset: { address: USDC_ADDRESS } }],
-      },
-    });
-
-    const result = await fetchMentoReserves(
-      { id: "cusd-celo" } as never,
-      config,
-      new AbortController().signal,
-      { requestCache: makeRequestCache() } as never,
-    );
-
-    expect(result.metadata?.redemption?.feeBps).toBe(5);
+    expect(result.slices).toHaveLength(9);
+    expectWarnings(result, []);
   });
 
   it("caches broker reads separately and stops each coin once its configured pools match", async () => {
-    const requestedData: string[] = [];
-    let activePoolReads = 0;
-    let maxActivePoolReads = 0;
-    vi.mocked(fetchOnchainRawCall).mockImplementation(async ({ data }) => {
-      requestedData.push(data);
-      if (data === MENTO_GET_EXCHANGE_IDS_SELECTOR) {
-        return encodeExchangeIds([EXCHANGE_ID_1, EXCHANGE_ID_2, EXCHANGE_ID_3]);
-      }
-      activePoolReads += 1;
-      maxActivePoolReads = Math.max(maxActivePoolReads, activePoolReads);
-      await Promise.resolve();
-      activePoolReads -= 1;
-      if (data === `${MENTO_GET_POOL_EXCHANGE_SELECTOR}${EXCHANGE_ID_1.slice(2)}`) {
-        return encodePoolExchange({
+    const network = installAdapterNetwork({
+      json: { [CATALOG_RESERVE_URL]: SAMPLE_PAYLOAD },
+      html: { [MENTO_DASHBOARD_URL]: MENTO_DASHBOARD_HTML_FIXTURE },
+      rpc: {
+        [exchangeIdsKey]: encodeExchangeIds([EXCHANGE_ID_1, EXCHANGE_ID_2, EXCHANGE_ID_3]),
+        [poolExchangeKey(EXCHANGE_ID_1)]: encodePoolExchange({
           asset0: USDM_ADDRESS,
           asset1: USDC_ADDRESS,
           bucket0: 0n,
           bucket1: 10n ** 18n,
           spread: 5n * 10n ** 20n,
-        });
-      }
-      if (data === `${MENTO_GET_POOL_EXCHANGE_SELECTOR}${EXCHANGE_ID_3.slice(2)}`) {
-        return encodePoolExchange({
+        }),
+        [poolExchangeKey(EXCHANGE_ID_2)]: null,
+        [poolExchangeKey(EXCHANGE_ID_3)]: encodePoolExchange({
           asset0: USDT_ADDRESS,
           asset1: USDM_ADDRESS,
           bucket0: 2n * 10n ** 18n,
           bucket1: 0n,
           spread: 10n ** 22n,
-        });
-      }
-      return null;
-    });
-    const usdcConfig = makeRedemptionConfig({
-      redemption: {
-        kind: "broker-pool",
-        pools: [{ selfTokenAddress: USDM_ADDRESS, counterAsset: { address: USDC_ADDRESS } }],
+        }),
       },
     });
-    const usdtConfig = makeRedemptionConfig({
-      redemption: {
-        kind: "broker-pool",
-        pools: [{ selfTokenAddress: USDM_ADDRESS, counterAsset: { address: USDT_ADDRESS } }],
-      },
-    });
-    const requestCache = makeRequestCache();
+    const requestCache = new Map<string, Promise<unknown>>();
+    const ctx = directCtx(network, requestCache);
 
-    await fetchMentoReserves(
+    const usdc = await fetchMentoReserves(
       { id: "cusd-celo" } as never,
-      usdcConfig,
+      brokerPoolConfig("cusd-celo", [{ selfTokenAddress: USDM_ADDRESS, counterAssetAddress: USDC_ADDRESS }]),
       new AbortController().signal,
-      { requestCache } as never,
+      ctx,
     );
-    expect(requestedData).toEqual([
+    expect(usdc.metadata?.redemption).toMatchObject({ capacityUsd: 1, feeBps: 5 });
+    expect(network.rpcCalls.map(({ data }) => data)).toEqual([
       MENTO_GET_EXCHANGE_IDS_SELECTOR,
       `${MENTO_GET_POOL_EXCHANGE_SELECTOR}${EXCHANGE_ID_1.slice(2)}`,
     ]);
 
-    await fetchMentoReserves(
+    const usdt = await fetchMentoReserves(
       { id: "ceur-celo" } as never,
-      usdtConfig,
+      brokerPoolConfig("cusd-celo", [{ selfTokenAddress: USDM_ADDRESS, counterAssetAddress: USDT_ADDRESS }]),
       new AbortController().signal,
-      { requestCache } as never,
+      ctx,
     );
-
-    expect(maxActivePoolReads).toBe(1);
-    expect(requestedData).toEqual([
+    // The exchange-id census and the already-decoded pool survive across coins;
+    // the scan resumes at the first unread pool and stops at its match.
+    expect(usdt.metadata?.redemption).toMatchObject({ capacityUsd: 2, feeBps: 100 });
+    expect(network.rpcCalls.map(({ data }) => data)).toEqual([
       MENTO_GET_EXCHANGE_IDS_SELECTOR,
       `${MENTO_GET_POOL_EXCHANGE_SELECTOR}${EXCHANGE_ID_1.slice(2)}`,
       `${MENTO_GET_POOL_EXCHANGE_SELECTOR}${EXCHANGE_ID_2.slice(2)}`,
@@ -758,64 +784,55 @@ describe("mento redemption telemetry", () => {
   it("continues a broker scan after another coin times out without inheriting its rejected read", async () => {
     vi.useFakeTimers();
     try {
-      const requestedData: string[] = [];
       let exchangeTwoAttempts = 0;
-      vi.mocked(fetchOnchainRawCall).mockImplementation(async ({ data, signal }) => {
-        requestedData.push(data);
-        if (data === MENTO_GET_EXCHANGE_IDS_SELECTOR) {
-          return encodeExchangeIds([EXCHANGE_ID_1, EXCHANGE_ID_2, EXCHANGE_ID_3]);
-        }
-        if (data === `${MENTO_GET_POOL_EXCHANGE_SELECTOR}${EXCHANGE_ID_1.slice(2)}`) return null;
-        if (data === `${MENTO_GET_POOL_EXCHANGE_SELECTOR}${EXCHANGE_ID_2.slice(2)}`) {
-          exchangeTwoAttempts += 1;
-          if (exchangeTwoAttempts === 1) {
-            return new Promise((_resolve, reject) => {
-              signal.addEventListener("abort", () => reject(signal.reason), { once: true });
-            });
-          }
-          return null;
-        }
-        if (data === `${MENTO_GET_POOL_EXCHANGE_SELECTOR}${EXCHANGE_ID_3.slice(2)}`) {
-          return encodePoolExchange({
+      const network = installAdapterNetwork({
+        json: { [CATALOG_RESERVE_URL]: SAMPLE_PAYLOAD },
+        html: { [MENTO_DASHBOARD_URL]: MENTO_DASHBOARD_HTML_FIXTURE },
+        rpc: {
+          [exchangeIdsKey]: encodeExchangeIds([EXCHANGE_ID_1, EXCHANGE_ID_2, EXCHANGE_ID_3]),
+          [poolExchangeKey(EXCHANGE_ID_1)]: null,
+          [poolExchangeKey(EXCHANGE_ID_2)]: () => {
+            exchangeTwoAttempts += 1;
+            if (exchangeTwoAttempts === 1) {
+              return new Promise<never>((_resolve, reject) => {
+                setTimeout(() => reject(new Error("broker read stalled")), 8_500);
+              });
+            }
+            return null;
+          },
+          [poolExchangeKey(EXCHANGE_ID_3)]: encodePoolExchange({
             asset0: USDM_ADDRESS,
             asset1: USDC_ADDRESS,
             bucket0: 0n,
             bucket1: 10n ** 18n,
             spread: 5n * 10n ** 20n,
-          });
-        }
-        return null;
-      });
-      const config = makeRedemptionConfig({
-        redemption: {
-          kind: "broker-pool",
-          pools: [{ selfTokenAddress: USDM_ADDRESS, counterAsset: { address: USDC_ADDRESS } }],
+          }),
         },
       });
-      const requestCache = makeRequestCache();
+      const requestCache = new Map<string, Promise<unknown>>();
+      const ctx = directCtx(network, requestCache);
+      const config = brokerPoolConfig("cusd-celo", [{ selfTokenAddress: USDM_ADDRESS, counterAssetAddress: USDC_ADDRESS }]);
 
-      const firstResultPromise = fetchMentoReserves(
+      const firstPromise = fetchMentoReserves(
         { id: "cusd-celo" } as never,
         config,
         new AbortController().signal,
-        { requestCache } as never,
+        ctx,
       );
-      await vi.advanceTimersByTimeAsync(8_000);
-      const firstResult = await firstResultPromise;
+      await vi.advanceTimersByTimeAsync(8_000); // the redemption deadline fires
+      await vi.advanceTimersByTimeAsync(1_000); // the stalled RPC read gives up
+      const firstResult = await firstPromise;
       const secondResult = await fetchMentoReserves(
         { id: "ceur-celo" } as never,
         config,
         new AbortController().signal,
-        { requestCache } as never,
+        ctx,
       );
 
       expect(firstResult.metadata?.redemption).toBeUndefined();
-      expect(firstResult.warnings?.some((warning) =>
-        warning.code === "mento-redemption-telemetry-failed"
-        && warning.message.includes("mento-redemption-timeout")
-      )).toBe(true);
+      expectWarnings(firstResult, ["mento-redemption-telemetry-failed"]);
       expect(secondResult.metadata?.redemption).toMatchObject({ capacityUsd: 1 });
-      expect(requestedData).toEqual([
+      expect(network.rpcCalls.map(({ data }) => data)).toEqual([
         MENTO_GET_EXCHANGE_IDS_SELECTOR,
         `${MENTO_GET_POOL_EXCHANGE_SELECTOR}${EXCHANGE_ID_1.slice(2)}`,
         `${MENTO_GET_POOL_EXCHANGE_SELECTOR}${EXCHANGE_ID_2.slice(2)}`,
@@ -832,161 +849,128 @@ describe("mento redemption telemetry", () => {
       { length: 65 },
       (_, index) => `0x${index.toString(16).padStart(64, "0")}`,
     );
-    vi.mocked(fetchOnchainRawCall).mockImplementation(async ({ data }) => {
-      if (data === MENTO_GET_EXCHANGE_IDS_SELECTOR) return encodeExchangeIds(oversizedExchangeIds);
-      throw new Error(`unexpected capped broker-pool lookup: ${data}`);
-    });
-    const config = makeRedemptionConfig({
-      redemption: {
-        kind: "broker-pool",
-        pools: [{ selfTokenAddress: USDM_ADDRESS, counterAsset: { address: USDC_ADDRESS } }],
-      },
+    const { result, network } = await runAdapter("mento", "brlm-mento", {
+      network: mentoNetwork({
+        rpc: { [exchangeIdsKey]: encodeExchangeIds(oversizedExchangeIds) },
+      }),
+      nowSec: CURRENT_DASHBOARD_NOW_SEC,
     });
 
-    const result = await fetchMentoReserves(
-      { id: "cusd-celo" } as never,
-      config,
-      new AbortController().signal,
-      { requestCache: makeRequestCache() } as never,
-    );
-
-    expect(result.slices.length).toBeGreaterThan(0);
+    expect(result.slices).toHaveLength(9);
     expect(result.metadata?.redemption).toBeUndefined();
-    expect(result.warnings?.some((warning) => warning.code === "mento-redemption-telemetry-failed")).toBe(true);
-    expect(fetchOnchainRawCall).toHaveBeenCalledTimes(1);
+    expectWarnings(result, ["mento-redemption-telemetry-failed"]);
+    // The cap short-circuits before any per-pool reads.
+    expect(network.rpcCalls).toHaveLength(1);
   });
 
   it("retains a failed exchange-id read for the run instead of retrying it per coin", async () => {
-    vi.mocked(fetchOnchainRawCall).mockRejectedValue(new Error("rpc down"));
-    const config = makeRedemptionConfig({
-      redemption: {
-        kind: "broker-pool",
-        pools: [{ selfTokenAddress: USDM_ADDRESS, counterAsset: { address: USDC_ADDRESS } }],
+    const network = installAdapterNetwork({
+      json: { [CATALOG_RESERVE_URL]: SAMPLE_PAYLOAD },
+      html: { [MENTO_DASHBOARD_URL]: MENTO_DASHBOARD_HTML_FIXTURE },
+      rpc: {
+        [exchangeIdsKey]: () => {
+          throw new Error("rpc down");
+        },
       },
     });
-    const requestCache = makeRequestCache();
+    const requestCache = new Map<string, Promise<unknown>>();
+    const ctx = directCtx(network, requestCache);
+    const config = brokerPoolConfig("cusd-celo", [{ selfTokenAddress: USDM_ADDRESS, counterAssetAddress: USDC_ADDRESS }]);
 
     const first = await fetchMentoReserves(
       { id: "cusd-celo" } as never,
       config,
       new AbortController().signal,
-      { requestCache } as never,
+      ctx,
     );
+    const callsAfterFirstCoin = network.rpcCalls.length;
     const second = await fetchMentoReserves(
       { id: "ceur-celo" } as never,
       config,
       new AbortController().signal,
-      { requestCache } as never,
+      ctx,
     );
 
-    expect(fetchOnchainRawCall).toHaveBeenCalledTimes(1);
-    expect(first.warnings?.some((warning) => warning.code === "mento-redemption-telemetry-failed")).toBe(true);
-    expect(second.warnings?.some((warning) => warning.code === "mento-redemption-telemetry-failed")).toBe(true);
+    expectWarnings(first, ["mento-redemption-telemetry-failed"]);
+    expectWarnings(second, ["mento-redemption-telemetry-failed"]);
+    // The rejected census read is cached for the whole run: the second coin
+    // adds no further RPC traffic.
+    expect(network.rpcCalls).toHaveLength(callsAfterFirstCoin);
   });
 
   it("bounds optional redemption telemetry without discarding reserve composition", async () => {
     vi.useFakeTimers();
     try {
-      vi.mocked(fetchOnchainRawCall).mockImplementation(({ signal }) =>
-        new Promise((_resolve, reject) => {
-          signal.addEventListener("abort", () => reject(signal.reason), { once: true });
-        }),
-      );
-      const config = makeRedemptionConfig({
-        redemption: {
-          kind: "broker-pool",
-          pools: [{ selfTokenAddress: USDM_ADDRESS, counterAsset: { address: USDC_ADDRESS } }],
+      const network = installAdapterNetwork({
+        json: { [CATALOG_RESERVE_URL]: SAMPLE_PAYLOAD },
+        html: { [MENTO_DASHBOARD_URL]: MENTO_DASHBOARD_HTML_FIXTURE },
+        rpc: {
+          [exchangeIdsKey]: () => new Promise<never>((_resolve, reject) => {
+            setTimeout(() => reject(new Error("broker scan stalled")), 8_500);
+          }),
         },
       });
       const resultPromise = fetchMentoReserves(
         { id: "cusd-celo" } as never,
-        config,
+        brokerPoolConfig("cusd-celo", [{ selfTokenAddress: USDM_ADDRESS, counterAssetAddress: USDC_ADDRESS }]),
         new AbortController().signal,
-        { requestCache: makeRequestCache() } as never,
+        directCtx(network, new Map()),
       );
 
-      await vi.advanceTimersByTimeAsync(8_000);
+      await vi.advanceTimersByTimeAsync(8_000); // the redemption deadline fires
+      await vi.advanceTimersByTimeAsync(1_000); // the stalled RPC read gives up
       const result = await resultPromise;
 
-      expect(result.slices.length).toBeGreaterThan(0);
+      expect(result.slices).toHaveLength(9);
       expect(result.metadata?.redemption).toBeUndefined();
-      expect(result.warnings?.some((warning) =>
-        warning.code === "mento-redemption-telemetry-failed"
-        && warning.message.includes("mento-redemption-timeout")
-      )).toBe(true);
+      expectWarnings(result, ["mento-redemption-telemetry-failed"]);
     } finally {
       vi.useRealTimers();
     }
   });
 
   it("fails closed when the broker-pool onchain read fails, leaving reserve slices unaffected", async () => {
-    vi.mocked(fetchOnchainRawCall).mockRejectedValue(new Error("rpc down"));
-
-    const config = makeRedemptionConfig({
-      redemption: {
-        kind: "broker-pool",
-        pools: [{ selfTokenAddress: USDM_ADDRESS, counterAsset: { address: USDC_ADDRESS } }],
-      },
+    const { result, network } = await runAdapter("mento", "brlm-mento", {
+      network: mentoNetwork({
+        rpc: {
+          [exchangeIdsKey]: () => {
+            throw new Error("rpc down");
+          },
+        },
+      }),
+      nowSec: CURRENT_DASHBOARD_NOW_SEC,
     });
 
-    const result = await fetchMentoReserves(
-      { id: "cusd-celo" } as never,
-      config,
-      new AbortController().signal,
-      { requestCache: makeRequestCache() } as never,
-    );
-
-    expect(result.slices.length).toBeGreaterThan(0);
+    expect(result.slices).toHaveLength(9);
     expect(result.metadata?.redemption).toBeUndefined();
-    expect(result.warnings?.some((warning) => warning.code === "mento-redemption-telemetry-failed")).toBe(true);
+    expectWarnings(result, ["mento-redemption-telemetry-failed"]);
+    // Fails closed at the census read; no per-pool reads are attempted.
+    expect(network.rpcCalls.some(({ data }) => data.startsWith(MENTO_GET_POOL_EXCHANGE_SELECTOR))).toBe(false);
   });
 
-  function runRedemption(id: string, config: LiveReservesConfig) {
-    return fetchMentoReserves(
-      { id } as never, config, new AbortController().signal, { requestCache: new Map() },
-    );
-  }
-
-  function fpmmConfig(cdpStablecoin: string, poolAddress: string) {
-    return makeRedemptionConfig({
-      cdpStablecoin,
-      redemption: { kind: "fpmm-pool", poolAddress, usdmTokenAddress: USDM_ADDRESS },
-    });
-  }
-
-  function liquityConfig() {
-    return makeRedemptionConfig({
-      cdpStablecoin: "GBPm",
-      redemption: {
-        kind: "liquity-v2-cr",
-        collateralRegistryAddress: "0x1bEDD4334335522B0a0e8e610d326B16B0a605Fb",
-        troveManagerAddress: "0xb38aEf2bF4e34B997330D626EBCd7629De3885C9",
-        activePoolAddress: "0xa7873F4Bf2A1ea2EB20B1e8A992C4748e78473b2",
-        tokenAddress: "0xCCF663b1fF11028f0b19058d0f7B674004a40746",
-      },
-    });
-  }
-
   it("computes liquity-v2-cr capacity ratio and fee for the GBPm CDP branch", async () => {
-    const ACTIVE_POOL = "0xa7873F4Bf2A1ea2EB20B1e8A992C4748e78473b2";
-    const TROVE_MANAGER = "0xb38aEf2bF4e34B997330D626EBCd7629De3885C9";
-    const COLLATERAL_REGISTRY = "0x1bEDD4334335522B0a0e8e610d326B16B0a605Fb";
-    const GBPM_TOKEN = "0xCCF663b1fF11028f0b19058d0f7B674004a40746";
+    const { coin } = resolveAdapterCoin("mento", "gbpm-mento");
+    const liquity = coin.liveReservesConfig!.params!.redemption! as {
+      collateralRegistryAddress: string;
+      troveManagerAddress: string;
+      activePoolAddress: string;
+      tokenAddress: string;
+      sourceUrls: string[];
+    };
 
-    vi.mocked(fetchOnchainUint256).mockImplementation(async ({ contract, data }) => (
-      contract === ACTIVE_POOL && data === "0x45507998" ? 500n * 10n ** 18n : null
-    ));
-    vi.mocked(fetchOnchainRawCall).mockImplementation(async ({ contract, data }) => (
-      contract === TROVE_MANAGER && data === "0x58569081" ? `0x${"0".repeat(64)}` : null
-    ));
-    vi.mocked(fetchOnchainRateBps).mockImplementation(async (_input, probe) => (
-      probe.contract === COLLATERAL_REGISTRY && probe.selector === "0xc52861f2" ? 50 : null
-    ));
-    vi.mocked(fetchErc20TotalSupply).mockImplementation(async (_input, address) => (
-      address === GBPM_TOKEN ? 1_000n * 10n ** 18n : null
-    ));
-
-    const result = await runRedemption("gbpm-mento", liquityConfig());
+    const { result } = await runAdapter("mento", "gbpm-mento", {
+      network: mentoNetwork({
+        dashboardHtml: sampleMatchingDashboardHtml("GBPm"),
+        rpc: {
+          [`celo:${liquity.activePoolAddress.toLowerCase()}:${LIQUITY_V2_DEBT_SELECTOR}`]: 500n * 10n ** 18n,
+          [`celo:${liquity.troveManagerAddress.toLowerCase()}:${LIQUITY_V2_SHUTDOWN_SELECTOR}`]: `0x${"0".repeat(64)}`,
+          // 5e15 of the 18-decimal rate scale = 50 bps.
+          [`celo:${liquity.collateralRegistryAddress.toLowerCase()}:${LIQUITY_V2_REDEMPTION_RATE_SELECTOR}`]: 5n * 10n ** 15n,
+          [`celo:${liquity.tokenAddress.toLowerCase()}:totalSupply()`]: 1_000n * 10n ** 18n,
+        },
+      }),
+      nowSec: OVERRIDE_DASHBOARD_NOW_SEC,
+    });
 
     expect(result.metadata?.redemption).toMatchObject({
       capacityRatioOfSupply: 0.5,
@@ -995,71 +979,109 @@ describe("mento redemption telemetry", () => {
       routeStatus: "open",
       routeStatusSource: "onchain",
       feeBps: 50,
+      sourceUrls: liquity.sourceUrls,
     });
-    expect(result.slices.length).toBeGreaterThan(0);
+    expect(result.slices).toHaveLength(1);
+    expectWarnings(result, []);
   });
 
   it("fails closed when the liquity-v2-cr onchain read fails, leaving reserve slices unaffected", async () => {
-    vi.mocked(fetchOnchainUint256).mockResolvedValue(null);
-    vi.mocked(fetchOnchainRawCall).mockResolvedValue(null);
-    vi.mocked(fetchOnchainRateBps).mockResolvedValue(null);
-    vi.mocked(fetchErc20TotalSupply).mockResolvedValue(null);
+    const liquity = resolveAdapterCoin("mento", "gbpm-mento").coin.liveReservesConfig!.params!.redemption! as {
+      collateralRegistryAddress: string;
+      troveManagerAddress: string;
+      activePoolAddress: string;
+      tokenAddress: string;
+    };
 
-    const result = await runRedemption("gbpm-mento", liquityConfig());
+    const { result } = await runAdapter("mento", "gbpm-mento", {
+      network: mentoNetwork({
+        dashboardHtml: sampleMatchingDashboardHtml("GBPm"),
+        rpc: {
+          [`celo:${liquity.activePoolAddress.toLowerCase()}:${LIQUITY_V2_DEBT_SELECTOR}`]: null,
+          [`celo:${liquity.troveManagerAddress.toLowerCase()}:${LIQUITY_V2_SHUTDOWN_SELECTOR}`]: null,
+          [`celo:${liquity.collateralRegistryAddress.toLowerCase()}:${LIQUITY_V2_REDEMPTION_RATE_SELECTOR}`]: null,
+          [`celo:${liquity.tokenAddress.toLowerCase()}:totalSupply()`]: null,
+        },
+      }),
+      nowSec: OVERRIDE_DASHBOARD_NOW_SEC,
+    });
 
-    expect(result.slices.length).toBeGreaterThan(0);
+    expect(result.slices).toHaveLength(1);
     expect(result.metadata?.redemption).toBeUndefined();
-    expect(result.warnings?.some((warning) => warning.code === "mento-redemption-telemetry-failed")).toBe(true);
+    expectWarnings(result, ["mento-redemption-telemetry-failed"]);
   });
 
   it("computes fpmm-pool capacity and fee from the pool's USDm balance and swap fees", async () => {
-    const POOL_ADDRESS = "0x9861F6D2Fe392b934C86eC89D2886CEb772B2b41";
+    const fpmm = resolveAdapterCoin("mento", "jpym-mento").coin.liveReservesConfig!.params!.redemption! as {
+      poolAddress: string;
+      usdmTokenAddress: string;
+    };
 
-    vi.mocked(fetchErc20Balance).mockImplementation(async (_input, tokenAddress, holder) => (
-      tokenAddress === USDM_ADDRESS && holder === POOL_ADDRESS ? 750n * 10n ** 18n : null
-    ));
-    vi.mocked(fetchOnchainUint256).mockImplementation(async ({ contract, data }) => {
-      if (contract !== POOL_ADDRESS) return null;
-      if (data === FPMM_LP_FEE_SELECTOR) return 20n;
-      if (data === FPMM_PROTOCOL_FEE_SELECTOR) return 10n;
-      return null;
+    const { result } = await runAdapter("mento", "jpym-mento", {
+      network: mentoNetwork({
+        dashboardHtml: sampleMatchingDashboardHtml("JPYm"),
+        rpc: {
+          [`celo:${fpmm.usdmTokenAddress.toLowerCase()}:balanceOf(address)`]: 750n * 10n ** 18n,
+          [`celo:${fpmm.poolAddress.toLowerCase()}:${FPMM_LP_FEE_SELECTOR}`]: 20n,
+          [`celo:${fpmm.poolAddress.toLowerCase()}:${FPMM_PROTOCOL_FEE_SELECTOR}`]: 10n,
+        },
+      }),
+      nowSec: OVERRIDE_DASHBOARD_NOW_SEC,
     });
 
-    const result = await runRedemption("jpym-mento", fpmmConfig("JPYm", POOL_ADDRESS));
-
-    const redemption = result.metadata?.redemption as Record<string, unknown> | undefined;
-    expect(redemption).toMatchObject({
+    expect(result.metadata?.redemption).toMatchObject({
       capacityUsd: 750,
       capacityKind: "live-direct-bounded",
       freshnessKind: "same-run-onchain",
       routeStatus: "open",
       feeBps: 30,
     });
-    expect(result.slices.length).toBeGreaterThan(0);
+    expect(result.slices).toHaveLength(1);
+    expectWarnings(result, []);
   });
 
   it("keeps fpmm-pool capacity but omits the fee when a fee leg does not read", async () => {
-    const POOL_ADDRESS = "0x9861F6D2Fe392b934C86eC89D2886CEb772B2b41";
+    const fpmm = resolveAdapterCoin("mento", "jpym-mento").coin.liveReservesConfig!.params!.redemption! as {
+      poolAddress: string;
+      usdmTokenAddress: string;
+    };
 
-    vi.mocked(fetchErc20Balance).mockResolvedValue(750n * 10n ** 18n);
-    vi.mocked(fetchOnchainUint256).mockImplementation(async ({ data }) => (
-      data === FPMM_LP_FEE_SELECTOR ? 20n : null
-    ));
+    const { result } = await runAdapter("mento", "jpym-mento", {
+      network: mentoNetwork({
+        dashboardHtml: sampleMatchingDashboardHtml("JPYm"),
+        rpc: {
+          [`celo:${fpmm.usdmTokenAddress.toLowerCase()}:balanceOf(address)`]: 750n * 10n ** 18n,
+          [`celo:${fpmm.poolAddress.toLowerCase()}:${FPMM_LP_FEE_SELECTOR}`]: 20n,
+          [`celo:${fpmm.poolAddress.toLowerCase()}:${FPMM_PROTOCOL_FEE_SELECTOR}`]: null,
+        },
+      }),
+      nowSec: OVERRIDE_DASHBOARD_NOW_SEC,
+    });
 
-    const result = await runRedemption("jpym-mento", fpmmConfig("JPYm", POOL_ADDRESS));
-
-    const redemption = result.metadata?.redemption as Record<string, unknown> | undefined;
-    expect(redemption).toMatchObject({ capacityUsd: 750 });
-    expect(redemption?.feeBps).toBeUndefined();
+    expect(result.metadata?.redemption).toMatchObject({ capacityUsd: 750 });
+    expect(result.metadata?.redemption?.feeBps).toBeUndefined();
   });
 
   it("fails closed when the fpmm-pool balance read fails, leaving reserve slices unaffected", async () => {
-    vi.mocked(fetchErc20Balance).mockResolvedValue(null);
+    const fpmm = resolveAdapterCoin("mento", "chfm-mento").coin.liveReservesConfig!.params!.redemption! as {
+      poolAddress: string;
+      usdmTokenAddress: string;
+    };
 
-    const result = await runRedemption("chfm-mento", fpmmConfig("CHFm", "0xDC81135fD82f02Cae736E261FB676B716663e8b8"));
+    const { result } = await runAdapter("mento", "chfm-mento", {
+      network: mentoNetwork({
+        dashboardHtml: sampleMatchingDashboardHtml("CHFm"),
+        rpc: {
+          [`celo:${fpmm.usdmTokenAddress.toLowerCase()}:balanceOf(address)`]: null,
+          [`celo:${fpmm.poolAddress.toLowerCase()}:${FPMM_LP_FEE_SELECTOR}`]: 20n,
+          [`celo:${fpmm.poolAddress.toLowerCase()}:${FPMM_PROTOCOL_FEE_SELECTOR}`]: 10n,
+        },
+      }),
+      nowSec: OVERRIDE_DASHBOARD_NOW_SEC,
+    });
 
-    expect(result.slices.length).toBeGreaterThan(0);
+    expect(result.slices).toHaveLength(1);
     expect(result.metadata?.redemption).toBeUndefined();
-    expect(result.warnings?.some((warning) => warning.code === "mento-redemption-telemetry-failed")).toBe(true);
+    expectWarnings(result, ["mento-redemption-telemetry-failed"]);
   });
 });

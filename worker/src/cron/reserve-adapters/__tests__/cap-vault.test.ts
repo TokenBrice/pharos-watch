@@ -1,43 +1,90 @@
-import type * as EvmRpc from "../../../lib/evm-rpc";
-import { beforeEach, describe, expect, it, vi } from "vitest";
-import type { StablecoinMeta } from "@shared/types/core";
-import type { LiveReservesConfig } from "@shared/types/live-reserves";
+import { describe, expect, it } from "vitest";
 import { encodeAddress, encodeUint256 } from "../../../lib/evm-selectors";
 
-vi.mock("../../../lib/evm-rpc", async (importOriginal) => ({
-  ...await importOriginal<typeof EvmRpc>(),
-  fetchEvmBlockNumber: vi.fn(async () => 12345),
-  fetchEvmBlockTimestamp: vi.fn(async () => 1776154391),
-}));
-
-vi.mock("../helpers", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("../helpers")>();
-  const { makeOnchainCallersMock } = await import("./helpers/onchain-callers-mock");
-  const fetchOnchainUint256 = vi.fn();
-  const fetchOnchainRawCall = vi.fn();
-  return {
-    ...actual,
-    fetchOnchainUint256,
-    fetchOnchainRawCall,
-    makeOnchainCallers: makeOnchainCallersMock({
-      uint256: fetchOnchainUint256,
-      raw: fetchOnchainRawCall,
-    }),
-  };
-});
-
-import { adaptCapVaultState, fetchCapVaultReserves } from "../cap-vault";
-import { fetchOnchainUint256, fetchOnchainRawCall } from "../helpers";
-import { expectValidAdapterOutput } from "./reserve-adapter.test-support";
+import { adaptCapVaultState } from "../cap-vault";
+import {
+  expectValidAdapterOutput,
+  installAdapterNetwork,
+  runAdapter,
+  type AdapterRpcValue,
+} from "./reserve-adapter.test-support";
 import { makeCapAsset } from "./cap-vault.test-support";
+const CAP_VAULT = "0xcccc62962d17b8914c62d74ffb843d73b2a3cccc";
+const USDC = "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eB48";
+const WTGXX = "0x434558cb1ebe9950e8a66f1ef8a15a473dce7d8c";
+const WTGXX_ORACLE = "0xd13cb763c43b5c058e7ec40176962c5030f4eb49";
+const CAP_NOW = 1_776_154_391;
 
-function makeSignal(): AbortSignal {
-  return new AbortController().signal;
+
+function encodeAddressArray(addresses: string[]): `0x${string}` {
+  return `0x${encodeUint256(32)}${encodeUint256(addresses.length)}${
+    addresses.map((address) => encodeAddress(address)).join("")
+  }` as `0x${string}`;
 }
 
-beforeEach(() => {
-  vi.clearAllMocks();
-});
+function encodeLatestRoundData(answer: bigint, updatedAt: number): `0x${string}` {
+  return `0x${[1n, answer, BigInt(updatedAt), BigInt(updatedAt), 1n]
+    .map((value) => encodeUint256(value))
+    .join("")}` as `0x${string}`;
+}
+
+function argumentAddress(data: string): string {
+  return `0x${data.slice(-40)}`.toLowerCase();
+}
+
+function capNetwork(options: {
+  assets?: string[];
+  totalSupplies?: Record<string, bigint>;
+  totalBorrows?: Record<string, bigint>;
+  available?: Record<string, bigint>;
+  decimals?: Record<string, bigint>;
+  paused?: boolean | null;
+  redeemFee?: bigint | null;
+  nullField?: "decimals" | "totalSupplies" | "totalBorrows" | "available";
+  navAnswer?: bigint;
+  navUpdatedAt?: number;
+} = {}) {
+  const assets = options.assets ?? [USDC];
+  const byAddress = (record: Record<string, bigint>) => {
+    const map = new Map(Object.entries(record).map(([address, value]) => [address.toLowerCase(), value]));
+    return (address: string): bigint | undefined => map.get(address.toLowerCase());
+  };
+  const totalSupplies = byAddress(options.totalSupplies ?? {});
+  const totalBorrows = byAddress(options.totalBorrows ?? {});
+  const available = byAddress(options.available ?? {});
+  const decimals = byAddress(options.decimals ?? {});
+  const rpc: Record<string, AdapterRpcValue> = {
+    [`${CAP_VAULT}:0x71a97305`]: encodeAddressArray(assets),
+    [`${CAP_VAULT}:0x18160ddd`]: 100n * 10n ** 18n,
+    [`${CAP_VAULT}:0x9782e821`]: (call: { data: string }) =>
+      options.nullField === "totalSupplies"
+        ? null
+        : totalSupplies(argumentAddress(call.data)) ?? (argumentAddress(call.data) === WTGXX.toLowerCase() ? 50n * 10n ** 18n : 50_000_000n),
+    [`${CAP_VAULT}:0xc6d98f1a`]: options.redeemFee === undefined ? 0n : options.redeemFee,
+    [`${CAP_VAULT}:0x8d730124`]: (call: { data: string }) => options.nullField === "totalBorrows"
+      ? null
+      : totalBorrows(argumentAddress(call.data)) ?? 0n,
+    [`${CAP_VAULT}:0xa0821be3`]: (call: { data: string }) => options.nullField === "available"
+      ? null
+      : available(argumentAddress(call.data)) ?? (argumentAddress(call.data) === WTGXX.toLowerCase() ? 50n * 10n ** 18n : 50_000_000n),
+    [`${CAP_VAULT}:0x2e48152c`]: options.paused === undefined ? false : options.paused,
+    [`${WTGXX_ORACLE}:0x313ce567`]: 8n,
+    [`${WTGXX_ORACLE}:0xfeaf968c`]: encodeLatestRoundData(
+      options.navAnswer ?? 100_000_000n,
+      options.navUpdatedAt ?? CAP_NOW - 60,
+    ),
+  };
+  for (const asset of assets) {
+    rpc[`${asset}:0x313ce567`] = options.nullField === "decimals"
+      ? null
+      : decimals(asset) ?? (asset.toLowerCase() === WTGXX.toLowerCase() ? 18n : 6n);
+  }
+  return {
+    block: { number: 12345, timestamp: CAP_NOW },
+    rpc,
+  };
+}
+
 
 describe("adaptCapVaultState", () => {
   it("uses total supplied assets for reserve slices and available unpaused balances for redemption capacity", () => {
@@ -249,228 +296,82 @@ describe("adaptCapVaultState", () => {
 });
 
 describe("fetchCapVaultReserves", () => {
-  const coin = {
-    id: "cusd-cap-vault",
-    contracts: [
-      { chain: "ethereum", address: "0xcccc62962d17b8914c62d74ffb843d73b2a3cccc", decimals: 18 },
-    ],
-  } as StablecoinMeta;
-
-  const assetAddress = "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48";
-
-  const config: LiveReservesConfig = {
-    adapter: "cap-vault",
-    version: 1,
-    semantics: "collateral-mix",
-    inputs: {
-      primary: { kind: "onchain-evm", chain: "ethereum", rpcMode: "public-rpc" },
-    },
-    params: {
-      assets: [
-        {
-          address: assetAddress,
-          name: "USDC",
-          risk: "low",
-        },
-      ],
-    },
-  };
-
-  function encodeAddressArray(addresses: string[]): string {
-    const offset = encodeUint256(32);
-    const length = encodeUint256(addresses.length);
-    const encodedAddresses = addresses.map((address) => encodeAddress(address)).join("");
-    return `0x${offset}${length}${encodedAddresses}`;
-  }
-
-  function encodeLatestRoundData(answer: bigint, updatedAt: number): `0x${string}` {
-    const word = (value: bigint) => value.toString(16).padStart(64, "0");
-    return `0x${word(1n)}${word(answer)}${word(BigInt(updatedAt))}${word(BigInt(updatedAt))}${word(1n)}`;
-  }
-
-  // Encodes a single-address dynamic-array result for assets() = [assetAddress]
-  function encodeSingleAddressArray(address: string): string {
-    return encodeAddressArray([address]);
-  }
-
-  // Helper: fill the mock queue for assets(), totalSupply(), getRedeemFee(), then per-asset calls.
-  function primeMocks(options: {
-    decimals: bigint | null;
-    totalSupplies: bigint | null;
-    totalBorrows: bigint | null;
-    available: bigint | null;
-    paused: string | null;
-    redeemFee?: bigint | null;
-  }) {
-    // fetchOnchainRawCall order: assets() → paused()
-    vi.mocked(fetchOnchainRawCall)
-      .mockResolvedValueOnce(encodeSingleAddressArray(assetAddress))
-      .mockResolvedValueOnce(options.paused);
-
-    // fetchOnchainUint256 order: totalSupply(vault), getRedeemFee(vault) → decimals(asset), totalSupplies(asset), totalBorrows(asset), available(asset)
-    vi.mocked(fetchOnchainUint256)
-      .mockResolvedValueOnce(100_000000000000000000n) // vault totalSupply (18 decimals)
-      .mockResolvedValueOnce(options.redeemFee === undefined ? 0n : options.redeemFee) // vault getRedeemFee() (ray)
-      .mockResolvedValueOnce(options.decimals) // asset decimals
-      .mockResolvedValueOnce(options.totalSupplies) // totalSupplies(asset)
-      .mockResolvedValueOnce(options.totalBorrows) // totalBorrows(asset)
-      .mockResolvedValueOnce(options.available); // available(asset)
-  }
-
-  const encodedFalse = `0x${encodeUint256(0n)}`;
-  const wtgxxAddress = "0x434558cb1ebe9950e8a66f1ef8a15a473dce7d8c";
-  const basketConfig: LiveReservesConfig = {
-    ...config,
-    params: {
-      assets: [
-        {
-          address: assetAddress,
-          name: "USDC",
-          risk: "low",
-          coinId: "usdc-circle",
-          priceUsd: 1,
-        },
-        {
-          address: wtgxxAddress,
-          name: "WTGXX",
-          risk: "low",
-          coinId: "wtgxx-wisdomtree",
-          depType: "collateral",
-          priceUsd: 1,
-        },
-      ],
-    },
-  };
-
-  function primeWtgxxBasketMocks(navObservedAt: number) {
-    vi.mocked(fetchOnchainRawCall)
-      .mockResolvedValueOnce(encodeAddressArray([assetAddress, wtgxxAddress]))
-      .mockResolvedValueOnce(encodedFalse)
-      .mockResolvedValueOnce(encodedFalse)
-      .mockResolvedValueOnce(encodeLatestRoundData(100_000_000n, navObservedAt));
-
-    vi.mocked(fetchOnchainUint256)
-      .mockResolvedValueOnce(100_000000000000000000n) // vault totalSupply (18 decimals)
-      .mockResolvedValueOnce(0n) // vault getRedeemFee() (ray)
-      .mockResolvedValueOnce(6n) // USDC decimals
-      .mockResolvedValueOnce(50_000000n) // USDC totalSupplies
-      .mockResolvedValueOnce(0n) // USDC totalBorrows
-      .mockResolvedValueOnce(50_000000n) // USDC available
-      .mockResolvedValueOnce(18n) // WTGXX decimals
-      .mockResolvedValueOnce(50_000000000000000000n) // WTGXX totalSupplies
-      .mockResolvedValueOnce(0n) // WTGXX totalBorrows
-      .mockResolvedValueOnce(50_000000000000000000n) // WTGXX available
-      .mockResolvedValueOnce(8n); // WTGXX Chainlink NAV decimals
-  }
-
   it("fails closed when the vault contract is not configured for the input chain", async () => {
-    const unsupportedCoin = {
-      id: "cusd-cap-vault",
-      contracts: [],
-    } as unknown as StablecoinMeta;
-
-    await expect(fetchCapVaultReserves(unsupportedCoin, config, makeSignal()))
-      .rejects.toThrow(/could not find a ethereum contract/);
-    expect(fetchOnchainRawCall).not.toHaveBeenCalled();
-    expect(fetchOnchainUint256).not.toHaveBeenCalled();
+    const network = installAdapterNetwork(capNetwork());
+    await expect(runAdapter("cap-vault", "cusd-cap", {
+      network,
+      coin: { contracts: [] },
+      nowSec: CAP_NOW,
+    })).rejects.toThrow(/could not find a ethereum contract/);
+    expect(network.rpcCalls).toEqual([]);
   });
 
   it("fails closed when assets() returns an empty array", async () => {
-    vi.mocked(fetchOnchainRawCall).mockResolvedValueOnce(encodeAddressArray([]));
-
-    await expect(fetchCapVaultReserves(coin, config, makeSignal()))
-      .rejects.toThrow(/assets\(\) returned no assets/);
-    expect(fetchOnchainUint256).not.toHaveBeenCalled();
+    const network = installAdapterNetwork(capNetwork({ assets: [] }));
+    await expect(runAdapter("cap-vault", "cusd-cap", {
+      network,
+      nowSec: CAP_NOW,
+    })).rejects.toThrow(/assets\(\) returned no assets/);
+    expect(network.rpcCalls.some((call) => call.selector === "0x9782e821")).toBe(false);
   });
 
   it.each([
-    ["totalSupplies", null, /totalSupplies/],
-    ["decimals", null, /decimals/],
-    ["decimals", 37n, /expected safe integer 0-36/],
-    ["totalBorrows", null, /totalBorrows/],
-    ["available", null, /available/],
-  ] as const)("fails closed when %s returns %s", async (field, value, error) => {
-    primeMocks({
-      decimals: 6n,
-      totalSupplies: 50_000000n,
-      totalBorrows: 0n,
-      available: 50_000000n,
-      paused: encodedFalse,
-      [field]: value,
-    });
+    ["totalSupplies", /totalSupplies/],
+    ["decimals", /decimals/],
+    ["totalBorrows", /totalBorrows/],
+    ["available", /available/],
+  ] as const)("fails closed when %s returns null", async (field, error) => {
+    await expect(runAdapter("cap-vault", "cusd-cap", {
+      network: capNetwork({ nullField: field }),
+      nowSec: CAP_NOW,
+    })).rejects.toThrow(error);
+  });
 
-    await expect(fetchCapVaultReserves(coin, config, makeSignal())).rejects.toThrow(error);
+  it("fails closed when an asset decimals value is outside the safe range", async () => {
+    await expect(runAdapter("cap-vault", "cusd-cap", {
+      network: capNetwork({ decimals: { [USDC]: 37n } }),
+      nowSec: CAP_NOW,
+    })).rejects.toThrow(/expected safe integer 0-36/);
   });
 
   it("treats paused() undecodable value as paused (conservative) and emits an info warning", async () => {
-    primeMocks({
-      decimals: 6n,
-      totalSupplies: 50_000000n,
-      totalBorrows: 0n,
-      available: 50_000000n,
-      paused: null,
+    const { result } = await runAdapter("cap-vault", "cusd-cap", {
+      network: capNetwork({ paused: null }),
+      nowSec: CAP_NOW,
     });
-
-    const result = await fetchCapVaultReserves(coin, config, makeSignal());
     const warning = result.warnings?.find((w) => w.code === "cap-vault-asset-status-unavailable");
     expect(warning).toBeDefined();
-    // Paused-treated-as-true must exclude from immediateRedeemable
+    // Paused-treated-as-true must exclude from immediateRedeemable.
     expect(result.metadata?.redemption?.capacityUsd).toBe(0);
   });
 
   it("reads getRedeemFee() and converts the ray value to bps", async () => {
-    primeMocks({
-      decimals: 6n,
-      totalSupplies: 50_000000n,
-      totalBorrows: 0n,
-      available: 50_000000n,
-      paused: encodedFalse,
-      redeemFee: 1_000000000000000000000000n, // 1e24 ray == 10 bps
+    const { result, network } = await runAdapter("cap-vault", "cusd-cap", {
+      network: capNetwork({ redeemFee: 1_000000000000000000000000n }),
+      nowSec: CAP_NOW,
     });
-
-    const result = await fetchCapVaultReserves(coin, config, makeSignal());
-    expect(result.metadata?.observedBlock).toEqual({ chain: "ethereum", number: 12345, timestamp: 1776154391 });
-    for (const [request] of [...vi.mocked(fetchOnchainRawCall).mock.calls, ...vi.mocked(fetchOnchainUint256).mock.calls]) {
-      expect(request.ctx?.observedBlock).toEqual(result.metadata?.observedBlock);
-    }
+    expect(result.metadata?.observedBlock).toEqual({ chain: "ethereum", number: 12345, timestamp: CAP_NOW });
+    expect(network.rpcCalls.every((call) => call.block === "0x3039")).toBe(true);
     expect(result.metadata).not.toHaveProperty("redemptionFeeBps");
     expect(result.metadata?.redemption).toMatchObject({ feeBps: 10 });
     expectValidAdapterOutput("cap-vault", result);
   });
 
   it("omits the redemption fee when getRedeemFee() is unreadable", async () => {
-    primeMocks({
-      decimals: 6n,
-      totalSupplies: 50_000000n,
-      totalBorrows: 0n,
-      available: 50_000000n,
-      paused: encodedFalse,
-      redeemFee: null,
+    const { result } = await runAdapter("cap-vault", "cusd-cap", {
+      network: capNetwork({ redeemFee: null }),
+      nowSec: CAP_NOW,
     });
-
-    const result = await fetchCapVaultReserves(coin, config, makeSignal());
     expect(result.metadata).not.toHaveProperty("redemptionFeeBps");
     expect(result.metadata?.redemption).not.toHaveProperty("feeBps");
   });
 
   it("defaults an unconfigured on-chain asset to high risk and emits a degraded warning", async () => {
-    primeMocks({
-      decimals: 6n,
-      totalSupplies: 50_000000n,
-      totalBorrows: 0n,
-      available: 50_000000n,
-      paused: encodedFalse,
+    const { result } = await runAdapter("cap-vault", "cusd-cap", {
+      network: capNetwork(),
+      params: { assets: [] },
+      nowSec: CAP_NOW,
     });
-
-    const result = await fetchCapVaultReserves(
-      coin,
-      {
-        ...config,
-        params: { assets: [] },
-      },
-      makeSignal(),
-    );
-
     expect(result.slices).toEqual([
       expect.objectContaining({ name: "Cap asset 0xa0b8...eb48", risk: "high" }),
     ]);
@@ -480,16 +381,15 @@ describe("fetchCapVaultReserves", () => {
   });
 
   it("maps current cusd-cap WTGXX vault asset when explicitly configured", async () => {
-    const now = Date.UTC(2026, 6, 24) / 1_000;
+    const now = CAP_NOW;
     const navObservedAt = now - 60;
-    primeWtgxxBasketMocks(navObservedAt);
-
-    const result = await fetchCapVaultReserves(
-      coin,
-      basketConfig,
-      makeSignal(),
-      { nowSec: now },
-    );
+    const { result } = await runAdapter("cap-vault", "cusd-cap", {
+      network: capNetwork({
+        assets: [USDC, WTGXX],
+        navUpdatedAt: navObservedAt,
+      }),
+      nowSec: now,
+    });
 
     expect(result.slices).toEqual([
       { sourceKey: "cap-vault:0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48", name: "USDC", pct: 50, risk: "low", coinId: "usdc-circle" },
@@ -514,14 +414,10 @@ describe("fetchCapVaultReserves", () => {
   });
 
   it("fails the CUSD basket snapshot closed when WTGXX Chainlink NAV is stale", async () => {
-    const now = Date.UTC(2026, 6, 24) / 1_000;
-    primeWtgxxBasketMocks(now - 345_601);
-
-    await expect(fetchCapVaultReserves(
-      coin,
-      basketConfig,
-      makeSignal(),
-      { nowSec: now },
-    )).rejects.toThrow(/WTGXX Chainlink NAV is stale/);
+    const now = CAP_NOW;
+    await expect(runAdapter("cap-vault", "cusd-cap", {
+      network: capNetwork({ assets: [USDC, WTGXX], navUpdatedAt: now - 345_601 }),
+      nowSec: now,
+    })).rejects.toThrow(/WTGXX Chainlink NAV is stale/);
   });
 });

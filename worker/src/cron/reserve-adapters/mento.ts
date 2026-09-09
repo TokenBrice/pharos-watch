@@ -582,9 +582,9 @@ async function fetchMentoDashboardSnapshot(
   signal: AbortSignal,
   warnings: LiveReserveWarning[],
   ctx?: AdapterContext,
-): Promise<MentoDashboardSnapshot> {
+): Promise<MentoDashboardSnapshot | null> {
   const url = config.display?.url;
-  if (!url) return { sourceTimestamp: null, cdpBackings: null };
+  if (!url) return null;
   try {
     const html = await fetchMentoWithBrowserFallback(
       signal,
@@ -599,7 +599,7 @@ async function fetchMentoDashboardSnapshot(
       "mento-dashboard-timestamp-failed",
       `Mento dashboard timestamp fetch failed (${url}): ${toErrorMessage(error)}`,
     ));
-    return { sourceTimestamp: null, cdpBackings: null };
+    return null;
   }
 }
 
@@ -622,14 +622,14 @@ export async function fetchMentoReserves(
   ]);
   const params = parseLiveReserveAdapterParams("mento", config.params);
   const result = params.cdpStablecoin
-    ? adaptMentoCdpComposition(payload, params.cdpStablecoin, dashboard.sourceTimestamp)
-    : adaptMentoReserveComposition(payload, dashboard.sourceTimestamp);
+    ? adaptMentoCdpComposition(payload, params.cdpStablecoin, dashboard?.sourceTimestamp ?? null)
+    : adaptMentoReserveComposition(payload, dashboard?.sourceTimestamp ?? null);
 
   // Dashboard-vs-API coherence gate: when the dashboard carries per-stablecoin
   // CDP totals for this coin and the analytics API trove sums materially
   // disagree, neither source can be trusted and the attempt fails closed.
   if (params.cdpStablecoin) {
-    const dashboardTotals = dashboard.cdpBackings?.get(params.cdpStablecoin);
+    const dashboardTotals = dashboard?.cdpBackings?.get(params.cdpStablecoin);
     const apiCollateralUsd = result.metadata?.totalCollateralUsd;
     const apiDebtUsd = result.metadata?.totalDebtUsd;
     if (dashboardTotals && typeof apiCollateralUsd === "number" && typeof apiDebtUsd === "number") {
@@ -640,6 +640,15 @@ export async function fetchMentoReserves(
         apiDebtUsd,
       );
       if (coherenceError) throw coherenceError;
+    } else if (dashboard && !dashboard.cdpBackings?.has(params.cdpStablecoin)) {
+      // The dashboard was fetched but no longer carries per-stablecoin totals
+      // for this coin (renamed/dropped `cdp_backings` row): the coherence gate
+      // cannot run, and skipping it silently would hide exactly the upstream
+      // drift the gate exists to catch.
+      dashboardWarnings.push(reserveDegradedWarning(
+        "mento-cdp-coherence-unavailable",
+        `Mento dashboard carried no cdp_backings totals for ${params.cdpStablecoin}; dashboard-vs-API coherence gate skipped`,
+      ));
     }
   }
 

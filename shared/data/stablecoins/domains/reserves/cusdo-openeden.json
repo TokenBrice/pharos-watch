@@ -2,6 +2,7 @@
   "id": "cusdo-openeden",
   "reserves": [
     {
+      "sourceKey": "erc4626-single-asset:ethereum:0x8238884ec9668ef77b90c6dff4d1a9f4f4823bfe",
       "name": "USDO wrapper shares",
       "pct": 100,
       "risk": "low",

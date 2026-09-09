@@ -84,6 +84,8 @@ export interface AdapterHttpResponse {
   body?: string;
   json?: unknown;
   headers?: Record<string, string>;
+  /** Optional final URL, for redirect/issuer-host verification. */
+  url?: string;
 }
 
 type Responder<T> = T | ((request: Request) => T | Promise<T>);
@@ -92,20 +94,34 @@ export interface AdapterRpcCall {
   /** Chain id when the RPC URL belongs to the chain registry. */
   chain?: string;
   url: string;
+  /** JSON-RPC method (`eth_call`, `eth_getStorageAt`, `eth_getBalance`, or `eth_getBlockBy*`). */
   method: string;
+  /** Target contract for eth_call, or address for balance/storage reads. */
   contract: string;
-  /** First four calldata bytes. */
+  /** First four calldata bytes for eth_call; empty for balance/storage reads. */
   selector: string;
+  /** Full calldata for eth_call, or storage slot for eth_getStorageAt. */
   data: string;
   block: string;
   viaMulticall: boolean;
 }
 
-type AdapterRpcWord = bigint | number | boolean | string | null;
+export type AdapterRpcWord = bigint | number | boolean | string | null;
+
+/**
+ * Partial block header for routed block-method answers; missing fields fall
+ * back to the `block` anchor.
+ */
+export interface AdapterBlockHeader {
+  number?: number;
+  timestamp?: number;
+  hash?: string;
+}
 
 export type AdapterRpcValue =
   | AdapterRpcWord
-  | ((call: AdapterRpcCall) => AdapterRpcWord | Promise<AdapterRpcWord>);
+  | AdapterBlockHeader
+  | ((call: AdapterRpcCall) => AdapterRpcWord | AdapterBlockHeader | Promise<AdapterRpcWord | AdapterBlockHeader>);
 
 export interface AdapterNetworkSpec {
   /** URL → JSON payload (or a full response envelope / responder). */
@@ -113,17 +129,22 @@ export interface AdapterNetworkSpec {
   /** URL → HTML or plain-text body (or a full response envelope / responder). */
   html?: Record<string, Responder<string | AdapterHttpResponse>>;
   /**
-   * `eth_call` answers keyed by selector (`0x18160ddd`), function signature
+   * EVM JSON-RPC answers keyed by selector (`0x18160ddd`), function signature
    * (`totalSupply()`), full calldata, or any of those prefixed with a contract
-   * address and/or a chain id in any order, colon-separated — e.g.
-   * `"ethereum:0xabc…:balanceOf(address)"`. More specific keys win.
+   * address and/or a chain id in any order (`"ethereum:0xabc…:balanceOf(address)"`).
+   * `eth_getStorageAt` uses the target address plus storage slot, and
+   * `eth_getBalance` uses the target address. Prefix either with its method
+   * name when a route must be restricted to that method. Block methods route
+   * here too: `"eth_blockNumber"` overrides the head, and
+   * `"eth_getBlockByNumber:0x3d0"` answers that tag with a block header whose
+   * gaps fall back to `block` (other routed values fall back to the anchor).
    */
   rpc?: Record<string, AdapterRpcValue>;
   /** `eth_getCode` answers keyed by (optionally chain-prefixed) address. */
   code?: Record<string, string>;
   /** Answers Multicall3 `aggregate3` batches from the `rpc` table (default on). */
   multicall?: boolean;
-  /** Anchor returned by eth_blockNumber / eth_getBlockByNumber. */
+  /** Anchor returned by eth_blockNumber / eth_getBlockByNumber and the fallback fields of routed block headers. */
   block?: { number?: number; timestamp?: number; hash?: string };
   /** Extra or overriding chain endpoints, chain id → RPC URL. */
   chains?: Record<string, string>;
@@ -139,7 +160,7 @@ export interface AdapterNetwork {
   chainRpcs: Map<string, ChainRpcConfig>;
   /** Every request that reached the boundary, in order. */
   requests: readonly AdapterNetworkRequest[];
-  /** Every decoded `eth_call`, including Multicall3 members. */
+  /** Every decoded EVM JSON-RPC call, including Multicall3 members. */
   rpcCalls: readonly AdapterRpcCall[];
   /** Requests the table did not answer; `runAdapter` fails on a non-empty list. */
   unmatched: readonly string[];
@@ -149,6 +170,11 @@ const AGGREGATE3_ABI = parseAbi([
   "function aggregate3((address target, bool allowFailure, bytes callData)[] calls) payable returns ((bool success, bytes returnData)[])",
 ]);
 const AGGREGATE3_SELECTOR = "0x82ad56cb";
+const BLOCK_ANSWER_METHODS: Record<string, true> = {
+  eth_blockNumber: true,
+  eth_getBlockByNumber: true,
+  eth_getBlockByHash: true,
+};
 const DEFAULT_BLOCK_NUMBER = 23_000_000;
 const DEFAULT_BLOCK_TIMESTAMP = 1_757_000_000;
 
@@ -195,11 +221,13 @@ function encodeRpcWord(value: Exclude<AdapterRpcWord, null>): string {
 /**
  * Parse a routing key into its parts. Segments are self-describing, so callers
  * may write them in any order: `0x…40 hex` is a contract, `0x…8 hex` a
- * selector, longer hex full calldata, `name(args)` a function signature, and
- * anything else a chain id.
+ * selector, longer hex full calldata (or a storage slot), `name(args)` a
+ * function signature, known `eth_*` names a method, and anything else a chain
+ * id.
  */
 interface RpcKeyParts {
   chain?: string;
+  method?: string;
   contract?: string;
   selector?: string;
   data?: string;
@@ -221,6 +249,10 @@ function parseRpcKey(key: string): RpcKeyParts {
       parts.selector = toFunctionSelector(segment).toLowerCase();
       continue;
     }
+    if (segment.startsWith("eth_")) {
+      parts.method = segment;
+      continue;
+    }
     parts.chain = segment;
   }
   return parts;
@@ -238,7 +270,10 @@ function compileRpcTable(table: Record<string, AdapterRpcValue>): CompiledRpcEnt
     .map(([key, value]) => {
       const parts = parseRpcKey(key);
       const specificity =
-        (parts.chain ? 1 : 0) + (parts.contract ? 2 : 0) + (parts.data ? 4 : parts.selector ? 1 : 0);
+        (parts.method ? 8 : 0) +
+        (parts.chain ? 1 : 0) +
+        (parts.contract ? 2 : 0) +
+        (parts.data ? 4 : parts.selector ? 1 : 0);
       return { parts, specificity, value, key };
     })
     .sort((left, right) => right.specificity - left.specificity);
@@ -246,10 +281,14 @@ function compileRpcTable(table: Record<string, AdapterRpcValue>): CompiledRpcEnt
 
 function matchesRpcEntry(entry: CompiledRpcEntry, call: AdapterRpcCall): boolean {
   const { parts } = entry;
+  if (parts.method && parts.method !== call.method) return false;
   if (parts.chain && parts.chain !== call.chain) return false;
   if (parts.contract && parts.contract !== call.contract) return false;
   if (parts.data && parts.data !== call.data) return false;
   if (parts.selector && parts.selector !== call.selector) return false;
+  if (call.method === "eth_call" && !parts.selector && !parts.data) return false;
+  if ((call.method === "eth_getStorageAt" || call.method === "eth_getBalance") && !parts.contract) return false;
+  if (BLOCK_ANSWER_METHODS[call.method]) return Boolean(parts.method);
   return Boolean(parts.selector ?? parts.data ?? parts.contract);
 }
 
@@ -263,13 +302,40 @@ function toHttpResponse(value: unknown, defaultContentType: string): Response {
     ("status" in envelope || "body" in envelope || "json" in envelope || "headers" in envelope);
   if (isEnvelope) {
     const body = envelope.body ?? (envelope.json === undefined ? "" : JSON.stringify(envelope.json));
-    return new Response(body, {
+    const response = new Response(body, {
       status: envelope.status ?? 200,
       headers: { "content-type": defaultContentType, ...(envelope.headers ?? {}) },
     });
+    if (envelope.url) Object.defineProperty(response, "url", { value: envelope.url });
+    return response;
   }
   const body = typeof value === "string" ? value : JSON.stringify(value);
   return new Response(body, { status: 200, headers: { "content-type": defaultContentType } });
+}
+
+/** Block header in JSON-RPC wire format: quantities as `0x` strings. */
+interface AdapterWireBlockHeader {
+  number: string;
+  timestamp: string;
+  hash: string;
+  parentHash: string;
+}
+
+/** What one JSON-RPC member answered: a matched route may deliberately fail with `null`. */
+interface RoutedAnswer {
+  matched: boolean;
+  result: string | AdapterBlockHeader | AdapterWireBlockHeader | null;
+}
+
+function jsonRpcResponse(id: JsonRpcRequest["id"], answer: RoutedAnswer): object {
+  if (answer.matched && answer.result != null) {
+    return { jsonrpc: "2.0", id: id ?? 1, result: answer.result };
+  }
+  return {
+    jsonrpc: "2.0",
+    id: id ?? 1,
+    error: { code: -32000, message: answer.matched ? "execution reverted" : "no harness answer" },
+  };
 }
 
 /**
@@ -320,18 +386,45 @@ export function installAdapterNetwork(spec: AdapterNetworkSpec = {}): AdapterNet
   const rpcCalls: AdapterRpcCall[] = [];
   const unmatched: string[] = [];
 
-  async function resolveCall(call: AdapterRpcCall): Promise<string | null> {
-    rpcCalls.push(call);
+  /** Route lookup without recording: block-method anchors are not decoded contract reads. */
+  async function peekRoute(call: AdapterRpcCall): Promise<RoutedAnswer> {
     const entry = rpcEntries.find((candidate) => matchesRpcEntry(candidate, call));
-    if (!entry) {
-      unmatched.push(`eth_call ${call.chain ?? call.url} ${call.contract} ${call.data}`);
-      return null;
-    }
+    if (!entry) return { matched: false, result: null };
     const raw = typeof entry.value === "function" ? await entry.value(call) : entry.value;
-    return raw == null ? null : encodeRpcWord(raw);
+    if (raw == null) return { matched: true, result: null };
+    if (typeof raw === "object") return { matched: true, result: raw };
+    return { matched: true, result: encodeRpcWord(raw) };
   }
 
-  async function handleEthCall(url: string, chain: string | undefined, params: unknown[]): Promise<unknown> {
+  async function resolveCall(call: AdapterRpcCall): Promise<RoutedAnswer> {
+    rpcCalls.push(call);
+    return peekRoute(call);
+  }
+
+  async function handleAddressRead(
+    method: "eth_getStorageAt" | "eth_getBalance",
+    url: string,
+    chain: string | undefined,
+    params: unknown[],
+  ): Promise<RoutedAnswer> {
+    const contract = String(params[0] ?? "").toLowerCase();
+    const isStorage = method === "eth_getStorageAt";
+    const data = isStorage ? String(params[1] ?? "").toLowerCase() : "";
+    const blockParam = isStorage ? params[2] : params[1];
+    const block = typeof blockParam === "string" ? blockParam : "latest";
+    return resolveCall({
+      chain,
+      url,
+      method,
+      contract,
+      selector: "",
+      data,
+      block,
+      viaMulticall: false,
+    });
+  }
+
+  async function handleEthCall(url: string, chain: string | undefined, params: unknown[]): Promise<RoutedAnswer> {
     const target = params[0] as { to?: string; data?: string } | undefined;
     const block = typeof params[1] === "string" ? params[1] : "latest";
     const contract = (target?.to ?? "").toLowerCase();
@@ -342,7 +435,7 @@ export function installAdapterNetwork(spec: AdapterNetworkSpec = {}): AdapterNet
       const results: [boolean, `0x${string}`][] = [];
       for (const member of calls) {
         const memberData = member.callData.toLowerCase();
-        const value = await resolveCall({
+        const { result: value } = await resolveCall({
           chain,
           url,
           method: "eth_call",
@@ -352,12 +445,15 @@ export function installAdapterNetwork(spec: AdapterNetworkSpec = {}): AdapterNet
           block,
           viaMulticall: true,
         });
-        results.push(value == null ? [false, "0x"] : [true, value as `0x${string}`]);
+        results.push(typeof value === "string" ? [true, value as `0x${string}`] : [false, "0x"]);
       }
-      return encodeAbiParameters(
-        [{ type: "tuple[]", components: [{ type: "bool" }, { type: "bytes" }] }],
-        [results],
-      );
+      return {
+        matched: true,
+        result: encodeAbiParameters(
+          [{ type: "tuple[]", components: [{ type: "bool" }, { type: "bytes" }] }],
+          [results],
+        ),
+      };
     }
     return resolveCall({
       chain,
@@ -371,34 +467,83 @@ export function installAdapterNetwork(spec: AdapterNetworkSpec = {}): AdapterNet
     });
   }
 
-  async function handleJsonRpc(url: string, payload: JsonRpcRequest): Promise<unknown> {
+  function blockHeaderAnswer(header: AdapterBlockHeader): RoutedAnswer {
+    const number = header.number ?? blockNumber;
+    const timestamp = header.timestamp ?? blockTimestamp;
+    return {
+      matched: true,
+      result: {
+        number: `0x${number.toString(16)}`,
+        timestamp: `0x${timestamp.toString(16)}`,
+        hash: header.hash ?? blockHash,
+        parentHash: `0x${(number - 1).toString(16).padStart(64, "0")}`,
+      },
+    };
+  }
+
+  async function handleJsonRpc(url: string, payload: JsonRpcRequest): Promise<RoutedAnswer> {
     const chain = chainByRpcUrl[normalizeUrl(url)];
     const params = payload.params ?? [];
     switch (payload.method) {
       case "eth_call":
         return handleEthCall(url, chain, params);
-      case "eth_blockNumber":
-        return `0x${blockNumber.toString(16)}`;
+      case "eth_getStorageAt":
+      case "eth_getBalance":
+        return handleAddressRead(payload.method, url, chain, params);
+      case "eth_blockNumber": {
+        const routed = await peekRoute({
+          chain,
+          url,
+          method: payload.method,
+          contract: "",
+          selector: "",
+          data: "",
+          block: "latest",
+          viaMulticall: false,
+        });
+        if (routed.matched && typeof routed.result === "string") {
+          // Block numbers are quantities: re-encode the routed word minimally.
+          return { matched: true, result: `0x${BigInt(routed.result).toString(16)}` };
+        }
+        return { matched: true, result: `0x${blockNumber.toString(16)}` };
+      }
       case "eth_getBlockByNumber":
-      case "eth_getBlockByHash":
-        return {
-          number: `0x${blockNumber.toString(16)}`,
-          timestamp: `0x${blockTimestamp.toString(16)}`,
-          hash: blockHash,
-          parentHash: `0x${(blockNumber - 1).toString(16).padStart(64, "0")}`,
-        };
+      case "eth_getBlockByHash": {
+        const tag = typeof params[0] === "string" ? params[0].toLowerCase() : "";
+        const routed = await peekRoute({
+          chain,
+          url,
+          method: payload.method,
+          contract: "",
+          selector: "",
+          data: tag,
+          block: tag || "latest",
+          viaMulticall: false,
+        });
+        // Table routes answer partial headers; the wire shape (with parentHash)
+        // is only built by blockHeaderAnswer itself.
+        const routedHeader = routed.matched && routed.result !== null && typeof routed.result === "object"
+          && !("parentHash" in routed.result)
+          ? routed.result
+          : {};
+        // A routed header describes the requested tag: the numeric tag supplies
+        // the number unless the route set it, while timestamp/hash gaps fall
+        // back to the anchor.
+        const tagNumber = /^0x[0-9a-f]+$/.test(tag) ? Number.parseInt(tag.slice(2), 16) : undefined;
+        return blockHeaderAnswer({ ...(tagNumber != null ? { number: tagNumber } : {}), ...routedHeader });
+      }
       case "eth_getCode": {
         const address = String(params[0] ?? "").toLowerCase();
         const code = codeTable[`${chain ?? ""}|${address}`] ?? codeTable[`|${address}`];
         if (code === undefined) {
           unmatched.push(`eth_getCode ${chain ?? url} ${address}`);
-          return null;
+          return { matched: false, result: null };
         }
-        return code;
+        return { matched: true, result: code };
       }
       default:
         unmatched.push(`${payload.method ?? "unknown-rpc"} ${url}`);
-        return null;
+        return { matched: false, result: null };
     }
   }
 
@@ -412,22 +557,14 @@ export function installAdapterNetwork(spec: AdapterNetworkSpec = {}): AdapterNet
           const raw = await request.clone().text();
           const parsed: unknown = raw.length > 0 ? JSON.parse(raw) : null;
           if (isEvmJsonRpcRequest(parsed)) {
-            const result = await handleJsonRpc(request.url, parsed);
-            return Response.json(
-              result == null
-                ? { jsonrpc: "2.0", id: parsed.id ?? 1, error: { code: -32000, message: "no harness answer" } }
-                : { jsonrpc: "2.0", id: parsed.id ?? 1, result },
-            );
+            const answer = await handleJsonRpc(request.url, parsed);
+            return Response.json(jsonRpcResponse(parsed.id, answer));
           }
           if (Array.isArray(parsed) && parsed.every(isEvmJsonRpcRequest)) {
             const results = [];
             for (const member of parsed) {
-              const result = await handleJsonRpc(request.url, member);
-              results.push(
-                result == null
-                  ? { jsonrpc: "2.0", id: member.id ?? 1, error: { code: -32000, message: "no harness answer" } }
-                  : { jsonrpc: "2.0", id: member.id ?? 1, result },
-              );
+              const answer = await handleJsonRpc(request.url, member);
+              results.push(jsonRpcResponse(member.id, answer));
             }
             return Response.json(results);
           }

@@ -3,6 +3,7 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 import { adaptSgForgeCoinvertible } from "../sgforge-coinvertible";
+import { installAdapterNetwork, runAdapter } from "./reserve-adapter.test-support";
 
 const FIXTURES_DIR = join(dirname(fileURLToPath(import.meta.url)), "fixtures");
 const SAMPLE_HTML = readFileSync(join(FIXTURES_DIR, "sgforge-coinvertible-eur.html"), "utf8");
@@ -140,5 +141,27 @@ describe("adaptSgForgeCoinvertible", () => {
     );
 
     expect(() => adaptSgForgeCoinvertible(mismatchedBucketsHtml, "usd")).toThrow("layout-changed");
+  });
+});
+
+describe("fetchSgForgeCoinvertibleReserves", () => {
+  const url = "https://www.sgforge.com/product/coinvertible/";
+  const nowSec = Date.parse("2026-08-10T00:00:00Z") / 1000;
+
+  it("fetches the EUR disclosure through the shared network harness", async () => {
+    const { result, network } = await runAdapter("sgforge-coinvertible", "eurcv-societe-generale-forge", {
+      network: installAdapterNetwork({ html: { [url]: SAMPLE_HTML } }),
+      nowSec,
+    });
+    expect(result.metadata).toMatchObject({ coinType: "eur", circulationAmount: 139700459.12 });
+    expect(network.requests).toEqual([{ url, method: "GET" }]);
+  });
+
+  it("rejects a renamed disclosure block instead of publishing stale cash", async () => {
+    await expect(runAdapter("sgforge-coinvertible", "eurcv-societe-generale-forge", {
+      network: installAdapterNetwork({ html: { [url]: SAMPLE_HTML.replace("EUR CoinVertible in circulation", "EUR reserve in circulation") } }),
+      nowSec,
+      validate: false,
+    })).rejects.toThrow("layout-changed");
   });
 });

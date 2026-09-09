@@ -1,17 +1,15 @@
-import type * as RequestModule from "../request";
-import type * as DefillamaModule from "../defillama";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ACTIVE_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import { parseLiveReserveAdapterParams } from "@shared/lib/live-reserve-adapters";
-import { fetchHyloSolanaReserves } from "../hylo-solana";
-import { fetchJsonPostWithRetry } from "../request";
 import { fetchDefiLlamaPrices } from "../defillama";
-vi.mock("../request", async (original) => ({ ...await original<typeof RequestModule>(), fetchJsonPostWithRetry: vi.fn() }));
-vi.mock("../defillama", () => ({ fetchDefiLlamaPrices: vi.fn() }));
+import { runAdapter, installAdapterNetwork, type AdapterNetworkSpec } from "./reserve-adapter.test-support";
+
 const coin = ACTIVE_META_BY_ID.get("hyusd-hylo")!;
 const config = coin.liveReservesConfig!;
 const p = parseLiveReserveAdapterParams("hylo-solana", config.params);
 const TOKEN = "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA";
+const SOLANA_RPC_URL = "https://api.mainnet-beta.solana.com";
+const NOW_SEC = 1_788_981_644;
 // Captured 2026-09-09 by the verified Hylo exchange v2.0.5 census.
 const recorded: Record<string, { owner: string; data: string }> = {
   "9cd2sAfbBvKs4SX9YKo4dcjwP3TgTVQ8dT5koshGcDND": {
@@ -55,7 +53,7 @@ function spl(mint: string, vault: string, mintBytes: Uint8Array, amount: bigint,
   accounts[vault] = { owner: TOKEN, data: v.toString("base64") };
 }
 beforeEach(() => {
-  vi.clearAllMocks(); accounts = structuredClone(recorded);
+  accounts = structuredClone(recorded);
   const lut = Buffer.from(accounts[p.registry].data, "base64");
   spl(p.lsts[0].mint, "2Y3TLkdGoJwbdizxqrZmQwNLYJyGKTgzC4tbetbkvQ43", lut.subarray(600, 632), 181108150424626n, 9);
   spl(p.lsts[1].mint, "7VNBQCDKt4cxLWW51suV8a6VAYC4R66CfyySiYJek7Rj", lut.subarray(728, 760), 16500853647186n, 9);
@@ -64,71 +62,124 @@ beforeEach(() => {
   spl(p.usdcMint, p.usdcVault, usdcBytes, 199025n, 6);
   const supply = Buffer.alloc(82); supply[44] = 6; supply[45] = 1; supply.writeBigUInt64LE(17204989688892n, 36);
   accounts[p.hyusdMint] = { owner: TOKEN, data: supply.toString("base64") };
-  vi.mocked(fetchJsonPostWithRetry).mockImplementation(async (_url, body) => {
-    const rpc = body as { method: string; params: unknown[] };
-    if (rpc.method === "getBlockTime") return { result: 1788981644 };
-    const addresses = rpc.params[0] as string[];
-    return { result: { context: { slot: 445689101 }, value: addresses.map((address) => accounts[address] ? { ...accounts[address], executable: false, data: [accounts[address].data, "base64"] } : null) } };
-  });
-  vi.mocked(fetchDefiLlamaPrices).mockResolvedValue(new Map([[p.lsts[0].mint, 134.27], [p.lsts[1].mint, 111.21], [p.exoPairs[0].mint, 78432.46], [p.exoPairs[1].mint, 85.89], [p.usdcMint, 1]]));
 });
-const run = () => fetchHyloSolanaReserves(coin, config, new AbortController().signal);
+
+afterEach(() => vi.unstubAllGlobals());
+
+const priceEntries = [
+  { chain: p.lsts[0].priceChain, address: p.lsts[0].priceAddress, price: 134.27 },
+  { chain: p.lsts[1].priceChain, address: p.lsts[1].priceAddress, price: 111.21 },
+  { chain: "coingecko", address: p.exoPairs[0].priceAddress, price: 78432.46 },
+  { chain: "coingecko", address: p.exoPairs[1].priceAddress, price: 85.89 },
+  { chain: "coingecko", address: "usd-coin", price: 1 },
+];
+const priceKey = ({ chain, address }: { chain: string; address: string }) =>
+  `${chain}:${chain === "solana" ? address : address.toLowerCase()}`;
+const PRICE_URL = `https://coins.llama.fi/prices/current/${priceEntries.map(priceKey).sort().join(",")}`;
+
+function hyloNetwork(
+  includePrices = true,
+  onAccounts?: (rpc: { method: string; params: unknown[] }, requestIndex: number) => void,
+): AdapterNetworkSpec {
+  const coins = Object.fromEntries(priceEntries.map((entry) => [
+    priceKey(entry),
+    { price: entry.price, timestamp: NOW_SEC, confidence: 1 },
+  ]));
+  let accountRequests = 0;
+  return {
+    json: {
+      [SOLANA_RPC_URL]: async (request: Request) => {
+        const rpc = await request.clone().json() as { method: string; params: unknown[] };
+        if (rpc.method === "getBlockTime") return { result: NOW_SEC };
+        accountRequests += 1;
+        onAccounts?.(rpc, accountRequests);
+        const addresses = rpc.params[0] as string[];
+        return {
+          result: {
+            context: { slot: 445689101 },
+            value: addresses.map((address) => accounts[address]
+              ? { ...accounts[address], executable: false, data: [accounts[address].data, "base64"] }
+              : null),
+          },
+        };
+      },
+      [PRICE_URL]: includePrices ? { coins } : { coins: {} },
+    },
+  };
+}
+
+function run(network: AdapterNetworkSpec = hyloNetwork()) {
+  return runAdapter("hylo-solana", "hyusd-hylo", {
+    network,
+    nowSec: NOW_SEC,
+  });
+}
 describe("hylo-solana", () => {
   it("values the recorded complete census against hyUSD supply at one observed slot", async () => {
-    const result = await run();
+    const { result } = await run();
     const total = 181108.150424626 * 134.27 + 16500.853647186 * 111.21 + 27.47796223 * 78432.46 + 14220.170633907 * 85.89 + 0.199025;
     expect(result.metadata?.totalCollateralUsd).toBeCloseTo(total, 5);
     expect(result.metadata?.collateralizationRatio).toBeCloseTo(total / 17204989.688892, 8);
-    expect(result.metadata?.observedBlock).toEqual({ chain: "solana", number: 445689101, timestamp: 1788981644 });
+    expect(result.metadata?.observedBlock).toEqual({ chain: "solana", number: 445689101, timestamp: NOW_SEC });
     expect(result.metadata?.freshnessMode).toBe("not-applicable");
     expect(result.slices.map((slice) => slice.sourceKey)).toEqual(expect.arrayContaining(["hylo-solana:lst-pool", "hylo-solana:cbbtc-pool", "hylo-solana:hype-pool"]));
     expect(result.slices.some((slice) => slice.sourceKey === "hylo-solana:usdc-pool")).toBe(false);
     expect(result.metadata?.details?.usdcDustExcludedUsd).toBe(0.199025);
     expect(result.warnings).toEqual([]);
   });
+
   it("fails closed on an unknown registry LST", async () => {
     mutate(p.registry, 600, 0);
     await expect(run()).rejects.toThrow(/unknown LST/);
   });
+
   it("retains composition but degrades paused state", async () => {
     mutate(p.state, 478, 1);
-    const result = await run();
+    const { result } = await run();
     expect(result.metadata?.collateralizationRatio).toBeGreaterThan(1);
     expect(result.warnings).toContainEqual(expect.objectContaining({ code: "route-paused", effect: "degraded" }));
   });
+
   it.each(["owner", "discriminator"])("rejects %s mismatches", async (kind) => {
-    if (kind === "owner") accounts[p.state].owner = TOKEN; else mutate(p.state, 0, 0);
+    if (kind === "owner") accounts[p.state].owner = TOKEN;
+    else mutate(p.state, 0, 0);
     await expect(run()).rejects.toThrow(/owner mismatch|discriminator/);
   });
+
   it("fails closed when an inactive exogenous pool becomes registered", async () => {
     accounts[p.inactiveExoPairs[0]] = accounts[p.exoPairs[0].pair];
     await expect(run()).rejects.toThrow(/unreviewed exogenous/);
   });
+
   it("rejects substitution of an exogenous oracle feed", async () => {
     mutate(p.exoPairs[0].pair, 76, 0);
     await expect(run()).rejects.toThrow(/oracle identity/);
   });
+
   it("rejects a registry changed between discovery and the atomic census", async () => {
-    const original = vi.mocked(fetchJsonPostWithRetry).getMockImplementation()!;
-    vi.mocked(fetchJsonPostWithRetry).mockImplementationOnce(async (...args) => {
-      const result = await original(...args);
-      mutate(p.registry, 21, 0);
-      return result;
+    const network = hyloNetwork(true, (_rpc, requestIndex) => {
+      if (requestIndex === 2) mutate(p.registry, 21, 0);
     });
-    await expect(run()).rejects.toThrow(/registry changed/);
+    await expect(run(network)).rejects.toThrow(/registry changed/);
   });
+
   it("preserves case-sensitive Solana price identities at the real quote boundary", async () => {
-    const actual = await vi.importActual<typeof DefillamaModule>("../defillama");
     const address = p.lsts[1].priceAddress;
-    const nowSec = 1788981644;
-    vi.stubGlobal("fetch", vi.fn(async (input: string | URL | Request) => {
-      const url = typeof input === "string" ? input : input instanceof URL ? input.href : input.url;
-      const identity = url.split("/prices/current/")[1];
-      return new Response(JSON.stringify({ coins: identity === `solana:${address}` ? { [identity]: { price: 111.21, timestamp: nowSec, confidence: 1 } } : {} }));
-    }));
-    try {
-      const prices = await actual.fetchDefiLlamaPrices([{ key: "hyloSOL", chain: "solana", address }], new AbortController().signal, { nowSec });
-      expect(prices.get("hyloSOL")).toBe(111.21);
-    } finally { vi.unstubAllGlobals(); }
+    const url = `https://coins.llama.fi/prices/current/solana:${address}`;
+    const network = installAdapterNetwork({
+      json: {
+        [url]: {
+          coins: {
+            [`solana:${address}`]: { price: 111.21, timestamp: NOW_SEC, confidence: 1 },
+          },
+        },
+      },
+    });
+    const prices = await fetchDefiLlamaPrices(
+      [{ key: "hyloSOL", chain: "solana", address }],
+      new AbortController().signal,
+      { chainRpcs: network.chainRpcs, requestCache: new Map(), nowSec: NOW_SEC },
+    );
+    expect(prices.get("hyloSOL")).toBe(111.21);
   });
 });

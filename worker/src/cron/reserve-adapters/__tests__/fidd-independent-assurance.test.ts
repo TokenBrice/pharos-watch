@@ -6,6 +6,7 @@ import { FIDD_INDEPENDENT_ASSURANCE_PROFILE, fetchFiddIndependentAssuranceReserv
 import { fetchIndependentAssuranceReserves, verifyIndependentAssuranceReport } from "../independent-assurance";
 import { getReserveAdapter } from "../index";
 import { validateAdapterOutput } from "../validate";
+import { installAdapterNetwork } from "./reserve-adapter.test-support";
 
 const PDF_BYTES = new TextEncoder().encode("%PDF-1.7\nfixture\n");
 
@@ -30,23 +31,19 @@ function viewerFixture(withDownloadAnchor = true): string {
 
 function installFetch(indexHtml: string, viewerHtml: string) {
   const reviewed = getIndependentAssuranceManifest("FIDD");
-  const fetchMock = vi.fn(async (input: RequestInfo | URL) => {
-    const url = String(input);
-    if (url === reviewed.officialIndexUrl) {
-      return new Response(indexHtml, { headers: { "content-type": "text/html" } });
-    }
-    if (url === VIEWER_URL) {
-      return new Response(viewerHtml, { headers: { "content-type": "text/html" } });
-    }
-    if (url === reviewed.reportUrl) {
-      return new Response(PDF_BYTES, {
-        headers: { "content-type": "application/pdf", "content-length": String(PDF_BYTES.length) },
-      });
-    }
-    throw new Error(`unexpected fixture request ${url}`);
+  return installAdapterNetwork({
+    html: {
+      [reviewed.officialIndexUrl]: indexHtml,
+      [VIEWER_URL]: viewerHtml,
+      [reviewed.reportUrl]: {
+        body: new TextDecoder().decode(PDF_BYTES),
+        headers: {
+          "content-type": "application/pdf",
+          "content-length": String(PDF_BYTES.length),
+        },
+      },
+    },
   });
-  vi.stubGlobal("fetch", fetchMock);
-  return fetchMock;
 }
 
 async function verifyIndex() {

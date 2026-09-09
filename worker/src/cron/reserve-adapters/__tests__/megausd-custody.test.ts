@@ -1,31 +1,13 @@
-import { describe, expect, it, vi, beforeEach } from "vitest";
+import { describe, expect, it } from "vitest";
 import type { StablecoinMeta } from "@shared/types/core";
 import type { LiveReservesConfig } from "@shared/types/live-reserves";
-
-vi.mock("../helpers", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("../helpers")>();
-  return {
-    ...actual,
-    fetchJsonAdapterInput: vi.fn(),
-  };
-});
-
 import {
   adaptMegausdCustody,
-  fetchMegausdCustodyReserves,
   type MegausdBackingAndSupplyPayload,
 } from "../megausd-custody";
-import { fetchJsonAdapterInput } from "../helpers";
-import {
-  expectValidAdapterOutput,
-  mockedReserveHelper,
-} from "./reserve-adapter.test-support";
+import { expectValidAdapterOutput, runAdapter } from "./reserve-adapter.test-support";
 
-let signal: AbortSignal;
-
-function makeCoin(): StablecoinMeta {
-  return { id: "usdm-mega", name: "MegaUSD", ticker: "USDM" } as unknown as StablecoinMeta;
-}
+const MEGAUSD_URL = "https://app.megausd.money/api/transparency/backing-and-supply/current";
 
 function makeConfig(): LiveReservesConfig {
   return {
@@ -33,9 +15,13 @@ function makeConfig(): LiveReservesConfig {
     version: 1,
     semantics: "collateral-mix",
     inputs: {
-      primary: { kind: "http-json", url: "https://app.megausd.money/api/transparency/backing-and-supply/current" },
+      primary: { kind: "http-json", url: MEGAUSD_URL },
     },
   } as unknown as LiveReservesConfig;
+}
+
+function makeCoin(): StablecoinMeta {
+  return { id: "usdm-mega", name: "MegaUSD", ticker: "USDM", liveReservesConfig: makeConfig() } as unknown as StablecoinMeta;
 }
 
 const MEGAUSD_BACKING: MegausdBackingAndSupplyPayload = {
@@ -62,10 +48,6 @@ const USDC_TOTAL = 1618402.389424 + 15319532.925638 + 440 + 1000.109;
 const USDTB_TOTAL = 1607.822777 + 19187.0188631 + 121;
 const TOTAL_RESERVE_USD = USDC_TOTAL + USDTB_TOTAL;
 
-beforeEach(() => {
-  vi.clearAllMocks();
-  signal = new AbortController().signal;
-});
 
 describe("adaptMegausdCustody", () => {
   it("maps USDC and USDtb into tracked-coin slices and persists only totalReserveUsd", () => {
@@ -196,26 +178,20 @@ describe("adaptMegausdCustody", () => {
 });
 
 describe("fetchMegausdCustodyReserves", () => {
-  it("fetches the configured backing-and-supply endpoint and adapts the payload", async () => {
-    mockedReserveHelper(fetchJsonAdapterInput).mockResolvedValue(MEGAUSD_BACKING);
-    const config = makeConfig();
+  it("fetches the configured backing-and-supply endpoint through the shared network harness", async () => {
+    const { result, network } = await runAdapter("megausd-custody", makeCoin(), {
+      network: { json: { [MEGAUSD_URL]: MEGAUSD_BACKING } },
+      nowSec: Math.floor(Date.parse("2026-09-09T16:00:00Z") / 1000),
+    });
 
-    const result = await fetchMegausdCustodyReserves(makeCoin(), config, signal);
-
-    expect(fetchJsonAdapterInput).toHaveBeenCalledWith(
-      config,
-      "megausd-custody",
-      signal,
-      12_000,
-      undefined,
-    );
+    expect(network.requests.map((request) => request.url)).toEqual([MEGAUSD_URL]);
     expect(result.slices[0]).toMatchObject({ name: "USDC cash-equivalent reserves" });
   });
 
-  it("propagates an error when the endpoint request fails", async () => {
-    mockedReserveHelper(fetchJsonAdapterInput).mockRejectedValue(new Error("HTTP 500 for https://app.megausd.money/api/transparency/backing-and-supply/current"));
-    const config = makeConfig();
-
-    await expect(fetchMegausdCustodyReserves(makeCoin(), config, signal)).rejects.toThrow("HTTP 500");
+  it("propagates an endpoint failure", async () => {
+    await expect(runAdapter("megausd-custody", makeCoin(), {
+      network: { json: { [MEGAUSD_URL]: { status: 500, body: "upstream unavailable" } } },
+      nowSec: Math.floor(Date.parse("2026-09-09T16:00:00Z") / 1000),
+    })).rejects.toThrow(/500/);
   });
 });

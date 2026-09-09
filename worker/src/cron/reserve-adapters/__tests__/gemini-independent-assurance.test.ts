@@ -7,6 +7,7 @@ import {
   fetchGeminiIndependentAssuranceReserves,
   verifyGeminiContentfulIndex,
 } from "../gemini-independent-assurance";
+import { installAdapterNetwork } from "./reserve-adapter.test-support";
 
 const REVIEWED_URL =
   "https://assets.ctfassets.net/jg6lo9a2ukvr/37f7Yx41qkN4XELuRzQrDv/e7d67a902d19e5fbf6a85ee620838d51/Gemini_Trust_Company__LLC_053126_GUSD_Reserves_Report_May_2026_-_Issued.pdf";
@@ -95,18 +96,24 @@ describe("Gemini GUSD independent assurance", () => {
     const pdf = "%PDF-1.7 scoped assurance fixture";
     const manifest = { ...original, reportByteLength: pdf.length, reportSha256: createHash("sha256").update(pdf).digest("hex") };
     vi.spyOn(assurance, "getIndependentAssuranceManifest").mockReturnValue(manifest);
-    vi.stubGlobal("fetch", vi.fn(async (input: RequestInfo | URL) => {
-      const url = String(input);
-      let body: string;
-      if (url === manifest.officialIndexUrl) body = contentfulIndex([olderEntry(), reviewedEntry(manifest.reportUrl)]);
-      else if (url === manifest.reportUrl) body = pdf;
-      else throw new Error(`Unreviewed report or route requested: ${url}`);
-      const response = new Response(body);
-      Object.defineProperty(response, "url", { value: url });
-      return response;
-    }));
+    const network = installAdapterNetwork({
+      json: {
+        [manifest.officialIndexUrl]: contentfulIndex([olderEntry(), reviewedEntry(manifest.reportUrl)]),
+        [manifest.reportUrl]: {
+          body: pdf,
+          headers: {
+            "content-type": "application/pdf",
+            "content-length": String(pdf.length),
+          },
+        },
+      },
+    });
 
     const result = await fetchGeminiIndependentAssuranceReserves(coin, coin.liveReservesConfig!, AbortSignal.timeout(5000));
+    expect(network.requests.map((request) => request.url)).toEqual([
+      manifest.officialIndexUrl,
+      manifest.reportUrl,
+    ]);
     expect(result.metadata?.collateralizationRatio).toBeCloseTo(1, 12);
     expect(result.metadata?.sourceTimestamp).toBe(Date.parse("2026-05-29T17:00:00-04:00") / 1000);
     expect(result.slices).toEqual([
@@ -120,16 +127,12 @@ describe("Gemini GUSD independent assurance", () => {
 
   it("fails closed when the official index gains a newer unreviewed entry", async () => {
     const manifest = assurance.getIndependentAssuranceManifest("GUSD");
-    vi.stubGlobal("fetch", vi.fn(async (input: RequestInfo | URL) => {
-      const url = String(input);
-      let body: string;
-      if (url === manifest.officialIndexUrl) body = contentfulIndex([olderEntry(), reviewedEntry(), olderEntry("2026-06-30T05:00:00Z")]);
-      else if (url === manifest.reportUrl) body = "%PDF-1.7 scoped assurance fixture";
-      else throw new Error(`Unreviewed report or route requested: ${url}`);
-      const response = new Response(body);
-      Object.defineProperty(response, "url", { value: url });
-      return response;
-    }));
+    installAdapterNetwork({
+      json: {
+        [manifest.officialIndexUrl]: contentfulIndex([olderEntry(), reviewedEntry(), olderEntry("2026-06-30T05:00:00Z")]),
+        [manifest.reportUrl]: "%PDF-1.7 scoped assurance fixture",
+      },
+    });
 
     await expect(fetchGeminiIndependentAssuranceReserves(coin, coin.liveReservesConfig!, AbortSignal.timeout(5000)))
       .rejects.toThrow("newer unreviewed report");

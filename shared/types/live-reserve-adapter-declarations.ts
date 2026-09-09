@@ -966,10 +966,11 @@ const escrowBalancePauseCheckSchema = z
   .strict();
 
 const escrowBalanceSharedParamsShape = {
-  slice: reserveSliceDescriptorSchema,
+  slice: reserveSliceDescriptorSchema.extend({ blacklistable: z.boolean().optional() }),
   ...RequiredSourceUrlsFields,
   holderEligibility: RedemptionHolderEligibilitySchema.optional(),
   settlementDelaySec: z.number().int().nonnegative().optional(),
+  compareToCoinSupply: z.boolean().optional(),
   ...OptionalEvmRpcFields,
 };
 
@@ -1080,60 +1081,6 @@ const originVaultBalancesParamsSchema = z
     assets: z.array(originVaultAssetSchema).min(1),
   })
   .strict();
-
-const pusdVaultAssetSchema = z
-  .object({
-    ...EvmAddressFields,
-    decimals: z.number().int().nonnegative(),
-  })
-  .strict();
-
-const pusdVaultChainAssetSchema = z
-  .object({
-    ...EvmAddressFields,
-    decimals: z.number().int().nonnegative(),
-    name: z.string(),
-    ...TrackedExposureFields,
-  })
-  .strict();
-
-const pusdVaultChainSchema = z
-  .object({
-    chain: z.string(),
-    vaultAddress: EvmAddressSchema,
-    assets: z.array(pusdVaultChainAssetSchema).min(1),
-  })
-  .strict();
-
-const pusdVaultParamsSchema = z
-  .object({
-    vaultAddress: EvmAddressSchema.optional(),
-    assets: z.array(pusdVaultAssetSchema).min(1).optional(),
-    slice: reserveSliceDescriptorSchema.optional(),
-    chains: z.array(pusdVaultChainSchema).min(1).optional(),
-    ...OptionalSourceUrlsFields,
-    ...OptionalEvmRpcFields,
-  })
-  .strict()
-  .superRefine((params, ctx) => {
-    if (params.chains != null) {
-      if (params.vaultAddress != null || params.assets != null || params.slice != null) {
-        ctx.addIssue({
-          code: z.ZodIssueCode.custom,
-          message: "pusd-vault params: chains is exclusive with the single-chain vaultAddress/assets/slice shape",
-          path: ["chains"],
-        });
-      }
-      return;
-    }
-    if (params.vaultAddress == null || params.assets == null || params.slice == null) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        message: "pusd-vault params: vaultAddress, assets and slice are required without chains",
-        path: ["vaultAddress"],
-      });
-    }
-  });
 
 const nestVaultPositionsParamsSchema = z
   .object({
@@ -1943,9 +1890,6 @@ export const LIVE_RESERVE_ADAPTER_DESCRIPTOR_DECLARATIONS = {
     // net USDF balance backing the shares is composition evidence, not capacity.
     redemptionTelemetry: { capacity: "none", fee: "none" },
   }),
-  asymmetry: declareAdapter(noParamsSchema, HTTP_DASHBOARD_COLLATERAL_V1, {
-    redemptionTelemetry: { capacity: "direct", fee: "none" },
-  }),
   "attestation-pdf-index": {
     primaryInputKinds: ["http-html"],
     paramsSchema: attestationPdfIndexParamsSchema,
@@ -2445,22 +2389,6 @@ export const LIVE_RESERVE_ADAPTER_DESCRIPTOR_DECLARATIONS = {
     redemptionTelemetry: { capacity: "none", fee: "none" },
     validation: DASHBOARD_WITH_UNKNOWN_CAP_VALIDATION,
   },
-  lista: {
-    primaryInputKinds: ["onchain-evm"],
-    paramsSchema: evmBranchBalancesParamsSchema,
-    sourceModel: "dynamic-mix",
-    evidenceClass: "independent",
-    sharedSourceMode: "none",
-    configValidation: CONFIG_COLLATERAL_V1,
-    redemptionTelemetry: { capacity: "none", fee: "none" },
-    provenance: {
-      status: "parked",
-      rationale: "The complete Lista GemJoin census contains positive unpriced assets and a non-unit-rate receipt that the branch adapter cannot value exactly. No active config is retained until every positive branch has a supported valuation path.",
-      parkedSince: "2026-09-05",
-      nextReview: "2026-10-05",
-    },
-    validation: LATEST_STATE_VALIDATION,
-  },
   "liquity-v1": declareAdapter(liquityV1ParamsSchema, ONCHAIN_SINGLE_ASSET_V2),
   "liquity-native-active-pool": {
     primaryInputKinds: ["onchain-evm"],
@@ -2586,7 +2514,6 @@ export const LIVE_RESERVE_ADAPTER_DESCRIPTOR_DECLARATIONS = {
     redemptionTelemetry: { capacity: "direct", fee: "none" },
     validation: LATEST_STATE_VALIDATION,
   },
-  "pusd-vault": declareAdapter(pusdVaultParamsSchema, ONCHAIN_SINGLE_ASSET_V1),
   "quantoz-transparency": declareAdapter(
     quantozTransparencyParamsSchema,
     HTTP_DISCLOSURE_ATTESTATION_V1,
@@ -2613,7 +2540,7 @@ export const LIVE_RESERVE_ADAPTER_DESCRIPTOR_DECLARATIONS = {
     validation: LATEST_STATE_VALIDATION,
   },
   "reserve-protocol-dtf": {
-    primaryInputKinds: ["http-json", "onchain-evm"],
+    primaryInputKinds: ["onchain-evm"],
     paramsSchema: reserveProtocolDtfParamsSchema,
     sourceModel: "dynamic-mix",
     evidenceClass: "independent",
@@ -2621,7 +2548,7 @@ export const LIVE_RESERVE_ADAPTER_DESCRIPTOR_DECLARATIONS = {
     sharedSourceMode: "none",
     configValidation: CONFIG_COLLATERAL_V1,
     redemptionTelemetry: { capacity: "direct", fee: "none" },
-    validation: TIMESTAMPLESS_WITH_UNKNOWN_CAP_VALIDATION,
+    validation: LATEST_STATE_VALIDATION,
   },
   reservoir: {
     primaryInputKinds: ["http-json"],
@@ -2660,7 +2587,6 @@ export const LIVE_RESERVE_ADAPTER_DESCRIPTOR_DECLARATIONS = {
     redemptionTelemetry: { capacity: "none", fee: "none" },
     validation: DISCLOSURE_VALIDATION,
   },
-  "sgho-wrapper": declareAdapter(erc4626SingleAssetParamsSchema, ONCHAIN_SINGLE_ASSET_V1),
   "saturn-pyusdx": declareAdapter(saturnPyusdxParamsSchema, ONCHAIN_SINGLE_ASSET_V1, {
     sourceOriginClass: "onchain-observation",
   }),
