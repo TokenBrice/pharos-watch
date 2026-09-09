@@ -88,7 +88,7 @@ export function selectWorkerActivationAt({
   const listed = deploymentId === null
     ? undefined
     : (Array.isArray(deployments) ? deployments : []).find((candidate) => candidate?.id === deploymentId);
-  const listedVersions = Array.isArray(listed?.versions) ? listed.versions : [];
+  const listedVersions: readonly WorkerDeploymentVersion[] = Array.isArray(listed?.versions) ? listed.versions : [];
   const listedVersionMatches = listedVersions.some((candidate) => candidate?.version_id === workerVersion);
   const createdOn = typeof listed?.created_on === "string" ? listed.created_on : null;
   const activationAtMs = createdOn === null ? Number.NaN : Date.parse(createdOn);

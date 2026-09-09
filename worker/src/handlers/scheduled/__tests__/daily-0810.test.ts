@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import type { ScheduledRuntimeContext } from "../context";
+
 import { makeScheduledRuntime } from "../../../test-helpers/scheduled-runtime.test-support";
 import { flattenScheduledSlotPlanJobs, SCHEDULED_SLOT_PLANS } from "@shared/lib/scheduled-runner-registry";
 

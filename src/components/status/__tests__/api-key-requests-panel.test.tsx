@@ -179,9 +179,8 @@ describe("ApiKeyRequestsPanel", () => {
     });
     expect(
       screen.getByText(
-        new RegExp(
-          `intent api-key-request:reject:${request.requestId}:[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}`,
-        ),
+        `intent api-key-request:reject:${request.requestId}:00112233-4455-4677-8899-aabbccddeeff`,
+        { exact: false },
       ),
     ).toBeTruthy();
   });

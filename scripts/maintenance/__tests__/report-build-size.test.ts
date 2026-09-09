@@ -113,6 +113,7 @@ describe("report-build-size", () => {
 
   it("reports compressed CSS beside its raw size", () => {
     const result = runReport(syntheticBuild());
+    // eslint-disable-next-line security/detect-non-literal-regexp -- interpolates in-test fixture constants, not user input
     const compressed = new RegExp(String.raw`(\d+) B gzip\s+${CSS_BYTES} B raw\s+${CSS_BUNDLE}`).exec(result.stdout);
 
     expect(compressed).not.toBeNull();

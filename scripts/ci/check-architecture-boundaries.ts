@@ -172,6 +172,7 @@ class DependencyGraph {
           const prefix = argument.head.text;
           const directory = resolve(dirname(absolute), prefix.slice(0, prefix.lastIndexOf("/") + 1));
           const escape = (text: string) => text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+          // eslint-disable-next-line security/detect-non-literal-regexp -- every fragment is escaped source text from the import template literal
           const pattern = new RegExp(`^${escape(prefix)}${argument.templateSpans.map((span) => `.*${escape(span.literal.text)}`).join("")}$`);
           const matches = existsSync(directory) ? collectSourceFiles(directory).filter((file) => {
             const specifier = repoPath(dirname(absolute), file);
@@ -209,12 +210,12 @@ export function checkArchitectureBoundaries(root = ROOT, rules: readonly Rule[] 
       if (forbidden(file)) violations.add(`${rule}: ${path.join(" -> ")}: forbidden dependency`);
       if (gateways.has(file) || visited.has(file)) return;
       visited.add(file);
-      const module = graph.module(file);
-      for (const error of module.errors) violations.add(`${rule}: ${path.join(" -> ")}: ${error}`);
-      if (network && (module.network || NETWORK_PACKAGES.test(file.replace(/^package:/, "")))) {
+      const resolved = graph.module(file);
+      for (const error of resolved.errors) violations.add(`${rule}: ${path.join(" -> ")}: ${error}`);
+      if (network && (resolved.network || NETWORK_PACKAGES.test(file.replace(/^package:/, "")))) {
         violations.add(`${rule}: ${path.join(" -> ")}: network capability`);
       }
-      for (const dependency of module.dependencies) visit(dependency, path);
+      for (const dependency of resolved.dependencies) visit(dependency, path);
     };
     for (const entry of entries) visit(entry, []);
     return visited;

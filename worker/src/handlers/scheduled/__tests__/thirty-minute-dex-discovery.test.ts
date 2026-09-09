@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import type { ScheduledRuntimeContext } from "../context";
+
 import { makeScheduledRuntime } from "../../../test-helpers/scheduled-runtime.test-support";
 
 const mocks = vi.hoisted(() => ({ syncDexDiscovery: vi.fn() }));

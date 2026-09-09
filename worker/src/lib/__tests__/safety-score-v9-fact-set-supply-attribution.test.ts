@@ -15,10 +15,7 @@ import {
 import {
   compileSafetyScoreV9FactSetFromFixedInput,
 } from "../safety-score-v9/fact-set";
-import {
-  buildSafetyScoreV9BaselineExtension,
-  type V9ExtensionRegistryMeta,
-} from "../safety-score-v9/extension";
+import { buildSafetyScoreV9BaselineExtension } from "../safety-score-v9/extension";
 import {
   deriveXautRepresentationGroupSupplyAttribution,
   XAUT_SUPPLY_ATTRIBUTION_MAX_AGE_SEC,
