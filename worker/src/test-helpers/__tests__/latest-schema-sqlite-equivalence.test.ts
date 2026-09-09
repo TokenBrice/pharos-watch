@@ -71,13 +71,14 @@ async function cacheKeysFromWorkerThread(key: string): Promise<string[]> {
     key,
   };
   // The thread runs from a data: URL, so both specifiers are absolute file URLs
-  // resolved in this process and only reachable at runtime via `workerData`:
-  // tsx compiles the TypeScript helper the thread imports.
+  // resolved in this process and only reachable at runtime via `workerData`.
+  // tsImport compiles the TypeScript helper and its relative imports for this
+  // one load; a bare register() left the helper's extensionless './sqlite-d1'
+  // import unresolved on Node 24.
   const source = `
     import { parentPort, workerData } from "node:worker_threads";
-    const { register } = await import(workerData.tsxApi);
-    register();
-    const { createLatestSchemaSqlite } = await import(workerData.helper);
+    const { tsImport } = await import(workerData.tsxApi);
+    const { createLatestSchemaSqlite } = await tsImport(workerData.helper, workerData.helper);
     const { sqlite } = createLatestSchemaSqlite();
     sqlite.prepare("INSERT INTO cache (key, value, updated_at) VALUES (?, 'value', 1)").run(workerData.key);
     parentPort.postMessage(sqlite.prepare("SELECT key FROM cache ORDER BY key").all().map((row) => String(row.key)));
