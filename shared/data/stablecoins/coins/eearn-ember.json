@@ -47,6 +47,11 @@
       "chain": "ethereum",
       "address": "0x9be9294722f8aad37b11a9792be2c782182cafa2",
       "decimals": 6
+    },
+    {
+      "chain": "sui",
+      "address": "0x34469c8accdd673df02600265cbbad3688577f0e716866e257f88d448d463492::eearn::EEARN",
+      "decimals": 6
     }
   ],
   "collateralQuality": "exotic",
