@@ -2,7 +2,6 @@
 
 import { appendFileSync, existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import path from "node:path";
-import { fileURLToPath } from "node:url";
 import { gzipSync } from "node:zlib";
 
 import {
@@ -23,7 +22,10 @@ function formatBytes(bytes) {
   return `${value.toFixed(value >= 100 ? 0 : value >= 10 ? 1 : 2)} ${unit}`;
 }
 
-const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
+// The report reads the build under the current working directory, matching the
+// sibling artifact gates (`check:phishing-signatures`, `check:seo-static`) that
+// run beside it over the same published `out/` tree.
+const root = path.resolve(".");
 const args = new Set(process.argv.slice(2));
 const check = args.has("--check");
 const MINIMUM_FILE_HEADROOM_RATIO = 0.25;

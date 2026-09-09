@@ -29,6 +29,25 @@ function ok(output = "") {
   return Promise.resolve({ status: 0, aborted: false, output });
 }
 
+/**
+ * Both snapshot producers must be in flight before either is allowed to
+ * finish. A sequential runner would leave the first producer waiting on this
+ * gate forever, so the case cannot pass without real concurrency.
+ */
+function concurrencyBarrier(parties: number) {
+  let arrived = 0;
+  let release = (): void => {};
+  const gate = new Promise<void>((resolveGate) => {
+    release = resolveGate;
+  });
+
+  return async () => {
+    arrived += 1;
+    if (arrived >= parties) release();
+    await gate;
+  };
+}
+
 describe("Pages release data refresh", () => {
   it("isolates a digest producer failure from successful depeg and dataset refreshes", async () => {
     vi.spyOn(process.stdout, "write").mockImplementation(() => true);
@@ -180,5 +199,55 @@ describe("Pages release data refresh", () => {
     expect(readFileSync(datasetPath, "utf8")).toBe("partial\n");
     expect(JSON.parse(readFileSync(result.resultPath, "utf8"))).toEqual(result);
     expect(readFileSync(join(paths.refreshDir, "datasets.log"), "utf8")).toContain("rollback sentinel");
+  });
+
+  it("refreshes both snapshots concurrently and defers public datasets until they land", async () => {
+    vi.spyOn(process.stdout, "write").mockImplementation(() => true);
+    const paths = fixture();
+    const datasetPath = join(paths.repoRoot, "public/datasets/latest.json");
+    const bothStarted = concurrencyBarrier(2);
+    const order: string[] = [];
+
+    const result = await refreshPagesReleaseData({
+      dependencies: {
+        digests: async ({ outputPath }) => {
+          order.push("digests:start");
+          await bothStarted();
+          writeFileSync(outputPath!, JSON.stringify([{ id: 1 }, { id: 2 }, { id: 3 }]));
+          order.push("digests:settled");
+          return ok();
+        },
+        depegEvents: async ({ outputPath }) => {
+          order.push("depeg:start");
+          await bothStarted();
+          writeFileSync(outputPath!, JSON.stringify([{ id: "new" }]));
+          order.push("depeg:settled");
+          return ok();
+        },
+        publicDatasets: () => {
+          order.push("datasets:start");
+          // Datasets publish whatever the snapshot refreshes already moved into place.
+          writeFileSync(datasetPath, JSON.stringify({
+            depegEvents: JSON.parse(readFileSync(join(paths.repoRoot, "data/depeg-events/index.json"), "utf8")),
+            digests: JSON.parse(readFileSync(join(paths.repoRoot, "data/digests.json"), "utf8")),
+          }));
+          return ok();
+        },
+      },
+      env: { NODE_ENV: "test" },
+      refreshDir: paths.refreshDir,
+      repoRoot: paths.repoRoot,
+    });
+
+    expect([...order.slice(0, 2)].sort()).toEqual(["depeg:start", "digests:start"]);
+    expect(order).toHaveLength(5);
+    expect(order[4]).toBe("datasets:start");
+    expect(JSON.parse(readFileSync(datasetPath, "utf8"))).toEqual({
+      depegEvents: [{ id: "new" }],
+      digests: [{ id: 1 }, { id: 2 }, { id: 3 }],
+    });
+    expect(result.digests).toMatchObject({ ok: true, refreshedCount: 3 });
+    expect(result.depegEvents.ok).toBe(true);
+    expect(result.publicDatasets).toEqual({ ok: true, rolledBack: false });
   });
 });
