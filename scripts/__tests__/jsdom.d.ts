@@ -6,6 +6,7 @@
 declare module "jsdom" {
   export interface JSDOMConstructorOptions {
     contentType?: string;
+    url?: string;
   }
 
   export class JSDOM {

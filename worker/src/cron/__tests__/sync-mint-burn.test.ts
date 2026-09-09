@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { mockD1 } from "@shared/test-utils/mock-d1";
+import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
 
 const ZERO_TOPIC = "0x0000000000000000000000000000000000000000000000000000000000000000";
 const TRANSFER_TOPIC = "0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef";
@@ -183,6 +184,8 @@ function makeDb(opts: {
 
 const USDT_CONFIG_KEY = "ethereum-0xdac17f958d2ee523a2206206994597c13d831ec7";
 
+const sqliteFixtures = createLatestSchemaFixtureTracker();
+
 function makeMintLog(opts: { blockNumber?: number; txHash?: string; logIndex?: number } = {}) {
   const block = opts.blockNumber ?? 22_000_000;
   return {
@@ -272,6 +275,7 @@ describe("syncMintBurn", () => {
   afterEach(() => {
     vi.useRealTimers();
     vi.restoreAllMocks();
+    sqliteFixtures.closeAll();
   });
 
   it("reports inserted rows (not parsed rows) in itemCount", async () => {
@@ -435,6 +439,35 @@ describe("syncMintBurn", () => {
       && entry.binds[0] === "ethereum-0xdac17f958d2ee523a2206206994597c13d831ec7",
     );
     expect(syncStateUpsert).toBeDefined();
+  });
+
+  it("holds the durable sync-state frontier through a config-phase rejection and advances it on the retry run", async () => {
+    const { sqlite, db } = sqliteFixtures.open();
+    sqlite
+      .prepare("INSERT INTO mint_burn_sync_state (config_key, last_block) VALUES (?, ?)")
+      .run(USDT_CONFIG_KEY, 21_950_000);
+    const readFrontier = (): number | null => {
+      const row = sqlite
+        .prepare("SELECT last_block FROM mint_burn_sync_state WHERE config_key = ?")
+        .get(USDT_CONFIG_KEY) as { last_block: number } | undefined;
+      return row?.last_block ?? null;
+    };
+
+    vi.mocked(fetchAlchemyLogs).mockRejectedValueOnce(new Error("eth_getLogs transport failure"));
+
+    await expect(syncMintBurn(db, "alchemy-key")).rejects.toThrow("eth_getLogs transport failure");
+
+    expect(readFrontier()).toBe(21_950_000);
+
+    const retry = await syncMintBurn(db, "alchemy-key");
+    const retryUsdt = (JSON.parse(retry.metadata).configSamples as Array<Record<string, unknown>>)
+      .find((row) => row.symbol === "USDT");
+
+    expect(retry.status).toBe("ok");
+    expect(retryUsdt?.scanFrom).toBe(21_950_001);
+    // full-success-empty stops one safety margin (75 blocks) short of the chain head
+    expect(retryUsdt?.advancedTo).toBe(21_999_925);
+    expect(readFrontier()).toBe(21_999_925);
   });
 
   it("prioritizes critical configs even when rotation starts with extended", async () => {

@@ -140,7 +140,11 @@ export function getOverflowRoutes(mode) {
   return OVERFLOW_ROUTE_DEFAULTS;
 }
 
-async function runSmokeRun(page, config) {
+// `deps` is the browser-lane test seam: the capture callback runs in the
+// page realm and therefore reads document/window/fetch/setTimeout as bare
+// globals. Production omits it (Playwright cannot clone DOM objects across
+// `page.evaluate`); script tests inject a controlled jsdom realm through it.
+export async function runSmokeRun(page, config, deps = undefined) {
   const waitForRetryDelay = async (ms) => {
     if (typeof page.waitForTimeout === "function") {
       await page.waitForTimeout(ms);
@@ -157,13 +161,14 @@ async function runSmokeRun(page, config) {
   };
 
   async function captureHomepageSummary() {
-    return page.evaluate(async ({ recentEventsPath, waitTimeoutMs }) => {
-      const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+    return page.evaluate(async ({ recentEventsPath, waitTimeoutMs, deps }) => {
+      const { document = globalThis.document, window = globalThis.window, fetch: fetchImpl = globalThis.fetch, setTimeout: setTimeoutImpl = globalThis.setTimeout } = deps ?? {};
+      const delay = (ms) => new Promise((resolve) => setTimeoutImpl(resolve, ms));
       const matchesAny = (text, values) => values.some((value) => text.includes(value));
       const timeoutAt = Date.now() + waitTimeoutMs;
       const captureRecentEventsContract = async () => {
         try {
-          const response = await fetch(recentEventsPath, {
+          const response = await fetchImpl(recentEventsPath, {
             cache: "no-store",
             headers: { Accept: "application/json" },
           });
@@ -249,7 +254,11 @@ async function runSmokeRun(page, config) {
 
       const text = document.body?.innerText ?? "";
       return buildSummary(text, document.querySelectorAll("table tbody tr").length, true);
-    }, { recentEventsPath: HOMEPAGE_RECENT_EVENTS_SMOKE_PATH, waitTimeoutMs: config.waitTimeoutMs });
+    }, {
+      recentEventsPath: HOMEPAGE_RECENT_EVENTS_SMOKE_PATH,
+      waitTimeoutMs: config.waitTimeoutMs,
+      ...(deps === undefined ? {} : { deps }),
+    });
   }
 
   async function captureAnalyticsRuntime() {
