@@ -64,6 +64,14 @@ export const ISOLATE_LOCAL_STATE_REGISTRY = [
     durableTruth: "Formatting inputs and locale options are authoritative; cached formatters carry no business state.",
   },
   {
+    sourcePath: "shared/lib/iana-local-time.ts",
+    stateNames: ["localFormatterCache"],
+    owner: "IANA local-time scheduling helpers",
+    kind: "cache",
+    resetOrTtl: "One Intl.DateTimeFormat per recognized IANA timezone until isolate recycle; unrecognized zones are never cached.",
+    durableTruth: "The subscriber timezone in D1 and the runtime timezone database are authoritative; cached formatters carry no business state.",
+  },
+  {
     sourcePath: "shared/lib/safety-score-v9/compile.ts",
     stateNames: ["validatedCompiledFactSets"],
     owner: "Safety Score V9 fact compilation",

@@ -70,6 +70,22 @@ it("keeps databases opened from the cached inventory independent", () => {
   expect(second.sqlite.prepare("SELECT * FROM items").all()).toEqual([]);
 });
 
+it("does not reuse a schema build that failed", async () => {
+  // A fresh module registry so this exercises a cold per-process cache: the
+  // statically imported instance above is already warm from earlier tests.
+  vi.resetModules();
+  const helper = await import("@shared/test-utils/latest-schema-sqlite");
+  state.migration = "INVALID SQL";
+  expect(() => helper.createLatestSchemaSqlite()).toThrow();
+
+  state.migration = "CREATE TABLE recovered (id INTEGER)";
+  const recovered = helper.createLatestSchemaSqlite();
+
+  expect(
+    recovered.sqlite.prepare("SELECT name FROM sqlite_master WHERE type = 'table' AND name NOT LIKE 'sqlite_%'").all(),
+  ).toEqual([{ name: "recovered" }]);
+});
+
 it("re-reads the migration inventory on the uncached path", () => {
   state.migration = "CREATE TABLE replacement (id INTEGER)";
   const uncached = createLatestSchemaSqliteUncached();

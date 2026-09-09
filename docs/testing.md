@@ -320,6 +320,8 @@ const { sqlite, db } = fixtures.open();
 
 Initialization failure closes the failed handle; `createLatestSchemaSqlite()` remains for a single untracked open.
 
+Replaying the migration inventory costs ~40ms per database, so the harness builds the migrated schema once per process and serializes it; each fixture restores those template bytes into its own fresh `:memory:` database (~0.06ms per open). A restored fixture owns resizeable storage: it is byte-identical to a fresh migration replay, holds no handle on the template, and shares nothing with any other fixture — a rolled-back transaction, a destroyed schema or an exclusive lock in one fixture cannot reach another, and a failed schema build is never cached. `worker/src/test-helpers/__tests__/latest-schema-sqlite-equivalence.test.ts` owns those guarantees, including cross-thread independence, by comparing fixtures against an independent `worker/migrations` replay. Tests that put the migration inventory itself under test must use `createLatestSchemaSqliteUncached()` or `createLatestSchemaFixtureTracker({ uncached: true })`, which re-read and replay the migrations on every open.
+
 ### Mock Fetch (`shared/test-utils/mock-fetch.ts`)
 
 Stubs global `fetch` for testing cron jobs that make HTTP requests.

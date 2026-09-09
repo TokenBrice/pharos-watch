@@ -7,7 +7,7 @@
     "worker"
   ],
   "engines": {
-    "node": ">=24 <27"
+    "node": ">=24.16 <27"
   },
   "browserslist": [
     "chrome >= 93",

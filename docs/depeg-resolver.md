@@ -1,5 +1,7 @@
 # Depeg Duration Resolver (DDR)
 
+> **Agent navigation** — Grep the heading you need: Methodology Versioning · Trigger & Scope · Public Forecast Contract · Stage 1 — Resolution Outlook · Stage 2 — Expected Duration · DDRR — Depeg Duration Resolver Reviewer · Honest Limitations & Failure Modes · Validation / Backtest Plan · Data Plumbing.
+
 When Pharos confirms an active depeg, the Depeg Duration Resolver answers the two questions an analyst actually asks, in order, as a public forecast contract instead of a live-moving widget:
 
 1. **Will it come back?** — a *Resolution Outlook*: an ordinal verdict (Recovery Likely / At Risk / Recovery Unlikely / Insufficient Signal) driven by transparent mechanistic rules over the coin's structure and the depeg's fingerprint. **No fitted ML, no false-precision forecast probability** — the death-label corpus is too thin to fit a supervised terminal classifier. Each verdict shows the contributing factors.

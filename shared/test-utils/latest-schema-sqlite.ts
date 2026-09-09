@@ -6,9 +6,12 @@ import { createSqliteD1, type SqliteD1Options } from "./sqlite-d1";
 
 const MIGRATIONS_DIR = path.resolve(__dirname, "../../worker/migrations");
 
-// Migration files are immutable during a test run, so their ordered SQL text is
-// read once per process and replayed into every fresh :memory: database.
-let cachedMigrationSql: string[] | undefined;
+// Migration files are immutable during a test run, and replaying all of them
+// costs ~40ms per database. The migrated schema is therefore built once per
+// process and serialized; each fixture restores those bytes into its own fresh
+// :memory: database (~0.06ms). A restored database owns resizeable storage and
+// shares nothing with the template bytes or with any other fixture.
+let cachedTemplate: Uint8Array | undefined;
 
 function readMigrationSql(): string[] {
   return readdirSync(MIGRATIONS_DIR)
@@ -17,17 +20,29 @@ function readMigrationSql(): string[] {
     .map((name) => readFileSync(path.join(MIGRATIONS_DIR, name), "utf8"));
 }
 
-function migrationSql(uncached: boolean): string[] {
-  if (uncached) return readMigrationSql();
-  return (cachedMigrationSql ??= readMigrationSql());
+function buildTemplate(): Uint8Array {
+  const sqlite = new DatabaseSync(":memory:");
+  try {
+    for (const sql of readMigrationSql()) {
+      sqlite.exec(sql);
+    }
+    return sqlite.serialize();
+  } finally {
+    sqlite.close();
+  }
 }
 
 function openLatestSchemaSqlite(options: SqliteD1Options, openDatabases?: Set<DatabaseSync>, uncached = false) {
   const sqlite = new DatabaseSync(":memory:");
   openDatabases?.add(sqlite);
   try {
-    for (const sql of migrationSql(uncached)) {
-      sqlite.exec(sql);
+    if (uncached) {
+      for (const sql of readMigrationSql()) {
+        sqlite.exec(sql);
+      }
+    } else {
+      // A failed build is never cached: the assignment only runs on success.
+      sqlite.deserialize((cachedTemplate ??= buildTemplate()));
     }
     return { sqlite, db: createSqliteD1(sqlite, options) };
   } catch (error) {
