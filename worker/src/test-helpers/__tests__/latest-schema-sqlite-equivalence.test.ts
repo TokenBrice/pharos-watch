@@ -1,5 +1,4 @@
 import { readdirSync, readFileSync } from "node:fs";
-import { createRequire } from "node:module";
 import path from "node:path";
 import { DatabaseSync } from "node:sqlite";
 import { pathToFileURL, URL } from "node:url";
@@ -64,27 +63,24 @@ function insertCacheKey(sqlite: DatabaseSync, key: string): void {
  * instance; this proves the harness carries no cross-thread shared state.
  */
 async function cacheKeysFromWorkerThread(key: string): Promise<string[]> {
-  const require = createRequire(import.meta.url);
-  const workerData = {
-    tsxApi: pathToFileURL(require.resolve("tsx/esm/api")).href,
-    helper: pathToFileURL(HELPER_MODULE).href,
-    key,
-  };
-  // The thread runs from a data: URL, so both specifiers are absolute file URLs
-  // resolved in this process and only reachable at runtime via `workerData`.
-  // tsImport compiles the TypeScript helper and its relative imports for this
-  // one load; a bare register() left the helper's extensionless './sqlite-d1'
-  // import unresolved on Node 24.
+  const workerData = { helper: pathToFileURL(HELPER_MODULE).href, key };
+  // The thread runs from a data: URL, so the helper is an absolute file URL
+  // reachable only via `workerData`, hence the runtime import. tsx is loaded
+  // as the thread's own loader (`--import tsx`, the same path every
+  // `node --import tsx` script in this repo uses) so the helper's relative
+  // TypeScript imports resolve on every supported Node line.
   const source = `
     import { parentPort, workerData } from "node:worker_threads";
-    const { tsImport } = await import(workerData.tsxApi);
-    const { createLatestSchemaSqlite } = await tsImport(workerData.helper, workerData.helper);
+    const { createLatestSchemaSqlite } = await import(workerData.helper);
     const { sqlite } = createLatestSchemaSqlite();
     sqlite.prepare("INSERT INTO cache (key, value, updated_at) VALUES (?, 'value', 1)").run(workerData.key);
     parentPort.postMessage(sqlite.prepare("SELECT key FROM cache ORDER BY key").all().map((row) => String(row.key)));
     sqlite.close();
   `;
-  const worker = new Worker(new URL(`data:text/javascript,${encodeURIComponent(source)}`), { workerData });
+  const worker = new Worker(new URL(`data:text/javascript,${encodeURIComponent(source)}`), {
+    workerData,
+    execArgv: ["--import", "tsx"],
+  });
   try {
     return await new Promise<string[]>((resolve, reject) => {
       worker.once("message", resolve);
