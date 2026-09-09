@@ -291,4 +291,29 @@ describe("half-hourly charts scheduling", () => {
     );
     expect(mocks.runCronSentinel).not.toHaveBeenCalled();
   });
+
+  it("runs the charts chain only after the DEX scoring chain completes", async () => {
+    const order: string[] = [];
+    mocks.consumeDexLiquidityScoringStage.mockImplementation(async () => {
+      order.push("consume");
+      return {
+        status: "ok",
+        itemCount: 1,
+        metadata: JSON.stringify({ persistence: { generationId: "dex-liquidity-123" } }),
+      };
+    });
+    mocks.prepareSafetyScoreV9Input.mockImplementation(async () => {
+      order.push("prepare");
+      return { status: "ok", itemCount: 1 };
+    });
+    mocks.syncStablecoinCharts.mockImplementation(async () => {
+      order.push("charts");
+      return { status: "ok", itemCount: 1 };
+    });
+
+    await runHalfHourlyChartsSlot(runtime());
+
+    expect(order.indexOf("prepare")).toBeGreaterThan(order.indexOf("consume"));
+    expect(order.indexOf("charts")).toBeGreaterThan(order.indexOf("prepare"));
+  });
 });
