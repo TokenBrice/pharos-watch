@@ -2,7 +2,8 @@ import { describe, expect, it, vi } from "vitest";
 import { makeStablecoin } from "@shared/test-utils/stablecoin";
 import type { DexLiquidityMap, DexLiquidityHistoryPoint, DepegEvent } from "@shared/types/market";
 import type { YieldRankingsResponse } from "@shared/types/yield";
-import { buildMarketSocial, buildLiquiditySocial, buildStabilitySocial, buildYieldSocial, captureDailySocial } from "../lib/daily-social-capture";
+import type { ReportCardsV9Response } from "@shared/types/report-cards-v9";
+import { attachDailySocialGrades, buildMarketSocial, buildLiquiditySocial, buildStabilitySocial, buildYieldSocial, captureDailySocial } from "../lib/daily-social-capture";
 
 const now = Date.parse("2026-09-10T12:00:00Z") / 1000;
 const base = { editionDate: "2026-09-10", scheduledAt: now, capturedAt: now, asOf: now - 30 };
@@ -18,7 +19,39 @@ describe("daily social source arithmetic", () => {
     const result = buildMarketSocial("market-share", [asset("a", 30e6, 10e6), asset("b", 20e6, 10e6), asset("new", 1000e6, 0)], base);
     expect(result.rows[0].id).toBe("a");
     expect(result.rows[0].value).toBeCloseTo(10);
+    expect(result.rows[0].shareBeforePct).toBe(50);
+    expect(result.rows[0].shareAfterPct).toBe(60);
     expect(result.highlights[0].value).toBe("2 assets");
+  });
+  it("joins published grades by ID rather than inferring from numeric scores or symbols", () => {
+    const snapshot = buildMarketSocial("market-growth", [asset("a", 30e6, 10e6), asset("b", 20e6, 10e6)], base);
+    const publication = { asOfSec: now - 100, publicationHealth: { status: "current" },
+      safetyScoreIdentity: { publicationGenerationId: "current-publication" },
+      cards: [{ id: "a", grade: "B", score: 99 }, { id: "other-id", grade: "A", score: 95 }],
+    } as unknown as ReportCardsV9Response;
+    const result = attachDailySocialGrades(snapshot, publication);
+    expect(result.rows[0].safetyGrade).toBe("B");
+    expect(result.rows[1].safetyGrade).toBeUndefined();
+    expect(result.safetyAsOf).toBe(now - 100);
+    expect(result.asOf).toBe(now - 100);
+    expect(result.safetyPublicationId).toBe("current-publication");
+    expect(() => attachDailySocialGrades(snapshot, { ...publication, asOfSec: now - 7201 })).toThrow();
+    expect(() => attachDailySocialGrades(snapshot, { ...publication, publicationHealth: { status: "held" } } as unknown as ReportCardsV9Response)).toThrow();
+  });
+  it("keeps fresh market data without inventing a rating when optional safety capture fails", async () => {
+    vi.stubEnv("PHAROS_API_KEY", "fixture");
+    try {
+      const fetcher = vi.fn(async (url: string | URL | Request) => String(url).includes("report-cards")
+        ? new Response("{}", { status: 503 })
+        : new Response(JSON.stringify({ peggedAssets: [asset("a", 20e6, 10e6)] }), { headers: { "x-data-age": "30" } }));
+      const result = await captureDailySocial("market-growth", base, now, fetcher);
+      expect(result.rows[0].value).toBe(10e6);
+      expect(result.rows[0].safetyGrade).toBeUndefined();
+      expect(result.highlights).toContainEqual({ label: "Safety grades", value: "Unavailable for this capture" });
+      expect(fetcher).toHaveBeenCalledTimes(2);
+    } finally {
+      vi.unstubAllEnvs();
+    }
   });
   it("reports zero qualifying gainers truthfully", () => {
     const result = buildMarketSocial("market-growth", [asset("a", 10e6, 20e6)], base);
@@ -62,6 +95,7 @@ describe("daily social source arithmetic", () => {
         safetyScoreIdentity: { model: "v9", publicationGenerationId: "pub" } } };
     const data = { rankings: [row], updatedAt: now, provenance: { safetySnapshot: { kind: "ok", publishedAt: now - 100, safetyScoreIdentity: { publicationGenerationId: "pub" } } } } as unknown as YieldRankingsResponse;
     expect(buildYieldSocial(data, [asset("a", 20e6, 10e6)], base).rows[0].value).toBe(8);
+    expect(buildYieldSocial(data, [asset("a", 20e6, 10e6)], base).rows[0].safetyGrade).toBe("A");
     for (const patch of [{ warningSignals: ["spike"] }, { sourceTvlUsd: 999999 }, { safetyScore: 69 },
       { provenance: { ...row.provenance, usedDefaultSafety: true } }, { provenance: { ...row.provenance, sourceObservedAt: now - 8000 } },
       { provenance: { ...row.provenance, safetyScoreIdentity: { model: "v9", publicationGenerationId: "different" } } }]) {

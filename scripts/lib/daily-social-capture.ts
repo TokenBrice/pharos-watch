@@ -6,12 +6,13 @@ import { StablecoinListResponseSchema, DexLiquidityMapSchema, DexLiquidityHistor
   type StablecoinData, type DexLiquidityMap, type DexLiquidityHistoryPoint, type DepegEvent } from "@shared/types/market";
 import { YieldRankingsResponseSchema, type YieldRankingsResponse } from "@shared/types/yield";
 import { ReportCardsV9ResponseSchema, type ReportCardsV9Response } from "@shared/types/report-cards-v9";
+import { ReportCardGradeSchema } from "@shared/types/report-card-grade";
 import { buildMaintenanceApiRequest } from "./maintenance-api";
 
 const DAY = 86400;
 const WEEK = 7 * DAY;
 export type DailySocialEdition = { editionDate: string; scheduledAt: number };
-type Base = DailySocialEdition & { capturedAt: number; asOf: number };
+type Base = DailySocialEdition & { capturedAt: number; asOf: number } & Partial<Pick<DailySocialSnapshot, "safetyAsOf" | "safetyPublicationId">>;
 type Content = Pick<DailySocialSnapshot, "topic" | "title" | "subtitle" | "unit" | "rows" | "methodology"> & Partial<Pick<DailySocialSnapshot, "highlights" | "source">>;
 const usd = (value: number) => formatDailySocialValue(value, "usd");
 function finish(base: Base, content: Content): DailySocialSnapshot {
@@ -44,12 +45,13 @@ export function buildMarketSocial(topic: "market-growth" | "market-share" | "mar
     const current = getCirculatingRaw(asset), previous = getPrevWeekRawOrNull(asset)!;
     return { id: asset.id, name: asset.name, symbol: asset.symbol,
       value: topic === "market-growth" ? current - previous : 100 * (current / total - previous / previousTotal),
+      ...(topic === "market-share" ? { shareBeforePct: 100 * previous / previousTotal, shareAfterPct: 100 * current / total } : {}),
       context: topic === "market-growth" ? `${((current / previous - 1) * 100).toFixed(2)}% in 7d · ${usd(current)} cap` : `${(current / total * 100).toFixed(2)}% of comparable cohort today` };
   }).sort((a, b) => b.value - a.value || a.id.localeCompare(b.id));
   const rows = topic === "market-growth" ? changes.filter((row) => row.value > 0).slice(0, 5)
     : [...changes.filter((row) => row.value > 0).slice(0, 3), ...changes.filter((row) => row.value < 0).sort((a, b) => a.value - b.value || a.id.localeCompare(b.id)).slice(0, 2)];
   return finish(base, { topic, title: topic === "market-growth" ? "This week's market-cap growers" : "This week's market-share movers",
-    subtitle: "7-day change · $10M+ current market cap · comparable tracked assets", unit: topic === "market-growth" ? "usd" : "percentage-points",
+    subtitle: topic === "market-share" ? "Share a week ago → share today · same tracked-asset cohort" : "7-day change · $10M+ current market cap · comparable tracked assets", unit: topic === "market-growth" ? "usd" : "percentage-points",
     rows: rows.length ? rows : [{ id: "no-movers", name: topic === "market-growth" ? "Qualifying gainers" : "Qualifying movers", value: 0, context: "No qualifying changes among eligible tracked assets" }],
     ...(rows.length ? {} : { unit: "count" as const }),
     highlights: [{ label: "Comparable cohort", value: `${cohort.length} assets` }],
@@ -88,10 +90,12 @@ export function buildYieldSocial(data: YieldRankingsResponse, assets: readonly S
     && fresh(row.provenance.sourceObservedAt, base.capturedAt, 7200) && (row.sourceRisk?.investabilityFlags?.length ?? 0) === 0)
     .sort((a, b) => b.currentApy - a.currentApy || a.id.localeCompare(b.id)).slice(0, 5);
   if (!rows.length) throw new Error("No qualifying fresh yield opportunities");
-  return finish({ ...base, asOf: Math.min(base.asOf, data.updatedAt, safety.publishedAt, ...rows.map((row) => row.provenance!.sourceObservedAt)) }, {
+  return finish({ ...base, asOf: Math.min(base.asOf, data.updatedAt, safety.publishedAt, ...rows.map((row) => row.provenance!.sourceObservedAt)),
+    safetyAsOf: safety.publishedAt, safetyPublicationId: safety.safetyScoreIdentity.publicationGenerationId }, {
     topic: "yield-watch", title: "This week's yield watch", subtitle: "Current APY · Safety Score 70+ · $1M+ source TVL", unit: "percent",
     rows: rows.map((row) => ({ id: row.id, name: row.name, symbol: row.symbol, value: row.currentApy,
-      context: `${row.safetyGrade} ${row.safetyScore}/100 · ${usd(row.sourceTvlUsd!)} TVL · ${row.yieldSource}` })),
+      safetyGrade: ReportCardGradeSchema.parse(row.safetyGrade),
+      context: `Safety Score ${row.safetyScore}/100 · ${usd(row.sourceTvlUsd!)} TVL · ${row.yieldSource}` })),
     methodology: "Current variable APY, not guaranteed returns. Ranked by APY among sources with Safety Score at least 70, $1M source TVL, fresh qualified evidence and no warning/anomaly/investability flags. Safety and source TVL do not guarantee access or withdrawals.", source: "Pharos · Yield Intelligence" });
 }
 
@@ -113,9 +117,27 @@ export function buildSafetySocial(data: ReportCardsV9Response, assets: readonly 
   const eligible = new Map(eligibleSocialAssets(assets, base.capturedAt).filter((asset) => getCirculatingRaw(asset) >= 10_000_000).map((asset) => [asset.id, asset]));
   const cards = data.cards.filter((card) => eligible.has(card.id) && card.score != null && card.grade !== "NR")
     .sort((a, b) => b.score! - a.score! || a.id.localeCompare(b.id)).slice(0, 5);
-  return finish({ ...base, asOf: Math.min(base.asOf, data.asOfSec) }, { topic: "safety", title: "The current Safety Score board", subtitle: `Highest current scores · $10M+ market cap · methodology ${data.methodology.version}`, unit: "score",
-    rows: cards.map((card) => ({ id: card.id, name: eligible.get(card.id)!.name, symbol: eligible.get(card.id)!.symbol, value: card.score!, context: `Grade ${card.grade}${card.weakestPillar ? ` · weakest pillar: ${card.weakestPillar.pillar}` : ""}` })),
+  return finish({ ...base, asOf: Math.min(base.asOf, data.asOfSec), safetyAsOf: data.asOfSec,
+    safetyPublicationId: data.safetyScoreIdentity.publicationGenerationId }, { topic: "safety", title: "The current Safety Score board", subtitle: `Published letter grades · $10M+ market cap · methodology ${data.methodology.version}`, unit: "score",
+    rows: cards.map((card) => ({ id: card.id, name: eligible.get(card.id)!.name, symbol: eligible.get(card.id)!.symbol, value: card.score!,
+      safetyGrade: card.grade, context: card.weakestPillar ? `Weakest pillar: ${card.weakestPillar.pillar}` : "Current published Safety Score" })),
     methodology: "Current published scores, not weekly movers or guarantees. Sparse grade-change history cannot prove exact seven-day score deltas. Rated tracked assets with $10M+ market cap only; ties broken by asset ID.", source: "Pharos · Safety Score V9" });
+}
+
+/** Grades are joined by stablecoin ID from one current publication, never inferred from score or symbol. */
+export function attachDailySocialGrades(snapshot: DailySocialSnapshot, data: ReportCardsV9Response): DailySocialSnapshot {
+  if (data.publicationHealth.status !== "current" || !fresh(data.asOfSec, snapshot.capturedAt)) {
+    throw new Error("Safety publication is held or stale");
+  }
+  const grades = new Map(data.cards.map((card) => [card.id, card.grade]));
+  const rows = snapshot.rows.map((row) => {
+    const grade = row.symbol ? grades.get(row.id) : undefined;
+    return grade != null ? { ...row, safetyGrade: grade } : row;
+  });
+  if (!rows.some((row) => row.safetyGrade != null)) return snapshot;
+  return DailySocialSnapshotSchema.parse({ ...snapshot, rows, asOf: Math.min(snapshot.asOf, data.asOfSec),
+    safetyAsOf: data.asOfSec, safetyPublicationId: data.safetyScoreIdentity.publicationGenerationId,
+    source: `${snapshot.source} + Safety Score V9` });
 }
 
 export async function captureDailySocial(topic: DailySocialTopic, edition: DailySocialEdition, nowSec: number, fetcher: typeof fetch = fetch): Promise<DailySocialSnapshot> {
@@ -140,14 +162,24 @@ export async function captureDailySocial(topic: DailySocialTopic, edition: Daily
   const assets = StablecoinListResponseSchema.parse(market.data).peggedAssets;
   const observations = eligibleSocialAssets(assets, nowSec).flatMap((asset) => asset.supplyObservedAt != null ? [asset.supplyObservedAt] : []);
   const base = { ...edition, capturedAt: nowSec, asOf: Math.min(market.asOf, ...observations) };
-  if (topic === "market-growth" || topic === "market-share" || topic === "market-overview") return buildMarketSocial(topic, assets, base);
+  const withOptionalGrades = async (snapshot: DailySocialSnapshot): Promise<DailySocialSnapshot> => {
+    if (!snapshot.rows.some((row) => row.symbol != null)) return snapshot;
+    try {
+      const result = await get("/api/report-cards/v9");
+      return attachDailySocialGrades({ ...snapshot, asOf: Math.min(snapshot.asOf, result.asOf) }, ReportCardsV9ResponseSchema.parse(result.data));
+    } catch {
+      return DailySocialSnapshotSchema.parse({ ...snapshot,
+        highlights: [...snapshot.highlights, { label: "Safety grades", value: "Unavailable for this capture" }].slice(0, 4) });
+    }
+  };
+  if (topic === "market-growth" || topic === "market-share" || topic === "market-overview") return withOptionalGrades(buildMarketSocial(topic, assets, base));
   if (topic === "yield-watch") {
     const result = await get("/api/yield-rankings");
     return buildYieldSocial(YieldRankingsResponseSchema.parse(result.data), assets, { ...base, asOf: Math.min(base.asOf, result.asOf) });
   }
   if (topic === "safety") {
     const result = await get("/api/report-cards/v9");
-    return buildSafetySocial(ReportCardsV9ResponseSchema.parse(result.data), assets, base);
+    return buildSafetySocial(ReportCardsV9ResponseSchema.parse(result.data), assets, { ...base, asOf: Math.min(base.asOf, result.asOf) });
   }
   if (topic === "liquidity-growth") {
     const result = await get("/api/dex-liquidity");
@@ -162,7 +194,7 @@ export async function captureDailySocial(topic: DailySocialTopic, edition: Daily
       const history = await get(`/api/dex-liquidity-history?stablecoin=${encodeURIComponent(id)}&days=10`, 3 * DAY, true);
       histories[id] = DexLiquidityHistoryResponseSchema.parse(history.data);
     }
-    return buildLiquiditySocial(map, histories, assets, { ...base, asOf: Math.min(base.asOf, result.asOf) });
+    return withOptionalGrades(buildLiquiditySocial(map, histories, assets, { ...base, asOf: Math.min(base.asOf, result.asOf) }));
   }
   const events: DepegEvent[] = [];
   const cursors = new Set<string>();

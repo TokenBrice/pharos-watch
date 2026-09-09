@@ -3,7 +3,7 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, extname, resolve } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { firefox } from "playwright";
-import { DailySocialSnapshotSchema, buildDailySocialAltText, formatDailySocialValue, type DailySocialSnapshot } from "@shared/lib/daily-social";
+import { DailySocialSnapshotSchema, buildDailySocialAltText, dailySocialRowLabel, formatDailySocialShare, formatDailySocialValue, type DailySocialSnapshot } from "@shared/lib/daily-social";
 import { escapeXml } from "../lib/og-svg.mts";
 import { parseStrictCliArgs, requireCliString, runCliEntrypoint, writeCliHelpIfRequested } from "../lib/cli-args.mjs";
 import { isDirectRun } from "../lib/smoke-runtime.mjs";
@@ -32,6 +32,12 @@ function asset(path: string): string {
 
 function text(x: number, y: number, value: string, size: number, fill = INK, extra = ""): string {
   return `<text x="${x}" y="${y}" font-size="${size}" fill="${fill}" ${extra}>${escapeXml(value)}</text>`;
+}
+
+/** Keep the complete grade suffix visible within a layout's allotted label width. */
+function fittedText(x: number, y: number, value: string, size: number, width: number, fill = INK, extra = ""): string {
+  const estimatedWidth = value.length * size * 0.64;
+  return text(x, y, value, size, fill, `${extra}${estimatedWidth > width ? ` textLength="${width}" lengthAdjust="spacingAndGlyphs"` : ""}`);
 }
 
 function wrap(value: string, max: number): string[] {
@@ -67,7 +73,7 @@ export function renderDailySocialSvg(raw: DailySocialSnapshot): string {
     .map(([family, file]) => `@font-face{font-family:'${family}';font-weight:200 800;src:url(data:font/woff2;base64,${readFileSync(resolve(ROOT, "src/assets/fonts", file)).toString("base64")}) format('woff2');}`).join("");
   const max = input.unit === "score" ? 100 : Math.max(...input.rows.map((row) => Math.abs(row.value)), 1e-9);
   const value = (row: DailySocialSnapshot["rows"][number]) => formatDailySocialValue(row.value, input.unit);
-  const rowName = (row: DailySocialSnapshot["rows"][number]) => row.symbol ?? row.name;
+  const rowName = (row: DailySocialSnapshot["rows"][number]) => dailySocialRowLabel(row);
   const scaleLabel = input.unit === "usd" ? "USD / SHARED LINEAR SCALE"
     : input.unit === "percentage-points" ? "PERCENTAGE POINTS / SHARED LINEAR SCALE"
       : input.unit === "score" ? "SCORE / SHARED LINEAR SCALE"
@@ -84,23 +90,29 @@ export function renderDailySocialSvg(raw: DailySocialSnapshot): string {
         <rect data-value="${row.value}" x="${x}" y="${714 - height}" width="${Math.min(slot - 35, 230)}" height="${height}" fill="${accent}" opacity="${1 - index * 0.12}"/>
         ${text(x, 696 - height, value(row), 35, INK, 'font-weight="600"')}
         ${logo(row.id, x, 734, 36, logos)}
-        ${text(x + 48, 763, rowName(row).slice(0, 13), 27)}
+        ${fittedText(x + 48, 763, rowName(row), 27, slot - 70)}
         ${lines(x, 802, row.context, Math.floor((slot - 25) / 11), 19, MUTED, 3)}
       </g>`;
     }).join("");
     chart += `<line x1="64" y1="715" x2="1536" y2="715" stroke="${RULE}"/>`;
   } else if (input.topic === "market-share") {
-    const zero = 1060;
-    chart = `<line x1="${zero}" y1="390" x2="${zero}" y2="859" stroke="${accent}" stroke-dasharray="3 7"/>`;
-    chart += text(756, 391, "SHARE LOST", 15, MUTED) + text(1250, 391, "SHARE GAINED", 15, MUTED);
+    const zero = 1290;
+    chart = `<line x1="${zero}" y1="413" x2="${zero}" y2="859" stroke="${accent}" stroke-dasharray="3 7"/>`;
+    chart += text(1090, 406, "SHARE LOST", 15, MUTED) + text(1350, 406, "SHARE GAINED", 15, MUTED);
+    const hasSharePairs = input.rows.some((row) => formatDailySocialShare(row) != null);
+    chart += text(590, 406, hasSharePairs ? "COHORT SHARE: LAST WEEK → NOW"
+      : input.unit === "count" ? "QUALIFYING MOVERS" : "CHANGE IN COHORT SHARE", 15, MUTED);
     chart += input.rows.map((row, index) => {
-      const y = 417 + index * 87;
+      const y = 431 + index * 87;
       const width = Math.abs(row.value) / max * 230;
+      const share = formatDailySocialShare(row);
+      const change = `${row.value > 0 ? "+" : ""}${formatDailySocialValue(row.value, input.unit, "expanded")}`;
       return `<g data-row="${index + 1}">${logo(row.id, 64, y, 38, logos)}
-        ${text(122, y + 28, rowName(row).slice(0, 24), 28)}
-        ${lines(122, y + 57, row.context, 52, 18, MUTED, 1)}
-        <rect data-value="${row.value}" x="${row.value < 0 ? zero - width : zero}" y="${y + 7}" width="${width}" height="30" fill="${accent}" opacity="${row.value < 0 ? 0.55 : 1}"/>
-        ${text(row.value < 0 ? zero - width - 16 : zero + width + 16, y + 32, value(row), 28, INK, `text-anchor="${row.value < 0 ? "end" : "start"}"`)}
+        ${fittedText(122, y + 28, rowName(row), 28, 430)}
+        ${lines(122, y + 57, row.context, 43, 17, MUTED, 1)}
+        ${fittedText(590, y + 30, share ?? change, share ? 33 : 25, 450, INK, 'font-weight="600"')}
+        ${share ? text(590, y + 59, change, 19, MUTED) : ""}
+        <rect data-value="${row.value}" x="${row.value < 0 ? zero - width : zero}" y="${y + 10}" width="${width}" height="28" fill="${accent}" opacity="${row.value < 0 ? 0.55 : 1}"/>
       </g>`;
     }).join("");
   } else if (input.topic === "market-overview") {
@@ -116,20 +128,48 @@ export function renderDailySocialSvg(raw: DailySocialSnapshot): string {
     chart += input.rows.map((row, index) => {
       const y = 600 + index * 55;
       return `${text(64, y, `0${index + 1}`, 22, accent)}${logo(row.id, 120, y - 28, 32, logos)}
-        ${text(168, y, rowName(row).slice(0, 23), 26)}${text(580, y, value(row), 28, INK, 'font-weight="600"')}
+        ${fittedText(168, y, rowName(row), 26, 380)}${text(580, y, value(row), 28, INK, 'font-weight="600"')}
         ${lines(885, y, row.context, 54, 19, MUTED, 1)}`;
     }).join("");
   } else if (input.topic === "stability") {
-    // The isobars are an illustration; only the labeled row values encode observations.
-    chart = `<g opacity="0.22" fill="none" stroke="${accent}">${[110, 155, 200, 245].map((r) => `<ellipse cx="305" cy="607" rx="${r}" ry="${r * 0.76}"/>`).join("")}</g>`;
-    chart += text(305, 587, "PEG", 84, accent, 'text-anchor="middle" style="font-family:Newsreader"');
-    chart += text(305, 649, "CONDITIONS", 25, INK, 'text-anchor="middle" letter-spacing="5"');
-    chart += input.rows.map((row, index) => {
-      const y = 412 + index * 91;
-      return `<line x1="630" y1="${y + 65}" x2="1536" y2="${y + 65}" stroke="${RULE}"/>
-        ${text(630, y + 9, rowName(row).slice(0, 33), 27)}
-        ${text(1536, y + 14, value(row), 36, accent, 'text-anchor="end"')}
-        ${lines(630, y + 41, row.context, 84, 19, MUTED, 1)}`;
+    // Bars compare observed episode counts; the two windows remain explicitly labeled.
+    // No inferred weather, severity rating or fabricated time series is shown.
+    const topRows = input.rows.slice(0, 2);
+    const bottomRows = input.rows.slice(2);
+    const trackWidth = 620;
+    const countBar = (row: DailySocialSnapshot["rows"][number], x: number, y: number, width: number) =>
+      `<rect x="${x}" y="${y}" width="${width}" height="12" fill="${RULE}"/>
+       <rect data-value="${row.value}" x="${x}" y="${y}" width="${Math.abs(row.value) / max * width}" height="12" fill="${accent}"/>`;
+    chart = `<line x1="799" y1="413" x2="799" y2="682" stroke="${RULE}"/>`;
+    chart += topRows.map((row, index) => {
+      const x = index === 0 ? 64 : 867;
+      return `<g data-row="${index + 1}">
+        ${text(x, 438, row.name.toUpperCase(), 25, accent, 'letter-spacing="2"')}
+        ${fittedText(x - 5, 590, value(row), 170, trackWidth, INK, 'font-weight="650" letter-spacing="-7"')}
+        ${lines(x, 626, row.context, 58, 20, MUTED, 1)}
+        ${countBar(row, x, 657, trackWidth)}
+      </g>`;
+    }).join("");
+    chart += `<line x1="64" y1="711" x2="1536" y2="711" stroke="${accent}"/>`;
+    chart += bottomRows.map((row, index) => {
+      const slot = 1472 / Math.max(bottomRows.length, 1);
+      const x = 64 + index * slot;
+      if (bottomRows.length === 1) {
+        return `<g data-row="${index + 3}">
+          ${fittedText(x, 837, value(row), 128, 245, accent, 'font-weight="650" letter-spacing="-5"')}
+          ${text(365, 762, row.name.toUpperCase(), 26, INK, 'letter-spacing="2"')}
+          ${lines(365, 798, row.context, 36, 20, MUTED, 3)}
+          ${text(867, 764, "OPEN AT CAPTURE · INCLUDING OLDER EPISODES", 16, MUTED)}
+          ${countBar(row, 867, 799, trackWidth)}
+          ${text(1487, 847, `${Math.max(...input.rows.map((item) => item.value), 0)} EPISODES / SHARED SCALE`, 15, MUTED, 'text-anchor="end"')}
+        </g>`;
+      }
+      return `<g data-row="${index + 3}">
+        ${fittedText(x, 758, row.name, 24, slot - 40)}
+        ${fittedText(x, 814, value(row), 50, slot - 40, accent)}
+        ${lines(x, 846, row.context, Math.floor((slot - 40) / 10), 16, MUTED, 1)}
+        ${countBar(row, x, 866, slot - 40)}
+      </g>`;
     }).join("");
   } else {
     chart = input.rows.map((row, index) => {
@@ -145,8 +185,11 @@ export function renderDailySocialSvg(raw: DailySocialSnapshot): string {
           <rect data-value="${row.value}" x="620" y="${y + 17}" width="${width}" height="${yieldWatch ? 8 : 28}" fill="${accent}" opacity="${1 - index * 0.1}"/>`;
       return `<g data-row="${index + 1}">
         ${text(64, y + 30, `0${index + 1}`, 25, accent)}${logo(row.id, 124, y, 42, logos)}
-        ${text(188, y + 30, rowName(row).slice(0, 23), 29)}${track}
-        ${text(1536, y + 36, value(row), 39, accent, 'text-anchor="end" font-weight="600"')}
+        ${fittedText(188, y + 30, rowName(row), 29, 395)}${track}
+        ${safety && row.safetyGrade
+          ? text(1325, y + 42, row.safetyGrade, 58, accent, 'text-anchor="middle" font-weight="650"')
+            + text(1536, y + 31, value(row), 24, MUTED, 'text-anchor="end"')
+          : text(1536, y + 36, value(row), 39, accent, 'text-anchor="end" font-weight="600"')}
         ${lines(188, y + 59, row.context, 128, 18, MUTED, 2)}
         <line x1="64" y1="${y + 86}" x2="1536" y2="${y + 86}" stroke="${RULE}"/>
       </g>`;
@@ -160,6 +203,7 @@ export function renderDailySocialSvg(raw: DailySocialSnapshot): string {
     return text(x, 290, item.label.toUpperCase(), Math.min(16, (slot - 28) / Math.max(item.label.length * 0.65, 1)), MUTED, 'letter-spacing="1"')
       + text(x, 326, item.value, Math.min(29, (slot - 28) / Math.max(item.value.length * 0.56, 1)), accent, 'font-weight="600"');
   }).join("");
+  const gradeAsOf = input.safetyAsOf ? new Date(input.safetyAsOf * 1000).toISOString().slice(0, 16).replace("T", " ") : null;
   const sourceLine = `${input.editionDate} EDITION · AS OF ${asOf} UTC · ${input.source}`;
   return `<svg xmlns="http://www.w3.org/2000/svg" width="${WIDTH}" height="${HEIGHT}" viewBox="0 0 ${WIDTH} ${HEIGHT}" role="img" aria-labelledby="title description">
     <title id="title">${escapeXml(input.title)}</title><desc id="description">${escapeXml(buildDailySocialAltText(input))}</desc>
@@ -174,8 +218,9 @@ export function renderDailySocialSvg(raw: DailySocialSnapshot): string {
     ${text(64, 186, input.title, Math.min(71, 2380 / Math.max(input.title.length, 1)), INK, 'style="font-family:Newsreader"')}
     ${lines(64, 233, input.subtitle, 129, 23, MUTED, 1)}
     ${highlights}
+    ${input.rows.some((row) => row.safetyGrade) ? text(1536, 348, `(GRADE) = PHAROS SAFETY SCORE${gradeAsOf ? ` · ${gradeAsOf} UTC` : ""}`, 13, MUTED, 'text-anchor="end" letter-spacing="0.5"') : ""}
     <line x1="64" y1="351" x2="1536" y2="351" stroke="${accent}"/>
-    ${text(1536, 377, input.topic === "stability" ? "OBSERVED PEG CONDITIONS" : input.unit === "score" ? "SCORE / 0–100 SCALE" : scaleLabel, 14, MUTED, 'text-anchor="end" letter-spacing="1"')}
+    ${text(1536, 377, input.topic === "stability" ? "CONFIRMED EPISODES / SHARED COUNT SCALE" : input.unit === "score" ? "SCORE / 0–100 SCALE" : scaleLabel, 14, MUTED, 'text-anchor="end" letter-spacing="1"')}
     ${chart}
     <line x1="64" y1="898" x2="1536" y2="898" stroke="${RULE}"/>
     ${lines(64, 920, input.methodology, 150, 16, MUTED, 3)}

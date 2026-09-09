@@ -33,8 +33,8 @@ describe("daily social renderer", () => {
     const svg = renderDailySocialSvg({ ...snapshot, topic: "market-share", unit: "percentage-points",
       rows: [{ ...snapshot.rows[0], value: -2 }, { ...snapshot.rows[1], value: 1 }],
     });
-    expect(svg).toMatch(/data-value="-2" x="830"[^>]+width="230"/);
-    expect(svg).toMatch(/data-value="1" x="1060"[^>]+width="115"/);
+    expect(svg).toMatch(/data-value="-2" x="1060"[^>]+width="230"/);
+    expect(svg).toMatch(/data-value="1" x="1290"[^>]+width="115"/);
   });
 
   it("uses a fixed 0–100 Safety Score axis", () => {
@@ -49,8 +49,56 @@ describe("daily social renderer", () => {
     const svg = renderDailySocialSvg({ ...snapshot, topic: "stability", unit: "count",
       rows: [{ id: "calm", name: "No observed episodes", value: 0, context: "Seven-day tracked coverage" }],
     });
-    expect(svg).toContain("No observed episodes");
+    expect(svg).toContain("NO OBSERVED EPISODES");
     expect(svg).not.toMatch(/="(?:NaN|Infinity)"/);
+  });
+
+  it("leads with actual cohort shares and spells out their change", () => {
+    const svg = renderDailySocialSvg({ ...snapshot, topic: "market-share", unit: "percentage-points",
+      rows: [{ ...snapshot.rows[0], value: 0.07, shareBeforePct: 19.6, shareAfterPct: 19.67 }],
+    });
+    expect(svg).toContain("19.60% → 19.67%");
+    expect(svg).toContain("+0.07 percentage points");
+    expect(svg).toContain("COHORT SHARE: LAST WEEK → NOW");
+    const legacy = renderDailySocialSvg({ ...snapshot, topic: "market-share", unit: "percentage-points",
+      rows: [{ ...snapshot.rows[0], value: -0.07 }],
+    });
+    expect(legacy).toContain("-0.07 percentage points");
+  });
+
+  it.each(DailySocialTopicSchema.options.filter((topic) => topic !== "stability"))("keeps full grade suffixes in %s coin labels", (topic) => {
+    const svg = renderDailySocialSvg({ ...snapshot, topic,
+      safetyAsOf: snapshot.asOf, safetyPublicationId: "test-publication",
+      rows: snapshot.rows.map((row) => ({ ...row, symbol: "W".repeat(20), safetyGrade: "A+" })),
+    });
+    expect(svg.split(`${"W".repeat(20)} (A+)`).length - 1).toBeGreaterThanOrEqual(5);
+    expect(svg).toContain('lengthAdjust="spacingAndGlyphs"');
+    expect(svg).toContain("(GRADE) = PHAROS SAFETY SCORE");
+  });
+
+  it("makes the safety grade larger than its supporting numeric score", () => {
+    const svg = renderDailySocialSvg({ ...snapshot, topic: "safety", unit: "score",
+      safetyAsOf: snapshot.asOf, safetyPublicationId: "test-publication",
+      rows: [{ ...snapshot.rows[0], value: 80, safetyGrade: "B+" }],
+    });
+    expect(svg).toMatch(/font-size="58"[^>]+>B\+<\/text>/);
+    expect(svg).toMatch(/font-size="24"[^>]+>80\/100<\/text>/);
+    expect(svg).toContain('data-value="80" cx="1052"');
+  });
+
+  it("encodes stability counts with a shared scale and keeps old episodes explicit", () => {
+    const svg = renderDailySocialSvg({ ...snapshot, topic: "stability", unit: "count",
+      rows: [
+        { id: "started", name: "New incidents", value: 2, context: "Began in the last seven days" },
+        { id: "recovered", name: "Recoveries", value: 4, context: "Recovered in the last seven days" },
+        { id: "ongoing", name: "Still open", value: 20, context: "All currently open incidents, including older episodes" },
+      ],
+    });
+    expect(svg).toMatch(/data-value="2"[^>]+width="62"/);
+    expect(svg).toMatch(/data-value="4"[^>]+width="124"/);
+    expect(svg).toMatch(/data-value="20"[^>]+width="620"/);
+    expect(svg).toContain("OPEN AT CAPTURE · INCLUDING OLDER EPISODES");
+    expect(svg).not.toContain("<ellipse");
   });
 
   it("escapes untrusted display text and rejects invalid inputs", () => {
