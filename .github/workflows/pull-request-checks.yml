@@ -93,7 +93,18 @@ jobs:
           PR_SKIP_DOC_SYNC: ${{ matrix.skipDocSync }}
           PR_LANE_SHARD: ${{ matrix.shard }}
           PR_LANE_SHARD_COUNT: ${{ matrix.shardCount }}
+          # Observability only: the tests lane writes its Vitest wall time and
+          # per-file durations for shard-balance review. Never gates the lane.
+          PR_SHARD_TIMINGS_FILE: ${{ matrix.lane == 'tests' && format('.tmp/pr-test-timings-{0}.json', matrix.shard) || '' }}
         run: node --experimental-strip-types scripts/maintenance/generate-pr-workflow-matrix.ts --run
+      - name: Upload PR test shard timings
+        if: ${{ always() && matrix.lane == 'tests' }}
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: pr-test-timings-${{ matrix.shard }}
+          path: .tmp/pr-test-timings-${{ matrix.shard }}.json
+          if-no-files-found: warn
+          retention-days: 7
       - name: Upload critical coverage blob
         if: ${{ always() && matrix.lane == 'critical-coverage-shards' }}
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
