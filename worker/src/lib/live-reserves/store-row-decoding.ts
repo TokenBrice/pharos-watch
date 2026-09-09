@@ -94,10 +94,7 @@ function markMalformedRedemptionTelemetry(redemption: object): void {
   });
 }
 
-function normalizeSnapshotMetadata(
-  metadata: Record<string, unknown>,
-  legacyFreshnessMode?: LiveReserveFreshnessMode,
-): LiveReserveSnapshotMetadata {
+function normalizeSnapshotMetadata(metadata: Record<string, unknown>): LiveReserveSnapshotMetadata {
   const normalized: LiveReserveSnapshotMetadata = { ...metadata };
   const invalidFreshness =
     (hasOwnMetadataKey(metadata, "freshnessMode")
@@ -139,17 +136,6 @@ function normalizeSnapshotMetadata(
   const freshnessMode = metadata.freshnessMode;
   if (typeof freshnessMode === "string" && VALID_FRESHNESS_MODES.has(freshnessMode as LiveReserveFreshnessMode)) {
     normalized.freshnessMode = freshnessMode as LiveReserveFreshnessMode;
-  } else if (!hasOwnMetadataKey(metadata, "freshnessMode") && legacyFreshnessMode != null) {
-    // Legacy snapshots persisted before the explicit freshnessMode contract
-    // carry no mode; a first deploy must not render them scoring-ineligible
-    // until their next successful sync. Admit them under the adapter's
-    // declared default and tag the inference so it stays visible. Newly
-    // written rows always carry an explicit mode, so they never reach here.
-    normalized.freshnessMode = legacyFreshnessMode;
-    normalized.diag = {
-      ...(normalized.diag && typeof normalized.diag === "object" && !Array.isArray(normalized.diag) ? normalized.diag : {}),
-      freshnessModeLegacyDefault: true,
-    };
   } else {
     delete normalized.freshnessMode;
   }
@@ -291,11 +277,8 @@ function normalizeSnapshotMetadata(
   return normalized;
 }
 
-export function parseSnapshotMetadata(
-  value: string | null | undefined,
-  legacyFreshnessMode?: LiveReserveFreshnessMode,
-): LiveReserveSnapshotMetadata {
-  return normalizeSnapshotMetadata(parseJsonObject(value), legacyFreshnessMode);
+export function parseSnapshotMetadata(value: string | null | undefined): LiveReserveSnapshotMetadata {
+  return normalizeSnapshotMetadata(parseJsonObject(value));
 }
 
 export function parseWarnings(value: string | null): LiveReserveWarning[] {
@@ -419,26 +402,6 @@ function resolveSnapshotEvidenceClass(
   return getLiveReserveAdapterDefinition(fallbackAdapterKey)?.evidenceClass ?? null;
 }
 
-/**
- * Freshness mode assumed for legacy snapshots persisted before the explicit
- * `freshnessMode` contract. The adapter's `preferredFreshnessMode` wins; when
- * absent, a single `allowedFreshnessModes` entry is the only honest mode;
- * otherwise fall back to `unverified`. Newly written rows carry an explicit
- * mode and never take this path.
- */
-function resolveLegacyFreshnessDefault(adapterKey: string): LiveReserveFreshnessMode {
-  const definition = getLiveReserveAdapterDefinition(adapterKey);
-  if (definition && "preferredFreshnessMode" in definition && definition.preferredFreshnessMode) {
-    return definition.preferredFreshnessMode;
-  }
-  const allowedModes =
-    definition && "validation" in definition ? definition.validation?.allowedFreshnessModes : undefined;
-  if (Array.isArray(allowedModes) && allowedModes.length === 1) {
-    return allowedModes[0];
-  }
-  return "unverified";
-}
-
 export function parseReserveCompositionRow(
   row: ReserveCompositionRow,
   syncState: ReserveSyncStateRecord | null,
@@ -450,8 +413,7 @@ export function parseReserveCompositionRow(
 
   const fallbackAdapterKey =
     syncState?.adapterKey ?? TRACKED_META_BY_ID.get(row.stablecoin_id)?.liveReservesConfig?.adapter ?? row.source;
-  const legacyFreshnessMode = resolveLegacyFreshnessDefault(fallbackAdapterKey);
-  const metadata = parseSnapshotMetadata(row.metadata, legacyFreshnessMode);
+  const metadata = parseSnapshotMetadata(row.metadata);
   const warnings = parseWarnings(row.warnings ?? null);
   const allowLegacyRecovery = shouldUseLegacySnapshotFallback(syncState, {
     fetchedAt: row.fetched_at,

@@ -200,29 +200,4 @@ describe("stored live reserve snapshot metadata normalization", () => {
     expect(metadata.redemptionFeeBps).toBeUndefined();
     expect(metadata.redemption).toBeUndefined();
   });
-
-  it("decodes a legacy snapshot missing freshnessMode as the adapter default and tags it", () => {
-    const parsed = parseReserveCompositionRow(
-      {
-        ...row([{ name: "Cash", pct: 100, risk: "low" }]),
-        metadata: JSON.stringify({ sourceTimestamp: 1_699_999_000 }),
-      },
-      null,
-    );
-
-    expect(parsed.issue).toBeNull();
-    expect(parsed.record?.metadata.freshnessMode).toBe("verified");
-    expect(parsed.record?.metadata.diag).toEqual({ freshnessModeLegacyDefault: true });
-
-    // A row that still carries an explicit mode is unaffected by the default.
-    const explicit = parseReserveCompositionRow(
-      {
-        ...row([{ name: "Cash", pct: 100, risk: "low" }]),
-        metadata: JSON.stringify({ freshnessMode: "unverified", sourceTimestamp: 1_699_999_000 }),
-      },
-      null,
-    );
-    expect(explicit.record?.metadata.freshnessMode).toBe("unverified");
-    expect(explicit.record?.metadata.diag).toBeUndefined();
-  });
 });

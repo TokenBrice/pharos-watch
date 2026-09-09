@@ -73,6 +73,31 @@
         ]
       },
       {
+        "id": "ethereum:0x6a9da2d710bb9b700acde7cb81f10f1ff8c89041",
+        "destinationChain": "ethereum",
+        "canonicalChain": "ethereum",
+        "contractAddress": "0x6a9da2d710bb9b700acde7cb81f10f1ff8c89041",
+        "protocol": "Securitize",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "single-chain-or-native",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-09-10",
+        "sources": [
+          {
+            "label": "BlackRock: BUIDL-I Token (Etherscan)",
+            "url": "https://etherscan.io/token/0x6a9da2d710bb9b700acde7cb81f10f1ff8c89041"
+          },
+          {
+            "label": "Securitize BUIDL",
+            "url": "https://securitize.io/blackrock/buidl"
+          }
+        ]
+      },
+      {
         "id": "bsc:0x2d5bdc96d9c8aabbdb38c9a27398513e7e5ef84f",
         "destinationChain": "bsc",
         "canonicalChain": "ethereum",

@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { computeLiveReserveConfigFingerprint } from "@shared/lib/live-reserve-adapters";
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import { computeReserveCompositionOverview, loadFreshIndependentLiveReserveMap, loadReserveSnapshotMetadataMap, resolveReserveResult } from "../live-reserves/store";
+import { evaluateLiveReserveAdmission } from "../live-reserves/store-snapshot-state";
 import { makeReservesDb, mockReserveD1, reserveCompositionRow, reserveSyncRow } from "./live-reserves-store.test-support";
 import { resolveRedemptionCapacity } from "../redemption-backstop/capacity";
 import { liveSnapshot } from "./redemption-backstop-sources.test-support";
@@ -85,6 +86,18 @@ describe("live reserve admission", () => {
     expect((await resolveReserveResult(db, "hbd-hive", 1_200))?.mode).not.toBe("live");
     expect((await loadFreshIndependentLiveReserveMap(db, 1_200)).has("hbd-hive")).toBe(false);
     expect((await loadReserveSnapshotMetadataMap(db, ["hbd-hive"], 1_200)).has("hbd-hive")).toBe(false);
+  });
+
+  it("names config-mismatch as the rejection reason for a stale fingerprint", () => {
+    const coin = TRACKED_META_BY_ID.get("hbd-hive")!;
+    const record = {
+      stablecoinId: "hbd-hive", slices: [{ name: "HBD", pct: 100, risk: "low" as const }], fetchedAt: 1_000, source: coin.liveReservesConfig!.adapter,
+      metadata: { freshnessMode: "not-applicable" as const }, warnings: [], warningCount: 0,
+      adapterSourceModel: "dynamic-mix" as const, adapterEvidenceClass: "independent" as const,
+      configFingerprint: computeLiveReserveConfigFingerprint({ ...coin.liveReservesConfig!, version: coin.liveReservesConfig!.version + 1 }),
+    };
+    expect(evaluateLiveReserveAdmission(record, null, coin, 1_200).reasons).toContain("config-mismatch");
+    expect(evaluateLiveReserveAdmission({ ...record, configFingerprint: computeLiveReserveConfigFingerprint(coin.liveReservesConfig!) }, null, coin, 1_200).reasons).not.toContain("config-mismatch");
   });
 
   it("accepts matching and legacy fingerprints but excludes internal diagnostics from detail", async () => {
