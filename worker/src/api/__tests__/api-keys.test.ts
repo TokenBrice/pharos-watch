@@ -4,7 +4,6 @@ import worker from "../../index";
 import { mockD1 } from "@shared/test-utils/mock-d1";
 import { createWorkerEnv } from "../../test-helpers/__shared/worker-env";
 import {
-  hmacSha256Hex,
   makeApiRequest,
   makeExecutionContext,
   stubCryptoForAuth,
@@ -16,7 +15,12 @@ import {
   handleApiKeys,
   handleCredentialLifecycleSummary,
 } from "./api-keys.test-helpers";
-import { makeApiKeyMutationTables, makeRequestAttributionTables } from "../../test-helpers/api-key-test-support";
+import {
+  makeApiKeyMutationTables,
+  makeApiKeyPrefixLookup,
+  makeAuthenticatedApiKeyRow,
+  makeRequestAttributionTables,
+} from "../../test-helpers/api-key-test-support";
 import { resetApiKeyStateForTests } from "../../lib/api-keys";
 import { resetRequestAttributionStateForTests } from "../../lib/request-source-attribution";
 import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
@@ -269,19 +273,17 @@ describe("api key handlers", () => {
 
   it("rejects expired keys in the real public fetch gate", async () => {
     const secret = "abcdefghijklmnopqrstuvwxyzABCDEF";
-    const secretHash = await hmacSha256Hex("pepper", secret);
     const db = mockD1(
       [
-        {
-          match: "FROM api_keys",
-          matchBinds: ["0123456789abcdef"],
-          first: makeApiKeyRow({
-            secret_hash: secretHash,
+        makeApiKeyPrefixLookup({
+          prefix: "0123456789abcdef",
+          row: await makeAuthenticatedApiKeyRow({
+            pepper: "pepper",
+            secret,
             name: "Expired",
             expires_at: 1,
           }),
-          rows: [],
-        },
+        }),
         ...makeRequestAttributionTables(),
       ],
       { requireMatch: true },
