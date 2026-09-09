@@ -11,7 +11,7 @@ DDR is **not investment advice and not a credit rating.** A "Recovery Unlikely" 
 
 ## Methodology Versioning
 
-- **Current methodology version:** <!-- GENERATED-START: methodology-version-depeg-resolver -->`v4.3`<!-- GENERATED-END: methodology-version-depeg-resolver -->
+- **Current methodology version:** <!-- GENERATED-START: methodology-version-depeg-resolver -->`v4.4`<!-- GENERATED-END: methodology-version-depeg-resolver -->
 - **Public changelog page:** `/methodology/depeg-resolver-changelog/`
 - **Canonical source:** `shared/lib/methodology-versions/depeg-resolver.ts`, with shared constants in `shared/lib/methodology-versions/constants.ts` and changelog entries in `shared/data/methodology-changelogs/depeg-resolver/`
 - **Structured changelog:** `shared/data/methodology-changelogs/depeg-resolver/`
@@ -187,6 +187,7 @@ The public module on `/depeg/` sits directly below DDR and separates coverage/ac
 - **Recovery likelihood** — strict accuracy for scored DDR recovery verdicts. Correct recoverable and correct terminal calls count in the numerator; false terminal, false recoverable, and `at_risk` terminal outcomes are scored in the denominator. Pending, insufficient-signal, and data-issue rows are excluded.
 - **Recovery duration** — average signed observed-minus-DDR duration error for recovered rows with a duration estimate. Positive means the observed recovery took longer than DDR's median remaining-time estimate; negative means it recovered faster. The module also shows the average absolute error as context.
 - **Horizon calibration** — expected-vs-observed cells alongside hit rates: for each horizon, mean predicted probability over scored duration rows, realized closure share, bias in percentage points (mean predicted − realized), and a Poisson-binomial z-score under the normal approximation `z = (observed − Σp) / sqrt(Σp(1−p))`. Surfaced in the DDRR snapshot summary as `horizonCalibration` and in `npm run calibrate:ddrr`.
+- **Coverage accounting (`v4.4`)** — the two completeness shares, `stateAssignedPct` and `finalizedCoveragePct`, count each incident once. Rows are grouped by `incidentKey` and each row's single `predictionState` is the assignment; an `operationalCoverageCause` is an overlay on that state, never a second assignment, so a data-quality gap or orphan closure attributed to a cron gap, system deferral or missed lock is one share rather than two. Both shares are therefore at most one by construction, not by clamping. An incident whose rows disagree about its state counts as unassigned so the shortfall stays visible. Per-state counts, `missedNoPredictionCount` and `operationalMissRatePct` deliberately keep their own denominators and may overlap the state buckets — they are cause filters, not assignments.
 
 Review outcomes are deliberately conservative:
 
