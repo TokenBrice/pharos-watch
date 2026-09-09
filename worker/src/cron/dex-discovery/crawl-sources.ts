@@ -82,6 +82,7 @@ export async function crawlCoin(
   deadlineMs?: number,
   references?: PriceValidationReferences,
   sharedDexScreenerRunState?: DexScreenerDiscoveryRunState,
+  onProviderStage?: (provider: DexDiscoveryCrawlerLeafId | "cg-tickers") => Promise<void>,
 ): Promise<CrawlResult> {
   const dexScreenerRunState = sharedDexScreenerRunState ?? createDexScreenerDiscoveryRunState();
   const finalizeOwnRun = async (result: CrawlResult): Promise<CrawlResult> => {
@@ -141,6 +142,11 @@ export async function crawlCoin(
   )];
   let unresolvedChains: string[] = [];
   for (const leaf of executionLeaves) {
+    if (onProviderStage && DEX_DISCOVERY_PROVIDER_REGISTRY.some((provider) =>
+      provider.lifecycle === "active" && provider.crawlerLeaf === leaf &&
+      coinTargets.some((target) => provider.supports(target.chain, target.address)))) {
+      await onProviderStage(leaf);
+    }
     const stage = await providerLeaves[leaf]();
     providerChecks.push(...stage.providerChecks);
     if (stage.unresolvedChains) unresolvedChains = stage.unresolvedChains;
@@ -159,6 +165,9 @@ export async function crawlCoin(
       });
     }
     if (leaf === "dexscreener") {
+      if ((pools.length === 0 || priceObs.length === 0) && stablecoinMeta?.geckoId && !context.timeExceeded()) {
+        await onProviderStage?.("cg-tickers");
+      }
       await crawlCoinGeckoTickersStage({
         cgApiKey,
         geckoId: stablecoinMeta?.geckoId,

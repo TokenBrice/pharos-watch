@@ -487,6 +487,16 @@ export async function syncDexDiscovery(
           coinDeadline,
           validationReferences,
           dexScreenerRunState,
+          onProgress ? async (provider) => {
+            await onProgress({
+              // Reconciliation retains the stage even after clearing progress.
+              stage: `crawl-${provider}:${candidate.stablecoinId}`,
+              itemsDone: index,
+              itemsTotal: eligibleCoins.length,
+              message: `Crawling ${candidate.stablecoinId} via ${provider}`,
+              metadata: { runSeq, tier: candidate.tier, coinsCrawled, poolsDiscovered },
+            });
+          } : undefined,
         );
 
         try {

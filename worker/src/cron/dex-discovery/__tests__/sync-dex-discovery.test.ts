@@ -135,6 +135,21 @@ const db = makeNoopD1({
 });
 
 describe("syncDexDiscovery", () => {
+  it("retains the coin and provider in progress for abandonment reconciliation", async () => {
+    const onProgress = vi.fn(async () => {});
+    vi.mocked(crawlCoin).mockImplementationOnce(async (...args) => {
+      await args[9]?.("curve");
+      return { pools: [], unresolvedChains: [], deploymentOutcomes: [], checkedDeploymentKeys: [] };
+    });
+
+    await syncDexDiscovery(db, null, undefined, onProgress);
+
+    expect(onProgress).toHaveBeenCalledWith(expect.objectContaining({
+      stage: "crawl-curve:coin-a",
+      message: "Crawling coin-a via curve",
+    }));
+  });
+
   it("prioritizes due supplemental refresh even when the weekly cohort is ineligible", async () => {
     const refreshDb = makeNoopD1({ prepare: () => ({ all: async () => ({ results: [
       { stablecoin_id: "coin-b", pool_count: 20, chain_count: 4, has_supplemental_coverage: 1 },
