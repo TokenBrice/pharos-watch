@@ -1,7 +1,8 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
-import { execFileSync, spawnSync } from "node:child_process";
+import { execFileSync } from "node:child_process";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { run as runRedemptionBackstopCli } from "../ci/check-redemption-backstops";
 import { validateRedemptionBackstopRegistry } from "../lib/redemption-backstop-validation";
 import { defineRecordEntries } from "@shared/lib/redemption-backstop-configs/factory";
 import type { RedemptionBackstopConfigManifestEntry } from "@shared/lib/redemption-backstop-configs";
@@ -30,7 +31,7 @@ const baseConfig: RedemptionBackstopConfig = {
   },
 };
 
-function validateFixture(
+function runFixture(
   configs: Record<string, RedemptionBackstopConfig>,
   manifestOverrides: Partial<RedemptionBackstopConfigManifestEntry> = {},
 ) {
@@ -43,10 +44,21 @@ function validateFixture(
       ...manifestOverrides,
     },
   ];
-  return validateRedemptionBackstopRegistry({
+  return runRedemptionBackstopCli([], {
     manifest,
+    validate: validateRedemptionBackstopRegistry,
     mergedConfigs: configs,
+    sourceTextByPath: new Map(),
   });
+}
+
+function validateFixture(
+  configs: Record<string, RedemptionBackstopConfig>,
+  manifestOverrides: Partial<RedemptionBackstopConfigManifestEntry> = {},
+) {
+  const result = runFixture(configs, manifestOverrides);
+  if (!result.validation) throw new Error("Fixture validation did not produce a result.");
+  return result.validation;
 }
 
 describe("check-redemption-backstops CLI", () => {
@@ -84,22 +96,21 @@ describe("check-redemption-backstops CLI", () => {
     vi.spyOn(ACTIVE_META_BY_ID, "keys").mockImplementation(() => new Map([
       ["usdt-tether", true], ["unconfigured-fixture", true],
     ]).keys());
-    const result = validateFixture({ "usdt-tether": baseConfig });
-    expect(result.auditRows.map((row) => row.stablecoinId)).toEqual(["usdt-tether"]);
-    expect(result.findings.filter((finding) => finding.code === "unconfigured-active-coin")).toEqual([
+    const runResult = runFixture({ "usdt-tether": baseConfig });
+    expect(runResult.status).toBe(1);
+    if (!runResult.validation) throw new Error("Fixture validation did not produce a result.");
+    expect(runResult.validation.auditRows.map((row) => row.stablecoinId)).toEqual(["usdt-tether"]);
+    expect(runResult.validation.findings.filter((finding) => finding.code === "unconfigured-active-coin")).toEqual([
       expect.objectContaining({ severity: "warning", stablecoinId: "unconfigured-fixture" }),
     ]);
   });
 
   it("rejects unknown CLI arguments", () => {
-    const result = spawnSync("node_modules/.bin/tsx", ["scripts/ci/check-redemption-backstops.ts", "--bad-arg"], {
-      cwd: process.cwd(),
-      encoding: "utf8",
-      stdio: ["ignore", "pipe", "pipe"],
-    });
+    const result = runRedemptionBackstopCli(["--bad-arg"]);
     expect(result.status).toBe(1);
     expect(result.stderr).toContain("Unknown argument: --bad-arg");
-  }, GATE_LOAD_TIMEOUT_MS);
+  });
+
 
   it("rejects non-http docs URLs and invalid calendar review dates", () => {
     const result = validateFixture({

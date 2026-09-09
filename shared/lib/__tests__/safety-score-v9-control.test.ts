@@ -28,6 +28,7 @@ import {
   makeEconomicControlFacts as facts,
   makeDeploymentControl as control,
   makeReviewedMintInput,
+  makeSupplyPartition,
   noBridgeReview as noBridge,
   noMintReview as noMint,
   noOracleReview as noOracle,
@@ -98,13 +99,13 @@ function nullShareDeploymentScenario(scenario: NullShareDeploymentScenario) {
         facts: {
           ...facts([nullShareBridge]),
           controlStatus: requiredKnown("controls"),
-          supply: {
+          supply: makeSupplyPartition({
             status: requiredKnown("supply"),
-            selectedBridgeRoutes,
+            routes: selectedBridgeRoutes,
             selectedRouteSupplyShare: reviewedShare,
             unknownRouteSupplyShare: gapShare,
             unreviewedRouteSupplyShare: gapShare === null ? null : 0,
-          },
+          }),
         },
         ...(reviewedBridge
           ? {
@@ -228,9 +229,9 @@ function chainLabelPoolResult(
       facts: {
         ...facts(controls),
         assetId,
-        supply: {
+        supply: makeSupplyPartition({
           status: requiredKnown("supply"),
-          selectedBridgeRoutes: [
+          routes: [
             {
               deploymentRouteKey: reviewedControl.deploymentKey,
               supplyUsd: reviewedShare * 100,
@@ -258,7 +259,7 @@ function chainLabelPoolResult(
           selectedRouteSupplyShare: reviewedShare,
           unknownRouteSupplyShare: (poolShare ?? 0) + namedShare,
           unreviewedRouteSupplyShare: 0,
-        },
+        }),
       },
       bridge: {
         status: requiredKnown("bridge"),
@@ -1243,14 +1244,19 @@ describe("Safety Score v9 economic control", () => {
       const result = evaluateV9EconomicControl(args({
         facts: {
           ...facts([missing]), controlStatus: requiredKnown("controls"),
-          supply: {
+          supply: makeSupplyPartition({
             status: requiredKnown("supply"),
-            selectedBridgeRoutes: [{
-              deploymentRouteKey: "ethereum:native", supplyUsd: rowShare * 100,
-              supplyShare: rowShare, reviewState: "selected-reviewed", reviewedRouteKind: "native",
+            routes: [{
+              deploymentRouteKey: "ethereum:native",
+              supplyUsd: rowShare * 100,
+              supplyShare: rowShare,
+              reviewState: "selected-reviewed",
+              reviewedRouteKind: "native",
             }],
-            selectedRouteSupplyShare: aggregateShare, unknownRouteSupplyShare: 0, unreviewedRouteSupplyShare: 0,
-          },
+            selectedRouteSupplyShare: aggregateShare,
+            unknownRouteSupplyShare: 0,
+            unreviewedRouteSupplyShare: 0,
+          }),
         },
       }));
       expect(result.reasons).toContainEqual(expect.objectContaining({
@@ -1267,18 +1273,27 @@ describe("Safety Score v9 economic control", () => {
     const result = evaluateV9EconomicControl(args({
       facts: {
         ...facts([missing]), controlStatus: requiredKnown("controls"),
-        supply: {
+        supply: makeSupplyPartition({
           status: requiredKnown("supply"),
-          selectedBridgeRoutes: [
-            { deploymentRouteKey: "ethereum:native", supplyUsd: 90, supplyShare: 0.9,
-              reviewState: "selected-reviewed", reviewedRouteKind: "native" },
+          routes: [
+            {
+              deploymentRouteKey: "ethereum:native",
+              supplyUsd: 90,
+              supplyShare: 0.9,
+              reviewState: "selected-reviewed",
+              reviewedRouteKind: "native",
+            },
             ...[0.04, 0.06].map((supplyShare) => ({
-              deploymentRouteKey: missing.deploymentKey, supplyUsd: supplyShare * 100,
-              supplyShare, reviewState: "unmatched" as const,
+              deploymentRouteKey: missing.deploymentKey,
+              supplyUsd: supplyShare * 100,
+              supplyShare,
+              reviewState: "unmatched" as const,
             })),
           ],
-          selectedRouteSupplyShare: 0.9, unknownRouteSupplyShare: 0.1, unreviewedRouteSupplyShare: 0,
-        },
+          selectedRouteSupplyShare: 0.9,
+          unknownRouteSupplyShare: 0.1,
+          unreviewedRouteSupplyShare: 0,
+        }),
       },
     }));
     expect(result.reasons).toContainEqual(expect.objectContaining({
@@ -1295,16 +1310,27 @@ describe("Safety Score v9 economic control", () => {
     const route = { controlKey: first.controlKey, tier: "external-validated-network" as const };
     const economicFacts: V9EconomicControlAssetFacts = {
       ...facts([first]),
-      supply: {
+      supply: makeSupplyPartition({
         status: requiredKnown("supply"),
-        selectedBridgeRoutes: [
-          { deploymentRouteKey: first.deploymentKey, supplyUsd: 95, supplyShare: 0.95,
-            reviewState: "selected-reviewed", reviewedRouteKind: "controlled" },
-          { deploymentRouteKey: "unmatched-chain:fixture:arbitrum", supplyUsd: 5, supplyShare: 0.05,
-            reviewState: "unmatched" },
+        routes: [
+          {
+            deploymentRouteKey: first.deploymentKey,
+            supplyUsd: 95,
+            supplyShare: 0.95,
+            reviewState: "selected-reviewed",
+            reviewedRouteKind: "controlled",
+          },
+          {
+            deploymentRouteKey: "unmatched-chain:fixture:arbitrum",
+            supplyUsd: 5,
+            supplyShare: 0.05,
+            reviewState: "unmatched",
+          },
         ],
-        selectedRouteSupplyShare: 0.95, unknownRouteSupplyShare: 0.05, unreviewedRouteSupplyShare: 0,
-      },
+        selectedRouteSupplyShare: 0.95,
+        unknownRouteSupplyShare: 0.05,
+        unreviewedRouteSupplyShare: 0,
+      }),
     };
     expect(evaluateV9SubthresholdUnresolvedBridgeJoins(
       economicFacts, [first], [route], 0.1, 0.1,
@@ -1512,10 +1538,9 @@ describe("Safety Score v9 economic control", () => {
         args({
           facts: {
             ...facts([unresolvedBridge]),
-            supply: {
-              ...facts().supply,
+            supply: makeSupplyPartition({
               status: supplyStatus,
-              selectedBridgeRoutes: [
+              routes: [
                 {
                   deploymentRouteKey: "ethereum:native",
                   supplyUsd: 100 * (1 - unreviewedRouteSupplyShare),
@@ -1532,7 +1557,7 @@ describe("Safety Score v9 economic control", () => {
               ],
               selectedRouteSupplyShare: 1 - unreviewedRouteSupplyShare,
               unreviewedRouteSupplyShare,
-            },
+            }),
           },
           bridge: { status: requiredKnown("bridge"), routes: [] },
         }),
@@ -1661,9 +1686,9 @@ describe("Safety Score v9 economic control", () => {
       args({
         facts: {
           ...facts([namedControl]),
-          supply: {
+          supply: makeSupplyPartition({
             status: requiredKnown("supply"),
-            selectedBridgeRoutes: [
+            routes: [
               {
                 deploymentRouteKey: "ethereum:native",
                 supplyUsd: 94,
@@ -1687,7 +1712,7 @@ describe("Safety Score v9 economic control", () => {
             selectedRouteSupplyShare: 0.94,
             unknownRouteSupplyShare: 0.06,
             unreviewedRouteSupplyShare: 0,
-          },
+          }),
         },
         bridge: { status: requiredKnown("bridge"), routes: [] },
       }),
@@ -1715,20 +1740,34 @@ describe("Safety Score v9 economic control", () => {
     });
     const economicFacts: V9EconomicControlAssetFacts = {
       ...facts([tempoControl]),
-      supply: {
+      supply: makeSupplyPartition({
         status: requiredKnown("supply"),
-        selectedBridgeRoutes: [
-          { deploymentRouteKey: "ethereum:native", supplyUsd: 99_997, supplyShare: 0.99997,
-            reviewState: "selected-reviewed", reviewedRouteKind: "native" },
-          { deploymentRouteKey: tempoControl.deploymentKey, supplyUsd: 2, supplyShare: 0.00002,
-            reviewState: "selected-reviewed", reviewedRouteKind: "controlled" },
-          { deploymentRouteKey: "unmatched-chain:fixture-asset:icp", supplyUsd: 1, supplyShare: 0.00001,
-            reviewState: "unmatched" },
+        routes: [
+          {
+            deploymentRouteKey: "ethereum:native",
+            supplyUsd: 99_997,
+            supplyShare: 0.99997,
+            reviewState: "selected-reviewed",
+            reviewedRouteKind: "native",
+          },
+          {
+            deploymentRouteKey: tempoControl.deploymentKey,
+            supplyUsd: 2,
+            supplyShare: 0.00002,
+            reviewState: "selected-reviewed",
+            reviewedRouteKind: "controlled",
+          },
+          {
+            deploymentRouteKey: "unmatched-chain:fixture-asset:icp",
+            supplyUsd: 1,
+            supplyShare: 0.00001,
+            reviewState: "unmatched",
+          },
         ],
         selectedRouteSupplyShare: 0.99999,
         unknownRouteSupplyShare: 0.00001,
         unreviewedRouteSupplyShare: 0,
-      },
+      }),
     };
     const result = evaluateV9EconomicControl(
       args({
@@ -1769,9 +1808,9 @@ describe("Safety Score v9 economic control", () => {
     const join = evaluateV9SubthresholdUnresolvedBridgeJoins(
       {
         ...facts(),
-        supply: {
+        supply: makeSupplyPartition({
           status: requiredKnown("supply"),
-          selectedBridgeRoutes: [
+          routes: [
             {
               deploymentRouteKey: "ethereum:native",
               supplyUsd: 100_000,
@@ -1783,7 +1822,7 @@ describe("Safety Score v9 economic control", () => {
           selectedRouteSupplyShare: 1,
           unknownRouteSupplyShare: 0,
           unreviewedRouteSupplyShare: 0,
-        },
+        }),
       },
       [],
       [],
@@ -1804,9 +1843,9 @@ describe("Safety Score v9 economic control", () => {
     ] as const;
     const economicFacts: V9EconomicControlAssetFacts = {
       ...facts([nativeControl]),
-      supply: {
+      supply: makeSupplyPartition({
         status: requiredKnown("supply"),
-        selectedBridgeRoutes: [
+        routes: [
           {
             deploymentRouteKey: nativeControl.deploymentKey,
             supplyUsd: 100 * (1 - residueShare),
@@ -1824,7 +1863,7 @@ describe("Safety Score v9 economic control", () => {
         selectedRouteSupplyShare: 1 - residueShare,
         unknownRouteSupplyShare: residueShare,
         unreviewedRouteSupplyShare: 0,
-      },
+      }),
     };
     const join = evaluateV9SubthresholdUnresolvedBridgeJoins(
       economicFacts,
@@ -1858,9 +1897,9 @@ describe("Safety Score v9 economic control", () => {
     ] as const;
     const economicFacts: V9EconomicControlAssetFacts = {
       ...facts([unmatchedControl]),
-      supply: {
+      supply: makeSupplyPartition({
         status: requiredKnown("supply"),
-        selectedBridgeRoutes: [
+        routes: [
           {
             deploymentRouteKey: "ethereum:bridge-representation",
             supplyUsd: 100 * (1 - residueShare),
@@ -1878,7 +1917,7 @@ describe("Safety Score v9 economic control", () => {
         selectedRouteSupplyShare: 1 - residueShare,
         unknownRouteSupplyShare: residueShare,
         unreviewedRouteSupplyShare: 0,
-      },
+      }),
     };
     const join = evaluateV9SubthresholdUnresolvedBridgeJoins(
       economicFacts,
@@ -1909,17 +1948,15 @@ describe("Safety Score v9 economic control", () => {
       args({
         facts: {
           ...facts(),
-          supply: {
-            ...facts().supply,
-            selectedBridgeRoutes: [
-              {
-                deploymentRouteKey: "ethereum:reviewed",
-                supplyUsd: 100,
-                supplyShare: 1,
-                reviewState: "selected-reviewed",
-              },
-            ],
-          },
+          supply: makeSupplyPartition({
+            status: requiredKnown("supply"),
+            routes: [{
+              deploymentRouteKey: "ethereum:reviewed",
+              supplyUsd: 100,
+              supplyShare: 1,
+              reviewState: "selected-reviewed",
+            }],
+          }),
         },
         bridge: { status: requiredKnown("bridge"), routes: [] },
       }),
@@ -1942,9 +1979,9 @@ describe("Safety Score v9 economic control", () => {
       args({
         facts: {
           ...facts([unresolvedBridge]),
-          supply: {
-            ...facts().supply,
-            selectedBridgeRoutes: [
+          supply: makeSupplyPartition({
+            status: requiredKnown("supply"),
+            routes: [
               {
                 deploymentRouteKey: "ethereum:retained-reviewed",
                 supplyUsd: 91,
@@ -1960,7 +1997,7 @@ describe("Safety Score v9 economic control", () => {
             ],
             selectedRouteSupplyShare: 0.91,
             unreviewedRouteSupplyShare: 0.09,
-          },
+          }),
         },
         bridge: { status: requiredKnown("bridge"), routes: [] },
       }),
@@ -2042,15 +2079,18 @@ describe("Safety Score v9 economic control", () => {
       });
       return {
         ...facts([bridgeControl]),
-        supply: {
+        supply: makeSupplyPartition({
           status: requiredKnown("supply"),
-          selectedBridgeRoutes: [
-            { deploymentRouteKey: "peripheral:dust", supplyUsd: 0, supplyShare: 0, reviewState: "unmatched" },
-          ],
+          routes: [{
+            deploymentRouteKey: "peripheral:dust",
+            supplyUsd: 0,
+            supplyShare: 0,
+            reviewState: "unmatched",
+          }],
           selectedRouteSupplyShare: 1,
           unknownRouteSupplyShare: 0,
           unreviewedRouteSupplyShare: 0,
-        },
+        }),
       };
     };
     const knownBridge: V9BridgeControlReview = { status: requiredKnown("bridge"), routes: [] };

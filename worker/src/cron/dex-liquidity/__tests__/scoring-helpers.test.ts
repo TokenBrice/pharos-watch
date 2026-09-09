@@ -10,7 +10,7 @@ import {
 } from "../scoring-helpers";
 import { isPlausibleDexObservationPrice } from "../price-sanity";
 import type { LiquiditySourceMixByFamily } from "../types";
-import { makeObs, makePool } from "./scoring-test-support";
+import { makeObs, makePool } from "./scoring-test-builders";
 
 describe("isPlausibleDexObservationPrice guards peg", () => {
   it("rejects extreme off-peg prices for usdc-circle", () => {
