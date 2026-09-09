@@ -13,22 +13,8 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  prepare:
-    runs-on: ${{ vars.CI_VALIDATE_RUNNER != '' && vars.CI_VALIDATE_RUNNER || 'ubuntu-latest' }}
-    timeout-minutes: 15
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          persist-credentials: false
-          fetch-depth: 0
-          filter: blob:none
-      - uses: ./.github/actions/setup-workspace
-        with:
-          bootstrap-history: "true"
-          workspace-artifact: publish
   full-static:
     name: Full lint and typecheck
-    needs: prepare
     runs-on: ${{ vars.CI_VALIDATE_RUNNER != '' && vars.CI_VALIDATE_RUNNER || 'ubuntu-latest' }}
     timeout-minutes: 25
     steps:
@@ -39,9 +25,8 @@ jobs:
       - uses: ./.github/actions/setup-workspace
         id: workspace
         with:
-          install-deps: "false"
+          bootstrap-history: "true"
           static-cache: "true"
-          workspace-artifact: restore
       - run: npm run lint
       - run: npm run lint:typed
       - run: npm run typecheck
@@ -58,7 +43,6 @@ jobs:
 
   full-tests:
     name: Full test suite (${{ matrix.shard }}/2)
-    needs: prepare
     runs-on: ${{ vars.CI_VALIDATE_RUNNER != '' && vars.CI_VALIDATE_RUNNER || 'ubuntu-latest' }}
     timeout-minutes: 30
     strategy:
@@ -72,8 +56,7 @@ jobs:
           fetch-depth: 0
       - uses: ./.github/actions/setup-workspace
         with:
-          install-deps: "false"
-          workspace-artifact: restore
+          bootstrap-history: "true"
       - run: npm run test:all -- --shard=${{ matrix.shard }}/2
 
   node26-proof:
