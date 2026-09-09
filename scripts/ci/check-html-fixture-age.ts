@@ -22,10 +22,21 @@
 
 import { reportViolations } from "../lib/report-violations.mts";
 import { runAsCli } from "../lib/source-files.mts";
-import { type HtmlFixtureCapture, readHtmlFixtureCaptures } from "../maintenance/refresh-reserve-html-fixtures.ts";
+import {
+  HTML_FIXTURE_REFRESH_TARGETS,
+  type HtmlFixtureCapture,
+  type HtmlFixtureRefreshTarget,
+  readHtmlFixtureCaptures,
+} from "../maintenance/refresh-reserve-html-fixtures.ts";
 
+/** Bound in whole days: a capture fails once it is a 91st day old. */
 export const HTML_FIXTURE_MAX_AGE_DAYS = 90;
 const DAY_MS = 24 * 60 * 60 * 1000;
+// The refresh script writes exactly `YYYY-MM-DDTHH:MM:SSZ`. `Date.parse` also
+// accepts `2026-08-09` and locale strings, which would silently move the age
+// arithmetic onto a local-midnight guess, so the shape is pinned here rather
+// than trusted to the parser.
+const CANONICAL_CAPTURE_RE = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$/;
 
 export type HtmlFixtureAgeVerdict =
   | "fresh"
@@ -73,6 +84,17 @@ function inspectCapture(
         };
   }
 
+  if (!CANONICAL_CAPTURE_RE.test(capture.capturedAt)) {
+    return {
+      ...base,
+      verdict: "unparsable-captured-at",
+      ageDays: null,
+      violation:
+        `${capture.fixture}: captured-at ${capture.capturedAt} is not a canonical UTC ` +
+        `capture stamp (YYYY-MM-DDTHH:MM:SSZ)`,
+    };
+  }
+
   const capturedAtMs = Date.parse(capture.capturedAt);
   if (Number.isNaN(capturedAtMs)) {
     return {
@@ -111,17 +133,47 @@ function inspectCapture(
   return { ...base, verdict: "fresh", ageDays, violation: null };
 }
 
+/**
+ * A refresh target whose file is gone, archived, or hand-trimmed cannot age at
+ * all, so a directory scan alone would report it as one fewer file and pass.
+ * The scheduled owner therefore checks the exported inventory too.
+ */
+function inspectRefreshTargets(
+  targets: readonly HtmlFixtureRefreshTarget[],
+  captures: readonly HtmlFixtureCapture[],
+): string[] {
+  const byFixture = new Map(captures.map((capture) => [capture.fixture, capture]));
+  return targets.flatMap((target) => {
+    const capture = byFixture.get(target.fixture);
+    if (capture === undefined) {
+      return [`${target.fixture}: listed for refresh but missing from the fixtures directory`];
+    }
+    if (capture.archivedReason !== null) {
+      return [`${target.fixture}: archived but still listed for refresh, which would overwrite the frozen capture`];
+    }
+    if (capture.trimmedReason !== null) {
+      return [`${target.fixture}: manually trimmed but still listed for refresh, which would overwrite the trim`];
+    }
+    return [];
+  });
+}
+
 export function evaluateHtmlFixtureAges({
   captures,
   now,
   maxAgeDays = HTML_FIXTURE_MAX_AGE_DAYS,
+  targets = HTML_FIXTURE_REFRESH_TARGETS,
 }: {
   captures: readonly HtmlFixtureCapture[];
   now: Date;
   maxAgeDays?: number;
+  targets?: readonly HtmlFixtureRefreshTarget[];
 }): HtmlFixtureAgeReport {
   const findings = captures.map((capture) => inspectCapture(capture, now, maxAgeDays));
-  const violations = findings.flatMap((finding) => (finding.violation === null ? [] : [finding.violation]));
+  const violations = [
+    ...findings.flatMap((finding) => (finding.violation === null ? [] : [finding.violation])),
+    ...inspectRefreshTargets(targets, captures),
+  ];
   return { findings, violations, checkedCount: findings.length, failed: violations.length > 0 };
 }
 
@@ -129,16 +181,18 @@ export function runHtmlFixtureAgeCheck({
   captures = readHtmlFixtureCaptures(),
   now = new Date(),
   maxAgeDays = HTML_FIXTURE_MAX_AGE_DAYS,
+  targets = HTML_FIXTURE_REFRESH_TARGETS,
   stdout = process.stdout,
   stderr = process.stderr,
 }: {
   captures?: readonly HtmlFixtureCapture[];
   now?: Date;
   maxAgeDays?: number;
+  targets?: readonly HtmlFixtureRefreshTarget[];
   stdout?: { write(chunk: string): unknown };
   stderr?: { write(chunk: string): unknown };
 } = {}): 0 | 1 {
-  const report = evaluateHtmlFixtureAges({ captures, now, maxAgeDays });
+  const report = evaluateHtmlFixtureAges({ captures, now, maxAgeDays, targets });
   return reportViolations({
     label: "check:html-fixture-age",
     heading: "Reserve HTML fixture capture violations",

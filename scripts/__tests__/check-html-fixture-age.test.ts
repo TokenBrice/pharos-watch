@@ -26,7 +26,7 @@ function makeCapture(fixture: string, overrides: Partial<HtmlFixtureCapture> = {
 }
 
 function inspectOne(capture: HtmlFixtureCapture, now: Date = NOW) {
-  return evaluateHtmlFixtureAges({ captures: [capture], now }).findings[0];
+  return evaluateHtmlFixtureAges({ captures: [capture], now, targets: [] }).findings[0];
 }
 
 describe("check-html-fixture-age", () => {
@@ -47,6 +47,7 @@ describe("check-html-fixture-age", () => {
     const report = evaluateHtmlFixtureAges({
       captures: [makeCapture("live.html", { capturedAt: "2025-12-31T12:00:00Z" })],
       now: NOW,
+      targets: [],
     });
 
     expect(report.failed).toBe(true);
@@ -75,6 +76,34 @@ describe("check-html-fixture-age", () => {
     });
   });
 
+  // `Date.parse` accepts these, so a bare date would otherwise be aged from a
+  // guessed midnight and a locale string from the runner's timezone.
+  it.each(["2026-03-22", "March 22, 2026 12:00:00 UTC", "2026-03-22T12:00:00+02:00"])(
+    "rejects the non-canonical capture stamp %s",
+    (capturedAt) => {
+      const finding = inspectOne(makeCapture("loose.html", { capturedAt }));
+
+      expect(finding.verdict).toBe("unparsable-captured-at");
+      expect(finding.violation).toContain("is not a canonical UTC capture stamp");
+    },
+  );
+
+  it("fails a refresh target that no longer ages: deleted, archived, or hand-trimmed", () => {
+    const target = { name: "Live source", url: "https://issuer.example/reserves", fixture: "live.html", path: "/x/live.html" };
+    const evaluate = (captures: Parameters<typeof evaluateHtmlFixtureAges>[0]["captures"]) =>
+      evaluateHtmlFixtureAges({ captures, now: NOW, targets: [target] }).violations;
+
+    // A directory scan alone reports one fewer file and passes.
+    expect(evaluate([])).toEqual(["live.html: listed for refresh but missing from the fixtures directory"]);
+    expect(evaluate([makeCapture("live.html", { archivedReason: "frozen upstream" })])).toEqual([
+      "live.html: archived but still listed for refresh, which would overwrite the frozen capture",
+    ]);
+    expect(evaluate([makeCapture("live.html", { trimmedReason: "hand-trimmed accordion" })])).toEqual([
+      "live.html: manually trimmed but still listed for refresh, which would overwrite the trim",
+    ]);
+    expect(evaluate([makeCapture("live.html")])).toEqual([]);
+  });
+
   it("exempts archived captures from the age bound without exempting them from the future bound", () => {
     const archivedReason = "usdh.com sunset; last valid capture of the live layout.";
     const frozen = inspectOne(makeCapture("archived.html", { capturedAt: "2024-01-01T00:00:00Z", archivedReason }));
@@ -101,6 +130,7 @@ describe("check-html-fixture-age", () => {
         makeCapture("ok.html"),
       ],
       now: NOW,
+      targets: [],
       ...writers,
     });
 
@@ -112,7 +142,12 @@ describe("check-html-fixture-age", () => {
 
     stdout.length = 0;
     stderr.length = 0;
-    const passing = runHtmlFixtureAgeCheck({ captures: [makeCapture("ok.html")], now: NOW, ...writers });
+    const passing = runHtmlFixtureAgeCheck({
+      captures: [makeCapture("ok.html")],
+      now: NOW,
+      targets: [],
+      ...writers,
+    });
 
     expect(passing).toBe(0);
     expect(stderr).toEqual([]);
