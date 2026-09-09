@@ -232,18 +232,18 @@ describe("Safety Score v9 DUSD Makina team-answer evidence", () => {
     });
   });
 
-  it("keeps DUSD local wrapper facts without inventing a parent from unmapped live positions", () => {
+  it("retains DUSD's authored serial parent independently of unmapped strategy positions", () => {
     const { compiledAsset, evaluatedAsset } = scenario;
     expect(compiledAsset.dependencies).toMatchObject({
-      source: "live-unmapped",
+      source: "variant",
+      baseSource: "live-unmapped",
       dependencyFromLive: true,
       mappedLiveReserveWeight: 0,
       fallbackReason: null,
-      edges: [],
+      edges: [{ upstreamAssetId: PARENT_ID, dependencyType: "wrapper", economicRole: "serial-claim", weight: 1 }],
       rejectionReasons: Array.from({ length: 6 }, (_, sliceIndex) => ({ sliceIndex, reason: "no-match" })),
     });
-    expect(evaluatedAsset.trace.wrapperParentLimit).toBeNull();
-    expect(evaluatedAsset.dependencyInputs.serial).toEqual([]);
+    expect(evaluatedAsset.dependencyInputs.serial).toMatchObject([{ upstreamAssetId: PARENT_ID }]);
     const wrapperFacts = compiledAsset.wrapperLocalFacts;
     if (wrapperFacts?.applicability !== "wrapper") throw new Error("expected DUSD wrapper local facts");
     expect(wrapperFacts.riskTransfer).toMatchObject({

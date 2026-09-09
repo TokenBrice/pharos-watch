@@ -468,6 +468,46 @@ export async function fetchBinaryResponseWithRetry(
   });
 }
 
+/** Posts a binary body (e.g. a CBOR-encoded IC query) and returns the binary
+ *  response through the shared retry and adapter-IO plumbing. Not cached: the
+ *  caller owns request identity for non-JSON bodies. */
+export async function fetchBinaryPostWithRetry(
+  url: string,
+  body: Uint8Array,
+  contentType: string,
+  signal: AbortSignal,
+  timeoutMs = 15_000,
+  ctx?: AdapterContext,
+  options?: TextRetryOptions,
+): Promise<Uint8Array> {
+  const maxRetries = options?.maxRetries ?? 1;
+  const maxResponseBytes = options?.maxResponseBytes ?? DEFAULT_ADAPTER_MAX_RESPONSE_BYTES;
+  return runAdapterIo(ctx, `binary-post:${url}`, async () => {
+    const result = await fetchBinaryBodyWithRetry(
+      url,
+      {
+        method: "POST",
+        headers: buildRequestHeaders(
+          { "Content-Type": contentType, "User-Agent": ADAPTER_USER_AGENT },
+          options?.headers,
+        ),
+        body,
+        signal,
+      },
+      maxRetries,
+      fetchBodyOptions(timeoutMs, maxResponseBytes),
+    );
+    if (!result) {
+      throw new Error(`POST fetch failed for ${requestHost(url)}`);
+    }
+    if (!result.response.ok) {
+      await cancelResponseBodyQuietly(result.response);
+      throw new Error(`HTTP ${result.response.status} for POST ${requestHost(url)}`);
+    }
+    return result.body;
+  });
+}
+
 export async function fetchPrimaryHtmlInput(
   config: LiveReservesConfig,
   adapterName: string,

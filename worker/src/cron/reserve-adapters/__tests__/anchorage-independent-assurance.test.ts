@@ -52,6 +52,11 @@ describe("anchorage-independent-assurance (Deloitte Anchorage examinations)", ()
     expect(manifest.assuranceTier).toBe("independent-assurance");
     expect(manifest.conclusion).toBe("unmodified");
     expect(manifest.attestor).toBe("Deloitte & Touche LLP");
+    expect(manifest.attestorIdentification).toMatchObject({
+      method: "reviewed-inference",
+      evidence: [expect.any(String), expect.any(String)],
+      reReviewTrigger: expect.any(String),
+    });
     expect(manifest.reportAsOf).toBe("2026-07-31T23:59:59Z");
     expect(reconcileIndependentAssuranceManifest(manifest)).toMatchObject({
       computedAssetTotal: "175906606",

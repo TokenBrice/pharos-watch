@@ -1,13 +1,8 @@
-import { parseLiveReserveAdapterParams, type LiveReserveAdapterParamsByKey } from "@shared/lib/live-reserve-adapters";
+import { parseLiveReserveAdapterParams } from "@shared/lib/live-reserve-adapters";
 import type { ReserveSlice, StablecoinMeta } from "@shared/types/core";
 import type { LiveReservesConfig } from "@shared/types/live-reserves";
 import { REDEMPTION_BACKSTOP_CONFIGS } from "@shared/lib/redemption-backstop-configs";
-import {
-  fetchEvmStorageAtBlock,
-  type EvmRpcOptions,
-} from "../../lib/evm-rpc";
 import { encodeBalanceOfCallData, TOTAL_SUPPLY_SELECTOR } from "../../lib/evm-selectors";
-import { runAdapterIo } from "./concurrency";
 import {
   decimalNumberFromBigInt,
   makeOnchainCallers,
@@ -16,8 +11,8 @@ import {
 } from "./helpers";
 import { decodeStrictAddressWord, decodeStrictBoolWord, decodeUint256Word } from "./abi-decode";
 import {
-  EIP1967_IMPLEMENTATION_SLOT,
-  implementationAddressFromSlot,
+  readImplementationSlotAddress,
+  requireExpectedAddress,
 } from "./onchain-identity";
 import type { AdapterContext, AdapterResult } from "./types";
 import { reserveDegradedWarning } from "./warnings";
@@ -32,8 +27,6 @@ const SELECTORS = {
   bridgedSupply: "0x11c301e0",
   paused: "0x5c975abb",
 } as const;
-
-export type UsdaiHubParams = LiveReserveAdapterParamsByKey["usdai-hub"];
 
 function requireUint(raw: string | null, label: string): bigint {
   const value = decodeUint256Word(raw);
@@ -51,50 +44,6 @@ function requireBool(raw: string | null, label: string): boolean {
   const value = decodeStrictBoolWord(raw);
   if (value == null) throw new Error(`${ADAPTER_KEY}: ${label} returned malformed bool payload`);
   return value;
-}
-
-function rpcOptions(
-  params: UsdaiHubParams,
-  signal: AbortSignal,
-  ctx?: AdapterContext,
-): EvmRpcOptions {
-  return {
-    extraRpcUrls: [params.rpcUrl, params.fallbackRpcUrl].filter((url): url is string => url != null),
-    signal,
-    timeoutMs: 10_000,
-    chainRpcs: ctx?.chainRpcs,
-  };
-}
-
-async function readImplementationSlot(
-  input: ReturnType<typeof requireOnchainInput>,
-  params: UsdaiHubParams,
-  signal: AbortSignal,
-  ctx?: AdapterContext,
-): Promise<string> {
-  const raw = await runAdapterIo(
-    ctx,
-    `${ADAPTER_KEY}:implementation-slot`,
-    () => fetchEvmStorageAtBlock(
-      input.chain,
-      params.hubAddress,
-      EIP1967_IMPLEMENTATION_SLOT,
-      "latest",
-      rpcOptions(params, signal, ctx),
-    ),
-    { signal },
-  );
-  const implementation = implementationAddressFromSlot(raw);
-  if (implementation == null) {
-    throw new Error(`${ADAPTER_KEY}: implementation slot returned malformed payload`);
-  }
-  return implementation;
-}
-
-function requireExpectedAddress(actual: string, expected: string, label: string): void {
-  if (actual !== expected.toLowerCase()) {
-    throw new Error(`${ADAPTER_KEY}: ${label} identity mismatch (${actual} != ${expected.toLowerCase()})`);
-  }
 }
 
 /**
@@ -130,12 +79,19 @@ export async function fetchUsdaiHubReserves(
       onchain.raw(params.hubAddress, SELECTORS.bridgedSupply),
       onchain.raw(params.hubAddress, SELECTORS.paused),
     ]),
-    readImplementationSlot(input, params, signal, ctx),
+    readImplementationSlotAddress({
+      adapterKey: ADAPTER_KEY,
+      input,
+      contractAddress: params.hubAddress,
+      params,
+      signal,
+      ctx,
+    }),
   ]);
 
   const baseToken = requireAddress(rawBaseToken, "baseToken()");
-  requireExpectedAddress(baseToken, params.baseTokenAddress, "baseToken()");
-  requireExpectedAddress(implementation, params.implementationAddress, "EIP-1967 implementation");
+  requireExpectedAddress(ADAPTER_KEY, baseToken, params.baseTokenAddress, "baseToken()");
+  requireExpectedAddress(ADAPTER_KEY, implementation, params.implementationAddress, "EIP-1967 implementation");
 
   const baseTokenBalanceRaw = requireUint(rawBalance, "PYUSD balanceOf(hub)");
   const totalSupplyRaw = requireUint(rawTotalSupply, "totalSupply()");

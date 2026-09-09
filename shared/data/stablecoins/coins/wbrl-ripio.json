@@ -112,6 +112,7 @@
       }
     },
     "params": {
+      "linkMatch": "wBRL",
       "slices": [
         {
           "name": "Brazilian-real cash deposited in a Brazilian bank account",

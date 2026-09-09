@@ -125,7 +125,7 @@ describe("fetchParallelizerBalancesReserves", () => {
   it("enumerates balances, aggregates reviewed names, and quantifies unlinked residuals", async () => {
     const { result, network } = await runParallel(parallelizerNetwork());
 
-    expect(result.slices).toMatchObject([
+    expect(result.slices).toEqual([
       {
         sourceKey: "parallelizer-balances:0x6000000000000000000000000000000000000006",
         name: "sUSDe (Ethereum + HyperEVM branches)",
@@ -143,6 +143,7 @@ describe("fetchParallelizerBalancesReserves", () => {
         depType: "collateral",
       },
       {
+        sourceKey: "parallelizer-balances:0x7000000000000000000000000000000000000007",
         name: `Untracked Parallelizer collateral ${UNKNOWN.toLowerCase()}`,
         pct: 11.111111,
         risk: "high",

@@ -25,7 +25,7 @@ const EXPECTED_MARKET_ORDER = [
 // uniformly shifted forward so the fixture clock stays ahead of the newest
 // reviewedAt dates in shared static data; relative ages are unchanged.
 describe("Safety Score v9 USDT premium production integration", () => {
-  it("derives rank from supply and rejects the reviewed non-link instead of inheriting USDT's premium", () => {
+  it("preserves the serial parent after a reserve non-link without inheriting USDT's asset premium", () => {
     const fixedInput = createReportCardsFixedInput(
       productionCapture.draft as unknown as ReportCardsFixedInputDraft,
     );
@@ -81,17 +81,20 @@ describe("Safety Score v9 USDT premium production integration", () => {
 
     const childFacts = factsById.get("susdt-spark")!;
     expect(childFacts.dependencies).toMatchObject({
-      source: "live-unmapped",
+      source: "variant",
+      baseSource: "live-unmapped",
       dependencyFromLive: true,
       mappedLiveReserveWeight: 0,
       fallbackReason: null,
       rejectionReasons: [{ sliceIndex: 0, reason: "non-link" }],
-      edges: [],
+      edges: [{ upstreamAssetId: "usdt-tether", dependencyType: "wrapper", economicRole: "serial-claim", weight: 1 }],
     });
 
     const child = evaluatedById.get("susdt-spark")!;
-    expect(child.dependencyInputs.serial).toEqual([]);
-    expect(child.trace.wrapperParentLimit).toBeNull();
+    expect(child.dependencyInputs.serial).toMatchObject([
+      { upstreamAssetId: "usdt-tether", score: usdt.trace.inheritableScore, blocked: false },
+    ]);
+    expect(child.trace.wrapperParentLimit).toMatchObject({ parentScore: usdt.trace.inheritableScore });
     expect(child.trace.scoreAdjustments).not.toContainEqual(
       expect.objectContaining({ kind: "market-anchor-longevity" }),
     );

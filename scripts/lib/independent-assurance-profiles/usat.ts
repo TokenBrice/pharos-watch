@@ -15,12 +15,19 @@ export const PROFILE: CompilerProfile = {
   reportTimeZone: "UTC",
   reportIssuedAt: "2026-08-28T23:59:00Z",
   attestor: "Deloitte & Touche LLP",
+  attestorIdentification: {
+    method: "reviewed-inference",
+    evidence: [
+      "The signed report's letterhead image is byte-identical (md5) to the Deloitte & Touche LLP letterhead published in the firm's other reviewed reports.",
+      "The Anchorage attestation page and the report body describe the examiner only as a Big Four accounting firm and never print the firm name in extractable text.",
+    ],
+    reReviewTrigger: "Re-review if the letterhead image bytes change, the Big Four wording is replaced with a named firm, or any extractable text begins naming the attestor directly.",
+  },
   engagement: "Independent accountant's examination under AICPA attestation standards",
   conclusion: "unmodified",
   unit: "USD",
   assetRows: [
     { code: "cash", label: "Cash", pattern: usatScheduleAmountPattern("Schedule II:", "Cash") },
-    // eslint-disable-next-line security/detect-non-literal-regexp -- label is a fixed literal from the reviewed extraction table below.
     { code: "reverse-repo", label: "Reverse repurchase agreements collateralized by U.S. Treasury securities, at fair value", pattern: usatScheduleAmountPattern("Schedule II:", "Reverse repurchase agreements collateralized by U\\.S\\. Treasury securities,") },
   ],
   liabilityRows: [

@@ -12,10 +12,8 @@ import { fetchJsonWithRetry } from "./helpers";
  * than fit, so an attempt can never paginate without limit.
  */
 
-export const TZKT_REST_ENDPOINT = "https://api.tzkt.io";
-
 /** Upper bound of keys a single TzKT keys page can return. */
-export const TZKT_BIGMAP_PAGE_LIMIT = 10_000;
+const TZKT_BIGMAP_PAGE_LIMIT = 10_000;
 
 const REQUEST_TIMEOUT_MS = 12_000;
 

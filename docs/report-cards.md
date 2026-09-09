@@ -5,7 +5,7 @@ Safety Score V9 is the sole active stablecoin safety model. It publishes evidenc
 ## Methodology Identity
 
 - Active model: <!-- GENERATED-START: report-cards-active-model -->`v9`<!-- GENERATED-END: report-cards-active-model -->
-- **Current methodology version:** <!-- GENERATED-START: methodology-version-safety-score -->`v9.48`<!-- GENERATED-END: methodology-version-safety-score -->
+- **Current methodology version:** <!-- GENERATED-START: methodology-version-safety-score -->`v9.49`<!-- GENERATED-END: methodology-version-safety-score -->
 - Public response schema: report v5 with score trace v3
 - Policy: `shared/data/safety-score-v9/methodology-policy-candidate-v1.json`, parsed and digested by `shared/lib/safety-score-v9/policy.ts`
 - Implementation: `shared/lib/safety-score-v9/`
@@ -41,7 +41,7 @@ Admission of a reviewed composition and the strength it enters at are separate d
 
 Curated collateral links enter the dependency overlay only when the same curated composition is admissible for the reserve envelope and no live reserve slices are present. An expired, incomplete, or otherwise inadmissible curated review therefore contributes no asserted basket edges for that cycle; the existing reserve-envelope gap (such as missing or partial reserve composition) remains the bounded score consequence.
 
-Since methodology 9.48, a live composition with no mapped tracked-asset slices returns `source: live-unmapped` and no dependencies; it never restores curated or manual weights. Dependency facts retain structured `rejectionReasons` entries (`sliceIndex`, `reason`) distinguishing `no-match`, `expired` matching classification, and explicit reviewed `non-link`. Curated fallback is available only when no live composition exists. Partial live mappings keep their live weights.
+Since methodology 9.49, structural dependencies are derived independently of reserve composition: variant parents and explicit wrapped-asset identities retain their unit serial claims, and manual non-collateral relationships survive either composition source. The 9.48 no-revival rule still applies to reserve weights: a live composition with no mapped tracked-asset slices retains `baseSource: live-unmapped` and never restores curated or manual collateral weights. A surviving variant uses `source: variant`; unmapped reserve provenance and zero mapped live weight remain visible. Dependency facts retain structured `rejectionReasons` entries (`sliceIndex`, `reason`) distinguishing `no-match`, `expired` matching classification, and explicit reviewed `non-link`. Curated reserve fallback is available only when no live composition exists. Partial live mappings keep their live weights.
 
 Economic Control prices mint, upgrade, oracle, bridge, and other binding control paths. Mint-component posture derivation, the scoped-control-question contract, and the ceilings each takes are owned by [mint-authority-scoring.md](./mint-authority-scoring.md#current-v9-scope); this document keeps only the pillar-level contract.
 

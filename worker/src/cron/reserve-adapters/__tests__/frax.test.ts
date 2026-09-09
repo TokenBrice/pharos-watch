@@ -336,7 +336,13 @@ describe("adaptFraxFpiCollateral", () => {
       expect.not.arrayContaining([expect.objectContaining({ code: "unknown-token" })]),
     );
     expect(result.slices).toEqual(
-      expect.arrayContaining([expect.objectContaining({ name: "Fraxswap V2 FRAX/FPIS", risk: "high" })]),
+      expect.arrayContaining([
+        expect.objectContaining({
+          name: "Fraxswap V2 FRAX/FPIS",
+          risk: "high",
+          sourceKey: "frax-fpi-collateral:ethereum:0x56695c26b3cdb528815cd22ff7b47510ab821efd",
+        }),
+      ]),
     );
   });
 

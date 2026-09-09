@@ -552,10 +552,10 @@ describe("mento adapter", () => {
     expectWarnings(result, ["mento-dashboard-timestamp-failed"]);
   });
 
-  it("fails closed when the dashboard and analytics API CDP totals diverge", async () => {
+  it("publishes the analytics-API composition degraded when dashboard and API CDP totals diverge", async () => {
     // Live 2026-09-09 discrepancy shape: the dashboard reports materially
     // different GBPm totals than the analytics API troves sum to.
-    await expect(runAdapter("mento", "gbpm-mento", {
+    const { result } = await runAdapter("mento", "gbpm-mento", {
       network: mentoNetwork({
         dashboardHtml: dashboardHtmlWithCdpBackings([
           { stablecoin: "GBPm", collateral_token: "USDm", collateral_usd: 774_785.9598798637, debt_usd: 315_700.2296351052, status: "active" },
@@ -565,11 +565,30 @@ describe("mento adapter", () => {
       // redemption telemetry.
       params: { redemption: undefined },
       nowSec: OVERRIDE_DASHBOARD_NOW_SEC,
-    })).rejects.toThrow(/mento dashboard-vs-API coherence failed for GBPm/);
+    });
+
+    // Policy E4: both sources were readable, so the analytics-API composition
+    // still publishes — degraded, carrying both sides' totals and the pct.
+    expectWarningEffect(result, "mento-cdp-coherence-diverged", "degraded");
+    expectWarnings(result, ["mento-cdp-coherence-diverged"]);
+    expect(result.metadata).toMatchObject({
+      cdpStablecoin: "GBPm",
+      totalCollateralUsd: SAMPLE_CDP_TOTALS.GBPm.collateral_usd,
+      totalDebtUsd: SAMPLE_CDP_TOTALS.GBPm.debt_usd,
+      details: {
+        cdpCoherenceDivergence: {
+          dashboardCollateralUsd: 774_785.9598798637,
+          dashboardDebtUsd: 315_700.2296351052,
+          apiCollateralUsd: SAMPLE_CDP_TOTALS.GBPm.collateral_usd,
+          apiDebtUsd: SAMPLE_CDP_TOTALS.GBPm.debt_usd,
+        },
+      },
+    });
+    expect(result.slices.length).toBeGreaterThan(0);
   });
 
-  it("reports both sides' totals in the coherence failure message", async () => {
-    const caught = await runAdapter("mento", "gbpm-mento", {
+  it("carries both sides' totals and the divergence pct in the coherence warning", async () => {
+    const { result } = await runAdapter("mento", "gbpm-mento", {
       network: mentoNetwork({
         dashboardHtml: dashboardHtmlWithCdpBackings([
           { stablecoin: "GBPm", collateral_token: "USDm", collateral_usd: 774_785.9598798637, debt_usd: 315_700.2296351052, status: "active" },
@@ -577,12 +596,20 @@ describe("mento adapter", () => {
       }),
       params: { redemption: undefined },
       nowSec: OVERRIDE_DASHBOARD_NOW_SEC,
-    }).catch((error: unknown) => error);
+    });
 
-    const message = (caught as Error).message as string;
+    const warning = result.warnings?.find((candidate) => candidate.code === "mento-cdp-coherence-diverged");
     for (const value of ["774785.96", "315700.23", "213427.50", "102821.25"]) {
-      expect(message).toContain(value);
+      expect(warning?.message).toContain(value);
     }
+    expect(result.metadata?.details?.cdpCoherenceDivergence).toMatchObject({
+      dashboardCollateralUsd: 774_785.9598798637,
+      dashboardDebtUsd: 315_700.2296351052,
+      apiCollateralUsd: SAMPLE_CDP_TOTALS.GBPm.collateral_usd,
+      apiDebtUsd: SAMPLE_CDP_TOTALS.GBPm.debt_usd,
+      collateralDivergencePct: expect.closeTo(72.45, 1),
+      debtDivergencePct: expect.closeTo(67.43, 1),
+    });
   });
 
   it.each([

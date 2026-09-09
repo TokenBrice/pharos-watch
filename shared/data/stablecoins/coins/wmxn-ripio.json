@@ -108,6 +108,7 @@
       }
     },
     "params": {
+      "linkMatch": "wMXN",
       "slices": [
         {
           "name": "Mexican-peso fiat deposits in a Mexican bank account",

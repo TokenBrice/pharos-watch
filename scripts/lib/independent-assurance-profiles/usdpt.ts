@@ -16,11 +16,13 @@ export const PROFILE: CompilerProfile = {
     {
       code: "cash",
       label: "Cash in FDIC-insured demand deposit accounts at major commercial banks",
+      // eslint-disable-next-line security/detect-unsafe-regex -- anchored per-line pattern over an offline reviewed PDF text dump; bounded digit runs, no nested quantifier ambiguity.
       pattern: /^\s*Cash\s+\$([\d,]+(?:\.\d{2})?)\s*$/m,
     },
     {
       code: "money-market-funds",
       label: "Money market funds, at net asset value",
+      // eslint-disable-next-line security/detect-unsafe-regex -- anchored per-line pattern over an offline reviewed PDF text dump; bounded digit runs, no nested quantifier ambiguity.
       pattern: /^\s*Money market funds, at net asset value\s+\$([\d,]+(?:\.\d{2})?)\s*$/m,
     },
   ],
@@ -28,6 +30,7 @@ export const PROFILE: CompilerProfile = {
     {
       code: "solana",
       label: "Solana USDPT redeemable tokens outstanding",
+      // eslint-disable-next-line security/detect-unsafe-regex -- anchored per-line pattern over an offline reviewed PDF text dump; bounded digit runs, no nested quantifier ambiguity.
       pattern: /^\s*d\.\s+Total USDPT redeemable tokens outstanding\s+([\d,]+(?:\.\d{2})?)\s*$/m,
     },
   ],
@@ -43,7 +46,9 @@ export const PROFILE: CompilerProfile = {
     { label: "qualified/adverse/disclaimed conclusion", pattern: /qualified opinion|adverse opinion|disclaimer of opinion|except for/i },
   ],
   reportedTotals: [
+    // eslint-disable-next-line security/detect-unsafe-regex -- anchored per-line pattern over an offline reviewed PDF text dump; bounded digit runs, no nested quantifier ambiguity.
     { label: "USDPT reserve assets total", expected: "6935076", pattern: /^\s*Total reserve assets in United States Dollar\s+([\d,]+(?:\.\d{2})?)\s*$/m },
+    // eslint-disable-next-line security/detect-unsafe-regex -- anchored per-line pattern over an offline reviewed PDF text dump; bounded digit runs, no nested quantifier ambiguity.
     { label: "USDPT redeemable tokens total", expected: "6823001", pattern: /^\s*Total USDPT redeemable tokens outstanding\s+([\d,]+(?:\.\d{2})?)\s*$/m },
   ],
   reportedAssetTotal: "6935076",

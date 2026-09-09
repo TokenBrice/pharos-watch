@@ -156,7 +156,7 @@ describe("dependency-graph", () => {
     const dependencies = deriveEffectiveDependencies(
       makeMeta({
         id: "dependent",
-        reserves: [{ name: "Curated upstream", pct: 100, risk: "low", coinId: "curated-upstream", depType: "wrapper" }],
+        reserves: [{ name: "Curated upstream", pct: 100, risk: "low", coinId: "curated-upstream", depType: "collateral" }],
       }),
       {
         liveReserveSlices: [
@@ -195,6 +195,64 @@ describe("dependency-graph", () => {
         { sliceIndex: 1, reason: "no-match" },
       ],
     });
+  });
+
+  it("retains a strategy variant's parent when its live reserve link is a reviewed non-link", () => {
+    const result = deriveEffectiveDependencySet(
+      makeMeta({
+        id: "yousd-yield-optimizer",
+        variantOf: "usdc-circle",
+        variantKind: "strategy-vault",
+        reserves: [{ name: "USDC strategies", pct: 100, risk: "medium", coinId: "usdc-circle" }],
+      }),
+      {
+        liveReserveSlices: [{ name: "USDC strategies", pct: 100, risk: "medium" }],
+        rejectionReasons: [{ sliceIndex: 0, reason: "non-link" }],
+      },
+    );
+
+    expect(result).toMatchObject({
+      dependencies: [{ id: "usdc-circle", weight: 1, type: "wrapper" }],
+      source: "variant",
+      baseSource: "live-unmapped",
+      mappedLiveReserveWeight: 0,
+      fallbackReason: null,
+      rejectionReasons: [{ sliceIndex: 0, reason: "non-link" }],
+    });
+  });
+
+  it("retains manual structural dependencies without reviving their collateral weights", () => {
+    const meta = makeMeta({
+      id: "dependent",
+      dependencies: [
+        { id: "parent", weight: 1, type: "wrapper" },
+        { id: "operator", weight: 1, type: "mechanism" },
+        { id: "old-backing", weight: 0.8, type: "collateral" },
+      ],
+    });
+
+    expect(deriveEffectiveDependencies(meta, {
+      liveReserveSlices: [{ name: "Unmapped book", pct: 100, risk: "low" }],
+    })).toEqual([
+      { id: "parent", weight: 1, type: "wrapper" },
+      { id: "operator", weight: 1, type: "mechanism" },
+    ]);
+    expect(deriveEffectiveDependencies(meta, {
+      liveReserveSlices: [{ name: "Live backing", pct: 40, risk: "low", coinId: "new-backing" }],
+    })).toEqual([
+      { id: "new-backing", weight: 0.4, type: "collateral" },
+      { id: "parent", weight: 1, type: "wrapper" },
+      { id: "operator", weight: 1, type: "mechanism" },
+    ]);
+  });
+
+  it("derives an explicit wrapped-asset claim independently of curated reserve percentages", () => {
+    expect(deriveEffectiveDependencies(makeMeta({
+      id: "usdk-kast",
+      reserves: [{ name: "M0 extension vault", pct: 80, risk: "low", coinId: "m-m0", depType: "wrapper" }],
+    }), {
+      liveReserveSlices: [{ name: "Eligible collateral", pct: 100, risk: "low" }],
+    })).toEqual([{ id: "m-m0", weight: 1, type: "wrapper" }]);
   });
 
   it("keeps live-unmapped provenance when unmapped live reserve slices have no fallback dependencies", () => {

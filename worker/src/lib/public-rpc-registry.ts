@@ -30,8 +30,6 @@ const PUBLIC_RPC_URLS: Record<string, string> = {
   "morph-l2": "https://rpc.morphl2.io",
   abcore: "https://rpc.core.ab.org",
   xlayer: "https://rpc.xlayer.tech",
-  // Sui's public transport is GraphQL, not the retired JSON-RPC methods.
-  sui: "https://graphql.mainnet.sui.io/graphql",
   // Hedera's public read surface is the mirror node REST API (contracts/call
   // for EVM-equivalent view calls, blocks, tokens) — not a JSON-RPC endpoint.
   // Consumed by the hliquity-hedera reserve adapter family.

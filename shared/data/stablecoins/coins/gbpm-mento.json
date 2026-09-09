@@ -52,7 +52,7 @@
   "governanceQuality": "multisig",
   "liveReservesConfig": {
     "adapter": "mento",
-    "version": 1,
+    "version": 2,
     "semantics": "collateral-mix",
     "breakerScope": "mento-cdp-gbpm",
     "display": {

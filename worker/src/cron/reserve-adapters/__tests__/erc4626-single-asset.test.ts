@@ -115,13 +115,20 @@ describe("fetchErc4626SingleAssetReserves", () => {
     const result = await runTrackedVault("syrupusdc-maple");
 
     expect(result.slices).toEqual([
-      expect.objectContaining({
+      {
+        sourceKey: "erc4626-single-asset:ethereum:0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+        name: "Maple syrupUSDC idle underlying",
         pct: 25,
         risk: "medium",
         coinId: "usdc-circle",
         depType: "wrapper",
-      }),
-      expect.objectContaining({ pct: 75, risk: "high" }),
+      },
+      {
+        sourceKey: "erc4626-single-asset:ethereum:0x80ac24aa929eaf5013f6436cda2a7ba190f5cc0b:deployed",
+        name: "Maple syrupUSDC deployed strategy positions",
+        pct: 75,
+        risk: "high",
+      },
     ]);
     expect(result.warnings).toBeUndefined();
     expect(result.metadata).toMatchObject({
@@ -609,7 +616,7 @@ describe("fetchErc4626SingleAssetReserves", () => {
 
     const result = await runTrackedVault(scenario.id);
 
-    expect(result.slices).toEqual([expect.objectContaining({ pct: 100, risk: "high" })]);
+    expect(result.slices).toEqual([{ sourceKey: "erc4626-single-asset:plasma:0xc8a8df9b210243c55d31c73090f06787ad0a1bf6:deployed", name: "Staked Yuzu USD deployed strategy positions", pct: 100, risk: "high" }]);
     expect(result.slices[0]).not.toHaveProperty("coinId");
     expect(result.metadata).toMatchObject({
       chain: "plasma",
@@ -632,7 +639,7 @@ describe("fetchErc4626SingleAssetReserves", () => {
 
     const result = await runTrackedVault(scenario.id);
 
-    expect(result.slices).toEqual([expect.objectContaining({ pct: 100, risk: "high" })]);
+    expect(result.slices).toEqual([{ sourceKey: "erc4626-single-asset:avalanche:0x06d47f3fb376649c3a9dafe069b3d6e35572219e:deployed", name: "Avant Staked USD deployed strategy positions", pct: 100, risk: "high" }]);
     expect(result.slices[0]).not.toHaveProperty("coinId");
     expect(result.metadata).toMatchObject({
       chain: "avalanche",
@@ -650,7 +657,7 @@ describe("fetchErc4626SingleAssetReserves", () => {
 
     const result = await runTrackedVault(scenario.id);
 
-    expect(result.slices).toEqual([expect.objectContaining({ pct: 100, risk: "high" })]);
+    expect(result.slices).toEqual([{ sourceKey: "erc4626-single-asset:ethereum:0x3d7d6fdf07ee548b939a80edbc9b2256d0cdc003:deployed", name: "Strata Senior USDe deployed strategy positions", pct: 100, risk: "high" }]);
     expect(result.slices[0]).not.toHaveProperty("coinId");
     expect(result.metadata).toMatchObject({
       chain: "ethereum",

@@ -1,6 +1,7 @@
 import type { ReserveSlice, StablecoinMeta } from "@shared/types/core";
 import type { LiveReservesConfig, LiveReserveWarning } from "@shared/types/live-reserves";
 import { CHAIN_META } from "@shared/lib/chains";
+import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import { keccak256, toFunctionSelector } from "viem/utils";
 import { encodeAddress } from "../../lib/evm-selectors";
 import { mapWithConcurrency } from "../../lib/concurrency";
@@ -11,7 +12,7 @@ import { decodeAbiWordAt, decodeStrictAddressArrayWord, decodeStrictAddressWord,
 import { pinnedBlockPlan } from "./evm-observation-plan";
 import type { AdapterContext, AdapterResult } from "./types";
 import {
-  buildUnknownExposureWarning, decimalNumberFromBigInt, fetchErc20TotalSupply,
+  buildUnknownExposureWarning, decimalNumberFromBigInt, fetchDefiLlamaPrices, fetchErc20TotalSupply,
   fetchJsonWithRetry, fetchOnchainMulticall3, fetchTronErc20TotalSupply,
   notApplicableFreshnessMetadata, requireOnchainInput, reserveDegradedWarning,
   reserveInfoWarning, slicesFromValues, type OnchainMulticall3Call,
@@ -79,6 +80,28 @@ function address(raw: string | null | undefined, label: string): string {
   const value = decodeStrictAddressWord(raw);
   if (!value || value === ZERO) throw new Error(`${KEY}: unreadable ${label}`);
   return value.toLowerCase();
+}
+
+/**
+ * Resolve DefiLlama quotes for the fixed-constant oracle legs (immutable
+ * MockAggregator, constant 1e8) keyed by reserve address. Legs without a
+ * tracked coin/geckoId are skipped and fall back to the reviewed constant.
+ */
+async function fetchFixedConstantLegPrices(
+  reserves: Array<{ reserve: string }>,
+  signal: AbortSignal,
+  ctx: AdapterContext | undefined,
+  warnings: LiveReserveWarning[],
+): Promise<Map<string, number>> {
+  const lookups: Array<{ key: string; chain: string; address: string }> = [];
+  for (const { reserve } of reserves) {
+    const coinId = IDENTITIES[reserve]?.coinId;
+    const geckoId = coinId ? TRACKED_META_BY_ID.get(coinId)?.geckoId : undefined;
+    if (!geckoId) continue;
+    lookups.push({ key: reserve, chain: "coingecko", address: geckoId });
+  }
+  if (lookups.length === 0) return new Map();
+  return fetchDefiLlamaPrices(lookups, signal, ctx, warnings);
 }
 
 export async function fetchSodaxSonicReserves(
@@ -170,12 +193,18 @@ export async function fetchSodaxSonicReserves(
     ...reserveData.flatMap((r) => activeBorrowers.map((b) => query(`balance:${r.reserve}:${b}`, r.aToken, "balanceOf(address)", b))),
   ]);
   const warnings: LiveReserveWarning[] = [];
+
+  // Immutable MockAggregator legs (constant 1e8) never track market price;
+  // value them with the live DefiLlama quote and keep the reviewed constant
+  // only as a flagged fallback.
+  const fixedConstantReserves = reserveData.filter((r) => r.source === FIXED_USD_SOURCE);
+  const fixedConstantPrices = await fetchFixedConstantLegPrices(fixedConstantReserves, signal, ctx, warnings);
+
   let unknownUsd = 0;
+  const priceSources: Array<{ reserve: string; symbol?: string; kind: "defillama" | "oracle"; priceInsensitive: boolean }> = [];
   const values = reserveData.map((r) => {
     const balance = activeBorrowers.reduce((sum, b) => sum + uint(observations.get(`balance:${r.reserve}:${b}`), `collateral ${r.reserve}/${b}`), 0n);
     if (balance === 0n) return null;
-    // A zero/unreadable price cannot quantify the missing USD denominator.
-    if (r.price <= 0n) throw new Error(`${KEY}: unpriced positive reserve ${r.reserve}`);
     const reviewed = REVIEWED_ORACLES[r.source];
     if (!reviewed || reviewed.timestampSource) {
       const timestamp = uint(observations.get(`timestamp:${r.source}`), `oracle timestamp ${r.reserve}`);
@@ -184,9 +213,29 @@ export async function fetchSodaxSonicReserves(
         warnings.push(reserveDegradedWarning("sodax-oracle-stale", `Oracle price for ${r.reserve} is older than one hour`));
       }
     }
-    const value = decimalNumberFromBigInt(balance * r.price, r.decimals + 8);
-    if (!Number.isFinite(value) || value <= 0) throw new Error(`${KEY}: invalid reserve valuation ${r.reserve}`);
     const identity = IDENTITIES[r.reserve];
+
+    // Prefer a live DefiLlama quote for fixed-constant legs; the immutable
+    // constant remains only as a flagged, reviewed fallback. A zero/unreadable
+    // oracle price with no quote still fails closed (missing USD denominator).
+    const defiLlamaPrice = r.source === FIXED_USD_SOURCE ? fixedConstantPrices.get(r.reserve) : undefined;
+    let value: number;
+    let priceInsensitive = false;
+    if (defiLlamaPrice != null) {
+      value = decimalNumberFromBigInt(balance, r.decimals) * defiLlamaPrice;
+    } else if (r.price > 0n) {
+      value = decimalNumberFromBigInt(balance * r.price, r.decimals + 8);
+      priceInsensitive = r.source === FIXED_USD_SOURCE;
+    } else {
+      throw new Error(`${KEY}: unpriced positive reserve ${r.reserve}`);
+    }
+    if (!Number.isFinite(value) || value <= 0) throw new Error(`${KEY}: invalid reserve valuation ${r.reserve}`);
+    priceSources.push({
+      reserve: r.reserve,
+      ...(identity ? { symbol: identity.symbol } : {}),
+      kind: defiLlamaPrice != null ? "defillama" : "oracle",
+      priceInsensitive,
+    });
     if (!identity) unknownUsd += value;
     return {
       value, sourceKey: `${KEY}:${r.reserve}`,
@@ -238,6 +287,7 @@ export async function fetchSodaxSonicReserves(
         omittedSupplyChains: supplyReads.filter((s) => s.raw == null).map((s) => s.contract.chain),
         supplyInventory: "Historical v1 deployments; Sonic v2 global issuance inventory has not been reviewed",
         borrowerDiscovery: "API candidates reconciled exactly to pinned non-transferable scaled debt supply",
+        priceSources,
       },
     },
   };

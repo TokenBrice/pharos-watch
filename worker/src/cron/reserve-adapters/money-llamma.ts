@@ -387,7 +387,7 @@ async function fetchChainCensus(
   return { chain, block: { number: 0, timestamp: 0 }, markets, supplyTokens };
 }
 
-export function adaptMoneyCensuses(
+function adaptMoneyCensuses(
   censuses: readonly ChainCensus[],
   extraWarnings: readonly LiveReserveWarning[] = [],
   liabilityValuation: "market" | "par" = "market",

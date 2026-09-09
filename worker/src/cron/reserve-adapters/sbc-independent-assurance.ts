@@ -22,7 +22,7 @@ function sbcReportDate(href: string): string | null {
   return formatValidIsoDate(year, month, lastDayOfMonth(year, month)!);
 }
 
-export const SBC_INDEPENDENT_ASSURANCE_PROFILE: IndependentAssuranceProfile = {
+const SBC_INDEPENDENT_ASSURANCE_PROFILE: IndependentAssuranceProfile = {
   adapterName: "sbc-independent-assurance",
   product: "SBC",
   profile: "sbc-v1",

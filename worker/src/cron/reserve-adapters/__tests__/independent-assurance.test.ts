@@ -232,7 +232,7 @@ describe("independent-assurance manifest framework", () => {
       const result = await fetchIndependentAssuranceReserves(
         coin, config, new AbortController().signal, profile, params,
       );
-      expect(result.slices).toMatchObject([{ name: "Cash", risk: "very-low", pct: 100 }]);
+      expect(result.slices).toEqual([{ sourceKey: "test-independent-assurance:audx:cash", name: "Cash", risk: "very-low", pct: 100 }]);
       expect(result.metadata).toMatchObject({ freshnessMode: "verified", collateralizationRatio: 1.01 });
     },
   );
@@ -277,7 +277,7 @@ describe("independent-assurance manifest framework", () => {
       { ...PROFILE, classifications: { cash: { name: "Cash", risk: "very-low" } } },
       { product: "AUDX", profile: "audx-v1", indexHost: "www.audxtoken.com", reportHosts: ["www.audxtoken.com"] },
     );
-    expect(result.slices).toMatchObject([{ name: "Cash", risk: "very-low", pct: 100 }]);
+    expect(result.slices).toEqual([{ sourceKey: "test-independent-assurance:audx:cash", name: "Cash", risk: "very-low", pct: 100 }]);
     expect(result.metadata?.collateralizationRatio).toBe(liability === "200" ? 0.505 : undefined);
     expect(result.warnings).toContainEqual(expect.objectContaining({ code: "reserve-undercollateralized", effect: "degraded" }));
     expect(reconcileIndependentAssuranceManifest(reviewed)).toMatchObject({

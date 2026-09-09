@@ -241,7 +241,7 @@ describe("reserve-protocol-dtf adapter", () => {
 
     const result = await fetchReserveProtocolDtfReserves(coin as never, config, signal);
 
-    expect(result.slices).toMatchObject([
+    expect(result.slices).toEqual([
       { sourceKey: "reserve-protocol-dtf:0xa3931d71877c0e7a3148cb7eb4463524fec27fbd", name: "Savings USDS", pct: 50, risk: "low", coinId: "susds-sky", depType: "collateral" },
       { sourceKey: "reserve-protocol-dtf:0x27f2f159fe990ba83d57f39fd69661764bebf37a", name: "Wrapped Compound USDCv3", pct: 50, risk: "medium", coinId: "usdc-circle", depType: "collateral" },
     ]);
@@ -449,10 +449,10 @@ describe("reserve-protocol-dtf adapter", () => {
     const observedAt = Date.UTC(2026, 7, 12, 12) / 1_000;
     const result = await fetchReserveProtocolDtfReserves(eusdCoin as never, config, signal, { nowSec: observedAt });
 
-    expect(result.slices).toMatchObject([
-      { name: "Static Aave Ethereum USDC", pct: 34, risk: "low", coinId: "usdc-circle", depType: "collateral" },
-      { name: "Wrapped Compound USDCv3", pct: 33, risk: "low", coinId: "usdc-circle", depType: "collateral" },
-      { name: "Wrapped Compound USDTv3", pct: 33, risk: "low", coinId: "usdt-tether", depType: "collateral" },
+    expect(result.slices).toEqual([
+      { sourceKey: `reserve-protocol-dtf:${STATIC_AAVE_USDC.toLowerCase()}`, name: "Static Aave Ethereum USDC", pct: 34, risk: "low", coinId: "usdc-circle", depType: "collateral" },
+      { sourceKey: `reserve-protocol-dtf:${WCUSDCV3.toLowerCase()}`, name: "Wrapped Compound USDCv3", pct: 33, risk: "low", coinId: "usdc-circle", depType: "collateral" },
+      { sourceKey: `reserve-protocol-dtf:${WCUSDT_V3.toLowerCase()}`, name: "Wrapped Compound USDTv3", pct: 33, risk: "low", coinId: "usdt-tether", depType: "collateral" },
     ]);
     expect(result.metadata).toMatchObject({
       componentCount: 3,
@@ -533,11 +533,11 @@ describe("reserve-protocol-dtf adapter", () => {
 
     const result = await fetchReserveProtocolDtfReserves(coin as never, createOnchainConfig(), signal);
 
-    expect(result.slices).toMatchObject([
-      { name: "Savings USDS", pct: 25, risk: "low", coinId: "susds-sky", depType: "collateral" },
-      { name: "Static Aave Ethereum USDC", pct: 25, risk: "medium", coinId: "usdc-circle", depType: "collateral" },
-      { name: "Wrapped Compound USDCv3", pct: 25, risk: "medium", coinId: "usdc-circle", depType: "collateral" },
-      { name: "Steakhouse USDC strategy", pct: 25, risk: "medium", coinId: "steakusdc-steakhouse", depType: "collateral" },
+    expect(result.slices).toEqual([
+      { sourceKey: `reserve-protocol-dtf:${SUSDS.toLowerCase()}`, name: "Savings USDS", pct: 25, risk: "low", coinId: "susds-sky", depType: "collateral" },
+      { sourceKey: `reserve-protocol-dtf:${STATIC_AAVE_USDC.toLowerCase()}`, name: "Static Aave Ethereum USDC", pct: 25, risk: "medium", coinId: "usdc-circle", depType: "collateral" },
+      { sourceKey: `reserve-protocol-dtf:${WCUSDCV3.toLowerCase()}`, name: "Wrapped Compound USDCv3", pct: 25, risk: "medium", coinId: "usdc-circle", depType: "collateral" },
+      { sourceKey: `reserve-protocol-dtf:${STEAK_USDC.toLowerCase()}`, name: "Steakhouse USDC strategy", pct: 25, risk: "medium", coinId: "steakusdc-steakhouse", depType: "collateral" },
     ]);
     expect(result.warnings).toContainEqual(
       expect.objectContaining({

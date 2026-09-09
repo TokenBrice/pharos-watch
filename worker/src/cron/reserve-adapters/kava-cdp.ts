@@ -12,22 +12,21 @@ import {
   slicesFromValues,
   valueUsdFromBigIntPrice,
 } from "./helpers";
+import {
+  KavaBlockSchema,
+  parseFinitePositiveDecimal,
+  validateKavaBlockHeader,
+  type KavaBlockPayload,
+} from "../../lib/kava-lcd";
 import type { AdapterContext, AdapterResult } from "./types";
 
 const ADAPTER_KEY = "kava-cdp";
-const KAVA_CHAIN_ID = "kava_2222-10";
 const KAVA_USDX_MARKET_ID = "usdx:usd";
 
 // USDX is Kava-native: 6 decimals on both the bank supply (10,001,377.482335
 // observed 2026-09-09) and the CDP principal ledger.
 const USDX_DENOM = "usdx";
 const USDX_DECIMALS = 6;
-
-// Mirrors worker/src/lib/authoritative-price-sources/kava-pricefeed.ts, which
-// trusts this LCD and rejects blocks older than 2 minutes (or 1 minute in the
-// future) as stale-oracle evidence.
-const KAVA_BLOCK_MAX_AGE_SEC = 2 * 60;
-const KAVA_BLOCK_MAX_FUTURE_SKEW_SEC = 60;
 
 const KAVA_CDP_PROOF_KIND = "kava-cdp-module-totals";
 
@@ -81,16 +80,6 @@ const KavaBankSupplySchema = z.object({
   amount: KavaAmountSchema,
 });
 
-const KavaBlockSchema = z.object({
-  block: z.object({
-    header: z.object({
-      chain_id: z.string(),
-      height: z.string(),
-      time: z.string(),
-    }),
-  }),
-});
-
 export interface KavaCdpTotalsPayload {
   total_collateral: Array<{ collateral_type: string; amount: { denom: string; amount: string } }>;
 }
@@ -119,9 +108,7 @@ export interface KavaBankSupplyPayload {
   amount: { denom: string; amount: string };
 }
 
-export interface KavaBlockPayload {
-  block: { header: { chain_id: string; height: string; time: string } };
-}
+export type { KavaBlockPayload } from "../../lib/kava-lcd";
 
 // Reviewed per-denom slice identity for every collateral denom the Kava CDP
 // module has ever admitted (2026-08-28 CDP inventory refresh). Risk tiers match
@@ -148,33 +135,6 @@ export interface KavaCdpState {
   block: KavaBlockPayload;
   /** Attempt start time (Unix seconds) used to age-check the pinned block. */
   nowSec: number;
-}
-
-function parseFinitePositiveDecimal(value: string): number | null {
-  const characters = [...value];
-  let decimalPoints = 0;
-  if (
-    characters.length === 0 ||
-    characters.length > 128 ||
-    characters[0] === "." ||
-    characters[characters.length - 1] === "." ||
-    characters.some((character) => {
-      if (character === ".") {
-        decimalPoints += 1;
-        return decimalPoints > 1;
-      }
-      return character < "0" || character > "9";
-    })
-  ) {
-    return null;
-  }
-  const parsed = Number(value);
-  return Number.isFinite(parsed) && parsed > 0 ? parsed : null;
-}
-
-function parseTimestampSec(value: string): number | null {
-  const parsedMs = Date.parse(value);
-  return Number.isFinite(parsedMs) && parsedMs > 0 ? Math.floor(parsedMs / 1_000) : null;
 }
 
 function parseAmountUnits(raw: string, label: string): bigint {
@@ -205,18 +165,11 @@ export function adaptKavaCdpState(state: KavaCdpState): AdapterResult {
 
   // ── Block pinning (freshness anchor) ─────────────────────────────────────
   const { header } = state.block.block;
-  const blockHeight = Number(header.height);
-  const blockTimeSec = parseTimestampSec(header.time);
-  if (
-    header.chain_id !== KAVA_CHAIN_ID ||
-    !Number.isSafeInteger(blockHeight) ||
-    blockHeight <= 0 ||
-    blockTimeSec == null ||
-    state.nowSec - blockTimeSec > KAVA_BLOCK_MAX_AGE_SEC ||
-    blockTimeSec - state.nowSec > KAVA_BLOCK_MAX_FUTURE_SKEW_SEC
-  ) {
+  const blockPin = validateKavaBlockHeader(header, state.nowSec);
+  if (blockPin == null) {
     throw new Error(`${ADAPTER_KEY}: latest block identity or freshness validation failed`);
   }
+  const { blockHeight } = blockPin;
 
   // ── Price map (one entry per live pricefeed market) ──────────────────────
   const priceMap = new Map<string, number>();

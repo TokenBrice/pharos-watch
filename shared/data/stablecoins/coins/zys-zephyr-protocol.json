@@ -72,7 +72,7 @@
   },
   "liveReservesConfig": {
     "adapter": "zephyr-scanner",
-    "version": 1,
+    "version": 2,
     "semantics": "protocol-reserve",
     "breakerScope": "zephyr-scanner-zys",
     "display": {

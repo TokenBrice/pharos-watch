@@ -1,8 +1,6 @@
 import { throwIfAborted } from "../../lib/abort";
 import type { AdapterContext } from "./types";
-import { fetchJsonWithRetry } from "./request";
-import { fetchBinaryWithRetry } from "../../lib/fetch-retry";
-import { runAdapterIo } from "./concurrency";
+import { fetchBinaryPostWithRetry, fetchJsonWithRetry } from "./request";
 
 /**
  * DFINITY's ICRC ledger REST index. Verified 2026-07-29 to agree to the unit
@@ -520,22 +518,16 @@ export async function queryIcpCanister(options: {
         },
       });
       const queryUrl = new URL(`/api/v2/canister/${options.canisterId}/query`, baseUrl).toString();
-      const response = await runAdapterIo(options.ctx, `icp:${options.methodName}`, () =>
-        fetchBinaryWithRetry(
-          queryUrl,
-          {
-            method: "POST",
-            headers: { "content-type": "application/cbor" },
-            body,
-            signal: options.signal,
-          },
-          1,
-          { timeoutMs: options.timeoutMs ?? 12_000, logUrl: queryUrl },
-        ),
+      const responseBody = await fetchBinaryPostWithRetry(
+        queryUrl,
+        body,
+        "application/cbor",
+        options.signal,
+        options.timeoutMs ?? 12_000,
+        options.ctx,
       );
-      if (!response) throw new Error(`icp: no response from ${baseUrl}`);
 
-      const decoded = cborDecode(response.body);
+      const decoded = cborDecode(responseBody);
       if (typeof decoded !== "object" || decoded === null || Array.isArray(decoded)) {
         throw new Error(`icp: malformed query response from ${baseUrl}`);
       }

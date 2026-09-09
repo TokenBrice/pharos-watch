@@ -1,4 +1,4 @@
-import { linePattern, type CompilerProfile } from "./shared";
+import type { CompilerProfile } from "./shared";
 
 // The July report examines two points in time (July 14 and July 31, 2026).
 // The July 31 column is the reviewed snapshot; every row pattern below is

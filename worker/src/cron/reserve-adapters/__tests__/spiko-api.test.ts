@@ -55,8 +55,8 @@ describe("adaptSpikoShareClassTotals", () => {
       risk: "medium",
     });
 
-    expect(result.slices).toMatchObject([
-      { name: "Fully collateralized overnight total-return swap exposure", pct: 100, risk: "medium" },
+    expect(result.slices).toEqual([
+      { sourceKey: "spiko-api:eursafo:total-assets", name: "Fully collateralized overnight total-return swap exposure", pct: 100, risk: "medium" },
     ]);
     expect(result.metadata).toMatchObject({
       sourceTimestamp: Math.floor(Date.parse("2026-07-09T13:40:41.205Z") / 1000),
@@ -103,8 +103,8 @@ describe("adaptSpikoShareClassTotals", () => {
       coinId: "uktbl-spiko",
     });
 
-    expect(result.slices).toMatchObject([
-      { name: "UK Treasury Bills and cash", pct: 100, risk: "very-low", coinId: "uktbl-spiko" },
+    expect(result.slices).toEqual([
+      { sourceKey: "spiko-api:uktbl:total-assets", name: "UK Treasury Bills and cash", pct: 100, risk: "very-low", coinId: "uktbl-spiko" },
     ]);
     expect(result.metadata).toMatchObject({
       freshnessMode: "verified",
@@ -232,8 +232,8 @@ describe("fetchSpikoApiReserves", () => {
     });
 
     expect(network.requests).toEqual([{ url: EURSAFO_URL, method: "GET" }]);
-    expect(result.slices).toMatchObject([
-      { name: "Spiko Amundi Overnight Swap Fund (EUR) shares", pct: 100, risk: "medium" },
+    expect(result.slices).toEqual([
+      { sourceKey: "spiko-api:eursafo:total-assets", name: "Spiko Amundi Overnight Swap Fund (EUR) shares", pct: 100, risk: "medium" },
     ]);
   });
 

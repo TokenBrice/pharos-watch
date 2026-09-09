@@ -12,10 +12,12 @@ import {
   readHtmlAttribute,
   requireHtmlInput,
   stripTags,
+  unverifiedFreshnessMetadata,
   verifiedFreshnessMetadata,
 } from "./helpers";
 import { buildBrowserHeaders, HTML_ACCEPT_HEADER, NEUTRAL_ADAPTER_HEADERS } from "./request";
 import { buildDocumentedRedemptionTelemetry } from "./redemption";
+import { reserveInfoWarning } from "./warnings";
 import {
   parseReportDateCandidates,
   type ParsedReportDateCandidate,
@@ -77,6 +79,10 @@ async function fetchAttestationIndexHtml(
 
 export interface AttestationPdfIndexParams {
   slices: ReserveSlice[];
+  /** Optional regex source (validated to compile) that the newest-dated PDF link
+   *  must match against its href + anchor text, so a shared index page cannot
+   *  resolve one currency to a sibling currency's certificate. */
+  linkMatch?: string;
 }
 
 interface AttestationPdfIndexAdaptOptions {
@@ -318,9 +324,10 @@ function collectPdfLinkCandidates(html: string): PdfLinkCandidate[] {
   return candidates;
 }
 
-function findLatestPdfLink(html: string): PdfLinkCandidate | null {
+function findLatestPdfLink(html: string, linkMatch?: RegExp): PdfLinkCandidate | null {
   let latest: PdfLinkCandidate | null = null;
   for (const candidate of collectPdfLinkCandidates(html)) {
+    if (linkMatch && !linkMatch.test(`${candidate.href} ${candidate.text}`)) continue;
     if (!latest || candidate.date.sourceTimestamp > latest.date.sourceTimestamp) {
       latest = candidate;
     }
@@ -353,15 +360,40 @@ export function adaptAttestationPdfIndex(
   options: AttestationPdfIndexAdaptOptions = {},
 ): AdapterResult {
   const slices = readConfiguredSlices(params.slices);
-  const latest = findLatestPdfLink(html);
+  // eslint-disable-next-line security/detect-non-literal-regexp -- reviewed static currency token from adapter config; the params schema already rejects non-compiling sources.
+  const linkMatch = params.linkMatch ? new RegExp(params.linkMatch) : undefined;
+  const diag = { rawSumDeviation: Math.abs(params.slices.reduce((sum, slice) => sum + slice.pct, 0) - 100) };
+  const latest = findLatestPdfLink(html, linkMatch);
   if (!latest) {
+    if (linkMatch) {
+      return {
+        slices,
+        warnings: [
+          reserveInfoWarning(
+            "attestation-pdf-index-link-unmatched",
+            "No dated PDF attestation/report link on the index matched the configured currency token; report URL and date omitted",
+          ),
+        ],
+        metadata: {
+          diag,
+          ...unverifiedFreshnessMetadata(
+            ADAPTER_NAME,
+            "No PDF link on the index matched the configured currency token",
+          ),
+          compositionMode: COMPOSITION_MODE,
+          compositionSource: COMPOSITION_MODE,
+          compositionNote: COMPOSITION_NOTE,
+          redemption: buildDocumentedRedemptionTelemetry(),
+        },
+      };
+    }
     throw htmlLayoutChangedError(ADAPTER_NAME, "no dated PDF attestation/report links found in HTML");
   }
 
   return {
     slices,
     metadata: {
-      diag: { rawSumDeviation: Math.abs(params.slices.reduce((sum, slice) => sum + slice.pct, 0) - 100) },
+      diag,
       ...verifiedFreshnessMetadata(latest.date.sourceTimestamp),
       reportDate: latest.date.reportDate,
       reportDateLabel: latest.date.reportDateLabel,

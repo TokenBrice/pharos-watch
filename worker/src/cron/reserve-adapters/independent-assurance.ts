@@ -4,6 +4,7 @@ import {
   reconcileIndependentAssuranceManifest,
   type IndependentAssuranceManifest,
   type IndependentAssuranceProduct,
+  type IndependentAssuranceReconciliation,
   type IndependentAssuranceReconciliationOptions,
 } from "@shared/lib/independent-assurance";
 import { getLiveReserveAdapterDefinition, parseLiveReserveAdapterParams, type LiveReserveAdapterParamsByKey } from "@shared/lib/live-reserve-adapters";
@@ -399,6 +400,91 @@ export async function verifyIndependentAssuranceReport(args: {
   return fetchAndHashPdf(args.manifest, args.reportHosts, args.signal, args.ctx);
 }
 
+/**
+ * Assembles the shared assurance snapshot: the `details.assurance` payload,
+ * rounding-difference and shortfall warnings, and the verified-freshness
+ * metadata envelope. Shared by the generic independent-assurance adapter and
+ * the BRLA adapter, which publishes an identical snapshot shape.
+ */
+export function buildIndependentAssuranceReserveResult(args: {
+  slices: ReserveSlice[];
+  manifest: IndependentAssuranceManifest;
+  reconciliation: IndependentAssuranceReconciliation;
+  verifiedResponseUrl: string;
+  verifiedByteLength: number;
+  sourceTimestamp: number;
+}): AdapterResult {
+  const { slices, manifest, reconciliation, verifiedResponseUrl, verifiedByteLength, sourceTimestamp } = args;
+
+  const details = {
+    assurance: {
+      product: manifest.product,
+      profile: manifest.profile,
+      reportDate: manifest.reportDate,
+      reportAsOf: manifest.reportAsOf,
+      reportTimeZone: manifest.reportTimeZone,
+      reportUrl: manifest.reportUrl,
+      reportSha256: manifest.reportSha256,
+      reportByteLength: manifest.reportByteLength,
+      attestor: manifest.attestor,
+      ...(manifest.attestorIdentification ? { attestorIdentification: manifest.attestorIdentification } : {}),
+      engagement: manifest.engagement,
+      conclusion: manifest.conclusion,
+      unit: manifest.unit,
+      assets: manifest.assets,
+      liabilities: manifest.liabilities,
+      ...(manifest.adjustments ? { adjustments: manifest.adjustments } : {}),
+      reportedAssetTotal: manifest.reportedAssetTotal,
+      computedAssetTotal: reconciliation.computedAssetTotal,
+      reportedLiabilityTotal: manifest.reportedLiabilityTotal,
+      computedLiabilityTotal: reconciliation.liabilityTotal,
+      reportedAssetDifference: reconciliation.reportedAssetDifference,
+      reportedLiabilityDifference: reconciliation.reportedLiabilityDifference,
+      reserveShortfall: reconciliation.reserveShortfall,
+      nonPositiveLiabilityCodes: reconciliation.nonPositiveLiabilityCodes,
+      extraction: manifest.extraction,
+      verifiedResponseUrl,
+      verifiedByteLength,
+    },
+  };
+
+  const roundingDifferences = [
+    reconciliation.reportedAssetDifference !== "0"
+      ? `assets ${reconciliation.reportedAssetDifference} ${manifest.unit} (${reconciliation.reportedAssetDifferencePpm.toFixed(3)} ppm)`
+      : null,
+    reconciliation.reportedLiabilityDifference !== "0"
+      ? `liabilities ${reconciliation.reportedLiabilityDifference} ${manifest.unit} (${reconciliation.reportedLiabilityDifferencePpm.toFixed(3)} ppm)`
+      : null,
+  ].filter((value): value is string => value !== null);
+
+  const warnings = [];
+  if (roundingDifferences.length > 0) {
+    warnings.push(reserveInfoWarning(
+      "report-rounding-difference",
+      `Reported totals differ from recomputed rows: ${roundingDifferences.join("; ")}`,
+    ));
+  }
+  if (reconciliation.reserveShortfall !== "0" || reconciliation.nonPositiveLiabilityCodes.length > 0) {
+    warnings.push(reserveDegradedWarning(
+      "reserve-undercollateralized",
+      `Report reserve shortfall: ${reconciliation.reserveShortfall} ${manifest.unit}; non-positive liability rows: ${reconciliation.nonPositiveLiabilityCodes.join(", ") || "none"}`,
+    ));
+  }
+
+  return {
+    slices,
+    ...(warnings.length > 0 ? { warnings } : {}),
+    metadata: {
+      sourceTimestamp,
+      freshnessMode: "verified",
+      ...(reconciliation.collateralizationRatio !== null
+        ? { collateralizationRatio: reconciliation.collateralizationRatio }
+        : {}),
+      details,
+    },
+  };
+}
+
 export async function fetchIndependentAssuranceReserves(
   coin: StablecoinMeta,
   config: LiveReservesConfig,
@@ -479,71 +565,14 @@ export async function fetchIndependentAssuranceReserves(
   );
   if (slices.length === 0) throw new Error("independent-assurance: no positive reserve asset rows");
 
-  const details = {
-    assurance: {
-      product: manifest.product,
-      profile: manifest.profile,
-      reportDate: manifest.reportDate,
-      reportAsOf: manifest.reportAsOf,
-      reportTimeZone: manifest.reportTimeZone,
-      reportUrl: manifest.reportUrl,
-      reportSha256: manifest.reportSha256,
-      reportByteLength: manifest.reportByteLength,
-      attestor: manifest.attestor,
-      engagement: manifest.engagement,
-      conclusion: manifest.conclusion,
-      unit: manifest.unit,
-      assets: manifest.assets,
-      liabilities: manifest.liabilities,
-      ...(manifest.adjustments ? { adjustments: manifest.adjustments } : {}),
-      reportedAssetTotal: manifest.reportedAssetTotal,
-      computedAssetTotal: reconciliation.computedAssetTotal,
-      reportedLiabilityTotal: manifest.reportedLiabilityTotal,
-      computedLiabilityTotal: reconciliation.liabilityTotal,
-      reportedAssetDifference: reconciliation.reportedAssetDifference,
-      reportedLiabilityDifference: reconciliation.reportedLiabilityDifference,
-      reserveShortfall: reconciliation.reserveShortfall,
-      nonPositiveLiabilityCodes: reconciliation.nonPositiveLiabilityCodes,
-      extraction: manifest.extraction,
-      verifiedResponseUrl: artifact.responseUrl,
-      verifiedByteLength: artifact.byteLength,
-    },
-  };
-
-  const roundingDifferences = [
-    reconciliation.reportedAssetDifference !== "0"
-      ? `assets ${reconciliation.reportedAssetDifference} ${manifest.unit} (${reconciliation.reportedAssetDifferencePpm.toFixed(3)} ppm)`
-      : null,
-    reconciliation.reportedLiabilityDifference !== "0"
-      ? `liabilities ${reconciliation.reportedLiabilityDifference} ${manifest.unit} (${reconciliation.reportedLiabilityDifferencePpm.toFixed(3)} ppm)`
-      : null,
-  ].filter((value): value is string => value !== null);
-
-  const warnings = [];
-  if (roundingDifferences.length > 0) {
-    warnings.push(reserveInfoWarning(
-      "report-rounding-difference",
-      `Reported totals differ from recomputed rows: ${roundingDifferences.join("; ")}`,
-    ));
-  }
-  if (reconciliation.reserveShortfall !== "0" || reconciliation.nonPositiveLiabilityCodes.length > 0) {
-    warnings.push(reserveDegradedWarning(
-      "reserve-undercollateralized",
-      `Report reserve shortfall: ${reconciliation.reserveShortfall} ${manifest.unit}; non-positive liability rows: ${reconciliation.nonPositiveLiabilityCodes.join(", ") || "none"}`,
-    ));
-  }
-  return {
+  return buildIndependentAssuranceReserveResult({
     slices,
-    ...(warnings.length > 0 ? { warnings } : {}),
-    metadata: {
-      sourceTimestamp: artifact.sourceTimestamp,
-      freshnessMode: "verified",
-      ...(reconciliation.collateralizationRatio !== null
-        ? { collateralizationRatio: reconciliation.collateralizationRatio }
-        : {}),
-      details,
-    },
-  };
+    manifest,
+    reconciliation,
+    verifiedResponseUrl: artifact.responseUrl,
+    verifiedByteLength: artifact.byteLength,
+    sourceTimestamp: artifact.sourceTimestamp,
+  });
 }
 
 export const fetchIndependentAssuranceAdapter: AdapterFn = async (coin, config, signal, ctx) => {

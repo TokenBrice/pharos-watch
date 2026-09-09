@@ -10,8 +10,8 @@ import {
   type IndependentAssuranceProduct,
 } from "@shared/lib/independent-assurance";
 import { MANIFEST_SOURCES } from "../../shared/data/live-reserves/independent-assurance";
-import { COMPILER_PROFILES } from "./independent-assurance-profiles";
-import type { CompilerProfile } from "./independent-assurance-profiles/shared";
+import { COMPILER_PROFILES } from "../lib/independent-assurance-profiles";
+import type { CompilerProfile } from "../lib/independent-assurance-profiles/shared";
 
 const MANIFEST_DIR = resolve("shared/data/live-reserves/independent-assurance");
 const PRODUCTS = Object.keys(COMPILER_PROFILES) as IndependentAssuranceProduct[];
@@ -88,6 +88,7 @@ function compile(pdfPath: string, config: CompilerProfile): IndependentAssurance
     reportTimeZone: config.reportTimeZone,
     ...(config.reportIssuedAt ? { reportIssuedAt: config.reportIssuedAt } : {}),
     attestor: config.attestor,
+    ...(config.attestorIdentification ? { attestorIdentification: config.attestorIdentification } : {}),
     engagement: config.engagement,
     conclusion: config.conclusion,
     unit: config.unit,
@@ -139,6 +140,9 @@ if (checkOnly && !parseFlag("--product") && !pdfPath) {
       "reportTimeZone", "reportIssuedAt", "attestor", "engagement", "conclusion", "unit",
       "reportedAssetTotal", "computedAssetTotal", "reportedLiabilityTotal"] as const) {
       if (config[field] !== manifest[field]) throw new Error(`Offline profile ${product}.${field} differs from reviewed manifest`);
+    }
+    if (JSON.stringify(config.attestorIdentification ?? null) !== JSON.stringify(manifest.attestorIdentification ?? null)) {
+      throw new Error(`Offline profile ${product}.attestorIdentification differs from reviewed manifest`);
     }
     for (const [rows, amounts] of [[config.assetRows, manifest.assets], [config.liabilityRows, manifest.liabilities]] as const) {
       if (rows.length !== amounts.length || rows.some((row, index) => row.code !== amounts[index].code || row.label !== amounts[index].label)) {

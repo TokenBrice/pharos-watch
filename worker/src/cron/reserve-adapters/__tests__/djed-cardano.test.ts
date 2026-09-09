@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { mockD1 } from "@shared/test-utils/mock-d1";
 import { expectWarningEffect, runAdapter } from "./reserve-adapter.test-support";
 
 // ---------------------------------------------------------------------------
@@ -106,6 +107,21 @@ function runDjed(overrides: DjedNetworkOverrides = {}) {
   });
 }
 
+/** Stablecoins-cache D1 fixture carrying the DefiLlama list circulating for DJED. */
+function djedCacheDb(circulating: number) {
+  return mockD1([{
+    match: "SELECT value, updated_at FROM cache WHERE key = ?",
+    matchBinds: ["stablecoins"],
+    rows: [{
+      key: "stablecoins",
+      value: JSON.stringify({
+        peggedAssets: [{ id: "djed-coti", symbol: "DJED", circulating: { peggedUSD: circulating } }],
+      }),
+      updated_at: TIP.block_time,
+    }],
+  }]);
+}
+
 // ---------------------------------------------------------------------------
 // djed-cardano binding through the real catalog config
 // ---------------------------------------------------------------------------
@@ -176,5 +192,35 @@ describe("djed-cardano", () => {
     });
     expectWarningEffect(result, "extraneous-bank-assets", "info");
     expect(result.metadata?.totalReserveQuantity).toBeCloseTo(25_034_263.75, 4);
+  });
+
+  it("degrades on material on-chain vs list supply divergence without replacing the on-chain liability", async () => {
+    const { result } = await runAdapter("djed-cardano", "djed-coti", {
+      network: djedNetwork(),
+      nowSec: TIP.block_time,
+      ctx: { db: djedCacheDb(4_020_000) },
+    });
+
+    expectWarningEffect(result, "djed-supply-divergence", "degraded");
+    expect(result.metadata?.supplyTokens).toBeCloseTo(DJED_CIRCULATING, 6);
+    expect(result.metadata?.details).toMatchObject({
+      listCirculatingUnits: 4_020_000,
+      supplyDerivation: expect.stringContaining("djedMinted"),
+    });
+    expect(result.metadata?.details?.supplyDivergencePct as number).toBeGreaterThan(10);
+  });
+
+  it("stays clean when the on-chain liability matches the list supply", async () => {
+    const { result } = await runAdapter("djed-cardano", "djed-coti", {
+      network: djedNetwork(),
+      nowSec: TIP.block_time,
+      ctx: { db: djedCacheDb(DJED_CIRCULATING) },
+    });
+
+    expect(result.warnings).toBeUndefined();
+    expect(result.metadata?.details).toMatchObject({
+      listCirculatingUnits: DJED_CIRCULATING,
+      supplyDivergencePct: 0,
+    });
   });
 });

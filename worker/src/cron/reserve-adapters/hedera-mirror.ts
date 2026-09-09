@@ -47,7 +47,7 @@ function parseHederaConsensusTimestamp(value: string, label: string): { sec: num
 }
 
 /** Hex string of a block number, the format `contracts/call` accepts for pinning. */
-export function hederaBlockParam(number: number): string {
+function hederaBlockParam(number: number): string {
   if (!Number.isSafeInteger(number) || number < 0) {
     throw new Error(`hedera-mirror: block number is not a non-negative safe integer: ${number}`);
   }

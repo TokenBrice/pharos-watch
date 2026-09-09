@@ -257,6 +257,39 @@ describe("adaptAttestationPdfIndex", () => {
     expect(() => adaptAttestationPdfIndex(html, CONFIGURED_PARAMS)).toThrow("layout-changed");
   });
 
+  it("selects the currency-specific certificate when linkMatch is configured", () => {
+    const html = `
+      <a href="https://action.ripio.com/hubfs/2026/wFIAT/ATTESTATION/20260331__wBRL__Token-Certification.pdf">wBRL certification</a>
+      <a href="https://action.ripio.com/hubfs/2026/wFIAT/ATTESTATION/20260331__wCOP__Token-Certification.pdf">wCOP certification</a>
+    `;
+
+    const result = adaptAttestationPdfIndex(html, { ...CONFIGURED_PARAMS, linkMatch: "wCOP" });
+
+    expect(result.metadata).toMatchObject({
+      reportDate: "2026-03-31",
+      reportPdfUrl: "https://action.ripio.com/hubfs/2026/wFIAT/ATTESTATION/20260331__wCOP__Token-Certification.pdf",
+    });
+    expect(result.warnings).toBeUndefined();
+  });
+
+  it("omits reportPdfUrl and warns when no link matches the configured currency token", () => {
+    const html = `
+      <a href="https://action.ripio.com/hubfs/2026/wFIAT/ATTESTATION/20260331__wBRL__Token-Certification.pdf">wBRL certification</a>
+    `;
+
+    const result = adaptAttestationPdfIndex(html, { ...CONFIGURED_PARAMS, linkMatch: "wPEN" });
+
+    expect(result.slices).toEqual(CONFIGURED_PARAMS.slices);
+    expect(result.metadata).not.toHaveProperty("reportPdfUrl");
+    expect(result.metadata).not.toHaveProperty("reportPdfHref");
+    expect(result.metadata).not.toHaveProperty("reportDate");
+    expect(result.metadata?.freshnessMode).toBe("unverified");
+    expect(result.warnings).toEqual([expect.objectContaining({
+      code: "attestation-pdf-index-link-unmatched",
+      effect: "info",
+    })]);
+  });
+
   it("discovers dated PDFs in gated Webflow data attributes", () => {
     const html = `
       <button

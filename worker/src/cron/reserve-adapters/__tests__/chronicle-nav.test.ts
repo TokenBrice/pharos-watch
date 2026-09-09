@@ -161,10 +161,14 @@ describe("chronicle-nav ACRDX binding", () => {
 
     const { result } = await runAdapter("chronicle-nav", "acrdx-anemoy-apollo", { ...acrdx, nowSec: NOW_SEC });
 
-    expect(result.slices[0]).toMatchObject({
-      sourceKey: "chronicle-nav:token:0x9477724bb54ad5417de8baff29e59df3fb4da74f",
-      pct: 100,
-    });
+    expect(result.slices).toEqual([
+      {
+        sourceKey: "chronicle-nav:token:0x9477724bb54ad5417de8baff29e59df3fb4da74f",
+        name: "Apollo Diversified Credit Fund NAV",
+        pct: 100,
+        risk: "high",
+      },
+    ]);
     expect(result.metadata?.supplyContributions).toHaveLength(5);
     expect(result.metadata?.supplyCoverageComplete).toBe(false);
     expectWarnings(result, ["por-supply-chain-omitted"]);

@@ -62,6 +62,26 @@ description = "Cosmos IBC denoms (ibc/ + 64 hex) are public on-chain identifiers
 regexTarget = "secret"
 regexes = ['''^ibc/[A-F0-9]{64}$''']
 
+# Tezos contract (KT1) and implicit (tz1/tz2/tz3) addresses are base58check public
+# on-chain identifiers, 36 characters long, exactly like the EVM addresses above.
+# The youves adapter and its fixtures pin engine/token contracts by address.
+[[allowlists]]
+description = "Tezos KT1/tz addresses are public on-chain identifiers, not secrets"
+regexTarget = "secret"
+regexes = ['''^(?:KT1|tz[123])[1-9A-HJ-NP-Za-km-z]{33}[.,;:)\]]?$''']
+
+# Anvil/Hardhat default test account #1 private key. It is published in the Foundry
+# and Hardhat documentation and holds nothing anywhere; the kerne-signed-por test
+# signs synthetic proofs with it so the recovered signer is deterministic. Pinned to
+# the exact value: any other 32-byte hex in that file still fails the scan.
+[[allowlists]]
+description = "Anvil default test account #1 key used to sign synthetic PoR fixtures"
+targetRules = ["generic-api-key"]
+condition = "AND"
+regexTarget = "secret"
+regexes = ['''^0x59c6995e998f97a5a0044966f0945389dc9e86dae88c7a8412f4603b6b78690d$''']
+paths = ['''(?:^|/)worker/src/cron/reserve-adapters/__tests__/kerne-signed-por\.test\.ts$''']
+
 # Issuers publish attestation and audit PDFs through GitBook, whose public
 # download links carry an `?alt=media&token=<uuid>` CDN parameter. Curated
 # `sources` arrays cite those links verbatim, so the token rides along in coin

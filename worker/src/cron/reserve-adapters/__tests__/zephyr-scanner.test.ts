@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { adaptZephyrScanner } from "../zephyr-scanner";
+import { adaptZephyrScanner, buildZephyrReserveSlice } from "../zephyr-scanner";
 import { expectValidAdapterOutput, runAdapter } from "./reserve-adapter.test-support";
 
 const ZEPHYR_ENDPOINT = "https://zephyrprotocol.com/api/v1/reservesnapshots?limit=1&order=desc";
@@ -83,23 +83,7 @@ describe("adaptZephyrScanner", () => {
       ],
     });
 
-    expect(result.slices).toEqual([
-      {
-        name: "ZEPH protocol reserve",
-        pct: 100,
-        risk: "high",
-        assetClass: "cryptoasset",
-        issuerOrObligor: "Zephyr Protocol on-chain ZEPH reserve",
-        riskFactors: [
-          "smart-contract",
-          "market",
-          "liquidity",
-          "concentration",
-          "custody",
-        ],
-        liquidityHorizon: "unknown",
-      },
-    ]);
+    expect(result.slices).toEqual([buildZephyrReserveSlice()]);
     expect(result.metadata).toMatchObject({
       freshnessMode: "verified",
       sourceTimestamp: 1710000000,

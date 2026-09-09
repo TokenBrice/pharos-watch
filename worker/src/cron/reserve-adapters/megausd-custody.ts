@@ -8,6 +8,7 @@ import {
   reserveDegradedWarning,
   reserveInfoWarning,
   slicesFromValues,
+  sumBackingAssetAmounts,
   verifiedFreshnessMetadata,
 } from "./helpers";
 
@@ -49,30 +50,6 @@ const MEGAUSD_ASSET_CONFIG: Record<string, MegausdAssetConfig> = {
  *  excluded from the reserve mix entirely. */
 const SELF_HOLDING_KEY = "USDM";
 
-/** Strict amount parser shared by asset rows: finite numbers pass through,
- *  numeric strings are converted, and anything else throws so a malformed
- *  payload can never silently read as zero. */
-function parseStrictAmount(value: unknown, label: string): number {
-  if (typeof value === "number" && Number.isFinite(value)) return value;
-  if (typeof value === "string" && value.trim() !== "" && Number.isFinite(Number(value))) {
-    return Number(value);
-  }
-  throw new Error(`megausd-custody ${label} is not a finite number: ${String(value)}`);
-}
-
-function sumAssetAmount(assetKey: string, entries: MegausdBackingAssetEntry[] | undefined): number {
-  if (!Array.isArray(entries)) {
-    throw new Error(`megausd-custody backing asset ${assetKey} entry list is not an array`);
-  }
-  return entries.reduce((total, entry, index) => {
-    const amount = parseStrictAmount(entry?.amount, `backing asset ${assetKey} entry ${index} amount`);
-    if (amount < 0) {
-      throw new Error(`megausd-custody backing asset ${assetKey} entry ${index} has a negative amount`);
-    }
-    return total + amount;
-  }, 0);
-}
-
 export function adaptMegausdCustody(payload: MegausdBackingAndSupplyPayload): AdapterResult {
   const backingAssets = payload.backingAssets;
   if (!backingAssets || typeof backingAssets !== "object") {
@@ -88,7 +65,7 @@ export function adaptMegausdCustody(payload: MegausdBackingAndSupplyPayload): Ad
   const sliceInputs: Array<{ value: number; sourceKey: string; name: string; risk: ReserveSlice["risk"]; coinId?: string }> = [];
 
   for (const [assetKey, entries] of Object.entries(backingAssets)) {
-    const amount = sumAssetAmount(assetKey, entries);
+    const amount = sumBackingAssetAmounts("megausd-custody", assetKey, entries);
     const normalizedKey = assetKey.trim().toUpperCase();
 
     if (normalizedKey === SELF_HOLDING_KEY) {

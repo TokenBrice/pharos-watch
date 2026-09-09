@@ -82,7 +82,8 @@ describe("adaptChainlinkPorResponse", () => {
       params,
     );
     expect(result.slices).toHaveLength(1);
-    expect(result.slices[0]).toMatchObject({
+    expect(result.slices[0]).toEqual({
+      sourceKey: "chainlink-por:feed:0xbe456fd14720c3accc30a2013bffd782c9cb75d5",
       name: "USD Cash Reserves",
       pct: 100,
       risk: "very-low",

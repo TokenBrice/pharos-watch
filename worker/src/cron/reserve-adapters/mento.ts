@@ -353,7 +353,7 @@ export interface MentoCdpBackingTotals {
  * payload into per-stablecoin collateral/debt totals. Returns null when the
  * dashboard payload does not carry the array or it cannot be decoded.
  */
-export function parseMentoDashboardCdpBackings(html: string): Map<string, MentoCdpBackingTotals> | null {
+function parseMentoDashboardCdpBackings(html: string): Map<string, MentoCdpBackingTotals> | null {
   let decoded: unknown;
   try {
     decoded = JSON.parse(
@@ -393,27 +393,25 @@ function mentoCdpDivergence(api: number, dashboard: number): number {
 /**
  * Dashboard-vs-API coherence gate for CDP coins: the dashboard's
  * per-stablecoin `cdp_backings` totals and the analytics API's summed
- * `cdp_troves` totals must agree within 1%. Returns an error naming both
- * values when they diverge — the two sources then disagree materially and
- * neither can be trusted — or null when they agree.
+ * `cdp_troves` totals must agree within 1%. Returns both divergence
+ * percentages when they diverge — the two sources then disagree materially,
+ * so policy E4 publishes the analytics-API composition degraded — or null
+ * when they agree.
  */
-export function mentoCdpCoherenceError(
-  cdpStablecoin: string,
+function mentoCdpCoherenceDivergence(
   dashboard: MentoCdpBackingTotals,
   apiCollateralUsd: number,
   apiDebtUsd: number,
-): Error | null {
-  const collateralDivergence = mentoCdpDivergence(apiCollateralUsd, dashboard.collateralUsd);
-  const debtDivergence = mentoCdpDivergence(apiDebtUsd, dashboard.debtUsd);
+): { collateralPct: number; debtPct: number } | null {
+  const collateralPct = mentoCdpDivergence(apiCollateralUsd, dashboard.collateralUsd) * 100;
+  const debtPct = mentoCdpDivergence(apiDebtUsd, dashboard.debtUsd) * 100;
   if (
-    collateralDivergence <= MENTO_DASHBOARD_COHERENCE_MAX_DIVERGENCE
-    && debtDivergence <= MENTO_DASHBOARD_COHERENCE_MAX_DIVERGENCE
+    collateralPct <= MENTO_DASHBOARD_COHERENCE_MAX_DIVERGENCE * 100
+    && debtPct <= MENTO_DASHBOARD_COHERENCE_MAX_DIVERGENCE * 100
   ) {
     return null;
   }
-  return new Error(
-    `mento dashboard-vs-API coherence failed for ${cdpStablecoin}: dashboard collateral/debt $${dashboard.collateralUsd.toFixed(2)}/$${dashboard.debtUsd.toFixed(2)} vs analytics API $${apiCollateralUsd.toFixed(2)}/$${apiDebtUsd.toFixed(2)}`,
-  );
+  return { collateralPct, debtPct };
 }
 
 export function adaptMentoReserveComposition(payload: unknown, sourceTimestamp: number | null = null): AdapterResult {
@@ -621,25 +619,44 @@ export async function fetchMentoReserves(
     fetchMentoDashboardSnapshot(config, signal, dashboardWarnings, ctx),
   ]);
   const params = parseLiveReserveAdapterParams("mento", config.params);
-  const result = params.cdpStablecoin
+  let result = params.cdpStablecoin
     ? adaptMentoCdpComposition(payload, params.cdpStablecoin, dashboard?.sourceTimestamp ?? null)
     : adaptMentoReserveComposition(payload, dashboard?.sourceTimestamp ?? null);
 
   // Dashboard-vs-API coherence gate: when the dashboard carries per-stablecoin
   // CDP totals for this coin and the analytics API trove sums materially
-  // disagree, neither source can be trusted and the attempt fails closed.
+  // disagree, both sources were still readable, so settled policy E4 publishes
+  // the analytics-API composition degraded instead of failing the attempt
+  // closed. Unreadable/malformed sources keep failing closed at their parsers.
   if (params.cdpStablecoin) {
     const dashboardTotals = dashboard?.cdpBackings?.get(params.cdpStablecoin);
     const apiCollateralUsd = result.metadata?.totalCollateralUsd;
     const apiDebtUsd = result.metadata?.totalDebtUsd;
     if (dashboardTotals && typeof apiCollateralUsd === "number" && typeof apiDebtUsd === "number") {
-      const coherenceError = mentoCdpCoherenceError(
-        params.cdpStablecoin,
-        dashboardTotals,
-        apiCollateralUsd,
-        apiDebtUsd,
-      );
-      if (coherenceError) throw coherenceError;
+      const divergence = mentoCdpCoherenceDivergence(dashboardTotals, apiCollateralUsd, apiDebtUsd);
+      if (divergence) {
+        dashboardWarnings.push(reserveDegradedWarning(
+          "mento-cdp-coherence-diverged",
+          `Mento dashboard-vs-API coherence diverged for ${params.cdpStablecoin}: dashboard collateral/debt $${dashboardTotals.collateralUsd.toFixed(2)}/$${dashboardTotals.debtUsd.toFixed(2)} vs analytics API $${apiCollateralUsd.toFixed(2)}/$${apiDebtUsd.toFixed(2)} (collateral ${divergence.collateralPct.toFixed(2)}%, debt ${divergence.debtPct.toFixed(2)}%)`,
+        ));
+        result = {
+          ...result,
+          metadata: {
+            ...result.metadata,
+            details: {
+              ...(result.metadata?.details ?? {}),
+              cdpCoherenceDivergence: {
+                dashboardCollateralUsd: dashboardTotals.collateralUsd,
+                dashboardDebtUsd: dashboardTotals.debtUsd,
+                apiCollateralUsd,
+                apiDebtUsd,
+                collateralDivergencePct: divergence.collateralPct,
+                debtDivergencePct: divergence.debtPct,
+              },
+            },
+          },
+        };
+      }
     } else if (dashboard && !dashboard.cdpBackings?.has(params.cdpStablecoin)) {
       // The dashboard was fetched but no longer carries per-stablecoin totals
       // for this coin (renamed/dropped `cdp_backings` row): the coherence gate

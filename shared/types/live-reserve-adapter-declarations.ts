@@ -58,13 +58,14 @@ function configPolicy<
 
 const CONFIG_COLLATERAL_V1 = configPolicy(["collateral-mix"], [1]);
 const CONFIG_COLLATERAL_V2 = configPolicy(["collateral-mix"], [2]);
-const CONFIG_COLLATERAL_V2_V3 = configPolicy(["collateral-mix"], [2, 3]);
+const CONFIG_COLLATERAL_V2_V3_V4 = configPolicy(["collateral-mix"], [2, 3, 4]);
 const CONFIG_COLLATERAL_V1_V2 = configPolicy(["collateral-mix"], [1, 2]);
 const CONFIG_ATTESTATION_V1 = configPolicy(["attestation-mix"], [1]);
 const CONFIG_ATTESTATION_V1_V2 = configPolicy(["attestation-mix"], [1, 2]);
 const CONFIG_ATTESTATION_V2 = configPolicy(["attestation-mix"], [2]);
 const CONFIG_PROTOCOL_V1 = configPolicy(["protocol-reserve"], [1]);
 const CONFIG_PROTOCOL_V2 = configPolicy(["protocol-reserve"], [2]);
+const CONFIG_PROTOCOL_V1_V2 = configPolicy(["protocol-reserve"], [1, 2]);
 const CONFIG_SINGLE_ASSET_V1 = configPolicy(["single-asset"], [1]);
 const CONFIG_SINGLE_ASSET_V2 = configPolicy(["single-asset"], [2]);
 const CONFIG_SINGLE_ASSET_V1_V2 = configPolicy(["single-asset"], [1, 2]);
@@ -296,6 +297,20 @@ const accountableParamsSchema = z
 const attestationPdfIndexParamsSchema = z
   .object({
     slices: z.array(ReserveSliceSchema).min(1),
+    linkMatch: z
+      .string()
+      .trim()
+      .min(1)
+      .refine((value) => {
+        try {
+          // eslint-disable-next-line security/detect-non-literal-regexp -- compiling a reviewed static currency token, not executing user input.
+          new RegExp(value);
+          return true;
+        } catch {
+          return false;
+        }
+      }, { message: "linkMatch must compile as a regular expression" })
+      .optional(),
   })
   .strict()
   .superRefine((params, ctx) => {
@@ -1926,7 +1941,11 @@ export const LIVE_RESERVE_ADAPTER_DESCRIPTOR_DECLARATIONS = {
     redemptionTelemetry: { capacity: "none", fee: "none" },
     validation: LATEST_STATE_VALIDATION,
   },
-  "brla-independent-assurance": declareAdapter(brlaAssuranceParamsSchema, HTTP_DISCLOSURE_ATTESTATION_V2),
+  "brla-independent-assurance": declareAdapter(brlaAssuranceParamsSchema, HTTP_DISCLOSURE_ATTESTATION_V2, {
+    // BRLA's official report index is Notion's loadPageChunk/getSignedFileUrls
+    // JSON record maps, not a server-rendered HTML page.
+    primaryInputKinds: ["http-json"],
+  }),
   "cadd-independent-assurance": declareAdapter(caddAssuranceParamsSchema, HTTP_DISCLOSURE_ATTESTATION_V2),
   // Live issuer balance-sheet feed (cash + Treasury vs on-chain liability) with
   // measured composition and a verified observation timestamp. The evidence
@@ -2040,7 +2059,7 @@ export const LIVE_RESERVE_ADAPTER_DESCRIPTOR_DECLARATIONS = {
     evidenceClass: "independent",
     preferredFreshnessMode: "not-applicable",
     sharedSourceMode: "none",
-    configValidation: CONFIG_COLLATERAL_V2_V3,
+    configValidation: CONFIG_COLLATERAL_V2_V3_V4,
     redemptionTelemetry: { capacity: "none", fee: "none" },
     validation: TIMESTAMPLESS_WITH_UNKNOWN_CAP_VALIDATION,
   },
@@ -2431,7 +2450,9 @@ export const LIVE_RESERVE_ADAPTER_DESCRIPTOR_DECLARATIONS = {
     sourceOriginClass: "issuer-attested",
     displayBadgeKind: "proof",
     sharedSourceMode: "none",
-    configValidation: CONFIG_COLLATERAL_V1,
+    // v2: position rows missing `updated_at` now degrade the snapshot instead
+    // of publishing unbounded position-accounting freshness.
+    configValidation: CONFIG_COLLATERAL_V1_V2,
     redemptionTelemetry: { capacity: "proxy", fee: "none" },
     validation: {
       maxSourceAgeSec: MAKINA_POSITION_SOURCE_MAX_AGE_SEC,
@@ -2461,7 +2482,9 @@ export const LIVE_RESERVE_ADAPTER_DESCRIPTOR_DECLARATIONS = {
     // make the adapter's output coin-specific, so results can no longer be
     // shared across coins within a run.
     sharedSourceMode: "none",
-    configValidation: CONFIG_COLLATERAL_V1,
+    // v2: a dashboard payload without per-stablecoin `cdp_backings` totals
+    // degrades the snapshot instead of silently skipping the coherence gate.
+    configValidation: CONFIG_COLLATERAL_V1_V2,
     redemptionTelemetry: { capacity: "direct", fee: "current-bps" },
     validation: DASHBOARD_VALIDATION,
   },
@@ -2677,7 +2700,13 @@ export const LIVE_RESERVE_ADAPTER_DESCRIPTOR_DECLARATIONS = {
     redemptionTelemetry: { capacity: "direct", fee: "none" },
     validation: TIMESTAMPED_FEED_VALIDATION,
   },
-  "paxos-independent-assurance": declareAdapter(paxosAssuranceParamsSchema, HTTP_DISCLOSURE_ATTESTATION_V2),
+  "paxos-independent-assurance": declareAdapter(paxosAssuranceParamsSchema, HTTP_DISCLOSURE_ATTESTATION_V2, {
+    // PAXG/PYUSD/USDG/USDP resolve through the same paxos.com Framer site and
+    // the identical script_main module, so one run's fetched payloads are
+    // valid for every product; per-product index/page/PDF URLs still differ
+    // and stay per-coin.
+    sharedSourceMode: "source-invariant",
+  }),
   "straitsx-independent-assurance": declareAdapter(
     straitsxAssuranceParamsSchema,
     HTTP_DISCLOSURE_ATTESTATION_V2,
@@ -2786,7 +2815,9 @@ export const LIVE_RESERVE_ADAPTER_DESCRIPTOR_DECLARATIONS = {
     evidenceClass: "independent",
     preferredFreshnessMode: "verified",
     sharedSourceMode: "none",
-    configValidation: CONFIG_COLLATERAL_V1,
+    // v2: collateral rows dropping `lockedValue` fail the sync closed instead
+    // of being silently summed as zero.
+    configValidation: CONFIG_COLLATERAL_V1_V2,
     redemptionTelemetry: { capacity: "direct", fee: "current-bps" },
     validation: DASHBOARD_VALIDATION,
   },
@@ -2817,7 +2848,11 @@ export const LIVE_RESERVE_ADAPTER_DESCRIPTOR_DECLARATIONS = {
     redemptionTelemetry: { capacity: "none", fee: "none" },
     validation: LATEST_STATE_WITH_UNKNOWN_CAP_VALIDATION,
   },
-  "zephyr-scanner": declareAdapter(noParamsSchema, HTTP_PROTOCOL_V1),
+  // v2: a snapshot carrying none of the four ZSD circulating-supply encodings
+  // fails closed instead of publishing a supply-less snapshot.
+  "zephyr-scanner": declareAdapter(noParamsSchema, HTTP_PROTOCOL_V1, {
+    configValidation: CONFIG_PROTOCOL_V1_V2,
+  }),
   "usdy-holdings-report": {
     primaryInputKinds: ["http-html"],
     paramsSchema: noParamsSchema,

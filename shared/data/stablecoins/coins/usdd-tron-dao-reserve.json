@@ -58,7 +58,7 @@
   "governanceQuality": "single-entity",
   "liveReservesConfig": {
     "adapter": "usdd-data-platform",
-    "version": 1,
+    "version": 2,
     "semantics": "collateral-mix",
     "breakerScope": "usdd-tron-dao-reserve",
     "display": {

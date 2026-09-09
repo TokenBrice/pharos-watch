@@ -100,6 +100,9 @@ describe("sodax-sonic", () => {
     const spec = network();
     spec.rpc!["getSourceOfAsset(address)"] = FIXED_SOURCE;
     spec.code = { [FIXED_SOURCE]: FIXED_CODE };
+    spec.json!["https://coins.llama.fi/prices/current/coingecko:usd-coin"] = {
+      coins: { "coingecko:usd-coin": { price: 1, timestamp: NOW, confidence: 0.99 } },
+    };
     const { result } = await run(spec);
     expect(result.metadata?.totalReserveUsd).toBe(800);
     expect(result.warnings?.some((w) => w.code === "sodax-oracle-stale")).toBe(false);
@@ -110,5 +113,39 @@ describe("sodax-sonic", () => {
     spec.rpc!["getSourceOfAsset(address)"] = FIXED_SOURCE;
     spec.code = { [FIXED_SOURCE]: "0x6000" };
     await expect(run(spec)).rejects.toThrow("reviewed oracle code drift");
+  });
+
+  it("prices the fixed-constant USDT oracle leg with the live DefiLlama quote", async () => {
+    const spec = network();
+    spec.rpc!["getSourceOfAsset(address)"] = ({ data }) => data.endsWith(USDC.slice(2)) ? FIXED_SOURCE : SOURCE;
+    spec.code = { [FIXED_SOURCE]: FIXED_CODE };
+    spec.json!["https://coins.llama.fi/prices/current/coingecko:usd-coin"] = {
+      coins: { "coingecko:usd-coin": { price: 1.05, timestamp: NOW, confidence: 0.99 } },
+    };
+    const { result } = await run(spec);
+
+    // USDC valued at the DefiLlama 1.05 quote (420) instead of the immutable $1
+    // constant (400); ETH keeps its normal oracle price (400).
+    expect(result.metadata?.totalReserveUsd).toBeCloseTo(820);
+    expect(result.metadata?.details).toMatchObject({
+      priceSources: expect.arrayContaining([
+        expect.objectContaining({ reserve: USDC, kind: "defillama", priceInsensitive: false }),
+      ]),
+    });
+  });
+
+  it("keeps the reviewed constant as a flagged price-insensitive fallback when no DefiLlama quote is available", async () => {
+    const spec = network();
+    spec.rpc!["getSourceOfAsset(address)"] = ({ data }) => data.endsWith(USDC.slice(2)) ? FIXED_SOURCE : SOURCE;
+    spec.code = { [FIXED_SOURCE]: FIXED_CODE };
+    spec.json!["https://coins.llama.fi/prices/current/coingecko:usd-coin"] = { coins: {} };
+    const { result } = await run(spec);
+
+    expect(result.metadata?.totalReserveUsd).toBe(800);
+    expect(result.metadata?.details).toMatchObject({
+      priceSources: expect.arrayContaining([
+        expect.objectContaining({ reserve: USDC, kind: "oracle", priceInsensitive: true }),
+      ]),
+    });
   });
 });

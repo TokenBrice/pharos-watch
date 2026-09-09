@@ -2,7 +2,8 @@ import type { ReserveSlice } from "@shared/types/core";
 import type { LiveReserveAdapterKey, LiveReserveWarning } from "@shared/types/live-reserves";
 import { getLiveReserveAdapterDefinition, MATERIAL_UNKNOWN_EXPOSURE_PCT } from "@shared/lib/live-reserve-adapters";
 import { reserveDegradedWarning, reserveInfoWarning } from "./warnings";
-export { decimalNumberFromBigInt, decimalStringFromBigInt } from "../../lib/bigint";
+import { decimalNumberFromBigInt, decimalStringFromBigInt } from "../../lib/bigint";
+export { decimalNumberFromBigInt, decimalStringFromBigInt };
 
 const RISK_SEVERITY: Record<ReserveSlice["risk"], number> = {
   "very-low": 0,
@@ -57,6 +58,68 @@ export function ratioFromRaw(numerator: bigint, denominator: bigint): number | u
   if (numerator >= denominator) return 1;
   const ratio = Number((numerator * RATIO_SCALE) / denominator) / Number(RATIO_SCALE);
   return Number.isFinite(ratio) ? ratio : undefined;
+}
+
+/**
+ * Raw-amount ratio between two tokens, decimaling each side independently.
+ * Equal-decimals pairs use the lossless bigint path; mixed decimals fall back
+ * to float division and clamp the result at 1 (a backing amount can never
+ * exceed the liability it covers).
+ */
+export function ratioFromTokenAmounts(
+  numeratorRaw: bigint,
+  numeratorDecimals: number,
+  denominatorRaw: bigint,
+  denominatorDecimals: number,
+): number | undefined {
+  if (denominatorRaw <= 0n) return undefined;
+  if (numeratorDecimals === denominatorDecimals) {
+    return ratioFromRaw(numeratorRaw, denominatorRaw);
+  }
+  const numerator = decimalNumberFromBigInt(numeratorRaw, numeratorDecimals);
+  const denominator = decimalNumberFromBigInt(denominatorRaw, denominatorDecimals);
+  if (!Number.isFinite(numerator) || !Number.isFinite(denominator) || denominator <= 0) return undefined;
+  return Math.min(1, numerator / denominator);
+}
+
+/**
+ * Unclamped collateralization ratio between two token amounts: the raw
+ * USD-denominated backing divided by the USD-denominated supply.
+ */
+export function collateralizationRatioFromTokenAmounts(
+  numeratorRaw: bigint,
+  numeratorDecimals: number,
+  denominatorRaw: bigint,
+  denominatorDecimals: number,
+): number | undefined {
+  const numerator = decimalNumberFromBigInt(numeratorRaw, numeratorDecimals);
+  const denominator = decimalNumberFromBigInt(denominatorRaw, denominatorDecimals);
+  if (!Number.isFinite(numerator) || !Number.isFinite(denominator) || denominator <= 0) return undefined;
+  return numerator / denominator;
+}
+
+export interface TokenCapacityRatios {
+  capacityUsd: number;
+  capacityRatioOfSupply: number | undefined;
+  collateralizationRatio: number | undefined;
+}
+
+/**
+ * Wrapper capacity triple: the USD value of a raw backing amount plus its
+ * clamped capacity ratio and unclamped collateralization ratio against a raw
+ * supply amount.
+ */
+export function capacityFromTokenAmounts(
+  backingRaw: bigint,
+  backingDecimals: number,
+  supplyRaw: bigint,
+  supplyDecimals: number,
+): TokenCapacityRatios {
+  return {
+    capacityUsd: decimalNumberFromBigInt(backingRaw, backingDecimals),
+    capacityRatioOfSupply: ratioFromTokenAmounts(backingRaw, backingDecimals, supplyRaw, supplyDecimals),
+    collateralizationRatio: collateralizationRatioFromTokenAmounts(backingRaw, backingDecimals, supplyRaw, supplyDecimals),
+  };
 }
 
 export function assertFiniteNonNegativeReserveRows<Value>(

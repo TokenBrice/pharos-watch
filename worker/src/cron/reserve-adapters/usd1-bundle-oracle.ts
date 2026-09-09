@@ -1,23 +1,21 @@
-import type { ContractDeployment, StablecoinMeta } from "@shared/types/core";
+import type { StablecoinMeta } from "@shared/types/core";
 import type { LiveReserveWarning, LiveReservesConfig } from "@shared/types/live-reserves";
-import { CHAIN_META } from "@shared/lib/chains";
 import { parseLiveReserveAdapterParams } from "@shared/lib/live-reserve-adapters";
 import { decodeAbiParameters, decodeFunctionResult, encodeFunctionData, parseAbi } from "viem/utils";
-import { logWorkerEventArgs } from "../../lib/structured-log";
 import type { AdapterContext, AdapterResult } from "./types";
 import {
+  aggregateMultichainErc20Supply,
   decimalNumberFromBigInt,
   fetchErc20TotalSupply,
-  fetchTronErc20TotalSupply,
   makeOnchainCallers,
   requireOnchainInput,
   reserveDegradedWarning,
   reserveInfoWarning,
   verifiedFreshnessMetadata,
+  type MultichainSupplyAggregate,
 } from "./helpers";
 import { buildDocumentedRedemptionTelemetry } from "./redemption";
 import { pinnedBlockPlan } from "./evm-observation-plan";
-import { rethrowIfAborted } from "../../lib/abort";
 
 const USD1_BUNDLE_ORACLE = "0x691b74146cdba162449012aa32d3cbf5df77d4c4";
 const USD1_RESERVE_LABEL = "U.S. Treasury Bills, Money Market Funds & Cash";
@@ -41,37 +39,7 @@ const BUNDLE_DECIMALS_SELECTOR = encodeFunctionData({
   functionName: "bundleDecimals",
 });
 
-export interface Usd1SupplyContribution {
-  chain: string;
-  tokenAddress: string;
-  raw: bigint;
-  decimals: number;
-}
-
-export interface Usd1SupplyAggregate {
-  contributions: Usd1SupplyContribution[];
-  omittedNonEvmChains: string[];
-  omittedNoRpcChains: string[];
-  omittedReadFailureChains: string[];
-}
-
-function isEvmContract(contract: ContractDeployment): boolean {
-  return CHAIN_META[contract.chain]?.type === "evm";
-}
-
-function isTronContract(contract: ContractDeployment): boolean {
-  return CHAIN_META[contract.chain]?.type === "tron";
-}
-
-/** True when an EVM chain has an RPC entry in the context's chainRpc map.
- *  Tron resolves through TronGrid rather than chainRpcs, so callers should
- *  only consult this for EVM contracts. A missing chainRpc map (smoke/test
- *  contexts) means the caller did not supply RPC resolution, so the chain is
- *  treated as readable and left to fail through its normal read path. */
-function chainHasRpc(chain: string, ctx?: AdapterContext): boolean {
-  const chainRpcs = ctx?.chainRpcs;
-  return chainRpcs == null || chainRpcs.has(chain);
-}
+export type Usd1SupplyAggregate = MultichainSupplyAggregate;
 
 export function adaptUsd1BundleOracle(input: {
   bundle: `0x${string}`;
@@ -227,87 +195,34 @@ export async function fetchUsd1BundleOracleReserves(
   // coin.contracts, mirroring chainlink-por's multichain liability scope.
   // Non-EVM chains (Solana, Aptos, …) are omitted from the gross-supply
   // denominator and surfaced as an info warning.
-  const allContracts = coin.contracts ?? [];
-  const evmContracts = allContracts.filter(isEvmContract);
-  const tronContracts = allContracts.filter(isTronContract);
-  const omittedNonEvmChains = allContracts
-    .filter((contract) => !isEvmContract(contract) && !isTronContract(contract))
-    .map((contract) => contract.chain);
-  const readableContracts = [...evmContracts, ...tronContracts];
-
-  if (readableContracts.length === 0) {
-    throw new Error(`usd1-bundle-oracle: no EVM or Tron contracts available for ${coin.id}`);
-  }
-
   const chainPlans = new Map([[input.chain, Promise.resolve(plan)]]);
-  const supplyReads = await Promise.all(
-    readableContracts.map(async (contract) => {
-      if (contract.decimals == null) {
-        logWorkerEventArgs(
-          "handler",
-          "warn",
-          `[usd1-bundle-oracle] ${contract.chain} supply probe skipped for ${coin.symbol}: contract decimals are missing`,
-        );
-        return { contract, raw: null, noRpc: false };
+  const supply = await aggregateMultichainErc20Supply({
+    coin,
+    adapterKey: "usd1-bundle-oracle",
+    signal,
+    ctx,
+    tronCtx: baseCtx,
+    readEvmSupply: async (contract) => {
+      let chainPlan = chainPlans.get(contract.chain);
+      if (!chainPlan) {
+        // Primary RPC overrides and any inherited pin belong to Ethereum.
+        chainPlan = pinnedBlockPlan({ chain: contract.chain, signal, ctx: { ...baseCtx, observedBlock: undefined } });
+        chainPlans.set(contract.chain, chainPlan);
       }
-      if (!isTronContract(contract) && !chainHasRpc(contract.chain, ctx)) {
-        return { contract, raw: null, noRpc: true };
-      }
-      let raw: bigint | null;
-      if (isTronContract(contract)) {
-        raw = await fetchTronErc20TotalSupply(contract.address, signal, baseCtx);
-      } else {
-        try {
-          let chainPlan = chainPlans.get(contract.chain);
-          if (!chainPlan) {
-            // Primary RPC overrides and any inherited pin belong to Ethereum.
-            chainPlan = pinnedBlockPlan({ chain: contract.chain, signal, ctx: { ...baseCtx, observedBlock: undefined } });
-            chainPlans.set(contract.chain, chainPlan);
-          }
-          const pinned = await chainPlan;
-          raw = await fetchErc20TotalSupply(
-            { ...input, chain: contract.chain }, contract.address, signal, pinned.ctx,
-            contract.chain === input.chain ? params.rpcUrl : undefined,
-            contract.chain === input.chain ? params.fallbackRpcUrl : undefined,
-          );
-        } catch (error) {
-          rethrowIfAborted(error, signal);
-          raw = null;
-        }
-      }
-      return { contract, raw, noRpc: false };
-    }),
-  );
-
-  const successful = supplyReads.filter(
-    (entry): entry is { contract: ContractDeployment; raw: bigint; noRpc: boolean } =>
-      entry.raw != null && entry.raw > 0n,
-  );
-  // A null read is an RPC/read failure; a zero read is a valid empty deployment.
-  const failed = supplyReads.filter((entry) => entry.raw == null && !entry.noRpc);
-  const omittedNoRpcChains = supplyReads
-    .filter((entry) => entry.noRpc)
-    .map((entry) => entry.contract.chain);
-
-  if (successful.length === 0) {
-    throw new Error(`usd1-bundle-oracle: totalSupply() calls failed on all EVM/Tron chains for ${coin.id}`);
-  }
+      const pinned = await chainPlan;
+      return fetchErc20TotalSupply(
+        { ...input, chain: contract.chain }, contract.address, signal, pinned.ctx,
+        contract.chain === input.chain ? params.rpcUrl : undefined,
+        contract.chain === input.chain ? params.fallbackRpcUrl : undefined,
+      );
+    },
+  });
 
   const result = adaptUsd1BundleOracle({
     bundle,
     latestBundleTimestamp,
     bundleDecimals,
-    supply: {
-      contributions: successful.map((entry) => ({
-        chain: entry.contract.chain,
-        tokenAddress: entry.contract.address,
-        raw: entry.raw,
-        decimals: entry.contract.decimals,
-      })),
-      omittedNonEvmChains,
-      omittedNoRpcChains,
-      omittedReadFailureChains: failed.map((entry) => entry.contract.chain),
-    },
+    supply,
   });
   return { ...result, metadata: { ...result.metadata, observedBlock: plan.observedBlock } };
 }

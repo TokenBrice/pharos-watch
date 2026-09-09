@@ -1,23 +1,14 @@
-import {
-  parseLiveReserveAdapterParams,
-  type LiveReserveAdapterParamsByKey,
-} from "@shared/lib/live-reserve-adapters";
+import { parseLiveReserveAdapterParams } from "@shared/lib/live-reserve-adapters";
 import type { ReserveSlice, StablecoinMeta } from "@shared/types/core";
 import type { LiveReservesConfig } from "@shared/types/live-reserves";
-import {
-  fetchEvmStorageAtBlock,
-  type EvmRpcOptions,
-} from "../../lib/evm-rpc";
 import {
   DECIMALS_SELECTOR,
   PAUSED_SELECTOR,
   TOTAL_SUPPLY_SELECTOR,
   encodeBalanceOfCallData,
 } from "../../lib/evm-selectors";
-import { runAdapterIo } from "./concurrency";
 import {
   buildCoverageShortfallWarnings,
-  decimalNumberFromBigInt,
   fetchOnchainMulticall3,
   notApplicableFreshnessMetadata,
   requireOnchainInput,
@@ -29,93 +20,16 @@ import {
   decodeUint8Word,
 } from "./abi-decode";
 import {
-  EIP1967_IMPLEMENTATION_SLOT,
-  implementationAddressFromSlot,
   multicallResultByLabel,
+  readImplementationSlotAddress,
+  requireExpectedAddress,
 } from "./onchain-identity";
-import { ratioFromRaw } from "./slice-math";
+import { capacityFromTokenAmounts } from "./slice-math";
 import { reserveDegradedWarning } from "./warnings";
 import type { AdapterContext, AdapterResult } from "./types";
 
 const ADAPTER_KEY = "saturn-pyusdx";
 const PYUSDX_SELECTOR = "0xda6b76b8"; // pyusdx()
-
-type SaturnPyusdxParams = LiveReserveAdapterParamsByKey[typeof ADAPTER_KEY];
-
-function ratioFromTokenAmounts(
-  numeratorRaw: bigint,
-  numeratorDecimals: number,
-  denominatorRaw: bigint,
-  denominatorDecimals: number,
-): number | undefined {
-  if (denominatorRaw <= 0n) return undefined;
-  if (numeratorDecimals === denominatorDecimals) {
-    return ratioFromRaw(numeratorRaw, denominatorRaw);
-  }
-  const numerator = decimalNumberFromBigInt(numeratorRaw, numeratorDecimals);
-  const denominator = decimalNumberFromBigInt(denominatorRaw, denominatorDecimals);
-  if (!Number.isFinite(numerator) || !Number.isFinite(denominator) || denominator <= 0) return undefined;
-  return Math.min(1, numerator / denominator);
-}
-
-function collateralizationRatioFromTokenAmounts(
-  numeratorRaw: bigint,
-  numeratorDecimals: number,
-  denominatorRaw: bigint,
-  denominatorDecimals: number,
-): number | undefined {
-  const numerator = decimalNumberFromBigInt(numeratorRaw, numeratorDecimals);
-  const denominator = decimalNumberFromBigInt(denominatorRaw, denominatorDecimals);
-  if (!Number.isFinite(numerator) || !Number.isFinite(denominator) || denominator <= 0) return undefined;
-  return numerator / denominator;
-}
-
-function rpcOptions(
-  params: SaturnPyusdxParams,
-  signal: AbortSignal,
-  ctx?: AdapterContext,
-): EvmRpcOptions {
-  return {
-    extraRpcUrls: [params.rpcUrl, params.fallbackRpcUrl].filter((url): url is string => url != null),
-    signal,
-    timeoutMs: 10_000,
-    chainRpcs: ctx?.chainRpcs,
-  };
-}
-
-async function readImplementationAddress(
-  input: ReturnType<typeof requireOnchainInput>,
-  params: SaturnPyusdxParams,
-  signal: AbortSignal,
-  ctx?: AdapterContext,
-): Promise<string> {
-  const raw = await runAdapterIo(
-    ctx,
-    `${ADAPTER_KEY}:implementation-slot`,
-    () =>
-      fetchEvmStorageAtBlock(
-        input.chain,
-        params.wrapperAddress,
-        EIP1967_IMPLEMENTATION_SLOT,
-        "latest",
-        rpcOptions(params, signal, ctx),
-      ),
-    { signal },
-  );
-  const implementation = implementationAddressFromSlot(raw);
-  if (implementation == null) {
-    throw new Error(`${ADAPTER_KEY}: implementation slot returned malformed payload`);
-  }
-  return implementation;
-}
-
-function requireExpectedAddress(actual: string, expected: string, label: string): void {
-  if (actual !== expected.toLowerCase()) {
-    throw new Error(
-      `${ADAPTER_KEY}: ${label} identity mismatch (${actual} != ${expected.toLowerCase()})`,
-    );
-  }
-}
 
 /**
  * Independently measures Saturn USDat's complete PYUSDx reserve on Ethereum.
@@ -161,18 +75,25 @@ export async function fetchSaturnPyusdxReserves(
       fallbackRpcUrl: params.fallbackRpcUrl,
       timeoutMs: 12_000,
     }),
-    readImplementationAddress(input, params, signal, ctx),
+    readImplementationSlotAddress({
+      adapterKey: ADAPTER_KEY,
+      input,
+      contractAddress: params.wrapperAddress,
+      params,
+      signal,
+      ctx,
+    }),
   ]);
   if (!results) {
     throw new Error(`${ADAPTER_KEY}: Multicall3 state batch unavailable for ${coin.id}`);
   }
-  requireExpectedAddress(implementation, params.expectedImplementation, "EIP-1967 implementation");
+  requireExpectedAddress(ADAPTER_KEY, implementation, params.expectedImplementation, "EIP-1967 implementation");
 
   const pyusdxAddress = decodeStrictAddressWord(multicallResultByLabel(results, "pyusdx"));
   if (!pyusdxAddress) {
     throw new Error(`${ADAPTER_KEY}: pyusdx() returned malformed payload for ${coin.id}`);
   }
-  requireExpectedAddress(pyusdxAddress, params.underlyingToken, "pyusdx()");
+  requireExpectedAddress(ADAPTER_KEY, pyusdxAddress, params.underlyingToken, "pyusdx()");
 
   const totalSupplyRaw = decodeUint256Word(multicallResultByLabel(results, "wrapper-supply"));
   if (totalSupplyRaw == null) {
@@ -189,14 +110,7 @@ export async function fetchSaturnPyusdxReserves(
   }
   const paused = decodeStrictBoolWord(multicallResultByLabel(results, "wrapper-paused"));
 
-  const capacityUsd = decimalNumberFromBigInt(underlyingBalanceRaw, underlyingDecimals);
-  const capacityRatioOfSupply = ratioFromTokenAmounts(
-    underlyingBalanceRaw,
-    underlyingDecimals,
-    totalSupplyRaw,
-    wrapperDecimals,
-  );
-  const collateralizationRatio = collateralizationRatioFromTokenAmounts(
+  const { capacityUsd, capacityRatioOfSupply, collateralizationRatio } = capacityFromTokenAmounts(
     underlyingBalanceRaw,
     underlyingDecimals,
     totalSupplyRaw,

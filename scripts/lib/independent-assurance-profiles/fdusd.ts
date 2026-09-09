@@ -16,25 +16,34 @@ export const PROFILE: CompilerProfile = {
     {
       code: "treasury-bills",
       label: "United States Treasury Bills (seven maturities, 11-Aug-26 through 22-Sep-26)",
+      // eslint-disable-next-line security/detect-unsafe-regex -- anchored pattern over an offline reviewed PDF text dump; bounded digit runs, no nested quantifier ambiguity.
       pattern: /\(A\) Sub-total:\s+([\d,]+(?:\.\d{2})?)/,
     },
     {
       code: "fixed-deposits",
       label: "U.S. government guaranteed fixed deposits held pursuant to reserve repurchase agreements",
+      // eslint-disable-next-line security/detect-unsafe-regex -- anchored pattern over an offline reviewed PDF text dump; bounded digit runs, no nested quantifier ambiguity.
       pattern: /\(B\) Sub-total:\s+([\d,]+(?:\.\d{2})?)/,
     },
     {
       code: "custody-cash",
       label: "US$ held in custody accounts",
+      // eslint-disable-next-line security/detect-unsafe-regex -- anchored pattern over an offline reviewed PDF text dump; bounded digit runs, no nested quantifier ambiguity.
       pattern: /\(C\) US\$ held in custody accounts:\s+([\d,]+(?:\.\d{2})?)/,
     },
   ],
   liabilityRows: [
+    // eslint-disable-next-line security/detect-unsafe-regex -- anchored pattern over an offline reviewed PDF text dump; bounded digit runs, no nested quantifier ambiguity.
     { code: "ethereum", label: "Ethereum FDUSD supply", pattern: /([\d,]+(?:\.\d{2})?) in Ethereum\)/ },
+    // eslint-disable-next-line security/detect-unsafe-regex -- anchored pattern over an offline reviewed PDF text dump; bounded digit runs, no nested quantifier ambiguity.
     { code: "bsc", label: "BSC FDUSD supply", pattern: /([\d,]+(?:\.\d{2})?) in BSC/ },
+    // eslint-disable-next-line security/detect-unsafe-regex -- anchored pattern over an offline reviewed PDF text dump; bounded digit runs, no nested quantifier ambiguity.
     { code: "sui", label: "Sui FDUSD supply", pattern: /([\d,]+(?:\.\d{2})?) FDUSD in SUI/ },
+    // eslint-disable-next-line security/detect-unsafe-regex -- anchored pattern over an offline reviewed PDF text dump; bounded digit runs, no nested quantifier ambiguity.
     { code: "solana", label: "Solana FDUSD supply", pattern: /([\d,]+(?:\.\d{2})?) FDUSD in SOL/ },
+    // eslint-disable-next-line security/detect-unsafe-regex -- anchored pattern over an offline reviewed PDF text dump; bounded digit runs, no nested quantifier ambiguity.
     { code: "arbitrum", label: "Arbitrum FDUSD supply", pattern: /([\d,]+(?:\.\d{2})?) FDUSD in Arbitrum/ },
+    // eslint-disable-next-line security/detect-unsafe-regex -- anchored pattern over an offline reviewed PDF text dump; bounded digit runs, no nested quantifier ambiguity.
     { code: "ton", label: "TON FDUSD supply", pattern: /([\d,]+(?:\.\d{2})?) FDUSD in TON/ },
   ],
   requiredText: [
@@ -50,7 +59,9 @@ export const PROFILE: CompilerProfile = {
     { label: "qualified/adverse/disclaimed conclusion", pattern: /qualified opinion|adverse opinion|disclaimer of opinion|except for/i },
   ],
   reportedTotals: [
+    // eslint-disable-next-line security/detect-unsafe-regex -- anchored pattern over an offline reviewed PDF text dump; bounded digit runs, no nested quantifier ambiguity.
     { label: "FDUSD reserve accounts total", expected: "351643471.73", pattern: /\(A\) \+ \(B\) \+ \(C\) Total assets held in Reserve Accounts:\s+US\$?([\d,]+(?:\.\d{2})?)/ },
+    // eslint-disable-next-line security/detect-unsafe-regex -- anchored pattern over an offline reviewed PDF text dump; bounded digit runs, no nested quantifier ambiguity.
     { label: "FDUSD supply total", expected: "350156619.24", pattern: /issued and in circulation[\s\S]{0,300}?([\d,]+(?:\.\d{2})?) FDUSD/ },
   ],
   reportedAssetTotal: "351643471.73",

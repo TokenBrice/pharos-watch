@@ -62,10 +62,11 @@ export function SafetyScoresOverview() {
         dependency reviews remain unchanged.
       </p>
       <p>
-        Since methodology v9.48, live reserves with no mapped tracked-asset slices publish no dependency edges rather
-        than restoring older curated or manual weights. Dependency facts distinguish unmatched identities, expired
-        matching classifications, and explicitly reviewed non-links. Curated fallback applies only when there is no
-        live composition; partial live mappings retain their live weights.
+        Since methodology v9.49, variant parents, explicit wrapped-asset claims, and manual non-collateral
+        relationships survive independently of reserve composition. Unmapped live reserves still cannot restore
+        older curated or manual collateral weights. Dependency facts distinguish unmatched identities, expired
+        matching classifications, and explicitly reviewed non-links. Curated reserve fallback applies only when
+        there is no live composition; partial live mappings retain their live weights.
       </p>
       <p>
         Responsibility follows causal provenance instead of the nearest processing stage. An explicit reason-level

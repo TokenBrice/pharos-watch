@@ -110,6 +110,7 @@
       }
     },
     "params": {
+      "linkMatch": "wCOP",
       "slices": [
         {
           "name": "Colombian-peso cash deposited in a Colombian bank account",

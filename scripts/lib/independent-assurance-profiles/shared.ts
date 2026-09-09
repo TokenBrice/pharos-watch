@@ -11,6 +11,7 @@ export interface CompilerProfile {
   reportAsOf: string;
   reportTimeZone: string;
   attestor: string;
+  attestorIdentification?: NonNullable<IndependentAssuranceManifest["attestorIdentification"]>;
   engagement: string;
   conclusion: IndependentAssuranceManifest["conclusion"];
   unit: IndependentAssuranceManifest["unit"];

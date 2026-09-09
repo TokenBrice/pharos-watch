@@ -10,6 +10,7 @@ import {
 const UNITED_POR_ENDPOINT = "https://u.tech/u-client-api/v1/public/u/por";
 
 const SLICE = {
+  sourceKey: "united-por:total-reserve",
   name: "Cash, U.S. Treasury bills, and fiat-referenced stablecoins (variable mix)",
   risk: "low" as const,
 };
@@ -31,7 +32,7 @@ describe("adaptUnitedPorPayload", () => {
   it("computes the honest ratio and verified freshness for a clean, non-ripcord snapshot", () => {
     const result = adaptUnitedPorPayload(UNITED_POR_PAYLOAD, SLICE);
 
-    expect(result.slices).toMatchObject([{ ...SLICE, pct: 100 }]);
+    expect(result.slices).toEqual([{ ...SLICE, pct: 100 }]);
     expect(result.metadata).toMatchObject({
       sourceTimestamp: Math.floor(Date.parse("2026-07-09T16:10:01.559Z") / 1000),
       freshnessMode: "verified",
@@ -57,7 +58,7 @@ describe("adaptUnitedPorPayload", () => {
     // The snapshot is still stored (slices/ratio/freshness compute normally) --
     // ripcord is surfaced as a degraded warning, not a thrown error, so a
     // ripcord run never silently disappears from the reserve detail surface.
-    expect(result.slices).toMatchObject([{ ...SLICE, pct: 100 }]);
+    expect(result.slices).toEqual([{ ...SLICE, pct: 100 }]);
     expect(result.metadata).toMatchObject({ freshnessMode: "verified" });
     expect(result.metadata!.details).toMatchObject({
       ripcord: true,
@@ -171,7 +172,7 @@ describe("fetchUnitedPorReserves", () => {
       nowSec: CAPTURE_NOW_SEC,
     });
 
-    expect(result.slices).toMatchObject([{ ...SLICE, pct: 100 }]);
+    expect(result.slices).toEqual([{ ...SLICE, pct: 100 }]);
     expect(result.metadata).toMatchObject({
       sourceTimestamp: Math.floor(Date.parse(UNITED_POR_PAYLOAD.updatedAt) / 1000),
       freshnessMode: "verified",

@@ -84,7 +84,7 @@ describe("stablecoin variants", () => {
     expect(statuses.get("wrapper")).toBe(true);
   });
 
-  it("normalizes variant-aware dependencies to a single synthetic wrapper edge", () => {
+  it("normalizes the variant parent claim without discarding an independent manual mechanism", () => {
     expect(
       deriveEffectiveDependencies({
         variantOf: "usds-sky",
@@ -94,7 +94,10 @@ describe("stablecoin variants", () => {
         ],
         reserves: undefined,
       }),
-    ).toEqual([{ id: "usds-sky", weight: 1, type: "wrapper" }]);
+    ).toEqual([
+      { id: "usds-sky", weight: 1, type: "wrapper" },
+      { id: "usdc-circle", weight: 0.2, type: "mechanism" },
+    ]);
   });
 
   it("models Initia iUSD as a pure serial wrapper of AUSD", () => {

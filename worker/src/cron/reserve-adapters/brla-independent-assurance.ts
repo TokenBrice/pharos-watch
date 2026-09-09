@@ -5,13 +5,14 @@ import {
   type IndependentAssuranceManifest,
 } from "@shared/lib/independent-assurance";
 import { parseLiveReserveAdapterParams, type LiveReserveAdapterParamsByKey } from "@shared/lib/live-reserve-adapters";
-import type { StablecoinMeta } from "@shared/types/core";
+import type { ReserveSlice, StablecoinMeta } from "@shared/types/core";
 import type { LiveReservesConfig } from "@shared/types/live-reserves";
 import { sha256Hex } from "../../lib/hash";
-import { normalizeSlices, reserveDegradedWarning, reserveInfoWarning } from "./helpers";
-import type { IndependentAssuranceProfile } from "./independent-assurance";
+import { computeUnknownExposurePct, normalizeSlices } from "./helpers";
+import { buildIndependentAssuranceReserveResult, type IndependentAssuranceProfile } from "./independent-assurance";
 import { fetchBinaryResponseWithRetry, fetchJsonPostWithRetry, fetchTextResponseWithRetry } from "./request";
 import type { AdapterContext, AdapterResult } from "./types";
+import { reserveDegradedWarning } from "./warnings";
 
 const ADAPTER_KEY = "brla-independent-assurance";
 const MAX_PDF_BYTES = 4 * 1024 * 1024;
@@ -294,6 +295,79 @@ const BRLA_CLASSIFICATIONS: Record<string, BrlaAssetClassification> = {
 
 const BRLA_REQUIRED_ASSET_CODES = ["cash-and-cash-equivalents", "repurchase-agreements"] as const;
 
+interface BrlaClassifiedAsset {
+  unclassified?: true;
+  sourceKey: string;
+  amount: number;
+  name: string;
+  risk: ReserveSlice["risk"];
+  assetClass?: ReserveSlice["assetClass"];
+  issuerOrObligor?: string;
+  riskFactors?: ReserveSlice["riskFactors"];
+  liquidityHorizon?: ReserveSlice["liquidityHorizon"];
+}
+
+/**
+ * Classifies the reviewed manifest's asset rows into reserve slices. A row with
+ * a reviewed classification maps to its classified slice; an observed row with
+ * an unreviewed code is still published, without an `assetClass` (the scorer's
+ * bounded-unknown path), and its value counts toward `unknownExposurePct`. An
+ * unparsable amount fails closed.
+ */
+export function buildBrlaReserveSlices(manifest: IndependentAssuranceManifest): {
+  slices: ReserveSlice[];
+  unknownExposurePct: number;
+  warnings: ReturnType<typeof reserveDegradedWarning>[];
+} {
+  const unclassifiedCodes: string[] = [];
+  const classifiedAssets: BrlaClassifiedAsset[] = manifest.assets.map((asset) => {
+    const amount = Number(asset.amount);
+    if (!Number.isFinite(amount)) {
+      throw new Error(`${ADAPTER_KEY}: unparsable asset amount for row ${asset.code}`);
+    }
+    const classification = BRLA_CLASSIFICATIONS[asset.code];
+    if (!classification) {
+      unclassifiedCodes.push(asset.code);
+      return {
+        unclassified: true,
+        sourceKey: `brla-independent-assurance:brla:${asset.code}`,
+        amount,
+        name: asset.label,
+        risk: "high",
+        liquidityHorizon: "unknown",
+      };
+    }
+    return {
+      sourceKey: `brla-independent-assurance:brla:${asset.code}`,
+      amount,
+      name: classification.name,
+      risk: classification.risk,
+      ...(classification.assetClass ? { assetClass: classification.assetClass } : {}),
+      ...(classification.issuerOrObligor ? { issuerOrObligor: classification.issuerOrObligor } : {}),
+      ...(classification.riskFactors ? { riskFactors: classification.riskFactors } : {}),
+      ...(classification.liquidityHorizon ? { liquidityHorizon: classification.liquidityHorizon } : {}),
+    };
+  });
+  const totalClassifiedAmount = classifiedAssets.reduce((sum, asset) => sum + asset.amount, 0);
+  const unknownAmount = classifiedAssets
+    .filter((asset) => asset.unclassified)
+    .reduce((sum, asset) => sum + asset.amount, 0);
+  const slices = normalizeSlices(
+    classifiedAssets.map(({ amount, unclassified: _unclassified, ...asset }) => ({ ...asset, pct: (amount / totalClassifiedAmount) * 100 })),
+    6,
+  );
+  return {
+    slices,
+    unknownExposurePct: computeUnknownExposurePct(unknownAmount, totalClassifiedAmount),
+    warnings: unclassifiedCodes.length > 0
+      ? [reserveDegradedWarning(
+          "brla-asset-code-unclassified",
+          `Unclassified reserve asset rows: ${unclassifiedCodes.join(", ")}`,
+        )]
+      : [],
+  };
+}
+
 export async function fetchBrlaIndependentAssuranceReserves(
   coin: StablecoinMeta,
   config: LiveReservesConfig,
@@ -344,92 +418,25 @@ export async function fetchBrlaIndependentAssuranceReserves(
     }
   }
 
-  const classifiedAssets = manifest.assets.map((asset) => {
-    const classification = BRLA_CLASSIFICATIONS[asset.code];
-    if (Number(asset.amount) > 0 && !classification) {
-      throw new Error(`${ADAPTER_KEY}: unknown positive asset row ${asset.code}`);
-    }
-    return {
-      sourceKey: `brla-independent-assurance:brla:${asset.code}`,
-      amount: Number(asset.amount),
-      name: classification?.name ?? asset.label,
-      risk: classification?.risk ?? "very-low",
-      ...(classification?.assetClass ? { assetClass: classification.assetClass } : {}),
-      ...(classification?.issuerOrObligor ? { issuerOrObligor: classification.issuerOrObligor } : {}),
-      ...(classification?.riskFactors ? { riskFactors: classification.riskFactors } : {}),
-      ...(classification?.liquidityHorizon ? { liquidityHorizon: classification.liquidityHorizon } : {}),
-    };
-  });
-  const totalClassifiedAmount = classifiedAssets.reduce((sum, asset) => sum + asset.amount, 0);
-  const slices = normalizeSlices(
-    classifiedAssets.map(({ amount, ...asset }) => ({ ...asset, pct: (amount / totalClassifiedAmount) * 100 })),
-    6,
-  );
+  const { slices, unknownExposurePct, warnings } = buildBrlaReserveSlices(manifest);
   if (slices.length === 0) throw new Error(`${ADAPTER_KEY}: no positive reserve asset rows`);
 
-  const details = {
-    assurance: {
-      product: manifest.product,
-      profile: manifest.profile,
-      reportDate: manifest.reportDate,
-      reportAsOf: manifest.reportAsOf,
-      reportTimeZone: manifest.reportTimeZone,
-      reportUrl: manifest.reportUrl,
-      reportSha256: manifest.reportSha256,
-      reportByteLength: manifest.reportByteLength,
-      attestor: manifest.attestor,
-      engagement: manifest.engagement,
-      conclusion: manifest.conclusion,
-      unit: manifest.unit,
-      assets: manifest.assets,
-      liabilities: manifest.liabilities,
-      reportedAssetTotal: manifest.reportedAssetTotal,
-      computedAssetTotal: reconciliation.computedAssetTotal,
-      reportedLiabilityTotal: manifest.reportedLiabilityTotal,
-      computedLiabilityTotal: reconciliation.liabilityTotal,
-      reportedAssetDifference: reconciliation.reportedAssetDifference,
-      reportedLiabilityDifference: reconciliation.reportedLiabilityDifference,
-      reserveShortfall: reconciliation.reserveShortfall,
-      nonPositiveLiabilityCodes: reconciliation.nonPositiveLiabilityCodes,
-      extraction: manifest.extraction,
-      verifiedResponseUrl: artifact.responseUrl,
-      verifiedByteLength: artifact.byteLength,
-    },
-  };
-
-  const roundingDifferences = [
-    reconciliation.reportedAssetDifference !== "0"
-      ? `assets ${reconciliation.reportedAssetDifference} ${manifest.unit} (${reconciliation.reportedAssetDifferencePpm.toFixed(3)} ppm)`
-      : null,
-    reconciliation.reportedLiabilityDifference !== "0"
-      ? `liabilities ${reconciliation.reportedLiabilityDifference} ${manifest.unit} (${reconciliation.reportedLiabilityDifferencePpm.toFixed(3)} ppm)`
-      : null,
-  ].filter((value): value is string => value !== null);
-
-  const warnings = [];
-  if (roundingDifferences.length > 0) {
-    warnings.push(reserveInfoWarning(
-      "report-rounding-difference",
-      `Reported totals differ from recomputed rows: ${roundingDifferences.join("; ")}`,
-    ));
-  }
-  if (reconciliation.reserveShortfall !== "0" || reconciliation.nonPositiveLiabilityCodes.length > 0) {
-    warnings.push(reserveDegradedWarning(
-      "reserve-undercollateralized",
-      `Report reserve shortfall: ${reconciliation.reserveShortfall} ${manifest.unit}; non-positive liability rows: ${reconciliation.nonPositiveLiabilityCodes.join(", ") || "none"}`,
-    ));
-  }
+  const result = buildIndependentAssuranceReserveResult({
+    slices,
+    manifest,
+    reconciliation,
+    verifiedResponseUrl: artifact.responseUrl,
+    verifiedByteLength: artifact.byteLength,
+    sourceTimestamp: discovery.sourceTimestamp,
+  });
+  if (warnings.length === 0) return result;
 
   return {
-    slices,
-    ...(warnings.length > 0 ? { warnings } : {}),
+    ...result,
+    warnings: [...warnings, ...(result.warnings ?? [])],
     metadata: {
-      sourceTimestamp: discovery.sourceTimestamp,
-      freshnessMode: "verified",
-      ...(reconciliation.collateralizationRatio !== null
-        ? { collateralizationRatio: reconciliation.collateralizationRatio }
-        : {}),
-      details,
+      ...result.metadata!,
+      unknownExposurePct,
     },
   };
 }

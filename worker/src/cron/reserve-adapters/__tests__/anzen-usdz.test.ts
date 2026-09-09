@@ -199,7 +199,7 @@ describe("fetchAnzenUsdzReserves", () => {
   it("uses pooled SPCT, held SPCT, and bridge-adjusted five-chain liabilities", async () => {
     const { result, network } = await runAnzen();
 
-    expect(result.slices).toEqual([expect.objectContaining({ pct: 100, risk: "high", blacklistable: true })]);
+    expect(result.slices).toEqual([{ sourceKey: "anzen-usdz:spct", name: "SPCT (Secured Private Credit Token)", pct: 100, risk: "high", blacklistable: true }]);
     expect(result.metadata).toMatchObject({
       freshnessMode: "not-applicable",
       details: {

@@ -76,6 +76,16 @@ export {
 export { fetchMovementFungibleAssetSupply, fetchSolanaTokenSupply, probeOnchainTotalSupply, probeTrackedTokenSupply } from "./token-supply";
 export { fetchStarknetTotalSupply } from "./starknet";
 export { fetchIcrcLedgerTotalSupply } from "./icp";
+export {
+  aggregateMultichainErc20Supply,
+  chainHasRpc,
+  isEvmContract,
+  isTronContract,
+  type MultichainSupplyAggregate,
+  type MultichainSupplyContribution,
+} from "./multichain-supply";
+export { strictAmountParser, sumBackingAssetAmounts, type StrictAmountEntry } from "./strict-amount";
+export { readImplementationSlotAddress, requireExpectedAddress } from "./onchain-identity";
 export { buildRedemptionSnapshotMetadata, probeOptionalRedemptionRateBps } from "./redemption";
 export { getJsonPath } from "./json-path";
 export { catchAndWarn, reserveDegradedWarning, reserveFatalWarning, reserveInfoWarning } from "./warnings";

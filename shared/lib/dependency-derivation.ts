@@ -65,15 +65,39 @@ function sumDependencyWeight(dependencies: readonly DependencyWeight[]): number 
   return total;
 }
 
-function injectVariantParent(
+function injectStructuralDependencies(
   dependencies: readonly DependencyWeight[],
-  variantOf?: string,
+  meta: Pick<StablecoinMeta, "variantOf" | "dependencies" | "reserves">,
 ): DependencyWeight[] {
-  if (!variantOf) return [...dependencies];
-
   // A variant is a serial claim on its parent. Its reserve view may expose the
   // parent's backing, but those slices are not an additional parallel path.
-  return [{ id: variantOf, weight: 1, type: "wrapper" }];
+  const result: DependencyWeight[] = meta.variantOf
+    ? [{ id: meta.variantOf, weight: 1, type: "wrapper" }]
+    : [...dependencies];
+  // Explicit wrapped-asset identities are serial claims, not basket weights.
+  // A variant's reserve book is look-through backing, so its parent wins.
+  if (!meta.variantOf) {
+    for (const reserve of meta.reserves ?? []) {
+      if (!reserve.coinId || reserve.depType !== "wrapper") continue;
+      const existingIndex = result.findIndex(
+        (candidate) => candidate.id === reserve.coinId && candidate.type === "wrapper",
+      );
+      const wrapper: DependencyWeight = { id: reserve.coinId, weight: 1, type: "wrapper" };
+      if (existingIndex < 0) result.push(wrapper);
+      else result[existingIndex] = wrapper;
+    }
+  }
+  for (const dependency of meta.dependencies ?? []) {
+    if ((dependency.type ?? "collateral") === "collateral") continue;
+    if (meta.variantOf === dependency.id) continue;
+    const existingIndex = result.findIndex(
+      (candidate) => candidate.id === dependency.id && candidate.type === dependency.type,
+    );
+    // Explicit structural metadata is independent of reserve percentages.
+    if (existingIndex < 0) result.push(dependency);
+    else result[existingIndex] = dependency;
+  }
+  return result;
 }
 
 function resolveSource(
@@ -83,9 +107,9 @@ function resolveSource(
 ): DependencyDerivationSource {
   if (!variantOf) return baseSource;
   if (
-    dependencies.length === 1
-    && dependencies[0].id === variantOf
-    && (dependencies[0].type ?? "collateral") === "wrapper"
+    dependencies.some(
+      (dependency) => dependency.id === variantOf && dependency.type === "wrapper",
+    )
   ) {
     return "variant";
   }
@@ -95,8 +119,8 @@ function resolveSource(
 /**
  * Derives dependency weights from curated reserve composition.
  * Reserve slices with `coinId` are converted to dependency entries, and
- * hand-curated `meta.dependencies` remain the fallback when reserves do not
- * provide linked upstream assets.
+ * manual collateral weights remain the fallback when reserves have no links.
+ * Manual structural relationships survive either composition source.
  */
 export function deriveDependencies(
   meta: Pick<StablecoinMeta, "reserves" | "dependencies"> & Partial<Pick<StablecoinMeta, "id">>,
@@ -107,7 +131,7 @@ export function deriveDependencies(
   const reserveDependencies = aggregateReserveDependencies(reserves, meta.id);
   if (reserveDependencies.length === 0) return meta.dependencies ?? [];
 
-  return reserveDependencies;
+  return injectStructuralDependencies(reserveDependencies, meta);
 }
 
 function deriveCuratedDependencySet(
@@ -123,7 +147,7 @@ function deriveCuratedDependencySet(
     : manualDependencies.length > 0
       ? "manual"
       : "none";
-  const dependencies = injectVariantParent(baseDependencies, meta.variantOf);
+  const dependencies = injectStructuralDependencies(baseDependencies, meta);
 
   return {
     dependencies,
@@ -149,20 +173,12 @@ export function deriveEffectiveDependencySet(
           !slice.coinId || slice.coinId === meta.id ? [{ sliceIndex, reason: "no-match" as const }] : [],
         );
 
-    if (liveDependencies.length === 0) {
-      return {
-        dependencies: [],
-        source: "live-unmapped",
-        baseSource: "live-unmapped",
-        dependencyFromLive: true,
-        mappedLiveReserveWeight,
-        fallbackReason: null,
-        rejectionReasons,
-      };
-    }
-
-    const dependencies = injectVariantParent(liveDependencies, meta.variantOf);
-    const baseSource: DependencyDerivationBaseSource = "live-reserve";
+    // Select only reserve-derived weights here. Structural relationships are
+    // applied afterward even when the live composition maps to no upstreams.
+    const dependencies = injectStructuralDependencies(liveDependencies, meta);
+    const baseSource: DependencyDerivationBaseSource = liveDependencies.length > 0
+      ? "live-reserve"
+      : "live-unmapped";
 
     return {
       dependencies,

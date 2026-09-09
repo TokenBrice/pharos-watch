@@ -2,8 +2,10 @@ import {
   parseLiveReserveAdapterParams,
   type LiveReserveAdapterParamsByKey,
 } from "@shared/lib/live-reserve-adapters";
+import { getCirculatingRaw } from "@shared/lib/supply";
 import type { StablecoinMeta } from "@shared/types/core";
 import type { LiveReserveWarning, LiveReservesConfig } from "@shared/types/live-reserves";
+import { hasUsableStablecoinsPayload, loadStablecoinsCache } from "../../lib/stablecoins-cache";
 import {
   fetchDefiLlamaPrices,
   notApplicableFreshnessMetadata,
@@ -33,6 +35,7 @@ interface DjedReadState {
   shenMinted: bigint | null;
   adaPriceUsd: number | undefined;
   djedPriceUsd: number | undefined;
+  listCirculating: number | undefined;
 }
 
 function unitOf(unit: { policyId: string; assetNameHex: string }): [string, string] {
@@ -81,7 +84,7 @@ function findPoolNftUtxo(utxos: KoiosUtxo[], djedPolicyId: string): KoiosUtxo {
   return holders[0]!;
 }
 
-export function adaptDjedCardanoState(
+function adaptDjedCardanoState(
   state: DjedReadState,
   params: DjedCardanoParams,
 ): AdapterResult {
@@ -106,6 +109,25 @@ export function adaptDjedCardanoState(
   const djedCirculating = decimalUnits(djedCirculatingRaw, params.djedUnit.decimals);
   if (!(djedCirculating > 0)) {
     throw new Error(`${ADAPTER_KEY}: DJED circulating supply is not positive`);
+  }
+
+  // ── Supply reconciliation (diagnostic; never replaces the on-chain liability) ──
+  // The bank census is a mint/burn liability; the DefiLlama list `circulating`
+  // is the market-cap denominator. They may legitimately diverge (e.g. DJED
+  // held in non-bank wallets), so drift is flagged, not reconciled.
+  const listCirculating = state.listCirculating;
+  const supplyDivergence = listCirculating != null && listCirculating > 0
+    ? {
+        listCirculatingUnits: listCirculating,
+        supplyDivergencePct: (Math.abs(djedCirculating - listCirculating) / listCirculating) * 100,
+        supplyDerivation: `${ADAPTER_KEY}: on-chain liability = djedMinted − djedBankStock; list = DefiLlama list circulating via getCirculatingRaw`,
+      }
+    : undefined;
+  if (supplyDivergence && supplyDivergence.supplyDivergencePct > 10) {
+    warnings.push(reserveDegradedWarning(
+      "djed-supply-divergence",
+      `${ADAPTER_KEY}: on-chain circulating ${djedCirculating.toFixed(2)} DJED diverges ${supplyDivergence.supplyDivergencePct.toFixed(2)}% from the DefiLlama list circulating ${supplyDivergence.listCirculatingUnits.toFixed(2)} DJED`,
+    ));
   }
 
   // ── SHEN stock (junior equity diagnostic; not required for the slice) ────
@@ -197,6 +219,7 @@ export function adaptDjedCardanoState(
         djedMintedUnits: decimalUnits(state.djedMinted, params.djedUnit.decimals),
         djedBankStockUnits: decimalUnits(djedBankStock, params.djedUnit.decimals),
         djedCirculatingUnits: djedCirculating,
+        ...(supplyDivergence ?? {}),
         ...(shenCirculating != null ? { shenCirculatingUnits: shenCirculating } : {}),
         extraneousAssets: extraneous,
       },
@@ -205,7 +228,7 @@ export function adaptDjedCardanoState(
 }
 
 export async function fetchDjedCardanoReserves(
-  _coin: StablecoinMeta,
+  coin: StablecoinMeta,
   config: LiveReservesConfig,
   signal: AbortSignal,
   ctx?: AdapterContext,
@@ -219,10 +242,12 @@ export async function fetchDjedCardanoReserves(
     ),
   ];
 
+  const listCirculating = await loadDjedListCirculating(coin, ctx);
+
   let lastError: unknown = null;
   for (const baseUrl of baseUrls) {
     try {
-      return await readDjedAttempt(baseUrl, params, signal, ctx);
+      return await readDjedAttempt(baseUrl, params, signal, ctx, listCirculating);
     } catch (error) {
       lastError = error;
       if (signal.aborted) break;
@@ -231,11 +256,31 @@ export async function fetchDjedCardanoReserves(
   throw lastError instanceof Error ? lastError : new Error(String(lastError));
 }
 
+async function loadDjedListCirculating(
+  coin: StablecoinMeta,
+  ctx: AdapterContext | undefined,
+): Promise<number | undefined> {
+  if (!ctx?.db) return undefined;
+  try {
+    const cached = await loadStablecoinsCache(ctx.db, { mode: "lenient", contract: "critical-fields" });
+    const supplyCoin = hasUsableStablecoinsPayload(cached)
+      && cached.updatedAt != null
+      && (ctx.nowSec ?? Math.floor(Date.now() / 1000)) - cached.updatedAt <= 7200
+      ? cached.payload.peggedAssets.find((asset) => asset.id === coin.id)
+      : undefined;
+    const circulating = supplyCoin ? getCirculatingRaw(supplyCoin) : 0;
+    return Number.isFinite(circulating) && circulating > 0 ? circulating : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
 async function readDjedAttempt(
   baseUrl: string,
   params: DjedCardanoParams,
   signal: AbortSignal,
-  ctx?: AdapterContext,
+  ctx: AdapterContext | undefined,
+  listCirculating: number | undefined,
 ): Promise<AdapterResult> {
   const reader = await createKoiosReader(baseUrl, signal, ctx);
   const units: Array<[string, string]> = [unitOf(params.djedUnit)];
@@ -274,6 +319,7 @@ async function readDjedAttempt(
       shenMinted: shenRow?.totalSupply ?? null,
       adaPriceUsd: priceMap.get("ADA"),
       djedPriceUsd: priceMap.get("DJED"),
+      listCirculating,
     },
     params,
   );

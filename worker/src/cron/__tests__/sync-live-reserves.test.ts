@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { CHAIN_META } from "@shared/lib/chains";
 import { LIVE_RESERVE_ADAPTER_DEFINITIONS } from "@shared/lib/live-reserve-adapters";
 import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import { buildChainRpcs } from "../../lib/chain-registry";
@@ -17,6 +18,75 @@ import {
 
 const mockD1 = mockLiveReserveD1;
 const mockAdapterRegistry = mockLiveReserveAdapterRegistry;
+
+/**
+ * Adapters whose gross-supply denominator aggregates totalSupply() across
+ * every EVM/Tron deployment in `coin.contracts` (via
+ * `aggregateMultichainErc20Supply` or its inline equivalent). These are the
+ * only adapters whose contract chains are read through the shared chain RPC
+ * map; every other adapter reads only its own input/params chains, so its
+ * `coin.contracts` list is deployment metadata rather than a read scope.
+ */
+const MULTICHAIN_SUPPLY_ADAPTERS = new Set([
+  "usd1-bundle-oracle",
+  "chronicle-nav",
+  "chainlink-por",
+  "sodax-sonic",
+]);
+
+/**
+ * EVM/Tron chains a live-reserve config reads over public RPC: the primary
+ * onchain input, every EVM/Tron deployment in the coin's contracts (for
+ * multichain-supply adapters), and any chain id carried in adapter params
+ * (branch/leg/contract entries). Non-EVM chains (Solana, Aptos, …) are outside
+ * the shared RPC map's scope.
+ */
+function referencedLiveReserveChains(coin: (typeof ACTIVE_STABLECOINS)[number]): Set<string> {
+  const chains = new Set<string>();
+  const config = coin.liveReservesConfig;
+  const primary = config?.inputs.primary;
+  if (primary?.kind === "onchain-evm") chains.add(primary.chain);
+
+  if (config && MULTICHAIN_SUPPLY_ADAPTERS.has(config.adapter)) {
+    for (const contract of coin.contracts ?? []) {
+      const type = CHAIN_META[contract.chain]?.type;
+      if (type === "evm" || type === "tron") chains.add(contract.chain);
+    }
+  }
+
+  collectParamChainIds(config?.params, chains);
+  return chains;
+}
+
+function collectParamChainIds(value: unknown, chains: Set<string>): void {
+  if (value === null || typeof value !== "object") return;
+  if (Array.isArray(value)) {
+    for (const item of value) collectParamChainIds(item, chains);
+    return;
+  }
+  const record = value as Record<string, unknown>;
+  for (const key of ["chain", "chains"] as const) {
+    const chainValue = record[key];
+    if (typeof chainValue === "string") {
+      const type = CHAIN_META[chainValue]?.type;
+      if (type === "evm" || type === "tron") chains.add(chainValue);
+    } else if (Array.isArray(chainValue)) {
+      for (const chain of chainValue) {
+        if (typeof chain === "string") {
+          const type = CHAIN_META[chain]?.type;
+          if (type === "evm" || type === "tron") chains.add(chain);
+        }
+      }
+    }
+  }
+  // Only branch/leg arrays read their chains through the shared chain RPC map
+  // (no per-entry URL). Other chain-bearing params — `deployments`,
+  // `additionalDeployments`, `supplyChain` — resolve through explicit RPC URLs
+  // or `getPublicRpcUrl()` and sit outside this assertion's scope.
+  for (const key of ["branches", "legs"] as const) {
+    collectParamChainIds(record[key], chains);
+  }
+}
 
 describe("syncLiveReserves", () => {
   const fixtures = createLatestSchemaFixtureTracker();
@@ -75,22 +145,25 @@ describe("syncLiveReserves", () => {
         const primary = coin.liveReservesConfig?.inputs.primary;
         return primary?.kind === "onchain-evm" && primary.rpcMode === "public-rpc";
       })
-      .filter((coin) => {
+      .flatMap((coin) => {
         const config = coin.liveReservesConfig!;
         const primary = config.inputs.primary;
-        if (primary.kind !== "onchain-evm") return false;
+        if (primary.kind !== "onchain-evm") return [];
 
         const params = config.params;
         const explicitRpcUrl = typeof params === "object" && params !== null && !Array.isArray(params)
           ? (params as { rpcUrl?: unknown }).rpcUrl
           : undefined;
+        const hasExplicitRpcUrl = typeof explicitRpcUrl === "string" && explicitRpcUrl.length > 0;
 
-        return !chainRpcs.has(primary.chain)
-          && !(typeof explicitRpcUrl === "string" && explicitRpcUrl.length > 0);
-      })
-      .map((coin) => {
-        const primary = coin.liveReservesConfig!.inputs.primary;
-        return primary.kind === "onchain-evm" ? `${coin.id}:${primary.chain}` : coin.id;
+        return [...referencedLiveReserveChains(coin)]
+          .filter((chain) => {
+            // The primary input may resolve through its own configured RPC URL;
+            // every other referenced chain is read through buildChainRpcs().
+            if (chain === primary.chain && hasExplicitRpcUrl) return false;
+            return !chainRpcs.has(chain);
+          })
+          .map((chain) => `${coin.id}:${chain}`);
       });
 
     expect(missingRpc).toEqual([]);

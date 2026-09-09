@@ -152,6 +152,7 @@
     "check:html-fixture-age": "node --import tsx scripts/ci/check-html-fixture-age.ts",
     "refresh:html-fixtures": "tsx scripts/maintenance/refresh-reserve-html-fixtures.ts",
     "refresh:assurance-reports": "tsx scripts/maintenance/refresh-independent-assurance-reports.ts",
+    "refresh:usdy-holdings-report": "tsx scripts/maintenance/refresh-usdy-holdings-report.ts",
     "refresh:markdown-fixtures": "tsx scripts/maintenance/refresh-markdown-export-fixtures.ts",
     "seo:live-smoke": "node scripts/ci/check-seo-live-smoke.mjs",
     "seo:check": "node scripts/ci/check-seo-static.mjs",

@@ -2,6 +2,21 @@ import type { MethodologyChangelogEntry } from "@shared/lib/methodology-versions
 
 export const SAFETY_SCORE_V9: readonly MethodologyChangelogEntry[] = [
   {
+    version: "9.49",
+    title: "Structural dependencies survive live reserve mapping",
+    date: "2026-09-10",
+    effectiveAt: 1788998400,
+    summary:
+      "Variant parents, explicit wrapped-asset claims, and manual non-collateral relationships are derived independently of reserve composition. Unmapped live reserves still cannot restore curated or manual collateral weights.",
+    impact: [
+      "A rejected live reserve link no longer deletes the separately authored serial parent claim or its inherited mint-control path.",
+      "Explicit curated wrapper identities produce unit serial claims rather than reviving old reserve percentages; independent manual structural relationships survive mapped and unmapped compositions.",
+      "Live mapping provenance, per-slice rejection reasons, and the curated basket admission gate remain intact. No evidence is added.",
+    ],
+    commits: [],
+    reconstructed: false,
+  },
+  {
     version: "9.48",
     title: "Unmapped live reserves cannot restore curated dependency weights",
     date: "2026-09-09",

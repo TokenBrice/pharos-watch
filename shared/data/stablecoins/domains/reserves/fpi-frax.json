@@ -37,7 +37,7 @@
       "liquidityHorizon": "unknown"
     },
     {
-      "sourceKey": "frax-fpi-collateral:fraxswap-v2-frax-fpis",
+      "sourceKey": "frax-fpi-collateral:ethereum:0x56695c26b3cdb528815cd22ff7b47510ab821efd",
       "name": "Fraxswap V2 FRAX/FPIS",
       "pct": 1.5,
       "risk": "high",

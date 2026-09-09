@@ -3,6 +3,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { getIndependentAssuranceManifest, reconcileIndependentAssuranceManifest } from "@shared/lib/independent-assurance";
 import {
   BRLA_NOTION_PIN,
+  buildBrlaReserveSlices,
   fetchAndVerifyBrlaPdf,
   verifyBrlaNotionDiscovery,
 } from "../brla-independent-assurance";
@@ -255,5 +256,36 @@ describe("BRLA PDF byte verification", () => {
       reportHosts: ["file.notion.so"],
       signal: AbortSignal.timeout(1000),
     })).rejects.toThrow("PDF SHA-256");
+  });
+});
+
+describe("BRLA asset classification", () => {
+  it("publishes an unknown-class slice and degrades for an unreviewed asset code", () => {
+    const reviewed = getIndependentAssuranceManifest("BRLA");
+    const withUnknown = {
+      ...reviewed,
+      assets: [...reviewed.assets, { code: "unreviewed-holdings", label: "Unreviewed holdings", amount: "123.45" }],
+    };
+
+    const { slices, unknownExposurePct, warnings } = buildBrlaReserveSlices(withUnknown);
+
+    const unreviewed = slices.find((slice) => slice.sourceKey === "brla-independent-assurance:brla:unreviewed-holdings");
+    expect(unreviewed).toMatchObject({ name: "Unreviewed holdings", risk: "high", liquidityHorizon: "unknown" });
+    expect(unreviewed).not.toHaveProperty("assetClass");
+    expect(unknownExposurePct).toBeGreaterThan(0);
+    expect(warnings).toEqual([expect.objectContaining({
+      code: "brla-asset-code-unclassified",
+      effect: "degraded",
+    })]);
+  });
+
+  it("rejects an unparsable asset amount", () => {
+    const reviewed = getIndependentAssuranceManifest("BRLA");
+    const garbage = {
+      ...reviewed,
+      assets: [{ code: "cash-and-cash-equivalents", label: "Cash", amount: "not-a-number" }],
+    };
+
+    expect(() => buildBrlaReserveSlices(garbage)).toThrow("unparsable asset amount");
   });
 });

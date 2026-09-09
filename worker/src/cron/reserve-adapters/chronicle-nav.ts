@@ -1,22 +1,20 @@
-import type { ContractDeployment, ReserveSlice, StablecoinMeta } from "@shared/types/core";
+import type { ReserveSlice, StablecoinMeta } from "@shared/types/core";
 import { parseLiveReserveAdapterParams } from "@shared/lib/live-reserve-adapters";
 import type { LiveReserveWarning, LiveReservesConfig } from "@shared/types/live-reserves";
-import { CHAIN_META } from "@shared/lib/chains";
 import { DAY_SECONDS } from "@shared/lib/time-constants";
 import { DECIMALS_SELECTOR } from "../../lib/evm-selectors";
-import { rethrowIfAborted } from "../../lib/abort";
-import { logWorkerEventArgs } from "../../lib/structured-log";
 import type { AdapterContext, AdapterResult } from "./types";
 import { decodeUint256Word } from "./abi-decode";
 import {
+  aggregateMultichainErc20Supply,
   decimalStringFromBigInt,
   fetchErc20TotalSupply,
-  fetchTronErc20TotalSupply,
   freshnessMetadataFromTimestamp,
   makeOnchainCallers,
   requireOnchainInput,
   reserveDegradedWarning,
   reserveInfoWarning,
+  type MultichainSupplyAggregate,
 } from "./helpers";
 import { validateDecimals } from "./slice-math";
 import { MAX_FUTURE_SOURCE_TIMESTAMP_SKEW_SEC } from "./validate";
@@ -36,41 +34,13 @@ export interface ChronicleNavParams {
   maxOracleAgeSec?: number;
 }
 
-export interface ChronicleNavSupplyContribution {
-  chain: string;
-  tokenAddress: string;
-  raw: bigint;
-  decimals: number;
-}
-
-export interface ChronicleNavSupplyAggregate {
-  contributions: ChronicleNavSupplyContribution[];
-  omittedNonEvmChains: string[];
-  omittedNoRpcChains: string[];
-  omittedReadFailureChains: string[];
-}
+export type ChronicleNavSupplyAggregate = MultichainSupplyAggregate;
 
 export interface ChronicleNavData {
   navPerToken: bigint;
   supply: ChronicleNavSupplyAggregate;
   tokenDecimals: number;
   updatedAt: number;
-}
-
-function isEvmContract(contract: ContractDeployment): boolean {
-  return CHAIN_META[contract.chain]?.type === "evm";
-}
-
-function isTronContract(contract: ContractDeployment): boolean {
-  return CHAIN_META[contract.chain]?.type === "tron";
-}
-
-/** True when an EVM chain has an RPC entry in the context's chainRpc map.
- *  Without a map the chain is treated as readable and left to fail through its
- *  normal read path (mirrors usd1-bundle-oracle's supply scope check). */
-function chainHasRpc(chain: string, ctx?: AdapterContext): boolean {
-  const chainRpcs = ctx?.chainRpcs;
-  return chainRpcs == null || chainRpcs.has(chain);
 }
 
 export function decodeChronicleReadWithAge(raw: string): { value: bigint; age: number } {
@@ -112,77 +82,21 @@ async function aggregateChronicleSupply(
   signal: AbortSignal,
   ctx?: AdapterContext,
 ): Promise<ChronicleNavSupplyAggregate> {
-  const allContracts = coin.contracts ?? [];
-  const evmContracts = allContracts.filter(isEvmContract);
-  const tronContracts = allContracts.filter(isTronContract);
-  const omittedNonEvmChains = allContracts
-    .filter((contract) => !isEvmContract(contract) && !isTronContract(contract))
-    .map((contract) => contract.chain);
-  const readableContracts = [...evmContracts, ...tronContracts];
-
-  if (readableContracts.length === 0) {
-    throw new Error(`chronicle-nav: no EVM or Tron contracts available for ${coin.id}`);
-  }
-
-  const supplyReads = await Promise.all(
-    readableContracts.map(async (contract) => {
-      if (contract.decimals == null) {
-        logWorkerEventArgs(
-          "handler",
-          "warn",
-          `[chronicle-nav] ${contract.chain} supply probe skipped for ${coin.symbol}: contract decimals are missing`,
-        );
-        return { contract, raw: null, noRpc: false };
-      }
-      if (!isTronContract(contract) && !chainHasRpc(contract.chain, ctx)) {
-        return { contract, raw: null, noRpc: true };
-      }
-      let raw: bigint | null;
-      if (isTronContract(contract)) {
-        raw = await fetchTronErc20TotalSupply(contract.address, signal, ctx);
-      } else {
-        try {
-          raw = await fetchErc20TotalSupply(
-            { ...input, chain: contract.chain },
-            contract.address,
-            signal,
-            ctx,
-            contract.chain === input.chain ? params.rpcUrl : undefined,
-            contract.chain === input.chain ? params.fallbackRpcUrl : undefined,
-          );
-        } catch (error) {
-          rethrowIfAborted(error, signal);
-          raw = null;
-        }
-      }
-      return { contract, raw, noRpc: false };
-    }),
-  );
-
-  const successful = supplyReads.filter(
-    (entry): entry is { contract: ContractDeployment; raw: bigint; noRpc: boolean } =>
-      entry.raw != null && entry.raw > 0n,
-  );
-  const failed = supplyReads.filter((entry) => entry.raw == null && !entry.noRpc);
-  const omittedNoRpcChains = supplyReads
-    .filter((entry) => entry.noRpc)
-    .map((entry) => entry.contract.chain);
-
-  if (successful.length === 0) {
-    throw new Error(`chronicle-nav: totalSupply() calls failed on all EVM/Tron chains for ${coin.id}`);
-  }
-
-  return {
-    contributions: successful.map((entry) => ({
-      chain: entry.contract.chain,
-      tokenAddress: entry.contract.address,
-      raw: entry.raw,
-      decimals: entry.contract.decimals as number,
-    })),
-    omittedNonEvmChains,
-    omittedNoRpcChains,
-    omittedReadFailureChains: failed.map((entry) => entry.contract.chain),
-  };
+  return aggregateMultichainErc20Supply({
+    coin,
+    adapterKey: "chronicle-nav",
+    signal,
+    ctx,
+    readEvmSupply: (contract) =>
+      fetchErc20TotalSupply(
+        { ...input, chain: contract.chain },
+        contract.address,
+        signal,
+        ctx,
+        contract.chain === input.chain ? params.rpcUrl : undefined,
+        contract.chain === input.chain ? params.fallbackRpcUrl : undefined,
+      ),
+  });
 }
 
 function supplyAggregateWarnings(supply: ChronicleNavSupplyAggregate): LiveReserveWarning[] {

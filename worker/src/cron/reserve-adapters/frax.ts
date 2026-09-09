@@ -52,6 +52,12 @@ interface TokenDisplayConfig {
   label: string;
   risk: ReserveSlice["risk"];
   coinId?: string;
+  /**
+   * Stable slice identity for rows that map to a fixed on-chain contract
+   * rather than a symbol. When set, it is emitted verbatim so the key cannot
+   * drift if the issuer relabels the position.
+   */
+  sourceKey?: string;
 }
 
 const TOKEN_DISPLAY: Record<string, TokenDisplayConfig> = {
@@ -130,8 +136,17 @@ const TOKEN_DISPLAY: Record<string, TokenDisplayConfig> = {
 // cannot collide with trusted symbols such as FRAX, DAI, or USDC.
 const FPI_COLLATERAL_NAME_ONLY_DISPLAY: Record<string, TokenDisplayConfig> = {
   // FPIS is FPI's own governance token, so this LP is rated like FXS rather
-  // than a stable pair.
-  "Fraxswap V2 FRAX/FPIS": { label: "Fraxswap V2 FRAX/FPIS", risk: "high" },
+  // than a stable pair. The slice identity is the Fraxswap V2 FRAX/FPIS pair
+  // contract on Ethereum, read from the Fraxswap V2 factory getPair(FRAX,
+  // FPIS) (factory 0x43ec799eadd63848443e2347c49f5f52e8fe0f6f; token0 FRAX
+  // 0x853d955acef822db058eb8505911ed77f175b99e, token1 FPIS
+  // 0xc2544a32872a91f4a553b404c6950e89de901fdb), so a provider-side relabel
+  // cannot move the reviewed slice key.
+  "Fraxswap V2 FRAX/FPIS": {
+    label: "Fraxswap V2 FRAX/FPIS",
+    risk: "high",
+    sourceKey: "frax-fpi-collateral:ethereum:0x56695c26b3cdb528815cd22ff7b47510ab821efd",
+  },
 };
 
 const SOURCE_TOTAL_RECONCILIATION_THRESHOLD_PCT = 0.5;
@@ -334,7 +349,7 @@ export function adaptFraxFpiCollateral(payload: FraxFpiCollateralResponse): Adap
     const config = getFpiCollateralDisplayConfig(symbol);
     if (!config) continue;
     slices.push({
-      sourceKey: `frax-fpi-collateral:${sourceKeySlug(symbol)}`,
+      sourceKey: config.sourceKey ?? `frax-fpi-collateral:${sourceKeySlug(symbol)}`,
       name: config.label,
       pct: (usd / totalCollateralUsd) * 100,
       risk: config.risk,

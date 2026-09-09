@@ -272,7 +272,7 @@ describe("fetchEvmBranchBalancesReserves", () => {
       },
     );
 
-    expect(result.slices).toMatchObject([{ sourceKey: "evm-branch-balances:ethereum:0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb", name: "wstETH", pct: 100, risk: "low" }]);
+    expect(result.slices).toEqual([{ sourceKey: "evm-branch-balances:ethereum:0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb", name: "wstETH", pct: 100, risk: "low" }]);
     expect(result.metadata).not.toHaveProperty("redemption");
     expect(network.rpcCalls.filter((call) => call.method === "eth_call").map((call) => call.selector))
       .toEqual([BALANCE_OF_SELECTOR, DECIMALS_SELECTOR]);
@@ -298,7 +298,7 @@ describe("fetchEvmBranchBalancesReserves", () => {
       vaultAddresses: [HONEY_VAULT],
     }));
 
-    expect(result.slices).toMatchObject([{ sourceKey: "evm-branch-balances:berachain:0x549943e04f40284185054145c6e4e9568c1d3241", name: "USDC.e", pct: 100, risk: "low" }]);
+    expect(result.slices).toEqual([{ sourceKey: "evm-branch-balances:berachain:0x549943e04f40284185054145c6e4e9568c1d3241", name: "USDC.e", pct: 100, risk: "low" }]);
     expect(result.metadata?.redemption).toEqual(expect.objectContaining({
       capacityUsd: 8,
       capacityKind: "live-direct",
@@ -416,7 +416,7 @@ describe("fetchEvmBranchBalancesReserves", () => {
 
     // 3 six-decimals tokens ($3) vs 2 eighteen-decimals tokens ($2): 60/40.
     expect(result.warnings).toBeUndefined();
-    expect(result.slices).toMatchObject([
+    expect(result.slices).toEqual([
       { sourceKey: "evm-branch-balances:ethereum:0x00000000000000000000000000000000000000b1", name: "Six-decimals stable", pct: 60, risk: "low" },
       { sourceKey: "evm-branch-balances:ethereum:0x00000000000000000000000000000000000000b2", name: "Eighteen-decimals stable", pct: 40, risk: "low" },
     ]);
@@ -467,7 +467,7 @@ describe("fetchEvmBranchBalancesReserves", () => {
       },
     );
 
-    expect(result.slices).toMatchObject([{ sourceKey: "evm-branch-balances:ethereum:0x00000000000000000000000000000000000000b1", name: "Non-ERC20 branch", pct: 100, risk: "low" }]);
+    expect(result.slices).toEqual([{ sourceKey: "evm-branch-balances:ethereum:0x00000000000000000000000000000000000000b1", name: "Non-ERC20 branch", pct: 100, risk: "low" }]);
     expect(result.warnings).toEqual([
       expect.objectContaining({
         code: "branch-token-decimals-unavailable",
@@ -537,7 +537,7 @@ describe("fetchEvmBranchBalancesReserves", () => {
         holder === HONEY_VAULT.toLowerCase() ? 0n : 274_114n,
     }));
 
-    expect(result.slices).toMatchObject([{ sourceKey: "evm-branch-balances:berachain:0x549943e04f40284185054145c6e4e9568c1d3241", name: "USDC.e", pct: 100, risk: "low" }]);
+    expect(result.slices).toEqual([{ sourceKey: "evm-branch-balances:berachain:0x549943e04f40284185054145c6e4e9568c1d3241", name: "USDC.e", pct: 100, risk: "low" }]);
     expect(result.warnings).toBeUndefined();
     expect(result.metadata).toMatchObject({ branchCount: 1 });
     expect(result.metadata?.redemption).toMatchObject({
@@ -614,16 +614,16 @@ describe("fetchEvmBranchBalancesReserves", () => {
       name: "retains a measured sub-tenth-percent tracked branch",
       secondBalance: 428n,
       expected: [
-        { name: "Sovryn Zero ZUSD", pct: 99.957, risk: "medium" },
-        { name: "Dollar on Chain DOC", pct: 0.043, risk: "medium", coinId: "doc-money-on-chain", depType: "collateral" },
+        { sourceKey: "evm-branch-balances:rootstock:0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb", name: "Sovryn Zero ZUSD", pct: 99.957, risk: "medium" },
+        { sourceKey: "evm-branch-balances:rootstock:0xcccccccccccccccccccccccccccccccccccccccc", name: "Dollar on Chain DOC", pct: 0.043, risk: "medium", coinId: "doc-money-on-chain", depType: "collateral" },
       ],
     },
     {
       name: "retains a measured branch below the three-decimal rounding threshold",
       secondBalance: 4n,
       expected: [
-        { name: "Sovryn Zero ZUSD", pct: 99.9996, risk: "medium" },
-        { name: "Dollar on Chain DOC", pct: 0.0004, risk: "medium", coinId: "doc-money-on-chain", depType: "collateral" },
+        { sourceKey: "evm-branch-balances:rootstock:0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb", name: "Sovryn Zero ZUSD", pct: 99.9996, risk: "medium" },
+        { sourceKey: "evm-branch-balances:rootstock:0xcccccccccccccccccccccccccccccccccccccccc", name: "Dollar on Chain DOC", pct: 0.0004, risk: "medium", coinId: "doc-money-on-chain", depType: "collateral" },
       ],
     },
   ])("$name", async ({ secondBalance, expected }) => {
@@ -664,7 +664,7 @@ describe("fetchEvmBranchBalancesReserves", () => {
       }),
     });
 
-    expect(result.slices).toMatchObject(expected);
+    expect(result.slices).toEqual(expected);
   });
 
   it("uses an explicit branch price token for DefiLlama price lookup", async () => {
@@ -690,7 +690,7 @@ describe("fetchEvmBranchBalancesReserves", () => {
       }),
     });
 
-    expect(result.slices).toMatchObject([{ name: "Receipt token", pct: 100, risk: "high" }]);
+    expect(result.slices).toEqual([{ sourceKey: "evm-branch-balances:berachain:0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee", name: "Receipt token", pct: 100, risk: "high" }]);
   });
 
   it("includes live redemption fee metadata when a probe is configured", async () => {
@@ -829,9 +829,9 @@ describe("fetchEvmBranchBalancesReserves", () => {
       },
     );
 
-    expect(result.slices).toMatchObject([
-      { name: "Wrapped stable", pct: 64.1, risk: "low" },
-      { name: "USYC", pct: 35.9, risk: "low" },
+    expect(result.slices).toEqual([
+      { sourceKey: "evm-branch-balances:ethereum:0xdddddddddddddddddddddddddddddddddddddddd", name: "Wrapped stable", pct: 64.1, risk: "low" },
+      { sourceKey: "evm-branch-balances:ethereum:0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb", name: "USYC", pct: 35.9, risk: "low" },
     ]);
   });
 
@@ -855,7 +855,7 @@ describe("fetchEvmBranchBalancesReserves", () => {
       },
     );
 
-    expect(result.slices).toMatchObject([{ name: "USDC branch", pct: 100, risk: "low", coinId: "usdc-circle" }]);
+    expect(result.slices).toEqual([{ sourceKey: "evm-branch-balances:ethereum:0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb", name: "USDC branch", pct: 100, risk: "low", coinId: "usdc-circle" }]);
     expect(result.warnings).toBeUndefined();
   });
 
@@ -922,7 +922,7 @@ describe("fetchEvmBranchBalancesReserves", () => {
       }),
     }, { ctx: { db } });
 
-    expect(result.slices).toMatchObject([{ name: "Hashnote USYC", pct: 100, risk: "low", coinId: "usyc-hashnote" }]);
+    expect(result.slices).toEqual([{ sourceKey: "evm-branch-balances:ethereum:0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb", name: "Hashnote USYC", pct: 100, risk: "low", coinId: "usyc-hashnote" }]);
     expect(network.requests.filter((request) => request.url.startsWith(PRICES_BASE))).toHaveLength(2);
   });
 
@@ -961,8 +961,9 @@ describe("fetchEvmBranchBalancesReserves", () => {
     );
 
     expect(result.warnings).toBeUndefined();
-    expect(result.slices).toMatchObject([
+    expect(result.slices).toEqual([
       {
+        sourceKey: "evm-branch-balances:ethereum:0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
         name: "sUSDe branch",
         pct: 100,
         risk: "medium",
@@ -1087,8 +1088,9 @@ describe("fetchEvmBranchBalancesReserves", () => {
       },
     );
 
-    expect(result.slices).toMatchObject([
+    expect(result.slices).toEqual([
       {
+        sourceKey: "evm-branch-balances:ethereum:0x7f39c581f595b53c5cb19bd0b3f8da6c935e2ca0",
         name: "wstETH-backed USDN vault",
         pct: 100,
         risk: "medium",

@@ -55,6 +55,18 @@ export const IndependentAssuranceManifestSchema = z
     reportTimeZone: z.string().trim().min(1),
     reportIssuedAt: z.string().datetime({ offset: true }).optional(),
     attestor: z.string().trim().min(1),
+    /** When the attestor identity was not printed in extractable report text but
+     *  was established by a reviewed inference (e.g. letterhead bytes matching a
+     *  known firm's mark), record the method, the evidence for it, and what
+     *  should trigger a re-review rather than presenting the name as extracted. */
+    attestorIdentification: z
+      .object({
+        method: z.literal("reviewed-inference"),
+        evidence: z.array(z.string().trim().min(1)).min(1),
+        reReviewTrigger: z.string().trim().min(1),
+      })
+      .strict()
+      .optional(),
     engagement: z.string().trim().min(1),
     conclusion: z.enum(["unmodified", "unqualified", "nothing-came-to-attention", "agreed-upon-procedures", "issuer-attested"]),
     assuranceTier: z.enum(["independent-assurance", "agreed-upon-procedures", "issuer-attested"]).optional(),
