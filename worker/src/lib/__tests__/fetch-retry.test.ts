@@ -534,6 +534,49 @@ describe("fetchWithRetry", () => {
     }
   });
 
+  it("retries a 200 response whose body is not JSON, then gives up with null", async () => {
+    const fetchMock = mockFetch([{
+      match: () => true,
+      respond: () => new Response("not json"),
+    }]);
+    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+
+    try {
+      const result = await fetchJsonWithRetry(
+        "https://example.com/not-json.json",
+        undefined,
+        2,
+      );
+
+      expect(result).toBeNull();
+      expect(fetchMock).toHaveBeenCalledTimes(3);
+      expect(warnRecords(warnSpy).filter((record) =>
+        record.event === "fetch_retry_attempt_failed"
+      )).toEqual([
+        expect.objectContaining({ errorName: "SyntaxError" }),
+        expect.objectContaining({ errorName: "SyntaxError" }),
+        expect.objectContaining({ errorName: "SyntaxError" }),
+      ]);
+    } finally {
+      warnSpy.mockRestore();
+    }
+  });
+
+  it("parses a JSON body regardless of content type", async () => {
+    mockFetch([{
+      match: () => true,
+      respond: () => new Response('{"ok":true}', { headers: { "Content-Type": "text/plain" } }),
+    }]);
+
+    const result = await fetchJsonWithRetry<{ ok: boolean }>(
+      "https://example.com/wrong-content-type",
+      undefined,
+      0,
+    );
+
+    expect(result?.body).toEqual({ ok: true });
+  });
+
   it("counts UTF-8 bytes while preserving an under-limit multibyte body", async () => {
     const bytes = encode("€🙂");
     const attempt = streamedResponse([bytes.slice(0, 2), bytes.slice(2)]);

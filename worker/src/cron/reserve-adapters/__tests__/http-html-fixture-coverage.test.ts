@@ -6,29 +6,21 @@ import { LIVE_RESERVE_ADAPTER_KEYS } from "@shared/types/live-reserves";
 import { LIVE_RESERVE_ADAPTER_DEFINITIONS } from "@shared/lib/live-reserve-adapters";
 
 const TEST_DIR = dirname(fileURLToPath(import.meta.url));
-const ROOT_DIR = resolve(TEST_DIR, "../../../../..");
 const FIXTURES_DIR = resolve(TEST_DIR, "fixtures");
-const REFRESH_SCRIPT = resolve(ROOT_DIR, "scripts/maintenance/refresh-reserve-html-fixtures.ts");
 const CAPTURED_AT_RE = /<!--\s*captured-at:\s*(\d{4}-\d{2}-\d{2}T[\d:]+Z)\s*-->/;
 // Archived fixtures are intentionally frozen regression inputs; their reason
-// replaces capture metadata, and the refresh script must not list them.
+// replaces capture metadata.
 const ARCHIVED_RE = /<!--\s*archived:\s*(\S[^>]*?)\s*-->/;
 const SOURCE_TRIMMED_RE = /<!--\s*source-trimmed:\s*(\S[^>]*?)\s*-->/;
 const SOURCE_RE = /<!--\s*source:\s*(https:\/\/\S+?)\s*-->/;
-const MAX_FIXTURE_AGE_DAYS = 90;
-const DAY_MS = 24 * 60 * 60 * 1000;
-
-function inspectFixtureFreshness(file: string, content: string, now: Date) {
-  const match = content.match(CAPTURED_AT_RE);
-  if (!match) return { file, error: `${file}: missing captured-at header` };
-  const capturedAt = new Date(match[1]);
-  if (Number.isNaN(capturedAt.getTime())) return { file, error: `${file}: invalid captured-at timestamp ${match[1]}` };
-  const ageDays = Math.floor((now.getTime() - capturedAt.getTime()) / DAY_MS);
-  if (ageDays > MAX_FIXTURE_AGE_DAYS) {
-    return { file, ageDays, error: `${file}: captured-at ${match[1]} is ${ageDays} days old` };
-  }
-  return { file, ageDays };
-}
+// Capture age (90-day bound, future-dated rejection) and refresh-list
+// membership are owned by `scripts/ci/check-html-fixture-age.ts`
+// (`npm run check:html-fixture-age`, scheduled in
+// .github/workflows/weekly-validation.yml) and covered by
+// `scripts/__tests__/check-html-fixture-age.test.ts`, which reads the script's
+// exported refresh targets instead of its source text. This file only asserts
+// that the metadata a parser run needs is present and parsable, so its verdict
+// does not move with the calendar.
 
 // Adapters that intentionally don't carry an HTML fixture file. Each entry
 // must come with a reason — gated PDFs cannot be checked in, and small
@@ -102,7 +94,6 @@ describe("http-html adapter fixture coverage", () => {
   const manuallyTrimmedFixtureNames = htmlFixtureNames.filter((name) =>
     SOURCE_TRIMMED_RE.test(fixtureContents[name]));
   const currentFixtureNames = htmlFixtureNames.filter((name) => !archivedFixtureNames.includes(name));
-  const refreshableFixtureNames = currentFixtureNames.filter((name) => !manuallyTrimmedFixtureNames.includes(name));
 
   it.each(currentFixtureNames)("%s carries a valid captured-at header", (fixtureName) => {
     const capturedAt = fixtureContents[fixtureName].match(CAPTURED_AT_RE)?.[1];
@@ -125,38 +116,4 @@ describe("http-html adapter fixture coverage", () => {
     expect(reason.trim().length, `Archived fixture ${fixtureName} must state why it is frozen`).toBeGreaterThan(20);
   });
 
-  it("keeps the 90-day boundary, invalid/missing headers, and future timestamps explicit", () => {
-    const now = new Date("2026-04-01T12:00:00Z");
-    expect(inspectFixtureFreshness("exact.html", "<!-- captured-at: 2026-01-01T00:00:00Z -->", now)).toEqual({
-      file: "exact.html",
-      ageDays: 90,
-    });
-    expect(inspectFixtureFreshness("stale.html", "<!-- captured-at: 2025-12-31T12:00:00Z -->", now)).toMatchObject({
-      file: "stale.html",
-      ageDays: 91,
-      error: expect.stringContaining("stale.html"),
-    });
-    expect(inspectFixtureFreshness("invalid.html", "<!-- captured-at: 2026-99-99T99:99:99Z -->", now)).toEqual({
-      file: "invalid.html",
-      error: "invalid.html: invalid captured-at timestamp 2026-99-99T99:99:99Z",
-    });
-    expect(inspectFixtureFreshness("missing.html", "<html />", now)).toEqual({
-      file: "missing.html",
-      error: "missing.html: missing captured-at header",
-    });
-    expect(inspectFixtureFreshness("future.html", "<!-- captured-at: 2026-04-02T12:00:00Z -->", now)).toEqual({
-      file: "future.html",
-      ageDays: -1,
-    });
-  });
-
-  it("refresh script lists every refreshable fixture and no archived or deleted one", () => {
-    const script = readFileSync(REFRESH_SCRIPT, "utf8");
-    const refreshFixtures = new Set(Array.from(script.matchAll(/fixture:\s*"([^"]+\.html)"/g), (match) => match[1]));
-    const missing = refreshableFixtureNames.filter((fixtureName) => !refreshFixtures.has(fixtureName));
-    const orphaned = [...refreshFixtures].filter((fixtureName) => !refreshableFixtureNames.includes(fixtureName)).sort();
-
-    expect(missing).toEqual([]);
-    expect(orphaned).toEqual([]);
-  });
 });

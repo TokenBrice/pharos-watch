@@ -175,4 +175,17 @@ describe("selectYieldSource ordering", () => {
       candidate("unknown", { freshness: null }),
     ]), lendInput)?.sourceKey).toBe("unknown");
   });
+
+  it("ranks future-dated and nonfinite freshness below every valid reading", () => {
+    for (const ageSeconds of [-1, -172_800, Number.NaN, Number.POSITIVE_INFINITY, Number.NEGATIVE_INFINITY]) {
+      expect(selectYieldSource(makeRow([
+        candidate("unusable", { freshness: { capturedAt: 1, ageSeconds } }),
+        candidate("fresh", { freshness: { capturedAt: 1, ageSeconds: 60 } }),
+      ]), lendInput)?.sourceKey, `fresh vs ${ageSeconds}`).toBe("fresh");
+      expect(selectYieldSource(makeRow([
+        candidate("unusable", { freshness: { capturedAt: 1, ageSeconds } }),
+        candidate("stale", { freshness: { capturedAt: 1, ageSeconds: 100_000 } }),
+      ]), lendInput)?.sourceKey, `stale vs ${ageSeconds}`).toBe("stale");
+    }
+  });
 });

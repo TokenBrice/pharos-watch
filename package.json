@@ -148,6 +148,7 @@
     "check:safe-browsing": "node --import tsx scripts/ci/check-safe-browsing.ts",
     "install:whyte-fonts": "node --import tsx scripts/maintenance/install-whyte-fonts.ts",
     "check:feature-flag-inlining": "node --import tsx scripts/ci/check-feature-flag-inlining.ts",
+    "check:html-fixture-age": "node --import tsx scripts/ci/check-html-fixture-age.ts",
     "refresh:html-fixtures": "tsx scripts/maintenance/refresh-reserve-html-fixtures.ts",
     "refresh:assurance-reports": "tsx scripts/maintenance/refresh-independent-assurance-reports.ts",
     "refresh:markdown-fixtures": "tsx scripts/maintenance/refresh-markdown-export-fixtures.ts",

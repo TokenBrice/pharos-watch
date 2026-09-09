@@ -380,6 +380,8 @@ npm run refresh:html-fixtures
 
 The script fetches each source live, prepends a `<!-- captured-at: ISO -->` provenance header, and writes the file back under `worker/src/cron/reserve-adapters/__tests__/fixtures/`. Sources that respond with <200 bytes or an HTTP error are left untouched and a warning is printed; the script exits non-zero only when zero fixtures refreshed. Run locally before updating adapter parsers — do not run in CI.
 
+The capture bound is enforced by `scripts/ci/check-html-fixture-age.ts` (`npm run check:html-fixture-age`), which runs from the `html-fixture-age` job of `.github/workflows/weekly-validation.yml` — never from the PR gate, because the verdict moves with the calendar and would otherwise fail an unrelated branch on the day a fixture crossed 90 days. Every non-archived fixture must carry a parseable `captured-at` header at most 90 days old and not in the future; archived fixtures (`<!-- archived: reason -->`) skip the staleness bound but still reject future-dated metadata. The check reads the same inventory the refresh script writes via its exported `HTML_FIXTURE_REFRESH_TARGETS`, so a fixture the script stops owning is caught as a missing owner rather than silently aging.
+
 ### Markdown Export Fixtures (`scripts/__tests__/fixtures/markdown/`)
 
 `scripts/__tests__/generate-markdown-exports.test.ts` asserts these snapshots against the live renderers, so a covered source edit — a new weekly changelog entry, a methodology changelog record, or USDT registry metadata — fails that test on the next PR even when no renderer changed. `scripts/maintenance/refresh-markdown-export-fixtures.ts` owns which fixture is produced by which renderer.

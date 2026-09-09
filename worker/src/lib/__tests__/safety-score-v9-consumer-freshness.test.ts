@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   isSafetyScoreV9SnapshotFresh,
   SAFETY_SCORE_V9_CONSUMER_MAX_AGE_SEC,
+  SAFETY_SCORE_V9_CONSUMER_MAX_FUTURE_SKEW_SEC,
 } from "../safety-score-v9/consumer-freshness";
 import { SAFETY_SCORE_V9_PUBLICATION_REFRESH_INTERVAL_SEC } from "@shared/lib/cron-jobs";
 
@@ -51,6 +52,45 @@ describe("Safety Score V9 consumer freshness", () => {
       updatedAt: Number.NaN,
       publicationHealth: currentHealth,
     }, 1_800_000_000)).toBe(false);
+  });
+
+  it("rejects a nonfinite publication time under current health", () => {
+    const nowSec = 1_800_000_000;
+    expect(isSafetyScoreV9SnapshotFresh({
+      updatedAt: Number.POSITIVE_INFINITY,
+      publicationHealth: currentHealth,
+    }, nowSec)).toBe(false);
+    expect(isSafetyScoreV9SnapshotFresh({
+      updatedAt: Number.NEGATIVE_INFINITY,
+      publicationHealth: currentHealth,
+    }, nowSec)).toBe(false);
+    expect(isSafetyScoreV9SnapshotFresh({
+      updatedAt: nowSec,
+      publicationHealth: currentHealth,
+    }, Number.NaN)).toBe(false);
+  });
+
+  it("tolerates the clock-skew allowance but rejects a later publication time", () => {
+    const nowSec = 1_800_000_000;
+
+    expect(
+      isSafetyScoreV9SnapshotFresh(
+        {
+          updatedAt: nowSec + SAFETY_SCORE_V9_CONSUMER_MAX_FUTURE_SKEW_SEC,
+          publicationHealth: currentHealth,
+        },
+        nowSec,
+      ),
+    ).toBe(true);
+    expect(
+      isSafetyScoreV9SnapshotFresh(
+        {
+          updatedAt: nowSec + SAFETY_SCORE_V9_CONSUMER_MAX_FUTURE_SKEW_SEC + 1,
+          publicationHealth: currentHealth,
+        },
+        nowSec,
+      ),
+    ).toBe(false);
   });
 
   it("treats a held snapshot as unavailable even when its accepted time is fresh", () => {
