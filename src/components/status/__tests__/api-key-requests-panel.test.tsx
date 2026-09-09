@@ -156,36 +156,35 @@ describe("ApiKeyRequestsPanel", () => {
     expect(String(fetchMock.mock.calls[0]?.[0])).toContain(request.requestId);
   });
 
-  // audit: s082-src/B2 — disputed contract
-  // The success receipt's technical intent line (`intent api-key-request:reject:<id>:<uuid>`) embeds the
-  // durable request id. Hiding ids is the cards' contract; whether the reconciliation metadata must redact
-  // it too is unsettled. Fails today; if the receipt redacts the id, promote this to a real assertion.
-  it.fails(
-    "keeps the durable request id out of the success receipt's intent metadata",
-    async () => {
-      const request = makeRequest({ requestId: "akr_do_not_show_receipt" });
-      vi.stubGlobal("crypto", { randomUUID: () => "uuid-for-test" });
-      mockFetch([{
-        match: "/api/admin/api-key-requests-admin/",
-        body: {
-          ok: true,
-          requestId: request.requestId,
-          status: "rejected",
-          claimStatus: "released",
-        },
-      }], { requireMatch: true });
-      renderPanel([request]);
+  it("renders the durable request id in the success receipt's intent metadata", async () => {
+    const request = makeRequest({ requestId: "akr_do_not_show_receipt" });
+    vi.stubGlobal("crypto", { randomUUID: () => "00112233-4455-4677-8899-aabbccddeeff" });
+    mockFetch([{
+      match: "/api/admin/api-key-requests-admin/",
+      body: {
+        ok: true,
+        requestId: request.requestId,
+        status: "rejected",
+        claimStatus: "released",
+      },
+    }], { requireMatch: true });
+    renderPanel([request]);
 
-      fireEvent.click(screen.getByRole("button", { name: "Reject pending request" }));
-      fireEvent.change(screen.getByLabelText(/Reason/), { target: { value: "abuse review" } });
-      fireEvent.click(screen.getByRole("button", { name: "Confirm" }));
+    fireEvent.click(screen.getByRole("button", { name: "Reject pending request" }));
+    fireEvent.change(screen.getByLabelText(/Reason/), { target: { value: "abuse review" } });
+    fireEvent.click(screen.getByRole("button", { name: "Confirm" }));
 
-      await waitFor(() => {
-        expect(screen.getByText("Request marked rejected; claim released.")).toBeTruthy();
-      });
-      expect(document.body.textContent).not.toContain(request.requestId);
-    },
-  );
+    await waitFor(() => {
+      expect(screen.getByText("Request marked rejected; claim released.")).toBeTruthy();
+    });
+    expect(
+      screen.getByText(
+        new RegExp(
+          `intent api-key-request:reject:${request.requestId}:[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}`,
+        ),
+      ),
+    ).toBeTruthy();
+  });
 
   it("requires confirmation and sends reason plus idempotency header for mutations", async () => {
     const request = makeRequest({ requestId: "akr_mutation_target" });

@@ -22,7 +22,6 @@ describe("rejectIfNotSiteDataUiOrigin", () => {
     { name: "preview Origin on site host", headers: { Origin: "https://stablecoin-dashboard.pages.dev" }, allowed: true },
     { name: "malformed Origin without Referer", headers: { Origin: "not-a-url" }, allowed: false },
     { name: "literal-null Origin without Referer", headers: { Origin: "null" }, allowed: false },
-    // audit: C4 — characterize current fallback; stricter invalid-Origin policy is deferred.
     { name: "malformed Origin falls through to allowed Referer", headers: { Origin: "not-a-url", Referer: "https://pharos.watch/" }, allowed: true },
     { name: "malformed Origin with foreign Referer", headers: { Origin: "not-a-url", Referer: "https://evil.example.com/" }, allowed: false },
     { name: "literal-null Origin falls through to allowed Referer", headers: { Origin: "null", Referer: "https://pharos.watch/" }, allowed: true },

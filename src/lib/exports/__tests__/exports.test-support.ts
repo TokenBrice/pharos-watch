@@ -25,7 +25,7 @@ export function useDownloadHarness(objectUrl: string) {
   });
 
   afterEach(() => {
-    vi.restoreAllMocks();
+    clickSpy.mockRestore();
     vi.useRealTimers();
     vi.unstubAllGlobals();
     createObjectURL.mockClear();

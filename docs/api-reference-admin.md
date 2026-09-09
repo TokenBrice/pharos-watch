@@ -804,7 +804,8 @@ Commodity and CoinGecko-only total-supply fallback replays historical EVM `total
 | `allow-constant-price-fallback` | `"true"`                           | —       | Allow current-price fallback when historical non-USD prices are missing                   |
 | `startDay`                      | `integer \| ISO date (YYYY-MM-DD)` | —       | Lower bound for UTC daily rows written                                                    |
 | `endDay`                        | `integer \| ISO date (YYYY-MM-DD)` | —       | Upper bound for UTC daily rows written; future values clamp to the last completed UTC day |
-
+| `windowDays`                    | `integer`                          | `30`    | Initial daily-window size (`1`–`90`); explicit values override and persist through continuation cursors |
+| `cursor`                        | `string`                           | —       | Opaque continuation cursor; cursor-only requests resume the stored window size, while an explicit `windowDays` overrides and persists a new size |
 ### `POST /api/backfill-stability-index`
 
 Backfills historical stability index scores from stored depeg events and supply data.

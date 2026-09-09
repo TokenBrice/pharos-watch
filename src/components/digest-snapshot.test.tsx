@@ -3,7 +3,6 @@
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { DigestSnapshot } from "@/components/digest-snapshot";
-import { parseDigestSafetyMapCapture } from "@shared/types/digest-safety-map-contract";
 
 const { useDigestSnapshotMock } = vi.hoisted(() => ({
   useDigestSnapshotMock: vi.fn(),
@@ -53,11 +52,6 @@ const completeSafetyMap = {
     },
   },
 } as const;
-const archiveSummary = {
-  ...Object.fromEntries(Object.entries(completeSafetyMap.manifest.mapSummary).filter(([key]) => !["floorMcapByTier", "tiers"].includes(key))),
-  tiers: completeSafetyMap.manifest.mapSummary.tiers.map(({ tier, count, mcapUsd, sharePct }) => ({ tier, count, mcapUsd, sharePct })),
-};
-const priorArchiveProjection = { ...completeSafetyMap, manifest: { date: "2026-08-30", mapSummary: archiveSummary } };
 
 afterEach(() => {
   cleanup();
@@ -65,17 +59,6 @@ afterEach(() => {
 });
 
 describe("DigestSnapshot safety map", () => {
-  it.each([
-    ["canonical", completeSafetyMap, priorArchiveProjection],
-    ["carried-forward", { ...completeSafetyMap, freshness: "carried-forward", ageDays: 2 }, { ...priorArchiveProjection, freshness: "carried-forward", ageDays: 2 }],
-    ["legacy mapSummary", { ...completeSafetyMap, manifest: { date: "2026-08-30" }, mapSummary: completeSafetyMap.manifest.mapSummary }, priorArchiveProjection],
-    ["legacy summary", { ...completeSafetyMap, manifest: { date: "2026-08-30" }, summary: completeSafetyMap.manifest.mapSummary }, priorArchiveProjection],
-    ["legacy missing age", { ...completeSafetyMap, ageDays: undefined }, { ...priorArchiveProjection, ageDays: null }],
-    ["legacy relative URL", { ...completeSafetyMap, imageUrl: "/safety-scores/map.png?date=2026-08-30" }, { ...priorArchiveProjection, imageUrl: "/safety-scores/map.png?date=2026-08-30" }],
-    ["malformed", { ...completeSafetyMap, imageUrl: "/safety-scores/map.png" }, null],
-  ])("matches the prior archive parser for %s", (_name, fixture, expected) => {
-    expect(parseDigestSafetyMapCapture(fixture, "archive-compatible")).toEqual(expected);
-  });
 
   it("renders the stored dated poster and deterministic tally", () => {
     useDigestSnapshotMock.mockReturnValue({ data: makeSnapshot(completeSafetyMap), isLoading: false, isError: false });

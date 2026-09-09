@@ -3,6 +3,7 @@
 import { render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import type { StablecoinAiSummary, StablecoinMeta } from "@shared/types";
+import { makeStablecoinVariantRegistry } from "@shared/test-utils/stablecoin";
 
 vi.mock("next/link", async () => {
   const { createNextLinkMock } = await import("@/test-utils/frontend");
@@ -15,6 +16,9 @@ const mockGetSnapshotSafetyAssessment = vi.hoisted(() =>
 vi.mock("@/lib/safety-grade-snapshot", () => ({
   getSnapshotSafetyAssessment: mockGetSnapshotSafetyAssessment,
 }));
+
+const staticMetaRegistry = makeStablecoinVariantRegistry();
+vi.doMock("@shared/lib/stablecoins/registry", () => staticMetaRegistry);
 
 const { StablecoinDetailSeoContent, buildStablecoinFaqItems } = await import("../static-seo-content");
 const { FaqSection } = await import("@/components/faq-section");

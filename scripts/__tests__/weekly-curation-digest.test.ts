@@ -25,6 +25,7 @@ describe("weekly curation coverage", () => {
     expect(oneLiner.missing).toEqual([]);
     expect(archetype.missing).toEqual([]);
     expect(archetype.unknown).toEqual([]);
+    expect(archetype.segmentTotal).toBe(baseline.topByRank.length);
   });
 
   it("requires oneLiners for active and pre-launch coins only", () => {

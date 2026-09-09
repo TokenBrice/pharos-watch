@@ -70,7 +70,7 @@ describe("fetchUpstreamProxy", () => {
   });
 
   it("normalizes an upstream fetch error to a 502 response", async () => {
-    vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => undefined);
     vi.spyOn(globalThis, "fetch").mockRejectedValue(new TypeError("network down"));
 
     const result = await fetchUpstreamProxy(
@@ -79,6 +79,7 @@ describe("fetchUpstreamProxy", () => {
     );
 
     expect(result).toMatchObject({ ok: false, errorKind: "fetch-error" });
+    expect(warnSpy).toHaveBeenCalledOnce();
     if (result.ok) return;
     expect(result.response.status).toBe(502);
     await expect(result.response.json()).resolves.toEqual({ error: "upstream fetch failed" });
