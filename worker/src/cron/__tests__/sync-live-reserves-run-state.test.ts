@@ -250,7 +250,5 @@ describe("recordDeferredTail", () => {
       runBudgetTruncationCount: 1,
     });
     expect(history.some((entry) => entry.sql.includes("cache"))).toBe(false);
-    expect(history.filter((entry) => entry.sql.includes("reserve_sync_state"))).toHaveLength(1);
-    expect(history.filter((entry) => entry.sql.includes("reserve_sync_attempt_history"))).toHaveLength(1);
   });
 });

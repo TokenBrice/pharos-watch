@@ -9,6 +9,11 @@ export type DependencyDerivationBaseSource =
 
 export type DependencyDerivationSource = DependencyDerivationBaseSource | "variant";
 
+export interface DependencyRejectionReason {
+  sliceIndex: number;
+  reason: "no-match" | "expired" | "non-link";
+}
+
 export interface DerivedDependencySet {
   dependencies: DependencyWeight[];
   source: DependencyDerivationSource;
@@ -16,6 +21,7 @@ export interface DerivedDependencySet {
   dependencyFromLive: boolean;
   mappedLiveReserveWeight: number | null;
   fallbackReason: DependencyFallbackReason | null;
+  rejectionReasons: DependencyRejectionReason[];
 }
 
 export type DependencyFallbackReason =
@@ -106,7 +112,6 @@ export function deriveDependencies(
 
 function deriveCuratedDependencySet(
   meta: Pick<StablecoinMeta, "variantOf" | "reserves" | "dependencies"> & Partial<Pick<StablecoinMeta, "id">>,
-  mappedLiveReserveWeight: number | null = null,
 ): DerivedDependencySet {
   const reserveDependencies = meta.reserves?.length
     ? aggregateReserveDependencies(meta.reserves, meta.id)
@@ -125,29 +130,26 @@ function deriveCuratedDependencySet(
     source: resolveSource(baseSource, dependencies, meta.variantOf),
     baseSource,
     dependencyFromLive: false,
-    mappedLiveReserveWeight,
-    fallbackReason: mappedLiveReserveWeight == null
-      ? null
-      : baseSource === "curated-reserve"
-        ? "live-unmapped-to-curated-reserve"
-        : baseSource === "manual"
-          ? "live-unmapped-to-manual"
-          : null,
+    mappedLiveReserveWeight: null,
+    fallbackReason: null,
+    rejectionReasons: [],
   };
 }
 
 export function deriveEffectiveDependencySet(
   meta: Pick<StablecoinMeta, "variantOf" | "reserves" | "dependencies"> & Partial<Pick<StablecoinMeta, "id">>,
-  options?: { liveReserveSlices?: readonly ReserveSlice[] },
+  options?: { liveReserveSlices?: readonly ReserveSlice[]; rejectionReasons?: readonly DependencyRejectionReason[] },
 ): DerivedDependencySet {
   if (Array.isArray(options?.liveReserveSlices)) {
     const liveDependencies = aggregateReserveDependencies(options.liveReserveSlices, meta.id);
     const mappedLiveReserveWeight = sumDependencyWeight(liveDependencies);
+    const rejectionReasons = options.rejectionReasons
+      ? [...options.rejectionReasons]
+      : options.liveReserveSlices.flatMap((slice, sliceIndex) =>
+          !slice.coinId || slice.coinId === meta.id ? [{ sliceIndex, reason: "no-match" as const }] : [],
+        );
 
     if (liveDependencies.length === 0) {
-      const fallbackSet = deriveCuratedDependencySet(meta, mappedLiveReserveWeight);
-      if (fallbackSet.dependencies.length > 0) return fallbackSet;
-
       return {
         dependencies: [],
         source: "live-unmapped",
@@ -155,6 +157,7 @@ export function deriveEffectiveDependencySet(
         dependencyFromLive: true,
         mappedLiveReserveWeight,
         fallbackReason: null,
+        rejectionReasons,
       };
     }
 
@@ -168,6 +171,7 @@ export function deriveEffectiveDependencySet(
       dependencyFromLive: true,
       mappedLiveReserveWeight,
       fallbackReason: null,
+      rejectionReasons,
     };
   }
 

@@ -1,7 +1,14 @@
+import type * as EvmRpc from "../../../lib/evm-rpc";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { StablecoinMeta } from "@shared/types/core";
 import type { LiveReservesConfig } from "@shared/types/live-reserves";
 import { encodeAddress, encodeUint256 } from "../../../lib/evm-selectors";
+
+vi.mock("../../../lib/evm-rpc", async (importOriginal) => ({
+  ...await importOriginal<typeof EvmRpc>(),
+  fetchEvmBlockNumber: vi.fn(async () => 12345),
+  fetchEvmBlockTimestamp: vi.fn(async () => 1776154391),
+}));
 
 vi.mock("../helpers", async (importOriginal) => {
   const actual = await importOriginal<typeof import("../helpers")>();
@@ -174,6 +181,7 @@ describe("adaptCapVaultState", () => {
     const warning = result.warnings?.find((w) => w.code === "unknown-vault-asset");
     expect(warning).toBeDefined();
     expect(warning?.effect).toBe("degraded");
+    expect(result.metadata?.unknownExposurePct).toBe(100);
     // Unconfigured, unpriced, non-USD-like assets are valued at $1.00; surface
     // that the fallback may misstate reserve totals.
     const pegWarning = result.warnings?.find((w) => w.code === "cap-vault-unknown-asset-peg-assumed");
@@ -423,6 +431,10 @@ describe("fetchCapVaultReserves", () => {
     });
 
     const result = await fetchCapVaultReserves(coin, config, makeSignal());
+    expect(result.metadata?.observedBlock).toEqual({ chain: "ethereum", number: 12345, timestamp: 1776154391 });
+    for (const [request] of [...vi.mocked(fetchOnchainRawCall).mock.calls, ...vi.mocked(fetchOnchainUint256).mock.calls]) {
+      expect(request.ctx?.observedBlock).toEqual(result.metadata?.observedBlock);
+    }
     expect(result.metadata?.redemptionFeeBps).toBe(10);
     expect(result.metadata?.redemption).toMatchObject({ feeBps: 10 });
     expectValidAdapterOutput("cap-vault", result);

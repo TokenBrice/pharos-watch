@@ -4,18 +4,6 @@ import { PublicStatusHistoryResponseSchema, StatusHistoryResponseSchema, StatusR
 import { reserveComposition, statusResponse } from "./status.test-support";
 
 describe("StatusResponseSchema reserve composition contract", () => {
-  it("parses reserve sync cursor and history observability fields", () => {
-    const parsed = StatusResponseSchema.parse(statusResponse());
-
-    expect(parsed.reserveComposition).toMatchObject({
-      historyWriteGaps: [
-        expect.objectContaining({
-          stablecoinId: "usdc-circle",
-          attemptId: "attempt-1",
-        }),
-      ],
-    });
-  });
 
   it.each([
     ["crons", { "sync-stablecoins": {} }],

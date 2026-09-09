@@ -376,6 +376,14 @@ export function validateAdapterOutput(input: ValidationInput, options?: Validati
 
   const warnings: LiveReserveWarning[] = [];
   const now = options?.now ?? Math.floor(Date.now() / 1000);
+  const observedBlock = getMetadataObject(input.metadata, "observedBlock");
+  const blockTimestamp = getFiniteMetadataNumber(observedBlock ?? undefined, "timestamp");
+  if (blockTimestamp != null && now - blockTimestamp > 10 * 60) {
+    warnings.push(reserveInfoWarning(
+      "observed-block-lag",
+      `Observed block is ${now - blockTimestamp}s older than the reserve attempt`,
+    ));
+  }
   const sourceTimestamp = getFiniteMetadataNumber(input.metadata, "sourceTimestamp");
   const redemption = getMetadataObject(input.metadata, "redemption");
   const redemptionSourceTimestamp = getFiniteMetadataNumber(redemption ?? undefined, "sourceTimestamp");
@@ -457,15 +465,21 @@ export function validateAdapterOutput(input: ValidationInput, options?: Validati
   }
 
   const sum = input.slices.reduce((s, r) => s + r.pct, 0);
-  const deviation = Math.abs(sum - 100);
+  const finalDeviation = Math.abs(sum - 100);
+  const diagnostics = getMetadataObject(input.metadata, "diag");
+  const rawDeviation = getFiniteMetadataNumber(diagnostics ?? undefined, "rawSumDeviation") ?? 0;
+  const deviation = Math.max(finalDeviation, rawDeviation);
   const adapterLabel = describeAdapter(options?.adapter);
+  const sumDescription = rawDeviation > finalDeviation
+    ? `Upstream slice percentages deviate from 100% by ${rawDeviation.toFixed(2)} percentage points before normalization`
+    : `Slice percentages sum to ${sum.toFixed(1)}%`;
   if (deviation > PCT_SUM_ERROR_TOLERANCE) {
     return {
       valid: false,
       warnings: [
         reserveFatalWarning(
           "pct-sum-deviation",
-          `Slice percentages sum to ${sum.toFixed(1)}%${adapterLabel} (expected 100% ± ${PCT_SUM_ERROR_TOLERANCE}%)`,
+          `${sumDescription}${adapterLabel} (expected 100% ± ${PCT_SUM_ERROR_TOLERANCE}%)`,
         ),
       ],
     };
@@ -474,7 +488,7 @@ export function validateAdapterOutput(input: ValidationInput, options?: Validati
     warnings.push(
       reserveDegradedWarning(
         "pct-sum-deviation",
-        `Slice percentages sum to ${sum.toFixed(1)}%${adapterLabel} (expected 100% ± ${PCT_SUM_WARNING_TOLERANCE}%)`,
+        `${sumDescription}${adapterLabel} (expected 100% ± ${PCT_SUM_WARNING_TOLERANCE}%)`,
       ),
     );
   }

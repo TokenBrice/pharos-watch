@@ -542,27 +542,6 @@ function evaluateReserveOperationalDiagnostics(input: DataQualityRuleInput): Par
       ),
     );
   }
-  if (reserve.historyWriteGaps.length > 0) {
-    const examples = reserve.historyWriteGaps
-      .slice(0, 3)
-      .map((gap) => {
-        const missing = [gap.compositionHistoryMissing ? "composition" : null, gap.attemptHistoryMissing ? "attempt" : null]
-          .filter((entry): entry is string => entry != null)
-          .join("+");
-        return `${gap.stablecoinId}:${missing || "history"}`;
-      })
-      .join(", ");
-    causes.push(
-      makeCause(
-        "data-quality",
-        "reserve_sync_history_write_gap",
-        "warning",
-        `${reserve.historyWriteGaps.length} authoritative live reserve snapshot(s) are missing history rows` +
-          (examples ? ` (${examples}${reserve.historyWriteGaps.length > 3 ? ", ..." : ""}).` : "."),
-        { metric: "reserveHistoryWriteGaps", value: reserve.historyWriteGaps.length, threshold: 1 },
-      ),
-    );
-  }
   return ruleResult("healthy", causes);
 }
 

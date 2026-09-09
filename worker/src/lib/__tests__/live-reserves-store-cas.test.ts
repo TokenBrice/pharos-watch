@@ -3,6 +3,7 @@ import { createLatestSchemaSqlite } from "@shared/test-utils/latest-schema-sqlit
 import { createSqliteD1 } from "@shared/test-utils/sqlite-d1";
 import {
   beginReserveSyncAttempt,
+  didReserveSyncSuccessBecomeAuthoritative,
   pruneLiveReserveHistory,
 } from "../live-reserves/store";
 import { buildReserveSyncRecordDeferredStatement } from "../live-reserves/store-statements";
@@ -30,40 +31,21 @@ describe("live-reserves-store", () => {
         });
       };
 
-      await expect(finalize("attempt-authoritative", 1_000)).resolves.toEqual({ finalized: true, historyRecorded: true });
+      await expect(finalize("attempt-authoritative", 1_000)).resolves.toEqual({ finalized: true });
       for (const [attemptId, fetchedAt] of [["attempt-older", 900], ["attempt-equal", 1_000]] as const) {
-        await expect(finalize(attemptId, fetchedAt)).resolves.toEqual({ finalized: false, historyRecorded: false });
+        await expect(finalize(attemptId, fetchedAt)).resolves.toEqual({ finalized: false });
         expect(readComposition()).toEqual({ fetched_at: 1_000, attempt_id: "attempt-authoritative" });
       }
-      await expect(finalize("attempt-newer", 1_100)).resolves.toEqual({ finalized: true, historyRecorded: true });
+      await expect(finalize("attempt-newer", 1_100)).resolves.toEqual({ finalized: true });
       expect(readComposition()).toEqual({ fetched_at: 1_100, attempt_id: "attempt-newer" });
       sqlite.prepare("UPDATE reserve_composition SET attempt_id = NULL WHERE stablecoin_id = ?").run("iusd-infinifi");
-      await expect(finalize("attempt-equal-legacy", 1_100)).resolves.toEqual({ finalized: true, historyRecorded: true });
+      await expect(finalize("attempt-equal-legacy", 1_100)).resolves.toEqual({ finalized: true });
       expect(readComposition()).toEqual({ fetched_at: 1_100, attempt_id: "attempt-equal-legacy" });
     } finally {
       sqlite.close();
     }
   });
 
-  it("returns finalized=false and writes no history rows when the composition upsert no-ops", async () => {
-    const db = mockD1([
-      {
-        match: "INSERT INTO reserve_composition (",
-        rows: [],
-        runMeta: { changes: 0 },
-      },
-    ]);
-    const attemptId = "attempt-no-op";
-
-    const result = await finalizeReserveSuccess(db, attemptId);
-
-    expect(result.finalized).toBe(false);
-    expect(result.historyRecorded).toBe(false);
-    const history = db.getHistory().map((entry) => entry.sql);
-    expect(history.some((sql) => sql.includes("INSERT OR IGNORE INTO reserve_composition_history"))).toBe(false);
-    expect(history.some((sql) => sql.includes("INSERT OR IGNORE INTO reserve_sync_attempt_history"))).toBe(false);
-    expect(history.some((sql) => sql.includes("JOIN reserve_sync_state"))).toBe(true);
-  });
 
   it("publishes neither canonical row past the deadline and both rows inside it", async () => {
     const { createSqliteD1 } = await import("@shared/test-utils/sqlite-d1");
@@ -78,7 +60,7 @@ describe("live-reserves-store", () => {
         finalizeDeadlineMs: Date.now() - 60_000,
       });
 
-      expect(expiredResult).toEqual({ finalized: false, historyRecorded: false });
+      expect(expiredResult).toEqual({ finalized: false });
       expect(
         expiredSqlite.prepare("SELECT attempt_id FROM reserve_composition WHERE stablecoin_id = ?")
           .get("iusd-infinifi"),
@@ -109,7 +91,7 @@ describe("live-reserves-store", () => {
         finalizeDeadlineMs: Date.now() + 60_000,
       });
 
-      expect(timelyResult).toEqual({ finalized: true, historyRecorded: true });
+      expect(timelyResult).toEqual({ finalized: true });
       expect(
         timelySqlite.prepare(
           `SELECT c.fetched_at, c.attempt_id,
@@ -155,12 +137,6 @@ describe("live-reserves-store", () => {
     const result = await finalizeReserveSuccess(db, attemptId);
 
     expect(result.finalized).toBe(true);
-    expect(result.historyRecorded).toBe(true);
-    const history = db.getHistory();
-    const readback = history.find((entry) => entry.sql.includes("JOIN reserve_sync_state"));
-    expect(readback?.binds).toEqual(["iusd-infinifi", 1_000, attemptId]);
-    expect(history.some((entry) => entry.sql.includes("INSERT OR IGNORE INTO reserve_composition_history"))).toBe(true);
-    expect(history.some((entry) => entry.sql.includes("INSERT OR IGNORE INTO reserve_sync_attempt_history"))).toBe(true);
   });
 
   it("treats an ambiguous success finalization batch error as finalized when authoritative readback matches the attempt", async () => {
@@ -181,11 +157,6 @@ describe("live-reserves-store", () => {
     const result = await finalizeReserveSuccess(db, attemptId);
 
     expect(result.finalized).toBe(true);
-    expect(result.historyRecorded).toBe(true);
-    const history = db.getHistory().map((entry) => entry.sql);
-    expect(history.some((sql) => sql.includes("JOIN reserve_sync_state"))).toBe(true);
-    expect(history.some((sql) => sql.includes("INSERT OR IGNORE INTO reserve_composition_history"))).toBe(true);
-    expect(history.some((sql) => sql.includes("INSERT OR IGNORE INTO reserve_sync_attempt_history"))).toBe(true);
   });
 
   it("clears non-authoritative attempt fencing but guards an existing canonical success during deferral", async () => {
@@ -201,7 +172,7 @@ describe("live-reserves-store", () => {
       expect(sqlite.prepare("SELECT last_attempt_id, pending_attempt_id FROM reserve_sync_state").get())
         .toEqual({ last_attempt_id: null, pending_attempt_id: null });
       await beginReserveSyncAttempt(db, reserveSyncAttemptInput("canonical"));
-      await expect(finalizeReserveSuccess(db, "canonical")).resolves.toEqual({ finalized: true, historyRecorded: true });
+      await expect(finalizeReserveSuccess(db, "canonical")).resolves.toEqual({ finalized: true });
       const before = sqlite.prepare("SELECT * FROM reserve_sync_state").get();
       const composition = sqlite.prepare("SELECT * FROM reserve_composition").get();
       await defer();
@@ -212,23 +183,48 @@ describe("live-reserves-store", () => {
     }
   });
 
-  it("keeps authoritative success when non-authoritative history writes fail", async () => {
-    const db = mockD1([
-      {
-        match: "INSERT OR IGNORE INTO reserve_composition_history",
-        rows: [],
-        throwError: new Error("history unavailable"),
-      },
-    ]);
-    const attemptId = "attempt-history-failure";
+  it("rolls authority and both histories back when either history insert fails", async () => {
+    for (const table of ["reserve_composition_history", "reserve_sync_attempt_history"]) {
+      const { sqlite, db } = createLatestSchemaSqlite();
+      try {
+        await beginReserveSyncAttempt(db, reserveSyncAttemptInput("history-failure"));
+        sqlite.exec(`CREATE TRIGGER reject_history BEFORE INSERT ON ${table}
+          BEGIN SELECT RAISE(ABORT, 'history unavailable'); END`);
+        await expect(finalizeReserveSuccess(db, "history-failure")).rejects.toThrow("history unavailable");
+        expect(sqlite.prepare("SELECT * FROM reserve_composition").all()).toEqual([]);
+        expect(sqlite.prepare("SELECT * FROM reserve_composition_history").all()).toEqual([]);
+        expect(sqlite.prepare("SELECT * FROM reserve_sync_attempt_history").all()).toEqual([]);
+        expect(sqlite.prepare("SELECT pending_attempt_id, last_success_at FROM reserve_sync_state").get())
+          .toEqual({ pending_attempt_id: "history-failure", last_success_at: null });
+      } finally {
+        sqlite.close();
+      }
+    }
+  });
 
-    await beginReserveSyncAttempt(db, reserveSyncAttemptInput(attemptId));
-
-    const result = await finalizeReserveSuccess(db, attemptId);
-
-    expect(result.finalized).toBe(true);
-    expect(result.historyRecorded).toBe(false);
-    expect(result.historyError).toContain("history unavailable");
+  it("requires the complete authority invariant for ambiguous-write readback", async () => {
+    const { sqlite, db } = createLatestSchemaSqlite();
+    try {
+      await beginReserveSyncAttempt(db, reserveSyncAttemptInput("authoritative"));
+      await finalizeReserveSuccess(db, "authoritative");
+      const readback = () => didReserveSyncSuccessBecomeAuthoritative(db, "iusd-infinifi", 1000, "authoritative");
+      expect(await readback()).toBe(true);
+      for (const mutation of [
+        "UPDATE reserve_sync_state SET last_success_at = 999",
+        "UPDATE reserve_sync_state SET last_attempt_id = 'other'",
+        "UPDATE reserve_sync_state SET last_success_attempt_id = 'other'",
+        "UPDATE reserve_sync_state SET pending_attempt_id = 'other'",
+        "UPDATE reserve_composition SET attempt_id = 'other'",
+        "UPDATE reserve_composition SET fetched_at = 999",
+      ]) {
+        sqlite.exec("SAVEPOINT inconsistent");
+        sqlite.exec(mutation);
+        expect(await readback()).toBe(false);
+        sqlite.exec("ROLLBACK TO inconsistent; RELEASE inconsistent");
+      }
+    } finally {
+      sqlite.close();
+    }
   });
 
   it("preserves history rows referenced by the current attempt closure past the age cutoff", async () => {

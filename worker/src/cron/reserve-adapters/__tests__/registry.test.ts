@@ -6,7 +6,7 @@ import {
   LiveReservesConfigSchema,
   parseLiveReserveAdapterParams,
 } from "@shared/lib/live-reserve-adapters";
-import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
+import { ACTIVE_STABLECOINS, TRACKED_SOURCE_COINS } from "@shared/lib/stablecoins/registry";
 import { getReserveAdapter, LIVE_RESERVE_ADAPTER_FETCHERS } from "../index";
 
 const VALID_INPUT_KINDS = new Set(["http-json", "http-html", "indexer", "onchain-solana", "onchain-evm"]);
@@ -220,19 +220,49 @@ describe("adapter registry completeness", () => {
   it("parseLiveReserveAdapterParams accepts a structured adapter payload", () => {
     const parsed = parseLiveReserveAdapterParams("chainlink-nav", {
       navScope: "native-fund-share",
-      oracleAddress: "0x123",
-      tokenAddress: "0x456",
+      oracleAddress: "0x1f9840a85d5aF5bf1D1762F925BDADdC4201F984",
+      tokenAddress: "0x6B175474E89094C44Da98b954EedeAC495271d0F",
       assetLabel: "USDC",
       assetRisk: "low",
     });
 
     expect(parsed).toEqual({
       navScope: "native-fund-share",
-      oracleAddress: "0x123",
-      tokenAddress: "0x456",
+      oracleAddress: "0x1f9840a85d5aF5bf1D1762F925BDADdC4201F984",
+      tokenAddress: "0x6B175474E89094C44Da98b954EedeAC495271d0F",
       assetLabel: "USDC",
       assetRisk: "low",
     });
+  });
+
+  it("rejects an address that is not a 20-byte EVM address", () => {
+    expect(() =>
+      parseLiveReserveAdapterParams("chainlink-nav", {
+        navScope: "native-fund-share",
+        oracleAddress: "0x123",
+        tokenAddress: "0x6B175474E89094C44Da98b954EedeAC495271d0F",
+        assetLabel: "USDC",
+        assetRisk: "low",
+      }),
+    ).toThrow(/oracleAddress/);
+  });
+
+  it("validates suspended live-reserve configs that the registry strips before every consumer", () => {
+    const suspended = TRACKED_SOURCE_COINS.filter((coin) => coin.liveReservesConfig?.suspended);
+    expect(
+      suspended.length,
+      "no suspended liveReservesConfig found; keep this test pointed at the pre-strip source catalog",
+    ).toBeGreaterThan(0);
+
+    for (const coin of suspended) {
+      const parsed = LiveReservesConfigSchema.safeParse(coin.liveReservesConfig);
+      expect(
+        parsed.success,
+        `${coin.id} is suspended but its liveReservesConfig no longer parses: ${
+          parsed.success ? "" : JSON.stringify(parsed.error.issues[0])
+        }`,
+      ).toBe(true);
+    }
   });
 
   it("documents safe source-invariant flip candidates without relying on coin-specific parser params", () => {

@@ -135,6 +135,7 @@ export function adaptTetherTransparency(
     }),
     ...(warnings.length > 0 ? { warnings } : {}),
     metadata: {
+      diag: { rawSumDeviation: Math.abs(params.slices.reduce((sum, slice) => sum + slice.pct, 0) - 100) },
       ...verifiedFreshnessMetadata(sourceTimestamp),
       collateralizationRatio: totalAssets / totalLiabilities,
       ...(params.currencyIso === "usdt"

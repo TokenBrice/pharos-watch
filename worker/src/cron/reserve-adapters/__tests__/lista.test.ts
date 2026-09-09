@@ -20,8 +20,8 @@ const coin = { id: "lisusd-lista" } as unknown as StablecoinMeta;
 function wbnbBranch() {
   return {
     name: "WBNB",
-    holder: "0xAAA",
-    token: { chain: "bsc", address: "0xBBB", decimals: 18 },
+    holder: "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    token: { chain: "bsc", address: "0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb", decimals: 18 },
     risk: "high" as const,
   };
 }
@@ -50,8 +50,8 @@ describe("adaptListaReserves", () => {
         {
           branch: {
             name: "slisBNB (Lista BNB LST)",
-            holder: "0xCCC",
-            token: { chain: "bsc", address: "0xDDD", decimals: 18 },
+            holder: "0xcccccccccccccccccccccccccccccccccccccccc",
+            token: { chain: "bsc", address: "0xdddddddddddddddddddddddddddddddddddddddd", decimals: 18 },
             risk: "high",
           },
           balanceRaw: 5_000_000_000_000_000_000n, // 5 slisBNB
@@ -59,8 +59,8 @@ describe("adaptListaReserves", () => {
         {
           branch: {
             name: "USDT (via PSM)",
-            holder: "0xEEE",
-            token: { chain: "bsc", address: "0xFFF", decimals: 18 },
+            holder: "0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+            token: { chain: "bsc", address: "0xffffffffffffffffffffffffffffffffffffffff", decimals: 18 },
             risk: "low",
             coinId: "usdt-tether",
             priceUsd: 1,
@@ -140,8 +140,8 @@ describe("adaptListaReserves", () => {
         {
           branch: {
             name: "slisBNB",
-            holder: "0xCCC",
-            token: { chain: "bsc", address: "0xDDD", decimals: 18 },
+            holder: "0xcccccccccccccccccccccccccccccccccccccccc",
+            token: { chain: "bsc", address: "0xdddddddddddddddddddddddddddddddddddddddd", decimals: 18 },
             risk: "high",
           },
           balanceRaw: 1_000_000_000_000_000_000n,
@@ -161,8 +161,8 @@ describe("adaptListaReserves", () => {
         {
           branch: {
             name: "USDT (via PSM)",
-            holder: "0xAAA",
-            token: { chain: "bsc", address: "0xBBB", decimals: 18 },
+            holder: "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            token: { chain: "bsc", address: "0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb", decimals: 18 },
             risk: "low",
             priceUsd: 1,
           },
@@ -171,8 +171,8 @@ describe("adaptListaReserves", () => {
         {
           branch: {
             name: "WBNB",
-            holder: "0xCCC",
-            token: { chain: "bsc", address: "0xDDD", decimals: 18 },
+            holder: "0xcccccccccccccccccccccccccccccccccccccccc",
+            token: { chain: "bsc", address: "0xdddddddddddddddddddddddddddddddddddddddd", decimals: 18 },
             risk: "high",
           },
           balanceRaw: 10n * 10n ** 18n,
@@ -193,8 +193,8 @@ describe("adaptListaReserves", () => {
         {
           branch: {
             name: "USDT (via PSM)",
-            holder: "0xAAA",
-            token: { chain: "bsc", address: "0xBBB", decimals: 18 },
+            holder: "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            token: { chain: "bsc", address: "0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb", decimals: 18 },
             risk: "low",
             coinId: "usdt-tether",
             depType: "wrapper",
@@ -243,8 +243,8 @@ describe("fetchListaReserves", () => {
         wbnbBranch(),
           {
             name: "slisBNB",
-            holder: "0xCCC",
-            token: { chain: "bsc", address: "0xDDD", decimals: 18 },
+            holder: "0xcccccccccccccccccccccccccccccccccccccccc",
+            token: { chain: "bsc", address: "0xdddddddddddddddddddddddddddddddddddddddd", decimals: 18 },
             risk: "high",
           },
       ],

@@ -1,3 +1,5 @@
+import { getCirculatingRaw } from "@shared/lib/supply";
+import { hasUsableStablecoinsPayload, loadStablecoinsCache } from "../../lib/stablecoins-cache";
 import type { ReserveSlice, StablecoinMeta } from "@shared/types/core";
 import type { LiveReserveWarning, LiveReservesConfig } from "@shared/types/live-reserves";
 import { getCanonicalReserveAssetRisk } from "@shared/lib/reserve-asset-risk";
@@ -98,7 +100,7 @@ export function resolveBaseSymbol(market: FirmMarket): string {
   return sym;
 }
 
-export function adaptFirmMarkets(payload: FirmMarketsResponse): AdapterResult {
+export function adaptFirmMarkets(payload: FirmMarketsResponse, supplyUsd?: number): AdapterResult {
   const sourceTimestamp = parseTimestampLikeToUnixSeconds(payload.timestamp);
   const {
     bucketTotals,
@@ -123,8 +125,10 @@ export function adaptFirmMarkets(payload: FirmMarketsResponse): AdapterResult {
     trackedStableValues.set(symbol, (trackedStableValues.get(symbol) ?? 0) + value);
   }
   const trackedStableTotal = Array.from(trackedStableValues.values()).reduce((sum, value) => sum + value, 0);
+  const unattributedUsd = supplyUsd != null ? Math.max(0, supplyUsd - totalDebt) : 0;
 
   const slices = slicesFromValues([
+    { name: "Unattributed non-FiRM issuance", value: unattributedUsd, risk: "high" },
     ...Array.from(trackedStableValues, ([symbol, value]) => {
       const config = getTrackedStablecoinAsset(symbol)!;
       return {
@@ -178,7 +182,11 @@ export function adaptFirmMarkets(payload: FirmMarketsResponse): AdapterResult {
             "firm-markets-api",
             "FiRM markets payload did not expose a trustworthy source timestamp",
           )),
-      unknownExposurePct: totalDebt > 0 ? (unknownDebt / totalDebt) * 100 : 0,
+      totalReserveUsd: totalDebt,
+      ...(supplyUsd != null ? { supplyUsd } : {}),
+      unknownExposurePct: supplyUsd != null
+        ? (unknownDebt + unattributedUsd) / Math.max(totalDebt, supplyUsd) * 100
+        : 100,
     },
   };
 }
@@ -301,11 +309,21 @@ export async function fetchDolaInverseReserves(
     probeInversePsm(signal, ctx),
     probeInversePsmSellFeeBps(signal, ctx),
   ]);
-  const adapted = adaptFirmMarkets(payload);
+  const cached = ctx?.db ? await loadStablecoinsCache(ctx.db, { mode: "lenient", contract: "critical-fields" }) : null;
+  const supplyCoin = cached && hasUsableStablecoinsPayload(cached)
+    && cached.updatedAt != null && (ctx?.nowSec ?? Math.floor(Date.now() / 1000)) - cached.updatedAt <= 7200
+    ? cached.payload.peggedAssets.find((asset) => asset.id === "dola-inverse")
+    : undefined;
+  const circulatingUsd = supplyCoin ? getCirculatingRaw(supplyCoin) : 0;
+  const supplyUsd = Number.isFinite(circulatingUsd) && circulatingUsd > 0 ? circulatingUsd : undefined;
+  const adapted = adaptFirmMarkets(payload, supplyUsd);
   const warnings: LiveReserveWarning[] = listUnexpectedDolaAssets(payload).map((asset) => reserveDegradedWarning(
     "unknown-asset",
     `DOLA FiRM asset bucketed into other: ${asset}`,
   ));
+  if (supplyUsd == null) {
+    warnings.push(reserveDegradedWarning("dola-supply-unavailable", "Fresh circulating supply unavailable; non-FiRM exposure cannot be measured"));
+  }
   if (psm == null) {
     warnings.push(
       reserveInfoWarning(

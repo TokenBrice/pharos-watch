@@ -36,7 +36,6 @@ describe("adaptCircleTransparency", () => {
 
   it("normalizes current absolute-value USDC disclosures into percentages", () => {
     const result = adaptCircleTransparency(CIRCLE_HTML, "usdc");
-    expect(result.metadata?.valueMode).toBe("absolute");
     expect(result.metadata).toMatchObject({
       freshnessMode: "verified",
       sourceTimestamp: Date.UTC(2026, 7, 6) / 1000,
@@ -51,16 +50,16 @@ describe("adaptCircleTransparency", () => {
 
   it("normalizes current absolute-value EURC disclosures into percentages", () => {
     const result = adaptCircleTransparency(CIRCLE_HTML, "eurc");
-    expect(result.metadata?.valueMode).toBe("absolute");
     expect(result.slices).toEqual([
       { sourceKey: "circle:eurc:other-bank-deposits", name: "Other Bank Deposits", pct: 98.6, risk: "very-low" },
       { sourceKey: "circle:eurc:sifi-deposits", name: "Deposits at Systemically Important Institutions", pct: 1.4, risk: "very-low" },
     ]);
   });
 
-  it("prefers percentage mode when the payload already sums to roughly 100%", () => {
-    const result = adaptCircleTransparency(AMBIGUOUS_NEAR_PERCENT_HTML, "usdc");
-    expect(result.metadata?.valueMode).toBe("percentage");
+  it("reports upstream percentage drift separately from rounding repair", () => {
+    const result = adaptCircleTransparency(AMBIGUOUS_NEAR_PERCENT_HTML.replace('data-usdc-cash="11.35"', 'data-usdc-cash="10.55"'), "usdc");
+    expect(result.metadata?.diag).toMatchObject({ rawSumDeviation: expect.closeTo(0.8, 6) });
+    expect(result.slices.reduce((sum, slice) => sum + slice.pct, 0)).toBeCloseTo(100);
   });
 
   it("throws when no matching canvas found", () => {
@@ -137,7 +136,6 @@ describe("adaptCircleTransparency", () => {
 `;
     const result = adaptCircleTransparency(html, "usdc");
 
-    expect(result.metadata).toMatchObject({ valueMode: "percentage", sliceCount: 3, expectedSliceCount: 4 });
     expect(result.slices).toEqual([
       { sourceKey: "circle:usdc:treasuries-under-3m", name: "<3-Month U.S. Treasuries", pct: 70, risk: "very-low" },
       { sourceKey: "circle:usdc:sifi-deposits", name: "Deposits at Systemically Important Institutions", pct: 20, risk: "very-low" },

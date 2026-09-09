@@ -23,6 +23,7 @@ import {
   buildSafetyScoreV9BaselineExtension,
   type V9ExtensionRegistryMeta,
 } from "../safety-score-v9/extension";
+import { createReportCardsFixedInput } from "../report-cards-fixed-input";
 import {
   V9_FIXTURE_CLOCK_SEC as AS_OF_SEC,
   V9_FIXTURE_OBSERVED_AT_SEC as OBSERVED_AT_SEC,
@@ -254,7 +255,17 @@ describe("Safety Score v9 exact base fact-set adapter — dependencies, roles an
   });
 
   it("marks mutual serial claims as a dependency cycle", () => {
-    const fixed = exactTwoAssetFixedInput({ omitAlphaReserve: true });
+    const {
+      schemaVersion: _schemaVersion,
+      dexPayloadFingerprint: _dexPayloadFingerprint,
+      redemptionPayloadFingerprint: _redemptionPayloadFingerprint,
+      registryFingerprint: _registryFingerprint,
+      inputMethodologyVersions: _inputMethodologyVersions,
+      baseInputGenerationId: _baseInputGenerationId,
+      ...draft
+    } = exactTwoAssetFixedInput({ omitAlphaReserve: true });
+    // Both manual serial claims require absent, not explicitly unmapped, live composition.
+    const fixed = createReportCardsFixedInput({ ...draft, liveReserveMap: {} });
     const dependencyReview = (upstreamAssetId: string) => ({
       reviewedAt: "1970-01-01",
       reviewer: "Fixture reviewer",

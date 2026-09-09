@@ -357,21 +357,16 @@ export async function fetchReservoirReserves(
   const warnings: LiveReserveWarning[] =
     adapted.unknownAssets.length > 0
       ? [
-          buildUnknownExposureWarning({
-            code: "unknown-position",
-            message: `Unmapped reserve positions: ${adapted.unknownAssets.join(", ")}`,
-            unknownExposurePct: adapted.unknownExposurePct,
-          }),
+          buildUnknownExposureWarning({ adapterKey: "reservoir", code: "unknown-position",
+          message: `Unmapped reserve positions: ${adapted.unknownAssets.join(", ")}`,
+          unknownExposurePct: adapted.unknownExposurePct, }),
         ]
       : [];
   if (adapted.sourceTotalGapPct > SOURCE_TOTAL_RECONCILIATION_THRESHOLD_PCT) {
     warnings.push(
-      buildUnknownExposureWarning({
-        code: "source-total-gap",
-        message: "Reservoir totalAssets exceeds disclosed asset rows",
-        unknownExposurePct: adapted.sourceTotalGapPct,
-        thresholdPct: SOURCE_TOTAL_RECONCILIATION_THRESHOLD_PCT,
-      }),
+      buildUnknownExposureWarning({ adapterKey: "reservoir", code: "source-total-gap",
+      message: "Reservoir totalAssets exceeds disclosed asset rows",
+      unknownExposurePct: adapted.sourceTotalGapPct,  }),
     );
   }
   if (

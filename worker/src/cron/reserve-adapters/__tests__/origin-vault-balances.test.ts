@@ -1,7 +1,14 @@
+import type * as EvmRpc from "../../../lib/evm-rpc";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import ousd from "@shared/data/stablecoins/coins/ousd-origin-protocol.json";
 import type { StablecoinMeta } from "@shared/types/core";
 import type { LiveReservesConfig } from "@shared/types/live-reserves";
+
+vi.mock("../../../lib/evm-rpc", async (importOriginal) => ({
+  ...await importOriginal<typeof EvmRpc>(),
+  fetchEvmBlockNumber: vi.fn(async () => 12345),
+  fetchEvmBlockTimestamp: vi.fn(async () => 1776154391),
+}));
 
 vi.mock("../helpers", async (importOriginal) => {
   const actual = await importOriginal<typeof import("../helpers")>();
@@ -36,6 +43,10 @@ describe("fetchOriginVaultBalancesReserves", () => {
       .mockResolvedValueOnce(5_000_000n * 10n ** 18n);
 
     const result = await fetchReserves();
+    expect(result.metadata?.observedBlock).toEqual({ chain: "ethereum", number: 12345, timestamp: 1776154391 });
+    for (const [request] of vi.mocked(fetchOnchainUint256).mock.calls) {
+      expect(request.ctx?.observedBlock).toEqual(result.metadata?.observedBlock);
+    }
 
     expect(result.slices).toEqual([
       {

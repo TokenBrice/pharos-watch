@@ -8,7 +8,7 @@ import type {
   LiveReservesConfig,
 } from "@shared/types/live-reserves";
 import { decodeAbiParameters } from "viem/utils";
-import { rethrowIfAborted, throwIfAborted } from "../../lib/abort";
+import { rethrowIfAborted } from "../../lib/abort";
 import { DECIMALS_SELECTOR, TOTAL_SUPPLY_SELECTOR, encodeAddressCallData, encodeUint256 } from "../../lib/evm-selectors";
 import type { AdapterContext, AdapterResult } from "./types";
 import {
@@ -17,7 +17,7 @@ import {
   decimalNumberFromBigInt,
   fetchJsonWithRetry,
   isHttpJsonInput,
-  makeOnchainCallers,
+  fetchOnchainMulticall3,
   notApplicableFreshnessMetadata,
   parsePositiveNumericLike,
   requireJsonInputFromConfig,
@@ -28,9 +28,10 @@ import {
   slicesFromValues,
   unverifiedFreshnessMetadata,
 } from "./helpers";
-import { decodeAddressWord, decodeBoolWord } from "./abi-decode";
+import { decodeAddressWord, decodeBoolWord, decodeUint256Word } from "./abi-decode";
 import { normalizeEvmAddress } from "./evm";
 import { validateDecimals } from "./slice-math";
+import { pinnedBlockPlan } from "./evm-observation-plan";
 
 interface ReserveProtocolDtfBasketEntry {
   address?: string;
@@ -208,41 +209,40 @@ interface ReserveProtocolDtfOutputLeg {
   assetId: string;
 }
 
-async function readOutputLegValueUsd(
-  leg: ReserveProtocolDtfOutputLeg,
-  onchain: ReturnType<typeof makeOnchainCallers>,
-): Promise<number | null> {
-  if (!COMET_EXCHANGE_RATE_WRAPPERS.has(leg.address.toLowerCase())) {
-    const convertedAssets = await onchain.uint256(
-      leg.address,
-      `${CONVERT_TO_ASSETS_SELECTOR}${encodeUint256(leg.quantity)}`,
-    );
-    if (convertedAssets == null) return null;
-    const rawUnderlying = await onchain.raw(leg.address, ERC4626_ASSET_SELECTOR);
-    const underlying = parseAddressResult(rawUnderlying, `asset() for ${leg.address}`);
-    const underlyingDecimals = decodeDecimals(
-      await onchain.uint256(underlying, DECIMALS_SELECTOR),
-      `underlying ${underlying}`,
-    );
-    const valueUsd = decimalNumberFromBigInt(convertedAssets, underlyingDecimals);
-    return Number.isFinite(valueUsd) && valueUsd > 0 ? valueUsd : null;
-  }
+type DtfReadWave = (calls: readonly (readonly [contract: string, data: string])[]) => Promise<Array<string | null>>;
 
-  const [exchangeRate, rawComet] = await Promise.all([
-    onchain.uint256(leg.address, EXCHANGE_RATE_SELECTOR),
-    onchain.raw(leg.address, UNDERLYING_COMET_SELECTOR),
-  ]);
-  if (exchangeRate == null || exchangeRate <= 0n) return null;
-  const comet = parseAddressResult(rawComet, `underlyingComet() for ${leg.address}`);
-  const rawUnderlying = await onchain.raw(comet, COMET_BASE_TOKEN_SELECTOR);
-  const underlying = parseAddressResult(rawUnderlying, `baseToken() for ${comet}`);
-  const underlyingDecimals = decodeDecimals(
-    await onchain.uint256(underlying, DECIMALS_SELECTOR),
-    `underlying ${underlying}`,
-  );
-  const underlyingRaw = (leg.quantity * exchangeRate) / 10n ** BigInt(leg.tokenDecimals);
-  const valueUsd = decimalNumberFromBigInt(underlyingRaw, underlyingDecimals);
-  return Number.isFinite(valueUsd) && valueUsd > 0 ? valueUsd : null;
+async function readOutputLegValuesUsd(
+  legs: readonly ReserveProtocolDtfOutputLeg[],
+  identities: readonly (string | null)[],
+  readWave: DtfReadWave,
+): Promise<Array<number | null>> {
+  const comets = legs.map((leg) => COMET_EXCHANGE_RATE_WRAPPERS.has(leg.address.toLowerCase()));
+  const addresses = identities.map((raw) => decodeAddressWord(raw));
+  const raw = await readWave(legs.flatMap((leg, index) => [
+    [leg.address, comets[index] ? EXCHANGE_RATE_SELECTOR : `${CONVERT_TO_ASSETS_SELECTOR}${encodeUint256(leg.quantity)}`] as const,
+    ...(addresses[index] ? [[addresses[index], comets[index] ? COMET_BASE_TOKEN_SELECTOR : DECIMALS_SELECTOR] as const] : []),
+  ]));
+  let cursor = 0;
+  const rates = legs.map((_, index) => {
+    const value = decodeUint256Word(raw[cursor++]);
+    const underlying = addresses[index] ? raw[cursor++] : null;
+    return { value, underlying };
+  });
+  const cometTokens = rates.map((rate, index) => comets[index] ? decodeAddressWord(rate.underlying) : null);
+  const decimalsRaw = await readWave(cometTokens.flatMap((address) => address ? [[address, DECIMALS_SELECTOR] as const] : []));
+  cursor = 0;
+  return legs.map((leg, index) => {
+    const rate = rates[index];
+    const decimals = comets[index]
+      ? (cometTokens[index] ? decodeUint256Word(decimalsRaw[cursor++]) : null)
+      : decodeUint256Word(rate.underlying);
+    if (rate.value == null || decimals == null) return null;
+    const underlyingRaw = comets[index]
+      ? leg.quantity * rate.value / 10n ** BigInt(leg.tokenDecimals)
+      : rate.value;
+    const value = decimalNumberFromBigInt(underlyingRaw, decodeDecimals(decimals, leg.address));
+    return Number.isFinite(value) && value > 0 ? value : null;
+  });
 }
 
 async function buildRedemptionOutputValuation(args: {
@@ -251,7 +251,7 @@ async function buildRedemptionOutputValuation(args: {
   rTokenDecimals: number;
   totalSupply: bigint;
   legs: readonly ReserveProtocolDtfOutputLeg[];
-  onchain: ReturnType<typeof makeOnchainCallers>;
+  values: readonly (number | null)[];
   signal: AbortSignal;
   observedAt: number;
 }): Promise<LiveReserveRedemptionOutputValuation | null> {
@@ -268,12 +268,7 @@ async function buildRedemptionOutputValuation(args: {
   }
 
   try {
-    const legValues = await Promise.all(
-      args.legs.map(async (leg) => ({
-        assetId: leg.assetId,
-        valueUsd: await readOutputLegValueUsd(leg, args.onchain),
-      })),
-    );
+    const legValues = args.legs.map((leg, index) => ({ assetId: leg.assetId, valueUsd: args.values[index] ?? null }));
     if (legValues.some((leg) => leg.valueUsd == null)) return null;
 
     const valueByAssetId = new Map<string, number>();
@@ -362,6 +357,7 @@ export function adaptReserveProtocolDtfRows(
   if (unknownExposurePct > 0) {
     warnings.push(
       buildUnknownExposureWarning({
+        adapterKey: "reserve-protocol-dtf",
         code: "reserve-protocol-dtf-unknown-component",
         message: "Unmapped Reserve Protocol DTF basket components",
         unknownExposurePct,
@@ -388,6 +384,7 @@ export function adaptReserveProtocolDtfRows(
     warnings,
     metadata: {
       ...freshness,
+      diag: { rawSumDeviation: Math.abs(totalWeight - 100) },
       unknownExposurePct,
       marketPriceUsd: parsePositiveNumericLike(dtf.price) ?? undefined,
       marketCapUsd: parsePositiveNumericLike(dtf.marketCap) ?? undefined,
@@ -437,19 +434,31 @@ async function fetchReserveProtocolDtfOnchainReserves(
   const rTokenAddress = rTokenContract.address;
   const rTokenDecimals = validateDecimals(rTokenContract.decimals, `reserve-protocol-dtf ${coin.id} RToken decimals`);
 
-  const onchain = makeOnchainCallers(input, {
-    signal,
-    ctx,
-    rpcUrl: params.rpcUrl,
-    fallbackRpcUrl: params.fallbackRpcUrl,
-    timeoutMs: 12_000,
-  });
-  const rawMain = await onchain.raw(rTokenAddress, MAIN_SELECTOR);
+  const plan = await pinnedBlockPlan({ chain: input.chain, signal, ctx, rpcUrl: params.rpcUrl, fallbackRpcUrl: params.fallbackRpcUrl, timeoutMs: 12_000 });
+  ctx = plan.ctx;
+  const readWave: DtfReadWave = async (calls) => {
+    if (calls.length === 0) return [];
+    const results = await fetchOnchainMulticall3({
+      calls: calls.map(([contract, data], index) => ({ label: String(index), contract, data, allowFailure: true })),
+      chain: input.chain, signal, ctx, rpcUrl: params.rpcUrl, fallbackRpcUrl: params.fallbackRpcUrl, timeoutMs: 12_000,
+    });
+    return calls.map((_, index) => {
+      const result = results?.[index];
+      return result?.success ? result.returnData : null;
+    });
+  };
+  const [rawMain, basketsNeeded, redemptionAvailable, totalSupply] = await readWave([
+    [rTokenAddress, MAIN_SELECTOR],
+    [rTokenAddress, BASKETS_NEEDED_SELECTOR],
+    [rTokenAddress, REDEMPTION_AVAILABLE_SELECTOR],
+    [rTokenAddress, TOTAL_SUPPLY_SELECTOR],
+  ]);
+  const rawBasketsNeeded = decodeUint256Word(basketsNeeded);
+  const rawRedemptionAvailable = decodeUint256Word(redemptionAvailable);
+  const rawTotalSupply = decodeUint256Word(totalSupply);
   const mainAddress = parseAddressResult(rawMain, "main()");
-  const [rawAssetRegistry, rawBasketHandler, rawBasketsNeeded] = await Promise.all([
-    onchain.raw(mainAddress, ASSET_REGISTRY_SELECTOR),
-    onchain.raw(mainAddress, BASKET_HANDLER_SELECTOR),
-    onchain.uint256(rTokenAddress, BASKETS_NEEDED_SELECTOR),
+  const [rawAssetRegistry, rawBasketHandler] = await readWave([
+    [mainAddress, ASSET_REGISTRY_SELECTOR], [mainAddress, BASKET_HANDLER_SELECTOR],
   ]);
   const assetRegistry = parseAddressResult(rawAssetRegistry, "assetRegistry()");
   const basketHandler = parseAddressResult(rawBasketHandler, "basketHandler()");
@@ -457,14 +466,12 @@ async function fetchReserveProtocolDtfOnchainReserves(
     throw new Error("reserve-protocol-dtf basketsNeeded() call failed");
   }
   const quoteAmount = rawBasketsNeeded;
-  const [rawFullyCollateralized, rawBasketStatus, rawQuote, rawRedemptionAvailable, rawTotalSupply] =
-    await Promise.all([
-      onchain.raw(basketHandler, FULLY_COLLATERALIZED_SELECTOR),
-      onchain.uint256(basketHandler, COLLATERAL_STATUS_SELECTOR),
-      onchain.raw(basketHandler, encodeQuoteCall(quoteAmount)),
-      onchain.uint256(rTokenAddress, REDEMPTION_AVAILABLE_SELECTOR),
-      onchain.uint256(rTokenAddress, TOTAL_SUPPLY_SELECTOR),
-    ]);
+  const [rawFullyCollateralized, basketStatus, rawQuote] = await readWave([
+    [basketHandler, FULLY_COLLATERALIZED_SELECTOR],
+    [basketHandler, COLLATERAL_STATUS_SELECTOR],
+    [basketHandler, encodeQuoteCall(quoteAmount)],
+  ]);
+  const rawBasketStatus = decodeUint256Word(basketStatus);
   if (!rawQuote) {
     throw new Error("reserve-protocol-dtf quote() call failed");
   }
@@ -472,6 +479,12 @@ async function fetchReserveProtocolDtfOnchainReserves(
   if (quoteEntries.length === 0) {
     throw new Error(`reserve-protocol-dtf quote returned no positive basket quantities for ${coin.id}`);
   }
+  const configuredOutputs = REDEMPTION_BACKSTOP_CONFIGS[coin.id]?.outputAssets;
+  const liveOutputs = new Set(quoteEntries.map((entry) => descriptorByAddress.get(entry.address.toLowerCase())?.coinId));
+  const valueOutputs = rawRedemptionAvailable != null && rawTotalSupply != null && rawTotalSupply > 0n &&
+    configuredOutputs != null && configuredOutputs.length >= 2 && liveOutputs.size === configuredOutputs.length &&
+    configuredOutputs.every((assetId) => liveOutputs.has(assetId));
+  const componentStride = valueOutputs ? 3 : 2;
 
   const warnings: LiveReserveWarning[] = [];
   const values: Array<{
@@ -487,34 +500,49 @@ async function fetchReserveProtocolDtfOnchainReserves(
   const componentMetadata: Array<Record<string, unknown>> = [];
   const outputLegs: ReserveProtocolDtfOutputLeg[] = [];
 
-  const resolvedComponents = await Promise.all(
-    quoteEntries.map(async (entry) => {
-      throwIfAborted(signal);
-      const [rawDecimals, rawAsset] = await Promise.all([
-        onchain.uint256(entry.address, DECIMALS_SELECTOR),
-        onchain.raw(assetRegistry, encodeAddressCallData(TO_ASSET_SELECTOR, entry.address)),
-      ]);
-      return {
-        entry,
-        tokenDecimals: decodeDecimals(rawDecimals, entry.address),
-        assetAddress: parseAddressResult(rawAsset, `toAsset(${entry.address})`),
-      };
-    }),
-  );
-  const pricedComponents = await Promise.all(
-    resolvedComponents.map(async (component) => {
-      throwIfAborted(signal);
-      const [rawPrice, rawStatus] = await Promise.all([
-        onchain.raw(component.assetAddress, PRICE_SELECTOR),
-        onchain.uint256(component.assetAddress, COLLATERAL_STATUS_SELECTOR),
-      ]);
-      return {
-        ...component,
-        price: decodePriceResult(rawPrice, component.entry.address),
-        rawStatus,
-      };
-    }),
-  );
+  // Resolve wrapper identities alongside token/plugin discovery, then price
+  // plugins alongside wrapper conversion reads. Only Comet decimals need wave 6.
+  const componentReads = await readWave(quoteEntries.flatMap((entry) => [
+    [entry.address, DECIMALS_SELECTOR] as const,
+    [assetRegistry, encodeAddressCallData(TO_ASSET_SELECTOR, entry.address)] as const,
+    ...(valueOutputs ? [[entry.address, COMET_EXCHANGE_RATE_WRAPPERS.has(entry.address.toLowerCase()) ? UNDERLYING_COMET_SELECTOR : ERC4626_ASSET_SELECTOR] as const] : []),
+  ]));
+  const resolvedComponents = quoteEntries.map((entry, index) => ({
+    entry,
+    tokenDecimals: decodeDecimals(decodeUint256Word(componentReads[index * componentStride]), entry.address),
+    assetAddress: parseAddressResult(componentReads[index * componentStride + 1], `toAsset(${entry.address})`),
+  }));
+  const valuationLegs = valueOutputs ? resolvedComponents.map(({ entry, tokenDecimals }) => ({
+    ...entry, tokenDecimals, assetId: descriptorByAddress.get(entry.address.toLowerCase())!.coinId!,
+  })) : [];
+  let priceReads: Array<string | null> = [];
+  let outputValues: Array<number | null> = [];
+  let pricesRead = false;
+  try {
+    outputValues = await readOutputLegValuesUsd(
+      valuationLegs,
+      valuationLegs.map((_, index) => componentReads[index * componentStride + 2]),
+      async (calls) => {
+        if (pricesRead) return readWave(calls);
+        const priceCalls = resolvedComponents.flatMap((component) => [
+          [component.assetAddress, PRICE_SELECTOR] as const,
+          [component.assetAddress, COLLATERAL_STATUS_SELECTOR] as const,
+        ]);
+        const results = await readWave([...priceCalls, ...calls]);
+        priceReads = results.slice(0, priceCalls.length);
+        pricesRead = true;
+        return results.slice(priceCalls.length);
+      },
+    );
+  } catch (error) {
+    rethrowIfAborted(error, signal);
+    // Wrapper valuation is optional; plugin prices remain required below.
+  }
+  const pricedComponents = resolvedComponents.map((component, index) => ({
+    ...component,
+    price: decodePriceResult(priceReads[index * 2] ?? null, component.entry.address),
+    rawStatus: decodeUint256Word(priceReads[index * 2 + 1]),
+  }));
 
   for (const { entry, tokenDecimals, assetAddress, price, rawStatus } of pricedComponents) {
     const value = decimalNumberFromBigInt(entry.quantity * price.mid, tokenDecimals + PRICE_DECIMALS);
@@ -582,6 +610,7 @@ async function fetchReserveProtocolDtfOnchainReserves(
     warnings.push(
       buildUnknownExposureWarning({
         code: "reserve-protocol-dtf-unknown-component",
+        adapterKey: "reserve-protocol-dtf",
         message: "Unmapped Reserve Protocol DTF basket components",
         unknownExposurePct,
       }),
@@ -613,8 +642,8 @@ async function fetchReserveProtocolDtfOnchainReserves(
       rTokenAddress,
       rTokenDecimals,
       totalSupply: rawTotalSupply,
+      values: outputValues,
       legs: outputLegs,
-      onchain,
       signal,
       observedAt: Math.floor(ctx?.nowSec ?? Date.now() / 1_000),
     });
@@ -625,6 +654,7 @@ async function fetchReserveProtocolDtfOnchainReserves(
     slices: slicesFromValues(values),
     ...(warnings.length > 0 ? { warnings } : {}),
     metadata: {
+      observedBlock: plan.observedBlock,
       ...notApplicableFreshnessMetadata({
         proofKind: "reserve-protocol-dtf-direct-onchain",
         rTokenAddress,

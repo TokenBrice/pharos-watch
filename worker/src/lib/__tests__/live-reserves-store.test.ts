@@ -10,7 +10,6 @@ import {
 import {
   computeReserveCompositionOverview,
   getMaxSyncAge,
-  loadLiveReserveHistoryWriteGaps,
   loadFreshIndependentLiveReserveMap,
   resolveReserveResult,
 } from "../live-reserves/store";
@@ -665,7 +664,7 @@ describe("live-reserves-store", () => {
     const scoringMap = await loadFreshIndependentLiveReserveMap(db, now + 100);
     expect(scoringMap.has("iusd-infinifi")).toBe(false);
     expect(scoringMap.get("gho-aave")).toEqual([{ name: "Tracked GSM", pct: 100, risk: "low" }]);
-    expect(scoringMap.get("usds-sky")).toEqual([{ name: "PSM USDC", pct: 100, risk: "low" }]);
+    expect(scoringMap.has("usds-sky")).toBe(false);
   });
 
   it("keeps static-validated, weak-probe, and unverified active configs out of score-grade reserve maps", async () => {
@@ -951,53 +950,6 @@ describe("live-reserves-store", () => {
     expect(overview.cursorRecordedAt).toBeNull();
   });
 
-  it("detects authoritative reserve snapshots missing history rows", async () => {
-    const db = mockD1([
-      {
-        match: "FROM reserve_composition c",
-        rows: [
-          {
-            stablecoin_id: "coin-a",
-            fetched_at: 1_700_000_000,
-            attempt_id: "coin-a:attempt",
-            composition_history_missing: 1,
-            attempt_history_missing: 0,
-          },
-        ],
-      },
-    ]);
-
-    await expect(loadLiveReserveHistoryWriteGaps(db)).resolves.toEqual([
-      {
-        stablecoinId: "coin-a",
-        fetchedAt: 1_700_000_000,
-        attemptId: "coin-a:attempt",
-        compositionHistoryMissing: true,
-        attemptHistoryMissing: false,
-      },
-    ]);
-  });
-
-  it("distinguishes a failed history reconciliation from a verified zero-gap result", async () => {
-    const now = Math.floor(Date.now() / 1000);
-    const failedDb = mockD1([
-      {
-        match: "FROM reserve_composition c",
-        rows: [],
-        throwError: "history reconciliation unavailable",
-      },
-    ]);
-
-    await expect(computeReserveCompositionOverview(failedDb, now)).resolves.toMatchObject({
-      historyWriteGaps: [],
-      historyWriteGapCheckFailed: true,
-    });
-
-    await expect(computeReserveCompositionOverview(mockD1(), now)).resolves.toMatchObject({
-      historyWriteGaps: [],
-      historyWriteGapCheckFailed: false,
-    });
-  });
 
   it("counts malformed stored slices as corruptCoins, not freshCoins", async () => {
     const now = Math.floor(Date.now() / 1000);

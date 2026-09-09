@@ -483,7 +483,7 @@ export function readRedemptionBackstopLiveMetadata(
   const adapterKey = trackedMeta?.liveReservesConfig?.adapter ?? null;
   const adapterDefinition = adapterKey ? getLiveReserveAdapterDefinition(adapterKey) : null;
   const isFresh = updatedAt != null && now - updatedAt <= LIVE_RESERVE_FRESHNESS_SEC;
-  const hasScoringEligibleFreshness = hasScoringEligibleLiveReserveFreshness(metadata);
+  const hasScoringEligibleFreshness = hasScoringEligibleLiveReserveFreshness(metadata, now);
   const canUseDegradedSyncCapacity = canUseCapacityDespiteDegradedSync(stablecoinId, snapshotMetadata);
   const hasBlockingWarnings = hasBlockingRedemptionWarnings(
     stablecoinId,

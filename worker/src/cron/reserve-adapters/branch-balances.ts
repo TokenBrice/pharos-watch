@@ -63,7 +63,7 @@ function isUsdPeggedBranch(branch: BranchConfig): boolean {
 function findUnderlyingContract(
   branch: BranchConfig,
 ): { chain: string; address: string } | null {
-  if (!branch.coinId) return null;
+  if (!branch.coinId || branch.underlyingPrice1to1 !== true) return null;
   const meta = TRACKED_META_BY_ID.get(branch.coinId);
   if (!meta?.contracts) return null;
   const sameChain = meta.contracts.find((c) => c.chain === branch.token.chain);
@@ -120,6 +120,7 @@ async function fetchCachedTrackedBranchPrices(
     && balanceRaw > 0n
     && branch.priceUsd == null
     && branch.coinId != null
+    && branch.underlyingPrice1to1 === true
     && !priceMap.has(branch.name)
   );
   if (branchesNeedingCachedPrices.length === 0) return new Map();
@@ -216,6 +217,7 @@ export async function fetchBranchPriceMap(
     })),
     signal,
     ctx,
+    warnings,
   );
 
   // For branches the wrapper-address lookup didn't resolve, fall back to the
@@ -240,6 +242,7 @@ export async function fetchBranchPriceMap(
       })),
       signal,
       ctx,
+      warnings,
     );
     for (const [name, price] of underlyingPriceMap) {
       if (!wrapperPriceMap.has(name)) {
@@ -340,6 +343,7 @@ export function adaptBranchBalanceReserves(input: AdaptBranchBalanceInput): Adap
     ...(warnings.length > 0 ? { warnings } : {}),
     metadata: {
       branchCount: pricedBranches.length,
+      unknownExposurePct: 0,
       ...notApplicableFreshnessMetadata({
         proofKind: "onchain-branch-balances",
         ...details,

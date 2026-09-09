@@ -114,6 +114,7 @@ export interface LiveReservePhaseTimings {
   queue: number;
   adapter: number;
   d1CoinPersistence: number;
+  stages?: Record<"checkpoint" | "breakerRead" | "beginWrite" | "failureWrite" | "authoritativeWrite" | "progress", number>;
 }
 
 export type ReserveFailureCategory =
@@ -125,6 +126,9 @@ export type ReserveFailureCategory =
   | "parse-failure"
   | "validation"
   | "storage-write"
+  | "corroboration-mismatch"
+  | "schema-shape"
+  | "run-budget-exhausted"
   | "unknown";
 
 export function breakerKeyForConfig(config: LiveReserveConfig): string {
@@ -206,15 +210,18 @@ export function classifyFailure(reason: string, lastError: string | null): Reser
   if (reason === "unknown-adapter") return "adapter-config";
   if (reason === "circuit-open") return "circuit-open";
   if (reason === "storage-write-timeout" || reason === "success-finalize-rejected") return "storage-write";
+  if (reason === "storage-exception") return "storage-write";
+  if (reason === "run-budget-exhausted") return "run-budget-exhausted";
   if (reason === "validation-failed" || reason === "fatal-warning" || reason === "empty-slices") return "validation";
 
   const message = (lastError ?? "").toLowerCase();
+  if (message.includes("d1_error")) return "storage-write";
+  if (message.includes("run-budget-exhausted")) return "run-budget-exhausted";
+  if (message.includes("disagree") || message.includes("corroboration") || message.includes("does not match")) return "corroboration-mismatch";
   if (message.includes("adapter params invalid") || message.includes("adapter requires")) {
     return "adapter-config";
   }
-  if (reason === "adapter-exception" && message.includes("invalid reserve output")) {
-    return "validation";
-  }
+  if (message.includes("invalid") || message.includes("malformed") || message.includes("must be an array")) return "schema-shape";
   if (message.includes("layout-changed")) return "parser-drift";
   if (message.includes("parse-failed") || message.includes("json parse failed")) return "parse-failure";
   if (message.includes("d1 write timeout") || message.includes("sqlite") || message.includes("database")) return "storage-write";

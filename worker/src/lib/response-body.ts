@@ -158,6 +158,42 @@ export async function readResponseJsonWithinLimitWithSignal<TResult = unknown>(
   return value;
 }
 
+export async function readResponseBytesWithinLimitWithSignal(
+  response: Response,
+  maxBytes: number,
+  signal?: AbortSignal,
+): Promise<Uint8Array> {
+  if (!Number.isSafeInteger(maxBytes) || maxBytes < 0) {
+    throw new RangeError(`maxBytes must be a non-negative safe integer; received ${maxBytes}`);
+  }
+
+  const declaredBytes = declaredResponseLength(response);
+  if (declaredBytes != null && declaredBytes > maxBytes) {
+    await cancelResponseBodyQuietly(response);
+    throw new ResponseBodyTooLargeError(maxBytes, declaredBytes);
+  }
+  if (!response.body) {
+    const bytes = await readResponseBodyWithSignal(
+      response,
+      signal,
+      async () => new Uint8Array(await response.arrayBuffer()),
+    );
+    if (bytes.byteLength > maxBytes) {
+      throw new ResponseBodyTooLargeError(maxBytes, bytes.byteLength);
+    }
+    return bytes;
+  }
+
+  const { bytes } = await bufferReadableStream(response.body, {
+    maxBytes,
+    signal,
+    overflowMode: "throw",
+    abortReason: responseBodyAbortReason,
+    createOverflowError: (limit, observedBytes) => new ResponseBodyTooLargeError(limit, observedBytes),
+  });
+  return bytes;
+}
+
 async function readResponseBodyWithSignal<TResult>(
   response: Response,
   signal: AbortSignal | undefined,

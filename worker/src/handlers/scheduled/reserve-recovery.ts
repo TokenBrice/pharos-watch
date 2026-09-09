@@ -2,6 +2,7 @@ import { CRON_SCHEDULES } from "@shared/lib/cron-jobs";
 import {
   claimNextLiveReserveCheckpointRecovery,
   prepareEligibleLiveReserveCheckpointRecoveries,
+  retireSupersededLiveReserveCheckpoints,
 } from "../../lib/scheduled-recovery-checkpoint";
 import { createScheduledRuntimeContext, type ScheduledRuntimeContext } from "./context";
 import { runFourHourlyReserveSyncSlot } from "./hourly-live-reserves";
@@ -47,6 +48,7 @@ async function runReserveRecovery(runtime: ScheduledRuntimeContext, signal: Abor
     signal,
     reconcilerWorkerVersion: runtime.workerVersion ?? null,
   });
+  const retiredCheckpoints = await retireSupersededLiveReserveCheckpoints(runtime.db);
   const preparation = await prepareEligibleLiveReserveCheckpointRecoveries(runtime.db, {
     staleAfterSec: RECOVERY_STALE_AFTER_SEC,
     limit: 1,
@@ -57,12 +59,17 @@ async function runReserveRecovery(runtime: ScheduledRuntimeContext, signal: Abor
     leaseSec: RECOVERY_LEASE_SEC,
   });
   if (!checkpoint) {
+    const recoveryBlocked = preparation.inspection.incompatibleCheckpointCount > 0
+      && preparation.inspection.eligibleCheckpointCount === 0
+      && preparation.inspection.readyCheckpointCount === 0;
     return {
-      status: "ok" as const,
+      status: recoveryBlocked ? "degraded" as const : "ok" as const,
       itemCount: 0,
       metadata: JSON.stringify({
         disposition: "no-recovery-due",
         mode,
+        retiredCheckpoints,
+        ...(recoveryBlocked ? { statusCause: "reserve-recovery-zero-eligible-incompatible" } : {}),
         checkpointsClaimed: 0,
         sweep,
         preparation,
@@ -104,6 +111,7 @@ async function runReserveRecovery(runtime: ScheduledRuntimeContext, signal: Abor
       childDispositionsAtClaim: checkpoint.childDispositions,
       sweep,
       preparation,
+      retiredCheckpoints,
       summary,
     }),
   };

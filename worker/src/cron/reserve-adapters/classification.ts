@@ -1,5 +1,5 @@
 import type { ReserveSlice } from "@shared/types/core";
-import { computeUnknownExposurePct, slicesFromValues } from "./slice-math";
+import { assertFiniteNonNegativeReserveRows, computeUnknownExposurePct, slicesFromValues } from "./slice-math";
 
 interface BucketedExposureOptions<Item, Bucket extends string> {
   items: Item[];
@@ -50,6 +50,7 @@ export function accumulateBucketedExposure<Item, Bucket extends string>({
   unknownValue: number;
   unknownValuesByKey: Map<string, number>;
 } {
+  assertFiniteNonNegativeReserveRows(items, getValue, "bucketed exposure");
   const bucketTotals = new Map<Bucket, number>();
   const unknownValuesByKey = new Map<string, number>();
   let totalValue = 0;
@@ -85,6 +86,7 @@ export function classifyBucketedValues<Item, Bucket extends string>({
   unknownSliceName = "Unmapped reserve positions",
   unknownRisk = "high",
 }: ClassifyBucketedValuesOptions<Item, Bucket>): ClassifiedBucketedValuesResult<Bucket> {
+  assertFiniteNonNegativeReserveRows(items, getValue, "classified reserve values");
   const bucketTotals = new Map<Bucket, number>();
   const bucketNames = new Map<Bucket, string>();
   const unknownItems: string[] = [];

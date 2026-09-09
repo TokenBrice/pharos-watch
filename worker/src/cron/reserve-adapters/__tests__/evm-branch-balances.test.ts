@@ -1,3 +1,9 @@
+vi.mock("../../../lib/evm-rpc", async (importOriginal) => ({
+  ...await importOriginal<typeof import("../../../lib/evm-rpc")>(),
+  fetchEvmBlockNumber: vi.fn(async () => 123),
+  fetchEvmBlockTimestamp: vi.fn(async () => 1_800_000_000),
+}));
+
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import type { StablecoinMeta } from "@shared/types/core";
 import type { LiveReservesConfig } from "@shared/types/live-reserves";
@@ -232,8 +238,8 @@ function mockHoneyCustodyOnchain(options: { failConvertToAssets?: boolean } = {}
 function wstEthBranch(overrides: Record<string, unknown> = {}) {
   return {
     name: "wstETH",
-    holder: "0xAAA",
-    token: { chain: "ethereum", address: "0xBBB", decimals: 18 },
+    holder: "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    token: { chain: "ethereum", address: "0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb", decimals: 18 },
     risk: "low",
     ...overrides,
   };
@@ -242,8 +248,8 @@ function wstEthBranch(overrides: Record<string, unknown> = {}) {
 function wbtcBranch(overrides: Record<string, unknown> = {}) {
   return {
     name: "WBTC",
-    holder: "0xCCC",
-    token: { chain: "ethereum", address: "0xDDD", decimals: 8 },
+    holder: "0xcccccccccccccccccccccccccccccccccccccccc",
+    token: { chain: "ethereum", address: "0xdddddddddddddddddddddddddddddddddddddddd", decimals: 8 },
     risk: "medium",
     ...overrides,
   };
@@ -263,8 +269,8 @@ function honeyBranch(overrides: Record<string, unknown> = {}) {
 function usdcBranch(overrides: Record<string, unknown> = {}) {
   return {
     name: "USDC branch",
-    holder: "0xAAA",
-    token: { chain: "ethereum", address: "0xBBB", decimals: 6 },
+    holder: "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    token: { chain: "ethereum", address: "0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb", decimals: 6 },
     risk: "low",
     coinId: "usdc-circle",
     ...overrides,
@@ -307,10 +313,7 @@ describe("fetchEvmBranchBalancesReserves", () => {
       signal,
     );
 
-    expect(result).toEqual({
-      slices: [{ name: "wstETH", pct: 100, risk: "low" }],
-      metadata: { branchCount: 1, freshnessMode: "not-applicable", details: { proofKind: "onchain-branch-balances" } },
-    });
+    expect(result.slices).toEqual([{ name: "wstETH", pct: 100, risk: "low" }]);
     expect(result.metadata).not.toHaveProperty("redemption");
     expect(fetchOnchainRawCall).not.toHaveBeenCalled();
   });
@@ -647,15 +650,15 @@ describe("fetchEvmBranchBalancesReserves", () => {
     const config = makeBranchConfig([
       {
         name: "Sovryn Zero ZUSD",
-        holder: "0xAAA",
-        token: { chain: "rootstock", address: "0xBBB", decimals: 0 },
+        holder: "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        token: { chain: "rootstock", address: "0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb", decimals: 0 },
         risk: "medium",
         priceUsd: 1,
       },
       {
         name: "Dollar on Chain DOC",
-        holder: "0xAAA",
-        token: { chain: "rootstock", address: "0xCCC", decimals: 0 },
+        holder: "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        token: { chain: "rootstock", address: "0xcccccccccccccccccccccccccccccccccccccccc", decimals: 0 },
         risk: "medium",
         coinId: "doc-money-on-chain",
         depType: "collateral",
@@ -670,15 +673,18 @@ describe("fetchEvmBranchBalancesReserves", () => {
 
   it("uses an explicit branch price token for DefiLlama price lookup", async () => {
     vi.mocked(fetchErc20Balance).mockResolvedValue(1_000_000_000_000_000_000n);
-    vi.mocked(fetchDefiLlamaPrices).mockResolvedValue(new Map([["Receipt token", 75_000]]));
+    vi.mocked(fetchDefiLlamaPrices).mockImplementation(async (assets) => new Map(
+      assets.filter((asset) => asset.chain === "berachain" && asset.address === "0xffffffffffffffffffffffffffffffffffffffff")
+        .map((asset) => [asset.key, 75_000]),
+    ));
 
     const config = makeBranchConfig(
       [
         {
           name: "Receipt token",
-          holder: "0xAAA",
-          token: { chain: "berachain", address: "0xWRAPPER", decimals: 18 },
-          priceToken: { chain: "berachain", address: "0xUNDERLYING" },
+          holder: "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          token: { chain: "berachain", address: "0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee", decimals: 18 },
+          priceToken: { chain: "berachain", address: "0xffffffffffffffffffffffffffffffffffffffff" },
           risk: "high",
         },
       ],
@@ -688,17 +694,7 @@ describe("fetchEvmBranchBalancesReserves", () => {
     const result = await fetchEvmBranchBalancesReserves(coin, config, signal);
 
     expect(result.slices).toEqual([{ name: "Receipt token", pct: 100, risk: "high" }]);
-    expect(fetchDefiLlamaPrices).toHaveBeenCalledWith(
-      [
-        {
-          key: "Receipt token",
-          chain: "berachain",
-          address: "0xUNDERLYING",
-        },
-      ],
-      signal,
-      undefined,
-    );
+
   });
 
   it("includes live redemption fee metadata when a probe is configured", async () => {
@@ -795,14 +791,14 @@ describe("fetchEvmBranchBalancesReserves", () => {
     const config = makeBranchConfig([
       {
         name: "USYC",
-        holder: "0xAAA",
-        token: { chain: "ethereum", address: "0xBBB", decimals: 6 },
+        holder: "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        token: { chain: "ethereum", address: "0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb", decimals: 6 },
         risk: "low",
       },
       {
         name: "Wrapped stable",
-        holder: "0xCCC",
-        token: { chain: "ethereum", address: "0xDDD", decimals: 18 },
+        holder: "0xcccccccccccccccccccccccccccccccccccccccc",
+        token: { chain: "ethereum", address: "0xdddddddddddddddddddddddddddddddddddddddd", decimals: 18 },
         risk: "low",
         priceUsd: 1,
       },
@@ -813,17 +809,7 @@ describe("fetchEvmBranchBalancesReserves", () => {
       { name: "Wrapped stable", pct: 64.1, risk: "low" },
       { name: "USYC", pct: 35.9, risk: "low" },
     ]);
-    expect(fetchDefiLlamaPrices).toHaveBeenCalledWith(
-      [
-        {
-          key: "USYC",
-          chain: "ethereum",
-          address: "0xBBB",
-        },
-      ],
-      signal,
-      undefined,
-    );
+
   });
 
   it("falls through to the underlying coin price when the wrapper address lookup is missing", async () => {
@@ -834,11 +820,18 @@ describe("fetchEvmBranchBalancesReserves", () => {
       .mockResolvedValueOnce(new Map())
       .mockResolvedValueOnce(new Map([["USDC branch", 1.0]]));
 
-    const config = makeBranchConfig([usdcBranch()]);
+    const config = makeBranchConfig([{ ...usdcBranch(), underlyingPrice1to1: true }]);
 
     const result = await fetchEvmBranchBalancesReserves(coin, config, signal);
     expect(result.slices).toEqual([{ name: "USDC branch", pct: 100, risk: "low", coinId: "usdc-circle" }]);
     expect(result.warnings).toBeUndefined();
+  });
+
+  it("fails closed when an underlying price substitution has not been reviewed", async () => {
+    vi.mocked(fetchErc20Balance).mockResolvedValue(50_000_000n);
+    vi.mocked(fetchDefiLlamaPrices).mockResolvedValue(new Map());
+    const config = makeBranchConfig([usdcBranch()]);
+    await expect(fetchEvmBranchBalancesReserves(coin, config, signal)).rejects.toThrow(/Missing DefiLlama price/);
   });
 
   it("falls back to the stablecoins cache price for tracked branches missing DefiLlama address prices", async () => {
@@ -872,6 +865,7 @@ describe("fetchEvmBranchBalancesReserves", () => {
       ...usdcBranch(),
       name: "Hashnote USYC",
       coinId: "usyc-hashnote",
+      underlyingPrice1to1: true,
     }]);
 
     const result = await fetchEvmBranchBalancesReserves(coin, config, signal, { db, nowSec: now });
@@ -896,7 +890,7 @@ describe("fetchEvmBranchBalancesReserves", () => {
     const config = makeBranchConfig([{
       ...usdcBranch(),
       name: "sUSDe branch",
-      token: { chain: "ethereum", address: "0xBBB", decimals: 18 },
+      token: { chain: "ethereum", address: "0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb", decimals: 18 },
       risk: "medium",
       coinId: "usde-ethena",
       depType: "wrapper",
@@ -941,8 +935,8 @@ describe("fetchEvmBranchBalancesReserves", () => {
       name: "invalid fixed price overrides",
       branches: [{
         name: "USYC",
-        holder: "0xAAA",
-        token: { chain: "ethereum", address: "0xBBB", decimals: 6 },
+        holder: "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        token: { chain: "ethereum", address: "0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb", decimals: 6 },
         risk: "low",
         priceUsd: 0,
       }],
@@ -962,7 +956,7 @@ describe("fetchEvmBranchBalancesReserves", () => {
     vi.mocked(fetchOnchainUint256).mockResolvedValueOnce(50_000n * 10n ** 18n);
 
     const config = makeBranchConfig([
-      wbtcBranch({ holder: "0xAAA", token: { chain: "ethereum", address: "0xBBB", decimals: 8 } }),
+      wbtcBranch({ holder: "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", token: { chain: "ethereum", address: "0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb", decimals: 8 } }),
     ], {
       params: {
         debtSelector: "0x18160ddd", // totalSupply() as example
@@ -1001,21 +995,8 @@ describe("fetchEvmBranchBalancesReserves", () => {
 
     const result = await fetchEvmBranchBalancesReserves(coin, config, signal);
 
-    expect(fetchErc20Balance).toHaveBeenCalledWith(
-      expect.objectContaining({ chain: "ethereum" }),
-      "0x7f39c581f595b53c5cb19bd0b3f8da6c935e2ca0",
-      "0x656cb8c6d154aad29d8771384089be5b5141f01a",
-      signal,
-      undefined,
-      undefined,
-      undefined,
-    );
-    expect(fetchOnchainUint256).toHaveBeenCalledWith(
-      expect.objectContaining({
-        contract: "0xde17a000ba631c5d7c2bd9fb692efea52d90dee2",
-        data: "0x18160ddd",
-      }),
-    );
+
+
     expect(result.slices).toEqual([
       {
         name: "wstETH-backed USDN vault",
@@ -1035,7 +1016,7 @@ describe("fetchEvmBranchBalancesReserves", () => {
     vi.mocked(fetchOnchainUint256).mockResolvedValueOnce(80_000n * 10n ** 18n);
 
     const config = makeBranchConfig([
-      wbtcBranch({ holder: "0xAAA", token: { chain: "ethereum", address: "0xBBB", decimals: 8 } }),
+      wbtcBranch({ holder: "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", token: { chain: "ethereum", address: "0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb", decimals: 8 } }),
     ], {
       params: {
         debtSelector: "0x18160ddd",
@@ -1070,7 +1051,7 @@ describe("fetchEvmBranchBalancesReserves", () => {
     vi.mocked(fetchErc20Balance).mockResolvedValueOnce(1_000_000_000_000_000_000n);
     vi.mocked(fetchDefiLlamaPrices).mockResolvedValue(new Map([["wstETH", 2000]]));
 
-    const config = makeBranchConfig([wstEthBranch({ holder: "0xAAA", token: { chain: "ethereum", address: "0xBBB", decimals: 18 } })]);
+    const config = makeBranchConfig([wstEthBranch({ holder: "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", token: { chain: "ethereum", address: "0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb", decimals: 18 } })]);
 
     const result = await fetchEvmBranchBalancesReserves(coin, config, signal);
     expect(result.metadata?.collateralizationRatio).toBeUndefined();

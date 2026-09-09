@@ -1,3 +1,4 @@
+import { pinnedBlockPlan } from "./evm-observation-plan";
 import type { ReserveSlice, StablecoinMeta } from "@shared/types/core";
 import type { LiveReserveWarning, LiveReservesConfig } from "@shared/types/live-reserves";
 import { parseLiveReserveAdapterParams } from "@shared/lib/live-reserve-adapters";
@@ -585,6 +586,8 @@ export async function fetchGhoReserves(
   }
 
   const params = readParams(config);
+  const plan = await pinnedBlockPlan({ chain: input.chain, signal, ctx, ...params });
+  ctx = plan.ctx;
   const ghoToken = params.ghoTokenAddress ?? GHO_TOKEN;
   const onchain = makeOnchainCallers(input, {
     signal,
@@ -618,6 +621,7 @@ export async function fetchGhoReserves(
     trackedModuleReadIncomplete: trackedModules.length !== params.gsmModules.length,
     totalSupply,
   });
+  adapted.metadata = { ...adapted.metadata, observedBlock: plan.observedBlock };
 
   // Residual decomposition and unknownExposurePct are now computed inside
   // adaptGhoFacilitators. The standard material-unknown-exposure validator

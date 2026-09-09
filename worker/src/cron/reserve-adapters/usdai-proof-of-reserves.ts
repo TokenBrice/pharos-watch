@@ -296,11 +296,9 @@ export function adaptUsdAiProofOfReserves(
   });
 
   if (unknownShare > 0n) {
-    warnings.push(buildUnknownExposureWarning({
-      code: "unknown-reserve-type",
-      message: `Unmapped USD.AI reserve types: ${Array.from(unknownTypes).sort().join(", ")}`,
-      unknownExposurePct: weightToPct(unknownShare),
-    }));
+    warnings.push(buildUnknownExposureWarning({ adapterKey: "usdai-proof-of-reserves", code: "unknown-reserve-type",
+    message: `Unmapped USD.AI reserve types: ${Array.from(unknownTypes).sort().join(", ")}`,
+    unknownExposurePct: weightToPct(unknownShare), }));
   }
   const unknownExposureWeight = unknownShare + syntheticUndisclosedShare;
 

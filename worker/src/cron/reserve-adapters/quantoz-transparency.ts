@@ -89,6 +89,7 @@ export function adaptQuantozTransparency(html: string, token: string): AdapterRe
     ], { context: `Quantoz ${token} reserve allocation` }),
     ...(warnings.length > 0 ? { warnings } : {}),
     metadata: {
+      diag: { rawSumDeviation: Math.abs(cashPct + governmentBondPct - 100) },
       token,
       totalSupply,
       reserveRatioPct,

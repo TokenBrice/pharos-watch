@@ -361,6 +361,7 @@ export function adaptAttestationPdfIndex(
   return {
     slices,
     metadata: {
+      diag: { rawSumDeviation: Math.abs(params.slices.reduce((sum, slice) => sum + slice.pct, 0) - 100) },
       ...verifiedFreshnessMetadata(latest.date.sourceTimestamp),
       reportDate: latest.date.reportDate,
       reportDateLabel: latest.date.reportDateLabel,

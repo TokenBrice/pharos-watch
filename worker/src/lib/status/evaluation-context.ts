@@ -53,8 +53,7 @@ export async function loadSupplementalStatusSections(
   let reserveComposition = emptyReserveComposition();
   let reserveCompositionQueryFailed = false;
   try {
-    const reserveOverview = await computeReserveCompositionOverview(db, now);
-    const { historyWriteGapCheckFailed, ...reserveOverviewData } = reserveOverview;
+    const reserveOverviewData = await computeReserveCompositionOverview(db, now);
     const reserveAssessment = deriveReserveCompositionStatus({
       ...reserveComposition,
       ...reserveOverviewData,
@@ -65,13 +64,6 @@ export async function loadSupplementalStatusSections(
       freshCoverageRatio: reserveAssessment.freshCoverageRatio,
       authoritativeFreshCoverageRatio: reserveAssessment.authoritativeFreshCoverageRatio,
     };
-    if (historyWriteGapCheckFailed) {
-      reserveCompositionQueryFailed = true;
-      sectionErrors.reserveComposition = {
-        code: "reserve_history_reconciliation_query_failed",
-        message: "Reserve history reconciliation unavailable.",
-      };
-    }
   } catch (err) {
     reserveCompositionQueryFailed = true;
     logWorkerEvent({

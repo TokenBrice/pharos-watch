@@ -73,11 +73,9 @@ function createUnknownVaultWarning(
   unknownVaultTypes: Iterable<string>,
   unknownExposurePct: number,
 ): LiveReserveWarning {
-  return buildUnknownExposureWarning({
-    code: "unknown-vault-type",
-    message: `USDD collateral feed includes unmapped vault types: ${Array.from(unknownVaultTypes).sort().join(", ")}`,
-    unknownExposurePct,
-  });
+  return buildUnknownExposureWarning({ adapterKey: "usdd-data-platform", code: "unknown-vault-type",
+  message: `USDD collateral feed includes unmapped vault types: ${Array.from(unknownVaultTypes).sort().join(", ")}`,
+  unknownExposurePct, });
 }
 
 export function adaptUsddLatestCollateral(

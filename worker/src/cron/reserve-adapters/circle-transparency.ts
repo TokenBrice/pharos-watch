@@ -162,16 +162,19 @@ export function adaptCircleTransparency(html: string, coinType: string): Adapter
     slices,
     ...(warnings.length > 0 ? { warnings } : {}),
     metadata: {
+      diag: {
+        rawSumDeviation: useAbsoluteValues ? 0 : Math.abs(rawValueSum - 100),
+        sliceCount: entries.length,
+        expectedSliceCount: sliceConfigs.length,
+        valueMode: useAbsoluteValues ? "absolute" : "percentage",
+        rawValueSum,
+      },
       coinType,
-      sliceCount: entries.length,
-      expectedSliceCount: sliceConfigs.length,
       ...freshnessMetadataFromTimestamp(
         sourceTimestamp,
         "html-disclosure",
         "Circle reserve page does not expose a parseable upstream disclosure timestamp in the adapter payload",
       ),
-      valueMode: useAbsoluteValues ? "absolute" : "percentage",
-      rawValueSum,
       ...(displayAmount != null ? { displayAmount } : {}),
       ...(displayAmountRelativeDiff != null ? { displayAmountRelativeDiff } : {}),
       redemption: buildDocumentedRedemptionTelemetry(sourceTimestamp, { holderEligibility: "verified-customer" }),

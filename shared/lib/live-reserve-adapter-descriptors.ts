@@ -5,7 +5,6 @@ import {
   type LiveReserveAdapterKey,
   type LiveReserveAdapterProvenance,
 } from "../types/live-reserve-adapter-declarations";
-import { LIVE_RESERVE_PARAM_SCHEMAS } from "./live-reserve-adapter-param-schemas";
 
 export { LIVE_RESERVE_ADAPTER_STATUS_VALUES } from "../types/live-reserve-adapter-declarations";
 export type { LiveReserveAdapterKey, LiveReserveAdapterProvenance } from "../types/live-reserve-adapter-declarations";
@@ -35,7 +34,7 @@ type LiveReserveAdapterDeclarationMap = typeof LIVE_RESERVE_ADAPTER_DESCRIPTOR_D
 export type LiveReserveAdapterDefinitionMap = {
   [K in LiveReserveAdapterKey]: LiveReserveAdapterDeclarationMap[K] & {
     key: K;
-    params: (typeof LIVE_RESERVE_PARAM_SCHEMAS)[LiveReserveAdapterDeclarationMap[K]["paramsSchema"]];
+    params: LiveReserveAdapterDeclarationMap[K]["paramsSchema"];
     sourceOriginClass: ReserveEvidenceSourceOriginClass;
     displayBadgeKind: ReserveDisplayBadgeKind;
     provenance: LiveReserveAdapterProvenance;
@@ -56,7 +55,7 @@ export const LIVE_RESERVE_ADAPTER_DEFINITIONS = Object.fromEntries(
       {
         ...declaration,
         key,
-        params: LIVE_RESERVE_PARAM_SCHEMAS[declaration.paramsSchema],
+        params: declaration.paramsSchema,
         sourceOriginClass,
         provenance,
         displayBadgeKind,

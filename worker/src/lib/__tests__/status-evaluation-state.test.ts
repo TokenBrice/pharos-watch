@@ -790,15 +790,6 @@ describe("status cause text", () => {
         nextCursorStablecoinId: "coin-tail",
         writeTimeoutUncertain: 1,
       }),
-      historyWriteGaps: [
-        {
-          stablecoinId: "coin-history",
-          fetchedAt: 1_700_000_000,
-          attemptId: "coin-history:attempt",
-          compositionHistoryMissing: true,
-          attemptHistoryMissing: true,
-        },
-      ],
     } as StatusResponse["reserveComposition"];
 
     const causes = buildDataQualityCauses({
@@ -822,12 +813,6 @@ describe("status cause text", () => {
       expect.objectContaining({
         code: "reserve_sync_budget_truncated",
         message: expect.stringContaining("next cursor coin-tail"),
-      }),
-    );
-    expect(causes).toContainEqual(
-      expect.objectContaining({
-        code: "reserve_sync_history_write_gap",
-        message: expect.stringContaining("coin-history:composition+attempt"),
       }),
     );
   });

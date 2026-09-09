@@ -152,7 +152,7 @@ describe("dependency-graph", () => {
     expect(result.mappedLiveReserveWeight).toBeCloseTo(1.00001, 12);
   });
 
-  it("falls back to curated dependencies when live reserve slices have no tracked upstreams", () => {
+  it("never restores curated weights for wholly unmapped live reserves", () => {
     const dependencies = deriveEffectiveDependencies(
       makeMeta({
         id: "dependent",
@@ -166,10 +166,10 @@ describe("dependency-graph", () => {
       },
     );
 
-    expect(dependencies).toEqual([{ id: "curated-upstream", weight: 1, type: "wrapper" }]);
+    expect(dependencies).toEqual([]);
   });
 
-  it("exposes fallback provenance when unmapped live reserve slices use manual dependencies", () => {
+  it("never restores manual weights for wholly unmapped live reserves", () => {
     const result = deriveEffectiveDependencySet(
       makeMeta({
         id: "dependent",
@@ -184,12 +184,16 @@ describe("dependency-graph", () => {
     );
 
     expect(result).toMatchObject({
-      dependencies: [{ id: "manual-upstream", weight: 1, type: "collateral" }],
-      source: "manual",
-      baseSource: "manual",
-      dependencyFromLive: false,
+      dependencies: [],
+      source: "live-unmapped",
+      baseSource: "live-unmapped",
+      dependencyFromLive: true,
       mappedLiveReserveWeight: 0,
-      fallbackReason: "live-unmapped-to-manual",
+      fallbackReason: null,
+      rejectionReasons: [
+        { sliceIndex: 0, reason: "no-match" },
+        { sliceIndex: 1, reason: "no-match" },
+      ],
     });
   });
 

@@ -201,6 +201,46 @@ describe("reviewed curated reserve admission", () => {
 });
 
 describe("curated reserve dependency admission", () => {
+  it.each(["no-match", "expired", "non-link"] as const)(
+    "does not restore curated weights after a live %s rejection",
+    (reason) => {
+      const base = makeV9TwoAssetFixedInput({ clockSec: DEPENDENCY_CLOCK_SEC });
+      const {
+        schemaVersion: _schemaVersion, dexPayloadFingerprint: _dexPayloadFingerprint,
+        redemptionPayloadFingerprint: _redemptionPayloadFingerprint, registryFingerprint: _registryFingerprint,
+        inputMethodologyVersions: _inputMethodologyVersions, baseInputGenerationId: _baseInputGenerationId,
+        ...draft
+      } = base;
+      const metaById = dependencyMetaById(reason === "expired" ? "2025-01-01" : "2026-08-19");
+      const meta = metaById.get("alpha")!;
+      meta.reserves = [{
+        sourceKey: "fixture:beta", name: "Beta exposure", pct: 100, risk: "low", coinId: "beta",
+      }];
+      if (reason === "non-link") {
+        meta.reserveReview!.nonLinkDispositions = [{
+          reserveIndex: 0, reserveName: "Beta exposure", pct: 100,
+          disposition: "untracked-exogenous-asset", rationale: "Reference only, not a claim.",
+        }];
+      }
+      const fixed = createReportCardsFixedInput({
+        ...draft,
+        liveReserveMap: { ...base.liveReserveMap, alpha: [{
+          sourceKey: reason === "no-match" ? "fixture:other" : "fixture:beta",
+          name: "Beta exposure", pct: 100, risk: "low",
+          ...(reason === "non-link" ? { coinId: "beta" } : {}),
+        }] },
+      });
+      const extension = buildSafetyScoreV9BaselineExtension(fixed, { metaById });
+      const expected = {
+        source: "live-unmapped", edges: [],
+        rejectionReasons: [{ sliceIndex: 0, reason }],
+      };
+      expect(extension.assets.find((asset) => asset.assetId === "alpha")!.dependencies).toMatchObject(expected);
+      const compiled = compileSafetyScoreV9FactSetFromFixedInput(fixed, extension);
+      expect(compiled.assets.find((asset) => asset.assetId === "alpha")!.dependencies).toMatchObject(expected);
+    },
+  );
+
   it("drops curated basket edges when the reserve review is expired", () => {
     const fixed = makeV9TwoAssetFixedInput({
       omitAlphaReserve: true,
@@ -595,7 +635,7 @@ describe("buildReviewedReserveClassifications", () => {
       assetClass: "treasury-bill",
       issuerOrObligorKey: "United States Treasury",
     });
-    expect(dependencyReserveSlices(matchedLive, reviewed, CLOCK_SEC)[0]).toMatchObject({
+    expect(dependencyReserveSlices(matchedLive, reviewed, CLOCK_SEC).slices[0]).toMatchObject({
       coinId: "treasury-proxy",
     });
 
@@ -608,7 +648,7 @@ describe("buildReviewedReserveClassifications", () => {
       classificationKey: expect.stringMatching(/^source-native:/),
       assetClass: null,
     });
-    expect(dependencyReserveSlices(mismatchedLive, reviewed, CLOCK_SEC)[0]!.coinId).toBeUndefined();
+    expect(dependencyReserveSlices(mismatchedLive, reviewed, CLOCK_SEC).slices[0]!.coinId).toBeUndefined();
   });
 
   it("rejects duplicate explicit source keys on either side", () => {
@@ -674,7 +714,7 @@ describe("buildReviewedReserveClassifications", () => {
       },
     ];
 
-    const [slice] = dependencyReserveSlices(live, reviewed, CLOCK_SEC);
+    const { slices: [slice] } = dependencyReserveSlices(live, reviewed, CLOCK_SEC);
     expect(slice).toMatchObject({ name: "Beta exposure", pct: 100 });
     expect(slice!.coinId).toBeUndefined();
     expect(slice!.depType).toBeUndefined();
@@ -695,7 +735,7 @@ describe("buildReviewedReserveClassifications", () => {
       { sourceKey: "fixture:alpha:beta-exposure", name: "Beta exposure", pct: 100, risk: "low" },
     ];
 
-    expect(dependencyReserveSlices(live, reviewed, CLOCK_SEC)[0]).toMatchObject({
+    expect(dependencyReserveSlices(live, reviewed, CLOCK_SEC).slices[0]).toMatchObject({
       coinId: "beta",
       depType: "collateral",
     });

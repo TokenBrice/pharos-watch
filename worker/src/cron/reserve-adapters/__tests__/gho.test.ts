@@ -1,3 +1,9 @@
+vi.mock("../../../lib/evm-rpc", async (importOriginal) => ({
+  ...await importOriginal<typeof import("../../../lib/evm-rpc")>(),
+  fetchEvmBlockNumber: vi.fn(async () => 123),
+  fetchEvmBlockTimestamp: vi.fn(async () => 1_800_000_000),
+}));
+
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { StablecoinMeta } from "@shared/types/core";
 import type { LiveReservesConfig } from "@shared/types/live-reserves";

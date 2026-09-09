@@ -510,21 +510,16 @@ export async function fetchInfiniFiReserves(
   if (payload.code !== "OK") throw new Error("infiniFi API returned non-OK code");
   const adapted = adaptInfiniFi(payload);
   const warnings: LiveReserveWarning[] = adapted.unknownFarms.length > 0
-    ? [buildUnknownExposureWarning({
-        code: "unknown-position",
-        message: `Unmapped reserve positions: ${adapted.unknownFarms.sort().join(", ")}`,
-        unknownExposurePct: adapted.unknownExposurePct,
-      })]
+    ? [buildUnknownExposureWarning({ adapterKey: "infinifi", code: "unknown-position",
+    message: `Unmapped reserve positions: ${adapted.unknownFarms.sort().join(", ")}`,
+    unknownExposurePct: adapted.unknownExposurePct, })]
     : [];
   if (adapted.sourceTotalGapPct > SOURCE_TOTAL_RECONCILIATION_THRESHOLD_PCT) {
-    warnings.push(buildUnknownExposureWarning({
-      code: "source-total-gap",
-      message: adapted.excludedProtocolFarms.length > 0
-        ? `InfiniFi PROTOCOL farm exposure excluded from mapped farm rows: ${adapted.excludedProtocolFarms.join(", ")}`
-        : "InfiniFi total TVL exceeds mapped active farm assets",
-      unknownExposurePct: adapted.sourceTotalGapPct,
-      thresholdPct: SOURCE_TOTAL_RECONCILIATION_THRESHOLD_PCT,
-    }));
+    warnings.push(buildUnknownExposureWarning({ adapterKey: "infinifi", code: "source-total-gap",
+    message: adapted.excludedProtocolFarms.length > 0
+      ? `InfiniFi PROTOCOL farm exposure excluded from mapped farm rows: ${adapted.excludedProtocolFarms.join(", ")}`
+      : "InfiniFi total TVL exceeds mapped active farm assets",
+    unknownExposurePct: adapted.sourceTotalGapPct,  }));
   }
 
   // The freshness probe is optional context: bound it to a hard 6s overall

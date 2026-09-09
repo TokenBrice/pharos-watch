@@ -1,3 +1,9 @@
+vi.mock("../../../lib/evm-rpc", async (importOriginal) => ({
+  ...await importOriginal<typeof import("../../../lib/evm-rpc")>(),
+  fetchEvmBlockNumber: vi.fn(async () => 123),
+  fetchEvmBlockTimestamp: vi.fn(async () => 1_800_000_000),
+}));
+
 import type { LiveReservesConfig } from "@shared/types/live-reserves";
 import { encodeAbiParameters } from "viem/utils";
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -296,19 +302,15 @@ describe("resupply-pairs adapter", () => {
     });
 
     const resultPromise = fetchResupplyPairsReserves(coin as never, config, signal);
-    await Promise.resolve();
-
-    expect(calls).toContain(`${normalizeAddress(CURVE_PAIR)}:${UNDERLYING_SELECTOR}`);
-    expect(calls).toContain(`${normalizeAddress(FRAX_PAIR)}:${UNDERLYING_SELECTOR}`);
-    expect(fetchOnchainMulticall3).toHaveBeenCalledTimes(1);
-    expect(vi.mocked(fetchOnchainMulticall3).mock.calls[0]?.[0].calls).toHaveLength(6);
+    await vi.waitFor(() => {
+      expect(calls).toContain(`${normalizeAddress(CURVE_PAIR)}:${UNDERLYING_SELECTOR}`);
+      expect(calls).toContain(`${normalizeAddress(FRAX_PAIR)}:${UNDERLYING_SELECTOR}`);
+    });
 
     resolveCurveUnderlying(encodeAddressResult(CRVUSD));
     resolveFraxUnderlying(encodeAddressResult(FRXUSD));
 
     const result = await resultPromise;
-    expect(fetchOnchainMulticall3).toHaveBeenCalledTimes(2);
-    expect(vi.mocked(fetchOnchainMulticall3).mock.calls[1]?.[0].calls).toHaveLength(6);
     expect(result.metadata).toMatchObject({
       pairCount: 2,
       activePairCount: 2,

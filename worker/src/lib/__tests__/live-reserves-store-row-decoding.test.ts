@@ -143,6 +143,8 @@ describe("stored live reserve snapshot metadata normalization", () => {
 
     const clean = parseSnapshotMetadata(JSON.stringify({ capacityUsd: 5 }));
     expect(clean.redemption).toBeUndefined();
-    expect(parseSnapshotMetadata("not json")).toEqual({});
+    // Malformed JSON cannot establish freshness, so it is flagged as
+    // invalid-freshness rather than silently dropped.
+    expect(parseSnapshotMetadata("not json")).toEqual({ diag: { invalidFreshness: true } });
   });
 });

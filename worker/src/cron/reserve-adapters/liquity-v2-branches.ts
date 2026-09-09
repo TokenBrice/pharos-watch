@@ -1,3 +1,4 @@
+import { pinnedBlockPlan } from "./evm-observation-plan";
 import { decodeAbiParameters } from "viem/utils";
 import type { StablecoinMeta } from "@shared/types/core";
 import type {
@@ -827,6 +828,8 @@ export async function fetchLiquityV2BranchReserves(
 ): Promise<AdapterResult> {
   const input = requireOnchainInput(config.inputs.primary, ADAPTER_KEY);
   const params = readParams(config);
+  const plan = await pinnedBlockPlan({ chain: input.chain, signal, ctx, ...params });
+  ctx = plan.ctx;
   const debtSelector = params.debtSelector ?? DEFAULT_DEBT_SELECTOR;
   const shutdownSelector = params.shutdownSelector ?? DEFAULT_SHUTDOWN_SELECTOR;
   const debtDecimals = params.debtDecimals ?? DEFAULT_DEBT_DECIMALS;
@@ -904,6 +907,7 @@ export async function fetchLiquityV2BranchReserves(
     balances,
     priceMap,
     metadata: {
+      observedBlock: plan.observedBlock,
       ...redemptionMetadata,
       ...(mechanismMetrics?.metadata ?? {}),
       details: {

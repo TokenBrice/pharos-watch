@@ -92,7 +92,7 @@ const config: LiveReservesConfig = {
 function oracleResult(priceUsd: bigint): string {
   return encodeAbiParameters(
     [{ type: "uint256" }, { type: "uint256" }, { type: "uint256" }, { type: "uint256" }, { type: "uint256" }],
-    [priceUsd, priceUsd, 1n, 1n, priceUsd],
+    [priceUsd * 2n, priceUsd, 1n, 1n, priceUsd],
   );
 }
 

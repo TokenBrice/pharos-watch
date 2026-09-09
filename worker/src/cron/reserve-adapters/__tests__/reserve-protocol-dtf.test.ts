@@ -1,26 +1,42 @@
+import type * as EvmRpc from "../../../lib/evm-rpc";
+import type * as Helpers from "../helpers";
 import type { LiveReservesConfig } from "@shared/types/live-reserves";
 import { encodeAbiParameters } from "viem/utils";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { DECIMALS_SELECTOR, TOTAL_SUPPLY_SELECTOR, encodeAddress, encodeUint256 } from "../../../lib/evm-selectors";
 
+vi.mock("../../../lib/evm-rpc", async (importOriginal) => ({
+  ...await importOriginal<typeof EvmRpc>(),
+  fetchEvmBlockNumber: vi.fn(async () => 12345),
+  fetchEvmBlockTimestamp: vi.fn(async () => 1776154391),
+}));
+
 vi.mock("../helpers", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("../helpers")>();
-  const { makeOnchainCallersMock } = await import("./helpers/onchain-callers-mock");
+  const actual = await importOriginal<typeof Helpers>();
   const fetchOnchainRawCall = vi.fn();
   const fetchOnchainUint256 = vi.fn();
   return {
     ...actual,
     fetchOnchainRawCall,
     fetchOnchainUint256,
-    makeOnchainCallers: makeOnchainCallersMock({
-      uint256: fetchOnchainUint256,
-      raw: fetchOnchainRawCall,
-    }),
+    fetchOnchainMulticall3: vi.fn(async (options: Parameters<typeof actual.fetchOnchainMulticall3>[0]) =>
+      Promise.all(options.calls.map(async (call) => {
+        const request = { ...options, contract: call.contract, data: call.data };
+        const uintSelectors = ["0x313ce567", "0x18160ddd", "0x7121c273", "0x9926020b", "0x200d2ed2", "0x07a2d13a", "0x3ba0b9a9"];
+        const value = uintSelectors.includes(call.data.slice(0, 10))
+          ? await fetchOnchainUint256(request)
+          : await fetchOnchainRawCall(request);
+        return {
+          label: call.label, success: value != null,
+          returnData: typeof value === "bigint" ? `0x${value.toString(16).padStart(64, "0")}` : value ?? "0x",
+        };
+      })),
+    ),
   };
 });
 
 import { adaptReserveProtocolDtfRows, fetchReserveProtocolDtfReserves } from "../reserve-protocol-dtf";
-import { fetchOnchainRawCall, fetchOnchainUint256 } from "../helpers";
+import { fetchOnchainRawCall, fetchOnchainUint256, fetchOnchainMulticall3 } from "../helpers";
 let signal: AbortSignal;
 
 const coin = {
@@ -360,6 +376,11 @@ describe("reserve-protocol-dtf adapter", () => {
     mockReserveProtocolOnchain({ redemptionAvailable: 120n * ONE, totalSupply: 100n * ONE });
 
     const result = await fetchReserveProtocolDtfReserves(coin as never, createOnchainConfig(), signal);
+    expect(result.metadata?.observedBlock).toEqual({ chain: "ethereum", number: 12345, timestamp: 1776154391 });
+    for (const [request] of [...vi.mocked(fetchOnchainRawCall).mock.calls, ...vi.mocked(fetchOnchainUint256).mock.calls]) {
+      expect(request.ctx?.observedBlock).toEqual(result.metadata?.observedBlock);
+    }
+    expect(fetchOnchainMulticall3).toHaveBeenCalledTimes(6);
 
     expect(result.metadata?.redemption).toMatchObject({
       capacityUsd: 100,

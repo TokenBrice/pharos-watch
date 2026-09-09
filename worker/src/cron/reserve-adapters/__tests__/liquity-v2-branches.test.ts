@@ -52,6 +52,8 @@ vi.mock("../../../lib/evm-rpc", async (importOriginal) => {
   return {
     ...actual,
     fetchEvmUint256AtBlock: vi.fn(),
+    fetchEvmBlockNumber: vi.fn(async () => 123),
+    fetchEvmBlockTimestamp: vi.fn(async () => 1_800_000_000),
   };
 });
 

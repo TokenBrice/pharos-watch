@@ -8,7 +8,9 @@ import {
   fetchErc20Balance,
   fetchJsonWithRetry,
   fetchOnchainMulticall3,
+  freshnessMetadataFromTimestamp,
   notApplicableFreshnessMetadata,
+  summarizeSourceTimestampsRequiringCoverage,
   normalizeSlices,
   parseBoundedDecimals,
   requireJsonInput,
@@ -42,7 +44,7 @@ interface PositionDetailsEntry {
 }
 
 type PositionDetailsPayload = Record<string, PositionDetailsEntry>;
-type PriceMappingPayload = Record<string, { price?: { usd?: number; eur?: number } }>;
+type PriceMappingPayload = Record<string, { price?: { usd?: number; eur?: number }; timestamp?: number }>;
 
 interface PositionsApiParams {
   pricesUrl: string;
@@ -201,6 +203,7 @@ export function adaptCollateralPositions(
   const missingPriceSymbols = new Set<string>();
   let unknownExposureUsd = 0;
   let activePositionCount = 0;
+  const priceTimestamps: unknown[] = [];
 
   for (const entry of Object.values(details)) {
     const totalBalance = entry.positions.reduce((acc, position) => {
@@ -223,6 +226,7 @@ export function adaptCollateralPositions(
 
     const usdValue = valueUsdFromBigIntPrice(totalBalance, entry.decimals, usdPrice);
     if (!Number.isFinite(usdValue) || usdValue <= 0) continue;
+    priceTimestamps.push(priceInfo?.timestamp);
 
     const risk = inferRisk(entry.symbol);
     const unknown = !isKnownAsset(entry.symbol);
@@ -317,6 +321,10 @@ export function adaptCollateralPositions(
     });
   }
 
+  const timestampSummary = summarizeSourceTimestampsRequiringCoverage(priceTimestamps);
+  if (timestampSummary && timestampSummary.untimestampedCount > 0) {
+    warnings.push(reserveDegradedWarning("price-timestamp-coverage", "Only part of the active collateral price basket has source timestamps"));
+  }
   return {
     slices: normalizeSlices(slices),
     ...(warnings.length > 0 ? { warnings } : {}),
@@ -355,10 +363,13 @@ export function adaptCollateralPositions(
             },
           }
         : {}),
-      ...notApplicableFreshnessMetadata({
-        freshnessSource: "position-and-price-apis",
-        freshnessReason: "Collateral positions and price payloads represent latest-state protocol API aggregation",
-      }),
+      ...(timestampSummary == null
+        ? notApplicableFreshnessMetadata({ freshnessSource: "position-price-api-without-timestamps" })
+        : freshnessMetadataFromTimestamp(
+            timestampSummary.untimestampedCount === 0 ? timestampSummary.sourceTimestamp : null,
+            "position-price-timestamps",
+            "One or more active collateral prices lack a valid source timestamp",
+          )),
     },
   };
 }

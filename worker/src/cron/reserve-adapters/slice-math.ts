@@ -1,5 +1,6 @@
 import type { ReserveSlice } from "@shared/types/core";
-import type { LiveReserveWarning } from "@shared/types/live-reserves";
+import type { LiveReserveAdapterKey, LiveReserveWarning } from "@shared/types/live-reserves";
+import { getLiveReserveAdapterDefinition, MATERIAL_UNKNOWN_EXPOSURE_PCT } from "@shared/lib/live-reserve-adapters";
 import { reserveDegradedWarning, reserveInfoWarning } from "./warnings";
 export { decimalNumberFromBigInt, decimalStringFromBigInt } from "../../lib/bigint";
 
@@ -23,7 +24,7 @@ interface UnknownExposureWarningOptions {
   code: string;
   message: string;
   unknownExposurePct: number;
-  thresholdPct?: number;
+  adapterKey: LiveReserveAdapterKey;
 }
 
 export function parseBoundedDecimals(value: unknown): number | null {
@@ -66,7 +67,7 @@ export function assertFiniteNonNegativeReserveRows<Value>(
 
 /**
  * Deduplicate and normalize reserve slices so percentages sum to exactly 100%.
- * Slices sharing the same (name, risk, coinId, depType, blacklistable) key are merged by summing pct.
+ * Slices sharing every identity and risk field are merged by summing pct.
  * After rounding, the largest slice absorbs any remainder to maintain the 100% invariant.
  * Returns slices sorted by pct descending.
  */
@@ -83,19 +84,23 @@ export function normalizeSlices(slices: ReserveSlice[], decimals = 1): ReserveSl
 
   for (const slice of slices) {
     if (slice.pct === 0) continue;
-    const key = [
+    const key = JSON.stringify([
       slice.name,
       slice.risk,
-      slice.coinId ?? "",
-      slice.depType ?? "",
-      slice.blacklistable == null ? "" : String(slice.blacklistable),
-    ].join("|");
+      slice.sourceKey,
+      slice.assetClass,
+      slice.issuerOrObligor,
+      slice.coinId,
+      slice.depType,
+      slice.blacklistable,
+      slice.blacklistabilityExposure,
+      slice.riskFactors ? [...slice.riskFactors].sort() : undefined,
+      slice.liquidityHorizon,
+      slice.maturityDaysMax,
+    ]);
     const existing = grouped.get(key);
     if (existing) {
       existing.pct += slice.pct;
-      if (slice.blacklistable != null) {
-        existing.blacklistable = Boolean(existing.blacklistable) || slice.blacklistable;
-      }
     } else {
       grouped.set(key, { ...slice });
     }
@@ -120,6 +125,17 @@ export function normalizeSlices(slices: ReserveSlice[], decimals = 1): ReserveSl
     .map(({ pctUnits, ...slice }) => ({ ...slice, pct: pctUnits / factor }))
     .filter((slice) => slice.pct > 0)
     .sort((a, b) => b.pct - a.pct);
+}
+
+export function normalizeSlicesWithDiagnostics(slices: ReserveSlice[], decimals = 1): {
+  slices: ReserveSlice[];
+  rawSumDeviation: number;
+} {
+  const normalized = normalizeSlices(slices, decimals);
+  return {
+    slices: normalized,
+    rawSumDeviation: Math.abs(slices.reduce((sum, slice) => sum + slice.pct, 0) - 100),
+  };
 }
 
 export function valueUsdFromBigIntPrice(value: bigint, decimals: number, priceUsd: number): number {
@@ -296,11 +312,15 @@ export function buildUnknownExposureWarning({
   code,
   message,
   unknownExposurePct,
-  thresholdPct = 5,
+  adapterKey,
 }: UnknownExposureWarningOptions): LiveReserveWarning {
+  const definition = getLiveReserveAdapterDefinition(adapterKey);
+  const thresholdPct = definition && "validation" in definition && "maxUnknownExposurePct" in definition.validation
+    ? definition.validation.maxUnknownExposurePct
+    : MATERIAL_UNKNOWN_EXPOSURE_PCT;
   const roundedPct = unknownExposurePct.toFixed(2);
   const fullMessage = `${message} (${roundedPct}% of reserves)`;
-  return unknownExposurePct >= thresholdPct
+  return thresholdPct != null && unknownExposurePct > thresholdPct
     ? reserveDegradedWarning(code, fullMessage)
     : reserveInfoWarning(code, fullMessage);
 }

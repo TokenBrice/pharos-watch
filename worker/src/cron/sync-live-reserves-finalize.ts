@@ -193,28 +193,6 @@ async function recoverNoCandidateLiveReserveBreakers(
 }
 
 
-function getHistoryWriteFailedCoins(warningMessages: readonly string[]): string[] {
-  return Array.from(new Set(
-    warningMessages
-      .filter((message) => message.endsWith(":history-write-failed"))
-      .map((message) => message.slice(0, -":history-write-failed".length)),
-  ));
-}
-
-async function recordHistoryWriteGapEvent(db: D1Database, historyWriteFailedCoins: readonly string[]): Promise<void> {
-  if (historyWriteFailedCoins.length === 0) return;
-
-  await logCronEvent(db, {
-    job: "sync-live-reserves",
-    eventType: "live-reserve-history-write-failed",
-    severity: "warning",
-    message:
-      `${historyWriteFailedCoins.length} live reserve successful attempt(s) missed history writes after authoritative state was recorded.`,
-    metadata: {
-      coins: historyWriteFailedCoins,
-    },
-  });
-}
 
 async function recordFinalizationWarning(
   db: D1Database,
@@ -345,8 +323,6 @@ export async function finalizeReserveSyncRun(args: FinalizeReserveSyncRunArgs): 
     );
   }
 
-  const historyWriteFailedCoins = getHistoryWriteFailedCoins(args.warningMessages);
-  await recordHistoryWriteGapEvent(args.db, historyWriteFailedCoins);
   finalizationBudget.remainingMs = Math.max(0, finalizationBudget.deadlineMs - Date.now());
 
   return {
@@ -380,6 +356,7 @@ export async function finalizeReserveSyncRun(args: FinalizeReserveSyncRunArgs): 
         queue: args.phaseTimings.queue,
         adapter: args.phaseTimings.adapter,
         d1CoinPersistence: args.phaseTimings.d1CoinPersistence,
+        stages: args.phaseTimings.stages,
         finalization: Date.now() - finalizationStartedMs,
       },
       adapterLatency: args.adapterLatency,
@@ -407,7 +384,6 @@ export async function finalizeReserveSyncRun(args: FinalizeReserveSyncRunArgs): 
       artifactCleanup,
       artifactCleanupWarningCount: artifactCleanupWarnings.length,
       ...(artifactCleanupWarnings.length > 0 ? { artifactCleanupWarnings } : {}),
-      ...(historyWriteFailedCoins.length > 0 ? { historyWriteFailedCoins } : {}),
       ...(args.coinsWithWarnings.length > 0 ? { coinsWithWarnings: args.coinsWithWarnings } : {}),
       ...(args.coinsWithErrors.length > 0 ? { coinsWithErrors: args.coinsWithErrors } : {}),
       ...(args.attemptFailureSummaries.length > 0 ? { attemptFailureSummaries: args.attemptFailureSummaries } : {}),

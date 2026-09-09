@@ -57,6 +57,7 @@ interface SliceValue {
   risk: ReserveSlice["risk"];
   coinId?: string;
   depType?: ReserveSlice["depType"];
+  unknown?: boolean;
 }
 
 type NestPendingTransactionType = "PendingDeposit" | "PendingWithdrawal";
@@ -163,6 +164,7 @@ function bucketLiquidToken(token: NestPositionToken): SliceValue {
     value,
     name: `${symbol} liquid balance`,
     risk: "high",
+    unknown: true,
   };
 }
 
@@ -205,6 +207,7 @@ function bucketYieldToken(asset: NestYieldAsset, token: NestPositionToken): Slic
     value,
     name: "Nest private and structured credit vaults",
     risk: "high",
+    unknown: true,
   };
 }
 
@@ -304,10 +307,8 @@ export async function fetchNestVaultPositionsReserves(
     navUsd != null && navUsd > 0 && settledCoverageUsd < navUsd
       ? navUsd - settledCoverageUsd
       : null;
-  const unknownExposurePct =
-    navReconciliationResidualUsd != null && navUsd != null && navUsd > 0
-      ? (navReconciliationResidualUsd / navUsd) * 100
-      : null;
+  const unknownValue = settledValues.reduce((sum, value) => sum + (value.unknown ? value.value : 0), 0)
+    + pendingDepositUsd + (navReconciliationResidualUsd ?? 0);
   const values = mergeSliceValues([
     ...settledValues,
     ...(pendingDepositUsd > 0
@@ -326,6 +327,7 @@ export async function fetchNestVaultPositionsReserves(
       : []),
   ]);
   const totalReserveUsd = navUsd != null && navUsd > 0 ? navUsd : settledPositionUsd;
+  const unknownExposurePct = unknownValue / Math.max(totalReserveUsd, settledCoverageUsd) * 100;
   const navCoverageRatio = navUsd && navUsd > 0 ? settledPositionUsd / navUsd : null;
   const reconciledNavCoverageRatio =
     navUsd && navUsd > 0 ? settledCoverageUsd / navUsd : navCoverageRatio;
@@ -356,7 +358,7 @@ export async function fetchNestVaultPositionsReserves(
       settledPositionUsd,
       ...(reconcileNopal ? { pendingDepositUsd, pendingWithdrawalUsd } : {}),
       ...(navReconciliationResidualUsd != null ? { navReconciliationResidualUsd } : {}),
-      ...(unknownExposurePct != null ? { unknownExposurePct } : {}),
+      unknownExposurePct,
       ...(navUsd != null ? { navUsd } : {}),
       ...(priceUsd != null ? { priceUsd } : {}),
       ...(totalSupply != null ? { totalSupply } : {}),

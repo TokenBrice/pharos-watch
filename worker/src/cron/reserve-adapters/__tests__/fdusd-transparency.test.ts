@@ -11,7 +11,7 @@ vi.mock("../helpers", async (importOriginal) => {
 
 vi.mock("../../../lib/fetch-retry", async (importOriginal) => {
   const actual = await importOriginal<typeof import("../../../lib/fetch-retry")>();
-  return { ...actual, fetchWithRetry: vi.fn() };
+  return { ...actual, fetchBinaryWithRetry: vi.fn() };
 });
 
 import {
@@ -20,7 +20,7 @@ import {
   selectNewestFdusdSignedReport,
 } from "../fdusd-transparency";
 import { fetchPrimaryHtmlInput } from "../helpers";
-import { fetchWithRetry } from "../../../lib/fetch-retry";
+import { fetchBinaryWithRetry } from "../../../lib/fetch-retry";
 
 let signal: AbortSignal;
 
@@ -129,17 +129,20 @@ describe("FDUSD signed reserve reports", () => {
 
   it("fails without emitting a row when the newest report cannot be parsed", async () => {
     vi.mocked(fetchPrimaryHtmlInput).mockResolvedValue(INDEX_HTML);
-    vi.mocked(fetchWithRetry).mockResolvedValue(new Response("not a reserve report", {
-      status: 200,
-      headers: { "content-type": "application/pdf" },
-    }));
+    vi.mocked(fetchBinaryWithRetry).mockResolvedValue({
+      response: new Response("not a reserve report", {
+        status: 200,
+        headers: { "content-type": "application/pdf" },
+      }),
+      body: new TextEncoder().encode("not a reserve report"),
+    });
 
     await expect(fetchFdusdTransparencyReserves({} as never, config, signal)).rejects.toThrow("layout-changed");
   });
 
   it("fails without emitting a row when the report fetch fails", async () => {
     vi.mocked(fetchPrimaryHtmlInput).mockResolvedValue(INDEX_HTML);
-    vi.mocked(fetchWithRetry).mockResolvedValue(null);
+    vi.mocked(fetchBinaryWithRetry).mockResolvedValue(null);
 
     await expect(fetchFdusdTransparencyReserves({} as never, config, signal)).rejects.toThrow("Fetch failed");
   });

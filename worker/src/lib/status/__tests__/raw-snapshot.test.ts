@@ -143,6 +143,25 @@ describe("writeStatusRawSnapshot", () => {
     expect(cron.staleArtifacts).toHaveLength(8);
   });
 
+  it("preserves all bounded reserve latency groups and histogram samples", async () => {
+    const { db } = fixtures.open();
+    const groups = Array.from({ length: 89 }, (_, index) => ({
+      adapterKey: `adapter-${index}`,
+      elapsedMs: { count: 1, sumMs: index + 1, buckets: [0, 1, 1] },
+    }));
+    const adapterLatency = { schemaVersion: 1, groups, omittedGroups: 0, total: { elapsedMs: { sumMs: 4005 } } };
+    const raw = {
+      ...minimalRawStatus(),
+      crons: { "sync-live-reserves": { lastRun: { metadata: { adapterLatency } } } },
+    } as unknown as Parameters<typeof writeStatusRawSnapshot>[2];
+    await writeStatusRawSnapshot(db, NOW, raw);
+    const snapshot = await loadStatusRawSnapshot(db, NOW);
+    expect(snapshot).toMatchObject({
+      kind: "fresh",
+      raw: { crons: { "sync-live-reserves": { lastRun: { metadata: { adapterLatency } } } } },
+    });
+  });
+
   it("persists the public-health projection and status supplements alongside raw data", async () => {
     const { db } = fixtures.open();
     const publicHealth = {

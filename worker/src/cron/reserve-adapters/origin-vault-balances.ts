@@ -12,6 +12,7 @@ import {
   requireOnchainInput,
   slicesFromValues,
 } from "./helpers";
+import { pinnedBlockPlan } from "./evm-observation-plan";
 
 const CHECK_BALANCE_SELECTOR = "0x5f515226";
 
@@ -54,6 +55,8 @@ export async function fetchOriginVaultBalancesReserves(
   const input = requireOnchainInput(config.inputs.primary, "origin-vault-balances");
   const params = readParams(config);
   const timeoutMs = 12_000;
+  const plan = await pinnedBlockPlan({ chain: input.chain, signal, ctx, rpcUrl: params.rpcUrl, fallbackRpcUrl: params.fallbackRpcUrl, timeoutMs });
+  ctx = plan.ctx;
   const onchain = makeOnchainCallers(input, {
     signal,
     ctx,
@@ -95,6 +98,7 @@ export async function fetchOriginVaultBalancesReserves(
   const totalValueUsd = decimalNumberFromBigInt(totalValueRaw, 18);
   const immediateRedeemableUsd = values.reduce((sum, value) => sum + value.idleValue, 0);
   const assetCoverageRatio = totalReserveUsd / totalValueUsd;
+  const unknownValue = Math.max(0, totalValueUsd - totalReserveUsd);
   const warnings = buildCoverageShortfallWarnings({
     code: "origin-vault-coverage-gap",
     message: (pct) => `Origin vault asset probes cover ${pct}% of totalValue()`,
@@ -102,9 +106,13 @@ export async function fetchOriginVaultBalancesReserves(
   });
 
   return {
-    slices: slicesFromValues(values),
+    slices: slicesFromValues([
+      ...values,
+      { name: "Unmapped Origin vault exposure", value: unknownValue, risk: "high" },
+    ]),
     ...(warnings.length > 0 ? { warnings } : {}),
     metadata: {
+      observedBlock: plan.observedBlock,
       ...notApplicableFreshnessMetadata(),
       details: {
         proofKind: "origin-vault-check-balance",
@@ -113,6 +121,7 @@ export async function fetchOriginVaultBalancesReserves(
       totalReserveUsd,
       totalValueUsd,
       assetCoverageRatio,
+      unknownExposurePct: unknownValue / Math.max(totalReserveUsd, totalValueUsd) * 100,
       totalValueRaw: totalValueRaw.toString(),
       immediateRedeemableUsd,
       idleVaultBalances: values.map((value) => ({

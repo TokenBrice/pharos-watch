@@ -5,7 +5,7 @@ Safety Score V9 is the sole active stablecoin safety model. It publishes evidenc
 ## Methodology Identity
 
 - Active model: <!-- GENERATED-START: report-cards-active-model -->`v9`<!-- GENERATED-END: report-cards-active-model -->
-- **Current methodology version:** <!-- GENERATED-START: methodology-version-safety-score -->`v9.47`<!-- GENERATED-END: methodology-version-safety-score -->
+- **Current methodology version:** <!-- GENERATED-START: methodology-version-safety-score -->`v9.48`<!-- GENERATED-END: methodology-version-safety-score -->
 - Public response schema: report v5 with score trace v3
 - Policy: `shared/data/safety-score-v9/methodology-policy-candidate-v1.json`, parsed and digested by `shared/lib/safety-score-v9/policy.ts`
 - Implementation: `shared/lib/safety-score-v9/`
@@ -40,6 +40,8 @@ A stale exposure whose composition came through the audited fallback carries `st
 Admission of a reviewed composition and the strength it enters at are separate decisions. An independent audit is evidence about the reserves; prudential supervision is evidence about the issuer. Supervision therefore does not gate admission, only the rung: a prudentially supervised issuer's corroborated composition keeps `issuer-attested` strength (or `independent` where a verified audit or examination reconciles it directly), while an unsupervised issuer's independently attested composition is admitted one rung down as `static-validated` and can never reach `independent` through that path. The lower rung is reachable only where a live reserve producer was observed returning nothing for that capture, so an asset with no live producer keeps the standalone path and an asset excluded from falling back is not rescued. Audited fallback evidence keeps the report's own publisher and dates rather than being emitted as an anonymous standalone review, and it carries the 38-day composition window rather than the 365-day audit window it was admitted under, so the rung degrades as the composition ages. Because the publisher is retained, a lapsed composition resolves to `published-evidence-expired` instead of `issuer-undisclosed`; unknown provenance still fails closed.
 
 Curated collateral links enter the dependency overlay only when the same curated composition is admissible for the reserve envelope and no live reserve slices are present. An expired, incomplete, or otherwise inadmissible curated review therefore contributes no asserted basket edges for that cycle; the existing reserve-envelope gap (such as missing or partial reserve composition) remains the bounded score consequence.
+
+Since methodology 9.48, a live composition with no mapped tracked-asset slices returns `source: live-unmapped` and no dependencies; it never restores curated or manual weights. Dependency facts retain structured `rejectionReasons` entries (`sliceIndex`, `reason`) distinguishing `no-match`, `expired` matching classification, and explicit reviewed `non-link`. Curated fallback is available only when no live composition exists. Partial live mappings keep their live weights.
 
 Economic Control prices mint, upgrade, oracle, bridge, and other binding control paths. Mint-component posture derivation, the scoped-control-question contract, and the ceilings each takes are owned by [mint-authority-scoring.md](./mint-authority-scoring.md#current-v9-scope); this document keeps only the pillar-level contract.
 

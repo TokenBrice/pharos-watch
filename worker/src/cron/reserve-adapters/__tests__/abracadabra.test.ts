@@ -35,7 +35,7 @@ describe("adaptAbracadabraReserves", () => {
     const readings: CauldronCollateralReading[] = [
       {
         cauldron: {
-          address: "0xAAA",
+          address: "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
           collateralSymbol: "yvDAI",
           collateralAddress: YVDAI_ADDRESS,
           collateralDecimals: 18,
@@ -45,7 +45,7 @@ describe("adaptAbracadabraReserves", () => {
       },
       {
         cauldron: {
-          address: "0xBBB",
+          address: "0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
           collateralSymbol: "wstETH",
           collateralAddress: WSTETH_ADDRESS,
           collateralDecimals: 18,
@@ -89,7 +89,7 @@ describe("adaptAbracadabraReserves", () => {
     const readings: CauldronCollateralReading[] = [
       {
         cauldron: {
-          address: "0xAAA",
+          address: "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
           collateralSymbol: "yvDAI",
           collateralAddress: YVDAI_ADDRESS,
           collateralDecimals: 18,
@@ -99,7 +99,7 @@ describe("adaptAbracadabraReserves", () => {
       },
       {
         cauldron: {
-          address: "0xBBB",
+          address: "0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
           collateralSymbol: "wstETH",
           collateralAddress: WSTETH_ADDRESS,
           collateralDecimals: 18,
@@ -125,7 +125,7 @@ describe("adaptAbracadabraReserves", () => {
     const readings: CauldronCollateralReading[] = [
       {
         cauldron: {
-          address: "0xAAA",
+          address: "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
           collateralSymbol: "yvDAI",
           collateralAddress: YVDAI_ADDRESS,
           collateralDecimals: 18,
@@ -147,7 +147,7 @@ describe("adaptAbracadabraReserves", () => {
     const readings: CauldronCollateralReading[] = [
       {
         cauldron: {
-          address: "0xAAA",
+          address: "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
           collateralSymbol: "yvDAI",
           collateralAddress: YVDAI_ADDRESS,
           collateralDecimals: 18,
@@ -166,7 +166,7 @@ describe("adaptAbracadabraReserves", () => {
     const readings: CauldronCollateralReading[] = [
       {
         cauldron: {
-          address: "0xAAA",
+          address: "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
           collateralSymbol: "yvUSDC",
           collateralAddress: YVUSDC_ADDRESS,
           collateralDecimals: 6,
@@ -210,8 +210,8 @@ describe("fetchAbracadabraReserves", () => {
       params: {
         bentoBoxAddress: BENTOBOX,
         cauldrons: [
-          { address: "0xCauldron1", collateralSymbol: "yvDAI", collateralAddress: YVDAI_ADDRESS, collateralDecimals: 18, risk: "high" },
-          { address: "0xCauldron2", collateralSymbol: "wstETH", collateralAddress: WSTETH_ADDRESS, collateralDecimals: 18, risk: "low" },
+          { address: "0xcccccccccccccccccccccccccccccccccccccccc", collateralSymbol: "yvDAI", collateralAddress: YVDAI_ADDRESS, collateralDecimals: 18, risk: "high" },
+          { address: "0xdddddddddddddddddddddddddddddddddddddddd", collateralSymbol: "wstETH", collateralAddress: WSTETH_ADDRESS, collateralDecimals: 18, risk: "low" },
         ],
       },
     };
@@ -239,8 +239,8 @@ describe("fetchAbracadabraReserves", () => {
       params: {
         bentoBoxAddress: BENTOBOX,
         cauldrons: [
-          { address: "0xCauldron1", collateralSymbol: "yvDAI", collateralAddress: YVDAI_ADDRESS, collateralDecimals: 18, risk: "high" },
-          { address: "0xCauldron2", collateralSymbol: "wstETH", collateralAddress: WSTETH_ADDRESS, collateralDecimals: 18, risk: "low" },
+          { address: "0xcccccccccccccccccccccccccccccccccccccccc", collateralSymbol: "yvDAI", collateralAddress: YVDAI_ADDRESS, collateralDecimals: 18, risk: "high" },
+          { address: "0xdddddddddddddddddddddddddddddddddddddddd", collateralSymbol: "wstETH", collateralAddress: WSTETH_ADDRESS, collateralDecimals: 18, risk: "low" },
         ],
       },
     };
@@ -261,7 +261,7 @@ describe("fetchAbracadabraReserves", () => {
       params: {
         bentoBoxAddress: BENTOBOX,
         cauldrons: [
-          { address: "0xCauldron1", collateralSymbol: "yvDAI", collateralAddress: YVDAI_ADDRESS, collateralDecimals: 18, risk: "high" },
+          { address: "0xcccccccccccccccccccccccccccccccccccccccc", collateralSymbol: "yvDAI", collateralAddress: YVDAI_ADDRESS, collateralDecimals: 18, risk: "high" },
         ],
       },
     };
@@ -282,7 +282,7 @@ describe("fetchAbracadabraReserves", () => {
       params: {
         bentoBoxAddress: BENTOBOX,
         cauldrons: [
-          { address: "0xCauldron1", collateralSymbol: "yvDAI", collateralAddress: YVDAI_ADDRESS, collateralDecimals: 18, risk: "high" },
+          { address: "0xcccccccccccccccccccccccccccccccccccccccc", collateralSymbol: "yvDAI", collateralAddress: YVDAI_ADDRESS, collateralDecimals: 18, risk: "high" },
         ],
       },
     };
@@ -308,8 +308,8 @@ describe("fetchAbracadabraReserves", () => {
       params: {
         bentoBoxAddress: BENTOBOX,
         cauldrons: [
-          { address: "0xCauldronA", collateralSymbol: "yvDAI", collateralAddress: YVDAI_ADDRESS, collateralDecimals: 18, risk: "high" },
-          { address: "0xCauldronB", collateralSymbol: "yvDAI", collateralAddress: YVDAI_ADDRESS, collateralDecimals: 18, risk: "high" },
+          { address: "0xcccccccccccccccccccccccccccccccccccccccc", collateralSymbol: "yvDAI", collateralAddress: YVDAI_ADDRESS, collateralDecimals: 18, risk: "high" },
+          { address: "0xdddddddddddddddddddddddddddddddddddddddd", collateralSymbol: "yvDAI", collateralAddress: YVDAI_ADDRESS, collateralDecimals: 18, risk: "high" },
         ],
       },
     };
@@ -340,7 +340,7 @@ describe("fetchAbracadabraReserves", () => {
       inputs: { primary: { kind: "onchain-evm", chain: "ethereum", rpcMode: "public-rpc" } },
       params: {
         cauldrons: [
-          { address: "0xCauldron1", collateralSymbol: "yvDAI", collateralAddress: YVDAI_ADDRESS, collateralDecimals: 18, risk: "high" },
+          { address: "0xcccccccccccccccccccccccccccccccccccccccc", collateralSymbol: "yvDAI", collateralAddress: YVDAI_ADDRESS, collateralDecimals: 18, risk: "high" },
         ],
       } as never,
     };

@@ -14,6 +14,8 @@ vi.mock("../helpers", async (importOriginal) => {
 
 vi.mock("../../../lib/evm-rpc", () => ({
   fetchEvmCallHexAtBlock: vi.fn(),
+  fetchEvmBlockNumber: vi.fn(async () => 123),
+  fetchEvmBlockTimestamp: vi.fn(async () => 1_800_000_000),
 }));
 
 import { fetchDefiLlamaPrices, fetchJsonWithRetry, fetchOnchainMulticall3 } from "../helpers";

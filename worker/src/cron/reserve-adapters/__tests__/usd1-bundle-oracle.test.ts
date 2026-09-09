@@ -1,8 +1,15 @@
+import type * as EvmRpc from "../../../lib/evm-rpc";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { encodeAbiParameters } from "viem/utils";
 import type { StablecoinMeta } from "@shared/types/core";
 import type { LiveReservesConfig } from "@shared/types/live-reserves";
 import type { ChainRpcConfig } from "../../../lib/chain-registry";
+
+vi.mock("../../../lib/evm-rpc", async (importOriginal) => ({
+  ...await importOriginal<typeof EvmRpc>(),
+  fetchEvmBlockNumber: vi.fn(async (chain) => chain === "ethereum" ? 12345 : 54321),
+  fetchEvmBlockTimestamp: vi.fn(async () => 1776154391),
+}));
 
 vi.mock("../helpers", async (importOriginal) => {
   const actual = await importOriginal<typeof import("../helpers")>();
@@ -250,7 +257,7 @@ describe("fetchUsd1BundleOracleReserves", () => {
     vi.mocked(fetchOnchainUint256).mockResolvedValue(BigInt(BUNDLE_TIMESTAMP));
   });
 
-  it("aggregates the denominator over every EVM and Tron deployment in the registry", async () => {
+  it.each([false, true])("aggregates every EVM and Tron deployment with inherited Ethereum pin=%s", async (inheritedPin) => {
     const coin = makeCoin([
       { chain: "ethereum", address: "0xeth", decimals: 18 },
       { chain: "bsc", address: "0xbsc", decimals: 18 },
@@ -264,7 +271,18 @@ describe("fetchUsd1BundleOracleReserves", () => {
       .mockResolvedValueOnce(500_000000000000000000n); // bsc
     vi.mocked(fetchTronErc20TotalSupply).mockResolvedValueOnce(750_000000000000000000n);
 
-    const result = await fetchUsd1BundleOracleReserves(coin, config, signal, { nowSec: BUNDLE_TIMESTAMP });
+    const result = await fetchUsd1BundleOracleReserves(coin, config, signal, {
+      nowSec: BUNDLE_TIMESTAMP,
+      ...(inheritedPin ? { observedBlock: { chain: "ethereum", number: 12345, timestamp: BUNDLE_TIMESTAMP } } : {}),
+    });
+    expect(result.metadata?.observedBlock).toEqual({ chain: "ethereum", number: 12345, timestamp: 1776154391 });
+    for (const [request] of [...vi.mocked(fetchOnchainRawCall).mock.calls, ...vi.mocked(fetchOnchainUint256).mock.calls]) {
+      expect(request.ctx?.observedBlock).toEqual(result.metadata?.observedBlock);
+    }
+    expect(vi.mocked(fetchErc20TotalSupply).mock.calls.map((call) => call[3]?.observedBlock)).toEqual([
+      { chain: "ethereum", number: 12345, timestamp: 1776154391 },
+      { chain: "bsc", number: 54321, timestamp: 1776154391 },
+    ]);
 
     // Ethereum-only would have published 3000/1000 = 3.0; the full liability is 2250.
     expect(result.metadata?.supplyUsd).toBeCloseTo(2250, 6);

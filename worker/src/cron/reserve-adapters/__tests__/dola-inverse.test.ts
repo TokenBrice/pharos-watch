@@ -181,7 +181,7 @@ describe("adaptFirmMarkets", () => {
         makeMarket("sDOLA-scrvUSD clp", 2_000_000),
       ],
       timestamp: 1000,
-    });
+    }, 4_000_000);
 
     const reusdSlice = result.slices.find((s) => s.name === "reUSD collateral");
     expect(reusdSlice).toMatchObject({
@@ -201,6 +201,12 @@ describe("adaptFirmMarkets", () => {
       ],
       timestamp: 1000,
     })).toEqual([]);
+  });
+
+  it("includes non-FiRM issuance in unknown exposure rather than normalizing it away", () => {
+    const result = adaptFirmMarkets({ markets: [makeMarket("wstETH", 60)], timestamp: 1000 }, 100);
+    expect(result.metadata?.unknownExposurePct).toBe(40);
+    expect(result.slices).toContainEqual({ name: "Unattributed non-FiRM issuance", pct: 40, risk: "high" });
   });
 
   it("filters out zero-debt markets", () => {

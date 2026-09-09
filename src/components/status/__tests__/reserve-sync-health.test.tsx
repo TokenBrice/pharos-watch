@@ -58,4 +58,24 @@ describe("ReserveSyncHealthCard", () => {
     expect(screen.queryByText("Report-card inputs are conservative")).toBeNull();
     expect(container.textContent).toContain("100.0% fresh, 100.0% score-grade");
   });
+
+  it("renders the 30-day adapter reliability rollup as a compact table", () => {
+    const { container } = render(
+      <ReserveSyncHealthCard
+        health={makeReserveHealth({
+          adapterReliability: [
+            { adapterKey: "circle", attempts: 4, ok: 3, degraded: 1, error: 0, skipped: 0, successRate: 0.75 },
+            { adapterKey: "infinifi", attempts: 2, ok: 0, degraded: 0, error: 2, skipped: 0, successRate: 0 },
+          ],
+        })}
+        nowSeconds={1_712_600_120}
+      />,
+    );
+
+    expect(screen.getByText("30-day Adapter Reliability")).toBeTruthy();
+    expect(container.textContent).toContain("circle");
+    expect(container.textContent).toContain("infinifi");
+    expect(screen.getByText("75.0%")).toBeTruthy();
+    expect(screen.getByText("0.0%")).toBeTruthy();
+  });
 });

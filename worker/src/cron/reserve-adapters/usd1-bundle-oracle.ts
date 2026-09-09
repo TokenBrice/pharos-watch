@@ -16,6 +16,8 @@ import {
   verifiedFreshnessMetadata,
 } from "./helpers";
 import { buildDocumentedRedemptionTelemetry } from "./redemption";
+import { pinnedBlockPlan } from "./evm-observation-plan";
+import { rethrowIfAborted } from "../../lib/abort";
 
 const USD1_BUNDLE_ORACLE = "0x691b74146cdba162449012aa32d3cbf5df77d4c4";
 const USD1_RESERVE_LABEL = "U.S. Treasury Bills, Money Market Funds & Cash";
@@ -190,6 +192,9 @@ export async function fetchUsd1BundleOracleReserves(
   }
   const params = parseLiveReserveAdapterParams("usd1-bundle-oracle", config.params);
 
+  const baseCtx = ctx;
+  const plan = await pinnedBlockPlan({ chain: input.chain, signal, ctx, rpcUrl: params.rpcUrl, fallbackRpcUrl: params.fallbackRpcUrl });
+  ctx = plan.ctx;
   const onchain = makeOnchainCallers(input, {
     signal,
     ctx,
@@ -233,6 +238,7 @@ export async function fetchUsd1BundleOracleReserves(
     throw new Error(`usd1-bundle-oracle: no EVM or Tron contracts available for ${coin.id}`);
   }
 
+  const chainPlans = new Map([[input.chain, Promise.resolve(plan)]]);
   const supplyReads = await Promise.all(
     readableContracts.map(async (contract) => {
       if (contract.decimals == null) {
@@ -246,16 +252,28 @@ export async function fetchUsd1BundleOracleReserves(
       if (!isTronContract(contract) && !chainHasRpc(contract.chain, ctx)) {
         return { contract, raw: null, noRpc: true };
       }
-      const raw = isTronContract(contract)
-        ? await fetchTronErc20TotalSupply(contract.address, signal, ctx)
-        : await fetchErc20TotalSupply(
-            { ...input, chain: contract.chain },
-            contract.address,
-            signal,
-            ctx,
-            params.rpcUrl,
-            params.fallbackRpcUrl,
+      let raw: bigint | null;
+      if (isTronContract(contract)) {
+        raw = await fetchTronErc20TotalSupply(contract.address, signal, baseCtx);
+      } else {
+        try {
+          let chainPlan = chainPlans.get(contract.chain);
+          if (!chainPlan) {
+            // Primary RPC overrides and any inherited pin belong to Ethereum.
+            chainPlan = pinnedBlockPlan({ chain: contract.chain, signal, ctx: { ...baseCtx, observedBlock: undefined } });
+            chainPlans.set(contract.chain, chainPlan);
+          }
+          const pinned = await chainPlan;
+          raw = await fetchErc20TotalSupply(
+            { ...input, chain: contract.chain }, contract.address, signal, pinned.ctx,
+            contract.chain === input.chain ? params.rpcUrl : undefined,
+            contract.chain === input.chain ? params.fallbackRpcUrl : undefined,
           );
+        } catch (error) {
+          rethrowIfAborted(error, signal);
+          raw = null;
+        }
+      }
       return { contract, raw, noRpc: false };
     }),
   );
@@ -274,7 +292,7 @@ export async function fetchUsd1BundleOracleReserves(
     throw new Error(`usd1-bundle-oracle: totalSupply() calls failed on all EVM/Tron chains for ${coin.id}`);
   }
 
-  return adaptUsd1BundleOracle({
+  const result = adaptUsd1BundleOracle({
     bundle,
     latestBundleTimestamp,
     bundleDecimals,
@@ -290,4 +308,5 @@ export async function fetchUsd1BundleOracleReserves(
       omittedReadFailureChains: failed.map((entry) => entry.contract.chain),
     },
   });
+  return { ...result, metadata: { ...result.metadata, observedBlock: plan.observedBlock } };
 }

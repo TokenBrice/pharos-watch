@@ -342,6 +342,7 @@ describe("buildRedemptionBackstopEntry", () => {
           immediateRedeemableUsd: 7_500_000,
           immediateRedeemableRatio: 0.15,
           sourceTimestamp: now - 1800,
+          freshnessMode: "verified",
         }, { fetchedAt: now - 1800 }),
       },
     );
@@ -1279,6 +1280,7 @@ describe("buildRedemptionBackstopEntry", () => {
           immediateRedeemableUsd: 5_000_000,
           immediateRedeemableRatio: 0.1,
           sourceTimestamp: now - 100,
+          freshnessMode: "verified",
         }, { fetchedAt: now - 100 }),
       },
     );

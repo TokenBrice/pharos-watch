@@ -62,6 +62,12 @@ export function SafetyScoresOverview() {
         dependency reviews remain unchanged.
       </p>
       <p>
+        Since methodology v9.48, live reserves with no mapped tracked-asset slices publish no dependency edges rather
+        than restoring older curated or manual weights. Dependency facts distinguish unmatched identities, expired
+        matching classifications, and explicitly reviewed non-links. Curated fallback applies only when there is no
+        live composition; partial live mappings retain their live weights.
+      </p>
+      <p>
         Responsibility follows causal provenance instead of the nearest processing stage. An explicit reason-level
         owner is authoritative; inherited reserve gaps, unavailable upstream pillars, and missing parent scores carry
         every originating owner downstream. Every attributed root receives a causal-root-qualified score path even

@@ -559,6 +559,7 @@ export function adaptMentoReserveComposition(payload: unknown, sourceTimestamp: 
     slices,
     ...(warnings.length > 0 ? { warnings } : {}),
     metadata: {
+      diag: { rawSumDeviation: Math.abs(totalPct - 100) },
       entryCount: entries.length,
       totalPct,
       ...(sourceTimestamp != null

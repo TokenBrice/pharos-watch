@@ -148,12 +148,19 @@ export async function resolveReserveSyncCapacity(
     kind: "reserve-sync-metadata",
     fallbackRatio: model.fallbackRatio,
   });
-  const snapshotMetadata =
+  const retainedSnapshot =
     options.reserveSnapshotMetadata !== undefined
       ? options.reserveSnapshotMetadata
-      : await getLatestSuccessfulReserveSnapshotMetadata(db, stablecoinId);
+      : await getLatestSuccessfulReserveSnapshotMetadata(db, stablecoinId, now);
+  // Capacity has its own evidence/warning policy, but cannot reuse rejected
+  // configuration, authority, or freshness evidence from reserve admission.
+  const snapshotRejected = retainedSnapshot?.admission?.reasons.some((reason) =>
+    reason !== "non-independent" && reason !== "degraded-snapshot" && reason !== "insufficient-slices",
+  ) ?? false;
+  const snapshotMetadata = snapshotRejected ? null : retainedSnapshot;
   const liveMetadata =
-    options.redemptionLiveMetadata ?? readRedemptionBackstopLiveMetadata(stablecoinId, snapshotMetadata, now);
+    (!snapshotRejected ? options.redemptionLiveMetadata : undefined)
+    ?? readRedemptionBackstopLiveMetadata(stablecoinId, snapshotMetadata, now);
 
   // The bounded-gap lane is reserved for OPEN routes: a paused route's zero is
   // the measured pause, not an evidence gap, so it falls through to the

@@ -1,3 +1,4 @@
+import { pinnedBlockPlan } from "./evm-observation-plan";
 import { parseLiveReserveAdapterParams, type LiveReserveAdapterParamsByKey } from "@shared/lib/live-reserve-adapters";
 import type { StablecoinMeta } from "@shared/types/core";
 import type { LiveReservesConfig } from "@shared/types/live-reserves";
@@ -265,6 +266,8 @@ export async function fetchResupplyPairsReserves(
   if (!params.pairs || params.pairs.length === 0) {
     throw new Error("resupply-pairs requires at least one configured pair");
   }
+  const plan = await pinnedBlockPlan({ chain: input.chain, signal, ctx, ...params });
+  ctx = plan.ctx;
   const callOptions = {
     chain: input.chain,
     signal,
@@ -419,9 +422,10 @@ export async function fetchResupplyPairsReserves(
     };
   });
 
-  return adaptResupplyPairSnapshots(
+  const result = adaptResupplyPairSnapshots(
     snapshots,
     params.underlyings,
     redemptionHandlerAddress && guard ? { redemptionHandlerAddress, guard } : undefined,
   );
+  return { ...result, metadata: { ...result.metadata, observedBlock: plan.observedBlock } };
 }

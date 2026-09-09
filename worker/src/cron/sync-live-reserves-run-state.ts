@@ -74,7 +74,7 @@ export async function recordDeferredTail(
         lastError: "run-budget-exhausted",
         metadata,
         attemptId: null,
-      }),
+      }, "deferred"),
     );
   }
 

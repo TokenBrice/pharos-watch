@@ -39,6 +39,7 @@ describe("syncLiveReserves", () => {
       sourceModel: definition.sourceModel,
       evidenceClass: definition.evidenceClass,
       sharedSourceMode: definition.sharedSourceMode,
+      redemptionTelemetry: definition.redemptionTelemetry,
       ...(validation ? { validation } : {}),
     };
   }
@@ -547,7 +548,7 @@ describe("syncLiveReserves", () => {
     expect(db.getHistory().some((entry) => entry.sql.includes("pending_attempt_id = NULL"))).toBe(false);
   });
 
-  it("leaves the authoritative write intact and skips history finalization when the write hook throws", async () => {
+  it("keeps authority and atomic history intact when the post-commit hook throws", async () => {
     const coin = getIndependentConfiguredCoin();
     const { syncReserveCoin } = await import("../sync-live-reserves-core");
     const db = mockLiveReserveD1();
@@ -574,7 +575,7 @@ describe("syncLiveReserves", () => {
 
     expect(result.status).toBe("failed");
     expect(db.getHistory().some((entry) => entry.sql.includes("INSERT INTO reserve_composition ("))).toBe(true);
-    expect(db.getHistory().some((entry) => entry.sql.includes("reserve_composition_history"))).toBe(false);
+    expect(db.getHistory().some((entry) => entry.sql.includes("reserve_composition_history"))).toBe(true);
   });
 
   it("preserves prior reserve detail and keeps it scoring when the circuit is open", async () => {

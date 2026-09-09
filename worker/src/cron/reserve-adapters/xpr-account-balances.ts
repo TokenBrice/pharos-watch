@@ -180,11 +180,9 @@ function adaptBatch(batch: XprReadBatch, params: XprAccountBalancesParams): Adap
   ));
 
   if (uncovered > 0) {
-    warnings.push(buildUnknownExposureWarning({
-      code: "xpr-unmeasured-treasury",
-      message: `${ADAPTER_KEY}: ${params.supplySymbol} supply not covered by measured ${params.balanceCode} balances of ${params.treasuryAccount}`,
-      unknownExposurePct,
-    }));
+    warnings.push(buildUnknownExposureWarning({ adapterKey: "xpr-account-balances", code: "xpr-unmeasured-treasury",
+    message: `${ADAPTER_KEY}: ${params.supplySymbol} supply not covered by measured ${params.balanceCode} balances of ${params.treasuryAccount}`,
+    unknownExposurePct, }));
   }
 
   const slices = slicesFromValues(

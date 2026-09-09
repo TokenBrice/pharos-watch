@@ -128,6 +128,9 @@ export const API_PATHS = {
   status: () => "/api/status",
   statusHistoryBase: () => "/api/status-history",
   statusHistory: (params?: { limit?: number }) => buildQueryPath("/api/status-history", { limit: params?.limit }),
+  reserveAttemptHistoryBase: () => "/api/reserve-attempt-history",
+  reserveAttemptHistory: (params?: { coin?: string; limit?: number }) =>
+    buildQueryPath("/api/reserve-attempt-history", { coin: params?.coin, limit: params?.limit }),
   requestSourceStatsBase: () => "/api/request-source-stats",
   requestSourceStats: (params?: { hours?: number; bucketSec?: number; routeLimit?: number; apiKeyLimit?: number }) =>
     buildQueryPath("/api/request-source-stats", {

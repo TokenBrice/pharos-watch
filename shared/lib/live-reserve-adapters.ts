@@ -2,8 +2,10 @@ import { z } from "zod";
 import {
   LIVE_RESERVE_RPC_MODE_VALUES,
   LIVE_RESERVE_SEMANTICS_VALUES,
+  type LiveReserveAdapterValidationPolicy,
   type LiveReserveInput,
 } from "../types/live-reserve-core";
+import { MATERIAL_UNKNOWN_EXPOSURE_PCT } from "../types/live-reserve-adapter-policy";
 import {
   type LiveReserveAdapterKey,
   type LiveReservesConfig,
@@ -12,8 +14,10 @@ import {
   LIVE_RESERVE_ADAPTER_DEFINITIONS,
   LIVE_RESERVE_ADAPTER_STATUS_VALUES,
 } from "./live-reserve-adapter-descriptors";
+import { sha256Hex } from "./sha256";
+import { stableJsonStringifyV1 } from "./stable-json";
 
-export * from "./live-reserve-adapter-param-schemas";
+export * from "../types/live-reserve-adapter-policy";
 
 export type LiveReserveInputKind = LiveReserveInput["kind"];
 
@@ -148,6 +152,29 @@ export function getLiveReserveAdapterDefinition(
   return LIVE_RESERVE_ADAPTER_DEFINITIONS[adapterKey as LiveReserveAdapterKey] ?? null;
 }
 
+/**
+ * The adapter's declared validation policy, or `undefined` when the adapter
+ * declares none. Callers that need an effective bound must apply their own
+ * default; this returns exactly what the declaration states.
+ */
+export function getLiveReserveAdapterValidationPolicy(
+  adapterKey: LiveReserveAdapterKey,
+): LiveReserveAdapterValidationPolicy | undefined {
+  const definition = LIVE_RESERVE_ADAPTER_DEFINITIONS[adapterKey];
+  return "validation" in definition ? definition.validation : undefined;
+}
+
+/**
+ * Effective unknown-exposure ceiling: the adapter's declared cap when it states
+ * one, otherwise the shared materiality threshold every basket adapter is held
+ * to. Use this instead of re-deriving the fallback per adapter.
+ */
+export function getLiveReserveAdapterMaxUnknownExposurePct(
+  adapterKey: LiveReserveAdapterKey,
+): number {
+  return getLiveReserveAdapterValidationPolicy(adapterKey)?.maxUnknownExposurePct ?? MATERIAL_UNKNOWN_EXPOSURE_PCT;
+}
+
 export function parseLiveReserveAdapterParams<K extends LiveReserveAdapterKey>(
   adapterKey: K,
   params: Record<string, unknown> | undefined,
@@ -162,4 +189,15 @@ export function parseLiveReserveAdapterParams<K extends LiveReserveAdapterKey>(
   const issue = parsed.error.issues[0];
   const path = issue?.path.length ? `.${issue.path.join(".")}` : "";
   throw new Error(`${adapterKey} adapter params invalid${path}: ${issue?.message ?? "unknown validation error"}`);
+}
+
+/** Bind retained evidence to the exact adapter inputs, independently of display/scoring policy. */
+export function computeLiveReserveConfigFingerprint(config: LiveReservesConfig): string {
+  return sha256Hex(stableJsonStringifyV1({
+    adapter: config.adapter,
+    version: config.version,
+    semantics: config.semantics,
+    inputs: config.inputs,
+    params: config.params ?? {},
+  }));
 }

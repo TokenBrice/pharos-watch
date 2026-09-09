@@ -6,6 +6,7 @@ vi.mock("../../../lib/fetch-retry", () => ({
 
 import { fetchTextWithRetry } from "../../../lib/fetch-retry";
 import { fetchDefiLlamaPrices } from "../defillama";
+import type { LiveReserveWarning } from "@shared/types/live-reserves";
 
 describe("fetchDefiLlamaPrices", () => {
   beforeEach(() => {
@@ -17,7 +18,7 @@ describe("fetchDefiLlamaPrices", () => {
       response: new Response(),
       body: JSON.stringify({
         coins: {
-          "hyperliquid:0xabc": { price: 1.23 },
+          "hyperliquid:0xabc": { price: 1.23, timestamp: Math.floor(Date.now() / 1000), confidence: 1 },
         },
       }),
     });
@@ -52,9 +53,9 @@ describe("fetchDefiLlamaPrices", () => {
     vi.mocked(fetchTextWithRetry).mockResolvedValue({
       response: new Response(),
       body: JSON.stringify({ coins: {
-        "ethereum:0xabc": { price: 2 },
-        "ethereum:0xzero": { price: 0 },
-        "ethereum:0xnegative": { price: -1 },
+        "ethereum:0xabc": { price: 2, timestamp: Math.floor(Date.now() / 1000), confidence: 1 },
+        "ethereum:0xzero": { price: 0, timestamp: Math.floor(Date.now() / 1000), confidence: 1 },
+        "ethereum:0xnegative": { price: -1, timestamp: Math.floor(Date.now() / 1000), confidence: 1 },
       } }),
     });
     const prices = await fetchDefiLlamaPrices(
@@ -69,7 +70,7 @@ describe("fetchDefiLlamaPrices", () => {
   it("returns each caller's logical keys while sharing one upstream fetch for the same asset", async () => {
     vi.mocked(fetchTextWithRetry).mockResolvedValue({
       response: new Response(),
-      body: JSON.stringify({ coins: { "ethereum:0xabc": { price: 2 } } }),
+      body: JSON.stringify({ coins: { "ethereum:0xabc": { price: 2, timestamp: Math.floor(Date.now() / 1000), confidence: 1 } } }),
     });
     const ctx = { requestCache: new Map<string, Promise<unknown>>() };
     const signal = new AbortController().signal;
@@ -85,7 +86,7 @@ describe("fetchDefiLlamaPrices", () => {
   it("does not let a caller's fallback prices leak into a later cached request", async () => {
     vi.mocked(fetchTextWithRetry).mockResolvedValue({
       response: new Response(),
-      body: JSON.stringify({ coins: { "ethereum:0xabc": { price: 2 } } }),
+      body: JSON.stringify({ coins: { "ethereum:0xabc": { price: 2, timestamp: Math.floor(Date.now() / 1000), confidence: 1 } } }),
     });
     const ctx = { requestCache: new Map<string, Promise<unknown>>() };
     const signal = new AbortController().signal;
@@ -99,5 +100,25 @@ describe("fetchDefiLlamaPrices", () => {
 
     expect(await fetchDefiLlamaPrices(assets, signal, ctx)).toEqual(new Map([["priced", 2]]));
     expect(fetchTextWithRetry).toHaveBeenCalledTimes(1);
+  });
+
+  it("rejects low-quality quote admission while retaining warned values for every cached caller", async () => {
+    vi.mocked(fetchTextWithRetry).mockResolvedValue({
+      response: new Response(),
+      body: JSON.stringify({ coins: {
+        "ethereum:0xold": { price: 2, timestamp: 1, confidence: 1 },
+        "ethereum:0xweak": { price: 3, timestamp: 200000, confidence: 0.79 },
+        "ethereum:0xedge": { price: 4, timestamp: 113600, confidence: 0.8 },
+      } }),
+    });
+    const ctx = { nowSec: 200000, requestCache: new Map<string, Promise<unknown>>() };
+    const assets = ["old", "weak", "edge"].map((key) => ({ key, chain: "ethereum", address: `0x${key}` }));
+    for (let attempt = 0; attempt < 2; attempt++) {
+      const warnings: LiveReserveWarning[] = [];
+      expect(await fetchDefiLlamaPrices(assets, new AbortController().signal, ctx, warnings))
+        .toEqual(new Map([["old", 2], ["weak", 3], ["edge", 4]]));
+      expect(warnings.map((warning) => warning.effect)).toEqual(["degraded", "degraded"]);
+    }
+    await expect(fetchDefiLlamaPrices(assets, new AbortController().signal, ctx)).rejects.toThrow(/policy/);
   });
 });

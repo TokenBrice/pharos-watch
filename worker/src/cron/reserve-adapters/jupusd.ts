@@ -165,11 +165,9 @@ export function adaptJupUsdData(
   const unknownExposurePct = totalReserveUsd > 0 ? (unknownValue / totalReserveUsd) * 100 : 0;
   const warnings: LiveReserveWarning[] = [];
   if (unknownValue > 0) {
-    warnings.push(buildUnknownExposureWarning({
-      code: "unknown-holding",
-      message: `JupUSD reserve feed included unmapped holding(s): ${Array.from(unknownHoldingNames).sort().join(", ")}`,
-      unknownExposurePct,
-    }));
+    warnings.push(buildUnknownExposureWarning({ adapterKey: "jupusd", code: "unknown-holding",
+    message: `JupUSD reserve feed included unmapped holding(s): ${Array.from(unknownHoldingNames).sort().join(", ")}`,
+    unknownExposurePct, }));
   }
   if (options.extraWarnings?.length) {
     warnings.push(...options.extraWarnings);

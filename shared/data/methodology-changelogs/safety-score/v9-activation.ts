@@ -2,6 +2,21 @@ import type { MethodologyChangelogEntry } from "@shared/lib/methodology-versions
 
 export const SAFETY_SCORE_V9: readonly MethodologyChangelogEntry[] = [
   {
+    version: "9.48",
+    title: "Unmapped live reserves cannot restore curated dependency weights",
+    date: "2026-09-09",
+    effectiveAt: 1788912000,
+    summary:
+      "A live composition with no mapped tracked-asset slices now remains live-unmapped with no dependency edges, instead of restoring the older curated or manual graph after a failed classification join.",
+    impact: [
+      "Dependency facts retain per-slice rejection reasons for unmatched identities, expired matching classifications, and explicit reviewed non-links.",
+      "Curated and manual fallback weights apply only when no live composition exists. Partial live mappings remain authoritative.",
+      "No evidence is added; dependency edges and downstream scores may change where stale curated weights previously bypassed the live identity join.",
+    ],
+    commits: [],
+    reconstructed: false,
+  },
+  {
     version: "9.47",
     title: "Inherited upstream reserve gaps count once per upstream cause",
     date: "2026-09-07",

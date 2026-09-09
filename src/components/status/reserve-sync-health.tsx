@@ -159,6 +159,42 @@ export function ReserveSyncHealthCard({ health, nowSeconds }: ReserveSyncHealthC
             </div>
           ) : null}
         </div>
+
+        {health.adapterReliability.length > 0 ? (
+          <div className="space-y-2 rounded-lg border border-border/60 bg-muted/20 p-3">
+            <div className="text-xs font-medium text-foreground">30-day Adapter Reliability</div>
+            <div className="overflow-x-auto">
+              <table className="w-full text-xs">
+                <thead>
+                  <tr className="text-left text-muted-foreground">
+                    <th className="py-1 pr-2 font-normal">Adapter</th>
+                    <th className="py-1 px-2 text-right font-normal">Attempts</th>
+                    <th className="py-1 px-2 text-right font-normal">OK</th>
+                    <th className="py-1 px-2 text-right font-normal">Degr.</th>
+                    <th className="py-1 px-2 text-right font-normal">Error</th>
+                    <th className="py-1 px-2 text-right font-normal">Skip</th>
+                    <th className="py-1 pl-2 text-right font-normal">Success</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {health.adapterReliability.map((row) => (
+                    <tr key={row.adapterKey} className="border-t border-border/40">
+                      <td className="py-1 pr-2 font-mono">{row.adapterKey}</td>
+                      <td className="py-1 px-2 text-right font-mono">{row.attempts}</td>
+                      <td className="py-1 px-2 text-right font-mono text-emerald-600 dark:text-emerald-400">{row.ok}</td>
+                      <td className="py-1 px-2 text-right font-mono text-amber-600 dark:text-amber-400">{row.degraded}</td>
+                      <td className="py-1 px-2 text-right font-mono text-red-600 dark:text-red-400">{row.error}</td>
+                      <td className="py-1 px-2 text-right font-mono">{row.skipped}</td>
+                      <td className="py-1 pl-2 text-right font-mono">
+                        {row.successRate != null ? formatCoveragePct(row.successRate) : "—"}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        ) : null}
       </CardContent>
     </Card>
   );

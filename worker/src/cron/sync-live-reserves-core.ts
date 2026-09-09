@@ -6,6 +6,7 @@ import { shouldAttemptFetch } from "../lib/circuit-breaker";
 import { hasDegradingWarnings, hasFatalWarnings, validateAdapterOutput } from "./reserve-adapters/validate";
 import { toErrorMessage } from "@shared/lib/error-utils";
 import { throwIfAborted } from "../lib/abort";
+import type { ScheduledCheckpointIdentity } from "../lib/scheduled-recovery-checkpoint";
 import {
   buildReserveSyncStateRecord,
   breakerKeyForConfig,
@@ -14,6 +15,7 @@ import {
   type ConfiguredCoin,
   type LiveReserveConfig,
   type ReserveAttemptFailureSummary,
+  type LiveReservePhaseTimings,
 } from "./sync-live-reserves-shared";
 import {
   beginReserveSyncAttempt,
@@ -52,7 +54,7 @@ export interface AdapterLatencyGroup {
   cacheHit: boolean;
   attemptCount: number;
   ioCallCount: number;
-  waveCount: number;
+  ioActivityBurstCount: number;
   errorCount: number;
   elapsedMs: AdapterLatencyHistogram;
 }
@@ -64,7 +66,7 @@ export interface AdapterLatencySummary {
   total: {
     attemptCount: number;
     ioCallCount: number;
-    waveCount: number;
+    ioActivityBurstCount: number;
     errorCount: number;
     elapsedMs: AdapterLatencyHistogram;
   };
@@ -78,7 +80,7 @@ export interface AdapterLatencySummary {
 export interface AdapterTelemetryProgress {
   attemptCount: number;
   ioCallCount: number;
-  waveCount: number;
+  ioActivityBurstCount: number;
   requestCacheHits: number;
   requestCacheMisses: number;
   elapsedTotalMs: number;
@@ -93,7 +95,7 @@ interface MutableAdapterLatencyGroup {
   cacheHit: boolean;
   attemptCount: number;
   ioCallCount: number;
-  waveCount: number;
+  ioActivityBurstCount: number;
   errorCount: number;
   elapsedCount: number;
   elapsedSumMs: number;
@@ -107,7 +109,7 @@ export interface AdapterLatencyCollector {
     stage: AdapterLatencyStage;
     cacheHit: boolean;
     ioCallCount: number;
-    waveCount: number;
+    ioActivityBurstCount: number;
     elapsedMs: number;
     error: boolean;
   }): void;
@@ -172,7 +174,7 @@ export function createAdapterLatencyCollector(): AdapterLatencyCollector {
     cacheHit: false,
     attemptCount: 0,
     ioCallCount: 0,
-    waveCount: 0,
+    ioActivityBurstCount: 0,
     errorCount: 0,
     elapsedCount: 0,
     elapsedSumMs: 0,
@@ -188,7 +190,7 @@ export function createAdapterLatencyCollector(): AdapterLatencyCollector {
     const elapsedMs = saturatingInteger(input.elapsedMs);
     group.attemptCount = saturatingAdd(group.attemptCount, 1);
     group.ioCallCount = saturatingAdd(group.ioCallCount, input.ioCallCount);
-    group.waveCount = saturatingAdd(group.waveCount, input.waveCount);
+    group.ioActivityBurstCount = saturatingAdd(group.ioActivityBurstCount, input.ioActivityBurstCount);
     group.errorCount = saturatingAdd(group.errorCount, input.error ? 1 : 0);
     group.elapsedCount = saturatingAdd(group.elapsedCount, 1);
     group.elapsedSumMs = saturatingAdd(group.elapsedSumMs, elapsedMs);
@@ -214,7 +216,7 @@ export function createAdapterLatencyCollector(): AdapterLatencyCollector {
         cacheHit: group.cacheHit,
         attemptCount: group.attemptCount,
         ioCallCount: group.ioCallCount,
-        waveCount: group.waveCount,
+        ioActivityBurstCount: group.ioActivityBurstCount,
         errorCount: group.errorCount,
         elapsedMs: snapshotHistogram(group),
       }));
@@ -226,7 +228,7 @@ export function createAdapterLatencyCollector(): AdapterLatencyCollector {
       total: {
         attemptCount: total.attemptCount,
         ioCallCount: total.ioCallCount,
-        waveCount: total.waveCount,
+        ioActivityBurstCount: total.ioActivityBurstCount,
         errorCount: total.errorCount,
         elapsedMs: snapshotHistogram(total),
       },
@@ -261,7 +263,7 @@ export function createAdapterLatencyCollector(): AdapterLatencyCollector {
           cacheHit: input.cacheHit,
           attemptCount: 0,
           ioCallCount: 0,
-          waveCount: 0,
+          ioActivityBurstCount: 0,
           errorCount: 0,
           elapsedCount: 0,
           elapsedSumMs: 0,
@@ -282,7 +284,7 @@ export function createAdapterLatencyCollector(): AdapterLatencyCollector {
       return {
         attemptCount: total.attemptCount,
         ioCallCount: total.ioCallCount,
-        waveCount: total.waveCount,
+        ioActivityBurstCount: total.ioActivityBurstCount,
         requestCacheHits,
         requestCacheMisses,
         elapsedTotalMs: total.elapsedSumMs,
@@ -311,6 +313,7 @@ export type ReserveAdapterRunner = (
   coin: ConfiguredCoin,
   config: LiveReserveConfig,
   adapter: ReserveAdapterDefinition,
+  deadlineMs?: number,
 ) => Promise<AdapterResult>;
 
 function getEffectiveScoringMaxSourceAgeSec(config: LiveReserveConfig, adapter: ReserveAdapterDefinition): number | undefined {
@@ -334,6 +337,9 @@ export async function syncReserveCoin(args: {
   breakerCanFetch: Map<string, boolean>;
   previousState: ReserveSyncStateRecord | null;
   d1FinalizeTimeoutMs: number;
+  deadlineMs?: number;
+  checkpoint?: ScheduledCheckpointIdentity;
+  stageTimings?: NonNullable<LiveReservePhaseTimings["stages"]>;
   onAttemptStarted?: (attemptId: string) => Promise<void>;
   onAttemptPending?: (attemptId: string) => Promise<void>;
   onAuthoritativeWrite?: (attemptId: string) => Promise<void>;
@@ -351,6 +357,20 @@ export async function syncReserveCoin(args: {
   let adapterStartMs: number | null = null;
   let adapterDurationMs = 0;
   let d1DurationMs = 0;
+  let failureStage: "adapter-exception" | "storage-exception" = "storage-exception";
+  const deadlineMs = args.deadlineMs ?? Number.POSITIVE_INFINITY;
+  const timeStage = async <T>(stage: keyof NonNullable<LiveReservePhaseTimings["stages"]>, operation: () => Promise<T>): Promise<T> => {
+    if (Date.now() >= deadlineMs) throw new Error("run-budget-exhausted");
+    const started = Date.now();
+    try {
+      const pending = operation();
+      return stage === "authoritativeWrite" || !Number.isFinite(deadlineMs)
+        ? await pending
+        : await raceWithTimeout(pending, Math.max(1, deadlineMs - Date.now()), "run-budget-exhausted");
+    } finally {
+      if (args.stageTimings) args.stageTimings[stage] += Date.now() - started;
+    }
+  };
 
   const timedResult = (
     result: Omit<ReserveCoinSyncResult, "adapterDurationMs" | "d1DurationMs">,
@@ -366,7 +386,7 @@ export async function syncReserveCoin(args: {
     if (!attemptStarted) return { finalized: false };
     const d1StartedMs = Date.now();
     try {
-      return await finalizeReserveSyncAttempt(db, buildReserveSyncStateRecord({
+      return await timeStage("failureWrite", () => finalizeReserveSyncAttempt(db, buildReserveSyncStateRecord({
           stablecoinId: coin.id,
           config,
           breakerKey,
@@ -382,7 +402,7 @@ export async function syncReserveCoin(args: {
             failureCategory: classifyFailure(reason, lastError),
             ...(metadataExtras ?? {}),
           },
-      }));
+      }), args.deadlineMs));
     } finally {
       d1DurationMs += Date.now() - d1StartedMs;
     }
@@ -392,26 +412,27 @@ export async function syncReserveCoin(args: {
   // as pending. A crash in between leaves a harmless checkpoint reference to
   // a nonexistent attempt; the opposite order could leave an untracked pending
   // attempt that recovery cannot clear with an exact compare-and-swap.
-  await args.onAttemptStarted?.(attemptId);
+  await timeStage("checkpoint", async () => { await args.onAttemptStarted?.(attemptId); });
   const beginStartedMs = Date.now();
   try {
-    await beginReserveSyncAttempt(db, {
+    await timeStage("beginWrite", () => beginReserveSyncAttempt(db, {
       stablecoinId: coin.id,
       adapterKey: config.adapter,
       breakerKey,
       attemptedAt: attemptStartedAt,
       attemptId,
-    });
+      deadlineMs: args.deadlineMs,
+      checkpoint: args.checkpoint,
+    }));
   } finally {
     d1DurationMs += Date.now() - beginStartedMs;
   }
   attemptStarted = true;
-  await args.onAttemptPending?.(attemptId);
-
+  await timeStage("checkpoint", async () => { await args.onAttemptPending?.(attemptId); });
   try {
     const canFetch = breakerCanFetch.has(breakerKey)
       ? breakerCanFetch.get(breakerKey) ?? true
-      : await shouldAttemptFetch(db, breakerKey);
+      : await timeStage("breakerRead", () => shouldAttemptFetch(db, breakerKey));
     breakerCanFetch.set(breakerKey, canFetch);
     if (!canFetch) {
       await recordFailure("skipped", null, "circuit-open");
@@ -421,11 +442,13 @@ export async function syncReserveCoin(args: {
     if (!adapter) {
       logWorkerEventArgs("handler", "warn", `[sync-live-reserves] Unknown adapter "${config.adapter}" for ${coin.id}`);
       await recordFailure("error", `Unknown adapter: ${config.adapter}`, "unknown-adapter");
-      return timedResult({ breakerKey, status: "failed", breakerOutcome: false, warningMessages: [], hasWarnings: false });
+      return timedResult({ breakerKey, status: "failed", warningMessages: [], hasWarnings: false });
     }
 
     adapterStartMs = Date.now();
-    const result = await runAdapter(coin, config, adapter);
+    failureStage = "adapter-exception";
+    const result = await runAdapter(coin, config, adapter, args.deadlineMs);
+    failureStage = "storage-exception";
     const durationMs = Date.now() - adapterStartMs;
     adapterDurationMs += durationMs;
     const validation = validateAdapterOutput(result, {
@@ -439,13 +462,13 @@ export async function syncReserveCoin(args: {
       const message = validation.warnings.map((warning) => warning.message).join("; ");
       logWorkerEventArgs("handler", "warn", `[sync-live-reserves] Adapter output invalid for ${coin.id}: ${message}`);
       await recordFailure("error", `Validation failed: ${message}`, "validation-failed", validation.warnings, { durationMs });
-      return timedResult({ breakerKey, status: "failed", breakerOutcome: false, warningMessages: [], hasWarnings: false });
+      return timedResult({ breakerKey, status: "failed", warningMessages: validation.warnings.map((warning) => `${coin.id}:${warning.code}`), hasWarnings: true });
     }
 
     if (result.slices.length === 0) {
       logWorkerEventArgs("handler", "warn", `[sync-live-reserves] Adapter returned empty slices for ${coin.id}`);
       await recordFailure("error", "Adapter returned zero reserve slices", "empty-slices", [], { durationMs });
-      return timedResult({ breakerKey, status: "failed", breakerOutcome: false, warningMessages: [], hasWarnings: false });
+      return timedResult({ breakerKey, status: "failed", warningMessages: [], hasWarnings: false });
     }
 
     const warnings = [...(result.warnings ?? []), ...validation.warnings];
@@ -455,14 +478,14 @@ export async function syncReserveCoin(args: {
         .map((warning) => warning.message)
         .join("; ");
       await recordFailure("error", message || "Fatal reserve adapter warning", "fatal-warning", warnings, { durationMs });
-      return timedResult({ breakerKey, status: "failed", breakerOutcome: false, warningMessages: [], hasWarnings: false });
+      return timedResult({ breakerKey, status: "failed", warningMessages: warnings.map((warning) => `${coin.id}:${warning.code}`), hasWarnings: true });
     }
 
     const degradedWarningsOutsideAllowlist = selectScoringDegradedWarnings(warnings, config);
 
     const snapshotMetadata = {
       ...(result.metadata ?? {}),
-      durationMs,
+      diag: { ...(typeof result.metadata?.diag === "object" && result.metadata.diag !== null ? result.metadata.diag : {}), durationMs },
     };
 
     const compositionRecord: ReserveCompositionRecord = {
@@ -501,26 +524,21 @@ export async function syncReserveCoin(args: {
     });
 
     let finalizeSucceeded = false;
-    let historyWriteFailed: string | null = null;
     let failureAlreadyRecorded = false;
     const finalizeStartedMs = Date.now();
     try {
-      const finalizeResult = await raceWithTimeout(
+      const finalizeResult = await timeStage("authoritativeWrite", () => raceWithTimeout(
         finalizeReserveSyncSuccess(
           db,
           compositionRecord,
           successState,
-          Date.now() + args.d1FinalizeTimeoutMs,
+          Math.min(Date.now() + args.d1FinalizeTimeoutMs, deadlineMs),
           args.onAuthoritativeWrite ? () => args.onAuthoritativeWrite!(attemptId) : undefined,
         ),
-        args.d1FinalizeTimeoutMs,
+        Math.max(1, Math.min(args.d1FinalizeTimeoutMs, deadlineMs - Date.now())),
         `D1 write timeout for ${coin.id}`,
-      );
+      ));
       finalizeSucceeded = finalizeResult.finalized;
-      if (finalizeResult.finalized && !finalizeResult.historyRecorded) {
-        historyWriteFailed = finalizeResult.historyError ?? "unknown history write failure";
-        logWorkerEventArgs("handler", "warn", `[sync-live-reserves] History write failed after authoritative success for ${coin.id}: ${historyWriteFailed}`);
-      }
     } catch (error) {
       const timeoutMessage = `D1 write timeout for ${coin.id}`;
       if (!(error instanceof Error) || error.message !== timeoutMessage) {
@@ -537,7 +555,6 @@ export async function syncReserveCoin(args: {
       ) {
         logWorkerEventArgs("handler", "warn", `[sync-live-reserves] ${timeoutMessage}; authoritative success confirmed by readback`);
         finalizeSucceeded = true;
-        historyWriteFailed = "D1 write timed out after authoritative success readback";
       }
 
       if (!finalizeSucceeded) {
@@ -562,13 +579,10 @@ export async function syncReserveCoin(args: {
           { uncertainWrite: true, durationMs },
         );
       }
-      return timedResult({ breakerKey, status: "failed", breakerOutcome: false, warningMessages: [], hasWarnings: false });
+      return timedResult({ breakerKey, status: "failed", warningMessages: [], hasWarnings: false });
     }
 
     const warningMessages = warnings.map((warning) => `${coin.id}:${warning.code}`);
-    if (historyWriteFailed) {
-      warningMessages.push(`${coin.id}:history-write-failed`);
-    }
 
     return timedResult({
       breakerKey,
@@ -593,14 +607,14 @@ export async function syncReserveCoin(args: {
     await recordFailure(
       "error",
       toErrorMessage(error),
-      "adapter-exception",
+      failureStage,
       [],
       Object.keys(extras).length > 0 ? extras : undefined,
     );
     return timedResult({
       breakerKey,
       status: "failed",
-      breakerOutcome: false,
+      ...(failureStage === "adapter-exception" && ["network", "upstream-http"].includes(classifyFailure(failureStage, toErrorMessage(error))) ? { breakerOutcome: false } : {}),
       warningMessages: [],
       hasWarnings: false,
       ...(attemptFailureSummaries ? { attemptFailureSummaries } : {}),

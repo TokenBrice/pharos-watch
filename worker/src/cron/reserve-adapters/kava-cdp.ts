@@ -331,12 +331,10 @@ export function adaptKavaCdpState(state: KavaCdpState): AdapterResult {
     ? (unpricedPrincipalTokens / principalTokens) * 100
     : 0;
   if (unpricedTypes.length > 0) {
-    warnings.push(buildUnknownExposureWarning({
-      code: "unpriced-collateral-type",
-      message:
-        `${ADAPTER_KEY}: collateral type(s) ${unpricedTypes.sort().join(", ")} have no live pricefeed market and back ${unknownExposurePct.toFixed(2)}% of USDX principal; their composition is unmeasured`,
-      unknownExposurePct,
-    }));
+    warnings.push(buildUnknownExposureWarning({ adapterKey: "kava-cdp", code: "unpriced-collateral-type",
+    message:
+      `${ADAPTER_KEY}: collateral type(s) ${unpricedTypes.sort().join(", ")} have no live pricefeed market and back ${unknownExposurePct.toFixed(2)}% of USDX principal; their composition is unmeasured`,
+    unknownExposurePct, }));
   }
 
   // ── Supply and ratios ────────────────────────────────────────────────────

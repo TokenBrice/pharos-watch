@@ -28,6 +28,7 @@ function mapReserveSyncStateRow(row: ReserveSyncStateRow): ReserveSyncStateRecor
     lastAttemptId: row.last_attempt_id ?? null,
     pendingAttemptId: row.pending_attempt_id ?? null,
     lastSuccessAttemptId: row.last_success_attempt_id ?? null,
+    configFingerprint: row.config_fingerprint ?? null,
   };
 }
 
@@ -35,31 +36,36 @@ export async function getReserveCompositionRow(
   db: D1Database,
   stablecoinId: string,
 ): Promise<ReserveCompositionRow | null> {
-  return db
+  return runWithOverloadRetry(() => db
     .prepare(
       `SELECT ${RESERVE_COMPOSITION_SELECT_COLUMNS}
          FROM reserve_composition
         WHERE stablecoin_id = ?`,
     )
     .bind(stablecoinId)
-    .first<ReserveCompositionRow>();
+    .first<ReserveCompositionRow>());
 }
 
 async function loadMapByStablecoinId<Row extends { stablecoin_id: string }, Value>(
   db: D1Database,
-  stablecoinIds: readonly string[],
-  sqlForInClause: (inClauseSql: string) => string,
+  stablecoinIds: readonly string[] | undefined,
+  sql: string,
   mapRow: (row: Row) => Value,
 ): Promise<Map<string, Value>> {
-  if (stablecoinIds.length === 0) return new Map();
+  if (stablecoinIds?.length === 0) return new Map();
 
   const result = new Map<string, Value>();
 
+  if (!stablecoinIds) {
+    const rows = await runWithOverloadRetry(() => db.prepare(sql).all<Row>());
+    for (const row of rows.results ?? []) result.set(row.stablecoin_id, mapRow(row));
+    return result;
+  }
   for (const batch of chunkArray(stablecoinIds, D1_SAFE_IN_CLAUSE_BIND_LIMIT)) {
     const inClause = buildInClause(batch);
     const rows = await runWithOverloadRetry(() =>
       db
-        .prepare(sqlForInClause(inClause.sql))
+        .prepare(`${sql} WHERE stablecoin_id IN (${inClause.sql})`)
         .bind(...inClause.binds)
         .all<Row>(),
     );
@@ -76,14 +82,14 @@ export async function getReserveSyncState(
   db: D1Database,
   stablecoinId: string,
 ): Promise<ReserveSyncStateRecord | null> {
-  const row = await db
+  const row = await runWithOverloadRetry(() => db
     .prepare(
       `SELECT ${RESERVE_SYNC_STATE_SELECT_COLUMNS}
          FROM reserve_sync_state
         WHERE stablecoin_id = ?`,
     )
     .bind(stablecoinId)
-    .first<ReserveSyncStateRow>();
+    .first<ReserveSyncStateRow>());
 
   if (!row) return null;
   return mapReserveSyncStateRow(row);
@@ -91,30 +97,24 @@ export async function getReserveSyncState(
 
 export async function loadReserveSyncStateMap(
   db: D1Database,
-  stablecoinIds: readonly string[],
+  stablecoinIds?: readonly string[],
 ): Promise<Map<string, ReserveSyncStateRecord>> {
   return loadMapByStablecoinId<ReserveSyncStateRow, ReserveSyncStateRecord>(
     db,
     stablecoinIds,
-    (inClauseSql) =>
-      `SELECT ${RESERVE_SYNC_STATE_SELECT_COLUMNS}
-           FROM reserve_sync_state
-          WHERE stablecoin_id IN (${inClauseSql})`,
+    `SELECT ${RESERVE_SYNC_STATE_SELECT_COLUMNS} FROM reserve_sync_state`,
     mapReserveSyncStateRow,
   );
 }
 
 export async function loadReserveCompositionRowMap(
   db: D1Database,
-  stablecoinIds: readonly string[],
+  stablecoinIds?: readonly string[],
 ): Promise<Map<string, ReserveCompositionRow>> {
   return loadMapByStablecoinId<ReserveCompositionRow, ReserveCompositionRow>(
     db,
     stablecoinIds,
-    (inClauseSql) =>
-      `SELECT ${RESERVE_COMPOSITION_SELECT_COLUMNS}
-           FROM reserve_composition
-          WHERE stablecoin_id IN (${inClauseSql})`,
+    `SELECT ${RESERVE_COMPOSITION_SELECT_COLUMNS} FROM reserve_composition`,
     (row) => row,
   );
 }

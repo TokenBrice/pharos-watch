@@ -134,7 +134,6 @@ const FPI_COLLATERAL_NAME_ONLY_DISPLAY: Record<string, TokenDisplayConfig> = {
 };
 
 const SOURCE_TOTAL_RECONCILIATION_THRESHOLD_PCT = 0.5;
-const FPI_UNKNOWN_EXPOSURE_THRESHOLD_PCT = 5;
 
 /* ---------- v2 balance-sheet adapter ---------- */
 
@@ -195,6 +194,7 @@ export function adaptFraxBalanceSheet(payload: FraxBalanceSheetResponse, subject
     });
     warnings.push(
       buildUnknownExposureWarning({
+        adapterKey: "frax-balance-sheet",
         code: "unknown-token",
         message: `Frax balance-sheet unknown token(s): ${unknownSymbols.sort().join(", ")}`,
         unknownExposurePct: (unknownUsd / total) * 100,
@@ -212,10 +212,10 @@ export function adaptFraxBalanceSheet(payload: FraxBalanceSheetResponse, subject
     });
     warnings.push(
       buildUnknownExposureWarning({
+        adapterKey: "frax-balance-sheet",
         code: "source-total-gap",
         message: "Frax balance-sheet totalAssets exceeds mapped asset-category rows",
         unknownExposurePct: sourceTotalGapPct,
-        thresholdPct: SOURCE_TOTAL_RECONCILIATION_THRESHOLD_PCT,
       }),
     );
   }
@@ -347,10 +347,10 @@ export function adaptFraxFpiCollateral(payload: FraxFpiCollateralResponse): Adap
     });
     warnings.push(
       buildUnknownExposureWarning({
+        adapterKey: "frax-fpi-collateral",
         code: "unknown-token",
         message: `Frax FPI collateral unknown token(s): ${[...unknownLabels].sort().join(", ")}`,
         unknownExposurePct,
-        thresholdPct: FPI_UNKNOWN_EXPOSURE_THRESHOLD_PCT,
       }),
     );
   }

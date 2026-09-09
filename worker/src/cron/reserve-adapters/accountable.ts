@@ -445,12 +445,10 @@ export function adaptAccountableDashboard(
     ? 0
     : computeUnknownExposurePct(protocolOwnedUsd, protocolOwnedDenominator);
   const protocolOwnedWarning = protocolOwnedPct > 0
-    ? buildUnknownExposureWarning({
-        code: "protocol-owned-bucket",
-        message:
-          `Accountable reserves include ${protocolOwnedUsd!.toFixed(2)} USD of issuer-held inventory and protocol-owned liquidity that is not itemized third-party backing`,
-        unknownExposurePct: protocolOwnedPct,
-      })
+    ? buildUnknownExposureWarning({ adapterKey: "accountable", code: "protocol-owned-bucket",
+    message:
+      `Accountable reserves include ${protocolOwnedUsd!.toFixed(2)} USD of issuer-held inventory and protocol-owned liquidity that is not itemized third-party backing`,
+    unknownExposurePct: protocolOwnedPct, })
     : null;
 
   const slices = slicesFromValues(
@@ -492,11 +490,9 @@ export function adaptAccountableDashboard(
       ? {
           warnings: [
             ...(unknownExposurePct > 0
-              ? [buildUnknownExposureWarning({
-                  code: "unmapped-bucket",
-                  message: `Accountable bucket mapping is missing: ${unknown.map((entry) => entry.name).sort().join(", ")}`,
-                  unknownExposurePct,
-                })]
+              ? [buildUnknownExposureWarning({ adapterKey: "accountable", code: "unmapped-bucket",
+              message: `Accountable bucket mapping is missing: ${unknown.map((entry) => entry.name).sort().join(", ")}`,
+              unknownExposurePct, })]
               : []),
             ...(signedBucketWarning ? [signedBucketWarning] : []),
             ...(protocolOwnedWarning ? [protocolOwnedWarning] : []),

@@ -72,7 +72,7 @@ function parseJsonObject(value: string | null | undefined): Record<string, unkno
         ? { ok: true, payload: parsed as Record<string, unknown> }
         : { ok: false, reason: "invalid-payload" },
   });
-  return decoded.payload ?? {};
+  return decoded.payload ?? { diag: { invalidFreshness: true } };
 }
 
 function coerceFiniteMetadataNumber(value: unknown): number | undefined {
@@ -96,8 +96,20 @@ function markMalformedRedemptionTelemetry(redemption: object): void {
 
 function normalizeSnapshotMetadata(metadata: Record<string, unknown>): LiveReserveSnapshotMetadata {
   const normalized: LiveReserveSnapshotMetadata = { ...metadata };
+  const invalidFreshness =
+    (hasOwnMetadataKey(metadata, "freshnessMode")
+      && !VALID_FRESHNESS_MODES.has(metadata.freshnessMode as LiveReserveFreshnessMode))
+    || (hasOwnMetadataKey(metadata, "sourceTimestamp")
+      && (isMalformedMetadataNumber(metadata.sourceTimestamp) || (metadata.sourceTimestamp as number) <= 0));
+  if (invalidFreshness) {
+    normalized.diag = {
+      ...(metadata.diag && typeof metadata.diag === "object" && !Array.isArray(metadata.diag) ? metadata.diag : {}),
+      invalidFreshness: true,
+    };
+  }
   const knownNumberKeys: Array<keyof LiveReserveSnapshotMetadata> = [
     "sourceTimestamp",
+    "referenceNavUsd",
     "unknownExposurePct",
     "supplyUsd",
     "totalReserveUsd",
@@ -417,6 +429,7 @@ export function parseReserveCompositionRow(
       fetchedAt: row.fetched_at,
       source: row.source,
       attemptId: row.attempt_id ?? null,
+      configFingerprint: row.config_fingerprint ?? null,
       metadata: finalMetadata,
       warningCount,
       warnings: finalWarnings,

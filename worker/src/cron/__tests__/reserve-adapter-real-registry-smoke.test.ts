@@ -126,7 +126,7 @@ describe("reserve adapter real-registry smoke", () => {
       sourceTimestamp,
       stableReservePct: 81,
     });
-    expect(typeof metadata.durationMs).toBe("number");
+    expect(typeof (metadata.diag as Record<string, unknown>).durationMs).toBe("number");
     expect(JSON.parse(String(compositionInsert!.binds[7]))).toEqual([
       expect.objectContaining({ code: "mento-redemption-telemetry-failed" }),
     ]);

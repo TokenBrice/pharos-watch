@@ -25,6 +25,7 @@
 | 0236     | `0236_dex_deployment_attempt_attribution.sql`                 | Add rollout-safe per-deployment DEX census attempt fences while retaining the legacy coin fence as a compatibility fallback. |
 | 0237     | `0237_reserve_composition_history_payload_hash.sql`       | Add nullable payload SHA-256 digest to reserve composition history while retaining payload columns for backward compatibility. |
 | 0238     | `0238_api_key_donor_claims.sql`                           | Add the one-claim-per-wallet supporter API key ledger backing `POST /api/donor-key-claims`. |
+| 0239     | `0239_live_reserve_config_fingerprint.sql`                 | Add nullable configuration fingerprints to reserve composition and attempt state; old Workers remain compatible and new admission rejects unreviewed retained configurations. |
 
 ## Squashed Individual Migrations (absorbed into the 0000 baseline on 2026-07-30)
 

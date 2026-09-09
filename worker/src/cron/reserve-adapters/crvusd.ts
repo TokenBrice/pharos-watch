@@ -1,3 +1,4 @@
+import { pinnedBlockPlan } from "./evm-observation-plan";
 import type { ReserveSlice, StablecoinMeta } from "@shared/types/core";
 import { toErrorMessage } from "@shared/lib/error-utils";
 import type { LiveReserveSnapshotMetadata, LiveReserveWarning, LiveReservesConfig } from "@shared/types/live-reserves";
@@ -285,7 +286,7 @@ async function readEthereumContract(
     args,
   });
   const raw = await runAdapterIo(ctx, `crvusd-evm-call:${address}:${functionName}`, () =>
-    fetchEvmCallHexAtBlock(ETHEREUM_CHAIN, address, data, "latest", {
+    fetchEvmCallHexAtBlock(ETHEREUM_CHAIN, address, data, ctx?.observedBlock?.number ?? "latest", {
       signal,
       timeoutMs: 12_000,
       chainRpcs: ctx?.chainRpcs,
@@ -511,7 +512,7 @@ async function fetchLlammaMarketDescriptors(
   return descriptors.filter((descriptor): descriptor is LlammaMarketDescriptor => descriptor != null);
 }
 
-async function fetchLlammaMarketExposures(signal: AbortSignal, ctx?: AdapterContext): Promise<LlammaMarketExposure[]> {
+async function fetchLlammaMarketExposures(signal: AbortSignal, ctx: AdapterContext | undefined, warnings: LiveReserveWarning[]): Promise<LlammaMarketExposure[]> {
   const descriptors = await fetchLlammaMarketDescriptors(signal, ctx);
   if (descriptors.length === 0) return [];
 
@@ -530,6 +531,7 @@ async function fetchLlammaMarketExposures(signal: AbortSignal, ctx?: AdapterCont
     ),
     signal,
     ctx,
+    warnings,
   );
 
   return mapWithConcurrency(descriptors, CRVUSD_MARKET_READ_CONCURRENCY, async (market) => {
@@ -734,7 +736,8 @@ async function fetchYieldBasisMarketPositions(
 
 async function fetchYieldBasisMarketExposures(
   signal: AbortSignal,
-  ctx?: AdapterContext,
+  ctx: AdapterContext | undefined,
+  warnings: LiveReserveWarning[],
 ): Promise<YieldBasisMarketExposure[]> {
   const positions = await fetchYieldBasisMarketPositions(signal, ctx);
   if (positions.length === 0) return [];
@@ -754,6 +757,7 @@ async function fetchYieldBasisMarketExposures(
     ),
     signal,
     ctx,
+    warnings,
   );
 
   return positions.map((position) => {
@@ -782,8 +786,9 @@ async function fetchOptionalYieldBasisMarketExposures(
   });
 
   try {
-    const markets = await fetchYieldBasisMarketExposures(timeout.signal, ctx);
-    return { markets, warnings: [] };
+    const warnings: LiveReserveWarning[] = [];
+    const markets = await fetchYieldBasisMarketExposures(timeout.signal, ctx, warnings);
+    return { markets, warnings };
   } catch (error) {
     if (signal.aborted) throw signal.reason ?? error;
     const message = toErrorMessage(error);
@@ -890,13 +895,20 @@ export async function fetchCrvUsdReserves(
   signal: AbortSignal,
   ctx?: AdapterContext,
 ): Promise<AdapterResult> {
+  const plan = await pinnedBlockPlan({
+    chain: ETHEREUM_CHAIN, signal, ctx,
+    rpcUrl: ETHEREUM_RPC_URLS[0], fallbackRpcUrl: ETHEREUM_RPC_URLS[1],
+  });
+  ctx = plan.ctx;
   if (config.inputs.primary.kind === "onchain-evm") {
     requireOnchainInput(config.inputs.primary, "crvusd");
+    const warnings: LiveReserveWarning[] = [];
     const [llammaMarkets, yieldBasis] = await Promise.all([
-      fetchLlammaMarketExposures(signal, ctx),
+      fetchLlammaMarketExposures(signal, ctx, warnings),
       fetchOptionalYieldBasisMarketExposures(signal, ctx),
     ]);
-    return adaptCrvUsdOnchain(llammaMarkets, yieldBasis.markets, yieldBasis.warnings);
+    const result = adaptCrvUsdOnchain(llammaMarkets, yieldBasis.markets, [...warnings, ...yieldBasis.warnings]);
+    return { ...result, metadata: { ...result.metadata, observedBlock: plan.observedBlock } };
   }
 
   const input = requireJsonInput(config.inputs.primary, "crvusd");
@@ -904,5 +916,6 @@ export async function fetchCrvUsdReserves(
     fetchJsonWithRetry<CurveMarketsPayload>(input.url, signal, 12_000, ctx),
     fetchOptionalYieldBasisMarketExposures(signal, ctx),
   ]);
-  return adaptCrvUsd(payload, yieldBasis.markets, yieldBasis.warnings);
+  const result = adaptCrvUsd(payload, yieldBasis.markets, yieldBasis.warnings);
+  return { ...result, metadata: { ...result.metadata, observedBlock: plan.observedBlock } };
 }

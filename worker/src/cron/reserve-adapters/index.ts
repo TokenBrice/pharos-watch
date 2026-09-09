@@ -99,7 +99,10 @@ import type { AdapterFn, ReserveAdapterDefinition } from "./types";
 
 export type { AdapterContext, AdapterResult, AdapterFn, ReserveAdapterDefinition } from "./types";
 
-export const LIVE_RESERVE_ADAPTER_FETCHERS = {
+// Annotated (not `satisfies`): the explicit `Record<LiveReserveAdapterKey, …>`
+// makes a declaration key with no fetcher a compile error here, so the
+// declaration table stays the single source of adapter identity.
+export const LIVE_RESERVE_ADAPTER_FETCHERS: Record<LiveReserveAdapterKey, AdapterFn> = {
   "3jane-usd3": fetchThreeJaneUsd3Reserves,
   abracadabra: fetchAbracadabraReserves,
   accountable: fetchAccountableReserves,
@@ -199,11 +202,11 @@ export const LIVE_RESERVE_ADAPTER_FETCHERS = {
   "xpr-account-balances": fetchXprAccountBalancesReserves,
   yamato: fetchYamatoReserves,
   "zephyr-scanner": fetchZephyrScannerReserves,
-} satisfies Record<LiveReserveAdapterKey, AdapterFn>;
+};
 
 // Cast (not satisfies) below: Object.fromEntries widens keys to string, so the
 // adapter-key map type must be re-asserted; key coverage is enforced by the
-// LIVE_RESERVE_ADAPTER_FETCHERS `satisfies` check and the registry test.
+// LIVE_RESERVE_ADAPTER_FETCHERS annotation and the registry test.
 const ADAPTERS = Object.fromEntries(
   Object.entries(LIVE_RESERVE_ADAPTER_DEFINITIONS).map(([key, definition]) => [
     key,

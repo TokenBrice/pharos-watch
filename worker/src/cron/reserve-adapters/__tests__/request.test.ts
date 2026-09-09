@@ -331,3 +331,138 @@ describe("adapter request cache", () => {
     expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 });
+
+describe("binary fetch lifecycle", () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+    vi.unstubAllGlobals();
+  });
+
+  it("bounds binary body reads with the attempt timeout", async () => {
+    let cancelled = false;
+    const slowBody = new ReadableStream<Uint8Array>({
+      async pull() {
+        await new Promise<never>(() => {});
+      },
+      cancel() {
+        cancelled = true;
+      },
+    });
+    const fetchMock = vi.fn(async () => new Response(slowBody, { status: 200 }));
+    vi.stubGlobal("fetch", fetchMock);
+    vi.spyOn(console, "warn").mockImplementation(() => {});
+
+    const startedAt = Date.now();
+    await expect(fetchBinaryResponseWithRetry(
+      "https://issuer.example/report.pdf",
+      new AbortController().signal,
+      50,
+      undefined,
+      { maxRetries: 0 },
+    )).rejects.toThrow("Fetch failed for issuer.example");
+    const elapsedMs = Date.now() - startedAt;
+
+    expect(elapsedMs).toBeLessThan(1_000);
+    expect(cancelled).toBe(true);
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("cancels binary bodies whose declared length exceeds the limit", async () => {
+    let cancelled = false;
+    const responseBody = new ReadableStream<Uint8Array>({
+      start(controller) {
+        controller.enqueue(new TextEncoder().encode("small"));
+        controller.close();
+      },
+      cancel() {
+        cancelled = true;
+      },
+    });
+    const fetchMock = vi.fn(async () => new Response(responseBody, {
+      status: 200,
+      headers: { "content-length": "1048576" },
+    }));
+    vi.stubGlobal("fetch", fetchMock);
+    vi.spyOn(console, "warn").mockImplementation(() => {});
+
+    await expect(fetchBinaryResponseWithRetry(
+      "https://issuer.example/report.pdf",
+      new AbortController().signal,
+      1_000,
+      undefined,
+      { maxRetries: 0, maxResponseBytes: 1024 },
+    )).rejects.toThrow("Fetch failed for issuer.example");
+
+    expect(cancelled).toBe(true);
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("cancels binary bodies that overflow the limit mid-stream", async () => {
+    let cancelled = false;
+    const responseBody = new ReadableStream<Uint8Array>({
+      start(controller) {
+        controller.enqueue(new TextEncoder().encode("overflowing bytes"));
+      },
+      cancel() {
+        cancelled = true;
+      },
+    });
+    const fetchMock = vi.fn(async () => new Response(responseBody, { status: 200 }));
+    vi.stubGlobal("fetch", fetchMock);
+    vi.spyOn(console, "warn").mockImplementation(() => {});
+
+    await expect(fetchBinaryResponseWithRetry(
+      "https://issuer.example/report.pdf",
+      new AbortController().signal,
+      1_000,
+      undefined,
+      { maxRetries: 0, maxResponseBytes: 8 },
+    )).rejects.toThrow("Fetch failed for issuer.example");
+
+    expect(cancelled).toBe(true);
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe("JSON POST retry and size limits", () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+    vi.unstubAllGlobals();
+  });
+
+  it("enforces maxResponseBytes on JSON POST responses", async () => {
+    const fetchMock = mockFetchStrict([
+      { match: "https://issuer.example/graphql", body: { ok: true, note: "x".repeat(256) } },
+    ]);
+
+    const signal = new AbortController().signal;
+    await expect(fetchJsonPostWithRetry(
+      "https://issuer.example/graphql",
+      { coin: "usdc" },
+      signal,
+      1_000,
+      undefined,
+      { maxRetries: 0, maxResponseBytes: 64 },
+    )).rejects.toThrow("POST fetch failed for https://issuer.example/graphql");
+
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("honours maxRetries on JSON POST requests", async () => {
+    const fetchMock = mockFetchStrict([
+      { match: "https://issuer.example/graphql", respond: () => new Response("down", { status: 500 }) },
+    ]);
+
+    const signal = new AbortController().signal;
+    await expect(fetchJsonPostWithRetry(
+      "https://issuer.example/graphql",
+      { coin: "usdc" },
+      signal,
+      1_000,
+      undefined,
+      { maxRetries: 1 },
+    )).rejects.toThrow("HTTP 500 for POST https://issuer.example/graphql");
+
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
+});

@@ -327,11 +327,9 @@ async function fetchMultichainVaultReserves(
   ];
   if (unknownExposurePct > 0) {
     warnings.push(
-      buildUnknownExposureWarning({
-        code: "reserve-unmapped-vault-asset",
-        message: "pUSD vault holds assets without a tracked coinId mapping",
-        unknownExposurePct,
-      }),
+      buildUnknownExposureWarning({ adapterKey: "pusd-vault", code: "reserve-unmapped-vault-asset",
+      message: "pUSD vault holds assets without a tracked coinId mapping",
+      unknownExposurePct, }),
     );
   }
   if (omittedNonEvmChains.length > 0) {

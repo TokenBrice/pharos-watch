@@ -1,6 +1,6 @@
 import {
+  fetchBinaryWithRetry as fetchBinaryBodyWithRetry,
   fetchTextWithRetry as fetchTextBodyWithRetry,
-  fetchWithRetry,
 } from "../../lib/fetch-retry";
 import { USER_AGENT } from "../../lib/constants";
 import { cancelResponseBodyQuietly } from "../../lib/response-body";
@@ -300,8 +300,9 @@ export async function fetchJsonPostWithRetry<T>(
   options?: JsonRetryOptions,
 ): Promise<T> {
   const serializedBody = JSON.stringify(body);
+  const maxRetries = options?.maxRetries ?? 2;
   return getCachedRequest(
-    `json-post:${url}:${timeoutMs}:${serializedBody}:${serializeHeadersForCache(options?.headers)}`,
+    `json-post:${url}:${timeoutMs}:${serializedBody}${serializeRetryOptionsForCache(options)}:${serializeHeadersForCache(options?.headers)}`,
     async () => runAdapterIo(ctx, `json-post:${url}`, async () => {
       const result = await fetchTextBodyWithRetry(
         url,
@@ -317,8 +318,8 @@ export async function fetchJsonPostWithRetry<T>(
           body: serializedBody,
           signal,
         },
-        2,
-        { timeoutMs, returnFinalResponse: true },
+        maxRetries,
+        fetchBodyOptions(timeoutMs, options?.maxResponseBytes),
       );
       if (!result) {
         throw new Error(`POST fetch failed for ${url}`);
@@ -413,48 +414,6 @@ export async function fetchTextWithRetry(
   );
 }
 
-async function readBinaryBodyWithinLimit(response: Response, url: string, maxBytes: number): Promise<Uint8Array> {
-  if (!Number.isSafeInteger(maxBytes) || maxBytes < 0) {
-    throw new RangeError(`maxResponseBytes must be a non-negative safe integer; received ${maxBytes}`);
-  }
-  const contentLength = response.headers.get("content-length");
-  if (contentLength != null) {
-    const declaredLength = Number(contentLength);
-    if (!Number.isSafeInteger(declaredLength) || declaredLength < 0 || declaredLength > maxBytes) {
-      throw new Error(`Binary content length is invalid for ${url}`);
-    }
-  }
-
-  if (!response.body) {
-    const bytes = new Uint8Array(await response.arrayBuffer());
-    if (bytes.length > maxBytes) throw new Error(`Binary response exceeds ${maxBytes} bytes for ${url}`);
-    return bytes;
-  }
-
-  const reader = response.body.getReader();
-  const chunks: Uint8Array[] = [];
-  let total = 0;
-  for (;;) {
-    const next = await reader.read();
-    if (next.done) break;
-    const chunk = next.value;
-    total += chunk.byteLength;
-    if (total > maxBytes) {
-      await reader.cancel();
-      throw new Error(`Binary response exceeds ${maxBytes} bytes for ${url}`);
-    }
-    chunks.push(chunk);
-  }
-
-  const bytes = new Uint8Array(total);
-  let offset = 0;
-  for (const chunk of chunks) {
-    bytes.set(chunk, offset);
-    offset += chunk.byteLength;
-  }
-  return bytes;
-}
-
 function requestHost(url: string): string {
   try {
     return new URL(url).host;
@@ -485,24 +444,26 @@ export async function fetchBinaryResponseWithRetry(
   const maxRetries = options?.maxRetries ?? 2;
   const maxResponseBytes = options?.maxResponseBytes ?? DEFAULT_ADAPTER_MAX_RESPONSE_BYTES;
   return runAdapterIo(ctx, `binary-get:${url}`, async () => {
-    const response = await fetchWithRetry(
+    const result = await fetchBinaryBodyWithRetry(
       url,
       {
         signal,
         headers: buildRequestHeaders({ "User-Agent": ADAPTER_USER_AGENT }, options?.headers),
       },
       maxRetries,
-      { timeoutMs, returnFinalResponse: true },
+      fetchBodyOptions(timeoutMs, maxResponseBytes),
     );
-    if (!response?.ok) {
-      await cancelResponseBodyQuietly(response);
-      const host = requestHost(url);
-      throw new Error(response ? `HTTP ${response.status} for ${host}` : `Fetch failed for ${host}`);
+    if (!result) {
+      throw new Error(`Fetch failed for ${requestHost(url)}`);
+    }
+    if (!result.response.ok) {
+      await cancelResponseBodyQuietly(result.response);
+      throw new Error(`HTTP ${result.response.status} for ${requestHost(url)}`);
     }
     return {
-      body: await readBinaryBodyWithinLimit(response, url, maxResponseBytes),
-      finalUrl: response.url || url,
-      headers: response.headers,
+      body: result.body,
+      finalUrl: result.response.url || url,
+      headers: result.response.headers,
     };
   });
 }

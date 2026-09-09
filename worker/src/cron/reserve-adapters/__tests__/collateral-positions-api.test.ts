@@ -1,7 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { StablecoinMeta } from "@shared/types/core";
 import type { LiveReservesConfig } from "@shared/types/live-reserves";
-import { LIVE_RESERVE_ADAPTER_DEFINITIONS } from "@shared/lib/live-reserve-adapters";
 
 vi.mock("../helpers", async (importOriginal) => {
   const actual = await importOriginal<typeof import("../helpers")>();
@@ -32,14 +31,15 @@ beforeEach(() => {
 });
 
 describe("adaptCollateralPositions", () => {
-  it("declares latest-state collateral APIs as not-applicable freshness", () => {
-    expect(LIVE_RESERVE_ADAPTER_DEFINITIONS["collateral-positions-api"].validation.allowedFreshnessModes).toEqual([
-      "not-applicable",
-    ]);
-    expect(LIVE_RESERVE_ADAPTER_DEFINITIONS["collateral-positions-api"].redemptionTelemetry).toMatchObject({
-      capacity: "direct",
-      capacityParamsGated: true,
-    });
+  it("uses the oldest active per-asset timestamp and refuses partial freshness coverage", () => {
+    const prices = Object.fromEntries(Object.entries(COLLATERAL_POSITION_PRICES).map(([address, price], index) => [
+      address, { ...price, timestamp: (1_780_000_000 + index) * 1000 },
+    ]));
+    const result = adaptCollateralPositions(COLLATERAL_POSITIONS_BY_ASSET, prices);
+    expect(result.metadata).toMatchObject({ freshnessMode: "verified", sourceTimestamp: 1_780_000_000 });
+    const firstAddress = Object.keys(prices)[0];
+    const incomplete = { ...prices, [firstAddress]: { ...prices[firstAddress], timestamp: undefined } };
+    expect(adaptCollateralPositions(COLLATERAL_POSITIONS_BY_ASSET, incomplete).metadata?.freshnessMode).toBe("unverified");
   });
 
   it("aggregates open collateral positions into reserve slices and folds small tails into Other", () => {
@@ -59,9 +59,6 @@ describe("adaptCollateralPositions", () => {
       activePositionCount: 3,
       missingPriceCount: 0,
       freshnessMode: "not-applicable",
-      details: {
-        freshnessSource: "position-and-price-apis",
-      },
     });
   });
 

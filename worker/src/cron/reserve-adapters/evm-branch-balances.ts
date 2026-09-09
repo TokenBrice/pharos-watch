@@ -1,3 +1,4 @@
+import { pinnedBlockPlan } from "./evm-observation-plan";
 import { toErrorMessage } from "@shared/lib/error-utils";
 import type { StablecoinMeta } from "@shared/types/core";
 import type { LiveReservesConfig, LiveReserveWarning } from "@shared/types/live-reserves";
@@ -551,6 +552,8 @@ export async function fetchEvmBranchBalancesReserves(
 ): Promise<AdapterResult> {
   const input = requireOnchainInput(config.inputs.primary, ADAPTER_KEY);
   const params = readBranchBalanceParams(config, ADAPTER_KEY);
+  const plan = await pinnedBlockPlan({ chain: input.chain, signal, ctx, ...params });
+  ctx = plan.ctx;
   const debtSelector = params.debtSelector;
   const debtDecimals = params.debtDecimals ?? DEFAULT_DEBT_DECIMALS;
   const onchain = makeOnchainCallers(input, {
@@ -614,6 +617,7 @@ export async function fetchEvmBranchBalancesReserves(
   const priceMap = await fetchBranchPriceMap(balances, signal, priceMapWarnings, ctx);
 
   const baseMetadata = {
+    observedBlock: plan.observedBlock,
     ...(redemptionFeeBps != null
       ? buildRedemptionSnapshotMetadata({
           feeBps: redemptionFeeBps,

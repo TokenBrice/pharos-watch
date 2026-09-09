@@ -1,3 +1,4 @@
+import { pinnedBlockPlan } from "./evm-observation-plan";
 import type { ReserveSlice, StablecoinMeta } from "@shared/types/core";
 import type { LiveReserveWarning, LiveReservesConfig } from "@shared/types/live-reserves";
 import { parseLiveReserveAdapterParams } from "@shared/lib/live-reserve-adapters";
@@ -59,6 +60,8 @@ export async function fetchLiquityV1Reserves(
 ): Promise<AdapterResult> {
   const input = requireOnchainInput(config.inputs.primary, "liquity-v1");
   const params = readParams(config);
+  const plan = await pinnedBlockPlan({ chain: input.chain, signal, ctx, ...params });
+  ctx = plan.ctx;
   const timeoutMs = 12_000;
   const onchain = makeOnchainCallers(input, {
     signal,
@@ -173,6 +176,7 @@ export async function fetchLiquityV1Reserves(
     [{ key: "ETH", chain: "ethereum", address: WETH_ETHEREUM_ADDRESS }],
     signal,
     ctx,
+    warnings,
   );
   const ethPriceUsd = ethPriceMap.get("ETH");
   let totalCollateralUsd: number | undefined;
@@ -205,6 +209,7 @@ export async function fetchLiquityV1Reserves(
     }],
     ...(warnings.length > 0 ? { warnings } : {}),
     metadata: {
+      observedBlock: plan.observedBlock,
       ...notApplicableFreshnessMetadata({
         proofKind: "liquity-v1-system-collateral",
         protocolPriceRaw: protocolPriceRaw?.toString() ?? null,

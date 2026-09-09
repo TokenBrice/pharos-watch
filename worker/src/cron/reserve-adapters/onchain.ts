@@ -38,6 +38,7 @@ interface BoundOnchainCallOptions {
   rpcUrl?: string;
   fallbackRpcUrl?: string;
   timeoutMs?: number;
+  blockNumberOrTag?: EvmBlockNumberOrTag;
 }
 
 export type OnchainUint256Caller = (contract: string, data: string) => Promise<bigint | null>;
@@ -71,6 +72,18 @@ interface EvmMulticall3Options {
   timeoutMs?: number;
   multicallBatchSize?: number;
   blockNumberOrTag?: EvmBlockNumberOrTag;
+}
+
+function resolveOnchainBlock(options: {
+  chain?: string;
+  ctx?: AdapterContext;
+  blockNumberOrTag?: EvmBlockNumberOrTag;
+}): EvmBlockNumberOrTag {
+  const observedBlock = options.ctx?.observedBlock;
+  if (observedBlock && observedBlock.chain !== options.chain) {
+    throw new Error(`Pinned block chain ${observedBlock.chain} does not match ${options.chain}`);
+  }
+  return options.blockNumberOrTag ?? observedBlock?.number ?? "latest";
 }
 
 async function runWithRpcFallback<T>(
@@ -107,6 +120,7 @@ export function makeOnchainCallers(input: EvmCallInput, options: BoundOnchainCal
     rpcMode: input.rpcMode,
     chain: input.chain,
     timeoutMs: options.timeoutMs,
+    blockNumberOrTag: options.blockNumberOrTag,
   };
 
   return {
@@ -126,7 +140,7 @@ export function makeOnchainCallers(input: EvmCallInput, options: BoundOnchainCal
 }
 
 export async function fetchOnchainUint256(options: EvmCallOptions): Promise<bigint | null> {
-  const blockNumberOrTag = options.blockNumberOrTag ?? "latest";
+  const blockNumberOrTag = resolveOnchainBlock(options);
   return runWithRpcFallback<bigint>(
     options,
     "evm-uint256",
@@ -160,7 +174,7 @@ export async function fetchOnchainMulticall3(options: EvmMulticall3Options): Pro
         callData: call.data,
         allowFailure: call.allowFailure,
       })),
-      options.blockNumberOrTag ?? "latest",
+      resolveOnchainBlock(options),
       {
         extraRpcUrls,
         signal: options.signal,
@@ -205,7 +219,7 @@ export async function fetchOnchainRateBps(
 }
 
 export async function fetchOnchainRawCall(options: EvmCallOptions): Promise<string | null> {
-  const blockNumberOrTag = options.blockNumberOrTag ?? "latest";
+  const blockNumberOrTag = resolveOnchainBlock(options);
   return runWithRpcFallback<string>(
     options,
     "evm-call",

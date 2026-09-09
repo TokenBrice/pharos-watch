@@ -13,6 +13,7 @@ import {
   reserveInfoWarning,
 } from "./helpers";
 import { rethrowIfAborted } from "../../lib/abort";
+import { pinnedBlockPlan } from "./evm-observation-plan";
 
 const ADAPTER_KEY = "yamato";
 const YAMATO_VALUE_DECIMALS = 18;
@@ -359,6 +360,8 @@ export async function fetchYamatoReserves(
   const input = requireOnchainInput(config.inputs.primary, ADAPTER_KEY);
   const params = parseLiveReserveAdapterParams("yamato", config.params);
   const timeoutMs = 12_000;
+  const plan = await pinnedBlockPlan({ chain: input.chain, signal, ctx, rpcUrl: params.rpcUrl, fallbackRpcUrl: params.fallbackRpcUrl, timeoutMs });
+  ctx = plan.ctx;
   const onchain = makeOnchainCallers(input, {
     signal,
     ctx,
@@ -391,14 +394,14 @@ export async function fetchYamatoReserves(
 
   // Only a non-zero cap needs an external price, so a healthy system with
   // nothing redeemable costs no extra request.
+  const warnings: LiveReserveWarning[] = [];
   let ethPriceUsd: number | undefined;
   if (redemption != null && redemption.redeemableCapJpyRaw > 0n) {
     ethPriceUsd = (
-      await fetchDefiLlamaPrices([{ key: "ETH", chain: "ethereum", address: WETH_ETHEREUM_ADDRESS }], signal, ctx)
+      await fetchDefiLlamaPrices([{ key: "ETH", chain: "ethereum", address: WETH_ETHEREUM_ADDRESS }], signal, ctx, warnings)
     ).get("ETH");
   }
 
-  const warnings: LiveReserveWarning[] = [];
   if (redemption == null) {
     warnings.push(
       reserveInfoWarning(
@@ -415,15 +418,17 @@ export async function fetchYamatoReserves(
     );
   }
 
-  return {
-    ...adaptYamatoStates(decodeYamatoGetStates(statesRaw), {
+  const result = adaptYamatoStates(decodeYamatoGetStates(statesRaw), {
       yamatoAddress: params.yamatoAddress,
       priceFeedAddress,
       ethJpyPriceRaw: decodeYamatoEthJpyPrice(priceRaw),
       slice: params.slice,
       ...(redemption ? { redemption } : {}),
       ...(ethPriceUsd != null ? { ethPriceUsd } : {}),
-    }),
+    });
+  return {
+    ...result,
+    metadata: { ...result.metadata, observedBlock: plan.observedBlock },
     ...(warnings.length > 0 ? { warnings } : {}),
   };
 }
