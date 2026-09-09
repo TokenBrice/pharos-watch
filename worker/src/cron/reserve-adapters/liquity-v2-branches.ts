@@ -442,7 +442,13 @@ async function probeBranchRedemptionFeeBps(
 ): Promise<number | null> {
   return fetchOnchainRateBps(
     input,
-    { contract: branch.holder, selector: BRANCH_REDEMPTION_RATE_SELECTOR },
+    {
+      contract: branch.holder,
+      selector: BRANCH_REDEMPTION_RATE_SELECTOR,
+      // The shared rate helper skips a probe without explicit decimals, so the
+      // individual-call fallback must scale exactly like the Multicall3 path.
+      decimals: BRANCH_REDEMPTION_RATE_DECIMALS,
+    },
     signal,
     ctx,
     params.rpcUrl,

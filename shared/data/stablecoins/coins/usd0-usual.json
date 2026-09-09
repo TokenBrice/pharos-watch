@@ -106,7 +106,7 @@
           "token": {
             "chain": "ethereum",
             "address": "0x4Cbc25559DbBD1272EC5B64c7b5F48a2405e6470",
-            "decimals": 18
+            "decimals": 6
           },
           "risk": "low",
           "coinId": "m-m0",

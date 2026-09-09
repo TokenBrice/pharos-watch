@@ -81,6 +81,12 @@ const MODULE_MAP: Record<string, ModuleSpec> = {
   spark: { name: "Spark (lending)", risk: "low" },
   grove: { name: "Grove (RWA)", risk: "low" },
   obex: { name: "Obex", risk: "medium" },
+  // Governance-funded Sky Stars/allocators (like Obex): Osero deploys USDS
+  // through its allocator vault, and Keel is the Solana-native allocator. Their
+  // ultimate holdings are allocator-strategy exposure rather than a single
+  // tracked stablecoin, so they map to a medium allocator risk with no coinId.
+  osero: { name: "Osero", risk: "medium" },
+  keel: { name: "Keel", risk: "medium" },
   core: { name: "Core (crypto vaults)", risk: "medium" },
   staked: { name: "Staking Engine", risk: "high" },
   "legacy-rwa": { name: "Legacy RWA", risk: "low" },

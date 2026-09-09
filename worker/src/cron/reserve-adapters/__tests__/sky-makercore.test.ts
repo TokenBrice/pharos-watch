@@ -183,6 +183,40 @@ describe("adaptSkyModules", () => {
     expect(otherSlice!.issuerOrObligor).toBe("Sky unknown module");
     expect(otherSlice!.pct).toBe(10);
   });
+
+  it("maps the osero and keel allocators to medium risk without a guessed coinId", () => {
+    const withAllocators: SkyGroupResult[] = [
+      {
+        group: "stablecoins",
+        group_name: "Stablecoins",
+        debt: "9000000000",
+        collateral: "9000000000",
+        datetime: "2026-04-05T17:33:24",
+      },
+      {
+        group: "osero",
+        group_name: "Osero",
+        debt: "25000000",
+        collateral: "25000000",
+        datetime: "2026-04-05T17:33:24",
+      },
+      {
+        group: "keel",
+        group_name: "Keel",
+        debt: "5000000",
+        collateral: "5000000",
+        datetime: "2026-04-05T17:33:24",
+      },
+    ];
+    const slices = adaptSkyModules(withAllocators);
+    const byName = Object.fromEntries(slices.map((s) => [s.name, s]));
+
+    expect(byName["Osero"]).toMatchObject({ risk: "medium", sourceKey: "sky-makercore:module:osero" });
+    expect(byName["Osero"].coinId).toBeUndefined();
+    expect(byName["Keel"]).toMatchObject({ risk: "medium", sourceKey: "sky-makercore:module:keel" });
+    expect(byName["Keel"].coinId).toBeUndefined();
+    expect(byName["Other modules"]).toBeUndefined();
+  });
 });
 
 describe("resolveSkyImmediateRedeemableUsd", () => {

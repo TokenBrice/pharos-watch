@@ -24,7 +24,7 @@ vi.mock("../helpers", async (importOriginal) => {
 });
 
 import { fetchEvmBranchBalancesReserves } from "../evm-branch-balances";
-import { validateAdapterOutput } from "../validate";
+import { hasFatalWarnings, validateAdapterOutput } from "../validate";
 import {
   fetchDefiLlamaPrices,
   fetchErc20Balance,
@@ -41,6 +41,7 @@ const HONEY_FACTORY = "0xa4afef880f5ce1f63c9fb48f661e27f8b4216401";
 const HONEY_TOKEN = "0xfcbd14dc51f0a4d49d5e53c2e0950e0bc26d0dce";
 const HONEY_ASSET = "0x549943e04f40284185054145c6e4e9568c1d3241";
 const HONEY_VAULT = "0x90bc07408f5b5eac4de38af76ea6069e1fcee363";
+const HONEY_CUSTODY = "0x83e672c9949af428687ecc9b6a3ba74db7bb0ed0";
 const WAD = 10n ** 18n;
 
 function addressWord(address: string): bigint {
@@ -103,7 +104,7 @@ function mockHoneyOnchain(options: { assetCount?: bigint; failVaultAsset?: boole
     return null;
   });
   vi.mocked(fetchOnchainMulticall3).mockImplementation(async ({ calls }) => {
-    if (calls.every((call) => call.label.startsWith("branch-balance:"))) return null;
+    if (calls.every((call) => call.label.startsWith("branch-"))) return null;
     return Promise.all(calls.map(async (call) => {
       const raw = call.data === "0x22acb867" || call.data === "0x72d4b21a"
         ? await fetchOnchainRawCall({ contract: call.contract, data: call.data } as never)
@@ -130,7 +131,7 @@ function mockFourAssetHoneyBatches(custody: boolean) {
     `0x${(0xc1 + index).toString(16).padStart(40, "0")}`
   );
   vi.mocked(fetchOnchainMulticall3).mockImplementation(async ({ calls }) => {
-    if (calls.every((call) => call.label.startsWith("branch-balance:"))) return null;
+    if (calls.every((call) => call.label.startsWith("branch-"))) return null;
     return calls.map((call) => {
       const index = Number(call.label.split(":").pop());
       let returnData: string;
@@ -163,6 +164,69 @@ function mockFourAssetHoneyBatches(custody: boolean) {
     });
   });
   return { assets, vaults };
+}
+
+function mockHoneyCustodyOnchain(options: { failConvertToAssets?: boolean } = {}) {
+  // Live-captured USDC.e vault state (2026-09-09): custodyInfo() is true, the
+  // vault idle balance is zero, and the factory-owned net shares (shares minus
+  // collected fees) convert to 29141 raw USDC units.
+  vi.mocked(fetchOnchainUint256).mockReset();
+  vi.mocked(fetchOnchainRawCall).mockReset();
+  vi.mocked(fetchOnchainUint256).mockImplementation(async ({ contract, data }) => {
+    const normalizedContract = contract.toLowerCase();
+    const selector = data.slice(0, 10);
+    if (normalizedContract === HONEY_FACTORY) {
+      if (selector === "0x36b2c4b2") return addressWord(HONEY_TOKEN);
+      if (selector === "0xbb85d15b") return 1n;
+      if (selector === "0xa083bd3c") return addressWord(HONEY_ASSET);
+      if (selector === "0xa622ee7c") return addressWord(HONEY_VAULT);
+      if (selector === "0x5c975abb" || selector === "0x7b34b5d8" || selector === "0xde4bc640") return 0n;
+      if (selector === "0x99a2af75" || selector === "0xbdb912f3") return WAD;
+      if (selector === "0x64f76eaa") return 155_489_553_000_000_000n;
+      if (selector === "0x2cfb0e10") return 999_500_000_000_000_000n;
+      if (selector === "0xbc7c2902") return 1n;
+    }
+    if (normalizedContract === HONEY_VAULT) {
+      if (selector === "0x38d52e0f") return addressWord(HONEY_ASSET);
+      if (selector === "0x5c975abb") return 0n;
+      if (selector === "0x70a08231") return 184_630_645_591_044_543n;
+      if (selector === "0x07a2d13a") return options.failConvertToAssets ? null : 29_141n;
+    }
+    if (normalizedContract === HONEY_ASSET) {
+      // The configured branch holder is the custody vault, which holds no idle
+      // USDC; the custody wallet holds the tokens the vault has a claim on.
+      if (selector === "0x70a08231") {
+        return data.toLowerCase().endsWith(HONEY_VAULT.slice(2)) ? 0n : 274_114n;
+      }
+      if (selector === "0x313ce567") return 6n;
+      if (selector === "0xdd62ed3e") return 274_114n;
+    }
+    return null;
+  });
+  vi.mocked(fetchOnchainRawCall).mockImplementation(async ({ contract, data }) => {
+    const normalizedContract = contract.toLowerCase();
+    if (normalizedContract === HONEY_FACTORY && data === "0x22acb867") {
+      return uintArrayResult([WAD]);
+    }
+    if (normalizedContract === HONEY_VAULT && data === "0x72d4b21a") {
+      return abiWords(1n, addressWord(HONEY_CUSTODY));
+    }
+    return null;
+  });
+  vi.mocked(fetchOnchainMulticall3).mockImplementation(async ({ calls }) => {
+    return Promise.all(calls.map(async (call) => {
+      const raw = call.data === "0x22acb867" || call.data === "0x72d4b21a"
+        ? await fetchOnchainRawCall({ contract: call.contract, data: call.data } as never)
+        : await fetchOnchainUint256({ contract: call.contract, data: call.data } as never);
+      return raw == null
+        ? { label: call.label, success: false, returnData: "0x" as const }
+        : {
+            label: call.label,
+            success: true,
+            returnData: (typeof raw === "bigint" ? abiWords(raw) : raw) as `0x${string}`,
+          };
+    }));
+  });
 }
 
 function wstEthBranch(overrides: Record<string, unknown> = {}) {
@@ -309,7 +373,7 @@ describe("fetchEvmBranchBalancesReserves", () => {
     },
   );
 
-  it("batches four same-chain branch balances into one Multicall3 wave", async () => {
+  it("batches four same-chain branch balances and decimals reads into one Multicall3 wave", async () => {
     const branches = Array.from({ length: 4 }, (_, index) => ({
       name: `branch-${index}`,
       holder: `0x${(0xd1 + index).toString(16).padStart(40, "0")}`,
@@ -322,11 +386,15 @@ describe("fetchEvmBranchBalancesReserves", () => {
       priceUsd: 1,
     }));
     vi.mocked(fetchOnchainMulticall3).mockImplementation(async ({ calls }) =>
-      calls.map((call, index) => ({
-        label: call.label,
-        success: true,
-        returnData: abiWords(BigInt(index + 1) * 1_000_000n) as `0x${string}`,
-      })),
+      calls.map((call) => {
+        const index = Number(call.label.split(":").pop());
+        const isDecimals = call.label.startsWith("branch-decimals:");
+        return {
+          label: call.label,
+          success: true,
+          returnData: abiWords(isDecimals ? 6n : BigInt(index + 1) * 1_000_000n) as `0x${string}`,
+        };
+      }),
     );
 
     const result = await fetchEvmBranchBalancesReserves(
@@ -337,8 +405,120 @@ describe("fetchEvmBranchBalancesReserves", () => {
 
     expect(result.slices).toHaveLength(4);
     expect(fetchOnchainMulticall3).toHaveBeenCalledTimes(1);
-    expect(vi.mocked(fetchOnchainMulticall3).mock.calls[0]?.[0].calls).toHaveLength(4);
+    expect(vi.mocked(fetchOnchainMulticall3).mock.calls[0]?.[0].calls).toHaveLength(8);
     expect(fetchErc20Balance).not.toHaveBeenCalled();
+  });
+
+  it("values a mixed-decimals basket correctly when on-chain decimals match config", async () => {
+    vi.mocked(fetchOnchainMulticall3).mockImplementation(async ({ calls }) =>
+      calls.map((call) => {
+        const index = Number(call.label.split(":").pop());
+        if (call.label.startsWith("branch-decimals:")) {
+          return {
+            label: call.label,
+            success: true,
+            returnData: abiWords(index === 0 ? 6n : 18n) as `0x${string}`,
+          };
+        }
+        return {
+          label: call.label,
+          success: true,
+          returnData: abiWords(index === 0 ? 3_000_000n : 2_000_000_000_000_000_000n) as `0x${string}`,
+        };
+      }),
+    );
+
+    const result = await fetchEvmBranchBalancesReserves(
+      coin,
+      makeBranchConfig([
+        {
+          name: "Six-decimals stable",
+          holder: "0x00000000000000000000000000000000000000a1",
+          token: { chain: "ethereum", address: "0x00000000000000000000000000000000000000b1", decimals: 6 },
+          risk: "low",
+          priceUsd: 1,
+        },
+        {
+          name: "Eighteen-decimals stable",
+          holder: "0x00000000000000000000000000000000000000a2",
+          token: { chain: "ethereum", address: "0x00000000000000000000000000000000000000b2", decimals: 18 },
+          risk: "low",
+          priceUsd: 1,
+        },
+      ]),
+      signal,
+    );
+
+    // 3 six-decimals tokens ($3) vs 2 eighteen-decimals tokens ($2): 60/40.
+    expect(result.warnings).toBeUndefined();
+    expect(result.slices).toEqual([
+      { name: "Six-decimals stable", pct: 60, risk: "low" },
+      { name: "Eighteen-decimals stable", pct: 40, risk: "low" },
+    ]);
+  });
+
+  it("emits a fatal warning when a branch token's on-chain decimals differ from config", async () => {
+    vi.mocked(fetchOnchainMulticall3).mockImplementation(async ({ calls }) =>
+      calls.map((call) => {
+        if (call.label.startsWith("branch-decimals:")) {
+          // Configured 18, but the token reports 6 — a 10^12 valuation error.
+          return { label: call.label, success: true, returnData: abiWords(6n) as `0x${string}` };
+        }
+        return { label: call.label, success: true, returnData: abiWords(50_000_000n) as `0x${string}` };
+      }),
+    );
+
+    const result = await fetchEvmBranchBalancesReserves(
+      coin,
+      makeBranchConfig([{
+        name: "M by M^0 (via UsualM wrapper)",
+        holder: "0x00000000000000000000000000000000000000a1",
+        token: { chain: "ethereum", address: "0x00000000000000000000000000000000000000b1", decimals: 18 },
+        risk: "low",
+        priceUsd: 1,
+      }]),
+      signal,
+    );
+
+    expect(result.warnings).toEqual([
+      expect.objectContaining({
+        code: "branch-token-decimals-mismatch",
+        effect: "fatal",
+        message: expect.stringContaining("0x00000000000000000000000000000000000000b1"),
+      }),
+    ]);
+    expect(hasFatalWarnings(result.warnings)).toBe(true);
+  });
+
+  it("keeps the configured scale with an info warning when decimals() reverts", async () => {
+    vi.mocked(fetchOnchainMulticall3).mockImplementation(async ({ calls }) =>
+      calls.map((call) => {
+        if (call.label.startsWith("branch-decimals:")) {
+          return { label: call.label, success: false, returnData: "0x" as const };
+        }
+        return { label: call.label, success: true, returnData: abiWords(1_000_000n) as `0x${string}` };
+      }),
+    );
+
+    const result = await fetchEvmBranchBalancesReserves(
+      coin,
+      makeBranchConfig([{
+        name: "Non-ERC20 branch",
+        holder: "0x00000000000000000000000000000000000000a1",
+        token: { chain: "ethereum", address: "0x00000000000000000000000000000000000000b1", decimals: 6 },
+        risk: "low",
+        priceUsd: 1,
+      }]),
+      signal,
+    );
+
+    expect(result.slices).toEqual([{ name: "Non-ERC20 branch", pct: 100, risk: "low" }]);
+    expect(result.warnings).toEqual([
+      expect.objectContaining({
+        code: "branch-token-decimals-unavailable",
+        effect: "info",
+      }),
+    ]);
   });
 
   it.each([
@@ -352,7 +532,7 @@ describe("fetchEvmBranchBalancesReserves", () => {
       honeyOptions: { failVaultAsset: true },
       maxAssets: 4,
     },
-  ])("withholds the whole Honey capacity block when $name", async ({ honeyOptions, maxAssets }) => {
+  ])("fails closed when $name", async ({ honeyOptions, maxAssets }) => {
     vi.mocked(fetchErc20Balance).mockResolvedValueOnce(12_000_000n);
     mockHoneyOnchain(honeyOptions);
     const config = makeBranchConfig([honeyBranch()], {
@@ -360,12 +540,42 @@ describe("fetchEvmBranchBalancesReserves", () => {
       params: { redemptionCapacity: honeyRedemptionCapacity(maxAssets) },
     });
 
+    await expect(fetchEvmBranchBalancesReserves(coin, config, signal)).rejects.toThrow(
+      /HoneyFactory vault state unavailable; cannot derive custody-mode branch composition/,
+    );
+  });
+
+  it("derives custody-mode branch composition from factory-owned net shares", async () => {
+    // The USDC.e vault holds zero idle USDC; custodyInfo() is true and the net
+    // factory shares (184630645591044543 - 155489553000000000) convert to
+    // 29141 raw USDC units, which is the branch's real backing.
+    mockHoneyCustodyOnchain();
+    const config = makeBranchConfig([honeyBranch()], {
+      chain: "berachain",
+      params: { redemptionCapacity: honeyRedemptionCapacity() },
+    });
+
     const result = await fetchEvmBranchBalancesReserves(coin, config, signal);
 
-    expect(result.metadata?.redemption).toBeUndefined();
-    expect(result.warnings).toEqual([
-      expect.objectContaining({ code: "redemption-capacity-unavailable", severity: "warning" }),
-    ]);
+    expect(result.slices).toEqual([{ name: "USDC.e", pct: 100, risk: "low" }]);
+    expect(result.warnings).toBeUndefined();
+    expect(result.metadata).toMatchObject({ branchCount: 1 });
+    expect(result.metadata?.redemption).toMatchObject({
+      capacityUsd: 0.029141,
+      routeStatus: "open",
+    });
+  });
+
+  it("fails closed when custody vault share conversion is unreadable", async () => {
+    mockHoneyCustodyOnchain({ failConvertToAssets: true });
+    const config = makeBranchConfig([honeyBranch()], {
+      chain: "berachain",
+      params: { redemptionCapacity: honeyRedemptionCapacity() },
+    });
+
+    await expect(fetchEvmBranchBalancesReserves(coin, config, signal)).rejects.toThrow(
+      /HoneyFactory vault state unavailable; cannot derive custody-mode branch composition/,
+    );
   });
 
   it("computes percentage slices from branch balances and prices", async () => {

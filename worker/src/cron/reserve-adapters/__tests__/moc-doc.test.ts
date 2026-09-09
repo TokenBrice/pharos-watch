@@ -52,7 +52,7 @@ describe("MoC DOC accounted rBTC", () => {
     const result = await run();
     expect(result.slices).toEqual([{ sourceKey: "moc-doc:rbtc", name: "Rootstock BTC (rBTC) collateral", pct: 100, risk: "medium" }]);
     expect(result.metadata).toMatchObject({
-      freshnessMode: "not-applicable", totalReservesUsd: 10_000_000, supplyUsd: 2_000_000, collateralizationRatio: 5,
+      freshnessMode: "not-applicable", totalReserveUsd: 10_000_000, supplyUsd: 2_000_000, collateralizationRatio: 5,
       details: { docLockedRbtcRaw: (40n * WAD).toString(), juniorBproResidualRbtcRaw: (160n * WAD).toString() },
       redemption: { capacityUsd: 2_000_000, routeStatus: "open" },
     });
@@ -65,7 +65,7 @@ describe("MoC DOC accounted rBTC", () => {
   it("does not count unaccounted rBTC donations as backing", async () => {
     const values = accounting();
     values[11] = word(250n * WAD);
-    expect((await run(values)).metadata?.totalReservesUsd).toBe(10_000_000);
+    expect((await run(values)).metadata?.totalReserveUsd).toBe(10_000_000);
   });
 
   it("caps missing custody collateral and degrades rather than hiding insolvency", async () => {

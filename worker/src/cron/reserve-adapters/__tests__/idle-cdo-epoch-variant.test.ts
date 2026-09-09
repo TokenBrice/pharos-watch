@@ -35,6 +35,7 @@ const LIVE_BLOCK_25882423: IdleCdoEpochVariantSnapshot = {
 };
 
 const PARAMS: Parameters<typeof adaptIdleCdoEpochVariantSnapshot>[1] = {
+  expectJuniorTranche: true,
   creditSlice: {
     sourceKey: "idle-cdo:falconx-credit-facility",
     name: "FalconX single-obligor credit facility",
@@ -55,8 +56,14 @@ const PARAMS: Parameters<typeof adaptIdleCdoEpochVariantSnapshot>[1] = {
   },
 };
 
-function adapt(overrides: Partial<IdleCdoEpochVariantSnapshot> = {}) {
-  return adaptIdleCdoEpochVariantSnapshot({ ...LIVE_BLOCK_25882423, ...overrides }, PARAMS);
+function adapt(
+  overrides: Partial<IdleCdoEpochVariantSnapshot> = {},
+  params: Partial<Parameters<typeof adaptIdleCdoEpochVariantSnapshot>[1]> = {},
+) {
+  return adaptIdleCdoEpochVariantSnapshot(
+    { ...LIVE_BLOCK_25882423, ...overrides },
+    { ...PARAMS, ...params },
+  );
 }
 
 describe("adaptIdleCdoEpochVariantSnapshot", () => {
@@ -108,6 +115,28 @@ describe("adaptIdleCdoEpochVariantSnapshot", () => {
     expect(result.slices[0]!.assetClass).toBe("private-credit");
   });
 
+  it("records a declared single-tranche vault's missing junior as info without degrading the snapshot", () => {
+    const result = adapt({}, { expectJuniorTranche: false });
+    expect(result.warnings).toContainEqual(
+      expect.objectContaining({ code: "idle-cdo-no-junior-subordination", effect: "info" }),
+    );
+    expect(result.warnings).not.toContainEqual(
+      expect.objectContaining({ effect: "degraded" }),
+    );
+    expect(result.slices[0]!.risk).toBe("high");
+    expect(result.slices[0]!.assetClass).toBe("private-credit");
+    expect(result.metadata).toMatchObject({
+      supplyUsd: 168_514_335.693873,
+      totalReserveUsd: 168_514_335.693873,
+    });
+    expect(
+      validateAdapterOutput(result, {
+        adapter: getReserveAdapter("idle-cdo-epoch-variant") ?? undefined,
+        subjectId: "aa-falconx-mev-capital",
+      }).valid,
+    ).toBe(true);
+  });
+
   it("splits an unlent underlying balance into its own tracked cash slice when one exists", () => {
     const result = adapt({ unlentRaw: 16_851_433_569_387n });
 
@@ -140,6 +169,17 @@ describe("adaptIdleCdoEpochVariantSnapshot", () => {
     );
   });
 
+  it("reconciles NAVs against fee-exclusive contract value so accrued fees alone do not degrade", () => {
+    const unclaimedFeesRaw = 200_000_000_000n; // 200,000 USDC accrued between harvests
+    const result = adapt({
+      contractValueRaw: LIVE_BLOCK_25882423.navAaRaw + unclaimedFeesRaw,
+      unclaimedFeesRaw,
+    });
+    expect(result.warnings ?? []).not.toContainEqual(
+      expect.objectContaining({ code: "idle-cdo-nav-reconciliation-drift" }),
+    );
+  });
+
   it("fails closed on unusable vault state rather than publishing a partial composition", () => {
     expect(() => adapt({ contractValueRaw: 0n })).toThrow(/zero contract value/);
     expect(() => adapt({ trancheSupplyRaw: 0n })).toThrow(/zero AA tranche supply/);
@@ -157,6 +197,9 @@ describe("aa-falconx-mev-capital liveReservesConfig", () => {
     expect(params.cdoAddress.toLowerCase()).toBe(CDO);
     expect(params.underlyingAddress.toLowerCase()).toBe(USDC);
     expect(params.tranche).toBe("AA");
+    // The reviewed vault is single-tranche, so the missing junior is a
+    // permanent structural fact (info), not a data-quality degrade.
+    expect(params.expectJuniorTranche).toBe(false);
     // The credit slice must never gain a coinId: that is what routes the asset
     // onto the generic reserves path instead of inheriting Circle's reserves.
     expect(params.creditSlice).not.toHaveProperty("coinId");

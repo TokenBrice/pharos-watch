@@ -139,7 +139,7 @@ export async function fetchMocDocReserves(
     ...(warnings.length ? { warnings } : {}),
     metadata: {
       ...notApplicableFreshnessMetadata(),
-      totalReservesUsd: decimalNumberFromBigInt(admitted * price / WAD, 18),
+      totalReserveUsd: decimalNumberFromBigInt(admitted * price / WAD, 18),
       supplyUsd: decimalNumberFromBigInt(liability, 18),
       collateralizationRatio,
       details: {

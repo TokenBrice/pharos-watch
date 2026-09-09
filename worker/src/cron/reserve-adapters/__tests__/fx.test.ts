@@ -139,16 +139,30 @@ describe("adaptFx", () => {
     expect(result.unknownKeys).toEqual([]);
   });
 
-  it("reads configured f(x) pools directly on-chain for score-grade freshness", async () => {
+  it("values on-chain pool raw collateral in each pool's raw unit (stETH for the wstETH pool)", async () => {
+    // Live f(x) pool state read on 2026-09-09 (review-evm-b.md EB1): the wstETH
+    // pool's `getTotalRawCollaterals()` is stETH-denominated (the issuer API names
+    // the same figure `stETHBalance`; the pool's actual wstETH holding is
+    // 5225421081447982325287), while the WBTC pool's raw amount is WBTC on the
+    // pool's unified 1e18 scale. Debts are fxUSD at 18 decimals. Prices are pinned
+    // to the review snapshot so the fixture reproduces the corrected published
+    // totals: wstETH 14.0% (the old wstETH-priced path published 16.9%), total
+    // ≈ $115.38M, CR ≈ 1.444.
+    const wstEthPoolRaw = 6498117380312973051552n; // stETH
+    const wstEthPoolDebt = 8408069477417882708446823n;
+    const wbtcPoolRaw = 1256573802172773285735n;
+    const wbtcPoolDebt = 71492785220689011149058249n;
+    const stEthPrice = 2485.83;
+    const wbtcPrice = 78966.15;
+
     vi.mocked(fetchOnchainUint256)
-      .mockResolvedValueOnce(2n * 10n ** 18n)
-      .mockResolvedValueOnce(3_000n * 10n ** 18n)
-      // fx getTotalRawCollaterals uses a unified 1e18 raw scale, even for WBTC.
-      .mockResolvedValueOnce(1n * 10n ** 18n)
-      .mockResolvedValueOnce(60_000n * 10n ** 18n);
+      .mockResolvedValueOnce(wstEthPoolRaw)
+      .mockResolvedValueOnce(wstEthPoolDebt)
+      .mockResolvedValueOnce(wbtcPoolRaw)
+      .mockResolvedValueOnce(wbtcPoolDebt);
     vi.mocked(fetchDefiLlamaPrices).mockResolvedValue(new Map([
-      ["wstETH", 4_000],
-      ["wbtc", 100_000],
+      ["wstETH", stEthPrice],
+      ["wbtc", wbtcPrice],
     ]));
 
     const coin = TRACKED_META_BY_ID.get("fxusd-f-x-protocol");
@@ -161,22 +175,38 @@ describe("adaptFx", () => {
     );
 
     expect(fetchOnchainUint256).toHaveBeenCalledTimes(4);
-    expect(result.slices).toEqual([
-      { name: "WBTC", pct: 92.6, risk: "medium" },
-      { name: "wstETH (Lido)", pct: 7.4, risk: "low" },
+
+    // Prices must be fetched for each pool's raw unit, not the wrapped token:
+    // stETH for the wstETH pool. Pricing the stETH-denominated raw amount with
+    // the wstETH price is the bug this fixture guards against.
+    expect(vi.mocked(fetchDefiLlamaPrices).mock.calls[0]?.[0]).toEqual([
+      { key: "wstETH", chain: "ethereum", address: "0xae7ab96520de3a18e5e111b5eaab095312d7fe84" },
+      { key: "wbtc", chain: "ethereum", address: "0x2260fac5e5542a773aa44fbcfedf7c193bc2c599" },
     ]);
+
+    expect(result.slices).toEqual([
+      { name: "WBTC", pct: 86.0, risk: "medium" },
+      { name: "wstETH (Lido)", pct: 14.0, risk: "low" },
+    ]);
+
+    const totalDebtUsd = (Number(wstEthPoolDebt) + Number(wbtcPoolDebt)) / 1e18;
+    const totalReserveUsd = (Number(wstEthPoolRaw) / 1e18) * stEthPrice
+      + (Number(wbtcPoolRaw) / 1e18) * wbtcPrice;
+    expect(totalReserveUsd).toBeCloseTo(115_380_000, -3);
+    expect(totalReserveUsd / totalDebtUsd).toBeCloseTo(1.444, 2);
+
     expect(result.metadata).toMatchObject({
       freshnessMode: "not-applicable",
-      immediateRedeemableUsd: 63_000,
       details: {
         proofKind: "fx-pool-direct-onchain",
         poolCount: 2,
       },
       redemption: {
-        capacityUsd: 63_000,
         capacityKind: "live-proxy-validated",
         freshnessKind: "same-run-api",
       },
     });
+    expect(result.metadata?.immediateRedeemableUsd).toBeCloseTo(totalDebtUsd, 6);
+    expect(result.metadata?.redemption?.capacityUsd).toBeCloseTo(totalDebtUsd, 6);
   });
 });

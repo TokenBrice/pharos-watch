@@ -58,6 +58,9 @@ interface HoneyFactoryRedemptionCapacityParams {
 interface RedemptionCapacityObservation {
   metadata?: Record<string, unknown>;
   warnings: LiveReserveWarning[];
+  /** Lowercased vault or custody-wallet address -> net converted assets (raw units) for custody-mode branches. */
+  custodyBackingByHolder?: ReadonlyMap<string, bigint>;
+  errorMessage?: string;
 }
 
 function requireUint(value: bigint | null, label: string): bigint {
@@ -436,6 +439,9 @@ async function observeHoneyFactoryRedemptionCapacity(
         assetDecimals,
         stableAsset,
         isPegged,
+        vault,
+        custodyInfo,
+        convertedAssets,
         vaultPaused,
         relativeCap,
         redeemRate,
@@ -443,6 +449,18 @@ async function observeHoneyFactoryRedemptionCapacity(
         weight: weights[index]!,
       };
     });
+
+    const custodyBackingByHolder = new Map<string, bigint>();
+    for (const observation of observations) {
+      if (!observation.custodyInfo.isCustodyVault) continue;
+      custodyBackingByHolder.set(observation.vault.toLowerCase(), observation.convertedAssets);
+      if (observation.custodyInfo.custodyAddress != null) {
+        custodyBackingByHolder.set(
+          observation.custodyInfo.custodyAddress.toLowerCase(),
+          observation.convertedAssets,
+        );
+      }
+    }
 
     const skippedAssets = observations
       .filter((observation) => !observation.stableAsset || !observation.isPegged)
@@ -511,6 +529,7 @@ async function observeHoneyFactoryRedemptionCapacity(
             `${ADAPTER_KEY} excluded unconfigured or non-pegged collateral from redemption capacity: ${skippedAssets.join(", ")}`,
           )]
         : [],
+      custodyBackingByHolder,
     };
   } catch (error) {
     const message = toErrorMessage(error);
@@ -519,6 +538,7 @@ async function observeHoneyFactoryRedemptionCapacity(
         "redemption-capacity-unavailable",
         `${ADAPTER_KEY} withheld the complete redemption-capacity block: ${message}`,
       )],
+      errorMessage: message,
     };
   }
 }
@@ -567,6 +587,28 @@ export async function fetchEvmBranchBalancesReserves(
         )
       : Promise.resolve<RedemptionCapacityObservation>({ warnings: [] }),
   ]);
+
+  // Honey custody composition: a custody-mode vault's idle balance is not the
+  // backing. The factory-owned net vault shares (shares minus collected fees)
+  // converted to underlying assets are the vault's claim, so branch balances
+  // whose holder is a custody vault (or its custody wallet) are replaced by
+  // the net-share conversion observed in the same multicall round.
+  if (redemptionCapacityParams?.kind === "honey-factory-vaults") {
+    const custodyBackingByHolder = redemptionCapacity.custodyBackingByHolder;
+    if (custodyBackingByHolder == null) {
+      throw new Error(
+        `${ADAPTER_KEY}: HoneyFactory vault state unavailable; cannot derive custody-mode branch composition: ${
+          redemptionCapacity.errorMessage ?? "unknown failure"
+        }`,
+      );
+    }
+    for (const entry of balances) {
+      const custodyBacking = custodyBackingByHolder.get(entry.branch.holder.toLowerCase());
+      if (custodyBacking != null) {
+        entry.balanceRaw = custodyBacking;
+      }
+    }
+  }
 
   const priceMapWarnings: LiveReserveWarning[] = [];
   const priceMap = await fetchBranchPriceMap(balances, signal, priceMapWarnings, ctx);

@@ -414,6 +414,28 @@ describe("reserve-protocol-dtf adapter", () => {
     expect(result.metadata?.redemption?.outputValuation).toBeUndefined();
   });
 
+  it("propagates cron aborts from the redemption output valuation instead of swallowing them", async () => {
+    mockReserveProtocolOnchain();
+    const controller = new AbortController();
+    const reason = new Error("cron timed out");
+    const defaultUint256 = vi.mocked(fetchOnchainUint256).getMockImplementation()!;
+
+    // The valuation legs are the only reads inside the swallowed try/catch; abort
+    // mid-valuation and assert the reason propagates rather than degrading to a
+    // null output valuation.
+    vi.mocked(fetchOnchainUint256).mockImplementation(async (request) => {
+      if (request.data.startsWith(CONVERT_TO_ASSETS_SELECTOR)) {
+        controller.abort(reason);
+        throw new Error("rpc aborted");
+      }
+      return defaultUint256(request);
+    });
+
+    await expect(
+      fetchReserveProtocolDtfReserves(coin as never, createOnchainConfig(), controller.signal),
+    ).rejects.toBe(reason);
+  });
+
   it("withholds output valuation when the live basket diverges from configured output assets", async () => {
     mockReserveProtocolOnchain({
       quoteEntries: [

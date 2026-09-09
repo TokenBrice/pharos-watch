@@ -25,6 +25,7 @@ interface ResupplyPairSnapshot {
   pairAddress: `0x${string}`;
   underlyingAddress: `0x${string}`;
   collateralAddress: `0x${string}`;
+  underlyingDecimals: number;
   totalBorrowAmount: bigint;
   totalBorrowShares: bigint;
   totalCollateralShares: bigint;
@@ -40,7 +41,9 @@ const GET_MAX_REDEEMABLE_DEBT_SELECTOR = "0x43bad45b";
 const GUARD_ENABLED_SELECTOR = "0x901654fc";
 const PERMISSIONLESS_PRICE_THRESHOLD_SELECTOR = "0x0e3d9f3c";
 const REUSD_ORACLE_PRICE_SELECTOR = "0xc6af1dda";
-const UNDERLYING_DECIMALS = 18;
+const ASSET_SELECTOR = "0x38d52e0f";
+const DECIMALS_SELECTOR = "0x313ce567";
+const REDEMPTION_GUARD_DECIMALS = 18;
 
 interface RedemptionGuardSnapshot {
   guardEnabled: boolean;
@@ -132,7 +135,7 @@ function buildRedemptionTelemetry(
     if (snapshot.maxRedeemableDebt == null) {
       throw new Error(`resupply-pairs missing redemption capacity for ${snapshot.pairAddress}`);
     }
-    capacityUsd += decimalNumberFromBigInt(snapshot.maxRedeemableDebt, UNDERLYING_DECIMALS);
+    capacityUsd += decimalNumberFromBigInt(snapshot.maxRedeemableDebt, snapshot.underlyingDecimals);
   }
 
   const permissionlessOpen =
@@ -158,10 +161,10 @@ function buildRedemptionTelemetry(
       ],
       redemptionHandlerAddress: input.redemptionHandlerAddress,
       guardEnabled: input.guard.guardEnabled,
-      reUsdOraclePrice: decimalNumberFromBigInt(input.guard.reUsdOraclePrice, UNDERLYING_DECIMALS),
+      reUsdOraclePrice: decimalNumberFromBigInt(input.guard.reUsdOraclePrice, REDEMPTION_GUARD_DECIMALS),
       permissionlessPriceThreshold: decimalNumberFromBigInt(
         input.guard.permissionlessPriceThreshold,
-        UNDERLYING_DECIMALS,
+        REDEMPTION_GUARD_DECIMALS,
       ),
     }),
   };
@@ -186,7 +189,7 @@ export function adaptResupplyPairSnapshots(
   let totalCollateralAssetsUsd = 0;
 
   for (const snapshot of snapshots) {
-    totalBorrowUsd += decimalNumberFromBigInt(snapshot.totalBorrowAmount, UNDERLYING_DECIMALS);
+    totalBorrowUsd += decimalNumberFromBigInt(snapshot.totalBorrowAmount, snapshot.underlyingDecimals);
     if (snapshot.totalCollateralAssets === 0n) {
       if (snapshot.totalBorrowAmount > 0n) {
         throw new Error(
@@ -202,7 +205,7 @@ export function adaptResupplyPairSnapshots(
       throw new Error(`resupply-pairs unmapped positive-collateral underlying ${snapshot.underlyingAddress}`);
     }
 
-    const value = decimalNumberFromBigInt(snapshot.totalCollateralAssets, UNDERLYING_DECIMALS);
+    const value = decimalNumberFromBigInt(snapshot.totalCollateralAssets, snapshot.underlyingDecimals);
     totalCollateralAssetsUsd += value;
     const current = valueByUnderlying.get(underlyingAddress);
     valueByUnderlying.set(underlyingAddress, {
@@ -355,11 +358,15 @@ export async function fetchResupplyPairsReserves(
 
   const secondStage = await fetchOnchainMulticall3({
     ...callOptions,
-    calls: pairState.map(({ index, collateralAddress, accounting }) => ({
-      label: `pair:${index}:collateral-assets`,
-      contract: collateralAddress,
-      data: encodeConvertToAssetsCall(accounting.totalCollateral),
-    })),
+    calls: pairState.flatMap(({ index, collateralAddress, underlyingAddress, accounting }) => [
+      {
+        label: `pair:${index}:collateral-assets`,
+        contract: collateralAddress,
+        data: encodeConvertToAssetsCall(accounting.totalCollateral),
+      },
+      { label: `pair:${index}:vault-asset`, contract: collateralAddress, data: ASSET_SELECTOR },
+      { label: `pair:${index}:underlying-decimals`, contract: underlyingAddress, data: DECIMALS_SELECTOR },
+    ]),
   });
   if (!secondStage) {
     throw new Error("resupply-pairs collateral conversion multicall failed");
@@ -378,11 +385,28 @@ export async function fetchResupplyPairsReserves(
       multicallResultByLabel(secondStage, `pair:${index}:collateral-assets`),
       `convertToAssets() for ${collateralAddress}`,
     );
+    const vaultAsset = parseAddressResult(
+      multicallResultByLabel(secondStage, `pair:${index}:vault-asset`),
+      `asset() for ${collateralAddress}`,
+    );
+    if (vaultAsset !== normalizeEvmAddress(underlyingAddress)) {
+      throw new Error(
+        `resupply-pairs collateral vault ${collateralAddress} asset() mismatch: expected ${underlyingAddress}, got ${vaultAsset}`,
+      );
+    }
+    const underlyingDecimalsRaw = decodeUint256Result(
+      multicallResultByLabel(secondStage, `pair:${index}:underlying-decimals`),
+      `decimals() for ${underlyingAddress}`,
+    );
+    if (underlyingDecimalsRaw > 36n) {
+      throw new Error(`resupply-pairs underlying ${underlyingAddress} decimals() out of range`);
+    }
     return {
       pairKey: key,
       pairAddress,
       underlyingAddress,
       collateralAddress,
+      underlyingDecimals: Number(underlyingDecimalsRaw),
       totalBorrowAmount: accounting.totalBorrowAmount,
       totalBorrowShares: accounting.totalBorrowShares,
       totalCollateralShares: accounting.totalCollateral,

@@ -33,7 +33,14 @@ const TOKEN_META = {
     chain: "ethereum",
     address: "0x7f39c581f595b53c5cb19bd0b3f8da6c935e2ca0",
     apiDecimals: 18,
-    onchainRawDecimals: 18,
+    // The pool's `getTotalRawCollaterals()` reports collateral in the pool's *base*
+    // token unit: the wstETH pool's base token is stETH (wstETH enters through the
+    // pool's rate provider, currently ~1.2436 stETH per wstETH), so the raw amount
+    // is stETH-denominated and must be valued with the stETH price. The issuer API
+    // names the same figure `stETHBalance`. Pricing it with the wstETH price
+    // overstates this pool by ~24%.
+    rawUnitAddress: "0xae7ab96520de3a18e5e111b5eaab095312d7fe84", // stETH
+    rawUnitDecimals: 18,
     risk: getCanonicalReserveAssetRisk("WSTETH") ?? "low",
     name: "wstETH (Lido)",
     poolAddress: "0x6Ecfa38FeE8a5277B91eFdA204c235814F0122E8",
@@ -42,7 +49,10 @@ const TOKEN_META = {
     chain: "ethereum",
     address: "0x2260fac5e5542a773aa44fbcfedf7c193bc2c599",
     apiDecimals: 8,
-    onchainRawDecimals: 18,
+    // The WBTC pool's rate provider is identity (rate 1), so its raw collateral is
+    // WBTC itself, expressed on the pool's unified 1e18 scale.
+    rawUnitAddress: "0x2260fac5e5542a773aa44fbcfedf7c193bc2c599", // WBTC
+    rawUnitDecimals: 18,
     risk: getCanonicalReserveAssetRisk("WBTC") ?? "medium",
     name: "WBTC",
     poolAddress: "0xAB709e26Fa6B0A30c119D8c55B887DeD24952473",
@@ -92,7 +102,7 @@ async function buildFxResult(
   ctx: AdapterContext | undefined,
   freshnessMetadata: Record<string, unknown>,
   sourceUrls: string[],
-  amountDecimalsByKey: Record<keyof typeof TOKEN_META, number>,
+  valuationByKey: Record<keyof typeof TOKEN_META, { address: string; decimals: number }>,
 ): Promise<AdapterResult> {
   if (balances.length === 0) {
     throw new Error("fx returned no positive collateral balances");
@@ -102,7 +112,7 @@ async function buildFxResult(
     balances.map(({ key }) => ({
       key,
       chain: TOKEN_META[key].chain,
-      address: TOKEN_META[key].address,
+      address: valuationByKey[key].address,
     })),
     signal,
     ctx,
@@ -114,7 +124,7 @@ async function buildFxResult(
       throw new Error(`Missing DefiLlama price for ${key}`);
     }
     return {
-      value: valueUsdFromBigIntPrice(amountRaw, amountDecimalsByKey[key], price),
+      value: valueUsdFromBigIntPrice(amountRaw, valuationByKey[key].decimals, price),
       name: TOKEN_META[key].name,
       risk: TOKEN_META[key].risk,
     };
@@ -172,8 +182,8 @@ async function fetchFxApiReserves(
       "https://fxprotocol.gitbook.io/fx-docs",
     ],
     {
-      wstETH: TOKEN_META.wstETH.apiDecimals,
-      wbtc: TOKEN_META.wbtc.apiDecimals,
+      wstETH: { address: TOKEN_META.wstETH.address, decimals: TOKEN_META.wstETH.apiDecimals },
+      wbtc: { address: TOKEN_META.wbtc.address, decimals: TOKEN_META.wbtc.apiDecimals },
     },
   );
 }
@@ -221,8 +231,8 @@ async function fetchFxOnchainReserves(
       "https://fxprotocol.gitbook.io/fx-docs",
     ],
     {
-      wstETH: TOKEN_META.wstETH.onchainRawDecimals,
-      wbtc: TOKEN_META.wbtc.onchainRawDecimals,
+      wstETH: { address: TOKEN_META.wstETH.rawUnitAddress, decimals: TOKEN_META.wstETH.rawUnitDecimals },
+      wbtc: { address: TOKEN_META.wbtc.rawUnitAddress, decimals: TOKEN_META.wbtc.rawUnitDecimals },
     },
   );
 }

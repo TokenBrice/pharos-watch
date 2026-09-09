@@ -42,6 +42,8 @@ const GET_MAX_REDEEMABLE_DEBT_SELECTOR = "0x43bad45b";
 const GUARD_ENABLED_SELECTOR = "0x901654fc";
 const PERMISSIONLESS_PRICE_THRESHOLD_SELECTOR = "0x0e3d9f3c";
 const REUSD_ORACLE_PRICE_SELECTOR = "0xc6af1dda";
+const ASSET_SELECTOR = "0x38d52e0f";
+const DECIMALS_SELECTOR = "0x313ce567";
 const REDEMPTION_HANDLER = "0x5eeB063d0abefBBc78F576E28d762a16b637A025";
 const ONE = 1_000_000_000_000_000_000n;
 
@@ -91,6 +93,27 @@ const underlyings = [
   },
 ];
 
+function twoPairConfig(): LiveReservesConfig {
+  return {
+    adapter: "resupply-pairs",
+    version: 1,
+    semantics: "collateral-mix",
+    breakerScope: "reusd-resupply",
+    display: { url: "https://resupply.fi/supply", label: "Resupply markets" },
+    inputs: {
+      primary: { kind: "onchain-evm", chain: "ethereum", rpcMode: "public-rpc" },
+    },
+    params: {
+      rpcUrl: "https://ethereum-rpc.publicnode.com",
+      pairs: [
+        { key: "PAIR_CURVELEND_SFRXUSD_CRVUSD", address: CURVE_PAIR },
+        { key: "PAIR_FRAXLEND_SFRXETH_FRXUSD", address: FRAX_PAIR },
+      ],
+      underlyings,
+    },
+  };
+}
+
 beforeEach(() => {
   signal = new AbortController().signal;
   vi.clearAllMocks();
@@ -105,6 +128,7 @@ describe("resupply-pairs adapter", () => {
           pairAddress: CURVE_PAIR,
           underlyingAddress: CRVUSD,
           collateralAddress: CURVE_COLLATERAL,
+          underlyingDecimals: 18,
           totalBorrowAmount: 60n * ONE,
           totalBorrowShares: 60n * ONE,
           totalCollateralShares: 100n * ONE,
@@ -116,6 +140,7 @@ describe("resupply-pairs adapter", () => {
           pairAddress: FRAX_PAIR,
           underlyingAddress: FRXUSD,
           collateralAddress: FRAX_COLLATERAL,
+          underlyingDecimals: 18,
           totalBorrowAmount: 40n * ONE,
           totalBorrowShares: 40n * ONE,
           totalCollateralShares: 80n * ONE,
@@ -127,6 +152,7 @@ describe("resupply-pairs adapter", () => {
           pairAddress: EMPTY_PAIR,
           underlyingAddress: FRXUSD,
           collateralAddress: EMPTY_COLLATERAL,
+          underlyingDecimals: 18,
           totalBorrowAmount: 0n,
           totalBorrowShares: 0n,
           totalCollateralShares: 0n,
@@ -183,6 +209,7 @@ describe("resupply-pairs adapter", () => {
             pairAddress: CURVE_PAIR,
             underlyingAddress: "0x0000000000000000000000000000000000000001",
             collateralAddress: CURVE_COLLATERAL,
+            underlyingDecimals: 18,
             totalBorrowAmount: ONE,
             totalBorrowShares: ONE,
             totalCollateralShares: 2n * ONE,
@@ -253,6 +280,18 @@ describe("resupply-pairs adapter", () => {
       if (normalizedContract === normalizeAddress(FRAX_COLLATERAL) && data.startsWith(CONVERT_TO_ASSETS_SELECTOR)) {
         return encodeUint256Result(40n * ONE);
       }
+      if (normalizedContract === normalizeAddress(CURVE_COLLATERAL) && data === ASSET_SELECTOR) {
+        return encodeAddressResult(CRVUSD);
+      }
+      if (normalizedContract === normalizeAddress(FRAX_COLLATERAL) && data === ASSET_SELECTOR) {
+        return encodeAddressResult(FRXUSD);
+      }
+      if (normalizedContract === normalizeAddress(CRVUSD) && data === DECIMALS_SELECTOR) {
+        return encodeUint256Result(18n);
+      }
+      if (normalizedContract === normalizeAddress(FRXUSD) && data === DECIMALS_SELECTOR) {
+        return encodeUint256Result(18n);
+      }
       return null;
     });
 
@@ -269,7 +308,7 @@ describe("resupply-pairs adapter", () => {
 
     const result = await resultPromise;
     expect(fetchOnchainMulticall3).toHaveBeenCalledTimes(2);
-    expect(vi.mocked(fetchOnchainMulticall3).mock.calls[1]?.[0].calls).toHaveLength(2);
+    expect(vi.mocked(fetchOnchainMulticall3).mock.calls[1]?.[0].calls).toHaveLength(6);
     expect(result.metadata).toMatchObject({
       pairCount: 2,
       activePairCount: 2,
@@ -365,6 +404,22 @@ describe("resupply-pairs adapter", () => {
       if (normalizedContract === normalizeAddress(EMPTY_COLLATERAL) && data.startsWith(CONVERT_TO_ASSETS_SELECTOR)) {
         return encodeUint256Result(0n);
       }
+      if (normalizedContract === normalizeAddress(CURVE_COLLATERAL) && data === ASSET_SELECTOR) {
+        return encodeAddressResult(CRVUSD);
+      }
+      if (
+        (normalizedContract === normalizeAddress(FRAX_COLLATERAL)
+          || normalizedContract === normalizeAddress(EMPTY_COLLATERAL))
+        && data === ASSET_SELECTOR
+      ) {
+        return encodeAddressResult(FRXUSD);
+      }
+      if (
+        (normalizedContract === normalizeAddress(CRVUSD) || normalizedContract === normalizeAddress(FRXUSD))
+        && data === DECIMALS_SELECTOR
+      ) {
+        return encodeUint256Result(18n);
+      }
       return null;
     });
 
@@ -395,6 +450,98 @@ describe("resupply-pairs adapter", () => {
       activePairCount: 2,
     });
     expect(fetchOnchainMulticall3).toHaveBeenCalledTimes(2);
-    expect(fetchOnchainRawCall).toHaveBeenCalledTimes(18);
+    expect(fetchOnchainRawCall).toHaveBeenCalledTimes(24);
+  });
+
+  it.each([
+    { name: "the wrapper underlying reports 8 decimals", frxUsdDecimals: 8n, expectedFraxUsd: 40 },
+    { name: "the wrapper underlying reports 18 decimals", frxUsdDecimals: 18n, expectedFraxUsd: 40 },
+  ])("values each pair at its verified underlying decimals when $name", async ({ frxUsdDecimals, expectedFraxUsd }) => {
+    const scale = 10n ** frxUsdDecimals;
+    vi.mocked(fetchOnchainRawCall).mockImplementation(async ({ contract, data }) => {
+      const normalizedContract = normalizeAddress(contract);
+      if (normalizedContract === normalizeAddress(CURVE_PAIR)) {
+        if (data === UNDERLYING_SELECTOR) return encodeAddressResult(CRVUSD);
+        if (data === COLLATERAL_SELECTOR) return encodeAddressResult(CURVE_COLLATERAL);
+        if (data === GET_PAIR_ACCOUNTING_SELECTOR) return encodePairAccounting(45n * ONE, 100n * ONE);
+      }
+      if (normalizedContract === normalizeAddress(FRAX_PAIR)) {
+        if (data === UNDERLYING_SELECTOR) return encodeAddressResult(FRXUSD);
+        if (data === COLLATERAL_SELECTOR) return encodeAddressResult(FRAX_COLLATERAL);
+        if (data === GET_PAIR_ACCOUNTING_SELECTOR) return encodePairAccounting(30n * scale, 100n * ONE);
+      }
+      if (normalizedContract === normalizeAddress(CURVE_COLLATERAL)) {
+        if (data.startsWith(CONVERT_TO_ASSETS_SELECTOR)) return encodeUint256Result(60n * ONE);
+        if (data === ASSET_SELECTOR) return encodeAddressResult(CRVUSD);
+      }
+      if (normalizedContract === normalizeAddress(FRAX_COLLATERAL)) {
+        if (data.startsWith(CONVERT_TO_ASSETS_SELECTOR)) return encodeUint256Result(40n * scale);
+        if (data === ASSET_SELECTOR) return encodeAddressResult(FRXUSD);
+      }
+      if (normalizedContract === normalizeAddress(CRVUSD) && data === DECIMALS_SELECTOR) {
+        return encodeUint256Result(18n);
+      }
+      if (normalizedContract === normalizeAddress(FRXUSD) && data === DECIMALS_SELECTOR) {
+        return encodeUint256Result(frxUsdDecimals);
+      }
+      return null;
+    });
+
+    const result = await fetchResupplyPairsReserves(coin as never, twoPairConfig(), signal);
+
+    expect(result.metadata).toMatchObject({
+      totalBorrowUsd: 75,
+      totalCollateralAssetsUsd: 60 + expectedFraxUsd,
+    });
+    expect(result.slices).toEqual([
+      { name: "Curve crvUSD lending markets", pct: 60, risk: "high", coinId: "crvusd-curve", depType: "collateral" },
+      { name: "Frax frxUSD lending markets", pct: 40, risk: "high", coinId: "frxusd-frax", depType: "collateral" },
+    ]);
+  });
+
+  it.each([
+    {
+      name: "an underlying decimals() read fails",
+      decimalsResult: null,
+      vaultAsset: FRXUSD,
+      expected: /decimals\(\) for .* call failed/,
+    },
+    {
+      name: "the collateral vault reports a different asset",
+      decimalsResult: encodeUint256Result(18n),
+      vaultAsset: CRVUSD,
+      expected: /asset\(\) mismatch/,
+    },
+  ])("fails closed when $name", async ({ decimalsResult, vaultAsset, expected }) => {
+    vi.mocked(fetchOnchainRawCall).mockImplementation(async ({ contract, data }) => {
+      const normalizedContract = normalizeAddress(contract);
+      if (normalizedContract === normalizeAddress(CURVE_PAIR)) {
+        if (data === UNDERLYING_SELECTOR) return encodeAddressResult(CRVUSD);
+        if (data === COLLATERAL_SELECTOR) return encodeAddressResult(CURVE_COLLATERAL);
+        if (data === GET_PAIR_ACCOUNTING_SELECTOR) return encodePairAccounting(45n * ONE, 100n * ONE);
+      }
+      if (normalizedContract === normalizeAddress(FRAX_PAIR)) {
+        if (data === UNDERLYING_SELECTOR) return encodeAddressResult(FRXUSD);
+        if (data === COLLATERAL_SELECTOR) return encodeAddressResult(FRAX_COLLATERAL);
+        if (data === GET_PAIR_ACCOUNTING_SELECTOR) return encodePairAccounting(30n * ONE, 100n * ONE);
+      }
+      if (normalizedContract === normalizeAddress(CURVE_COLLATERAL)) {
+        if (data.startsWith(CONVERT_TO_ASSETS_SELECTOR)) return encodeUint256Result(60n * ONE);
+        if (data === ASSET_SELECTOR) return encodeAddressResult(CRVUSD);
+      }
+      if (normalizedContract === normalizeAddress(FRAX_COLLATERAL)) {
+        if (data.startsWith(CONVERT_TO_ASSETS_SELECTOR)) return encodeUint256Result(40n * ONE);
+        if (data === ASSET_SELECTOR) return encodeAddressResult(vaultAsset);
+      }
+      if (normalizedContract === normalizeAddress(CRVUSD) && data === DECIMALS_SELECTOR) {
+        return encodeUint256Result(18n);
+      }
+      if (normalizedContract === normalizeAddress(FRXUSD) && data === DECIMALS_SELECTOR) {
+        return decimalsResult;
+      }
+      return null;
+    });
+
+    await expect(fetchResupplyPairsReserves(coin as never, twoPairConfig(), signal)).rejects.toThrow(expected);
   });
 });

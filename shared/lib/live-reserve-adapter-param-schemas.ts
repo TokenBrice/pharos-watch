@@ -928,6 +928,11 @@ const idleCdoEpochVariantParamsSchema = z
     tranche: z.enum(["AA", "BB"]),
     underlyingAddress: EvmAddressSchema,
     underlyingDecimals: z.number().int().nonnegative(),
+    // A structural single-tranche vault has no junior (BB) capital by design.
+    // Declaring `false` records the missing junior as an `info` risk fact
+    // instead of a data-quality `degraded` warning; the first-loss reality is
+    // already carried on the slice's `risk` and `riskFactors`.
+    expectJuniorTranche: z.boolean().default(true),
     creditSlice: idleCdoCreditSliceSchema,
     unlentSlice: idleCdoUnlentSliceSchema,
     ...OptionalSourceUrlsFields,

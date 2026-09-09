@@ -8,7 +8,7 @@ import type {
   LiveReservesConfig,
 } from "@shared/types/live-reserves";
 import { decodeAbiParameters } from "viem/utils";
-import { throwIfAborted } from "../../lib/abort";
+import { rethrowIfAborted, throwIfAborted } from "../../lib/abort";
 import { DECIMALS_SELECTOR, TOTAL_SUPPLY_SELECTOR, encodeAddressCallData, encodeUint256 } from "../../lib/evm-selectors";
 import type { AdapterContext, AdapterResult } from "./types";
 import {
@@ -252,6 +252,7 @@ async function buildRedemptionOutputValuation(args: {
   totalSupply: bigint;
   legs: readonly ReserveProtocolDtfOutputLeg[];
   onchain: ReturnType<typeof makeOnchainCallers>;
+  signal: AbortSignal;
   observedAt: number;
 }): Promise<LiveReserveRedemptionOutputValuation | null> {
   const configuredAssetIds = REDEMPTION_BACKSTOP_CONFIGS[args.coinId]?.outputAssets;
@@ -295,7 +296,8 @@ async function buildRedemptionOutputValuation(args: {
         weight: valueByAssetId.get(assetId)! / totalValueUsd,
       })),
     };
-  } catch {
+  } catch (error) {
+    rethrowIfAborted(error, args.signal);
     return null;
   }
 }
@@ -613,6 +615,7 @@ async function fetchReserveProtocolDtfOnchainReserves(
       totalSupply: rawTotalSupply,
       legs: outputLegs,
       onchain,
+      signal,
       observedAt: Math.floor(ctx?.nowSec ?? Date.now() / 1_000),
     });
     if (outputValuation) redemption = { ...redemption, outputValuation };

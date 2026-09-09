@@ -22,6 +22,13 @@ const PUBLIC_RPC_URLS: Record<string, string> = {
   // Required for reviewed CHFAU native supply aggregation.
   tempo: "https://rpc.tempo.xyz",
   movement: "https://mainnet.movementnetwork.xyz/v1",
+  // Required for usd1-bundle-oracle multichain totalSupply() supply aggregation.
+  plume: "https://rpc.plume.org",
+  monad: "https://rpc.monad.xyz",
+  mantle: "https://rpc.mantle.xyz",
+  "morph-l2": "https://rpc.morphl2.io",
+  abcore: "https://rpc.core.ab.org",
+  xlayer: "https://rpc.xlayer.tech",
 };
 
 const EXTRA_FALLBACK_RPC_URLS: Record<string, string[]> = {

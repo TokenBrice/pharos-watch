@@ -382,9 +382,15 @@ export function adaptYamatoStates(states: YamatoStates, options: YamatoAdaptOpti
       redemption: {
         ...redemptionCapacityMetadata,
         freshnessKind: "same-run-onchain",
-        routeStatus,
-        routeStatusSource: "onchain",
-        ...(routeStatusReason ? { routeStatusReason } : {}),
+        // `routeStatus` is only claimable from a same-run paused() observation;
+        // a null probe withholds it rather than asserting an unobserved "open".
+        ...(probe
+          ? {
+              routeStatus,
+              routeStatusSource: "onchain",
+              ...(routeStatusReason ? { routeStatusReason } : {}),
+            }
+          : {}),
         holderEligibility: "any-holder",
         settlementDelaySec: 0,
         sourceUrls: [
@@ -449,7 +455,7 @@ export async function fetchYamatoReserves(
     warnings.push(
       reserveInfoWarning(
         "yamato-redeemables-cap-unreadable",
-        `Yamato ${params.yamatoAddress} did not return a matching paused()/priorityRegistry()/getRedeemablesCap() set this run; redemption capacity withheld`,
+        `Yamato ${params.yamatoAddress} did not return a matching paused()/priorityRegistry()/getRedeemablesCap() set this run; redemption route status and capacity withheld`,
       ),
     );
   } else if (redemption.redeemableCapJpyRaw > 0n && ethPriceUsd == null) {

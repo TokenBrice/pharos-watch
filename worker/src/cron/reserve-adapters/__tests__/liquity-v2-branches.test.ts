@@ -19,6 +19,7 @@ import {
   fetchOnchainUint256,
   probeOptionalRedemptionRateBps,
 } from "../helpers";
+import { fetchEvmUint256AtBlock } from "../../../lib/evm-rpc";
 
 vi.mock("../helpers", async (importOriginal) => {
   const actual = await importOriginal<typeof import("../helpers")>();
@@ -30,7 +31,10 @@ vi.mock("../helpers", async (importOriginal) => {
     fetchDefiLlamaPrices: vi.fn(),
     fetchErc20Balance: vi.fn(),
     fetchOnchainMulticall3: vi.fn(),
-    fetchOnchainRateBps: vi.fn(),
+    // Default to the real bps helper so the individual-call fallback is proven
+    // end to end (raw word -> bps) instead of through a stub that ignores the
+    // probe's decimals; tests that only need a fee value override it.
+    fetchOnchainRateBps: vi.fn(actual.fetchOnchainRateBps),
     fetchOnchainRawCall,
     fetchOnchainUint256,
     makeOnchainCallers: makeOnchainCallersMock({
@@ -38,6 +42,16 @@ vi.mock("../helpers", async (importOriginal) => {
       raw: fetchOnchainRawCall,
     }),
     probeOptionalRedemptionRateBps: vi.fn(),
+  };
+});
+
+// The real rate helper reads through `fetchOnchainUint256`, so the RPC boundary
+// underneath it is the seam that keeps the fallback probe off the network.
+vi.mock("../../../lib/evm-rpc", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("../../../lib/evm-rpc")>();
+  return {
+    ...actual,
+    fetchEvmUint256AtBlock: vi.fn(),
   };
 });
 
@@ -61,6 +75,7 @@ const BOLD_MECHANISM_PRICE_SELECTOR = "0x4ea15f37";
 const BOLD_STABILITY_POOL_DEPOSITS_SELECTOR = "0xf71c6940";
 const BERABORROW_DEBT_SELECTOR = "0x795d26c3";
 const BERABORROW_SHUTDOWN_SELECTOR = "0x9484fb8e";
+const BRANCH_REDEMPTION_RATE_SELECTOR = "0xc52861f2"; // getRedemptionRateWithDecay()
 
 function encodeAddress(address: string): string {
   return `0x${address.toLowerCase().slice(2).padStart(64, "0")}`;
@@ -665,10 +680,11 @@ describe("fetchLiquityV2BranchReserves Beraborrow branches", () => {
       return 0n;
     });
     vi.mocked(fetchDefiLlamaPrices).mockResolvedValue(new Map([["WBERA", 0.4]]));
-    vi.mocked(fetchOnchainRateBps).mockImplementation(async (_input, probe) => {
-      if (probe.contract === wberaBranch.holder) return 50;
-      if (probe.contract === pumpBtcBranch.holder) return 0;
-      return 0;
+    // No mocked bps helper here: the fallback probe must scale this raw
+    // getRedemptionRateWithDecay() word (0.5% at 18 decimals) into 50 bps.
+    vi.mocked(fetchEvmUint256AtBlock).mockImplementation(async (_chainId, to, data) => {
+      if (data !== BRANCH_REDEMPTION_RATE_SELECTOR) return null;
+      return to === wberaBranch.holder ? 5_000_000_000_000_000n : 0n;
     });
     vi.mocked(fetchOnchainRawCall).mockImplementation(async ({ contract, data }) => {
       if (data === ERC4626_ASSET_SELECTOR) {
@@ -755,6 +771,83 @@ describe("fetchLiquityV2BranchReserves Beraborrow branches", () => {
       contract: pumpBtcBranch.holder,
       data: BERABORROW_SHUTDOWN_SELECTOR,
     }));
+  });
+
+  it("derives the same branch redemption fee from the individual fallback as from the batch", async () => {
+    // 0.5% getRedemptionRateWithDecay() word, as live Beraborrow WBERA reports.
+    const rateRaw = 5_000_000_000_000_000n;
+    const branchIndexByHolder: Record<string, number> = Object.fromEntries(
+      branches.map((entry, index) => [entry.holder, index]),
+    );
+    const balanceRawByIndex = [50n * 10n ** 18n, 10n * 10n ** 18n];
+    const debtRawByIndex = [1_250n * 10n ** 18n, 50n * 10n ** 18n];
+
+    const primeSharedReads = () => {
+      vi.mocked(probeOptionalRedemptionRateBps).mockResolvedValue(null);
+      vi.mocked(fetchDefiLlamaPrices).mockResolvedValue(new Map([["WBERA", 0.4]]));
+      vi.mocked(fetchErc20Balance).mockImplementation(async (_input, contract) => {
+        if (contract === wberaBranch.token.address) return balanceRawByIndex[0]!;
+        if (contract === pumpBtcBranch.token.address) return balanceRawByIndex[1]!;
+        return 0n;
+      });
+      vi.mocked(fetchOnchainRawCall).mockImplementation(async ({ contract, data }) => (
+        data === BERABORROW_SHUTDOWN_SELECTOR
+          ? encodeUint(contract === pumpBtcBranch.holder ? 1 : 0)
+          : null
+      ));
+      vi.mocked(fetchOnchainUint256).mockImplementation(async ({ contract, data }) => {
+        // pumpBTC has no DefiLlama entry, so it prices off the branch oracle.
+        if (data === BRANCH_PRICE_SELECTOR) {
+          return contract === pumpBtcBranch.holder ? 80_000n * 10n ** 18n : null;
+        }
+        if (data !== BERABORROW_DEBT_SELECTOR) return null;
+        if (contract === wberaBranch.holder) return debtRawByIndex[0]!;
+        if (contract === pumpBtcBranch.holder) return debtRawByIndex[1]!;
+        return 0n;
+      });
+    };
+
+    primeSharedReads();
+    // Multicall3 path: the fee word arrives inside the branch batch.
+    vi.mocked(fetchOnchainMulticall3).mockImplementation(async ({ calls }) => {
+      if (!calls[0]?.label.startsWith("branch:balance:")) return null;
+      return calls.map((call) => {
+        const index = Number(call.label.split(":").pop());
+        if (call.label.startsWith("branch:balance:")) {
+          return { label: call.label, success: true, returnData: encodeUint(balanceRawByIndex[index] ?? 0n) };
+        }
+        if (call.label.startsWith("branch:debt:")) {
+          return { label: call.label, success: true, returnData: encodeUint(debtRawByIndex[index] ?? 0n) };
+        }
+        if (call.label.startsWith("branch:shutdown:")) {
+          return { label: call.label, success: true, returnData: encodeUint(index === 1 ? 1 : 0) };
+        }
+        return { label: call.label, success: true, returnData: encodeUint(index === 0 ? rateRaw : 0n) };
+      });
+    });
+    const batched = await fetchLiquityV2BranchReserves(
+      nectBeraborrow as unknown as StablecoinMeta,
+      config,
+      AbortSignal.timeout(5_000),
+    );
+
+    // Individual-call fallback: Multicall3 is unavailable, so every branch fee
+    // comes from its own getRedemptionRateWithDecay() read.
+    primeSharedReads();
+    vi.mocked(fetchOnchainMulticall3).mockResolvedValue(null);
+    vi.mocked(fetchEvmUint256AtBlock).mockImplementation(async (_chainId, to, data) => {
+      if (data !== BRANCH_REDEMPTION_RATE_SELECTOR) return null;
+      return branchIndexByHolder[to] === 0 ? rateRaw : 0n;
+    });
+    const fallback = await fetchLiquityV2BranchReserves(
+      nectBeraborrow as unknown as StablecoinMeta,
+      config,
+      AbortSignal.timeout(5_000),
+    );
+
+    expect(batched.metadata?.redemptionFeeBps).toBe(50);
+    expect(fallback.metadata?.redemptionFeeBps).toBe(batched.metadata?.redemptionFeeBps);
+    expect(fallback.metadata?.redemption).toMatchObject({ feeBps: 50 });
   });
 });
 

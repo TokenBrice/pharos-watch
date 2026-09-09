@@ -213,8 +213,6 @@ describe("adaptYamatoStates", () => {
       gasReserveRatePct: 1,
       redemption: {
         freshnessKind: "same-run-onchain",
-        routeStatus: "open",
-        routeStatusSource: "onchain",
         holderEligibility: "any-holder",
         settlementDelaySec: 0,
         sourceUrls: [
@@ -223,6 +221,9 @@ describe("adaptYamatoStates", () => {
         ],
       },
     });
+    // No same-run paused() probe means the route status is withheld, not assumed open.
+    expect(result.metadata?.redemption).not.toHaveProperty("routeStatus");
+    expect(result.metadata?.redemption).not.toHaveProperty("routeStatusSource");
   });
 
   it("degrades redemption route metadata when system CR is below MCR", () => {
@@ -237,6 +238,11 @@ describe("adaptYamatoStates", () => {
       },
       {
         ethJpyPriceRaw: 100_000n * ONE,
+        redemption: {
+          paused: false,
+          priorityRegistryAddress: PRIORITY_REGISTRY_ADDRESS,
+          redeemableCapJpyRaw: 0n,
+        },
       },
     );
 
@@ -245,6 +251,32 @@ describe("adaptYamatoStates", () => {
       routeStatusSource: "onchain",
       routeStatusReason: expect.stringContaining("below MCR"),
     });
+  });
+
+  it("withholds route status when the redemption probe is null", () => {
+    const result = adaptYamatoStates(
+      {
+        totalCollateralRaw: 100n * ONE,
+        totalDebtRaw: 20_000_000n * ONE,
+        mcrPct: 130,
+        rrrPct: 80,
+        srrPct: 20,
+        grrPct: 1,
+      },
+      {
+        ethJpyPriceRaw: 400_000n * ONE,
+      },
+    );
+
+    expect(result.metadata?.redemption).toBeDefined();
+    expect(result.metadata?.redemption).toMatchObject({
+      freshnessKind: "same-run-onchain",
+      holderEligibility: "any-holder",
+      settlementDelaySec: 0,
+    });
+    expect(result.metadata?.redemption).not.toHaveProperty("routeStatus");
+    expect(result.metadata?.redemption).not.toHaveProperty("routeStatusSource");
+    expect(result.metadata?.redemption).not.toHaveProperty("routeStatusReason");
   });
 
   it("allows the ETH slice metadata to be supplied by adapter params", () => {
@@ -458,6 +490,8 @@ describe("fetchYamatoReserves", () => {
 
     expect(result.metadata?.redemption).not.toHaveProperty("capacityUsd");
     expect(result.metadata).not.toHaveProperty("redeemableCapJpy");
+    expect(result.metadata?.redemption).not.toHaveProperty("routeStatus");
+    expect(result.metadata?.redemption).not.toHaveProperty("routeStatusSource");
     expect(result.warnings).toEqual([
       expect.objectContaining({ code: "yamato-redeemables-cap-unreadable" }),
     ]);

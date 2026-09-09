@@ -2,7 +2,7 @@ import { parseLiveReserveAdapterParams, type LiveReserveAdapterParamsByKey } fro
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import type { LiveReserveAdapterKey, LiveReservesConfig, LiveReserveWarning } from "@shared/types/live-reserves";
 import { hasUsableStablecoinsPayload, loadStablecoinsCache } from "../../lib/stablecoins-cache";
-import { encodeBalanceOfCallData } from "../../lib/evm-selectors";
+import { DECIMALS_SELECTOR, encodeBalanceOfCallData } from "../../lib/evm-selectors";
 import type { AdapterContext, AdapterResult } from "./types";
 import { getCachedRequest } from "./request";
 import {
@@ -12,6 +12,7 @@ import {
   notApplicableFreshnessMetadata,
   requireOnchainInput,
   reserveDegradedWarning,
+  reserveFatalWarning,
   reserveInfoWarning,
   slicesFromValues,
   valueUsdFromBigIntPrice,
@@ -28,6 +29,8 @@ export type BranchConfig = BranchBalanceParams["branches"][number];
 export interface BranchBalanceEntry {
   branch: BranchConfig;
   balanceRaw: bigint | null;
+  /** decimals() read from the branch token; undefined = not probed, null = call reverted. */
+  observedDecimals?: bigint | null;
 }
 
 export interface AdaptBranchBalanceInput {
@@ -159,12 +162,20 @@ export async function fetchBranchBalances(
   );
   if (!isSingleChainEvmConfig) return fetchIndividually();
 
-  const calls = params.branches.map((branch, index) => ({
-    label: `branch-balance:${index}`,
-    contract: branch.token.address,
-    data: encodeBalanceOfCallData(branch.holder),
-    allowFailure: true,
-  }));
+  const calls = params.branches.flatMap((branch, index) => [
+    {
+      label: `branch-balance:${index}`,
+      contract: branch.token.address,
+      data: encodeBalanceOfCallData(branch.holder),
+      allowFailure: true,
+    },
+    {
+      label: `branch-decimals:${index}`,
+      contract: branch.token.address,
+      data: DECIMALS_SELECTOR,
+      allowFailure: true,
+    },
+  ]);
   const results = await fetchOnchainMulticall3({
     calls,
     chain: input.chain,
@@ -180,6 +191,7 @@ export async function fetchBranchBalances(
     return params.branches.map((branch, index) => ({
       branch,
       balanceRaw: decodeUint256Word(rawByLabel.get(`branch-balance:${index}`)),
+      observedDecimals: decodeUint256Word(rawByLabel.get(`branch-decimals:${index}`)),
     }));
   }
 
@@ -262,6 +274,25 @@ export function adaptBranchBalanceReserves(input: AdaptBranchBalanceInput): Adap
   }
 
   const warnings: LiveReserveWarning[] = [];
+
+  // Configured-vs-on-chain decimals identity: a mismatched scale values every
+  // branch by a power of ten, so a mismatch must reject the snapshot rather
+  // than store a 10^12 valuation error. A reverting decimals() (non-ERC20) is
+  // not an identity failure — keep the configured scale and surface it as info.
+  for (const { branch, observedDecimals } of balances) {
+    if (observedDecimals === undefined) continue;
+    if (observedDecimals === null) {
+      warnings.push(reserveInfoWarning(
+        "branch-token-decimals-unavailable",
+        `${adapterKey} could not read decimals() for ${branch.name}; using configured ${branch.token.decimals}`,
+      ));
+    } else if (observedDecimals !== BigInt(branch.token.decimals)) {
+      warnings.push(reserveFatalWarning(
+        "branch-token-decimals-mismatch",
+        `${adapterKey} token ${branch.name} (${branch.token.address}) decimals mismatch: configured ${branch.token.decimals}, observed ${observedDecimals}`,
+      ));
+    }
+  }
 
   const values = pricedBranches.map(({ branch, balanceRaw }) => {
     const price = branch.priceUsd ?? priceMap.get(branch.name);

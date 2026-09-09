@@ -175,8 +175,7 @@ describe("hive-hbd-protocol adapter", () => {
       fallback: { feed: { ...baseFeed(), current_median_history: { base: "0.041 HBD", quote: "1.000 HIVE" } } },
     });
 
-    await expect(fetchFixture()).rejects.toThrow("nodes disagree on material Hive state");
-    expect(rpc.fetchJsonPostWithRetry).toHaveBeenCalledTimes(12);
+    await expect(fetchFixture()).rejects.toThrow(/ratioBps: primary=2831, fallback=2781/);
   });
 
   it("rejects a changing head across the material read bracket", async () => {
@@ -185,7 +184,6 @@ describe("hive-hbd-protocol adapter", () => {
     });
 
     await expect(fetchFixture()).rejects.toThrow("crossed a changing Hive head");
-    expect(rpc.fetchJsonPostWithRetry).toHaveBeenCalledTimes(12);
   });
 
   it.each([PRIMARY_URL, `${PRIMARY_URL}/`, "https://API.HIVE.BLOG./other-rpc"])(
@@ -198,7 +196,7 @@ describe("hive-hbd-protocol adapter", () => {
     },
   );
 
-  it("resamples the whole pair through real request caching and I/O limiting after head progression", async () => {
+  it("retains the coherent peer through real request caching and I/O limiting after head progression", async () => {
     const { fetchJsonPostWithRetry } = await vi.importActual<typeof import("../request")>("../request");
     const transport = await import("../../../lib/fetch-retry");
     const fixtureRpc = rpc.fetchJsonPostWithRetry.getMockImplementation()!;
@@ -232,25 +230,43 @@ describe("hive-hbd-protocol adapter", () => {
     });
 
     expect(result.metadata?.details).toMatchObject({ sourceNodes: [PRIMARY_URL, FALLBACK_URL] });
-    expect(fetchText).toHaveBeenCalledTimes(12);
+    expect(fetchText).toHaveBeenCalledTimes(9);
     expect(maxActive).toBe(2);
     expect(active).toBe(0);
     expect(requestCache.size).toBe(0);
   });
 
-  it("resamples transient cross-node head skew without accepting different heads", async () => {
+  it("accepts adjacent heads with equal derived material quantities", async () => {
+    const adjacent = {
+      ...baseDgp("bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb", hiveTime(NOW_SEC - 27)),
+      head_block_number: 109_000_001,
+      last_irreversible_block_num: 108_999_999,
+    };
+    installRpcFixtures({ fallback: { dgpBefore: adjacent, dgpAfter: adjacent } });
+    const result = await fetchFixture();
+    expect(result.metadata?.details).toMatchObject({ protocolDebtRatioBps: 2831 });
+    expect(rpc.fetchJsonPostWithRetry).toHaveBeenCalledTimes(6);
+  });
+
+  it("resamples only the lagging node until it converges beyond one retry", async () => {
     const fixtureRpc = rpc.fetchJsonPostWithRetry.getMockImplementation()!;
-    let reads = 0;
+    let fallbackSamples = 0;
     rpc.fetchJsonPostWithRetry.mockImplementation(async (url, body) => {
-      reads += 1;
-      if (reads <= 6 && url === FALLBACK_URL && !Array.isArray(body)) {
-        return rpcResult(body.id, baseDgp("bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"));
+      if (url === FALLBACK_URL && !Array.isArray(body)) {
+        if (body.id === 1) fallbackSamples += 1;
+        const lagging = {
+          ...baseDgp(),
+          head_block_number: 109_000_000 - Math.max(0, 7 - fallbackSamples),
+          last_irreversible_block_num: 108_999_990,
+        };
+        return rpcResult(body.id, lagging);
       }
       return fixtureRpc(url, body);
     });
     const result = await fetchFixture();
-    expect(result.metadata?.details).toMatchObject({ headBlockId: PRIMARY_HEAD_ID });
-    expect(rpc.fetchJsonPostWithRetry).toHaveBeenCalledTimes(12);
+    expect(result.metadata?.details).toMatchObject({ protocolDebtRatioBps: 2831 });
+    expect(fallbackSamples).toBe(4);
+    expect(rpc.fetchJsonPostWithRetry.mock.calls.filter(([url]) => url === PRIMARY_URL)).toHaveLength(3);
   });
 
   it("does not reset the 19-second budget when resampling", async () => {
