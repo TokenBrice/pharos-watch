@@ -17,7 +17,7 @@ const ZEPHYR_ZYS_ASSET_ID = "zys-zephyr-protocol";
 const ZEPHYR_SNAPSHOT_SOURCE =
   "https://zephyrprotocol.com/api/v1/reservesnapshots?limit=1&order=desc";
 
-export function buildZephyrReserveSlice(): ReserveSlice {
+function buildZephyrReserveSlice(): ReserveSlice {
   return {
     name: "ZEPH protocol reserve",
     pct: 100,
