@@ -12,7 +12,8 @@ vi.mock("../helpers", async (importOriginal) => {
 
 import { adaptSpikoShareClassTotals, fetchSpikoApiReserves, type SpikoShareClassTotals } from "../spiko-api";
 import { fetchJsonWithRetry } from "../helpers";
-let TEST_SIGNAL: AbortSignal;
+
+let signal: AbortSignal;
 
 function makeCoin(): StablecoinMeta {
   return { id: "eursafo-spiko", name: "Spiko Euro", ticker: "EURSAFO" } as unknown as StablecoinMeta;
@@ -57,7 +58,7 @@ const UKTBL_TOTALS: SpikoShareClassTotals = {
 } as unknown as SpikoShareClassTotals;
 
 beforeEach(() => {
-  TEST_SIGNAL = new AbortController().signal;
+  signal = new AbortController().signal;
   vi.clearAllMocks();
 });
 
@@ -177,11 +178,11 @@ describe("fetchSpikoApiReserves", () => {
       risk: "medium",
     });
 
-    const result = await fetchSpikoApiReserves(makeCoin(), config, TEST_SIGNAL);
+    const result = await fetchSpikoApiReserves(makeCoin(), config, signal);
 
     expect(fetchJsonWithRetry).toHaveBeenCalledWith(
       "https://public-api.spiko.io/share-classes/eurSAFO/totals",
-      TEST_SIGNAL,
+      signal,
       12_000,
       undefined,
     );
@@ -196,6 +197,6 @@ describe("fetchSpikoApiReserves", () => {
     );
     const config = makeConfig("unknownSymbol", { name: "Test", risk: "medium" });
 
-    await expect(fetchSpikoApiReserves(makeCoin(), config, TEST_SIGNAL)).rejects.toThrow("HTTP 404");
+    await expect(fetchSpikoApiReserves(makeCoin(), config, signal)).rejects.toThrow("HTTP 404");
   });
 });

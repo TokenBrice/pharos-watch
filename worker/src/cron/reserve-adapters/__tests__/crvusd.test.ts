@@ -19,7 +19,8 @@ vi.mock("../../../lib/evm-rpc", () => ({
 import { fetchDefiLlamaPrices, fetchJsonWithRetry, fetchOnchainMulticall3 } from "../helpers";
 import { fetchEvmCallHexAtBlock } from "../../../lib/evm-rpc";
 import { adaptCrvUsd, adaptCrvUsdOnchain, fetchCrvUsdReserves } from "../crvusd";
-import { TEST_SIGNAL as signal } from "./reserve-adapter.test-support";
+
+let signal: AbortSignal;
 
 type FetchOnchainMulticall3Options = Parameters<typeof fetchOnchainMulticall3>[0];
 type TestHexAddress = `0x${string}`;
@@ -319,6 +320,7 @@ const HTTP_CRVUSD_CONFIG = Object.freeze({
 } satisfies LiveReservesConfig);
 
 beforeEach(() => {
+  signal = new AbortController().signal;
   vi.clearAllMocks();
   vi.mocked(fetchOnchainMulticall3).mockImplementation(mockMulticallFromEvmCalls);
 });

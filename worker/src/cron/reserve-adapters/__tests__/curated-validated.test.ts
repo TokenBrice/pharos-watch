@@ -22,7 +22,7 @@ vi.mock("@shared/lib/redemption-backstop-configs", () => ({
 import { fetchCuratedValidatedReserves } from "../curated-validated";
 import { makeOnchainCallers, probeTrackedTokenSupply } from "../helpers";
 
-import { TEST_SIGNAL as signal } from "./reserve-adapter.test-support";
+let signal: AbortSignal;
 
 function makeCoin(
   reserves?: ReserveSlice[],
@@ -48,6 +48,7 @@ const MULTI_SLICE_RESERVES: ReserveSlice[] = [
 const unexpectedProbeRequests: unknown[] = [];
 afterEach(() => { expect(unexpectedProbeRequests).toEqual([]); });
 beforeEach(() => {
+  signal = new AbortController().signal;
   vi.clearAllMocks();
   unexpectedProbeRequests.length = 0;
 });

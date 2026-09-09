@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { LiveReservesConfig } from "@shared/types/live-reserves";
 
 vi.mock("../helpers", async (importOriginal) => {
@@ -21,7 +21,8 @@ import {
 } from "../fdusd-transparency";
 import { fetchPrimaryHtmlInput } from "../helpers";
 import { fetchWithRetry } from "../../../lib/fetch-retry";
-import { TEST_SIGNAL as signal } from "./reserve-adapter.test-support";
+
+let signal: AbortSignal;
 
 const FIXTURES_DIR = join(dirname(fileURLToPath(import.meta.url)), "fixtures");
 const INDEX_HTML = readFileSync(join(FIXTURES_DIR, "fdusd-transparency.html"), "utf8");
@@ -45,6 +46,10 @@ const config = {
     primary: { kind: "http-html", url: "https://www.firstdigitallabs.com/transparency" },
   },
 } as LiveReservesConfig;
+
+beforeEach(() => {
+  signal = new AbortController().signal;
+});
 
 afterEach(() => {
   vi.clearAllMocks();
