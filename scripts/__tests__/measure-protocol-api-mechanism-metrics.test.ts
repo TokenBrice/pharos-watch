@@ -581,6 +581,36 @@ describe("protocol API CLI policy", () => {
     }
   });
 
+  it("accepts the frozen legacy V1 bytes only at their designated path", async () => {
+    const legacyPath =
+      "shared/data/safety-score-v9/mechanism-measurements/usde-ethena/2026-07-22T20-00-16.250Z-protocol-api.json";
+    // The original pre-R2 capture, recovered byte-identically; the CLI pins this
+    // fingerprint, so the fixture must keep hashing to it.
+    const frozenBytes = readFileSync(join(__dirname, "fixtures", "usde-ethena-frozen-legacy-protocol-api-v1.json"));
+    expect(createHash("sha256").update(frozenBytes).digest("hex")).toBe(
+      "cdcbc2f806fcf6def97a2870d262a821ece9636efcd5a9d80c29518ae1a2589f",
+    );
+    const directory = mkdtempSync(join(tmpdir(), "pharos-legacy-protocol-api-bytes-"));
+    try {
+      mkdirSync(dirname(join(directory, legacyPath)), { recursive: true });
+      writeFileSync(join(directory, legacyPath), frozenBytes);
+      // No summary present: acceptance must come from the artifact bytes.
+      const accepted = await runCli(["--replay", legacyPath], directory);
+      expect(accepted.status, accepted.stderr).toBe(0);
+      expect(accepted.stdout).toMatch(/frozen legacy V1 fingerprint passed/);
+
+      // Path identity is checked independently of content integrity: the exact
+      // frozen bytes under any other capture name stay rejected.
+      const movedPath = legacyPath.replace("2026-07-22T20-00-16.250Z", "2026-07-22T21-00-16.250Z");
+      writeFileSync(join(directory, movedPath), frozenBytes);
+      const misplaced = await runCli(["--replay", movedPath], directory);
+      expect(misplaced.status).toBe(1);
+      expect(misplaced.stderr).toMatch(/Unknown or modified legacy protocol API artifact/);
+    } finally {
+      rmSync(directory, { recursive: true, force: true });
+    }
+  });
+
   it("keeps replay-all scoped to protocol API refresh target directories", async () => {
     const directory = mkdtempSync(join(tmpdir(), "pharos-protocol-discovery-"));
     try {
