@@ -7,7 +7,7 @@ import type {
   LiveReservesConfig,
   LiveReserveWarning,
 } from "@shared/types/live-reserves";
-import { parseChainlinkLatestRoundData } from "../../lib/chainlink-round-data";
+import { requireChainlinkLatestRoundData } from "../../lib/chainlink-round-data";
 import {
   DECIMALS_SELECTOR,
   LATEST_ROUND_DATA_SELECTOR,
@@ -184,7 +184,7 @@ async function resolveSourceBoundOutputPrice(
     throw new Error("cap-vault: WTGXX Chainlink NAV read failed");
   }
   const decimals = validateDecimals(rawDecimals, "cap-vault: WTGXX Chainlink NAV decimals");
-  const round = parseChainlinkLatestRoundData(rawRoundData, "cap-vault: WTGXX Chainlink NAV");
+  const round = requireChainlinkLatestRoundData(rawRoundData, "cap-vault: WTGXX Chainlink NAV");
   if (round.updatedAt > now + MAX_FUTURE_SOURCE_TIMESTAMP_SKEW_SEC) {
     throw new Error(`cap-vault: WTGXX Chainlink NAV timestamp is in the future (${round.updatedAt - now}s)`);
   }

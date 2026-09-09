@@ -11,7 +11,7 @@ import {
   encodeUint256,
 } from "../../lib/evm-selectors";
 import type { AdapterContext, AdapterResult } from "./types";
-import { parseChainlinkLatestRoundData } from "../../lib/chainlink-round-data";
+import { requireChainlinkLatestRoundData } from "../../lib/chainlink-round-data";
 import {
   decimalNumberFromBigInt,
   decimalStringFromBigInt,
@@ -366,7 +366,7 @@ export async function fetchChainlinkNavCore(
     if (rawRoundData == null) {
       throw new Error("chainlink-nav: latestRoundData() call failed");
     }
-    const parsed = parseChainlinkLatestRoundData(rawRoundData, "chainlink-nav");
+    const parsed = requireChainlinkLatestRoundData(rawRoundData, "chainlink-nav");
     navPerToken = parsed.answer;
     roundId = parsed.roundId;
     updatedAt = parsed.updatedAt;

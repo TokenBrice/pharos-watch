@@ -7,7 +7,7 @@ import { parseLiveReserveAdapterParams } from "@shared/lib/live-reserve-adapters
 import { DECIMALS_SELECTOR, LATEST_ROUND_DATA_SELECTOR } from "../../lib/evm-selectors";
 import { logWorkerEventArgs } from "../../lib/structured-log";
 import type { AdapterContext, AdapterResult } from "./types";
-import { parseChainlinkLatestRoundData } from "../../lib/chainlink-round-data";
+import { requireChainlinkLatestRoundData } from "../../lib/chainlink-round-data";
 import {
   buildCoverageShortfallWarnings,
   decimalNumberFromBigInt,
@@ -469,7 +469,7 @@ export async function fetchChainlinkPorReserves(
     throw new Error("chainlink-por: latestRoundData() call failed");
   }
 
-  const { roundId, answer, updatedAt } = parseChainlinkLatestRoundData(rawRoundData, "chainlink-por");
+  const { roundId, answer, updatedAt } = requireChainlinkLatestRoundData(rawRoundData, "chainlink-por");
   const maxOracleAgeSec = params.maxOracleAgeSec ?? DEFAULT_MAX_ORACLE_AGE_SEC;
   const now = ctx?.nowSec ?? Math.floor(Date.now() / 1000);
   if (updatedAt > now + MAX_FUTURE_SOURCE_TIMESTAMP_SKEW_SEC) {
