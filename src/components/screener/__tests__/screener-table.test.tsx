@@ -120,6 +120,16 @@ describe("ScreenerTable desktop table", () => {
     expect(screen.getByRole("link", { name: /Open Safety Score waterfall for USDT/i })).toBeTruthy();
   });
 
+  it("labels the safety summary badge with the projected V9 grade and score", async () => {
+    installViewportMatchMedia(1400);
+
+    render(<ScreenerTable rows={[row]} isLoading={false} hasActiveFilters={false} sort={makeSort()} />);
+
+    await waitFor(() => {
+      expect(screen.getByLabelText("Safety grade B+, score 82")).toBeTruthy();
+    });
+  });
+
   it("skips xl-only sparkline SVGs below the xl breakpoint", async () => {
     installViewportMatchMedia(900);
 

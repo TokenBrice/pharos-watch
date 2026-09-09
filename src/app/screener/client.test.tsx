@@ -4,8 +4,7 @@ import { cleanup, render } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { makeStablecoin } from "@shared/test-utils/stablecoin";
-import { buildV9SafetyTableMap } from "@/lib/safety-score-v9-consumers";
-import { makeReportCardsV9Response, makeV9Card } from "@/test/fixtures/safety-score-v9";
+import { makeReportCardsV9Response, makeV9Card, makeV9Pillars } from "@/test/fixtures/safety-score-v9";
 import type { ScreenerRow } from "@/lib/screener-filters";
 
 import { ScreenerClient } from "./client";
@@ -172,18 +171,31 @@ describe("ScreenerClient freshness notices", () => {
     expect(props.queries.some((query) => query.preset === "dexLiquidity" && query.hasData)).toBe(true);
   });
 
-  it("projects screener safety fields from the canonical V9 table row", () => {
+  it("projects the V9 score into the screener row, not the legacy weighted-pillar mean", () => {
+    const bindingCap = {
+      kind: "reason:missing-mint-authority",
+      limit: 61,
+      source: "evidence" as const,
+      reason: "Mint control evidence caps the published score.",
+      binding: true,
+    };
+    // The legacy weighted-pillar mean (qualityScore 88) and the V9 post-cap
+    // published score (61) diverge; the screener row must carry the V9 one.
     const response = makeReportCardsV9Response({
       cards: [
         makeV9Card({
           id: "usdc-circle",
+          score: 61,
+          grade: "C+",
+          qualityScore: 88,
+          pegAdjustedScore: 88,
+          pillars: makeV9Pillars({ backing: 86, exit: 88, control: 90 }),
+          caps: [bindingCap],
+          bindingCap,
           evidence: { level: "insufficient", freshness: "stale", reasons: [] },
         }),
       ],
     });
-    const canonical = buildV9SafetyTableMap(response, response.safetyScoreIdentity);
-    expect(canonical.status).toBe("available");
-    if (canonical.status !== "available") return;
 
     mocks.useStablecoins.mockReturnValue({
       data: { peggedAssets: [makeStablecoin()] },
@@ -206,17 +218,16 @@ describe("ScreenerClient freshness notices", () => {
 
     const props = mocks.ScreenerTable.mock.calls[0]?.[0] as { rows: ScreenerRow[] } | undefined;
     const row = props?.rows.find((candidate) => candidate.id === "usdc-circle");
-    const projected = canonical.value["usdc-circle"];
     expect(row).toEqual(expect.objectContaining({
-      safetyGrade: projected?.grade,
-      safetyScore: projected?.score,
-      safetyBackingScore: projected?.pillars.backing.score,
-      safetyExitScore: projected?.pillars.exit.score,
-      safetyControlScore: projected?.pillars.control.score,
+      safetyGrade: "C+",
+      safetyScore: 61,
+      safetyBackingScore: 86,
+      safetyExitScore: 88,
+      safetyControlScore: 90,
       safetyEvidence: "limited",
-      safetyWeakestPillar: projected?.weakestPillar?.pillar ?? null,
-      safetyWeakestScore: projected?.weakestPillar?.score ?? null,
-      safetyBindingCapReason: projected?.bindingCapReason ?? null,
+      safetyWeakestPillar: "backing",
+      safetyWeakestScore: 86,
+      safetyBindingCapReason: "Mint control evidence caps the published score.",
     }));
   });
 });

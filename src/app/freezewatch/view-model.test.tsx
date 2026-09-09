@@ -6,9 +6,7 @@ import {
   parseFreezeWatchPageFilters,
   useFreezeWatchPageController,
 } from "./view-model";
-import { buildStablecoinTableInputs } from "@/lib/stablecoin-table-inputs";
-import { buildV9SafetyTableMap } from "@/lib/safety-score-v9-consumers";
-import { makeReportCardsV9Response, makeV9Card } from "@/test/fixtures/safety-score-v9";
+import { makeReportCardsV9Response, makeV9Card, makeV9Pillars } from "@/test/fixtures/safety-score-v9";
 
 const {
   useBlacklistSummaryMock,
@@ -256,24 +254,42 @@ describe("useFreezeWatchPageController", () => {
     expect(result.current.rangeEnd).toBe(0);
   });
 
-  it("uses the canonical V9 projection for the drilldown table", () => {
+  it("projects the V9 score into the freezewatch drilldown row, not the legacy weighted-pillar mean", () => {
+    const bindingCap = {
+      kind: "reason:missing-mint-authority",
+      limit: 61,
+      source: "evidence" as const,
+      reason: "Mint control evidence caps the published score.",
+      binding: true,
+    };
+    // The legacy weighted-pillar mean (qualityScore 88) and the V9 post-cap
+    // published score (61) diverge; the drilldown row must carry the V9 one.
     const response = makeReportCardsV9Response({
-      cards: [makeV9Card({ id: "shared-freezewatch-asset" })],
+      cards: [
+        makeV9Card({
+          id: "shared-freezewatch-asset",
+          score: 61,
+          grade: "C+",
+          qualityScore: 88,
+          pegAdjustedScore: 88,
+          pillars: makeV9Pillars({ backing: 86, exit: 88, control: 90 }),
+          caps: [bindingCap],
+          bindingCap,
+        }),
+      ],
     });
-    const canonical = buildV9SafetyTableMap(response, response.safetyScoreIdentity);
-    const tableInputs = buildStablecoinTableInputs({ reportCardsV9: response });
-    expect(canonical.status).toBe("available");
-    if (canonical.status !== "available") return;
 
     useReportCardsV9Mock.mockReturnValue({ data: response, isLoading: false });
     const { result } = renderHook(() => useFreezeWatchPageController());
 
-    expect(result.current.reportCardMap?.["shared-freezewatch-asset"]).toEqual(
-      tableInputs.reportCards?.["shared-freezewatch-asset"],
-    );
-    expect(result.current.reportCardMap?.["shared-freezewatch-asset"]).toEqual(
-      canonical.value["shared-freezewatch-asset"],
-    );
+    const row = result.current.reportCardMap?.["shared-freezewatch-asset"];
+    expect(row?.score).toBe(61);
+    expect(row?.grade).toBe("C+");
+    expect(row?.pillars.backing.score).toBe(86);
+    expect(row?.pillars.exit.score).toBe(88);
+    expect(row?.pillars.control.score).toBe(90);
+    expect(row?.weakestPillar).toEqual({ pillar: "backing", score: 86 });
+    expect(row?.bindingCapReason).toBe("Mint control evidence caps the published score.");
   });
 
   it("removes stale chainId alias when updating the chain filter", () => {
