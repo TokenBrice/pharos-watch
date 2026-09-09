@@ -3,6 +3,7 @@ import { readFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it, afterEach, vi } from "vitest";
+import * as assurance from "@shared/lib/independent-assurance";
 import {
   getIndependentAssuranceManifest,
   IndependentAssuranceManifestSchema,
@@ -14,6 +15,7 @@ import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import {
   EUROP_INDEPENDENT_ASSURANCE_PROFILE,
   fetchIndependentAssuranceAdapter,
+  fetchIndependentAssuranceReserves,
   straitsxIndependentAssuranceProfile,
   verifyIndependentAssuranceReport,
   type IndependentAssuranceProfile,
@@ -185,7 +187,40 @@ function assuranceCandidate(
 }
 
 describe("independent-assurance manifest framework", () => {
-  afterEach(() => vi.unstubAllGlobals());
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    vi.restoreAllMocks();
+  });
+
+  it.each(["200", "0", "-1"])("publishes reported liability %s with degraded evidence", async (liability) => {
+    const reviewed = manifest({
+      liabilities: [{ code: "supply", label: "Supply", amount: liability }],
+      reportedLiabilityTotal: liability,
+    });
+    vi.spyOn(assurance, "getIndependentAssuranceManifest").mockReturnValue(reviewed);
+    installFetch();
+    const result = await fetchIndependentAssuranceReserves(
+      routedAssuranceCoin("audx-aussie-dollar-token"),
+      { ...routedAssuranceCoin("audx-aussie-dollar-token").liveReservesConfig!,
+        inputs: { primary: { kind: "http-html", url: reviewed.officialIndexUrl } } },
+      new AbortController().signal,
+      { ...PROFILE, classifications: { cash: { name: "Cash", risk: "very-low" } } },
+      { product: "AUDX", profile: "audx-v1", indexHost: "www.audxtoken.com", reportHosts: ["www.audxtoken.com"] },
+    );
+    expect(result.slices).toEqual([{ name: "Cash", risk: "very-low", pct: 100 }]);
+    expect(result.metadata?.collateralizationRatio).toBe(liability === "200" ? 0.505 : undefined);
+    expect(result.warnings).toContainEqual(expect.objectContaining({ code: "reserve-undercollateralized", effect: "degraded" }));
+    expect(reconcileIndependentAssuranceManifest(reviewed)).toMatchObject({
+      reserveShortfall: liability === "200" ? "99" : "0",
+      nonPositiveLiabilityCodes: liability === "200" ? [] : ["supply"],
+    });
+  });
+
+  it.each(["assets", "liabilities"] as const)("rejects malformed %s rows", (field) => {
+    const reviewed = manifest();
+    reviewed[field][0].amount = "not-a-decimal";
+    expect(() => reconcileIndependentAssuranceManifest(reviewed)).toThrow("not a decimal string");
+  });
 
   it("accepts a matching official index URL and exact PDF bytes", async () => {
     installFetch();

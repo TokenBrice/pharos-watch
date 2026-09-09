@@ -262,15 +262,23 @@ describe("syncLiveReserves", () => {
   it("keeps stale source-age warnings degrading even when the warning code is allowlisted", async () => {
     const configuredCoin = ACTIVE_STABLECOINS.find((candidate) =>
       candidate.liveReservesConfig?.adapter === "mento"
-      && candidate.liveReservesConfig.scoring?.maxSourceAgeSec === 4_000_000
+      || candidate.liveReservesConfig?.adapter === "accountable"
     ) as ConfiguredCoin | undefined;
     expect(configuredCoin).toBeDefined();
+    const baseDefinition = LIVE_RESERVE_ADAPTER_DEFINITIONS[configuredCoin!.liveReservesConfig.adapter];
+    const adapterMaxSourceAgeSec = "validation" in baseDefinition && "maxSourceAgeSec" in baseDefinition.validation
+      ? baseDefinition.validation.maxSourceAgeSec
+      : undefined;
+    expect(adapterMaxSourceAgeSec).toBeDefined();
     const coin = {
       ...configuredCoin!,
       liveReservesConfig: {
         ...configuredCoin!.liveReservesConfig,
         scoring: {
           ...configuredCoin!.liveReservesConfig.scoring,
+          // Per-coin caps may only tighten the adapter cap, so derive the
+          // synthetic cap from the adapter definition instead of the registry.
+          maxSourceAgeSec: adapterMaxSourceAgeSec,
           allowedDegradedWarningCodes: [
             ...(configuredCoin!.liveReservesConfig.scoring?.allowedDegradedWarningCodes ?? []),
             "stale-source-data",

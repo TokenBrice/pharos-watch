@@ -110,6 +110,10 @@ describe("adaptM0Collateral", () => {
       earliestCollateralUpdateTimestamp: 1787176804,
       latestCollateralUpdateTimestamp: 1787176847,
       snapshotLagSec: 5460,
+      details: {
+        collateralLagSec: 5460,
+        collateralLagCapSec: 43_200,
+      },
     });
     expect(result.metadata?.redemption).toBeUndefined();
   });
@@ -126,17 +130,42 @@ describe("adaptM0Collateral", () => {
       data: {
         ...SAMPLE_PAYLOAD.data,
         collateralUpdateds: [
-          // 7h after the total snapshot at 1787171387.
-          { timestamp: "1787196587", blockTimestamp: "1787196587" },
+          // 13h after the total snapshot at 1787171387.
+          { timestamp: "1787218187", blockTimestamp: "1787218187" },
         ],
         minterGateway_latestUpdateTimestampSnapshots: [
-          { timestamp: "1787196587", value: "1787196587" },
+          { timestamp: "1787218187", value: "1787218187" },
         ],
       },
     });
 
     expect(result.warnings?.some((warning) => warning.code === "total-collateral-snapshot-lag")).toBe(true);
-    expect(result.metadata).toMatchObject({ snapshotLagSec: 25_200 });
+    expect(result.metadata).toMatchObject({
+      snapshotLagSec: 46_800,
+      details: { collateralLagSec: 46_800, collateralLagCapSec: 43_200 },
+    });
+  });
+
+  it("no longer degrades at the production 27,000s lag under the 12h cap", () => {
+    // Production lag on 2026-09-09 was 27,000s (7.5h), which previously tripped
+    // the 6h cap and degraded all five M0 coins. P11 widens the cap to 12h.
+    const result = adaptM0Collateral({
+      data: {
+        ...SAMPLE_PAYLOAD.data,
+        collateralUpdateds: [
+          { timestamp: "1787198387", blockTimestamp: "1787198387" },
+        ],
+        minterGateway_latestUpdateTimestampSnapshots: [
+          { timestamp: "1787198387", value: "1787198387" },
+        ],
+      },
+    });
+
+    expect(result.warnings).toBeUndefined();
+    expect(result.metadata).toMatchObject({
+      snapshotLagSec: 27_000,
+      details: { collateralLagSec: 27_000, collateralLagCapSec: 43_200 },
+    });
   });
 
   it("degrades when the per-minter sum diverges from the total snapshot", () => {

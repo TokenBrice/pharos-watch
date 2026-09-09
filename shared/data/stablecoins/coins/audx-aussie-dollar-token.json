@@ -101,9 +101,6 @@
     "version": 2,
     "semantics": "attestation-mix",
     "breakerScope": "audx-aussie-dollar-token",
-    "scoring": {
-      "maxSourceAgeSec": 4000000
-    },
     "display": {
       "url": "https://www.audxtoken.com/transparency",
       "label": "AUDX Transparency"

@@ -94,5 +94,26 @@
     }
   ],
   "governanceQuality": "regulated-entity",
+  "liveReservesConfig": {
+    "adapter": "single-asset",
+    "version": 1,
+    "semantics": "single-asset",
+    "breakerScope": "mxne-real-mxn",
+    "display": {
+      "url": "https://app.etherfuse.com/legal/proof-of-reserves",
+      "label": "Etherfuse CETES Stablebonds"
+    },
+    "inputs": {
+      "primary": {
+        "kind": "onchain-evm",
+        "chain": "base",
+        "rpcMode": "alchemy"
+      }
+    },
+    "params": {
+      "label": "CETES Stablebonds",
+      "risk": "low"
+    }
+  },
   "launchDate": "2024-05-22"
 }

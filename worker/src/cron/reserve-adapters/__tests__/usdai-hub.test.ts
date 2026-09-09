@@ -137,10 +137,12 @@ describe("usdai-hub adapter", () => {
     await expect(fetchFixture()).rejects.toThrow("EIP-1967 implementation identity mismatch");
   });
 
-  it("fails closed when PYUSD is below canonical plus bridged liabilities", async () => {
+  it("publishes PYUSD below bridge-safe liabilities as degraded", async () => {
     installReads({ balance: word(PYUSD_BALANCE - 20_000n) });
-
-    await expect(fetchFixture()).rejects.toThrow("below bridge-safe USDai liabilities");
+    const output = await fetchFixture();
+    expect(output.slices[0].pct).toBe(100);
+    expect(output.metadata?.collateralizationRatio).toBeLessThan(1);
+    expect(output.warnings).toContainEqual(expect.objectContaining({ code: "reserve-undercollateralized", effect: "degraded" }));
   });
 
   it("preserves redemption telemetry and marks a paused hub as paused", async () => {
@@ -156,11 +158,25 @@ describe("usdai-hub adapter", () => {
       capacityUsd: 202_886_394.432337,
     });
     expect(output.metadata?.details).toMatchObject({ paused: true });
+    expect(output.warnings).toContainEqual(expect.objectContaining({ code: "route-paused", effect: "degraded" }));
   });
 
   it("rejects malformed ABI payloads instead of publishing a partial snapshot", async () => {
     installReads({ paused: "0x1234" as `0x${string}` });
 
     await expect(fetchFixture()).rejects.toThrow("paused() returned malformed bool payload");
+  });
+
+  it("retains bridged liabilities when canonical supply is zero", async () => {
+    installReads({ totalSupply: word(0n) });
+    const output = await fetchFixture();
+    expect(output.metadata?.supplyUsd).toBe(Number(BRIDGED_SUPPLY) / 1e18);
+  });
+
+  it("publishes zero total liabilities without inventing a ratio", async () => {
+    installReads({ totalSupply: word(0n), bridgedSupply: word(0n) });
+    const output = await fetchFixture();
+    expect(output.metadata?.collateralizationRatio).toBeUndefined();
+    expect(output.warnings).toContainEqual(expect.objectContaining({ effect: "degraded" }));
   });
 });

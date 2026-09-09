@@ -247,7 +247,16 @@ export async function fetchJupUsdReserves(
         )
       : Promise.resolve(null),
   ]);
-  const latestTimestamp = parseTimestampLikeToUnixSeconds(snapshots?.snapshots?.[0]?.timestamp);
+  // The snapshots feed is ordered descending today, but the adapter must not
+  // trust that: an upstream flip to ascending would silently stamp an
+  // eight-month-old "verified" timestamp. Take the newest parseable timestamp
+  // explicitly instead of trusting snapshots[0].
+  const snapshotTimestamps = (snapshots?.snapshots ?? [])
+    .map((entry) => parseTimestampLikeToUnixSeconds(entry?.timestamp))
+    .filter((timestamp): timestamp is number => timestamp != null);
+  const latestTimestamp = snapshotTimestamps.length > 0
+    ? Math.max(...snapshotTimestamps)
+    : null;
   return adaptJupUsdData(payload, {
     sourceTimestamp: latestTimestamp,
     oracle,

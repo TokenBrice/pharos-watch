@@ -140,12 +140,11 @@ export async function getMaxSyncAge(
 
   const row = await db
     .prepare(
-      `SELECT MIN(last_attempted_at) AS oldest_ts,
-              COUNT(DISTINCT stablecoin_id) AS observed_count
+      `SELECT MIN(last_attempted_at) AS oldest_ts
          FROM reserve_sync_state`,
     )
     .bind()
-    .first<{ oldest_ts: number | null; observed_count: number }>();
+    .first<{ oldest_ts: number | null }>();
   if (!row?.oldest_ts) return Infinity;
   return now - row.oldest_ts;
 }

@@ -101,9 +101,6 @@
     "version": 1,
     "semantics": "attestation-mix",
     "breakerScope": "audm-macropod",
-    "scoring": {
-      "maxSourceAgeSec": 10000000
-    },
     "display": {
       "url": "https://www.macropod.com/transparency",
       "label": "Macropod reserves"

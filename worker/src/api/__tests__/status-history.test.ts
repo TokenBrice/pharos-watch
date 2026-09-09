@@ -99,7 +99,6 @@ describe("handleStatusHistoryRoute", () => {
       reserveComposition: {
         deferredCoins: number;
         runBudgetTruncated: boolean;
-        cursorTailState: string | null;
         historyWriteGaps: unknown[];
       } | null;
     };
@@ -113,7 +112,6 @@ describe("handleStatusHistoryRoute", () => {
     expect(body.reserveComposition).toMatchObject({
       deferredCoins: 0,
       runBudgetTruncated: false,
-      cursorTailState: null,
       historyWriteGaps: [],
     });
   });

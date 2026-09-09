@@ -28,6 +28,11 @@ interface UnitedPorSliceConfig {
   depType?: ReserveSlice["depType"];
 }
 
+/** The single reviewed attestor identity for `u-united-stables`; any other
+ *  `accountName` is rejected so a foreign payload cannot masquerade as this
+ *  coin's proof-of-reserves. */
+const REVIEWED_ACCOUNT_NAME = "United Stables";
+
 function normalizeRipcordDetails(details: unknown): string[] {
   return Array.isArray(details)
     ? details.filter((detail): detail is string => typeof detail === "string")
@@ -60,6 +65,19 @@ export function adaptUnitedPorPayload(
   const sourceTimestamp = parseTimestampLikeToUnixSeconds(payload.updatedAt);
   if (sourceTimestamp == null) {
     throw new Error("United PoR payload has an unreadable updatedAt");
+  }
+
+  // The payload must be the reviewed attestor's own account and must carry an
+  // explicit boolean ripcord alarm. A missing/null alarm (or a foreign
+  // account) previously slipped past `if (payload.ripcord)` and admitted an
+  // alarm-less or wrong-account snapshot as healthy, so both fail closed.
+  if (payload.accountName !== REVIEWED_ACCOUNT_NAME) {
+    throw new Error(
+      `United PoR payload has an unexpected accountName (${payload.accountName ?? "missing"}); expected ${REVIEWED_ACCOUNT_NAME}`,
+    );
+  }
+  if (typeof payload.ripcord !== "boolean") {
+    throw new Error("United PoR payload has a missing or non-boolean ripcord alarm");
   }
 
   const collateralizationRatio = totalReserveUsd / supplyUsd;

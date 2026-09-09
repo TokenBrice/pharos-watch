@@ -16,7 +16,9 @@ import {
   adaptMentoReserveComposition,
   extractMentoDashboardTimestamp,
   fetchMentoReserves,
+  mentoCdpCoherenceError,
   parseMentoCdpComposition,
+  parseMentoDashboardCdpBackings,
   parseMentoReserveComposition,
 } from "../mento";
 import {
@@ -115,6 +117,14 @@ const forbiddenFetch = vi.fn(() => { throw new Error("Unexpected real network re
 const httpRequests: Array<{ url: string; identity: string; referer: string | null }> = [];
 const unexpectedHttpRequests: string[] = [];
 let rejectedIdentities: string[] = [];
+let reservePayloadOverride: Record<string, unknown> | null = null;
+let dashboardHtmlOverride: string | null = null;
+
+/** Builds a minimal dashboard payload carrying the given escaped `cdp_backings` rows. */
+function dashboardHtmlWithCdpBackings(backings: Array<Record<string, unknown>>): string {
+  const backingsJson = JSON.stringify(backings).replaceAll('"', '\\"');
+  return `cdp_backings\\":${backingsJson},\\"dataUpdateCount\\":1,\\"dataUpdatedAt\\":1779025576506`;
+}
 
 beforeEach(() => {
   forbiddenFetch.mockClear();
@@ -123,6 +133,8 @@ beforeEach(() => {
   httpRequests.length = 0;
   unexpectedHttpRequests.length = 0;
   rejectedIdentities = [];
+  reservePayloadOverride = null;
+  dashboardHtmlOverride = null;
   fetchWithRetryMock.mockImplementation(async (url: string, init?: RequestInit) => {
     const headers = new Headers(init?.headers);
     const identity = headers.has("origin") ? "browser" : "neutral";
@@ -135,7 +147,10 @@ beforeEach(() => {
     if (rejectedIdentities.includes(`${url}:${identity}`)) {
       return new Response("denied", { status: identity === "browser" ? 401 : 403 });
     }
-    return new Response(url === MENTO_RESERVE_URL ? JSON.stringify(SAMPLE_PAYLOAD) : MENTO_DASHBOARD_HTML_FIXTURE);
+    if (url === MENTO_RESERVE_URL) {
+      return new Response(JSON.stringify(reservePayloadOverride ?? SAMPLE_PAYLOAD));
+    }
+    return new Response(dashboardHtmlOverride ?? MENTO_DASHBOARD_HTML_FIXTURE);
   });
 });
 
@@ -433,7 +448,91 @@ describe("mento adapter", () => {
     expect(result.metadata).toMatchObject({
       freshnessMode: "verified",
       sourceTimestamp,
+      details: { freshnessSource: "same-run-render-clock" },
     });
+  });
+
+  it("parses per-stablecoin CDP totals from the dashboard fixture", () => {
+    const backings = parseMentoDashboardCdpBackings(CURRENT_DASHBOARD_HTML);
+    expect(backings).not.toBeNull();
+    const gbpm = backings!.get("GBPm");
+    expect(gbpm).toBeDefined();
+    expect(Number.isFinite(gbpm!.collateralUsd)).toBe(true);
+    expect(Number.isFinite(gbpm!.debtUsd)).toBe(true);
+    expect(gbpm!.collateralUsd).toBeGreaterThan(0);
+    expect(gbpm!.debtUsd).toBeGreaterThan(0);
+  });
+
+  it("returns null from the coherence check for small matching drift", () => {
+    expect(mentoCdpCoherenceError(
+      "JPYm",
+      { collateralUsd: 171_960.48000001, debtUsd: 105_336.20000002 },
+      171_960.48000001,
+      105_336.20000002,
+    )).toBeNull();
+  });
+
+  it("fails closed when the dashboard and analytics API CDP totals diverge", async () => {
+    // Live 2026-09-09 discrepancy: the dashboard reported 2.05x the collateral
+    // and 2.52x the debt the analytics API troves summed for GBPm.
+    dashboardHtmlOverride = dashboardHtmlWithCdpBackings([
+      { stablecoin: "GBPm", collateral_token: "USDm", collateral_usd: 774785.9598798637, debt_usd: 315700.2296351052, status: "active" },
+    ]);
+    reservePayloadOverride = {
+      cdp_troves: {
+        troves: [
+          { stablecoin: "GBPm", collateral_token: "USDm", collateral_usd: 377712.75632851, debt_usd: 125192.04448356, status: "active" },
+        ],
+      },
+    };
+
+    const error = await fetchMentoReserves(
+      { id: "gbpm-mento" } as never,
+      { ...makeMentoConfig(), params: { cdpStablecoin: "GBPm" } },
+      new AbortController().signal,
+      { requestCache: new Map() } as never,
+    ).catch((caught: unknown) => caught);
+
+    expect(error).toBeInstanceOf(Error);
+    const message = (error as Error).message;
+    expect(message).toContain("mento dashboard-vs-API coherence failed for GBPm");
+    expect(message).toContain("774785.96");
+    expect(message).toContain("315700.23");
+    expect(message).toContain("377712.76");
+    expect(message).toContain("125192.04");
+  });
+
+  it.each([
+    { stablecoin: "JPYm", collateralUsd: 171_960.48000001, debtUsd: 105_336.20000002 },
+    { stablecoin: "CHFm", collateralUsd: 143_361.85000003, debtUsd: 90_307.02000004 },
+  ])("accepts $stablecoin when dashboard and API CDP totals agree to 8 decimals", async ({ stablecoin, collateralUsd, debtUsd }) => {
+    dashboardHtmlOverride = dashboardHtmlWithCdpBackings([
+      { stablecoin, collateral_token: "USDm", collateral_usd: collateralUsd, debt_usd: debtUsd, status: "active" },
+    ]);
+    reservePayloadOverride = {
+      cdp_troves: {
+        troves: [
+          { stablecoin, collateral_token: "USDm", collateral_usd: collateralUsd, debt_usd: debtUsd, status: "active" },
+        ],
+      },
+    };
+
+    const result = await fetchMentoReserves(
+      { id: "gbpm-mento" } as never,
+      { ...makeMentoConfig(), params: { cdpStablecoin: stablecoin } },
+      new AbortController().signal,
+      { requestCache: new Map() } as never,
+    );
+
+    expect(result.metadata).toMatchObject({
+      freshnessMode: "verified",
+      details: { freshnessSource: "same-run-render-clock" },
+      cdpStablecoin: stablecoin,
+      totalCollateralUsd: collateralUsd,
+      totalDebtUsd: debtUsd,
+      collateralizationRatio: collateralUsd / debtUsd,
+    });
+    expect(result.warnings).toBeUndefined();
   });
 
   it("throws when the requested CDP stablecoin has no active troves", () => {

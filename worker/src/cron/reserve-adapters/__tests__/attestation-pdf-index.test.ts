@@ -1,5 +1,6 @@
 import type { StablecoinMeta } from "@shared/types/core";
 import type { LiveReservesConfig } from "@shared/types/live-reserves";
+import { parseLiveReserveAdapterParams } from "@shared/lib/live-reserve-adapters";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   adaptAttestationPdfIndex,
@@ -225,6 +226,38 @@ describe("adaptAttestationPdfIndex", () => {
     });
   });
 
+  it("parses compact YYYYMMDD report dates in PDF filenames", () => {
+    const html = `
+      <a href="https://action.ripio.com/hubfs/2025/wFIAT/ATTESTATION/31_12_2025__wBRL__Token-Certification.pdf">
+        wBRL certification
+      </a>
+      <a href="https://action.ripio.com/hubfs/2026/wFIAT/ATTESTATION/20260331__wBRL__Token-Certification.pdf">
+        wBRL certification
+      </a>
+    `;
+
+    const result = adaptAttestationPdfIndex(html, CONFIGURED_PARAMS);
+
+    expect(result.metadata).toMatchObject({
+      sourceTimestamp: Date.UTC(2026, 2, 31) / 1000,
+      reportDate: "2026-03-31",
+      reportDateLabel: "March 31, 2026",
+      reportDatePrecision: "day",
+      reportDateSource: "href",
+      reportPdfPath: "/hubfs/2026/wFIAT/ATTESTATION/20260331__wBRL__Token-Certification.pdf",
+    });
+  });
+
+  it("ignores 8-digit tokens that are not valid dates in PDF filenames", () => {
+    const html = `
+      <a href="https://action.ripio.com/hubfs/2026/wFIAT/ATTESTATION/12345678__wBRL__Token-Certification.pdf">
+        wBRL certification
+      </a>
+    `;
+
+    expect(() => adaptAttestationPdfIndex(html, CONFIGURED_PARAMS)).toThrow("layout-changed");
+  });
+
   it("discovers dated PDFs in gated Webflow data attributes", () => {
     const html = `
       <button
@@ -295,6 +328,17 @@ describe("adaptAttestationPdfIndex", () => {
     const html = '<a href="/reports/2026-02-28-attestation.pdf">February report</a>';
 
     expect(() => adaptAttestationPdfIndex(html, { slices: [] })).toThrow("params invalid.slices");
+  });
+
+  it("rejects an off-sum configured composition", () => {
+    expect(() =>
+      parseLiveReserveAdapterParams("attestation-pdf-index", {
+        slices: [
+          { name: "U.S. Treasury Bills", pct: 50, risk: "very-low" },
+          { name: "Cash deposits", pct: 40, risk: "low" },
+        ],
+      }),
+    ).toThrow("attestation-pdf-index adapter params invalid.slices");
   });
 });
 

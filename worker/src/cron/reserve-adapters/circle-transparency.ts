@@ -39,7 +39,7 @@ const EURC_SLICES: CircleSliceConfig[] = [
 
 function extractAttrValue(html: string, attr: string): number | null {
   // Match data-attr="value" or data-attr='value' with optional whitespace around "=".
-  // Numeric value must be a clean positive decimal: digits with at most one
+  // Numeric value must be a clean non-negative decimal: digits with at most one
   // decimal section. Rejects "4.7.18" or stray dots that parseFloat would
   // silently truncate to a wrong slice value.
   // eslint-disable-next-line security/detect-non-literal-regexp -- attr is selected from adapter-owned config constants.
@@ -47,7 +47,7 @@ function extractAttrValue(html: string, attr: string): number | null {
   const m = html.match(re);
   if (!m) return null;
   const val = parseFloat(m[1]);
-  return Number.isFinite(val) && val > 0 ? val : null;
+  return Number.isFinite(val) && val >= 0 ? val : null;
 }
 
 function extractDisplayAmount(html: string, coinType: string): number | null {
@@ -107,6 +107,10 @@ export function adaptCircleTransparency(html: string, coinType: string): Adapter
       missingAttrs.push(cfg.attr);
       continue;
     }
+    // A disclosure row may legitimately read zero (e.g. no overnight repo
+    // exposure); it is a valid parse and is simply omitted from the slices
+    // below rather than treated as a missing attribute.
+    if (val === 0) continue;
     entries.push({ sourceKey: cfg.sourceKey, name: cfg.label, value: val, risk: "very-low" });
   }
 
@@ -118,6 +122,12 @@ export function adaptCircleTransparency(html: string, coinType: string): Adapter
   }
 
   const rawValueSum = entries.reduce((sum, entry) => sum + entry.value, 0);
+  if (!(rawValueSum > 0)) {
+    throw htmlLayoutChangedError(
+      "circle-transparency",
+      `all reserve attributes for ${coinType} are zero`,
+    );
+  }
   const displayAmount = extractDisplayAmount(html, coinType);
   const displayAmountRelativeDiff = displayAmount != null && displayAmount > 0
     ? Math.abs(rawValueSum - displayAmount) / Math.max(rawValueSum, displayAmount)

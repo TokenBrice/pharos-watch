@@ -31,7 +31,8 @@ describe("adaptReMetrics", () => {
       chainBreakdownCount: 4,
       trackedTokenCount: 6,
       offchainCapitalUsd: 179595196.93262026,
-      sourceTimestamp: Date.UTC(2026, 7, 9) / 1000,
+      offchainAsOf: Date.parse("2026-08-09T00:00:00.000Z") / 1000,
+      sourceTimestamp: Math.floor(Date.parse("2026-08-09T21:23:13.835Z") / 1000),
       freshnessMode: "verified",
       stableAssetUsd: expect.any(Number),
       immediateRedeemableUsd: 45535373.18748523,
@@ -45,29 +46,39 @@ describe("adaptReMetrics", () => {
         holderEligibility: "any-holder",
       },
     });
+    expect(result.warnings).toContainEqual(expect.objectContaining({
+      code: "re-metrics-offchain-capital-branch",
+      effect: "info",
+      message: expect.stringContaining("initialCards"),
+    }));
     expectValidAdapterOutput("re-metrics", result);
   });
 
-  it.each(["series", "initialTvlData", "both"] as const)("parses %s with series taking precedence", (format) => {
+  it.each(["initialCards", "initialTvlData", "both"] as const)("parses %s with initialCards taking precedence and warns which branch fired", (format) => {
     const payload = {
       initialChainBreakdowns: {
         ethereum: { asOf: "2026-04-14", rows: [{ tokenSymbol: "usdc", valueWei: "100000000000000000000", valueKnown: true }] },
       },
       ...(format !== "initialTvlData" ? {
-        series: [{ seriesKey: "offchain_capital", stats: { current: 300 }, points: [{ date: "2026-04-14", value: 300 }] }],
+        initialCards: [{ seriesKey: "offchain_capital", stats: { current: 300 }, points: [{ date: "2026-04-14", value: 300 }] }],
       } : {}),
-      ...(format !== "series" ? { initialTvlData: [{ date: "2026-04-14", offchain_capital: 100 }] } : {}),
+      ...(format !== "initialCards" ? { initialTvlData: [{ date: "2026-04-14", offchain_capital: 100 }] } : {}),
     };
     const html = `<script>self.__next_f.push([1,${JSON.stringify(JSON.stringify(payload))}]);</script>`;
     const result = adaptReMetrics(html);
     expect(result.metadata?.offchainCapitalUsd).toBe(format === "initialTvlData" ? 100 : 300);
     expect(result.slices.find(({ coinId }) => coinId === "usdc-circle")?.pct).toBe(format === "initialTvlData" ? 50 : 25);
+    expect(result.warnings).toContainEqual(expect.objectContaining({
+      code: "re-metrics-offchain-capital-branch",
+      effect: "info",
+      message: expect.stringContaining(format === "initialTvlData" ? "initialTvlData fallback" : "initialCards series"),
+    }));
   });
 
   it("maps liUSD 4w explicitly instead of degrading as an unmapped token", () => {
     const html = `
 <html><body><script>
-self.__next_f.push([1,"...\\"initialChainBreakdowns\\":{\\"ethereum\\":{\\"asOf\\":\\"2026-04-14\\",\\"rows\\":[{\\"tokenSymbol\\":\\"liusd-4w\\",\\"valueWei\\":\\"100000000000000000000\\",\\"valueKnown\\":true}]}},\\"series\\":[{\\"seriesKey\\":\\"offchain_capital\\",\\"stats\\":{\\"current\\":100},\\"points\\":[{\\"date\\":\\"2026-04-14\\",\\"value\\":100}]}]..."]);
+self.__next_f.push([1,"...\\"initialChainBreakdowns\\":{\\"ethereum\\":{\\"asOf\\":\\"2026-04-14\\",\\"rows\\":[{\\"tokenSymbol\\":\\"liusd-4w\\",\\"valueWei\\":\\"100000000000000000000\\",\\"valueKnown\\":true}]}},\\"initialCards\\":[{\\"seriesKey\\":\\"offchain_capital\\",\\"stats\\":{\\"current\\":100},\\"points\\":[{\\"date\\":\\"2026-04-14\\",\\"value\\":100}]}]..."]);
 </script></body></html>
 `;
     const result = adaptReMetrics(html);
@@ -76,13 +87,18 @@ self.__next_f.push([1,"...\\"initialChainBreakdowns\\":{\\"ethereum\\":{\\"asOf\
       { sourceKey: "re-metrics:token:liusd-4w", name: "liUSD 4w vault", pct: 50, risk: "medium" },
       { sourceKey: "re-metrics:offchain-capital", name: "Off-chain insurance / reinsurance capital", pct: 50, risk: "medium" },
     ]);
-    expect(result.warnings).toBeUndefined();
+    expect(result.warnings).toContainEqual(expect.objectContaining({
+      code: "re-metrics-offchain-capital-branch",
+      effect: "info",
+      message: expect.stringContaining("initialCards series"),
+    }));
+    expect(result.warnings).toHaveLength(1);
   });
 
   it("maps sUSDS explicitly instead of degrading as an unmapped token", () => {
     const html = `
 <html><body><script>
-self.__next_f.push([1,"...\\"initialChainBreakdowns\\":{\\"ethereum\\":{\\"asOf\\":\\"2026-06-03T10:27:10.907Z\\",\\"rows\\":[{\\"tokenSymbol\\":\\"sUSDS\\",\\"valueWei\\":\\"100000000000000000000\\",\\"valueKnown\\":true}]}},\\"series\\":[{\\"seriesKey\\":\\"offchain_capital\\",\\"stats\\":{\\"current\\":100},\\"points\\":[{\\"date\\":\\"2026-06-03\\",\\"value\\":100}]}]..."]);
+self.__next_f.push([1,"...\\"initialChainBreakdowns\\":{\\"ethereum\\":{\\"asOf\\":\\"2026-06-03T10:27:10.907Z\\",\\"rows\\":[{\\"tokenSymbol\\":\\"sUSDS\\",\\"valueWei\\":\\"100000000000000000000\\",\\"valueKnown\\":true}]}},\\"initialCards\\":[{\\"seriesKey\\":\\"offchain_capital\\",\\"stats\\":{\\"current\\":100},\\"points\\":[{\\"date\\":\\"2026-06-03\\",\\"value\\":100}]}]..."]);
 </script></body></html>
 `;
     const result = adaptReMetrics(html);
@@ -91,13 +107,18 @@ self.__next_f.push([1,"...\\"initialChainBreakdowns\\":{\\"ethereum\\":{\\"asOf\
       { sourceKey: "re-metrics:token:susds", name: "sUSDS (Sky savings USDS)", pct: 50, risk: "low", coinId: "susds-sky", depType: "collateral" },
       { sourceKey: "re-metrics:offchain-capital", name: "Off-chain insurance / reinsurance capital", pct: 50, risk: "medium" },
     ]);
-    expect(result.warnings).toBeUndefined();
+    expect(result.warnings).toContainEqual(expect.objectContaining({
+      code: "re-metrics-offchain-capital-branch",
+      effect: "info",
+      message: expect.stringContaining("initialCards series"),
+    }));
+    expect(result.warnings).toHaveLength(1);
   });
 
   it("extracts instant redemption vault capacity from redemptionRows", () => {
     const html = `
 <html><body><script>
-self.__next_f.push([1,"...\\"initialChainBreakdowns\\":{\\"ethereum\\":{\\"asOf\\":\\"2026-06-15T10:00:00.000Z\\",\\"rows\\":[{\\"tokenSymbol\\":\\"usdc\\",\\"valueWei\\":\\"100000000000000000000\\",\\"valueKnown\\":true}]}},\\"redemptionRows\\":[{\\"chainName\\":\\"Ethereum\\",\\"vaultAddress\\":\\"0x5C454f5526e41fBE917b63475CD8CA7E4631B147\\",\\"custodialWalletAddress\\":\\"0x9eA38e09F41A9DE53972a68268BA0Dcc6d2fAdf8\\",\\"totalReserveValueWei\\":\\"25000000000000000000000000\\"},{\\"chainName\\":\\"Base\\",\\"vaultAddress\\":\\"0x9AB62AebAbE738AB233C447eEdCE88D1D0a61FE3\\",\\"custodialWalletAddress\\":\\"0x81d3C071d9c6d3d1f2f307004e9E5bB6db089f64\\",\\"totalReserveValueWei\\":\\"500000000000000000000000\\"}],\\"series\\":[{\\"seriesKey\\":\\"offchain_capital\\",\\"stats\\":{\\"current\\":100},\\"points\\":[{\\"date\\":\\"2026-06-15\\",\\"value\\":100}]}]..."]);
+self.__next_f.push([1,"...\\"initialChainBreakdowns\\":{\\"ethereum\\":{\\"asOf\\":\\"2026-06-15T10:00:00.000Z\\",\\"rows\\":[{\\"tokenSymbol\\":\\"usdc\\",\\"valueWei\\":\\"100000000000000000000\\",\\"valueKnown\\":true}]}},\\"redemptionRows\\":[{\\"chainName\\":\\"Ethereum\\",\\"vaultAddress\\":\\"0x5C454f5526e41fBE917b63475CD8CA7E4631B147\\",\\"custodialWalletAddress\\":\\"0x9eA38e09F41A9DE53972a68268BA0Dcc6d2fAdf8\\",\\"totalReserveValueWei\\":\\"25000000000000000000000000\\"},{\\"chainName\\":\\"Base\\",\\"vaultAddress\\":\\"0x9AB62AebAbE738AB233C447eEdCE88D1D0a61FE3\\",\\"custodialWalletAddress\\":\\"0x81d3C071d9c6d3d1f2f307004e9E5bB6db089f64\\",\\"totalReserveValueWei\\":\\"500000000000000000000000\\"}],\\"initialCards\\":[{\\"seriesKey\\":\\"offchain_capital\\",\\"stats\\":{\\"current\\":100},\\"points\\":[{\\"date\\":\\"2026-06-15\\",\\"value\\":100}]}]..."]);
 </script></body></html>
 `;
     const result = adaptReMetrics(html);
@@ -126,7 +147,7 @@ self.__next_f.push([1,"...\\"initialChainBreakdowns\\":{\\"ethereum\\":{\\"asOf\
   it("normalizes large wei-denominated token values", () => {
     const html = `
 <html><body><script>
-self.__next_f.push([1,"...\\"initialChainBreakdowns\\":{\\"ethereum\\":{\\"asOf\\":\\"2026-04-14\\",\\"rows\\":[{\\"tokenSymbol\\":\\"usdc\\",\\"valueWei\\":\\"100000000000000000000000123456\\",\\"valueKnown\\":true}]}},\\"series\\":[{\\"seriesKey\\":\\"offchain_capital\\",\\"stats\\":{\\"current\\":100},\\"points\\":[{\\"date\\":\\"2026-04-14\\",\\"value\\":100}]}]..."]);
+self.__next_f.push([1,"...\\"initialChainBreakdowns\\":{\\"ethereum\\":{\\"asOf\\":\\"2026-04-14\\",\\"rows\\":[{\\"tokenSymbol\\":\\"usdc\\",\\"valueWei\\":\\"100000000000000000000000123456\\",\\"valueKnown\\":true}]}},\\"initialCards\\":[{\\"seriesKey\\":\\"offchain_capital\\",\\"stats\\":{\\"current\\":100},\\"points\\":[{\\"date\\":\\"2026-04-14\\",\\"value\\":100}]}]..."]);
 </script></body></html>
 `;
     const result = adaptReMetrics(html);
@@ -148,7 +169,7 @@ self.__next_f.push([1,"...\\"initialChainBreakdowns\\":{\\"ethereum\\":{\\"asOf\
 <html>
   <body>
     <script>
-      self.__next_f.push([1,"...\\\"series\\\":[bad-json],\\\"initialChainBreakdowns\\\":{}..."]);
+      self.__next_f.push([1,"...\\\"initialCards\\\":[bad-json],\\\"initialChainBreakdowns\\\":{}..."]);
     </script>
   </body>
 </html>

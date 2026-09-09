@@ -123,6 +123,14 @@
           "totalSupply"
         ]
       },
+      "timestampProbe": {
+        "kind": "json-path",
+        "path": [
+          "chains",
+          "0",
+          "lastSyncedAt"
+        ]
+      },
       "reserveSourceLabel": "Stablecorp balances API"
     }
   },

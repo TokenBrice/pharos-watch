@@ -126,6 +126,14 @@ export const REDEMPTION_BACKSTOP_POLICY_ENTRIES: readonly RedemptionBackstopPoli
     owner: POLICY_OWNER,
     reviewedAt: "2026-05-23",
   },
+  {
+    kind: "unused-live-redemption-telemetry",
+    stablecoinId: "witry-brix",
+    reason:
+      "wiTRY's ERC-4626 wrapper feed exposes vault redemption capacity, but no public holder-facing redemption route has been reviewed for the TRY-denominated fund; the telemetry is reserve evidence only until a route is configured.",
+    owner: POLICY_OWNER,
+    reviewedAt: "2026-09-09",
+  },
 ];
 
 const UNVERIFIED_FRESHNESS_APPROVALS = new Set<string>(

@@ -58,8 +58,10 @@ describe("adapter registry completeness", () => {
   it.each(LIVE_RESERVE_ADAPTER_KEYS)(
     "%s validates params through its registered schema",
     (key) => {
-      const config = ACTIVE_STABLECOINS.find((coin) => coin.liveReservesConfig?.adapter === key)?.liveReservesConfig;
-      if (config) {
+      const configs = ACTIVE_STABLECOINS.flatMap((coin) =>
+        coin.liveReservesConfig?.adapter === key ? [coin.liveReservesConfig] : [],
+      );
+      for (const config of configs) {
         expect(parseLiveReserveAdapterParams(key, config.params)).toEqual(expect.any(Object));
       }
       // An array is invalid even for no-params adapters; missing schemas and

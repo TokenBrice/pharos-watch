@@ -6,13 +6,14 @@ import {
   accumulateBucketedExposure,
   decimalNumberFromBigInt,
   fetchJsonAdapterInput,
-  freshnessMetadataFromTimestamp,
   makeOnchainCallers,
   parseTimestampLikeToUnixSeconds,
   requireJsonInputFromConfig,
   reserveDegradedWarning,
   reserveInfoWarning,
+  sameRunRenderClockFreshnessMetadata,
   slicesFromValues,
+  unverifiedFreshnessMetadata,
 } from "./helpers";
 import { parseEvmAddressResult } from "./evm";
 import { rethrowIfAborted } from "../../lib/abort";
@@ -169,11 +170,14 @@ export function adaptFirmMarkets(payload: FirmMarketsResponse): AdapterResult {
       activeMarkets,
       totalMarkets: payload.markets.length,
       timestamp: sourceTimestamp,
-      ...freshnessMetadataFromTimestamp(
-        sourceTimestamp,
-        "firm-markets-api",
-        "FiRM markets payload did not expose a trustworthy source timestamp",
-      ),
+      // The FiRM payload `timestamp` is the API's own response clock, so the
+      // verified timestamp is stamped with that basis explicitly.
+      ...(sourceTimestamp != null
+        ? sameRunRenderClockFreshnessMetadata(sourceTimestamp)
+        : unverifiedFreshnessMetadata(
+            "firm-markets-api",
+            "FiRM markets payload did not expose a trustworthy source timestamp",
+          )),
       unknownExposurePct: totalDebt > 0 ? (unknownDebt / totalDebt) * 100 : 0,
     },
   };

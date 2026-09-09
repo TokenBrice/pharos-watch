@@ -124,4 +124,37 @@ describe("adaptCircleTransparency", () => {
     expect(() => adaptCircleTransparency(html, "usdc")).toThrow(/layout-changed/);
     expect(() => adaptCircleTransparency(html, "usdc")).toThrow(/data-usdc-us-treasuries/);
   });
+
+  it("accepts a valid allocation with a zero disclosure row and omits the zero slice", () => {
+    const html = `
+<span data-coin="usdc" data-point="100" id="usdc-in-circulation"></span>
+<canvas id="usdc_chartjs_canvas"
+  data-usdc-us-treasuries="70"
+  data-usdc-months="20"
+  data-usdc-cash="10"
+  data-usdc-in-circulation="0">
+</canvas>
+`;
+    const result = adaptCircleTransparency(html, "usdc");
+
+    expect(result.metadata).toMatchObject({ valueMode: "percentage", sliceCount: 3, expectedSliceCount: 4 });
+    expect(result.slices).toEqual([
+      { sourceKey: "circle:usdc:treasuries-under-3m", name: "<3-Month U.S. Treasuries", pct: 70, risk: "very-low" },
+      { sourceKey: "circle:usdc:sifi-deposits", name: "Deposits at Systemically Important Institutions", pct: 20, risk: "very-low" },
+      { sourceKey: "circle:usdc:other-bank-deposits", name: "Other Bank Deposits", pct: 10, risk: "very-low" },
+    ]);
+  });
+
+  it("throws layout-changed when every disclosure row reads zero", () => {
+    const html = `
+<span data-coin="usdc" data-point="0" id="usdc-in-circulation"></span>
+<canvas id="usdc_chartjs_canvas"
+  data-usdc-us-treasuries="0"
+  data-usdc-months="0"
+  data-usdc-cash="0"
+  data-usdc-in-circulation="0">
+</canvas>
+`;
+    expect(() => adaptCircleTransparency(html, "usdc")).toThrow(/layout-changed/);
+  });
 });

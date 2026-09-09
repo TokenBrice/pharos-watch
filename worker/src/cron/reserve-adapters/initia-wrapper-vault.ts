@@ -7,6 +7,7 @@ import {
   notApplicableFreshnessMetadata,
   requireJsonInput,
   reserveInfoWarning,
+  reserveDegradedWarning,
 } from "./helpers";
 import { fetchJsonPostWithRetry, fetchJsonWithRetry } from "./request";
 import type { AdapterContext, AdapterResult } from "./types";
@@ -28,7 +29,7 @@ const EXPECTED_AUSD0_PROJECT_URI = "https://www.agora.finance";
  *
  * The adapter reads the vault's balance, not the parent's total supply, so a
  * balance surplus within this tolerance is informational and keeps its exact
- * collateralizationRatio. Any shortfall or larger surplus is withheld.
+ * collateralizationRatio. Larger surpluses remain informational; shortfalls degrade.
  */
 const DUST_TOLERANCE_RAW = 5_000_000n;
 const DUST_TOLERANCE_TOKENS = 5;
@@ -235,9 +236,6 @@ export async function fetchInitiaWrapperVaultReserves(
     ctx,
   );
   const vaultBalanceRaw = parseViewBalance(viewResponse);
-  if (vaultBalanceRaw <= 0n) {
-    throw new Error(`${ADAPTER}: vault AUSD0 balance is zero for ${coin.id}`);
-  }
 
   throwIfAborted(signal);
   const supplyResponse = await fetchJsonWithRetry<InitiaSupplyResponse>(
@@ -247,9 +245,6 @@ export async function fetchInitiaWrapperVaultReserves(
     ctx,
   );
   const iusdSupplyRaw = parseBankSupply(supplyResponse, params.iusdDenom);
-  if (iusdSupplyRaw <= 0n) {
-    throw new Error(`${ADAPTER}: iUSD bank supply is zero for ${coin.id}`);
-  }
 
   throwIfAborted(signal);
   const iusdIdentity = await fetchJsonWithRetry<InitiaResourceEnvelope>(
@@ -284,38 +279,36 @@ export async function fetchInitiaWrapperVaultReserves(
 
   const supplyTokens = decimalNumberFromBigInt(iusdSupplyRaw, params.decimals);
   const vaultBalanceTokens = decimalNumberFromBigInt(vaultBalanceRaw, params.decimals);
-  const collateralizationRatio = Number(vaultBalanceRaw) / Number(iusdSupplyRaw);
-  if (!Number.isFinite(supplyTokens) || !Number.isFinite(vaultBalanceTokens) || !Number.isFinite(collateralizationRatio)) {
+  const collateralizationRatio = iusdSupplyRaw > 0n ? Number(vaultBalanceRaw) / Number(iusdSupplyRaw) : undefined;
+  if (!Number.isFinite(supplyTokens) || !Number.isFinite(vaultBalanceTokens) ||
+      (collateralizationRatio !== undefined && !Number.isFinite(collateralizationRatio))) {
     throw new Error(`${ADAPTER}: reserve values are outside the supported numeric range`);
   }
 
-  if (vaultBalanceRaw < iusdSupplyRaw) {
-    throw new Error(
-      `${ADAPTER}: vault balance is under iUSD supply (${vaultBalanceRaw} < ${iusdSupplyRaw}; coverage ${collateralizationRatio})`,
-    );
-  }
   const surplusRaw = vaultBalanceRaw - iusdSupplyRaw;
-  if (surplusRaw > DUST_TOLERANCE_RAW) {
-    throw new Error(
-      `${ADAPTER}: vault/iUSD surplus exceeds ${DUST_TOLERANCE_TOKENS} ${EXPECTED_AUSD0_SYMBOL} dust tolerance (${surplusRaw} raw units)`,
-    );
-  }
 
-  const warnings = surplusRaw > 0n
-    ? [reserveInfoWarning(
-        "reserve-overcollateralized-dust",
-        `${coin.id} vault exceeds iUSD supply by ${decimalNumberFromBigInt(surplusRaw, params.decimals)} AUSD0 within the ${DUST_TOLERANCE_TOKENS} AUSD0 tolerance`,
-      )]
-    : undefined;
+  const warnings = [];
+  if (surplusRaw > 0n) {
+    warnings.push(reserveInfoWarning(
+      "reserve-overcollateralized-dust",
+      `${coin.id} vault exceeds iUSD supply by ${decimalNumberFromBigInt(surplusRaw, params.decimals)} AUSD0 (${surplusRaw <= DUST_TOLERANCE_RAW ? "within" : "above"} the ${DUST_TOLERANCE_TOKENS} AUSD0 dust threshold)`,
+    ));
+  }
+  if (surplusRaw < 0n || iusdSupplyRaw === 0n) {
+    warnings.push(reserveDegradedWarning(
+      "reserve-undercollateralized",
+      `${coin.id} observed vault balance ${vaultBalanceRaw} and iUSD supply ${iusdSupplyRaw} raw units`,
+    ));
+  }
 
   return {
     slices: [slice],
-    ...(warnings ? { warnings } : {}),
+    ...(warnings.length > 0 ? { warnings } : {}),
     metadata: {
       ...notApplicableFreshnessMetadata({ proofKind: "initia-move-view" }),
       supplyTokens,
       totalReserveQuantity: vaultBalanceTokens,
-      collateralizationRatio,
+      ...(collateralizationRatio !== undefined ? { collateralizationRatio } : {}),
       details: {
         proofKind: "initia-wrapper-vault-balance-vs-bank-supply",
         vaultBalanceRaw: vaultBalanceRaw.toString(),

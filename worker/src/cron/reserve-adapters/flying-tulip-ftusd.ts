@@ -6,6 +6,7 @@ import {
   normalizeSlices,
   parseTimestampLikeToUnixSeconds,
   requireJsonInput,
+  sameRunRenderClockFreshnessMetadata,
 } from "./helpers";
 import { reserveDegradedWarning } from "./warnings";
 
@@ -216,6 +217,10 @@ export function adaptFlyingTulipFtUsd(payload: FlyingTulipPayload): AdapterResul
     throw new Error("flying-tulip-ftusd collateral rows do not reconcile to cross-chain TVL");
   }
 
+  // `lastUpdated` is the API's own render/response clock (it tracks request
+  // time), so the verified timestamp is stamped with that basis explicitly.
+  const freshness = sameRunRenderClockFreshnessMetadata(sourceTimestamp);
+
   return {
     slices: normalizeSlices([...collateralUsd.entries()].map(([symbol, value]) => ({
       ...SLICE_META[symbol],
@@ -223,13 +228,13 @@ export function adaptFlyingTulipFtUsd(payload: FlyingTulipPayload): AdapterResul
     }))),
     warnings,
     metadata: {
-      sourceTimestamp,
-      freshnessMode: "verified",
+      ...freshness,
       totalReserveUsd,
       supplyUsd,
       collateralizationRatio: totalReserveUsd / supplyUsd,
       unknownExposurePct: 0,
       details: {
+        ...freshness.details,
         sourceOperator: "Flying Tulip",
         assurance: "first-party index of publicly verifiable on-chain reserve state",
         strategies: diagnostics,

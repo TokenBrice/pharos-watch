@@ -129,9 +129,11 @@ const SOURCE_TOTAL_RECONCILIATION_THRESHOLD_PCT = 0.5;
 // snapshotter on a 2-hour cadence; its latest point timestamps that snapshot,
 // and matching its value against the live staked exchange rate ties the
 // timestamp to the reserve state we are reporting. History values are rounded
-// to 4 decimals, so the tolerance covers rounding plus sub-cadence yield drift.
+// to 4 decimals, so ±5e-5 is the rounding envelope; 6e-5 admits rounding plus
+// a sliver of sub-cadence drift while rejecting the multi-day drift (2.45d at
+// the previous 5e-4) a monotone yield accumulator can accumulate unnoticed.
 const INFINIFI_RATE_HISTORY_PATH = "/api/protocol/rate-history/siUSD?daysAgo=7";
-const RATE_CROSS_CHECK_TOLERANCE = 5e-4;
+const RATE_CROSS_CHECK_TOLERANCE = 6e-5;
 const RATE_HISTORY_PROBE_TIMEOUT_MS = 6_000;
 
 export function resolveInfiniFiFreshness(

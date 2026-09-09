@@ -187,6 +187,55 @@ describe("fetchNestVaultPositionsReserves", () => {
     expect(result.metadata?.navReconciliationResidualUsd).toBeUndefined();
   });
 
+  it("emits a NAV reconciliation residual and unknown exposure for non-nOPAL Nest vaults when positions cover less than NAV", async () => {
+    mockedReserveHelper(fetchJsonWithRetry)
+      .mockResolvedValueOnce({
+        data: {
+          positions: {
+            liquidAssets: [
+              { symbol: "pUSD", position: { value: 0.410183 } },
+            ],
+            yieldAssets: [],
+          },
+        },
+      })
+      .mockResolvedValueOnce({
+        data: {
+          nav: 1.8890182896,
+          price: 1,
+          totalSupply: 2,
+        },
+      })
+      .mockResolvedValueOnce({
+        data: {
+          lastPriceUpdates: [{ updatedAt: 1778474625 }],
+        },
+      });
+
+    const coin = inalpha as unknown as StablecoinMeta;
+    const result = await fetchNestVaultPositionsReserves(
+      coin!,
+      coin!.liveReservesConfig!,
+      signal,
+    );
+
+    expect(result.slices).toEqual([
+      { name: "Nest NAV reconciliation residual", pct: 78.3, risk: "high" },
+      { name: "pUSD liquid balance", pct: 21.7, risk: "high", coinId: "pusd-plume" },
+    ]);
+    expect(result.metadata).toMatchObject({
+      totalReserveUsd: 1.8890182896,
+      settledPositionUsd: 0.410183,
+      navReconciliationResidualUsd: expect.closeTo(1.4788352896, 6),
+      unknownExposurePct: expect.closeTo(78.2859169623574, 3),
+      navUsd: 1.8890182896,
+      navCoverageRatio: expect.closeTo(0.410183 / 1.8890182896, 6),
+    });
+    expect(result.warnings).toEqual([
+      expect.objectContaining({ code: "nest-nav-coverage-gap", effect: "degraded" }),
+    ]);
+  });
+
   it.each([
     {
       label: "a missing pendingTransactions array",

@@ -229,7 +229,6 @@ describe("recordDeferredTail", () => {
       const overview = await computeReserveCompositionOverview(db, deferredAt + 60);
       expect(overview).toMatchObject({
         freshCoins: 1,
-        cursorTailState: null,
         deferredCoins: 2,
         runBudgetTruncated: true,
         nextCursorStablecoinId: configuredCoin.id,

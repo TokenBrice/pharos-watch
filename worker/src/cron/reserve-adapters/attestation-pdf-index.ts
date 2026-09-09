@@ -1,6 +1,7 @@
 import type { ReserveSlice, StablecoinMeta } from "@shared/types/core";
 import type { LiveReservesConfig } from "@shared/types/live-reserves";
 import { ReserveSliceSchema } from "@shared/types/reserves";
+import { parseLiveReserveAdapterParams } from "@shared/lib/live-reserve-adapters";
 import type { AdapterContext, AdapterResult } from "./types";
 import {
   decodeHtmlEntities,
@@ -147,20 +148,7 @@ function readConfiguredSlices(rawSlices: unknown): ReserveSlice[] {
     };
   });
 
-  const total = slices.reduce((sum, slice) => sum + slice.pct, 0);
-  if (Math.abs(total - 100) > 1.5) {
-    throw new Error(
-      `attestation PDF configured reserve composition sum to ${total.toFixed(1)}% (expected 100% ± 1.5%)`,
-    );
-  }
-
   return normalizeSlices(slices);
-}
-
-function readParams(config: LiveReservesConfig): AttestationPdfIndexParams {
-  return {
-    slices: readConfiguredSlices(config.params?.slices),
-  };
 }
 
 function betterDate(
@@ -225,6 +213,18 @@ const DAY_DATE_PARSERS: readonly ReportDateParserEntry[] = [
     month: 2,
     day: 1,
     monthIsName: true,
+  },
+  // Compact YYYYMMDD in PDF filenames (e.g. 20260331__Token-Certification.pdf).
+  // Lowest precedence: appended after every separated format, which wins ties.
+  // Requires a full 8-digit token (no adjacent alphanumerics); year 2000-2099,
+  // month 01-12, day 01-31 — impossible dates (e.g. 20260231) are rejected by
+  // formatValidIsoDate, and non-dates like 12345678 fail the year group.
+  {
+    kind: "day",
+    regex: /(?<![A-Za-z0-9])(20\d{2})(0[1-9]|1[0-2])(0[1-9]|[12]\d|3[01])(?![A-Za-z0-9])/g,
+    year: 1,
+    month: 2,
+    day: 3,
   },
 ];
 
@@ -385,5 +385,9 @@ export async function fetchAttestationPdfIndexReserves(
 ): Promise<AdapterResult> {
   const input = requireHtmlInput(config.inputs.primary, ADAPTER_NAME);
   const html = await fetchAttestationIndexHtml(config, input.url, signal, ctx);
-  return adaptAttestationPdfIndex(html, readParams(config), { indexUrl: input.url });
+  return adaptAttestationPdfIndex(
+    html,
+    parseLiveReserveAdapterParams("attestation-pdf-index", config.params),
+    { indexUrl: input.url },
+  );
 }

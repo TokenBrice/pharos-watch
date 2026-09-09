@@ -8,7 +8,6 @@ import {
   freshnessMetadataFromTimestamp,
   parsePositiveNumericLike,
   parseTimestampLikeToUnixSeconds,
-  unverifiedFreshnessMetadata,
 } from "./helpers";
 
 const ZEPHYR_ATOM_DECIMALS = 12;
@@ -17,41 +16,43 @@ const ZEPHYR_ZSD_ASSET_ID = "zsd-zephyr-protocol";
 const ZEPHYR_ZYS_ASSET_ID = "zys-zephyr-protocol";
 const ZEPHYR_SNAPSHOT_SOURCE =
   "https://zephyrprotocol.com/api/v1/reservesnapshots?limit=1&order=desc";
-const ZEPHYR_RESERVE_SLICE = {
-  name: "ZEPH protocol reserve",
-  pct: 100,
-  risk: "high",
-} as const;
-const ZEPHYR_YIELD_RESERVE_SLICE: ReserveSlice = {
-  name: "ZSD yield reserve backing ZYS shares",
-  pct: 100,
-  risk: "high",
-  coinId: ZEPHYR_ZSD_ASSET_ID,
-  depType: "wrapper",
-  assetClass: "stablecoin",
-  issuerOrObligor: "Zephyr Protocol on-chain ZSD yield reserve",
-  riskFactors: [
-    "counterparty",
-    "smart-contract",
-    "market",
-    "liquidity",
-    "concentration",
-  ],
-  liquidityHorizon: "unknown",
-};
 
-interface ZephyrLiveStatsPayload {
-  zsd_circ?: number;
-  zsd_price?: number;
-  zys_circ?: number;
-  zys_price?: number;
-  zeph_price?: number;
-  reserve_ratio?: number;
-  reserve_ratio_ma?: number;
-  zeph_in_reserve?: number;
-  zeph_in_reserve_value?: number;
-  zsd_in_yield_reserve?: number;
-  zsd_in_yield_reserve_percent?: number;
+function buildZephyrReserveSlice(): ReserveSlice {
+  return {
+    name: "ZEPH protocol reserve",
+    pct: 100,
+    risk: "high",
+    assetClass: "cryptoasset",
+    issuerOrObligor: "Zephyr Protocol on-chain ZEPH reserve",
+    riskFactors: [
+      "smart-contract",
+      "market",
+      "liquidity",
+      "concentration",
+      "custody",
+    ],
+    liquidityHorizon: "unknown",
+  };
+}
+
+function buildZephyrYieldReserveSlice(): ReserveSlice {
+  return {
+    name: "ZSD yield reserve backing ZYS shares",
+    pct: 100,
+    risk: "high",
+    coinId: ZEPHYR_ZSD_ASSET_ID,
+    depType: "wrapper",
+    assetClass: "stablecoin",
+    issuerOrObligor: "Zephyr Protocol on-chain ZSD yield reserve",
+    riskFactors: [
+      "counterparty",
+      "smart-contract",
+      "market",
+      "liquidity",
+      "concentration",
+    ],
+    liquidityHorizon: "unknown",
+  };
 }
 
 interface ZephyrSnapshotResult {
@@ -104,16 +105,6 @@ interface ZephyrSnapshotPayload {
   results?: ZephyrSnapshotResult[];
 }
 
-type ZephyrScannerPayload = ZephyrLiveStatsPayload | ZephyrSnapshotPayload;
-
-function isZephyrSnapshotPayload(payload: ZephyrScannerPayload): payload is ZephyrSnapshotPayload {
-  return "results" in payload;
-}
-
-function isZephyrLiveStatsPayload(payload: ZephyrScannerPayload): payload is ZephyrLiveStatsPayload {
-  return !isZephyrSnapshotPayload(payload);
-}
-
 function positiveDecimalAtoms(value: unknown, decimals: number): number | null {
   if (typeof value !== "string" || !/^\d+$/.test(value.trim())) return null;
   const parsed = decimalNumberFromBigInt(BigInt(value), decimals);
@@ -143,7 +134,7 @@ function buildWarnings(collateralizationRatio: number): LiveReserveWarning[] {
 function buildYieldReserveWarnings(collateralizationRatio: number): LiveReserveWarning[] {
   return buildCoverageShortfallWarnings({
     code: "reserve-undercollateralized",
-    message: (pct) => `Zephyr ZSD yield reserve covers ${pct}% of ZYS liabilities`,
+    message: (pct) => `Zephyr ZEPH reserve covers ${pct}% of ZSD supply backing ZYS shares`,
     coverageRatio: collateralizationRatio,
   });
 }
@@ -206,7 +197,7 @@ function adaptSnapshot(payload: ZephyrSnapshotPayload): AdapterResult {
   const requiredRatio = requirePositive(collateralizationRatio, "collateralization ratio");
 
   return {
-    slices: [ZEPHYR_RESERVE_SLICE],
+    slices: [buildZephyrReserveSlice()],
     ...(buildWarnings(requiredRatio).length > 0 ? { warnings: buildWarnings(requiredRatio) } : {}),
     metadata: {
       ...freshnessMetadataFromTimestamp(
@@ -234,49 +225,6 @@ function adaptSnapshot(payload: ZephyrSnapshotPayload): AdapterResult {
       details: {
         proofKind: "zephyr-scanner-reserve-snapshot",
         reserveSourceLabel: "Zephyr Scanner reserve snapshot",
-      },
-    },
-  };
-}
-
-function adaptLiveStats(payload: ZephyrLiveStatsPayload): AdapterResult {
-  const totalReserveUsd = parsePositiveNumericLike(payload.zeph_in_reserve_value)
-    ?? (
-      parsePositiveNumericLike(payload.zeph_in_reserve) != null && parsePositiveNumericLike(payload.zeph_price) != null
-        ? parsePositiveNumericLike(payload.zeph_in_reserve)! * parsePositiveNumericLike(payload.zeph_price)!
-        : null
-    );
-  const zsdPrice = parsePositiveNumericLike(payload.zsd_price) ?? 1;
-  const zsdSupply = parsePositiveNumericLike(payload.zsd_circ);
-  const supplyUsd = zsdSupply != null ? zsdSupply * zsdPrice : null;
-  const collateralizationRatio = parsePositiveNumericLike(payload.reserve_ratio)
-    ?? (totalReserveUsd != null && supplyUsd != null ? totalReserveUsd / supplyUsd : null);
-
-  const requiredTotalReserveUsd = requirePositive(totalReserveUsd, "total reserve USD");
-  const requiredSupplyUsd = requirePositive(supplyUsd, "ZSD supply USD");
-  const requiredRatio = requirePositive(collateralizationRatio, "collateralization ratio");
-
-  return {
-    slices: [ZEPHYR_RESERVE_SLICE],
-    ...(buildWarnings(requiredRatio).length > 0 ? { warnings: buildWarnings(requiredRatio) } : {}),
-    metadata: {
-      ...unverifiedFreshnessMetadata(
-        "zephyr-scanner-livestats",
-        "Zephyr livestats payload does not include a trustworthy source timestamp",
-      ),
-      totalReserveUsd: requiredTotalReserveUsd,
-      supplyUsd: requiredSupplyUsd,
-      collateralizationRatio: requiredRatio,
-      reserveAssetAmount: payload.zeph_in_reserve,
-      reserveAssetPriceUsd: payload.zeph_price,
-      reserveRatioMovingAverage: payload.reserve_ratio_ma,
-      zsdYieldReserve: payload.zsd_in_yield_reserve,
-      zsdYieldReservePct: payload.zsd_in_yield_reserve_percent != null
-        ? payload.zsd_in_yield_reserve_percent * 100
-        : undefined,
-      details: {
-        proofKind: "zephyr-scanner-livestats",
-        reserveSourceLabel: "Zephyr Scanner live stats",
       },
     },
   };
@@ -315,15 +263,19 @@ function adaptYieldSnapshot(payload: ZephyrSnapshotPayload): AdapterResult {
     sharePriceZsd,
   );
 
+  const zsdCoverageRatio = parsePositiveNumericLike(snapshot.on_chain?.reserve_ratio)
+    ?? parsePositiveNumericLike(snapshot.raw?.reserve_ratio)
+    ?? positiveFixedPoint(snapshot.pricing_record?.reserve_ratio, ZEPHYR_PRICE_DECIMALS)
+    ?? positiveFixedPoint(snapshot.raw?.pr?.reserve_ratio, ZEPHYR_PRICE_DECIMALS);
   const liabilityAmountZsd = requiredShareSupply * sharePriceZsd;
-  const collateralizationRatio = requiredReserveAmount / liabilityAmountZsd;
+  const collateralizationRatio = requirePositive(zsdCoverageRatio, "ZSD ZEPH reserve coverage ratio");
   const sourceTimestamp = parseTimestampLikeToUnixSeconds(snapshot.captured_at)
     ?? parseTimestampLikeToUnixSeconds(snapshot.pricing_record?.timestamp)
     ?? parseTimestampLikeToUnixSeconds(snapshot.raw?.pr?.timestamp);
   const warnings = buildYieldReserveWarnings(collateralizationRatio);
 
   return {
-    slices: [ZEPHYR_YIELD_RESERVE_SLICE],
+    slices: [buildZephyrYieldReserveSlice()],
     ...(warnings.length > 0 ? { warnings } : {}),
     metadata: {
       ...freshnessMetadataFromTimestamp(
@@ -352,78 +304,24 @@ function adaptYieldSnapshot(payload: ZephyrSnapshotPayload): AdapterResult {
   };
 }
 
-function adaptYieldLiveStats(payload: ZephyrLiveStatsPayload): AdapterResult {
-  const reserveAmount = requirePositive(
-    parsePositiveNumericLike(payload.zsd_in_yield_reserve),
-    "ZSD yield reserve",
-  );
-  const shareSupply = requirePositive(
-    parsePositiveNumericLike(payload.zys_circ),
-    "ZYS circulation",
-  );
-  const zsdPrice = requirePositive(
-    parsePositiveNumericLike(payload.zsd_price),
-    "ZSD price",
-  );
-  const zysPrice = requirePositive(
-    parsePositiveNumericLike(payload.zys_price),
-    "ZYS price",
-  );
-  const sharePriceZsd = zysPrice / zsdPrice;
-  assertRateReconciliation(reserveAmount, shareSupply, sharePriceZsd);
-
-  const totalReserveUsd = reserveAmount * zsdPrice;
-  const supplyUsd = shareSupply * zysPrice;
-  const collateralizationRatio = totalReserveUsd / supplyUsd;
-  const warnings = buildYieldReserveWarnings(collateralizationRatio);
-
-  return {
-    slices: [ZEPHYR_YIELD_RESERVE_SLICE],
-    ...(warnings.length > 0 ? { warnings } : {}),
-    metadata: {
-      ...unverifiedFreshnessMetadata(
-        "zephyr-scanner-yield-livestats",
-        "Zephyr yield livestats payload does not include a trustworthy source timestamp",
-      ),
-      totalReserveUsd,
-      supplyUsd,
-      collateralizationRatio,
-      details: {
-        proofKind: "zephyr-scanner-yield-livestats",
-        reserveSourceLabel: "Zephyr Scanner ZSD yield reserve live stats",
-        reserveAssetId: ZEPHYR_ZSD_ASSET_ID,
-        reserveAssetAmountZsd: reserveAmount,
-        zysCirculating: shareSupply,
-        sharePriceZsd,
-        adapterStatus: buildYieldAdapterStatus(null),
-      },
-    },
-  };
-}
-
 export function adaptZephyrScanner(
-  payload: ZephyrScannerPayload,
+  payload: ZephyrSnapshotPayload,
   assetId: string = ZEPHYR_ZSD_ASSET_ID,
 ): AdapterResult {
+  const hasResults = payload.results != null && payload.results.length > 0;
   if (assetId === ZEPHYR_ZYS_ASSET_ID) {
-    if (isZephyrSnapshotPayload(payload) && payload.results != null && payload.results.length > 0) {
+    if (hasResults) {
       return adaptYieldSnapshot(payload);
     }
-    if (isZephyrLiveStatsPayload(payload)) {
-      return adaptYieldLiveStats(payload);
-    }
-    throw new Error("zephyr-scanner payload did not include a valid ZYS snapshot or live-stats format");
+    throw new Error("zephyr-scanner payload did not include a valid ZYS snapshot");
   }
   if (assetId !== ZEPHYR_ZSD_ASSET_ID) {
     throw new Error(`zephyr-scanner does not support asset ${assetId}`);
   }
-  if (isZephyrSnapshotPayload(payload) && payload.results != null && payload.results.length > 0) {
+  if (hasResults) {
     return adaptSnapshot(payload);
   }
-  if (isZephyrLiveStatsPayload(payload)) {
-    return adaptLiveStats(payload);
-  }
-  throw new Error("zephyr-scanner payload did not include a valid snapshot or live-stats format");
+  throw new Error("zephyr-scanner payload did not include a valid snapshot");
 }
 
 export async function fetchZephyrScannerReserves(
@@ -432,7 +330,7 @@ export async function fetchZephyrScannerReserves(
   signal: AbortSignal,
   ctx?: AdapterContext,
 ): Promise<AdapterResult> {
-  const payload = await fetchJsonAdapterInput<ZephyrScannerPayload>(
+  const payload = await fetchJsonAdapterInput<ZephyrSnapshotPayload>(
     config,
     "zephyr-scanner",
     signal,

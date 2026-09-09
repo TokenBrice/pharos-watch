@@ -95,9 +95,6 @@
     "adapter": "mento",
     "version": 1,
     "semantics": "collateral-mix",
-    "scoring": {
-      "maxSourceAgeSec": 4000000
-    },
     "breakerScope": "mento-reserve-cusd",
     "display": {
       "url": "https://reserve.mento.org/",

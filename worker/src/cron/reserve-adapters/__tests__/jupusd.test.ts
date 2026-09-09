@@ -178,11 +178,15 @@ describe("fetchJupUsdReserves", () => {
     };
   }
 
-  function mockTransport(failedUrl?: string, error?: Error) {
+  function mockTransport(
+    failedUrl?: string,
+    error?: Error,
+    snapshotsPayload: { snapshots?: Array<{ timestamp?: string | number }> } = { snapshots: [{ timestamp: 1776000000 }] },
+  ) {
     vi.mocked(fetchWithRetry).mockImplementation(async (url) => {
       if (url === failedUrl) throw error;
       if (url === baseUrl) return Response.json(dataPayload);
-      if (url === snapshotsUrl) return Response.json({ snapshots: [{ timestamp: 1776000000 }] });
+      if (url === snapshotsUrl) return Response.json(snapshotsPayload);
       if (url === oracleUrl) return Response.json({ ripcord: false });
       unexpectedRequests.push(url);
       throw new Error(`Unexpected JupUSD request: ${url}`);
@@ -239,6 +243,26 @@ describe("fetchJupUsdReserves", () => {
     );
 
     expect(result.warnings).toBeUndefined();
+  });
+
+  it("takes the newest snapshot timestamp instead of trusting snapshots[0] ordering", async () => {
+    const cache = mockTransport(undefined, undefined, {
+      snapshots: [
+        { timestamp: 1775900000 },
+        { timestamp: "1776100000" },
+        { timestamp: 1776000000 },
+      ],
+    });
+
+    const result = await fetchJupUsdReserves(
+      coin,
+      makeConfig(),
+      new AbortController().signal,
+      { requestCache: cache } as never,
+    );
+
+    expect(result.metadata?.sourceTimestamp).toBe(1776100000);
+    expect(result.metadata?.freshnessMode).toBe("verified");
   });
 
   it("labels core transparency data fetch failures with the failing fetch", async () => {

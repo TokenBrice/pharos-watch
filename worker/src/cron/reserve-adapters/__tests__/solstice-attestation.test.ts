@@ -130,7 +130,7 @@ describe("adaptSolsticeAttestation", () => {
     expect(report.valid).toBe(false);
   });
 
-  it("accepts the weekly reporting window but degrades a proof past its grace", () => {
+  it("accepts within the 14-day cap but degrades a proof past it", () => {
     const sourceTimestamp = 1_788_341_462;
     const result = adaptSolsticeAttestation({
       res: "ok",
@@ -141,8 +141,8 @@ describe("adaptSolsticeAttestation", () => {
     });
     const adapter = getReserveAdapter("solstice-attestation")!;
     expect(adapter.evidenceClass).toBe("weak-live-probe");
-    const fresh = validateAdapterOutput(result, { adapter, now: sourceTimestamp + 700_000 });
-    const stale = validateAdapterOutput(result, { adapter, now: sourceTimestamp + 700_001 });
+    const fresh = validateAdapterOutput(result, { adapter, now: sourceTimestamp + 1_209_600 });
+    const stale = validateAdapterOutput(result, { adapter, now: sourceTimestamp + 1_209_601 });
     expect(fresh.valid).toBe(true);
     expect(fresh.warnings).not.toContainEqual(expect.objectContaining({ code: "stale-source-data" }));
     expect(stale.warnings).toContainEqual(expect.objectContaining({ code: "stale-source-data", effect: "degraded" }));

@@ -155,10 +155,12 @@ describe("adaptRiverProtocolInfo", () => {
       sourceTimestamp: 1776290400,
       totalReserveUsd: 300_000_000,
       supplyUsd: 150_000_000,
-      collateralizationRatio: 2,
       chainCirculatingCount: 1,
       tvlPointCount: 1,
       circulatingPointCount: 1,
+      details: {
+        protocolTvlToSupplyRatio: 2,
+      },
     });
   });
 
@@ -188,17 +190,17 @@ describe("adaptRiverProtocolInfo", () => {
     ]));
   });
 
-  it("degrades when protocol TVL falls below circulating satUSD", () => {
+  it("publishes a sub-1 TVL-to-supply diagnostic without a coverage shortfall warning", () => {
     const result = adaptRiverProtocolInfo({
       tvl: 640,
       circulatingSupply: 1000,
     });
 
-    expect(result.metadata?.collateralizationRatio).toBe(0.64);
-    expect(result.warnings?.[0]).toMatchObject({
-      code: "reserve-undercollateralized",
-      effect: "degraded",
-    });
+    expect(result.metadata?.details).toMatchObject({ protocolTvlToSupplyRatio: 0.64 });
+    expect(result.metadata).not.toHaveProperty("collateralizationRatio");
+    // Protocol-wide TVL is not satUSD backing, so a sub-1 ratio must not be
+    // presented as a reserve-undercollateralized state (R1).
+    expect(result.warnings ?? []).toEqual([]);
   });
 
   it("throws when TVL or circulatingSupply is missing (parse-failure path)", () => {

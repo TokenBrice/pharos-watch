@@ -16,9 +16,10 @@ import {
   MATERIAL_UNKNOWN_EXPOSURE_PCT,
   MONTHLY_DISCLOSURE_SOURCE_MAX_AGE_SEC,
   NOT_APPLICABLE_ONLY_FRESHNESS,
-  QUARTERLY_DISCLOSURE_SOURCE_MAX_AGE_SEC,
+  QUARTERLY_ASSURANCE_MAX_AGE_SEC,
   VERIFIED_ONLY_FRESHNESS,
   VERIFIED_OR_UNVERIFIED_FRESHNESS,
+  WEEKLY_SOURCE_MAX_AGE_SEC,
 } from "./live-reserve-adapter-policy";
 
 type LiveReserveAdapterConfigValidationPolicy = {
@@ -90,6 +91,10 @@ type LiveReserveAdapterDescriptorDeclaration = {
     fee: "current-bps" | "none";
   };
   validation?: LiveReserveAdapterValidationPolicy;
+  /** Target freshness, distinct from tolerated fallback modes. */
+  preferredFreshnessMode?: "verified" | "not-applicable";
+  /** Upstream evidence limitation when no honest preferred mode is available. */
+  freshnessLimitation?: string;
   provenance?: LiveReserveAdapterProvenance;
   displayBadgeKind?: ReserveDisplayBadgeKind;
 };
@@ -128,6 +133,7 @@ const HTTP_DASHBOARD_COLLATERAL_V1 = {
   primaryInputKinds: ["http-json"],
   sourceModel: "dynamic-mix",
   evidenceClass: "independent",
+  preferredFreshnessMode: "verified",
   sharedSourceMode: "none",
   configValidation: CONFIG_COLLATERAL_V1,
   redemptionTelemetry: { capacity: "none", fee: "none" },
@@ -210,6 +216,7 @@ export const LIVE_RESERVE_ADAPTER_DESCRIPTOR_DECLARATIONS = {
     paramsSchema: "accountable",
     sourceModel: "dynamic-mix",
     evidenceClass: "independent",
+    preferredFreshnessMode: "verified",
     sharedSourceMode: "none",
     configValidation: CONFIG_ACCOUNTABLE,
     redemptionTelemetry: { capacity: "none", fee: "none" },
@@ -297,6 +304,7 @@ export const LIVE_RESERVE_ADAPTER_DESCRIPTOR_DECLARATIONS = {
     paramsSchema: "chainlinkNav",
     sourceModel: "single-bucket",
     evidenceClass: "independent",
+    preferredFreshnessMode: "verified",
     sharedSourceMode: "none",
     configValidation: CONFIG_SINGLE_ASSET_V1_V2,
     // Redemption capacity is emitted only for coins whose params carry a
@@ -330,8 +338,10 @@ export const LIVE_RESERVE_ADAPTER_DESCRIPTOR_DECLARATIONS = {
     "circleTransparency",
     HTTP_DISCLOSURE_ATTESTATION_V1,
     {
+      preferredFreshnessMode: "verified",
       validation: {
-        maxSourceAgeSec: DISCLOSURE_SOURCE_MAX_AGE_SEC,
+        // Circle publishes the reserve chart weekly, not on its monthly assurance cadence.
+        maxSourceAgeSec: WEEKLY_SOURCE_MAX_AGE_SEC,
         allowedFreshnessModes: VERIFIED_OR_UNVERIFIED_FRESHNESS,
       },
     },
@@ -356,6 +366,7 @@ export const LIVE_RESERVE_ADAPTER_DESCRIPTOR_DECLARATIONS = {
     paramsSchema: "none",
     sourceModel: "dynamic-mix",
     evidenceClass: "independent",
+    preferredFreshnessMode: "not-applicable",
     sharedSourceMode: "none",
     configValidation: CONFIG_COLLATERAL_V2_V3,
     redemptionTelemetry: { capacity: "none", fee: "none" },
@@ -385,6 +396,7 @@ export const LIVE_RESERVE_ADAPTER_DESCRIPTOR_DECLARATIONS = {
     paramsSchema: "none",
     sourceModel: "dynamic-mix",
     evidenceClass: "independent",
+    preferredFreshnessMode: "verified",
     sharedSourceMode: "none",
     configValidation: CONFIG_COLLATERAL_V1,
     // The adapter reads the Inverse PSM's own supply() and the sUSDS vault's
@@ -439,7 +451,8 @@ export const LIVE_RESERVE_ADAPTER_DESCRIPTOR_DECLARATIONS = {
     HTTP_DISCLOSURE_ATTESTATION_V2,
     {
       validation: {
-        maxSourceAgeSec: QUARTERLY_DISCLOSURE_SOURCE_MAX_AGE_SEC,
+        // Schuman's reviewed reports are quarterly; allow 100 days, not the legacy 116-day override.
+        maxSourceAgeSec: QUARTERLY_ASSURANCE_MAX_AGE_SEC,
         allowedFreshnessModes: VERIFIED_ONLY_FRESHNESS,
       },
     },
@@ -459,6 +472,7 @@ export const LIVE_RESERVE_ADAPTER_DESCRIPTOR_DECLARATIONS = {
     redemptionTelemetry: { capacity: "proxy", fee: "none" },
   }),
   "fdusd-transparency": declareAdapter("none", HTTP_DISCLOSURE_ATTESTATION_V1, {
+    preferredFreshnessMode: "verified",
     validation: {
       maxSourceAgeSec: LATE_MONTHLY_DISCLOSURE_SOURCE_MAX_AGE_SEC,
       allowedFreshnessModes: VERIFIED_OR_UNVERIFIED_FRESHNESS,
@@ -484,6 +498,7 @@ export const LIVE_RESERVE_ADAPTER_DESCRIPTOR_DECLARATIONS = {
     paramsSchema: "none",
     sourceModel: "dynamic-mix",
     evidenceClass: "independent",
+    preferredFreshnessMode: "verified",
     sourceOriginClass: "issuer-attested",
     displayBadgeKind: "proof",
     sharedSourceMode: "none",
@@ -500,6 +515,7 @@ export const LIVE_RESERVE_ADAPTER_DESCRIPTOR_DECLARATIONS = {
     paramsSchema: "fraxFpiCollateral",
     sourceModel: "dynamic-mix",
     evidenceClass: "independent",
+    preferredFreshnessMode: "verified",
     sourceOriginClass: "issuer-attested",
     displayBadgeKind: "proof",
     sharedSourceMode: "none",
@@ -516,6 +532,7 @@ export const LIVE_RESERVE_ADAPTER_DESCRIPTOR_DECLARATIONS = {
     paramsSchema: "fx",
     sourceModel: "dynamic-mix",
     evidenceClass: "independent",
+    preferredFreshnessMode: "not-applicable",
     sharedSourceMode: "none",
     configValidation: CONFIG_COLLATERAL_V1,
     redemptionTelemetry: { capacity: "proxy", fee: "none" },
@@ -560,6 +577,14 @@ export const LIVE_RESERVE_ADAPTER_DESCRIPTOR_DECLARATIONS = {
   },
   infinifi: declareAdapter("none", HTTP_DASHBOARD_COLLATERAL_V1, {
     redemptionTelemetry: { capacity: "proxy", fee: "none" },
+    validation: {
+      // The transparency dashboard's siUSD rate-history snapshotter writes on
+      // a 2-hour cadence (I2); 6h admits three missed writes before the
+      // snapshot reads as stale, replacing the generic 3-day dashboard cap.
+      maxSourceAgeSec: 6 * 60 * 60,
+      maxUnknownExposurePct: MATERIAL_UNKNOWN_EXPOSURE_PCT,
+      allowedFreshnessModes: VERIFIED_OR_UNVERIFIED_FRESHNESS,
+    },
   }),
   "initia-wrapper-vault": {
     primaryInputKinds: ["http-json"],
@@ -579,6 +604,7 @@ export const LIVE_RESERVE_ADAPTER_DESCRIPTOR_DECLARATIONS = {
     paramsSchema: "jupusd",
     sourceModel: "dynamic-mix",
     evidenceClass: "independent",
+    preferredFreshnessMode: "verified",
     sharedSourceMode: "none",
     configValidation: CONFIG_COLLATERAL_V1,
     redemptionTelemetry: { capacity: "direct", fee: "none" },
@@ -629,6 +655,7 @@ export const LIVE_RESERVE_ADAPTER_DESCRIPTOR_DECLARATIONS = {
     paramsSchema: "none",
     sourceModel: "single-bucket",
     evidenceClass: "independent",
+    preferredFreshnessMode: "verified",
     sharedSourceMode: "source-invariant",
     configValidation: CONFIG_PROTOCOL_V1,
     redemptionTelemetry: { capacity: "none", fee: "none" },
@@ -643,6 +670,7 @@ export const LIVE_RESERVE_ADAPTER_DESCRIPTOR_DECLARATIONS = {
     paramsSchema: "makinaStrategy",
     sourceModel: "dynamic-mix",
     evidenceClass: "independent",
+    preferredFreshnessMode: "verified",
     sourceOriginClass: "issuer-attested",
     displayBadgeKind: "proof",
     sharedSourceMode: "none",
@@ -659,6 +687,7 @@ export const LIVE_RESERVE_ADAPTER_DESCRIPTOR_DECLARATIONS = {
     paramsSchema: "mento",
     sourceModel: "dynamic-mix",
     evidenceClass: "independent",
+    preferredFreshnessMode: "verified",
     // Per-coin on-chain redemption reads (broker-pool/liquity-v2-cr/fpmm-pool)
     // make the adapter's output coin-specific, so results can no longer be
     // shared across coins within a run.
@@ -688,6 +717,7 @@ export const LIVE_RESERVE_ADAPTER_DESCRIPTOR_DECLARATIONS = {
     paramsSchema: "none",
     sourceModel: "dynamic-mix",
     evidenceClass: "independent",
+    preferredFreshnessMode: "verified",
     sharedSourceMode: "none",
     configValidation: CONFIG_COLLATERAL_V1,
     redemptionTelemetry: { capacity: "direct", fee: "none" },
@@ -723,6 +753,7 @@ export const LIVE_RESERVE_ADAPTER_DESCRIPTOR_DECLARATIONS = {
     paramsSchema: "none",
     sourceModel: "dynamic-mix",
     evidenceClass: "independent",
+    preferredFreshnessMode: "verified",
     sharedSourceMode: "none",
     configValidation: CONFIG_COLLATERAL_V1,
     redemptionTelemetry: { capacity: "direct", fee: "none" },
@@ -748,6 +779,7 @@ export const LIVE_RESERVE_ADAPTER_DESCRIPTOR_DECLARATIONS = {
     paramsSchema: "reserveProtocolDtf",
     sourceModel: "dynamic-mix",
     evidenceClass: "independent",
+    preferredFreshnessMode: "not-applicable",
     sharedSourceMode: "none",
     configValidation: CONFIG_COLLATERAL_V1,
     redemptionTelemetry: { capacity: "direct", fee: "none" },
@@ -761,6 +793,7 @@ export const LIVE_RESERVE_ADAPTER_DESCRIPTOR_DECLARATIONS = {
     paramsSchema: "none",
     sourceModel: "dynamic-mix",
     evidenceClass: "independent",
+    freshnessLimitation: "The reserve balance-sheet API publishes no accounting timestamp; same-run PSM reads date redemption liquidity, not the reserve book.",
     sharedSourceMode: "source-invariant",
     configValidation: CONFIG_PROTOCOL_V1,
     // Capacity comes from a same-run read of the terminal USDC PSM balance, not
@@ -793,6 +826,7 @@ export const LIVE_RESERVE_ADAPTER_DESCRIPTOR_DECLARATIONS = {
     paramsSchema: "sgForgeCoinvertible",
     sourceModel: "single-bucket",
     evidenceClass: "independent",
+    preferredFreshnessMode: "verified",
     sharedSourceMode: "none",
     configValidation: CONFIG_ATTESTATION_V1,
     redemptionTelemetry: { capacity: "none", fee: "none" },
@@ -804,8 +838,11 @@ export const LIVE_RESERVE_ADAPTER_DESCRIPTOR_DECLARATIONS = {
   "sgho-wrapper": declareAdapter("erc4626SingleAsset", ONCHAIN_SINGLE_ASSET_V1),
   "solstice-attestation": declareAdapter("none", HTTP_PROTOCOL_V1, {
     validation: {
-      // Weekly attestations plus the reviewed USX reporting grace.
-      maxSourceAgeSec: 700_000,
+      // Weekly attestations with observed publication gaps of 5-9 days (SO1);
+      // 14 days admits two missed weekly attestations before the proof reads
+      // as stale, replacing the 700,000s (8.10d) cap that sat seconds away
+      // from the real gap.
+      maxSourceAgeSec: 1_209_600,
       allowedFreshnessModes: VERIFIED_OR_UNVERIFIED_FRESHNESS,
     },
   }),
@@ -826,6 +863,7 @@ export const LIVE_RESERVE_ADAPTER_DESCRIPTOR_DECLARATIONS = {
     paramsSchema: "none",
     sourceModel: "dynamic-mix",
     evidenceClass: "independent",
+    preferredFreshnessMode: "verified",
     sharedSourceMode: "source-invariant",
     configValidation: CONFIG_COLLATERAL_V1,
     redemptionTelemetry: { capacity: "direct", fee: "none" },
@@ -840,6 +878,7 @@ export const LIVE_RESERVE_ADAPTER_DESCRIPTOR_DECLARATIONS = {
     paramsSchema: "none",
     sourceModel: "dynamic-mix",
     evidenceClass: "independent",
+    preferredFreshnessMode: "verified",
     sourceOriginClass: "issuer-attested",
     sharedSourceMode: "none",
     configValidation: CONFIG_COLLATERAL_V1,
@@ -882,6 +921,7 @@ export const LIVE_RESERVE_ADAPTER_DESCRIPTOR_DECLARATIONS = {
     paramsSchema: "superstateLiquidity",
     sourceModel: "single-bucket",
     evidenceClass: "independent",
+    preferredFreshnessMode: "verified",
     sharedSourceMode: "none",
     configValidation: CONFIG_SINGLE_ASSET_V1,
     redemptionTelemetry: { capacity: "direct", fee: "none" },
@@ -907,6 +947,7 @@ export const LIVE_RESERVE_ADAPTER_DESCRIPTOR_DECLARATIONS = {
     paramsSchema: "tetherTransparency",
     sourceModel: "dynamic-mix",
     evidenceClass: "independent",
+    preferredFreshnessMode: "verified",
     sourceOriginClass: "issuer-attested",
     displayBadgeKind: "proof",
     sharedSourceMode: "source-invariant",
@@ -971,6 +1012,7 @@ export const LIVE_RESERVE_ADAPTER_DESCRIPTOR_DECLARATIONS = {
     paramsSchema: "none",
     sourceModel: "dynamic-mix",
     evidenceClass: "independent",
+    preferredFreshnessMode: "verified",
     sourceOriginClass: "issuer-attested",
     displayBadgeKind: "proof",
     sharedSourceMode: "none",
@@ -1000,6 +1042,7 @@ export const LIVE_RESERVE_ADAPTER_DESCRIPTOR_DECLARATIONS = {
     paramsSchema: "none",
     sourceModel: "dynamic-mix",
     evidenceClass: "independent",
+    preferredFreshnessMode: "verified",
     sharedSourceMode: "none",
     configValidation: CONFIG_COLLATERAL_V1,
     redemptionTelemetry: { capacity: "direct", fee: "current-bps" },
@@ -1013,6 +1056,7 @@ export const LIVE_RESERVE_ADAPTER_DESCRIPTOR_DECLARATIONS = {
     paramsSchema: "none",
     sourceModel: "dynamic-mix",
     evidenceClass: "independent",
+    preferredFreshnessMode: "verified",
     sharedSourceMode: "none",
     configValidation: CONFIG_COLLATERAL_V1,
     redemptionTelemetry: { capacity: "none", fee: "none" },

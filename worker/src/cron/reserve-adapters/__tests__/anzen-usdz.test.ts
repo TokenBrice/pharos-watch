@@ -234,20 +234,25 @@ describe("fetchAnzenUsdzReserves", () => {
     expectValidAdapterOutput("anzen-usdz", result);
   });
 
-  it("fails closed when pooled SPCT is below liabilities, held SPCT is short, or surplus exceeds tolerance", async () => {
-    await expect(fetchAnzenUsdzReserves(makeCoin(), config, signal)).resolves.toBeTruthy();
-
-    primeRpcMocks({ 4: word(liability - 1n) });
-    await expect(fetchAnzenUsdzReserves(makeCoin(), config, signal)).rejects.toThrow("below USDz liabilities");
-
-    primeRpcMocks({ 4: word(pooled), 13: word(pooled - 1n) });
-    await expect(fetchAnzenUsdzReserves(makeCoin(), config, signal)).rejects.toThrow("held SPCT");
-
-    primeRpcMocks({ 4: word(liability + 1_001n * WAD), 13: word(liability + 1_001n * WAD) });
-    await expect(fetchAnzenUsdzReserves(makeCoin(), config, signal)).rejects.toThrow("surplus");
+  it.each([
+    { 4: word(liability - WAD) },
+    { 13: word(liability - WAD) },
+  ])("publishes pooled or held SPCT shortfalls", async (overrides) => {
+    primeRpcMocks(overrides);
+    const result = await fetchAnzenUsdzReserves(makeCoin(), config, signal);
+    expect(result.slices[0].pct).toBe(100);
+    expect(result.metadata?.collateralizationRatio).toBeLessThan(1);
+    expect(result.warnings).toContainEqual(expect.objectContaining({ code: "reserve-undercollateralized", effect: "degraded" }));
+    expectValidAdapterOutput("anzen-usdz", result);
   });
 
-  it("fails closed on reviewed topology, code, identity, pause, and redemption drift", async () => {
+  it("publishes observed surplus above the reviewed tolerance", async () => {
+    primeRpcMocks({ 4: word(liability + 1_001n * WAD), 13: word(liability + 1_001n * WAD) });
+    const result = await fetchAnzenUsdzReserves(makeCoin(), config, signal);
+    expect(result.metadata?.collateralizationRatio).toBeGreaterThan(1);
+  });
+
+  it("fails closed on reviewed topology, code, and identity drift", async () => {
     const coin = makeCoin();
     coin.contracts = coin.contracts?.filter((entry) => entry.chain !== "blast");
     await expect(fetchAnzenUsdzReserves(coin, config, signal)).rejects.toThrow("contract set");
@@ -258,8 +263,6 @@ describe("fetchAnzenUsdzReserves", () => {
     primeRpcMocks({ 5: word("0x1111111111111111111111111111111111111111") });
     await expect(fetchAnzenUsdzReserves(makeCoin(), config, signal)).rejects.toThrow("spct() identity");
 
-    primeRpcMocks({ 8: word(true) });
-    await expect(fetchAnzenUsdzReserves(makeCoin(), config, signal)).rejects.toThrow("paused");
   });
 
   it("does not call or use global SPCT totalSupply", async () => {
@@ -304,10 +307,15 @@ describe("fetchAnzenUsdzReserves", () => {
     }
   });
 
-  it("withholds redemption for SPCT pause, whitelist removal, and migration", async () => {
-    for (const overrides of [{ 15: word(true) }, { 18: word(false) }, { 10: word(1n) }]) {
-      primeRpcMocks(overrides);
-      await expect(fetchAnzenUsdzReserves(makeCoin(), config, signal)).rejects.toThrow(/paused|migration/);
-    }
+  it.each([{ 8: word(true) }, { 15: word(true) }, { 18: word(false) }, { 10: word(1n) }, { 21: word(WAD - 1n) }])("publishes blocked redemption routes as paused", async (overrides) => {
+    primeRpcMocks(overrides);
+    const result = await fetchAnzenUsdzReserves(makeCoin(), config, signal);
+    expect(result.metadata?.redemption?.routeStatus).toBe("paused");
+    expect(result.warnings).toContainEqual(expect.objectContaining({ code: "route-paused", effect: "degraded" }));
+  });
+
+  it("rejects malformed pause evidence", async () => {
+    primeRpcMocks({ 8: word(2n) });
+    await expect(fetchAnzenUsdzReserves(makeCoin(), config, signal)).rejects.toThrow();
   });
 });

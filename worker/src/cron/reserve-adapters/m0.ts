@@ -72,9 +72,12 @@ const M0_MINTER_RECONCILIATION_WARN_RATIO = 0.005;
 
 // The published value comes from the latest total-collateral snapshot; the
 // collateral-update event stream routinely runs ahead of it by an indexing
-// cadence of ~2h (observed 2026-08-20). Only a lag well beyond that cadence
-// indicates the total has stopped tracking known collateral updates.
-const M0_SNAPSHOT_LAG_DEGRADE_SEC = 6 * 60 * 60;
+// cadence of ~2h (observed 2026-08-20), and production lag reached 27,000s on
+// 2026-09-09. The degrade cap is widened to 12h by decision P11 (2026-09-09),
+// accepting the risk that a stalled total may be admitted for up to 12h. Only
+// a lag beyond the cap indicates the total has stopped tracking known
+// collateral updates.
+const M0_SNAPSHOT_LAG_DEGRADE_SEC = 12 * 60 * 60;
 const M0_TOTAL_COLLATERAL_SOURCE_KEY = "m0:eligible-collateral";
 
 function parseNumericValue(value: string | number | undefined): number | null {
@@ -131,6 +134,12 @@ export function adaptM0Collateral(payload: M0GraphQlResponse): AdapterResult {
     ));
   }
 
+  const freshnessMetadata = freshnessMetadataFromTimestamp(
+    snapshotTimestamp,
+    "protocol-api-graphql",
+    "M0 total collateral snapshot did not expose a parseable timestamp",
+  );
+
   const slices = slicesFromValues([
     {
       sourceKey: M0_TOTAL_COLLATERAL_SOURCE_KEY,
@@ -144,11 +153,7 @@ export function adaptM0Collateral(payload: M0GraphQlResponse): AdapterResult {
     slices,
     ...(warnings.length > 0 ? { warnings } : {}),
     metadata: {
-      ...freshnessMetadataFromTimestamp(
-        snapshotTimestamp,
-        "protocol-api-graphql",
-        "M0 total collateral snapshot did not expose a parseable timestamp",
-      ),
+      ...freshnessMetadata,
       collateralValueDivisor: M0_COLLATERAL_DECIMALS_DIVISOR,
       normalizedReserveTotal: totalUsd,
       ...(minterCollateralTotalUsd != null
@@ -164,6 +169,11 @@ export function adaptM0Collateral(payload: M0GraphQlResponse): AdapterResult {
           }
         : {}),
       ...(snapshotLagSec != null ? { snapshotLagSec } : {}),
+      details: {
+        ...("details" in freshnessMetadata ? freshnessMetadata.details : {}),
+        ...(snapshotLagSec != null ? { collateralLagSec: snapshotLagSec } : {}),
+        collateralLagCapSec: M0_SNAPSHOT_LAG_DEGRADE_SEC,
+      },
     },
   };
 }

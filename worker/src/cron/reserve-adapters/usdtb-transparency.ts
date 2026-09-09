@@ -12,15 +12,16 @@ import {
 } from "./helpers";
 
 interface UsdtbBackingAssetEntry {
-  amount?: number;
+  /** USD amount; numeric strings are deliberately supported and converted. */
+  amount?: number | string;
   custodian?: string;
 }
 
 export interface UsdtbBackingAndSupplyPayload {
-  assetsInMotion?: number;
+  assetsInMotion?: number | string;
   backingAssets?: Record<string, UsdtbBackingAssetEntry[]>;
   lastUpdatedAt?: string;
-  supply?: number;
+  supply?: number | string;
 }
 
 interface UsdtbAssetConfig {
@@ -56,16 +57,28 @@ const USDTB_ASSET_CONFIG: Record<string, UsdtbAssetConfig> = {
  *  are excluded from the reserve mix entirely. */
 const SELF_HOLDING_KEY = "USDTB";
 
-function sumAssetAmount(entries: UsdtbBackingAssetEntry[] | undefined): number {
-  if (!Array.isArray(entries)) return 0;
-  return entries.reduce((total, entry) => {
-    const amount = typeof entry?.amount === "number" && Number.isFinite(entry.amount) ? entry.amount : 0;
-    return total + Math.max(0, amount);
-  }, 0);
+/** Strict amount parser shared by asset rows and aggregate fields: finite
+ *  numbers pass through, numeric strings are converted, and anything else
+ *  throws so a malformed payload can never silently read as zero. */
+function parseStrictAmount(value: unknown, label: string): number {
+  if (typeof value === "number" && Number.isFinite(value)) return value;
+  if (typeof value === "string" && value.trim() !== "" && Number.isFinite(Number(value))) {
+    return Number(value);
+  }
+  throw new Error(`usdtb-transparency ${label} is not a finite number: ${String(value)}`);
 }
 
-function parseFiniteNumber(value: unknown): number {
-  return typeof value === "number" && Number.isFinite(value) ? value : Number.NaN;
+function sumAssetAmount(assetKey: string, entries: UsdtbBackingAssetEntry[] | undefined): number {
+  if (!Array.isArray(entries)) {
+    throw new Error(`usdtb-transparency backing asset ${assetKey} entry list is not an array`);
+  }
+  return entries.reduce((total, entry, index) => {
+    const amount = parseStrictAmount(entry?.amount, `backing asset ${assetKey} entry ${index} amount`);
+    if (amount < 0) {
+      throw new Error(`usdtb-transparency backing asset ${assetKey} entry ${index} has a negative amount`);
+    }
+    return total + amount;
+  }, 0);
 }
 
 export function adaptUsdtbTransparency(payload: UsdtbBackingAndSupplyPayload): AdapterResult {
@@ -74,7 +87,7 @@ export function adaptUsdtbTransparency(payload: UsdtbBackingAndSupplyPayload): A
     throw new Error("usdtb-transparency payload missing backingAssets");
   }
 
-  const supplyUsd = parseFiniteNumber(payload.supply);
+  const supplyUsd = parseStrictAmount(payload.supply, "supply");
   if (!(supplyUsd > 0)) {
     throw new Error("usdtb-transparency payload has invalid supply");
   }
@@ -88,7 +101,7 @@ export function adaptUsdtbTransparency(payload: UsdtbBackingAndSupplyPayload): A
   const sliceInputs: Array<{ value: number; name: string; risk: ReserveSlice["risk"]; coinId?: string }> = [];
 
   for (const [assetKey, entries] of Object.entries(backingAssets)) {
-    const amount = sumAssetAmount(entries);
+    const amount = sumAssetAmount(assetKey, entries);
     const normalizedKey = assetKey.trim().toUpperCase();
 
     if (normalizedKey === SELF_HOLDING_KEY) {
@@ -116,7 +129,13 @@ export function adaptUsdtbTransparency(payload: UsdtbBackingAndSupplyPayload): A
     sliceInputs.push({ name: config.name, value: amount, risk: config.risk, coinId: config.coinId });
   }
 
-  const assetsInMotionUsd = Math.max(0, parseFiniteNumber(payload.assetsInMotion) || 0);
+  let assetsInMotionUsd = 0;
+  if (payload.assetsInMotion != null) {
+    assetsInMotionUsd = parseStrictAmount(payload.assetsInMotion, "assetsInMotion");
+    if (assetsInMotionUsd < 0) {
+      throw new Error("usdtb-transparency assetsInMotion is negative");
+    }
+  }
   if (assetsInMotionUsd > 0) {
     sliceInputs.push({ name: "Assets in motion (settlement float)", value: assetsInMotionUsd, risk: "low" });
   }

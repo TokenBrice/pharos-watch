@@ -167,6 +167,36 @@ describe("adaptUnitedPorPayload", () => {
     expect(() => adaptUnitedPorPayload(malformed, SLICE)).toThrow("unreadable updatedAt");
   });
 
+  it("throws when the ripcord alarm field is missing", () => {
+    const payload = { ...UNITED_POR_PAYLOAD } as Partial<UnitedPorPayload>;
+    delete payload.ripcord;
+
+    expect(() => adaptUnitedPorPayload(payload as UnitedPorPayload, SLICE))
+      .toThrow("missing or non-boolean ripcord alarm");
+  });
+
+  it("throws when the ripcord alarm is not a boolean", () => {
+    const payload = { ...UNITED_POR_PAYLOAD, ripcord: "false" } as unknown as UnitedPorPayload;
+
+    expect(() => adaptUnitedPorPayload(payload, SLICE))
+      .toThrow("missing or non-boolean ripcord alarm");
+  });
+
+  it("throws when the attestor account is not the reviewed United Stables account", () => {
+    const payload = { ...UNITED_POR_PAYLOAD, accountName: "Unreviewed Attestor" };
+
+    expect(() => adaptUnitedPorPayload(payload, SLICE))
+      .toThrow("unexpected accountName (Unreviewed Attestor); expected United Stables");
+  });
+
+  it("throws when the accountName field is missing", () => {
+    const payload = { ...UNITED_POR_PAYLOAD } as Partial<UnitedPorPayload>;
+    delete payload.accountName;
+
+    expect(() => adaptUnitedPorPayload(payload as UnitedPorPayload, SLICE))
+      .toThrow("unexpected accountName (missing); expected United Stables");
+  });
+
   it("still parses a stale updatedAt into a verified but old sourceTimestamp", () => {
     const stale: UnitedPorPayload = { ...UNITED_POR_PAYLOAD, updatedAt: "2026-06-01T08:00:00.000Z" };
 

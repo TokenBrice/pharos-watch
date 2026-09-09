@@ -363,6 +363,12 @@ describe("fetchYamatoReserves", () => {
     vi.mocked(fetchDefiLlamaPrices).mockResolvedValue(new Map([["ETH", 3_000]]));
   });
 
+  it("rejects a malformed slice instead of silently defaulting it", async () => {
+    await expect(
+      fetchYamatoReserves(coin, makeConfig({ yamatoAddress: YAMATO_ADDRESS, slice: { name: "ETH" } }), signal),
+    ).rejects.toThrow("yamato adapter params invalid");
+  });
+
   it("reads getStates(), resolves the price feed, and adapts same-run on-chain state", async () => {
     mockOnchainCalls();
 

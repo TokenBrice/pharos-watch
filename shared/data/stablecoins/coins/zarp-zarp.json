@@ -90,5 +90,34 @@
   "collateralQuality": "rwa",
   "custodyModel": "institutional-regulated",
   "governanceQuality": "single-entity",
+  "liveReservesConfig": {
+    "adapter": "attestation-pdf-index",
+    "version": 1,
+    "semantics": "attestation-mix",
+    "breakerScope": "zarp-zarp",
+    "display": {
+      "url": "https://www.zarpstablecoin.com/transparency/",
+      "label": "ZARP transparency"
+    },
+    "inputs": {
+      "primary": {
+        "kind": "http-html",
+        "url": "https://www.zarpstablecoin.com/transparency/"
+      }
+    },
+    "params": {
+      "slices": [
+        {
+          "name": "ZAR fiat reserves",
+          "pct": 100,
+          "risk": "very-low",
+          "assetClass": "bank-deposit",
+          "issuerOrObligor": "Old Mutual Wealth Trust Company (JHB) and Standard Bank of South Africa",
+          "riskFactors": ["counterparty", "custody", "concentration"],
+          "liquidityHorizon": "immediate"
+        }
+      ]
+    }
+  },
   "launchDate": "2021-11-15"
 }

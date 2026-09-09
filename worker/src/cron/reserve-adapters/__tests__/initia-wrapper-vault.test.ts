@@ -88,10 +88,12 @@ beforeEach(() => {
 });
 
 describe("fetchInitiaWrapperVaultReserves", () => {
-  it("rejects one raw unit of underbacking", async () => {
+  it("publishes one raw unit of underbacking as degraded", async () => {
     mockHealthyReads((BigInt(IUSD_SUPPLY) - 1n).toString());
-    await expect(fetchInitiaWrapperVaultReserves(coin, config(), new AbortController().signal))
-      .rejects.toThrow("vault balance is under iUSD supply");
+    const result = await fetchInitiaWrapperVaultReserves(coin, config(), new AbortController().signal);
+    expect(result.metadata?.collateralizationRatio).toBeLessThan(1);
+    expect(result.slices[0].pct).toBe(100);
+    expect(result.warnings).toContainEqual(expect.objectContaining({ code: "reserve-undercollateralized", effect: "degraded" }));
   });
 
   it.each([4_999_999n, 5_000_000n])("preserves a tolerated %s raw-unit surplus", async (surplus) => {
@@ -105,19 +107,23 @@ describe("fetchInitiaWrapperVaultReserves", () => {
     ]);
   });
 
-  it("rejects one raw unit above the dust tolerance", async () => {
-    mockHealthyReads((BigInt(IUSD_SUPPLY) + 5_000_001n).toString());
-    await expect(fetchInitiaWrapperVaultReserves(coin, config(), new AbortController().signal))
-      .rejects.toThrow("surplus exceeds");
+  it("publishes a six-AUSD0 surplus without degrading", async () => {
+    mockHealthyReads((BigInt(IUSD_SUPPLY) + 6_000_000n).toString());
+    const result = await fetchInitiaWrapperVaultReserves(coin, config(), new AbortController().signal);
+    expect(result.metadata?.collateralizationRatio).toBeGreaterThan(1);
+    expect(result.warnings?.every((warning) => warning.effect === "info")).toBe(true);
   });
 
-  it("rejects zero balance and zero supply independently", async () => {
-    for (const [balance, supply] of [["0", IUSD_SUPPLY], [IUSD_SUPPLY, "0"]]) {
-      vi.resetAllMocks();
-      mockHealthyReads(balance, undefined, supply);
-      await expect(fetchInitiaWrapperVaultReserves(coin, config(), new AbortController().signal))
-        .rejects.toThrow(balance === "0" ? "vault AUSD0 balance is zero" : "iUSD bank supply is zero");
-    }
+  it.each([["0", IUSD_SUPPLY], [IUSD_SUPPLY, "0"]])("publishes observed balance %s and supply %s", async (balance, supply) => {
+    mockHealthyReads(balance, undefined, supply);
+    const result = await fetchInitiaWrapperVaultReserves(coin, config(), new AbortController().signal);
+    expect(result.metadata?.collateralizationRatio).toBe(supply === "0" ? undefined : 0);
+    expect(result.warnings).toContainEqual(expect.objectContaining({ effect: "degraded" }));
+  });
+
+  it("rejects malformed balance data", async () => {
+    mockHealthyReads("not-an-amount");
+    await expect(fetchInitiaWrapperVaultReserves(coin, config(), new AbortController().signal)).rejects.toThrow();
   });
 
   it("reads the recorded Initia responses and emits one 100% parent slice", async () => {

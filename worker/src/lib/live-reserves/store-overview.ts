@@ -315,12 +315,7 @@ export async function computeReserveCompositionOverview(
     runBudgetTruncated: pointerPending,
     deferredAt: pointerPending ? checkpoint!.updated_at : null,
     nextCursorStablecoinId: pointerPending ? checkpoint!.next_item_key : null,
-    cursorTailState: null,
-    cursorTailError: null,
     cursorRecordedAt: pointerPending ? checkpoint!.updated_at : null,
-    cursorTailCompletedAt: null,
-    cursorTailFailedAt: null,
-    runBudgetTruncationCount: pointerPending ? 1 : 0,
     historyWriteGaps,
     historyWriteGapCheckFailed,
     persistentlyStaleIndependentCoins: counts.persistentlyStaleIndependentCoins.sort(

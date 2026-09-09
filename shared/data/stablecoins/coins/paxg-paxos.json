@@ -85,9 +85,6 @@
     "version": 2,
     "semantics": "attestation-mix",
     "breakerScope": "paxg-paxos",
-    "scoring": {
-      "maxSourceAgeSec": 4000000
-    },
     "display": {
       "url": "https://www.paxos.com/paxg-transparency",
       "label": "Paxos / KPMG gold examination"

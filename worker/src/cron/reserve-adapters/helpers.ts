@@ -28,12 +28,14 @@ export {
   parseTimestampLikeToUnixSeconds,
   freshnessMetadataFromTimestamp,
   notApplicableFreshnessMetadata,
+  sameRunRenderClockFreshnessMetadata,
   SOURCE_TIMESTAMP_SPREAD_DEGRADE_SEC,
   summarizeSourceTimestamps,
+  summarizeSourceTimestampsRequiringCoverage,
   unverifiedFreshnessMetadata,
   verifiedFreshnessMetadata,
 } from "./freshness";
-export type { SourceTimestampSummary } from "./freshness";
+export type { SourceTimestampCoverageSummary, SourceTimestampSummary } from "./freshness";
 export {
   HTML_ENTITY_MAP,
   decodeHtmlEntities,

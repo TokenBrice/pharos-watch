@@ -95,9 +95,9 @@
   "custodyModel": "institutional-unregulated",
   "governanceQuality": "single-entity",
   "liveReservesConfig": {
-    "adapter": "single-asset",
+    "adapter": "attestation-pdf-index",
     "version": 1,
-    "semantics": "single-asset",
+    "semantics": "attestation-mix",
     "breakerScope": "wcop-ripio",
     "display": {
       "url": "https://www.ripio.com/en/cryptos/local-stablecoins",
@@ -105,14 +105,22 @@
     },
     "inputs": {
       "primary": {
-        "kind": "onchain-evm",
-        "chain": "ethereum",
-        "rpcMode": "public-rpc"
+        "kind": "http-html",
+        "url": "https://www.ripio.com/en/cryptos/local-stablecoins"
       }
     },
     "params": {
-      "label": "Colombian-peso cash deposited in a Colombian bank account",
-      "risk": "high"
+      "slices": [
+        {
+          "name": "Colombian-peso cash deposited in a Colombian bank account",
+          "pct": 100,
+          "risk": "high",
+          "assetClass": "bank-deposit",
+          "issuerOrObligor": "Undisclosed Colombian financial institution",
+          "riskFactors": ["counterparty", "liquidity", "custody", "concentration"],
+          "liquidityHorizon": "unknown"
+        }
+      ]
     }
   },
   "notices": [

@@ -96,6 +96,7 @@ describe("adaptChainlinkPorResponse", () => {
       totalReserveUsd: 1450,
       supplyUsd: 144_000_000,
       supplyReadComplete: true,
+      supplyCoverageComplete: true,
     });
   });
 
@@ -149,6 +150,48 @@ describe("adaptChainlinkPorResponse", () => {
     expect(result.warnings?.some((w) => w.code === "por-reserve-over-supply")).not.toBe(true);
   });
 
+  it.each([
+    ["XAU_G", "grams of fine gold"],
+    ["XAG_G", "grams of fine silver"],
+  ] as const)("labels %s reserves as gram quantities instead of USD", (reserveUnit, reserveUnitLabel) => {
+    const result = adaptChainlinkPorResponse(
+      { reserves: 145_000_000_000n, decimals: 8, roundId: 42n, updatedAt: 1710000000 },
+      { ...params, reserveUnit },
+    );
+
+    expect(result.metadata).toMatchObject({
+      reserveUnit,
+      reserveUnitLabel,
+      totalReserveQuantity: 1450,
+      totalReservesRaw: "145000000000",
+      feedDecimals: 8,
+      feedRoundId: "42",
+      feedUpdatedAt: 1710000000,
+    });
+    expect(result.metadata?.totalReserveUsd).toBeUndefined();
+  });
+
+  it("compares gram-denominated reserves 1:1 against token supply for gram-pegged tokens", () => {
+    const result = adaptChainlinkPorResponse(
+      { reserves: 99_000_000_000n, decimals: 8, roundId: 42n, updatedAt: 1710000000 },
+      { ...params, reserveUnit: "XAU_G" },
+      makePorSupply(),
+    );
+
+    // 990 g of fine gold vs 1000 gram-pegged tokens (1 token = 1 g) -> 0.99
+    expect(result.metadata).toMatchObject({
+      reserveUnit: "XAU_G",
+      reserveUnitLabel: "grams of fine gold",
+      totalReserveQuantity: 990,
+      supplyTokens: 1000,
+      collateralizationRatio: 0.99,
+    });
+    expect(result.metadata?.supplyUsd).toBeUndefined();
+    expect(result.metadata?.totalReserveUsd).toBeUndefined();
+    expect(result.warnings?.some((w) => w.code === "por-reserve-under-supply")).toBe(true);
+    expect(result.warnings?.find((w) => w.code === "por-reserve-under-supply")?.effect).toBe("degraded");
+  });
+
   it("degrades when reserves do not cover multichain token supply", () => {
     const result = adaptChainlinkPorResponse(
       { reserves: 99_000_000_000n, decimals: 8, roundId: 42n, updatedAt: 1710000000 },
@@ -185,6 +228,10 @@ describe("adaptChainlinkPorResponse", () => {
     expect(omitted).toBeDefined();
     expect(omitted?.severity).toBe("info");
     expect(omitted?.message).toContain("tron");
+    // Reads all succeeded, but coverage is not complete: a registry deployment
+    // was omitted by design rather than read.
+    expect(result.metadata?.supplyReadComplete).toBe(true);
+    expect(result.metadata?.supplyCoverageComplete).toBe(false);
   });
 
   it("degrades and marks supply incomplete when any EVM supply source fails", () => {
@@ -197,6 +244,7 @@ describe("adaptChainlinkPorResponse", () => {
     expect(result.metadata).toMatchObject({
       supplyUsd: 1000,
       supplyReadComplete: false,
+      supplyCoverageComplete: false,
       collateralizationRatio: 1,
     });
     const warning = result.warnings?.find((w) => w.code === "partial-supply-read-failure");
@@ -621,6 +669,62 @@ describe("fetchChainlinkPorReserves", () => {
     expect(result.metadata?.collateralizationRatio).toBeUndefined();
   });
 
+  it("compares gram feed answers against token supply for gram-pegged commodity units", async () => {
+    const coin: StablecoinMeta = {
+      id: "kau-kinesis",
+      name: "Kinesis Gold",
+      symbol: "KAU",
+      flags: {
+        backing: "rwa-backed",
+        pegCurrency: "GOLD",
+        governance: "centralized",
+        yieldBearing: false,
+        rwa: true,
+        navToken: false,
+      },
+      contracts: [
+        { chain: "ethereum", address: "0x14dab79fd7b7b3f748d434812fd6a9aac460ea52", decimals: 18 },
+      ],
+    };
+
+    const now = 1_700_000_000;
+    vi.mocked(fetchOnchainUint256).mockResolvedValueOnce(18n);
+    // The KAU PoR feed answers in grams of fine gold; one KAU = one gram, so
+    // the gram answer divides cleanly by token supply (unlike troy ounces).
+    vi.mocked(fetchOnchainRawCall).mockResolvedValueOnce(
+      encodeLatestRoundData(2_567_133_466_000000000000000n, now - 60),
+    );
+    vi.mocked(fetchErc20TotalSupply).mockResolvedValueOnce(2_386_227_834_200000000000000n);
+
+    const result = await fetchChainlinkPorReserves(
+      coin,
+      {
+        ...config,
+        params: {
+          ...baseParams,
+          assetLabel: "Physical gold reserves (grams)",
+          reserveUnit: "XAU_G",
+        },
+      },
+      signal,
+      { nowSec: now },
+    );
+
+    expect(fetchErc20TotalSupply).toHaveBeenCalledTimes(1);
+    expect(result.metadata).toMatchObject({
+      reserveUnit: "XAU_G",
+      reserveUnitLabel: "grams of fine gold",
+    });
+    expect(result.metadata?.totalReserveQuantity).toBeCloseTo(2_567_133.466, 3);
+    expect(result.metadata?.supplyTokens).toBeCloseTo(2_386_227.8342, 3);
+    expect(result.metadata?.supplyUsd).toBeUndefined();
+    expect(result.metadata?.collateralizationRatio).toBeCloseTo(2_567_133.466 / 2_386_227.8342, 5);
+    // ~107.6% coverage on the gross-supply basis stays under the 1.1
+    // scope-mismatch threshold, so neither coverage warning fires.
+    expect(result.warnings?.some((w) => w.code === "por-reserve-under-supply")).not.toBe(true);
+    expect(result.warnings?.some((w) => w.code === "por-reserve-over-supply")).not.toBe(true);
+  });
+
   it("omits registry-typed non-EVM chains like NEAR instead of firing EVM reads at them", async () => {
     const coin = makePorCoin({
       contracts: [
@@ -642,6 +746,7 @@ describe("fetchChainlinkPorReserves", () => {
     expect(omitted?.message).toContain("near");
     expect(result.warnings?.some((w) => w.code === "partial-supply-read-failure")).not.toBe(true);
     expect(result.metadata?.supplyReadComplete).toBe(true);
+    expect(result.metadata?.supplyCoverageComplete).toBe(false);
   });
 
   it("treats a zero totalSupply read as a valid empty deployment, not a read failure", async () => {

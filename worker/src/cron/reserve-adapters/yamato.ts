@@ -1,4 +1,5 @@
 import { CANONICAL_ETH_RESERVE_RISK } from "@shared/lib/reserve-asset-risk";
+import { parseLiveReserveAdapterParams } from "@shared/lib/live-reserve-adapters";
 import type { ReserveSlice, StablecoinMeta } from "@shared/types/core";
 import type { LiveReserveWarning, LiveReservesConfig } from "@shared/types/live-reserves";
 import { decodeFunctionResult, encodeFunctionData, parseAbi } from "viem/utils";
@@ -6,7 +7,6 @@ import type { AdapterContext, AdapterResult } from "./types";
 import {
   decimalNumberFromBigInt,
   fetchDefiLlamaPrices,
-  isReserveRisk,
   makeOnchainCallers,
   notApplicableFreshnessMetadata,
   requireOnchainInput,
@@ -86,14 +86,6 @@ interface YamatoSliceConfig {
   depType?: ReserveSlice["depType"];
 }
 
-interface YamatoParams {
-  yamatoAddress: string;
-  priceFeedAddress?: string;
-  rpcUrl?: string;
-  fallbackRpcUrl?: string;
-  slice: YamatoSliceConfig;
-}
-
 export interface YamatoRedemptionProbe {
   paused: boolean;
   priorityRegistryAddress: string;
@@ -122,50 +114,6 @@ function uint8Result(value: unknown, field: string): number {
     throw new Error(`yamato getStates() returned invalid ${field}`);
   }
   return parsed;
-}
-
-function optionalString(params: Record<string, unknown>, key: string): string | undefined {
-  const value = params[key];
-  return typeof value === "string" && value.trim().length > 0 ? value.trim() : undefined;
-}
-
-function readSlice(params: Record<string, unknown>): YamatoSliceConfig {
-  const raw = params.slice;
-  if (!raw || typeof raw !== "object" || Array.isArray(raw)) {
-    return DEFAULT_ETH_SLICE;
-  }
-  const slice = raw as Record<string, unknown>;
-  const name =
-    typeof slice.name === "string" && slice.name.trim().length > 0 ? slice.name.trim() : DEFAULT_ETH_SLICE.name;
-  const risk = isReserveRisk(slice.risk) ? slice.risk : DEFAULT_ETH_SLICE.risk;
-  const coinId = typeof slice.coinId === "string" && slice.coinId.trim().length > 0 ? slice.coinId.trim() : undefined;
-  const depType =
-    typeof slice.depType === "string" && slice.depType.trim().length > 0
-      ? (slice.depType as ReserveSlice["depType"])
-      : undefined;
-
-  return {
-    name,
-    risk,
-    ...(coinId ? { coinId } : {}),
-    ...(depType ? { depType } : {}),
-  };
-}
-
-function readParams(config: LiveReservesConfig): YamatoParams {
-  const params = config.params ?? {};
-  const yamatoAddress = optionalString(params, "yamatoAddress") ?? optionalString(params, "contractAddress");
-  if (!yamatoAddress) {
-    throw new Error("yamato adapter params invalid.yamatoAddress: expected contract address string");
-  }
-
-  return {
-    yamatoAddress,
-    priceFeedAddress: optionalString(params, "priceFeedAddress"),
-    rpcUrl: optionalString(params, "rpcUrl"),
-    fallbackRpcUrl: optionalString(params, "fallbackRpcUrl"),
-    slice: readSlice(params),
-  };
 }
 
 export function decodeYamatoGetStates(raw: string): YamatoStates {
@@ -409,7 +357,7 @@ export async function fetchYamatoReserves(
   ctx?: AdapterContext,
 ): Promise<AdapterResult> {
   const input = requireOnchainInput(config.inputs.primary, ADAPTER_KEY);
-  const params = readParams(config);
+  const params = parseLiveReserveAdapterParams("yamato", config.params);
   const timeoutMs = 12_000;
   const onchain = makeOnchainCallers(input, {
     signal,

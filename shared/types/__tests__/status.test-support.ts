@@ -89,12 +89,7 @@ export function reserveComposition() {
     runBudgetTruncated: true,
     deferredAt: 1_780_000_000,
     nextCursorStablecoinId: "usdc-circle",
-    cursorTailState: "incomplete",
-    cursorTailError: "cursor write failed",
     cursorRecordedAt: 1_780_000_010,
-    cursorTailCompletedAt: null,
-    cursorTailFailedAt: 1_780_000_020,
-    runBudgetTruncationCount: 2,
     historyWriteGaps: [
       {
         stablecoinId: "usdc-circle",

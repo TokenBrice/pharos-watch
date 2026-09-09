@@ -74,7 +74,17 @@ const attestationPdfIndexParamsSchema = z
   .object({
     slices: z.array(ReserveSliceSchema).min(1),
   })
-  .strict();
+  .strict()
+  .superRefine((params, ctx) => {
+    const total = params.slices.reduce((sum, slice) => sum + slice.pct, 0);
+    if (Math.abs(total - 100) > 1.5) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["slices"],
+        message: `configured reserve composition sum to ${total.toFixed(1)}% (expected 100% ± 1.5%)`,
+      });
+    }
+  });
 
 const assuranceHostSchema = z.string().regex(/^[A-Za-z0-9.-]+$/);
 const assuranceParamsShape = {
@@ -416,7 +426,7 @@ const chainlinkPorParamsSchema = z
     porFeedAddress: z.string(),
     assetLabel: z.string(),
     assetRisk: LiveReserveRiskSchema,
-    reserveUnit: z.enum(["USD", "XAU", "XAG", "SHARES"]).optional(),
+    reserveUnit: z.enum(["USD", "XAU", "XAG", "XAU_G", "XAG_G", "SHARES"]).optional(),
     ...OptionalEvmRpcFields,
     ...OptionalOracleFreshnessFields,
     issuerCirculationProbe: chainlinkPorIssuerCirculationProbeSchema.optional(),

@@ -53,7 +53,7 @@ describe("live-reserves-store", () => {
       {
         match: "SELECT MIN(last_attempted_at) AS oldest_ts",
         rows: [],
-        first: { oldest_ts: 950, observed_count: 1 },
+        first: { oldest_ts: 950 },
       },
     ]);
 
@@ -926,12 +926,7 @@ describe("live-reserves-store", () => {
     expect(overview.runBudgetTruncated).toBe(true);
     expect(overview.deferredCoins).toBeGreaterThanOrEqual(12);
     expect(overview.nextCursorStablecoinId).toBe("coin-tail");
-    expect(overview.cursorTailState).toBeNull();
-    expect(overview.cursorTailError).toBeNull();
     expect(overview.cursorRecordedAt).toBe(9_905);
-    expect(overview.cursorTailFailedAt).toBeNull();
-    expect(overview.cursorTailCompletedAt).toBeNull();
-    expect(overview.runBudgetTruncationCount).toBe(1);
   });
 
   it("ignores stale pending pointers when the latest checkpoint is terminal", async () => {
@@ -954,10 +949,6 @@ describe("live-reserves-store", () => {
     expect(overview.runBudgetTruncated).toBe(false);
     expect(overview.nextCursorStablecoinId).toBeNull();
     expect(overview.cursorRecordedAt).toBeNull();
-    expect(overview.runBudgetTruncationCount).toBe(0);
-    const checkpointQuery = db.getHistory().find((entry) => entry.sql.includes("FROM worker_scheduled_checkpoints"));
-    expect(checkpointQuery?.sql).not.toContain("state IN");
-    expect(checkpointQuery?.sql).toContain("ORDER BY slot_started_at DESC, attempt_no DESC");
   });
 
   it("detects authoritative reserve snapshots missing history rows", async () => {

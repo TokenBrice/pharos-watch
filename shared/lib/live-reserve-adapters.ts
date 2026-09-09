@@ -82,7 +82,7 @@ export type LiveReserveAdapterParamsByKey = {
 
 function validateAdapterConfigPolicy(
   adapterKey: LiveReserveAdapterKey,
-  config: Pick<LiveReservesConfig, "semantics" | "version">,
+  config: Pick<LiveReservesConfig, "semantics" | "version" | "scoring">,
   ctx: z.RefinementCtx,
 ): void {
   const policy = LIVE_RESERVE_ADAPTER_DEFINITIONS[adapterKey].configValidation;
@@ -103,16 +103,31 @@ function validateAdapterConfigPolicy(
       message: `${adapterKey} adapter does not support config version ${config.version}`,
     });
   }
+  const definition = LIVE_RESERVE_ADAPTER_DEFINITIONS[adapterKey];
+  const adapterCap = "validation" in definition && "maxSourceAgeSec" in definition.validation
+    ? definition.validation.maxSourceAgeSec
+    : undefined;
+  const coinCap = config.scoring?.maxSourceAgeSec;
+  if (coinCap != null && adapterCap != null && coinCap > adapterCap) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["scoring", "maxSourceAgeSec"],
+      message: `${adapterKey} source-age override may only tighten the adapter cap (${adapterCap}s)`,
+    });
+  }
 }
 
 const liveReserveConfigAdapterKeys = Object.keys(LIVE_RESERVE_ADAPTER_DEFINITIONS) as LiveReserveAdapterKey[];
-const liveReserveConfigVariants = liveReserveConfigAdapterKeys.map((adapterKey) =>
-  baseLiveReserveConfigSchema.extend({
+const liveReserveConfigVariants = liveReserveConfigAdapterKeys.map((adapterKey) => {
+  const paramsSchema = LIVE_RESERVE_ADAPTER_DEFINITIONS[adapterKey].params;
+  return baseLiveReserveConfigSchema.extend({
     adapter: z.literal(adapterKey),
     inputs: createLiveReserveInputsSchema(adapterKey),
-    params: LIVE_RESERVE_ADAPTER_DEFINITIONS[adapterKey].params.optional(),
-  }).superRefine((config, ctx) => validateAdapterConfigPolicy(adapterKey, config, ctx)),
-) as unknown as readonly [z.ZodTypeAny, ...z.ZodTypeAny[]];
+    // A params block is only optional when the adapter's own schema accepts
+    // `{}`; otherwise omitting it must fail config validation, not first in prod.
+    params: paramsSchema.safeParse({}).success ? paramsSchema.optional() : paramsSchema,
+  }).superRefine((config, ctx) => validateAdapterConfigPolicy(adapterKey, config, ctx));
+}) as unknown as readonly [z.ZodTypeAny, ...z.ZodTypeAny[]];
 
 export const LiveReservesConfigSchema: z.ZodType<LiveReservesConfig> = z.union(
   liveReserveConfigVariants as unknown as [z.ZodType<LiveReservesConfig>, ...z.ZodType<LiveReservesConfig>[]],

@@ -25,7 +25,7 @@ import {
   requireJsonInputFromConfig,
   reserveDegradedWarning,
   SOURCE_TIMESTAMP_SPREAD_DEGRADE_SEC,
-  summarizeSourceTimestamps,
+  summarizeSourceTimestampsRequiringCoverage,
   unverifiedFreshnessMetadata,
   verifiedFreshnessMetadata,
 } from "./helpers";
@@ -132,13 +132,23 @@ export function adaptEthenaCollateral(
   );
 
   const assetCount = new Set(payload.collateral.map((row) => row.asset)).size;
-  const timestampSummary = summarizeSourceTimestamps(
-    payload.collateral
-      .filter((row) => Number.isFinite(row.usdAmount) && row.usdAmount > 0)
-      .map((row) => row.timestamp),
+  // Freshness must cover every material row: a payload that omits timestamps
+  // for some rows must not present the remaining rows' clock as the freshness
+  // of the whole composition (IA11). Zero rows need no clock and are excluded.
+  const materialRows = payload.collateral.filter(
+    (row) => Number.isFinite(row.usdAmount) && row.usdAmount > 0,
+  );
+  const timestampSummary = summarizeSourceTimestampsRequiringCoverage(
+    materialRows.map((row) => row.timestamp),
   );
   const lastUpdatedAt = timestampSummary?.latestSourceTimestamp ?? 0;
   const warnings: LiveReserveWarning[] = [];
+  if (timestampSummary && timestampSummary.untimestampedCount > 0) {
+    warnings.push(reserveDegradedWarning(
+      "source-timestamp-coverage",
+      `Ethena collateral payload omitted source timestamps for ${timestampSummary.untimestampedCount} of ${materialRows.length} material rows`,
+    ));
+  }
   if (
     timestampSummary
     && timestampSummary.sourceTimestampSpreadSec > SOURCE_TIMESTAMP_SPREAD_DEGRADE_SEC
@@ -157,7 +167,7 @@ export function adaptEthenaCollateral(
       computedTotalBackingAssetsInUsd,
       totalBackingAssetsInUsd: payload.totalBackingAssetsInUsd,
       lastUpdatedAt,
-      ...(timestampSummary
+      ...(timestampSummary && timestampSummary.untimestampedCount === 0
         ? {
             ...verifiedFreshnessMetadata(timestampSummary.sourceTimestamp),
             latestRowUpdatedAt: timestampSummary.latestSourceTimestamp,
@@ -166,7 +176,9 @@ export function adaptEthenaCollateral(
           }
         : unverifiedFreshnessMetadata(
             "issuer-api",
-            "Ethena collateral rows did not expose a trustworthy source timestamp",
+            timestampSummary
+              ? `Ethena collateral payload omitted source timestamps for ${timestampSummary.untimestampedCount} of ${materialRows.length} material rows`
+              : "Ethena collateral rows did not expose a trustworthy source timestamp",
           )),
       unknownExposurePct:
         computedTotalBackingAssetsInUsd > 0

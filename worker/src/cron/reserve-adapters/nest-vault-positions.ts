@@ -299,8 +299,15 @@ export async function fetchNestVaultPositionsReserves(
   if (reconcileNopal && pendingWithdrawalUsd > 0) {
     throw new Error("nest-vault-positions cannot reconcile positive nOPAL pending withdrawals");
   }
+  const settledCoverageUsd = settledPositionUsd + pendingDepositUsd;
   const navReconciliationResidualUsd =
-    reconcileNopal ? navUsd! - settledPositionUsd - pendingDepositUsd : null;
+    navUsd != null && navUsd > 0 && settledCoverageUsd < navUsd
+      ? navUsd - settledCoverageUsd
+      : null;
+  const unknownExposurePct =
+    navReconciliationResidualUsd != null && navUsd != null && navUsd > 0
+      ? (navReconciliationResidualUsd / navUsd) * 100
+      : null;
   const values = mergeSliceValues([
     ...settledValues,
     ...(pendingDepositUsd > 0
@@ -318,12 +325,10 @@ export async function fetchNestVaultPositionsReserves(
         }]
       : []),
   ]);
-  const totalReserveUsd = reconcileNopal ? navUsd! : settledPositionUsd;
+  const totalReserveUsd = navUsd != null && navUsd > 0 ? navUsd : settledPositionUsd;
   const navCoverageRatio = navUsd && navUsd > 0 ? settledPositionUsd / navUsd : null;
   const reconciledNavCoverageRatio =
-    reconcileNopal && navUsd && navUsd > 0
-      ? (settledPositionUsd + pendingDepositUsd) / navUsd
-      : navCoverageRatio;
+    navUsd && navUsd > 0 ? settledCoverageUsd / navUsd : navCoverageRatio;
   const warnings = buildCoverageShortfallWarnings({
     code: "nest-nav-coverage-gap",
     message: (pct) => reconcileNopal
@@ -348,14 +353,10 @@ export async function fetchNestVaultPositionsReserves(
           : {}),
       },
       totalReserveUsd,
-      ...(reconcileNopal
-        ? {
-            settledPositionUsd,
-            pendingDepositUsd,
-            pendingWithdrawalUsd,
-            navReconciliationResidualUsd,
-          }
-        : {}),
+      settledPositionUsd,
+      ...(reconcileNopal ? { pendingDepositUsd, pendingWithdrawalUsd } : {}),
+      ...(navReconciliationResidualUsd != null ? { navReconciliationResidualUsd } : {}),
+      ...(unknownExposurePct != null ? { unknownExposurePct } : {}),
       ...(navUsd != null ? { navUsd } : {}),
       ...(priceUsd != null ? { priceUsd } : {}),
       ...(totalSupply != null ? { totalSupply } : {}),

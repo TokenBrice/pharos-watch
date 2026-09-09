@@ -180,7 +180,9 @@ export interface IndependentAssuranceReconciliationOptions {
 export interface IndependentAssuranceReconciliation {
   computedAssetTotal: string;
   liabilityTotal: string;
-  collateralizationRatio: number;
+  collateralizationRatio: number | null;
+  reserveShortfall: string;
+  nonPositiveLiabilityCodes: string[];
   reportedAssetDifference: string;
   reportedAssetDifferencePpm: number;
   reportedLiabilityDifference: string;
@@ -198,11 +200,10 @@ export function reconcileIndependentAssuranceManifest(
     }
     return row.amount;
   });
+  const nonPositiveLiabilityCodes: string[] = [];
   const liabilityAmounts = manifest.liabilities.map((row) => {
     const amount = parseDecimal(row.amount, `liability ${row.code}`);
-    if (amount.units <= 0n) {
-      throw new Error(`independent-assurance: liability ${row.code} must be positive`);
-    }
+    if (amount.units <= 0n) nonPositiveLiabilityCodes.push(row.code);
     return row.amount;
   });
   const computedAssetTotal = decimalSum(assetAmounts, "asset total");
@@ -214,10 +215,13 @@ export function reconcileIndependentAssuranceManifest(
     );
   }
   const reportedLiabilityDifference = decimalDifference(manifest.reportedLiabilityTotal, liabilityTotal);
-  const reportedLiabilityDifferencePpm =
-    (decimalToNumber(reportedLiabilityDifference, "reported liability difference") /
-      decimalToNumber(manifest.reportedLiabilityTotal, "reported liability total")) *
-    1_000_000;
+  const reportedLiabilityNumber = Number(manifest.reportedLiabilityTotal);
+  if (!Number.isFinite(reportedLiabilityNumber)) {
+    throw new Error("independent-assurance: reported liability total is not finite");
+  }
+  const reportedLiabilityDifferencePpm = reportedLiabilityDifference === "0" ? 0
+    : (decimalToNumber(reportedLiabilityDifference, "reported liability difference") /
+      Math.abs(reportedLiabilityNumber)) * 1_000_000;
   const liabilityTolerance = options?.reportedLiabilityTotalTolerance;
   if (!liabilityTolerance && compareDecimal(reportedLiabilityDifference, "0") !== 0) {
     throw new Error(
@@ -233,11 +237,9 @@ export function reconcileIndependentAssuranceManifest(
       );
     }
   }
-  if (compareDecimal(computedAssetTotal, liabilityTotal) < 0) {
-    throw new Error(
-      `independent-assurance: reserve assets ${computedAssetTotal} are below liabilities ${liabilityTotal}`,
-    );
-  }
+  const reserveShortfall = compareDecimal(computedAssetTotal, liabilityTotal) < 0
+    ? decimalDifference(liabilityTotal, computedAssetTotal)
+    : "0";
 
   const reportedAssetDifference = decimalDifference(manifest.reportedAssetTotal, computedAssetTotal);
   const reportedAssetDifferencePpm =
@@ -262,9 +264,12 @@ export function reconcileIndependentAssuranceManifest(
   return {
     computedAssetTotal,
     liabilityTotal,
-    collateralizationRatio:
-      decimalToNumber(computedAssetTotal, "computed asset total") /
-      decimalToNumber(liabilityTotal, "liability total"),
+    collateralizationRatio: compareDecimal(liabilityTotal, "0") > 0
+      ? decimalToNumber(computedAssetTotal, "computed asset total") /
+        decimalToNumber(liabilityTotal, "liability total")
+      : null,
+    reserveShortfall,
+    nonPositiveLiabilityCodes,
     reportedAssetDifference,
     reportedAssetDifferencePpm,
     reportedLiabilityDifference,

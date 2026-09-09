@@ -44,7 +44,21 @@ describe("adaptZephyrScanner", () => {
     });
 
     expect(result.slices).toEqual([
-      { name: "ZEPH protocol reserve", pct: 100, risk: "high" },
+      {
+        name: "ZEPH protocol reserve",
+        pct: 100,
+        risk: "high",
+        assetClass: "cryptoasset",
+        issuerOrObligor: "Zephyr Protocol on-chain ZEPH reserve",
+        riskFactors: [
+          "smart-contract",
+          "market",
+          "liquidity",
+          "concentration",
+          "custody",
+        ],
+        liquidityHorizon: "unknown",
+      },
     ]);
     expect(result.metadata).toMatchObject({
       freshnessMode: "verified",
@@ -60,32 +74,6 @@ describe("adaptZephyrScanner", () => {
       hardForkVersion: 11,
     });
     expect(result.warnings).toBeUndefined();
-  });
-
-  it("supports livestats payloads but marks freshness unverified", () => {
-    const result = adaptZephyrScanner({
-      zsd_circ: 385_038.0963333748,
-      zsd_price: 1,
-      zeph_price: 0.3185,
-      reserve_ratio: 3.175179,
-      reserve_ratio_ma: 3.216131,
-      zeph_in_reserve: 3_838_609.286861881,
-      zeph_in_reserve_value: 1_222_597.057865509,
-      zsd_in_yield_reserve: 315_748.4432611362,
-      zsd_in_yield_reserve_percent: 0.8200446819884389,
-    });
-
-    expect(result.slices).toEqual([
-      { name: "ZEPH protocol reserve", pct: 100, risk: "high" },
-    ]);
-    expect(result.metadata).toMatchObject({
-      freshnessMode: "unverified",
-      totalReserveUsd: 1_222_597.057865509,
-      supplyUsd: 385_038.0963333748,
-      collateralizationRatio: 3.175179,
-      reserveAssetAmount: 3_838_609.286861881,
-      reserveAssetPriceUsd: 0.3185,
-    });
   });
 
   it("degrades undercollateralized snapshots", () => {
@@ -141,6 +129,7 @@ describe("adaptZephyrScanner", () => {
             on_chain: {
               zsd_yield_reserve_atoms: "355777179070495244",
               zys_circ_atoms: "183232761929264165",
+              reserve_ratio: 4.38861,
             },
             pricing_record: {
               timestamp: 1784504312,
@@ -172,7 +161,7 @@ describe("adaptZephyrScanner", () => {
       liabilityAmountZsd: 355_777.04013880575,
       zysCirculating: 183_232.76192926418,
       sharePriceZsd: 1.94166718,
-      collateralizationRatio: expect.closeTo(1, 6),
+      collateralizationRatio: 4.38861,
       details: {
         reserveAssetId: "zsd-zephyr-protocol",
         zysCirculating: 183_232.76192926418,

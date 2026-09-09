@@ -168,6 +168,74 @@ describe("adaptSpikoShareClassTotals", () => {
     expect(() => adaptSpikoShareClassTotals(malformed, "eurSAFO", { name: "Test", risk: "medium" }))
       .toThrow("unreadable netAssetValue.updatedAt");
   });
+
+  it("rejects a mismatched fund/NAV currency instead of publishing a meaningless ratio", () => {
+    // The ON4 reproduction: EUR assets divided by a USD NAV previously yielded
+    // a ratio of 0.5 with no warning and no USD totals.
+    const mismatched: SpikoShareClassTotals = {
+      ...EURSAFO_TOTALS,
+      netAssetValue: {
+        ...EURSAFO_TOTALS.netAssetValue,
+        amount: { value: "1.007845", currency: "USD" },
+      },
+    };
+
+    expect(() => adaptSpikoShareClassTotals(mismatched, "eurSAFO", { name: "Test", risk: "medium" }))
+      .toThrow("mismatched or missing fund/NAV currency (assets EUR vs NAV USD)");
+  });
+
+  it("rejects a missing fund or NAV currency", () => {
+    const missingNavCurrency = {
+      ...EURSAFO_TOTALS,
+      netAssetValue: {
+        ...EURSAFO_TOTALS.netAssetValue,
+        amount: { value: "1.007845" },
+      },
+    } as unknown as SpikoShareClassTotals;
+
+    expect(() => adaptSpikoShareClassTotals(missingNavCurrency, "eurSAFO", { name: "Test", risk: "medium" }))
+      .toThrow("mismatched or missing fund/NAV currency");
+  });
+
+  it("rejects a non-finite shares × NAV product", () => {
+    const overflow = {
+      totalShares: "1e308",
+      totalAssets: { value: "1e308", currency: "USD" },
+      netAssetValue: {
+        amount: { value: "1e308", currency: "USD" },
+        updatedAt: "2026-07-09T12:00:00.000Z",
+      },
+    } as unknown as SpikoShareClassTotals;
+
+    expect(() => adaptSpikoShareClassTotals(overflow, "SAFO", { name: "Test", risk: "medium" }))
+      .toThrow("non-finite shares × NAV product");
+  });
+
+  it("emits a reserve-undercollateralized degraded warning for a 50% ratio", () => {
+    const halfCollateral: SpikoShareClassTotals = {
+      totalShares: "1000000",
+      totalAssets: { value: "500000", currency: "USD" },
+      netAssetValue: {
+        amount: { value: "1.0", currency: "USD" },
+        updatedAt: "2026-07-09T12:00:00.000Z",
+      },
+    } as unknown as SpikoShareClassTotals;
+
+    const result = adaptSpikoShareClassTotals(halfCollateral, "SAFO", {
+      name: "Fully collateralized overnight total-return swap exposure",
+      risk: "medium",
+    });
+
+    expect(result.metadata!.collateralizationRatio).toBeCloseTo(0.5, 9);
+    expect(result.warnings).toEqual([
+      {
+        code: "reserve-undercollateralized",
+        message: "Spiko SAFO fund assets cover 50.00% of issued share value",
+        severity: "warning",
+        effect: "degraded",
+      },
+    ]);
+  });
 });
 
 describe("fetchSpikoApiReserves", () => {

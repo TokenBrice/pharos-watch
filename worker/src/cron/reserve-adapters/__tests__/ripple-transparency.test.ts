@@ -33,7 +33,13 @@ describe("adaptRippleTransparency", () => {
       freshnessMode: "verified",
       sourceTimestamp: Date.UTC(2026, 3, 30) / 1000,
     });
-    expect(result.warnings).toBeUndefined();
+    expect(result.warnings).toEqual([
+      expect.objectContaining({
+        code: "attested-fallback-used",
+        effect: "degraded",
+        message: expect.stringContaining("no asset-class breakdown"),
+      }),
+    ]);
   });
 
   it("itemizes slices per the attested May 2026 composition when the payload lacks a breakdown", () => {
@@ -79,15 +85,23 @@ describe("adaptRippleTransparency", () => {
       ["Government money-market funds", 25.2],
       ["Cash and deposit accounts", 14.7],
     ]);
+    expect(result.warnings).toBeUndefined();
   });
 
-  it("falls back to the attested split when the payload breakdown does not reconcile", () => {
+  it("falls back to the attested split with a degraded warning when the payload breakdown does not reconcile", () => {
     const result = adaptRippleTransparency(RIPPLE_HTML_WITH_BREAKDOWN.replace("60.10%", "30.10%"));
 
     expect(result.slices.map((slice) => slice.pct)).toEqual([65.41, 19.44, 15.15]);
+    expect(result.warnings).toEqual([
+      expect.objectContaining({
+        code: "attested-fallback-used",
+        effect: "degraded",
+        message: expect.stringContaining("malformed asset-class breakdown"),
+      }),
+    ]);
   });
 
-  it("falls back to the attested split when percentages are malformed numeric tokens", () => {
+  it("falls back to the attested split with a degraded warning when percentages are malformed numeric tokens", () => {
     const result = adaptRippleTransparency(
       RIPPLE_HTML_WITH_BREAKDOWN.replace("60.10%", "1060.10%")
         .replace("25.20%", "1025.20%")
@@ -95,12 +109,23 @@ describe("adaptRippleTransparency", () => {
     );
 
     expect(result.slices.map((slice) => slice.pct)).toEqual([65.41, 19.44, 15.15]);
+    expect(result.warnings).toEqual([
+      expect.objectContaining({
+        code: "attested-fallback-used",
+        effect: "degraded",
+        message: expect.stringContaining("malformed asset-class breakdown"),
+      }),
+    ]);
   });
 
   it("keeps the undercollateralization breaker on the aggregate ratio", () => {
     const result = adaptRippleTransparency(RIPPLE_HTML.replace("$1,546.6M", "$900.0M"));
 
     expect(result.warnings).toEqual([
+      expect.objectContaining({
+        code: "attested-fallback-used",
+        effect: "degraded",
+      }),
       expect.objectContaining({
         code: "reserve-undercollateralized",
         effect: "degraded",

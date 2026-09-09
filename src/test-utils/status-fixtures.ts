@@ -675,7 +675,6 @@ export function makeActionBlockedStatusResponse(base = makeActionRecommendedStat
     reserveComposition: {
       ...base.reserveComposition,
       writeTimeoutUncertain: 1,
-      cursorTailError: "Fixture deferred cursor tail failed.",
       status: "degraded",
     },
   });

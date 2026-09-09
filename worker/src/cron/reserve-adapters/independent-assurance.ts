@@ -12,7 +12,7 @@ import type { LiveReservesConfig } from "@shared/types/live-reserves";
 import { normalizeSlices, readHtmlAttribute, stripTags } from "./helpers";
 import { fetchBinaryResponseWithRetry, fetchTextResponseWithRetry } from "./request";
 import type { AdapterContext, AdapterFn, AdapterResult } from "./types";
-import { reserveInfoWarning } from "./warnings";
+import { reserveDegradedWarning, reserveInfoWarning } from "./warnings";
 import { formatValidIsoDate, lastDayOfMonth, monthNumberFromLabel } from "./report-date";
 
 const MAX_PDF_BYTES = 4 * 1024 * 1024;
@@ -425,6 +425,8 @@ export async function fetchIndependentAssuranceReserves(
       computedLiabilityTotal: reconciliation.liabilityTotal,
       reportedAssetDifference: reconciliation.reportedAssetDifference,
       reportedLiabilityDifference: reconciliation.reportedLiabilityDifference,
+      reserveShortfall: reconciliation.reserveShortfall,
+      nonPositiveLiabilityCodes: reconciliation.nonPositiveLiabilityCodes,
       extraction: manifest.extraction,
       verifiedResponseUrl: artifact.responseUrl,
       verifiedByteLength: artifact.byteLength,
@@ -440,22 +442,28 @@ export async function fetchIndependentAssuranceReserves(
       : null,
   ].filter((value): value is string => value !== null);
 
+  const warnings = [];
+  if (roundingDifferences.length > 0) {
+    warnings.push(reserveInfoWarning(
+      "report-rounding-difference",
+      `Reported totals differ from recomputed rows: ${roundingDifferences.join("; ")}`,
+    ));
+  }
+  if (reconciliation.reserveShortfall !== "0" || reconciliation.nonPositiveLiabilityCodes.length > 0) {
+    warnings.push(reserveDegradedWarning(
+      "reserve-undercollateralized",
+      `Report reserve shortfall: ${reconciliation.reserveShortfall} ${manifest.unit}; non-positive liability rows: ${reconciliation.nonPositiveLiabilityCodes.join(", ") || "none"}`,
+    ));
+  }
   return {
     slices,
-    ...(roundingDifferences.length > 0
-      ? {
-          warnings: [
-            reserveInfoWarning(
-              "report-rounding-difference",
-              `Reported totals differ from recomputed rows: ${roundingDifferences.join("; ")}`,
-            ),
-          ],
-        }
-      : {}),
+    ...(warnings.length > 0 ? { warnings } : {}),
     metadata: {
       sourceTimestamp: artifact.sourceTimestamp,
       freshnessMode: "verified",
-      collateralizationRatio: reconciliation.collateralizationRatio,
+      ...(reconciliation.collateralizationRatio !== null
+        ? { collateralizationRatio: reconciliation.collateralizationRatio }
+        : {}),
       details,
     },
   };

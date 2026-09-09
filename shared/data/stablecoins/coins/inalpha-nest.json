@@ -48,6 +48,11 @@
     "version": 1,
     "semantics": "collateral-mix",
     "breakerScope": "inalpha-nest",
+    "suspended": {
+      "reason": "dust vault — NAV $1.889 vs positions $0.410, accountant last priced ~197d",
+      "since": "2026-09-09",
+      "reviewBy": "2027-03-09"
+    },
     "display": {
       "url": "https://www.nest.credit/",
       "label": "Nest Credit API"

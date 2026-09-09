@@ -24,12 +24,13 @@ import {
   fetchOnchainRawCall,
   fetchOnchainUint256,
   fetchTextWithRetry,
-  freshnessMetadataFromTimestamp,
   parseTimestampLikeToUnixSeconds,
   reserveDegradedWarning,
   reserveInfoWarning,
+  sameRunRenderClockFreshnessMetadata,
   slicesFromPercentages,
   slicesFromValues,
+  unverifiedFreshnessMetadata,
 } from "./helpers";
 import { buildBrowserHeaders, NEUTRAL_ADAPTER_HEADERS } from "./request";
 import { requireJsonInput } from "./input-guards";
@@ -356,6 +357,137 @@ export function extractMentoDashboardTimestamp(html: string): number | null {
   return parseTimestampLikeToUnixSeconds(dataUpdatedAt);
 }
 
+const MENTO_DASHBOARD_CDP_BACKINGS_KEY = "cdp_backings";
+const MENTO_DASHBOARD_CDP_BACKINGS_MAX_CHARS = 64_000;
+
+export interface MentoCdpBackingTotals {
+  collateralUsd: number;
+  debtUsd: number;
+}
+
+/** Reverses the single level of quote/backslash escaping used to embed JSON in the Flight payload. */
+function unescapeMentoFlightJson(text: string): string {
+  let result = "";
+  for (let index = 0; index < text.length; index++) {
+    const char = text[index];
+    if (char !== "\\") {
+      result += char;
+      continue;
+    }
+    const next = text[index + 1];
+    if (next === undefined) {
+      result += char;
+      continue;
+    }
+    result += next === '"' || next === "\\" ? next : char + next;
+    index += 1;
+  }
+  return result;
+}
+
+/**
+ * Parses the dashboard's escaped `cdp_backings` array from the Next.js Flight
+ * payload into per-stablecoin collateral/debt totals. Returns null when the
+ * dashboard payload does not carry the array or it cannot be decoded.
+ */
+export function parseMentoDashboardCdpBackings(html: string): Map<string, MentoCdpBackingTotals> | null {
+  const keyIndex = findDashboardPayloadKeyIndex(html, MENTO_DASHBOARD_CDP_BACKINGS_KEY);
+  if (keyIndex == null) return null;
+
+  const arrayStart = html.indexOf("[", keyIndex);
+  if (arrayStart < 0 || arrayStart - keyIndex > MENTO_DASHBOARD_CDP_BACKINGS_MAX_CHARS) return null;
+  const window = unescapeMentoFlightJson(
+    html.slice(arrayStart, Math.min(html.length, arrayStart + MENTO_DASHBOARD_CDP_BACKINGS_MAX_CHARS)),
+  );
+
+  // Depth-scan the decoded JSON text so brackets inside string values are not
+  // mistaken for structure.
+  let depth = 0;
+  let inString = false;
+  let arrayEnd = -1;
+  for (let index = 0; index < window.length; index++) {
+    const char = window[index];
+    if (char === "\\") {
+      index += 1;
+      continue;
+    }
+    if (char === '"') {
+      inString = !inString;
+      continue;
+    }
+    if (inString) continue;
+    if (char === "[") {
+      depth += 1;
+    } else if (char === "]") {
+      depth -= 1;
+      if (depth === 0) {
+        arrayEnd = index + 1;
+        break;
+      }
+    }
+  }
+  if (arrayEnd < 0) return null;
+
+  let decoded: unknown;
+  try {
+    decoded = JSON.parse(window.slice(0, arrayEnd));
+  } catch {
+    return null;
+  }
+  if (!Array.isArray(decoded)) return null;
+
+  const totals = new Map<string, MentoCdpBackingTotals>();
+  for (const entry of decoded) {
+    if (!entry || typeof entry !== "object") continue;
+    const record = entry as Record<string, unknown>;
+    if (typeof record.stablecoin !== "string") continue;
+    const collateralUsd = parseFiniteUsd(record.collateral_usd);
+    const debtUsd = parseFiniteUsd(record.debt_usd);
+    if (collateralUsd == null || debtUsd == null) continue;
+    const existing = totals.get(record.stablecoin);
+    if (existing) {
+      existing.collateralUsd += collateralUsd;
+      existing.debtUsd += debtUsd;
+    } else {
+      totals.set(record.stablecoin, { collateralUsd, debtUsd });
+    }
+  }
+  return totals.size > 0 ? totals : null;
+}
+
+const MENTO_DASHBOARD_COHERENCE_MAX_DIVERGENCE = 0.01;
+
+function mentoCdpDivergence(api: number, dashboard: number): number {
+  const denominator = Math.max(Math.abs(api), Math.abs(dashboard));
+  return denominator === 0 ? 0 : Math.abs(api - dashboard) / denominator;
+}
+
+/**
+ * Dashboard-vs-API coherence gate for CDP coins: the dashboard's
+ * per-stablecoin `cdp_backings` totals and the analytics API's summed
+ * `cdp_troves` totals must agree within 1%. Returns an error naming both
+ * values when they diverge — the two sources then disagree materially and
+ * neither can be trusted — or null when they agree.
+ */
+export function mentoCdpCoherenceError(
+  cdpStablecoin: string,
+  dashboard: MentoCdpBackingTotals,
+  apiCollateralUsd: number,
+  apiDebtUsd: number,
+): Error | null {
+  const collateralDivergence = mentoCdpDivergence(apiCollateralUsd, dashboard.collateralUsd);
+  const debtDivergence = mentoCdpDivergence(apiDebtUsd, dashboard.debtUsd);
+  if (
+    collateralDivergence <= MENTO_DASHBOARD_COHERENCE_MAX_DIVERGENCE
+    && debtDivergence <= MENTO_DASHBOARD_COHERENCE_MAX_DIVERGENCE
+  ) {
+    return null;
+  }
+  return new Error(
+    `mento dashboard-vs-API coherence failed for ${cdpStablecoin}: dashboard collateral/debt $${dashboard.collateralUsd.toFixed(2)}/$${dashboard.debtUsd.toFixed(2)} vs analytics API $${apiCollateralUsd.toFixed(2)}/$${apiDebtUsd.toFixed(2)}`,
+  );
+}
+
 export function adaptMentoReserveComposition(payload: unknown, sourceTimestamp: number | null = null): AdapterResult {
   const entries = parseMentoReserveComposition(payload);
   const warnings: LiveReserveWarning[] = [];
@@ -429,11 +561,12 @@ export function adaptMentoReserveComposition(payload: unknown, sourceTimestamp: 
     metadata: {
       entryCount: entries.length,
       totalPct,
-      ...freshnessMetadataFromTimestamp(
-        sourceTimestamp,
-        "mento-analytics-api",
-        "Mento analytics API exposes reserve composition but not a trustworthy payload update timestamp",
-      ),
+      ...(sourceTimestamp != null
+        ? sameRunRenderClockFreshnessMetadata(sourceTimestamp)
+        : unverifiedFreshnessMetadata(
+            "mento-analytics-api",
+            "Mento analytics API exposes reserve composition but not a trustworthy payload update timestamp",
+          )),
       stableReservePct: stablePct,
     },
   };
@@ -500,35 +633,44 @@ export function adaptMentoCdpComposition(
       totalCollateralUsd,
       totalDebtUsd,
       ...(collateralizationRatio != null ? { collateralizationRatio } : {}),
-      ...freshnessMetadataFromTimestamp(
-        sourceTimestamp,
-        "mento-analytics-api",
-        "Mento analytics API exposes CDP collateral and debt but not a trustworthy payload update timestamp",
-      ),
+      ...(sourceTimestamp != null
+        ? sameRunRenderClockFreshnessMetadata(sourceTimestamp)
+        : unverifiedFreshnessMetadata(
+            "mento-analytics-api",
+            "Mento analytics API exposes CDP collateral and debt but not a trustworthy payload update timestamp",
+          )),
     },
   };
 }
 
-async function fetchMentoDashboardTimestamp(
+interface MentoDashboardSnapshot {
+  sourceTimestamp: number | null;
+  cdpBackings: Map<string, MentoCdpBackingTotals> | null;
+}
+
+async function fetchMentoDashboardSnapshot(
   config: LiveReservesConfig,
   signal: AbortSignal,
   warnings: LiveReserveWarning[],
   ctx?: AdapterContext,
-): Promise<number | null> {
+): Promise<MentoDashboardSnapshot> {
   const url = config.display?.url;
-  if (!url) return null;
+  if (!url) return { sourceTimestamp: null, cdpBackings: null };
   try {
     const html = await fetchMentoWithBrowserFallback(
       signal,
       (headers) => fetchTextWithRetry(url, signal, 12_000, ctx, { headers }),
     );
-    return extractMentoDashboardTimestamp(html);
+    return {
+      sourceTimestamp: extractMentoDashboardTimestamp(html),
+      cdpBackings: parseMentoDashboardCdpBackings(html),
+    };
   } catch (error) {
     warnings.push(reserveInfoWarning(
       "mento-dashboard-timestamp-failed",
       `Mento dashboard timestamp fetch failed (${url}): ${toErrorMessage(error)}`,
     ));
-    return null;
+    return { sourceTimestamp: null, cdpBackings: null };
   }
 }
 
@@ -881,17 +1023,36 @@ export async function fetchMentoReserves(
 ): Promise<AdapterResult> {
   const input = requireJsonInput(config.inputs.primary, "mento");
   const dashboardWarnings: LiveReserveWarning[] = [];
-  const [payload, sourceTimestamp] = await Promise.all([
+  const [payload, dashboard] = await Promise.all([
     fetchMentoWithBrowserFallback(
       signal,
       (headers) => fetchJsonWithRetry<MentoReserveApiResponse>(input.url, signal, 12_000, ctx, { headers }),
     ),
-    fetchMentoDashboardTimestamp(config, signal, dashboardWarnings, ctx),
+    fetchMentoDashboardSnapshot(config, signal, dashboardWarnings, ctx),
   ]);
   const params = parseLiveReserveAdapterParams("mento", config.params);
   const result = params.cdpStablecoin
-    ? adaptMentoCdpComposition(payload, params.cdpStablecoin, sourceTimestamp)
-    : adaptMentoReserveComposition(payload, sourceTimestamp);
+    ? adaptMentoCdpComposition(payload, params.cdpStablecoin, dashboard.sourceTimestamp)
+    : adaptMentoReserveComposition(payload, dashboard.sourceTimestamp);
+
+  // Dashboard-vs-API coherence gate: when the dashboard carries per-stablecoin
+  // CDP totals for this coin and the analytics API trove sums materially
+  // disagree, neither source can be trusted and the attempt fails closed.
+  if (params.cdpStablecoin) {
+    const dashboardTotals = dashboard.cdpBackings?.get(params.cdpStablecoin);
+    const apiCollateralUsd = result.metadata?.totalCollateralUsd;
+    const apiDebtUsd = result.metadata?.totalDebtUsd;
+    if (dashboardTotals && typeof apiCollateralUsd === "number" && typeof apiDebtUsd === "number") {
+      const coherenceError = mentoCdpCoherenceError(
+        params.cdpStablecoin,
+        dashboardTotals,
+        apiCollateralUsd,
+        apiDebtUsd,
+      );
+      if (coherenceError) throw coherenceError;
+    }
+  }
+
   const warnings = [...(result.warnings ?? []), ...dashboardWarnings];
 
   if (!params.redemption) {

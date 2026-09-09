@@ -209,7 +209,14 @@ These were operated against production D1 outside the normal migration path. His
 
 These are not active migration rows. They record stale tables with no current runtime readers or writers where the cleanup action is a dedicated destructive D1 rollout, not a standard deploy migration. `npm run check:migrations` enforces `rollout-safety: backward-compatible` for active migrations and rejects table drops in the normal deploy path.
 
-The queue is currently empty. The 2026-08-26 destructive window cleared the previously queued `api_key_requests.intended_endpoints_json` column and the production-only orphans from the 2026-08-26 parity capture (`agents/be4-baseline-parity-prod-schema-2026-08-26.txt`); the load-bearing repair backlog index from that capture was backfilled as migration `0234`. `d1_migrations` is wrangler-owned bookkeeping and is expected to exist only in production.
+The 2026-08-26 destructive window cleared the previously queued `api_key_requests.intended_endpoints_json` column and the production-only orphans from the 2026-08-26 parity capture (`agents/be4-baseline-parity-prod-schema-2026-08-26.txt`); the load-bearing repair backlog index from that capture was backfilled as migration `0234`. `d1_migrations` is wrangler-owned bookkeeping and is expected to exist only in production.
+
+Queued 2026-09-09 (`findings/infra-store-api.md` IS6; fresh source search found no runtime reader for any of the four outside the baseline DDL — every predicate on the affected tables is `stablecoin_id`-qualified or `attempt_id = ?`):
+
+- `idx_reserve_composition_history_coin_attempt` — fully shadowed by the partial-unique twin `idx_reserve_composition_history_coin_attempt_unique` on the same columns; every predicate is `attempt_id = ?`, which never matches NULL.
+- `idx_reserve_sync_attempt_history_coin_attempt` — fully shadowed by `idx_reserve_sync_attempt_history_coin_attempt_unique` on the same columns; same reasoning.
+- `idx_reserve_sync_state_last_success_attempt` — no unqualified consumer; every `reserve_sync_state` predicate is `stablecoin_id`-qualified (primary key) or per-coin correlated.
+- `idx_reserve_sync_state_pending_attempt` — no unqualified consumer; same reasoning.
 
 ## Append-only Retention Policy
 

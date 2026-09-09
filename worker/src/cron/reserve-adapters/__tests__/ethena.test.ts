@@ -91,6 +91,33 @@ describe("adaptEthenaCollateral", () => {
     expect(result.warnings?.some((warning) => warning.code === "source-timestamp-spread")).toBe(true);
   });
 
+  it("withholds verified freshness when material rows lack timestamps", () => {
+    const payload: EthenaCollateralResponse = {
+      totalBackingAssetsInUsd: 100,
+      collateral: [
+        // 99 material rows with no timestamp, one with a valid one: the 1%
+        // must not stand in for the whole composition's freshness.
+        { asset: "Liquid Cash", exchange: "Binance", timestamp: 1_000, usdAmount: 1 },
+        { asset: "BTC", exchange: "Binance", timestamp: Number.NaN, usdAmount: 99 },
+        // Zero rows need no clock and must not count against coverage.
+        { asset: "ETH", exchange: "Binance", timestamp: Number.NaN, usdAmount: 0 },
+      ],
+    };
+
+    const result = adaptEthenaCollateral(payload);
+
+    expect(result.metadata).toMatchObject({
+      freshnessMode: "unverified",
+      details: {
+        freshnessSource: "issuer-api",
+        freshnessReason: expect.stringContaining("omitted source timestamps for 1 of 2 material rows"),
+      },
+    });
+    expect(result.warnings).toEqual(expect.arrayContaining([
+      expect.objectContaining({ code: "source-timestamp-coverage", effect: "degraded" }),
+    ]));
+  });
+
   it("does not treat the mixed Liquid Cash bucket as redemption capacity", () => {
     const payload: EthenaCollateralResponse = {
       totalBackingAssetsInUsd: 100,
