@@ -93,16 +93,10 @@ function mockYearnV3Rpc(isShutdownRaw?: bigint | number) {
           return jsonResponse({ result: strategyParamsResult(35_000_000n) });
         }
       }
-      if (call.data === `0xd905777e${addressWord(vault)}` && to === strategyA) {
+      if (call.data === `0xce96cb77${addressWord(vault)}` && to === strategyA) {
         return jsonResponse({ result: uint256Result(60_000_000n) });
       }
-      if (call.data === `0xd905777e${addressWord(vault)}` && to === strategyB) {
-        return jsonResponse({ result: uint256Result(20_000_000n) });
-      }
-      if (call.data === `0x07a2d13a${uint256Result(60_000_000n).slice(2)}` && to === strategyA) {
-        return jsonResponse({ result: uint256Result(60_000_000n) });
-      }
-      if (call.data === `0x07a2d13a${uint256Result(20_000_000n).slice(2)}` && to === strategyB) {
+      if (call.data === `0xce96cb77${addressWord(vault)}` && to === strategyB) {
         return jsonResponse({ result: uint256Result(20_000_000n) });
       }
       return undefined;

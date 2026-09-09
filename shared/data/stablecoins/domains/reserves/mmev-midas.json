@@ -2,6 +2,7 @@
   "id": "mmev-midas",
   "reserves": [
     {
+      "sourceKey": "chainlink-nav:token:0x030b69280892c888670edcdcd8b69fd8026a0bf3",
       "name": "MEV Capital DeFi strategy NAV",
       "pct": 100,
       "risk": "high",

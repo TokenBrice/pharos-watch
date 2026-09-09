@@ -128,10 +128,11 @@ export function adaptFirmMarkets(payload: FirmMarketsResponse, supplyUsd?: numbe
   const unattributedUsd = supplyUsd != null ? Math.max(0, supplyUsd - totalDebt) : 0;
 
   const slices = slicesFromValues([
-    { name: "Unattributed non-FiRM issuance", value: unattributedUsd, risk: "high" },
+    { sourceKey: "dola-inverse:unattributed", name: "Unattributed non-FiRM issuance", value: unattributedUsd, risk: "high" },
     ...Array.from(trackedStableValues, ([symbol, value]) => {
       const config = getTrackedStablecoinAsset(symbol)!;
       return {
+        sourceKey: `dola-inverse:${symbol.toLowerCase()}`,
         name: `${symbol} collateral`,
         value,
         risk: config.risk,
@@ -140,26 +141,31 @@ export function adaptFirmMarkets(payload: FirmMarketsResponse, supplyUsd?: numbe
       };
     }),
     {
+      sourceKey: "dola-inverse:stablecoin",
       name: "Other stablecoin collateral",
       value: Math.max(0, (bucketTotals.get("stablecoin") ?? 0) - trackedStableTotal),
       risk: getCanonicalReserveAssetRisk("sUSDe") ?? "low",
     },
     {
+      sourceKey: "dola-inverse:eth-lst",
       name: "ETH / Liquid staking (wstETH, WETH)",
       value: bucketTotals.get("eth-lst") ?? 0,
       risk: getCanonicalReserveAssetRisk("wstETH") ?? "low",
     },
     {
+      sourceKey: "dola-inverse:btc",
       name: "BTC (WBTC, cbBTC)",
       value: bucketTotals.get("btc") ?? 0,
       risk: getCanonicalReserveAssetRisk("WBTC") ?? "medium",
     },
     {
+      sourceKey: "dola-inverse:governance",
       name: "Governance tokens (INV, CRV, CVX)",
       value: bucketTotals.get("governance") ?? 0,
       risk: "very-high",
     },
     {
+      sourceKey: "dola-inverse:other",
       name: "Other collateral",
       value: bucketTotals.get("other") ?? 0,
       risk: "high",

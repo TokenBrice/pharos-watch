@@ -60,6 +60,7 @@ describe("adaptSolomonProtocolData", () => {
       depType: "collateral",
       blacklistable: true,
     });
+    expect(usdc!.sourceKey).toBe("solomon-protocol:vault:usdc");
 
     const pctSum = result.slices.reduce((sum, slice) => sum + slice.pct, 0);
     expect(pctSum).toBeCloseTo(100, 5);

@@ -67,6 +67,7 @@ describe("adaptBtcfi", () => {
     expect(sliceNames).toContain("WBTC");
     expect(sliceNames).toContain("TBTC");
     expect(sliceNames).toContain("CBBTC");
+    expect(result.slices.find((s) => s.name === "WBTC")!.sourceKey).toBe("btcfi:wbtc");
     // Today all canonical BTC wrappers sit at medium; promotion to per-symbol
     // risk tiers is a separate methodology task.
     expect(result.slices.every((s) => s.risk === "medium")).toBe(true);
@@ -83,6 +84,7 @@ describe("adaptBtcfi", () => {
     );
 
     expect(result.slices).toEqual([{
+      sourceKey: "btcfi:unknown",
       name: "Unmapped BTC variants",
       pct: 100,
       risk: "high",
@@ -116,9 +118,9 @@ describe("adaptBtcfi", () => {
       ],
     );
     expect(result.slices).toEqual([
-      { name: "WBTC", pct: 60, risk: "medium" },
-      { name: "TBTC", pct: 30, risk: "medium" },
-      { name: "Unmapped BTC variants", pct: 10, risk: "high" },
+      { sourceKey: "btcfi:wbtc", name: "WBTC", pct: 60, risk: "medium" },
+      { sourceKey: "btcfi:tbtc", name: "TBTC", pct: 30, risk: "medium" },
+      { sourceKey: "btcfi:unknown", name: "Unmapped BTC variants", pct: 10, risk: "high" },
     ]);
     expect(result.metadata?.unknownExposurePct).toBe(10);
   });
@@ -132,7 +134,7 @@ describe("adaptBtcfi", () => {
     const handlers = [{ id: 0, symbol: "WBTC", isStable: false }, { id: 1, symbol: "USD", isStable: true }];
     expect(adaptBtcfi(ignored, handlers)).toEqual({ slices: [] });
     expect(adaptBtcfi([...ignored, { token_handler_id: 0, deposit_value: "1" }], handlers).slices)
-      .toEqual([{ name: "WBTC", pct: 100, risk: "medium" }]);
+      .toEqual([{ sourceKey: "btcfi:wbtc", name: "WBTC", pct: 100, risk: "medium" }]);
   });
 
   it("fetches distinct market and handler payloads and rejects either endpoint failure", async () => {
@@ -150,7 +152,7 @@ describe("adaptBtcfi", () => {
       ]);
       const result = fetchBtcfiReserves({ id: "btcfi" } as StablecoinMeta, config, new AbortController().signal);
       if (failing) await expect(result).rejects.toThrow();
-      else expect((await result).slices).toEqual([{ name: "WBTC", pct: 100, risk: "medium" }]);
+      else expect((await result).slices).toEqual([{ sourceKey: "btcfi:wbtc", name: "WBTC", pct: 100, risk: "medium" }]);
     }
   });
 });

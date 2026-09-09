@@ -2,6 +2,7 @@
   "id": "fdusd-first-digital",
   "reserves": [
     {
+      "sourceKey": "fdusd-independent-assurance:fdusd:treasury-bills",
       "name": "U.S. Treasury Bills",
       "pct": 85.3,
       "risk": "very-low",
@@ -15,6 +16,7 @@
       "liquidityHorizon": "one-day"
     },
     {
+      "sourceKey": "fdusd-independent-assurance:fdusd:custody-cash",
       "name": "Cash",
       "pct": 10.4,
       "risk": "very-low",
@@ -28,6 +30,7 @@
       "liquidityHorizon": "immediate"
     },
     {
+      "sourceKey": "fdusd-independent-assurance:fdusd:fixed-deposits",
       "name": "Fixed Deposit",
       "pct": 4.3,
       "risk": "very-low",

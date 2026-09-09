@@ -65,11 +65,11 @@ describe("adaptUsddLatestCollateral", () => {
     );
 
     expect(result.slices).toEqual([
-      { name: "Smart Allocator (stablecoin DeFi via Aave/JustLend)", pct: 50.4, risk: "medium" },
-      { name: "TRX", pct: 39.7, risk: "high" },
-      { name: "USDT (PSM vaults)", pct: 8, risk: "low", coinId: "usdt-tether", depType: "collateral" },
-      { name: "sTRX (direct vaults)", pct: 1.8, risk: "high" },
-      { name: "USDT (direct vaults)", pct: 0.1, risk: "high", coinId: "usdt-tether" },
+      { sourceKey: "usdd-data-platform:smart-allocator", name: "Smart Allocator (stablecoin DeFi via Aave/JustLend)", pct: 50.4, risk: "medium" },
+      { sourceKey: "usdd-data-platform:trx", name: "TRX", pct: 39.7, risk: "high" },
+      { sourceKey: "usdd-data-platform:psm-usdt", name: "USDT (PSM vaults)", pct: 8, risk: "low", coinId: "usdt-tether", depType: "collateral" },
+      { sourceKey: "usdd-data-platform:staked-trx", name: "sTRX (direct vaults)", pct: 1.8, risk: "high" },
+      { sourceKey: "usdd-data-platform:direct-usdt", name: "USDT (direct vaults)", pct: 0.1, risk: "high", coinId: "usdt-tether" },
     ]);
     expect(result.metadata).toMatchObject({
       vaultCount: 7,
@@ -94,8 +94,8 @@ describe("adaptUsddLatestCollateral", () => {
     });
 
     expect(result.slices).toEqual([
-      { name: "Smart Allocator (stablecoin DeFi via Aave/JustLend)", pct: 75, risk: "medium" },
-      { name: "Unknown / unmapped collateral vaults", pct: 25, risk: "high" },
+      { sourceKey: "usdd-data-platform:smart-allocator", name: "Smart Allocator (stablecoin DeFi via Aave/JustLend)", pct: 75, risk: "medium" },
+      { sourceKey: "usdd-data-platform:unknown", name: "Unknown / unmapped collateral vaults", pct: 25, risk: "high" },
     ]);
     expect(result.warnings).toEqual([{
       code: "unknown-vault-type",
@@ -160,7 +160,7 @@ describe("fetchUsddDataPlatformReserves", () => {
     const result = await fetchUsddDataPlatformReserves(coin, config, signal);
 
     expect(result.slices).toEqual([
-      { name: "USDT (direct vaults)", pct: 100, risk: "high", coinId: "usdt-tether" },
+      { sourceKey: "usdd-data-platform:direct-usdt", name: "USDT (direct vaults)", pct: 100, risk: "high", coinId: "usdt-tether" },
     ]);
     expect(fetchJsonWithRetry).toHaveBeenNthCalledWith(
       1,
@@ -271,7 +271,7 @@ describe("fetchUsddDataPlatformReserves Tron PSM redemption telemetry", () => {
     const result = await fetchUsddDataPlatformReserves(coin, tronConfig, signal);
 
     expect(result.metadata?.redemption).toMatchObject({ feeBps: 10 });
-    expect(result.metadata?.redemptionFeeBps).toBe(10);
+    expect(result.metadata).not.toHaveProperty("redemptionFeeBps");
   });
 
   it("reports a zero GemJoin balance as an open route with no capacity", async () => {

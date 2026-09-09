@@ -26,6 +26,7 @@ import {
 import { getReserveAdapter } from "../index";
 import { USDGO_INDEPENDENT_ASSURANCE_PROFILE } from "../usdgo-transparency";
 import { validateAdapterOutput } from "../validate";
+import { buildReviewedReserveClassifications } from "../../../lib/safety-score-v9/extension-reserves";
 
 /** One registered live-reserve adapter definition: the union
  * `getLiveReserveAdapterDefinition` hands out for any adapter key. */
@@ -231,10 +232,35 @@ describe("independent-assurance manifest framework", () => {
       const result = await fetchIndependentAssuranceReserves(
         coin, config, new AbortController().signal, profile, params,
       );
-      expect(result.slices).toEqual([{ name: "Cash", risk: "very-low", pct: 100 }]);
+      expect(result.slices).toMatchObject([{ name: "Cash", risk: "very-low", pct: 100 }]);
       expect(result.metadata).toMatchObject({ freshnessMode: "verified", collateralizationRatio: 1.01 });
     },
   );
+
+  it("joins renamed assurance categories by their source asset code", async () => {
+    const reviewed = manifest();
+    vi.spyOn(assurance, "getIndependentAssuranceManifest").mockReturnValue(reviewed);
+    installFetch();
+    const coin = routedAssuranceCoin("audx-aussie-dollar-token");
+    const result = await fetchIndependentAssuranceReserves(
+      coin,
+      { ...coin.liveReservesConfig!, inputs: { primary: { kind: "http-html", url: reviewed.officialIndexUrl } } },
+      new AbortController().signal,
+      { ...PROFILE, classifications: { cash: { name: "Renamed bank reserve", risk: "very-low" } } },
+      { product: "AUDX", profile: "audx-v1", indexHost: "www.audxtoken.com", reportHosts: ["www.audxtoken.com"] },
+    );
+    const meta = {
+      ...coin,
+      reserves: [{ ...coin.reserves![0]!, sourceKey: "test-independent-assurance:audx:cash" }],
+    };
+    const clock = Date.parse(`${coin.reserveReview!.reviewedAt}T12:00:00Z`) / 1000;
+    const [classification] = buildReviewedReserveClassifications(result.slices, meta, clock);
+    expect(classification).toMatchObject({
+      assetClass: coin.reserves![0]!.assetClass,
+      issuerOrObligorKey: coin.reserves![0]!.issuerOrObligor,
+    });
+    expect(classification?.classificationKey).toMatch(/^registry-reviewed:/);
+  });
 
   it.each(["200", "0", "-1"])("publishes reported liability %s with degraded evidence", async (liability) => {
     const reviewed = manifest({
@@ -251,7 +277,7 @@ describe("independent-assurance manifest framework", () => {
       { ...PROFILE, classifications: { cash: { name: "Cash", risk: "very-low" } } },
       { product: "AUDX", profile: "audx-v1", indexHost: "www.audxtoken.com", reportHosts: ["www.audxtoken.com"] },
     );
-    expect(result.slices).toEqual([{ name: "Cash", risk: "very-low", pct: 100 }]);
+    expect(result.slices).toMatchObject([{ name: "Cash", risk: "very-low", pct: 100 }]);
     expect(result.metadata?.collateralizationRatio).toBe(liability === "200" ? 0.505 : undefined);
     expect(result.warnings).toContainEqual(expect.objectContaining({ code: "reserve-undercollateralized", effect: "degraded" }));
     expect(reconcileIndependentAssuranceManifest(reviewed)).toMatchObject({

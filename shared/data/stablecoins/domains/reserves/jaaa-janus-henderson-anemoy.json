@@ -2,6 +2,7 @@
   "id": "jaaa-janus-henderson-anemoy",
   "reserves": [
     {
+      "sourceKey": "chainlink-nav:token:0x5a0f93d040de44e78f251b03c43be9cf317dcf64",
       "name": "Janus Henderson Anemoy AAA CLO Fund NAV",
       "pct": 100,
       "risk": "high",

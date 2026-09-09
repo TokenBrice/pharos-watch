@@ -230,6 +230,16 @@ export const LiveReserveSnapshotMetadataSchema = z
     shareholderEquityUsd: z.number().finite().optional(),
     collateralizationRatio: z.number().finite().optional(),
     liquidationCapacityRatio: z.number().finite().nonnegative().optional(),
+    /**
+     * Legacy flat redemption-telemetry fields, superseded by the nested
+     * `redemption.capacityUsd` / `redemption.capacityRatioOfSupply` /
+     * `redemption.feeBps` contract. Historical D1 rows can still carry them
+     * (30-day retention), so they remain optional for read compatibility; the
+     * store-row decoder maps them into the nested shape at decode time and no
+     * producer writes them anymore.
+     *
+     * @deprecated Read-only legacy compatibility; use `redemption.*`.
+     */
     immediateRedeemableUsd: z.number().finite().optional(),
     immediateRedeemableRatio: z.number().finite().optional(),
     redemptionFeeBps: z.number().finite().optional(),

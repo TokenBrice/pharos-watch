@@ -67,6 +67,7 @@ export function adaptBtcfi(market: BtcfiMarketRow[], handlers: BtcfiHandlerRow[]
   if (total <= 0) return { slices: [] };
 
   const sliceInputs = Array.from(symbolValues.entries()).map(([symbol, { value, risk }]) => ({
+    sourceKey: `btcfi:${symbol.toLowerCase()}`,
     name: symbol,
     value,
     risk,
@@ -74,6 +75,7 @@ export function adaptBtcfi(market: BtcfiMarketRow[], handlers: BtcfiHandlerRow[]
 
   if (unknownValue > 0) {
     sliceInputs.push({
+      sourceKey: "btcfi:unknown",
       name: UNMAPPED_BTC_SLICE_NAME,
       value: unknownValue,
       risk: "high",

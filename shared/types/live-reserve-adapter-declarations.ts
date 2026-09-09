@@ -686,56 +686,9 @@ const collateralPositionsParamsSchema = z
     message: "redemptionBridge and redemptionBridgeBasket are mutually exclusive",
   });
 
-/** Opt-in live redemption probe for curated coins. The shape only describes
- *  atomic, same-block routes: a single uint256 read of what the route can pay
- *  out right now, valued 1:1 in USD. */
-const curatedValidatedRedemptionCapacitySchema = z
-  .object({
-    chain: z.string().min(1),
-    capacityRead: z.discriminatedUnion("kind", [
-      z
-        .object({
-          kind: z.literal("selector"),
-          contract: EvmAddressSchema,
-          selector: EvmSelectorSchema,
-        })
-        .strict(),
-      z
-        .object({
-          kind: z.literal("erc20-balance-of"),
-          contract: EvmAddressSchema,
-          holder: EvmAddressSchema,
-        })
-        .strict(),
-    ]),
-    /** Address getters the route must still resolve to. Any mismatch means the
-     *  pinned contracts no longer describe this route, so nothing is emitted. */
-    identityChecks: z
-      .array(
-        z
-          .object({
-            contract: EvmAddressSchema,
-            selector: EvmSelectorSchema,
-            expectedAddress: EvmAddressSchema,
-          })
-          .strict(),
-      )
-      .nonempty()
-      .optional(),
-    pauseCheck: z
-      .object({ contract: EvmAddressSchema, selector: EvmSelectorSchema })
-      .strict()
-      .optional(),
-    decimals: z.number().int().min(0).max(36),
-    holderEligibility: RedemptionHolderEligibilitySchema,
-    ...NonemptySourceUrlsFields,
-  })
-  .strict();
-
 const curatedValidatedParamsSchema = z
   .object({
     ...OptionalEvmRpcFields,
-    redemptionCapacity: curatedValidatedRedemptionCapacitySchema.optional(),
   })
   .strict();
 
@@ -1493,7 +1446,7 @@ const mentoRedemptionParamsSchema = z.discriminatedUnion("kind", [
 
 const mentoParamsSchema = z
   .object({
-    cdpStablecoin: z.enum(["GBPm", "JPYm", "CHFm", "XOFm"]).optional(),
+    cdpStablecoin: z.enum(["GBPm", "JPYm", "CHFm"]).optional(),
     redemption: mentoRedemptionParamsSchema.optional(),
   })
   .strict();
@@ -1524,64 +1477,15 @@ const tetherTransparencyParamsSchema = z
   })
   .strict();
 
-/** Opt-in live redemption probe for coins whose exit is a single redeemer
- *  contract paying one ERC20 out of its own float. Every bound the route's size
- *  depends on is read in the same run; any mismatch or unreadable value
- *  withholds the whole live block rather than publishing a partial route. */
-const singleAssetRedemptionCapacitySchema = z
-  .object({
-    chain: z.string().min(1),
-    /** Contract that executes the redemption and holds the payout float. */
-    redeemer: EvmAddressSchema,
-    /** ERC20 the route pays out; its `redeemer` balance is the capacity. */
-    payoutToken: z
-      .object({
-        ...EvmAddressFields,
-        decimals: z.number().int().min(0).max(36),
-      })
-      .strict(),
-    /** Address getters the route must still resolve to. Pin the upgrade surface
-     *  (beacon/implementation) here so a retarget stops emission. */
-    identityChecks: z
-      .array(
-        z
-          .object({
-            contract: EvmAddressSchema,
-            selector: EvmSelectorSchema,
-            expectedAddress: EvmAddressSchema,
-          })
-          .strict(),
-      )
-      .nonempty(),
-    /** Per-day cap, read as `limitSelector - usedSelector(currentDay)`. */
-    dailyLimit: z
-      .object({
-        limitSelector: EvmSelectorSchema,
-        /** Takes the `block.timestamp / 86400` day index as its only argument. */
-        usedSelector: EvmSelectorSchema,
-        decimals: z.number().int().min(0).max(36),
-      })
-      .strict()
-      .optional(),
-    /** Getter returning the redemption fee already denominated in bps. */
-    feeBpsSelector: EvmSelectorSchema.optional(),
-    holderEligibility: RedemptionHolderEligibilitySchema,
-    ...NonemptySourceUrlsFields,
-  })
-  .strict();
-
 const singleAssetParamsSchema = z
   .object({
     label: z.string(),
     ...TrackedExposureFields,
     ...OptionalEvmRpcFields,
-    probe: singleAssetProbeSchema.optional(),
     reserveProbe: singleAssetProbeSchema.optional(),
     supplyProbe: singleAssetProbeSchema.optional(),
     timestampProbe: singleAssetProbeSchema.optional(),
     reserveSourceLabel: z.string().optional(),
-    redemptionRateProbe: redemptionRateProbeSchema.optional(),
-    redemptionCapacity: singleAssetRedemptionCapacitySchema.optional(),
   })
   .strict();
 
@@ -2071,10 +1975,7 @@ export const LIVE_RESERVE_ADAPTER_DESCRIPTOR_DECLARATIONS = {
     evidenceClass: "static-validated",
     sharedSourceMode: "none",
     configValidation: CONFIG_CURATED_VALIDATED,
-    // Live capacity is emitted only for curated coins whose params carry a
-    // redemptionCapacity block; every other curated coin keeps its static
-    // redemption block and is not an unused-telemetry candidate.
-    redemptionTelemetry: { capacity: "direct", capacityParamsGated: true, fee: "none" },
+    redemptionTelemetry: { capacity: "none", fee: "none" },
     // Curated composition is reviewer-owned and does not age; the same-run
     // supply/redemption reads are latest-state, so no source timestamp exists.
     validation: LATEST_STATE_VALIDATION,
@@ -2592,10 +2493,7 @@ export const LIVE_RESERVE_ADAPTER_DESCRIPTOR_DECLARATIONS = {
     evidenceClass: "weak-live-probe",
     sharedSourceMode: "none",
     configValidation: CONFIG_SINGLE_ASSET_V1,
-    // Redemption capacity is emitted only for coins whose params carry a
-    // redemptionCapacity block (currently AID); the plain liveness-probe coins
-    // never emit and are not unused-telemetry candidates.
-    redemptionTelemetry: { capacity: "direct", capacityParamsGated: true, fee: "current-bps" },
+    redemptionTelemetry: { capacity: "none", fee: "none" },
     // The http-json probe emits verified or unverified depending on whether the
     // upstream carries a timestamp; the on-chain probe is latest-state.
     validation: { allowedFreshnessModes: ANY_FRESHNESS },

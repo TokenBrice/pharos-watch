@@ -120,9 +120,6 @@ function normalizeSnapshotMetadata(metadata: Record<string, unknown>): LiveReser
     "totalLiabilitiesUsd",
     "shareholderEquityUsd",
     "collateralizationRatio",
-    "immediateRedeemableUsd",
-    "immediateRedeemableRatio",
-    "redemptionFeeBps",
     "buyFeeBpsMin",
     "buyFeeBpsMax",
   ];
@@ -255,6 +252,27 @@ function normalizeSnapshotMetadata(metadata: Record<string, unknown>): LiveReser
   } else {
     delete normalized.redemption;
   }
+
+  // Legacy flat capacity/fee fields: rows persisted before the nested
+  // `metadata.redemption` contract could carry redeemable capacity and fee
+  // at the top level. Historical D1 rows still can (30-day retention), so the
+  // decoder maps them into the nested shape here and drops the flat keys.
+  // A nested `redemption` block, when present, always wins.
+  if (!Object.prototype.hasOwnProperty.call(metadata, "redemption")) {
+    const legacyCapacityUsd = coerceFiniteMetadataNumber(metadata.immediateRedeemableUsd);
+    const legacyCapacityRatio = coerceFiniteMetadataNumber(metadata.immediateRedeemableRatio);
+    const legacyFeeBps = coerceFiniteMetadataNumber(metadata.redemptionFeeBps);
+    if (legacyCapacityUsd != null || legacyCapacityRatio != null || legacyFeeBps != null) {
+      normalized.redemption = {
+        ...(legacyCapacityUsd != null ? { capacityUsd: legacyCapacityUsd } : {}),
+        ...(legacyCapacityRatio != null ? { capacityRatioOfSupply: legacyCapacityRatio } : {}),
+        ...(legacyFeeBps != null ? { feeBps: legacyFeeBps } : {}),
+      };
+    }
+  }
+  delete normalized.immediateRedeemableUsd;
+  delete normalized.immediateRedeemableRatio;
+  delete normalized.redemptionFeeBps;
 
   return normalized;
 }

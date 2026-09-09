@@ -2,6 +2,7 @@
   "id": "rusd-reservoir",
   "reserves": [
     {
+      "sourceKey": "reservoir:prime",
       "name": "Hastra / Sentora PRIME credit allocations",
       "pct": 33.9,
       "risk": "high",
@@ -17,6 +18,7 @@
       "liquidityHorizon": "unknown"
     },
     {
+      "sourceKey": "reservoir:usdat",
       "name": "Pendle PT USDat tokenized-treasury principal token",
       "pct": 17.3,
       "risk": "high",
@@ -35,6 +37,7 @@
       "maturityDaysMax": 31
     },
     {
+      "sourceKey": "reservoir:gho",
       "name": "GHO lending markets",
       "pct": 14.2,
       "risk": "medium",
@@ -51,6 +54,7 @@
       "liquidityHorizon": "one-day"
     },
     {
+      "sourceKey": "reservoir:usdc",
       "name": "USDC positions",
       "pct": 31.2,
       "risk": "low",
@@ -68,6 +72,7 @@
       "liquidityHorizon": "one-day"
     },
     {
+      "sourceKey": "reservoir:agua",
       "name": "Agua Global Carry Vault (USDC-denominated ERC-4626)",
       "pct": 3.4,
       "risk": "high",

@@ -16,7 +16,8 @@
         "market",
         "basis"
       ],
-      "liquidityHorizon": "one-day"
+      "liquidityHorizon": "one-day",
+      "sourceKey": "astherus-earn-wrapper:usdf"
     }
   ],
   "reserveReview": {

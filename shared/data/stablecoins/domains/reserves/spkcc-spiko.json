@@ -2,6 +2,7 @@
   "id": "spkcc-spiko",
   "reserves": [
     {
+      "sourceKey": "spiko-api:spkcc:total-assets",
       "name": "Digital-asset cash-and-carry strategy",
       "pct": 100,
       "risk": "high",

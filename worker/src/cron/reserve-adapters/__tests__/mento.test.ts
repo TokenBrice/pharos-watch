@@ -372,28 +372,6 @@ describe("mento adapter", () => {
     });
   });
 
-  it("maps XOFm CDP troves through the same USDm collateral shape", () => {
-    const result = adaptMentoCdpComposition(SAMPLE_PAYLOAD, "XOFm");
-    expect(result.slices).toEqual([
-      {
-        name: "USDm (Mento Dollar) CDP collateral",
-        pct: 100,
-        risk: "low",
-        coinId: "cusd-celo",
-        depType: "collateral",
-      },
-    ]);
-    expect(result.warnings).toBeUndefined();
-    expect(result.metadata).toMatchObject({
-      cdpStablecoin: "XOFm",
-      cdpActiveTroves: 1,
-      totalCollateralUsd: 25_000,
-      totalDebtUsd: 12_500,
-      collateralizationRatio: 2,
-      freshnessMode: "unverified",
-    });
-  });
-
   it.each([
     { reserveFails: false, dashboardFails: false },
     { reserveFails: true, dashboardFails: false },
@@ -584,7 +562,7 @@ describe("mento adapter", () => {
   });
 
   it("produces CDP reserve output that passes adapter validation", () => {
-    const result = adaptMentoCdpComposition(SAMPLE_PAYLOAD, "XOFm");
+    const result = adaptMentoCdpComposition(SAMPLE_PAYLOAD, "GBPm");
     expectValidAdapterOutput("mento", result);
   });
 });
@@ -664,7 +642,7 @@ describe("mento redemption telemetry", () => {
       feeBps: 100,
       sourceUrls: ["https://docs.mento.org/mento/build-on-mento/smart-contracts/bipoolmanager"],
     });
-    expect(result.metadata?.redemptionFeeBps).toBe(100);
+    expect(result.metadata?.redemption?.feeBps).toBe(100);
     // Redemption telemetry is additive: the analytics-API reserve composition
     // is untouched.
     expect(result.slices.length).toBeGreaterThan(0);
@@ -700,7 +678,7 @@ describe("mento redemption telemetry", () => {
       { requestCache: makeRequestCache() } as never,
     );
 
-    expect(result.metadata?.redemptionFeeBps).toBe(5);
+    expect(result.metadata?.redemption?.feeBps).toBe(5);
   });
 
   it("caches broker reads separately and stops each coin once its configured pools match", async () => {

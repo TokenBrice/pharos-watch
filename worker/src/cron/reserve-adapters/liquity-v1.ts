@@ -201,6 +201,7 @@ export async function fetchLiquityV1Reserves(
 
   return {
     slices: [{
+      sourceKey: "liquity-v1:eth",
       name: params.slice.name,
       pct: 100,
       risk: params.slice.risk,
@@ -226,7 +227,6 @@ export async function fetchLiquityV1Reserves(
       ...(collateralizationRatio != null ? { collateralizationRatio } : {}),
       ...(totalCollateralRatio != null ? { totalCollateralRatio } : {}),
       ...(minimumCollateralRatio != null ? { minimumCollateralRatio } : {}),
-      immediateRedeemableUsd: capacityUsd,
       ...buildRedemptionSnapshotMetadata({
         capacityUsd,
         capacityKind: "live-direct-bounded",

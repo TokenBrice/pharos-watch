@@ -110,6 +110,7 @@
       "navScope": "portfolio",
       "oracleAddress": "0x9Cad45a8BF0Ed41Ff33074449B357C7a1fAb4094",
       "tokenAddress": "0x1b19c19393e2d034d8ff31ff34c81252fcbbee92",
+      "sourceKey": "chainlink-nav:token:0x1b19c19393e2d034d8ff31ff34c81252fcbbee92",
       "assetLabel": "OUSG tokenized Treasury fund portfolio",
       "assetRisk": "low",
       "oracleMethod": "getAssetPrice",

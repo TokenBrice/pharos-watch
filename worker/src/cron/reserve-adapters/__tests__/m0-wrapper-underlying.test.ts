@@ -63,7 +63,7 @@ describe("fetchM0WrapperUnderlyingReserves", () => {
     );
 
     expect(result.slices).toEqual([
-      { name: "M token held by wrapper", pct: 100, risk: "very-low", coinId: "m-m0", depType: "wrapper" },
+      { sourceKey: "m0-wrapper-underlying:m", name: "M token held by wrapper", pct: 100, risk: "very-low", coinId: "m-m0", depType: "wrapper" },
     ]);
     expect(result.metadata).toMatchObject({
       freshnessMode: "not-applicable",

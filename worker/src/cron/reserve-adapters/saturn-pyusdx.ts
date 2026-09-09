@@ -223,6 +223,7 @@ export async function fetchSaturnPyusdxReserves(
   }
 
   const slice: ReserveSlice = {
+    sourceKey: "saturn-pyusdx:pyusd",
     name: params.slice.name,
     pct: 100,
     risk: params.slice.risk,

@@ -2,6 +2,7 @@
   "id": "usdpt-western-union",
   "reserves": [
     {
+      "sourceKey": "anchorage-independent-assurance:usdpt:cash",
       "name": "Demand deposits at FDIC-insured depository institutions",
       "pct": 9.8609,
       "risk": "very-low",
@@ -16,6 +17,7 @@
       "liquidityHorizon": "immediate"
     },
     {
+      "sourceKey": "anchorage-independent-assurance:usdpt:money-market-funds",
       "name": "Money market funds at net asset value (JLTXX CUSIP 46655R119 $5,799,924; CUSIP 09248U874 $451,291)",
       "pct": 90.1391,
       "risk": "low",

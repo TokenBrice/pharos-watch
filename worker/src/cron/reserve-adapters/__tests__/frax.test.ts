@@ -277,6 +277,7 @@ describe("adaptFraxFpiCollateral", () => {
 
     expect(result.slices.find((slice) => slice.name === "FPI")).toBeUndefined();
     expect(result.slices.find((slice) => slice.name === "FRAX")!.pct).toBeGreaterThan(90);
+    expect(result.slices.find((slice) => slice.name === "FRAX")!.sourceKey).toBe("frax-fpi-collateral:frax");
     expect(result.metadata).toMatchObject({
       totalCollateralUsd: 5_200_000,
       mappedCollateralUsd: 5_200_000,
@@ -367,7 +368,7 @@ describe("adaptFraxFpiCollateral", () => {
 
     expect(result.metadata).toMatchObject({
       unknownCollateralUsd: 500_000,
-      immediateRedeemableUsd: 5_000_000,
+      redemption: { capacityUsd: 5_000_000 },
     });
     expect(result.warnings).toEqual(
       expect.arrayContaining([

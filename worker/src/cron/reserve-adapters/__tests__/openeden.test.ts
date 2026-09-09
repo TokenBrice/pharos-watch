@@ -52,8 +52,8 @@ describe("adaptOpenEdenUsdo", () => {
       sourceTimestamp: Date.UTC(2026, 2, 25, 8, 0, 17) / 1000,
       reserveAssetsInUsd: 62_539_444.54,
       supplyUsd: 62_283_070,
-      immediateRedeemableUsd: 4_767_161.22,
       redemption: {
+        capacityUsd: 4_767_161.22,
         routeStatus: "open",
         routeStatusSource: "protocol-api",
         holderEligibility: "verified-customer",
@@ -92,7 +92,6 @@ describe("adaptOpenEdenUsdo", () => {
     });
     expect(result.metadata?.componentTotalUsd).toBeCloseTo(49_084_898.00, 2);
     expect(result.metadata).toMatchObject({
-      immediateRedeemableUsd: 411_606.20,
       redemption: { capacityUsd: 411_606.20 },
     });
   });

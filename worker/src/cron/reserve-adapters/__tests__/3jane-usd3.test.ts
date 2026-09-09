@@ -28,8 +28,9 @@ describe("adaptThreeJaneUsd3Snapshot", () => {
     });
 
     expect(result.slices).toEqual([
-      { name: "Fintech and crypto credit receivables", pct: 60, risk: "high" },
+      { sourceKey: "3jane-usd3:credit-receivables", name: "Fintech and crypto credit receivables", pct: 60, risk: "high" },
       {
+        sourceKey: "3jane-usd3:usdc",
         name: "Aave USDC liquidity buffer",
         pct: 40,
         risk: "medium",
@@ -44,9 +45,6 @@ describe("adaptThreeJaneUsd3Snapshot", () => {
       totalReserveUsd: 100,
       totalAssetsUsd: 100,
       collateralizationRatio: 1,
-      immediateRedeemableUsd: 40,
-      immediateRedeemableRatio: 0.4,
-      redemptionFeeBps: 0,
       redemption: {
         capacityUsd: 40,
         capacityRatioOfSupply: 0.4,

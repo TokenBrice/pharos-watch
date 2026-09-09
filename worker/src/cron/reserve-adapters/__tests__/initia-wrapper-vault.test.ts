@@ -133,6 +133,7 @@ describe("fetchInitiaWrapperVaultReserves", () => {
 
     expect(result.slices).toEqual([
       {
+        sourceKey: "initia-wrapper-vault:ausd",
         name: "Agora AUSD bridged via LayerZero (Initia AUSD0)",
         pct: 100,
         risk: "low",

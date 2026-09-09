@@ -349,6 +349,7 @@
       "currencyIso": "usdt",
       "slices": [
         {
+          "sourceKey": "tether:usdt:treasury-bills",
           "name": "U.S. Treasury bills",
           "pct": 61.03,
           "risk": "very-low",
@@ -363,6 +364,7 @@
           "maturityDaysMax": 364
         },
         {
+          "sourceKey": "tether:usdt:overnight-reverse-repo",
           "name": "Overnight reverse repurchase agreements",
           "pct": 10.08,
           "risk": "very-low",
@@ -377,6 +379,7 @@
           "maturityDaysMax": 1
         },
         {
+          "sourceKey": "tether:usdt:term-reverse-repo",
           "name": "Term reverse repurchase agreements",
           "pct": 2.47,
           "risk": "very-low",
@@ -391,6 +394,7 @@
           "liquidityHorizon": "unknown"
         },
         {
+          "sourceKey": "tether:usdt:cash-bank-deposits",
           "name": "Cash and bank deposits",
           "pct": 0.06,
           "risk": "very-low",
@@ -403,6 +407,7 @@
           "liquidityHorizon": "immediate"
         },
         {
+          "sourceKey": "tether:usdt:precious-metals",
           "name": "Precious metals",
           "pct": 10.34,
           "risk": "medium",
@@ -416,6 +421,7 @@
           "liquidityHorizon": "seven-days"
         },
         {
+          "sourceKey": "tether:usdt:bitcoin",
           "name": "Bitcoin",
           "pct": 3.45,
           "risk": "medium",
@@ -429,6 +435,7 @@
           "liquidityHorizon": "seven-days"
         },
         {
+          "sourceKey": "tether:usdt:public-equities",
           "name": "Public equities",
           "pct": 1.78,
           "risk": "high",
@@ -443,6 +450,7 @@
           "liquidityHorizon": "unknown"
         },
         {
+          "sourceKey": "tether:usdt:other-investments",
           "name": "Other investments",
           "pct": 2.53,
           "risk": "high",
@@ -457,6 +465,7 @@
           "liquidityHorizon": "unknown"
         },
         {
+          "sourceKey": "tether:usdt:secured-loans",
           "name": "Secured loans",
           "pct": 8.25,
           "risk": "high",

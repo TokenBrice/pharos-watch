@@ -64,7 +64,6 @@ describe("adaptSuperstateLiquidity", () => {
       circleUsdAvailable: 2_696_887.17,
       usdcRedemptionIdle: 3_412_248.944618,
       apiLiquidityUsd: 6_109_136.114618,
-      immediateRedeemableUsd: 9_310_000,
       redemption: {
         capacityUsd: 9_310_000,
         capacityKind: "live-direct-bounded",
@@ -170,7 +169,6 @@ describe("fetchSuperstateLiquidityReserves", () => {
       undefined,
     );
     expect(result.metadata).toMatchObject({
-      immediateRedeemableUsd: 9_310_000,
       redemption: {
         capacityUsd: 9_310_000,
         capacityKind: "live-direct-bounded",

@@ -48,8 +48,8 @@ describe("adaptUsdtbTransparency", () => {
     const result = adaptUsdtbTransparency(USDTB_BACKING);
 
     expect(result.slices).toEqual([
-      { name: "BlackRock BUIDL (U.S. T-Bills, cash, repos)", pct: 98.8, risk: "low", coinId: "buidl-blackrock" },
-      { name: "Assets in motion (settlement float)", pct: 1.2, risk: "low" },
+      { sourceKey: "usdtb-transparency:buidl", name: "BlackRock BUIDL (U.S. T-Bills, cash, repos)", pct: 98.8, risk: "low", coinId: "buidl-blackrock" },
+      { sourceKey: "usdtb-transparency:assets-in-motion", name: "Assets in motion (settlement float)", pct: 1.2, risk: "low" },
     ]);
     expect(result.warnings).toBeUndefined();
 
@@ -132,8 +132,8 @@ describe("adaptUsdtbTransparency", () => {
     const result = adaptUsdtbTransparency(withStringAmounts);
 
     expect(result.slices).toEqual([
-      { name: "BlackRock BUIDL (U.S. T-Bills, cash, repos)", pct: 98.8, risk: "low", coinId: "buidl-blackrock" },
-      { name: "Assets in motion (settlement float)", pct: 1.2, risk: "low" },
+      { sourceKey: "usdtb-transparency:buidl", name: "BlackRock BUIDL (U.S. T-Bills, cash, repos)", pct: 98.8, risk: "low", coinId: "buidl-blackrock" },
+      { sourceKey: "usdtb-transparency:assets-in-motion", name: "Assets in motion (settlement float)", pct: 1.2, risk: "low" },
     ]);
     const totalReserveUsd = 767603510.39 + 9115451.68;
     expect(result.metadata?.totalReserveUsd).toBeCloseTo(totalReserveUsd, 3);

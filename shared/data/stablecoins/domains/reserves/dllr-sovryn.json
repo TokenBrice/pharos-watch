@@ -12,7 +12,8 @@
         "smart-contract",
         "liquidity"
       ],
-      "liquidityHorizon": "unknown"
+      "liquidityHorizon": "unknown",
+      "sourceKey": "evm-branch-balances:rootstock:0xdb107fa69e33f05180a4c2ce9c2e7cb481645c2d"
     },
     {
       "name": "Dollar on Chain DOC",
@@ -26,7 +27,8 @@
         "smart-contract",
         "liquidity"
       ],
-      "liquidityHorizon": "unknown"
+      "liquidityHorizon": "unknown",
+      "sourceKey": "evm-branch-balances:rootstock:0xe700691da7b9851f2f35f8b8182c69c53ccad9db"
     }
   ],
   "reserveReview": {

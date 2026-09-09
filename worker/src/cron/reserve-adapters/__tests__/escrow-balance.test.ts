@@ -116,6 +116,7 @@ describe("fetchEscrowBalanceReserves", () => {
     });
     expect(result.slices).toEqual([
       {
+        sourceKey: "escrow-balance:0x8888888199b2df864bf678259607d6d5ebb4e3ce",
         name: "USDC held as Circle xReserve native collateral for the Movement domain",
         pct: 100,
         risk: "very-low",
@@ -219,7 +220,6 @@ describe("fetchEscrowBalanceReserves", () => {
       escrowBalanceReadCount: 2,
       escrowBalancesRaw: ["1250000", "2000000000000000000"],
       escrowBalanceUsd: 3.25,
-      immediateRedeemableUsd: 3.25,
       redemption: {
         capacityUsd: 3.25,
         capacityKind: "live-direct",

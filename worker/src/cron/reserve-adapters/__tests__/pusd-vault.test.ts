@@ -149,6 +149,7 @@ describe("fetchPusdVaultReserves", () => {
 
     expect(result.slices).toEqual([
       {
+        sourceKey: "pusd-vault:0xc417fd8e9661c0d2120b64a04bb3278c17e99db1",
         name: "USDC / USDC.e on Polygon",
         pct: 100,
         risk: "low",
@@ -251,9 +252,9 @@ describe("fetchPusdVaultReserves", () => {
 
     // Holdings $3,000,000 vs supply $4,000,000: 80% / 16.7% / 3.3% slices.
     expect(result.slices).toEqual([
-      { name: "USDC on Plume", pct: 80, risk: "low", coinId: "usdc-circle", depType: "collateral", blacklistable: true },
-      { name: "USDC.e on Plume", pct: 16.7, risk: "low", coinId: "usdc-circle", depType: "collateral", blacklistable: true },
-      { name: "USDC on Ethereum", pct: 3.3, risk: "low", coinId: "usdc-circle", depType: "collateral", blacklistable: true },
+      { sourceKey: "pusd-vault:0x222365ef19f7947e5484218551b56bb3965aa7af", name: "USDC on Plume", pct: 80, risk: "low", coinId: "usdc-circle", depType: "collateral", blacklistable: true },
+      { sourceKey: "pusd-vault:0x78add880a697070c1e765ac44d65323a0dcce913", name: "USDC.e on Plume", pct: 16.7, risk: "low", coinId: "usdc-circle", depType: "collateral", blacklistable: true },
+      { sourceKey: "pusd-vault:0x222365ef19f7947e5484218551b56bb3965aa7af", name: "USDC on Ethereum", pct: 3.3, risk: "low", coinId: "usdc-circle", depType: "collateral", blacklistable: true },
     ]);
     expect(result.metadata).toMatchObject({
       freshnessMode: "not-applicable",

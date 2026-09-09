@@ -1,6 +1,8 @@
 import { describe, expect, it, vi, beforeEach } from "vitest";
 import type { StablecoinMeta } from "@shared/types/core";
 import type { LiveReservesConfig } from "@shared/types/live-reserves";
+import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
+import { buildReviewedReserveClassifications } from "../../../lib/safety-score-v9/extension-reserves";
 
 vi.mock("../helpers", async (importOriginal) => {
   const actual = await importOriginal<typeof import("../helpers")>();
@@ -63,13 +65,28 @@ beforeEach(() => {
 });
 
 describe("adaptSpikoShareClassTotals", () => {
+  it("retains reviewed classification after a fund display-label change", () => {
+    const coin = ACTIVE_STABLECOINS.find((entry) => entry.id === "eursafo-spiko")!;
+    const result = adaptSpikoShareClassTotals(EURSAFO_TOTALS, "eurSAFO", {
+      name: "Renamed fund share",
+      risk: "medium",
+    });
+    const clock = Date.parse(`${coin.reserveReview!.reviewedAt}T12:00:00Z`) / 1000;
+    const [classified] = buildReviewedReserveClassifications(result.slices, coin, clock);
+    expect(classified).toMatchObject({
+      assetClass: coin.reserves![0]!.assetClass,
+      issuerOrObligorKey: coin.reserves![0]!.issuerOrObligor,
+    });
+    expect(classified?.classificationKey).toMatch(/^registry-reviewed:/);
+  });
+
   it("computes the honest ratio and verified freshness for a EUR fund with no FX conversion", () => {
     const result = adaptSpikoShareClassTotals(EURSAFO_TOTALS, "eurSAFO", {
       name: "Fully collateralized overnight total-return swap exposure",
       risk: "medium",
     });
 
-    expect(result.slices).toEqual([
+    expect(result.slices).toMatchObject([
       { name: "Fully collateralized overnight total-return swap exposure", pct: 100, risk: "medium" },
     ]);
     expect(result.metadata).toMatchObject({
@@ -117,7 +134,7 @@ describe("adaptSpikoShareClassTotals", () => {
       coinId: "uktbl-spiko",
     });
 
-    expect(result.slices).toEqual([
+    expect(result.slices).toMatchObject([
       { name: "UK Treasury Bills and cash", pct: 100, risk: "very-low", coinId: "uktbl-spiko" },
     ]);
     expect(result.metadata).toMatchObject({
@@ -254,7 +271,7 @@ describe("fetchSpikoApiReserves", () => {
       12_000,
       undefined,
     );
-    expect(result.slices).toEqual([
+    expect(result.slices).toMatchObject([
       { name: "Fully collateralized overnight total-return swap exposure", pct: 100, risk: "medium" },
     ]);
   });

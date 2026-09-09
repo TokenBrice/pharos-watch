@@ -64,7 +64,7 @@ describe("adaptChainlinkPorResponse", () => {
       params,
     );
     expect(result.slices).toHaveLength(1);
-    expect(result.slices[0]).toEqual({
+    expect(result.slices[0]).toMatchObject({
       name: "USD Cash Reserves",
       pct: 100,
       risk: "very-low",

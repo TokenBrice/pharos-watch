@@ -25,10 +25,10 @@ describe("adaptEthenaCollateral", () => {
     const result = adaptEthenaCollateral(payload);
 
     expect(result.slices).toEqual([
-      { name: "Liquid Cash strategy basket", pct: 35, risk: "medium" },
-      { name: "ETH / liquid staking collateral", pct: 30, risk: "medium" },
-      { name: "BTC collateral", pct: 20, risk: "medium" },
-      { name: "Other crypto collateral", pct: 15, risk: "high" },
+      { sourceKey: "ethena:stable", name: "Liquid Cash strategy basket", pct: 35, risk: "medium" },
+      { sourceKey: "ethena:eth", name: "ETH / liquid staking collateral", pct: 30, risk: "medium" },
+      { sourceKey: "ethena:btc", name: "BTC collateral", pct: 20, risk: "medium" },
+      { sourceKey: "ethena:other", name: "Other crypto collateral", pct: 15, risk: "high" },
     ]);
     expect(result.metadata).toMatchObject({
       assetCount: 5,

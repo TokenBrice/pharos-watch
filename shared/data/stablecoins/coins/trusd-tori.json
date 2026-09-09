@@ -48,6 +48,12 @@
         "Delta-Neutral Futures Arbitrage": "Delta-neutral futures arbitrage and calendar-spread positions",
         "Cash & Equivalents": "Cash and equivalents held as FX collateral at investment banks and exchange venues",
         "On-chain Buffer": "On-chain stablecoin buffer in the minting custodian wallet"
+      },
+      "sourceKeyMap": {
+        "Money Markets": "accountable:tori:deployment:money-markets",
+        "Cash & Equivalents": "accountable:tori:deployment:cash-equivalents",
+        "Delta-Neutral Futures Arbitrage": "accountable:tori:deployment:delta-neutral-futures-arbitrage",
+        "On-chain Buffer": "accountable:tori:deployment:on-chain-buffer"
       }
     }
   },

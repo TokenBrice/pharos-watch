@@ -527,14 +527,14 @@ describe("adaptAccountableDashboard", () => {
       collateralizationRatio: 0.98699,
     });
     expect(result.slices).toEqual([
-      { name: "STRC (Strategy preferred equity, BTC-linked)", pct: 58.4, risk: "high" },
-      { name: "Protocol Owned Liquidity", pct: 17.3, risk: "high" },
-      { name: "Inventory", pct: 17.0, risk: "high" },
-      { name: "Cash & Equivalents (USDC, U.S. Treasury Bills)", pct: 7.3, risk: "very-low" },
+      { sourceKey: "accountable:apyx:deployment:strc", name: "STRC (Strategy preferred equity, BTC-linked)", pct: 58.4, risk: "high" },
+      { sourceKey: "accountable:apyx:deployment:protocol-owned-liquidity", name: "Protocol Owned Liquidity", pct: 17.3, risk: "high" },
+      { sourceKey: "accountable:apyx:deployment:inventory", name: "Inventory", pct: 17.0, risk: "high" },
+      { sourceKey: "accountable:apyx:deployment:cash-equivalents", name: "Cash & Equivalents (USDC, U.S. Treasury Bills)", pct: 7.3, risk: "very-low" },
     ]);
     expect(
       apxusdReserves.reserves
-        .map(({ name, pct, risk }) => ({ name, pct, risk }))
+        .map(({ sourceKey, name, pct, risk }) => ({ sourceKey, name, pct, risk }))
         .sort((a, b) => b.pct - a.pct),
     ).toEqual(result.slices);
     expect(validateAdapterOutput(result, {
@@ -593,9 +593,9 @@ describe("adaptAccountableDashboard", () => {
     });
 
     expect(result.slices).toEqual([
-      { name: "Binance", pct: 50.6, risk: "high" },
-      { name: "Solana", pct: 48.3, risk: "high" },
-      { name: "Bnb_smartchain", pct: 1.1, risk: "high" },
+      { sourceKey: "accountable:unitas:deployment:binance", name: "Binance", pct: 50.6, risk: "high" },
+      { sourceKey: "accountable:unitas:deployment:solana", name: "Solana", pct: 48.3, risk: "high" },
+      { sourceKey: "accountable:unitas:deployment:bnb-smartchain", name: "Bnb_smartchain", pct: 1.1, risk: "high" },
     ]);
   });
 
@@ -759,7 +759,7 @@ describe("adaptAccountableDashboard", () => {
     });
 
     expect(result.slices).toEqual([
-      { name: "Liquidity buffer", pct: 100, risk: "low", coinId: "usdt-tether", depType: "collateral" },
+      { sourceKey: "accountable:yuzu:deployment:liquidity-buffer", name: "Liquidity buffer", pct: 100, risk: "low", coinId: "usdt-tether", depType: "collateral" },
     ]);
     expect(result.slices).not.toContainEqual(expect.objectContaining({
       name: "Global Dollar USDG loop",
@@ -813,7 +813,7 @@ describe("adaptAccountableDashboard", () => {
       exposureSplitTimelineTotalReserves: 63_527_322.23,
     });
     expect(result.slices).toEqual([
-      { name: "Liquidity buffer", pct: 100, risk: "low", coinId: "usdt-tether", depType: "collateral" },
+      { sourceKey: "accountable:yuzu:deployment:liquidity-buffer", name: "Liquidity buffer", pct: 100, risk: "low", coinId: "usdt-tether", depType: "collateral" },
     ]);
     expect(result.warnings?.map((warning) => warning.code)).toEqual(["signed-negative-bucket"]);
   });
@@ -900,6 +900,7 @@ describe("adaptAccountableDashboard", () => {
       depType: "collateral",
     }));
     expect(result.slices).toContainEqual({
+      sourceKey: "accountable:yuzu:deployment:fasanara-mglo-loop",
       name: "Fasanara mGLO loop",
       pct: 40,
       risk: "high",

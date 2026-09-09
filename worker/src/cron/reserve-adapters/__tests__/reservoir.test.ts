@@ -104,17 +104,18 @@ describe("adaptReservoirReserves", () => {
 
     expect(slices).toEqual([
       {
+        sourceKey: "reservoir:usd1",
         name: "USD1 lending markets",
         pct: 30,
         risk: "medium",
         coinId: "usd1-world-liberty-financial",
         depType: "collateral",
       },
-      { name: "PYUSD lending markets", pct: 30, risk: "medium", coinId: "pyusd-paypal", depType: "collateral" },
-      { name: "RLUSD lending markets", pct: 15, risk: "medium", coinId: "rlusd-ripple", depType: "collateral" },
-      { name: "GHO lending markets", pct: 10, risk: "medium", coinId: "gho-aave", depType: "collateral" },
-      { name: "USDT / USDT0 positions", pct: 10, risk: "medium", coinId: "usdt-tether", depType: "collateral" },
-      { name: "USDC positions", pct: 5, risk: "medium", coinId: "usdc-circle", depType: "collateral" },
+      { sourceKey: "reservoir:pyusd", name: "PYUSD lending markets", pct: 30, risk: "medium", coinId: "pyusd-paypal", depType: "collateral" },
+      { sourceKey: "reservoir:rlusd", name: "RLUSD lending markets", pct: 15, risk: "medium", coinId: "rlusd-ripple", depType: "collateral" },
+      { sourceKey: "reservoir:gho", name: "GHO lending markets", pct: 10, risk: "medium", coinId: "gho-aave", depType: "collateral" },
+      { sourceKey: "reservoir:usdt", name: "USDT / USDT0 positions", pct: 10, risk: "medium", coinId: "usdt-tether", depType: "collateral" },
+      { sourceKey: "reservoir:usdc", name: "USDC positions", pct: 5, risk: "medium", coinId: "usdc-circle", depType: "collateral" },
     ]);
     // The broader stable bucket remains diagnostic, while the modeled terminal
     // USDC route is limited to the actual USDC slice.
@@ -147,8 +148,8 @@ describe("adaptReservoirReserves", () => {
     });
 
     expect(slices).toEqual([
-      { name: "AUSD lending markets", pct: 60, risk: "medium", coinId: "ausd-agora", depType: "collateral" },
-      { name: "USDC positions", pct: 40, risk: "medium", coinId: "usdc-circle", depType: "collateral" },
+      { sourceKey: "reservoir:ausd", name: "AUSD lending markets", pct: 60, risk: "medium", coinId: "ausd-agora", depType: "collateral" },
+      { sourceKey: "reservoir:usdc", name: "USDC positions", pct: 40, risk: "medium", coinId: "usdc-circle", depType: "collateral" },
     ]);
     expect(stableBucketLiquidityUsd).toBe(95);
     expect(immediateRedeemableUsd).toBe(40);
@@ -181,8 +182,9 @@ describe("adaptReservoirReserves", () => {
     });
 
     expect(slices).toEqual([
-      { name: "Hastra / Sentora PRIME credit allocations", pct: 75, risk: "high" },
+      { sourceKey: "reservoir:prime", name: "Hastra / Sentora PRIME credit allocations", pct: 75, risk: "high" },
       {
+        sourceKey: "reservoir:usdat",
         name: "Pendle PT USDat tokenized-treasury principal token",
         pct: 25,
         risk: "high",
@@ -242,7 +244,7 @@ describe("adaptReservoirReserves", () => {
       equity: "5",
     });
 
-    expect(slices).toEqual([{ name: "Unmapped reserve positions", pct: 100, risk: "high" }]);
+    expect(slices).toEqual([{ sourceKey: "reservoir:unknown", name: "Unmapped reserve positions", pct: 100, risk: "high" }]);
     expect(unknownAssets).toEqual(["Mystery Strategy Vault"]);
     expect(unknownExposurePct).toBe(100);
     expect(immediateRedeemableUsd).toBe(0);
@@ -256,7 +258,7 @@ describe("adaptReservoirReserves", () => {
 
     expect(unknownAssets).toContain("Unmapped Reservoir balance-sheet total-assets gap");
     expect(sourceTotalGapPct).toBe(20);
-    expect(slices).toEqual(expect.arrayContaining([{ name: "Unmapped reserve positions", pct: 20, risk: "high" }]));
+    expect(slices).toEqual(expect.arrayContaining([{ sourceKey: "reservoir:unknown", name: "Unmapped reserve positions", pct: 20, risk: "high" }]));
   });
 
   it("handles non-integer percentages correctly via normalizeSlices", () => {
@@ -305,8 +307,6 @@ describe("adaptReservoirReserves", () => {
 
     expect(result.metadata).toMatchObject({
       psmUnderlyingBalanceRaw: "4000000",
-      immediateRedeemableUsd: 4,
-      immediateRedeemableRatio: 4 / 95,
       redemption: {
         capacityUsd: 4,
         capacityRatioOfSupply: 4 / 95,
@@ -328,7 +328,7 @@ describe("adaptReservoirReserves", () => {
     primePsmMocks({ redeemFee: 134n });
     const { result } = await runReservoir("srusd-reservoir", SAMPLE_RESPONSE);
 
-    expect(result.metadata?.redemptionFeeBps).toBeCloseTo(1.34, 10);
+    expect(result.metadata).not.toHaveProperty("redemptionFeeBps");
     expect(result.metadata?.redemption?.feeBps).toBeCloseTo(1.34, 10);
   });
 
@@ -336,7 +336,7 @@ describe("adaptReservoirReserves", () => {
     primePsmMocks({ redeemFee: 134n });
     const { result } = await runReservoir("rusd-reservoir", SAMPLE_RESPONSE);
 
-    expect(result.metadata?.redemptionFeeBps).toBeUndefined();
+    expect(result.metadata).not.toHaveProperty("redemptionFeeBps");
     expect(result.metadata?.redemption?.feeBps).toBeUndefined();
     // Capacity still publishes: the PSM leg is shared by all three coins.
     expect(result.metadata?.redemption?.capacityKind).toBe("live-direct");

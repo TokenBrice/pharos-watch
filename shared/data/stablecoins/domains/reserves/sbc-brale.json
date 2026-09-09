@@ -2,6 +2,7 @@
   "id": "sbc-brale",
   "reserves": [
     {
+      "sourceKey": "sbc-independent-assurance:sbc:cash-and-cash-equivalents",
       "name": "Cash and cash equivalents",
       "pct": 88.827248,
       "risk": "very-low",
@@ -16,6 +17,7 @@
       "liquidityHorizon": "immediate"
     },
     {
+      "sourceKey": "sbc-independent-assurance:sbc:us-government-backed-debt",
       "name": "U.S. government-backed debt",
       "pct": 11.172752,
       "risk": "very-low",

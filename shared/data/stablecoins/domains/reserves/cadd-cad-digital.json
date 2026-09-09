@@ -2,6 +2,7 @@
   "id": "cadd-cad-digital",
   "reserves": [
     {
+      "sourceKey": "cadd-independent-assurance:cadd:cad-cash",
       "name": "Canadian dollar cash in segregated trust accounts",
       "pct": 100,
       "risk": "very-low",

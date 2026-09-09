@@ -8,8 +8,16 @@
       "coinId": "usde-ethena",
       "assetClass": "stablecoin",
       "issuerOrObligor": "Ethena Labs",
-      "riskFactors": ["counterparty", "custody", "smart-contract", "market", "basis", "concentration"],
-      "liquidityHorizon": "immediate"
+      "riskFactors": [
+        "counterparty",
+        "custody",
+        "smart-contract",
+        "market",
+        "basis",
+        "concentration"
+      ],
+      "liquidityHorizon": "immediate",
+      "sourceKey": "evm-branch-balances:berachain:0x5d3a1ff2b6bab83b63cd9ad0787074081a52ef34"
     }
   ],
   "reserveReview": {

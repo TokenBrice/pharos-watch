@@ -35,7 +35,6 @@ describe("adaptReMetrics", () => {
       sourceTimestamp: Math.floor(Date.parse("2026-08-09T21:23:13.835Z") / 1000),
       freshnessMode: "verified",
       stableAssetUsd: expect.any(Number),
-      immediateRedeemableUsd: 45535373.18748523,
       redemptionRowsCount: 4,
       redemption: {
         capacityUsd: 45535373.18748523,
@@ -124,7 +123,6 @@ self.__next_f.push([1,"...\\"initialChainBreakdowns\\":{\\"ethereum\\":{\\"asOf\
     const result = adaptReMetrics(html);
 
     expect(result.metadata).toMatchObject({
-      immediateRedeemableUsd: 25_500_000,
       redemptionRowsCount: 2,
       redemption: {
         capacityUsd: 25_500_000,

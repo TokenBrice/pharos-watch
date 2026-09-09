@@ -53,7 +53,6 @@ export function adaptSuperstateLiquidity(
       circleUsdAvailable,
       usdcRedemptionIdle,
       apiLiquidityUsd,
-      immediateRedeemableUsd: onchainRedemptionIdleUsd,
       liquidityFreshnessSource: "same-run-onchain" as const,
       redemption: {
         capacityUsd: onchainRedemptionIdleUsd,

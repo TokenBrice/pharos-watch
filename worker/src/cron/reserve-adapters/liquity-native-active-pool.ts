@@ -113,6 +113,7 @@ export async function fetchLiquityNativeActivePoolReserves(
   return {
     slices: [
       {
+        sourceKey: `liquity-native-active-pool:${params.activePoolAddress.toLowerCase()}`,
         name: params.collateralLabel,
         pct: 100,
         risk: params.collateralRisk,
@@ -127,7 +128,6 @@ export async function fetchLiquityNativeActivePoolReserves(
       activePoolAddress: params.activePoolAddress,
       totalDebtUsd,
       totalReserveUsd: collateralUsd,
-      immediateRedeemableUsd: totalDebtUsd,
       collateralizationRatio,
       collateralPriceUsd: priceUsd,
       ...(tcr != null ? { totalCollateralRatio: tcr } : {}),

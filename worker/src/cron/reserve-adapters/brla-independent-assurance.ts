@@ -350,6 +350,7 @@ export async function fetchBrlaIndependentAssuranceReserves(
       throw new Error(`${ADAPTER_KEY}: unknown positive asset row ${asset.code}`);
     }
     return {
+      sourceKey: `brla-independent-assurance:brla:${asset.code}`,
       amount: Number(asset.amount),
       name: classification?.name ?? asset.label,
       risk: classification?.risk ?? "very-low",

@@ -20,6 +20,15 @@ export function worseRisk(a: ReserveSlice["risk"], b: ReserveSlice["risk"]): Res
   return RISK_SEVERITY[a] >= RISK_SEVERITY[b] ? a : b;
 }
 
+/**
+ * Canonical sourceKey suffix slug: lowercase, every character outside
+ * [a-z0-9._-] folded to "-" with repeats collapsed, so the result always
+ * satisfies the ReserveSliceSchema sourceKey pattern.
+ */
+export function sourceKeySlug(value: string): string {
+  return value.toLowerCase().replace(/[^a-z0-9._-]+/g, "-");
+}
+
 interface UnknownExposureWarningOptions {
   code: string;
   message: string;
@@ -272,6 +281,7 @@ export function buildBucketSlices<Bucket extends string>(
     risk: ReserveSlice["risk"];
     bucket?: Bucket;
     value?: number;
+    sourceKey?: string;
     coinId?: string;
     depType?: ReserveSlice["depType"];
     blacklistable?: boolean;

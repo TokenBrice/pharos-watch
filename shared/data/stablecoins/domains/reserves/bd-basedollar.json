@@ -7,8 +7,14 @@
       "risk": "very-low",
       "assetClass": "cryptoasset",
       "issuerOrObligor": "Ethereum protocol and WETH9 contract",
-      "riskFactors": ["market", "liquidity", "smart-contract", "custody"],
-      "liquidityHorizon": "immediate"
+      "riskFactors": [
+        "market",
+        "liquidity",
+        "smart-contract",
+        "custody"
+      ],
+      "liquidityHorizon": "immediate",
+      "sourceKey": "liquity-v2-branches:base:0x4200000000000000000000000000000000000006"
     },
     {
       "name": "wstETH (Lido)",
@@ -16,8 +22,15 @@
       "risk": "low",
       "assetClass": "cryptoasset",
       "issuerOrObligor": "Lido DAO and Ethereum validators",
-      "riskFactors": ["market", "liquidity", "smart-contract", "custody", "concentration"],
-      "liquidityHorizon": "immediate"
+      "riskFactors": [
+        "market",
+        "liquidity",
+        "smart-contract",
+        "custody",
+        "concentration"
+      ],
+      "liquidityHorizon": "immediate",
+      "sourceKey": "liquity-v2-branches:base:0xc1cba3fcea344f92d9239c08c0568f6f2f0ee452"
     },
     {
       "name": "rETH (Rocket Pool)",
@@ -25,8 +38,15 @@
       "risk": "low",
       "assetClass": "cryptoasset",
       "issuerOrObligor": "Rocket Pool DAO and node operators",
-      "riskFactors": ["market", "liquidity", "smart-contract", "custody", "concentration"],
-      "liquidityHorizon": "one-day"
+      "riskFactors": [
+        "market",
+        "liquidity",
+        "smart-contract",
+        "custody",
+        "concentration"
+      ],
+      "liquidityHorizon": "one-day",
+      "sourceKey": "liquity-v2-branches:base:0xb6fe221fe9eef5aba221c348ba20a1bf5e73624c"
     },
     {
       "name": "cbBTC (Coinbase)",
@@ -34,8 +54,15 @@
       "risk": "medium",
       "assetClass": "cryptoasset",
       "issuerOrObligor": "Coinbase and the Bitcoin network",
-      "riskFactors": ["market", "liquidity", "smart-contract", "custody", "concentration"],
-      "liquidityHorizon": "immediate"
+      "riskFactors": [
+        "market",
+        "liquidity",
+        "smart-contract",
+        "custody",
+        "concentration"
+      ],
+      "liquidityHorizon": "immediate",
+      "sourceKey": "liquity-v2-branches:base:0x92a7aee8afaa71ba0a9cc04a3dbe1f34237c33e0"
     },
     {
       "name": "cbETH (Coinbase)",
@@ -43,8 +70,15 @@
       "risk": "low",
       "assetClass": "cryptoasset",
       "issuerOrObligor": "Coinbase and Ethereum validators",
-      "riskFactors": ["market", "liquidity", "smart-contract", "custody", "concentration"],
-      "liquidityHorizon": "one-day"
+      "riskFactors": [
+        "market",
+        "liquidity",
+        "smart-contract",
+        "custody",
+        "concentration"
+      ],
+      "liquidityHorizon": "one-day",
+      "sourceKey": "liquity-v2-branches:base:0x2ae3f1ec7f1f5012cfeab0185bfc7aa3cf0dec22"
     }
   ],
   "reserveReview": {

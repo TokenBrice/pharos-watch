@@ -92,15 +92,15 @@ describe("fetchNestVaultPositionsReserves", () => {
     );
 
     expect(result.slices).toEqual([
-      { name: "Superstate USTB Treasury Fund", pct: 27.9, risk: "low", coinId: "ustb-superstate" },
-      { name: "Nest private and structured credit vaults", pct: 27.9, risk: "high" },
-      { name: "Nest Treasury vault (nTBILL)", pct: 11.6, risk: "low", coinId: "ntbill-nest" },
-      { name: "Liquid USDC balances", pct: 9.3, risk: "low", coinId: "usdc-circle" },
-      { name: "Janus Henderson Anemoy Treasury Fund (JTRSY)", pct: 9.3, risk: "low", coinId: "jtrsy-anemoy" },
-      { name: "Liquid USDT balances", pct: 4.7, risk: "low", coinId: "usdt-tether" },
-      { name: "Nest pending deposits", pct: 4.7, risk: "high" },
-      { name: "pUSD liquid balance", pct: 2.3, risk: "high", coinId: "pusd-plume" },
-      { name: "Nest NAV reconciliation residual", pct: 2.3, risk: "high" },
+      { sourceKey: "nest-vault-positions:ustb", name: "Superstate USTB Treasury Fund", pct: 27.9, risk: "low", coinId: "ustb-superstate" },
+      { sourceKey: "nest-vault-positions:credit-vaults", name: "Nest private and structured credit vaults", pct: 27.9, risk: "high" },
+      { sourceKey: "nest-vault-positions:ntbill", name: "Nest Treasury vault (nTBILL)", pct: 11.6, risk: "low", coinId: "ntbill-nest" },
+      { sourceKey: "nest-vault-positions:usdc", name: "Liquid USDC balances", pct: 9.3, risk: "low", coinId: "usdc-circle" },
+      { sourceKey: "nest-vault-positions:jtrsy", name: "Janus Henderson Anemoy Treasury Fund (JTRSY)", pct: 9.3, risk: "low", coinId: "jtrsy-anemoy" },
+      { sourceKey: "nest-vault-positions:usdt", name: "Liquid USDT balances", pct: 4.7, risk: "low", coinId: "usdt-tether" },
+      { sourceKey: "nest-vault-positions:pending-deposits", name: "Nest pending deposits", pct: 4.7, risk: "high" },
+      { sourceKey: "nest-vault-positions:pusd", name: "pUSD liquid balance", pct: 2.3, risk: "high", coinId: "pusd-plume" },
+      { sourceKey: "nest-vault-positions:nav-residual", name: "Nest NAV reconciliation residual", pct: 2.3, risk: "high" },
     ]);
     expect(result.metadata).toMatchObject({
       freshnessMode: "verified",
@@ -175,7 +175,7 @@ describe("fetchNestVaultPositionsReserves", () => {
     );
 
     expect(result.slices).toEqual([
-      { name: "Liquid USDC balances", pct: 100, risk: "low", coinId: "usdc-circle" },
+      { sourceKey: "nest-vault-positions:usdc", name: "Liquid USDC balances", pct: 100, risk: "low", coinId: "usdc-circle" },
     ]);
     expect(result.warnings).toBeUndefined();
     expect(result.metadata).toMatchObject({
@@ -220,8 +220,8 @@ describe("fetchNestVaultPositionsReserves", () => {
     );
 
     expect(result.slices).toEqual([
-      { name: "Nest NAV reconciliation residual", pct: 78.3, risk: "high" },
-      { name: "pUSD liquid balance", pct: 21.7, risk: "high", coinId: "pusd-plume" },
+      { sourceKey: "nest-vault-positions:nav-residual", name: "Nest NAV reconciliation residual", pct: 78.3, risk: "high" },
+      { sourceKey: "nest-vault-positions:pusd", name: "pUSD liquid balance", pct: 21.7, risk: "high", coinId: "pusd-plume" },
     ]);
     expect(result.metadata).toMatchObject({
       totalReserveUsd: 1.8890182896,

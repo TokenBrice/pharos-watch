@@ -129,7 +129,7 @@ function decodeBooleanResult(raw: string | null, context: string): boolean {
 function buildRedemptionTelemetry(
   snapshots: readonly ResupplyPairSnapshot[],
   input: RedemptionTelemetryInput | undefined,
-): Pick<NonNullable<AdapterResult["metadata"]>, "redemption" | "immediateRedeemableUsd"> {
+): Pick<NonNullable<AdapterResult["metadata"]>, "redemption"> {
   if (!input) return {};
   let capacityUsd = 0;
   for (const snapshot of snapshots) {
@@ -146,7 +146,6 @@ function buildRedemptionTelemetry(
     : "Resupply redemption guard currently limits redemptions to the protocol redemption operator until the reUSD oracle price is below the permissionless threshold";
 
   return {
-    immediateRedeemableUsd: capacityUsd,
     ...buildRedemptionSnapshotMetadata({
       capacityUsd,
       capacityKind: "live-direct-bounded",
@@ -175,6 +174,7 @@ export function adaptResupplyPairSnapshots(
   snapshots: readonly ResupplyPairSnapshot[],
   underlyings: readonly ResupplyUnderlyingDescriptor[] | undefined,
   redemptionTelemetry?: RedemptionTelemetryInput,
+  chain = "ethereum",
 ): AdapterResult {
   const underlyingByAddress = buildUnderlyingMap(underlyings);
   const valueByUnderlying = new Map<
@@ -234,6 +234,7 @@ export function adaptResupplyPairSnapshots(
   return {
     slices: slicesFromValues(
       [...valueByUnderlying.values()].map(({ descriptor, value }) => ({
+        sourceKey: `resupply-pairs:${chain}:${descriptor.address.toLowerCase()}`,
         value,
         name: descriptor.name,
         risk: descriptor.risk,

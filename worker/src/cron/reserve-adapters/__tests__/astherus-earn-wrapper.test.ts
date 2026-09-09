@@ -141,6 +141,7 @@ describe("fetchAstherusEarnWrapperReserves", () => {
 
     expect(result.slices).toEqual([
       {
+        sourceKey: "astherus-earn-wrapper:usdf",
         name: "USDF staking wrapper shares",
         pct: 100,
         risk: "medium",

@@ -23,8 +23,8 @@ describe("adaptQuantozTransparency", () => {
     const result = adaptQuantozTransparency(QUANTOZ_HTML, "EURQ");
 
     expect(result.slices).toEqual([
-      { name: "Government bonds (Netherlands, Germany, and US)", pct: 70, risk: "very-low" },
-      { name: "Cash deposits at Tier 1 European banks", pct: 30, risk: "very-low" },
+      { sourceKey: "quantoz-transparency:government-bonds", name: "Government bonds (Netherlands, Germany, and US)", pct: 70, risk: "very-low" },
+      { sourceKey: "quantoz-transparency:cash", name: "Cash deposits at Tier 1 European banks", pct: 30, risk: "very-low" },
     ]);
     expect(result.metadata).toMatchObject({
       token: "EURQ",

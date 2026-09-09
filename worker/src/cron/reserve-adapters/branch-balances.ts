@@ -318,6 +318,9 @@ export function adaptBranchBalanceReserves(input: AdaptBranchBalanceInput): Adap
       }
     }
     return {
+      ...(adapterKey === "lista"
+        ? {}
+        : { sourceKey: `${adapterKey}:${branch.token.chain}:${branch.token.address.toLowerCase()}` }),
       value: valueUsdFromBigIntPrice(balanceRaw ?? 0n, branch.token.decimals, price),
       name: branch.name,
       risk: branch.risk,

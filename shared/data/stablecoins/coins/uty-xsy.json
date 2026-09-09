@@ -115,7 +115,23 @@
       },
       "allowNegativeBuckets": [
         "Ethereum"
-      ]
+      ],
+      "sourceKeyMap": {
+        "Avalanche": "accountable:xsy:deployment:avalanche",
+        "Copper": "accountable:xsy:deployment:copper",
+        "Katana": "accountable:xsy:deployment:katana",
+        "Ethereum": "accountable:xsy:deployment:ethereum",
+        "Base": "accountable:xsy:deployment:base",
+        "Plasma": "accountable:xsy:deployment:plasma",
+        "Arbitrum": "accountable:xsy:deployment:arbitrum",
+        "Monad": "accountable:xsy:deployment:monad",
+        "Bybit": "accountable:xsy:deployment:bybit",
+        "Bnb_smartchain": "accountable:xsy:deployment:bnb-smartchain",
+        "Hyperevm": "accountable:xsy:deployment:hyperevm",
+        "Hyperliquid": "accountable:xsy:deployment:hyperliquid",
+        "Megaeth": "accountable:xsy:deployment:megaeth",
+        "Sei": "accountable:xsy:deployment:sei"
+      }
     }
   },
   "launchDate": "2025-05-15"

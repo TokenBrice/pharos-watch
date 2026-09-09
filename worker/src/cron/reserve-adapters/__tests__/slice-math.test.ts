@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { normalizeSlicesWithDiagnostics, normalizeSlices, valueUsdFromBigIntPrice, worseRisk } from "../slice-math";
+import { normalizeSlicesWithDiagnostics, normalizeSlices, sourceKeySlug, valueUsdFromBigIntPrice, worseRisk } from "../slice-math";
 import { accumulateBucketedExposure, classifyBucketedValues } from "../classification";
 import type { ReserveSlice } from "@shared/types/core";
 
@@ -102,6 +102,22 @@ describe("reserve identity and input integrity", () => {
         items, getValue: (value) => value, getUnknownLabel: String,
         rules: [{ key: "cash", name: "Cash", risk: "low", match: () => true }],
       })).toThrow(/invalid value/);
+    }
+  });
+});
+
+describe("sourceKeySlug", () => {
+  it("folds provider labels into schema-valid sourceKey suffixes", () => {
+    const schemaPattern = /^[a-z0-9][a-z0-9._-]*:[a-z0-9][a-z0-9._:/-]*$/;
+    const cases: Array<[string, string]> = [
+      ["Fraxswap V2 FRAX/FPIS", "fraxswap-v2-frax-fpis"],
+      ["cowswap-fxSave", "cowswap-fxsave"],
+      ["morpho-steakUSDCinfinifi", "morpho-steakusdcinfinifi"],
+      ["a  b//c", "a-b-c"],
+    ];
+    for (const [raw, expected] of cases) {
+      expect(sourceKeySlug(raw)).toBe(expected);
+      expect(schemaPattern.test(`adapter:${sourceKeySlug(raw)}`)).toBe(true);
     }
   });
 });

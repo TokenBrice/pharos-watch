@@ -2,6 +2,7 @@
   "id": "usdu-unitas",
   "reserves": [
     {
+      "sourceKey": "accountable:unitas:deployment:binance",
       "name": "Binance",
       "pct": 15.02,
       "risk": "high",
@@ -18,6 +19,7 @@
       "liquidityHorizon": "unknown"
     },
     {
+      "sourceKey": "accountable:unitas:deployment:solana",
       "name": "Solana",
       "pct": 47.57,
       "risk": "high",
@@ -34,6 +36,7 @@
       "liquidityHorizon": "unknown"
     },
     {
+      "sourceKey": "accountable:unitas:deployment:bnb-smartchain",
       "name": "Bnb_smartchain",
       "pct": 2.24,
       "risk": "high",
@@ -50,6 +53,7 @@
       "liquidityHorizon": "unknown"
     },
     {
+      "sourceKey": "accountable:unitas:deployment:bitcoin",
       "name": "Bitcoin",
       "pct": 35.17,
       "risk": "medium",

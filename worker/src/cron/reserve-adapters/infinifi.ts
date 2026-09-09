@@ -15,6 +15,7 @@ import {
   parseTimestampLikeToUnixSeconds,
   requireJsonInputFromConfig,
   reserveInfoWarning,
+  sourceKeySlug,
   unverifiedFreshnessMetadata,
   verifiedFreshnessMetadata,
 } from "./helpers";
@@ -240,6 +241,7 @@ export function adaptInfiniFi(payload: InfiniFiProtocolData): AdaptInfiniFiResul
     const risk: ReserveSlice["risk"] = config?.risk
       ?? (f.type === "LIQUID" ? "low" : "medium");
     rawSlices.push({
+      sourceKey: `infinifi:${sourceKeySlug(f.name)}`,
       name: f.label,
       pct,
       risk,
@@ -251,6 +253,7 @@ export function adaptInfiniFi(payload: InfiniFiProtocolData): AdaptInfiniFiResul
 
   if (sourceTotalGapPct > SOURCE_TOTAL_RECONCILIATION_THRESHOLD_PCT) {
     rawSlices.push({
+      sourceKey: "infinifi:tvl-gap",
       name: excludedProtocolFarms.length > 0
         ? "InfiniFi protocol-level reserve positions"
         : "Unmapped InfiniFi TVL gap",
@@ -563,11 +566,7 @@ export async function fetchInfiniFiReserves(
       ...(adapted.excludedProtocolFarms.length > 0 ? { excludedProtocolFarms: adapted.excludedProtocolFarms } : {}),
       ...freshness,
       totalReserveUsd,
-      immediateRedeemableUsd: adapted.immediateRedeemableUsd,
       illiquidReserveUsd,
-      ...(adapted.supplyUsd != null && adapted.supplyUsd > 0
-        ? { immediateRedeemableRatio: adapted.immediateRedeemableUsd / adapted.supplyUsd }
-        : {}),
       pendingRedemptionsUsd:
         payload.data.stats.asset.pendingRedemptionsAssetNormalized,
       ...(adapted.supplyUsd != null ? { supplyUsd: adapted.supplyUsd } : {}),

@@ -151,8 +151,9 @@ describe("fetchParallelizerBalancesReserves", () => {
       AbortSignal.timeout(5_000),
     );
 
-    expect(result.slices).toEqual([
+    expect(result.slices).toMatchObject([
       {
+        sourceKey: "parallelizer-balances:0x6000000000000000000000000000000000000006",
         name: "sUSDe (Ethereum + HyperEVM branches)",
         pct: 66.666667,
         risk: "medium",
@@ -160,6 +161,7 @@ describe("fetchParallelizerBalancesReserves", () => {
         depType: "collateral",
       },
       {
+        sourceKey: "parallelizer-balances:0x5000000000000000000000000000000000000005",
         name: "frxUSD (Ethereum branch)",
         pct: 22.222222,
         risk: "low",
@@ -224,7 +226,6 @@ describe("fetchParallelizerBalancesReserves", () => {
     expect(result.slices.map((slice) => slice.name)).toContain("sUSDe (Ethereum + HyperEVM branches)");
     expect(result.metadata).toMatchObject({
       totalReserveUsd: 450,
-      immediateRedeemableUsd: 100,
       redemption: {
         capacityUsd: 100,
         routeStatus: "degraded",
@@ -244,7 +245,6 @@ describe("fetchParallelizerBalancesReserves", () => {
 
     expect(result.metadata).toMatchObject({
       totalReserveUsd: 450,
-      immediateRedeemableUsd: 0,
       redemption: {
         capacityUsd: 0,
         routeStatus: "paused",

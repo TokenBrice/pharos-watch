@@ -2,6 +2,7 @@
   "id": "audx-aussie-dollar-token",
   "reserves": [
     {
+      "sourceKey": "audx-independent-assurance:audx:designated-bank-accounts",
       "name": "Australian-dollar reserves in designated bank accounts",
       "pct": 100,
       "risk": "very-low",

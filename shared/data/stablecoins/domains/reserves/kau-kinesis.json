@@ -2,6 +2,7 @@
   "id": "kau-kinesis",
   "reserves": [
     {
+      "sourceKey": "chainlink-por:feed:0xab5dd7dd7669072a1ef27c0ba241120a27a1aec3",
       "name": "Physical gold reserves",
       "pct": 100,
       "risk": "very-low",

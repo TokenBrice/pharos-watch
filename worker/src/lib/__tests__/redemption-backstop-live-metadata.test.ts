@@ -442,9 +442,11 @@ describe("readRedemptionBackstopLiveMetadata", () => {
       "lusd-liquity",
       snapshot("lusd-liquity", {
         freshnessMode: "not-applicable",
-        immediateRedeemableUsd: Number.NaN,
-        immediateRedeemableRatio: -0.1,
-        redemptionFeeBps: -1,
+        redemption: {
+          capacityUsd: Number.NaN,
+          capacityRatioOfSupply: -0.1,
+          feeBps: -1,
+        },
       }),
       now,
     );
@@ -456,9 +458,9 @@ describe("readRedemptionBackstopLiveMetadata", () => {
     expect(metadata.canUseFee).toBe(false);
     expect(metadata.capacityNotes).toEqual(
       expect.arrayContaining([
-        "Legacy redemption capacity USD is malformed and was ignored",
-        "Legacy redemption capacity ratio is below 0 and was ignored",
-        "Legacy redemption fee bps is below 0 and was ignored",
+        "Live redemption capacity USD is malformed and was ignored",
+        "Live redemption capacity ratio is below 0 and was ignored",
+        "Live redemption fee bps is below 0 and was ignored",
       ]),
     );
   });

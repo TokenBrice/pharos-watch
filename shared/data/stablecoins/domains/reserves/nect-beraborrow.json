@@ -16,7 +16,8 @@
         "custody",
         "concentration"
       ],
-      "liquidityHorizon": "unknown"
+      "liquidityHorizon": "unknown",
+      "sourceKey": "liquity-v2-branches:berachain:0x924d6485583bfe571a03fcb05107e1e6dc44e408"
     },
     {
       "name": "WETH",
@@ -30,7 +31,8 @@
         "smart-contract",
         "concentration"
       ],
-      "liquidityHorizon": "seven-days"
+      "liquidityHorizon": "seven-days",
+      "sourceKey": "liquity-v2-branches:berachain:0x42ebe55b64bb6fa169518ab1bf1c7fca874e3004"
     },
     {
       "name": "WETH-HONEY Kodiak Island",
@@ -46,7 +48,8 @@
         "counterparty",
         "concentration"
       ],
-      "liquidityHorizon": "unknown"
+      "liquidityHorizon": "unknown",
+      "sourceKey": "liquity-v2-branches:berachain:0xd8a8231f78b25de11119b77ae56d3daa84605a64"
     },
     {
       "name": "solvBTC",
@@ -61,7 +64,8 @@
         "counterparty",
         "smart-contract"
       ],
-      "liquidityHorizon": "seven-days"
+      "liquidityHorizon": "seven-days",
+      "sourceKey": "liquity-v2-branches:berachain:0x4c0c5ae255a1dcbec206a1cd40a03c60c387dcdd"
     },
     {
       "name": "beraETH",
@@ -75,7 +79,8 @@
         "smart-contract",
         "counterparty"
       ],
-      "liquidityHorizon": "unknown"
+      "liquidityHorizon": "unknown",
+      "sourceKey": "liquity-v2-branches:berachain:0x65af6d1822f162b2b70395428cc24ff5587c0b02"
     },
     {
       "name": "solvBTC.bbn",
@@ -90,7 +95,8 @@
         "counterparty",
         "smart-contract"
       ],
-      "liquidityHorizon": "unknown"
+      "liquidityHorizon": "unknown",
+      "sourceKey": "liquity-v2-branches:berachain:0xe357b38f9871da3f8320e132e272d93721aa6582"
     },
     {
       "name": "pumpBTC",
@@ -105,7 +111,8 @@
         "counterparty",
         "smart-contract"
       ],
-      "liquidityHorizon": "unknown"
+      "liquidityHorizon": "unknown",
+      "sourceKey": "liquity-v2-branches:berachain:0xce1e426e35ebc9f512944f59527304e3b771ea12"
     },
     {
       "name": "WBTC-HONEY Kodiak Island",
@@ -122,7 +129,8 @@
         "custody",
         "concentration"
       ],
-      "liquidityHorizon": "unknown"
+      "liquidityHorizon": "unknown",
+      "sourceKey": "liquity-v2-branches:berachain:0x08feddcbf7ff3462a61dd56016f5297b87c0789f"
     },
     {
       "name": "uniBTC",
@@ -137,7 +145,8 @@
         "counterparty",
         "smart-contract"
       ],
-      "liquidityHorizon": "unknown"
+      "liquidityHorizon": "unknown",
+      "sourceKey": "liquity-v2-branches:berachain:0xdc8408870f77b0b99d70779f68fb560b6fe39259"
     },
     {
       "name": "ylstETH",
@@ -151,7 +160,8 @@
         "smart-contract",
         "counterparty"
       ],
-      "liquidityHorizon": "unknown"
+      "liquidityHorizon": "unknown",
+      "sourceKey": "liquity-v2-branches:berachain:0x45b3b6b28c77dd23a91acc3bd41da436fa6a61ae"
     },
     {
       "name": "rsETH",
@@ -165,7 +175,8 @@
         "smart-contract",
         "counterparty"
       ],
-      "liquidityHorizon": "unknown"
+      "liquidityHorizon": "unknown",
+      "sourceKey": "liquity-v2-branches:berachain:0xabbf8064047a6ea85169230bf42013da4431659a"
     },
     {
       "name": "Stakestone ETH",
@@ -179,7 +190,8 @@
         "smart-contract",
         "counterparty"
       ],
-      "liquidityHorizon": "unknown"
+      "liquidityHorizon": "unknown",
+      "sourceKey": "liquity-v2-branches:berachain:0x3d7f3b0ab008a04582a2a37bee150de7c8a37953"
     },
     {
       "name": "WBERA",
@@ -192,7 +204,8 @@
         "liquidity",
         "smart-contract"
       ],
-      "liquidityHorizon": "seven-days"
+      "liquidityHorizon": "seven-days",
+      "sourceKey": "liquity-v2-branches:berachain:0x9158d1b0c9cc4ec7640eaef0522f710dadee9a1b"
     }
   ],
   "reserveReview": {

@@ -18,7 +18,8 @@
         "smart-contract",
         "concentration"
       ],
-      "liquidityHorizon": "immediate"
+      "liquidityHorizon": "immediate",
+      "sourceKey": "pusd-vault:0xc417fd8e9661c0d2120b64a04bb3278c17e99db1"
     }
   ],
   "reserveReview": {

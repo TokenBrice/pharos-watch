@@ -397,10 +397,14 @@ describe("adaptCrvUsd", () => {
     });
 
     expect(result.slices).toEqual([
-      { name: "Custodied BTC (ex: wBTC/cbBTC)", pct: 70, risk: "medium" },
-      { name: "wstETH / sfrxETH / weETH", pct: 12, risk: "low" },
-      { name: "tBTC", pct: 10, risk: "medium" },
-      { name: "ETH", pct: 8, risk: "very-low" },
+      { sourceKey: "crvusd:btc",
+      name: "Custodied BTC (ex: wBTC/cbBTC)", pct: 70, risk: "medium" },
+      { sourceKey: "crvusd:eth-lst",
+      name: "wstETH / sfrxETH / weETH", pct: 12, risk: "low" },
+      { sourceKey: "crvusd:tbtc",
+      name: "tBTC", pct: 10, risk: "medium" },
+      { sourceKey: "crvusd:eth",
+      name: "ETH", pct: 8, risk: "very-low" },
     ]);
     expect(result.warnings).toEqual([]);
     expect(result.metadata).toMatchObject({
@@ -433,8 +437,10 @@ describe("adaptCrvUsd", () => {
     );
 
     expect(result.slices).toEqual([
-      { name: "Custodied BTC (ex: wBTC/cbBTC)", pct: 66.7, risk: "medium" },
-      { name: "ETH", pct: 33.3, risk: "very-low" },
+      { sourceKey: "crvusd:btc",
+      name: "Custodied BTC (ex: wBTC/cbBTC)", pct: 66.7, risk: "medium" },
+      { sourceKey: "crvusd:eth",
+      name: "ETH", pct: 33.3, risk: "very-low" },
     ]);
     expect(result.metadata).toMatchObject({
       marketCount: 4,
@@ -451,8 +457,10 @@ describe("adaptCrvUsd", () => {
       { collateral_amount_usd: 25, collateral_token: { symbol: "UNREVIEWED" } },
     ] } } });
     expect(result.slices).toEqual([
-      { name: "Custodied BTC (ex: wBTC/cbBTC)", pct: 75, risk: "medium" },
-      { name: "Other / unmapped collateral markets", pct: 25, risk: "high" },
+      { sourceKey: "crvusd:btc",
+      name: "Custodied BTC (ex: wBTC/cbBTC)", pct: 75, risk: "medium" },
+      { sourceKey: "crvusd:unknown",
+      name: "Other / unmapped collateral markets", pct: 25, risk: "high" },
     ]);
     expect(result.metadata).toMatchObject({ unknownExposurePct: 25, activeMarketCount: 2, directCollateralUsd: 100 });
     expect(result.warnings).toEqual([expect.objectContaining({ code: "unknown-market" })]);
@@ -462,7 +470,8 @@ describe("adaptCrvUsd", () => {
     const result = adaptCrvUsd({ chains: { ethereum: { data: [
       { collateral_amount_usd: 100, collateral_token: { symbol: "UNREVIEWED" } },
     ] } } });
-    expect(result.slices).toEqual([{ name: "Other / unmapped collateral markets", pct: 100, risk: "high" }]);
+    expect(result.slices).toEqual([{ sourceKey: "crvusd:unknown",
+      name: "Other / unmapped collateral markets", pct: 100, risk: "high" }]);
     expect(result.metadata).toMatchObject({ unknownExposurePct: 100, activeMarketCount: 1 });
     expect(result.warnings).toEqual([expect.objectContaining({ code: "unknown-market" })]);
   });
@@ -479,8 +488,10 @@ describe("adaptCrvUsd", () => {
       { marketId: 3, symbol: "UNREVIEWED", usd: Infinity },
     ]);
     expect(result.slices).toEqual([
-      { name: "Custodied BTC (ex: wBTC/cbBTC)", pct: 50, risk: "medium" },
-      { name: "ETH", pct: 50, risk: "very-low" },
+      { sourceKey: "crvusd:btc",
+      name: "Custodied BTC (ex: wBTC/cbBTC)", pct: 50, risk: "medium" },
+      { sourceKey: "crvusd:eth",
+      name: "ETH", pct: 50, risk: "very-low" },
     ]);
     expect(result.metadata).toMatchObject({
       unknownExposurePct: 0, activeMarketCount: 2, directActiveMarketCount: 1,
@@ -509,8 +520,10 @@ describe("adaptCrvUsd", () => {
     );
 
     expect(result.slices).toEqual([
-      { name: "Custodied BTC (ex: wBTC/cbBTC)", pct: 66.7, risk: "medium" },
-      { name: "ETH", pct: 33.3, risk: "very-low" },
+      { sourceKey: "crvusd:btc",
+      name: "Custodied BTC (ex: wBTC/cbBTC)", pct: 66.7, risk: "medium" },
+      { sourceKey: "crvusd:eth",
+      name: "ETH", pct: 33.3, risk: "very-low" },
     ]);
     expect(result.metadata).toMatchObject({
       freshnessMode: "not-applicable",
@@ -610,7 +623,8 @@ describe("fetchCrvUsdReserves", () => {
 
     const result = await fetchCrvUsdReserves({} as never, HTTP_CRVUSD_CONFIG, signal);
 
-    expect(result.slices).toEqual([{ name: "Custodied BTC (ex: wBTC/cbBTC)", pct: 100, risk: "medium" }]);
+    expect(result.slices).toEqual([{ sourceKey: "crvusd:btc",
+      name: "Custodied BTC (ex: wBTC/cbBTC)", pct: 100, risk: "medium" }]);
     expect(result.warnings).toEqual(
       expect.arrayContaining([expect.objectContaining({ code: "yield-basis-read-failed", effect: "degraded" })]),
     );
@@ -747,8 +761,10 @@ describe("fetchCrvUsdReserves", () => {
     const result = await fetchCrvUsdReserves({} as never, HTTP_CRVUSD_CONFIG, signal);
 
     expect(result.slices).toEqual([
-      { name: "Custodied BTC (ex: wBTC/cbBTC)", pct: 66.7, risk: "medium" },
-      { name: "ETH", pct: 33.3, risk: "very-low" },
+      { sourceKey: "crvusd:btc",
+      name: "Custodied BTC (ex: wBTC/cbBTC)", pct: 66.7, risk: "medium" },
+      { sourceKey: "crvusd:eth",
+      name: "ETH", pct: 33.3, risk: "very-low" },
     ]);
     expect(result.metadata).toMatchObject({
       yieldBasisMarketCount: 2,
@@ -770,7 +786,8 @@ describe("fetchCrvUsdReserves", () => {
 
     const result = await fetchCrvUsdReserves({} as never, HTTP_CRVUSD_CONFIG, signal);
 
-    expect(result.slices).toEqual([{ name: "Custodied BTC (ex: wBTC/cbBTC)", pct: 100, risk: "medium" }]);
+    expect(result.slices).toEqual([{ sourceKey: "crvusd:btc",
+      name: "Custodied BTC (ex: wBTC/cbBTC)", pct: 100, risk: "medium" }]);
     expect(result.warnings).toEqual(
       expect.arrayContaining([expect.objectContaining({ code: "yield-basis-read-failed", effect: "degraded" })]),
     );
@@ -793,7 +810,8 @@ describe("fetchCrvUsdReserves", () => {
 
     const result = await fetchCrvUsdReserves({} as never, HTTP_CRVUSD_CONFIG, signal);
 
-    expect(result.slices).toEqual([{ name: "Custodied BTC (ex: wBTC/cbBTC)", pct: 100, risk: "medium" }]);
+    expect(result.slices).toEqual([{ sourceKey: "crvusd:btc",
+      name: "Custodied BTC (ex: wBTC/cbBTC)", pct: 100, risk: "medium" }]);
     expect(result.warnings).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
@@ -820,7 +838,8 @@ describe("fetchCrvUsdReserves", () => {
 
     const result = await fetchCrvUsdReserves({} as never, ONCHAIN_CRVUSD_CONFIG, signal);
 
-    expect(result.slices).toEqual([{ name: "Custodied BTC (ex: wBTC/cbBTC)", pct: 100, risk: "medium" }]);
+    expect(result.slices).toEqual([{ sourceKey: "crvusd:btc",
+      name: "Custodied BTC (ex: wBTC/cbBTC)", pct: 100, risk: "medium" }]);
     expect(result.metadata).toMatchObject({
       freshnessMode: "not-applicable",
       directMarketCount: 1,

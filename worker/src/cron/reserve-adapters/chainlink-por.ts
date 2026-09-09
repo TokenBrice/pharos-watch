@@ -355,6 +355,7 @@ export function adaptChainlinkPorResponse(
   return {
     slices: [
       {
+        sourceKey: `chainlink-por:feed:${params.porFeedAddress.toLowerCase()}`,
         name: params.assetLabel,
         pct: 100,
         risk: params.assetRisk,

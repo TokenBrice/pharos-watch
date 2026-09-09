@@ -55,7 +55,7 @@ function solanaSupplyResponse(amount?: string) {
 }
 
 describe("buildRedemptionSnapshotMetadata", () => {
-  it("mirrors fee telemetry into nested redemption metadata and the legacy top-level field", () => {
+  it("nests fee telemetry inside redemption metadata without a legacy top-level field", () => {
     expect(buildRedemptionSnapshotMetadata({
       capacityUsd: 1250,
       capacityKind: "live-direct-bounded",
@@ -63,7 +63,6 @@ describe("buildRedemptionSnapshotMetadata", () => {
       routeStatus: "open",
       feeBps: 52,
     })).toEqual({
-      redemptionFeeBps: 52,
       redemption: {
         capacityUsd: 1250,
         capacityKind: "live-direct-bounded",

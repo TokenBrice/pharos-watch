@@ -73,14 +73,12 @@ describe("adaptCapVaultState", () => {
     });
 
     expect(result.slices).toEqual([
-      { name: "USDC", pct: 70, risk: "low", coinId: "usdc-circle" },
-      { name: "USDT", pct: 30, risk: "low", coinId: "usdt-tether" },
+      { sourceKey: "cap-vault:0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48", name: "USDC", pct: 70, risk: "low", coinId: "usdc-circle" },
+      { sourceKey: "cap-vault:0xdac17f958d2ee523a2206206994597c13d831ec7", name: "USDT", pct: 30, risk: "low", coinId: "usdt-tether" },
     ]);
     expect(result.metadata).toMatchObject({
       totalReserveUsd: 100,
       supplyUsd: 100,
-      immediateRedeemableUsd: 50,
-      immediateRedeemableRatio: 0.5,
       redemption: {
         capacityUsd: 50,
         capacityRatioOfSupply: 0.5,
@@ -102,7 +100,7 @@ describe("adaptCapVaultState", () => {
       assets: [makeCapAsset({ coinId: "usdc-circle", priceUsd: 1 })],
     });
 
-    expect(result.metadata?.redemptionFeeBps).toBe(0);
+    expect(result.metadata).not.toHaveProperty("redemptionFeeBps");
     expect(result.metadata?.redemption).toMatchObject({ feeBps: 0 });
     expectValidAdapterOutput("cap-vault", result);
   });
@@ -115,7 +113,7 @@ describe("adaptCapVaultState", () => {
       assets: [makeCapAsset({ priceUsd: 1 })],
     });
 
-    expect(result.metadata?.redemptionFeeBps).toBeUndefined();
+    expect(result.metadata).not.toHaveProperty("redemptionFeeBps");
     expect(result.metadata?.redemption).not.toHaveProperty("feeBps");
   });
 
@@ -143,7 +141,7 @@ describe("adaptCapVaultState", () => {
     expect(statusWarning).toBeDefined();
     expect(statusWarning?.severity).toBe("info");
     // Paused-treated-as-true must exclude the asset from immediate redeemable capacity.
-    expect(result.metadata?.immediateRedeemableUsd).toBe(0);
+    expect(result.metadata?.redemption?.capacityUsd).toBe(0);
   });
 
   it("emits cap-vault-peg-assumed info warning when any active asset lacks priceUsd", () => {
@@ -157,7 +155,7 @@ describe("adaptCapVaultState", () => {
     expect(pegWarning).toBeDefined();
     expect(pegWarning?.severity).toBe("info");
     expect(result.metadata?.totalReserveUsd).toBe(100);
-    expect(result.metadata?.immediateRedeemableUsd).toBe(100);
+    expect(result.metadata?.redemption?.capacityUsd).toBe(100);
   });
 
   it("classifies unknown active vault assets as high risk with a degraded warning", () => {
@@ -176,7 +174,7 @@ describe("adaptCapVaultState", () => {
     });
 
     expect(result.slices).toEqual([
-      { name: "Cap asset 0x9999...9999", pct: 100, risk: "high" },
+      { sourceKey: "cap-vault:0x9999999999999999999999999999999999999999", name: "Cap asset 0x9999...9999", pct: 100, risk: "high" },
     ]);
     const warning = result.warnings?.find((w) => w.code === "unknown-vault-asset");
     expect(warning).toBeDefined();
@@ -246,7 +244,7 @@ describe("adaptCapVaultState", () => {
     expect(result.warnings?.some((w) => w.code === "cap-vault-peg-assumed") ?? false).toBe(false);
     // 50 * 1 + 20 * 1.05 = 71
     expect(result.metadata?.totalReserveUsd).toBe(71);
-    expect(result.metadata?.immediateRedeemableUsd).toBe(71);
+    expect(result.metadata?.redemption?.capacityUsd).toBe(71);
   });
 });
 
@@ -417,7 +415,7 @@ describe("fetchCapVaultReserves", () => {
     const warning = result.warnings?.find((w) => w.code === "cap-vault-asset-status-unavailable");
     expect(warning).toBeDefined();
     // Paused-treated-as-true must exclude from immediateRedeemable
-    expect(result.metadata?.immediateRedeemableUsd).toBe(0);
+    expect(result.metadata?.redemption?.capacityUsd).toBe(0);
   });
 
   it("reads getRedeemFee() and converts the ray value to bps", async () => {
@@ -435,7 +433,7 @@ describe("fetchCapVaultReserves", () => {
     for (const [request] of [...vi.mocked(fetchOnchainRawCall).mock.calls, ...vi.mocked(fetchOnchainUint256).mock.calls]) {
       expect(request.ctx?.observedBlock).toEqual(result.metadata?.observedBlock);
     }
-    expect(result.metadata?.redemptionFeeBps).toBe(10);
+    expect(result.metadata).not.toHaveProperty("redemptionFeeBps");
     expect(result.metadata?.redemption).toMatchObject({ feeBps: 10 });
     expectValidAdapterOutput("cap-vault", result);
   });
@@ -451,7 +449,7 @@ describe("fetchCapVaultReserves", () => {
     });
 
     const result = await fetchCapVaultReserves(coin, config, makeSignal());
-    expect(result.metadata?.redemptionFeeBps).toBeUndefined();
+    expect(result.metadata).not.toHaveProperty("redemptionFeeBps");
     expect(result.metadata?.redemption).not.toHaveProperty("feeBps");
   });
 
@@ -494,14 +492,13 @@ describe("fetchCapVaultReserves", () => {
     );
 
     expect(result.slices).toEqual([
-      { name: "USDC", pct: 50, risk: "low", coinId: "usdc-circle" },
-      { name: "WTGXX", pct: 50, risk: "low", coinId: "wtgxx-wisdomtree", depType: "collateral" },
+      { sourceKey: "cap-vault:0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48", name: "USDC", pct: 50, risk: "low", coinId: "usdc-circle" },
+      { sourceKey: "cap-vault:0x434558cb1ebe9950e8a66f1ef8a15a473dce7d8c", name: "WTGXX", pct: 50, risk: "low", coinId: "wtgxx-wisdomtree", depType: "collateral" },
     ]);
     expect(result.warnings?.some((warning) => warning.code === "unknown-vault-asset") ?? false).toBe(false);
     expect(result.metadata).toMatchObject({
       assetCount: 2,
       totalReserveUsd: 100,
-      immediateRedeemableUsd: 100,
       redemption: {
         outputValuation: {
           sourceId: "cap-vault:chainlink-nav:0xd13cb763c43b5c058e7ec40176962c5030f4eb49",

@@ -208,6 +208,7 @@ export function adaptKrwqCustodian(
   const warnings: LiveReserveWarning[] = [];
   const sliceInputs: Array<{
     value: number;
+    sourceKey: string;
     name: string;
     risk: ReserveSlice["risk"];
     coinId: string;
@@ -250,7 +251,7 @@ export function adaptKrwqCustodian(
       ));
     }
 
-    sliceInputs.push({ name: leg.name, value, risk: leg.risk, coinId: leg.coinId });
+    sliceInputs.push({ sourceKey: `krwq-custodian:${leg.key}`, name: leg.name, value, risk: leg.risk, coinId: leg.coinId });
   }
 
   if (sliceInputs.length === 0) {

@@ -66,8 +66,8 @@ describe("adaptFx", () => {
     mockApiPools();
     const result = await fetchFxReserves(fxCoin, apiConfig, new AbortController().signal);
     expect(result.slices).toEqual([
-      { name: "WBTC", pct: 92.6, risk: "medium" },
-      { name: "wstETH (Lido)", pct: 7.4, risk: "low" },
+      { sourceKey: "fx:wbtc", name: "WBTC", pct: 92.6, risk: "medium" },
+      { sourceKey: "fx:wsteth", name: "wstETH (Lido)", pct: 7.4, risk: "low" },
     ]);
   });
 
@@ -185,8 +185,8 @@ describe("adaptFx", () => {
     ]);
 
     expect(result.slices).toEqual([
-      { name: "WBTC", pct: 86.0, risk: "medium" },
-      { name: "wstETH (Lido)", pct: 14.0, risk: "low" },
+      { sourceKey: "fx:wbtc", name: "WBTC", pct: 86.0, risk: "medium" },
+      { sourceKey: "fx:wsteth", name: "wstETH (Lido)", pct: 14.0, risk: "low" },
     ]);
 
     const totalDebtUsd = (Number(wstEthPoolDebt) + Number(wbtcPoolDebt)) / 1e18;
@@ -206,7 +206,6 @@ describe("adaptFx", () => {
         freshnessKind: "same-run-api",
       },
     });
-    expect(result.metadata?.immediateRedeemableUsd).toBeCloseTo(totalDebtUsd, 6);
     expect(result.metadata?.redemption?.capacityUsd).toBeCloseTo(totalDebtUsd, 6);
   });
 });

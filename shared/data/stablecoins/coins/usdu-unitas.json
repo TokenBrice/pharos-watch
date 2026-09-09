@@ -79,6 +79,13 @@
         "Bnb_smartchain": "high",
         "Aster": "high",
         "Bitcoin": "medium"
+      },
+      "sourceKeyMap": {
+        "Binance": "accountable:unitas:deployment:binance",
+        "Solana": "accountable:unitas:deployment:solana",
+        "Bnb_smartchain": "accountable:unitas:deployment:bnb-smartchain",
+        "Aster": "accountable:unitas:deployment:aster",
+        "Bitcoin": "accountable:unitas:deployment:bitcoin"
       }
     }
   },

@@ -54,7 +54,7 @@ describe("adaptUnitedPorPayload", () => {
   it("computes the honest ratio and verified freshness for a clean, non-ripcord snapshot", () => {
     const result = adaptUnitedPorPayload(UNITED_POR_PAYLOAD, SLICE);
 
-    expect(result.slices).toEqual([{ ...SLICE, pct: 100 }]);
+    expect(result.slices).toMatchObject([{ ...SLICE, pct: 100 }]);
     expect(result.metadata).toMatchObject({
       sourceTimestamp: Math.floor(Date.parse("2026-07-09T16:10:01.559Z") / 1000),
       freshnessMode: "verified",
@@ -80,7 +80,7 @@ describe("adaptUnitedPorPayload", () => {
     // The snapshot is still stored (slices/ratio/freshness compute normally) --
     // ripcord is surfaced as a degraded warning, not a thrown error, so a
     // ripcord run never silently disappears from the reserve detail surface.
-    expect(result.slices).toEqual([{ ...SLICE, pct: 100 }]);
+    expect(result.slices).toMatchObject([{ ...SLICE, pct: 100 }]);
     expect(result.metadata).toMatchObject({ freshnessMode: "verified" });
     expect(result.metadata!.details).toMatchObject({
       ripcord: true,
@@ -224,7 +224,7 @@ describe("fetchUnitedPorReserves", () => {
       12_000,
       undefined,
     );
-    expect(result.slices).toEqual([{ ...SLICE, pct: 100 }]);
+    expect(result.slices).toMatchObject([{ ...SLICE, pct: 100 }]);
   });
 
   it("propagates an error when the PoR endpoint fetch fails", async () => {

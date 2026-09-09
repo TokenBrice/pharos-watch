@@ -7,8 +7,14 @@
       "risk": "very-high",
       "assetClass": "cryptoasset",
       "issuerOrObligor": "Hyperliquid native HYPE asset and WHYPE wrapper",
-      "riskFactors": ["market", "liquidity", "smart-contract", "concentration"],
-      "liquidityHorizon": "unknown"
+      "riskFactors": [
+        "market",
+        "liquidity",
+        "smart-contract",
+        "concentration"
+      ],
+      "liquidityHorizon": "unknown",
+      "sourceKey": "liquity-v2-branches:hyperevm:0x5555555555555555555555555555555555555555"
     },
     {
       "name": "kHYPE (Kinetiq)",
@@ -16,8 +22,15 @@
       "risk": "very-high",
       "assetClass": "cryptoasset",
       "issuerOrObligor": "Kinetiq liquid-staking protocol",
-      "riskFactors": ["market", "liquidity", "smart-contract", "counterparty", "concentration"],
-      "liquidityHorizon": "unknown"
+      "riskFactors": [
+        "market",
+        "liquidity",
+        "smart-contract",
+        "counterparty",
+        "concentration"
+      ],
+      "liquidityHorizon": "unknown",
+      "sourceKey": "liquity-v2-branches:hyperevm:0xfd739d4e423301ce9385c1fb8850539d657c296d"
     },
     {
       "name": "UBTC (bridged Bitcoin)",
@@ -25,8 +38,15 @@
       "risk": "medium",
       "assetClass": "cryptoasset",
       "issuerOrObligor": "UBTC bridge and Bitcoin custody operators",
-      "riskFactors": ["market", "liquidity", "custody", "smart-contract", "counterparty"],
-      "liquidityHorizon": "unknown"
+      "riskFactors": [
+        "market",
+        "liquidity",
+        "custody",
+        "smart-contract",
+        "counterparty"
+      ],
+      "liquidityHorizon": "unknown",
+      "sourceKey": "liquity-v2-branches:hyperevm:0xefbd9cfe88235f0e648aefb52c8e8dc152a9ad6f"
     },
     {
       "name": "wstHYPE",
@@ -34,8 +54,15 @@
       "risk": "very-high",
       "assetClass": "cryptoasset",
       "issuerOrObligor": "Hyperliquid liquid-staking protocol and wstHYPE wrapper",
-      "riskFactors": ["market", "liquidity", "smart-contract", "counterparty", "concentration"],
-      "liquidityHorizon": "unknown"
+      "riskFactors": [
+        "market",
+        "liquidity",
+        "smart-contract",
+        "counterparty",
+        "concentration"
+      ],
+      "liquidityHorizon": "unknown",
+      "sourceKey": "liquity-v2-branches:hyperevm:0x94e8396e0869c9f2200760af0621afd240e1cf38"
     }
   ],
   "reserveReview": {

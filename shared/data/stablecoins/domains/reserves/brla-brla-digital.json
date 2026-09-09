@@ -2,6 +2,7 @@
   "id": "brla-brla-digital",
   "reserves": [
     {
+      "sourceKey": "brla-independent-assurance:brla:cash-and-cash-equivalents",
       "name": "BRL cash and cash equivalents",
       "pct": 80.493287,
       "risk": "very-low",
@@ -11,6 +12,7 @@
       "liquidityHorizon": "immediate"
     },
     {
+      "sourceKey": "brla-independent-assurance:brla:repurchase-agreements",
       "name": "Overnight repurchase agreements collateralized by Brazilian corporate debentures",
       "pct": 19.506713,
       "risk": "low",

@@ -280,6 +280,7 @@ export function adaptCapVaultState(args: {
 
   return {
     slices: slicesFromValues(activeAssets.map((asset) => ({
+      sourceKey: `cap-vault:${asset.address}`,
       name: asset.name,
       value: asset.totalSupplied * priceForCapAsset(asset),
       risk: asset.risk,
@@ -297,10 +298,6 @@ export function adaptCapVaultState(args: {
         ? unknownAssets.reduce((sum, asset) => sum + asset.totalSupplied * priceForCapAsset(asset), 0) / totalReserveUsd * 100
         : 0,
       ...(args.supplyUsd != null ? { supplyUsd: args.supplyUsd } : {}),
-      immediateRedeemableUsd,
-      ...(args.supplyUsd != null && args.supplyUsd > 0
-        ? { immediateRedeemableRatio: immediateRedeemableUsd / args.supplyUsd }
-        : {}),
       assets: activeAssets.map((asset) => ({
         address: asset.address,
         name: asset.name,

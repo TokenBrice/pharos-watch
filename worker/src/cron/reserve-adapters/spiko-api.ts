@@ -94,6 +94,7 @@ export function adaptSpikoShareClassTotals(
 
   return {
     slices: [{
+      sourceKey: `spiko-api:${shareClassSymbol.toLowerCase()}:total-assets`,
       name: slice.name,
       pct: 100,
       risk: slice.risk,

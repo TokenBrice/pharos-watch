@@ -2,6 +2,7 @@
   "id": "suiusde-sui",
   "reserves": [
     {
+      "sourceKey": "ethena-whitelabel:usde",
       "name": "Ethena USDe backing",
       "pct": 90.3297403,
       "risk": "high",
@@ -18,6 +19,7 @@
       "liquidityHorizon": "unknown"
     },
     {
+      "sourceKey": "ethena-whitelabel:usdc",
       "name": "Circle USDC backing",
       "pct": 9.6702597,
       "risk": "low",
@@ -50,12 +52,12 @@
         "url": "https://blog.sui.io/esui-dollar-suiusde-deepbook-margin/"
       }
     ],
-      "rationale": "Ethena Whitelabel's live suiUSDe transparency API reported $13,108,619.396969 backing at 2026-08-20T00:03:19Z: $11,840,981.860536 USDe and $1,267,637.535433 USDC across the listed Sui and Ethereum custody/mint-redeem wallets. Those amounts normalize to 90.3297403% and 9.6702597%; the listed custodian amounts are $0.001 below totalBacking, an endpoint reconciliation difference rather than an unidentified reserve slice.",
+    "rationale": "Ethena Whitelabel's live suiUSDe transparency API reported $13,108,619.396969 backing at 2026-08-20T00:03:19Z: $11,840,981.860536 USDe and $1,267,637.535433 USDC across the listed Sui and Ethereum custody/mint-redeem wallets. Those amounts normalize to 90.3297403% and 9.6702597%; the listed custodian amounts are $0.001 below totalBacking, an endpoint reconciliation difference rather than an unidentified reserve slice.",
     "compositionBasis": "Ethena Whitelabel issuer transparency API, with listed custody and mint/redeem wallets grouped by backing token.",
-      "compositionAsOf": "2026-08-20",
+    "compositionAsOf": "2026-08-20",
     "scope": "full-composition",
-      "knownUnknownExposure": "The issuer's live transparency API identifies both backing assets and their aggregate quantities; its listed-custodian sum is $0.001 below totalBacking, an endpoint reconciliation difference rather than an unlinked reserve slice.",
-      "knownUnknownExposurePct": 0
+    "knownUnknownExposure": "The issuer's live transparency API identifies both backing assets and their aggregate quantities; its listed-custodian sum is $0.001 below totalBacking, an endpoint reconciliation difference rather than an unlinked reserve slice.",
+    "knownUnknownExposurePct": 0
   },
   "custodyProfile": {
     "providers": [

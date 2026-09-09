@@ -2,6 +2,7 @@
   "id": "frxusd-frax",
   "reserves": [
     {
+      "sourceKey": "frax-balance-sheet:wtgxx",
       "name": "WTGXX (WisdomTree Government Money Market)",
       "pct": 54.3,
       "risk": "low",
@@ -17,6 +18,7 @@
       "liquidityHorizon": "one-day"
     },
     {
+      "sourceKey": "frax-balance-sheet:ustb",
       "name": "USTB (Superstate tokenized T-bills)",
       "pct": 28.8,
       "risk": "low",
@@ -33,6 +35,7 @@
       "liquidityHorizon": "one-day"
     },
     {
+      "sourceKey": "frax-balance-sheet:buidl",
       "name": "BUIDL (BlackRock tokenized T-bills)",
       "pct": 13.5,
       "risk": "low",
@@ -49,6 +52,7 @@
       "liquidityHorizon": "one-day"
     },
     {
+      "sourceKey": "frax-balance-sheet:usdb",
       "name": "USDB (Bridge)",
       "pct": 1.7,
       "risk": "low",
@@ -63,6 +67,7 @@
       "liquidityHorizon": "immediate"
     },
     {
+      "sourceKey": "frax-balance-sheet:erebor_usd",
       "name": "EREBOR_USD (Erebor Bank frxUSD reserve account)",
       "pct": 1.7,
       "risk": "very-low",

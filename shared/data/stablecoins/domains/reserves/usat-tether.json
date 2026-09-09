@@ -2,6 +2,7 @@
   "id": "usat-tether",
   "reserves": [
     {
+      "sourceKey": "anchorage-independent-assurance:usat:reverse-repo",
       "name": "Reverse repurchase agreements collateralized by U.S. Treasury securities",
       "pct": 90.0472,
       "risk": "very-low",
@@ -18,6 +19,7 @@
       "maturityDaysMax": 3
     },
     {
+      "sourceKey": "anchorage-independent-assurance:usat:cash",
       "name": "Cash in demand deposit accounts",
       "pct": 9.9528,
       "risk": "very-low",

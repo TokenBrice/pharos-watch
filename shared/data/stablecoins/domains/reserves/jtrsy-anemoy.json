@@ -2,6 +2,7 @@
   "id": "jtrsy-anemoy",
   "reserves": [
     {
+      "sourceKey": "chainlink-nav:token:0x8c213ee79581ff4984583c6a801e5263418c4b86",
       "name": "Janus Henderson Anemoy Treasury Fund NAV",
       "pct": 100,
       "risk": "very-low",

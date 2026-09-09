@@ -66,6 +66,7 @@ export function adaptChronicleNavResponse(data: ChronicleNavData, params: Chroni
   return {
     slices: [
       {
+        sourceKey: `chronicle-nav:token:${params.tokenAddress.toLowerCase()}`,
         name: params.assetLabel,
         pct: 100,
         risk: params.assetRisk,

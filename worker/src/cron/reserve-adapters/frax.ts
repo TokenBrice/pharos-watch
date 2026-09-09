@@ -12,6 +12,7 @@ import {
   normalizeSlices,
   parseTimestampLikeToUnixSeconds,
   reserveDegradedWarning,
+  sourceKeySlug,
 } from "./helpers";
 
 /* ---------- v2 balance-sheet API types ---------- */
@@ -178,6 +179,7 @@ export function adaptFraxBalanceSheet(payload: FraxBalanceSheetResponse, subject
     }
     if (config) {
       slices.push({
+        sourceKey: `frax-balance-sheet:${symbol.toLowerCase()}`,
         name: config.label,
         pct: (usd / total) * 100,
         risk: config.risk,
@@ -188,6 +190,7 @@ export function adaptFraxBalanceSheet(payload: FraxBalanceSheetResponse, subject
 
   if (unknownUsd > 0) {
     slices.push({
+      sourceKey: "frax-balance-sheet:unknown",
       name: "Unmapped Frax balance-sheet assets",
       pct: (unknownUsd / total) * 100,
       risk: "high",
@@ -206,6 +209,7 @@ export function adaptFraxBalanceSheet(payload: FraxBalanceSheetResponse, subject
   const sourceTotalGapPct = sourceTotalGapUsd > 0 ? (sourceTotalGapUsd / total) * 100 : 0;
   if (sourceTotalGapPct > SOURCE_TOTAL_RECONCILIATION_THRESHOLD_PCT) {
     slices.push({
+      sourceKey: "frax-balance-sheet:source-total-gap",
       name: "Unmapped Frax balance-sheet total-assets gap",
       pct: sourceTotalGapPct,
       risk: "high",
@@ -234,7 +238,6 @@ export function adaptFraxBalanceSheet(payload: FraxBalanceSheetResponse, subject
         "frax-balance-sheet-api",
         "Frax balance-sheet response did not include asOfTimestamp",
       ),
-      immediateRedeemableUsd: stableRedeemableUsd,
       ...buildRedemptionSnapshotMetadata({
         capacityUsd: stableRedeemableUsd,
         capacityKind: "live-proxy-validated",
@@ -331,6 +334,7 @@ export function adaptFraxFpiCollateral(payload: FraxFpiCollateralResponse): Adap
     const config = getFpiCollateralDisplayConfig(symbol);
     if (!config) continue;
     slices.push({
+      sourceKey: `frax-fpi-collateral:${sourceKeySlug(symbol)}`,
       name: config.label,
       pct: (usd / totalCollateralUsd) * 100,
       risk: config.risk,
@@ -341,6 +345,7 @@ export function adaptFraxFpiCollateral(payload: FraxFpiCollateralResponse): Adap
   if (unknownUsd > 0) {
     const unknownExposurePct = (unknownUsd / totalCollateralUsd) * 100;
     slices.push({
+      sourceKey: "frax-fpi-collateral:unknown",
       name: "Unmapped Frax FPI collateral assets",
       pct: unknownExposurePct,
       risk: "high",
@@ -383,7 +388,6 @@ export function adaptFraxFpiCollateral(payload: FraxFpiCollateralResponse): Adap
         "frax-fpi-collateral-api",
         "Frax FPI collateral response did not include updatedAtTimestampSec",
       ),
-      immediateRedeemableUsd: stableRedeemableUsd,
       ...buildRedemptionSnapshotMetadata({
         capacityUsd: stableRedeemableUsd,
         capacityKind: "live-proxy-validated",

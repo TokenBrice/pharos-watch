@@ -2,6 +2,7 @@
   "id": "mtbill-midas",
   "reserves": [
     {
+      "sourceKey": "chainlink-nav:token:0xdd629e5241cbc5919847783e6c96b2de4754e438",
       "name": "BlackRock IB01 T-Bill ETF",
       "pct": 100,
       "risk": "very-low",

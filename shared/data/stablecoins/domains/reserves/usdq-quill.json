@@ -12,7 +12,8 @@
         "liquidity",
         "smart-contract"
       ],
-      "liquidityHorizon": "unknown"
+      "liquidityHorizon": "unknown",
+      "sourceKey": "liquity-v2-branches:scroll:0x5300000000000000000000000000000000000004"
     },
     {
       "name": "wstETH (Lido)",
@@ -26,7 +27,8 @@
         "smart-contract",
         "counterparty"
       ],
-      "liquidityHorizon": "unknown"
+      "liquidityHorizon": "unknown",
+      "sourceKey": "liquity-v2-branches:scroll:0xf610a9dfb7c89644979b4a0f27063e9e7d7cda32"
     },
     {
       "name": "weETH (Ether.fi)",
@@ -40,7 +42,8 @@
         "smart-contract",
         "counterparty"
       ],
-      "liquidityHorizon": "unknown"
+      "liquidityHorizon": "unknown",
+      "sourceKey": "liquity-v2-branches:scroll:0x01f0a31698c4d065659b9bdc21b3610292a1c506"
     },
     {
       "name": "SCR",
@@ -54,7 +57,8 @@
         "smart-contract",
         "concentration"
       ],
-      "liquidityHorizon": "unknown"
+      "liquidityHorizon": "unknown",
+      "sourceKey": "liquity-v2-branches:scroll:0xd29687c813d741e2f938f4ac377128810e217b1b"
     }
   ],
   "reserveReview": {

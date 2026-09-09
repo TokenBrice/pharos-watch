@@ -178,14 +178,13 @@ describe("resupply-pairs adapter", () => {
     );
 
     expect(result.slices).toEqual([
-      { name: "Frax frxUSD lending markets", pct: 60, risk: "high", coinId: "frxusd-frax", depType: "collateral" },
-      { name: "Curve crvUSD lending markets", pct: 40, risk: "high", coinId: "crvusd-curve", depType: "collateral" },
+      { sourceKey: "resupply-pairs:ethereum:0xcacd6fd266af91b8aed52accc382b4e165586e29", name: "Frax frxUSD lending markets", pct: 60, risk: "high", coinId: "frxusd-frax", depType: "collateral" },
+      { sourceKey: "resupply-pairs:ethereum:0xf939e0a03fb07f59a73314e73794be0e57ac1b4e", name: "Curve crvUSD lending markets", pct: 40, risk: "high", coinId: "crvusd-curve", depType: "collateral" },
     ]);
     expect(result.metadata).toMatchObject({
       freshnessMode: "not-applicable",
       totalBorrowUsd: 100,
       totalCollateralAssetsUsd: 200,
-      immediateRedeemableUsd: 80,
       redemption: {
         capacityUsd: 80,
         capacityKind: "live-direct-bounded",
@@ -428,14 +427,13 @@ describe("resupply-pairs adapter", () => {
     const result = await fetchResupplyPairsReserves(coin as never, config, signal);
 
     expect(result.slices).toEqual([
-      { name: "Curve crvUSD lending markets", pct: 60, risk: "high", coinId: "crvusd-curve", depType: "collateral" },
-      { name: "Frax frxUSD lending markets", pct: 40, risk: "high", coinId: "frxusd-frax", depType: "collateral" },
+      { sourceKey: "resupply-pairs:ethereum:0xf939e0a03fb07f59a73314e73794be0e57ac1b4e", name: "Curve crvUSD lending markets", pct: 60, risk: "high", coinId: "crvusd-curve", depType: "collateral" },
+      { sourceKey: "resupply-pairs:ethereum:0xcacd6fd266af91b8aed52accc382b4e165586e29", name: "Frax frxUSD lending markets", pct: 40, risk: "high", coinId: "frxusd-frax", depType: "collateral" },
     ]);
     expect(result.warnings).toBeUndefined();
     expect(result.metadata).toMatchObject({
       totalBorrowUsd: 100,
       totalCollateralAssetsUsd: 100,
-      immediateRedeemableUsd: 75,
       redemption: {
         capacityUsd: 75,
         capacityKind: "live-direct-bounded",
@@ -496,8 +494,8 @@ describe("resupply-pairs adapter", () => {
       totalCollateralAssetsUsd: 60 + expectedFraxUsd,
     });
     expect(result.slices).toEqual([
-      { name: "Curve crvUSD lending markets", pct: 60, risk: "high", coinId: "crvusd-curve", depType: "collateral" },
-      { name: "Frax frxUSD lending markets", pct: 40, risk: "high", coinId: "frxusd-frax", depType: "collateral" },
+      { sourceKey: "resupply-pairs:ethereum:0xf939e0a03fb07f59a73314e73794be0e57ac1b4e", name: "Curve crvUSD lending markets", pct: 60, risk: "high", coinId: "crvusd-curve", depType: "collateral" },
+      { sourceKey: "resupply-pairs:ethereum:0xcacd6fd266af91b8aed52accc382b4e165586e29", name: "Frax frxUSD lending markets", pct: 40, risk: "high", coinId: "frxusd-frax", depType: "collateral" },
     ]);
   });
 

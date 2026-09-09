@@ -85,7 +85,7 @@ export function adaptMegausdCustody(payload: MegausdBackingAndSupplyPayload): Ad
   }
 
   const warnings: LiveReserveWarning[] = [];
-  const sliceInputs: Array<{ value: number; name: string; risk: ReserveSlice["risk"]; coinId?: string }> = [];
+  const sliceInputs: Array<{ value: number; sourceKey: string; name: string; risk: ReserveSlice["risk"]; coinId?: string }> = [];
 
   for (const [assetKey, entries] of Object.entries(backingAssets)) {
     const amount = sumAssetAmount(assetKey, entries);
@@ -109,11 +109,11 @@ export function adaptMegausdCustody(payload: MegausdBackingAndSupplyPayload): Ad
         "unknown-asset",
         `Unmapped MegaUSD backing asset: ${assetKey} ($${amount.toFixed(2)})`,
       ));
-      sliceInputs.push({ name: `${assetKey} (unmapped)`, value: amount, risk: "high" });
+      sliceInputs.push({ sourceKey: `megausd-custody:${normalizedKey.toLowerCase()}`, name: `${assetKey} (unmapped)`, value: amount, risk: "high" });
       continue;
     }
 
-    sliceInputs.push({ name: config.name, value: amount, risk: config.risk, coinId: config.coinId });
+    sliceInputs.push({ sourceKey: `megausd-custody:${normalizedKey.toLowerCase()}`, name: config.name, value: amount, risk: config.risk, coinId: config.coinId });
   }
 
   if (sliceInputs.length === 0) {

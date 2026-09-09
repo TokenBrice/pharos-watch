@@ -189,7 +189,7 @@ describe("adaptYamatoStates", () => {
       },
     );
 
-    expect(result.slices).toEqual([{ name: "ETH", pct: 100, risk: "very-low" }]);
+    expect(result.slices).toEqual([{ sourceKey: "yamato:eth", name: "ETH", pct: 100, risk: "very-low" }]);
     expect(result.metadata).toMatchObject({
       freshnessMode: "not-applicable",
       details: {
@@ -306,7 +306,7 @@ describe("adaptYamatoStates", () => {
       },
     );
 
-    expect(result.slices).toEqual([{ name: "ETH", pct: 100, risk: "very-low", depType: "collateral" }]);
+    expect(result.slices).toEqual([{ sourceKey: "yamato:eth", name: "ETH", pct: 100, risk: "very-low", depType: "collateral" }]);
   });
 
   it("floors the redeemable cap at the collateral getStates() actually measured", () => {
@@ -333,7 +333,6 @@ describe("adaptYamatoStates", () => {
 
     expect(result.metadata).toMatchObject({
       redeemableCapEth: 100,
-      immediateRedeemableUsd: 300_000,
       redemption: { capacityUsd: 300_000 },
     });
   });
@@ -412,7 +411,7 @@ describe("fetchYamatoReserves", () => {
         rpcMode: "alchemy",
       }),
     );
-    expect(result.slices).toEqual([{ name: "ETH", pct: 100, risk: "very-low" }]);
+    expect(result.slices).toEqual([{ sourceKey: "yamato:eth", name: "ETH", pct: 100, risk: "very-low" }]);
     expect(result.metadata).toMatchObject({
       freshnessMode: "not-applicable",
       totalCollateralEth: 100,
@@ -471,7 +470,6 @@ describe("fetchYamatoReserves", () => {
       redeemableCapJpy: 6_500_000,
       redeemableCapEth: 16.25,
       ethPriceUsd: 3_000,
-      immediateRedeemableUsd: 48_750,
       redemption: {
         capacityUsd: 48_750,
         capacityKind: "live-direct-bounded",

@@ -289,7 +289,6 @@ export function adaptYamatoStates(states: YamatoStates, options: YamatoAdaptOpti
       redeemableCapJpy,
       redeemableCapEth: capacityEth,
       ...(options.ethPriceUsd != null ? { ethPriceUsd: options.ethPriceUsd } : {}),
-      ...(capacityUsd != null ? { immediateRedeemableUsd: capacityUsd } : {}),
     };
     redemptionCapacityMetadata = {
       ...(capacityUsd != null
@@ -307,6 +306,7 @@ export function adaptYamatoStates(states: YamatoStates, options: YamatoAdaptOpti
   return {
     slices: [
       {
+        sourceKey: "yamato:eth",
         name: slice.name,
         pct: 100,
         risk: slice.risk,

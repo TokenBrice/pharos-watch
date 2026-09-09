@@ -2,6 +2,7 @@
   "id": "vbill-vaneck",
   "reserves": [
     {
+      "sourceKey": "chainlink-nav:token:0x2255718832bc9fd3be1caf75084f4803da14ff01",
       "name": "VanEck Treasury Fund shares",
       "pct": 100,
       "risk": "very-low",

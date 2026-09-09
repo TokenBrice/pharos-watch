@@ -2,6 +2,7 @@
   "id": "gldy-streamex",
   "reserves": [
     {
+      "sourceKey": "chainlink-por:feed:0xf488fa1b4ac8210bf0b2d212176ca28c48f86708",
       "name": "Physical gold reserves",
       "pct": 100,
       "risk": "low",

@@ -371,6 +371,7 @@ interface GhoFacilitatorAllocation {
 interface GhoSliceValue {
   name: string;
   value: number;
+  sourceKey?: string;
   risk: ReserveSlice["risk"];
   coinId?: string;
   depType?: ReserveSlice["depType"];
@@ -430,6 +431,7 @@ function buildGhoSlices(
   for (const trackedModule of trackedModules) {
     if (trackedModule.currentBackingGho <= 0n) continue;
     values.push({
+      sourceKey: `gho:${trackedModule.address.toLowerCase()}`,
       name: trackedModule.label,
       value: scale18ToUsd(trackedModule.currentBackingGho),
       risk: trackedModule.risk,
@@ -452,6 +454,7 @@ function buildGhoSlices(
         const bucket = classifyFacilitatorLabel(facilitator.label);
         if (bucket === "unknown") unknownResidualRaw += share;
         values.push({
+          sourceKey: `gho:${facilitator.address.toLowerCase()}`,
           name: facilitator.label,
           value: scale18ToUsd(share),
           risk: riskForFacilitatorBucket(bucket),
@@ -465,6 +468,7 @@ function buildGhoSlices(
     if (unallocatedRaw > 0n) {
       unknownResidualRaw += unallocatedRaw;
       values.push({
+        sourceKey: "gho:residual",
         name: "Residual facilitators / reserve buffer",
         value: scale18ToUsd(unallocatedRaw),
         risk: "high",
@@ -550,14 +554,11 @@ export function adaptGhoFacilitators(data: GhoFacilitatorData): AdapterResult {
       ).length,
       trackedGsmBackingUsd: scale18ToUsd(trackedBackingRaw),
       residualSupplyUsd: residualRaw > 0n ? scale18ToUsd(residualRaw) : 0,
-      immediateRedeemableUsd,
-      ...(immediateRedeemableRatio != null ? { immediateRedeemableRatio } : {}),
       ...(typeof data.totalSupply === "bigint" ? { supplyUsd, totalReserveUsd: exposureUsd } : {}),
       ...(typeof data.totalSupply === "bigint" ? { onchainSupplyUsd: supplyUsd } : {}),
       ...(unknownExposurePct > 0 ? { unknownExposurePct } : {}),
       ...(buyFeeBpsValues.length > 0
         ? {
-            redemptionFeeBps,
             buyFeeBpsMin: Math.min(...buyFeeBpsValues),
             buyFeeBpsMax: redemptionFeeBps,
           }

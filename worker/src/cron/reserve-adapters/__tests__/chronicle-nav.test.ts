@@ -102,7 +102,7 @@ describe("adaptChronicleNavResponse", () => {
       baseParams(),
     );
 
-    expect(result.slices).toEqual([
+    expect(result.slices).toMatchObject([
       { name: "Securitize Tokenized AAA CLO Fund NAV", pct: 100, risk: "high" },
     ]);
     expect(result.metadata).toMatchObject({

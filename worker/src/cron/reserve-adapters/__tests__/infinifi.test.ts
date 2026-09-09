@@ -277,8 +277,8 @@ describe("adaptInfiniFi", () => {
     const result = adaptInfiniFi(response);
     expect(result.unknownFarms).toEqual([]);
     expect(result.slices).toEqual([
-      { name: "infinifiUSD Autopool", pct: 90, risk: "medium" },
-      { name: "Multi Farm", pct: 10, risk: "low" },
+      { sourceKey: "infinifi:tokemak-auto-infinifiusd", name: "infinifiUSD Autopool", pct: 90, risk: "medium" },
+      { sourceKey: "infinifi:swapfarm", name: "Multi Farm", pct: 10, risk: "low" },
     ]);
   });
 
@@ -291,8 +291,8 @@ describe("adaptInfiniFi", () => {
     const result = adaptInfiniFi(response);
     expect(result.unknownFarms).toEqual([]);
     expect(result.slices).toEqual([
-      { name: "Liquid Cap", pct: 60, risk: "medium", coinId: "stcusd-cap", depType: "collateral" },
-      { name: "f(x) fxSAVE", pct: 40, risk: "medium", coinId: "fxsave-f-x-protocol", depType: "collateral" },
+      { sourceKey: "infinifi:liquid-cap", name: "Liquid Cap", pct: 60, risk: "medium", coinId: "stcusd-cap", depType: "collateral" },
+      { sourceKey: "infinifi:cowswap-fxsave", name: "f(x) fxSAVE", pct: 40, risk: "medium", coinId: "fxsave-f-x-protocol", depType: "collateral" },
     ]);
   });
 
@@ -309,11 +309,11 @@ describe("adaptInfiniFi", () => {
     expect(result.unknownFarms).toEqual([]);
     expect(result.unknownExposurePct).toBe(0);
     expect(result.slices).toEqual([
-      { name: "Pendle PT-apxUSD-18JUN2026", pct: 20, risk: "high", coinId: "apxusd-apyx", depType: "collateral" },
-      { name: "Pendle PT-apyUSD-18JUN2026", pct: 20, risk: "high", coinId: "apyusd-apyx", depType: "collateral" },
-      { name: "New Silver", pct: 20, risk: "high", blacklistable: true },
-      { name: "Sentora PRIME Main", pct: 20, risk: "high", coinId: "pyusd-paypal", depType: "collateral" },
-      { name: "Cap stcUSD", pct: 20, risk: "medium", coinId: "stcusd-cap", depType: "collateral" },
+      { sourceKey: "infinifi:pendle-v3-pt-apxusd-18jun2026", name: "Pendle PT-apxUSD-18JUN2026", pct: 20, risk: "high", coinId: "apxusd-apyx", depType: "collateral" },
+      { sourceKey: "infinifi:pendle-v3-pt-apyusd-18jun2026", name: "Pendle PT-apyUSD-18JUN2026", pct: 20, risk: "high", coinId: "apyusd-apyx", depType: "collateral" },
+      { sourceKey: "infinifi:new-silver-junior", name: "New Silver", pct: 20, risk: "high", blacklistable: true },
+      { sourceKey: "infinifi:morpho-v2-sentora-prime", name: "Sentora PRIME Main", pct: 20, risk: "high", coinId: "pyusd-paypal", depType: "collateral" },
+      { sourceKey: "infinifi:capfarm", name: "Cap stcUSD", pct: 20, risk: "medium", coinId: "stcusd-cap", depType: "collateral" },
     ]);
   });
 
@@ -379,7 +379,7 @@ describe("adaptInfiniFi", () => {
     expect(result.excludedProtocolFarms).toEqual(["ProtocolBuffer"]);
     expect(result.sourceTotalGapPct).toBe(20);
     expect(result.slices).toEqual(expect.arrayContaining([
-      { name: "InfiniFi protocol-level reserve positions", pct: 20, risk: "high" },
+      { sourceKey: "infinifi:tvl-gap", name: "InfiniFi protocol-level reserve positions", pct: 20, risk: "high" },
     ]));
   });
 

@@ -84,8 +84,8 @@ export function adaptQuantozTransparency(html: string, token: string): AdapterRe
 
   return {
     slices: slicesFromPercentages([
-      { name: "Cash deposits at Tier 1 European banks", pct: cashPct, risk: "very-low" },
-      { name: "Government bonds (Netherlands, Germany, and US)", pct: governmentBondPct, risk: "very-low" },
+      { sourceKey: "quantoz-transparency:cash", name: "Cash deposits at Tier 1 European banks", pct: cashPct, risk: "very-low" },
+      { sourceKey: "quantoz-transparency:government-bonds", name: "Government bonds (Netherlands, Germany, and US)", pct: governmentBondPct, risk: "very-low" },
     ], { context: `Quantoz ${token} reserve allocation` }),
     ...(warnings.length > 0 ? { warnings } : {}),
     metadata: {

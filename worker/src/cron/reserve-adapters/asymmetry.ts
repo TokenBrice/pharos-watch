@@ -82,6 +82,7 @@ export function adaptAsymmetry(payload: AsymmetryPayload): AdapterResult {
           });
         }
         return {
+          sourceKey: `asymmetry:${normalizeBranchKey(entry.name)}`,
           name: entry.name,
           pct: (entry.usd / total) * 100,
           risk: config.risk,
@@ -105,8 +106,6 @@ export function adaptAsymmetry(payload: AsymmetryPayload): AdapterResult {
         : {}),
       ...(supplyValid
         ? {
-            immediateRedeemableUsd: capacityUsd,
-            ...(capacityRatioOfSupply != null ? { capacityRatioOfSupply } : {}),
             redemption: {
               capacityUsd,
               ...(capacityRatioOfSupply != null ? { capacityRatioOfSupply } : {}),

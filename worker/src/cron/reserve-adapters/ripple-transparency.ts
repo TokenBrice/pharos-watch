@@ -150,6 +150,7 @@ export function parseRippleReserveBreakdown(normalized: string): ReserveBreakdow
 function buildReserveSlices(breakdown: ReserveBreakdown): ReserveSlice[] {
   const slices: ReserveSlice[] = [
     {
+      sourceKey: "ripple-transparency:treasury-bills",
       name: "U.S. Treasury bills",
       pct: breakdown.treasuryBillsPct,
       risk: "very-low",
@@ -162,6 +163,7 @@ function buildReserveSlices(breakdown: ReserveBreakdown): ReserveSlice[] {
       maturityDaysMax: 92,
     },
     {
+      sourceKey: "ripple-transparency:government-mmf",
       name: "Government money-market funds",
       pct: breakdown.governmentMoneyMarketFundsPct,
       risk: "very-low",
@@ -171,6 +173,7 @@ function buildReserveSlices(breakdown: ReserveBreakdown): ReserveSlice[] {
       liquidityHorizon: "one-day",
     },
     {
+      sourceKey: "ripple-transparency:cash",
       name: "Cash and deposit accounts",
       pct: breakdown.cashPct,
       risk: "very-low",

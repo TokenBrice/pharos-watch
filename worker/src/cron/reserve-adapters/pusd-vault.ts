@@ -152,6 +152,7 @@ async function fetchSingleChainVaultReserves(
   return {
     slices: [
       {
+        sourceKey: `pusd-vault:${vaultAddress.toLowerCase()}`,
         name: sliceConfig.name,
         pct: 100,
         risk: sliceConfig.risk,
@@ -246,6 +247,7 @@ async function fetchMultichainVaultReserves(
 
   const slices = normalizeSlices(
     holdings.map((holding) => ({
+      sourceKey: `pusd-vault:${holding.address.toLowerCase()}`,
       name: holding.name,
       pct: (holding.usd / vaultBalanceUsd) * 100,
       risk: holding.risk,

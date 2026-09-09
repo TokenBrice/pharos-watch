@@ -336,7 +336,6 @@ describe("fetchSkyMakercoreReserves PSM attribution", () => {
     expect(result.metadata?.totalReserveUsd).toBe(7000000000);
     expect(result.metadata?.totalLiabilitiesUsd).toBe(7000000000);
     expect(result.metadata?.collateralizationRatio).toBe(1);
-    expect(result.metadata?.immediateRedeemableUsd).toBe(123456);
     expect(result.metadata?.redemption).toMatchObject({
       capacityUsd: 123456,
       capacityKind: "live-direct",

@@ -23,6 +23,7 @@ export {
   slicesFromPercentages,
   slicesFromValues,
   valueUsdFromBigIntPrice,
+  sourceKeySlug,
 } from "./slice-math";
 export {
   parseTimestampLikeToUnixSeconds,

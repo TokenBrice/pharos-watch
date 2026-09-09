@@ -38,6 +38,7 @@ interface ResolvedReserveBucket {
   name: string;
   risk: ReserveSlice["risk"];
   coinId?: string;
+  sourceKey: string;
 }
 
 type WeightMode = "share" | "amount";
@@ -100,17 +101,17 @@ function resolveTbillBucket(name: string): ResolvedReserveBucket {
   const normalized = normalizeBucketKey(name);
   switch (normalized) {
     case "PYUSD":
-      return { name: "PYUSD (PayPal USD)", risk: "low", coinId: "pyusd-paypal" };
+      return { name: "PYUSD (PayPal USD)", risk: "low", coinId: "pyusd-paypal", sourceKey: "usdai-proof-of-reserves:pyusd" };
     case "USDC":
-      return { name: "USDC", risk: "low", coinId: "usdc-circle" };
+      return { name: "USDC", risk: "low", coinId: "usdc-circle", sourceKey: "usdai-proof-of-reserves:usdc" };
     case "USDT":
-      return { name: "USDT", risk: "low", coinId: "usdt-tether" };
+      return { name: "USDT", risk: "low", coinId: "usdt-tether", sourceKey: "usdai-proof-of-reserves:usdt" };
     case "M":
     case "WM":
     case "M0":
-      return { name: "M0 / wM Treasury assets", risk: "low", coinId: "m-m0" };
+      return { name: "M0 / wM Treasury assets", risk: "low", coinId: "m-m0", sourceKey: "usdai-proof-of-reserves:m0" };
     default:
-      return { name: name.trim(), risk: "low" };
+      return { name: name.trim(), risk: "low", sourceKey: `usdai-proof-of-reserves:${name.trim().toLowerCase().replace(/[^a-z0-9]+/g, "-")}` };
   }
 }
 
@@ -250,6 +251,7 @@ export function adaptUsdAiProofOfReserves(
   );
 
   const sliceInputs = Array.from(tbillBuckets.values()).map(({ share, bucket }) => ({
+    sourceKey: bucket.sourceKey,
     name: bucket.name,
     pct: weightToPct(share),
     risk: bucket.risk,
@@ -258,6 +260,7 @@ export function adaptUsdAiProofOfReserves(
 
   if (dealShare > 0n) {
     sliceInputs.push({
+      sourceKey: "usdai-proof-of-reserves:deal",
       name: "GPU-backed infrastructure loans (NVIDIA hardware)",
       pct: weightToPct(dealShare),
       risk: "high",
@@ -266,6 +269,7 @@ export function adaptUsdAiProofOfReserves(
 
   if (syntheticUndisclosedShare > 0n) {
     sliceInputs.push({
+      sourceKey: "usdai-proof-of-reserves:undisclosed",
       name: "Undisclosed USD.AI reserve buckets",
       pct: weightToPct(syntheticUndisclosedShare),
       risk: "high",
@@ -280,6 +284,7 @@ export function adaptUsdAiProofOfReserves(
 
   if (unknownShare > 0n) {
     sliceInputs.push({
+      sourceKey: "usdai-proof-of-reserves:unknown",
       name: "Unmapped USD.AI reserve buckets",
       pct: weightToPct(unknownShare),
       risk: "high",

@@ -84,6 +84,7 @@
       "navScope": "native-fund-share",
       "oracleAddress": "0xd92095BAf79a6ca6533019e952aDe0d3C5834f4b",
       "tokenAddress": "0x2255718832bc9fd3be1caf75084f4803da14ff01",
+      "sourceKey": "chainlink-nav:token:0x2255718832bc9fd3be1caf75084f4803da14ff01",
       "assetLabel": "VanEck Treasury Fund shares",
       "assetRisk": "very-low",
       "oracleMethod": "latestRoundData",

@@ -106,7 +106,7 @@ describe("GHO parent-local exposure", () => {
 describe("GHO fetch boundary", () => {
   it("preserves dependency identity and local attribution through RPC decoding", async () => {
     const result = await fetchGhoReserves(COIN, CONFIG, new AbortController().signal);
-    expect(result.slices.find((slice) => slice.coinId === "usdc-circle")).toMatchObject({ pct: 50, depType: "collateral" });
+    expect(result.slices.find((slice) => slice.coinId === "usdc-circle")).toMatchObject({ sourceKey: "gho:0x3333333333333333333333333333333333333333", pct: 50, depType: "collateral" });
     expect(result.slices.find((slice) => slice.name === "CoreGhoDirectMinter")?.pct).toBe(50);
   });
 

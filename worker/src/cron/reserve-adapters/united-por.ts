@@ -107,6 +107,7 @@ export function adaptUnitedPorPayload(
 
   return {
     slices: [{
+      sourceKey: "united-por:total-reserve",
       name: slice.name,
       pct: 100,
       risk: slice.risk,

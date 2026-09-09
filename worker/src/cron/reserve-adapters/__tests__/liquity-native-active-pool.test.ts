@@ -80,18 +80,16 @@ describe("fetchLiquityNativeActivePoolReserves", () => {
     );
 
     expect(result.slices).toEqual([
-      { name: "BTC collateral in Mezo ActivePool", pct: 100, risk: "medium" },
+      { sourceKey: "liquity-native-active-pool:0x3012c2fe1240e3754e5c200a0946bb0e07474876", name: "BTC collateral in Mezo ActivePool", pct: 100, risk: "medium" },
     ]);
     expect(result.warnings).toBeUndefined();
     expect(result.metadata).toMatchObject({
       totalDebtUsd: 3_500_000,
       totalReserveUsd: 5_850_000,
-      immediateRedeemableUsd: 3_500_000,
       collateralizationRatio: 5_850_000 / 3_500_000,
       collateralPriceUsd: 65_000,
       totalCollateralRatio: 1.67,
       minimumCollateralRatio: 1.1,
-      redemptionFeeBps: 75,
       redemption: {
         capacityUsd: 3_500_000,
         capacityKind: "live-direct-bounded",
@@ -155,7 +153,7 @@ describe("fetchLiquityNativeActivePoolReserves", () => {
     mockPool();
     vi.mocked(fetchOnchainRateBps).mockResolvedValue(null);
     const result = await fetchPool();
-    expect(result.slices).toEqual([{ name: "BTC collateral in Mezo ActivePool", pct: 100, risk: "medium" }]);
+    expect(result.slices).toEqual([{ sourceKey: "liquity-native-active-pool:0x3012c2fe1240e3754e5c200a0946bb0e07474876", name: "BTC collateral in Mezo ActivePool", pct: 100, risk: "medium" }]);
     expect(result.metadata?.redemption?.routeStatus).toBe("open");
     expect(result.metadata).not.toHaveProperty("redemptionFeeBps");
     expect(result.metadata?.redemption).not.toHaveProperty("feeBps");

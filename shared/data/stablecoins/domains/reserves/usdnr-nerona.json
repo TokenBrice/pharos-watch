@@ -9,8 +9,14 @@
       "depType": "wrapper",
       "assetClass": "stablecoin",
       "issuerOrObligor": "M0 Protocol minters and their short-duration U.S. Treasury collateral",
-      "riskFactors": ["counterparty", "smart-contract", "custody", "liquidity"],
-      "liquidityHorizon": "unknown"
+      "riskFactors": [
+        "counterparty",
+        "smart-contract",
+        "custody",
+        "liquidity"
+      ],
+      "liquidityHorizon": "unknown",
+      "sourceKey": "m0-wrapper-underlying:m"
     }
   ],
   "reserveReview": {

@@ -47,6 +47,7 @@ describe("adaptRippleTransparency", () => {
 
     expect(result.slices).toEqual([
       {
+        sourceKey: "ripple-transparency:treasury-bills",
         name: "U.S. Treasury bills",
         pct: 65.41,
         risk: "very-low",
@@ -57,6 +58,7 @@ describe("adaptRippleTransparency", () => {
         maturityDaysMax: 92,
       },
       {
+        sourceKey: "ripple-transparency:government-mmf",
         name: "Government money-market funds",
         pct: 19.44,
         risk: "very-low",
@@ -66,6 +68,7 @@ describe("adaptRippleTransparency", () => {
         liquidityHorizon: "one-day",
       },
       {
+        sourceKey: "ripple-transparency:cash",
         name: "Cash and deposit accounts",
         pct: 15.15,
         risk: "very-low",

@@ -140,6 +140,7 @@ export function adaptEthenaWhitelabel(
 
   const sliceInputs: Array<{
     value: number;
+    sourceKey: string;
     name: string;
     risk: ReserveSlice["risk"];
     coinId?: string;
@@ -147,7 +148,7 @@ export function adaptEthenaWhitelabel(
 
   for (const [asset, value] of onChainTotals) {
     const config = ON_CHAIN_ASSET_CONFIG[asset];
-    sliceInputs.push({ name: config.name, value, risk: config.risk, coinId: config.coinId });
+    sliceInputs.push({ sourceKey: `ethena-whitelabel:${asset.toLowerCase()}`, name: config.name, value, risk: config.risk, coinId: config.coinId });
   }
 
   if (unmappedUsd > 0) {
@@ -155,7 +156,7 @@ export function adaptEthenaWhitelabel(
       "unknown-asset",
       `Unmapped suiUSDe backing asset(s): ${Array.from(unmappedAssets).sort().join(", ")} ($${unmappedUsd.toFixed(2)})`,
     ));
-    sliceInputs.push({ name: "Unmapped suiUSDe backing assets", value: unmappedUsd, risk: "high" });
+    sliceInputs.push({ sourceKey: "ethena-whitelabel:unknown", name: "Unmapped suiUSDe backing assets", value: unmappedUsd, risk: "high" });
   }
 
   if (offChainUsd > 0) {
@@ -163,7 +164,7 @@ export function adaptEthenaWhitelabel(
       "off-chain-custody",
       `suiUSDe backing includes ${offChainUsd.toFixed(2)} held in off-chain custody (${Array.from(offChainCustodians).sort().join(", ")}); this balance is not independently on-chain verifiable`,
     ));
-    sliceInputs.push({ name: "Coinbase Prime custody (off-chain)", value: offChainUsd, risk: "low" });
+    sliceInputs.push({ sourceKey: "ethena-whitelabel:off-chain", name: "Coinbase Prime custody (off-chain)", value: offChainUsd, risk: "low" });
   }
 
   if (sliceInputs.length === 0) {

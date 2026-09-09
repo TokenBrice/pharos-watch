@@ -501,6 +501,7 @@ function adaptHiveHbdProtocolSnapshots(
   };
 
   const slice: ReserveSlice = {
+    sourceKey: "hive-hbd-protocol:hive",
     name: "Hive protocol HIVE conversion mechanism (endogenous HIVE value)",
     pct: 100,
     risk: "high",

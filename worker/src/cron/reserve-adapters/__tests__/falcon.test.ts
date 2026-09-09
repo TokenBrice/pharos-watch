@@ -33,19 +33,22 @@ describe("adaptFalconTransparency", () => {
       supply: "100",
       supplyUsd: 100,
       insuranceFund: "5",
-      immediateRedeemableUsd: 30,
-      immediateRedeemableRatio: 0.3,
       assetCount: 5,
       sourceTimestamp: 1773316982,
       freshnessMode: "verified",
       redemption: {
+        capacityUsd: 30,
+        capacityRatioOfSupply: 0.3,
         routeStatus: "open",
         routeStatusSource: "protocol-api",
         settlementDelaySec: 604800,
       },
     });
-    // AVAX is a known altcoin — no warning emitted
-    expect(result.warnings).toBeUndefined();
+    // AVAX is unmapped; at ~16% of this fixture it exceeds the share threshold
+    // and warns rather than being silently suppressed.
+    expect(result.warnings).toEqual([
+      expect.objectContaining({ code: "unknown-asset", message: expect.stringContaining("AVAX") }),
+    ]);
     expect(() => adaptFalconTransparency(falconPayload([
       { label: "USDC", ceffu: "malformed", fireblocks: "100" },
     ]))).toThrow(/Falcon USDC venue values row 1 has invalid value: NaN/);
@@ -54,7 +57,7 @@ describe("adaptFalconTransparency", () => {
   it.each([
     ["UNKNOWN_TOKEN_XYZ", "50000", true],
     ["UNKNOWN_TOKEN_XYZ", "0.01", false],
-    ["SOL", "500000", false],
+    ["SOL", "500000", true],
   ] as const)("classifies warning exposure for %s worth %s", (label, value, warns) => {
     const result = adaptFalconTransparency(falconPayload([
       { label: "USDC", ceffu: "50" }, { label, ceffu: value },
@@ -66,21 +69,6 @@ describe("adaptFalconTransparency", () => {
     } else {
       expect(result.warnings).toBeUndefined();
     }
-  });
-
-  it("treats DUSK as a reviewed Falcon altcoin instead of degrading the snapshot", () => {
-    const payload = falconPayload([
-      { label: "USDC", ceffu: "998949900" },
-      { label: "DUSK", ceffu: "105100" },
-    ], { timestamp: 1775023886, supply: "1000000000", insurance: "0" });
-
-    const result = adaptFalconTransparency(payload);
-
-    expect(result.warnings).toBeUndefined();
-    expect(result.metadata).toMatchObject({
-      immediateRedeemableUsd: 998949900,
-      unknownExposurePct: 0,
-    });
   });
 
   it("normalizes a millisecond snapshot_date to unix seconds", () => {

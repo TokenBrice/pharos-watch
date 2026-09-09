@@ -2,6 +2,7 @@
   "id": "btcusd-btcfi",
   "reserves": [
     {
+      "sourceKey": "btcfi:btc",
       "name": "BTC",
       "pct": 45.94,
       "risk": "medium",
@@ -16,6 +17,7 @@
       "liquidityHorizon": "seven-days"
     },
     {
+      "sourceKey": "btcfi:btcb",
       "name": "BTCB",
       "pct": 39.44,
       "risk": "medium",
@@ -32,11 +34,13 @@
       "liquidityHorizon": "seven-days"
     },
     {
+      "sourceKey": "btcfi:unknown",
       "name": "Unmapped BTC variants",
       "pct": 13.53,
       "risk": "high"
     },
     {
+      "sourceKey": "btcfi:cbbtc",
       "name": "CBBTC",
       "pct": 1.02,
       "risk": "medium",
@@ -52,6 +56,7 @@
       "liquidityHorizon": "seven-days"
     },
     {
+      "sourceKey": "btcfi:wbtc",
       "name": "WBTC",
       "pct": 0.06,
       "risk": "medium",

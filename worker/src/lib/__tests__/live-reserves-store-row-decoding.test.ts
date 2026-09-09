@@ -147,4 +147,57 @@ describe("stored live reserve snapshot metadata normalization", () => {
     // invalid-freshness rather than silently dropped.
     expect(parseSnapshotMetadata("not json")).toEqual({ diag: { invalidFreshness: true } });
   });
+
+  it("maps legacy flat capacity and fee fields into the nested redemption shape at decode time", () => {
+    const metadata = parseSnapshotMetadata(JSON.stringify({
+      freshnessMode: "not-applicable",
+      immediateRedeemableUsd: 500_000,
+      immediateRedeemableRatio: 0.25,
+      redemptionFeeBps: 50,
+    }));
+
+    expect(metadata.immediateRedeemableUsd).toBeUndefined();
+    expect(metadata.immediateRedeemableRatio).toBeUndefined();
+    expect(metadata.redemptionFeeBps).toBeUndefined();
+    expect(metadata.redemption).toEqual({
+      capacityUsd: 500_000,
+      capacityRatioOfSupply: 0.25,
+      feeBps: 50,
+    });
+  });
+
+  it("lets a nested redemption block win over legacy flat fields", () => {
+    const metadata = parseSnapshotMetadata(JSON.stringify({
+      freshnessMode: "not-applicable",
+      immediateRedeemableUsd: 500_000,
+      redemptionFeeBps: 50,
+      redemption: {
+        capacityUsd: 750_000,
+        capacityKind: "live-direct-bounded",
+        feeBps: 42,
+      },
+    }));
+
+    expect(metadata.immediateRedeemableUsd).toBeUndefined();
+    expect(metadata.redemptionFeeBps).toBeUndefined();
+    expect(metadata.redemption).toMatchObject({
+      capacityUsd: 750_000,
+      capacityKind: "live-direct-bounded",
+      feeBps: 42,
+    });
+  });
+
+  it("drops malformed legacy flat fields without fabricating nested telemetry", () => {
+    const metadata = parseSnapshotMetadata(JSON.stringify({
+      freshnessMode: "not-applicable",
+      immediateRedeemableUsd: "not-a-number",
+      immediateRedeemableRatio: Number.NaN,
+      redemptionFeeBps: "not-a-fee",
+    }));
+
+    expect(metadata.immediateRedeemableUsd).toBeUndefined();
+    expect(metadata.immediateRedeemableRatio).toBeUndefined();
+    expect(metadata.redemptionFeeBps).toBeUndefined();
+    expect(metadata.redemption).toBeUndefined();
+  });
 });

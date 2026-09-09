@@ -2,6 +2,7 @@
   "id": "ausd-agora",
   "reserves": [
     {
+      "sourceKey": "agora-independent-assurance:ausd:us-treasury-securities",
       "name": "Short-dated U.S. Treasury Bills",
       "pct": 31.66,
       "risk": "very-low",
@@ -16,6 +17,7 @@
       "maturityDaysMax": 60
     },
     {
+      "sourceKey": "agora-independent-assurance:ausd:us-treasury-repos",
       "name": "U.S. Treasury Repurchase Agreements",
       "pct": 60.79,
       "risk": "very-low",
@@ -42,6 +44,7 @@
       "liquidityHorizon": "immediate"
     },
     {
+      "sourceKey": "agora-independent-assurance:ausd:stablecoins",
       "name": "Stablecoins held in segregated wallets",
       "pct": 3.66,
       "risk": "low",

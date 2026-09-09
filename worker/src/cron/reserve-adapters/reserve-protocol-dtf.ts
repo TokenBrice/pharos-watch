@@ -312,6 +312,7 @@ export function adaptReserveProtocolDtfRows(
   const descriptorByAddress = buildDescriptorMap(assets);
   const values: Array<{
     pct: number;
+    sourceKey?: string;
     name: string;
     risk: ReserveSlice["risk"];
     coinId?: string;
@@ -332,6 +333,7 @@ export function adaptReserveProtocolDtfRows(
     if (!descriptor) {
       unknownWeight += pct;
       values.push({
+        sourceKey: "reserve-protocol-dtf:unknown",
         pct,
         name: `Unmapped Reserve Protocol DTF asset: ${component.symbol ?? component.name ?? component.address ?? "unknown"}`,
         risk: "high",
@@ -340,6 +342,7 @@ export function adaptReserveProtocolDtfRows(
     }
 
     values.push({
+      sourceKey: `reserve-protocol-dtf:${descriptor.address.toLowerCase()}`,
       pct,
       name: descriptor.name,
       risk: descriptor.risk,
@@ -489,6 +492,7 @@ async function fetchReserveProtocolDtfOnchainReserves(
   const warnings: LiveReserveWarning[] = [];
   const values: Array<{
     value: number;
+    sourceKey?: string;
     name: string;
     risk: ReserveSlice["risk"];
     coinId?: string;
@@ -581,6 +585,7 @@ async function fetchReserveProtocolDtfOnchainReserves(
     if (!descriptor) {
       unknownValue += value;
       values.push({
+        sourceKey: "reserve-protocol-dtf:unknown",
         value,
         name: `Unmapped Reserve Protocol DTF asset: ${entry.address}`,
         risk: "high",
@@ -596,6 +601,7 @@ async function fetchReserveProtocolDtfOnchainReserves(
       });
     }
     values.push({
+      sourceKey: `reserve-protocol-dtf:${descriptor.address.toLowerCase()}`,
       value,
       name: descriptor.name,
       risk: descriptor.risk,

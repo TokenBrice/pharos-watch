@@ -112,8 +112,6 @@ describe("buildLiquityV2RedemptionMetadata", () => {
     });
 
     expect(metadata).toMatchObject({
-      immediateRedeemableUsd: 1250,
-      redemptionFeeBps: 52,
       redemption: {
         capacityUsd: 1250,
         capacityKind: "live-direct-bounded",
@@ -192,7 +190,6 @@ describe("buildLiquityV2RedemptionMetadata", () => {
 
     expect(metadata).toMatchObject({
       totalDebtUsd: 2_000,
-      immediateRedeemableUsd: 1_250,
       redemption: {
         capacityUsd: 1_250,
         routeStatus: "degraded",
@@ -494,7 +491,6 @@ describe("fetchLiquityV2BranchReserves BOLD mechanism metrics", () => {
     expect(result.metadata?.collateralizationRatio).toBeCloseTo(2.13, 6);
     expect(result.metadata?.liquidationCapacityRatio).toBeCloseTo(25 / 30, 6);
     expect(result.metadata?.totalDebtUsd).toBe(30_000_000);
-    expect(result.metadata?.immediateRedeemableUsd).toBe(25_000_000);
     expect(result.metadata?.redemption).toMatchObject({
       capacityUsd: 25_000_000,
       routeStatus: "degraded",
@@ -737,8 +733,6 @@ describe("fetchLiquityV2BranchReserves Beraborrow branches", () => {
     expect(result.slices.map((slice) => slice.name)).toEqual(["pumpBTC", "WBERA"]);
     expect(metadata).toMatchObject({
       totalDebtUsd: 1300,
-      immediateRedeemableUsd: 1300,
-      redemptionFeeBps: 50,
       redemption: {
         capacityUsd: 1300,
         routeStatus: "degraded",
@@ -847,8 +841,7 @@ describe("fetchLiquityV2BranchReserves Beraborrow branches", () => {
       AbortSignal.timeout(5_000),
     );
 
-    expect(batched.metadata?.redemptionFeeBps).toBe(50);
-    expect(fallback.metadata?.redemptionFeeBps).toBe(batched.metadata?.redemptionFeeBps);
+    expect(batched.metadata?.redemption).toMatchObject({ feeBps: 50 });
     expect(fallback.metadata?.redemption).toMatchObject({ feeBps: 50 });
   });
 });
@@ -968,9 +961,9 @@ describe("fetchLiquityV2BranchReserves staged branch reads", () => {
     expect(result.slices.map((slice) => slice.name)).toEqual(["branch-0", "branch-1"]);
     expect(result.metadata).toMatchObject({
       totalDebtUsd: 150,
-      immediateRedeemableUsd: 150,
-      redemptionFeeBps: 70,
       redemption: {
+        capacityUsd: 150,
+        feeBps: 70,
         routeStatus: "open",
       },
     });

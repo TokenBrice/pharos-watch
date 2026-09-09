@@ -74,25 +74,6 @@ const FALCON_TRACKED_RWA_ASSETS: Partial<Record<string, { name: string; coinId: 
   XAUT: { name: "XAUt gold token assets", coinId: "xaut-tether", risk: "medium" },
 };
 
-/** Well-known altcoins that legitimately go to the "other" bucket without warning. */
-const FALCON_OTHER_KNOWN = new Set([
-  // L1/L2 natives
-  "SOL", "BNB", "TRX", "XRP", "AVAX", "TON", "NEAR", "ATOM", "SEI",
-  "BERA", "POL", "KAVA", "CELO", "EOS", "FLR", "WFLR", "ASTR",
-  "RON", "RONIN", "METIS", "S", "SONIC", "KLAY", "CFX",
-  // DeFi / governance
-  "CRV", "CVX", "UNI", "DODO", "MORPHO", "PENDLE", "EUL",
-  "GNO", "ANKR", "BAL", "SUSHI", "QI",
-  // Popular / meme
-  "FLOKI", "TRUMP", "HMSTR", "DEXE", "FET",
-  // Other known tokens
-  "LUMIA", "JST", "XDC", "SIREN", "MANTA", "JASMY", "DUSK",
-  "MASK", "IOST", "SUN", "BTTC", "BTT", "WLFI",
-  "PROM", "BABY", "DOLO", "LAYER", "PORTAL",
-  "MANTRA", "YGG", "API3", "COTI", "MOVE",
-  "FIDA", "ID", "A", "SOPH",
-]);
-
 /** Only warn about unknown assets above this USD value. */
 const FALCON_UNKNOWN_WARN_THRESHOLD = 10_000;
 
@@ -133,6 +114,12 @@ export function adaptFalconTransparency(payload: FalconTransparencyResponse): Ad
   const warnings: LiveReserveWarning[] = [];
   const trackedStableValues = new Map<string, number>();
   const trackedRwaValues = new Map<string, number>();
+  // Compute each asset's USD value once; it is consumed by the total, the
+  // bucket classifier and the tracked-stable/RWA accumulation below.
+  const assetValues = new Map<FalconBreakdownAsset, number>();
+  for (const asset of assets) {
+    assetValues.set(asset, sumFalconAssetValue(asset));
+  }
   const {
     bucketTotals,
     totalValue: totalAssetUsd,
@@ -140,18 +127,19 @@ export function adaptFalconTransparency(payload: FalconTransparencyResponse): Ad
     unknownValuesByKey,
   } = accumulateBucketedExposure({
     items: assets,
-    getValue: sumFalconAssetValue,
+    getValue: (asset) => assetValues.get(asset)!,
     getBucket: (asset) => {
       const bucket = bucketForFalconAsset(asset.label);
+      const value = assetValues.get(asset)!;
       if (bucket === "stable" && FALCON_TRACKED_STABLE_ASSETS[asset.label]) {
-        trackedStableValues.set(asset.label, (trackedStableValues.get(asset.label) ?? 0) + sumFalconAssetValue(asset));
+        trackedStableValues.set(asset.label, (trackedStableValues.get(asset.label) ?? 0) + value);
       }
       if (bucket === "rwa" && FALCON_TRACKED_RWA_ASSETS[asset.label]) {
-        trackedRwaValues.set(asset.label, (trackedRwaValues.get(asset.label) ?? 0) + sumFalconAssetValue(asset));
+        trackedRwaValues.set(asset.label, (trackedRwaValues.get(asset.label) ?? 0) + value);
       }
       return bucket;
     },
-    isUnknown: (asset, bucket) => bucket === "other" && !FALCON_OTHER_KNOWN.has(asset.label),
+    isUnknown: (_asset, bucket) => bucket === "other",
     getUnknownKey: (asset) => asset.label,
   });
 
@@ -239,10 +227,6 @@ export function adaptFalconTransparency(payload: FalconTransparencyResponse): Ad
       supply: payload.usdf?.supply,
       insuranceFund: payload.usdf?.insurance_fund,
       ...(Number.isFinite(supplyUsd) && supplyUsd > 0 ? { supplyUsd } : {}),
-      immediateRedeemableUsd: stableBucketUsd,
-      ...(Number.isFinite(supplyUsd) && supplyUsd > 0
-        ? { immediateRedeemableRatio: stableBucketUsd / supplyUsd }
-        : {}),
       assetCount: assets.length,
       ...freshnessMetadataFromTimestamp(
         sourceTimestamp,

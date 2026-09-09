@@ -21,12 +21,12 @@ describe("adaptAsymmetry", () => {
     });
 
     expect(slices.slices).toEqual([
-      { name: "ysyBOLD", pct: 65.3, risk: "medium", coinId: "bold-liquity", depType: "collateral" },
-      { name: "scrvUSD", pct: 22.6, risk: "medium", coinId: "scrvusd-curve", depType: "collateral" },
-      { name: "sUSDS", pct: 7.4, risk: "low", coinId: "susds-sky", depType: "collateral" },
-      { name: "tBTC", pct: 2.3, risk: "medium" },
-      { name: "sfrxUSD", pct: 1.9, risk: "medium", coinId: "sfrxusd-frax", depType: "collateral" },
-      { name: "wBTC", pct: 0.5, risk: "medium" },
+      { sourceKey: "asymmetry:ysybold", name: "ysyBOLD", pct: 65.3, risk: "medium", coinId: "bold-liquity", depType: "collateral" },
+      { sourceKey: "asymmetry:scrvusd", name: "scrvUSD", pct: 22.6, risk: "medium", coinId: "scrvusd-curve", depType: "collateral" },
+      { sourceKey: "asymmetry:susds", name: "sUSDS", pct: 7.4, risk: "low", coinId: "susds-sky", depType: "collateral" },
+      { sourceKey: "asymmetry:tbtc", name: "tBTC", pct: 2.3, risk: "medium" },
+      { sourceKey: "asymmetry:sfrxusd", name: "sfrxUSD", pct: 1.9, risk: "medium", coinId: "sfrxusd-frax", depType: "collateral" },
+      { sourceKey: "asymmetry:wbtc", name: "wBTC", pct: 0.5, risk: "medium" },
     ]);
     expect(slices.metadata).toMatchObject({
       branchCount: 6,
@@ -37,8 +37,6 @@ describe("adaptAsymmetry", () => {
       totalReserveUsd: 996,
       supplyUsd: 996,
       collateralizationRatio: 1,
-      immediateRedeemableUsd: 996,
-      capacityRatioOfSupply: 1,
       redemption: {
         capacityUsd: 996,
         capacityRatioOfSupply: 1,
@@ -73,8 +71,6 @@ describe("adaptAsymmetry", () => {
       totalReserveUsd: 800,
       supplyUsd: 1000,
       collateralizationRatio: 0.8,
-      immediateRedeemableUsd: 800,
-      capacityRatioOfSupply: 0.8,
       redemption: {
         capacityUsd: 800,
         capacityRatioOfSupply: 0.8,

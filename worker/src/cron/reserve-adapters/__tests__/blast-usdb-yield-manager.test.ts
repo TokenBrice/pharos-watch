@@ -36,6 +36,7 @@ describe("fetchBlastUsdbYieldManagerReserves", () => {
 
     expect(result.slices).toEqual([
       {
+        sourceKey: "blast-usdb-yield-manager:dai",
         name: "MakerDAO DSR / DAI yield manager",
         pct: 100,
         risk: "low",

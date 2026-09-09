@@ -152,6 +152,7 @@ function readSlice(params: InitiaWrapperVaultParams): ReserveSlice {
     throw new Error(`${ADAPTER}: slice must target ausd-agora with depType wrapper`);
   }
   return {
+    sourceKey: "initia-wrapper-vault:ausd",
     name: params.slice.name,
     pct: 100,
     risk: params.slice.risk,

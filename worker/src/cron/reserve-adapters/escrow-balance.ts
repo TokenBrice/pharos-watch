@@ -22,7 +22,9 @@ type EscrowBalanceParams = LiveReserveAdapterParamsByKey[typeof ADAPTER];
 type EscrowBalanceMultiParams = Extract<EscrowBalanceParams, { reads: unknown }>;
 
 function readSlice(params: EscrowBalanceParams): ReserveSlice {
+  const escrowContract = "reads" in params ? params.reads[0]!.contract : params.contract;
   return {
+    sourceKey: `escrow-balance:${escrowContract.toLowerCase()}`,
     name: params.slice.name,
     pct: 100,
     risk: params.slice.risk,
@@ -163,7 +165,6 @@ export async function fetchEscrowBalanceReserves(
         escrowBalanceReadCount: params.reads.length,
         escrowBalancesRaw: multiRead.capacityRaw,
         escrowBalanceUsd: multiRead.capacityUsd,
-        immediateRedeemableUsd: multiRead.capacityUsd,
         ...buildRedemptionSnapshotMetadata({
           capacityUsd: multiRead.capacityUsd,
           capacityKind: "live-direct",
@@ -211,7 +212,6 @@ export async function fetchEscrowBalanceReserves(
       contractAddress: params.contract,
       escrowBalanceRaw: escrowBalanceRaw.toString(),
       escrowBalanceUsd,
-      immediateRedeemableUsd: escrowBalanceUsd,
       ...buildRedemptionSnapshotMetadata({
         capacityUsd: escrowBalanceUsd,
         capacityKind: "live-direct",

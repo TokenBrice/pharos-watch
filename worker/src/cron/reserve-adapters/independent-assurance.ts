@@ -460,6 +460,7 @@ export async function fetchIndependentAssuranceReserves(
       throw new Error(`independent-assurance: unknown positive asset row ${asset.code}`);
     }
     return {
+      sourceKey: `${profile.adapterName}:${profile.product.toLowerCase()}:${asset.code}`,
       amount: Number(asset.amount),
       name: classification?.name ?? asset.label,
       risk: classification?.risk ?? "very-low",

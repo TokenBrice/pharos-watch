@@ -196,6 +196,7 @@ export function adaptCollateralPositions(
     name: string;
     usd: number;
     risk: ReserveSlice["risk"];
+    sourceKey: string;
     coinId?: string;
     depType?: ReserveSlice["depType"];
     unknown?: boolean;
@@ -242,6 +243,7 @@ export function adaptCollateralPositions(
       name: `${entry.symbol}${entry.name && entry.name !== entry.symbol ? ` (${entry.name})` : ""}`,
       usd: usdValue,
       risk,
+      sourceKey: `collateral-positions-api:${entry.symbol.toLowerCase()}`,
       coinId: inferCoinId(entry.symbol),
       depType: inferDepType(entry.symbol),
       ...(unknown ? { unknown: true } : {}),
@@ -292,6 +294,7 @@ export function adaptCollateralPositions(
   const minor = knownValues.filter((value) => (value.usd / total) * 100 < otherThresholdPct);
 
   const slices = major.map((value) => ({
+    sourceKey: value.sourceKey,
     name: value.name,
     pct: (value.usd / total) * 100,
     risk: value.risk,
@@ -307,6 +310,7 @@ export function adaptCollateralPositions(
         ? "high"
         : "medium";
     slices.push({
+      sourceKey: "collateral-positions-api:other",
       name: "Other collateral",
       pct: (otherUsd / total) * 100,
       risk: highestRisk,
@@ -315,6 +319,7 @@ export function adaptCollateralPositions(
 
   if (unknownValues.length > 0) {
     slices.push({
+      sourceKey: "collateral-positions-api:unknown",
       name: "Unknown assets",
       pct: (unknownExposureUsd / total) * 100,
       risk: "high",
@@ -342,7 +347,6 @@ export function adaptCollateralPositions(
             collateralizationRatio: total / mintedUsd,
           }
         : {}),
-      ...(immediateRedeemableUsd != null ? { immediateRedeemableUsd } : {}),
       ...(immediateRedeemableUsd != null
         ? {
             redemption: {

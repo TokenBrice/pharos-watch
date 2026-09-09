@@ -206,7 +206,7 @@ describe("adaptFirmMarkets", () => {
   it("includes non-FiRM issuance in unknown exposure rather than normalizing it away", () => {
     const result = adaptFirmMarkets({ markets: [makeMarket("wstETH", 60)], timestamp: 1000 }, 100);
     expect(result.metadata?.unknownExposurePct).toBe(40);
-    expect(result.slices).toContainEqual({ name: "Unattributed non-FiRM issuance", pct: 40, risk: "high" });
+    expect(result.slices).toContainEqual({ sourceKey: "dola-inverse:unattributed", name: "Unattributed non-FiRM issuance", pct: 40, risk: "high" });
   });
 
   it("filters out zero-debt markets", () => {
@@ -287,12 +287,14 @@ describe("adaptFirmMarkets", () => {
 
     expect(result.slices).toEqual(expect.arrayContaining([
       expect.objectContaining({
+        sourceKey: "dola-inverse:susde",
         name: "sUSDe collateral",
         pct: 50,
         risk: "high",
         coinId: "susde-ethena",
       }),
       expect.objectContaining({
+        sourceKey: "dola-inverse:other",
         name: "Other collateral",
         pct: 50,
         risk: "high",

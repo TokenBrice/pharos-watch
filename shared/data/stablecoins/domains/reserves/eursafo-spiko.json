@@ -2,6 +2,7 @@
   "id": "eursafo-spiko",
   "reserves": [
     {
+      "sourceKey": "spiko-api:eursafo:total-assets",
       "name": "Fully collateralized overnight total-return swap exposure",
       "pct": 100,
       "risk": "medium",

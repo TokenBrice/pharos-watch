@@ -149,18 +149,11 @@ function validateRedemptionTelemetry(
   const warnings: LiveReserveWarning[] = [];
   const adapterLabel = describeAdapter(adapter);
   const redemption = getMetadataObject(metadata, "redemption");
-  const capacityUsdFields = [
-    getMetadataNumberField(metadata, "immediateRedeemableUsd"),
-    getMetadataNumberField(redemption ?? undefined, "capacityUsd"),
-  ] as const;
+  const capacityUsdFields = [getMetadataNumberField(redemption ?? undefined, "capacityUsd")] as const;
   const capacityRatioFields = [
-    getMetadataNumberField(metadata, "immediateRedeemableRatio"),
     getMetadataNumberField(redemption ?? undefined, "capacityRatioOfSupply"),
   ] as const;
-  const feeBpsFields = [
-    getMetadataNumberField(metadata, "redemptionFeeBps"),
-    getMetadataNumberField(redemption ?? undefined, "feeBps"),
-  ] as const;
+  const feeBpsFields = [getMetadataNumberField(redemption ?? undefined, "feeBps")] as const;
   const capacityUsdValues = capacityUsdFields.map((field) => field.value);
   const capacityRatioValues = capacityRatioFields.map((field) => field.value);
   const feeBpsValues = feeBpsFields.map((field) => field.value);

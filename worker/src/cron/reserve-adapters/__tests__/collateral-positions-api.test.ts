@@ -50,8 +50,8 @@ describe("adaptCollateralPositions", () => {
     );
 
     expect(result.slices).toEqual([
-      { name: "WBTC (Wrapped BTC)", pct: 55.6, risk: "medium" },
-      { name: "WETH (Wrapped Ether)", pct: 44.4, risk: "very-low" },
+      { sourceKey: "collateral-positions-api:wbtc", name: "WBTC (Wrapped BTC)", pct: 55.6, risk: "medium" },
+      { sourceKey: "collateral-positions-api:weth", name: "WETH (Wrapped Ether)", pct: 44.4, risk: "very-low" },
     ]);
     expect(result.metadata).toMatchObject({
       assetCount: 3,
@@ -160,6 +160,7 @@ describe("adaptCollateralPositions", () => {
     );
     expect(result.warnings).toBeUndefined();
     expect(result.slices).toContainEqual({
+      sourceKey: "collateral-positions-api:ysybold",
       name: "ysyBOLD (Staked yBOLD)",
       pct: 0.1,
       risk: "medium",
@@ -194,8 +195,8 @@ describe("adaptCollateralPositions", () => {
     );
 
     expect(result.slices).toEqual([
-      { name: "PAXG (Paxos Gold)", pct: 60, risk: "medium", coinId: "paxg-paxos" },
-      { name: "XAUt (Tether Gold)", pct: 40, risk: "medium", coinId: "xaut-tether" },
+      { sourceKey: "collateral-positions-api:paxg", name: "PAXG (Paxos Gold)", pct: 60, risk: "medium", coinId: "paxg-paxos" },
+      { sourceKey: "collateral-positions-api:xaut", name: "XAUt (Tether Gold)", pct: 40, risk: "medium", coinId: "xaut-tether" },
     ]);
   });
 
@@ -218,7 +219,7 @@ describe("adaptCollateralPositions", () => {
 
     expect(result.warnings).toBeUndefined();
     expect(result.slices).toEqual([
-      { name: "CHFAU (AllUnity CHF)", pct: 100, risk: "low", coinId: "chfau-allunity" },
+      { sourceKey: "collateral-positions-api:chfau", name: "CHFAU (AllUnity CHF)", pct: 100, risk: "low", coinId: "chfau-allunity" },
     ]);
   });
 
@@ -274,7 +275,6 @@ describe("adaptCollateralPositions", () => {
     );
 
     expect(result.metadata).toMatchObject({
-      immediateRedeemableUsd: 395_346.145491,
       redemption: {
         capacityUsd: 395_346.145491,
         capacityKind: "live-direct-bounded",
@@ -347,8 +347,8 @@ describe("adaptCollateralPositions", () => {
       activePositionCount: 2,
     });
     expect(result.slices).toEqual([
-      { name: "USDC (USD Coin)", pct: 50, risk: "low", coinId: "usdc-circle" },
-      { name: "DAI (Dai Stablecoin)", pct: 50, risk: "low", coinId: "dai-makerdao" },
+      { sourceKey: "collateral-positions-api:usdc", name: "USDC (USD Coin)", pct: 50, risk: "low", coinId: "usdc-circle" },
+      { sourceKey: "collateral-positions-api:dai", name: "DAI (Dai Stablecoin)", pct: 50, risk: "low", coinId: "dai-makerdao" },
     ]);
   });
 
@@ -382,7 +382,7 @@ describe("adaptCollateralPositions", () => {
       activePositionCount: 1,
     });
     expect(result.slices).toEqual([
-      { name: "USDC (USD Coin)", pct: 100, risk: "low", coinId: "usdc-circle" },
+      { sourceKey: "collateral-positions-api:usdc", name: "USDC (USD Coin)", pct: 100, risk: "low", coinId: "usdc-circle" },
     ]);
   });
 });
@@ -492,7 +492,6 @@ describe("fetchCollateralPositionsApiReserves bridge basket", () => {
     const result = await fetchCollateralPositionsApiReserves(TEST_COIN, BRIDGE_BASKET_CONFIG, signal);
 
     expect(result.metadata).toMatchObject({
-      immediateRedeemableUsd: 120.912,
       redemption: {
         capacityUsd: 120.912,
         capacityEur: 100.76,

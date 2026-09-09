@@ -2,6 +2,7 @@
   "id": "ustb-superstate",
   "reserves": [
     {
+      "sourceKey": "chainlink-nav:token:0x43415eb6ff9db7e26a15b704e7a3edce97d31c4e",
       "name": "Short-duration U.S. government securities",
       "pct": 100,
       "risk": "very-low",

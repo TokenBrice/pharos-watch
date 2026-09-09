@@ -80,6 +80,7 @@ function ratioWithinTolerance(
 
 function readSlice(params: AstherusEarnWrapperParams): ReserveSlice {
   return {
+    sourceKey: "astherus-earn-wrapper:usdf",
     name: params.slice.name,
     pct: 100,
     risk: params.slice.risk,

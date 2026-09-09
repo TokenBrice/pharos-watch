@@ -314,6 +314,7 @@ export async function fetchM0WrapperUnderlyingReserves(
   return {
     slices: [
       {
+        sourceKey: "m0-wrapper-underlying:m",
         name: sliceConfig.name,
         pct: 100,
         risk: sliceConfig.risk,

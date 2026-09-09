@@ -17,6 +17,7 @@ const PREVIEW_REDEEM_SELECTOR = "0x4cdad506";
 function readSlice(config: LiveReservesConfig): ReserveSlice {
   const params = parseLiveReserveAdapterParams("sgho-wrapper", config.params);
   return {
+    sourceKey: "sgho-wrapper:gho",
     name: params.slice.name,
     pct: 100,
     risk: params.slice.risk,
@@ -82,8 +83,6 @@ export async function fetchSghoWrapperReserves(
       previewRedeemRaw: previewRedeemRaw.toString(),
       supplyUsd,
       previewRedeemUsd,
-      immediateRedeemableUsd: previewRedeemUsd,
-      immediateRedeemableRatio: capacityRatioOfSupply,
       ...buildRedemptionSnapshotMetadata({
         capacityUsd: previewRedeemUsd,
         capacityRatioOfSupply,

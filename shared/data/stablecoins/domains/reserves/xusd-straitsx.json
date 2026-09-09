@@ -2,6 +2,7 @@
   "id": "xusd-straitsx",
   "reserves": [
     {
+      "sourceKey": "straitsx-independent-assurance:xusd:cash",
       "name": "USD cash",
       "pct": 100,
       "risk": "very-low",

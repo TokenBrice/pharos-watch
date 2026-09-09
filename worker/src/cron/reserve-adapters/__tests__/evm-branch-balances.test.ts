@@ -313,7 +313,7 @@ describe("fetchEvmBranchBalancesReserves", () => {
       signal,
     );
 
-    expect(result.slices).toEqual([{ name: "wstETH", pct: 100, risk: "low" }]);
+    expect(result.slices).toMatchObject([{ sourceKey: "evm-branch-balances:ethereum:0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb", name: "wstETH", pct: 100, risk: "low" }]);
     expect(result.metadata).not.toHaveProperty("redemption");
     expect(fetchOnchainRawCall).not.toHaveBeenCalled();
   });
@@ -329,7 +329,7 @@ describe("fetchEvmBranchBalancesReserves", () => {
 
     const result = await fetchEvmBranchBalancesReserves(coin, config, signal);
 
-    expect(result.slices).toEqual([{ name: "USDC.e", pct: 100, risk: "low" }]);
+    expect(result.slices).toMatchObject([{ sourceKey: "evm-branch-balances:berachain:0x549943e04f40284185054145c6e4e9568c1d3241", name: "USDC.e", pct: 100, risk: "low" }]);
     expect(result.metadata?.redemption).toEqual(expect.objectContaining({
       capacityUsd: 8,
       capacityKind: "live-direct",
@@ -338,7 +338,7 @@ describe("fetchEvmBranchBalancesReserves", () => {
       routeStatusSource: "onchain",
       feeBps: 5,
     }));
-    expect(result.metadata?.redemptionFeeBps).toBe(5);
+    expect(result.metadata).not.toHaveProperty("redemptionFeeBps");
     expect(validateAdapterOutput(result, {
       adapter: {
         key: "evm-branch-balances",
@@ -454,9 +454,9 @@ describe("fetchEvmBranchBalancesReserves", () => {
 
     // 3 six-decimals tokens ($3) vs 2 eighteen-decimals tokens ($2): 60/40.
     expect(result.warnings).toBeUndefined();
-    expect(result.slices).toEqual([
-      { name: "Six-decimals stable", pct: 60, risk: "low" },
-      { name: "Eighteen-decimals stable", pct: 40, risk: "low" },
+    expect(result.slices).toMatchObject([
+      { sourceKey: "evm-branch-balances:ethereum:0x00000000000000000000000000000000000000b1", name: "Six-decimals stable", pct: 60, risk: "low" },
+      { sourceKey: "evm-branch-balances:ethereum:0x00000000000000000000000000000000000000b2", name: "Eighteen-decimals stable", pct: 40, risk: "low" },
     ]);
   });
 
@@ -515,7 +515,7 @@ describe("fetchEvmBranchBalancesReserves", () => {
       signal,
     );
 
-    expect(result.slices).toEqual([{ name: "Non-ERC20 branch", pct: 100, risk: "low" }]);
+    expect(result.slices).toMatchObject([{ sourceKey: "evm-branch-balances:ethereum:0x00000000000000000000000000000000000000b1", name: "Non-ERC20 branch", pct: 100, risk: "low" }]);
     expect(result.warnings).toEqual([
       expect.objectContaining({
         code: "branch-token-decimals-unavailable",
@@ -560,7 +560,7 @@ describe("fetchEvmBranchBalancesReserves", () => {
 
     const result = await fetchEvmBranchBalancesReserves(coin, config, signal);
 
-    expect(result.slices).toEqual([{ name: "USDC.e", pct: 100, risk: "low" }]);
+    expect(result.slices).toMatchObject([{ sourceKey: "evm-branch-balances:berachain:0x549943e04f40284185054145c6e4e9568c1d3241", name: "USDC.e", pct: 100, risk: "low" }]);
     expect(result.warnings).toBeUndefined();
     expect(result.metadata).toMatchObject({ branchCount: 1 });
     expect(result.metadata?.redemption).toMatchObject({
@@ -668,7 +668,7 @@ describe("fetchEvmBranchBalancesReserves", () => {
 
     const result = await fetchEvmBranchBalancesReserves(coin, config, signal);
 
-    expect(result.slices).toEqual(expected);
+    expect(result.slices).toMatchObject(expected);
   });
 
   it("uses an explicit branch price token for DefiLlama price lookup", async () => {
@@ -693,7 +693,7 @@ describe("fetchEvmBranchBalancesReserves", () => {
 
     const result = await fetchEvmBranchBalancesReserves(coin, config, signal);
 
-    expect(result.slices).toEqual([{ name: "Receipt token", pct: 100, risk: "high" }]);
+    expect(result.slices).toMatchObject([{ name: "Receipt token", pct: 100, risk: "high" }]);
 
   });
 
@@ -716,7 +716,7 @@ describe("fetchEvmBranchBalancesReserves", () => {
     expect(result.metadata).toMatchObject({
       branchCount: 1,
       freshnessMode: "not-applicable",
-      redemptionFeeBps: 50,
+      redemption: { feeBps: 50 },
       details: {
         proofKind: "onchain-branch-balances",
       },
@@ -805,7 +805,7 @@ describe("fetchEvmBranchBalancesReserves", () => {
     ]);
 
     const result = await fetchEvmBranchBalancesReserves(coin, config, signal);
-    expect(result.slices).toEqual([
+    expect(result.slices).toMatchObject([
       { name: "Wrapped stable", pct: 64.1, risk: "low" },
       { name: "USYC", pct: 35.9, risk: "low" },
     ]);
@@ -823,7 +823,7 @@ describe("fetchEvmBranchBalancesReserves", () => {
     const config = makeBranchConfig([{ ...usdcBranch(), underlyingPrice1to1: true }]);
 
     const result = await fetchEvmBranchBalancesReserves(coin, config, signal);
-    expect(result.slices).toEqual([{ name: "USDC branch", pct: 100, risk: "low", coinId: "usdc-circle" }]);
+    expect(result.slices).toMatchObject([{ name: "USDC branch", pct: 100, risk: "low", coinId: "usdc-circle" }]);
     expect(result.warnings).toBeUndefined();
   });
 
@@ -869,7 +869,7 @@ describe("fetchEvmBranchBalancesReserves", () => {
     }]);
 
     const result = await fetchEvmBranchBalancesReserves(coin, config, signal, { db, nowSec: now });
-    expect(result.slices).toEqual([{ name: "Hashnote USYC", pct: 100, risk: "low", coinId: "usyc-hashnote" }]);
+    expect(result.slices).toMatchObject([{ name: "Hashnote USYC", pct: 100, risk: "low", coinId: "usyc-hashnote" }]);
     expect(fetchDefiLlamaPrices).toHaveBeenCalledTimes(2);
   });
 
@@ -898,7 +898,7 @@ describe("fetchEvmBranchBalancesReserves", () => {
 
     const result = await fetchEvmBranchBalancesReserves(coin, config, signal);
     expect(result.warnings).toBeUndefined();
-    expect(result.slices).toEqual([
+    expect(result.slices).toMatchObject([
       {
         name: "sUSDe branch",
         pct: 100,
@@ -997,7 +997,7 @@ describe("fetchEvmBranchBalancesReserves", () => {
 
 
 
-    expect(result.slices).toEqual([
+    expect(result.slices).toMatchObject([
       {
         name: "wstETH-backed USDN vault",
         pct: 100,

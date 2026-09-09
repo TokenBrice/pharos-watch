@@ -13,7 +13,7 @@ describe("adaptSgForgeCoinvertible", () => {
   it("maps the EUR CoinVertible block into a single cash reserve slice", () => {
     const result = adaptSgForgeCoinvertible(SAMPLE_HTML, "eur");
     expect(result.slices).toEqual([
-      { name: "Euro cash deposits at Societe Generale", pct: 100, risk: "very-low" },
+      { sourceKey: "sgforge-coinvertible:cash-deposits", name: "Euro cash deposits at Societe Generale", pct: 100, risk: "very-low" },
     ]);
     expect(result.metadata).toMatchObject({
       coinType: "eur",
@@ -43,7 +43,7 @@ describe("adaptSgForgeCoinvertible", () => {
     const result = adaptSgForgeCoinvertible(SAMPLE_HTML, "usd");
 
     expect(result.slices).toEqual([
-      { name: "U.S. dollar cash deposits at BNY and Societe Generale", pct: 100, risk: "very-low" },
+      { sourceKey: "sgforge-coinvertible:cash-deposits", name: "U.S. dollar cash deposits at BNY and Societe Generale", pct: 100, risk: "very-low" },
     ]);
     expect(result.slices).toHaveLength(1);
     expect(result.warnings).toBeUndefined();

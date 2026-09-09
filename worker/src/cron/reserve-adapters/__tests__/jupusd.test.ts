@@ -33,16 +33,14 @@ describe("adaptJupUsdData", () => {
     });
 
     expect(result.slices).toEqual([
-      { name: "USDtb", pct: 80, risk: "low", coinId: "usdtb-ethena", depType: "collateral" },
-      { name: "USDC", pct: 20, risk: "low", coinId: "usdc-circle", depType: "collateral" },
+      { sourceKey: "jupusd:usdtb", name: "USDtb", pct: 80, risk: "low", coinId: "usdtb-ethena", depType: "collateral" },
+      { sourceKey: "jupusd:usdc", name: "USDC", pct: 20, risk: "low", coinId: "usdc-circle", depType: "collateral" },
     ]);
     expect(result.metadata).toMatchObject({
       totalReserveUsd: 7_500_000,
       supplyUsd: 75_000_000,
       collateralizationRatio: 0.1,
       unknownExposurePct: 0,
-      immediateRedeemableUsd: 7_500_000,
-      immediateRedeemableRatio: 0.1,
       freshnessMode: "verified",
       sourceTimestamp: 1776261612,
       redemption: {
@@ -86,8 +84,8 @@ describe("adaptJupUsdData", () => {
     });
 
     expect(result.slices).toEqual([
-      { name: "USDC", pct: 99, risk: "low", coinId: "usdc-circle", depType: "collateral" },
-      { name: "Unmapped JupUSD reserve holdings", pct: 1, risk: "high" },
+      { sourceKey: "jupusd:usdc", name: "USDC", pct: 99, risk: "low", coinId: "usdc-circle", depType: "collateral" },
+      { sourceKey: "jupusd:unknown", name: "Unmapped JupUSD reserve holdings", pct: 1, risk: "high" },
     ]);
     expect(result.warnings?.[0]).toMatchObject({
       code: "unknown-holding",
@@ -127,7 +125,7 @@ describe("adaptJupUsdData", () => {
 
     expect(result.metadata?.totalReserveUsd).toBe(100_000_000_000);
     expect(result.slices).toEqual([
-      { name: "USDC", pct: 100, risk: "low", coinId: "usdc-circle", depType: "collateral" },
+      { sourceKey: "jupusd:usdc", name: "USDC", pct: 100, risk: "low", coinId: "usdc-circle", depType: "collateral" },
     ]);
   });
 
@@ -141,7 +139,7 @@ describe("adaptJupUsdData", () => {
 
     expect(result.metadata?.totalReserveUsd).toBe(1);
     expect(result.slices).toEqual([
-      { name: "USDC", pct: 100, risk: "low", coinId: "usdc-circle", depType: "collateral" },
+      { sourceKey: "jupusd:usdc", name: "USDC", pct: 100, risk: "low", coinId: "usdc-circle", depType: "collateral" },
     ]);
   });
 

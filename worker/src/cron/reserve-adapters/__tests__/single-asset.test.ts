@@ -7,18 +7,14 @@ vi.mock("../helpers", async (importOriginal) => {
   return {
     ...actual,
     fetchJsonWithRetry: vi.fn(),
-    probeOptionalRedemptionRateBps: vi.fn(),
     probeOnchainTotalSupply: vi.fn(),
-    makeOnchainCallers: vi.fn(),
   };
 });
 
 import { fetchSingleAssetReserves } from "../single-asset";
 import {
   fetchJsonWithRetry,
-  makeOnchainCallers,
   probeOnchainTotalSupply,
-  probeOptionalRedemptionRateBps,
 } from "../helpers";
 
 let signal: AbortSignal;
@@ -58,7 +54,7 @@ describe("fetchSingleAssetReserves", () => {
       params: {
         label: "ETH collateral",
         risk: "low",
-        probe: { kind: "json-path", path: ["total_supply"] },
+        reserveProbe: { kind: "json-path", path: ["total_supply"] },
       },
     });
 
@@ -83,7 +79,7 @@ describe("fetchSingleAssetReserves", () => {
         risk: "very-low",
         coinId: "usdc-circle",
         depType: "wrapper",
-        probe: { kind: "json-path", path: ["value"] },
+        reserveProbe: { kind: "json-path", path: ["value"] },
       },
     });
 
@@ -99,7 +95,7 @@ describe("fetchSingleAssetReserves", () => {
       params: {
         label: "ETH collateral",
         risk: "low",
-        probe: { kind: "json-path", path: ["total_supply"] },
+        reserveProbe: { kind: "json-path", path: ["total_supply"] },
       },
     });
 
@@ -112,7 +108,7 @@ describe("fetchSingleAssetReserves", () => {
     const config = makeSingleAssetConfig({ params: { label: "Test", risk: "low" } });
 
     await expect(fetchSingleAssetReserves(makeCoin(), config, signal))
-      .rejects.toThrow("params.probe/reserveProbe or params.supplyProbe");
+      .rejects.toThrow("params.reserveProbe or params.supplyProbe");
   });
 
   it.each([
@@ -142,37 +138,6 @@ describe("fetchSingleAssetReserves", () => {
     ]);
     expect(result.metadata).toMatchObject({
       freshnessMode: "not-applicable",
-      details: {
-        proofKind: "erc20-total-supply-liveness",
-      },
-    });
-  });
-
-  it("includes live redemption fee metadata when a probe is configured", async () => {
-    vi.mocked(probeOnchainTotalSupply).mockResolvedValue(1000000n);
-    vi.mocked(probeOptionalRedemptionRateBps).mockResolvedValue(50);
-    const config = makeSingleAssetConfig({
-      primary: { kind: "onchain-evm", chain: "ethereum", rpcMode: "public-rpc" },
-      params: {
-        label: "ETH collateral",
-        risk: "low",
-        redemptionRateProbe: {
-          contract: "0xA39739EF8b0231DbFA0DcdA07d7e29faAbCf4bb2",
-          selector: "0xc52861f2",
-          decimals: 18,
-        },
-      },
-    });
-
-    const result = await fetchSingleAssetReserves(
-      makeCoin([{ chain: "ethereum", address: "0x1234" }]),
-      config,
-      signal,
-    );
-
-    expect(result.metadata).toMatchObject({
-      freshnessMode: "not-applicable",
-      redemptionFeeBps: 50,
       details: {
         proofKind: "erc20-total-supply-liveness",
       },
@@ -247,7 +212,7 @@ describe("fetchSingleAssetReserves", () => {
       params: {
         label: "Treasury reserve",
         risk: "very-low",
-        probe: { kind: "json-path", path: ["data", "price"] },
+        reserveProbe: { kind: "json-path", path: ["data", "price"] },
         timestampProbe: { kind: "json-path", path: ["data", "timestamp"] },
       },
     });
@@ -272,230 +237,5 @@ describe("fetchSingleAssetReserves", () => {
     });
 
     await expect(fetchSingleAssetReserves(makeCoin(), config, signal)).rejects.toBe(error);
-  });
-});
-
-// AID-shaped fixture: the GAIB Redeemer beacon proxy pays USDC out of its own
-// balance, gated on stablecoin()/aid() identity and the beacon implementation,
-// and metered by redeemLimitPerDay() - dailyRedeemed(day).
-const REDEEMER = "0x52323f33551188F170D8de14fE8d8423a839629d";
-const USDC = "0xA0b86991c6218b36c1d19D4a2e9eb0ce3606eb48";
-const AID = "0x18f52b3fb465118731d9e0d276d4eb3599d57596";
-const BEACON = "0xc787e7f060acab38d30aceb539355b328024e8b8";
-const IMPLEMENTATION = "0xb835004007296f5278fbf85f090af7195361e946";
-
-const STABLECOIN_SELECTOR = "0xe9cbd822";
-const AID_SELECTOR = "0xb91cc136";
-const IMPLEMENTATION_SELECTOR = "0x5c60da1b";
-const LIMIT_SELECTOR = "0xd9d48e04";
-const USED_SELECTOR = "0x9ac929fb";
-const FEE_SELECTOR = "0xd68002f3";
-
-const CAPACITY_CONFIG: LiveReservesConfig = {
-  adapter: "single-asset",
-  version: 1,
-  semantics: "single-asset",
-  inputs: { primary: { kind: "onchain-evm", chain: "ethereum", rpcMode: "public-rpc" } },
-  params: {
-    label: "U.S. Treasury and accepted stablecoin reserves",
-    risk: "low",
-    redemptionCapacity: {
-      chain: "ethereum",
-      redeemer: REDEEMER,
-      payoutToken: { address: USDC, decimals: 6 },
-      identityChecks: [
-        { contract: REDEEMER, selector: STABLECOIN_SELECTOR, expectedAddress: USDC },
-        { contract: REDEEMER, selector: AID_SELECTOR, expectedAddress: AID },
-        { contract: BEACON, selector: IMPLEMENTATION_SELECTOR, expectedAddress: IMPLEMENTATION },
-      ],
-      dailyLimit: { limitSelector: LIMIT_SELECTOR, usedSelector: USED_SELECTOR, decimals: 18 },
-      feeBpsSelector: FEE_SELECTOR,
-      holderEligibility: "whitelisted-primary",
-      sourceUrls: ["https://docs.gaib.ai/products/gaib-products/aid-and-said-contracts"],
-    },
-  },
-};
-
-function addressWord(address: string): string {
-  return `0x${address.replace(/^0x/, "").toLowerCase().padStart(64, "0")}`;
-}
-
-/** Live values observed on Ethereum mainnet 2026-08-12. */
-const LIVE_USDC_BALANCE = 239_938_892_162n;
-const LIVE_DAILY_LIMIT = 10n ** 36n;
-
-function mockCapacityCallers(overrides: {
-  stablecoin?: string | null;
-  aid?: string | null;
-  implementation?: string | null;
-  usdcBalance?: bigint | null;
-  dailyLimit?: bigint | null;
-  dailyUsed?: bigint | null;
-  feeBps?: bigint | null;
-} = {}): void {
-  vi.mocked(makeOnchainCallers).mockImplementation((input) => {
-    if (input.chain !== "ethereum") {
-      unexpectedRequests.push(input.chain);
-      throw new Error(`unexpected chain ${input.chain}`);
-    }
-    return {
-    raw: vi.fn(async (contract: string, data: string) => {
-      if (contract.toLowerCase() === REDEEMER.toLowerCase() && data === STABLECOIN_SELECTOR) {
-        return overrides.stablecoin === null ? null : addressWord(overrides.stablecoin ?? USDC);
-      }
-      if (contract.toLowerCase() === REDEEMER.toLowerCase() && data === AID_SELECTOR) return overrides.aid === null ? null : addressWord(overrides.aid ?? AID);
-      if (contract.toLowerCase() === BEACON.toLowerCase() && data === IMPLEMENTATION_SELECTOR) {
-        return overrides.implementation === null ? null : addressWord(overrides.implementation ?? IMPLEMENTATION);
-      }
-      unexpectedRequests.push(`${contract} ${data}`);
-      throw new Error(`unexpected raw call ${contract} ${data}`);
-    }),
-    uint256: vi.fn(async (contract: string, data: string) => {
-      if (contract.toLowerCase() === USDC.toLowerCase() && data === `0x70a08231${addressWord(REDEEMER).slice(2)}`) {
-        return overrides.usdcBalance === undefined ? LIVE_USDC_BALANCE : overrides.usdcBalance;
-      }
-      if (contract.toLowerCase() === REDEEMER.toLowerCase()) {
-        if (data === LIMIT_SELECTOR) return overrides.dailyLimit === undefined ? LIVE_DAILY_LIMIT : overrides.dailyLimit;
-        if (data === `${USED_SELECTOR}${(20_677n).toString(16).padStart(64, "0")}`) return overrides.dailyUsed === undefined ? 0n : overrides.dailyUsed;
-        if (data === FEE_SELECTOR) return overrides.feeBps === undefined ? 10n : overrides.feeBps;
-      }
-      unexpectedRequests.push(`${contract} ${data}`);
-      throw new Error(`unexpected uint256 call ${contract} ${data}`);
-    }),
-    };
-  });
-}
-
-describe("fetchSingleAssetReserves redemption capacity probe", () => {
-  beforeEach(() => {
-    vi.spyOn(Date, "now").mockReturnValue(20_677 * 86_400_000 + 12_345);
-    vi.mocked(probeOnchainTotalSupply).mockResolvedValue(1n);
-    vi.mocked(probeOptionalRedemptionRateBps).mockResolvedValue(null);
-  });
-  afterEach(() => vi.restoreAllMocks());
-
-  it("emits live-direct-bounded capacity when every identity gate and read passes", async () => {
-    mockCapacityCallers();
-
-    const result = await fetchSingleAssetReserves(
-      makeCoin([{ chain: "ethereum", address: AID }]),
-      CAPACITY_CONFIG,
-      signal,
-    );
-
-    expect(result.warnings).toBeUndefined();
-    expect(result.metadata?.redemption).toMatchObject({
-      capacityUsd: 239_938.892162,
-      capacityKind: "live-direct-bounded",
-      freshnessKind: "same-run-onchain",
-      routeStatus: "open",
-      routeStatusSource: "onchain",
-      holderEligibility: "whitelisted-primary",
-      settlementDelaySec: 0,
-      feeBps: 10,
-    });
-    expect(result.metadata?.redemptionFeeBps).toBe(10);
-    // The pinned cap is 12 orders of magnitude above the float, so publishing it
-    // as a daily limit would be noise rather than a bound.
-    expect(result.metadata?.redemption).not.toHaveProperty("dailyLimitUsd");
-  });
-
-  it("floors capacity at the remaining daily allowance and publishes it when it binds", async () => {
-    mockCapacityCallers({ dailyLimit: 5_000n * 10n ** 18n, dailyUsed: 4_900n * 10n ** 18n });
-
-    const result = await fetchSingleAssetReserves(
-      makeCoin([{ chain: "ethereum", address: AID }]),
-      CAPACITY_CONFIG,
-      signal,
-    );
-
-    expect(result.metadata?.redemption).toMatchObject({
-      capacityUsd: 100,
-      dailyLimitUsd: 100,
-      routeStatus: "open",
-    });
-  });
-
-  it("does not assert openness from a measured zero payout float", async () => {
-    mockCapacityCallers({ usdcBalance: 0n });
-
-    const result = await fetchSingleAssetReserves(
-      makeCoin([{ chain: "ethereum", address: AID }]),
-      CAPACITY_CONFIG,
-      signal,
-    );
-
-    expect(result.metadata?.redemption).toMatchObject({
-      capacityUsd: 0,
-      capacityKind: "live-direct-bounded",
-      routeStatus: "unknown",
-    });
-    expect(result.metadata?.redemption).not.toHaveProperty("routeStatusSource");
-  });
-
-  it("withholds the live block when the beacon implementation no longer matches", async () => {
-    mockCapacityCallers({ implementation: "0x1111111111111111111111111111111111111111" });
-
-    const result = await fetchSingleAssetReserves(
-      makeCoin([{ chain: "ethereum", address: AID }]),
-      CAPACITY_CONFIG,
-      signal,
-    );
-
-    expect(result.metadata?.redemption).toEqual({
-      capacityKind: "documented-bound",
-      freshnessKind: "same-run-onchain",
-      routeStatus: "unknown",
-    });
-    expect(result.warnings?.[0]?.code).toBe("single-asset-redemption-capacity-unreadable");
-  });
-
-  it("withholds the live block when the payout balance read fails", async () => {
-    mockCapacityCallers({ usdcBalance: null });
-
-    const result = await fetchSingleAssetReserves(
-      makeCoin([{ chain: "ethereum", address: AID }]),
-      CAPACITY_CONFIG,
-      signal,
-    );
-
-    expect(result.metadata?.redemption).not.toHaveProperty("capacityUsd");
-    expect(result.warnings?.[0]?.code).toBe("single-asset-redemption-capacity-unreadable");
-  });
-
-  it("withholds the live block when the fee getter returns an out-of-range value", async () => {
-    mockCapacityCallers({ feeBps: 10_001n });
-
-    const result = await fetchSingleAssetReserves(
-      makeCoin([{ chain: "ethereum", address: AID }]),
-      CAPACITY_CONFIG,
-      signal,
-    );
-
-    expect(result.metadata?.redemption).not.toHaveProperty("capacityUsd");
-    expect(result.warnings?.[0]?.code).toBe("single-asset-redemption-capacity-unreadable");
-  });
-
-  it("never opens a capacity call for a coin without redemptionCapacity params", async () => {
-    mockCapacityCallers();
-    vi.mocked(probeOptionalRedemptionRateBps).mockResolvedValue(25);
-
-    const result = await fetchSingleAssetReserves(
-      makeCoin([{ chain: "ethereum", address: "0x1234" }]),
-      {
-        ...CAPACITY_CONFIG,
-        params: { label: "ETH collateral", risk: "low" },
-      },
-      signal,
-    );
-
-    expect(makeOnchainCallers).not.toHaveBeenCalled();
-    expect(result.warnings).toBeUndefined();
-    expect(result.metadata?.redemption).toEqual({
-      capacityKind: "documented-bound",
-      freshnessKind: "same-run-onchain",
-      routeStatus: "unknown",
-      feeBps: 25,
-    });
   });
 });

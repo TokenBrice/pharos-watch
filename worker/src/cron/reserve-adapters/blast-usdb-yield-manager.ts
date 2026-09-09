@@ -72,6 +72,7 @@ export async function fetchBlastUsdbYieldManagerReserves(
   return {
     slices: [
       {
+        sourceKey: "blast-usdb-yield-manager:dai",
         name: "MakerDAO DSR / DAI yield manager",
         pct: 100,
         risk: "low",

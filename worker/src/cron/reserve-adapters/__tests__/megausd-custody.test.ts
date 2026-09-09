@@ -72,8 +72,8 @@ describe("adaptMegausdCustody", () => {
     const result = adaptMegausdCustody(MEGAUSD_BACKING);
 
     expect(result.slices).toEqual([
-      { name: "USDC cash-equivalent reserves", pct: 99.9, risk: "low", coinId: "usdc-circle" },
-      { name: "USDtb cash-equivalent reserves", pct: 0.1, risk: "low", coinId: "usdtb-ethena" },
+      { sourceKey: "megausd-custody:usdc", name: "USDC cash-equivalent reserves", pct: 99.9, risk: "low", coinId: "usdc-circle" },
+      { sourceKey: "megausd-custody:usdtb", name: "USDtb cash-equivalent reserves", pct: 0.1, risk: "low", coinId: "usdtb-ethena" },
     ]);
     expect(result.warnings).toBeUndefined();
 
@@ -153,8 +153,8 @@ describe("adaptMegausdCustody", () => {
     const result = adaptMegausdCustody(withStringAmounts);
 
     expect(result.slices).toEqual([
-      { name: "USDC cash-equivalent reserves", pct: 99.9, risk: "low", coinId: "usdc-circle" },
-      { name: "USDtb cash-equivalent reserves", pct: 0.1, risk: "low", coinId: "usdtb-ethena" },
+      { sourceKey: "megausd-custody:usdc", name: "USDC cash-equivalent reserves", pct: 99.9, risk: "low", coinId: "usdc-circle" },
+      { sourceKey: "megausd-custody:usdtb", name: "USDtb cash-equivalent reserves", pct: 0.1, risk: "low", coinId: "usdtb-ethena" },
     ]);
     expect(result.metadata?.totalReserveUsd).toBeCloseTo(TOTAL_RESERVE_USD, 3);
   });

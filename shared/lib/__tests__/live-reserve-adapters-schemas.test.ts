@@ -127,9 +127,14 @@ describe("LiveReservesConfigSchema URL validation", () => {
   it("accepts deliberate Mento CDP stablecoin params without widening to arbitrary strings", () => {
     expect(
       parseLiveReserveAdapterParams("mento", {
+        cdpStablecoin: "GBPm",
+      }),
+    ).toEqual({ cdpStablecoin: "GBPm" });
+    expect(() =>
+      parseLiveReserveAdapterParams("mento", {
         cdpStablecoin: "XOFm",
       }),
-    ).toEqual({ cdpStablecoin: "XOFm" });
+    ).toThrow(/Invalid option/);
     expect(() =>
       parseLiveReserveAdapterParams("mento", {
         cdpStablecoin: "NOTm",

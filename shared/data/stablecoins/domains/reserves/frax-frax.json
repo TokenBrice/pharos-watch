@@ -2,6 +2,7 @@
   "id": "frax-frax",
   "reserves": [
     {
+      "sourceKey": "frax-balance-sheet:wtgxx",
       "name": "WTGXX (WisdomTree Government Money Market)",
       "pct": 22.5,
       "risk": "low",
@@ -16,6 +17,7 @@
       "liquidityHorizon": "one-day"
     },
     {
+      "sourceKey": "frax-balance-sheet:frax",
       "name": "FRAX",
       "pct": 16.1,
       "risk": "low",
@@ -29,6 +31,7 @@
       "liquidityHorizon": "one-day"
     },
     {
+      "sourceKey": "frax-balance-sheet:frxusd",
       "name": "frxUSD",
       "pct": 13.6,
       "risk": "low",
@@ -44,6 +47,7 @@
       "liquidityHorizon": "one-day"
     },
     {
+      "sourceKey": "frax-balance-sheet:sfrax",
       "name": "sFRAX",
       "pct": 13.3,
       "risk": "medium",
@@ -57,6 +61,7 @@
       "liquidityHorizon": "one-day"
     },
     {
+      "sourceKey": "frax-balance-sheet:ustb",
       "name": "USTB (Superstate tokenized T-bills)",
       "pct": 11.9,
       "risk": "low",
@@ -73,6 +78,7 @@
       "liquidityHorizon": "one-day"
     },
     {
+      "sourceKey": "frax-balance-sheet:sfrxusd",
       "name": "sfrxUSD",
       "pct": 8.3,
       "risk": "low",
@@ -88,6 +94,7 @@
       "liquidityHorizon": "one-day"
     },
     {
+      "sourceKey": "frax-balance-sheet:buidl",
       "name": "BUIDL (BlackRock tokenized T-bills)",
       "pct": 5.6,
       "risk": "low",
@@ -104,6 +111,7 @@
       "liquidityHorizon": "one-day"
     },
     {
+      "sourceKey": "frax-balance-sheet:usde",
       "name": "USDe",
       "pct": 2.7,
       "risk": "high",
@@ -120,6 +128,7 @@
       "liquidityHorizon": "one-day"
     },
     {
+      "sourceKey": "frax-balance-sheet:frxeth",
       "name": "frxETH",
       "pct": 0.7,
       "risk": "low",
@@ -134,6 +143,7 @@
       "liquidityHorizon": "immediate"
     },
     {
+      "sourceKey": "frax-balance-sheet:erebor_usd",
       "name": "EREBOR_USD (Erebor Bank frxUSD reserve account)",
       "pct": 0.7,
       "risk": "very-low",
@@ -147,6 +157,7 @@
       "liquidityHorizon": "one-day"
     },
     {
+      "sourceKey": "frax-balance-sheet:usdb",
       "name": "USDB (Bridge)",
       "pct": 0.7,
       "risk": "low",
@@ -160,6 +171,7 @@
       "liquidityHorizon": "unknown"
     },
     {
+      "sourceKey": "frax-balance-sheet:lfrax",
       "name": "LFRAX",
       "pct": 0.7,
       "risk": "medium",
@@ -173,6 +185,7 @@
       "liquidityHorizon": "one-day"
     },
     {
+      "sourceKey": "frax-balance-sheet:sfrxeth",
       "name": "sfrxETH",
       "pct": 0.6,
       "risk": "low",
@@ -187,6 +200,7 @@
       "liquidityHorizon": "one-day"
     },
     {
+      "sourceKey": "frax-balance-sheet:cvx",
       "name": "CVX",
       "pct": 0.6,
       "risk": "very-high",
@@ -200,6 +214,7 @@
       "liquidityHorizon": "immediate"
     },
     {
+      "sourceKey": "frax-balance-sheet:eth",
       "name": "ETH",
       "pct": 0.4,
       "risk": "very-low",
@@ -213,6 +228,7 @@
       "liquidityHorizon": "immediate"
     },
     {
+      "sourceKey": "frax-balance-sheet:lzfrxeth",
       "name": "lzfrxETH",
       "pct": 0.2,
       "risk": "medium",
@@ -228,6 +244,7 @@
       "liquidityHorizon": "one-day"
     },
     {
+      "sourceKey": "frax-balance-sheet:reusd",
       "name": "reUSD",
       "pct": 0.2,
       "risk": "medium",
@@ -244,6 +261,7 @@
       "liquidityHorizon": "one-day"
     },
     {
+      "sourceKey": "frax-balance-sheet:wfrxeth",
       "name": "wfrxETH",
       "pct": 0.2,
       "risk": "medium",
@@ -258,6 +276,7 @@
       "liquidityHorizon": "immediate"
     },
     {
+      "sourceKey": "frax-balance-sheet:crv",
       "name": "CRV",
       "pct": 0.2,
       "risk": "very-high",
@@ -271,6 +290,7 @@
       "liquidityHorizon": "immediate"
     },
     {
+      "sourceKey": "frax-balance-sheet:lzsfrxeth",
       "name": "lzsfrxETH",
       "pct": 0.2,
       "risk": "medium",
@@ -286,6 +306,7 @@
       "liquidityHorizon": "one-day"
     },
     {
+      "sourceKey": "frax-balance-sheet:usdc",
       "name": "USDC (Circle)",
       "pct": 0.1,
       "risk": "low",
@@ -300,6 +321,7 @@
       "liquidityHorizon": "immediate"
     },
     {
+      "sourceKey": "frax-balance-sheet:usds",
       "name": "USDS",
       "pct": 0.1,
       "risk": "low",
@@ -315,6 +337,7 @@
       "liquidityHorizon": "one-day"
     },
     {
+      "sourceKey": "frax-balance-sheet:weth",
       "name": "WETH",
       "pct": 0.1,
       "risk": "very-low",
@@ -329,6 +352,7 @@
       "liquidityHorizon": "immediate"
     },
     {
+      "sourceKey": "frax-balance-sheet:cvxcrv",
       "name": "cvxCRV",
       "pct": 0.1,
       "risk": "very-high",
@@ -342,6 +366,7 @@
       "liquidityHorizon": "one-day"
     },
     {
+      "sourceKey": "frax-balance-sheet:fpi",
       "name": "FPI",
       "pct": 0.1,
       "risk": "medium",
@@ -356,6 +381,7 @@
       "liquidityHorizon": "one-day"
     },
     {
+      "sourceKey": "frax-balance-sheet:wbnb",
       "name": "WBNB",
       "pct": 0.1,
       "risk": "high",
@@ -370,6 +396,7 @@
       "liquidityHorizon": "immediate"
     },
     {
+      "sourceKey": "frax-balance-sheet:velo",
       "name": "VELO (locked veNFT #4976)",
       "pct": 0.1,
       "risk": "very-high",

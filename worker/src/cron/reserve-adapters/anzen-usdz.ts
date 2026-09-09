@@ -480,7 +480,7 @@ export async function fetchAnzenUsdzReserves(
   }
 
   return {
-    slices: [{ name: "SPCT (Secured Private Credit Token)", pct: 100, risk: "high", blacklistable: true }],
+    slices: [{ sourceKey: "anzen-usdz:spct", name: "SPCT (Secured Private Credit Token)", pct: 100, risk: "high", blacklistable: true }],
     ...(warnings.length > 0 ? { warnings } : {}),
     metadata: {
       ...notApplicableFreshnessMetadata({

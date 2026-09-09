@@ -103,7 +103,7 @@ describe("adaptKrwqCustodian", () => {
 
     expect(result.warnings).toBeUndefined();
     expect(result.slices).toEqual(expect.arrayContaining([
-      expect.objectContaining({ name: "USDC custodian reserves", coinId: "usdc-circle", risk: "low" }),
+      expect.objectContaining({ sourceKey: "krwq-custodian:usdc", name: "USDC custodian reserves", coinId: "usdc-circle", risk: "low" }),
       expect.objectContaining({ name: "frxUSD custodian reserves", coinId: "frxusd-frax", risk: "low" }),
       expect.objectContaining({ name: "Treasury USDC (Korean Treasury Bond transition)", coinId: "usdc-circle", risk: "low" }),
     ]));

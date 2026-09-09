@@ -2,6 +2,7 @@
   "id": "mapollo-midas",
   "reserves": [
     {
+      "sourceKey": "chainlink-nav:token:0x7cf9dec92ca9fd46f8d86e7798b72624bc116c05",
       "name": "Apollo Crypto managed yield strategy NAV",
       "pct": 100,
       "risk": "high",

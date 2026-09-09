@@ -2,6 +2,7 @@
   "id": "acred-apollo-securitize",
   "reserves": [
     {
+      "sourceKey": "chainlink-nav:token:0x17418038ecf73ba4026c4f428547bf099706f27b",
       "name": "Apollo Diversified Credit Fund NAV",
       "pct": 100,
       "risk": "high",

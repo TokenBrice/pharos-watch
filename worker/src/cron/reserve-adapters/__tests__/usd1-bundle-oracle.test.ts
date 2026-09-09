@@ -74,6 +74,7 @@ describe("adaptUsd1BundleOracle", () => {
 
     expect(result.slices).toEqual([
       {
+        sourceKey: "usd1-bundle-oracle:0x691b74146cdba162449012aa32d3cbf5df77d4c4",
         name: "U.S. Treasury Bills, Money Market Funds & Cash",
         pct: 100,
         risk: "very-low",

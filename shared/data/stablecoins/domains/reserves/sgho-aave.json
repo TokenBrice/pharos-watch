@@ -14,7 +14,8 @@
         "counterparty",
         "liquidity"
       ],
-      "liquidityHorizon": "immediate"
+      "liquidityHorizon": "immediate",
+      "sourceKey": "sgho-wrapper:gho"
     }
   ],
   "reserveReview": {

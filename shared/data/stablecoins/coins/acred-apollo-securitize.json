@@ -97,6 +97,7 @@
       "navScope": "native-fund-share",
       "oracleAddress": "0x35DDfB90011E686CCf837a6819562705076207EB",
       "tokenAddress": "0x17418038ecf73ba4026c4f428547bf099706f27b",
+      "sourceKey": "chainlink-nav:token:0x17418038ecf73ba4026c4f428547bf099706f27b",
       "assetLabel": "Apollo Diversified Credit Fund shares",
       "assetRisk": "high",
       "oracleMethod": "latestRoundData",

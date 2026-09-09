@@ -2,6 +2,7 @@
   "id": "mf-one-midas",
   "reserves": [
     {
+      "sourceKey": "chainlink-nav:token:0x238a700ed6165261cf8b2e544ba797bc11e466ba",
       "name": "Fasanara F-ONE private-credit and digital-asset strategy NAV",
       "pct": 100,
       "risk": "high",

@@ -142,6 +142,7 @@ export function adaptUsd1BundleOracle(input: {
   return {
     slices: [
       {
+        sourceKey: "usd1-bundle-oracle:0x691b74146cdba162449012aa32d3cbf5df77d4c4",
         name: USD1_RESERVE_LABEL,
         pct: 100,
         risk: "very-low",

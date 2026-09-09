@@ -14,7 +14,8 @@
         "smart-contract",
         "liquidity"
       ],
-      "liquidityHorizon": "immediate"
+      "liquidityHorizon": "immediate",
+      "sourceKey": "parallelizer-balances:0xcacd6fd266af91b8aed52accc382b4e165586e29"
     },
     {
       "name": "sfrxUSD (Ethereum branch)",
@@ -29,7 +30,8 @@
         "smart-contract",
         "liquidity"
       ],
-      "liquidityHorizon": "immediate"
+      "liquidityHorizon": "immediate",
+      "sourceKey": "parallelizer-balances:0xcf62f905562626cfcdd2261162a51fd02fc9c5b6"
     },
     {
       "name": "USDe (Ethereum + HyperEVM branches)",
@@ -47,7 +49,8 @@
         "smart-contract",
         "liquidity"
       ],
-      "liquidityHorizon": "immediate"
+      "liquidityHorizon": "immediate",
+      "sourceKey": "parallelizer-balances:0x4c9edd5852cd905f086c759e8383e09bff1e68b3"
     },
     {
       "name": "sUSDe (Ethereum + HyperEVM branches)",
@@ -65,7 +68,8 @@
         "smart-contract",
         "liquidity"
       ],
-      "liquidityHorizon": "unknown"
+      "liquidityHorizon": "unknown",
+      "sourceKey": "parallelizer-balances:0x9d39a5de30e57443bff2a8307a4256c8797a3497"
     },
     {
       "name": "sUSDS (Base branch)",
@@ -80,7 +84,8 @@
         "smart-contract",
         "liquidity"
       ],
-      "liquidityHorizon": "immediate"
+      "liquidityHorizon": "immediate",
+      "sourceKey": "parallelizer-balances:0x5875eee11cf8398102fdad704c9e96607675467a"
     },
     {
       "name": "USDS (Base branch)",
@@ -95,7 +100,8 @@
         "smart-contract",
         "liquidity"
       ],
-      "liquidityHorizon": "immediate"
+      "liquidityHorizon": "immediate",
+      "sourceKey": "parallelizer-balances:0x820c137fa70c8691f0e44dc420a5e53c168921dc"
     },
     {
       "name": "USDC (Base + Avalanche branches)",
@@ -111,7 +117,8 @@
         "legal",
         "liquidity"
       ],
-      "liquidityHorizon": "immediate"
+      "liquidityHorizon": "immediate",
+      "sourceKey": "parallelizer-balances:0x833589fcd6edb6e08f4c7c32d4f71b54bda02913"
     },
     {
       "name": "ygamiUSDC vault shares (Avalanche branch)",
@@ -127,7 +134,8 @@
         "liquidity",
         "market"
       ],
-      "liquidityHorizon": "unknown"
+      "liquidityHorizon": "unknown",
+      "sourceKey": "parallelizer-balances:0x9fd32fd5e32c6b95483d36c5e724c5c5250ce010"
     }
   ],
   "reserveReview": {

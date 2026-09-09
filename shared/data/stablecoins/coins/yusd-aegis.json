@@ -93,7 +93,18 @@
       },
       "totalReservesExcludeBuckets": [
         "Insurance Fund"
-      ]
+      ],
+      "sourceKeyMap": {
+        "Copper": "accountable:aegis:deployment:copper",
+        "Fireblocks": "accountable:aegis:deployment:fireblocks",
+        "Insurance Fund": "accountable:aegis:deployment:insurance-fund",
+        "Insurance Fund Usage": "accountable:aegis:deployment:insurance-fund-usage",
+        "Binance": "accountable:aegis:deployment:binance",
+        "Ethereum Chain": "accountable:aegis:deployment:ethereum-chain",
+        "BNB Smart Chain": "accountable:aegis:deployment:bnb-smart-chain",
+        "Avalanche": "accountable:aegis:deployment:avalanche",
+        "Arbitrum": "accountable:aegis:deployment:arbitrum"
+      }
     }
   },
   "yieldConfig": {

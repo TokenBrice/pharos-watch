@@ -52,6 +52,7 @@ interface NestLastPriceUpdatePayload {
 }
 
 interface SliceValue {
+  sourceKey?: string;
   value: number;
   name: string;
   risk: ReserveSlice["risk"];
@@ -138,6 +139,7 @@ function bucketLiquidToken(token: NestPositionToken): SliceValue {
   const value = readValue(token);
   if (symbol === "USDC" || symbol === "USDC.e") {
     return {
+      sourceKey: "nest-vault-positions:usdc",
       value,
       name: "Liquid USDC balances",
       risk: "low",
@@ -146,6 +148,7 @@ function bucketLiquidToken(token: NestPositionToken): SliceValue {
   }
   if (symbol === "USDT" || symbol === "USDT0") {
     return {
+      sourceKey: "nest-vault-positions:usdt",
       value,
       name: "Liquid USDT balances",
       risk: "low",
@@ -154,6 +157,7 @@ function bucketLiquidToken(token: NestPositionToken): SliceValue {
   }
   if (symbol === "pUSD") {
     return {
+      sourceKey: "nest-vault-positions:pusd",
       value,
       name: "pUSD liquid balance",
       risk: "high",
@@ -161,6 +165,7 @@ function bucketLiquidToken(token: NestPositionToken): SliceValue {
     };
   }
   return {
+    sourceKey: "nest-vault-positions:unknown",
     value,
     name: `${symbol} liquid balance`,
     risk: "high",
@@ -174,6 +179,7 @@ function bucketYieldToken(asset: NestYieldAsset, token: NestPositionToken): Slic
   const value = readValue(token);
   if (slug === "nest-treasury-vault" || symbol === "nTBILL") {
     return {
+      sourceKey: "nest-vault-positions:ntbill",
       value,
       name: "Nest Treasury vault (nTBILL)",
       risk: "low",
@@ -182,6 +188,7 @@ function bucketYieldToken(asset: NestYieldAsset, token: NestPositionToken): Slic
   }
   if (slug === "janus-henderson-fund" || symbol === "JTRSY") {
     return {
+      sourceKey: "nest-vault-positions:jtrsy",
       value,
       name: "Janus Henderson Anemoy Treasury Fund (JTRSY)",
       risk: "low",
@@ -190,6 +197,7 @@ function bucketYieldToken(asset: NestYieldAsset, token: NestPositionToken): Slic
   }
   if (slug === "superstate-ustb" || symbol === "USTB") {
     return {
+      sourceKey: "nest-vault-positions:ustb",
       value,
       name: "Superstate USTB Treasury Fund",
       risk: "low",
@@ -198,12 +206,14 @@ function bucketYieldToken(asset: NestYieldAsset, token: NestPositionToken): Slic
   }
   if (slug === "superstate-uscc" || symbol === "USCC") {
     return {
+      sourceKey: "nest-vault-positions:uscc",
       value,
       name: "Superstate USCC cash-and-carry fund",
       risk: "low",
     };
   }
   return {
+    sourceKey: "nest-vault-positions:credit-vaults",
     value,
     name: "Nest private and structured credit vaults",
     risk: "high",
@@ -313,6 +323,7 @@ export async function fetchNestVaultPositionsReserves(
     ...settledValues,
     ...(pendingDepositUsd > 0
       ? [{
+          sourceKey: "nest-vault-positions:pending-deposits",
           value: pendingDepositUsd,
           name: "Nest pending deposits",
           risk: "high" as const,
@@ -320,6 +331,7 @@ export async function fetchNestVaultPositionsReserves(
       : []),
     ...(navReconciliationResidualUsd != null && navReconciliationResidualUsd > 0
       ? [{
+          sourceKey: "nest-vault-positions:nav-residual",
           value: navReconciliationResidualUsd,
           name: "Nest NAV reconciliation residual",
           risk: "high" as const,

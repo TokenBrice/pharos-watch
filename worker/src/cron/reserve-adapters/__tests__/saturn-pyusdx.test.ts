@@ -104,6 +104,7 @@ describe("saturn-pyusdx adapter", () => {
 
     expect(output.slices).toEqual([
       {
+        sourceKey: "saturn-pyusdx:pyusd",
         name: "PYUSDx held by Saturn USDat",
         pct: 100,
         risk: "low",
@@ -154,6 +155,7 @@ describe("saturn-pyusdx adapter", () => {
     const output = await fetchFixture();
     expect(output.slices).toEqual([
       {
+        sourceKey: "saturn-pyusdx:pyusd",
         name: "PYUSDx held by Saturn USDat",
         pct: 100,
         risk: "low",

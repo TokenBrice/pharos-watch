@@ -783,7 +783,6 @@ export function buildLiquityV2RedemptionMetadata(
 
   return {
     totalDebtUsd,
-    immediateRedeemableUsd: capacityUsd,
     ...buildRedemptionSnapshotMetadata({
       capacityUsd,
       capacityKind: "live-direct-bounded",

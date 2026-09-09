@@ -2,6 +2,7 @@
   "id": "ousg-ondo-finance",
   "reserves": [
     {
+      "sourceKey": "chainlink-nav:token:0x1b19c19393e2d034d8ff31ff34c81252fcbbee92",
       "name": "OUSG tokenized Treasury fund portfolio",
       "pct": 100,
       "risk": "low",

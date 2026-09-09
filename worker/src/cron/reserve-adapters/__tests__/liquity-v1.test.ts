@@ -126,6 +126,7 @@ describe("fetchLiquityV1Reserves", () => {
     const result = await fetchLiquityV1Reserves(coin, config, signal);
 
     expect(result.slices).toEqual([{
+      sourceKey: "liquity-v1:eth",
       name: "ETH",
       pct: 100,
       risk: "very-low",
@@ -141,8 +142,6 @@ describe("fetchLiquityV1Reserves", () => {
       totalCollateralUsd: 400_000,
       ethPriceUsd: 2000,
       minimumCollateralRatio: 1.1,
-      immediateRedeemableUsd: 150_000,
-      redemptionFeeBps: 50,
       redemption: {
         capacityUsd: 150_000,
         capacityKind: "live-direct-bounded",

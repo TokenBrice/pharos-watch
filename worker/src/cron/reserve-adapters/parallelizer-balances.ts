@@ -242,6 +242,7 @@ export async function fetchParallelizerBalancesReserves(
   }
 
   const grouped = new Map<string, {
+    sourceKey: string;
     value: number;
     name: ReserveSlice["name"];
     risk: ReserveSlice["risk"];
@@ -264,6 +265,7 @@ export async function fetchParallelizerBalancesReserves(
       continue;
     }
     grouped.set(key, {
+      sourceKey: `parallelizer-balances:${(descriptor?.address ?? observation.address).toLowerCase()}`,
       value: observation.value,
       name: descriptor?.name ?? `Untracked Parallelizer collateral ${observation.address}`,
       risk: descriptor?.risk ?? "high",
@@ -325,7 +327,6 @@ export async function fetchParallelizerBalancesReserves(
       unlinkedCollateralPct,
       // Canonical field consumed by adapter validation's material-unknown gate.
       unknownExposurePct: unlinkedCollateralPct,
-      immediateRedeemableUsd: unpausedReserveUsd,
       ...buildRedemptionSnapshotMetadata({
         capacityUsd: unpausedReserveUsd,
         capacityKind: "live-direct-bounded",

@@ -73,7 +73,6 @@ describe("sgho-wrapper adapter", () => {
     const result = await fetchSghoWrapperReserves(COIN, CONFIG, new AbortController().signal);
     expect(result.metadata).toMatchObject({
       details: { sharePrice: 0.8 },
-      immediateRedeemableUsd: 800,
       redemption: { capacityUsd: 800, capacityRatioOfSupply: 0.8 },
     });
   });
@@ -83,6 +82,7 @@ describe("sgho-wrapper adapter", () => {
 
     expect(result.slices).toEqual([
       {
+        sourceKey: "sgho-wrapper:gho",
         name: "GHO deposited in Aave Savings module",
         pct: 100,
         risk: "low",
@@ -97,8 +97,6 @@ describe("sgho-wrapper adapter", () => {
       previewRedeemRaw: (1005n * 10n ** 18n).toString(),
       supplyUsd: 1000,
       previewRedeemUsd: 1005,
-      immediateRedeemableUsd: 1005,
-      immediateRedeemableRatio: 1,
       redemption: {
         capacityUsd: 1005,
         capacityRatioOfSupply: 1,

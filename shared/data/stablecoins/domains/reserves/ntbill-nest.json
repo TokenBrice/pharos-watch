@@ -15,7 +15,8 @@
         "smart-contract",
         "concentration"
       ],
-      "liquidityHorizon": "unknown"
+      "liquidityHorizon": "unknown",
+      "sourceKey": "nest-vault-positions:ntbill"
     }
   ],
   "reserveReview": {
@@ -57,7 +58,12 @@
         "pct": 100,
         "disposition": "basket-needs-split",
         "rationale": "Nest's live page renders mutable current weights, but no durable reviewed split or stablecoin-buffer breakdown is retained, so this basket records the qualitative look-through basis without pinning percentages.",
-        "candidateCoinIds": ["jtrsy-anemoy", "ustb-superstate", "usdc-circle", "pusd-plume"]
+        "candidateCoinIds": [
+          "jtrsy-anemoy",
+          "ustb-superstate",
+          "usdc-circle",
+          "pusd-plume"
+        ]
       }
     ]
   },

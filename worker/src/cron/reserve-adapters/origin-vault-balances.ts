@@ -33,6 +33,7 @@ interface OriginVaultBalancesParams {
 }
 
 interface OriginVaultAssetState {
+  sourceKey?: string;
   value: number;
   idleValue: number;
   idleRaw: string;
@@ -76,6 +77,7 @@ export async function fetchOriginVaultBalancesReserves(
       throw new Error(`origin-vault-balances idle balance probe failed for ${asset.name}`);
     }
     return {
+      sourceKey: `origin-vault-balances:${asset.address.toLowerCase()}`,
       value: decimalNumberFromBigInt(raw, asset.decimals),
       idleValue: decimalNumberFromBigInt(idleRaw, asset.decimals),
       idleRaw: idleRaw.toString(),
@@ -108,7 +110,7 @@ export async function fetchOriginVaultBalancesReserves(
   return {
     slices: slicesFromValues([
       ...values,
-      { name: "Unmapped Origin vault exposure", value: unknownValue, risk: "high" },
+      { sourceKey: "origin-vault-balances:unknown", name: "Unmapped Origin vault exposure", value: unknownValue, risk: "high" },
     ]),
     ...(warnings.length > 0 ? { warnings } : {}),
     metadata: {
@@ -123,7 +125,6 @@ export async function fetchOriginVaultBalancesReserves(
       assetCoverageRatio,
       unknownExposurePct: unknownValue / Math.max(totalReserveUsd, totalValueUsd) * 100,
       totalValueRaw: totalValueRaw.toString(),
-      immediateRedeemableUsd,
       idleVaultBalances: values.map((value) => ({
         name: value.name,
         value: value.idleValue,

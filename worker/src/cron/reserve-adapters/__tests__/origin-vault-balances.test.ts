@@ -50,6 +50,7 @@ describe("fetchOriginVaultBalancesReserves", () => {
 
     expect(result.slices).toEqual([
       {
+        sourceKey: "origin-vault-balances:0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
         name: "USDC deployed through Origin OUSD strategies",
         pct: 100,
         risk: "medium",
@@ -63,7 +64,6 @@ describe("fetchOriginVaultBalancesReserves", () => {
       totalReserveUsd: 5_000_000,
       totalValueUsd: 5_000_000,
       assetCoverageRatio: 1,
-      immediateRedeemableUsd: 1_250_000,
       idleVaultBalances: [
         {
           name: "USDC deployed through Origin OUSD strategies",
@@ -144,8 +144,8 @@ describe("fetchOriginVaultBalancesReserves", () => {
     });
     const result = await fetchReserves(candidate);
     expect(result.slices).toEqual([
-      { name: "DAI", pct: 60, risk: "low" },
-      { name: "USDC", pct: 40, risk: "low" },
+      { sourceKey: "origin-vault-balances:0x2222222222222222222222222222222222222222", name: "DAI", pct: 60, risk: "low" },
+      { sourceKey: "origin-vault-balances:0x1111111111111111111111111111111111111111", name: "USDC", pct: 40, risk: "low" },
     ]);
     expect(result.metadata).toMatchObject({ totalReserveUsd: 100, assetCoverageRatio: 1, redemption: { capacityUsd: 18 } });
     expect(result.warnings).toBeUndefined();

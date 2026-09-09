@@ -173,6 +173,17 @@ function normalizeAddress(address: string): string {
   return address.toLowerCase();
 }
 
+function crvUsdBucketSourceKey(name: string): string {
+  const key = {
+    "Custodied BTC (ex: wBTC/cbBTC)": "btc",
+    tBTC: "tbtc",
+    ETH: "eth",
+    "wstETH / sfrxETH / weETH": "eth-lst",
+    "Other / unmapped collateral markets": "unknown",
+  }[name];
+  return key ? `crvusd:${key}` : "crvusd:unknown";
+}
+
 function summarizeCrvUsdCollateralBuckets(
   entries: readonly CrvUsdCollateralBucketInput[],
 ): CrvUsdCollateralBucketSummary | null {
@@ -225,6 +236,7 @@ function summarizeCrvUsdCollateralBuckets(
 
   const slices = normalizeSlices(
     Array.from(buckets.entries()).map(([name, bucket]) => ({
+      sourceKey: crvUsdBucketSourceKey(name),
       name,
       pct: (bucket.usd / totalWithUnknown) * 100,
       risk: bucket.risk,

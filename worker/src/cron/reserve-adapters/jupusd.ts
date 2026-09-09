@@ -182,6 +182,7 @@ export function adaptJupUsdData(
   return {
     slices: normalizeSlices(
       [...values.values()].map((entry) => ({
+        sourceKey: entry.unknown ? "jupusd:unknown" : `jupusd:${entry.name.toLowerCase()}`,
         name: entry.name,
         pct: (entry.value / totalReserveUsd) * 100,
         risk: entry.risk,
@@ -196,8 +197,6 @@ export function adaptJupUsdData(
       ...(collateralizationRatio != null ? { collateralizationRatio } : {}),
       unknownExposurePct,
       ...(unknownHoldingNames.size > 0 ? { unknownHoldingNames: Array.from(unknownHoldingNames).sort() } : {}),
-      immediateRedeemableUsd: capacityUsd,
-      ...(ratio != null ? { immediateRedeemableRatio: ratio } : {}),
       ...buildRedemptionSnapshotMetadata({
         capacityUsd,
         ...(ratio != null ? { capacityRatioOfSupply: ratio } : {}),

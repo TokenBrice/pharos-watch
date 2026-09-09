@@ -2,6 +2,7 @@
   "id": "uktbl-spiko",
   "reserves": [
     {
+      "sourceKey": "spiko-api:uktbl:total-assets",
       "name": "UK Treasury Bills and cash",
       "pct": 100,
       "risk": "low",

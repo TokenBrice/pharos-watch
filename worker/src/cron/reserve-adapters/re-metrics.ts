@@ -353,7 +353,6 @@ export function adaptReMetrics(html: string): AdapterResult {
       stableAssetUsd: stableRedeemableUsd,
       ...(instantRedemptionCapacity
         ? {
-            immediateRedeemableUsd: instantRedemptionCapacity.capacityUsd,
             redemptionRowsCount: instantRedemptionCapacity.rows.length,
             redemption: {
               capacityUsd: instantRedemptionCapacity.capacityUsd,

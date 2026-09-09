@@ -126,6 +126,7 @@ async function buildFxResult(
       throw new Error(`Missing DefiLlama price for ${key}`);
     }
     return {
+      sourceKey: `fx:${key.toLowerCase()}`,
       value: valueUsdFromBigIntPrice(amountRaw, valuationByKey[key].decimals, price),
       name: TOKEN_META[key].name,
       risk: TOKEN_META[key].risk,
@@ -143,7 +144,6 @@ async function buildFxResult(
       ...freshnessMetadata,
       ...(capacityUsd > 0
         ? {
-            immediateRedeemableUsd: capacityUsd,
             redemption: {
               capacityUsd,
               capacityKind: "live-proxy-validated" as const,

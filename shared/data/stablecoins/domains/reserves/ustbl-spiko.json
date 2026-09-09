@@ -2,6 +2,7 @@
   "id": "ustbl-spiko",
   "reserves": [
     {
+      "sourceKey": "chainlink-nav:token:0xe4880249745eac5f1ed9d8f7df844792d560e750",
       "name": "Spiko US T-Bills Money Market Fund NAV",
       "pct": 100,
       "risk": "low",

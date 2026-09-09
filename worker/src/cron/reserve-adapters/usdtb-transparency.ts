@@ -28,6 +28,7 @@ interface UsdtbAssetConfig {
   name: string;
   risk: ReserveSlice["risk"];
   coinId: string;
+  sourceKey: string;
 }
 
 /** BUIDL and BUIDL-I are both share classes of the same BlackRock fund, so they
@@ -36,6 +37,7 @@ const BUIDL_ASSET_CONFIG: UsdtbAssetConfig = {
   name: "BlackRock BUIDL (U.S. T-Bills, cash, repos)",
   risk: getCanonicalReserveAssetRisk("BUIDL") ?? "low",
   coinId: "buidl-blackrock",
+  sourceKey: "usdtb-transparency:buidl",
 };
 
 const USDTB_ASSET_CONFIG: Record<string, UsdtbAssetConfig> = {
@@ -45,11 +47,13 @@ const USDTB_ASSET_CONFIG: Record<string, UsdtbAssetConfig> = {
     name: "USDC cash-equivalent reserves",
     risk: getCanonicalReserveAssetRisk("USDC") ?? "low",
     coinId: "usdc-circle",
+    sourceKey: "usdtb-transparency:usdc",
   },
   USDT: {
     name: "USDT cash-equivalent reserves",
     risk: getCanonicalReserveAssetRisk("USDT") ?? "low",
     coinId: "usdt-tether",
+    sourceKey: "usdtb-transparency:usdt",
   },
 };
 
@@ -98,7 +102,7 @@ export function adaptUsdtbTransparency(payload: UsdtbBackingAndSupplyPayload): A
   }
 
   const warnings: LiveReserveWarning[] = [];
-  const sliceInputs: Array<{ value: number; name: string; risk: ReserveSlice["risk"]; coinId?: string }> = [];
+  const sliceInputs: Array<{ value: number; sourceKey: string; name: string; risk: ReserveSlice["risk"]; coinId?: string }> = [];
 
   for (const [assetKey, entries] of Object.entries(backingAssets)) {
     const amount = sumAssetAmount(assetKey, entries);
@@ -122,11 +126,11 @@ export function adaptUsdtbTransparency(payload: UsdtbBackingAndSupplyPayload): A
         "unknown-asset",
         `Unmapped USDtb backing asset: ${assetKey} ($${amount.toFixed(2)})`,
       ));
-      sliceInputs.push({ name: `${assetKey} (unmapped)`, value: amount, risk: "high" });
+      sliceInputs.push({ sourceKey: `usdtb-transparency:${normalizedKey.toLowerCase()}`, name: `${assetKey} (unmapped)`, value: amount, risk: "high" });
       continue;
     }
 
-    sliceInputs.push({ name: config.name, value: amount, risk: config.risk, coinId: config.coinId });
+    sliceInputs.push({ sourceKey: config.sourceKey, name: config.name, value: amount, risk: config.risk, coinId: config.coinId });
   }
 
   let assetsInMotionUsd = 0;
@@ -137,7 +141,7 @@ export function adaptUsdtbTransparency(payload: UsdtbBackingAndSupplyPayload): A
     }
   }
   if (assetsInMotionUsd > 0) {
-    sliceInputs.push({ name: "Assets in motion (settlement float)", value: assetsInMotionUsd, risk: "low" });
+    sliceInputs.push({ sourceKey: "usdtb-transparency:assets-in-motion", name: "Assets in motion (settlement float)", value: assetsInMotionUsd, risk: "low" });
   }
 
   if (sliceInputs.length === 0) {

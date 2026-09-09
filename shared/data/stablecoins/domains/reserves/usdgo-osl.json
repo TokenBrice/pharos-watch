@@ -2,6 +2,7 @@
   "id": "usdgo-osl",
   "reserves": [
     {
+      "sourceKey": "usdgo-transparency:usdgo:stbxx",
       "name": "Goldman Sachs STBXX (CUSIP 38151N205)",
       "pct": 8.904468,
       "risk": "low",
@@ -17,6 +18,7 @@
       "liquidityHorizon": "one-day"
     },
     {
+      "sourceKey": "usdgo-transparency:usdgo:jltxx",
       "name": "JPMorgan JLTXX (CUSIP 46655R119)",
       "pct": 62.116731,
       "risk": "low",
@@ -32,6 +34,7 @@
       "liquidityHorizon": "one-day"
     },
     {
+      "sourceKey": "usdgo-transparency:usdgo:buidl",
       "name": "BUIDL (BlackRock USD Institutional Digital Liquidity Fund)",
       "pct": 27.987907,
       "risk": "low",
@@ -48,6 +51,7 @@
       "liquidityHorizon": "one-day"
     },
     {
+      "sourceKey": "usdgo-transparency:usdgo:cash",
       "name": "Cash at FDIC-insured depository institutions",
       "pct": 0.990893,
       "risk": "very-low",

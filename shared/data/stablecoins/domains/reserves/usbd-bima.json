@@ -15,7 +15,8 @@
         "smart-contract",
         "concentration"
       ],
-      "liquidityHorizon": "unknown"
+      "liquidityHorizon": "unknown",
+      "sourceKey": "evm-branch-balances:ethereum:0x59063fbe70d3b0f9312e5c89acdc476f5d2018e1"
     }
   ],
   "reserveReview": {
