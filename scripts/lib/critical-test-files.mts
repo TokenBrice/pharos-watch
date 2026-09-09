@@ -8,7 +8,7 @@ import { CRITICAL_FILES, CRITICAL_OWNERSHIP, criticalCoverageFilesForChanges, se
 
 export const GLOBAL_INVARIANT_TEST_FILES: string[] = [
   "src/lib/__tests__/reserve-coinid-validation.test.ts",
-  "worker/src/cron/__tests__/telegram-recap-cost-boundary.test.ts",
+  "scripts/ci/check-architecture-boundaries.test.ts",
 ];
 
 export const CRITICAL_CONTRACT_TEST_FILES: string[] = [

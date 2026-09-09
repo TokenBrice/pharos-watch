@@ -1,4 +1,3 @@
-import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import { FRONTEND_API_QUERY_DESCRIPTORS, projectStablecoinLiveSummary, type FrontendApiQueryDescriptorRegistry } from "../api-query-descriptors";
 import { CRON_USDS_STATUS } from "@/lib/cron-intervals";
@@ -227,11 +226,5 @@ describe("frontend API query descriptors", () => {
       "components",
       "severity",
     ]);
-  });
-
-  it("keeps the lightweight PSI contract free of full-schema loaders", () => {
-    const lightContractSource = readFileSync("src/lib/api-query-domains/stability-light.ts", "utf8");
-
-    expect(lightContractSource).not.toMatch(/from ["']zod|import\(["']@shared\/types\/stability["']\)/);
   });
 });

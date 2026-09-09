@@ -1,7 +1,6 @@
 // @vitest-environment jsdom
 
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { readFileSync } from "node:fs";
 import {
   readVerificationTokenFromUrl,
   stripQueryVerificationTokenFromUrl,
@@ -97,11 +96,5 @@ describe("API-key verification URL handling", () => {
     expect(readVerificationTokenFromUrl()).toBeNull();
     expect(stripQueryVerificationTokenFromUrl()).toBeUndefined();
     expect(stripVerificationTokenFromUrl()).toBeUndefined();
-  });
-
-  it("keeps the global URL scrubber free of schema-bearing imports", () => {
-    const source = readFileSync("src/lib/api-key-verification-url.ts", "utf8");
-
-    expect(source).not.toMatch(/from ["']zod|@shared\/types|api-key-self-serve/);
   });
 });
