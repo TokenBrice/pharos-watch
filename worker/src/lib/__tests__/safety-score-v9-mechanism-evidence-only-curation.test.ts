@@ -91,7 +91,7 @@ describe("Safety Score V9 evidence-only mechanism curation", () => {
     expect(unreviewedCompiled.assets[0]!.mechanismRiskReview.status.observationState).toBe("missing");
     expect(
       curatedCompiled.assets[0]!.gaps.some(
-        (gap) => gap.responsibility === "issuer-undisclosed" && gap.path.componentKey?.startsWith("mechanism-review:"),
+        (gap) => gap.responsibility === "issuer-undisclosed" && "componentKey" in gap.path && gap.path.componentKey.startsWith("mechanism-review:"),
       ),
     ).toBe(true);
   });
