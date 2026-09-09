@@ -32,7 +32,17 @@ async function issueKey() {
     key: { keyPrefix: "prefix-test", maskedToken: "prefix-test...", tier: "donor", rateLimitPerMinute: 10, expiresAt: null },
   });
   fireEvent.click(screen.getByRole("button", { name: "Claim supporter key" }));
-  await waitFor(() => expect(screen.getByText(token)).toBeTruthy());
+  // React commits the revealed token one task before it runs the guard's
+  // passive effect, and RTL's waitFor can resolve in that gap (its post-check
+  // setTimeout(0) races the scheduler task that flushes effects). Both guard
+  // listeners are registered in one effect body, so an armed beforeunload is
+  // the readiness signal for the capture-phase link guard as well.
+  await waitFor(() => {
+    expect(screen.getByText(token)).toBeTruthy();
+    const armed = new Event("beforeunload", { cancelable: true });
+    window.dispatchEvent(armed);
+    expect(armed.defaultPrevented).toBe(true);
+  });
   expect(wallet.mock.calls.map(([args]) => args.method)).toEqual(["eth_requestAccounts", "eth_accounts", "personal_sign", "eth_accounts"]);
 }
 
