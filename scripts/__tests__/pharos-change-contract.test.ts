@@ -14,6 +14,7 @@ import {
   getHookHarness,
   normalizeChangedFiles,
   normalizeExplicitFiles,
+  readHookInput,
 } from "../ci/pharos-change-contract.ts";
 import { PATH_FAMILIES } from "../lib/doc-ownership-registry.mts";
 
@@ -1119,23 +1120,19 @@ describe("W2.7 Python and Node one-line writes", () => {
 });
 
 describe("W2.7 malformed hook payloads", () => {
-  const hookModes = ["pre-tool-use", "permission-request", "session-start"] as const;
-  const diagnostic = "pharos-change-contract: empty or malformed hook payload; no policy applied";
-
-  it.each(hookModes)("returns no decision and logs for empty %s stdin", (hook) => {
-    const result = runHookCliProcess(hook);
-
-    expect(result.status).toBe(0);
-    expect(result.stdout.trim()).toBe("{}");
-    expect(result.stderr.trim()).toBe(diagnostic);
+  it("marks empty input as malformed without touching the process stdin", () => {
+    expect(readHookInput({ readStdin: () => "" })).toEqual({ input: {}, malformed: true });
   });
 
-  it.each(hookModes)("returns no decision and logs for malformed %s stdin", (hook) => {
-    const result = runHookCliProcess(hook, "{not-json");
+  it("marks malformed JSON as malformed without touching the process stdin", () => {
+    expect(readHookInput({ readStdin: () => "{not-json" })).toEqual({ input: {}, malformed: true });
+  });
+  it("keeps the malformed payload CLI response contract", () => {
+    const result = runHookCliProcess("pre-tool-use", "{not-json");
 
     expect(result.status).toBe(0);
     expect(result.stdout.trim()).toBe("{}");
-    expect(result.stderr.trim()).toBe(diagnostic);
+    expect(result.stderr.trim()).toBe("pharos-change-contract: empty or malformed hook payload; no policy applied");
   });
 
   it("does not log for a valid empty hook object", () => {

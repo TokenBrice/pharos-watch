@@ -10,7 +10,7 @@ import { MechanismMeasurementEvidenceV1Schema, type MeasurementCall } from "../l
 import { redactRpcUrlForEvidence } from "../lib/mechanism-measurement/rpc-provenance";
 import { captureFixture, cleanupCaptures, remote } from "./measure-cdp-mechanism-metrics.test-support";
 import { gzipSync } from "node:zlib";
-import { resolveCaptureBody } from "../maintenance/measure-cdp-mechanism-metrics";
+import { resolveCaptureBody, run } from "../maintenance/measure-cdp-mechanism-metrics";
 import { CDP_MEASUREMENT_TARGETS } from "../lib/mechanism-measurement/targets";
 
 interface RecordedFixture {
@@ -23,6 +23,7 @@ interface RecordedFixture {
 function loadFixture(name: string): RecordedFixture {
   return JSON.parse(readFileSync(join(__dirname, "fixtures", name), "utf8")) as RecordedFixture;
 }
+const FIXTURE_PATH = join(__dirname, "fixtures", "lusd-liquity-mechanism-measurement-block-25533257.json");
 
 // Recorded live returndata from block 25533257 (finalized at capture time);
 // replaying it must reproduce the committed measurement exactly, no network.
@@ -171,6 +172,38 @@ describe("measureLiquityV2", () => {
     ).rejects.toThrow(/branch\[0\]\.price/);
   });
 });
+describe("CDP replay CLI seam", () => {
+  it("replays a committed artifact in-process without using the process streams", async () => {
+    const logs: string[] = [];
+    const warnings: string[] = [];
+    const errors: string[] = [];
+    const status = await run({
+      argv: ["--replay", FIXTURE_PATH],
+      io: {
+        error: (message) => errors.push(message),
+        log: (message) => logs.push(message),
+        warn: (message) => warnings.push(message),
+      },
+    });
+
+    expect(status).toBe(0);
+    expect(logs.join("")).toContain("[measure-cdp] lusd-liquity: offline byte replay passed");
+    expect(warnings).toEqual([]);
+    expect(errors).toEqual([]);
+  });
+
+  it("returns a runtime status and captured diagnostic for a missing artifact", async () => {
+    const errors: string[] = [];
+    const status = await run({
+      argv: ["--replay", "missing-cdp-artifact.json"],
+      io: { error: (message) => errors.push(message) },
+    });
+
+    expect(status).toBe(1);
+    expect(errors.join("")).toContain("measure-cdp-mechanism-metrics: Missing mechanism evidence capture or summary:");
+  });
+});
+
 
 afterEach(cleanupCaptures);
 

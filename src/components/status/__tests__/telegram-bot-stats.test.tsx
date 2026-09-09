@@ -5,7 +5,7 @@ import { describe, expect, it } from "vitest";
 import type { CronStatus, StatusResponse } from "@shared/types";
 import { TELEGRAM_ALERT_TYPES } from "@shared/types/status";
 import { buildCommsWorkbenchModel } from "@/lib/comms-workbench-model";
-import { makeCompleteTelegramBotStatus } from "@/test-utils/status-fixtures";
+import { makeCompleteTelegramBotStatus, makeDispatchMetadata } from "@/test-utils/status-fixtures";
 import { TelegramBotStats } from "../telegram-bot-stats";
 
 const NOW_SECONDS = 1_771_858_200;
@@ -66,28 +66,8 @@ function telegramBot(): NonNullable<StatusResponse["telegramBot"]> {
   };
 }
 
-function dispatchMetadata(overrides: Record<string, unknown> = {}): Record<string, unknown> {
-  return {
-    subscribersNotified: 0,
-    messagesSent: 0,
-    freshAttempted: 0,
-    freshSent: 0,
-    freshRetryQueued: 0,
-    freshPermanentFailures: 0,
-    pendingAttempted: 0,
-    pendingDrained: 0,
-    pendingRetryQueued: 0,
-    pendingDroppedPermanentFailure: 0,
-    pendingDroppedMaxAttemptsFallback: 0,
-    pendingRateLimited: false,
-    safetyAlertsSuppressed: false,
-    reserveAlertsSuppressed: false,
-    ...overrides,
-  };
-}
-
 function dispatchCron(
-  metadata: Record<string, unknown> = dispatchMetadata(),
+  metadata: Record<string, unknown> = makeDispatchMetadata(),
   status: "ok" | "degraded" | "error" = "ok",
   error?: string,
 ): CronStatus {
@@ -193,7 +173,7 @@ describe("TelegramBotStats", () => {
   it("renders independently specified per-alert metrics identically in both layouts", () => {
     const { model } = renderWorkbench({
       cron: dispatchCron(
-        dispatchMetadata({
+        makeDispatchMetadata({
           perAlertType: {
             dews: { sent: 7, enqueued: 5, failed: 3, blocked: 1, firstSendLatencyMs: 240 },
             depeg: { sent: 6, enqueued: 4, failed: 2, blocked: 8, firstSendLatencyMs: null },
@@ -257,7 +237,7 @@ describe("TelegramBotStats", () => {
         },
       },
       cron: dispatchCron(
-        dispatchMetadata({
+        makeDispatchMetadata({
           freshPermanentFailures: 1,
           freshRetryQueued: 2,
           pendingRetryQueued: 0,

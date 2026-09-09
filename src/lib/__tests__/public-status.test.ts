@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { HealthResponse } from "@shared/types";
 import { countPublicImpactOpenCircuits, isPublicImpactCircuitKey } from "@shared/lib/public-health";
-import { makeHealthyHealthResponse } from "@/test-utils/status-fixtures";
+import { makeActivePriceCoverage, makeHealthyHealthResponse, makeMissingActiveAsset } from "@/test-utils/status-fixtures";
 import {
   getImpactedPublicSurfaces,
   getPublicDivergenceNotice,
@@ -12,67 +12,21 @@ import {
 
 const BASE_HEALTH: HealthResponse = makeHealthyHealthResponse();
 
-type ActivePriceCoverageFixture = NonNullable<HealthResponse["activePriceCoverage"]>;
-type MissingActiveAssetFixture = ActivePriceCoverageFixture["missingActiveAssets"][number];
-
-function makeMissingAsset(overrides: Partial<MissingActiveAssetFixture> = {}): MissingActiveAssetFixture {
-  return {
-    stablecoinId: "test-dollar",
-    symbol: "TUSD",
-    marketCapUsd: 500_000,
-    currentPrice: null,
-    currentSource: null,
-    currentObservedAt: null,
-    currentConfidence: null,
-    consecutiveMissingGenerations: 1,
-    lastAcceptedPrice: null,
-    lastAcceptedSource: null,
-    lastAcceptedObservedAt: null,
-    rejectionReason: "no-accepted-price",
-    alertEligible: false,
-    ...overrides,
-  };
-}
-
-/** Derives counts/ids from the supplied missing assets so fixture scenarios cannot drift apart. */
-function makeCoverage(
-  missingAssets: MissingActiveAssetFixture[],
-  overrides: Partial<ActivePriceCoverageFixture> = {},
-): ActivePriceCoverageFixture {
-  const alertEligibleIds = missingAssets.filter((asset) => asset.alertEligible).map((asset) => asset.stablecoinId);
-  return {
-    status: "incomplete",
-    expectedActiveCount: 190,
-    presentActiveCount: 190,
-    pricedActiveCount: 190 - missingAssets.length,
-    missingPriceCount: missingAssets.length,
-    pricedActiveIds: [],
-    missingActiveIds: missingAssets.map((asset) => asset.stablecoinId),
-    affectedMarketCapUsd: missingAssets.reduce((sum, asset) => sum + (asset.marketCapUsd ?? 0), 0),
-    missingActiveAssets: missingAssets,
-    alertEligibleCount: alertEligibleIds.length,
-    alertEligibleIds,
-    maxConsecutiveMissingGenerations: Math.max(0, ...missingAssets.map((asset) => asset.consecutiveMissingGenerations)),
-    observedAt: 1_700_000_000,
-    ...overrides,
-  };
-}
-
 describe("public status helpers", () => {
   it("renders active-price warnings with impacted assets without a public surface incident", () => {
     const health: HealthResponse = {
       ...BASE_HEALTH,
       status: "healthy",
       warnings: ["active-price-coverage-incomplete:nxusd-nereus,test-dollar"],
-      activePriceCoverage: makeCoverage([
-        makeMissingAsset({
+      activePriceCoverage: makeActivePriceCoverage([
+        makeMissingActiveAsset({
           stablecoinId: "nxusd-nereus",
           symbol: "NXUSD",
           marketCapUsd: 1_500_000,
           consecutiveMissingGenerations: 2,
           alertEligible: true,
         }),
-        makeMissingAsset(),
+        makeMissingActiveAsset(),
       ]),
     };
 
@@ -238,7 +192,7 @@ describe("getImpactedPublicSurfaces", () => {
       ...BASE_HEALTH,
       status: "healthy",
       warnings: [],
-      activePriceCoverage: makeCoverage([makeMissingAsset()]),
+      activePriceCoverage: makeActivePriceCoverage([makeMissingActiveAsset()]),
     };
     expect(getImpactedPublicSurfaces(transient).some((s) => s.id === "active-price-coverage")).toBe(false);
   });
@@ -248,7 +202,7 @@ describe("getImpactedPublicSurfaces", () => {
       ...BASE_HEALTH,
       status: "healthy",
       warnings: ["active-price-coverage-incomplete:test-dollar"],
-      activePriceCoverage: makeCoverage([makeMissingAsset({ alertEligible: true })]),
+      activePriceCoverage: makeActivePriceCoverage([makeMissingActiveAsset({ alertEligible: true })]),
     };
     expect(getImpactedPublicSurfaces(alertEligible).some((surface) => surface.id === "active-price-coverage")).toBe(false);
   });
@@ -256,7 +210,7 @@ describe("getImpactedPublicSurfaces", () => {
   it("fails closed with a degraded surface when exact price coverage is unknown", () => {
     const health: HealthResponse = {
       ...BASE_HEALTH,
-      activePriceCoverage: makeCoverage([], {
+      activePriceCoverage: makeActivePriceCoverage([], {
         status: "unknown",
         expectedActiveCount: 0,
         presentActiveCount: 0,

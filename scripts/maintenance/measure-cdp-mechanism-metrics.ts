@@ -2,7 +2,7 @@ import { createHash } from "node:crypto";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { gunzipSync } from "node:zlib";
-import { parseCliInteger, parseStrictCliArgs, runCliEntrypoint, writeCliHelpIfRequested } from "../lib/cli-args.mjs";
+import { CliUsageError, parseCliInteger, parseStrictCliArgs, writeCliHelpIfRequested } from "../lib/cli-args.mjs";
 import { isDirectRun } from "../lib/smoke-runtime.mjs";
 import { fetchBlockByNumber, pinBlock, JournaledEthCaller, ReplayEthCaller } from "../lib/mechanism-measurement/core";
 import { CAPTURE_SUMMARY_SUFFIX, parseMechanismCaptureSummary } from "../lib/mechanism-measurement/capture-summary";
@@ -35,7 +35,27 @@ interface CliOptions {
   replayPaths: string[];
 }
 
-const DEFAULT_CAPTURE_CACHE_DIR = resolve(process.cwd(), "agents/.cache/measurements");
+export interface CdpMeasurementCliIo {
+  log: (message: string) => void;
+  warn: (message: string) => void;
+  error: (message: string) => void;
+}
+
+export interface CdpMeasurementRunDeps {
+  argv?: readonly string[];
+  cacheDir?: string;
+  cwd?: string;
+  io?: Partial<CdpMeasurementCliIo>;
+  r2Client?: R2MeasurementsClient;
+}
+
+const DEFAULT_CLI_IO: CdpMeasurementCliIo = {
+  log: (message) => process.stdout.write(`${message}\n`),
+  warn: (message) => process.stderr.write(`${message}\n`),
+  error: (message) => process.stderr.write(message),
+};
+
+const DEFAULT_CAPTURE_CACHE_DIR = "agents/.cache/measurements";
 
 function captureSha256(bytes: Uint8Array): string {
   return createHash("sha256").update(bytes).digest("hex");
@@ -48,16 +68,17 @@ function decodeCaptureBody(bytes: Uint8Array): Buffer {
 
 export async function resolveCaptureBody(
   path: string,
-  options: { cacheDir?: string; r2Client?: R2MeasurementsClient } = {},
+  options: { cacheDir?: string; r2Client?: R2MeasurementsClient; rootDir?: string } = {},
 ): Promise<Buffer> {
-  const absolutePath = resolve(path);
+  const rootDir = options.rootDir ?? process.cwd();
+  const absolutePath = resolve(rootDir, path);
   if (existsSync(absolutePath)) return readFileSync(absolutePath);
   const summaryPath = absolutePath.endsWith(CAPTURE_SUMMARY_SUFFIX)
     ? absolutePath
     : `${absolutePath.slice(0, -".json".length)}${CAPTURE_SUMMARY_SUFFIX}`;
   if (!existsSync(summaryPath)) throw new Error(`Missing mechanism evidence capture or summary: ${absolutePath}`);
   const summary = parseMechanismCaptureSummary(JSON.parse(readFileSync(summaryPath, "utf8")), summaryPath);
-  const cacheDir = resolve(options.cacheDir ?? DEFAULT_CAPTURE_CACHE_DIR);
+  const cacheDir = resolve(rootDir, options.cacheDir ?? DEFAULT_CAPTURE_CACHE_DIR);
   const cachePath = resolve(cacheDir, `${summary.sha256}.json`);
   if (existsSync(cachePath)) {
     const cached = readFileSync(cachePath);
@@ -77,7 +98,7 @@ export async function resolveCaptureBody(
   throw new Error(`capture ${summary.sha256} expired: non-replayable`);
 }
 
-function parseOptions(argv: string[]): CliOptions | null {
+export function parseOptions(argv: readonly string[], io: CdpMeasurementCliIo = DEFAULT_CLI_IO): CliOptions | null {
   const { values } = parseStrictCliArgs(argv, {
     options: {
       asset: { type: "string", multiple: true },
@@ -88,7 +109,7 @@ function parseOptions(argv: string[]): CliOptions | null {
       help: { type: "boolean", short: "h" },
     },
   });
-  if (writeCliHelpIfRequested(values, USAGE)) return null;
+  if (writeCliHelpIfRequested(values, USAGE, { write: (text) => io.log(text.trimEnd()) })) return null;
   const block = values.block == null ? null : parseCliInteger(values.block, { name: "--block", min: 1 });
   const assets = Array.isArray(values.asset) ? values.asset.map(String) : [];
   const replayPaths = Array.isArray(values.replay) ? values.replay.map(String) : [];
@@ -115,10 +136,25 @@ function measurementOnly(value: unknown): string {
   return JSON.stringify(cloned);
 }
 
-async function replayEvidence(path: string): Promise<void> {
-  const absolutePath = resolve(path);
+interface CdpExecutionDeps {
+  cacheDir?: string;
+  cwd: string;
+  io: CdpMeasurementCliIo;
+  r2Client?: R2MeasurementsClient;
+}
+
+async function replayEvidence(path: string, deps: CdpExecutionDeps): Promise<void> {
+  const absolutePath = resolve(deps.cwd, path);
   const recorded = MechanismMeasurementEvidenceV1Schema.parse(
-    JSON.parse((await resolveCaptureBody(absolutePath)).toString("utf8")),
+    JSON.parse(
+      (
+        await resolveCaptureBody(path, {
+          cacheDir: deps.cacheDir,
+          r2Client: deps.r2Client,
+          rootDir: deps.cwd,
+        })
+      ).toString("utf8"),
+    ),
   );
   const target = CDP_MEASUREMENT_TARGETS.find((candidate) => candidate.assetId === recorded.assetId);
   if (!target) throw new Error(`No configured target for replay asset ${recorded.assetId}`);
@@ -135,12 +171,12 @@ async function replayEvidence(path: string): Promise<void> {
   if (JSON.stringify(recomputed) !== JSON.stringify(recorded)) {
     throw new Error(`Offline replay diverged from recorded artifact ${absolutePath}`);
   }
-  console.log(
+  deps.io.log(
     `[measure-cdp] ${recorded.assetId}: offline byte replay passed (${recorded.calls.length} calls, ${recorded.logQueries?.length ?? 0} log queries) -> ${absolutePath}`,
   );
 }
 
-async function measureTarget(options: CliOptions, assetId: string): Promise<void> {
+async function measureTarget(options: CliOptions, assetId: string, deps: CdpExecutionDeps): Promise<void> {
   const target = CDP_MEASUREMENT_TARGETS.find((candidate) => candidate.assetId === assetId);
   if (!target) {
     throw new Error(
@@ -158,7 +194,7 @@ async function measureTarget(options: CliOptions, assetId: string): Promise<void
       const parsed = MechanismMeasurementEvidenceV1Schema.parse(evidence);
 
       const date = parsed.block.timestampIso.slice(0, 10);
-      const outPath = resolve(join(options.outDir, parsed.assetId, `${date}-block-${parsed.block.number}.json`));
+      const outPath = resolve(deps.cwd, join(options.outDir, parsed.assetId, `${date}-block-${parsed.block.number}.json`));
       const serialized = `${JSON.stringify(parsed, null, 2)}\n`;
       if (existsSync(outPath)) {
         const existing = readFileSync(outPath, "utf8");
@@ -169,14 +205,14 @@ async function measureTarget(options: CliOptions, assetId: string): Promise<void
             `Evidence file ${outPath} already exists with a different measurement — refusing to overwrite`,
           );
         }
-        console.log(`[measure-cdp] ${parsed.assetId}: identical measurement already recorded at ${outPath}`);
+        deps.io.log(`[measure-cdp] ${parsed.assetId}: identical measurement already recorded at ${outPath}`);
         return;
       }
       mkdirSync(dirname(outPath), { recursive: true });
       writeFileSync(outPath, serialized);
       const completeness = parsed.completeness ?? { complete: true, blockers: [] };
       const formatMetric = (value: number | null): string => (value === null ? "N/A" : String(value));
-      console.log(
+      deps.io.log(
         `[measure-cdp] ${parsed.assetId}: block ${parsed.block.number} (${parsed.block.selection}) via ${parsed.rpcUrl}\n` +
           `  collateralizationRatio=${formatMetric(parsed.metrics.collateralizationRatio)} liquidationCapacityRatio=${formatMetric(parsed.metrics.liquidationCapacityRatio)}\n` +
           `  complete=${completeness.complete}${completeness.blockers.length > 0 ? ` blockers=${completeness.blockers.join(" | ")}` : ""}\n` +
@@ -185,7 +221,7 @@ async function measureTarget(options: CliOptions, assetId: string): Promise<void
       return;
     } catch (error) {
       lastError = error;
-      console.warn(
+      deps.io.warn(
         `[measure-cdp] ${assetId}: ${redactRpcUrlForEvidence(rpcUrl)} failed — ${error instanceof Error ? error.message : String(error)}`,
       );
     }
@@ -194,22 +230,41 @@ async function measureTarget(options: CliOptions, assetId: string): Promise<void
     `All RPC endpoints failed for ${assetId}: ${lastError instanceof Error ? lastError.message : String(lastError)}`,
   );
 }
-if (isDirectRun(import.meta.url, process.argv[1])) {
 
-void runCliEntrypoint(
-  async () => {
-    const options = parseOptions(process.argv.slice(2));
-    if (!options) return;
+export async function run(deps: CdpMeasurementRunDeps = {}): Promise<number> {
+  const cwd = deps.cwd ?? process.cwd();
+  const io: CdpMeasurementCliIo = { ...DEFAULT_CLI_IO, ...deps.io };
+  const execution: CdpExecutionDeps = {
+    cacheDir: deps.cacheDir,
+    cwd,
+    io,
+    r2Client: deps.r2Client,
+  };
+
+  try {
+    const options = parseOptions(deps.argv ?? process.argv.slice(2), io);
+    if (!options) return 0;
     if (options.replayPaths.length > 0) {
-      for (const path of options.replayPaths) await replayEvidence(path);
-      return;
+      for (const path of options.replayPaths) await replayEvidence(path, execution);
+      return 0;
     }
     const assetIds =
       options.assets.length > 0 ? options.assets : CDP_MEASUREMENT_TARGETS.map((target) => target.assetId);
     for (const assetId of assetIds) {
-      await measureTarget(options, assetId);
+      await measureTarget(options, assetId, execution);
     }
-  },
-  { label: "measure-cdp-mechanism-metrics", usage: USAGE },
-);
+    return 0;
+  } catch (error) {
+    const usageError = error instanceof CliUsageError;
+    const message = error instanceof Error ? error.message : String(error);
+    io.error(`measure-cdp-mechanism-metrics: ${message}\n`);
+    if (usageError) io.error(`\n${USAGE.trimEnd()}\n`);
+    return usageError ? 2 : 1;
+  }
+}
+
+if (isDirectRun(import.meta.url, process.argv[1])) {
+  void run().then((status) => {
+    if (status !== 0) process.exitCode = status;
+  });
 }
