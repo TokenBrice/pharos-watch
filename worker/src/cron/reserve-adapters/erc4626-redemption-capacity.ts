@@ -780,6 +780,7 @@ export function finalizeErc4626RedemptionCapacity(input: {
     ...(usesYearnV3Capacity
       ? {
           settlementDelaySec: route.settlementDelaySec,
+          ...((route.settlementDelaySec ?? 0) > 0 ? { capacityKind: "documented-bound" as const } : {}),
           yearnV3WithdrawableRaw: configured.capacityRaw.toString(),
         }
       : {}),

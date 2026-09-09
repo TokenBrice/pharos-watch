@@ -121,6 +121,7 @@
       }
     },
     "params": {
+      "navScope": "portfolio",
       "oracleAddress": "0xfa54C1c5F62ea3a5653a0b1b7148E26008eA1501",
       "tokenAddress": "0x23ae4fd8e7844cdbc97775496ebd0e8248656028",
       "assetLabel": "Physical gold bars (LBMA 99.99%)",

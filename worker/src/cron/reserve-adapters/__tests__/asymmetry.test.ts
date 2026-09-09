@@ -34,6 +34,9 @@ describe("adaptAsymmetry", () => {
       unknownBranchCount: 0,
       freshnessMode: "verified",
       sourceTimestamp: 1776239429,
+      totalReserveUsd: 996,
+      supplyUsd: 996,
+      collateralizationRatio: 1,
       immediateRedeemableUsd: 996,
       capacityRatioOfSupply: 1,
       redemption: {
@@ -67,6 +70,9 @@ describe("adaptAsymmetry", () => {
       ]),
     );
     expect(result.metadata).toMatchObject({
+      totalReserveUsd: 800,
+      supplyUsd: 1000,
+      collateralizationRatio: 0.8,
       immediateRedeemableUsd: 800,
       capacityRatioOfSupply: 0.8,
       redemption: {

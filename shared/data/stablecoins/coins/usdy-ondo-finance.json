@@ -145,6 +145,7 @@
       }
     },
     "params": {
+      "navScope": "portfolio",
       "oracleAddress": "0xA0219AA5B31e65Bc920B5b6DFb8EdF0988121De0",
       "tokenAddress": "0x96F6eF951840721AdBF46Ac996b59E0235CB985C",
       "assetLabel": "Short-term U.S. Treasuries and bank deposits",

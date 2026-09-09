@@ -72,7 +72,7 @@ describe("sgho-wrapper adapter", () => {
       .mockResolvedValueOnce(`0x${(800n * 10n ** 18n).toString(16)}`);
     const result = await fetchSghoWrapperReserves(COIN, CONFIG, new AbortController().signal);
     expect(result.metadata).toMatchObject({
-      collateralizationRatio: 0.8,
+      details: { sharePrice: 0.8 },
       immediateRedeemableUsd: 800,
       redemption: { capacityUsd: 800, capacityRatioOfSupply: 0.8 },
     });
@@ -92,12 +92,11 @@ describe("sgho-wrapper adapter", () => {
     ]);
     expect(result.metadata).toMatchObject({
       freshnessMode: "not-applicable",
-      details: { proofKind: "aave-sgho-preview-redeem" },
+      details: { proofKind: "aave-sgho-preview-redeem", sharePrice: 1.005 },
       totalSupplyRaw: (1000n * 10n ** 18n).toString(),
       previewRedeemRaw: (1005n * 10n ** 18n).toString(),
       supplyUsd: 1000,
       previewRedeemUsd: 1005,
-      collateralizationRatio: 1.005,
       immediateRedeemableUsd: 1005,
       immediateRedeemableRatio: 1,
       redemption: {

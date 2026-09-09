@@ -219,8 +219,11 @@ export async function resolveReserveSyncCapacity(
     // dUSD), and only then does the adapter-derived live confidence apply.
     // The measured capacity value is used in all three cases; only its
     // confidence label changes.
+    const capacityKind = (liveMetadata.settlementDelaySec ?? 0) > 0 && liveMetadata.capacityKind === "live-direct"
+      ? "documented-bound" as const
+      : liveMetadata.capacityKind;
     const liveCapacityConfidence =
-      liveMetadata.capacityKind === "documented-bound"
+      capacityKind === "documented-bound"
         ? ("documented-bound" as const)
         : (model.liveCapacityConfidence ?? liveMetadata.capacityConfidence);
     const {
@@ -265,7 +268,7 @@ export async function resolveReserveSyncCapacity(
       // routeFamily=null: recomputed with the real routeFamily in redemption-backstop-sources.ts; not read downstream here.
       capacityBasis: resolveCapacityBasis(null, model, liveCapacityConfidence),
       capacitySemantics,
-      ...(liveMetadata.capacityKind ? { capacityKind: liveMetadata.capacityKind } : {}),
+      ...(capacityKind ? { capacityKind } : {}),
       ...(liveMetadata.freshnessKind ? { freshnessKind: liveMetadata.freshnessKind } : {}),
       ...(liveMetadata.sourceTimestamp != null ? { sourceTimestamp: liveMetadata.sourceTimestamp } : {}),
       ...(liveMetadata.sourceUrls.length > 0 ? { sourceUrls: liveMetadata.sourceUrls } : {}),

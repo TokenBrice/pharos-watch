@@ -154,12 +154,17 @@ describe("adapter registry completeness", () => {
     expect(parsed.success).toBe(true);
   });
 
-  it("pins the reviewed issuer-host fallbacks for FDUSD and the Reservoir cohort", () => {
+  it("pins the reviewed FDUSD Webflow index and Reservoir cohort fallbacks", () => {
     const configsById = new Map(ACTIVE_STABLECOINS.map((coin) => [coin.id, coin.liveReservesConfig]));
 
-    expect(configsById.get("fdusd-first-digital")?.inputs.fallbacks).toEqual([
-      { kind: "http-html", url: "https://firstdigitallabs.webflow.io/transparency" },
-    ]);
+    // The issuer domain blocks Worker egress, so the compiled assurance
+    // binding pins the issuer's Webflow mirror as the sole primary input and
+    // keeps no fallbacks (the adapter fails closed on index drift).
+    expect(configsById.get("fdusd-first-digital")?.inputs.primary).toEqual({
+      kind: "http-html",
+      url: "https://firstdigitallabs.webflow.io/transparency",
+    });
+    expect(configsById.get("fdusd-first-digital")?.inputs.fallbacks).toBeUndefined();
     for (const id of ["rusd-reservoir", "srusd-reservoir", "wsrusd-reservoir"]) {
       expect(configsById.get(id)?.inputs.fallbacks).toEqual([
         { kind: "http-json", url: "https://fireworks-git-master-fortunafi.vercel.app/api/reserves/raw" },
@@ -214,6 +219,7 @@ describe("adapter registry completeness", () => {
 
   it("parseLiveReserveAdapterParams accepts a structured adapter payload", () => {
     const parsed = parseLiveReserveAdapterParams("chainlink-nav", {
+      navScope: "native-fund-share",
       oracleAddress: "0x123",
       tokenAddress: "0x456",
       assetLabel: "USDC",
@@ -221,6 +227,7 @@ describe("adapter registry completeness", () => {
     });
 
     expect(parsed).toEqual({
+      navScope: "native-fund-share",
       oracleAddress: "0x123",
       tokenAddress: "0x456",
       assetLabel: "USDC",

@@ -211,6 +211,10 @@ export const LIVE_RESERVE_ADAPTER_DESCRIPTOR_DECLARATIONS = {
       allowedFreshnessModes: NOT_APPLICABLE_ONLY_FRESHNESS,
     },
   },
+  "anchorage-independent-assurance": declareAdapter(
+    "anchorageAssurance",
+    HTTP_DISCLOSURE_ATTESTATION_V2,
+  ),
   accountable: {
     primaryInputKinds: ["http-json"],
     paramsSchema: "accountable",
@@ -225,6 +229,7 @@ export const LIVE_RESERVE_ADAPTER_DESCRIPTOR_DECLARATIONS = {
       allowedFreshnessModes: VERIFIED_OR_UNVERIFIED_FRESHNESS,
     },
   },
+  "agora-independent-assurance": declareAdapter("agoraAssurance", HTTP_DISCLOSURE_ATTESTATION_V2),
   "anzen-usdz": declareAdapter("none", ONCHAIN_SINGLE_ASSET_V2, {
     sourceOriginClass: "onchain-observation",
   }),
@@ -265,6 +270,18 @@ export const LIVE_RESERVE_ADAPTER_DESCRIPTOR_DECLARATIONS = {
       allowedFreshnessModes: VERIFIED_ONLY_FRESHNESS,
     },
   },
+  "audd-independent-assurance": declareAdapter(
+    "auddAssurance",
+    HTTP_DISCLOSURE_ATTESTATION_V2,
+    {
+      // ASRS 4400 agreed-upon procedures: the report explicitly disclaims an
+      // assurance opinion, so the evidence class stays static-validated with
+      // issuer-attested origin instead of the independent class.
+      sourceModel: "validated-static",
+      evidenceClass: "static-validated",
+      sourceOriginClass: "issuer-attested",
+    },
+  ),
   "audx-independent-assurance": declareAdapter(
     "audxAssurance",
     HTTP_DISCLOSURE_ATTESTATION_V2,
@@ -278,6 +295,28 @@ export const LIVE_RESERVE_ADAPTER_DESCRIPTOR_DECLARATIONS = {
     configValidation: CONFIG_SINGLE_ASSET_V1,
     redemptionTelemetry: { capacity: "none", fee: "none" },
     validation: { allowedFreshnessModes: NOT_APPLICABLE_ONLY_FRESHNESS },
+  },
+  "brla-independent-assurance": declareAdapter("brlaAssurance", HTTP_DISCLOSURE_ATTESTATION_V2),
+  "cadd-independent-assurance": declareAdapter("caddAssurance", HTTP_DISCLOSURE_ATTESTATION_V2),
+  // Live issuer balance-sheet feed (cash + Treasury vs on-chain liability) with
+  // measured composition and a verified observation timestamp. The evidence
+  // class mirrors the frax-balance-sheet / tether-transparency issuer
+  // balance-sheet precedent: independent *measurement* of an issuer-published
+  // feed, not third-party assurance, hence the issuer-attested origin class.
+  "bridge-transparency": {
+    primaryInputKinds: ["http-json"],
+    paramsSchema: "bridgeTransparency",
+    sourceModel: "dynamic-mix",
+    evidenceClass: "independent",
+    preferredFreshnessMode: "verified",
+    sourceOriginClass: "issuer-attested",
+    sharedSourceMode: "none",
+    configValidation: CONFIG_COLLATERAL_V1,
+    redemptionTelemetry: { capacity: "none", fee: "none" },
+    validation: {
+      maxSourceAgeSec: DASHBOARD_SOURCE_MAX_AGE_SEC,
+      allowedFreshnessModes: VERIFIED_OR_UNVERIFIED_FRESHNESS,
+    },
   },
   btcfi: {
     primaryInputKinds: ["http-json"],
@@ -303,6 +342,7 @@ export const LIVE_RESERVE_ADAPTER_DESCRIPTOR_DECLARATIONS = {
     primaryInputKinds: ["onchain-evm"],
     paramsSchema: "chainlinkNav",
     sourceModel: "single-bucket",
+    // P5: native fund-share exposure only; portfolio scope emits a scoring-degraded warning.
     evidenceClass: "independent",
     preferredFreshnessMode: "verified",
     sharedSourceMode: "none",
@@ -317,6 +357,7 @@ export const LIVE_RESERVE_ADAPTER_DESCRIPTOR_DECLARATIONS = {
     primaryInputKinds: ["onchain-evm"],
     paramsSchema: "chronicleNav",
     sourceModel: "single-bucket",
+    // P5: ACRDX/STAC prove native fund-share NAV, not look-through portfolio holdings.
     evidenceClass: "independent",
     sourceOriginClass: "independent-assurance",
     sharedSourceMode: "none",
@@ -423,6 +464,23 @@ export const LIVE_RESERVE_ADAPTER_DESCRIPTOR_DECLARATIONS = {
     // rather than a proxy for the collateral basket.
     redemptionTelemetry: { capacity: "direct", fee: "none" },
   }),
+  "ethena-whitelabel": {
+    primaryInputKinds: ["http-json"],
+    paramsSchema: "ethenaWhitelabel",
+    sourceModel: "dynamic-mix",
+    evidenceClass: "independent",
+    preferredFreshnessMode: "verified",
+    sourceOriginClass: "issuer-attested",
+    displayBadgeKind: "proof",
+    sharedSourceMode: "none",
+    configValidation: CONFIG_COLLATERAL_V1,
+    redemptionTelemetry: { capacity: "none", fee: "none" },
+    validation: {
+      maxSourceAgeSec: DASHBOARD_SOURCE_MAX_AGE_SEC,
+      maxUnknownExposurePct: MATERIAL_UNKNOWN_EXPOSURE_PCT,
+      allowedFreshnessModes: VERIFIED_OR_UNVERIFIED_FRESHNESS,
+    },
+  },
   "evm-branch-balances": {
     primaryInputKinds: ["onchain-evm"],
     paramsSchema: "evmBranchBalances",
@@ -468,16 +526,40 @@ export const LIVE_RESERVE_ADAPTER_DESCRIPTOR_DECLARATIONS = {
     redemptionTelemetry: { capacity: "none", fee: "none" },
     validation: { allowedFreshnessModes: NOT_APPLICABLE_ONLY_FRESHNESS },
   },
+  "xpr-account-balances": {
+    primaryInputKinds: ["http-json"],
+    paramsSchema: "xprAccountBalances",
+    sourceModel: "dynamic-mix",
+    evidenceClass: "independent",
+    sourceOriginClass: "onchain-observation",
+    preferredFreshnessMode: "not-applicable",
+    sharedSourceMode: "none",
+    configValidation: CONFIG_COLLATERAL_V1,
+    redemptionTelemetry: { capacity: "none", fee: "none" },
+    validation: {
+      maxUnknownExposurePct: MATERIAL_UNKNOWN_EXPOSURE_PCT,
+      allowedFreshnessModes: NOT_APPLICABLE_ONLY_FRESHNESS,
+    },
+  },
   falcon: declareAdapter("none", HTTP_DASHBOARD_COLLATERAL_V1, {
     redemptionTelemetry: { capacity: "proxy", fee: "none" },
   }),
+  "fdusd-independent-assurance": declareAdapter("fdusdAssurance", HTTP_DISCLOSURE_ATTESTATION_V2),
   "fdusd-transparency": declareAdapter("none", HTTP_DISCLOSURE_ATTESTATION_V1, {
     preferredFreshnessMode: "verified",
+    provenance: {
+      status: "retired",
+      rationale:
+        "Superseded by the compiled AOGB assurance manifest (fdusd-independent-assurance); retain the adapter only for historical review of the pre-compiled signed-report era.",
+      parkedSince: "2026-09-09",
+      nextReview: "2027-03-09",
+    },
     validation: {
       maxSourceAgeSec: LATE_MONTHLY_DISCLOSURE_SOURCE_MAX_AGE_SEC,
       allowedFreshnessModes: VERIFIED_OR_UNVERIFIED_FRESHNESS,
     },
   }),
+  "fidd-independent-assurance": declareAdapter("fiddAssurance", HTTP_DISCLOSURE_ATTESTATION_V2),
   "flying-tulip-ftusd": {
     primaryInputKinds: ["http-json"],
     paramsSchema: "none",
@@ -541,6 +623,12 @@ export const LIVE_RESERVE_ADAPTER_DESCRIPTOR_DECLARATIONS = {
       allowedFreshnessModes: UNVERIFIED_OR_NOT_APPLICABLE_FRESHNESS,
     },
   },
+  "gemini-independent-assurance": declareAdapter("none", HTTP_DISCLOSURE_ATTESTATION_V2, {
+    // Gemini's /dollar attestation list loads from its public Contentful
+    // delivery collection (content_type=gusdAttestation), so the reviewed
+    // official index is JSON rather than server-rendered HTML.
+    primaryInputKinds: ["http-json"],
+  }),
   gho: {
     primaryInputKinds: ["onchain-evm"],
     paramsSchema: "gho",
@@ -599,6 +687,18 @@ export const LIVE_RESERVE_ADAPTER_DESCRIPTOR_DECLARATIONS = {
     redemptionTelemetry: { capacity: "none", fee: "none" },
     validation: { allowedFreshnessModes: NOT_APPLICABLE_ONLY_FRESHNESS },
   },
+  "issuer-attested-report": declareAdapter(
+    "issuerAttestedReport",
+    HTTP_DISCLOSURE_ATTESTATION_V2,
+    {
+      // Hash-pinned issuer-signed reports (BRLV Fact Finance PoR memo, AUDM
+      // issuer-CEO attestation): non-independent tiers, so the evidence class
+      // stays static-validated with issuer-attested origin.
+      sourceModel: "validated-static",
+      evidenceClass: "static-validated",
+      sourceOriginClass: "issuer-attested",
+    },
+  ),
   jupusd: {
     primaryInputKinds: ["http-json"],
     paramsSchema: "jupusd",
@@ -610,6 +710,39 @@ export const LIVE_RESERVE_ADAPTER_DESCRIPTOR_DECLARATIONS = {
     redemptionTelemetry: { capacity: "direct", fee: "none" },
     validation: {
       maxSourceAgeSec: DASHBOARD_SOURCE_MAX_AGE_SEC,
+      allowedFreshnessModes: VERIFIED_OR_UNVERIFIED_FRESHNESS,
+    },
+  },
+  "kava-cdp": {
+    primaryInputKinds: ["http-json"],
+    paramsSchema: "none",
+    sourceModel: "dynamic-mix",
+    evidenceClass: "independent",
+    sourceOriginClass: "onchain-observation",
+    preferredFreshnessMode: "not-applicable",
+    sharedSourceMode: "none",
+    configValidation: CONFIG_COLLATERAL_V1,
+    // The legacy CDP's exit is borrower repay-only (no holder-facing
+    // redemption route), so capacity/fee telemetry would fabricate a route.
+    redemptionTelemetry: { capacity: "none", fee: "none" },
+    validation: {
+      maxUnknownExposurePct: MATERIAL_UNKNOWN_EXPOSURE_PCT,
+      allowedFreshnessModes: NOT_APPLICABLE_ONLY_FRESHNESS,
+    },
+  },
+  "krwq-custodian": {
+    primaryInputKinds: ["http-json"],
+    paramsSchema: "none",
+    sourceModel: "dynamic-mix",
+    evidenceClass: "independent",
+    preferredFreshnessMode: "verified",
+    sourceOriginClass: "onchain-observation",
+    sharedSourceMode: "none",
+    configValidation: CONFIG_COLLATERAL_V1,
+    redemptionTelemetry: { capacity: "none", fee: "none" },
+    validation: {
+      maxSourceAgeSec: DASHBOARD_SOURCE_MAX_AGE_SEC,
+      maxUnknownExposurePct: MATERIAL_UNKNOWN_EXPOSURE_PCT,
       allowedFreshnessModes: VERIFIED_OR_UNVERIFIED_FRESHNESS,
     },
   },
@@ -679,6 +812,21 @@ export const LIVE_RESERVE_ADAPTER_DESCRIPTOR_DECLARATIONS = {
     validation: {
       maxSourceAgeSec: MAKINA_POSITION_SOURCE_MAX_AGE_SEC,
       maxUnknownExposurePct: MATERIAL_UNKNOWN_EXPOSURE_PCT,
+      allowedFreshnessModes: VERIFIED_OR_UNVERIFIED_FRESHNESS,
+    },
+  },
+  "megausd-custody": {
+    primaryInputKinds: ["http-json"],
+    paramsSchema: "none",
+    sourceModel: "dynamic-mix",
+    evidenceClass: "independent",
+    preferredFreshnessMode: "verified",
+    sourceOriginClass: "issuer-attested",
+    sharedSourceMode: "none",
+    configValidation: CONFIG_COLLATERAL_V1,
+    redemptionTelemetry: { capacity: "none", fee: "none" },
+    validation: {
+      maxSourceAgeSec: DASHBOARD_SOURCE_MAX_AGE_SEC,
       allowedFreshnessModes: VERIFIED_OR_UNVERIFIED_FRESHNESS,
     },
   },
@@ -836,6 +984,10 @@ export const LIVE_RESERVE_ADAPTER_DESCRIPTOR_DECLARATIONS = {
     },
   },
   "sgho-wrapper": declareAdapter("erc4626SingleAsset", ONCHAIN_SINGLE_ASSET_V1),
+  "saturn-pyusdx": declareAdapter("saturnPyusdx", ONCHAIN_SINGLE_ASSET_V1, {
+    sourceOriginClass: "onchain-observation",
+  }),
+  "sbc-independent-assurance": declareAdapter("sbcAssurance", HTTP_DISCLOSURE_ATTESTATION_V2),
   "solstice-attestation": declareAdapter("none", HTTP_PROTOCOL_V1, {
     validation: {
       // Weekly attestations with observed publication gaps of 5-9 days (SO1);
@@ -894,7 +1046,9 @@ export const LIVE_RESERVE_ADAPTER_DESCRIPTOR_DECLARATIONS = {
     primaryInputKinds: ["http-json"],
     paramsSchema: "spikoApi",
     sourceModel: "single-bucket",
+    // P5: independent admission is limited to the named native fund-share exposure.
     evidenceClass: "independent",
+    sourceOriginClass: "issuer-attested",
     sharedSourceMode: "none",
     configValidation: CONFIG_SINGLE_ASSET_V1,
     redemptionTelemetry: { capacity: "none", fee: "none" },
@@ -920,6 +1074,7 @@ export const LIVE_RESERVE_ADAPTER_DESCRIPTOR_DECLARATIONS = {
     primaryInputKinds: ["onchain-evm"],
     paramsSchema: "superstateLiquidity",
     sourceModel: "single-bucket",
+    // P5: USTB's single slice names the fund share, not its underlying securities.
     evidenceClass: "independent",
     preferredFreshnessMode: "verified",
     sharedSourceMode: "none",
@@ -929,7 +1084,7 @@ export const LIVE_RESERVE_ADAPTER_DESCRIPTOR_DECLARATIONS = {
       allowedFreshnessModes: VERIFIED_OR_UNVERIFIED_FRESHNESS,
     },
   },
-  "paxos-independent-assurance": declareAdapter("none", HTTP_DISCLOSURE_ATTESTATION_V2),
+  "paxos-independent-assurance": declareAdapter("paxosAssurance", HTTP_DISCLOSURE_ATTESTATION_V2),
   "straitsx-independent-assurance": declareAdapter(
     "straitsxAssurance",
     HTTP_DISCLOSURE_ATTESTATION_V2,
@@ -1009,10 +1164,10 @@ export const LIVE_RESERVE_ADAPTER_DESCRIPTOR_DECLARATIONS = {
   },
   "usdai-proof-of-reserves": {
     primaryInputKinds: ["http-json"],
-    paramsSchema: "none",
+    paramsSchema: "usdaiProofOfReserves",
     sourceModel: "dynamic-mix",
     evidenceClass: "independent",
-    preferredFreshnessMode: "verified",
+    preferredFreshnessMode: "not-applicable",
     sourceOriginClass: "issuer-attested",
     displayBadgeKind: "proof",
     sharedSourceMode: "none",
@@ -1021,7 +1176,7 @@ export const LIVE_RESERVE_ADAPTER_DESCRIPTOR_DECLARATIONS = {
     validation: {
       maxUnknownExposurePct: MATERIAL_UNKNOWN_EXPOSURE_PCT,
       maxSourceAgeSec: DISCLOSURE_SOURCE_MAX_AGE_SEC,
-      allowedFreshnessModes: VERIFIED_OR_UNVERIFIED_FRESHNESS,
+      allowedFreshnessModes: ["not-applicable", "unverified"],
     },
   },
   "usd1-bundle-oracle": {

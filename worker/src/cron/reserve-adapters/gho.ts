@@ -11,7 +11,6 @@ import {
   notApplicableFreshnessMetadata,
   type OnchainCallers,
   reserveDegradedWarning,
-  reserveInfoWarning,
   requireOnchainInput,
   slicesFromValues,
 } from "./helpers";
@@ -40,6 +39,7 @@ function classifyFacilitatorLabel(label: string): FacilitatorRiskBucket {
   if (normalized.includes("flashmint") || normalized.includes("flash mint")) {
     return "flashminter";
   }
+  if (normalized.includes("gsm")) return "unknown";
   if (
     normalized.includes("directminter")
     || normalized.includes("direct minter")
@@ -91,6 +91,7 @@ interface GhoParams {
 
 export interface GhoTrackedModuleConfig {
   address: string;
+  facilitatorAddress: string;
   label: string;
   coinId?: string;
   depType?: ReserveSlice["depType"];
@@ -106,20 +107,21 @@ export interface GhoFacilitatorSnapshot {
 
 export interface GhoTrackedModuleSnapshot {
   address: string;
+  facilitatorAddress: string;
   label: string;
   coinId?: string;
   depType?: ReserveSlice["depType"];
   risk: ReserveSlice["risk"];
   currentBackingGho: bigint;
-  swappable: boolean;
-  isFrozen: boolean;
-  isSeized: boolean;
+  isFrozen: boolean | null;
+  isSeized: boolean | null;
   buyFeeBps: number | null;
 }
 
 export interface GhoFacilitatorData {
   facilitators: GhoFacilitatorSnapshot[];
   trackedModules: GhoTrackedModuleSnapshot[];
+  trackedModuleReadIncomplete?: boolean;
   totalSupply?: bigint;
 }
 
@@ -186,6 +188,7 @@ function readParams(config: LiveReservesConfig): GhoParams {
     fallbackRpcUrl: params.fallbackRpcUrl,
     gsmModules: params.gsmModules.map((trackedModule) => ({
       address: trackedModule.address,
+      facilitatorAddress: trackedModule.facilitatorAddress,
       label: trackedModule.label,
       coinId: trackedModule.coinId,
       depType: trackedModule.depType,
@@ -318,7 +321,6 @@ async function loadTrackedModule(
         ? used - currentBacking.deficit
         : 0n
       : used + currentBacking.excess;
-  const swappable = isFrozen === false && isSeized === false;
 
   let buyFeeBps: number | null = null;
   const feeStrategyAddress =
@@ -331,13 +333,13 @@ async function loadTrackedModule(
   }
 
   if (isFrozen) {
-    warnings.push(reserveInfoWarning(
+    warnings.push(reserveDegradedWarning(
       "tracked-gsm-frozen",
       `GHO tracked GSM module "${trackedModule.label}" is currently frozen and excluded from immediate redeemable capacity`,
     ));
   }
   if (isSeized) {
-    warnings.push(reserveInfoWarning(
+    warnings.push(reserveDegradedWarning(
       "tracked-gsm-seized",
       `GHO tracked GSM module "${trackedModule.label}" is currently seized and excluded from immediate redeemable capacity`,
     ));
@@ -346,20 +348,21 @@ async function loadTrackedModule(
   return {
     module: {
       address: trackedModule.address,
+      facilitatorAddress: trackedModule.facilitatorAddress,
       label: trackedModule.label,
       coinId: trackedModule.coinId,
+      depType: trackedModule.depType,
       risk: trackedModule.risk ?? "low",
       currentBackingGho,
-      swappable,
-      isFrozen: isFrozen ?? true,
-      isSeized: isSeized ?? false,
+      isFrozen,
+      isSeized,
       buyFeeBps,
     },
     warnings,
   };
 }
 
-export interface GhoFacilitatorAllocation {
+interface GhoFacilitatorAllocation {
   facilitator: GhoFacilitatorSnapshot;
   share: bigint;
 }
@@ -374,61 +377,50 @@ interface GhoSliceValue {
   issuerOrObligor?: string;
 }
 
-export interface GhoRedemptionTelemetry {
-  immediateRedeemableRaw: bigint;
+interface GhoRedemptionTelemetry {
+  routeStatus: "open" | "paused" | "unknown";
   immediateRedeemableUsd: number;
   immediateRedeemableRatio?: number;
   redemptionFeeBps?: number;
 }
 
-/**
- * Allocate a residual GHO exposure across facilitators proportional to each
- * facilitator's `bucketLevel`. Pure: takes the facilitator list and a residual
- * raw amount (18-decimal GHO units) and emits one entry per active facilitator
- * (bucketLevel > 0). Returns an empty array if no facilitators have a positive
- * bucket level — the caller decides whether to synthesize a fallback slice.
- *
- * Invariants:
- *   - `sum(allocations[*].share) === residualRaw` when at least one
- *     facilitator has bucketLevel > 0n (any rounding dust is folded into the
- *     final allocation so the residual is fully accounted for).
- *   - Allocation order matches the order of active facilitators in the input.
- */
-export function allocateResidualByBucketLevel(
-  facilitators: readonly GhoFacilitatorSnapshot[],
-  residualRaw: bigint,
-): GhoFacilitatorAllocation[] {
-  if (residualRaw <= 0n) return [];
-  const activeWithLevel = facilitators.filter((f) => f.bucketLevel > 0n);
-  const totalActiveBucketLevel = activeWithLevel.reduce((sum, f) => sum + f.bucketLevel, 0n);
-  if (totalActiveBucketLevel <= 0n) return [];
-
-  let allocated = 0n;
-  return activeWithLevel.map((facilitator, idx) => {
-    const share = idx === activeWithLevel.length - 1
-      ? residualRaw - allocated
-      : (residualRaw * facilitator.bucketLevel) / totalActiveBucketLevel;
-    allocated += share;
-    return { facilitator, share };
-  });
+/** Replace backing only inside the issuing parent; never spread deductions across unrelated buckets. */
+function allocateGhoExposure(data: GhoFacilitatorData) {
+  const modulesByParent = new Map<string, GhoTrackedModuleSnapshot[]>();
+  for (const gsmModule of data.trackedModules) {
+    const key = gsmModule.facilitatorAddress.toLowerCase();
+    const modules = modulesByParent.get(key) ?? [];
+    modules.push(gsmModule);
+    modulesByParent.set(key, modules);
+  }
+  const coveredModules: GhoTrackedModuleSnapshot[] = [];
+  const allocations: GhoFacilitatorAllocation[] = [];
+  let issuedRaw = 0n;
+  let coveredRaw = 0n;
+  for (const facilitator of data.facilitators) {
+    if (facilitator.bucketLevel <= 0n) continue;
+    issuedRaw += facilitator.bucketLevel;
+    const modules = (modulesByParent.get(facilitator.address.toLowerCase()) ?? [])
+      .filter((module) => module.currentBackingGho > 0n);
+    const backingRaw = modules.reduce((sum, module) => sum + module.currentBackingGho, 0n);
+    const parentCoveredRaw = backingRaw < facilitator.bucketLevel ? backingRaw : facilitator.bucketLevel;
+    let allocatedRaw = 0n;
+    for (const [index, module] of modules.entries()) {
+      const share = index === modules.length - 1
+        ? parentCoveredRaw - allocatedRaw
+        : parentCoveredRaw * module.currentBackingGho / backingRaw;
+      allocatedRaw += share;
+      coveredModules.push({ ...module, currentBackingGho: share });
+    }
+    coveredRaw += parentCoveredRaw;
+    allocations.push({ facilitator, share: facilitator.bucketLevel - parentCoveredRaw });
+  }
+  const exposureRaw = data.totalSupply != null && data.totalSupply > issuedRaw ? data.totalSupply : issuedRaw;
+  return { coveredModules, allocations, issuedRaw, exposureRaw, coveredRaw };
 }
 
-/**
- * Build the `ReserveSlice` value list from tracked GSM modules plus residual
- * facilitator allocations. Classifies each facilitator label via
- * `classifyFacilitatorLabel` and accumulates the raw GHO exposure routed
- * through "unknown" labels.
- *
- * If `residualRaw > 0n` but `facilitatorAllocations` is empty, a synthetic
- * "Residual facilitators / reserve buffer" high-risk slice is emitted and the
- * full residual is counted as unknown exposure.
- *
- * Invariants:
- *   - Tracked modules with `currentBackingGho <= 0n` are skipped.
- *   - `unknownResidualRaw` only accumulates `bucket === "unknown"` shares plus
- *     the no-facilitator-labels fallback.
- */
-export function buildGhoSlices(
+/** Preserve measured parent remainders plus any supply not reconciled to the registry. */
+function buildGhoSlices(
   trackedModules: readonly GhoTrackedModuleSnapshot[],
   facilitatorAllocations: readonly GhoFacilitatorAllocation[],
   residualRaw: bigint,
@@ -466,12 +458,14 @@ export function buildGhoSlices(
           issuerOrObligor: issuerForFacilitatorLabel(facilitator.label),
         });
       }
-    } else {
-      // No facilitator labels available — treat residual as unknown exposure.
-      unknownResidualRaw = residualRaw;
+    }
+    const allocatedRaw = facilitatorAllocations.reduce((sum, allocation) => sum + allocation.share, 0n);
+    const unallocatedRaw = residualRaw - allocatedRaw;
+    if (unallocatedRaw > 0n) {
+      unknownResidualRaw += unallocatedRaw;
       values.push({
         name: "Residual facilitators / reserve buffer",
-        value: scale18ToUsd(residualRaw),
+        value: scale18ToUsd(unallocatedRaw),
         risk: "high",
         assetClass: "protocol-position",
         issuerOrObligor: "Aave GHO facilitator pool",
@@ -482,24 +476,15 @@ export function buildGhoSlices(
   return { values, unknownResidualRaw };
 }
 
-/**
- * Pure constructor for the `redemption: {…}` block inside the GHO adapter
- * metadata. Encodes the GSM redemption telemetry (capacity USD, capacity
- * ratio, fee, route status) in the shape expected by downstream validators.
- *
- * Invariants:
- *   - `routeStatus === "open"` iff `immediateRedeemableRaw > 0n`.
- *   - Optional fields (`capacityRatioOfSupply`, `feeBps`) are omitted when
- *     undefined — the redemption schema treats absence as "not reported".
- */
-export function buildGhoRedemptionMetadata(telemetry: GhoRedemptionTelemetry) {
-  const { immediateRedeemableRaw, immediateRedeemableUsd, immediateRedeemableRatio, redemptionFeeBps } = telemetry;
+/** Route state is observed from flags independently of available liquidity. */
+function buildGhoRedemptionMetadata(telemetry: GhoRedemptionTelemetry) {
+  const { routeStatus, immediateRedeemableUsd, immediateRedeemableRatio, redemptionFeeBps } = telemetry;
   return {
     capacityUsd: immediateRedeemableUsd,
     ...(immediateRedeemableRatio != null ? { capacityRatioOfSupply: immediateRedeemableRatio } : {}),
     capacityKind: "live-direct" as const,
     freshnessKind: "same-run-onchain" as const,
-    routeStatus: immediateRedeemableRaw > 0n ? ("open" as const) : ("paused" as const),
+    routeStatus,
     routeStatusSource: "onchain" as const,
     holderEligibility: "any-holder" as const,
     settlementDelaySec: 0,
@@ -509,20 +494,20 @@ export function buildGhoRedemptionMetadata(telemetry: GhoRedemptionTelemetry) {
 }
 
 export function adaptGhoFacilitators(data: GhoFacilitatorData): AdapterResult {
-  const trackedBackingRaw = data.trackedModules.reduce(
-    (sum, trackedModule) => sum + trackedModule.currentBackingGho,
-    0n,
-  );
-  const residualRaw =
-    typeof data.totalSupply === "bigint" && data.totalSupply > trackedBackingRaw
-      ? data.totalSupply - trackedBackingRaw
-      : 0n;
+  const { coveredModules, allocations, issuedRaw, exposureRaw, coveredRaw } = allocateGhoExposure(data);
+  const trackedBackingRaw = data.trackedModules.reduce((sum, module) => sum + module.currentBackingGho, 0n);
+  const residualRaw = exposureRaw - coveredRaw;
   const immediateRedeemableRaw = data.trackedModules
-    .filter((trackedModule) => trackedModule.swappable)
+    .filter((trackedModule) => trackedModule.isFrozen === false && trackedModule.isSeized === false)
     .reduce((sum, trackedModule) => sum + trackedModule.currentBackingGho, 0n);
 
-  const allocations = allocateResidualByBucketLevel(data.facilitators, residualRaw);
-  const { values, unknownResidualRaw } = buildGhoSlices(data.trackedModules, allocations, residualRaw);
+  const { values, unknownResidualRaw } = buildGhoSlices(coveredModules, allocations, residualRaw);
+  const routeStatus = data.trackedModules.some((module) => module.isFrozen === false && module.isSeized === false)
+    ? "open"
+    : !data.trackedModuleReadIncomplete && data.trackedModules.length > 0
+        && data.trackedModules.every((module) => module.isFrozen === true || module.isSeized === true)
+      ? "paused"
+      : "unknown";
 
   if (values.length === 0) return { slices: [] };
 
@@ -538,12 +523,19 @@ export function adaptGhoFacilitators(data: GhoFacilitatorData): AdapterResult {
   const redemptionFeeBps = buyFeeBpsValues.length > 0 ? Math.max(...buyFeeBpsValues) : undefined;
 
   const supplyUsd = typeof data.totalSupply === "bigint" ? scale18ToUsd(data.totalSupply) : 0;
-  const unknownExposurePct = supplyUsd > 0
-    ? (scale18ToUsd(unknownResidualRaw) / supplyUsd) * 100
+  const exposureUsd = scale18ToUsd(exposureRaw);
+  const unknownExposurePct = exposureUsd > 0
+    ? (scale18ToUsd(unknownResidualRaw) / exposureUsd) * 100
     : 0;
 
   return {
     slices: slicesFromValues(values),
+    ...(data.totalSupply != null && issuedRaw > data.totalSupply
+      ? { warnings: [reserveDegradedWarning(
+          "facilitator-issuance-exceeds-supply",
+          "Observed facilitator issuance exceeds the supply observation; measured exposures are retained without global reallocation",
+        )] }
+      : {}),
     metadata: {
       ...notApplicableFreshnessMetadata({
         proofKind: "aave-gho-onchain-facilitators",
@@ -553,13 +545,13 @@ export function adaptGhoFacilitators(data: GhoFacilitatorData): AdapterResult {
       trackedGsmCount: data.trackedModules.length,
       activeTrackedGsmCount: data.trackedModules.filter((trackedModule) => trackedModule.currentBackingGho > 0n).length,
       swappableTrackedGsmCount: data.trackedModules.filter(
-        (trackedModule) => trackedModule.swappable && trackedModule.currentBackingGho > 0n,
+        (trackedModule) => trackedModule.isFrozen === false && trackedModule.isSeized === false && trackedModule.currentBackingGho > 0n,
       ).length,
       trackedGsmBackingUsd: scale18ToUsd(trackedBackingRaw),
       residualSupplyUsd: residualRaw > 0n ? scale18ToUsd(residualRaw) : 0,
       immediateRedeemableUsd,
       ...(immediateRedeemableRatio != null ? { immediateRedeemableRatio } : {}),
-      ...(typeof data.totalSupply === "bigint" ? { supplyUsd, totalReserveUsd: supplyUsd } : {}),
+      ...(typeof data.totalSupply === "bigint" ? { supplyUsd, totalReserveUsd: exposureUsd } : {}),
       ...(typeof data.totalSupply === "bigint" ? { onchainSupplyUsd: supplyUsd } : {}),
       ...(unknownExposurePct > 0 ? { unknownExposurePct } : {}),
       ...(buyFeeBpsValues.length > 0
@@ -570,7 +562,7 @@ export function adaptGhoFacilitators(data: GhoFacilitatorData): AdapterResult {
           }
         : {}),
       redemption: buildGhoRedemptionMetadata({
-        immediateRedeemableRaw,
+        routeStatus,
         immediateRedeemableUsd,
         immediateRedeemableRatio,
         redemptionFeeBps,
@@ -601,6 +593,9 @@ export async function fetchGhoReserves(
     fallbackRpcUrl: params.fallbackRpcUrl,
   });
 
+  // GHO originates on Ethereum: CCIP locks canonical GHO here and mints remote
+  // representations. This is the canonical issuance denominator, not additive
+  // chain-local circulation (https://aave.com/docs/ecosystem/gho).
   const totalSupply = await onchain.uint256(ghoToken, TOTAL_SUPPLY_SELECTOR);
   if (totalSupply == null) {
     throw new Error("gho: failed to read totalSupply()");
@@ -620,6 +615,7 @@ export async function fetchGhoReserves(
   const adapted = adaptGhoFacilitators({
     facilitators,
     trackedModules,
+    trackedModuleReadIncomplete: trackedModules.length !== params.gsmModules.length,
     totalSupply,
   });
 

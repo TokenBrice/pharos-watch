@@ -75,6 +75,7 @@
       }
     },
     "params": {
+      "navScope": "portfolio",
       "oracleAddress": "0x8D51DBC85cEef637c97D02bdaAbb5E274850e68C",
       "tokenAddress": "0x238a700ed6165261cf8b2e544ba797bc11e466ba",
       "assetLabel": "Fasanara F-ONE private-credit and digital-asset strategy NAV",

@@ -333,6 +333,9 @@ describe("fetchSkyMakercoreReserves PSM attribution", () => {
     const details = result.metadata?.details as { psmComposition?: string };
     expect(details?.psmComposition).toMatch(/USDC.*USDT.*USDP/);
     expect(result.metadata?.skyStablecoinsModuleCollateralUsd).toBe(4000000000);
+    expect(result.metadata?.totalReserveUsd).toBe(7000000000);
+    expect(result.metadata?.totalLiabilitiesUsd).toBe(7000000000);
+    expect(result.metadata?.collateralizationRatio).toBe(1);
     expect(result.metadata?.immediateRedeemableUsd).toBe(123456);
     expect(result.metadata?.redemption).toMatchObject({
       capacityUsd: 123456,

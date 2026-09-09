@@ -3,12 +3,18 @@ import type { LiveReserveAdapterKey } from "@shared/types/live-reserves";
 import { fetchThreeJaneUsd3Reserves } from "./3jane-usd3";
 import { fetchAbracadabraReserves } from "./abracadabra";
 import { fetchAccountableReserves } from "./accountable";
+import { fetchAgoraIndependentAssuranceReserves } from "./agora-independent-assurance";
 import { fetchAnzenUsdzReserves } from "./anzen-usdz";
+import { fetchAnchorageIndependentAssuranceReserves } from "./anchorage-independent-assurance";
 import { fetchAsymmetryReserves } from "./asymmetry";
 import { fetchAttestationPdfIndexReserves } from "./attestation-pdf-index";
+import { fetchAuddIndependentAssuranceReserves } from "./audd-independent-assurance";
+import { fetchBrlaIndependentAssuranceReserves } from "./brla-independent-assurance";
+import { fetchCaddIndependentAssuranceReserves } from "./cadd-independent-assurance";
 import { fetchPaxosIndependentAssuranceReserves } from "./paxos-independent-assurance";
 import { fetchIndependentAssuranceAdapter } from "./independent-assurance";
 import { fetchBlastUsdbYieldManagerReserves } from "./blast-usdb-yield-manager";
+import { fetchBridgeTransparencyReserves } from "./bridge-transparency";
 import { fetchBtcfiReserves } from "./btcfi";
 import { fetchCapVaultReserves } from "./cap-vault";
 import { fetchCircleReserves } from "./circle-transparency";
@@ -22,16 +28,22 @@ import { fetchDolaInverseReserves } from "./dola-inverse";
 import { fetchEscrowBalanceReserves } from "./escrow-balance";
 import { fetchEvmBranchBalancesReserves } from "./evm-branch-balances";
 import { fetchEthenaReserves } from "./ethena";
+import { fetchEthenaWhitelabelReserves } from "./ethena-whitelabel";
 import { fetchFalconReserves } from "./falcon";
+import { fetchFdusdIndependentAssuranceReserves } from "./fdusd-independent-assurance";
 import { fetchFdusdTransparencyReserves } from "./fdusd-transparency";
+import { fetchFiddIndependentAssuranceReserves } from "./fidd-independent-assurance";
 import { fetchFlyingTulipFtUsdReserves } from "./flying-tulip-ftusd";
 import { fetchFraxBalanceSheetReserves, fetchFraxFpiCollateralReserves } from "./frax";
 import { fetchFxReserves } from "./fx";
+import { fetchGeminiIndependentAssuranceReserves } from "./gemini-independent-assurance";
 import { fetchGhoReserves } from "./gho";
 import { fetchHiveHbdProtocolReserves } from "./hive-hbd-protocol";
 import { fetchIdleCdoEpochVariantReserves } from "./idle-cdo-epoch-variant";
 import { fetchInfiniFiReserves } from "./infinifi";
 import { fetchJupUsdReserves } from "./jupusd";
+import { fetchKavaCdpReserves } from "./kava-cdp";
+import { fetchKrwqCustodianReserves } from "./krwq-custodian";
 import { fetchListaReserves } from "./lista";
 import { fetchLiquityV1Reserves } from "./liquity-v1";
 import { fetchLiquityNativeActivePoolReserves } from "./liquity-native-active-pool";
@@ -39,6 +51,7 @@ import { fetchLiquityV2BranchReserves } from "./liquity-v2-branches";
 import { fetchM0Reserves } from "./m0";
 import { fetchM0WrapperUnderlyingReserves } from "./m0-wrapper-underlying";
 import { fetchMakinaStrategyReserves } from "./makina-strategy";
+import { fetchMegausdCustodyReserves } from "./megausd-custody";
 import { fetchMentoReserves } from "./mento";
 import { fetchMocDocReserves } from "./moc-doc";
 import { fetchUsdrifRifReserves } from "./usdrif-rif";
@@ -50,6 +63,8 @@ import { fetchPusdVaultReserves } from "./pusd-vault";
 import { fetchQuantozTransparencyReserves } from "./quantoz-transparency";
 import { fetchReMetricsReserves } from "./re-metrics";
 import { fetchResupplyPairsReserves } from "./resupply-pairs";
+import { fetchSaturnPyusdxReserves } from "./saturn-pyusdx";
+import { fetchSbcIndependentAssuranceReserves } from "./sbc-independent-assurance";
 import { fetchReserveProtocolDtfReserves } from "./reserve-protocol-dtf";
 import { fetchReservoirReserves } from "./reservoir";
 import { fetchRippleTransparencyReserves } from "./ripple-transparency";
@@ -78,6 +93,7 @@ import { fetchUsddDataPlatformReserves } from "./usdd-data-platform";
 import { fetchUsdtbTransparencyReserves } from "./usdtb-transparency";
 import { fetchYamatoReserves } from "./yamato";
 import { fetchXdaiBridgeReserves } from "./xdai-bridge";
+import { fetchXprAccountBalancesReserves } from "./xpr-account-balances";
 import { fetchZephyrScannerReserves } from "./zephyr-scanner";
 import type { AdapterFn, ReserveAdapterDefinition } from "./types";
 
@@ -87,13 +103,19 @@ export const LIVE_RESERVE_ADAPTER_FETCHERS = {
   "3jane-usd3": fetchThreeJaneUsd3Reserves,
   abracadabra: fetchAbracadabraReserves,
   accountable: fetchAccountableReserves,
+  "agora-independent-assurance": fetchAgoraIndependentAssuranceReserves,
+  "anchorage-independent-assurance": fetchAnchorageIndependentAssuranceReserves,
   "anzen-usdz": fetchAnzenUsdzReserves,
   "astherus-earn-wrapper": fetchAstherusEarnWrapperReserves,
   asymmetry: fetchAsymmetryReserves,
   "attestation-pdf-index": fetchAttestationPdfIndexReserves,
+  "audd-independent-assurance": fetchAuddIndependentAssuranceReserves,
   "audx-independent-assurance": fetchIndependentAssuranceAdapter,
   "blast-usdb-yield-manager": fetchBlastUsdbYieldManagerReserves,
+  "brla-independent-assurance": fetchBrlaIndependentAssuranceReserves,
+  "bridge-transparency": fetchBridgeTransparencyReserves,
   btcfi: fetchBtcfiReserves,
+  "cadd-independent-assurance": fetchCaddIndependentAssuranceReserves,
   "cap-vault": fetchCapVaultReserves,
   "chainlink-nav": fetchChainlinkNavCore,
   "circle-transparency": fetchCircleReserves,
@@ -106,20 +128,27 @@ export const LIVE_RESERVE_ADAPTER_FETCHERS = {
   "erc4626-single-asset": fetchErc4626SingleAssetReserves,
   "escrow-balance": fetchEscrowBalanceReserves,
   ethena: fetchEthenaReserves,
+  "ethena-whitelabel": fetchEthenaWhitelabelReserves,
   "europ-independent-assurance": fetchIndependentAssuranceAdapter,
   "evm-branch-balances": fetchEvmBranchBalancesReserves,
   falcon: fetchFalconReserves,
+  "fdusd-independent-assurance": fetchFdusdIndependentAssuranceReserves,
   "fdusd-transparency": fetchFdusdTransparencyReserves,
+  "fidd-independent-assurance": fetchFiddIndependentAssuranceReserves,
   "flying-tulip-ftusd": fetchFlyingTulipFtUsdReserves,
   "frax-balance-sheet": fetchFraxBalanceSheetReserves,
   "frax-fpi-collateral": fetchFraxFpiCollateralReserves,
   fx: fetchFxReserves,
+  "gemini-independent-assurance": fetchGeminiIndependentAssuranceReserves,
   gho: fetchGhoReserves,
   "hive-hbd-protocol": fetchHiveHbdProtocolReserves,
   "idle-cdo-epoch-variant": fetchIdleCdoEpochVariantReserves,
   infinifi: fetchInfiniFiReserves,
   "initia-wrapper-vault": fetchInitiaWrapperVaultReserves,
+  "issuer-attested-report": fetchIndependentAssuranceAdapter,
   jupusd: fetchJupUsdReserves,
+  "kava-cdp": fetchKavaCdpReserves,
+  "krwq-custodian": fetchKrwqCustodianReserves,
   lista: fetchListaReserves,
   "liquity-v1": fetchLiquityV1Reserves,
   "liquity-native-active-pool": fetchLiquityNativeActivePoolReserves,
@@ -127,6 +156,7 @@ export const LIVE_RESERVE_ADAPTER_FETCHERS = {
   m0: fetchM0Reserves,
   "m0-wrapper-underlying": fetchM0WrapperUnderlyingReserves,
   "makina-strategy": fetchMakinaStrategyReserves,
+  "megausd-custody": fetchMegausdCustodyReserves,
   mento: fetchMentoReserves,
   "moc-doc": fetchMocDocReserves,
   "moc-v3-buckets": fetchUsdrifRifReserves,
@@ -138,6 +168,8 @@ export const LIVE_RESERVE_ADAPTER_FETCHERS = {
   "quantoz-transparency": fetchQuantozTransparencyReserves,
   "re-metrics": fetchReMetricsReserves,
   "resupply-pairs": fetchResupplyPairsReserves,
+  "saturn-pyusdx": fetchSaturnPyusdxReserves,
+  "sbc-independent-assurance": fetchSbcIndependentAssuranceReserves,
   "reserve-protocol-dtf": fetchReserveProtocolDtfReserves,
   reservoir: fetchReservoirReserves,
   "ripple-transparency": fetchRippleTransparencyReserves,
@@ -164,6 +196,7 @@ export const LIVE_RESERVE_ADAPTER_FETCHERS = {
   "usdd-data-platform": fetchUsddDataPlatformReserves,
   "usdtb-transparency": fetchUsdtbTransparencyReserves,
   "xdai-bridge": fetchXdaiBridgeReserves,
+  "xpr-account-balances": fetchXprAccountBalancesReserves,
   yamato: fetchYamatoReserves,
   "zephyr-scanner": fetchZephyrScannerReserves,
 } satisfies Record<LiveReserveAdapterKey, AdapterFn>;

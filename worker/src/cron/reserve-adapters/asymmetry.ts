@@ -96,6 +96,13 @@ export function adaptAsymmetry(payload: AsymmetryPayload): AdapterResult {
       activeBranchCount: entries.length,
       unknownBranchCount: warnings.filter((w) => w.code === "unknown-branch").length,
       unknownExposurePct: total > 0 ? (unknownExposureUsd / total) * 100 : 0,
+      totalReserveUsd: total,
+      ...(supplyValid
+        ? {
+            supplyUsd: supply,
+            collateralizationRatio: total / supply,
+          }
+        : {}),
       ...(supplyValid
         ? {
             immediateRedeemableUsd: capacityUsd,

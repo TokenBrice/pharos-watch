@@ -66,20 +66,25 @@
   "custodyModel": "institutional-top",
   "governanceQuality": "regulated-entity",
   "liveReservesConfig": {
-    "adapter": "curated-validated",
-    "version": 1,
+    "adapter": "fidd-independent-assurance",
+    "version": 2,
     "semantics": "attestation-mix",
     "breakerScope": "fidd-fidelity",
     "display": {
       "url": "https://www.fidelitydigitalassets.com/stablecoin",
-      "label": "Fidelity"
+      "label": "Fidelity Digital Assets"
     },
     "inputs": {
       "primary": {
-        "kind": "onchain-evm",
-        "chain": "ethereum",
-        "rpcMode": "public-rpc"
+        "kind": "http-html",
+        "url": "https://www.fidelitydigitalassets.com/stablecoin"
       }
+    },
+    "params": {
+      "product": "FIDD",
+      "profile": "fidd-v1",
+      "indexHost": "www.fidelitydigitalassets.com",
+      "reportHosts": ["fwc.widen.net"]
     }
   },
   "launchDate": "2026-02-04"

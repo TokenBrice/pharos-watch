@@ -20,6 +20,37 @@
       "decimals": 18
     }
   ],
+  "liveReservesConfig": {
+    "adapter": "accountable",
+    "version": 1,
+    "semantics": "collateral-mix",
+    "breakerScope": "trusd-tori",
+    "display": {
+      "url": "https://tori.accountable.capital/",
+      "label": "Accountable Dashboard"
+    },
+    "inputs": {
+      "primary": {
+        "kind": "http-json",
+        "url": "https://cache.accountable.capital/dashboard/tori"
+      }
+    },
+    "params": {
+      "layout": "asset-breakdown",
+      "riskMap": {
+        "Money Markets": "medium",
+        "Cash & Equivalents": "medium",
+        "Delta-Neutral Futures Arbitrage": "high",
+        "On-chain Buffer": "low"
+      },
+      "renameMap": {
+        "Money Markets": "Hedged money-market positions at undisclosed custodians (asset-manager mandate)",
+        "Delta-Neutral Futures Arbitrage": "Delta-neutral futures arbitrage and calendar-spread positions",
+        "Cash & Equivalents": "Cash and equivalents held as FX collateral at investment banks and exchange venues",
+        "On-chain Buffer": "On-chain stablecoin buffer in the minting custodian wallet"
+      }
+    }
+  },
   "proofOfReserves": {
     "type": "real-time",
     "url": "https://app.tori.finance/transparency",

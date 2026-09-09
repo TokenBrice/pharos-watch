@@ -147,4 +147,118 @@ describe("adaptSolsticeAttestation", () => {
     expect(fresh.warnings).not.toContainEqual(expect.objectContaining({ code: "stale-source-data" }));
     expect(stale.warnings).toContainEqual(expect.objectContaining({ code: "stale-source-data", effect: "degraded" }));
   });
+
+  it("emits the attestations evidence basis from the same payload without warnings", () => {
+    const result = adaptSolsticeAttestation({
+      res: "ok",
+      data: {
+        collateralization: 1.004,
+        ts: "1788944462773",
+        attestations: {
+          sev: { addr: "0x9F6745D25E4cc6ad6A0a96F37721Fb495108F794" },
+          merkle_root: { rootHash: "GoShEX4gMDc9Y63zmyo6V51wx6uXWq7dXxfoALWSgWz2", ts: 1788968394288 },
+          snapshot: { ts: 1788967832500 },
+          zkp: {
+            liabilities: { params: JSON.stringify({ dataHash: "7CwrfdDDyytZfKucpRmXBGLb41LQwhTEjumFDyBVkhy3" }) },
+            collateral: { params: JSON.stringify({ dataHash: "DjrDyfVkAkW7KevtLuE5CbxNr2hAiFfEyAytDTUjuKe5" }) },
+          },
+        },
+        reserves: {
+          total_reserves: { value: 1000 },
+          total_supply: { value: 900 },
+          timeline: [{ ts: "1788944462773", reserves: 1000, supply: 900 }],
+        },
+      },
+    });
+    expect(result.metadata?.details).toEqual({
+      evidenceBasis: {
+        merkleRoot: "GoShEX4gMDc9Y63zmyo6V51wx6uXWq7dXxfoALWSgWz2",
+        zkpLiabilitiesHash: "7CwrfdDDyytZfKucpRmXBGLb41LQwhTEjumFDyBVkhy3",
+        zkpCollateralHash: "DjrDyfVkAkW7KevtLuE5CbxNr2hAiFfEyAytDTUjuKe5",
+        snapshotTsMs: 1_788_967_832_500,
+        sevAttestation: "0x9F6745D25E4cc6ad6A0a96F37721Fb495108F794",
+      },
+    });
+    expect(result.metadata).toMatchObject({ attestedTotalReservesUsd: 1000, attestedTotalSupplyUsd: 900 });
+    expect(result.warnings ?? []).toEqual([]);
+  });
+
+  it("degrades when headline totals diverge from the timeline beyond 0.5% and stays quiet within it", () => {
+    const mismatched = adaptSolsticeAttestation({
+      res: "ok",
+      data: {
+        reserves: {
+          total_reserves: { value: 990 },
+          total_supply: { value: 900 },
+          timeline: [{ reserves: 1000, supply: 900 }],
+        },
+      },
+    });
+    expect(mismatched.warnings).toContainEqual(expect.objectContaining({
+      code: "solstice-timeline-total-mismatch",
+      severity: "warning",
+      effect: "degraded",
+    }));
+    const quiet = adaptSolsticeAttestation({
+      res: "ok",
+      data: {
+        reserves: {
+          total_reserves: { value: 996 },
+          total_supply: { value: 900 },
+          timeline: [{ reserves: 1000, supply: 900 }],
+        },
+      },
+    });
+    expect(quiet.warnings).not.toContainEqual(
+      expect.objectContaining({ code: "solstice-timeline-total-mismatch" }),
+    );
+  });
+
+  it("warns info instead of failing when the attestations block is missing", () => {
+    const result = adaptSolsticeAttestation({
+      res: "ok",
+      data: {
+        reserves: {
+          total_reserves: { value: 1000 },
+          total_supply: { value: 900 },
+          timeline: [{ reserves: 1000, supply: 900 }],
+        },
+      },
+    });
+    expect(result.warnings).toContainEqual(expect.objectContaining({
+      code: "solstice-attestations-unavailable",
+      severity: "info",
+      effect: "info",
+    }));
+    expect(result.metadata?.details).not.toHaveProperty("evidenceBasis");
+    const adapter = getReserveAdapter("solstice-attestation")!;
+    expect(validateAdapterOutput(result, { adapter }).valid).toBe(true);
+  });
+
+  it("reports a partial evidence basis when proof fields are missing", () => {
+    const result = adaptSolsticeAttestation({
+      res: "ok",
+      data: {
+        ts: "1776264425730",
+        attestations: {
+          merkle_root: { rootHash: "GoShEX4gMDc9Y63zmyo6V51wx6uXWq7dXxfoALWSgWz2" },
+        },
+        reserves: { timeline: [{ ts: "1776264425730", reserves: 1000, supply: 900 }] },
+      },
+    });
+    expect(result.metadata?.details).toEqual({
+      evidenceBasis: {
+        merkleRoot: "GoShEX4gMDc9Y63zmyo6V51wx6uXWq7dXxfoALWSgWz2",
+        zkpLiabilitiesHash: null,
+        zkpCollateralHash: null,
+        snapshotTsMs: null,
+        sevAttestation: null,
+      },
+    });
+    expect(result.warnings).toContainEqual(expect.objectContaining({
+      code: "solstice-evidence-basis-partial",
+      severity: "info",
+    }));
+  });
+
 });

@@ -295,6 +295,9 @@ export async function fetchSkyMakercoreReserves(
     metadata: {
       tokenCount: groups.length,
       totalCollateralUsd: Math.round(totalCollateralUsd),
+      totalReserveUsd: Math.round(totalCollateralUsd),
+      totalLiabilitiesUsd: Math.round(totalDebt),
+      ...(totalDebt > 0 ? { collateralizationRatio: totalCollateralUsd / totalDebt } : {}),
       skyStablecoinsModuleCollateralUsd: immediateRedeemableUsd,
       ...(litePsmCapacity ? { immediateRedeemableUsd: litePsmCapacity.capacityUsd } : {}),
       ...(timestampSummary != null ? { snapshotDate: timestampSummary.sourceTimestamp } : {}),

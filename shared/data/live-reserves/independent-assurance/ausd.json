@@ -1,0 +1,68 @@
+{
+  "schemaVersion": 1,
+  "product": "AUSD",
+  "profile": "ausd-v1",
+  "officialIndexUrl": "https://docs.agora.finance/developer/transparency",
+  "reportUrl": "https://files.buildwithfern.com/agora.docs.buildwithfern.com/377372bfa35fa0c22ea1113fde44f99459f3c5f3dfa547bbf3ab692d71aac53d/docs/assets/2026%20Jul%20-%20Agora%20Dollar%20Reserve%20Report.pdf",
+  "reportSha256": "377372bfa35fa0c22ea1113fde44f99459f3c5f3dfa547bbf3ab692d71aac53d",
+  "reportByteLength": 916656,
+  "reportDate": "2026-07-31",
+  "reportAsOf": "2026-07-31T23:59:00+00:00",
+  "reportTimeZone": "UTC (as printed in the report)",
+  "attestor": "Grant Thornton LLP",
+  "engagement": "Independent certified public accountants' examination under AICPA attestation standards",
+  "conclusion": "unmodified",
+  "unit": "USD",
+  "assets": [
+    {
+      "code": "us-treasury-securities",
+      "label": "Short-dated U.S. Treasury securities held in the Agora Reserve Fund",
+      "amount": "61365065"
+    },
+    {
+      "code": "us-treasury-repos",
+      "label": "Overnight U.S. Treasury repurchase agreements held in the Agora Reserve Fund",
+      "amount": "114933254"
+    },
+    {
+      "code": "fund-cash",
+      "label": "Cash held in the Agora Reserve Fund at regulated financial institutions",
+      "amount": "10510374"
+    },
+    {
+      "code": "company-cash",
+      "label": "Cash held by Agora Bermuda Limited at regulated financial institutions",
+      "amount": "48604476"
+    },
+    {
+      "code": "stablecoins",
+      "label": "U.S. dollar stablecoins held in segregated wallets",
+      "amount": "6063786"
+    }
+  ],
+  "liabilities": [
+    {
+      "code": "ausd-in-circulation",
+      "label": "AUSD in circulation across all AUSD Approved Blockchains",
+      "amount": "240745867"
+    }
+  ],
+  "adjustments": [
+    {
+      "code": "ausd-created-excluded",
+      "label": "AUSD Created — minted but not yet distributed to third-party holders, excluded from AUSD in circulation",
+      "amount": "24127673",
+      "treatment": "Excluded from liabilities under the report's circulation criteria: AUSD Created that is solely custodied by the Company is not considered in circulation. Reported total supply 264,873,540 less excluded AUSD Created 24,127,673 equals 240,745,867 in circulation."
+    }
+  ],
+  "reportedAssetTotal": "241476955",
+  "computedAssetTotal": "241476955",
+  "reportedLiabilityTotal": "240745867",
+  "extraction": {
+    "tool": "Poppler pdftotext -layout",
+    "parserVersion": "26.07.0",
+    "normalizedTextSha256": "960d5ff7319b8bd10b01ba46b1fdf40e980cb647595fdf9e24c4459d8e19f995",
+    "pageCount": 9
+  },
+  "assuranceTier": "independent-assurance"
+}

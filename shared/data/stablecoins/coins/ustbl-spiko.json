@@ -99,9 +99,10 @@
       }
     },
     "params": {
+      "navScope": "native-fund-share",
       "oracleAddress": "0x477e363c51Ab0C4D13B22CD6B57D56d4a3Cb7Abe",
       "tokenAddress": "0xe4880249745eac5f1ed9d8f7df844792d560e750",
-      "assetLabel": "Spiko US T-Bills Money Market Fund NAV",
+      "assetLabel": "Spiko US T-Bills Money Market Fund shares",
       "assetRisk": "low",
       "oracleMethod": "latestRoundData",
       "maxOracleAgeSec": 345600

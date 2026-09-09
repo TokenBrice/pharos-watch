@@ -132,8 +132,8 @@
   "custodyModel": "institutional-regulated",
   "governanceQuality": "regulated-entity",
   "liveReservesConfig": {
-    "adapter": "curated-validated",
-    "version": 1,
+    "adapter": "sbc-independent-assurance",
+    "version": 2,
     "semantics": "attestation-mix",
     "breakerScope": "sbc-brale",
     "display": {
@@ -142,10 +142,15 @@
     },
     "inputs": {
       "primary": {
-        "kind": "onchain-evm",
-        "chain": "ethereum",
-        "rpcMode": "public-rpc"
+        "kind": "http-html",
+        "url": "https://brale.xyz/stablecoins/SBC"
       }
+    },
+    "params": {
+      "product": "SBC",
+      "profile": "sbc-v1",
+      "indexHost": "brale.xyz",
+      "reportHosts": ["brale.xyz"]
     }
   },
   "launchDate": "2022-08-02"

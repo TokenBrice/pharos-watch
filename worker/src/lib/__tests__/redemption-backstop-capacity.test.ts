@@ -263,6 +263,25 @@ describe("resolveRedemptionCapacity — reserve-sync over-provisioned clamp", ()
     expect(result.notes).toContain("Live redemption daily limit caps usable scoring capacity");
   });
 
+  it("downgrades a direct-capacity claim when live settlement requires a cooldown", async () => {
+    const result = await resolveRedemptionCapacity(
+      {} as D1Database, "lusd-liquity", { kind: "reserve-sync-metadata" }, 1_000_000, now,
+      { reserveSnapshotMetadata: baseSnapshot({
+        freshnessMode: "not-applicable",
+        redemption: {
+          capacityUsd: 1_000_000, capacityRatioOfSupply: 1,
+          capacityKind: "live-direct", freshnessKind: "same-run-onchain",
+          settlementDelaySec: 86_400, routeStatus: "open", routeStatusSource: "onchain",
+        },
+      }) },
+    );
+    expect(result).toMatchObject({
+      capacityKind: "documented-bound", capacityConfidence: "documented-bound",
+      settlementDelaySec: 86_400, immediateCapacityUsd: 1_000_000,
+      capacityProfile: { capacityProfileConfidence: "documented-bound" },
+    });
+  });
+
   it("preserves exact live reserve-sync capacity output when ratio telemetry overrides derived ratio", async () => {
     const db = {} as D1Database;
     const result = await resolveRedemptionCapacity(

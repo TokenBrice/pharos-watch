@@ -80,20 +80,27 @@
   "collateralQuality": "rwa",
   "governanceQuality": "single-entity",
   "liveReservesConfig": {
-    "adapter": "curated-validated",
-    "version": 1,
+    "adapter": "brla-independent-assurance",
+    "version": 2,
     "semantics": "attestation-mix",
     "breakerScope": "brla-brla-digital",
     "display": {
-      "url": "https://avenia.io/brla",
-      "label": "Avenia BRLA"
+      "url": "https://brladigital.notion.site/BRLA-Transparency-Page-238ba143aa2f4338902ee91ebe50298a",
+      "label": "BRLA Digital transparency"
     },
     "inputs": {
       "primary": {
-        "kind": "onchain-evm",
-        "chain": "polygon",
-        "rpcMode": "public-rpc"
+        "kind": "http-html",
+        "url": "https://brladigital.notion.site/BRLA-Transparency-Page-238ba143aa2f4338902ee91ebe50298a"
       }
+    },
+    "params": {
+      "product": "BRLA",
+      "profile": "brla-v1",
+      "indexHost": "brladigital.notion.site",
+      "reportHosts": [
+        "file.notion.so"
+      ]
     }
   },
   "launchDate": "2023-04-18",

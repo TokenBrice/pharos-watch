@@ -134,8 +134,8 @@
   "custodyModel": "institutional-top",
   "governanceQuality": "regulated-entity",
   "liveReservesConfig": {
-    "adapter": "curated-validated",
-    "version": 1,
+    "adapter": "agora-independent-assurance",
+    "version": 2,
     "semantics": "attestation-mix",
     "breakerScope": "ausd-agora",
     "display": {
@@ -144,10 +144,17 @@
     },
     "inputs": {
       "primary": {
-        "kind": "onchain-evm",
-        "chain": "ethereum",
-        "rpcMode": "public-rpc"
+        "kind": "http-html",
+        "url": "https://docs.agora.finance/developer/transparency"
       }
+    },
+    "params": {
+      "product": "AUSD",
+      "profile": "ausd-v1",
+      "indexHost": "docs.agora.finance",
+      "reportHosts": [
+        "files.buildwithfern.com"
+      ]
     }
   },
   "launchDate": "2024-07-07"

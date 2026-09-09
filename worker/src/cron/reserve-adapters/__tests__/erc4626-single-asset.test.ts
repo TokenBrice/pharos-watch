@@ -115,7 +115,7 @@ describe("fetchErc4626SingleAssetReserves", () => {
     resetRpcMocks();
   });
 
-  it("returns a 100% single-asset slice after probing ERC-4626 state", async () => {
+  it("separates held collateral from deployed strategy exposure", async () => {
     const balanceOfCalls: Array<{ to?: string; data: string }> = [];
     mockErc4626Rpc({ extraHandlers: [({ call }) => {
       if (call?.data.startsWith("0x70a08231")) balanceOfCalls.push(call);
@@ -125,13 +125,13 @@ describe("fetchErc4626SingleAssetReserves", () => {
     const result = await runTrackedVault("syrupusdc-maple");
 
     expect(result.slices).toEqual([
-      {
-        name: "USDC-denominated loan receivables",
-        pct: 100,
+      expect.objectContaining({
+        pct: 25,
         risk: "medium",
         coinId: "usdc-circle",
         depType: "wrapper",
-      },
+      }),
+      expect.objectContaining({ pct: 75, risk: "high" }),
     ]);
     expect(result.warnings).toBeUndefined();
     expect(result.metadata).toMatchObject({
@@ -142,12 +142,12 @@ describe("fetchErc4626SingleAssetReserves", () => {
       totalAssetsRaw: "100000000",
       totalSupplyRaw: "100000000",
       convertToAssetsRaw: "100000000",
-      collateralizationRatio: 1,
       idleUnderlyingBalanceRaw: "25000000",
       underlyingDecimals: 6,
       details: {
         proofKind: "erc4626-total-assets",
         assetAddressMatchesExpected: true,
+        navConsistencyRatio: 1,
       },
       redemption: {
         capacityUsd: 25,
@@ -171,8 +171,8 @@ describe("fetchErc4626SingleAssetReserves", () => {
     const result = await runTrackedVault("syrupusdc-maple");
 
     expect(result.metadata).toMatchObject({
-      collateralizationRatio: 1.01,
       convertToAssetsRaw: convertedAssetsRaw.toString(),
+      details: { navConsistencyRatio: 1.01 },
     });
     expect(result.warnings).toContainEqual(expect.objectContaining({
       code: "erc4626-nav-divergence",
@@ -204,11 +204,10 @@ describe("fetchErc4626SingleAssetReserves", () => {
       totalAssetsRaw: "100000000",
       totalSupplyRaw: "100000000",
       convertToAssetsRaw: "100000000",
-      collateralizationRatio: 1,
+      details: { navConsistencyRatio: 1 },
       redemption: {
         capacityKind: "documented-eventual",
         freshnessKind: "same-run-onchain",
-        routeStatus: "unknown",
       },
     });
     expect(result.metadata).not.toHaveProperty("assetAddress");
@@ -243,12 +242,12 @@ describe("fetchErc4626SingleAssetReserves", () => {
         totalAssetsRaw: "100000000",
       });
       if (field === "totalSupply" || field === "convertedAssets") {
-        expect(result.metadata).not.toHaveProperty("collateralizationRatio");
+        expect(result.metadata?.details).not.toHaveProperty("navConsistencyRatio");
         expect(result.metadata).not.toHaveProperty("convertToAssetsRaw");
         expect(result.metadata?.redemption).toMatchObject({ capacityUsd: 25 });
       } else {
         expect(result.metadata?.redemption).not.toHaveProperty("capacityUsd");
-        expect(result.metadata?.redemption).toMatchObject({ capacityKind: "documented-eventual", routeStatus: "unknown" });
+        expect(result.metadata?.redemption).toMatchObject({ capacityKind: "documented-eventual" });
       }
     },
   );
@@ -276,7 +275,7 @@ describe("fetchErc4626SingleAssetReserves", () => {
 
     const result = await runTrackedVault("syrupusdc-maple");
 
-    expect(result.warnings).toBeUndefined();
+    expect(result.warnings).toContainEqual(expect.objectContaining({ code: "erc4626-redemption-paused", effect: "degraded" }));
     expect(result.metadata).toMatchObject({
       idleUnderlyingBalanceRaw: "25000000",
       redemption: {
@@ -356,7 +355,7 @@ describe("fetchErc4626SingleAssetReserves", () => {
 
     const result = await runTrackedVault("syrupusdc-maple", withRedemptionLiquidity({ source: "yearn-v3-withdrawable", settlementDelaySec: 0 }));
 
-    expect(result.warnings).toBeUndefined();
+    expect(result.warnings).toContainEqual(expect.objectContaining({ code: "erc4626-redemption-paused", effect: "degraded" }));
     expect(result.metadata).toMatchObject({
       redemptionCapacityRaw: "85000000",
       redemption: {
@@ -595,7 +594,7 @@ describe("fetchErc4626SingleAssetReserves", () => {
       },
     });
     expect(result.metadata).not.toHaveProperty("convertToAssetsRaw");
-    expect(result.metadata).not.toHaveProperty("collateralizationRatio");
+    expect(result.metadata?.details).not.toHaveProperty("navConsistencyRatio");
     expect(conversionCalls).toEqual([]);
   });
 
@@ -610,7 +609,7 @@ describe("fetchErc4626SingleAssetReserves", () => {
         severity: "warning",
       }),
     ]);
-    expect(result.metadata?.collateralizationRatio).toBeCloseTo(1.1, 2);
+    expect(result.metadata?.details?.navConsistencyRatio).toBeCloseTo(1.1, 2);
     expect(result.metadata?.redemption?.routeStatus).toBe("degraded");
   });
 
@@ -625,15 +624,8 @@ describe("fetchErc4626SingleAssetReserves", () => {
       "https://rpc.plasma.to",
       "https://rpc.plasma.to",
     ]);
-    expect(result.slices).toEqual([
-      {
-        name: "Yuzu USD staking vault shares",
-        pct: 100,
-        risk: "high",
-        coinId: "yzusd-yuzu",
-        depType: "wrapper",
-      },
-    ]);
+    expect(result.slices).toEqual([expect.objectContaining({ pct: 100, risk: "high" })]);
+    expect(result.slices[0]).not.toHaveProperty("coinId");
     expect(result.metadata).toMatchObject({
       chain: "plasma",
       contractAddress: "0xc8a8df9b210243c55d31c73090f06787ad0a1bf6",
@@ -647,22 +639,20 @@ describe("fetchErc4626SingleAssetReserves", () => {
 
   it("probes Avant savUSD as a high-risk avUSD wrapper", async () => {
     const scenario = catalogCases[1];
-    mockErc4626Rpc({ asset: scenario.asset, vault: scenario.vault, idleBalance: 0, decimals: 18 });
+    mockErc4626Rpc({
+      asset: scenario.asset, vault: scenario.vault, idleBalance: 0, decimals: 18,
+      extraHandlers: [({ call }) => call?.data === "0x35269315"
+        ? jsonResponse({ result: uint256Result(86_400) }) : undefined],
+    });
 
     const result = await runTrackedVault(scenario.id);
 
-    expect(result.slices).toEqual([
-      {
-        name: "avUSD savings vault shares",
-        pct: 100,
-        risk: "high",
-        coinId: "avusd-avant",
-        depType: "wrapper",
-      },
-    ]);
+    expect(result.slices).toEqual([expect.objectContaining({ pct: 100, risk: "high" })]);
+    expect(result.slices[0]).not.toHaveProperty("coinId");
     expect(result.metadata).toMatchObject({
       chain: "avalanche",
       assetAddress: "0x24de8771bc5ddb3362db529fc3358f2df3a0e346",
+      redemption: { capacityKind: "documented-bound", settlementDelaySec: 86_400 },
       details: {
         assetAddressMatchesExpected: true,
       },
@@ -675,15 +665,8 @@ describe("fetchErc4626SingleAssetReserves", () => {
 
     const result = await runTrackedVault(scenario.id);
 
-    expect(result.slices).toEqual([
-      {
-        name: "Senior tranche USDe vault shares",
-        pct: 100,
-        risk: "high",
-        coinId: "usde-ethena",
-        depType: "wrapper",
-      },
-    ]);
+    expect(result.slices).toEqual([expect.objectContaining({ pct: 100, risk: "high" })]);
+    expect(result.slices[0]).not.toHaveProperty("coinId");
     expect(result.metadata).toMatchObject({
       chain: "ethereum",
       assetAddress: "0x4c9edd5852cd905f086c759e8383e09bff1e68b3",

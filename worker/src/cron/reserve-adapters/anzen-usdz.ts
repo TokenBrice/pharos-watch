@@ -447,15 +447,19 @@ export async function fetchAnzenUsdzReserves(
   const pooledSpctRaw = requireUint(ethereum.values, "usdz:total-pooled-spct");
   const heldSpctRaw = requireUint(ethereum.values, "spct:balance-of-usdz");
   const liabilityRaw = chainObservations.reduce((sum, observation) => sum + observation.rawSupply, 0n);
+  const oraclePriceRaw = requireUint(ethereum.values, "oracle:price");
+  const backedSpctRaw = heldSpctRaw < pooledSpctRaw ? heldSpctRaw : pooledSpctRaw;
+  // getPrice() is USD per SPCT at 18 decimals, matching collateralRate().
+  const reserveValueRaw = backedSpctRaw * oraclePriceRaw / 10n ** 18n;
   const surplusRaw = pooledSpctRaw - liabilityRaw;
   const toleranceRaw = (liabilityRaw / 10_000n) > 1_000n * 10n ** 18n
     ? liabilityRaw / 10_000n
     : 1_000n * 10n ** 18n;
   const warnings = [];
-  if (heldSpctRaw < pooledSpctRaw || pooledSpctRaw < liabilityRaw || liabilityRaw === 0n) {
+  if (heldSpctRaw < pooledSpctRaw || reserveValueRaw < liabilityRaw || liabilityRaw === 0n) {
     warnings.push(reserveDegradedWarning(
       "reserve-undercollateralized",
-      `USDz observed pooled SPCT ${pooledSpctRaw}, held SPCT ${heldSpctRaw}, and liabilities ${liabilityRaw}`,
+      `USDz observed pooled SPCT ${pooledSpctRaw}, held SPCT ${heldSpctRaw}, oracle-valued reserve ${reserveValueRaw}, and liabilities ${liabilityRaw}`,
     ));
   }
   if (surplusRaw > toleranceRaw) {
@@ -470,19 +474,18 @@ export async function fetchAnzenUsdzReserves(
     decimalNumberFromBigInt(observation.rawSupply, observation.decimals),
   ])) as Record<SupportedSupplyChain, number>;
   const supplyUsd = decimalNumberFromBigInt(liabilityRaw, SPCT_POOL_DECIMALS);
-  const backedSpctRaw = heldSpctRaw < pooledSpctRaw ? heldSpctRaw : pooledSpctRaw;
-  const totalReserveUsd = decimalNumberFromBigInt(backedSpctRaw, SPCT_POOL_DECIMALS);
+  const totalReserveUsd = decimalNumberFromBigInt(reserveValueRaw, SPCT_POOL_DECIMALS);
   if (!Number.isFinite(supplyUsd) || !Number.isFinite(totalReserveUsd)) {
     throw new Error(`${ADAPTER_KEY} computed invalid USDz reserve totals`);
   }
 
   return {
-    slices: [{ name: "SPCT (Secured Private Credit Token)", pct: 100, risk: "high" }],
+    slices: [{ name: "SPCT (Secured Private Credit Token)", pct: 100, risk: "high", blacklistable: true }],
     ...(warnings.length > 0 ? { warnings } : {}),
     metadata: {
       ...notApplicableFreshnessMetadata({
         proofKind: "multichain-usdz-pooled-spct-v2",
-        reserveSourceLabel: "USDz totalPooledSPCT() reconciled to held SPCT",
+        reserveSourceLabel: "Oracle-valued USDz totalPooledSPCT() reconciled to held SPCT",
         supplySourceLabel: "USDz totalSupply() across reviewed OFT/native deployments",
       }),
       totalReserveUsd,
@@ -490,12 +493,14 @@ export async function fetchAnzenUsdzReserves(
       ...(supplyUsd > 0 ? { collateralizationRatio: totalReserveUsd / supplyUsd } : {}),
       details: {
         proofKind: "multichain-usdz-pooled-spct-v2",
-        reserveSourceLabel: "USDz totalPooledSPCT() reconciled to held SPCT",
+        reserveSourceLabel: "Oracle-valued USDz totalPooledSPCT() reconciled to held SPCT",
         supplySourceLabel: "USDz totalSupply() across reviewed OFT/native deployments",
         reserveContract: SPCT_POOL_CONTRACT,
         reserveChain: "ethereum",
         accountedSpctRaw: pooledSpctRaw.toString(),
         heldSpctRaw: heldSpctRaw.toString(),
+        oraclePriceRaw: oraclePriceRaw.toString(),
+        oraclePriceDecimals: 18,
         liabilityRaw: liabilityRaw.toString(),
         surplusSpct: decimalNumberFromBigInt(surplusRaw, SPCT_POOL_DECIMALS),
         underlyingLoanBookScope: "outside adapter composition scope",

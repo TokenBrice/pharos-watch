@@ -4,6 +4,7 @@ import type { LiveReservesConfig, LiveReserveWarning } from "@shared/types/live-
 import type { AdapterContext, AdapterResult } from "./types";
 import { toErrorMessage } from "@shared/lib/error-utils";
 import {
+  buildCoverageShortfallWarnings,
   buildRedemptionSnapshotMetadata,
   buildUnknownExposureWarning,
   catchAndWarn,
@@ -155,7 +156,12 @@ export function adaptJupUsdData(
     ? (options.oracle.ripcordDetails || "JupUSD oracle reports ripcord mode")
     : undefined;
   const totalSupply = parseAmount(payload.totalSupply, 6);
-  const ratio = totalSupply > 0 ? Math.min(1, totalReserveUsd / totalSupply) : undefined;
+  // True assets ÷ liability: never clamped, so genuine overcollateralization
+  // shows and a shortfall degrades per the undercollateralization policy.
+  const collateralizationRatio = totalSupply > 0 ? totalReserveUsd / totalSupply : undefined;
+  // Redemption capacity is clamped to the supply that can actually be redeemed.
+  const capacityUsd = totalSupply > 0 ? Math.min(totalReserveUsd, totalSupply) : totalReserveUsd;
+  const ratio = totalSupply > 0 ? capacityUsd / totalSupply : undefined;
   const unknownExposurePct = totalReserveUsd > 0 ? (unknownValue / totalReserveUsd) * 100 : 0;
   const warnings: LiveReserveWarning[] = [];
   if (unknownValue > 0) {
@@ -168,6 +174,12 @@ export function adaptJupUsdData(
   if (options.extraWarnings?.length) {
     warnings.push(...options.extraWarnings);
   }
+  warnings.push(...buildCoverageShortfallWarnings({
+    code: "reserve-undercollateralized",
+    message: (pct) => `JupUSD reserve holdings cover ${pct}% of reported supply`,
+    coverageRatio: collateralizationRatio,
+    thresholdRatio: 1,
+  }));
 
   return {
     slices: normalizeSlices(
@@ -183,12 +195,13 @@ export function adaptJupUsdData(
     metadata: {
       totalReserveUsd,
       ...(totalSupply > 0 ? { supplyUsd: totalSupply } : {}),
+      ...(collateralizationRatio != null ? { collateralizationRatio } : {}),
       unknownExposurePct,
       ...(unknownHoldingNames.size > 0 ? { unknownHoldingNames: Array.from(unknownHoldingNames).sort() } : {}),
-      immediateRedeemableUsd: totalReserveUsd,
+      immediateRedeemableUsd: capacityUsd,
       ...(ratio != null ? { immediateRedeemableRatio: ratio } : {}),
       ...buildRedemptionSnapshotMetadata({
-        capacityUsd: totalReserveUsd,
+        capacityUsd,
         ...(ratio != null ? { capacityRatioOfSupply: ratio } : {}),
         capacityKind: "live-direct-bounded",
         freshnessKind: sourceTimestamp != null ? "verified-source-timestamp" : "same-run-api",

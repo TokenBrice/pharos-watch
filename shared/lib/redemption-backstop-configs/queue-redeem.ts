@@ -360,7 +360,7 @@ const RAW_QUEUE_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopConfig
       "Ethena staking includes jurisdictional and sanctions-based restrictions on the staking contract itself, so the wrapper route is modeled as whitelisted-onchain rather than fully permissionless",
     ],
     telemetrySubject: "the staking contract's USDe holdings",
-    settlementConstraint: "the documented 7-day cooldown",
+    settlementConstraint: "the live cooldownDuration() value published by reserve sync (rather than a fixed 7-day assumption)",
   }),
   "syusd-aegis": erc4626ReserveTelemetryQueueConfig({
       reviewedAt: REVIEWED_WRAPPER_QUEUE_AT,

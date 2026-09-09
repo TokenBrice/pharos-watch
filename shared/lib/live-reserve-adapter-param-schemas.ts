@@ -47,6 +47,21 @@ const usd1BundleOracleParamsSchema = z
   })
   .strict();
 
+const usdaiProofOfReservesParamsSchema = z.object({
+  anchor: z.object({
+    vaultAddress: EvmAddressSchema,
+    assetAddress: EvmAddressSchema,
+    toleranceBps: z.number().int().min(0).max(100),
+    liquidReserves: z.array(z.object({
+      name: z.string().min(1),
+      tokenAddress: EvmAddressSchema,
+      holderAddress: EvmAddressSchema,
+      decimals: z.number().int().min(0).max(18),
+    }).strict()).min(1).max(4),
+  }).strict().optional(),
+  ...OptionalEvmRpcFields,
+}).strict();
+
 const accountableParamsSchema = z
   .object({
     bucket: z
@@ -60,6 +75,7 @@ const accountableParamsSchema = z
         "protocol_split",
       ])
       .optional(),
+    layout: z.enum(["reserves-types", "asset-breakdown"]).optional(),
     riskMap: riskRecordSchema.optional(),
     renameMap: stringRecordSchema.optional(),
     sourceKeyMap: stringRecordSchema.optional(),
@@ -91,6 +107,10 @@ const assuranceParamsShape = {
   indexHost: assuranceHostSchema,
   reportHosts: z.array(assuranceHostSchema).min(1),
 };
+
+const paxosAssuranceParamsSchema = z.object({
+  product: z.enum(["PAXG", "PYUSD", "USDP", "USDG", "GUSD"]).default("PAXG"),
+}).strict();
 
 const audxAssuranceParamsSchema = z
   .object({
@@ -266,6 +286,7 @@ const blastUsdbYieldManagerParamsSchema = z
 
 const chainlinkNavParamsSchema = z
   .object({
+    navScope: z.enum(["native-fund-share", "portfolio"]),
     oracleAddress: z.string(),
     tokenAddress: z.string(),
     assetLabel: z.string(),
@@ -585,6 +606,24 @@ const reserveSliceDescriptorSchema = z
   })
   .strict();
 
+// Saturn USDat's reviewed MultiMint wrapper pins both the implementation and
+// the PYUSDx underlying, and the emitted slice is always the canonical PayPal
+// USD dependency: M0 documents PYUSDx extensions as 1:1 PYUSDx wrappers and
+// PYUSDx as MoonPay's PYUSD-backed tokenization framework (reviewed 2026-09).
+const saturnPyusdxParamsSchema = z
+  .object({
+    wrapperAddress: EvmAddressSchema,
+    expectedImplementation: EvmAddressSchema,
+    underlyingToken: EvmAddressSchema,
+    slice: reserveSliceDescriptorSchema.extend({
+      coinId: z.literal("pyusd-paypal"),
+      depType: z.literal("wrapper"),
+    }),
+    ...OptionalSourceUrlsFields,
+    ...OptionalEvmRpcFields,
+  })
+  .strict();
+
 const redemptionRateProbeSchema = z
   .object({
     contract: z.string(),
@@ -711,6 +750,11 @@ const fraxtalHopWithdrawableRedemptionLiquiditySchema = z
 const erc4626SingleAssetParamsSchema = z
   .object({
     slice: reserveSliceDescriptorSchema,
+    redemptionRoute: z.literal("async-request").optional(),
+    redemptionLock: z.array(z.object({
+      selector: z.union([EvmSelectorSchema, z.string().regex(/^[A-Za-z_][A-Za-z0-9_]*\(\)$/)]),
+      kind: z.enum(["cooldown-seconds", "unstake-window-seconds", "paused-bool"]),
+    }).strict()).max(8).optional(),
     redemptionLiquidity: z
       .discriminatedUnion("source", [
         morphoVaultV1RedemptionLiquiditySchema,
@@ -883,15 +927,52 @@ const pusdVaultAssetSchema = z
   })
   .strict();
 
+const pusdVaultChainAssetSchema = z
+  .object({
+    ...StringAddressFields,
+    decimals: z.number().int().nonnegative(),
+    name: z.string(),
+    ...TrackedExposureFields,
+  })
+  .strict();
+
+const pusdVaultChainSchema = z
+  .object({
+    chain: z.string(),
+    vaultAddress: z.string(),
+    assets: z.array(pusdVaultChainAssetSchema).min(1),
+  })
+  .strict();
+
 const pusdVaultParamsSchema = z
   .object({
-    vaultAddress: z.string(),
-    assets: z.array(pusdVaultAssetSchema).min(1),
-    slice: reserveSliceDescriptorSchema,
+    vaultAddress: z.string().optional(),
+    assets: z.array(pusdVaultAssetSchema).min(1).optional(),
+    slice: reserveSliceDescriptorSchema.optional(),
+    chains: z.array(pusdVaultChainSchema).min(1).optional(),
     ...OptionalSourceUrlsFields,
     ...OptionalEvmRpcFields,
   })
-  .strict();
+  .strict()
+  .superRefine((params, ctx) => {
+    if (params.chains != null) {
+      if (params.vaultAddress != null || params.assets != null || params.slice != null) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "pusd-vault params: chains is exclusive with the single-chain vaultAddress/assets/slice shape",
+          path: ["chains"],
+        });
+      }
+      return;
+    }
+    if (params.vaultAddress == null || params.assets == null || params.slice == null) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "pusd-vault params: vaultAddress, assets and slice are required without chains",
+        path: ["vaultAddress"],
+      });
+    }
+  });
 
 const nestVaultPositionsParamsSchema = z
   .object({
@@ -965,6 +1046,12 @@ const makinaStrategyParamsSchema = z
 const quantozTransparencyParamsSchema = z
   .object({
     token: z.enum(["EURQ", "USDQ"]),
+  })
+  .strict();
+
+const ethenaWhitelabelParamsSchema = z
+  .object({
+    stablecoin: z.string().min(1),
   })
   .strict();
 
@@ -1104,6 +1191,7 @@ const liquityV2BranchesParamsSchema = evmBranchBalancesParamsSchema
 const ghoGsmModuleSchema = z
   .object({
     ...StringAddressFields,
+    facilitatorAddress: z.string().regex(/^0x[0-9a-fA-F]{40}$/),
     label: z.string(),
     coinId: z.string().optional(),
     depType: LiveReserveDependencyTypeSchema.optional(),
@@ -1391,14 +1479,182 @@ const stoneyieldRouterPoolParamsSchema = z
   })
   .strict();
 
+// XPR Network (Antelope) account reads: token supply from one contract's
+// currency stats plus the treasury account's balances on the balance contract.
+// Each `slices` entry names one measured balance symbol; anything of the supply
+// the measured balances do not cover is published as the configured unknown
+// slice with an explicit unknownExposurePct, never silently dropped.
+const xprAccountBalanceSliceSchema = z
+  .object({
+    symbol: z.string().trim().min(1),
+    name: z.string(),
+    risk: LiveReserveRiskSchema,
+  })
+  .strict();
+
+const xprAccountBalancesParamsSchema = z
+  .object({
+    treasuryAccount: z.string().trim().min(1).max(12),
+    balanceCode: z.string().trim().min(1).max(12),
+    supplyCode: z.string().trim().min(1).max(12),
+    supplySymbol: z.string().trim().min(1),
+    slices: z.array(xprAccountBalanceSliceSchema).min(1),
+    unknownSlice: z
+      .object({
+        name: z.string(),
+        risk: LiveReserveRiskSchema,
+      })
+      .strict(),
+  })
+  .strict()
+  .superRefine((params, ctx) => {
+    const symbols = new Set<string>();
+    for (const [index, slice] of params.slices.entries()) {
+      if (symbols.has(slice.symbol)) {
+        ctx.addIssue({
+          code: "custom",
+          path: ["slices", index, "symbol"],
+          message: `duplicate measured symbol "${slice.symbol}"`,
+        });
+      }
+      symbols.add(slice.symbol);
+    }
+  });
+
+// The Bridge transparency stablecoin key: the final path segment of the
+// configured primary URL, e.g. "usd_sui" or "path_usd". The adapter refuses to
+// fetch a URL whose slug does not match this identity pin.
+const bridgeTransparencyParamsSchema = z
+  .object({
+    slug: z.string().min(1),
+  })
+  .strict();
+
+// AUDD's William Buck ASRS 4400 agreed-upon-procedures report: published
+// through a static-validated / issuer-attested descriptor (the engagement is
+// explicitly not an assurance engagement).
+const auddAssuranceParamsSchema = z
+  .object({
+    product: z.literal("AUDD"),
+    profile: z.literal("audd-v1"),
+    ...assuranceParamsShape,
+  })
+  .strict();
+
+// Anchorage-published Deloitte attestation reports; reviewed products only.
+const anchorageAssuranceParamsSchema = z.discriminatedUnion("product", [
+  z
+    .object({
+      product: z.literal("USAT"),
+      profile: z.literal("usat-v1"),
+      ...assuranceParamsShape,
+    })
+    .strict(),
+  z
+    .object({
+      product: z.literal("USDPT"),
+      profile: z.literal("usdpt-v1"),
+      ...assuranceParamsShape,
+    })
+    .strict(),
+]);
+
+// Baker Tilly's monthly CADD CSAE 3000 report: the index links Google Drive
+// share URLs, so reportHosts pins both the drive.google.com share host and the
+// drive.usercontent.google.com host the direct download redirects to.
+const caddAssuranceParamsSchema = z
+  .object({
+    product: z.literal("CADD"),
+    profile: z.literal("cadd-v1"),
+    ...assuranceParamsShape,
+  })
+  .strict();
+
+// Hash-pinned issuer-signed reserve reports (Fact Finance BRLV PoR memo and
+// Catena Digital AUDM issuer-CEO attestation): non-independent, so they share a
+// static-validated / issuer-attested sibling descriptor.
+const issuerAttestedReportParamsSchema = z.discriminatedUnion("product", [
+  z
+    .object({
+      product: z.literal("BRLV"),
+      profile: z.literal("brlv-v1"),
+      ...assuranceParamsShape,
+    })
+    .strict(),
+  z
+    .object({
+      product: z.literal("AUDM"),
+      profile: z.literal("audm-v1"),
+      ...assuranceParamsShape,
+    })
+    .strict(),
+]);
+
+// BRLA: Notion-hosted transparency index; runtime resolves the reviewed UHY
+// report through pinned loadPageChunk/getSignedFileUrls block identity.
+const brlaAssuranceParamsSchema = z
+  .object({
+    product: z.literal("BRLA"),
+    profile: z.literal("brla-v1"),
+    ...assuranceParamsShape,
+  })
+  .strict();
+
+// AUSD: Fern-hosted Agora transparency index; runtime verifies the reviewed
+// July report path hash on the index and fetches the stable Fern mirror.
+const agoraAssuranceParamsSchema = z
+  .object({
+    product: z.literal("AUSD"),
+    profile: z.literal("ausd-v1"),
+    ...assuranceParamsShape,
+  })
+  .strict();
+
+// FIDD: Fidelity Digital Assets transparency index; runtime resolves the
+// reviewed July Widen viewer link and its original PDF download anchor.
+const fiddAssuranceParamsSchema = z
+  .object({
+    product: z.literal("FIDD"),
+    profile: z.literal("fidd-v1"),
+    ...assuranceParamsShape,
+  })
+  .strict();
+
+// SBC: Brale SBC transparency index with direct monthly PDF links.
+const sbcAssuranceParamsSchema = z
+  .object({
+    product: z.literal("SBC"),
+    profile: z.literal("sbc-v1"),
+    ...assuranceParamsShape,
+  })
+  .strict();
+
+// First Digital's AOGB ISAE 3000 reports: the issuer domain blocks Cloudflare
+// Worker egress, so discovery pins the issuer's Webflow mirror index and the
+// Webflow CDN host serving the PDFs.
+const fdusdAssuranceParamsSchema = z
+  .object({
+    product: z.literal("FDUSD"),
+    profile: z.literal("fdusd-v1"),
+    ...assuranceParamsShape,
+  })
+  .strict();
+
 export const LIVE_RESERVE_PARAM_SCHEMAS = {
   none: noParamsSchema,
   abracadabra: abracadabraParamsSchema,
   astherusEarnWrapper: astherusEarnWrapperParamsSchema,
   accountable: accountableParamsSchema,
+  agoraAssurance: agoraAssuranceParamsSchema,
+  anchorageAssurance: anchorageAssuranceParamsSchema,
   attestationPdfIndex: attestationPdfIndexParamsSchema,
+  auddAssurance: auddAssuranceParamsSchema,
   audxAssurance: audxAssuranceParamsSchema,
+  caddAssurance: caddAssuranceParamsSchema,
+  paxosAssurance: paxosAssuranceParamsSchema,
   blastUsdbYieldManager: blastUsdbYieldManagerParamsSchema,
+  brlaAssurance: brlaAssuranceParamsSchema,
+  bridgeTransparency: bridgeTransparencyParamsSchema,
   btcfi: btcfiParamsSchema,
   capVault: capVaultParamsSchema,
   chainlinkNav: chainlinkNavParamsSchema,
@@ -1409,12 +1665,15 @@ export const LIVE_RESERVE_PARAM_SCHEMAS = {
   curatedValidated: curatedValidatedParamsSchema,
   erc4626SingleAsset: erc4626SingleAssetParamsSchema,
   europAssurance: europAssuranceParamsSchema,
+  fiddAssurance: fiddAssuranceParamsSchema,
   escrowBalance: escrowBalanceParamsSchema,
+  ethenaWhitelabel: ethenaWhitelabelParamsSchema,
   evmBranchBalances: evmBranchBalancesParamsSchema,
   fraxFpiCollateral: fraxFpiCollateralParamsSchema,
   fx: fxParamsSchema,
   gho: ghoParamsSchema,
   initiaWrapperVault: initiaWrapperVaultParamsSchema,
+  issuerAttestedReport: issuerAttestedReportParamsSchema,
   jupusd: jupusdParamsSchema,
   liquityNativeActivePool: liquityNativeActivePoolParamsSchema,
   liquityV1: liquityV1ParamsSchema,
@@ -1429,6 +1688,8 @@ export const LIVE_RESERVE_PARAM_SCHEMAS = {
   quantozTransparency: quantozTransparencyParamsSchema,
   reserveProtocolDtf: reserveProtocolDtfParamsSchema,
   resupplyPairs: resupplyPairsParamsSchema,
+  saturnPyusdx: saturnPyusdxParamsSchema,
+  sbcAssurance: sbcAssuranceParamsSchema,
   sgForgeCoinvertible: sgForgeCoinvertibleParamsSchema,
   stoneyieldRouterPool: stoneyieldRouterPoolParamsSchema,
   singleAsset: singleAssetParamsSchema,
@@ -1444,8 +1705,11 @@ export const LIVE_RESERVE_PARAM_SCHEMAS = {
   hiveHbdProtocol: hiveHbdProtocolParamsSchema,
   idleCdoEpochVariant: idleCdoEpochVariantParamsSchema,
   usdaiHub: usdaiHubParamsSchema,
+  usdaiProofOfReserves: usdaiProofOfReservesParamsSchema,
   xdaiBridge: xdaiBridgeParamsSchema,
+  xprAccountBalances: xprAccountBalancesParamsSchema,
   yamato: yamatoParamsSchema,
+  fdusdAssurance: fdusdAssuranceParamsSchema,
 } as const;
 
 

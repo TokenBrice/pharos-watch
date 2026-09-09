@@ -135,6 +135,7 @@ describe("fetchSuperstateLiquidityReserves", () => {
       primary: { kind: "onchain-evm", chain: "ethereum", rpcMode: "etherscan-proxy" },
     },
     params: {
+      navScope: "native-fund-share",
       oracleAddress: "0x289B5036cd942e619E1Ee48670F98d214E745AAC",
       tokenAddress: "0x43415eB6ff9DB7E26A15b704e7A3eDCe97d31C4e",
       assetLabel: "Short-duration U.S. government securities",

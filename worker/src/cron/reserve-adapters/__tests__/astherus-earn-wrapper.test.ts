@@ -155,7 +155,6 @@ describe("fetchAstherusEarnWrapperReserves", () => {
       contractAddress: EARN_ADDRESS,
       underlyingAmount: 3_006_429.0742260767,
       supplyTokens: 2_820_142.388657761,
-      collateralizationRatio: 1.0660557730409417,
       details: {
         proofKind: "astherus-earn-wrapper-net-usdf-balance",
         underlyingBalanceRaw: UNDERLYING_BALANCE.toString(),
@@ -163,6 +162,7 @@ describe("fetchAstherusEarnWrapperReserves", () => {
         netBackingRaw: NET_BACKING.toString(),
         totalSupplyRaw: TOTAL_SUPPLY.toString(),
         exchangePriceRaw: EXCHANGE_PRICE.toString(),
+        sharePrice: 1.0660557730409417,
       },
       redemption: {
         freshnessKind: "same-run-onchain",
@@ -170,6 +170,7 @@ describe("fetchAstherusEarnWrapperReserves", () => {
         routeStatusSource: "onchain",
       },
     });
+    expect(result.metadata?.collateralizationRatio).toBeCloseTo(1, 10);
     assertSingleAggregate3Batch();
   });
 

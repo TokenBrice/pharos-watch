@@ -199,7 +199,7 @@ describe("fetchAnzenUsdzReserves", () => {
   it("uses pooled SPCT, held SPCT, and bridge-adjusted five-chain liabilities", async () => {
     const result = await fetchAnzenUsdzReserves(makeCoin(), config, signal);
 
-    expect(result.slices).toEqual([{ name: "SPCT (Secured Private Credit Token)", pct: 100, risk: "high" }]);
+    expect(result.slices).toEqual([expect.objectContaining({ pct: 100, risk: "high", blacklistable: true })]);
     expect(result.metadata).toMatchObject({
       freshnessMode: "not-applicable",
       details: {
@@ -243,6 +243,16 @@ describe("fetchAnzenUsdzReserves", () => {
     expect(result.slices[0].pct).toBe(100);
     expect(result.metadata?.collateralizationRatio).toBeLessThan(1);
     expect(result.warnings).toContainEqual(expect.objectContaining({ code: "reserve-undercollateralized", effect: "degraded" }));
+    expectValidAdapterOutput("anzen-usdz", result);
+  });
+
+  it("values SPCT at its oracle price and publishes an oracle-driven shortfall", async () => {
+    primeRpcMocks({ 21: word(WAD * 9n / 10n) });
+    const result = await fetchAnzenUsdzReserves(makeCoin(), config, signal);
+    expect(result.metadata?.totalReserveUsd).toBeCloseTo(Number(pooled) / 1e18 * 0.9, 7);
+    expect(result.metadata?.collateralizationRatio).toBeLessThan(1);
+    expect(result.warnings).toContainEqual(expect.objectContaining({ code: "reserve-undercollateralized", effect: "degraded" }));
+    expect(result.slices[0].blacklistable).toBe(true);
     expectValidAdapterOutput("anzen-usdz", result);
   });
 

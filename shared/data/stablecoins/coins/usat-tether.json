@@ -42,24 +42,25 @@
   "custodyModel": "institutional-regulated",
   "governanceQuality": "regulated-entity",
   "liveReservesConfig": {
-    "adapter": "single-asset",
-    "version": 1,
-    "semantics": "single-asset",
+    "adapter": "anchorage-independent-assurance",
+    "version": 2,
+    "semantics": "attestation-mix",
     "breakerScope": "usat-tether",
     "display": {
-      "url": "https://usat.io/",
-      "label": "USA-T"
+      "url": "https://www.anchorage.com/platform/usat-reserve-attestations",
+      "label": "USA₮ Reserve Attestations"
     },
     "inputs": {
       "primary": {
-        "kind": "onchain-evm",
-        "chain": "ethereum",
-        "rpcMode": "public-rpc"
+        "kind": "http-html",
+        "url": "https://www.anchorage.com/platform/usat-reserve-attestations"
       }
     },
     "params": {
-      "label": "U.S. Treasury bills & cash deposits",
-      "risk": "very-low"
+      "product": "USAT",
+      "profile": "usat-v1",
+      "indexHost": "www.anchorage.com",
+      "reportHosts": ["learn.anchorage.com"]
     }
   },
   "proofOfReserves": {
@@ -70,17 +71,17 @@
     "cadence": "monthly",
     "attestorJurisdiction": "United States",
     "latestReport": {
-      "periodEnd": "2026-06-30",
-      "publishedAt": "2026-07-28",
+      "periodEnd": "2026-07-31",
+      "publishedAt": "2026-08-28",
       "assuranceMethod": "examination",
       "scope": "assets-and-liabilities",
       "liabilityReconciliation": "full",
-      "reviewer": "PoR verification sweep 2026-08 (June report PDF read; composition review advanced in lockstep)",
+      "reviewer": "PoR verification sweep 2026-09 (July report PDF read; manifest compilation reviewed in lockstep)",
       "confidence": "verified",
       "sources": [
         {
-          "label": "Deloitte USA₮ Reserve Report - June 2026",
-          "url": "https://learn.anchorage.com/06.30.26_USAT-Stablecoin-Attestation-Report.pdf"
+          "label": "Deloitte USA₮ Reserve Report - July 2026",
+          "url": "https://learn.anchorage.com/07.31.26_USAT-Stablecoin-Attestation-Report-signed.pdf"
         }
       ]
     }

@@ -18,7 +18,7 @@ import { getConfiguredLiveReserveCoins } from "../live-reserves/store-shared";
 
 describe("live-reserves-store", () => {
   it.each([
-    ["fdusd-first-digital", "fdusd-transparency", 36 * 86400, 60, false],
+    ["fdusd-first-digital", "fdusd-independent-assurance", 36 * 86400, 60, false],
     ["xsgd-straitsx", "straitsx-independent-assurance", 67 * 86400, 60, true],
     ["xsgd-straitsx", "straitsx-independent-assurance", 4_000_000, 60, false],
     ["xsgd-straitsx", "straitsx-independent-assurance", 4_000_001, 60, true],

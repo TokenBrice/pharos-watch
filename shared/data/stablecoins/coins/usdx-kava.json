@@ -54,6 +54,22 @@
   ],
   "collateralQuality": "alt-lst-bridged-or-mixed",
   "governanceQuality": "dao-governance",
+  "liveReservesConfig": {
+    "adapter": "kava-cdp",
+    "version": 1,
+    "semantics": "collateral-mix",
+    "display": {
+      "url": "https://api.data.kava.io/kava/cdp/v1beta1/totalCollateral",
+      "label": "Kava CDP module (total collateral)"
+    },
+    "inputs": {
+      "primary": {
+        "kind": "http-json",
+        "url": "https://api.data.kava.io/kava/cdp/v1beta1/totalCollateral"
+      }
+    },
+    "params": {}
+  },
   "notices": [
     {
       "type": "warning",

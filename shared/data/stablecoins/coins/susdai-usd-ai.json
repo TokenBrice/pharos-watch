@@ -112,6 +112,21 @@
       "url": "https://app.usd.ai/reserves",
       "label": "USD.AI On-chain Reserve Index"
     },
+    "params": {
+      "anchor": {
+        "vaultAddress": "0x0b2b2b2076d95dda7817e785989fe353fe955ef9",
+        "assetAddress": "0x0a1a1a107e45b7ced86833863f482bc5f4ed82ef",
+        "toleranceBps": 100,
+        "liquidReserves": [
+          {
+            "name": "PYUSD",
+            "tokenAddress": "0x46850ad61c2b7d64d08c9c754f45254596696984",
+            "holderAddress": "0x0a1a1a107e45b7ced86833863f482bc5f4ed82ef",
+            "decimals": 6
+          }
+        ]
+      }
+    },
     "inputs": {
       "primary": {
         "kind": "http-json",

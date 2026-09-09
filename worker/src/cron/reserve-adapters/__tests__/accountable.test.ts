@@ -1065,6 +1065,111 @@ describe("adaptAccountableDashboard", () => {
       now: Date.UTC(2026, 5, 20, 10) / 1000,
     }).valid).toBe(true);
   });
+
+  it("maps the root-level assetBreakdown layout into reserve slices", () => {
+    // Verbatim Tori Accountable dashboard capture: the four strategy categories
+    // live at data.assetBreakdown (not data.reserves.type*), and their nested
+    // entries sum to the published total_reserves value.
+    const result = adaptAccountableDashboard(
+      {
+        res: "ok",
+        data: {
+          collateralization: 1.00218,
+          ts: "1788968760934",
+          reserves: {
+            interval: "live",
+            verifiability: "100",
+            total_reserves: { name: "Total Reserves", value: 67_390_916.86 },
+            total_supply: { name: "Total Supply", fx: 1, value: 67_244_323.59 },
+          },
+          assetBreakdown: {
+            "On-chain Buffer": { "On-chain Buffer": { status: "private", value: 1_022_633.741500425 } },
+            "Money Markets": { "Money Market Instruments": { status: "private", value: 41_544_625.36 } },
+            "Cash & Equivalents": {
+              "OTC & Exchange Reserve": 0,
+              "FX Collateral": { status: "private", value: 6_796_722.89 },
+              "Bank Cash": { status: "private", value: 206.2812771119609 },
+            },
+            "Delta-Neutral Futures Arbitrage": {
+              "Delta-Neutral Futures Arbitrage": { status: "private", value: 18_026_728.59 },
+            },
+          },
+        },
+      },
+      {
+        layout: "asset-breakdown",
+        riskMap: {
+          "Money Markets": "medium",
+          "Cash & Equivalents": "medium",
+          "Delta-Neutral Futures Arbitrage": "high",
+          "On-chain Buffer": "low",
+        },
+        renameMap: {
+          "Money Markets": "Hedged money-market positions at undisclosed custodians (asset-manager mandate)",
+          "Delta-Neutral Futures Arbitrage": "Delta-neutral futures arbitrage and calendar-spread positions",
+          "Cash & Equivalents": "Cash and equivalents held as FX collateral at investment banks and exchange venues",
+          "On-chain Buffer": "On-chain stablecoin buffer in the minting custodian wallet",
+        },
+      },
+    );
+
+    expect(result.slices).toEqual([
+      { name: "Hedged money-market positions at undisclosed custodians (asset-manager mandate)", pct: 61.7, risk: "medium" },
+      { name: "Delta-neutral futures arbitrage and calendar-spread positions", pct: 26.7, risk: "high" },
+      { name: "Cash and equivalents held as FX collateral at investment banks and exchange venues", pct: 10.1, risk: "medium" },
+      { name: "On-chain stablecoin buffer in the minting custodian wallet", pct: 1.5, risk: "low" },
+    ]);
+    expect(result.metadata).toMatchObject({
+      bucket: "asset-breakdown",
+      layout: "asset-breakdown",
+      breakdownCount: 4,
+      mappedBucketCount: 4,
+      totalReserves: 67_390_916.86,
+      sourceTimestamp: 1_788_968_760,
+      freshnessMode: "verified",
+    });
+    expect(result.metadata?.unknownExposurePct).toBeUndefined();
+    expect(result.warnings).toBeUndefined();
+  });
+
+  it("records unknownExposurePct for unmapped asset-breakdown categories", () => {
+    const result = adaptAccountableDashboard(
+      {
+        res: "ok",
+        data: {
+          collateralization: 1.01,
+          ts: "1788968760934",
+          reserves: {
+            total_reserves: { value: 100 },
+            total_supply: { value: 99 },
+          },
+          assetBreakdown: {
+            "Money Markets": { "Money Market Instruments": { value: 70 } },
+            "Undisclosed Custodian Strategy": { "Custodian Positions": { value: 30 } },
+          },
+        },
+      },
+      {
+        layout: "asset-breakdown",
+        riskMap: { "Money Markets": "medium" },
+      },
+    );
+
+    expect(result.slices).toEqual([
+      { name: "Money Markets", pct: 70, risk: "medium" },
+      { name: "Unknown / unmapped Accountable buckets", pct: 30, risk: "high" },
+    ]);
+    expect(result.metadata).toMatchObject({
+      bucket: "asset-breakdown",
+      layout: "asset-breakdown",
+      unknownBucketCount: 1,
+      unknownExposurePct: 30,
+    });
+    expect(result.warnings?.[0]).toMatchObject({
+      code: "unmapped-bucket",
+      effect: "degraded",
+    });
+  });
 });
 
 describe("adaptAccountableDashboard collateralization reconciliation", () => {

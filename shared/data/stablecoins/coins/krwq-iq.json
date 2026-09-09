@@ -135,5 +135,20 @@
     "korea",
     "rwa"
   ],
-  "launchDate": "2025-10-30"
+  "launchDate": "2025-10-30",
+  "liveReservesConfig": {
+    "adapter": "krwq-custodian",
+    "version": 1,
+    "semantics": "collateral-mix",
+    "display": {
+      "url": "https://krwq.cash/transparency",
+      "label": "KRWQ Transparency"
+    },
+    "inputs": {
+      "primary": {
+        "kind": "http-json",
+        "url": "https://www.krwq.cash/api/custodian-assets"
+      }
+    }
+  }
 }

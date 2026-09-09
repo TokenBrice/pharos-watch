@@ -39,6 +39,7 @@ describe("adaptJupUsdData", () => {
     expect(result.metadata).toMatchObject({
       totalReserveUsd: 7_500_000,
       supplyUsd: 75_000_000,
+      collateralizationRatio: 0.1,
       unknownExposurePct: 0,
       immediateRedeemableUsd: 7_500_000,
       immediateRedeemableRatio: 0.1,
@@ -55,6 +56,10 @@ describe("adaptJupUsdData", () => {
         holderEligibility: "whitelisted-primary",
       },
     });
+    expect(result.warnings).toContainEqual(expect.objectContaining({
+      code: "reserve-undercollateralized",
+      effect: "degraded",
+    }));
     expectValidAdapterOutput("jupusd", result, { now: 1776262000 });
   });
 

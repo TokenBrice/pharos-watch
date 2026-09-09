@@ -4,7 +4,6 @@ import { parseLiveReserveAdapterParams } from "@shared/lib/live-reserve-adapters
 import { TOTAL_SUPPLY_SELECTOR, TOTAL_VALUE_SELECTOR } from "../../lib/evm-selectors";
 import type { AdapterContext, AdapterResult } from "./types";
 import {
-  buildCoverageShortfallWarnings,
   decimalNumberFromBigInt,
   makeOnchainCallers,
   notApplicableFreshnessMetadata,
@@ -64,12 +63,11 @@ export async function fetchBlastUsdbYieldManagerReserves(
 
   const totalReserveUsd = decimalNumberFromBigInt(totalValueRaw, 18);
   const supplyUsd = decimalNumberFromBigInt(totalSupplyRaw, 18);
-  const collateralizationRatio = totalReserveUsd / supplyUsd;
-  const warnings = buildCoverageShortfallWarnings({
-    code: "blast-usdb-undercollateralized",
-    message: (pct) => `Blast USDYieldManager totalValue() is ${pct}% of USDB supply`,
-    coverageRatio: collateralizationRatio,
-  });
+  // totalValue()/totalSupply is the manager's assets per USDB unit — a share
+  // price, not an independent assets ÷ liability comparison (USDB supply on
+  // the supply chain is not the manager's liability). Published as
+  // details.sharePrice; no collateralizationRatio is claimed on this basis.
+  const sharePrice = totalReserveUsd / supplyUsd;
 
   return {
     slices: [
@@ -80,7 +78,6 @@ export async function fetchBlastUsdbYieldManagerReserves(
         coinId: "dai-makerdao",
       },
     ],
-    ...(warnings.length > 0 ? { warnings } : {}),
     metadata: {
       ...notApplicableFreshnessMetadata(),
       details: {
@@ -88,10 +85,10 @@ export async function fetchBlastUsdbYieldManagerReserves(
         yieldManagerAddress: params.yieldManagerAddress,
         supplyChain: params.supplyChain,
         supplyTokenAddress: params.supplyTokenAddress,
+        sharePrice,
       },
       totalReserveUsd,
       supplyUsd,
-      collateralizationRatio,
       totalValueRaw: totalValueRaw.toString(),
       totalSupplyRaw: totalSupplyRaw.toString(),
     },

@@ -3,7 +3,7 @@
   "reserves": [
     {
       "name": "Demand deposits at FDIC-insured depository institutions",
-      "pct": 2.54898,
+      "pct": 9.8609,
       "risk": "very-low",
       "assetClass": "bank-deposit",
       "issuerOrObligor": "FDIC-insured depository institutions",
@@ -16,11 +16,11 @@
       "liquidityHorizon": "immediate"
     },
     {
-      "name": "JPMorgan OnChain Liquidity-Token Money Market Fund (JLTXX; CUSIP 46655R119)",
-      "pct": 97.45102,
+      "name": "Money market funds at net asset value (JLTXX CUSIP 46655R119 $5,799,924; CUSIP 09248U874 $451,291)",
+      "pct": 90.1391,
       "risk": "low",
       "assetClass": "money-market-fund",
-      "issuerOrObligor": "JPMorgan Trust IV and United States Treasury",
+      "issuerOrObligor": "JPMorgan Trust IV (JLTXX); manager of CUSIP 09248U874 not disclosed in the report",
       "riskFactors": [
         "credit",
         "duration",
@@ -32,39 +32,39 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-08-08",
-    "reviewer": "PoR verification sweep 2026-08 (lockstep coherent refresh: report and composition review updated together from the same artefact)",
+    "reviewedAt": "2026-09-09",
+    "reviewer": "PoR verification sweep 2026-09 (lockstep coherent refresh: report and composition review updated together from the same artefact)",
     "confidence": "verified",
     "sources": [
       {
-        "label": "Deloitte USDPT reserve examination for June 2026",
-        "url": "https://learn.anchorage.com/06.30.26_USDPT-Stablecoin-Attestation-Report.pdf"
+        "label": "Deloitte USDPT reserve examination for July 2026",
+        "url": "https://learn.anchorage.com/07.31.26_USDPT-Stablecoin-Attestation-Report-signed.pdf"
       },
       {
         "label": "Anchorage Digital USDPT reserve-attestation index",
         "url": "https://www.anchorage.com/platform/usdpt-reserve-attestations-anchorage-digital"
       }
     ],
-    "rationale": "Deloitte's June 30, 2026 examination (report dated 2026-07-28, PDF read this pass): reserves $122,245 against 21,581 redeemable USDPT (Solana only) - $119,129 in a single money market fund (CUSIP 46655R119) and $3,116 cash in FDIC-insured demand deposits (uninsured portion $0). Surplus $100,664 (~566% collateralization on a near-zero-supply token).",
-    "compositionBasis": "Deloitte examination of the USDPT Reserve Report as of June 30, 2026",
-    "compositionAsOf": "2026-06-30",
+    "rationale": "Deloitte's July 31, 2026 examination (report dated 2026-08-28, PDF read this pass): reserves $6,935,076 against 6,823,001 redeemable USDPT (Solana only) - $6,251,215 across two money market funds at net asset value (JLTXX CUSIP 46655R119 $5,799,924 plus CUSIP 09248U874 $451,291) and $683,861 cash in demand deposits at FDIC-insured depository institutions held directly at major commercial banks ($433,861 uninsured). Surplus $112,075.",
+    "compositionBasis": "Deloitte examination of the USDPT Reserve Report as of July 31, 2026",
+    "compositionAsOf": "2026-07-31",
     "scope": "full-composition",
-    "knownUnknownExposure": "All positive reserve categories and values in the examination are identified. The report does not name the depository institutions, but that provider-level omission does not leave an unidentified reserve slice.",
+    "knownUnknownExposure": "All positive reserve categories and values in the examination are identified. The report does not name the depository institutions or the manager of the 09248U874 money market fund (identified by CUSIP only); those provider-level omissions do not leave an unidentified reserve slice.",
     "knownUnknownExposurePct": 0,
     "nonLinkDispositions": [
       {
         "reserveIndex": 0,
         "reserveName": "Demand deposits at FDIC-insured depository institutions",
-        "pct": 2.54898,
+        "pct": 9.8609,
         "disposition": "untracked-exogenous-asset",
         "rationale": "The examination identifies the deposit category and exact value; the depository institutions are not tracked stablecoin dependencies."
       },
       {
         "reserveIndex": 1,
-        "reserveName": "JPMorgan OnChain Liquidity-Token Money Market Fund (JLTXX; CUSIP 46655R119)",
-        "pct": 97.45102,
+        "reserveName": "Money market funds at net asset value (JLTXX CUSIP 46655R119 $5,799,924; CUSIP 09248U874 $451,291)",
+        "pct": 90.1391,
         "disposition": "untracked-exogenous-asset",
-        "rationale": "JLTXX is an identified regulated money market fund rather than another tracked stablecoin."
+        "rationale": "The examination identifies the money market funds by CUSIP at disclosed net asset values (JLTXX is an identified regulated money market fund); they are untracked exogenous assets rather than tracked stablecoins."
       }
     ]
   },

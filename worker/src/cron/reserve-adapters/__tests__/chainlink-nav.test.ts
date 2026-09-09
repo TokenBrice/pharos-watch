@@ -62,6 +62,7 @@ function makeChainlinkNavConfig(
       primary: { kind: "onchain-evm", chain: "ethereum", rpcMode: "public-rpc" },
     },
     params: {
+      navScope: "native-fund-share",
       oracleAddress: ORACLE_ADDRESS,
       tokenAddress: TOKEN_ADDRESS,
       ...overrides.params,
@@ -83,6 +84,7 @@ function encodeLatestRoundData(args: {
 
 describe("adaptChainlinkNavResponse", () => {
   const params: ChainlinkNavParams = {
+    navScope: "native-fund-share",
     oracleAddress: "0x74f2199AEb743f68f05943e5715A33EaF2b61f53",
     tokenAddress: "0x136471a34f6ef19fE571EFFC1CA711fdb8E49f2b",
     assetLabel: "U.S. Treasury Bills",
@@ -90,18 +92,29 @@ describe("adaptChainlinkNavResponse", () => {
     sourceKey: "chainlink-nav:test",
   };
 
-  it("returns single 100% slice", () => {
+  it("retains native fund-share exposure without a scoring degradation", () => {
     const result = adaptChainlinkNavResponse(
       { navPerToken: 1_119_000n, navDecimals: 6, totalSupply: 500_000_000n, tokenDecimals: 6, roundId: 384n, updatedAt: 1773405239 },
       params,
     );
     expect(result.slices).toHaveLength(1);
-    expect(result.slices[0].sourceKey).toBe("chainlink-nav:test");
     expect(result.slices[0].pct).toBe(100);
-    expect(result.slices[0].name).toBe("U.S. Treasury Bills");
+    expect(result.warnings?.filter((warning) => warning.effect === "degraded") ?? []).toEqual([]);
   });
 
-  it("calculates AUM in metadata", () => {
+  it("keeps portfolio NAV visible but degrades unverified composition", () => {
+    const result = adaptChainlinkNavResponse(
+      { navPerToken: 1_119_000n, navDecimals: 6, totalSupply: 500_000_000n, tokenDecimals: 6, roundId: 384n, updatedAt: 1773405239 },
+      { ...params, navScope: "portfolio" },
+    );
+    expect(result.slices[0].pct).toBe(100);
+    expect(result.metadata?.freshnessMode).toBe("verified");
+    expect(result.warnings).toEqual(expect.arrayContaining([
+      expect.objectContaining({ code: "nav-portfolio-composition-unverified", effect: "degraded" }),
+    ]));
+  });
+
+  it("reports NAV and observed token supply with timestamped valuation evidence", () => {
     const result = adaptChainlinkNavResponse(
       { navPerToken: 1_119_000n, navDecimals: 6, totalSupply: 500_000_000n, tokenDecimals: 6, roundId: 384n, updatedAt: 1773405239 },
       params,
@@ -405,6 +418,7 @@ describe("fetchChainlinkNavCore", () => {
     const config = makeChainlinkNavConfig({
       semantics: "collateral-mix",
       params: {
+        navScope: "portfolio",
         assetLabel: "Ondo T-Bills",
         assetRisk: "very-low",
         oracleMethod: "getAssetPrice",
@@ -418,6 +432,9 @@ describe("fetchChainlinkNavCore", () => {
     );
 
     expect(result.warnings?.some((w) => w.code === "chainlink-nav-wrapper-oracle-malformed")).toBe(true);
+    expect(result.warnings).toEqual(expect.arrayContaining([
+      expect.objectContaining({ code: "nav-portfolio-composition-unverified", effect: "degraded" }),
+    ]));
     // freshness falls through to unverified (no valid wrapper timestamp)
     expect(result.metadata?.freshnessMode).toBe("unverified");
   });

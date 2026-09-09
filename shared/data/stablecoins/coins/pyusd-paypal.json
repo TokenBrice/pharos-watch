@@ -151,9 +151,9 @@
   "custodyModel": "institutional-top",
   "governanceQuality": "regulated-entity",
   "liveReservesConfig": {
-    "adapter": "single-asset",
-    "version": 1,
-    "semantics": "single-asset",
+    "adapter": "paxos-independent-assurance",
+    "version": 2,
+    "semantics": "attestation-mix",
     "breakerScope": "pyusd-paypal",
     "display": {
       "url": "https://www.paxos.com/pyusd-transparency",
@@ -161,14 +161,12 @@
     },
     "inputs": {
       "primary": {
-        "kind": "onchain-evm",
-        "chain": "ethereum",
-        "rpcMode": "public-rpc"
+        "kind": "http-html",
+        "url": "https://www.paxos.com/pyusd-transparency"
       }
     },
     "params": {
-      "label": "USD deposits, U.S. Treasuries & reverse repos",
-      "risk": "very-low"
+      "product": "PYUSD"
     }
   },
   "launchDate": "2023-08-07"

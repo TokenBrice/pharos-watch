@@ -47,15 +47,16 @@ describe("fetchBlastUsdbYieldManagerReserves", () => {
       freshnessMode: "not-applicable",
       totalReserveUsd: 120,
       supplyUsd: 100,
-      collateralizationRatio: 1.2,
       details: {
         proofKind: "blast-usdb-yield-manager-total-value",
         supplyChain: "blast",
+        sharePrice: 1.2,
       },
     });
+    expect(result.metadata).not.toHaveProperty("collateralizationRatio");
   });
 
-  it("degrades when manager value falls below supply", async () => {
+  it("publishes the share price without a coverage claim when manager value falls below supply", async () => {
     vi.mocked(fetchOnchainUint256)
       .mockResolvedValueOnce(98n * 10n ** 18n)
       .mockResolvedValueOnce(100n * 10n ** 18n);
@@ -67,11 +68,8 @@ describe("fetchBlastUsdbYieldManagerReserves", () => {
       new AbortController().signal,
     );
 
-    expect(result.warnings).toEqual([
-      expect.objectContaining({
-        code: "blast-usdb-undercollateralized",
-        effect: "degraded",
-      }),
-    ]);
+    expect(result.warnings).toBeUndefined();
+    expect(result.metadata).not.toHaveProperty("collateralizationRatio");
+    expect(result.metadata?.details?.sharePrice).toBeCloseTo(0.98, 6);
   });
 });

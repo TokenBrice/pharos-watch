@@ -1,10 +1,5 @@
 import { z } from "zod";
-import paxgManifest from "../data/live-reserves/independent-assurance/paxg.json";
-import audxManifest from "../data/live-reserves/independent-assurance/audx.json";
-import europManifest from "../data/live-reserves/independent-assurance/europ.json";
-import usdgoManifest from "../data/live-reserves/independent-assurance/usdgo.json";
-import xsgdManifest from "../data/live-reserves/independent-assurance/xsgd.json";
-import xusdManifest from "../data/live-reserves/independent-assurance/xusd.json";
+import { MANIFEST_SOURCES } from "../data/live-reserves/independent-assurance";
 
 const HASH_PATTERN = /^[0-9a-f]{64}$/i;
 // eslint-disable-next-line security/detect-unsafe-regex -- anchored fixed-shape decimal check; finite quantifiers, no backtracking ambiguity.
@@ -21,6 +16,8 @@ const INDEPENDENT_ASSURANCE_PRODUCTS = [
   "USDGO",
   "XSGD",
   "XUSD",
+  "AUDD", "USAT", "USDPT", "BRLA", "AUSD", "FIDD", "SBC", "TRYB", "TGBP",
+  "PGOLD", "CADD", "BRLV", "AUDM", "USX", "FDUSD",
 ] as const;
 
 export type IndependentAssuranceProduct = (typeof INDEPENDENT_ASSURANCE_PRODUCTS)[number];
@@ -59,8 +56,9 @@ export const IndependentAssuranceManifestSchema = z
     reportIssuedAt: z.string().datetime({ offset: true }).optional(),
     attestor: z.string().trim().min(1),
     engagement: z.string().trim().min(1),
-    conclusion: z.enum(["unmodified", "unqualified", "nothing-came-to-attention"]),
-    unit: z.enum(["USD", "EUR", "AUD", "SGD", "fine-troy-ounce"]),
+    conclusion: z.enum(["unmodified", "unqualified", "nothing-came-to-attention", "agreed-upon-procedures", "issuer-attested"]),
+    assuranceTier: z.enum(["independent-assurance", "agreed-upon-procedures", "issuer-attested"]).optional(),
+    unit: z.enum(["USD", "EUR", "AUD", "SGD", "fine-troy-ounce", "GBP", "TRY", "BRL", "CAD", "ZAR"]),
     assets: z.array(ReportAmountSchema).min(1),
     liabilities: z.array(ReportAmountSchema).min(1),
     adjustments: z.array(ReportAdjustmentSchema).optional(),
@@ -76,18 +74,27 @@ export const IndependentAssuranceManifestSchema = z
       })
       .strict(),
   })
-  .strict();
+  .strict()
+  .transform((manifest, ctx) => {
+    const { assuranceTier: declaredTier, ...report } = manifest;
+    const assuranceTier = manifest.conclusion === "agreed-upon-procedures" || manifest.conclusion === "issuer-attested"
+      ? manifest.conclusion
+      : "independent-assurance";
+    if (declaredTier !== undefined && declaredTier !== assuranceTier) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["assuranceTier"], message: "assuranceTier contradicts the report conclusion" });
+      return z.NEVER;
+    }
+    return { ...report, assuranceTier };
+  });
 
 export type IndependentAssuranceManifest = z.infer<typeof IndependentAssuranceManifestSchema>;
 
-const MANIFESTS: Partial<Record<IndependentAssuranceProduct, IndependentAssuranceManifest>> = {
-  PAXG: IndependentAssuranceManifestSchema.parse(paxgManifest),
-  AUDX: IndependentAssuranceManifestSchema.parse(audxManifest),
-  EUROP: IndependentAssuranceManifestSchema.parse(europManifest),
-  USDGO: IndependentAssuranceManifestSchema.parse(usdgoManifest),
-  XSGD: IndependentAssuranceManifestSchema.parse(xsgdManifest),
-  XUSD: IndependentAssuranceManifestSchema.parse(xusdManifest),
-};
+const MANIFESTS: Partial<Record<IndependentAssuranceProduct, IndependentAssuranceManifest>> = {};
+for (const [product, source] of Object.entries(MANIFEST_SOURCES)) {
+  const manifest = IndependentAssuranceManifestSchema.parse(source);
+  if (manifest.product !== product) throw new Error(`independent-assurance: manifest registration mismatch for ${product}`);
+  MANIFESTS[manifest.product] = manifest;
+}
 
 export function getIndependentAssuranceManifest(product: IndependentAssuranceProduct): IndependentAssuranceManifest {
   const manifest = MANIFESTS[product];

@@ -97,8 +97,8 @@
   "custodyModel": "institutional-regulated",
   "governanceQuality": "regulated-entity",
   "liveReservesConfig": {
-    "adapter": "attestation-pdf-index",
-    "version": 1,
+    "adapter": "issuer-attested-report",
+    "version": 2,
     "semantics": "attestation-mix",
     "breakerScope": "audm-macropod",
     "display": {
@@ -112,12 +112,11 @@
       }
     },
     "params": {
-      "slices": [
-        {
-          "name": "AUD cash in the Westpac AUDM Trust Class A Reserve",
-          "pct": 100,
-          "risk": "very-low"
-        }
+      "product": "AUDM",
+      "profile": "audm-v1",
+      "indexHost": "www.macropod.com",
+      "reportHosts": [
+        "cdn.prod.website-files.com"
       ]
     }
   },

@@ -79,7 +79,7 @@ describe("adaptM0Collateral", () => {
         depType: "wrapper",
       }),
     ]);
-    expect(usdat?.liveReservesConfig).toBeUndefined();
+    expect(usdat?.liveReservesConfig).toMatchObject({ adapter: "saturn-pyusdx", breakerScope: "usdat-saturn" });
   });
 
   it("converts the total collateral snapshot into the single protocol-constrained slice", () => {

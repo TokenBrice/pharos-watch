@@ -119,14 +119,28 @@
     },
     "inputs": {
       "primary": {
-        "kind": "onchain-evm",
-        "chain": "ethereum",
-        "rpcMode": "public-rpc"
+        "kind": "http-json",
+        "url": "https://api.tgbp.io/api/v1/public/data/tgbp"
       }
     },
     "params": {
       "label": "GBP cash and short-term UK gilts",
-      "risk": "very-low"
+      "risk": "very-low",
+      "reserveProbe": {
+        "kind": "json-path",
+        "path": [
+          "result",
+          "collateral"
+        ]
+      },
+      "supplyProbe": {
+        "kind": "json-path",
+        "path": [
+          "result",
+          "total_supply"
+        ]
+      },
+      "reserveSourceLabel": "Tokenised GBP public data API"
     }
   },
   "launchDate": "2025-06-03"

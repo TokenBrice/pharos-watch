@@ -225,6 +225,38 @@ describe("adaptCollateralPositions", () => {
     ]);
   });
 
+  it("emits the assets-to-liability ratio from position minted debt", () => {
+    const result = adaptCollateralPositions(
+      {
+        "0xbtc": {
+          address: "0xBTC",
+          name: "Wrapped BTC",
+          symbol: "WBTC",
+          decimals: 8,
+          positions: [
+            {
+              collateralBalance: "100000000",
+              minted: "50000000000000000000000",
+              zchf: "0xZCHF",
+              zchfDecimals: 18,
+            },
+          ],
+        },
+      },
+      {
+        "0xbtc": { price: { usd: 100_000 } },
+        "0xzchf": { price: { usd: 1.25 } },
+      },
+      2,
+    );
+
+    expect(result.metadata).toMatchObject({
+      totalReserveUsd: 100_000,
+      totalLiabilitiesUsd: 62_500,
+      collateralizationRatio: 1.6,
+    });
+  });
+
   it("attaches optional bridge-backed redeemable capacity metadata", () => {
     const result = adaptCollateralPositions(
       {

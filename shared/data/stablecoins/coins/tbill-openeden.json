@@ -88,9 +88,10 @@
       }
     },
     "params": {
+      "navScope": "native-fund-share",
       "oracleAddress": "0xCe9a6626Eb99eaeA829D7fA613d5D0A2eaE45F40",
       "tokenAddress": "0xdd50c053c096cb04a3e3362e2b622529ec5f2e8a",
-      "assetLabel": "U.S. Treasury bills (WAM <3 months)",
+      "assetLabel": "OpenEden TBILL Fund shares",
       "assetRisk": "very-low",
       "rpcUrl": "https://ethereum-rpc.publicnode.com",
       "fallbackRpcUrl": "https://eth.llamarpc.com",

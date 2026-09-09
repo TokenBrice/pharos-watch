@@ -1,0 +1,51 @@
+{
+  "schemaVersion": 1,
+  "product": "USAT",
+  "profile": "usat-v1",
+  "officialIndexUrl": "https://www.anchorage.com/platform/usat-reserve-attestations",
+  "reportUrl": "https://learn.anchorage.com/07.31.26_USAT-Stablecoin-Attestation-Report-signed.pdf",
+  "reportSha256": "8600a37c77c31c189e7de7e754eb03cdba8533cd598a6d54557143fffdaf33f0",
+  "reportByteLength": 403256,
+  "reportDate": "2026-07-31",
+  "reportAsOf": "2026-07-31T23:59:59Z",
+  "reportTimeZone": "UTC",
+  "reportIssuedAt": "2026-08-28T23:59:00Z",
+  "attestor": "Deloitte & Touche LLP",
+  "engagement": "Independent accountant's examination under AICPA attestation standards",
+  "conclusion": "unmodified",
+  "unit": "USD",
+  "assets": [
+    {
+      "code": "cash",
+      "label": "Cash",
+      "amount": "17507606"
+    },
+    {
+      "code": "reverse-repo",
+      "label": "Reverse repurchase agreements collateralized by U.S. Treasury securities, at fair value",
+      "amount": "158399000"
+    }
+  ],
+  "liabilities": [
+    {
+      "code": "ethereum",
+      "label": "Ethereum USAT redeemable tokens",
+      "amount": "175204971"
+    },
+    {
+      "code": "celo",
+      "label": "Celo USAT redeemable tokens",
+      "amount": "40556"
+    }
+  ],
+  "reportedAssetTotal": "175906606",
+  "computedAssetTotal": "175906606",
+  "reportedLiabilityTotal": "175245527",
+  "extraction": {
+    "tool": "Poppler pdftotext -layout",
+    "parserVersion": "26.07.0",
+    "normalizedTextSha256": "67b1feb578d5e562e624dbc033b43a1bf8b0eb5fb387144246608eb606d5b435",
+    "pageCount": 8
+  },
+  "assuranceTier": "independent-assurance"
+}

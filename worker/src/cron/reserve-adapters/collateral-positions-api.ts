@@ -33,6 +33,11 @@ interface PositionDetailsEntry {
     closed?: boolean;
     denied?: boolean;
     collateralBalance?: string;
+    /** Minted-token debt of this position, raw integer in zchfDecimals. */
+    minted?: string;
+    /** The stablecoin token this position mints (ZCHF or dEURO). */
+    zchf?: string;
+    zchfDecimals?: number;
   }>;
 }
 
@@ -248,6 +253,35 @@ export function adaptCollateralPositions(
   const total = values.reduce((acc, value) => acc + value.usd, 0);
   if (total <= 0) return { slices: [] };
 
+  // Liability side: each open position's minted ZCHF/dEURO, valued through the
+  // minted token's own price-mapping row. Both sides of the assets ÷ liability
+  // ratio come from the same position payload over the same scope. A minted
+  // row without a price makes the liability incomplete, so the ratio is
+  // withheld rather than overstated.
+  let mintedUsd = 0;
+  let mintedCoverageComplete = true;
+  for (const entry of Object.values(details)) {
+    for (const position of entry.positions) {
+      if (position.closed || position.denied) continue;
+      const mintedDecimals = position.zchfDecimals ?? entry.decimals;
+      const mintedRaw = parseCollateralBalance(position.minted, mintedDecimals);
+      if (mintedRaw <= 0n) continue;
+      const mintedPrice = position.zchf
+        ? prices[position.zchf.toLowerCase()]?.price?.usd
+        : undefined;
+      if (typeof mintedPrice !== "number" || mintedPrice <= 0) {
+        mintedCoverageComplete = false;
+        continue;
+      }
+      const usd = valueUsdFromBigIntPrice(mintedRaw, mintedDecimals, mintedPrice);
+      if (Number.isFinite(usd) && usd >= 0) {
+        mintedUsd += usd;
+      } else {
+        mintedCoverageComplete = false;
+      }
+    }
+  }
+
   const knownValues = values.filter((value) => !value.unknown);
   const unknownValues = values.filter((value) => value.unknown);
   const major = knownValues.filter((value) => (value.usd / total) * 100 >= otherThresholdPct);
@@ -293,6 +327,13 @@ export function adaptCollateralPositions(
       missingPriceCount: missingPriceSymbols.size,
       unknownAssetCount: warnings.length,
       unknownExposurePct: total > 0 ? (unknownExposureUsd / total) * 100 : 0,
+      totalReserveUsd: total,
+      ...(mintedUsd > 0 && mintedCoverageComplete
+        ? {
+            totalLiabilitiesUsd: mintedUsd,
+            collateralizationRatio: total / mintedUsd,
+          }
+        : {}),
       ...(immediateRedeemableUsd != null ? { immediateRedeemableUsd } : {}),
       ...(immediateRedeemableUsd != null
         ? {

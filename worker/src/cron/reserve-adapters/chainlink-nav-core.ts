@@ -60,6 +60,7 @@ export interface ChainlinkNavRedemptionCapacityParams {
 }
 
 export interface ChainlinkNavParams {
+  navScope: "native-fund-share" | "portfolio";
   oracleAddress: string;
   tokenAddress: string;
   assetLabel: string;
@@ -202,6 +203,14 @@ export function adaptChainlinkNavResponse(data: ChainlinkNavData, params: Chainl
         risk: params.assetRisk,
       },
     ],
+    ...(params.navScope === "portfolio"
+      ? {
+        warnings: [reserveDegradedWarning(
+          "nav-portfolio-composition-unverified",
+          "NAV values the portfolio but does not verify its composition; dated holdings are required for scoring",
+        )],
+      }
+      : {}),
     metadata: {
       navPerToken: decimalStringFromBigInt(data.navPerToken, data.navDecimals),
       totalSupplyFormatted: decimalStringFromBigInt(data.totalSupply, data.tokenDecimals),
@@ -412,5 +421,5 @@ export async function fetchChainlinkNavCore(
       adapted.metadata = { ...adapted.metadata, redemption };
     }
   }
-  return warnings.length > 0 ? { ...adapted, warnings } : adapted;
+  return warnings.length > 0 ? { ...adapted, warnings: [...(adapted.warnings ?? []), ...warnings] } : adapted;
 }

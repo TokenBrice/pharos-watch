@@ -74,6 +74,7 @@ export async function fetchSghoWrapperReserves(
     metadata: {
       ...notApplicableFreshnessMetadata({
         proofKind: "aave-sgho-preview-redeem",
+        sharePrice: previewRedeemUsd / supplyUsd,
       }),
       chain: input.chain,
       contractAddress,
@@ -81,7 +82,6 @@ export async function fetchSghoWrapperReserves(
       previewRedeemRaw: previewRedeemRaw.toString(),
       supplyUsd,
       previewRedeemUsd,
-      collateralizationRatio: previewRedeemUsd / supplyUsd,
       immediateRedeemableUsd: previewRedeemUsd,
       immediateRedeemableRatio: capacityRatioOfSupply,
       ...buildRedemptionSnapshotMetadata({

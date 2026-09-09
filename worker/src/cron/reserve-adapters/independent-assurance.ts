@@ -6,7 +6,7 @@ import {
   type IndependentAssuranceProduct,
   type IndependentAssuranceReconciliationOptions,
 } from "@shared/lib/independent-assurance";
-import { parseLiveReserveAdapterParams, type LiveReserveAdapterParamsByKey } from "@shared/lib/live-reserve-adapters";
+import { getLiveReserveAdapterDefinition, parseLiveReserveAdapterParams, type LiveReserveAdapterParamsByKey } from "@shared/lib/live-reserve-adapters";
 import type { ReserveSlice, StablecoinMeta } from "@shared/types/core";
 import type { LiveReservesConfig } from "@shared/types/live-reserves";
 import { normalizeSlices, readHtmlAttribute, stripTags } from "./helpers";
@@ -39,6 +39,11 @@ export interface IndependentAssuranceProfile {
   isReportCandidate: (href: string, text: string) => boolean;
   reportDateFromCandidate?: (href: string, text: string) => string | null;
   prepareIndexHtml?: (html: string, signal: AbortSignal, ctx?: AdapterContext) => Promise<string>;
+  /** JSON-index publishers (e.g. Gemini's Contentful attestation collection):
+   *  verify the raw index body in place of the HTML candidate/date checks.
+   *  The hook MUST retain the equivalents: exact reviewed report URL, a unique
+   *  newest entry, and fail-closed on any newer unreviewed entry. */
+  verifyIndexJson?: (json: string, manifest: IndependentAssuranceManifest, signal: AbortSignal, ctx?: AdapterContext) => Promise<void>;
 }
 
 const formatDate = (year: number, month: number, day: number): string | null =>
@@ -112,10 +117,71 @@ export function straitsxIndependentAssuranceProfile(product: "XSGD" | "XUSD"): I
     reportDateFromCandidate: straitsxReportDate,
   };
 }
+function brlvReportDate(href: string): string | null {
+  const fileName = decodeURIComponent(new URL(href).pathname.split("/").pop() ?? "");
+  const numbered = fileName.match(/report_brl[vy]_(\d{1,2})_(\d{4})_/i);
+  if (numbered) {
+    const month = Number(numbered[1]);
+    const year = Number(numbered[2]);
+    return formatDate(year, month, lastDayOfMonth(year, month)!);
+  }
+  const named = fileName.match(/report_([a-z]+)_(\d{4})_/i);
+  if (named) {
+    const month = monthNumberFromLabel(named[1]);
+    const year = Number(named[2]);
+    if (!month) return null;
+    return formatDate(year, month, lastDayOfMonth(year, month)!);
+  }
+  return null;
+}
+export const BRLV_INDEPENDENT_ASSURANCE_PROFILE: IndependentAssuranceProfile = {
+  adapterName: "issuer-attested-report", product: "BRLV", profile: "brlv-v1",
+  requiredAssetCodes: ["treasury-bonds-primary", "treasury-bonds-secondary"],
+  classifications: {
+    "cash-equivalents": { name: "Cash and equivalents", risk: "very-low", assetClass: "cash", issuerOrObligor: "Undisclosed Brazilian financial institutions", riskFactors: ["counterparty", "custody", "concentration"], liquidityHorizon: "immediate" },
+    "treasury-bonds-primary": { name: "Brazilian Treasury Bonds", risk: "low", assetClass: "government-security", issuerOrObligor: "Government of Brazil (Tesouro Nacional)", riskFactors: ["credit", "duration", "liquidity", "custody", "concentration"], liquidityHorizon: "unknown" },
+    "treasury-bonds-secondary": { name: "Brazilian Treasury Bonds", risk: "low", assetClass: "government-security", issuerOrObligor: "Government of Brazil (Tesouro Nacional)", riskFactors: ["credit", "duration", "liquidity", "custody", "concentration"], liquidityHorizon: "unknown" },
+    "etf-treasury-primary": { name: "ETFs linked to Tesouro Selic", risk: "low", assetClass: "treasury-bill", issuerOrObligor: "Government of Brazil (Tesouro Nacional) via Selic-linked ETFs", riskFactors: ["credit", "liquidity", "custody", "concentration"], liquidityHorizon: "unknown" },
+    "etf-treasury-secondary": { name: "ETFs linked to Tesouro Selic", risk: "low", assetClass: "treasury-bill", issuerOrObligor: "Government of Brazil (Tesouro Nacional) via Selic-linked ETFs", riskFactors: ["credit", "liquidity", "custody", "concentration"], liquidityHorizon: "unknown" },
+  },
+  isReportCandidate: (href) => /report_/i.test(decodeURIComponent(href)),
+  reportDateFromCandidate: brlvReportDate,
+};
+
+function audmReportDate(href: string): string | null {
+  const fileName = decodeURIComponent(new URL(href).pathname.split("/").pop() ?? "");
+  const yymmdd = fileName.match(/[_-](\d{2})(\d{2})(\d{2})\s+Catena/i);
+  if (yymmdd) {
+    return formatDate(2000 + Number(yymmdd[1]), Number(yymmdd[2]), Number(yymmdd[3]));
+  }
+  const monthName = fileName.match(/(January|February|March|April|May|June|July|August|September|October|November|December)\s+(\d{4})/i);
+  if (monthName) {
+    const month = monthNumberFromLabel(monthName[1]);
+    const year = Number(monthName[2]);
+    if (!month) return null;
+    return formatDate(year, month, lastDayOfMonth(year, month)!);
+  }
+  return null;
+}
+export const AUDM_INDEPENDENT_ASSURANCE_PROFILE: IndependentAssuranceProfile = {
+  adapterName: "issuer-attested-report", product: "AUDM", profile: "audm-v1",
+  requiredAssetCodes: ["cash"],
+  classifications: {
+    cash: { name: "AUD cash held at Westpac Banking Corporation in the AUDM Trust Class A Reserve", risk: "very-low", assetClass: "bank-deposit", issuerOrObligor: "Westpac Banking Corporation", riskFactors: ["counterparty", "custody", "concentration"], liquidityHorizon: "immediate" },
+  },
+  isReportCandidate: (href) => /Reserve Verification Report|Agreed-Upon Procedures Report/i.test(decodeURIComponent(href)),
+  reportDateFromCandidate: audmReportDate,
+};
+
 export const INDEPENDENT_ASSURANCE_PROFILES = {
   "audx-independent-assurance": AUDX_INDEPENDENT_ASSURANCE_PROFILE,
   "europ-independent-assurance": EUROP_INDEPENDENT_ASSURANCE_PROFILE,
   "straitsx-independent-assurance": straitsxIndependentAssuranceProfile,
+} as const;
+
+export const ISSUER_ATTESTED_REPORT_PROFILES = {
+  BRLV: BRLV_INDEPENDENT_ASSURANCE_PROFILE,
+  AUDM: AUDM_INDEPENDENT_ASSURANCE_PROFILE,
 } as const;
 
 interface ReportCandidate {
@@ -299,31 +365,35 @@ export async function verifyIndependentAssuranceReport(args: {
   }
   assertAllowedHost(args.manifest.reportUrl, args.reportHosts, "reviewed PDF");
   const html = await fetchIndexHtml(args.indexUrl, args.indexHost, args.signal, args.ctx);
-  const discoveryHtml = args.profile.prepareIndexHtml
-    ? await args.profile.prepareIndexHtml(html, args.signal, args.ctx)
-    : html;
-  const candidates = collectReportCandidates(discoveryHtml, args.indexUrl, args.profile);
-  const manifestUrl = normalizeUrl(args.manifest.reportUrl, args.indexUrl);
-  const exact = candidates.filter((candidate) => candidate.url === manifestUrl);
-  const datedCandidates = candidates.map((candidate) => {
-    const date = args.profile.reportDateFromCandidate
-      ? args.profile.reportDateFromCandidate(candidate.url, candidate.text)
-      : parseDiscoveryDate(`${candidate.url} ${candidate.text}`);
-    return { ...candidate, date };
-  });
-  const ambiguousDate = datedCandidates.some((candidate) => candidate.date == null);
-  const latestDate = datedCandidates.reduce<string | null>(
-    (latest, candidate) => (candidate.date != null && (latest == null || candidate.date > latest) ? candidate.date : latest),
-    null,
-  );
-  const latestCandidates = datedCandidates.filter((candidate) => candidate.date === latestDate);
-  const newer = latestDate != null && latestDate > args.manifest.reportDate;
-  const duplicateLatest = latestDate === args.manifest.reportDate &&
-    (latestCandidates.length !== 1 || latestCandidates[0]?.url !== manifestUrl);
-  if (ambiguousDate || newer || duplicateLatest || exact.length !== 1) {
-    throw new Error(
-      `independent-assurance: ${ambiguousDate ? "ambiguous report date" : newer ? "newer unreviewed report" : "reviewed report URL is missing or duplicated"} on official index`,
+  if (args.profile.verifyIndexJson) {
+    await args.profile.verifyIndexJson(html, args.manifest, args.signal, args.ctx);
+  } else {
+    const discoveryHtml = args.profile.prepareIndexHtml
+      ? await args.profile.prepareIndexHtml(html, args.signal, args.ctx)
+      : html;
+    const candidates = collectReportCandidates(discoveryHtml, args.indexUrl, args.profile);
+    const manifestUrl = normalizeUrl(args.manifest.reportUrl, args.indexUrl);
+    const exact = candidates.filter((candidate) => candidate.url === manifestUrl);
+    const datedCandidates = candidates.map((candidate) => {
+      const date = args.profile.reportDateFromCandidate
+        ? args.profile.reportDateFromCandidate(candidate.url, candidate.text)
+        : parseDiscoveryDate(`${candidate.url} ${candidate.text}`);
+      return { ...candidate, date };
+    });
+    const ambiguousDate = datedCandidates.some((candidate) => candidate.date == null);
+    const latestDate = datedCandidates.reduce<string | null>(
+      (latest, candidate) => (candidate.date != null && (latest == null || candidate.date > latest) ? candidate.date : latest),
+      null,
     );
+    const latestCandidates = datedCandidates.filter((candidate) => candidate.date === latestDate);
+    const newer = latestDate != null && latestDate > args.manifest.reportDate;
+    const duplicateLatest = latestDate === args.manifest.reportDate &&
+      (latestCandidates.length !== 1 || latestCandidates[0]?.url !== manifestUrl);
+    if (ambiguousDate || newer || duplicateLatest || exact.length !== 1) {
+      throw new Error(
+        `independent-assurance: ${ambiguousDate ? "ambiguous report date" : newer ? "newer unreviewed report" : "reviewed report URL is missing or duplicated"} on official index`,
+      );
+    }
   }
 
   return fetchAndHashPdf(args.manifest, args.reportHosts, args.signal, args.ctx);
@@ -349,11 +419,17 @@ export async function fetchIndependentAssuranceReserves(
     throw new Error(`independent-assurance: coin ${coin.id} is not ${profile.product}`);
   }
   const primary = config.inputs.primary;
-  if (primary.kind !== "http-html") {
-    throw new Error(`${profile.adapterName} adapter requires an http-html primary input`);
+  if (primary.kind !== "http-html" && primary.kind !== "http-json") {
+    throw new Error(`${profile.adapterName} adapter requires an http-html or http-json primary input`);
   }
 
   const manifest = getIndependentAssuranceManifest(profile.product);
+  if (manifest.assuranceTier !== "independent-assurance") {
+    const descriptor = getLiveReserveAdapterDefinition(config.adapter);
+    if (descriptor?.evidenceClass !== "static-validated" || descriptor.sourceOriginClass !== "issuer-attested") {
+      throw new Error(`independent-assurance: ${manifest.assuranceTier} reports require a static-validated/issuer-attested adapter`);
+    }
+  }
   if (manifest.profile !== profile.profile) {
     throw new Error(`independent-assurance: manifest profile drifted for ${profile.product}`);
   }
@@ -480,6 +556,11 @@ export const fetchIndependentAssuranceAdapter: AdapterFn = async (coin, config, 
     const params = parseLiveReserveAdapterParams(adapter, config.params) as
       LiveReserveAdapterParamsByKey["audx-independent-assurance"] | LiveReserveAdapterParamsByKey["europ-independent-assurance"];
     return fetchIndependentAssuranceReserves(coin, config, signal, INDEPENDENT_ASSURANCE_PROFILES[adapter], params, ctx);
+  }
+  if (adapter === "issuer-attested-report") {
+    const params = parseLiveReserveAdapterParams("issuer-attested-report", config.params) as
+      LiveReserveAdapterParamsByKey["issuer-attested-report"];
+    return fetchIndependentAssuranceReserves(coin, config, signal, ISSUER_ATTESTED_REPORT_PROFILES[params.product], params, ctx);
   }
   throw new Error(`independent-assurance: unsupported adapter ${adapter}`);
 };

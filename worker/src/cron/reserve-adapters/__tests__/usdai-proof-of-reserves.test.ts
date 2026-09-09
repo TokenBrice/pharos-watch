@@ -1,14 +1,23 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { mockFetch } from "@shared/test-utils/mock-fetch";
+import type { LiveReservesConfig } from "@shared/types/live-reserves";
+import { fetchEvmMulticall3Aggregate3AtBlock } from "../../../lib/evm-rpc";
+import type * as EvmRpc from "../../../lib/evm-rpc";
+
+vi.mock("../../../lib/evm-rpc", async (importOriginal) => ({
+  ...(await importOriginal<typeof EvmRpc>()),
+  fetchEvmMulticall3Aggregate3AtBlock: vi.fn(),
+}));
 import {
   adaptUsdAiProofOfReserves,
-  extractUsdAiProofPageTimestamp,
-  extractUsdAiProofPageTimestampSummary,
   fetchUsdAiProofOfReserves,
   parseUsdAiProofOfReserves,
 } from "../usdai-proof-of-reserves";
 
-afterEach(() => vi.unstubAllGlobals());
+afterEach(() => {
+  vi.unstubAllGlobals();
+  vi.resetAllMocks();
+});
 const SAMPLE_RAW_PAYLOAD = JSON.stringify([
   {
     type: "TBILL",
@@ -60,7 +69,124 @@ const MIXED_WEIGHT_PAYLOAD = [
   },
 ];
 
+const ANCHORED_CONFIG = {
+  adapter: "usdai-proof-of-reserves", version: 2, semantics: "collateral-mix",
+  inputs: { primary: { kind: "http-json", url: "https://example.com/proof" } },
+  params: {
+    anchor: {
+      vaultAddress: "0x0b2b2b2076d95dda7817e785989fe353fe955ef9",
+      assetAddress: "0x0a1a1a107e45b7ced86833863f482bc5f4ed82ef",
+      toleranceBps: 100,
+      liquidReserves: [{
+        name: "PYUSD", tokenAddress: "0x46850ad61c2b7d64d08c9c754f45254596696984",
+        holderAddress: "0x0a1a1a107e45b7ced86833863f482bc5f4ed82ef", decimals: 6,
+      }],
+    },
+  },
+} satisfies LiveReservesConfig;
+
+async function fetchAnchored(values: Record<string, bigint> = {}, entries = MIXED_WEIGHT_PAYLOAD) {
+  mockFetch([{ match: "https://example.com/proof", body: JSON.stringify(entries.map((row) => ({
+    ...row,
+    ...(row.type === "TBILL" ? { reserveLink: "https://arbiscan.io/token/0x46850ad61c2b7d64d08c9c754f45254596696984#balances" } : {}),
+  }))) }], { requireMatch: true });
+  const words: Record<string, bigint> = {
+    block: 500_000_000n, timestamp: 1_788_975_000n,
+    assets: 1_000_000n * 10n ** 18n, supply: 950_000n * 10n ** 18n,
+    asset: BigInt(ANCHORED_CONFIG.params.anchor.assetAddress),
+    "vault-decimals": 18n, "asset-decimals": 18n, "decimals-0": 6n,
+    "balance-0": 944_000n * 10n ** 6n,
+    ...values,
+  };
+  vi.mocked(fetchEvmMulticall3Aggregate3AtBlock).mockImplementation(async (_chain, calls) =>
+    calls.map((call) => ({
+      label: call.label, success: words[call.label] != null,
+      returnData: `0x${(words[call.label] ?? 0n).toString(16).padStart(64, "0")}` as `0x${string}`,
+    })),
+  );
+  return fetchUsdAiProofOfReserves({ id: "susdai-usd-ai" } as never, ANCHORED_CONFIG, new AbortController().signal);
+}
+
 describe("usdai-proof-of-reserves adapter", () => {
+  it("anchors composition to same-call liquid balance and vault assets rather than document clocks", async () => {
+    const result = await fetchAnchored();
+    expect(result.slices.map(({ pct }) => pct)).toEqual([94.4, 5.6]);
+    expect(result.metadata).toMatchObject({
+      freshnessMode: "not-applicable",
+      observedBlock: { number: 500_000_000, timestamp: 1_788_975_000 },
+      details: { anchor: { block: 500_000_000, tolerance: 0.01, checkedRows: [expect.objectContaining({ name: "PYUSD" })] } },
+    });
+    expect(result.warnings?.some((warning) => warning.effect === "degraded")).toBe(false);
+  });
+
+  it("enforces the reviewed tolerance without floating-point boundary drift", async () => {
+    const atLimit = await fetchAnchored({ assets: 1_010_000n * 10n ** 18n });
+    expect(atLimit.metadata?.freshnessMode).toBe("not-applicable");
+    const overLimit = await fetchAnchored({ assets: 1_010_000n * 10n ** 18n + 1n });
+    expect(overLimit.metadata?.freshnessMode).toBe("unverified");
+    expect(overLimit.warnings).toContainEqual(expect.objectContaining({ code: "usdai-anchor-mismatch" }));
+  });
+
+  it("does not mistake a zero liquid row for evidence covering the loan composition", async () => {
+    const result = await fetchAnchored({ "balance-0": 0n }, [
+      { ...MIXED_WEIGHT_PAYLOAD[0], amount: "0", share: "0" },
+      { ...MIXED_WEIGHT_PAYLOAD[1], share: "1000000000000000000" },
+    ]);
+    expect(result.slices[0].pct).toBe(100);
+    expect(result.metadata?.freshnessMode).toBe("unverified");
+    expect(result.warnings).toContainEqual(expect.objectContaining({ code: "usdai-anchor-mismatch" }));
+  });
+
+  it("withholds freshness when token decimals drift even if the old scale would reconcile", async () => {
+    const result = await fetchAnchored({ "decimals-0": 18n });
+    expect(result.metadata?.freshnessMode).toBe("unverified");
+    expect(result.warnings).toContainEqual(expect.objectContaining({ code: "usdai-anchor-mismatch" }));
+  });
+
+  it("degrades a balance mismatch without discarding the observed composition", async () => {
+    const result = await fetchAnchored({ "balance-0": 900_000n * 10n ** 6n });
+    expect(result.slices.map(({ pct }) => pct)).toEqual([94.4, 5.6]);
+    expect(result.metadata?.freshnessMode).toBe("unverified");
+    expect(result.warnings).toContainEqual(expect.objectContaining({ code: "usdai-anchor-mismatch", effect: "degraded" }));
+  });
+
+  it("does not accept matching liquid amounts against an unrelated vault denominator", async () => {
+    const result = await fetchAnchored({ assets: 2_000_000n * 10n ** 18n });
+    expect(result.metadata?.freshnessMode).toBe("unverified");
+    expect(result.warnings).toContainEqual(expect.objectContaining({ code: "usdai-anchor-mismatch", effect: "degraded" }));
+  });
+
+  it("degrades unavailable anchor reads without turning readable reserves into an error", async () => {
+    mockFetch([{ match: "https://example.com/proof", body: JSON.stringify([{
+      ...MIXED_WEIGHT_PAYLOAD[0],
+      share: "1000000000000000000",
+      reserveLink: "https://arbiscan.io/token/0x46850ad61c2b7d64d08c9c754f45254596696984#balances",
+    }]) }]);
+    vi.mocked(fetchEvmMulticall3Aggregate3AtBlock).mockResolvedValue(null);
+    const result = await fetchUsdAiProofOfReserves({ id: "susdai-usd-ai" } as never, ANCHORED_CONFIG, new AbortController().signal);
+    expect(result.slices[0].pct).toBe(100);
+    expect(result.metadata?.freshnessMode).toBe("unverified");
+    expect(result.warnings).toContainEqual(expect.objectContaining({ code: "usdai-anchor-unavailable", effect: "degraded" }));
+  });
+
+  it("does not certify document-update clocks when no on-chain anchor is configured", async () => {
+    mockFetch([
+      { match: "https://example.com/proof", body: SAMPLE_RAW_PAYLOAD },
+      { match: "https://app.usd.ai/reserves", body: '\\"dealsDetailsCache\\":{\\"tokens\\":[{\\"timeLastUpdated\\":\\"2026-09-09T12:00:00Z\\"}]}' },
+    ]);
+    const result = await fetchUsdAiProofOfReserves(
+      { id: "susdai-usd-ai" } as never,
+      {
+        adapter: "usdai-proof-of-reserves", version: 2, semantics: "collateral-mix",
+        inputs: { primary: { kind: "http-json", url: "https://example.com/proof" } },
+        display: { url: "https://app.usd.ai/reserves" },
+      },
+      new AbortController().signal,
+    );
+    expect(result.metadata?.freshnessMode).toBe("unverified");
+    expect(result.warnings).toContainEqual(expect.objectContaining({ code: "usdai-anchor-unavailable", effect: "degraded" }));
+  });
+
   it("preserves oversized share strings when parsing the raw API payload", () => {
     const parsed = parseUsdAiProofOfReserves(SAMPLE_RAW_PAYLOAD);
 
@@ -186,84 +312,6 @@ describe("usdai-proof-of-reserves adapter", () => {
     });
   });
 
-  it("extracts the oldest proof-page collateral update timestamp", () => {
-    const timestamp = extractUsdAiProofPageTimestamp(
-      '\\"dealsDetailsCache\\":{\\"proofs\\":[{\\"timeLastUpdated\\":\\"2026-04-10T03:44:09.495Z\\"},'
-      + '{\\"timeLastUpdated\\":\\"2026-04-09T19:43:32.664Z\\"}]}',
-    );
-
-    expect(timestamp).toBe(Math.floor(Date.parse("2026-04-09T19:43:32.664Z") / 1000));
-  });
-
-  it("summarizes proof-page collateral update timestamps for oldest-component freshness", () => {
-    const summary = extractUsdAiProofPageTimestampSummary(
-      '\\"dealsDetailsCache\\":{\\"proofs\\":[{\\"timeLastUpdated\\":\\"2026-04-10T03:44:09.495Z\\"},'
-      + '{\\"timeLastUpdated\\":\\"2026-04-09T19:43:32.664Z\\"}]}',
-    );
-
-    expect(summary).toEqual({
-      sourceTimestamp: Math.floor(Date.parse("2026-04-09T19:43:32.664Z") / 1000),
-      latestSourceTimestamp: Math.floor(Date.parse("2026-04-10T03:44:09.495Z") / 1000),
-      sourceTimestampSpreadSec: 28837,
-      timestampCount: 2,
-    });
-  });
-
-  it("picks the oldest timeLastUpdated only from the proof-row payload", () => {
-    const html =
-      '\\"activity\\":[{\\"timeLastUpdated\\":\\"2099-01-01T00:00:00.000Z\\"}],'
-      + '\\"dealsDetailsCache\\":{\\"tokens\\":['
-      + '{\\"timeLastUpdated\\":\\"2026-04-10T03:44:09.495Z\\"},'
-      + '{\\"timeLastUpdated\\":\\"2026-04-09T19:43:32.664Z\\"}'
-      + ']}';
-
-    expect(extractUsdAiProofPageTimestamp(html)).toBe(
-      Math.floor(Date.parse("2026-04-09T19:43:32.664Z") / 1000),
-    );
-  });
-
-  it("returns null when the proof-row container is absent", () => {
-    const html = '\\"news\\":[{\\"timeLastUpdated\\":\\"2099-01-01T00:00:00.000Z\\"}]';
-    expect(extractUsdAiProofPageTimestamp(html)).toBeNull();
-  });
-
-  it("can stamp adapted rows with verified proof-page freshness", () => {
-    const sourceTimestamp = Math.floor(Date.parse("2026-04-09T19:43:32.664Z") / 1000);
-    const result = adaptUsdAiProofOfReserves(parseUsdAiProofOfReserves(SAMPLE_RAW_PAYLOAD), sourceTimestamp);
-
-    expect(result.metadata).toMatchObject({
-      freshnessMode: "verified",
-      sourceTimestamp,
-    });
-  });
-
-  it("stamps the oldest proof-row timestamp while preserving latest-component metadata", () => {
-    const oldest = Math.floor(Date.parse("2026-04-09T19:43:32.664Z") / 1000);
-    const latest = Math.floor(Date.parse("2026-04-10T03:44:09.495Z") / 1000);
-    const result = adaptUsdAiProofOfReserves(
-      parseUsdAiProofOfReserves(SAMPLE_RAW_PAYLOAD),
-      oldest,
-      {
-        sourceTimestamp: oldest,
-        latestSourceTimestamp: latest,
-        sourceTimestampSpreadSec: latest - oldest,
-        timestampCount: 2,
-      },
-    );
-
-    expect(result.metadata).toMatchObject({
-      freshnessMode: "verified",
-      sourceTimestamp: oldest,
-      oldestSourceTimestamp: oldest,
-      latestSourceTimestamp: latest,
-      sourceTimestampSpreadSec: latest - oldest,
-      sourceTimestampCount: 2,
-    });
-    expect(result.warnings).toEqual(expect.arrayContaining([
-      expect.objectContaining({ code: "source-timestamp-spread", effect: "degraded" }),
-    ]));
-  });
-
   it("ignores amount-only rows when share-bearing rows already disclose the full mix", () => {
     const result = adaptUsdAiProofOfReserves(MIXED_WEIGHT_PAYLOAD);
 
@@ -363,11 +411,6 @@ describe("usdai-proof-of-reserves adapter", () => {
         match: "https://example.com/usdai/proof-of-reserves?chainId=42161",
         body: SAMPLE_RAW_PAYLOAD,
       },
-      {
-        match: "https://app.usd.ai/reserves",
-        body: '\\"dealsDetailsCache\\":{\\"tokens\\":[{\\"timeLastUpdated\\":\\"2026-04-09T19:43:32.664Z\\"},'
-          + '{\\"timeLastUpdated\\":\\"2026-04-10T03:44:09.495Z\\"}]}',
-      },
     ], { requireMatch: true, strictUrl: true });
     const result = await fetchUsdAiProofOfReserves(
       { id: "susdai-usd-ai" } as never,
@@ -386,10 +429,6 @@ describe("usdai-proof-of-reserves adapter", () => {
       { requestCache: new Map() },
     );
     fetchSpy.assertAllRoutesUsed();
-    expect(fetchSpy.getHistory().map(({ url }) => url).sort()).toEqual([
-      "https://app.usd.ai/reserves",
-      "https://example.com/usdai/proof-of-reserves?chainId=42161",
-    ]);
 
     expect(result.slices[0]).toEqual({
       name: "PYUSD (PayPal USD)",
@@ -397,8 +436,7 @@ describe("usdai-proof-of-reserves adapter", () => {
       risk: "low",
       coinId: "pyusd-paypal",
     });
-    expect(result.metadata?.freshnessMode).toBe("verified");
-    expect(result.metadata?.sourceTimestamp).toBe(Math.floor(Date.parse("2026-04-09T19:43:32.664Z") / 1000));
-    expect(result.metadata?.oldestSourceTimestamp).toBe(Math.floor(Date.parse("2026-04-09T19:43:32.664Z") / 1000));
+    expect(result.metadata?.freshnessMode).toBe("unverified");
+    expect(result.metadata?.sourceTimestamp).toBeUndefined();
   });
 });

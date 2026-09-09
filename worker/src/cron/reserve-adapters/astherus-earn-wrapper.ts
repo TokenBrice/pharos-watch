@@ -175,7 +175,15 @@ export async function fetchAstherusEarnWrapperReserves(
     throw new Error(`${ADAPTER_KEY} exchangePrice is invalid for ${coin.id}`);
   }
 
-  const collateralizationRatio = backingAmount / supplyAmount;
+  // Share price: net USDF held per asUSDF share. Published as details.sharePrice,
+  // never as collateralizationRatio (it is a price, not a coverage ratio).
+  const sharePrice = backingAmount / supplyAmount;
+  if (!Number.isFinite(sharePrice) || sharePrice <= 0) {
+    throw new Error(`${ADAPTER_KEY} share price is invalid for ${coin.id}`);
+  }
+  // Real assets ÷ liability: net USDF backing vs the share supply valued at the
+  // same exchangePrice() the wrapper reports, so ≈1.0 when the two agree.
+  const collateralizationRatio = backingAmount / (supplyAmount * exchangePrice);
   if (!Number.isFinite(collateralizationRatio) || collateralizationRatio <= 0) {
     throw new Error(`${ADAPTER_KEY} backing coverage is invalid for ${coin.id}`);
   }
@@ -234,6 +242,7 @@ export async function fetchAstherusEarnWrapperReserves(
         netBackingRaw: netBackingRaw.toString(),
         totalSupplyRaw: totalSupplyRaw.toString(),
         exchangePriceRaw: exchangePriceRaw.toString(),
+        sharePrice,
       }),
       chain: input.chain,
       contractAddress: params.earnAddress,

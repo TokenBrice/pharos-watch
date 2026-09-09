@@ -1,0 +1,46 @@
+{
+  "schemaVersion": 1,
+  "product": "SBC",
+  "profile": "sbc-v1",
+  "officialIndexUrl": "https://brale.xyz/stablecoins/SBC",
+  "reportUrl": "https://brale.xyz/assets/reports/SBC-Stable-Coin-Reserve-Attestation-Report-07-2026.pdf",
+  "reportSha256": "407aa1430186c84c6bf9e976cc85d3486173711659d9482244b585808ebccfb7",
+  "reportByteLength": 146303,
+  "reportDate": "2026-07-31",
+  "reportAsOf": "2026-07-31T23:50:00-04:00",
+  "reportTimeZone": "Eastern Daylight Time (UTC-4)",
+  "reportIssuedAt": "2026-08-11T23:59:00-05:00",
+  "attestor": "Michael Coglianese, CPA, P.C. (MCCPA)",
+  "engagement": "AICPA attestation standards direct examination of management's assertion; MCCPA relied on data and records provided by Brale Inc. and was not retained to, and has not attempted to, independently confirm the authenticity and accuracy of those data and records",
+  "conclusion": "unmodified",
+  "unit": "USD",
+  "assets": [
+    {
+      "code": "cash-and-cash-equivalents",
+      "label": "Cash and cash equivalents in unencumbered segregated accounts",
+      "amount": "5972459"
+    },
+    {
+      "code": "us-government-backed-debt",
+      "label": "U.S. government backed debt",
+      "amount": "751220"
+    }
+  ],
+  "liabilities": [
+    {
+      "code": "all-supported-blockchains",
+      "label": "SBC issued across all supported blockchains (Algorand, Aptos, Arbitrum, Avalanche, Base, Canton, Celo, Chia, Coreum, Ethereum, Ethereum Classic, Hedera, Kusama, Monad, Optimism, Polygon, PulseChain, Radius, Solana, Spark, Starknet, Stellar, Tron, Tempo, World Chain, XRP Ledger, Xion)",
+      "amount": "6723679"
+    }
+  ],
+  "reportedAssetTotal": "6723679",
+  "computedAssetTotal": "6723679",
+  "reportedLiabilityTotal": "6723679",
+  "extraction": {
+    "tool": "Poppler pdftotext -layout",
+    "parserVersion": "26.07.0",
+    "normalizedTextSha256": "8b529322f2ca2032f0590b93f64504175b81eeaee1080443823d79b88ad0efca",
+    "pageCount": 2
+  },
+  "assuranceTier": "independent-assurance"
+}
