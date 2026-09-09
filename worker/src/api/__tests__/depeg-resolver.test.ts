@@ -278,6 +278,13 @@ function manifestRow(payload: DdrResponse, sequence = 1) {
   };
 }
 
+function snapshotResolvingAt(computedAt: number, medianResolveAt: number): DdrResponse {
+  const row = predictionRow(computedAt);
+  row.frozen.duration.medianResolveAt = medianResolveAt;
+  row.prediction.rowHash = computeDdrPublicRowHash(row);
+  return snapshot(computedAt, computedAt + 900, [row]);
+}
+
 describe("handleDepegResolver", () => {
   it("serves stale v2 snapshots as degraded while preserving frozen duration", async () => {
     vi.useFakeTimers();
@@ -298,6 +305,35 @@ describe("handleDepegResolver", () => {
     if (body.rows[0].kind !== "prediction") throw new Error("expected prediction row");
     expect(body.rows[0].frozen.duration.medianSec).toBe(3600);
     expect(body.rows[0].frozen.duration.horizons).toHaveLength(1);
+  });
+
+  it("flags a fresh cached row stale once its frozen median resolve time has passed", async () => {
+    const computedAt = 1_998_000;
+    const payload = snapshotResolvingAt(computedAt, computedAt + 60);
+    vi.useFakeTimers();
+    vi.setSystemTime((computedAt + 61) * 1000);
+    const db = mockD1(cacheRows(payload));
+
+    const body = (await readJsonResponse(await handleDepegResolver(db), 200)) as DdrResponse;
+
+    expect(body._meta.degradedReason).toBeNull();
+    expect(body.rows[0].live.stale).toBe(true);
+    expect(body.rows[0].live.degradedReason).toBe("duration-exceeded");
+    if (body.rows[0].kind !== "prediction") throw new Error("expected prediction row");
+    expect(body.rows[0].frozen.duration.medianResolveAt).toBe(computedAt + 60);
+  });
+
+  it("keeps a fresh cached row unstale until its frozen median resolve time passes", async () => {
+    const computedAt = 1_998_000;
+    const payload = snapshotResolvingAt(computedAt, computedAt + 60);
+    vi.useFakeTimers();
+    vi.setSystemTime((computedAt + 59) * 1000);
+    const db = mockD1(cacheRows(payload));
+
+    const body = (await readJsonResponse(await handleDepegResolver(db), 200)) as DdrResponse;
+
+    expect(body.rows[0].live.stale).toBe(false);
+    expect(body.rows[0].live.degradedReason).toBeNull();
   });
 
   it("marks stale closed rows as awaiting DDRR handoff", async () => {

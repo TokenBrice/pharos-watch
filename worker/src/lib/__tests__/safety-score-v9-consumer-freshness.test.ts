@@ -2,7 +2,6 @@ import { describe, expect, it } from "vitest";
 import {
   isSafetyScoreV9SnapshotFresh,
   SAFETY_SCORE_V9_CONSUMER_MAX_AGE_SEC,
-  SAFETY_SCORE_V9_CONSUMER_MAX_FUTURE_SKEW_SEC,
 } from "../safety-score-v9/consumer-freshness";
 import { SAFETY_SCORE_V9_PUBLICATION_REFRESH_INTERVAL_SEC } from "@shared/lib/cron-jobs";
 
@@ -70,24 +69,15 @@ describe("Safety Score V9 consumer freshness", () => {
     }, Number.NaN)).toBe(false);
   });
 
-  it("tolerates the clock-skew allowance but rejects a later publication time", () => {
+  it("accepts the present instant but rejects any future publication time", () => {
     const nowSec = 1_800_000_000;
 
     expect(
-      isSafetyScoreV9SnapshotFresh(
-        {
-          updatedAt: nowSec + SAFETY_SCORE_V9_CONSUMER_MAX_FUTURE_SKEW_SEC,
-          publicationHealth: currentHealth,
-        },
-        nowSec,
-      ),
+      isSafetyScoreV9SnapshotFresh({ updatedAt: nowSec, publicationHealth: currentHealth }, nowSec),
     ).toBe(true);
     expect(
       isSafetyScoreV9SnapshotFresh(
-        {
-          updatedAt: nowSec + SAFETY_SCORE_V9_CONSUMER_MAX_FUTURE_SKEW_SEC + 1,
-          publicationHealth: currentHealth,
-        },
+        { updatedAt: nowSec + 1, publicationHealth: currentHealth },
         nowSec,
       ),
     ).toBe(false);

@@ -55,6 +55,7 @@ for (const viewport of VIEWPORTS) {
     await page.locator(`${FILTER_CONTROL_SELECTOR}:visible`).first().hover();
     const tooltip = page.locator('[role="tooltip"]');
     await expect(tooltip).toBeVisible({ timeout: 5_000 });
+    expect(await tooltip.locator("span").count()).toBeGreaterThan(0);
 
     const minRatio = await tooltip.evaluate((tip) => {
       // Resolve any CSS color (oklch/rgba/color-mix) to sRGB through a scratch

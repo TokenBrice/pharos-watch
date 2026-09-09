@@ -17,7 +17,7 @@ import {
   type DdrV2ResponseRow,
   type DdrV2Row,
 } from "@shared/types/depeg-resolver";
-import { validateDdrPublicCacheContract } from "@shared/lib/depeg-resolver/public-contract";
+import { applyDurationStaleness, validateDdrPublicCacheContract } from "@shared/lib/depeg-resolver/public-contract";
 import {
   DDR_DURATION_MODEL_VERSION,
   DDR_FORECAST_READINESS_VERSION,
@@ -572,7 +572,13 @@ export const handleDepegResolver = async (db: D1Database): Promise<Response> => 
       return jsonFreshDegradedResponse(payload, nowSec, API_FRESHNESS_MAX_AGE_SEC.depegResolver);
     }
     const nowSec = Math.floor(Date.now() / 1000);
-    const basePayload = nowSec > cached.payload._meta.expiresAt ? await staleSnapshotResponse(db, cached.payload) : cached.payload;
+    // `live.stale` is a payload invariant evaluated at serve time: the cron
+    // computes it when it builds the snapshot, but a frozen row can outlive its
+    // anchored median while the cache is still fresh, so re-age it against the
+    // request clock before overlays run.
+    const basePayload = nowSec > cached.payload._meta.expiresAt
+      ? await staleSnapshotResponse(db, cached.payload)
+      : applyDurationStaleness(cached.payload, nowSec);
     const payload = await decorateDdrResponse(db, basePayload);
     return jsonFreshDegradedResponse(payload, cached.payload._meta.computedAt, API_FRESHNESS_MAX_AGE_SEC.depegResolver);
   }

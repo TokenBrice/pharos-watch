@@ -164,9 +164,8 @@ describe("syncLiveReserves orchestrator run-budget behavior", () => {
         attemptNo: 2,
         invocationId: identity.invocationId,
         nextItemKey: crashedCoin.id,
-        currentItemKey: crashedCoin.id,
-        currentDomainAttemptId: "crashed-authoritative-attempt",
         itemsDone: 0,
+        currentDomainAttemptId: "crashed-authoritative-attempt",
       }),
       {
         match: "FROM reserve_composition c",

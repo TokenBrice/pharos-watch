@@ -15,7 +15,7 @@ import {
   forecastReadinessLockTrigger,
   forecastReadinessScore,
 } from "@shared/lib/depeg-resolver/forecast-readiness";
-import { buildDdrManifestBasePayload } from "@shared/lib/depeg-resolver/public-contract";
+import { buildDdrManifestBasePayload, DDR_DURATION_EXCEEDED_REASON } from "@shared/lib/depeg-resolver/public-contract";
 import {
   DDR_PREDICTION_POLICY_VERSION,
   DDR_SNAPSHOT_CACHE_GENERATION,
@@ -198,7 +198,7 @@ function buildLiveOverlay(
     eventState: "active",
     updatedAt: nowSec,
     stale: durationExceeded,
-    degradedReason: durationExceeded ? "duration-exceeded" : null,
+    degradedReason: durationExceeded ? DDR_DURATION_EXCEEDED_REASON : null,
   };
 }
 

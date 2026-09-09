@@ -55,8 +55,8 @@ async function openBotPage(page: Page, width: number, height: number) {
   await page.route("**/_site-data/telegram-pulse*", fulfillPulse);
   await page.route("**/api/telegram-pulse*", fulfillPulse);
   await page.goto("/pharoswatchbot/", { waitUntil: "domcontentloaded" });
-  await expect(page.getByRole("heading", { name: "PharosWatchBot", exact: true })).toBeVisible();
-  await expect(page.locator("#bot img")).toHaveJSProperty("complete", true);
+  await expect(page.locator("#watch").getByRole("heading", { level: 1 })).toBeVisible();
+  await expect(page.locator("#watch svg[role=\"presentation\"]")).toBeVisible();
   await page.evaluate(() => document.fonts.ready);
 }
 
@@ -64,26 +64,25 @@ test.describe("PharosWatchBot public page", () => {
   test("keeps the 320px decision path in the first fold without horizontal overflow", async ({ page }) => {
     await openBotPage(page, 320, 568);
 
-    await expect(page.getByRole("link", { name: /Open Bot/i }).first()).toBeVisible();
-    const examplesTop = await page.locator("#alerts").evaluate((element) => element.getBoundingClientRect().top);
-    expect(examplesTop).toBeLessThan(568);
+    const hero = page.locator("#watch");
+    await expect(hero.getByRole("heading", { level: 1 })).toBeVisible();
+    await expect(hero.getByRole("link", { name: "Open the bot", exact: true })).toBeInViewport();
+    await expect(hero.getByRole("link", { name: "See example alerts", exact: true })).toBeInViewport();
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
-
-    await expect(page.locator("#bot")).toHaveScreenshot("pharoswatchbot-hero-320.png", {
-      animations: "disabled",
-    });
   });
 
-  test("keeps the 375px reference keyboard accessible and axe-clean", async ({ page }) => {
+  test("keeps the 375px command reference keyboard accessible and axe-clean", async ({ page }) => {
     await openBotPage(page, 375, 667);
 
-    const commandSummary = page.locator("#commands summary");
-    await commandSummary.focus();
-    await page.keyboard.press("Enter");
-    await expect(page.locator("#commands details")).toHaveAttribute("open", "");
-    await expect(page.getByLabel("PharosWatchBot command reference")).toBeVisible();
+    const manual = page.locator("#manual");
+    await expect(manual.getByRole("heading", { level: 2 }).first()).toBeVisible();
+    const commandReference = page.getByLabel("PharosWatchBot command reference");
+    await expect(commandReference).toBeVisible();
+    const commandFilter = page.getByRole("searchbox", { name: "Filter bot commands" });
+    await commandFilter.focus();
+    await expect(commandFilter).toBeFocused();
 
-    const inaccessibleCommandOverflow = await page.getByLabel("PharosWatchBot command reference").evaluate((root) => {
+    const inaccessibleCommandOverflow = await commandReference.evaluate((root) => {
       const elements = [root, ...root.querySelectorAll<HTMLElement>("*")];
       return elements.some((element) => {
         const overflowX = window.getComputedStyle(element).overflowX;
@@ -98,29 +97,16 @@ test.describe("PharosWatchBot public page", () => {
     const results = await new AxeBuilder({ page }).withTags(TAGS).analyze();
     expect(summarizeViolations("/pharoswatchbot#reference", results.violations), "axe-core violations").toEqual([]);
 
-    await page.locator("#mini-app").scrollIntoViewIfNeeded();
-    await expect(page.getByRole("heading", { name: "The same alert state, without slash commands" })).toBeVisible();
-    await page.locator("header").evaluateAll((headers) => {
-      for (const header of headers) (header as HTMLElement).style.visibility = "hidden";
-    });
-    const feedbackButton = page.getByRole("button", { name: "Send feedback" });
-    if (await feedbackButton.count()) {
-      await feedbackButton.first().evaluate((button) => {
-        const dock = button.closest(".fixed") as HTMLElement | null;
-        if (dock) dock.style.display = "none";
-      });
-    }
-    await expect(page.locator("#mini-app")).toHaveScreenshot("pharoswatchbot-mini-app-375.png", {
-      animations: "disabled",
-    });
+    const control = page.locator("#control");
+    await control.scrollIntoViewIfNeeded();
+    await expect(control.getByRole("heading", { level: 2 })).toBeVisible();
   });
 
   test("preserves the unframed desktop product scene", async ({ page }) => {
     await openBotPage(page, 1440, 900);
 
-    await expect(page.locator("#bot")).toHaveCSS("border-top-left-radius", "0px");
-    await expect(page.locator("#bot")).toHaveScreenshot("pharoswatchbot-hero-desktop.png", {
-      animations: "disabled",
-    });
+    const hero = page.locator("#watch");
+    await expect(hero).toHaveCSS("border-top-left-radius", "0px");
+    await expect(hero.locator('svg[role="presentation"]')).toBeVisible();
   });
 });

@@ -81,6 +81,7 @@
     "sync:staged-artifacts": "node --import tsx scripts/ci/sync-staged-generated-artifacts.mts",
     "serve:static-export": "node --import tsx scripts/maintenance/serve-static-export.ts",
     "test:a11y": "playwright test tests/visual/a11y/axe-routes.spec.ts",
+    "test:visual": "playwright test tests/visual/*.spec.ts",
     "test:a11y:hydrated": "playwright test tests/visual/a11y/axe-routes-hydrated.spec.ts",
     "test:ops-browser": "playwright test --config playwright.ops.config.ts",
     "test:smoke-api": "node scripts/maintenance/smoke-api.mjs",
