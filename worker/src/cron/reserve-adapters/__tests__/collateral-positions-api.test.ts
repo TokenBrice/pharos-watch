@@ -15,6 +15,11 @@ vi.mock("../helpers", async (importOriginal) => {
 import { adaptCollateralPositions, fetchCollateralPositionsApiReserves } from "../collateral-positions-api";
 import { fetchJsonWithRetry, fetchOnchainMulticall3 } from "../helpers";
 import { mockedReserveHelper } from "./reserve-adapter.test-support";
+import {
+  COLLATERAL_POSITION_MIN_SLICE_PCT,
+  COLLATERAL_POSITION_PRICES,
+  COLLATERAL_POSITIONS_BY_ASSET,
+} from "./reserve-adapter-payloads.test-support";
 
 let signal: AbortSignal;
 
@@ -39,41 +44,9 @@ describe("adaptCollateralPositions", () => {
 
   it("aggregates open collateral positions into reserve slices and folds small tails into Other", () => {
     const result = adaptCollateralPositions(
-      {
-        "0xbtc": {
-          address: "0xBTC",
-          name: "Wrapped BTC",
-          symbol: "WBTC",
-          decimals: 8,
-          positions: [
-            { collateralBalance: "500000000", closed: false, denied: false },
-          ],
-        },
-        "0xeth": {
-          address: "0xETH",
-          name: "Wrapped Ether",
-          symbol: "WETH",
-          decimals: 18,
-          positions: [
-            { collateralBalance: "200000000000000000000", closed: false, denied: false },
-          ],
-        },
-        "0xgno": {
-          address: "0xGNO",
-          name: "Gnosis",
-          symbol: "GNO",
-          decimals: 18,
-          positions: [
-            { collateralBalance: "1000000000000000000", closed: false, denied: false },
-          ],
-        },
-      },
-      {
-        "0xbtc": { price: { usd: 100000 } },
-        "0xeth": { price: { usd: 2000 } },
-        "0xgno": { price: { usd: 200 } },
-      },
-      5,
+      COLLATERAL_POSITIONS_BY_ASSET,
+      COLLATERAL_POSITION_PRICES,
+      COLLATERAL_POSITION_MIN_SLICE_PCT,
     );
 
     expect(result.slices).toEqual([

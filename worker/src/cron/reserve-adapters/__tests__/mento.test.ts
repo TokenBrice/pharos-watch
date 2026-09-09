@@ -27,6 +27,7 @@ import {
   fetchOnchainUint256,
 } from "../helpers";
 import { expectValidAdapterOutput } from "./reserve-adapter.test-support";
+import { MENTO_RESERVE_COMPOSITION_PAYLOAD as SAMPLE_PAYLOAD } from "./reserve-adapter-payloads.test-support";
 
 vi.mock("../helpers", async (importOriginal) => {
   const actual = await importOriginal<typeof import("../helpers")>();
@@ -109,77 +110,6 @@ function makeMentoConfig(): LiveReservesConfig {
     },
   };
 }
-
-const SAMPLE_PAYLOAD = {
-  collateral: {
-    assets: [
-      { symbol: "sUSDS", percentage: 50 },
-      { symbol: "EURC", percentage: 10 },
-      { symbol: "axlEUROC", percentage: 5 },
-      { symbol: "CELO", percentage: 15 },
-      { symbol: "USDGLO", percentage: 5 },
-      { symbol: "stETH", percentage: 3 },
-      { symbol: "USDT", percentage: 3 },
-      { symbol: "USDT0", percentage: 1 },
-      { symbol: "USDC", percentage: 2 },
-      { symbol: "axlUSDC", percentage: 1 },
-      { symbol: "AUSD", percentage: 4 },
-      { symbol: "WETH", percentage: 1 },
-    ],
-  },
-  cdp_troves: {
-    troves: [
-      {
-        stablecoin: "GBPm",
-        collateral_token: "USDm",
-        collateral_usd: 173_427.5,
-        debt_usd: 82_821.25,
-        ratio: 2.09,
-        status: "active",
-      },
-      {
-        stablecoin: "GBPm",
-        collateral_token: "USDm",
-        collateral_usd: 40_000,
-        debt_usd: 20_000,
-        ratio: 2,
-        status: "active",
-      },
-      {
-        stablecoin: "JPYm",
-        collateral_token: "USDm",
-        collateral_usd: 171_960.48,
-        debt_usd: 105_336.2,
-        ratio: 1.63,
-        status: "active",
-      },
-      {
-        stablecoin: "CHFm",
-        collateral_token: "USDm",
-        collateral_usd: 143_361.85,
-        debt_usd: 90_307.02,
-        ratio: 1.59,
-        status: "active",
-      },
-      {
-        stablecoin: "XOFm",
-        collateral_token: "USDm",
-        collateral_usd: 25_000,
-        debt_usd: 12_500,
-        ratio: 2,
-        status: "active",
-      },
-      {
-        stablecoin: "GBPm",
-        collateral_token: "USDm",
-        collateral_usd: 1_000,
-        debt_usd: 500,
-        ratio: 2,
-        status: "closed",
-      },
-    ],
-  },
-};
 
 const forbiddenFetch = vi.fn(() => { throw new Error("Unexpected real network request"); });
 const httpRequests: Array<{ url: string; identity: string; referer: string | null }> = [];
