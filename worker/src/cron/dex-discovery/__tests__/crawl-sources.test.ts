@@ -880,6 +880,7 @@ describe("crawlCoin DexScreener hardening", () => {
     });
     expect(events).toEqual([
       "cg:eth",
+      "cg:plasma",
       "gt",
       "ds:ethereum",
       "tickers",

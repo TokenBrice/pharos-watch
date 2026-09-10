@@ -259,6 +259,7 @@ export async function stageDexLiquidityScoring(
       retention: stored.retention,
       rowsRead: scoringSourceState.primaryRawPoolCount,
       failedSources: scoringSourceState.failedSources,
+      degradedSources: scoringSourceState.degradedSources ?? [],
       fallbackSignals: scoringSourceState.fallbackSignals,
       poolRejections: poolState.poolRejections,
       poolRejectionMateriality: {
@@ -450,6 +451,7 @@ function buildDexLiquidityScoringSourceState(
     failedSources: sourceState.failedSources,
     criticalSourceFailures: sourceState.criticalSourceFailures,
     fallbackSignals: sourceState.fallbackSignals,
+    degradedSources: sourceState.directApiPhase.degradedSources,
     directApiSourceSummary: {
       circuitEvents: sourceState.directApiPhase.circuitEvents,
       sourceWarnings: sourceState.directApiPhase.sourceWarnings,
@@ -797,6 +799,7 @@ async function buildDexLiquidityPoolState(
         sourceState.lookups.contractMetaByChainAddress,
     },
     preprocessedPoolCounts: sourceState.directApiPoolCounts,
+    attemptedProtocolChains: sourceState.directApiPhase.attemptedProtocolChains,
     fallbackCounters: ctx.fallbackCounters,
   });
   logDirectApiSourceSummary(directApiIntegration, sourceState.directApiPhase.circuitEvents);
@@ -951,14 +954,17 @@ async function scoreDexLiquidityPoolState(
   sourceState.protocolTvlCaps.clear();
   sourceState.stablecoinMcapById.clear();
 
+  // The near and hard coverage/value guards are evaluated unconditionally in
+  // the post-scoring analysis, so a run with a critical source failure still
+  // records `nearCoverageGuard`, `nearValueGuard`, and `hardCoverageGuard` in
+  // cron metadata instead of going dark exactly on the worst runs. A critical
+  // failure already forces `degraded` and skipped persistence, so it keeps
+  // suppressing the hard abort that would otherwise replace that metadata with
+  // a thrown error.
   const hasCriticalSourceFailure = sourceState.criticalSourceFailures.length > 0;
-  if (
-    !hasCriticalSourceFailure &&
-    analysis.previousCoverage >= 10 &&
-    analysis.currentCoverage < analysis.minExpectedCoverage
-  ) {
+  if (!hasCriticalSourceFailure && analysis.hardCoverageGuard) {
     throw new Error(
-      `[dex-liquidity] coverage guard tripped: current=${analysis.currentCoverage}, previous=${analysis.previousCoverage}, minExpected=${analysis.minExpectedCoverage}`,
+      `[dex-liquidity] coverage guard tripped: current=${analysis.currentCoverage}, baseline=${analysis.previousCoverage}, minExpected=${analysis.minExpectedCoverage}`,
     );
   }
   if (!hasCriticalSourceFailure && analysis.hardValueGuard) {
@@ -983,6 +989,7 @@ async function scoreDexLiquidityPoolState(
       currentGlobalTvl: Math.round(analysis.currentGlobalTvl),
     },
     metadata: {
+      hardCoverageGuard: analysis.hardCoverageGuard,
       hardValueGuard: analysis.hardValueGuard,
       hardMajorCoverageGuard: analysis.hardMajorCoverageGuard,
     },

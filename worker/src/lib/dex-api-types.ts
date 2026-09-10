@@ -78,6 +78,13 @@ export interface DexApiFetchResult {
   degraded: boolean;
   errors: string[];
   warnings?: string[];
+  /**
+   * Chains whose capture failed inside an otherwise usable source, e.g. `["bsc"]`
+   * for PancakeSwap when only BSC throws. Phase telemetry turns each entry into a
+   * chain-scoped degraded source (`pancakeswap-api:bsc`) so a partially failed
+   * source stops hiding behind a source-level flag.
+   */
+  degradedChains?: string[];
   pagination?: {
     state: "complete" | "partial";
     headRefreshed: boolean;
