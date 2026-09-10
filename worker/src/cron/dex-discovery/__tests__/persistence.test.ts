@@ -206,15 +206,18 @@ describe("discovery persistence D1 retry coverage", () => {
     const { sqlite, db } = fixtures.open();
     const insert = sqlite.prepare(`INSERT INTO dex_deployment_outcomes
       (stablecoin_id, chain, contract_address, outcome, provider_set_json, reason, observed_at)
-      VALUES (?, 'ethereum', ?, ?, ?, 'fixture', 100)`);
-    insert.run("coin-a", "0xa", "verified_no_pools", '["curve"]');
-    insert.run("coin-a", "0xb", "observed_pools", '["curve"]');
-    insert.run("coin-a", "0xc", "provider_inaccessible", '["curve"]');
-    insert.run("coin-a", "0xd", "provider_inaccessible", "[]");
-    insert.run("coin-b", "0xa", "provider_inaccessible", "[]");
+      VALUES (?, ?, ?, ?, ?, 'fixture', 100)`);
+    insert.run("coin-a", "ethereum", "0xa", "verified_no_pools", '["curve"]');
+    insert.run("coin-a", "ethereum", "0xb", "observed_pools", '["curve"]');
+    insert.run("coin-a", "ethereum", "0xc", "provider_inaccessible", '["curve"]');
+    insert.run("coin-a", "ethereum", "0xd", "provider_inaccessible", "[]");
+    insert.run("coin-b", "ethereum", "0xa", "provider_inaccessible", "[]");
+    // A provider-less chain stays a standing unsupported remainder instead of
+    // counting as a remapped row due for re-attempt.
+    insert.run("coin-b", "secret", "secret1unsupported", "provider_inaccessible", "[]");
     expect(await readDiscoveryCensusSummaries(db)).toEqual(new Map([
-      ["coin-a", { verifiedNoPoolsCount: 1, observedPoolsCount: 1, providerSupportedInaccessibleCount: 1 }],
-      ["coin-b", { verifiedNoPoolsCount: 0, observedPoolsCount: 0, providerSupportedInaccessibleCount: 0 }],
+      ["coin-a", { verifiedNoPoolsCount: 1, observedPoolsCount: 1, providerSupportedInaccessibleCount: 1, remappedUnsupportedCount: 1 }],
+      ["coin-b", { verifiedNoPoolsCount: 0, observedPoolsCount: 0, providerSupportedInaccessibleCount: 0, remappedUnsupportedCount: 1 }],
     ]));
   });
 

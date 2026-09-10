@@ -2,6 +2,8 @@ import { logWorkerEventArgs } from "../../lib/structured-log";
 import { batchExecute } from "../../lib/db";
 import { rethrowIfAborted, throwIfAborted } from "../../lib/abort";
 import { runWithOverloadRetry } from "../../lib/d1-overload-retry";
+import { CG_CHAIN_MAP, DS_CHAIN_MAP, GT_CHAIN_MAP } from "@shared/lib/chains";
+import { CURVE_NATIVE_DISCOVERY_CHAINS } from "@shared/lib/dex-deployment-coverage";
 import { toErrorMessage } from "@shared/lib/error-utils";
 import { canonicalExitRouteScopedId } from "@shared/lib/exit-route-identity";
 import type { ContractDeployment } from "@shared/types/core";
@@ -40,6 +42,29 @@ const STAGING_CLEANUP_MAX_ROWS_PER_RUN = 1_000;
 const RUN_SEQ_KEY = "discovery_run_seq";
 const TARGET_CURSOR_KEY = "discovery_target_cursors";
 const ORDERBOOK_POOL_ID_PREFIX = "orderbook:";
+
+/**
+ * Canonical chains a provider mapping can reach. An unsupported-scope census
+ * row on one of these chains is a pre-coverage artifact once the mapping lands,
+ * so it is counted separately and feeds the refresh-tier re-attempt gate.
+ * Chains outside this set have no registered provider: the static writer
+ * re-asserts their rows every run, so those rows never go stale.
+ */
+const REMAPPABLE_UNSUPPORTED_CHAIN: Readonly<Record<string, true>> = Object.fromEntries(
+  [
+    ...Object.keys(CG_CHAIN_MAP),
+    ...Object.keys(GT_CHAIN_MAP),
+    ...Object.keys(DS_CHAIN_MAP),
+    ...CURVE_NATIVE_DISCOVERY_CHAINS,
+    // Native single-deployment adapters outside the provider network-slug maps.
+    "stellar",
+    "tezos",
+    "icon",
+    "osmosis",
+    "noble",
+  ].map((chain) => [chain, true as const]),
+);
+const REMAPPABLE_UNSUPPORTED_CHAIN_IDS = Object.keys(REMAPPABLE_UNSUPPORTED_CHAIN).sort();
 
 // Canonical pool_id shapes observed in dex_pool_staging:
 //   "chain:0xhex"                 (EVM, lowercased)
@@ -386,6 +411,8 @@ export interface DiscoveryCensusSummary {
   verifiedNoPoolsCount: number;
   observedPoolsCount: number;
   providerSupportedInaccessibleCount: number;
+  /** Unsupported-scope rows for chains the registry now serves: due for re-attempt. */
+  remappedUnsupportedCount: number;
 }
 
 /**
@@ -405,15 +432,20 @@ export async function readDiscoveryCensusSummaries(
                   SUM(CASE WHEN outcome = 'verified_no_pools' THEN 1 ELSE 0 END) AS verified_no_pools,
                   SUM(CASE WHEN outcome = 'observed_pools' THEN 1 ELSE 0 END) AS observed_pools,
                   SUM(CASE WHEN outcome = 'provider_inaccessible' AND provider_set_json <> '[]' THEN 1 ELSE 0 END)
-                    AS provider_supported_inaccessible
+                    AS provider_supported_inaccessible,
+                  SUM(CASE WHEN outcome = 'provider_inaccessible' AND provider_set_json = '[]'
+                            AND chain IN (${REMAPPABLE_UNSUPPORTED_CHAIN_IDS.map(() => "?").join(", ")}) THEN 1 ELSE 0 END)
+                    AS remapped_unsupported
              FROM dex_deployment_outcomes
             GROUP BY stablecoin_id`,
         )
+        .bind(...REMAPPABLE_UNSUPPORTED_CHAIN_IDS)
         .all<{
           stablecoin_id: string;
           verified_no_pools: number | null;
           observed_pools: number | null;
           provider_supported_inaccessible: number | null;
+          remapped_unsupported: number | null;
         }>(),
     3,
     signal,
@@ -426,6 +458,7 @@ export async function readDiscoveryCensusSummaries(
       verifiedNoPoolsCount: row.verified_no_pools ?? 0,
       observedPoolsCount: row.observed_pools ?? 0,
       providerSupportedInaccessibleCount: row.provider_supported_inaccessible ?? 0,
+      remappedUnsupportedCount: row.remapped_unsupported ?? 0,
     });
   }
   return summaries;

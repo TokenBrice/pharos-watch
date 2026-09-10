@@ -7,6 +7,7 @@ import { getTrackedContracts } from "../../dex-liquidity/pool-helpers";
 import {
   compareDiscoveryMeta,
   computeEffectiveTier,
+  hasRemappedUnsupportedCensusRow,
   hasVerifiedEmptyCensus,
   isEligibleThisRun,
   isDiscoveryEvidenceRefreshDue,
@@ -93,6 +94,7 @@ describe("hasVerifiedEmptyCensus", () => {
         verifiedNoPoolsCount: 2,
         observedPoolsCount: 0,
         providerSupportedInaccessibleCount: 0,
+        remappedUnsupportedCount: 0,
       }),
     ).toBe(true);
   });
@@ -103,6 +105,7 @@ describe("hasVerifiedEmptyCensus", () => {
         verifiedNoPoolsCount: 1,
         observedPoolsCount: 0,
         providerSupportedInaccessibleCount: 0,
+        remappedUnsupportedCount: 0,
       }),
     ).toBe(true);
   });
@@ -114,6 +117,7 @@ describe("hasVerifiedEmptyCensus", () => {
         verifiedNoPoolsCount: 1,
         observedPoolsCount: 0,
         providerSupportedInaccessibleCount: 0,
+        remappedUnsupportedCount: 0,
       }),
     ).toBe(false);
     // Pools were observed somewhere in the footprint.
@@ -122,6 +126,7 @@ describe("hasVerifiedEmptyCensus", () => {
         verifiedNoPoolsCount: 1,
         observedPoolsCount: 1,
         providerSupportedInaccessibleCount: 0,
+        remappedUnsupportedCount: 0,
       }),
     ).toBe(false);
     // A provider-supported deployment is still unanswered.
@@ -130,6 +135,7 @@ describe("hasVerifiedEmptyCensus", () => {
         verifiedNoPoolsCount: 2,
         observedPoolsCount: 0,
         providerSupportedInaccessibleCount: 1,
+        remappedUnsupportedCount: 0,
       }),
     ).toBe(false);
     // No census read at all, and a footprint with no reviewable deployment.
@@ -139,8 +145,57 @@ describe("hasVerifiedEmptyCensus", () => {
         verifiedNoPoolsCount: 0,
         observedPoolsCount: 0,
         providerSupportedInaccessibleCount: 0,
+        remappedUnsupportedCount: 0,
       }),
     ).toBe(false);
+  });
+});
+
+describe("hasRemappedUnsupportedCensusRow", () => {
+  const ethereumTarget: ContractDeployment = {
+    chain: "ethereum",
+    address: "0x1111111111111111111111111111111111111111",
+    decimals: 18,
+  };
+  const providerlessTarget: ContractDeployment = { chain: "hive", address: "hbd", decimals: 3 };
+  const summary = {
+    verifiedNoPoolsCount: 0,
+    observedPoolsCount: 0,
+    providerSupportedInaccessibleCount: 0,
+    remappedUnsupportedCount: 1,
+  };
+
+  it("schedules a stale unsupported-chain row on a now-mapped chain for re-census", () => {
+    expect(hasRemappedUnsupportedCensusRow([ethereumTarget], summary)).toBe(true);
+    // The remapped row flips a deep-in-the-ladder dormant coin out of its
+    // daily/weekly sleep into the refresh tier, so the crawl rotation
+    // overwrites the row instead of keeping it.
+    const meta: DiscoveryMeta = {
+      stablecoinId: "coin-a",
+      consecutiveMisses: DISCOVERY_TIERS.BACKOFF_DORMANT_MISSES,
+      lastCrawlAt: nowSec - 2 * DISCOVERY_TIERS.DORMANT_INTERVAL_SEC,
+      lastHitAt: null,
+    };
+    expect(computeEffectiveTier("coin-a", 0, 0, meta, 1, nowSec, false, false)).toBe("skip");
+    expect(
+      computeEffectiveTier(
+        "coin-a",
+        0,
+        0,
+        meta,
+        1,
+        nowSec,
+        false,
+        hasRemappedUnsupportedCensusRow([ethereumTarget], summary) &&
+          isDiscoveryEvidenceRefreshDue([ethereumTarget], meta, nowSec),
+      ),
+    ).toBe("refresh");
+  });
+
+  it("keeps the ladder untouched without a remapped row or a supported target", () => {
+    expect(hasRemappedUnsupportedCensusRow([ethereumTarget], { ...summary, remappedUnsupportedCount: 0 })).toBe(false);
+    expect(hasRemappedUnsupportedCensusRow([providerlessTarget], summary)).toBe(false);
+    expect(hasRemappedUnsupportedCensusRow([ethereumTarget], undefined)).toBe(false);
   });
 });
 

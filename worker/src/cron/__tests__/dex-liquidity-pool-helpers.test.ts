@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { GT_CHAIN_MAP, GT_ONLY_CHAIN_MAP } from "../../lib/chain-registry";
+import { CG_CHAIN_MAP, GT_CHAIN_MAP, GT_ONLY_CHAIN_MAP } from "../../lib/chain-registry";
 import { QUALITY_MULTIPLIERS } from "../../lib/dex-cron-constants";
 import {
   buildSymbolLookups,
@@ -75,8 +75,11 @@ describe("dex-liquidity pool helpers", () => {
     expect(GT_CHAIN_MAP.plume).toBe("plume-network");
     expect(GT_CHAIN_MAP.sei).toBe("sei-network");
     expect(GT_CHAIN_MAP.worldchain).toBe("world-chain");
-    expect(GT_ONLY_CHAIN_MAP.plasma).toBe("plasma");
-    expect(GT_ONLY_CHAIN_MAP.mantle).toBe("mantle");
+    // plasma and mantle left the GT-only backfill set once their CoinGecko
+    // onchain networks were verified; soneium remains GT-only.
+    expect(CG_CHAIN_MAP.plasma).toBe("plasma");
+    expect(CG_CHAIN_MAP.mantle).toBe("mantle");
+    expect(GT_ONLY_CHAIN_MAP.soneium).toBe("soneium");
   });
 
   it("computes durability and liquidity scores for default and healthy cases", () => {
