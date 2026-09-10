@@ -3,7 +3,6 @@ import { getCache, setCache } from "../lib/db-cache";
 import { shouldAttemptFetch, recordOutcome } from "../lib/circuit-breaker";
 import { FRED_EFFR_CSV_URL, FRED_TBILL_CSV_URL } from "../lib/constants";
 import { logCronEvent, recordCronFailure, type CronResult } from "../lib/cron-logger";
-import { cadenceBucketFor, claimCadenceBucket, completeCadenceBucket, failCadenceBucket } from "../lib/cadence-bucket";
 import {
   buildRiskFreeRateCachePayload,
   buildRiskFreeRatesCachePayload,
@@ -49,16 +48,6 @@ const RISK_FREE_RATES_CACHE_KEY = "risk_free_rates";
 const LEGACY_USD_RISK_FREE_RATE_CACHE_KEY = "risk_free_rate";
 const GBP_RETAINED_FALLBACK_STREAK_CACHE_KEY = "fetch-tbill-rate:gbp-retained-fallback-streak";
 const TREASURY_CIRCUIT_PREFIX = "TREASURY_RATES:";
-const TBILL_WEEKLY_CADENCE_KEY = "fetch-tbill-rate:weekly";
-const TBILL_WEEKLY_CADENCE_SEC = 7 * 24 * 60 * 60;
-const TBILL_STALE_CLAIM_SEC = 12 * 60;
-const DAILY_BENCHMARK_KEYS: Record<string, true> = {
-  USD_EFFR: true,
-};
-
-interface FetchTbillRateOptions {
-  scheduledAtSec?: number;
-}
 
 function benchmarkCircuitKey(key: string): string {
   return `${TREASURY_CIRCUIT_PREFIX}${key}`;
@@ -627,10 +616,9 @@ async function resolveBenchmarkProviderMap(params: {
   fetchedAt: number;
   env?: Pick<Env, "BANXICO_TOKEN">;
   signal?: AbortSignal;
-  descriptors?: readonly FetchBenchmarkDescriptor[];
 }): Promise<Record<string, ResolvedBenchmarkProvider>> {
   const resolvedProviders: ResolvedBenchmarkProvider[] = [];
-  for (const descriptor of params.descriptors ?? BENCHMARK_FETCH_DESCRIPTORS) {
+  for (const descriptor of BENCHMARK_FETCH_DESCRIPTORS) {
     throwIfAborted(params.signal);
     resolvedProviders.push(
       descriptor.provider === "MXN"
@@ -646,30 +634,6 @@ async function resolveBenchmarkProviderMap(params: {
   }
 
   return Object.fromEntries(resolvedProviders.map((entry) => [entry.key, entry]));
-}
-
-const DAILY_FETCH_DESCRIPTORS = BENCHMARK_FETCH_DESCRIPTORS.filter(
-  (descriptor) => DAILY_BENCHMARK_KEYS[descriptor.key] === true,
-);
-const WEEKLY_FETCH_DESCRIPTORS = BENCHMARK_FETCH_DESCRIPTORS.filter(
-  (descriptor) => DAILY_BENCHMARK_KEYS[descriptor.key] !== true,
-);
-
-function preserveWeeklyBenchmark(
-  descriptor: FetchBenchmarkDescriptor,
-  previous: ParsedYieldBenchmarkRegistry,
-): ResolvedBenchmarkProvider {
-  const key = descriptor.key as BenchmarkProviderKey;
-  const meta = previous[key] ?? null;
-  const fallbackMode = descriptor.provider === "MXN"
-    ? "weekly-not-yet-fetched"
-    : descriptor.provider.fallbackMode;
-  return {
-    key,
-    parsed: null,
-    meta,
-    failureMode: meta?.isFallback ? meta.fallbackMode : (meta ? null : fallbackMode),
-  };
 }
 
 function buildBenchmarkRegistry(
@@ -716,130 +680,63 @@ export async function fetchTbillRate(
   db: D1Database,
   signal?: AbortSignal,
   env?: Pick<Env, "BANXICO_TOKEN">,
-  options: FetchTbillRateOptions = {},
 ): Promise<CronResult> {
   const previous = await loadRiskFreeRateRegistry(db);
   throwIfAborted(signal);
   const fetchedAt = Math.floor(Date.now() / 1000);
-  const scheduledAtSec = options.scheduledAtSec ?? fetchedAt;
-  const weeklyBucket = cadenceBucketFor(scheduledAtSec, TBILL_WEEKLY_CADENCE_SEC);
-  const weeklyClaimResult = await claimCadenceBucket(db, {
-    key: TBILL_WEEKLY_CADENCE_KEY,
-    bucket: weeklyBucket,
-    nowSec: fetchedAt,
-    staleClaimAfterSec: TBILL_STALE_CLAIM_SEC,
-  });
-  const weeklyClaim = weeklyClaimResult.kind === "claimed" ? weeklyClaimResult.claim : null;
-  let weeklyCompleted = weeklyClaim == null;
-
-  try {
-    throwIfAborted(signal);
-    const usdCircuitSource = benchmarkCircuitKey("USD");
-    const usdAllowed = await shouldAttemptFetch(db, usdCircuitSource);
-    const usdFred = usdAllowed ? await tryFredCsv(FRED_TBILL_CSV_URL, signal) : null;
-    const usdParsed = usdFred ?? (usdAllowed ? await tryTreasuryXml(signal) : null);
-    const usdSource = usdFred ? "fred-dgs3mo" : usdParsed ? "treasury-yield-xml" : null;
-    const usdFallbackMode = usdAllowed ? "all-sources-failed" : "circuit-open";
-    const usdMeta =
-      usdParsed && usdSource
-        ? buildResolvedBenchmark({
-            key: "USD",
-            rate: usdParsed.rate,
-            recordDate: usdParsed.recordDate,
-            fetchedAt,
-            source: usdSource,
-          })
-        : (buildRetainedBenchmark(previous.USD, usdFallbackMode) ??
-          buildHardcodedUsdBenchmark(usdFallbackMode));
-
-    if (usdAllowed) {
-      await recordOutcome(db, usdCircuitSource, usdParsed != null);
-    }
-
-    const resolvedByKey = await resolveBenchmarkProviderMap({
-      db,
-      previous,
-      fetchedAt,
-      env,
-      signal,
-      descriptors: DAILY_FETCH_DESCRIPTORS,
-    });
-    if (weeklyClaim) {
-      Object.assign(
-        resolvedByKey,
-        await resolveBenchmarkProviderMap({
-          db,
-          previous,
+  const usdCircuitSource = benchmarkCircuitKey("USD");
+  const usdAllowed = await shouldAttemptFetch(db, usdCircuitSource);
+  const usdFred = usdAllowed ? await tryFredCsv(FRED_TBILL_CSV_URL, signal) : null;
+  const usdParsed = usdFred ?? (usdAllowed ? await tryTreasuryXml(signal) : null);
+  const usdSource = usdFred ? "fred-dgs3mo" : usdParsed ? "treasury-yield-xml" : null;
+  const usdFallbackMode = usdAllowed ? "all-sources-failed" : "circuit-open";
+  const usdMeta =
+    usdParsed && usdSource
+      ? buildResolvedBenchmark({
+          key: "USD",
+          rate: usdParsed.rate,
+          recordDate: usdParsed.recordDate,
           fetchedAt,
-          env,
-          signal,
-          descriptors: WEEKLY_FETCH_DESCRIPTORS,
-        }),
-      );
-    } else {
-      for (const descriptor of WEEKLY_FETCH_DESCRIPTORS) {
-        resolvedByKey[descriptor.key] = preserveWeeklyBenchmark(descriptor, previous);
-      }
-    }
+          source: usdSource,
+        })
+      : (buildRetainedBenchmark(previous.USD, usdFallbackMode) ??
+        buildHardcodedUsdBenchmark(usdFallbackMode));
 
-    // SGD: TODO — no stable public SORA endpoint identified yet; SGD pegs fall back to USD.
-    const benchmarks = buildBenchmarkRegistry(usdMeta, resolvedByKey);
-
-    const gbpRetainedFallbackMonitor = await updateGbpRetainedFallbackMonitor({
-      db,
-      benchmark: benchmarks.GBP,
-      fetchedAt,
-      signal,
-    });
-    await writeStructuredBenchmarks(db, benchmarks);
-
-    if (weeklyClaim) {
-      weeklyCompleted = await completeCadenceBucket(db, weeklyClaim, fetchedAt);
-      if (!weeklyCompleted) {
-        await logCronEvent(db, {
-          job: "fetch-tbill-rate",
-          eventType: "weekly-cadence-complete-skipped",
-          severity: "warning",
-          message: "Weekly T-bill cadence claim was superseded before completion.",
-          metadata: { bucket: weeklyBucket },
-        });
-      }
-    }
-
-    const degradationReasons = buildBenchmarkDegradationReasons(usdMeta, resolvedByKey);
-    return {
-      status: degradationReasons.length > 0 || !weeklyCompleted ? "degraded" : "ok",
-      itemCount: BENCHMARK_METADATA_DESCRIPTORS.filter(({ key }) => benchmarks[key] != null).length,
-      metadata: buildBenchmarkRunMetadata({
-        fallbackMode: degradationReasons.length > 0 ? degradationReasons.join(",") : null,
-        benchmarks,
-        includeDetails: true,
-        extraFields: {
-          ...gbpRetainedFallbackMonitor,
-          ...buildGbpResponseDiagnosticMetadata(resolvedByKey.GBP),
-          weeklyCadence: {
-            bucket: weeklyBucket,
-            claimed: weeklyClaim != null,
-            completed: weeklyCompleted,
-            reason: weeklyClaimResult.kind === "skip" ? weeklyClaimResult.reason : null,
-          },
-        },
-      }),
-    };
-  } catch (error) {
-    if (weeklyClaim) {
-      try {
-        await failCadenceBucket(db, weeklyClaim, fetchedAt);
-      } catch (releaseError) {
-        await logCronEvent(db, {
-          job: "fetch-tbill-rate",
-          eventType: "weekly-cadence-release-failed",
-          severity: "warning",
-          message: "Failed to release T-bill weekly cadence claim after publication failure.",
-          metadata: { bucket: weeklyBucket, error: toErrorMessage(releaseError) },
-        });
-      }
-    }
-    throw error;
+  if (usdAllowed) {
+    await recordOutcome(db, usdCircuitSource, usdParsed != null);
   }
+
+  const resolvedByKey = await resolveBenchmarkProviderMap({
+    db,
+    previous,
+    fetchedAt,
+    env,
+    signal,
+  });
+
+  // SGD: TODO — no stable public SORA endpoint identified yet; SGD pegs fall back to USD.
+  const benchmarks = buildBenchmarkRegistry(usdMeta, resolvedByKey);
+
+  const gbpRetainedFallbackMonitor = await updateGbpRetainedFallbackMonitor({
+    db,
+    benchmark: benchmarks.GBP,
+    fetchedAt,
+    signal,
+  });
+  await writeStructuredBenchmarks(db, benchmarks);
+
+  const degradationReasons = buildBenchmarkDegradationReasons(usdMeta, resolvedByKey);
+  return {
+    status: degradationReasons.length > 0 ? "degraded" : "ok",
+    itemCount: BENCHMARK_METADATA_DESCRIPTORS.filter(({ key }) => benchmarks[key] != null).length,
+    metadata: buildBenchmarkRunMetadata({
+      fallbackMode: degradationReasons.length > 0 ? degradationReasons.join(",") : null,
+      benchmarks,
+      includeDetails: true,
+      extraFields: {
+        ...gbpRetainedFallbackMonitor,
+        ...buildGbpResponseDiagnosticMetadata(resolvedByKey.GBP),
+      },
+    }),
+  };
 }

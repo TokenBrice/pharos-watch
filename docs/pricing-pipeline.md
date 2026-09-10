@@ -581,9 +581,9 @@ The live `/price/` endpoint requires no API key and is called only in claimed `s
 
 ## Treasury Benchmark Rates
 
-`fetch-tbill-rate` keeps the existing daily 08:00 UTC trigger, but isolates source work inside that lane. USD 3-month Treasury and USD/EFFR benchmarks are eligible every day. EUR, CHF, GBP, JPY, MXN, BRL, AUD, CAD, RUB, and TRY descriptors run only in a generation-fenced weekly cadence bucket; a second invocation in the same bucket carries forward the latest structured benchmark cache without fetching those sources.
+`fetch-tbill-rate` runs daily at 08:00 UTC and fetches every benchmark descriptor on each run: USD 3-month Treasury, USD/EFFR, EUR, CHF, GBP, JPY, MXN, BRL, AUD, CAD, RUB, and TRY.
 
-Each descriptor owns an independent circuit breaker key in the form `TREASURY_RATES:<descriptor>` (for example, `TREASURY_RATES:EUR`). An open descriptor circuit produces its retained or hardcoded fallback while other descriptors continue through their own breaker and provider path. This reduces weekly benchmark fetch volume without adding a cron trigger or changing the structured `risk_free_rates` / legacy `risk_free_rate` cache shapes.
+Each descriptor owns an independent circuit breaker key in the form `TREASURY_RATES:<descriptor>` (for example, `TREASURY_RATES:EUR`). An open descriptor circuit produces its retained or hardcoded fallback while every other descriptor continues through its own breaker and provider path. The daily publication preserves the structured `risk_free_rates` and legacy `risk_free_rate` cache shapes.
 
 ## Stale Data Monitoring (Frontend)
 
