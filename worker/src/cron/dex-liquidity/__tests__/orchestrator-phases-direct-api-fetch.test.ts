@@ -6,6 +6,8 @@ import {
 import { recordOutcomeSafe } from "../../../lib/circuit-breaker";
 import type { DirectApiFetcher } from "../orchestrator-phases/direct-api";
 import {
+  buildAttemptedProtocolChains,
+  buildDexDirectApiFetchers,
   compactDirectApiFetchPhasePools,
   runDirectApiFetchPhase,
 } from "../orchestrator-phases/direct-api";
@@ -393,7 +395,77 @@ describe("runDirectApiFetchPhase", () => {
     const result = await runDirectApiFetchPhase({} as D1Database, fetchers);
 
     expect(result.failedSources).toEqual(["unavailable-circuit"]);
+    expect(result.degradedSources).toEqual([]);
     expect(result.fallbackSignals).toEqual(["unavailable-circuit-unavailable"]);
     expect(result.sourceWarnings).toEqual(["unavailable-circuit: all pages returned 503"]);
+  });
+
+  it("names the chain that failed inside an otherwise usable source", async () => {
+    const fetchers: DirectApiFetcher[] = [
+      {
+        name: "PancakeSwap",
+        circuitKey: "pancakeswap-api",
+        normalizedProtocol: "pancakeswap",
+        supportedChains: ["bsc", "ethereum", "base"],
+        fn: async () =>
+          makeDexApiFetchResult([], {
+            ok: true,
+            degraded: true,
+            errors: ["bsc: The operation was aborted due to timeout"],
+            degradedChains: ["bsc"],
+          }),
+      },
+    ];
+
+    const result = await runDirectApiFetchPhase({} as D1Database, fetchers);
+
+    expect(result.failedSources).toEqual([]);
+    expect(result.degradedSources).toEqual(["pancakeswap-api:bsc"]);
+    expect(result.fallbackSignals).toEqual(["pancakeswap-api-partial"]);
+    expect(result.attemptedProtocolChains).toEqual([
+      "pancakeswap:bsc",
+      "pancakeswap:ethereum",
+      "pancakeswap:base",
+    ]);
+  });
+
+  it("keeps a degraded source without chain detail at source level", async () => {
+    const fetchers = [
+      makeFetcher("cursorless", async () =>
+        makeDexApiFetchResult([], {
+          ok: true,
+          degraded: true,
+          errors: [],
+        }),
+      ),
+    ];
+
+    const result = await runDirectApiFetchPhase({} as D1Database, fetchers);
+
+    expect(result.degradedSources).toEqual(["cursorless-circuit"]);
+  });
+
+  it("keys attempted coverage by the pool source family each adapter emits", () => {
+    const fetchers = buildDexDirectApiFetchers({
+      db: {} as D1Database,
+      graphApiKey: "graph-key",
+      chainAddressToId: new Map(),
+      symbolToChainScopedIds: new Map(),
+      stablecoinPriceById: new Map(),
+    });
+
+    // Slipstream and CLMM adapters emit a `source` that differs from their
+    // normalized protocol; attempted keys must match the counts that
+    // `acceptedByProtocolChain` records for the same pools.
+    expect(buildAttemptedProtocolChains(fetchers)).toEqual(expect.arrayContaining([
+      "pancakeswap:bsc",
+      "pancakeswap:ethereum",
+      "pancakeswap:base",
+      "aerodrome-slipstream:base",
+      "velodrome-slipstream:optimism",
+      "raydium:solana",
+      "orca:solana",
+      "uniswap-v3-shadow:bsc",
+    ]));
   });
 });

@@ -186,6 +186,8 @@ describe("integrateDirectApiLiquidityPhase", () => {
         },
       ],
       failedSources: [],
+      degradedSources: [],
+      attemptedProtocolChains: [],
       fallbackSignals: [],
       sourceWarnings: ["balancer-api: bounded-tail"],
       circuitEvents: [],
@@ -248,6 +250,8 @@ describe("integrateDirectApiLiquidityPhase", () => {
         },
       ],
       failedSources: [],
+      degradedSources: [],
+      attemptedProtocolChains: [],
       fallbackSignals: [],
       sourceWarnings: [],
       circuitEvents: [],
@@ -495,6 +499,39 @@ describe("integrateDirectApiLiquidityPhase", () => {
       source: "balancer",
       invariant: "stableswap",
       feeRate: 0.0001,
+    });
+  });
+
+  it("records explicit zero coverage for a configured chain that returned no pools", async () => {
+    const usdc = "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48";
+    const usdt = "0xdac17f958d2ee523a2206206994597c13d831ec7";
+    const pancakeEthereumPool = makeSolanaDirectPool({
+      source: "pancakeswap",
+      chain: "ethereum",
+      poolAddress: "0x00000000000000000000000000000000000000aa",
+      poolType: "pancakeswap-v3-1bp",
+      tokens: [
+        { address: usdc, symbol: "USDC", decimals: 6 },
+        { address: usdt, symbol: "USDT", decimals: 6 },
+      ],
+    });
+
+    const result = await runDirectApiScenario({
+      directApiPools: [pancakeEthereumPool],
+      chainAddressToId: new Map([
+        [buildChainAddressKey("ethereum", usdc), "usdc-circle"],
+        [buildChainAddressKey("ethereum", usdt), "usdt-tether"],
+      ]),
+      stablecoinPriceById: new Map([["usdc-circle", 1], ["usdt-tether", 1]]),
+      attemptedProtocolChains: ["pancakeswap:bsc", "pancakeswap:ethereum", "pancakeswap:base"],
+    });
+
+    // BSC failed while its siblings answered: the explicit zero is the telemetry,
+    // not the silence that let a frozen chain hide for six days.
+    expect(result.acceptedByProtocolChain).toEqual({
+      "pancakeswap:bsc": 0,
+      "pancakeswap:ethereum": 1,
+      "pancakeswap:base": 0,
     });
   });
 });

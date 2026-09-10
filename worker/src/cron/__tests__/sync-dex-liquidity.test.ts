@@ -499,7 +499,12 @@ describe("dex liquidity scoring stage cycle", () => {
       failedSources?: string[];
       rowsWritten?: number;
       persistence?: { skipped?: boolean; skippedReason?: string | null };
-      sourceCoverage?: { currentGlobalTvl?: number; nearValueGuard?: boolean };
+      sourceCoverage?: {
+        currentGlobalTvl?: number;
+        nearValueGuard?: boolean;
+        nearCoverageGuard?: boolean;
+        hardCoverageGuard?: boolean;
+      };
     };
     expect(metadata.failedSources).toContain("defillama-yields");
     expect(metadata.rowsWritten).toBe(0);
@@ -507,6 +512,10 @@ describe("dex liquidity scoring stage cycle", () => {
     expect(metadata.persistence?.skippedReason).toBe("defillama-yields-unavailable");
     expect(metadata.sourceCoverage?.currentGlobalTvl).toBe(2_000_000_000);
     expect(metadata.sourceCoverage?.nearValueGuard).toBe(true);
+    // A critical source failure suppresses the hard abort but must not blank
+    // the guard evaluation that says why the run is degraded.
+    expect(metadata.sourceCoverage?.nearCoverageGuard).toBe(true);
+    expect(metadata.sourceCoverage?.hardCoverageGuard).toBe(true);
     expect(persistScores).not.toHaveBeenCalled();
     expect(publishStablecoinScoreTargets).not.toHaveBeenCalled();
     expect(computeDexPrices).not.toHaveBeenCalled();
@@ -604,6 +613,25 @@ describe("dex liquidity scoring stage cycle", () => {
     expect(metadata.fallbackCounters).toBeDefined();
     expect(metadata.fallbackCounters?.unmeasuredBalanceOptimistic).toBeTypeOf("number");
     expect(metadata.fallbackCounters?.stagedOrganicFractionDefault).toBeTypeOf("number");
+  });
+
+  it("names a chain that failed inside a usable direct API source in the scoring-stage metadata", async () => {
+    vi.mocked(fetchPancakeSwapPools).mockResolvedValueOnce({
+      pools: [],
+      ok: true,
+      degraded: true,
+      errors: ["bsc: The operation was aborted due to timeout"],
+      degradedChains: ["bsc"],
+    });
+
+    const stageResult = await stageDexLiquidityScoring(db, "graph-key");
+
+    const metadata = JSON.parse(stageResult.metadata ?? "{}") as {
+      failedSources?: string[];
+      degradedSources?: string[];
+    };
+    expect(metadata.degradedSources).toEqual(["pancakeswap-api:bsc"]);
+    expect(metadata.failedSources).toEqual([]);
   });
 
   it("reuses the current generation for hourly prices without liquidity writes", async () => {
@@ -1342,6 +1370,13 @@ describe("dex liquidity scoring stage cycle", () => {
                       priceObservationCoins: 5,
                       measuredBalanceCoveragePct: 0.5,
                       weakCoverageCoins: 0,
+                      // Conditions already observed once: this run is the
+                      // second consecutive one, so each flag confirms.
+                      qualityDriftCandidates: [
+                        { flag: "price-observation-drop", consecutiveRuns: 1, baselineValue: 5, observedValue: 1 },
+                        { flag: "measured-balance-drop", consecutiveRuns: 1, baselineValue: 0.5, observedValue: 0 },
+                        { flag: "watchlist-pool-drop:usdc-circle", consecutiveRuns: 1, baselineValue: 5, observedValue: 1 },
+                      ],
                     },
                   }),
                 },

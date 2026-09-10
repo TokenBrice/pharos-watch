@@ -77,6 +77,13 @@ function makeCronMetadata(params: {
   measuredBalanceCoveragePct?: number;
   weakCoverageCoins?: number;
   persistenceSkipped?: boolean;
+  currentCoverage?: number;
+  qualityDriftCandidates?: Array<{
+    flag: string;
+    consecutiveRuns: number;
+    baselineValue: number;
+    observedValue: number;
+  }>;
 }) {
   return JSON.stringify({
     stagedPoolsMerged: params.stagedPoolsMerged,
@@ -87,7 +94,7 @@ function makeCronMetadata(params: {
       dlProtocolsAvailable: params.dlProtocolsAvailable,
       currentGlobalTvl: params.currentGlobalTvl,
       sourceDegradedFamilies: params.failedSources ?? [],
-      currentCoverage: 159,
+      currentCoverage: params.currentCoverage ?? 159,
       previousCoverage: 158,
       minExpectedCoverage: 94,
       nearCoverageGuard: false,
@@ -96,6 +103,7 @@ function makeCronMetadata(params: {
       priceObservationCoins: params.priceObservationCoins,
       measuredBalanceCoveragePct: params.measuredBalanceCoveragePct,
       weakCoverageCoins: params.weakCoverageCoins,
+      qualityDriftCandidates: params.qualityDriftCandidates,
     },
     persistence: params.persistenceSkipped == null ? undefined : { skipped: params.persistenceSkipped },
   });
@@ -289,6 +297,159 @@ describe("analyzeDexLiquidityPostScoring", () => {
     expect(analysis.sourceCoverage.qualityDriftSeverity).toBe("none");
   });
 
+  it("records a first-run coin TVL cliff as a candidate and reports it only on the second run", async () => {
+    const collapsedTvl = 13_720_000;
+    const makeDb = (candidates?: Array<{ flag: string; consecutiveRuns: number; baselineValue: number; observedValue: number }>) =>
+      mockD1([
+        {
+          match: "COUNT(*) as cnt FROM dex_liquidity",
+          rows: [],
+          first: { cnt: 1 },
+        },
+        {
+          match: "SELECT total_tvl_usd, updated_at FROM dex_liquidity WHERE stablecoin_id = '__global__'",
+          rows: [],
+          first: { total_tvl_usd: 6_000_000_000, updated_at: 1_784_000_000 },
+        },
+        {
+          match: "GROUP BY coverage_class",
+          rows: [],
+        },
+        {
+          match: "ORDER BY total_tvl_usd DESC",
+          rows: [{ stablecoin_id: "usds-sky", total_tvl_usd: 152_000_000 }],
+        },
+        {
+          match: "FROM cron_runs",
+          rows: [
+            {
+              started_at: 1_784_000_000,
+              status: "ok",
+              metadata: makeCronMetadata({
+                dlProtocolsAvailable: true,
+                currentGlobalTvl: 6_000_000_000,
+                currentCoverage: 1,
+                stagedPoolsMerged: 0,
+                stagedPoolsSkipped: 0,
+                priceObservationCoins: 0,
+                measuredBalanceCoveragePct: 0,
+                weakCoverageCoins: 0,
+                qualityDriftCandidates: candidates,
+              }),
+            },
+          ],
+        },
+        {
+          match: "WHERE stablecoin_id IN",
+          rows: [],
+        },
+      ]);
+    const scoreResults = new Map([
+      ["usds-sky", { ...BASE_SCORE_RESULT, tvl: collapsedTvl, effectiveTvl: collapsedTvl }],
+    ]);
+
+    const first = await analyzeDexLiquidityPostScoring(
+      makeAnalysisInput({ db: makeDb(), scoreResults }),
+    );
+
+    expect(first.sourceCoverage.qualityDriftFlags).toEqual([]);
+    expect(first.sourceCoverage.qualityDriftSeverity).toBe("none");
+    expect(first.sourceCoverage.qualityDriftCandidates).toEqual([
+      {
+        flag: "major-tvl-cliff:usds-sky",
+        consecutiveRuns: 1,
+        baselineValue: 152_000_000,
+        observedValue: collapsedTvl,
+      },
+    ]);
+
+    const second = await analyzeDexLiquidityPostScoring(
+      makeAnalysisInput({
+        db: makeDb(first.sourceCoverage.qualityDriftCandidates),
+        scoreResults,
+      }),
+    );
+
+    expect(second.sourceCoverage.qualityDriftFlags).toEqual(["major-tvl-cliff:usds-sky"]);
+    expect(second.sourceCoverage.qualityDriftSeverity).toBe("high");
+    expect(second.sourceCoverage.qualityDriftCandidates[0]?.consecutiveRuns).toBe(2);
+  });
+
+  it("keeps a confirmed cliff after the published baseline row was overwritten", async () => {
+    const db = mockD1([
+      {
+        match: "COUNT(*) as cnt FROM dex_liquidity",
+        rows: [],
+        first: { cnt: 1 },
+      },
+      {
+        match: "SELECT total_tvl_usd, updated_at FROM dex_liquidity WHERE stablecoin_id = '__global__'",
+        rows: [],
+        first: { total_tvl_usd: 6_000_000_000, updated_at: 1_784_000_000 },
+      },
+      {
+        match: "GROUP BY coverage_class",
+        rows: [],
+      },
+      {
+        // The row the comparison used to read now carries the collapsed value.
+        match: "ORDER BY total_tvl_usd DESC",
+        rows: [{ stablecoin_id: "usds-sky", total_tvl_usd: 13_700_000 }],
+      },
+      {
+        match: "FROM cron_runs",
+        rows: [
+          {
+            started_at: 1_784_000_000,
+            status: "ok",
+            metadata: makeCronMetadata({
+              dlProtocolsAvailable: true,
+              currentGlobalTvl: 6_000_000_000,
+              currentCoverage: 1,
+              stagedPoolsMerged: 0,
+              stagedPoolsSkipped: 0,
+              priceObservationCoins: 0,
+              measuredBalanceCoveragePct: 0,
+              weakCoverageCoins: 0,
+              qualityDriftCandidates: [
+                {
+                  flag: "major-tvl-cliff:usds-sky",
+                  consecutiveRuns: 2,
+                  baselineValue: 152_000_000,
+                  observedValue: 13_720_000,
+                },
+              ],
+            }),
+          },
+        ],
+      },
+      {
+        match: "WHERE stablecoin_id IN",
+        rows: [],
+      },
+    ]);
+
+    const analysis = await analyzeDexLiquidityPostScoring(
+      makeAnalysisInput({
+        db,
+        scoreResults: new Map([
+          ["usds-sky", { ...BASE_SCORE_RESULT, tvl: 13_600_000, effectiveTvl: 13_600_000 }],
+        ]),
+      }),
+    );
+
+    expect(analysis.sourceCoverage.qualityDriftFlags).toEqual(["major-tvl-cliff:usds-sky"]);
+    expect(analysis.sourceCoverage.qualityDriftCandidates).toEqual([
+      {
+        flag: "major-tvl-cliff:usds-sky",
+        consecutiveRuns: 3,
+        baselineValue: 152_000_000,
+        observedValue: 13_600_000,
+      },
+    ]);
+    expect(analysis.sourceCoverage.majorTvlCliffs[0]?.previousTvlUsd).toBe(152_000_000);
+  });
+
   it("keeps hard value guard behavior for source-complete table baselines", async () => {
     const db = mockD1([
       {
@@ -336,6 +497,113 @@ describe("analyzeDexLiquidityPostScoring", () => {
     expect(analysis.sourceCoverage.valueBaselineSource).toBe("dex_liquidity_global");
     expect(analysis.sourceCoverage.ignoredPersistedGlobalTvl).toBeNull();
     expect(analysis.hardValueGuard).toBe(true);
+  });
+
+  it("measures the coverage guard against the trailing median, not the row it just overwrote", async () => {
+    const db = mockD1([
+      {
+        match: "COUNT(*) as cnt FROM dex_liquidity",
+        rows: [],
+        first: { cnt: 288 },
+      },
+      {
+        match: "SELECT total_tvl_usd, updated_at FROM dex_liquidity WHERE stablecoin_id = '__global__'",
+        rows: [],
+        first: { total_tvl_usd: 6_000_000_000, updated_at: 1_784_000_000 },
+      },
+      {
+        match: "GROUP BY coverage_class",
+        rows: [],
+      },
+      {
+        match: "ORDER BY total_tvl_usd DESC",
+        rows: [],
+      },
+      {
+        match: "FROM cron_runs",
+        // A slow six-run slide: the previous-run comparison stays inside the
+        // band at every step, which is how the 2026-09-04 crawl collapse
+        // published as `ok`.
+        rows: [305, 300, 296, 292, 288, 284].map((currentCoverage, index) => ({
+          started_at: 1_784_000_000 - index * 3_600,
+          status: "ok",
+          metadata: makeCronMetadata({
+            dlProtocolsAvailable: true,
+            currentGlobalTvl: 6_000_000_000,
+            currentCoverage,
+          }),
+        })),
+      },
+      {
+        match: "WHERE stablecoin_id IN",
+        rows: [],
+      },
+    ]);
+
+    const analysis = await analyzeDexLiquidityPostScoring(
+      makeAnalysisInput({
+        db,
+        scoreResults: new Map(
+          Array.from({ length: 232 }, (_, index) => [`coin-${index}`, BASE_SCORE_RESULT]),
+        ),
+        globalAgg: { ...BASE_GLOBAL_AGG, totalTvl: 6_000_000_000 },
+      }),
+    );
+
+    // Median of the published row (288) plus the five newest productive runs.
+    expect(analysis.currentCoverage).toBe(232);
+    expect(analysis.previousCoverage).toBe(294);
+    expect(analysis.nearCoverageGuard).toBe(true);
+    expect(analysis.hardCoverageGuard).toBe(false);
+    // The published row the previous-run comparison read stays inside the band.
+    expect(analysis.currentCoverage).toBeGreaterThan(Math.floor(288 * 0.8));
+    expect(analysis.sourceCoverage.nearCoverageGuard).toBe(true);
+  });
+
+  it("records guard state on a run with a critical source failure", async () => {
+    const db = mockD1([
+      {
+        match: "COUNT(*) as cnt FROM dex_liquidity",
+        rows: [],
+        first: { cnt: 165 },
+      },
+      {
+        match: "SELECT total_tvl_usd, updated_at FROM dex_liquidity WHERE stablecoin_id = '__global__'",
+        rows: [],
+        first: { total_tvl_usd: 6_000_000_000, updated_at: 1_777_556_412 },
+      },
+      {
+        match: "GROUP BY coverage_class",
+        rows: [],
+      },
+      {
+        match: "ORDER BY total_tvl_usd DESC",
+        rows: [],
+      },
+      {
+        match: "FROM cron_runs",
+        rows: [],
+      },
+      {
+        match: "WHERE stablecoin_id IN",
+        rows: [],
+      },
+    ]);
+
+    const analysis = await analyzeDexLiquidityPostScoring(makeAnalysisInput({
+      db,
+      dlYieldsAvailable: false,
+      criticalSourceFailures: ["defillama-yields"],
+      globalAgg: { ...BASE_GLOBAL_AGG, totalTvl: 2_000_000_000 },
+    }));
+
+    // The critical failure keeps the run degraded and suppresses the hard
+    // abort; it must not blank the guard evaluation that records what happened.
+    expect(analysis.sourceCoverage.nearCoverageGuard).toBe(true);
+    expect(analysis.sourceCoverage.hardCoverageGuard).toBe(true);
+    expect(analysis.sourceCoverage.nearValueGuard).toBe(true);
+    expect(analysis.sourceCoverage.valueBaselineSource).toBe("dex_liquidity_global");
+    expect(analysis.sourceCoverage.sourceDegradedFamilies).toEqual(["defillama-yields"]);
   });
 
   it("discounts low-effective previous top rows before hard-failing major coverage recovery", async () => {

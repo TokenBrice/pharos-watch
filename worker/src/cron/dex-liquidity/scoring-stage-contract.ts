@@ -31,6 +31,12 @@ export interface DexLiquidityScoringSourceState {
   failedSources: string[];
   criticalSourceFailures: string[];
   fallbackSignals: string[];
+  /**
+   * Direct-API sources that finished partially, chain-scoped where known
+   * (`pancakeswap-api:bsc`). Optional so staged/decoded source states written
+   * before this key existed still type-check and parse.
+   */
+  degradedSources?: string[];
   directApiSourceSummary: DexLiquidityDirectApiSourceSummary;
 }
 
