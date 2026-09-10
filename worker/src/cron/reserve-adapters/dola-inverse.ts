@@ -304,7 +304,7 @@ async function probeInversePsmSellFeeBps(signal: AbortSignal, ctx?: AdapterConte
 }
 
 export async function fetchDolaInverseReserves(
-  _coin: StablecoinMeta,
+  coin: StablecoinMeta,
   config: LiveReservesConfig,
   signal: AbortSignal,
   ctx?: AdapterContext,
@@ -318,7 +318,7 @@ export async function fetchDolaInverseReserves(
   const cached = ctx?.db ? await loadStablecoinsCache(ctx.db, { mode: "lenient", contract: "critical-fields" }) : null;
   const supplyCoin = cached && hasUsableStablecoinsPayload(cached)
     && cached.updatedAt != null && (ctx?.nowSec ?? Math.floor(Date.now() / 1000)) - cached.updatedAt <= 7200
-    ? cached.payload.peggedAssets.find((asset) => asset.id === "dola-inverse")
+    ? cached.payload.peggedAssets.find((asset) => asset.id === coin.id)
     : undefined;
   const circulatingUsd = supplyCoin ? getCirculatingRaw(supplyCoin) : 0;
   const supplyUsd = Number.isFinite(circulatingUsd) && circulatingUsd > 0 ? circulatingUsd : undefined;
