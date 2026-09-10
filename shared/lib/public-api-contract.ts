@@ -31,7 +31,7 @@ export const SELF_SERVE_ISSUANCE_OPEN: boolean = false;
 export const DONOR_KEY_CLAIMS_OPEN: boolean = true;
 
 export const DONOR_API_KEY_SUMMARY =
-  `one key per wallet with more than $${DONOR_API_KEY_MIN_USD} in donations of stablecoins graded A or B (including +/−) at claim time, no expiry, ${DONOR_API_KEY_RATE_LIMIT_PER_MINUTE} requests per minute`;
+  `one key per wallet with at least $${DONOR_API_KEY_MIN_USD} in donations of stablecoins graded A or B (including +/−) at claim time, no expiry, ${DONOR_API_KEY_RATE_LIMIT_PER_MINUTE} requests per minute`;
 
 export const SELF_SERVE_API_KEY_RATE_LIMIT_RPM = SELF_SERVE_API_KEY_RATE_LIMIT_PER_MINUTE;
 export const SELF_SERVE_API_KEY_EXPIRY_DAYS = Math.round(SELF_SERVE_API_KEY_EXPIRY_SEC / DAY_SECONDS);

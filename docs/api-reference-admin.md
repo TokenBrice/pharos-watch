@@ -761,7 +761,7 @@ Donor eligibility uses Safety Score grades at claim time, not donation time. Lat
 
 Supporter keys never rotate by self-service: re-signing the claim message returns `409`, so a donor who lost a key asks through the feedback form and an operator rotates it here. The key is named `donor <full lowercase address>`, so the admin list is searchable by the full address.
 
-Correcting the ledger is a two-step operator action. When removing or correcting a donation row in `shared/data/funding/donations.json` leaves a wallet with $10 or less in qualifying stablecoin donations, the runtime does not revoke anything on its own, because eligibility is only read at claim time. Find the `donor` key whose name carries that address and deactivate it with `POST /api/api-keys/:id/deactivate`. Leave the `api_key_donor_claims` row in place: it keeps that address from claiming again, and a re-claim attempt against a deactivated key returns `403` rather than issuing a second key.
+Correcting the ledger is a two-step operator action. When removing or correcting a donation row in `shared/data/funding/donations.json` leaves a wallet with less than $10 in qualifying stablecoin donations, the runtime does not revoke anything on its own, because eligibility is only read at claim time. Find the `donor` key whose name carries that address and deactivate it with `POST /api/api-keys/:id/deactivate`. Leave the `api_key_donor_claims` row in place: it keeps that address from claiming again, and a re-claim attempt against a deactivated key returns `403` rather than issuing a second key.
 
 ### `GET /api/api-key-requests-admin`
 

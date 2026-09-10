@@ -68,6 +68,18 @@ vi.mock("@shared/data/funding/donations.json", () => ({
       },
       {
         chain: "ethereum",
+        tx_hash: "0xbb02",
+        block_timestamp: 1776282647,
+        from_address: "0x15d34aaf54267db7d7c367839aaf71a00a2c6a65",
+        display: "0x15d34a...6a65",
+        kind: "community",
+        asset_symbol: "USDC",
+        amount_decimal: 9.99,
+        usd_at_receipt: 9.99,
+        price_note: "stablecoin-par",
+      },
+      {
+        chain: "ethereum",
         tx_hash: "0xdd01",
         block_timestamp: 1776372647,
         from_address: "0xf39fd6e51aad88f6f4ce6ab8827279cfffb92266",
@@ -100,8 +112,11 @@ const PEPPER = "donor-claim-pepper";
 const CLAIM_URL = "https://api.pharos.watch/api/donor-key-claims";
 
 const donorAccount = privateKeyToAccount("0x59c6995e998f97a5a0044966f0945389dc9e86dae88c7a8412f4603b6b78690d");
-const belowThresholdAccount = privateKeyToAccount(
+const thresholdAccount = privateKeyToAccount(
   "0x5de4111afa1a4b94908f83103eb1f1706367c2e68ca870fc3fb9a804cdab365a",
+);
+const belowThresholdAccount = privateKeyToAccount(
+  "0x47e179ec197488593b187f80a00eb0da91f1b9d0b13f8733639f19c30a34926a",
 );
 const poolAccount = privateKeyToAccount("0x7c852118294e51e653712a81e05800f419141751be58f605c371e15141b007a6");
 const strangerAccount = privateKeyToAccount("0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80");
@@ -455,7 +470,14 @@ describe("POST /api/donor-key-claims", () => {
     await expect(response.json()).resolves.toMatchObject({ error: expect.stringContaining("revoked") });
   });
 
-  it("answers 403 with the ledger date for a wallet at exactly $10", async () => {
+  it("issues a key for a wallet at exactly $10, because the threshold is inclusive", async () => {
+    const response = await claim(claimMessage(thresholdAccount), { signer: thresholdAccount });
+
+    expect(response.status).toBe(201);
+    expect(countApiKeys()).toBe(1);
+  });
+
+  it("answers 403 with the ledger date for a wallet below $10", async () => {
     const response = await claim(claimMessage(belowThresholdAccount), { signer: belowThresholdAccount });
 
     expect(response.status).toBe(403);

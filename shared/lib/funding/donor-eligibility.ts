@@ -35,6 +35,7 @@ export function isEligibleDonor(
   thresholdUsd: number,
 ): boolean {
   const total = totals.get(address.toLowerCase()) ?? 0;
-  // Do not turn floating-point noise on an exact-threshold sum into eligibility.
-  return total > thresholdUsd + 1e-9;
+  // The threshold is inclusive, so the epsilon absorbs floating-point drift that
+  // would otherwise leave a sum meant to be exactly the threshold just under it.
+  return total >= thresholdUsd - 1e-9;
 }
