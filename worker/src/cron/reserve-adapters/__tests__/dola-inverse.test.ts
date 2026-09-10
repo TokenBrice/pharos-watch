@@ -1,4 +1,5 @@
 import { describe, it, expect } from "vitest";
+import { mockD1 } from "@shared/test-utils/mock-d1";
 import {
   resolveBaseSymbol,
   bucketForAsset,
@@ -64,15 +65,30 @@ function dolaNetwork(options: {
   });
 }
 
-async function runDola(options: Parameters<typeof dolaNetwork>[0] = {}) {
+async function runDola(options: Parameters<typeof dolaNetwork>[0] = {}, db?: D1Database) {
   const network = dolaNetwork(options);
   const result = await fetchDolaInverseReserves(
     { id: "dola-inverse-finance" } as never,
     DOLA_LIVE_CONFIG,
     new AbortController().signal,
-    { chainRpcs: network.chainRpcs, nowSec: 1_776_330_494 },
+    { chainRpcs: network.chainRpcs, nowSec: 1_776_330_494, db },
   );
   return { result, network };
+}
+
+/** Stablecoins-cache D1 fixture keyed the way the registry publishes DOLA. */
+function dolaCacheDb(circulating: number) {
+  return mockD1([{
+    match: "SELECT value, updated_at FROM cache WHERE key = ?",
+    matchBinds: ["stablecoins"],
+    rows: [{
+      key: "stablecoins",
+      value: JSON.stringify({
+        peggedAssets: [{ id: "dola-inverse-finance", symbol: "DOLA", circulating: { peggedUSD: circulating } }],
+      }),
+      updated_at: 1_776_330_494 - 600,
+    }],
+  }]);
 }
 
 describe("resolveBaseSymbol", () => {
@@ -336,6 +352,16 @@ describe("fetchDolaInverseReserves PSM redemption telemetry", () => {
     expect(result.warnings ?? []).toEqual(
       expect.arrayContaining([expect.objectContaining({ code: "dola-psm-unreadable", effect: "info" })]),
     );
+    expectValidAdapterOutput("dola-inverse", result);
+  });
+
+
+  it("measures non-FiRM issuance from the fresh stablecoins cache instead of degrading", async () => {
+    const { result } = await runDola({}, dolaCacheDb(1_500_000));
+
+    expect(result.warnings ?? []).not.toContainEqual(expect.objectContaining({ code: "dola-supply-unavailable" }));
+    expect(result.metadata).toMatchObject({ supplyUsd: 1_500_000 });
+    expect(result.slices.find((slice) => slice.sourceKey === "dola-inverse:unattributed")?.pct).toBeCloseTo(33.3, 1);
     expectValidAdapterOutput("dola-inverse", result);
   });
 
