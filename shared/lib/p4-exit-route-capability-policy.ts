@@ -633,6 +633,7 @@ export interface P4DexRoutePoolInput {
     orderbookDepthUsd?: number;
     measurement?: {
       synthetic?: boolean;
+      decayed?: boolean;
     };
     executionCapabilityGate?: DexExecutionCapabilityGate;
     ammExecutionModel?: DexAmmExecutionModel;
@@ -829,6 +830,12 @@ export function capabilityForPool(
   }
   if (pool.extra?.measurement?.synthetic === true) {
     return capabilityById("synthetic-or-fallback-shaped");
+  }
+  // A remembered row (decayed staged backfill) is inventory evidence, not an observation of
+  // DL/direct shape, so it must not inherit the primary-lane capability (plan D15: aged pools
+  // never add route evidence).
+  if (pool.extra?.measurement?.decayed === true) {
+    return capabilityById("discovery-pool-shaped");
   }
   if (
     pool.source === "dl" &&

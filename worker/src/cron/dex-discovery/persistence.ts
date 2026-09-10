@@ -15,6 +15,15 @@ import {
   type StagedPool,
 } from "./types";
 
+// Three guards keep a staged row from regressing when writers overlap:
+// - monotonic refreshed_at: discovery (:06) can overlap the :10 write-back stage, so a slower
+//   older writer must not clobber a row another writer already refreshed;
+// - no COALESCE on tvl_usd/volume_24h/price_usd: hasValidStagedPoolTvl admits a null tvl, so a
+//   valueless observation would keep the stored value while refreshed_at advances — the same
+//   staleness laundering already rejected for price_usd (keeping a stale price would make the
+//   24 h price pin treat a dead observation as fresh). A null observation must fall out via
+//   hasInvalidTvl in the merge until the pool is genuinely observed again;
+// - minRefreshGapSec: the hourly write-back passes a gap so rows refreshed within it are skipped.
 const STAGING_UPSERT_SQL = `INSERT INTO dex_pool_staging
   (pool_id, stablecoin_id, source, chain, protocol, dex_id, symbol, tvl_usd, volume_24h, quality_multiplier, pool_type, fee_tier, balance_ratio,
    is_stable, base_token, quote_token, quote_symbol, price_usd, locked_liq_pct, raw_json, discovered_at, refreshed_at)
@@ -38,7 +47,9 @@ ON CONFLICT(pool_id, stablecoin_id) DO UPDATE SET
   price_usd = excluded.price_usd,
   locked_liq_pct = excluded.locked_liq_pct,
   raw_json = excluded.raw_json,
-  refreshed_at = excluded.refreshed_at`;
+  refreshed_at = excluded.refreshed_at
+WHERE excluded.refreshed_at >= dex_pool_staging.refreshed_at
+  AND (? = 0 OR dex_pool_staging.refreshed_at < excluded.refreshed_at - ?)`;
 
 const STAGING_BATCH_SIZE = 50;
 // Rows must outlive the merge horizon by a day so the stale_confidence_zero grace window always finds them.
@@ -105,9 +116,18 @@ function legacyOrderbookPoolId(pool: Pick<StagedPool, "poolId" | "stablecoinId" 
 /**
  * Upsert discovered pools into dex_pool_staging.
  * Preserves initial discovery timestamp on re-discovery by updating conflicting rows in place.
+ * Conflicts never regress a fresher row: the update only applies when the incoming refreshed_at
+ * is not older than the stored one, a null tvl/volume overwrites the stored value instead of
+ * preserving stale metrics, and `options.minRefreshGapSec` skips rows another writer
+ * refreshed within that gap.
  * Batches in groups of 50 to stay within D1 statement limits.
  */
-export async function upsertStagedPools(db: D1Database, pools: StagedPool[], signal?: AbortSignal): Promise<void> {
+export interface StagedPoolUpsertOptions {
+  /** When set, an existing row refreshed within this many seconds is left untouched (the DO UPDATE becomes a no-op, which D1 counts as zero rows written). */
+  minRefreshGapSec?: number;
+}
+
+export async function upsertStagedPools(db: D1Database, pools: StagedPool[], signal?: AbortSignal, options?: StagedPoolUpsertOptions): Promise<void> {
   throwIfAborted(signal);
   if (pools.length === 0) return;
 
@@ -127,6 +147,8 @@ export async function upsertStagedPools(db: D1Database, pools: StagedPool[], sig
     return true;
   });
   if (validPools.length === 0) return;
+
+  const minRefreshGapSec = options?.minRefreshGapSec ?? 0;
 
   const stmts = validPools.flatMap((pool) => {
     const cleanupPoolId = legacyOrderbookPoolId(pool);
@@ -160,6 +182,8 @@ export async function upsertStagedPools(db: D1Database, pools: StagedPool[], sig
         pool.rawJson,
         pool.discoveredAt,
         pool.refreshedAt,
+        minRefreshGapSec,
+        minRefreshGapSec,
       );
     return cleanupStmt ? [cleanupStmt, insertStmt] : [insertStmt];
   });

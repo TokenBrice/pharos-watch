@@ -391,10 +391,14 @@ function incrementSkipDimension(
 }
 
 // Exhaustive staged-source → published source-family mapping: adding a staged
-// source without a row fails this record's type. The gecko_terminal fallback
-// still covers staged rows whose persisted source string outlives this deploy,
-// including prototype-named keys that plain Record indexing would inherit.
-const STAGED_SOURCE_FAMILY: Record<StagedPool["source"], Exclude<LiquidityPoolSourceFamily, "dl">> = {
+// source without a row fails this record's type. `dl` and `direct_api` rows are
+// this repo's own live-lane write-back, so they map to their own family. The
+// gecko_terminal fallback still covers staged rows whose persisted source
+// string outlives this deploy, including prototype-named keys that plain
+// Record indexing would inherit.
+const STAGED_SOURCE_FAMILY: Record<StagedPool["source"], LiquidityPoolSourceFamily> = {
+  dl: "dl",
+  direct_api: "direct_api",
   cg_onchain: "cg_onchain",
   gecko_terminal: "gecko_terminal",
   dexscreener: "dexscreener",
@@ -432,6 +436,13 @@ export async function mergeStagedPools(
   skippedByAuthoritativeProtocolCount: number;
   skipDimensions: StagedPoolSkipDimension[];
   priceObservations: Map<string, DexPriceObs[]>;
+  /**
+   * `${stablecoinId}\u0000${poolId}` for every row this read found under a
+   * discovery source, recorded before any skip or dedupe decision. The
+   * live-lane write-back subtracts it, so a pool both lanes observe keeps its
+   * discovery row — and the price that row carries.
+   */
+  discoveryOwnedKeys: Set<string>;
 }> {
   registerRetainedPoolExactStablecoins(knownPoolIndex, metrics);
   const result = await db
@@ -462,9 +473,17 @@ export async function mergeStagedPools(
   const skipDimensions = new Map<string, StagedPoolSkipDimension>();
   const supersededLegacyLowercaseRows = collectSupersededLegacyLowercaseRows(rows);
   const stagedIdentityCountsByStablecoin = new Map<string, StagedPoolIdentityCounts>();
+  const discoveryOwnedKeys = new Set<string>();
 
   for (const row of rows) {
     if (!row) continue;
+    if (row.source !== "dl" && row.source !== "direct_api") {
+      // Discovery owns rows it wrote; the live-lane write-back must not relabel
+      // them `dl` or null the price, so the key is read before any skip.
+      discoveryOwnedKeys.add(
+        `${row.stablecoin_id}\u0000${canonicalExitRouteScopedKey(row.chain, row.pool_id)}`,
+      );
+    }
     if (supersededLegacyLowercaseRows.has(row)) {
       skippedCount++;
       incrementSkipDimension(skipDimensions, "legacy_lowercase_identity_superseded", row);
@@ -783,5 +802,6 @@ export async function mergeStagedPools(
     skippedByAuthoritativeProtocolCount: authoritativeProtocolSkipped,
     skipDimensions: [...skipDimensions.values()],
     priceObservations: stagedPriceObs,
+    discoveryOwnedKeys,
   };
 }

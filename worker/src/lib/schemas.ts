@@ -132,6 +132,8 @@ export const DexLiquidityCronMetadataSchema = z.object({
   stagedPoolsSkippedByUniqueDerivedIdentity: z.number().optional(),
   stagedPoolsSkippedByOptionalWildcardIdentity: z.number().optional(),
   stagedPoolsSkippedByAuthoritativeProtocol: z.number().optional(),
+  stagedWritebackRows: z.number().optional(),
+  stagedWritebackSkippedUntrustedIds: z.number().optional(),
   failedSources: z.array(z.string()).optional().default([]),
   degradedSources: z.array(z.string()).optional().default([]),
   sourceCoverage: z

@@ -2,11 +2,17 @@ import { DAY_SECONDS } from "@shared/lib/time-constants";
 import type { DexDiscoveryProvider } from "@shared/lib/dex-deployment-coverage";
 import type { ContractDeployment } from "@shared/types/core";
 
-/** Raw pool entry written to dex_pool_staging by the discovery cron. */
+/**
+ * Raw pool entry written to dex_pool_staging. Discovery owns its own families;
+ * `dl` and `direct_api` rows are the live-lane write-back from the `:10`
+ * source stage, never discovery output.
+ */
 export interface StagedPool {
   poolId: string;
   stablecoinId: string;
   source:
+    | "dl"
+    | "direct_api"
     | "cg_onchain"
     | "gecko_terminal"
     | "dexscreener"
@@ -98,7 +104,7 @@ export const STAGED_POOL_DEFAULTS = {
  * revisit tail (p95 in the 7–14 day band on 2026-09-10) so a slow rotating
  * crawl no longer drops pools it simply has not revisited yet.
  */
-export const STAGED_POOL_FRESH_HOURS = 24;
+const STAGED_POOL_FRESH_HOURS = 24;
 export const STAGED_POOL_CONFIDENCE_HORIZON_HOURS = 14 * 24;
 /**
  * Price evidence never inherits the inventory horizon: a staged row older than

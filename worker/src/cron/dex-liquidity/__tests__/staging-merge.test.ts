@@ -1552,4 +1552,53 @@ describe("mergeStagedPools", () => {
     expect(metrics.get("usdt-tether")?.topPools).toHaveLength(1);
     expect(metrics.get("usdc-circle")?.topPools).toHaveLength(1);
   });
+
+  it("hands the live-lane write-back only the keys discovery owns", async () => {
+    const now = 1710000000;
+    const metrics = new Map();
+    const cgPoolId = `ethereum:${newPoolAddress}`;
+
+    const result = await mergeStagedPools(
+      createMockDb([
+        makeStagedPoolRow({
+          pool_id: cgPoolId,
+          stablecoin_id: "usdc-circle",
+          source: "cg_onchain",
+          chain: "ethereum",
+          protocol: "curve",
+          dex_id: "curve",
+          refreshed_at: now,
+        }),
+        // Both live-lane families write staging rows of their own; neither may
+        // be relabelled over the discovery row that carries the price.
+        makeStagedPoolRow({
+          pool_id: `ethereum:${exactPoolAddress}`,
+          stablecoin_id: "usdc-circle",
+          source: "dl",
+          chain: "ethereum",
+          protocol: "uniswap-v3",
+          dex_id: "uniswap-v3",
+          base_token: baseToken,
+          quote_token: quoteToken,
+          refreshed_at: now,
+        }),
+        makeStagedPoolRow({
+          pool_id: `ethereum:${secondExactPoolAddress}`,
+          stablecoin_id: "usdc-circle",
+          source: "direct_api",
+          chain: "ethereum",
+          protocol: "uniswap-v3",
+          dex_id: "uniswap-v3",
+          base_token: quoteToken,
+          quote_token: baseToken,
+          refreshed_at: now,
+        }),
+      ]),
+      metrics as never,
+      makeKnownPoolIndex(),
+      now,
+    );
+
+    expect(result.discoveryOwnedKeys).toEqual(new Set([`usdc-circle\u0000${cgPoolId}`]));
+  });
 });

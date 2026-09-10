@@ -5,8 +5,14 @@ import { createCronResult } from "../../lib/cron-result";
 import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import type { LiquidityFallbackCounters, LiquidityMetrics, LlamaPool } from "./types";
 import { runWithOverloadRetry } from "../../lib/d1-overload-retry";
-import { throwIfAborted } from "../../lib/abort";
+import { rethrowIfAborted, throwIfAborted } from "../../lib/abort";
 import { loadPriceValidationReferences } from "../../lib/price-validation";
+import { upsertStagedPools } from "../dex-discovery/persistence";
+import {
+  STAGED_WRITEBACK_MIN_REFRESH_GAP_SEC,
+  buildStagedPoolWriteback,
+  filterDiscoveryOwned,
+} from "./staged-pool-writeback";
 import { buildSymbolLookups, classifyPoolType, initLiquidityFallbackCounters } from "./pool-helpers";
 import { buildChainAddressKey } from "./token-resolution";
 import {
@@ -820,6 +826,10 @@ async function buildDexLiquidityPoolState(
     },
   });
 
+  // Snapshot this run's live-lane observations before the merge: rows the merge
+  // backfills arrive from dex_pool_staging, so writing them back would advance
+  // refreshed_at every hour and no row would ever age out (immortal registry).
+  const stagedWritebackSnapshot = buildStagedPoolWriteback(metrics, ctx.syncStartSec);
   const staged = await mergeStagedPools(
     ctx.db,
     metrics,
@@ -831,6 +841,30 @@ async function buildDexLiquidityPoolState(
   );
   mergeDexPriceObservationMap(sourceState.priceObservations, staged.priceObservations);
   staged.priceObservations.clear();
+  // Discovery wrote these rows and carries the only price either lane has: the
+  // live-lane copy would relabel them `dl` with `price_usd = NULL` and erase
+  // the observation the merge just sourced.
+  const stagedWriteback = filterDiscoveryOwned(stagedWritebackSnapshot, staged.discoveryOwnedKeys);
+  if (stagedWriteback.skippedDiscoveryOwned > 0) {
+    logWorkerEventArgs("handler", "info",
+      `[dex-liquidity] skipped ${stagedWriteback.skippedDiscoveryOwned} live-lane write-back rows owned by discovery`,
+    );
+  }
+  // Best-effort memory only: publication depends on the merge above, so a D1
+  // failure here costs durability, not this run's output.
+  try {
+    await upsertStagedPools(ctx.db, stagedWriteback.pools, ctx.signal, {
+      minRefreshGapSec: STAGED_WRITEBACK_MIN_REFRESH_GAP_SEC,
+    });
+  } catch (error) {
+    rethrowIfAborted(error, ctx.signal);
+    logWorkerEventArgs("handler", "warn", JSON.stringify({
+      scope: "dex-liquidity",
+      message: "Failed to write live-lane pools back to dex_pool_staging",
+      error: toErrorMessage(error),
+      rows: stagedWriteback.pools.length,
+    }));
+  }
   await enrichEvmV2ExecutionModels({
     metrics,
     chainAddressToId: sourceState.lookups.chainAddressToId,
@@ -901,6 +935,8 @@ async function buildDexLiquidityPoolState(
     stagedSkippedByOptionalWildcardIdentityCount: staged.skippedByOptionalWildcardIdentityCount,
     stagedSkippedByAuthoritativeProtocolCount: staged.skippedByAuthoritativeProtocolCount,
     stagedSkipDimensions: staged.skipDimensions,
+    stagedWritebackRows: stagedWriteback.pools.length,
+    stagedWritebackSkippedUntrustedIds: stagedWriteback.skippedUntrustedIds,
     directApiIntegration,
   };
 }
@@ -1244,6 +1280,8 @@ function buildDexLiquidityCronResult(
         stagedPoolsSkippedByOptionalWildcardIdentity: poolState.stagedSkippedByOptionalWildcardIdentityCount,
         stagedPoolsSkippedByAuthoritativeProtocol: poolState.stagedSkippedByAuthoritativeProtocolCount,
         stagedPoolSkipDimensions: poolState.stagedSkipDimensions,
+        stagedWritebackRows: poolState.stagedWritebackRows,
+        stagedWritebackSkippedUntrustedIds: poolState.stagedWritebackSkippedUntrustedIds,
         poolRejections: poolState.poolRejections,
         directApiSourceSummary: {
           acceptedByProtocolChain: poolState.directApiIntegration.acceptedByProtocolChain,

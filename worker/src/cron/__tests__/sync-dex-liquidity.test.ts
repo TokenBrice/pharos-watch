@@ -58,6 +58,7 @@ const phaseFixtures = vi.hoisted(() => {
         skippedByAuthoritativeProtocolCount: 0,
         skipDimensions: [],
         priceObservations: new Map(),
+        discoveryOwnedKeys: new Set<string>(),
       },
       scores: {
         measuredTargetInventory: { mode: "active", active: [], shadow: [] },
@@ -749,6 +750,7 @@ describe("dex liquidity scoring stage cycle", () => {
       skippedByAuthoritativeProtocolCount: 0,
       skipDimensions: [],
       priceObservations: stagedPriceObservations,
+      discoveryOwnedKeys: new Set<string>(),
     });
     let callsAtTelemetryEntry: number[] | undefined;
     vi.mocked(fetchMajorStablecoinOrderbookDepthSummary).mockImplementationOnce(async () => {
@@ -1000,6 +1002,7 @@ describe("dex liquidity scoring stage cycle", () => {
           skippedByAuthoritativeProtocolCount: 0,
           skipDimensions: [],
           priceObservations: new Map(),
+          discoveryOwnedKeys: new Set<string>(),
         };
       },
     );
