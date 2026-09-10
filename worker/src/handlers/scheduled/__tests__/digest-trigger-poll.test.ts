@@ -28,14 +28,10 @@ vi.mock("../../../lib/db-cache", () => ({
 vi.mock("../../../lib/budget-surface-telemetry", () => ({
   recordBudgetSurfaceTelemetry: vi.fn(async () => {}),
 }));
-vi.mock("../../../lib/daily-social-delivery", () => ({
-  deliverDailySocial: vi.fn(async () => ({ status: "skipped", reason: "outside-publication-window" })),
-}));
 vi.mock("../../../lib/telegram/digest-outbox", () => ({
   drainTelegramDigestOutbox: vi.fn(),
 }));
 
-import { deliverDailySocial } from "../../../lib/daily-social-delivery";
 import { generateDailyDigest, resumeDailyDigestDelivery } from "../../../cron/daily-digest";
 import { resolveDigestSafetyMap } from "../../../lib/digest-safety-map";
 import { deleteCache, getCache, setCache } from "../../../lib/db-cache";
@@ -129,19 +125,6 @@ describe("runDigestTriggerPollSlot", () => {
     });
   }
 
-  it("continues digest polling when daily social delivery and telemetry fail", async () => {
-    vi.mocked(buildTwitterCreds).mockReturnValue({ apiKey: "a", apiSecret: "b", accessToken: "c", accessTokenSecret: "d" });
-    vi.mocked(deliverDailySocial).mockRejectedValueOnce(new Error("image unavailable"));
-    vi.mocked(recordBudgetSurfaceTelemetry).mockImplementation(async (_db, telemetry) => {
-      if (telemetry.surface === "daily-social-delivery") throw new Error("telemetry unavailable");
-    });
-    vi.mocked(getCache).mockResolvedValue(null);
-    const summary = await runDigestTriggerPollSlot(buildRuntime());
-    expect(deliverDailySocial).toHaveBeenCalledOnce();
-    expect(summary.jobs).toContainEqual(expect.objectContaining({ job: "digest-trigger-poll", reason: "no-pending-request" }));
-    vi.mocked(recordBudgetSurfaceTelemetry).mockImplementation(async () => {});
-  });
-
   it("is a no-op when the force-run cache key is absent", async () => {
     vi.mocked(getCache).mockResolvedValueOnce(null);
 
@@ -164,7 +147,7 @@ describe("runDigestTriggerPollSlot", () => {
       jobsNeutralSkipped: 1,
       jobsDegraded: 0,
       jobsErrored: 0,
-      budgetOnlyJobs: 3,
+      budgetOnlyJobs: 2,
       jobs: [
         {
           job: "digest-trigger-poll",

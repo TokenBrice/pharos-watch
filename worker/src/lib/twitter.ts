@@ -77,7 +77,7 @@ async function buildOAuthHeader(method: string, url: string, creds: TwitterCreds
 }
 
 /** Post a single tweet using OAuth 1.0a. Throws with delivery ambiguity attached on API error. */
-async function postTweet(text: string, creds: TwitterCreds, mediaId?: string, signal?: AbortSignal): Promise<string> {
+async function postTweet(text: string, creds: TwitterCreds, mediaId?: string): Promise<string> {
   const url = "https://api.twitter.com/2/tweets";
   let authHeader: string;
   try {
@@ -86,7 +86,7 @@ async function postTweet(text: string, creds: TwitterCreds, mediaId?: string, si
     throw new TwitterPostError(`Twitter request signing failed before send: ${toErrorMessage(error)}`, "definitive_failure");
   }
 
-  const requestSignal = signal ? AbortSignal.any([signal, AbortSignal.timeout(10_000)]) : AbortSignal.timeout(10_000);
+  const requestSignal = AbortSignal.timeout(10_000);
   let res: Response;
   try {
     res = await fetch(url, {
@@ -162,12 +162,12 @@ async function uploadTweetImage(imageUrl: string, creds: TwitterCreds): Promise<
   return uploadTweetImageBytes(imageBytes, creds);
 }
 
-async function uploadTweetImageBytes(imageBytes: ArrayBuffer, creds: TwitterCreds, signal?: AbortSignal): Promise<string> {
+async function uploadTweetImageBytes(imageBytes: ArrayBuffer, creds: TwitterCreds): Promise<string> {
   const authHeader = await buildOAuthHeader("POST", TWITTER_MEDIA_UPLOAD_URL, creds);
   const body = new FormData();
   body.append("media", new Blob([imageBytes], { type: "image/png" }), "pharos-safety-score-map.png");
   body.append("media_category", "tweet_image");
-  const uploadSignal = signal ? AbortSignal.any([signal, AbortSignal.timeout(15_000)]) : AbortSignal.timeout(15_000);
+  const uploadSignal = AbortSignal.timeout(15_000);
   const response = await fetch(TWITTER_MEDIA_UPLOAD_URL, {
     method: "POST",
     headers: { Authorization: authHeader },
@@ -236,39 +236,4 @@ export async function postDigestTweet(
   const tweetId = await postTweet(tweetText, creds, mediaId);
   logWorkerEventArgs("lib", "info", `[twitter] Posted digest tweet (${tweetText.length} chars${mediaId ? ", safety map attached" : ""})`);
   return { tweetId, mediaAttached: Boolean(mediaId) };
-}
-
-/** Post verified PNG bytes with accessible alt text; never degrade to text-only. */
-export async function postImageTweet(
-  text: string,
-  imageBytes: ArrayBuffer,
-  altText: string,
-  creds: TwitterCreds,
-  signal?: AbortSignal,
-  beforePublish?: () => void,
-): Promise<{ tweetId: string; mediaAttached: boolean }> {
-  let mediaId: string;
-  try {
-    if (imageBytes.byteLength === 0 || imageBytes.byteLength > TWITTER_IMAGE_MAX_BYTES) {
-      throw new Error("Invalid tweet image size");
-    }
-    mediaId = await uploadTweetImageBytes(imageBytes, creds, signal);
-    const url = "https://upload.twitter.com/1.1/media/metadata/create.json";
-    const authHeader = await buildOAuthHeader("POST", url, creds);
-    const requestSignal = signal ? AbortSignal.any([signal, AbortSignal.timeout(10_000)]) : AbortSignal.timeout(10_000);
-    const response = await fetch(url, {
-      method: "POST",
-      headers: { Authorization: authHeader, "Content-Type": "application/json" },
-      body: JSON.stringify({ media_id: mediaId, alt_text: { text: altText } }),
-      signal: requestSignal,
-    });
-    const raw = await readResponseTextBoundedWithSignal(response, 16_384, requestSignal);
-    if (!response.ok) throw new Error(`Twitter media metadata API ${response.status}: ${raw.slice(0, 300)}`);
-    signal?.throwIfAborted();
-    beforePublish?.();
-  } catch (error) {
-    throw new TwitterPostError(`Image preparation failed; tweet aborted: ${toErrorMessage(error)}`, "definitive_failure");
-  }
-  const tweetId = await postTweet(text, creds, mediaId, signal);
-  return { tweetId, mediaAttached: true };
 }
