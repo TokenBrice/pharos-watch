@@ -21,12 +21,12 @@ describe("handleDexLiquidity", () => {
     try {
       const insert = sqlite.prepare("INSERT INTO cron_runs (job, started_at, duration_ms, status, metadata) VALUES ('sync-dex-liquidity', ?, 1, ?, ?)");
       insert.run(100, "ok", JSON.stringify({ sourceCoverage: {
-        qualityDriftSeverity: "high", qualityDriftFlags: ["major-tvl-cliff:crvusd-curve"],
+        qualityDriftSeverity: "medium", qualityDriftFlags: ["staged-merge-drop"],
       } }));
       insert.run(200, "skipped_neutral", null);
       insert.run(300, "skipped_locked", null);
       insert.run(350, "ok", JSON.stringify({ persistence: { skippedReason: "liquidity-cadence-reuse" } }));
-      expect((await handleDexLiquidity(db)).headers.get("Warning")).toContain("major-tvl-cliff:crvusd-curve");
+      expect((await handleDexLiquidity(db)).headers.get("Warning")).toContain("staged-merge-drop");
       insert.run(400, "ok", "{}");
       expect((await handleDexLiquidity(db)).headers.get("Warning")).toBeNull();
     } finally {
@@ -35,11 +35,16 @@ describe("handleDexLiquidity", () => {
   });
 
   it.each([
-    ["ok", ["major-tvl-cliff:crvusd-curve"], false],
-    ["ok", ["major-tvl-cliff:crvusd-curve", "price-observation-drop"], true],
-    ["degraded", ["major-tvl-cliff:crvusd-curve"], true],
-    ["error", [], true],
-  ])("scopes %s advisory flags %j without hiding dataset-wide failures", async (status, flags, affectsOtherCoins) => {
+    ["ok", ["major-tvl-cliff:crvusd-curve"], false, false],
+    ["ok", ["major-tvl-cliff:crvusd-curve", "price-observation-drop"], true, true],
+    ["degraded", ["major-tvl-cliff:crvusd-curve"], true, true],
+    ["error", [], true, true],
+  ])("scopes %s advisory flags %j without hiding dataset-wide failures", async (
+    status,
+    flags,
+    affectsOtherCoins,
+    affectsGlobalSurface,
+  ) => {
     const db = mockDexD1([
       { match: "dex_liquidity_history", rows: [] },
       { match: "dex_prices", rows: [] },
@@ -50,9 +55,35 @@ describe("handleDexLiquidity", () => {
     ]);
     const res = await handleDexLiquidity(db);
     const body = await res.json() as Record<string, { warning: string | null }>;
-    expect(res.headers.get("Warning")).toBeTruthy();
+    const globalWarning = res.headers.get("Warning");
+    if (affectsGlobalSurface) expect(globalWarning).toBeTruthy();
+    else expect(globalWarning).toBeNull();
     expect(body["crvusd-curve"].warning).toBeTruthy();
     expect(Boolean(body["usdt-tether"].warning)).toBe(affectsOtherCoins);
+  });
+
+  it("keeps a coin-scoped cliff flag off the global surface and on its own coin row", async () => {
+    const db = mockDexD1([
+      { match: "dex_liquidity_history", rows: [] },
+      { match: "dex_prices", rows: [] },
+      { match: "cron_runs", rows: [], first: { status: "ok", metadata: JSON.stringify({
+        failedSources: [],
+        sourceCoverage: {
+          qualityDriftSeverity: "high",
+          qualityDriftFlags: ["major-tvl-cliff:usdg-paxos"],
+          nearCoverageGuard: false,
+          nearValueGuard: false,
+          nearMajorCoverageGuard: false,
+        },
+      }) } },
+      { match: "dex_liquidity", rows: [row, makeDexLiquidityRow({ stablecoin_id: "usdg-paxos" }), makeDexLiquidityRow({ stablecoin_id: "__global__" })] },
+    ]);
+    const res = await handleDexLiquidity(db);
+    const body = await res.json() as Record<string, { warning: string | null }>;
+    expect(res.headers.get("Warning")).toBeNull();
+    expect(body["usdg-paxos"].warning).toContain("major-tvl-cliff:usdg-paxos");
+    expect(body["usdt-tether"].warning).toBeNull();
+    expect(body["__global__"].warning).toBeNull();
   });
 
   it("returns 200 with liquidity map", async () => {

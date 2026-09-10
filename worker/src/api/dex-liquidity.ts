@@ -146,7 +146,10 @@ export const handleDexLiquidity = async (db: D1Database): Promise<Response> => {
       : inferred7dMeasured;
 
     map[id] = {
-      warning: [headers.Warning, buildDexLiquidityWarning(latestCron, id === "__global__" ? undefined : id)]
+      warning: [headers.Warning, buildDexLiquidityWarning(
+        latestCron,
+        id === "__global__" ? { scope: "global" } : { scope: "coin", stablecoinId: id },
+      )]
         .filter(Boolean).join(", ") || null,
       totalTvlUsd: currentTvl,
       totalVolume24hUsd: row.total_volume_24h_usd,
@@ -203,7 +206,7 @@ export const handleDexLiquidity = async (db: D1Database): Promise<Response> => {
     };
   }
 
-  const degradedWarning = buildDexLiquidityWarning(latestCron);
+  const degradedWarning = buildDexLiquidityWarning(latestCron, { scope: "global" });
   if (degradedWarning) {
     headers.Warning = headers.Warning ? `${headers.Warning}, ${degradedWarning}` : degradedWarning;
   }
