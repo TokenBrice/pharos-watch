@@ -331,7 +331,7 @@ export default function ApiAccessPage() {
             .
           </li>
           <li>The donating wallet has to be able to sign: exchange withdrawals and contract wallets do not qualify.</li>
-          <li>Ledger reconciled {LEDGER_RECONCILED_DATE} UTC; new donations go live with the next release.</li>
+          <li>Claims are not instant. The donor list is updated once a week, on Sunday mornings; a new donation can only be claimed once it appears on the funding page. Ledger last reconciled {LEDGER_RECONCILED_DATE} UTC.</li>
         </ul>
         {DONOR_KEY_CLAIMS_OPEN ? (
           <DonorKeyClaim />

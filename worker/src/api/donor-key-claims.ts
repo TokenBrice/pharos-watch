@@ -32,7 +32,7 @@ const RATE_LIMIT_RETRY_AFTER_SEC = 60;
 const SIWE_INVALID_MESSAGE = "Claim message or signature is invalid";
 const UNAVAILABLE_MESSAGE = "Supporter key claims are temporarily unavailable";
 const INELIGIBLE_MESSAGE =
-  `This wallet needs more than $${DONOR_API_KEY_MIN_USD} in stablecoin donations in the public ledger whose current Safety Score is in the A or B grade band. `
+  `This wallet needs at least $${DONOR_API_KEY_MIN_USD} in stablecoin donations in the public ledger whose current Safety Score is in the A or B grade band. `
   + "Donations are reconciled weekly and go live with the next release; see https://pharos.watch/funding/";
 const ALREADY_CLAIMED_MESSAGE =
   "This wallet already claimed its supporter key; to rotate a lost key use the feedback form at https://pharos.watch/feedback/";

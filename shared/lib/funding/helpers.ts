@@ -50,7 +50,9 @@ export interface MonthlyCommunityCoverage {
 
 /**
  * Per-month community totals for months strictly before `nowSec`'s month.
- * Months with no community donations are omitted. Sorted most-recent first.
+ * Every month from the first community donation up to last month is listed,
+ * so a month with no donations shows as $0 rather than disappearing.
+ * Sorted most-recent first.
  */
 export function computeMonthlyHistory(
   donations: readonly Donation[],
@@ -59,26 +61,39 @@ export function computeMonthlyHistory(
 ): MonthlyCommunityCoverage[] {
   const currentMonth = monthKey(nowSec);
   const totals = new Map<string, number>();
+  let earliest: string | null = null;
   for (const d of donations) {
     requireFinite(d.block_timestamp, "timestamp");
     requireFinite(d.usd_at_receipt, "donation amount");
     if (d.kind === "founder") continue;
     const key = monthKey(d.block_timestamp);
+    if (earliest === null || key < earliest) earliest = key;
     if (key === currentMonth) continue;
     totals.set(key, (totals.get(key) ?? 0) + d.usd_at_receipt);
   }
-  return [...totals.entries()]
-    .sort((a, b) => (a[0] < b[0] ? 1 : -1))
-    .slice(0, maxMonths)
-    .map(([key, communityUsd]) => {
-      const [y, m] = key.split("-").map(Number);
-      const label = new Date(Date.UTC(y, m - 1, 1)).toLocaleDateString("en-US", {
-        month: "short",
-        year: "numeric",
-        timeZone: "UTC",
-      });
-      return { monthKey: key, label, communityUsd };
+  if (earliest === null || earliest >= currentMonth) return [];
+
+  const [nowY, nowM] = currentMonth.split("-").map(Number);
+  const history: MonthlyCommunityCoverage[] = [];
+  // Walk backwards from last month until the earliest community month.
+  let y = nowY;
+  let m = nowM - 1;
+  while (history.length < maxMonths) {
+    if (m < 1) {
+      m = 12;
+      y -= 1;
+    }
+    const key = `${y}-${String(m).padStart(2, "0")}`;
+    if (key < earliest) break;
+    const label = new Date(Date.UTC(y, m - 1, 1)).toLocaleDateString("en-US", {
+      month: "short",
+      year: "numeric",
+      timeZone: "UTC",
     });
+    history.push({ monthKey: key, label, communityUsd: totals.get(key) ?? 0 });
+    m -= 1;
+  }
+  return history;
 }
 
 export interface DonationSummary {

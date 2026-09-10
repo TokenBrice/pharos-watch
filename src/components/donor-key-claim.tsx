@@ -63,7 +63,7 @@ function describeClaimFailure(error: unknown): ClaimFailure {
       if (error.ledgerUpdatedAt != null) {
         return {
           status: 403,
-          text: `This wallet needs more than $${DONOR_API_KEY_MIN_USD} in donations of stablecoins currently graded A+, A, A−, B+, B, or B−, using the ledger reconciled on ${formatIsoDate(error.ledgerUpdatedAt)}. New donations count after the weekly reconciliation and the next release.`,
+          text: `This wallet needs at least $${DONOR_API_KEY_MIN_USD} in donations of stablecoins currently graded A+, A, A−, B+, B, or B−, using the ledger reconciled on ${formatIsoDate(error.ledgerUpdatedAt)}. Claims are not instant: the donor list is updated once a week, on Sunday mornings, and a donation only counts once it appears on the funding page.`,
         };
       }
       if (/revok/i.test(error.message)) {

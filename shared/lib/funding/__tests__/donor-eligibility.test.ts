@@ -35,15 +35,15 @@ describe("donor eligibility", () => {
       row({ from_address: B, tx_hash: "0x03", usd_at_receipt: 9.9 }),
     ], GRADES);
     expect(isEligibleDonor(A, totals, 10)).toBe(false);
-    expect(isEligibleDonor(B, totals, 10)).toBe(false);
+    expect(isEligibleDonor(B, totals, 10)).toBe(true);
     totals.set(B, 10.01);
     expect(isEligibleDonor(B.toUpperCase().replace("0X", "0x"), totals, 10)).toBe(true);
     expect(isEligibleDonor("0x0000000000000000000000000000000000000000", totals, 10)).toBe(false);
   });
 
-  it("does not grant access for floating-point noise at exactly $10", () => {
+  it("grants access when floating-point drift leaves an exactly-$10 sum just short", () => {
     const totals = sumEligibleDonationsByAddress(Array.from({ length: 100 }, () => row({ usd_at_receipt: 0.1 })), GRADES);
-    expect(isEligibleDonor(A, totals, 10)).toBe(false);
+    expect(isEligibleDonor(A, totals, 10)).toBe(true);
   });
 
   it.each(["USDC", "USDT", "DAI", "USDGLO"])("counts reconciled %s donations", (asset_symbol) => {
