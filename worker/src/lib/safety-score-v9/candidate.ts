@@ -10,7 +10,10 @@ import type {
   CompiledV9FactSetV3,
   V9BridgeJoinDiagnosticsV1,
 } from "@shared/types/safety-score-v9-facts";
-import type { SafetyScoreV9CurrentResponse } from "@shared/types/safety-score-v9-public";
+import type {
+  SafetyScoreV9CurrentResponse,
+  SafetyScoreV9EvidenceFreshness,
+} from "@shared/types/safety-score-v9-public";
 import type { V9ValidatedPolicyEnvelope } from "@shared/types/safety-score-v9";
 import { z } from "zod";
 import {
@@ -442,6 +445,22 @@ function v9PolicyVersion(policy: V9ValidatedPolicyEnvelope): string {
 }
 
 /**
+ * Public exit-pillar freshness is the age of the captured DEX liquidity input,
+ * judged against the same lane bound the fact set applies
+ * (`routeFreshness.dexMaxAgeSec`). Presentation only: it annotates the card and
+ * never enters a score, a cap, or a candidate/publication identity digest.
+ */
+function exitPillarFreshnessFromDexInput(
+  fixedInput: Readonly<SafetyScoreV9CompilerInput>,
+  assetId: string,
+  dexMaxAgeSec: number,
+): SafetyScoreV9EvidenceFreshness {
+  const updatedAt = fixedInput.dexLiqMap[assetId]?.updatedAt;
+  if (updatedAt === undefined) return "unknown";
+  return fixedInput.clockSec - updatedAt <= dexMaxAgeSec ? "current" : "stale";
+}
+
+/**
  * Compile, evaluate, and project one exact V9 publication without storage,
  * network access, wall-clock access, or mutation of another publication.
  */
@@ -515,6 +534,10 @@ function buildSafetyScoreV9CandidatePipeline(
         },
       ),
   );
+  // Read the DEX lane bound off the materialized extension so the card can
+  // never drift from the bound the exit evidence itself was judged against;
+  // the extension graph is released below.
+  const dexExitRouteMaxAgeSec = extension.routeFreshness.dexMaxAgeSec;
   const compilation =
     compileSafetyScoreV9FactSetWithIsolationFromValidatedExtension(
       fixedInput,
@@ -589,6 +612,9 @@ function buildSafetyScoreV9CandidatePipeline(
       exit: asset.exit,
       control: asset.control,
       display: displayByAssetId.get(asset.assetId),
+      freshness: {
+        exit: exitPillarFreshnessFromDexInput(fixedInput, asset.assetId, dexExitRouteMaxAgeSec),
+      },
     })),
   });
 

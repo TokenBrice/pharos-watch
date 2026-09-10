@@ -594,4 +594,31 @@ describe("Safety Score v9 publication pipeline", { timeout: V9_EVALUATION_TEST_T
     expect(result.candidate.cards[0]).toMatchObject({ id: "alpha", score: 77, grade: "B+" });
     expect(result.evaluatedSet.assets[0]!.trace.finalScore).toBe(result.candidate.cards[0]!.score);
   });
+
+  it("projects exit-pillar freshness from the DEX input age against the lane bound", () => {
+    const withDexRowAge = (ageSec: number) => {
+      const fixedInput = exactFixedInput("alpha");
+      const updatedAt = AS_OF_SEC - ageSec;
+      fixedInput.dexLiqMap.alpha!.updatedAt = updatedAt;
+      fixedInput.dexGenerationId = `dex-liquidity-${updatedAt}`;
+      fixedInput.inputFreshness.dexLiquidity = { updatedAt, ageSeconds: ageSec, stale: ageSec > 14_400 };
+      fixedInput.liquidityStale = ageSec > 14_400;
+      fixedInput.dexPayloadFingerprint = computeDexLiquidityPayloadFingerprint(
+        fixedInput.dexLiqMap,
+        fixedInput.dexGenerationId,
+      );
+      fixedInput.baseInputGenerationId = deriveReportCardsBaseInputGenerationId(fixedInput);
+      return buildSafetyScoreV9Candidate({
+        fixedInput,
+        extension: reviewedExtension(fixedInput),
+        publishedAtSec: PUBLISHED_AT_SEC,
+      });
+    };
+
+    // One hour old: inside the 4h DEX lane bound, so the exit input is current.
+    expect(withDexRowAge(3_600).candidate.cards[0]?.pillars.exit.freshness).toBe("current");
+    // Five hours old: past the bound, the stale DEX generation must surface on
+    // the card instead of an anonymous "unknown".
+    expect(withDexRowAge(5 * 3_600).candidate.cards[0]?.pillars.exit.freshness).toBe("stale");
+  });
 });

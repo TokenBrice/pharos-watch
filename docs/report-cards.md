@@ -180,6 +180,17 @@ The response includes:
 - the canonical serial/basket dependency graph
 - accepted `updatedAt`
 
+Each pillar row on a card carries a `freshness` value: `current`, `stale`, or `unknown`. The Exit
+pillar's value is the age of the DEX liquidity input the exit-route evidence was observed at,
+judged against the lane's 4-hour evidence bound (`DEX_LIQUIDITY_EVIDENCE_MAX_AGE_SEC`, applied by
+the compiler as `routeFreshness.dexMaxAgeSec`): a DEX publication at or under 4 hours reports
+`current`, an older publication reports `stale`, and an asset with no DEX row reports `unknown`.
+It is presentation metadata projected onto the card — it never feeds a score, a cap, or a
+publication identity digest. Backing and Economic Control keep `unknown` until their own lane
+ages are projected (only the Exit lane is wired today). The card-level `evidence.freshness`
+reports `stale` when any wired pillar is stale and `unknown` otherwise, so a stale DEX
+generation is visible downstream instead of anonymously unassessed.
+
 See [API Reference](./api-reference.md) for the wire contract.
 
 ## Consumers
