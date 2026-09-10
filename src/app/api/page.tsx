@@ -50,7 +50,7 @@ const ACCESS_FACTS = [
   {
     title: "Supporter Key",
     description:
-      `Wallets with more than $${DONOR_API_KEY_MIN_USD} in donations of stablecoins currently graded A or B (including +/−) can claim one key at ${DONOR_API_KEY_RATE_LIMIT_PER_MINUTE} requests per minute, with no scheduled expiry.`,
+      `Wallets with at least $${DONOR_API_KEY_MIN_USD} in donations of stablecoins currently graded A or B (including +/−) can claim one key at ${DONOR_API_KEY_RATE_LIMIT_PER_MINUTE} requests per minute, with no scheduled expiry.`,
     icon: KeyRound,
   },
 ] as const;
@@ -311,7 +311,7 @@ export default function ApiAccessPage() {
           <p className="pharos-kicker">Supporter Key</p>
           <h2 className="text-2xl font-semibold tracking-tight text-foreground">A thank-you perk for donors</h2>
           <p className="text-sm leading-relaxed text-muted-foreground">
-            Any externally-owned EVM wallet with more than ${DONOR_API_KEY_MIN_USD} in qualifying stablecoin donations in the{" "}
+            Any externally-owned EVM wallet with at least ${DONOR_API_KEY_MIN_USD} in qualifying stablecoin donations in the{" "}
             <Link href="/funding/" className="pharos-prose-link">
               public donation ledger
             </Link>{" "}

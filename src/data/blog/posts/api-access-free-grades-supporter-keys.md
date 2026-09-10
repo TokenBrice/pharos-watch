@@ -14,7 +14,7 @@ Keyed access to the full API is now by request through the [feedback form](/feed
 
 ## The supporter key
 
-An externally-owned EVM wallet that has donated more than $10 in stablecoins to Pharos, valued at receipt and recorded on the public [funding ledger](/funding/), can claim one API key by signing a message on [/api/](/api/). Only stablecoins graded A or B, including plus and minus grades, at the time you claim count toward the total. Exactly $10, ETH and other non-stablecoin donations, lower or missing grades, and pooled payouts do not qualify. No email, no account, no payment processor. The key runs at 10 requests per minute and has no scheduled expiry.
+An externally-owned EVM wallet that has donated at least $10 in stablecoins to Pharos, valued at receipt and recorded on the public [funding ledger](/funding/), can claim one API key by signing a message on [/api/](/api/). Only stablecoins graded A or B, including plus and minus grades, at the time you claim count toward the total. The threshold is inclusive, so exactly $10 qualifies; ETH and other non-stablecoin donations, lower or missing grades, and pooled payouts do not. No email, no account, no payment processor. The key runs at 10 requests per minute and has no scheduled expiry.
 
 How it works, in practice:
 

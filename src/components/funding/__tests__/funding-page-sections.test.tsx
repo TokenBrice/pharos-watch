@@ -166,7 +166,7 @@ describe("SupportCtas", () => {
   it("advertises the supporter API key perk with its threshold and rate limit", () => {
     render(<SupportCtas />);
     expect(screen.getByText("Supporter API key")).toBeTruthy();
-    expect(screen.getByText(/more than \$10 in stablecoin donations on this ledger/)).toBeTruthy();
+    expect(screen.getByText(/at least \$10 in stablecoin donations on this ledger/)).toBeTruthy();
     expect(screen.getByText(/graded A or B \(including \+\/−\) when claiming/)).toBeTruthy();
     expect(screen.getByText(/10 requests per minute, no expiry, one per wallet/)).toBeTruthy();
     expect(screen.getByRole("link", { name: "the API page" }).getAttribute("href")).toMatch(/^\/api\/?$/);
