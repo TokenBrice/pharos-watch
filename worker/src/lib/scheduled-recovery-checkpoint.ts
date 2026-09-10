@@ -826,8 +826,9 @@ export async function inspectLiveReserveCheckpointRecoveryEligibility(
 
 /**
  * Retire incompatible historical frontiers only after a newer complete cohort
- * supersedes them. The transition and exact pending-attempt fence share a batch;
- * neither an active child lease nor a recovery claimant may be displaced.
+ * supersedes them in a finished slot, even if a sidecar degraded the slot result.
+ * The transition and exact pending-attempt fence share a batch; neither an active
+ * child lease nor a recovery claimant may be displaced.
  */
 export async function retireSupersededLiveReserveCheckpoints(
   db: D1Database,
@@ -837,7 +838,7 @@ export async function retireSupersededLiveReserveCheckpoints(
     `SELECT ${CHECKPOINT_COLUMNS}
        FROM worker_scheduled_checkpoints
       WHERE schedule_key = ? AND job = ? AND queue_hash <> ?
-        AND state IN ('running', 'recovering', 'ready')
+        AND state IN ('running', 'recovering', 'ready', 'platform_abandoned')
       ORDER BY slot_started_at ASC LIMIT 25`,
   ).bind(LIVE_RESERVE_SCHEDULE_KEY, LIVE_RESERVE_CHECKPOINT_JOB, LIVE_RESERVE_QUEUE_HASH)
     .all<ScheduledCheckpointRow>());
@@ -854,7 +855,7 @@ export async function retireSupersededLiveReserveCheckpoints(
         SET state = 'failed', error = ?, completed_at = ?, updated_at = ?,
             recovery_owner = NULL, recovery_lease_until = NULL
         WHERE ${identityWhereSql()}
-          AND state IN ('running', 'recovering', 'ready') AND queue_hash <> ?
+          AND state IN ('running', 'recovering', 'ready', 'platform_abandoned') AND queue_hash <> ?
           AND (recovery_lease_until IS NULL OR recovery_lease_until < ?)
           AND NOT EXISTS (
             SELECT 1 FROM cron_leases
@@ -872,7 +873,7 @@ export async function retireSupersededLiveReserveCheckpoints(
             WHERE newer.schedule_key = ? AND newer.job = ? AND newer.slot_started_at > ?
               AND newer.queue_hash = ? AND newer.state = 'completed' AND newer.completed_at IS NOT NULL
               AND newer.next_item_key IS NULL AND newer.items_done = newer.items_total
-              AND newer.items_total = ? AND slot.state = 'finished' AND slot.result_status = 'ok'
+              AND newer.items_total = ? AND slot.state = 'finished'
           )`).bind(
         reason, timestamp, timestamp, ...identityBinds(checkpoint), LIVE_RESERVE_QUEUE_HASH,
         timestamp, ...LIVE_RESERVE_SLOT_JOBS, timestamp,

@@ -120,6 +120,41 @@ describe("scheduled recovery checkpoint", () => {
     expect(sqlite.prepare("SELECT lease_owner FROM cron_leases").get()).toEqual({ lease_owner: "active" });
   });
 
+  it("retires drifted running, ready, and abandoned debt after a full cohort completes in a degraded slot", async () => {
+    const { sqlite, db } = harness();
+    for (const [index, state] of ["running", "ready", "platform_abandoned"].entries()) {
+      const slotStartedAt = 1000 + index;
+      await seedCheckpointFrontier(db, {
+        slotStartedAt, invocationId: `old-${state}`, queueHash: "obsolete", nowSec: slotStartedAt,
+      });
+      sqlite.prepare("UPDATE worker_scheduled_checkpoints SET state = ? WHERE slot_started_at = ?")
+        .run(state, slotStartedAt);
+    }
+    await seedCheckpointFrontier(db, { slotStartedAt: 2000, invocationId: "new", nowSec: 2000 });
+    sqlite.prepare(`UPDATE worker_scheduled_checkpoints SET state = 'completed', completed_at = 2100,
+      next_item_key = NULL, items_done = items_total WHERE slot_started_at = 2000`).run();
+    sqlite.prepare(`INSERT INTO cron_slot_executions
+      (slot_key, slot_started_at, state, result_status, execution_owner, execution_generation, started_at, updated_at)
+      VALUES ('fourHourlyReserveSync', 2000, 'running', NULL, 'new', 1, 2000, 2100)`).run();
+    expect(await retireSupersededLiveReserveCheckpoints(db, 3000)).toBe(0);
+    sqlite.prepare(`UPDATE cron_slot_executions SET state = 'finished', result_status = 'degraded',
+      finished_at = 2100 WHERE slot_started_at = 2000`).run();
+    expect(await retireSupersededLiveReserveCheckpoints(db, 3000)).toBe(3);
+    expect(sqlite.prepare(`SELECT state, error FROM worker_scheduled_checkpoints
+      WHERE queue_hash = 'obsolete' ORDER BY slot_started_at`).all()).toEqual(
+      Array.from({ length: 3 }, () => ({
+        state: "failed", error: "checkpoint-superseded-by-newer-full-cohort",
+      })),
+    );
+    const preparation = await prepareEligibleLiveReserveCheckpointRecoveries(db, {
+      staleAfterSec: 120, nowSec: 3000, limit: 1,
+    });
+    expect(preparation.inspection).toMatchObject({
+      incompatibleCheckpointCount: 0, eligibleCheckpointCount: 0, readyCheckpointCount: 0,
+    });
+    expect(await retireSupersededLiveReserveCheckpoints(db, 3000)).toBe(0);
+  });
+
   it("fences an abandoned attempt, clears only its pending domain attempt, and creates attempt two", async () => {
     const { sqlite, db } = harness();
     const checkpoint = await seedCheckpointFrontier(db, {
