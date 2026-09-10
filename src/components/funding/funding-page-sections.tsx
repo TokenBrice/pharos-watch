@@ -447,7 +447,7 @@ function SupporterKeyNote() {
       <div className="space-y-1">
         <p className="text-sm font-semibold text-foreground">Supporter API key</p>
         <p className="text-sm leading-relaxed text-muted-foreground">
-          Any externally-owned EVM wallet with more than ${DONOR_API_KEY_MIN_USD} in stablecoin donations on this ledger, graded A or B (including +/−) when claiming, can claim one API key for the full Pharos
+          Any externally-owned EVM wallet with at least ${DONOR_API_KEY_MIN_USD} in stablecoin donations on this ledger, graded A or B (including +/−) when claiming, can claim one API key for the full Pharos
           API: {DONOR_API_KEY_RATE_LIMIT_PER_MINUTE} requests per minute, no expiry, one per wallet, by signing a
           message on{" "}
           <Link href="/api/" className="pharos-prose-link">

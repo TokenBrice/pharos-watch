@@ -12,13 +12,16 @@ import {
   upsertStagedPools,
   writeDiscoveryTargetCursors,
 } from "../persistence";
-import { STAGED_POOL_MAX_TVL_USD } from "../types";
+import { STAGED_POOL_CONFIDENCE_HORIZON_HOURS, STAGED_POOL_MAX_TVL_USD } from "../types";
 import { makeNoopD1, makeRunCountingNoopD1 } from "../../../test-helpers/noop-d1";
 import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
 import { stagedPool } from "./discovery.test-support";
 
 const fixtures = createLatestSchemaFixtureTracker();
 afterEach(() => { fixtures.closeAll(); vi.useRealTimers(); });
+
+// Rows survive one day past the confidence horizon so the stale_confidence_zero grace window still finds them.
+const STAGING_DELETE_TTL_SEC = (STAGED_POOL_CONFIDENCE_HORIZON_HOURS + 24) * 60 * 60;
 
 describe("isValidStagedPoolId", () => {
   it("accepts EVM chain:address lowercased form", () => {
@@ -86,6 +89,91 @@ describe("upsertStagedPools", () => {
       { pool_id: pool.poolId, stablecoin_id: pool.stablecoinId, discovered_at: nowSec - 100, refreshed_at: nowSec },
     ]);
   });
+
+  it("leaves a stored row untouched when the incoming write is older", async () => {
+    const { sqlite, db } = fixtures.open();
+    const nowSec = 1_710_000_000;
+    const pool = stagedPool({ discoveredAt: nowSec - 7200, refreshedAt: nowSec - 7200 });
+
+    await upsertStagedPools(db, [pool]);
+    await upsertStagedPools(db, [
+      { ...pool, tvlUsd: 99_000, volume24h: 88_000, priceUsd: 0.5, refreshedAt: nowSec - 10_800 },
+    ]);
+
+    expect(sqlite.prepare("SELECT tvl_usd, volume_24h, price_usd, refreshed_at FROM dex_pool_staging").get()).toEqual({
+      tvl_usd: 10_000,
+      volume_24h: 1_000,
+      price_usd: 1,
+      refreshed_at: nowSec - 7200,
+    });
+  });
+
+  it("overwrites stored tvl and volume with NULL when a degraded write omits them, while still advancing refreshed_at", async () => {
+    const { sqlite, db } = fixtures.open();
+    const nowSec = 1_710_000_000;
+    const pool = stagedPool({ discoveredAt: nowSec - 3600, refreshedAt: nowSec - 3600 });
+
+    await upsertStagedPools(db, [pool]);
+    await upsertStagedPools(db, [{ ...pool, tvlUsd: null, volume24h: null, refreshedAt: nowSec }]);
+
+    expect(sqlite.prepare("SELECT tvl_usd, volume_24h, refreshed_at FROM dex_pool_staging").get()).toEqual({
+      tvl_usd: null,
+      volume_24h: null,
+      refreshed_at: nowSec,
+    });
+  });
+
+  it("overwrites the stored price with NULL when a write has no price", async () => {
+    const { sqlite, db } = fixtures.open();
+    const nowSec = 1_710_000_000;
+    const pool = stagedPool({ discoveredAt: nowSec - 3600, refreshedAt: nowSec - 3600 });
+
+    await upsertStagedPools(db, [pool]);
+    await upsertStagedPools(db, [{ ...pool, priceUsd: null, refreshedAt: nowSec }]);
+
+    expect(sqlite.prepare("SELECT price_usd, refreshed_at FROM dex_pool_staging").get()).toEqual({
+      price_usd: null,
+      refreshed_at: nowSec,
+    });
+  });
+
+  it("minRefreshGapSec skips rows refreshed within the gap but updates older rows", async () => {
+    const { sqlite, db } = fixtures.open();
+    const nowSec = 1_710_000_000;
+    const hour = 3_600;
+    const fresh = stagedPool({ poolId: "ethereum:0xfresh", discoveredAt: nowSec - hour, refreshedAt: nowSec - hour });
+    const stale = stagedPool({ poolId: "ethereum:0xstale", discoveredAt: nowSec - 5 * hour, refreshedAt: nowSec - 5 * hour });
+
+    await upsertStagedPools(db, [fresh, stale]);
+    await upsertStagedPools(
+      db,
+      [
+        { ...fresh, tvlUsd: 12_000, refreshedAt: nowSec },
+        { ...stale, tvlUsd: 23_000, refreshedAt: nowSec },
+      ],
+      undefined,
+      { minRefreshGapSec: 4 * hour },
+    );
+
+    expect(sqlite.prepare("SELECT pool_id, tvl_usd, refreshed_at FROM dex_pool_staging ORDER BY pool_id").all()).toEqual([
+      { pool_id: "ethereum:0xfresh", tvl_usd: 10_000, refreshed_at: nowSec - hour },
+      { pool_id: "ethereum:0xstale", tvl_usd: 23_000, refreshed_at: nowSec },
+    ]);
+  });
+
+  it("still updates a row refreshed an hour ago on the default discovery path", async () => {
+    const { sqlite, db } = fixtures.open();
+    const nowSec = 1_710_000_000;
+    const pool = stagedPool({ discoveredAt: nowSec - 3600, refreshedAt: nowSec - 3600 });
+
+    await upsertStagedPools(db, [pool]);
+    await upsertStagedPools(db, [{ ...pool, tvlUsd: 15_000, refreshedAt: nowSec }]);
+
+    expect(sqlite.prepare("SELECT tvl_usd, refreshed_at FROM dex_pool_staging").get()).toEqual({
+      tvl_usd: 15_000,
+      refreshed_at: nowSec,
+    });
+  });
 });
 
 describe("discovery persistence D1 retry coverage", () => {
@@ -112,7 +200,7 @@ describe("discovery persistence D1 retry coverage", () => {
     expect(db.getRunCount()).toBe(1);
   });
 
-  it("uses bounded oldest-first 30h/4h staging cleanup and retries transient D1 overload", async () => {
+  it("uses bounded oldest-first staging cleanup past the merge horizon and retries transient D1 overload", async () => {
     vi.useFakeTimers();
     let attempts = 0;
     const prepared: Array<{ sql: string; binds: unknown[] }> = [];
@@ -139,7 +227,7 @@ describe("discovery persistence D1 retry coverage", () => {
 
     expect(attempts).toBe(3);
     expect(prepared[0]?.sql).toContain("ORDER BY refreshed_at ASC, rowid ASC");
-    expect(prepared[0]?.binds).toEqual([1_710_000_000 - 30 * 60 * 60, 1_000]);
+    expect(prepared[0]?.binds).toEqual([1_710_000_000 - STAGING_DELETE_TTL_SEC, 1_000]);
     expect(prepared[2]?.sql).toContain("SET raw_json = NULL");
     expect(prepared[2]?.binds).toEqual([1_710_000_000 - 4 * 60 * 60, 1_000]);
     expect(cleanup).toMatchObject({
@@ -149,6 +237,23 @@ describe("discovery persistence D1 retry coverage", () => {
       oldestRawJsonRemainingAt: 1_709_990_000,
       error: null,
     });
+  });
+
+  it("keeps staging rows one hour inside the delete TTL and deletes rows one hour past it", async () => {
+    const { sqlite, db } = fixtures.open();
+    const now = 1_710_000_000;
+    const insert = sqlite.prepare(`INSERT INTO dex_pool_staging
+      (pool_id, stablecoin_id, source, chain, protocol, symbol, discovered_at, refreshed_at)
+      VALUES (?, ?, 'dexscreener', 'ethereum', 'test', 'TEST / USDC', ?, ?)`);
+    insert.run("ethereum:0xkeep", "usdc-circle", now, now - STAGING_DELETE_TTL_SEC + 60 * 60);
+    insert.run("ethereum:0xdrop", "usdc-circle", now, now - STAGING_DELETE_TTL_SEC - 60 * 60);
+
+    const cleanup = await cleanupStaging(db, now);
+
+    expect(cleanup.deletedRows).toBe(1);
+    expect(sqlite.prepare("SELECT pool_id FROM dex_pool_staging").all()).toEqual([
+      { pool_id: "ethereum:0xkeep" },
+    ]);
   });
 
   it("reports staging cleanup errors without throwing", async () => {

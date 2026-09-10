@@ -547,7 +547,14 @@ export async function analyzeDexLiquidityPostScoring(params: {
     for (const pool of pools) {
       retainedPoolCountBySourceFamily[pool.source] = (retainedPoolCountBySourceFamily[pool.source] ?? 0) + 1;
       sourceFamilies.add(pool.source);
-      if (pool.source === "dl" || pool.source === "direct_api") hasPrimaryLiquidity = true;
+      // A remembered DL/direct row (decayed staged backfill) is inventory, not a this-run
+      // observation: it must not hide a total primary-lane outage from coverage classification.
+      if (
+        (pool.source === "dl" || pool.source === "direct_api") &&
+        pool.extra?.measurement?.decayed !== true
+      ) {
+        hasPrimaryLiquidity = true;
+      }
       if (pool.source === "gecko_terminal") hasGeckoTerminalLiquidity = true;
       if (pool.extra?.measurement?.balanceMeasured) {
         hasMeasuredBalanceLiquidity = true;

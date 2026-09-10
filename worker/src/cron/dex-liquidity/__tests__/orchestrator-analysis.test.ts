@@ -3,6 +3,7 @@ import { mockD1 } from "@shared/test-utils/mock-d1";
 import { analyzeDexLiquidityPostScoring } from "../orchestrator-analysis";
 import { isDexLiquidityDegraded } from "../orchestrator-metadata";
 import type { FullScoreResult, GlobalAgg } from "../types";
+import { makePool } from "./scoring-test-builders";
 
 const BASE_SCORE_RESULT: FullScoreResult = {
   tvl: 100,
@@ -760,5 +761,28 @@ describe("analyzeDexLiquidityPostScoring", () => {
         ],
       }),
     ).toBe(false);
+  });
+
+  it("counts a decayed dl-only coin as crawler-only but an observed dl pool as primary coverage", async () => {
+    const decayedPool = makePool({
+      poolId: "ethereum:0xdecayed",
+      source: "dl",
+      extra: { measurement: { decayed: true } },
+    });
+
+    const decayed = await analyzeDexLiquidityPostScoring(
+      makeAnalysisInput({ retainedPoolsByStablecoin: new Map([["usdc-circle", [decayedPool]]]) }),
+    );
+    expect(decayed.sourceCoverage.coinsCrawlerOnly).toBe(1);
+    expect(decayed.sourceCoverage.retainedPoolCountBySourceFamily.dl).toBe(1);
+
+    const observed = await analyzeDexLiquidityPostScoring(
+      makeAnalysisInput({
+        retainedPoolsByStablecoin: new Map([
+          ["usdc-circle", [{ ...decayedPool, extra: { measurement: { decayed: false } } }]],
+        ]),
+      }),
+    );
+    expect(observed.sourceCoverage.coinsCrawlerOnly).toBe(0);
   });
 });

@@ -31,7 +31,7 @@ export const BLOG_POSTS: readonly BlogPost[] = [
     slug: "api-access-free-grades-supporter-keys",
     title: "API Access: Free Grades, Supporter Keys",
     description:
-      "Free Safety Score grades, restricted API access, and supporter keys for wallets donating more than $10 in stablecoins graded A or B at claim time.",
+      "Free Safety Score grades, restricted API access, and supporter keys for wallets donating at least $10 in stablecoins graded A or B at claim time.",
     datePublished: "2026-09-07",
     coverImage: "/blog/api-access-free-grades-supporter-keys-cover.png",
     coverAlt:

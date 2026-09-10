@@ -2,8 +2,13 @@ import { logWorkerEventArgs } from "../../lib/structured-log";
 import type { StagedPool } from "../dex-discovery/types";
 import { CHAIN_META } from "@shared/lib/chains";
 import { canonicalExitRouteChain, canonicalExitRouteScopedKey } from "@shared/lib/exit-route-identity";
-import { DAY_SECONDS } from "@shared/lib/time-constants";
-import { STAGED_POOL_MAX_TVL_USD, stagedPoolConfidence, stagedPoolMaturityDays } from "../dex-discovery/types";
+import {
+  STAGED_POOL_CONFIDENCE_HORIZON_HOURS,
+  STAGED_POOL_MAX_TVL_USD,
+  STAGED_POOL_PRICE_MAX_AGE_HOURS,
+  stagedPoolConfidence,
+  stagedPoolMaturityDays,
+} from "../dex-discovery/types";
 import { DEX_PRICE_OBSERVATION_MIN_TVL_USD } from "../../lib/constants";
 import { DIRECT_API_POOL_MIN_TVL_USD } from "../../lib/dex-api-pool-shaping";
 import { QUALITY_MULTIPLIERS } from "../../lib/dex-cron-constants";
@@ -207,6 +212,7 @@ interface StagedPoolEntry {
   qualityMultiplier: number;
   identity: StagedPoolIdentity;
   confidence: number;
+  priceEligible: boolean;
 }
 
 interface StagedPoolIdentityCounts {
@@ -308,6 +314,7 @@ function buildStagedPoolEntry(stagedPool: StagedPool, nowSec: number): StagedPoo
     qualityMultiplier: profile.qualityMultiplier,
     identity,
     confidence: stagedPoolConfidence(ageHours),
+    priceEligible: ageHours <= STAGED_POOL_PRICE_MAX_AGE_HOURS,
   };
 }
 
@@ -384,10 +391,14 @@ function incrementSkipDimension(
 }
 
 // Exhaustive staged-source → published source-family mapping: adding a staged
-// source without a row fails this record's type. The gecko_terminal fallback
-// still covers staged rows whose persisted source string outlives this deploy,
-// including prototype-named keys that plain Record indexing would inherit.
-const STAGED_SOURCE_FAMILY: Record<StagedPool["source"], Exclude<LiquidityPoolSourceFamily, "dl">> = {
+// source without a row fails this record's type. `dl` and `direct_api` rows are
+// this repo's own live-lane write-back, so they map to their own family. The
+// gecko_terminal fallback still covers staged rows whose persisted source
+// string outlives this deploy, including prototype-named keys that plain
+// Record indexing would inherit.
+const STAGED_SOURCE_FAMILY: Record<StagedPool["source"], LiquidityPoolSourceFamily> = {
+  dl: "dl",
+  direct_api: "direct_api",
   cg_onchain: "cg_onchain",
   gecko_terminal: "gecko_terminal",
   dexscreener: "dexscreener",
@@ -402,10 +413,11 @@ const STAGED_SOURCE_FAMILY: Record<StagedPool["source"], Exclude<LiquidityPoolSo
 };
 
 /**
- * Read staged pools from dex_pool_staging (refreshed within 24h),
- * convert to pool entries with confidence decay and defaults,
- * and merge into existing metrics.
- *
+ * Read staged pools from dex_pool_staging that refreshed within
+ * STAGED_POOL_CONFIDENCE_HORIZON_HOURS, convert to pool entries with confidence
+ * decay and defaults, and merge into existing metrics. The horizon is inventory
+ * memory only: price evidence is separately pinned to
+ * STAGED_POOL_PRICE_MAX_AGE_HOURS.
  */
 export async function mergeStagedPools(
   db: D1Database,
@@ -424,6 +436,13 @@ export async function mergeStagedPools(
   skippedByAuthoritativeProtocolCount: number;
   skipDimensions: StagedPoolSkipDimension[];
   priceObservations: Map<string, DexPriceObs[]>;
+  /**
+   * `${stablecoinId}\u0000${poolId}` for every row this read found under a
+   * discovery source, recorded before any skip or dedupe decision. The
+   * live-lane write-back subtracts it, so a pool both lanes observe keeps its
+   * discovery row — and the price that row carries.
+   */
+  discoveryOwnedKeys: Set<string>;
 }> {
   registerRetainedPoolExactStablecoins(knownPoolIndex, metrics);
   const result = await db
@@ -434,12 +453,12 @@ export async function mergeStagedPools(
                        raw_json, discovered_at, refreshed_at
                 FROM dex_pool_staging WHERE refreshed_at >= ?`,
     )
-    // Fetch a 60s grace beyond the 24h confidence horizon so rows that have
-    // just crossed it surface as stagedPoolConfidence === 0 and are recorded
-    // under the stale_confidence_zero skip reason instead of silently never
+    // Fetch a 60s grace beyond the confidence horizon so rows that have just
+    // crossed it surface as stagedPoolConfidence === 0 and are recorded under
+    // the stale_confidence_zero skip reason instead of silently never
     // appearing. Without the grace the read window and the zero gate align
     // exactly and the guard below is unreachable.
-    .bind(nowSec - DAY_SECONDS - 60)
+    .bind(nowSec - STAGED_POOL_CONFIDENCE_HORIZON_HOURS * 3600 - 60)
     .all<StagedPoolRow>();
   const rows: Array<StagedPoolRow | undefined> = result.results ?? [];
 
@@ -454,9 +473,17 @@ export async function mergeStagedPools(
   const skipDimensions = new Map<string, StagedPoolSkipDimension>();
   const supersededLegacyLowercaseRows = collectSupersededLegacyLowercaseRows(rows);
   const stagedIdentityCountsByStablecoin = new Map<string, StagedPoolIdentityCounts>();
+  const discoveryOwnedKeys = new Set<string>();
 
   for (const row of rows) {
     if (!row) continue;
+    if (row.source !== "dl" && row.source !== "direct_api") {
+      // Discovery owns rows it wrote; the live-lane write-back must not relabel
+      // them `dl` or null the price, so the key is read before any skip.
+      discoveryOwnedKeys.add(
+        `${row.stablecoin_id}\u0000${canonicalExitRouteScopedKey(row.chain, row.pool_id)}`,
+      );
+    }
     if (supersededLegacyLowercaseRows.has(row)) {
       skippedCount++;
       incrementSkipDimension(skipDimensions, "legacy_lowercase_identity_superseded", row);
@@ -495,7 +522,7 @@ export async function mergeStagedPools(
     if (!stagedPool.poolId || !stagedPool.stablecoinId || hasInvalidTvl(stagedPool)) continue;
 
     const entry = buildStagedPoolEntry(stagedPool, nowSec);
-    const { dexId, poolType, qualityMultiplier, identity, confidence } = entry;
+    const { dexId, poolType, qualityMultiplier, identity, confidence, priceEligible } = entry;
     const normalizedProtocol = normalizeProtocol(stagedPool.protocol || dexId);
     // Preserve the full suffix after the first colon. Orderbook ids and any colon-bearing
     // native ids stay intact. EVM/base58 addresses are colon-free so this is safe.
@@ -513,7 +540,9 @@ export async function mergeStagedPools(
     // Compute confidence and adjusted TVL early — needed for price observation gate
     if (confidence === 0) {
       skippedCount++;
-      incrementSkipDimension(skipDimensions, "stale_confidence_zero", stagedPool, { threshold: 24 });
+      incrementSkipDimension(skipDimensions, "stale_confidence_zero", stagedPool, {
+        threshold: STAGED_POOL_CONFIDENCE_HORIZON_HOURS,
+      });
       continue;
     }
 
@@ -552,7 +581,12 @@ export async function mergeStagedPools(
     // carry priceUsd. These observations still feed diagnostics and later retained-
     // pool price eligibility, but dex_prices is now rebuilt only from the final
     // retained pool set after dedupe and filtering.
-    if (stagedPool.priceUsd != null && stagedPool.priceUsd > 0 && adjustedTvl >= DEX_PRICE_OBSERVATION_MIN_TVL_USD) {
+    if (
+      priceEligible &&
+      stagedPool.priceUsd != null &&
+      stagedPool.priceUsd > 0 &&
+      adjustedTvl >= DEX_PRICE_OBSERVATION_MIN_TVL_USD
+    ) {
       const obs = stagedPriceObs.get(stagedPool.stablecoinId) ?? [];
       obs.push({
         price: stagedPool.priceUsd,
@@ -651,7 +685,10 @@ export async function mergeStagedPools(
         qualityMultiplier,
         maturityDays,
         poolType,
-        price: stagedPool.priceUsd ?? 0,
+        // dex_prices → DDR/peg-summary must only see day-fresh prices, while the
+        // inventory TVL above may be two weeks old: an aged row keeps its decayed
+        // TVL but contributes no price.
+        price: priceEligible ? stagedPool.priceUsd ?? 0 : 0,
         symbol: stagedPool.symbol,
         sourceFamily: "cg_onchain",
         balanceRatio: stagedPool.balanceRatio,
@@ -662,7 +699,7 @@ export async function mergeStagedPools(
           volumeMeasured: stagedPool.volume24h != null && Number.isFinite(stagedPool.volume24h),
           balanceMeasured: stagedPool.balanceRatio != null,
           maturityMeasured: false,
-          priceMeasured: stagedPool.priceUsd != null && stagedPool.priceUsd > 0,
+          priceMeasured: priceEligible && stagedPool.priceUsd != null && stagedPool.priceUsd > 0,
           synthetic: false,
           decayed: confidence < 1,
         },
@@ -681,7 +718,7 @@ export async function mergeStagedPools(
       qualityMultiplier,
       maturityDays,
       poolType,
-      price: stagedPool.priceUsd ?? 0,
+      price: priceEligible ? stagedPool.priceUsd ?? 0 : 0,
       symbol: stagedPool.symbol,
       sourceFamily: Object.prototype.hasOwnProperty.call(STAGED_SOURCE_FAMILY, stagedPool.source)
         ? STAGED_SOURCE_FAMILY[stagedPool.source]
@@ -696,7 +733,7 @@ export async function mergeStagedPools(
               volumeMeasured: stagedPool.volume24h != null && Number.isFinite(stagedPool.volume24h),
               balanceMeasured: false,
               maturityMeasured: false,
-              priceMeasured: stagedPool.priceUsd != null && stagedPool.priceUsd > 0,
+              priceMeasured: priceEligible && stagedPool.priceUsd != null && stagedPool.priceUsd > 0,
               synthetic: true,
               decayed: confidence < 1,
             },
@@ -707,7 +744,7 @@ export async function mergeStagedPools(
               volumeMeasured: stagedPool.volume24h != null && Number.isFinite(stagedPool.volume24h),
               balanceMeasured: stagedPool.balanceRatio != null,
               maturityMeasured: false,
-              priceMeasured: stagedPool.priceUsd != null && stagedPool.priceUsd > 0,
+              priceMeasured: priceEligible && stagedPool.priceUsd != null && stagedPool.priceUsd > 0,
               synthetic: false,
               decayed: confidence < 1,
             },
@@ -765,5 +802,6 @@ export async function mergeStagedPools(
     skippedByAuthoritativeProtocolCount: authoritativeProtocolSkipped,
     skipDimensions: [...skipDimensions.values()],
     priceObservations: stagedPriceObs,
+    discoveryOwnedKeys,
   };
 }

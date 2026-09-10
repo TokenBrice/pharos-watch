@@ -53,5 +53,12 @@ export interface DexLiquidityPoolState {
   stagedSkippedByOptionalWildcardIdentityCount: number;
   stagedSkippedByAuthoritativeProtocolCount: number;
   stagedSkipDimensions: StagedPoolSkipDimension[];
+  /**
+   * Live-lane rows handed to the `:10` staging write-back, and entries it
+   * dropped because their id is not a trustworthy exact pool id. Optional so a
+   * stage header written before these counters existed still decodes.
+   */
+  stagedWritebackRows?: number;
+  stagedWritebackSkippedUntrustedIds?: number;
   directApiIntegration: DirectApiIntegrationResult;
 }
