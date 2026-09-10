@@ -15,7 +15,7 @@ export const DRIFT_WATCHLIST = ["usdc-circle", "usdt-tether", "dai-makerdao", "u
  * publishes. Confirmation removes every one-hour blip and, in exchange, keeps
  * a real loss visible until the value recovers.
  */
-export const DRIFT_CONFIRMATION_RUNS = 2;
+const DRIFT_CONFIRMATION_RUNS = 2;
 
 export type PreviousDexLiquiditySummary = {
   stagedPoolsMerged: number;
