@@ -8,7 +8,12 @@ import { toErrorMessage } from "@shared/lib/error-utils";
 import { canonicalExitRouteScopedId } from "@shared/lib/exit-route-identity";
 import type { ContractDeployment } from "@shared/types/core";
 import { tryParseJson } from "../../lib/json-parse";
-import { STAGED_POOL_MAX_TVL_USD, type DiscoveryMeta, type StagedPool } from "./types";
+import {
+  STAGED_POOL_CONFIDENCE_HORIZON_HOURS,
+  STAGED_POOL_MAX_TVL_USD,
+  type DiscoveryMeta,
+  type StagedPool,
+} from "./types";
 
 const STAGING_UPSERT_SQL = `INSERT INTO dex_pool_staging
   (pool_id, stablecoin_id, source, chain, protocol, dex_id, symbol, tvl_usd, volume_24h, quality_multiplier, pool_type, fee_tier, balance_ratio,
@@ -36,7 +41,8 @@ ON CONFLICT(pool_id, stablecoin_id) DO UPDATE SET
   refreshed_at = excluded.refreshed_at`;
 
 const STAGING_BATCH_SIZE = 50;
-const STAGING_DELETE_TTL_SEC = 30 * 60 * 60;
+// Rows must outlive the merge horizon by a day so the stale_confidence_zero grace window always finds them.
+const STAGING_DELETE_TTL_SEC = (STAGED_POOL_CONFIDENCE_HORIZON_HOURS + 24) * 60 * 60;
 const STAGING_RAW_JSON_TTL_SEC = 4 * 60 * 60;
 const STAGING_CLEANUP_MAX_ROWS_PER_RUN = 1_000;
 const RUN_SEQ_KEY = "discovery_run_seq";
@@ -303,7 +309,7 @@ export async function recordDiscoveryAttemptFence(
 
 /**
  * Cleanup stale staging data.
- * - Delete rows older than 30 hours, preserving the complete 24-hour scoring window.
+ * - Delete rows past the delete TTL (merge horizon plus a day), after confidence has fully decayed.
  * - NULL raw provider payloads after four hours.
  * - Bound both oldest-first passes so a retention shortening drains gradually.
  */

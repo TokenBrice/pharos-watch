@@ -12,13 +12,16 @@ import {
   upsertStagedPools,
   writeDiscoveryTargetCursors,
 } from "../persistence";
-import { STAGED_POOL_MAX_TVL_USD } from "../types";
+import { STAGED_POOL_CONFIDENCE_HORIZON_HOURS, STAGED_POOL_MAX_TVL_USD } from "../types";
 import { makeNoopD1, makeRunCountingNoopD1 } from "../../../test-helpers/noop-d1";
 import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
 import { stagedPool } from "./discovery.test-support";
 
 const fixtures = createLatestSchemaFixtureTracker();
 afterEach(() => { fixtures.closeAll(); vi.useRealTimers(); });
+
+// Rows survive one day past the confidence horizon so the stale_confidence_zero grace window still finds them.
+const STAGING_DELETE_TTL_SEC = (STAGED_POOL_CONFIDENCE_HORIZON_HOURS + 24) * 60 * 60;
 
 describe("isValidStagedPoolId", () => {
   it("accepts EVM chain:address lowercased form", () => {
@@ -112,7 +115,7 @@ describe("discovery persistence D1 retry coverage", () => {
     expect(db.getRunCount()).toBe(1);
   });
 
-  it("uses bounded oldest-first 30h/4h staging cleanup and retries transient D1 overload", async () => {
+  it("uses bounded oldest-first staging cleanup past the merge horizon and retries transient D1 overload", async () => {
     vi.useFakeTimers();
     let attempts = 0;
     const prepared: Array<{ sql: string; binds: unknown[] }> = [];
@@ -139,7 +142,7 @@ describe("discovery persistence D1 retry coverage", () => {
 
     expect(attempts).toBe(3);
     expect(prepared[0]?.sql).toContain("ORDER BY refreshed_at ASC, rowid ASC");
-    expect(prepared[0]?.binds).toEqual([1_710_000_000 - 30 * 60 * 60, 1_000]);
+    expect(prepared[0]?.binds).toEqual([1_710_000_000 - STAGING_DELETE_TTL_SEC, 1_000]);
     expect(prepared[2]?.sql).toContain("SET raw_json = NULL");
     expect(prepared[2]?.binds).toEqual([1_710_000_000 - 4 * 60 * 60, 1_000]);
     expect(cleanup).toMatchObject({
@@ -149,6 +152,23 @@ describe("discovery persistence D1 retry coverage", () => {
       oldestRawJsonRemainingAt: 1_709_990_000,
       error: null,
     });
+  });
+
+  it("keeps staging rows one hour inside the delete TTL and deletes rows one hour past it", async () => {
+    const { sqlite, db } = fixtures.open();
+    const now = 1_710_000_000;
+    const insert = sqlite.prepare(`INSERT INTO dex_pool_staging
+      (pool_id, stablecoin_id, source, chain, protocol, symbol, discovered_at, refreshed_at)
+      VALUES (?, ?, 'dexscreener', 'ethereum', 'test', 'TEST / USDC', ?, ?)`);
+    insert.run("ethereum:0xkeep", "usdc-circle", now, now - STAGING_DELETE_TTL_SEC + 60 * 60);
+    insert.run("ethereum:0xdrop", "usdc-circle", now, now - STAGING_DELETE_TTL_SEC - 60 * 60);
+
+    const cleanup = await cleanupStaging(db, now);
+
+    expect(cleanup.deletedRows).toBe(1);
+    expect(sqlite.prepare("SELECT pool_id FROM dex_pool_staging").all()).toEqual([
+      { pool_id: "ethereum:0xkeep" },
+    ]);
   });
 
   it("reports staging cleanup errors without throwing", async () => {

@@ -1,5 +1,11 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { STAGED_POOL_MAX_TVL_USD, stagedPoolConfidence, stagedPoolMaturityDays } from "../../dex-discovery/types";
+import {
+  STAGED_POOL_CONFIDENCE_HORIZON_HOURS,
+  STAGED_POOL_MAX_TVL_USD,
+  STAGED_POOL_PRICE_MAX_AGE_HOURS,
+  stagedPoolConfidence,
+  stagedPoolMaturityDays,
+} from "../../dex-discovery/types";
 import { mergeStagedPools } from "../staging-merge";
 import type { AuthoritativeStagedPoolConfirmationIndex } from "../orchestrator-phases/authoritative";
 import {
@@ -14,10 +20,10 @@ import { makeNoopD1 } from "../../../test-helpers/noop-d1";
 
 const confidenceCases = [
   { ageHours: 0, expected: 1 },
-  { ageHours: 12, expected: 0.75 },
-  { ageHours: 24, expected: 0.5 },
-  { ageHours: 25, expected: 0 },
-  { ageHours: 24 + 30 / 3600, expected: 0 },
+  { ageHours: 24, expected: 1 },
+  { ageHours: 180, expected: 0.5 },
+  { ageHours: 336, expected: 0 },
+  { ageHours: 400, expected: 0 },
   { ageHours: -5, expected: 1 },
 ] as const;
 
@@ -417,7 +423,7 @@ describe("mergeStagedPools", () => {
         base_token: baseToken,
         quote_token: quoteToken,
         discovered_at: now - 100000,
-        refreshed_at: now - 86400 - 30,
+        refreshed_at: now - STAGED_POOL_CONFIDENCE_HORIZON_HOURS * 3600 - 30,
       }),
     ]);
     const metrics = new Map();
@@ -444,7 +450,7 @@ describe("mergeStagedPools", () => {
         protocol: "pancakeswap",
         chain: "ethereum",
         count: 1,
-        threshold: 24,
+        threshold: STAGED_POOL_CONFIDENCE_HORIZON_HOURS,
       },
     ]);
   });
@@ -588,6 +594,7 @@ describe("mergeStagedPools", () => {
 
   it("merges GT-style staged pools with confidence decay and GT dex quality", async () => {
     const now = 1710000000;
+    const decay = stagedPoolConfidence(150);
     const mockDb = createMockDb([
       {
         pool_id: "bsc:0xpool1",
@@ -607,7 +614,7 @@ describe("mergeStagedPools", () => {
         price_usd: 1,
         locked_liq_pct: null,
         discovered_at: now - 86400 * 10,
-        refreshed_at: now - 3600 * 12,
+        refreshed_at: now - 3600 * 150,
       },
     ]);
     const metrics = new Map();
@@ -619,16 +626,85 @@ describe("mergeStagedPools", () => {
     expect(result.skippedCount).toBe(0);
     expect(result.skippedByExactIdentityCount).toBe(0);
     expect(result.skippedByUniqueDerivedIdentityCount).toBe(0);
-    expect(result.priceObservations.get("usdt-tether")).toHaveLength(1);
+    // A six-day-old row still merges at decayed weight, but its price is pinned
+    // out of the price-observation set.
+    expect(result.priceObservations.get("usdt-tether")).toBeUndefined();
     expect(metric).toBeDefined();
-    expect(metric.totalTvlUsd).toBe(75000);
-    expect(metric.totalVolume24hUsd).toBe(37500);
+    expect(metric.totalTvlUsd).toBeCloseTo(100000 * decay, 6);
+    expect(metric.totalVolume24hUsd).toBeCloseTo(50000 * decay, 6);
     expect(metric.poolCount).toBe(1);
-    expect(metric.qualityAdjustedTvl).toBe(37500);
-    expect(metric.protocolTvl.pancakeswap).toBe(75000);
+    // pancakeswap-v3 carries GT dex quality 0.5 on top of the age decay.
+    expect(metric.qualityAdjustedTvl).toBeCloseTo(100000 * decay * 0.5, 6);
+    expect(metric.protocolTvl.pancakeswap).toBeCloseTo(100000 * decay, 6);
     expect(metric.topPools).toHaveLength(1);
     expect(metric.topPools[0]?.source).toBe("gecko_terminal");
     expect(metric.topPools[0]?.poolId).toBe("bsc:0xpool1");
+  });
+
+  it("keeps decayed TVL but withholds price evidence past the price window", async () => {
+    const now = 1710000000;
+    const mergeAtAge = async (ageHours: number) => {
+      const metrics = new Map();
+      const result = await mergeStagedPools(
+        createMockDb([makeStagedPoolRow({ refreshed_at: now - ageHours * 3600 })]),
+        metrics as never,
+        makeKnownPoolIndex(),
+        now,
+      );
+      return { result, metric: metrics.get("usdt-tether") };
+    };
+
+    const fresh = await mergeAtAge(STAGED_POOL_PRICE_MAX_AGE_HOURS - 1);
+    expect(fresh.metric.totalTvlUsd).toBe(100000);
+    expect(fresh.metric.topPools[0]?.extra?.measurement).toMatchObject({ priceMeasured: true });
+    expect(fresh.result.priceObservations.get("usdt-tether")).toHaveLength(1);
+
+    const aged = await mergeAtAge(STAGED_POOL_PRICE_MAX_AGE_HOURS + 1);
+    expect(aged.metric.totalTvlUsd).toBeLessThan(100000);
+    expect(aged.metric.totalTvlUsd).toBeCloseTo(
+      100000 * stagedPoolConfidence(STAGED_POOL_PRICE_MAX_AGE_HOURS + 1),
+      6,
+    );
+    // The aged entry carries price 0, which pool shaping drops entirely, so no
+    // staged price can reach buildDexPriceObservationsFromRetainedPools.
+    expect(aged.metric.topPools[0]?.price ?? 0).toBe(0);
+    expect(aged.metric.topPools[0]?.extra?.measurement).toMatchObject({
+      priceMeasured: false,
+      decayed: true,
+    });
+    expect(aged.result.priceObservations.get("usdt-tether")).toBeUndefined();
+  });
+
+  it("retires rows past the confidence horizon and keeps rows inside it", async () => {
+    const now = 1710000000;
+    const insideHorizonPool = "0x0000000000000000000000000000000000000aaa";
+    const pastHorizonPool = "0x0000000000000000000000000000000000000bbb";
+    const mockDb = createMockDb([
+      makeStagedPoolRow({ pool_id: `ethereum:${insideHorizonPool}`, refreshed_at: now - 300 * 3600 }),
+      makeStagedPoolRow({ pool_id: `ethereum:${pastHorizonPool}`, refreshed_at: now - 337 * 3600 }),
+    ]);
+    const metrics = new Map();
+
+    const result = await mergeStagedPools(mockDb, metrics as never, makeKnownPoolIndex(), now);
+    const metric = metrics.get("usdt-tether");
+
+    expect(result.mergedCount).toBe(1);
+    expect(result.skippedCount).toBe(1);
+    expect(result.skipDimensions).toEqual([
+      {
+        reason: "stale_confidence_zero",
+        protocol: "uniswap-v3",
+        chain: "ethereum",
+        count: 1,
+        threshold: STAGED_POOL_CONFIDENCE_HORIZON_HOURS,
+      },
+    ]);
+    expect(metric.poolCount).toBe(1);
+    expect(metric.topPools).toHaveLength(1);
+    expect(metric.topPools[0]?.poolId).toBe(`ethereum:${insideHorizonPool}`);
+    expect(metric.totalTvlUsd).toBeCloseTo(100000 * stagedPoolConfidence(300), 6);
+    // The surviving row is older than the price window, so it contributes no price.
+    expect(result.priceObservations.get("usdt-tether")).toBeUndefined();
   });
 
   it("retains Horizon as the source family for a priced Stellar pool", async () => {
