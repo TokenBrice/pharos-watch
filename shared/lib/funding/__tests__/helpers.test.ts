@@ -147,7 +147,21 @@ describe("computeMonthlyHistory", () => {
     }
     const history = computeMonthlyHistory(rows, Date.UTC(2026, 4, 1) / 1000, 6);
     expect(history).toHaveLength(6);
-    expect(history[0]?.monthKey).toBe("2026-02");
-    expect(history[5]?.monthKey).toBe("2025-09");
+    expect(history[0]?.monthKey).toBe("2026-04");
+    expect(history[5]?.monthKey).toBe("2025-11");
+  });
+
+  it("lists months with no donations as $0 instead of skipping them", () => {
+    const rows: Donation[] = [
+      D(mar, "community", 25, "c"),
+      D(Date.UTC(2026, 0, 10) / 1000, "community", 40, "a"),
+    ];
+    const history = computeMonthlyHistory(rows, may);
+    expect(history).toEqual([
+      { monthKey: "2026-04", label: "Apr 2026", communityUsd: 0 },
+      { monthKey: "2026-03", label: "Mar 2026", communityUsd: 25 },
+      { monthKey: "2026-02", label: "Feb 2026", communityUsd: 0 },
+      { monthKey: "2026-01", label: "Jan 2026", communityUsd: 40 },
+    ]);
   });
 });

@@ -454,7 +454,7 @@ function SupporterKeyNote() {
             the API page
           </Link>
           . {DONOR_KEY_CLAIMS_OPEN
-            ? "New donations count after the weekly reconciliation and the next release. Grades are checked at claim time; later grade changes do not affect issued keys."
+            ? "Claims are not instant: the donor list is updated once a week, on Sunday mornings, and a donation can only be claimed once it appears on this wall. Grades are checked at claim time; later grade changes do not affect issued keys."
             : "Claims are paused. Eligibility will use Safety Score grades at claim time."}
         </p>
       </div>
@@ -593,7 +593,7 @@ export function FundingFaq() {
     },
     {
       q: "What do supporters get?",
-      a: `Public recognition on the wall unless you ask for a custom label, and a supporter API key once your externally-owned EVM wallet exceeds $${DONOR_API_KEY_MIN_USD} in stablecoin donations graded A or B (including +/−) when claimed: ${DONOR_API_KEY_RATE_LIMIT_PER_MINUTE} requests per minute on the full API, no expiry, claimed by signing a message on the API page. Donation values use receipt-time USD. Grades are checked at claim time, not donation time; later grade changes do not affect issued keys. ETH, other non-stablecoins, lower or missing grades, and pooled payouts do not count. Claims pause if the Safety Score publication is unavailable or held. The public website stays fully free; any future paid surface would be for high-frequency or heavy API usage, not the core dashboards.`,
+      a: `Public recognition on the wall unless you ask for a custom label, and a supporter API key once your externally-owned EVM wallet reaches $${DONOR_API_KEY_MIN_USD} in stablecoin donations graded A or B (including +/−) when claimed: ${DONOR_API_KEY_RATE_LIMIT_PER_MINUTE} requests per minute on the full API, no expiry, claimed by signing a message on the API page. The key cannot be claimed right after donating: the donor list is updated once a week, on Sunday mornings, and a donation only counts once it appears on this wall. Donation values use receipt-time USD. Grades are checked at claim time, not donation time; later grade changes do not affect issued keys. ETH, other non-stablecoins, lower or missing grades, and pooled payouts do not count. Claims pause if the Safety Score publication is unavailable or held. The public website stays fully free; any future paid surface would be for high-frequency or heavy API usage, not the core dashboards.`,
     },
     {
       q: "Can I help without donating?",
