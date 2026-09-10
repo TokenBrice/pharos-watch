@@ -17,19 +17,6 @@ import { YIELD_BENCHMARK_KEY_VALUES } from "@shared/types/yield";
 
 vi.mock("../../lib/fetch-retry", () => mockFetchRetry({ fetchWithRetry: vi.fn(), passthroughNonResponse: true }));
 
-const cadenceMocks = vi.hoisted(() => ({
-  claimCadenceBucket: vi.fn(),
-  completeCadenceBucket: vi.fn(),
-  failCadenceBucket: vi.fn(),
-}));
-
-vi.mock("../../lib/cadence-bucket", () => ({
-  cadenceBucketFor: (scheduledAtSec: number, cadenceSec: number) => Math.floor(scheduledAtSec / cadenceSec),
-  claimCadenceBucket: cadenceMocks.claimCadenceBucket,
-  completeCadenceBucket: cadenceMocks.completeCadenceBucket,
-  failCadenceBucket: cadenceMocks.failCadenceBucket,
-}));
-
 vi.mock("../../lib/db-cache", () => ({
   getCache: vi.fn(),
   setCache: vi.fn(),
@@ -93,17 +80,6 @@ const FROZEN_NOW = new Date("2026-06-25T12:00:00Z");
 beforeEach(() => {
   vi.useFakeTimers({ toFake: ["Date"] });
   vi.setSystemTime(FROZEN_NOW);
-  cadenceMocks.claimCadenceBucket.mockReset().mockResolvedValue({
-    kind: "claimed",
-    claim: {
-      key: "fetch-tbill-rate:weekly",
-      bucket: 0,
-      generation: "test-generation",
-      serializedClaim: "test-claim",
-    },
-  });
-  cadenceMocks.completeCadenceBucket.mockReset().mockResolvedValue(true);
-  cadenceMocks.failCadenceBucket.mockReset().mockResolvedValue(true);
 });
 
 afterEach(() => {
@@ -289,76 +265,23 @@ describe("fetchTbillRate", () => {
     expect(Object.keys(latestStructuredCachePayload().benchmarks)).toEqual([...YIELD_BENCHMARK_KEY_VALUES]);
   });
 
-  it("skips weekly benchmark descriptors on a second run in the same week", async () => {
+  it("fetches every benchmark descriptor on each daily run", async () => {
     const calls: string[] = [];
     mockTbillByUrl({}, calls);
-    cadenceMocks.claimCadenceBucket
-      .mockResolvedValueOnce({
-        kind: "claimed",
-        claim: {
-          key: "fetch-tbill-rate:weekly",
-          bucket: 1,
-          generation: "first",
-          serializedClaim: "first-claim",
-        },
-      })
-      .mockResolvedValueOnce({ kind: "skip", reason: "already-completed", bucket: 1 });
 
     await fetchTbillRate(db, undefined, BANXICO_TEST_ENV);
-    const previous = latestStructuredCachePayload();
-    installCacheByKey(vi.mocked(getCache), {
-      risk_free_rates: makeRiskFreeRatesCacheRow(previous.benchmarks, Math.floor(Date.now() / 1000)),
-    });
     await fetchTbillRate(db, undefined, BANXICO_TEST_ENV);
 
-    expect(calls.filter((url) => url.includes("data-api.ecb.europa.eu"))).toHaveLength(1);
+    expect(calls.filter((url) => url.includes("data-api.ecb.europa.eu"))).toHaveLength(2);
     expect(calls.filter((url) => url.includes("id=DGS3MO"))).toHaveLength(2);
-    expect(calls.filter((url) => url.includes("report-download"))).toHaveLength(1);
-    const published = latestStructuredCachePayload();
-    for (const key of ["EUR", "CHF", "MXN", "BRL", "CAD", "RUB", "TRY"]) {
-      expect(previous.benchmarks[key]).not.toBeNull();
-      expect(published.benchmarks[key]).toEqual(previous.benchmarks[key]);
+    expect(calls.filter((url) => url.includes("report-download"))).toHaveLength(2);
+    const circuitOutcomes = vi.mocked(recordOutcome).mock.calls.map(([, key]) => key);
+    for (const key of YIELD_BENCHMARK_KEY_VALUES.filter((key) => key !== "SGD")) {
+      expect(circuitOutcomes.filter((circuitKey) => circuitKey === `TREASURY_RATES:${key}`)).toHaveLength(2);
     }
   });
 
-  it("reports a superseded weekly completion as degraded", async () => {
-    mockTbillByUrl();
-    cadenceMocks.completeCadenceBucket.mockResolvedValue(false);
-    const result = await fetchTbillRate(db, undefined, BANXICO_TEST_ENV);
-    expect(result.status).toBe("degraded");
-    expect(JSON.parse(result.metadata ?? "{}").weeklyCadence).toMatchObject({ claimed: true, completed: false });
-    expect(logCronEvent).toHaveBeenCalledWith(db, expect.objectContaining({
-      eventType: "weekly-cadence-complete-skipped",
-      severity: "warning",
-    }));
-  });
-
-  it.each([false, true])("releases a failed publication claim, preserving the error (release fails: %s)", async (releaseFails) => {
-    mockTbillByUrl();
-    const publicationError = new Error("benchmark publication failed");
-    vi.mocked(setCache).mockImplementation(async (_db, key) => {
-      if (key === "risk_free_rates") throw publicationError;
-    });
-    if (releaseFails) cadenceMocks.failCadenceBucket.mockRejectedValue(new Error("release failed"));
-
-    await expect(fetchTbillRate(db, undefined, BANXICO_TEST_ENV)).rejects.toBe(publicationError);
-
-    expect(cadenceMocks.completeCadenceBucket).not.toHaveBeenCalled();
-    expect(cadenceMocks.failCadenceBucket).toHaveBeenCalledWith(
-      db,
-      expect.objectContaining({ generation: "test-generation", serializedClaim: "test-claim" }),
-      Math.floor(FROZEN_NOW.getTime() / 1000),
-    );
-    expect(vi.mocked(setCache).mock.calls.map((call) => call[1])).toContain("risk_free_rates");
-    if (releaseFails) {
-      expect(logCronEvent).toHaveBeenCalledWith(db, expect.objectContaining({
-        eventType: "weekly-cadence-release-failed",
-        metadata: expect.objectContaining({ error: "release failed" }),
-      }));
-    }
-  });
-
-  it("isolates an open weekly descriptor circuit from the other descriptors", async () => {
+  it("isolates an open descriptor circuit from the other descriptors", async () => {
     const calls: string[] = [];
     mockTbillByUrl({}, calls);
     vi.mocked(shouldAttemptFetch).mockImplementation(

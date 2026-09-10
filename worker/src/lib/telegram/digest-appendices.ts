@@ -97,13 +97,21 @@ export function diffFrozenIds(current: ReadonlySet<string>, previous: ReadonlySe
   return added;
 }
 
+// Authored epitaphs are wrapper-owned copy, so the delivery-wrapper style gate
+// scans them as hard findings. A forbidden dash would block Telegram delivery
+// and, because appendix snapshots only advance after a successful send, the
+// same appendix would re-render and re-block every edition until code changed.
+function stripForbiddenDashes(value: string): string {
+  return value.replace(/\s*[\u2012-\u2015]\s*/g, ", ");
+}
+
 function buildFrozenAppendix(ids: Iterable<string>): string {
   const lines: string[] = ["<b>Newly Frozen Stablecoins</b>"];
   for (const id of ids) {
     const meta = FROZEN_META_BY_ID.get(id);
     if (!meta?.obituary) continue;
     lines.push(
-      `<code>${escapeHtml(meta.symbol)}</code> ${escapeHtml(meta.name)} — <i>${escapeHtml(meta.obituary.epitaph)}</i>`,
+      `<code>${escapeHtml(meta.symbol)}</code> ${escapeHtml(meta.name)}: <i>${escapeHtml(stripForbiddenDashes(meta.obituary.epitaph))}</i>`,
     );
   }
   return lines.join("\n");
@@ -137,7 +145,7 @@ function formatCemeteryCoin(coin: DeadStablecoin): string {
   const lines = [header];
 
   if (coin.epitaph) {
-    lines.push(`<i>${escapeHtml(coin.epitaph)}</i>`);
+    lines.push(`<i>${escapeHtml(stripForbiddenDashes(coin.epitaph))}</i>`);
   }
 
   if (typeof coin.peakMcap === "number" && Number.isFinite(coin.peakMcap)) {
