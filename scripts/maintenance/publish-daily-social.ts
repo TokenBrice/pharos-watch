@@ -22,7 +22,7 @@ plan checks the 13:00–14:00 Europe/Belgrade preparation window and immutable K
 capture writes snapshot.json from fresh Pharos data. On unavailable topic data it tries
 a clearly labelled current market overview. Render it with build-daily-social.ts.
 publish verifies poster.png, writes content-addressed PNG bytes, then the dated manifest.
-The Worker publishes the prepared edition at 14:00 Europe/Belgrade, including DST.
+Nothing posts automatically: an operator tweets the prepared edition by hand.
 Environment: PHAROS_API_KEY (capture; .env.local fallback), CLOUDFLARE_ACCOUNT_ID,
 SAFETY_MAP_KV_TOKEN, KV_NAMESPACE_ID (plan/publish; existing SELECTOR_SNAPSHOTS namespace).`;
 

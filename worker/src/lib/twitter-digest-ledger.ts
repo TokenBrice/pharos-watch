@@ -59,18 +59,6 @@ function parseRecord(value: string): TwitterDigestDeliveryRecord | null {
   }
 }
 
-/** Read-only fast path; the claim CAS remains authoritative for every nonterminal state. */
-export function terminalTwitterDigestResult(value: string): TwitterDigestLedgerResult | null {
-  const record = parseRecord(value);
-  if (!record) return { status: "skipped", reason: "already-sent" };
-  if (record.state === "sent") return { status: "skipped", reason: "already-sent" };
-  if (record.state === "execution_unknown") return { status: "skipped", reason: "execution-unknown" };
-  if (record.state === "failed" && record.attempts >= TWITTER_DIGEST_MAX_ATTEMPTS) {
-    return { status: "skipped", reason: "attempt-limit" };
-  }
-  return null;
-}
-
 async function replaceRecord(
   db: D1Database,
   key: string,

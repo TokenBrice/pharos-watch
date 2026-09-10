@@ -18,7 +18,6 @@ import {
   missingTelegramCredentialNames,
   missingTwitterCredentialNames,
 } from "../../lib/runtime-credentials";
-import { deliverDailySocial } from "../../lib/daily-social-delivery";
 import { drainTelegramDigestOutbox } from "../../lib/telegram/digest-outbox";
 import { deleteCache, getCache, setCache } from "../../lib/db-cache";
 import { DIGEST_FORCE_RUN_CACHE_KEY } from "../../api/admin-actions";
@@ -328,13 +327,12 @@ async function runWeeklyResumeIfDue(
     caught
       ? summarizeThrownScheduledJob("weekly-recap", caught)
       : summarizeCronResult("weekly-recap", result),
-  ], { budgetOnlyJobs: 3 });
+  ], { budgetOnlyJobs: 2 });
 }
 
 export async function runDigestTriggerPollSlot(runtime: ScheduledRuntimeContext) {
   const startedMs = Date.now();
   await runTelegramDigestOutboxDrain(runtime);
-  await runDailySocialDelivery(runtime);
   const pending = await getCache(runtime.db, DIGEST_FORCE_RUN_CACHE_KEY);
   if (!pending) {
     const weeklyResume = await runWeeklyResumeIfDue(runtime, startedMs);
@@ -351,7 +349,7 @@ export async function runDigestTriggerPollSlot(runtime: ScheduledRuntimeContext)
     });
     return buildScheduledSlotSummary([
       summarizeSkippedScheduledJob("digest-trigger-poll", "no-pending-request", { neutral: true }),
-    ], { budgetOnlyJobs: 3 });
+    ], { budgetOnlyJobs: 2 });
   }
 
   const payload = parseForceRunPayload(pending.value);
@@ -378,7 +376,7 @@ export async function runDigestTriggerPollSlot(runtime: ScheduledRuntimeContext)
     });
     return buildScheduledSlotSummary([
       summarizeSkippedScheduledJob("digest-trigger-poll", "malformed-payload"),
-    ], { budgetOnlyJobs: 3 });
+    ], { budgetOnlyJobs: 2 });
   }
 
   const now = Math.floor(Date.now() / 1000);
@@ -405,7 +403,7 @@ export async function runDigestTriggerPollSlot(runtime: ScheduledRuntimeContext)
         "digest-trigger-poll",
         payload.state === "dead_letter" ? "dead-letter" : "already-succeeded",
       ),
-    ], { budgetOnlyJobs: 3 });
+    ], { budgetOnlyJobs: 2 });
   }
   if (payload.nextAttemptAt > now) {
     const weeklyResume = await runWeeklyResumeIfDue(runtime, startedMs);
@@ -428,7 +426,7 @@ export async function runDigestTriggerPollSlot(runtime: ScheduledRuntimeContext)
     });
     return buildScheduledSlotSummary([
       summarizeSkippedScheduledJob("digest-trigger-poll", "retry-not-due"),
-    ], { budgetOnlyJobs: 3 });
+    ], { budgetOnlyJobs: 2 });
   }
 
   let result: CronResult | null = null;
@@ -601,35 +599,5 @@ export async function runDigestTriggerPollSlot(runtime: ScheduledRuntimeContext)
     caught
       ? summarizeThrownScheduledJob("daily-digest", caught)
       : summarizeCronResult("daily-digest", result),
-  ], { budgetOnlyJobs: 3 });
-}
-
-async function runDailySocialDelivery(runtime: ScheduledRuntimeContext): Promise<void> {
-  const surface = "daily-social-delivery";
-  const startedMs = Date.now();
-  const creds = buildTwitterCreds(runtime.env);
-  try {
-    const result = creds
-      ? await runRuntimeBudgetOnlyTask(runtime, surface, (signal) => deliverDailySocial(runtime.db, creds, Math.floor(Date.now() / 1000), signal))
-      : { status: "skipped", reason: "missing-twitter-credentials" };
-    const unresolved = result.reason === "execution-unknown" || result.reason === "attempt-limit";
-    await recordBudgetSurfaceTelemetry(runtime.db, {
-      surface, durationMs: Date.now() - startedMs,
-      dueCount: result.status === "sent" || unresolved ? 1 : 0,
-      processedCount: result.status === "sent" ? 1 : 0,
-      outcome: unresolved ? "degraded" : result.status === "sent" ? "ok" : "skipped",
-      skippedReason: result.reason, metadata: result,
-      producer: getRuntimeProducerIdentity(runtime, surface),
-    });
-  } catch (error) {
-    logWorkerEvent({ scope: "handler", level: "error", event: "daily_social_delivery_failed", job: surface, message: "Daily social delivery failed", error });
-    try {
-      await recordBudgetSurfaceTelemetry(runtime.db, {
-        surface, durationMs: Date.now() - startedMs, dueCount: 1, processedCount: 0,
-        outcome: "error", error: toErrorMessage(error), producer: getRuntimeProducerIdentity(runtime, surface),
-      });
-    } catch (telemetryError) {
-      logWorkerEvent({ scope: "handler", level: "error", event: "daily_social_telemetry_failed", job: surface, message: "Daily social telemetry failed", error: telemetryError });
-    }
-  }
+  ], { budgetOnlyJobs: 2 });
 }

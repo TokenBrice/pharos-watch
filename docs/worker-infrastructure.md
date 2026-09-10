@@ -528,7 +528,7 @@ The platform header-wait limit and Pharos's stricter trigger-wide budget are sta
 
 `npm run check:cron-connections` reads `shared/lib/cron-jobs.ts` and sums peak `connectionGroup` usage, so sequential chains count by their maximum in-chain fetch width rather than by adding every chained job together.
 
-Use `npm run check:cron-connections` for the live per-slot budget report. It includes the budget-only `telegram-digest-outbox-drain`, `daily-social-delivery`, `digest-trigger-poll`, and Telegram registration reconciliation entries even though those surfaces do not create separate `/api/status` job rows.
+Use `npm run check:cron-connections` for the live per-slot budget report. It includes the budget-only `telegram-digest-outbox-drain`, `digest-trigger-poll`, and Telegram registration reconciliation entries even though those surfaces do not create separate `/api/status` job rows.
 
 The `sync-dex-liquidity-stage` direct API phase owns its circuit and timeout wrapper locally in `worker/src/cron/dex-liquidity/orchestrator-phases/direct-api.ts`. Protocol families run serially through `mapWithConcurrency(..., 1, ...)`, each completed result is immediately compacted to tracked pools and bounded source evidence before the next family starts, and circuit outcomes use the existing `circuit:<source>` breaker keys. Individual adapters retain their protocol-specific request/body policies. Consumed Curve response trees are also released before the scoring-stage generation is written. The static source-stage trigger declaration remains conservatively `5/6` and is enforced by `check:cron-connections` because one provider may still use its nested request width; it performs network work hourly at `:10`. The `sync-dex-liquidity` consumer remains D1-only at `0/6`; it writes prices hourly and full score surfaces hourly. Its generation-private publication rows stream through 15-row buffers packed as five three-row statements, reducing D1 work while preserving bounded memory, retry-idempotent replacement, and exact-generation publication fencing.
 
@@ -539,8 +539,6 @@ The `halfHourlyChartsOffset` trigger peaks at `3/6`: DEX consumption, the D1-onl
 - Jobs requiring <=1 external connection may share any slot with headroom >=2.
 - Jobs requiring >2 concurrent connections should get a dedicated trigger slot.
 - Never add a fetching job to a slot with headroom <=1.
-
-The five-minute digest-trigger slot also delivers the [daily social data graphic](./daily-social.md) after the Telegram drain. It fetches and verifies the immutable local-date edition, uploads the PNG and alt text, then publishes through the persistent Twitter ledger. Requests are serial within a one-connection budget-only surface; no trigger expression or parallel peak is added. The target is 14:00 Europe/Belgrade daily, with a bounded catch-up window ending at 15:00. The shared IANA timezone conversion handles CET/CEST. Preparation occurs in GitHub Actions before the target; source/capture age, calendar identity and checksums are checked again before the tweet request. Social errors are recorded without blocking the existing digest request processing.
 
 ### Cron Error Handling Policy
 

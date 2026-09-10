@@ -98,7 +98,6 @@
   },
   "conditionalJobPaths": ["digestTriggerPoll:daily-digest"],
   "budgetOnlySurfaces": [
-    "daily-social-delivery",
     "digest-trigger-poll",
     "telegram-digest-outbox-drain",
     "telegram-registration-reconciliation"

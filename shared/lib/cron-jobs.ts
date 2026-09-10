@@ -798,15 +798,6 @@ const CRON_CONNECTION_BUDGET_ONLY_DEFINITIONS: readonly CronConnectionBudgetDefi
       "Retries immutable Telegram daily/weekly digest editions without regenerating copy and surfaces ambiguous sends for operator reconciliation.",
   },
   {
-    job: "daily-social-delivery",
-    label: "Daily social X delivery",
-    scheduleKey: "digestTriggerPoll",
-    maxConnections: 1,
-    connectionGroup: "digest-trigger-poll-chain",
-    statusTracked: false,
-    notes: "Serial daily 14:00 Europe/Belgrade image delivery with a one-hour cutoff and duplicate-safe ledger.",
-  },
-  {
     job: "digest-trigger-poll",
     label: "Manual digest trigger poll",
     scheduleKey: "digestTriggerPoll",

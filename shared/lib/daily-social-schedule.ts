@@ -1,6 +1,5 @@
 const DAILY_SOCIAL_TIME_ZONE = "Europe/Belgrade";
 const DAILY_SOCIAL_PREPARATION_LEAD_SEC = 3600;
-const DAILY_SOCIAL_DELIVERY_WINDOW_SEC = 3600;
 export const DAILY_SOCIAL_MAX_SOURCE_AGE_SEC = 3 * 3600;
 export const DAILY_SOCIAL_MAX_CAPTURE_AGE_SEC = 2 * 3600;
 
@@ -43,9 +42,4 @@ export function getDailySocialEdition(nowSec: number): { editionDate: string; sc
 export function dailySocialPreparationWindow(nowSec: number): boolean {
   const { scheduledAt } = getDailySocialEdition(nowSec);
   return nowSec >= scheduledAt - DAILY_SOCIAL_PREPARATION_LEAD_SEC && nowSec < scheduledAt;
-}
-
-export function isDailySocialDeliveryDue(nowSec: number): boolean {
-  const { scheduledAt } = getDailySocialEdition(nowSec);
-  return nowSec >= scheduledAt && nowSec < scheduledAt + DAILY_SOCIAL_DELIVERY_WINDOW_SEC;
 }
