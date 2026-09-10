@@ -456,6 +456,13 @@ const CURATED_AGGREGATE_ONCHAIN_SUPPLY_CONTRACTS: Record<
     supplyProbeChain("etherlink"),
     { chain: "solana" },
   ],
+  // eEARN is an ERC-4626 vault on Ethereum plus a native Ember Move receipt coin
+  // on Sui (registered 2026-09-10). Sui's supply is not publicly readable: the
+  // treasury cap is unfrozen, so GraphQL `coinMetadata.supply` is null, and no Sui
+  // supply probe family exists. Ethereum stays the sole leg (3,188,127.346337 at
+  // the 2026-09-10 verification, the pre-registration behaviour); the Sui leg is
+  // an acknowledged coverage gap, not a zero.
+  "eearn-ember": [{ chain: "ethereum" }],
   // USTB is native on Ethereum and Solana; Plume is Superstate issuer-native
   // burn/mint (bridge() burns source, no lockbox). Verified 2026-08-19:
   // Ethereum 67,696,661.464479 + Plume 169,698.550490 + Solana 224,120.571877
