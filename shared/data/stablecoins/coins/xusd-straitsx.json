@@ -78,9 +78,6 @@
     "version": 2,
     "semantics": "attestation-mix",
     "breakerScope": "xusd-straitsx",
-    "scoring": {
-      "maxSourceAgeSec": 4000000
-    },
     "display": {
       "url": "https://www.straitsx.com/xusd",
       "label": "StraitsX"

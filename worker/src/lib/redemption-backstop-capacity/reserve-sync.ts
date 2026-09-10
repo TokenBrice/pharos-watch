@@ -148,12 +148,19 @@ export async function resolveReserveSyncCapacity(
     kind: "reserve-sync-metadata",
     fallbackRatio: model.fallbackRatio,
   });
-  const snapshotMetadata =
+  const retainedSnapshot =
     options.reserveSnapshotMetadata !== undefined
       ? options.reserveSnapshotMetadata
-      : await getLatestSuccessfulReserveSnapshotMetadata(db, stablecoinId);
+      : await getLatestSuccessfulReserveSnapshotMetadata(db, stablecoinId, now);
+  // Capacity has its own evidence/warning policy, but cannot reuse rejected
+  // configuration, authority, or freshness evidence from reserve admission.
+  const snapshotRejected = retainedSnapshot?.admission?.reasons.some((reason) =>
+    reason !== "non-independent" && reason !== "degraded-snapshot" && reason !== "insufficient-slices",
+  ) ?? false;
+  const snapshotMetadata = snapshotRejected ? null : retainedSnapshot;
   const liveMetadata =
-    options.redemptionLiveMetadata ?? readRedemptionBackstopLiveMetadata(stablecoinId, snapshotMetadata, now);
+    (!snapshotRejected ? options.redemptionLiveMetadata : undefined)
+    ?? readRedemptionBackstopLiveMetadata(stablecoinId, snapshotMetadata, now);
 
   // The bounded-gap lane is reserved for OPEN routes: a paused route's zero is
   // the measured pause, not an evidence gap, so it falls through to the
@@ -219,8 +226,11 @@ export async function resolveReserveSyncCapacity(
     // dUSD), and only then does the adapter-derived live confidence apply.
     // The measured capacity value is used in all three cases; only its
     // confidence label changes.
+    const capacityKind = (liveMetadata.settlementDelaySec ?? 0) > 0 && liveMetadata.capacityKind === "live-direct"
+      ? "documented-bound" as const
+      : liveMetadata.capacityKind;
     const liveCapacityConfidence =
-      liveMetadata.capacityKind === "documented-bound"
+      capacityKind === "documented-bound"
         ? ("documented-bound" as const)
         : (model.liveCapacityConfidence ?? liveMetadata.capacityConfidence);
     const {
@@ -265,7 +275,7 @@ export async function resolveReserveSyncCapacity(
       // routeFamily=null: recomputed with the real routeFamily in redemption-backstop-sources.ts; not read downstream here.
       capacityBasis: resolveCapacityBasis(null, model, liveCapacityConfidence),
       capacitySemantics,
-      ...(liveMetadata.capacityKind ? { capacityKind: liveMetadata.capacityKind } : {}),
+      ...(capacityKind ? { capacityKind } : {}),
       ...(liveMetadata.freshnessKind ? { freshnessKind: liveMetadata.freshnessKind } : {}),
       ...(liveMetadata.sourceTimestamp != null ? { sourceTimestamp: liveMetadata.sourceTimestamp } : {}),
       ...(liveMetadata.sourceUrls.length > 0 ? { sourceUrls: liveMetadata.sourceUrls } : {}),

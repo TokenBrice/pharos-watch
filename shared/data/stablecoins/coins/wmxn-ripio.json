@@ -93,9 +93,9 @@
   "custodyModel": "institutional-unregulated",
   "governanceQuality": "single-entity",
   "liveReservesConfig": {
-    "adapter": "single-asset",
+    "adapter": "attestation-pdf-index",
     "version": 1,
-    "semantics": "single-asset",
+    "semantics": "attestation-mix",
     "breakerScope": "wmxn-ripio",
     "display": {
       "url": "https://www.ripio.com/en/cryptos/local-stablecoins",
@@ -103,14 +103,23 @@
     },
     "inputs": {
       "primary": {
-        "kind": "onchain-evm",
-        "chain": "ethereum",
-        "rpcMode": "public-rpc"
+        "kind": "http-html",
+        "url": "https://www.ripio.com/en/cryptos/local-stablecoins"
       }
     },
     "params": {
-      "label": "Mexican-peso fiat deposits in a Mexican bank account",
-      "risk": "high"
+      "linkMatch": "wMXN",
+      "slices": [
+        {
+          "name": "Mexican-peso fiat deposits in a Mexican bank account",
+          "pct": 100,
+          "risk": "high",
+          "assetClass": "bank-deposit",
+          "issuerOrObligor": "Undisclosed Mexican financial institution",
+          "riskFactors": ["counterparty", "liquidity", "custody", "concentration"],
+          "liquidityHorizon": "unknown"
+        }
+      ]
     }
   },
   "launchDate": "2025-10-17"

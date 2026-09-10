@@ -47,7 +47,7 @@
   ],
   "governanceQuality": "multisig",
   "liveReservesConfig": {
-    "adapter": "curated-validated",
+    "adapter": "money-llamma",
     "version": 1,
     "semantics": "collateral-mix",
     "breakerScope": "money-defi-money",

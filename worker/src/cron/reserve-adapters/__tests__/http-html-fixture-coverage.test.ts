@@ -31,8 +31,15 @@ const FIXTURE_EXEMPT_ADAPTERS: Record<string, string> = {
   "attestation-pdf-index": "Upstream is a gated PDF index; HTML page is not the parsed surface.",
   "audx-independent-assurance": "Compact index HTML for newer-report detection is covered inline; evidence is the exact official PDF bytes bound to a reviewed manifest SHA-256.",
   "paxos-independent-assurance": "Inline tests cover the sole parsed HTML surface (main-module script reference); exact reviewed main/product-module hashes bind report selection, and the manifest binds PDF bytes.",
+  "fdusd-independent-assurance": "Compact Webflow index HTML for newer-report detection is covered inline; evidence is the exact official PDF bytes bound to a reviewed manifest SHA-256.",
+  "agora-independent-assurance": "Compact Fern docs index HTML for reviewed-link rewriting is covered inline; evidence is the exact official PDF bytes bound to a reviewed manifest SHA-256.",
+  "fidd-independent-assurance": "Compact official index and Widen viewer HTML for newer-report detection are covered inline; evidence is the exact official PDF bytes bound to a reviewed manifest SHA-256.",
+  "issuer-attested-report": "Shared sibling descriptor for BRLV/AUDM: each product profile parses its own compact issuer index inline and evidence is the exact reviewed PDF bytes bound to a manifest SHA-256.",
+  "sbc-independent-assurance": "Compact Brale index HTML for newer-report detection is covered inline; evidence is the exact official PDF bytes bound to a reviewed manifest SHA-256.",
   "quantoz-transparency": "Adapter test uses inline HTML; upstream layout is stable and compact.",
   "ripple-transparency": "Adapter test uses inline HTML; upstream layout is stable and compact.",
+  "onre-holdings-csv": "Adapter parses the published Schedule of Assets CSV (RFC-4180 quoted), not an HTML page; the compact CSV payload is covered inline in tests.",
+  "usdy-holdings-report": "Parses no HTML surface: evidence is the exact Ankura PDF report bytes pinned to a manifest SHA-256, and the live feed is suspended with the reviewed manifest retained as static evidence.",
 };
 
 function fixturePrefixCandidates(key: string): string[] {

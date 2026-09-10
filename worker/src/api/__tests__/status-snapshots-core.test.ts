@@ -676,13 +676,7 @@ describe("handleStatus", () => {
     )).toBe(true);
     expect(body.sectionErrors).not.toHaveProperty("producerHistory");
     expect(body.reserveComposition).toMatchObject({
-      cursorTailState: null,
-      cursorTailError: null,
       cursorRecordedAt: null,
-      cursorTailCompletedAt: null,
-      cursorTailFailedAt: null,
-      runBudgetTruncationCount: 0,
-      historyWriteGaps: [],
     });
     expect(typeof body.dbHealthy).toBe("boolean");
     expect(body.datasetFreshness).toHaveProperty("stablecoins");

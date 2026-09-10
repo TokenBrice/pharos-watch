@@ -9,8 +9,17 @@
       "depType": "wrapper",
       "assetClass": "stablecoin",
       "issuerOrObligor": "Usual DAO",
-      "riskFactors": ["liquidity", "custody", "counterparty", "smart-contract", "market", "legal", "concentration"],
-      "liquidityHorizon": "over-seven-days"
+      "riskFactors": [
+        "liquidity",
+        "custody",
+        "counterparty",
+        "smart-contract",
+        "market",
+        "legal",
+        "concentration"
+      ],
+      "liquidityHorizon": "over-seven-days",
+      "sourceKey": "evm-branch-balances:ethereum:0x73a15fed60bf67631dc6cd7bc5b6e8da8190acf5"
     }
   ],
   "reserveReview": {

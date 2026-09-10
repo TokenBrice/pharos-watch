@@ -2,12 +2,18 @@
   "id": "usdcv-societe-generale-forge",
   "reserves": [
     {
+      "sourceKey": "sgforge-coinvertible:cash-deposits",
       "name": "U.S. dollar cash deposits at BNY and Societe Generale",
       "pct": 100,
       "risk": "very-low",
       "assetClass": "bank-deposit",
       "issuerOrObligor": "The Bank of New York Mellon SA/NV and Societe Generale",
-      "riskFactors": ["counterparty", "custody", "legal", "concentration"],
+      "riskFactors": [
+        "counterparty",
+        "custody",
+        "legal",
+        "concentration"
+      ],
       "liquidityHorizon": "immediate"
     }
   ],

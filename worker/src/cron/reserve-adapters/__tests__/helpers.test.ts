@@ -55,7 +55,7 @@ function solanaSupplyResponse(amount?: string) {
 }
 
 describe("buildRedemptionSnapshotMetadata", () => {
-  it("mirrors fee telemetry into nested redemption metadata and the legacy top-level field", () => {
+  it("nests fee telemetry inside redemption metadata without a legacy top-level field", () => {
     expect(buildRedemptionSnapshotMetadata({
       capacityUsd: 1250,
       capacityKind: "live-direct-bounded",
@@ -63,7 +63,6 @@ describe("buildRedemptionSnapshotMetadata", () => {
       routeStatus: "open",
       feeBps: 52,
     })).toEqual({
-      redemptionFeeBps: 52,
       redemption: {
         capacityUsd: 1250,
         capacityKind: "live-direct-bounded",
@@ -451,14 +450,22 @@ describe("unknown exposure helpers", () => {
 
   it("escalates warning effect when unknown exposure is material", () => {
     expect(buildUnknownExposureWarning({
+      adapterKey: "infinifi",
       code: "unknown",
       message: "unknown buckets",
-      unknownExposurePct: 2,
+      unknownExposurePct: 5,
     }).effect).toBe("info");
     expect(buildUnknownExposureWarning({
+      adapterKey: "infinifi",
       code: "unknown",
       message: "unknown buckets",
       unknownExposurePct: 7,
+    }).effect).toBe("degraded");
+    expect(buildUnknownExposureWarning({
+      adapterKey: "flying-tulip-ftusd",
+      code: "unknown",
+      message: "unknown buckets",
+      unknownExposurePct: 0.1,
     }).effect).toBe("degraded");
   });
 });
@@ -726,7 +733,7 @@ describe("fetchDefiLlamaPrices", () => {
     vi.mocked(fetchWithRetry).mockResolvedValue(
       new Response(JSON.stringify({
         coins: {
-          "hyperliquid:0x5555555555555555555555555555555555555555": { price: 37.27 },
+          "hyperliquid:0x5555555555555555555555555555555555555555": { price: 37.27, timestamp: Math.floor(Date.now() / 1000), confidence: 1 },
         },
       }), {
         status: 200,

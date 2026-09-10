@@ -9,8 +9,13 @@
       "depType": "collateral",
       "assetClass": "stablecoin",
       "issuerOrObligor": "Sovryn protocol",
-      "riskFactors": ["smart-contract", "liquidity", "counterparty"],
-      "liquidityHorizon": "unknown"
+      "riskFactors": [
+        "smart-contract",
+        "liquidity",
+        "counterparty"
+      ],
+      "liquidityHorizon": "unknown",
+      "sourceKey": "evm-branch-balances:rootstock:0xc1411567d2670e24d9c4daaa7cda95686e1250aa"
     },
     {
       "name": "Rootstock Bridged USDT",
@@ -21,8 +26,14 @@
       "blacklistable": true,
       "assetClass": "stablecoin",
       "issuerOrObligor": "Tether and the Rootstock bridge",
-      "riskFactors": ["counterparty", "smart-contract", "custody", "liquidity"],
-      "liquidityHorizon": "unknown"
+      "riskFactors": [
+        "counterparty",
+        "smart-contract",
+        "custody",
+        "liquidity"
+      ],
+      "liquidityHorizon": "unknown",
+      "sourceKey": "evm-branch-balances:rootstock:0xef213441a85df4d7acbdae0cf78004e1e486bb96"
     },
     {
       "name": "Dollar on Chain DOC",
@@ -32,8 +43,13 @@
       "depType": "collateral",
       "assetClass": "stablecoin",
       "issuerOrObligor": "Money on Chain protocol",
-      "riskFactors": ["smart-contract", "liquidity", "counterparty"],
-      "liquidityHorizon": "unknown"
+      "riskFactors": [
+        "smart-contract",
+        "liquidity",
+        "counterparty"
+      ],
+      "liquidityHorizon": "unknown",
+      "sourceKey": "evm-branch-balances:rootstock:0xe700691da7b9851f2f35f8b8182c69c53ccad9db"
     }
   ],
   "reserveReview": {

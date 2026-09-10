@@ -140,8 +140,6 @@ export function adaptOpenEdenUsdo(payload: OpenEdenReserveCompositionResponse): 
       supplyUsd: payload.usdoAmount,
       totalReserveUsd: payload.reserveAssetsInUsd,
       componentTotalUsd: componentTotal,
-      immediateRedeemableUsd: payload.usdcAmount,
-      ...(payload.usdoAmount > 0 ? { immediateRedeemableRatio: payload.usdcAmount / payload.usdoAmount } : {}),
       ...buildRedemptionSnapshotMetadata({
         capacityUsd: payload.usdcAmount,
         ...(payload.usdoAmount > 0 ? { capacityRatioOfSupply: payload.usdcAmount / payload.usdoAmount } : {}),

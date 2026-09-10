@@ -80,12 +80,24 @@
   "collateralQuality": "rwa",
   "custodyModel": "institutional-regulated",
   "governanceQuality": "single-entity",
-  "notices": [
-    {
-      "type": "info",
-      "title": "Tempo-native issuer rail",
-      "message": "pathUSD is tracked as a Tempo quote token. Pharos models its Bridge redemption route, but there is no independent live reserve adapter for the Bridge reserve portfolio yet."
+  "liveReservesConfig": {
+    "adapter": "bridge-transparency",
+    "breakerScope": "pathusd-bridge",
+    "version": 1,
+    "semantics": "collateral-mix",
+    "display": {
+      "url": "https://transparency.bridge.xyz/v0/stablecoins/path_usd",
+      "label": "Bridge Transparency"
+    },
+    "inputs": {
+      "primary": {
+        "kind": "http-json",
+        "url": "https://transparency.bridge.xyz/v0/stablecoins/path_usd"
+      }
+    },
+    "params": {
+      "slug": "path_usd"
     }
-  ],
+  },
   "launchDate": "2026-03-18"
 }

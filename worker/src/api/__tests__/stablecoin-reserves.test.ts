@@ -258,4 +258,15 @@ describe("handleStablecoinReserves", () => {
   ])("maps mode=%s to the correct Cache-Control tier", (mode, expected) => {
     expect(reserveCacheControlForMode(mode)).toBe(expected);
   });
+
+  it("derates live cache control when the sync is not ok or the write is uncertain", () => {
+    expect(reserveCacheControlForMode("live", { enabled: true, status: "ok", stale: false, bootstrap: false }))
+      .toBe("public, s-maxage=3600, max-age=300");
+    expect(reserveCacheControlForMode("live", { enabled: true, status: "degraded", stale: false, bootstrap: false }))
+      .toBe("public, s-maxage=300, max-age=60");
+    expect(reserveCacheControlForMode("live", { enabled: true, status: "error", stale: false, bootstrap: false }))
+      .toBe("public, s-maxage=300, max-age=60");
+    expect(reserveCacheControlForMode("live", { enabled: true, status: "ok", stale: false, bootstrap: false, uncertainWrite: true }))
+      .toBe("public, s-maxage=300, max-age=60");
+  });
 });

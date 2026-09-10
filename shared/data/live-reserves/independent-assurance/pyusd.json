@@ -1,0 +1,81 @@
+{
+  "schemaVersion": 1,
+  "product": "PYUSD",
+  "profile": "pyusd-v1",
+  "officialIndexUrl": "https://www.paxos.com/pyusd-transparency",
+  "reportUrl": "https://framerusercontent.com/assets/AzDCU1EG16dVKso3JV6W7I5Bk.pdf",
+  "reportSha256": "1873676ebec2ba586dcfdaad163bdcb767bbbac30960cfb264bcdb37b7bdc5b9",
+  "reportByteLength": 545442,
+  "reportDate": "2026-07-31",
+  "reportAsOf": "2026-07-31T17:00:00-04:00",
+  "reportTimeZone": "Eastern Daylight Time (UTC-4)",
+  "reportIssuedAt": "2026-08-25T23:59:00-04:00",
+  "attestor": "KPMG LLP",
+  "engagement": "Independent accountants examination under AICPA attestation standards",
+  "conclusion": "unmodified",
+  "unit": "USD",
+  "assets": [
+    {
+      "code": "cash",
+      "label": "Cash",
+      "amount": "94699538"
+    },
+    {
+      "code": "reverse-repo",
+      "label": "Repurchase agreements, at fair value",
+      "amount": "2200625000"
+    },
+    {
+      "code": "treasury-bills",
+      "label": "Obligations of U.S. Treasury, at fair value",
+      "amount": "398747625"
+    }
+  ],
+  "liabilities": [
+    {
+      "code": "ethereum",
+      "label": "PYUSD redeemable ethereum tokens",
+      "amount": "1790065386"
+    },
+    {
+      "code": "solana",
+      "label": "PYUSD redeemable solana tokens",
+      "amount": "675295029"
+    },
+    {
+      "code": "arbitrum",
+      "label": "PYUSD redeemable arbitrum tokens",
+      "amount": "205920633"
+    },
+    {
+      "code": "stellar",
+      "label": "PYUSD redeemable stellar tokens",
+      "amount": "7902125"
+    },
+    {
+      "code": "polygon",
+      "label": "PYUSD redeemable polygon tokens",
+      "amount": "10152379"
+    },
+    {
+      "code": "ink",
+      "label": "PYUSD redeemable ink tokens",
+      "amount": "22"
+    },
+    {
+      "code": "x-layer",
+      "label": "PYUSD redeemable x-layer tokens",
+      "amount": "100"
+    }
+  ],
+  "reportedAssetTotal": "2694072163",
+  "computedAssetTotal": "2694072163",
+  "reportedLiabilityTotal": "2689335674",
+  "extraction": {
+    "tool": "Poppler pdftotext -layout",
+    "parserVersion": "26.07.0",
+    "normalizedTextSha256": "d5f1e5fb9250faf9d78c7020a6cf9e318a5c39f48124f13f0083edd64ebe19a4",
+    "pageCount": 12
+  },
+  "assuranceTier": "independent-assurance"
+}

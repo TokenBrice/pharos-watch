@@ -1,23 +1,15 @@
-import { afterEach, beforeEach, expect } from "vitest";
-import { jsonResponse } from "@shared/test-utils/mock-fetch";
 import { fetchErc4626SingleAssetReserves } from "../erc4626-single-asset";
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import type { LiveReservesConfig } from "@shared/types/live-reserves";
-import { fetchWithRetryMock, testChainRpcs } from "./helpers/rpc-mock";
-import { decodeFunctionData, encodeFunctionResult, parseAbi } from "viem/utils";
-
-const MULTICALL3_ABI = parseAbi([
-  "function aggregate3((address target, bool allowFailure, bytes callData)[] calls) payable returns ((bool success, bytes returnData)[] returnData)",
-]);
-
-const unexpectedRequests: string[] = [];
-beforeEach(() => { unexpectedRequests.length = 0; });
-afterEach(() => { expect(unexpectedRequests).toEqual([]); });
-
-function rejectUnexpectedRequest(message: string): never {
-  unexpectedRequests.push(message);
-  throw new Error(message);
-}
+import {
+  installAdapterNetwork,
+  type AdapterNetwork,
+  type AdapterNetworkSpec,
+  type AdapterRpcCall,
+  type AdapterBlockHeader,
+  type AdapterRpcValue,
+  type AdapterRpcWord,
+} from "./reserve-adapter.test-support";
 
 type Erc4626Call = { to?: string; data: string };
 
@@ -29,7 +21,8 @@ type Erc4626RpcContext = {
 
 type Erc4626RpcHandler = (context: Erc4626RpcContext) => Response | null | undefined;
 
-type Erc4626RpcFixture = {
+export type Erc4626RpcFixture = {
+  chain?: string;
   vault?: string;
   asset?: string | null;
   totalAssets?: bigint | number | null;
@@ -42,11 +35,19 @@ type Erc4626RpcFixture = {
   extraHandlers?: Erc4626RpcHandler[];
 };
 
-function uint256Result(value: bigint | number): string {
-  return `0x${BigInt(value).toString(16).padStart(64, "0")}`;
+async function responseValue(response: Response | null): Promise<string | null> {
+  const payload = response == null ? null : await response.json() as { result?: string } | null;
+  // An empty success word ("0x") is not representable as a harness rpc word
+  // (short hex is right-aligned into a zero word); surface it as a failed
+  // call instead, which adapters read identically (unreadable result).
+  const result = payload?.result;
+  return result != null && result.length > 2 ? result : null;
 }
 
-export function mockErc4626Rpc({
+let activeNetwork: AdapterNetwork | undefined;
+
+export function installErc4626Network({
+  chain = "ethereum",
   vault = "0x80ac24aa929eaf5013f6436cda2a7ba190f5cc0b",
   asset = "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
   totalAssets = 100_000_000n,
@@ -57,89 +58,86 @@ export function mockErc4626Rpc({
   paused,
   shutdown,
   extraHandlers = [],
-}: Erc4626RpcFixture = {}): void {
-  fetchWithRetryMock.mockImplementation(async (url: string, init?: RequestInit) => {
-    const body = JSON.parse(String(init?.body ?? "{}")) as Record<string, unknown>;
-    const params = body.params as Array<Erc4626Call> | undefined;
-    const call = params?.[0];
-    if (!call) {
-      const context = { url, body };
-      for (const handler of extraHandlers) {
-        const response = handler(context);
-        if (response !== undefined) return response;
-      }
-      return rejectUnexpectedRequest(`Unexpected non-RPC request ${url}`);
-    }
-    if (body.method !== "eth_call" || (body.params as unknown[])[1] !== "latest") {
-      return rejectUnexpectedRequest(`Unexpected RPC method or block ${JSON.stringify(body)}`);
-    }
-
-    const resolveCall = async (nestedCall: Erc4626Call): Promise<Response | null> => {
-      const context = { url, call: nestedCall, body };
-      for (const handler of extraHandlers) {
-        const response = handler(context);
-        if (response !== undefined) return response;
-      }
-
-      const to = nestedCall.to?.toLowerCase();
-      const data = nestedCall.data.toLowerCase();
-      const vaultAddress = vault.toLowerCase();
-      const underlying = asset?.toLowerCase();
-      if (to === underlying && data === `0x70a08231${vaultAddress.slice(2).padStart(64, "0")}`) {
-        return idleBalance == null ? null : jsonResponse({ result: uint256Result(idleBalance) });
-      }
-      if (to === underlying && data === "0x313ce567") {
-        return decimals == null ? null : jsonResponse({ result: uint256Result(decimals) });
-      }
-      if (to === vaultAddress) {
-        if (data === "0x38d52e0f") {
-          return asset == null ? jsonResponse({ result: "0x" }) : jsonResponse({ result: `0x${asset.replace(/^0x/i, "").padStart(64, "0")}` });
-        }
-        const values: Record<string, bigint | number | null | undefined> = {
-          "0x01e1d114": totalAssets,
-          "0x18160ddd": totalSupply,
-          "0x5c975abb": paused,
-          "0xbf86d690": shutdown,
-        };
-        if (data in values) {
-          const value = values[data];
-          return value == null ? null : jsonResponse({ result: uint256Result(value) });
-        }
-        if (totalSupply != null && data === `0x07a2d13a${BigInt(totalSupply).toString(16).padStart(64, "0")}`) {
-          return convertedAssets == null ? null : jsonResponse({ result: uint256Result(convertedAssets) });
-        }
-      }
-      return rejectUnexpectedRequest(`Unexpected ERC4626 call ${to} ${data}`);
-    };
-
-    if (!call.data.startsWith("0x82ad56cb")) return resolveCall(call);
-    if (call.to?.toLowerCase() !== "0xca11bde05977b3631167028862be2a173976ca11") {
-      return rejectUnexpectedRequest(`Unexpected multicall target ${call.to}`);
-    }
-
-    const decoded = decodeFunctionData({
-      abi: MULTICALL3_ABI,
-      data: call.data as `0x${string}`,
-    });
-    const calls = decoded.args[0];
-    const results = await Promise.all(calls.map(async (nestedCall) => {
-      const response = await resolveCall({
-        to: nestedCall.target,
-        data: nestedCall.callData,
+}: Erc4626RpcFixture = {}): AdapterNetwork {
+  const vaultAddress = vault.toLowerCase();
+  const underlying = asset?.toLowerCase();
+  const invokeExtra = async (call: AdapterRpcCall | undefined, url: string, body: Record<string, unknown>) => {
+    for (const handler of extraHandlers) {
+      const response = handler({
+        url,
+        call: call ? { to: call.contract, data: call.data } : undefined,
+        body,
       });
-      const payload = response ? await response.json() as { result?: string } : null;
-      return payload?.result != null
-        ? { success: true, returnData: payload.result as `0x${string}` }
-        : { success: false, returnData: "0x" as `0x${string}` };
-    }));
-    return jsonResponse({
-      result: encodeFunctionResult({
-        abi: MULTICALL3_ABI,
-        functionName: "aggregate3",
-        result: results,
-      }),
-    });
+      if (response !== undefined) return response;
+    }
+    return undefined;
+  };
+  const rpcHandlerBody = (call: AdapterRpcCall) => ({
+    jsonrpc: "2.0",
+    method: call.method,
+    params: [{ to: call.contract, data: call.data }, call.block],
   });
+  const withHandlers = (fallback: AdapterRpcValue) =>
+    async (call: AdapterRpcCall): Promise<AdapterRpcWord | AdapterBlockHeader> => {
+      const response = await invokeExtra(call, call.url, rpcHandlerBody(call));
+      if (response === undefined) return typeof fallback === "function" ? fallback(call) : fallback;
+      return responseValue(response);
+    };
+  const rpc: AdapterNetworkSpec["rpc"] = {
+    [`${vault}:asset()`]: withHandlers(asset == null ? null : asset),
+    [`${vault}:totalAssets()`]: withHandlers(totalAssets),
+    [`${vault}:totalSupply()`]: withHandlers(totalSupply),
+    ...(paused === undefined ? {} : { [`${vault}:paused()`]: withHandlers(paused) }),
+    ...(shutdown === undefined ? {} : { [`${vault}:isShutdown()`]: withHandlers(shutdown) }),
+    [`${vault}:convertToAssets(uint256)`]: withHandlers(convertedAssets),
+    ...(underlying
+      ? {
+          [`${underlying}:decimals()`]: withHandlers(decimals),
+          [`${underlying}:balanceOf(address)`]: withHandlers((call: AdapterRpcCall) =>
+            call.data === `0x70a08231${vaultAddress.slice(2).padStart(64, "0")}` ? idleBalance ?? null : null),
+        }
+      : {}),
+    ...Object.fromEntries(
+      [
+        "0x9aa7df94",
+        "0xa9bbf1cc",
+        "0x39ebf823",
+        "0xce96cb77",
+        "0x160b71df",
+        "0xbf2428e6",
+        "0x35269315",
+        "0x90b9f9e4",
+        "0xb249b35d",
+        "0x1d30e266",
+        "0x9e65741e",
+        "0xe7c2a608",
+        "0x5c975abb",
+        "0x18160ddd",
+        "0x70a08231",
+      ]
+        .map((selector) => [selector, async (call: AdapterRpcCall) => {
+          const response = await invokeExtra(call, call.url, rpcHandlerBody(call));
+          if (response == null) return null;
+          return responseValue(response);
+        }]),
+    ),
+  };
+  activeNetwork = installAdapterNetwork({
+    chains: { [chain]: "https://rpc.example" },
+    rpc,
+    json: {
+      "https://api.morpho.org/graphql": async (request: Request) => {
+        const body = await request.json() as Record<string, unknown>;
+        const response = await invokeExtra(undefined, "https://api.morpho.org/graphql", body);
+        if (!response) throw new Error("Unexpected non-RPC request https://api.morpho.org/graphql");
+        return await response.json();
+      },
+    },
+  });
+  return activeNetwork;
+}
+export function getErc4626Network(): AdapterNetwork | undefined {
+  return activeNetwork;
 }
 
 export async function runTrackedVault(
@@ -149,10 +147,11 @@ export async function runTrackedVault(
   const coin = TRACKED_META_BY_ID.get(id);
   if (!coin?.liveReservesConfig) throw new Error(`Missing live reserve config for ${id}`);
   const config = configTransform ? configTransform(coin.liveReservesConfig) : coin.liveReservesConfig;
+  const network = activeNetwork ?? installErc4626Network();
   return fetchErc4626SingleAssetReserves(
     coin,
     config,
     new AbortController().signal,
-    { chainRpcs: testChainRpcs },
+    { chainRpcs: network.chainRpcs },
   );
 }

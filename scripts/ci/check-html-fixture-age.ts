@@ -20,6 +20,8 @@
  * capture metadata still has to be parsable and non-future.
  */
 
+import { readFileSync, readdirSync } from "node:fs";
+import { dirname, join } from "node:path";
 import { reportViolations } from "../lib/report-violations.mts";
 import { runAsCli } from "../lib/source-files.mts";
 import {
@@ -37,6 +39,63 @@ const DAY_MS = 24 * 60 * 60 * 1000;
 // arithmetic onto a local-midnight guess, so the shape is pinned here rather
 // than trusted to the parser.
 const CANONICAL_CAPTURE_RE = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$/;
+
+// The same `<!-- captured-at -->` header the refresh tooling writes into HTML
+// captures; JSON and txt fixtures may carry it only if their loader strips it.
+const CAPTURED_AT_HEADER_RE = /<!--\s*captured-at:\s*([^>]*?)\s*-->/;
+const HEADER_PREFIX_BYTES = 4096;
+
+/**
+ * JSON and txt fixtures are parsed by `JSON.parse`/`readFileSync` directly in
+ * the adapter tests, so they cannot carry the HTML-comment `captured-at` header
+ * the refresh tooling writes into `.html` captures, and their capture date was
+ * never recorded as a machine stamp. Re-stamping now would fabricate a date, so
+ * each legacy fixture is exempted here with the reason it cannot age. A new
+ * `.json`/`.txt` fixture without a stamp and without an entry here fails the
+ * gate, forcing its provenance to be recorded explicitly.
+ */
+const NON_HTML_FIXTURE_EXEMPTIONS: Readonly<Record<string, string>> = {
+  "tether-transparency.json":
+    "captured 2026-07-09 (per tether-transparency.test.ts); JSON cannot carry an HTML-comment capture header",
+  "frax-balance-sheet.json": "JSON cannot carry an HTML-comment capture header",
+  "makina-allocations.json": "JSON cannot carry an HTML-comment capture header",
+  "makina-strategy.json": "JSON cannot carry an HTML-comment capture header",
+  "fdusd-reserve-report.txt": "signed-report text extract; no capture header was recorded",
+  "fdusd-isae3000-july-glyph-fragmented.txt": "signed-report text extract; no capture header was recorded",
+  "makina-async-redeemer-runtime-code.txt":
+    "deployed EVM runtime bytecode pinned by keccak hash (immutable); no capture header was recorded",
+};
+
+/**
+ * Reads capture metadata for every `.json` and `.txt` fixture in `dir`, mapping
+ * each onto the same `HtmlFixtureCapture` contract the age gate already checks.
+ * A stamped fixture is gated normally; an unstamped fixture that is not
+ * exempted reads as a missing header and fails the gate.
+ */
+export function readNonHtmlFixtureCaptures(dir: string): HtmlFixtureCapture[] {
+  return readdirSync(dir)
+    .filter((name) => name.endsWith(".json") || name.endsWith(".txt"))
+    .sort()
+    .map((fixture) => {
+      const path = join(dir, fixture);
+      const header = readFileSync(path, "utf8").slice(0, HEADER_PREFIX_BYTES);
+      const capturedAt = header.match(CAPTURED_AT_HEADER_RE)?.[1] ?? null;
+      const exemptReason = NON_HTML_FIXTURE_EXEMPTIONS[fixture] ?? null;
+      return {
+        fixture,
+        path,
+        capturedAt,
+        archivedReason: capturedAt === null ? exemptReason : null,
+        trimmedReason: null,
+        refreshed: false,
+      };
+    });
+}
+
+function readAllFixtureCaptures(): HtmlFixtureCapture[] {
+  const dir = dirname(HTML_FIXTURE_REFRESH_TARGETS[0].path);
+  return [...readHtmlFixtureCaptures(dir), ...readNonHtmlFixtureCaptures(dir)];
+}
 
 export type HtmlFixtureAgeVerdict =
   | "fresh"
@@ -178,7 +237,7 @@ export function evaluateHtmlFixtureAges({
 }
 
 export function runHtmlFixtureAgeCheck({
-  captures = readHtmlFixtureCaptures(),
+  captures,
   now = new Date(),
   maxAgeDays = HTML_FIXTURE_MAX_AGE_DAYS,
   targets = HTML_FIXTURE_REFRESH_TARGETS,
@@ -192,7 +251,12 @@ export function runHtmlFixtureAgeCheck({
   stdout?: { write(chunk: string): unknown };
   stderr?: { write(chunk: string): unknown };
 } = {}): 0 | 1 {
-  const report = evaluateHtmlFixtureAges({ captures, now, maxAgeDays, targets });
+  const report = evaluateHtmlFixtureAges({
+    captures: captures ?? readAllFixtureCaptures(),
+    now,
+    maxAgeDays,
+    targets,
+  });
   return reportViolations({
     label: "check:html-fixture-age",
     heading: "Reserve HTML fixture capture violations",

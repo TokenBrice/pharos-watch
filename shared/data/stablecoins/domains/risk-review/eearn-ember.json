@@ -30,7 +30,7 @@
   },
   "bridgeRouteRisk": {
     "tier": "opaque-or-unknown",
-    "summary": "eEARN is currently a single-chain Ethereum USDC vault-share token: bridgeAdapter() was zero at Ethereum block 25770499, so no live destination representation, peer, messenger, validator, or supply-conserving route is claimed. The verified vault nevertheless exposes configurable adapter-only bridgeMint/bridgeBurn functions, and its ProtocolConfig/admin and UUPS owner paths can authorize that dormant surface. This conservative opaque-or-unknown tier records latent bridge capability, not a claim that eEARN currently has a destination route.",
+    "summary": "eEARN is issued natively as separate Ember vault-share tokens on Ethereum and Sui. On the Ethereum vault, bridgeAdapter() was zero at Ethereum block 25770499, so no live destination representation, peer, messenger, validator, or supply-conserving route is claimed; the verified vault nevertheless exposes configurable adapter-only bridgeMint/bridgeBurn functions, and its ProtocolConfig/admin and UUPS owner paths can authorize that dormant surface. This conservative opaque-or-unknown tier records latent bridge capability, not a claim that eEARN currently has a destination route.",
     "reviewedAt": "2026-08-16",
     "reviewer": "Codex eEARN bridge-boundary correction",
     "confidence": "verified",
@@ -102,6 +102,32 @@
           {
             "label": "Ethereum fixed-block JSON-RPC reads",
             "url": "https://ethereum-rpc.publicnode.com"
+          }
+        ]
+      },
+      {
+        "id": "sui:0x34469c8accdd673df02600265cbbad3688577f0e716866e257f88d448d463492::eearn::EEARN",
+        "destinationChain": "sui",
+        "canonicalChain": "sui",
+        "contractAddress": "0x34469c8accdd673df02600265cbbad3688577f0e716866e257f88d448d463492::eearn::EEARN",
+        "protocol": "Ember eEARN native vault",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "single-chain-or-native",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "The Sui eEARN coin type is defined and minted natively by Ember's own Sui Move vault package, not a Wormhole token-bridge wrapped coin; Bluefin Spot carries the live eEARN/USDC pools. Ember's vault model mints receipt coins on deposit, so this is a second native Ember vault deployment rather than a bridged representation of the Ethereum vault, and no bridge adapter is evidenced on the Sui side.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-09-10",
+        "sources": [
+          {
+            "label": "Ember core concepts",
+            "url": "https://learn.ember.so/ember-protocol/core-concepts"
+          },
+          {
+            "label": "SuiVision eEARN coin",
+            "url": "https://suivision.xyz/coin/0x34469c8accdd673df02600265cbbad3688577f0e716866e257f88d448d463492::eearn::EEARN"
           }
         ]
       }

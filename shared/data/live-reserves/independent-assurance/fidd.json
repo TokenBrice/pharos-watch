@@ -1,0 +1,46 @@
+{
+  "schemaVersion": 1,
+  "product": "FIDD",
+  "profile": "fidd-v1",
+  "officialIndexUrl": "https://www.fidelitydigitalassets.com/stablecoin",
+  "reportUrl": "https://fwc.widen.net/content/iizyowcatt/original/Fidelity-Digital-Assets---FIDD-Reserve-Attestation-Report---July26.pdf?u=zfczv1&download=true",
+  "reportSha256": "1152aad1d9ab2c005579d6808430438677c5a88c6a009cce703e1c31c1e476d3",
+  "reportByteLength": 444726,
+  "reportDate": "2026-07-31",
+  "reportAsOf": "2026-07-31T17:00:00-04:00",
+  "reportTimeZone": "Eastern Daylight Time (UTC-4)",
+  "reportIssuedAt": "2026-08-26T23:59:00-04:00",
+  "attestor": "PricewaterhouseCoopers LLP",
+  "engagement": "Independent accountants' examination under AICPA attestation standards (AICPA 2025 Criteria for the Presentation and Disclosure of Redeemable Tokens Outstanding and the Availability of Assets for Redemption: Specific to Asset-Backed Fiat-Pegged Tokens)",
+  "conclusion": "unmodified",
+  "unit": "USD",
+  "assets": [
+    {
+      "code": "cash-deposits",
+      "label": "Cash deposits held in bank deposit accounts at The Bank of New York Mellon (July 31 column)",
+      "amount": "20860119.65"
+    },
+    {
+      "code": "us-treasury-bills",
+      "label": "U.S. Treasury bills (July 31 column)",
+      "amount": "30634836.55"
+    }
+  ],
+  "liabilities": [
+    {
+      "code": "ethereum",
+      "label": "FIDD redeemable Ethereum Mainnet tokens outstanding",
+      "amount": "48882278"
+    }
+  ],
+  "reportedAssetTotal": "51494956.20",
+  "computedAssetTotal": "51494956.20",
+  "reportedLiabilityTotal": "48882278",
+  "extraction": {
+    "tool": "Poppler pdftotext -layout",
+    "parserVersion": "26.07.0",
+    "normalizedTextSha256": "ea916101d740d574ebe9ed1f73d2d6714638fb6a9474001648893d71020739da",
+    "pageCount": 9
+  },
+  "assuranceTier": "independent-assurance"
+}

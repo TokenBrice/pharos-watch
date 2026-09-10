@@ -1,3 +1,5 @@
+import { pinnedBlockPlan } from "./evm-observation-plan";
+import { createAdapterIoLimiter } from "./concurrency";
 import { toErrorMessage } from "@shared/lib/error-utils";
 import type { StablecoinMeta } from "@shared/types/core";
 import type { LiveReservesConfig, LiveReserveWarning } from "@shared/types/live-reserves";
@@ -58,6 +60,9 @@ interface HoneyFactoryRedemptionCapacityParams {
 interface RedemptionCapacityObservation {
   metadata?: Record<string, unknown>;
   warnings: LiveReserveWarning[];
+  /** Lowercased vault or custody-wallet address -> net converted assets (raw units) for custody-mode branches. */
+  custodyBackingByHolder?: ReadonlyMap<string, bigint>;
+  errorMessage?: string;
 }
 
 function requireUint(value: bigint | null, label: string): bigint {
@@ -436,6 +441,9 @@ async function observeHoneyFactoryRedemptionCapacity(
         assetDecimals,
         stableAsset,
         isPegged,
+        vault,
+        custodyInfo,
+        convertedAssets,
         vaultPaused,
         relativeCap,
         redeemRate,
@@ -443,6 +451,18 @@ async function observeHoneyFactoryRedemptionCapacity(
         weight: weights[index]!,
       };
     });
+
+    const custodyBackingByHolder = new Map<string, bigint>();
+    for (const observation of observations) {
+      if (!observation.custodyInfo.isCustodyVault) continue;
+      custodyBackingByHolder.set(observation.vault.toLowerCase(), observation.convertedAssets);
+      if (observation.custodyInfo.custodyAddress != null) {
+        custodyBackingByHolder.set(
+          observation.custodyInfo.custodyAddress.toLowerCase(),
+          observation.convertedAssets,
+        );
+      }
+    }
 
     const skippedAssets = observations
       .filter((observation) => !observation.stableAsset || !observation.isPegged)
@@ -511,6 +531,7 @@ async function observeHoneyFactoryRedemptionCapacity(
             `${ADAPTER_KEY} excluded unconfigured or non-pegged collateral from redemption capacity: ${skippedAssets.join(", ")}`,
           )]
         : [],
+      custodyBackingByHolder,
     };
   } catch (error) {
     const message = toErrorMessage(error);
@@ -519,6 +540,7 @@ async function observeHoneyFactoryRedemptionCapacity(
         "redemption-capacity-unavailable",
         `${ADAPTER_KEY} withheld the complete redemption-capacity block: ${message}`,
       )],
+      errorMessage: message,
     };
   }
 }
@@ -531,6 +553,29 @@ export async function fetchEvmBranchBalancesReserves(
 ): Promise<AdapterResult> {
   const input = requireOnchainInput(config.inputs.primary, ADAPTER_KEY);
   const params = readBranchBalanceParams(config, ADAPTER_KEY);
+  const attemptCtx = { ...ctx, ioLimiter: ctx?.ioLimiter ?? createAdapterIoLimiter(2) };
+  const plan = await pinnedBlockPlan({ chain: input.chain, signal, ctx: attemptCtx, ...params });
+  ctx = plan.ctx;
+  const chainPlans = new Map([[input.chain, plan]]);
+  for (const branch of params.branches) {
+    const chain = branch.chain ?? input.chain;
+    if (!chainPlans.has(chain)) {
+      chainPlans.set(chain, await pinnedBlockPlan({
+        chain, signal, ctx: { ...attemptCtx, observedBlock: undefined },
+      }));
+    }
+  }
+  const balanceGroups = [...chainPlans].map(([chain, chainPlan]) => {
+    const branches = params.branches.filter((branch) => (branch.chain ?? input.chain) === chain);
+    return branches.length === 0 ? Promise.resolve([]) : fetchBranchBalances(
+      { ...input, chain },
+      { ...params, branches, ...(chain !== input.chain ? { rpcUrl: undefined, fallbackRpcUrl: undefined } : {}) },
+      signal, chainPlan.ctx,
+    );
+  });
+  const observationDetails = chainPlans.size > 1
+    ? { observedBlocks: [...chainPlans.values()].map((entry) => entry.observedBlock) }
+    : undefined;
   const debtSelector = params.debtSelector;
   const debtDecimals = params.debtDecimals ?? DEFAULT_DEBT_DECIMALS;
   const onchain = makeOnchainCallers(input, {
@@ -544,7 +589,7 @@ export async function fetchEvmBranchBalancesReserves(
   ).redemptionCapacity;
 
   const [balances, redemptionFeeBps, debtRaw, redemptionCapacity] = await Promise.all([
-    fetchBranchBalances(input, params, signal, ctx),
+    Promise.all(balanceGroups).then((groups) => groups.flat()),
     probeOptionalRedemptionRateBps(
       input,
       params.redemptionRateProbe,
@@ -568,10 +613,33 @@ export async function fetchEvmBranchBalancesReserves(
       : Promise.resolve<RedemptionCapacityObservation>({ warnings: [] }),
   ]);
 
+  // Honey custody composition: a custody-mode vault's idle balance is not the
+  // backing. The factory-owned net vault shares (shares minus collected fees)
+  // converted to underlying assets are the vault's claim, so branch balances
+  // whose holder is a custody vault (or its custody wallet) are replaced by
+  // the net-share conversion observed in the same multicall round.
+  if (redemptionCapacityParams?.kind === "honey-factory-vaults") {
+    const custodyBackingByHolder = redemptionCapacity.custodyBackingByHolder;
+    if (custodyBackingByHolder == null) {
+      throw new Error(
+        `${ADAPTER_KEY}: HoneyFactory vault state unavailable; cannot derive custody-mode branch composition: ${
+          redemptionCapacity.errorMessage ?? "unknown failure"
+        }`,
+      );
+    }
+    for (const entry of balances) {
+      const custodyBacking = custodyBackingByHolder.get(entry.branch.holder.toLowerCase());
+      if (custodyBacking != null) {
+        entry.balanceRaw = custodyBacking;
+      }
+    }
+  }
+
   const priceMapWarnings: LiveReserveWarning[] = [];
   const priceMap = await fetchBranchPriceMap(balances, signal, priceMapWarnings, ctx);
 
   const baseMetadata = {
+    observedBlock: plan.observedBlock,
     ...(redemptionFeeBps != null
       ? buildRedemptionSnapshotMetadata({
           feeBps: redemptionFeeBps,
@@ -590,7 +658,7 @@ export async function fetchEvmBranchBalancesReserves(
       if (entry.balanceRaw == null || entry.balanceRaw <= 0n) return sum;
       const price = entry.branch.priceUsd ?? priceMap.get(entry.branch.name);
       if (price == null) return sum;
-      return sum + decimalNumberFromBigInt(entry.balanceRaw, entry.branch.token.decimals) * price;
+      return sum + decimalNumberFromBigInt(entry.balanceRaw, entry.balanceDecimals ?? entry.branch.token.decimals) * price;
     }, 0);
     const collateralizationRatio = totalDebtUsd > 0 ? totalCollateralUsd / totalDebtUsd : null;
     const warnings: LiveReserveWarning[] = [];
@@ -604,6 +672,7 @@ export async function fetchEvmBranchBalancesReserves(
       adapterKey: ADAPTER_KEY,
       balances,
       priceMap,
+      details: observationDetails,
       metadata: {
         ...(baseMetadata ?? {}),
         totalDebtUsd,
@@ -620,6 +689,7 @@ export async function fetchEvmBranchBalancesReserves(
     adapterKey: ADAPTER_KEY,
     balances,
     priceMap,
+    details: observationDetails,
     metadata: baseMetadata,
   });
   return commonWarnings.length > 0

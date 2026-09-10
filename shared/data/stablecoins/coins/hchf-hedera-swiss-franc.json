@@ -46,6 +46,23 @@
       "decimals": 8
     }
   ],
+  "liveReservesConfig": {
+    "adapter": "hliquity-hedera",
+    "version": 1,
+    "semantics": "collateral-mix",
+    "breakerScope": "hchf-hedera-swiss-franc",
+    "display": {
+      "url": "https://mainnet-public.mirrornode.hedera.com/api/v1/contracts/0.0.6070118",
+      "label": "Hedera mirror node (HLiquity TroveManager)"
+    },
+    "inputs": {
+      "primary": {
+        "kind": "http-json",
+        "url": "https://mainnet-public.mirrornode.hedera.com/api/v1"
+      }
+    },
+    "params": {}
+  },
   "collateralQuality": "alt-lst-bridged-or-mixed",
   "custodyModel": "onchain",
   "governanceQuality": "immutable-code",

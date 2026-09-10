@@ -90,6 +90,7 @@
       }
     },
     "params": {
+      "navScope": "portfolio",
       "oracleAddress": "0x66Aa9fcD63DF74e1f67A9452E6E59Fbc67f75E38",
       "tokenAddress": "0x7433806912eae67919e66aea853d46fa0aef98a8",
       "assetLabel": "Fasanara Global diversified alternative debt strategy NAV",

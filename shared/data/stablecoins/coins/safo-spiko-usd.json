@@ -111,7 +111,7 @@
     "params": {
       "shareClassSymbol": "SAFO",
       "slice": {
-        "name": "Fully collateralized overnight total-return swap exposure",
+        "name": "Spiko Amundi Overnight Swap Fund shares",
         "risk": "medium"
       }
     }

@@ -85,6 +85,9 @@
       }
     },
     "params": {
+      "redemptionLock": [
+        { "selector": "cooldownDuration()", "kind": "cooldown-seconds" }
+      ],
       "slice": {
         "name": "YUSD staking vault shares",
         "risk": "medium",

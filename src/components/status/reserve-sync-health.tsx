@@ -1,5 +1,6 @@
 import type { StatusResponse } from "@shared/types";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { TableBody, TableCell, TableFrame, TableHead, TableHeader, TableRow } from "@/components/table";
 import { formatElapsedSeconds } from "@shared/lib/format";
 import { getStatusTone } from "@/lib/status-dashboard-model";
 import { SEVERITY_TONE_CLASS } from "@/lib/severity-tone";
@@ -159,6 +160,45 @@ export function ReserveSyncHealthCard({ health, nowSeconds }: ReserveSyncHealthC
             </div>
           ) : null}
         </div>
+
+        {health.adapterReliability.length > 0 ? (
+          <div className="space-y-2 rounded-lg border border-border/60 bg-muted/20 p-3">
+            <div className="text-xs font-medium text-foreground">30-day Adapter Reliability</div>
+            <TableFrame
+              tableId="reserve-adapter-reliability"
+              chrome="content"
+              density="compact"
+              tableProps={{ "aria-label": "30-day adapter reliability" }}
+            >
+              <TableHeader>
+                <TableRow>
+                  <TableHead scope="col">Adapter</TableHead>
+                  <TableHead scope="col" className="text-right">Attempts</TableHead>
+                  <TableHead scope="col" className="text-right">OK</TableHead>
+                  <TableHead scope="col" className="text-right">Degr.</TableHead>
+                  <TableHead scope="col" className="text-right">Error</TableHead>
+                  <TableHead scope="col" className="text-right">Skip</TableHead>
+                  <TableHead scope="col" className="text-right">Success</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {health.adapterReliability.map((row) => (
+                  <TableRow key={row.adapterKey}>
+                    <TableCell className="font-mono">{row.adapterKey}</TableCell>
+                    <TableCell className="text-right font-mono">{row.attempts}</TableCell>
+                    <TableCell className="text-right font-mono text-emerald-600 dark:text-emerald-400">{row.ok}</TableCell>
+                    <TableCell className="text-right font-mono text-amber-600 dark:text-amber-400">{row.degraded}</TableCell>
+                    <TableCell className="text-right font-mono text-red-600 dark:text-red-400">{row.error}</TableCell>
+                    <TableCell className="text-right font-mono">{row.skipped}</TableCell>
+                    <TableCell className="text-right font-mono">
+                      {row.successRate != null ? formatCoveragePct(row.successRate) : "—"}
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </TableFrame>
+          </div>
+        ) : null}
       </CardContent>
     </Card>
   );

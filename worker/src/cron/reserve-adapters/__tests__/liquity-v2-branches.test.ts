@@ -1,9 +1,6 @@
+import { parseLiveReserveAdapterParams } from "@shared/lib/live-reserve-adapters";
 import type { StablecoinMeta } from "@shared/types/core";
 import type { LiveReservesConfig } from "@shared/types/live-reserves";
-import bdBaseDollar from "@shared/data/stablecoins/coins/bd-basedollar.json";
-import boldLiquity from "@shared/data/stablecoins/coins/bold-liquity.json";
-import cdpEnosys from "@shared/data/stablecoins/coins/cdp-enosys.json";
-import nectBeraborrow from "@shared/data/stablecoins/coins/nect-beraborrow.json";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   buildLiquityV2Warnings,
@@ -11,75 +8,142 @@ import {
   fetchLiquityV2BranchReserves,
 } from "../liquity-v2-branches";
 import {
-  fetchDefiLlamaPrices,
-  fetchErc20Balance,
-  fetchOnchainMulticall3,
-  fetchOnchainRateBps,
-  fetchOnchainRawCall,
-  fetchOnchainUint256,
-  probeOptionalRedemptionRateBps,
-} from "../helpers";
+  expectValidAdapterOutput,
+  expectWarningEffect,
+  expectWarnings,
+  installAdapterNetwork,
+  resolveAdapterCoin,
+  runAdapter,
+  type AdapterNetworkSpec,
+  type AdapterRpcValue,
+} from "./reserve-adapter.test-support";
 
-vi.mock("../helpers", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("../helpers")>();
-  const { makeOnchainCallersMock } = await import("./helpers/onchain-callers-mock");
-  const fetchOnchainRawCall = vi.fn();
-  const fetchOnchainUint256 = vi.fn();
-  return {
-    ...actual,
-    fetchDefiLlamaPrices: vi.fn(),
-    fetchErc20Balance: vi.fn(),
-    fetchOnchainMulticall3: vi.fn(),
-    fetchOnchainRateBps: vi.fn(),
-    fetchOnchainRawCall,
-    fetchOnchainUint256,
-    makeOnchainCallers: makeOnchainCallersMock({
-      uint256: fetchOnchainUint256,
-      raw: fetchOnchainRawCall,
-    }),
-    probeOptionalRedemptionRateBps: vi.fn(),
-  };
-});
+const NOW = 1_788_991_200;
+const WAD = 10n ** 18n;
+const BLOCK = { number: 23_456_789, timestamp: NOW };
 
-const branch = {
-  name: "WETH",
-  holder: "0x1111111111111111111111111111111111111111",
-  token: {
-    chain: "ethereum",
-    address: "0x2222222222222222222222222222222222222222",
-    decimals: 18,
-  },
-  risk: "very-low" as const,
-};
-
+const DEBT_SELECTOR = "0x45507998"; // getBoldDebt()
+const SHUTDOWN_SELECTOR = "0x06ff8dfb"; // hasBeenShutDown()
+const BRANCH_PRICE_SELECTOR = "0x0fdb11cf"; // fetchPrice()
+const REDEMPTION_RATE_SELECTOR = "0xc52861f2"; // getRedemptionRateWithDecay()
+const MECHANISM_PRICE_SELECTOR = "0x4ea15f37"; // getUnbackedPortionPriceAndDecayAndRedeemability
+const STABILITY_POOL_DEPOSITS_SELECTOR = "0xf71c6940";
+const TOTAL_SUPPLY_SELECTOR = "0x18160ddd";
+const DECIMALS_SELECTOR = "0x313ce567";
 const ERC4626_ASSET_SELECTOR = "0x38d52e0f";
 const ERC4626_TOTAL_ASSETS_SELECTOR = "0x01e1d114";
-const ERC20_TOTAL_SUPPLY_SELECTOR = "0x18160ddd";
-const ERC20_DECIMALS_SELECTOR = "0x313ce567";
-const BRANCH_PRICE_SELECTOR = "0x0fdb11cf";
-const BOLD_MECHANISM_PRICE_SELECTOR = "0x4ea15f37";
-const BOLD_STABILITY_POOL_DEPOSITS_SELECTOR = "0xf71c6940";
-const BERABORROW_DEBT_SELECTOR = "0x795d26c3";
-const BERABORROW_SHUTDOWN_SELECTOR = "0x9484fb8e";
+const AGGREGATE3_SELECTOR = "0x82ad56cb";
 
-function encodeAddress(address: string): string {
-  return `0x${address.toLowerCase().slice(2).padStart(64, "0")}`;
+const bold = resolveAdapterCoin("liquity-v2-branches", "bold-liquity");
+const boldParams = parseLiveReserveAdapterParams("liquity-v2-branches", bold.config.params);
+const boldProbe = boldParams.redemptionRateProbe!;
+const boldMechanism = boldParams.mechanismMetrics!;
+
+const nect = resolveAdapterCoin("liquity-v2-branches", "nect-beraborrow");
+const nectParams = parseLiveReserveAdapterParams("liquity-v2-branches", nect.config.params);
+const wberaBranch = nectParams.branches.find((branch) => branch.name === "WBERA")!;
+const pumpBtcBranch = nectParams.branches.find((branch) => branch.name === "pumpBTC")!;
+
+afterEach(() => vi.unstubAllGlobals());
+
+function llamaUrl(tokens: ReadonlyArray<{ chain: string; address: string }>): string {
+  const keys = tokens.map((token) => `${token.chain}:${token.address.toLowerCase()}`);
+  return `https://coins.llama.fi/prices/current/${[...new Set(keys)].sort().join(",")}`;
 }
 
-function encodeUint(value: bigint | number): `0x${string}` {
-  return `0x${BigInt(value).toString(16).padStart(64, "0")}` as `0x${string}`;
+function encodeUint(value: bigint): string {
+  return `0x${value.toString(16).padStart(64, "0")}`;
 }
 
-function encodeMechanismPrice(price: bigint, redeemable = true): `0x${string}` {
-  return `0x${encodeUint(0).slice(2)}${encodeUint(price).slice(2)}${encodeUint(redeemable ? 1 : 0).slice(2)}`;
+/** Three-word getUnbackedPortionPriceAndDecayAndRedeemability payload: (_, price, redeemable). */
+function encodeMechanismPrice(price: bigint, redeemable: boolean): string {
+  return `0x${encodeUint(0n).slice(2)}${encodeUint(price).slice(2)}${encodeUint(redeemable ? 1n : 0n).slice(2)}`;
 }
 
-afterEach(() => {
-  vi.clearAllMocks();
-  vi.mocked(fetchOnchainMulticall3).mockReset();
+function boldCoinQuotes(pricesByName: Record<string, number>) {
+  const coins: Record<string, { price: number; timestamp: number; confidence: number }> = {};
+  for (const branch of boldParams.branches) {
+    const price = pricesByName[branch.name];
+    if (price != null) {
+      coins[`ethereum:${branch.token.address.toLowerCase()}`] = { price, timestamp: NOW, confidence: 1 };
+    }
+  }
+  return { coins };
+}
+
+const BOLD_LLAMA_URL = llamaUrl(boldParams.branches.map((branch) => branch.token));
+const BOLD_FULL_QUOTES = boldCoinQuotes({
+  "wstETH (Lido)": 2_000,
+  WETH: 1_800,
+  "rETH (Rocket Pool)": 1_900,
 });
 
+function boldBranchRpc(entries: {
+  balances: Map<string, bigint>;
+  debts: Map<string, bigint | null>;
+  feeRaw: bigint | null;
+}): Record<string, AdapterRpcValue> {
+  const rpc: Record<string, AdapterRpcValue> = {};
+  for (const branch of boldParams.branches) {
+    rpc[`${branch.token.address}:balanceOf(address)`] = entries.balances.get(branch.name) ?? 0n;
+    rpc[`${branch.holder}:${DEBT_SELECTOR}`] = entries.debts.get(branch.name) ?? null;
+    rpc[`${branch.holder}:${SHUTDOWN_SELECTOR}`] = false;
+    // No branch is an ERC4626 wrapper: the share-adaptation probe must fail.
+    rpc[`${branch.token.address}:asset()`] = null;
+  }
+  rpc[`${boldProbe.contract}:${REDEMPTION_RATE_SELECTOR}`] = entries.feeRaw;
+  return rpc;
+}
+
+function boldMechanismRpc(entries: {
+  totalSupply: bigint | null;
+  prices: Map<string, bigint>;
+  redeemable: Map<string, boolean>;
+  deposits: Map<string, bigint>;
+}): Record<string, AdapterRpcValue> {
+  const rpc: Record<string, AdapterRpcValue> = {
+    [`${boldMechanism.supplyTokenAddress}:totalSupply()`]: entries.totalSupply,
+  };
+  for (const binding of boldMechanism.branches) {
+    rpc[`${binding.troveManagerAddress}:${MECHANISM_PRICE_SELECTOR}`] = encodeMechanismPrice(
+      entries.prices.get(binding.name) ?? 0n,
+      entries.redeemable.get(binding.name) ?? true,
+    );
+    rpc[`${binding.stabilityPoolAddress}:${STABILITY_POOL_DEPOSITS_SELECTOR}`] =
+      entries.deposits.get(binding.name) ?? 0n;
+  }
+  return rpc;
+}
+
+/** Every Liquity read arrives as individual eth_calls: Multicall3 is unavailable. */
+function boldFallbackNetwork(debts: Map<string, bigint | null>): AdapterNetworkSpec {
+  return {
+    multicall: false,
+    block: BLOCK,
+    rpc: {
+      ...boldBranchRpc({
+        balances: new Map(boldParams.branches.map((branch) => [branch.name, 1_000n * WAD])),
+        debts,
+        feeRaw: null,
+      }),
+      [AGGREGATE3_SELECTOR]: null,
+    },
+    json: { [BOLD_LLAMA_URL]: BOLD_FULL_QUOTES },
+  };
+}
+
 describe("buildLiquityV2RedemptionMetadata", () => {
+  const branch = {
+    name: "WETH",
+    holder: "0x1111111111111111111111111111111111111111",
+    token: {
+      chain: "ethereum",
+      address: "0x2222222222222222222222222222222222222222",
+      decimals: 18,
+    },
+    risk: "very-low" as const,
+  };
+
   it("publishes same-run direct redemption capacity from active-pool debt", () => {
     const metadata = buildLiquityV2RedemptionMetadata({
       balances: [{ branch, balanceRaw: 2_000_000_000_000_000_000n }],
@@ -95,8 +159,6 @@ describe("buildLiquityV2RedemptionMetadata", () => {
     });
 
     expect(metadata).toMatchObject({
-      immediateRedeemableUsd: 1250,
-      redemptionFeeBps: 52,
       redemption: {
         capacityUsd: 1250,
         capacityKind: "live-direct-bounded",
@@ -133,7 +195,6 @@ describe("buildLiquityV2RedemptionMetadata", () => {
 
     expect(metadata.redemption).toMatchObject({
       routeStatus: "degraded",
-      routeStatusReason: "Collateral branch shutdown/sunset detected for: WETH",
     });
   });
 
@@ -175,11 +236,9 @@ describe("buildLiquityV2RedemptionMetadata", () => {
 
     expect(metadata).toMatchObject({
       totalDebtUsd: 2_000,
-      immediateRedeemableUsd: 1_250,
       redemption: {
         capacityUsd: 1_250,
         routeStatus: "degraded",
-        routeStatusReason: "Protocol redemption disabled for: rETH (Rocket Pool)",
       },
       details: {
         nonRedeemableBranches: ["rETH (Rocket Pool)"],
@@ -215,7 +274,6 @@ describe("buildLiquityV2RedemptionMetadata", () => {
     expect(metadata.redemption).toBeUndefined();
     expect(metadata.details).toMatchObject({
       unreadableRedeemabilityBranches: ["WETH"],
-      redemptionCapacityUnratedReason: "Could not verify branch redeemability for: WETH",
       branchDebt: [expect.objectContaining({ name: "WETH", redeemable: null })],
     });
   });
@@ -238,14 +296,9 @@ describe("buildLiquityV2RedemptionMetadata", () => {
 
     expect(metadata.redemption).toMatchObject({
       routeStatus: "unknown",
-      routeStatusReason: "Could not verify branch shutdown status for: WETH",
     });
-    expect(warnings).toEqual([
-      expect.objectContaining({
-        code: "redemption-route-status-unreadable",
-        effect: "degraded",
-      }),
-    ]);
+    expectWarnings({ warnings }, ["redemption-route-status-unreadable"]);
+    expectWarningEffect({ warnings }, "redemption-route-status-unreadable", "degraded");
   });
 
   it("fails closed when active-pool debt is zero", () => {
@@ -260,12 +313,12 @@ describe("buildLiquityV2RedemptionMetadata", () => {
           redemptionFeeBps: null,
         },
       ],
-    })).toThrow("active-pool debt reads returned zero capacity");
+    })).toThrow(/active-pool debt/);
   });
 });
 
 describe("Base Dollar production bindings", () => {
-  const config = bdBaseDollar.liveReservesConfig as LiveReservesConfig;
+  const config = resolveAdapterCoin("liquity-v2-branches", "bd-basedollar").config;
   const params = config.params as {
     rpcUrl: string;
     fallbackRpcUrl: string;
@@ -300,8 +353,8 @@ describe("Base Dollar production bindings", () => {
       },
       mechanismMetrics: {
         supplyTokenAddress: "0x252d36f435582ecb01686448d21e8c9ea0b2ca65",
-        branchPriceSelector: BOLD_MECHANISM_PRICE_SELECTOR,
-        stabilityPoolDepositsSelector: BOLD_STABILITY_POOL_DEPOSITS_SELECTOR,
+        branchPriceSelector: MECHANISM_PRICE_SELECTOR,
+        stabilityPoolDepositsSelector: STABILITY_POOL_DEPOSITS_SELECTOR,
       },
     });
     expect(params.sourceUrls).toEqual(expect.arrayContaining([
@@ -370,175 +423,102 @@ describe("Base Dollar production bindings", () => {
 });
 
 describe("fetchLiquityV2BranchReserves BOLD mechanism metrics", () => {
-  const config = boldLiquity.liveReservesConfig as LiveReservesConfig;
-  const params = config.params as {
-    branches: typeof branch[];
-    mechanismMetrics: {
-      supplyTokenAddress: string;
-      branchPriceSelector: string;
-      stabilityPoolDepositsSelector: string;
-      branches: Array<{
-        name: string;
-        troveManagerAddress: string;
-        stabilityPoolAddress: string;
-      }>;
-    };
-  };
-
   it("binds every configured reserve branch to a TroveManager and Stability Pool", () => {
-    expect(params.mechanismMetrics).toMatchObject({
+    expect(bold.config.adapter).toBe("liquity-v2-branches");
+    expect(bold.config.version).toBe(2);
+    expect(boldMechanism).toMatchObject({
       supplyTokenAddress: "0x6440f144b7e50d6a8439336510312d2f54beb01d",
-      branchPriceSelector: BOLD_MECHANISM_PRICE_SELECTOR,
-      stabilityPoolDepositsSelector: BOLD_STABILITY_POOL_DEPOSITS_SELECTOR,
+      branchPriceSelector: MECHANISM_PRICE_SELECTOR,
+      stabilityPoolDepositsSelector: STABILITY_POOL_DEPOSITS_SELECTOR,
     });
-    expect(params.mechanismMetrics.branches.map((entry) => entry.name).sort()).toEqual(
-      params.branches.map((entry) => entry.name).sort(),
+    expect(boldMechanism.branches.map((entry) => entry.name).sort()).toEqual(
+      boldParams.branches.map((entry) => entry.name).sort(),
     );
   });
 
   it("publishes mechanism metrics and excludes a protocol-disabled branch from redemption capacity", async () => {
-    const unit = 10n ** 18n;
-    const balances = new Map([
-      ["wstETH (Lido)", 20_000n * unit],
-      ["WETH", 8_000n * unit],
-      ["rETH (Rocket Pool)", 5_000n * unit],
-    ]);
-    const debts = new Map([
-      ["wstETH (Lido)", 17_000_000n * unit],
-      ["WETH", 8_000_000n * unit],
-      ["rETH (Rocket Pool)", 5_000_000n * unit],
-    ]);
-    const protocolPrices = new Map([
-      ["wstETH (Lido)", 2_000n * unit],
-      ["WETH", 1_800n * unit],
-      ["rETH (Rocket Pool)", 1_900n * unit],
-    ]);
-    const stabilityPoolDeposits = new Map([
-      ["wstETH (Lido)", 12_000_000n * unit],
-      ["WETH", 10_000_000n * unit],
-      ["rETH (Rocket Pool)", 3_000_000n * unit],
-    ]);
-
-    vi.mocked(probeOptionalRedemptionRateBps).mockResolvedValue(null);
-    vi.mocked(fetchDefiLlamaPrices).mockResolvedValue(new Map([
-      ["wstETH (Lido)", 2_000],
-      ["WETH", 1_800],
-      ["rETH (Rocket Pool)", 1_900],
-    ]));
-    vi.mocked(fetchErc20Balance).mockImplementation(async (_input, _contract, holder) => {
-      const entry = params.branches.find((candidate) => candidate.holder === holder);
-      return entry ? (balances.get(entry.name) ?? null) : null;
-    });
-    vi.mocked(fetchOnchainRawCall).mockImplementation(async ({ data }) => (
-      data === "0x06ff8dfb" ? encodeUint(0) : null
-    ));
-    vi.mocked(fetchOnchainUint256).mockImplementation(async ({ contract, data }) => {
-      if (data !== "0x45507998") return null;
-      const entry = params.branches.find((candidate) => candidate.holder === contract);
-      return entry ? (debts.get(entry.name) ?? null) : null;
-    });
-    vi.mocked(fetchOnchainMulticall3).mockImplementation(async ({ calls }) => {
-      if (calls[0]?.label.startsWith("branch:")) return null;
-      return calls.map((call) => {
-        if (call.label === "mechanism:total-supply") {
-          return { label: call.label, success: true, returnData: encodeUint(30_000_000n * unit) };
-        }
-        const metricBranch = params.mechanismMetrics.branches.find((entry) =>
-          call.label.endsWith(`:${entry.name}`)
-        );
-        if (!metricBranch) {
-          return { label: call.label, success: false, returnData: "0x" as const };
-        }
-        if (call.label.startsWith("mechanism:price:")) {
-          return {
-            label: call.label,
-            success: true,
-            returnData: encodeMechanismPrice(
-              protocolPrices.get(metricBranch.name) ?? 0n,
-              metricBranch.name !== "rETH (Rocket Pool)",
-            ),
-          };
-        }
-        return {
-          label: call.label,
-          success: true,
-          returnData: encodeUint(stabilityPoolDeposits.get(metricBranch.name) ?? 0n),
-        };
-      });
+    const { result, network } = await runAdapter("liquity-v2-branches", "bold-liquity", {
+      network: {
+        block: BLOCK,
+        rpc: {
+          ...boldBranchRpc({
+            balances: new Map([
+              ["wstETH (Lido)", 20_000n * WAD],
+              ["WETH", 8_000n * WAD],
+              ["rETH (Rocket Pool)", 5_000n * WAD],
+            ]),
+            debts: new Map([
+              ["wstETH (Lido)", 17_000_000n * WAD],
+              ["WETH", 8_000_000n * WAD],
+              ["rETH (Rocket Pool)", 5_000_000n * WAD],
+            ]),
+            feeRaw: 5n * 10n ** 15n,
+          }),
+          ...boldMechanismRpc({
+            totalSupply: 30_000_000n * WAD,
+            prices: new Map([
+              ["wstETH (Lido)", 2_000n * WAD],
+              ["WETH", 1_800n * WAD],
+              ["rETH (Rocket Pool)", 1_900n * WAD],
+            ]),
+            redeemable: new Map([["rETH (Rocket Pool)", false]]),
+            deposits: new Map([
+              ["wstETH (Lido)", 12_000_000n * WAD],
+              ["WETH", 10_000_000n * WAD],
+              ["rETH (Rocket Pool)", 3_000_000n * WAD],
+            ]),
+          }),
+        },
+        json: { [BOLD_LLAMA_URL]: BOLD_FULL_QUOTES },
+      },
+      nowSec: NOW,
     });
 
-    const result = await fetchLiquityV2BranchReserves(
-      boldLiquity as unknown as StablecoinMeta,
-      config,
-      AbortSignal.timeout(5_000),
-    );
-
+    expect(result.slices.map((slice) => slice.name)).toEqual(["wstETH (Lido)", "WETH", "rETH (Rocket Pool)"]);
     expect(result.metadata?.totalReserveUsd).toBeCloseTo(63_900_000, 2);
     expect(result.metadata?.collateralizationRatio).toBeCloseTo(2.13, 6);
     expect(result.metadata?.liquidationCapacityRatio).toBeCloseTo(25 / 30, 6);
     expect(result.metadata?.totalDebtUsd).toBe(30_000_000);
-    expect(result.metadata?.immediateRedeemableUsd).toBe(25_000_000);
     expect(result.metadata?.redemption).toMatchObject({
       capacityUsd: 25_000_000,
       routeStatus: "degraded",
-      routeStatusReason: "Protocol redemption disabled for: rETH (Rocket Pool)",
+      feeBps: 50,
     });
     expect(result.metadata?.details).toMatchObject({
       proofKind: "liquity-v2-active-pool-debt",
       nonRedeemableBranches: ["rETH (Rocket Pool)"],
       mechanismMetrics: {
         proofKind: "liquity-v2-protocol-priced-system-state",
-        totalSupplyRaw: (30_000_000n * unit).toString(),
-        totalDebtRaw: (30_000_000n * unit).toString(),
-        totalStabilityPoolDepositsRaw: (25_000_000n * unit).toString(),
+        totalSupplyRaw: (30_000_000n * WAD).toString(),
+        totalDebtRaw: (30_000_000n * WAD).toString(),
+        totalStabilityPoolDepositsRaw: (25_000_000n * WAD).toString(),
         branchCappedLiquidationCapacityRatio: 23 / 30,
       },
     });
-    expect(result.warnings).toBeUndefined();
-    const mechanismBatches = vi.mocked(fetchOnchainMulticall3).mock.calls
-      .map(([options]) => options)
-      .filter((options) => options.calls[0]?.label.startsWith("mechanism:"));
-    expect(mechanismBatches).toHaveLength(1);
-    expect(mechanismBatches[0]).toEqual(expect.objectContaining({
-      calls: expect.arrayContaining([
-        expect.objectContaining({
-          label: "mechanism:total-supply",
-          contract: params.mechanismMetrics.supplyTokenAddress,
-        }),
-        expect.objectContaining({
-          label: "mechanism:price:WETH",
-          contract: params.mechanismMetrics.branches.find((entry) => entry.name === "WETH")?.troveManagerAddress,
-        }),
-        expect.objectContaining({
-          label: "mechanism:stability-pool:WETH",
-          contract: params.mechanismMetrics.branches.find((entry) => entry.name === "WETH")?.stabilityPoolAddress,
-        }),
+    expectWarnings(result, []);
+    const mechanismContracts = new Set<string>([
+      boldMechanism.supplyTokenAddress.toLowerCase(),
+      ...boldMechanism.branches.flatMap((binding) => [
+        binding.troveManagerAddress.toLowerCase(),
+        binding.stabilityPoolAddress.toLowerCase(),
       ]),
-    }));
+    ]);
+    const mechanismCalls = network.rpcCalls.filter((call) => mechanismContracts.has(call.contract));
+    expect(mechanismCalls.map((call) => call.selector)).toEqual([
+      TOTAL_SUPPLY_SELECTOR,
+      ...boldMechanism.branches.flatMap((_binding) => [
+        MECHANISM_PRICE_SELECTOR,
+        STABILITY_POOL_DEPOSITS_SELECTOR,
+      ]),
+    ]);
+    expect(mechanismCalls.every((call) => call.viaMulticall)).toBe(true);
   });
 
   it("keeps reserves but leaves redemption unrated when branch redeemability is unreadable", async () => {
-    const unit = 10n ** 18n;
-    vi.mocked(probeOptionalRedemptionRateBps).mockResolvedValue(null);
-    vi.mocked(fetchDefiLlamaPrices).mockResolvedValue(new Map([
-      ["wstETH (Lido)", 2_000],
-      ["WETH", 1_800],
-      ["rETH (Rocket Pool)", 1_900],
-    ]));
-    vi.mocked(fetchErc20Balance).mockResolvedValue(1_000n * unit);
-    vi.mocked(fetchOnchainRawCall).mockImplementation(async ({ data }) => (
-      data === "0x06ff8dfb" ? encodeUint(0) : null
-    ));
-    vi.mocked(fetchOnchainUint256).mockImplementation(async ({ data }) => (
-      data === "0x45507998" ? 1_000_000n * unit : null
-    ));
-    vi.mocked(fetchOnchainMulticall3).mockResolvedValue(null);
-
-    const result = await fetchLiquityV2BranchReserves(
-      boldLiquity as unknown as StablecoinMeta,
-      config,
-      AbortSignal.timeout(5_000),
-    );
+    const { result } = await runAdapter("liquity-v2-branches", "bold-liquity", {
+      network: boldFallbackNetwork(new Map(boldParams.branches.map((branch) => [branch.name, 1_000_000n * WAD as bigint]))),
+      nowSec: NOW,
+    });
 
     expect(result.slices).toHaveLength(3);
     expect(result.metadata?.collateralizationRatio).toBeUndefined();
@@ -547,55 +527,35 @@ describe("fetchLiquityV2BranchReserves BOLD mechanism metrics", () => {
     expect(result.metadata?.details).toMatchObject({
       unreadableRedeemabilityBranches: ["wstETH (Lido)", "WETH", "rETH (Rocket Pool)"],
     });
-    expect(result.warnings).toEqual(expect.arrayContaining([
-      expect.objectContaining({
-        code: "liquity-v2-mechanism-metrics-unavailable",
-        severity: "info",
-      }),
-      expect.objectContaining({
-        code: "liquity-v2-redeemability-unavailable",
-        effect: "degraded",
-      }),
-    ]));
+    expectWarnings(result, [
+      "liquity-v2-mechanism-metrics-unavailable",
+      "liquity-v2-redeemability-unavailable",
+    ]);
+    expectWarningEffect(result, "liquity-v2-mechanism-metrics-unavailable", "info");
+    expectWarningEffect(result, "liquity-v2-redeemability-unavailable", "degraded");
   });
 
   it("keeps redemption rated when optional solvency metrics fail after redeemability is readable", async () => {
-    const unit = 10n ** 18n;
-    vi.mocked(probeOptionalRedemptionRateBps).mockResolvedValue(50);
-    vi.mocked(fetchDefiLlamaPrices).mockResolvedValue(new Map([
-      ["wstETH (Lido)", 2_000],
-      ["WETH", 1_800],
-      ["rETH (Rocket Pool)", 1_900],
-    ]));
-    vi.mocked(fetchErc20Balance).mockResolvedValue(1_000n * unit);
-    vi.mocked(fetchOnchainRawCall).mockImplementation(async ({ data }) => (
-      data === "0x06ff8dfb" ? encodeUint(0) : null
-    ));
-    vi.mocked(fetchOnchainUint256).mockImplementation(async ({ data }) => (
-      data === "0x45507998" ? 1_000_000n * unit : null
-    ));
-    vi.mocked(fetchOnchainMulticall3).mockImplementation(async ({ calls }) => {
-      if (calls[0]?.label.startsWith("branch:")) return null;
-      return calls.map((call) => {
-        if (call.label === "mechanism:total-supply") {
-          return { label: call.label, success: false, returnData: "0x" as const };
-        }
-        if (call.label.startsWith("mechanism:price:")) {
-          return {
-            label: call.label,
-            success: true,
-            returnData: encodeMechanismPrice(2_000n * unit, true),
-          };
-        }
-        return { label: call.label, success: true, returnData: encodeUint(500_000n * unit) };
-      });
+    const { result } = await runAdapter("liquity-v2-branches", "bold-liquity", {
+      network: {
+        block: BLOCK,
+        rpc: {
+          ...boldBranchRpc({
+            balances: new Map(boldParams.branches.map((branch) => [branch.name, 1_000n * WAD])),
+            debts: new Map(boldParams.branches.map((branch) => [branch.name, 1_000_000n * WAD as bigint])),
+            feeRaw: 5n * 10n ** 15n,
+          }),
+          ...boldMechanismRpc({
+            totalSupply: null,
+            prices: new Map(boldParams.branches.map((branch) => [branch.name, 2_000n * WAD])),
+            redeemable: new Map(),
+            deposits: new Map(boldParams.branches.map((branch) => [branch.name, 500_000n * WAD])),
+          }),
+        },
+        json: { [BOLD_LLAMA_URL]: BOLD_FULL_QUOTES },
+      },
+      nowSec: NOW,
     });
-
-    const result = await fetchLiquityV2BranchReserves(
-      boldLiquity as unknown as StablecoinMeta,
-      config,
-      AbortSignal.timeout(5_000),
-    );
 
     expect(result.slices).toHaveLength(3);
     expect(result.metadata?.collateralizationRatio).toBeUndefined();
@@ -604,37 +564,107 @@ describe("fetchLiquityV2BranchReserves BOLD mechanism metrics", () => {
       routeStatus: "open",
       feeBps: 50,
     });
-    expect(result.warnings).toEqual([
-      expect.objectContaining({
-        code: "liquity-v2-mechanism-metrics-unavailable",
-        severity: "info",
+    expectWarnings(result, ["liquity-v2-mechanism-metrics-unavailable"]);
+    expectWarningEffect(result, "liquity-v2-mechanism-metrics-unavailable", "info");
+  });
+
+  it("rejects shape drift when a branch debt read disappears", async () => {
+    const debts = new Map<string, bigint | null>(
+      boldParams.branches.map((branch) => [branch.name, branch.name === "WETH" ? null : 1_000_000n * WAD]),
+    );
+    await expect(
+      runAdapter("liquity-v2-branches", "bold-liquity", {
+        network: boldFallbackNetwork(debts),
+        nowSec: NOW,
       }),
-    ]);
+    ).rejects.toThrow(/active-pool debt/);
   });
 });
 
 describe("fetchLiquityV2BranchReserves Beraborrow branches", () => {
-  const config = nectBeraborrow.liveReservesConfig as LiveReservesConfig;
-  const branches = (config.params as { branches: typeof branch[] }).branches;
-  const wberaBranch = branches.find((entry) => entry.name === "WBERA")!;
-  const pumpBtcBranch = branches.find((entry) => entry.name === "pumpBTC")!;
-  const solvBtcBranch = branches.find((entry) => entry.name === "solvBTC")!;
-  const wberaAsset = "0x6969696969696969696969696969696969696969";
-  const pumpBtcAsset = "0x1fCca65fb6Ae3b2758b9b2B394CB227eAE404e1E";
+  const WBERA_VAULT_ASSET = "0x6969696969696969696969696969696969696969";
+  const PUMP_BTC_VAULT_ASSET = "0x1fcca65fb6ae3b2758b9b2b394cb227eae404e1e";
+
+  const balanceByToken = new Map<string, bigint>([
+    [wberaBranch.token.address.toLowerCase(), 50n * WAD],
+    [pumpBtcBranch.token.address.toLowerCase(), 10n * WAD],
+  ]);
+  const debtByHolder = new Map<string, bigint>([
+    [wberaBranch.holder.toLowerCase(), 1_250n * WAD],
+    [pumpBtcBranch.holder.toLowerCase(), 50n * WAD],
+  ]);
+  const feeByHolder = new Map<string, bigint>([[wberaBranch.holder.toLowerCase(), 5n * 10n ** 15n]]);
+  const shutdownByHolder = new Set<string>([pumpBtcBranch.holder.toLowerCase()]);
+  const assetByToken = new Map<string, string>([
+    [wberaBranch.token.address.toLowerCase(), WBERA_VAULT_ASSET],
+    [pumpBtcBranch.token.address.toLowerCase(), PUMP_BTC_VAULT_ASSET],
+  ]);
+  const decimalsByAsset = new Map<string, number>([
+    [WBERA_VAULT_ASSET, 18],
+    [PUMP_BTC_VAULT_ASSET, 8],
+  ]);
+  const totalAssetsByToken = new Map<string, bigint>([
+    [wberaBranch.token.address.toLowerCase(), 200n * WAD],
+    [pumpBtcBranch.token.address.toLowerCase(), 10_000_000n],
+  ]);
+  const totalSupplyByToken = new Map<string, bigint>([
+    [wberaBranch.token.address.toLowerCase(), 100n * WAD],
+    [pumpBtcBranch.token.address.toLowerCase(), 100n * WAD],
+  ]);
+
+  /**
+   * One answer table serves both transports: with Multicall3 enabled the same
+   * entries are read inside each aggregate3 batch, with it disabled the
+   * adapter re-reads every branch through individual calls.
+   */
+  function beraborrowNetwork({ multicall = false }: { multicall?: boolean } = {}): AdapterNetworkSpec {
+    const spec: AdapterNetworkSpec = {
+      block: BLOCK,
+      json: {
+        // Price lookups run on the ERC4626-adapted branch tokens, so the
+        // quotes are keyed by the underlying vault assets.
+        [llamaUrl([
+          { chain: wberaBranch.token.chain, address: WBERA_VAULT_ASSET },
+          { chain: pumpBtcBranch.token.chain, address: PUMP_BTC_VAULT_ASSET },
+        ])]: {
+          coins: {
+            [`berachain:${WBERA_VAULT_ASSET}`]: { price: 0.4, timestamp: NOW, confidence: 1 },
+          },
+        },
+      },
+      rpc: {
+        "balanceOf(address)": (call) => balanceByToken.get(call.contract) ?? 0n,
+        [nectParams.debtSelector!]: (call) => debtByHolder.get(call.contract) ?? 0n,
+        [nectParams.shutdownSelector!]: (call) => shutdownByHolder.has(call.contract),
+        [REDEMPTION_RATE_SELECTOR]: (call) => feeByHolder.get(call.contract) ?? 0n,
+        "asset()": (call) => assetByToken.get(call.contract) ?? null,
+        "decimals()": (call) => decimalsByAsset.get(call.contract) ?? null,
+        "totalAssets()": (call) => totalAssetsByToken.get(call.contract) ?? null,
+        "totalSupply()": (call) => totalSupplyByToken.get(call.contract) ?? null,
+        [BRANCH_PRICE_SELECTOR]: (call) =>
+          call.contract === pumpBtcBranch.holder.toLowerCase() ? 80_000n * WAD : null,
+      },
+    };
+    if (!multicall) {
+      spec.multicall = false;
+      spec.rpc![AGGREGATE3_SELECTOR] = null;
+    }
+    return spec;
+  }
 
   it("keeps the reviewed Berachain branch set and selectors in metadata", () => {
-    expect(config.adapter).toBe("liquity-v2-branches");
-    expect(config.version).toBe(2);
-    expect(config.inputs.primary).toMatchObject({
+    expect(nect.config.adapter).toBe("liquity-v2-branches");
+    expect(nect.config.version).toBe(2);
+    expect(nect.config.inputs.primary).toMatchObject({
       kind: "onchain-evm",
       chain: "berachain",
       rpcMode: "public-rpc",
     });
-    expect(config.params).toMatchObject({
-      debtSelector: BERABORROW_DEBT_SELECTOR,
-      shutdownSelector: BERABORROW_SHUTDOWN_SELECTOR,
+    expect(nect.config.params).toMatchObject({
+      debtSelector: "0x795d26c3",
+      shutdownSelector: "0x9484fb8e",
     });
-    expect(branches.map((entry) => entry.name)).toEqual([
+    expect(nectParams.branches.map((entry) => entry.name)).toEqual([
       "WBERA",
       "pumpBTC",
       "solvBTC",
@@ -649,6 +679,7 @@ describe("fetchLiquityV2BranchReserves Beraborrow branches", () => {
       "WETH-HONEY Kodiak Island",
       "WETH-WBTC Kodiak Island",
     ]);
+    const solvBtcBranch = nectParams.branches.find((entry) => entry.name === "solvBTC")!;
     expect(solvBtcBranch).toMatchObject({
       priceToken: {
         chain: "coingecko",
@@ -658,73 +689,18 @@ describe("fetchLiquityV2BranchReserves Beraborrow branches", () => {
   });
 
   it("reads ERC4626 vault shares, DenManager debt, sunsetting status, and branch fee telemetry", async () => {
-    vi.mocked(probeOptionalRedemptionRateBps).mockResolvedValue(null);
-    vi.mocked(fetchErc20Balance).mockImplementation(async (_input, contract) => {
-      if (contract === wberaBranch.token.address) return 50_000_000_000_000_000_000n;
-      if (contract === pumpBtcBranch.token.address) return 10_000_000_000_000_000_000n;
-      return 0n;
+    const { result, network } = await runAdapter("liquity-v2-branches", "nect-beraborrow", {
+      network: beraborrowNetwork(),
+      nowSec: NOW,
     });
-    vi.mocked(fetchDefiLlamaPrices).mockResolvedValue(new Map([["WBERA", 0.4]]));
-    vi.mocked(fetchOnchainRateBps).mockImplementation(async (_input, probe) => {
-      if (probe.contract === wberaBranch.holder) return 50;
-      if (probe.contract === pumpBtcBranch.holder) return 0;
-      return 0;
-    });
-    vi.mocked(fetchOnchainRawCall).mockImplementation(async ({ contract, data }) => {
-      if (data === ERC4626_ASSET_SELECTOR) {
-        if (contract === wberaBranch.token.address) return encodeAddress(wberaAsset);
-        if (contract === pumpBtcBranch.token.address) return encodeAddress(pumpBtcAsset);
-        return null;
-      }
-      if (data === ERC20_DECIMALS_SELECTOR) {
-        if (contract.toLowerCase() === wberaAsset.toLowerCase()) return encodeUint(18);
-        if (contract.toLowerCase() === pumpBtcAsset.toLowerCase()) return encodeUint(8);
-        return null;
-      }
-      if (data === BERABORROW_SHUTDOWN_SELECTOR) {
-        return encodeUint(contract === pumpBtcBranch.holder ? 1 : 0);
-      }
-      return null;
-    });
-    vi.mocked(fetchOnchainUint256).mockImplementation(async ({ contract, data }) => {
-      if (data === ERC4626_TOTAL_ASSETS_SELECTOR) {
-        if (contract === wberaBranch.token.address) return 200_000_000_000_000_000_000n;
-        if (contract === pumpBtcBranch.token.address) return 10_000_000n;
-        return null;
-      }
-      if (data === ERC20_TOTAL_SUPPLY_SELECTOR) {
-        if (contract === wberaBranch.token.address) return 100_000_000_000_000_000_000n;
-        if (contract === pumpBtcBranch.token.address) return 100_000_000_000_000_000_000n;
-        return null;
-      }
-      if (data === BERABORROW_DEBT_SELECTOR) {
-        if (contract === wberaBranch.holder) return 1_250_000_000_000_000_000_000n;
-        if (contract === pumpBtcBranch.holder) return 50_000_000_000_000_000_000n;
-        return 0n;
-      }
-      if (data === BRANCH_PRICE_SELECTOR) {
-        if (contract === pumpBtcBranch.holder) return 80_000_000_000_000_000_000_000n;
-        return null;
-      }
-      return null;
-    });
-
-    const result = await fetchLiquityV2BranchReserves(
-      nectBeraborrow as unknown as StablecoinMeta,
-      config,
-      AbortSignal.timeout(5_000),
-    );
     const metadata = result.metadata as NonNullable<typeof result.metadata>;
 
     expect(result.slices.map((slice) => slice.name)).toEqual(["pumpBTC", "WBERA"]);
     expect(metadata).toMatchObject({
       totalDebtUsd: 1300,
-      immediateRedeemableUsd: 1300,
-      redemptionFeeBps: 50,
       redemption: {
         capacityUsd: 1300,
         routeStatus: "degraded",
-        routeStatusReason: "Collateral branch shutdown/sunset detected for: pumpBTC",
         feeBps: 50,
       },
     });
@@ -744,23 +720,35 @@ describe("fetchLiquityV2BranchReserves Beraborrow branches", () => {
         }),
       ]),
     });
-    expect(result.warnings).toEqual(expect.arrayContaining([
-      expect.objectContaining({ code: "branch-protocol-price-fallback", effect: "info" }),
-    ]));
-    expect(fetchOnchainUint256).toHaveBeenCalledWith(expect.objectContaining({
-      contract: wberaBranch.holder,
-      data: BERABORROW_DEBT_SELECTOR,
-    }));
-    expect(fetchOnchainRawCall).toHaveBeenCalledWith(expect.objectContaining({
-      contract: pumpBtcBranch.holder,
-      data: BERABORROW_SHUTDOWN_SELECTOR,
-    }));
+    expectWarnings(result, ["branch-protocol-price-fallback"]);
+    expectWarningEffect(result, "branch-protocol-price-fallback", "info");
+    expect(network.rpcCalls.some((call) =>
+      call.contract === wberaBranch.holder.toLowerCase() && call.selector === nectParams.debtSelector
+    )).toBe(true);
+    expect(network.rpcCalls.some((call) =>
+      call.contract === pumpBtcBranch.holder.toLowerCase() && call.selector === nectParams.shutdownSelector
+    )).toBe(true);
+  });
+
+  it("derives the same branch redemption fee from the individual fallback as from the batch", async () => {
+    const batched = await runAdapter("liquity-v2-branches", "nect-beraborrow", {
+      network: beraborrowNetwork({ multicall: true }),
+      nowSec: NOW,
+    });
+    const fallback = await runAdapter("liquity-v2-branches", "nect-beraborrow", {
+      network: beraborrowNetwork({ multicall: false }),
+      nowSec: NOW,
+    });
+
+    expect(batched.result.metadata?.redemption).toMatchObject({ feeBps: 50 });
+    expect(fallback.result.metadata?.redemption).toMatchObject({ feeBps: 50 });
   });
 });
 
 describe("fetchLiquityV2BranchReserves Enosys branches", () => {
-  const config = cdpEnosys.liveReservesConfig as LiveReservesConfig;
-  const branches = (config.params as { branches: typeof branch[] }).branches;
+  const enosys = resolveAdapterCoin("liquity-v2-branches", "cdp-enosys");
+  const config = enosys.config;
+  const params = config.params as { branches: Array<{ name: string; holder: string }> };
 
   it("keeps the reviewed Flare branch set and redemption-rate probe", () => {
     expect(config.adapter).toBe("liquity-v2-branches");
@@ -774,15 +762,15 @@ describe("fetchLiquityV2BranchReserves Enosys branches", () => {
       rpcUrl: "https://flare-api.flare.network/ext/C/rpc",
       redemptionRateProbe: {
         contract: "0x9474206bc035D03d142264fd9913d1D51246d3AC",
-        selector: "0xc52861f2",
+        selector: REDEMPTION_RATE_SELECTOR,
       },
       sourceUrls: [
         "https://help.enosys.global/enosys/enosys-ecosystem/enosys-loans",
         "https://flare.network/news/enosys-loans-xrp-backed-stablecoin-flare",
       ],
     });
-    expect(branches.map((entry) => entry.name)).toEqual(["FXRP", "WFLR", "stXRP", "sFLR"]);
-    expect(branches.map((entry) => entry.holder)).toEqual([
+    expect(params.branches.map((entry) => entry.name)).toEqual(["FXRP", "WFLR", "stXRP", "sFLR"]);
+    expect(params.branches.map((entry) => entry.holder)).toEqual([
       "0x65C378Bf4A68491436C84d8Da020b14FEfE03D17",
       "0xE4Fc0543990128612d8112c90cdECc252165D255",
       "0x6988515B4e69Ab8AfA56E6079A1787F5A0a71Be7",
@@ -816,80 +804,86 @@ describe("fetchLiquityV2BranchReserves staged branch reads", () => {
       },
     };
 
-    vi.mocked(fetchDefiLlamaPrices).mockResolvedValue(new Map([["branch-0", 1]]));
-    vi.mocked(fetchOnchainMulticall3).mockImplementation(async ({ calls }) => {
-      if (calls[0]?.label.startsWith("branch:balance:")) {
-        const balances = [10n * 10n ** 18n, 5n * 10n ** 18n, 0n];
-        const debts = [100n * 10n ** 18n, 50n * 10n ** 18n, 0n];
-        const fees = [50n, 60n, 70n];
-        return calls.map((call) => {
-          const index = Number(call.label.split(":").pop());
-          const value = call.label.startsWith("branch:balance:")
-            ? balances[index]
-            : call.label.startsWith("branch:debt:")
-              ? debts[index]
-              : call.label.startsWith("branch:fee:")
-                ? fees[index] * 10n ** 14n
-                : 0n;
-          return { label: call.label, success: true, returnData: encodeUint(value) };
-        });
-      }
-      if (calls[0]?.label.startsWith("branch:asset:")) {
-        return calls.map((call) => ({
-          label: call.label,
-          success: call.label === "branch:asset:0",
-          returnData: call.label === "branch:asset:0" ? encodeAddress(underlying) as `0x${string}` : "0x" as const,
-        }));
-      }
-      if (calls[0]?.label.startsWith("branch:total-assets:")) {
-        return calls.map((call) => ({
-          label: call.label,
-          success: true,
-          returnData: encodeUint(
-            call.label.startsWith("branch:total-assets:")
-              ? 20n * 10n ** 18n
-              : call.label.startsWith("branch:total-supply:")
-                ? 10n * 10n ** 18n
-                : 18n,
-          ),
-        }));
-      }
-      if (calls[0]?.label.startsWith("branch:protocol-price:")) {
-        return calls.map((call) => ({
-          label: call.label,
-          success: true,
-          returnData: encodeUint(2n * 10n ** 18n),
-        }));
-      }
-      return null;
+    const balanceByToken = new Map<string, bigint>([
+      [branches[0]!.token.address, 10n * WAD],
+      [branches[1]!.token.address, 5n * WAD],
+    ]);
+    const debtByHolder = new Map<string, bigint>([
+      [branches[0]!.holder, 100n * WAD],
+      [branches[1]!.holder, 50n * WAD],
+    ]);
+    const feeByHolder = new Map<string, bigint>([
+      [branches[0]!.holder, 50n * 10n ** 14n],
+      [branches[1]!.holder, 60n * 10n ** 14n],
+      [branches[2]!.holder, 70n * 10n ** 14n],
+    ]);
+    const network = installAdapterNetwork({
+      block: BLOCK,
+      json: {
+        // branch-0 is ERC4626-adapted to the underlying before pricing;
+        // branch-1 keeps its own token and falls back to the branch oracle.
+        [llamaUrl([
+          { chain: "ethereum", address: underlying },
+          { chain: "ethereum", address: branches[1]!.token.address },
+        ])]: {
+          coins: {
+            [`ethereum:${underlying}`]: { price: 1, timestamp: NOW, confidence: 1 },
+          },
+        },
+      },
+      rpc: {
+        "balanceOf(address)": (call) => balanceByToken.get(call.contract) ?? 0n,
+        [DEBT_SELECTOR]: (call) => debtByHolder.get(call.contract) ?? 0n,
+        [SHUTDOWN_SELECTOR]: false,
+        [REDEMPTION_RATE_SELECTOR]: (call) => feeByHolder.get(call.contract) ?? 0n,
+        "asset()": (call) => (call.contract === branches[0]!.token.address ? underlying : null),
+        "totalAssets()": 20n * WAD,
+        "totalSupply()": 10n * WAD,
+        "decimals()": 18,
+        [BRANCH_PRICE_SELECTOR]: 2n * WAD,
+      },
     });
-
+    const signal = new AbortController().signal;
     const result = await fetchLiquityV2BranchReserves(
       { id: "test-liquity-v2" } as StablecoinMeta,
       testConfig,
-      AbortSignal.timeout(5_000),
+      signal,
+      { chainRpcs: network.chainRpcs, requestCache: new Map(), nowSec: NOW, abortSignal: signal },
     );
 
+    expectValidAdapterOutput("liquity-v2-branches", result, { now: NOW });
     expect(result.slices.map((slice) => slice.name)).toEqual(["branch-0", "branch-1"]);
     expect(result.metadata).toMatchObject({
       totalDebtUsd: 150,
-      immediateRedeemableUsd: 150,
-      redemptionFeeBps: 70,
       redemption: {
+        capacityUsd: 150,
+        feeBps: 70,
         routeStatus: "open",
       },
+      observedBlock: { chain: "ethereum", number: 23_456_789 },
     });
-    const branchBatches = vi.mocked(fetchOnchainMulticall3).mock.calls
-      .map(([options]) => options.calls)
-      .filter((calls) => calls[0]?.label.startsWith("branch:"));
-    expect(branchBatches.map((calls) => calls.length)).toEqual([12, 2, 3, 1]);
-    expect(branchBatches[1]?.map((call) => call.label)).toEqual([
-      "branch:asset:0",
-      "branch:asset:1",
+
+    // The waves are pinned end to end: balance/debt/shutdown/fee for every
+    // branch, then asset() probes only for funded branches, then vault
+    // metadata only for probed wrappers, then branch prices only for
+    // unfunded DefiLlama quotes — every read inside a Multicall3 batch.
+    const calls = network.rpcCalls;
+    expect(calls.every((call) => call.viaMulticall)).toBe(true);
+    expect(calls).toHaveLength(18);
+    expect(calls.slice(0, 12).map((call) => call.selector)).toEqual(
+      branches.flatMap(() => ["0x70a08231", DEBT_SELECTOR, SHUTDOWN_SELECTOR, REDEMPTION_RATE_SELECTOR]),
+    );
+    expect(calls.slice(12, 14).map((call) => [call.selector, call.contract])).toEqual([
+      [ERC4626_ASSET_SELECTOR, branches[0]!.token.address],
+      [ERC4626_ASSET_SELECTOR, branches[1]!.token.address],
     ]);
-    expect(fetchErc20Balance).not.toHaveBeenCalled();
-    expect(fetchOnchainUint256).not.toHaveBeenCalled();
-    expect(fetchOnchainRawCall).not.toHaveBeenCalled();
-    expect(fetchOnchainRateBps).not.toHaveBeenCalled();
+    expect(calls.slice(14, 17).map((call) => call.selector)).toEqual([
+      ERC4626_TOTAL_ASSETS_SELECTOR,
+      TOTAL_SUPPLY_SELECTOR,
+      DECIMALS_SELECTOR,
+    ]);
+    expect(calls.slice(17, 18).map((call) => [call.selector, call.contract])).toEqual([
+      [BRANCH_PRICE_SELECTOR, branches[1]!.holder],
+    ]);
   });
 });

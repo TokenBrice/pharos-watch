@@ -4,8 +4,16 @@ import type { ReservePresentationMode, StablecoinReservesResponse } from "@share
 import { resolveReserveResult } from "../lib/live-reserves/store";
 import { CACHE_PROFILES } from "../lib/constants";
 
-export function reserveCacheControlForMode(mode: ReservePresentationMode): string {
-  if (mode === "live") return CACHE_PROFILES.reserveLive;
+export function reserveCacheControlForMode(
+  mode: ReservePresentationMode,
+  sync?: StablecoinReservesResponse["sync"],
+): string {
+  if (mode === "live") {
+    if (sync && (sync.status !== "ok" || sync.uncertainWrite === true)) {
+      return CACHE_PROFILES.reserveFallback;
+    }
+    return CACHE_PROFILES.reserveLive;
+  }
   if (mode === "live-stale") return CACHE_PROFILES.reserveLiveStale;
   return CACHE_PROFILES.reserveFallback;
 }
@@ -44,6 +52,6 @@ export const handleStablecoinReserves = async (
   };
 
   return jsonFreshResponse(body, {
-    cacheControl: reserveCacheControlForMode(resolved.mode),
+    cacheControl: reserveCacheControlForMode(resolved.mode, resolved.sync),
   });
 };

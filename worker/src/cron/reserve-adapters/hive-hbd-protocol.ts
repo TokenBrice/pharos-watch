@@ -11,11 +11,14 @@ const REQUEST_TIMEOUT_MS = 2_500;
 const ATTEMPT_BUDGET_MS = 19_000;
 const MAX_HEAD_AGE_SEC = 1_800;
 const MAX_FUTURE_HEAD_SKEW_SEC = 60;
+const MAX_HEAD_DISTANCE = 3;
+const MATERIAL_TOLERANCE_BPS = 2n;
+const MAX_RESAMPLES = 12;
 
 // These values are pinned to the reviewed HF26+ mainnet consensus regime. The
 // runtime DGP start/stop fields are still checked against the pin; get_config
-// is deliberately not called: each two-node sample uses eight methods, with
-// at most one whole-pair retry inside the same 19-second attempt budget.
+// is deliberately not called. Corroboration resamples within one 19-second
+// attempt, retaining the coherent leading node when only its peer lags.
 const PINNED = {
   chain: "hive-mainnet",
   hardfork: "hf26-plus",
@@ -251,18 +254,40 @@ function dgpMaterialKey(dgp: DynamicGlobalProperties): string {
   ]);
 }
 
-function materialKey(snapshot: HiveNodeSnapshot): string {
-  return JSON.stringify([
-    dgpMaterialKey(snapshot.dgp),
-    snapshot.feed.base.amount.toString(),
-    snapshot.feed.quote.amount.toString(),
-    snapshot.treasuryHbd.amount.toString(),
-    snapshot.treasurySavingsHbd.amount.toString(),
-    snapshot.ratio.adjustedHbdSupply.toString(),
-    snapshot.ratio.hbdAsHive.toString(),
-    snapshot.ratio.adjustedVirtualSupply.toString(),
-    snapshot.ratio.ratioBps.toString(),
-  ]);
+function materialMismatches(primary: HiveNodeSnapshot, fallback: HiveNodeSnapshot): string[] {
+  const mismatches: string[] = [];
+  const headDistance = Math.abs(primary.dgp.headBlockNumber - fallback.dgp.headBlockNumber);
+  if (headDistance > MAX_HEAD_DISTANCE) {
+    mismatches.push(`headBlockNumber: primary=${primary.dgp.headBlockNumber}, fallback=${fallback.dgp.headBlockNumber}`);
+  }
+  const quantities: Array<[string, bigint, bigint]> = [
+    ["currentSupply", primary.dgp.currentSupply.amount, fallback.dgp.currentSupply.amount],
+    ["currentHbdSupply", primary.dgp.currentHbdSupply.amount, fallback.dgp.currentHbdSupply.amount],
+    ["virtualSupply", primary.dgp.virtualSupply.amount, fallback.dgp.virtualSupply.amount],
+    ["treasuryHbd", primary.treasuryHbd.amount, fallback.treasuryHbd.amount],
+    ["treasurySavingsHbd", primary.treasurySavingsHbd.amount, fallback.treasurySavingsHbd.amount],
+    ["adjustedHbdSupply", primary.ratio.adjustedHbdSupply, fallback.ratio.adjustedHbdSupply],
+    ["hbdAsHive", primary.ratio.hbdAsHive, fallback.ratio.hbdAsHive],
+    ["adjustedVirtualSupply", primary.ratio.adjustedVirtualSupply, fallback.ratio.adjustedVirtualSupply],
+  ];
+  for (const [field, left, right] of quantities) {
+    const difference = left > right ? left - right : right - left;
+    const smaller = left < right ? left : right;
+    // Integer milliunits, relative to the smaller value; zero must agree exactly.
+    if (difference * HIVE_PERCENT_SCALE > smaller * MATERIAL_TOLERANCE_BPS) {
+      mismatches.push(`${field}: primary=${left}, fallback=${right}`);
+    }
+  }
+  const ratioDifference = primary.ratio.ratioBps - fallback.ratio.ratioBps;
+  if (ratioDifference > MATERIAL_TOLERANCE_BPS || ratioDifference < -MATERIAL_TOLERANCE_BPS) {
+    mismatches.push(`ratioBps: primary=${primary.ratio.ratioBps}, fallback=${fallback.ratio.ratioBps}`);
+  }
+  for (const field of ["hbdStartPercent", "hbdStopPercent", "hbdPrintRate"] as const) {
+    if (primary.dgp[field] !== fallback.dgp[field]) {
+      mismatches.push(`${field}: primary=${primary.dgp[field]}, fallback=${fallback.dgp[field]}`);
+    }
+  }
+  return mismatches;
 }
 
 function validateHeadRecency(dgp: DynamicGlobalProperties, nowSec: number): void {
@@ -432,8 +457,9 @@ function adaptHiveHbdProtocolSnapshots(
   snapshots: readonly [HiveNodeSnapshot, HiveNodeSnapshot],
 ): AdapterResult {
   const [primary, fallback] = snapshots;
-  if (materialKey(primary) !== materialKey(fallback)) {
-    throw new HiveSnapshotCoherenceError(`${ADAPTER_KEY}: primary and fallback nodes disagree on material Hive state`);
+  const mismatches = materialMismatches(primary, fallback);
+  if (mismatches.length > 0) {
+    throw new HiveSnapshotCoherenceError(`${ADAPTER_KEY}: primary and fallback nodes disagree on material Hive state; ${mismatches.join("; ")}`);
   }
 
   const ratio = primary.ratio;
@@ -475,6 +501,7 @@ function adaptHiveHbdProtocolSnapshots(
   };
 
   const slice: ReserveSlice = {
+    sourceKey: "hive-hbd-protocol:hive",
     name: "Hive protocol HIVE conversion mechanism (endogenous HIVE value)",
     pct: 100,
     risk: "high",
@@ -521,30 +548,46 @@ export async function fetchHiveHbdProtocolReserves(
   // Repeated RPC bodies must observe new state, not replay the run's cached
   // bracket. Keep the shared I/O limiter while bypassing only request caching.
   const requestContext = { ...ctx, requestCache: undefined, abortSignal: attempt.signal };
+  const urls = [primary.url, fallbacks[0].url] as const;
+  const retained: [HiveNodeSnapshot | undefined, HiveNodeSnapshot | undefined] = [undefined, undefined];
+  let lastCoherenceError: HiveSnapshotCoherenceError | undefined;
   try {
-    for (let sample = 0; ; sample += 1) {
+    for (let sample = 0; sample <= MAX_RESAMPLES; sample += 1) {
       attempt.signal.throwIfAborted();
-      try {
-        // Drain both nodes before retrying so an unfinished bracket cannot
-        // overlap the next pair or consume its two-connection allowance.
-        const snapshots = await Promise.allSettled([
-          fetchNodeSnapshot(primary.url, params.treasuryAccount, attempt.signal, requestContext, params, nowSec),
-          fetchNodeSnapshot(fallbacks[0].url, params.treasuryAccount, attempt.signal, requestContext, params, nowSec),
-        ]);
-        attempt.signal.throwIfAborted();
-        for (const snapshot of snapshots) {
-          if (snapshot.status === "rejected" && !(snapshot.reason instanceof HiveSnapshotCoherenceError)) {
-            throw snapshot.reason;
-          }
+      // Drain all active brackets before retrying, preserving the two-I/O limit.
+      const snapshots = await Promise.allSettled(urls.map((url, index) =>
+        retained[index] ?? fetchNodeSnapshot(url, params.treasuryAccount, attempt.signal, requestContext, params, nowSec),
+      ));
+      attempt.signal.throwIfAborted();
+      for (const [index, snapshot] of snapshots.entries()) {
+        if (snapshot.status === "fulfilled") {
+          retained[index] = snapshot.value;
+        } else if (snapshot.reason instanceof HiveSnapshotCoherenceError) {
+          retained[index] = undefined;
+          lastCoherenceError = snapshot.reason;
+        } else {
+          throw snapshot.reason;
         }
-        const [primarySnapshot, fallbackSnapshot] = snapshots;
-        if (primarySnapshot.status === "rejected") throw primarySnapshot.reason;
-        if (fallbackSnapshot.status === "rejected") throw fallbackSnapshot.reason;
-        return adaptHiveHbdProtocolSnapshots([primarySnapshot.value, fallbackSnapshot.value]);
-      } catch (error) {
-        if (sample >= 1 || !(error instanceof HiveSnapshotCoherenceError)) throw error;
+      }
+      const [primarySnapshot, fallbackSnapshot] = retained;
+      if (primarySnapshot && fallbackSnapshot) {
+        try {
+          return adaptHiveHbdProtocolSnapshots([primarySnapshot, fallbackSnapshot]);
+        } catch (error) {
+          if (!(error instanceof HiveSnapshotCoherenceError)) throw error;
+          lastCoherenceError = error;
+          // Refresh only the lagging node; equal-height disagreement needs both.
+          if (primarySnapshot.dgp.headBlockNumber <= fallbackSnapshot.dgp.headBlockNumber) retained[0] = undefined;
+          if (fallbackSnapshot.dgp.headBlockNumber <= primarySnapshot.dgp.headBlockNumber) retained[1] = undefined;
+        }
       }
     }
+    throw lastCoherenceError;
+  } catch (error) {
+    if (attempt.signal.aborted && lastCoherenceError && !signal.aborted) {
+      throw new Error(`${ADAPTER_KEY}: attempt budget exceeded; ${lastCoherenceError.message}`);
+    }
+    throw error;
   } finally {
     attempt.dispose();
   }

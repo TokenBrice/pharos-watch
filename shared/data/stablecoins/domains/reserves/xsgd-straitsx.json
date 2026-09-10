@@ -2,6 +2,7 @@
   "id": "xsgd-straitsx",
   "reserves": [
     {
+      "sourceKey": "straitsx-independent-assurance:xsgd:cash",
       "name": "SGD cash",
       "pct": 51.431942,
       "risk": "very-low",
@@ -15,6 +16,7 @@
       "liquidityHorizon": "immediate"
     },
     {
+      "sourceKey": "straitsx-independent-assurance:xsgd:short-dated-government-or-repo",
       "name": "Short-dated MAS/government SGD bills or eligible overnight reverse repos",
       "pct": 48.568058,
       "risk": "very-low",

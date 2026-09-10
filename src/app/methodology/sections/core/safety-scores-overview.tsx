@@ -62,6 +62,13 @@ export function SafetyScoresOverview() {
         dependency reviews remain unchanged.
       </p>
       <p>
+        Since methodology v9.49, variant parents, explicit wrapped-asset claims, and manual non-collateral
+        relationships survive independently of reserve composition. Unmapped live reserves still cannot restore
+        older curated or manual collateral weights. Dependency facts distinguish unmatched identities, expired
+        matching classifications, and explicitly reviewed non-links. Curated reserve fallback applies only when
+        there is no live composition; partial live mappings retain their live weights.
+      </p>
+      <p>
         Responsibility follows causal provenance instead of the nearest processing stage. An explicit reason-level
         owner is authoritative; inherited reserve gaps, unavailable upstream pillars, and missing parent scores carry
         every originating owner downstream. Every attributed root receives a causal-root-qualified score path even

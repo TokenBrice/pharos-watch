@@ -43,13 +43,11 @@ export function buildReserveRecoveryForecast(data: StatusResponse): ReserveRecov
   const nextRunAt = getCronNextRunAt(cron);
   const resumeCursor = reserve.nextCursorStablecoinId ?? readString(metadata?.nextCursorStablecoinId);
 
-  if (cron?.inFlight?.stale || reserve.cursorTailError) {
+  if (cron?.inFlight?.stale) {
     return {
       state: "blocked",
       headline: "Reserve recovery needs operator attention",
-      detail: cron?.inFlight?.stale
-        ? "The live reserve lane has a stale in-flight lease; verify the lease before waiting on another pass."
-        : `The deferred cursor tail failed: ${reserve.cursorTailError}`,
+      detail: "The live reserve lane has a stale in-flight lease; verify the lease before waiting on another pass.",
       nextRunAt,
       resumeCursor,
       estimatedRunsToClear,
@@ -78,15 +76,11 @@ export function buildReserveRecoveryForecast(data: StatusResponse): ReserveRecov
     };
   }
 
-  if (
-    reserve.writeTimeoutUncertain > 0 ||
-    reserve.cursorTailState === "recording" ||
-    reserve.cursorTailState === "incomplete"
-  ) {
+  if (reserve.writeTimeoutUncertain > 0) {
     return {
       state: "watch",
       headline: "Reserve recovery is not blocked, but writes need confirmation",
-      detail: `${reserve.writeTimeoutUncertain} uncertain write(s); cursor tail ${reserve.cursorTailState ?? "clear"}. Wait for the next clean pass before treating score inputs as fully restored.`,
+      detail: `${reserve.writeTimeoutUncertain} uncertain write(s). Wait for the next clean pass before treating score inputs as fully restored.`,
       nextRunAt,
       resumeCursor,
       estimatedRunsToClear,

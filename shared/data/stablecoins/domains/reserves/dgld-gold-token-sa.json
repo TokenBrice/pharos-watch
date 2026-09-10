@@ -2,6 +2,7 @@
   "id": "dgld-gold-token-sa",
   "reserves": [
     {
+      "sourceKey": "dgld-gold-mapper:gold",
       "name": "Allocated LBMA Good Delivery PAMP gold (Swiss vaults)",
       "pct": 100,
       "risk": "very-low",

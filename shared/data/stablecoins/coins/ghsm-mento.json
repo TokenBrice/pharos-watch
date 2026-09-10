@@ -47,11 +47,8 @@
   "governanceQuality": "dao-governance",
   "liveReservesConfig": {
     "adapter": "mento",
-    "version": 1,
+    "version": 2,
     "semantics": "collateral-mix",
-    "scoring": {
-      "maxSourceAgeSec": 4000000
-    },
     "breakerScope": "mento-reserve-ghsm",
     "display": {
       "url": "https://reserve.mento.org/",

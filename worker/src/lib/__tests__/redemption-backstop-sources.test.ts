@@ -287,7 +287,7 @@ describe("buildRedemptionBackstopEntry", () => {
       null,
       {
         reserveSnapshotMetadata: snapshot("bold-liquity", {
-          redemptionFeeBps: 50,
+          redemption: { feeBps: 50 },
           freshnessMode: "not-applicable",
         }, {
           fetchedAt: now - 300,
@@ -339,9 +339,12 @@ describe("buildRedemptionBackstopEntry", () => {
       null,
       {
         reserveSnapshotMetadata: snapshot("lusd-liquity", {
-          immediateRedeemableUsd: 7_500_000,
-          immediateRedeemableRatio: 0.15,
+          redemption: {
+            capacityUsd: 7_500_000,
+            capacityRatioOfSupply: 0.15,
+          },
           sourceTimestamp: now - 1800,
+          freshnessMode: "verified",
         }, { fetchedAt: now - 1800 }),
       },
     );
@@ -551,7 +554,6 @@ describe("buildRedemptionBackstopEntry", () => {
       null,
       {
         reserveSnapshotMetadata: snapshot("usde-ethena", {
-          immediateRedeemableRatio: 0.9,
           freshnessMode: "verified",
           sourceTimestamp: now - 120,
           redemption: {
@@ -805,7 +807,6 @@ describe("buildRedemptionBackstopEntry", () => {
     const entry = await buildEntry("lusd-liquity", config!, 100_000_000, null, {
       reserveSnapshotMetadata: snapshot("lusd-liquity", {
         freshnessMode: "not-applicable",
-        redemptionFeeBps: 50,
         redemption: {
           capacityUsd: 84_000_000,
           capacityKind: "live-direct-bounded",
@@ -870,7 +871,6 @@ describe("buildRedemptionBackstopEntry", () => {
     const entry = await buildEntry("bold-liquity", config!, 40_000_000, null, {
       reserveSnapshotMetadata: snapshot("bold-liquity", {
         freshnessMode: "not-applicable",
-        redemptionFeeBps: 52,
         redemption: {
           capacityUsd: 32_000_000,
           capacityKind: "live-direct-bounded",
@@ -905,7 +905,7 @@ describe("buildRedemptionBackstopEntry", () => {
       35,
       {
         reserveSnapshotMetadata: snapshot("zchf-frankencoin", {
-          immediateRedeemableUsd: 362_655.25,
+          redemption: { capacityUsd: 362_655.25 },
           freshnessMode: "unverified",
         }, { fetchedAt: now - 300, source: "collateral-positions-api" }),
       },
@@ -1146,8 +1146,6 @@ describe("buildRedemptionBackstopEntry", () => {
       33,
       {
         reserveSnapshotMetadata: snapshot("zchf-frankencoin", {
-          immediateRedeemableUsd: 5_000_000,
-          immediateRedeemableRatio: 0.1,
           sourceTimestamp: now - 120,
           redemption: {
             capacityUsd: 5_000_000,
@@ -1180,8 +1178,6 @@ describe("buildRedemptionBackstopEntry", () => {
       33,
       {
         reserveSnapshotMetadata: snapshot("zchf-frankencoin", {
-          immediateRedeemableUsd: 5_000_000,
-          immediateRedeemableRatio: 0.1,
           sourceTimestamp: now - 120,
           redemption: {
             capacityUsd: 5_000_000,
@@ -1226,8 +1222,6 @@ describe("buildRedemptionBackstopEntry", () => {
       33,
       {
         reserveSnapshotMetadata: snapshot("zchf-frankencoin", {
-          immediateRedeemableUsd: 5_000_000,
-          immediateRedeemableRatio: 0.1,
           sourceTimestamp: now - 7_200,
           redemption: {
             capacityUsd: 5_000_000,
@@ -1276,9 +1270,12 @@ describe("buildRedemptionBackstopEntry", () => {
       null,
       {
         reserveSnapshotMetadata: snapshot("lusd-liquity", {
-          immediateRedeemableUsd: 5_000_000,
-          immediateRedeemableRatio: 0.1,
+          redemption: {
+            capacityUsd: 5_000_000,
+            capacityRatioOfSupply: 0.1,
+          },
           sourceTimestamp: now - 100,
+          freshnessMode: "verified",
         }, { fetchedAt: now - 100 }),
       },
     );
@@ -1322,8 +1319,10 @@ describe("buildRedemptionBackstopEntry", () => {
       null,
       {
         reserveSnapshotMetadata: snapshot("test-coin", {
-          immediateRedeemableUsd: 10_000_000,
-          immediateRedeemableRatio: 0.2,
+          redemption: {
+            capacityUsd: 10_000_000,
+            capacityRatioOfSupply: 0.2,
+          },
         }, { fetchedAt: now - 7_200 }),
       },
     );
@@ -1345,9 +1344,11 @@ describe("buildRedemptionBackstopEntry", () => {
       null,
       {
         reserveSnapshotMetadata: snapshot("gho-aave", {
-          immediateRedeemableUsd: 212_370_000,
-          immediateRedeemableRatio: 212_370_000 / 584_000_000,
-          redemptionFeeBps: 10,
+          redemption: {
+            capacityUsd: 212_370_000,
+            capacityRatioOfSupply: 212_370_000 / 584_000_000,
+            feeBps: 10,
+          },
           freshnessMode: "not-applicable",
         }, {
           fetchedAt: now - 120,
@@ -1387,8 +1388,10 @@ describe("buildRedemptionBackstopEntry", () => {
       null,
       {
         reserveSnapshotMetadata: snapshot("gho-aave", {
-          immediateRedeemableUsd: 212_370_000,
-          immediateRedeemableRatio: 212_370_000 / 584_000_000,
+          redemption: {
+            capacityUsd: 212_370_000,
+            capacityRatioOfSupply: 212_370_000 / 584_000_000,
+          },
           freshnessMode: "not-applicable",
         }, {
           fetchedAt: now - 120,
@@ -1433,7 +1436,7 @@ describe("buildRedemptionBackstopEntry", () => {
       null,
       {
         reserveSnapshotMetadata: snapshot("gho-aave", {
-          redemptionFeeBps: 7,
+          redemption: { feeBps: 7 },
           sourceTimestamp: now - 120,
         }, { fetchedAt: now - 120 }),
       },

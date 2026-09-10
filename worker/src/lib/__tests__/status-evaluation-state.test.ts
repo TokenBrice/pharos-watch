@@ -124,56 +124,35 @@ describe("status evaluation policy", () => {
   });
 
   it("keeps one-off low-share reserve truncation healthy while surfacing it as a cause", () => {
-    const assessment = deriveReserveCompositionStatus({
-      ...makeReserveComposition({
+    const assessment = deriveReserveCompositionStatus(
+      makeReserveComposition({
         runBudgetTruncated: true,
         deferredCoins: 1,
         nextCursorStablecoinId: "coin-a",
       }),
-      runBudgetTruncationCount: 1,
-      cursorTailState: "complete",
-    } as StatusResponse["reserveComposition"]);
+    );
 
     expect(assessment.status).toBe("healthy");
   });
 
-  it("degrades reserve status for repeated or high-share truncation pressure", () => {
-    const repeated = deriveReserveCompositionStatus({
-      ...makeReserveComposition({
-        runBudgetTruncated: true,
-        deferredCoins: 1,
-      }),
-      runBudgetTruncationCount: 2,
-      cursorTailState: "complete",
-    } as StatusResponse["reserveComposition"]);
-    const highShare = deriveReserveCompositionStatus({
-      ...makeReserveComposition({
+  it("degrades reserve status for high-share truncation pressure", () => {
+    const highShare = deriveReserveCompositionStatus(
+      makeReserveComposition({
         runBudgetTruncated: true,
         deferredCoins: 3,
       }),
-      runBudgetTruncationCount: 1,
-      cursorTailState: "complete",
-    } as StatusResponse["reserveComposition"]);
+    );
 
-    expect(repeated.status).toBe("degraded");
     expect(highShare.status).toBe("degraded");
   });
 
-  it("degrades reserve status for incomplete deferred-tail state or uncertain writes", () => {
-    const incompleteTail = deriveReserveCompositionStatus({
-      ...makeReserveComposition({
-        runBudgetTruncated: true,
-        deferredCoins: 1,
-      }),
-      cursorTailState: "incomplete",
-    } as StatusResponse["reserveComposition"]);
+  it("degrades reserve status for uncertain writes", () => {
     const uncertainWrite = deriveReserveCompositionStatus(
       makeReserveComposition({
         writeTimeoutUncertain: 1,
       }),
     );
 
-    expect(incompleteTail.status).toBe("degraded");
     expect(uncertainWrite.status).toBe("degraded");
   });
 
@@ -536,16 +515,12 @@ describe("status cause text", () => {
   });
 
   it("emits a warning cause for one-off low-share reserve truncation", () => {
-    const reserveComposition = {
-      ...makeReserveComposition({
-        status: "healthy",
-        runBudgetTruncated: true,
-        deferredCoins: 1,
-        nextCursorStablecoinId: "coin-a",
-      }),
-      cursorTailState: "complete",
-      runBudgetTruncationCount: 1,
-    } as StatusResponse["reserveComposition"];
+    const reserveComposition = makeReserveComposition({
+      status: "healthy",
+      runBudgetTruncated: true,
+      deferredCoins: 1,
+      nextCursorStablecoinId: "coin-a",
+    });
 
     const causes = buildDataQualityCauses({
       dataQuality: makeDataQuality(),
@@ -806,7 +781,7 @@ describe("status cause text", () => {
     );
   });
 
-  it("emits reserve causes for truncation, incomplete tail state, and uncertain writes", () => {
+  it("emits reserve causes for truncation and uncertain writes", () => {
     const reserveComposition = {
       ...makeReserveComposition({
         status: "degraded",
@@ -815,18 +790,6 @@ describe("status cause text", () => {
         nextCursorStablecoinId: "coin-tail",
         writeTimeoutUncertain: 1,
       }),
-      cursorTailState: "incomplete",
-      cursorTailError: "batch unavailable",
-      runBudgetTruncationCount: 2,
-      historyWriteGaps: [
-        {
-          stablecoinId: "coin-history",
-          fetchedAt: 1_700_000_000,
-          attemptId: "coin-history:attempt",
-          compositionHistoryMissing: true,
-          attemptHistoryMissing: true,
-        },
-      ],
     } as StatusResponse["reserveComposition"];
 
     const causes = buildDataQualityCauses({
@@ -848,20 +811,8 @@ describe("status cause text", () => {
     );
     expect(causes).toContainEqual(
       expect.objectContaining({
-        code: "reserve_sync_tail_incomplete",
-        message: expect.stringContaining("batch unavailable"),
-      }),
-    );
-    expect(causes).toContainEqual(
-      expect.objectContaining({
         code: "reserve_sync_budget_truncated",
         message: expect.stringContaining("next cursor coin-tail"),
-      }),
-    );
-    expect(causes).toContainEqual(
-      expect.objectContaining({
-        code: "reserve_sync_history_write_gap",
-        message: expect.stringContaining("coin-history:composition+attempt"),
       }),
     );
   });

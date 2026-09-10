@@ -1,0 +1,81 @@
+{
+  "schemaVersion": 1,
+  "product": "AUDD",
+  "profile": "audd-v1",
+  "officialIndexUrl": "https://www.audd.digital/transparency/",
+  "reportUrl": "https://www.audd.digital/wp-content/uploads/2026/09/AUDC-Agreed-upon-procedures-report-Aug26_.pdf",
+  "reportSha256": "b766a625b595be5cd20c1fc0abba063dcc989dc7a36d9e1481db7690407108c5",
+  "reportByteLength": 387499,
+  "reportDate": "2026-08-31",
+  "reportAsOf": "2026-08-31T23:59:00Z",
+  "reportTimeZone": "UTC (as printed in the report)",
+  "reportIssuedAt": "2026-09-04T23:59:00Z",
+  "attestor": "William Buck Audit (Vic) Pty Ltd",
+  "engagement": "Report of Factual Findings under ASRS 4400 Agreed-Upon Procedures Engagements (not an assurance engagement)",
+  "conclusion": "agreed-upon-procedures",
+  "unit": "AUD",
+  "assets": [
+    {
+      "code": "banking-circle",
+      "label": "AUD cash held at Banking Circle (AUDC Reserve Account)",
+      "amount": "288159.90"
+    },
+    {
+      "code": "westpac",
+      "label": "AUD cash held at Westpac under the AMAL Bare Trust",
+      "amount": "11256449.87"
+    }
+  ],
+  "liabilities": [
+    {
+      "code": "stellar",
+      "label": "Stellar AUDD circulation",
+      "amount": "3588926.04"
+    },
+    {
+      "code": "xrpl",
+      "label": "XRP Ledger AUDD circulation",
+      "amount": "314828.98"
+    },
+    {
+      "code": "ethereum",
+      "label": "Ethereum AUDD circulation",
+      "amount": "3993650.83"
+    },
+    {
+      "code": "solana",
+      "label": "Solana AUDD circulation",
+      "amount": "102635.99"
+    },
+    {
+      "code": "hedera",
+      "label": "Hedera AUDD circulation",
+      "amount": "1196.00"
+    },
+    {
+      "code": "base",
+      "label": "Base AUDD circulation",
+      "amount": "2995283.08"
+    },
+    {
+      "code": "xdc",
+      "label": "XDC AUDD circulation",
+      "amount": "361440.04"
+    },
+    {
+      "code": "redbelly",
+      "label": "Redbelly AUDD circulation",
+      "amount": "50251.00"
+    }
+  ],
+  "reportedAssetTotal": "11544609.77",
+  "computedAssetTotal": "11544609.77",
+  "reportedLiabilityTotal": "11408211.96",
+  "extraction": {
+    "tool": "Poppler pdftotext -layout",
+    "parserVersion": "26.07.0",
+    "normalizedTextSha256": "d98ccdc4e13fc62edd8ca320e4234c3ef1dd307a8ed9b95ab86cc32d16b9e758",
+    "pageCount": 5
+  },
+  "assuranceTier": "agreed-upon-procedures"
+}

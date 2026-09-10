@@ -6,6 +6,24 @@ import { validateAdapterOutput } from "../validate";
 const slices = [{ name: "USDC", pct: 100, risk: "low" as const }];
 
 describe("validateAdapterOutput redemption telemetry", () => {
+  it("retains raw upstream percentage drift after slices have been normalized", () => {
+    const validateRawDeviation = (rawSumDeviation: number) => validateAdapterOutput({
+      slices,
+      metadata: { diag: { rawSumDeviation } },
+    });
+    expect(validateRawDeviation(0.5)).toEqual({ valid: true, warnings: [] });
+    const degraded = validateRawDeviation(2);
+    expect(degraded.valid).toBe(true);
+    expect(degraded.warnings).toContainEqual(expect.objectContaining({
+      code: "pct-sum-deviation", effect: "degraded",
+    }));
+    const fatal = validateRawDeviation(2.01);
+    expect(fatal.valid).toBe(false);
+    expect(fatal.warnings).toContainEqual(expect.objectContaining({
+      code: "pct-sum-deviation", effect: "fatal",
+    }));
+  });
+
   it("rejects slices above the public 100% per-slice schema limit", () => {
     const result = validateAdapterOutput({
       slices: [

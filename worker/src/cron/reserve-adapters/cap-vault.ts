@@ -29,6 +29,7 @@ import {
 import { MAX_FUTURE_SOURCE_TIMESTAMP_SKEW_SEC } from "./validate";
 import { validateDecimals } from "./slice-math";
 import { decodeAddressArrayWord, decodeBoolWord } from "./abi-decode";
+import { pinnedBlockPlan } from "./evm-observation-plan";
 
 const ADAPTER_KEY = "cap-vault";
 const ASSETS_SELECTOR = "0x71a97305";
@@ -279,6 +280,7 @@ export function adaptCapVaultState(args: {
 
   return {
     slices: slicesFromValues(activeAssets.map((asset) => ({
+      sourceKey: `cap-vault:${asset.address}`,
       name: asset.name,
       value: asset.totalSupplied * priceForCapAsset(asset),
       risk: asset.risk,
@@ -292,11 +294,10 @@ export function adaptCapVaultState(args: {
       assetCount: activeAssets.length,
       pausedAssetCount: pausedAssets.length,
       totalReserveUsd,
+      unknownExposurePct: totalReserveUsd > 0
+        ? unknownAssets.reduce((sum, asset) => sum + asset.totalSupplied * priceForCapAsset(asset), 0) / totalReserveUsd * 100
+        : 0,
       ...(args.supplyUsd != null ? { supplyUsd: args.supplyUsd } : {}),
-      immediateRedeemableUsd,
-      ...(args.supplyUsd != null && args.supplyUsd > 0
-        ? { immediateRedeemableRatio: immediateRedeemableUsd / args.supplyUsd }
-        : {}),
       assets: activeAssets.map((asset) => ({
         address: asset.address,
         name: asset.name,
@@ -344,6 +345,8 @@ export async function fetchCapVaultReserves(
   }
 
   const assetConfigs = normalizeAssetConfigs(config);
+  const plan = await pinnedBlockPlan({ chain: input.chain, signal, ctx, rpcUrl: params.rpcUrl, fallbackRpcUrl: params.fallbackRpcUrl });
+  ctx = plan.ctx;
   const onchain = makeOnchainCallers(input, {
     signal,
     ctx,
@@ -423,10 +426,11 @@ export async function fetchCapVaultReserves(
     assetStates.map((asset) => resolveSourceBoundOutputPrice(asset, onchain, now)),
   );
 
-  return adaptCapVaultState({
+  const result = adaptCapVaultState({
     assets: sourceBoundAssetStates,
     supplyUsd,
     contractAddress,
     redemptionFeeBps,
   });
+  return { ...result, metadata: { ...result.metadata, observedBlock: plan.observedBlock } };
 }

@@ -2,6 +2,7 @@
   "id": "kau-kinesis",
   "reserves": [
     {
+      "sourceKey": "chainlink-por:feed:0xab5dd7dd7669072a1ef27c0ba241120a27a1aec3",
       "name": "Kinesis-native KAU held in a segregated reserve wallet by KMS Labs S.A.",
       "pct": 100,
       "risk": "medium",
@@ -44,7 +45,7 @@
         "reserveName": "Kinesis-native KAU held in a segregated reserve wallet by KMS Labs S.A.",
         "pct": 100,
         "disposition": "untracked-exogenous-asset",
-        "rationale": "Kinesis-native KAU is an external reserve token rather than a tracked stablecoin dependency; its allocated physical-gold backing is the second-layer native-KAU asset."
+        "rationale": "Kinesis-native KAU is an external reserve token rather than a tracked stablecoin dependency; its allocated physical-gold backing is the second-layer native-KAU asset. The curated slice keeps its stable chainlink-por feed sourceKey."
       }
     ]
   },

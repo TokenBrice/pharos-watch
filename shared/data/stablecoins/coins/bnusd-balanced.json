@@ -106,8 +106,15 @@
     {
       "type": "info",
       "title": "Balanced v1 transition and v2 launch",
-      "message": "Balanced's current documentation says v2 launched on April 7, 2026 and the original v1 app is no longer supported. The deployments tracked here are the historical v1 ICON-Hub bnUSD entry; current v2 issuance, reserves, and authority are not asserted until a verified active contract inventory is available."
+      "message": "Balanced's current documentation says v2 launched on April 7, 2026 and the original v1 app is no longer supported. The deployments tracked here are the historical v1 ICON-Hub bnUSD entry; current v2 issuance and authority are not asserted until a verified active contract inventory is available. The Sonic v2 reserve census is now live, while the tracked contract inventory remains v1; no global collateralization ratio is asserted."
     }
   ],
+  "liveReservesConfig": {
+    "adapter": "sodax-sonic",
+    "version": 1,
+    "semantics": "collateral-mix",
+    "inputs": { "primary": { "kind": "onchain-evm", "chain": "sonic", "rpcMode": "public-rpc" } },
+    "display": { "url": "https://balanced.network/stablecoin/", "label": "SODAX borrower collateral" }
+  },
   "launchDate": "2021-04-25"
 }

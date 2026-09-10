@@ -86,6 +86,7 @@
       }
     },
     "params": {
+      "navScope": "portfolio",
       "oracleAddress": "0x1f09475Fe4D212fC24611bAE180201869956c238",
       "tokenAddress": "0x4f0ca3df1c2e6b943cf82e649d576ffe7b2fabcf",
       "assetLabel": "iShares Gold Trust (IAU) ETF shares",

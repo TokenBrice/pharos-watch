@@ -2,6 +2,7 @@
   "id": "syzusd-yuzu",
   "reserves": [
     {
+      "sourceKey": "erc4626-single-asset:plasma:0x6695c0f8706c5ace3bdf8995073179cca47926dc",
       "name": "Yuzu USD staking vault shares",
       "pct": 100,
       "risk": "high",

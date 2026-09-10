@@ -38,6 +38,10 @@ interface AccountableDashboardResponse {
       protocol_split?: Record<string, unknown>;
       timeline?: AccountableTimelinePoint[];
     };
+    /** Root-level category breakdown used by the `asset-breakdown` layout. Each key is a
+     *  strategy/custody category whose value is an object whose nested entries sum to the
+     *  category's USD value (e.g. Tori's four categories). */
+    assetBreakdown?: Record<string, unknown>;
   };
 }
 
@@ -48,6 +52,10 @@ interface AccountableTimelinePoint {
 
 interface AccountableParams {
   bucket?: "type" | "reserves_split" | "deployment" | "type_split" | "stablecoin_split" | "exposure_split" | "protocol_split";
+  /** Which composition source to read. `reserves-types` (default) selects a sub-bucket under
+   *  `data.reserves` via `bucket`; `asset-breakdown` reads the root-level `data.assetBreakdown`
+   *  category tree instead, for feeds whose composition is not published under `reserves`. */
+  layout?: "reserves-types" | "asset-breakdown";
   riskMap?: Record<string, ReserveSlice["risk"]>;
   renameMap?: Record<string, string>;
   sourceKeyMap?: Record<string, string>;
@@ -362,11 +370,19 @@ export function adaptAccountableDashboard(
     throw new Error("Accountable dashboard returned an invalid response");
   }
 
+  const layout = params.layout ?? "reserves-types";
   const bucket = params.bucket ?? "type";
+  const breakdownBucket = layout === "asset-breakdown" ? "asset-breakdown" : bucket;
   const allowNegativeBuckets = new Set(params.allowNegativeBuckets ?? []);
-  const breakdown = extractBucketEntries(payload.data.reserves, bucket, { allowNegativeBuckets });
+  const breakdown = layout === "asset-breakdown"
+    ? extractRecordBucketEntries(payload.data.assetBreakdown, "asset-breakdown", { allowNegativeBuckets })
+    : extractBucketEntries(payload.data.reserves, bucket, { allowNegativeBuckets });
   if (breakdown.length === 0) {
-    throw new Error(`Unsupported Accountable bucket: ${bucket}`);
+    throw new Error(
+      layout === "asset-breakdown"
+        ? "Accountable asset-breakdown layout returned no asset categories"
+        : `Unsupported Accountable bucket: ${bucket}`,
+    );
   }
 
   const riskMap = params.riskMap ?? {};
@@ -379,7 +395,7 @@ export function adaptAccountableDashboard(
   const reconciledBreakdown = breakdown.filter((entry) => !(totalReservesExcludeBuckets.has(entry.name)));
   const positiveBreakdown = reconciledBreakdown.filter((entry) => entry.value > 0);
   const mappedForValidation = breakdown.filter(({ name }) => name in riskMap);
-  validateMappedBucketValues(mappedForValidation, bucket, { allowNegativeBuckets });
+  validateMappedBucketValues(mappedForValidation, breakdownBucket, { allowNegativeBuckets });
   const mapped = positiveBreakdown.filter(({ name }) => name in riskMap);
   const totalReserves = extractOptionalReserveScalar(payload.data.reserves.total_reserves, "total_reserves", {
     requirePositive: true,
@@ -388,16 +404,16 @@ export function adaptAccountableDashboard(
     requirePositive: true,
   });
   const protocolOwnedUsd = extractProtocolOwnedUsd(payload.data.reserves);
-  const exposureSplitSourceTimestamp = bucket === "exposure_split" && payload.data.reserves.exposure_split_ts != null
+  const exposureSplitSourceTimestamp = layout === "reserves-types" && bucket === "exposure_split" && payload.data.reserves.exposure_split_ts != null
     ? parseTimestampLikeToUnixSeconds(payload.data.reserves.exposure_split_ts)
     : null;
-  if (bucket === "exposure_split" && payload.data.reserves.exposure_split_ts != null && exposureSplitSourceTimestamp == null) {
+  if (layout === "reserves-types" && bucket === "exposure_split" && payload.data.reserves.exposure_split_ts != null && exposureSplitSourceTimestamp == null) {
     throw new Error(`Accountable exposure_split_ts is invalid: ${String(payload.data.reserves.exposure_split_ts)}`);
   }
   const exposureSplitTimelineTotal = exposureSplitSourceTimestamp != null
     ? findNearestExposureSplitReserveTotal(payload.data.reserves, exposureSplitSourceTimestamp)
     : null;
-  validateBucketTotalAgainstReserves(breakdown, exposureSplitTimelineTotal?.totalReserves ?? totalReserves, bucket, {
+  validateBucketTotalAgainstReserves(breakdown, exposureSplitTimelineTotal?.totalReserves ?? totalReserves, breakdownBucket, {
     excludeBuckets: totalReservesExcludeBuckets,
   });
   const unknown = positiveBreakdown.filter(({ name }) => !(name in riskMap));
@@ -429,12 +445,10 @@ export function adaptAccountableDashboard(
     ? 0
     : computeUnknownExposurePct(protocolOwnedUsd, protocolOwnedDenominator);
   const protocolOwnedWarning = protocolOwnedPct > 0
-    ? buildUnknownExposureWarning({
-        code: "protocol-owned-bucket",
-        message:
-          `Accountable reserves include ${protocolOwnedUsd!.toFixed(2)} USD of issuer-held inventory and protocol-owned liquidity that is not itemized third-party backing`,
-        unknownExposurePct: protocolOwnedPct,
-      })
+    ? buildUnknownExposureWarning({ adapterKey: "accountable", code: "protocol-owned-bucket",
+    message:
+      `Accountable reserves include ${protocolOwnedUsd!.toFixed(2)} USD of issuer-held inventory and protocol-owned liquidity that is not itemized third-party backing`,
+    unknownExposurePct: protocolOwnedPct, })
     : null;
 
   const slices = slicesFromValues(
@@ -476,11 +490,9 @@ export function adaptAccountableDashboard(
       ? {
           warnings: [
             ...(unknownExposurePct > 0
-              ? [buildUnknownExposureWarning({
-                  code: "unmapped-bucket",
-                  message: `Accountable bucket mapping is missing: ${unknown.map((entry) => entry.name).sort().join(", ")}`,
-                  unknownExposurePct,
-                })]
+              ? [buildUnknownExposureWarning({ adapterKey: "accountable", code: "unmapped-bucket",
+              message: `Accountable bucket mapping is missing: ${unknown.map((entry) => entry.name).sort().join(", ")}`,
+              unknownExposurePct, })]
               : []),
             ...(signedBucketWarning ? [signedBucketWarning] : []),
             ...(protocolOwnedWarning ? [protocolOwnedWarning] : []),
@@ -490,7 +502,8 @@ export function adaptAccountableDashboard(
         }
       : {}),
     metadata: {
-      bucket,
+      bucket: breakdownBucket,
+      layout,
       breakdownCount: breakdown.length,
       mappedBucketCount: mapped.length,
       ...(unknown.length > 0 ? { unknownBucketCount: unknown.length } : {}),
@@ -514,7 +527,7 @@ export function adaptAccountableDashboard(
       ...(protocolOwnedUsd != null
         ? { protocolOwnedUsd, protocolOwnedPctOfReserves: protocolOwnedPct }
         : {}),
-      ...(bucket === "deployment"
+      ...(layout === "reserves-types" && bucket === "deployment"
         ? {
             deploymentSnapshot: buildDeploymentSnapshotMetadata(
               breakdown,

@@ -16,13 +16,12 @@ import { decodeAddressWord, decodeBoolWord, decodeUint8Word } from "./abi-decode
 import { normalizeEvmAddress, resolveCoinContractAddress } from "./evm";
 import {
   buildCoverageShortfallWarnings,
-  decimalNumberFromBigInt,
   makeOnchainCallers,
   notApplicableFreshnessMetadata,
   requireOnchainInput,
   type OnchainCallers,
 } from "./helpers";
-import { ratioFromRaw } from "./slice-math";
+import { capacityFromTokenAmounts } from "./slice-math";
 import { reserveDegradedWarning } from "./warnings";
 import type { AdapterContext, AdapterResult } from "./types";
 
@@ -55,34 +54,6 @@ function encodeCanSwapViaPathCall(
   toToken: string,
 ): `0x${string}` {
   return `${selector}${encodeAddress(swapper)}${encodeAddress(fromToken)}${encodeAddress(toToken)}` as `0x${string}`;
-}
-
-function ratioFromTokenAmounts(
-  numeratorRaw: bigint,
-  numeratorDecimals: number,
-  denominatorRaw: bigint,
-  denominatorDecimals: number,
-): number | undefined {
-  if (denominatorRaw <= 0n) return undefined;
-  if (numeratorDecimals === denominatorDecimals) {
-    return ratioFromRaw(numeratorRaw, denominatorRaw);
-  }
-  const numerator = decimalNumberFromBigInt(numeratorRaw, numeratorDecimals);
-  const denominator = decimalNumberFromBigInt(denominatorRaw, denominatorDecimals);
-  if (!Number.isFinite(numerator) || !Number.isFinite(denominator) || denominator <= 0) return undefined;
-  return Math.min(1, numerator / denominator);
-}
-
-function collateralizationRatioFromTokenAmounts(
-  numeratorRaw: bigint,
-  numeratorDecimals: number,
-  denominatorRaw: bigint,
-  denominatorDecimals: number,
-): number | undefined {
-  const numerator = decimalNumberFromBigInt(numeratorRaw, numeratorDecimals);
-  const denominator = decimalNumberFromBigInt(denominatorRaw, denominatorDecimals);
-  if (!Number.isFinite(numerator) || !Number.isFinite(denominator) || denominator <= 0) return undefined;
-  return numerator / denominator;
 }
 
 function parseSliceConfig(params: M0WrapperUnderlyingParams): SliceConfig {
@@ -283,14 +254,7 @@ export async function fetchM0WrapperUnderlyingReserves(
     }
   }
 
-  const capacityUsd = decimalNumberFromBigInt(underlyingBalanceRaw, underlyingDecimals);
-  const capacityRatioOfSupply = ratioFromTokenAmounts(
-    underlyingBalanceRaw,
-    underlyingDecimals,
-    totalSupplyRaw,
-    wrapperDecimals,
-  );
-  const collateralizationRatio = collateralizationRatioFromTokenAmounts(
+  const { capacityUsd, capacityRatioOfSupply, collateralizationRatio } = capacityFromTokenAmounts(
     underlyingBalanceRaw,
     underlyingDecimals,
     totalSupplyRaw,
@@ -314,6 +278,7 @@ export async function fetchM0WrapperUnderlyingReserves(
   return {
     slices: [
       {
+        sourceKey: "m0-wrapper-underlying:m",
         name: sliceConfig.name,
         pct: 100,
         risk: sliceConfig.risk,

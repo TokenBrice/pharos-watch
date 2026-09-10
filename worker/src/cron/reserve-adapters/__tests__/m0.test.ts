@@ -4,12 +4,11 @@ import ctusdReserves from "@shared/data/stablecoins/domains/reserves/ctusd-citre
 import usdatReserves from "@shared/data/stablecoins/domains/reserves/usdat-saturn.json";
 import ctusdCoin from "@shared/data/stablecoins/coins/ctusd-citrea.json";
 import usdatCoin from "@shared/data/stablecoins/coins/usdat-saturn.json";
-import type { LiveReservesConfig } from "@shared/types/live-reserves";
 import type { StablecoinMeta } from "@shared/types/core";
-import { adaptM0Collateral, fetchM0Reserves } from "../m0";
+import { adaptM0Collateral } from "../m0";
 import { getReserveAdapter } from "../index";
 import { validateAdapterOutput } from "../validate";
-
+import { runAdapter } from "./reserve-adapter.test-support";
 // Live payload shape observed against protocol-api.m0.org on 2026-08-20, after
 // M0 retired the off-chain CollateralCurrent composition feed and moved the
 // endpoint to keyed access. Values are 6-decimal token units.
@@ -79,7 +78,7 @@ describe("adaptM0Collateral", () => {
         depType: "wrapper",
       }),
     ]);
-    expect(usdat?.liveReservesConfig).toBeUndefined();
+    expect(usdat?.liveReservesConfig).toMatchObject({ adapter: "saturn-pyusdx", breakerScope: "usdat-saturn" });
   });
 
   it("converts the total collateral snapshot into the single protocol-constrained slice", () => {
@@ -110,6 +109,10 @@ describe("adaptM0Collateral", () => {
       earliestCollateralUpdateTimestamp: 1787176804,
       latestCollateralUpdateTimestamp: 1787176847,
       snapshotLagSec: 5460,
+      details: {
+        collateralLagSec: 5460,
+        collateralLagCapSec: 43_200,
+      },
     });
     expect(result.metadata?.redemption).toBeUndefined();
   });
@@ -126,17 +129,42 @@ describe("adaptM0Collateral", () => {
       data: {
         ...SAMPLE_PAYLOAD.data,
         collateralUpdateds: [
-          // 7h after the total snapshot at 1787171387.
-          { timestamp: "1787196587", blockTimestamp: "1787196587" },
+          // 13h after the total snapshot at 1787171387.
+          { timestamp: "1787218187", blockTimestamp: "1787218187" },
         ],
         minterGateway_latestUpdateTimestampSnapshots: [
-          { timestamp: "1787196587", value: "1787196587" },
+          { timestamp: "1787218187", value: "1787218187" },
         ],
       },
     });
 
     expect(result.warnings?.some((warning) => warning.code === "total-collateral-snapshot-lag")).toBe(true);
-    expect(result.metadata).toMatchObject({ snapshotLagSec: 25_200 });
+    expect(result.metadata).toMatchObject({
+      snapshotLagSec: 46_800,
+      details: { collateralLagSec: 46_800, collateralLagCapSec: 43_200 },
+    });
+  });
+
+  it("no longer degrades at the production 27,000s lag under the 12h cap", () => {
+    // Production lag on 2026-09-09 was 27,000s (7.5h), which previously tripped
+    // the 6h cap and degraded all five M0 coins. P11 widens the cap to 12h.
+    const result = adaptM0Collateral({
+      data: {
+        ...SAMPLE_PAYLOAD.data,
+        collateralUpdateds: [
+          { timestamp: "1787198387", blockTimestamp: "1787198387" },
+        ],
+        minterGateway_latestUpdateTimestampSnapshots: [
+          { timestamp: "1787198387", value: "1787198387" },
+        ],
+      },
+    });
+
+    expect(result.warnings).toBeUndefined();
+    expect(result.metadata).toMatchObject({
+      snapshotLagSec: 27_000,
+      details: { collateralLagSec: 27_000, collateralLagCapSec: 43_200 },
+    });
   });
 
   it("degrades when the per-minter sum diverges from the total snapshot", () => {
@@ -213,19 +241,39 @@ describe("adaptM0Collateral", () => {
 });
 
 describe("fetchM0Reserves", () => {
-  it("fails closed before fetching when M0_API_KEY is not configured", async () => {
-    const config = {
-      adapter: "m0",
-      version: 1,
-      semantics: "protocol-reserve",
-      inputs: { primary: { kind: "http-json", url: "https://protocol-api.m0.org/graphql" } },
-    } as unknown as LiveReservesConfig;
+  it("fetches the keyed GraphQL payload through the shared network harness", async () => {
+    const { result, network } = await runAdapter("m0", "musd-metamask", {
+      network: {
+        json: {
+          "https://protocol-api.m0.org/graphql": (request: Request) => {
+            expect(request.method).toBe("POST");
+            expect(request.headers.get("authorization")).toBe("ApiKey test-key");
+            return SAMPLE_PAYLOAD;
+          },
+        },
+      },
+      ctx: { m0ApiKey: "test-key" },
+      nowSec: 1_787_171_387 + 3_600,
+    });
 
-    await expect(
-      fetchM0Reserves({} as StablecoinMeta, config, new AbortController().signal, {}),
-    ).rejects.toThrow(/M0_API_KEY not configured/);
-    await expect(
-      fetchM0Reserves({} as StablecoinMeta, config, new AbortController().signal, { m0ApiKey: "   " }),
-    ).rejects.toThrow(/M0_API_KEY not configured/);
+    expect(result.slices).toEqual([
+      {
+        sourceKey: "m0:eligible-collateral",
+        name: "U.S. Treasury bills & cash (M0 eligible collateral)",
+        pct: 100,
+        risk: "very-low",
+      },
+    ]);
+    expect(network.requests).toEqual([{ url: "https://protocol-api.m0.org/graphql", method: "POST" }]);
+  });
+
+  it("fails closed before fetching when M0_API_KEY is not configured", async () => {
+    for (const m0ApiKey of [undefined, "   "]) {
+      await expect(runAdapter("m0", "musd-metamask", {
+        network: { json: { "https://protocol-api.m0.org/graphql": SAMPLE_PAYLOAD } },
+        ctx: { m0ApiKey },
+        nowSec: 1_787_171_387 + 3_600,
+      })).rejects.toThrow(/M0_API_KEY not configured/);
+    }
   });
 });

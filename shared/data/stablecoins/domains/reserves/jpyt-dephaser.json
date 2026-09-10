@@ -3,7 +3,8 @@
   "reserves": [
     {
       "name": "USDT locked on Optimism DepositManager and supplied to Aave V3 (aOptUSDT)",
-      "pct": 87.715906,
+      "sourceKey": "evm-branch-balances:optimism:0x6ab707aca953edaefbc4fd23ba73294241490620",
+      "pct": 87.7,
       "risk": "medium",
       "coinId": "usdt-tether",
       "depType": "collateral",
@@ -21,7 +22,8 @@
     },
     {
       "name": "USDC locked on Base DepositManager and supplied to Aave V3 (aBasUSDC)",
-      "pct": 12.284094,
+      "sourceKey": "evm-branch-balances:base:0x4e65fe4dba92790696d040ac24aa414708f5c0ab",
+      "pct": 12.3,
       "risk": "medium",
       "coinId": "usdc-circle",
       "depType": "collateral",
@@ -39,8 +41,8 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-09-04",
-    "reviewer": "Pharos reserve research agent (2026-08-20 current-source refresh)",
+    "reviewedAt": "2026-09-09",
+    "reviewer": "Pharos branch-adapter reserve review",
     "confidence": "verified",
     "sources": [
       {
@@ -64,9 +66,9 @@
         "url": "https://mainnet.base.org"
       }
     ],
-    "rationale": "Fixed-block remeasurement on 2026-09-04. Issuer docs and UsdtDepositManager source confirm dual routes: users lock USDT on Optimism or USDC on Base; each DepositManager supplies the deposit token into Aave V3 and mints JPYT. Public RPC reads at Optimism block 156472176 returned aOptUSDT (0x6ab707aca953edaefbc4fd23ba73294241490620).balanceOf(0x77c1e40f5e7bb19c34d81f986fb13fe655f23cd9) = 44,616.509375 USDT; Base block 50876890 returned aBasUSDC (0x4e65fe4dba92790696d040ac24aa414708f5c0ab).balanceOf(0x0eab9d66adb8527cd7c0e7e7c1782580431ec276) = 6,248.278544 USDC. Combined aToken reserves = 50,864.787919 USD, giving 87.715906% USDT and 12.284094% USDC. Residual unknowns: Aave utilization-driven withdrawal latency and legal custody terms beyond on-chain smart-contract custody.",
+    "rationale": "Live adapter remeasurement on 2026-09-09 at Optimism block 156691711 and Base block 51096426, both timestamp 1788982199. DepositManager aOptUSDT and aBasUSDC balances are valued with live DefiLlama underlying USDT/USDC prices, producing 87.7% USDT and 12.3% USDC. UNDERLYING_ASSET_ADDRESS() was verified on both Aave receipts: Optimism USDT 0x94b008aa00579c1307b0ef2c499ad98a8ce58e58 and Base USDC 0x833589fcd6edb6e08f4c7c32d4f71b54bda02913, both six decimals. aToken balanceOf already includes accrued interest in 1:1 underlying units; no Compound-style conversion applies. Both chain holdings are included. Aave utilization-driven withdrawal latency and legal custody terms remain separate from these measured weights.",
     "compositionBasis": "On-chain aToken balances of DePhaser DepositManager proxies plus issuer money-flow docs",
-    "compositionAsOf": "2026-09-04",
+    "compositionAsOf": "2026-09-09",
     "scope": "full-composition",
     "knownUnknownExposure": "Legal segregation/bankruptcy-remoteness of Aave positions and instantaneous redeemable liquidity under high Aave utilization are not published as static legal terms; weights themselves are measured.",
     "knownUnknownExposurePct": 0

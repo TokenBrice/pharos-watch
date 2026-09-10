@@ -2,23 +2,25 @@ import { parseLiveReserveAdapterParams, type LiveReserveAdapterParamsByKey } fro
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import type { LiveReserveAdapterKey, LiveReservesConfig, LiveReserveWarning } from "@shared/types/live-reserves";
 import { hasUsableStablecoinsPayload, loadStablecoinsCache } from "../../lib/stablecoins-cache";
-import { encodeBalanceOfCallData } from "../../lib/evm-selectors";
+import { DECIMALS_SELECTOR, encodeBalanceOfCallData } from "../../lib/evm-selectors";
 import type { AdapterContext, AdapterResult } from "./types";
 import { getCachedRequest } from "./request";
 import {
   fetchDefiLlamaPrices,
   fetchErc20Balance,
   fetchOnchainMulticall3,
+  fetchOnchainUint256,
   notApplicableFreshnessMetadata,
   requireOnchainInput,
   reserveDegradedWarning,
+  reserveFatalWarning,
   reserveInfoWarning,
   slicesFromValues,
   valueUsdFromBigIntPrice,
 } from "./helpers";
 import { decodeUint256Word } from "./abi-decode";
 
-export type BranchBalanceAdapterKey = Extract<LiveReserveAdapterKey, "evm-branch-balances" | "liquity-v2-branches" | "lista">;
+export type BranchBalanceAdapterKey = Extract<LiveReserveAdapterKey, "evm-branch-balances" | "liquity-v2-branches">;
 
 const STABLECOINS_CACHE_BRANCH_PRICE_MAX_AGE_SEC = 2 * 60 * 60;
 
@@ -28,6 +30,10 @@ export type BranchConfig = BranchBalanceParams["branches"][number];
 export interface BranchBalanceEntry {
   branch: BranchConfig;
   balanceRaw: bigint | null;
+  /** decimals() read from the branch token; undefined = not probed, null = call reverted. */
+  observedDecimals?: bigint | null;
+  /** Converted underlying scale; the original token scale remains the identity gate. */
+  balanceDecimals?: number;
 }
 
 export interface AdaptBranchBalanceInput {
@@ -60,7 +66,7 @@ function isUsdPeggedBranch(branch: BranchConfig): boolean {
 function findUnderlyingContract(
   branch: BranchConfig,
 ): { chain: string; address: string } | null {
-  if (!branch.coinId) return null;
+  if (!branch.coinId || branch.underlyingPrice1to1 !== true) return null;
   const meta = TRACKED_META_BY_ID.get(branch.coinId);
   if (!meta?.contracts) return null;
   const sameChain = meta.contracts.find((c) => c.chain === branch.token.chain);
@@ -117,6 +123,7 @@ async function fetchCachedTrackedBranchPrices(
     && balanceRaw > 0n
     && branch.priceUsd == null
     && branch.coinId != null
+    && branch.underlyingPrice1to1 === true
     && !priceMap.has(branch.name)
   );
   if (branchesNeedingCachedPrices.length === 0) return new Map();
@@ -138,33 +145,74 @@ export async function fetchBranchBalances(
   signal: AbortSignal,
   ctx?: AdapterContext,
 ): Promise<BranchBalanceEntry[]> {
+  const balanceCall = (branch: BranchConfig) => ({
+    contract: branch.balanceRead?.contract ?? branch.token.address,
+    data: branch.balanceRead
+      ? branch.balanceRead.selector + (branch.balanceRead.args ?? []).map((word) => word.slice(2)).join("")
+      : encodeBalanceOfCallData(branch.holder),
+  });
+  const convertReceipts = async (entries: BranchBalanceEntry[]): Promise<BranchBalanceEntry[]> =>
+    Promise.all(entries.map(async (entry) => {
+      const { branch } = entry;
+      if (!branch.receipt || entry.balanceRaw == null || entry.balanceRaw === 0n) return entry;
+      if (!branch.priceToken || branch.priceToken.chain !== input.chain) {
+        throw new Error(`Compound receipt ${branch.name} requires a same-chain underlying priceToken`);
+      }
+      const read = (contract: string, data: string) => fetchOnchainUint256({
+        contract, data, chain: input.chain, signal, ctx,
+        rpcUrl: params.rpcUrl, fallbackRpcUrl: params.fallbackRpcUrl,
+      });
+      const [rate, underlying, decimals] = await Promise.all([
+        read(branch.token.address, branch.receipt.exchangeRateSelector ?? "0x182df0f5"),
+        read(branch.token.address, "0x6f307dc3"),
+        read(branch.priceToken.address, DECIMALS_SELECTOR),
+      ]);
+      if (underlying !== BigInt(branch.priceToken.address) || decimals == null || decimals > 36n || rate == null || rate <= 0n) {
+        throw new Error(`Compound receipt ${branch.name} underlying identity or exchange rate unavailable`);
+      }
+      // cToken human units × rate / 10^(18 + underlyingDecimals - cTokenDecimals).
+      // In raw units the token decimal factors cancel; floor to whole underlying units.
+      return { ...entry, balanceRaw: entry.balanceRaw * rate / 10n ** 18n, balanceDecimals: Number(decimals) };
+    }));
   const fetchIndividually = () => Promise.all(
     params.branches.map(async (branch) => {
-      const raw = await fetchErc20Balance(
-        input,
-        branch.token.address,
-        branch.holder,
-        signal,
-        ctx,
-        params.rpcUrl,
-        params.fallbackRpcUrl,
-      );
-      return { branch, balanceRaw: raw };
+      const raw = branch.balanceRead
+        ? await fetchOnchainUint256({
+            ...balanceCall(branch), chain: input.chain, signal, ctx,
+            rpcUrl: params.rpcUrl, fallbackRpcUrl: params.fallbackRpcUrl,
+          })
+        : await fetchErc20Balance(
+            input, branch.token.address, branch.holder, signal, ctx, params.rpcUrl, params.fallbackRpcUrl,
+          );
+      const observedDecimals = branch.balanceRead || branch.receipt
+        ? await fetchOnchainUint256({
+            contract: branch.token.address, data: DECIMALS_SELECTOR, chain: input.chain, signal, ctx,
+            rpcUrl: params.rpcUrl, fallbackRpcUrl: params.fallbackRpcUrl,
+          })
+        : undefined;
+      return { branch, balanceRaw: raw, ...(observedDecimals !== undefined ? { observedDecimals } : {}) };
     }),
   );
   const isSingleChainEvmConfig = params.branches.every((branch) =>
-    branch.token.chain === input.chain
+    (branch.chain ?? branch.token.chain) === input.chain
     && /^0x[0-9a-fA-F]{40}$/.test(branch.token.address)
     && /^0x[0-9a-fA-F]{40}$/.test(branch.holder)
   );
-  if (!isSingleChainEvmConfig) return fetchIndividually();
+  if (!isSingleChainEvmConfig) return convertReceipts(await fetchIndividually());
 
-  const calls = params.branches.map((branch, index) => ({
-    label: `branch-balance:${index}`,
-    contract: branch.token.address,
-    data: encodeBalanceOfCallData(branch.holder),
-    allowFailure: true,
-  }));
+  const calls = params.branches.flatMap((branch, index) => [
+    {
+      label: `branch-balance:${index}`,
+      ...balanceCall(branch),
+      allowFailure: true,
+    },
+    {
+      label: `branch-decimals:${index}`,
+      contract: branch.token.address,
+      data: DECIMALS_SELECTOR,
+      allowFailure: true,
+    },
+  ]);
   const results = await fetchOnchainMulticall3({
     calls,
     chain: input.chain,
@@ -177,13 +225,14 @@ export async function fetchBranchBalances(
     const rawByLabel = new Map(
       results.map((result) => [result.label, result.success ? result.returnData : null]),
     );
-    return params.branches.map((branch, index) => ({
+    return convertReceipts(params.branches.map((branch, index) => ({
       branch,
       balanceRaw: decodeUint256Word(rawByLabel.get(`branch-balance:${index}`)),
-    }));
+      observedDecimals: decodeUint256Word(rawByLabel.get(`branch-decimals:${index}`)),
+    })));
   }
 
-  return fetchIndividually();
+  return convertReceipts(await fetchIndividually());
 }
 
 export async function fetchBranchPriceMap(
@@ -204,6 +253,7 @@ export async function fetchBranchPriceMap(
     })),
     signal,
     ctx,
+    warnings,
   );
 
   // For branches the wrapper-address lookup didn't resolve, fall back to the
@@ -228,6 +278,7 @@ export async function fetchBranchPriceMap(
       })),
       signal,
       ctx,
+      warnings,
     );
     for (const [name, price] of underlyingPriceMap) {
       if (!wrapperPriceMap.has(name)) {
@@ -263,7 +314,26 @@ export function adaptBranchBalanceReserves(input: AdaptBranchBalanceInput): Adap
 
   const warnings: LiveReserveWarning[] = [];
 
-  const values = pricedBranches.map(({ branch, balanceRaw }) => {
+  // Configured-vs-on-chain decimals identity: a mismatched scale values every
+  // branch by a power of ten, so a mismatch must reject the snapshot rather
+  // than store a 10^12 valuation error. A reverting decimals() (non-ERC20) is
+  // not an identity failure — keep the configured scale and surface it as info.
+  for (const { branch, observedDecimals } of balances) {
+    if (observedDecimals === undefined) continue;
+    if (observedDecimals === null) {
+      warnings.push(reserveInfoWarning(
+        "branch-token-decimals-unavailable",
+        `${adapterKey} could not read decimals() for ${branch.name}; using configured ${branch.token.decimals}`,
+      ));
+    } else if (observedDecimals !== BigInt(branch.token.decimals)) {
+      warnings.push(reserveFatalWarning(
+        "branch-token-decimals-mismatch",
+        `${adapterKey} token ${branch.name} (${branch.token.address}) decimals mismatch: configured ${branch.token.decimals}, observed ${observedDecimals}`,
+      ));
+    }
+  }
+
+  const values = pricedBranches.map(({ branch, balanceRaw, balanceDecimals }) => {
     const price = branch.priceUsd ?? priceMap.get(branch.name);
     if (price == null) {
       throw new Error(`Missing DefiLlama price for ${branch.name}`);
@@ -284,7 +354,8 @@ export function adaptBranchBalanceReserves(input: AdaptBranchBalanceInput): Adap
       }
     }
     return {
-      value: valueUsdFromBigIntPrice(balanceRaw ?? 0n, branch.token.decimals, price),
+      sourceKey: `${adapterKey}:${branch.chain ?? branch.token.chain}:${branch.token.address.toLowerCase()}`,
+      value: valueUsdFromBigIntPrice(balanceRaw ?? 0n, balanceDecimals ?? branch.token.decimals, price),
       name: branch.name,
       risk: branch.risk,
       ...(branch.coinId ? { coinId: branch.coinId } : {}),
@@ -309,6 +380,7 @@ export function adaptBranchBalanceReserves(input: AdaptBranchBalanceInput): Adap
     ...(warnings.length > 0 ? { warnings } : {}),
     metadata: {
       branchCount: pricedBranches.length,
+      unknownExposurePct: 0,
       ...notApplicableFreshnessMetadata({
         proofKind: "onchain-branch-balances",
         ...details,

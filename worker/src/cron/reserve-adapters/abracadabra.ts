@@ -180,11 +180,14 @@ export async function fetchAbracadabraReserves(
     ]),
   );
 
+  const warnings: NonNullable<AdapterResult["warnings"]> = [];
   const priceMap = await fetchDefiLlamaPrices(
     Array.from(uniqueAssets.values()),
     signal,
     ctx,
+    warnings,
   );
 
-  return adaptAbracadabraReserves(readings, priceMap);
+  const result = adaptAbracadabraReserves(readings, priceMap);
+  return { ...result, warnings: [...(result.warnings ?? []), ...warnings] };
 }

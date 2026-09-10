@@ -1,8 +1,10 @@
+import { dirname } from "node:path";
 import { describe, expect, it } from "vitest";
 
 import {
   HTML_FIXTURE_MAX_AGE_DAYS,
   evaluateHtmlFixtureAges,
+  readNonHtmlFixtureCaptures,
   runHtmlFixtureAgeCheck,
 } from "../ci/check-html-fixture-age.ts";
 import {
@@ -113,6 +115,38 @@ describe("check-html-fixture-age", () => {
     expect(frozen).toMatchObject({ verdict: "archived", violation: null });
     expect(headerless).toMatchObject({ verdict: "archived", violation: null });
     expect(impossible.verdict).toBe("future");
+  });
+
+  it("gates JSON/txt fixtures through the same canonical stamp rule", () => {
+    const exempt = evaluateHtmlFixtureAges({
+      captures: [
+        makeCapture("x.json", { capturedAt: null, archivedReason: "JSON cannot carry an HTML-comment capture header" }),
+      ],
+      now: NOW,
+      targets: [],
+    });
+    expect(exempt.violations).toEqual([]);
+
+    const unstamped = evaluateHtmlFixtureAges({
+      captures: [makeCapture("y.json", { capturedAt: null })],
+      now: NOW,
+      targets: [],
+    });
+    expect(unstamped.violations).toEqual(["y.json: missing captured-at header"]);
+  });
+
+  it("enumerates every JSON/txt fixture and exempts the unstamped legacy captures", () => {
+    const dir = dirname(HTML_FIXTURE_REFRESH_TARGETS[0].path);
+    const captures = readNonHtmlFixtureCaptures(dir);
+
+    expect(captures.length).toBeGreaterThan(0);
+    for (const capture of captures) {
+      expect(capture.fixture).toMatch(/\.(json|txt)$/);
+      expect(
+        capture.capturedAt ?? capture.archivedReason,
+        `${capture.fixture} must be stamped or carry an exemption reason`,
+      ).not.toBeNull();
+    }
   });
 
   it("reports every violating fixture and keeps a passing corpus quiet", () => {

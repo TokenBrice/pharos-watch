@@ -16,7 +16,8 @@
         "legal",
         "concentration"
       ],
-      "liquidityHorizon": "unknown"
+      "liquidityHorizon": "unknown",
+      "sourceKey": "nest-vault-positions:uscc"
     },
     {
       "name": "Superstate USTB Treasury Fund",
@@ -35,7 +36,8 @@
         "legal",
         "concentration"
       ],
-      "liquidityHorizon": "unknown"
+      "liquidityHorizon": "unknown",
+      "sourceKey": "nest-vault-positions:ustb"
     },
     {
       "name": "pUSD liquid balance",
@@ -52,7 +54,8 @@
         "smart-contract",
         "concentration"
       ],
-      "liquidityHorizon": "unknown"
+      "liquidityHorizon": "unknown",
+      "sourceKey": "nest-vault-positions:pusd"
     }
   ],
   "reserveReview": {

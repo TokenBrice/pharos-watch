@@ -232,22 +232,24 @@ describe("Safety Score v9 DUSD Makina team-answer evidence", () => {
     });
   });
 
-  it("keeps DUSD wrapper-parent scoring on local facts with zero risk-transfer credit", () => {
-    const { evaluatedAsset } = scenario;
-    const wrapperParentLimit = evaluatedAsset.trace.wrapperParentLimit;
-
-    expect(wrapperParentLimit).toMatchObject({
-      treatment: "fallback-discount",
-      riskTransfer: {
-        disposition: "not-applicable",
-        mechanism: "none",
-        requestedCredit: 0,
-        appliedCredit: 0,
-      },
+  it("retains DUSD's authored serial parent independently of unmapped strategy positions", () => {
+    const { compiledAsset, evaluatedAsset } = scenario;
+    expect(compiledAsset.dependencies).toMatchObject({
+      source: "variant",
+      baseSource: "live-unmapped",
+      dependencyFromLive: true,
+      mappedLiveReserveWeight: 0,
+      fallbackReason: null,
+      edges: [{ upstreamAssetId: PARENT_ID, dependencyType: "wrapper", economicRole: "serial-claim", weight: 1 }],
+      rejectionReasons: Array.from({ length: 6 }, (_, sliceIndex) => ({ sliceIndex, reason: "no-match" })),
     });
-    expect(wrapperParentLimit).toBeDefined();
-    expect(wrapperParentLimit!.missingFacts.map((fact) => fact.factClass).filter(
-      (fact) => ["custodyEscrow", "leverage", "lossAbsorptionEmergencyControls"].includes(fact),
-    )).toEqual([]);
+    expect(evaluatedAsset.dependencyInputs.serial).toMatchObject([{ upstreamAssetId: PARENT_ID }]);
+    const wrapperFacts = compiledAsset.wrapperLocalFacts;
+    if (wrapperFacts?.applicability !== "wrapper") throw new Error("expected DUSD wrapper local facts");
+    expect(wrapperFacts.riskTransfer).toMatchObject({
+      disposition: "not-applicable",
+      mechanism: "none",
+      maximumParentLossAbsorptionPoints: 0,
+    });
   });
 });

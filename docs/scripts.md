@@ -18,6 +18,12 @@ Schema rejections use canonical diagnostics (the first failing field path and sc
 
 `.github/workflows/safety-map-refresh.yml` schedules the refresh at 02:20, 04:20, and 06:20 UTC, plus manual dispatch. GitHub scheduled starts are best-effort and can arrive hours late, so the additional slots only improve the odds. The digest is independent of winning this race and can carry forward a recent dated map within its bounded continuity window.
 
+## Daily Social Posters
+
+`npm run publish:daily-social -- capture --out-dir agents/daily-social/local` captures the day's topic from fresh Pharos API data. `npm run build:daily-social -- --input agents/daily-social/local/snapshot.json --out agents/daily-social/local/poster.png` produces a 1600×1000 PNG with self-contained SVG/HTML and `.alt.txt` siblings. The renderer embeds local fonts and logos and performs no network requests. `capture --topic <topic>` previews another weekday's format without changing the publication calendar.
+
+The [daily social pipeline](./daily-social.md) owns the seven-topic calendar, source eligibility, fallback policy, prepublication validation and immutable image/manifest protocol. `.github/workflows/daily-social.yml` prepares the graphic during 13:00–14:00 Europe/Belgrade; the existing Worker digest-trigger poll owns automatic publication at 14:00 local time with DST conversion. `publish --dry-run` reads and validates the target without writes; the workflow uses it before publishing.
+
 ## Operator CLI Contract
 
 State-changing and release-control scripts use `scripts/lib/cli-args.mjs`, a strict wrapper around Node's `util.parseArgs`. These entrypoints reject unknown options, missing values, accidental duplicate options, unexpected positionals, and declared option conflicts before network or filesystem effects. Every migrated command supports `-h` / `--help`; usage errors exit `2`, runtime failures exit `1`, and help exits `0`.

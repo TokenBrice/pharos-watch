@@ -1,13 +1,8 @@
-import { parseLiveReserveAdapterParams, type LiveReserveAdapterParamsByKey } from "@shared/lib/live-reserve-adapters";
+import { parseLiveReserveAdapterParams } from "@shared/lib/live-reserve-adapters";
 import type { ReserveSlice, StablecoinMeta } from "@shared/types/core";
 import type { LiveReservesConfig } from "@shared/types/live-reserves";
 import { REDEMPTION_BACKSTOP_CONFIGS } from "@shared/lib/redemption-backstop-configs";
-import {
-  fetchEvmStorageAtBlock,
-  type EvmRpcOptions,
-} from "../../lib/evm-rpc";
 import { encodeBalanceOfCallData, TOTAL_SUPPLY_SELECTOR } from "../../lib/evm-selectors";
-import { runAdapterIo } from "./concurrency";
 import {
   decimalNumberFromBigInt,
   makeOnchainCallers,
@@ -16,10 +11,11 @@ import {
 } from "./helpers";
 import { decodeStrictAddressWord, decodeStrictBoolWord, decodeUint256Word } from "./abi-decode";
 import {
-  EIP1967_IMPLEMENTATION_SLOT,
-  implementationAddressFromSlot,
+  readImplementationSlotAddress,
+  requireExpectedAddress,
 } from "./onchain-identity";
 import type { AdapterContext, AdapterResult } from "./types";
+import { reserveDegradedWarning } from "./warnings";
 
 const ADAPTER_KEY = "usdai-hub";
 const PYUSD_DECIMALS = 6;
@@ -31,8 +27,6 @@ const SELECTORS = {
   bridgedSupply: "0x11c301e0",
   paused: "0x5c975abb",
 } as const;
-
-export type UsdaiHubParams = LiveReserveAdapterParamsByKey["usdai-hub"];
 
 function requireUint(raw: string | null, label: string): bigint {
   const value = decodeUint256Word(raw);
@@ -50,50 +44,6 @@ function requireBool(raw: string | null, label: string): boolean {
   const value = decodeStrictBoolWord(raw);
   if (value == null) throw new Error(`${ADAPTER_KEY}: ${label} returned malformed bool payload`);
   return value;
-}
-
-function rpcOptions(
-  params: UsdaiHubParams,
-  signal: AbortSignal,
-  ctx?: AdapterContext,
-): EvmRpcOptions {
-  return {
-    extraRpcUrls: [params.rpcUrl, params.fallbackRpcUrl].filter((url): url is string => url != null),
-    signal,
-    timeoutMs: 10_000,
-    chainRpcs: ctx?.chainRpcs,
-  };
-}
-
-async function readImplementationSlot(
-  input: ReturnType<typeof requireOnchainInput>,
-  params: UsdaiHubParams,
-  signal: AbortSignal,
-  ctx?: AdapterContext,
-): Promise<string> {
-  const raw = await runAdapterIo(
-    ctx,
-    `${ADAPTER_KEY}:implementation-slot`,
-    () => fetchEvmStorageAtBlock(
-      input.chain,
-      params.hubAddress,
-      EIP1967_IMPLEMENTATION_SLOT,
-      "latest",
-      rpcOptions(params, signal, ctx),
-    ),
-    { signal },
-  );
-  const implementation = implementationAddressFromSlot(raw);
-  if (implementation == null) {
-    throw new Error(`${ADAPTER_KEY}: implementation slot returned malformed payload`);
-  }
-  return implementation;
-}
-
-function requireExpectedAddress(actual: string, expected: string, label: string): void {
-  if (actual !== expected.toLowerCase()) {
-    throw new Error(`${ADAPTER_KEY}: ${label} identity mismatch (${actual} != ${expected.toLowerCase()})`);
-  }
 }
 
 /**
@@ -129,36 +79,42 @@ export async function fetchUsdaiHubReserves(
       onchain.raw(params.hubAddress, SELECTORS.bridgedSupply),
       onchain.raw(params.hubAddress, SELECTORS.paused),
     ]),
-    readImplementationSlot(input, params, signal, ctx),
+    readImplementationSlotAddress({
+      adapterKey: ADAPTER_KEY,
+      input,
+      contractAddress: params.hubAddress,
+      params,
+      signal,
+      ctx,
+    }),
   ]);
 
   const baseToken = requireAddress(rawBaseToken, "baseToken()");
-  requireExpectedAddress(baseToken, params.baseTokenAddress, "baseToken()");
-  requireExpectedAddress(implementation, params.implementationAddress, "EIP-1967 implementation");
+  requireExpectedAddress(ADAPTER_KEY, baseToken, params.baseTokenAddress, "baseToken()");
+  requireExpectedAddress(ADAPTER_KEY, implementation, params.implementationAddress, "EIP-1967 implementation");
 
   const baseTokenBalanceRaw = requireUint(rawBalance, "PYUSD balanceOf(hub)");
   const totalSupplyRaw = requireUint(rawTotalSupply, "totalSupply()");
   const bridgedSupplyRaw = requireUint(rawBridgedSupply, "bridgedSupply()");
   const paused = requireBool(rawPaused, "paused()");
-  if (totalSupplyRaw <= 0n) {
-    throw new Error(`${ADAPTER_KEY}: totalSupply() returned zero`);
-  }
 
   const bridgeSafeLiabilityRaw = totalSupplyRaw + bridgedSupplyRaw;
-  if (baseTokenBalanceRaw * PYUSD_TO_USDAI_SCALE < bridgeSafeLiabilityRaw) {
-    throw new Error(
-      `${ADAPTER_KEY}: PYUSD balance is below bridge-safe USDai liabilities `
-      + `(${baseTokenBalanceRaw} < ${bridgeSafeLiabilityRaw} at 6/18 decimals)`,
-    );
+  const warnings = [];
+  if (baseTokenBalanceRaw * PYUSD_TO_USDAI_SCALE < bridgeSafeLiabilityRaw || bridgeSafeLiabilityRaw === 0n) {
+    warnings.push(reserveDegradedWarning(
+      "reserve-undercollateralized",
+      `${ADAPTER_KEY}: observed PYUSD balance ${baseTokenBalanceRaw} against bridge-safe liability ${bridgeSafeLiabilityRaw} at 6/18 decimals`,
+    ));
   }
+  if (paused) warnings.push(reserveDegradedWarning("route-paused", "USDai hub paused() returned true on-chain"));
 
   const totalReserveUsd = decimalNumberFromBigInt(baseTokenBalanceRaw, PYUSD_DECIMALS);
   const supplyUsd = decimalNumberFromBigInt(bridgeSafeLiabilityRaw, USDAI_DECIMALS);
   const canonicalSupplyUsd = decimalNumberFromBigInt(totalSupplyRaw, USDAI_DECIMALS);
   const bridgedSupplyUsd = decimalNumberFromBigInt(bridgedSupplyRaw, USDAI_DECIMALS);
-  const collateralizationRatio = totalReserveUsd / supplyUsd;
-  if (![totalReserveUsd, supplyUsd, canonicalSupplyUsd, bridgedSupplyUsd, collateralizationRatio]
-    .every(Number.isFinite)) {
+  const collateralizationRatio = supplyUsd > 0 ? totalReserveUsd / supplyUsd : undefined;
+  if (![totalReserveUsd, supplyUsd, canonicalSupplyUsd, bridgedSupplyUsd].every(Number.isFinite) ||
+      (collateralizationRatio !== undefined && !Number.isFinite(collateralizationRatio))) {
     throw new Error(`${ADAPTER_KEY}: reserve/liability values are not finite`);
   }
 
@@ -168,7 +124,7 @@ export async function fetchUsdaiHubReserves(
   const routeStatusReason = paused
     ? "USDai hub paused() returned true on-chain"
     : totalReserveUsd > 0
-      ? "PYUSD balanceOf(hub) is positive and covers canonical plus bridged USDai liabilities"
+      ? "PYUSD balanceOf(hub) is positive"
       : undefined;
 
   const slice: ReserveSlice = {
@@ -181,12 +137,13 @@ export async function fetchUsdaiHubReserves(
 
   return {
     slices: [slice],
+    ...(warnings.length > 0 ? { warnings } : {}),
     metadata: {
       ...notApplicableFreshnessMetadata(),
       totalSupplyRaw: totalSupplyRaw.toString(),
       totalReserveUsd,
       supplyUsd,
-      collateralizationRatio,
+      ...(collateralizationRatio !== undefined ? { collateralizationRatio } : {}),
       redemption: {
         capacityUsd: totalReserveUsd,
         capacityRaw: baseTokenBalanceRaw.toString(),

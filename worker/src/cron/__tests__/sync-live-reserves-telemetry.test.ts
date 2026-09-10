@@ -48,7 +48,7 @@ describe("syncLiveReserves adapter latency telemetry", () => {
         stage: index % 2 === 0 ? "primary" : "fallback",
         cacheHit: index % 3 === 0,
         ioCallCount: 2,
-        waveCount: 1,
+        ioActivityBurstCount: 1,
         elapsedMs: index + 1,
         error: index % 5 === 0,
       });
@@ -72,7 +72,7 @@ describe("syncLiveReserves adapter latency telemetry", () => {
     for (const elapsedMs of [1, 5, 6, 10, 25]) {
       collector.recordAttempt({
         adapterKey: "test", chain: "ethereum", stage: "primary", cacheHit: false,
-        ioCallCount: 1, waveCount: 1, elapsedMs, error: false,
+        ioCallCount: 1, ioActivityBurstCount: 1, elapsedMs, error: false,
       });
     }
     expect(collector.finalize().total.elapsedMs).toEqual({
@@ -87,7 +87,7 @@ describe("syncLiveReserves adapter latency telemetry", () => {
     for (const elapsedMs of [-1, NaN, Infinity, 20_001]) {
       collector.recordAttempt({
         adapterKey: "test", chain: "ethereum", stage: "primary", cacheHit: false,
-        ioCallCount: 0, waveCount: 0, elapsedMs, error: false,
+        ioCallCount: 0, ioActivityBurstCount: 0, elapsedMs, error: false,
       });
     }
     expect(collector.finalize().total.elapsedMs).toEqual({
@@ -103,7 +103,7 @@ describe("syncLiveReserves adapter latency telemetry", () => {
       for (let attempt = 0; attempt < 3; attempt++) {
         collector.recordAttempt({
           adapterKey: `adapter-${index}`, chain: "ethereum", stage: "primary", cacheHit: false,
-          ioCallCount: 0, waveCount: 0, elapsedMs: 1, error: false,
+          ioCallCount: 0, ioActivityBurstCount: 0, elapsedMs: 1, error: false,
         });
       }
     }
@@ -166,7 +166,7 @@ describe("syncLiveReserves adapter latency telemetry", () => {
     expect(adapterLatency.total).toMatchObject({
       attemptCount: configuredCoins,
       ioCallCount: adapterFetches * 2,
-      waveCount: adapterFetches,
+      ioActivityBurstCount: adapterFetches,
       errorCount: 0,
     });
     expect(adapterLatency.requestCacheMisses).toBe(adapterFetches);
@@ -224,7 +224,7 @@ describe("syncLiveReserves adapter latency telemetry", () => {
     expect(observedErrors).toEqual(["async I/O failed", "sync I/O failed"]);
     expect(metadataOf(result).adapterLatency.total).toMatchObject({
       ioCallCount: 3,
-      waveCount: 3,
+      ioActivityBurstCount: 3,
       errorCount: 0,
     });
   });
@@ -306,7 +306,7 @@ describe("syncLiveReserves adapter latency telemetry", () => {
       total: {
         attemptCount: 0,
         ioCallCount: 0,
-        waveCount: 0,
+        ioActivityBurstCount: 0,
         errorCount: 0,
         elapsedMs: {
           count: 0,

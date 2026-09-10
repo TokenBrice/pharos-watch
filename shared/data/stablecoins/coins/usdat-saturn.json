@@ -90,5 +90,39 @@
   "collateralQuality": "rwa",
   "custodyModel": "institutional-unregulated",
   "governanceQuality": "single-entity",
+  "liveReservesConfig": {
+    "adapter": "saturn-pyusdx",
+    "version": 1,
+    "semantics": "single-asset",
+    "breakerScope": "usdat-saturn",
+    "display": {
+      "url": "https://app.saturn.credit/insights/saturn-protocol",
+      "label": "USDat MultiMint contract"
+    },
+    "inputs": {
+      "primary": {
+        "kind": "onchain-evm",
+        "chain": "ethereum",
+        "rpcMode": "public-rpc"
+      }
+    },
+    "params": {
+      "wrapperAddress": "0x23238f20b894f29041f48d88ee91131c395aaa71",
+      "expectedImplementation": "0x496a4a33b6181f4536203488d9a05ac1429e702c",
+      "underlyingToken": "0xebdb0942ce16386ab90718c7bd10c91cdb66b14d",
+      "slice": {
+        "name": "PYUSDx held by Saturn USDat",
+        "risk": "low",
+        "coinId": "pyusd-paypal",
+        "depType": "wrapper"
+      },
+      "sourceUrls": [
+        "https://github.com/saturn-organization/saturn-dollar",
+        "https://docs.m0.org/build/pyusdx/deploy-extension",
+        "https://www.m0.org/press-releases/moonpay-m0-and-paypal-announce-pyusdx-the-infrastructure-platform-for-pyusd-backed-stablecoins"
+      ],
+      "rpcUrl": "https://ethereum.publicnode.com"
+    }
+  },
   "launchDate": "2026-03-10"
 }

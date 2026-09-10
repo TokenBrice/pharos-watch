@@ -1,5 +1,5 @@
 import type { ReserveSlice } from "@shared/types/core";
-import { computeUnknownExposurePct, slicesFromValues } from "./slice-math";
+import { assertFiniteNonNegativeReserveRows, computeUnknownExposurePct, slicesFromValues } from "./slice-math";
 
 interface BucketedExposureOptions<Item, Bucket extends string> {
   items: Item[];
@@ -13,6 +13,7 @@ export interface ValueBucketRule<Item, Bucket extends string = string> {
   key: Bucket;
   name: string | ((item: Item) => string);
   risk: ReserveSlice["risk"];
+  sourceKey?: string;
   coinId?: string;
   depType?: ReserveSlice["depType"];
   blacklistable?: boolean;
@@ -27,6 +28,7 @@ interface ClassifyBucketedValuesOptions<Item, Bucket extends string> {
   totalValue?: number;
   decimals?: number;
   unknownSliceName?: string;
+  unknownSourceKey?: string;
   unknownRisk?: ReserveSlice["risk"];
 }
 
@@ -50,6 +52,7 @@ export function accumulateBucketedExposure<Item, Bucket extends string>({
   unknownValue: number;
   unknownValuesByKey: Map<string, number>;
 } {
+  assertFiniteNonNegativeReserveRows(items, getValue, "bucketed exposure");
   const bucketTotals = new Map<Bucket, number>();
   const unknownValuesByKey = new Map<string, number>();
   let totalValue = 0;
@@ -83,8 +86,10 @@ export function classifyBucketedValues<Item, Bucket extends string>({
   totalValue,
   decimals = 1,
   unknownSliceName = "Unmapped reserve positions",
+  unknownSourceKey,
   unknownRisk = "high",
 }: ClassifyBucketedValuesOptions<Item, Bucket>): ClassifiedBucketedValuesResult<Bucket> {
+  assertFiniteNonNegativeReserveRows(items, getValue, "classified reserve values");
   const bucketTotals = new Map<Bucket, number>();
   const bucketNames = new Map<Bucket, string>();
   const unknownItems: string[] = [];
@@ -121,13 +126,14 @@ export function classifyBucketedValues<Item, Bucket extends string>({
           value,
           name: bucketNames.get(rule.key) ?? (typeof rule.name === "string" ? rule.name : rule.key),
           risk: rule.risk,
+          ...(rule.sourceKey ? { sourceKey: rule.sourceKey } : {}),
           ...(rule.coinId ? { coinId: rule.coinId } : {}),
           ...(rule.depType ? { depType: rule.depType } : {}),
           ...(rule.blacklistable != null ? { blacklistable: rule.blacklistable } : {}),
         }];
       }),
       ...(unknownValue > 0
-        ? [{ value: unknownValue, name: unknownSliceName, risk: unknownRisk }]
+        ? [{ value: unknownValue, name: unknownSliceName, risk: unknownRisk, ...(unknownSourceKey ? { sourceKey: unknownSourceKey } : {}) }]
         : []),
     ],
     decimals,

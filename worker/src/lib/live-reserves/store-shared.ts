@@ -1,3 +1,4 @@
+import type { ScheduledCheckpointIdentity } from "../scheduled-recovery-checkpoint";
 import { DAY_SECONDS } from "@shared/lib/time-constants";
 import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import type { ReserveSlice, StablecoinMeta } from "@shared/types/core";
@@ -7,6 +8,7 @@ import type {
   LiveReserveSourceModel,
   LiveReserveWarning,
 } from "@shared/types/live-reserves";
+import type { LiveReserveAdmissionResult } from "./store-snapshot-state";
 export type { ReserveCompositionOverview } from "@shared/types/live-reserves";
 
 export const LIVE_RESERVE_FRESHNESS_SEC = 2 * DAY_SECONDS;
@@ -25,6 +27,7 @@ const RESERVE_COMPOSITION_COLUMN_NAMES = [
   "warnings",
   "adapter_source_model",
   "adapter_evidence_class",
+  "config_fingerprint",
 ] as const;
 
 export const RESERVE_COMPOSITION_INSERT_COLUMNS = RESERVE_COMPOSITION_COLUMN_NAMES.map(
@@ -50,6 +53,7 @@ export interface ReserveCompositionRow {
   warnings?: string | null;
   adapter_source_model?: string | null;
   adapter_evidence_class?: string | null;
+  config_fingerprint?: string | null;
 }
 
 export interface ReserveSyncStateRow {
@@ -66,6 +70,7 @@ export interface ReserveSyncStateRow {
   last_attempt_id?: string | null;
   pending_attempt_id?: string | null;
   last_success_attempt_id?: string | null;
+  config_fingerprint?: string | null;
 }
 
 export interface SnapshotIntegrityIssue {
@@ -85,6 +90,7 @@ export interface ReserveCompositionRecord {
   warnings: LiveReserveWarning[];
   adapterSourceModel: LiveReserveSourceModel;
   adapterEvidenceClass: LiveReserveEvidenceClass;
+  configFingerprint?: string | null;
 }
 
 export interface ReserveSyncStateRecord {
@@ -101,6 +107,7 @@ export interface ReserveSyncStateRecord {
   lastAttemptId?: string | null;
   pendingAttemptId?: string | null;
   lastSuccessAttemptId?: string | null;
+  configFingerprint?: string | null;
 }
 
 export interface ReserveSyncAttemptHistoryRecord {
@@ -122,6 +129,9 @@ export interface ReserveSyncAttemptStartRecord {
   breakerKey: string;
   attemptedAt: number;
   attemptId: string;
+  configFingerprint?: string | null;
+  deadlineMs?: number;
+  checkpoint?: ScheduledCheckpointIdentity;
 }
 
 export interface LiveReserveHistoryPruneResult {
@@ -161,6 +171,7 @@ export interface ReserveSnapshotMetadataRecord {
   sourceModel: LiveReserveSourceModel;
   evidenceClass: LiveReserveEvidenceClass;
   syncStatus: ReserveSyncStatus;
+  admission?: LiveReserveAdmissionResult;
 }
 
 export const RESERVE_SYNC_STATE_SELECT_COLUMNS = [
@@ -177,6 +188,7 @@ export const RESERVE_SYNC_STATE_SELECT_COLUMNS = [
   "last_attempt_id",
   "pending_attempt_id",
   "last_success_attempt_id",
+  "config_fingerprint",
 ].join(", ");
 
 export function getConfiguredLiveReserveCoins(): StablecoinMeta[] {

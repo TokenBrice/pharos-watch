@@ -3,6 +3,9 @@ import { readFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it, afterEach, vi } from "vitest";
+import * as assurance from "@shared/lib/independent-assurance";
+import * as adapters from "@shared/lib/live-reserve-adapters";
+import type { LiveReserveAdapterDefinitionMap } from "@shared/lib/live-reserve-adapters";
 import {
   getIndependentAssuranceManifest,
   IndependentAssuranceManifestSchema,
@@ -11,9 +14,11 @@ import {
   type IndependentAssuranceProduct,
 } from "@shared/lib/independent-assurance";
 import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
+import type { LiveReserveAdapterKey } from "@shared/types/live-reserves";
 import {
   EUROP_INDEPENDENT_ASSURANCE_PROFILE,
   fetchIndependentAssuranceAdapter,
+  fetchIndependentAssuranceReserves,
   straitsxIndependentAssuranceProfile,
   verifyIndependentAssuranceReport,
   type IndependentAssuranceProfile,
@@ -21,6 +26,11 @@ import {
 import { getReserveAdapter } from "../index";
 import { USDGO_INDEPENDENT_ASSURANCE_PROFILE } from "../usdgo-transparency";
 import { validateAdapterOutput } from "../validate";
+import { buildReviewedReserveClassifications } from "../../../lib/safety-score-v9/extension-reserves";
+
+/** One registered live-reserve adapter definition: the union
+ * `getLiveReserveAdapterDefinition` hands out for any adapter key. */
+type LiveReserveAdapterDefinition = LiveReserveAdapterDefinitionMap[LiveReserveAdapterKey];
 
 const TEST_DIR = dirname(fileURLToPath(import.meta.url));
 const PDF_BYTES = new TextEncoder().encode("%PDF-1.7\nfixture\n");
@@ -50,6 +60,7 @@ function manifest(overrides: Partial<IndependentAssuranceManifest> = {}): Indepe
     attestor: "Aura Partners",
     engagement: "Independent limited assurance",
     conclusion: "nothing-came-to-attention",
+    assuranceTier: "independent-assurance",
     unit: "AUD",
     assets: [{ code: "cash", label: "Cash", amount: "101.00" }],
     liabilities: [{ code: "supply", label: "Supply", amount: "100.00" }],
@@ -185,7 +196,101 @@ function assuranceCandidate(
 }
 
 describe("independent-assurance manifest framework", () => {
-  afterEach(() => vi.unstubAllGlobals());
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    vi.restoreAllMocks();
+  });
+
+  it.each(["agreed-upon-procedures", "issuer-attested"] as const)(
+    "derives %s provenance and prevents independent publication",
+    async (conclusion) => {
+      const raw = { ...manifest(), conclusion, assuranceTier: undefined };
+      const reviewed = IndependentAssuranceManifestSchema.parse(raw);
+      expect(reviewed.assuranceTier).toBe(conclusion);
+      expect(IndependentAssuranceManifestSchema.safeParse({
+        ...raw, assuranceTier: "independent-assurance",
+      }).success).toBe(false);
+      vi.spyOn(assurance, "getIndependentAssuranceManifest").mockReturnValue(reviewed);
+      const fetchMock = installFetch();
+      const coin = routedAssuranceCoin("audx-aussie-dollar-token");
+      const config = coin.liveReservesConfig!;
+      const profile = { ...PROFILE, classifications: { cash: { name: "Cash", risk: "very-low" as const } } };
+      const params = { product: "AUDX" as const, profile: "audx-v1", indexHost: "www.audxtoken.com", reportHosts: ["www.audxtoken.com"] };
+      await expect(fetchIndependentAssuranceReserves(
+        coin, config, new AbortController().signal, profile, params,
+      )).rejects.toThrow("static-validated/issuer-attested");
+      expect(fetchMock).not.toHaveBeenCalled();
+
+      const descriptor = adapters.getLiveReserveAdapterDefinition(config.adapter)!;
+      // The fixture fabricates an evidence class the registry never pairs with
+      // this adapter key (the `key` literal pins the union member), so the
+      // mocked definition is only reachable via an explicit assertion,
+      // mirroring the keyed-params cast in live-reserve-adapters.ts.
+      vi.spyOn(adapters, "getLiveReserveAdapterDefinition").mockReturnValue({
+        ...descriptor, evidenceClass: "static-validated", sourceOriginClass: "issuer-attested",
+      } as unknown as LiveReserveAdapterDefinition);
+      const result = await fetchIndependentAssuranceReserves(
+        coin, config, new AbortController().signal, profile, params,
+      );
+      expect(result.slices).toEqual([{ sourceKey: "test-independent-assurance:audx:cash", name: "Cash", risk: "very-low", pct: 100 }]);
+      expect(result.metadata).toMatchObject({ freshnessMode: "verified", collateralizationRatio: 1.01 });
+    },
+  );
+
+  it("joins renamed assurance categories by their source asset code", async () => {
+    const reviewed = manifest();
+    vi.spyOn(assurance, "getIndependentAssuranceManifest").mockReturnValue(reviewed);
+    installFetch();
+    const coin = routedAssuranceCoin("audx-aussie-dollar-token");
+    const result = await fetchIndependentAssuranceReserves(
+      coin,
+      { ...coin.liveReservesConfig!, inputs: { primary: { kind: "http-html", url: reviewed.officialIndexUrl } } },
+      new AbortController().signal,
+      { ...PROFILE, classifications: { cash: { name: "Renamed bank reserve", risk: "very-low" } } },
+      { product: "AUDX", profile: "audx-v1", indexHost: "www.audxtoken.com", reportHosts: ["www.audxtoken.com"] },
+    );
+    const meta = {
+      ...coin,
+      reserves: [{ ...coin.reserves![0]!, sourceKey: "test-independent-assurance:audx:cash" }],
+    };
+    const clock = Date.parse(`${coin.reserveReview!.reviewedAt}T12:00:00Z`) / 1000;
+    const [classification] = buildReviewedReserveClassifications(result.slices, meta, clock);
+    expect(classification).toMatchObject({
+      assetClass: coin.reserves![0]!.assetClass,
+      issuerOrObligorKey: coin.reserves![0]!.issuerOrObligor,
+    });
+    expect(classification?.classificationKey).toMatch(/^registry-reviewed:/);
+  });
+
+  it.each(["200", "0", "-1"])("publishes reported liability %s with degraded evidence", async (liability) => {
+    const reviewed = manifest({
+      liabilities: [{ code: "supply", label: "Supply", amount: liability }],
+      reportedLiabilityTotal: liability,
+    });
+    vi.spyOn(assurance, "getIndependentAssuranceManifest").mockReturnValue(reviewed);
+    installFetch();
+    const result = await fetchIndependentAssuranceReserves(
+      routedAssuranceCoin("audx-aussie-dollar-token"),
+      { ...routedAssuranceCoin("audx-aussie-dollar-token").liveReservesConfig!,
+        inputs: { primary: { kind: "http-html", url: reviewed.officialIndexUrl } } },
+      new AbortController().signal,
+      { ...PROFILE, classifications: { cash: { name: "Cash", risk: "very-low" } } },
+      { product: "AUDX", profile: "audx-v1", indexHost: "www.audxtoken.com", reportHosts: ["www.audxtoken.com"] },
+    );
+    expect(result.slices).toEqual([{ sourceKey: "test-independent-assurance:audx:cash", name: "Cash", risk: "very-low", pct: 100 }]);
+    expect(result.metadata?.collateralizationRatio).toBe(liability === "200" ? 0.505 : undefined);
+    expect(result.warnings).toContainEqual(expect.objectContaining({ code: "reserve-undercollateralized", effect: "degraded" }));
+    expect(reconcileIndependentAssuranceManifest(reviewed)).toMatchObject({
+      reserveShortfall: liability === "200" ? "99" : "0",
+      nonPositiveLiabilityCodes: liability === "200" ? [] : ["supply"],
+    });
+  });
+
+  it.each(["assets", "liabilities"] as const)("rejects malformed %s rows", (field) => {
+    const reviewed = manifest();
+    reviewed[field][0].amount = "not-a-decimal";
+    expect(() => reconcileIndependentAssuranceManifest(reviewed)).toThrow("not a decimal string");
+  });
 
   it("accepts a matching official index URL and exact PDF bytes", async () => {
     installFetch();
@@ -429,4 +534,69 @@ describe("independent-assurance manifest framework", () => {
       }),
     ).toThrow(/reported asset total differs/);
   });
+
+  it.each(["brlv-crown", "audm-macropod"] as const)(
+    "binds %s to a static-validated/issuer-attested descriptor and reconciles every liability",
+    (coinId) => {
+      const coin = ACTIVE_STABLECOINS.find((candidate) => candidate.id === coinId);
+      if (!coin?.liveReservesConfig) throw new Error(`missing issuer-attested config for ${coinId}`);
+      expect(coin.liveReservesConfig.adapter).toBe("issuer-attested-report");
+
+      const descriptor = getReserveAdapter("issuer-attested-report");
+      expect(descriptor?.evidenceClass).toBe("static-validated");
+      expect(adapters.getLiveReserveAdapterDefinition("issuer-attested-report")?.sourceOriginClass).toBe("issuer-attested");
+
+      const product = coin.symbol.toUpperCase() as "BRLV" | "AUDM";
+      const reviewed = getIndependentAssuranceManifest(product);
+      expect(reviewed.conclusion).toBe("issuer-attested");
+      expect(reviewed.assuranceTier).toBe("issuer-attested");
+      expect(reviewed.liabilities.length).toBeGreaterThan(0);
+      expect(reconcileIndependentAssuranceManifest(reviewed)).toMatchObject({
+        reportedAssetDifference: "0",
+        reportedLiabilityDifference: "0",
+        reserveShortfall: "0",
+        nonPositiveLiabilityCodes: [],
+      });
+    },
+  );
+
+  it.each(["brlv-crown", "audm-macropod"] as const)(
+    "dispatches %s through the exported adapter and classifies measured slices",
+    async (coinId) => {
+      const coin = ACTIVE_STABLECOINS.find((candidate) => candidate.id === coinId);
+      if (!coin?.liveReservesConfig) throw new Error(`missing live-reserves config for ${coinId}`);
+      const config = coin.liveReservesConfig;
+      const product = coin.symbol.toUpperCase() as "BRLV" | "AUDM";
+      const reviewed = {
+        ...getIndependentAssuranceManifest(product),
+        reportSha256: PDF_SHA256,
+        reportByteLength: PDF_BYTES.length,
+      };
+      vi.spyOn(assurance, "getIndependentAssuranceManifest").mockReturnValue(reviewed);
+
+      vi.stubGlobal(
+        "fetch",
+        vi.fn(async (input: RequestInfo | URL) => {
+          const url = String(input);
+          if (url === reviewed.officialIndexUrl) {
+            return new Response(`<a href="${reviewed.reportUrl}">Reviewed report</a>`, {
+              headers: { "content-type": "text/html" },
+            });
+          }
+          if (url === reviewed.reportUrl) {
+            return new Response(PDF_BYTES, {
+              headers: { "content-type": "application/pdf", "content-length": String(PDF_BYTES.length) },
+            });
+          }
+          throw new Error(`unexpected request ${url}`);
+        }),
+      );
+
+      const result = await fetchIndependentAssuranceAdapter(coin, config, new AbortController().signal);
+      expect(result.metadata).toMatchObject({ freshnessMode: "verified" });
+      expect(result.metadata?.collateralizationRatio).toBeGreaterThan(1);
+      expect(result.slices.length).toBeGreaterThan(0);
+      expect(result.slices.reduce((sum, slice) => sum + slice.pct, 0)).toBeGreaterThan(99);
+    },
+  );
 });

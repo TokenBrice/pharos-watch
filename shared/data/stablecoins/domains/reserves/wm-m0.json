@@ -16,7 +16,8 @@
         "smart-contract",
         "counterparty"
       ],
-      "liquidityHorizon": "unknown"
+      "liquidityHorizon": "unknown",
+      "sourceKey": "m0-wrapper-underlying:m"
     }
   ],
   "reserveReview": {

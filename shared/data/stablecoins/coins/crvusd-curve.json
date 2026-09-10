@@ -97,7 +97,7 @@
   "governanceQuality": "dao-governance",
   "liveReservesConfig": {
     "adapter": "crvusd",
-    "version": 3,
+    "version": 4,
     "semantics": "collateral-mix",
     "breakerScope": "crvusd-curve",
     "display": {

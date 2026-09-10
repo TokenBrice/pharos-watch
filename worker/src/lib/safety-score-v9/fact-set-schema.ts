@@ -8,6 +8,7 @@ import {
 } from "@shared/types/dependency-types";
 import {
   V9AccessReviewV2Schema,
+  V9DependencyRejectionReasonsSchema,
   V9ControlAuthoritySchema,
   V9EconomicControlReviewV2Schema,
   V9IncidentStateSchema,
@@ -173,6 +174,7 @@ const EffectiveDependenciesOverlaySchema = z
     fallbackReason: z
       .enum(["live-unmapped-to-curated-reserve", "live-unmapped-to-manual", "live-cycle-to-curated"])
       .nullable(),
+    rejectionReasons: V9DependencyRejectionReasonsSchema.optional(),
     edges: canonicalArrayBy(DependencyEdgeOverlaySchema, (edge) => {
       const role = edge.economicRole ?? defaultV9DependencyEconomicRole(edge.dependencyType);
       return canonicalV9DependencyEdgeKey(edge.dependencyType, edge.upstreamAssetId, role);

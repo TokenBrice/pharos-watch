@@ -1,5 +1,50 @@
 {
   "id": "hyusd-hylo",
+  "liveReservesConfig": {
+    "adapter": "hylo-solana",
+    "version": 1,
+    "semantics": "collateral-mix",
+    "display": { "url": "https://hylo.so/", "label": "Hylo Solana pool accounts" },
+    "inputs": { "primary": { "kind": "onchain-solana" } },
+    "params": {
+      "program": "HYEXCHtHkBagdStcJCp3xbbb9B7sdMdWXFNj6mdsG4hn",
+      "state": "9cd2sAfbBvKs4SX9YKo4dcjwP3TgTVQ8dT5koshGcDND",
+      "registry": "9Mb2Mt76AN7eNY3BBA4LgfTicARXhcEEokTBfsN47noK",
+      "hyusdMint": "5YMkXAYccHSGnHn9nob9xEvv6Pvka9DZWH7nTbotTu9E",
+      "solOracle": "7AviUf9nL62mcxNbQGKm4nKDQnPjswo6c5MX4D57HmyE",
+      "usdcPair": "CMNPACEDebyvNJDgBxRc5fbScF8kmx52ZPBY4Cu4wuwS",
+      "usdcVault": "5ykRvDpEXwKEdoE6yfZ45zeuZ62CcRQRUoZoye4tTJd7",
+      "usdcMint": "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",
+      "lsts": [
+        { "mint": "J1toso1uCk3RLmjorhTtrVwY9HJ7X8V9yYac6Y7kGCPn", "name": "jitoSOL", "priceChain": "coingecko", "priceAddress": "jito-staked-sol" },
+        { "mint": "hy1oXYgrBW6PVcJ4s6s2FKavRdwgWTXdfE69AxT7kPT", "name": "hyloSOL", "priceChain": "solana", "priceAddress": "hy1oXYgrBW6pVCj4s6s2FKavRdwgWTXdfE69AxT7kPT" }
+      ],
+      "exoPairs": [
+        {
+          "pair": "8mgw2TsNxTMndWPyswLELw3V2tPrPvtqS7Ex9RyiGhML",
+          "vault": "Hrdm1Q417g1kChwzZbdV1KhyPVGgzWvKnCSdafpqXNy",
+          "mint": "cbbtcf3aa214zXHbiAZQwf4122FBYbraNdFqgw4iMij",
+          "oracle": "APgzQGGdv2qCgBkX6aHVkrGePtBVDDg68GiqaM7rmtf5",
+          "feedId": "e62df6c8b4a85fe1a67db44dc12de5db330f7ac66b72dc658afedf0f4a415b43",
+          "pool": "cbbtc-pool", "name": "cbBTC pool collateral", "priceAddress": "coinbase-wrapped-btc"
+        },
+        {
+          "pair": "42GzNWvZ1H1hwXaBZ8mbeVZaSEgh6zMm8BABdS3v1BEB",
+          "vault": "FWPLy9vhx2VRto91bcqh7f8xSUd285Sz2N12H6JC29rr",
+          "mint": "98sMhvDwXj1RQi5c5Mndm3vPe9cBqPrbLaufMXFNMh5g",
+          "oracle": "9dAoWJ5ua81c43ntstN4xyg3Uo9Zt93x7BjCxSc27V6V",
+          "feedId": "4279e31cc369bbcc2faf022b382b080e32a8e689ff20fbc530d2a603eb6cd98b",
+          "pool": "hype-pool", "name": "HYPE pool collateral", "priceAddress": "hyperliquid"
+        }
+      ],
+      "inactiveExoPairs": [
+        "J1KqodmuXBdRZZbiHV9LDh3uYDz1QZ3hzsWYXLraHJWZ",
+        "ANbqWKsgtWxoaaYQPyAfZWsMxptmzaFJ6RJDW7yXvEf6",
+        "HRLWxMPgaBiZ8M37Z9MaTN1JQcQqwc2VoRojyQT2HsfZ",
+        "Atssq1iqXhUrPX1qV9e2UyQCWdeAd6DXQrccK9eu3Bc"
+      ]
+    }
+  },
   "name": "Hylo HYUSD",
   "symbol": "hyUSD",
   "oneLiner": "HYUSD is issued by isolated SOL-LST, cbBTC, and USDC pools whose liabilities reconcile to the live token supply.",

@@ -9,8 +9,14 @@
       "depType": "mechanism",
       "assetClass": "stablecoin",
       "issuerOrObligor": "MakerDAO / Sky Protocol",
-      "riskFactors": ["counterparty", "smart-contract", "liquidity", "custody"],
-      "liquidityHorizon": "unknown"
+      "riskFactors": [
+        "counterparty",
+        "smart-contract",
+        "liquidity",
+        "custody"
+      ],
+      "liquidityHorizon": "unknown",
+      "sourceKey": "blast-usdb-yield-manager:dai"
     }
   ],
   "reserveReview": {

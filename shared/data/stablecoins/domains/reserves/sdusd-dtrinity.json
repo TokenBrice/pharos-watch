@@ -2,6 +2,7 @@
   "id": "sdusd-dtrinity",
   "reserves": [
     {
+      "sourceKey": "erc4626-single-asset:ethereum:0x07fff99e1664d9b116fbc158c0e99785f81ca236",
       "name": "dLEND dUSD deposits",
       "pct": 100,
       "risk": "high",

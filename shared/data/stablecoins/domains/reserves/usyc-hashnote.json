@@ -2,6 +2,7 @@
   "id": "usyc-hashnote",
   "reserves": [
     {
+      "sourceKey": "chainlink-nav:token:0x136471a34f6ef19fe571effc1ca711fdb8e49f2b",
       "name": "U.S. Treasury Bills and reverse repos",
       "pct": 100,
       "risk": "very-low",

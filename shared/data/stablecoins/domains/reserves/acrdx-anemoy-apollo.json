@@ -2,6 +2,7 @@
   "id": "acrdx-anemoy-apollo",
   "reserves": [
     {
+      "sourceKey": "chronicle-nav:token:0x9477724bb54ad5417de8baff29e59df3fb4da74f",
       "name": "Apollo Diversified Credit Fund NAV",
       "pct": 100,
       "risk": "high",

@@ -157,7 +157,6 @@
     "version": 1,
     "semantics": "protocol-reserve",
     "scoring": {
-      "maxSourceAgeSec": 4000000,
       "allowedDegradedWarningCodes": [
         "unknown-position",
         "source-total-gap"

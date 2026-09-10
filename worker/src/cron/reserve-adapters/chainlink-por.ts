@@ -3,7 +3,7 @@ import type { ContractDeployment, ReserveSlice, StablecoinMeta } from "@shared/t
 import type { LiveReservesConfig, LiveReserveWarning } from "@shared/types/live-reserves";
 import { DAY_SECONDS } from "@shared/lib/time-constants";
 import { CHAIN_META, resolveChainId } from "@shared/lib/chains";
-import { parseLiveReserveAdapterParams } from "@shared/lib/live-reserve-adapters";
+import { parseLiveReserveAdapterParams, type LiveReserveAdapterParamsByKey } from "@shared/lib/live-reserve-adapters";
 import { DECIMALS_SELECTOR, LATEST_ROUND_DATA_SELECTOR } from "../../lib/evm-selectors";
 import { logWorkerEventArgs } from "../../lib/structured-log";
 import type { AdapterContext, AdapterResult } from "./types";
@@ -23,23 +23,29 @@ import { buildDocumentedRedemptionTelemetry } from "./redemption";
 import { MAX_FUTURE_SOURCE_TIMESTAMP_SKEW_SEC } from "./validate";
 import { decodeUint256Word } from "./abi-decode";
 const DEFAULT_MAX_ORACLE_AGE_SEC = 2 * DAY_SECONDS;
-const CHAINLINK_POR_RESERVE_UNITS = ["USD", "XAU", "XAG", "SHARES"] as const;
 
-export type ChainlinkPorReserveUnit = (typeof CHAINLINK_POR_RESERVE_UNITS)[number];
+export type ChainlinkPorReserveUnit = NonNullable<LiveReserveAdapterParamsByKey["chainlink-por"]["reserveUnit"]>;
 
 const NON_USD_RESERVE_UNIT_LABELS = {
   XAU: "troy ounces of gold",
   XAG: "troy ounces of silver",
+  XAU_G: "grams of fine gold",
+  XAG_G: "grams of fine silver",
   SHARES: "underlying fund shares",
 } as const satisfies Record<Exclude<ChainlinkPorReserveUnit, "USD">, string>;
 
 /** Units whose feed answer is comparable against token supply: USD-valued
- *  reserves, and 1:1 tracker-certificate share quantities (SHARES). Commodity
- *  quantity feeds (XAU/XAG) prove physical holdings, not a per-token claim. */
+ *  reserves, 1:1 tracker-certificate share quantities (SHARES), and
+ *  gram-denominated commodity quantities (XAU_G/XAG_G) for tokens pegged to
+ *  one gram of the metal (e.g. Kinesis KAU: 1 token = 1 g of fine gold).
+ *  Troy-ounce commodity feeds (XAU/XAG) prove physical holdings, not a
+ *  per-token claim, so their quantities are never divided by token supply. */
 const SUPPLY_COMPARABLE_RESERVE_UNITS: Record<ChainlinkPorReserveUnit, boolean> = {
   USD: true,
   XAU: false,
   XAG: false,
+  XAU_G: true,
+  XAG_G: true,
   SHARES: true,
 };
 
@@ -109,23 +115,6 @@ function isEvmContract(contract: ContractDeployment): boolean {
 
 function isTronContract(contract: ContractDeployment): boolean {
   return CHAIN_META[contract.chain]?.type === "tron";
-}
-
-function parseReserveUnit(raw: unknown): ChainlinkPorReserveUnit | undefined {
-  if (raw == null) return undefined;
-  if (typeof raw === "string" && CHAINLINK_POR_RESERVE_UNITS.includes(raw as ChainlinkPorReserveUnit)) {
-    return raw as ChainlinkPorReserveUnit;
-  }
-  throw new Error("chainlink-por adapter params invalid.reserveUnit: Expected USD, XAU, XAG, or SHARES");
-}
-
-function readParams(config: LiveReservesConfig): ChainlinkPorParams {
-  const { reserveUnit: rawReserveUnit, ...schemaParams } = config.params ?? {};
-  const parsed = parseLiveReserveAdapterParams("chainlink-por", schemaParams);
-  return {
-    ...parsed,
-    reserveUnit: parseReserveUnit(rawReserveUnit),
-  };
 }
 
 function inferReserveUnit(coin: StablecoinMeta, params: ChainlinkPorParams): ChainlinkPorReserveUnit {
@@ -366,6 +355,7 @@ export function adaptChainlinkPorResponse(
   return {
     slices: [
       {
+        sourceKey: `chainlink-por:feed:${params.porFeedAddress.toLowerCase()}`,
         name: params.assetLabel,
         pct: 100,
         risk: params.assetRisk,
@@ -382,8 +372,9 @@ export function adaptChainlinkPorResponse(
       ...buildReserveValueMetadata(reserveValue, reserveUnit),
       ...(supplyTokens != null
         ? {
-            // USD feeds value both sides in dollars; SHARES feeds compare
-            // share quantities against token quantities (1:1 tracker claims).
+            // USD feeds value both sides in dollars; SHARES and gram-commodity
+            // feeds compare quantities against token quantities (1:1 tracker
+            // claims; gram units for tokens pegged to one gram).
             ...(reserveUnit === "USD" ? { supplyUsd: supplyTokens } : { supplyTokens }),
             supplyContributions: supply!.contributions.map((contribution) => ({
               chain: contribution.chain,
@@ -392,6 +383,12 @@ export function adaptChainlinkPorResponse(
               decimals: contribution.decimals,
             })),
             supplyReadComplete: supply!.omittedReadFailureChains.length === 0,
+            // Coverage completeness is distinct from read success: a non-EVM
+            // registry deployment (Solana, NEAR, …) is omitted by design and
+            // degrades coverage here while still surfacing as the
+            // `por-supply-chain-omitted` info warning, not a read failure.
+            supplyCoverageComplete:
+              supply!.omittedNonEvmChains.length === 0 && supply!.omittedReadFailureChains.length === 0,
             ...(primaryContribution
               ? {
                   supplyRaw: primaryContribution.raw.toString(),
@@ -435,7 +432,7 @@ export async function fetchChainlinkPorReserves(
   ctx?: AdapterContext,
 ): Promise<AdapterResult> {
   const input = requireOnchainInput(config.inputs.primary, "chainlink-por");
-  const parsedParams = readParams(config);
+  const parsedParams = parseLiveReserveAdapterParams("chainlink-por", config.params);
   const params: ChainlinkPorParams = {
     ...parsedParams,
     reserveUnit: inferReserveUnit(coin, parsedParams),

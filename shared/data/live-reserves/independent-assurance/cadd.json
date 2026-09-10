@@ -1,0 +1,41 @@
+{
+  "schemaVersion": 1,
+  "product": "CADD",
+  "profile": "cadd-v1",
+  "officialIndexUrl": "https://tetradg.com/cadd-reserve-attestations/",
+  "reportUrl": "https://drive.google.com/uc?export=download&id=19cuC3Y91BCr1AopeCfzq53oZJD7HeEET&name=attestation.pdf",
+  "reportSha256": "b8b239d96317c36c899e46a38f9bc71e0db658a51c8babf84b1ef1cf8f1af53c",
+  "reportByteLength": 167043,
+  "reportDate": "2026-07-31",
+  "reportAsOf": "2026-07-31T23:59:00Z",
+  "reportTimeZone": "UTC (as printed in the report)",
+  "reportIssuedAt": "2026-09-04T23:59:00Z",
+  "attestor": "Baker Tilly WM LLP",
+  "engagement": "Independent reasonable assurance engagement under Canadian Standard on Assurance Engagements (CSAE) 3000",
+  "conclusion": "unmodified",
+  "unit": "CAD",
+  "assets": [
+    {
+      "code": "cad-cash",
+      "label": "Canadian Dollar Cash",
+      "amount": "1194448.5"
+    }
+  ],
+  "liabilities": [
+    {
+      "code": "base-tempo-ethereum",
+      "label": "CADD in Circulation (total CADD token supply on the Base, Tempo and Ethereum chains)",
+      "amount": "1188399.38"
+    }
+  ],
+  "reportedAssetTotal": "1194448.5",
+  "computedAssetTotal": "1194448.5",
+  "reportedLiabilityTotal": "1188399.38",
+  "extraction": {
+    "tool": "Poppler pdftotext -layout",
+    "parserVersion": "26.07.0",
+    "normalizedTextSha256": "09cd82021aea4f752f4d5b27a9729863348eab45abcaf159c2fb290885ef241d",
+    "pageCount": 5
+  },
+  "assuranceTier": "independent-assurance"
+}

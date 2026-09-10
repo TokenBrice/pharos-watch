@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { buildTweetText, postDigestTweet, TwitterPostError } from "../twitter";
+import { buildTweetText, postDigestTweet, postImageTweet, TwitterPostError } from "../twitter";
 import { mockFetch } from "@shared/test-utils/mock-fetch";
 
 const creds = {
@@ -23,6 +23,38 @@ describe("twitter helpers", () => {
   afterEach(() => {
     vi.restoreAllMocks();
     vi.unstubAllGlobals();
+  });
+
+  it("attaches verified bytes and alt text before creating an image tweet", async () => {
+    const fetchSpy = vi.fn()
+      .mockResolvedValueOnce(new Response(JSON.stringify({ media_id_string: "123" })))
+      .mockResolvedValueOnce(new Response(null, { status: 204 }))
+      .mockResolvedValueOnce(new Response(JSON.stringify({ data: { id: "456" } })));
+    vi.stubGlobal("fetch", fetchSpy);
+    expect(await postImageTweet("Growth", new Uint8Array([1, 2]).buffer, "Five growth bars", creds))
+      .toEqual({ tweetId: "456", mediaAttached: true });
+    expect(JSON.parse(fetchSpy.mock.calls[1][1].body)).toEqual({ media_id: "123", alt_text: { text: "Five growth bars" } });
+    expect(JSON.parse(fetchSpy.mock.calls[2][1].body)).toEqual({ text: "Growth", media: { media_ids: ["123"] } });
+  });
+
+  it("rechecks publication eligibility after media preparation before creating the tweet", async () => {
+    const fetchSpy = vi.fn()
+      .mockResolvedValueOnce(new Response(JSON.stringify({ media_id_string: "123" })))
+      .mockResolvedValueOnce(new Response(null, { status: 204 }));
+    vi.stubGlobal("fetch", fetchSpy);
+    await expect(postImageTweet("Growth", new Uint8Array([1, 2]).buffer, "Alt", creds, undefined,
+      () => { throw new Error("publication cutoff elapsed"); }))
+      .rejects.toMatchObject({ twitterDeliveryFailureKind: "definitive_failure" });
+    expect(fetchSpy).toHaveBeenCalledTimes(2);
+  });
+
+  it("never creates a text-only tweet when image preparation fails", async () => {
+    const fetchSpy = vi.fn().mockResolvedValue(new Response("denied", { status: 403 }));
+    vi.stubGlobal("fetch", fetchSpy);
+    await expect(postImageTweet("Growth", new Uint8Array([1]).buffer, "Alt", creds))
+      .rejects.toMatchObject({ twitterDeliveryFailureKind: "definitive_failure" });
+    expect(fetchSpy).toHaveBeenCalledTimes(1);
+    expect(String(fetchSpy.mock.calls[0][0])).toContain("media/upload");
   });
 
   it("builds tweet text with title stripping, single earliest-mention cashtag, and truncation", () => {

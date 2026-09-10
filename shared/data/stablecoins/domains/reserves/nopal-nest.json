@@ -14,7 +14,8 @@
         "custody",
         "concentration"
       ],
-      "liquidityHorizon": "one-day"
+      "liquidityHorizon": "one-day",
+      "sourceKey": "nest-vault-positions:credit-vaults"
     },
     {
       "name": "Nest Treasury vault (nTBILL)",
@@ -30,7 +31,8 @@
         "liquidity",
         "smart-contract"
       ],
-      "liquidityHorizon": "one-day"
+      "liquidityHorizon": "one-day",
+      "sourceKey": "nest-vault-positions:ntbill"
     },
     {
       "name": "Liquid USDT balances",
@@ -47,7 +49,8 @@
         "liquidity",
         "smart-contract"
       ],
-      "liquidityHorizon": "immediate"
+      "liquidityHorizon": "immediate",
+      "sourceKey": "nest-vault-positions:usdt"
     },
     {
       "name": "Liquid USDC balances",
@@ -64,7 +67,8 @@
         "liquidity",
         "smart-contract"
       ],
-      "liquidityHorizon": "immediate"
+      "liquidityHorizon": "immediate",
+      "sourceKey": "nest-vault-positions:usdc"
     },
     {
       "name": "pUSD liquid balance",
@@ -81,7 +85,8 @@
         "liquidity",
         "smart-contract"
       ],
-      "liquidityHorizon": "immediate"
+      "liquidityHorizon": "immediate",
+      "sourceKey": "nest-vault-positions:pusd"
     }
   ],
   "reserveReview": {

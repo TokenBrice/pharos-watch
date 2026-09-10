@@ -114,7 +114,7 @@ export const AUTHORING_CONTRACT_MINT_AUTHORITY_EXAMPLE: MintAuthorityProfile = {
 function fixedInput(
   activeAssetIds: readonly string[] = [ASSET_ID],
   supplyUsdById: Readonly<Record<string, number>> = {},
-  options: { clockSec?: number; capturedAt?: string } = {},
+  options: { clockSec?: number; capturedAt?: string; omitLiveReserveIds?: readonly string[] } = {},
 ) {
   const clockSec = options.clockSec ?? AS_OF_SEC;
   const observedAtSec = clockSec - 100;
@@ -187,7 +187,7 @@ function fixedInput(
     bluechipMap: {},
     resolvedBlacklistStatuses: Object.fromEntries(activeAssetIds.map((assetId) => [assetId, false])),
     liveReserveMap: Object.fromEntries(
-      activeAssetIds.map((assetId) => [
+      activeAssetIds.filter((assetId) => !options.omitLiveReserveIds?.includes(assetId)).map((assetId) => [
         assetId,
         [
           {
@@ -529,6 +529,7 @@ describe("Safety Score v9 mint authoring contract (authoring-contract batch, own
     const input = fixedInput(activeAssetIds, {}, {
       clockSec: REGISTRY_FIXTURE_CLOCK_SEC,
       capturedAt: REGISTRY_FIXTURE_CAPTURED_AT,
+      omitLiveReserveIds: relationships.map(({ assetId }) => assetId),
     });
     const extension = buildSafetyScoreV9BaselineExtension(input, { metaById });
     const compiled = compileSafetyScoreV9FactSetFromNormalizedInput(normalizeFixedInput(input), extension);
@@ -613,6 +614,7 @@ describe("Safety Score v9 mint authoring contract (authoring-contract batch, own
       {
         clockSec: REGISTRY_FIXTURE_CLOCK_SEC,
         capturedAt: REGISTRY_FIXTURE_CAPTURED_AT,
+        omitLiveReserveIds: [assetId],
       },
     );
     const extension = buildSafetyScoreV9BaselineExtension(input, { metaById });
@@ -679,6 +681,7 @@ describe("Safety Score v9 mint authoring contract (authoring-contract batch, own
     const input = fixedInput(activeAssetIds, {}, {
       clockSec: REGISTRY_FIXTURE_CLOCK_SEC,
       capturedAt: REGISTRY_FIXTURE_CAPTURED_AT,
+      omitLiveReserveIds: [assetId],
     });
     const extension = buildSafetyScoreV9BaselineExtension(input, { metaById });
     const asset = extension.assets.find((candidate) => candidate.assetId === assetId)!;

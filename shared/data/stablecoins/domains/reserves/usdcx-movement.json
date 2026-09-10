@@ -9,8 +9,14 @@
       "depType": "wrapper",
       "assetClass": "stablecoin",
       "issuerOrObligor": "Circle Internet Financial, LLC",
-      "riskFactors": ["counterparty", "custody", "liquidity", "smart-contract"],
-      "liquidityHorizon": "unknown"
+      "riskFactors": [
+        "counterparty",
+        "custody",
+        "liquidity",
+        "smart-contract"
+      ],
+      "liquidityHorizon": "unknown",
+      "sourceKey": "escrow-balance:0x8888888199b2df864bf678259607d6d5ebb4e3ce"
     }
   ],
   "reserveReview": {

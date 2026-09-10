@@ -77,7 +77,7 @@
     "yieldType": "nav-appreciation"
   },
   "liveReservesConfig": {
-    "adapter": "curated-validated",
+    "adapter": "erc4626-single-asset",
     "version": 1,
     "semantics": "single-asset",
     "breakerScope": "witry-brix",
@@ -90,6 +90,13 @@
         "kind": "onchain-evm",
         "chain": "ethereum",
         "rpcMode": "alchemy"
+      }
+    },
+    "params": {
+      "slice": {
+        "name": "wiTRY claim on iTRY backed by Digital Liquidity Fund shares",
+        "risk": "high",
+        "expectedAssetAddress": "0xb492b4afd9658093694cf9452d5c272e8230f3b0"
       }
     }
   },

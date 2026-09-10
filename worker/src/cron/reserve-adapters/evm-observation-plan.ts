@@ -9,10 +9,48 @@ import type {
   ExtractAbiFunctionNames,
 } from "abitype";
 import { decodeFunctionResult, encodeFunctionData } from "viem/utils";
-import type { EvmRpcOptions } from "../../lib/evm-rpc";
+import { fetchEvmBlockNumber, fetchEvmBlockTimestamp, type EvmRpcOptions } from "../../lib/evm-rpc";
+import type { AdapterContext } from "./types";
+import { runAdapterIo } from "./concurrency";
 import { decodeStrictAddressWord, decodeStrictBoolWord, decodeUint256Word } from "./abi-decode";
 import { EIP1967_IMPLEMENTATION_SLOT, implementationAddressFromSlot } from "./onchain-identity";
 import { normalizeEvmAddress } from "./evm";
+
+/** One attempt-local anchor shared by dependent batches and individual fallbacks. */
+export async function pinnedBlockPlan(options: {
+  chain: string;
+  signal: AbortSignal;
+  ctx?: AdapterContext;
+  rpcUrl?: string;
+  fallbackRpcUrl?: string;
+  timeoutMs?: number;
+}): Promise<{ observedBlock: NonNullable<AdapterContext["observedBlock"]>; ctx: AdapterContext }> {
+  const existing = options.ctx?.observedBlock;
+  if (existing) {
+    if (existing.chain !== options.chain) throw new Error("Pinned block plan chain mismatch");
+    return { observedBlock: existing, ctx: options.ctx! };
+  }
+  const rpcOptions: EvmRpcOptions = {
+    signal: options.signal,
+    chainRpcs: options.ctx?.chainRpcs,
+    timeoutMs: options.timeoutMs ?? 10_000,
+    extraRpcUrls: [options.rpcUrl, options.fallbackRpcUrl].filter(
+      (url): url is string => typeof url === "string" && url.length > 0,
+    ),
+  };
+  const observedBlock = await runAdapterIo(options.ctx, `evm-block:${options.chain}`, async () => {
+    const number = await fetchEvmBlockNumber(options.chain, rpcOptions);
+    if (number == null || !Number.isSafeInteger(number) || number < 0) {
+      throw new Error(`Unable to pin ${options.chain} observation block`);
+    }
+    const timestamp = await fetchEvmBlockTimestamp(options.chain, number, rpcOptions);
+    if (timestamp == null || !Number.isSafeInteger(timestamp) || timestamp <= 0) {
+      throw new Error(`Unable to read ${options.chain} observation block timestamp`);
+    }
+    return { chain: options.chain, number, timestamp };
+  });
+  return { observedBlock, ctx: { ...options.ctx, observedBlock } };
+}
 
 export interface EvmObservationTransportCall {
   label: string;

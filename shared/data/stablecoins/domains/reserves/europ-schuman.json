@@ -2,6 +2,7 @@
   "id": "europ-schuman",
   "reserves": [
     {
+      "sourceKey": "europ-independent-assurance:europ:cash",
       "name": "Euro cash held at regulated financial institutions",
       "pct": 31.947113,
       "risk": "very-low",
@@ -17,6 +18,7 @@
       "liquidityHorizon": "immediate"
     },
     {
+      "sourceKey": "europ-independent-assurance:europ:cash-equivalents",
       "name": "Euro cash equivalents held at regulated financial institutions (instruments undisclosed)",
       "pct": 68.052887,
       "risk": "low",

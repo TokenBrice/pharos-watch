@@ -6,7 +6,6 @@ import {
 import { inferReserveDisplayBadgeKindFromEvidenceClass } from "@shared/lib/live-reserve-adapter-descriptors";
 import { getReserves, type ReserveResult } from "@shared/lib/reserve-templates";
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
-import type { StablecoinMeta } from "@shared/types/core";
 import type {
   LiveReserveSnapshotMetadata,
   ReserveDisplayBadgeView,
@@ -17,7 +16,6 @@ import { getReserveCompositionRow, getReserveSyncState } from "./store-read";
 import { parseReserveCompositionRow } from "./store-row-decoding";
 import {
   LIVE_RESERVE_FRESHNESS_SEC,
-  selectScoringDegradedWarnings,
   type ReserveCompositionRecord,
   type ReserveSyncStateRecord,
   type ReserveSyncStatus,
@@ -26,23 +24,20 @@ import {
 import {
   hasConsistentSnapshotState,
   isReserveSnapshotStale,
-  hasScoringEligibleLiveReserveFreshness,
+  evaluateLiveReserveAdmission,
+  type LiveReserveAdmissionResult,
 } from "./store-snapshot-state";
 
 function buildReserveProvenanceView(
   record: Pick<ReserveCompositionRecord, "adapterEvidenceClass" | "adapterSourceModel" | "metadata" | "warnings">,
-  config: StablecoinMeta["liveReservesConfig"] | undefined,
-  stale: boolean,
+  admission: LiveReserveAdmissionResult,
 ): ReserveProvenanceView {
   const freshnessMode = record.metadata.freshnessMode;
   return {
     evidenceClass: record.adapterEvidenceClass,
     sourceModel: record.adapterSourceModel,
     ...(freshnessMode ? { freshnessMode } : {}),
-    scoringEligible: record.adapterEvidenceClass === "independent"
-      && !stale
-      && selectScoringDegradedWarnings(record.warnings, config).length === 0
-      && hasScoringEligibleLiveReserveFreshness(record.metadata),
+    scoringEligible: admission.eligible,
   };
 }
 
@@ -151,7 +146,8 @@ export async function resolveReserveResult(
   })
     ? parseReserveCompositionRow(compositionRow, syncState)
     : { record: null, issue: null };
-  const liveSnapshot = consistentSnapshot.record;
+  const admission = evaluateLiveReserveAdmission(consistentSnapshot.record, syncState, meta, now, freshnessSec);
+  const liveSnapshot = admission.reasons.includes("config-mismatch") ? null : consistentSnapshot.record;
   const liveAtCandidate = liveSnapshot?.fetchedAt
     ?? (
       compositionRow && hasConsistentSnapshotState(syncState, {
@@ -170,12 +166,13 @@ export async function resolveReserveResult(
   // staleness (Worker fetch age or effective upstream observation age, computed
   // above) may demote it, and that surfaces as `live-stale` rather than hiding it.
   if (liveSnapshot) {
-    const provenance = buildReserveProvenanceView(liveSnapshot, meta.liveReservesConfig, stale);
+    const provenance = buildReserveProvenanceView(liveSnapshot, admission);
     const adapterBadge = buildReserveDisplayBadgeView(liveSnapshot);
     const displayBadge = meta.liveReservesConfig?.semantics === "attestation-mix" && adapterBadge.kind === "live"
       ? { ...buildReserveDisplayBadge("proof"), label: "Attestation" }
       : adapterBadge;
     const evidenceUrls = extractReserveEvidenceUrls(liveSnapshot.metadata, displayUrl);
+    const { diag: _diag, ...publicMetadata } = liveSnapshot.metadata;
     return {
       reserves: liveSnapshot.slices,
       estimated: false,
@@ -185,7 +182,7 @@ export async function resolveReserveResult(
       displayUrl,
       evidenceUrls,
       displayBadge,
-      metadata: liveSnapshot.metadata,
+      metadata: publicMetadata,
       provenance,
       sync: buildSyncView(syncState, stale, {
         enabled: !!meta.liveReservesConfig,

@@ -1,27 +1,8 @@
 import type { LiveReservesConfig } from "@shared/types/live-reserves";
 import { encodeAbiParameters } from "viem/utils";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it } from "vitest";
 import { DECIMALS_SELECTOR, TOTAL_SUPPLY_SELECTOR, encodeAddress, encodeUint256 } from "../../../lib/evm-selectors";
-
-vi.mock("../helpers", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("../helpers")>();
-  const { makeOnchainCallersMock } = await import("./helpers/onchain-callers-mock");
-  const fetchOnchainRawCall = vi.fn();
-  const fetchOnchainUint256 = vi.fn();
-  return {
-    ...actual,
-    fetchOnchainRawCall,
-    fetchOnchainUint256,
-    makeOnchainCallers: makeOnchainCallersMock({
-      uint256: fetchOnchainUint256,
-      raw: fetchOnchainRawCall,
-    }),
-  };
-});
-
-import { adaptReserveProtocolDtfRows, fetchReserveProtocolDtfReserves } from "../reserve-protocol-dtf";
-import { fetchOnchainRawCall, fetchOnchainUint256 } from "../helpers";
-let signal: AbortSignal;
+import { installAdapterNetwork, runAdapter, type AdapterNetwork } from "./reserve-adapter.test-support";
 
 const coin = {
   id: "usd3-reserve-protocol",
@@ -132,6 +113,9 @@ function createOnchainConfig(twoComponents = false): LiveReservesConfig {
   };
 }
 
+let signal: AbortSignal;
+let activeNetwork: AdapterNetwork;
+
 interface MockReserveProtocolOnchainOptions {
   statusByAsset?: Map<string, bigint>;
   redemptionAvailable?: bigint | null;
@@ -141,6 +125,7 @@ interface MockReserveProtocolOnchainOptions {
   unreadableValuationAsset?: string;
   pluginPricesOnly?: boolean;
   quoteEntries?: Array<{ address: `0x${string}`; quantity: bigint }>;
+  abort?: { controller: AbortController; reason: Error };
 }
 
 function mockReserveProtocolOnchain(options: MockReserveProtocolOnchainOptions = {}): void {
@@ -158,171 +143,93 @@ function mockReserveProtocolOnchain(options: MockReserveProtocolOnchainOptions =
       { address: STEAK_USDC, quantity: 25n * ONE },
     ],
   } = options;
-  vi.mocked(fetchOnchainRawCall).mockImplementation(async ({ contract, data }) => {
-    const normalizedContract = normalizeAddress(contract);
-    if (options.pluginPricesOnly && [ERC4626_ASSET_SELECTOR, UNDERLYING_COMET_SELECTOR].includes(data)) return null;
-    if (normalizedContract === RTOKEN && data === MAIN_SELECTOR) return encodeAddressResult(MAIN);
-    if (normalizedContract === MAIN && data === ASSET_REGISTRY_SELECTOR) return encodeAddressResult(ASSET_REGISTRY);
-    if (normalizedContract === MAIN && data === BASKET_HANDLER_SELECTOR) return encodeAddressResult(BASKET_HANDLER);
-    if (normalizedContract === BASKET_HANDLER && data === FULLY_COLLATERALIZED_SELECTOR)
-      return encodeBoolResult(fullyCollateralized);
-    if (normalizedContract === BASKET_HANDLER && data.startsWith(QUOTE_SELECTOR)) {
-      return encodeAbiParameters(
+  const shouldAbort = () => {
+    if (options.abort) {
+      options.abort.controller.abort(options.abort.reason);
+      throw new Error("rpc aborted");
+    }
+  };
+  activeNetwork = installAdapterNetwork({
+    block: { number: 12345, timestamp: 1776154391 },
+    rpc: {
+      [`${RTOKEN}:${MAIN_SELECTOR}`]: encodeAddressResult(MAIN),
+      [`${MAIN}:${ASSET_REGISTRY_SELECTOR}`]: encodeAddressResult(ASSET_REGISTRY),
+      [`${MAIN}:${BASKET_HANDLER_SELECTOR}`]: encodeAddressResult(BASKET_HANDLER),
+      [`${BASKET_HANDLER}:${FULLY_COLLATERALIZED_SELECTOR}`]: encodeBoolResult(fullyCollateralized),
+      [`${BASKET_HANDLER}:${QUOTE_SELECTOR}`]: encodeAbiParameters(
         [{ type: "address[]" }, { type: "uint256[]" }],
-        [
-          quoteEntries.map((entry) => entry.address),
-          quoteEntries.map((entry) => entry.quantity),
-        ],
-      );
-    }
-    if (normalizedContract === ASSET_REGISTRY && data === `${TO_ASSET_SELECTOR}${encodeAddress(SUSDS)}`) {
-      return encodeAddressResult(SUSDS_ASSET);
-    }
-    if (normalizedContract === ASSET_REGISTRY && data === `${TO_ASSET_SELECTOR}${encodeAddress(WCUSDCV3)}`) {
-      return encodeAddressResult(WCUSDCV3_ASSET);
-    }
-    if (normalizedContract === ASSET_REGISTRY && data === `${TO_ASSET_SELECTOR}${encodeAddress(STATIC_AAVE_USDC)}`) {
-      return encodeAddressResult(STATIC_AAVE_USDC_ASSET);
-    }
-    if (normalizedContract === ASSET_REGISTRY && data === `${TO_ASSET_SELECTOR}${encodeAddress(STEAK_USDC)}`) {
-      return encodeAddressResult(STEAK_USDC_ASSET);
-    }
-    if (
-      [SUSDS_ASSET, WCUSDCV3_ASSET, STATIC_AAVE_USDC_ASSET, STEAK_USDC_ASSET].includes(normalizedContract) &&
-      data === PRICE_SELECTOR
-    ) {
-      return encodeAbiParameters([{ type: "uint256" }, { type: "uint256" }], [ONE, ONE]);
-    }
-    if (data === ERC4626_ASSET_SELECTOR) {
-      if (normalizedContract === SUSDS) return encodeAddressResult(USDS);
-      if (normalizedContract === STATIC_AAVE_USDC || normalizedContract === STEAK_USDC) {
-        return encodeAddressResult(USDC);
-      }
-    }
-    if (data === UNDERLYING_COMET_SELECTOR && normalizedContract === WCUSDCV3) {
-      return encodeAddressResult(COMET_USDC);
-    }
-    if (data === COMET_BASE_TOKEN_SELECTOR && normalizedContract === COMET_USDC) {
-      return encodeAddressResult(USDC);
-    }
-    return null;
+        [quoteEntries.map((entry) => entry.address), quoteEntries.map((entry) => entry.quantity)],
+      ),
+      [`${ASSET_REGISTRY}:${TO_ASSET_SELECTOR}${encodeAddress(SUSDS)}`]: encodeAddressResult(SUSDS_ASSET),
+      [`${ASSET_REGISTRY}:${TO_ASSET_SELECTOR}${encodeAddress(WCUSDCV3)}`]: encodeAddressResult(WCUSDCV3_ASSET),
+      [`${ASSET_REGISTRY}:${TO_ASSET_SELECTOR}${encodeAddress(STATIC_AAVE_USDC)}`]: encodeAddressResult(STATIC_AAVE_USDC_ASSET),
+      [`${ASSET_REGISTRY}:${TO_ASSET_SELECTOR}${encodeAddress(STEAK_USDC)}`]: encodeAddressResult(STEAK_USDC_ASSET),
+      [`${SUSDS_ASSET}:${PRICE_SELECTOR}`]: encodeAbiParameters([{ type: "uint256" }, { type: "uint256" }], [ONE, ONE]),
+      [`${WCUSDCV3_ASSET}:${PRICE_SELECTOR}`]: encodeAbiParameters([{ type: "uint256" }, { type: "uint256" }], [ONE, ONE]),
+      [`${STATIC_AAVE_USDC_ASSET}:${PRICE_SELECTOR}`]: encodeAbiParameters([{ type: "uint256" }, { type: "uint256" }], [ONE, ONE]),
+      [`${STEAK_USDC_ASSET}:${PRICE_SELECTOR}`]: encodeAbiParameters([{ type: "uint256" }, { type: "uint256" }], [ONE, ONE]),
+      [`${SUSDS}:${ERC4626_ASSET_SELECTOR}`]: options.pluginPricesOnly ? null : encodeAddressResult(USDS),
+      [`${STATIC_AAVE_USDC}:${ERC4626_ASSET_SELECTOR}`]: options.pluginPricesOnly ? null : encodeAddressResult(USDC),
+      [`${STEAK_USDC}:${ERC4626_ASSET_SELECTOR}`]: options.pluginPricesOnly ? null : encodeAddressResult(USDC),
+      [`${WCUSDCV3}:${UNDERLYING_COMET_SELECTOR}`]: options.pluginPricesOnly ? null : encodeAddressResult(COMET_USDC),
+      [`${COMET_USDC}:${COMET_BASE_TOKEN_SELECTOR}`]: encodeAddressResult(USDC),
+      [`${RTOKEN}:${BASKETS_NEEDED_SELECTOR}`]: 100n * ONE,
+      [`${RTOKEN}:${REDEMPTION_AVAILABLE_SELECTOR}`]: redemptionAvailable,
+      [`${RTOKEN}:${TOTAL_SUPPLY_SELECTOR}`]: totalSupply,
+      [`${BASKET_HANDLER}:${COLLATERAL_STATUS_SELECTOR}`]: basketStatus,
+      [`${SUSDS}:${DECIMALS_SELECTOR}`]: 18n,
+      [`${WCUSDCV3}:${DECIMALS_SELECTOR}`]: 6n,
+      [`${STATIC_AAVE_USDC}:${DECIMALS_SELECTOR}`]: 6n,
+      [`${STEAK_USDC}:${DECIMALS_SELECTOR}`]: 18n,
+      [`${USDS}:${DECIMALS_SELECTOR}`]: 18n,
+      [`${USDC}:${DECIMALS_SELECTOR}`]: 6n,
+      [`${SUSDS}:${CONVERT_TO_ASSETS_SELECTOR}`]: () => {
+        shouldAbort();
+        return normalizeAddress(unreadableValuationAsset ?? "") === normalizeAddress(SUSDS)
+          ? null
+          : 27_500_000_000_000_000_000n;
+      },
+      [`${STATIC_AAVE_USDC}:${CONVERT_TO_ASSETS_SELECTOR}`]: () => {
+        shouldAbort();
+        return normalizeAddress(unreadableValuationAsset ?? "") === normalizeAddress(STATIC_AAVE_USDC)
+          ? null
+          : 26_000_000n;
+      },
+      [`${STEAK_USDC}:${CONVERT_TO_ASSETS_SELECTOR}`]: () => {
+        shouldAbort();
+        return normalizeAddress(unreadableValuationAsset ?? "") === normalizeAddress(STEAK_USDC)
+          ? null
+          : 26_500_000n;
+      },
+      [`${WCUSDCV3}:${EXCHANGE_RATE_SELECTOR}`]: 1_050_000n,
+      [`${SUSDS_ASSET}:${COLLATERAL_STATUS_SELECTOR}`]: statusByAsset.get(normalizeAddress(SUSDS_ASSET)) ?? 0n,
+      [`${WCUSDCV3_ASSET}:${COLLATERAL_STATUS_SELECTOR}`]: statusByAsset.get(normalizeAddress(WCUSDCV3_ASSET)) ?? 0n,
+      [`${STATIC_AAVE_USDC_ASSET}:${COLLATERAL_STATUS_SELECTOR}`]: statusByAsset.get(normalizeAddress(STATIC_AAVE_USDC_ASSET)) ?? 0n,
+      [`${STEAK_USDC_ASSET}:${COLLATERAL_STATUS_SELECTOR}`]: statusByAsset.get(normalizeAddress(STEAK_USDC_ASSET)) ?? 0n,
+    },
   });
+}
 
-  vi.mocked(fetchOnchainUint256).mockImplementation(async ({ contract, data }) => {
-    const normalizedContract = normalizeAddress(contract);
-    if (normalizedContract === RTOKEN && data === BASKETS_NEEDED_SELECTOR) return 100n * ONE;
-    if (normalizedContract === RTOKEN && data === REDEMPTION_AVAILABLE_SELECTOR) return redemptionAvailable;
-    if (normalizedContract === RTOKEN && data === TOTAL_SUPPLY_SELECTOR) return totalSupply;
-    if (normalizedContract === BASKET_HANDLER && data === COLLATERAL_STATUS_SELECTOR) return basketStatus;
-    if (normalizedContract === SUSDS && data === DECIMALS_SELECTOR) return 18n;
-    if ([WCUSDCV3, STATIC_AAVE_USDC].includes(normalizedContract) && data === DECIMALS_SELECTOR) return 6n;
-    if (normalizedContract === STEAK_USDC && data === DECIMALS_SELECTOR) return 18n;
-    if (normalizedContract === USDS && data === DECIMALS_SELECTOR) return 18n;
-    if (normalizedContract === USDC && data === DECIMALS_SELECTOR) return 6n;
-    if (data.startsWith(CONVERT_TO_ASSETS_SELECTOR)) {
-      if (normalizedContract === unreadableValuationAsset) return null;
-      if (normalizedContract === SUSDS) return 27_500_000_000_000_000_000n;
-      if (normalizedContract === STATIC_AAVE_USDC) return 26_000_000n;
-      if (normalizedContract === STEAK_USDC) return 26_500_000n;
-    }
-    if (normalizedContract === WCUSDCV3 && data === EXCHANGE_RATE_SELECTOR) return 1_050_000n;
-    if (
-      [SUSDS_ASSET, WCUSDCV3_ASSET, STATIC_AAVE_USDC_ASSET, STEAK_USDC_ASSET].includes(normalizedContract) &&
-      data === COLLATERAL_STATUS_SELECTOR
-    ) {
-      return statusByAsset.get(normalizedContract) ?? 0n;
-    }
-    return null;
-  });
+async function fetchReserveProtocolDtfReserves(
+  coinArg: typeof coin,
+  config: LiveReservesConfig,
+  abortSignal: AbortSignal,
+  ctx?: { nowSec?: number },
+) {
+  const { result } = await runAdapter(
+    "reserve-protocol-dtf",
+    { ...coinArg, liveReservesConfig: config } as never,
+    { network: activeNetwork, signal: abortSignal, ...(ctx?.nowSec == null ? {} : { nowSec: ctx.nowSec }) },
+  );
+  return result;
 }
 
 beforeEach(() => {
   signal = new AbortController().signal;
-  vi.clearAllMocks();
+  activeNetwork = installAdapterNetwork();
 });
 
 describe("reserve-protocol-dtf adapter", () => {
-  it("maps reviewed basket components by address and preserves unverified freshness", () => {
-    const result = adaptReserveProtocolDtfRows(
-      [
-        {
-          address: "0x0d86883FAf4FfD7aEb116390af37746F45b6f378",
-          name: "Web 3 Dollar",
-          symbol: "USD3",
-          price: 1.09,
-          marketCap: 4_500_000,
-          chainId: 1,
-          status: "active",
-          basket: [
-            {
-              address: "0xa3931d71877C0E7a3148CB7Eb4463524FEc27fbD",
-              symbol: "sUSDS",
-              name: "Savings USDS",
-              weight: "50",
-            },
-            {
-              address: "0x27F2f159Fe990Ba83D57f39Fd69661764BEbf37a",
-              symbol: "wcUSDCv3",
-              name: "Wrapped cUSDCv3",
-              weight: "50",
-            },
-          ],
-        },
-      ],
-      coin as never,
-      [
-        {
-          address: "0xa3931d71877C0E7a3148CB7Eb4463524FEc27fbD",
-          name: "Savings USDS",
-          risk: "low",
-          coinId: "susds-sky",
-          depType: "collateral",
-        },
-        {
-          address: "0x27F2f159Fe990Ba83D57f39Fd69661764BEbf37a",
-          name: "Wrapped Compound USDCv3",
-          risk: "medium",
-          coinId: "usdc-circle",
-          depType: "collateral",
-        },
-      ],
-      "https://api.reserve.org/discover/dtfs",
-    );
-
-    expect(result.slices).toEqual([
-      { name: "Savings USDS", pct: 50, risk: "low", coinId: "susds-sky", depType: "collateral" },
-      { name: "Wrapped Compound USDCv3", pct: 50, risk: "medium", coinId: "usdc-circle", depType: "collateral" },
-    ]);
-    expect(result.warnings).toEqual([]);
-    expect(result.metadata?.freshnessMode).toBe("unverified");
-    expect(result.metadata?.unknownExposurePct).toBe(0);
-  });
-
-  it("degrades material unmapped basket exposure", () => {
-    const result = adaptReserveProtocolDtfRows(
-      [
-        {
-          address: "0x0d86883faf4ffd7aeb116390af37746f45b6f378",
-          symbol: "USD3",
-          basket: [{ address: "0x0000000000000000000000000000000000000001", symbol: "UNKNOWN", weight: 100 }],
-        },
-      ],
-      coin as never,
-      [],
-      "https://api.reserve.org/discover/dtfs",
-    );
-
-    expect(result.slices[0]).toMatchObject({
-      name: "Unmapped Reserve Protocol DTF asset: UNKNOWN",
-      risk: "high",
-      pct: 100,
-    });
-    expect(result.warnings?.[0]).toMatchObject({
-      code: "reserve-protocol-dtf-unknown-component",
-      effect: "degraded",
-    });
-  });
-
   it("reads Reserve Protocol quote and asset plugin prices directly onchain", async () => {
     const config = createOnchainConfig(true);
     mockReserveProtocolOnchain({
@@ -335,8 +242,8 @@ describe("reserve-protocol-dtf adapter", () => {
     const result = await fetchReserveProtocolDtfReserves(coin as never, config, signal);
 
     expect(result.slices).toEqual([
-      { name: "Savings USDS", pct: 50, risk: "low", coinId: "susds-sky", depType: "collateral" },
-      { name: "Wrapped Compound USDCv3", pct: 50, risk: "medium", coinId: "usdc-circle", depType: "collateral" },
+      { sourceKey: "reserve-protocol-dtf:0xa3931d71877c0e7a3148cb7eb4463524fec27fbd", name: "Savings USDS", pct: 50, risk: "low", coinId: "susds-sky", depType: "collateral" },
+      { sourceKey: "reserve-protocol-dtf:0x27f2f159fe990ba83d57f39fd69661764bebf37a", name: "Wrapped Compound USDCv3", pct: 50, risk: "medium", coinId: "usdc-circle", depType: "collateral" },
     ]);
     expect(result.warnings).toBeUndefined();
     expect(result.metadata).toMatchObject({
@@ -360,6 +267,8 @@ describe("reserve-protocol-dtf adapter", () => {
     mockReserveProtocolOnchain({ redemptionAvailable: 120n * ONE, totalSupply: 100n * ONE });
 
     const result = await fetchReserveProtocolDtfReserves(coin as never, createOnchainConfig(), signal);
+    expect(result.metadata?.observedBlock).toEqual({ chain: "ethereum", number: 12345, timestamp: 1776154391 });
+    expect(activeNetwork.rpcCalls.filter((call) => call.method === "eth_call").every((call) => call.block === "0x3039")).toBe(true);
 
     expect(result.metadata?.redemption).toMatchObject({
       capacityUsd: 100,
@@ -414,6 +323,20 @@ describe("reserve-protocol-dtf adapter", () => {
     expect(result.metadata?.redemption?.outputValuation).toBeUndefined();
   });
 
+  it("propagates cron aborts from the redemption output valuation instead of swallowing them", async () => {
+    const controller = new AbortController();
+    const reason = new Error("cron timed out");
+    mockReserveProtocolOnchain({ abort: { controller, reason } });
+
+    // The valuation legs are the only reads inside the swallowed try/catch; abort
+    // mid-valuation and assert the reason propagates rather than degrading to a
+    // null output valuation.
+    await expect(
+      fetchReserveProtocolDtfReserves(coin as never, createOnchainConfig(), controller.signal),
+    ).rejects.toBe(reason);
+  });
+
+
   it("withholds output valuation when the live basket diverges from configured output assets", async () => {
     mockReserveProtocolOnchain({
       quoteEntries: [
@@ -426,8 +349,7 @@ describe("reserve-protocol-dtf adapter", () => {
 
     expect(result.metadata?.redemption).toMatchObject({ capacityUsd: 40, routeStatus: "open" });
     expect(result.metadata?.redemption?.outputValuation).toBeUndefined();
-    expect(vi.mocked(fetchOnchainUint256).mock.calls.some(([call]) => call.data.startsWith(CONVERT_TO_ASSETS_SELECTOR)))
-      .toBe(false);
+    expect(activeNetwork.rpcCalls.some((call) => call.selector === CONVERT_TO_ASSETS_SELECTOR)).toBe(false);
   });
 
   it("reads eUSD's three-token basket and emits its RToken redemption throttle", async () => {
@@ -481,87 +403,56 @@ describe("reserve-protocol-dtf adapter", () => {
     const wcUsdtQuantity = 7_535_523_786_385n;
     const staticAaveUsdcQuantity = 7_763_872_992_033n;
 
-    vi.mocked(fetchOnchainRawCall).mockImplementation(async ({ contract, data }) => {
-      const normalizedContract = normalizeAddress(contract);
-      if (normalizedContract === EUSD_RTOKEN && data === MAIN_SELECTOR) return encodeAddressResult(EUSD_MAIN);
-      if (normalizedContract === EUSD_MAIN && data === ASSET_REGISTRY_SELECTOR)
-        return encodeAddressResult(EUSD_ASSET_REGISTRY);
-      if (normalizedContract === EUSD_MAIN && data === BASKET_HANDLER_SELECTOR)
-        return encodeAddressResult(EUSD_BASKET_HANDLER);
-      if (normalizedContract === EUSD_BASKET_HANDLER && data === FULLY_COLLATERALIZED_SELECTOR)
-        return encodeBoolResult(true);
-      if (normalizedContract === EUSD_BASKET_HANDLER && data.startsWith(QUOTE_SELECTOR)) {
-        return encodeAbiParameters(
+    activeNetwork = installAdapterNetwork({
+      block: { number: 12345, timestamp: 1776154391 },
+      rpc: {
+        [`${EUSD_RTOKEN}:${MAIN_SELECTOR}`]: encodeAddressResult(EUSD_MAIN),
+        [`${EUSD_MAIN}:${ASSET_REGISTRY_SELECTOR}`]: encodeAddressResult(EUSD_ASSET_REGISTRY),
+        [`${EUSD_MAIN}:${BASKET_HANDLER_SELECTOR}`]: encodeAddressResult(EUSD_BASKET_HANDLER),
+        [`${EUSD_BASKET_HANDLER}:${FULLY_COLLATERALIZED_SELECTOR}`]: encodeBoolResult(true),
+        [`${EUSD_BASKET_HANDLER}:${QUOTE_SELECTOR}`]: encodeAbiParameters(
           [{ type: "address[]" }, { type: "uint256[]" }],
           [
             [WCUSDCV3, WCUSDT_V3, STATIC_AAVE_USDC],
             [wcUsdcQuantity, wcUsdtQuantity, staticAaveUsdcQuantity],
           ],
-        );
-      }
-      const assetByToken = new Map([
-        [WCUSDCV3, WCUSDCV3_ASSET],
-        [WCUSDT_V3, WCUSDT_V3_ASSET],
-        [STATIC_AAVE_USDC, STATIC_AAVE_USDC_ASSET],
-      ]);
-      if (normalizedContract === EUSD_ASSET_REGISTRY && data.startsWith(TO_ASSET_SELECTOR)) {
-        for (const [token, asset] of assetByToken) {
-          if (data === `${TO_ASSET_SELECTOR}${encodeAddress(token)}`) return encodeAddressResult(asset);
-        }
-      }
-      if ([WCUSDCV3_ASSET, WCUSDT_V3_ASSET, STATIC_AAVE_USDC_ASSET].includes(normalizedContract)) {
-        if (data === PRICE_SELECTOR) {
-          return encodeAbiParameters([{ type: "uint256" }, { type: "uint256" }], [ONE, ONE]);
-        }
-      }
-      if (data === ERC4626_ASSET_SELECTOR && normalizedContract === STATIC_AAVE_USDC) {
-        return encodeAddressResult(USDC);
-      }
-      if (data === UNDERLYING_COMET_SELECTOR && normalizedContract === WCUSDCV3) {
-        return encodeAddressResult(COMET_USDC);
-      }
-      if (data === UNDERLYING_COMET_SELECTOR && normalizedContract === WCUSDT_V3) {
-        return encodeAddressResult(COMET_USDT);
-      }
-      if (data === COMET_BASE_TOKEN_SELECTOR && normalizedContract === COMET_USDC) {
-        return encodeAddressResult(USDC);
-      }
-      if (data === COMET_BASE_TOKEN_SELECTOR && normalizedContract === COMET_USDT) {
-        return encodeAddressResult(USDT);
-      }
-      return null;
-    });
-
-    vi.mocked(fetchOnchainUint256).mockImplementation(async ({ contract, data }) => {
-      const normalizedContract = normalizeAddress(contract);
-      if (normalizedContract === EUSD_RTOKEN && data === BASKETS_NEEDED_SELECTOR) return totalSupply;
-      if (normalizedContract === EUSD_RTOKEN && data === REDEMPTION_AVAILABLE_SELECTOR) return 5_000_000n * ONE;
-      if (normalizedContract === EUSD_RTOKEN && data === TOTAL_SUPPLY_SELECTOR) return totalSupply;
-      if (normalizedContract === EUSD_BASKET_HANDLER && data === COLLATERAL_STATUS_SELECTOR) return 0n;
-      if ([WCUSDCV3, WCUSDT_V3, STATIC_AAVE_USDC].includes(normalizedContract) && data === DECIMALS_SELECTOR)
-        return 6n;
-      if ([USDC, USDT].includes(normalizedContract) && data === DECIMALS_SELECTOR) return 6n;
-      if (normalizedContract === STATIC_AAVE_USDC && data.startsWith(CONVERT_TO_ASSETS_SELECTOR)) {
-        return staticAaveUsdcQuantity;
-      }
-      if ([WCUSDCV3, WCUSDT_V3].includes(normalizedContract) && data === EXCHANGE_RATE_SELECTOR) {
-        return 1_000_000n;
-      }
-      if (
-        [WCUSDCV3_ASSET, WCUSDT_V3_ASSET, STATIC_AAVE_USDC_ASSET].includes(normalizedContract) &&
-        data === COLLATERAL_STATUS_SELECTOR
-      )
-        return 0n;
-      return null;
+        ),
+        [`${EUSD_ASSET_REGISTRY}:${TO_ASSET_SELECTOR}${encodeAddress(WCUSDCV3)}`]: encodeAddressResult(WCUSDCV3_ASSET),
+        [`${EUSD_ASSET_REGISTRY}:${TO_ASSET_SELECTOR}${encodeAddress(WCUSDT_V3)}`]: encodeAddressResult(WCUSDT_V3_ASSET),
+        [`${EUSD_ASSET_REGISTRY}:${TO_ASSET_SELECTOR}${encodeAddress(STATIC_AAVE_USDC)}`]: encodeAddressResult(STATIC_AAVE_USDC_ASSET),
+        [`${WCUSDCV3_ASSET}:${PRICE_SELECTOR}`]: encodeAbiParameters([{ type: "uint256" }, { type: "uint256" }], [ONE, ONE]),
+        [`${WCUSDT_V3_ASSET}:${PRICE_SELECTOR}`]: encodeAbiParameters([{ type: "uint256" }, { type: "uint256" }], [ONE, ONE]),
+        [`${STATIC_AAVE_USDC_ASSET}:${PRICE_SELECTOR}`]: encodeAbiParameters([{ type: "uint256" }, { type: "uint256" }], [ONE, ONE]),
+        [`${STATIC_AAVE_USDC}:${ERC4626_ASSET_SELECTOR}`]: encodeAddressResult(USDC),
+        [`${WCUSDCV3}:${UNDERLYING_COMET_SELECTOR}`]: encodeAddressResult(COMET_USDC),
+        [`${WCUSDT_V3}:${UNDERLYING_COMET_SELECTOR}`]: encodeAddressResult(COMET_USDT),
+        [`${COMET_USDC}:${COMET_BASE_TOKEN_SELECTOR}`]: encodeAddressResult(USDC),
+        [`${COMET_USDT}:${COMET_BASE_TOKEN_SELECTOR}`]: encodeAddressResult(USDT),
+        [`${EUSD_RTOKEN}:${BASKETS_NEEDED_SELECTOR}`]: totalSupply,
+        [`${EUSD_RTOKEN}:${REDEMPTION_AVAILABLE_SELECTOR}`]: 5_000_000n * ONE,
+        [`${EUSD_RTOKEN}:${TOTAL_SUPPLY_SELECTOR}`]: totalSupply,
+        [`${EUSD_BASKET_HANDLER}:${COLLATERAL_STATUS_SELECTOR}`]: 0n,
+        [`${WCUSDCV3}:${DECIMALS_SELECTOR}`]: 6n,
+        [`${WCUSDT_V3}:${DECIMALS_SELECTOR}`]: 6n,
+        [`${STATIC_AAVE_USDC}:${DECIMALS_SELECTOR}`]: 6n,
+        [`${USDC}:${DECIMALS_SELECTOR}`]: 6n,
+        [`${USDT}:${DECIMALS_SELECTOR}`]: 6n,
+        [`${STATIC_AAVE_USDC}:${CONVERT_TO_ASSETS_SELECTOR}`]: staticAaveUsdcQuantity,
+        [`${WCUSDCV3}:${EXCHANGE_RATE_SELECTOR}`]: 1_000_000n,
+        [`${WCUSDT_V3}:${EXCHANGE_RATE_SELECTOR}`]: 1_000_000n,
+        [`${WCUSDCV3_ASSET}:${COLLATERAL_STATUS_SELECTOR}`]: 0n,
+        [`${WCUSDT_V3_ASSET}:${COLLATERAL_STATUS_SELECTOR}`]: 0n,
+        [`${STATIC_AAVE_USDC_ASSET}:${COLLATERAL_STATUS_SELECTOR}`]: 0n,
+      },
     });
 
     const observedAt = Date.UTC(2026, 7, 12, 12) / 1_000;
     const result = await fetchReserveProtocolDtfReserves(eusdCoin as never, config, signal, { nowSec: observedAt });
 
     expect(result.slices).toEqual([
-      { name: "Static Aave Ethereum USDC", pct: 34, risk: "low", coinId: "usdc-circle", depType: "collateral" },
-      { name: "Wrapped Compound USDCv3", pct: 33, risk: "low", coinId: "usdc-circle", depType: "collateral" },
-      { name: "Wrapped Compound USDTv3", pct: 33, risk: "low", coinId: "usdt-tether", depType: "collateral" },
+      { sourceKey: `reserve-protocol-dtf:${STATIC_AAVE_USDC.toLowerCase()}`, name: "Static Aave Ethereum USDC", pct: 34, risk: "low", coinId: "usdc-circle", depType: "collateral" },
+      { sourceKey: `reserve-protocol-dtf:${WCUSDCV3.toLowerCase()}`, name: "Wrapped Compound USDCv3", pct: 33, risk: "low", coinId: "usdc-circle", depType: "collateral" },
+      { sourceKey: `reserve-protocol-dtf:${WCUSDT_V3.toLowerCase()}`, name: "Wrapped Compound USDTv3", pct: 33, risk: "low", coinId: "usdt-tether", depType: "collateral" },
     ]);
     expect(result.metadata).toMatchObject({
       componentCount: 3,
@@ -643,10 +534,10 @@ describe("reserve-protocol-dtf adapter", () => {
     const result = await fetchReserveProtocolDtfReserves(coin as never, createOnchainConfig(), signal);
 
     expect(result.slices).toEqual([
-      { name: "Savings USDS", pct: 25, risk: "low", coinId: "susds-sky", depType: "collateral" },
-      { name: "Static Aave Ethereum USDC", pct: 25, risk: "medium", coinId: "usdc-circle", depType: "collateral" },
-      { name: "Wrapped Compound USDCv3", pct: 25, risk: "medium", coinId: "usdc-circle", depType: "collateral" },
-      { name: "Steakhouse USDC strategy", pct: 25, risk: "medium", coinId: "steakusdc-steakhouse", depType: "collateral" },
+      { sourceKey: `reserve-protocol-dtf:${SUSDS.toLowerCase()}`, name: "Savings USDS", pct: 25, risk: "low", coinId: "susds-sky", depType: "collateral" },
+      { sourceKey: `reserve-protocol-dtf:${STATIC_AAVE_USDC.toLowerCase()}`, name: "Static Aave Ethereum USDC", pct: 25, risk: "medium", coinId: "usdc-circle", depType: "collateral" },
+      { sourceKey: `reserve-protocol-dtf:${WCUSDCV3.toLowerCase()}`, name: "Wrapped Compound USDCv3", pct: 25, risk: "medium", coinId: "usdc-circle", depType: "collateral" },
+      { sourceKey: `reserve-protocol-dtf:${STEAK_USDC.toLowerCase()}`, name: "Steakhouse USDC strategy", pct: 25, risk: "medium", coinId: "steakusdc-steakhouse", depType: "collateral" },
     ]);
     expect(result.warnings).toContainEqual(
       expect.objectContaining({

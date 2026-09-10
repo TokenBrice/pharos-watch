@@ -2,6 +2,7 @@
   "id": "said-gaib",
   "reserves": [
     {
+      "sourceKey": "erc4626-single-asset:ethereum:0x18f52b3fb465118731d9e0d276d4eb3599d57596",
       "name": "AID vault shares and AI infrastructure financing portfolio",
       "pct": 100,
       "risk": "high",

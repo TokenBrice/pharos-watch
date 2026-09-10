@@ -60,9 +60,6 @@
     "adapter": "infinifi",
     "version": 1,
     "semantics": "collateral-mix",
-    "scoring": {
-      "maxSourceAgeSec": 4000000
-    },
     "display": {
       "url": "https://stats.infinifi.xyz/",
       "label": "Stats"

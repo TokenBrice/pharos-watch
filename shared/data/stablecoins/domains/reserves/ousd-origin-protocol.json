@@ -9,8 +9,15 @@
       "depType": "collateral",
       "assetClass": "protocol-position",
       "issuerOrObligor": "Origin OUSD Vault strategies using Morpho and Curve",
-      "riskFactors": ["liquidity", "custody", "counterparty", "smart-contract", "concentration"],
-      "liquidityHorizon": "one-day"
+      "riskFactors": [
+        "liquidity",
+        "custody",
+        "counterparty",
+        "smart-contract",
+        "concentration"
+      ],
+      "liquidityHorizon": "one-day",
+      "sourceKey": "origin-vault-balances:0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48"
     }
   ],
   "reserveReview": {

@@ -39,6 +39,7 @@ describe("syncLiveReserves", () => {
       sourceModel: definition.sourceModel,
       evidenceClass: definition.evidenceClass,
       sharedSourceMode: definition.sharedSourceMode,
+      redemptionTelemetry: definition.redemptionTelemetry,
       ...(validation ? { validation } : {}),
     };
   }
@@ -262,15 +263,23 @@ describe("syncLiveReserves", () => {
   it("keeps stale source-age warnings degrading even when the warning code is allowlisted", async () => {
     const configuredCoin = ACTIVE_STABLECOINS.find((candidate) =>
       candidate.liveReservesConfig?.adapter === "mento"
-      && candidate.liveReservesConfig.scoring?.maxSourceAgeSec === 4_000_000
+      || candidate.liveReservesConfig?.adapter === "accountable"
     ) as ConfiguredCoin | undefined;
     expect(configuredCoin).toBeDefined();
+    const baseDefinition = LIVE_RESERVE_ADAPTER_DEFINITIONS[configuredCoin!.liveReservesConfig.adapter];
+    const adapterMaxSourceAgeSec = "validation" in baseDefinition && "maxSourceAgeSec" in baseDefinition.validation
+      ? baseDefinition.validation.maxSourceAgeSec
+      : undefined;
+    expect(adapterMaxSourceAgeSec).toBeDefined();
     const coin = {
       ...configuredCoin!,
       liveReservesConfig: {
         ...configuredCoin!.liveReservesConfig,
         scoring: {
           ...configuredCoin!.liveReservesConfig.scoring,
+          // Per-coin caps may only tighten the adapter cap, so derive the
+          // synthetic cap from the adapter definition instead of the registry.
+          maxSourceAgeSec: adapterMaxSourceAgeSec,
           allowedDegradedWarningCodes: [
             ...(configuredCoin!.liveReservesConfig.scoring?.allowedDegradedWarningCodes ?? []),
             "stale-source-data",
@@ -539,7 +548,7 @@ describe("syncLiveReserves", () => {
     expect(db.getHistory().some((entry) => entry.sql.includes("pending_attempt_id = NULL"))).toBe(false);
   });
 
-  it("leaves the authoritative write intact and skips history finalization when the write hook throws", async () => {
+  it("keeps authority and atomic history intact when the post-commit hook throws", async () => {
     const coin = getIndependentConfiguredCoin();
     const { syncReserveCoin } = await import("../sync-live-reserves-core");
     const db = mockLiveReserveD1();
@@ -566,7 +575,7 @@ describe("syncLiveReserves", () => {
 
     expect(result.status).toBe("failed");
     expect(db.getHistory().some((entry) => entry.sql.includes("INSERT INTO reserve_composition ("))).toBe(true);
-    expect(db.getHistory().some((entry) => entry.sql.includes("reserve_composition_history"))).toBe(false);
+    expect(db.getHistory().some((entry) => entry.sql.includes("reserve_composition_history"))).toBe(true);
   });
 
   it("preserves prior reserve detail and keeps it scoring when the circuit is open", async () => {

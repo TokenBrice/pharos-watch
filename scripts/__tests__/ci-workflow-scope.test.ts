@@ -112,30 +112,27 @@ describe("CI workflow scope", () => {
     expect(acceptance?.run).toContain("scripts/ci/run-post-deploy-acceptance.ts");
   });
 
-  it("fans the nightly Node 24 validation out from one prepared workspace artifact", () => {
+  it("installs each nightly Node 24 lane independently and keeps the Node 26 probe separate", () => {
     const workflow = parseYaml(readRepoFile(".github/workflows/nightly-validation.yml")) as {
       jobs: Record<string, {
         needs?: string | string[];
         steps?: Array<{ uses?: string; with?: Record<string, unknown> }>;
       }>;
     };
-    const prepareSetup = workflow.jobs.prepare.steps?.find(
-      (step) => step.uses === "./.github/actions/setup-workspace");
-    expect(prepareSetup?.with?.["workspace-artifact"]).toBe("publish");
-    expect(prepareSetup?.with?.["bootstrap-history"]).toBe("true");
-    for (const job of ["full-static", "full-tests"]) {
+    // The workspace-artifact fan-out was measured across three paired
+    // nightlies and lengthened the critical path (+104s median) while the npm
+    // cache was already hot in every job, so each lane installs on its own.
+    expect(workflow.jobs.prepare).toBeUndefined();
+    for (const job of ["full-static", "full-tests", "node26-proof"]) {
       const setup = workflow.jobs[job].steps?.find(
         (step) => step.uses === "./.github/actions/setup-workspace");
-      expect(workflow.jobs[job].needs).toContain("prepare");
-      expect(setup?.with?.["workspace-artifact"]).toBe("restore");
-      expect(setup?.with?.["install-deps"]).toBe("false");
+      expect(workflow.jobs[job].needs).toBeUndefined();
+      expect(setup?.with?.["workspace-artifact"]).toBeUndefined();
+      expect(setup?.with?.["install-deps"]).toBeUndefined();
+      expect(setup?.with?.["bootstrap-history"]).toBe("true");
     }
-    // The artifact carries Node 24 state; the Node 26 probe installs independently.
-    const node26Setup = workflow.jobs["node26-proof"].steps?.find(
-      (step) => step.uses === "./.github/actions/setup-workspace");
-    expect(node26Setup?.with?.["node-version"]).toBe("26");
-    expect(node26Setup?.with?.["workspace-artifact"]).toBeUndefined();
-    expect(node26Setup?.with?.["install-deps"]).toBeUndefined();
+    expect(workflow.jobs["node26-proof"].steps?.find(
+      (step) => step.uses === "./.github/actions/setup-workspace")?.with?.["node-version"]).toBe("26");
   });
 
   it("runs the weekly gitleaks scan without npm installation", () => {

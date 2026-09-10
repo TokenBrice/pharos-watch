@@ -1,28 +1,14 @@
 import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { describe, expect, it } from "vitest";
 import type { LiveReservesConfig } from "@shared/types/live-reserves";
-
-vi.mock("../helpers", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("../helpers")>();
-  return { ...actual, fetchPrimaryHtmlInput: vi.fn() };
-});
-
-vi.mock("../../../lib/fetch-retry", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("../../../lib/fetch-retry")>();
-  return { ...actual, fetchWithRetry: vi.fn() };
-});
-
+import type { StablecoinMeta } from "@shared/types/core";
 import {
   adaptFdusdReserveReport,
-  fetchFdusdTransparencyReserves,
   selectNewestFdusdSignedReport,
 } from "../fdusd-transparency";
-import { fetchPrimaryHtmlInput } from "../helpers";
-import { fetchWithRetry } from "../../../lib/fetch-retry";
-
-let signal: AbortSignal;
+import { runAdapter } from "./reserve-adapter.test-support";
 
 const FIXTURES_DIR = join(dirname(fileURLToPath(import.meta.url)), "fixtures");
 const INDEX_HTML = readFileSync(join(FIXTURES_DIR, "fdusd-transparency.html"), "utf8");
@@ -38,22 +24,18 @@ const JULY_INDEX_HTML = `
 `;
 const REPORT_TEXT = readFileSync(join(FIXTURES_DIR, "fdusd-reserve-report.txt"), "utf8");
 const JULY_REPORT_TEXT = readFileSync(join(FIXTURES_DIR, "fdusd-isae3000-july-glyph-fragmented.txt"), "utf8");
+const FDUSD_INDEX_URL = "https://www.firstdigitallabs.com/transparency";
+const FDUSD_REPORT_URL = "https://cdn.prod.website-files.com/675ab99bf1f7ea944d49a55b/6a55fa3b263f9436c944049d_ISAE3000%20-%20Attestation%20Report%20on%20Reserves%20Account%20(June%202026).pdf";
 const config = {
   adapter: "fdusd-transparency",
   version: 1,
   semantics: "attestation-mix",
-  inputs: {
-    primary: { kind: "http-html", url: "https://www.firstdigitallabs.com/transparency" },
-  },
+  inputs: { primary: { kind: "http-html", url: FDUSD_INDEX_URL } },
 } as LiveReservesConfig;
 
-beforeEach(() => {
-  signal = new AbortController().signal;
-});
-
-afterEach(() => {
-  vi.clearAllMocks();
-});
+function makeCoin(): StablecoinMeta {
+  return { id: "fdusd-transparency", liveReservesConfig: config } as unknown as StablecoinMeta;
+}
 
 describe("FDUSD signed reserve reports", () => {
   it("selects the newest dated reserve-account report from the official index fixture", () => {
@@ -128,19 +110,38 @@ describe("FDUSD signed reserve reports", () => {
   });
 
   it("fails without emitting a row when the newest report cannot be parsed", async () => {
-    vi.mocked(fetchPrimaryHtmlInput).mockResolvedValue(INDEX_HTML);
-    vi.mocked(fetchWithRetry).mockResolvedValue(new Response("not a reserve report", {
-      status: 200,
-      headers: { "content-type": "application/pdf" },
-    }));
-
-    await expect(fetchFdusdTransparencyReserves({} as never, config, signal)).rejects.toThrow("layout-changed");
+    await expect(runAdapter("fdusd-transparency", makeCoin(), {
+      network: {
+        html: {
+          [FDUSD_INDEX_URL]: INDEX_HTML,
+          [FDUSD_REPORT_URL]: { body: "not a reserve report", headers: { "content-type": "application/pdf" } },
+        },
+      },
+      nowSec: 1_783_555_200,
+      validate: false,
+    })).rejects.toThrow("layout-changed");
   });
 
   it("fails without emitting a row when the report fetch fails", async () => {
-    vi.mocked(fetchPrimaryHtmlInput).mockResolvedValue(INDEX_HTML);
-    vi.mocked(fetchWithRetry).mockResolvedValue(null);
+    await expect(runAdapter("fdusd-transparency", makeCoin(), {
+      network: {
+        html: {
+          [FDUSD_INDEX_URL]: INDEX_HTML,
+          [FDUSD_REPORT_URL]: { status: 500, body: "upstream unavailable" },
+        },
+      },
+      nowSec: 1_783_555_200,
+      validate: false,
+    })).rejects.toThrow(/500|Fetch failed/);
+  });
 
-    await expect(fetchFdusdTransparencyReserves({} as never, config, signal)).rejects.toThrow("Fetch failed");
+  it("fetches the configured index and report through the shared network harness", async () => {
+    const { result, network } = await runAdapter("fdusd-transparency", makeCoin(), {
+      network: { html: { [FDUSD_INDEX_URL]: INDEX_HTML, [FDUSD_REPORT_URL]: REPORT_TEXT } },
+      nowSec: 1_783_555_200,
+    });
+
+    expect(network.requests.map((request) => request.url)).toEqual([FDUSD_INDEX_URL, FDUSD_REPORT_URL]);
+    expect(result.metadata?.freshnessMode).toBe("verified");
   });
 });

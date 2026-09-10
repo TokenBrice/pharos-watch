@@ -14,6 +14,34 @@
   "collateral": "ADA reserves held by the Cardano Djed protocol, with SHEN reserve-coin holders absorbing surplus reserve volatility",
   "pegMechanism": "Overcollateralized Cardano stablecoin where DJED can be minted and burned against ADA while SHEN maintains the reserve ratio band",
   "mechanismArchetype": "cdp",
+  "liveReservesConfig": {
+    "adapter": "djed-cardano",
+    "version": 1,
+    "semantics": "collateral-mix",
+    "display": {
+      "url": "https://cardanoscan.io/address/addr1z8mcpc26j64fmhhd6sv5qj5mk9xqnfxgm6k8zmk7h2rlu4qm5kjdmrpmng059yellupyvwgay2v0lz6663swmds7hp0qhxg9gt",
+      "label": "Djed reserve script address on Cardano (Koios)"
+    },
+    "inputs": {
+      "primary": {
+        "kind": "http-json",
+        "url": "https://api.koios.rest/api/v1"
+      }
+    },
+    "params": {
+      "bankAddress": "addr1z8mcpc26j64fmhhd6sv5qj5mk9xqnfxgm6k8zmk7h2rlu4qm5kjdmrpmng059yellupyvwgay2v0lz6663swmds7hp0qhxg9gt",
+      "djedUnit": {
+        "policyId": "8db269c3ec630e06ae29f74bc39edd1f87c819f1056206e879a1cd61",
+        "assetNameHex": "446a65644d6963726f555344",
+        "decimals": 6
+      },
+      "shenUnit": {
+        "policyId": "8db269c3ec630e06ae29f74bc39edd1f87c819f1056206e879a1cd61",
+        "assetNameHex": "5368656e4d6963726f555344",
+        "decimals": 6
+      }
+    }
+  },
   "links": [
     {
       "id": "website",

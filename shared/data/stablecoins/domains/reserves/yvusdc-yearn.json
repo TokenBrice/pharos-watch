@@ -2,6 +2,7 @@
   "id": "yvusdc-yearn",
   "reserves": [
     {
+      "sourceKey": "erc4626-single-asset:ethereum:0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
       "name": "USDC routed through Yearn v3 strategy allocator",
       "pct": 100,
       "risk": "medium",

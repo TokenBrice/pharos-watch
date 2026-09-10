@@ -93,6 +93,7 @@
       }
     },
     "params": {
+      "redemptionRoute": "async-request",
       "slice": {
         "name": "apxUSD yield vault shares",
         "risk": "high",

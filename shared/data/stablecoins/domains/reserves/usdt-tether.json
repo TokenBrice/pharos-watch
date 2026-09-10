@@ -2,6 +2,7 @@
   "id": "usdt-tether",
   "reserves": [
     {
+      "sourceKey": "tether:usdt:treasury-bills",
       "name": "U.S. Treasury bills",
       "pct": 61.23,
       "risk": "very-low",
@@ -16,6 +17,7 @@
       "maturityDaysMax": 364
     },
     {
+      "sourceKey": "tether:usdt:overnight-reverse-repo",
       "name": "Overnight reverse repurchase agreements",
       "pct": 9.92,
       "risk": "very-low",
@@ -30,6 +32,7 @@
       "maturityDaysMax": 1
     },
     {
+      "sourceKey": "tether:usdt:term-reverse-repo",
       "name": "Term reverse repurchase agreements",
       "pct": 3.72,
       "risk": "very-low",
@@ -44,6 +47,7 @@
       "liquidityHorizon": "unknown"
     },
     {
+      "sourceKey": "tether:usdt:cash-bank-deposits",
       "name": "Cash and bank deposits",
       "pct": 0.02,
       "risk": "very-low",
@@ -56,6 +60,7 @@
       "liquidityHorizon": "immediate"
     },
     {
+      "sourceKey": "tether:usdt:precious-metals",
       "name": "Precious metals",
       "pct": 10.03,
       "risk": "medium",
@@ -69,6 +74,7 @@
       "liquidityHorizon": "seven-days"
     },
     {
+      "sourceKey": "tether:usdt:bitcoin",
       "name": "Bitcoin",
       "pct": 3.09,
       "risk": "medium",
@@ -82,6 +88,7 @@
       "liquidityHorizon": "seven-days"
     },
     {
+      "sourceKey": "tether:usdt:public-equities",
       "name": "Public equities",
       "pct": 2.0,
       "risk": "high",
@@ -96,6 +103,7 @@
       "liquidityHorizon": "unknown"
     },
     {
+      "sourceKey": "tether:usdt:other-investments",
       "name": "Other investments",
       "pct": 2.79,
       "risk": "high",
@@ -110,6 +118,7 @@
       "liquidityHorizon": "unknown"
     },
     {
+      "sourceKey": "tether:usdt:secured-loans",
       "name": "Secured loans",
       "pct": 7.17,
       "risk": "high",

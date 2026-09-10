@@ -37,7 +37,10 @@ describe("api endpoint registry", () => {
     expect(publicPaths).toContain("/api/health");
     expect(publicPaths).toContain("/api/stablecoin/pyusd-paypal");
     expect(adminPaths).toEqual([
-      "/api/status", "/api/status-history?limit=10", "/api/debug-sync-state",
+      "/api/status",
+      "/api/status-history?limit=10",
+      "/api/reserve-attempt-history?coin=usdc-circle&limit=10",
+      "/api/debug-sync-state",
     ]);
     expect(manualPaths).toContain("/api/audit-depeg-history?dry-run=true");
     expect(manualPaths).toContain("/api/trigger-digest");

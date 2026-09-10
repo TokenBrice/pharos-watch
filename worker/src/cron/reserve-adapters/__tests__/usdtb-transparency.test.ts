@@ -48,8 +48,8 @@ describe("adaptUsdtbTransparency", () => {
     const result = adaptUsdtbTransparency(USDTB_BACKING);
 
     expect(result.slices).toEqual([
-      { name: "BlackRock BUIDL (U.S. T-Bills, cash, repos)", pct: 98.8, risk: "low", coinId: "buidl-blackrock" },
-      { name: "Assets in motion (settlement float)", pct: 1.2, risk: "low" },
+      { sourceKey: "usdtb-transparency:buidl", name: "BlackRock BUIDL (U.S. T-Bills, cash, repos)", pct: 98.8, risk: "low", coinId: "buidl-blackrock" },
+      { sourceKey: "usdtb-transparency:assets-in-motion", name: "Assets in motion (settlement float)", pct: 1.2, risk: "low" },
     ]);
     expect(result.warnings).toBeUndefined();
 
@@ -114,9 +114,56 @@ describe("adaptUsdtbTransparency", () => {
 
   it("throws when supply is missing or not a positive number", () => {
     expect(() => adaptUsdtbTransparency({ ...USDTB_BACKING, supply: undefined }))
-      .toThrow("invalid supply");
+      .toThrow("not a finite number");
     expect(() => adaptUsdtbTransparency({ ...USDTB_BACKING, supply: -1 }))
       .toThrow("invalid supply");
+  });
+
+  it("parses numeric-string amounts instead of silently reading them as zero", () => {
+    const withStringAmounts: UsdtbBackingAndSupplyPayload = {
+      ...USDTB_BACKING,
+      backingAssets: {
+        BUIDL: [{ amount: "767603510.39", custodian: "0x2004F7f7B600d962170d7f28114Cc123c5e98451" }],
+      },
+      assetsInMotion: "9115451.68",
+      supply: "775334449.6661826",
+    };
+
+    const result = adaptUsdtbTransparency(withStringAmounts);
+
+    expect(result.slices).toEqual([
+      { sourceKey: "usdtb-transparency:buidl", name: "BlackRock BUIDL (U.S. T-Bills, cash, repos)", pct: 98.8, risk: "low", coinId: "buidl-blackrock" },
+      { sourceKey: "usdtb-transparency:assets-in-motion", name: "Assets in motion (settlement float)", pct: 1.2, risk: "low" },
+    ]);
+    const totalReserveUsd = 767603510.39 + 9115451.68;
+    expect(result.metadata?.totalReserveUsd).toBeCloseTo(totalReserveUsd, 3);
+    expect(result.metadata?.collateralizationRatio).toBeCloseTo(totalReserveUsd / 775334449.6661826, 9);
+  });
+
+  it("throws on non-numeric backing asset amounts instead of silently reading them as zero", () => {
+    const withGarbageAmount: UsdtbBackingAndSupplyPayload = {
+      ...USDTB_BACKING,
+      backingAssets: {
+        ...USDTB_BACKING.backingAssets,
+        BUIDL: [{ amount: "not-a-number", custodian: "0x2004F7f7B600d962170d7f28114Cc123c5e98451" }],
+      },
+    };
+
+    expect(() => adaptUsdtbTransparency(withGarbageAmount)).toThrow("backing asset BUIDL entry 0 amount is not a finite number");
+    expect(() => adaptUsdtbTransparency({ ...USDTB_BACKING, assetsInMotion: "NaN" }))
+      .toThrow("assetsInMotion is not a finite number");
+  });
+
+  it("throws on negative amounts instead of silently zeroing them", () => {
+    expect(() => adaptUsdtbTransparency({
+      ...USDTB_BACKING,
+      backingAssets: {
+        ...USDTB_BACKING.backingAssets,
+        BUIDL: [{ amount: -5, custodian: "0x2004F7f7B600d962170d7f28114Cc123c5e98451" }],
+      },
+    })).toThrow("backing asset BUIDL entry 0 has a negative amount");
+    expect(() => adaptUsdtbTransparency({ ...USDTB_BACKING, assetsInMotion: -1 }))
+      .toThrow("assetsInMotion is negative");
   });
 
   it("throws when lastUpdatedAt is unreadable", () => {

@@ -2,6 +2,7 @@
   "id": "yusd-aegis",
   "reserves": [
     {
+      "sourceKey": "accountable:aegis:deployment:copper",
       "name": "Copper",
       "pct": 71.9,
       "risk": "medium",
@@ -18,6 +19,7 @@
       "liquidityHorizon": "unknown"
     },
     {
+      "sourceKey": "accountable:aegis:deployment:fireblocks",
       "name": "Fireblocks",
       "pct": 27.9,
       "risk": "medium",
@@ -34,6 +36,7 @@
       "liquidityHorizon": "unknown"
     },
     {
+      "sourceKey": "accountable:aegis:deployment:insurance-fund-usage",
       "name": "Insurance Fund Usage",
       "pct": 0.2,
       "risk": "very-high",

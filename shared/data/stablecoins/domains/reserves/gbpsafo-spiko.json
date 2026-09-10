@@ -2,6 +2,7 @@
   "id": "gbpsafo-spiko",
   "reserves": [
     {
+      "sourceKey": "spiko-api:gbpsafo:total-assets",
       "name": "Fully collateralized overnight total-return swap exposure",
       "pct": 100,
       "risk": "medium",

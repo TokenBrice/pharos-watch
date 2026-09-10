@@ -1,23 +1,4 @@
-import { beforeEach, describe, it, expect, vi } from "vitest";
-
-vi.mock("../helpers", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("../helpers")>();
-  const { makeOnchainCallersMock } = await import("./helpers/onchain-callers-mock");
-  const fetchOnchainUint256 = vi.fn();
-  const fetchOnchainRawCall = vi.fn();
-  return {
-    ...actual,
-    fetchJsonAdapterInput: vi.fn(),
-    fetchOnchainUint256,
-    fetchOnchainRawCall,
-    makeOnchainCallers: makeOnchainCallersMock({
-      uint256: fetchOnchainUint256,
-      raw: fetchOnchainRawCall,
-    }),
-  };
-});
-
-import { fetchJsonAdapterInput, fetchOnchainRawCall, fetchOnchainUint256 } from "../helpers";
+import { describe, it, expect } from "vitest";
 import {
   resolveBaseSymbol,
   bucketForAsset,
@@ -26,7 +7,7 @@ import {
   listUnexpectedDolaAssets,
   type FirmMarket,
 } from "../dola-inverse";
-import { expectValidAdapterOutput } from "./reserve-adapter.test-support";
+import { expectValidAdapterOutput, installAdapterNetwork } from "./reserve-adapter.test-support";
 
 function makeMarket(symbol: string, totalDebt = 1_000_000): FirmMarket {
   return { name: `${symbol} Market`, underlying: { symbol }, totalDebt, borrowPaused: false };
@@ -42,23 +23,19 @@ const DOLA_SELECTOR = "0x92c592d0";
 const SUPPLY_SELECTOR = "0x047fc9aa";
 const SELL_FEE_BPS_SELECTOR = "0x23cbe1f3";
 const MAX_WITHDRAW_DATA = `0xce96cb77${PSM_ADDRESS.slice(2).padStart(64, "0")}`;
+const DOLA_ENDPOINT = "https://www.inverse.finance/api/f2/fixed-markets";
 const DOLA_LIVE_CONFIG = {
   adapter: "dola-inverse",
   version: 1,
   semantics: "collateral-mix",
-  inputs: { primary: { kind: "http-json", url: "https://www.inverse.finance/api/f2/fixed-markets" } },
+  inputs: { primary: { kind: "http-json", url: DOLA_ENDPOINT } },
 } as never;
 
 function word(hexBody: string): string {
   return `0x${hexBody.replace(/^0x/, "").padStart(64, "0")}`;
 }
 
-/**
- * Route the mocked callers by contract and selector: the adapter fires the
- * three identity reads, supply(), maxWithdraw() and sellFeeBps() concurrently,
- * so ordered mock queues would be fragile here.
- */
-function primeDolaPsmMocks(options: {
+function dolaNetwork(options: {
   vault?: string | null;
   collateral?: string | null;
   dola?: string | null;
@@ -66,40 +43,37 @@ function primeDolaPsmMocks(options: {
   maxWithdraw?: bigint | null;
   sellFeeBps?: bigint | null;
 } = {}) {
-  const vault = options.vault === undefined ? word(SUSDS_ADDRESS) : options.vault;
-  const collateral = options.collateral === undefined ? word(USDS_ADDRESS) : options.collateral;
-  const dola = options.dola === undefined ? word(DOLA_ADDRESS) : options.dola;
-  vi.mocked(fetchOnchainRawCall).mockImplementation((args: unknown) => {
-    const { contract, data } = args as { contract: string; data: string };
-    if (contract !== PSM_ADDRESS) return Promise.resolve(null);
-    if (data === VAULT_SELECTOR) return Promise.resolve(vault);
-    if (data === COLLATERAL_SELECTOR) return Promise.resolve(collateral);
-    if (data === DOLA_SELECTOR) return Promise.resolve(dola);
-    return Promise.resolve(null);
+  return installAdapterNetwork({
+    chains: { ethereum: "https://rpc.example" },
+    json: {
+      [DOLA_ENDPOINT]: {
+        markets: [makeMarket("wstETH", 1_000_000)],
+        timestamp: 1_776_330_494,
+      },
+    },
+    rpc: {
+      [`${PSM_ADDRESS}:${VAULT_SELECTOR}`]: options.vault === undefined ? word(SUSDS_ADDRESS) : options.vault,
+      [`${PSM_ADDRESS}:${COLLATERAL_SELECTOR}`]:
+        options.collateral === undefined ? word(USDS_ADDRESS) : options.collateral,
+      [`${PSM_ADDRESS}:${DOLA_SELECTOR}`]: options.dola === undefined ? word(DOLA_ADDRESS) : options.dola,
+      [`${PSM_ADDRESS}:${SUPPLY_SELECTOR}`]: options.supply === undefined ? 0n : options.supply,
+      [`${PSM_ADDRESS}:${SELL_FEE_BPS_SELECTOR}`]: options.sellFeeBps === undefined ? 20n : options.sellFeeBps,
+      [`${SUSDS_ADDRESS}:${MAX_WITHDRAW_DATA}`]:
+        options.maxWithdraw === undefined ? 0n : options.maxWithdraw,
+    },
   });
-  vi.mocked(fetchOnchainUint256).mockImplementation((args: unknown) => {
-    const { contract, data } = args as { contract: string; data: string };
-    if (contract === PSM_ADDRESS && data === SUPPLY_SELECTOR) {
-      return Promise.resolve(options.supply === undefined ? 0n : options.supply);
-    }
-    if (contract === PSM_ADDRESS && data === SELL_FEE_BPS_SELECTOR) {
-      return Promise.resolve(options.sellFeeBps === undefined ? 20n : options.sellFeeBps);
-    }
-    if (contract === SUSDS_ADDRESS && data === MAX_WITHDRAW_DATA) {
-      return Promise.resolve(options.maxWithdraw === undefined ? 0n : options.maxWithdraw);
-    }
-    return Promise.resolve(null);
-  });
-  vi.mocked(fetchJsonAdapterInput).mockResolvedValue({
-    markets: [makeMarket("wstETH", 1_000_000)],
-    timestamp: 1_776_330_494,
-  } as never);
 }
 
-beforeEach(() => {
-  vi.clearAllMocks();
-  primeDolaPsmMocks();
-});
+async function runDola(options: Parameters<typeof dolaNetwork>[0] = {}) {
+  const network = dolaNetwork(options);
+  const result = await fetchDolaInverseReserves(
+    { id: "dola-inverse-finance" } as never,
+    DOLA_LIVE_CONFIG,
+    new AbortController().signal,
+    { chainRpcs: network.chainRpcs, nowSec: 1_776_330_494 },
+  );
+  return { result, network };
+}
 
 describe("resolveBaseSymbol", () => {
   it.each([
@@ -181,7 +155,7 @@ describe("adaptFirmMarkets", () => {
         makeMarket("sDOLA-scrvUSD clp", 2_000_000),
       ],
       timestamp: 1000,
-    });
+    }, 4_000_000);
 
     const reusdSlice = result.slices.find((s) => s.name === "reUSD collateral");
     expect(reusdSlice).toMatchObject({
@@ -201,6 +175,12 @@ describe("adaptFirmMarkets", () => {
       ],
       timestamp: 1000,
     })).toEqual([]);
+  });
+
+  it("includes non-FiRM issuance in unknown exposure rather than normalizing it away", () => {
+    const result = adaptFirmMarkets({ markets: [makeMarket("wstETH", 60)], timestamp: 1000 }, 100);
+    expect(result.metadata?.unknownExposurePct).toBe(40);
+    expect(result.slices).toContainEqual({ sourceKey: "dola-inverse:unattributed", name: "Unattributed non-FiRM issuance", pct: 40, risk: "high" });
   });
 
   it("filters out zero-debt markets", () => {
@@ -281,12 +261,14 @@ describe("adaptFirmMarkets", () => {
 
     expect(result.slices).toEqual(expect.arrayContaining([
       expect.objectContaining({
+        sourceKey: "dola-inverse:susde",
         name: "sUSDe collateral",
         pct: 50,
         risk: "high",
         coinId: "susde-ethena",
       }),
       expect.objectContaining({
+        sourceKey: "dola-inverse:other",
         name: "Other collateral",
         pct: 50,
         risk: "high",
@@ -301,8 +283,7 @@ describe("fetchDolaInverseReserves PSM redemption telemetry", () => {
   it("publishes the measured zero capacity without claiming the route is open", async () => {
     // The PSM has been empty since 2025-12-10. It is not paused — it has
     // nothing to pay out — so neither "open" nor "paused" is an honest claim.
-    primeDolaPsmMocks({ supply: 0n, maxWithdraw: 0n });
-    const result = await fetchDolaInverseReserves({ id: "dola-inverse-finance" } as never, DOLA_LIVE_CONFIG, new AbortController().signal);
+    const { result } = await runDola({ supply: 0n, maxWithdraw: 0n });
 
     expect(result.metadata).toMatchObject({
       psmSupplyRaw: "0",
@@ -323,8 +304,7 @@ describe("fetchDolaInverseReserves PSM redemption telemetry", () => {
   });
 
   it("reports the route open and binds capacity to the lower of supply() and vault maxWithdraw()", async () => {
-    primeDolaPsmMocks({ supply: 5_000n * 10n ** 18n, maxWithdraw: 8_000n * 10n ** 18n });
-    const result = await fetchDolaInverseReserves({ id: "dola-inverse-finance" } as never, DOLA_LIVE_CONFIG, new AbortController().signal);
+    const { result } = await runDola({ supply: 5_000n * 10n ** 18n, maxWithdraw: 8_000n * 10n ** 18n });
 
     expect(result.metadata?.redemption).toMatchObject({
       capacityUsd: 5_000,
@@ -341,15 +321,15 @@ describe("fetchDolaInverseReserves PSM redemption telemetry", () => {
   });
 
   it("binds capacity to the vault leg when the sUSDS vault cannot pay out the full accounted supply", async () => {
-    primeDolaPsmMocks({ supply: 9_000n * 10n ** 18n, maxWithdraw: 1_500n * 10n ** 18n });
-    const result = await fetchDolaInverseReserves({ id: "dola-inverse-finance" } as never, DOLA_LIVE_CONFIG, new AbortController().signal);
-
+    const { result } = await runDola({ supply: 9_000n * 10n ** 18n, maxWithdraw: 1_500n * 10n ** 18n });
     expect(result.metadata?.redemption?.capacityUsd).toBe(1_500);
   });
 
   it("withholds the whole redemption block when the PSM vault identity no longer matches sUSDS", async () => {
-    primeDolaPsmMocks({ vault: word("0x1111111111111111111111111111111111111111"), supply: 5_000n * 10n ** 18n });
-    const result = await fetchDolaInverseReserves({ id: "dola-inverse-finance" } as never, DOLA_LIVE_CONFIG, new AbortController().signal);
+    const { result } = await runDola({
+      vault: word("0x1111111111111111111111111111111111111111"),
+      supply: 5_000n * 10n ** 18n,
+    });
 
     expect(result.metadata?.redemption).toBeUndefined();
     expect(result.metadata?.psmSupplyRaw).toBeUndefined();
@@ -360,8 +340,7 @@ describe("fetchDolaInverseReserves PSM redemption telemetry", () => {
   });
 
   it("withholds the whole redemption block when supply() cannot be read", async () => {
-    primeDolaPsmMocks({ supply: null });
-    const result = await fetchDolaInverseReserves({ id: "dola-inverse-finance" } as never, DOLA_LIVE_CONFIG, new AbortController().signal);
+    const { result } = await runDola({ supply: null });
 
     expect(result.metadata?.redemption).toBeUndefined();
     expect(result.warnings ?? []).toEqual(
@@ -370,8 +349,11 @@ describe("fetchDolaInverseReserves PSM redemption telemetry", () => {
   });
 
   it("still publishes capacity when the sellFeeBps() read fails", async () => {
-    primeDolaPsmMocks({ supply: 5_000n * 10n ** 18n, maxWithdraw: 5_000n * 10n ** 18n, sellFeeBps: null });
-    const result = await fetchDolaInverseReserves({ id: "dola-inverse-finance" } as never, DOLA_LIVE_CONFIG, new AbortController().signal);
+    const { result } = await runDola({
+      supply: 5_000n * 10n ** 18n,
+      maxWithdraw: 5_000n * 10n ** 18n,
+      sellFeeBps: null,
+    });
 
     expect(result.metadata?.redemption).toMatchObject({ capacityUsd: 5_000, routeStatus: "open" });
     expect(result.metadata?.redemption?.feeBps).toBeUndefined();
@@ -379,10 +361,35 @@ describe("fetchDolaInverseReserves PSM redemption telemetry", () => {
   });
 
   it("rejects a sellFeeBps() reading outside the contract's own bps denominator", async () => {
-    primeDolaPsmMocks({ supply: 5_000n * 10n ** 18n, maxWithdraw: 5_000n * 10n ** 18n, sellFeeBps: 10_001n });
-    const result = await fetchDolaInverseReserves({ id: "dola-inverse-finance" } as never, DOLA_LIVE_CONFIG, new AbortController().signal);
+    const { result } = await runDola({
+      supply: 5_000n * 10n ** 18n,
+      maxWithdraw: 5_000n * 10n ** 18n,
+      sellFeeBps: 10_001n,
+    });
 
     expect(result.metadata?.redemption?.feeBps).toBeUndefined();
+  });
+
+  it("fails closed when the FiRM payload drops its markets field", async () => {
+    const network = installAdapterNetwork({
+      chains: { ethereum: "https://rpc.example" },
+      json: { [DOLA_ENDPOINT]: { timestamp: 1_776_330_494 } },
+      rpc: {
+        [`${PSM_ADDRESS}:${VAULT_SELECTOR}`]: word(SUSDS_ADDRESS),
+        [`${PSM_ADDRESS}:${COLLATERAL_SELECTOR}`]: word(USDS_ADDRESS),
+        [`${PSM_ADDRESS}:${DOLA_SELECTOR}`]: word(DOLA_ADDRESS),
+        [`${PSM_ADDRESS}:${SUPPLY_SELECTOR}`]: 0n,
+        [`${PSM_ADDRESS}:${SELL_FEE_BPS_SELECTOR}`]: 20n,
+        [`${SUSDS_ADDRESS}:${MAX_WITHDRAW_DATA}`]: 0n,
+      },
+    });
+
+    await expect(fetchDolaInverseReserves(
+      { id: "dola-inverse-finance" } as never,
+      DOLA_LIVE_CONFIG,
+      new AbortController().signal,
+      { chainRpcs: network.chainRpcs, nowSec: 1_776_330_494 },
+    )).rejects.toThrow(/markets|findIndex/i);
   });
 });
 

@@ -2,6 +2,36 @@ import type { MethodologyChangelogEntry } from "@shared/lib/methodology-versions
 
 export const SAFETY_SCORE_V9: readonly MethodologyChangelogEntry[] = [
   {
+    version: "9.49",
+    title: "Structural dependencies survive live reserve mapping",
+    date: "2026-09-10",
+    effectiveAt: 1788998400,
+    summary:
+      "Variant parents, explicit wrapped-asset claims, and manual non-collateral relationships are derived independently of reserve composition. Unmapped live reserves still cannot restore curated or manual collateral weights.",
+    impact: [
+      "A rejected live reserve link no longer deletes the separately authored serial parent claim or its inherited mint-control path.",
+      "Explicit curated wrapper identities produce unit serial claims rather than reviving old reserve percentages; independent manual structural relationships survive mapped and unmapped compositions.",
+      "Live mapping provenance, per-slice rejection reasons, and the curated basket admission gate remain intact. No evidence is added.",
+    ],
+    commits: [],
+    reconstructed: false,
+  },
+  {
+    version: "9.48",
+    title: "Unmapped live reserves cannot restore curated dependency weights",
+    date: "2026-09-09",
+    effectiveAt: 1788912000,
+    summary:
+      "A live composition with no mapped tracked-asset slices now remains live-unmapped with no dependency edges, instead of restoring the older curated or manual graph after a failed classification join.",
+    impact: [
+      "Dependency facts retain per-slice rejection reasons for unmatched identities, expired matching classifications, and explicit reviewed non-links.",
+      "Curated and manual fallback weights apply only when no live composition exists. Partial live mappings remain authoritative.",
+      "No evidence is added; dependency edges and downstream scores may change where stale curated weights previously bypassed the live identity join.",
+    ],
+    commits: [],
+    reconstructed: false,
+  },
+  {
     version: "9.47",
     title: "Inherited upstream reserve gaps count once per upstream cause",
     date: "2026-09-07",

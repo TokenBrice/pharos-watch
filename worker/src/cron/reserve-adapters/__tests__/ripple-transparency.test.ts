@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { adaptRippleTransparency, parseRippleReserveBreakdown } from "../ripple-transparency";
+import { expectWarnings, installAdapterNetwork, runAdapter } from "./reserve-adapter.test-support";
 
 const RIPPLE_HTML = `
 <h5>Total Circulating RLUSD</h5>
@@ -33,7 +34,7 @@ describe("adaptRippleTransparency", () => {
       freshnessMode: "verified",
       sourceTimestamp: Date.UTC(2026, 3, 30) / 1000,
     });
-    expect(result.warnings).toBeUndefined();
+    expectWarnings(result, ["attested-fallback-used"]);
   });
 
   it("itemizes slices per the attested May 2026 composition when the payload lacks a breakdown", () => {
@@ -41,6 +42,7 @@ describe("adaptRippleTransparency", () => {
 
     expect(result.slices).toEqual([
       {
+        sourceKey: "ripple-transparency:treasury-bills",
         name: "U.S. Treasury bills",
         pct: 65.41,
         risk: "very-low",
@@ -51,6 +53,7 @@ describe("adaptRippleTransparency", () => {
         maturityDaysMax: 92,
       },
       {
+        sourceKey: "ripple-transparency:government-mmf",
         name: "Government money-market funds",
         pct: 19.44,
         risk: "very-low",
@@ -60,6 +63,7 @@ describe("adaptRippleTransparency", () => {
         liquidityHorizon: "one-day",
       },
       {
+        sourceKey: "ripple-transparency:cash",
         name: "Cash and deposit accounts",
         pct: 15.15,
         risk: "very-low",
@@ -79,15 +83,23 @@ describe("adaptRippleTransparency", () => {
       ["Government money-market funds", 25.2],
       ["Cash and deposit accounts", 14.7],
     ]);
+    expect(result.warnings).toBeUndefined();
   });
 
-  it("falls back to the attested split when the payload breakdown does not reconcile", () => {
+  it("falls back to the attested split with a degraded warning when the payload breakdown does not reconcile", () => {
     const result = adaptRippleTransparency(RIPPLE_HTML_WITH_BREAKDOWN.replace("60.10%", "30.10%"));
 
     expect(result.slices.map((slice) => slice.pct)).toEqual([65.41, 19.44, 15.15]);
+    expect(result.warnings).toEqual([
+      expect.objectContaining({
+        code: "attested-fallback-used",
+        effect: "degraded",
+        message: expect.stringContaining("malformed asset-class breakdown"),
+      }),
+    ]);
   });
 
-  it("falls back to the attested split when percentages are malformed numeric tokens", () => {
+  it("falls back to the attested split with a degraded warning when percentages are malformed numeric tokens", () => {
     const result = adaptRippleTransparency(
       RIPPLE_HTML_WITH_BREAKDOWN.replace("60.10%", "1060.10%")
         .replace("25.20%", "1025.20%")
@@ -95,12 +107,23 @@ describe("adaptRippleTransparency", () => {
     );
 
     expect(result.slices.map((slice) => slice.pct)).toEqual([65.41, 19.44, 15.15]);
+    expect(result.warnings).toEqual([
+      expect.objectContaining({
+        code: "attested-fallback-used",
+        effect: "degraded",
+        message: expect.stringContaining("malformed asset-class breakdown"),
+      }),
+    ]);
   });
 
   it("keeps the undercollateralization breaker on the aggregate ratio", () => {
     const result = adaptRippleTransparency(RIPPLE_HTML.replace("$1,546.6M", "$900.0M"));
 
     expect(result.warnings).toEqual([
+      expect.objectContaining({
+        code: "attested-fallback-used",
+        effect: "degraded",
+      }),
       expect.objectContaining({
         code: "reserve-undercollateralized",
         effect: "degraded",
@@ -145,5 +168,27 @@ describe("parseRippleReserveBreakdown", () => {
         "U.S. Treasury bills 60.1000000%, Government money-market funds 25.20%, Cash and deposit accounts 14.70%",
       ),
     ).toBeNull();
+  });
+});
+
+describe("fetchRippleTransparencyReserves", () => {
+  const url = "https://ripple.com/solutions/stablecoin/transparency/";
+  const nowSec = Date.UTC(2026, 4, 1) / 1000;
+
+  it("fetches RLUSD transparency through the shared network harness", async () => {
+    const { result, network } = await runAdapter("ripple-transparency", "rlusd-ripple", {
+      network: installAdapterNetwork({ html: { [url]: RIPPLE_HTML } }),
+      nowSec,
+    });
+    expect(result.metadata).toMatchObject({ reservesUsd: 1_546_600_000 });
+    expect(network.requests).toEqual([{ url, method: "GET" }]);
+  });
+
+  it("rejects a renamed reserve heading instead of publishing an attested fallback", async () => {
+    await expect(runAdapter("ripple-transparency", "rlusd-ripple", {
+      network: installAdapterNetwork({ html: { [url]: RIPPLE_HTML.replace("RLUSD Reserve Funds", "RLUSD Reserves") } }),
+      nowSec,
+      validate: false,
+    })).rejects.toThrow("layout-changed");
   });
 });

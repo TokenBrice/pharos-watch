@@ -52,11 +52,13 @@ interface NestLastPriceUpdatePayload {
 }
 
 interface SliceValue {
+  sourceKey?: string;
   value: number;
   name: string;
   risk: ReserveSlice["risk"];
   coinId?: string;
   depType?: ReserveSlice["depType"];
+  unknown?: boolean;
 }
 
 type NestPendingTransactionType = "PendingDeposit" | "PendingWithdrawal";
@@ -137,6 +139,7 @@ function bucketLiquidToken(token: NestPositionToken): SliceValue {
   const value = readValue(token);
   if (symbol === "USDC" || symbol === "USDC.e") {
     return {
+      sourceKey: "nest-vault-positions:usdc",
       value,
       name: "Liquid USDC balances",
       risk: "low",
@@ -145,6 +148,7 @@ function bucketLiquidToken(token: NestPositionToken): SliceValue {
   }
   if (symbol === "USDT" || symbol === "USDT0") {
     return {
+      sourceKey: "nest-vault-positions:usdt",
       value,
       name: "Liquid USDT balances",
       risk: "low",
@@ -153,6 +157,7 @@ function bucketLiquidToken(token: NestPositionToken): SliceValue {
   }
   if (symbol === "pUSD") {
     return {
+      sourceKey: "nest-vault-positions:pusd",
       value,
       name: "pUSD liquid balance",
       risk: "high",
@@ -160,9 +165,11 @@ function bucketLiquidToken(token: NestPositionToken): SliceValue {
     };
   }
   return {
+    sourceKey: "nest-vault-positions:unknown",
     value,
     name: `${symbol} liquid balance`,
     risk: "high",
+    unknown: true,
   };
 }
 
@@ -172,6 +179,7 @@ function bucketYieldToken(asset: NestYieldAsset, token: NestPositionToken): Slic
   const value = readValue(token);
   if (slug === "nest-treasury-vault" || symbol === "nTBILL") {
     return {
+      sourceKey: "nest-vault-positions:ntbill",
       value,
       name: "Nest Treasury vault (nTBILL)",
       risk: "low",
@@ -180,6 +188,7 @@ function bucketYieldToken(asset: NestYieldAsset, token: NestPositionToken): Slic
   }
   if (slug === "janus-henderson-fund" || symbol === "JTRSY") {
     return {
+      sourceKey: "nest-vault-positions:jtrsy",
       value,
       name: "Janus Henderson Anemoy Treasury Fund (JTRSY)",
       risk: "low",
@@ -188,6 +197,7 @@ function bucketYieldToken(asset: NestYieldAsset, token: NestPositionToken): Slic
   }
   if (slug === "superstate-ustb" || symbol === "USTB") {
     return {
+      sourceKey: "nest-vault-positions:ustb",
       value,
       name: "Superstate USTB Treasury Fund",
       risk: "low",
@@ -196,15 +206,18 @@ function bucketYieldToken(asset: NestYieldAsset, token: NestPositionToken): Slic
   }
   if (slug === "superstate-uscc" || symbol === "USCC") {
     return {
+      sourceKey: "nest-vault-positions:uscc",
       value,
       name: "Superstate USCC cash-and-carry fund",
       risk: "low",
     };
   }
   return {
+    sourceKey: "nest-vault-positions:credit-vaults",
     value,
     name: "Nest private and structured credit vaults",
     risk: "high",
+    unknown: true,
   };
 }
 
@@ -299,12 +312,18 @@ export async function fetchNestVaultPositionsReserves(
   if (reconcileNopal && pendingWithdrawalUsd > 0) {
     throw new Error("nest-vault-positions cannot reconcile positive nOPAL pending withdrawals");
   }
+  const settledCoverageUsd = settledPositionUsd + pendingDepositUsd;
   const navReconciliationResidualUsd =
-    reconcileNopal ? navUsd! - settledPositionUsd - pendingDepositUsd : null;
+    navUsd != null && navUsd > 0 && settledCoverageUsd < navUsd
+      ? navUsd - settledCoverageUsd
+      : null;
+  const unknownValue = settledValues.reduce((sum, value) => sum + (value.unknown ? value.value : 0), 0)
+    + pendingDepositUsd + (navReconciliationResidualUsd ?? 0);
   const values = mergeSliceValues([
     ...settledValues,
     ...(pendingDepositUsd > 0
       ? [{
+          sourceKey: "nest-vault-positions:pending-deposits",
           value: pendingDepositUsd,
           name: "Nest pending deposits",
           risk: "high" as const,
@@ -312,18 +331,18 @@ export async function fetchNestVaultPositionsReserves(
       : []),
     ...(navReconciliationResidualUsd != null && navReconciliationResidualUsd > 0
       ? [{
+          sourceKey: "nest-vault-positions:nav-residual",
           value: navReconciliationResidualUsd,
           name: "Nest NAV reconciliation residual",
           risk: "high" as const,
         }]
       : []),
   ]);
-  const totalReserveUsd = reconcileNopal ? navUsd! : settledPositionUsd;
+  const totalReserveUsd = navUsd != null && navUsd > 0 ? navUsd : settledPositionUsd;
+  const unknownExposurePct = unknownValue / Math.max(totalReserveUsd, settledCoverageUsd) * 100;
   const navCoverageRatio = navUsd && navUsd > 0 ? settledPositionUsd / navUsd : null;
   const reconciledNavCoverageRatio =
-    reconcileNopal && navUsd && navUsd > 0
-      ? (settledPositionUsd + pendingDepositUsd) / navUsd
-      : navCoverageRatio;
+    navUsd && navUsd > 0 ? settledCoverageUsd / navUsd : navCoverageRatio;
   const warnings = buildCoverageShortfallWarnings({
     code: "nest-nav-coverage-gap",
     message: (pct) => reconcileNopal
@@ -348,14 +367,10 @@ export async function fetchNestVaultPositionsReserves(
           : {}),
       },
       totalReserveUsd,
-      ...(reconcileNopal
-        ? {
-            settledPositionUsd,
-            pendingDepositUsd,
-            pendingWithdrawalUsd,
-            navReconciliationResidualUsd,
-          }
-        : {}),
+      settledPositionUsd,
+      ...(reconcileNopal ? { pendingDepositUsd, pendingWithdrawalUsd } : {}),
+      ...(navReconciliationResidualUsd != null ? { navReconciliationResidualUsd } : {}),
+      unknownExposurePct,
       ...(navUsd != null ? { navUsd } : {}),
       ...(priceUsd != null ? { priceUsd } : {}),
       ...(totalSupply != null ? { totalSupply } : {}),

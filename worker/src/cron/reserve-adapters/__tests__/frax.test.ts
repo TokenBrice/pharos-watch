@@ -2,19 +2,7 @@ import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
-import { beforeEach, describe, it, expect, vi } from "vitest";
-
-const requestMocks = vi.hoisted(() => ({
-  fetchJsonAdapterInput: vi.fn(),
-}));
-
-vi.mock("../helpers", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("../helpers")>();
-  return {
-    ...actual,
-    fetchJsonAdapterInput: requestMocks.fetchJsonAdapterInput,
-  };
-});
+import { describe, it, expect } from "vitest";
 
 import {
   adaptFraxBalanceSheet,
@@ -23,15 +11,15 @@ import {
   type FraxBalanceSheetResponse,
   type FraxFpiCollateralResponse,
 } from "../frax";
+import { installAdapterNetwork, runAdapter } from "./reserve-adapter.test-support";
+
 
 const FIXTURES_DIR = join(dirname(fileURLToPath(import.meta.url)), "fixtures");
 const FRAX_BALANCE_SHEET_FIXTURE = JSON.parse(
   readFileSync(join(FIXTURES_DIR, "frax-balance-sheet.json"), "utf8"),
 ) as FraxBalanceSheetResponse;
-
-beforeEach(() => {
-  requestMocks.fetchJsonAdapterInput.mockReset();
-});
+const BALANCE_SHEET_ENDPOINT = "https://api.frax.finance/v2/frax/balance-sheet/latest";
+const FPI_COLLATERAL_ENDPOINT = "https://api.frax.finance/v2/fpifpis/fpi-collateral";
 
 /* ---------- v2 balance-sheet tests ---------- */
 
@@ -252,24 +240,23 @@ const FPI_COLLATERAL_SAMPLE: FraxFpiCollateralResponse = {
 
 describe("adaptFraxFpiCollateral", () => {
   it("publishes no route metadata when the atomic issuer payload fails", async () => {
-    requestMocks.fetchJsonAdapterInput.mockRejectedValueOnce(new Error("issuer API unavailable"));
+    const network = installAdapterNetwork({
+      json: {
+        [FPI_COLLATERAL_ENDPOINT]: { status: 503, body: "issuer API unavailable" },
+      },
+    });
     const coin = TRACKED_META_BY_ID.get("fpi-frax");
     expect(coin?.liveReservesConfig).toBeDefined();
 
-    let publishedResult: Awaited<ReturnType<typeof fetchFraxFpiCollateralReserves>> | null = null;
     await expect(
       fetchFraxFpiCollateralReserves(
         coin!,
         coin!.liveReservesConfig!,
         new AbortController().signal,
-      ).then((result) => {
-        publishedResult = result;
-        return result;
-      }),
-    ).rejects.toThrow("issuer API unavailable");
-
-    expect(publishedResult).toBeNull();
-    expect(requestMocks.fetchJsonAdapterInput).toHaveBeenCalledTimes(1);
+      ),
+    ).rejects.toThrow(/503|Fetch failed/);
+    expect(network.requests.length).toBeGreaterThan(0);
+    expect(network.requests.every((request) => request.url === FPI_COLLATERAL_ENDPOINT)).toBe(true);
   });
 
   it("excludes self-held FPI from collateral slices and nets it against liabilities", () => {
@@ -277,6 +264,7 @@ describe("adaptFraxFpiCollateral", () => {
 
     expect(result.slices.find((slice) => slice.name === "FPI")).toBeUndefined();
     expect(result.slices.find((slice) => slice.name === "FRAX")!.pct).toBeGreaterThan(90);
+    expect(result.slices.find((slice) => slice.name === "FRAX")!.sourceKey).toBe("frax-fpi-collateral:frax");
     expect(result.metadata).toMatchObject({
       totalCollateralUsd: 5_200_000,
       mappedCollateralUsd: 5_200_000,
@@ -348,7 +336,13 @@ describe("adaptFraxFpiCollateral", () => {
       expect.not.arrayContaining([expect.objectContaining({ code: "unknown-token" })]),
     );
     expect(result.slices).toEqual(
-      expect.arrayContaining([expect.objectContaining({ name: "Fraxswap V2 FRAX/FPIS", risk: "high" })]),
+      expect.arrayContaining([
+        expect.objectContaining({
+          name: "Fraxswap V2 FRAX/FPIS",
+          risk: "high",
+          sourceKey: "frax-fpi-collateral:ethereum:0x56695c26b3cdb528815cd22ff7b47510ab821efd",
+        }),
+      ]),
     );
   });
 
@@ -367,7 +361,7 @@ describe("adaptFraxFpiCollateral", () => {
 
     expect(result.metadata).toMatchObject({
       unknownCollateralUsd: 500_000,
-      immediateRedeemableUsd: 5_000_000,
+      redemption: { capacityUsd: 5_000_000 },
     });
     expect(result.warnings).toEqual(
       expect.arrayContaining([
@@ -436,5 +430,31 @@ describe("adaptFraxFpiCollateral", () => {
         liabilities: [],
       }),
     ).toThrow(/no positive non-FPI collateral/);
+  });
+});
+
+describe("frax balance-sheet fetch boundary", () => {
+  it("fetches the configured balance-sheet endpoint through the shared network harness", async () => {
+    const { result, network } = await runAdapter("frax-balance-sheet", "frax-frax", {
+      network: { json: { [BALANCE_SHEET_ENDPOINT]: BALANCE_SHEET_SAMPLE } },
+      nowSec: 1_775_657_027,
+    });
+
+    expect(network.requests.map((request) => request.url)).toEqual([BALANCE_SHEET_ENDPOINT]);
+    expect(result.metadata).toMatchObject({
+      sourceTimestamp: 1_775_307_827,
+    });
+    expect(result.slices).toContainEqual(expect.objectContaining({
+      name: "USTB (Superstate tokenized T-bills)",
+      coinId: "ustb-superstate",
+    }));
+  });
+
+  it("fails closed when the configured balance-sheet response loses its asset rows", async () => {
+    await expect(runAdapter("frax-balance-sheet", "frax-frax", {
+      network: { json: { [BALANCE_SHEET_ENDPOINT]: { ...BALANCE_SHEET_SAMPLE, assets: [] } } },
+      nowSec: 1_775_657_027,
+      validate: false,
+    })).rejects.toThrow("missing or empty assets");
   });
 });

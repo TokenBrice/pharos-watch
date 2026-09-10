@@ -8,7 +8,9 @@ import {
   fetchErc20Balance,
   fetchJsonWithRetry,
   fetchOnchainMulticall3,
+  freshnessMetadataFromTimestamp,
   notApplicableFreshnessMetadata,
+  summarizeSourceTimestampsRequiringCoverage,
   normalizeSlices,
   parseBoundedDecimals,
   requireJsonInput,
@@ -33,11 +35,16 @@ interface PositionDetailsEntry {
     closed?: boolean;
     denied?: boolean;
     collateralBalance?: string;
+    /** Minted-token debt of this position, raw integer in zchfDecimals. */
+    minted?: string;
+    /** The stablecoin token this position mints (ZCHF or dEURO). */
+    zchf?: string;
+    zchfDecimals?: number;
   }>;
 }
 
 type PositionDetailsPayload = Record<string, PositionDetailsEntry>;
-type PriceMappingPayload = Record<string, { price?: { usd?: number; eur?: number } }>;
+type PriceMappingPayload = Record<string, { price?: { usd?: number; eur?: number }; timestamp?: number }>;
 
 interface PositionsApiParams {
   pricesUrl: string;
@@ -189,6 +196,7 @@ export function adaptCollateralPositions(
     name: string;
     usd: number;
     risk: ReserveSlice["risk"];
+    sourceKey: string;
     coinId?: string;
     depType?: ReserveSlice["depType"];
     unknown?: boolean;
@@ -196,6 +204,7 @@ export function adaptCollateralPositions(
   const missingPriceSymbols = new Set<string>();
   let unknownExposureUsd = 0;
   let activePositionCount = 0;
+  const priceTimestamps: unknown[] = [];
 
   for (const entry of Object.values(details)) {
     const totalBalance = entry.positions.reduce((acc, position) => {
@@ -218,6 +227,7 @@ export function adaptCollateralPositions(
 
     const usdValue = valueUsdFromBigIntPrice(totalBalance, entry.decimals, usdPrice);
     if (!Number.isFinite(usdValue) || usdValue <= 0) continue;
+    priceTimestamps.push(priceInfo?.timestamp);
 
     const risk = inferRisk(entry.symbol);
     const unknown = !isKnownAsset(entry.symbol);
@@ -233,6 +243,7 @@ export function adaptCollateralPositions(
       name: `${entry.symbol}${entry.name && entry.name !== entry.symbol ? ` (${entry.name})` : ""}`,
       usd: usdValue,
       risk,
+      sourceKey: `collateral-positions-api:${entry.symbol.toLowerCase()}`,
       coinId: inferCoinId(entry.symbol),
       depType: inferDepType(entry.symbol),
       ...(unknown ? { unknown: true } : {}),
@@ -248,12 +259,42 @@ export function adaptCollateralPositions(
   const total = values.reduce((acc, value) => acc + value.usd, 0);
   if (total <= 0) return { slices: [] };
 
+  // Liability side: each open position's minted ZCHF/dEURO, valued through the
+  // minted token's own price-mapping row. Both sides of the assets ÷ liability
+  // ratio come from the same position payload over the same scope. A minted
+  // row without a price makes the liability incomplete, so the ratio is
+  // withheld rather than overstated.
+  let mintedUsd = 0;
+  let mintedCoverageComplete = true;
+  for (const entry of Object.values(details)) {
+    for (const position of entry.positions) {
+      if (position.closed || position.denied) continue;
+      const mintedDecimals = position.zchfDecimals ?? entry.decimals;
+      const mintedRaw = parseCollateralBalance(position.minted, mintedDecimals);
+      if (mintedRaw <= 0n) continue;
+      const mintedPrice = position.zchf
+        ? prices[position.zchf.toLowerCase()]?.price?.usd
+        : undefined;
+      if (typeof mintedPrice !== "number" || mintedPrice <= 0) {
+        mintedCoverageComplete = false;
+        continue;
+      }
+      const usd = valueUsdFromBigIntPrice(mintedRaw, mintedDecimals, mintedPrice);
+      if (Number.isFinite(usd) && usd >= 0) {
+        mintedUsd += usd;
+      } else {
+        mintedCoverageComplete = false;
+      }
+    }
+  }
+
   const knownValues = values.filter((value) => !value.unknown);
   const unknownValues = values.filter((value) => value.unknown);
   const major = knownValues.filter((value) => (value.usd / total) * 100 >= otherThresholdPct);
   const minor = knownValues.filter((value) => (value.usd / total) * 100 < otherThresholdPct);
 
   const slices = major.map((value) => ({
+    sourceKey: value.sourceKey,
     name: value.name,
     pct: (value.usd / total) * 100,
     risk: value.risk,
@@ -269,6 +310,7 @@ export function adaptCollateralPositions(
         ? "high"
         : "medium";
     slices.push({
+      sourceKey: "collateral-positions-api:other",
       name: "Other collateral",
       pct: (otherUsd / total) * 100,
       risk: highestRisk,
@@ -277,12 +319,17 @@ export function adaptCollateralPositions(
 
   if (unknownValues.length > 0) {
     slices.push({
+      sourceKey: "collateral-positions-api:unknown",
       name: "Unknown assets",
       pct: (unknownExposureUsd / total) * 100,
       risk: "high",
     });
   }
 
+  const timestampSummary = summarizeSourceTimestampsRequiringCoverage(priceTimestamps);
+  if (timestampSummary && timestampSummary.untimestampedCount > 0) {
+    warnings.push(reserveDegradedWarning("price-timestamp-coverage", "Only part of the active collateral price basket has source timestamps"));
+  }
   return {
     slices: normalizeSlices(slices),
     ...(warnings.length > 0 ? { warnings } : {}),
@@ -293,7 +340,13 @@ export function adaptCollateralPositions(
       missingPriceCount: missingPriceSymbols.size,
       unknownAssetCount: warnings.length,
       unknownExposurePct: total > 0 ? (unknownExposureUsd / total) * 100 : 0,
-      ...(immediateRedeemableUsd != null ? { immediateRedeemableUsd } : {}),
+      totalReserveUsd: total,
+      ...(mintedUsd > 0 && mintedCoverageComplete
+        ? {
+            totalLiabilitiesUsd: mintedUsd,
+            collateralizationRatio: total / mintedUsd,
+          }
+        : {}),
       ...(immediateRedeemableUsd != null
         ? {
             redemption: {
@@ -314,10 +367,13 @@ export function adaptCollateralPositions(
             },
           }
         : {}),
-      ...notApplicableFreshnessMetadata({
-        freshnessSource: "position-and-price-apis",
-        freshnessReason: "Collateral positions and price payloads represent latest-state protocol API aggregation",
-      }),
+      ...(timestampSummary == null
+        ? notApplicableFreshnessMetadata({ freshnessSource: "position-price-api-without-timestamps" })
+        : freshnessMetadataFromTimestamp(
+            timestampSummary.untimestampedCount === 0 ? timestampSummary.sourceTimestamp : null,
+            "position-price-timestamps",
+            "One or more active collateral prices lack a valid source timestamp",
+          )),
     },
   };
 }

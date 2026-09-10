@@ -89,5 +89,27 @@
   "collateralQuality": "rwa",
   "custodyModel": "institutional-unregulated",
   "governanceQuality": "dao-governance",
+  "liveReservesConfig": {
+    "adapter": "icp-gldt",
+    "version": 1,
+    "semantics": "single-asset",
+    "breakerScope": "icp-gldt",
+    "display": {
+      "url": "https://gldt.org/",
+      "label": "Gold DAO (GLDT)"
+    },
+    "inputs": {
+      "primary": {
+        "kind": "http-json",
+        "url": "https://icrc-api.internetcomputer.org/api/v1/ledgers"
+      }
+    },
+    "params": {
+      "swapCanisterId": "6f6ua-hqaaa-aaaar-qairq-cai",
+      "ledgerCanisterId": "6c7su-kiaaa-aaaar-qaira-cai",
+      "label": "Locked GLD NFTs representing physical gold bars in Swiss vaults",
+      "risk": "low"
+    }
+  },
   "launchDate": "2024-10-30"
 }

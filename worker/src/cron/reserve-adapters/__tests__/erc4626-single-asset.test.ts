@@ -1,8 +1,7 @@
-import { beforeEach, describe, expect, it } from "vitest";
+import { describe, expect, it } from "vitest";
 import type { LiveReservesConfig } from "@shared/types/live-reserves";
 import { jsonResponse } from "@shared/test-utils/mock-fetch";
-import { fetchWithRetryMock, resetRpcMocks } from "./helpers/rpc-mock";
-import { mockErc4626Rpc, runTrackedVault } from "./erc4626-single-asset.test-support";
+import { installErc4626Network, runTrackedVault } from "./erc4626-single-asset.test-support";
 
 function uint256Result(value: bigint | number): string {
   return `0x${BigInt(value).toString(16).padStart(64, "0")}`;
@@ -73,7 +72,7 @@ function mockYearnV3Rpc(isShutdownRaw?: bigint | number) {
   const strategyA = "0x1111111111111111111111111111111111111111";
   const strategyB = "0x2222222222222222222222222222222222222222";
   const vault = "0x80ac24aa929eaf5013f6436cda2a7ba190f5cc0b";
-  mockErc4626Rpc({
+  installErc4626Network({
     idleBalance: 5_000_000n,
     shutdown: isShutdownRaw,
     extraHandlers: [({ call }) => {
@@ -93,16 +92,10 @@ function mockYearnV3Rpc(isShutdownRaw?: bigint | number) {
           return jsonResponse({ result: strategyParamsResult(35_000_000n) });
         }
       }
-      if (call.data === `0xd905777e${addressWord(vault)}` && to === strategyA) {
+      if (call.data === `0xce96cb77${addressWord(vault)}` && to === strategyA) {
         return jsonResponse({ result: uint256Result(60_000_000n) });
       }
-      if (call.data === `0xd905777e${addressWord(vault)}` && to === strategyB) {
-        return jsonResponse({ result: uint256Result(20_000_000n) });
-      }
-      if (call.data === `0x07a2d13a${uint256Result(60_000_000n).slice(2)}` && to === strategyA) {
-        return jsonResponse({ result: uint256Result(60_000_000n) });
-      }
-      if (call.data === `0x07a2d13a${uint256Result(20_000_000n).slice(2)}` && to === strategyB) {
+      if (call.data === `0xce96cb77${addressWord(vault)}` && to === strategyB) {
         return jsonResponse({ result: uint256Result(20_000_000n) });
       }
       return undefined;
@@ -111,13 +104,10 @@ function mockYearnV3Rpc(isShutdownRaw?: bigint | number) {
 }
 
 describe("fetchErc4626SingleAssetReserves", () => {
-  beforeEach(() => {
-    resetRpcMocks();
-  });
 
-  it("returns a 100% single-asset slice after probing ERC-4626 state", async () => {
+  it("separates held collateral from deployed strategy exposure", async () => {
     const balanceOfCalls: Array<{ to?: string; data: string }> = [];
-    mockErc4626Rpc({ extraHandlers: [({ call }) => {
+    installErc4626Network({ extraHandlers: [({ call }) => {
       if (call?.data.startsWith("0x70a08231")) balanceOfCalls.push(call);
       return undefined;
     }] });
@@ -126,11 +116,18 @@ describe("fetchErc4626SingleAssetReserves", () => {
 
     expect(result.slices).toEqual([
       {
-        name: "USDC-denominated loan receivables",
-        pct: 100,
+        sourceKey: "erc4626-single-asset:ethereum:0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+        name: "Maple syrupUSDC idle underlying",
+        pct: 25,
         risk: "medium",
         coinId: "usdc-circle",
         depType: "wrapper",
+      },
+      {
+        sourceKey: "erc4626-single-asset:ethereum:0x80ac24aa929eaf5013f6436cda2a7ba190f5cc0b:deployed",
+        name: "Maple syrupUSDC deployed strategy positions",
+        pct: 75,
+        risk: "high",
       },
     ]);
     expect(result.warnings).toBeUndefined();
@@ -142,12 +139,12 @@ describe("fetchErc4626SingleAssetReserves", () => {
       totalAssetsRaw: "100000000",
       totalSupplyRaw: "100000000",
       convertToAssetsRaw: "100000000",
-      collateralizationRatio: 1,
       idleUnderlyingBalanceRaw: "25000000",
       underlyingDecimals: 6,
       details: {
         proofKind: "erc4626-total-assets",
         assetAddressMatchesExpected: true,
+        navConsistencyRatio: 1,
       },
       redemption: {
         capacityUsd: 25,
@@ -166,13 +163,13 @@ describe("fetchErc4626SingleAssetReserves", () => {
   it("preserves BigInt precision when the NAV divergence is just above 1%", async () => {
     const totalAssetsRaw = 10n ** 30n;
     const convertedAssetsRaw = totalAssetsRaw + totalAssetsRaw / 100n + 1n;
-    mockErc4626Rpc({ totalAssets: totalAssetsRaw, totalSupply: totalAssetsRaw, convertedAssets: convertedAssetsRaw, idleBalance: 0n });
+    installErc4626Network({ totalAssets: totalAssetsRaw, totalSupply: totalAssetsRaw, convertedAssets: convertedAssetsRaw, idleBalance: 0n });
 
     const result = await runTrackedVault("syrupusdc-maple");
 
     expect(result.metadata).toMatchObject({
-      collateralizationRatio: 1.01,
       convertToAssetsRaw: convertedAssetsRaw.toString(),
+      details: { navConsistencyRatio: 1.01 },
     });
     expect(result.warnings).toContainEqual(expect.objectContaining({
       code: "erc4626-nav-divergence",
@@ -180,7 +177,7 @@ describe("fetchErc4626SingleAssetReserves", () => {
   });
 
   it("throws when the vault asset differs from the configured expectation", async () => {
-    mockErc4626Rpc({ asset: "0xdead" });
+    installErc4626Network({ asset: "0xdead" });
 
     await expect(
       runTrackedVault("syrupusdc-maple"),
@@ -188,7 +185,7 @@ describe("fetchErc4626SingleAssetReserves", () => {
   });
 
   it("throws when expected vault asset identity cannot be read", async () => {
-    mockErc4626Rpc({ asset: null });
+    installErc4626Network({ asset: null });
 
     await expect(
       runTrackedVault("syrupusdc-maple"),
@@ -196,7 +193,7 @@ describe("fetchErc4626SingleAssetReserves", () => {
   });
 
   it("uses documented-eventual redemption telemetry when asset() is absent with no expected asset", async () => {
-    mockErc4626Rpc({ asset: null, idleBalance: null, decimals: null });
+    installErc4626Network({ asset: null, idleBalance: null, decimals: null });
 
     const result = await runTrackedVault("syrupusdc-maple", cloneConfigWithoutExpectedAsset);
 
@@ -204,11 +201,10 @@ describe("fetchErc4626SingleAssetReserves", () => {
       totalAssetsRaw: "100000000",
       totalSupplyRaw: "100000000",
       convertToAssetsRaw: "100000000",
-      collateralizationRatio: 1,
+      details: { navConsistencyRatio: 1 },
       redemption: {
         capacityKind: "documented-eventual",
         freshnessKind: "same-run-onchain",
-        routeStatus: "unknown",
       },
     });
     expect(result.metadata).not.toHaveProperty("assetAddress");
@@ -216,7 +212,7 @@ describe("fetchErc4626SingleAssetReserves", () => {
   });
 
   it("suppresses redemption capacity when underlying decimals are invalid", async () => {
-    mockErc4626Rpc({ decimals: 37 });
+    installErc4626Network({ decimals: 37 });
 
     const result = await runTrackedVault("syrupusdc-maple");
 
@@ -236,25 +232,25 @@ describe("fetchErc4626SingleAssetReserves", () => {
   it.each(["totalSupply", "convertedAssets", "idleBalance", "decimals"] as const)(
     "withholds only telemetry requiring an unreadable %s while asset identity remains valid",
     async (field) => {
-      mockErc4626Rpc({ [field]: null });
+      installErc4626Network({ [field]: null });
       const result = await runTrackedVault("syrupusdc-maple");
       expect(result.metadata).toMatchObject({
         assetAddress: "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
         totalAssetsRaw: "100000000",
       });
       if (field === "totalSupply" || field === "convertedAssets") {
-        expect(result.metadata).not.toHaveProperty("collateralizationRatio");
+        expect(result.metadata?.details).not.toHaveProperty("navConsistencyRatio");
         expect(result.metadata).not.toHaveProperty("convertToAssetsRaw");
         expect(result.metadata?.redemption).toMatchObject({ capacityUsd: 25 });
       } else {
         expect(result.metadata?.redemption).not.toHaveProperty("capacityUsd");
-        expect(result.metadata?.redemption).toMatchObject({ capacityKind: "documented-eventual", routeStatus: "unknown" });
+        expect(result.metadata?.redemption).toMatchObject({ capacityKind: "documented-eventual" });
       }
     },
   );
 
   it("emits zero redemption capacity when idle underlying balance is zero", async () => {
-    mockErc4626Rpc({ idleBalance: 0 });
+    installErc4626Network({ idleBalance: 0 });
 
     const result = await runTrackedVault("syrupusdc-maple");
 
@@ -272,11 +268,11 @@ describe("fetchErc4626SingleAssetReserves", () => {
   });
 
   it("reports a paused redemption route when the vault paused() returns true", async () => {
-    mockErc4626Rpc({ paused: 1 });
+    installErc4626Network({ paused: 1 });
 
     const result = await runTrackedVault("syrupusdc-maple");
 
-    expect(result.warnings).toBeUndefined();
+    expect(result.warnings).toContainEqual(expect.objectContaining({ code: "erc4626-redemption-paused", effect: "degraded" }));
     expect(result.metadata).toMatchObject({
       idleUnderlyingBalanceRaw: "25000000",
       redemption: {
@@ -288,7 +284,7 @@ describe("fetchErc4626SingleAssetReserves", () => {
   });
 
   it("uses full convertible backing as capacity for atomic-full-backing vaults even with zero idle balance", async () => {
-    mockErc4626Rpc({ idleBalance: 0 });
+    installErc4626Network({ idleBalance: 0 });
 
     const result = await runTrackedVault("syrupusdc-maple", withRedemptionLiquidity({ source: "atomic-full-backing" }));
 
@@ -356,7 +352,7 @@ describe("fetchErc4626SingleAssetReserves", () => {
 
     const result = await runTrackedVault("syrupusdc-maple", withRedemptionLiquidity({ source: "yearn-v3-withdrawable", settlementDelaySec: 0 }));
 
-    expect(result.warnings).toBeUndefined();
+    expect(result.warnings).toContainEqual(expect.objectContaining({ code: "erc4626-redemption-paused", effect: "degraded" }));
     expect(result.metadata).toMatchObject({
       redemptionCapacityRaw: "85000000",
       redemption: {
@@ -369,7 +365,7 @@ describe("fetchErc4626SingleAssetReserves", () => {
 
   it("uses sBOLD Stability-Pool-withdrawable capacity from calcFragments instead of the ~0 idle balance", async () => {
     const calcFragmentsCalls: Array<{ to?: string; data: string }> = [];
-    mockErc4626Rpc({ idleBalance: 1_000_000n, extraHandlers: [({ call }) => {
+    installErc4626Network({ idleBalance: 1_000_000n, extraHandlers: [({ call }) => {
       if (call?.data === "0x160b71df") {
         calcFragmentsCalls.push(call);
         return jsonResponse({ result: calcFragmentsResult(85_000_000n) });
@@ -402,7 +398,7 @@ describe("fetchErc4626SingleAssetReserves", () => {
   });
 
   it("degrades sBOLD when collateral exceeds the maxCollInBold withdrawal gate", async () => {
-    mockErc4626Rpc({ idleBalance: 1_000_000n, extraHandlers: [({ call }) => {
+    installErc4626Network({ idleBalance: 1_000_000n, extraHandlers: [({ call }) => {
       if (call?.data === "0x160b71df") return jsonResponse({ result: calcFragmentsResult(85_000_000n, 7_500_001n) });
       if (call?.data === "0xbf2428e6") return jsonResponse({ result: uint256Result(7_500_000n) });
       return undefined;
@@ -427,7 +423,7 @@ describe("fetchErc4626SingleAssetReserves", () => {
   });
 
   it("keeps the existing documented-bound sBOLD telemetry when maxCollInBold is unreadable", async () => {
-    mockErc4626Rpc({ idleBalance: 1_000_000n, extraHandlers: [({ call }) => {
+    installErc4626Network({ idleBalance: 1_000_000n, extraHandlers: [({ call }) => {
       if (call?.data === "0x160b71df") return jsonResponse({ result: calcFragmentsResult(85_000_000n) });
       if (call?.data === "0xbf2428e6") return null;
       return undefined;
@@ -448,7 +444,7 @@ describe("fetchErc4626SingleAssetReserves", () => {
   });
 
   it("degrades sBOLD to the idle balance when the calcFragments probe cannot be decoded", async () => {
-    mockErc4626Rpc({ idleBalance: 1_000_000n, extraHandlers: [({ call }) => {
+    installErc4626Network({ idleBalance: 1_000_000n, extraHandlers: [({ call }) => {
       if (call?.data === "0x160b71df") return jsonResponse({ result: "0x" });
       if (call?.data === "0xbf2428e6") return null;
       return undefined;
@@ -494,7 +490,7 @@ describe("fetchErc4626SingleAssetReserves", () => {
     },
   ])("uses $source liquidity rather than idle underlying balance", async ({ source, key, liquidity, metadata }) => {
     const morphoVariables: unknown[] = [];
-    mockErc4626Rpc({ idleBalance: 0, extraHandlers: [({ url, body }) => {
+    installErc4626Network({ idleBalance: 0, extraHandlers: [({ url, body }) => {
       if (url !== "https://api.morpho.org/graphql") return undefined;
       morphoVariables.push(body.variables);
       return jsonResponse({
@@ -531,7 +527,7 @@ describe("fetchErc4626SingleAssetReserves", () => {
   });
 
   it("falls back to idle capacity and degrades when Morpho V2 identity validation fails", async () => {
-    mockErc4626Rpc({ extraHandlers: [({ url }) => {
+    installErc4626Network({ extraHandlers: [({ url }) => {
       if (url !== "https://api.morpho.org/graphql") return undefined;
       return jsonResponse({
         data: {
@@ -574,7 +570,7 @@ describe("fetchErc4626SingleAssetReserves", () => {
 
   it("skips NAV ratio when totalSupply is zero but still emits readable idle capacity USD", async () => {
     const conversionCalls: string[] = [];
-    mockErc4626Rpc({ totalSupply: 0, convertedAssets: null, extraHandlers: [({ call }) => {
+    installErc4626Network({ totalSupply: 0, convertedAssets: null, extraHandlers: [({ call }) => {
       if (call?.data.startsWith("0x07a2d13a")) {
         conversionCalls.push(call.data);
       }
@@ -595,12 +591,12 @@ describe("fetchErc4626SingleAssetReserves", () => {
       },
     });
     expect(result.metadata).not.toHaveProperty("convertToAssetsRaw");
-    expect(result.metadata).not.toHaveProperty("collateralizationRatio");
+    expect(result.metadata?.details).not.toHaveProperty("navConsistencyRatio");
     expect(conversionCalls).toEqual([]);
   });
 
   it("emits degraded warning when convertToAssets diverges from totalAssets by >1%", async () => {
-    mockErc4626Rpc({ totalAssets: 100, totalSupply: 100, convertedAssets: 110, idleBalance: 0 });
+    installErc4626Network({ totalAssets: 100, totalSupply: 100, convertedAssets: 110, idleBalance: 0 });
 
     const result = await runTrackedVault("syrupusdc-maple");
 
@@ -610,30 +606,18 @@ describe("fetchErc4626SingleAssetReserves", () => {
         severity: "warning",
       }),
     ]);
-    expect(result.metadata?.collateralizationRatio).toBeCloseTo(1.1, 2);
+    expect(result.metadata?.details?.navConsistencyRatio).toBeCloseTo(1.1, 2);
     expect(result.metadata?.redemption?.routeStatus).toBe("degraded");
   });
 
   it("uses explicit RPC URLs for ERC-4626 vaults on chains without registry RPCs", async () => {
     const scenario = catalogCases[0];
-    mockErc4626Rpc({ asset: scenario.asset, vault: scenario.vault, idleBalance: 0, decimals: 18 });
+    installErc4626Network({ asset: scenario.asset, vault: scenario.vault, idleBalance: 0, decimals: 18 });
 
     const result = await runTrackedVault(scenario.id);
 
-    expect(fetchWithRetryMock).toHaveBeenCalledTimes(2);
-    expect(fetchWithRetryMock.mock.calls.map(([url]) => url)).toEqual([
-      "https://rpc.plasma.to",
-      "https://rpc.plasma.to",
-    ]);
-    expect(result.slices).toEqual([
-      {
-        name: "Yuzu USD staking vault shares",
-        pct: 100,
-        risk: "high",
-        coinId: "yzusd-yuzu",
-        depType: "wrapper",
-      },
-    ]);
+    expect(result.slices).toEqual([{ sourceKey: "erc4626-single-asset:plasma:0xc8a8df9b210243c55d31c73090f06787ad0a1bf6:deployed", name: "Staked Yuzu USD deployed strategy positions", pct: 100, risk: "high" }]);
+    expect(result.slices[0]).not.toHaveProperty("coinId");
     expect(result.metadata).toMatchObject({
       chain: "plasma",
       contractAddress: "0xc8a8df9b210243c55d31c73090f06787ad0a1bf6",
@@ -647,22 +631,20 @@ describe("fetchErc4626SingleAssetReserves", () => {
 
   it("probes Avant savUSD as a high-risk avUSD wrapper", async () => {
     const scenario = catalogCases[1];
-    mockErc4626Rpc({ asset: scenario.asset, vault: scenario.vault, idleBalance: 0, decimals: 18 });
+    installErc4626Network({
+      asset: scenario.asset, vault: scenario.vault, idleBalance: 0, decimals: 18,
+      extraHandlers: [({ call }) => call?.data === "0x35269315"
+        ? jsonResponse({ result: uint256Result(86_400) }) : undefined],
+    });
 
     const result = await runTrackedVault(scenario.id);
 
-    expect(result.slices).toEqual([
-      {
-        name: "avUSD savings vault shares",
-        pct: 100,
-        risk: "high",
-        coinId: "avusd-avant",
-        depType: "wrapper",
-      },
-    ]);
+    expect(result.slices).toEqual([{ sourceKey: "erc4626-single-asset:avalanche:0x06d47f3fb376649c3a9dafe069b3d6e35572219e:deployed", name: "Avant Staked USD deployed strategy positions", pct: 100, risk: "high" }]);
+    expect(result.slices[0]).not.toHaveProperty("coinId");
     expect(result.metadata).toMatchObject({
       chain: "avalanche",
       assetAddress: "0x24de8771bc5ddb3362db529fc3358f2df3a0e346",
+      redemption: { capacityKind: "documented-bound", settlementDelaySec: 86_400 },
       details: {
         assetAddressMatchesExpected: true,
       },
@@ -671,19 +653,12 @@ describe("fetchErc4626SingleAssetReserves", () => {
 
   it("probes Strata srUSDe as a high-risk USDe wrapper", async () => {
     const scenario = catalogCases[2];
-    mockErc4626Rpc({ asset: scenario.asset, vault: scenario.vault, idleBalance: 0, decimals: 18 });
+    installErc4626Network({ asset: scenario.asset, vault: scenario.vault, idleBalance: 0, decimals: 18 });
 
     const result = await runTrackedVault(scenario.id);
 
-    expect(result.slices).toEqual([
-      {
-        name: "Senior tranche USDe vault shares",
-        pct: 100,
-        risk: "high",
-        coinId: "usde-ethena",
-        depType: "wrapper",
-      },
-    ]);
+    expect(result.slices).toEqual([{ sourceKey: "erc4626-single-asset:ethereum:0x3d7d6fdf07ee548b939a80edbc9b2256d0cdc003:deployed", name: "Strata Senior USDe deployed strategy positions", pct: 100, risk: "high" }]);
+    expect(result.slices[0]).not.toHaveProperty("coinId");
     expect(result.metadata).toMatchObject({
       chain: "ethereum",
       assetAddress: "0x4c9edd5852cd905f086c759e8383e09bff1e68b3",

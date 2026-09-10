@@ -1,6 +1,7 @@
 import type { ReserveSlice, StablecoinMeta } from "@shared/types/core";
 import type { LiveReservesConfig } from "@shared/types/live-reserves";
 import { ReserveSliceSchema } from "@shared/types/reserves";
+import { parseLiveReserveAdapterParams } from "@shared/lib/live-reserve-adapters";
 import type { AdapterContext, AdapterResult } from "./types";
 import {
   decodeHtmlEntities,
@@ -11,10 +12,12 @@ import {
   readHtmlAttribute,
   requireHtmlInput,
   stripTags,
+  unverifiedFreshnessMetadata,
   verifiedFreshnessMetadata,
 } from "./helpers";
 import { buildBrowserHeaders, HTML_ACCEPT_HEADER, NEUTRAL_ADAPTER_HEADERS } from "./request";
 import { buildDocumentedRedemptionTelemetry } from "./redemption";
+import { reserveInfoWarning } from "./warnings";
 import {
   parseReportDateCandidates,
   type ParsedReportDateCandidate,
@@ -76,6 +79,10 @@ async function fetchAttestationIndexHtml(
 
 export interface AttestationPdfIndexParams {
   slices: ReserveSlice[];
+  /** Optional regex source (validated to compile) that the newest-dated PDF link
+   *  must match against its href + anchor text, so a shared index page cannot
+   *  resolve one currency to a sibling currency's certificate. */
+  linkMatch?: string;
 }
 
 interface AttestationPdfIndexAdaptOptions {
@@ -147,20 +154,7 @@ function readConfiguredSlices(rawSlices: unknown): ReserveSlice[] {
     };
   });
 
-  const total = slices.reduce((sum, slice) => sum + slice.pct, 0);
-  if (Math.abs(total - 100) > 1.5) {
-    throw new Error(
-      `attestation PDF configured reserve composition sum to ${total.toFixed(1)}% (expected 100% ± 1.5%)`,
-    );
-  }
-
   return normalizeSlices(slices);
-}
-
-function readParams(config: LiveReservesConfig): AttestationPdfIndexParams {
-  return {
-    slices: readConfiguredSlices(config.params?.slices),
-  };
 }
 
 function betterDate(
@@ -225,6 +219,18 @@ const DAY_DATE_PARSERS: readonly ReportDateParserEntry[] = [
     month: 2,
     day: 1,
     monthIsName: true,
+  },
+  // Compact YYYYMMDD in PDF filenames (e.g. 20260331__Token-Certification.pdf).
+  // Lowest precedence: appended after every separated format, which wins ties.
+  // Requires a full 8-digit token (no adjacent alphanumerics); year 2000-2099,
+  // month 01-12, day 01-31 — impossible dates (e.g. 20260231) are rejected by
+  // formatValidIsoDate, and non-dates like 12345678 fail the year group.
+  {
+    kind: "day",
+    regex: /(?<![A-Za-z0-9])(20\d{2})(0[1-9]|1[0-2])(0[1-9]|[12]\d|3[01])(?![A-Za-z0-9])/g,
+    year: 1,
+    month: 2,
+    day: 3,
   },
 ];
 
@@ -318,9 +324,10 @@ function collectPdfLinkCandidates(html: string): PdfLinkCandidate[] {
   return candidates;
 }
 
-function findLatestPdfLink(html: string): PdfLinkCandidate | null {
+function findLatestPdfLink(html: string, linkMatch?: RegExp): PdfLinkCandidate | null {
   let latest: PdfLinkCandidate | null = null;
   for (const candidate of collectPdfLinkCandidates(html)) {
+    if (linkMatch && !linkMatch.test(`${candidate.href} ${candidate.text}`)) continue;
     if (!latest || candidate.date.sourceTimestamp > latest.date.sourceTimestamp) {
       latest = candidate;
     }
@@ -353,14 +360,40 @@ export function adaptAttestationPdfIndex(
   options: AttestationPdfIndexAdaptOptions = {},
 ): AdapterResult {
   const slices = readConfiguredSlices(params.slices);
-  const latest = findLatestPdfLink(html);
+  // eslint-disable-next-line security/detect-non-literal-regexp -- reviewed static currency token from adapter config; the params schema already rejects non-compiling sources.
+  const linkMatch = params.linkMatch ? new RegExp(params.linkMatch) : undefined;
+  const diag = { rawSumDeviation: Math.abs(params.slices.reduce((sum, slice) => sum + slice.pct, 0) - 100) };
+  const latest = findLatestPdfLink(html, linkMatch);
   if (!latest) {
+    if (linkMatch) {
+      return {
+        slices,
+        warnings: [
+          reserveInfoWarning(
+            "attestation-pdf-index-link-unmatched",
+            "No dated PDF attestation/report link on the index matched the configured currency token; report URL and date omitted",
+          ),
+        ],
+        metadata: {
+          diag,
+          ...unverifiedFreshnessMetadata(
+            ADAPTER_NAME,
+            "No PDF link on the index matched the configured currency token",
+          ),
+          compositionMode: COMPOSITION_MODE,
+          compositionSource: COMPOSITION_MODE,
+          compositionNote: COMPOSITION_NOTE,
+          redemption: buildDocumentedRedemptionTelemetry(),
+        },
+      };
+    }
     throw htmlLayoutChangedError(ADAPTER_NAME, "no dated PDF attestation/report links found in HTML");
   }
 
   return {
     slices,
     metadata: {
+      diag,
       ...verifiedFreshnessMetadata(latest.date.sourceTimestamp),
       reportDate: latest.date.reportDate,
       reportDateLabel: latest.date.reportDateLabel,
@@ -385,5 +418,9 @@ export async function fetchAttestationPdfIndexReserves(
 ): Promise<AdapterResult> {
   const input = requireHtmlInput(config.inputs.primary, ADAPTER_NAME);
   const html = await fetchAttestationIndexHtml(config, input.url, signal, ctx);
-  return adaptAttestationPdfIndex(html, readParams(config), { indexUrl: input.url });
+  return adaptAttestationPdfIndex(
+    html,
+    parseLiveReserveAdapterParams("attestation-pdf-index", config.params),
+    { indexUrl: input.url },
+  );
 }

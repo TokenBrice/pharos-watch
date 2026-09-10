@@ -2,6 +2,7 @@
   "id": "fxsave-f-x-protocol",
   "reserves": [
     {
+      "sourceKey": "erc4626-single-asset:ethereum:0x65c9a641afceb9c0e6034e558a319488fa0fa3be",
       "name": "fxSP stability-pool shares",
       "pct": 100,
       "risk": "medium",

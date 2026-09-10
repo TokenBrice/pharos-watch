@@ -2,6 +2,7 @@
   "id": "kusd-kerne",
   "reserves": [
     {
+      "sourceKey": "kerne-signed-por:psm-usdc",
       "name": "USDC held 1:1 in the on-chain Peg Stability Module",
       "pct": 100,
       "risk": "low",

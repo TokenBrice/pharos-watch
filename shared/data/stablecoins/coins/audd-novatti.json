@@ -34,17 +34,17 @@
     "cadence": "monthly",
     "attestorJurisdiction": "Australia",
     "latestReport": {
-      "periodEnd": "2026-07-31",
-      "publishedAt": "2026-08-06",
+      "periodEnd": "2026-08-31",
+      "publishedAt": "2026-09-04",
       "assuranceMethod": "agreed-upon-procedures",
       "scope": "assets-and-liabilities",
       "liabilityReconciliation": "full",
-      "reviewer": "PoR verification sweep 2026-08 (July AUP PDF read; composition review advanced in lockstep)",
+      "reviewer": "PoR verification sweep 2026-09 (August AUP PDF read; manifest compilation reviewed in lockstep)",
       "confidence": "verified",
       "sources": [
         {
-          "label": "William Buck AUDD Agreed-Upon Procedures Report - July 2026",
-          "url": "https://cdn.audd.digital/dam/reports/AUDC+Agreed+upon+procedures+report+Jul26_.pdf"
+          "label": "William Buck AUDD Agreed-Upon Procedures Report - August 2026",
+          "url": "https://www.audd.digital/wp-content/uploads/2026/09/AUDC-Agreed-upon-procedures-report-Aug26_.pdf"
         }
       ]
     }
@@ -117,9 +117,9 @@
   "custodyModel": "institutional-regulated",
   "governanceQuality": "regulated-entity",
   "liveReservesConfig": {
-    "adapter": "single-asset",
-    "version": 1,
-    "semantics": "single-asset",
+    "adapter": "audd-independent-assurance",
+    "version": 2,
+    "semantics": "attestation-mix",
     "breakerScope": "audd-novatti",
     "display": {
       "url": "https://www.audd.digital/transparency/",
@@ -127,14 +127,15 @@
     },
     "inputs": {
       "primary": {
-        "kind": "onchain-evm",
-        "chain": "ethereum",
-        "rpcMode": "public-rpc"
+        "kind": "http-html",
+        "url": "https://www.audd.digital/transparency/"
       }
     },
     "params": {
-      "label": "AUD bank deposits",
-      "risk": "very-low"
+      "product": "AUDD",
+      "profile": "audd-v1",
+      "indexHost": "www.audd.digital",
+      "reportHosts": ["www.audd.digital"]
     }
   },
   "launchDate": "2022-11-01"

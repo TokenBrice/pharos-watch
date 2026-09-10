@@ -1,0 +1,49 @@
+{
+  "schemaVersion": 1,
+  "product": "GUSD",
+  "profile": "gusd-v1",
+  "officialIndexUrl": "https://cdn.contentful.com/spaces/jg6lo9a2ukvr/entries?access_token=AIRFWcFNIs83Nw7SKtdz1wLW9j94yxYlS5ef5qHGo8A&content_type=gusdAttestation&order=-fields.reportDate&limit=1000&include=1",
+  "reportUrl": "https://assets.ctfassets.net/jg6lo9a2ukvr/37f7Yx41qkN4XELuRzQrDv/e7d67a902d19e5fbf6a85ee620838d51/Gemini_Trust_Company__LLC_053126_GUSD_Reserves_Report_May_2026_-_Issued.pdf",
+  "reportSha256": "ecfc9a720a43f9d8176e0131aeb3372cef7c9ad70067a00c100425530afb3034",
+  "reportByteLength": 231787,
+  "reportDate": "2026-05-29",
+  "reportAsOf": "2026-05-29T17:00:00-04:00",
+  "reportTimeZone": "Eastern Daylight Time (UTC-4)",
+  "reportIssuedAt": "2026-06-29T23:59:00-04:00",
+  "attestor": "BPM LLP",
+  "engagement": "Independent accountants' examination under AICPA attestation standards",
+  "conclusion": "unmodified",
+  "unit": "USD",
+  "assets": [
+    {
+      "code": "cash-deposits",
+      "label": "Cash deposits held at U.S. regulated financial institutions, net of timing and settlement differences",
+      "amount": "40136854.84"
+    }
+  ],
+  "liabilities": [
+    {
+      "code": "ethereum",
+      "label": "GUSD issued and in circulation",
+      "amount": "40136854.84"
+    }
+  ],
+  "adjustments": [
+    {
+      "code": "net-cash-receivable",
+      "label": "Net cash receivable (payable) due to timing and settlement differences",
+      "amount": "-500211.38",
+      "treatment": "Deducted from gross cash deposits to arrive at the reported Total Reserve"
+    }
+  ],
+  "reportedAssetTotal": "40136854.84",
+  "computedAssetTotal": "40136854.84",
+  "reportedLiabilityTotal": "40136854.84",
+  "extraction": {
+    "tool": "Poppler pdftotext -layout",
+    "parserVersion": "26.07.0",
+    "normalizedTextSha256": "04b87d894057837530bfff8a86773d1942865a7a1dde60d3a874f3a6f42ae11c",
+    "pageCount": 4
+  },
+  "assuranceTier": "independent-assurance"
+}

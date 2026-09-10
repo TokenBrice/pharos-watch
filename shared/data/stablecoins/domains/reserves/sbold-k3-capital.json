@@ -2,6 +2,7 @@
   "id": "sbold-k3-capital",
   "reserves": [
     {
+      "sourceKey": "erc4626-single-asset:ethereum:0x6440f144b7e50d6a8439336510312d2f54beb01d",
       "name": "BOLD deployed into Liquity V2 Stability Pools",
       "pct": 100,
       "risk": "medium",

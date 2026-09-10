@@ -1,11 +1,8 @@
 import type { ReserveSlice, StablecoinMeta } from "@shared/types/core";
+import type { LiveReserveAdapterDescriptor } from "@shared/types/live-reserve-adapter-declarations";
 import type {
   LiveReserveAdapterKey,
-  LiveReserveAdapterValidationPolicy,
-  LiveReserveEvidenceClass,
   LiveReserveSnapshotMetadata,
-  LiveReserveSourceModel,
-  LiveReserveSourceSharingMode,
   LiveReserveWarning,
   LiveReservesConfig,
 } from "@shared/types/live-reserves";
@@ -21,6 +18,7 @@ export interface AdapterContext {
   m0ApiKey?: string;
   chainRpcs?: Map<string, ChainRpcConfig>;
   nowSec?: number;
+  observedBlock?: { chain: string; number: number; timestamp: number };
   requestCache?: Map<string, Promise<unknown>>;
   ioLimiter?: AdapterIoLimiter;
   abortSignal?: AbortSignal;
@@ -39,15 +37,16 @@ export type AdapterFn = (
   ctx?: AdapterContext,
 ) => Promise<AdapterResult>;
 
-export interface ReserveAdapterDefinition {
+/**
+ * Projection of the shared declaration plus the Worker-only fetch function.
+ * Projecting rather than re-declaring keeps fields such as
+ * `redemptionTelemetry.capacityParamsGated` visible to the Worker as soon as
+ * the declaration gains them.
+ */
+export type ReserveAdapterDefinition = Pick<
+  LiveReserveAdapterDescriptor,
+  "sourceModel" | "evidenceClass" | "sharedSourceMode" | "redemptionTelemetry" | "validation"
+> & {
   key: LiveReserveAdapterKey;
   fetch: AdapterFn;
-  sourceModel: LiveReserveSourceModel;
-  evidenceClass: LiveReserveEvidenceClass;
-  sharedSourceMode: LiveReserveSourceSharingMode;
-  redemptionTelemetry?: {
-    capacity: "direct" | "proxy" | "none";
-    fee: "current-bps" | "none";
-  };
-  validation?: LiveReserveAdapterValidationPolicy;
-}
+};

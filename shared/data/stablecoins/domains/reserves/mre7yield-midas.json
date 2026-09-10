@@ -2,6 +2,7 @@
   "id": "mre7yield-midas",
   "reserves": [
     {
+      "sourceKey": "chainlink-nav:token:0x87c9053c819bb28e0d73d33059e1b3da80afb0cf",
       "name": "Re7-managed DeFi yield strategy NAV",
       "pct": 100,
       "risk": "high",

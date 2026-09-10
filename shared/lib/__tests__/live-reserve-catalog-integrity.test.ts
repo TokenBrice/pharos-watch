@@ -2,49 +2,22 @@ import { readFileSync, readdirSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import {
-  LATE_MONTHLY_DISCLOSURE_SOURCE_MAX_AGE_SEC,
   LIVE_RESERVE_ADAPTER_DEFINITIONS,
   LiveReservesConfigSchema,
-  QUARTERLY_DISCLOSURE_SOURCE_MAX_AGE_SEC,
 } from "@shared/lib/live-reserve-adapters";
 import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
 
-const LATE_MONTHLY_SOURCE_AGE_IDS = [
-  "audm-mento",
-  "bib01-backed",
-  "brlm-mento",
-  "btcusd-btcfi",
-  "cadm-mento",
-  "ceur-celo",
-  "chfm-mento",
-  "copm-mento",
-  "cusd-celo",
-  "deuro-deuro",
-  "fdusd-first-digital",
-  "gbpm-mento",
-  "ghsm-mento",
-  "iusd-infinifi",
-  "jpym-mento",
-  "kesm-mento",
-  "srusd-reservoir",
-  "usdy-ondo-finance",
-  "uty-xsy",
-  "wsrusd-reservoir",
-  "xsgd-straitsx",
-  "zarm-mento",
-  "zchf-frankencoin",
-] as const;
-
-const INDEPENDENT_ASSURANCE_SOURCE_AGE_POLICIES = {
-  "audx-independent-assurance": LATE_MONTHLY_DISCLOSURE_SOURCE_MAX_AGE_SEC,
-  "europ-independent-assurance": QUARTERLY_DISCLOSURE_SOURCE_MAX_AGE_SEC,
-  "straitsx-independent-assurance": LATE_MONTHLY_DISCLOSURE_SOURCE_MAX_AGE_SEC,
-} as const;
-
 const COIN_SOURCE_DIR = join(process.cwd(), "shared/data/stablecoins/coins");
 
+const RESERVE_SOURCE_DIR = join(process.cwd(), "shared/data/stablecoins/domains/reserves");
+
 interface CoinSource {
-  liveReservesConfig?: { scoring?: { maxSourceAgeSec?: number } };
+  liveReservesConfig?: {
+    adapter: keyof typeof LIVE_RESERVE_ADAPTER_DEFINITIONS;
+    scoring?: { maxSourceAgeSec?: number };
+    inputs?: { primary?: { chain?: string } };
+    params?: { slice?: { expectedAssetAddress?: string } };
+  };
 }
 
 let coinSources: Map<string, CoinSource> | undefined;
@@ -60,11 +33,25 @@ function getCoinSources(): Map<string, CoinSource> {
   );
 }
 
-function readCoinSource(id: string): CoinSource {
-  const source = getCoinSources().get(id);
-  if (!source) throw new Error(`Missing coin source: ${id}`);
-  return source;
+interface ReserveSource {
+  reserves?: Array<{ sourceKey?: string }>;
 }
+
+let erc4626SidecarKeys: Set<string> | undefined;
+
+function getErc4626SidecarKeys(): Set<string> {
+  return (erc4626SidecarKeys ??= new Set(
+    readdirSync(RESERVE_SOURCE_DIR)
+      .filter((fileName) => fileName.endsWith(".json"))
+      .flatMap((fileName) => {
+        const sidecar = JSON.parse(readFileSync(join(RESERVE_SOURCE_DIR, fileName), "utf8")) as ReserveSource;
+        return (sidecar.reserves ?? [])
+          .map((row) => row.sourceKey?.toLowerCase() ?? "")
+          .filter((sourceKey) => sourceKey.startsWith("erc4626-single-asset:"));
+      }),
+  ));
+}
+
 
 describe("live reserve catalog integrity", () => {
   it("accepts configured live reserve URLs", () => {
@@ -83,54 +70,40 @@ describe("live reserve catalog integrity", () => {
     expect(failures).toEqual([]);
   });
 
-  it("requires independent-assurance coins to pin the declaration source-age cap", () => {
+  it("keeps every bound source-age override at or below its adapter cap", () => {
     const failures: string[] = [];
-
-    for (const coin of ACTIVE_STABLECOINS) {
-      const config = coin.liveReservesConfig;
-      if (!config || !(config.adapter in INDEPENDENT_ASSURANCE_SOURCE_AGE_POLICIES)) continue;
-
-      const expectedCap =
-        INDEPENDENT_ASSURANCE_SOURCE_AGE_POLICIES[
-          config.adapter as keyof typeof INDEPENDENT_ASSURANCE_SOURCE_AGE_POLICIES
-        ];
-      // Adapter declarations are heterogeneous; this comparison only needs optional validation metadata.
-      const adapterDefinition = LIVE_RESERVE_ADAPTER_DEFINITIONS[config.adapter] as {
-        validation?: { maxSourceAgeSec?: number };
-      };
-      const declarationCap = adapterDefinition.validation?.maxSourceAgeSec;
-      const sourceConfig = readCoinSource(coin.id).liveReservesConfig;
-      if (declarationCap !== expectedCap || sourceConfig?.scoring?.maxSourceAgeSec !== expectedCap) {
-        failures.push(
-          `${coin.id}: declaration=${String(declarationCap)} coin=${String(sourceConfig?.scoring?.maxSourceAgeSec)} expected=${expectedCap}`,
-        );
+    // Read source JSONs as well as active bindings so suspended configurations are covered.
+    for (const [id, source] of getCoinSources()) {
+      const config = source.liveReservesConfig;
+      const coinCap = config?.scoring?.maxSourceAgeSec;
+      if (!config || coinCap == null) continue;
+      const definition = LIVE_RESERVE_ADAPTER_DEFINITIONS[config.adapter];
+      const adapterCap = "validation" in definition && "maxSourceAgeSec" in definition.validation
+        ? definition.validation.maxSourceAgeSec
+        : undefined;
+      if (adapterCap != null && coinCap > adapterCap) {
+        failures.push(`${id}: coin=${coinCap} adapter=${adapterCap}`);
       }
     }
-
     expect(failures).toEqual([]);
   });
 
-  it("keeps reviewed late-monthly source-age overrides tied to the named policy", () => {
-    const failures = LATE_MONTHLY_SOURCE_AGE_IDS.flatMap((id) => {
-      const maxSourceAgeSec = readCoinSource(id).liveReservesConfig?.scoring?.maxSourceAgeSec;
-      return maxSourceAgeSec === LATE_MONTHLY_DISCLOSURE_SOURCE_MAX_AGE_SEC
-        ? []
-        : [`${id}: expected ${LATE_MONTHLY_DISCLOSURE_SOURCE_MAX_AGE_SEC}, got ${String(maxSourceAgeSec)}`];
-    });
-
+  it("covers every erc4626-single-asset coin with a reviewed reserve slice", () => {
+    const failures: string[] = [];
+    const sidecarKeys = getErc4626SidecarKeys();
+    for (const [id, source] of getCoinSources()) {
+      const config = source.liveReservesConfig;
+      if (!config || config.adapter !== "erc4626-single-asset") continue;
+      const chain = config.inputs?.primary?.chain;
+      const asset = config.params?.slice?.expectedAssetAddress?.toLowerCase();
+      // The adapter emits `erc4626-single-asset:<chain>:<vault underlying>`; the
+      // reviewed sidecar slice must carry the same key. sgho-aave follows this
+      // rule too — the savings passthrough is keyed by the GHO underlying.
+      const sourceKey = chain && asset ? `erc4626-single-asset:${chain}:${asset}` : undefined;
+      if (!sourceKey || !sidecarKeys.has(sourceKey)) {
+        failures.push(`${id}: no reserve slice keyed ${sourceKey ?? "erc4626-single-asset:<chain>:<underlying>"}`);
+      }
+    }
     expect(failures).toEqual([]);
-  });
-
-  it("does not leave late-monthly-ish caps outside the named policy value", () => {
-    const adHocCaps = [...getCoinSources()].flatMap(([id, source]) => {
-      const maxSourceAgeSec = source.liveReservesConfig?.scoring?.maxSourceAgeSec;
-      const isLateMonthlyRange =
-        maxSourceAgeSec != null && maxSourceAgeSec >= 3_900_000 && maxSourceAgeSec <= 4_100_000;
-      return isLateMonthlyRange && maxSourceAgeSec !== LATE_MONTHLY_DISCLOSURE_SOURCE_MAX_AGE_SEC
-        ? [`${id}.json: ${maxSourceAgeSec}`]
-        : [];
-    });
-
-    expect(adHocCaps).toEqual([]);
   });
 });

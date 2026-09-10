@@ -66,6 +66,11 @@
       }
     },
     "params": {
+      "redemptionLock": [
+        { "selector": "getCooldown()", "kind": "cooldown-seconds" },
+        { "selector": "getUnstakeWindow()", "kind": "unstake-window-seconds" },
+        { "selector": "paused()", "kind": "paused-bool" }
+      ],
       "slice": {
         "name": "GHO staked in Aave Umbrella safety module",
         "risk": "high",

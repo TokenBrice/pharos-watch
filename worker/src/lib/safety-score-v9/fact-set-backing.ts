@@ -366,6 +366,7 @@ export function buildDependencies(context: AssetBuildContext): V9EffectiveDepend
     dependencyFromLive: overlay.dependencyFromLive,
     mappedLiveReserveWeight: overlay.mappedLiveReserveWeight,
     fallbackReason: overlay.fallbackReason,
+    rejectionReasons: overlay.rejectionReasons,
     edges: overlay.edges.map((edge) => {
       const economicRole = edge.economicRole ?? defaultV9DependencyEconomicRole(edge.dependencyType);
       return {

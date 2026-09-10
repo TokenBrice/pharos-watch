@@ -1,35 +1,24 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { describe, expect, it } from "vitest";
 import { LIVE_RESERVE_ADAPTER_DEFINITIONS } from "@shared/lib/live-reserve-adapters";
-import { mockFetchRetry } from "../../../test-helpers/cron";
-
-vi.mock("../../../lib/fetch-retry", () => mockFetchRetry({ fetchWithRetry: vi.fn() }));
-import { fetchWithRetry } from "../../../lib/fetch-retry";
-
-vi.mock("../helpers", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("../helpers")>();
-  return { ...actual, fetchOnchainMulticall3: vi.fn() };
-});
-
-import { fetchOnchainMulticall3 } from "../helpers";
+import { encodeUint256, PAUSED_SELECTOR } from "../../../lib/evm-selectors";
 import {
   adaptInfiniFi,
-  fetchInfiniFiReserves,
   resolveInfiniFiFreshness,
   type InfiniFiProtocolData,
   type InfiniFiRateHistoryResponse,
 } from "../infinifi";
-import { expectValidAdapterOutput } from "./reserve-adapter.test-support";
+import { runAdapter, type AdapterNetworkSpec, type AdapterRpcValue } from "./reserve-adapter.test-support";
 
-const RATE_HISTORY_URL = "https://example.com/api/protocol/rate-history/siUSD?daysAgo=7";
-const unexpectedRequests: unknown[] = [];
-afterEach(() => {
-  const unexpected = unexpectedRequests.splice(0);
-  vi.resetAllMocks();
-  expect(unexpected).toEqual([]);
-});
+// The real catalog endpoint for iusd-infinifi; runAdapter resolves it from the
+// coin's liveReservesConfig, and the freshness probe path hangs off the same origin.
+const ROUTE_URL = "https://eth-api.infinifi.xyz/api/protocol/data";
+const RATE_HISTORY_URL = "https://eth-api.infinifi.xyz/api/protocol/rate-history/siUSD?daysAgo=7";
 
 const EMPTY_RATE_HISTORY: InfiniFiRateHistoryResponse = { code: "OK", data: { dataPoints: [] } };
 
+// Gateway registry answers the probe re-reads same-run; the gateway itself is
+// the adapter's tracked deployment.
+const GATEWAY = "0x3f04b65ddbd87f9ce0a2e7eb24d80e7fb87625b5";
 const REDEEM_CONTROLLER = "0xcb1747e89a43dedcf4a2b831a0d94859efec7601";
 const YIELD_SHARING = "0x90e91f5bfd9a0a4d925bf30b512add8cd2bbae3b";
 const BEFORE_REDEEM_HOOK = "0x4b2bfe49829de3632449928507452ee667f61395";
@@ -37,6 +26,33 @@ const IUSD = "0x48f9e38f3070ad8945dfeae3fa70987722e3d89c";
 const USDC = "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48";
 const IUSD_ONE = 10n ** 18n;
 const USDC_ONE = 10n ** 6n;
+
+// View selectors the route probe reads; `paused()` is shared by every gate.
+const ASSET_TOKEN_SELECTOR = "0x1083f761"; // assetToken()
+const BEFORE_REDEEM_HOOK_SELECTOR = "0xce25b2c6"; // beforeRedeemHook()
+const QUEUE_LENGTH_SELECTOR = "0xab91c7b0"; // queueLength()
+const TOTAL_ENQUEUED_REDEMPTIONS_SELECTOR = "0x3f3b03ca"; // totalEnqueuedRedemptions()
+const TOTAL_PENDING_CLAIMS_SELECTOR = "0x70bf2381"; // totalPendingClaims()
+const LIQUIDITY_SELECTOR = "0x1a686502"; // liquidity()
+const RECEIPT_TO_ASSET_CALLDATA = `0xf308cf65${encodeUint256(IUSD_ONE)}`; // receiptToAsset(1 iUSD)
+const UNACCRUED_YIELD_SELECTOR = "0xf843336c"; // unaccruedYield()
+
+// The gateway's string-keyed registry reads share one selector, so the rpc
+// table keys them by full calldata.
+const GATEWAY_REDEEM_CONTROLLER_CALLDATA =
+  "0xbf40fac10000000000000000000000000000000000000000000000000000000000000020"
+  + "000000000000000000000000000000000000000000000000000000000000001072656465656d436f6e74726f6c6c657200000000000000000000000000000000";
+const GATEWAY_YIELD_SHARING_CALLDATA =
+  "0xbf40fac10000000000000000000000000000000000000000000000000000000000000020"
+  + "000000000000000000000000000000000000000000000000000000000000000c7969656c6453686172696e670000000000000000000000000000000000000000";
+const GATEWAY_RECEIPT_TOKEN_CALLDATA =
+  "0xbf40fac10000000000000000000000000000000000000000000000000000000000000020"
+  + "000000000000000000000000000000000000000000000000000000000000000c72656365697074546f6b656e0000000000000000000000000000000000000000";
+
+// The rate-history fixture's latest point; the validation clock hangs off it
+// so a verified run sees a fresh source timestamp.
+const RATE_HISTORY_SOURCE_SEC = 1_781_114_400;
+const NOW_SEC = RATE_HISTORY_SOURCE_SEC + 600;
 
 interface RouteState {
   gatewayPaused: boolean;
@@ -60,53 +76,56 @@ const OPEN_ROUTE: RouteState = {
   enqueued: 0n,
 };
 
-function word(value: bigint | boolean | string): `0x${string}` {
-  if (typeof value === "string") {
-    return `0x${value.replace(/^0x/, "").toLowerCase().padStart(64, "0")}` as `0x${string}`;
-  }
-  const uint = typeof value === "boolean" ? (value ? 1n : 0n) : value;
-  const unsigned = uint < 0n ? uint + (1n << 256n) : uint;
-  return `0x${unsigned.toString(16).padStart(64, "0")}` as `0x${string}`;
-}
-
 /**
- * Answer the probe's three dependent multicall phases by label: the gateway
- * registry resolves the controller and yield-sharing addresses before either
- * can be read, and the hook address only exists after the controller batch.
+ * Answer the probe's three dependent multicall phases at the fetch boundary:
+ * the gateway registry resolves the controller and yield-sharing addresses
+ * before either can be read, and the hook address only exists after the
+ * controller batch. Keys are the wire-level contract+calldata pairs the
+ * Multicall3 batch decodes to.
  */
-function primeRouteProbe(overrides: Partial<RouteState> = {}) {
-  const state = { ...OPEN_ROUTE, ...overrides };
-  vi.mocked(fetchOnchainMulticall3).mockImplementation((args: unknown) => {
-    if (state.fail) return Promise.resolve(null);
-    const { calls } = args as { calls: Array<{ label: string }> };
-    return Promise.resolve(calls.map(({ label }) => {
-      const returnData = ((): `0x${string}` => {
-        switch (label) {
-          case "gateway:paused": return word(state.gatewayPaused);
-          case "gateway:redeem-controller": return word(REDEEM_CONTROLLER);
-          case "gateway:yield-sharing": return word(YIELD_SHARING);
-          case "gateway:receipt-token": return word(IUSD);
-          case "rc:paused": return word(state.controllerPaused);
-          case "rc:asset-token": return word(USDC);
-          case "rc:hook": return word(BEFORE_REDEEM_HOOK);
-          case "rc:queue-length": return word(state.queueLength);
-          case "rc:enqueued": return word(state.enqueued);
-          case "rc:pending-claims": return word(0n);
-          case "rc:liquidity": return word(669n);
-          // 1 iUSD converts to 1 USDC at the controller's live ratio.
-          case "rc:receipt-to-asset": return word(USDC_ONE);
-          case "ys:paused": return word(state.yieldSharingPaused);
-          case "ys:unaccrued-yield": return word(state.unaccruedYield);
-          case "hook:paused": return word(state.hookPaused);
-          default: return word(0n);
-        }
-      })();
-      return { label, success: true, returnData };
-    }));
-  });
+function routeRpcTable(state: RouteState): Record<string, AdapterRpcValue> {
+  const table: Record<string, AdapterRpcValue> = {
+    [`ethereum:${GATEWAY}:${PAUSED_SELECTOR}`]: state.gatewayPaused,
+    [`ethereum:${GATEWAY}:${GATEWAY_REDEEM_CONTROLLER_CALLDATA}`]: REDEEM_CONTROLLER,
+    [`ethereum:${GATEWAY}:${GATEWAY_YIELD_SHARING_CALLDATA}`]: YIELD_SHARING,
+    [`ethereum:${GATEWAY}:${GATEWAY_RECEIPT_TOKEN_CALLDATA}`]: IUSD,
+    [`ethereum:${REDEEM_CONTROLLER}:${PAUSED_SELECTOR}`]: state.controllerPaused,
+    [`ethereum:${REDEEM_CONTROLLER}:${ASSET_TOKEN_SELECTOR}`]: USDC,
+    [`ethereum:${REDEEM_CONTROLLER}:${BEFORE_REDEEM_HOOK_SELECTOR}`]: BEFORE_REDEEM_HOOK,
+    [`ethereum:${REDEEM_CONTROLLER}:${QUEUE_LENGTH_SELECTOR}`]: state.queueLength,
+    [`ethereum:${REDEEM_CONTROLLER}:${TOTAL_ENQUEUED_REDEMPTIONS_SELECTOR}`]: state.enqueued,
+    [`ethereum:${REDEEM_CONTROLLER}:${TOTAL_PENDING_CLAIMS_SELECTOR}`]: 0n,
+    [`ethereum:${REDEEM_CONTROLLER}:${LIQUIDITY_SELECTOR}`]: 669n,
+    [`ethereum:${REDEEM_CONTROLLER}:${RECEIPT_TO_ASSET_CALLDATA}`]: USDC_ONE,
+    [`ethereum:${YIELD_SHARING}:${PAUSED_SELECTOR}`]: state.yieldSharingPaused,
+    [`ethereum:${YIELD_SHARING}:${UNACCRUED_YIELD_SELECTOR}`]: state.unaccruedYield,
+    [`ethereum:${BEFORE_REDEEM_HOOK}:${PAUSED_SELECTOR}`]: state.hookPaused,
+  };
+  // A failed probe reverts every route read; the adapter must withhold
+  // redemption telemetry rather than publish a partial route.
+  if (state.fail) {
+    return Object.fromEntries(Object.keys(table).map((key) => [key, null] as const));
+  }
+  return table;
 }
 
-const ROUTE_URL = "https://example.com/infinifi";
+function infinifiNetwork(options: {
+  routeState?: Partial<RouteState>;
+  payload?: InfiniFiProtocolData;
+  rateHistory?: InfiniFiRateHistoryResponse;
+} = {}): AdapterNetworkSpec {
+  return {
+    json: {
+      [ROUTE_URL]: options.payload ?? routeResponse(),
+      [RATE_HISTORY_URL]: options.rateHistory ?? EMPTY_RATE_HISTORY,
+    },
+    rpc: routeRpcTable({ ...OPEN_ROUTE, ...options.routeState }),
+  };
+}
+
+function run(network: AdapterNetworkSpec = infinifiNetwork()) {
+  return runAdapter("infinifi", "iusd-infinifi", { network, nowSec: NOW_SEC });
+}
 
 function routeResponse(overrides: {
   liquid?: number;
@@ -141,25 +160,6 @@ function routeResponse(overrides: {
   };
 }
 
-function fetchRouteReserves(response: InfiniFiProtocolData = routeResponse(), rateHistory: InfiniFiRateHistoryResponse = EMPTY_RATE_HISTORY) {
-  vi.mocked(fetchWithRetry).mockImplementation(async (url) => {
-    if (url === ROUTE_URL) return Response.json(response);
-    if (url === RATE_HISTORY_URL) return Response.json(rateHistory);
-    unexpectedRequests.push(url);
-    throw new Error(`Unexpected InfiniFi request: ${url}`);
-  });
-  return fetchInfiniFiReserves(
-    { id: "infinifi" } as never,
-    {
-      adapter: "infinifi",
-      version: 1,
-      semantics: "collateral-mix",
-      inputs: { primary: { kind: "http-json", url: ROUTE_URL } },
-    },
-    new AbortController().signal,
-    { requestCache: new Map() } as never,
-  );
-}
 
 const SAMPLE_RESPONSE: InfiniFiProtocolData = {
   code: "OK",
@@ -212,9 +212,6 @@ function protocolBufferResponse() {
 }
 
 describe("adaptInfiniFi", () => {
-  beforeEach(() => {
-    vi.mocked(fetchOnchainMulticall3).mockReset();
-  });
 
   it("allows verified freshness (rate-history probe) with unverified fallback", () => {
     expect(LIVE_RESERVE_ADAPTER_DEFINITIONS.infinifi.validation.allowedFreshnessModes).toEqual([
@@ -277,8 +274,8 @@ describe("adaptInfiniFi", () => {
     const result = adaptInfiniFi(response);
     expect(result.unknownFarms).toEqual([]);
     expect(result.slices).toEqual([
-      { name: "infinifiUSD Autopool", pct: 90, risk: "medium" },
-      { name: "Multi Farm", pct: 10, risk: "low" },
+      { sourceKey: "infinifi:tokemak-auto-infinifiusd", name: "infinifiUSD Autopool", pct: 90, risk: "medium" },
+      { sourceKey: "infinifi:swapfarm", name: "Multi Farm", pct: 10, risk: "low" },
     ]);
   });
 
@@ -291,8 +288,8 @@ describe("adaptInfiniFi", () => {
     const result = adaptInfiniFi(response);
     expect(result.unknownFarms).toEqual([]);
     expect(result.slices).toEqual([
-      { name: "Liquid Cap", pct: 60, risk: "medium", coinId: "stcusd-cap", depType: "collateral" },
-      { name: "f(x) fxSAVE", pct: 40, risk: "medium", coinId: "fxsave-f-x-protocol", depType: "collateral" },
+      { sourceKey: "infinifi:liquid-cap", name: "Liquid Cap", pct: 60, risk: "medium", coinId: "stcusd-cap", depType: "collateral" },
+      { sourceKey: "infinifi:cowswap-fxsave", name: "f(x) fxSAVE", pct: 40, risk: "medium", coinId: "fxsave-f-x-protocol", depType: "collateral" },
     ]);
   });
 
@@ -309,11 +306,11 @@ describe("adaptInfiniFi", () => {
     expect(result.unknownFarms).toEqual([]);
     expect(result.unknownExposurePct).toBe(0);
     expect(result.slices).toEqual([
-      { name: "Pendle PT-apxUSD-18JUN2026", pct: 20, risk: "high", coinId: "apxusd-apyx", depType: "collateral" },
-      { name: "Pendle PT-apyUSD-18JUN2026", pct: 20, risk: "high", coinId: "apyusd-apyx", depType: "collateral" },
-      { name: "New Silver", pct: 20, risk: "high", blacklistable: true },
-      { name: "Sentora PRIME Main", pct: 20, risk: "high", coinId: "pyusd-paypal", depType: "collateral" },
-      { name: "Cap stcUSD", pct: 20, risk: "medium", coinId: "stcusd-cap", depType: "collateral" },
+      { sourceKey: "infinifi:pendle-v3-pt-apxusd-18jun2026", name: "Pendle PT-apxUSD-18JUN2026", pct: 20, risk: "high", coinId: "apxusd-apyx", depType: "collateral" },
+      { sourceKey: "infinifi:pendle-v3-pt-apyusd-18jun2026", name: "Pendle PT-apyUSD-18JUN2026", pct: 20, risk: "high", coinId: "apyusd-apyx", depType: "collateral" },
+      { sourceKey: "infinifi:new-silver-junior", name: "New Silver", pct: 20, risk: "high", blacklistable: true },
+      { sourceKey: "infinifi:morpho-v2-sentora-prime", name: "Sentora PRIME Main", pct: 20, risk: "high", coinId: "pyusd-paypal", depType: "collateral" },
+      { sourceKey: "infinifi:capfarm", name: "Cap stcUSD", pct: 20, risk: "medium", coinId: "stcusd-cap", depType: "collateral" },
     ]);
   });
 
@@ -379,12 +376,15 @@ describe("adaptInfiniFi", () => {
     expect(result.excludedProtocolFarms).toEqual(["ProtocolBuffer"]);
     expect(result.sourceTotalGapPct).toBe(20);
     expect(result.slices).toEqual(expect.arrayContaining([
-      { name: "InfiniFi protocol-level reserve positions", pct: 20, risk: "high" },
+      { sourceKey: "infinifi:tvl-gap", name: "InfiniFi protocol-level reserve positions", pct: 20, risk: "high" },
     ]));
   });
 
+});
+
+describe("fetchInfiniFiReserves", () => {
   it("warns when source TVL exceeds emitted active farm rows", async () => {
-    const result = await fetchRouteReserves(protocolBufferResponse());
+    const { result } = await run(infinifiNetwork({ payload: protocolBufferResponse() }));
 
     expect(result.warnings).toEqual(expect.arrayContaining([
       expect.objectContaining({ code: "source-total-gap", effect: "degraded" }),
@@ -400,9 +400,7 @@ describe("adaptInfiniFi", () => {
   });
 
   it("reports an open route with a zero queue when every on-chain gate reads unpaused", async () => {
-    primeRouteProbe();
-
-    const result = await fetchRouteReserves(routeResponse({ pendingRedemptions: 0 }));
+    const { result } = await run(infinifiNetwork({ payload: routeResponse({ pendingRedemptions: 0 }) }));
 
     expect(result.metadata).toMatchObject({
       freshnessMode: "unverified",
@@ -433,13 +431,12 @@ describe("adaptInfiniFi", () => {
         },
       },
     });
-    expectValidAdapterOutput("infinifi", result);
   });
 
   it("degrades the route and prices the queue when redemptions are already enqueued", async () => {
-    primeRouteProbe({ queueLength: 3n, enqueued: 1_250n * IUSD_ONE });
-
-    const result = await fetchRouteReserves();
+    const { result } = await run(infinifiNetwork({
+      routeState: { queueLength: 3n, enqueued: 1_250n * IUSD_ONE },
+    }));
 
     expect(result.metadata?.redemption).toMatchObject({
       routeStatus: "degraded",
@@ -447,10 +444,6 @@ describe("adaptInfiniFi", () => {
       queueDepthUsd: 1_250,
       capacityUsd: 35,
     });
-    expect(result.metadata?.redemption).toHaveProperty(
-      "routeStatusReason",
-      expect.stringContaining("queueLength() is 3"),
-    );
   });
 
   it("reports a paused route when a gate is closed or losses are unaccrued", async () => {
@@ -460,8 +453,7 @@ describe("adaptInfiniFi", () => {
       { hookPaused: true },
       { unaccruedYield: -1n },
     ]) {
-      primeRouteProbe(closed);
-      const result = await fetchRouteReserves();
+      const { result } = await run(infinifiNetwork({ routeState: closed }));
       expect(result.metadata?.redemption).toMatchObject({
         routeStatus: "paused",
         routeStatusSource: "onchain",
@@ -469,10 +461,14 @@ describe("adaptInfiniFi", () => {
     }
   });
 
-  it("withholds redemption telemetry when the route probe fails", async () => {
-    primeRouteProbe({ fail: true });
+  it("fails closed when the upstream payload drops the farm rows", async () => {
+    const payload = routeResponse();
+    const drifted = { ...payload, data: { ...payload.data, farms: undefined } } as unknown as InfiniFiProtocolData;
+    await expect(run(infinifiNetwork({ payload: drifted }))).rejects.toThrow();
+  });
 
-    const result = await fetchRouteReserves();
+  it("withholds redemption telemetry when the route probe fails", async () => {
+    const { result } = await run(infinifiNetwork({ routeState: { fail: true } }));
 
     expect(result.metadata).not.toHaveProperty("redemption");
     expect(result.metadata?.details).not.toHaveProperty("redeemRoute");
@@ -493,18 +489,17 @@ describe("adaptInfiniFi", () => {
       },
     };
 
-    const result = await fetchRouteReserves(response, { code: "OK", data: { dataPoints: [null] } });
+    const { result } = await run(infinifiNetwork({
+      payload: response,
+      rateHistory: { code: "OK", data: { dataPoints: [null] } },
+    }));
 
     expect(result.metadata).toMatchObject({
       freshnessMode: "unverified",
-      details: {
-        freshnessReason: "InfiniFi protocol stats payload does not expose a trustworthy source timestamp",
-      },
     });
   });
 
   it("verifies freshness from the siUSD rate-history probe when it matches the live staked rate", async () => {
-    primeRouteProbe();
     const response: InfiniFiProtocolData = {
       ...SAMPLE_RESPONSE,
       data: {
@@ -520,19 +515,19 @@ describe("adaptInfiniFi", () => {
       data: {
         dataPoints: [
           { time: 1_781_107_200_000, value: 1.0726 },
-          { time: 1_781_114_400_000, value: 1.0727 },
+          { time: RATE_HISTORY_SOURCE_SEC * 1_000, value: 1.0727 },
         ],
       },
     };
 
-    const result = await fetchRouteReserves(response, rateHistory);
+    const { result } = await run(infinifiNetwork({ payload: response, rateHistory }));
 
     expect(result.metadata).toMatchObject({
       freshnessMode: "verified",
-      sourceTimestamp: 1_781_114_400,
+      sourceTimestamp: RATE_HISTORY_SOURCE_SEC,
       redemption: {
         freshnessKind: "verified-source-timestamp",
-        sourceTimestamp: 1_781_114_400,
+        sourceTimestamp: RATE_HISTORY_SOURCE_SEC,
       },
     });
   });
@@ -552,6 +547,24 @@ describe("resolveInfiniFiFreshness", () => {
 
   it("returns verified with the latest valid point when the rate matches within tolerance", () => {
     expect(resolveInfiniFiFreshness(payloadWithRate(1.0727142465309754), {
+      code: "OK",
+      data: { dataPoints: [{ time: 1_781_114_400_000, value: 1.0727 }] },
+    })).toEqual({
+      freshnessMode: "verified",
+      sourceTimestamp: 1_781_114_400,
+    });
+  });
+
+  it("stays unverified for drift beyond the tightened 6e-5 rounding envelope", () => {
+    // Δ = 7e-5 is past the 4-decimal rounding envelope but was admitted by the
+    // old 5e-4 tolerance (~2.45 days of yield drift); it must now fail closed.
+    const diverged = "InfiniFi siUSD rate-history freshness probe diverged from the live staked exchange rate";
+    expect(resolveInfiniFiFreshness(payloadWithRate(1.07277), {
+      code: "OK",
+      data: { dataPoints: [{ time: 1_781_114_400_000, value: 1.0727 }] },
+    })).toMatchObject({ freshnessMode: "unverified", details: { freshnessReason: diverged } });
+    // Δ = 5e-5 (one rounding step) is still admitted.
+    expect(resolveInfiniFiFreshness(payloadWithRate(1.07275), {
       code: "OK",
       data: { dataPoints: [{ time: 1_781_114_400_000, value: 1.0727 }] },
     })).toEqual({

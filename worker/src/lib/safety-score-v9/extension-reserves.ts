@@ -1,3 +1,4 @@
+import type { DependencyRejectionReason } from "@shared/lib/dependency-derivation";
 import { compareText, domainDigest } from "@shared/lib/safety-score-v9/primitives";
 import { V9_CANDIDATE_POLICY_V1 } from "@shared/lib/safety-score-v9/policy";
 import { stableJsonStringifyV1 } from "@shared/lib/stable-json";
@@ -149,7 +150,7 @@ export function dependencyReserveSlices(
   liveReserves: readonly ReserveSlice[],
   meta: V9ExtensionRegistryMeta,
   clockSec: number,
-): ReserveSlice[] {
+): { slices: ReserveSlice[]; rejectionReasons: DependencyRejectionReason[] } {
   const reviewedMatches = reviewedReserveMatches(liveReserves, meta, clockSec);
   const reviewedByLiveIndex = new Map(
     reviewedMatches.map((match) => [match.liveIndex, match.reviewed]),
@@ -162,12 +163,27 @@ export function dependencyReserveSlices(
       .filter((match) => nonLinkReviewedIndexes.has(match.reviewedIndex))
       .map((match) => match.liveIndex),
   );
-  return liveReserves.map((slice, liveIndex) => {
+  const rejectionReasons: DependencyRejectionReason[] = [];
+  const reviewedAtSec = meta.reserveReview
+    ? Date.parse(`${meta.reserveReview.reviewedAt}T00:00:00.000Z`) / 1_000
+    : Number.NaN;
+  const expired = Number.isFinite(reviewedAtSec)
+    && clockSec - reviewedAtSec > REVIEWED_RESERVE_CLASSIFICATION_MAX_AGE_SEC;
+  const slices = liveReserves.map((slice, liveIndex) => {
     if (nonLinkLiveIndexes.has(liveIndex)) {
+      rejectionReasons.push({ sliceIndex: liveIndex, reason: "non-link" });
       const { coinId: _coinId, depType: _depType, ...unlinked } = slice;
       return unlinked;
     }
     const reviewed = reviewedByLiveIndex.get(liveIndex);
+    if ((!slice.coinId && !reviewed?.coinId) || slice.coinId === meta.id) {
+      rejectionReasons.push({
+        sliceIndex: liveIndex,
+        reason: expired && (meta.reserves ?? []).some((candidate) => reserveSlicesMatch(slice, candidate))
+          ? "expired"
+          : "no-match",
+      });
+    }
     if (!reviewed?.coinId || slice.coinId) return slice;
     return {
       ...slice,
@@ -175,6 +191,7 @@ export function dependencyReserveSlices(
       ...(reviewed.depType ? { depType: reviewed.depType } : {}),
     };
   });
+  return { slices, rejectionReasons };
 }
 
 /**

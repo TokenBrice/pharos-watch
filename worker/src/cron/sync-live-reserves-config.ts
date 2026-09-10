@@ -6,16 +6,11 @@ export interface LiveReserveSyncBudgetConfig {
   minimumAttemptBudgetMs: number;
 }
 
-// The leased outer wrapper gives sync-live-reserves a 12-minute (720s)
-// wall-clock budget whose clock starts before this loop's pre-flight D1 reads
-// (cursor + sync-state map). The internal run budget is deliberately held a
-// more than 2 minutes under that cap: the worst case is an admit-at-edge attempt
-// (adapter 20s + finalize 30s + margin 5s) landing the internal loop at ~540s,
-// after which the untimed pre-loop load plus the deferred-tail / finalize /
-// cron-logging tail must still clear the outer cap. At 11min that tail headroom
-// was ~20-25s and occasional runs were killed at the 720s lease (watchdog
-// cap-hits); 9min restores ~145-170s of headroom so deferral stays graceful
-// (deferred coins resume next run via the persisted cursor).
+// The 12-minute lease includes setup, deferred-tail writes and final logging.
+// Keep the internal budget at nine minutes. Admission reserves one adapter
+// window plus finalization and margin; the complete primary/fallback chain
+// shares the remaining run deadline rather than multiplying that reservation.
+// Checkpoint and D1 begin/failure writes use the same absolute lifecycle bound.
 const DEFAULT_LIVE_RESERVE_SYNC_BUDGETS = {
   adapterTimeoutMs: 20_000,
   runBudgetMs: 9 * 60 * 1000,

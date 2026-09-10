@@ -89,22 +89,25 @@ function truncateString(value: string, limit = SNAPSHOT_STRING_LIMIT): string {
   return `${value.slice(0, limit)}... [truncated ${value.length - limit} chars]`;
 }
 
-function compactSnapshotValue(value: unknown, depth = 0): unknown {
+function compactSnapshotValue(value: unknown, depth = 0, path = ""): unknown {
   if (value == null) return value;
   if (typeof value === "string") return truncateString(value);
   if (typeof value === "number" || typeof value === "boolean") return value;
   if (Array.isArray(value)) {
-    if (depth >= SNAPSHOT_METADATA_DEPTH_LIMIT) return "[truncated-depth]";
+    const latencyGroups = path === "adapterLatency.groups";
+    if (depth >= (path.startsWith("adapterLatency.") ? 7 : SNAPSHOT_METADATA_DEPTH_LIMIT)) return "[truncated-depth]";
     return value
-      .slice(0, SNAPSHOT_METADATA_ARRAY_LIMIT)
-      .map((entry) => compactSnapshotValue(entry, depth + 1));
+      .slice(0, latencyGroups ? 128 : SNAPSHOT_METADATA_ARRAY_LIMIT)
+      .map((entry) => compactSnapshotValue(entry, depth + 1, path));
   }
   if (!isRecord(value)) return null;
-  if (depth >= SNAPSHOT_METADATA_DEPTH_LIMIT) return "[truncated-depth]";
+  if (depth >= (path.startsWith("adapterLatency.") ? 7 : SNAPSHOT_METADATA_DEPTH_LIMIT)) return "[truncated-depth]";
 
   const compacted: Record<string, unknown> = {};
   for (const [key, entry] of Object.entries(value).slice(0, SNAPSHOT_METADATA_OBJECT_KEY_LIMIT)) {
-    compacted[key] = compactSnapshotValue(entry, depth + 1);
+    // Reserve latency is producer-bounded to 128 groups / 36 KiB. Preserve its
+    // histogram subtree; a second silent 40-group cap falsifies omittedGroups.
+    compacted[key] = compactSnapshotValue(entry, depth + 1, path ? `${path}.${key}` : key);
   }
   return compacted;
 }

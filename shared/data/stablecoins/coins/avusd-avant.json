@@ -68,7 +68,7 @@
   "custodyModel": "institutional-unregulated",
   "governanceQuality": "single-entity",
   "liveReservesConfig": {
-    "adapter": "curated-validated",
+    "adapter": "avant-reserves-api",
     "version": 1,
     "semantics": "collateral-mix",
     "breakerScope": "avusd-avant",
@@ -78,11 +78,11 @@
     },
     "inputs": {
       "primary": {
-        "kind": "onchain-evm",
-        "chain": "ethereum",
-        "rpcMode": "public-rpc"
+        "kind": "http-json",
+        "url": "https://app.avantprotocol.com/api/metrics/avusd"
       }
-    }
+    },
+    "params": {}
   },
   "launchDate": "2024-11-15",
   "mechanismArchetype": "synthetic-delta-neutral",

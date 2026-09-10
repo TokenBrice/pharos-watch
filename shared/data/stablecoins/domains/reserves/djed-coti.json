@@ -2,6 +2,7 @@
   "id": "djed-coti",
   "reserves": [
     {
+      "sourceKey": "djed-cardano:ada",
       "name": "ADA reserves in the Cardano Djed contract",
       "pct": 100,
       "risk": "high",
@@ -34,7 +35,7 @@
         "url": "https://api.koios.rest/api/v1/address_info"
       }
     ],
-    "rationale": "Re-verified 2026-08-23. COTI's overcollateralization FAQ states \"DJED uses exogenous collateral (ADA)\" and explains that ADA is used to buy SHEN; its minting and burning FAQ describes the 400%-800% reserve-ratio guards and states that DJED can be burned. A Cardano mainnet Koios POST /api/v1/address_info read for the named Djed reserve script address addr1z8mcpc26j64fmhhd6sv5qj5mk9xqnfxgm6k8zmk7h2rlu4qm5kjdmrpmng059yellupyvwgay2v0lz6663swmds7hp0qhxg9gt returned balance 28,300,277,449,032 lovelace (=28,300,277.449032 ADA); the newest UTxO in that response is at block 13,840,791. A same-session Koios /tip read returned Cardano block 13,846,947. The current read corroborates a single ADA reserve envelope; it does not establish an independent liability reconciliation or custody/legal terms.",
+    "rationale": "Re-verified 2026-08-23. COTI's overcollateralization FAQ states \"DJED uses exogenous collateral (ADA)\" and explains that ADA is used to buy SHEN; its minting and burning FAQ describes the 400%-800% reserve-ratio guards and states that DJED can be burned. A Cardano mainnet Koios POST /api/v1/address_info read for the named Djed reserve script address addr1z8mcpc26j64fmhhd6sv5qj5mk9xqnfxgm6k8zmk7h2rlu4qm5kjdmrpmng059yellupyvwgay2v0lz6663swmds7hp0qhxg9gt returned balance 28,300,277,449,032 lovelace (=28,300,277.449032 ADA); the newest UTxO in that response is at block 13,840,791. A same-session Koios /tip read returned Cardano block 13,846,947. The current read corroborates a single ADA reserve envelope; it does not establish an independent liability reconciliation or custody/legal terms. The live adapter's on-chain liability (minted DJED minus bank-held unissued stock, ≈ 1.47M DJED) diverges ~2.7x from the DefiLlama list circulating (≈ 4.02M DJED); the adapter keeps the on-chain liability as supplyTokens and surfaces the drift as a degraded `djed-supply-divergence` warning when it exceeds 10% rather than substituting the list figure.",
     "compositionBasis": "COTI Djed ADA collateral disclosure corroborated by Cardano mainnet Koios address_info read on 2026-08-23",
     "compositionAsOf": "2026-08-23",
     "scope": "full-composition",

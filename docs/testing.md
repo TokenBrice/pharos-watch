@@ -305,6 +305,40 @@ const db = mockD1([
 
 Cross-runtime tests outside `worker/src` should use `createRemoteD1Mock()` from `scripts/test-utils/d1.ts` for worker maintenance scripts that accept a `RemoteD1Client` dependency. Pages Functions that need `prepare()`, `batch()`, and `getHistory()` use `makeTestD1Database()` from `@shared/test-utils/mock-d1`.
 
+### Reserve Adapter Harness (`worker/src/cron/reserve-adapters/__tests__/reserve-adapter.test-support.ts`)
+
+Reserve adapters reach the network through exactly one boundary — `globalThis.fetch`, underneath `request.ts`, `onchain.ts`, `evm-observation-plan.ts` and `worker/src/lib/evm-rpc.ts` — and resolve chain endpoints from `ctx.chainRpcs`. Adapter tests install a routing table at that boundary instead of module-mocking `../helpers`, `../request` or `lib/evm-rpc`, so URL building, headers, retry policy, body limits, JSON/HTML parsing, Multicall3 encoding and ABI decoding are all exercised for real.
+
+```ts
+import { runAdapter, expectWarnings } from "./reserve-adapter.test-support";
+
+const { result, report, network } = await runAdapter("tether-transparency", "usdt-tether", {
+  network: { json: { "https://app.tether.to/transparency.json": TRANSPARENCY_FIXTURE } },
+  nowSec: FIXTURE_NOW_SEC,
+});
+expectWarnings(result, ["quarantined-balance"]);
+```
+
+- `runAdapter(key, coinId?, options?)` resolves the adapter's registered fetcher **and the coin's real catalog `liveReservesConfig`**, so a mis-wired URL or a renamed param fails the test instead of being papered over by a hand-written config literal. It always runs `validateAdapterOutput` against the adapter's own descriptor policy and fails the test on a `fatal` warning; pass `validate: false` only when asserting a rejection. It returns `{ result, report, coin, config, network }`.
+- `options`: `network` (spec or an already-installed network), `coin` / `config` / `params` shallow overrides on the catalog values, `ctx`, `nowSec` (also the validation clock), `signal`, `maxSourceAgeSec`, `allowUnmatched`.
+- `installAdapterNetwork(spec)` can be called directly when a test drives an adapter helper rather than a registered fetcher. It returns `{ fetchSpy, chainRpcs, requests, rpcCalls, unmatched }`.
+  - `json` / `html`: URL → payload, a `{ status, body, json, headers }` envelope, or a `(request) => …` responder. Unlisted URLs answer HTTP 404 and are recorded; `runAdapter` then fails with the exact URL the table is missing.
+  - `rpc`: `eth_call` answers keyed by selector (`"0x18160ddd"`), function signature (`"totalSupply()"`), full calldata, or any of those prefixed with a contract address and/or chain id in any order (`"ethereum:0xabc…:balanceOf(address)"`). More specific keys win. Values are `bigint` / `number` / `boolean` / hex / `null` (a routed `null` answers a real `execution reverted`, not an unmatched request) or a function of the decoded call. Multicall3 `aggregate3` batches are decoded and answered from the same table. Block methods route here too — `"eth_blockNumber"` overrides the head, `"eth_getBlockByNumber:0x3d0"` answers that tag with a block header whose gaps fall back to `block` — unlisted block reads are answered from `block`, and block reads never appear in `network.rpcCalls`.
+  - `code`: `eth_getCode` answers for code-identity checks; `chains`: extra or overriding chain endpoints.
+- `expectWarnings(result, codes)` asserts the emitted warning **codes**, never message wording; `expectWarningEffect(result, code, effect)` pins one code's effect. Message text is not a contract and copy edits must not fail a suite.
+- Pure `adapt*` unit tests keep calling the parser directly — the harness is for fetch-level and adapter-level cases.
+
+#### Corpus replay gate (`__tests__/adapter-corpus.test.ts`)
+
+Every registered adapter key must appear in `CORPUS_CASES` or one of the two exemption maps — `CORPUS_BACKLOG` or `CORPUS_NOT_REPLAYABLE` — in `__tests__/adapter-corpus.test-support.ts`; the gate fails on a key in neither map, a key double-booked across maps, a stale key, or a reason under 20 characters. A corpus case carries the coin id, the captured happy-path payload and one `drift` mutation:
+
+- the happy path must produce a snapshot `validateAdapterOutput` accepts, with a `metadata.freshnessMode` inside the descriptor's `allowedFreshnessModes`;
+- the drift mutation (a renamed, retyped or dropped upstream field) must produce an adapter error or a `degraded` warning. A mutation that publishes silently is the "no silent constant fallback" defect class and fails the gate.
+
+When adding an adapter, add its corpus case in the same change. `CORPUS_NOT_REPLAYABLE` is structural: hash-pinned issuer reports plus the adapters with no bound catalog coin, where no wire capture could ever replay. `CORPUS_BACKLOG` is a debt ledger: adapters that are bound and testable but still owe a committed wire capture. Each entry states which test file owns the behaviour instead.
+
+**Corpus backlog:** adapter tests that still owe a committed wire capture are tracked as **corpus-backlog** in the `CORPUS_BACKLOG` map of `__tests__/adapter-corpus.test-support.ts`; the map is the authoritative list, and every green `adapter-corpus.test.ts` run prints "corpus backlog: N adapter(s)…" with the full list. Clearing a backlog entry means landing a captured happy-path-plus-drift corpus case, not deleting the key.
+
 ### Latest-Schema SQLite Harness (`shared/test-utils/latest-schema-sqlite.ts`)
 
 When correctness depends on transactions, constraints, migrations, or SQL semantics, use real SQLite instead of treating substring-matched mocks as persistence proof. `createLatestSchemaFixtureTracker()` opens in-memory databases with every migration in `worker/migrations` applied and wrapped by `createSqliteD1` (`shared/test-utils/sqlite-d1.ts`), registers each handle immediately on open, and closes every tracked handle on `closeAll()` — reporting aggregate errors rather than stopping at the first failure. The required lifecycle is:

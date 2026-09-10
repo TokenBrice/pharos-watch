@@ -562,19 +562,19 @@ function prepareDependency(
   activeIds: ReadonlySet<string>,
   clockSec: number,
 ): PreparedDependency {
-  const hasLiveReserveSlices = (liveReserveSlices?.length ?? 0) > 0;
-  const effectiveLiveReserveSlices = liveReserveSlices
+  const liveDependencyMapping = liveReserveSlices
     ? dependencyReserveSlices(liveReserveSlices, meta, clockSec)
     : undefined;
+  const effectiveLiveReserveSlices = liveDependencyMapping?.slices;
   const derived = deriveEffectiveDependencySet(meta, {
-    ...(effectiveLiveReserveSlices ? { liveReserveSlices: effectiveLiveReserveSlices } : {}),
+    ...(liveDependencyMapping
+      ? { liveReserveSlices: liveDependencyMapping.slices, rejectionReasons: liveDependencyMapping.rejectionReasons }
+      : {}),
   });
-  // Curated basket links are only scoreable when the same composition can enter
-  // the reserve envelope. A missing live snapshot must not keep stale curated
-  // collateral edges alive; serial/manual relationships and live-derived edges
-  // deliberately stay on their existing paths.
+  // Curated derivation is reachable only without a live composition. Its
+  // basket links must also pass the reserve-envelope admission gate; serial
+  // and manual relationships do not assert curated basket composition.
   const suppressCuratedBasketEdges =
-    !hasLiveReserveSlices &&
     derived.baseSource === "curated-reserve" &&
     derived.dependencies.some(
       (dependency) => (dependency.type ?? "collateral") === "collateral",
@@ -704,6 +704,7 @@ function prepareDependency(
       dependencyFromLive: derived.dependencyFromLive,
       mappedLiveReserveWeight: derived.mappedLiveReserveWeight,
       fallbackReason: derived.fallbackReason,
+      rejectionReasons: derived.rejectionReasons,
       edges: validEdges,
       diagnostics: {
         graphState: dependencyReviewUnresolved ? "unresolved" : issueCodes.length > 0 ? "invalid" : "valid",

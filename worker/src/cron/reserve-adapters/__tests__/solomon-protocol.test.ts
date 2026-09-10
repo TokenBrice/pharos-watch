@@ -1,10 +1,8 @@
 import { describe, expect, it } from "vitest";
 import { getReserveAdapter } from "../index";
 import { validateAdapterOutput } from "../validate";
-import {
-  adaptSolomonProtocolData,
-  type SolomonProtocolDataResponse,
-} from "../solomon-protocol";
+import { adaptSolomonProtocolData, type SolomonProtocolDataResponse } from "../solomon-protocol";
+import { installAdapterNetwork, runAdapter } from "./reserve-adapter.test-support";
 
 const FIXTURE: SolomonProtocolDataResponse = {
   protocolTvl: "1512045.79",
@@ -60,6 +58,7 @@ describe("adaptSolomonProtocolData", () => {
       depType: "collateral",
       blacklistable: true,
     });
+    expect(usdc!.sourceKey).toBe("solomon-protocol:vault:usdc");
 
     const pctSum = result.slices.reduce((sum, slice) => sum + slice.pct, 0);
     expect(pctSum).toBeCloseTo(100, 5);
@@ -117,5 +116,29 @@ describe("adaptSolomonProtocolData", () => {
         protocolTvl: "100",
       }),
     ).toThrow(/exceed protocolTvl/);
+  });
+});
+
+describe("fetchSolomonProtocolReserves", () => {
+  const url = "https://data.solomonlabs.io/api/solomon-protocol/protocol-data";
+  const nowSec = 1_787_097_700;
+
+  it("fetches protocol data through the shared network harness", async () => {
+    const { result, network } = await runAdapter("solomon-protocol", "usdv-solomon", {
+      network: installAdapterNetwork({ json: { [url]: FIXTURE } }),
+      nowSec,
+    });
+    expect(result.metadata).toMatchObject({ protocolTvl: 1_512_045.79 });
+    expect(network.requests).toEqual([{ url, method: "GET" }]);
+  });
+
+  it("rejects a renamed protocolTvl field instead of publishing a zero snapshot", async () => {
+    const drifted = { ...FIXTURE };
+    Reflect.deleteProperty(drifted, "protocolTvl");
+    await expect(runAdapter("solomon-protocol", "usdv-solomon", {
+      network: installAdapterNetwork({ json: { [url]: drifted } }),
+      nowSec,
+      validate: false,
+    })).rejects.toThrow("protocolTvl");
   });
 });

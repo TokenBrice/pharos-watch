@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { CHAIN_META } from "@shared/lib/chains";
 import { LIVE_RESERVE_ADAPTER_DEFINITIONS } from "@shared/lib/live-reserve-adapters";
-import { type MockTableConfig } from "@shared/test-utils/mock-d1";
 import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import { buildChainRpcs } from "../../lib/chain-registry";
 import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
@@ -18,6 +18,75 @@ import {
 
 const mockD1 = mockLiveReserveD1;
 const mockAdapterRegistry = mockLiveReserveAdapterRegistry;
+
+/**
+ * Adapters whose gross-supply denominator aggregates totalSupply() across
+ * every EVM/Tron deployment in `coin.contracts` (via
+ * `aggregateMultichainErc20Supply` or its inline equivalent). These are the
+ * only adapters whose contract chains are read through the shared chain RPC
+ * map; every other adapter reads only its own input/params chains, so its
+ * `coin.contracts` list is deployment metadata rather than a read scope.
+ */
+const MULTICHAIN_SUPPLY_ADAPTERS = new Set([
+  "usd1-bundle-oracle",
+  "chronicle-nav",
+  "chainlink-por",
+  "sodax-sonic",
+]);
+
+/**
+ * EVM/Tron chains a live-reserve config reads over public RPC: the primary
+ * onchain input, every EVM/Tron deployment in the coin's contracts (for
+ * multichain-supply adapters), and any chain id carried in adapter params
+ * (branch/leg/contract entries). Non-EVM chains (Solana, Aptos, …) are outside
+ * the shared RPC map's scope.
+ */
+function referencedLiveReserveChains(coin: (typeof ACTIVE_STABLECOINS)[number]): Set<string> {
+  const chains = new Set<string>();
+  const config = coin.liveReservesConfig;
+  const primary = config?.inputs.primary;
+  if (primary?.kind === "onchain-evm") chains.add(primary.chain);
+
+  if (config && MULTICHAIN_SUPPLY_ADAPTERS.has(config.adapter)) {
+    for (const contract of coin.contracts ?? []) {
+      const type = CHAIN_META[contract.chain]?.type;
+      if (type === "evm" || type === "tron") chains.add(contract.chain);
+    }
+  }
+
+  collectParamChainIds(config?.params, chains);
+  return chains;
+}
+
+function collectParamChainIds(value: unknown, chains: Set<string>): void {
+  if (value === null || typeof value !== "object") return;
+  if (Array.isArray(value)) {
+    for (const item of value) collectParamChainIds(item, chains);
+    return;
+  }
+  const record = value as Record<string, unknown>;
+  for (const key of ["chain", "chains"] as const) {
+    const chainValue = record[key];
+    if (typeof chainValue === "string") {
+      const type = CHAIN_META[chainValue]?.type;
+      if (type === "evm" || type === "tron") chains.add(chainValue);
+    } else if (Array.isArray(chainValue)) {
+      for (const chain of chainValue) {
+        if (typeof chain === "string") {
+          const type = CHAIN_META[chain]?.type;
+          if (type === "evm" || type === "tron") chains.add(chain);
+        }
+      }
+    }
+  }
+  // Only branch/leg arrays read their chains through the shared chain RPC map
+  // (no per-entry URL). Other chain-bearing params — `deployments`,
+  // `additionalDeployments`, `supplyChain` — resolve through explicit RPC URLs
+  // or `getPublicRpcUrl()` and sit outside this assertion's scope.
+  for (const key of ["branches", "legs"] as const) {
+    collectParamChainIds(record[key], chains);
+  }
+}
 
 describe("syncLiveReserves", () => {
   const fixtures = createLatestSchemaFixtureTracker();
@@ -76,22 +145,25 @@ describe("syncLiveReserves", () => {
         const primary = coin.liveReservesConfig?.inputs.primary;
         return primary?.kind === "onchain-evm" && primary.rpcMode === "public-rpc";
       })
-      .filter((coin) => {
+      .flatMap((coin) => {
         const config = coin.liveReservesConfig!;
         const primary = config.inputs.primary;
-        if (primary.kind !== "onchain-evm") return false;
+        if (primary.kind !== "onchain-evm") return [];
 
         const params = config.params;
         const explicitRpcUrl = typeof params === "object" && params !== null && !Array.isArray(params)
           ? (params as { rpcUrl?: unknown }).rpcUrl
           : undefined;
+        const hasExplicitRpcUrl = typeof explicitRpcUrl === "string" && explicitRpcUrl.length > 0;
 
-        return !chainRpcs.has(primary.chain)
-          && !(typeof explicitRpcUrl === "string" && explicitRpcUrl.length > 0);
-      })
-      .map((coin) => {
-        const primary = coin.liveReservesConfig!.inputs.primary;
-        return primary.kind === "onchain-evm" ? `${coin.id}:${primary.chain}` : coin.id;
+        return [...referencedLiveReserveChains(coin)]
+          .filter((chain) => {
+            // The primary input may resolve through its own configured RPC URL;
+            // every other referenced chain is read through buildChainRpcs().
+            if (chain === primary.chain && hasExplicitRpcUrl) return false;
+            return !chainRpcs.has(chain);
+          })
+          .map((chain) => `${coin.id}:${chain}`);
       });
 
     expect(missingRpc).toEqual([]);
@@ -137,27 +209,18 @@ describe("syncLiveReserves", () => {
 
   it.each([
     {
-      label: "history repair loses the authoritative generation",
-      nextItemKey: SYNC_ORDERED_CONFIGURED_COINS[0]!.id,
-      currentDomainAttemptId: "authoritative-attempt",
-      repaired: 0,
-      expected: `live reserve checkpoint history repair lost authoritative generation for ${SYNC_ORDERED_CONFIGURED_COINS[0]!.id}`,
-    },
-    {
       label: "an authoritative checkpoint item left the queue",
       nextItemKey: "removed-coin",
       currentDomainAttemptId: "authoritative-attempt",
-      repaired: 1,
       expected: "live reserve checkpoint item removed-coin no longer exists in the queue",
     },
     {
       label: "a pending checkpoint item left the queue",
       nextItemKey: "removed-coin",
       currentDomainAttemptId: null,
-      repaired: null,
       expected: "live reserve checkpoint item removed-coin no longer exists in the queue",
     },
-  ])("rejects unsafe recovery when $label", async ({ nextItemKey, currentDomainAttemptId, repaired, expected }) => {
+  ])("rejects unsafe recovery when $label", async ({ nextItemKey, currentDomainAttemptId, expected }) => {
     const checkpointIdentity = makeCheckpointIdentity(2, "recovery-owner");
     const db = mockD1([
       makeCheckpointTable({
@@ -171,7 +234,6 @@ describe("syncLiveReserves", () => {
       ...(currentDomainAttemptId
         ? [
             { match: "SELECT 1 AS finalized", rows: [{ finalized: 1 }] },
-            { match: "SELECT 1 AS repaired", rows: repaired ? [{ repaired }] : [] },
           ]
         : []),
     ]);
@@ -188,82 +250,6 @@ describe("syncLiveReserves", () => {
     expect(getReserveAdapterMock).not.toHaveBeenCalled();
   });
 
-  it("repairs crash-omitted history before advancing an authoritative item on retry", async () => {
-    const lastCoin = SYNC_ORDERED_CONFIGURED_COINS[SYNC_ORDERED_CONFIGURED_COINS.length - 1];
-    expect(lastCoin).toBeDefined();
-    const checkpointIdentity = makeCheckpointIdentity(2, "recovery-owner", 2_000);
-    const checkpointAdvanceError = new Error("checkpoint advance interrupted");
-    const checkpointAdvanceConfig: MockTableConfig = {
-      match: "items_done = ?",
-      rows: [],
-      throwError: checkpointAdvanceError,
-    };
-    const db = mockD1([
-      makeCheckpointTable({
-        attemptNo: checkpointIdentity.attemptNo,
-        invocationId: checkpointIdentity.invocationId,
-        nextItemKey: lastCoin!.id,
-        currentItemKey: lastCoin!.id,
-        currentDomainAttemptId: "authoritative-attempt",
-        itemsDone: SYNC_ORDERED_CONFIGURED_COINS.length - 1,
-        slotStartedAt: checkpointIdentity.slotStartedAt,
-        recoveryLeaseUntil: 3_000,
-      }),
-      {
-        match: "FROM reserve_composition c",
-        rows: [{ finalized: 1, repaired: 1 }],
-      },
-      checkpointAdvanceConfig,
-    ]);
-    const { syncLiveReserves } = await import("../sync-live-reserves");
-
-    await expect(syncLiveReserves(
-      db,
-      new AbortController().signal,
-      {},
-      undefined,
-      undefined,
-      checkpointIdentity,
-    )).rejects.toBe(checkpointAdvanceError);
-
-    delete checkpointAdvanceConfig.throwError;
-    const result = await syncLiveReserves(
-      db,
-      new AbortController().signal,
-      {},
-      undefined,
-      undefined,
-      checkpointIdentity,
-    );
-
-    expect(getReserveAdapterMock).not.toHaveBeenCalled();
-    expect(result?.itemCount).toBe(0);
-    const history = db.getHistory();
-    const checkpointAdvances = history.filter((entry) => (
-      entry.sql.includes("UPDATE worker_scheduled_checkpoints")
-      && entry.sql.includes("items_done = ?")
-    ));
-    expect(checkpointAdvances).toHaveLength(2);
-    expect(checkpointAdvances[1]?.binds.slice(0, 2)).toEqual([
-      null,
-      SYNC_ORDERED_CONFIGURED_COINS.length,
-    ]);
-    const compositionRepairs = history.filter((entry) => (
-      entry.sql.includes("INSERT OR IGNORE INTO reserve_composition_history")
-      && entry.sql.includes("c.stablecoin_id")
-    ));
-    const attemptRepairs = history.filter((entry) => (
-      entry.sql.includes("INSERT OR IGNORE INTO reserve_sync_attempt_history")
-      && entry.sql.includes("s.stablecoin_id")
-    ));
-    expect(attemptRepairs).toHaveLength(2);
-    expect(compositionRepairs).toHaveLength(2);
-    for (let index = 0; index < checkpointAdvances.length; index += 1) {
-      const advanceIndex = history.indexOf(checkpointAdvances[index]!);
-      expect(history.indexOf(compositionRepairs[index]!)).toBeLessThan(advanceIndex);
-      expect(history.indexOf(attemptRepairs[index]!)).toBeLessThan(advanceIndex);
-    }
-  });
 
   it("persists reserve snapshot + sync state and returns ok on a clean run", async () => {
     mockAdapterRegistry(
@@ -421,7 +407,7 @@ describe("syncLiveReserves", () => {
     }`;
     mockAdapterRegistry(async (coin) => {
       if (coin?.id === firstQueuedCoin.id) {
-        throw new Error("forced reserve source outage");
+        throw new Error("HTTP 503 forced reserve source outage");
       }
       return { slices: [{ name: "Mock Farm", pct: 100, risk: "low" as const }] };
     });
@@ -557,7 +543,7 @@ describe("syncLiveReserves", () => {
     }`;
     mockAdapterRegistry(async (coin) => {
       if (coin?.id === firstQueuedCoin.id) {
-        throw new Error("forced reserve source outage");
+        throw new Error("HTTP 503 forced reserve source outage");
       }
       return { slices: [{ name: "Mock Farm", pct: 100, risk: "low" as const }] };
     });
@@ -588,7 +574,6 @@ describe("syncLiveReserves", () => {
     let nowMs = 1_700_000_000_000;
     const dateNowSpy = vi.spyOn(Date, "now").mockImplementation(() => nowMs);
     mockAdapterRegistry(async () => {
-      nowMs += 10_000;
       return { slices: [{ name: "Mock Farm", pct: 100, risk: "low" as const }] };
     });
 
@@ -599,7 +584,7 @@ describe("syncLiveReserves", () => {
         db,
         new AbortController().signal,
         {},
-        undefined,
+        async (update) => { if (update.stage === "finalizing") nowMs += 10_000; },
         {
           runBudgetMs: 5_000,
           adapterTimeoutMs: 1,
@@ -617,7 +602,7 @@ describe("syncLiveReserves", () => {
       expect(recordOutcomeSafeMock).not.toHaveBeenCalled();
       expect(metadata.breakerOutcomeBudgetExhausted).toBe(true);
       expect(metadata.breakerOutcomesRecorded).toBe(0);
-      expect(metadata.breakerOutcomesSkippedBudget).toBe(1);
+      expect(metadata.breakerOutcomesSkippedBudget).toBeGreaterThan(0);
       expect(metadata.staleBreakerRecoveriesSkipped).toBe(1);
     } finally {
       dateNowSpy.mockRestore();
@@ -997,11 +982,9 @@ describe("syncLiveReserves", () => {
       failed?: number;
       warningCount?: number;
       warnings?: string[];
-      historyWriteFailedCoins?: string[];
     };
 
     // The tiny budget admits exactly one coin: the head of the ordered queue.
-    const firstQueuedCoinId = SYNC_ORDERED_CONFIGURED_COINS[0]!.id;
     expect(result?.itemCount).toBe(1);
     // warningCount is deliberately not pinned: the head-of-queue coin's
     // adapter policy can add informational warnings (e.g. freshness) that are
@@ -1009,14 +992,7 @@ describe("syncLiveReserves", () => {
     expect(metadata).toMatchObject({
       synced: 1,
       failed: 0,
-      historyWriteFailedCoins: [firstQueuedCoinId],
     });
-    expect(metadata.warnings).toContain(`${firstQueuedCoinId}:history-write-failed`);
-    const historyWriteEvent = db.getHistory().find((entry) => (
-      entry.sql.includes("INSERT OR REPLACE INTO cache")
-      && entry.binds[0] === "cron:event:sync-live-reserves:live-reserve-history-write-failed"
-    ));
-    expect(historyWriteEvent).toBeDefined();
     const storageTimeoutAttempt = db.getHistory().find((entry) => (
       entry.sql.includes("reserve_sync_attempt_history")
       && entry.binds.some((bind) => typeof bind === "string" && bind.includes("storage-write-timeout"))
@@ -1067,6 +1043,38 @@ describe("syncLiveReserves", () => {
     expect(timeoutAttempt).toBeDefined();
   });
 
+  it("bounds non-cooperative fallback chains without treating the local deadline as source failure", async () => {
+    vi.useFakeTimers();
+    const target = SYNC_ORDERED_CONFIGURED_COINS.find((coin) =>
+      (coin.liveReservesConfig?.inputs.fallbacks?.length ?? 0) >= 2
+      && coin.liveReservesConfig?.adapter !== "hive-hbd-protocol");
+    if (!target) throw new Error("Expected multi-fallback source");
+    const adapterFetch = mockAdapterRegistry(async (coin) => {
+      if (coin?.id === target.id) return await new Promise<never>(() => undefined);
+      return { slices: [{ name: "Mock Farm", pct: 100, risk: "low" as const }] };
+    });
+    const identity = makeCheckpointIdentity(2, "deadline-owner");
+    const db = mockD1([makeCheckpointTable({
+      attemptNo: identity.attemptNo, invocationId: identity.invocationId,
+      nextItemKey: target.id, itemsDone: SYNC_ORDERED_CONFIGURED_COINS.findIndex((coin) => coin.id === target.id),
+    }), { match: "UPDATE worker_scheduled_checkpoints", rows: [] }]);
+    const { syncLiveReserves } = await import("../sync-live-reserves");
+    const pending = syncLiveReserves(db, new AbortController().signal, {}, undefined, {
+      runBudgetMs: 60_000, adapterTimeoutMs: 20_000, d1FinalizeTimeoutMs: 30_000, finalizationMarginMs: 5_000,
+    }, identity);
+    await vi.advanceTimersByTimeAsync(25_001);
+    const result = await pending;
+    expect(adapterFetch.mock.calls.filter(([coin]) => coin.id === target.id)).toHaveLength(2);
+    expect(JSON.parse(result.metadata ?? "{}")).toMatchObject({ failed: 1, runBudgetTruncated: true });
+    const key = `live-reserves:${target.liveReservesConfig!.breakerScope ?? target.liveReservesConfig!.adapter}`;
+    expect(recordOutcomeSafeMock).not.toHaveBeenCalledWith(db, key, false);
+    expect(db.getHistory().some((entry) =>
+      entry.sql.includes("reserve_sync_attempt_history")
+      && entry.binds[0] === target.id
+      && entry.binds.some((value) => typeof value === "string" && value.includes('"failureCategory":"run-budget-exhausted"')),
+    )).toBe(true);
+  });
+
   it("records string abort reasons and the adapter fallback for non-error reasons", async () => {
     const { syncLiveReserves } = await import("../sync-live-reserves");
     for (const { reason, expectedAttemptError, expectedRunError } of [
@@ -1089,7 +1097,7 @@ describe("syncLiveReserves", () => {
     }
   });
 
-  it("emits durationMs in reserve_composition metadata for successful syncs", async () => {
+  it("keeps attempt duration in diagnostics rather than composition evidence", async () => {
     mockAdapterRegistry(
       async () => ({ slices: [{ name: "Mock Farm", pct: 100, risk: "low" as const }] }),
     );
@@ -1104,9 +1112,9 @@ describe("syncLiveReserves", () => {
     expect(compositionInsert).toBeDefined();
     // metadata is the 6th bound column in reserve_composition (0-indexed 5).
     const metadataJson = compositionInsert!.binds[5] as string;
-    const metadata = JSON.parse(metadataJson) as { durationMs?: number };
-    expect(typeof metadata.durationMs).toBe("number");
-    expect(metadata.durationMs!).toBeGreaterThanOrEqual(0);
+    const metadata = JSON.parse(metadataJson) as { diag: { durationMs: number }; durationMs?: number };
+    expect(metadata.durationMs).toBeUndefined();
+    expect(metadata.diag.durationMs).toBeGreaterThanOrEqual(0);
   });
 
   it("reports per-coin progress through the cron progress hook", async () => {

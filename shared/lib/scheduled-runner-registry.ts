@@ -100,7 +100,7 @@ const SCHEDULED_SLOT_PLAN_INPUTS = {
   },
   digestTriggerPoll: {
     jobChains: [["daily-digest", "weekly-recap"]],
-    budgetOnlyJobs: ["telegram-digest-outbox-drain", "digest-trigger-poll"],
+    budgetOnlyJobs: ["telegram-digest-outbox-drain", "daily-social-delivery", "digest-trigger-poll"],
   },
   daily0300Utc: {
     jobChains: [[

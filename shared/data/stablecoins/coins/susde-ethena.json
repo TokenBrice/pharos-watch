@@ -191,6 +191,9 @@
       }
     },
     "params": {
+      "redemptionLock": [
+        { "selector": "cooldownDuration()", "kind": "cooldown-seconds" }
+      ],
       "slice": {
         "name": "USDe staking vault shares",
         "risk": "medium",

@@ -1,41 +1,83 @@
-import type { StablecoinMeta } from "@shared/types/core";
-import { beforeEach, describe, expect, it, vi } from "vitest";
-
-vi.mock("../helpers", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("../helpers")>();
-  return {
-    ...actual,
-    fetchJsonWithRetry: vi.fn(),
-    fetchJsonPostWithRetry: vi.fn(),
-  };
-});
-
-import { fetchJsonPostWithRetry, fetchJsonWithRetry } from "../helpers";
+import { describe, expect, it } from "vitest";
 import {
   adaptUsddLatestCollateral,
   buildUsddHistoryUrl,
-  fetchUsddDataPlatformReserves,
 } from "../usdd-data-platform";
-import { expectValidAdapterOutput } from "./reserve-adapter.test-support";
-let signal: AbortSignal;
+import {
+  expectValidAdapterOutput,
+  expectWarningEffect,
+  expectWarnings,
+  runAdapter,
+  type AdapterNetworkSpec,
+} from "./reserve-adapter.test-support";
 
-const coin = {
-  id: "usdd-decentralized-usd",
-  name: "USDD",
-  symbol: "USDD",
-  flags: {
-    backing: "crypto-backed",
-    pegCurrency: "USD",
-    governance: "centralized",
-    yieldBearing: false,
-    rwa: false,
-    navToken: false,
-  },
-} as const satisfies StablecoinMeta;
-beforeEach(() => {
-  vi.clearAllMocks();
-  signal = new AbortController().signal;
-});
+const TRON_LATEST = "https://app-api.usdd.io/data-platform/latest-collateral?chain=tron";
+const TRON_HISTORY = "https://app-api.usdd.io/data-platform/collateral-history?interval=WEEKLY&chain=tron";
+const ETHEREUM_LATEST = "https://app-api.usdd.io/data-platform/latest-collateral?chain=ethereum";
+const ETHEREUM_HISTORY = "https://app-api.usdd.io/data-platform/collateral-history?interval=WEEKLY&chain=ethereum";
+const TRON_GRID = "https://api.trongrid.io/wallet/triggerconstantcontract";
+
+const HISTORY_TIMESTAMP = 1_774_281_600_000;
+
+function collateralResponse(items: Array<{ vaultType: string; lockedValue: number }>) {
+  return { code: 0, data: { items } };
+}
+
+function historyResponse(statisticTime: number | undefined = HISTORY_TIMESTAMP) {
+  return { code: 0, data: { items: statisticTime === undefined ? [] : [{ statisticTime }] } };
+}
+const GEM_JOIN_WORD = "000000000000000000000000b50eb419ebeba06c80df5e9aaec494cef4297879";
+const USDD_WORD = "000000000000000000000000e91a7411e56ce79e83570570f49b9fc35b7727c5";
+const GEM_JOIN_BALANCE_RAW = 33_195_883_987_282n;
+
+type TronCallBody = {
+  contract_address?: string;
+  function_selector?: string;
+  parameter?: string;
+};
+
+function toWord(value: bigint): string {
+  return value.toString(16).padStart(64, "0");
+}
+
+function defaultPsmWords(): Record<string, string | null> {
+  return {
+    "gemJoin()": GEM_JOIN_WORD,
+    "usdd()": USDD_WORD,
+    "buyEnabled()": toWord(1n),
+    "tout()": toWord(0n),
+    "balanceOf(address)": toWord(GEM_JOIN_BALANCE_RAW),
+  };
+}
+
+function tronNetwork(options: {
+  words?: Record<string, string | null>;
+  fail?: boolean;
+} = {}): {
+  spec: AdapterNetworkSpec;
+  calls: TronCallBody[];
+} {
+  const calls: TronCallBody[] = [];
+  const words = options.words ?? defaultPsmWords();
+  return {
+    spec: {
+      json: {
+        [TRON_LATEST]: collateralResponse([{ vaultType: "PSM-USDT-A", lockedValue: 100 }]),
+        [TRON_HISTORY]: historyResponse(),
+        [TRON_GRID]: async (request: Request) => {
+          if (options.fail) throw new Error("trongrid down");
+          const body = await request.clone().json() as TronCallBody;
+          calls.push(body);
+          const word = words[body.function_selector ?? ""];
+          return word == null
+            ? { result: { result: false } }
+            : { result: { result: true }, constant_result: [word] };
+        },
+      },
+    },
+    calls,
+  };
+}
 
 describe("adaptUsddLatestCollateral", () => {
   it("maps the USDD collateral feed into detail-page reserve slices", () => {
@@ -65,11 +107,11 @@ describe("adaptUsddLatestCollateral", () => {
     );
 
     expect(result.slices).toEqual([
-      { name: "Smart Allocator (stablecoin DeFi via Aave/JustLend)", pct: 50.4, risk: "medium" },
-      { name: "TRX", pct: 39.7, risk: "high" },
-      { name: "USDT (PSM vaults)", pct: 8, risk: "low", coinId: "usdt-tether", depType: "collateral" },
-      { name: "sTRX (direct vaults)", pct: 1.8, risk: "high" },
-      { name: "USDT (direct vaults)", pct: 0.1, risk: "high", coinId: "usdt-tether" },
+      { sourceKey: "usdd-data-platform:smart-allocator", name: "Smart Allocator (stablecoin DeFi via Aave/JustLend)", pct: 50.4, risk: "medium" },
+      { sourceKey: "usdd-data-platform:trx", name: "TRX", pct: 39.7, risk: "high" },
+      { sourceKey: "usdd-data-platform:psm-usdt", name: "USDT (PSM vaults)", pct: 8, risk: "low", coinId: "usdt-tether", depType: "collateral" },
+      { sourceKey: "usdd-data-platform:staked-trx", name: "sTRX (direct vaults)", pct: 1.8, risk: "high" },
+      { sourceKey: "usdd-data-platform:direct-usdt", name: "USDT (direct vaults)", pct: 0.1, risk: "high", coinId: "usdt-tether" },
     ]);
     expect(result.metadata).toMatchObject({
       vaultCount: 7,
@@ -94,15 +136,11 @@ describe("adaptUsddLatestCollateral", () => {
     });
 
     expect(result.slices).toEqual([
-      { name: "Smart Allocator (stablecoin DeFi via Aave/JustLend)", pct: 75, risk: "medium" },
-      { name: "Unknown / unmapped collateral vaults", pct: 25, risk: "high" },
+      { sourceKey: "usdd-data-platform:smart-allocator", name: "Smart Allocator (stablecoin DeFi via Aave/JustLend)", pct: 75, risk: "medium" },
+      { sourceKey: "usdd-data-platform:unknown", name: "Unknown / unmapped collateral vaults", pct: 25, risk: "high" },
     ]);
-    expect(result.warnings).toEqual([{
-      code: "unknown-vault-type",
-      message: "USDD collateral feed includes unmapped vault types: RWA-A (25.00% of reserves)",
-      severity: "warning",
-      effect: "degraded",
-    }]);
+    expectWarnings(result, ["unknown-vault-type"]);
+    expectWarningEffect(result, "unknown-vault-type", "degraded");
     expect(result.metadata).toMatchObject({
       vaultCount: 2,
       trackedVaultCount: 5,
@@ -124,113 +162,65 @@ describe("adaptUsddLatestCollateral", () => {
 
 describe("buildUsddHistoryUrl", () => {
   it("derives the matching history endpoint from the active latest-collateral URL", () => {
-    expect(buildUsddHistoryUrl("https://app-api.usdd.io/data-platform/latest-collateral?chain=ethereum"))
-      .toBe("https://app-api.usdd.io/data-platform/collateral-history?interval=WEEKLY&chain=ethereum");
+    expect(buildUsddHistoryUrl(ETHEREUM_LATEST)).toBe(ETHEREUM_HISTORY);
   });
 });
 
 describe("fetchUsddDataPlatformReserves", () => {
-  it("fetches history from the same configured chain as the latest collateral source", async () => {
-    vi.mocked(fetchJsonWithRetry)
-      .mockResolvedValueOnce({
-        code: 0,
-        data: {
-          items: [{ vaultType: "USDT-A", lockedValue: 100 }],
-        },
-      })
-      .mockResolvedValueOnce({
-        code: 0,
-        data: {
-          items: [{ statisticTime: 1_774_281_600_000 }],
-        },
-      });
-
-    const config = {
-      adapter: "usdd-data-platform",
-      version: 1,
-      semantics: "collateral-mix",
-      inputs: {
-        primary: {
-          kind: "http-json",
-          url: "https://app-api.usdd.io/data-platform/latest-collateral?chain=ethereum",
+  it("fetches history from the same configured chain as the active collateral source", async () => {
+    const { result } = await runAdapter("usdd-data-platform", "usdd-tron-dao-reserve", {
+      config: {
+        inputs: {
+          primary: { kind: "http-json", url: ETHEREUM_LATEST },
         },
       },
-    } as const;
-
-    const result = await fetchUsddDataPlatformReserves(coin, config, signal);
+      network: {
+        json: {
+          [ETHEREUM_LATEST]: collateralResponse([{ vaultType: "USDT-A", lockedValue: 100 }]),
+          [ETHEREUM_HISTORY]: historyResponse(),
+        },
+      },
+      nowSec: HISTORY_TIMESTAMP / 1_000 + 3_600,
+    });
 
     expect(result.slices).toEqual([
-      { name: "USDT (direct vaults)", pct: 100, risk: "high", coinId: "usdt-tether" },
+      { sourceKey: "usdd-data-platform:direct-usdt", name: "USDT (direct vaults)", pct: 100, risk: "high", coinId: "usdt-tether" },
     ]);
-    expect(fetchJsonWithRetry).toHaveBeenNthCalledWith(
-      1,
-      "https://app-api.usdd.io/data-platform/latest-collateral?chain=ethereum",
-      signal,
-      12_000,
-      undefined,
-    );
-    expect(fetchJsonWithRetry).toHaveBeenNthCalledWith(
-      2,
-      "https://app-api.usdd.io/data-platform/collateral-history?interval=WEEKLY&chain=ethereum",
-      signal,
-      12_000,
-      undefined,
-    );
+  });
+
+  it("fails closed when the provider drops the response status field", async () => {
+    await expect(runAdapter("usdd-data-platform", "usdd-tron-dao-reserve", {
+      network: {
+        json: {
+          [TRON_LATEST]: { data: { items: [{ vaultType: "PSM-USDT-A", lockedValue: 100 }] } },
+          [TRON_HISTORY]: historyResponse(),
+        },
+      },
+      nowSec: HISTORY_TIMESTAMP / 1_000 + 3_600,
+      validate: false,
+    })).rejects.toThrow("returned code");
+  });
+  it("fails closed when a collateral row drops lockedValue", async () => {
+    await expect(runAdapter("usdd-data-platform", "usdd-tron-dao-reserve", {
+      network: {
+        json: {
+          [TRON_LATEST]: { code: 0, data: { items: [{ vaultType: "PSM-USDT-A" }] } },
+          [TRON_HISTORY]: historyResponse(),
+        },
+      },
+      nowSec: HISTORY_TIMESTAMP / 1_000 + 3_600,
+      validate: false,
+    })).rejects.toThrow("collateral item 0 lockedValue");
   });
 });
 
 describe("fetchUsddDataPlatformReserves Tron PSM redemption telemetry", () => {
-  // Verified on Tron mainnet 2026-08-12 via TronGrid triggerconstantcontract.
-  const GEM_JOIN_WORD = "000000000000000000000000b50eb419ebeba06c80df5e9aaec494cef4297879";
-  const USDD_WORD = "000000000000000000000000e91a7411e56ce79e83570570f49b9fc35b7727c5";
-  const GEM_JOIN_BALANCE_RAW = 33_195_883_987_282n;
-
-  function toWord(value: bigint): string {
-    return value.toString(16).padStart(64, "0");
-  }
-
-  function defaultPsmWords(): Record<string, string | null> {
-    return {
-      "gemJoin()": GEM_JOIN_WORD,
-      "usdd()": USDD_WORD,
-      "buyEnabled()": toWord(1n),
-      "tout()": toWord(0n),
-      "balanceOf(address)": toWord(GEM_JOIN_BALANCE_RAW),
-    };
-  }
-
-  function mockPsmReads(words: Record<string, string | null>): void {
-    vi.mocked(fetchJsonPostWithRetry).mockImplementation(async (_url, body) => {
-      const { function_selector: selector } = body as { function_selector: string };
-      const word = words[selector];
-      return word == null
-        ? { result: { result: false } }
-        : { result: { result: true }, constant_result: [word] };
-    });
-  }
-
-  const tronConfig = {
-    adapter: "usdd-data-platform",
-    version: 1,
-    semantics: "collateral-mix",
-    inputs: {
-      primary: {
-        kind: "http-json",
-        url: "https://app-api.usdd.io/data-platform/latest-collateral?chain=tron",
-      },
-    },
-  } as const;
-
-  beforeEach(() => {
-    vi.mocked(fetchJsonWithRetry)
-      .mockResolvedValueOnce({ code: 0, data: { items: [{ vaultType: "PSM-USDT-A", lockedValue: 100 }] } })
-      .mockResolvedValueOnce({ code: 0, data: { items: [{ statisticTime: 1_774_281_600_000 }] } });
-  });
-
   it("publishes the GemJoin's USDT balance as live-direct PSM capacity", async () => {
-    mockPsmReads(defaultPsmWords());
-
-    const result = await fetchUsddDataPlatformReserves(coin, tronConfig, signal);
+    const { spec } = tronNetwork();
+    const { result } = await runAdapter("usdd-data-platform", "usdd-tron-dao-reserve", {
+      network: spec,
+      nowSec: HISTORY_TIMESTAMP / 1_000 + 3_600,
+    });
 
     expect(result.metadata?.redemption).toMatchObject({
       capacityUsd: 33_195_883.987282,
@@ -251,41 +241,52 @@ describe("fetchUsddDataPlatformReserves Tron PSM redemption telemetry", () => {
   });
 
   it("reads the balance of the address the PSM itself reports as its GemJoin", async () => {
-    mockPsmReads(defaultPsmWords());
-
-    await fetchUsddDataPlatformReserves(coin, tronConfig, signal);
-
-    const balanceCall = vi
-      .mocked(fetchJsonPostWithRetry)
-      .mock.calls.find(([, body]) => (body as { function_selector: string }).function_selector === "balanceOf(address)");
-    expect(balanceCall?.[0]).toBe("https://api.trongrid.io/wallet/triggerconstantcontract");
-    expect(balanceCall?.[1]).toMatchObject({
-      contract_address: "41a614f803b6fd780986a42c78ec9c7f77e6ded13c",
-      parameter: GEM_JOIN_WORD,
+    const { spec, calls } = tronNetwork();
+    await runAdapter("usdd-data-platform", "usdd-tron-dao-reserve", {
+      network: spec,
+      nowSec: HISTORY_TIMESTAMP / 1_000 + 3_600,
     });
+
+    const balanceCall = calls.find((call) => call.function_selector === "balanceOf(address)");
+    expect(balanceCall?.contract_address).toBe("41a614f803b6fd780986a42c78ec9c7f77e6ded13c");
+    expect(balanceCall?.parameter).toBe(
+      GEM_JOIN_WORD,
+    );
   });
 
   it("converts a nonzero WAD tout into basis points", async () => {
-    mockPsmReads({ ...defaultPsmWords(), "tout()": toWord(1_000_000_000_000_000n) });
-
-    const result = await fetchUsddDataPlatformReserves(coin, tronConfig, signal);
+    const { spec } = tronNetwork({
+      words: { ...defaultPsmWords(), "tout()": toWord(1_000_000_000_000_000n) },
+    });
+    const { result } = await runAdapter("usdd-data-platform", "usdd-tron-dao-reserve", {
+      network: spec,
+      nowSec: HISTORY_TIMESTAMP / 1_000 + 3_600,
+    });
 
     expect(result.metadata?.redemption).toMatchObject({ feeBps: 10 });
-    expect(result.metadata?.redemptionFeeBps).toBe(10);
+    expect(result.metadata).not.toHaveProperty("redemptionFeeBps");
   });
 
   it("reports a zero GemJoin balance as an open route with no capacity", async () => {
-    mockPsmReads({ ...defaultPsmWords(), "balanceOf(address)": toWord(0n) });
-
-    const result = await fetchUsddDataPlatformReserves(coin, tronConfig, signal);
+    const { spec } = tronNetwork({
+      words: { ...defaultPsmWords(), "balanceOf(address)": toWord(0n) },
+    });
+    const { result } = await runAdapter("usdd-data-platform", "usdd-tron-dao-reserve", {
+      network: spec,
+      nowSec: HISTORY_TIMESTAMP / 1_000 + 3_600,
+    });
 
     expect(result.metadata?.redemption).toMatchObject({ capacityUsd: 0, routeStatus: "open" });
   });
 
   it("marks the route paused when buyGem is disabled", async () => {
-    mockPsmReads({ ...defaultPsmWords(), "buyEnabled()": toWord(0n) });
-
-    const result = await fetchUsddDataPlatformReserves(coin, tronConfig, signal);
+    const { spec } = tronNetwork({
+      words: { ...defaultPsmWords(), "buyEnabled()": toWord(0n) },
+    });
+    const { result } = await runAdapter("usdd-data-platform", "usdd-tron-dao-reserve", {
+      network: spec,
+      nowSec: HISTORY_TIMESTAMP / 1_000 + 3_600,
+    });
 
     expect(result.metadata?.redemption).toMatchObject({
       capacityUsd: 33_195_883.987282,
@@ -294,9 +295,13 @@ describe("fetchUsddDataPlatformReserves Tron PSM redemption telemetry", () => {
   });
 
   it("withholds redemption telemetry when a read fails", async () => {
-    mockPsmReads({ ...defaultPsmWords(), "balanceOf(address)": null });
-
-    const result = await fetchUsddDataPlatformReserves(coin, tronConfig, signal);
+    const { spec } = tronNetwork({
+      words: { ...defaultPsmWords(), "balanceOf(address)": null },
+    });
+    const { result } = await runAdapter("usdd-data-platform", "usdd-tron-dao-reserve", {
+      network: spec,
+      nowSec: HISTORY_TIMESTAMP / 1_000 + 3_600,
+    });
 
     expect(result.metadata?.redemption).toBeUndefined();
     expect(result.metadata?.psmGemJoinBalanceRaw).toBeUndefined();
@@ -304,38 +309,46 @@ describe("fetchUsddDataPlatformReserves Tron PSM redemption telemetry", () => {
   });
 
   it("withholds redemption telemetry when the PSM no longer points at the pinned GemJoin", async () => {
-    mockPsmReads({
-      ...defaultPsmWords(),
-      "gemJoin()": "0000000000000000000000001111111111111111111111111111111111111111",
+    const { spec } = tronNetwork({
+      words: {
+        ...defaultPsmWords(),
+        "gemJoin()": "0000000000000000000000001111111111111111111111111111111111111111",
+      },
     });
-
-    const result = await fetchUsddDataPlatformReserves(coin, tronConfig, signal);
+    const { result } = await runAdapter("usdd-data-platform", "usdd-tron-dao-reserve", {
+      network: spec,
+      nowSec: HISTORY_TIMESTAMP / 1_000 + 3_600,
+    });
 
     expect(result.metadata?.redemption).toBeUndefined();
   });
 
   it("withholds redemption telemetry when the request throws", async () => {
-    vi.mocked(fetchJsonPostWithRetry).mockRejectedValue(new Error("trongrid down"));
-
-    const result = await fetchUsddDataPlatformReserves(coin, tronConfig, signal);
+    const { spec } = tronNetwork({ fail: true });
+    const { result } = await runAdapter("usdd-data-platform", "usdd-tron-dao-reserve", {
+      network: spec,
+      nowSec: HISTORY_TIMESTAMP / 1_000 + 3_600,
+    });
 
     expect(result.metadata?.redemption).toBeUndefined();
   });
 
   it("skips the Tron PSM probe when the configured collateral feed is not Tron", async () => {
-    mockPsmReads(defaultPsmWords());
-
-    const result = await fetchUsddDataPlatformReserves(coin, {
-      ...tronConfig,
-      inputs: {
-        primary: {
-          kind: "http-json",
-          url: "https://app-api.usdd.io/data-platform/latest-collateral?chain=ethereum",
+    const { result } = await runAdapter("usdd-data-platform", "usdd-tron-dao-reserve", {
+      config: {
+        inputs: {
+          primary: { kind: "http-json", url: ETHEREUM_LATEST },
         },
       },
-    } as const, signal);
+      network: {
+        json: {
+          [ETHEREUM_LATEST]: collateralResponse([{ vaultType: "USDT-A", lockedValue: 100 }]),
+          [ETHEREUM_HISTORY]: historyResponse(),
+        },
+      },
+      nowSec: HISTORY_TIMESTAMP / 1_000 + 3_600,
+    });
 
     expect(result.metadata?.redemption).toBeUndefined();
-    expect(fetchJsonPostWithRetry).not.toHaveBeenCalled();
   });
 });

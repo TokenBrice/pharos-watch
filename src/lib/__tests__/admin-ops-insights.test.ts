@@ -52,23 +52,17 @@ describe("admin ops insights", () => {
     expect(forecast.detail).toContain("48 coin(s) remain deferred");
   });
 
-  it("prioritizes stale leases and cursor-tail failures over deferred catch-up", () => {
-    for (const blocker of ["lease", "cursor"]) {
-      const data = withReservePressure(makeHealthyStatusResponse());
-      if (blocker === "lease") {
-        data.crons["sync-live-reserves"].inFlight = { startedAt: 1, updatedAt: 1, stale: true };
-      } else {
-        data.reserveComposition.cursorTailError = "cursor write failed";
-      }
-      expect(buildReserveRecoveryForecast(data).state).toBe("blocked");
-      const checks = buildActionReadinessChecks({
-        data, healthData: makeHealthyHealthResponse(), clientDataStale: false, recommendedActions: [],
-      });
-      expect(checks.filter((check) => ["reserve-lane", "reserve-cursor"].includes(check.id))
-        .map(({ id, state }) => [id, state])).toEqual([
-        ["reserve-lane", "blocked"], ["reserve-cursor", "blocked"],
-      ]);
-    }
+  it("prioritizes stale leases over deferred catch-up", () => {
+    const data = withReservePressure(makeHealthyStatusResponse());
+    data.crons["sync-live-reserves"].inFlight = { startedAt: 1, updatedAt: 1, stale: true };
+    expect(buildReserveRecoveryForecast(data).state).toBe("blocked");
+    const checks = buildActionReadinessChecks({
+      data, healthData: makeHealthyHealthResponse(), clientDataStale: false, recommendedActions: [],
+    });
+    expect(checks.filter((check) => ["reserve-lane", "reserve-cursor"].includes(check.id))
+      .map(({ id, state }) => [id, state])).toEqual([
+      ["reserve-lane", "blocked"], ["reserve-cursor", "blocked"],
+    ]);
   });
 
   it("rounds throughput boundaries up to whole scheduled runs", () => {

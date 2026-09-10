@@ -15,6 +15,26 @@ describe("buildChainRpcs", () => {
     expect(tempo?.alchemyPrimary).toBeUndefined();
   });
 
+  it.each([
+    ["plume", "Plume", "https://rpc.plume.org", "https://explorer.plumenetwork.xyz"],
+    ["monad", "Monad", "https://rpc.monad.xyz", "https://explorer.monad.xyz"],
+    ["mantle", "Mantle", "https://rpc.mantle.xyz", "https://mantlescan.xyz"],
+    ["morph-l2", "Morph", "https://rpc.morphl2.io", "https://explorer.morphl2.io"],
+    ["abcore", "AB Core", "https://rpc.core.ab.org", "https://explorer.core.ab.org"],
+    ["xlayer", "X Layer", "https://rpc.xlayer.tech", "https://www.oklink.com/xlayer"],
+  ])("includes public-only %s RPC resolution for usd1 supply aggregation", (chainId, chainName, rpcUrl, explorerUrl) => {
+    const config = buildChainRpcs().get(chainId);
+
+    expect(config).toMatchObject({
+      chainId,
+      chainName,
+      type: "evm",
+      rpcUrl,
+      explorerUrl,
+    });
+    expect(config?.alchemyPrimary).toBeUndefined();
+  });
+
   it("keeps Alchemy API keys out of RPC URLs", () => {
     const ethereum = buildChainRpcs("test-key").get("ethereum");
 

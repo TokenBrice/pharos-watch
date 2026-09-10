@@ -10,6 +10,15 @@ import { getReserveAdapter } from "../index";
 import { validateAdapterOutput } from "../validate";
 
 describe("adaptEthenaCollateral", () => {
+  it("rejects drift removing totalBackingAssetsInUsd", () => {
+    const payload: EthenaCollateralResponse = {
+      totalBackingAssetsInUsd: 100,
+      collateral: [{ asset: "Liquid Cash", exchange: "Binance", timestamp: 1, usdAmount: 100 }],
+    };
+    Reflect.deleteProperty(payload, "totalBackingAssetsInUsd");
+    expect(() => adaptEthenaCollateral(payload)).toThrow(/totalBackingAssetsInUsd/);
+  });
+
   it("groups Ethena collateral into reserve buckets", () => {
     const payload: EthenaCollateralResponse = {
       totalBackingAssetsInUsd: 100,
@@ -25,10 +34,10 @@ describe("adaptEthenaCollateral", () => {
     const result = adaptEthenaCollateral(payload);
 
     expect(result.slices).toEqual([
-      { name: "Liquid Cash strategy basket", pct: 35, risk: "medium" },
-      { name: "ETH / liquid staking collateral", pct: 30, risk: "medium" },
-      { name: "BTC collateral", pct: 20, risk: "medium" },
-      { name: "Other crypto collateral", pct: 15, risk: "high" },
+      { sourceKey: "ethena:stable", name: "Liquid Cash strategy basket", pct: 35, risk: "medium" },
+      { sourceKey: "ethena:eth", name: "ETH / liquid staking collateral", pct: 30, risk: "medium" },
+      { sourceKey: "ethena:btc", name: "BTC collateral", pct: 20, risk: "medium" },
+      { sourceKey: "ethena:other", name: "Other crypto collateral", pct: 15, risk: "high" },
     ]);
     expect(result.metadata).toMatchObject({
       assetCount: 5,
@@ -89,6 +98,33 @@ describe("adaptEthenaCollateral", () => {
       sourceTimestampCount: 2,
     });
     expect(result.warnings?.some((warning) => warning.code === "source-timestamp-spread")).toBe(true);
+  });
+
+  it("withholds verified freshness when material rows lack timestamps", () => {
+    const payload: EthenaCollateralResponse = {
+      totalBackingAssetsInUsd: 100,
+      collateral: [
+        // 99 material rows with no timestamp, one with a valid one: the 1%
+        // must not stand in for the whole composition's freshness.
+        { asset: "Liquid Cash", exchange: "Binance", timestamp: 1_000, usdAmount: 1 },
+        { asset: "BTC", exchange: "Binance", timestamp: Number.NaN, usdAmount: 99 },
+        // Zero rows need no clock and must not count against coverage.
+        { asset: "ETH", exchange: "Binance", timestamp: Number.NaN, usdAmount: 0 },
+      ],
+    };
+
+    const result = adaptEthenaCollateral(payload);
+
+    expect(result.metadata).toMatchObject({
+      freshnessMode: "unverified",
+      details: {
+        freshnessSource: "issuer-api",
+        freshnessReason: expect.stringContaining("omitted source timestamps for 1 of 2 material rows"),
+      },
+    });
+    expect(result.warnings).toEqual(expect.arrayContaining([
+      expect.objectContaining({ code: "source-timestamp-coverage", effect: "degraded" }),
+    ]));
   });
 
   it("does not treat the mixed Liquid Cash bucket as redemption capacity", () => {

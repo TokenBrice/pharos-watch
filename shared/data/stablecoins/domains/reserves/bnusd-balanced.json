@@ -3,6 +3,7 @@
   "reserves": [
     {
       "name": "sodahyTB (SODAX-wrapped HiYield Treasury Bill Vault) borrower collateral",
+      "sourceKey": "sodax-sonic:0xd806e60e3929c7f62ce22f9b132801ae98dd1cd8",
       "pct": 32.16872978,
       "risk": "medium",
       "blacklistable": true,
@@ -21,6 +22,7 @@
     },
     {
       "name": "sodaUSDC (SODAX-wrapped USDC) borrower collateral",
+      "sourceKey": "sodax-sonic:0xabbb91c0617090f0028bdc27597cd0d038f3a833",
       "pct": 19.84762818,
       "risk": "low",
       "coinId": "usdc-circle",
@@ -39,6 +41,7 @@
     },
     {
       "name": "sodaBTC (SODAX-wrapped BTC family) borrower collateral",
+      "sourceKey": "sodax-sonic:0x7a1a5555842ad2d0ed274d09b5c4406a95799d5d",
       "pct": 9.76503988,
       "risk": "medium",
       "assetClass": "cryptoasset",
@@ -53,6 +56,7 @@
     },
     {
       "name": "sodaBNB (SODAX-wrapped BNB) borrower collateral",
+      "sourceKey": "sodax-sonic:0x40cd41b35db9e5109ae7e54b44de8625db320e6b",
       "pct": 6.04190304,
       "risk": "high",
       "assetClass": "cryptoasset",
@@ -67,6 +71,7 @@
     },
     {
       "name": "sodaAVAX (SODAX-wrapped AVAX) borrower collateral",
+      "sourceKey": "sodax-sonic:0x14238d267557e9d799016ad635b53cd15935d290",
       "pct": 3.17779144,
       "risk": "high",
       "assetClass": "cryptoasset",
@@ -81,6 +86,7 @@
     },
     {
       "name": "sodaSUI (SODAX-wrapped SUI) borrower collateral",
+      "sourceKey": "sodax-sonic:0xdc5b4b00f98347e95b9f94911213dab4c687e1e3",
       "pct": 2.98382253,
       "risk": "high",
       "assetClass": "cryptoasset",
@@ -95,6 +101,7 @@
     },
     {
       "name": "sodasftUSD (SODAX-wrapped staked ftUSD) borrower collateral",
+      "sourceKey": "sodax-sonic:0x0902b2bc326ab373be4fe20605690b0422998685",
       "pct": 2.76423407,
       "risk": "medium",
       "coinId": "ftusd-flying-tulip",
@@ -111,6 +118,7 @@
     },
     {
       "name": "sodaETH (SODAX-wrapped ETH family) borrower collateral",
+      "sourceKey": "sodax-sonic:0x4effb5813271699683c25c734f4dabc45b363709",
       "pct": 2.4501142,
       "risk": "very-low",
       "assetClass": "cryptoasset",
@@ -125,6 +133,7 @@
     },
     {
       "name": "sodaUSDT (SODAX-wrapped USDT) borrower collateral",
+      "sourceKey": "sodax-sonic:0xbdf1f453fcb61424011bbddcb96cfdb30f3fe876",
       "pct": 13.03781973,
       "risk": "low",
       "coinId": "usdt-tether",
@@ -143,6 +152,7 @@
     },
     {
       "name": "sodaWEETH (SODAX-wrapped weETH) borrower collateral",
+      "sourceKey": "sodax-sonic:0xcb6b152d3a943f25157381afca7fefcd2ef5a357",
       "pct": 1.70595983,
       "risk": "low",
       "assetClass": "cryptoasset",
@@ -158,6 +168,7 @@
     },
     {
       "name": "sodaSODA (SODAX governance token) borrower collateral",
+      "sourceKey": "sodax-sonic:0x21685e341de7844135329914be6bd8d16982d834",
       "pct": 2.43599211,
       "risk": "very-high",
       "assetClass": "cryptoasset",
@@ -172,6 +183,7 @@
     },
     {
       "name": "sodaHYPE (SODAX-wrapped HYPE) borrower collateral",
+      "sourceKey": "sodax-sonic:0x6e81124fc5d2bf666b16a0a5d90066ebf35c7411",
       "pct": 1.22269177,
       "risk": "high",
       "assetClass": "cryptoasset",
@@ -186,6 +198,7 @@
     },
     {
       "name": "sodaSOL (SODAX-wrapped SOL) borrower collateral",
+      "sourceKey": "sodax-sonic:0xdea692287e2ce8cb08fa52917be0f16b1dacdc87",
       "pct": 0.78975098,
       "risk": "high",
       "assetClass": "cryptoasset",
@@ -200,6 +213,7 @@
     },
     {
       "name": "sodaWSTETH (SODAX-wrapped wstETH) borrower collateral",
+      "sourceKey": "sodax-sonic:0x58b0538d7eeaee69ef32f9f1de5cbf32a10a977b",
       "pct": 0.76929741,
       "risk": "low",
       "assetClass": "cryptoasset",
@@ -258,7 +272,7 @@
         "url": "https://coins.llama.fi/prices/current"
       }
     ],
-    "rationale": "Current-source re-measurement at Sonic block 77819356 (2026-08-20T14:21:05Z), replacing the 2026-07-30 envelope. The facilitator bucket reports currentBorrowed = 1,313,027.46 bnUSD (cap 2,500,000); the SODAX API enumerates 50 current borrowers and 24 nonzero reserve positions. Summing every borrower aToken balance and pricing each reserve with the pool Aave oracle getAssetPrice at the current Sonic read gives total backing $3,613,750.65 and collateralizationRatio 2.752228. Composition: sodahyTB $1,162,497 (32.16872978%), sodaUSDC $717,244 (19.84762818%), sodaUSDT $471,154 (13.03781973%), sodaBTC $352,884 (9.76503988%), sodaBNB $218,339 (6.04190304%), sodaAVAX $114,838 (3.17779144%), sodaSUI $107,827 (2.98382253%), sodasftUSD $99,893 (2.76423407%), sodaETH $88,541 (2.45011420%), sodaSODA $88,030 (2.43599211%), sodaWEETH $61,649 (1.70595983%), sodaHYPE $44,185 (1.22269177%), sodaSOL $28,540 (0.78975098%), sodaWSTETH $27,800 (0.76929741%), and a fully enumerated 0.83922505% tail (sodaNEAR, sodaPOL, sodaXLM, bnUSD, sodaS, sodaINJ, sodaWBTC, sodaKAIA, sodaLL, sodaSUSDS dust). The latest position set still includes the full borrower-collateral base; the Stability Fund's approved-stablecoin swaps mint through the same facilitator and are therefore not an additive unmeasured layer. At Sonic block 78468970, sodasftUSD 0x0902...8685 reported supported token 0xd1e5...aeb1, identified on-chain as sftUSD; sftUSD asset() returned 0xf7d85ec4e7710f71992752eac2111312e73e9c9c, the exact tracked Sonic ftUSD contract, and convertToAssets(1e6) returned 1e6. The 2.76423407% sodasftUSD slice is therefore linked through the wrappers to ftusd-flying-tulip. hyTB remains identified as HiYield Treasury Bill Vault (SnowTrace token 0x8475509d391e6ee5A8b7133221CE17019D307B3E); the SODAX audits index still lists no report scoped to the hub EVM money-market Pool.",
+    "rationale": "Current-source re-measurement at Sonic block 77819356 (2026-08-20T14:21:05Z), replacing the 2026-07-30 envelope. The facilitator bucket reports currentBorrowed = 1,313,027.46 bnUSD (cap 2,500,000); the SODAX API enumerates 50 current borrowers and 24 nonzero reserve positions. Summing every borrower aToken balance and pricing each reserve with the pool Aave oracle getAssetPrice at the current Sonic read gives total backing $3,613,750.65 and collateralizationRatio 2.752228. Composition: sodahyTB $1,162,497 (32.16872978%), sodaUSDC $717,244 (19.84762818%), sodaUSDT $471,154 (13.03781973%), sodaBTC $352,884 (9.76503988%), sodaBNB $218,339 (6.04190304%), sodaAVAX $114,838 (3.17779144%), sodaSUI $107,827 (2.98382253%), sodasftUSD $99,893 (2.76423407%), sodaETH $88,541 (2.45011420%), sodaSODA $88,030 (2.43599211%), sodaWEETH $61,649 (1.70595983%), sodaHYPE $44,185 (1.22269177%), sodaSOL $28,540 (0.78975098%), sodaWSTETH $27,800 (0.76929741%), and a fully enumerated 0.83922505% tail (sodaNEAR, sodaPOL, sodaXLM, bnUSD, sodaS, sodaINJ, sodaWBTC, sodaKAIA, sodaLL, sodaSUSDS dust). The latest position set still includes the full borrower-collateral base; the Stability Fund's approved-stablecoin swaps mint through the same facilitator and are therefore not an additive unmeasured layer. At Sonic block 78468970, sodasftUSD 0x0902...8685 reported supported token 0xd1e5...aeb1, identified on-chain as sftUSD; sftUSD asset() returned 0xf7d85ec4e7710f71992752eac2111312e73e9c9c, the exact tracked Sonic ftUSD contract, and convertToAssets(1e6) returned 1e6. The 2.76423407% sodasftUSD slice is therefore linked through the wrappers to ftusd-flying-tulip. hyTB remains identified as HiYield Treasury Bill Vault (SnowTrace token 0x8475509d391e6ee5A8b7133221CE17019D307B3E); the SODAX audits index still lists no report scoped to the hub EVM money-market Pool. The sodaUSDT reserve's price source is an immutable MockAggregator (constant 1e8); the live adapter treats fixed-constant oracle legs as price-insensitive, valuing them with the DefiLlama quote and retaining the reviewed constant only as a flagged fallback.",
     "compositionBasis": "Complete enumeration of all 50 current bnUSD facilitator borrowers' aToken collateral across 24 nonzero SODAX money-market reserves at Sonic block 77819356, priced with the pool Aave oracle at the same current read per the issuer's official stats methodology",
     "compositionAsOf": "2026-08-20",
     "scope": "full-composition",

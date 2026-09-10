@@ -2,6 +2,7 @@
   "id": "fidd-fidelity",
   "reserves": [
     {
+      "sourceKey": "fidd-independent-assurance:fidd:us-treasury-bills",
       "name": "U.S. Treasury bills",
       "pct": 64.08,
       "risk": "very-low",
@@ -16,6 +17,7 @@
       "maturityDaysMax": 83
     },
     {
+      "sourceKey": "fidd-independent-assurance:fidd:cash-deposits",
       "name": "Cash in bank deposit accounts",
       "pct": 35.92,
       "risk": "very-low",

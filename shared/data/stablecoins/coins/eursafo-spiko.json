@@ -113,7 +113,7 @@
     "params": {
       "shareClassSymbol": "eurSAFO",
       "slice": {
-        "name": "Fully collateralized overnight total-return swap exposure",
+        "name": "Spiko Amundi Overnight Swap Fund (EUR) shares",
         "risk": "medium"
       }
     }

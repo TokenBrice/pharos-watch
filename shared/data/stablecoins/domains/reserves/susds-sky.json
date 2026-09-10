@@ -2,6 +2,7 @@
   "id": "susds-sky",
   "reserves": [
     {
+      "sourceKey": "erc4626-single-asset:ethereum:0xdc035d45d973e3ec169d2276ddab16f1e407384f",
       "name": "USDS savings vault shares",
       "pct": 100,
       "risk": "low",

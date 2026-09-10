@@ -2,6 +2,7 @@
   "id": "audm-macropod",
   "reserves": [
     {
+      "sourceKey": "issuer-attested-report:audm:cash",
       "name": "AUD cash in the Westpac AUDM Trust Class A Reserve",
       "pct": 100,
       "risk": "very-low",

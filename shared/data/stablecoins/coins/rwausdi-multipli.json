@@ -117,9 +117,9 @@
   "custodyModel": "institutional-unregulated",
   "governanceQuality": "single-entity",
   "liveReservesConfig": {
-    "adapter": "curated-validated",
+    "adapter": "afi-proof",
     "version": 1,
-    "semantics": "collateral-mix",
+    "semantics": "single-asset",
     "breakerScope": "rwausdi-multipli",
     "display": {
       "url": "https://docs.multipli.fi/technical-architecture/unwind-and-peg-module",
@@ -127,10 +127,12 @@
     },
     "inputs": {
       "primary": {
-        "kind": "onchain-evm",
-        "chain": "ethereum",
-        "rpcMode": "public-rpc"
+        "kind": "http-json",
+        "url": "https://api.afiprotocol.xyz/por/multipli/rwaUSDi/proofs"
       }
+    },
+    "params": {
+      "symbol": "rwaUSDi"
     }
   },
   "launchDate": "2025-11-23"

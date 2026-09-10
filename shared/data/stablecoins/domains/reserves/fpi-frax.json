@@ -2,6 +2,7 @@
   "id": "fpi-frax",
   "reserves": [
     {
+      "sourceKey": "frax-fpi-collateral:frax",
       "name": "FRAX",
       "pct": 87.05,
       "risk": "low",
@@ -19,6 +20,7 @@
       "liquidityHorizon": "unknown"
     },
     {
+      "sourceKey": "frax-fpi-collateral:stkcvxfpifrax",
       "name": "stkcvxFPIFRAX (staked Convex FPI/FRAX LP)",
       "pct": 11.44,
       "risk": "medium",
@@ -35,6 +37,7 @@
       "liquidityHorizon": "unknown"
     },
     {
+      "sourceKey": "frax-fpi-collateral:ethereum:0x56695c26b3cdb528815cd22ff7b47510ab821efd",
       "name": "Fraxswap V2 FRAX/FPIS",
       "pct": 1.5,
       "risk": "high",
@@ -51,6 +54,7 @@
       "liquidityHorizon": "unknown"
     },
     {
+      "sourceKey": "frax-fpi-collateral:fxs",
       "name": "FXS",
       "pct": 0.01,
       "risk": "high",

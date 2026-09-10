@@ -5,7 +5,10 @@ import {
 import type { ReserveSlice, StablecoinMeta } from "@shared/types/core";
 import type { LiveReservesConfig } from "@shared/types/live-reserves";
 import type { RedemptionRouteStatus } from "@shared/types/redemption";
+import { TOTAL_SUPPLY_SELECTOR } from "../../lib/evm-selectors";
+import { validateDecimals } from "./slice-math";
 import {
+  buildCoverageShortfallWarnings,
   buildRedemptionSnapshotMetadata,
   decimalNumberFromBigInt,
   makeOnchainCallers,
@@ -22,12 +25,15 @@ type EscrowBalanceParams = LiveReserveAdapterParamsByKey[typeof ADAPTER];
 type EscrowBalanceMultiParams = Extract<EscrowBalanceParams, { reads: unknown }>;
 
 function readSlice(params: EscrowBalanceParams): ReserveSlice {
+  const escrowContract = "reads" in params ? params.reads[0]!.contract : params.contract;
   return {
+    sourceKey: `escrow-balance:${escrowContract.toLowerCase()}`,
     name: params.slice.name,
     pct: 100,
     risk: params.slice.risk,
     ...(params.slice.coinId ? { coinId: params.slice.coinId } : {}),
     ...(params.slice.depType ? { depType: params.slice.depType } : {}),
+    ...(params.slice.blacklistable != null ? { blacklistable: params.slice.blacklistable } : {}),
   };
 }
 
@@ -126,6 +132,24 @@ async function fetchMultiReadCapacity(
   };
 }
 
+function compareEscrowSupply(balanceUsd: number, supplyUsd: number | undefined) {
+  const coverageRatio = supplyUsd == null ? undefined : balanceUsd / supplyUsd;
+  return {
+    warnings: buildCoverageShortfallWarnings({
+      code: "reserve-undercollateralized",
+      message: (pct) => `Escrow backing covers ${pct}% of coin supply`,
+      coverageRatio,
+    }),
+    metadata: supplyUsd == null ? {} : {
+      totalReserveUsd: balanceUsd,
+      supplyUsd,
+      collateralizationRatio: coverageRatio,
+    },
+    capacityUsd: supplyUsd == null ? balanceUsd : Math.min(balanceUsd, supplyUsd),
+    capacityRatioOfSupply: coverageRatio == null ? undefined : Math.min(1, coverageRatio),
+  };
+}
+
 /**
  * Reads the redemption capacity of a coin whose exit route is paid out of
  * reviewer-pinned escrow/reserve state. The original mode performs one
@@ -150,12 +174,26 @@ export async function fetchEscrowBalanceReserves(
     fallbackRpcUrl: params.fallbackRpcUrl,
   });
 
+  let supplyUsd: number | undefined;
+  if (params.compareToCoinSupply) {
+    const contract = coin.contracts?.find((deployment) => deployment.chain === input.chain);
+    if (!contract) throw new Error(`${ADAPTER}: no ${input.chain} coin contract configured for ${coin.id}`);
+    const decimals = validateDecimals(contract.decimals, `${ADAPTER} coin supply decimals`);
+    const supplyRaw = await onchain.uint256(contract.address, TOTAL_SUPPLY_SELECTOR);
+    if (supplyRaw == null || supplyRaw <= 0n) {
+      throw new Error(`${ADAPTER}: totalSupply() failed for ${coin.id}`);
+    }
+    supplyUsd = decimalNumberFromBigInt(supplyRaw, decimals);
+  }
+
   if ("reads" in params) {
     const multiRead = await fetchMultiReadCapacity(coin, params, onchain);
     const contractAddresses = [...new Set(params.reads.map((read) => read.contract))];
+    const comparison = compareEscrowSupply(multiRead.capacityUsd, supplyUsd);
 
     return {
       slices: [readSlice(params)],
+      ...(comparison.warnings.length > 0 ? { warnings: comparison.warnings } : {}),
       metadata: {
         ...notApplicableFreshnessMetadata({ proofKind: "escrow-balance-view" }),
         chain: input.chain,
@@ -163,10 +201,13 @@ export async function fetchEscrowBalanceReserves(
         escrowBalanceReadCount: params.reads.length,
         escrowBalancesRaw: multiRead.capacityRaw,
         escrowBalanceUsd: multiRead.capacityUsd,
-        immediateRedeemableUsd: multiRead.capacityUsd,
+        ...comparison.metadata,
         ...buildRedemptionSnapshotMetadata({
-          capacityUsd: multiRead.capacityUsd,
-          capacityKind: "live-direct",
+          capacityUsd: multiRead.routeStatus === "paused" ? 0 : comparison.capacityUsd,
+          ...(comparison.capacityRatioOfSupply != null ? {
+            capacityRatioOfSupply: multiRead.routeStatus === "paused" ? 0 : comparison.capacityRatioOfSupply,
+          } : {}),
+          capacityKind: supplyUsd == null ? "live-direct" : "live-direct-bounded",
           freshnessKind: "same-run-onchain",
           routeStatus: multiRead.routeStatus,
           routeStatusSource: "onchain",
@@ -202,19 +243,24 @@ export async function fetchEscrowBalanceReserves(
   }
 
   const escrowBalanceUsd = decimalNumberFromBigInt(escrowBalanceRaw, params.decimals);
+  const comparison = compareEscrowSupply(escrowBalanceUsd, supplyUsd);
 
   return {
     slices: [readSlice(params)],
+    ...(comparison.warnings.length > 0 ? { warnings: comparison.warnings } : {}),
     metadata: {
       ...notApplicableFreshnessMetadata({ proofKind: "escrow-balance-view" }),
       chain: input.chain,
       contractAddress: params.contract,
       escrowBalanceRaw: escrowBalanceRaw.toString(),
       escrowBalanceUsd,
-      immediateRedeemableUsd: escrowBalanceUsd,
+      ...comparison.metadata,
       ...buildRedemptionSnapshotMetadata({
-        capacityUsd: escrowBalanceUsd,
-        capacityKind: "live-direct",
+        capacityUsd: routeStatus === "paused" ? 0 : comparison.capacityUsd,
+        ...(comparison.capacityRatioOfSupply != null ? {
+          capacityRatioOfSupply: routeStatus === "paused" ? 0 : comparison.capacityRatioOfSupply,
+        } : {}),
+        capacityKind: supplyUsd == null ? "live-direct" : "live-direct-bounded",
         freshnessKind: "same-run-onchain",
         routeStatus,
         routeStatusSource: "onchain",

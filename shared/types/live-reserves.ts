@@ -115,13 +115,16 @@ export interface LiveReservesConfig {
 
 const UnknownRecordSchema: z.ZodType<Record<string, unknown>> = z.record(z.string(), z.unknown());
 
-export const ReserveCompositionHistoryWriteGapSchema = z.object({
-  stablecoinId: z.string(),
-  fetchedAt: z.number(),
-  attemptId: z.string(),
-  compositionHistoryMissing: z.boolean(),
-  attemptHistoryMissing: z.boolean(),
+export const ReserveSyncAdapterReliabilitySchema = z.object({
+  adapterKey: z.string(),
+  attempts: z.number().int().nonnegative(),
+  ok: z.number().int().nonnegative(),
+  degraded: z.number().int().nonnegative(),
+  error: z.number().int().nonnegative(),
+  skipped: z.number().int().nonnegative(),
+  successRate: z.number().finite().nonnegative().max(1).nullable(),
 });
+export type ReserveSyncAdapterReliability = z.infer<typeof ReserveSyncAdapterReliabilitySchema>;
 
 export const ReserveCompositionOverviewSchema = z.object({
   configuredCoins: z.number(),
@@ -140,13 +143,7 @@ export const ReserveCompositionOverviewSchema = z.object({
   runBudgetTruncated: z.boolean(),
   deferredAt: z.number().nullable(),
   nextCursorStablecoinId: z.string().nullable(),
-  cursorTailState: z.enum(["recording", "incomplete", "complete"]).nullable(),
-  cursorTailError: z.string().nullable(),
   cursorRecordedAt: z.number().nullable(),
-  cursorTailCompletedAt: z.number().nullable(),
-  cursorTailFailedAt: z.number().nullable(),
-  runBudgetTruncationCount: z.number(),
-  historyWriteGaps: z.array(ReserveCompositionHistoryWriteGapSchema),
   /**
    * Coins whose adapter is classified as `independent` but whose latest source
    * has been stuck in `degraded` or `error` with the last successful snapshot
@@ -160,6 +157,7 @@ export const ReserveCompositionOverviewSchema = z.object({
   ),
   lastSuccessAt: z.number().nullable(),
   oldestFreshAgeSec: z.number().nullable(),
+  adapterReliability: z.array(ReserveSyncAdapterReliabilitySchema),
 });
 export type ReserveCompositionOverview = z.infer<typeof ReserveCompositionOverviewSchema>;
 
@@ -181,16 +179,11 @@ export function emptyReserveCompositionOverview(configuredCoins = 0): ReserveCom
     runBudgetTruncated: false,
     deferredAt: null,
     nextCursorStablecoinId: null,
-    cursorTailState: null,
-    cursorTailError: null,
     cursorRecordedAt: null,
-    cursorTailCompletedAt: null,
-    cursorTailFailedAt: null,
-    runBudgetTruncationCount: 0,
-    historyWriteGaps: [],
     persistentlyStaleIndependentCoins: [],
     lastSuccessAt: null,
     oldestFreshAgeSec: null,
+    adapterReliability: [],
   };
 }
 
@@ -226,6 +219,7 @@ export const LiveReserveSnapshotMetadataSchema = z
     unknownExposurePct: z.number().finite().optional(),
     yieldBasisCollateralUsd: z.number().finite().optional(),
     yieldBasisCollateralPct: z.number().finite().optional(),
+    referenceNavUsd: z.number().finite().optional(),
     supplyUsd: z.number().finite().optional(),
     totalReserveUsd: z.number().finite().optional(),
     supplyTokens: z.number().finite().optional(),
@@ -236,6 +230,16 @@ export const LiveReserveSnapshotMetadataSchema = z
     shareholderEquityUsd: z.number().finite().optional(),
     collateralizationRatio: z.number().finite().optional(),
     liquidationCapacityRatio: z.number().finite().nonnegative().optional(),
+    /**
+     * Legacy flat redemption-telemetry fields, superseded by the nested
+     * `redemption.capacityUsd` / `redemption.capacityRatioOfSupply` /
+     * `redemption.feeBps` contract. Historical D1 rows can still carry them
+     * (30-day retention), so they remain optional for read compatibility; the
+     * store-row decoder maps them into the nested shape at decode time and no
+     * producer writes them anymore.
+     *
+     * @deprecated Read-only legacy compatibility; use `redemption.*`.
+     */
     immediateRedeemableUsd: z.number().finite().optional(),
     immediateRedeemableRatio: z.number().finite().optional(),
     redemptionFeeBps: z.number().finite().optional(),
@@ -243,6 +247,7 @@ export const LiveReserveSnapshotMetadataSchema = z
     buyFeeBpsMax: z.number().finite().optional(),
     redemption: LiveReserveRedemptionTelemetrySchema.optional(),
     details: UnknownRecordSchema.optional(),
+    diag: UnknownRecordSchema.optional(),
   })
   .passthrough();
 export type LiveReserveSnapshotMetadata = z.output<typeof LiveReserveSnapshotMetadataSchema>;

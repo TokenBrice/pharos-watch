@@ -2,6 +2,7 @@
   "id": "tusd-trueusd",
   "reserves": [
     {
+      "sourceKey": "chainlink-por:feed:0xbe456fd14720c3accc30a2013bffd782c9cb75d5",
       "name": "USD reserves (Moore Hong Kong attested)",
       "pct": 100,
       "risk": "high",

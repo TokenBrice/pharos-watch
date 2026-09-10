@@ -2,6 +2,7 @@
   "id": "xagm-matrixdock",
   "reserves": [
     {
+      "sourceKey": "matrixdock-frs:silver",
       "name": "Physical silver bars (LBMA Good Delivery, Asian vault custody)",
       "pct": 100,
       "risk": "medium",

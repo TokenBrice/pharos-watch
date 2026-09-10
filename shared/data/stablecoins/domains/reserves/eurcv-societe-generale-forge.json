@@ -2,6 +2,7 @@
   "id": "eurcv-societe-generale-forge",
   "reserves": [
     {
+      "sourceKey": "sgforge-coinvertible:cash-deposits",
       "name": "Euro cash deposits at Societe Generale",
       "pct": 100,
       "risk": "very-low",

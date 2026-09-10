@@ -1,73 +1,153 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { describe, expect, it } from "vitest";
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
+import { adaptFx } from "../fx";
+import { runAdapter, type AdapterNetworkSpec } from "./reserve-adapter.test-support";
 
-vi.mock("../helpers", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("../helpers")>();
-  const { makeOnchainCallersMock } = await import("./helpers/onchain-callers-mock");
-  const fetchOnchainUint256 = vi.fn();
-  return {
-    ...actual,
-    fetchDefiLlamaPrices: vi.fn(),
-    fetchJsonWithRetry: vi.fn(),
-    fetchOnchainUint256,
-    makeOnchainCallers: makeOnchainCallersMock({ uint256: fetchOnchainUint256 }),
-  };
-});
-
-import { adaptFx, fetchFxReserves } from "../fx";
-import { fetchDefiLlamaPrices, fetchJsonWithRetry, fetchOnchainUint256 } from "../helpers";
-
-
+const FX_API_ENDPOINT = "https://fx.example/tvl";
+const API_PRICE_ENDPOINT =
+  "https://coins.llama.fi/prices/current/ethereum:0x2260fac5e5542a773aa44fbcfedf7c193bc2c599,ethereum:0x7f39c581f595b53c5cb19bd0b3f8da6c935e2ca0";
+const ONCHAIN_PRICE_ENDPOINT =
+  "https://coins.llama.fi/prices/current/ethereum:0x2260fac5e5542a773aa44fbcfedf7c193bc2c599,ethereum:0xae7ab96520de3a18e5e111b5eaab095312d7fe84";
+const WSTETH_POOL = "0x6Ecfa38FeE8a5277B91eFdA204c235814F0122E8";
+const WBTC_POOL = "0xAB709e26Fa6B0A30c119D8c55B887DeD24952473";
+const WSTETH_POOL_LOWER = WSTETH_POOL.toLowerCase();
+const WBTC_POOL_LOWER = WBTC_POOL.toLowerCase();
+const COLLATERAL_SELECTOR = "0xee65a03c";
+const DEBT_SELECTOR = "0xf9d45fd2";
 const fxCoin = TRACKED_META_BY_ID.get("fxusd-f-x-protocol")!;
 const apiConfig = {
   ...fxCoin.liveReservesConfig!,
-  inputs: { primary: { kind: "http-json" as const, url: "https://fx.example/tvl" } },
+  inputs: { primary: { kind: "http-json" as const, url: FX_API_ENDPOINT } },
 };
 
-function mockApiPools(extra: Record<string, { collateralBalance: string }> = {}) {
-  vi.mocked(fetchJsonWithRetry).mockResolvedValue({
-    data: { poolInfo: {
-      wstETH: { collateralBalance: "2000000000000000000" },
-      wbtc: { collateralBalance: "100000000" },
-      ...extra,
-    } },
-  });
-  vi.mocked(fetchDefiLlamaPrices).mockResolvedValue(new Map([["wstETH", 4_000], ["wbtc", 100_000]]));
+function apiPayload(extra: Record<string, { collateralBalance: string }> = {}) {
+  return {
+    data: {
+      poolInfo: {
+        wstETH: { collateralBalance: "2000000000000000000" },
+        wbtc: { collateralBalance: "100000000" },
+        ...extra,
+      },
+    },
+  };
 }
-beforeEach(() => {
-  vi.clearAllMocks();
-});
+
+function apiPrices(nowSec: number, includeWbtc = true) {
+  return {
+    coins: {
+      "ethereum:0x7f39c581f595b53c5cb19bd0b3f8da6c935e2ca0": {
+        price: 4_000,
+        timestamp: nowSec,
+        confidence: 1,
+      },
+      ...(includeWbtc
+        ? {
+            "ethereum:0x2260fac5e5542a773aa44fbcfedf7c193bc2c599": {
+              price: 100_000,
+              timestamp: nowSec,
+              confidence: 1,
+            },
+          }
+        : {}),
+    },
+  };
+}
+
+function onchainPrices(nowSec: number, stEthPrice = 2485.83, wbtcPrice = 78966.15) {
+  return {
+    coins: {
+      "ethereum:0xae7ab96520de3a18e5e111b5eaab095312d7fe84": {
+        price: stEthPrice,
+        timestamp: nowSec,
+        confidence: 1,
+      },
+      "ethereum:0x2260fac5e5542a773aa44fbcfedf7c193bc2c599": {
+        price: wbtcPrice,
+        timestamp: nowSec,
+        confidence: 1,
+      },
+    },
+  };
+}
+
+function onchainNetwork(options: {
+  wstEthRaw?: bigint;
+  wstEthDebt?: bigint;
+  wbtcRaw?: bigint;
+  wbtcDebt?: bigint;
+  stEthPrice?: number;
+  wbtcPrice?: number;
+  missing?: { pool: string; selector: string };
+} = {}): AdapterNetworkSpec {
+  const rpc: Record<string, bigint | null> = {
+    [`ethereum:eth_call:${WSTETH_POOL_LOWER}:${COLLATERAL_SELECTOR}`]: options.wstEthRaw ?? 2n * 10n ** 18n,
+    [`ethereum:eth_call:${WSTETH_POOL_LOWER}:${DEBT_SELECTOR}`]: options.wstEthDebt ?? 1n * 10n ** 18n,
+    [`ethereum:eth_call:${WBTC_POOL_LOWER}:${COLLATERAL_SELECTOR}`]: options.wbtcRaw ?? 1n * 10n ** 18n,
+    [`ethereum:eth_call:${WBTC_POOL_LOWER}:${DEBT_SELECTOR}`]: options.wbtcDebt ?? 1n * 10n ** 18n,
+  };
+  if (options.missing) {
+    rpc[`ethereum:eth_call:${options.missing.pool.toLowerCase()}:${options.missing.selector}`] = null;
+  }
+  return {
+    rpc,
+    json: {
+      [ONCHAIN_PRICE_ENDPOINT]: onchainPrices(1_757_000_000, options.stEthPrice, options.wbtcPrice),
+    },
+  };
+}
 
 describe("adaptFx", () => {
   it("fails closed at the HTTP consumer for unknown positive collateral", async () => {
-    mockApiPools({ unexpectedAsset: { collateralBalance: "1" } });
-    await expect(fetchFxReserves(fxCoin, apiConfig, new AbortController().signal))
-      .rejects.toThrow("unmapped positive collateral keys with unquantified exposure: unexpectedAsset");
+    await expect(runAdapter("fx", fxCoin, {
+      config: apiConfig,
+      network: {
+        json: {
+          [FX_API_ENDPOINT]: apiPayload({ unexpectedAsset: { collateralBalance: "1" } }),
+        },
+      },
+      nowSec: 1_800_000_000,
+      validate: false,
+    })).rejects.toThrow("unmapped positive collateral keys with unquantified exposure: unexpectedAsset");
   });
 
   it("rejects a missing price instead of renormalizing the priced balance", async () => {
-    mockApiPools();
-    vi.mocked(fetchDefiLlamaPrices).mockResolvedValue(new Map([["wstETH", 4_000]]));
-    await expect(fetchFxReserves(fxCoin, apiConfig, new AbortController().signal))
-      .rejects.toThrow("Missing DefiLlama price for wbtc");
+    await expect(runAdapter("fx", fxCoin, {
+      config: apiConfig,
+      network: {
+        json: {
+          [FX_API_ENDPOINT]: apiPayload(),
+          [API_PRICE_ENDPOINT]: apiPrices(1_800_000_000, false),
+        },
+      },
+      nowSec: 1_800_000_000,
+      validate: false,
+    })).rejects.toThrow("Missing DefiLlama price for wbtc");
   });
 
   it.each([
     ["0xee65a03c", "collateral"], ["0xf9d45fd2", "debt"],
   ])("rejects an independently unreadable on-chain %s read", async (selector, kind) => {
-    vi.mocked(fetchOnchainUint256).mockImplementation(async ({ contract, data }) =>
-      contract === "0x6Ecfa38FeE8a5277B91eFdA204c235814F0122E8" && data === selector
-        ? null : 10n ** 18n);
-    await expect(fetchFxReserves(fxCoin, fxCoin.liveReservesConfig!, new AbortController().signal))
-      .rejects.toThrow(`fx on-chain ${kind} read failed for wstETH`);
+    await expect(runAdapter("fx", fxCoin, {
+      network: onchainNetwork({ missing: { pool: WSTETH_POOL, selector } }),
+      nowSec: 1_757_000_000,
+      validate: false,
+    })).rejects.toThrow(`fx on-chain ${kind} read failed for wstETH`);
   });
 
   it("values API WBTC at eight decimals rather than the on-chain eighteen", async () => {
-    mockApiPools();
-    const result = await fetchFxReserves(fxCoin, apiConfig, new AbortController().signal);
+    const { result } = await runAdapter("fx", fxCoin, {
+      config: apiConfig,
+      network: {
+        json: {
+          [FX_API_ENDPOINT]: apiPayload(),
+          [API_PRICE_ENDPOINT]: apiPrices(1_800_000_000),
+        },
+      },
+      nowSec: 1_800_000_000,
+    });
     expect(result.slices).toEqual([
-      { name: "WBTC", pct: 92.6, risk: "medium" },
-      { name: "wstETH (Lido)", pct: 7.4, risk: "low" },
+      { sourceKey: "fx:wbtc", name: "WBTC", pct: 92.6, risk: "medium" },
+      { sourceKey: "fx:wsteth", name: "wstETH (Lido)", pct: 7.4, risk: "low" },
     ]);
   });
 
@@ -139,44 +219,48 @@ describe("adaptFx", () => {
     expect(result.unknownKeys).toEqual([]);
   });
 
-  it("reads configured f(x) pools directly on-chain for score-grade freshness", async () => {
-    vi.mocked(fetchOnchainUint256)
-      .mockResolvedValueOnce(2n * 10n ** 18n)
-      .mockResolvedValueOnce(3_000n * 10n ** 18n)
-      // fx getTotalRawCollaterals uses a unified 1e18 raw scale, even for WBTC.
-      .mockResolvedValueOnce(1n * 10n ** 18n)
-      .mockResolvedValueOnce(60_000n * 10n ** 18n);
-    vi.mocked(fetchDefiLlamaPrices).mockResolvedValue(new Map([
-      ["wstETH", 4_000],
-      ["wbtc", 100_000],
-    ]));
+  it("values on-chain pool raw collateral in each pool's raw unit (stETH for the wstETH pool)", async () => {
+    const wstEthPoolRaw = 6498117380312973051552n;
+    const wstEthPoolDebt = 8408069477417882708446823n;
+    const wbtcPoolRaw = 1256573802172773285735n;
+    const wbtcPoolDebt = 71492785220689011149058249n;
+    const stEthPrice = 2485.83;
+    const wbtcPrice = 78966.15;
+    const { result, network } = await runAdapter("fx", "fxusd-f-x-protocol", {
+      network: onchainNetwork({
+        wstEthRaw: wstEthPoolRaw,
+        wstEthDebt: wstEthPoolDebt,
+        wbtcRaw: wbtcPoolRaw,
+        wbtcDebt: wbtcPoolDebt,
+        stEthPrice,
+        wbtcPrice,
+      }),
+      nowSec: 1_757_000_000,
+    });
 
-    const coin = TRACKED_META_BY_ID.get("fxusd-f-x-protocol");
-    expect(coin?.liveReservesConfig).toBeDefined();
-
-    const result = await fetchFxReserves(
-      coin!,
-      coin!.liveReservesConfig!,
-      AbortSignal.timeout(5_000),
-    );
-
-    expect(fetchOnchainUint256).toHaveBeenCalledTimes(4);
+    expect(network.requests.map((request) => request.url)).toContain(ONCHAIN_PRICE_ENDPOINT);
     expect(result.slices).toEqual([
-      { name: "WBTC", pct: 92.6, risk: "medium" },
-      { name: "wstETH (Lido)", pct: 7.4, risk: "low" },
+      { sourceKey: "fx:wbtc", name: "WBTC", pct: 86.0, risk: "medium" },
+      { sourceKey: "fx:wsteth", name: "wstETH (Lido)", pct: 14.0, risk: "low" },
     ]);
+
+    const totalDebtUsd = (Number(wstEthPoolDebt) + Number(wbtcPoolDebt)) / 1e18;
+    const totalReserveUsd = (Number(wstEthPoolRaw) / 1e18) * stEthPrice
+      + (Number(wbtcPoolRaw) / 1e18) * wbtcPrice;
+    expect(totalReserveUsd).toBeCloseTo(115_380_000, -3);
+    expect(totalReserveUsd / totalDebtUsd).toBeCloseTo(1.444, 2);
+
     expect(result.metadata).toMatchObject({
       freshnessMode: "not-applicable",
-      immediateRedeemableUsd: 63_000,
       details: {
         proofKind: "fx-pool-direct-onchain",
         poolCount: 2,
       },
       redemption: {
-        capacityUsd: 63_000,
         capacityKind: "live-proxy-validated",
         freshnessKind: "same-run-api",
       },
     });
+    expect(result.metadata?.redemption?.capacityUsd).toBeCloseTo(totalDebtUsd, 6);
   });
 });

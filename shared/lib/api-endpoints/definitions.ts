@@ -650,6 +650,12 @@ const BASE_ENDPOINT_DEFINITIONS = [
     opsProxyTimeoutMs: 20_000,
   }),
   adminGet({
+    key: "reserve-attempt-history",
+    path: API_PATHS.reserveAttemptHistoryBase(),
+    probeGroup: "admin",
+    probePath: API_PATHS.reserveAttemptHistory({ coin: "usdc-circle", limit: 10 }),
+  }),
+  adminGet({
     key: "request-source-stats",
     path: API_PATHS.requestSourceStatsBase(),
   }),

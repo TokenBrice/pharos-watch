@@ -1,44 +1,81 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
-import ousd from "@shared/data/stablecoins/coins/ousd-origin-protocol.json";
-import type { StablecoinMeta } from "@shared/types/core";
-import type { LiveReservesConfig } from "@shared/types/live-reserves";
+import { describe, expect, it } from "vitest";
+import { runAdapter, expectWarnings, installAdapterNetwork, type AdapterNetworkSpec } from "./reserve-adapter.test-support";
 
-vi.mock("../helpers", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("../helpers")>();
-  const { makeOnchainCallersMock } = await import("./helpers/onchain-callers-mock");
-  const fetchOnchainUint256 = vi.fn();
-  return {
-    ...actual,
-    fetchOnchainUint256,
-    makeOnchainCallers: makeOnchainCallersMock({ uint256: fetchOnchainUint256 }),
+const USDC = "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48";
+const CHECK_BALANCE_SELECTOR = "0x5f515226";
+const BALANCE_OF_SELECTOR = "0x70a08231";
+const TOTAL_VALUE_SELECTOR = "0xd4c3eea0";
+const BLOCK_NUMBER = 12345;
+const BLOCK_TIMESTAMP = 1776154391;
+
+interface OriginAssetValues {
+  reserve: bigint;
+  idle: bigint;
+}
+
+interface OriginNetworkOptions {
+  reserve?: bigint;
+  idle?: bigint;
+  total?: bigint;
+  failed?: string;
+  assets?: Record<string, OriginAssetValues>;
+}
+
+function originNetwork(options: OriginNetworkOptions = {}): AdapterNetworkSpec {
+  const assets = Object.fromEntries(
+    Object.entries(options.assets ?? {
+      [USDC.toLowerCase()]: {
+        reserve: options.reserve ?? 5_000_000n * 10n ** 6n,
+        idle: options.idle ?? 1_250_000n * 10n ** 6n,
+      },
+    }).map(([address, values]) => [address.toLowerCase(), values]),
+  );
+  const defaultValues = assets[USDC.toLowerCase()] ?? {
+    reserve: options.reserve ?? 5_000_000n * 10n ** 6n,
+    idle: options.idle ?? 1_250_000n * 10n ** 6n,
   };
-});
+  return {
+    block: { number: BLOCK_NUMBER, timestamp: BLOCK_TIMESTAMP },
+    rpc: {
+      [CHECK_BALANCE_SELECTOR]: ({ data }) => {
+        if (options.failed && data.startsWith(options.failed)) return null;
+        const asset = `0x${data.slice(-40)}`.toLowerCase();
+        return assets[asset]?.reserve ?? defaultValues.reserve;
+      },
+      [BALANCE_OF_SELECTOR]: ({ contract, data }) => {
+        if (options.failed && data.startsWith(options.failed)) return null;
+        return assets[contract]?.idle ?? defaultValues.idle;
+      },
+      [TOTAL_VALUE_SELECTOR]: ({ data }) => {
+        if (options.failed && data.startsWith(options.failed)) return null;
+        return options.total ?? 5_000_000n * 10n ** 18n;
+      },
+    },
+  };
+}
 
-import { fetchOriginVaultBalancesReserves } from "../origin-vault-balances";
-import { fetchOnchainUint256 } from "../helpers";
-
-const coin = ousd as unknown as StablecoinMeta;
-const config = ousd.liveReservesConfig as LiveReservesConfig;
-
-function fetchReserves(candidate = config) {
-  return fetchOriginVaultBalancesReserves(coin, candidate, new AbortController().signal);
+function runOrigin(
+  network: AdapterNetworkSpec,
+  params?: Record<string, unknown>,
+  validate = true,
+) {
+  return runAdapter("origin-vault-balances", "ousd-origin-protocol", {
+    network: installAdapterNetwork(network),
+    nowSec: BLOCK_TIMESTAMP,
+    ...(params ? { params } : {}),
+    ...(validate ? {} : { validate: false as const }),
+  });
 }
 
 describe("fetchOriginVaultBalancesReserves", () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
-
   it("uses OUSD vault checkBalance and reconciles against totalValue", async () => {
-    vi.mocked(fetchOnchainUint256)
-      .mockResolvedValueOnce(5_000_000n * 10n ** 6n)
-      .mockResolvedValueOnce(1_250_000n * 10n ** 6n)
-      .mockResolvedValueOnce(5_000_000n * 10n ** 18n);
-
-    const result = await fetchReserves();
+    const { result, network } = await runOrigin(originNetwork());
+    expect(result.metadata?.observedBlock).toEqual({ chain: "ethereum", number: BLOCK_NUMBER, timestamp: BLOCK_TIMESTAMP });
+    expect(network.rpcCalls.every((call) => call.block === `0x${BLOCK_NUMBER.toString(16)}`)).toBe(true);
 
     expect(result.slices).toEqual([
       {
+        sourceKey: "origin-vault-balances:0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
         name: "USDC deployed through Origin OUSD strategies",
         pct: 100,
         risk: "medium",
@@ -46,13 +83,12 @@ describe("fetchOriginVaultBalancesReserves", () => {
         depType: "collateral",
       },
     ]);
-    expect(result.warnings).toBeUndefined();
+    expectWarnings(result, []);
     expect(result.metadata).toMatchObject({
       freshnessMode: "not-applicable",
       totalReserveUsd: 5_000_000,
       totalValueUsd: 5_000_000,
       assetCoverageRatio: 1,
-      immediateRedeemableUsd: 1_250_000,
       idleVaultBalances: [
         {
           name: "USDC deployed through Origin OUSD strategies",
@@ -73,70 +109,70 @@ describe("fetchOriginVaultBalancesReserves", () => {
         proofKind: "origin-vault-check-balance",
       },
     });
-    expect(vi.mocked(fetchOnchainUint256).mock.calls[1]?.[0]).toMatchObject({
-      contract: "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
+    const idleCall = network.rpcCalls.find(
+      (call) => call.selector === BALANCE_OF_SELECTOR && call.contract === USDC.toLowerCase(),
+    );
+    expect(idleCall).toMatchObject({
+      contract: USDC.toLowerCase(),
       data: "0x70a08231000000000000000000000000e75d77b1865ae93c7eaa3040b038d7aa7bc02f70",
     });
   });
+
   it("distinguishes failed invested, idle and total-value probes", async () => {
     for (const [failed, message] of [
-      ["0x5f515226", /checkBalance failed/],
-      ["0x70a08231", /idle balance probe failed/],
-      ["0xd4c3eea0", /totalValue probe failed/],
+      [CHECK_BALANCE_SELECTOR, /checkBalance failed/],
+      [BALANCE_OF_SELECTOR, /idle balance probe failed/],
+      [TOTAL_VALUE_SELECTOR, /totalValue probe failed/],
     ] as const) {
-      vi.mocked(fetchOnchainUint256).mockImplementation(async ({ data }) => {
-        if (data.startsWith(failed)) return null;
-        return data.startsWith("0xd4c3eea0") ? 100n * 10n ** 18n : 100n * 10n ** 6n;
-      });
-      await expect(fetchReserves()).rejects.toThrow(message);
+      await expect(runOrigin(originNetwork({ failed }), undefined, false)).rejects.toThrow(message);
     }
   });
 
   it("rejects zero total value and zero aggregate reserves independently", async () => {
-    for (const [reserve, total, message] of [
-      [100n * 10n ** 6n, 0n, /totalValue probe failed/],
-      [0n, 100n * 10n ** 18n, /zero reserve value/],
-    ] as const) {
-      vi.mocked(fetchOnchainUint256).mockImplementation(async ({ data }) =>
-        data.startsWith("0xd4c3eea0") ? total : reserve);
-      await expect(fetchReserves()).rejects.toThrow(message);
-    }
+    await expect(runOrigin(originNetwork({ reserve: 100n * 10n ** 6n, total: 0n }), undefined, false))
+      .rejects.toThrow(/totalValue probe failed/);
+    await expect(runOrigin(originNetwork({ reserve: 0n, total: 100n * 10n ** 18n }), undefined, false))
+      .rejects.toThrow(/zero reserve value/);
   });
 
   it("degrades incomplete asset coverage without confusing idle liquidity with backing", async () => {
-    vi.mocked(fetchOnchainUint256)
-      .mockResolvedValueOnce(80n * 10n ** 6n)
-      .mockResolvedValueOnce(20n * 10n ** 6n)
-      .mockResolvedValueOnce(100n * 10n ** 18n);
-    const result = await fetchReserves();
+    const { result } = await runOrigin(originNetwork({
+      reserve: 80n * 10n ** 6n,
+      idle: 20n * 10n ** 6n,
+      total: 100n * 10n ** 18n,
+    }));
     expect(result.metadata).toMatchObject({
       totalReserveUsd: 80, totalValueUsd: 100, assetCoverageRatio: 0.8,
       redemption: { capacityUsd: 20 },
     });
-    expect(result.warnings).toEqual([expect.objectContaining({ code: "origin-vault-coverage-gap", effect: "degraded" })]);
+    expectWarnings(result, ["origin-vault-coverage-gap"]);
   });
 
   it("normalizes mixed asset decimals and sums idle capacity separately", async () => {
-    const candidate = structuredClone(config);
-    candidate.params = {
-      ...candidate.params,
-      assets: [
-        { address: "0x1111111111111111111111111111111111111111", decimals: 6, name: "USDC", risk: "low" },
-        { address: "0x2222222222222222222222222222222222222222", decimals: 18, name: "DAI", risk: "low" },
-      ],
-    };
-    vi.mocked(fetchOnchainUint256).mockImplementation(async ({ contract, data }) => {
-      if (data === "0xd4c3eea0") return 100n * 10n ** 18n;
-      const first = data.endsWith("1".repeat(40)) || contract === "0x1111111111111111111111111111111111111111";
-      const idle = data.startsWith("0x70a08231");
-      return first ? (idle ? 7n : 40n) * 10n ** 6n : (idle ? 11n : 60n) * 10n ** 18n;
-    });
-    const result = await fetchReserves(candidate);
+    const assets = [
+      { address: "0x1111111111111111111111111111111111111111", decimals: 6, name: "USDC", risk: "low" },
+      { address: "0x2222222222222222222222222222222222222222", decimals: 18, name: "DAI", risk: "low" },
+    ];
+    const { result } = await runOrigin(
+      originNetwork({
+        assets: {
+          [assets[0]!.address]: { reserve: 40n * 10n ** 6n, idle: 7n * 10n ** 6n },
+          [assets[1]!.address]: { reserve: 60n * 10n ** 18n, idle: 11n * 10n ** 18n },
+        },
+        total: 100n * 10n ** 18n,
+      }),
+      { assets },
+    );
     expect(result.slices).toEqual([
-      { name: "DAI", pct: 60, risk: "low" },
-      { name: "USDC", pct: 40, risk: "low" },
+      { sourceKey: "origin-vault-balances:0x2222222222222222222222222222222222222222", name: "DAI", pct: 60, risk: "low" },
+      { sourceKey: "origin-vault-balances:0x1111111111111111111111111111111111111111", name: "USDC", pct: 40, risk: "low" },
     ]);
     expect(result.metadata).toMatchObject({ totalReserveUsd: 100, assetCoverageRatio: 1, redemption: { capacityUsd: 18 } });
-    expect(result.warnings).toBeUndefined();
+    expectWarnings(result, []);
+  });
+
+  it("rejects a renamed totalValue field instead of publishing a plausible snapshot", async () => {
+    await expect(runOrigin(originNetwork({ failed: TOTAL_VALUE_SELECTOR }), undefined, false))
+      .rejects.toThrow(/totalValue probe failed/);
   });
 });

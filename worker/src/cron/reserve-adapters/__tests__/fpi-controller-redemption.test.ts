@@ -8,6 +8,10 @@ import {
 } from "viem/utils";
 import type { EvmMulticall3Call, EvmMulticall3Result } from "../../../lib/evm-rpc";
 import {
+  installAdapterNetwork,
+  type AdapterRpcCall,
+} from "./reserve-adapter.test-support";
+import {
   observeFpiControllerRedemptionRoute,
   type FpiControllerRouteReadClient,
 } from "../fpi-controller-redemption";
@@ -522,5 +526,141 @@ describe("observeFpiControllerRedemptionRoute", () => {
       rejectionCode: "controller-state-unavailable",
       blockNumber: BLOCK,
     });
+  });
+});
+
+describe("observeFpiControllerRedemptionRoute network boundary", () => {
+  it("reads the pinned controller state and redemption quote through the shared RPC harness", async () => {
+    const controllerRpc = (call: AdapterRpcCall): Hex => {
+      const functionName = decodeFunctionData({
+        abi: CONTROLLER_ABI,
+        data: call.data as Hex,
+      }).functionName;
+      switch (functionName) {
+        case "FPI_TKN":
+          return encodeFunctionResult({ abi: CONTROLLER_ABI, functionName, result: FPI as Hex });
+        case "FRAX":
+          return encodeFunctionResult({ abi: CONTROLLER_ABI, functionName, result: FRAX as Hex });
+        case "priceFeedFRAXUSD":
+          return encodeFunctionResult({ abi: CONTROLLER_ABI, functionName, result: FRAX_PRICE_FEED as Hex });
+        case "priceFeedFPIUSD":
+          return encodeFunctionResult({ abi: CONTROLLER_ABI, functionName, result: FPI_PRICE_FEED as Hex });
+        case "cpiTracker":
+          return encodeFunctionResult({ abi: CONTROLLER_ABI, functionName, result: CPI_TRACKER as Hex });
+        case "chainlink_frax_usd_decimals":
+          return encodeFunctionResult({ abi: CONTROLLER_ABI, functionName, result: 8n });
+        case "chainlink_fpi_usd_decimals":
+          return encodeFunctionResult({ abi: CONTROLLER_ABI, functionName, result: 18n });
+        case "redeem_fee":
+          return encodeFunctionResult({ abi: CONTROLLER_ABI, functionName, result: FEE });
+        case "redeems_paused":
+          return encodeFunctionResult({ abi: CONTROLLER_ABI, functionName, result: false });
+        case "peg_band_mint_redeem":
+          return encodeFunctionResult({ abi: CONTROLLER_ABI, functionName, result: PEG_BAND });
+        case "pegStatusMntRdm":
+          return encodeFunctionResult({
+            abi: CONTROLLER_ABI,
+            functionName,
+            result: [PEG, PEG_DIFFERENCE, true],
+          });
+        case "calcRedeemFPI": {
+          const input = decodeFunctionData({
+            abi: CONTROLLER_ABI,
+            data: call.data as Hex,
+          }).args?.[0] as bigint;
+          return encodeFunctionResult({
+            abi: CONTROLLER_ABI,
+            functionName,
+            result: expectedOutput(input),
+          });
+        }
+        case "getFRAXPriceE18":
+          return encodeFunctionResult({ abi: CONTROLLER_ABI, functionName, result: OUTPUT_PRICE });
+        case "getFPIPriceE18":
+          return encodeFunctionResult({ abi: CONTROLLER_ABI, functionName, result: FPI_PRICE });
+        default:
+          throw new Error(`unexpected controller method ${functionName}`);
+      }
+    };
+    const feedRpc = (call: AdapterRpcCall, decimals: number, round: readonly [bigint, bigint, bigint, bigint, bigint]): Hex => {
+      const functionName = decodeFunctionData({ abi: PRICE_FEED_ABI, data: call.data as Hex }).functionName;
+      return functionName === "decimals"
+        ? encodeFunctionResult({ abi: PRICE_FEED_ABI, functionName, result: decimals })
+        : encodeFunctionResult({ abi: PRICE_FEED_ABI, functionName, result: round });
+    };
+    const cpiRpc = (call: AdapterRpcCall): Hex => {
+      const functionName = decodeFunctionData({ abi: CPI_TRACKER_ABI, data: call.data as Hex }).functionName;
+      return functionName === "currPegPrice"
+        ? encodeFunctionResult({ abi: CPI_TRACKER_ABI, functionName, result: PEG })
+        : encodeFunctionResult({ abi: CPI_TRACKER_ABI, functionName, result: BigInt(CPI_TRACKER_UPDATED_AT) });
+    };
+    const network = installAdapterNetwork({
+      chains: { ethereum: "https://rpc.example" },
+      block: { number: BLOCK, timestamp: NOW - 30 },
+      code: {
+        [`ethereum:${CONTROLLER}`]: CONTROLLER_CODE,
+        [`ethereum:${FRAX_PRICE_FEED}`]: FRAX_PRICE_FEED_CODE,
+        [`ethereum:${FPI_PRICE_FEED}`]: FPI_PRICE_FEED_CODE,
+        [`ethereum:${CPI_TRACKER}`]: CPI_TRACKER_CODE,
+      },
+      rpc: {
+        [`ethereum:eth_call:${CONTROLLER}:FPI_TKN()`]: controllerRpc,
+        [`ethereum:eth_call:${CONTROLLER}:FRAX()`]: controllerRpc,
+        [`ethereum:eth_call:${CONTROLLER}:priceFeedFRAXUSD()`]: controllerRpc,
+        [`ethereum:eth_call:${CONTROLLER}:priceFeedFPIUSD()`]: controllerRpc,
+        [`ethereum:eth_call:${CONTROLLER}:cpiTracker()`]: controllerRpc,
+        [`ethereum:eth_call:${CONTROLLER}:chainlink_frax_usd_decimals()`]: controllerRpc,
+        [`ethereum:eth_call:${CONTROLLER}:chainlink_fpi_usd_decimals()`]: controllerRpc,
+        [`ethereum:eth_call:${CONTROLLER}:redeem_fee()`]: controllerRpc,
+        [`ethereum:eth_call:${CONTROLLER}:redeems_paused()`]: controllerRpc,
+        [`ethereum:eth_call:${CONTROLLER}:peg_band_mint_redeem()`]: controllerRpc,
+        [`ethereum:eth_call:${CONTROLLER}:pegStatusMntRdm()`]: controllerRpc,
+        [`ethereum:eth_call:${CONTROLLER}:calcRedeemFPI(uint256,uint256)`]: controllerRpc,
+        [`ethereum:eth_call:${CONTROLLER}:getFRAXPriceE18()`]: controllerRpc,
+        [`ethereum:eth_call:${CONTROLLER}:getFPIPriceE18()`]: controllerRpc,
+        [`ethereum:eth_call:${FRAX_PRICE_FEED}:decimals()`]: (call) => feedRpc(call, 8, [
+          FRAX_FEED_ROUND, FRAX_FEED_ANSWER, BigInt(FRAX_FEED_UPDATED_AT), BigInt(FRAX_FEED_UPDATED_AT), FRAX_FEED_ROUND,
+        ]),
+        [`ethereum:eth_call:${FRAX_PRICE_FEED}:latestRoundData()`]: (call) => feedRpc(call, 8, [
+          FRAX_FEED_ROUND, FRAX_FEED_ANSWER, BigInt(FRAX_FEED_UPDATED_AT), BigInt(FRAX_FEED_UPDATED_AT), FRAX_FEED_ROUND,
+        ]),
+        [`ethereum:eth_call:${FPI_PRICE_FEED}:decimals()`]: (call) => feedRpc(call, 18, [
+          FPI_FEED_ROUND, FPI_PRICE, 0n, BigInt(FPI_FEED_UPDATED_AT), FPI_FEED_ROUND,
+        ]),
+        [`ethereum:eth_call:${FPI_PRICE_FEED}:latestRoundData()`]: (call) => feedRpc(call, 18, [
+          FPI_FEED_ROUND, FPI_PRICE, 0n, BigInt(FPI_FEED_UPDATED_AT), FPI_FEED_ROUND,
+        ]),
+        [`ethereum:eth_call:${CPI_TRACKER}:currPegPrice()`]: cpiRpc,
+        [`ethereum:eth_call:${CPI_TRACKER}:lastUpdateTime()`]: cpiRpc,
+        [`ethereum:eth_call:${FRAX}:balanceOf(address)`]: () => encodeFunctionResult({
+          abi: ERC20_ABI, functionName: "balanceOf", result: BALANCE,
+        }),
+      },
+    });
+    const signal = new AbortController().signal;
+    const attempt = await observeFpiControllerRedemptionRoute(
+      params,
+      signal,
+      {
+        chainRpcs: network.chainRpcs,
+        requestCache: new Map(),
+        nowSec: NOW,
+        abortSignal: signal,
+      },
+      { attemptedAtSec: NOW },
+    );
+
+    expect(attempt).toMatchObject({
+      status: "accepted",
+      state: {
+        blockNumber: BLOCK,
+        blockTimestamp: NOW - 30,
+        controllerAddress: CONTROLLER,
+        inputTokenAddress: FPI,
+        outputTokenAddress: FRAX,
+      },
+    });
+    expect(network.rpcCalls.filter((call) => call.viaMulticall)).not.toHaveLength(0);
+    expect(network.rpcCalls.some((call) => !call.viaMulticall && call.contract === CONTROLLER)).toBe(true);
   });
 });

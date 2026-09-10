@@ -1,23 +1,12 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { describe, expect, it } from "vitest";
 import { LIVE_RESERVE_ADAPTER_DEFINITIONS } from "@shared/lib/live-reserve-adapters";
 import coin from "@shared/data/stablecoins/coins/stusd-stoneyield.json";
 import type { StablecoinMeta } from "@shared/types/core";
 import type { LiveReservesConfig } from "@shared/types/live-reserves";
-import type * as Onchain from "../onchain";
+import type { AdapterNetworkSpec } from "./reserve-adapter.test-support";
 import type { AdapterResult } from "../types";
-import { resetRpcMocks, testChainRpcs } from "./helpers/rpc-mock";
-
-vi.mock("../onchain", async (importOriginal) => {
-  const actual = await importOriginal<typeof Onchain>();
-  return {
-    ...actual,
-    fetchOnchainMulticall3: vi.fn(),
-  };
-});
-
+import { installAdapterNetwork } from "./reserve-adapter.test-support";
 import { fetchStoneyieldRouterPoolReserves } from "../stoneyield-router-pool";
-import { fetchOnchainMulticall3 } from "../onchain";
-
 const STUSD = "0x806dd21af6de051fb811760a5768d04a99160eb9";
 const USDC = "0x8ac76a51cc950d9822d68b83fe1ad97b32cd580d";
 const SUSDC = "0xad66385c6db496258771b5fd8ac376e3dd0d1536";
@@ -80,13 +69,13 @@ function strategyResult(address: string, active = true, weightBps = 10_000n): `0
   ].join("")}`;
 }
 
-function mockStoneyieldRpc(
+function stoneyieldNetwork(
   routerAsset = USDC,
   strategyAddress = VENUS_VAULT,
   overrides: { active?: boolean; count?: bigint; managed?: bigint; rate?: bigint; stusdSupply?: bigint; susdcSupply?: bigint; balance?: bigint } = {},
-): void {
+): AdapterNetworkSpec {
   const balanceOf = (owner: string) => `0x70a08231${owner.slice(2).padStart(64, "0")}`;
-  const rows: Array<[string, string, `0x${string}`]> = [
+  const rows: Array<[string, string, string]> = [
     [STUSD, "0x18160ddd", uint256Result(overrides.stusdSupply ?? STUSD_SUPPLY)],
     [SUSDC, "0x18160ddd", uint256Result(overrides.susdcSupply ?? SUSDC_SUPPLY)],
     [USDC, balanceOf(SUSDC), uint256Result(SUSDC_IDLE)],
@@ -101,44 +90,27 @@ function mockStoneyieldRpc(
     [VUSDC, "0x182df0f5", uint256Result(overrides.rate ?? VUSDC_RATE)],
     [VUSDC, "0x313ce567", uint256Result(8n)],
   ];
-  vi.mocked(fetchOnchainMulticall3).mockImplementation(async ({ chain, calls }) => {
-    if (chain !== "bsc") throw new Error(`Unexpected chain ${chain}`);
-    return calls.map(({ label, contract, data }) => {
-      const row = rows.find(([target, calldata]) => target === contract.toLowerCase() && calldata === data.toLowerCase());
-      if (!row) throw new Error(`Unexpected call ${contract} ${data}`);
-      return { label, success: true, returnData: row[2] };
-    });
-  });
+  return {
+    chains: { bsc: "https://rpc.example" },
+    rpc: Object.fromEntries(rows.map(([target, data, value]) => [`${target}:${data}`, value])),
+  };
 }
 
 async function runTracked(
-  configTransform?: (config: LiveReservesConfig) => LiveReservesConfig,
+  networkSpec: AdapterNetworkSpec = stoneyieldNetwork(),
 ): Promise<AdapterResult> {
+  const network = installAdapterNetwork(networkSpec);
   const trackedCoin = coin as unknown as StablecoinMeta;
-  const config = configTransform ? configTransform(TEST_CONFIG) : TEST_CONFIG;
   return fetchStoneyieldRouterPoolReserves(
     trackedCoin,
-    config,
+    TEST_CONFIG,
     new AbortController().signal,
-    { chainRpcs: testChainRpcs },
+    { chainRpcs: network.chainRpcs },
   );
 }
 
 describe("fetchStoneyieldRouterPoolReserves", () => {
-  beforeEach(() => {
-    resetRpcMocks();
-    testChainRpcs.set("bsc", {
-      chainId: "bsc",
-      chainName: "BNB Smart Chain",
-      type: "evm",
-      rpcUrl: "https://rpc.example",
-      explorerUrl: "https://bscscan.com",
-    });
-  });
-
   it("reads the split pool and emits one USDC look-through slice", async () => {
-    mockStoneyieldRpc();
-
     const result = await runTracked();
 
     expect(result.slices).toEqual([{
@@ -180,36 +152,30 @@ describe("fetchStoneyieldRouterPoolReserves", () => {
   });
 
   it("fails closed when the router's pinned asset identity changes", async () => {
-    mockStoneyieldRpc("0x1111111111111111111111111111111111111111");
-
-    await expect(runTracked()).rejects.toThrow(/router\.asset\(\).*expected/);
-    expect(fetchOnchainMulticall3).toHaveBeenCalledTimes(1);
+    await expect(runTracked(stoneyieldNetwork("0x1111111111111111111111111111111111111111")))
+      .rejects.toThrow(/router\.asset\(\).*expected/);
   });
 
   it("rejects inactive, unpinned, and additional strategies", async () => {
-    mockStoneyieldRpc(USDC, VENUS_VAULT, { active: false });
-    await expect(runTracked()).rejects.toThrow(/inactive/);
-    mockStoneyieldRpc(USDC, STUSD);
-    await expect(runTracked()).rejects.toThrow(/strategies\(0\).*expected/);
-    mockStoneyieldRpc(USDC, VENUS_VAULT, { count: 2n });
-    await expect(runTracked()).rejects.toThrow(/exactly one/);
+    await expect(runTracked(stoneyieldNetwork(USDC, VENUS_VAULT, { active: false }))).rejects.toThrow(/inactive/);
+    await expect(runTracked(stoneyieldNetwork(USDC, STUSD))).rejects.toThrow(/strategies\(0\).*expected/);
+    await expect(runTracked(stoneyieldNetwork(USDC, VENUS_VAULT, { count: 2n }))).rejects.toThrow(/exactly one/);
   });
 
   it("rejects impossible managed accounting and a funded zero-rate position", async () => {
-    mockStoneyieldRpc(USDC, VENUS_VAULT, { managed: ROUTER_IDLE - 1n });
-    await expect(runTracked()).rejects.toThrow(/below router idle/);
-    mockStoneyieldRpc(USDC, VENUS_VAULT, { rate: 0n });
-    await expect(runTracked()).rejects.toThrow(/not positive for a funded/);
+    await expect(runTracked(stoneyieldNetwork(USDC, VENUS_VAULT, { managed: ROUTER_IDLE - 1n })))
+      .rejects.toThrow(/below router idle/);
+    await expect(runTracked(stoneyieldNetwork(USDC, VENUS_VAULT, { rate: 0n })))
+      .rejects.toThrow(/not positive for a funded/);
   });
 
   it("permits exactly 1% divergence but degrades above it in either direction", async () => {
     for (const [router, venus, warned] of [[990n, 1000n, false], [989n, 1000n, true], [1000n, 990n, false], [1000n, 989n, true]] as const) {
-      mockStoneyieldRpc(USDC, VENUS_VAULT, {
+      const result = await runTracked(stoneyieldNetwork(USDC, VENUS_VAULT, {
         managed: ROUTER_IDLE + router * 10n ** 18n,
         balance: venus * 10n ** 8n,
         rate: 10n ** 28n,
-      });
-      const result = await runTracked();
+      }));
       expect((result.warnings ?? []).filter((warning) => warning.code === "router-nav-divergence"))
         .toEqual(warned ? [expect.objectContaining({ effect: "degraded" })] : []);
     }
@@ -220,15 +186,13 @@ describe("fetchStoneyieldRouterPoolReserves", () => {
       [2n * STUSD_SUPPLY, SUSDC_SUPPLY, "reserve-undercollateralized"],
       [STUSD_SUPPLY, 2n * SUSDC_SUPPLY, "susdc-supply-shortfall"],
     ] as const) {
-      mockStoneyieldRpc(USDC, VENUS_VAULT, { stusdSupply, susdcSupply });
-      const result = await runTracked();
+      const result = await runTracked(stoneyieldNetwork(USDC, VENUS_VAULT, { stusdSupply, susdcSupply }));
       expect(result.warnings).toEqual([expect.objectContaining({ code, effect: "degraded" })]);
     }
   });
 
   it("reports unavailable sUSDC coverage without losing STUSD backing", async () => {
-    mockStoneyieldRpc(USDC, VENUS_VAULT, { susdcSupply: 0n });
-    const result = await runTracked();
+    const result = await runTracked(stoneyieldNetwork(USDC, VENUS_VAULT, { susdcSupply: 0n }));
     expect(result.metadata?.collateralizationRatio).toBe(1);
     expect(result.warnings).toEqual([expect.objectContaining({ code: "susdc-supply-unavailable", effect: "degraded" })]);
   });

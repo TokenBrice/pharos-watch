@@ -295,6 +295,17 @@ The legacy top-level projections `gtProbe`, `priceProviderDiagnostics`, `cacheBl
     "persistentlyStaleIndependentCoins": [],
     "lastSuccessAt": 1771855800,
     "oldestFreshAgeSec": 3100,
+    "adapterReliability": [
+      {
+        "adapterKey": "circle",
+        "attempts": 72,
+        "ok": 70,
+        "degraded": 1,
+        "error": 1,
+        "skipped": 0,
+        "successRate": 0.972
+      }
+    ],
     "status": "healthy",
     "freshCoverageRatio": 0.89,
     "authoritativeFreshCoverageRatio": 0.83
@@ -494,7 +505,7 @@ Ratio-based on-chain status thresholds apply only when `dataQuality.onchainSuppl
 
 `summary.diagnosticIssueCount` counts best-effort status loader failures such as cache freshness lookups, reserve overview diagnostics, mint/burn diagnostics, and non-stablecoins data-quality subqueries. These issues reduce confidence and appear as info causes, but they do not degrade `availabilityStatus` or `dataQualityStatus` on their own unless all freshness evidence for the affected lane is gone.
 
-`reserveComposition.status` is a derived health signal for live reserve coverage. After bootstrap, it becomes `stale` when `freshCoins === 0`; `degraded` when `freshCoverageRatio < 0.75`, `authoritativeFreshCoverageRatio < 0.5`, `persistentlyStaleIndependentCoins.length > 0`, or reserve capacity pressure is present — `writeTimeoutUncertain > 0`, a `cursorTailState` of `recording` or `incomplete`, `runBudgetTruncationCount >= 2`, or a `runBudgetTruncated` run whose deferred share (`deferredCoins / configuredCoins`) is at least `0.25`; and `healthy` otherwise.
+`reserveComposition.status` is a derived health signal for live reserve coverage. After bootstrap, it becomes `stale` when `freshCoins === 0`; `degraded` when `freshCoverageRatio < 0.75`, `authoritativeFreshCoverageRatio < 0.5`, `persistentlyStaleIndependentCoins.length > 0`, or reserve capacity pressure is present — `writeTimeoutUncertain > 0`, or a `runBudgetTruncated` run whose deferred share (`deferredCoins / configuredCoins`) is at least `0.25`; and `healthy` otherwise.
 
 `reserveComposition.freshCoverageRatio` is `freshCoins / configuredCoins`. `reserveComposition.authoritativeFreshCoverageRatio` counts only stronger evidence cohorts (`independentFreshEligible`, `independentFreshUnverified`, `staticValidatedFresh`) over `configuredCoins`.
 
@@ -581,6 +592,19 @@ Machine-readable status timeline endpoint for tooling and incident analysis.
 `limit` is clamped into `1..200` by the shared query parser.
 
 **Response shape:** `StatusHistoryResponse` (defined in `shared/types/index.ts`). The response includes the current `reserveComposition` summary when it can be computed, or `null` if the reserve overview diagnostic query fails. `hasMore` reports whether another matching transition exists beyond the returned page: `true` means the selected window is truncated, `false` proves the returned page covers the matching window, and `null` means the transition query failed and completeness is unknown. Consumers must not infer that no transition occurred from a `true` or `null` result.
+
+### `GET /api/reserve-attempt-history`
+
+Admin-only per-coin attempt timeline for the live-reserve sync lane. This is the first production read path for `reserve_sync_attempt_history`; it turns triage from log grep into a bounded query.
+
+**Query parameters**
+
+| Param  | Type      | Default | Description                                                        |
+| ------ | --------- | ------- | ------------------------------------------------------------------ |
+| `coin` | `string`  | —       | Required stablecoin id (e.g. `usdc-circle`)                        |
+| `limit`| `integer` | `50`    | Number of attempts to return (1–200), newest first                  |
+
+**Response shape:** `{ "coin": string, "attempts": Array<{ stablecoinId, attemptedAt, adapterKey, breakerKey, attemptId, status, failureCategory, warningCodes, lastError, durationMs }> }`. `failureCategory` is the cron-classified failure (`network`, `upstream-http`, `parser-drift`, `validation`, `storage-write`, `circuit-open`, …); `warningCodes` are the attempt-scoped warning codes; `durationMs` is `metadata.diag.durationMs` and is `null` until the adapter emits block-scoped instrumentation. A missing `coin` returns `400`.
 
 ### `GET /api/request-source-stats`
 

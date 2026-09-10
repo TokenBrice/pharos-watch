@@ -1,70 +1,12 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { LIVE_RESERVE_ADAPTER_DEFINITIONS } from "@shared/lib/live-reserve-adapters";
 import { getRedemptionBackstopConfig } from "@shared/lib/redemption-backstops";
 import { readRedemptionBackstopLiveMetadata } from "../../../lib/redemption-backstop/live-metadata";
 import { buildRedemptionBackstopEntry } from "../../../lib/redemption-backstop/sources";
-
-vi.mock("../helpers", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("../helpers")>();
-  const { makeOnchainCallersMock } = await import("./helpers/onchain-callers-mock");
-  const fetchOnchainUint256 = vi.fn();
-  const fetchOnchainRawCall = vi.fn();
-  return {
-    ...actual,
-    fetchOnchainUint256,
-    fetchOnchainRawCall,
-    makeOnchainCallers: makeOnchainCallersMock({
-      uint256: fetchOnchainUint256,
-      raw: fetchOnchainRawCall,
-    }),
-  };
-});
-
-import { fetchOnchainRawCall, fetchOnchainUint256 } from "../helpers";
 import { adaptReservoirReserves, type ReservoirReservesResponse } from "../reservoir";
-import { runReservoir, reservoirSnapshot } from "./reservoir.test-support";
+import { RESERVOIR_ENDPOINT, reservoirSnapshot, runReservoir } from "./reservoir.test-support";
 
-const PSM_ADDRESS = "0x4809010926aec940b550d34a46a52739f996d75d";
-const USDC_ADDRESS = "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48";
-const UNDERLYING_SELECTOR = "0x6f307dc3";
-const UNDERLYING_BALANCE_SELECTOR = "0x59356c5c";
-const PAUSED_SELECTOR = "0x5c975abb";
-const SAVING_MODULE_ADDRESS = "0x5475611dffb8ef4d697ae39df9395513b6e947d7";
-const REDEEM_FEE_SELECTOR = "0x965fa21e";
-
-function word(hexBody: string): string {
-  return `0x${hexBody.replace(/^0x/, "").padStart(64, "0")}`;
-}
-
-/**
- * Route the mocked callers by contract and selector: the adapter fires
- * underlying(), underlyingBalance(), paused() and redeemFee() concurrently, so
- * ordered mock queues would be fragile here.
- */
-function primePsmMocks(options: {
-  underlying?: string | null;
-  balance?: bigint | null;
-  paused?: boolean | null;
-  redeemFee?: bigint | null;
-}) {
-  const underlying = options.underlying === undefined ? word(USDC_ADDRESS) : options.underlying;
-  const paused = options.paused === undefined ? false : options.paused;
-  vi.mocked(fetchOnchainRawCall).mockImplementation((args: unknown) => {
-    const { contract, data } = args as { contract: string; data: string };
-    if (contract !== PSM_ADDRESS) return Promise.resolve(null);
-    if (data === UNDERLYING_SELECTOR) return Promise.resolve(underlying);
-    if (data === PAUSED_SELECTOR) return Promise.resolve(paused == null ? null : word(paused ? "1" : "0"));
-    return Promise.resolve(null);
-  });
-  vi.mocked(fetchOnchainUint256).mockImplementation((args: unknown) => {
-    const { contract, data } = args as { contract: string; data: string };
-    if (contract === SAVING_MODULE_ADDRESS && data === REDEEM_FEE_SELECTOR) {
-      return Promise.resolve(options.redeemFee === undefined ? 134n : options.redeemFee);
-    }
-    if (contract !== PSM_ADDRESS || data !== UNDERLYING_BALANCE_SELECTOR) return Promise.resolve(null);
-    return Promise.resolve(options.balance === undefined ? 4_000000n : options.balance);
-  });
-}
+afterEach(() => vi.unstubAllGlobals());
 
 const SAMPLE_RESPONSE: ReservoirReservesResponse = {
   assets: [
@@ -82,10 +24,6 @@ const SAMPLE_RESPONSE: ReservoirReservesResponse = {
   equity: "5",
 };
 
-beforeEach(() => {
-  vi.clearAllMocks();
-  primePsmMocks({});
-});
 afterEach(() => vi.unstubAllGlobals());
 
 describe("adaptReservoirReserves", () => {
@@ -104,17 +42,18 @@ describe("adaptReservoirReserves", () => {
 
     expect(slices).toEqual([
       {
+        sourceKey: "reservoir:usd1",
         name: "USD1 lending markets",
         pct: 30,
         risk: "medium",
         coinId: "usd1-world-liberty-financial",
         depType: "collateral",
       },
-      { name: "PYUSD lending markets", pct: 30, risk: "medium", coinId: "pyusd-paypal", depType: "collateral" },
-      { name: "RLUSD lending markets", pct: 15, risk: "medium", coinId: "rlusd-ripple", depType: "collateral" },
-      { name: "GHO lending markets", pct: 10, risk: "medium", coinId: "gho-aave", depType: "collateral" },
-      { name: "USDT / USDT0 positions", pct: 10, risk: "medium", coinId: "usdt-tether", depType: "collateral" },
-      { name: "USDC positions", pct: 5, risk: "medium", coinId: "usdc-circle", depType: "collateral" },
+      { sourceKey: "reservoir:pyusd", name: "PYUSD lending markets", pct: 30, risk: "medium", coinId: "pyusd-paypal", depType: "collateral" },
+      { sourceKey: "reservoir:rlusd", name: "RLUSD lending markets", pct: 15, risk: "medium", coinId: "rlusd-ripple", depType: "collateral" },
+      { sourceKey: "reservoir:gho", name: "GHO lending markets", pct: 10, risk: "medium", coinId: "gho-aave", depType: "collateral" },
+      { sourceKey: "reservoir:usdt", name: "USDT / USDT0 positions", pct: 10, risk: "medium", coinId: "usdt-tether", depType: "collateral" },
+      { sourceKey: "reservoir:usdc", name: "USDC positions", pct: 5, risk: "medium", coinId: "usdc-circle", depType: "collateral" },
     ]);
     // The broader stable bucket remains diagnostic, while the modeled terminal
     // USDC route is limited to the actual USDC slice.
@@ -147,8 +86,8 @@ describe("adaptReservoirReserves", () => {
     });
 
     expect(slices).toEqual([
-      { name: "AUSD lending markets", pct: 60, risk: "medium", coinId: "ausd-agora", depType: "collateral" },
-      { name: "USDC positions", pct: 40, risk: "medium", coinId: "usdc-circle", depType: "collateral" },
+      { sourceKey: "reservoir:ausd", name: "AUSD lending markets", pct: 60, risk: "medium", coinId: "ausd-agora", depType: "collateral" },
+      { sourceKey: "reservoir:usdc", name: "USDC positions", pct: 40, risk: "medium", coinId: "usdc-circle", depType: "collateral" },
     ]);
     expect(stableBucketLiquidityUsd).toBe(95);
     expect(immediateRedeemableUsd).toBe(40);
@@ -181,8 +120,9 @@ describe("adaptReservoirReserves", () => {
     });
 
     expect(slices).toEqual([
-      { name: "Hastra / Sentora PRIME credit allocations", pct: 75, risk: "high" },
+      { sourceKey: "reservoir:prime", name: "Hastra / Sentora PRIME credit allocations", pct: 75, risk: "high" },
       {
+        sourceKey: "reservoir:usdat",
         name: "Pendle PT USDat tokenized-treasury principal token",
         pct: 25,
         risk: "high",
@@ -242,7 +182,7 @@ describe("adaptReservoirReserves", () => {
       equity: "5",
     });
 
-    expect(slices).toEqual([{ name: "Unmapped reserve positions", pct: 100, risk: "high" }]);
+    expect(slices).toEqual([{ sourceKey: "reservoir:unknown", name: "Unmapped reserve positions", pct: 100, risk: "high" }]);
     expect(unknownAssets).toEqual(["Mystery Strategy Vault"]);
     expect(unknownExposurePct).toBe(100);
     expect(immediateRedeemableUsd).toBe(0);
@@ -256,7 +196,7 @@ describe("adaptReservoirReserves", () => {
 
     expect(unknownAssets).toContain("Unmapped Reservoir balance-sheet total-assets gap");
     expect(sourceTotalGapPct).toBe(20);
-    expect(slices).toEqual(expect.arrayContaining([{ name: "Unmapped reserve positions", pct: 20, risk: "high" }]));
+    expect(slices).toEqual(expect.arrayContaining([{ sourceKey: "reservoir:unknown", name: "Unmapped reserve positions", pct: 20, risk: "high" }]));
   });
 
   it("handles non-integer percentages correctly via normalizeSlices", () => {
@@ -278,7 +218,7 @@ describe("adaptReservoirReserves", () => {
   });
 
   it("emits unverified freshness for timestamp-less protocol API telemetry", async () => {
-    const { result } = await runReservoir("r", SAMPLE_RESPONSE);
+    const { result } = await runReservoir("rusd-reservoir", SAMPLE_RESPONSE);
 
     expect(result.metadata).toMatchObject({
       freshnessMode: "unverified",
@@ -300,13 +240,10 @@ describe("adaptReservoirReserves", () => {
   });
 
   it("binds redemption capacity to the same-run USDC PSM balance and reports the route open", async () => {
-    primePsmMocks({ balance: 4_000000n, paused: false });
-    const { result } = await runReservoir("srusd-reservoir", SAMPLE_RESPONSE);
+    const { result } = await runReservoir("srusd-reservoir", SAMPLE_RESPONSE, { balance: 4_000000n, paused: false });
 
     expect(result.metadata).toMatchObject({
       psmUnderlyingBalanceRaw: "4000000",
-      immediateRedeemableUsd: 4,
-      immediateRedeemableRatio: 4 / 95,
       redemption: {
         capacityUsd: 4,
         capacityRatioOfSupply: 4 / 95,
@@ -325,26 +262,23 @@ describe("adaptReservoirReserves", () => {
   it("publishes the SavingModule redeemFee() as live fee telemetry without rounding it away", async () => {
     // 134/1e6 is a 1.34 bps multiplicative exit fee; rounding to an integer bps
     // at the adapter would understate it by a quarter.
-    primePsmMocks({ redeemFee: 134n });
-    const { result } = await runReservoir("srusd-reservoir", SAMPLE_RESPONSE);
+    const { result } = await runReservoir("srusd-reservoir", SAMPLE_RESPONSE, { redeemFee: 134n });
 
-    expect(result.metadata?.redemptionFeeBps).toBeCloseTo(1.34, 10);
+    expect(result.metadata).not.toHaveProperty("redemptionFeeBps");
     expect(result.metadata?.redemption?.feeBps).toBeCloseTo(1.34, 10);
   });
 
   it("does not attribute the SavingModule exit fee to rUSD, which redeems straight at the PSM", async () => {
-    primePsmMocks({ redeemFee: 134n });
-    const { result } = await runReservoir("rusd-reservoir", SAMPLE_RESPONSE);
+    const { result } = await runReservoir("rusd-reservoir", SAMPLE_RESPONSE, { redeemFee: 134n });
 
-    expect(result.metadata?.redemptionFeeBps).toBeUndefined();
+    expect(result.metadata).not.toHaveProperty("redemptionFeeBps");
     expect(result.metadata?.redemption?.feeBps).toBeUndefined();
     // Capacity still publishes: the PSM leg is shared by all three coins.
     expect(result.metadata?.redemption?.capacityKind).toBe("live-direct");
   });
 
   it("omits fee telemetry when redeemFee() breaches the contract's own 1e6 bound", async () => {
-    primePsmMocks({ redeemFee: 1_000_000n });
-    const { result } = await runReservoir("srusd-reservoir", SAMPLE_RESPONSE);
+    const { result } = await runReservoir("srusd-reservoir", SAMPLE_RESPONSE, { redeemFee: 1_000_000n });
 
     expect(result.metadata?.redemption?.feeBps).toBeUndefined();
     // The unreadable fee must not take the capacity surface down with it.
@@ -352,8 +286,7 @@ describe("adaptReservoirReserves", () => {
   });
 
   it("reports the route paused when the PSM paused() read returns true", async () => {
-    primePsmMocks({ paused: true });
-    const { result } = await runReservoir("srusd-reservoir", SAMPLE_RESPONSE);
+    const { result } = await runReservoir("srusd-reservoir", SAMPLE_RESPONSE, { paused: true });
 
     expect(result.metadata?.redemption).toMatchObject({
       routeStatus: "paused",
@@ -362,8 +295,9 @@ describe("adaptReservoirReserves", () => {
   });
 
   it("withholds redemption telemetry when the PSM underlying() is not the pinned USDC address", async () => {
-    primePsmMocks({ underlying: word("0x1111111111111111111111111111111111111111") });
-    const { result } = await runReservoir("srusd-reservoir", SAMPLE_RESPONSE);
+    const { result } = await runReservoir("srusd-reservoir", SAMPLE_RESPONSE, {
+      underlying: "0x1111111111111111111111111111111111111111",
+    });
 
     expect(result.metadata?.redemption).toBeUndefined();
     expect(result.metadata?.immediateRedeemableUsd).toBeUndefined();
@@ -375,8 +309,7 @@ describe("adaptReservoirReserves", () => {
   });
 
   it("withholds redemption telemetry when the PSM balance read fails", async () => {
-    primePsmMocks({ balance: null });
-    const { result } = await runReservoir("srusd-reservoir", SAMPLE_RESPONSE);
+    const { result } = await runReservoir("srusd-reservoir", SAMPLE_RESPONSE, { balance: null });
 
     expect(result.metadata?.redemption).toBeUndefined();
     expect(result.metadata?.immediateRedeemableUsd).toBeUndefined();
@@ -384,7 +317,6 @@ describe("adaptReservoirReserves", () => {
 
   it("scores the PSM-bound route capacity as live-direct through the backstop entry", async () => {
     const now = 1_800_000_000;
-    primePsmMocks({ balance: 4_000000n, paused: false });
     const { result } = await runReservoir("wsrusd-reservoir", SAMPLE_RESPONSE);
     const reserveSnapshot = reservoirSnapshot(result, now);
     const liveMetadata = readRedemptionBackstopLiveMetadata("wsrusd-reservoir", reserveSnapshot, now);
@@ -427,8 +359,11 @@ describe("adaptReservoirReserves", () => {
     // other cost term, so resolveCostBps returns null and V9 sees the same
     // undisclosed-fee route it saw before this adapter published a live fee.
     const now = 1_800_000_000;
-    primePsmMocks({ balance: 4_000000n, paused: false, redeemFee: null });
-    const { result } = await runReservoir("wsrusd-reservoir", SAMPLE_RESPONSE);
+    const { result } = await runReservoir("wsrusd-reservoir", SAMPLE_RESPONSE, {
+      balance: 4_000000n,
+      paused: false,
+      redeemFee: null,
+    });
     const reserveSnapshot = reservoirSnapshot(result, now);
     const entry = await buildRedemptionBackstopEntry(
       {} as D1Database,
@@ -448,21 +383,24 @@ describe("adaptReservoirReserves", () => {
   });
 
   it("falls back to neutral API headers when browser-style headers fail", async () => {
-    const { result, requests } = await runReservoir("r", SAMPLE_RESPONSE, true);
+    const { result, network } = await runReservoir("rusd-reservoir", SAMPLE_RESPONSE, {
+      rejectBrowserHeaders: true,
+    });
 
     expect(result.metadata).toMatchObject({
       totalAssetsUsd: 100,
       totalLiabilitiesUsd: 95,
       collateralizationRatio: 100 / 95,
     });
-    expect(requests.map((request) => ({ url: request.url, origin: request.headers.origin ?? null, referer: request.headers.referer ?? null }))).toEqual([
-      { url: "https://example.com/reservoir", origin: "https://app.reservoir.xyz", referer: "https://app.reservoir.xyz/reserves" },
-      { url: "https://example.com/reservoir", origin: null, referer: null },
-    ]);
+    // First attempt carries the browser pair (403 from the table), retry carries
+    // no origin at all — the responder rejects any unexpected header set.
+    expect(
+      network.requests.filter((request) => request.method === "GET").map((request) => request.url),
+    ).toEqual([RESERVOIR_ENDPOINT, RESERVOIR_ENDPOINT]);
   });
 
   it("aggregates unknown exposure into one warning instead of one warning per position", async () => {
-    const { result } = await runReservoir("r", {
+    const { result } = await runReservoir("rusd-reservoir", {
       ...SAMPLE_RESPONSE,
       assets: [...SAMPLE_RESPONSE.assets,
         { label: "Mystery Adapter A", totalBalanceValue: "3" },
@@ -485,7 +423,7 @@ describe("adaptReservoirReserves", () => {
   });
 
   it("emits a degraded warning when totalAssets exceeds disclosed asset rows", async () => {
-    const { result } = await runReservoir("r", { ...SAMPLE_RESPONSE, totalAssets: "125" });
+    const { result } = await runReservoir("rusd-reservoir", { ...SAMPLE_RESPONSE, totalAssets: "125" });
 
     expect(result.warnings).toEqual(
       expect.arrayContaining([expect.objectContaining({ code: "source-total-gap", effect: "degraded" })]),
@@ -496,7 +434,7 @@ describe("adaptReservoirReserves", () => {
   });
 
   it("emits a degraded warning when total liabilities exceed total assets", async () => {
-    const { result } = await runReservoir("r", { ...SAMPLE_RESPONSE, totalAssets: "100", totalLiabilities: "120", equity: "-20" });
+    const { result } = await runReservoir("rusd-reservoir", { ...SAMPLE_RESPONSE, totalAssets: "100", totalLiabilities: "120", equity: "-20" });
 
     expect(result.warnings).toEqual(
       expect.arrayContaining([

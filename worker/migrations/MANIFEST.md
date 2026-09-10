@@ -25,6 +25,7 @@
 | 0236     | `0236_dex_deployment_attempt_attribution.sql`                 | Add rollout-safe per-deployment DEX census attempt fences while retaining the legacy coin fence as a compatibility fallback. |
 | 0237     | `0237_reserve_composition_history_payload_hash.sql`       | Add nullable payload SHA-256 digest to reserve composition history while retaining payload columns for backward compatibility. |
 | 0238     | `0238_api_key_donor_claims.sql`                           | Add the one-claim-per-wallet supporter API key ledger backing `POST /api/donor-key-claims`. |
+| 0239     | `0239_live_reserve_config_fingerprint.sql`                 | Add nullable configuration fingerprints to reserve composition and attempt state; old Workers remain compatible and new admission rejects unreviewed retained configurations. |
 
 ## Squashed Individual Migrations (absorbed into the 0000 baseline on 2026-07-30)
 
@@ -209,7 +210,14 @@ These were operated against production D1 outside the normal migration path. His
 
 These are not active migration rows. They record stale tables with no current runtime readers or writers where the cleanup action is a dedicated destructive D1 rollout, not a standard deploy migration. `npm run check:migrations` enforces `rollout-safety: backward-compatible` for active migrations and rejects table drops in the normal deploy path.
 
-The queue is currently empty. The 2026-08-26 destructive window cleared the previously queued `api_key_requests.intended_endpoints_json` column and the production-only orphans from the 2026-08-26 parity capture (`agents/be4-baseline-parity-prod-schema-2026-08-26.txt`); the load-bearing repair backlog index from that capture was backfilled as migration `0234`. `d1_migrations` is wrangler-owned bookkeeping and is expected to exist only in production.
+The 2026-08-26 destructive window cleared the previously queued `api_key_requests.intended_endpoints_json` column and the production-only orphans from the 2026-08-26 parity capture (`agents/be4-baseline-parity-prod-schema-2026-08-26.txt`); the load-bearing repair backlog index from that capture was backfilled as migration `0234`. `d1_migrations` is wrangler-owned bookkeeping and is expected to exist only in production.
+
+Queued 2026-09-09 (`findings/infra-store-api.md` IS6; fresh source search found no runtime reader for any of the four outside the baseline DDL — every predicate on the affected tables is `stablecoin_id`-qualified or `attempt_id = ?`):
+
+- `idx_reserve_composition_history_coin_attempt` — fully shadowed by the partial-unique twin `idx_reserve_composition_history_coin_attempt_unique` on the same columns; every predicate is `attempt_id = ?`, which never matches NULL.
+- `idx_reserve_sync_attempt_history_coin_attempt` — fully shadowed by `idx_reserve_sync_attempt_history_coin_attempt_unique` on the same columns; same reasoning.
+- `idx_reserve_sync_state_last_success_attempt` — no unqualified consumer; every `reserve_sync_state` predicate is `stablecoin_id`-qualified (primary key) or per-coin correlated.
+- `idx_reserve_sync_state_pending_attempt` — no unqualified consumer; same reasoning.
 
 ## Append-only Retention Policy
 

@@ -2,11 +2,27 @@ import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
+import type { StablecoinMeta } from "@shared/types/core";
+import type { LiveReservesConfig } from "@shared/types/live-reserves";
 import { adaptUsdhNativeMarkets } from "../usdh-native-markets";
+import { runAdapter } from "./reserve-adapter.test-support";
 
 const FIXTURES_DIR = join(dirname(fileURLToPath(import.meta.url)), "fixtures");
 const SAMPLE_HTML = readFileSync(join(FIXTURES_DIR, "usdh-native-markets.html"), "utf8");
 
+const RESERVES_PAGE = "https://usdh.example/reserves";
+const NATIVE_MARKETS_CONFIG: LiveReservesConfig = {
+  adapter: "usdh-native-markets",
+  version: 1,
+  semantics: "attestation-mix",
+  inputs: { primary: { kind: "http-html", url: RESERVES_PAGE } },
+};
+const NATIVE_MARKETS_COIN = {
+  id: "usdh-native-markets",
+  name: "USDH Stablecoin",
+  symbol: "USDH",
+  liveReservesConfig: NATIVE_MARKETS_CONFIG,
+} as unknown as StablecoinMeta;
 describe("adaptUsdhNativeMarkets", () => {
   it("emits a single reviewed-attestation slice at risk low", () => {
     const result = adaptUsdhNativeMarkets(SAMPLE_HTML);
@@ -60,5 +76,18 @@ describe("adaptUsdhNativeMarkets", () => {
     `;
     const result = adaptUsdhNativeMarkets(html);
     expect(result.metadata?.attestationPeriod).toBe("January 2026");
+  });
+});
+describe("fetchUsdhNativeMarketsReserves", () => {
+  it("fetches the configured page through the shared network boundary", async () => {
+    const { result } = await runAdapter(NATIVE_MARKETS_CONFIG.adapter, NATIVE_MARKETS_COIN, {
+      network: { html: { [RESERVES_PAGE]: SAMPLE_HTML } },
+      nowSec: Date.UTC(2026, 3, 30, 1) / 1_000,
+    });
+
+    expect(result.metadata).toMatchObject({
+      attestationPeriod: "April 2026",
+      sourceTimestamp: Date.UTC(2026, 3, 30) / 1_000,
+    });
   });
 });

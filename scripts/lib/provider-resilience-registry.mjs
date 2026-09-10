@@ -248,6 +248,29 @@ export const PROVIDER_RESILIENCE_REGISTRY = [
     ],
   },
   {
+    id: "daily-social-delivery",
+    family: "provider-transport",
+    description: "Daily social graphic and manifest reads from the same-owned Pages publication before the 14:00 Europe/Belgrade tweet.",
+    files: ["worker/src/lib/daily-social-delivery.ts"],
+    tests: ["worker/src/lib/__tests__/daily-social-delivery.test.ts"],
+    allowBareFetch: true,
+    directFetchJustification:
+      "The same-owned Pages route serves the immutable local-date edition; each read is time-bounded, response bodies are cancelled on 404 or invalid content, and the PNG is signature- and checksum-verified before the tweet is prepared.",
+    resilience: {
+      transport: "direct-fetch",
+      timeout: "Composes the caller signal with a 15-second AbortSignal.timeout() via AbortSignal.any().",
+      body: "Bounds reads with bufferReadableStream(), cancels 404 and invalid or bodyless responses, and verifies the PNG signature and SHA-256 digest before upload.",
+      circuitSources: [],
+    },
+    requiredMarkers: [
+      "AbortSignal.timeout",
+      "AbortSignal.any",
+      "bufferReadableStream",
+      "body?.cancel",
+      "SITE_ORIGIN",
+    ],
+  },
+  {
     id: "twitter-digest-delivery",
     family: "twitter",
     description: "Twitter/X daily digest delivery.",

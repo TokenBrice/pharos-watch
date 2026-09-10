@@ -14,7 +14,8 @@
         "custody",
         "concentration"
       ],
-      "liquidityHorizon": "one-day"
+      "liquidityHorizon": "one-day",
+      "sourceKey": "liquity-v2-branches:flare:0xad552a648c74d49e10027ab8a618a3ad4901c5be"
     },
     {
       "name": "WFLR",
@@ -27,7 +28,8 @@
         "liquidity",
         "smart-contract"
       ],
-      "liquidityHorizon": "immediate"
+      "liquidityHorizon": "immediate",
+      "sourceKey": "liquity-v2-branches:flare:0x1d80c49bbbcd1c0911346656b529df9e5c2f783d"
     },
     {
       "name": "stXRP",
@@ -41,7 +43,8 @@
         "smart-contract",
         "custody"
       ],
-      "liquidityHorizon": "one-day"
+      "liquidityHorizon": "one-day",
+      "sourceKey": "liquity-v2-branches:flare:0x4c18ff3c89632c3dd62e796c0afa5c07c4c1b2b3"
     },
     {
       "name": "sFLR",
@@ -55,7 +58,8 @@
         "smart-contract",
         "custody"
       ],
-      "liquidityHorizon": "one-day"
+      "liquidityHorizon": "one-day",
+      "sourceKey": "liquity-v2-branches:flare:0x12e605bc104e93b45e1ad99f9e555f659051c2bb"
     }
   ],
   "reserveReview": {

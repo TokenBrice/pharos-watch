@@ -25,6 +25,7 @@ export const CLI_ARGV_POLICY = Object.freeze({
     strict("scripts/ci/check-doc-symbols.ts"),
     strict("scripts/ci/guard-worker-deploy.ts"),
     strict("scripts/ci/open-automated-refresh-pr.ts"),
+    strict("scripts/maintenance/build-daily-social.ts"),
     strict("scripts/maintenance/diff-safety-score-v9-movers.ts"),
     strict("scripts/maintenance/freeze-stablecoin.ts"),
     strict("scripts/maintenance/generate-safety-score-v9-evidence-gap-queue.ts"),
@@ -35,6 +36,7 @@ export const CLI_ARGV_POLICY = Object.freeze({
     strict("scripts/maintenance/measure-cdp-shock-coverage.ts"),
     strict("scripts/maintenance/measure-protocol-api-mechanism-metrics.ts"),
     strict("scripts/maintenance/migrate-stablecoin-sidecar.ts"),
+    strict("scripts/maintenance/publish-daily-social.ts"),
     strict("scripts/maintenance/publish-safety-score-map.ts"),
     strict("scripts/maintenance/purge-cloudflare-zone-cache.mjs"),
     strict("scripts/maintenance/refresh-pages-release-data.ts"),
@@ -169,6 +171,7 @@ export const CLI_ARGV_POLICY = Object.freeze({
     exempt("scripts/maintenance/profile-vitest.mjs", "test"),
     exempt("scripts/maintenance/refresh-independent-assurance-reports.ts", "build"),
     exempt("scripts/maintenance/refresh-reserve-html-fixtures.ts", "build"),
+    exempt("scripts/maintenance/refresh-usdy-holdings-report.ts", "build"),
     exempt(
       "scripts/maintenance/replay-safety-score-v9-aggregation.ts",
       "build",

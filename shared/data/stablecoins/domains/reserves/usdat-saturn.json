@@ -9,8 +9,16 @@
       "depType": "wrapper",
       "assetClass": "stablecoin",
       "issuerOrObligor": "MoonPay-issued PYUSDx, backed by PayPal USD",
-      "riskFactors": ["credit", "duration", "liquidity", "custody", "counterparty", "concentration"],
-      "liquidityHorizon": "immediate"
+      "riskFactors": [
+        "credit",
+        "duration",
+        "liquidity",
+        "custody",
+        "counterparty",
+        "concentration"
+      ],
+      "liquidityHorizon": "immediate",
+      "sourceKey": "saturn-pyusdx:pyusd"
     }
   ],
   "reserveReview": {

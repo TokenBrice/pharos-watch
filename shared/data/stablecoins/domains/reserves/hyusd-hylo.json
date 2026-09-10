@@ -3,6 +3,7 @@
   "reserves": [
     {
       "name": "SOL LST pool collateral at current Hylo program state",
+      "sourceKey": "hylo-solana:lst-pool",
       "pct": 92.05801369,
       "risk": "high",
       "assetClass": "cryptoasset",
@@ -17,6 +18,7 @@
     },
     {
       "name": "cbBTC pool collateral at current Hylo program state",
+      "sourceKey": "hylo-solana:cbbtc-pool",
       "pct": 4.55819504,
       "risk": "high",
       "assetClass": "cryptoasset",
@@ -32,6 +34,7 @@
     },
     {
       "name": "USDC pool collateral at current Hylo program state",
+      "sourceKey": "hylo-solana:usdc-pool",
       "pct": 1.77347232,
       "risk": "low",
       "coinId": "usdc-circle",
@@ -48,6 +51,7 @@
     },
     {
       "name": "HYPE pool collateral at current Hylo program state",
+      "sourceKey": "hylo-solana:hype-pool",
       "pct": 1.61031895,
       "risk": "high",
       "assetClass": "cryptoasset",

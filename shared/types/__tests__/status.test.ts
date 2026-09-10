@@ -4,21 +4,6 @@ import { PublicStatusHistoryResponseSchema, StatusHistoryResponseSchema, StatusR
 import { reserveComposition, statusResponse } from "./status.test-support";
 
 describe("StatusResponseSchema reserve composition contract", () => {
-  it("parses reserve sync cursor and history observability fields", () => {
-    const parsed = StatusResponseSchema.parse(statusResponse());
-
-    expect(parsed.reserveComposition).toMatchObject({
-      cursorTailState: "incomplete",
-      cursorTailError: "cursor write failed",
-      runBudgetTruncationCount: 2,
-      historyWriteGaps: [
-        expect.objectContaining({
-          stablecoinId: "usdc-circle",
-          attemptId: "attempt-1",
-        }),
-      ],
-    });
-  });
 
   it.each([
     ["crons", { "sync-stablecoins": {} }],
@@ -98,14 +83,14 @@ describe("StatusResponseSchema reserve composition contract", () => {
   it.each([
     ["current", StatusResponseSchema],
     ["history", StatusHistoryResponseSchema],
-  ] as const)("preserves and validates reserve cursor state in %s status", (_name, schema) => {
+  ] as const)("preserves and validates reserve deferred-cursor state in %s status", (_name, schema) => {
     const payload = { ...statusResponse(), transitions: [], hasMore: false };
     expect(schema.parse(payload).reserveComposition).toEqual(reserveComposition());
-    const { cursorTailState: _cursorTailState, ...reserveWithoutCursorState } = payload.reserveComposition;
-    const result = schema.safeParse({ ...payload, reserveComposition: reserveWithoutCursorState });
+    const { nextCursorStablecoinId: _nextCursor, ...reserveWithoutNextCursor } = payload.reserveComposition;
+    const result = schema.safeParse({ ...payload, reserveComposition: reserveWithoutNextCursor });
     expect(result.success).toBe(false);
     if (!result.success) {
-      expect(result.error.issues.map((issue) => issue.path)).toContainEqual(["reserveComposition", "cursorTailState"]);
+      expect(result.error.issues.map((issue) => issue.path)).toContainEqual(["reserveComposition", "nextCursorStablecoinId"]);
     }
   });
 

@@ -1,0 +1,60 @@
+{
+  "schemaVersion": 1,
+  "product": "BRLV",
+  "profile": "brlv-v1",
+  "officialIndexUrl": "https://www.crown-brlv.com/en/transparency/",
+  "reportUrl": "https://dfg4lo8c2lfcn.cloudfront.net/report_brlv_8_2026_1ea3d5e0be.pdf",
+  "reportSha256": "68325f70157b6d549f534900917e84d40bdcbc9bc9348de2a717c11f8e01f8cd",
+  "reportByteLength": 59237,
+  "reportDate": "2026-08-31",
+  "reportAsOf": "2026-08-31T23:59:59-03:00",
+  "reportTimeZone": "Brasília Time (BRT, UTC-3)",
+  "attestor": "Fact Finance Ltda",
+  "engagement": "Independent technical Proof of Reserves verification memo (an RWA verification agent, not an accounting/audit firm; the signer is a technical lead, not a licensed accountant)",
+  "conclusion": "issuer-attested",
+  "unit": "BRL",
+  "assets": [
+    {
+      "code": "cash-equivalents",
+      "label": "Cash and equivalents",
+      "amount": "60.21"
+    },
+    {
+      "code": "treasury-bonds-primary",
+      "label": "Brazilian Treasury Bonds",
+      "amount": "231887240.50"
+    },
+    {
+      "code": "treasury-bonds-secondary",
+      "label": "Brazilian Treasury Bonds",
+      "amount": "148370777.48"
+    },
+    {
+      "code": "etf-treasury-primary",
+      "label": "ETFs – Brazilian Treasury",
+      "amount": "48479.53"
+    },
+    {
+      "code": "etf-treasury-secondary",
+      "label": "ETFs – Brazilian Treasury",
+      "amount": "9060.72"
+    }
+  ],
+  "liabilities": [
+    {
+      "code": "circulation",
+      "label": "BRLV tokens in circulation (all networks)",
+      "amount": "378063743.00"
+    }
+  ],
+  "reportedAssetTotal": "380315618.44",
+  "computedAssetTotal": "380315618.44",
+  "reportedLiabilityTotal": "378063743.00",
+  "extraction": {
+    "tool": "Poppler pdftotext -layout",
+    "parserVersion": "26.07.0",
+    "normalizedTextSha256": "a0ad11c3687ee3440e5f0ab96f0584d2f82d3e7e2297a4f436c848b68eb95e65",
+    "pageCount": 2
+  },
+  "assuranceTier": "issuer-attested"
+}

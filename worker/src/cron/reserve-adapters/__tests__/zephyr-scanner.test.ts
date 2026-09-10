@@ -1,6 +1,46 @@
 import { describe, expect, it } from "vitest";
 import { adaptZephyrScanner } from "../zephyr-scanner";
-import { expectValidAdapterOutput } from "./reserve-adapter.test-support";
+import { expectValidAdapterOutput, runAdapter } from "./reserve-adapter.test-support";
+
+const ZEPHYR_ENDPOINT = "https://zephyrprotocol.com/api/v1/reservesnapshots?limit=1&order=desc";
+const ZEPHYR_CAPTURE = {
+  total: 580,
+  limit: 1,
+  order: "desc",
+  results: [
+    {
+      captured_at: "2024-03-09T16:00:00.000Z",
+      reserve_height: 773828,
+      previous_height: 773827,
+      hf_version: 11,
+      on_chain: {
+        zeph_reserve_atoms: "3838581055538091486",
+        zeph_reserve: 3_838_581.055538091,
+        zsd_circ_atoms: "385036812914440613",
+        zsd_circ: 385_036.8129144406,
+        reserve_ratio: 3.173356,
+        reserve_ratio_ma: 3.218013,
+        zsd_yield_reserve_atoms: "315747159842202047",
+        zsd_yield_reserve: 315_747.159842202,
+      },
+      pricing_record: {
+        spot: 318310060000,
+        timestamp: 1710000000,
+        reserve_ratio: 3173355150000,
+        reserve_ratio_ma: 3218168250000,
+      },
+      raw: {
+        assets: "1221858966103193233",
+        liabilities: "385036812914440613",
+        zeph_reserve: "3838581055538091486",
+        num_stables: "385036812914440613",
+        zyield_reserve: "315747159842202047",
+        reserve_ratio: "3.173356",
+        reserve_ratio_ma: "3.218013",
+      },
+    },
+  ],
+};
 
 describe("adaptZephyrScanner", () => {
   it("maps latest reserve snapshot into a ZEPH protocol reserve slice with verified metadata", () => {
@@ -43,9 +83,9 @@ describe("adaptZephyrScanner", () => {
       ],
     });
 
-    expect(result.slices).toEqual([
-      { name: "ZEPH protocol reserve", pct: 100, risk: "high" },
-    ]);
+    expect(result.slices).toHaveLength(1);
+    expect(result.slices[0]).toMatchObject({ name: "ZEPH protocol reserve", pct: 100, risk: "high", assetClass: "cryptoasset", liquidityHorizon: "unknown" });
+    expect(result.slices[0].riskFactors).toEqual(["smart-contract", "market", "liquidity", "concentration", "custody"]);
     expect(result.metadata).toMatchObject({
       freshnessMode: "verified",
       sourceTimestamp: 1710000000,
@@ -60,32 +100,6 @@ describe("adaptZephyrScanner", () => {
       hardForkVersion: 11,
     });
     expect(result.warnings).toBeUndefined();
-  });
-
-  it("supports livestats payloads but marks freshness unverified", () => {
-    const result = adaptZephyrScanner({
-      zsd_circ: 385_038.0963333748,
-      zsd_price: 1,
-      zeph_price: 0.3185,
-      reserve_ratio: 3.175179,
-      reserve_ratio_ma: 3.216131,
-      zeph_in_reserve: 3_838_609.286861881,
-      zeph_in_reserve_value: 1_222_597.057865509,
-      zsd_in_yield_reserve: 315_748.4432611362,
-      zsd_in_yield_reserve_percent: 0.8200446819884389,
-    });
-
-    expect(result.slices).toEqual([
-      { name: "ZEPH protocol reserve", pct: 100, risk: "high" },
-    ]);
-    expect(result.metadata).toMatchObject({
-      freshnessMode: "unverified",
-      totalReserveUsd: 1_222_597.057865509,
-      supplyUsd: 385_038.0963333748,
-      collateralizationRatio: 3.175179,
-      reserveAssetAmount: 3_838_609.286861881,
-      reserveAssetPriceUsd: 0.3185,
-    });
   });
 
   it("degrades undercollateralized snapshots", () => {
@@ -141,6 +155,7 @@ describe("adaptZephyrScanner", () => {
             on_chain: {
               zsd_yield_reserve_atoms: "355777179070495244",
               zys_circ_atoms: "183232761929264165",
+              reserve_ratio: 4.38861,
             },
             pricing_record: {
               timestamp: 1784504312,
@@ -172,7 +187,7 @@ describe("adaptZephyrScanner", () => {
       liabilityAmountZsd: 355_777.04013880575,
       zysCirculating: 183_232.76192926418,
       sharePriceZsd: 1.94166718,
-      collateralizationRatio: expect.closeTo(1, 6),
+      collateralizationRatio: 4.38861,
       details: {
         reserveAssetId: "zsd-zephyr-protocol",
         zysCirculating: 183_232.76192926418,
@@ -218,5 +233,39 @@ describe("adaptZephyrScanner", () => {
         "zys-zephyr-protocol",
       ),
     ).toThrow(/share-rate divergence/);
+  });
+});
+describe("fetchZephyrScannerReserves", () => {
+  it("fetches the catalog snapshot through the shared network boundary", async () => {
+    const { result } = await runAdapter("zephyr-scanner", "zsd-zephyr-protocol", {
+      network: { json: { [ZEPHYR_ENDPOINT]: ZEPHYR_CAPTURE } },
+      nowSec: 1_710_003_600,
+    });
+
+    expect(result.metadata).toMatchObject({
+      sourceTimestamp: 1_710_000_000,
+      freshnessMode: "verified",
+      reserveHeight: 773_828,
+    });
+  });
+
+  it("fails closed when a snapshot drops the circulating-supply field", async () => {
+    // Upstream ships each quantity in paired encodings (verified live: zsd_circ === zsd_circ_atoms / 10^12),
+    // and raw.num_stables / raw.liabilities carry the same circulating-supply datum. Dropping one
+    // encoding alone must still publish; only a snapshot missing every encoding is a dropped field.
+    const capture = ZEPHYR_CAPTURE.results[0]!;
+    const drifted = {
+      ...ZEPHYR_CAPTURE,
+      results: [{
+        ...capture,
+        on_chain: { ...capture.on_chain, zsd_circ: undefined, zsd_circ_atoms: undefined },
+        raw: { ...capture.raw, num_stables: undefined, liabilities: undefined },
+      }],
+    };
+    await expect(runAdapter("zephyr-scanner", "zsd-zephyr-protocol", {
+      network: { json: { [ZEPHYR_ENDPOINT]: drifted } },
+      nowSec: 1_710_003_600,
+      validate: false,
+    })).rejects.toThrow(/ZSD supply USD|zsd_circ/);
   });
 });

@@ -44,6 +44,7 @@
       "liquidityHorizon": "one-day"
     },
     {
+      "sourceKey": "paxos-independent-assurance:usdg:treasury-bills",
       "name": "U.S. Treasury bills",
       "pct": 41.8,
       "risk": "very-low",
@@ -58,6 +59,7 @@
       "maturityDaysMax": 48
     },
     {
+      "sourceKey": "paxos-independent-assurance:usdg:cash",
       "name": "Cash in demand deposit accounts",
       "pct": 4.83,
       "risk": "very-low",

@@ -7,8 +7,16 @@
       "risk": "high",
       "assetClass": "private-credit",
       "issuerOrObligor": "3Jane Fintech Credit Conduits and Crypto Credit Lines",
-      "riskFactors": ["credit", "liquidity", "counterparty", "legal", "concentration", "smart-contract"],
-      "liquidityHorizon": "unknown"
+      "riskFactors": [
+        "credit",
+        "liquidity",
+        "counterparty",
+        "legal",
+        "concentration",
+        "smart-contract"
+      ],
+      "liquidityHorizon": "unknown",
+      "sourceKey": "3jane-usd3:credit-receivables"
     },
     {
       "name": "Aave USDC liquidity buffer",
@@ -19,8 +27,14 @@
       "blacklistable": true,
       "assetClass": "protocol-position",
       "issuerOrObligor": "Aave V3 USDC market / Circle Internet Financial",
-      "riskFactors": ["smart-contract", "counterparty", "liquidity", "custody"],
-      "liquidityHorizon": "immediate"
+      "riskFactors": [
+        "smart-contract",
+        "counterparty",
+        "liquidity",
+        "custody"
+      ],
+      "liquidityHorizon": "immediate",
+      "sourceKey": "3jane-usd3:usdc"
     }
   ],
   "reserveReview": {

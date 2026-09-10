@@ -6,7 +6,7 @@ import {
   LiveReservesConfigSchema,
   parseLiveReserveAdapterParams,
 } from "@shared/lib/live-reserve-adapters";
-import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
+import { ACTIVE_STABLECOINS, TRACKED_SOURCE_COINS } from "@shared/lib/stablecoins/registry";
 import { getReserveAdapter, LIVE_RESERVE_ADAPTER_FETCHERS } from "../index";
 
 const VALID_INPUT_KINDS = new Set(["http-json", "http-html", "indexer", "onchain-solana", "onchain-evm"]);
@@ -58,8 +58,10 @@ describe("adapter registry completeness", () => {
   it.each(LIVE_RESERVE_ADAPTER_KEYS)(
     "%s validates params through its registered schema",
     (key) => {
-      const config = ACTIVE_STABLECOINS.find((coin) => coin.liveReservesConfig?.adapter === key)?.liveReservesConfig;
-      if (config) {
+      const configs = ACTIVE_STABLECOINS.flatMap((coin) =>
+        coin.liveReservesConfig?.adapter === key ? [coin.liveReservesConfig] : [],
+      );
+      for (const config of configs) {
         expect(parseLiveReserveAdapterParams(key, config.params)).toEqual(expect.any(Object));
       }
       // An array is invalid even for no-params adapters; missing schemas and
@@ -152,12 +154,17 @@ describe("adapter registry completeness", () => {
     expect(parsed.success).toBe(true);
   });
 
-  it("pins the reviewed issuer-host fallbacks for FDUSD and the Reservoir cohort", () => {
+  it("pins the reviewed FDUSD Webflow index and Reservoir cohort fallbacks", () => {
     const configsById = new Map(ACTIVE_STABLECOINS.map((coin) => [coin.id, coin.liveReservesConfig]));
 
-    expect(configsById.get("fdusd-first-digital")?.inputs.fallbacks).toEqual([
-      { kind: "http-html", url: "https://firstdigitallabs.webflow.io/transparency" },
-    ]);
+    // The issuer domain blocks Worker egress, so the compiled assurance
+    // binding pins the issuer's Webflow mirror as the sole primary input and
+    // keeps no fallbacks (the adapter fails closed on index drift).
+    expect(configsById.get("fdusd-first-digital")?.inputs.primary).toEqual({
+      kind: "http-html",
+      url: "https://firstdigitallabs.webflow.io/transparency",
+    });
+    expect(configsById.get("fdusd-first-digital")?.inputs.fallbacks).toBeUndefined();
     for (const id of ["rusd-reservoir", "srusd-reservoir", "wsrusd-reservoir"]) {
       expect(configsById.get(id)?.inputs.fallbacks).toEqual([
         { kind: "http-json", url: "https://fireworks-git-master-fortunafi.vercel.app/api/reserves/raw" },
@@ -212,18 +219,50 @@ describe("adapter registry completeness", () => {
 
   it("parseLiveReserveAdapterParams accepts a structured adapter payload", () => {
     const parsed = parseLiveReserveAdapterParams("chainlink-nav", {
-      oracleAddress: "0x123",
-      tokenAddress: "0x456",
+      navScope: "native-fund-share",
+      oracleAddress: "0x1f9840a85d5aF5bf1D1762F925BDADdC4201F984",
+      tokenAddress: "0x6B175474E89094C44Da98b954EedeAC495271d0F",
       assetLabel: "USDC",
       assetRisk: "low",
     });
 
     expect(parsed).toEqual({
-      oracleAddress: "0x123",
-      tokenAddress: "0x456",
+      navScope: "native-fund-share",
+      oracleAddress: "0x1f9840a85d5aF5bf1D1762F925BDADdC4201F984",
+      tokenAddress: "0x6B175474E89094C44Da98b954EedeAC495271d0F",
       assetLabel: "USDC",
       assetRisk: "low",
     });
+  });
+
+  it("rejects an address that is not a 20-byte EVM address", () => {
+    expect(() =>
+      parseLiveReserveAdapterParams("chainlink-nav", {
+        navScope: "native-fund-share",
+        oracleAddress: "0x123",
+        tokenAddress: "0x6B175474E89094C44Da98b954EedeAC495271d0F",
+        assetLabel: "USDC",
+        assetRisk: "low",
+      }),
+    ).toThrow(/oracleAddress/);
+  });
+
+  it("validates suspended live-reserve configs that the registry strips before every consumer", () => {
+    const suspended = TRACKED_SOURCE_COINS.filter((coin) => coin.liveReservesConfig?.suspended);
+    expect(
+      suspended.length,
+      "no suspended liveReservesConfig found; keep this test pointed at the pre-strip source catalog",
+    ).toBeGreaterThan(0);
+
+    for (const coin of suspended) {
+      const parsed = LiveReservesConfigSchema.safeParse(coin.liveReservesConfig);
+      expect(
+        parsed.success,
+        `${coin.id} is suspended but its liveReservesConfig no longer parses: ${
+          parsed.success ? "" : JSON.stringify(parsed.error.issues[0])
+        }`,
+      ).toBe(true);
+    }
   });
 
   it("documents safe source-invariant flip candidates without relying on coin-specific parser params", () => {

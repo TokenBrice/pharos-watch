@@ -82,8 +82,8 @@
   "custodyModel": "institutional-top",
   "governanceQuality": "regulated-entity",
   "liveReservesConfig": {
-    "adapter": "curated-validated",
-    "version": 1,
+    "adapter": "paxos-independent-assurance",
+    "version": 2,
     "semantics": "attestation-mix",
     "breakerScope": "usdp-paxos",
     "display": {
@@ -92,11 +92,11 @@
     },
     "inputs": {
       "primary": {
-        "kind": "onchain-evm",
-        "chain": "ethereum",
-        "rpcMode": "public-rpc"
+        "kind": "http-html",
+        "url": "https://www.paxos.com/usdp-transparency"
       }
-    }
+    },
+    "params": { "product": "USDP" }
   },
   "launchDate": "2018-09-08"
 }

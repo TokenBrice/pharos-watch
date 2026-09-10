@@ -1,8 +1,15 @@
-import { FROZEN_IDS } from "@shared/lib/stablecoins/registry";
+/**
+ * Stage A: checkpoint start, ownership-gated domain begin, then atomic authority
+ * and history (6 SQL / 3 RTT for scheduled success). Stage B may batch checkpoint
+ * and begin only after proving exact-owner SQL gating, crash recovery before and
+ * after commit, and ambiguous acknowledgements. Never batch a coin's begin with
+ * its success: that would make its pending-attempt fence tautological.
+ */
+import { FROZEN_IDS, ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
+import { computeLiveReserveConfigFingerprint } from "@shared/lib/live-reserve-adapters";
 import { chunkArray, D1_SAFE_IN_CLAUSE_BIND_LIMIT } from "../collections";
 import { buildInClause, executeAtomicBatch } from "../db";
 import { runWithOverloadRetry } from "../d1-overload-retry";
-import { toErrorMessage } from "@shared/lib/error-utils";
 import { sha256Hex } from "../hash";
 import {
   LIVE_RESERVE_HISTORY_RETENTION_SEC,
@@ -13,12 +20,9 @@ import {
 } from "./store-shared";
 import {
   buildReserveAttemptAuthoritativeReadbackStatement,
-  buildReserveAuthoritativeHistoryRepairReadbackStatement,
-  buildReserveCompositionHistoryRepairStatement,
   buildReserveCompositionHistoryInsertStatement,
   buildReserveCompositionFinalizeSuccessStatement,
   buildReserveSuccessAuthoritativeReadbackStatement,
-  buildReserveSyncAttemptHistoryRepairStatement,
   buildReserveSyncAttemptHistoryInsertStatement,
   buildReserveSyncAttemptStartStatement,
   buildReserveSyncFinalizeAttemptStatement,
@@ -38,37 +42,14 @@ function reserveCompositionPayloadJson(payload: ReserveCompositionPayloadRow): s
 }
 
 function reserveCompositionPayloadFromRecord(record: ReserveCompositionRecord): ReserveCompositionPayloadRow {
+  const { diag: _diag, ...metadata } = record.metadata;
   return {
     slices: JSON.stringify(record.slices),
-    metadata: JSON.stringify(record.metadata),
+    metadata: JSON.stringify(metadata),
     warnings: record.warnings.length > 0 ? JSON.stringify(record.warnings) : null,
   };
 }
 
-async function loadAuthoritativeReserveCompositionPayloadHash(
-  db: D1Database,
-  stablecoinId: string,
-  attemptId: string,
-): Promise<string | null> {
-  const row = await runWithOverloadRetry(() =>
-    db
-      .prepare(
-        `SELECT c.slices, c.metadata, c.warnings
-           FROM reserve_composition c
-           JOIN reserve_sync_state s
-             ON s.stablecoin_id = c.stablecoin_id
-          WHERE c.stablecoin_id = ?
-            AND c.attempt_id = ?
-            AND s.last_success_at = c.fetched_at
-            AND s.last_attempt_id = c.attempt_id
-            AND s.last_success_attempt_id = c.attempt_id
-            AND s.pending_attempt_id IS NULL`,
-      )
-      .bind(stablecoinId, attemptId)
-      .first<ReserveCompositionPayloadRow>(),
-  );
-  return row ? sha256Hex(reserveCompositionPayloadJson(row)) : null;
-}
 
 export interface LiveReserveArtifactCleanupResult {
   syncStateDeleted: number;
@@ -80,7 +61,13 @@ export async function beginReserveSyncAttempt(
   db: D1Database,
   record: ReserveSyncAttemptStartRecord,
 ): Promise<void> {
-  await runWithOverloadRetry(() => buildReserveSyncAttemptStartStatement(db, record).run());
+  const config = ACTIVE_STABLECOINS.find((coin) => coin.id === record.stablecoinId)?.liveReservesConfig;
+  const persisted = { ...record, configFingerprint: record.configFingerprint ?? (config ? computeLiveReserveConfigFingerprint(config) : null) };
+  await runWithOverloadRetry(async () => {
+    if (record.deadlineMs != null && Date.now() > record.deadlineMs) throw new Error("Reserve attempt start deadline expired");
+    const result = await buildReserveSyncAttemptStartStatement(db, persisted).run();
+    if ((result.meta.changes ?? 0) === 0) throw new Error("Reserve attempt start lost checkpoint ownership or deadline");
+  });
 }
 
 export async function didReserveSyncSuccessBecomeAuthoritative(
@@ -109,22 +96,6 @@ export async function didReserveSyncAttemptBecomeAuthoritative(
   return row?.finalized === 1;
 }
 
-export async function repairAuthoritativeReserveSyncHistory(
-  db: D1Database,
-  stablecoinId: string,
-  attemptId: string,
-): Promise<boolean> {
-  const payloadSha256 = await loadAuthoritativeReserveCompositionPayloadHash(db, stablecoinId, attemptId);
-  await executeAtomicBatch(db, [
-    buildReserveCompositionHistoryRepairStatement(db, stablecoinId, attemptId, payloadSha256),
-    buildReserveSyncAttemptHistoryRepairStatement(db, stablecoinId, attemptId),
-  ]);
-  const row = await runWithOverloadRetry(() =>
-    buildReserveAuthoritativeHistoryRepairReadbackStatement(db, stablecoinId, attemptId)
-      .first<{ repaired: number }>(),
-  );
-  return row?.repaired === 1;
-}
 
 export async function finalizeReserveSyncSuccess(
   db: D1Database,
@@ -132,14 +103,32 @@ export async function finalizeReserveSyncSuccess(
   syncState: ReserveSyncStateRecord,
   finalizeDeadlineMs: number,
   onAuthoritativeWrite?: () => Promise<void>,
-): Promise<{ finalized: boolean; historyRecorded: boolean; historyError?: string }> {
+): Promise<{ finalized: boolean }> {
+  const config = ACTIVE_STABLECOINS.find((coin) => coin.id === composition.stablecoinId)?.liveReservesConfig;
+  const configFingerprint = composition.configFingerprint ?? (config ? computeLiveReserveConfigFingerprint(config) : null);
+  const payloadSha256 = await sha256Hex(
+    reserveCompositionPayloadJson(reserveCompositionPayloadFromRecord(composition)),
+  );
   let compositionApplied = false;
   let finalized = false;
 
   try {
     const [compositionRes, finalizeRes] = await executeAtomicBatch(db, [
-        buildReserveCompositionFinalizeSuccessStatement(db, composition, finalizeDeadlineMs),
-        buildReserveSyncFinalizeSuccessStatement(db, syncState, finalizeDeadlineMs),
+        buildReserveCompositionFinalizeSuccessStatement(db, { ...composition, configFingerprint }, finalizeDeadlineMs),
+        buildReserveSyncFinalizeSuccessStatement(db, { ...syncState, configFingerprint }, finalizeDeadlineMs),
+        buildReserveCompositionHistoryInsertStatement(db, composition, payloadSha256),
+        buildReserveSyncAttemptHistoryInsertStatement(db, {
+          stablecoinId: syncState.stablecoinId,
+          attemptedAt: syncState.lastAttemptedAt ?? composition.fetchedAt,
+          adapterKey: syncState.adapterKey,
+          breakerKey: syncState.breakerKey,
+          status: syncState.lastStatus,
+          warningCount: syncState.warningCount,
+          warnings: syncState.warnings,
+          lastError: syncState.lastError,
+          metadata: syncState.metadata,
+          attemptId: syncState.lastAttemptId ?? null,
+        }, "success"),
       ], { returnResults: true });
     compositionApplied = ((compositionRes as D1Result).meta.changes ?? 0) > 0;
     finalized = ((finalizeRes as D1Result).meta.changes ?? 0) > 0;
@@ -167,67 +156,38 @@ export async function finalizeReserveSyncSuccess(
       composition.attemptId,
     );
     if (!authoritative) {
-      return { finalized: false, historyRecorded: false };
+      return { finalized: false };
     }
   }
 
   await onAuthoritativeWrite?.();
-  const payloadSha256 = await sha256Hex(
-    reserveCompositionPayloadJson(reserveCompositionPayloadFromRecord(composition)),
-  );
-
-  try {
-    await executeAtomicBatch(db, [
-        buildReserveCompositionHistoryInsertStatement(db, composition, payloadSha256),
-        buildReserveSyncAttemptHistoryInsertStatement(db, {
-          stablecoinId: syncState.stablecoinId,
-          attemptedAt: syncState.lastAttemptedAt ?? composition.fetchedAt,
-          adapterKey: syncState.adapterKey,
-          breakerKey: syncState.breakerKey,
-          status: syncState.lastStatus,
-          warningCount: syncState.warningCount,
-          warnings: syncState.warnings,
-          lastError: syncState.lastError,
-          metadata: syncState.metadata,
-          attemptId: syncState.lastAttemptId ?? null,
-        }),
-      ]);
-  } catch (error) {
-    return {
-      finalized: true,
-      historyRecorded: false,
-      historyError: toErrorMessage(error),
-    };
-  }
-
-  return { finalized: true, historyRecorded: true };
+  return { finalized: true };
 }
 
 export async function finalizeReserveSyncAttempt(
   db: D1Database,
   syncState: ReserveSyncStateRecord,
+  deadlineMs = Number.MAX_SAFE_INTEGER,
 ): Promise<{ finalized: boolean }> {
-  const finalizeResult = await runWithOverloadRetry(() => buildReserveSyncFinalizeAttemptStatement(db, syncState).run());
-  const finalized = (finalizeResult.meta.changes ?? 0) > 0;
-
-  if (finalized) {
-    await runWithOverloadRetry(() =>
-      buildReserveSyncAttemptHistoryInsertStatement(db, {
-        stablecoinId: syncState.stablecoinId,
-        attemptedAt: syncState.lastAttemptedAt ?? Math.floor(Date.now() / 1000),
-        adapterKey: syncState.adapterKey,
-        breakerKey: syncState.breakerKey,
-        status: syncState.lastStatus,
-        warningCount: syncState.warningCount,
-        warnings: syncState.warnings,
-        lastError: syncState.lastError,
-        metadata: syncState.metadata,
-        attemptId: syncState.lastAttemptId ?? null,
-      }).run(),
-    );
-  }
-
-  return { finalized };
+  if (Date.now() > deadlineMs) throw new Error("Reserve attempt finalization deadline expired");
+  const config = ACTIVE_STABLECOINS.find((coin) => coin.id === syncState.stablecoinId)?.liveReservesConfig;
+  const configFingerprint = syncState.configFingerprint ?? (config ? computeLiveReserveConfigFingerprint(config) : null);
+  const [finalizeResult] = await executeAtomicBatch(db, [
+    buildReserveSyncFinalizeAttemptStatement(db, { ...syncState, configFingerprint }, deadlineMs),
+    buildReserveSyncAttemptHistoryInsertStatement(db, {
+      stablecoinId: syncState.stablecoinId,
+      attemptedAt: syncState.lastAttemptedAt ?? Math.floor(Date.now() / 1000),
+      adapterKey: syncState.adapterKey,
+      breakerKey: syncState.breakerKey,
+      status: syncState.lastStatus,
+      warningCount: syncState.warningCount,
+      warnings: syncState.warnings,
+      lastError: syncState.lastError,
+      metadata: syncState.metadata,
+      attemptId: syncState.lastAttemptId ?? null,
+    }),
+  ], { returnResults: true });
+  return { finalized: (finalizeResult.meta.changes ?? 0) > 0 };
 }
 
 async function loadStringColumn(

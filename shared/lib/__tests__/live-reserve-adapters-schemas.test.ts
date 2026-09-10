@@ -84,6 +84,25 @@ describe("baseLiveReserveConfigSchema", () => {
 });
 
 describe("LiveReservesConfigSchema URL validation", () => {
+  it("allows source-age tightening but rejects widening the adapter cap", () => {
+    const cap = LIVE_RESERVE_ADAPTER_DEFINITIONS.ethena.validation.maxSourceAgeSec;
+    const config = {
+      adapter: "ethena",
+      version: 1,
+      semantics: "collateral-mix",
+      inputs: { primary: { kind: "http-json", url: "https://example.com/reserves" } },
+    };
+    expect(LiveReservesConfigSchema.safeParse(config).success).toBe(true);
+    for (const maxSourceAgeSec of [cap - 1, cap]) {
+      expect(LiveReservesConfigSchema.safeParse({
+        ...config, scoring: { maxSourceAgeSec },
+      }).success).toBe(true);
+    }
+    expect(LiveReservesConfigSchema.safeParse({
+      ...config, scoring: { maxSourceAgeSec: cap + 1 },
+    }).success).toBe(false);
+  });
+
   it("rejects non-absolute input URLs", () => {
     const result = LiveReservesConfigSchema.safeParse({
       adapter: "accountable",
@@ -108,9 +127,14 @@ describe("LiveReservesConfigSchema URL validation", () => {
   it("accepts deliberate Mento CDP stablecoin params without widening to arbitrary strings", () => {
     expect(
       parseLiveReserveAdapterParams("mento", {
+        cdpStablecoin: "GBPm",
+      }),
+    ).toEqual({ cdpStablecoin: "GBPm" });
+    expect(() =>
+      parseLiveReserveAdapterParams("mento", {
         cdpStablecoin: "XOFm",
       }),
-    ).toEqual({ cdpStablecoin: "XOFm" });
+    ).toThrow(/Invalid option/);
     expect(() =>
       parseLiveReserveAdapterParams("mento", {
         cdpStablecoin: "NOTm",

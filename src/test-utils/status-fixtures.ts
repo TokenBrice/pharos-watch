@@ -675,8 +675,28 @@ export function makeActionBlockedStatusResponse(base = makeActionRecommendedStat
     reserveComposition: {
       ...base.reserveComposition,
       writeTimeoutUncertain: 1,
-      cursorTailError: "Fixture deferred cursor tail failed.",
       status: "degraded",
+    },
+    crons: {
+      ...base.crons,
+      "sync-live-reserves": {
+        lastRun: {
+          startedAt: base.timestamp - 43_200,
+          durationMs: 120_000,
+          status: "error",
+          itemCount: 0,
+        },
+        recentRuns: [{ startedAt: base.timestamp - 43_200, durationMs: 120_000, status: "error" }],
+        expectedIntervalSec: 14_400,
+        healthy: false,
+        inFlight: {
+          startedAt: base.timestamp - 21_600,
+          updatedAt: base.timestamp - 21_000,
+          stage: "sync",
+          leaseOwner: "fixture-worker",
+          stale: true,
+        },
+      },
     },
   });
 }

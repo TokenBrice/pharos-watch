@@ -1,5 +1,7 @@
 import { describe, expect, it } from "vitest";
-import { valueUsdFromBigIntPrice, worseRisk } from "../slice-math";
+import { normalizeSlicesWithDiagnostics, normalizeSlices, sourceKeySlug, valueUsdFromBigIntPrice, worseRisk } from "../slice-math";
+import { accumulateBucketedExposure, classifyBucketedValues } from "../classification";
+import type { ReserveSlice } from "@shared/types/core";
 
 describe("valueUsdFromBigIntPrice", () => {
   it("returns NaN for non-positive or non-finite prices", () => {
@@ -69,5 +71,53 @@ describe("worseRisk", () => {
   it("retains the higher-risk exposure regardless of merge order", () => {
     expect(worseRisk("low", "high")).toBe("high");
     expect(worseRisk("high", "low")).toBe("high");
+  });
+});
+
+describe("reserve identity and input integrity", () => {
+  it("keeps every distinct scoring identity separate", () => {
+    const base: ReserveSlice = { name: "Bond", risk: "low", pct: 50 };
+    const identities: Partial<ReserveSlice>[] = [
+      { sourceKey: "second" }, { assetClass: "public-credit" },
+      { issuerOrObligor: "second issuer" }, { coinId: "usdc-circle" }, { depType: "wrapper" },
+    ];
+    for (const identity of identities) {
+      expect(normalizeSlices([base, { ...base, ...identity }])).toEqual([base, { ...base, ...identity }]);
+    }
+  });
+
+  it("retains source drift independently of repaired rounding", () => {
+    const result = normalizeSlicesWithDiagnostics([{ name: "Cash", risk: "low", pct: 99 }]);
+    expect(result.rawSumDeviation).toBe(1);
+    expect(result.slices[0].pct).toBe(100);
+  });
+
+  it("rejects malformed exposure before either classifier can hide it", () => {
+    for (const badValue of [NaN, Infinity, -100]) {
+      const items = [100, badValue];
+      expect(() => accumulateBucketedExposure({
+        items, getValue: (value) => value, getBucket: () => "cash",
+      })).toThrow(/invalid value/);
+      expect(() => classifyBucketedValues({
+        items, getValue: (value) => value, getUnknownLabel: String,
+        rules: [{ key: "cash", name: "Cash", risk: "low", match: () => true }],
+      })).toThrow(/invalid value/);
+    }
+  });
+});
+
+describe("sourceKeySlug", () => {
+  it("folds provider labels into schema-valid sourceKey suffixes", () => {
+    const schemaPattern = /^[a-z0-9][a-z0-9._-]*:[a-z0-9][a-z0-9._:/-]*$/;
+    const cases: Array<[string, string]> = [
+      ["Fraxswap V2 FRAX/FPIS", "fraxswap-v2-frax-fpis"],
+      ["cowswap-fxSave", "cowswap-fxsave"],
+      ["morpho-steakUSDCinfinifi", "morpho-steakusdcinfinifi"],
+      ["a  b//c", "a-b-c"],
+    ];
+    for (const [raw, expected] of cases) {
+      expect(sourceKeySlug(raw)).toBe(expected);
+      expect(schemaPattern.test(`adapter:${sourceKeySlug(raw)}`)).toBe(true);
+    }
   });
 });

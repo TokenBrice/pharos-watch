@@ -1,23 +1,9 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
-import { toFunctionSelector } from "viem/utils";
-import {
-  fetchXdaiBridgeReserves,
-  type XdaiBridgeParams,
-} from "../xdai-bridge";
-
-const rpc = vi.hoisted(() => ({
-  fetchEvmBlockHeader: vi.fn(),
-  fetchEvmBlockHeaderAtTag: vi.fn(),
-  fetchEvmCodeAtBlock: vi.fn(),
-  fetchEvmMulticall3Aggregate3AtBlock: vi.fn(),
-  fetchEvmStorageAtBlock: vi.fn(),
-}));
-
-vi.mock("../../../lib/evm-rpc", () => rpc);
+import { describe, expect, it } from "vitest";
+import { installAdapterNetwork, runAdapter, type AdapterNetwork } from "./reserve-adapter.test-support";
 
 const ADDRESSES = {
   foreign: "0x4aa42145Aa6Ebf72e164C9bBC74fbD3788045016",
-  home: "0x7301CFA0e1756B71869E93d4e4Dca5c7d0eb0AA6",
+  home: "0x7301CFA0e1756B71869E93d4E4Dca5C7d0Eb0AA6",
   blockReward: "0x481c034c6d9441db23Ea48De68BCAe812C5d39bA",
   deposit: "0x5C183C8A49aBA6e31049997a56D75600E27FF8c9",
   usds: "0xdC035D45d973E3EC169d2276DDab16f1e407384F",
@@ -27,6 +13,10 @@ const ADDRESSES = {
 } as const;
 
 const NOW_SEC = 1_800_000_000;
+const ETHEREUM_RPC = "https://ethereum-rpc.publicnode.com";
+const GNOSIS_RPC = "https://gnosis-rpc.publicnode.com";
+const FOREIGN_BRIDGE_OTHER_SIDE_STORAGE_SLOT =
+  "0x21ffdf150a5d180f96d98d16f50e7b4dd63e2a067adc8386cf5af55dcecd8dd9";
 const ETHEREUM_BLOCK = {
   number: 20_000_000,
   timestamp: NOW_SEC - 30,
@@ -35,7 +25,7 @@ const ETHEREUM_BLOCK = {
 const GNOSIS_BLOCK = {
   number: 40_000_000,
   timestamp: NOW_SEC - 20,
-  hash: "0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+  hash: `0x${"b".repeat(64)}`,
 };
 
 function word(value: bigint): `0x${string}` {
@@ -48,10 +38,6 @@ function bytes4Word(value: string): `0x${string}` {
 
 function addressWord(address: string): `0x${string}` {
   return `0x${address.slice(2).toLowerCase().padStart(64, "0")}`;
-}
-
-function result(label: string, returnData: `0x${string}`) {
-  return { label, success: true, returnData };
 }
 
 const DEFAULTS = {
@@ -67,153 +53,134 @@ const MINTED = 133_089_330n * 10n ** 18n;
 const OUTSTANDING = 64_623_307n * 10n ** 18n;
 const BURNT = MINTED - OUTSTANDING;
 
-function baseParams(): XdaiBridgeParams {
-  return {
-    foreignBridgeAddress: ADDRESSES.foreign,
-    homeBridgeAddress: ADDRESSES.home,
-    blockRewardAddress: ADDRESSES.blockReward,
-    usdsDepositContractAddress: ADDRESSES.deposit,
-    usdsAddress: ADDRESSES.usds,
-    susdsAddress: ADDRESSES.susds,
-    daiAddress: ADDRESSES.dai,
-    sdaiAddress: ADDRESSES.sdai,
-    ethereumRpcUrl: "https://ethereum-rpc.publicnode.com",
-    gnosisRpcUrl: "https://gnosis-rpc.publicnode.com",
-    finalityTag: "finalized",
-    maxBlockAgeSec: 1_800,
-    maxFutureBlockSkewSec: 60,
-    crossChainSkewWarningSec: 30,
-    maxCrossChainSkewSec: 60,
-    coverageShortfallWarningRatio: 0.995,
-    surplusWarningRatio: 1.05,
-    maxSurplusRatio: 1.2,
-    legacyWarningPct: 0.01,
-    legacyMaterialityPct: 0.1,
-    maxWithdrawDivergencePct: 1,
-    sourceUrls: ["https://docs.gnosischain.com/bridges/About%20Token%20Bridges/xdai-bridge"],
-  };
-}
+type XdaiResponse = `0x${string}` | null;
+type XdaiBlock = { number: number; timestamp: number; hash: string };
+type BlockPlan = {
+  anchors: { ethereum: XdaiBlock; gnosis: XdaiBlock };
+  numeric: { ethereum: XdaiBlock; gnosis: XdaiBlock };
+};
+type NetworkOptions = {
+  ethereum?: Record<string, XdaiResponse>;
+  gnosis?: Record<string, XdaiResponse>;
+  convertedAssets?: bigint;
+  blockPlan?: BlockPlan;
+};
 
-function baseConfig() {
-  return {
-    adapter: "xdai-bridge" as const,
-    version: 1,
-    semantics: "collateral-mix" as const,
-    inputs: {
-      primary: { kind: "onchain-evm" as const, chain: "ethereum", rpcMode: "public-rpc" as const },
-    },
-    params: baseParams(),
-  };
-}
-
-function ethereumResults(overrides: Record<string, `0x${string}`> = {}) {
-  const params = baseParams();
-  const values: Record<string, `0x${string}`> = {
-    "foreign-daiToken": addressWord(params.usdsAddress),
-    "foreign-sDaiToken": addressWord(params.susdsAddress),
-    "foreign-erc20token": addressWord(params.usdsAddress),
+function rpcTable(options: NetworkOptions): Record<string, XdaiResponse | ((call: { selector: string }) => XdaiResponse)> {
+  const ethereum = {
+    "foreign-daiToken": addressWord(ADDRESSES.usds),
+    "foreign-sDaiToken": addressWord(ADDRESSES.susds),
+    "foreign-erc20token": addressWord(ADDRESSES.usds),
     "foreign-interestEnabled": word(1n),
     "foreign-investedAmount": word(DEFAULTS.investedUsds),
     "foreign-bridgeMode": bytes4Word("0x18762d46"),
     "usds-balance": word(DEFAULTS.liquidUsds),
     "usds-decimals": word(18n),
     "susds-balance": word(DEFAULTS.susdsShares),
-    "susds-asset": addressWord(params.usdsAddress),
+    "susds-asset": addressWord(ADDRESSES.usds),
     "susds-decimals": word(18n),
     "susds-maxWithdraw": word(DEFAULTS.maxWithdraw),
     "dai-balance": word(0n),
     "dai-decimals": word(18n),
     "sdai-balance": word(0n),
     "sdai-decimals": word(18n),
-    ...overrides,
+    ...(options.ethereum ?? {}),
   };
-  return Object.entries(values).map(([label, returnData]) => result(label, returnData));
-}
-
-function gnosisResults(overrides: Record<string, `0x${string}`> = {}) {
-  const params = baseParams();
-  const values: Record<string, `0x${string}`> = {
-    "home-blockReward": addressWord(params.blockRewardAddress),
-    "home-usdsDeposit": addressWord(params.usdsDepositContractAddress),
+  const gnosis = {
+    "home-blockReward": addressWord(ADDRESSES.blockReward),
+    "home-usdsDeposit": addressWord(ADDRESSES.deposit),
     "home-bridgeMode": bytes4Word("0x18762d46"),
     mintedTotallyByBridge: word(MINTED),
     totalBurntCoins: word(BURNT),
-    ...overrides,
+    ...(options.gnosis ?? {}),
   };
-  return Object.entries(values).map(([label, returnData]) => result(label, returnData));
+  const entries: Record<string, XdaiResponse | ((call: { selector: string }) => XdaiResponse)> = {
+    [`ethereum:${ADDRESSES.foreign}:0xbe22f546`]: ethereum["foreign-daiToken"],
+    [`ethereum:${ADDRESSES.foreign}:0x3853b7a1`]: ethereum["foreign-sDaiToken"],
+    [`ethereum:${ADDRESSES.foreign}:0x1dcea427`]: ethereum["foreign-erc20token"],
+    [`ethereum:${ADDRESSES.foreign}:0xd2ef8660`]: ethereum["foreign-interestEnabled"],
+    [`ethereum:${ADDRESSES.foreign}:0xcff77444`]: ethereum["foreign-investedAmount"],
+    [`ethereum:${ADDRESSES.foreign}:0x437764df`]: ethereum["foreign-bridgeMode"],
+    [`ethereum:${ADDRESSES.usds}:0x70a08231`]: ethereum["usds-balance"],
+    [`ethereum:${ADDRESSES.usds}:0x313ce567`]: ethereum["usds-decimals"],
+    [`ethereum:${ADDRESSES.susds}:0x70a08231`]: ethereum["susds-balance"],
+    [`ethereum:${ADDRESSES.susds}:0x38d52e0f`]: ethereum["susds-asset"],
+    [`ethereum:${ADDRESSES.susds}:0x313ce567`]: ethereum["susds-decimals"],
+    [`ethereum:${ADDRESSES.susds}:0xce96cb77`]: ethereum["susds-maxWithdraw"],
+    [`ethereum:${ADDRESSES.susds}:0x07a2d13a`]: word(options.convertedAssets ?? DEFAULTS.susdsAssets),
+    [`ethereum:${ADDRESSES.dai}:0x70a08231`]: ethereum["dai-balance"],
+    [`ethereum:${ADDRESSES.dai}:0x313ce567`]: ethereum["dai-decimals"],
+    [`ethereum:${ADDRESSES.sdai}:0x70a08231`]: ethereum["sdai-balance"],
+    [`ethereum:${ADDRESSES.sdai}:0x313ce567`]: ethereum["sdai-decimals"],
+    [`gnosis:${ADDRESSES.home}:0x56b54bae`]: gnosis["home-blockReward"],
+    [`gnosis:${ADDRESSES.home}:0xd7ef34bc`]: gnosis["home-usdsDeposit"],
+    [`gnosis:${ADDRESSES.home}:0x437764df`]: gnosis["home-bridgeMode"],
+    [`gnosis:${ADDRESSES.blockReward}:0xb4a523e8`]: gnosis.mintedTotallyByBridge,
+    [`gnosis:${ADDRESSES.home}:0x0e8162ba`]: gnosis.totalBurntCoins,
+    [`ethereum:eth_getStorageAt:${ADDRESSES.foreign}:${FOREIGN_BRIDGE_OTHER_SIDE_STORAGE_SLOT}`]:
+      addressWord(ADDRESSES.home),
+  };
+  return entries;
 }
 
-function installRpcFixtures(options: {
-  ethereum?: ReturnType<typeof ethereumResults>;
-  gnosis?: ReturnType<typeof gnosisResults>;
-  ethereumBlock?: typeof ETHEREUM_BLOCK;
-  gnosisBlock?: typeof GNOSIS_BLOCK;
-  convertedAssets?: bigint;
-} = {}) {
-  const ethereumBlock = options.ethereumBlock ?? ETHEREUM_BLOCK;
-  const gnosisBlock = options.gnosisBlock ?? GNOSIS_BLOCK;
-  const blockHeader = async (chain: string) => chain === "ethereum" ? ethereumBlock : gnosisBlock;
-  rpc.fetchEvmBlockHeader.mockImplementation(blockHeader);
-  rpc.fetchEvmBlockHeaderAtTag.mockImplementation(blockHeader);
-  rpc.fetchEvmCodeAtBlock.mockResolvedValue("0x6000");
-  rpc.fetchEvmStorageAtBlock.mockResolvedValue(addressWord(ADDRESSES.home));
-  const identities: Record<string, [string, string, string?]> = {
-    "foreign-daiToken": [ADDRESSES.foreign, "daiToken()"],
-    "foreign-sDaiToken": [ADDRESSES.foreign, "sDaiToken()"],
-    "foreign-erc20token": [ADDRESSES.foreign, "erc20token()"],
-    "foreign-interestEnabled": [ADDRESSES.foreign, "isInterestEnabled(address)", addressWord(ADDRESSES.usds)],
-    "foreign-investedAmount": [ADDRESSES.foreign, "investedAmount(address)", addressWord(ADDRESSES.usds)],
-    "foreign-bridgeMode": [ADDRESSES.foreign, "getBridgeMode()"],
-    "susds-asset": [ADDRESSES.susds, "asset()"],
-    "susds-maxWithdraw": [ADDRESSES.susds, "maxWithdraw(address)", addressWord(ADDRESSES.foreign)],
-    "susds-convertToAssets": [ADDRESSES.susds, "convertToAssets(uint256)", word(DEFAULTS.susdsShares)],
-    "home-blockReward": [ADDRESSES.home, "blockRewardContract()"],
-    "home-usdsDeposit": [ADDRESSES.home, "usdsDepositContract()"],
-    "home-bridgeMode": [ADDRESSES.home, "getBridgeMode()"],
-    mintedTotallyByBridge: [ADDRESSES.blockReward, "mintedTotallyByBridge(address)", addressWord(ADDRESSES.home)],
-    totalBurntCoins: [ADDRESSES.home, "totalBurntCoins()"],
-  };
-  for (const token of ["usds", "susds", "dai", "sdai"] as const) {
-    identities[`${token}-balance`] = [ADDRESSES[token], "balanceOf(address)", addressWord(ADDRESSES.foreign)];
-    identities[`${token}-decimals`] = [ADDRESSES[token], "decimals()"];
-  }
-  rpc.fetchEvmMulticall3Aggregate3AtBlock.mockImplementation(async (
-    chain: string, calls: Array<{ label: string; target: string; callData: string }>, block: number,
-  ) => {
-    const values = chain === "ethereum" ? (options.ethereum ?? ethereumResults()) : (options.gnosis ?? gnosisResults());
-    return calls.map((call) => {
-      const identity = identities[call.label];
-      const expectedChain = call.label.startsWith("home-") || ["mintedTotallyByBridge", "totalBurntCoins"].includes(call.label)
-        ? "gnosis" : "ethereum";
-      if (!identity || chain !== expectedChain || block !== (chain === "ethereum" ? ethereumBlock.number : gnosisBlock.number)
-        || call.target.toLowerCase() !== identity[0].toLowerCase()
-        || call.callData.toLowerCase() !== `${toFunctionSelector(identity[1])}${identity[2]?.slice(2) ?? ""}`) {
-        throw new Error(`Unexpected xDAI observation: ${chain}/${block}/${JSON.stringify(call)}`);
+function installBlockPlan(network: AdapterNetwork, plan: BlockPlan): void {
+  const base = network.fetchSpy.getMockImplementation();
+  if (!base) throw new Error("xDAI test network has no fetch implementation");
+  network.fetchSpy.mockImplementation(async (input, init) => {
+    const request = input instanceof Request ? input : new Request(input, init);
+    const requestUrl = request.url.replace(/\/$/, "");
+    if (request.method === "POST" && (requestUrl === ETHEREUM_RPC || requestUrl === GNOSIS_RPC)) {
+      const body = JSON.parse(await request.clone().text()) as {
+        id?: number;
+        method?: string;
+        params?: unknown[];
+      };
+      if (body.method === "eth_getBlockByNumber") {
+        const chain = requestUrl === ETHEREUM_RPC ? "ethereum" : "gnosis";
+        const tag = body.params?.[0];
+        const isNumericTag = typeof tag === "string" && tag.startsWith("0x");
+        const configuredBlock = isNumericTag ? plan.numeric[chain] : plan.anchors[chain];
+        const block = isNumericTag
+          ? { ...configuredBlock, number: Number.parseInt((tag as string).slice(2), 16) }
+          : configuredBlock;
+        return Response.json({
+          jsonrpc: "2.0",
+          id: body.id ?? 1,
+          result: {
+            number: `0x${block.number.toString(16)}`,
+            timestamp: `0x${block.timestamp.toString(16)}`,
+            hash: block.hash,
+          },
+        });
       }
-      const value = call.label === "susds-convertToAssets"
-        ? result(call.label, word(options.convertedAssets ?? DEFAULTS.susdsAssets))
-        : values.find((entry) => entry.label === call.label);
-      if (!value) throw new Error(`Missing xDAI response: ${call.label}`);
-      return value;
-    });
+    }
+    return base(input, init);
   });
 }
 
-async function fetchFixture(config = baseConfig()) {
-  return fetchXdaiBridgeReserves(
-    {} as never,
-    config as never,
-    new AbortController().signal,
-    { nowSec: NOW_SEC },
-  );
+function installXdaiNetwork(options: NetworkOptions = {}): AdapterNetwork {
+  const network = installAdapterNetwork({
+    chains: { ethereum: ETHEREUM_RPC, gnosis: GNOSIS_RPC },
+    block: ETHEREUM_BLOCK,
+    rpc: rpcTable(options),
+  });
+  if (options.blockPlan) installBlockPlan(network, options.blockPlan);
+  return network;
+}
+
+async function fetchFixture(
+  network = installXdaiNetwork(),
+  params: Record<string, unknown> = {},
+) {
+  const { result } = await runAdapter("xdai-bridge", "xdai-gnosis", {
+    network,
+    nowSec: NOW_SEC,
+    params,
+  });
+  return result;
 }
 
 describe("xdai-bridge adapter", () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-    installRpcFixtures();
-  });
-
   it("publishes the two reviewed collateral slices and bridge coverage", async () => {
     const output = await fetchFixture();
 
@@ -225,78 +192,102 @@ describe("xdai-bridge adapter", () => {
     expect(output.metadata).toMatchObject({ freshnessMode: "not-applicable", supplyUsd: 64_623_307, totalReserveUsd: 65_036_450 });
     expect(output.metadata?.collateralizationRatio).toBeCloseTo(65_036_450 / 64_623_307, 9);
     expect(output.metadata?.redemption).toBeUndefined();
-    expect(output.metadata?.details).toMatchObject({ finalityTag: "finalized", crossChainTimestampSkewSec: 10 });
+    expect(output.metadata?.details).toMatchObject({ finalityTag: "safe", crossChainTimestampSkewSec: 0 });
   });
 
   it("fails closed when a bridge identity getter drifts", async () => {
-    installRpcFixtures({ ethereum: ethereumResults({ "foreign-erc20token": addressWord(ADDRESSES.dai) }) });
+    const network = installXdaiNetwork({
+      ethereum: { "foreign-erc20token": addressWord(ADDRESSES.dai) },
+    });
 
-    await expect(fetchFixture()).rejects.toThrow("foreign.erc20token() identity mismatch");
+    await expect(fetchFixture(network)).rejects.toThrow("foreign.erc20token() identity mismatch");
   });
 
   it("fails closed on malformed ABI payloads", async () => {
-    installRpcFixtures({ ethereum: ethereumResults({ "susds-asset": "0x1234" as `0x${string}` }) });
+    const network = installXdaiNetwork({
+      ethereum: { "susds-asset": ("0x" + "1".repeat(64)) as `0x${string}` },
+    });
 
-    await expect(fetchFixture()).rejects.toThrow("susds-asset returned malformed address payload");
+    await expect(fetchFixture(network)).rejects.toThrow("susds-asset returned malformed address payload");
   });
 
   it("rejects invalid mint-minus-burn arithmetic", async () => {
-    installRpcFixtures({ gnosis: gnosisResults({ totalBurntCoins: word(MINTED + 1n) }) });
+    const network = installXdaiNetwork({
+      gnosis: { totalBurntCoins: word(MINTED + 1n) },
+    });
 
-    await expect(fetchFixture()).rejects.toThrow("burnt xDAI exceeds minted xDAI");
+    await expect(fetchFixture(network)).rejects.toThrow("burnt xDAI exceeds minted xDAI");
   });
 
   it("keeps the observed coverage ratio and degrades on a material shortfall", async () => {
-    installRpcFixtures({
-      ethereum: ethereumResults({ "usds-balance": word(0n) }),
+    const network = installXdaiNetwork({
+      ethereum: { "usds-balance": word(0n) },
       convertedAssets: 60_000_000n * 10n ** 18n,
     });
 
-    const output = await fetchFixture();
+    const output = await fetchFixture(network);
 
     expect(output.metadata?.collateralizationRatio).toBeLessThan(1);
     expect(output.warnings).toContainEqual(expect.objectContaining({ code: "xdai-reserve-undercollateralized", effect: "degraded" }));
   });
 
   it("rejects excessive cross-chain timestamp skew", async () => {
-    installRpcFixtures({
-      gnosisBlock: { ...GNOSIS_BLOCK, timestamp: NOW_SEC - 200 },
+    const network = installXdaiNetwork({
+      blockPlan: {
+        anchors: {
+          ethereum: ETHEREUM_BLOCK,
+          gnosis: { ...GNOSIS_BLOCK, timestamp: NOW_SEC - 200 },
+        },
+        numeric: {
+          ethereum: { ...ETHEREUM_BLOCK, timestamp: NOW_SEC - 300 },
+          gnosis: { ...GNOSIS_BLOCK, timestamp: NOW_SEC - 200 },
+        },
+      },
     });
-    const skewedBlockHeader = async (chain: string, blockTag: number | "finalized") => {
-      if (chain === "ethereum" && blockTag !== "finalized") {
-        return { ...ETHEREUM_BLOCK, number: blockTag, timestamp: NOW_SEC - 300 };
-      }
-      return chain === "ethereum" ? ETHEREUM_BLOCK : { ...GNOSIS_BLOCK, timestamp: NOW_SEC - 200 };
-    };
-    rpc.fetchEvmBlockHeader.mockImplementation(skewedBlockHeader);
-    rpc.fetchEvmBlockHeaderAtTag.mockImplementation(skewedBlockHeader);
 
-    await expect(fetchFixture()).rejects.toThrow("cross-chain finalized block timestamp skew 100s exceeds 60s");
+    await expect(fetchFixture(network, { maxCrossChainSkewSec: 60 })).rejects.toThrow(
+      "cross-chain finalized block timestamp skew 100s exceeds 60s",
+    );
   });
 
   it("reads balances at the historical block selected to align finalized anchors", async () => {
-    const aligned = { ...ETHEREUM_BLOCK, number: ETHEREUM_BLOCK.number - 1, timestamp: NOW_SEC - 200 };
+    const aligned = { ...ETHEREUM_BLOCK, number: ETHEREUM_BLOCK.number - 15, timestamp: NOW_SEC - 200 };
     const olderGnosis = { ...GNOSIS_BLOCK, timestamp: NOW_SEC - 200 };
-    installRpcFixtures({ ethereumBlock: aligned, gnosisBlock: olderGnosis });
-    rpc.fetchEvmBlockHeaderAtTag.mockImplementation(async (chain: string) => chain === "ethereum" ? ETHEREUM_BLOCK : olderGnosis);
-    const output = await fetchFixture();
+    const network = installXdaiNetwork({
+      blockPlan: {
+        anchors: { ethereum: ETHEREUM_BLOCK, gnosis: olderGnosis },
+        numeric: { ethereum: aligned, gnosis: olderGnosis },
+      },
+    });
+
+    const output = await fetchFixture(network, { maxCrossChainSkewSec: 60 });
+
     expect(output.metadata?.details).toMatchObject({
-      ethereumBlock: { number: aligned.number }, crossChainTimestampSkewSec: 0,
+      ethereumBlock: { number: aligned.number },
+      crossChainTimestampSkewSec: 0,
     });
     expect(output.metadata?.totalReserveUsd).toBe(65_036_450);
   });
 
   it("rejects a closing block hash that changed during observation", async () => {
-    rpc.fetchEvmBlockHeader.mockImplementation(async (chain: string) =>
-      chain === "ethereum" ? { ...ETHEREUM_BLOCK, hash: GNOSIS_BLOCK.hash } : GNOSIS_BLOCK);
-    await expect(fetchFixture()).rejects.toThrow("ethereum finalized block changed during the read");
+    const network = installXdaiNetwork({
+      blockPlan: {
+        anchors: { ethereum: ETHEREUM_BLOCK, gnosis: GNOSIS_BLOCK },
+        numeric: {
+          ethereum: { ...ETHEREUM_BLOCK, hash: GNOSIS_BLOCK.hash },
+          gnosis: GNOSIS_BLOCK,
+        },
+      },
+    });
+
+    await expect(fetchFixture(network)).rejects.toThrow("ethereum finalized block changed during the read");
   });
 
   it("fails closed when legacy DAI/sDAI exposure becomes material", async () => {
-    installRpcFixtures({
-      ethereum: ethereumResults({ "dai-balance": word(100_000n * 10n ** 18n) }),
+    const network = installXdaiNetwork({
+      ethereum: { "dai-balance": word(100_000n * 10n ** 18n) },
     });
 
-    await expect(fetchFixture()).rejects.toThrow("material legacy DAI/sDAI balance");
+    await expect(fetchFixture(network)).rejects.toThrow("material legacy DAI/sDAI balance");
   });
 });

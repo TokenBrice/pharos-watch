@@ -12,6 +12,7 @@ import {
   normalizeSlices,
   parseTimestampLikeToUnixSeconds,
   reserveDegradedWarning,
+  sourceKeySlug,
 } from "./helpers";
 
 /* ---------- v2 balance-sheet API types ---------- */
@@ -51,6 +52,12 @@ interface TokenDisplayConfig {
   label: string;
   risk: ReserveSlice["risk"];
   coinId?: string;
+  /**
+   * Stable slice identity for rows that map to a fixed on-chain contract
+   * rather than a symbol. When set, it is emitted verbatim so the key cannot
+   * drift if the issuer relabels the position.
+   */
+  sourceKey?: string;
 }
 
 const TOKEN_DISPLAY: Record<string, TokenDisplayConfig> = {
@@ -129,12 +136,20 @@ const TOKEN_DISPLAY: Record<string, TokenDisplayConfig> = {
 // cannot collide with trusted symbols such as FRAX, DAI, or USDC.
 const FPI_COLLATERAL_NAME_ONLY_DISPLAY: Record<string, TokenDisplayConfig> = {
   // FPIS is FPI's own governance token, so this LP is rated like FXS rather
-  // than a stable pair.
-  "Fraxswap V2 FRAX/FPIS": { label: "Fraxswap V2 FRAX/FPIS", risk: "high" },
+  // than a stable pair. The slice identity is the Fraxswap V2 FRAX/FPIS pair
+  // contract on Ethereum, read from the Fraxswap V2 factory getPair(FRAX,
+  // FPIS) (factory 0x43ec799eadd63848443e2347c49f5f52e8fe0f6f; token0 FRAX
+  // 0x853d955acef822db058eb8505911ed77f175b99e, token1 FPIS
+  // 0xc2544a32872a91f4a553b404c6950e89de901fdb), so a provider-side relabel
+  // cannot move the reviewed slice key.
+  "Fraxswap V2 FRAX/FPIS": {
+    label: "Fraxswap V2 FRAX/FPIS",
+    risk: "high",
+    sourceKey: "frax-fpi-collateral:ethereum:0x56695c26b3cdb528815cd22ff7b47510ab821efd",
+  },
 };
 
 const SOURCE_TOTAL_RECONCILIATION_THRESHOLD_PCT = 0.5;
-const FPI_UNKNOWN_EXPOSURE_THRESHOLD_PCT = 5;
 
 /* ---------- v2 balance-sheet adapter ---------- */
 
@@ -179,6 +194,7 @@ export function adaptFraxBalanceSheet(payload: FraxBalanceSheetResponse, subject
     }
     if (config) {
       slices.push({
+        sourceKey: `frax-balance-sheet:${symbol.toLowerCase()}`,
         name: config.label,
         pct: (usd / total) * 100,
         risk: config.risk,
@@ -189,12 +205,14 @@ export function adaptFraxBalanceSheet(payload: FraxBalanceSheetResponse, subject
 
   if (unknownUsd > 0) {
     slices.push({
+      sourceKey: "frax-balance-sheet:unknown",
       name: "Unmapped Frax balance-sheet assets",
       pct: (unknownUsd / total) * 100,
       risk: "high",
     });
     warnings.push(
       buildUnknownExposureWarning({
+        adapterKey: "frax-balance-sheet",
         code: "unknown-token",
         message: `Frax balance-sheet unknown token(s): ${unknownSymbols.sort().join(", ")}`,
         unknownExposurePct: (unknownUsd / total) * 100,
@@ -206,16 +224,17 @@ export function adaptFraxBalanceSheet(payload: FraxBalanceSheetResponse, subject
   const sourceTotalGapPct = sourceTotalGapUsd > 0 ? (sourceTotalGapUsd / total) * 100 : 0;
   if (sourceTotalGapPct > SOURCE_TOTAL_RECONCILIATION_THRESHOLD_PCT) {
     slices.push({
+      sourceKey: "frax-balance-sheet:source-total-gap",
       name: "Unmapped Frax balance-sheet total-assets gap",
       pct: sourceTotalGapPct,
       risk: "high",
     });
     warnings.push(
       buildUnknownExposureWarning({
+        adapterKey: "frax-balance-sheet",
         code: "source-total-gap",
         message: "Frax balance-sheet totalAssets exceeds mapped asset-category rows",
         unknownExposurePct: sourceTotalGapPct,
-        thresholdPct: SOURCE_TOTAL_RECONCILIATION_THRESHOLD_PCT,
       }),
     );
   }
@@ -234,7 +253,6 @@ export function adaptFraxBalanceSheet(payload: FraxBalanceSheetResponse, subject
         "frax-balance-sheet-api",
         "Frax balance-sheet response did not include asOfTimestamp",
       ),
-      immediateRedeemableUsd: stableRedeemableUsd,
       ...buildRedemptionSnapshotMetadata({
         capacityUsd: stableRedeemableUsd,
         capacityKind: "live-proxy-validated",
@@ -331,6 +349,7 @@ export function adaptFraxFpiCollateral(payload: FraxFpiCollateralResponse): Adap
     const config = getFpiCollateralDisplayConfig(symbol);
     if (!config) continue;
     slices.push({
+      sourceKey: config.sourceKey ?? `frax-fpi-collateral:${sourceKeySlug(symbol)}`,
       name: config.label,
       pct: (usd / totalCollateralUsd) * 100,
       risk: config.risk,
@@ -341,16 +360,17 @@ export function adaptFraxFpiCollateral(payload: FraxFpiCollateralResponse): Adap
   if (unknownUsd > 0) {
     const unknownExposurePct = (unknownUsd / totalCollateralUsd) * 100;
     slices.push({
+      sourceKey: "frax-fpi-collateral:unknown",
       name: "Unmapped Frax FPI collateral assets",
       pct: unknownExposurePct,
       risk: "high",
     });
     warnings.push(
       buildUnknownExposureWarning({
+        adapterKey: "frax-fpi-collateral",
         code: "unknown-token",
         message: `Frax FPI collateral unknown token(s): ${[...unknownLabels].sort().join(", ")}`,
         unknownExposurePct,
-        thresholdPct: FPI_UNKNOWN_EXPOSURE_THRESHOLD_PCT,
       }),
     );
   }
@@ -383,7 +403,6 @@ export function adaptFraxFpiCollateral(payload: FraxFpiCollateralResponse): Adap
         "frax-fpi-collateral-api",
         "Frax FPI collateral response did not include updatedAtTimestampSec",
       ),
-      immediateRedeemableUsd: stableRedeemableUsd,
       ...buildRedemptionSnapshotMetadata({
         capacityUsd: stableRedeemableUsd,
         capacityKind: "live-proxy-validated",

@@ -6,6 +6,7 @@ import { reviewedReserve } from "./generate-reserve-coverage-audit.test-support"
 import {
   REVIEWED_LIVE_RESERVE_SOURCE_NOTES,
   buildReserveCoverageAudit,
+  extractReserveStateRows,
   parseArgs,
   renderReserveCoverageAuditMarkdown,
   runCli,
@@ -51,17 +52,17 @@ const activeCoins = [
   }),
   coin({ id: "plain", symbol: "PLN", name: "Plain Coin", reserves: [{ name: "Cash", pct: 100, risk: "very-low" }] }),
   coin({
-    id: "busd0-usual",
-    symbol: "bUSD0",
-    name: "Bond USD0",
-    reserves: [{ name: "Locked USD0", pct: 100, risk: "low", coinId: "usd0-usual", depType: "wrapper" }],
+    id: "usdo-openeden",
+    symbol: "USDO",
+    name: "OpenEden USDO",
+    reserves: [{ name: "US Treasuries", pct: 100, risk: "low", coinId: "usdc-circle" }],
   }),
 ] satisfies StablecoinMeta[];
 
 const stablecoinsPayload = {
   peggedAssets: [
     { id: "plain", circulating: { peggedUSD: 20_000_000 } },
-    { id: "busd0-usual", circulating: { peggedUSD: 10_000_000 } },
+    { id: "usdo-openeden", circulating: { peggedUSD: 10_000_000 } },
   ],
 };
 
@@ -78,7 +79,7 @@ describe("generate-reserve-coverage-audit", () => {
           { id: "live-b", backingFromLiveReserves: false },
           { id: "live-c", backingFromLiveReserves: false },
           { id: "plain", backingFromLiveReserves: false },
-          { id: "busd0-usual", backingFromLiveReserves: false },
+          { id: "usdo-openeden", backingFromLiveReserves: false },
           { id: "defunct", isDefunct: true, backingFromLiveReserves: true },
         ],
       },
@@ -116,8 +117,8 @@ describe("generate-reserve-coverage-audit", () => {
       "weak-live-probe": 1,
     });
     expect(audit.independentConfiguredButNotScoreGradeIds).toEqual([]);
-    expect(audit.curatedOnlyActiveCandidates.map((row) => row.coinId)).toEqual(["plain", "busd0-usual"]);
-    expect(audit.curatedOnlyActiveCandidates.find((row) => row.coinId === "busd0-usual")).toMatchObject({
+    expect(audit.curatedOnlyActiveCandidates.map((row) => row.coinId)).toEqual(["plain", "usdo-openeden"]);
+    expect(audit.curatedOnlyActiveCandidates.find((row) => row.coinId === "usdo-openeden")).toMatchObject({
       sourceQuality: "independent",
       scoreGradePlausible: true,
     });
@@ -303,14 +304,21 @@ describe("generate-reserve-coverage-audit", () => {
   });
 
   it("warns when a reviewed source-quality note no longer matches an active stablecoin", () => {
-    // busd0-usual is in activeCoins, so its note is in sync; every other
-    // table key is stale relative to this synthetic active list.
+    // scusd-rings is still curated-only with a reviewed note, so its note is
+    // in sync; every other table key is stale relative to this synthetic
+    // active list.
     const audit = buildReserveCoverageAudit({
-      activeCoins,
+      activeCoins: [
+        coin({
+          id: "scusd-rings",
+          symbol: "SCUSD",
+          reserves: [{ name: "Cash", pct: 100, risk: "low" }],
+        }),
+      ],
       generatedAt: "2026-06-03T00:00:00.000Z",
     });
 
-    const staleKeys = Object.keys(REVIEWED_LIVE_RESERVE_SOURCE_NOTES).filter((id) => id !== "busd0-usual");
+    const staleKeys = Object.keys(REVIEWED_LIVE_RESERVE_SOURCE_NOTES).filter((id) => id !== "scusd-rings");
     expect(staleKeys.length).toBeGreaterThan(0);
     for (const id of staleKeys) {
       expect(audit.warnings).toContain(
@@ -319,8 +327,92 @@ describe("generate-reserve-coverage-audit", () => {
     }
     // The in-sync key must not produce a stale warning.
     expect(audit.warnings).not.toContain(
-      'Reviewed reserve source-quality note for "busd0-usual" no longer matches any active stablecoin.',
+      'Reviewed reserve source-quality note for "scusd-rings" no longer matches any active stablecoin.',
     );
+  });
+
+  it("warns when a reviewed source-quality note is now live-configured", () => {
+    const audit = buildReserveCoverageAudit({
+      activeCoins: [
+        coin({
+          id: "scusd-rings",
+          symbol: "SCUSD",
+          reserves: [{ name: "Cash", pct: 100, risk: "low" }],
+          liveReservesConfig: liveConfig("chainlink-nav"),
+        }),
+      ],
+      generatedAt: "2026-06-03T00:00:00.000Z",
+    });
+
+    expect(audit.warnings).toContain(
+      'Reviewed reserve source-quality note for "scusd-rings" is now live-configured via chainlink-nav; delete the note.',
+    );
+    // Live-configured coins leave the curated-only candidate table.
+    expect(audit.curatedOnlyActiveCandidates).toEqual([]);
+  });
+
+  it("rolls up per-adapter prod sync status and score-grade from reserve states", () => {
+    const audit = buildReserveCoverageAudit({
+      activeCoins: [
+        coin({
+          id: "live-a",
+          symbol: "LIVA",
+          reserves: [{ name: "USDC", pct: 100, risk: "low", coinId: "usdc-circle" }],
+          liveReservesConfig: liveConfig("accountable"),
+        }),
+        coin({
+          id: "live-b",
+          symbol: "LIVB",
+          reserves: [{ name: "Cash", pct: 100, risk: "low" }],
+          liveReservesConfig: liveConfig("accountable"),
+        }),
+        coin({
+          id: "live-c",
+          symbol: "LIVC",
+          reserves: [{ name: "Cash", pct: 100, risk: "low" }],
+          liveReservesConfig: liveConfig("chainlink-nav"),
+        }),
+      ],
+      reserveStates: [
+        { stablecoinId: "live-a", sync: { status: "ok" }, provenance: { scoringEligible: true, freshnessMode: "verified" } },
+        { stablecoinId: "live-b", sync: { status: "degraded" }, provenance: { scoringEligible: false, freshnessMode: "unverified" } },
+        { stablecoinId: "live-c", sync: { status: "error" }, provenance: { scoringEligible: false, freshnessMode: "not-applicable" } },
+      ],
+      generatedAt: "2026-06-03T00:00:00.000Z",
+    });
+
+    expect(audit.reserveStatesSupplied).toBe(true);
+    expect(audit.adapterReliability).toEqual([
+      { adapter: "accountable", boundCoinCount: 2, syncOk: 1, syncDegraded: 1, syncError: 0, syncSkippedOrUnknown: 0, scoreGradeCount: 1 },
+      { adapter: "chainlink-nav", boundCoinCount: 1, syncOk: 0, syncDegraded: 0, syncError: 1, syncSkippedOrUnknown: 0, scoreGradeCount: 0 },
+    ]);
+
+    const markdown = renderReserveCoverageAuditMarkdown(audit);
+    expect(markdown).toContain("## Adapter Reliability (--prod)");
+    expect(markdown).toContain("adapter | bound coins | sync ok | degraded | error | skipped/unknown | score-grade");
+    expect(markdown).toContain("accountable");
+    expect(markdown).toContain("chainlink-nav");
+  });
+
+  it("documents the reserve-states input requirement when absent", () => {
+    const markdown = renderReserveCoverageAuditMarkdown(buildReserveCoverageAudit({ activeCoins }));
+    expect(markdown).toContain("## Adapter Reliability (--prod)");
+    expect(markdown).toContain("--reserve-states <file>");
+  });
+
+  it("extracts reserve states from stablecoin-reserves-shaped entries", () => {
+    expect(
+      extractReserveStateRows([
+        { stablecoinId: "a", sync: { status: "ok" }, provenance: { scoringEligible: true, freshnessMode: "verified" } },
+        { stablecoinId: "b", sync: { status: "skipped" }, provenance: { scoringEligible: false } },
+        { stablecoinId: "c" },
+        "not-an-object",
+      ]),
+    ).toEqual([
+      { id: "a", syncStatus: "ok", scoringEligible: true, freshnessMode: "verified" },
+      { id: "b", syncStatus: "skipped", scoringEligible: false, freshnessMode: null },
+      { id: "c", syncStatus: null, scoringEligible: null, freshnessMode: null },
+    ]);
   });
 
   it("parses CLI options", () => {
@@ -330,6 +422,8 @@ describe("generate-reserve-coverage-audit", () => {
         "agents/report-cards.json",
         "--stablecoins",
         "agents/stablecoins.json",
+        "--reserve-states",
+        "agents/reserve-states.json",
         "--json",
         "--report",
         "agents/reserve-coverage.json",
@@ -339,6 +433,7 @@ describe("generate-reserve-coverage-audit", () => {
     ).toMatchObject({
       reportCardsPath: "agents/report-cards.json",
       stablecoinsPath: "agents/stablecoins.json",
+      reserveStatesPath: "agents/reserve-states.json",
       format: "json",
       reportPath: "agents/reserve-coverage.json",
       generatedAt: "2026-06-03T00:00:00.000Z",

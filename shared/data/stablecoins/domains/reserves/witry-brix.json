@@ -2,6 +2,7 @@
   "id": "witry-brix",
   "reserves": [
     {
+      "sourceKey": "erc4626-single-asset:ethereum:0xb492b4afd9658093694cf9452d5c272e8230f3b0",
       "name": "wiTRY claim on iTRY backed by Digital Liquidity Fund shares",
       "pct": 100,
       "risk": "high",

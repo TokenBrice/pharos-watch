@@ -2,8 +2,10 @@ import { z } from "zod";
 import {
   LIVE_RESERVE_RPC_MODE_VALUES,
   LIVE_RESERVE_SEMANTICS_VALUES,
+  type LiveReserveAdapterValidationPolicy,
   type LiveReserveInput,
 } from "../types/live-reserve-core";
+import { MATERIAL_UNKNOWN_EXPOSURE_PCT } from "../types/live-reserve-adapter-policy";
 import {
   type LiveReserveAdapterKey,
   type LiveReservesConfig,
@@ -12,8 +14,10 @@ import {
   LIVE_RESERVE_ADAPTER_DEFINITIONS,
   LIVE_RESERVE_ADAPTER_STATUS_VALUES,
 } from "./live-reserve-adapter-descriptors";
+import { sha256Hex } from "./sha256";
+import { stableJsonStringifyV1 } from "./stable-json";
 
-export * from "./live-reserve-adapter-param-schemas";
+export * from "../types/live-reserve-adapter-policy";
 
 export type LiveReserveInputKind = LiveReserveInput["kind"];
 
@@ -82,7 +86,7 @@ export type LiveReserveAdapterParamsByKey = {
 
 function validateAdapterConfigPolicy(
   adapterKey: LiveReserveAdapterKey,
-  config: Pick<LiveReservesConfig, "semantics" | "version">,
+  config: Pick<LiveReservesConfig, "semantics" | "version" | "scoring">,
   ctx: z.RefinementCtx,
 ): void {
   const policy = LIVE_RESERVE_ADAPTER_DEFINITIONS[adapterKey].configValidation;
@@ -103,16 +107,31 @@ function validateAdapterConfigPolicy(
       message: `${adapterKey} adapter does not support config version ${config.version}`,
     });
   }
+  const definition = LIVE_RESERVE_ADAPTER_DEFINITIONS[adapterKey];
+  const adapterCap = "validation" in definition && "maxSourceAgeSec" in definition.validation
+    ? definition.validation.maxSourceAgeSec
+    : undefined;
+  const coinCap = config.scoring?.maxSourceAgeSec;
+  if (coinCap != null && adapterCap != null && coinCap > adapterCap) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["scoring", "maxSourceAgeSec"],
+      message: `${adapterKey} source-age override may only tighten the adapter cap (${adapterCap}s)`,
+    });
+  }
 }
 
 const liveReserveConfigAdapterKeys = Object.keys(LIVE_RESERVE_ADAPTER_DEFINITIONS) as LiveReserveAdapterKey[];
-const liveReserveConfigVariants = liveReserveConfigAdapterKeys.map((adapterKey) =>
-  baseLiveReserveConfigSchema.extend({
+const liveReserveConfigVariants = liveReserveConfigAdapterKeys.map((adapterKey) => {
+  const paramsSchema = LIVE_RESERVE_ADAPTER_DEFINITIONS[adapterKey].params;
+  return baseLiveReserveConfigSchema.extend({
     adapter: z.literal(adapterKey),
     inputs: createLiveReserveInputsSchema(adapterKey),
-    params: LIVE_RESERVE_ADAPTER_DEFINITIONS[adapterKey].params.optional(),
-  }).superRefine((config, ctx) => validateAdapterConfigPolicy(adapterKey, config, ctx)),
-) as unknown as readonly [z.ZodTypeAny, ...z.ZodTypeAny[]];
+    // A params block is only optional when the adapter's own schema accepts
+    // `{}`; otherwise omitting it must fail config validation, not first in prod.
+    params: paramsSchema.safeParse({}).success ? paramsSchema.optional() : paramsSchema,
+  }).superRefine((config, ctx) => validateAdapterConfigPolicy(adapterKey, config, ctx));
+}) as unknown as readonly [z.ZodTypeAny, ...z.ZodTypeAny[]];
 
 export const LiveReservesConfigSchema: z.ZodType<LiveReservesConfig> = z.union(
   liveReserveConfigVariants as unknown as [z.ZodType<LiveReservesConfig>, ...z.ZodType<LiveReservesConfig>[]],
@@ -133,6 +152,29 @@ export function getLiveReserveAdapterDefinition(
   return LIVE_RESERVE_ADAPTER_DEFINITIONS[adapterKey as LiveReserveAdapterKey] ?? null;
 }
 
+/**
+ * The adapter's declared validation policy, or `undefined` when the adapter
+ * declares none. Callers that need an effective bound must apply their own
+ * default; this returns exactly what the declaration states.
+ */
+export function getLiveReserveAdapterValidationPolicy(
+  adapterKey: LiveReserveAdapterKey,
+): LiveReserveAdapterValidationPolicy | undefined {
+  const definition = LIVE_RESERVE_ADAPTER_DEFINITIONS[adapterKey];
+  return "validation" in definition ? definition.validation : undefined;
+}
+
+/**
+ * Effective unknown-exposure ceiling: the adapter's declared cap when it states
+ * one, otherwise the shared materiality threshold every basket adapter is held
+ * to. Use this instead of re-deriving the fallback per adapter.
+ */
+export function getLiveReserveAdapterMaxUnknownExposurePct(
+  adapterKey: LiveReserveAdapterKey,
+): number {
+  return getLiveReserveAdapterValidationPolicy(adapterKey)?.maxUnknownExposurePct ?? MATERIAL_UNKNOWN_EXPOSURE_PCT;
+}
+
 export function parseLiveReserveAdapterParams<K extends LiveReserveAdapterKey>(
   adapterKey: K,
   params: Record<string, unknown> | undefined,
@@ -147,4 +189,15 @@ export function parseLiveReserveAdapterParams<K extends LiveReserveAdapterKey>(
   const issue = parsed.error.issues[0];
   const path = issue?.path.length ? `.${issue.path.join(".")}` : "";
   throw new Error(`${adapterKey} adapter params invalid${path}: ${issue?.message ?? "unknown validation error"}`);
+}
+
+/** Bind retained evidence to the exact adapter inputs, independently of display/scoring policy. */
+export function computeLiveReserveConfigFingerprint(config: LiveReservesConfig): string {
+  return sha256Hex(stableJsonStringifyV1({
+    adapter: config.adapter,
+    version: config.version,
+    semantics: config.semantics,
+    inputs: config.inputs,
+    params: config.params ?? {},
+  }));
 }

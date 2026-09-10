@@ -6,6 +6,7 @@ import { makeScheduledRuntime } from "../../../test-helpers/scheduled-runtime.te
 const mocks = vi.hoisted(() => ({
   claim: vi.fn(),
   prepare: vi.fn(),
+  retire: vi.fn(),
   sweep: vi.fn(),
   runReserveSlot: vi.fn(),
   createRuntime: vi.fn(),
@@ -14,6 +15,7 @@ const mocks = vi.hoisted(() => ({
 vi.mock("../../../lib/scheduled-recovery-checkpoint", () => ({
   claimNextLiveReserveCheckpointRecovery: mocks.claim,
   prepareEligibleLiveReserveCheckpointRecoveries: mocks.prepare,
+  retireSupersededLiveReserveCheckpoints: mocks.retire,
 }));
 vi.mock("../../../lib/scheduled-slot-fence", () => ({
   sweepStaleScheduledSlotExecutions: mocks.sweep,
@@ -65,6 +67,7 @@ describe("reserve recovery mode", () => {
     latestLeasedResult = undefined;
     mocks.sweep.mockResolvedValue({ slotsReconciled: 0 });
     mocks.prepare.mockResolvedValue({ inspection: EMPTY_INSPECTION, prepared: [] });
+    mocks.retire.mockResolvedValue(0);
     mocks.claim.mockResolvedValue(null);
     mocks.runReserveSlot.mockResolvedValue({ jobsErrored: 0, jobsDegraded: 0, jobsSkipped: 0 });
   });
@@ -111,9 +114,10 @@ describe("reserve recovery mode", () => {
       leaseSec: 900,
     });
     expect(mocks.runReserveSlot).toHaveBeenCalledTimes(1);
-    expect((latestLeasedResult as { metadata?: string }).metadata).toBe(JSON.stringify({
+    expect(JSON.parse((latestLeasedResult as { metadata?: string }).metadata ?? "{}")).toMatchObject({
       disposition: "recovery-executed",
       mode: "recover",
+      retiredCheckpoints: 0,
       checkpointsClaimed: 1,
       originalScheduleKey: "fourHourlyReserveSync",
       originalSlotStartedAt: 800,
@@ -124,7 +128,19 @@ describe("reserve recovery mode", () => {
       sweep: { slotsReconciled: 0 },
       preparation: { inspection: EMPTY_INSPECTION, prepared: [] },
       summary: { jobsErrored: 0, jobsDegraded: 0, jobsSkipped: 0 },
-    }));
+    });
+  });
+
+  it("surfaces a zero-eligible incompatible backlog instead of reporting green", async () => {
+    mocks.prepare.mockResolvedValue({
+      inspection: { ...EMPTY_INSPECTION, incompatibleCheckpointCount: 14 },
+      prepared: [],
+    });
+    const result = await runFiveMinuteReserveRecoverySlot(runtime("recover"));
+    expect(result.jobsDegraded).toBe(1);
+    expect(JSON.parse((latestLeasedResult as CronResult).metadata ?? "{}")).toMatchObject({
+      statusCause: "reserve-recovery-zero-eligible-incompatible", checkpointsClaimed: 0,
+    });
   });
 
   it("reports a contended recovery as degraded so the active checkpoint can retry", async () => {

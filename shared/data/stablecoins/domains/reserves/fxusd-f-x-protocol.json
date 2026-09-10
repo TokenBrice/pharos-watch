@@ -15,7 +15,8 @@
         "liquidity",
         "smart-contract"
       ],
-      "liquidityHorizon": "seven-days"
+      "liquidityHorizon": "seven-days",
+      "sourceKey": "fx:wbtc"
     },
     {
       "name": "wstETH (Lido)",
@@ -30,7 +31,8 @@
         "smart-contract",
         "basis"
       ],
-      "liquidityHorizon": "seven-days"
+      "liquidityHorizon": "seven-days",
+      "sourceKey": "fx:wsteth"
     }
   ],
   "reserveReview": {

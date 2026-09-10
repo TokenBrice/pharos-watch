@@ -126,6 +126,30 @@ export const REDEMPTION_BACKSTOP_POLICY_ENTRIES: readonly RedemptionBackstopPoli
     owner: POLICY_OWNER,
     reviewedAt: "2026-05-23",
   },
+  {
+    kind: "unused-live-redemption-telemetry",
+    stablecoinId: "witry-brix",
+    reason:
+      "wiTRY's ERC-4626 wrapper feed exposes vault redemption capacity, but no public holder-facing redemption route has been reviewed for the TRY-denominated fund; the telemetry is reserve evidence only until a route is configured.",
+    owner: POLICY_OWNER,
+    reviewedAt: "2026-09-09",
+  },
+  {
+    kind: "unused-live-redemption-telemetry",
+    stablecoinId: "usdat-saturn",
+    reason:
+      "USDat's MultiMint wrapper read exposes the PYUSDx backing balance as capacity telemetry, but no public holder-facing redemption route through the wrapper has been reviewed; the telemetry is reserve evidence only until a route is configured.",
+    owner: POLICY_OWNER,
+    reviewedAt: "2026-09-09",
+  },
+  {
+    kind: "unused-live-redemption-telemetry",
+    stablecoinId: "hchf-hedera-swiss-franc",
+    reason:
+      "HCHF's HLiquity adapter publishes same-run debt-bounded redemption capacity, but the CHF-denominated route has no reviewed public redemption backstop config yet; the telemetry is reserve evidence only until a route is configured.",
+    owner: POLICY_OWNER,
+    reviewedAt: "2026-09-09",
+  },
 ];
 
 const UNVERIFIED_FRESHNESS_APPROVALS = new Set<string>(
