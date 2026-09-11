@@ -19,6 +19,7 @@ import type {
 import {
   DEFAULT_FILTERS,
   YIELD_PRESET_SPECS,
+  YIELD_RISK_ANY_PARAM,
   YIELD_RISK_BUDGET_SPECS,
   type YieldPresetSpec,
   type YieldRiskBudgetSpec,
@@ -97,6 +98,17 @@ function buildEmptyStateSuggestions(
       });
     }
   }
+  // Band keys often only recover rows together (a low-grade row with a
+  // warning is blocked by both the safety floor and the warnings filter), so
+  // offer lifting the whole band as one move.
+  if (RISK_BUDGET_FILTER_KEYS.some((key) => filters[key] !== DEFAULT_FILTERS[key])) {
+    const unbanded = { ...filters };
+    for (const key of RISK_BUDGET_FILTER_KEYS) (unbanded as Record<keyof YieldViewModelFilters, unknown>)[key] = DEFAULT_FILTERS[key];
+    const gain = countRowsMatchingFilters(facets, unbanded);
+    if (gain > 0) {
+      scored.push({ filterKey: "risk", targetValue: YIELD_RISK_ANY_PARAM, gain, label: "Show all risk levels" });
+    }
+  }
   scored.sort((left, right) => right.gain - left.gain);
   return scored.slice(0, EMPTY_STATE_SUGGESTION_LIMIT);
 }
@@ -125,14 +137,16 @@ function applyOverrides(overrides: Partial<YieldViewModelFilters>): YieldViewMod
   return { ...DEFAULT_FILTERS, ...overrides };
 }
 
-function presetFilters(spec: YieldPresetSpec): YieldViewModelFilters {
-  return applyOverrides(spec.overrides);
+// Presets merge onto the current filters when clicked (see
+// `handleApplyPreset`), so counts and the active state must be evaluated on the
+// same stacked base — otherwise the landing risk band makes every count lie.
+function presetFilters(filters: YieldViewModelFilters, spec: YieldPresetSpec): YieldViewModelFilters {
+  return { ...filters, ...spec.overrides };
 }
 
 function filtersMatchPreset(filters: YieldViewModelFilters, spec: YieldPresetSpec): boolean {
-  const target = presetFilters(spec);
-  return (Object.keys(DEFAULT_FILTERS) as Array<keyof YieldViewModelFilters>).every(
-    (key) => filters[key] === target[key],
+  return (Object.keys(spec.overrides) as Array<keyof YieldViewModelFilters>).every(
+    (key) => filters[key] === spec.overrides[key],
   );
 }
 
@@ -148,7 +162,7 @@ export function buildYieldPresets(
       key: spec.key,
       label: spec.label,
       description: spec.description,
-      count: countRowsMatchingFilters(facets, presetFilters(spec)),
+      count: countRowsMatchingFilters(facets, presetFilters(filters, spec)),
       active,
       overrides: spec.overrides,
     } satisfies YieldPresetState;

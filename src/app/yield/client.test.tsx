@@ -163,6 +163,7 @@ describe("YieldClient", () => {
     { data: makeResponse(), isLoading: false, error: new Error("Refresh failed") },
   ])("waits for loaded error-free data before tracking an empty view (%#)", (pending) => {
     searchParamsMock.set("q", "zzzz-no-match");
+    searchParamsMock.set("risk", "any");
     const ready = useYieldRankingsSummaryMock();
     useYieldRankingsSummaryMock.mockReturnValue({ ...ready, ...pending });
     const { rerender } = render(<YieldClient />);
@@ -180,6 +181,7 @@ describe("YieldClient", () => {
       ...useYieldRankingsSummaryMock(),
       data: { ...makeResponse(), rankings: [] },
     });
+    searchParamsMock.set("risk", "any");
     render(<YieldClient />);
     expect(trackEventMock).toHaveBeenCalledWith("yield_zero_results", { active_filter_count: 0 });
   });
@@ -277,6 +279,7 @@ describe("YieldClient", () => {
       refetch: vi.fn(),
     });
 
+    searchParamsMock.set("risk", "any");
     render(<YieldClient />);
 
     const props = scatterPropsMock.mock.calls.at(-1)?.[0] as { rankings: unknown[] };
@@ -361,10 +364,25 @@ describe("YieldClient", () => {
 
     expect(params.get("peg")).toBe("USD");
     expect(params.get("q")).toBe("coin");
-    expect(params.get("minSafety")).toBe("80");
-    expect(params.get("depth")).toBe("hide-thin");
-    expect(params.get("sourcePosture")).toBe("clean");
-    expect(params.get("warnings")).toBe("hide");
+    expect(params.get("risk")).toBe("conservative");
+    expect(params.get("minSafety")).toBeNull();
+    expect(params.get("depth")).toBeNull();
+    expect(params.get("sourcePosture")).toBeNull();
     expect(params.get("sourceConfidence")).toBeNull();
+    expect(params.get("warnings")).toBeNull();
+  });
+
+  it("selecting the all risk-budget stop writes the neutral any param", () => {
+    render(<YieldClient />);
+
+    fireEvent.change(screen.getByRole("slider", { name: "Risk tolerance" }), {
+      target: { value: "3" },
+    });
+
+    const update = replaceParamsMock.mock.calls[0]?.[0] as (params: URLSearchParams) => void;
+    const params = new URLSearchParams(searchParamsMock);
+    update(params);
+
+    expect(params.get("risk")).toBe("any");
   });
 });

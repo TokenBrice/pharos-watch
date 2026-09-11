@@ -10,13 +10,13 @@ import {
 import type { FaqItem } from "@/lib/faq";
 
 const desc =
-  "Compare risk-adjusted stablecoin yield rankings by APY, safety grade, source freshness, benchmark spread, venue risk, and Pharos Yield Score.";
+  "Compare stablecoin yields by APY, safety grade, source risk, and benchmark spread. The Pharos Yield Score asks one question: is this APY paying enough for the risk you take?";
 
 const FAQ_ITEMS = [
   {
     question: "What is the Pharos Yield Score (PYS)?",
     answer:
-      "The Pharos Yield Score (PYS) is a risk-adjusted yield metric scored 0-100 that balances yield magnitude against safety, benchmark context, source risk, and consistency. It starts from 30-day average APY, adds 25% of the row's benchmark spread, divides that effective yield by source-risk and safety-derived penalties, then applies a sustainability multiplier based on APY volatility over the same period. Higher-safety stablecoins and cleaner yield sources incur lower adjusted penalties, so moderate but durable yield can compete with riskier double-digit offers.",
+      "The Pharos Yield Score (PYS) answers one question: is this APY paying enough for the risk you take? It is yield per unit of risk on a 0-100 scale, not a recommendation and not a safety verdict. It starts from 30-day average APY, adds 25% of the row's benchmark spread, divides that effective yield by source-risk and safety-derived penalties, then applies a sustainability multiplier based on APY volatility over the same period. A D-grade stablecoin can post a high PYS because it pays a lot for a lot of risk; read PYS next to the Safety grade and the row's zone (Sweet Spot, Danger Zone, Play It Safe, Why Bother?) before acting on it.",
   },
   {
     question: "How are stablecoin yields sourced?",
@@ -26,7 +26,7 @@ const FAQ_ITEMS = [
   {
     question: "What does 'risk-adjusted' mean for stablecoin yield?",
     answer:
-      "Risk-adjusted yield accounts for the safety of the stablecoin issuing the yield, not just the raw APY. A stablecoin with a high safety grade (A or A+) receives a much lighter adjusted penalty in the PYS formula, so even a moderate APY can score well. Conversely, a risky stablecoin must offer meaningfully higher raw yield to achieve the same PYS, reflecting the extra risk borne by the holder.",
+      "Risk-adjusted yield accounts for the safety of the stablecoin issuing the yield, not just the raw APY. A stablecoin with a high safety grade (A or A+) receives a much lighter adjusted penalty in the PYS formula, so even a moderate APY can score well. Conversely, a risky stablecoin must offer meaningfully higher raw yield to achieve the same PYS, reflecting the extra risk borne by the holder. Risk-adjusted does not mean safe: a top PYS on a low-grade coin says the yield compensates the risk well, not that the risk is small.",
   },
   {
     question: "How do holder yield and lending opportunities differ?",
@@ -44,9 +44,9 @@ const FAQ_ITEMS = [
       "No. Depth is an explanatory lens for how much evidence backs the observed yield source, using venue size and related source-risk fields where available. It is not a fill-size estimate, execution quote, or guarantee that capital can enter or exit at the displayed APY.",
   },
   {
-    question: "Is PYS a guarantee or an additive score breakdown?",
+    question: "Is PYS a guarantee, a recommendation, or an additive score breakdown?",
     answer:
-      "No. PYS is a comparative ranking score built from historical APY, benchmark context, source-risk penalties, stablecoin safety penalties, and yield stability. Component explanations show why a row moved, but they are not guarantees and should not be read as independently additive promises of future return.",
+      "None of these. PYS is a comparative score built from historical APY, benchmark context, source-risk penalties, stablecoin safety penalties, and yield stability. It ranks how well each row pays for its risk; it does not endorse a row, and the leaderboard sorted by PYS is not a list of recommended coins. Component explanations show why a row moved, but they are not guarantees and should not be read as independently additive promises of future return.",
   },
 ] as const satisfies readonly FaqItem[];
 
@@ -79,7 +79,11 @@ const route = createClientFeaturePage({
       version: YIELD_METHODOLOGY_VERSION_LABEL,
       changelogPath: YIELD_METHODOLOGY_CHANGELOG_PATH,
     },
-    leadParagraphs: ["Stablecoin yield rankings that weigh every APY against safety and real-world benchmarks."],
+    leadParagraphs: [
+      "Stablecoin yield rankings that weigh every APY against safety and real-world benchmarks.",
+      "Two readings per row: Safety says how likely you are to lose money; PYS says how well the yield pays you for that chance. A high PYS on a D-grade coin is well-paid risk, not a safe pick. The page opens on the Opportunistic band (C+ safety, warnings hidden); widen the Risk tolerance slider to see everything.",
+    ],
+    leadFullWidth: true,
   },
   afterClient: (
     <>

@@ -120,7 +120,7 @@ describe("YieldLeaderboardControls", () => {
 
     render(
       <YieldLeaderboardControls
-        viewModel={buildModel({ attention: "watchlist" }, new Set(["usdc-circle"]))}
+        viewModel={buildModel({ attention: "watchlist", risk: "any" }, new Set(["usdc-circle"]))}
         onFilterChange={onFilterChange}
         onClearFilters={vi.fn()}
         onApplyPreset={vi.fn()}

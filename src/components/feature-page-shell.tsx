@@ -15,6 +15,8 @@ export interface FeaturePageShellProps {
   };
   headerActions?: React.ReactNode;
   leadParagraphs?: readonly React.ReactNode[];
+  /** Let lead paragraphs span the container instead of the prose-width cap. */
+  leadFullWidth?: boolean;
   headerSupplement?: React.ReactNode;
   preface?: React.ReactNode;
   children: React.ReactNode;
@@ -30,6 +32,7 @@ export function FeaturePageShell({
   methodology,
   headerActions,
   leadParagraphs = [],
+  leadFullWidth = false,
   headerSupplement,
   preface,
   children,
@@ -71,7 +74,7 @@ export function FeaturePageShell({
           </p>
         )}
         {leadParagraphs.length > 0 ? (
-          <div className="max-w-4xl space-y-2">
+          <div className={leadFullWidth ? "space-y-2" : "max-w-4xl space-y-2"}>
             {leadParagraphs.map((paragraph, index) => (
               <p key={index} className={index === 0 ? "pharos-page-lead" : "pharos-lead"}>
                 {paragraph}

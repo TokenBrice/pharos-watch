@@ -9,6 +9,7 @@ import { MethodologyHint } from "@/components/methodology-hint";
 import { TablePagination, type TablePaginationProps } from "@/components/table-pagination";
 import { YieldWatchlistStar } from "@/components/yield-watchlist-star";
 import { YieldCohortChip } from "@/components/yield-cohort-chip";
+import { YieldZoneChip } from "@/components/yield-zone-chip";
 import {
   ApyRangeBar,
   YieldExpandedDetails,
@@ -286,6 +287,7 @@ function YieldInstrumentRowBase({
             <Badge variant="outline" className={`text-[10px] ${YIELD_TYPE_STYLES[row.yieldType]?.badge ?? ""}`}>
               {YIELD_TYPE_LABELS[row.yieldType] ?? row.yieldType}
             </Badge>
+            <YieldZoneChip safetyScore={safetyScore} apy30d={row.apy30d} benchmarkRate={benchmarkRate} />
             <YieldSignalsIndicator
               row={row}
               sourceRiskMaterial={sourceRiskMaterial}
@@ -582,7 +584,7 @@ export function YieldInstrumentBoard({
         <HeaderCell
           label="PYS"
           adornment={<MethodologyHint topic="pys" />}
-          title="Pharos Yield Score: risk-adjusted yield ranking"
+          title="Pharos Yield Score: is this APY paying enough for the risk? Yield per unit of risk, not a recommendation"
         />
         <HeaderCell label="Source" />
         <HeaderCell label="TVL" title="Total value locked in yield source" />

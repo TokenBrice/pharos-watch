@@ -20,7 +20,7 @@ import { computeApyAxis, computeSafetyDomain, nudgeOverlaps, SAFETY_SCORE_THRESH
 import { getYieldBenchmarkDisplayLabel } from "@/lib/yield-benchmark";
 import { SEVERITY_TONE_CLASS } from "@/lib/severity-tone";
 import { cn } from "@/lib/utils";
-import { YIELD_TYPE_LABELS } from "@shared/lib/classification";
+import { YIELD_TYPE_LABELS, YIELD_ZONE_LABELS } from "@shared/lib/classification";
 import { YIELD_RISK_BUDGET_MIN_SAFETY } from "@/lib/yield-view-model";
 import { useIsMobile } from "@/hooks/use-is-mobile";
 import { resolveCompactLogoSrc } from "@/lib/logo-variants";
@@ -77,7 +77,7 @@ const YIELD_SCATTER_QUADRANTS = [
     key: "sweet-spot",
     safetySide: "above-threshold",
     yieldSide: "above-benchmark",
-    label: "Sweet Spot",
+    label: YIELD_ZONE_LABELS["sweet-spot"],
     labelPosition: "insideTopRight",
     fill: CHART_GREEN,
     fillOpacity: 0.12,
@@ -86,7 +86,7 @@ const YIELD_SCATTER_QUADRANTS = [
     key: "danger-zone",
     safetySide: "below-threshold",
     yieldSide: "above-benchmark",
-    label: "Danger Zone",
+    label: YIELD_ZONE_LABELS["danger-zone"],
     labelPosition: "insideTopLeft",
     fill: CHART_RED,
     fillOpacity: 0.12,
@@ -95,7 +95,7 @@ const YIELD_SCATTER_QUADRANTS = [
     key: "play-it-safe",
     safetySide: "above-threshold",
     yieldSide: "below-benchmark",
-    label: "Play It Safe",
+    label: YIELD_ZONE_LABELS["play-it-safe"],
     labelPosition: "insideBottomRight",
     fill: CHART_BLUE,
     fillOpacity: 0.12,
@@ -104,7 +104,7 @@ const YIELD_SCATTER_QUADRANTS = [
     key: "why-bother",
     safetySide: "below-threshold",
     yieldSide: "below-benchmark",
-    label: "Why Bother?",
+    label: YIELD_ZONE_LABELS["why-bother"],
     labelPosition: "insideBottomLeft",
     fill: CHART_SLATE,
     fillOpacity: 0.07,

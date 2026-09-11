@@ -165,6 +165,35 @@ export const YIELD_TYPE_STYLES: Record<YieldType, { badge: string; hex: string }
   "structured-tranche": { badge: "bg-rose-500/10 text-rose-700 dark:text-rose-400 border-rose-500/20", hex: "#e11d48" },
 };
 
+/**
+ * Joint safety × yield reading shared by the /yield scatter quadrants and the
+ * per-row zone chip. Split at safety 60 and the row's own benchmark rate.
+ * PYS says how well a row pays for its risk; the zone says whether that risk
+ * is one a reader should be taking at all.
+ */
+export type YieldZoneKey = "sweet-spot" | "danger-zone" | "play-it-safe" | "why-bother";
+
+export const YIELD_ZONE_LABELS: Record<YieldZoneKey, string> = {
+  "sweet-spot": "Sweet Spot",
+  "danger-zone": "Danger Zone",
+  "play-it-safe": "Play It Safe",
+  "why-bother": "Why Bother?",
+};
+
+export const YIELD_ZONE_DESCRIPTIONS: Record<YieldZoneKey, string> = {
+  "sweet-spot": "Safety 60+ and APY above its benchmark: paid to hold a safer coin.",
+  "danger-zone": "Safety below 60 with APY above its benchmark: well-paid risk, not a safe pick.",
+  "play-it-safe": "Safety 60+ but APY at or below its benchmark: safe, underpaid.",
+  "why-bother": "Safety below 60 and APY at or below its benchmark: risk without pay.",
+};
+
+export const YIELD_ZONE_STYLES: Record<YieldZoneKey, { badge: string }> = {
+  "sweet-spot": { badge: "bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-500/20" },
+  "danger-zone": { badge: "bg-red-500/10 text-red-700 dark:text-red-400 border-red-500/30" },
+  "play-it-safe": { badge: "bg-blue-500/10 text-blue-700 dark:text-blue-400 border-blue-500/20" },
+  "why-bother": { badge: "bg-slate-500/10 text-slate-700 dark:text-slate-400 border-slate-500/20" },
+};
+
 /** Chart hex colors for blacklist stablecoin breakdown.
  *  Intentionally per-stablecoin brand colors — independent of chart-colors.ts tokens. */
 export const BLACKLIST_CHART_COLORS: Record<BlacklistStablecoin, string> = {

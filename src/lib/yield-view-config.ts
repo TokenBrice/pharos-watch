@@ -32,6 +32,8 @@ export type YieldWatchlistFilter = "all" | "only";
 export type YieldAttentionFilter = "all" | "watchlist";
 
 export interface YieldViewModelUrlParams {
+  /** Risk-tolerance band; absent = `YIELD_LANDING_RISK_BUDGET`, `any` = no band. */
+  risk?: string | null;
   peg?: string | null;
   yieldType?: string | null;
   q?: string | null;
@@ -142,6 +144,15 @@ export const DEFAULT_FILTERS: YieldViewModelFilters = {
   attention: "all",
 };
 
+/**
+ * Risk band applied when the URL carries no `risk` param and no explicit
+ * risk-budget filter. The neutral "all" band must be requested explicitly via
+ * `risk=any` so D-grade rows never lead the page by default.
+ */
+export const YIELD_LANDING_RISK_BUDGET: YieldRiskBudgetKey = "opportunistic";
+/** URL value for the neutral band; not "all" because `setParam` treats "all" as clear. */
+export const YIELD_RISK_ANY_PARAM = "any";
+
 export interface YieldPresetSpec {
   key: YieldPresetKey;
   label: string;
@@ -240,7 +251,8 @@ export const YIELD_PRESET_SPECS: readonly YieldPresetSpec[] = [
     key: "watchlist-warnings",
     label: "Watching needs attention",
     description: "Starred rows with warnings or source changes",
-    overrides: { attention: "watchlist" },
+    // WHY: the landing risk band hides warning rows, which this view exists to surface.
+    overrides: { attention: "watchlist", warnings: "all" },
   },
 ];
 

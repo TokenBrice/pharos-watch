@@ -402,7 +402,9 @@ The monthly coverage audit now treats both `AUTO_LENDING_POOL_MAP` and `EXPLICIT
 
 ## Pharos Yield Score (PYS)
 
-Risk-adjusted ranking (0–100) that balances yield magnitude against source risk, stablecoin safety, and consistency.
+Risk-adjusted ranking (0–100) that balances yield magnitude against source risk, stablecoin safety, and consistency. PYS answers one question — *is this APY paying enough for the risk taken?* — so it is yield per unit of risk, not a recommendation and not a safety verdict. A D-grade coin can top the leaderboard when it pays a lot for a lot of risk (wTRY at ~38% APY sits beside USDC at ~4.7%). Every surface that names PYS carries that framing, and each row also shows the joint safety × yield **zone** described under Presentation Boundaries.
+
+Known limitation (not yet versioned): PYS starts from nominal `apy30d` and weights the benchmark spread at only `PYS_BENCHMARK_SPREAD_WEIGHT` (0.25), so rows pegged to high-rate currencies earn PYS credit for policy-rate compensation rather than real excess yield; wTRY's +1.3% over TLREF scores like a much larger USD spread. A spread-first variant is under evaluation as a separate methodology change.
 
 **Formula (`computePYS()` in `shared/lib/yield-scoring.ts`):**
 
@@ -623,6 +625,8 @@ Schedules are owned by `worker/wrangler.toml`, `shared/lib/cron-jobs.ts`, and `s
 - The stablecoin detail section is an at-a-glance summary; `/stablecoin/<id>/yield/` is the history-first workbench. The two surfaces must not duplicate whole panels.
 - Deep-link workbenches are runtime analysis surfaces and remain `noindex`; `/yield/` and stablecoin detail pages are the indexable surfaces.
 - PYS factor attribution neutralizes one factor at a time and recomputes PYS. Per-factor deltas are explanatory and need not sum to the final score.
+- Every row carries a zone chip derived from `resolveYieldZone()` in `src/lib/yield-scatter.ts`: safety `>= 60` × 30-day APY above the row's benchmark (falling back to the visible USD benchmark) yields `Sweet Spot`, `Danger Zone`, `Play It Safe`, or `Why Bother?`. Labels, descriptions, and static badge classes live in `shared/lib/classification.ts` and are shared with the scatter-plot quadrants; unscored rows or rows with no benchmark render no chip. The hero highlight context and the leaderboard PYS tooltip use the same vocabulary so a top-PYS low-grade row reads as well-paid risk, not as an endorsement.
+- `/yield/` lands on the Opportunistic risk band (`YIELD_LANDING_RISK_BUDGET`: safety `>= 50`, warnings hidden). The `risk` URL param selects a band (`conservative`, `balanced`, `opportunistic`, or `any` for no band); an absent param is the landing band. The band only fills risk-budget keys the URL leaves unset, so explicit `minSafety`, `depth`, `sourcePosture`, `sourceConfidence`, or `warnings` params always win. Clearing one of those keys from the filter controls pins `risk=any` and keeps the other band-derived keys explicit. View presets stack on the current filters (active when their override keys match; counts computed on the stacked filters), and the compare drawer always selects from the unbanded universe so a selected low-grade row never disappears.
 
 ### Validation
 

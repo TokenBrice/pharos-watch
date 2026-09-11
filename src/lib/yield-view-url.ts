@@ -1,4 +1,10 @@
-import { DEFAULT_FILTERS } from "@/lib/yield-view-config";
+import {
+  DEFAULT_FILTERS,
+  YIELD_LANDING_RISK_BUDGET,
+  YIELD_RISK_ANY_PARAM,
+  YIELD_RISK_BUDGET_SPECS,
+  type YieldRiskBudgetKey,
+} from "@/lib/yield-view-config";
 import type {
   YieldBenchmarkFilter,
   YieldDepthFilter,
@@ -50,7 +56,39 @@ function normalizeOption<T extends string>(
   return value != null && validValues.has(value as T) ? value as T : fallback;
 }
 
-export function normalizeFilters(params: YieldViewModelUrlParams, options: YieldViewModelOptions): {
+function parseRiskBudgetParam(value: string | null | undefined): YieldRiskBudgetKey {
+  if (value == null || value.trim() === "") return YIELD_LANDING_RISK_BUDGET;
+  if (value === YIELD_RISK_ANY_PARAM || value === "all") return "all";
+  return YIELD_RISK_BUDGET_SPECS.some((spec) => spec.key === value)
+    ? (value as YieldRiskBudgetKey)
+    : YIELD_LANDING_RISK_BUDGET;
+}
+
+export function riskBudgetUrlValue(key: YieldRiskBudgetKey): string {
+  return key === "all" ? YIELD_RISK_ANY_PARAM : key;
+}
+
+/**
+ * Applies the URL risk band to every risk-budget key the URL leaves unset, so
+ * `/yield/` lands on the opportunistic band while explicit filter params still
+ * win (stackable semantics). `risk=any` requests the neutral defaults.
+ */
+function expandRiskBudget(params: YieldViewModelUrlParams): {
+  risk: YieldRiskBudgetKey;
+  params: YieldViewModelUrlParams;
+} {
+  const risk = parseRiskBudgetParam(params.risk);
+  const spec = YIELD_RISK_BUDGET_SPECS.find((entry) => entry.key === risk);
+  const expanded: YieldViewModelUrlParams = { ...params };
+  for (const [key, value] of Object.entries(spec?.overrides ?? {})) {
+    const paramKey = key as keyof YieldViewModelUrlParams;
+    const raw = expanded[paramKey];
+    if ((raw == null || raw.trim() === "") && value != null) expanded[paramKey] = String(value);
+  }
+  return { risk, params: expanded };
+}
+
+export function normalizeFilters(rawParams: YieldViewModelUrlParams, options: YieldViewModelOptions): {
   filters: YieldViewModelFilters;
   normalizedParams: Record<keyof YieldViewModelUrlParams, string | null>;
   invalidParamKeys: Array<keyof YieldViewModelUrlParams>;
@@ -70,6 +108,7 @@ export function normalizeFilters(params: YieldViewModelUrlParams, options: Yield
   const validTrending = new Set<YieldTrendingFilter>(["all", "rising"]);
   const validWatchlist = new Set<YieldWatchlistFilter>(["all", "only"]);
   const validAttention = new Set<YieldAttentionFilter>(["all", "watchlist"]);
+  const { risk, params } = expandRiskBudget(rawParams);
 
   const filters: YieldViewModelFilters = {
     peg: normalizeOption(params.peg, validPegValues, DEFAULT_FILTERS.peg),
@@ -90,6 +129,7 @@ export function normalizeFilters(params: YieldViewModelUrlParams, options: Yield
   };
 
   const normalizedParams: Record<keyof YieldViewModelUrlParams, string | null> = {
+    risk: risk === YIELD_LANDING_RISK_BUDGET ? null : riskBudgetUrlValue(risk),
     peg: filters.peg === DEFAULT_FILTERS.peg ? null : filters.peg,
     yieldType: filters.yieldType === DEFAULT_FILTERS.yieldType ? null : filters.yieldType,
     q: filters.q === DEFAULT_FILTERS.q ? null : filters.q,
@@ -109,7 +149,7 @@ export function normalizeFilters(params: YieldViewModelUrlParams, options: Yield
 
   const invalidParamKeys = (Object.keys(normalizedParams) as Array<keyof YieldViewModelUrlParams>)
     .filter((key) => {
-      const raw = params[key];
+      const raw = rawParams[key];
       const normalized = normalizedParams[key];
       return raw != null && raw.trim() !== "" && raw !== normalized;
     });
