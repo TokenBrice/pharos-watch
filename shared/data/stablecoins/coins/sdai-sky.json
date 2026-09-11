@@ -79,6 +79,11 @@
         "depType": "wrapper",
         "expectedAssetAddress": "0x6b175474e89094c44da98b954eedeac495271d0f"
       },
+      "deployedExposure": {
+        "basis": "Pot (DSR) holds the vault's DAI via vat internal accounting; sDAI totalAssets() is DAI in the Pot",
+        "reviewedAt": "2026-09-11",
+        "sourceUrl": "https://docs.spark.fi/"
+      },
       "redemptionLiquidity": {
         "source": "atomic-full-backing"
       }

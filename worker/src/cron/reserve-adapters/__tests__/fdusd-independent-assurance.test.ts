@@ -1,3 +1,6 @@
+import { readFileSync } from "node:fs";
+import { dirname, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { LIVE_RESERVE_ADAPTER_DEFINITIONS } from "@shared/lib/live-reserve-adapters";
 import { getIndependentAssuranceManifest, independentAssuranceSourceTimestamp, reconcileIndependentAssuranceManifest } from "@shared/lib/independent-assurance";
@@ -14,6 +17,17 @@ vi.mock("../independent-assurance", async () => {
 
 const PDF_BYTES = new TextEncoder().encode("%PDF-1.7\nfixture\n");
 const reviewed = getIndependentAssuranceManifest("FDUSD");
+
+const TEST_DIR = dirname(fileURLToPath(import.meta.url));
+const FEB_2026_HREF =
+  "https://cdn.prod.website-files.com/675ab99bf1f7ea944d49a55b/69b8bb692133e7d22020f80a_FD121_(BVI)_-_ISAE3000_Attestation_Report_on_Reserves_Account_(Feb_2026)_(FINAL).pdf";
+const SEP_2025_HREF =
+  "https://cdn.prod.website-files.com/675ab99bf1f7ea944d49a55b/68f09f623c0571b23acecbcc_ISAE3000_-_Attestion_Report_on_Reserves_Account_(Sept_2025)_Final.pdf";
+
+// The live Webflow index capture: every ISAE 3000 row the newer-report fence
+// dates, including the Feb 2026 and Sept 2025 rows whose CDN filenames separate
+// the report month and year with an underscore instead of a space.
+const LIVE_INDEX_FIXTURE = resolve(TEST_DIR, "fixtures", "fdusd-independent-assurance.html");
 
 // Webflow CDN cohort: the June signed-image report (no ISAE 3000 marker) and a
 // whitepaper handout carrying an ISAE 3000 label must both stay out of the
@@ -103,6 +117,23 @@ describe("fdusd-independent-assurance (AOGB ISAE 3000 limited assurance)", () =>
 
   it("selects the reviewed report on the Webflow index and reaches the PDF byte gate", async () => {
     installFetch(indexHtml());
+    await expect(verifyIndex()).rejects.toThrow(
+      `PDF byte length ${PDF_BYTES.length} does not match reviewed ${reviewed.reportByteLength}`,
+    );
+  });
+
+  it("dates every row of the live Webflow index, including underscore-separated CDN filenames", async () => {
+    // Regression: the live index pairs "(Feb_2026)" and "(Sept_2025)" filenames
+    // with "(July 2026)"-style names, and the fence reads an undated candidate as
+    // proof the index changed shape, so a missed underscore separator errored the
+    // whole sync instead of publishing the reviewed July report.
+    expect(FDUSD_INDEPENDENT_ASSURANCE_PROFILE.reportDateFromCandidate?.(FEB_2026_HREF, "Download")).toBe(
+      "2026-02-28",
+    );
+    expect(FDUSD_INDEPENDENT_ASSURANCE_PROFILE.reportDateFromCandidate?.(SEP_2025_HREF, "Download")).toBe(
+      "2025-09-30",
+    );
+    installFetch(readFileSync(LIVE_INDEX_FIXTURE, "utf8"));
     await expect(verifyIndex()).rejects.toThrow(
       `PDF byte length ${PDF_BYTES.length} does not match reviewed ${reviewed.reportByteLength}`,
     );

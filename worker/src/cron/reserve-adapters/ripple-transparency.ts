@@ -108,27 +108,42 @@ function parseMmDdYyyy(raw: string | undefined): number | null {
   return Math.floor(timestampMs / 1000);
 }
 
+const LABEL_WINDOW_CHARS = 300;
+
 /** Reads an explicit percentage within a short window after a class label. */
 function parseLabeledPct(normalized: string, label: RegExp): number | null {
   const match = normalized.match(label);
   if (!match || match.index === undefined) return null;
-  const window = normalized.slice(match.index, match.index + 300);
+  const window = normalized.slice(match.index, match.index + LABEL_WINDOW_CHARS);
   return parseFirstPercentage(window);
 }
 
 const TREASURY_BILLS_LABEL = /U\.?S\.?\s+Treasury\s+bills?|T-bills/i;
 const GOVERNMENT_MMF_LABEL = /[Gg]overnment\s+money[- ]market\s+funds?/;
 const CASH_LABEL = /[Cc]ash|[Dd]eposit\s+accounts/;
+const RESERVE_CLASS_LABELS = [TREASURY_BILLS_LABEL, GOVERNMENT_MMF_LABEL, CASH_LABEL];
 
 /**
- * Whether the payload carries a percentage-looking token after a class label
- * (the same window the parser reads). Distinguishes a payload that carries a
- * malformed/unreconcilable breakdown from one that carries none at all.
+ * Whether the payload publishes an asset-class breakdown block the parser could
+ * not reconcile, as opposed to carrying no breakdown at all. A breakdown names
+ * at least two of the three NYDFS reserve classes and shows a
+ * percentage-looking token in one of those label windows. The live
+ * transparency page names a single class in marketing prose ("other cash
+ * equivalents", next to a "backed 100%" claim), so one class word plus an
+ * unrelated percentage must not be reported as a malformed breakdown.
  */
-function hasBreakdownPctToken(normalized: string, label: RegExp): boolean {
-  const match = normalized.match(label);
-  if (!match || match.index === undefined) return false;
-  return normalized.slice(match.index, match.index + 300).includes("%");
+function carriesBreakdownShape(normalized: string): boolean {
+  let labeledClasses = 0;
+  let labeledPctToken = false;
+  for (const label of RESERVE_CLASS_LABELS) {
+    const match = normalized.match(label);
+    if (!match || match.index === undefined) continue;
+    labeledClasses++;
+    if (normalized.slice(match.index, match.index + LABEL_WINDOW_CHARS).includes("%")) {
+      labeledPctToken = true;
+    }
+  }
+  return labeledClasses >= 2 && labeledPctToken;
 }
 
 /**
@@ -136,6 +151,11 @@ function hasBreakdownPctToken(normalized: string, label: RegExp): boolean {
  * an explicit breakdown (labeled percentages for all three NYDFS reserve
  * classes summing to 100%). Returns null when the payload has no usable
  * breakdown so the caller falls back to the attested static split.
+ *
+ * The live transparency page, verified 2026-09-11, publishes only the balance
+ * block (circulating supply, reserve funds, `As of` date) and an index of
+ * monthly Deloitte attestation PDFs; it carries no per-class percentages, so a
+ * null here is the expected live outcome, not a parser regression.
  */
 export function parseRippleReserveBreakdown(normalized: string): ReserveBreakdown | null {
   const treasuryBillsPct = parseLabeledPct(normalized, TREASURY_BILLS_LABEL);
@@ -208,15 +228,14 @@ export function adaptRippleTransparency(html: string): AdapterResult {
   const warnings: LiveReserveWarning[] = [];
   let breakdown = parseRippleReserveBreakdown(normalized);
   if (breakdown == null) {
-    // Missing and malformed live breakdowns are distinguishable: only the
-    // latter carries percentage tokens the parser rejected. Either way the
+    // Missing and malformed live breakdowns are distinguishable: only a
+    // payload shaped like a breakdown (two or more named reserve classes) can
+    // be malformed; a payload that never carried one is not. Either way the
     // attested split is stale evidence under a fresh clock, so republishing it
     // silently would launder the September timestamp over May weights — emit
     // an explicit degraded warning instead.
     breakdown = ATTESTED_BREAKDOWN_2026_05;
-    const malformed = [TREASURY_BILLS_LABEL, GOVERNMENT_MMF_LABEL, CASH_LABEL].some((label) =>
-      hasBreakdownPctToken(normalized, label),
-    );
+    const malformed = carriesBreakdownShape(normalized);
     warnings.push(
       reserveDegradedWarning(
         "attested-fallback-used",

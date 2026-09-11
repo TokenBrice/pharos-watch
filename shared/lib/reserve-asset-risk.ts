@@ -53,6 +53,13 @@ export const CANONICAL_RESERVE_ASSET_RISK_BY_SYMBOL = {
   CELO: "high",
   POL: "high",
 
+  // ── High: synthetic dollars ────────────────────────────────
+  // USDe backs its peg with delta-neutral basis positions and centralized
+  // custody rather than cash equivalents, so the reviewed sidecars (frax,
+  // honey, yzusd, srusde, reusd, suiusde) and the frax balance-sheet adapter
+  // tier it above the low custodial stablecoins above.
+  USDE: "high",
+
   // ── Very-high: governance / exotic ─────────────────────────
   DEPS: "very-high",
   CRV: "very-high",

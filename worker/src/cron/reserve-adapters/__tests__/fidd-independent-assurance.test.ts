@@ -7,6 +7,7 @@ import { fetchIndependentAssuranceReserves, verifyIndependentAssuranceReport } f
 import { getReserveAdapter } from "../index";
 import { validateAdapterOutput } from "../validate";
 import { installAdapterNetwork } from "./reserve-adapter.test-support";
+import type { AdapterHttpResponse } from "./reserve-adapter.test-support";
 
 const PDF_BYTES = new TextEncoder().encode("%PDF-1.7\nfixture\n");
 
@@ -16,6 +17,21 @@ vi.mock("../independent-assurance", async () => {
 });
 
 const VIEWER_URL = "https://fwc.widen.net/s/drcwdbtqzk/fidelity-digital-assets---fidd-reserve-attestation-report---july26";
+const CDN_PDF_URL =
+  "https://cf-store.widencdn.net/fwc/1/4/7/147b4558-cc40-4196-b5a8-d5ad517e019a.pdf?response-content-type=application%2Fpdf";
+
+/**
+ * Fidelity's WAF answers 403 to crawler user agents without a contact URI —
+ * the prod failures hit both the shared browser-shaped index UA and the
+ * neutral Pharos UA — so the responder enforces that observed rule instead of
+ * answering any user agent.
+ */
+function fidelityIndex(indexHtml: string) {
+  return (request: Request): string | AdapterHttpResponse =>
+    /\+https?:\/\//.test(request.headers.get("user-agent") ?? "")
+      ? { body: indexHtml, headers: { "content-type": "text/html; charset=utf-8" } }
+      : { status: 403, body: "Forbidden" };
+}
 
 function indexFixture(withViewerLink = true): string {
   return `<html><body>${withViewerLink
@@ -33,10 +49,12 @@ function installFetch(indexHtml: string, viewerHtml: string) {
   const reviewed = getIndependentAssuranceManifest("FIDD");
   return installAdapterNetwork({
     html: {
-      [reviewed.officialIndexUrl]: indexHtml,
+      [reviewed.officialIndexUrl]: fidelityIndex(indexHtml),
       [VIEWER_URL]: viewerHtml,
+      // The reviewed fwc.widen.net URL 303-redirects to the Widen CDN.
       [reviewed.reportUrl]: {
         body: new TextDecoder().decode(PDF_BYTES),
+        url: CDN_PDF_URL,
         headers: {
           "content-type": "application/pdf",
           "content-length": String(PDF_BYTES.length),
@@ -46,13 +64,21 @@ function installFetch(indexHtml: string, viewerHtml: string) {
   });
 }
 
-async function verifyIndex() {
+/** The coin's own reviewed params, so the checks below run the configured allowlist. */
+function fiddParams(): { indexHost: string; reportHosts: readonly string[] } {
+  const coin = ACTIVE_STABLECOINS.find((candidate) => candidate.id === "fidd-fidelity");
+  const params = coin!.liveReservesConfig!.params!;
+  return { indexHost: params.indexHost as string, reportHosts: params.reportHosts as readonly string[] };
+}
+
+async function verifyIndex(overrides: { reportHosts?: readonly string[] } = {}) {
   const reviewed = getIndependentAssuranceManifest("FIDD");
+  const params = fiddParams();
   await verifyIndependentAssuranceReport({
     manifest: reviewed,
     indexUrl: reviewed.officialIndexUrl,
-    indexHost: "www.fidelitydigitalassets.com",
-    reportHosts: ["fwc.widen.net"],
+    indexHost: params.indexHost,
+    reportHosts: overrides.reportHosts ?? params.reportHosts,
     profile: FIDD_INDEPENDENT_ASSURANCE_PROFILE,
     signal: new AbortController().signal,
   });
@@ -99,6 +125,12 @@ describe("fidd-independent-assurance (PwC FIDD examination)", () => {
     await expect(verifyIndex()).rejects.toThrow("PDF byte length");
   });
 
+  it("fails closed when the PDF hop leaves the reviewed report hosts", async () => {
+    installFetch(indexFixture(), viewerFixture());
+    await expect(verifyIndex({ reportHosts: ["fwc.widen.net"] }))
+      .rejects.toThrow("cf-store.widencdn.net is not in the reviewed allowlist");
+  });
+
   it("fails closed when the July viewer link is missing from the official index", async () => {
     installFetch(indexFixture(false), viewerFixture());
     await expect(verifyIndex())
@@ -121,7 +153,7 @@ describe("fidd-independent-assurance (PwC FIDD examination)", () => {
         product: "FIDD",
         profile: "fidd-v1",
         indexHost: "www.fidelitydigitalassets.com",
-        reportHosts: ["fwc.widen.net"],
+        reportHosts: ["fwc.widen.net", "cf-store.widencdn.net"],
       },
     });
     vi.mocked(fetchIndependentAssuranceReserves).mockResolvedValue({
@@ -137,7 +169,7 @@ describe("fidd-independent-assurance (PwC FIDD examination)", () => {
     expect(result.slices.map((slice) => slice.name)).toContain("U.S. Treasury bills");
     expect(vi.mocked(fetchIndependentAssuranceReserves)).toHaveBeenCalledWith(
       coin!, coin!.liveReservesConfig!, expect.any(AbortSignal), FIDD_INDEPENDENT_ASSURANCE_PROFILE,
-      { product: "FIDD", profile: "fidd-v1", indexHost: "www.fidelitydigitalassets.com", reportHosts: ["fwc.widen.net"] },
+      { product: "FIDD", profile: "fidd-v1", indexHost: "www.fidelitydigitalassets.com", reportHosts: ["fwc.widen.net", "cf-store.widencdn.net"] },
       undefined,
     );
 

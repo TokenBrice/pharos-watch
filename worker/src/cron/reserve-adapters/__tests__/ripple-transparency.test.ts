@@ -23,6 +23,21 @@ const RIPPLE_HTML_WITH_BREAKDOWN = `
 </table>
 `;
 
+/**
+ * Trimmed 2026-09-11 capture of
+ * https://ripple.com/solutions/stablecoin/transparency/ (same document behind
+ * the /products/stablecoin/transparency/ redirect): the marketing paragraphs,
+ * the live Balances block, and the Attestations copy. The live payload
+ * publishes no asset-class percentage breakdown; the reserve classes appear
+ * only in this prose and inside the linked monthly Deloitte report PDFs.
+ */
+const RIPPLE_HTML_LIVE = `
+<div class="[&amp;&gt;*:last-child]:mb-0 body3 lg:body2"><p class="mb-[1em] last:mb-0"><a class="text-newblue-50 hover:underline decoration-current" target="_blank" rel="noopener noreferrer" href="/products/stablecoin/">Ripple USD (RLUSD)</a> is a USD stablecoin designed for institutions, created with trust and compliance at its core. RLUSD is backed by U.S. dollars and other cash equivalents, with reserves held in segregated accounts.</p><p class="mb-[1em] last:mb-0">Standard Custody, the issuer of RLUSD, is chartered and supervised by NYDFS as a limited purpose trust company, which means our stablecoin is required to be backed 100% by highly liquid, short-term, transparent reserves. Standard Custody adheres to high safety and soundness standards, including NYDFS customer protection and reserve requirements, as well as redemptions with strict SLAs.<br/></p></div>
+<div class="p-8 rounded-lg shadow-heavy-24 mt-8 flex flex-col w-full text-center"><h5 class="heading3 md:heading2 mb-4">Total Circulating RLUSD</h5><p class="headline3 md:headline2 blue-gradient-light">$2,395.6M</p><h5 class="heading3 md:heading2 mb-4 mt-10">RLUSD Reserve Funds</h5><p class="headline3 md:headline2 blue-gradient-light">$2,517.7M</p><p class="mt-8 md:mt-10 text-gray-50 caption1">As of <!-- -->09/03/2026</p></div>
+<h4 class="heading1 md:headline4 mb-8">Attestations*</h4><div class="w-full body3 lg:body2 text-gray-70"><p class="mb-[1em] last:mb-0">Attestations are performed by an independent Certified Public Accountant (CPA) licensed in the United States. The CPA issues monthly attestation reports pertaining to management’s assertions regarding the amount of RLUSD in circulation, along with information pertaining to the composition of the RLUSD Reserve fund.</p></div>
+<a href="https://cdn.sanity.io/files/ior4a5y3/production/5a9121caa4206788930869cac0f868e5841d7fae.pdf/RLUSD_Attestation_Report_-_June'26_FINAL.pdf">Jun</a>
+`;
+
 describe("adaptRippleTransparency", () => {
   it("parses RLUSD reserves and source timestamp", () => {
     const result = adaptRippleTransparency(RIPPLE_HTML);
@@ -72,6 +87,30 @@ describe("adaptRippleTransparency", () => {
         riskFactors: ["counterparty", "custody", "concentration"],
         liquidityHorizon: "immediate",
       },
+    ]);
+  });
+
+  it("reads the live payload's balances and reports the missing breakdown as absent, not malformed", () => {
+    const result = adaptRippleTransparency(RIPPLE_HTML_LIVE);
+
+    expect(result.metadata).toMatchObject({
+      circulatingUsd: 2_395_600_000,
+      reservesUsd: 2_517_700_000,
+      collateralizationRatio: 2_517_700_000 / 2_395_600_000,
+      freshnessMode: "verified",
+      sourceTimestamp: Date.UTC(2026, 8, 3) / 1000,
+    });
+    expect(result.slices.map((slice) => [slice.name, slice.pct])).toEqual([
+      ["U.S. Treasury bills", 65.41],
+      ["Government money-market funds", 19.44],
+      ["Cash and deposit accounts", 15.15],
+    ]);
+    expect(result.warnings).toEqual([
+      expect.objectContaining({
+        code: "attested-fallback-used",
+        effect: "degraded",
+        message: expect.stringContaining("no asset-class breakdown"),
+      }),
     ]);
   });
 

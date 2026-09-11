@@ -90,7 +90,7 @@
     },
     "inputs": {
       "primary": {
-        "kind": "http-json",
+        "kind": "http-html",
         "url": "https://brladigital.notion.site/BRLA-Transparency-Page-238ba143aa2f4338902ee91ebe50298a"
       }
     },

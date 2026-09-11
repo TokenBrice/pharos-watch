@@ -46,8 +46,8 @@ describe("adaptBridgeTransparency", () => {
     const result = adaptBridgeTransparency(USDSUI_PAYLOAD, "usd_sui");
 
     expect(result.slices).toEqual([
-      { sourceKey: "bridge-transparency:treasury", name: "Treasury", pct: 89.8, risk: "low", assetClass: "treasury-bill", issuerOrObligor: "United States Treasury" },
-      { sourceKey: "bridge-transparency:cash", name: "Cash", pct: 10.2, risk: "low", assetClass: "cash", issuerOrObligor: "Bridge-approved bank counterparties" },
+      { sourceKey: "bridge-transparency:treasury", name: "Treasury", pct: 89.8, risk: "very-low", assetClass: "treasury-bill", issuerOrObligor: "United States Treasury" },
+      { sourceKey: "bridge-transparency:cash", name: "Cash", pct: 10.2, risk: "very-low", assetClass: "cash", issuerOrObligor: "Bridge-approved bank counterparties" },
     ]);
     expect(result.warnings).toBeUndefined();
     expect(result.metadata).toMatchObject({
@@ -196,7 +196,7 @@ describe("fetchBridgeTransparencyReserves", () => {
     });
 
     expect(network.requests.map((request) => request.url)).toEqual([USDSUI_ENDPOINT]);
-    expect(result.slices.find((slice) => slice.name === "Cash")).toMatchObject({ risk: "low" });
+    expect(result.slices.find((slice) => slice.name === "Cash")).toMatchObject({ risk: "very-low" });
     expect(result.metadata?.details).toMatchObject({ slug: "usd_sui" });
     expectWarnings(result, []);
   });

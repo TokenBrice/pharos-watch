@@ -62,7 +62,6 @@ interface AccountableParams {
   coinIdMap?: Record<string, string>;
   depTypeMap?: Record<string, ReserveSlice["depType"]>;
   totalReservesExcludeBuckets?: string[];
-  allowNegativeBuckets?: string[];
 }
 
 const VALID_BUCKETS = new Set(["type", "reserves_split", "deployment", "type_split", "stablecoin_split", "exposure_split", "protocol_split"]);
@@ -82,6 +81,12 @@ function parseAccountableParams(config: LiveReservesConfig): AccountableParams {
   return params;
 }
 
+/** Bucket values arrive in several reviewed shapes: a bare number, the empty-key wrapper the
+ *  hosted Accountable feeds now publish for every bucket (`{ "": -7311212.03 }`), a
+ *  `{ value: n }` / `{ usd: n }` record, a category-labelled map, or Tori's nested
+ *  asset-breakdown tree. Anything that does not resolve to a finite number is a parse failure
+ *  and throws; signed values resolve like any other and are reported downstream instead of
+ *  failing the snapshot. */
 function extractAccountableBucketValue(value: unknown, depth = 0): number | null {
   const direct = toFiniteNumber(value);
   if (direct != null) return direct;
@@ -89,6 +94,9 @@ function extractAccountableBucketValue(value: unknown, depth = 0): number | null
   if (!value || typeof value !== "object" || Array.isArray(value)) return null;
 
   const record = value as Record<string, unknown>;
+  const keys = Object.keys(record);
+  if (keys.length === 1 && keys[0] === "") return toFiniteNumber(record[""]);
+
   for (const key of ["value", "usd", "amount", "total"]) {
     const numeric = toFiniteNumber(record[key]);
     if (numeric != null) return numeric;
@@ -99,14 +107,9 @@ function extractAccountableBucketValue(value: unknown, depth = 0): number | null
   return (childValues as number[]).reduce((sum, numeric) => sum + numeric, 0);
 }
 
-function requireAccountableBucketValue(
-  name: string,
-  value: unknown,
-  bucket: string,
-  options?: { allowNegative?: boolean },
-): number {
+function requireAccountableBucketValue(name: string, value: unknown, bucket: string): number {
   const numeric = extractAccountableBucketValue(value);
-  if (numeric == null || (!options?.allowNegative && numeric < 0)) {
+  if (numeric == null) {
     throw new Error(`Accountable ${bucket} bucket "${name}" has invalid value: ${String(value)}`);
   }
   return numeric;
@@ -115,20 +118,14 @@ function requireAccountableBucketValue(
 function extractRecordBucketEntries(
   entries: Record<string, unknown> | undefined,
   bucket: string,
-  options?: { allowNegativeBuckets?: ReadonlySet<string> },
 ): Array<{ name: string; value: number }> {
   return Object.entries(entries ?? {}).map(([name, value]) => ({
     name,
-    value: requireAccountableBucketValue(name, value, bucket, {
-      allowNegative: options?.allowNegativeBuckets?.has(name),
-    }),
+    value: requireAccountableBucketValue(name, value, bucket),
   }));
 }
 
-function extractReservesSplitEntries(
-  value: unknown,
-  options?: { allowNegativeBuckets?: ReadonlySet<string> },
-): Array<{ name: string; value: number }> {
+function extractReservesSplitEntries(value: unknown): Array<{ name: string; value: number }> {
   if (value == null) return [];
   if (!Array.isArray(value)) {
     throw new Error("Accountable reserves_split bucket must be an array");
@@ -144,9 +141,7 @@ function extractReservesSplitEntries(
     }
     return {
       name: record.name,
-      value: requireAccountableBucketValue(record.name, record.value, "reserves_split", {
-        allowNegative: options?.allowNegativeBuckets?.has(record.name),
-      }),
+      value: requireAccountableBucketValue(record.name, record.value, "reserves_split"),
     };
   });
 }
@@ -154,23 +149,22 @@ function extractReservesSplitEntries(
 function extractBucketEntries(
   reserves: NonNullable<NonNullable<AccountableDashboardResponse["data"]>["reserves"]>,
   bucket: NonNullable<AccountableParams["bucket"]>,
-  options?: { allowNegativeBuckets?: ReadonlySet<string> },
 ): Array<{ name: string; value: number }> {
   switch (bucket) {
     case "type":
-      return extractRecordBucketEntries(reserves.type, bucket, options);
+      return extractRecordBucketEntries(reserves.type, bucket);
     case "reserves_split":
-      return extractReservesSplitEntries(reserves.reserves_split, options);
+      return extractReservesSplitEntries(reserves.reserves_split);
     case "deployment":
-      return extractRecordBucketEntries(reserves.deployment, bucket, options);
+      return extractRecordBucketEntries(reserves.deployment, bucket);
     case "type_split":
-      return extractRecordBucketEntries(reserves.type_split, bucket, options);
+      return extractRecordBucketEntries(reserves.type_split, bucket);
     case "stablecoin_split":
-      return extractRecordBucketEntries(reserves.stablecoin_split, bucket, options);
+      return extractRecordBucketEntries(reserves.stablecoin_split, bucket);
     case "exposure_split":
-      return extractRecordBucketEntries(reserves.exposure_split, bucket, options);
+      return extractRecordBucketEntries(reserves.exposure_split, bucket);
     case "protocol_split":
-      return extractRecordBucketEntries(reserves.protocol_split, bucket, options);
+      return extractRecordBucketEntries(reserves.protocol_split, bucket);
     default:
       return [];
   }
@@ -280,33 +274,43 @@ function buildCollateralizationReconciliationWarning(
   );
 }
 
+/** A mapped bucket the dashboard reports as exactly zero would vanish from the published mix
+ *  without any trace, so it still fails closed. Signed buckets are a distinct, reported case:
+ *  they are excluded from slice weights and surfaced as a degraded warning instead. */
 function validateMappedBucketValues(
   mapped: Array<{ name: string; value: number }>,
   bucket: string,
-  options?: { allowNegativeBuckets?: ReadonlySet<string> },
 ): void {
-  const invalid = mapped.filter((entry) => entry.value <= 0 && !options?.allowNegativeBuckets?.has(entry.name));
+  const invalid = mapped.filter((entry) => entry.value === 0);
   if (invalid.length > 0) {
-    throw new Error(`Accountable ${bucket} mapped bucket has non-positive value: ${invalid.map((entry) => entry.name).sort().join(", ")}`);
+    throw new Error(`Accountable ${bucket} mapped bucket has zero value: ${invalid.map((entry) => entry.name).sort().join(", ")}`);
   }
 }
 
+/** Coverage guard for the composition buckets. Under-coverage means the feed's own breakdown is
+ *  incomplete relative to the reserve total, so the published mix would silently omit backing:
+ *  that still fails closed. Over-coverage on a signed (netted) book is the issuer's own
+ *  readable inconsistency — the levered gross legs are netted by the negative buckets, so the
+ *  net can sit above the reserve total; it returns the signed residual for a degraded warning
+ *  instead of failing the snapshot. */
 function validateBucketTotalAgainstReserves(
   breakdown: Array<{ name: string; value: number }>,
   totalReserves: number | undefined,
   bucket: string,
   options?: {
     excludeBuckets?: ReadonlySet<string>;
+    hasSignedBuckets?: boolean;
   },
-): void {
-  if (totalReserves == null) return;
+): number | null {
+  if (totalReserves == null) return null;
   const totalValue = breakdown
     .filter((entry) => !(options?.excludeBuckets?.has(entry.name)))
     .reduce((sum, entry) => sum + entry.value, 0);
   const tolerance = Math.max(TOTAL_RESERVES_ABSOLUTE_TOLERANCE, totalReserves * TOTAL_RESERVES_RELATIVE_TOLERANCE);
-  if (Math.abs(totalValue - totalReserves) > tolerance) {
-    throw new Error(`Accountable ${bucket} bucket total ${totalValue} does not match total_reserves ${totalReserves}`);
-  }
+  const residual = totalValue - totalReserves;
+  if (Math.abs(residual) <= tolerance) return null;
+  if (residual > 0 && options?.hasSignedBuckets) return residual;
+  throw new Error(`Accountable ${bucket} bucket total ${totalValue} does not match total_reserves ${totalReserves}`);
 }
 
 function findNearestExposureSplitReserveTotal(
@@ -336,14 +340,18 @@ function findNearestExposureSplitReserveTotal(
 function buildSignedBucketWarning(
   signedBuckets: Array<{ name: string; value: number }>,
   totalValue: number,
+  signedResidual: number | null,
 ) {
   const signedValue = signedBuckets.reduce((sum, entry) => sum + Math.abs(entry.value), 0);
   const exposurePct = computeUnknownExposurePct(signedValue, totalValue);
+  const residualSuffix = signedResidual == null
+    ? ""
+    : `; their signed total is ${signedResidual.toFixed(2)} USD above the reconciled reserve total`;
   return reserveDegradedWarning(
     "signed-negative-bucket",
     `Accountable signed exposure buckets are omitted from reserve slices: ${
       signedBuckets.map((entry) => entry.name).sort().join(", ")
-    } (${exposurePct.toFixed(2)}% of positive reserve buckets)`,
+    } (${exposurePct.toFixed(2)}% of positive reserve buckets)${residualSuffix}`,
   );
 }
 
@@ -373,10 +381,9 @@ export function adaptAccountableDashboard(
   const layout = params.layout ?? "reserves-types";
   const bucket = params.bucket ?? "type";
   const breakdownBucket = layout === "asset-breakdown" ? "asset-breakdown" : bucket;
-  const allowNegativeBuckets = new Set(params.allowNegativeBuckets ?? []);
   const breakdown = layout === "asset-breakdown"
-    ? extractRecordBucketEntries(payload.data.assetBreakdown, "asset-breakdown", { allowNegativeBuckets })
-    : extractBucketEntries(payload.data.reserves, bucket, { allowNegativeBuckets });
+    ? extractRecordBucketEntries(payload.data.assetBreakdown, "asset-breakdown")
+    : extractBucketEntries(payload.data.reserves, bucket);
   if (breakdown.length === 0) {
     throw new Error(
       layout === "asset-breakdown"
@@ -394,8 +401,7 @@ export function adaptAccountableDashboard(
   const signedBuckets = breakdown.filter((entry) => entry.value < 0);
   const reconciledBreakdown = breakdown.filter((entry) => !(totalReservesExcludeBuckets.has(entry.name)));
   const positiveBreakdown = reconciledBreakdown.filter((entry) => entry.value > 0);
-  const mappedForValidation = breakdown.filter(({ name }) => name in riskMap);
-  validateMappedBucketValues(mappedForValidation, breakdownBucket, { allowNegativeBuckets });
+  validateMappedBucketValues(breakdown.filter(({ name }) => name in riskMap), breakdownBucket);
   const mapped = positiveBreakdown.filter(({ name }) => name in riskMap);
   const totalReserves = extractOptionalReserveScalar(payload.data.reserves.total_reserves, "total_reserves", {
     requirePositive: true,
@@ -413,15 +419,18 @@ export function adaptAccountableDashboard(
   const exposureSplitTimelineTotal = exposureSplitSourceTimestamp != null
     ? findNearestExposureSplitReserveTotal(payload.data.reserves, exposureSplitSourceTimestamp)
     : null;
-  validateBucketTotalAgainstReserves(breakdown, exposureSplitTimelineTotal?.totalReserves ?? totalReserves, breakdownBucket, {
-    excludeBuckets: totalReservesExcludeBuckets,
-  });
+  const signedResidual = validateBucketTotalAgainstReserves(
+    breakdown,
+    exposureSplitTimelineTotal?.totalReserves ?? totalReserves,
+    breakdownBucket,
+    { excludeBuckets: totalReservesExcludeBuckets, hasSignedBuckets: signedBuckets.length > 0 },
+  );
   const unknown = positiveBreakdown.filter(({ name }) => !(name in riskMap));
   const totalValue = positiveBreakdown.reduce((sum, entry) => sum + entry.value, 0);
   const unknownValue = unknown.reduce((sum, entry) => sum + entry.value, 0);
   const unknownExposurePct = computeUnknownExposurePct(unknownValue, totalValue);
   const signedBucketWarning = signedBuckets.length > 0
-    ? buildSignedBucketWarning(signedBuckets, totalValue)
+    ? buildSignedBucketWarning(signedBuckets, totalValue, signedResidual)
     : null;
   const collateralizationRatio = toFiniteNumber(payload.data.collateralization);
   if (collateralizationRatio == null || collateralizationRatio < 0) {
@@ -544,6 +553,7 @@ export function adaptAccountableDashboard(
             signedBucketCount: signedBuckets.length,
             signedBucketNames: signedBuckets.map((entry) => entry.name).sort(),
             signedBucketValue: signedBuckets.reduce((sum, entry) => sum + entry.value, 0),
+            ...(signedResidual != null ? { signedBucketTotalResidual: signedResidual } : {}),
           }
         : {}),
       dashboardTimestamp: payload.data.ts,

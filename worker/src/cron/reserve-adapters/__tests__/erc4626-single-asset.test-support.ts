@@ -140,6 +140,16 @@ export function getErc4626Network(): AdapterNetwork | undefined {
   return activeNetwork;
 }
 
+/** Strip the reviewed deployed-exposure attestation so a case exercises the
+ *  unreviewed held-versus-deployed split. */
+export function withoutDeployedExposure(config: LiveReservesConfig): LiveReservesConfig {
+  const cloned = structuredClone(config) as LiveReservesConfig & {
+    params?: { deployedExposure?: unknown };
+  };
+  if (cloned.params) delete cloned.params.deployedExposure;
+  return cloned;
+}
+
 export async function runTrackedVault(
   id: string,
   configTransform?: (config: LiveReservesConfig) => LiveReservesConfig,

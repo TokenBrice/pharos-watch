@@ -218,7 +218,7 @@ export const CORPUS_BACKLOG: Record<string, string> = {
   "matrixdock-frs":
     "No committed wire capture yet; the happy path and its failure modes are owned by matrixdock-frs.test.ts.",
   "icp-gldt":
-    "On-chain ICP canister reads; the adapter test mocks queryIcpCanister/fetchIcrcLedgerTotalSupply directly and no CBOR/candid wire capture is committed yet (owner: P4GldtFinish).",
+    "On-chain ICP canister reads; the committed capture covers the swap canister's get_swap_configs candid reply only, and the balance/ledger-supply reads are owned by icp-gldt.test.ts (owner: P4GldtFinish).",
   "onre-holdings-csv":
     "No committed wire capture yet; the happy path and its failure modes are owned by its adapter test file.",
   "avant-reserves-api":

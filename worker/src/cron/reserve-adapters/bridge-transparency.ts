@@ -42,20 +42,26 @@ interface BridgeComponentConfig {
 }
 
 /** Bridge discloses exactly two reserve components: cash at approved bank
- *  counterparties and Treasury exposure. Unknown components are published as
- *  high-risk unmapped slices with a degraded warning, never dropped. */
+ *  counterparties (segregated, bankruptcy-remote accounts) and Treasury
+ *  exposure. Both are asset classes rather than bare symbols, so their tier is
+ *  stated here from the corpus convention every other adapter follows — U.S.
+ *  Treasury bills and custodied bank cash are published `very-low`, which is
+ *  also the reviewed tier of the curated Bridge baskets. A hardcoded `low` here
+ *  silently scored both coins 25 points under their curated coverage.
+ *  Unknown components are published as high-risk unmapped slices with a
+ *  degraded warning, never dropped. */
 const BRIDGE_COMPONENT_CONFIG: Record<string, BridgeComponentConfig> = {
   cash: {
     sourceKey: "bridge-transparency:cash",
     name: "Cash",
-    risk: "low",
+    risk: "very-low",
     assetClass: "cash",
     issuerOrObligor: "Bridge-approved bank counterparties",
   },
   treasury: {
     sourceKey: "bridge-transparency:treasury",
     name: "Treasury",
-    risk: "low",
+    risk: "very-low",
     assetClass: "treasury-bill",
     issuerOrObligor: "United States Treasury",
   },

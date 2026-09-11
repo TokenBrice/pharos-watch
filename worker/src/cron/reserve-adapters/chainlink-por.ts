@@ -55,6 +55,16 @@ export interface ChainlinkPorIssuerCirculationProbe {
   reserveSymbol: string;
 }
 
+/** Declared when the readable registry deployments are not the coin's
+ *  canonical supply (Kinesis KAU: the feed covers the whole native-chain
+ *  program while `totalSupply()` aggregates only the Ethereum representation
+ *  wrapper). The aggregate is then a subset of the feed's reserve scope, so the
+ *  snapshot publishes quantities and the gap instead of a coverage verdict. */
+export interface ChainlinkPorIncompleteSupplyScope {
+  chain: string;
+  reason: string;
+}
+
 export interface ChainlinkPorParams {
   porFeedAddress: string;
   assetLabel: string;
@@ -64,6 +74,7 @@ export interface ChainlinkPorParams {
   fallbackRpcUrl?: string;
   maxOracleAgeSec?: number;
   issuerCirculationProbe?: ChainlinkPorIssuerCirculationProbe;
+  incompleteSupplyScope?: ChainlinkPorIncompleteSupplyScope;
 }
 
 interface ChainlinkPorData {
@@ -271,6 +282,7 @@ export function adaptChainlinkPorResponse(
   const reserveUnit = params.reserveUnit ?? "USD";
   const reserveValue = decimalNumberFromBigInt(data.reserves, data.decimals);
   const comparesSupply = SUPPLY_COMPARABLE_RESERVE_UNITS[reserveUnit];
+  const supplyScope = params.incompleteSupplyScope;
   const supplyTokens =
     comparesSupply && supply && supply.contributions.length > 0
       ? supply.contributions.reduce(
@@ -287,10 +299,15 @@ export function adaptChainlinkPorResponse(
     circulatingTokens != null && (supplyTokens == null || circulatingTokens <= supplyTokens * 1.001);
   // When a probe is configured, gross totalSupply is proven non-authoritative
   // (it includes unsold issuer pre-mint inventory), so a failed or implausible
-  // probe publishes NO coverage ratio rather than a misleading gross one.
-  const liabilityBasis: "issuer-circulating" | "onchain-total-supply" | undefined = probeActive
-    ? (circulationPlausible ? "issuer-circulating" : undefined)
-    : "onchain-total-supply";
+  // probe publishes NO coverage ratio rather than a misleading gross one. A
+  // declared incomplete supply scope works the same way: the readable
+  // deployments are only part of the liability the feed covers, so neither
+  // basis applies and the ratio stays withheld.
+  const liabilityBasis: "issuer-circulating" | "onchain-total-supply" | undefined = supplyScope != null
+    ? undefined
+    : probeActive
+      ? (circulationPlausible ? "issuer-circulating" : undefined)
+      : "onchain-total-supply";
   const liabilityTokens =
     liabilityBasis === "issuer-circulating" ? circulatingTokens : liabilityBasis != null ? supplyTokens : undefined;
   const collateralizationRatio =
@@ -349,6 +366,14 @@ export function adaptChainlinkPorResponse(
       ),
     );
   }
+  if (supplyScope != null) {
+    warnings.push(
+      reserveInfoWarning(
+        "por-supply-scope-incomplete",
+        `On-chain supply covers only registry deployments, while the canonical ${supplyScope.chain} supply is not readable by this adapter; no coverage ratio is published (${supplyScope.reason})`,
+      ),
+    );
+  }
 
   const primaryContribution = supply?.contributions[0];
 
@@ -386,9 +411,16 @@ export function adaptChainlinkPorResponse(
             // Coverage completeness is distinct from read success: a non-EVM
             // registry deployment (Solana, NEAR, …) is omitted by design and
             // degrades coverage here while still surfacing as the
-            // `por-supply-chain-omitted` info warning, not a read failure.
+            // `por-supply-chain-omitted` info warning, not a read failure. A
+            // configured incomplete supply scope keeps coverage incomplete
+            // regardless of which deployments were read.
             supplyCoverageComplete:
-              supply!.omittedNonEvmChains.length === 0 && supply!.omittedReadFailureChains.length === 0,
+              supplyScope == null &&
+              supply!.omittedNonEvmChains.length === 0 &&
+              supply!.omittedReadFailureChains.length === 0,
+            ...(supplyScope != null
+              ? { supplyScopeIncomplete: { chain: supplyScope.chain, reason: supplyScope.reason } }
+              : {}),
             ...(primaryContribution
               ? {
                   supplyRaw: primaryContribution.raw.toString(),

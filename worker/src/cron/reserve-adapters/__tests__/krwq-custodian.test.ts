@@ -15,19 +15,21 @@ const USDC_ETHEREUM = "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48";
 const FRXUSD_ETHEREUM = "0xcacd6fd266af91b8aed52accc382b4e165586e29";
 const USDC_BASE = "0x833589fcd6edb6e08f4c7c32d4f71b54bda02913";
 const KRWQ_URL = "https://www.krwq.cash/api/custodian-assets";
+// Live upstream shape (2026-09-11): `totalAssets` arrives as comma-grouped
+// decimal strings, `totalAssetsRaw` as plain digit strings.
 const PAYLOAD: KrwqCustodianPayload = {
   usdc: {
-    totalAssets: 90102.08,
+    totalAssets: "90,102.08",
     totalAssetsRaw: "90102080832",
     custodianAddress: "0x5573b8db24043beE020C36Ee0Df32694DFFeF04C",
   },
   frxusd: {
-    totalAssets: 482631.87,
+    totalAssets: "482,631.87",
     totalAssetsRaw: "482631869316796940855261",
     custodianAddress: "0x7e88aC6A9C2DaD21feA4dE6b54C764cA4D99C05D",
   },
   treasury: {
-    totalAssets: 105708.96,
+    totalAssets: "105,708.96",
     totalAssetsRaw: "105708960000",
     treasuryAddress: "0xA3E0B562C6FD7D6F570B2afC2Cc4e240226D8B54",
   },
@@ -93,6 +95,34 @@ describe("adaptKrwqCustodian", () => {
     expect(result.metadata?.supplyUsd).toBeCloseTo(SUPPLY_USD, 6);
     expect(result.metadata?.collateralizationRatio).toBeCloseTo(TOTAL_RESERVE_USD / SUPPLY_USD, 6);
     expectValidAdapterOutput("krwq-custodian", result);
+  });
+
+  it("parses the live comma-grouped amount strings", () => {
+    const result = adaptKrwqCustodian(PAYLOAD, ONCHAIN_MATCH, SUPPLY);
+
+    expect(result.warnings).toBeUndefined();
+    expect(result.slices).toHaveLength(3);
+    expect(result.metadata?.totalReserveUsd).toBeCloseTo(TOTAL_RESERVE_USD, 5);
+  });
+
+  it("still accepts ungrouped numbers and numeric strings", () => {
+    const result = adaptKrwqCustodian(
+      { ...PAYLOAD, usdc: { ...PAYLOAD.usdc, totalAssets: 90102.08 } },
+      ONCHAIN_MATCH,
+      SUPPLY,
+    );
+
+    expect(result.metadata?.totalReserveUsd).toBeCloseTo(TOTAL_RESERVE_USD, 5);
+  });
+
+  it("fails closed on malformed grouped amounts", () => {
+    for (const bad of ["1,2,3", "N/A", "", "12,34.5", "1,2345"]) {
+      expect(() => adaptKrwqCustodian(
+        { ...PAYLOAD, usdc: { ...PAYLOAD.usdc, totalAssets: bad } },
+        ONCHAIN_MATCH,
+        SUPPLY,
+      )).toThrow(/not a finite number/);
+    }
   });
 
   it("degrades and keeps the issuer value when an on-chain balance diverges", () => {

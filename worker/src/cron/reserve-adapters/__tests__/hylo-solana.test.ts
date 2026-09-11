@@ -66,9 +66,17 @@ beforeEach(() => {
 
 afterEach(() => vi.unstubAllGlobals());
 
+// DefiLlama's `solana:` namespace is keyed by mint address, case-sensitively: a
+// case variant is a different key with no quote. Deriving each Solana fixture
+// key from the on-chain mint keeps this mock honest, so a mis-keyed Solana
+// price identity fails here instead of only in prod.
+const lstPricesUsd = [134.27, 111.21];
 const priceEntries = [
-  { chain: p.lsts[0].priceChain, address: p.lsts[0].priceAddress, price: 134.27 },
-  { chain: p.lsts[1].priceChain, address: p.lsts[1].priceAddress, price: 111.21 },
+  ...p.lsts.map((lst, index) => ({
+    chain: lst.priceChain,
+    address: lst.priceChain === "solana" ? lst.mint : lst.priceAddress,
+    price: lstPricesUsd[index],
+  })),
   { chain: "coingecko", address: p.exoPairs[0].priceAddress, price: 78432.46 },
   { chain: "coingecko", address: p.exoPairs[1].priceAddress, price: 85.89 },
   { chain: "coingecko", address: "usd-coin", price: 1 },
@@ -126,6 +134,20 @@ describe("hylo-solana", () => {
     expect(result.slices.some((slice) => slice.sourceKey === "hylo-solana:usdc-pool")).toBe(false);
     expect(result.metadata?.details?.usdcDustExcludedUsd).toBe(0.199025);
     expect(result.warnings).toEqual([]);
+  });
+
+  it("quotes hyloSOL under its own on-chain mint identity", async () => {
+    const hyloSol = p.lsts.find((lst) => lst.priceChain === "solana")!;
+    const { result, network } = await run();
+    // DefiLlama's `solana:` namespace is case-sensitive, so quoting a case
+    // variant (the 2026-09-09 config) resolves no price and errors every run.
+    expect(network.requests.some((request) => request.url.includes(`solana:${hyloSol.mint}`))).toBe(true);
+    const breakdown = result.metadata?.details?.lstBreakdown as Array<{ mint: string; valueUsd: number }>;
+    expect(breakdown.find((row) => row.mint === hyloSol.mint)?.valueUsd).toBeCloseTo(16500.853647186 * 111.21, 5);
+  });
+
+  it("fails closed when a reviewed collateral quote is absent", async () => {
+    await expect(run(hyloNetwork(false))).rejects.toThrow(/missing collateral price/);
   });
 
   it("fails closed on an unknown registry LST", async () => {

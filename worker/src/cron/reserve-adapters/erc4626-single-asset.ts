@@ -22,6 +22,8 @@ import {
   requireOnchainInput,
   reserveDegradedWarning,
 } from "./helpers";
+import { hasDegradingWarnings } from "./validate";
+import { reserveInfoWarning } from "./warnings";
 import {
   ERC4626_ASSET_SELECTOR,
   ERC4626_CONVERT_TO_ASSETS_SELECTOR,
@@ -60,6 +62,7 @@ interface SingleAssetSliceConfig {
   coinId?: string;
   depType?: ReserveSlice["depType"];
   expectedAssetAddress?: string;
+  deployedExposure?: LiveReserveAdapterParamsByKey["erc4626-single-asset"]["deployedExposure"];
   redemptionLiquidity?: Erc4626RedemptionLiquidityConfig;
   redemptionLock?: LiveReserveAdapterParamsByKey["erc4626-single-asset"]["redemptionLock"];
   redemptionRoute?: LiveReserveAdapterParamsByKey["erc4626-single-asset"]["redemptionRoute"];
@@ -77,6 +80,7 @@ function parseSliceConfig(config: LiveReservesConfig): SingleAssetSliceConfig {
     ...(params.slice.expectedAssetAddress
       ? { expectedAssetAddress: params.slice.expectedAssetAddress.toLowerCase() }
       : {}),
+    ...(params.deployedExposure ? { deployedExposure: params.deployedExposure } : {}),
     ...(params.redemptionLiquidity ? { redemptionLiquidity: params.redemptionLiquidity } : {}),
     ...(params.redemptionLock ? { redemptionLock: params.redemptionLock } : {}),
     ...(params.redemptionRoute ? { redemptionRoute: params.redemptionRoute } : {}),
@@ -356,25 +360,47 @@ export async function fetchErc4626SingleAssetReserves(
     ? 0n
     : idleUnderlyingBalanceRaw < totalAssetsRaw ? idleUnderlyingBalanceRaw : totalAssetsRaw;
   const idlePct = Number(heldRaw * 100_000_000_000_000n / totalAssetsRaw) / 1_000_000_000_000;
-  const unknownExposurePct = 100 - idlePct;
+  // A reviewed `deployedExposure` attests that the configured slice descriptor
+  // already covers the vault's non-idle positions, so one reviewed slice is
+  // published instead of a vault-named high-risk remainder. It never applies
+  // when the idle balance is unreadable: an unmeasured holding stays
+  // unattributed.
+  const reviewedDeployedExposure = idleUnderlyingBalanceRaw == null ? null : sliceConfig.deployedExposure ?? null;
+  const deployedPct = Number((totalAssetsRaw - heldRaw) * 100_000_000_000_000n / totalAssetsRaw) / 1_000_000_000_000;
+  const unknownExposurePct = reviewedDeployedExposure ? 0 : 100 - idlePct;
   const slices: ReserveSlice[] = [];
-  if (idlePct > 0) {
+  if (reviewedDeployedExposure) {
     slices.push({
       sourceKey: `erc4626-single-asset:${primaryInput.chain}:${assetAddress}`,
-      name: idlePct === 100 ? sliceConfig.name : `${coin.name} idle underlying`,
-      pct: idlePct,
+      name: sliceConfig.name,
+      pct: 100,
       risk: sliceConfig.risk,
       ...(sliceConfig.coinId ? { coinId: sliceConfig.coinId } : {}),
       ...(sliceConfig.depType ? { depType: sliceConfig.depType } : {}),
     });
-  }
-  if (unknownExposurePct > 0) {
-    slices.push({
-      sourceKey: `erc4626-single-asset:${primaryInput.chain}:${contractAddress.toLowerCase()}:deployed`,
-      name: `${coin.name} ${idleUnderlyingBalanceRaw == null ? "unattributed reserve exposure" : "deployed strategy positions"}`,
-      pct: unknownExposurePct,
-      risk: "high",
-    });
+    warnings.push(reserveInfoWarning(
+      "erc4626-deployed-exposure-reviewed",
+      `Deployed share ${deployedPct.toFixed(2)}% of totalAssets() is attributed to the reviewed slice: ${reviewedDeployedExposure.basis}`,
+    ));
+  } else {
+    if (idlePct > 0) {
+      slices.push({
+        sourceKey: `erc4626-single-asset:${primaryInput.chain}:${assetAddress}`,
+        name: idlePct === 100 ? sliceConfig.name : `${coin.name} idle underlying`,
+        pct: idlePct,
+        risk: sliceConfig.risk,
+        ...(sliceConfig.coinId ? { coinId: sliceConfig.coinId } : {}),
+        ...(sliceConfig.depType ? { depType: sliceConfig.depType } : {}),
+      });
+    }
+    if (unknownExposurePct > 0) {
+      slices.push({
+        sourceKey: `erc4626-single-asset:${primaryInput.chain}:${contractAddress.toLowerCase()}:deployed`,
+        name: `${coin.name} ${idleUnderlyingBalanceRaw == null ? "unattributed reserve exposure" : "deployed strategy positions"}`,
+        pct: unknownExposurePct,
+        risk: "high",
+      });
+    }
   }
 
   return {
@@ -397,6 +423,9 @@ export async function fetchErc4626SingleAssetReserves(
       contractAddress,
       totalAssetsRaw: totalAssetsRaw.toString(),
       unknownExposurePct,
+      ...(reviewedDeployedExposure
+        ? { deployedPct, deployedExposureBasis: reviewedDeployedExposure.basis }
+        : {}),
       ...(unstakeWindowSec != null ? { unstakeWindowSec } : {}),
       ...(assetAddress ? { assetAddress } : {}),
       ...(redemptionCapacity
@@ -447,7 +476,7 @@ export async function fetchErc4626SingleAssetReserves(
         routeStatus:
           lockPaused || redemptionCapacity?.routeStatus === "paused"
             ? "paused" as const
-            : warnings.length > 0
+            : hasDegradingWarnings(warnings)
               ? "degraded" as const
               : redemptionCapacity?.routeStatus ?? "unknown" as const,
         routeStatusSource: redemptionCapacity?.routeStatusSource ?? "onchain" as const,

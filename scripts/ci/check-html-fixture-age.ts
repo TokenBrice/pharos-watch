@@ -60,10 +60,14 @@ const NON_HTML_FIXTURE_EXEMPTIONS: Readonly<Record<string, string>> = {
   "frax-balance-sheet.json": "JSON cannot carry an HTML-comment capture header",
   "makina-allocations.json": "JSON cannot carry an HTML-comment capture header",
   "makina-strategy.json": "JSON cannot carry an HTML-comment capture header",
+  "falcon-transparency.json":
+    "captured 2026-09-10 (payload snapshot_date 2026-09-10T12:03:02Z, refetched byte-identical 2026-09-11); JSON cannot carry an HTML-comment capture header",
   "fdusd-reserve-report.txt": "signed-report text extract; no capture header was recorded",
   "fdusd-isae3000-july-glyph-fragmented.txt": "signed-report text extract; no capture header was recorded",
   "makina-async-redeemer-runtime-code.txt":
     "deployed EVM runtime bytecode pinned by keccak hash (immutable); no capture header was recorded",
+  "icp-gldt-get-swap-configs.json":
+    "captured 2026-09-11 from the live GLDT swap canister's get_swap_configs candid reply; JSON cannot carry an HTML-comment capture header",
 };
 
 /**

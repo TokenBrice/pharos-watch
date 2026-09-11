@@ -40,6 +40,12 @@ export interface IndependentAssuranceProfile {
   isReportCandidate: (href: string, text: string) => boolean;
   reportDateFromCandidate?: (href: string, text: string) => string | null;
   prepareIndexHtml?: (html: string, signal: AbortSignal, ctx?: AdapterContext) => Promise<string>;
+  /**
+   * Header overrides for the official index fetch. Publisher WAFs disagree
+   * about crawler user agents (Fidelity Digital Assets 403s the shared index
+   * UA), so a profile whose index host rejects the default supplies its own.
+   */
+  indexHeaders?: Record<string, string>;
   /** JSON-index publishers (e.g. Gemini's Contentful attestation collection):
    *  verify the raw index body in place of the HTML candidate/date checks.
    *  The hook MUST retain the equivalents: exact reviewed report URL, a unique
@@ -291,6 +297,7 @@ function parseDiscoveryDate(value: string): string | null {
 async function fetchIndexHtml(
   url: string,
   indexHost: string,
+  profile: IndependentAssuranceProfile,
   signal: AbortSignal,
   ctx: AdapterContext | undefined,
 ): Promise<string> {
@@ -298,6 +305,7 @@ async function fetchIndexHtml(
     headers: {
       Accept: "text/html,application/xhtml+xml",
       "User-Agent": "Mozilla/5.0 Pharos reserve verifier",
+      ...profile.indexHeaders,
     },
     maxRetries: 0,
   });
@@ -365,7 +373,7 @@ export async function verifyIndependentAssuranceReport(args: {
     throw new Error(`independent-assurance: index host ${index.hostname} is not reviewed for this profile`);
   }
   assertAllowedHost(args.manifest.reportUrl, args.reportHosts, "reviewed PDF");
-  const html = await fetchIndexHtml(args.indexUrl, args.indexHost, args.signal, args.ctx);
+  const html = await fetchIndexHtml(args.indexUrl, args.indexHost, args.profile, args.signal, args.ctx);
   if (args.profile.verifyIndexJson) {
     await args.profile.verifyIndexJson(html, args.manifest, args.signal, args.ctx);
   } else {

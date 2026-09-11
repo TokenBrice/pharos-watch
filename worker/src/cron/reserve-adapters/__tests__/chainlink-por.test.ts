@@ -8,7 +8,7 @@ import {
   type ChainlinkPorIssuerCirculationProbe,
   type ChainlinkPorParams,
 } from "../chainlink-por";
-import { expectWarnings, runAdapter, type AdapterNetworkSpec, type AdapterRpcValue } from "./reserve-adapter.test-support";
+import { expectWarnings, expectWarningEffect, runAdapter, type AdapterNetworkSpec, type AdapterRpcValue } from "./reserve-adapter.test-support";
 import { makePorCoin, makePorSupply } from "./chainlink-por.test-support";
 const POR_FEED_ENDPOINT = "https://api.backed.fi/graphql";
 const TRON_SUPPLY_ENDPOINT = "https://api.trongrid.io/wallet/triggerconstantcontract";
@@ -234,6 +234,47 @@ describe("adaptChainlinkPorResponse", () => {
     expect(result.metadata?.collateralizationRatio).toBeCloseTo(1.6, 5);
     expect(result.warnings?.some((w) => w.code === "por-reserve-over-supply")).toBe(true);
     expect(result.warnings?.find((w) => w.code === "por-reserve-over-supply")?.effect).toBe("degraded");
+  });
+
+  it("withholds the coverage ratio and reports the gap when the supply scope is declared incomplete", () => {
+    const result = adaptChainlinkPorResponse(
+      { reserves: 2_567_133_466_000_000_000_000_000n, decimals: 18, roundId: 200n, updatedAt: 1710000000 },
+      {
+        ...params,
+        reserveUnit: "XAU_G",
+        incompleteSupplyScope: {
+          chain: "kinesis",
+          reason: "the Ethereum ERC-20 is a KMS Labs representation of Kinesis-native KAU",
+        },
+      },
+      makePorSupply({
+        contributions: [
+          {
+            chain: "ethereum",
+            tokenAddress: "0x14dab79fd7b7b3f748d434812fd6a9aac460ea52",
+            raw: 1_640_000_000_000_000_000_000_000n,
+            decimals: 18,
+          },
+        ],
+      }),
+    );
+
+    // 2,567,133.466 g of feed reserves against the 1,640,000-token readable
+    // wrapper: the aggregate is a subset of the feed's reserve scope, so the
+    // snapshot keeps the quantities and withholds any coverage verdict.
+    expect(result.metadata?.totalReserveQuantity).toBeCloseTo(2_567_133.466, 3);
+    expect(result.metadata?.supplyTokens).toBeCloseTo(1_640_000, 3);
+    expect(result.metadata?.collateralizationRatio).toBeUndefined();
+    expect(result.metadata?.supplyReadComplete).toBe(true);
+    expect(result.metadata?.supplyCoverageComplete).toBe(false);
+    expect(result.metadata?.supplyScopeIncomplete).toEqual({
+      chain: "kinesis",
+      reason: "the Ethereum ERC-20 is a KMS Labs representation of Kinesis-native KAU",
+    });
+    expectWarnings(result, ["por-supply-scope-incomplete"]);
+    expectWarningEffect(result, "por-supply-scope-incomplete", "info");
+    expect(result.warnings?.some((w) => w.code === "por-reserve-over-supply")).not.toBe(true);
+    expect(result.warnings?.some((w) => w.code === "por-reserve-under-supply")).not.toBe(true);
   });
 
   it("emits info warning when non-EVM chains are omitted from supply aggregation", () => {
@@ -687,6 +728,33 @@ describe("fetchChainlinkPorReserves", () => {
     expect(result.metadata?.collateralizationRatio).toBeCloseTo(2_567_133.466 / 2_386_227.8342, 5);
     expect(result.warnings?.some((w) => w.code === "por-reserve-under-supply")).not.toBe(true);
     expect(result.warnings?.some((w) => w.code === "por-reserve-over-supply")).not.toBe(true);
+  });
+
+  it("publishes KAU's declared incomplete supply scope instead of a scope-mismatch degradation", async () => {
+    // Real catalog config for kau-kinesis: the feed answers the audited Kinesis
+    // Cayman fine-gold balance (2,567,133.466 g), while the only readable
+    // deployment is the Ethereum representation wrapper (1,640,000 totalSupply).
+    const tokenAddress = "0x14dab79fd7b7b3f748d434812fd6a9aac460ea52";
+    const now = 1_700_000_000;
+    const { result, network } = await runAdapter("chainlink-por", "kau-kinesis", {
+      nowSec: now,
+      network: porNetwork({
+        feedAddress: "0xaB5Dd7DD7669072a1Ef27c0ba241120A27A1aeC3",
+        feedDecimals: 18n,
+        updatedAt: now - 60,
+        reserves: 2_567_133_466_000_000_000_000_000n,
+        evmSupply: { [tokenAddress]: 1_640_000_000_000_000_000_000_000n },
+      }),
+    });
+
+    expect(network.rpcCalls.filter((call) => call.selector === "0x18160ddd")).toHaveLength(1);
+    expect(result.metadata?.totalReserveQuantity).toBeCloseTo(2_567_133.466, 3);
+    expect(result.metadata?.supplyTokens).toBeCloseTo(1_640_000, 3);
+    expect(result.metadata?.collateralizationRatio).toBeUndefined();
+    expect(result.metadata?.supplyCoverageComplete).toBe(false);
+    expectWarningEffect(result, "por-supply-scope-incomplete", "info");
+    expect(result.warnings?.some((w) => w.code === "por-reserve-over-supply")).not.toBe(true);
+    expect(result.warnings?.some((w) => w.code === "por-reserve-under-supply")).not.toBe(true);
   });
 
   it("omits registry-typed non-EVM chains like NEAR instead of firing EVM reads at them", async () => {

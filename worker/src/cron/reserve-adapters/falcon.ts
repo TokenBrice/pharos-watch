@@ -7,10 +7,11 @@ import {
   assertFiniteNonNegativeReserveRows,
   buildBucketSlices,
   buildRedemptionSnapshotMetadata,
+  computeUnknownExposurePct,
   fetchJsonAdapterInput,
   freshnessMetadataFromTimestamp,
   parseTimestampLikeToUnixSeconds,
-  reserveDegradedWarning,
+  reserveInfoWarning,
 } from "./helpers";
 
 interface FalconBreakdownAsset {
@@ -73,9 +74,6 @@ const FALCON_TRACKED_RWA_ASSETS: Partial<Record<string, { name: string; coinId: 
   JAAA: { name: "JAAA CLO assets", coinId: "jaaa-janus-henderson-anemoy", risk: "medium" },
   XAUT: { name: "XAUt gold token assets", coinId: "xaut-tether", risk: "medium" },
 };
-
-/** Only warn about unknown assets above this USD value. */
-const FALCON_UNKNOWN_WARN_THRESHOLD = 10_000;
 
 function bucketForFalconAsset(label: string): FalconBucket {
   if (FALCON_STABLE_ASSETS.has(label)) return "stable";
@@ -143,14 +141,22 @@ export function adaptFalconTransparency(payload: FalconTransparencyResponse): Ad
     getUnknownKey: (asset) => asset.label,
   });
 
-  for (const [label, value] of unknownValuesByKey) {
-    const sharePct = totalAssetUsd > 0 ? (value / totalAssetUsd) * 100 : 0;
-    if (value > FALCON_UNKNOWN_WARN_THRESHOLD || sharePct >= 0.25) {
-      warnings.push(reserveDegradedWarning(
-        "unknown-asset",
-        `Unmapped Falcon asset: ${label} ($${value.toFixed(0)}, ${sharePct.toFixed(2)}%)`,
-      ));
-    }
+  const unknownExposurePct = computeUnknownExposurePct(unknownExposureUsd, totalAssetUsd);
+
+  // Unmapped assets keep their full weight inside the high-risk "other" bucket
+  // and the unknown-exposure total; the shared policy cap (5% for
+  // dynamic-mix/independent) decides whether that exposure degrades the
+  // snapshot. Falcon's unmapped set is a long tail of altcoin dust, so it is
+  // reported as one discovery warning instead of a per-asset degradation.
+  if (unknownValuesByKey.size > 0) {
+    const symbols = Array.from(unknownValuesByKey)
+      .sort(([, left], [, right]) => right - left)
+      .map(([label]) => label);
+    warnings.push(reserveInfoWarning(
+      "unknown-asset",
+      `Unmapped Falcon assets: ${symbols.join(", ")} ` +
+        `(${symbols.length} symbols, $${unknownExposureUsd.toFixed(2)}, ${unknownExposurePct.toFixed(2)}% of reserves)`,
+    ));
   }
 
   const insuranceFund =
@@ -236,7 +242,7 @@ export function adaptFalconTransparency(payload: FalconTransparencyResponse): Ad
         "issuer-api",
         "Falcon transparency payload did not expose a trustworthy snapshot timestamp",
       ),
-      unknownExposurePct: totalAssetUsd > 0 ? (unknownExposureUsd / totalAssetUsd) * 100 : 0,
+      unknownExposurePct,
       ...buildRedemptionSnapshotMetadata({
         capacityUsd: stableBucketUsd,
         capacityRatioOfSupply: stableBucketUsd / supplyUsd,

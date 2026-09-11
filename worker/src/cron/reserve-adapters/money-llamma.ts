@@ -4,6 +4,7 @@ import { getCanonicalReserveAssetRisk } from "@shared/lib/reserve-asset-risk";
 import type { LiveReserveWarning, LiveReservesConfig } from "@shared/types/live-reserves";
 import { getPublicRpcUrl, getSecondaryFallbackRpcUrl } from "../../lib/public-rpc-registry";
 import { throwIfAborted } from "../../lib/abort";
+import { createAdapterIoLimiter } from "./concurrency";
 import { executeEvmObservationPlan, pinnedBlockPlan, rawObservation } from "./evm-observation-plan";
 import type { AdapterContext, AdapterResult } from "./types";
 import {
@@ -30,7 +31,13 @@ const MONEY_TOKEN = "0x69420f9E38a4e60a62224C489be4BF7a94402496";
 const CHAIN_LEGS = ["arbitrum", "base", "optimism"] as const;
 const MONEY_MAX_MARKETS_PER_CHAIN = 256;
 const MONEY_MAX_BANDS_PER_MARKET = 2_048;
-const LLAMMA_MULTICALL_BATCH_SIZE = 500;
+// Per-page Multicall3 size for the band census. Measured 2026-09-11 against the
+// configured RPCs: a 2 000-call aggregate3 page (≈640 KB response, the largest
+// size every endpoint accepted) completes in 0.2–0.5 s, while 4 000-call pages
+// are rejected by the publicnode fallbacks ("Request body size limit
+// reached"). The full census (~25 000 band reads across 17 markets) needs 14
+// such pages instead of ~64 at the former 500-call size.
+const LLAMMA_MULTICALL_BATCH_SIZE = 2_000;
 const MONEY_PAR_DEVIATION_INFO_PCT = 1;
 
 const MONEY_CONTROLLER_ABI = parseAbi([
@@ -314,7 +321,10 @@ async function fetchChainCensus(
     }
   }
 
-  // Band balances (collateral y + soft-liquidated MONEY x).
+  // Band balances (collateral y + soft-liquidated MONEY x). The census covers
+  // every band in every market, so the range is split into full Multicall3
+  // pages dispatched together: the shared adapter I/O limiter (2 concurrent
+  // requests under the runner) is what paces the RPC, not a sequential loop.
   const bandCalls: OnchainMulticall3Call[] = [];
   for (const market of descriptors) {
     for (let band = market.minBand; band <= market.maxBand; band += 1) {
@@ -330,7 +340,17 @@ async function fetchChainCensus(
       });
     }
   }
-  const bandResults = await fetchChainMulticall(chain, bandCalls, "bands", signal, ctx, leg);
+  const bandPages: OnchainMulticall3Call[][] = [];
+  for (let start = 0; start < bandCalls.length; start += LLAMMA_MULTICALL_BATCH_SIZE) {
+    bandPages.push(bandCalls.slice(start, start + LLAMMA_MULTICALL_BATCH_SIZE));
+  }
+  const pageResults = await Promise.all(
+    bandPages.map((page) => fetchChainMulticall(chain, page, "bands", signal, ctx, leg)),
+  );
+  const bandResults = new Map<string, `0x${string}`>();
+  for (const page of pageResults) {
+    for (const [label, returnData] of page) bandResults.set(label, returnData);
+  }
 
   const rawByMarket = new Map<number, PricedMarketInput>();
   for (const [label, returnData] of bandResults) {
@@ -470,25 +490,37 @@ export async function fetchMoneyReserves(
   ctx?: AdapterContext,
 ): Promise<AdapterResult> {
   requireOnchainInput(config.inputs.primary, ADAPTER_KEY);
+  // Callers outside the cron runner (scripts, probes) get the same two-request
+  // I/O budget as production instead of unthrottled fan-out.
+  const attemptCtx: AdapterContext = ctx?.ioLimiter ? ctx : { ...ctx, ioLimiter: createAdapterIoLimiter() };
 
-  const censuses: ChainCensus[] = [];
-  const warnings: LiveReserveWarning[] = [];
-  const chainBlocks: Array<{ chain: string; number: number; timestamp: number }> = [];
-
-  for (const leg of CHAIN_LEG_PLANS) {
-    throwIfAborted(signal);
-    const plan = await pinnedBlockPlan({
-      chain: leg.chain,
-      signal,
-      ctx,
-      rpcUrl: leg.rpcUrl,
-      fallbackRpcUrl: leg.fallbackRpcUrl,
-    });
-    const census = await fetchChainCensus(leg, signal, warnings, plan.ctx);
-    census.block = { number: plan.observedBlock.number, timestamp: plan.observedBlock.timestamp };
-    censuses.push(census);
-    chainBlocks.push({ chain: leg.chain, number: plan.observedBlock.number, timestamp: plan.observedBlock.timestamp });
-  }
+  // The three chain legs are independent pinned-block censuses; run them
+  // together so the shared I/O limiter (2 concurrent requests under the
+  // runner) paces every leg. Each leg pins its own block, so a caller-supplied
+  // `observedBlock` cannot apply here and is cleared per leg.
+  const legs = await Promise.all(
+    CHAIN_LEG_PLANS.map(async (leg) => {
+      throwIfAborted(signal);
+      const plan = await pinnedBlockPlan({
+        chain: leg.chain,
+        signal,
+        ctx: { ...attemptCtx, observedBlock: undefined },
+        rpcUrl: leg.rpcUrl,
+        fallbackRpcUrl: leg.fallbackRpcUrl,
+      });
+      const legWarnings: LiveReserveWarning[] = [];
+      const census = await fetchChainCensus(leg, signal, legWarnings, plan.ctx);
+      census.block = { number: plan.observedBlock.number, timestamp: plan.observedBlock.timestamp };
+      return { census, block: plan.observedBlock, warnings: legWarnings };
+    }),
+  );
+  const censuses = legs.map((leg) => leg.census);
+  const chainBlocks = legs.map((leg) => ({
+    chain: leg.block.chain,
+    number: leg.block.number,
+    timestamp: leg.block.timestamp,
+  }));
+  const warnings: LiveReserveWarning[] = legs.flatMap((leg) => leg.warnings);
 
   // Collateral always prices via DefiLlama and fails closed. The MONEY debt
   // liability is market-valued when DefiLlama quotes MONEY; with no quote it
