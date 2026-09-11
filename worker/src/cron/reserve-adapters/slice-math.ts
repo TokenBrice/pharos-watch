@@ -406,13 +406,18 @@ interface CoverageShortfallWarningOptions {
   thresholdRatio?: number;
 }
 
+/** Absorbs binary rounding in assets ÷ liability so an exact 1.0 coverage
+ *  computed from bigint-scaled inputs (0.9999999999999999) cannot degrade
+ *  against a `thresholdRatio` of 1. Any real shortfall is far larger. */
+const COVERAGE_RATIO_EPSILON = 1e-9;
+
 export function buildCoverageShortfallWarnings({
   code,
   message,
   coverageRatio,
   thresholdRatio = 0.995,
 }: CoverageShortfallWarningOptions): LiveReserveWarning[] {
-  if (coverageRatio == null || coverageRatio >= thresholdRatio) {
+  if (coverageRatio == null || coverageRatio >= thresholdRatio - COVERAGE_RATIO_EPSILON) {
     return [];
   }
   return [reserveDegradedWarning(code, message((coverageRatio * 100).toFixed(2)))];

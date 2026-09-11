@@ -30,6 +30,12 @@ export const DISCLOSURE_SOURCE_MAX_AGE_SEC = 7 * DAY_SECONDS;
 export const WEEKLY_SOURCE_MAX_AGE_SEC = DISCLOSURE_SOURCE_MAX_AGE_SEC;
 export const MONTHLY_DISCLOSURE_SOURCE_MAX_AGE_SEC = 33 * DAY_SECONDS;
 export const LATE_MONTHLY_DISCLOSURE_SOURCE_MAX_AGE_SEC = 4_000_000;
+/** Monthly examinations issued 30-41 days after their as-of date on a ~30-day
+ *  cadence (Gemini/BPM GUSD, 94 reports through 2026-05): the newest report is
+ *  up to ~71 days old the day before its successor lands, so the late-monthly
+ *  46-day cap degraded ~16 days of every healthy cycle. 75 days = observed
+ *  worst case plus publication grace. Decision 2026-09-11. */
+export const LAGGED_MONTHLY_EXAMINATION_SOURCE_MAX_AGE_SEC = 75 * DAY_SECONDS;
 export const QUARTERLY_DISCLOSURE_SOURCE_MAX_AGE_SEC = 10_000_000;
 export const QUARTERLY_ASSURANCE_MAX_AGE_SEC = 100 * DAY_SECONDS;
 export const BUSINESS_DAY_NAV_SOURCE_MAX_AGE_SEC = 5 * DAY_SECONDS;
@@ -93,6 +99,12 @@ export const MONTHLY_VERIFIED_VALIDATION = {
 /** Monthly report whose publisher routinely lands past the month boundary. */
 export const LATE_MONTHLY_VERIFIED_VALIDATION = {
   maxSourceAgeSec: LATE_MONTHLY_DISCLOSURE_SOURCE_MAX_AGE_SEC,
+  allowedFreshnessModes: VERIFIED_ONLY_FRESHNESS,
+} as const satisfies LiveReserveAdapterValidationPolicy;
+
+/** Monthly examination whose issuance lags the as-of date by more than a month. */
+export const LAGGED_MONTHLY_EXAMINATION_VALIDATION = {
+  maxSourceAgeSec: LAGGED_MONTHLY_EXAMINATION_SOURCE_MAX_AGE_SEC,
   allowedFreshnessModes: VERIFIED_ONLY_FRESHNESS,
 } as const satisfies LiveReserveAdapterValidationPolicy;
 

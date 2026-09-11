@@ -99,7 +99,8 @@
       "profile": "brla-v1",
       "indexHost": "brladigital.notion.site",
       "reportHosts": [
-        "file.notion.so"
+        "file.notion.so",
+        "file.notion.com"
       ]
     }
   },
