@@ -1,7 +1,24 @@
+import type { YieldZoneKey } from "@shared/lib/classification";
 import { clamp } from "@shared/lib/math";
 import { percentileLinear } from "@shared/lib/stats";
 
 export const SAFETY_SCORE_THRESHOLD = 60;
+
+/**
+ * Joint safety × yield zone for one row, using the same split as the scatter
+ * quadrants. Null when the row is unscored or has no benchmark to compare to.
+ */
+export function resolveYieldZone(
+  safetyScore: number | null,
+  apy30d: number,
+  benchmarkRate: number | null | undefined,
+): YieldZoneKey | null {
+  if (safetyScore === null || benchmarkRate == null || !Number.isFinite(benchmarkRate)) return null;
+  const safe = safetyScore >= SAFETY_SCORE_THRESHOLD;
+  const paid = apy30d > benchmarkRate;
+  if (safe) return paid ? "sweet-spot" : "play-it-safe";
+  return paid ? "danger-zone" : "why-bother";
+}
 
 const SAFETY_WINDOW_STEP = 5;
 const SAFETY_WINDOW_BUFFER = 5;

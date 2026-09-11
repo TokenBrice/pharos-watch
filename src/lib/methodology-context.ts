@@ -351,9 +351,9 @@ export const METHODOLOGY_CONTEXT: Record<MethodologyContextKey, MethodologyConte
   pys: {
     title: "PYS",
     summary:
-      "Benchmark-aware risk-adjusted yield score that starts from APY, adds a weighted slice of benchmark spread, then discounts by source risk, stablecoin safety, and yield consistency.",
+      "Asks one question: is this APY paying enough for the risk you take? Yield per unit of risk, 0-100. Starts from APY, adds a weighted slice of benchmark spread, then discounts by source risk, stablecoin safety, and yield consistency.",
     detail:
-      "High APY on weak safety or thin source evidence still needs an exceptional edge because source-risk and safety penalties are deliberately steep, while stronger local-currency benchmark outperformance now gets explicit credit.",
+      "Not a recommendation or a safety verdict: a D-grade coin can top PYS because it pays a lot for a lot of risk. Read it next to the Safety grade and the row's zone. Source-risk and safety penalties are deliberately steep, and local-currency benchmark outperformance gets explicit credit.",
     methodologyPath: "/methodology/#yield-intelligence-methodology",
     versionLabel: YIELD_METHODOLOGY_VERSION_LABEL,
     changelogPath: YIELD_METHODOLOGY_CHANGELOG_PATH,

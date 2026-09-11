@@ -30,6 +30,7 @@ import { isOpportunityDerivedSafety } from "@shared/lib/yield-opportunity-proven
 import { YIELD_TYPE_LABELS, YIELD_TYPE_STYLES } from "@shared/lib/classification";
 import { formatPercent, formatScore } from "@shared/lib/format";
 import { YieldCohortChip } from "@/components/yield-cohort-chip";
+import { YieldZoneChip } from "@/components/yield-zone-chip";
 import { YieldWhyPysStrip } from "@/components/yield-why-pys-strip";
 import {
   YieldRankChangeChip,
@@ -572,6 +573,7 @@ export function YieldMobileCard({
         <Badge variant="outline" className={`text-[10px] ${YIELD_TYPE_STYLES[row.yieldType]?.badge ?? ""}`}>
           {YIELD_TYPE_LABELS[row.yieldType] ?? row.yieldType}
         </Badge>
+        <YieldZoneChip safetyScore={safetyScore} apy30d={row.apy30d} benchmarkRate={row.benchmarkRate ?? riskFreeRate} />
         <MobileMetricPill>
           TVL{" "}
           <span className={tvlIsNative ? "text-muted-foreground" : "font-mono tabular-nums text-foreground"}>

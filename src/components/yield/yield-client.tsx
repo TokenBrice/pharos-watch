@@ -26,7 +26,9 @@ import {
   getActiveFilterSummaries,
   prepareYieldUniverse,
   RISK_BUDGET_FILTER_KEYS,
+  riskBudgetUrlValue,
   selectVisibleYieldRows,
+  YIELD_LANDING_RISK_BUDGET,
   YIELD_PRESET_SPECS,
   YIELD_RISK_BUDGET_SPECS,
   type YieldPresetKey,
@@ -35,6 +37,8 @@ import {
   type YieldViewModelRow,
 } from "@/lib/yield-view-model";
 import { buildStablecoinUrl } from "@shared/lib/urls";
+import { YIELD_ZONE_LABELS } from "@shared/lib/classification";
+import { resolveYieldZone } from "@/lib/yield-scatter";
 import { buildYieldStoryCallouts } from "@/lib/yield-story-callouts";
 import { trackEvent } from "@/lib/analytics";
 import { formatCurrency, formatPercent } from "@shared/lib/format";
@@ -144,12 +148,15 @@ function HeroHighlightRow({ label, logoSrc, name, symbol, value, unit, context, 
   );
 }
 
-function formatHeroRiskContext(row: YieldViewModelRow): string {
+function formatHeroRiskContext(row: YieldViewModelRow, riskFreeRate: number): string {
+  const zone = resolveYieldZone(row.safetyScore, row.apy30d, row.benchmarkRate ?? riskFreeRate);
   const safety = row.safetyGrade && row.safetyGrade !== "NR" ? `${row.safetyGrade} safety` : "Safety NR";
   const pys = row.pharosYieldScore !== null ? `PYS ${row.pharosYieldScore.toFixed(1)}` : "PYS NR";
   const posture = row.sourcePosture ? row.sourcePosture.replaceAll("-", " ") : "posture unknown";
   const warningCount = row.warningSignals.length;
-  return `${safety} · ${pys} · ${posture} · ${warningCount} warning${warningCount === 1 ? "" : "s"}`;
+  const parts = [safety, pys, posture, `${warningCount} warning${warningCount === 1 ? "" : "s"}`];
+  if (zone !== null) parts.unshift(YIELD_ZONE_LABELS[zone]);
+  return parts.join(" · ");
 }
 
 function YieldApiWarnings({ warnings }: { warnings: YieldRankingsSummaryResponse["warnings"] }) {
@@ -275,6 +282,7 @@ export function YieldClient() {
   const watchlist = useWatchlist();
   const urlParams = useMemo(
     () => ({
+      risk: searchParams.get("risk"),
       peg: searchParams.get("peg"),
       yieldType: searchParams.get("yieldType"),
       q: searchParams.get("q"),
@@ -302,7 +310,9 @@ export function YieldClient() {
       }),
     [data?.benchmarks, data?.provenance?.benchmark, data?.provenance?.benchmarks, urlParams, yieldUniverse],
   );
-  const comparisonRows = useMemo(() => selectVisibleYieldRows(yieldUniverse, {}), [yieldUniverse]);
+  // Compare/selection universe ignores the landing risk band so a selected
+  // D-grade row does not vanish from the drawer.
+  const comparisonRows = useMemo(() => selectVisibleYieldRows(yieldUniverse, { risk: riskBudgetUrlValue("all") }), [yieldUniverse]);
   const visibleRows = viewModel.visibleRows;
   const storyCallouts = useMemo(() => buildYieldStoryCallouts(visibleRows), [visibleRows]);
   const activeFilterSummaries = useMemo(() => getActiveFilterSummaries(viewModel), [viewModel]);
@@ -393,15 +403,38 @@ export function YieldClient() {
 
   const handleFilterChange = useCallback(
     (key: string, value: string) => {
-      setParam(key, value);
       const trackedValue = key === "q" ? (value.trim() ? "non-empty" : "empty") : value || "all";
+      const clearing = trackedValue === "all" || trackedValue === "empty";
+      if (key === "risk") {
+        // Whole-band move (empty-state "Show all risk levels"): drop every
+        // explicit band key so the requested band alone decides.
+        replaceParams((params) => {
+          for (const riskKey of RISK_BUDGET_FILTER_KEYS) params.delete(riskKey);
+          if (clearing) params.delete("risk");
+          else params.set("risk", value);
+        });
+      } else if (clearing && RISK_BUDGET_FILTER_KEYS.includes(key as (typeof RISK_BUDGET_FILTER_KEYS)[number])) {
+        // Deleting a risk-budget key alone would let the URL risk band re-fill
+        // it. Pin the band to neutral and keep the other band-derived keys
+        // explicit so only the cleared key relaxes.
+        replaceParams((params) => {
+          params.set("risk", riskBudgetUrlValue("all"));
+          for (const riskKey of RISK_BUDGET_FILTER_KEYS) {
+            const current = viewModel.normalizedParams[riskKey];
+            if (riskKey === key || current === null) params.delete(riskKey);
+            else params.set(riskKey, current);
+          }
+        });
+      } else {
+        setParam(key, value);
+      }
       trackEvent("yield_filter_changed", {
         filter_type: key,
         filter_value: trackedValue,
-        action: trackedValue === "all" || trackedValue === "empty" ? "cleared" : "applied",
+        action: clearing ? "cleared" : "applied",
       });
     },
-    [setParam],
+    [replaceParams, setParam, viewModel.normalizedParams],
   );
 
   const handleClearFilters = useCallback(() => {
@@ -455,10 +488,8 @@ export function YieldClient() {
         for (const paramKey of RISK_BUDGET_FILTER_KEYS) {
           params.delete(paramKey);
         }
-        for (const [paramKey, value] of Object.entries(spec.overrides)) {
-          if (value == null) continue;
-          params.set(paramKey, String(value));
-        }
+        if (key === YIELD_LANDING_RISK_BUDGET) params.delete("risk");
+        else params.set("risk", riskBudgetUrlValue(key));
       });
     },
     [replaceParams, viewModel.riskBudget.stops],
@@ -512,14 +543,14 @@ export function YieldClient() {
               topPysRow ? (
                 <span className="space-y-1">
                   <span className="block">
-                    Top risk-adjusted yield <span className="text-foreground/70">· {topPysRow.symbol}</span>
+                    Best-paid risk in view <span className="text-foreground/70">· {topPysRow.symbol}</span>
                   </span>
                   <span className="block text-[11px] font-normal text-muted-foreground">
-                    {formatHeroRiskContext(topPysRow)}
+                    {formatHeroRiskContext(topPysRow, data.riskFreeRate)}
                   </span>
                 </span>
               ) : (
-                "Top risk-adjusted yield"
+                "Best-paid risk in view"
               )
             }
             beamValue={
@@ -534,7 +565,7 @@ export function YieldClient() {
             }
             beamTitle={
               topPysRow && topPysRow.pharosYieldScore != null
-                ? `Best Pharos Yield Score in view: ${topPysRow.pharosYieldScore.toFixed(1)}`
+                ? `Best Pharos Yield Score in view: ${topPysRow.pharosYieldScore.toFixed(1)} — highest yield per unit of risk, not the safest coin`
                 : undefined
             }
             expand={{ href: "#data", label: "Jump to the full yield leaderboard" }}
@@ -550,7 +581,7 @@ export function YieldClient() {
                       symbol={exhibitTiles.topYield.symbol}
                       value={formatPercent(exhibitTiles.topYield.apy30d)}
                       unit="APY"
-                      context={formatHeroRiskContext(exhibitTiles.topYield)}
+                      context={formatHeroRiskContext(exhibitTiles.topYield, data.riskFreeRate)}
                       onClick={() => handleScrollToRow(exhibitTiles.topYield!.id)}
                     />
                   ) : null}
@@ -562,7 +593,7 @@ export function YieldClient() {
                       symbol={exhibitTiles.mostStable.symbol}
                       value={formatPercent(exhibitTiles.mostStable.apy30d)}
                       unit="APY"
-                      context={formatHeroRiskContext(exhibitTiles.mostStable)}
+                      context={formatHeroRiskContext(exhibitTiles.mostStable, data.riskFreeRate)}
                       onClick={() => handleScrollToRow(exhibitTiles.mostStable!.id)}
                     />
                   ) : null}
@@ -574,7 +605,7 @@ export function YieldClient() {
                       symbol={exhibitTiles.largestMarket.symbol}
                       value={formatCurrency(exhibitTiles.largestMarket.sourceTvlUsd!)}
                       unit="TVL"
-                      context={formatHeroRiskContext(exhibitTiles.largestMarket)}
+                      context={formatHeroRiskContext(exhibitTiles.largestMarket, data.riskFreeRate)}
                       onClick={() => handleScrollToRow(exhibitTiles.largestMarket!.id)}
                     />
                   ) : null}

@@ -119,13 +119,13 @@ describe("buildYieldViewModel", () => {
   });
 
   it.each([
-    [{ peg: "non-usd" }, ["eurc-circle"]],
-    [{ yieldType: "lending-vault" }, ["eurc-circle"]],
-    [{ q: "eur" }, ["eurc-circle"]],
-    [{ warnings: "only" }, ["eurc-circle", "usdt-tether"]],
-    [{ sourceConfidence: "deterministic" }, ["eurc-circle"]],
-    [{ benchmark: "EUR" }, ["eurc-circle"]],
-    [{ opportunity: "holder-yield" }, ["eurc-circle"]],
+    [{ risk: "any", peg: "non-usd" }, ["eurc-circle"]],
+    [{ risk: "any", yieldType: "lending-vault" }, ["eurc-circle"]],
+    [{ risk: "any", q: "eur" }, ["eurc-circle"]],
+    [{ risk: "any", warnings: "only" }, ["eurc-circle", "usdt-tether"]],
+    [{ risk: "any", sourceConfidence: "deterministic" }, ["eurc-circle"]],
+    [{ risk: "any", benchmark: "EUR" }, ["eurc-circle"]],
+    [{ risk: "any", opportunity: "holder-yield" }, ["eurc-circle"]],
   ])("independently filters by %j", (filters, expected) => {
     const model = buildYieldViewModel(prepareYieldUniverse(rows, null), filters);
     expect(model.visibleRows.map((row) => row.id).sort()).toEqual(expected);
@@ -133,6 +133,7 @@ describe("buildYieldViewModel", () => {
 
   it("composes multiple current-payload filters with AND semantics", () => {
     const model = buildYieldViewModel(prepareYieldUniverse(rows, null), {
+      risk: "any",
       peg: "non-usd",
       yieldType: "lending-vault",
       q: "eur",
@@ -161,7 +162,7 @@ describe("buildYieldViewModel", () => {
       makeYieldRanking({ id: "fixed", symbol: "FIXED", yieldType: "fixed-yield" }),
       makeYieldRanking({ id: "tranche", symbol: "TRANCHE", yieldType: "structured-tranche" }),
     ];
-    const model = buildYieldViewModel(prepareYieldUniverse(opportunityRows, null), { opportunity: "lending-opportunity" });
+    const model = buildYieldViewModel(prepareYieldUniverse(opportunityRows, null), { risk: "any", opportunity: "lending-opportunity" });
 
     expect(model.visibleRows.map((row) => row.id).sort()).toEqual(["fixed", "lend", "tranche"]);
     expect(model.comparisonLabel).toBe("External opportunities");
@@ -172,7 +173,7 @@ describe("buildYieldViewModel", () => {
       { value: "lending-opportunity", label: "External opportunities", count: 3 },
     ]);
 
-    const trancheModel = buildYieldViewModel(prepareYieldUniverse(opportunityRows, null), { yieldType: "structured-tranche" });
+    const trancheModel = buildYieldViewModel(prepareYieldUniverse(opportunityRows, null), { risk: "any", yieldType: "structured-tranche" });
     expect(trancheModel.filters.yieldType).toBe("structured-tranche");
     expect(trancheModel.visibleRows.map((row) => row.id)).toEqual(["tranche"]);
     expect(trancheModel.comparisonLabel).toBe("Structured Tranche");
@@ -213,12 +214,12 @@ describe("buildYieldViewModel", () => {
   });
 
   it("excludes null safety and TVL only when minimum filters are set", () => {
-    expect(buildYieldViewModel(prepareYieldUniverse(rows, null), {}).visibleRows.map((row) => row.id)).toContain("eurc-circle");
+    expect(buildYieldViewModel(prepareYieldUniverse(rows, null), { risk: "any" }).visibleRows.map((row) => row.id)).toContain("eurc-circle");
 
-    const safetyFiltered = buildYieldViewModel(prepareYieldUniverse(rows, null), { minSafety: "70" });
+    const safetyFiltered = buildYieldViewModel(prepareYieldUniverse(rows, null), { risk: "any", minSafety: "70" });
     expect(safetyFiltered.visibleRows.map((row) => row.id)).toEqual(["usdc-circle"]);
 
-    const tvlFiltered = buildYieldViewModel(prepareYieldUniverse(rows, null), { minTvl: "10000000" });
+    const tvlFiltered = buildYieldViewModel(prepareYieldUniverse(rows, null), { risk: "any", minTvl: "10000000" });
     expect(tvlFiltered.visibleRows.map((row) => row.id)).toEqual(["usdt-tether"]);
   });
 
@@ -229,7 +230,7 @@ describe("buildYieldViewModel", () => {
   });
 
   it("derives view-rank labels inside the filtered comparable set", () => {
-    const model = buildYieldViewModel(prepareYieldUniverse(rows, null), { peg: "non-usd" });
+    const model = buildYieldViewModel(prepareYieldUniverse(rows, null), { risk: "any", peg: "non-usd" });
 
     expect(model.visibleRows).toHaveLength(1);
     expect(model.visibleRows[0]).toMatchObject({
@@ -261,14 +262,14 @@ describe("buildYieldViewModel", () => {
   });
 
   it("filters by URL-backed source depth lens", () => {
-    expect(buildYieldViewModel(prepareYieldUniverse(rows, null), { depth: "thin" }).visibleRows.map((row) => row.id)).toEqual(["usdc-circle"]);
-    expect(buildYieldViewModel(prepareYieldUniverse(rows, null), { depth: "moderate" }).visibleRows.map((row) => row.id)).toEqual(["usdt-tether"]);
-    expect(buildYieldViewModel(prepareYieldUniverse(rows, null), { depth: "hide-thin" }).visibleRows.map((row) => row.id)).toEqual([
+    expect(buildYieldViewModel(prepareYieldUniverse(rows, null), { risk: "any", depth: "thin" }).visibleRows.map((row) => row.id)).toEqual(["usdc-circle"]);
+    expect(buildYieldViewModel(prepareYieldUniverse(rows, null), { risk: "any", depth: "moderate" }).visibleRows.map((row) => row.id)).toEqual(["usdt-tether"]);
+    expect(buildYieldViewModel(prepareYieldUniverse(rows, null), { risk: "any", depth: "hide-thin" }).visibleRows.map((row) => row.id)).toEqual([
       "eurc-circle",
       "usdt-tether",
     ]);
 
-    expect(buildYieldViewModel(prepareYieldUniverse(rows, null), {}).options.depth.find((option) => option.value === "hide-thin")).toEqual({
+    expect(buildYieldViewModel(prepareYieldUniverse(rows, null), { risk: "any" }).options.depth.find((option) => option.value === "hide-thin")).toEqual({
       value: "hide-thin",
       label: "Hide thin venues",
       count: 2,
@@ -276,10 +277,10 @@ describe("buildYieldViewModel", () => {
   });
 
   it("filters rows with changed sources from URL state", () => {
-    expect(buildYieldViewModel(prepareYieldUniverse(rows, null), { sourceChanged: "only" }).visibleRows.map((row) => row.id)).toEqual([
+    expect(buildYieldViewModel(prepareYieldUniverse(rows, null), { risk: "any", sourceChanged: "only" }).visibleRows.map((row) => row.id)).toEqual([
       "usdc-circle",
     ]);
-    expect(buildYieldViewModel(prepareYieldUniverse(rows, null), { sourceChanged: "none" }).visibleRows.map((row) => row.id)).toEqual([
+    expect(buildYieldViewModel(prepareYieldUniverse(rows, null), { risk: "any", sourceChanged: "none" }).visibleRows.map((row) => row.id)).toEqual([
       "eurc-circle",
       "usdt-tether",
     ]);
@@ -328,19 +329,19 @@ describe("buildYieldViewModel", () => {
       }),
     ];
 
-    const clean = buildYieldViewModel(prepareYieldUniverse(postureRows, null), { sourcePosture: "clean" });
+    const clean = buildYieldViewModel(prepareYieldUniverse(postureRows, null), { risk: "any", sourcePosture: "clean" });
     expect(clean.visibleRows.map((row) => row.id)).toEqual(["clean-row"]);
     expect(clean.comparisonLabel).toBe("Clean source posture");
 
-    const watch = buildYieldViewModel(prepareYieldUniverse(postureRows, null), { sourcePosture: "watch" });
+    const watch = buildYieldViewModel(prepareYieldUniverse(postureRows, null), { risk: "any", sourcePosture: "watch" });
     expect(watch.visibleRows.map((row) => row.id)).toEqual(["clean-row", "watch-row"]);
     expect(watch.comparisonLabel).toBe("Clean/watch source posture");
 
-    const watchOnly = buildYieldViewModel(prepareYieldUniverse(postureRows, null), { sourcePosture: "watch-only" });
+    const watchOnly = buildYieldViewModel(prepareYieldUniverse(postureRows, null), { risk: "any", sourcePosture: "watch-only" });
     expect(watchOnly.visibleRows.map((row) => row.id)).toEqual(["watch-row"]);
     expect(watchOnly.comparisonLabel).toBe("Watch source posture");
 
-    const speculative = buildYieldViewModel(prepareYieldUniverse(postureRows, null), { sourcePosture: "speculative" });
+    const speculative = buildYieldViewModel(prepareYieldUniverse(postureRows, null), { risk: "any", sourcePosture: "speculative" });
     expect(speculative.visibleRows.map((row) => row.id)).toEqual(["spec-row"]);
     expect(speculative.options.sourcePosture).toEqual([
       { value: "all", label: "All postures", count: 3 },
@@ -385,15 +386,26 @@ describe("buildYieldViewModel", () => {
   });
 
   it("marks the active preset and counts its matching rows", () => {
+    // Stacking contract: the landing band fills minSafety=50, but preset
+    // matching only checks the preset's own override keys, so
+    // watchlist-warnings stays active on top of the band. The count is
+    // evaluated on the stacked filters — the null-safety EURC row never
+    // clears the band's safety floor, so only two watched rows count.
     const warningsModel = buildYieldViewModel(prepareYieldUniverse(rows, new Set(["usdc-circle", "eurc-circle", "usdt-tether"])), {
       attention: "watchlist",
+      warnings: "all",
     });
     expect(warningsModel.matchingPreset).toBe("watchlist-warnings");
     const watchlist = warningsModel.presets.find((preset) => preset.key === "watchlist-warnings");
     expect(watchlist?.active).toBe(true);
-    expect(watchlist?.count).toBe(3);
+    expect(watchlist?.count).toBe(2);
 
-    const defaultModel = buildYieldViewModel(prepareYieldUniverse(rows, null), {});
+    // A partial override match is inactive: the band fills warnings=hide,
+    // which the preset's overrides do not match.
+    const mismatched = buildYieldViewModel(prepareYieldUniverse(rows, null), { attention: "watchlist" });
+    expect(mismatched.matchingPreset).toBeNull();
+
+    const defaultModel = buildYieldViewModel(prepareYieldUniverse(rows, null), { risk: "any" });
     expect(defaultModel.matchingPreset).toBeNull();
   });
 
@@ -457,7 +469,7 @@ describe("buildYieldViewModel", () => {
   });
 
   it("defaults to all when watchlistIds is not provided", () => {
-    const model = buildYieldViewModel(prepareYieldUniverse(rows, null), {});
+    const model = buildYieldViewModel(prepareYieldUniverse(rows, null), { risk: "any" });
 
     expect(model.filters.watchlist).toBe("all");
     expect(model.visibleRows.map((row) => row.id)).toEqual(["usdc-circle", "eurc-circle", "usdt-tether"]);
@@ -467,21 +479,21 @@ describe("buildYieldViewModel", () => {
   it("counts watchlist matches and filters to only watchlist rows", () => {
     const watchlistIds = new Set(["usdc-circle", "usdt-tether"]);
 
-    const allModel = buildYieldViewModel(prepareYieldUniverse(rows, watchlistIds), {});
+    const allModel = buildYieldViewModel(prepareYieldUniverse(rows, watchlistIds), { risk: "any" });
     expect(allModel.options.watchlist.find((option) => option.value === "only")?.count).toBe(2);
     expect(allModel.visibleRows).toHaveLength(3);
 
-    const onlyModel = buildYieldViewModel(prepareYieldUniverse(rows, watchlistIds), { watchlist: "only" });
+    const onlyModel = buildYieldViewModel(prepareYieldUniverse(rows, watchlistIds), { risk: "any", watchlist: "only" });
     expect(onlyModel.visibleRows.map((row) => row.id)).toEqual(["usdc-circle", "usdt-tether"]);
   });
 
   it("filters watched rows that need attention without forcing warnings/source-changed AND semantics", () => {
     const watchlistIds = new Set(["usdc-circle", "eurc-circle", "usdt-tether"]);
 
-    const allModel = buildYieldViewModel(prepareYieldUniverse(rows, watchlistIds), {});
+    const allModel = buildYieldViewModel(prepareYieldUniverse(rows, watchlistIds), { risk: "any" });
     expect(allModel.options.attention.find((option) => option.value === "watchlist")?.count).toBe(3);
 
-    const attentionModel = buildYieldViewModel(prepareYieldUniverse(rows, watchlistIds), { attention: "watchlist" });
+    const attentionModel = buildYieldViewModel(prepareYieldUniverse(rows, watchlistIds), { risk: "any", attention: "watchlist" });
     expect(attentionModel.visibleRows.map((row) => row.id)).toEqual([
       "usdc-circle",
       "eurc-circle",
@@ -490,6 +502,7 @@ describe("buildYieldViewModel", () => {
     expect(attentionModel.comparisonLabel).toBe("Watched rows needing attention");
 
     const warningAndChangedOnly = buildYieldViewModel(prepareYieldUniverse(rows, watchlistIds), {
+      risk: "any",
       watchlist: "only",
       warnings: "only",
       sourceChanged: "only",
@@ -511,34 +524,26 @@ describe("buildYieldViewModel", () => {
   });
 
   it("matches each risk-budget stop's filter overrides to its matching key", () => {
-    const conservative = buildYieldViewModel(prepareYieldUniverse(rows, null), {
-      minSafety: "80",
-      depth: "hide-thin",
-      sourcePosture: "clean",
-      warnings: "hide",
-    });
+    // Empty URL lands on the opportunistic band, risk=any is the neutral
+    // band, and an explicit key stacked on the landing band matches no stop.
+    const landing = buildYieldViewModel(prepareYieldUniverse(rows, null), {});
+    expect(landing.riskBudget.matching).toBe("opportunistic");
+
+    const any = buildYieldViewModel(prepareYieldUniverse(rows, null), { risk: "any" });
+    expect(any.riskBudget.matching).toBe("all");
+
+    const conservative = buildYieldViewModel(prepareYieldUniverse(rows, null), { risk: "conservative" });
     expect(conservative.riskBudget.matching).toBe("conservative");
 
-    const balanced = buildYieldViewModel(prepareYieldUniverse(rows, null), {
-      minSafety: "70",
-      depth: "hide-thin",
-      sourcePosture: "watch",
-      warnings: "hide",
-    });
+    const balanced = buildYieldViewModel(prepareYieldUniverse(rows, null), { risk: "balanced" });
     expect(balanced.riskBudget.matching).toBe("balanced");
 
-    const opportunistic = buildYieldViewModel(prepareYieldUniverse(rows, null), {
-      minSafety: "50",
-      warnings: "hide",
-    });
-    expect(opportunistic.riskBudget.matching).toBe("opportunistic");
+    const stacked = buildYieldViewModel(prepareYieldUniverse(rows, null), { minSafety: "80" });
+    expect(stacked.riskBudget.matching).toBeNull();
 
-    const all = buildYieldViewModel(prepareYieldUniverse(rows, null), {});
-    expect(all.riskBudget.matching).toBe("all");
-
-    const stops = all.riskBudget.stops.map((stop) => stop.key);
+    const stops = any.riskBudget.stops.map((stop) => stop.key);
     expect(stops).toEqual(["conservative", "balanced", "opportunistic", "all"]);
-    expect(all.riskBudget.stops.every((stop) => stop.count >= 0)).toBe(true);
+    expect(any.riskBudget.stops.every((stop) => stop.count >= 0)).toBe(true);
   });
 
   it("returns null matchingRiskBudget when filters don't match any stop", () => {
@@ -547,12 +552,49 @@ describe("buildYieldViewModel", () => {
     expect(model.riskBudget.stops.every((stop) => stop.active === false)).toBe(true);
   });
 
+  it("applies the opportunistic landing band only when the URL omits risk", () => {
+    const bandRows = [
+      makeYieldRanking({ id: "low-safety", symbol: "LOW", safetyScore: 40, warningSignals: [] }),
+      makeYieldRanking({ id: "warned", symbol: "WRN", safetyScore: 90, warningSignals: ["data-stale"] }),
+    ];
+
+    const landing = buildYieldViewModel(prepareYieldUniverse(bandRows, null), {});
+    expect(landing.visibleRows.map((row) => row.id)).toEqual([]);
+
+    const neutral = buildYieldViewModel(prepareYieldUniverse(bandRows, null), { risk: "any" });
+    expect(neutral.visibleRows.map((row) => row.id).sort()).toEqual(["low-safety", "warned"]);
+  });
+
+  it("stacks explicit risk-budget params on top of the landing band", () => {
+    const stacked = buildYieldViewModel(prepareYieldUniverse(rows, null), { minSafety: "80" });
+
+    // The band fills only the keys the URL leaves unset (warnings=hide), so
+    // warning and null-safety rows stay hidden alongside the explicit floor,
+    // and the implicit landing band is not echoed back into the URL state.
+    expect(stacked.visibleRows.map((row) => row.id)).toEqual(["usdc-circle"]);
+    expect(stacked.normalizedParams.risk).toBeNull();
+  });
+
+  it("offers lifting the whole landing band when single-axis relaxations recover nothing", () => {
+    const blocked = [
+      makeYieldRanking({ id: "risky-row", symbol: "RISKY", safetyScore: 40, warningSignals: ["data-stale"] }),
+    ];
+    const model = buildYieldViewModel(prepareYieldUniverse(blocked, null), { q: "risky" });
+
+    expect(model.visibleRows).toEqual([]);
+    // Clearing q, the safety floor, or the warnings filter alone still leaves
+    // the row blocked by the other band keys; only risk=any lifts both.
+    expect(model.emptyState.suggestions.map((s) => s.filterKey)).toEqual(["risk"]);
+    expect(model.emptyState.suggestions[0]).toMatchObject({ targetValue: "any", gain: 1 });
+  });
+
   it("computes empty-state suggestions ranked by row recovery", () => {
     // Designed so dropping any of these three filters recovers a non-empty subset:
     //   peg=USD ∧ warnings=only ∧ benchmark=EUR
     // Drop peg → EURC matches (warnings+EUR). Drop benchmark → USDT matches.
     // Drop warnings → still empty (USDC/USDT are USD-not-EUR). Top 3 by gain.
     const model = buildYieldViewModel(prepareYieldUniverse(rows, null), {
+      risk: "any",
       peg: "USD",
       warnings: "only",
       benchmark: "EUR",

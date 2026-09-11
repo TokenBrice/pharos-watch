@@ -70,7 +70,8 @@ export interface YieldRiskBudgetState {
 }
 
 export interface YieldEmptyStateSuggestion {
-  filterKey: keyof YieldViewModelFilters;
+  /** A filter axis, or `risk` to lift the whole risk band at once. */
+  filterKey: keyof YieldViewModelFilters | "risk";
   targetValue: string | null;
   gain: number;
   label: string;
