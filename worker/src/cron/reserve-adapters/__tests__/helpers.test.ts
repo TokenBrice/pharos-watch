@@ -511,6 +511,22 @@ describe("buildCoverageShortfallWarnings", () => {
       thresholdRatio: 0.99,
     })).toHaveLength(1);
   });
+
+  it("treats binary rounding just under an exact threshold as covered", () => {
+    // asUSDF in prod: backing / (supply * exchangePrice) = 0.9999999999999999.
+    expect(buildCoverageShortfallWarnings({
+      code: "reserve-undercollateralized",
+      message: (pct) => `${pct}%`,
+      coverageRatio: 0.9999999999999999,
+      thresholdRatio: 1,
+    })).toEqual([]);
+    expect(buildCoverageShortfallWarnings({
+      code: "reserve-undercollateralized",
+      message: (pct) => `${pct}%`,
+      coverageRatio: 0.99999,
+      thresholdRatio: 1,
+    })).toHaveLength(1);
+  });
 });
 
 describe("parseTimestampLikeToUnixSeconds", () => {
