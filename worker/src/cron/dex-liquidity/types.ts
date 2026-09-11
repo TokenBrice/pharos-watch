@@ -373,8 +373,13 @@ export interface GtNewPool {
   symbol: string;
   /** Discovery/source-specific pool type used for quality weighting */
   poolType: string;
-  /** Canonical source family for later merge attribution. */
-  sourceFamily: Exclude<LiquidityPoolSourceFamily, "dl">;
+  /**
+   * Canonical source family for later merge attribution. `dl` is reachable
+   * here only for staged rows the source stage wrote back from DeFiLlama, so
+   * a remembered DL pool keeps its family (and primary-TVL treatment, minus
+   * the decay penalty) instead of being relabelled as discovery evidence.
+   */
+  sourceFamily: LiquidityPoolSourceFamily;
   /** Optional per-pool 7d volume when source provides it */
   volume7dUsd?: number | null;
   /** Optional measured balance ratio from richer direct/discovery APIs. */

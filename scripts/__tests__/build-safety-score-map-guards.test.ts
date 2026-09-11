@@ -6,6 +6,7 @@ import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { makeReportCardsV9Card } from "@shared/test-utils/report-cards-v9";
+import { runSafetyScoreMapCli } from "../maintenance/build-safety-score-map";
 import type { SafetyScoreV9CurrentCard } from "@shared/types/safety-score-v9-public";
 import {
   makeSafetyMapPsiPayload,
@@ -20,10 +21,12 @@ import {
  *
  * The generator runs unattended every day and publishes to a public URL, so the
  * failure that matters is not a crash — it is a successful exit that ships a
- * blank or malformed poster. Every guard below is asserted through the real CLI
- * against a fixture API, because the guards live inside `main()` and are not
- * individually exported. Each fixture is shaped to stop the run *before* the
- * headless-Firefox render, so the suite needs no browser and no credentials.
+ * blank or malformed poster. Every guard below is asserted through the CLI
+ * against a fixture API: one case keeps a real child process so the argv/exit
+ * contract stays pinned, and the rest drive the exported
+ * `runSafetyScoreMapCli` in-process with the same fixture server. Each fixture
+ * is shaped to stop the run *before* the headless-Firefox render, so the suite
+ * needs no browser and no credentials.
  */
 
 const REPO_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "../..");
@@ -182,7 +185,7 @@ interface RunResult {
 }
 
 /**
- * Run the generator against the fixture API.
+ * Stage the fixture API state and output path shared by both runners.
  *
  * `stopBeforeRender` pre-writes a future-dated manifest at the output path. The
  * backwards-publish guard (§11.2b rule 5) then aborts the run *after* fetch,
@@ -190,10 +193,9 @@ interface RunResult {
  * *before* Firefox launches — so a test can assert "the run got this far"
  * without paying for a real render.
  */
-async function runGenerator(
+function stageFixture(
   fixture: { cards: Card[]; assets: Asset[]; asOfSec?: number; methodologyVersion?: string },
   options: {
-    args?: string[];
     stopBeforeRender?: boolean;
     publicationStatus?: string;
     psiComputedAt?: number;
@@ -201,7 +203,7 @@ async function runGenerator(
     stablecoinsPayload?: unknown;
     psiPayload?: unknown;
   } = {},
-): Promise<RunResult> {
+): { pngPath: string; outDir: string } {
   cards = fixture.cards;
   assets = fixture.assets;
   asOfSec = fixture.asOfSec ?? Math.floor(Date.now() / 1000) - HOUR;
@@ -220,8 +222,54 @@ async function runGenerator(
       JSON.stringify({ renderedAt: new Date(Date.now() + HOUR * 1000).toISOString() }),
     );
   }
+  return { pngPath, outDir };
+}
 
-  const child = spawn("npx", ["tsx", SCRIPT, "--out", pngPath, ...(options.args ?? [])], {
+/**
+ * Run the generator in-process against the fixture API. Guard failures come
+ * back as exit code 1 with the `[safety-score-map]`-prefixed message on
+ * stderr, byte-for-byte what the spawned CLI prints.
+ */
+async function runGenerator(
+  fixture: { cards: Card[]; assets: Asset[]; asOfSec?: number; methodologyVersion?: string },
+  options: {
+    args?: string[];
+    stopBeforeRender?: boolean;
+    publicationStatus?: string;
+    psiComputedAt?: number;
+    reportCardsPayload?: unknown;
+    stablecoinsPayload?: unknown;
+    psiPayload?: unknown;
+  } = {},
+): Promise<RunResult> {
+  const { pngPath, outDir } = stageFixture(fixture, options);
+  const stdout: string[] = [];
+  const warnings: string[] = [];
+  const errors: string[] = [];
+  const status = await runSafetyScoreMapCli({
+    argv: ["--out", pngPath, ...(options.args ?? [])],
+    apiKey: "fixture-key",
+    baseUrl,
+    io: {
+      log: (message) => stdout.push(message),
+      warn: (message) => warnings.push(message),
+      error: (message) => errors.push(message),
+    },
+  });
+  return { status, stdout: stdout.join(""), stderr: `${warnings.join("")}${errors.join("")}`, pngPath, outDir };
+}
+
+/**
+ * The suite's single real-process invocation: it pins the CLI's argv parsing
+ * and exit code through an actual child process, while every other case drives
+ * the exported entrypoint in-process.
+ */
+async function runGeneratorCli(
+  fixture: { cards: Card[]; assets: Asset[]; asOfSec?: number; methodologyVersion?: string },
+  options: { args?: string[] } = {},
+): Promise<RunResult> {
+  const { pngPath, outDir } = stageFixture(fixture);
+  const child = spawn(process.execPath, ["--import", "tsx", SCRIPT, "--out", pngPath, ...(options.args ?? [])], {
     cwd: REPO_ROOT,
     env: {
       ...process.env,
@@ -441,7 +489,9 @@ describe("safety-score map — backwards-publish guard (§11.2b rule 5)", () => 
 
 describe("safety-score map — CLI contract", () => {
   it("rejects an unknown edition", async () => {
-    const run = await runGenerator(universe(), { args: ["--edition", "weekly"] });
+    // The suite's single real-process invocation: it pins the CLI's argv
+    // parsing and exit code through an actual child process.
+    const run = await runGeneratorCli(universe(), { args: ["--edition", "weekly"] });
     expect(run.status).toBe(1);
     expect(run.stderr).toMatch(/--edition must be "daily" or "monthly" \(got "weekly"\)/);
   });

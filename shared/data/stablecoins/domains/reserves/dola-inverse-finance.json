@@ -17,7 +17,8 @@
         "liquidity",
         "concentration"
       ],
-      "liquidityHorizon": "immediate"
+      "liquidityHorizon": "immediate",
+      "sourceKey": "dola-inverse:susde"
     },
     {
       "name": "sUSDS collateral",
@@ -31,7 +32,8 @@
         "counterparty",
         "smart-contract"
       ],
-      "liquidityHorizon": "immediate"
+      "liquidityHorizon": "immediate",
+      "sourceKey": "dola-inverse:susds"
     },
     {
       "name": "Other collateral",
@@ -46,7 +48,8 @@
         "concentration",
         "counterparty"
       ],
-      "liquidityHorizon": "unknown"
+      "liquidityHorizon": "unknown",
+      "sourceKey": "dola-inverse:other"
     },
     {
       "name": "ETH / Liquid staking (wstETH, WETH)",
@@ -59,7 +62,8 @@
         "smart-contract",
         "liquidity"
       ],
-      "liquidityHorizon": "immediate"
+      "liquidityHorizon": "immediate",
+      "sourceKey": "dola-inverse:eth-lst"
     },
     {
       "name": "Governance tokens (INV, CRV, CVX)",
@@ -72,7 +76,8 @@
         "liquidity",
         "concentration"
       ],
-      "liquidityHorizon": "unknown"
+      "liquidityHorizon": "unknown",
+      "sourceKey": "dola-inverse:governance"
     },
     {
       "name": "BTC (WBTC, cbBTC)",
@@ -86,7 +91,8 @@
         "counterparty",
         "liquidity"
       ],
-      "liquidityHorizon": "immediate"
+      "liquidityHorizon": "immediate",
+      "sourceKey": "dola-inverse:btc"
     }
   ],
   "reserveReview": {

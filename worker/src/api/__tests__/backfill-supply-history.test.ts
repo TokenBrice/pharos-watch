@@ -7,6 +7,7 @@ import { registerStablecoinParameterContract } from "../../test-helpers/__shared
 import type { ChainRpcConfig } from "../../lib/chain-registry";
 import { encodeBalanceOfCallData, TOTAL_SUPPLY_SELECTOR } from "../../lib/evm-selectors";
 import { fetchHistoricalFxRates } from "../../lib/backfill-fx";
+import { ethereumSupplyRpc, supplyRpcResponse } from "./backfill-supply-history.test-support";
 
 type PsiEligibleCoin = (typeof import("@shared/lib/psi-eligible"))["PSI_ELIGIBLE_STABLECOINS"][number];
 
@@ -22,25 +23,18 @@ const psiEligibleMocks = vi.hoisted(() => ({
   defaultMetaEntries: [] as Array<[string, PsiEligibleCoin]>,
 }));
 
-vi.mock("@shared/lib/psi-eligible", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("@shared/lib/psi-eligible")>();
-  psiEligibleMocks.stablecoins.splice(0, psiEligibleMocks.stablecoins.length, ...actual.PSI_ELIGIBLE_STABLECOINS);
-  psiEligibleMocks.defaultStablecoins.splice(
-    0,
-    psiEligibleMocks.defaultStablecoins.length,
-    ...actual.PSI_ELIGIBLE_STABLECOINS,
-  );
-  psiEligibleMocks.defaultMetaEntries.splice(
-    0,
-    psiEligibleMocks.defaultMetaEntries.length,
-    ...actual.PSI_ELIGIBLE_META_BY_ID.entries(),
-  );
-  psiEligibleMocks.metaById.clear();
-  for (const [id, meta] of actual.PSI_ELIGIBLE_META_BY_ID.entries()) {
-    psiEligibleMocks.metaById.set(id, meta);
-  }
+vi.mock("@shared/lib/psi-eligible", async () => {
+  // Vitest hoists this factory before static test imports are initialized.
+  const { supplyMetadata } = await import("./backfill-supply-history.test-support");
+  const fixtures = supplyMetadata();
+  const { SHADOW_STABLECOINS } = await import("@shared/lib/shadow-stablecoins");
+  // The ID resolver validates shadow membership at import time.
+  fixtures.push(...SHADOW_STABLECOINS);
+  psiEligibleMocks.stablecoins.push(...fixtures);
+  for (const coin of fixtures) psiEligibleMocks.metaById.set(coin.id, coin);
+  psiEligibleMocks.defaultStablecoins.push(...fixtures);
+  psiEligibleMocks.defaultMetaEntries.push(...fixtures.map((coin): [string, PsiEligibleCoin] => [coin.id, coin]));
   return {
-    ...actual,
     PSI_ELIGIBLE_STABLECOINS: psiEligibleMocks.stablecoins,
     PSI_ELIGIBLE_META_BY_ID: psiEligibleMocks.metaById,
   };
@@ -255,53 +249,37 @@ describe("handleBackfillSupplyHistory", () => {
     expect(vi.mocked(fetchMarketBackfillPriceSeries).mock.calls[0]?.[2]?.range).toBeUndefined();
   });
 
-  it("bounds explicit historical windows and returns a continuation cursor", async () => {
-    const day1 = Math.floor(Date.UTC(2026, 0, 1) / 1000);
-    const day2 = day1 + 86_400;
-    const day3 = day2 + 86_400;
-    const fetchSpy = vi.spyOn(globalThis, "fetch").mockImplementation(async () =>
-      new Response(
-        JSON.stringify({
-          price: 1,
-          tokens: [day1, day2, day3].map((date, index) => ({
-            date,
-            circulating: { peggedUSD: 100_000_000 + index },
-          })),
-        }),
-        { status: 200, headers: { "Content-Type": "application/json" } },
-      ),
-    );
-
-    const firstDb = mockD1([{ match: "INSERT OR REPLACE INTO supply_history", rows: [] }]);
-    const firstUrl = "/api/backfill-supply-history?stablecoin=usdt-tether&startDay=2026-01-01&endDay=2026-01-03&windowDays=2";
-    const firstRes = await handleBackfillSupplyHistoryTrusted({ db: firstDb, url: makeApiUrl(firstUrl), request: makeApiRequest(firstUrl, { adminKey: "secret" }) });
-    const firstBody = (await firstRes.json()) as {
-      rowsInserted: number;
-      done: boolean;
-      continuationCursor: string | null;
-      window: { startDay: number; endDay: number; windowDays: number };
-    };
-
-    expect(firstBody.rowsInserted).toBe(2);
-    expect(firstBody.done).toBe(false);
-    expect(firstBody.continuationCursor).toBeTypeOf("string");
-    expect(firstBody.window).toMatchObject({ startDay: day1, endDay: day2, windowDays: 2 });
-
-    const secondDb = mockD1([{ match: "INSERT OR REPLACE INTO supply_history", rows: [] }]);
-    const secondUrl = `/api/backfill-supply-history?stablecoin=usdt-tether&cursor=${encodeURIComponent(firstBody.continuationCursor!)}`;
-    const secondRes = await handleBackfillSupplyHistoryTrusted({ db: secondDb, url: makeApiUrl(secondUrl), request: makeApiRequest(secondUrl, { adminKey: "secret" }) });
-    const secondBody = (await secondRes.json()) as {
-      rowsInserted: number;
-      done: boolean;
-      continuationCursor: string | null;
-      window: { startDay: number; endDay: number };
-    };
-
-    expect(secondBody.rowsInserted).toBe(1);
-    expect(secondBody.done).toBe(true);
-    expect(secondBody.continuationCursor).toBeNull();
-    expect(secondBody.window).toMatchObject({ startDay: day3, endDay: day3 });
-    expect(fetchSpy).toHaveBeenCalledTimes(2);
+  it.each([undefined, 1])("preserves cursor windows unless explicitly overridden to %s days", async (override) => {
+    const day1 = Date.UTC(2026, 0, 1) / 1000;
+    const days = Array.from({ length: 5 }, (_, index) => day1 + index * 86_400);
+    vi.spyOn(globalThis, "fetch").mockImplementation(async () => Response.json({
+      price: 1,
+      tokens: days.map((date) => ({ date, circulating: { peggedUSD: 100_000_000 } })),
+    }));
+    const db = mockD1([{ match: "INSERT OR REPLACE INTO supply_history", rows: [] }]);
+    let path = "/api/backfill-supply-history?stablecoin=usdt-tether&startDay=2026-01-01&endDay=2026-01-05&windowDays=2";
+    const widths: number[] = [];
+    for (let page = 0; page < 5; page++) {
+      const res = await handleBackfillSupplyHistoryTrusted({
+        db, url: makeApiUrl(path), request: makeApiRequest(path, { adminKey: "secret" }),
+      });
+      const body = await readJsonResponse<{
+        rowsInserted: number; done: boolean; continuationCursor: string | null;
+        window: { windowDays: number };
+      }>(res, 200);
+      widths.push(body.rowsInserted);
+      expect(body.window.windowDays).toBe(page === 0 ? 2 : override ?? 2);
+      if (body.done) {
+        expect(body.continuationCursor).toBeNull();
+        break;
+      }
+      expect(body.continuationCursor).toBeTypeOf("string");
+      path = `/api/backfill-supply-history?stablecoin=usdt-tether&cursor=${encodeURIComponent(body.continuationCursor!)}`;
+      if (page === 0 && override != null) path += `&windowDays=${override}`;
+    }
+    expect(widths).toEqual(override === 1 ? [2, 1, 1, 1] : [2, 2, 1]);
+    expect(db.getHistory().filter((stmt) => stmt.sql.includes("INSERT OR REPLACE INTO supply_history"))
+      .map((stmt) => stmt.binds[1])).toEqual(days);
   });
 
   it("threads the request AbortSignal into supply backfill upstream helpers", async () => {
@@ -471,12 +449,8 @@ describe("handleBackfillSupplyHistory", () => {
     const ts1 = 1_775_692_800_000; // CG returns ms timestamps
     const ts2 = 1_775_779_200_000; // +1 day
     const blockNumber = 22_500_000;
-    const onChainRawSupplyByCall = [
-      1_000_000_000_000n, // 1,000,000 tokens at 6 decimals
-      1_100_000_000_000n, // 1,100,000 tokens at 6 decimals
-    ];
-
-    evmRpcMocks.resolveClosestBlockAtOrBeforeTimestamp.mockResolvedValue(blockNumber);
+    evmRpcMocks.resolveClosestBlockAtOrBeforeTimestamp.mockImplementation(async (_chain, timestamp) =>
+      timestamp < ts2 / 1000 ? blockNumber : blockNumber + 1);
 
     vi.spyOn(globalThis, "fetch").mockImplementation(async (input: RequestInfo | URL, init?: RequestInit) => {
       const url = typeof input === "string" ? input : input instanceof URL ? input.toString() : input.url;
@@ -497,36 +471,15 @@ describe("handleBackfillSupplyHistory", () => {
         );
       }
       if (url.includes("fake-eth-rpc")) {
-        const body = JSON.parse(String(init?.body ?? "{}")) as {
-          method?: string;
-          params?: Array<{ data?: string } | string>;
-        };
-        expect(body.method).toBe("eth_call");
-        const call = body.params?.[0];
-        const data = typeof call === "object" && call != null ? call.data?.toLowerCase() : undefined;
-        expect(data).toBe(TOTAL_SUPPLY_SELECTOR);
-        const raw = onChainRawSupplyByCall.shift();
-        if (raw == null) throw new Error("Unexpected extra historical totalSupply call");
-        return new Response(
-          JSON.stringify({ jsonrpc: "2.0", id: 1, result: formatUint256Hex(raw) }),
-          { status: 200, headers: { "Content-Type": "application/json" } },
-        );
+        const requestBlock = JSON.parse(String(init?.body)).params[1] as string;
+        return requestBlock === `0x${blockNumber.toString(16)}`
+          ? supplyRpcResponse(init, blockNumber, { [TOTAL_SUPPLY_SELECTOR]: 1_000_000_000_000n })
+          : supplyRpcResponse(init, blockNumber + 1, { [TOTAL_SUPPLY_SELECTOR]: 1_100_000_000_000n });
       }
       throw new Error(`Unexpected fetch: ${url}`);
     });
 
-    const chainRpcs = new Map<string, ChainRpcConfig>([
-      [
-        "ethereum",
-        {
-          chainId: "ethereum",
-          chainName: "Ethereum",
-          type: "evm",
-          rpcUrl: "https://fake-eth-rpc.test",
-          explorerUrl: "https://etherscan.io",
-        },
-      ],
-    ]);
+    const chainRpcs = ethereumSupplyRpc();
 
     const res = await handleBackfillSupplyHistoryTrusted({ db, url: makeApiUrl(`/api/backfill-supply-history?stablecoin=${fixtureId}&startDay=2026-04-09&endDay=2026-04-10`), request: makeApiRequest(`/api/backfill-supply-history?stablecoin=${fixtureId}&startDay=2026-04-09&endDay=2026-04-10`, {
         adminKey: "secret",
@@ -584,34 +537,12 @@ describe("handleBackfillSupplyHistory", () => {
         );
       }
       if (url.includes("fake-eth-rpc")) {
-        const body = JSON.parse(String(init?.body ?? "{}")) as {
-          method?: string;
-          params?: Array<{ data?: string } | string>;
-        };
-        expect(body.method).toBe("eth_call");
-        const call = body.params?.[0];
-        const data = typeof call === "object" && call != null ? call.data?.toLowerCase() : undefined;
-        expect(data).toBe(TOTAL_SUPPLY_SELECTOR);
-        return new Response(
-          JSON.stringify({ jsonrpc: "2.0", id: 1, result: formatUint256Hex(1_100_000_000_000n) }),
-          { status: 200, headers: { "Content-Type": "application/json" } },
-        );
+        return supplyRpcResponse(init, blockNumber, { [TOTAL_SUPPLY_SELECTOR]: 1_100_000_000_000n });
       }
       throw new Error(`Unexpected fetch: ${url}`);
     });
 
-    const chainRpcs = new Map<string, ChainRpcConfig>([
-      [
-        "ethereum",
-        {
-          chainId: "ethereum",
-          chainName: "Ethereum",
-          type: "evm",
-          rpcUrl: "https://fake-eth-rpc.test",
-          explorerUrl: "https://etherscan.io",
-        },
-      ],
-    ]);
+    const chainRpcs = ethereumSupplyRpc();
 
     const res = await handleBackfillSupplyHistoryTrusted({ db, url: makeApiUrl(`/api/backfill-supply-history?stablecoin=${fixtureId}&startDay=2026-04-09&endDay=2026-04-10`), request: makeApiRequest(`/api/backfill-supply-history?stablecoin=${fixtureId}&startDay=2026-04-09&endDay=2026-04-10`, {
         adminKey: "secret",
@@ -701,64 +632,8 @@ describe("handleBackfillSupplyHistory", () => {
 
   it("skips eEARN days when historical totalSupply has no USD price", async () => {
     const db = mockD1([{ match: "INSERT OR REPLACE INTO supply_history", rows: [] }]);
-    const day1 = Math.floor(Date.UTC(2026, 5, 9) / 1000);
-    const day2 = Math.floor(Date.UTC(2026, 5, 10) / 1000);
-    const blockNumber = 22_500_000;
-    const supplyRawByCall = [
-      4_000_000n * 10n ** 6n,
-      4_100_000n * 10n ** 6n,
-    ];
-
-    evmRpcMocks.resolveClosestBlockAtOrBeforeTimestamp.mockResolvedValue(blockNumber);
-    vi.spyOn(globalThis, "fetch").mockImplementation(async (input: RequestInfo | URL, init?: RequestInit) => {
-      const url = typeof input === "string" ? input : input instanceof URL ? input.toString() : input.url;
-
-      if (url.includes("/coins/ember-earn/market_chart/range")) {
-        return new Response(
-          JSON.stringify({
-            market_caps: [[day1 * 1000, 1_000], [day2 * 1000, 1_000]],
-            prices: [[day1 * 1000, 1.02], [day2 * 1000, 1.03]],
-          }),
-          { status: 200, headers: { "Content-Type": "application/json" } },
-        );
-      }
-      if (url.includes("/coins/ember-earn?")) {
-        return new Response(
-          JSON.stringify({ market_data: { circulating_supply: 0 } }),
-          { status: 200, headers: { "Content-Type": "application/json" } },
-        );
-      }
-      if (url.includes("fake-eth-rpc")) {
-        const body = JSON.parse(String(init?.body ?? "{}")) as {
-          method?: string;
-          params?: Array<{ data?: string } | string>;
-        };
-        expect(body.method).toBe("eth_call");
-        const call = body.params?.[0];
-        const data = typeof call === "object" && call != null ? call.data?.toLowerCase() : undefined;
-        expect(data).toBe(TOTAL_SUPPLY_SELECTOR);
-        const raw = supplyRawByCall.shift();
-        if (raw == null) throw new Error("Unexpected extra eEARN totalSupply call");
-        return new Response(JSON.stringify({ jsonrpc: "2.0", id: 1, result: formatUint256Hex(raw) }), {
-          status: 200,
-          headers: { "Content-Type": "application/json" },
-        });
-      }
-      throw new Error(`Unexpected fetch: ${url}`);
-    });
-
-    const chainRpcs = new Map<string, ChainRpcConfig>([
-      [
-        "ethereum",
-        {
-          chainId: "ethereum",
-          chainName: "Ethereum",
-          type: "evm",
-          rpcUrl: "https://fake-eth-rpc.test",
-          explorerUrl: "https://etherscan.io",
-        },
-      ],
-    ]);
+    const fetchSpy = vi.spyOn(globalThis, "fetch").mockRejectedValue(new Error("Unpriced days must not fetch"));
+    const chainRpcs = ethereumSupplyRpc();
 
     const res = await handleBackfillSupplyHistoryTrusted({ db, url: makeApiUrl("/api/backfill-supply-history?stablecoin=eearn-ember&startDay=2026-06-09&endDay=2026-06-10"), request: makeApiRequest("/api/backfill-supply-history?stablecoin=eearn-ember&startDay=2026-06-09&endDay=2026-06-10", {
         adminKey: "secret",
@@ -776,6 +651,7 @@ describe("handleBackfillSupplyHistory", () => {
     expect(body.errors?.[0]).toContain("historical totalSupply backfill wrote 0 rows");
     expect(body.skippedDays).toBe(2);
     expect(evmRpcMocks.resolveClosestBlockAtOrBeforeTimestamp).not.toHaveBeenCalled();
+    expect(fetchSpy).not.toHaveBeenCalled();
     const inserts = db.getHistory().filter((stmt) =>
       stmt.sql.includes("INSERT OR REPLACE INTO supply_history"),
     );
@@ -784,39 +660,8 @@ describe("handleBackfillSupplyHistory", () => {
 
   it("skips autoUSD days without a CoinGecko ID or historical price", async () => {
     const db = mockD1([{ match: "INSERT OR REPLACE INTO supply_history", rows: [] }]);
-    const blockNumber = 22_500_000;
-    const totalSupplyRaw = 6_700_000n * 10n ** 18n;
-
-    evmRpcMocks.resolveClosestBlockAtOrBeforeTimestamp.mockResolvedValue(blockNumber);
-    const fetchSpy = vi.spyOn(globalThis, "fetch").mockImplementation(async (input: RequestInfo | URL, init?: RequestInit) => {
-      const url = typeof input === "string" ? input : input instanceof URL ? input.toString() : input.url;
-      if (!url.includes("fake-eth-rpc")) throw new Error(`Unexpected fetch: ${url}`);
-      const body = JSON.parse(String(init?.body ?? "{}")) as {
-        method?: string;
-        params?: Array<{ data?: string } | string>;
-      };
-      expect(body.method).toBe("eth_call");
-      const call = body.params?.[0];
-      const data = typeof call === "object" && call != null ? call.data?.toLowerCase() : undefined;
-      expect(data).toBe(TOTAL_SUPPLY_SELECTOR);
-      return new Response(JSON.stringify({ jsonrpc: "2.0", id: 1, result: formatUint256Hex(totalSupplyRaw) }), {
-        status: 200,
-        headers: { "Content-Type": "application/json" },
-      });
-    });
-
-    const chainRpcs = new Map<string, ChainRpcConfig>([
-      [
-        "ethereum",
-        {
-          chainId: "ethereum",
-          chainName: "Ethereum",
-          type: "evm",
-          rpcUrl: "https://fake-eth-rpc.test",
-          explorerUrl: "https://etherscan.io",
-        },
-      ],
-    ]);
+    const fetchSpy = vi.spyOn(globalThis, "fetch").mockRejectedValue(new Error("Unpriced days must not fetch"));
+    const chainRpcs = ethereumSupplyRpc();
 
     const res = await handleBackfillSupplyHistoryTrusted({ db, url: makeApiUrl("/api/backfill-supply-history?stablecoin=autousd-auto-finance&startDay=2026-06-09&endDay=2026-06-10"), request: makeApiRequest("/api/backfill-supply-history?stablecoin=autousd-auto-finance&startDay=2026-06-09&endDay=2026-06-10", {
         adminKey: "secret",
@@ -834,6 +679,7 @@ describe("handleBackfillSupplyHistory", () => {
     expect(body.errors?.[0]).toContain("historical totalSupply backfill wrote 0 rows");
     expect(body.skippedDays).toBe(2);
     expect(fetchSpy).not.toHaveBeenCalled();
+    expect(evmRpcMocks.resolveClosestBlockAtOrBeforeTimestamp).not.toHaveBeenCalled();
 
     const inserts = db.getHistory().filter((stmt) =>
       stmt.sql.includes("INSERT OR REPLACE INTO supply_history"),
@@ -861,7 +707,10 @@ describe("handleBackfillSupplyHistory", () => {
 
   it("backfills USD-valued Base Dollar supply from historical totalSupply without a CoinGecko ID", async () => {
     const db = mockD1([{ match: "INSERT OR REPLACE INTO supply_history", rows: [] }]);
-    const baseDollar = psiEligibleMocks.defaultStablecoins.find((coin) => coin.id === "bd-basedollar");
+    const actual = await vi.importActual<typeof import("@shared/lib/psi-eligible")>("@shared/lib/psi-eligible");
+    const baseDollar = actual.PSI_ELIGIBLE_META_BY_ID.get("bd-basedollar")!;
+    psiEligibleMocks.stablecoins.splice(0, psiEligibleMocks.stablecoins.length, baseDollar);
+    psiEligibleMocks.metaById.set(baseDollar.id, baseDollar);
     expect(baseDollar).toMatchObject({
       detailProvider: "defillama",
       llamaId: "434",
@@ -952,67 +801,8 @@ describe("handleBackfillSupplyHistory", () => {
     psiEligibleMocks.stablecoins.splice(0, psiEligibleMocks.stablecoins.length, ...historicalTotalSupplyCoins);
 
     const db = mockD1([{ match: "INSERT OR REPLACE INTO supply_history", rows: [] }]);
-    const day = Math.floor(Date.UTC(2026, 5, 9) / 1000);
-    const blockNumber = 22_500_000;
-    const blockSearchCaches: unknown[] = [];
-    const onChainRawSupplyByCall = [
-      6_700_000n * 10n ** 18n,
-      4_000_000n * 10n ** 6n,
-    ];
-
-    evmRpcMocks.resolveClosestBlockAtOrBeforeTimestamp.mockImplementation(async (_chain, _timestamp, cache) => {
-      blockSearchCaches.push(cache);
-      return blockNumber;
-    });
-    vi.spyOn(globalThis, "fetch").mockImplementation(async (input: RequestInfo | URL, init?: RequestInit) => {
-      const url = typeof input === "string" ? input : input instanceof URL ? input.toString() : input.url;
-
-      if (url.includes("/coins/ember-earn/market_chart/range")) {
-        return new Response(
-          JSON.stringify({
-            market_caps: [[day * 1000, 1_000]],
-            prices: [[day * 1000, 1.02]],
-          }),
-          { status: 200, headers: { "Content-Type": "application/json" } },
-        );
-      }
-      if (url.includes("/coins/ember-earn?")) {
-        return new Response(
-          JSON.stringify({ market_data: { circulating_supply: 0 } }),
-          { status: 200, headers: { "Content-Type": "application/json" } },
-        );
-      }
-      if (url.includes("fake-eth-rpc")) {
-        const body = JSON.parse(String(init?.body ?? "{}")) as {
-          method?: string;
-          params?: Array<{ data?: string } | string>;
-        };
-        expect(body.method).toBe("eth_call");
-        const call = body.params?.[0];
-        const data = typeof call === "object" && call != null ? call.data?.toLowerCase() : undefined;
-        expect(data).toBe(TOTAL_SUPPLY_SELECTOR);
-        const raw = onChainRawSupplyByCall.shift();
-        if (raw == null) throw new Error("Unexpected extra historical totalSupply call");
-        return new Response(JSON.stringify({ jsonrpc: "2.0", id: 1, result: formatUint256Hex(raw) }), {
-          status: 200,
-          headers: { "Content-Type": "application/json" },
-        });
-      }
-      throw new Error(`Unexpected fetch: ${url}`);
-    });
-
-    const chainRpcs = new Map<string, ChainRpcConfig>([
-      [
-        "ethereum",
-        {
-          chainId: "ethereum",
-          chainName: "Ethereum",
-          type: "evm",
-          rpcUrl: "https://fake-eth-rpc.test",
-          explorerUrl: "https://etherscan.io",
-        },
-      ],
-    ]);
+    const fetchSpy = vi.spyOn(globalThis, "fetch").mockRejectedValue(new Error("Unpriced days must not fetch"));
+    const chainRpcs = ethereumSupplyRpc();
 
     const res = await handleBackfillSupplyHistoryTrusted({ db, url: makeApiUrl("/api/backfill-supply-history?batch=0&batchSize=2&startDay=2026-06-09&endDay=2026-06-09"), request: makeApiRequest("/api/backfill-supply-history?batch=0&batchSize=2&startDay=2026-06-09&endDay=2026-06-09", {
         adminKey: "secret",
@@ -1029,7 +819,8 @@ describe("handleBackfillSupplyHistory", () => {
     expect(body.rowsInserted).toBe(0);
     expect(body.errors).toHaveLength(2);
     expect(body.skippedDays).toBe(2);
-    expect(blockSearchCaches).toHaveLength(0);
+    expect(evmRpcMocks.resolveClosestBlockAtOrBeforeTimestamp).not.toHaveBeenCalled();
+    expect(fetchSpy).not.toHaveBeenCalled();
 
     const inserts = db.getHistory().filter((stmt) =>
       stmt.sql.includes("INSERT OR REPLACE INTO supply_history"),
@@ -1037,83 +828,50 @@ describe("handleBackfillSupplyHistory", () => {
     expect(inserts).toHaveLength(0);
   });
 
-  it("backfills USG historical supply after subtracting PegKeeper balances", async () => {
+  it.each([null, 1.25])("replays USG exclusions only with a historical price (%s)", async (price) => {
+    const day = Date.UTC(2026, 4, 9) / 1000;
     const db = mockD1([{ match: "INSERT OR REPLACE INTO supply_history", rows: [] }]);
     const blockNumber = 24_500_000;
-    const totalSupplyRaw = 40_020_000n * 10n ** 18n;
-    const keeperOneRaw = 19_686_793n * 10n ** 18n;
-    const keeperTwoRaw = 19_780_590n * 10n ** 18n;
-    const keeperOneCall = encodeBalanceOfCallData("0xf89615f75c8161dc185c03020240905f6b66bad9");
-    const keeperTwoCall = encodeBalanceOfCallData("0x8a7f16508d1e8b48bdf36023f378cc04d9506d4e");
-
-    const uint256Hex = (value: bigint) => `0x${value.toString(16).padStart(64, "0")}`;
-    evmRpcMocks.resolveClosestBlockAtOrBeforeTimestamp.mockResolvedValue(blockNumber);
-    const fetchSpy = vi.spyOn(globalThis, "fetch").mockImplementation(async (_input: RequestInfo | URL, init?: RequestInit) => {
-      const body = JSON.parse(String(init?.body ?? "{}")) as {
-        method?: string;
-        params?: Array<{ data?: string } | string>;
-      };
-      if (body.method !== "eth_call") {
-        throw new Error(`Unexpected RPC method: ${body.method}`);
-      }
-      const call = body.params?.[0];
-      const data = typeof call === "object" && call != null ? call.data?.toLowerCase() : undefined;
-      if (data === TOTAL_SUPPLY_SELECTOR) {
-        return new Response(JSON.stringify({ jsonrpc: "2.0", id: 1, result: uint256Hex(totalSupplyRaw) }), {
-          status: 200,
-          headers: { "Content-Type": "application/json" },
-        });
-      }
-      if (data === keeperOneCall.toLowerCase()) {
-        return new Response(JSON.stringify({ jsonrpc: "2.0", id: 1, result: uint256Hex(keeperOneRaw) }), {
-          status: 200,
-          headers: { "Content-Type": "application/json" },
-        });
-      }
-      if (data === keeperTwoCall.toLowerCase()) {
-        return new Response(JSON.stringify({ jsonrpc: "2.0", id: 1, result: uint256Hex(keeperTwoRaw) }), {
-          status: 200,
-          headers: { "Content-Type": "application/json" },
-        });
-      }
-      throw new Error(`Unexpected eth_call data: ${data}`);
+    // Synthetic replay-price availability; the live USG catalog has no CoinGecko ID.
+    const source = psiEligibleMocks.metaById.get("usg-tangent")!;
+    const pricedFixture = { ...source, geckoId: "fixture-usg" };
+    psiEligibleMocks.metaById.set(source.id, pricedFixture);
+    psiEligibleMocks.stablecoins.splice(0, psiEligibleMocks.stablecoins.length, pricedFixture);
+    vi.mocked(fetchMarketBackfillPriceSeries).mockResolvedValueOnce({
+      diagnostics: {
+        granularity: "daily", sourcesUsed: ["coingecko"], quoteMode: "usd", quoteCurrency: "usd",
+        mergeReasons: [], perSourceStats: [], policyAdjustments: [], finalPointCount: price == null ? 0 : 1,
+      },
+      prices: price == null ? [] : [{ timestamp: day, price }],
     });
-
-    const chainRpcs = new Map<string, ChainRpcConfig>([
-      [
-        "ethereum",
-        {
-          chainId: "ethereum",
-          chainName: "Ethereum",
-          type: "evm",
-          rpcUrl: "https://fake-eth-rpc.test",
-          explorerUrl: "https://etherscan.io",
-        },
-      ],
-    ]);
-
-    const res = await handleBackfillSupplyHistoryTrusted({ db, url: makeApiUrl("/api/backfill-supply-history?stablecoin=usg-tangent&startDay=2026-05-09&endDay=2026-05-09"), request: makeApiRequest("/api/backfill-supply-history?stablecoin=usg-tangent&startDay=2026-05-09&endDay=2026-05-09", {
-        adminKey: "secret",
-      }), coingeckoApiKey: null, chainRpcs });
-
-    const body = (await readJsonResponse(res, 200)) as {
-      coinsProcessed: number;
-      rowsInserted: number;
-      errors?: string[];
-      skipped?: string[];
-      skippedDays?: number;
+    evmRpcMocks.resolveClosestBlockAtOrBeforeTimestamp.mockResolvedValue(blockNumber);
+    const amounts = {
+      [TOTAL_SUPPLY_SELECTOR]: 40_020_000n * 10n ** 18n,
+      [encodeBalanceOfCallData("0xf89615f75c8161dc185c03020240905f6b66bad9").toLowerCase()]: 19_686_793n * 10n ** 18n,
+      [encodeBalanceOfCallData("0x8a7f16508d1e8b48bdf36023f378cc04d9506d4e").toLowerCase()]: 19_780_590n * 10n ** 18n,
     };
-    expect(body.coinsProcessed).toBe(1);
-    expect(body.rowsInserted).toBe(0);
-    expect(body.errors?.[0]).toContain("historical on-chain supply backfill wrote 0 rows");
-    expect(body.skippedDays).toBe(1);
-    expect(evmRpcMocks.resolveClosestBlockAtOrBeforeTimestamp).not.toHaveBeenCalled();
-    expect(fetchSpy).not.toHaveBeenCalled();
-
-    const insert = db.getHistory().find((stmt) =>
-      stmt.sql.includes("INSERT OR REPLACE INTO supply_history"),
-    );
-    expect(insert).toBeUndefined();
+    const fetchSpy = vi.spyOn(globalThis, "fetch").mockImplementation(async (_input, init) =>
+      supplyRpcResponse(init, blockNumber, amounts));
+    const path = "/api/backfill-supply-history?stablecoin=usg-tangent&startDay=2026-05-09&endDay=2026-05-09";
+    const res = await handleBackfillSupplyHistoryTrusted({
+      db, url: makeApiUrl(path), request: makeApiRequest(path, { adminKey: "secret" }),
+      coingeckoApiKey: null, chainRpcs: ethereumSupplyRpc(),
+    });
+    const body = await readJsonResponse<{ rowsInserted: number; skippedDays?: number; errors?: string[] }>(res, 200);
+    const inserts = db.getHistory().filter((stmt) => stmt.sql.includes("INSERT OR REPLACE INTO supply_history"));
+    if (price == null) {
+      expect(body.rowsInserted).toBe(0);
+      expect(body.skippedDays).toBe(1);
+      expect(body.errors?.[0]).toContain("historical on-chain supply backfill wrote 0 rows");
+      expect(evmRpcMocks.resolveClosestBlockAtOrBeforeTimestamp).not.toHaveBeenCalled();
+      expect(fetchSpy).not.toHaveBeenCalled();
+      expect(inserts).toEqual([]);
+    } else {
+      expect(body.rowsInserted).toBe(1);
+      expect(body.errors).toBeUndefined();
+      expect(fetchSpy).toHaveBeenCalledTimes(3);
+      expect(inserts.map((stmt) => stmt.binds)).toEqual([["usg-tangent", day, 690_771.25, 1.25]]);
+    }
   });
 
   it("returns a clear error when CG market caps are all zero and on-chain fallback is unavailable", async () => {
@@ -1218,8 +976,9 @@ describe("handleBackfillSupplyHistory", () => {
   });
 
   it("consumes the parallel price response before returning a protocol fallback error", async () => {
-    const encoder = new TextEncoder();
-    let priceBodyConsumed = false;
+    const priceResponse = new Response(JSON.stringify({ coins: {} }), {
+      headers: { "Content-Type": "application/json" },
+    });
 
     vi.spyOn(globalThis, "fetch").mockImplementation(async (input: RequestInfo | URL) => {
       const url = typeof input === "string" ? input : input instanceof URL ? input.toString() : input.url;
@@ -1243,16 +1002,7 @@ describe("handleBackfillSupplyHistory", () => {
         });
       }
       if (url.includes("/chart/coingecko:tether-gold")) {
-        return new Response(new ReadableStream<Uint8Array>({
-          pull(controller) {
-            priceBodyConsumed = true;
-            controller.enqueue(encoder.encode(JSON.stringify({ coins: {} })));
-            controller.close();
-          },
-        }), {
-          status: 200,
-          headers: { "Content-Type": "application/json" },
-        });
+        return priceResponse;
       }
       throw new Error(`Unexpected fetch: ${url}`);
     });
@@ -1262,6 +1012,6 @@ describe("handleBackfillSupplyHistory", () => {
 
     const body = (await readJsonResponse(res, 200)) as { errors?: string[] };
     expect(body.errors?.[0]).toContain("no TVL history");
-    expect(priceBodyConsumed).toBe(true);
+    expect(priceResponse.bodyUsed).toBe(true);
   });
 });

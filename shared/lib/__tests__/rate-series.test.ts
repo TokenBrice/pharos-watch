@@ -27,6 +27,17 @@ describe("interpolateRateAtTimestamp", () => {
     ];
     expect(interpolateRateAtTimestamp(series, 150)).toBe(2);
   });
+
+  it("selects exact interior points and the later interpolation interval", () => {
+    const series = [
+      { timestamp: 100, rate: 1 },
+      { timestamp: 160, rate: 7 },
+      { timestamp: 300, rate: 3 },
+      { timestamp: 500, rate: 11 },
+    ];
+    expect(interpolateRateAtTimestamp(series, 160)).toBe(7);
+    expect(interpolateRateAtTimestamp(series, 350)).toBe(5);
+  });
 });
 
 describe("enumerateDates", () => {
@@ -45,11 +56,20 @@ describe("mergeDateRates", () => {
       "2026-01-01": { eur: 0.91 },
     };
 
-    mergeDateRates(target, "2026-01-01", { gbp: 0.79 });
+    mergeDateRates(target, "2026-01-01", { eur: 0.93, gbp: 0.79 });
 
     expect(target).toEqual({
-      "2026-01-01": { eur: 0.91, gbp: 0.79 },
+      "2026-01-01": { eur: 0.93, gbp: 0.79 },
     });
+  });
+
+  it("inserts a first bucket and treats null rates as a no-op", () => {
+    const target = {};
+    mergeDateRates(target, "2026-01-01", null);
+    expect(target).toEqual({});
+    mergeDateRates(target, "2026-01-01", { eur: 0.91 });
+    mergeDateRates(target, "2026-01-01", null);
+    expect(target).toEqual({ "2026-01-01": { eur: 0.91 } });
   });
 });
 

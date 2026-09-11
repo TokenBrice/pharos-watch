@@ -113,32 +113,43 @@ describe("adaptive PR checks", () => {
   });
 
   it("unions changed Vitest files with the critical contract set", () => {
-    const listed = parseVitestFileList("[unit] src/a.test.ts\n[worker] worker/a.spec.ts\n");
-    expect(selectPrTestFiles(listed, ["critical.test.ts"])).toEqual([
-      "critical.test.ts",
+    const listed = parseVitestFileList("[node] src/a.test.ts\n[worker] worker/a.spec.ts\n");
+    expect(selectPrTestFiles(listed, ["src/critical.test.ts"], [], new Map(), () => true)).toEqual([
       "src/a.test.ts",
+      "src/critical.test.ts",
       "worker/a.spec.ts",
     ]);
   });
 
   it("always selects global invariants for unrelated source changes", () => {
-    const selected = selectPrTestFiles(["src/components/unrelated-source.test.ts"]);
+    const selected = selectPrTestFiles(["src/components/unrelated-source.test.ts"], undefined, [], undefined, () => true);
 
     expect(selected).toEqual(
       expect.arrayContaining([
         "src/lib/__tests__/reserve-coinid-validation.test.ts",
-        "worker/src/cron/__tests__/telegram-recap-cost-boundary.test.ts",
+        "scripts/ci/check-architecture-boundaries.test.ts",
         "src/components/unrelated-source.test.ts",
       ]),
     );
   });
 
-  it("keeps thirty-one unique contracts including real OG rendering for dependency changes", () => {
-    expect(ALWAYS_RUN_TEST_FILES).toHaveLength(31);
-    expect(new Set(ALWAYS_RUN_TEST_FILES).size).toBe(31);
+  it("keeps unique required contracts including real OG rendering for dependency changes", () => {
+    expect(new Set(ALWAYS_RUN_TEST_FILES).size).toBe(ALWAYS_RUN_TEST_FILES.length);
     for (const source of ["worker/package.json", "package-lock.json", "worker/src/api/og.tsx"]) {
-      expect(selectPrTestFiles([], undefined, [source])).toContain("scripts/__tests__/og-worker-runtime.test.ts");
+      expect(selectPrTestFiles([], undefined, [source])).toEqual(expect.arrayContaining([
+        "scripts/__tests__/og-worker-runtime.test.ts",
+        "src/lib/__tests__/reserve-coinid-validation.test.ts",
+        "scripts/ci/check-architecture-boundaries.test.ts",
+      ]));
     }
+  });
+
+  it("fails closed when a mandatory contract disappears but drops deleted graph tests", () => {
+    const mandatory = "src/mandatory.test.ts";
+    expect(() => selectPrTestFiles([], [mandatory], [], new Map(), () => false)).toThrow(mandatory);
+    expect(selectPrTestFiles(["src/deleted.test.ts"], [mandatory], [], new Map(), (path) => path.endsWith(mandatory)))
+      .toEqual([mandatory]);
+    expect(() => selectPrTestFiles([], [], [], new Map(), () => true)).toThrow(/Empty/);
   });
 
   it("selects importing owners for changed critical source files", () => {

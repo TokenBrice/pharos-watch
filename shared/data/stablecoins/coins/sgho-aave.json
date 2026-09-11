@@ -41,7 +41,7 @@
   "custodyModel": "onchain",
   "governanceQuality": "wrapper",
   "liveReservesConfig": {
-    "adapter": "sgho-wrapper",
+    "adapter": "erc4626-single-asset",
     "version": 1,
     "semantics": "single-asset",
     "breakerScope": "sgho-aave",
@@ -58,6 +58,7 @@
     },
     "params": {
       "slice": {
+        "expectedAssetAddress": "0x40d16fc0246ad3160ccc09b8d0d3a2cd28ae6c2f",
         "name": "GHO deposited in Aave Savings module",
         "risk": "low",
         "coinId": "gho-aave",

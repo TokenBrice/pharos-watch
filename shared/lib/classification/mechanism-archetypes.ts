@@ -1,7 +1,7 @@
 import type { MechanismArchetype } from "../../types";
 import { projectDescriptors } from "./descriptors";
 
-export const MECHANISM_ARCHETYPE_DESCRIPTORS = {
+const MECHANISM_ARCHETYPE_DESCRIPTORS = {
   "fiat-cash": { label: "Custodial Cash and Cash-Equivalents", shortLabel: "Custodial Cash", ctaNoun: "fiat-backed",
     oneLiner: "Centralized issuers custody dollars in bank accounts and short-term Treasuries; tokens are minted and redeemed on demand.",
   },

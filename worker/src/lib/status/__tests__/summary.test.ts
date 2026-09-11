@@ -1,39 +1,8 @@
 import { describe, expect, it } from "vitest";
 import type { CronHealthSnapshot } from "../cron-health";
 import { buildStatusSummary, emptyStatusSummary } from "../summary";
+import { makeCronHealth } from "./cron-health.test-support";
 
-function makeCronHealth(
-  overrides?: {
-    scheduledSlots?: Partial<CronHealthSnapshot["scheduledSlots"]>;
-    scheduledSlotEventMarkerQueryFailed?: boolean;
-  },
-): CronHealthSnapshot {
-  return {
-    crons: {},
-    unhealthyCrons: 1,
-    availabilityImpactingUnhealthyCrons: 0,
-    watchUnhealthyCrons: 1,
-    degradedCronRuns: 2,
-    cronErrorCount: 3,
-    availabilityImpactingCronErrors: 0,
-    availabilityImpactingConsecutiveCronErrors: 0,
-    staleCronArtifacts: 4,
-    expiredCronLeases: 1,
-    orphanedCronProgressRows: 3,
-    cronHistoryQueryFailed: false,
-    cronProgressQueryFailed: false,
-    cronLeaseQueryFailed: false,
-    scheduledSlotEventMarkerQueryFailed: overrides?.scheduledSlotEventMarkerQueryFailed ?? false,
-    scheduledSlots: {
-      runningSlots: 7,
-      staleCandidateSlots: 0,
-      oldestRunningAgeSec: 30,
-      oldestStaleAgeSec: null,
-      queryFailed: false,
-      ...(overrides?.scheduledSlots ?? {}),
-    },
-  };
-}
 
 function buildSummary(cronHealth: CronHealthSnapshot) {
   return buildStatusSummary({
@@ -47,7 +16,11 @@ function buildSummary(cronHealth: CronHealthSnapshot) {
 
 describe("status summary scheduled-slot query failures", () => {
   it("keeps the no-failure summary shape unchanged", () => {
-    const summary = buildSummary(makeCronHealth());
+    const summary = buildSummary(makeCronHealth({
+      unhealthyCrons: 1, watchUnhealthyCrons: 1, degradedCronRuns: 2, cronErrorCount: 3,
+      staleCronArtifacts: 4, expiredCronLeases: 1, orphanedCronProgressRows: 3,
+      scheduledSlots: { runningSlots: 7, oldestRunningAgeSec: 30 },
+    }));
 
     expect(summary).toEqual({
       unhealthyCrons: 1,

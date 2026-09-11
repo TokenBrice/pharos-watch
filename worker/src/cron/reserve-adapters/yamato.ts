@@ -1,4 +1,5 @@
 import { CANONICAL_ETH_RESERVE_RISK } from "@shared/lib/reserve-asset-risk";
+import { parseLiveReserveAdapterParams } from "@shared/lib/live-reserve-adapters";
 import type { ReserveSlice, StablecoinMeta } from "@shared/types/core";
 import type { LiveReserveWarning, LiveReservesConfig } from "@shared/types/live-reserves";
 import { decodeFunctionResult, encodeFunctionData, parseAbi } from "viem/utils";
@@ -6,13 +7,13 @@ import type { AdapterContext, AdapterResult } from "./types";
 import {
   decimalNumberFromBigInt,
   fetchDefiLlamaPrices,
-  isReserveRisk,
   makeOnchainCallers,
   notApplicableFreshnessMetadata,
   requireOnchainInput,
   reserveInfoWarning,
 } from "./helpers";
 import { rethrowIfAborted } from "../../lib/abort";
+import { pinnedBlockPlan } from "./evm-observation-plan";
 
 const ADAPTER_KEY = "yamato";
 const YAMATO_VALUE_DECIMALS = 18;
@@ -41,31 +42,31 @@ const PRIORITY_REGISTRY_ABI = parseAbi([
   "function getRedeemablesCap() view returns (uint256)",
 ]);
 
-export const YAMATO_GET_STATES_SELECTOR = encodeFunctionData({
+const YAMATO_GET_STATES_SELECTOR = encodeFunctionData({
   abi: YAMATO_ABI,
   functionName: "getStates",
 });
-export const YAMATO_PRICE_FEED_SELECTOR = encodeFunctionData({
+const YAMATO_PRICE_FEED_SELECTOR = encodeFunctionData({
   abi: YAMATO_ABI,
   functionName: "priceFeed",
 });
-export const YAMATO_GET_PRICE_SELECTOR = encodeFunctionData({
+const YAMATO_GET_PRICE_SELECTOR = encodeFunctionData({
   abi: YAMATO_PRICE_FEED_ABI,
   functionName: "getPrice",
 });
-export const YAMATO_PAUSED_SELECTOR = encodeFunctionData({
+const YAMATO_PAUSED_SELECTOR = encodeFunctionData({
   abi: YAMATO_REDEMPTION_ABI,
   functionName: "paused",
 });
-export const YAMATO_PRIORITY_REGISTRY_SELECTOR = encodeFunctionData({
+const YAMATO_PRIORITY_REGISTRY_SELECTOR = encodeFunctionData({
   abi: YAMATO_REDEMPTION_ABI,
   functionName: "priorityRegistry",
 });
-export const PRIORITY_REGISTRY_YAMATO_SELECTOR = encodeFunctionData({
+const PRIORITY_REGISTRY_YAMATO_SELECTOR = encodeFunctionData({
   abi: PRIORITY_REGISTRY_ABI,
   functionName: "yamato",
 });
-export const PRIORITY_REGISTRY_GET_REDEEMABLES_CAP_SELECTOR = encodeFunctionData({
+const PRIORITY_REGISTRY_GET_REDEEMABLES_CAP_SELECTOR = encodeFunctionData({
   abi: PRIORITY_REGISTRY_ABI,
   functionName: "getRedeemablesCap",
 });
@@ -84,14 +85,6 @@ interface YamatoSliceConfig {
   risk: ReserveSlice["risk"];
   coinId?: string;
   depType?: ReserveSlice["depType"];
-}
-
-interface YamatoParams {
-  yamatoAddress: string;
-  priceFeedAddress?: string;
-  rpcUrl?: string;
-  fallbackRpcUrl?: string;
-  slice: YamatoSliceConfig;
 }
 
 export interface YamatoRedemptionProbe {
@@ -122,50 +115,6 @@ function uint8Result(value: unknown, field: string): number {
     throw new Error(`yamato getStates() returned invalid ${field}`);
   }
   return parsed;
-}
-
-function optionalString(params: Record<string, unknown>, key: string): string | undefined {
-  const value = params[key];
-  return typeof value === "string" && value.trim().length > 0 ? value.trim() : undefined;
-}
-
-function readSlice(params: Record<string, unknown>): YamatoSliceConfig {
-  const raw = params.slice;
-  if (!raw || typeof raw !== "object" || Array.isArray(raw)) {
-    return DEFAULT_ETH_SLICE;
-  }
-  const slice = raw as Record<string, unknown>;
-  const name =
-    typeof slice.name === "string" && slice.name.trim().length > 0 ? slice.name.trim() : DEFAULT_ETH_SLICE.name;
-  const risk = isReserveRisk(slice.risk) ? slice.risk : DEFAULT_ETH_SLICE.risk;
-  const coinId = typeof slice.coinId === "string" && slice.coinId.trim().length > 0 ? slice.coinId.trim() : undefined;
-  const depType =
-    typeof slice.depType === "string" && slice.depType.trim().length > 0
-      ? (slice.depType as ReserveSlice["depType"])
-      : undefined;
-
-  return {
-    name,
-    risk,
-    ...(coinId ? { coinId } : {}),
-    ...(depType ? { depType } : {}),
-  };
-}
-
-function readParams(config: LiveReservesConfig): YamatoParams {
-  const params = config.params ?? {};
-  const yamatoAddress = optionalString(params, "yamatoAddress") ?? optionalString(params, "contractAddress");
-  if (!yamatoAddress) {
-    throw new Error("yamato adapter params invalid.yamatoAddress: expected contract address string");
-  }
-
-  return {
-    yamatoAddress,
-    priceFeedAddress: optionalString(params, "priceFeedAddress"),
-    rpcUrl: optionalString(params, "rpcUrl"),
-    fallbackRpcUrl: optionalString(params, "fallbackRpcUrl"),
-    slice: readSlice(params),
-  };
 }
 
 export function decodeYamatoGetStates(raw: string): YamatoStates {
@@ -340,7 +289,6 @@ export function adaptYamatoStates(states: YamatoStates, options: YamatoAdaptOpti
       redeemableCapJpy,
       redeemableCapEth: capacityEth,
       ...(options.ethPriceUsd != null ? { ethPriceUsd: options.ethPriceUsd } : {}),
-      ...(capacityUsd != null ? { immediateRedeemableUsd: capacityUsd } : {}),
     };
     redemptionCapacityMetadata = {
       ...(capacityUsd != null
@@ -358,6 +306,7 @@ export function adaptYamatoStates(states: YamatoStates, options: YamatoAdaptOpti
   return {
     slices: [
       {
+        sourceKey: "yamato:eth",
         name: slice.name,
         pct: 100,
         risk: slice.risk,
@@ -382,9 +331,15 @@ export function adaptYamatoStates(states: YamatoStates, options: YamatoAdaptOpti
       redemption: {
         ...redemptionCapacityMetadata,
         freshnessKind: "same-run-onchain",
-        routeStatus,
-        routeStatusSource: "onchain",
-        ...(routeStatusReason ? { routeStatusReason } : {}),
+        // `routeStatus` is only claimable from a same-run paused() observation;
+        // a null probe withholds it rather than asserting an unobserved "open".
+        ...(probe
+          ? {
+              routeStatus,
+              routeStatusSource: "onchain",
+              ...(routeStatusReason ? { routeStatusReason } : {}),
+            }
+          : {}),
         holderEligibility: "any-holder",
         settlementDelaySec: 0,
         sourceUrls: [
@@ -403,8 +358,10 @@ export async function fetchYamatoReserves(
   ctx?: AdapterContext,
 ): Promise<AdapterResult> {
   const input = requireOnchainInput(config.inputs.primary, ADAPTER_KEY);
-  const params = readParams(config);
+  const params = parseLiveReserveAdapterParams("yamato", config.params);
   const timeoutMs = 12_000;
+  const plan = await pinnedBlockPlan({ chain: input.chain, signal, ctx, rpcUrl: params.rpcUrl, fallbackRpcUrl: params.fallbackRpcUrl, timeoutMs });
+  ctx = plan.ctx;
   const onchain = makeOnchainCallers(input, {
     signal,
     ctx,
@@ -437,19 +394,19 @@ export async function fetchYamatoReserves(
 
   // Only a non-zero cap needs an external price, so a healthy system with
   // nothing redeemable costs no extra request.
+  const warnings: LiveReserveWarning[] = [];
   let ethPriceUsd: number | undefined;
   if (redemption != null && redemption.redeemableCapJpyRaw > 0n) {
     ethPriceUsd = (
-      await fetchDefiLlamaPrices([{ key: "ETH", chain: "ethereum", address: WETH_ETHEREUM_ADDRESS }], signal, ctx)
+      await fetchDefiLlamaPrices([{ key: "ETH", chain: "ethereum", address: WETH_ETHEREUM_ADDRESS }], signal, ctx, warnings)
     ).get("ETH");
   }
 
-  const warnings: LiveReserveWarning[] = [];
   if (redemption == null) {
     warnings.push(
       reserveInfoWarning(
         "yamato-redeemables-cap-unreadable",
-        `Yamato ${params.yamatoAddress} did not return a matching paused()/priorityRegistry()/getRedeemablesCap() set this run; redemption capacity withheld`,
+        `Yamato ${params.yamatoAddress} did not return a matching paused()/priorityRegistry()/getRedeemablesCap() set this run; redemption route status and capacity withheld`,
       ),
     );
   } else if (redemption.redeemableCapJpyRaw > 0n && ethPriceUsd == null) {
@@ -461,15 +418,17 @@ export async function fetchYamatoReserves(
     );
   }
 
-  return {
-    ...adaptYamatoStates(decodeYamatoGetStates(statesRaw), {
+  const result = adaptYamatoStates(decodeYamatoGetStates(statesRaw), {
       yamatoAddress: params.yamatoAddress,
       priceFeedAddress,
       ethJpyPriceRaw: decodeYamatoEthJpyPrice(priceRaw),
       slice: params.slice,
       ...(redemption ? { redemption } : {}),
       ...(ethPriceUsd != null ? { ethPriceUsd } : {}),
-    }),
+    });
+  return {
+    ...result,
+    metadata: { ...result.metadata, observedBlock: plan.observedBlock },
     ...(warnings.length > 0 ? { warnings } : {}),
   };
 }

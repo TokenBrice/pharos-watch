@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it } from "vitest";
-import { createLatestSchemaSqlite } from "../../../test-helpers/latest-schema-sqlite";
+import { createLatestSchemaSqlite } from "@shared/test-utils/latest-schema-sqlite";
 import { pruneOldDexLiquidityGenerations } from "../persistence";
 import { makeNoopD1 } from "../../../test-helpers/noop-d1";
 

@@ -1,5 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import type { D1Database, D1PreparedStatement, D1Result, KVNamespace } from "@shared/types/cloudflare-runtime";
+import { createHash, createHmac } from "node:crypto";
+import type { D1Database, KVNamespace } from "@shared/types/cloudflare-runtime";
+import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
+import { createSqliteD1 } from "@shared/test-utils/sqlite-d1";
 import { makeKV, type TestKVNamespace } from "./helpers/mock-kv";
 import { makePagesProxyContext } from "./helpers/pages-context";
 import {
@@ -8,12 +11,12 @@ import {
   computeSelectorSnapshotSid,
   createVerifiedSelectorSnapshot,
   validateSelectorSnapshot,
-} from "../../shared/lib/selector/snapshot";
-import { SELECTOR_SNAPSHOT_VERIFICATION_KIND } from "../../shared/lib/selector/types";
+} from "@shared/lib/selector/snapshot";
+import { SELECTOR_SNAPSHOT_VERIFICATION_KIND } from "@shared/lib/selector/types";
 import {
   buildSelectorSnapshotOutput,
   buildSnapshotRecommendation,
-} from "../../shared/lib/selector/__tests__/snapshot-fixture";
+} from "@shared/lib/selector/__tests__/snapshot-fixture";
 
 const { recomputeVerifiedSelectorSnapshotMock } = vi.hoisted(() => ({
   recomputeVerifiedSelectorSnapshotMock: vi.fn(),
@@ -25,57 +28,24 @@ vi.mock("../lib/selector-canonical-snapshot", () => ({
 
 import { onRequest } from "../selector-snapshot/[[path]].ts";
 
-interface TestD1Database extends D1Database {
-  __getQuotaRows(): Map<string, number>;
-  __setRunHandler(handler: (() => void | Promise<void>) | null): void;
-}
+const databases = createLatestSchemaFixtureTracker();
 
-function makeD1(): TestD1Database {
-  const quotaRows = new Map<string, number>();
-  let runHandler: (() => void | Promise<void>) | null = null;
-
-  const result = <T>(changes: number): D1Result<T> => ({
-    success: true,
-    results: [],
-    meta: {
-      duration: 0,
-      size_after: 0,
-      rows_read: 0,
-      rows_written: changes,
-      last_row_id: 0,
-      changed_db: changes > 0,
-      changes,
+function makeD1() {
+  const { sqlite } = databases.open();
+  let runHandler: (() => void) | null = null;
+  const db = createSqliteD1(sqlite, { onRun: () => runHandler?.() });
+  return Object.assign(db, {
+    __getQuotaRows: () => new Map(
+      sqlite.prepare("SELECT quota_date, ip_hash, count FROM selector_snapshot_daily_quota")
+        .all().map((row) => [`${row.quota_date}:${row.ip_hash}`, Number(row.count)] as const),
+    ),
+    __setRunHandler: (handler: () => void) => { runHandler = handler; },
+    __seedQuota: (date: string, hash: string, count: number) => {
+      sqlite.prepare(
+        "INSERT INTO selector_snapshot_daily_quota (quota_date, ip_hash, count, first_seen_at, last_seen_at) VALUES (?, ?, ?, 0, 0)",
+      ).run(date, hash, count);
     },
   });
-
-  const db: Partial<TestD1Database> = {
-    prepare: ((query: string) => {
-      let values: unknown[] = [];
-      const statement: Partial<D1PreparedStatement> = {
-        bind: (...bindValues: unknown[]) => {
-          values = bindValues;
-          return statement as D1PreparedStatement;
-        },
-        run: async <T = Record<string, unknown>>() => {
-          if (runHandler) await runHandler();
-          if (!query.includes("selector_snapshot_daily_quota")) return result<T>(0);
-          const [quotaDate, ipHash, , , maxCount] = values as [string, string, number, number, number];
-          const key = `${quotaDate}:${ipHash}`;
-          const current = quotaRows.get(key) ?? 0;
-          if (current >= maxCount) return result<T>(0);
-          quotaRows.set(key, current + 1);
-          return result<T>(1);
-        },
-      };
-      return statement as D1PreparedStatement;
-    }) as D1Database["prepare"],
-    __getQuotaRows: () => quotaRows,
-    __setRunHandler: (handler) => {
-      runHandler = handler;
-    },
-  };
-
-  return db as TestD1Database;
 }
 
 interface MakeEnvOverrides {
@@ -125,10 +95,33 @@ function postRequest(body: unknown, headers: HeadersInit = POST_HEADERS): Reques
   });
 }
 
+function getRequest(sid: string): Request {
+  return new Request(`https://pharos.watch/selector-snapshot/${sid}`, {
+    headers: { Origin: "https://pharos.watch" },
+  });
+}
+
 function buildVerifiedSnapshot(overrides: Record<string, unknown> = {}) {
   const validation = validateSelectorSnapshot(buildSelectorSnapshotOutput(overrides));
   if (!validation.ok) throw new Error(`Invalid verified snapshot fixture: ${validation.error}`);
   return createVerifiedSelectorSnapshot(validation.snapshot);
+}
+
+function buildProseSnapshot(prose: string) {
+  return buildSelectorSnapshotOutput({
+    recommended: [buildSnapshotRecommendation({ whyText: prose, watchText: prose })],
+    lowerRanked: [{
+      id: "usdt-tether",
+      symbol: "USDT",
+      name: "Tether USD",
+      slot: "A",
+      reasonKey: "weak-liquidity",
+      failedComponent: "liquidity",
+      hypotheticalScore: 70,
+      verdictText: prose,
+      teachingText: prose,
+    }],
+  });
 }
 
 describe("selector-snapshot Pages Function", () => {
@@ -141,6 +134,7 @@ describe("selector-snapshot Pages Function", () => {
   afterEach(() => {
     vi.useRealTimers();
     vi.restoreAllMocks();
+    databases.closeAll();
   });
 
   describe("origin gating", () => {
@@ -303,27 +297,7 @@ describe("selector-snapshot Pages Function", () => {
 
     it("strips caller-authored prose before storing snapshots", async () => {
       const env = makeEnv();
-      const output = buildSelectorSnapshotOutput({
-        recommended: [
-          buildSnapshotRecommendation({
-            whyText: "Attacker-authored recommendation prose.",
-            watchText: "Attacker-authored watch prose.",
-          }),
-        ],
-        lowerRanked: [
-          {
-            id: "usdt-tether",
-            symbol: "USDT",
-            name: "Tether USD",
-            slot: "A",
-            reasonKey: "weak-liquidity",
-            failedComponent: "liquidity",
-            hypotheticalScore: 70,
-            verdictText: "Attacker-authored verdict.",
-            teachingText: "Attacker-authored teaching copy.",
-          },
-        ],
-      });
+      const output = buildProseSnapshot("Attacker-authored prose.");
 
       const response = await onRequest(snapshotContext(postRequest(output), env));
       const { sid } = (await response.json()) as { sid: string };
@@ -349,10 +323,60 @@ describe("selector-snapshot Pages Function", () => {
       const secondBody = (await second.json()) as { sid: string };
 
       expect(secondBody.sid).toBe(firstBody.sid);
+      expect(first.status).toBe(200);
+      expect(second.status).toBe(200);
+      const kv = env.SELECTOR_SNAPSHOTS as TestKVNamespace;
+      expect(kv.__getPutCalls()).toHaveLength(1);
+      expect((await onRequest(snapshotContext(getRequest(firstBody.sid), env))).status).toBe(200);
+      const retained = await onRequest(snapshotContext(postRequest(output), env));
+      expect(retained.status).toBe(200);
+      await expect(retained.json()).resolves.toMatchObject({ sid: firstBody.sid });
+      expect(kv.__getPutCalls()).toHaveLength(2);
+      expect(kv.__getPutCalls()[1]?.options?.expirationTtl).toBe(SELECTOR_SNAPSHOT_TTL_SECONDS);
+    });
+
+    it.each(["corrupt JSON", "wrong SID", "lookup failure"])("overwrites trusted %s with canonical content", async (failure) => {
+      const kv = makeKV();
+      const canonical = buildVerifiedSnapshot();
+      const sid = computeSelectorSnapshotSid(canonical);
+      await kv.put(`s:${sid}`, failure === "corrupt JSON" ? "{" : JSON.stringify(
+        buildVerifiedSnapshot({ datasetHash: "b".repeat(64) }),
+      ), { metadata: { trust: SELECTOR_SNAPSHOT_VERIFICATION_KIND } });
+      if (failure === "lookup failure") kv.__setReadHandler(() => { throw new Error("lookup failed"); });
+      const response = await onRequest(snapshotContext(postRequest({ input: canonical.input }), makeEnv({ SELECTOR_SNAPSHOTS: kv })));
+      expect(response.status).toBe(200);
+      await expect(response.json()).resolves.toMatchObject({ sid });
+      expect(JSON.parse(kv.__getStore().get(`s:${sid}`)!)).toEqual(canonical);
+      expect(kv.__getPutCalls()).toHaveLength(2);
+      expect(kv.__getPutCalls()[1]?.options?.metadata).toEqual({ trust: SELECTOR_SNAPSHOT_VERIFICATION_KIND });
     });
   });
 
   describe("POST failure modes", () => {
+    it.each(["stream error", "invalid UTF-8"])("rejects %s before reservation or storage", async (failure) => {
+      const db = makeD1();
+      const env = makeEnv({ DB: db });
+      const body = new ReadableStream<Uint8Array>({
+        pull(controller) {
+          if (failure === "stream error") controller.error(new Error("body unavailable"));
+          else {
+            controller.enqueue(new Uint8Array([0xc3, 0x28]));
+            controller.close();
+          }
+        },
+      });
+      const response = await onRequest(snapshotContext(new Request("https://pharos.watch/selector-snapshot", {
+        method: "POST",
+        headers: { ...POST_HEADERS, "CF-Connecting-IP": failure === "stream error" ? "203.0.113.210" : "203.0.113.211" },
+        body,
+        duplex: "half",
+      } as RequestInit & { duplex: "half" }), env));
+      expect(response.status).toBe(400);
+      expect(db.__getQuotaRows().size).toBe(0);
+      expect(recomputeVerifiedSelectorSnapshotMock).not.toHaveBeenCalled();
+      expect((env.SELECTOR_SNAPSHOTS as TestKVNamespace).__getPutCalls()).toEqual([]);
+    });
+
     it("returns 400 on malformed JSON", async () => {
       const response = await onRequest(snapshotContext(postRequest("not-json")));
       expect(response.status).toBe(400);
@@ -521,9 +545,7 @@ describe("selector-snapshot Pages Function", () => {
       const { sid } = (await post.json()) as { sid: string };
 
       const get = await onRequest(
-        snapshotContext(new Request(`https://pharos.watch/selector-snapshot/${sid}`, {
-          headers: { Origin: "https://pharos.watch" },
-        }), env),
+        snapshotContext(getRequest(sid), env),
       );
       expect(get.status).toBe(200);
       expect(get.headers.get("Cache-Control")).toBe("private, no-store");
@@ -547,9 +569,7 @@ describe("selector-snapshot Pages Function", () => {
       kv.__getStore().set(`s:${sid}`, JSON.stringify(legacy));
 
       const get = await onRequest(
-        snapshotContext(new Request(`https://pharos.watch/selector-snapshot/${sid}`, {
-          headers: { Origin: "https://pharos.watch" },
-        }), env),
+        snapshotContext(getRequest(sid), env),
       );
       expect(get.status).toBe(200);
       const body = (await get.json()) as Record<string, unknown>;
@@ -558,30 +578,13 @@ describe("selector-snapshot Pages Function", () => {
 
     it("strips prose from legacy stored snapshots before replay", async () => {
       const env = makeEnv();
-      const legacyShape = buildSelectorSnapshotOutput({
-        recommended: [buildSnapshotRecommendation({ whyText: "Legacy prose", watchText: "Legacy watch" })],
-        lowerRanked: [
-          {
-            id: "usdt-tether",
-            symbol: "USDT",
-            name: "Tether USD",
-            slot: "A",
-            reasonKey: "weak-liquidity",
-            failedComponent: "liquidity",
-            hypotheticalScore: 70,
-            verdictText: "Legacy verdict",
-            teachingText: "Legacy teaching",
-          },
-        ],
-      });
+      const legacyShape = buildProseSnapshot("Legacy prose.");
       const sid = computeSelectorSnapshotSid(legacyShape);
       const kv = env.SELECTOR_SNAPSHOTS as TestKVNamespace;
       kv.__getStore().set(`s:${sid}`, JSON.stringify(legacyShape));
 
       const get = await onRequest(
-        snapshotContext(new Request(`https://pharos.watch/selector-snapshot/${sid}`, {
-          headers: { Origin: "https://pharos.watch" },
-        }), env),
+        snapshotContext(getRequest(sid), env),
       );
       expect(get.status).toBe(200);
       const body = (await get.json()) as Record<string, unknown>;
@@ -607,9 +610,7 @@ describe("selector-snapshot Pages Function", () => {
       kv.__getStore().set(`s:${sid}`, JSON.stringify(output));
 
       const get = await onRequest(
-        snapshotContext(new Request(`https://pharos.watch/selector-snapshot/${sid}`, {
-          headers: { Origin: "https://pharos.watch" },
-        }), env),
+        snapshotContext(getRequest(sid), env),
       );
 
       expect(get.status).toBe(200);
@@ -617,6 +618,10 @@ describe("selector-snapshot Pages Function", () => {
       expect(body.provenance).toBe("client-unverified");
       expect(body.snapshotSchemaVersion).toBe(2);
       expect(kv.__getPutCalls().at(-1)?.options?.metadata).toEqual({ extended: true, legacySid: sid });
+      const replay = await onRequest(snapshotContext(getRequest(sid), env));
+      expect(replay.status).toBe(200);
+      await expect(replay.json()).resolves.toEqual(body);
+      expect(kv.__getPutCalls()).toHaveLength(1);
     });
 
     it("downgrades a forged verified payload when KV metadata does not attest it", async () => {
@@ -627,9 +632,7 @@ describe("selector-snapshot Pages Function", () => {
       kv.__getStore().set(`s:${sid}`, JSON.stringify(forged));
 
       const response = await onRequest(
-        snapshotContext(new Request(`https://pharos.watch/selector-snapshot/${sid}`, {
-          headers: { Origin: "https://pharos.watch" },
-        }), env),
+        snapshotContext(getRequest(sid), env),
       );
 
       expect(response.status).toBe(200);
@@ -654,9 +657,7 @@ describe("selector-snapshot Pages Function", () => {
       });
 
       const getOnce = await onRequest(
-        snapshotContext(new Request(`https://pharos.watch/selector-snapshot/${sid}`, {
-          headers: { Origin: "https://pharos.watch" },
-        }), env),
+        snapshotContext(getRequest(sid), env),
       );
       expect(getOnce.status).toBe(200);
       expect(kv.__getPutCalls()).toHaveLength(2);
@@ -669,9 +670,7 @@ describe("selector-snapshot Pages Function", () => {
       });
 
       const getTwice = await onRequest(
-        snapshotContext(new Request(`https://pharos.watch/selector-snapshot/${sid}`, {
-          headers: { Origin: "https://pharos.watch" },
-        }), env),
+        snapshotContext(getRequest(sid), env),
       );
       expect(getTwice.status).toBe(200);
       expect(kv.__getPutCalls()).toHaveLength(2);
@@ -687,9 +686,7 @@ describe("selector-snapshot Pages Function", () => {
       });
 
       const get = await onRequest(
-        snapshotContext(new Request(`https://pharos.watch/selector-snapshot/${sid}`, {
-          headers: { Origin: "https://pharos.watch" },
-        }), env),
+        snapshotContext(getRequest(sid), env),
       );
 
       expect(get.status).toBe(503);
@@ -699,6 +696,9 @@ describe("selector-snapshot Pages Function", () => {
 
   describe("POST rate limiting", () => {
     it("returns 429 after exceeding the per-IP write budget", async () => {
+      vi.useFakeTimers();
+      const start = new Date("2026-06-20T12:00:00Z").getTime();
+      vi.setSystemTime(start);
       const env = makeEnv();
       const output = buildSelectorSnapshotOutput();
       const limitedHeaders = {
@@ -706,16 +706,18 @@ describe("selector-snapshot Pages Function", () => {
         "CF-Connecting-IP": "203.0.113.77",
       };
 
-      let lastStatus = 0;
       for (let i = 0; i < 10; i++) {
         const response = await onRequest(snapshotContext(postRequest(output, limitedHeaders), env));
-        lastStatus = response.status;
+        expect(response.status).toBe(200);
       }
-      expect(lastStatus).toBe(200);
 
       const throttled = await onRequest(snapshotContext(postRequest(output, limitedHeaders), env));
       expect(throttled.status).toBe(429);
       expect(throttled.headers.get("Retry-After")).toBe("60");
+      vi.setSystemTime(start + 59_999);
+      expect((await onRequest(snapshotContext(postRequest(output, limitedHeaders), env))).status).toBe(429);
+      vi.setSystemTime(start + 60_000);
+      expect((await onRequest(snapshotContext(postRequest(output, limitedHeaders), env))).status).toBe(200);
 
       const otherIp = await onRequest(
         snapshotContext(postRequest(output, { ...POST_HEADERS, "CF-Connecting-IP": "203.0.113.78" }), env),
@@ -724,97 +726,93 @@ describe("selector-snapshot Pages Function", () => {
     });
   });
 
-  it("persists a per-IP daily quota across isolate rate-limit windows", async () => {
+  it("persists the daily boundary across minute windows and resets at UTC midnight", async () => {
     vi.useFakeTimers();
-    vi.setSystemTime(new Date("2026-06-19T00:00:00Z"));
     const db = makeD1();
     const env = makeEnv({ DB: db });
-    const output = buildSelectorSnapshotOutput();
-    const headers = {
-      ...POST_HEADERS,
-      "CF-Connecting-IP": "203.0.113.90",
-    };
-
-    for (let i = 0; i < 100; i++) {
-      vi.setSystemTime(new Date(Date.UTC(2026, 5, 19, 0, i + 1, 0)));
-      const response = await onRequest(
-        snapshotContext(postRequest({ ...output, datasetHash: i.toString(16).padStart(64, "0") }, headers), env),
-      );
-      expect(response.status).toBe(200);
-    }
-
-    vi.setSystemTime(new Date(Date.UTC(2026, 5, 19, 1, 50, 0)));
-    const throttled = await onRequest(
-      snapshotContext(postRequest({ ...output, datasetHash: "f".repeat(64) }, headers), env),
-    );
+    const ip = "203.0.113.90";
+    const hash = createHmac("sha256", env.SELECTOR_SNAPSHOT_IP_HASH_SECRET!).update(ip).digest("hex").slice(0, 32);
+    db.__seedQuota("2026-06-19", hash, 98);
+    const headers = { ...POST_HEADERS, "CF-Connecting-IP": ip };
+    const send = () => onRequest(snapshotContext(postRequest(buildSelectorSnapshotOutput(), headers), env));
+    vi.setSystemTime(new Date("2026-06-19T23:56:00Z"));
+    expect((await send()).status).toBe(200);
+    expect(db.__getQuotaRows().get(`2026-06-19:${hash}`)).toBe(99);
+    vi.setSystemTime(new Date("2026-06-19T23:57:00Z"));
+    expect((await send()).status).toBe(200);
+    expect(db.__getQuotaRows().get(`2026-06-19:${hash}`)).toBe(100);
+    vi.setSystemTime(new Date("2026-06-19T23:58:00Z"));
+    const throttled = await send();
     expect(throttled.status).toBe(429);
     expect(throttled.headers.get("Retry-After")).toBe("86400");
-    expect([...(env.DB as TestD1Database).__getQuotaRows().values()]).toEqual([100]);
+    expect(db.__getQuotaRows().get(`2026-06-19:${hash}`)).toBe(100);
+    vi.setSystemTime(new Date("2026-06-20T00:00:00Z"));
+    expect((await send()).status).toBe(200);
+    // The quota lookup has no ORDER BY, so compare key/value pairs independent of row order.
+    expect(db.__getQuotaRows()).toEqual(new Map([
+      [`2026-06-19:${hash}`, 100],
+      [`2026-06-20:${hash}`, 1],
+    ]));
   });
 
-  it("stores only a peppered HMAC-derived IP quota key", async () => {
+  it("uses deterministic, IP-separated and configured-pepper HMAC quota identities", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-06-21T00:00:00Z"));
     const db = makeD1();
-    const env = makeEnv({ DB: db, SELECTOR_SNAPSHOT_IP_HASH_SECRET: "pepper-one-which-is-long-enough-for-tests" });
-    const ip = "203.0.113.201";
-    const response = await onRequest(
-      snapshotContext(postRequest(buildSelectorSnapshotOutput(), {
-        ...POST_HEADERS,
-        "CF-Connecting-IP": ip,
-      }), env),
-    );
-    expect(response.status).toBe(200);
-
-    const [storedKey] = [...db.__getQuotaRows().keys()];
-    const unsalted = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(ip));
-    const unsaltedPrefix = Array.from(new Uint8Array(unsalted).slice(0, 16), (byte) =>
-      byte.toString(16).padStart(2, "0"),
-    ).join("");
-    expect(storedKey).not.toContain(ip);
-    expect(storedKey).not.toContain(unsaltedPrefix);
-    expect(storedKey).toMatch(/^\d{4}-\d{2}-\d{2}:[0-9a-f]{32}$/);
+    const firstPepper = "pepper-one-which-is-long-enough-for-tests";
+    const secondPepper = "pepper-two-which-is-long-enough-for-tests";
+    const firstIp = "203.0.113.201";
+    const secondIp = "203.0.113.202";
+    for (const [ip, pepper] of [[firstIp, firstPepper], [secondIp, firstPepper], [firstIp, secondPepper], [firstIp, firstPepper]]) {
+      const env = makeEnv({ DB: db, SELECTOR_SNAPSHOT_IP_HASH_SECRET: pepper });
+      const response = await onRequest(snapshotContext(postRequest(buildSelectorSnapshotOutput(), {
+        ...POST_HEADERS, "CF-Connecting-IP": ip,
+      }), env));
+      expect(response.status).toBe(200);
+    }
+    const key = (ip: string, pepper: string) =>
+      `2026-06-21:${createHmac("sha256", pepper).update(ip).digest("hex").slice(0, 32)}`;
+    expect(db.__getQuotaRows()).toEqual(new Map([
+      [key(firstIp, firstPepper), 2],
+      [key(secondIp, firstPepper), 1],
+      [key(firstIp, secondPepper), 1],
+    ]));
+    for (const storedKey of db.__getQuotaRows().keys()) {
+      expect(storedKey).not.toContain(firstIp);
+      expect(storedKey).not.toContain(secondIp);
+      expect(storedKey).not.toContain(createHash("sha256").update(firstIp).digest("hex").slice(0, 32));
+      expect(storedKey).toMatch(/^\d{4}-\d{2}-\d{2}:[0-9a-f]{32}$/);
+    }
   });
 
   describe("GET failure modes", () => {
     it("returns 404 for an unknown sid", async () => {
       const env = makeEnv();
       const response = await onRequest(
-        snapshotContext(new Request("https://pharos.watch/selector-snapshot/00112233445566778899aabbccddeeff", {
-          headers: { Origin: "https://pharos.watch" },
-        }), env),
+        snapshotContext(getRequest("00112233445566778899aabbccddeeff"), env),
       );
       expect(response.status).toBe(404);
     });
 
     it("returns 404 when the sid is not 32 hex chars", async () => {
       const response = await onRequest(
-        snapshotContext(new Request("https://pharos.watch/selector-snapshot/not-a-sid", {
-          headers: { Origin: "https://pharos.watch" },
-        })),
+        snapshotContext(getRequest("not-a-sid")),
       );
       expect(response.status).toBe(404);
     });
 
-    it("returns 502 when the stored KV value is corrupt JSON", async () => {
+    it.each([
+      ["corrupt JSON", "{not valid json}"],
+      ["wrong shape", JSON.stringify({ wrong: "shape" })],
+    ])("returns 502 for stored %s", async (_label, stored) => {
       const kv = makeKV();
-      kv.__setReadHandler(() => "{not valid json}");
+      kv.__setReadHandler(() => stored);
       const response = await onRequest(
-        snapshotContext(new Request("https://pharos.watch/selector-snapshot/00112233445566778899aabbccddeeff", {
-          headers: { Origin: "https://pharos.watch" },
-        }), makeEnv({ SELECTOR_SNAPSHOTS: kv })),
+        snapshotContext(getRequest("00112233445566778899aabbccddeeff"), makeEnv({ SELECTOR_SNAPSHOTS: kv })),
       );
       expect(response.status).toBe(502);
     });
 
-    it("returns 502 when the stored KV value is valid JSON but the wrong shape", async () => {
-      const kv = makeKV();
-      kv.__setReadHandler(() => JSON.stringify({ wrong: "shape" }));
-      const response = await onRequest(
-        snapshotContext(new Request("https://pharos.watch/selector-snapshot/00112233445566778899aabbccddeeff", {
-          headers: { Origin: "https://pharos.watch" },
-        }), makeEnv({ SELECTOR_SNAPSHOTS: kv })),
-      );
-      expect(response.status).toBe(502);
-    });
 
     it("returns 502 when the stored KV payload does not match the requested sid", async () => {
       const env = makeEnv();
@@ -824,9 +822,7 @@ describe("selector-snapshot Pages Function", () => {
       kv.__getStore().set(`s:${sid}`, JSON.stringify(buildVerifiedSnapshot({ datasetHash: "b".repeat(64) })));
 
       const response = await onRequest(
-        snapshotContext(new Request(`https://pharos.watch/selector-snapshot/${sid}`, {
-          headers: { Origin: "https://pharos.watch" },
-        }), env),
+        snapshotContext(getRequest(sid), env),
       );
       expect(response.status).toBe(502);
     });
@@ -843,9 +839,7 @@ describe("selector-snapshot Pages Function", () => {
       kv.__getStore().set(`s:${sid}`, JSON.stringify(stored));
 
       const response = await onRequest(
-        snapshotContext(new Request(`https://pharos.watch/selector-snapshot/${sid}`, {
-          headers: { Origin: "https://pharos.watch" },
-        }), env),
+        snapshotContext(getRequest(sid), env),
       );
       expect(response.status).toBe(502);
     });
@@ -856,18 +850,14 @@ describe("selector-snapshot Pages Function", () => {
         throw new Error("kv read failed");
       });
       const response = await onRequest(
-        snapshotContext(new Request("https://pharos.watch/selector-snapshot/00112233445566778899aabbccddeeff", {
-          headers: { Origin: "https://pharos.watch" },
-        }), makeEnv({ SELECTOR_SNAPSHOTS: kv })),
+        snapshotContext(getRequest("00112233445566778899aabbccddeeff"), makeEnv({ SELECTOR_SNAPSHOTS: kv })),
       );
       expect(response.status).toBe(503);
     });
 
     it("returns 500 when the KV binding is missing on GET", async () => {
       const response = await onRequest(
-        snapshotContext(new Request("https://pharos.watch/selector-snapshot/00112233445566778899aabbccddeeff", {
-          headers: { Origin: "https://pharos.watch" },
-        }), makeEnv({ SELECTOR_SNAPSHOTS: undefined })),
+        snapshotContext(getRequest("00112233445566778899aabbccddeeff"), makeEnv({ SELECTOR_SNAPSHOTS: undefined })),
       );
       expect(response.status).toBe(500);
     });

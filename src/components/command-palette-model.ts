@@ -13,18 +13,32 @@ import {
 import { NAV_ITEMS } from "@/lib/nav-config";
 import type { NavItem } from "@/lib/nav-config";
 import { COMMAND_PALETTE_STABLECOINS } from "@/lib/command-palette-search-data";
+import { CASE_STUDY_CLIENT_LIST } from "@/lib/case-study-client-index";
+import { GLOSSARY_ENTRIES } from "@/lib/glossary-content";
+import { BLOG_POSTS } from "@/data/blog";
 import { buildStablecoinUrl } from "@shared/lib/urls";
 import { CHAIN_META, getActiveChainIds } from "@shared/lib/chains";
+import { CLIENT_TRACKED_META_BY_ID, CLIENT_TRACKED_STABLECOINS } from "@shared/lib/stablecoins/client-registry";
+import { hasStaticYieldWorkbench } from "@shared/lib/yield-auto-lending";
 import { PEG_TAXONOMY_PAGES } from "@/lib/peg-taxonomy";
+import { buildStaticComparisonSlug, STATIC_COMPARE_PAIRS } from "@/lib/compare-links";
+import { PUBLIC_DOCS } from "@shared/lib/public-docs";
 import { MECHANISM_ARCHETYPE_VALUES } from "@shared/types/stablecoin-taxonomy";
 import { MECHANISM_ARCHETYPE_LABELS, MECHANISM_ARCHETYPE_ONE_LINERS } from "@shared/lib/classification";
 import depegEventSearchData from "@/generated/depeg-event-search-data.json";
 import {
   fuzzyMatch,
+  isBoundedTypoMatch,
   isExactStablecoinSymbolMatch,
+  PAGE_LEAD_MIN_SCORE,
+  pageLeadMatchScore,
   rankCommandPaletteResults,
+  scoreKeywordTokenMatch,
+  scorePageSearchMatch,
   scoreStablecoinSearchMatch,
   stablecoinProminenceBonus,
+  TYPO_COIN_MATCH_SCORE,
+  TYPO_PAGE_MATCH_SCORE,
 } from "./command-palette-scoring";
 import type {
   CommandPaletteActionDefinition,
@@ -38,7 +52,7 @@ import type {
 
 // Re-export the split-out types and scoring helpers retained on this module's
 // public surface. [audit Q-130]
-export type { CommandPaletteSection, CommandPaletteActionId, CommandPaletteActionIcon, CommandPaletteActionDefinition, CommandPaletteGroup, CommandPaletteSectionedItem, CommandPaletteHistoryItem, CommandPalettePegStatus, CommandPaletteStablecoinHealth, CommandPaletteStablecoinLiveMetadata, CommandPaletteResultDescriptor } from "./command-palette-types";
+export type { CommandPaletteSection, CommandPaletteActionId, CommandPaletteActionIcon, CommandPaletteActionDefinition, CommandPaletteGroup, CommandPaletteSectionedItem, CommandPaletteHistoryItem, CommandPalettePegStatus, CommandPaletteStablecoinHealth, CommandPaletteStablecoinLiveMetadata, CommandPaletteResultDescriptor, CommandPaletteResultKind } from "./command-palette-types";
 export {
   fuzzyMatch,
   rankCommandPaletteResults,
@@ -142,8 +156,13 @@ const COMMAND_PALETTE_SECTION_ORDER: readonly CommandPaletteSection[] = [
   "Pages",
   "Chains",
   "Peg currencies",
+  "Comparisons",
+  "Case studies",
+  "Glossary",
   "Mechanism archetypes",
   "Recent depegs",
+  "Docs",
+  "Blog",
   "Actions",
   "Try a command",
 ] as const;
@@ -180,6 +199,36 @@ const PALETTE_MECHANISMS: readonly PaletteMechanism[] = MECHANISM_ARCHETYPE_VALU
   label: MECHANISM_ARCHETYPE_LABELS[id],
   oneLiner: MECHANISM_ARCHETYPE_ONE_LINERS[id],
 }));
+
+interface PaletteComparison {
+  id: string;
+  label: string;
+  /** Lowercased symbols for substring containment checks. */
+  leftSymbolLower: string;
+  rightSymbolLower: string;
+  href: string;
+}
+
+const PALETTE_COMPARISONS: readonly PaletteComparison[] = STATIC_COMPARE_PAIRS.map(([leftId, rightId]) => {
+  const leftSymbol = CLIENT_TRACKED_META_BY_ID.get(leftId)?.symbol ?? leftId;
+  const rightSymbol = CLIENT_TRACKED_META_BY_ID.get(rightId)?.symbol ?? rightId;
+  return {
+    id: `${leftId}-vs-${rightId}`,
+    label: `${leftSymbol} vs ${rightSymbol}`,
+    leftSymbolLower: leftSymbol.toLowerCase(),
+    rightSymbolLower: rightSymbol.toLowerCase(),
+    href: `/compare/${buildStaticComparisonSlug(leftId, rightId)}/`,
+  };
+});
+
+/**
+ * Coins whose `/stablecoin/<id>/yield/` route actually exists in the static
+ * export (mirrors the yield page's `generateStaticParams` gate). Yield rows
+ * are only emitted for these ids so the palette never links a 404.
+ */
+const YIELD_WORKBENCH_IDS: ReadonlySet<string> = new Set(
+  CLIENT_TRACKED_STABLECOINS.filter(hasStaticYieldWorkbench).map((coin) => coin.id),
+);
 
 const VERB_HINTS: ReadonlyArray<{ id: string; label: string; prefill: string }> = [
   { id: "verb-hint-compare", label: "compare USDT USDC USDe", prefill: "compare USDT USDC USDe" },
@@ -308,11 +357,34 @@ export function buildCommandPaletteActionDefinitions(
   return actions;
 }
 
+/**
+ * Sections strong enough to float above the Stablecoins block. Peg currency
+ * pages lead above Pages when both qualify: "euro" should open the EUR peg
+ * page, not the broader Non-USD hub that also keyword-matches.
+ */
+const LEAD_PROMOTABLE_SECTIONS: readonly CommandPaletteSection[] = ["Peg currencies", "Pages"];
+
+function resolveSectionRenderOrder(leadSections: ReadonlySet<CommandPaletteSection>): readonly CommandPaletteSection[] {
+  const promoted = LEAD_PROMOTABLE_SECTIONS.filter((section) => leadSections.has(section));
+  if (promoted.length === 0) return COMMAND_PALETTE_SECTION_ORDER;
+  const order: CommandPaletteSection[] = [];
+  for (const section of COMMAND_PALETTE_SECTION_ORDER) {
+    if (section === "Stablecoins" || promoted.includes(section)) continue;
+    order.push(section);
+    if (section === "Popular") order.push(...promoted, "Stablecoins");
+  }
+  return order;
+}
+
 export function groupCommandPaletteResults<TItem extends CommandPaletteSectionedItem>(
   results: TItem[],
 ): CommandPaletteGroup<TItem>[] {
+  const leadSections = new Set<CommandPaletteSection>();
+  for (const result of results) {
+    if (result.lead) leadSections.add(result.section);
+  }
   const groups: CommandPaletteGroup<TItem>[] = [];
-  for (const section of COMMAND_PALETTE_SECTION_ORDER) {
+  for (const section of resolveSectionRenderOrder(leadSections)) {
     const items = results.filter((result) => result.section === section);
     if (items.length > 0) {
       groups.push({ section, items });
@@ -352,6 +424,13 @@ export function buildCommandPaletteResultDescriptors({
   }
 
   if (q) {
+    // "yield" / "apy" are intent tokens, not content: strip them so "usde
+    // yield" still finds the coin and can attach its yield deep-link row.
+    const queryTokens = q.toLowerCase().split(/\s+/).filter(Boolean);
+    const contentTokens = queryTokens.filter((token) => token !== "yield" && token !== "apy");
+    const hasYieldIntent = contentTokens.length < queryTokens.length;
+    const searchQuery = hasYieldIntent && contentTokens.length > 0 ? contentTokens.join(" ") : q;
+
     const matched: Array<{
       coin: (typeof COMMAND_PALETTE_STABLECOINS)[number];
       score: number;
@@ -361,16 +440,62 @@ export function buildCommandPaletteResultDescriptors({
 
     for (const [index, coin] of COMMAND_PALETTE_STABLECOINS.entries()) {
       const status = coin[3];
-      const base = scoreStablecoinSearchMatch(q, coin);
+      const base = scoreStablecoinSearchMatch(searchQuery, coin);
       if (base <= 0) continue;
       matched.push({
         coin,
         score: base + stablecoinProminenceBonus(coin[0], index, stablecoinLiveMetadata),
         status: status ?? "active",
-        exactSymbol: isExactStablecoinSymbolMatch(q, coin),
+        exactSymbol: isExactStablecoinSymbolMatch(searchQuery, coin),
       });
     }
 
+    const pageMatches: Array<{ page: NavItem; score: number; leadScore: number }> = [];
+    for (const page of COMMAND_PALETTE_PAGES) {
+      const score = scorePageSearchMatch(searchQuery, page);
+      if (score > 0) {
+        pageMatches.push({ page, score, leadScore: pageLeadMatchScore(searchQuery, page) });
+      }
+    }
+
+    // Bounded typo pass: only when strict matching came up thin, look for
+    // single-edit coin symbols and page labels/keyword tokens ("usdcc" → USDC).
+    // Typo hits score at the ordinary `contains` tier, never above real matches.
+    if (matched.length + pageMatches.length < 3) {
+      const matchedCoinIds = new Set(matched.map((entry) => entry.coin[0]));
+      for (const [index, coin] of COMMAND_PALETTE_STABLECOINS.entries()) {
+        if (matchedCoinIds.has(coin[0])) continue;
+        if (!isBoundedTypoMatch(searchQuery, coin[2])) continue;
+        matched.push({
+          coin,
+          score: TYPO_COIN_MATCH_SCORE + stablecoinProminenceBonus(coin[0], index, stablecoinLiveMetadata),
+          status: coin[3] ?? "active",
+          exactSymbol: false,
+        });
+      }
+      const matchedPageHrefs = new Set(pageMatches.map((entry) => entry.page.href));
+      for (const page of COMMAND_PALETTE_PAGES) {
+        if (matchedPageHrefs.has(page.href)) continue;
+        const labelWords = page.label.toLowerCase().split(/\s+/);
+        const keywordTokens = page.keywords?.toLowerCase().split(/\s+/) ?? [];
+        const typoHit =
+          isBoundedTypoMatch(searchQuery, page.label)
+          || labelWords.some((word) => isBoundedTypoMatch(searchQuery, word))
+          || keywordTokens.some((token) => isBoundedTypoMatch(searchQuery, token));
+        if (typoHit) {
+          pageMatches.push({ page, score: TYPO_PAGE_MATCH_SCORE, leadScore: 0 });
+        }
+      }
+    }
+
+    // An exact coin-symbol match always outranks any page/peg lead, so ticker
+    // lookups ("usdc", "eurc") keep the coin as the first result.
+    const hasExactSymbolCoin = matched.some((entry) => entry.exactSymbol);
+    const pagesLead = !hasExactSymbolCoin;
+
+    pageMatches.sort((a, b) => b.score - a.score);
+
+    let yieldRowsEmitted = 0;
     for (const { coin } of rankCommandPaletteResults(matched)) {
       const [id, name, symbol, status, frozenAt] = coin;
       const href = buildStablecoinUrl(id);
@@ -387,39 +512,49 @@ export function buildCommandPaletteResultDescriptors({
         href,
         history: { id, type: "stablecoin", label: name, sublabel: symbol, href },
       });
-    }
-
-    for (const page of COMMAND_PALETTE_PAGES) {
-      if (
-        fuzzyMatch(q, page.label) ||
-        (page.description && fuzzyMatch(q, page.description)) ||
-        (page.keywords && fuzzyMatch(q, page.keywords))
-      ) {
+      if (hasYieldIntent && yieldRowsEmitted < 3 && YIELD_WORKBENCH_IDS.has(id)) {
+        yieldRowsEmitted += 1;
+        const yieldHref = buildStablecoinUrl(id, "yield/");
         items.push({
-          id: `page-${page.href}`,
-          label: page.label,
-          sublabel: page.description,
-          section: "Pages",
-          kind: "page",
-          href: page.href,
-          external: page.external,
-          pageIcon: page.icon,
-          history: {
-            id: page.href,
-            type: "page",
-            label: page.label,
-            sublabel: page.description,
-            href: page.href,
-          },
+          id: `coin-yield-${id}`,
+          label: `${name} · Yield`,
+          sublabel: `${symbol} · per-source APY history and warnings`,
+          section: "Stablecoins",
+          kind: "stablecoin-yield",
+          logoId: id,
+          ...projectStablecoinLiveMetadata(id, stablecoinLiveMetadata),
+          href: yieldHref,
+          history: { id: `coin-yield-${id}`, type: "page", label: name, sublabel: "Yield", href: yieldHref },
         });
       }
+    }
+
+    for (const { page, leadScore } of pageMatches) {
+      items.push({
+        id: `page-${page.href}`,
+        label: page.label,
+        sublabel: page.description,
+        section: "Pages",
+        kind: "page",
+        lead: pagesLead && leadScore >= PAGE_LEAD_MIN_SCORE,
+        href: page.href,
+        external: page.external,
+        pageIcon: page.icon,
+        history: {
+          id: page.href,
+          type: "page",
+          label: page.label,
+          sublabel: page.description,
+          href: page.href,
+        },
+      });
     }
 
     // Chains
     const chainMatches: PaletteChain[] = [];
     for (const chain of PALETTE_CHAINS) {
       if (chainMatches.length >= NEW_SECTION_RESULT_CAP) break;
-      if (fuzzyMatch(q, chain.name) || fuzzyMatch(q, chain.id)) {
+      if (fuzzyMatch(searchQuery, chain.name) || fuzzyMatch(searchQuery, chain.id)) {
         chainMatches.push(chain);
       }
     }
@@ -445,25 +580,33 @@ export function buildCommandPaletteResultDescriptors({
       });
     }
 
-    // Peg currencies
+    // Peg currencies. "euro" should open the EUR peg page above any coin whose
+    // name merely contains the word, so an exact/word-prefix peg-name hit
+    // leads (unless a coin matched its exact symbol).
     const pegMatches: (typeof PEG_TAXONOMY_PAGES)[number][] = [];
     for (const peg of PEG_TAXONOMY_PAGES) {
       if (pegMatches.length >= NEW_SECTION_RESULT_CAP) break;
       if (
-        fuzzyMatch(q, peg.shortLabel) ||
-        fuzzyMatch(q, peg.value) ||
-        fuzzyMatch(q, peg.slug)
+        fuzzyMatch(searchQuery, peg.shortLabel) ||
+        fuzzyMatch(searchQuery, peg.value) ||
+        fuzzyMatch(searchQuery, peg.slug)
       ) {
         pegMatches.push(peg);
       }
     }
     for (const peg of pegMatches) {
+      const lead = !hasExactSymbolCoin && [peg.shortLabel, peg.value, peg.slug].some((field) => {
+        const target = field.toLowerCase();
+        const queryLower = searchQuery.toLowerCase();
+        return target === queryLower || target.split(/\s+/).some((word) => word.startsWith(queryLower));
+      });
       items.push({
         id: `peg-${peg.slug}`,
         label: peg.title,
         sublabel: `${peg.coins.length} tracked stablecoin${peg.coins.length === 1 ? "" : "s"}`,
         section: "Peg currencies",
         kind: "peg",
+        lead,
         href: peg.href,
         history: {
           id: `peg-${peg.slug}`,
@@ -475,14 +618,106 @@ export function buildCommandPaletteResultDescriptors({
       });
     }
 
+    // Static comparison pages: match when the query names both symbols in any
+    // order, or an explicit "vs"/"versus" plus one side.
+    const queryLower = searchQuery.toLowerCase();
+    const hasVsToken = queryTokens.includes("vs") || queryTokens.includes("versus") || queryTokens.includes("vs.");
+    const comparisonMatches: PaletteComparison[] = [];
+    for (const pair of PALETTE_COMPARISONS) {
+      if (comparisonMatches.length >= NEW_SECTION_RESULT_CAP) break;
+      const leftHit = queryLower.includes(pair.leftSymbolLower);
+      const rightHit = queryLower.includes(pair.rightSymbolLower);
+      if ((leftHit && rightHit) || (hasVsToken && (leftHit || rightHit))) {
+        comparisonMatches.push(pair);
+      }
+    }
+    for (const pair of comparisonMatches) {
+      items.push({
+        id: `comparison-${pair.id}`,
+        label: pair.label,
+        sublabel: "Static comparison page",
+        section: "Comparisons",
+        kind: "comparison",
+        href: pair.href,
+        history: {
+          id: `comparison-${pair.id}`,
+          type: "page",
+          label: pair.label,
+          sublabel: "Comparison",
+          href: pair.href,
+        },
+      });
+    }
+
+    // Case studies (generated client index: title, slug words, symbols, keywords)
+    const caseStudyMatches: (typeof CASE_STUDY_CLIENT_LIST)[number][] = [];
+    for (const study of CASE_STUDY_CLIENT_LIST) {
+      if (caseStudyMatches.length >= NEW_SECTION_RESULT_CAP) break;
+      const titleScore = scorePageSearchMatch(searchQuery, { label: study.title, keywords: study.keywords });
+      const symbolScore = study.coinSymbols.reduce(
+        (best, symbol) => Math.max(best, scoreKeywordTokenMatch(searchQuery, symbol)),
+        0,
+      );
+      if (titleScore + symbolScore > 0) {
+        caseStudyMatches.push(study);
+      }
+    }
+    for (const study of caseStudyMatches) {
+      const href = `/learn/case-studies/${study.slug}/`;
+      items.push({
+        id: `case-study-${study.slug}`,
+        label: study.title,
+        sublabel: `Case study${study.year ? ` · ${study.year}` : ""}`,
+        section: "Case studies",
+        kind: "case-study",
+        href,
+        history: {
+          id: `case-study-${study.slug}`,
+          type: "page",
+          label: study.title,
+          sublabel: "Case study",
+          href,
+        },
+      });
+    }
+
+    // Glossary terms, deep-linked to the entry anchor on /learn/glossary/
+    const glossaryMatches: (typeof GLOSSARY_ENTRIES)[number][] = [];
+    for (const entry of GLOSSARY_ENTRIES) {
+      if (glossaryMatches.length >= NEW_SECTION_RESULT_CAP) break;
+      // Term exact/prefix/word-prefix via the label tiers; definition hits via
+      // the weak description tiers.
+      if (scorePageSearchMatch(searchQuery, { label: entry.term, description: entry.definition }) > 0) {
+        glossaryMatches.push(entry);
+      }
+    }
+    for (const entry of glossaryMatches) {
+      const href = `/learn/glossary/#${entry.id}`;
+      items.push({
+        id: `glossary-${entry.id}`,
+        label: entry.term,
+        sublabel: "Glossary term",
+        section: "Glossary",
+        kind: "glossary-term",
+        href,
+        history: {
+          id: `glossary-${entry.id}`,
+          type: "page",
+          label: entry.term,
+          sublabel: "Glossary term",
+          href,
+        },
+      });
+    }
+
     // Mechanism archetypes
     const mechMatches: PaletteMechanism[] = [];
     for (const mech of PALETTE_MECHANISMS) {
       if (mechMatches.length >= NEW_SECTION_RESULT_CAP) break;
       if (
-        fuzzyMatch(q, mech.label) ||
-        fuzzyMatch(q, mech.id) ||
-        fuzzyMatch(q, mech.oneLiner)
+        fuzzyMatch(searchQuery, mech.label) ||
+        fuzzyMatch(searchQuery, mech.id) ||
+        fuzzyMatch(searchQuery, mech.oneLiner)
       ) {
         mechMatches.push(mech);
       }
@@ -512,9 +747,9 @@ export function buildCommandPaletteResultDescriptors({
       for (const event of depegEventSearchData) {
         if (depegMatches.length >= NEW_SECTION_RESULT_CAP) break;
         if (
-          fuzzyMatch(q, event.symbol) ||
-          fuzzyMatch(q, event.stablecoinId) ||
-          fuzzyMatch(q, event.slug)
+          fuzzyMatch(searchQuery, event.symbol) ||
+          fuzzyMatch(searchQuery, event.stablecoinId) ||
+          fuzzyMatch(searchQuery, event.slug)
         ) {
           depegMatches.push(event);
         }
@@ -544,6 +779,60 @@ export function buildCommandPaletteResultDescriptors({
           },
         });
       }
+    }
+
+    // Public docs (title + summary; the markdown bodies stay out of the bundle)
+    const docMatches: (typeof PUBLIC_DOCS)[number][] = [];
+    for (const doc of PUBLIC_DOCS) {
+      if (docMatches.length >= NEW_SECTION_RESULT_CAP) break;
+      if (scorePageSearchMatch(searchQuery, { label: doc.title, description: doc.summary }) > 0) {
+        docMatches.push(doc);
+      }
+    }
+    for (const doc of docMatches) {
+      const href = `/docs/${doc.slug}/`;
+      items.push({
+        id: `doc-${doc.slug}`,
+        label: doc.title,
+        sublabel: doc.summary,
+        section: "Docs",
+        kind: "doc",
+        href,
+        history: {
+          id: `doc-${doc.slug}`,
+          type: "page",
+          label: doc.title,
+          sublabel: "Docs",
+          href,
+        },
+      });
+    }
+
+    // Blog posts (metadata-only registry: title, description, slug)
+    const blogMatches: (typeof BLOG_POSTS)[number][] = [];
+    for (const post of BLOG_POSTS) {
+      if (blogMatches.length >= NEW_SECTION_RESULT_CAP) break;
+      if (scorePageSearchMatch(searchQuery, { label: post.title, description: post.description }) > 0) {
+        blogMatches.push(post);
+      }
+    }
+    for (const post of blogMatches) {
+      const href = `/blog/${post.slug}/`;
+      items.push({
+        id: `blog-${post.slug}`,
+        label: post.title,
+        sublabel: post.description,
+        section: "Blog",
+        kind: "blog-post",
+        href,
+        history: {
+          id: `blog-${post.slug}`,
+          type: "page",
+          label: post.title,
+          sublabel: "Blog",
+          href,
+        },
+      });
     }
   }
 

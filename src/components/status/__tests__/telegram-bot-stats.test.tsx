@@ -5,8 +5,8 @@ import { describe, expect, it } from "vitest";
 import type { CronStatus, StatusResponse } from "@shared/types";
 import { TELEGRAM_ALERT_TYPES } from "@shared/types/status";
 import { buildCommsWorkbenchModel } from "@/lib/comms-workbench-model";
-import { makeCompleteTelegramBotStatus } from "@/test-utils/status-fixtures";
-import { PER_ALERT_METRICS, TelegramBotStats } from "../telegram-bot-stats";
+import { makeCompleteTelegramBotStatus, makeDispatchMetadata } from "@/test-utils/status-fixtures";
+import { TelegramBotStats } from "../telegram-bot-stats";
 
 const NOW_SECONDS = 1_771_858_200;
 const LIFECYCLE_SNAPSHOT_AT = NOW_SECONDS - 1_800;
@@ -66,28 +66,8 @@ function telegramBot(): NonNullable<StatusResponse["telegramBot"]> {
   };
 }
 
-function dispatchMetadata(overrides: Record<string, unknown> = {}): Record<string, unknown> {
-  return {
-    subscribersNotified: 0,
-    messagesSent: 0,
-    freshAttempted: 0,
-    freshSent: 0,
-    freshRetryQueued: 0,
-    freshPermanentFailures: 0,
-    pendingAttempted: 0,
-    pendingDrained: 0,
-    pendingRetryQueued: 0,
-    pendingDroppedPermanentFailure: 0,
-    pendingDroppedMaxAttemptsFallback: 0,
-    pendingRateLimited: false,
-    safetyAlertsSuppressed: false,
-    reserveAlertsSuppressed: false,
-    ...overrides,
-  };
-}
-
 function dispatchCron(
-  metadata: Record<string, unknown> = dispatchMetadata(),
+  metadata: Record<string, unknown> = makeDispatchMetadata(),
   status: "ok" | "degraded" | "error" = "ok",
   error?: string,
 ): CronStatus {
@@ -190,60 +170,63 @@ describe("TelegramBotStats", () => {
     );
   });
 
-  it("uses one descriptor for ordered field values at both breakpoints", () => {
+  it("renders independently specified per-alert metrics identically in both layouts", () => {
     const { model } = renderWorkbench({
       cron: dispatchCron(
-        dispatchMetadata({
+        makeDispatchMetadata({
           perAlertType: {
-            dews: { sent: 3, enqueued: 1, failed: 0, blocked: 0, firstSendLatencyMs: 240 },
-            depeg: { sent: 1, enqueued: 2, failed: 1, blocked: 0, firstSendLatencyMs: null },
+            dews: { sent: 7, enqueued: 5, failed: 3, blocked: 1, firstSendLatencyMs: 240 },
+            depeg: { sent: 6, enqueued: 4, failed: 2, blocked: 8, firstSendLatencyMs: null },
           },
         }),
       ),
     });
 
+    // Independent oracle: every value is unique across fields and rows, so an
+    // accessor or formatter wired to the wrong field cannot reproduce them.
+    const metricKeys = ["sent", "enqueued", "failed", "blocked", "firstSendLatencyMs"];
+    const metricLabels = ["Sent", "Enqueued", "Failed", "Blocked", "First send latency"];
+    const expectedByType = {
+      dews: ["7", "5", "3", "1", "240ms"],
+      depeg: ["6", "4", "2", "8", "Unknown"],
+    } as const;
+
     const mobile = screen.getByTestId("telegram-delivery-mobile");
     const desktop = screen.getByTestId("telegram-delivery-desktop");
-    const dewsRow = model.delivery.perAlertType.find((row) => row.type === "dews");
-    expect(dewsRow).toBeDefined();
-    if (!dewsRow) return;
-
-    const expectedKeys = PER_ALERT_METRICS.map((metric) => metric.key);
-    const expectedLabels = PER_ALERT_METRICS.map((metric) => metric.label);
-    const expectedValues = PER_ALERT_METRICS.map((metric) => metric.formatter(metric.accessor(dewsRow)));
-    const mobileDews = mobile.querySelector('[data-alert-type="dews"]');
     const desktopTable = desktop.querySelector("table");
-    const desktopDews = desktopTable?.querySelector("tbody tr");
-    expect(mobileDews).toBeTruthy();
-    expect(desktopTable).toBeTruthy();
-    expect(desktopDews).toBeTruthy();
-    if (!mobileDews || !desktopTable || !desktopDews) return;
-
-    expect(mobile.className).toContain("sm:hidden");
     expect(mobile.querySelectorAll("dl")).toHaveLength(TELEGRAM_ALERT_TYPES.length);
-    expect([...mobileDews.querySelectorAll("[data-metric-key]")].map((element) => element.getAttribute("data-metric-key"))).toEqual(
-      expectedKeys,
-    );
-    expect([...mobileDews.querySelectorAll("dt")].map((element) => element.textContent)).toEqual(expectedLabels);
-    expect([...mobileDews.querySelectorAll("dd")].map((element) => element.textContent)).toEqual(expectedValues);
-    expect(within(mobile).getAllByText("Unknown").length).toBeGreaterThan(0);
-    expect(desktop.className).toContain("overflow-x-auto");
-    expect(desktop.className).toContain("sm:block");
-    expect(desktop.querySelector("table")?.className).toContain("table-fixed");
-    expect(desktop.querySelectorAll("tbody tr")).toHaveLength(TELEGRAM_ALERT_TYPES.length);
-    expect(within(desktop).getByText("Alert type")).toBeTruthy();
-    expect([...desktopTable.querySelectorAll("thead [data-metric-key]")].map((element) => element.getAttribute("data-metric-key"))).toEqual(
-      expectedKeys,
-    );
+    expect(desktopTable).toBeTruthy();
+    expect(desktopTable?.querySelectorAll("tbody tr")).toHaveLength(TELEGRAM_ALERT_TYPES.length);
+    if (!desktopTable) return;
+
+    expect(
+      [...desktopTable.querySelectorAll("thead [data-metric-key]")].map((element) =>
+        element.getAttribute("data-metric-key"),
+      ),
+    ).toEqual(metricKeys);
     expect([...desktopTable.querySelectorAll("thead [data-metric-key]")].map((element) => element.textContent)).toEqual(
-      expectedLabels,
+      metricLabels,
     );
-    expect([...desktopDews.querySelectorAll("[data-metric-key]")].map((element) => element.textContent)).toEqual(
-      expectedValues,
-    );
+
+    for (const type of ["dews", "depeg"] as const) {
+      const expectedValues = expectedByType[type];
+      const mobileRow = mobile.querySelector(`[data-alert-type="${type}"]`);
+      const desktopRow = desktopTable.querySelectorAll("tbody tr")[
+        model.delivery.perAlertType.findIndex((row) => row.type === type)
+      ];
+      expect(mobileRow).toBeTruthy();
+      expect(desktopRow).toBeTruthy();
+      if (!mobileRow || !desktopRow) continue;
+
+      expect([...mobileRow.querySelectorAll("dt")].map((element) => element.textContent)).toEqual(metricLabels);
+      expect([...mobileRow.querySelectorAll("dd")].map((element) => element.textContent)).toEqual(expectedValues);
+      expect([...desktopRow.querySelectorAll("[data-metric-key]")].map((element) => element.textContent)).toEqual(
+        expectedValues,
+      );
+    }
   });
 
-  it("wraps long diagnostics locally and exposes real recovery cross-links on failure", () => {
+  it("renders long unbroken diagnostics verbatim and exposes real recovery cross-links on failure", () => {
     const longError = "dispatch_failed_with_an_extremely_long_unbroken_identifier_that_must_not_expand_the_document";
     const bot = telegramBot();
     renderWorkbench({
@@ -254,7 +237,7 @@ describe("TelegramBotStats", () => {
         },
       },
       cron: dispatchCron(
-        dispatchMetadata({
+        makeDispatchMetadata({
           freshPermanentFailures: 1,
           freshRetryQueued: 2,
           pendingRetryQueued: 0,
@@ -266,12 +249,11 @@ describe("TelegramBotStats", () => {
       ),
     });
 
-    const retryClass = screen.getByText("gateway_timeout_after_fixture_retry_budget_with_an_extremely_long_suffix");
-    const error = screen.getByText(longError);
-    const coinId = screen.getByText("stablecoin-with-a-very-long-identifier-that-must-wrap-locally");
-    expect(retryClass.className).toContain("[overflow-wrap:anywhere]");
-    expect(error.className).toContain("[overflow-wrap:anywhere]");
-    expect(coinId.className).toContain("[overflow-wrap:anywhere]");
+    // Verbatim presence is asserted by getByText below; wrap containment is
+    // measured by the visual/E2E owner, not by utility-class spelling.
+    screen.getByText("gateway_timeout_after_fixture_retry_budget_with_an_extremely_long_suffix");
+    screen.getByText(longError);
+    screen.getByText("stablecoin-with-a-very-long-identifier-that-must-wrap-locally");
     expect(screen.getByRole("link", { name: /Inspect dispatch cron/i }).getAttribute("href")).toBe("/admin/crons");
     expect(screen.getByRole("link", { name: /Open delivery actions/i }).getAttribute("href")).toBe("/admin/actions");
     const runbook = screen.getByRole("link", { name: /No-delivery runbook/i });
@@ -294,9 +276,8 @@ describe("TelegramBotStats", () => {
 
     expect(screen.getByText("Telegram telemetry is partial.")).toBeTruthy();
     expect(screen.getByText(/Unavailable fields: pendingDeliveryBacklog/)).toBeTruthy();
-    expect(screen.getByText(/no such table with_a_long_unbroken_name/).className).toContain("[overflow-wrap:anywhere]");
+    expect(screen.getByText(/no such table with_a_long_unbroken_name/)).toBeTruthy();
     const lifecycle = screen.getByText("Lifecycle and secondary telemetry");
     expect(lifecycle.closest("details")).toBeTruthy();
-    expect(screen.getByText("Snapshot captured").parentElement?.className).toContain("grid-cols-1");
   });
 });

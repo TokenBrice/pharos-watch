@@ -21,19 +21,33 @@ vi.mock("../../../reserve-adapters/helpers", () => ({
 
 import { fetchCuratedAggregateOnChainMcap, fetchOnChainMcap } from "../onchain-supply";
 
-function makeMovementMeta(): StablecoinMeta {
+function makeMeta(
+  input: Pick<StablecoinMeta, "id" | "name" | "symbol" | "contracts"> & {
+    detailProvider?: StablecoinMeta["detailProvider"];
+    flags?: Partial<StablecoinMeta["flags"]>;
+  },
+): StablecoinMeta {
   return {
+    detailProvider: "coingecko",
+    ...input,
+    flags: {
+      pegCurrency: "USD", backing: "rwa-backed", governance: "centralized-dependent",
+      ...input.flags,
+    },
+  } as StablecoinMeta;
+}
+
+function makeMovementMeta(): StablecoinMeta {
+  return makeMeta({
     id: "usdcx-movement",
     name: "Movement USDCx",
     symbol: "USDCx",
-    detailProvider: "coingecko",
     contracts: [{
       chain: "movement",
       address: "0xba11833544a2f99eec743f41a228ca6ffa7f13c3b6b04681d5a79a8b75ff225e",
       decimals: 6,
     }],
-    flags: { pegCurrency: "USD", backing: "rwa-backed", governance: "centralized-dependent" },
-  } as StablecoinMeta;
+  });
 }
 
 function movementChainRpcs() {
@@ -44,11 +58,10 @@ function movementChainRpcs() {
 }
 
 function makeSkyMeta(): StablecoinMeta {
-  return {
+  return makeMeta({
     id: "susds-sky",
     name: "Savings USDS",
     symbol: "sUSDS",
-    detailProvider: "coingecko",
     contracts: [
       { chain: "ethereum", address: "0x0000000000000000000000000000000000000001", decimals: 18 },
       { chain: "base", address: "0x0000000000000000000000000000000000000002", decimals: 18 },
@@ -56,21 +69,18 @@ function makeSkyMeta(): StablecoinMeta {
       { chain: "arbitrum", address: "0x0000000000000000000000000000000000000004", decimals: 18 },
     ],
     flags: {
-      pegCurrency: "USD",
       backing: "crypto-backed",
-      governance: "centralized-dependent",
       yieldBearing: true,
       navToken: true,
     },
-  } as StablecoinMeta;
+  });
 }
 
 function makeChfauMeta(): StablecoinMeta {
-  return {
+  return makeMeta({
     id: "chfau-allunity",
     name: "AllUnity CHF",
     symbol: "CHFAU",
-    detailProvider: "coingecko",
     contracts: [
       { chain: "ethereum", address: "0xbd4dfc058eb95b8de5ceaf39966a1a70f5556f78", decimals: 6 },
       { chain: "polygon", address: "0xbd4dfc058eb95b8de5ceaf39966a1a70f5556f78", decimals: 6 },
@@ -79,12 +89,11 @@ function makeChfauMeta(): StablecoinMeta {
     ],
     flags: {
       pegCurrency: "CHF",
-      backing: "rwa-backed",
       governance: "centralized",
       yieldBearing: false,
       navToken: false,
     },
-  } as StablecoinMeta;
+  });
 }
 
 const SUSDE_OFT = "0x211cc4dd073734da055fbf44a2b4667d5e5fe5d2";
@@ -95,33 +104,29 @@ const SUSDE_REPRESENTATION_CHAINS = [
 ];
 
 function makeSusdeMeta(): StablecoinMeta {
-  return {
+  return makeMeta({
     id: "susde-ethena",
     name: "Staked USDe",
     symbol: "sUSDe",
-    detailProvider: "coingecko",
     contracts: [
       { chain: "ethereum", address: "0x9d39a5de30e57443bff2a8307a4256c8797a3497", decimals: 18 },
       ...SUSDE_REPRESENTATION_CHAINS.map((chain) => ({ chain, address: SUSDE_OFT, decimals: 18 })),
     ],
     flags: {
-      pegCurrency: "USD",
       backing: "crypto-backed",
-      governance: "centralized-dependent",
       yieldBearing: true,
       navToken: true,
     },
-  } as StablecoinMeta;
+  });
 }
 
 function makeAcrdxMeta(): StablecoinMeta {
   const share = "0x9477724bb54ad5417de8baff29e59df3fb4da74f";
   const spoke = "0x2fabf1c784b8583d63c00c5c9c0377d8cf1a3245";
-  return {
+  return makeMeta({
     id: "acrdx-anemoy-apollo",
     name: "Anemoy Apollo",
     symbol: "ACRDX",
-    detailProvider: "coingecko",
     contracts: [
       { chain: "ethereum", address: share, decimals: 18 },
       { chain: "plume", address: share, decimals: 18 },
@@ -131,18 +136,16 @@ function makeAcrdxMeta(): StablecoinMeta {
       { chain: "solana", address: "ACDR3LGFrMuDZSDRyJjncFCzo5c8xkQxhWx4im4Vmq8G", decimals: 6 },
     ],
     flags: {
-      pegCurrency: "USD",
-      backing: "rwa-backed",
       governance: "centralized",
       yieldBearing: true,
       navToken: true,
     },
-  } as StablecoinMeta;
+  });
 }
 
 function makeGldtMeta(): StablecoinMeta {
   const evm = "0x86856814e74456893cfc8946bedcbb472b5fa856";
-  return {
+  return makeMeta({
     id: "gldt-gold-dao",
     name: "Gold Token",
     symbol: "GLDT",
@@ -155,20 +158,17 @@ function makeGldtMeta(): StablecoinMeta {
     ],
     flags: {
       pegCurrency: "GOLD",
-      backing: "rwa-backed",
-      governance: "centralized-dependent",
       yieldBearing: false,
       navToken: false,
     },
-  } as StablecoinMeta;
+  });
 }
 
 function makeMre7yieldMeta(): StablecoinMeta {
-  return {
+  return makeMeta({
     id: "mre7yield-midas",
     name: "Midas Re7 Yield",
     symbol: "mRe7YIELD",
-    detailProvider: "coingecko",
     contracts: [
       { chain: "ethereum", address: "0x87c9053c819bb28e0d73d33059e1b3da80afb0cf", decimals: 18 },
       { chain: "etherlink", address: "0x733d504435a49fc8c4e9759e756c2846c92f0160", decimals: 18 },
@@ -179,32 +179,27 @@ function makeMre7yieldMeta(): StablecoinMeta {
       },
     ],
     flags: {
-      pegCurrency: "USD",
-      backing: "rwa-backed",
       governance: "centralized",
       yieldBearing: true,
       navToken: true,
     },
-  } as StablecoinMeta;
+  });
 }
 
 function makeSingleContractMeta(): StablecoinMeta {
-  return {
+  return makeMeta({
     id: "susdc-spark",
     name: "Spark Savings USDC",
     symbol: "sUSDC",
-    detailProvider: "coingecko",
     contracts: [
       { chain: "ethereum", address: "0x0000000000000000000000000000000000000009", decimals: 18 },
     ],
     flags: {
-      pegCurrency: "USD",
       backing: "crypto-backed",
-      governance: "centralized-dependent",
       yieldBearing: true,
       navToken: true,
     },
-  } as StablecoinMeta;
+  });
 }
 
 describe("fetchOnChainMcap", () => {

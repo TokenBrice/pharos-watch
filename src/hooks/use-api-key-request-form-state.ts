@@ -10,6 +10,8 @@ import {
 } from "@/lib/api-key-verification-url";
 import { submitApiKeyRequest, verifyApiKeyRequestToken } from "@/lib/api-key-self-serve";
 import { copyText as writeClipboardText } from "@/lib/clipboard";
+import { useUnsavedTokenGuard } from "@/hooks/use-unsaved-token-guard";
+import { beginPendingApiKeyIssuance, clearPendingApiKey } from "@/components/pending-api-key-recovery";
 import {
   apiKeyRequestWorkflowReducer,
   buildApiKeySelfServeRequestPayload,
@@ -44,19 +46,6 @@ function useIssuedKeyFocusEffect(
   }, [copyTokenButtonRef, issuedKey]);
 }
 
-function useUnsavedTokenBeforeUnloadEffect(issuedKey: unknown, tokenSecured: boolean) {
-  useEffect(() => {
-    if (!issuedKey || tokenSecured) return;
-    const handleBeforeUnload = (event: BeforeUnloadEvent) => {
-      event.preventDefault();
-      event.returnValue = "";
-      return "";
-    };
-    window.addEventListener("beforeunload", handleBeforeUnload);
-    return () => window.removeEventListener("beforeunload", handleBeforeUnload);
-  }, [issuedKey, tokenSecured]);
-}
-
 export function useApiKeyRequestFormState() {
   const [state, dispatch] = useReducer(
     apiKeyRequestWorkflowReducer,
@@ -73,11 +62,13 @@ export function useApiKeyRequestFormState() {
   const projectUrlValue = state.projectUrl.trim();
   const projectUrlValid = isProjectUrlValid(projectUrlValue);
   const tokenSecured = state.tokenCopied || state.revealAcknowledged;
+  const retainIssuedToken = useUnsavedTokenGuard(state.issuedKey?.token ?? null, tokenSecured, state.verificationStatus === "verifying");
   const canSubmit = canSubmitApiKeyRequest(state);
 
   const copyText = useCallback(async (kind: "token" | "curl", value: string) => {
     const result = await writeClipboardText(value);
     if (result.ok) {
+      if (kind === "token") clearPendingApiKey(value);
       dispatch({ type: "copySucceeded", kind });
       window.setTimeout(() => dispatch({ type: "clearCopied" }), 1800);
     } else {
@@ -101,21 +92,24 @@ export function useApiKeyRequestFormState() {
 
   const verifyToken = useCallback(async (token: string) => {
     dispatch({ type: "verificationStarted" });
+    const finishIssuance = beginPendingApiKeyIssuance();
 
     try {
       const payload = await verifyApiKeyRequestToken(token);
+      retainIssuedToken(payload.token);
       dispatch({ type: "verificationSucceeded", payload });
     } catch (error) {
       dispatch({
         type: "verificationFailed",
         error: error instanceof Error ? error.message : "Verification failed",
       });
+    } finally {
+      finishIssuance();
     }
-  }, []);
+  }, [retainIssuedToken]);
 
   useVerificationTokenEffect(verifyToken);
   useIssuedKeyFocusEffect(state.issuedKey, copyTokenButtonRef);
-  useUnsavedTokenBeforeUnloadEffect(state.issuedKey, tokenSecured);
 
   const handleSubmit = useCallback(async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();

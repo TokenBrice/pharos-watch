@@ -1,3 +1,4 @@
+import complianceAsset from "@shared/data/stablecoins/coins.compliance.generated.json";
 import { isPricingSourceProtocolOverride } from "@shared/lib/pricing-source-registry";
 import { getCirculatingRaw } from "@shared/lib/supply";
 import {
@@ -20,10 +21,18 @@ import {
   buildCoverageFeatureSummary,
   buildCoverageRow,
   COVERAGE_FEATURES,
+  type CoverageCoinMeta,
   type CoverageFeatureKey,
   type CoverageFeatureSummary,
 } from "@/lib/coverage";
 import { buildV9DependencyCoverageFacts } from "@/lib/dependency-coverage-facts";
+
+// Compliance evidence lives outside the compact client list, in the same
+// generated projection consumed by /compliance/.
+const COMPLIANCE_BY_ID = new Map(
+  (complianceAsset as Pick<CoverageCoinMeta, "id" | "mica" | "genius">[])
+    .map((entry) => [entry.id, entry] as const),
+);
 
 /**
  * Features whose whole cell becomes "Data n/a" when their query is missing, and
@@ -146,7 +155,7 @@ export function buildCoverageMatrixModel(input: CoverageMatrixModelInput) {
     const reportCard = reportCardById.get(coin.id);
     const mcap = asset ? getCirculatingRaw(asset) : 0;
     return buildCoverageRow({
-      coin,
+      coin: { ...coin, ...COMPLIANCE_BY_ID.get(coin.id) },
       marketCapUsd: mcap,
       hasPegCoverage: pegIds.has(coin.id),
       consensusSources: pegCoin?.consensusSources,

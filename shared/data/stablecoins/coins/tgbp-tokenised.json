@@ -113,20 +113,39 @@
     "version": 1,
     "semantics": "single-asset",
     "breakerScope": "tgbp-tokenised",
+    "suspended": {
+      "reason": "api.tgbp.io returns HTTP 403 to Cloudflare Workers egress since 2026-09-10; curated reserve evidence remains authoritative until the issuer allows the feed",
+      "since": "2026-09-11",
+      "reviewBy": "2026-10-11"
+    },
     "display": {
       "url": "https://www.tokenisedgbp.com/",
       "label": "Tokenised"
     },
     "inputs": {
       "primary": {
-        "kind": "onchain-evm",
-        "chain": "ethereum",
-        "rpcMode": "public-rpc"
+        "kind": "http-json",
+        "url": "https://api.tgbp.io/api/v1/public/data/tgbp"
       }
     },
     "params": {
       "label": "GBP cash and short-term UK gilts",
-      "risk": "very-low"
+      "risk": "very-low",
+      "reserveProbe": {
+        "kind": "json-path",
+        "path": [
+          "result",
+          "collateral"
+        ]
+      },
+      "supplyProbe": {
+        "kind": "json-path",
+        "path": [
+          "result",
+          "total_supply"
+        ]
+      },
+      "reserveSourceLabel": "Tokenised GBP public data API"
     }
   },
   "launchDate": "2025-06-03"

@@ -758,6 +758,90 @@ describe("Safety Score v9 public projection", () => {
     expect(card.scoreTrace.scoreAdjustments).toEqual(input.trace.scoreAdjustments);
   });
 
+  function publish(results: V9PublicCardProjectionInput[]) {
+    return buildSafetyScoreV9Response({
+      candidateId: "safety-score-v9:v1:public-test",
+      policyVersion: "9.0",
+      publicationGenerationId: "report-cards:v9:v1:public-test",
+      publishedAtSec: 1_001,
+      results,
+    });
+  }
+
+  it("rejects empty publications", () => {
+    expect(() => publish([])).toThrow(/at least one result/);
+  });
+
+  it("rejects each independently mismatched publication identity", () => {
+    const baseline = fixture("alpha", { score: 91.8, grade: "A+" });
+    const mutations: [Partial<V9ProductionScoreTrace>, RegExp][] = [
+      [{ factSetDigest: "e".repeat(64) }, /mixes fact-set digest/],
+      [{ baseInputGenerationId: `report-cards-input:v1:${"e".repeat(64)}` }, /mixes base input generation/],
+      [{ policyDigest: "e".repeat(64) }, /mixes policy digest/],
+      [{ asOfSec: 999 }, /mixes evidence clock/],
+      [{ sourceGenerations: { dex: "dex:g2", registry: "registry:g1" } }, /mixes source generations/],
+    ];
+    for (const [mutation, error] of mutations) {
+      const other = fixture("beta", { score: 90, grade: "A+" });
+      expect(publish([baseline, other]).cards.map((card) => card.id)).toEqual(["alpha", "beta"]);
+      Object.assign(other.trace, mutation);
+      expect(() => publish([baseline, other])).toThrow(error);
+    }
+  });
+
+  it("canonicalizes source maps and result ordering without losing score changes in the digest", () => {
+    const alpha = fixture("alpha", { score: 91.8, grade: "A+" });
+    const beta = fixture("beta", { score: 90, grade: "A+" });
+    const forward = publish([alpha, beta]);
+    beta.trace.sourceGenerations = { registry: "registry:g1", dex: "dex:g1" };
+    const reversed = publish([beta, alpha]);
+    expect(reversed.cards).toEqual(forward.cards);
+    expect(reversed.resultDigest).toBe(forward.resultDigest);
+    expect(reversed.sourceGenerations).toEqual({ dex: "dex:g1", registry: "registry:g1" });
+    const changed = publish([alpha, fixture("beta", { score: 89, grade: "A+" })]);
+    expect(changed.resultDigest).not.toBe(forward.resultDigest);
+  });
+
+  it("deduplicates identical reasons through all projector reason lists", () => {
+    const input = fixture("repeated-reasons", { score: 91.8, grade: "A+" });
+    const reason = { code: "bounded-mechanism-review" as const, path: "backing:mechanism:custody", message: "Reviewed custody." };
+    const seamReason = { ...reason, responsibility: "method-unsupported" as const };
+    input.scoreInput.pillars.backing.reasons = [seamReason, { ...seamReason }];
+    input.evidenceReasons = [seamReason, { ...seamReason }];
+    input.access = { ...input.access, reasons: [seamReason, { ...seamReason }] };
+    const card = projectSafetyScoreV9Card(input);
+    expect(card.pillars.backing.reasons).toEqual([reason]);
+    expect(card.evidence.reasons).toEqual([reason]);
+    expect(card.accessPosture.reasons).toEqual([reason]);
+  });
+
+  it("rejects conflicting renderings but publishes distinct paths for the same reason code", () => {
+    const first = { code: "bounded-mechanism-review" as const, path: "backing:mechanism:custody", message: "First rendering." };
+    const second = { ...first, message: "Second rendering." };
+    const seamFirst = { ...first, responsibility: "method-unsupported" as const };
+    const seamSecond = { ...seamFirst, message: second.message };
+    for (const target of ["pillar", "evidence", "access"] as const) {
+      const input = fixture(`conflicting-${target}`, { score: 91.8, grade: "A+" });
+      const reasons = [seamFirst, seamSecond];
+      if (target === "pillar") input.scoreInput.pillars.backing.reasons = reasons;
+      if (target === "evidence") input.evidenceReasons = reasons;
+      if (target === "access") input.access = { ...input.access, reasons };
+      // Conflicting evidence is rejected, not silently assigned an arbitrary winning message.
+      expect(() => projectSafetyScoreV9Card(input)).toThrow(expect.objectContaining({
+        issues: [expect.objectContaining({
+          code: "custom",
+          path: target === "pillar" ? ["pillars", "backing", "reasons", 1]
+            : [target === "evidence" ? "evidence" : "accessPosture", "reasons", 1],
+        })],
+      }));
+      reasons[1] = { ...seamSecond, path: "backing:mechanism:reserves" };
+      const card = projectSafetyScoreV9Card(input);
+      const published = target === "pillar" ? card.pillars.backing.reasons
+        : target === "evidence" ? card.evidence.reasons : card.accessPosture.reasons;
+      expect(published).toEqual([first, { ...second, path: "backing:mechanism:reserves" }]);
+    }
+  });
+
   it("rejects duplicate assets and mixed evaluator identities", () => {
     const base = fixture("alpha", { score: 91.8, grade: "A+" });
     expect(() =>

@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { existsSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { TRACKED_STABLECOINS } from "@shared/lib/stablecoins/registry";
@@ -49,9 +49,10 @@ describe("stablecoin detail snapshot generator", () => {
       writeSnapshots(snapshots, outputDir);
       expect(checkSnapshots(outputDir)).toEqual(snapshots);
       const firstPath = join(outputDir, `${TRACKED_STABLECOINS[0].id}.json`);
+      const firstBytes = readFileSync(firstPath);
       rmSync(firstPath);
       expect(() => checkSnapshots(outputDir)).toThrow(/Missing stablecoin detail snapshot/);
-      writeSnapshots(snapshots, outputDir);
+      writeFileSync(firstPath, firstBytes);
       writeFileSync(join(outputDir, "removed-coin.json"), "{}");
       expect(() => checkSnapshots(outputDir)).toThrow(/Obsolete/);
       writeSnapshots(snapshots, outputDir);
@@ -68,6 +69,7 @@ describe("stablecoin detail snapshot generator", () => {
     vi.restoreAllMocks();
     vi.unstubAllEnvs();
     vi.unstubAllGlobals();
+    vi.useRealTimers();
   });
 
   it("carries body and header source clocks through snapshots rather than the build clock", async () => {
@@ -225,8 +227,8 @@ describe("stablecoin detail snapshot generator", () => {
     expect(serializedSnapshotBytes(snapshot)).toBeLessThanOrEqual(8 * 1024);
   });
 
-  it("drops supply before an oversized compact lane and permits an empty envelope", () => {
-    const warning = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+  it("permits an empty envelope when both lanes exceed the cap", () => {
+    vi.spyOn(console, "warn").mockImplementation(() => undefined);
     const oversizedBuckets = Object.fromEntries(
       Array.from({ length: 500 }, (_, index) => [`peggedUSD-${"x".repeat(30)}-${index}`, index]),
     );
@@ -246,9 +248,76 @@ describe("stablecoin detail snapshot generator", () => {
 
     expect(snapshot.lanes).toEqual({});
     expect(serializedSnapshotBytes(snapshot)).toBeLessThanOrEqual(8 * 1024);
-    expect(warning.mock.calls.map(([message]) => String(message))).toEqual([
-      expect.stringContaining("Omitting supply history"),
-      expect.stringContaining("Omitting live summary"),
-    ]);
+  });
+  it("retains a small summary when oversized history is removed", () => {
+    vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    const summary = liveSummary();
+    const snapshot = buildStablecoinDetailSnapshots({
+      generatedAt: 1_700_000_000_000, updatedAtById: new Map(),
+      liveSummariesById: new Map([["usdt-tether", summary]]),
+      supplyHistoryById: new Map([["usdt-tether", Array.from({ length: 500 }, (_, index) => ({
+        date: 1_600_000_000 + index * 86_400, circulatingUsd: 100_000_000 + index, price: 1,
+      }))]]),
+    }).find((candidate) => candidate.stablecoinId === "usdt-tether")!;
+    expect(snapshot.lanes).toEqual({ liveSummary: summary });
+    expect(serializedSnapshotBytes(snapshot)).toBeLessThanOrEqual(8 * 1024);
+  });
+
+  it("normalizes fallback source clocks using both ages and clamps negative results", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(100_000);
+    vi.stubEnv("PHAROS_API_KEY", "fixture-key");
+    const cases: [Record<string, string>, number][] = [
+      [{ "X-Data-Age": "10", Age: "20" }, 70_000],
+      [{ Date: "invalid", "X-Data-Age": "10", Age: "20" }, 70_000],
+      [{}, 100_000],
+      [{ "X-Data-Age": "invalid", Age: "invalid" }, 100_000],
+      [{ "X-Data-Age": "90", Age: "20" }, 0],
+    ];
+    for (const [headers, expected] of cases) {
+      vi.stubGlobal("fetch", vi.fn(async () => Response.json([], { headers })));
+      expect(await fetchOptionalDetailSnapshotLane(
+        "history", "https://api.pharos.watch/api/supply-history", SupplyHistoryResponseSchema,
+      )).toEqual({ data: [], updatedAt: expected });
+    }
+  });
+
+  it("rejects missing credentials before transport and malformed successful JSON", async () => {
+    for (const name of ["PHAROS_API_KEY", "SITE_API_SHARED_SECRET", "DIGEST_API_KEY", "PUBLIC_DATASETS_API_KEY", "SMOKE_API_KEY"]) {
+      vi.stubEnv(name, "");
+    }
+    const fetch = vi.fn(async () => new Response("malformed-json"));
+    vi.stubGlobal("fetch", fetch);
+    await expect(fetchOptionalDetailSnapshotLane(
+      "detail", "https://api.pharos.watch/api/stablecoin/usdt-tether", StablecoinDetailResponseSchema,
+    )).rejects.toThrow(/required/);
+    expect(fetch).not.toHaveBeenCalled();
+    vi.stubEnv("PHAROS_API_KEY", "fixture-key");
+    await expect(fetchOptionalDetailSnapshotLane(
+      "detail", "https://api.pharos.watch/api/stablecoin/usdt-tether", StablecoinDetailResponseSchema,
+    )).rejects.toBeInstanceOf(SyntaxError);
+  });
+
+  it("fetches live IDs but preserves empty envelopes for non-live catalog members", async () => {
+    vi.stubEnv("PHAROS_API_KEY", "fixture-key");
+    for (const name of ["DIGEST_API_URL", "PUBLIC_DATASETS_API_URL", "SMOKE_API_BASE", "API_BASE_URL"]) vi.stubEnv(name, "");
+    const requested = new Set<string>();
+    vi.stubGlobal("fetch", vi.fn(async (raw: string) => {
+      const url = new URL(raw);
+      const history = url.pathname.endsWith("/supply-history");
+      requested.add(history ? url.searchParams.get("stablecoin")! : url.pathname.split("/").at(-1)!);
+      return Response.json(history ? [] : { price: 1 });
+    }));
+    const snapshots = await generateSnapshots(false);
+    const nonLive = TRACKED_STABLECOINS.filter((coin) => coin.status != null && coin.status !== "active" && coin.status !== "frozen");
+    expect(nonLive.length).toBeGreaterThan(0);
+    for (const coin of nonLive) {
+      expect(requested.has(coin.id)).toBe(false);
+      expect(snapshots.find((snapshot) => snapshot.stablecoinId === coin.id)?.lanes).toEqual({});
+    }
+    expect(requested.has("usdt-tether")).toBe(true);
+    expect(snapshots.find((snapshot) => snapshot.stablecoinId === "usdt-tether")?.lanes)
+      .toMatchObject({ liveSummary: { price: 1 }, supplyHistory: [] });
+    expect(snapshots.map((snapshot) => snapshot.stablecoinId)).toEqual(TRACKED_STABLECOINS.map((coin) => coin.id));
   });
 });

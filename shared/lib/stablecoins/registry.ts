@@ -31,6 +31,14 @@ export function withoutSuspendedLiveReserves(stablecoin: StablecoinMeta): Stable
   return rest;
 }
 
+/**
+ * The catalog exactly as checked in, before `withoutSuspendedLiveReserves`
+ * removes operator-suspended feeds. Every other export is post-strip, so this
+ * is the only view in which a suspended `liveReservesConfig` is still visible
+ * and can be validated instead of rotting until the kill switch is reverted.
+ */
+export const TRACKED_SOURCE_COINS: readonly StablecoinMeta[] = PER_COIN_SOURCE_COINS;
+
 const registry = buildStablecoinRegistryIndexes(PER_COIN_SOURCE_COINS, {
   canonicalOrder: CANONICAL_ORDER,
   normalize: withoutSuspendedLiveReserves,

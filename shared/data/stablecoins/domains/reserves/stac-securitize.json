@@ -2,6 +2,7 @@
   "id": "stac-securitize",
   "reserves": [
     {
+      "sourceKey": "chronicle-nav:token:0x51c2d74017390cbbd30550179a16a1c28f7210fc",
       "name": "Securitize Tokenized AAA CLO Fund NAV",
       "pct": 100,
       "risk": "high",

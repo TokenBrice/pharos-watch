@@ -2,9 +2,9 @@ import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import { analyzeArchetype, analyzeAttestorTier, analyzeOneLiner } from "../maintenance/weekly-curation-digest.mjs";
 import { loadPerCoinStablecoinEntries } from "../lib/stablecoin-catalog-sources";
+import { renderDigest } from "./weekly-curation-digest.test-support";
 
 const baseline = JSON.parse(readFileSync("scripts/lib/curation-baseline-caps.json", "utf8"));
-const ratio = (total: number, missing: unknown[]) => (total === 0 ? 0 : missing.length / total);
 const coin = (id: string, overrides: Record<string, unknown> = {}) => ({ id, ...overrides });
 const audit = (id: string, withTier = true) =>
   coin(id, {
@@ -21,10 +21,11 @@ describe("weekly curation coverage", () => {
     const attestor = analyzeAttestorTier(coins);
     const oneLiner = analyzeOneLiner(coins);
     const archetype = analyzeArchetype(coins, baseline);
-    expect([attestor.total - attestor.missing.length, attestor.total]).toEqual([72, 72]);
-    expect([oneLiner.total - oneLiner.missing.length, oneLiner.total]).toEqual([364, 364]);
-    expect([archetype.tracked - archetype.missing.length, archetype.tracked]).toEqual([39, 39]);
+    expect(attestor.missing).toEqual([]);
+    expect(oneLiner.missing).toEqual([]);
+    expect(archetype.missing).toEqual([]);
     expect(archetype.unknown).toEqual([]);
+    expect(archetype.segmentTotal).toBe(baseline.topByRank.length);
   });
 
   it("requires oneLiners for active and pre-launch coins only", () => {
@@ -36,24 +37,16 @@ describe("weekly curation coverage", () => {
       coin("dead", { status: "dead" }),
     ]);
     expect(result).toEqual({ total: 3, missing: ["a-pre", "z-default"] });
-    expect(result.missing.length === 0).toBe(false);
   });
 
-  it("keeps the attestor threshold strictly above 20 percent", () => {
-    const exact = analyzeAttestorTier([
-      ...Array.from({ length: 4 }, (_, i) => audit(`with-${i}`)),
+  it("requires attestor tiers only for independent audits", () => {
+    expect(analyzeAttestorTier([
+      audit("covered"),
       audit("z-missing", false),
+      audit("a-missing", false),
       coin("self", { proofOfReserves: { type: "self-reported" } }),
       coin("none"),
-    ]);
-    const over = analyzeAttestorTier([
-      ...Array.from({ length: 3 }, (_, i) => audit(`with-${i}`)),
-      audit("z", false),
-      audit("a", false),
-    ]);
-
-    expect([exact.total, exact.missing, ratio(exact.total, exact.missing) <= 0.2]).toEqual([5, ["z-missing"], true]);
-    expect([over.missing, ratio(over.total, over.missing) > 0.2]).toEqual([["a", "z"], true]);
+    ])).toEqual({ total: 3, missing: ["a-missing", "z-missing"] });
   });
 
   it("uses the fixed archetype cohort and applies exclusions before variants", () => {
@@ -70,30 +63,49 @@ describe("weekly curation coverage", () => {
     );
 
     expect([result.tracked, result.missing, result.frozen, result.variants]).toEqual([3, ["a", "z"], 1, 1]);
-    expect(result.unknown.length === 0).toBe(false);
+    expect(result.unknown).toEqual(["unknown"]);
   });
 
-  it("keeps the archetype threshold strictly above 27 percent and zero ratios stable", () => {
-    const ids = Array.from({ length: 100 }, (_, i) => `coin-${String(i).padStart(3, "0")}`);
-    const coins = ids.map((id, i) => coin(id, i < 27 ? {} : { mechanismArchetype: "fiat-cash" }));
-    const exact = analyzeArchetype(coins, archetypeBaseline(ids));
-    const over = analyzeArchetype(
-      coins.map((entry, i) => (i === 27 ? coin(ids[i]) : entry)),
-      archetypeBaseline(ids),
-    );
-    const emptyArchetype = analyzeArchetype(
-      [coin("f", { status: "frozen" }), coin("v", { variantOf: "p" })],
-      archetypeBaseline(["f", "v"]),
-    );
+  it("reports stale and missing active summaries at the 180-day boundary", () => {
+    const report = renderDigest({
+      coins: ["fresh", "stale", "undated", "invalid", "missing"].map((id) => coin(id)).concat([
+        coin("prelaunch", { status: "pre-launch" }),
+      ]),
+      summaries: {
+        fresh: { text: "Current", updatedAt: "2026-01-02" },
+        stale: { text: "Old", updatedAt: "2026-01-01" },
+        undated: { text: "No date" },
+        invalid: { text: "Invalid date", updatedAt: "invalid" },
+      },
+    });
+    const summary = report.split("## AI summary staleness")[1].split("## Annotation queue health")[0];
+    expect(summary).toMatch(/active summaries: 3\. Missing: 1\./);
+    expect(summary).toContain("Missing entries: missing");
+    expect(summary).toMatch(/- stale .*2026-01-01 \(181d\)/);
+    expect(summary).toMatch(/- undated .*\(n\/a\)/);
+    expect(summary).toMatch(/- invalid .*\(n\/a\)/);
+    expect(summary).not.toMatch(/fresh|prelaunch/);
+  });
 
-    expect([ratio(exact.tracked, exact.missing) <= 0.27, ratio(over.tracked, over.missing) > 0.27]).toEqual([
-      true,
-      true,
-    ]);
-    expect([
-      ratio(0, analyzeAttestorTier([]).missing),
-      ratio(0, analyzeOneLiner([]).missing),
-      ratio(emptyArchetype.tracked, emptyArchetype.missing),
-    ]).toEqual([0, 0, 0]);
+  it.each([
+    { rows: 30, date: "2026-05-02", warnings: [] },
+    { rows: 31, date: "2026-05-02", warnings: ["queue length 31 exceeds 30-row threshold"] },
+    { rows: 30, date: "2026-05-01", warnings: ["oldest row is 61 days old (>60d)"] },
+  ])("reports queue warnings for $rows rows dated $date", ({ rows, date, warnings }) => {
+    const report = renderDigest({
+      queue: `## ${date}\n${Array.from({ length: rows }, (_, i) => `- coin-${i} | event`).join("\n")}`,
+    });
+    expect(report).toContain(`Rows pending review: ${rows}`);
+    expect(report.split("\n").filter((line) => line.startsWith("WARN: ")))
+      .toEqual(warnings.map((warning) => `WARN: ${warning}`));
+  });
+
+  it("renders empty cohorts with finite percentages and reports absent queue input", () => {
+    const report = renderDigest();
+    expect(report).toContain("0/0 active/pre-launch");
+    expect(report).toContain("0/0 have an archetype (0.0%)");
+    expect(report).toContain("attestorTier: 0/0 (0.0%)");
+    expect(report).not.toMatch(/NaN|Infinity|WARN:/);
+    expect(report).toContain("Queue file `agents/annotation-candidates.md` not present");
   });
 });

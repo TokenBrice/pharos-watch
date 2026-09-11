@@ -135,13 +135,33 @@ describe("pages middleware markdown negotiation", () => {
     expect(res.headers.get("Content-Security-Policy")).toContain("script-src 'self' 'nonce-");
   });
 
-  it("passes through /api/* untouched", async () => {
-    const req = new Request("https://pharos.watch/api/stablecoins", {
+  it.each([200, 404])("preserves API JSON body, status %i and headers without markdown negotiation", async (status) => {
+    const request = new Request("https://pharos.watch/api/stablecoins", {
       headers: { Accept: "text/markdown" },
     });
-    const { env, next } = ctx(req, {});
-    await onRequest({ request: req, env, next });
-    expect(next).toHaveBeenCalled();
+    const body = '{"sentinel":"api response"}';
+    const next = vi.fn(async () => new Response(body, {
+      status,
+      headers: { "Content-Type": "application/json", "X-Sentinel": "preserved" },
+    }));
+    const response = await onRequest({ request, env: ctx(request, {}).env, next });
+    expect(response.status).toBe(status);
+    expect(response.headers.get("Content-Type")).toBe("application/json");
+    expect(response.headers.get("X-Sentinel")).toBe("preserved");
+    expect(await response.text()).toBe(body);
+  });
+
+  it.each(["/_site-data/stablecoins", "/_next/static/app.html"])("passes %s HTML through without transformation", async (path) => {
+    const request = new Request(`https://pharos.watch${path}`);
+    const body = "<html><script>window.sentinel = true;</script></html>";
+    const next = vi.fn(async () => new Response(body, {
+      status: 202,
+      headers: { "Content-Type": "text/html", "Content-Security-Policy": "sentinel-policy" },
+    }));
+    const response = await onRequest({ request, env: ctx(request, {}).env, next });
+    expect(response.status).toBe(202);
+    expect(response.headers.get("Content-Security-Policy")).toBe("sentinel-policy");
+    expect(await response.text()).toBe(body);
   });
 
   it("passes through non-negotiable methods before markdown negotiation", async () => {
@@ -232,12 +252,14 @@ describe("pages middleware markdown negotiation", () => {
     expect(scriptSrc(csp)).not.toContain("'unsafe-inline'");
     expect(res.headers.get("Cloudflare-CDN-Cache-Control")).toBe("no-store");
     expect(res.headers.get("CDN-Cache-Control")).toBe("no-store");
-    expect(body).toMatch(/<script nonce="[^"]+">window\.__INLINE_ONE__ = true;<\/script>/);
-    expect(body).toMatch(/<script nonce="[^"]+">window\.__INLINE_TWO__ = true;<\/script>/);
-    expect(body).toMatch(/<script nonce="[^"]+">window\.__INLINE_THREE__ = true;<\/script>/);
+    const nonce = scriptSrc(csp).match(/'nonce-([^']+)'/)?.[1];
+    expect(nonce).toBeTruthy();
+    for (const marker of ["ONE", "TWO", "THREE"]) {
+      expect(body).toContain(`<script nonce="${nonce}">window.__INLINE_${marker}__ = true;</script>`);
+    }
     expect(body).not.toContain("route-nonce");
     expect(body).toContain('<script src="/_next/static/chunks/app.js"></script>');
-    expect(body).toMatch(/<script nonce="[^"]+" type="application\/ld\+json">/);
+    expect(body).toContain(`<script nonce="${nonce}" type="application/ld+json">`);
   });
 
   it("sets CSP on HEAD responses without trying to transform a body", async () => {
@@ -334,8 +356,11 @@ describe("pages middleware markdown negotiation", () => {
   });
 
   it("keeps the static fallback CSP free of unsafe inline script execution", () => {
-    expect(buildContentSecurityPolicy("abc123")).toBe(
-      "default-src 'self'; script-src 'self' 'nonce-abc123' https://www.googletagmanager.com; style-src 'self' 'unsafe-inline'; img-src 'self' https://coin-images.coingecko.com https://www.google-analytics.com https://*.google-analytics.com https://analytics.google.com https://*.analytics.google.com https://www.googletagmanager.com https://*.googletagmanager.com https://pbs.twimg.com https://abs.twimg.com data:; connect-src 'self' https://api.pharos.watch https://www.google-analytics.com https://*.google-analytics.com https://analytics.google.com https://*.analytics.google.com https://www.googletagmanager.com https://*.googletagmanager.com; font-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'",
-    );
+    const directives = buildContentSecurityPolicy("abc123").split(";").map((value) => value.trim());
+    const scripts = scriptSrc(directives.join(";"));
+    expect(scripts).toContain("'nonce-abc123'");
+    expect(scripts).not.toContain("'unsafe-inline'");
+    expect(scripts).not.toContain("'unsafe-eval'");
+    expect(directives).toEqual(expect.arrayContaining(["object-src 'none'", "base-uri 'self'", "frame-ancestors 'none'"]));
   });
 });

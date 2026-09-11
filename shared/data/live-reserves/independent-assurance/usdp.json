@@ -1,0 +1,51 @@
+{
+  "schemaVersion": 1,
+  "product": "USDP",
+  "profile": "usdp-v1",
+  "officialIndexUrl": "https://www.paxos.com/usdp-transparency",
+  "reportUrl": "https://framerusercontent.com/assets/Kk04pJ7gWRmVlVJvl5rmYWj25M.pdf",
+  "reportSha256": "40694d8d3162da294c41e72317e23e12ca4b0368029855741413c0327ec69d28",
+  "reportByteLength": 522676,
+  "reportDate": "2026-07-31",
+  "reportAsOf": "2026-07-31T17:00:00-04:00",
+  "reportTimeZone": "Eastern Daylight Time (UTC-4)",
+  "reportIssuedAt": "2026-08-25T23:59:00-04:00",
+  "attestor": "KPMG LLP",
+  "engagement": "Independent accountants examination under AICPA attestation standards",
+  "conclusion": "unmodified",
+  "unit": "USD",
+  "assets": [
+    {
+      "code": "cash",
+      "label": "Cash",
+      "amount": "24935703"
+    },
+    {
+      "code": "reverse-repo",
+      "label": "Repurchase agreements, at fair value",
+      "amount": "7040000"
+    }
+  ],
+  "liabilities": [
+    {
+      "code": "ethereum",
+      "label": "USDP redeemable ethereum tokens",
+      "amount": "29650135"
+    },
+    {
+      "code": "solana",
+      "label": "USDP redeemable solana tokens",
+      "amount": "2303892"
+    }
+  ],
+  "reportedAssetTotal": "31975703",
+  "computedAssetTotal": "31975703",
+  "reportedLiabilityTotal": "31954027",
+  "extraction": {
+    "tool": "Poppler pdftotext -layout",
+    "parserVersion": "26.07.0",
+    "normalizedTextSha256": "bb5962243035437103763ebdab4efe63502920b23e29ae2685d166ce19863cde",
+    "pageCount": 9
+  },
+  "assuranceTier": "independent-assurance"
+}

@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { cleanup, render, screen } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import type { TapeEvent } from "@shared/types/tape-event";
 
 type UseEventsResult = {
@@ -127,12 +127,18 @@ describe("TimelineClient", () => {
     expect(screen.getByText(/no events match these filters/i)).toBeTruthy();
   });
 
-  it("renders an error notice when the hook errors", () => {
-    mockEvents([], {
-      error: new Error("fetch failed"),
-    });
-    const { container } = render(<TimelineClient />);
-    expect(container.firstChild).not.toBeNull();
+  it("renders an error notice and recovers after retry", async () => {
+    const refetch = vi.fn(async () => { mockEvents([]); });
+    mockEvents([], { error: new Error("fetch failed"), refetch });
+    const { rerender } = render(<TimelineClient />);
+    const notice = screen.getByText("fetch failed").closest('[role="status"]')!;
+    expect(notice).not.toBeNull();
+    await act(async () => { fireEvent.click(within(notice as HTMLElement).getByRole("button", { name: "Retry" })); });
+    expect(refetch).toHaveBeenCalledOnce();
+    rerender(<TimelineClient />);
+    expect(screen.queryByText("fetch failed")).toBeNull();
+    expect(screen.queryByRole("button", { name: "Retry" })).toBeNull();
+    expect(screen.getByText(/no events match these filters/i)).toBeTruthy();
   });
 
   it("renders events with titles and source links", () => {

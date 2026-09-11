@@ -53,7 +53,7 @@ export function buildFrozenCemeteryProjection(): CemeteryEntry[] {
   return FROZEN_STABLECOINS.map(frozenToDeadShape).sort((left, right) => left.id.localeCompare(right.id));
 }
 
-export function buildMergedCemetery(): CemeteryEntry[] {
+function buildMergedCemetery(): CemeteryEntry[] {
   const seenIds = new Set<string>();
   const merged: CemeteryEntry[] = [];
   for (const dead of DEAD_STABLECOINS) {

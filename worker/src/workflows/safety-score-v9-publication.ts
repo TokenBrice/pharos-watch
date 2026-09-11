@@ -160,6 +160,11 @@ export function createSafetyScoreV9ShadowCaptureDatabase(
             );
           }
           if (captured.some((statement) => !isWriteQuery(statement!.query))) {
+            if (captured.some((statement) => isWriteQuery(statement!.query))) {
+              throw new Error(
+                "Safety Score V9 shadow compiler attempted a mixed read/write D1 batch",
+              );
+            }
             return target.batch(
               captured.map((statement) => statement!.delegate),
             );

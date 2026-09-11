@@ -9,27 +9,11 @@ import { V9_CANDIDATE_POLICY_V1 } from "../safety-score-v9/policy";
 import {
   projectV9DependencyScore,
   scoreV9EvaluatedAsset,
-  type V9PillarEvaluation,
   type V9ProductionScoreInput,
 } from "../safety-score-v9/score";
 import { computeV9ResultDigest } from "../safety-score-v9/trace";
 
-const DIGEST = "a".repeat(64);
-const BUILD_DIGEST = "b".repeat(64);
-const BASE_ID = `report-cards-input:v1:${"c".repeat(64)}`;
-
-function pillar(
-  score: number,
-  overrides: Partial<V9PillarEvaluation> = {},
-): V9PillarEvaluation {
-  return {
-    score,
-    evidenceLevel: "strong",
-    reasons: [],
-    structuralSignals: [],
-    ...overrides,
-  };
-}
+import { makeV9Pillar as pillar, makeV9ProductionScoreInput } from "./safety-score-v9-score.test-support";
 
 function signal(
   kind: V9StructuralSignal["kind"],
@@ -81,14 +65,12 @@ function operationalResilience(): V9OperationalResilienceResult {
 }
 
 function healthyInput(): V9ProductionScoreInput {
-  return {
+  const input = makeV9ProductionScoreInput();
+  return makeV9ProductionScoreInput({
     assetId: "usdt-tether",
     marketRank: 1,
     identity: {
-      factSetDigest: DIGEST,
-      baseInputGenerationId: BASE_ID,
-      evaluationBuildDigest: BUILD_DIGEST,
-      asOfSec: 1_000,
+      ...input.identity,
       sourceGenerations: { dex: "dex:1", reserves: "reserves:1" },
     },
     pillars: {
@@ -98,13 +80,9 @@ function healthyInput(): V9ProductionScoreInput {
         structuralSignals: [signal("centralized-mint", "low")],
       }),
     },
-    peg: { applicable: true, score: 100, activeDepegBps: null, reasons: [] },
     trackRecordMonths: 141,
-    parent: { required: false, score: null, propagatedReasons: [] },
-    dependencyReasons: [],
-    dependencyStructuralSignals: [],
     operationalResilience: operationalResilience(),
-  };
+  });
 }
 
 describe("Safety Score V9 USDT market-anchor premium", () => {
@@ -217,10 +195,12 @@ describe("Safety Score V9 USDT market-anchor premium", () => {
     ["a serial parent", (input: V9ProductionScoreInput) => {
       input.parent = { required: true, score: 83, propagatedReasons: [] };
     }],
+    ["operationally ineligible", (input: V9ProductionScoreInput) => {
+      input.operationalResilience = { ...operationalResilience(), eligible: false };
+    }],
     ["an operational blocker", (input: V9ProductionScoreInput) => {
       input.operationalResilience = {
         ...operationalResilience(),
-        eligible: false,
         blockerCodes: ["activeDepeg"],
       };
     }],

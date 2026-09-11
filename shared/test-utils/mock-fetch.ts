@@ -113,6 +113,7 @@ async function normalizeRequest(input: RequestInfo | URL, init?: RequestInit): P
   // Cloudflare's generic Request constructor infers its host metadata type from
   // RequestInit; normalize that inference at this cross-runtime test boundary.
   const request = new Request(normalizedInput, init) as Request;
+  request.signal.throwIfAborted();
   const body = request.body == null ? null : await cloneRequest(request).text();
   return {
     request,
@@ -163,6 +164,7 @@ async function routeMatches(
     : strictUrl
       ? history.url === route.match
       : history.url.includes(route.match);
+  request.signal.throwIfAborted();
   if (!requestMatches || (route.matchBody != null && history.body?.includes(route.matchBody) !== true)) {
     return false;
   }
@@ -183,6 +185,7 @@ async function routeMatches(
     const jsonMatches = typeof route.matchJson === "function"
       ? await route.matchJson(parsedBody, cloneRequest(request))
       : isJsonEqual(parsedBody, route.matchJson);
+    request.signal.throwIfAborted();
     if (!jsonMatches) return false;
   }
   return true;
@@ -243,9 +246,12 @@ export function mockFetch(routes: MockRoute[] = [], options: MockFetchOptions = 
   const fetchImplementation: MockFetchFn = async (input: RequestInfo | URL, init?: RequestInit) => {
     const normalized = await normalizeRequest(input, init);
     history.push(normalized.history);
+    normalized.request.signal.throwIfAborted();
     let route: MockRoute | undefined;
     for (const candidate of routes) {
-      if (await routeMatches(candidate, normalized.request, normalized.history, options.strictUrl === true)) {
+      const matches = await routeMatches(candidate, normalized.request, normalized.history, options.strictUrl === true);
+      normalized.request.signal.throwIfAborted();
+      if (matches) {
         route = candidate;
         break;
       }
@@ -276,10 +282,12 @@ export function mockFetch(routes: MockRoute[] = [], options: MockFetchOptions = 
     } else {
       outcome = route;
     }
+    normalized.request.signal.throwIfAborted();
     if (outcome instanceof Error) throw outcome;
     if (outcome instanceof Response) return outcome;
     if ("stall" in outcome) return await stalledResponse(normalized.request.signal);
     if (outcome.delayMs != null) await delayedResponse(outcome.delayMs, normalized.request.signal);
+    normalized.request.signal.throwIfAborted();
     return responseFromOutcome(outcome);
   };
   const spy = Object.assign(vi.fn<MockFetchFn>(fetchImplementation), {

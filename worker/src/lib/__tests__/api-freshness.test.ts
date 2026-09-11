@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
+import { createLatestSchemaSqlite } from "@shared/test-utils/latest-schema-sqlite";
 import { mockD1 } from "@shared/test-utils/mock-d1";
-import { makeNoopD1 } from "../../test-helpers/noop-d1";
+import { freshnessDb } from "./api-freshness.test-support";
 import {
   buildFreshnessMeta,
   buildCacheStatuses,
@@ -150,6 +151,31 @@ describe("getLatestSuccessfulCronTimestamp", () => {
 });
 
 describe("buildCacheStatuses sentinel validation", () => {
+  it("ignores newer non-best yield sources when measuring fallback freshness", async () => {
+    const now = 1_800_000_000;
+    const { db, sqlite } = createLatestSchemaSqlite();
+    try {
+      const insert = sqlite.prepare(`INSERT INTO yield_data
+        (stablecoin_id, source_key, symbol, current_apy, apy_7d, apy_30d,
+         yield_source, yield_type, data_source, is_best, updated_at)
+        VALUES ('usdc-circle', ?, 'USDC', 4, 4, 4, 'lending', 'lending', 'defillama', ?, ?)`);
+      insert.run("best", 1, now - 600);
+      insert.run("alternative", 0, now - 10);
+
+      const { caches } = await buildCacheStatuses(db, now);
+      expect(caches["yield-data"]).toMatchObject({
+        ageSeconds: 600,
+        freshnessSource: "table-fallback",
+      });
+
+      sqlite.exec("UPDATE yield_data SET is_best = 0");
+      const withoutBest = await buildCacheStatuses(db, now);
+      expect(withoutBest.caches["yield-data"].ageSeconds).toBeNull();
+    } finally {
+      sqlite.close();
+    }
+  });
+
   it("uses valid freshness sentinels without hot-table fallback queries", async () => {
     const now = 1_800_000_000;
     const db = mockD1([
@@ -174,14 +200,26 @@ describe("buildCacheStatuses sentinel validation", () => {
     expect(caches["dex-liquidity"]).toMatchObject({
       ageSeconds: 120,
       freshnessSource: "freshness-sentinel",
+      producerJob: "sync-dex-liquidity",
+      producerIntervalSec: 3600,
+      endpointMaxAge: 14400,
+      availabilityMaxAge: 43200,
     });
     expect(caches["yield-data"]).toMatchObject({
       ageSeconds: 180,
       freshnessSource: "freshness-sentinel",
+      producerJob: "sync-yield-data",
+      producerIntervalSec: 3600,
+      endpointMaxAge: 3600,
+      availabilityMaxAge: 3600,
     });
     expect(caches.dews).toMatchObject({
       ageSeconds: 240,
       freshnessSource: "freshness-sentinel",
+      producerJob: "compute-dews",
+      producerIntervalSec: 1800,
+      endpointMaxAge: 1800,
+      availabilityMaxAge: 1800,
     });
     expect(diagnostics).toEqual([]);
     expect(warnings).toEqual([]);
@@ -397,193 +435,112 @@ describe("buildCacheStatuses sentinel validation", () => {
     }));
     expect(statusFloor).toBe("stale");
   });
+
+  it("reports a table-query failure when cron timestamps rescue a missing sentinel", async () => {
+    const now = 1_800_000_000;
+    const db = mockD1([
+      {
+        match: "cache WHERE key IN",
+        rows: [
+          cacheRow("stablecoins", now - 60),
+          cacheRow("stablecoin-charts", now - 60),
+          cacheRow("usds-status", now - 60),
+          cacheRow("fx-rates", now - 60, { peggedEUR: 1.08 }),
+          cacheRow("bluechip-ratings", now - 60),
+          // No freshness:dex-liquidity sentinel row at all: the fallback path
+          // must surface the table failure, not a sentinel validation reason.
+          sentinelRow("yield-data", now - 180),
+          sentinelRow("dews", now - 240),
+        ],
+      },
+      { match: "GROUP BY job", rows: [{ job: "sync-dex-liquidity", started_at: now - 300 }] },
+      { match: "dex_liquidity", rows: [], throwError: new Error("table unavailable") },
+    ]);
+
+    const { caches, diagnostics, warnings } = await buildCacheStatuses(db, now);
+
+    expect(caches["dex-liquidity"]).toMatchObject({
+      ageSeconds: 300,
+      freshnessSource: "cron-fallback",
+      warning: "dex-liquidity: freshness table query failed; using cron fallback",
+    });
+    expect(diagnostics).toContainEqual({
+      key: "dex-liquidity",
+      freshnessSource: "cron-fallback",
+      warning: "dex-liquidity: freshness table query failed; using cron fallback",
+      failureSource: "table-freshness",
+    });
+    expect(warnings).toContain("dex-liquidity: freshness table query failed; using cron fallback");
+  });
+
+  it("escalates the global floor to stale when yield-data blows past its override ceiling", async () => {
+    const now = 1_800_000_000;
+    const db = mockD1([
+      {
+        match: "cache WHERE key IN",
+        rows: [
+          cacheRow("stablecoins", now - 60),
+          cacheRow("stablecoin-charts", now - 60),
+          cacheRow("usds-status", now - 60),
+          cacheRow("fx-rates", now - 60, { peggedEUR: 1.08 }),
+          cacheRow("bluechip-ratings", now - 60),
+          sentinelRow("dex-liquidity", now - 120),
+          // ~5.5x the hourly budget: past the yield-data override stale
+          // ceiling (4x), so the per-cache override escalates the floor.
+          sentinelRow("yield-data", now - 20_000),
+          sentinelRow("dews", now - 240),
+        ],
+      },
+      { match: "GROUP BY job", rows: [] },
+    ]);
+
+    const { caches, statusFloor } = await buildCacheStatuses(db, now);
+
+    expect(caches["yield-data"]).toMatchObject({ ageSeconds: 20_000, healthy: false });
+    expect(statusFloor).toBe("stale");
+  });
 });
 
 describe("buildCacheStatuses", () => {
-  function makeDb(nowSec: number) {
-    const seenSql: string[] = [];
-    const db = makeNoopD1({
-      prepare: (sql: string) => {
-        seenSql.push(sql);
-        const first = async <T>() => {
-          if (sql.includes("FROM cache WHERE key = ?")) {
-            return {
-              value: JSON.stringify({
-                updatedAt: nowSec - 120,
-                source: "compute-dews",
-                publishStatus: "published",
-                coverageVersion: 2,
-                expectedRowCount: 2,
-                stablecoinIdsDigest: "a".repeat(64),
-              }),
-              updated_at: nowSec - 120,
-            } as T;
-          }
-          if (sql.includes("MAX(updated_at)")) {
-            return { age: 120 } as T;
-          }
-          return null as T | null;
-        };
-        return {
-          bind: (..._args: unknown[]) => ({
-            all: async <T>() => {
-              if (sql.includes("cache WHERE key IN")) {
-                return {
-                  results: [{ key: "stablecoins", updated_at: nowSec - 60 }] as T[],
-                  success: true,
-                  meta: {},
-                };
-              }
-              return { results: [] as T[], success: true, meta: {} };
-            },
-            first,
-            run: async () => ({ success: true, meta: {} }),
-          }),
-          all: async <T>() => ({ results: [] as T[], success: true, meta: {} }),
-          first,
-          run: async () => ({ success: true, meta: {} }),
-        };
-      },
-      batch: async () => [],
-      exec: async () => ({ count: 0, duration: 0 }),
-      dump: async () => new ArrayBuffer(0),
+  it("ignores an unknown provider instead of evaluating its freshness", async () => {
+    const nowSec = 1_800_000_000;
+    const unknownProviderKey = "unknown-provider";
+    const db = freshnessDb({
+      cacheRows: [
+        cacheRow("stablecoins", nowSec - 60),
+        cacheRow("stablecoin-charts", nowSec - 60),
+        cacheRow("usds-status", nowSec - 60),
+        cacheRow("fx-rates", nowSec - 60, { peggedEUR: 1.08 }),
+        cacheRow("bluechip-ratings", nowSec - 60),
+        sentinelRow("dex-liquidity", nowSec - 60),
+        sentinelRow("yield-data", nowSec - 60),
+        sentinelRow("dews", nowSec - 60),
+        cacheRow(unknownProviderKey, nowSec - 86_400),
+      ],
     });
-    return { db, seenSql };
-  }
+
+    const { caches, statusFloor } = await buildCacheStatuses(db, nowSec);
+
+    expect(caches).not.toHaveProperty(unknownProviderKey);
+    expect(statusFloor).toBe("healthy");
+  });
 
   it("uses table timestamps for table-backed datasets and the publication pointer for DEWS", async () => {
     const nowSec = Math.floor(Date.now() / 1000);
-    const { db, seenSql } = makeDb(nowSec);
+    const db = freshnessDb({ tableAge: 120, pointer: dewsPublicationPointerRow(nowSec - 120) });
 
-    await buildCacheStatuses(db, nowSec);
-
-    const dexSql = seenSql.find((s) => s.includes("dex_liquidity"));
-    const yieldSql = seenSql.find((s) => s.includes("yield_data"));
-    expect(dexSql).toContain("? - MAX(updated_at)");
-    expect(yieldSql).toContain("? - MAX(updated_at)");
-    expect(yieldSql).toContain("is_best = 1");
-    expect(seenSql.some((sql) => sql.includes("FROM stress_signals"))).toBe(false);
-    expect(seenSql.some((sql) => sql.includes("FROM cache WHERE key = ?"))).toBe(true);
-  });
-
-  it("uses freshness sentinels when present and skips hot-table freshness queries", async () => {
-    const nowSec = Math.floor(Date.now() / 1000);
-    const seenSql: string[] = [];
-    const db = makeNoopD1({
-      prepare: (sql: string) => {
-        seenSql.push(sql);
-        const first = async <T>() => null as T | null;
-        return {
-          bind: (..._args: unknown[]) => ({
-            all: async <T>() => {
-              if (sql.includes("cache WHERE key IN")) {
-                return {
-                  results: [
-                    { key: "stablecoins", updated_at: nowSec - 60, value: "{}" },
-                    {
-                      key: "freshness:dex-liquidity",
-                      updated_at: nowSec - 120,
-                      value: JSON.stringify({
-                        updatedAt: nowSec - 120,
-                        source: "sync-dex-liquidity",
-                        publishStatus: "ok",
-                      }),
-                    },
-                    {
-                      key: "freshness:yield-data",
-                      updated_at: nowSec - 180,
-                      value: JSON.stringify({
-                        updatedAt: nowSec - 180,
-                        source: "sync-yield-data",
-                        publishStatus: "ok",
-                      }),
-                    },
-                    {
-                      key: "freshness:dews",
-                      updated_at: nowSec - 240,
-                      value: JSON.stringify({
-                        updatedAt: nowSec - 240,
-                        source: "compute-dews",
-                        publishStatus: "ok",
-                      }),
-                    },
-                  ] as T[],
-                  success: true,
-                  meta: {},
-                };
-              }
-              return { results: [] as T[], success: true, meta: {} };
-            },
-            first,
-            run: async () => ({ success: true, meta: {} }),
-          }),
-          all: async <T>() => ({ results: [] as T[], success: true, meta: {} }),
-          first,
-          run: async () => ({ success: true, meta: {} }),
-        };
-      },
-      batch: async () => [],
-      exec: async () => ({ count: 0, duration: 0 }),
-      dump: async () => new ArrayBuffer(0),
-    });
-
-    const { caches, diagnostics } = await buildCacheStatuses(db, nowSec);
-
-    expect(caches["dex-liquidity"]?.ageSeconds).toBe(120);
-    expect(caches["dex-liquidity"]).toMatchObject({
-      freshnessSource: "freshness-sentinel",
-      producerJob: "sync-dex-liquidity",
-      producerIntervalSec: 7200,
-      endpointMaxAge: 14_400,
-      availabilityMaxAge: 43200,
-    });
-    expect(caches["yield-data"]?.ageSeconds).toBe(180);
-    expect(caches["yield-data"]).toMatchObject({
-      freshnessSource: "freshness-sentinel",
-      producerJob: "sync-yield-data",
-      producerIntervalSec: 3600,
-      endpointMaxAge: 3600,
-      availabilityMaxAge: 3600,
-    });
-    expect(caches.dews?.ageSeconds).toBe(240);
-    expect(caches.dews).toMatchObject({
-      freshnessSource: "freshness-sentinel",
-      producerJob: "compute-dews",
-      producerIntervalSec: 1800,
-      endpointMaxAge: 1800,
-      availabilityMaxAge: 1800,
-    });
-    expect(diagnostics).toEqual([]);
-    expect(seenSql.some((sql) => sql.includes("FROM dex_liquidity"))).toBe(false);
-    expect(seenSql.some((sql) => sql.includes("FROM yield_data"))).toBe(false);
+    const { caches } = await buildCacheStatuses(db, nowSec);
+    const seenSql = db.getHistory().map((entry) => entry.sql);
+    expect(caches["dex-liquidity"]).toMatchObject({ ageSeconds: 120, freshnessSource: "table-fallback" });
+    expect(caches["yield-data"]).toMatchObject({ ageSeconds: 120, freshnessSource: "table-fallback" });
+    expect(caches.dews?.ageSeconds).toBe(120);
     expect(seenSql.some((sql) => sql.includes("FROM stress_signals"))).toBe(false);
   });
+
 
   it("clamps negative table ages to zero without accepting a future DEWS table row", async () => {
     const nowSec = Math.floor(Date.now() / 1000);
-    const db = makeNoopD1({
-      prepare: (sql: string) => {
-        const first = async <T>() => {
-          if (sql.includes("MAX(updated_at)") || sql.includes("MAX(computed_at)")) {
-            return { age: -30 } as T;
-          }
-          return null as T | null;
-        };
-        return {
-          bind: (..._args: unknown[]) => ({
-            all: async <T>() => ({ results: [] as T[], success: true, meta: {} }),
-            first,
-            run: async () => ({ success: true, meta: {} }),
-          }),
-          all: async <T>() => ({ results: [] as T[], success: true, meta: {} }),
-          first,
-          run: async () => ({ success: true, meta: {} }),
-        };
-      },
-      batch: async () => [],
-      exec: async () => ({ count: 0, duration: 0 }),
-      dump: async () => new ArrayBuffer(0),
-    });
+    const db = freshnessDb({ tableAge: -30 });
 
     const { caches } = await buildCacheStatuses(db, nowSec);
     expect(caches["dex-liquidity"]?.ageSeconds).toBe(0);
@@ -593,29 +550,7 @@ describe("buildCacheStatuses", () => {
 
   it("reports missing DEWS publication evidence instead of throwing", async () => {
     const nowSec = Math.floor(Date.now() / 1000);
-    const db = makeNoopD1({
-      prepare: (sql: string) => {
-        const first = async <T>() => {
-          if (sql.includes("MAX(updated_at)")) {
-            return { age: 60 } as T;
-          }
-          return null as T | null;
-        };
-        return {
-          bind: (..._args: unknown[]) => ({
-            all: async <T>() => ({ results: [] as T[], success: true, meta: {} }),
-            first,
-            run: async () => ({ success: true, meta: {} }),
-          }),
-          all: async <T>() => ({ results: [] as T[], success: true, meta: {} }),
-          first,
-          run: async () => ({ success: true, meta: {} }),
-        };
-      },
-      batch: async () => [],
-      exec: async () => ({ count: 0, duration: 0 }),
-      dump: async () => new ArrayBuffer(0),
-    });
+    const db = freshnessDb({ tableAge: 60 });
 
     const { caches, failures } = await buildCacheStatuses(db, nowSec);
     expect(caches.dews?.ageSeconds).toBeNull();
@@ -630,35 +565,7 @@ describe("buildCacheStatuses", () => {
 
   it("does not let producer cron timestamps replace missing DEWS publication evidence", async () => {
     const nowSec = Math.floor(Date.now() / 1000);
-    const db = makeNoopD1({
-      prepare: (sql: string) => {
-        const first = async <T>() => {
-          return null as T | null;
-        };
-        return {
-          bind: (..._args: unknown[]) => ({
-            all: async <T>() => {
-              if (sql.includes("FROM cron_runs")) {
-                return {
-                  results: [{ job: "compute-dews", started_at: nowSec - 300 }] as T[],
-                  success: true,
-                  meta: {},
-                };
-              }
-              return { results: [] as T[], success: true, meta: {} };
-            },
-            first,
-            run: async () => ({ success: true, meta: {} }),
-          }),
-          all: async <T>() => ({ results: [] as T[], success: true, meta: {} }),
-          first,
-          run: async () => ({ success: true, meta: {} }),
-        };
-      },
-      batch: async () => [],
-      exec: async () => ({ count: 0, duration: 0 }),
-      dump: async () => new ArrayBuffer(0),
-    });
+    const db = freshnessDb({ cronRows: [{ job: "compute-dews", started_at: nowSec - 300 }] });
 
     const { caches, diagnostics, failures, warnings } = await buildCacheStatuses(db, nowSec);
     expect(caches.dews?.ageSeconds).toBeNull();
@@ -678,37 +585,7 @@ describe("buildCacheStatuses", () => {
     const nowSec = Math.floor(Date.now() / 1000);
     const infoSpy = vi.spyOn(console, "info").mockImplementation(() => {});
     try {
-      const db = makeNoopD1({
-        prepare: (sql: string) => {
-          const first = async <T>() => {
-            if (sql.includes("MAX(updated_at)") || sql.includes("MAX(computed_at)")) {
-              return { age: 45 } as T;
-            }
-            return null as T | null;
-          };
-          return {
-            bind: (..._args: unknown[]) => ({
-              all: async <T>() => {
-                if (sql.includes("cache WHERE key IN")) {
-                  throw new Error("cache lookup failed");
-                }
-                if (sql.includes("FROM cron_runs")) {
-                  return { results: [] as T[], success: true, meta: {} };
-                }
-                return { results: [] as T[], success: true, meta: {} };
-              },
-              first,
-              run: async () => ({ success: true, meta: {} }),
-            }),
-            all: async <T>() => ({ results: [] as T[], success: true, meta: {} }),
-            first,
-            run: async () => ({ success: true, meta: {} }),
-          };
-        },
-        batch: async () => [],
-        exec: async () => ({ count: 0, duration: 0 }),
-        dump: async () => new ArrayBuffer(0),
-      });
+      const db = freshnessDb({ tableAge: 45, cacheError: new Error("cache lookup failed") });
 
       const { caches, diagnostics, failures, warnings } = await buildCacheStatuses(db, nowSec);
 
@@ -740,44 +617,13 @@ describe("buildCacheStatuses", () => {
     const nowSec = Math.floor(Date.now() / 1000);
     const infoSpy = vi.spyOn(console, "info").mockImplementation(() => {});
     try {
-      const db = makeNoopD1({
-        prepare: (sql: string) => {
-          const first = async <T>() => {
-            if (sql.includes("MAX(updated_at)") || sql.includes("MAX(computed_at)")) {
-              return { age: null } as T;
-            }
-            return null as T | null;
-          };
-          return {
-            bind: (..._args: unknown[]) => ({
-              all: async <T>() => {
-                if (sql.includes("cache WHERE key IN")) {
-                  throw new Error("cache lookup failed");
-                }
-                if (sql.includes("FROM cron_runs")) {
-                  return {
-                    results: [
-                      { job: "sync-dex-liquidity", started_at: nowSec - 90 },
-                      { job: "sync-yield-data", started_at: nowSec - 120 },
-                      { job: "compute-dews", started_at: nowSec - 150 },
-                    ] as T[],
-                    success: true,
-                    meta: {},
-                  };
-                }
-                return { results: [] as T[], success: true, meta: {} };
-              },
-              first,
-              run: async () => ({ success: true, meta: {} }),
-            }),
-            all: async <T>() => ({ results: [] as T[], success: true, meta: {} }),
-            first,
-            run: async () => ({ success: true, meta: {} }),
-          };
-        },
-        batch: async () => [],
-        exec: async () => ({ count: 0, duration: 0 }),
-        dump: async () => new ArrayBuffer(0),
+      const db = freshnessDb({
+        cacheError: new Error("cache lookup failed"),
+        cronRows: [
+          { job: "sync-dex-liquidity", started_at: nowSec - 90 },
+          { job: "sync-yield-data", started_at: nowSec - 120 },
+          { job: "compute-dews", started_at: nowSec - 150 },
+        ],
       });
 
       const { caches, diagnostics, failures, warnings } = await buildCacheStatuses(db, nowSec);
@@ -810,34 +656,7 @@ describe("buildCacheStatuses", () => {
     const nowSec = Math.floor(Date.now() / 1000);
     const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
     try {
-      const db = makeNoopD1({
-        prepare: (sql: string) => {
-          const first = async <T>() => {
-            if (sql.includes("MAX(updated_at)") || sql.includes("MAX(computed_at)")) {
-              return { age: null } as T;
-            }
-            return null as T | null;
-          };
-          return {
-            bind: (..._args: unknown[]) => ({
-              all: async <T>() => {
-                if (sql.includes("FROM cron_runs")) {
-                  throw new Error("cron lookup failed");
-                }
-                return { results: [] as T[], success: true, meta: {} };
-              },
-              first,
-              run: async () => ({ success: true, meta: {} }),
-            }),
-            all: async <T>() => ({ results: [] as T[], success: true, meta: {} }),
-            first,
-            run: async () => ({ success: true, meta: {} }),
-          };
-        },
-        batch: async () => [],
-        exec: async () => ({ count: 0, duration: 0 }),
-        dump: async () => new ArrayBuffer(0),
-      });
+      const db = freshnessDb({ cronError: new Error("cron lookup failed") });
 
       const { failures } = await buildCacheStatuses(db, nowSec);
 
@@ -856,73 +675,29 @@ describe("buildCacheStatuses", () => {
 
   it("uses fx-rates-meta usableSyncAt for cache freshness and keeps cadence-aware source warnings separate", async () => {
     const nowSec = Math.floor(Date.now() / 1000);
-    const db = makeNoopD1({
-      prepare: (sql: string) => {
-        const first = async <T>() => {
-          if (sql.includes("FROM cache WHERE key = ?")) {
-            return {
-              value: JSON.stringify({
-                updatedAt: nowSec - 60,
-                source: "compute-dews",
-                publishStatus: "published",
-                coverageVersion: 2,
-                expectedRowCount: 2,
-                stablecoinIdsDigest: "a".repeat(64),
-              }),
-              updated_at: nowSec - 60,
-            } as T;
-          }
-          if (sql.includes("MAX(updated_at)")) {
-            return { age: 60 } as T;
-          }
-          return null as T | null;
-        };
-        return {
-          bind: (..._args: unknown[]) => ({
-            all: async <T>() => {
-              if (sql.includes("cache WHERE key IN")) {
-                return {
-                  results: [
-                    { key: "stablecoins", updated_at: nowSec - 60, value: "{}" },
-                    { key: "stablecoin-charts", updated_at: nowSec - 60, value: "{}" },
-                    { key: "usds-status", updated_at: nowSec - 60, value: "{}" },
-                    { key: "fx-rates", updated_at: nowSec - 60, value: JSON.stringify({ peggedEUR: 1.08 }) },
-                    {
-                      key: "fx-rates-meta",
-                      updated_at: nowSec - 60,
-                      value: JSON.stringify({
-                        usableSyncAt: nowSec - 60,
-                        mode: "cached-fallback",
-                        sourceUpdatedAtByPeg: { peggedEUR: nowSec - 8 * 3600 },
-                        sourceModeByPeg: { peggedEUR: "cached" },
-                        sourceCadenceByPeg: { peggedEUR: "intraday" },
-                        consecutiveFallbackRuns: 4,
-                      }),
-                    },
-                    { key: "bluechip-ratings", updated_at: nowSec - 60, value: "{}" },
-                  ] as T[],
-                  success: true,
-                  meta: {},
-                };
-              }
-              return { results: [] as T[], success: true, meta: {} };
-            },
-            first,
-            run: async () => ({ success: true, meta: {} }),
-          }),
-          all: async <T>() => ({ results: [] as T[], success: true, meta: {} }),
-          first,
-          run: async () => ({ success: true, meta: {} }),
-        };
-      },
-      batch: async () => [],
-      exec: async () => ({ count: 0, duration: 0 }),
-      dump: async () => new ArrayBuffer(0),
+    const db = freshnessDb({
+      tableAge: 60,
+      pointer: dewsPublicationPointerRow(nowSec - 60),
+      cacheRows: [
+        cacheRow("stablecoins", nowSec - 60),
+        cacheRow("stablecoin-charts", nowSec - 60),
+        cacheRow("usds-status", nowSec - 60),
+        cacheRow("fx-rates", nowSec - 60, { peggedEUR: 1.08 }),
+        cacheRow("fx-rates-meta", nowSec - 30, {
+          usableSyncAt: nowSec - 180,
+          mode: "cached-fallback",
+          sourceUpdatedAtByPeg: { peggedEUR: nowSec - 8 * 3600 },
+          sourceModeByPeg: { peggedEUR: "cached" },
+          sourceCadenceByPeg: { peggedEUR: "intraday" },
+          consecutiveFallbackRuns: 4,
+        }),
+        cacheRow("bluechip-ratings", nowSec - 60),
+      ],
     });
 
     const { caches, statusFloor, warnings } = await buildCacheStatuses(db, nowSec);
 
-    expect(caches["fx-rates"]?.ageSeconds).toBe(60);
+    expect(caches["fx-rates"]?.ageSeconds).toBe(180);
     expect(caches["fx-rates"]?.mode).toBe("cached-fallback");
     expect(caches["fx-rates"]?.sourceStatus).toBe("degraded");
     expect(caches["fx-rates"]?.consecutiveFallbackRuns).toBe(4);

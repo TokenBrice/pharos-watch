@@ -105,7 +105,6 @@ vi.mock("../../api/backfill-price-sources", () => ({
 
 import {
   AUTHORITATIVE_LIVE_CANDIDATE_TIMEOUT_MS,
-  AUTHORITATIVE_LIVE_OVERRIDE_BUDGET_MS,
   type AuthoritativeLivePriceCandidate,
   createAuthoritativeLivePriceOverrideStats,
   fetchAuthoritativeHistoricalPriceSeries,
@@ -122,7 +121,15 @@ import {
   type PriceSourceProvider,
 } from "../authoritative-price-sources/helpers";
 import type * as KavaPricefeedModule from "../authoritative-price-sources/kava-pricefeed";
-import { asset, fetchLiveOverrides, freshParent, unpricedChild } from "./authoritative-price-sources.test-support";
+import {
+  asset,
+  fetchLiveOverrides,
+  freshParent,
+  makeCircuitCacheRow,
+  makeHistoricalMeta,
+  makeHistoricalPriceSeries,
+  unpricedChild,
+} from "./authoritative-price-sources.test-support";
 import { resolveVaultNavSupplyPrice } from "../authoritative-price-sources/erc4626-nav";
 import type { PeggedAsset } from "../../cron/sync-stablecoins/enrich-prices-shared";
 
@@ -419,22 +426,15 @@ describe("authoritative-price-sources", () => {
   it("skips live RPC protocol-redeem overrides while the grouped circuit is open", async () => {
     const nowSec = Math.floor(Date.now() / 1000);
     const db = mockD1([
-      {
-        match: "SELECT value, updated_at FROM cache WHERE key = ?",
-        rows: [
-          {
-            key: `circuit:${CIRCUIT_SOURCE.PROTOCOL_REDEEM}`,
-            value: JSON.stringify({
-              state: "open",
-              consecutiveFailures: 3,
-              lastFailureAt: nowSec,
-              lastSuccessAt: null,
-              openedAt: nowSec,
-            }),
-            updated_at: nowSec,
-          },
-        ],
-      },
+      makeCircuitCacheRow(CIRCUIT_SOURCE.PROTOCOL_REDEEM, {
+        record: {
+          state: "open",
+          consecutiveFailures: 3,
+          lastFailureAt: nowSec,
+          openedAt: nowSec,
+        },
+        updatedAt: nowSec,
+      }),
     ]);
     const stats = createAuthoritativeLivePriceOverrideStats();
 
@@ -463,23 +463,15 @@ describe("authoritative-price-sources", () => {
   it("reuses an open grouped circuit decision within one live override run", async () => {
     const nowSec = Math.floor(Date.now() / 1000);
     const db = mockD1([
-      {
-        match: "SELECT value, updated_at FROM cache WHERE key = ?",
-        matchBinds: [`circuit:${CIRCUIT_SOURCE.PROTOCOL_REDEEM}`],
-        rows: [
-          {
-            key: `circuit:${CIRCUIT_SOURCE.PROTOCOL_REDEEM}`,
-            value: JSON.stringify({
-              state: "open",
-              consecutiveFailures: 3,
-              lastFailureAt: nowSec,
-              lastSuccessAt: null,
-              openedAt: nowSec,
-            }),
-            updated_at: nowSec,
-          },
-        ],
-      },
+      makeCircuitCacheRow(CIRCUIT_SOURCE.PROTOCOL_REDEEM, {
+        record: {
+          state: "open",
+          consecutiveFailures: 3,
+          lastFailureAt: nowSec,
+          openedAt: nowSec,
+        },
+        updatedAt: nowSec,
+      }),
     ]);
     const stats = createAuthoritativeLivePriceOverrideStats();
 
@@ -693,10 +685,6 @@ describe("authoritative-price-sources", () => {
     });
   });
 
-  it("defaults the live override wall-clock budget to 10 seconds", () => {
-    expect(AUTHORITATIVE_LIVE_OVERRIDE_BUDGET_MS).toBe(10_000);
-    expect(createAuthoritativeLivePriceOverrideStats().budgetMs).toBe(10_000);
-  });
 
   it("prioritizes every missing price before already-priced override candidates", () => {
     const prioritized = prioritizeAuthoritativeLivePriceCandidates([
@@ -891,6 +879,57 @@ describe("authoritative-price-sources", () => {
     ]);
   });
 
+  it("aborts pending overrides at ten seconds by default and leaves later candidates unattempted", async () => {
+    vi.useFakeTimers();
+    // Drive the platform timeout with the same virtual clock as candidate timeouts.
+    const timeoutSpy = vi.spyOn(AbortSignal, "timeout").mockImplementation((milliseconds) => {
+      const controller = new AbortController();
+      setTimeout(() => controller.abort(new DOMException("Timed out", "TimeoutError")), milliseconds);
+      return controller.signal;
+    });
+    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    try {
+      fetchEvmCallHexAtBlockMock.mockImplementation(
+        (_chain: string, _to: string, _data: string, _block: number | "latest", options?: { signal?: AbortSignal }) =>
+          new Promise((_resolve, reject) => {
+            options?.signal?.addEventListener("abort", () => reject(options.signal?.reason), { once: true });
+          }),
+      );
+      const stats = createAuthoritativeLivePriceOverrideStats();
+      let settled = false;
+      const run = fetchLiveOverrides(
+        [
+          unpricedChild("cusd-cap"),
+          unpricedChild("iusd-infinifi"),
+          unpricedChild("susdc-spark"),
+          unpricedChild("steakusdc-steakhouse"),
+          unpricedChild("bbqusdc-steakhouse"),
+          freshParent("usdc-circle", 1, "protocol-redeem", {
+            nowSec: Math.floor(Date.now() / 1000),
+          }),
+        ],
+        { stats },
+      ).then((result) => {
+        settled = true;
+        return result;
+      });
+      await vi.advanceTimersByTimeAsync(9_999);
+      expect(settled).toBe(false);
+      expect(stats.timedOut).toBe(false);
+      await vi.advanceTimersByTimeAsync(1);
+      expect(settled).toBe(true);
+      expect((await run).size).toBe(0);
+      expect(stats).toMatchObject({ timedOut: true, attemptedCount: 4, skippedBudget: 1 });
+      expect(stats.assetAttempts.filter((attempt) => attempt.state === "skipped")).toEqual([
+        expect.objectContaining({ skipReason: "budget", rejectionClass: "timeout" }),
+      ]);
+    } finally {
+      timeoutSpy.mockRestore();
+      warnSpy.mockRestore();
+      vi.useRealTimers();
+    }
+  });
+
   it("continues to the next live candidate after a single candidate timeout", async () => {
     vi.useFakeTimers();
     const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => undefined);
@@ -963,23 +1002,15 @@ describe("authoritative-price-sources", () => {
     );
     const nowSec = Math.floor(Date.now() / 1000);
     const db = mockD1([
-      {
-        match: "SELECT value, updated_at FROM cache WHERE key = ?",
-        matchBinds: [`circuit:${CIRCUIT_SOURCE.PROTOCOL_REDEEM}`],
-        rows: [
-          {
-            key: `circuit:${CIRCUIT_SOURCE.PROTOCOL_REDEEM}`,
-            value: JSON.stringify({
-              state: "half-open",
-              consecutiveFailures: 3,
-              lastFailureAt: nowSec - 1_800,
-              lastSuccessAt: null,
-              openedAt: nowSec - 1_800,
-            }),
-            updated_at: nowSec,
-          },
-        ],
-      },
+      makeCircuitCacheRow(CIRCUIT_SOURCE.PROTOCOL_REDEEM, {
+        record: {
+          state: "half-open",
+          consecutiveFailures: 3,
+          lastFailureAt: nowSec - 1_800,
+          openedAt: nowSec - 1_800,
+        },
+        updatedAt: nowSec,
+      }),
     ]);
     const stats = createAuthoritativeLivePriceOverrideStats(5);
 
@@ -1018,19 +1049,11 @@ describe("authoritative-price-sources", () => {
     fetchEvmCallHexAtBlockMock.mockResolvedValue(QUOTE_HEX);
 
     const result = await fetchAuthoritativeHistoricalPriceSeries(
-      {
-        id: "cusd-cap",
-        name: "Cap cUSD",
-        symbol: "CUSD",
+      makeHistoricalMeta("cusd-cap", "Cap cUSD", "CUSD", {
         flags: {
-          pegCurrency: "USD",
-          backing: "rwa-backed",
           governance: "centralized-dependent",
-          yieldBearing: false,
-          rwa: false,
-          navToken: false,
         },
-      },
+      }),
       {
         candidateTimestamps: [1_710_000_000, 1_710_086_400],
         supplySnapshots: [
@@ -1067,19 +1090,11 @@ describe("authoritative-price-sources", () => {
     resolveClosestBlockAtOrBeforeTimestampMock.mockRejectedValue(new Error("rpc index down"));
 
     const result = await fetchAuthoritativeHistoricalPriceSeries(
-      {
-        id: "cusd-cap",
-        name: "Cap cUSD",
-        symbol: "CUSD",
+      makeHistoricalMeta("cusd-cap", "Cap cUSD", "CUSD", {
         flags: {
-          pegCurrency: "USD",
-          backing: "rwa-backed",
           governance: "centralized-dependent",
-          yieldBearing: false,
-          rwa: false,
-          navToken: false,
         },
-      },
+      }),
       {
         candidateTimestamps: [1_710_000_000],
         supplySnapshots: [{ ts: 1_710_000_000, supply: 100_000_000 }],
@@ -1385,19 +1400,13 @@ describe("authoritative-price-sources", () => {
 
   it("does not claim authoritative historical protocol-par coverage for CHF parity", async () => {
     const result = await fetchAuthoritativeHistoricalPriceSeries(
-      {
-        id: "chfau-allunity",
-        name: "AllUnity CHF",
-        symbol: "CHFAU",
+      makeHistoricalMeta("chfau-allunity", "AllUnity CHF", "CHFAU", {
         flags: {
           pegCurrency: "CHF",
-          backing: "rwa-backed",
           governance: "centralized",
-          yieldBearing: false,
           rwa: true,
-          navToken: false,
         },
-      },
+      }),
       {
         candidateTimestamps: [1_778_000_000],
       },
@@ -1415,19 +1424,13 @@ describe("authoritative-price-sources", () => {
     fetchEvmCallHexAtBlockMock.mockResolvedValue(IUSD_QUOTE_HEX);
 
     const result = await fetchAuthoritativeHistoricalPriceSeries(
-      {
-        id: "iusd-infinifi",
-        name: "infiniFi USD",
-        symbol: "IUSD",
+      makeHistoricalMeta("iusd-infinifi", "infiniFi USD", "IUSD", {
         flags: {
-          pegCurrency: "USD",
           backing: "crypto-backed",
           governance: "centralized-dependent",
           yieldBearing: true,
-          rwa: false,
-          navToken: false,
         },
-      },
+      }),
       {
         candidateTimestamps: [1_767_196_936, 1_768_107_667],
       },
@@ -1456,37 +1459,19 @@ describe("authoritative-price-sources", () => {
   });
 
   it("replays historical USDAI prices from the tracked PYUSD market series", async () => {
-    fetchMarketBackfillPriceSeriesMock.mockResolvedValue({
-      prices: [
+    fetchMarketBackfillPriceSeriesMock.mockResolvedValue(
+      makeHistoricalPriceSeries([
         { timestamp: 1_759_363_200, price: 0.99994 },
         { timestamp: 1_759_366_800, price: 1.00011 },
-      ],
-      diagnostics: {
-        granularity: "hourly",
-        sourcesUsed: ["coingecko"],
-        quoteMode: "usd",
-        quoteCurrency: "usd",
-        mergeReasons: [],
-        perSourceStats: [],
-        policyAdjustments: [],
-        finalPointCount: 2,
-      },
-    });
+      ]),
+    );
 
     const result = await fetchAuthoritativeHistoricalPriceSeries(
-      {
-        id: "usdai-usd-ai",
-        name: "USDai",
-        symbol: "USDai",
+      makeHistoricalMeta("usdai-usd-ai", "USDai", "USDai", {
         flags: {
-          pegCurrency: "USD",
-          backing: "rwa-backed",
           governance: "centralized-dependent",
-          yieldBearing: false,
-          rwa: false,
-          navToken: false,
         },
-      },
+      }),
       {
         candidateTimestamps: [1_759_363_200, 1_759_366_800],
       },
@@ -1514,100 +1499,32 @@ describe("authoritative-price-sources", () => {
     });
   });
 
-  it("replays historical M0 extension prices from the tracked wM market series", async () => {
-    fetchMarketBackfillPriceSeriesMock.mockResolvedValue({
-      prices: [
+  it.each([
+    ["usdk-kast", "KAST Dollar", "USDK"],
+    ["xo-exodus", "XO Cash", "XO"],
+    ["usdnr-nerona", "Nerona USD", "USDnr"],
+    ["m-m0", "M by M0", "M"],
+  ])("replays historical %s prices from the tracked wM market series", async (id, name, symbol) => {
+    fetchMarketBackfillPriceSeriesMock.mockResolvedValue(
+      makeHistoricalPriceSeries([
         { timestamp: 1_776_000_000, price: 0.99971 },
         { timestamp: 1_776_003_600, price: 1.00006 },
-      ],
-      diagnostics: {
-        granularity: "hourly",
-        sourcesUsed: ["coingecko"],
-        quoteMode: "usd",
-        quoteCurrency: "usd",
-        mergeReasons: [],
-        perSourceStats: [],
-        policyAdjustments: [],
-        finalPointCount: 2,
-      },
-    });
-
-    const usdkResult = await fetchAuthoritativeHistoricalPriceSeries(
-      {
-        id: "usdk-kast",
-        name: "KAST Dollar",
-        symbol: "USDK",
-        flags: {
-          pegCurrency: "USD",
-          backing: "rwa-backed",
-          governance: "centralized",
-          yieldBearing: false,
-          rwa: true,
-          navToken: false,
-        },
-      },
-      {
-        candidateTimestamps: [1_776_000_000, 1_776_003_600],
-      },
-    );
-    const xoResult = await fetchAuthoritativeHistoricalPriceSeries(
-      {
-        id: "xo-exodus",
-        name: "XO Cash",
-        symbol: "XO",
-        flags: {
-          pegCurrency: "USD",
-          backing: "rwa-backed",
-          governance: "centralized",
-          yieldBearing: false,
-          rwa: true,
-          navToken: false,
-        },
-      },
-      {
-        candidateTimestamps: [1_776_000_000, 1_776_003_600],
-      },
-    );
-    const usdnrResult = await fetchAuthoritativeHistoricalPriceSeries(
-      {
-        id: "usdnr-nerona",
-        name: "Nerona USD",
-        symbol: "USDnr",
-        flags: {
-          pegCurrency: "USD",
-          backing: "rwa-backed",
-          governance: "centralized",
-          yieldBearing: false,
-          rwa: true,
-          navToken: false,
-        },
-      },
-      {
-        candidateTimestamps: [1_776_000_000, 1_776_003_600],
-      },
-    );
-    const mResult = await fetchAuthoritativeHistoricalPriceSeries(
-      {
-        id: "m-m0",
-        name: "M by M0",
-        symbol: "M",
-        flags: {
-          pegCurrency: "USD",
-          backing: "rwa-backed",
-          governance: "centralized",
-          yieldBearing: false,
-          rwa: true,
-          navToken: false,
-        },
-      },
-      {
-        candidateTimestamps: [1_776_000_000, 1_776_003_600],
-      },
+      ]),
     );
 
-    expect(fetchMarketBackfillPriceSeriesMock).toHaveBeenCalledTimes(4);
-    expect(fetchMarketBackfillPriceSeriesMock).toHaveBeenNthCalledWith(
-      1,
+    const result = await fetchAuthoritativeHistoricalPriceSeries(
+      makeHistoricalMeta(id, name, symbol, {
+        flags: {
+          governance: "centralized",
+          rwa: true,
+        },
+      }),
+      {
+        candidateTimestamps: [1_776_000_000, 1_776_003_600],
+      },
+    );
+    expect(fetchMarketBackfillPriceSeriesMock).toHaveBeenCalledTimes(1);
+    expect(fetchMarketBackfillPriceSeriesMock).toHaveBeenCalledWith(
       expect.objectContaining({
         id: "wm-m0",
         geckoId: "wrappedm-by-m0",
@@ -1618,67 +1535,7 @@ describe("authoritative-price-sources", () => {
         coingeckoApiKey: null,
       },
     );
-    expect(fetchMarketBackfillPriceSeriesMock).toHaveBeenNthCalledWith(
-      2,
-      expect.objectContaining({
-        id: "wm-m0",
-        geckoId: "wrappedm-by-m0",
-      }),
-      "wrappedm-by-m0",
-      {
-        granularity: "hourly",
-        coingeckoApiKey: null,
-      },
-    );
-    expect(fetchMarketBackfillPriceSeriesMock).toHaveBeenNthCalledWith(
-      3,
-      expect.objectContaining({
-        id: "wm-m0",
-        geckoId: "wrappedm-by-m0",
-      }),
-      "wrappedm-by-m0",
-      {
-        granularity: "hourly",
-        coingeckoApiKey: null,
-      },
-    );
-    expect(fetchMarketBackfillPriceSeriesMock).toHaveBeenNthCalledWith(
-      4,
-      expect.objectContaining({
-        id: "wm-m0",
-        geckoId: "wrappedm-by-m0",
-      }),
-      "wrappedm-by-m0",
-      {
-        granularity: "hourly",
-        coingeckoApiKey: null,
-      },
-    );
-    expect(mResult).toEqual({
-      matched: true,
-      source: "protocol-redeem",
-      prices: [
-        { timestamp: 1_776_000_000, price: 0.99971 },
-        { timestamp: 1_776_003_600, price: 1.00006 },
-      ],
-    });
-    expect(usdkResult).toEqual({
-      matched: true,
-      source: "protocol-redeem",
-      prices: [
-        { timestamp: 1_776_000_000, price: 0.99971 },
-        { timestamp: 1_776_003_600, price: 1.00006 },
-      ],
-    });
-    expect(xoResult).toEqual({
-      matched: true,
-      source: "protocol-redeem",
-      prices: [
-        { timestamp: 1_776_000_000, price: 0.99971 },
-        { timestamp: 1_776_003_600, price: 1.00006 },
-      ],
-    });
-    expect(usdnrResult).toEqual({
+    expect(result).toEqual({
       matched: true,
       source: "protocol-redeem",
       prices: [
@@ -1689,34 +1546,16 @@ describe("authoritative-price-sources", () => {
   });
 
   it("passes the CoinGecko API key through authoritative market-history replays", async () => {
-    fetchMarketBackfillPriceSeriesMock.mockResolvedValue({
-      prices: [{ timestamp: 1_759_363_200, price: 1 }],
-      diagnostics: {
-        granularity: "hourly",
-        sourcesUsed: ["coingecko"],
-        quoteMode: "usd",
-        quoteCurrency: "usd",
-        mergeReasons: [],
-        perSourceStats: [],
-        policyAdjustments: [],
-        finalPointCount: 1,
-      },
-    });
+    fetchMarketBackfillPriceSeriesMock.mockResolvedValue(
+      makeHistoricalPriceSeries([{ timestamp: 1_759_363_200, price: 1 }]),
+    );
 
     await fetchAuthoritativeHistoricalPriceSeries(
-      {
-        id: "usdai-usd-ai",
-        name: "USDai",
-        symbol: "USDai",
+      makeHistoricalMeta("usdai-usd-ai", "USDai", "USDai", {
         flags: {
-          pegCurrency: "USD",
-          backing: "rwa-backed",
           governance: "centralized-dependent",
-          yieldBearing: false,
-          rwa: false,
-          navToken: false,
         },
-      },
+      }),
       {
         candidateTimestamps: [1_759_363_200],
         coingeckoApiKey: "cg-pro-key",
@@ -2779,22 +2618,15 @@ describe("resolveVaultNavSupplyPrice", () => {
   it("skips the resolver while the grouped protocol-redeem circuit is open", async () => {
     const nowSec = Math.floor(Date.now() / 1000);
     const db = mockD1([
-      {
-        match: "SELECT value, updated_at FROM cache WHERE key = ?",
-        rows: [
-          {
-            key: `circuit:${CIRCUIT_SOURCE.PROTOCOL_REDEEM}`,
-            value: JSON.stringify({
-              state: "open",
-              consecutiveFailures: 3,
-              lastFailureAt: nowSec,
-              lastSuccessAt: null,
-              openedAt: nowSec,
-            }),
-            updated_at: nowSec,
-          },
-        ],
-      },
+      makeCircuitCacheRow(CIRCUIT_SOURCE.PROTOCOL_REDEEM, {
+        record: {
+          state: "open",
+          consecutiveFailures: 3,
+          lastFailureAt: nowSec,
+          openedAt: nowSec,
+        },
+        updatedAt: nowSec,
+      }),
     ]);
 
     expect(await resolveVaultNavSupplyPrice("eearn-ember", previousPayload(nowSec), db)).toBeNull();

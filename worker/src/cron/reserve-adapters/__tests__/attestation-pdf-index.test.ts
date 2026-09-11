@@ -1,13 +1,13 @@
 import type { StablecoinMeta } from "@shared/types/core";
 import type { LiveReservesConfig } from "@shared/types/live-reserves";
+import { parseLiveReserveAdapterParams } from "@shared/lib/live-reserve-adapters";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   adaptAttestationPdfIndex,
   fetchAttestationPdfIndexReserves,
   type AttestationPdfIndexParams,
 } from "../attestation-pdf-index";
-import { HTML_ACCEPT_HEADER, NEUTRAL_ADAPTER_HEADERS } from "../request";
-import { mockFetchStrict } from "@shared/test-utils/mock-fetch";
+import { installAdapterNetwork } from "./reserve-adapter.test-support";
 
 const CONFIGURED_PARAMS: AttestationPdfIndexParams = {
   slices: [
@@ -225,6 +225,71 @@ describe("adaptAttestationPdfIndex", () => {
     });
   });
 
+  it("parses compact YYYYMMDD report dates in PDF filenames", () => {
+    const html = `
+      <a href="https://action.ripio.com/hubfs/2025/wFIAT/ATTESTATION/31_12_2025__wBRL__Token-Certification.pdf">
+        wBRL certification
+      </a>
+      <a href="https://action.ripio.com/hubfs/2026/wFIAT/ATTESTATION/20260331__wBRL__Token-Certification.pdf">
+        wBRL certification
+      </a>
+    `;
+
+    const result = adaptAttestationPdfIndex(html, CONFIGURED_PARAMS);
+
+    expect(result.metadata).toMatchObject({
+      sourceTimestamp: Date.UTC(2026, 2, 31) / 1000,
+      reportDate: "2026-03-31",
+      reportDateLabel: "March 31, 2026",
+      reportDatePrecision: "day",
+      reportDateSource: "href",
+      reportPdfPath: "/hubfs/2026/wFIAT/ATTESTATION/20260331__wBRL__Token-Certification.pdf",
+    });
+  });
+
+  it("ignores 8-digit tokens that are not valid dates in PDF filenames", () => {
+    const html = `
+      <a href="https://action.ripio.com/hubfs/2026/wFIAT/ATTESTATION/12345678__wBRL__Token-Certification.pdf">
+        wBRL certification
+      </a>
+    `;
+
+    expect(() => adaptAttestationPdfIndex(html, CONFIGURED_PARAMS)).toThrow("layout-changed");
+  });
+
+  it("selects the currency-specific certificate when linkMatch is configured", () => {
+    const html = `
+      <a href="https://action.ripio.com/hubfs/2026/wFIAT/ATTESTATION/20260331__wBRL__Token-Certification.pdf">wBRL certification</a>
+      <a href="https://action.ripio.com/hubfs/2026/wFIAT/ATTESTATION/20260331__wCOP__Token-Certification.pdf">wCOP certification</a>
+    `;
+
+    const result = adaptAttestationPdfIndex(html, { ...CONFIGURED_PARAMS, linkMatch: "wCOP" });
+
+    expect(result.metadata).toMatchObject({
+      reportDate: "2026-03-31",
+      reportPdfUrl: "https://action.ripio.com/hubfs/2026/wFIAT/ATTESTATION/20260331__wCOP__Token-Certification.pdf",
+    });
+    expect(result.warnings).toBeUndefined();
+  });
+
+  it("omits reportPdfUrl and warns when no link matches the configured currency token", () => {
+    const html = `
+      <a href="https://action.ripio.com/hubfs/2026/wFIAT/ATTESTATION/20260331__wBRL__Token-Certification.pdf">wBRL certification</a>
+    `;
+
+    const result = adaptAttestationPdfIndex(html, { ...CONFIGURED_PARAMS, linkMatch: "wPEN" });
+
+    expect(result.slices).toEqual(CONFIGURED_PARAMS.slices);
+    expect(result.metadata).not.toHaveProperty("reportPdfUrl");
+    expect(result.metadata).not.toHaveProperty("reportPdfHref");
+    expect(result.metadata).not.toHaveProperty("reportDate");
+    expect(result.metadata?.freshnessMode).toBe("unverified");
+    expect(result.warnings).toEqual([expect.objectContaining({
+      code: "attestation-pdf-index-link-unmatched",
+      effect: "info",
+    })]);
+  });
+
   it("discovers dated PDFs in gated Webflow data attributes", () => {
     const html = `
       <button
@@ -296,6 +361,17 @@ describe("adaptAttestationPdfIndex", () => {
 
     expect(() => adaptAttestationPdfIndex(html, { slices: [] })).toThrow("params invalid.slices");
   });
+
+  it("rejects an off-sum configured composition", () => {
+    expect(() =>
+      parseLiveReserveAdapterParams("attestation-pdf-index", {
+        slices: [
+          { name: "U.S. Treasury Bills", pct: 50, risk: "very-low" },
+          { name: "Cash deposits", pct: 40, risk: "low" },
+        ],
+      }),
+    ).toThrow("attestation-pdf-index adapter params invalid.slices");
+  });
 });
 
 describe("fetchAttestationPdfIndexReserves", () => {
@@ -305,12 +381,15 @@ describe("fetchAttestationPdfIndexReserves", () => {
 
   it("fetches the primary HTML input and resolves relative report URLs against that page", async () => {
     const html = '<a href="reports/2026-04-30-attestation.pdf">April 2026 report</a>';
-    const fetchMock = mockFetchStrict([{
-      match: "https://issuer.example/transparency/index.html",
-      body: html,
-      status: 200,
-      headers: { "content-type": "text/html" },
-    }]);
+    const network = installAdapterNetwork({
+      html: {
+        "https://issuer.example/transparency/index.html": {
+          body: html,
+          status: 200,
+          headers: { "content-type": "text/html" },
+        },
+      },
+    });
 
     const result = await fetchAttestationPdfIndexReserves(
       {} as StablecoinMeta,
@@ -318,16 +397,7 @@ describe("fetchAttestationPdfIndexReserves", () => {
       new AbortController().signal,
     );
 
-    expect(fetchMock).toHaveBeenCalledTimes(1);
-    expect(fetchMock.getHistory()).toMatchObject([{
-      url: "https://issuer.example/transparency/index.html",
-      headers: {
-        accept: HTML_ACCEPT_HEADER,
-        "accept-language": "en-US,en;q=0.9",
-        origin: "https://issuer.example",
-        referer: "https://issuer.example/transparency/index.html",
-      },
-    }]);
+    expect(network.requests).toEqual([{ url: "https://issuer.example/transparency/index.html", method: "GET" }]);
     expect(result.slices).toEqual(CONFIGURED_PARAMS.slices);
     expect(result.metadata).toMatchObject({
       sourceTimestamp: Date.UTC(2026, 3, 30) / 1000,
@@ -337,33 +407,42 @@ describe("fetchAttestationPdfIndexReserves", () => {
     });
   });
 
-  it("uses neutral HTML headers first for Schuman reserve-audit pages", async () => {
+  it("fetches Schuman reserve-audit HTML with the neutral network route", async () => {
     const html = '<a href="/reports/EUROP_Reserve_Report_31_05_2026.pdf">May 2026 report</a>';
-    const fetchMock = mockFetchStrict([{
-      match: "https://schuman.io/reserve-audits/",
-      body: html,
-      status: 200,
-      headers: { "content-type": "text/html" },
-    }]);
-
+    const network = installAdapterNetwork({
+      html: {
+        "https://schuman.io/reserve-audits/": {
+          body: html,
+          status: 200,
+          headers: { "content-type": "text/html" },
+        },
+      },
+    });
     const result = await fetchAttestationPdfIndexReserves(
       {} as StablecoinMeta,
       buildConfig("https://schuman.io/reserve-audits/"),
       new AbortController().signal,
     );
 
-    expect(fetchMock).toHaveBeenCalledTimes(1);
-    expect(fetchMock.getHistory()).toMatchObject([{
-      url: "https://schuman.io/reserve-audits/",
-      headers: {
-        accept: HTML_ACCEPT_HEADER,
-        ...Object.fromEntries(Object.entries(NEUTRAL_ADAPTER_HEADERS).map(([name, value]) => [name.toLowerCase(), value])),
-      },
-    }]);
-    expect(fetchMock.getHistory()[0]?.headers).not.toHaveProperty("origin");
+    expect(network.requests).toEqual([{ url: "https://schuman.io/reserve-audits/", method: "GET" }]);
     expect(result.metadata).toMatchObject({
       reportDate: "2026-05-31",
       reportPdfPath: "/reports/EUROP_Reserve_Report_31_05_2026.pdf",
     });
+  });
+  it("fails closed when the report href field is renamed upstream", async () => {
+    const url = "https://issuer.example/transparency/index.html";
+    const network = installAdapterNetwork({
+      html: {
+        [url]: '<a data-report-url="/reports/2026-04-30-attestation.pdf">April 2026 report</a>',
+      },
+    });
+
+    await expect(fetchAttestationPdfIndexReserves(
+      {} as StablecoinMeta,
+      buildConfig(url),
+      new AbortController().signal,
+    )).rejects.toThrow("layout-changed");
+    expect(network.requests).toEqual([{ url, method: "GET" }]);
   });
 });

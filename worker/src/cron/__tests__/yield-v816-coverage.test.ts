@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
-import { createSqliteD1 } from "../../test-helpers/sqlite-d1";
+import { createSqliteD1 } from "@shared/test-utils/sqlite-d1";
 import { getPriceDerivedApy } from "../yield-sync/sources-riskfree";
-import { createLatestSchemaSqlite } from "../../test-helpers/latest-schema-sqlite";
+import { createLatestSchemaSqlite } from "@shared/test-utils/latest-schema-sqlite";
 
 const DAY_SECONDS = 24 * 60 * 60;
 const NOW_SEC = 1_779_210_000;

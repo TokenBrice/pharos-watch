@@ -20,7 +20,6 @@ import {
   type ReportCardsFixedInputDraft,
 } from "../report-cards-fixed-input";
 import {
-  compileSafetyScoreV9FactSetFromFixedInput,
   compileSafetyScoreV9FactSetFromNormalizedInput,
   compileSafetyScoreV9FactSetWithIsolationFromValidatedExtension,
   materializeSafetyScoreV9FactSetExtension,
@@ -39,6 +38,7 @@ import {
   v9TestClockSec,
   V9_FIXTURE_CLOCK_SEC as AS_OF_SEC,
 } from "../../test-helpers/v9-fixed-input";
+import { parseReserveCompositionRow } from "../live-reserves/store-row-decoding";
 
 const DEFAULT_RESERVES: readonly ReserveSlice[] = [
   {
@@ -183,11 +183,10 @@ describe("VERITAS finding VER-007: nonconserving supply review is accepted as kn
   });
 });
 
-// VER-008: reserve compilation currently enforces <=100% only within each exposure
-// identity. Two distinct 60% rows therefore survive into canonical facts.
-describe.skip("VERITAS finding VER-008: aggregate reserve weights above 100% pass fact compilation", () => {
-  it("rejects a reserve envelope whose distinct exposure weights total 120%", () => {
-    const fixedInput = exactFixedInput([
+// Producer rows must pass live-reserve admission before entering fixed input.
+describe("VERITAS finding VER-008: aggregate reserve weights above 100%", () => {
+  it("accepts 100% and rejects distinct exposures totaling 120%", () => {
+    const reserves: ReserveSlice[] = [
       {
         name: "Custodied cash A",
         pct: 60,
@@ -208,11 +207,27 @@ describe.skip("VERITAS finding VER-008: aggregate reserve weights above 100% pas
         liquidityHorizon: "immediate",
         maturityDaysMax: 0,
       },
-    ]);
-
-    expect(() => compileSafetyScoreV9FactSetFromFixedInput(fixedInput, baselineExtension(fixedInput))).toThrow(
-      /reserve.*(?:100|full notional|total weight)/i,
-    );
+    ];
+    const row = {
+      stablecoin_id: "iusd-infinifi",
+      fetched_at: AS_OF_SEC,
+      source: "infinifi",
+      metadata: "{}",
+      warnings: null,
+      warning_count: 0,
+      adapter_source_model: "dynamic-mix",
+      adapter_evidence_class: "independent",
+    };
+    const controlReserves = reserves.map((reserve) => ({ ...reserve, pct: 50 }));
+    const accepted = parseReserveCompositionRow({ ...row, slices: JSON.stringify(controlReserves) }, null);
+    expect(accepted.issue).toBeNull();
+    expect(accepted.record?.slices).toEqual(controlReserves);
+    const control = exactFixedInput(accepted.record!.slices);
+    const facts = compileSafetyScoreV9FactSetFromNormalizedInput(normalizeFixedInput(control), baselineExtension(control));
+    expect(facts.assets[0]!.reserveExposures.map((exposure) => exposure.weight)).toEqual([0.5, 0.5]);
+    const rejected = parseReserveCompositionRow({ ...row, slices: JSON.stringify(reserves) }, null);
+    expect(rejected.record).toBeNull();
+    expect(rejected.issue?.code).toBe("invalid-sum");
   });
 });
 

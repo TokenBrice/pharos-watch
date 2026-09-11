@@ -13,7 +13,8 @@
         "smart-contract",
         "concentration"
       ],
-      "liquidityHorizon": "immediate"
+      "liquidityHorizon": "immediate",
+      "sourceKey": "liquity-v1:eth"
     }
   ],
   "reserveReview": {

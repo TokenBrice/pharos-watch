@@ -23,11 +23,19 @@ export function normalizePegFilter(value: string): PegCurrency | "all" {
   return value === "all" || value in PEG_LABELS_SHORT ? (value as PegCurrency | "all") : "all";
 }
 
+const WARNING_DETAIL_SUFFIX = /\s*\([^()]*\)\s*$/;
+const DRIFT_WARNING_PATTERN = /^Latest sync-dex-liquidity run shows (?:medium|high) quality drift$/;
+
 export function formatLiquidityWarningMessage(warning: string): string {
   try {
     return warning
       .split(/,\s*(?=\d{3}\s+-)/)
-      .map((entry) => entry.match(/"(.+)"/)?.[1] ?? entry.trim())
+      .map((entry) => {
+        // Machine detail stays in the API warning string (and its `title`
+        // tooltip); the banner itself only shows user-facing copy.
+        const summary = (entry.match(/"(.+)"/)?.[1] ?? entry.trim()).replace(WARNING_DETAIL_SUFFIX, "").trim();
+        return DRIFT_WARNING_PATTERN.test(summary) ? "Some liquidity data is being re-verified" : summary;
+      })
       .join(" ");
   } catch {
     return warning;

@@ -42,8 +42,8 @@ function makeSummary(overrides: Partial<D1UsageSummary> = {}): D1UsageSummary {
 }
 
 describe("D1UsageCard", () => {
-  it("stacks the D1 metrics in a single column for readability", () => {
-    const { container } = render(<D1UsageCard summary={makeSummary()} nowSeconds={1_712_600_120} />);
+  it("labels every capacity and traffic metric it reports", () => {
+    render(<D1UsageCard summary={makeSummary()} nowSeconds={1_712_600_120} />);
 
     expect(screen.getByText("Database Size")).toBeTruthy();
     expect(screen.getByText("Capacity Forecast")).toBeTruthy();
@@ -52,9 +52,5 @@ describe("D1UsageCard", () => {
     expect(screen.getByText("Rows Read (24h)")).toBeTruthy();
     expect(screen.getByText("Rows Written (24h)")).toBeTruthy();
     expect(screen.getByText("Replication")).toBeTruthy();
-
-    const metricsGrid = container.querySelector(".grid.grid-cols-1");
-    expect(metricsGrid).toBeTruthy();
-    expect(metricsGrid?.className).not.toContain("xl:grid-cols-4");
   });
 });

@@ -1,5 +1,4 @@
-import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
-import { tmpdir } from "node:os";
+import { writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { mockFetchStrict } from "@shared/test-utils/mock-fetch";
@@ -10,16 +9,16 @@ import {
   resolveApiPathUrl,
   shouldAllowExistingDataOnFetchFailure,
 } from "../lib/sync-from-api";
+import { createTempRepoTracker } from "./helpers/test-state";
 
-const tempRoots: string[] = [];
+const { cleanup, makeRoot } = createTempRepoTracker("pharos-sync-fallback");
 
 describe("fetchWithRetry", () => {
   afterEach(() => {
     vi.unstubAllGlobals();
     vi.unstubAllEnvs();
-    for (const root of tempRoots.splice(0)) {
-      rmSync(root, { force: true, recursive: true });
-    }
+    vi.restoreAllMocks();
+    cleanup();
   });
 
   it("keeps the site API credential off untrusted or unresolved API reads", () => {
@@ -110,6 +109,64 @@ describe("fetchWithRetry", () => {
     expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 
+  it("rejects an already-aborted caller with its reason before fetching", async () => {
+    const controller = new AbortController();
+    const reason = new Error("caller stopped");
+    controller.abort(reason);
+    const fetchMock = vi.fn();
+    vi.stubGlobal("fetch", fetchMock);
+    await expect(fetchWithRetry("https://api.pharos.watch/api/health", { signal: controller.signal }, {
+      logLabel: "test",
+    })).rejects.toBe(reason);
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it("stops during backoff without issuing another attempt", async () => {
+    const controller = new AbortController();
+    const reason = new Error("caller stopped");
+    let enteredBackoff!: () => void;
+    const backoffStarted = new Promise<void>((resolve) => { enteredBackoff = resolve; });
+    vi.spyOn(console, "log").mockImplementation(() => { enteredBackoff(); });
+    const fetchMock = vi.fn().mockResolvedValue(new Response("", { status: 503 }));
+    vi.stubGlobal("fetch", fetchMock);
+    const pending = fetchWithRetry("https://api.pharos.watch/api/health", { signal: controller.signal }, {
+      logLabel: "test", backoffMs: [60_000],
+    });
+    const rejected = expect(pending).rejects.toMatchObject({ name: "AbortError", cause: reason });
+    try {
+      await backoffStarted;
+      controller.abort(reason);
+      await rejected;
+      expect(fetchMock).toHaveBeenCalledTimes(1);
+    } finally {
+      controller.abort(reason);
+    }
+  });
+
+  it("recovers from a transport exception", async () => {
+    const fetchMock = vi.fn()
+      .mockRejectedValueOnce(new TypeError("connection reset"))
+      .mockResolvedValueOnce(new Response("recovered"));
+    vi.stubGlobal("fetch", fetchMock);
+    const response = await fetchWithRetry("https://api.pharos.watch/api/health", {}, {
+      logLabel: "test", backoffMs: [0],
+    });
+    expect(await response.text()).toBe("recovered");
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
+
+  it("preserves the final transport error at the configured attempt bound", async () => {
+    const finalError = new TypeError("last connection reset");
+    const fetchMock = vi.fn()
+      .mockRejectedValueOnce(new TypeError("first connection reset"))
+      .mockRejectedValueOnce(finalError);
+    vi.stubGlobal("fetch", fetchMock);
+    await expect(fetchWithRetry("https://api.pharos.watch/api/health", {}, {
+      logLabel: "test", attempts: 2, backoffMs: [0],
+    })).rejects.toBe(finalError);
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
+
   it("retries caller-declared transient statuses", async () => {
     const fetchMock = mockFetchStrict([{
       match: "https://api.pharos.watch/api/health",
@@ -153,8 +210,7 @@ describe("fetchWithRetry", () => {
   });
 
   it("preserves a valid existing JSON array after a release-time fetch failure", () => {
-    const root = mkdtempSync(join(tmpdir(), "pharos-sync-fallback-"));
-    tempRoots.push(root);
+    const root = makeRoot();
     const outputPath = join(root, "snapshot.json");
     writeFileSync(outputPath, JSON.stringify([{ id: "existing" }]));
 
@@ -169,8 +225,7 @@ describe("fetchWithRetry", () => {
   });
 
   it("rejects the existing-data fallback when the checked-in JSON is empty", () => {
-    const root = mkdtempSync(join(tmpdir(), "pharos-sync-fallback-"));
-    tempRoots.push(root);
+    const root = makeRoot();
     const outputPath = join(root, "snapshot.json");
     writeFileSync(outputPath, "[]");
 

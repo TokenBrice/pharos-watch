@@ -1,13 +1,13 @@
 import { DatabaseSync } from "node:sqlite";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { createSqliteD1 } from "../../../test-helpers/sqlite-d1";
+import { createSqliteD1 } from "@shared/test-utils/sqlite-d1";
 import {
   applySubscribeIntent,
   applyUnsubscribeIntent,
 } from "../presets";
 import { unsubscribeAll } from "../../../lib/telegram/subscriber-lifecycle";
 import { upsertGlobalAlertTypes } from "../subscribers";
-import { createLatestSchemaSqlite } from "../../../test-helpers/latest-schema-sqlite";
+import { createLatestSchemaSqlite } from "@shared/test-utils/latest-schema-sqlite";
 import { makeNoopD1 } from "../../../test-helpers/noop-d1";
 
 const CHAT_ID = "42";

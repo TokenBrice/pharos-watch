@@ -14,11 +14,12 @@ describe("measured-execution EVM codecs", () => {
   });
 
   it.each([
-    ["short address", "0x1234"],
-    ["long address", `0x${"11".repeat(21)}`],
-    ["malformed hash", "0xnot-a-hash"],
-  ])("rejects %s", (_label, value) => {
-    expect(value.length === 42 ? canonicalEvmAddress(value) : canonicalEvmHash(value)).toBeNull();
+    ["short address", "0x1234", canonicalEvmAddress],
+    ["long address", `0x${"11".repeat(21)}`, canonicalEvmAddress],
+    ["nonhex address", `0x${"gg".repeat(20)}`, canonicalEvmAddress],
+    ["malformed hash", "0xnot-a-hash", canonicalEvmHash],
+  ] as const)("rejects %s", (_label, value, validate) => {
+    expect(validate(value)).toBeNull();
   });
 
   it("accepts the zero address and safely rejects malformed ABI results", () => {

@@ -16,8 +16,13 @@ export type CommandPaletteSection =
   | "Pages"
   | "Chains"
   | "Peg currencies"
+  | "Comparisons"
+  | "Case studies"
+  | "Glossary"
   | "Mechanism archetypes"
   | "Recent depegs"
+  | "Docs"
+  | "Blog"
   | "Actions"
   | "Try a command";
 export type CommandPaletteActionId =
@@ -54,6 +59,12 @@ export interface CommandPaletteGroup<TItem> {
 
 export interface CommandPaletteSectionedItem {
   section: CommandPaletteSection;
+  /**
+   * Set when this item's section earned the top-of-results position for the
+   * current query (strong label/keyword page hit, or an exact peg-name hit).
+   * Promoted sections render above the Stablecoins block.
+   */
+  lead?: boolean;
 }
 
 export interface CommandPaletteHistoryItem {
@@ -67,12 +78,18 @@ export interface CommandPaletteHistoryItem {
 export type CommandPaletteResultKind =
   | "recent"
   | "stablecoin"
+  | "stablecoin-yield"
   | "page"
   | "action"
   | "chain"
   | "peg"
   | "mechanism"
   | "depeg-event"
+  | "comparison"
+  | "case-study"
+  | "glossary-term"
+  | "doc"
+  | "blog-post"
   | "verb-hint"
   | "verb-run";
 
@@ -87,11 +104,10 @@ export interface CommandPaletteStablecoinLiveMetadata {
   health?: CommandPaletteStablecoinHealth;
 }
 
-export interface CommandPaletteResultDescriptor {
+export interface CommandPaletteResultDescriptor extends CommandPaletteSectionedItem {
   id: string;
   label: string;
   sublabel?: string;
-  section: CommandPaletteSection;
   kind: CommandPaletteResultKind;
   logoId?: string;
   /** Static image path (e.g. chain logo) when not driven by the logos hook. */

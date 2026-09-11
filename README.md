@@ -20,9 +20,9 @@ Pharos is research infrastructure, not financial advice. Data can be delayed, in
 ## What Pharos Tracks
 
 - **Peg health:** 15-minute peg monitoring, Peg Score, depeg detection, direction tracking, and historical depeg timelines.
-- **Issuer controls:** FreezeWatch covers freeze, blacklist, and seize events for supported issuer-controlled assets across major chains.
+- **Issuer controls:** FreezeWatch covers freeze/blacklist, release, and seize or wipe events for supported issuer-controlled assets across major chains.
 - **Liquidity quality:** DEX Liquidity Score combines pool TVL, volume, durability, pool quality, and pair diversity.
-- **DEX price corroboration:** on-chain and aggregator DEX inputs — Curve, Uniswap, and Raydium among others — help suppress false depeg alerts. The live venue roster is rendered at [pharos.watch/about](https://pharos.watch/about/) from `DATA_SOURCE_GROUPS` in `src/lib/about-content.ts`.
+- **DEX price corroboration:** on-chain and aggregator DEX inputs — Curve, Uniswap, and Raydium among others — help suppress false depeg alerts.
 - **Market structure:** USD, non-USD fiat, commodity, and CPI-linked stablecoin cohorts with chain and peg distribution views.
 - **Risk context:** safety report cards, Bluechip ratings, redemption backstops, dependency mapping, mint/burn flows, live reserves, and yield intelligence where coverage exists.
 - **Lifecycle coverage:** upcoming stablecoins, frozen archives, and the Stablecoin Cemetery for retired or failed assets.
@@ -83,7 +83,7 @@ npx wrangler dev
 
 For local tunnel or cross-origin `next dev` testing, set `NEXT_ALLOWED_DEV_ORIGINS=host1,host2` in `.env.local`; `next.config.ts` appends those hosts to the built-in dev allowlist.
 
-Local Next.js and scripts that explicitly load credentials use the ignored root `.env.local`; [`.env.example`](./.env.example) documents variable names, not values. Check only whether a required name is present, and never print or copy its value. Worker runtime secrets remain in Cloudflare/Wrangler-managed bindings rather than local environment files.
+Local Next.js and scripts that explicitly load credentials use the ignored root `.env.local`; [`.env.example`](./.env.example) is generated from the env contract and documents variable names plus non-secret defaults, never secret values. Check only whether a required name is present, and never print or copy its value. Worker runtime secrets remain in Cloudflare/Wrangler-managed bindings rather than local environment files.
 
 Useful checks:
 

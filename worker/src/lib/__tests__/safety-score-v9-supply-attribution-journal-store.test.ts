@@ -8,7 +8,7 @@ import {
   createSupplyAttributionJournalV1,
   type SupplyAttributionJournalV1Payload,
 } from "@shared/lib/safety-score-v9-supply-attribution-journal";
-import { createSqliteD1 } from "../../test-helpers/sqlite-d1";
+import { createSqliteD1 } from "@shared/test-utils/sqlite-d1";
 import {
   SUPPLY_ATTRIBUTION_JOURNAL_STORE_MAX_ROWS_PER_ASSET,
   SUPPLY_ATTRIBUTION_JOURNAL_STORE_RETENTION_SEC,

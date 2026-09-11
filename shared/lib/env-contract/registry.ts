@@ -93,6 +93,12 @@ export const ENV_BINDINGS = [
     runtimes: { worker: { status: "required" } },
   },
   {
+    key: "DONOR_KEY_CLAIM_RATE_LIMIT",
+    valueType: "RateLimit",
+    description: "Cloudflare per-IP rate limiter for anonymous supporter (donor) API key claims, checked before the request body is read.",
+    runtimes: { worker: { status: "required" } },
+  },
+  {
     key: "CORS_ORIGIN",
     valueType: "string",
     description: "Comma-separated CORS allowlist; repo default is `https://pharos.watch,https://ops.pharos.watch`.",

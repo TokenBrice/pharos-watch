@@ -40,6 +40,8 @@ export function makeDexApiFetchResult(
     degraded: boolean;
     errors: string[];
     warnings?: string[];
+    /** Chains that failed inside an otherwise usable source; see `DexApiFetchResult`. */
+    degradedChains?: string[];
     pagination?: DexApiFetchResult["pagination"];
   },
 ): DexApiFetchResult {

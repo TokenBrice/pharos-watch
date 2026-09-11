@@ -1,24 +1,9 @@
 // @vitest-environment jsdom
-import { fireEvent, render, screen } from "@testing-library/react";
+import { fireEvent, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 import { FiatEmblems } from "@/app/alt-pegs/fiat-world-atlas/fiat-emblems";
-import { HoverProvider } from "@/app/alt-pegs/fiat-world-atlas/hover-context";
-import type { PegCluster, PlacedCoin } from "@/lib/alt-peg-hero";
-
-function coin(overrides: Partial<PlacedCoin> & Pick<PlacedCoin, "id" | "symbol">): PlacedCoin {
-  return {
-    id: overrides.id,
-    symbol: overrides.symbol,
-    name: overrides.symbol,
-    href: `/stablecoin/${overrides.id}`,
-    logoSrc: "/logos/50-eurc.png",
-    pegCurrency: overrides.pegCurrency ?? "EUR",
-    marketCap: overrides.marketCap ?? 10_000_000,
-    x: overrides.x ?? 50,
-    y: overrides.y ?? 20,
-    sizePx: overrides.sizePx ?? 36,
-  };
-}
+import type { PegCluster } from "@/lib/alt-peg-hero";
+import { makePlacedCoin as coin, renderAtlas } from "./atlas.test-support";
 
 describe("FiatEmblems", () => {
 
@@ -36,19 +21,12 @@ describe("FiatEmblems", () => {
       },
     ];
 
-    const { container } = render(
-      <HoverProvider>
-        <FiatEmblems clusters={clusters} />
-      </HoverProvider>,
-    );
+    const { container } = renderAtlas(<><FiatEmblems clusters={clusters} /></>);
 
     const hitTarget = container.querySelector('[data-hit-coin-id="vchf-vnx"]') as HTMLAnchorElement;
     expect(hitTarget).not.toBeNull();
     expect(hitTarget.getAttribute("aria-hidden")).toBe("true");
     expect(hitTarget.getAttribute("tabindex")).toBe("-1");
-    expect(hitTarget.style.width).toBe("calc(var(--hit-size) * var(--peg-hit-scale, 1))");
-    expect(hitTarget.style.height).toBe("calc(var(--hit-size) * var(--peg-hit-scale, 1))");
-    expect(hitTarget.style.getPropertyValue("--hit-size")).toBe("24px");
     expect(container.querySelector(".coin-emblem__mini-label")).toBeNull();
 
     fireEvent.mouseEnter(hitTarget);

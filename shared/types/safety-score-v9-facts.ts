@@ -225,6 +225,11 @@ const V9EffectiveDependencyEdgeV2Schema = V9EffectiveDependencyEdgeBaseSchema.ex
     }
   });
 
+export const V9DependencyRejectionReasonsSchema = z.array(z.object({
+  sliceIndex: z.number().int().nonnegative(),
+  reason: z.enum(["no-match", "expired", "non-link"]),
+}).strict());
+
 const V9EffectiveDependenciesBaseFields = {
   status: V9FactStatusV2Schema,
   sourceGenerationId: CanonicalTextSchema,
@@ -235,6 +240,7 @@ const V9EffectiveDependenciesBaseFields = {
   fallbackReason: z
     .enum(["live-unmapped-to-curated-reserve", "live-unmapped-to-manual", "live-cycle-to-curated"])
     .nullable(),
+  rejectionReasons: V9DependencyRejectionReasonsSchema.optional(),
   diagnostics: z
     .object({
       graphState: z.enum(["valid", "cycle", "invalid", "unresolved"]),

@@ -260,7 +260,9 @@ function resolveSupplyBackfillWindow(
     dayWindow.endDay ?? parsedCursor?.requestedEndDay ?? lastCompletedDay,
     lastCompletedDay,
   );
-  const windowDays = parsedWindowDays;
+  const windowDays = url.searchParams.has("windowDays")
+    ? parsedWindowDays
+    : parsedCursor?.windowDays ?? parsedWindowDays;
 
   if (requestedStartDay != null && requestedStartDay > requestedEndDay) {
     return jsonResponse({ error: "Invalid cursor: requested range is exhausted" }, { status: 400 });

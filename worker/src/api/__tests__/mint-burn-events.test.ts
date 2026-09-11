@@ -1,9 +1,22 @@
 import { readJsonResponse } from "../../test-helpers/__shared/auth";
-import { describe, it, expect } from "vitest";
+import { afterEach, describe, it, expect } from "vitest";
 import { mockD1, type MockD1Database } from "@shared/test-utils/mock-d1";
 import { makeMintBurnRow } from "../../test-helpers/__shared/fixtures";
 import { registerStablecoinParameterContract } from "../../test-helpers/__shared/endpoint-contracts";
 import { handleMintBurnEvents } from "../mint-burn-events";
+import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
+
+const fixtures = createLatestSchemaFixtureTracker();
+afterEach(() => fixtures.closeAll());
+
+function eventDb(rows: Record<string, string | number | null>[]) {
+  const { sqlite, db } = fixtures.open();
+  for (const row of rows) {
+    sqlite.prepare(`INSERT INTO mint_burn_events (${Object.keys(row).join(",")}) VALUES (${Object.keys(row).map(() => "?").join(",")})`)
+      .run(...Object.values(row));
+  }
+  return db;
+}
 
 describe("handleMintBurnEvents", () => {
   const row = makeMintBurnRow();
@@ -138,38 +151,23 @@ describe("handleMintBurnEvents", () => {
     expect(res.status).toBe(400);
   });
 
-  it("uses counted scope to filter to standard economic-flow rows", async () => {
-    const db = mockD1([
-      { match: "COUNT", rows: [{ total: 1 }] },
-      { match: "mint_burn_events", rows: [makeMintBurnRow()] },
-    ]) as MockD1Database;
-
-    const res = await handleMintBurnEvents(
-      db,
-      new URL("https://x/api/mint-burn-events?stablecoin=usdt-tether&scope=counted"),
-    );
-
-    expect(res.status).toBe(200);
-    const countQuery = db.getHistory().find((entry) => entry.sql.includes("COUNT(*) as total"));
-    expect(countQuery?.sql).toContain("flow_type = 'standard'");
-    expect(countQuery?.sql).toContain("(direction = 'mint' OR burn_type = 'effective_burn')");
-  });
-
-  it("treats minAmount as USD-only filtering", async () => {
-    const db = mockD1([
-      { match: "COUNT", rows: [{ total: 1 }] },
-      { match: "mint_burn_events", rows: [makeMintBurnRow()] },
-    ]) as MockD1Database;
-
-    const res = await handleMintBurnEvents(
-      db,
-      new URL("https://x/api/mint-burn-events?stablecoin=usdt-tether&minAmount=1000000"),
-    );
-
-    expect(res.status).toBe(200);
-    const countQuery = db.getHistory().find((entry) => entry.sql.includes("COUNT(*) as total"));
-    expect(countQuery?.sql).toContain("amount_usd IS NOT NULL AND amount_usd >= ?");
-    expect(countQuery?.sql).not.toContain("COALESCE(amount_usd, amount)");
+  it.each([
+    ["scope=counted", ["priced", "unpriced", "effective"]],
+    ["minAmount=1000000", ["priced", "atomic", "bridge", "effective"]],
+    ["scope=counted&minAmount=1000000", ["priced", "effective"]],
+  ])("keeps count and selection aligned for %s", async (query, expected) => {
+    const db = eventDb([
+      makeMintBurnRow({ id: "priced", amount_usd: 1_000_000 }),
+      makeMintBurnRow({ id: "unpriced", amount: 9_000_000, amount_usd: null }),
+      makeMintBurnRow({ id: "atomic", amount_usd: 2_000_000, flow_type: "atomic_roundtrip" }),
+      makeMintBurnRow({ id: "bridge", amount_usd: 2_000_000, direction: "burn", burn_type: "bridge_burn" }),
+      makeMintBurnRow({ id: "effective", amount_usd: 2_000_000, direction: "burn", burn_type: "effective_burn" }),
+      makeMintBurnRow({ id: "small", amount_usd: 999_999, flow_type: "bridge_transfer" }),
+    ]);
+    const body = await readJsonResponse<{ events: { id: string }[]; total: number }>(
+      await handleMintBurnEvents(db, new URL(`https://x/api/mint-burn-events?stablecoin=usdt-tether&${query}`)), 200);
+    expect(body.events.map((event) => event.id).sort()).toEqual([...expected].sort());
+    expect(body.total).toBe(expected.length);
   });
 
   it("rejects malformed minAmount with 400", async () => {
@@ -219,38 +217,25 @@ describe("handleMintBurnEvents", () => {
     expect(db.getHistory().some((entry) => entry.sql.includes("COUNT(*) as total"))).toBe(false);
   });
 
-  it("emits and accepts a keyset cursor", async () => {
-    const first = makeMintBurnRow({ id: "mb-3", timestamp: 1_700_000_003, block_number: 103 });
-    const second = makeMintBurnRow({ id: "mb-2", timestamp: 1_700_000_002, block_number: 102 });
-    const db = mockD1([
-      { match: "mint_burn_events", rows: [first, second] },
-    ]) as MockD1Database;
-
-    const firstRes = await handleMintBurnEvents(
-      db,
-      new URL("https://x/api/mint-burn-events?stablecoin=usdt-tether&limit=1&includeTotal=false"),
-    );
-    const firstBody = (await firstRes.json()) as { nextCursor: string | null };
-    expect(firstBody.nextCursor).toBeTypeOf("string");
-
-    const cursorDb = mockD1([
-      { match: "mint_burn_events", rows: [second] },
-    ]) as MockD1Database;
-    const cursorRes = await handleMintBurnEvents(
-      cursorDb,
-      new URL(`https://x/api/mint-burn-events?stablecoin=usdt-tether&limit=1&includeTotal=false&cursor=${firstBody.nextCursor}`),
-    );
-
-    expect(cursorRes.status).toBe(200);
-    const dataQuery = cursorDb.getHistory().find((entry) => entry.sql.includes("FROM mint_burn_events"));
-    expect(dataQuery?.sql).toContain("ORDER BY timestamp DESC, block_number DESC, id DESC");
-    expect(dataQuery?.sql).toContain("timestamp < ?");
-    expect(dataQuery?.sql).toContain("block_number < ?");
-    expect(dataQuery?.sql).toContain("id < ?");
-    expect(dataQuery?.sql).toContain("(timestamp = ? AND block_number = ? AND id < ?)");
-    expect(dataQuery?.binds).toContain(first.timestamp);
-    expect(dataQuery?.binds).toContain(first.block_number);
-    expect(dataQuery?.binds).toContain(first.id);
+  it("exhausts timestamp and block ties without losing cursor rows", async () => {
+    const db = eventDb([
+      makeMintBurnRow({ id: "mb-a", timestamp: 1_700_000_003, block_number: 103 }),
+      makeMintBurnRow({ id: "mb-b", timestamp: 1_700_000_003, block_number: 103 }),
+      makeMintBurnRow({ id: "mb-c", timestamp: 1_700_000_003, block_number: 102 }),
+      makeMintBurnRow({ id: "mb-d", timestamp: 1_700_000_002, block_number: 101 }),
+    ]);
+    let cursor: string | null = null;
+    const ids: string[] = [];
+    for (let page = 0; page < 4; page++) {
+      const url = new URL("https://x/api/mint-burn-events?stablecoin=usdt-tether&limit=1&includeTotal=false");
+      if (cursor) url.searchParams.set("cursor", cursor);
+      const body = await readJsonResponse<{ events: { id: string }[]; nextCursor: string | null }>(
+        await handleMintBurnEvents(db, url), 200);
+      ids.push(...body.events.map((event) => event.id));
+      cursor = body.nextCursor;
+      expect(cursor === null).toBe(page === 3);
+    }
+    expect(ids).toEqual(["mb-b", "mb-a", "mb-c", "mb-d"]);
   });
 
   it("includes X-Data-Age header", async () => {

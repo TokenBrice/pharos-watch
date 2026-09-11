@@ -1,3 +1,4 @@
+import { pinnedBlockPlan } from "./evm-observation-plan";
 import { parseLiveReserveAdapterParams, type LiveReserveAdapterParamsByKey } from "@shared/lib/live-reserve-adapters";
 import type { StablecoinMeta } from "@shared/types/core";
 import type { LiveReservesConfig } from "@shared/types/live-reserves";
@@ -25,6 +26,7 @@ interface ResupplyPairSnapshot {
   pairAddress: `0x${string}`;
   underlyingAddress: `0x${string}`;
   collateralAddress: `0x${string}`;
+  underlyingDecimals: number;
   totalBorrowAmount: bigint;
   totalBorrowShares: bigint;
   totalCollateralShares: bigint;
@@ -40,7 +42,9 @@ const GET_MAX_REDEEMABLE_DEBT_SELECTOR = "0x43bad45b";
 const GUARD_ENABLED_SELECTOR = "0x901654fc";
 const PERMISSIONLESS_PRICE_THRESHOLD_SELECTOR = "0x0e3d9f3c";
 const REUSD_ORACLE_PRICE_SELECTOR = "0xc6af1dda";
-const UNDERLYING_DECIMALS = 18;
+const ASSET_SELECTOR = "0x38d52e0f";
+const DECIMALS_SELECTOR = "0x313ce567";
+const REDEMPTION_GUARD_DECIMALS = 18;
 
 interface RedemptionGuardSnapshot {
   guardEnabled: boolean;
@@ -125,14 +129,14 @@ function decodeBooleanResult(raw: string | null, context: string): boolean {
 function buildRedemptionTelemetry(
   snapshots: readonly ResupplyPairSnapshot[],
   input: RedemptionTelemetryInput | undefined,
-): Pick<NonNullable<AdapterResult["metadata"]>, "redemption" | "immediateRedeemableUsd"> {
+): Pick<NonNullable<AdapterResult["metadata"]>, "redemption"> {
   if (!input) return {};
   let capacityUsd = 0;
   for (const snapshot of snapshots) {
     if (snapshot.maxRedeemableDebt == null) {
       throw new Error(`resupply-pairs missing redemption capacity for ${snapshot.pairAddress}`);
     }
-    capacityUsd += decimalNumberFromBigInt(snapshot.maxRedeemableDebt, UNDERLYING_DECIMALS);
+    capacityUsd += decimalNumberFromBigInt(snapshot.maxRedeemableDebt, snapshot.underlyingDecimals);
   }
 
   const permissionlessOpen =
@@ -142,7 +146,6 @@ function buildRedemptionTelemetry(
     : "Resupply redemption guard currently limits redemptions to the protocol redemption operator until the reUSD oracle price is below the permissionless threshold";
 
   return {
-    immediateRedeemableUsd: capacityUsd,
     ...buildRedemptionSnapshotMetadata({
       capacityUsd,
       capacityKind: "live-direct-bounded",
@@ -158,10 +161,10 @@ function buildRedemptionTelemetry(
       ],
       redemptionHandlerAddress: input.redemptionHandlerAddress,
       guardEnabled: input.guard.guardEnabled,
-      reUsdOraclePrice: decimalNumberFromBigInt(input.guard.reUsdOraclePrice, UNDERLYING_DECIMALS),
+      reUsdOraclePrice: decimalNumberFromBigInt(input.guard.reUsdOraclePrice, REDEMPTION_GUARD_DECIMALS),
       permissionlessPriceThreshold: decimalNumberFromBigInt(
         input.guard.permissionlessPriceThreshold,
-        UNDERLYING_DECIMALS,
+        REDEMPTION_GUARD_DECIMALS,
       ),
     }),
   };
@@ -171,6 +174,7 @@ export function adaptResupplyPairSnapshots(
   snapshots: readonly ResupplyPairSnapshot[],
   underlyings: readonly ResupplyUnderlyingDescriptor[] | undefined,
   redemptionTelemetry?: RedemptionTelemetryInput,
+  chain = "ethereum",
 ): AdapterResult {
   const underlyingByAddress = buildUnderlyingMap(underlyings);
   const valueByUnderlying = new Map<
@@ -186,7 +190,7 @@ export function adaptResupplyPairSnapshots(
   let totalCollateralAssetsUsd = 0;
 
   for (const snapshot of snapshots) {
-    totalBorrowUsd += decimalNumberFromBigInt(snapshot.totalBorrowAmount, UNDERLYING_DECIMALS);
+    totalBorrowUsd += decimalNumberFromBigInt(snapshot.totalBorrowAmount, snapshot.underlyingDecimals);
     if (snapshot.totalCollateralAssets === 0n) {
       if (snapshot.totalBorrowAmount > 0n) {
         throw new Error(
@@ -202,7 +206,7 @@ export function adaptResupplyPairSnapshots(
       throw new Error(`resupply-pairs unmapped positive-collateral underlying ${snapshot.underlyingAddress}`);
     }
 
-    const value = decimalNumberFromBigInt(snapshot.totalCollateralAssets, UNDERLYING_DECIMALS);
+    const value = decimalNumberFromBigInt(snapshot.totalCollateralAssets, snapshot.underlyingDecimals);
     totalCollateralAssetsUsd += value;
     const current = valueByUnderlying.get(underlyingAddress);
     valueByUnderlying.set(underlyingAddress, {
@@ -230,6 +234,7 @@ export function adaptResupplyPairSnapshots(
   return {
     slices: slicesFromValues(
       [...valueByUnderlying.values()].map(({ descriptor, value }) => ({
+        sourceKey: `resupply-pairs:${chain}:${descriptor.address.toLowerCase()}`,
         value,
         name: descriptor.name,
         risk: descriptor.risk,
@@ -262,6 +267,8 @@ export async function fetchResupplyPairsReserves(
   if (!params.pairs || params.pairs.length === 0) {
     throw new Error("resupply-pairs requires at least one configured pair");
   }
+  const plan = await pinnedBlockPlan({ chain: input.chain, signal, ctx, ...params });
+  ctx = plan.ctx;
   const callOptions = {
     chain: input.chain,
     signal,
@@ -355,11 +362,15 @@ export async function fetchResupplyPairsReserves(
 
   const secondStage = await fetchOnchainMulticall3({
     ...callOptions,
-    calls: pairState.map(({ index, collateralAddress, accounting }) => ({
-      label: `pair:${index}:collateral-assets`,
-      contract: collateralAddress,
-      data: encodeConvertToAssetsCall(accounting.totalCollateral),
-    })),
+    calls: pairState.flatMap(({ index, collateralAddress, underlyingAddress, accounting }) => [
+      {
+        label: `pair:${index}:collateral-assets`,
+        contract: collateralAddress,
+        data: encodeConvertToAssetsCall(accounting.totalCollateral),
+      },
+      { label: `pair:${index}:vault-asset`, contract: collateralAddress, data: ASSET_SELECTOR },
+      { label: `pair:${index}:underlying-decimals`, contract: underlyingAddress, data: DECIMALS_SELECTOR },
+    ]),
   });
   if (!secondStage) {
     throw new Error("resupply-pairs collateral conversion multicall failed");
@@ -378,11 +389,28 @@ export async function fetchResupplyPairsReserves(
       multicallResultByLabel(secondStage, `pair:${index}:collateral-assets`),
       `convertToAssets() for ${collateralAddress}`,
     );
+    const vaultAsset = parseAddressResult(
+      multicallResultByLabel(secondStage, `pair:${index}:vault-asset`),
+      `asset() for ${collateralAddress}`,
+    );
+    if (vaultAsset !== normalizeEvmAddress(underlyingAddress)) {
+      throw new Error(
+        `resupply-pairs collateral vault ${collateralAddress} asset() mismatch: expected ${underlyingAddress}, got ${vaultAsset}`,
+      );
+    }
+    const underlyingDecimalsRaw = decodeUint256Result(
+      multicallResultByLabel(secondStage, `pair:${index}:underlying-decimals`),
+      `decimals() for ${underlyingAddress}`,
+    );
+    if (underlyingDecimalsRaw > 36n) {
+      throw new Error(`resupply-pairs underlying ${underlyingAddress} decimals() out of range`);
+    }
     return {
       pairKey: key,
       pairAddress,
       underlyingAddress,
       collateralAddress,
+      underlyingDecimals: Number(underlyingDecimalsRaw),
       totalBorrowAmount: accounting.totalBorrowAmount,
       totalBorrowShares: accounting.totalBorrowShares,
       totalCollateralShares: accounting.totalCollateral,
@@ -395,9 +423,10 @@ export async function fetchResupplyPairsReserves(
     };
   });
 
-  return adaptResupplyPairSnapshots(
+  const result = adaptResupplyPairSnapshots(
     snapshots,
     params.underlyings,
     redemptionHandlerAddress && guard ? { redemptionHandlerAddress, guard } : undefined,
   );
+  return { ...result, metadata: { ...result.metadata, observedBlock: plan.observedBlock } };
 }

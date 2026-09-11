@@ -9,6 +9,22 @@ import type { MethodologyChangelogEntry } from "@shared/lib/methodology-versions
 // are newest-first by version.
 export const LIQUIDITY_SCORE_V6: readonly MethodologyChangelogEntry[] = [
   {
+    version: "6.4",
+    title: "14-day staged pool memory",
+    date: "2026-09-10",
+    effectiveAt: 1788998400,
+    summary:
+      "Staged discovery pools are now remembered for 14 days instead of 24 hours — full confidence through the first day, then linear decay to zero at 336 hours — while price observations remain pinned to rows refreshed within 24 hours.",
+    impact: [
+      "The staging merge reads `dex_pool_staging` rows refreshed within 336 hours; confidence is 1.0 for ages up to 24 hours and decays linearly to 0 at 336 hours, replacing the old `max(0.5, 1 - ageHours / 48)` curve that zeroed rows past 24 hours and deleted them after 30 hours. Staging rows are now deleted after 15 days",
+      "Price evidence does not inherit the longer inventory horizon: a staged row older than 24 hours still contributes decayed TVL but emits no price observation and enters the retained set unpriced, so DEX-implied prices, DDR inputs, and peg summaries keep their previous day-fresh behaviour",
+      "Pool coverage and effective TVL no longer drop when the discovery crawl has not revisited a coin within a day; over the trailing 30 days, 228 of 3,364 coin-days swung more than 1.5x or less than 0.5x day-over-day with no market cause, and crawl-timing expiry drove a measured share of those swings",
+      "`measurement.decayed` now means confidence below 1.0, i.e. a staged row older than 24 hours; under the old curve every staged row older than zero hours was marked decayed, so coins whose staged rows are day-fresh see a smaller decayed share, a slightly higher coverage confidence, and can newly clear the `trendworthy` and digest-admission thresholds that read it",
+    ],
+    commits: [],
+    reconstructed: false,
+  },
+  {
     version: "6.3",
     title: "Curve physical-pool alias normalization",
     date: "2026-09-01",

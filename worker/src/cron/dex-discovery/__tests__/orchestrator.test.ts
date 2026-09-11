@@ -1,5 +1,4 @@
 import { describe, expect, it } from "vitest";
-import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import { CRON_INTERVALS } from "@shared/lib/cron-jobs";
 import type { ContractDeployment } from "@shared/types/core";
 import type { DiscoveryMeta } from "../types";
@@ -8,6 +7,7 @@ import { getTrackedContracts } from "../../dex-liquidity/pool-helpers";
 import {
   compareDiscoveryMeta,
   computeEffectiveTier,
+  hasRemappedUnsupportedCensusRow,
   hasVerifiedEmptyCensus,
   isEligibleThisRun,
   isDiscoveryEvidenceRefreshDue,
@@ -94,6 +94,7 @@ describe("hasVerifiedEmptyCensus", () => {
         verifiedNoPoolsCount: 2,
         observedPoolsCount: 0,
         providerSupportedInaccessibleCount: 0,
+        remappedUnsupportedCount: 0,
       }),
     ).toBe(true);
   });
@@ -104,6 +105,7 @@ describe("hasVerifiedEmptyCensus", () => {
         verifiedNoPoolsCount: 1,
         observedPoolsCount: 0,
         providerSupportedInaccessibleCount: 0,
+        remappedUnsupportedCount: 0,
       }),
     ).toBe(true);
   });
@@ -115,6 +117,7 @@ describe("hasVerifiedEmptyCensus", () => {
         verifiedNoPoolsCount: 1,
         observedPoolsCount: 0,
         providerSupportedInaccessibleCount: 0,
+        remappedUnsupportedCount: 0,
       }),
     ).toBe(false);
     // Pools were observed somewhere in the footprint.
@@ -123,6 +126,7 @@ describe("hasVerifiedEmptyCensus", () => {
         verifiedNoPoolsCount: 1,
         observedPoolsCount: 1,
         providerSupportedInaccessibleCount: 0,
+        remappedUnsupportedCount: 0,
       }),
     ).toBe(false);
     // A provider-supported deployment is still unanswered.
@@ -131,6 +135,7 @@ describe("hasVerifiedEmptyCensus", () => {
         verifiedNoPoolsCount: 2,
         observedPoolsCount: 0,
         providerSupportedInaccessibleCount: 1,
+        remappedUnsupportedCount: 0,
       }),
     ).toBe(false);
     // No census read at all, and a footprint with no reviewable deployment.
@@ -140,8 +145,57 @@ describe("hasVerifiedEmptyCensus", () => {
         verifiedNoPoolsCount: 0,
         observedPoolsCount: 0,
         providerSupportedInaccessibleCount: 0,
+        remappedUnsupportedCount: 0,
       }),
     ).toBe(false);
+  });
+});
+
+describe("hasRemappedUnsupportedCensusRow", () => {
+  const ethereumTarget: ContractDeployment = {
+    chain: "ethereum",
+    address: "0x1111111111111111111111111111111111111111",
+    decimals: 18,
+  };
+  const providerlessTarget: ContractDeployment = { chain: "hive", address: "hbd", decimals: 3 };
+  const summary = {
+    verifiedNoPoolsCount: 0,
+    observedPoolsCount: 0,
+    providerSupportedInaccessibleCount: 0,
+    remappedUnsupportedCount: 1,
+  };
+
+  it("schedules a stale unsupported-chain row on a now-mapped chain for re-census", () => {
+    expect(hasRemappedUnsupportedCensusRow([ethereumTarget], summary)).toBe(true);
+    // The remapped row flips a deep-in-the-ladder dormant coin out of its
+    // daily/weekly sleep into the refresh tier, so the crawl rotation
+    // overwrites the row instead of keeping it.
+    const meta: DiscoveryMeta = {
+      stablecoinId: "coin-a",
+      consecutiveMisses: DISCOVERY_TIERS.BACKOFF_DORMANT_MISSES,
+      lastCrawlAt: nowSec - 2 * DISCOVERY_TIERS.DORMANT_INTERVAL_SEC,
+      lastHitAt: null,
+    };
+    expect(computeEffectiveTier("coin-a", 0, 0, meta, 1, nowSec, false, false)).toBe("skip");
+    expect(
+      computeEffectiveTier(
+        "coin-a",
+        0,
+        0,
+        meta,
+        1,
+        nowSec,
+        false,
+        hasRemappedUnsupportedCensusRow([ethereumTarget], summary) &&
+          isDiscoveryEvidenceRefreshDue([ethereumTarget], meta, nowSec),
+      ),
+    ).toBe("refresh");
+  });
+
+  it("keeps the ladder untouched without a remapped row or a supported target", () => {
+    expect(hasRemappedUnsupportedCensusRow([ethereumTarget], { ...summary, remappedUnsupportedCount: 0 })).toBe(false);
+    expect(hasRemappedUnsupportedCensusRow([providerlessTarget], summary)).toBe(false);
+    expect(hasRemappedUnsupportedCensusRow([ethereumTarget], undefined)).toBe(false);
   });
 });
 
@@ -252,7 +306,7 @@ describe("isEligibleThisRun", () => {
 
 describe("compareDiscoveryMeta", () => {
   it("sorts never-crawled coins before previously crawled coins", () => {
-    const coins = [{ id: "never" }, { id: "seen" }];
+    const coins = [{ id: "seen" }, { id: "never" }];
     const metaById = new Map<string, DiscoveryMeta>([
       ["seen", { stablecoinId: "seen", consecutiveMisses: 0, lastCrawlAt: 1000, lastHitAt: null }],
     ]);
@@ -263,7 +317,7 @@ describe("compareDiscoveryMeta", () => {
   });
 
   it("sorts older crawls before newer crawls", () => {
-    const coins = [{ id: "older" }, { id: "newer" }];
+    const coins = [{ id: "newer" }, { id: "older" }];
     const metaById = new Map<string, DiscoveryMeta>([
       ["older", { stablecoinId: "older", consecutiveMisses: 0, lastCrawlAt: 500, lastHitAt: null }],
       ["newer", { stablecoinId: "newer", consecutiveMisses: 0, lastCrawlAt: 1000, lastHitAt: null }],
@@ -277,18 +331,10 @@ describe("compareDiscoveryMeta", () => {
 
 describe("chain-aware routing", () => {
   it("discovery targets include traded contracts and preserve same-chain deployments", () => {
-    const usdt = ACTIVE_STABLECOINS.find((stablecoin) => stablecoin.id === "usdt-tether");
-    expect(usdt).toBeDefined();
-    expect(usdt?.tradedContracts?.length ?? 0).toBeGreaterThan(0);
-
-    const targets = getTrackedContracts(usdt!);
-
-    expect(targets.some((contract) =>
-      usdt?.tradedContracts?.some((traded) =>
-        traded.chain === contract.chain && traded.address === contract.address
-      )
-    )).toBe(true);
-    expect(targets.length).toBeGreaterThanOrEqual((usdt?.contracts?.length ?? 0) + (usdt?.tradedContracts?.length ?? 0) - 1);
+    const canonical = { chain: "ethereum", address: "0xaaa", decimals: 6 };
+    const traded = { chain: "ethereum", address: "0xbbb", decimals: 6 };
+    const targets = getTrackedContracts({ contracts: [canonical], tradedContracts: [traded, canonical] });
+    expect(targets).toEqual([canonical, traded]);
   });
 });
 

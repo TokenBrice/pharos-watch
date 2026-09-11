@@ -2,6 +2,8 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { syncGeneratedArtifacts } from "../lib/generated-artifacts";
 import { CASE_STUDY_LIST } from "../../src/lib/case-studies";
+import { CLIENT_TRACKED_META_BY_ID } from "../../shared/lib/stablecoins/client-registry";
+import { DEAD_STABLECOINS } from "../../shared/lib/dead-stablecoins";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const OUTPUT = join(
@@ -36,6 +38,37 @@ const cemeteryLookup = Object.fromEntries(
   ]),
 );
 
+/**
+ * Command-palette index rows. Symbols come from the coin registries (tracked
+ * client meta for live coins, the cemetery registry for dead ones); keywords
+ * are the lowercased coin names/symbols (which carry the protocol and issuer
+ * vocabulary) plus the slug's words. Year drives the palette sublabel.
+ */
+const deadMetaById = new Map(DEAD_STABLECOINS.map((coin) => [coin.id, coin]));
+const paletteList = CASE_STUDY_LIST.map((study) => {
+  const coinMetas = [
+    study.primaryCoinId ? CLIENT_TRACKED_META_BY_ID.get(study.primaryCoinId) : undefined,
+    study.cemeteryId ? deadMetaById.get(study.cemeteryId) : undefined,
+    ...(study.relatedCoins ?? []).map((coin) => CLIENT_TRACKED_META_BY_ID.get(coin.coinId)),
+  ];
+  const coinSymbols = coinMetas.filter((meta) => meta != null).map((meta) => meta.symbol);
+  const keywords = [
+    ...new Set(
+      coinMetas
+        .flatMap((meta) => (meta ? [meta.name.toLowerCase(), meta.symbol.toLowerCase()] : []))
+        .concat(study.slug.split("-")),
+    ),
+  ].join(" ");
+  return {
+    slug: study.slug,
+    title: study.title,
+    outcome: study.outcome,
+    coinSymbols,
+    year: study.eventWindow.startISO.slice(0, 4) || null,
+    keywords,
+  };
+});
+
 const eventWindows = CASE_STUDY_LIST.map((study) => ({
   slug: study.slug,
   primaryCoinId: study.primaryCoinId ?? null,
@@ -59,6 +92,16 @@ export interface CaseStudyClientSummary {
   readonly outcome: CaseStudyOutcome;
 }
 
+/** Palette/search row for one case study: light metadata only, no article prose. */
+export interface CaseStudyClientListEntry {
+  readonly slug: string;
+  readonly title: string;
+  readonly outcome: CaseStudyOutcome;
+  readonly coinSymbols: readonly string[];
+  readonly year: string | null;
+  readonly keywords: string;
+}
+
 export const CASE_STUDY_CLIENT_BY_COIN_ID: Record<string, CaseStudyClientSummary> = ${stableStringify(coinLookup)};
 
 /**
@@ -74,6 +117,13 @@ export const CASE_STUDY_CLIENT_BY_CEMETERY_ID: Record<string, CaseStudyClientSum
  * bundles.
  */
 export const CASE_STUDY_EVENT_WINDOWS: readonly CaseStudyEventWindowResolverItem[] = ${stableStringify(eventWindows)};
+
+/**
+ * Command-palette corpus for /learn/case-studies/: title, coin symbols, year,
+ * and search keywords per study. Generated from the same registries; do not
+ * extend by hand.
+ */
+export const CASE_STUDY_CLIENT_LIST: readonly CaseStudyClientListEntry[] = ${stableStringify(paletteList)};
 
 /**
  * Resolve the case study that covers a charted event for \`coinId\` at \`tsMs\`

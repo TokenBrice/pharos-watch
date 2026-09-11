@@ -27,6 +27,8 @@ Analytics loads only when `NEXT_PUBLIC_GA_ID` is configured and the browser uses
 
 The shared liquidity/compliance search hook (`src/hooks/use-url-search-sync.ts`) schedules `search_performed` only from manual input, not initial URL queries or browser history changes. Analytics receives the page label and query length, never the raw query in that custom event; clearing input cancels the pending search event. URL synchronization retains its own debounce, while search analytics uses the shared one-second debounce and route-navigation cleanup. This custom-event restriction does not strip query strings from page-view URLs.
 
+Navigation and command-palette telemetry follow the same rule: `nav_click` sends a bounded chrome surface (`rail`, `menu`, `drawer`, or `bottom_bar`), a group identifier, and the internal href clicked — never a query string; `palette_selected` sends the query length plus the selected result's kind, section, and rank; `palette_zero_results` sends the query length when a palette search returns nothing. Raw palette query text is never sent in any event.
+
 `WebVitalsReporter` keeps its reporting callback identity stable across route rerenders, preventing Next.js from registering additional metric observers for the same mounted reporter. It reads the latest pathname for the public-route guard and existing `page_path` attribution; this does not turn document-lifetime Web Vitals into per-client-navigation measurements.
 
 Deliberate local test exception: `localhost`, `127.0.0.1`, and `[::1]` retain analytics support when a measurement ID is explicitly configured, so the existing local `SMOKE_UI_EXPECT_GA_ID` smoke check remains usable. Use a test measurement ID for these runs; they are not public-production traffic. No other host suffix or preview domain is allowed. The page explains cookies, retention, hosting providers, and the typed event catalog without promising telemetry that the runtime does not collect.
@@ -41,7 +43,7 @@ Authoritative sources:
 
 ### Browser-local preferences
 
-Pharos has no website account or wallet connection. Browser-local functional state includes:
+Pharos has no website account. The only wallet interaction is the optional supporter API key claim on `/api/`, described below; nothing else on the site connects a wallet. Browser-local functional state includes:
 
 - homepage shortcut hrefs in `localStorage` under `pharos-shortcuts`
 - portfolio holdings in `localStorage` under `pharos:portfolio`
@@ -56,11 +58,14 @@ Portfolio and shortcut state is not sent to the API. Picker snapshot sharing is 
 
 Feedback contact handles may be included in the public GitHub issue created from a submission. Self-serve API access requests use private operator storage for verified email and optional request metadata; verification mail is delivered through Resend. Request-abuse controls use salted or keyed pseudonymous values rather than storing raw IP addresses in the application tables.
 
+Supporter API key: claiming a key on `/api/` stores the wallet address that signed the claim, the issued key's prefix, and the claim time in `api_key_donor_claims`, plus the `api_keys` row itself, whose `name` is `donor <address>` and which carries the `last_used_at` / `last_used_route` fields every key records. The `api_key_audit_log` row for the issuance holds only the tier, never the address. A wallet address linked to a credential is personal data, and it is processed to deliver the perk the donor asked for. The claim signature and the plaintext token are never persistently stored and never written to logs. The one-time reveal temporarily keeps an unsaved token in browser memory across internal navigation, clearing it on copy/acknowledgement or document unload; it never writes the token to localStorage or sessionStorage. Wallet addresses are excluded from request telemetry and structured Worker logs, which record outcome codes only. These records have no automatic expiry. Deactivation stops access but leaves the wallet-bearing key name and usage metadata in place. A donor can request removal through the feedback form: the operator follows `docs/api-reference-admin.md` to deactivate the key and delete its key, usage, and audit rows. The wallet address, prefix, and claim time remain in `api_key_donor_claims` to prevent a second claim; removing that fence requires a separate explicit decision allowing reissuance. This is partial erasure, not a promise to remove every wallet-linked record. The public donation ledger on `/funding/` is a separate published record and is unaffected.
+
 Authoritative sources:
 
 - `worker/src/api/feedback.ts`
 - `worker/src/api/api-key-requests.ts`
 - `worker/src/api/api-key-requests/`
+- `worker/src/api/donor-key-claims.ts`
 - relevant migrations in `worker/migrations/`
 
 ### Stablecoin Picker snapshots

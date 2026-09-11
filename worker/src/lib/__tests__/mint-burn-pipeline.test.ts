@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("../db", async (importOriginal) => {
   const actual = await importOriginal<typeof import("../db")>();
@@ -69,6 +69,11 @@ import type { MintBurnContractConfig, MintBurnEventDef } from "../mint-burn-cont
 import type { AlchemyLogEntry } from "../alchemy-logs";
 import { makeMintBurnConfig } from "../../test-helpers/__shared/mint-burn";
 import { makeNoopD1 } from "../../test-helpers/noop-d1";
+import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
+
+const fixtures = createLatestSchemaFixtureTracker();
+afterEach(() => fixtures.closeAll());
+const realDb = await vi.importActual<{ batchExecute: typeof batchExecute }>("../db");
 
 function makeDb(): D1Database {
   return makeNoopD1({
@@ -80,183 +85,6 @@ function makeDb(): D1Database {
   });
 }
 
-type HourlyRow = {
-  stablecoin_id: string;
-  chain_id: string;
-  hour_ts: number;
-  mint_count: number;
-  burn_count: number;
-  mint_volume_usd: number;
-  burn_volume_usd: number;
-  net_flow_usd: number;
-};
-
-function makeAggregationDb(): D1Database & { hourlyRows: Map<string, HourlyRow>; events: MintBurnRow[] } {
-  const events: MintBurnRow[] = [];
-  const hourlyRows = new Map<string, HourlyRow>();
-
-  return makeNoopD1({
-    events,
-    hourlyRows,
-    prepare: (sql: string) => ({
-      bind: (...args: unknown[]) => ({
-        run: async () => {
-          if (sql.includes("INSERT OR IGNORE INTO mint_burn_events")) {
-            const row: MintBurnRow = {
-              id: args[0] as string,
-              stablecoin_id: args[1] as string,
-              symbol: args[2] as string,
-              chain_id: args[3] as string,
-              direction: args[4] as MintBurnRow["direction"],
-              amount: args[5] as number,
-              amount_usd: args[6] as number | null,
-              price_used: args[7] as number | null,
-              price_timestamp: args[8] as number | null,
-              price_source: args[9] as string | null,
-              burn_type: args[10] as MintBurnRow["burn_type"],
-              burn_review_reason: args[11] as string | null,
-              counterparty: args[12] as string | null,
-              tx_hash: args[13] as string,
-              block_number: args[14] as number,
-              timestamp: args[15] as number,
-              explorer_tx_url: args[16] as string,
-              flow_type: args[17] as MintBurnRow["flow_type"],
-            };
-            events.push(row);
-            return { success: true, meta: { changes: 1 } };
-          }
-
-          if (sql.includes("UPDATE mint_burn_events")) {
-            const [burnType, burnReviewReason, id] = args as [
-              MintBurnRow["burn_type"],
-              string | null,
-              string,
-            ];
-            const existing = events.find((row) => row.id === id);
-            if (existing) {
-              existing.burn_type = burnType;
-              existing.burn_review_reason = burnReviewReason;
-              return { success: true, meta: { changes: 1 } };
-            }
-            return { success: true, meta: { changes: 0 } };
-          }
-
-          if (sql.includes("DELETE FROM mint_burn_hourly")) {
-            if (args.length === 1) {
-              const [stablecoinId] = args as [string];
-              for (const key of [...hourlyRows.keys()]) {
-                if (key.startsWith(`${stablecoinId}-`)) {
-                  hourlyRows.delete(key);
-                }
-              }
-              return { success: true, meta: { changes: 1 } };
-            }
-
-            const [stablecoinId, chainId, hourTs] = args as [string, string, number];
-            hourlyRows.delete(`${stablecoinId}-${chainId}-${hourTs}`);
-            return { success: true, meta: { changes: 1 } };
-          }
-
-          if (sql.includes("INSERT OR REPLACE INTO mint_burn_hourly")) {
-            if (args.length === 1) {
-              const [stablecoinId] = args as [string];
-              const grouped = new Map<string, MintBurnRow[]>();
-              for (const row of events.filter((event) => event.stablecoin_id === stablecoinId)) {
-                const hourTs = Math.floor(row.timestamp / 3600) * 3600;
-                grouped.set(`${row.chain_id}-${hourTs}`, [...(grouped.get(`${row.chain_id}-${hourTs}`) ?? []), row]);
-              }
-
-              for (const [groupKey, relevant] of grouped) {
-                const [chainId, hourTsRaw] = groupKey.split("-");
-                const hourTs = Number(hourTsRaw);
-                hourlyRows.set(`${stablecoinId}-${chainId}-${hourTs}`, {
-                  stablecoin_id: stablecoinId,
-                  chain_id: chainId!,
-                  hour_ts: hourTs,
-                  mint_count: relevant.filter((row) => row.direction === "mint" && row.flow_type === "standard").length,
-                  burn_count: relevant.filter((row) =>
-                    row.direction === "burn" &&
-                    (row.burn_type ?? "effective_burn") === "effective_burn" &&
-                    row.flow_type === "standard",
-                  ).length,
-                  mint_volume_usd: relevant.reduce((sum, row) =>
-                    row.direction === "mint" && row.flow_type === "standard"
-                      ? sum + (row.amount_usd ?? 0)
-                      : sum,
-                  0),
-                  burn_volume_usd: relevant.reduce((sum, row) =>
-                    row.direction === "burn" &&
-                    (row.burn_type ?? "effective_burn") === "effective_burn" &&
-                    row.flow_type === "standard"
-                      ? sum + (row.amount_usd ?? 0)
-                      : sum,
-                  0),
-                  net_flow_usd: relevant.reduce((sum, row) => {
-                    if (row.flow_type !== "standard") return sum;
-                    if (row.direction === "mint") return sum + (row.amount_usd ?? 0);
-                    if (row.direction === "burn" && (row.burn_type ?? "effective_burn") === "effective_burn") {
-                      return sum - (row.amount_usd ?? 0);
-                    }
-                    return sum;
-                  }, 0),
-                });
-              }
-
-              return { success: true, meta: { changes: grouped.size } };
-            }
-
-            const [stablecoinId, chainId, startTs, endTs] = args as [string, string, number, number];
-            const relevant = events.filter((row) =>
-              row.stablecoin_id === stablecoinId &&
-              row.chain_id === chainId &&
-              row.timestamp >= startTs &&
-              row.timestamp < endTs,
-            );
-
-            if (relevant.length === 0) {
-              return { success: true, meta: { changes: 0 } };
-            }
-
-            hourlyRows.set(`${stablecoinId}-${chainId}-${startTs}`, {
-              stablecoin_id: stablecoinId,
-              chain_id: chainId,
-              hour_ts: startTs,
-              mint_count: relevant.filter((row) => row.direction === "mint" && row.flow_type === "standard").length,
-              burn_count: relevant.filter((row) =>
-                row.direction === "burn" &&
-                row.burn_type === "effective_burn" &&
-                row.flow_type === "standard",
-              ).length,
-              mint_volume_usd: relevant.reduce((sum, row) =>
-                row.direction === "mint" && row.flow_type === "standard"
-                  ? sum + (row.amount_usd ?? 0)
-                  : sum,
-              0),
-              burn_volume_usd: relevant.reduce((sum, row) =>
-                row.direction === "burn" &&
-                row.burn_type === "effective_burn" &&
-                row.flow_type === "standard"
-                  ? sum + (row.amount_usd ?? 0)
-                  : sum,
-              0),
-              net_flow_usd: relevant.reduce((sum, row) => {
-                if (row.flow_type !== "standard") return sum;
-                if (row.direction === "mint") return sum + (row.amount_usd ?? 0);
-                if (row.direction === "burn" && row.burn_type === "effective_burn") {
-                  return sum - (row.amount_usd ?? 0);
-                }
-                return sum;
-              }, 0),
-            });
-            return { success: true, meta: { changes: 1 } };
-          }
-
-          return { success: true, meta: {} };
-        },
-      }),
-    }),
-  });
-}
 
 function makeRow(overrides?: Partial<MintBurnRow>): MintBurnRow {
   return {
@@ -509,13 +337,8 @@ describe("mint-burn shared pipeline modules", () => {
   });
 
   it("rebuilds hourly buckets for whole coins after valuation repair", async () => {
-    const db = makeAggregationDb();
-    vi.mocked(batchExecute).mockImplementation(async (_db, stmts) => {
-      for (const stmt of stmts) {
-        await stmt.run();
-      }
-      return stmts.length;
-    });
+    const { db, sqlite } = fixtures.open();
+    vi.mocked(batchExecute).mockImplementation(realDb.batchExecute);
 
     const rows = [
       makeRow({
@@ -554,25 +377,20 @@ describe("mint-burn shared pipeline modules", () => {
 
     const usdtHourTs = Math.floor(rows[0]!.timestamp / 3600) * 3600;
     const usdcHourTs = Math.floor(rows[2]!.timestamp / 3600) * 3600;
-    const usdtHour = db.hourlyRows.get(`usdt-tether-ethereum-${usdtHourTs}`);
+    const usdtHour = sqlite.prepare("SELECT * FROM mint_burn_hourly WHERE stablecoin_id = ? AND hour_ts = ?").get("usdt-tether", usdtHourTs);
     expect(usdtHour?.mint_count).toBe(1);
     expect(usdtHour?.burn_count).toBe(1);
     expect(usdtHour?.net_flow_usd).toBe(80);
 
-    const usdcHour = db.hourlyRows.get(`usdc-circle-ethereum-${usdcHourTs}`);
+    const usdcHour = sqlite.prepare("SELECT * FROM mint_burn_hourly WHERE stablecoin_id = ? AND hour_ts = ?").get("usdc-circle", usdcHourTs);
     expect(usdcHour?.mint_count).toBe(1);
     expect(usdcHour?.burn_count).toBe(0);
     expect(usdcHour?.net_flow_usd).toBe(55);
   });
 
   it("excludes atomic roundtrip rows from hourly aggregation", async () => {
-    const db = makeAggregationDb();
-    vi.mocked(batchExecute).mockImplementation(async (_db, stmts) => {
-      for (const stmt of stmts) {
-        await stmt.run();
-      }
-      return stmts.length;
-    });
+    const { db, sqlite } = fixtures.open();
+    vi.mocked(batchExecute).mockImplementation(realDb.batchExecute);
 
     const rows = [
       makeRow({ id: "mint-standard", direction: "mint", amount_usd: 100, timestamp: 3_605, tx_hash: "0xmint-standard" }),
@@ -606,7 +424,7 @@ describe("mint-burn shared pipeline modules", () => {
     await insertMintBurnRows(db, rows);
     await recalcAffectedHours(db, collectAffectedHours(rows));
 
-    expect(db.hourlyRows.get("usdt-tether-ethereum-3600")).toEqual({
+    expect(sqlite.prepare("SELECT * FROM mint_burn_hourly").get()).toEqual({
       stablecoin_id: "usdt-tether",
       chain_id: "ethereum",
       hour_ts: 3600,
@@ -619,13 +437,8 @@ describe("mint-burn shared pipeline modules", () => {
   });
 
   it("excludes bridge-transfer rows from hourly aggregation", async () => {
-    const db = makeAggregationDb();
-    vi.mocked(batchExecute).mockImplementation(async (_db, stmts) => {
-      for (const stmt of stmts) {
-        await stmt.run();
-      }
-      return stmts.length;
-    });
+    const { db, sqlite } = fixtures.open();
+    vi.mocked(batchExecute).mockImplementation(realDb.batchExecute);
 
     const rows = [
       makeRow({ id: "mint-standard", direction: "mint", amount_usd: 100, timestamp: 3_605, tx_hash: "0xmint-standard" }),
@@ -659,7 +472,7 @@ describe("mint-burn shared pipeline modules", () => {
     await insertMintBurnRows(db, rows);
     await recalcAffectedHours(db, collectAffectedHours(rows));
 
-    expect(db.hourlyRows.get("usdt-tether-ethereum-3600")).toEqual({
+    expect(sqlite.prepare("SELECT * FROM mint_burn_hourly").get()).toEqual({
       stablecoin_id: "usdt-tether",
       chain_id: "ethereum",
       hour_ts: 3600,
@@ -672,13 +485,8 @@ describe("mint-burn shared pipeline modules", () => {
   });
 
   it("removes stale hourly rows when an affected bucket has no rows left after recompute", async () => {
-    const db = makeAggregationDb();
-    vi.mocked(batchExecute).mockImplementation(async (_db, stmts) => {
-      for (const stmt of stmts) {
-        await stmt.run();
-      }
-      return stmts.length;
-    });
+    const { db, sqlite } = fixtures.open();
+    vi.mocked(batchExecute).mockImplementation(realDb.batchExecute);
 
     const burnRow = makeRow({
       id: "burn-effective",
@@ -690,7 +498,7 @@ describe("mint-burn shared pipeline modules", () => {
 
     await insertMintBurnRows(db, [burnRow]);
     await recalcAffectedHours(db, collectAffectedHours([burnRow]));
-    expect(db.hourlyRows.get("usdt-tether-ethereum-3600")).toEqual({
+    expect(sqlite.prepare("SELECT * FROM mint_burn_hourly").get()).toEqual({
       stablecoin_id: "usdt-tether",
       chain_id: "ethereum",
       hour_ts: 3600,
@@ -701,10 +509,27 @@ describe("mint-burn shared pipeline modules", () => {
       net_flow_usd: -125,
     });
 
-    db.events.length = 0;
+    sqlite.exec("DELETE FROM mint_burn_events");
     await recalcAffectedHours(db, collectAffectedHours([burnRow]));
 
-    expect(db.hourlyRows.has("usdt-tether-ethereum-3600")).toBe(false);
+    expect(sqlite.prepare("SELECT * FROM mint_burn_hourly").all()).toEqual([]);
+  });
+
+  it("ignores duplicate IDs, excludes unclassified burns, and persists reclassification", async () => {
+    const { db, sqlite } = fixtures.open();
+    vi.mocked(batchExecute).mockImplementation(realDb.batchExecute);
+    const mint = makeRow({ id: "mint", timestamp: 3605 });
+    const burn = makeRow({ id: "burn", direction: "burn", burn_type: null, timestamp: 3610 });
+    expect(await insertMintBurnRows(db, [mint, burn, mint])).toEqual({ inserted: 2, ignored: 1 });
+    await rebuildHourlyForStablecoinIds(db, ["usdt-tether"]);
+    expect(sqlite.prepare("SELECT mint_count, burn_count, net_flow_usd FROM mint_burn_hourly").get())
+      .toEqual({ mint_count: 1, burn_count: 0, net_flow_usd: 100 });
+    await updateEventClassifications(db, [{ ...burn, burn_type: "bridge_burn", burn_review_reason: "reviewed", flow_type: "bridge_transfer" }]);
+    expect(sqlite.prepare("SELECT burn_type, burn_review_reason, flow_type FROM mint_burn_events WHERE id = 'burn'").get())
+      .toEqual({ burn_type: "bridge_burn", burn_review_reason: "reviewed", flow_type: "bridge_transfer" });
+    await recalcAffectedHours(db, collectAffectedHours([mint, burn]));
+    expect(sqlite.prepare("SELECT mint_count, burn_count, net_flow_usd FROM mint_burn_hourly").get())
+      .toEqual({ mint_count: 1, burn_count: 0, net_flow_usd: 100 });
   });
 
   it("updates classification rows for burns and non-standard mints", async () => {
@@ -729,32 +554,13 @@ describe("mint-burn shared pipeline modules", () => {
     expect(stmts).toHaveLength(3);
   });
 
-  it("uses monotonic sync-state upsert mode for backfill semantics", async () => {
-    const prepareCalls: string[] = [];
-    const bindArgs: unknown[][] = [];
-    const db = makeNoopD1({
-      prepare: (sql: string) => {
-        prepareCalls.push(sql);
-        return {
-          bind: (...args: unknown[]) => {
-            bindArgs.push(args);
-            return {
-              run: async () => ({ success: true, meta: {} }),
-            };
-          },
-        };
-      },
-    });
-
-    await upsertMintBurnSyncState(db, "ethereum-0xabc", 123, "replace");
-    await upsertMintBurnSyncState(db, "ethereum-0xabc", 456, "monotonic-max");
-
-    expect(prepareCalls[0]).toContain("last_block = excluded.last_block");
-    expect(prepareCalls[1]).toContain("CASE");
-    expect(bindArgs).toEqual([
-      ["ethereum-0xabc", 123],
-      ["ethereum-0xabc", 456],
-    ]);
+  it("keeps the high cursor in monotonic mode and permits rewind in replace mode", async () => {
+    const { db, sqlite } = fixtures.open();
+    await upsertMintBurnSyncState(db, "ethereum-0xabc", 456, "replace");
+    await upsertMintBurnSyncState(db, "ethereum-0xabc", 123, "monotonic-max");
+    expect(sqlite.prepare("SELECT last_block FROM mint_burn_sync_state").get()).toEqual({ last_block: 456 });
+    await upsertMintBurnSyncState(db, "ethereum-0xabc", 100, "replace");
+    expect(sqlite.prepare("SELECT last_block FROM mint_burn_sync_state").get()).toEqual({ last_block: 100 });
   });
 
   it("reads sync state in chunked IN-clause queries instead of one select per config", async () => {

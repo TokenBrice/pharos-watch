@@ -1,4 +1,6 @@
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import { DatabaseSync } from "node:sqlite";
+import { createSqliteD1 } from "@shared/test-utils/sqlite-d1";
 import { mockD1 } from "@shared/test-utils/mock-d1";
 import { encodeJsonCursor } from "../api-params";
 import { makeNoopD1 } from "../../test-helpers/noop-d1";
@@ -43,6 +45,11 @@ const UNKNOWN_STRING_CURSOR = {
 function params(query: string): URLSearchParams {
   return new URLSearchParams(query);
 }
+
+const paginationDatabases: DatabaseSync[] = [];
+afterEach(() => {
+  for (const sqlite of paginationDatabases.splice(0)) sqlite.close();
+});
 
 describe("parsePaginatedEventParams cursor validation", () => {
   it("returns null cursorValues when no cursor supplied", () => {
@@ -182,44 +189,51 @@ describe("fetchPaginatedEvents cursor WHERE clause", () => {
     ).rejects.toThrow(/Invalid cursor column/);
   });
 
-  it("builds the 3-column equality-prefix disjunction and binds in column order", async () => {
-    const db = mockD1([
-      { match: "FROM depeg_events", rows: [] },
-    ], { requireMatch: true });
-    await fetchPaginatedEvents<Row, Row>(db, {
+  it("traverses tied timestamps with mixed secondary directions without losing rows", async () => {
+    const sqlite = new DatabaseSync(":memory:");
+    paginationDatabases.push(sqlite);
+    sqlite.exec(`CREATE TABLE depeg_events (id INTEGER PRIMARY KEY, started_at INTEGER, stablecoin TEXT);
+      INSERT INTO depeg_events VALUES (9, 300, 'a'), (8, 300, 'a'), (7, 300, 'b'),
+        (6, 300, 'b'), (5, 300, 'b'), (4, 200, 'a')`);
+    const db = createSqliteD1(sqlite);
+    const config = {
       tableName: "depeg_events",
       orderBy: "started_at DESC, stablecoin ASC, id DESC",
-      conditions: [],
-      filterBindings: [],
-      limit: 10,
+      conditions: [] as string[],
+      filterBindings: [] as (string | number)[],
+      limit: 3,
       offset: 0,
       includeTotal: false,
-      mapRow: (r) => r,
+      mapRow: (r: Row) => r,
       cursor: {
         columns: [
-          { column: "started_at", type: "number", direction: "DESC", getValue: (r) => r.started_at },
-          { column: "stablecoin", type: "string", direction: "ASC", getValue: (r) => r.stablecoin },
-          { column: "id", type: "number", direction: "DESC", getValue: (r) => r.id },
+          { column: "started_at", type: "number", direction: "DESC", getValue: (r: Row) => r.started_at },
+          { column: "stablecoin", type: "string", direction: "ASC", getValue: (r: Row) => r.stablecoin },
+          { column: "id", type: "number", direction: "DESC", getValue: (r: Row) => r.id },
         ],
       },
-      cursorValues: [1_700_000_000, "usdc", 42],
-    });
+    } as const;
+    const first = await fetchPaginatedEvents<Row, Row>(db, config);
+    expect(first.events.map((r) => r.id)).toEqual([9, 8, 7]);
+    const decoded = JSON.parse(atob(first.nextCursor!));
+    expect(decoded).toEqual({ v: 1, values: [300, "b", 7] });
+    const second = await fetchPaginatedEvents<Row, Row>(db, { ...config, cursorValues: decoded.values });
+    expect(second.events.map((r) => r.id)).toEqual([6, 5, 4]);
+    expect(second.nextCursor).toBeNull();
+  });
 
-    const dataQuery = db.getHistory().find((entry) => entry.sql.includes("FROM depeg_events"));
-    expect(dataQuery).toBeDefined();
-    // The third disjunct exercises the j<i equality-prefix predicates for all preceding columns.
-    expect(dataQuery!.sql).toContain(
-      "((started_at < ?) OR (started_at = ? AND stablecoin > ?) OR (started_at = ? AND stablecoin = ? AND id < ?))",
-    );
-    // Cursor bindings precede the LIMIT (offset is forced to 0 for cursor pages).
-    expect(dataQuery!.binds.slice(0, 6)).toEqual([
-      1_700_000_000,
-      1_700_000_000,
-      "usdc",
-      1_700_000_000,
-      "usdc",
-      42,
-    ]);
+  it("does not emit a cursor when the last emitted row has a null cursor value", async () => {
+    const db = mockD1([{ match: "FROM depeg_events", rows: [
+      { id: 2, started_at: 200, stablecoin: "a" },
+      { id: 1, started_at: 100, stablecoin: "a" },
+    ] }]);
+    const result = await fetchPaginatedEvents<Row, Row>(db, {
+      tableName: "depeg_events", orderBy: "id DESC", conditions: [], filterBindings: [],
+      limit: 1, offset: 0, includeTotal: false, mapRow: (r) => r,
+      cursor: { columns: [{ column: "id", type: "number", direction: "DESC", getValue: () => null }] },
+    });
+    expect(result.events.map((r) => r.id)).toEqual([2]);
+    expect(result.nextCursor).toBeNull();
   });
 
   it("emits a nextCursor when more rows exist and null when the page is short", async () => {
@@ -242,7 +256,7 @@ describe("fetchPaginatedEvents cursor WHERE clause", () => {
       cursorValues: null,
     });
     expect(moreResult.events).toHaveLength(2);
-    expect(moreResult.nextCursor).toBeTruthy();
+    expect(JSON.parse(atob(moreResult.nextCursor!))).toEqual({ v: 1, values: [200, 2] });
 
     const short = mockD1([{ match: "FROM depeg_events", rows: rows.slice(0, 1) }], { requireMatch: true });
     const shortResult = await fetchPaginatedEvents<Row, Row>(short, {

@@ -66,7 +66,7 @@ export function v9ExitRouteObservation(
     scoreEligible: true,
     observedAt,
     freshnessSeconds: clockSec - observedAt,
-    commonModeKeys: ["chain:ethereum", "protocol:fixture-dex"],
+    commonModeKeys: [`chain:${chain}`, "protocol:fixture-dex"],
     capacityCurve: [
       {
         requestedNotionalUsd: 100_000,
@@ -85,7 +85,7 @@ export function v9ExitRouteObservation(
 }
 
 /** A reviewed bounded DEX route review matching `v9ExitRouteObservation`. */
-export function v9RouteReview(routeId = "dex:primary", observedAt = V9_FIXTURE_OBSERVED_AT_SEC) {
+export function v9RouteReview(routeId = "dex:primary", observedAt = V9_FIXTURE_OBSERVED_AT_SEC, chain = "ethereum") {
   return {
     lane: "dex" as const,
     routeId,
@@ -124,7 +124,7 @@ export function v9RouteReview(routeId = "dex:primary", observedAt = V9_FIXTURE_O
       },
     },
     failureDomains: [
-      { kind: "chain" as const, key: "ethereum" },
+      { kind: "chain" as const, key: chain },
       { kind: "dex-protocol" as const, key: "fixture-dex" },
     ],
   };

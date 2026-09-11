@@ -62,7 +62,7 @@ const CASES: Case[] = [
     name: "adapter-exception + invalid reserve output",
     reason: "adapter-exception",
     lastError: "Invalid reserve output from adapter XYZ",
-    expected: "validation",
+    expected: "schema-shape",
   },
 
   // parser-drift

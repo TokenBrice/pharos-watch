@@ -303,6 +303,7 @@ index	idx_yield_source_decisions_retention
 table	admin_action_audit
 table	admin_idempotency_keys
 table	api_key_audit_log
+table	api_key_donor_claims
 table	api_key_rate_limit
 table	api_key_request_rate_limit_v2
 table	api_key_request_stats

@@ -19,6 +19,10 @@ import {
   writeFreshnessSentinel,
 } from "../db-cache";
 import { makeNoopD1 } from "../../test-helpers/noop-d1";
+import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
+
+const fixtures = createLatestSchemaFixtureTracker();
+afterEach(() => fixtures.closeAll());
 
 type CacheRow = { value: string; updated_at: number };
 
@@ -27,11 +31,11 @@ function makeDb(opts?: {
   lastBlocks?: Map<string, number>;
   priceRows?: Array<{ asset_id: string; price: number; updated_at: number }>;
   firstSeenRows?: Array<{ stablecoin_id: string; first_seen: number }>;
-  setCacheIfNewerChanges?: number;
   transientFailures?: Record<string, number>;
 }) {
   const calls: Array<{ sql: string; args: unknown[] }> = [];
   const batchCalls: D1PreparedStatement[][] = [];
+  const executedQueries: string[] = [];
   const transientFailures = new Map(Object.entries(opts?.transientFailures ?? {}));
 
   const maybeThrowTransientFailure = (sql: string) => {
@@ -45,14 +49,13 @@ function makeDb(opts?: {
   const db = makeNoopD1({
     prepare: (sql: string) => {
       const runForSql = async () => {
+        executedQueries.push(sql);
         maybeThrowTransientFailure(sql);
-        if (sql.includes("ON CONFLICT(key) DO UPDATE")) {
-          return { success: true, meta: { changes: opts?.setCacheIfNewerChanges ?? 1 } };
-        }
         return { success: true, meta: { changes: 1 } };
       };
 
       const firstForSql = async <T>(args: unknown[]) => {
+        executedQueries.push(sql);
         maybeThrowTransientFailure(sql);
         if (sql.includes("SELECT value, updated_at FROM cache")) {
           const key = String(args[0] ?? "");
@@ -67,6 +70,7 @@ function makeDb(opts?: {
       };
 
       const allForSql = async <T>(args: unknown[]) => {
+        executedQueries.push(sql);
         maybeThrowTransientFailure(sql);
         if (sql.includes("FROM blacklist_sync_state") && sql.includes("IN (")) {
           const rows = (args as string[])
@@ -124,7 +128,7 @@ function makeDb(opts?: {
     dump: async () => new ArrayBuffer(0),
   });
 
-  return { db, calls, batchCalls };
+  return { db, calls, batchCalls, executedQueries };
 }
 
 describe("db utility helpers", () => {
@@ -286,26 +290,16 @@ describe("db utility helpers", () => {
     expect(write?.args[2]).toBe(Math.floor(Date.now() / 1000));
   });
 
-  it("returns written when setCacheIfNewer inserts or updates the cache row", async () => {
-    const { db } = makeDb({ setCacheIfNewerChanges: 1 });
-
-    const result = await setCacheIfNewer(db, "stablecoins", '{"x":1}', 1700000000);
-
-    expect(result).toEqual({ written: true, skippedBecauseNewer: false });
-  });
-
-  it("returns skipped outcome and logs when setCacheIfNewer skips write due to fresher row", async () => {
-    const { db } = makeDb({ setCacheIfNewerChanges: 0 });
-    const logSpy = vi.spyOn(console, "info").mockImplementation(() => {});
-
-    const result = await setCacheIfNewer(db, "stablecoins", '{"x":1}', 1700000000);
-
-    expect(result).toEqual({ written: false, skippedBecauseNewer: true });
-    expect(JSON.parse(String(logSpy.mock.calls[0]?.[0]))).toMatchObject({
-      event: "cache_write_skipped_newer",
-      metadata: { key: "stablecoins", syncStartSec: 1700000000 },
-    });
-    logSpy.mockRestore();
+  it("preserves newer cache values but permits an equal-timestamp replacement", async () => {
+    const { db } = fixtures.open();
+    expect(await setCacheIfNewer(db, "stablecoins", "newer", 200))
+      .toEqual({ written: true, skippedBecauseNewer: false });
+    expect(await setCacheIfNewer(db, "stablecoins", "older", 199))
+      .toEqual({ written: false, skippedBecauseNewer: true });
+    expect(await getCache(db, "stablecoins")).toEqual({ value: "newer", updatedAt: 200 });
+    expect(await setCacheIfNewer(db, "stablecoins", "equal", 200))
+      .toEqual({ written: true, skippedBecauseNewer: false });
+    expect(await getCache(db, "stablecoins")).toEqual({ value: "equal", updatedAt: 200 });
   });
 
   it("refuses cache publication when the signal is already aborted", async () => {
@@ -459,7 +453,7 @@ describe("db utility helpers", () => {
   });
 
   it("uses a fresh first-seen cache row when available", async () => {
-    const { db, calls } = makeDb({
+    const { db, executedQueries } = makeDb({
       cache: new Map([
         [
           "supply-history:first-seen-dates",
@@ -481,14 +475,13 @@ describe("db utility helpers", () => {
     });
 
     const firstSeen = await getFirstSeenDates(db);
-    expect(firstSeen.get("usdt-tether")).toBe(1690000000);
-    expect(firstSeen.get("usdc-circle")).toBe(1680000000);
-    expect(calls.some((call) => call.sql.includes("MIN(snapshot_date)"))).toBe(false);
+    expect([...firstSeen]).toEqual([["usdt-tether", 1690000000], ["usdc-circle", 1680000000]]);
+    expect(executedQueries.some((sql) => sql.includes("MIN(snapshot_date)"))).toBe(false);
   });
 
   it("adds priced observations to a fresh first-seen cache without querying supply history", async () => {
     const nowSec = Math.floor(Date.now() / 1000);
-    const { db, calls } = makeDb({
+    const { db, calls, executedQueries } = makeDb({
       cache: new Map([
         [
           "supply-history:first-seen-dates",
@@ -514,11 +507,12 @@ describe("db utility helpers", () => {
       { id: "bad-observation", observedAtSec: null },
     ]);
 
-    expect(firstSeen.get("usdt-tether")).toBe(1690000000);
-    expect(firstSeen.get("new-priced-asset")).toBe(1700000000);
-    expect(firstSeen.get("future-priced-asset")).toBe(nowSec);
-    expect(firstSeen.has("bad-observation")).toBe(false);
-    expect(calls.some((call) => call.sql.includes("MIN(snapshot_date)"))).toBe(false);
+    expect([...firstSeen]).toEqual([
+      ["usdt-tether", 1690000000],
+      ["new-priced-asset", 1700000000],
+      ["future-priced-asset", nowSec],
+    ]);
+    expect(executedQueries.some((sql) => sql.includes("MIN(snapshot_date)"))).toBe(false);
     expect(calls.some((call) => call.sql.includes("INSERT OR REPLACE INTO cache"))).toBe(true);
   });
 

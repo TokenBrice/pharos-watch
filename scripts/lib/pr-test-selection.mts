@@ -1,9 +1,9 @@
+import { existsSync } from "node:fs";
 import { matchesGlob } from "node:path";
-import { CRITICAL_FILES } from "./critical-coverage.mjs";
-import { collectOwningTests, deriveCriticalOwnership, normalizeOwnershipPath, type CriticalOwnership } from "./critical-ownership.mts";
+import { CRITICAL_OWNERSHIP } from "./critical-coverage.mjs";
+import { assertExecutableTestFiles, collectOwningTests, normalizeOwnershipPath, type CriticalOwnership } from "./critical-ownership.mts";
 import { ALWAYS_RUN_TEST_FILES } from "./critical-test-files.mts";
 export { ALWAYS_RUN_TEST_FILES };
-const CRITICAL_OWNERSHIP: CriticalOwnership = deriveCriticalOwnership({ sourceFiles: CRITICAL_FILES });
 
 
 export function parseVitestFileList(output: unknown): string[] {
@@ -18,10 +18,16 @@ export function selectPrTestFiles(
   criticalFiles: readonly string[] = ALWAYS_RUN_TEST_FILES,
   changedSourceFiles: readonly string[] = [],
   ownership: CriticalOwnership = CRITICAL_OWNERSHIP,
+  exists: (path: string) => boolean = existsSync,
 ): string[] {
-  const selected = new Set([...criticalFiles, ...changedTestFiles]);
-  for (const test of collectOwningTests(changedSourceFiles, ownership)) selected.add(test);
-  return [...selected].map(normalizeOwnershipPath).sort();
+  if (criticalFiles.length > 0) assertExecutableTestFiles(criticalFiles, { exists });
+  const selected = new Set([...criticalFiles, ...changedTestFiles.filter((file) => exists(file))]);
+  for (const test of collectOwningTests(changedSourceFiles, ownership)) {
+    if (exists(test)) selected.add(test);
+  }
+  const files = [...selected].map(normalizeOwnershipPath).sort();
+  assertExecutableTestFiles(files, { exists });
+  return files;
 }
 
 export function isTestFile(path: string): boolean {

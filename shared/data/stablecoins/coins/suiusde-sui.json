@@ -37,5 +37,24 @@
   "collateralQuality": "exotic",
   "custodyModel": "cex",
   "governanceQuality": "single-entity",
+  "liveReservesConfig": {
+    "adapter": "ethena-whitelabel",
+    "version": 1,
+    "semantics": "collateral-mix",
+    "breakerScope": "suiusde-sui",
+    "display": {
+      "url": "https://whitelabel.ethena.fi/transparency",
+      "label": "eSui Dollar transparency"
+    },
+    "inputs": {
+      "primary": {
+        "kind": "http-json",
+        "url": "https://whitelabel.ethena.fi/api/transparency"
+      }
+    },
+    "params": {
+      "stablecoin": "suiUSDe"
+    }
+  },
   "launchDate": "2026-02-11"
 }

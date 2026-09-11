@@ -1,10 +1,8 @@
 import { describe, expect, it } from "vitest";
-import {
-  fixtureIsReasonablePrice,
-  fixtureHasMissingPrice,
-  fixturePEG_HARDCODED_PRICE_BOUNDS,
-  type PeggedAsset,
-} from "./enrich-prices.test-support";
+import { isReasonablePrice as fixtureIsReasonablePrice } from "../../lib/price-validation";
+import { hasMissingPrice as fixtureHasMissingPrice } from "../sync-stablecoins/enrich-prices-shared";
+import { PEG_HARDCODED_PRICE_BOUNDS as fixturePEG_HARDCODED_PRICE_BOUNDS } from "@shared/lib/peg-taxonomy";
+import type { PeggedAsset } from "../sync-stablecoins/enrich-prices-shared";
 
 describe("PEG_HARDCODED_PRICE_BOUNDS", () => {
   it("has entries for all major peg types", () => {
@@ -43,46 +41,17 @@ describe("PEG_HARDCODED_PRICE_BOUNDS", () => {
 describe("isReasonablePrice", () => {
   // --- USD peg ---
 
-  describe("USD peg", () => {
-    it("accepts 0.99", () => {
-      expect(fixtureIsReasonablePrice(0.99, "peggedUSD")).toBe(true);
-    });
-
-    it("accepts 1.01", () => {
-      expect(fixtureIsReasonablePrice(1.01, "peggedUSD")).toBe(true);
-    });
-
-    it("accepts 1.00", () => {
-      expect(fixtureIsReasonablePrice(1.0, "peggedUSD")).toBe(true);
-    });
-
-    it("rejects 0.009 (too low)", () => {
-      expect(fixtureIsReasonablePrice(0.009, "peggedUSD")).toBe(false);
-    });
-
-    it("rejects 1.20 (too high — CG artifact territory)", () => {
-      expect(fixtureIsReasonablePrice(1.2, "peggedUSD")).toBe(false);
-    });
-
-    it("accepts 1.18 (just within upper bound)", () => {
-      expect(fixtureIsReasonablePrice(1.18, "peggedUSD")).toBe(true);
-    });
-
-    it("rejects negative price", () => {
-      expect(fixtureIsReasonablePrice(-1, "peggedUSD")).toBe(false);
-    });
-
-    it("rejects zero", () => {
-      expect(fixtureIsReasonablePrice(0, "peggedUSD")).toBe(false);
-    });
-
-    it("rejects NaN", () => {
-      expect(fixtureIsReasonablePrice(NaN, "peggedUSD")).toBe(false);
-    });
-
-    it("rejects Infinity", () => {
-      expect(fixtureIsReasonablePrice(Infinity, "peggedUSD")).toBe(false);
-    });
+  it.each([
+    [1, true],
+    [0.009, false],
+    [1.2, false],
+    [1.18, true],
+    [-1, false],
+    [0, false],
+    [NaN, false],
+    [Infinity, false],
+  ])("validates USD price %s as %s", (price, expected) => {
+    expect(fixtureIsReasonablePrice(price, "peggedUSD")).toBe(expected);
   });
 
   describe("NAV token override", () => {
@@ -99,46 +68,12 @@ describe("isReasonablePrice", () => {
 
   // --- Non-USD pegs (hardcoded fallback) ---
 
-  describe("EUR peg", () => {
-    it("accepts typical EUR rate ~1.08", () => {
-      expect(fixtureIsReasonablePrice(1.08, "peggedEUR")).toBe(true);
-    });
-
-    it("rejects 0.005 (too low)", () => {
-      expect(fixtureIsReasonablePrice(0.005, "peggedEUR")).toBe(false);
-    });
-
-    it("rejects 3.0 (too high)", () => {
-      expect(fixtureIsReasonablePrice(3.0, "peggedEUR")).toBe(false);
-    });
-  });
-
-  describe("JPY peg", () => {
-    it("accepts typical JPY rate ~0.0067", () => {
-      expect(fixtureIsReasonablePrice(0.0067, "peggedJPY")).toBe(true);
-    });
-
-    it("rejects 0.0005 (too low)", () => {
-      expect(fixtureIsReasonablePrice(0.0005, "peggedJPY")).toBe(false);
-    });
-
-    it("rejects 0.1 (too high)", () => {
-      expect(fixtureIsReasonablePrice(0.1, "peggedJPY")).toBe(false);
-    });
-  });
-
-  describe("IDR peg", () => {
-    it("accepts typical IDR rate ~0.000062", () => {
-      expect(fixtureIsReasonablePrice(0.000062, "peggedIDR")).toBe(true);
-    });
-
-    it("rejects 0.000001 (too low)", () => {
-      expect(fixtureIsReasonablePrice(0.000001, "peggedIDR")).toBe(false);
-    });
-
-    it("rejects 0.01 (too high)", () => {
-      expect(fixtureIsReasonablePrice(0.01, "peggedIDR")).toBe(false);
-    });
+  it.each([
+    ["EUR", 1.08, true], ["EUR", 0.005, false], ["EUR", 3, false],
+    ["JPY", 0.0067, true], ["JPY", 0.0005, false], ["JPY", 0.1, false],
+    ["IDR", 0.000062, true], ["IDR", 0.000001, false], ["IDR", 0.01, false],
+  ])("validates %s price %s as %s", (currency, price, expected) => {
+    expect(fixtureIsReasonablePrice(price, `pegged${currency}`)).toBe(expected);
   });
 
   describe("GOLD peg", () => {
@@ -183,38 +118,11 @@ describe("isReasonablePrice", () => {
     });
   });
 
-  describe("SGD peg", () => {
-    it("accepts typical SGD rate ~0.74", () => {
-      expect(fixtureIsReasonablePrice(0.74, "peggedSGD")).toBe(true);
-    });
-  });
-
-  describe("TRY peg", () => {
-    it("accepts typical TRY rate ~0.028", () => {
-      expect(fixtureIsReasonablePrice(0.028, "peggedTRY")).toBe(true);
-    });
-  });
-
-  describe("AUD peg", () => {
-    it("accepts typical AUD rate ~0.63", () => {
-      expect(fixtureIsReasonablePrice(0.63, "peggedAUD")).toBe(true);
-    });
-  });
-
-  describe("RUB peg", () => {
-    it("accepts typical RUB rate ~0.011", () => {
-      expect(fixtureIsReasonablePrice(0.011, "peggedRUB")).toBe(true);
-    });
-  });
-
-  describe("ARS peg", () => {
-    it("accepts typical ARS rate ~0.0009", () => {
-      expect(fixtureIsReasonablePrice(0.0009, "peggedARS")).toBe(true);
-    });
-
-    it("rejects 0.0000001 (too low)", () => {
-      expect(fixtureIsReasonablePrice(0.0000001, "peggedARS")).toBe(false);
-    });
+  it.each([
+    ["SGD", 0.74, true], ["TRY", 0.028, true], ["AUD", 0.63, true],
+    ["RUB", 0.011, true], ["ARS", 0.0009, true], ["ARS", 0.0000001, false],
+  ])("validates %s price %s as %s", (currency, price, expected) => {
+    expect(fixtureIsReasonablePrice(price, `pegged${currency}`)).toBe(expected);
   });
 
   // --- FX-rate-aware bounds ---
@@ -282,27 +190,10 @@ describe("isReasonablePrice", () => {
 });
 
 describe("hasMissingPrice", () => {
-  it("detects null price", () => {
-    expect(fixtureHasMissingPrice({ price: null } as PeggedAsset)).toBe(true);
-  });
-
-  it("detects undefined price", () => {
-    expect(fixtureHasMissingPrice({ price: undefined } as unknown as PeggedAsset)).toBe(true);
-  });
-
-  it("detects zero price", () => {
-    expect(fixtureHasMissingPrice({ price: 0 } as PeggedAsset)).toBe(true);
-  });
-
-  it("detects non-number price (string)", () => {
-    expect(fixtureHasMissingPrice({ price: "1.0" } as unknown as PeggedAsset)).toBe(true);
-  });
-
-  it("returns false for valid price", () => {
-    expect(fixtureHasMissingPrice({ price: 1.0 } as PeggedAsset)).toBe(false);
-  });
-
-  it("returns false for small but valid price", () => {
-    expect(fixtureHasMissingPrice({ price: 0.0001 } as PeggedAsset)).toBe(false);
+  it.each([
+    [null, true], [undefined, true], [0, true], ["1.0", true],
+    [1, false], [0.0001, false],
+  ])("classifies price %s as missing: %s", (price, expected) => {
+    expect(fixtureHasMissingPrice({ price } as PeggedAsset)).toBe(expected);
   });
 });

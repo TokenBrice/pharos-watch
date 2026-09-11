@@ -7,8 +7,14 @@
       "risk": "low",
       "assetClass": "cryptoasset",
       "issuerOrObligor": "Lido DAO and Ethereum validators",
-      "riskFactors": ["market", "liquidity", "smart-contract", "custody"],
-      "liquidityHorizon": "immediate"
+      "riskFactors": [
+        "market",
+        "liquidity",
+        "smart-contract",
+        "custody"
+      ],
+      "liquidityHorizon": "immediate",
+      "sourceKey": "liquity-v2-branches:ethereum:0x7f39c581f595b53c5cb19bd0b3f8da6c935e2ca0"
     },
     {
       "name": "WETH",
@@ -16,8 +22,14 @@
       "risk": "very-low",
       "assetClass": "cryptoasset",
       "issuerOrObligor": "Ethereum protocol and WETH9 contract",
-      "riskFactors": ["market", "liquidity", "smart-contract", "custody"],
-      "liquidityHorizon": "immediate"
+      "riskFactors": [
+        "market",
+        "liquidity",
+        "smart-contract",
+        "custody"
+      ],
+      "liquidityHorizon": "immediate",
+      "sourceKey": "liquity-v2-branches:ethereum:0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2"
     },
     {
       "name": "rETH (Rocket Pool)",
@@ -25,8 +37,15 @@
       "risk": "low",
       "assetClass": "cryptoasset",
       "issuerOrObligor": "Rocket Pool DAO and node operators",
-      "riskFactors": ["market", "liquidity", "smart-contract", "custody", "concentration"],
-      "liquidityHorizon": "one-day"
+      "riskFactors": [
+        "market",
+        "liquidity",
+        "smart-contract",
+        "custody",
+        "concentration"
+      ],
+      "liquidityHorizon": "one-day",
+      "sourceKey": "liquity-v2-branches:ethereum:0xae78736cd615f374d3085123a210448e74fc6393"
     }
   ],
   "reserveReview": {

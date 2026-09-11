@@ -353,6 +353,7 @@ export async function markLiveReserveCheckpointItemStarted(
     itemsTotal: number;
     nowSec?: number;
     recoveryLeaseUntil?: number | null;
+    deadlineMs?: number;
   },
 ): Promise<void> {
   const timestamp = input.nowSec ?? nowSec();
@@ -365,7 +366,8 @@ export async function markLiveReserveCheckpointItemStarted(
                   items_done = ?, items_total = ?, updated_at = ?,
                   recovery_lease_until = COALESCE(?, recovery_lease_until)
             WHERE ${identityWhereSql()}
-              AND state IN ('running', 'recovering')`,
+              AND state IN ('running', 'recovering')
+              AND (? IS NULL OR CAST((julianday('now') - 2440587.5) * 86400000 AS INTEGER) < ?)`,
         )
         .bind(
           input.itemKey,
@@ -376,6 +378,8 @@ export async function markLiveReserveCheckpointItemStarted(
           timestamp,
           input.recoveryLeaseUntil ?? null,
           ...identityBinds(identity),
+          input.deadlineMs ?? null,
+          input.deadlineMs ?? null,
         )
         .run(),
     ),
@@ -819,6 +823,79 @@ export async function inspectLiveReserveCheckpointRecoveryEligibility(
   };
 }
 
+
+/**
+ * Retire incompatible historical frontiers only after a newer complete cohort
+ * supersedes them in a finished slot, even if a sidecar degraded the slot result.
+ * The transition and exact pending-attempt fence share a batch; neither an active
+ * child lease nor a recovery claimant may be displaced.
+ */
+export async function retireSupersededLiveReserveCheckpoints(
+  db: D1Database,
+  timestamp = nowSec(),
+): Promise<number> {
+  const rows = await runWithOverloadRetry(() => db.prepare(
+    `SELECT ${CHECKPOINT_COLUMNS}
+       FROM worker_scheduled_checkpoints
+      WHERE schedule_key = ? AND job = ? AND queue_hash <> ?
+        AND state IN ('running', 'recovering', 'ready', 'platform_abandoned')
+      ORDER BY slot_started_at ASC LIMIT 25`,
+  ).bind(LIVE_RESERVE_SCHEDULE_KEY, LIVE_RESERVE_CHECKPOINT_JOB, LIVE_RESERVE_QUEUE_HASH)
+    .all<ScheduledCheckpointRow>());
+  let retired = 0;
+  for (const row of rows.results ?? []) {
+    const checkpoint = mapCheckpointRow(row);
+    const reason = "checkpoint-superseded-by-newer-full-cohort";
+    const guard = `EXISTS (
+      SELECT 1 FROM worker_scheduled_checkpoints
+       WHERE ${identityWhereSql()} AND state = 'failed' AND error = ? AND completed_at = ?
+    )`;
+    const statements = [
+      db.prepare(`UPDATE worker_scheduled_checkpoints
+        SET state = 'failed', error = ?, completed_at = ?, updated_at = ?,
+            recovery_owner = NULL, recovery_lease_until = NULL
+        WHERE ${identityWhereSql()}
+          AND state IN ('running', 'recovering', 'ready', 'platform_abandoned') AND queue_hash <> ?
+          AND (recovery_lease_until IS NULL OR recovery_lease_until < ?)
+          AND NOT EXISTS (
+            SELECT 1 FROM cron_leases
+             WHERE job IN (${LIVE_RESERVE_SLOT_JOBS.map(() => "?").join(", ")}) AND lease_until >= ?
+          )
+          AND NOT EXISTS (
+            SELECT 1 FROM cron_slot_executions
+             WHERE slot_key = ? AND slot_started_at = ?
+               AND state IN ('running', 'reconciling') AND updated_at >= ?
+          )
+          AND EXISTS (
+            SELECT 1 FROM worker_scheduled_checkpoints newer
+            JOIN cron_slot_executions slot
+              ON slot.slot_key = newer.schedule_key AND slot.slot_started_at = newer.slot_started_at
+            WHERE newer.schedule_key = ? AND newer.job = ? AND newer.slot_started_at > ?
+              AND newer.queue_hash = ? AND newer.state = 'completed' AND newer.completed_at IS NOT NULL
+              AND newer.next_item_key IS NULL AND newer.items_done = newer.items_total
+              AND newer.items_total = ? AND slot.state = 'finished'
+          )`).bind(
+        reason, timestamp, timestamp, ...identityBinds(checkpoint), LIVE_RESERVE_QUEUE_HASH,
+        timestamp, ...LIVE_RESERVE_SLOT_JOBS, timestamp,
+        checkpoint.scheduleKey, checkpoint.slotStartedAt, timestamp - 120,
+        checkpoint.scheduleKey, checkpoint.job, checkpoint.slotStartedAt, LIVE_RESERVE_QUEUE_HASH,
+        SYNC_ORDERED_CONFIGURED_COINS.length,
+      ),
+      ...buildReserveAttemptAbandonmentStatements(db, {
+        ...checkpoint,
+        currentItemKey: checkpoint.currentItemKey ?? checkpoint.nextItemKey,
+      }, {
+        timestamp, error: reason,
+        metadata: JSON.stringify({ reason, failureCategory: "checkpoint-superseded", supersedingQueueHash: LIVE_RESERVE_QUEUE_HASH, reconciledAt: timestamp }),
+        checkpointGuardSql: guard,
+        checkpointGuardBinds: [...identityBinds(checkpoint), reason, timestamp],
+      }),
+    ];
+    const results = await runWithOverloadRetry(() => db.batch(statements));
+    retired += results[0]?.meta.changes ?? 0;
+  }
+  return retired;
+}
 
 export async function prepareEligibleLiveReserveCheckpointRecoveries(
   db: D1Database,

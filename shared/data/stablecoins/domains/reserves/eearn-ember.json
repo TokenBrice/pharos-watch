@@ -2,6 +2,7 @@
   "id": "eearn-ember",
   "reserves": [
     {
+      "sourceKey": "erc4626-single-asset:ethereum:0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
       "name": "USDC deposited into Ember Earn's Ethereum vault",
       "pct": 100,
       "risk": "high",
@@ -49,7 +50,7 @@
         "url": "https://ethereum-rpc.publicnode.com"
       }
     ],
-    "rationale": "The eEARN proxy still resolves to a single USDC-denominated Ember Earn vault after the 2026-08-18 implementation-pin review. Same-run on-chain reads confirmed asset() returns USDC, the vaultValidator and protocolConfig dependencies remain the configured proxy addresses, operations and protocol pause flags are unpaused, and the withdrawal-fee components are zero. The reviewed sources support retaining the 100% USDC wrapper dependency while pinning the upgraded vault, validator, and protocol-config implementations; they still do not publish a current independent assurance report, strategy allocation, or fixed redemption window.",
+    "rationale": "The eEARN proxy still resolves to a single USDC-denominated Ember Earn vault after the 2026-08-18 implementation-pin review. Same-run on-chain reads confirmed asset() returns USDC, the vaultValidator and protocolConfig dependencies remain the configured proxy addresses, operations and protocol pause flags are unpaused, and the withdrawal-fee components are zero. The reviewed sources support retaining the 100% USDC wrapper dependency while pinning the upgraded vault, validator, and protocol-config implementations; they still do not publish a current independent assurance report, strategy allocation, or fixed redemption window. Supply coverage gap (2026-09-10): the Sui eEARN receipt coin (0x34469c8a…::eearn::EEARN) is registered but its supply is not publicly measurable (unfrozen TreasuryCap, coinMetadata.supply null), so the curated supply aggregate reads the Ethereum vault only; re-review when a Sui supply read exists.",
     "compositionBasis": "Ember Earn product disclosure, verified current proxy implementations, and live ERC-4626 single-asset observer reads",
     "compositionAsOf": "2026-08-18",
     "scope": "full-composition",

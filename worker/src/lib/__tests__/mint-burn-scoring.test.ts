@@ -105,16 +105,15 @@ describe("computeFlowIntensity", () => {
 
   it("uses floor of 1M for denominator when baseline abs flow is tiny", () => {
     // absBaseline = 100, denom = max(100 * 0.3, 1e6) = 1e6
-    // z = (-2e6 - 0) / 1e6 = -2.0
-    // intensity = clamp(-100, 100, -2 * 50) = -100
+    // z = -500000 / 1e6 = -0.5, below saturation.
     const result = computeFlowIntensity({
-      currentDailyNet: -2e6,
+      currentDailyNet: -500_000,
       baselineDailyNet: 0,
       baselineDailyAbs: 100,
       dataAgeDays: 30,
-      currentDailyAbs: 2_000_000,
+      currentDailyAbs: 500_000,
     });
-    expect(result).toBeCloseTo(-100, 1);
+    expect(result).toBe(-25);
   });
 
   it("accounts for non-zero baseline in z-score", () => {
@@ -140,6 +139,13 @@ describe("computeFlowIntensity", () => {
         currentDailyAbs: 100_000_000,
       })
     ).toBeCloseTo(-33.33, 0);
+  });
+
+  it("includes exactly seven days and $50K activity, but excludes either just below", () => {
+    const input = { currentDailyNet: 50_000, baselineDailyNet: 0, baselineDailyAbs: 100, dataAgeDays: 7, currentDailyAbs: 50_000 };
+    expect(computeFlowIntensity(input)).toBe(2.5);
+    expect(computeFlowIntensity({ ...input, dataAgeDays: 6.999 })).toBeNull();
+    expect(computeFlowIntensity({ ...input, currentDailyAbs: 49_999 })).toBeNull();
   });
 });
 
@@ -217,6 +223,10 @@ describe("computeGaugeScore", () => {
   it("returns null for empty array", () => {
     expect(computeGaugeScore([])).toBeNull();
   });
+
+  it("returns null for eligible intensities with zero total market cap", () => {
+    expect(computeGaugeScore([{ intensity: 40, mcap: 0 }])).toBeNull();
+  });
 });
 
 describe("detectFlightToQuality", () => {
@@ -253,5 +263,10 @@ describe("detectFlightToQuality", () => {
       riskyNet24h: -2e9,
     });
     expect(result).toEqual({ active: true, intensity: 100 });
+  });
+
+  it("requires both flows to strictly exceed $100M", () => {
+    expect(detectFlightToQuality({ safeNet24h: 1e8, riskyNet24h: -2e8 })).toEqual({ active: false, intensity: 0 });
+    expect(detectFlightToQuality({ safeNet24h: 2e8, riskyNet24h: -1e8 })).toEqual({ active: false, intensity: 0 });
   });
 });

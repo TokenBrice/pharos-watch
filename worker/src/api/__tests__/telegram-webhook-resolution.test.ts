@@ -30,15 +30,12 @@ describe("resolveCoinTargets", () => {
 
   it("returns ambiguous with candidates and remaining tickers", () => {
     const ambiguous = resolveTicker("USDF");
-    if (ambiguous.status !== "ambiguous") {
-      // Skip if no ambiguous ticker available in test dataset
-      return;
-    }
+    expect(ambiguous.status).toBe("ambiguous");
     const result = resolveCoinTargets(["USDF", "USDC"]);
     expect(result.kind).toBe("ambiguous");
     if (result.kind === "ambiguous") {
       expect(result.ticker).toBe("USDF");
-      expect(result.candidates.length).toBeGreaterThan(1);
+      expect(result.candidates).toEqual(ambiguous.status === "ambiguous" ? ambiguous.matches : []);
       expect(result.remainingTickers).toEqual(["USDC"]);
     }
   });

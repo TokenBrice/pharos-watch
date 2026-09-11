@@ -48,12 +48,13 @@ describe("useContagionGraphDrag", () => {
     delete document.body.dataset.clicked;
   });
 
-  it("persists dragged positions within the active simulation key", async () => {
-    const { container } = render(<DragHarness />);
+  it("persists dragged positions within the active simulation key", () => {
+    const { container, rerender } = render(<DragHarness />);
     const node = screen.getByTestId("drag-node");
     const svg = screen.getByTestId("drag-svg");
     const circle = container.querySelector("circle");
 
+    expect(circle).not.toBeNull();
     expect(circle?.getAttribute("cx")).toBe("100");
     expect(circle?.getAttribute("cy")).toBe("100");
 
@@ -61,10 +62,16 @@ describe("useContagionGraphDrag", () => {
     fireEvent.pointerMove(svg, { pointerId: 1, clientX: 140, clientY: 150 });
     fireEvent.pointerUp(svg, { pointerId: 1 });
 
-    await waitFor(() => {
-      expect(circle?.getAttribute("cx")).not.toBe("100");
-      expect(circle?.getAttribute("cy")).not.toBe("100");
-    });
+    // The coordinate shim maps client to svg coordinates 1:1, so the drag of
+    // (+40, +50) must land on exact finite coordinates, not merely "not 100".
+    expect(circle?.getAttribute("cx")).toBe("140");
+    expect(circle?.getAttribute("cy")).toBe("150");
+
+    // Pinned positions survive a plain rerender under the same simulation key.
+    rerender(<DragHarness />);
+
+    expect(circle?.getAttribute("cx")).toBe("140");
+    expect(circle?.getAttribute("cy")).toBe("150");
   });
 
   it("resets pinned positions when the simulation key changes", async () => {

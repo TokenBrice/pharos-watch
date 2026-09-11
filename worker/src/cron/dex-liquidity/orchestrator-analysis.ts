@@ -7,9 +7,12 @@ import type { DirectCexOrderbookDepthSummary } from "../../lib/cex-orderbooks";
 import {
   DRIFT_WATCHLIST,
   computeDexLiquidityDriftSummary,
+  readPreviousDexLiquidityDriftCandidates,
   readPreviousDexLiquiditySummary,
   round4,
+  type DexLiquidityDriftCandidate,
   type DexLiquidityDriftSummary,
+  type PreviousDexLiquiditySummary,
 } from "./orchestrator-drift";
 import { toErrorMessage } from "@shared/lib/error-utils";
 
@@ -132,11 +135,35 @@ function parsePreviousCronRows(
   return parsedRows;
 }
 
-function readLatestProductiveDexLiquiditySummary(rows: ParsedPreviousCronRow[]) {
+/** Trailing window (productive published runs) used for the coverage/value guard baselines. */
+const GUARD_BASELINE_RUNS = 6;
+
+/** A run that produced a scoring result: `ok`/`degraded` and not persistence-skipped. */
+function isProductiveCronRow(row: ParsedPreviousCronRow): boolean {
+  return (row.status === "ok" || row.status === "degraded") && row.metadata.persistence?.skipped !== true;
+}
+
+/**
+ * Median of the newest `GUARD_BASELINE_RUNS` values, most recent first. The
+ * guards used to compare against the immediately previous run only, so a 20%
+ * slide spread over six runs never crossed a 20% single-run bound and those
+ * runs published as `ok`; a trailing median sees the decay while still ignoring
+ * one noisy hour.
+ */
+function medianOfRecentRuns(values: number[]): number | null {
+  const sorted = [...values.slice(0, GUARD_BASELINE_RUNS)].sort((left, right) => left - right);
+  if (sorted.length === 0) return null;
+  const middle = Math.floor(sorted.length / 2);
+  return sorted.length % 2 === 0 ? (sorted[middle - 1]! + sorted[middle]!) / 2 : sorted[middle]!;
+}
+
+function readLatestProductiveDexLiquidityBaseline(rows: ParsedPreviousCronRow[]): {
+  summary: PreviousDexLiquiditySummary | null;
+  candidates: DexLiquidityDriftCandidate[];
+} {
   const latestProductiveRow = rows.find(
     (row) =>
-      (row.status === "ok" || row.status === "degraded") &&
-      row.metadata.persistence?.skipped !== true &&
+      isProductiveCronRow(row) &&
       [
         row.metadata.stagedPoolsMerged,
         row.metadata.stagedPoolsSkipped,
@@ -145,7 +172,10 @@ function readLatestProductiveDexLiquiditySummary(rows: ParsedPreviousCronRow[]) 
         row.metadata.sourceCoverage.weakCoverageCoins,
       ].every((value) => typeof value === "number" && Number.isFinite(value)),
   );
-  return readPreviousDexLiquiditySummary(latestProductiveRow?.metadata ?? null);
+  return {
+    summary: readPreviousDexLiquiditySummary(latestProductiveRow?.metadata ?? null),
+    candidates: readPreviousDexLiquidityDriftCandidates(latestProductiveRow?.metadata ?? null),
+  };
 }
 
 function isApproxSameTvl(left: number | null, right: number | null): boolean {
@@ -172,47 +202,24 @@ function findPersistedCronMetadata(
 
 function selectValueBaseline(params: {
   persistedGlobalTvl: number | null;
-  persistedUpdatedAt: number | null;
-  previousCronRows: ParsedPreviousCronRow[];
+  persistedSourceIncomplete: boolean;
+  trailingSourceCompleteGlobalTvl: number | null;
 }): ValueBaselineSelection {
-  const persistedRun = findPersistedCronMetadata(
-    params.previousCronRows,
-    params.persistedUpdatedAt,
-    params.persistedGlobalTvl,
-  );
-  const persistedSourceIncomplete = persistedRun != null && isSourceIncompleteMetadata(persistedRun.metadata);
-  const sourceCompleteRun = params.previousCronRows.find(
-    (row) => (row.status === "ok" || row.status === "degraded") && isSourceCompleteMetadata(row.metadata),
-  );
+  // The persisted `__global__` row is the most recent published baseline, so it
+  // is the anchor of the guard window unless it came from a source-incomplete
+  // run. Either way the trailing source-complete median smooths the comparison.
+  const usesPersistedRow = !params.persistedSourceIncomplete && params.persistedGlobalTvl != null;
+  const baseline = usesPersistedRow
+    ? params.trailingSourceCompleteGlobalTvl ?? params.persistedGlobalTvl
+    : params.trailingSourceCompleteGlobalTvl;
 
-  if (persistedSourceIncomplete) {
-    const value = sourceCompleteRun?.metadata.sourceCoverage.currentGlobalTvl ?? null;
-    return {
-      previousGlobalTvl: isFinitePositive(value) ? value : null,
-      minExpectedGlobalTvl: isFinitePositive(value) ? value * 0.6 : null,
-      valueBaselineSource: isFinitePositive(value) ? "cron_metadata_source_complete" : "none",
-      valueBaselineGlobalTvl: isFinitePositive(value) ? value : null,
-      ignoredPersistedGlobalTvl: params.persistedGlobalTvl,
-    };
-  }
-
-  if (params.persistedGlobalTvl != null) {
-    return {
-      previousGlobalTvl: params.persistedGlobalTvl,
-      minExpectedGlobalTvl: params.persistedGlobalTvl * 0.6,
-      valueBaselineSource: "dex_liquidity_global",
-      valueBaselineGlobalTvl: params.persistedGlobalTvl,
-      ignoredPersistedGlobalTvl: null,
-    };
-  }
-
-  const value = sourceCompleteRun?.metadata.sourceCoverage.currentGlobalTvl ?? null;
   return {
-    previousGlobalTvl: isFinitePositive(value) ? value : null,
-    minExpectedGlobalTvl: isFinitePositive(value) ? value * 0.6 : null,
-    valueBaselineSource: isFinitePositive(value) ? "cron_metadata_source_complete" : "none",
-    valueBaselineGlobalTvl: isFinitePositive(value) ? value : null,
-    ignoredPersistedGlobalTvl: null,
+    previousGlobalTvl: baseline,
+    minExpectedGlobalTvl: baseline != null ? baseline * 0.6 : null,
+    valueBaselineSource:
+      baseline == null ? "none" : usesPersistedRow ? "dex_liquidity_global" : "cron_metadata_source_complete",
+    valueBaselineGlobalTvl: baseline,
+    ignoredPersistedGlobalTvl: params.persistedSourceIncomplete ? params.persistedGlobalTvl : null,
   };
 }
 
@@ -236,6 +243,7 @@ export interface DexLiquidityPostScoreAnalysis {
   hardValueGuard: boolean;
   nearMajorCoverageGuard: boolean;
   hardMajorCoverageGuard: boolean;
+  hardCoverageGuard: boolean;
   sourceCoverage: {
     dlYieldsAvailable: boolean;
     dlProtocolsAvailable: boolean;
@@ -244,6 +252,7 @@ export interface DexLiquidityPostScoreAnalysis {
     previousCoverageBaselineAvailable: boolean;
     minExpectedCoverage: number;
     nearCoverageGuard: boolean;
+    hardCoverageGuard: boolean;
     currentGlobalTvl: number;
     previousGlobalTvl: number | null;
     minExpectedGlobalTvl: number | null;
@@ -412,20 +421,44 @@ export async function analyzeDexLiquidityPostScoring(params: {
       }),
   ]);
 
-  const previousCoverageBaselineAvailable = previousCoverageRow != null;
-  const previousCoverage = previousCoverageRow?.cnt ?? 0;
+  const parsedPreviousCronRows = parsePreviousCronRows(previousCronRows.results ?? []);
+
+  // Coverage guard baseline: the published row count plus the trailing
+  // productive runs, so a slow decay is measured against where coverage
+  // actually was rather than against the run it just overwrote.
+  const coverageBaselineWindow = [
+    ...(previousCoverageRow != null ? [previousCoverageRow.cnt] : []),
+    ...parsedPreviousCronRows
+      .filter((row) => isProductiveCronRow(row) && isFiniteNonNegative(row.metadata.sourceCoverage.currentCoverage))
+      .map((row) => row.metadata.sourceCoverage.currentCoverage!),
+  ];
+  const coverageBaseline = medianOfRecentRuns(coverageBaselineWindow);
+  const previousCoverageBaselineAvailable = coverageBaseline != null;
+  const previousCoverage = coverageBaseline ?? 0;
   const minExpectedCoverage = previousCoverageBaselineAvailable ? Math.max(1, Math.floor(previousCoverage * 0.6)) : 0;
+  const hardCoverageGuard =
+    previousCoverageBaselineAvailable && previousCoverage >= 10 && currentCoverage < minExpectedCoverage;
   const nearCoverageGuard =
     previousCoverageBaselineAvailable && previousCoverage >= 10 && currentCoverage < Math.floor(previousCoverage * 0.8);
 
   const currentGlobalTvl = params.globalAgg.totalTvl;
   const persistedGlobalTvl = previousGlobalRow?.total_tvl_usd ?? null;
   const persistedGlobalUpdatedAt = previousGlobalRow?.updated_at ?? null;
-  const parsedPreviousCronRows = parsePreviousCronRows(previousCronRows.results ?? []);
+  const persistedRun = findPersistedCronMetadata(
+    parsedPreviousCronRows,
+    persistedGlobalUpdatedAt,
+    persistedGlobalTvl,
+  );
+  const persistedSourceIncomplete = persistedRun != null && isSourceIncompleteMetadata(persistedRun.metadata);
+  const trailingSourceCompleteGlobalTvl = medianOfRecentRuns(
+    parsedPreviousCronRows
+      .filter((row) => isProductiveCronRow(row) && isSourceCompleteMetadata(row.metadata))
+      .map((row) => row.metadata.sourceCoverage.currentGlobalTvl!),
+  );
   const valueBaseline = selectValueBaseline({
     persistedGlobalTvl,
-    persistedUpdatedAt: persistedGlobalUpdatedAt,
-    previousCronRows: parsedPreviousCronRows,
+    persistedSourceIncomplete,
+    trailingSourceCompleteGlobalTvl,
   });
   const previousGlobalTvl = valueBaseline.previousGlobalTvl;
   const minExpectedGlobalTvl = valueBaseline.minExpectedGlobalTvl;
@@ -491,7 +524,7 @@ export async function analyzeDexLiquidityPostScoring(params: {
     }
   }
 
-  const previousSummary = readLatestProductiveDexLiquiditySummary(parsedPreviousCronRows);
+  const previousDriftBaseline = readLatestProductiveDexLiquidityBaseline(parsedPreviousCronRows);
   const watchlistPreviousById = new Map((previousWatchlistRows.results ?? []).map((row) => [row.stablecoin_id, row]));
 
   const retainedPoolCountBySourceFamily: Record<string, number> = {};
@@ -514,7 +547,14 @@ export async function analyzeDexLiquidityPostScoring(params: {
     for (const pool of pools) {
       retainedPoolCountBySourceFamily[pool.source] = (retainedPoolCountBySourceFamily[pool.source] ?? 0) + 1;
       sourceFamilies.add(pool.source);
-      if (pool.source === "dl" || pool.source === "direct_api") hasPrimaryLiquidity = true;
+      // A remembered DL/direct row (decayed staged backfill) is inventory, not a this-run
+      // observation: it must not hide a total primary-lane outage from coverage classification.
+      if (
+        (pool.source === "dl" || pool.source === "direct_api") &&
+        pool.extra?.measurement?.decayed !== true
+      ) {
+        hasPrimaryLiquidity = true;
+      }
       if (pool.source === "gecko_terminal") hasGeckoTerminalLiquidity = true;
       if (pool.extra?.measurement?.balanceMeasured) {
         hasMeasuredBalanceLiquidity = true;
@@ -586,7 +626,8 @@ export async function analyzeDexLiquidityPostScoring(params: {
     .slice(0, 6);
 
   const driftSummary = computeDexLiquidityDriftSummary({
-    previousSummary,
+    previousSummary: previousDriftBaseline.summary,
+    previousCandidates: previousDriftBaseline.candidates,
     priceObservations: params.priceObservations,
     stagedMergedCount: params.stagedMergedCount,
     stagedSkippedCount: params.stagedSkippedCount,
@@ -594,7 +635,6 @@ export async function analyzeDexLiquidityPostScoring(params: {
     measuredBalanceCoveragePct,
     watchlistPreviousById,
     scoreResults: params.scoreResults,
-    retainedPoolsByStablecoin: params.retainedPoolsByStablecoin,
     previousMajorTvlById: new Map(
       (previousTopCoverageRows.results ?? []).map((row) => [row.stablecoin_id, row.total_tvl_usd]),
     ),
@@ -616,6 +656,7 @@ export async function analyzeDexLiquidityPostScoring(params: {
     currentTop10GuardTvl,
     previousTop10GuardTvl,
     nearCoverageGuard,
+    hardCoverageGuard,
     nearValueGuard,
     hardValueGuard,
     nearMajorCoverageGuard,
@@ -628,6 +669,7 @@ export async function analyzeDexLiquidityPostScoring(params: {
       previousCoverageBaselineAvailable,
       minExpectedCoverage,
       nearCoverageGuard,
+      hardCoverageGuard,
       currentGlobalTvl,
       previousGlobalTvl,
       minExpectedGlobalTvl,
@@ -661,6 +703,7 @@ export async function analyzeDexLiquidityPostScoring(params: {
         topStablecoins: cappedStablecoinBreakdown,
       },
       qualityDriftFlags: driftSummary.qualityDriftFlags,
+      qualityDriftCandidates: driftSummary.qualityDriftCandidates,
       qualityDriftSeverity: driftSummary.qualityDriftSeverity,
       qualityDriftMetrics: driftSummary.qualityDriftMetrics,
       topAssetCoverageDeltas: driftSummary.topAssetCoverageDeltas,

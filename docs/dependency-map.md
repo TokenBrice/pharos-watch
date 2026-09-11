@@ -36,6 +36,8 @@ The page combines:
 
 A held V9 publication is shown with the shared status notice. Missing or invalid V9 data renders unavailable; the page never falls back to V8 or reconstructs dependency edges from a retired card model. The graph takes its edge set only from `dependencyGraph.edges`; it has no static fallback source.
 
+Since Safety Score methodology 9.49, variant parents, explicit wrapped-asset claims, and manual non-collateral relationships survive independently of reserve composition. The 9.48 no-revival rule remains in force for reserve weights: wholly unmapped live compositions contribute no reserve-derived edges rather than restoring old curated or manual collateral weights. Compiled dependency facts retain per-slice `rejectionReasons` (`no-match`, `expired`, or reviewed `non-link`) with zero-based `sliceIndex` and live mapping provenance even when a structural edge survives; curated reserve fallback is considered only when no live composition exists.
+
 ## Dependency Coverage Audit
 
 Run `npm run audit:coverage -- --domain=dependency-coverage` for the authored registry view, or add `--prod` to compare it with the current public V9 cards, live dependency graph, and stablecoin market-cap ordering. The production lane consumes the current report-v5 contract: cards publish `score`, while graph edges publish `kind` (`serial` or `basket`) and use a null weight for serial claims.

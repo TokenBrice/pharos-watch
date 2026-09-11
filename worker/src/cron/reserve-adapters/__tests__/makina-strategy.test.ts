@@ -2,6 +2,7 @@ import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
+import { expectWarningEffect } from "./reserve-adapter.test-support";
 import { getReserveAdapter } from "../index";
 import { adaptMakinaStrategyReserves, buildMakinaRedemptionMetadata } from "../makina-strategy";
 import { validateAdapterOutput } from "../validate";
@@ -176,17 +177,42 @@ describe("makina-strategy adapter", () => {
   it("does not hide stale on-chain position accounting behind fresh API envelopes", () => {
     const strategy = structuredClone(STRATEGY_FIXTURE);
     const allocations = structuredClone(ALLOCATIONS_FIXTURE);
-    strategy.meta.generated_at = "2026-07-28T22:58:23.000Z";
-    allocations.meta.generated_at = "2026-07-28T22:58:23.000Z";
+    const oldestPositionAccounting = 1785265103;
 
-    const result = adaptMakinaStrategyReserves(strategy, allocations, PARAMS);
-    const validation = validateAdapterOutput(result, {
-      adapter: getReserveAdapter("makina-strategy") ?? undefined,
-      now: Math.floor(Date.parse("2026-07-28T22:58:23.000Z") / 1000),
-    });
+    const validateAt = (ageSec: number) => {
+      const envelope = new Date((oldestPositionAccounting + ageSec) * 1000).toISOString();
+      strategy.meta.generated_at = envelope;
+      allocations.meta.generated_at = envelope;
+      const result = adaptMakinaStrategyReserves(strategy, allocations, PARAMS);
+      const validation = validateAdapterOutput(result, {
+        adapter: getReserveAdapter("makina-strategy") ?? undefined,
+        now: oldestPositionAccounting + ageSec,
+      });
+      return {
+        sourceTimestamp: result.metadata?.sourceTimestamp,
+        codes: validation.warnings.map((warning) => warning.code),
+      };
+    };
 
-    expect(result.metadata?.sourceTimestamp).toBe(1785265103);
-    expect(validation.warnings.map((warning) => warning.code)).toContain("stale-source-data");
+    // Fresh envelopes cannot mask position accounting older than the day-long
+    // publisher cadence, while accounting inside that cadence stays fresh.
+    const insideCadence = validateAt(23 * 60 * 60);
+    expect(insideCadence.sourceTimestamp).toBe(oldestPositionAccounting);
+    expect(insideCadence.codes).not.toContain("stale-source-data");
+
+    const beyondCadence = validateAt(25 * 60 * 60);
+    expect(beyondCadence.sourceTimestamp).toBe(oldestPositionAccounting);
+    expect(beyondCadence.codes).toContain("stale-source-data");
+  });
+
+  it("degrades when a counted position omits its updated_at timestamp", () => {
+    const allocations = structuredClone(ALLOCATIONS_FIXTURE);
+    delete allocations.data.positions[0].updated_at;
+
+    const result = adaptMakinaStrategyReserves(STRATEGY_FIXTURE, allocations, PARAMS);
+
+    expect(result.slices.length).toBeGreaterThan(0);
+    expectWarningEffect(result, "makina-position-timestamp-missing", "degraded");
   });
 
   it("publishes backlog-adjusted live queue capacity without score-bearing settlement delay", () => {
@@ -259,35 +285,6 @@ describe("makina-strategy adapter", () => {
     expect(result.metadata?.redemption).not.toHaveProperty("feeBps");
     expect(validateAdapterOutput(result, { adapter: getReserveAdapter("makina-strategy") ?? undefined }).valid)
       .toBe(true);
-  });
-
-  it("uses the full idle Machine buffer when no DUSD shares are pending in the queue", () => {
-    const metadata = buildMakinaRedemptionMetadata({
-      ...REDEMPTION_STATE,
-      nextRequestId: 345,
-      lastFinalizedRequestId: 344,
-      pendingRequestCount: 0,
-      lockedShares: 0,
-      grossIdleCapacityUsd: 700,
-      queueDepthUsd: 0,
-      capacityUsd: 700,
-    });
-
-    expect(metadata.redemption).toMatchObject({
-      capacityUsd: 700,
-      settlementBoundUnproven: true,
-      capacityKind: "live-queue",
-      queueDepthUsd: 0,
-      holderEligibility: "any-holder",
-      routeStatus: "open",
-    });
-    expect(metadata.redemptionQueue).toMatchObject({
-      pendingRequestCount: 0,
-      lockedShares: 0,
-      queueDepthUsd: 0,
-      grossIdleCapacityUsd: 700,
-      settlementBoundUnproven: true,
-    });
   });
 
   it("publishes cohort-limited access when the Risk Manager enables the whitelist", () => {

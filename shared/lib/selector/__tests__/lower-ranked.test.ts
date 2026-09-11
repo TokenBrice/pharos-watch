@@ -62,6 +62,11 @@ describe("userEmphasizedDimension", () => {
   it("default → safetyOverall", () => {
     expect(userEmphasizedDimension(makeInput())).toBe("safetyOverall");
   });
+  it("zero tolerance precedes composability and minimum APY, which lose to liquidity next", () => {
+    const input = makeInput({ profile: "yield", depegTolerance: "zero", composability: "high", minApy: 8 });
+    expect(userEmphasizedDimension(input)).toBe("pegStabilityLive");
+    expect(userEmphasizedDimension({ ...input, depegTolerance: "tight" })).toBe("liquidity");
+  });
 });
 
 describe("selectLowerRanked — Slot A", () => {
@@ -142,6 +147,16 @@ describe("selectLowerRanked — Slot A", () => {
       scorer,
     );
     expect(result).toHaveLength(0);
+  });
+
+  it("continues past an unscorable priority candidate", () => {
+    const rows = [makeRow("unscorable", { safetyScore: null }), makeRow("scorable", { safetyScore: 60 })];
+    const excluded: ExclusionRecord[] = [
+      { id: "unscorable", reason: "safety-resilience-floor", severity: "hard" },
+      { id: "scorable", reason: "dews-ceiling", severity: "hard" },
+    ];
+    expect(selectLowerRanked([], excluded, makeInput(), rows, new Set(), (row) => row.safetyScore))
+      .toMatchObject([{ slot: "A", id: "scorable", hypotheticalScore: 60 }]);
   });
 });
 
@@ -225,5 +240,28 @@ describe("selectLowerRanked — Slot B", () => {
     // r4 would be the bottom-quartile pick by score, but shares protocolSlug with r1.
     expect(slotB?.id).toBe("r5");
     expect(slotB?.teachingText).not.toContain("weak-");
+  });
+
+  it("uses liquidity for quartile admission but overall score within that quartile", () => {
+    const rows = [
+      makeRow("r1"), makeRow("r2"), makeRow("r3"),
+      makeRow("higher-score", { safetyScore: 75, liquidityScore: 20 }),
+      makeRow("lowest-liquidity", { safetyScore: 60, liquidityScore: 10 }),
+      makeRow("c", { safetyScore: 50, liquidityScore: 80 }),
+      makeRow("d", { safetyScore: 40, liquidityScore: 90 }),
+      makeRow("e", { safetyScore: 30, liquidityScore: 100 }),
+    ];
+    expect(selectLowerRanked(buildScored(rows), [], makeInput({ composability: "high" }), rows,
+      new Set(["r1", "r2", "r3"]), scorer))
+      .toMatchObject([{ slot: "B", id: "higher-score", failedComponent: "liquidity", hypotheticalScore: 75 }]);
+  });
+
+  it("admits exactly five survivors and ignores a missing emphasized component", () => {
+    const rows = [makeRow("r1"), makeRow("r2"), makeRow("r3"), makeRow("missing"), makeRow("valid")];
+    const scored = buildScored(rows);
+    scored[3]!.components = [];
+    expect(selectLowerRanked(scored, [], makeInput({ composability: "high" }), rows,
+      new Set(["r1", "r2", "r3"]), scorer))
+      .toMatchObject([{ slot: "B", id: "valid", failedComponent: "liquidity" }]);
   });
 });

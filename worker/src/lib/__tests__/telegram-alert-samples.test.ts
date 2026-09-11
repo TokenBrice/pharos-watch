@@ -6,6 +6,7 @@ import {
   telegramAlertHtmlToPublicText,
 } from "@shared/lib/telegram-alert-samples";
 import { formatConsolidatedMessage, freezeSectionHeader, type ConsolidatedAlerts } from "../telegram/alerts";
+import { emptyConsolidatedAlerts } from "./telegram-alerts.test-support";
 
 /**
  * TGB-028 public-sample drift contract: the /pharoswatchbot landing page
@@ -15,18 +16,6 @@ import { formatConsolidatedMessage, freezeSectionHeader, type ConsolidatedAlerts
  * here instead of drifting silently.
  */
 
-function emptyConsolidatedAlerts(): ConsolidatedAlerts {
-  return {
-    dews: [],
-    depegTriggered: [],
-    depegResolved: [],
-    depegWorsening: [],
-    safety: [],
-    launch: [],
-    reserve: [],
-    freeze: [],
-  };
-}
 
 function buildSingleFamilyAlerts(family: TelegramAlertType): ConsolidatedAlerts {
   const alerts = emptyConsolidatedAlerts();

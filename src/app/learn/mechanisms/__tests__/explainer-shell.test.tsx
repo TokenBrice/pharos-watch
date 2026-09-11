@@ -1,8 +1,19 @@
 import { renderToStaticMarkup } from "react-dom/server";
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { StablecoinMeta } from "@shared/types";
 
 import { ARCHETYPE_CONTENT } from "@/lib/mechanism-explainers";
+
+const mechanismFixture = vi.hoisted(() => ({ coins: null as StablecoinMeta[] | null }));
+vi.mock("@shared/lib/stablecoins/by-mechanism", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@shared/lib/stablecoins/by-mechanism")>();
+  return {
+    ...actual,
+    getActiveByArchetype: (...args: Parameters<typeof actual.getActiveByArchetype>) =>
+      mechanismFixture.coins ?? actual.getActiveByArchetype(...args),
+  };
+});
+beforeEach(() => { mechanismFixture.coins = null; });
 
 vi.mock("next/link", async () => {
   const { createNextLinkMock } = await import("@/test-utils/frontend");
@@ -62,9 +73,7 @@ describe("ArchetypeExplainerBody", () => {
     expect(html).toContain('href="/screener/?mechanisms=fiat-cash"');
   });
 
-  it("pluralizes the tracked-universe heading from total coins, not parent rows", async () => {
-    vi.resetModules();
-
+  it("pluralizes the tracked-universe heading from total coins, not parent rows", () => {
     const parent = {
       id: "parent-usd",
       name: "Parent USD",
@@ -77,27 +86,11 @@ describe("ArchetypeExplainerBody", () => {
       variantOf: parent.id,
     } as StablecoinMeta;
 
-    vi.doMock("@shared/lib/stablecoins/by-mechanism", () => ({
-      getActiveByArchetype: () => [parent, child],
-      getCoinsByLifecycleStatus: () => [],
-      nestVariants: (_coins: StablecoinMeta[]) => ({
-        parents: [parent],
-        childrenByParentId: { [parent.id]: [child] },
-      }),
-    }));
-
-    try {
-      const { ArchetypeExplainerBody: MockedArchetypeExplainerBody } =
-        await import("@/app/learn/mechanisms/explainer-shell");
-      const html = renderToStaticMarkup(
-        <MockedArchetypeExplainerBody content={ARCHETYPE_CONTENT.cdp} />,
-      );
-
-      expect(html).toContain("2 tracked stablecoins in this archetype");
-      expect(html).not.toContain("1 tracked stablecoin in this archetype");
-    } finally {
-      vi.doUnmock("@shared/lib/stablecoins/by-mechanism");
-      vi.resetModules();
-    }
+    mechanismFixture.coins = [parent, child];
+    const html = renderToStaticMarkup(
+      <ArchetypeExplainerBody content={ARCHETYPE_CONTENT.cdp} />,
+    );
+    expect(html).toContain("2 tracked stablecoins in this archetype");
+    expect(html).not.toContain("1 tracked stablecoin in this archetype");
   });
 });

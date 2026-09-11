@@ -68,6 +68,7 @@
       "tranche": "AA",
       "underlyingAddress": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
       "underlyingDecimals": 6,
+      "expectJuniorTranche": false,
       "creditSlice": {
         "sourceKey": "idle-cdo:falconx-credit-facility",
         "name": "FalconX single-obligor credit facility",

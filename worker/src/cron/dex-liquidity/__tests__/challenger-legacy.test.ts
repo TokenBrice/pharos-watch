@@ -70,6 +70,10 @@ describe("challenger legacy fallback", () => {
     const db = mockD1(
       [
         {
+          match: "SELECT stablecoin_id\n     FROM dex_liquidity",
+          rows: [{ stablecoin_id: "coin-z" }],
+        },
+        {
           match: "FROM dex_price_challenger_snapshots",
           rows: [],
         },
@@ -78,7 +82,7 @@ describe("challenger legacy fallback", () => {
           rows: [],
         },
         {
-          match: "FROM dex_liquidity",
+          match: "SELECT stablecoin_id, top_pools_json",
           rows: [
             {
               stablecoin_id: "coin-z",
@@ -88,7 +92,7 @@ describe("challenger legacy fallback", () => {
           ],
         },
         {
-          match: "FROM dex_prices",
+          match: "SELECT stablecoin_id, price_sources_json",
           rows: [
             {
               stablecoin_id: "coin-y",
@@ -105,7 +109,6 @@ describe("challenger legacy fallback", () => {
 
     expect(result.diagnostics.mode).toBe("absent");
     expect(result.challengersByStablecoin.size).toBe(0);
-    expect(db.getHistory().some((entry) => entry.sql.includes("FROM dex_liquidity"))).toBe(true);
-    expect(db.getHistory().some((entry) => entry.sql.includes("FROM dex_prices"))).toBe(true);
+    db.assertAllMatchesUsed();
   });
 });

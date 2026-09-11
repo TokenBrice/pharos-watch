@@ -206,17 +206,19 @@ describe("daily-digest lead policy (golden replay of the July 2026 USX era)", ()
     expect(unchanged?.[0]?.mentionTokens).toEqual(["CRSH"]);
   });
 
-  it("change summary no longer fabricates cross-coin USDA movement", () => {
-    // Jul 18's stored inputs contain usda-avalon (peak -3098) and
-    // usda-alpha-partner (peak -503) — both symbol "USDA". The symbol-keyed
-    // map published "USDA narrowed 3098 -> 503 bps" as fact.
-    const summary = buildChangeSummary(fixture.inputData, fixture.prevInputData);
-    const depegChanges = [...summary.improvedSignals, ...summary.worsenedSignals].filter(
-      (change) => change.kind === "depeg",
-    );
-    for (const change of depegChanges) {
-      expect(change.detail).not.toMatch(/3098 bps to 503 bps/);
-    }
+  it("keeps opposite movements of same-symbol coins attached to their identities", () => {
+    const depeg = (stablecoinId: string, bps: number) => ({
+      ...fixture.inputData.topDepegs[0], stablecoinId, symbol: "USDA", bps, currentBps: bps,
+    });
+    const previous = { ...fixture.inputData, topDepegs: [depeg("usda-avalon", 3098), depeg("usda-alpha-partner", 503)] };
+    const current = { ...fixture.inputData, topDepegs: [depeg("usda-alpha-partner", 603), depeg("usda-avalon", 2898)] };
+    const summary = buildChangeSummary(current, previous);
+    expect(summary.improvedSignals.filter((change) => change.kind === "depeg")).toEqual([
+      { id: "change:depeg:usda-avalon:improved", label: "USDA depeg narrowed", kind: "depeg", symbols: ["USDA"], detail: "3098 bps to 2898 bps off peg." },
+    ]);
+    expect(summary.worsenedSignals.filter((change) => change.kind === "depeg")).toEqual([
+      { id: "change:depeg:usda-alpha-partner:worsened", label: "USDA depeg widened", kind: "depeg", symbols: ["USDA"], detail: "503 bps to 603 bps off peg." },
+    ]);
   });
 
   it("candidate novelty reflects the day-over-day delta instead of always 'worsening'", async () => {
@@ -234,6 +236,7 @@ describe("daily-digest lead policy (golden replay of the July 2026 USX era)", ()
     // apxUSD moved ~$0.861 -> $0.843 (~-208 bps day-over-day): genuinely worsening.
     expect(apx?.novelty).toBe("worsening");
     const alphaPartner = candidates.find((candidate) => candidate.id === "depeg:usda-alpha-partner:active");
+    expect(alphaPartner).toBeDefined();
     // usda-alpha-partner barely moved and is weeks old: no more perpetual "worsening".
     expect(alphaPartner?.novelty).not.toBe("worsening");
   });

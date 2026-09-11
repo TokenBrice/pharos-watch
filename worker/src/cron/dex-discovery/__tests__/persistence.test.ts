@@ -1,4 +1,4 @@
-import { describe, it, expect, vi } from "vitest";
+import { afterEach, describe, it, expect, vi } from "vitest";
 import {
   cleanupStaging,
   hasValidStagedPoolTvl,
@@ -12,8 +12,16 @@ import {
   upsertStagedPools,
   writeDiscoveryTargetCursors,
 } from "../persistence";
-import { STAGED_POOL_MAX_TVL_USD, type StagedPool } from "../types";
-import { makeNoopD1 } from "../../../test-helpers/noop-d1";
+import { STAGED_POOL_CONFIDENCE_HORIZON_HOURS, STAGED_POOL_MAX_TVL_USD } from "../types";
+import { makeNoopD1, makeRunCountingNoopD1 } from "../../../test-helpers/noop-d1";
+import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
+import { stagedPool } from "./discovery.test-support";
+
+const fixtures = createLatestSchemaFixtureTracker();
+afterEach(() => { fixtures.closeAll(); vi.useRealTimers(); });
+
+// Rows survive one day past the confidence horizon so the stale_confidence_zero grace window still finds them.
+const STAGING_DELETE_TTL_SEC = (STAGED_POOL_CONFIDENCE_HORIZON_HOURS + 24) * 60 * 60;
 
 describe("isValidStagedPoolId", () => {
   it("accepts EVM chain:address lowercased form", () => {
@@ -59,99 +67,141 @@ describe("hasValidStagedPoolTvl", () => {
 
 describe("upsertStagedPools", () => {
   it("deletes the same-coin legacy exchange-only orderbook row before upserting suffixed ids", async () => {
-    const preparedSql: string[] = [];
-    const boundValues: unknown[][] = [];
-    const db = makeNoopD1({
-      prepare: (sql: string) => {
-        preparedSql.push(sql);
-        return {
-          bind: (...values: unknown[]) => {
-            boundValues.push(values);
-            return { run: async () => ({ success: true, meta: { changes: 1 } }) };
-          },
-        };
-      },
-      batch: async (stmts: unknown[]) => stmts.map(() => ({ success: true, meta: { changes: 1 } })),
-    });
+    const { sqlite, db } = fixtures.open();
 
     const nowSec = 1710000000;
-    const pool: StagedPool = {
-      poolId: "orderbook:kinesis:usdc-circle",
-      stablecoinId: "usdc-circle",
-      source: "cg_tickers",
-      chain: "orderbook",
-      protocol: "kinesis",
-      dexId: "kinesis",
-      symbol: "USDC / USD",
-      tvlUsd: 60_000,
-      volume24h: 30_000,
-      qualityMultiplier: 0.6,
-      poolType: "orderbook",
-      feeTier: null,
-      balanceRatio: null,
-      isStable: null,
-      baseToken: null,
-      quoteToken: null,
-      quoteSymbol: "USD",
-      priceUsd: 1,
-      lockedLiqPct: null,
-      rawJson: null,
-      discoveredAt: nowSec,
-      refreshedAt: nowSec,
-    };
+    const pool = stagedPool({
+      poolId: "orderbook:kinesis:usdc-circle", stablecoinId: "usdc-circle", source: "cg_tickers",
+      chain: "orderbook", protocol: "kinesis", dexId: "kinesis", symbol: "USDC / USD",
+      tvlUsd: 60_000, volume24h: 30_000, qualityMultiplier: 0.6, poolType: "orderbook",
+      quoteToken: null, quoteSymbol: "USD", discoveredAt: nowSec, refreshedAt: nowSec,
+    });
 
+    await upsertStagedPools(db, [{ ...pool, discoveredAt: nowSec - 100, refreshedAt: nowSec - 100 }]);
+    await upsertStagedPools(db, [
+      { ...pool, poolId: "orderbook:kinesis" },
+      { ...pool, poolId: "orderbook:kinesis", stablecoinId: "other-coin" },
+    ]);
     await upsertStagedPools(db, [pool]);
 
-    expect(preparedSql[0]).toBe(
-      "DELETE FROM dex_pool_staging WHERE stablecoin_id = ? AND source = 'cg_tickers' AND pool_id = ?",
+    expect(sqlite.prepare("SELECT pool_id, stablecoin_id, discovered_at, refreshed_at FROM dex_pool_staging ORDER BY stablecoin_id").all()).toEqual([
+      { pool_id: "orderbook:kinesis", stablecoin_id: "other-coin", discovered_at: nowSec, refreshed_at: nowSec },
+      { pool_id: pool.poolId, stablecoin_id: pool.stablecoinId, discovered_at: nowSec - 100, refreshed_at: nowSec },
+    ]);
+  });
+
+  it("leaves a stored row untouched when the incoming write is older", async () => {
+    const { sqlite, db } = fixtures.open();
+    const nowSec = 1_710_000_000;
+    const pool = stagedPool({ discoveredAt: nowSec - 7200, refreshedAt: nowSec - 7200 });
+
+    await upsertStagedPools(db, [pool]);
+    await upsertStagedPools(db, [
+      { ...pool, tvlUsd: 99_000, volume24h: 88_000, priceUsd: 0.5, refreshedAt: nowSec - 10_800 },
+    ]);
+
+    expect(sqlite.prepare("SELECT tvl_usd, volume_24h, price_usd, refreshed_at FROM dex_pool_staging").get()).toEqual({
+      tvl_usd: 10_000,
+      volume_24h: 1_000,
+      price_usd: 1,
+      refreshed_at: nowSec - 7200,
+    });
+  });
+
+  it("overwrites stored tvl and volume with NULL when a degraded write omits them, while still advancing refreshed_at", async () => {
+    const { sqlite, db } = fixtures.open();
+    const nowSec = 1_710_000_000;
+    const pool = stagedPool({ discoveredAt: nowSec - 3600, refreshedAt: nowSec - 3600 });
+
+    await upsertStagedPools(db, [pool]);
+    await upsertStagedPools(db, [{ ...pool, tvlUsd: null, volume24h: null, refreshedAt: nowSec }]);
+
+    expect(sqlite.prepare("SELECT tvl_usd, volume_24h, refreshed_at FROM dex_pool_staging").get()).toEqual({
+      tvl_usd: null,
+      volume_24h: null,
+      refreshed_at: nowSec,
+    });
+  });
+
+  it("overwrites the stored price with NULL when a write has no price", async () => {
+    const { sqlite, db } = fixtures.open();
+    const nowSec = 1_710_000_000;
+    const pool = stagedPool({ discoveredAt: nowSec - 3600, refreshedAt: nowSec - 3600 });
+
+    await upsertStagedPools(db, [pool]);
+    await upsertStagedPools(db, [{ ...pool, priceUsd: null, refreshedAt: nowSec }]);
+
+    expect(sqlite.prepare("SELECT price_usd, refreshed_at FROM dex_pool_staging").get()).toEqual({
+      price_usd: null,
+      refreshed_at: nowSec,
+    });
+  });
+
+  it("minRefreshGapSec skips rows refreshed within the gap but updates older rows", async () => {
+    const { sqlite, db } = fixtures.open();
+    const nowSec = 1_710_000_000;
+    const hour = 3_600;
+    const fresh = stagedPool({ poolId: "ethereum:0xfresh", discoveredAt: nowSec - hour, refreshedAt: nowSec - hour });
+    const stale = stagedPool({ poolId: "ethereum:0xstale", discoveredAt: nowSec - 5 * hour, refreshedAt: nowSec - 5 * hour });
+
+    await upsertStagedPools(db, [fresh, stale]);
+    await upsertStagedPools(
+      db,
+      [
+        { ...fresh, tvlUsd: 12_000, refreshedAt: nowSec },
+        { ...stale, tvlUsd: 23_000, refreshedAt: nowSec },
+      ],
+      undefined,
+      { minRefreshGapSec: 4 * hour },
     );
-    expect(boundValues[0]).toEqual(["usdc-circle", "orderbook:kinesis"]);
-    expect(preparedSql[1]).toContain("INSERT INTO dex_pool_staging");
-    expect(boundValues[1]?.[0]).toBe("orderbook:kinesis:usdc-circle");
+
+    expect(sqlite.prepare("SELECT pool_id, tvl_usd, refreshed_at FROM dex_pool_staging ORDER BY pool_id").all()).toEqual([
+      { pool_id: "ethereum:0xfresh", tvl_usd: 10_000, refreshed_at: nowSec - hour },
+      { pool_id: "ethereum:0xstale", tvl_usd: 23_000, refreshed_at: nowSec },
+    ]);
+  });
+
+  it("still updates a row refreshed an hour ago on the default discovery path", async () => {
+    const { sqlite, db } = fixtures.open();
+    const nowSec = 1_710_000_000;
+    const pool = stagedPool({ discoveredAt: nowSec - 3600, refreshedAt: nowSec - 3600 });
+
+    await upsertStagedPools(db, [pool]);
+    await upsertStagedPools(db, [{ ...pool, tvlUsd: 15_000, refreshedAt: nowSec }]);
+
+    expect(sqlite.prepare("SELECT tvl_usd, refreshed_at FROM dex_pool_staging").get()).toEqual({
+      tvl_usd: 15_000,
+      refreshed_at: nowSec,
+    });
   });
 });
 
 describe("discovery persistence D1 retry coverage", () => {
   it("retries discovery meta writes on transient D1 overload", async () => {
-    let attempts = 0;
-    const db = makeNoopD1({
-      prepare: () => ({
-        bind: () => ({
-          run: async () => {
-            attempts++;
-            if (attempts === 1) throw new Error("D1 DB is overloaded");
-            return { success: true, meta: { changes: 1 } };
-          },
-        }),
-      }),
-    });
+    vi.useFakeTimers();
+    const db = makeRunCountingNoopD1((attempt) =>
+      attempt === 1 ? new Error("D1 DB is overloaded") : null,
+    );
 
-    await updateDiscoveryMeta(db, "usdc-circle", 2, 1_710_000_000);
+    const pending = updateDiscoveryMeta(db, "usdc-circle", 2, 1_710_000_000);
+    await vi.runAllTimersAsync();
+    await pending;
 
-    expect(attempts).toBe(2);
+    expect(db.getRunCount()).toBe(2);
   });
 
   it("does not retry miss-counter arithmetic after an ambiguous D1 overload", async () => {
-    let attempts = 0;
-    const db = makeNoopD1({
-      prepare: () => ({
-        bind: () => ({
-          run: async () => {
-            attempts++;
-            throw new Error("D1 DB storage operation exceeded timeout");
-          },
-        }),
-      }),
-    });
+    const db = makeRunCountingNoopD1(() => new Error("D1 DB storage operation exceeded timeout"));
 
     await expect(updateDiscoveryMeta(db, "usdc-circle", 0, 1_710_000_000)).rejects.toThrow(
       "D1 DB storage operation exceeded timeout",
     );
 
-    expect(attempts).toBe(1);
+    expect(db.getRunCount()).toBe(1);
   });
 
-  it("uses bounded oldest-first 30h/4h staging cleanup and retries transient D1 overload", async () => {
+  it("uses bounded oldest-first staging cleanup past the merge horizon and retries transient D1 overload", async () => {
+    vi.useFakeTimers();
     let attempts = 0;
     const prepared: Array<{ sql: string; binds: unknown[] }> = [];
     const db = makeNoopD1({
@@ -171,11 +221,13 @@ describe("discovery persistence D1 retry coverage", () => {
       }),
     });
 
-    const cleanup = await cleanupStaging(db, 1_710_000_000);
+    const pending = cleanupStaging(db, 1_710_000_000);
+    await vi.runAllTimersAsync();
+    const cleanup = await pending;
 
     expect(attempts).toBe(3);
     expect(prepared[0]?.sql).toContain("ORDER BY refreshed_at ASC, rowid ASC");
-    expect(prepared[0]?.binds).toEqual([1_710_000_000 - 30 * 60 * 60, 1_000]);
+    expect(prepared[0]?.binds).toEqual([1_710_000_000 - STAGING_DELETE_TTL_SEC, 1_000]);
     expect(prepared[2]?.sql).toContain("SET raw_json = NULL");
     expect(prepared[2]?.binds).toEqual([1_710_000_000 - 4 * 60 * 60, 1_000]);
     expect(cleanup).toMatchObject({
@@ -185,6 +237,23 @@ describe("discovery persistence D1 retry coverage", () => {
       oldestRawJsonRemainingAt: 1_709_990_000,
       error: null,
     });
+  });
+
+  it("keeps staging rows one hour inside the delete TTL and deletes rows one hour past it", async () => {
+    const { sqlite, db } = fixtures.open();
+    const now = 1_710_000_000;
+    const insert = sqlite.prepare(`INSERT INTO dex_pool_staging
+      (pool_id, stablecoin_id, source, chain, protocol, symbol, discovered_at, refreshed_at)
+      VALUES (?, ?, 'dexscreener', 'ethereum', 'test', 'TEST / USDC', ?, ?)`);
+    insert.run("ethereum:0xkeep", "usdc-circle", now, now - STAGING_DELETE_TTL_SEC + 60 * 60);
+    insert.run("ethereum:0xdrop", "usdc-circle", now, now - STAGING_DELETE_TTL_SEC - 60 * 60);
+
+    const cleanup = await cleanupStaging(db, now);
+
+    expect(cleanup.deletedRows).toBe(1);
+    expect(sqlite.prepare("SELECT pool_id FROM dex_pool_staging").all()).toEqual([
+      { pool_id: "ethereum:0xkeep" },
+    ]);
   });
 
   it("reports staging cleanup errors without throwing", async () => {
@@ -206,6 +275,7 @@ describe("discovery persistence D1 retry coverage", () => {
   });
 
   it("retries discovery meta reads and maps rows", async () => {
+    vi.useFakeTimers();
     let attempts = 0;
     const db = makeNoopD1({
       prepare: () => ({
@@ -224,7 +294,9 @@ describe("discovery persistence D1 retry coverage", () => {
       }),
     });
 
-    const rows = await readDiscoveryMeta(db);
+    const pending = readDiscoveryMeta(db);
+    await vi.runAllTimersAsync();
+    const rows = await pending;
 
     expect(attempts).toBe(2);
     expect(rows.get("usdc-circle")).toEqual({
@@ -236,53 +308,22 @@ describe("discovery persistence D1 retry coverage", () => {
   });
 
   it("aggregates the deployment census per coin and excludes unsupported chains", async () => {
-    let sql = "";
-    const db = makeNoopD1({
-      prepare: (statement: string) => {
-        sql = statement;
-        return {
-          all: async () => ({
-            results: [
-              {
-                stablecoin_id: "buidl-blackrock",
-                verified_no_pools: 8,
-                observed_pools: 0,
-                provider_supported_inaccessible: 0,
-              },
-              {
-                stablecoin_id: "m-m0",
-                verified_no_pools: 9,
-                observed_pools: 0,
-                provider_supported_inaccessible: 7,
-              },
-              {
-                stablecoin_id: "sparse",
-                verified_no_pools: null,
-                observed_pools: null,
-                provider_supported_inaccessible: null,
-              },
-            ],
-          }),
-        };
-      },
-    });
-
-    const summaries = await readDiscoveryCensusSummaries(db);
-
-    // Unsupported-chain rows must not count as unanswered deployments (R1-D).
-    expect(sql).toContain("provider_set_json <> '[]'");
-    expect(sql).toContain("GROUP BY stablecoin_id");
-    expect(summaries.get("buidl-blackrock")).toEqual({
-      verifiedNoPoolsCount: 8,
-      observedPoolsCount: 0,
-      providerSupportedInaccessibleCount: 0,
-    });
-    expect(summaries.get("m-m0")?.providerSupportedInaccessibleCount).toBe(7);
-    expect(summaries.get("sparse")).toEqual({
-      verifiedNoPoolsCount: 0,
-      observedPoolsCount: 0,
-      providerSupportedInaccessibleCount: 0,
-    });
+    const { sqlite, db } = fixtures.open();
+    const insert = sqlite.prepare(`INSERT INTO dex_deployment_outcomes
+      (stablecoin_id, chain, contract_address, outcome, provider_set_json, reason, observed_at)
+      VALUES (?, ?, ?, ?, ?, 'fixture', 100)`);
+    insert.run("coin-a", "ethereum", "0xa", "verified_no_pools", '["curve"]');
+    insert.run("coin-a", "ethereum", "0xb", "observed_pools", '["curve"]');
+    insert.run("coin-a", "ethereum", "0xc", "provider_inaccessible", '["curve"]');
+    insert.run("coin-a", "ethereum", "0xd", "provider_inaccessible", "[]");
+    insert.run("coin-b", "ethereum", "0xa", "provider_inaccessible", "[]");
+    // A provider-less chain stays a standing unsupported remainder instead of
+    // counting as a remapped row due for re-attempt.
+    insert.run("coin-b", "secret", "secret1unsupported", "provider_inaccessible", "[]");
+    expect(await readDiscoveryCensusSummaries(db)).toEqual(new Map([
+      ["coin-a", { verifiedNoPoolsCount: 1, observedPoolsCount: 1, providerSupportedInaccessibleCount: 1, remappedUnsupportedCount: 1 }],
+      ["coin-b", { verifiedNoPoolsCount: 0, observedPoolsCount: 0, providerSupportedInaccessibleCount: 0, remappedUnsupportedCount: 1 }],
+    ]));
   });
 
   it("round-trips the per-coin target cursor as one durable map", async () => {
@@ -316,48 +357,25 @@ describe("discovery persistence D1 retry coverage", () => {
   });
 
   it("records an attempt fence without changing existing backoff counters", async () => {
-    const prepared: Array<{ sql: string; binds: unknown[] }> = [];
-    const db = makeNoopD1({
-      prepare: (sql: string) => ({
-        bind: (...binds: unknown[]) => ({
-          sql,
-          binds,
-        }),
-      }),
-      batch: async (statements: Array<{ sql: string; binds: unknown[] }>) => {
-        prepared.push(...statements);
-        return statements.map(() => ({ success: true, meta: { changes: 1 } }));
-      },
-    });
-
-    await recordDiscoveryAttemptFence(
-      db,
-      "coin-a",
-      [{ chain: "ethereum", address: "0xABC", decimals: 18 }],
-      1_710_000_000,
-    );
-
-    expect(prepared).toHaveLength(3);
-    expect(prepared[0]?.sql).toContain(
-      "deployment_fence_attribution_at <> last_crawl_at",
-    );
-    expect(prepared[0]?.binds).toEqual(["coin-a", "coin-a", "coin-a"]);
-    expect(prepared[1]?.sql).toContain("FROM json_each(?) AS target");
-    expect(prepared[1]?.binds).toEqual([
-      1_710_000_000,
-      "coin-a",
-      JSON.stringify([{ chain: "ethereum", address: "0xabc" }]),
+    const { sqlite, db } = fixtures.open();
+    sqlite.exec(`INSERT INTO dex_discovery_meta
+      (stablecoin_id, consecutive_misses, last_crawl_at, last_hit_at, deployment_fence_attribution_at)
+      VALUES ('coin-a', 7, 100, 80, 100), ('coin-b', 9, 90, 70, 90);
+      INSERT INTO dex_deployment_outcomes
+      (stablecoin_id, chain, contract_address, outcome, reason, observed_at, last_attempt_at)
+      VALUES ('coin-a', 'ethereum', '0xabc', 'verified_no_pools', 'fixture', 100, 100),
+        ('coin-a', 'ethereum', '0xdef', 'verified_no_pools', 'fixture', 100, 100),
+        ('coin-b', 'ethereum', '0xabc', 'verified_no_pools', 'fixture', 90, 90)`);
+    await recordDiscoveryAttemptFence(db, "coin-a", [{ chain: "ethereum", address: "0xABC", decimals: 18 }], 200);
+    expect(sqlite.prepare("SELECT stablecoin_id, contract_address, last_attempt_at FROM dex_deployment_outcomes ORDER BY stablecoin_id, contract_address").all()).toEqual([
+      { stablecoin_id: "coin-a", contract_address: "0xabc", last_attempt_at: 200 },
+      { stablecoin_id: "coin-a", contract_address: "0xdef", last_attempt_at: 100 },
+      { stablecoin_id: "coin-b", contract_address: "0xabc", last_attempt_at: 90 },
     ]);
-    expect(prepared[2]?.sql).toContain(
-      "last_crawl_at = excluded.last_crawl_at",
-    );
-    expect(prepared[2]?.sql).toContain(
-      "deployment_fence_attribution_at = excluded.deployment_fence_attribution_at",
-    );
-    expect(prepared[2]?.sql).not.toContain(
-      "DO UPDATE SET\n             consecutive_misses",
-    );
-    expect(prepared[2]?.binds).toEqual(["coin-a", 1_710_000_000, 1_710_000_000]);
+    expect(await readDiscoveryMeta(db)).toEqual(new Map([
+      ["coin-a", { stablecoinId: "coin-a", consecutiveMisses: 7, lastCrawlAt: 200, lastHitAt: 80 }],
+      ["coin-b", { stablecoinId: "coin-b", consecutiveMisses: 9, lastCrawlAt: 90, lastHitAt: 70 }],
+    ]));
   });
 
   it("honors abort signals before incrementing the run sequence", async () => {

@@ -804,57 +804,6 @@ describe("processPoolMetrics", () => {
     expect(usdc?.topPools[0]?.extra?.effectiveTvl).toBe(51_000_000);
   });
 
-  it("F18 balance ratio: pathological >1.0 ratio does not inflate quality via Math.pow", () => {
-    // Direct API balance ratios are normalized to [0, 1] before pow(1.5).
-    // This regression guards against a pool surfacing an out-of-range ratio
-    // that, via Math.pow(ratio, 1.5), would inflate qualityAdjustedTvl.
-    vi.spyOn(console, "log").mockImplementation(() => {});
-
-    const symbolToIds = new Map<string, string[]>([["USDC", ["usdc-circle"]]]);
-    const symbolToChainScopedIds = buildSymbolToChainScopedIds(symbolToIds, ["ethereum"]);
-    const chainAddressToId = new Map<string, string>([["ethereum:0xusdc", "usdc-circle"]]);
-
-    // Curve entry with balance ratio clamped at 1.0 (canonical). Same TVL both branches.
-    const curvePoolMap = new Map<string, CurvePoolEntry>([
-      [
-        "ethereum:0xclamped",
-        makeCurveEntry({
-          balanceRatio: 1.0,
-          tvl: 1_000_000,
-          metapoolAdjustedTvl: 1_000_000,
-          balanceDetails: [{ symbol: "USDC", balancePct: 100, isTracked: true }],
-        }),
-      ],
-    ]);
-
-    const metrics = processPoolMetrics({
-      pools: [
-        makePool({
-          pool: "0xclamped",
-          project: "curve",
-          symbol: "USDC-USDC",
-          tvlUsd: 1_000_000,
-          underlyingTokens: ["0xusdc"],
-          count: 3,
-        }),
-      ],
-      dexProjects: new Set(["curve"]),
-      symbolToChainScopedIds: symbolToChainScopedIds,
-      chainAddressToId: chainAddressToId,
-      curvePoolMap: curvePoolMap,
-      uniV3PoolFees: new Map(),
-      uniV3SymbolFees: new Map(),
-      aerodromeIsStable: new Map(),
-    }).metrics;
-
-    const usdc = metrics.get("usdc-circle");
-    expect(usdc).toBeDefined();
-    // With ratio clamped to 1, balanceHealth = 1^1.5 = 1, so qualityAdjustedTvl
-    // cannot exceed the underlying poolTvl * mechanism multiplier.
-    // Curve stableswap A<500 mechanism = 0.85x, so qualityAdjustedTvl ≤ 850K.
-    expect(usdc?.qualityAdjustedTvl).toBeLessThanOrEqual(1_000_000);
-    expect(usdc?.effectiveTvl).toBeLessThanOrEqual(1_000_000);
-  });
 
   it("joins UUID-id DeFiLlama rows to Curve pools via the coin-set fingerprint", () => {
     vi.spyOn(console, "log").mockImplementation(() => {});

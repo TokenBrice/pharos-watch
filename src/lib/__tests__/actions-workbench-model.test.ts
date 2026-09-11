@@ -1,3 +1,5 @@
+// @vitest-environment node
+
 import { describe, expect, it } from "vitest";
 import type { StatusPageAction } from "@shared/lib/api-endpoints";
 import {

@@ -2,6 +2,7 @@
   "id": "rlusd-ripple",
   "reserves": [
     {
+      "sourceKey": "ripple-transparency:treasury-bills",
       "name": "U.S. Treasury bills",
       "pct": 69.663811,
       "risk": "very-low",
@@ -16,6 +17,7 @@
       "maturityDaysMax": 92
     },
     {
+      "sourceKey": "ripple-transparency:government-mmf",
       "name": "Government money-market funds",
       "pct": 14.329615,
       "risk": "very-low",
@@ -29,6 +31,7 @@
       "liquidityHorizon": "one-day"
     },
     {
+      "sourceKey": "ripple-transparency:cash",
       "name": "Cash and deposit accounts",
       "pct": 16.006574,
       "risk": "very-low",

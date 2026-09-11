@@ -18,4 +18,26 @@ describe("resolvedExitRouteOutputAssetKeys", () => {
       }),
     ).toEqual(["usdc-circle"]);
   });
+  it("includes fiat currency alongside explicit basket keys", () => {
+    expect(resolvedExitRouteOutputAssetKeys({ kind: "fiat", currency: "USD", assetKeys: ["fiat:EUR"] }))
+      .toEqual(["fiat:EUR", "fiat:USD"]);
+  });
+
+  it("uses explicit keys when collateral or tracked outputs have no tracked identity", () => {
+    expect(resolvedExitRouteOutputAssetKeys({ kind: "collateral", assetKeys: ["ethereum:weth"] })).toEqual(["ethereum:weth"]);
+    expect(resolvedExitRouteOutputAssetKeys({ kind: "tracked-stablecoin", trackedAssetIds: [], assetKeys: ["solana:mint"] }))
+      .toEqual(["solana:mint"]);
+  });
+
+  it("rejects empty and unresolved output identities", () => {
+    expect(resolvedExitRouteOutputAssetKeys({ kind: "collateral", assetKeys: [] })).toBeNull();
+    expect(resolvedExitRouteOutputAssetKeys({ kind: "fiat" })).toBeNull();
+    expect(resolvedExitRouteOutputAssetKeys({ kind: "unknown", assetKeys: ["fiat:USD"] })).toBeNull();
+  });
+
+  it("sorts and deduplicates without mutating the caller's identities", () => {
+    const assetKeys = ["z", "a", "z", "m"];
+    expect(resolvedExitRouteOutputAssetKeys({ kind: "collateral", assetKeys })).toEqual(["a", "m", "z"]);
+    expect(assetKeys).toEqual(["z", "a", "z", "m"]);
+  });
 });

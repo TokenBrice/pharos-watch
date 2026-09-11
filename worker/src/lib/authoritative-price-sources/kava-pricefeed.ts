@@ -4,31 +4,19 @@ import { median } from "@shared/lib/stats";
 import type { PeggedAsset } from "../../cron/sync-stablecoins/enrich-prices-shared";
 import { CIRCUIT_SOURCE, USER_AGENT } from "../constants";
 import { fetchJsonWithRetry } from "../fetch-retry";
+import { KavaBlockSchema, parseFinitePositiveDecimal, parseTimestampSec, validateKavaBlockHeader } from "../kava-lcd";
 import type { CurrentPriceOverride, LivePriceContext, PriceSourceProvider } from "./helpers";
 
 const KAVA_API_BASE = "https://api.data.kava.io";
-const KAVA_CHAIN_ID = "kava_2222-10";
 const KAVA_USDX_ID = "usdx-kava";
 const KAVA_USDX_MARKET_ID = "usdx:usd";
 const KAVA_PRICEFEED_SOURCE = "kava-pricefeed";
 
 const KAVA_REQUEST_TIMEOUT_MS = 2_200;
 const KAVA_MAX_RESPONSE_BYTES = 256 * 1024;
-const KAVA_BLOCK_MAX_AGE_SEC = 2 * 60;
-const KAVA_BLOCK_MAX_FUTURE_SKEW_SEC = 60;
 const KAVA_CACHE_TRUST_WINDOW_SEC = 30 * 60;
 const KAVA_MAX_ORACLE_DISPERSION_BPS = 2_000;
 const KAVA_MAX_AGGREGATE_MEDIAN_DEVIATION_BPS = 1_000;
-
-const KavaBlockSchema = z.object({
-  block: z.object({
-    header: z.object({
-      chain_id: z.string(),
-      height: z.string(),
-      time: z.string(),
-    }),
-  }),
-});
 
 const KavaMarketsSchema = z.object({
   markets: z.array(
@@ -69,33 +57,6 @@ interface KavaUsdxPriceResult {
   dispersionBps: number;
 }
 
-function parseFinitePositiveDecimal(value: string): number | null {
-  const characters = [...value];
-  let decimalPoints = 0;
-  if (
-    characters.length === 0 ||
-    characters.length > 128 ||
-    characters[0] === "." ||
-    characters[characters.length - 1] === "." ||
-    characters.some((character) => {
-      if (character === ".") {
-        decimalPoints += 1;
-        return decimalPoints > 1;
-      }
-      return character < "0" || character > "9";
-    })
-  ) {
-    return null;
-  }
-  const parsed = Number(value);
-  return Number.isFinite(parsed) && parsed > 0 ? parsed : null;
-}
-
-function parseTimestampSec(value: string): number | null {
-  const parsedMs = Date.parse(value);
-  return Number.isFinite(parsedMs) && parsedMs > 0 ? Math.floor(parsedMs / 1_000) : null;
-}
-
 async function fetchKavaJson(url: string, signal?: AbortSignal): Promise<unknown | null> {
   const result = await fetchJsonWithRetry<unknown>(
     url,
@@ -132,19 +93,12 @@ export async function fetchKavaUsdxPrice(signal?: AbortSignal): Promise<KavaUsdx
   }
 
   const { header } = blockResult.data.block;
-  const blockHeight = Number(header.height);
-  const blockTime = parseTimestampSec(header.time);
-  if (
-    header.chain_id !== KAVA_CHAIN_ID ||
-    !Number.isSafeInteger(blockHeight) ||
-    blockHeight <= 0 ||
-    blockTime == null ||
-    nowSec - blockTime > KAVA_BLOCK_MAX_AGE_SEC ||
-    blockTime - nowSec > KAVA_BLOCK_MAX_FUTURE_SKEW_SEC
-  ) {
+  const blockPin = validateKavaBlockHeader(header, nowSec);
+  if (blockPin == null) {
     logWorkerEventArgs("lib", "warn", "[kava-pricefeed] latest block identity or freshness validation failed");
     return null;
   }
+  const { blockHeight, blockTimeSec: blockTime } = blockPin;
 
   const marketsPayload = await fetchKavaJson(`${KAVA_API_BASE}/kava/pricefeed/v1beta1/markets`, signal);
   const marketsResult = KavaMarketsSchema.safeParse(marketsPayload);

@@ -23,7 +23,7 @@ function card(id: string, score: number | null, archetype: string | null = "fiat
 }
 
 /** Synthetic fully-coherent set: every ruled anchor exactly satisfied or better. */
-function passingCards(): V9AnchorGateCard[] {
+function passingCards(overrides: Record<string, number> = {}): V9AnchorGateCard[] {
   return [
     card("usdc-circle", 90),
     card("bold-liquity", 84, "cdp"),
@@ -46,7 +46,7 @@ function passingCards(): V9AnchorGateCard[] {
     card("eurs-stasis", 20),
     card("mim-abracadabra", 0, "cdp"),
     card("tusd-trueusd", 54),
-  ];
+  ].map((entry) => entry.id in overrides ? card(entry.id, overrides[entry.id], entry.archetype) : entry);
 }
 
 function withScore(cards: V9AnchorGateCard[], id: string, score: number): V9AnchorGateCard[] {
@@ -109,18 +109,18 @@ describe("evaluateSafetyScoreV9AnchorGate", () => {
 
   it("still evaluates pair rules in both directions (machinery retained for future pairs)", () => {
     const contract: V9AnchorContract = {
-      ...SAFETY_SCORE_V9_ANCHOR_CONTRACT_V1,
+      schemaVersion: 1, anchors: [], adverse: [],
       relative: [{ kind: "pair", id: "pyusd-paypal", overId: "pusd-polymarket", label: "test pair rule" }],
     };
     const rule = "relative:pyusd-paypal>=pusd-polymarket";
 
-    const passing = evaluateAtCaptureClock({ cards: passingCards(), contract });
+    const passing = evaluateAtCaptureClock({ cards: [card("pyusd-paypal", 71), card("pusd-polymarket", 64)], contract });
     expect(passing.decision).toBe("gate-passed");
     expect(verdict(passing, rule).status).toBe("pass");
     expect(verdict(passing, rule).observed).toBe("71 vs 64");
 
     const inverted = evaluateAtCaptureClock({
-      cards: withScore(passingCards(), "pusd-polymarket", 72),
+      cards: [card("pyusd-paypal", 71), card("pusd-polymarket", 72)],
       contract,
     });
     expect(inverted.decision).toBe("no-go");
@@ -130,7 +130,7 @@ describe("evaluateSafetyScoreV9AnchorGate", () => {
     expect(entry.observed).toBe("71 vs 72");
 
     const missing = evaluateAtCaptureClock({
-      cards: withoutId(passingCards(), "pusd-polymarket"),
+      cards: [card("pyusd-paypal", 71)],
       contract,
     });
     expect(verdict(missing, rule).code).toBe("asset-missing");
@@ -144,24 +144,37 @@ describe("evaluateSafetyScoreV9AnchorGate", () => {
     expect(entry.status).toBe("fail");
     expect(entry.code).toBe("relative-inversion");
     expect(entry.detail).toContain("wusd-synthetic 91");
-    // Non-fiat archetypes do not enter the comparison set.
-    expect(verdict(report, "anchor:usdc-circle").status).toBe("pass");
   });
 
-  it("fails a max-score adverse pin above its bound", () => {
+  it("excludes higher-scoring CDP and unknown-archetype peers from fiat dominance", () => {
+    const report = evaluateAtCaptureClock({
+      cards: [...passingCards(), card("cdp-peer", 99, "cdp"), card("unknown-peer", 100, null)],
+    });
+    expect(verdict(report, "relative:usdc-circle>=archetype(fiat-cash|tbill)").status).toBe("pass");
+    expect(report.decision).toBe("gate-passed");
+  });
+
+  it("uses the integer max-score boundary: 32 passes and 33 fails", () => {
     // The production contract retired its last max-score pin (U released
     // 2026-08-08 after pre-drifting in production), so the rule kind is
     // exercised through an injected contract, mirroring the pair-rule test.
+    // Decision D5 fixes this pin to integer scores; fractional cases are not
+    // part of the comparator contract.
     const contract: V9AnchorContract = {
-      ...SAFETY_SCORE_V9_ANCHOR_CONTRACT_V1,
+      schemaVersion: 1, anchors: [], relative: [],
       adverse: [{ kind: "max-score", id: "u-united-stables", maxScore: 32, label: "U adverse pin" }],
     };
-    const report = evaluateAtCaptureClock({
-      cards: withScore(passingCards(), "u-united-stables", 33),
+    const atBound = evaluateAtCaptureClock({ cards: [card("u-united-stables", 32)], contract });
+    expect(atBound.decision).toBe("gate-passed");
+    expect(verdict(atBound, "adverse:u-united-stables").status).toBe("pass");
+    expect(verdict(atBound, "adverse:u-united-stables").required).toBe("score ≤ 32");
+
+    const aboveBound = evaluateAtCaptureClock({
+      cards: [card("u-united-stables", 33)],
       contract,
     });
-    expect(report.decision).toBe("no-go");
-    const entry = verdict(report, "adverse:u-united-stables");
+    expect(aboveBound.decision).toBe("no-go");
+    const entry = verdict(aboveBound, "adverse:u-united-stables");
     expect(entry.status).toBe("fail");
     expect(entry.code).toBe("adverse-above-bound");
     expect(entry.required).toBe("score ≤ 32");
@@ -185,44 +198,19 @@ describe("evaluateSafetyScoreV9AnchorGate", () => {
   });
 
   it("treats exactly-at-threshold scores as passing", () => {
-    const cards = [
-      // USDC must also meet the relative fiat-dominance rule once the USDT
-      // anchor is pinned at the higher A+ floor.
-      card("usdc-circle", 87),
-      card("bold-liquity", 83, "cdp"),
-      card("usdt-tether", 87),
-      card("dai-makerdao", 70, "cdp"),
-      card("sdai-sky", 65, "wrapper"),
-      card("sbold-k3-capital", 65, "wrapper"),
-      card("lusd-liquity", 75, "cdp"),
-      card("pyusd-paypal", 70),
-      card("pusd-polymarket", 70),
-      card("usdg-paxos", 60),
-      card("ausd-agora", 60),
-      card("rlusd-ripple", 70),
-      card("zchf-frankencoin", 60),
-      card("fxusd-f-x-protocol", 70),
-      card("usdd-tron-dao-reserve", 39, "cdp"),
-      card("u-united-stables", 32),
-      card("usdai-usd-ai", 39, "rwa-credit-fund"),
-      card("eurs-stasis", 39),
-      card("mim-abracadabra", 39, "cdp"),
-      card("tusd-trueusd", 54),
-    ];
+    const cards = passingCards({
+      "usdc-circle": 87, "bold-liquity": 83, "usdt-tether": 87,
+      "dai-makerdao": 70, "sdai-sky": 65, "sbold-k3-capital": 65,
+      "lusd-liquity": 65, "pyusd-paypal": 65, "ausd-agora": 60,
+      "rlusd-ripple": 70, "zchf-frankencoin": 60, "fxusd-f-x-protocol": 70,
+      "eurs-stasis": 39,
+    });
     const report = evaluateAtCaptureClock({ cards });
     expect(report.decision).toBe("gate-passed");
   });
 
   it("applies the current production-calibration thresholds as the defaults", () => {
-    const cards = withScore(
-      withScore(
-        withScore(withScore(passingCards(), "usdt-tether", 87), "ausd-agora", 62),
-        "zchf-frankencoin",
-        64,
-      ),
-      "usdg-paxos",
-      61,
-    );
+    const cards = passingCards({ "usdt-tether": 87, "ausd-agora": 62, "zchf-frankencoin": 64, "usdg-paxos": 61 });
     const report = evaluateAtCaptureClock({ cards });
     expect(report.decision).toBe("gate-passed");
     expect(verdict(report, "anchor:usdt-tether").required).toBe("score ≥ 87 (A+)");
@@ -250,19 +238,91 @@ describe("evaluateSafetyScoreV9AnchorGate", () => {
     );
   });
 
-  it("resolves every declared anchor threshold from the candidate policy", () => {
-    const report = evaluateAtCaptureClock({ cards: passingCards() });
-    const thresholds = new Map(report.gradeThresholds.map((entry) => [entry.grade, entry.minScore]));
-    expect(thresholds.get("A")).toBe(83);
-    expect(thresholds.get("A-")).toBe(80);
-    expect(thresholds.get("B+")).toBe(75);
-    expect(thresholds.get("B")).toBe(70);
-    expect(thresholds.get("C+")).toBe(60);
-    expect(report.verdicts).toHaveLength(
-      SAFETY_SCORE_V9_ANCHOR_CONTRACT_V1.anchors.length +
-        SAFETY_SCORE_V9_ANCHOR_CONTRACT_V1.relative.length +
-        SAFETY_SCORE_V9_ANCHOR_CONTRACT_V1.adverse.length,
+  it("changes the anchor decision when the supplied policy raises its grade threshold", () => {
+    const cards = passingCards();
+    expect(evaluateAtCaptureClock({ cards }).decision).toBe("gate-passed");
+    const policy = structuredClone(V9_CANDIDATE_POLICY_V1);
+    policy.policy.semantic.formula.gradeThresholds =
+      policy.policy.semantic.formula.gradeThresholds.map((entry) =>
+        entry.grade === "A" ? { ...entry, minScore: 85 } : entry);
+    const report = evaluateAtCaptureClock({ cards, policy });
+    expect(report.decision).toBe("no-go");
+    expect(verdict(report, "anchor:bold-liquity").code).toBe("anchor-below-threshold");
+  });
+
+  it("rejects a policy missing the anchor's selected grade", () => {
+    const policy = structuredClone(V9_CANDIDATE_POLICY_V1);
+    policy.policy.semantic.formula.gradeThresholds =
+      policy.policy.semantic.formula.gradeThresholds.filter((entry) => entry.grade !== "A");
+    expect(() => evaluateAtCaptureClock({ cards: passingCards(), policy })).toThrow(
+      "Policy carries no grade threshold for A",
     );
+  });
+
+  it("applies a declared ruling only when selected, even after its time box expires", () => {
+    const contract: V9AnchorContract = {
+      schemaVersion: 1, relative: [], adverse: [],
+      anchors: [{
+        id: "anchor", minGrade: "B", label: "test anchor",
+        pendingRuling: { decisionId: "D-test", alternativeMinGrade: "B-", note: "easement" },
+        timeBox: { untilSec: 100, restoreMinGrade: "A", note: "expiry" },
+      }],
+    };
+    for (const asOfSec of [99, 100]) {
+      const input = { contract, cards: [card("anchor", 69)], asOfSec };
+      const without = evaluateSafetyScoreV9AnchorGate(input);
+      expect(without.decision).toBe("no-go");
+      expect(verdict(without, "anchor:anchor").required).toBe(
+        asOfSec === 99 ? "score ≥ 70 (B)" : "score ≥ 83 (A)",
+      );
+      const applied = evaluateSafetyScoreV9AnchorGate({ ...input, applyRulings: ["D-test"] });
+      expect(applied.decision).toBe("gate-passed");
+      expect(verdict(applied, "anchor:anchor").status).toBe("pass");
+    }
+  });
+
+  it("fails closed for unrated required assets in every rule kind", () => {
+    const cases: Array<{ contract: V9AnchorContract; rule: string; cards: V9AnchorGateCard[] }> = [
+      {
+        contract: { schemaVersion: 1, anchors: [{ id: "required", minGrade: "A", label: "anchor" }], relative: [], adverse: [] },
+        rule: "anchor:required", cards: [card("required", null)],
+      },
+      ...["left", "right"].map((side) => ({
+        contract: {
+          schemaVersion: 1 as const, anchors: [], adverse: [],
+          relative: [{ kind: "pair" as const, id: "left", overId: "right", label: "pair" }],
+        },
+        rule: "relative:left>=right",
+        cards: [card("left", side === "left" ? null : 90), card("right", side === "right" ? null : 80)],
+      })),
+      {
+        contract: { schemaVersion: 1, anchors: [], adverse: [], relative: [{ kind: "archetype-set", id: "required", archetypes: ["fiat-cash"], label: "leader" }] },
+        rule: "relative:required>=archetype(fiat-cash)", cards: [card("required", null), card("peer", 80)],
+      },
+      {
+        contract: { schemaVersion: 1, anchors: [], relative: [], adverse: [{ kind: "max-score", id: "required", maxScore: 32, label: "pin" }] },
+        rule: "adverse:required", cards: [card("required", null)],
+      },
+    ];
+    for (const { contract, rule, cards } of cases) {
+      const report = evaluateAtCaptureClock({ contract, cards });
+      expect(report.decision).toBe("no-go");
+      expect(verdict(report, rule).code).toBe("asset-not-rated");
+    }
+  });
+
+  it("ignores unrated optional comparison peers", () => {
+    const report = evaluateAtCaptureClock({ cards: [...passingCards(), card("unrated-peer", null)] });
+    expect(report.decision).toBe("gate-passed");
+    expect(verdict(report, "relative:usdc-circle>=archetype(fiat-cash|tbill)").status).toBe("pass");
+  });
+
+  it("rejects conflicting duplicate identities regardless of order", () => {
+    for (const scores of [[90, 10], [10, 90]]) {
+      expect(() => evaluateAtCaptureClock({
+        cards: [...withoutId(passingCards(), "usdc-circle"), ...scores.map((score) => card("usdc-circle", score))],
+      })).toThrow("Anchor gate received duplicate card id: usdc-circle");
+    }
   });
 
   describe("time-boxed anchor amendments (owner ruling D-J)", () => {

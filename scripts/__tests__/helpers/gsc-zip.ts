@@ -1,4 +1,5 @@
 import { writeFileSync } from "node:fs";
+import { crc32 } from "node:zlib";
 
 export function writeStoredZip(targetPath: string, files: Record<string, string>) {
   const localParts: Buffer[] = [];
@@ -9,6 +10,7 @@ export function writeStoredZip(targetPath: string, files: Record<string, string>
   for (const [name, content] of entries) {
     const nameBuffer = Buffer.from(name, "utf8");
     const payload = Buffer.from(content, "utf8");
+    const checksum = crc32(payload);
 
     const localHeader = Buffer.alloc(30);
     localHeader.writeUInt32LE(0x04034b50, 0);
@@ -17,7 +19,7 @@ export function writeStoredZip(targetPath: string, files: Record<string, string>
     localHeader.writeUInt16LE(0, 8);
     localHeader.writeUInt16LE(0, 10);
     localHeader.writeUInt16LE(0, 12);
-    localHeader.writeUInt32LE(0, 14);
+    localHeader.writeUInt32LE(checksum, 14);
     localHeader.writeUInt32LE(payload.length, 18);
     localHeader.writeUInt32LE(payload.length, 22);
     localHeader.writeUInt16LE(nameBuffer.length, 26);
@@ -33,7 +35,7 @@ export function writeStoredZip(targetPath: string, files: Record<string, string>
     centralHeader.writeUInt16LE(0, 10);
     centralHeader.writeUInt16LE(0, 12);
     centralHeader.writeUInt16LE(0, 14);
-    centralHeader.writeUInt32LE(0, 16);
+    centralHeader.writeUInt32LE(checksum, 16);
     centralHeader.writeUInt32LE(payload.length, 20);
     centralHeader.writeUInt32LE(payload.length, 24);
     centralHeader.writeUInt16LE(nameBuffer.length, 28);

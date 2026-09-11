@@ -4,8 +4,7 @@ import {
   crawlHorizonPoolsStage,
   resetHorizonDiscoveryStateForTests,
 } from "../crawl-horizon-pools";
-import { createCrawlStageContext } from "../staged-pool";
-import type { StagedPool } from "../types";
+import { discoveryContext } from "./discovery.test-support";
 import { mockFetch } from "@shared/test-utils/mock-fetch";
 
 const EURC_ADDRESS = "EURC-GDHU6WRG4IEQXM5NZ4BMPKOXHW76MZM4Y2IEMFDVXBSDP6SJY4ITNPP2";
@@ -39,23 +38,10 @@ function poolRow() {
 }
 
 function context(options?: { deadlineMs?: number; stablecoinId?: string }) {
-  const pools: StagedPool[] = [];
-  return {
-    pools,
-    value: createCrawlStageContext({
-      stablecoinId: options?.stablecoinId ?? "eurc-circle",
-      knownPoolIds: new Set(),
-      nowSec: 1_800_000_000,
-      pools,
-      priceObs: [],
-      deadlineMs: options?.deadlineMs,
-      references: {
-        rates: { peggedEUR: 1.1 },
-        type: "fresh",
-        updatedAt: 1_800_000_000,
-      },
-    }),
-  };
+  return discoveryContext(options?.stablecoinId ?? "eurc-circle", {
+    deadlineMs: options?.deadlineMs,
+    references: { rates: { peggedEUR: 1.1 }, type: "fresh", updatedAt: 1_800_000_000 },
+  });
 }
 
 describe("Horizon pool discovery", () => {

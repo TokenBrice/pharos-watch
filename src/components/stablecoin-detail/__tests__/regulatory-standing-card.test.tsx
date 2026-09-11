@@ -44,8 +44,18 @@ const VIEW: RegulatoryStandingView = {
   reviewedAt: "2026-07-02",
 };
 
+/**
+ * One checklist `<li>`, so a row's own truth state and destination are read
+ * instead of any "published" text anywhere in the card.
+ */
+function checklistRow(html: string, label: string): string {
+  const rows = html.split("<li").filter((row) => row.includes(`>${label}<`));
+  expect(rows).toHaveLength(1);
+  return rows[0];
+}
+
 describe("RegulatoryStandingCard", () => {
-  it("renders badge, both regimes, checklist, and folded sources", () => {
+  it("renders badge, both regimes, facts, and folded sources", () => {
     const html = renderToStaticMarkup(<RegulatoryStandingCard view={VIEW} />);
     expect(html).toContain("Regulatory standing");
     expect(html).toContain("MiCA Authorized");
@@ -53,12 +63,40 @@ describe("RegulatoryStandingCard", () => {
     expect(html).toContain("MiCA (EU)");
     expect(html).toContain("Filing Pending");
     expect(html).toContain("OCC");
-    expect(html).toContain("Monthly attestation");
-    expect(html).toContain("https://example.com/reserves");
-    expect(html).toContain("latest 2026-07-01");
     expect(html).toContain("Reviewed 2026-07-02");
     expect(html).toContain("https://example.com/dnb");
     expect(html).toContain('hidden=""'); // sources folded by default
+  });
+
+  it("states each checklist obligation's truth state and links the evidence it has", () => {
+    const html = renderToStaticMarkup(<RegulatoryStandingCard view={VIEW} />);
+
+    const attestation = checklistRow(html, "Monthly attestation");
+    expect(attestation).toContain("published");
+    expect(attestation).not.toContain("not found");
+
+    const redemptionPolicy = checklistRow(html, "Redemption policy");
+    expect(redemptionPolicy).toContain("not found");
+    expect(redemptionPolicy).not.toContain(">published<");
+
+    const reserveDisclosure = checklistRow(html, "Reserve disclosure");
+    expect(reserveDisclosure).toMatch(
+      /<a href="https:\/\/example\.com\/reserves"[^>]*>Reserve disclosure<\/a>/,
+    );
+    expect(reserveDisclosure).toContain("latest 2026-07-01");
+    expect(reserveDisclosure).toContain("published");
+  });
+
+  it("omits the checklist for a regime with no researched obligations", () => {
+    const html = renderToStaticMarkup(
+      <RegulatoryStandingCard
+        view={{ ...VIEW, regimes: [VIEW.regimes[1]] }}
+      />,
+    );
+
+    expect(html).toContain("MiCA (EU)");
+    expect(html).not.toContain(">published<");
+    expect(html).not.toContain(">not found<");
   });
 
   it("renders nothing without a view", () => {

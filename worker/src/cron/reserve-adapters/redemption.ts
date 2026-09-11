@@ -32,10 +32,9 @@ export function buildDocumentedRedemptionTelemetry(
 
 export function buildRedemptionSnapshotMetadata(
   options: BuildRedemptionSnapshotMetadataOptions,
-): Pick<LiveReserveSnapshotMetadata, "redemption" | "redemptionFeeBps"> {
+): Pick<LiveReserveSnapshotMetadata, "redemption"> {
   const { feeBps, ...redemption } = options;
   return {
-    ...(feeBps != null ? { redemptionFeeBps: feeBps } : {}),
     redemption: {
       ...redemption,
       ...(feeBps != null ? { feeBps } : {}),

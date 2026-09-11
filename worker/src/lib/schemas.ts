@@ -132,7 +132,10 @@ export const DexLiquidityCronMetadataSchema = z.object({
   stagedPoolsSkippedByUniqueDerivedIdentity: z.number().optional(),
   stagedPoolsSkippedByOptionalWildcardIdentity: z.number().optional(),
   stagedPoolsSkippedByAuthoritativeProtocol: z.number().optional(),
+  stagedWritebackRows: z.number().optional(),
+  stagedWritebackSkippedUntrustedIds: z.number().optional(),
   failedSources: z.array(z.string()).optional().default([]),
+  degradedSources: z.array(z.string()).optional().default([]),
   sourceCoverage: z
     .object({
       currentCoverage: z.number().optional(),
@@ -248,15 +251,27 @@ export const DexLiquidityCronMetadataSchema = z.object({
           }),
         )
         .optional(),
+      qualityDriftCandidates: z
+        .array(
+          z.object({
+            flag: z.string(),
+            consecutiveRuns: z.number(),
+            baselineValue: z.number(),
+            observedValue: z.number(),
+          }),
+        )
+        .optional(),
       nearCoverageGuard: z.boolean().optional().default(false),
       nearValueGuard: z.boolean().optional().default(false),
       nearMajorCoverageGuard: z.boolean().optional().default(false),
+      hardCoverageGuard: z.boolean().optional().default(false),
     })
     .optional()
     .default(() => ({
       nearCoverageGuard: false,
       nearValueGuard: false,
       nearMajorCoverageGuard: false,
+      hardCoverageGuard: false,
     })),
   persistence: z
     .object({

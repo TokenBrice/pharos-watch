@@ -47,6 +47,9 @@ describe("downloadCsv", () => {
     expect(Array.from(new Uint8Array(await blob.arrayBuffer()).slice(0, 3))).toEqual([239, 187, 191]);
     await expect(blob.text()).resolves.toBe('Name,Note\nUSD Coin,"quoted, value"');
     expect(clickSpy).toHaveBeenCalledTimes(1);
+    const anchor = clickSpy.mock.instances[0] as HTMLAnchorElement | undefined;
+    expect(anchor?.download).toBe("stablecoins-2026-04-28.csv");
+    expect(anchor?.href).toBe("blob:pharos-csv");
     expect(revokeObjectURL).not.toHaveBeenCalled();
 
     await vi.runOnlyPendingTimersAsync();

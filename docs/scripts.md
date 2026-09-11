@@ -1,6 +1,6 @@
 # Scripts
 
-> **Agent navigation** — Grep the heading you need instead of reading wholesale: Overview · Safety Score Map Refresh · Operator CLI Contract · D1 Insights Capture · Routing Index · Validation Command Index · Build And Generated Artifacts · PR And Release Gates · Operational Notes · Pre-Commit Hook Mechanics · Release Ownership · Safe Usage Guidelines.
+> **Agent navigation** — Grep the heading you need instead of reading wholesale: Overview · Safety Score Map Refresh · Operator CLI Contract · Safety Score Capture-Time Replay · D1 Insights Capture · Routing Index · Validation Command Index · Build And Generated Artifacts · PR And Release Gates · Operational Notes · Pre-Commit Hook Mechanics · Release Ownership · Safe Usage Guidelines.
 
 ## Overview
 
@@ -17,6 +17,12 @@ Snapshot pulls using `scripts/lib/sync-from-api.ts` retain fixed-backoff retries
 Schema rejections use canonical diagnostics (the first failing field path and schema issue), rather than translating errors into historical map-specific wording. Valid payloads still pass the map's score/grade, duplicate-ID, supply-join, and geometry checks.
 
 `.github/workflows/safety-map-refresh.yml` schedules the refresh at 02:20, 04:20, and 06:20 UTC, plus manual dispatch. GitHub scheduled starts are best-effort and can arrive hours late, so the additional slots only improve the odds. The digest is independent of winning this race and can carry forward a recent dated map within its bounded continuity window.
+
+## Daily Social Posters
+
+`npm run publish:daily-social -- capture --out-dir agents/daily-social/local` captures the day's topic from fresh Pharos API data. `npm run build:daily-social -- --input agents/daily-social/local/snapshot.json --out agents/daily-social/local/poster.png` produces a 1600×1000 PNG with self-contained SVG/HTML and `.alt.txt` siblings. The renderer embeds local fonts and logos and performs no network requests. `capture --topic <topic>` previews another weekday's format without changing the publication calendar.
+
+The [daily social pipeline](./daily-social.md) owns the seven-topic calendar, source eligibility, fallback policy, prepublication validation and immutable image/manifest protocol. Publication is manual: there is no workflow, and operators run `capture` and `build:daily-social` locally, then post the rendered graphic to X by hand. `publish --dry-run` reads and validates the KV target without writes.
 
 ## Operator CLI Contract
 

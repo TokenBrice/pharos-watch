@@ -29,7 +29,7 @@ import { shouldAttemptFetch, recordOutcome } from "../../../lib/circuit-breaker"
 import { CIRCUIT_SOURCE } from "../../../lib/constants";
 import { fetchJsonWithRetry } from "../../../lib/fetch-retry";
 import { buildDlStablecoinPoolsCache } from "../../yield-sync/cache";
-import type { CurvePool, LlamaPool } from "../types";
+import type { CurveApiPayload, CurvePool, LlamaPool } from "../types";
 import { buildKnownPoolAddresses, buildCurveLookups, fetchDataSources } from "../fetch-primary";
 import { buildPoolFingerprint } from "../pool-helpers";
 import { buildPoolIdentity, getIdentityDedupReason } from "../pool-identity";
@@ -44,6 +44,15 @@ import {
 } from "../../measured-execution/curve-composite-identities";
 import { buildCurveCompositeMeasuredExecutionTarget } from "../../measured-execution/curve-composite";
 import { makeNoopD1 } from "../../../test-helpers/noop-d1";
+import { makeApiPool } from "./fetch-primary.test-support";
+
+function makeDeferred(): { promise: Promise<void>; resolve: () => void } {
+  let resolve!: () => void;
+  const promise = new Promise<void>((promiseResolve) => {
+    resolve = () => promiseResolve();
+  });
+  return { promise, resolve };
+}
 
 function createMockDb(): D1Database {
   return makeNoopD1({
@@ -83,7 +92,7 @@ const PRIMARY_POOL_LOOKUPS = {
   symbolToChainScopedIds: new Map([["USDC", new Map([["ethereum", ["usdc-circle"]]])]]),
 };
 
-function mockDlYieldsSuccess() {
+function mockDlYieldsSuccess(curveResponse: (() => Promise<{ response: Response; body: unknown } | null>) | null = async () => ({ response: new Response("", { status: 200 }), body: { data: { poolData: [] } } })) {
   vi.mocked(fetchJsonWithRetry).mockImplementation(async (url: string | URL | Request) => {
     const urlStr = typeof url === "string" ? url : url instanceof URL ? url.toString() : url.url;
     if (urlStr.includes("yields.llama.fi")) {
@@ -99,10 +108,7 @@ function mockDlYieldsSuccess() {
       };
     }
     if (urlStr.includes("api.curve.finance")) {
-      return {
-        response: new Response("", { status: 200 }),
-        body: { data: { poolData: [] } },
-      };
+      return curveResponse ? curveResponse() : null;
     }
     return {
       response: new Response("", { status: 200 }),
@@ -135,6 +141,7 @@ describe("fetchDataSources", () => {
       .mocked(fetchJsonWithRetry)
       .mock.calls.filter((call) => String(call[0]).includes("api.curve.finance"));
     expect(curveCalls).toHaveLength(0);
+    expect(result!.dlYieldsAvailable).toBe(true);
   });
 
   it("records success when at least 1 Curve chain succeeds", async () => {
@@ -145,100 +152,42 @@ describe("fetchDataSources", () => {
   });
 
   it("caps Curve API fetch concurrency below the DEX job peak", async () => {
-    let activeCurveRequests = 0;
-    let maxActiveCurveRequests = 0;
-
-    vi.mocked(fetchJsonWithRetry).mockImplementation(async (url: string | URL | Request) => {
-      const urlStr = typeof url === "string" ? url : url instanceof URL ? url.toString() : url.url;
-      if (urlStr.includes("yields.llama.fi")) {
-        return {
-          response: new Response("", { status: 200 }),
-          body: { data: FAKE_DL_POOLS },
-        };
-      }
-      if (urlStr.includes("api.llama.fi/protocols")) {
-        return {
-          response: new Response("", { status: 200 }),
-          body: [],
-        };
-      }
-      if (urlStr.includes("api.curve.finance")) {
-        activeCurveRequests++;
-        maxActiveCurveRequests = Math.max(maxActiveCurveRequests, activeCurveRequests);
-        await new Promise((resolve) => setTimeout(resolve, 1));
-        activeCurveRequests--;
-        return {
-          response: new Response("", { status: 200 }),
-          body: { data: { poolData: [] } },
-        };
-      }
-      return {
-        response: new Response("", { status: 200 }),
-        body: {},
-      };
+    const firstWave = makeDeferred();
+    const release = makeDeferred();
+    let active = 0;
+    let started = 0;
+    let maxActive = 0;
+    mockDlYieldsSuccess(async () => {
+      started++;
+      active++;
+      maxActive = Math.max(maxActive, active);
+      if (started === 4) firstWave.resolve();
+      await release.promise;
+      active--;
+      return { response: new Response("", { status: 200 }), body: { data: { poolData: [] } } };
     });
-
-    const result = await fetchDataSources(null, createMockDb(), PRIMARY_POOL_LOOKUPS);
-
-    expect(result).not.toBeNull();
-    expect(maxActiveCurveRequests).toBe(4);
+    const pending = fetchDataSources(null, createMockDb(), PRIMARY_POOL_LOOKUPS);
+    try {
+      await firstWave.promise;
+      expect(started).toBe(4);
+      expect(active).toBe(4);
+      release.resolve();
+      const result = await pending;
+      expect(result).not.toBeNull();
+      expect(maxActive).toBe(4);
+      expect(active).toBe(0);
+    } finally {
+      release.resolve();
+      await pending;
+    }
   });
 
-  it("records failure when all Curve chains fail", async () => {
-    vi.mocked(fetchJsonWithRetry).mockImplementation(async (url: string | URL | Request) => {
-      const urlStr = typeof url === "string" ? url : url instanceof URL ? url.toString() : url.url;
-      if (urlStr.includes("yields.llama.fi")) {
-        return {
-          response: new Response("", { status: 200 }),
-          body: { data: FAKE_DL_POOLS },
-        };
-      }
-      if (urlStr.includes("api.llama.fi/protocols")) {
-        return {
-          response: new Response("", { status: 200 }),
-          body: [],
-        };
-      }
-      if (urlStr.includes("api.curve.finance")) {
-        return null;
-      }
-      return {
-        response: new Response("", { status: 200 }),
-        body: {},
-      };
-    });
+  it("records Curve failure while retaining usable DL-only data", async () => {
+    mockDlYieldsSuccess(null);
 
     const result = await fetchDataSources(null, createMockDb(), PRIMARY_POOL_LOOKUPS);
     expect(result).not.toBeNull(); // DL is still up
     expect(vi.mocked(recordOutcome)).toHaveBeenCalledWith(expect.anything(), "curve-liquidity-api", false);
-  });
-
-  it("returns DL-only data when Curve fails", async () => {
-    vi.mocked(fetchJsonWithRetry).mockImplementation(async (url: string | URL | Request) => {
-      const urlStr = typeof url === "string" ? url : url instanceof URL ? url.toString() : url.url;
-      if (urlStr.includes("yields.llama.fi")) {
-        return {
-          response: new Response("", { status: 200 }),
-          body: { data: FAKE_DL_POOLS },
-        };
-      }
-      if (urlStr.includes("api.llama.fi/protocols")) {
-        return {
-          response: new Response("", { status: 200 }),
-          body: [],
-        };
-      }
-      if (urlStr.includes("api.curve.finance")) {
-        return null;
-      }
-      return {
-        response: new Response("", { status: 200 }),
-        body: {},
-      };
-    });
-
-    const result = await fetchDataSources(null, createMockDb(), PRIMARY_POOL_LOOKUPS);
-    expect(result).not.toBeNull();
     expect(result!.dlYieldsAvailable).toBe(true);
   });
 
@@ -247,17 +196,6 @@ describe("fetchDataSources", () => {
 
     const result = await fetchDataSources(null, createMockDb(), PRIMARY_POOL_LOOKUPS);
     expect(result).toBeNull();
-  });
-
-  it("returns DL-only data when circuit breaker is open and DL succeeds", async () => {
-    vi.mocked(shouldAttemptFetch).mockImplementation(async (_db, source) => {
-      if (source === "curve-liquidity-api") return false;
-      return true;
-    });
-
-    const result = await fetchDataSources(null, createMockDb(), PRIMARY_POOL_LOOKUPS);
-    expect(result).not.toBeNull();
-    expect(result!.dlYieldsAvailable).toBe(true);
   });
 
   it("compacts raw yields before Curve while preserving raw cache, fallback, and count semantics", async () => {
@@ -742,28 +680,6 @@ describe("buildCurveLookups", () => {
   it("skips Curve fingerprinting for malformed coin addresses while preserving later pools", async () => {
     const USDC = "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48";
     const USDT = "0xdac17f958d2ee523a2206206994597c13d831ec7";
-    const makeApiPool = (address: string, coins: Array<{ symbol: string; address: unknown }>, usdTotal = 200_000) => ({
-      address,
-      name: coins.map((coin) => coin.symbol).join("/"),
-      amplificationCoefficient: "1000",
-      coins: coins.map((coin) => ({
-        ...coin,
-        poolBalance: "100000000000",
-        usdPrice: 1,
-        decimals: "6",
-      })),
-      usdTotal,
-      isMetaPool: false,
-      assetTypeName: "USD",
-      totalSupply: 0,
-      registryId: "factory-stable-ng",
-      isBroken: false,
-      virtualPrice: "1",
-      usdTotalExcludingBasePool: 0,
-      creationTs: 123,
-      basePoolAddress: null,
-      gaugeCrvApy: null,
-    });
     const curvePayloads = [
       {
         data: {
@@ -806,28 +722,6 @@ describe("buildCurveLookups", () => {
   it("indexes pools by coin-set fingerprint and fails closed on duplicates", async () => {
     const USDC = "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48";
     const USDT = "0xdac17f958d2ee523a2206206994597c13d831ec7";
-    const makeApiPool = (address: string, coins: Array<{ symbol: string; address: string }>, usdTotal = 200_000) => ({
-      address,
-      name: coins.map((coin) => coin.symbol).join("/"),
-      amplificationCoefficient: "1000",
-      coins: coins.map((coin) => ({
-        ...coin,
-        poolBalance: "100000000000",
-        usdPrice: 1,
-        decimals: "6",
-      })),
-      usdTotal,
-      isMetaPool: false,
-      assetTypeName: "USD",
-      totalSupply: 0,
-      registryId: "factory-stable-ng",
-      isBroken: false,
-      virtualPrice: "1",
-      usdTotalExcludingBasePool: 0,
-      creationTs: 123,
-      basePoolAddress: null,
-      gaugeCrvApy: null,
-    });
     const curvePayloads = [
       {
         data: {
@@ -835,17 +729,17 @@ describe("buildCurveLookups", () => {
             makeApiPool("0x1111111111111111111111111111111111111111", [
               { symbol: "USDC", address: USDC },
               { symbol: "USDT", address: USDT },
-            ]),
+            ]) as CurvePool,
             // Distinct coin set: fingerprint survives.
             makeApiPool("0x2222222222222222222222222222222222222222", [
               { symbol: "USDC", address: USDC },
               { symbol: "FRAX", address: "0x853d955acef822db058eb8505911ed77f175b99e" },
-            ]),
+            ]) as CurvePool,
             // Same coin set as the first pool: both fingerprints fail closed.
             makeApiPool("0x3333333333333333333333333333333333333333", [
               { symbol: "USDC", address: USDC },
               { symbol: "USDT", address: USDT },
-            ]),
+            ]) as CurvePool,
             // Dust duplicates do not poison the retained pool's address-grade join.
             makeApiPool(
               "0x4444444444444444444444444444444444444444",
@@ -854,11 +748,11 @@ describe("buildCurveLookups", () => {
                 { symbol: "FRAX", address: "0x853d955acef822db058eb8505911ed77f175b99e" },
               ],
               40,
-            ),
+            ) as CurvePool,
           ],
         },
       },
-    ];
+    ] satisfies CurveApiPayload[];
 
     const { curvePoolMap, curvePoolCandidatesByFingerprint } = await buildCurveLookups(
       curvePayloads,

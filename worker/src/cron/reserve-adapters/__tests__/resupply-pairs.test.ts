@@ -1,31 +1,16 @@
-import type { LiveReservesConfig } from "@shared/types/live-reserves";
 import { encodeAbiParameters } from "viem/utils";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import { adaptResupplyPairSnapshots } from "../resupply-pairs";
+import {
+  installAdapterNetwork,
+  runAdapter,
+  type AdapterNetwork,
+  type AdapterNetworkSpec,
+  type AdapterRpcValue,
+} from "./reserve-adapter.test-support";
 
-vi.mock("../helpers", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("../helpers")>();
-  const fetchOnchainRawCall = vi.fn();
-  const fetchOnchainMulticall3 = vi.fn(async ({ calls, ...options }) => Promise.all(
-    calls.map(async (call: { label: string; contract: string; data: string }) => {
-      const returnData = await fetchOnchainRawCall({ ...options, contract: call.contract, data: call.data });
-      return {
-        label: call.label,
-        success: returnData != null,
-        returnData: returnData ?? "0x",
-      };
-    }),
-  ));
-  return {
-    ...actual,
-    fetchOnchainRawCall,
-    fetchOnchainMulticall3,
-  };
-});
+afterEach(() => vi.unstubAllGlobals());
 
-import { fetchOnchainMulticall3, fetchOnchainRawCall } from "../helpers";
-import { adaptResupplyPairSnapshots, fetchResupplyPairsReserves } from "../resupply-pairs";
-
-import { TEST_SIGNAL as signal } from "./reserve-adapter.test-support";
 const CURVE_PAIR = "0xC5184cccf85b81EDdc661330acB3E41bd89F34A1";
 const FRAX_PAIR = "0x3F2b20b8E8Ce30bb52239d3dFADf826eCFE6A5f7";
 const EMPTY_PAIR = "0x212589B06EBBA4d89d9deFcc8DDc58D80E141EA0";
@@ -42,37 +27,11 @@ const GET_MAX_REDEEMABLE_DEBT_SELECTOR = "0x43bad45b";
 const GUARD_ENABLED_SELECTOR = "0x901654fc";
 const PERMISSIONLESS_PRICE_THRESHOLD_SELECTOR = "0x0e3d9f3c";
 const REUSD_ORACLE_PRICE_SELECTOR = "0xc6af1dda";
+const ASSET_SELECTOR = "0x38d52e0f";
+const DECIMALS_SELECTOR = "0x313ce567";
 const REDEMPTION_HANDLER = "0x5eeB063d0abefBBc78F576E28d762a16b637A025";
 const ONE = 1_000_000_000_000_000_000n;
-
-const coin = {
-  id: "reusd-resupply",
-  symbol: "REUSD",
-  contracts: [{ chain: "ethereum", address: "0x57ab1e0003f623289cd798b1824be09a793e4bec", decimals: 18 }],
-};
-
-function encodeAddressResult(address: string): `0x${string}` {
-  return `0x${address.toLowerCase().replace(/^0x/, "").padStart(64, "0")}`;
-}
-
-function encodePairAccounting(totalBorrowAmount: bigint, totalCollateralShares: bigint): `0x${string}` {
-  return encodeAbiParameters(
-    [{ type: "uint256" }, { type: "uint128" }, { type: "uint128" }, { type: "uint256" }],
-    [0n, totalBorrowAmount, totalBorrowAmount, totalCollateralShares],
-  );
-}
-
-function encodeUint256Result(value: bigint): `0x${string}` {
-  return `0x${value.toString(16).padStart(64, "0")}`;
-}
-
-function encodeBoolResult(value: boolean): `0x${string}` {
-  return encodeUint256Result(value ? 1n : 0n);
-}
-
-function normalizeAddress(address: string): string {
-  return address.toLowerCase();
-}
+const NOW_SEC = 1_800_000_000;
 
 const underlyings = [
   {
@@ -91,9 +50,101 @@ const underlyings = [
   },
 ];
 
-beforeEach(() => {
-  vi.clearAllMocks();
-});
+function encodePairAccounting(totalBorrowAmount: bigint, totalCollateralShares: bigint): `0x${string}` {
+  return encodeAbiParameters(
+    [{ type: "uint256" }, { type: "uint128" }, { type: "uint128" }, { type: "uint256" }],
+    [0n, totalBorrowAmount, totalBorrowAmount, totalCollateralShares],
+  );
+}
+
+interface ResupplyPairAnswers {
+  underlying: string;
+  collateral: string;
+  totalBorrowAmount: bigint;
+  totalCollateralShares: bigint;
+  maxRedeemableDebt: bigint;
+  collateralAssets: bigint;
+  vaultAsset: string;
+}
+
+function pairAnswers(
+  overrides: Partial<ResupplyPairAnswers> & Pick<ResupplyPairAnswers, "underlying" | "collateral">,
+): ResupplyPairAnswers {
+  return {
+    totalBorrowAmount: 0n,
+    totalCollateralShares: 0n,
+    maxRedeemableDebt: 0n,
+    collateralAssets: 0n,
+    vaultAsset: overrides.underlying,
+    ...overrides,
+  };
+}
+
+interface ResupplyGuardAnswers {
+  guardEnabled: boolean;
+  permissionlessPriceThreshold: bigint;
+  reUsdOraclePrice: bigint;
+}
+
+const DEFAULT_GUARD: ResupplyGuardAnswers = {
+  guardEnabled: true,
+  permissionlessPriceThreshold: 985_000_000_000_000_000n,
+  reUsdOraclePrice: 970_000_000_000_000_000n,
+};
+
+/**
+ * Answer the reviewed RedemptionHandler reads, per-pair accounting, and the
+ * second-stage collateral conversion. `getMaxRedeemableDebt` is keyed by the
+ * encoded pair argument (the calldata's trailing 32-byte address word),
+ * mirroring the on-chain call shape.
+ */
+function resupplyNetwork(
+  pairs: Record<string, ResupplyPairAnswers>,
+  options: { decimals?: Record<string, bigint | null>; guard?: ResupplyGuardAnswers } = {},
+): AdapterNetworkSpec {
+  const guard = options.guard ?? DEFAULT_GUARD;
+  const rpc: Record<string, AdapterRpcValue> = {
+    [`${REDEMPTION_HANDLER}:${GUARD_ENABLED_SELECTOR}`]: guard.guardEnabled,
+    [`${REDEMPTION_HANDLER}:${PERMISSIONLESS_PRICE_THRESHOLD_SELECTOR}`]: guard.permissionlessPriceThreshold,
+    [`${REDEMPTION_HANDLER}:${REUSD_ORACLE_PRICE_SELECTOR}`]: guard.reUsdOraclePrice,
+    [`${REDEMPTION_HANDLER}:${GET_MAX_REDEEMABLE_DEBT_SELECTOR}`]: ({ data }) => {
+      for (const [pair, answer] of Object.entries(pairs)) {
+        if (data.endsWith(pair.toLowerCase().replace(/^0x/, "").padStart(64, "0"))) return answer.maxRedeemableDebt;
+      }
+      return null;
+    },
+  };
+  for (const [contract, value] of Object.entries(options.decimals ?? { [CRVUSD]: 18n, [FRXUSD]: 18n })) {
+    rpc[`${contract}:${DECIMALS_SELECTOR}`] = value;
+  }
+  for (const [pair, answer] of Object.entries(pairs)) {
+    rpc[`${pair}:${UNDERLYING_SELECTOR}`] = answer.underlying;
+    rpc[`${pair}:${COLLATERAL_SELECTOR}`] = answer.collateral;
+    rpc[`${pair}:${GET_PAIR_ACCOUNTING_SELECTOR}`] = encodePairAccounting(
+      answer.totalBorrowAmount,
+      answer.totalCollateralShares,
+    );
+    rpc[`${answer.collateral}:${CONVERT_TO_ASSETS_SELECTOR}`] = answer.collateralAssets;
+    rpc[`${answer.collateral}:${ASSET_SELECTOR}`] = answer.vaultAsset;
+  }
+  return { rpc };
+}
+
+const DEFAULT_PAIRS = [
+  { key: "PAIR_CURVELEND_SFRXUSD_CRVUSD", address: CURVE_PAIR },
+  { key: "PAIR_FRAXLEND_SFRXETH_FRXUSD", address: FRAX_PAIR },
+];
+
+function runResupply(options: {
+  network: AdapterNetworkSpec | AdapterNetwork;
+  pairs?: { key: string; address: string }[];
+}) {
+  return runAdapter("resupply-pairs", "reusd-resupply", {
+    network: options.network,
+    params: { pairs: options.pairs ?? DEFAULT_PAIRS },
+    nowSec: NOW_SEC,
+  });
+}
 
 describe("resupply-pairs adapter", () => {
   it("aggregates converted collateral assets by reviewed underlying", () => {
@@ -104,6 +155,7 @@ describe("resupply-pairs adapter", () => {
           pairAddress: CURVE_PAIR,
           underlyingAddress: CRVUSD,
           collateralAddress: CURVE_COLLATERAL,
+          underlyingDecimals: 18,
           totalBorrowAmount: 60n * ONE,
           totalBorrowShares: 60n * ONE,
           totalCollateralShares: 100n * ONE,
@@ -115,6 +167,7 @@ describe("resupply-pairs adapter", () => {
           pairAddress: FRAX_PAIR,
           underlyingAddress: FRXUSD,
           collateralAddress: FRAX_COLLATERAL,
+          underlyingDecimals: 18,
           totalBorrowAmount: 40n * ONE,
           totalBorrowShares: 40n * ONE,
           totalCollateralShares: 80n * ONE,
@@ -126,6 +179,7 @@ describe("resupply-pairs adapter", () => {
           pairAddress: EMPTY_PAIR,
           underlyingAddress: FRXUSD,
           collateralAddress: EMPTY_COLLATERAL,
+          underlyingDecimals: 18,
           totalBorrowAmount: 0n,
           totalBorrowShares: 0n,
           totalCollateralShares: 0n,
@@ -145,14 +199,13 @@ describe("resupply-pairs adapter", () => {
     );
 
     expect(result.slices).toEqual([
-      { name: "Frax frxUSD lending markets", pct: 60, risk: "high", coinId: "frxusd-frax", depType: "collateral" },
-      { name: "Curve crvUSD lending markets", pct: 40, risk: "high", coinId: "crvusd-curve", depType: "collateral" },
+      { sourceKey: "resupply-pairs:ethereum:0xcacd6fd266af91b8aed52accc382b4e165586e29", name: "Frax frxUSD lending markets", pct: 60, risk: "high", coinId: "frxusd-frax", depType: "collateral" },
+      { sourceKey: "resupply-pairs:ethereum:0xf939e0a03fb07f59a73314e73794be0e57ac1b4e", name: "Curve crvUSD lending markets", pct: 40, risk: "high", coinId: "crvusd-curve", depType: "collateral" },
     ]);
     expect(result.metadata).toMatchObject({
       freshnessMode: "not-applicable",
       totalBorrowUsd: 100,
       totalCollateralAssetsUsd: 200,
-      immediateRedeemableUsd: 80,
       redemption: {
         capacityUsd: 80,
         capacityKind: "live-direct-bounded",
@@ -182,6 +235,7 @@ describe("resupply-pairs adapter", () => {
             pairAddress: CURVE_PAIR,
             underlyingAddress: "0x0000000000000000000000000000000000000001",
             collateralAddress: CURVE_COLLATERAL,
+            underlyingDecimals: 18,
             totalBorrowAmount: ONE,
             totalBorrowShares: ONE,
             totalCollateralShares: 2n * ONE,
@@ -195,189 +249,100 @@ describe("resupply-pairs adapter", () => {
   });
 
   it("fetches independent pairs with bounded fan-out", async () => {
-    const config: LiveReservesConfig = {
-      adapter: "resupply-pairs",
-      version: 1,
-      semantics: "collateral-mix",
-      breakerScope: "reusd-resupply",
-      display: { url: "https://resupply.fi/supply", label: "Resupply markets" },
-      inputs: {
-        primary: { kind: "onchain-evm", chain: "ethereum", rpcMode: "public-rpc" },
-      },
-      params: {
-        rpcUrl: "https://ethereum-rpc.publicnode.com",
-        fallbackRpcUrl: "https://eth.llamarpc.com",
-        pairs: [
-          { key: "PAIR_CURVELEND_SFRXUSD_CRVUSD", address: CURVE_PAIR },
-          { key: "PAIR_FRAXLEND_SFRXETH_FRXUSD", address: FRAX_PAIR },
-        ],
-        underlyings,
-      },
-    };
-
-    let resolveCurveUnderlying!: (value: `0x${string}`) => void;
-    let resolveFraxUnderlying!: (value: `0x${string}`) => void;
-    const curveUnderlying = new Promise<`0x${string}`>((resolve) => {
+    let resolveCurveUnderlying!: (value: string) => void;
+    let resolveFraxUnderlying!: (value: string) => void;
+    const curveUnderlying = new Promise<string>((resolve) => {
       resolveCurveUnderlying = resolve;
     });
-    const fraxUnderlying = new Promise<`0x${string}`>((resolve) => {
+    const fraxUnderlying = new Promise<string>((resolve) => {
       resolveFraxUnderlying = resolve;
     });
-    const calls: string[] = [];
 
-    vi.mocked(fetchOnchainRawCall).mockImplementation(async ({ contract, data }) => {
-      const normalizedContract = normalizeAddress(contract);
-      calls.push(`${normalizedContract}:${data}`);
-      if (normalizedContract === normalizeAddress(CURVE_PAIR) && data === UNDERLYING_SELECTOR) {
-        return curveUnderlying;
-      }
-      if (normalizedContract === normalizeAddress(FRAX_PAIR) && data === UNDERLYING_SELECTOR) {
-        return fraxUnderlying;
-      }
-      if (normalizedContract === normalizeAddress(CURVE_PAIR) && data === COLLATERAL_SELECTOR) {
-        return encodeAddressResult(CURVE_COLLATERAL);
-      }
-      if (normalizedContract === normalizeAddress(FRAX_PAIR) && data === COLLATERAL_SELECTOR) {
-        return encodeAddressResult(FRAX_COLLATERAL);
-      }
-      if (normalizedContract === normalizeAddress(CURVE_PAIR) && data === GET_PAIR_ACCOUNTING_SELECTOR) {
-        return encodePairAccounting(75n * ONE, 100n * ONE);
-      }
-      if (normalizedContract === normalizeAddress(FRAX_PAIR) && data === GET_PAIR_ACCOUNTING_SELECTOR) {
-        return encodePairAccounting(25n * ONE, 100n * ONE);
-      }
-      if (normalizedContract === normalizeAddress(CURVE_COLLATERAL) && data.startsWith(CONVERT_TO_ASSETS_SELECTOR)) {
-        return encodeUint256Result(60n * ONE);
-      }
-      if (normalizedContract === normalizeAddress(FRAX_COLLATERAL) && data.startsWith(CONVERT_TO_ASSETS_SELECTOR)) {
-        return encodeUint256Result(40n * ONE);
-      }
-      return null;
+    const spec = resupplyNetwork({
+      [CURVE_PAIR]: pairAnswers({
+        underlying: CRVUSD,
+        collateral: CURVE_COLLATERAL,
+        totalBorrowAmount: 75n * ONE,
+        totalCollateralShares: 100n * ONE,
+        maxRedeemableDebt: 75n * ONE,
+        collateralAssets: 60n * ONE,
+      }),
+      [FRAX_PAIR]: pairAnswers({
+        underlying: FRXUSD,
+        collateral: FRAX_COLLATERAL,
+        totalBorrowAmount: 25n * ONE,
+        totalCollateralShares: 100n * ONE,
+        maxRedeemableDebt: 25n * ONE,
+        collateralAssets: 40n * ONE,
+      }),
     });
+    // Both underlyings stay in flight while the first-stage batch is on the
+    // wire: the run must not serialize one pair's pipeline behind the other.
+    spec.rpc![`${CURVE_PAIR}:${UNDERLYING_SELECTOR}`] = () => curveUnderlying;
+    spec.rpc![`${FRAX_PAIR}:${UNDERLYING_SELECTOR}`] = () => fraxUnderlying;
+    const network = installAdapterNetwork(spec);
 
-    const resultPromise = fetchResupplyPairsReserves(coin as never, config, signal);
-    await Promise.resolve();
+    const runPromise = runResupply({ network });
+    await vi.waitFor(() => {
+      expect(network.requests.length).toBeGreaterThan(0);
+    });
+    resolveCurveUnderlying(CRVUSD);
+    resolveFraxUnderlying(FRXUSD);
 
-    expect(calls).toContain(`${normalizeAddress(CURVE_PAIR)}:${UNDERLYING_SELECTOR}`);
-    expect(calls).toContain(`${normalizeAddress(FRAX_PAIR)}:${UNDERLYING_SELECTOR}`);
-    expect(fetchOnchainMulticall3).toHaveBeenCalledTimes(1);
-    expect(vi.mocked(fetchOnchainMulticall3).mock.calls[0]?.[0].calls).toHaveLength(6);
-
-    resolveCurveUnderlying(encodeAddressResult(CRVUSD));
-    resolveFraxUnderlying(encodeAddressResult(FRXUSD));
-
-    const result = await resultPromise;
-    expect(fetchOnchainMulticall3).toHaveBeenCalledTimes(2);
-    expect(vi.mocked(fetchOnchainMulticall3).mock.calls[1]?.[0].calls).toHaveLength(2);
+    const { result } = await runPromise;
     expect(result.metadata).toMatchObject({
       pairCount: 2,
       activePairCount: 2,
       totalBorrowUsd: 100,
       totalCollateralAssetsUsd: 100,
     });
+    const underlyingCalls = network.rpcCalls.filter((call) => call.selector === UNDERLYING_SELECTOR);
+    expect(underlyingCalls.map((call) => call.contract)).toEqual([CURVE_PAIR.toLowerCase(), FRAX_PAIR.toLowerCase()]);
+    expect(underlyingCalls.every((call) => call.viaMulticall)).toBe(true);
   });
 
   it("reads reviewed pairs and converts collateral shares to assets onchain", async () => {
-    const config: LiveReservesConfig = {
-      adapter: "resupply-pairs",
-      version: 1,
-      semantics: "collateral-mix",
-      breakerScope: "reusd-resupply",
-      display: { url: "https://resupply.fi/supply", label: "Resupply markets" },
-      inputs: {
-        primary: { kind: "onchain-evm", chain: "ethereum", rpcMode: "public-rpc" },
-      },
-      params: {
-        rpcUrl: "https://ethereum-rpc.publicnode.com",
-        fallbackRpcUrl: "https://eth.llamarpc.com",
-        redemptionHandlerAddress: REDEMPTION_HANDLER,
-        pairs: [
-          { key: "PAIR_CURVELEND_SFRXUSD_CRVUSD", address: CURVE_PAIR },
-          { key: "PAIR_FRAXLEND_SFRXETH_FRXUSD", address: FRAX_PAIR },
-          { key: "PAIR_FRAXLEND_SUSDE_FRXUSD", address: EMPTY_PAIR },
-        ],
-        underlyings,
-      },
-    };
-
-    vi.mocked(fetchOnchainRawCall).mockImplementation(async ({ contract, data }) => {
-      const normalizedContract = normalizeAddress(contract);
-      if (normalizedContract === normalizeAddress(CURVE_PAIR) && data === UNDERLYING_SELECTOR) {
-        return encodeAddressResult(CRVUSD);
-      }
-      if (normalizedContract === normalizeAddress(FRAX_PAIR) && data === UNDERLYING_SELECTOR) {
-        return encodeAddressResult(FRXUSD);
-      }
-      if (normalizedContract === normalizeAddress(EMPTY_PAIR) && data === UNDERLYING_SELECTOR) {
-        return encodeAddressResult(FRXUSD);
-      }
-      if (normalizedContract === normalizeAddress(CURVE_PAIR) && data === COLLATERAL_SELECTOR) {
-        return encodeAddressResult(CURVE_COLLATERAL);
-      }
-      if (normalizedContract === normalizeAddress(FRAX_PAIR) && data === COLLATERAL_SELECTOR) {
-        return encodeAddressResult(FRAX_COLLATERAL);
-      }
-      if (normalizedContract === normalizeAddress(EMPTY_PAIR) && data === COLLATERAL_SELECTOR) {
-        return encodeAddressResult(EMPTY_COLLATERAL);
-      }
-      if (normalizedContract === normalizeAddress(CURVE_PAIR) && data === GET_PAIR_ACCOUNTING_SELECTOR) {
-        return encodePairAccounting(75n * ONE, 100n * ONE);
-      }
-      if (normalizedContract === normalizeAddress(FRAX_PAIR) && data === GET_PAIR_ACCOUNTING_SELECTOR) {
-        return encodePairAccounting(25n * ONE, 100n * ONE);
-      }
-      if (normalizedContract === normalizeAddress(EMPTY_PAIR) && data === GET_PAIR_ACCOUNTING_SELECTOR) {
-        return encodePairAccounting(0n, 0n);
-      }
-      if (normalizedContract === normalizeAddress(REDEMPTION_HANDLER) && data === GUARD_ENABLED_SELECTOR) {
-        return encodeBoolResult(true);
-      }
-      if (
-        normalizedContract === normalizeAddress(REDEMPTION_HANDLER) &&
-        data === PERMISSIONLESS_PRICE_THRESHOLD_SELECTOR
-      ) {
-        return encodeUint256Result(985_000_000_000_000_000n);
-      }
-      if (normalizedContract === normalizeAddress(REDEMPTION_HANDLER) && data === REUSD_ORACLE_PRICE_SELECTOR) {
-        return encodeUint256Result(990_000_000_000_000_000n);
-      }
-      if (
-        normalizedContract === normalizeAddress(REDEMPTION_HANDLER) &&
-        data.startsWith(GET_MAX_REDEEMABLE_DEBT_SELECTOR)
-      ) {
-        if (data.toLowerCase().endsWith(CURVE_PAIR.toLowerCase().replace(/^0x/, "").padStart(64, "0"))) {
-          return encodeUint256Result(50n * ONE);
-        }
-        if (data.toLowerCase().endsWith(FRAX_PAIR.toLowerCase().replace(/^0x/, "").padStart(64, "0"))) {
-          return encodeUint256Result(25n * ONE);
-        }
-        if (data.toLowerCase().endsWith(EMPTY_PAIR.toLowerCase().replace(/^0x/, "").padStart(64, "0"))) {
-          return encodeUint256Result(0n);
-        }
-      }
-      if (normalizedContract === normalizeAddress(CURVE_COLLATERAL) && data.startsWith(CONVERT_TO_ASSETS_SELECTOR)) {
-        return encodeUint256Result(60n * ONE);
-      }
-      if (normalizedContract === normalizeAddress(FRAX_COLLATERAL) && data.startsWith(CONVERT_TO_ASSETS_SELECTOR)) {
-        return encodeUint256Result(40n * ONE);
-      }
-      if (normalizedContract === normalizeAddress(EMPTY_COLLATERAL) && data.startsWith(CONVERT_TO_ASSETS_SELECTOR)) {
-        return encodeUint256Result(0n);
-      }
-      return null;
+    const { result, network } = await runResupply({
+      pairs: [
+        ...DEFAULT_PAIRS,
+        { key: "PAIR_FRAXLEND_SUSDE_FRXUSD", address: EMPTY_PAIR },
+      ],
+      network: resupplyNetwork(
+        {
+          [CURVE_PAIR]: pairAnswers({
+            underlying: CRVUSD,
+            collateral: CURVE_COLLATERAL,
+            totalBorrowAmount: 75n * ONE,
+            totalCollateralShares: 100n * ONE,
+            maxRedeemableDebt: 50n * ONE,
+            collateralAssets: 60n * ONE,
+          }),
+          [FRAX_PAIR]: pairAnswers({
+            underlying: FRXUSD,
+            collateral: FRAX_COLLATERAL,
+            totalBorrowAmount: 25n * ONE,
+            totalCollateralShares: 100n * ONE,
+            maxRedeemableDebt: 25n * ONE,
+            collateralAssets: 40n * ONE,
+          }),
+          [EMPTY_PAIR]: pairAnswers({
+            underlying: FRXUSD,
+            collateral: EMPTY_COLLATERAL,
+            vaultAsset: FRXUSD,
+          }),
+        },
+        { guard: { ...DEFAULT_GUARD, reUsdOraclePrice: 990_000_000_000_000_000n } },
+      ),
     });
 
-    const result = await fetchResupplyPairsReserves(coin as never, config, signal);
-
     expect(result.slices).toEqual([
-      { name: "Curve crvUSD lending markets", pct: 60, risk: "high", coinId: "crvusd-curve", depType: "collateral" },
-      { name: "Frax frxUSD lending markets", pct: 40, risk: "high", coinId: "frxusd-frax", depType: "collateral" },
+      { sourceKey: "resupply-pairs:ethereum:0xf939e0a03fb07f59a73314e73794be0e57ac1b4e", name: "Curve crvUSD lending markets", pct: 60, risk: "high", coinId: "crvusd-curve", depType: "collateral" },
+      { sourceKey: "resupply-pairs:ethereum:0xcacd6fd266af91b8aed52accc382b4e165586e29", name: "Frax frxUSD lending markets", pct: 40, risk: "high", coinId: "frxusd-frax", depType: "collateral" },
     ]);
     expect(result.warnings).toBeUndefined();
     expect(result.metadata).toMatchObject({
       totalBorrowUsd: 100,
       totalCollateralAssetsUsd: 100,
-      immediateRedeemableUsd: 75,
       redemption: {
         capacityUsd: 75,
         capacityKind: "live-direct-bounded",
@@ -393,7 +358,88 @@ describe("resupply-pairs adapter", () => {
       pairCount: 3,
       activePairCount: 2,
     });
-    expect(fetchOnchainMulticall3).toHaveBeenCalledTimes(2);
-    expect(fetchOnchainRawCall).toHaveBeenCalledTimes(18);
+    // Two batched multicalls (guard + pairs, then collateral conversion): 15
+    // first-stage members plus 9 second-stage members, no stray direct reads.
+    expect(network.rpcCalls).toHaveLength(24);
+    expect(network.rpcCalls.every((call) => call.viaMulticall)).toBe(true);
+  });
+
+  it.each([
+    { name: "the wrapper underlying reports 8 decimals", frxUsdDecimals: 8n, expectedFraxUsd: 40 },
+    { name: "the wrapper underlying reports 18 decimals", frxUsdDecimals: 18n, expectedFraxUsd: 40 },
+  ])("values each pair at its verified underlying decimals when $name", async ({ frxUsdDecimals, expectedFraxUsd }) => {
+    const scale = 10n ** frxUsdDecimals;
+    const { result } = await runResupply({
+      network: resupplyNetwork(
+        {
+          [CURVE_PAIR]: pairAnswers({
+            underlying: CRVUSD,
+            collateral: CURVE_COLLATERAL,
+            totalBorrowAmount: 45n * ONE,
+            totalCollateralShares: 100n * ONE,
+            maxRedeemableDebt: 45n * ONE,
+            collateralAssets: 60n * ONE,
+          }),
+          [FRAX_PAIR]: pairAnswers({
+            underlying: FRXUSD,
+            collateral: FRAX_COLLATERAL,
+            totalBorrowAmount: 30n * scale,
+            totalCollateralShares: 100n * ONE,
+            maxRedeemableDebt: 30n * scale,
+            collateralAssets: 40n * scale,
+          }),
+        },
+        { decimals: { [CRVUSD]: 18n, [FRXUSD]: frxUsdDecimals } },
+      ),
+    });
+
+    expect(result.metadata).toMatchObject({
+      totalBorrowUsd: 75,
+      totalCollateralAssetsUsd: 60 + expectedFraxUsd,
+    });
+    expect(result.slices).toEqual([
+      { sourceKey: "resupply-pairs:ethereum:0xf939e0a03fb07f59a73314e73794be0e57ac1b4e", name: "Curve crvUSD lending markets", pct: 60, risk: "high", coinId: "crvusd-curve", depType: "collateral" },
+      { sourceKey: "resupply-pairs:ethereum:0xcacd6fd266af91b8aed52accc382b4e165586e29", name: "Frax frxUSD lending markets", pct: 40, risk: "high", coinId: "frxusd-frax", depType: "collateral" },
+    ]);
+  });
+
+  it.each([
+    {
+      name: "an underlying decimals() read fails",
+      decimalsResult: null,
+      vaultAsset: FRXUSD,
+      expected: /decimals\(\) for .* call failed/,
+    },
+    {
+      name: "the collateral vault reports a different asset",
+      decimalsResult: 18n,
+      vaultAsset: CRVUSD,
+      expected: /asset\(\) mismatch/,
+    },
+  ])("fails closed when $name", async ({ decimalsResult, vaultAsset, expected }) => {
+    await expect(runResupply({
+      network: resupplyNetwork(
+        {
+          [CURVE_PAIR]: pairAnswers({
+            underlying: CRVUSD,
+            collateral: CURVE_COLLATERAL,
+            totalBorrowAmount: 45n * ONE,
+            totalCollateralShares: 100n * ONE,
+            maxRedeemableDebt: 45n * ONE,
+            collateralAssets: 60n * ONE,
+          }),
+          [FRAX_PAIR]: pairAnswers({
+            underlying: FRXUSD,
+            collateral: FRAX_COLLATERAL,
+            totalBorrowAmount: 30n * ONE,
+            totalCollateralShares: 100n * ONE,
+            maxRedeemableDebt: 30n * ONE,
+            collateralAssets: 40n * ONE,
+            vaultAsset,
+          }),
+        },
+        { decimals: { [CRVUSD]: 18n, [FRXUSD]: decimalsResult } },
+      ),
+    })).rejects.toThrow(expected);
   });
 });

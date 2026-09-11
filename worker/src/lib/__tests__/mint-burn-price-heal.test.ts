@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("../db", () => ({
   batchExecute: vi.fn().mockResolvedValue(0),
@@ -16,6 +16,10 @@ import { batchExecute } from "../db";
 import { getPriceCache } from "../db-cache";
 import { healNullPrices } from "../mint-burn-pipeline/price-heal";
 import { makeNoopD1 } from "../../test-helpers/noop-d1";
+import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
+
+const fixtures = createLatestSchemaFixtureTracker();
+afterEach(() => fixtures.closeAll());
 
 const NOW = 1_700_000_000;
 
@@ -223,17 +227,25 @@ describe("healNullPrices", () => {
     expect(batchExecute).not.toHaveBeenCalled();
   });
 
-  it("queries recent NULL-price events in deterministic newest-first order", async () => {
-    const prepare = vi.fn().mockReturnValue({
-      bind: vi.fn().mockReturnValue({
-        all: vi.fn().mockResolvedValue({ results: [] }),
-      }),
-    });
-    const db = makeNoopD1({ prepare });
-
-    await healNullPrices(db, NOW);
-
-    const sql = prepare.mock.calls[0]?.[0] as string;
-    expect(sql).toContain("ORDER BY e.timestamp DESC, e.id DESC");
+  it("heals the newest 500 rows with deterministic ID ordering at tied timestamps", async () => {
+    const { db, sqlite } = fixtures.open();
+    const insert = sqlite.prepare(`INSERT INTO mint_burn_events
+      (id, stablecoin_id, symbol, chain_id, direction, amount, amount_usd, tx_hash, block_number, timestamp, explorer_tx_url)
+      VALUES (?, 'usdc-circle', 'USDC', 'ethereum', 'mint', 100, NULL, ?, 1, ?, '')`);
+    for (let index = 0; index < 501; index++) {
+      const id = `event-${String(index).padStart(3, "0")}`;
+      insert.run(id, id, NOW);
+    }
+    insert.run("older", "older", NOW - 1);
+    const actual = await vi.importActual<{ batchExecute: typeof batchExecute }>("../db");
+    vi.mocked(batchExecute).mockImplementationOnce(actual.batchExecute);
+    vi.mocked(getPriceCache).mockResolvedValueOnce(new Map([
+      ["usdc-circle", { price: 1.01, updatedAt: NOW, source: "binance" }],
+    ]));
+    expect((await healNullPrices(db, NOW)).healed).toBe(500);
+    expect(sqlite.prepare("SELECT id FROM mint_burn_events WHERE amount_usd IS NULL ORDER BY id").all())
+      .toEqual([{ id: "event-000" }, { id: "older" }]);
+    expect(sqlite.prepare("SELECT amount_usd, price_used FROM mint_burn_events WHERE id = 'event-500'").get())
+      .toEqual({ amount_usd: 101, price_used: 1.01 });
   });
 });

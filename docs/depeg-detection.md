@@ -2,7 +2,7 @@
 
 Two-stage depeg detection pipeline for stablecoins. Stage 1 (detection) runs every 15 minutes as part of the `sync-stablecoins` cron and writes every threshold-crossing onset to `depeg_pending`. Stage 2 runs immediately after and promotes only candidates that have remained beyond the full trigger threshold for at least 15 minutes and satisfy the applicable source-trust rule.
 
-> **Agent navigation** — Grep the heading you need: Methodology Versioning · Downstream: Depeg Duration Resolver · Thresholds & Constants · Database Schema · Build-time event archive · Cron Scheduling · Stage 1 -- Detection · Stage 2 -- Confirmation · Historical Backfill Validation · Event Lifecycle · Types · API · Frontend · Peg Stability Metrics (`peg-stability.ts`) · Peg Score (`peg-score.ts`) · Edge Cases & Guardrails · Pending Depeg Confirmation.
+> **Agent navigation** — Grep the heading you need: Methodology Versioning · Downstream: Depeg Duration Resolver · Thresholds & Constants · Database Schema · Build-time event archive · Cron Scheduling · Stage 1 -- Detection · Stage 2 -- Confirmation · Historical Backfill Validation · Event Lifecycle · Types · API · Frontend · Peg Stability Metrics (`peg-stability.ts`) · Peg Score (`peg-score.ts`) · Edge Cases & Guardrails.
 
 ## Methodology Versioning
 
@@ -187,7 +187,7 @@ Detection runs as part of the `*/15 * * * *` sync cycle. After `syncStablecoins(
 
 Both calls are in `worker/src/cron/sync-stablecoins/post-enrichment.ts` (invoked from the parent `sync-stablecoins.ts` orchestrator). Errors from either are captured in the sync metadata as `depegErrors` array but do not fail the parent cron.
 
-The API layer reuses this event dataset through `worker/src/lib/peg-analytics.ts` (`derivePegAnalyticsSnapshot()`), which builds shared `eventsByCoin` and `pegDataById` maps. The half-hourly, DEX-publication-triggered `prepare-safety-score-v9-input` job is the only writer of the producer-published `peg-analytics` D1 cache row and the exact V9 peg-provenance seed. `/api/peg-summary` accepts the analytics row for up to 30 minutes (2x producer cadence) and falls back to direct compute on a miss or stale/invalid row. `GET /api/report-cards/v9` reads only the separately accepted canonical V9 publication.
+The API layer reuses this event dataset through `worker/src/lib/peg-analytics.ts` (`derivePegAnalyticsSnapshot()`), which builds shared `eventsByCoin` and `pegDataById` maps. The half-hourly, DEX-publication-triggered `prepare-safety-score-v9-input` job is the only writer of the producer-published `peg-analytics` D1 cache row and the exact V9 peg-provenance seed. `/api/peg-summary` accepts the analytics row for up to 30 minutes (one producer interval) and falls back to direct compute on a miss or stale/invalid row. `GET /api/report-cards/v9` reads only the separately accepted canonical V9 publication.
 
 ## Stage 1 -- Detection
 
@@ -276,7 +276,7 @@ Detection persistence commits all mutations for one stablecoin as one ordered at
 
 ### Orphan Cleanup
 
-After the main loop, load open events with the `MAX_OPEN_DEPEG_EVENTS = 200` bound. If the read reaches that bound, skip orphan cleanup and emit a structured degraded warning rather than operating on a truncated set. Otherwise, close any rows that were not in the `seen` set and were not created during the current run. These are true "orphans" -- the coin was removed from tracking or exited the PSI-eligible set. Tracked coins are intentionally kept open through transient missing-price or ambiguous-input cycles and are **not** force-closed just because one run lacked a trusted recovery signal. Orphans are closed with `close_reason = 'orphan-tracking-removed'` and `recovery_price = NULL`.
+After the main loop, load open events with the `MAX_OPEN_DEPEG_EVENTS = 200` bound. If the read reaches that bound, skip orphan cleanup and emit a structured degraded warning rather than operating on a truncated set. Otherwise, close any rows that were not in the `seen` set and were not created during the current run. Rows for frozen coins are also exempt and are never force-closed -- preserved historical data must not be falsified by a lifecycle change (`shouldCloseOrphanedDepeg` in `worker/src/cron/depeg-detection/repair.ts`). These are true "orphans" -- the coin was removed from tracking or exited the PSI-eligible set. Tracked coins are intentionally kept open through transient missing-price or ambiguous-input cycles and are **not** force-closed just because one run lacked a trusted recovery signal. Orphans are closed with `close_reason = 'orphan-tracking-removed'` and `recovery_price = NULL`.
 
 ## Stage 2 -- Confirmation
 
@@ -593,7 +593,7 @@ high-magnitude depegs from being scored as nearly free.
 **Active depeg penalty**: Floor of 5, scales at `|peakBps| / 50`, capped at 50.
 A 500 bps ongoing depeg costs 10 points; 2500+ bps hits the cap.
 
-Returns `null` if < 7 days tracking. Scores based on 7–30 days are flagged as "Early score" in the UI.
+Returns `null` if < 7 days tracking. The 7–30 day "Early score" label described on /methodology and /depeg is not currently rendered anywhere: the detail hero shows `NR` with an `<N>d tracked` subline below 7 days, and a plain score at or above 7 days (`buildPegScoreDisplay` in `src/lib/stablecoin-detail-hero-metrics.ts`).
 
 ## Edge Cases & Guardrails
 
@@ -607,12 +607,3 @@ Returns `null` if < 7 days tracking. Scores based on 7–30 days are flagged as 
 | DEX freshness | Prices > 75 min old ignored |
 | Orphaned events | Closed with `close_reason = 'orphan-tracking-removed'` and `recovery_price = NULL` when coin drops off tracking |
 | Non-USD threshold | 150bps accounts for FX noise and thin liquidity |
-
-## Pending Depeg Confirmation
-
-For stablecoins at or above the large-cap confirmation floor, plus tiered near-large-cap cases, depeg detection uses a two-phase confirmation system:
-
-1. **Phase 1** (`detect-depegs.ts`): When a coin requires confirmation instead of direct mutation, a record is inserted into `depeg_pending` (schema in `worker/migrations/0000_baseline.sql`). This now covers large-cap supply (`>= $1B`), tiered near-large-cap checks (`>= $750M` with weak source depth or >= 2x severity; `>= $500M` only when both weak-source and severe), low-confidence/cached/stale primary prices, and extreme moves (`abs(bps) >= 5000`)
-2. **Phase 2** (`confirm-pending-depegs.ts`): On the next cron cycle, pending records are re-checked. If the depeg persists and a secondary source agrees, a real depeg event is opened. If an **authoritative** primary price recovered, the pending record is deleted
-
-This prevents false positive depeg events for systemically important stablecoins during brief price feed glitches.

@@ -60,6 +60,11 @@
       }
     },
     "params": {
+      "deployedExposure": {
+        "basis": "Yearn v3 vault is an ERC-4626 share over USDC; deployed USDC is routed through the vault's strategy allocator",
+        "reviewedAt": "2026-09-11",
+        "sourceUrl": "https://yearn.fi/v3/1/0xbe53a109b494e5c9f97b9cd39fe969be68bf6204"
+      },
       "redemptionLiquidity": {
         "source": "yearn-v3-withdrawable",
         "settlementDelaySec": 0

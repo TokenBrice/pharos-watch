@@ -30,6 +30,7 @@ import {
 import { isOperationalDexMeasuredFailure } from "../persistence";
 import { buildDexMeasuredExecutionProfile } from "../profiles";
 import { makeMeasuredTarget } from "@shared/test-utils/measured-execution.test-support";
+import { factoryMembershipProof, poolCoinProof, tokenDecimalsProof } from "./curve-proof.test-support";
 
 const POOL_ABI = parseAbi([
   "function coins(uint256) view returns (address)",
@@ -47,11 +48,7 @@ const BLOCK_HASH =
 
 function factoryProof(): DexMeasuredExecutionStableSwapNgFactoryBindingProof {
   const policy = CURVE_USDG_USDC_STABLESWAP_NG_POLICY;
-  const poolListCallData = encodeFunctionData({
-    abi: FACTORY_ABI,
-    functionName: "pool_list",
-    args: [BigInt(policy.factoryPoolIndex)],
-  }).toLowerCase() as `0x${string}`;
+  const membership = factoryMembershipProof(policy.factoryPoolIndex, policy.poolAddress);
   const factoryCoinsCallData = encodeFunctionData({
     abi: FACTORY_ABI,
     functionName: "get_coins",
@@ -66,12 +63,8 @@ function factoryProof(): DexMeasuredExecutionStableSwapNgFactoryBindingProof {
     poolIndex: policy.factoryPoolIndex,
     registeredPoolAddress: policy.poolAddress,
     poolTokenAddresses: policy.poolTokens.map((token) => token.address),
-    poolListCallData,
-    poolListReturnData: encodeFunctionResult({
-      abi: FACTORY_ABI,
-      functionName: "pool_list",
-      result: policy.poolAddress,
-    }).toLowerCase() as `0x${string}`,
+    poolListCallData: membership.callData,
+    poolListReturnData: membership.returnData,
     factoryCoinsCallData,
     factoryCoinsReturnData: encodeFunctionResult({
       abi: FACTORY_ABI,
@@ -83,29 +76,12 @@ function factoryProof(): DexMeasuredExecutionStableSwapNgFactoryBindingProof {
     }).toLowerCase() as `0x${string}`,
     poolCoinsProof: policy.poolTokens.map((token, index) => ({
       index,
-      callData: encodeFunctionData({
-        abi: POOL_ABI,
-        functionName: "coins",
-        args: [BigInt(index)],
-      }).toLowerCase() as `0x${string}`,
-      returnData: encodeFunctionResult({
-        abi: POOL_ABI,
-        functionName: "coins",
-        result: token.address,
-      }).toLowerCase() as `0x${string}`,
+      ...poolCoinProof(index, token.address),
     })),
     tokenDecimalsProof: policy.poolTokens.map((token) => ({
       tokenAddress: token.address,
       decimals: token.decimals,
-      callData: encodeFunctionData({
-        abi: ERC20_ABI,
-        functionName: "decimals",
-      }).toLowerCase() as `0x${string}`,
-      returnData: encodeFunctionResult({
-        abi: ERC20_ABI,
-        functionName: "decimals",
-        result: token.decimals,
-      }).toLowerCase() as `0x${string}`,
+      ...tokenDecimalsProof(token.decimals),
     })),
   };
 }
@@ -201,6 +177,21 @@ function target(
     retainedTvlUsd: 20_501_133,
     retainedPoolPriceUsd: 1,
     capturedAt: BLOCK_TIMESTAMP - 60,
+  });
+}
+
+function deploymentVerifier(
+  overrides: Partial<Parameters<typeof createCurveStableSwapNgDeploymentVerifier>[0]> = {},
+) {
+  const policy = CURVE_USDG_USDC_STABLESWAP_NG_POLICY;
+  return createCurveStableSwapNgDeploymentVerifier({
+    fetchCodeStatus: vi.fn(validDeploymentCode),
+    fetchCall: vi.fn(validDeploymentCall),
+    fetchBlockHeader: vi.fn(async () => ({
+      number: BLOCK_NUMBER, timestamp: BLOCK_TIMESTAMP, hash: BLOCK_HASH,
+    })),
+    hashCode: (code) => code === "0x6000" ? policy.expectedPoolCodeHash : policy.expectedFactoryCodeHash,
+    ...overrides,
   });
 }
 
@@ -393,13 +384,7 @@ describe("reviewed Curve StableSwap-NG policy", () => {
       timestamp: BLOCK_TIMESTAMP,
       hash: BLOCK_HASH,
     }));
-    const verify = createCurveStableSwapNgDeploymentVerifier({
-      fetchCodeStatus,
-      fetchCall,
-      fetchBlockHeader,
-      hashCode: (code) =>
-        code === "0x6000" ? policy.expectedPoolCodeHash : policy.expectedFactoryCodeHash,
-    });
+    const verify = deploymentVerifier({ fetchCodeStatus, fetchCall, fetchBlockHeader });
 
     const result = await verify({
       nowSec: BLOCK_TIMESTAMP + 60,
@@ -432,7 +417,6 @@ describe("reviewed Curve StableSwap-NG policy", () => {
   });
 
   it("rejects a finalized header that changes or disappears during identity reads", async () => {
-    const policy = CURVE_USDG_USDC_STABLESWAP_NG_POLICY;
     const header = {
       number: BLOCK_NUMBER,
       timestamp: BLOCK_TIMESTAMP,
@@ -442,13 +426,7 @@ describe("reviewed Curve StableSwap-NG policy", () => {
       const fetchBlockHeader = vi.fn()
         .mockResolvedValueOnce(header)
         .mockResolvedValueOnce(secondHeader);
-      return createCurveStableSwapNgDeploymentVerifier({
-        fetchCodeStatus: vi.fn(validDeploymentCode),
-        fetchCall: vi.fn(validDeploymentCall),
-        fetchBlockHeader,
-        hashCode: (code) =>
-          code === "0x6000" ? policy.expectedPoolCodeHash : policy.expectedFactoryCodeHash,
-      })({
+      return deploymentVerifier({ fetchBlockHeader })({
         nowSec: BLOCK_TIMESTAMP + 60,
         chainRpcs: new Map(),
       });
@@ -467,17 +445,7 @@ describe("reviewed Curve StableSwap-NG policy", () => {
   it("treats unavailable identity reads as semantic proof failures", async () => {
     const policy = CURVE_USDG_USDC_STABLESWAP_NG_POLICY;
     const run = (fetchCall: typeof validDeploymentCall) =>
-      createCurveStableSwapNgDeploymentVerifier({
-        fetchCodeStatus: vi.fn(validDeploymentCode),
-        fetchCall: vi.fn(fetchCall),
-        fetchBlockHeader: vi.fn(async () => ({
-          number: BLOCK_NUMBER,
-          timestamp: BLOCK_TIMESTAMP,
-          hash: BLOCK_HASH,
-        })),
-        hashCode: (code) =>
-          code === "0x6000" ? policy.expectedPoolCodeHash : policy.expectedFactoryCodeHash,
-      })({
+      deploymentVerifier({ fetchCall: vi.fn(fetchCall) })({
         nowSec: BLOCK_TIMESTAMP + 60,
         chainRpcs: new Map(),
       });

@@ -78,7 +78,7 @@ export const CACHE_FRESHNESS_LANES = {
     producerIntervalSec: CRON_INTERVALS["sync-dex-liquidity"],
     endpointMaxAgeSec: 4 * 3600,
     availabilityMaxAgeSec: 12 * 3600,
-    endpointBudgetReason: "DEX liquidity endpoints warn after one missed two-hour scoring runway.",
+    endpointBudgetReason: "DEX liquidity endpoints retain their reviewed four-hour warning budget despite hourly publication.",
     availabilityBudgetReason: "Public health keeps a slower availability runway for the last successful liquidity dataset.",
     freshnessSentinelKey: "freshness:dex-liquidity",
   },

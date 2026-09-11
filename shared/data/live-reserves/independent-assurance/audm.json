@@ -1,0 +1,55 @@
+{
+  "schemaVersion": 1,
+  "product": "AUDM",
+  "profile": "audm-v1",
+  "officialIndexUrl": "https://www.macropod.com/transparency",
+  "reportUrl": "https://cdn.prod.website-files.com/69df87da28d300c1b443a0d6/6a9929b8226f390a1fcddc38_260901%20Catena%20Digital%20Pty%20Ltd%20Reserve%20Verification%20Report%20as%20at%201st%20September%202026.pdf",
+  "reportSha256": "37c7d58cc584a55d4243727a3736d66923918601c9aca771ca455f3857f74325",
+  "reportByteLength": 95518,
+  "reportDate": "2026-09-01",
+  "reportAsOf": "2026-09-01T23:59:59+10:00",
+  "reportTimeZone": "Australian Eastern Standard Time (AEST, UTC+10)",
+  "attestor": "Catena Digital Pty Ltd (trading as Macropod Global) — issuer CEO",
+  "engagement": "Issuer self-attestation under paragraph 12 of ASIC Corporations (Stablecoin and Wrapped Token Relief) Instrument 2025/867; not an independent examination",
+  "conclusion": "issuer-attested",
+  "unit": "AUD",
+  "assets": [
+    {
+      "code": "cash",
+      "label": "Cash held at Westpac Banking Corporation in the AUDM Trust Class A Reserve",
+      "amount": "2899657.78"
+    }
+  ],
+  "liabilities": [
+    {
+      "code": "ethereum",
+      "label": "Ethereum AUDM on-chain supply",
+      "amount": "2779318.78"
+    },
+    {
+      "code": "redbelly",
+      "label": "Redbelly AUDM on-chain supply",
+      "amount": "51012.00"
+    },
+    {
+      "code": "solana",
+      "label": "Solana AUDM on-chain supply",
+      "amount": "2463.00"
+    },
+    {
+      "code": "base",
+      "label": "Base AUDM on-chain supply",
+      "amount": "66150.00"
+    }
+  ],
+  "reportedAssetTotal": "2899657.78",
+  "computedAssetTotal": "2899657.78",
+  "reportedLiabilityTotal": "2898943.78",
+  "extraction": {
+    "tool": "Poppler pdftotext -layout",
+    "parserVersion": "26.07.0",
+    "normalizedTextSha256": "6154d47f1aa92a268023cbaccff6cb838c30231e75064a51e7bc1bc194283d64",
+    "pageCount": 2
+  },
+  "assuranceTier": "issuer-attested"
+}

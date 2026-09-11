@@ -143,11 +143,6 @@ export function apiKeyRequestWorkflowReducer(
   }
 }
 
-export function formatSelfServeExpiry(epochSeconds: number | null): string {
-  if (epochSeconds == null) return "No expiry";
-  return new Date(epochSeconds * 1000).toLocaleString();
-}
-
 export function buildCurlCommand(token: string): string {
   return buildPublicApiCurlCommand({ tokenReference: token, includeAcceptHeader: true });
 }

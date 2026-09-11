@@ -31,7 +31,7 @@ Earlier release history lives in `shared/data/methodology-changelogs/mint-burn-f
 
 ## Cron Schedule
 
-- **Critical lane pattern:** `4,34 * * * *` (every 30 minutes, offset at :04/:34)
+- **Critical lane pattern:** logical `4,34 * * * *`, deployed as hourly physical aliases `4 * * * *` and `34 * * * *` (every 30 minutes, offset at :04/:34)
 - **Extended lane pattern:** logical `18,48 * * * *`, deployed as hourly physical aliases `18 * * * *` and `48 * * * *` (every 30 minutes, offset at :18/:48 — placed ahead of the fenced V9 publication slot at :22/:52 to keep the minute-long extended scan clear of the DEX/V9 publication chain). The aliases preserve cadence and slot identity while qualifying each invocation for Cloudflare's hourly Cron CPU class; the combined expression was retired after same-version production runs repeatedly exhausted the sub-hourly 30-second class and were reconciled as `platform-abandoned`.
 - **Trigger mode:** isolated. `sync-blacklist` runs on its own dedicated 6-hourly trigger (`3 */6 * * *`); `sync-dex-discovery` runs on a dedicated 2-hourly trigger (`6 */2 * * *`).
 - **Function:** `syncMintBurn(db, alchemyApiKey, { lane, jobName, ... })`
@@ -162,7 +162,7 @@ When omitted, the default is the Transfer convention: mint → `topics[2]` (reci
 11. **Sweep cross-run roundtrips** — on non-error runs, query up to 200 `(tx_hash, stablecoin_id, chain_id)` groups within the last 7 days where both mint and burn directions exist but `flow_type = 'standard'`. Reclassify to `atomic_roundtrip` and re-aggregate affected hourly buckets. This catches roundtrips where the mint and burn were ingested in separate cron runs. The HAVING clause mirrors `ROUNDTRIP_AMOUNT_TOLERANCE` from the in-memory detector so partial same-tx groups (e.g. mint 100 / burn 50) are not mis-tagged as atomic roundtrips.
 12. **Invalidate flow API caches** — on successful runs (`status ∈ {ok, degraded}`), purge `mint-burn-flows:v3:*` rows from the shared `cache` table using a PK-range predicate over the versioned `FLOW_CACHE_PREFIX` (`key >= 'mint-burn-flows:v3:' AND key < 'mint-burn-flows:v3:\uffff'`). This drops stale pre-sync aggregate payloads so the next `/api/mint-burn-flows` request rebuilds against the freshly written buckets.
 
-**Counterparty resolution:** For mints, `topics[2]` (recipient). For burns, `topics[1]` (sender).
+**Counterparty resolution (default):** mints read `topics[2]` (recipient), burns read `topics[1]` (sender); a config's `counterpartyEncoding` override changes the slot (see Event Detection).
 
 **Event ID format:** `"{chainId}-{txHash}-{logIndex}"` — deterministic, prevents duplicates via `INSERT OR IGNORE`.
 
@@ -336,7 +336,7 @@ Exact columns, constraints, and indexes live in `worker/migrations/0000_baseline
 
 `mint_burn_events` is the transaction-addressable recent event ledger with the protected 8-day retention policy above. It preserves token-native amount, optional event valuation and its source timestamp, chain/transaction provenance, counterparty, burn classification, and economic-flow classification. `standard`, `bridge_transfer`, and `atomic_roundtrip` semantics decide whether a row contributes to aggregates; burn rows additionally distinguish effective burns, bridge burns, and review-required evidence.
 
-Migration `0178_historical_data_debt_closure.sql` owns bounded historical price-repair state and its backlog index. Repair provenance distinguishes retryable unclassified debt, aggregate rebuild pending, recovered rows, and irreducible exact-day gaps; it also binds mutation attempts to their operator run and pre-run Time Travel bookmark. Migration `0097_mbe_flow_type_ts_index.sql` owns flow-classification query support. Exact index membership stays in the migrations.
+Migration `0178_historical_data_debt_closure.sql` owns bounded historical price-repair state and its provenance columns; migration `0234_mint_burn_price_repair_backlog_index.sql` owns the repair backlog index (`idx_mbe_historical_price_repair_backlog`). Repair provenance distinguishes retryable unclassified debt, aggregate rebuild pending, recovered rows, and irreducible exact-day gaps; it also binds mutation attempts to their operator run and pre-run Time Travel bookmark. Migration `0097_mbe_flow_type_ts_index.sql` owns flow-classification query support. Exact index membership stays in the migrations.
 
 ### mint_burn_hourly (baseline `0000_baseline.sql`)
 

@@ -1,3 +1,4 @@
+import { pinnedBlockPlan } from "./evm-observation-plan";
 import type { ReserveSlice, StablecoinMeta } from "@shared/types/core";
 import { toErrorMessage } from "@shared/lib/error-utils";
 import type { LiveReserveSnapshotMetadata, LiveReserveWarning, LiveReservesConfig } from "@shared/types/live-reserves";
@@ -172,6 +173,17 @@ function normalizeAddress(address: string): string {
   return address.toLowerCase();
 }
 
+function crvUsdBucketSourceKey(name: string): string {
+  const key = {
+    "Custodied BTC (ex: wBTC/cbBTC)": "btc",
+    tBTC: "tbtc",
+    ETH: "eth",
+    "wstETH / sfrxETH / weETH": "eth-lst",
+    "Other / unmapped collateral markets": "unknown",
+  }[name];
+  return key ? `crvusd:${key}` : "crvusd:unknown";
+}
+
 function summarizeCrvUsdCollateralBuckets(
   entries: readonly CrvUsdCollateralBucketInput[],
 ): CrvUsdCollateralBucketSummary | null {
@@ -224,6 +236,7 @@ function summarizeCrvUsdCollateralBuckets(
 
   const slices = normalizeSlices(
     Array.from(buckets.entries()).map(([name, bucket]) => ({
+      sourceKey: crvUsdBucketSourceKey(name),
       name,
       pct: (bucket.usd / totalWithUnknown) * 100,
       risk: bucket.risk,
@@ -285,7 +298,7 @@ async function readEthereumContract(
     args,
   });
   const raw = await runAdapterIo(ctx, `crvusd-evm-call:${address}:${functionName}`, () =>
-    fetchEvmCallHexAtBlock(ETHEREUM_CHAIN, address, data, "latest", {
+    fetchEvmCallHexAtBlock(ETHEREUM_CHAIN, address, data, ctx?.observedBlock?.number ?? "latest", {
       signal,
       timeoutMs: 12_000,
       chainRpcs: ctx?.chainRpcs,
@@ -511,7 +524,7 @@ async function fetchLlammaMarketDescriptors(
   return descriptors.filter((descriptor): descriptor is LlammaMarketDescriptor => descriptor != null);
 }
 
-async function fetchLlammaMarketExposures(signal: AbortSignal, ctx?: AdapterContext): Promise<LlammaMarketExposure[]> {
+async function fetchLlammaMarketExposures(signal: AbortSignal, ctx: AdapterContext | undefined, warnings: LiveReserveWarning[]): Promise<LlammaMarketExposure[]> {
   const descriptors = await fetchLlammaMarketDescriptors(signal, ctx);
   if (descriptors.length === 0) return [];
 
@@ -530,6 +543,7 @@ async function fetchLlammaMarketExposures(signal: AbortSignal, ctx?: AdapterCont
     ),
     signal,
     ctx,
+    warnings,
   );
 
   return mapWithConcurrency(descriptors, CRVUSD_MARKET_READ_CONCURRENCY, async (market) => {
@@ -734,7 +748,8 @@ async function fetchYieldBasisMarketPositions(
 
 async function fetchYieldBasisMarketExposures(
   signal: AbortSignal,
-  ctx?: AdapterContext,
+  ctx: AdapterContext | undefined,
+  warnings: LiveReserveWarning[],
 ): Promise<YieldBasisMarketExposure[]> {
   const positions = await fetchYieldBasisMarketPositions(signal, ctx);
   if (positions.length === 0) return [];
@@ -754,6 +769,7 @@ async function fetchYieldBasisMarketExposures(
     ),
     signal,
     ctx,
+    warnings,
   );
 
   return positions.map((position) => {
@@ -782,8 +798,9 @@ async function fetchOptionalYieldBasisMarketExposures(
   });
 
   try {
-    const markets = await fetchYieldBasisMarketExposures(timeout.signal, ctx);
-    return { markets, warnings: [] };
+    const warnings: LiveReserveWarning[] = [];
+    const markets = await fetchYieldBasisMarketExposures(timeout.signal, ctx, warnings);
+    return { markets, warnings };
   } catch (error) {
     if (signal.aborted) throw signal.reason ?? error;
     const message = toErrorMessage(error);
@@ -807,6 +824,19 @@ export function adaptCrvUsd(
   extraWarnings: LiveReserveWarning[] = [],
 ): AdapterResult {
   const markets = payload.chains?.ethereum?.data ?? [];
+  // Upstream drift (renamed or dropped collateral fields) must not publish a
+  // silently empty collateral mix while markets are still being reported.
+  const hasReadableMarket = markets.some((market) =>
+    Boolean(market.collateral_token?.symbol)
+    && Number.isFinite(market.collateral_amount_usd)
+    && (market.collateral_amount_usd ?? 0) > 0
+  );
+  const unreadablePayloadWarnings = markets.length > 0 && !hasReadableMarket
+    ? [reserveDegradedWarning(
+        "curve-markets-unreadable",
+        `Curve market payload returned ${markets.length} markets with no readable collateral_amount_usd/collateral_token fields; refusing to publish an empty crvUSD collateral mix`,
+      )]
+    : [];
   const summary = summarizeCrvUsdCollateralBuckets([
     ...markets.map((market) => ({
       source: "direct" as const,
@@ -821,7 +851,7 @@ export function adaptCrvUsd(
       unknownWarning: (symbol: string) => `Unmapped crvUSD Yield Basis collateral market: ${symbol}`,
     })),
   ]);
-  if (!summary) return { slices: [], warnings: [] };
+  if (!summary) return { slices: [], warnings: unreadablePayloadWarnings };
 
   return buildCrvUsdResult(
     summary,
@@ -829,7 +859,7 @@ export function adaptCrvUsd(
       directMarketCount: markets.length,
       yieldBasisMarketCount: yieldBasisMarkets.length,
     },
-    extraWarnings,
+    [...unreadablePayloadWarnings, ...extraWarnings],
     unverifiedFreshnessMetadata(
       "curve-market-api + yield-basis-onchain",
       "Curve market payload does not expose a trustworthy source timestamp even though the Yield Basis leg is current-state on-chain",
@@ -890,13 +920,20 @@ export async function fetchCrvUsdReserves(
   signal: AbortSignal,
   ctx?: AdapterContext,
 ): Promise<AdapterResult> {
+  const plan = await pinnedBlockPlan({
+    chain: ETHEREUM_CHAIN, signal, ctx,
+    rpcUrl: ETHEREUM_RPC_URLS[0], fallbackRpcUrl: ETHEREUM_RPC_URLS[1],
+  });
+  ctx = plan.ctx;
   if (config.inputs.primary.kind === "onchain-evm") {
     requireOnchainInput(config.inputs.primary, "crvusd");
+    const warnings: LiveReserveWarning[] = [];
     const [llammaMarkets, yieldBasis] = await Promise.all([
-      fetchLlammaMarketExposures(signal, ctx),
+      fetchLlammaMarketExposures(signal, ctx, warnings),
       fetchOptionalYieldBasisMarketExposures(signal, ctx),
     ]);
-    return adaptCrvUsdOnchain(llammaMarkets, yieldBasis.markets, yieldBasis.warnings);
+    const result = adaptCrvUsdOnchain(llammaMarkets, yieldBasis.markets, [...warnings, ...yieldBasis.warnings]);
+    return { ...result, metadata: { ...result.metadata, observedBlock: plan.observedBlock } };
   }
 
   const input = requireJsonInput(config.inputs.primary, "crvusd");
@@ -904,5 +941,6 @@ export async function fetchCrvUsdReserves(
     fetchJsonWithRetry<CurveMarketsPayload>(input.url, signal, 12_000, ctx),
     fetchOptionalYieldBasisMarketExposures(signal, ctx),
   ]);
-  return adaptCrvUsd(payload, yieldBasis.markets, yieldBasis.warnings);
+  const result = adaptCrvUsd(payload, yieldBasis.markets, yieldBasis.warnings);
+  return { ...result, metadata: { ...result.metadata, observedBlock: plan.observedBlock } };
 }

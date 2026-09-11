@@ -7,6 +7,7 @@ import {
   loadCloudflareAccountStateManifest,
   runCloudflareAccountStateDriftCheck,
 } from "../ci/check-cloudflare-account-state-drift.mjs";
+import { mockConsole } from "../test-utils/ci-script-test-helpers";
 
 interface FixtureEnvironmentVariable {
   type: string;
@@ -54,9 +55,18 @@ function readFixture(name: string): FixtureLiveState {
   ) as FixtureLiveState;
 }
 
-function createFixtureFetch(liveState: FixtureLiveState) {
+function createFixtureFetch(
+  liveState: FixtureLiveState,
+  override?: (path: string, result: unknown) => Response | undefined,
+) {
   return vi.fn(async (input: RequestInfo | URL, _init?: RequestInit) => {
     const url = new URL(String(input));
+    const account = "/client/v4/accounts/account-id-not-in-manifest";
+    const project = `${account}/pages/projects/${liveState.pages.project.name}`;
+    const ruleset = "/client/v4/zones/zone-id-not-in-manifest/rulesets/phases/http_ratelimit/entrypoint";
+    if (!["/client/v4/zones", project, `${project}/domains`, `${account}/access/apps`, `${account}/workers/domains`, ruleset].includes(url.pathname)) {
+      throw new Error(`Unexpected fixture URL: ${url}`);
+    }
     const production = liveState.pages.project.production;
     const envVars = Object.fromEntries(
       Object.entries(production.environmentVariables).map(([name, variable]) => [
@@ -68,7 +78,7 @@ function createFixtureFetch(liveState: FixtureLiveState) {
         },
       ]),
     );
-    const result = url.pathname.endsWith("/zones")
+    const result = url.pathname === "/client/v4/zones"
       ? [
           {
             id: "zone-id-not-in-manifest",
@@ -77,17 +87,17 @@ function createFixtureFetch(liveState: FixtureLiveState) {
             account: { id: "account-id-not-in-manifest" },
           },
         ]
-      : url.pathname.endsWith("/workers/domains")
+      : url.pathname === `${account}/workers/domains`
         ? liveState.workerDomains
-        : url.pathname.endsWith("/domains")
+        : url.pathname === `${project}/domains`
           ? liveState.pages.customDomains.map((name) => ({ name }))
-          : url.pathname.endsWith("/access/apps")
+          : url.pathname === `${account}/access/apps`
           ? liveState.accessApplications.map((application) => ({
               type: application.type,
               self_hosted_domains: application.selfHostedDomains,
               session_duration: application.sessionDuration,
             }))
-            : url.pathname.endsWith("/rulesets/phases/http_ratelimit/entrypoint")
+            : url.pathname === ruleset
               ? {
                   rules: liveState.rateLimitRules.map((rule) => ({
                     description: rule.description,
@@ -112,7 +122,7 @@ function createFixtureFetch(liveState: FixtureLiveState) {
                     },
                   },
                 };
-    return new Response(JSON.stringify({ success: true, result }), { status: 200 });
+    return override?.(url.pathname, result) ?? new Response(JSON.stringify({ success: true, result }), { status: 200 });
   });
 }
 
@@ -155,6 +165,86 @@ describe("Cloudflare account-state drift comparison", () => {
     }
     expect(JSON.stringify(liveState)).not.toContain("account-id-not-in-manifest");
     expect(JSON.stringify(liveState)).not.toContain("secret-value-that-must-not-be-reported");
+  });
+
+  it("prefers unified bindings, deduplicates resource names, and discards secret text", async () => {
+    const fetchMock = createFixtureFetch(readFixture("healthy-live-state.json"), (path, result) => {
+      if (!path.endsWith(`/pages/projects/${manifest.pages.project}`)) return;
+      const project = result as { deployment_configs: { production: Record<string, unknown> } };
+      Object.assign(project.deployment_configs.production, {
+        env_vars: { COLLISION: { type: "plain_text", value: "legacy" } },
+        d1_databases: { DB: {} },
+        kv_namespaces: { CACHE: {} },
+        bindings: [
+          { name: "COLLISION", type: "plain_text", text: "unified" },
+          { name: "SECRET", type: "secret_text", text: "unified-secret-sentinel" },
+          { name: "DB", type: "d1" }, { name: "DB", type: "d1" }, { name: "EXTRA_DB", type: "d1" },
+          { name: "CACHE", type: "kv_namespace" }, { name: "CACHE", type: "kv_namespace" },
+        ],
+      });
+      return new Response(JSON.stringify({ success: true, result }));
+    });
+    const state = await fetchCloudflareAccountState({ manifest, apiToken: "token", fetchImpl: fetchMock });
+    expect(state.pages.project.production).toEqual({
+      environmentVariables: { COLLISION: { type: "plain_text", value: "unified" }, SECRET: { type: "secret_text" } },
+      d1Bindings: ["DB", "EXTRA_DB"],
+      kvBindings: ["CACHE"],
+    });
+    expect(JSON.stringify(state)).not.toContain("unified-secret-sentinel");
+  });
+
+  it("rejects zero or multiple exact zones before fetching account resources", async () => {
+    for (const count of [0, 2]) {
+      const fetchMock = createFixtureFetch(readFixture("healthy-live-state.json"), (path, result) => {
+        if (path !== "/client/v4/zones") return;
+        const [zone] = result as unknown[];
+        return new Response(JSON.stringify({ success: true, result: Array(count).fill(zone) }));
+      });
+      await expect(fetchCloudflareAccountState({ manifest, apiToken: "token", fetchImpl: fetchMock }))
+        .rejects.toThrow(`returned ${count} exact active matches`);
+      expect(fetchMock).toHaveBeenCalledTimes(1);
+    }
+  });
+
+  it("allows a missing optional ruleset but rejects project HTTP, API, and JSON failures", async () => {
+    const optional = createFixtureFetch(readFixture("healthy-live-state.json"), (path) =>
+      path.includes("/rulesets/") ? new Response("missing", { status: 404 }) : undefined);
+    const state = await fetchCloudflareAccountState({ manifest, apiToken: "token", fetchImpl: optional });
+    expect(state.rateLimitRules).toEqual([]);
+    for (const [body, status, error] of [
+      [JSON.stringify({ success: false }), 404, "failed (HTTP 404)"],
+      [JSON.stringify({ success: false }), 200, "failed (HTTP 200)"],
+      ["not JSON", 200, "returned an unparseable response (HTTP 200)"],
+    ] as const) {
+      const fetchMock = createFixtureFetch(readFixture("healthy-live-state.json"), (path) =>
+        path.endsWith(`/pages/projects/${manifest.pages.project}`) ? new Response(body, { status }) : undefined);
+      await expect(fetchCloudflareAccountState({ manifest, apiToken: "token", fetchImpl: fetchMock }))
+        .rejects.toThrow(`Cloudflare Pages project lookup ${error}`);
+    }
+  });
+
+  it.each(["healthy", "drifted"])("reports %s orchestration without leaking credentials", async (kind) => {
+    const logs: string[] = [];
+    const errors: string[] = [];
+    const report = await runCloudflareAccountStateDriftCheck({
+      manifest,
+      env: { CLOUDFLARE_ACCOUNT_STATE_DRIFT_API_TOKEN: "token-secret-sentinel", NODE_ENV: "test" },
+      fetchImpl: createFixtureFetch(readFixture(`${kind}-live-state.json`)),
+      consoleImpl: mockConsole({ log: (message: string) => logs.push(message), error: (message: string) => errors.push(message) }),
+    });
+    expect(report.ok).toBe(kind === "healthy");
+    if (kind === "healthy") {
+      expect(report.drift).toEqual([]);
+      expect(errors).toEqual([]);
+      expect(logs).toHaveLength(1);
+    } else {
+      expect(report.drift).toContain('pages.customDomains: missing "ops.pharos.watch"');
+      expect(errors).toContain('  - pages.customDomains: missing "ops.pharos.watch"');
+      expect(logs).toEqual([]);
+    }
+    const output = JSON.stringify({ report, logs, errors });
+    expect(output).not.toContain("token-secret-sentinel");
+    expect(output).not.toContain("secret-value-that-must-not-be-reported");
   });
 
   it("fails clearly before a network call when the dedicated token is absent", async () => {

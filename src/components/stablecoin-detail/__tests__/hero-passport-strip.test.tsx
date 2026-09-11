@@ -84,18 +84,13 @@ describe("HeroPassportStrip", () => {
     ]);
   });
 
-  it("stacks the field name above an all-caps mono value, with no jump icon", () => {
+  it("pairs each field name with its own value", () => {
     const { getByRole } = render(<HeroPassportStrip items={ITEMS} />);
 
     const mechanism = getByRole("link", { name: "Peg mechanism: Custodial Cash — jump to Key Information" });
     const [label, value] = Array.from(mechanism.querySelectorAll("span"));
     expect(label.textContent).toBe("Mechanism");
-    expect(label.className).toContain("uppercase");
-    expect(label.className).toContain("tracking-wider");
     expect(value.textContent).toBe("Custodial Cash");
-    expect(value.className).toContain("uppercase");
-    expect(value.className).toContain("font-mono");
-    expect(mechanism.querySelector("svg")).toBeNull();
   });
 
   it("applies data-driven text tones to tinted values only", () => {
@@ -112,26 +107,20 @@ describe("HeroPassportStrip", () => {
     expect(container.firstChild).toBeNull();
   });
 
-  it("uses an explicit desktop grid template for compact hero rows", () => {
-    const { container, getAllByRole } = render(<HeroPassportStrip items={ITEMS} compactDesktop />);
+  it("drops the mechanism cell from the compact desktop tier while the mobile row keeps it", () => {
+    // Mechanism already has its own hero treatment, so the compact desktop
+    // strip spends that column on a fact the card does not otherwise show.
+    const { container } = render(<HeroPassportStrip items={ITEMS} compactDesktop />);
 
-    const desktopGrid = container.querySelector(".hidden.lg\\:grid") as HTMLDivElement | null;
-    expect(desktopGrid).not.toBeNull();
-    expect(desktopGrid?.style.gridTemplateColumns).toBe("repeat(6, minmax(min-content, 1fr))");
-    expect(desktopGrid?.className).not.toContain("grid-cols-[repeat");
-    expect(getAllByRole("link")).toHaveLength(13);
-  });
-
-  it("tightens desktop cell padding once the strip carries nine or more fields", () => {
-    const dense = [...ITEMS, ...ITEMS.slice(1, 5).map((item) => ({ ...item, key: `${item.key}-2` }))];
-    const { container: sparse } = render(<HeroPassportStrip items={ITEMS} compactDesktop />);
-    const sparseCell = sparse.querySelector(".hidden.lg\\:grid > a");
-    expect(sparseCell?.className).toContain("px-4");
-
-    const { container: crowded } = render(
-      <HeroPassportStrip items={dense as typeof ITEMS} compactDesktop />,
+    const tiers = Array.from(container.querySelectorAll("div")).filter((node) => node.querySelector(":scope > a"));
+    expect(tiers).toHaveLength(2);
+    const [mobileHrefs, desktopHrefs] = tiers.map((tier) =>
+      Array.from(tier.querySelectorAll(":scope > a")).map((link) => link.getAttribute("href")),
     );
-    const crowdedCell = crowded.querySelector(".hidden.lg\\:grid > a");
-    expect(crowdedCell?.className).toContain("px-2.5");
+
+    expect(mobileHrefs).toEqual(ITEMS.map((item) => item.href));
+    expect(desktopHrefs).toEqual(
+      ITEMS.filter((item) => item.category !== "Mechanism").map((item) => item.href),
+    );
   });
 });

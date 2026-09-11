@@ -1,6 +1,7 @@
 import { describe, expect, it, vi, beforeEach, afterEach } from "vitest";
 import type { ScheduledRuntimeContext } from "../context";
 import { makeNoopD1 } from "../../../test-helpers/noop-d1";
+import { makeScheduledRuntime } from "../../../test-helpers/scheduled-runtime.test-support";
 
 vi.mock("../../../cron/daily-digest", () => ({
   generateDailyDigest: vi.fn(),
@@ -81,6 +82,7 @@ describe("runDigestTriggerPollSlot", () => {
     warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
     runLeasedCron = vi.fn();
     vi.mocked(buildTelegramCreds).mockReturnValue(null);
+    vi.mocked(buildTwitterCreds).mockReturnValue(null);
     vi.mocked(resumeDailyDigestDelivery).mockResolvedValue({ kind: "no-publishable-digest" });
     vi.mocked(resolveDigestSafetyMap).mockResolvedValue({ kind: "unavailable", reason: "manifest-http-404" });
     vi.mocked(drainTelegramDigestOutbox).mockResolvedValue({
@@ -112,21 +114,15 @@ describe("runDigestTriggerPollSlot", () => {
   }
 
   function buildRuntime(): ScheduledRuntimeContext {
-    return {
+    return makeScheduledRuntime({
       db: {} as D1Database,
       env: { ANTHROPIC_API_KEY: "anthropic-key" } as ScheduledRuntimeContext["env"],
-      ctx: {} as ExecutionContext,
       cron: "*/5 * * * *",
       scheduleKey: "digestTriggerPoll" as ScheduledRuntimeContext["scheduleKey"],
       scheduledTimeMs: null,
       slotStartedAt: 0,
-      mintBurnDisabledIds: [],
-      mintBurnDisabledSymbols: [],
-      mintBurnFreshnessConfig: {} as ScheduledRuntimeContext["mintBurnFreshnessConfig"],
-      coingeckoApiKey: null,
-      chainRpcs: new Map(),
       runLeasedCron: runLeasedCron as unknown as ScheduledRuntimeContext["runLeasedCron"],
-    };
+    });
   }
 
   it("is a no-op when the force-run cache key is absent", async () => {
@@ -260,7 +256,7 @@ describe("runDigestTriggerPollSlot", () => {
   });
 
   it("runs daily-digest with force=true and clears the intent on success", async () => {
-    vi.mocked(buildTwitterCreds).mockReturnValueOnce({
+    vi.mocked(buildTwitterCreds).mockReturnValue({
       apiKey: "tw-key",
       apiSecret: "tw-secret",
       accessToken: "tw-token",

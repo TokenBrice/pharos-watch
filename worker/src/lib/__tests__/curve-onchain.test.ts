@@ -37,7 +37,10 @@ beforeEach(() => {
   mockBlockNumber.mockResolvedValue(FRESH_BLOCK_NUMBER);
   mockBlockTimestamp.mockResolvedValue(FRESH_BLOCK_TIMESTAMP);
 });
-afterEach(() => vi.clearAllMocks());
+afterEach(() => {
+  vi.clearAllMocks();
+  vi.useRealTimers();
+});
 
 describe("fetchCurveOnchainPrices", () => {
   it("includes verified safe direct Curve configs with explicit indices and decimals", () => {
@@ -231,6 +234,29 @@ describe("fetchCurveOnchainPrices", () => {
     expect(outcome.value.prices.get("gho-aave")).toBeCloseTo(expectedGho, 3);
     expect(outcome.value.routeTypeByCoinId.get("gho-aave")).toBe("one-hop");
     expect(outcome.value.hopDepthByCoinId.get("gho-aave")).toBe(1);
+  });
+
+  it("pins each cross-chain hop and propagates the older dependency timestamp", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(1_800_000_000_000);
+    mockBlockNumber.mockImplementation(async (chain) => chain === "ethereum" ? 100 : 200);
+    mockBlockTimestamp.mockImplementation(async (chain) => chain === "ethereum" ? 1_799_999_800 : 1_799_999_980);
+    const via = makeCurveConfig({ stablecoinId: "via", chain: "ethereum" });
+    const dependent = makeCurveConfig({
+      stablecoinId: "dependent", chain: "arbitrum",
+      poolAddress: "0x0000000000000000000000000000000000000002",
+      hop: { viaStablecoinId: "via" },
+    });
+    mockEvmCall.mockResolvedValue(hexWord(1_000_000));
+    const outcome = await fetchCurveOnchainPrices([dependent, via]);
+    expect([...outcome.value.prices]).toEqual([["dependent", 1], ["via", 1]]);
+    expect([...outcome.value.observedAtByCoinId]).toEqual([
+      ["dependent", 1_799_999_800], ["via", 1_799_999_800],
+    ]);
+    expect(mockEvmCall.mock.calls.map(([chain, target, , block]) => [chain, target, block]))
+      .toEqual([["arbitrum", dependent.poolAddress, 200], ["ethereum", via.poolAddress, 100]]);
+    expect(mockBlockTimestamp.mock.calls.map(([chain, block]) => [chain, block]))
+      .toEqual([["arbitrum", 200], ["ethereum", 100]]);
   });
 
   it("resolves one-hop prices even when via config appears later", async () => {
@@ -530,17 +556,18 @@ describe("fetchCurveOnchainPrices", () => {
     expect(mockBlockTimestamp).toHaveBeenCalledTimes(1);
   });
 
-  it("rejects the whole run when block timestamp is older than 300s", async () => {
-    const stale = Math.floor(Date.now() / 1000) - 400; // >300s old
-    mockBlockTimestamp.mockResolvedValue(stale);
-    const mockHexResponse = hexWord(999000);
-    mockEvmCall.mockResolvedValue(mockHexResponse);
-
-    const config = makeCurveConfig();
-    const outcome = await fetchCurveOnchainPrices([config]);
-    expect(outcome.kind).toBe("upstream-error");
-    expect(outcome.value.prices.size).toBe(0);
-  });
+  it.each([[300, "ok", 1], [301, "upstream-error", 0]] as const)(
+    "applies the block freshness cutoff at age %s", async (age, kind, size) => {
+      vi.useFakeTimers();
+      vi.setSystemTime(1_800_000_000_000);
+      mockBlockTimestamp.mockResolvedValue(1_800_000_000 - age);
+      mockEvmCall.mockResolvedValue(hexWord(1_000_000));
+      const outcome = await fetchCurveOnchainPrices([makeCurveConfig()]);
+      expect(outcome.kind).toBe(kind);
+      expect(outcome.value.prices.size).toBe(size);
+      if (age === 300) expect(outcome.value.prices.get("usdt-tether")).toBe(1);
+    },
+  );
 
   it("returns upstream-error when block number RPC fails", async () => {
     mockBlockNumber.mockResolvedValue(null);

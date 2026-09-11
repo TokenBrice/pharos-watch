@@ -15,6 +15,9 @@ import {
   runCanaryChecks,
 } from "../canary-checks";
 import { buildDewsStablecoinIdsDigest } from "../dews-publication-pointer";
+import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
+
+const fixtures = createLatestSchemaFixtureTracker();
 
 const NOW = 1_775_900_000;
 const EXPECTED_CANARY_CHECK_IDS = [
@@ -66,6 +69,7 @@ beforeEach(() => {
 afterEach(() => {
   vi.useRealTimers();
   vi.restoreAllMocks();
+  fixtures.closeAll();
 });
 
 function stablecoinsPayload(activeCount = ACTIVE_IDS.size) {
@@ -151,6 +155,8 @@ function healthyD1(
     rowCount?: number;
     latestPublishedRows?: number;
     latestGenerationPublishedRows?: number;
+    retainedLegacyRows?: number;
+    retainedOlderPublishedRows?: number;
     unpublishedRows?: number;
     generationCount?: number;
     globalRows?: number;
@@ -198,8 +204,8 @@ function healthyD1(
       matchBinds: ["dex-gen-1"],
       first: {
         latest_generation_rows: latestGenerationPublishedRows,
-        retained_legacy_rows: 0,
-        retained_older_published_rows: 0,
+        retained_legacy_rows: dex.retainedLegacyRows ?? 0,
+        retained_older_published_rows: dex.retainedOlderPublishedRows ?? 0,
       },
       rows: [],
     },
@@ -434,6 +440,8 @@ describe("worker data invariant canaries", () => {
         rowCount: 377,
         latestPublishedRows: 368,
         latestGenerationPublishedRows: 368,
+        retainedLegacyRows: 4,
+        retainedOlderPublishedRows: 5,
         generationCount: 2,
       }),
       { observedAt: NOW, mode: "status" },
@@ -448,8 +456,8 @@ describe("worker data invariant canaries", () => {
         rowCount: 368,
         latestPublishedRows: 368,
         latestGenerationPublishedRows: 368,
-        retainedLegacyRows: 0,
-        retainedOlderPublishedRows: 0,
+        retainedLegacyRows: 4,
+        retainedOlderPublishedRows: 5,
       }),
     });
     expect(summary.worstStatus).toBe("ok");
@@ -567,99 +575,49 @@ describe("worker data invariant canaries", () => {
     ]);
   });
 
-  it("persists latest rows idempotently and loads status summaries", async () => {
+  it("persists idempotently and selects the latest active checks in the requested mode", async () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date(NOW * 1000));
-    const db = healthyD1();
-
+    const { db, sqlite } = fixtures.open();
     await runAndPersistCanaryChecks(db, { observedAt: NOW, mode: "status" });
-    await runAndPersistCanaryChecks(db, { observedAt: NOW, mode: "status" });
-    const inserts = db.getHistory().filter((entry) => entry.sql.includes("INSERT INTO worker_canary_runs"));
-    expect(inserts).toHaveLength(16);
-
-    const status = await loadCanaryStatus(
-      mockD1([
-        {
-          match: "FROM worker_canary_runs",
-          rows: [
-            {
-              check_id: "stablecoins-cache-active-count",
-              status: "ok",
-              severity: "info",
-              observed_at: NOW,
-              duration_ms: 5,
-              metadata_json: JSON.stringify({
-                label: "Stablecoins cache active count",
-                description: "The stablecoins cache contains every active registry asset or an owned unexpired waiver.",
-                activeCount: ACTIVE_IDS.size,
-                mode: "status",
-              }),
-              error: null,
-            },
-            {
-              check_id: "psi-latest-sample",
-              status: "ok",
-              severity: "info",
-              observed_at: NOW,
-              duration_ms: 3,
-              metadata_json: JSON.stringify({
-                label: "PSI latest sample",
-                description: "The latest PSI sample exists.",
-              }),
-              error: null,
-            },
-          ],
-        },
-      ]),
-      NOW + 60,
-      "status",
-    );
-
+    const summary = await runAndPersistCanaryChecks(db, { observedAt: NOW, mode: "status" });
+    expect(sqlite.prepare("SELECT check_id, COUNT(*) AS count FROM worker_canary_runs GROUP BY check_id ORDER BY check_id").all())
+      .toEqual([...EXPECTED_CANARY_CHECK_IDS].sort().map((check_id) => ({ check_id, count: 1 })));
+    await runAndPersistCanaryChecks(db, { observedAt: NOW - 30, mode: "status" });
+    await runAndPersistCanaryChecks(db, { observedAt: NOW + 30, mode: "alert" });
+    sqlite.exec(`INSERT INTO worker_canary_runs
+      (id, check_id, idempotency_key, status, severity, observed_at, duration_ms, metadata_json, error, mode)
+      VALUES ('retired', 'report-card-cache-methodology', 'retired', 'error', 'error', ${NOW + 40}, 1, '{}', 'retired', 'status')`);
+    const status = await loadCanaryStatus(db, NOW + 60, "status");
+    expect(Object.keys(status.checks).sort()).toEqual([...EXPECTED_CANARY_CHECK_IDS].sort());
     expect(status).toMatchObject({
-      checkedAt: NOW + 60,
-      status: "healthy",
       latestRunAt: NOW,
-      totalChecks: 2,
-      okCount: 2,
+      totalChecks: summary.totalChecks,
+      okCount: summary.okCount,
+      errorCount: summary.errorCount,
+      degradedCount: summary.degradedCount,
       staleCount: 0,
     });
-    expect(status.checks["stablecoins-cache-active-count"]).toMatchObject({
-      status: "ok",
-      severity: "info",
-      metadata: expect.objectContaining({
-        activeCount: ACTIVE_IDS.size,
-        mode: "status",
-      }),
-    });
+    const alert = await loadCanaryStatus(db, NOW + 60, "alert");
+    expect(alert.latestRunAt).toBe(NOW + 30);
+    expect(Object.keys(alert.checks).sort()).toEqual([...EXPECTED_CANARY_CHECK_IDS].sort());
+  });
 
-    const degradedStatus = await loadCanaryStatus(
-      mockD1([
-        {
-          match: "FROM worker_canary_runs",
-          rows: [
-            {
-              check_id: "dews-latest-signal",
-              status: "error",
-              severity: "error",
-              observed_at: NOW,
-              duration_ms: 4,
-              metadata_json: JSON.stringify({
-                label: "DEWS latest signal",
-                description: "DEWS latest stress-signal rows exist.",
-              }),
-              error: "2 DEWS stress signals have out-of-range scores",
-            },
-          ],
-        },
-      ]),
-      NOW + 60,
-      "status",
-    );
-    expect(degradedStatus).toMatchObject({
-      status: "degraded",
-      errorCount: 1,
-      staleCount: 0,
-    });
+  it("maps fresh persisted checks to healthy and either warning class to degraded", async () => {
+    const { db, sqlite } = fixtures.open();
+    const insert = sqlite.prepare(`INSERT INTO worker_canary_runs
+      (id, check_id, idempotency_key, status, severity, observed_at, duration_ms, metadata_json, error, mode)
+      VALUES (?, ?, ?, 'ok', 'info', ?, 1, '{}', NULL, 'status')`);
+    for (const id of EXPECTED_CANARY_CHECK_IDS) insert.run(id, id, id, NOW);
+    expect((await loadCanaryStatus(db, NOW + 60, "status")).status).toBe("healthy");
+
+    const update = sqlite.prepare("UPDATE worker_canary_runs SET status = ? WHERE check_id = ?");
+    update.run("degraded", EXPECTED_CANARY_CHECK_IDS[0]);
+    expect((await loadCanaryStatus(db, NOW + 60, "status")).status).toBe("degraded");
+    update.run("error", EXPECTED_CANARY_CHECK_IDS[0]);
+    expect((await loadCanaryStatus(db, NOW + 60, "status")).status).toBe("degraded");
+    update.run("ok", EXPECTED_CANARY_CHECK_IDS[0]);
+    expect((await loadCanaryStatus(db, NOW + 60, "status")).status).toBe("healthy");
   });
 
   it.each(["off", "shadow"] as const)(
@@ -686,50 +644,6 @@ describe("worker data invariant canaries", () => {
     },
   );
 
-  it("queries only the current authoritative canary mode", async () => {
-    const db = mockD1(
-      [
-        {
-          match: "FROM worker_canary_runs",
-          rows: [],
-        },
-      ],
-      { requireMatch: true },
-    );
-
-    await loadCanaryStatus(db, NOW + 60, "alert");
-
-    expect(db.getHistory()[0]?.binds).toEqual([
-      "alert",
-      ...EXPECTED_CANARY_CHECK_IDS,
-      "alert",
-      ...EXPECTED_CANARY_CHECK_IDS,
-    ]);
-  });
-
-  it("constrains status summaries to active canary check ids", async () => {
-    const db = mockD1(
-      [
-        {
-          match: "FROM worker_canary_runs",
-          matchBinds: [
-            "status",
-            ...EXPECTED_CANARY_CHECK_IDS,
-            "status",
-            ...EXPECTED_CANARY_CHECK_IDS,
-          ],
-          rows: [],
-        },
-      ],
-      { requireMatch: true },
-    );
-
-    await loadCanaryStatus(db, NOW + 60, "status");
-
-    const query = db.getHistory()[0];
-    expect(query?.sql).toContain("check_id IN");
-    expect(query?.binds).not.toContain("report-card-cache-methodology");
-  });
 
   it("prunes canary run rows older than the 14-day retention cutoff", async () => {
     const db = mockD1([

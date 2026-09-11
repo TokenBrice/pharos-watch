@@ -18,16 +18,17 @@ import {
 } from "../maintenance/generate-compact-logos";
 
 /** Deterministic high-entropy PNG that clears both the size and byte gates. */
-async function writeNoiseLogo(logosDir: string, name: string, size: number): Promise<void> {
+async function writeNoiseLogo(logosDir: string, name: string, size: number, height = size, seed = 0x2f6e2b1): Promise<void> {
   // LCG per byte, taking the high bits (low bytes repeat with period 256):
   // keeps PNG row filters from collapsing the image to nothing.
-  let state = 0x2f6e2b1;
-  const data = Buffer.alloc(size * size * 3);
+  let state = seed;
+  const data = Buffer.alloc(size * height * 3);
   for (let i = 0; i < data.length; i += 1) {
     state = (Math.imul(state, 1664525) + 1013904223) >>> 0;
     data[i] = state >>> 24;
   }
-  await sharp(data, { raw: { width: size, height: size, channels: 3 } }).png().toFile(join(logosDir, name));
+  const image = sharp(data, { raw: { width: size, height, channels: 3 } });
+  await (name.endsWith(".jpg") ? image.jpeg({ quality: 100 }) : image.png()).toFile(join(logosDir, name));
 }
 
 /** Flat-color PNG: large canvas but far below the 2500-byte gate. */
@@ -49,6 +50,13 @@ function makePaths(): { paths: CompactLogoPaths } {
   return { paths: { logosDir, compactDir: join(logosDir, "compact"), mapPath: join(root, "map.generated.json") } };
 }
 
+async function makeGeneratedLogoFixture(): Promise<{ paths: CompactLogoPaths }> {
+  const { paths } = makePaths();
+  await writeNoiseLogo(paths.logosDir, "alpha.png", 100);
+  await generateCompactLogos(paths);
+  return { paths };
+}
+
 afterEach(() => {
   while (roots.length > 0) {
     const root = roots.pop();
@@ -57,6 +65,33 @@ afterEach(() => {
 });
 
 describe("generateCompactLogos", () => {
+  it("contains non-square PNG and JPEG images with transparent padding", async () => {
+    const { paths } = makePaths();
+    await writeNoiseLogo(paths.logosDir, "wide.png", 128, 64);
+    await writeNoiseLogo(paths.logosDir, "tall.jpg", 64, 128);
+    expect((await sharp(join(paths.logosDir, "tall.jpg")).metadata()).format).toBe("jpeg");
+    expect((await generateCompactLogos(paths)).ok).toBe(true);
+    for (const name of ["wide", "tall"]) {
+      const { data, info } = await sharp(join(paths.compactDir, `${name}.webp`)).ensureAlpha().raw().toBuffer({ resolveWithObject: true });
+      expect([info.width, info.height]).toEqual([32, 32]);
+      for (let y = 0; y < 32; y += 1) {
+        for (let x = 0; x < 32; x += 1) {
+          const coordinate = name === "wide" ? y : x;
+          expect(data[(y * 32 + x) * 4 + 3]).toBe(coordinate >= 8 && coordinate < 24 ? 255 : 0);
+        }
+      }
+    }
+  });
+
+  it("qualifies dimensions at 65 but not 64, even when only one axis exceeds the gate", async () => {
+    const { paths } = makePaths();
+    await writeNoiseLogo(paths.logosDir, "edge.png", 64);
+    await writeNoiseLogo(paths.logosDir, "wide.png", 65, 64);
+    await writeNoiseLogo(paths.logosDir, "tall.png", 64, 65);
+    expect((await generateCompactLogos(paths)).generated).toBe(2);
+    expect(readdirSync(paths.compactDir).sort()).toEqual(["tall.webp", "wide.webp"]);
+  });
+
   it("generates 32x32 variants only for logos past both gates and writes the sorted map", async () => {
     const { paths } = makePaths();
     await writeNoiseLogo(paths.logosDir, "alpha.png", 100);
@@ -84,9 +119,7 @@ describe("generateCompactLogos", () => {
   });
 
   it("prunes compact assets whose source logo disappeared", async () => {
-    const { paths } = makePaths();
-    await writeNoiseLogo(paths.logosDir, "alpha.png", 100);
-    await generateCompactLogos(paths);
+    const { paths } = await makeGeneratedLogoFixture();
 
     rmSync(join(paths.logosDir, "alpha.png"));
     await writeNoiseLogo(paths.logosDir, "gamma.png", 100);
@@ -119,6 +152,16 @@ describe("generateCompactLogos", () => {
 });
 
 describe("checkCompactLogos", () => {
+  it("detects changed source pixels without writing any source, output, or map bytes", async () => {
+    const { paths } = await makeGeneratedLogoFixture();
+    await writeNoiseLogo(paths.logosDir, "alpha.png", 100, 100, 123);
+    const files = [join(paths.logosDir, "alpha.png"), join(paths.compactDir, "alpha.webp"), paths.mapPath];
+    const before = files.map((file) => readFileSync(file));
+    expect((await checkCompactLogos(paths)).problems.map((problem) => problem.kind)).toEqual(["stale-output"]);
+    expect(files.map((file) => readFileSync(file))).toEqual(before);
+    expect(readdirSync(paths.compactDir)).toEqual(["alpha.webp"]);
+  });
+
   it("passes when every committed output is fresh", async () => {
     const { paths } = makePaths();
     await writeNoiseLogo(paths.logosDir, "alpha.png", 100);
@@ -133,9 +176,7 @@ describe("checkCompactLogos", () => {
   });
 
   it("fails on a stale or missing variant map", async () => {
-    const { paths } = makePaths();
-    await writeNoiseLogo(paths.logosDir, "alpha.png", 100);
-    await generateCompactLogos(paths);
+    const { paths } = await makeGeneratedLogoFixture();
 
     writeFileSync(paths.mapPath, "{}\n");
     const stale = await checkCompactLogos(paths);
@@ -163,9 +204,7 @@ describe("checkCompactLogos", () => {
   });
 
   it("fails on a compact output whose bytes no longer match its source", async () => {
-    const { paths } = makePaths();
-    await writeNoiseLogo(paths.logosDir, "alpha.png", 100);
-    await generateCompactLogos(paths);
+    const { paths } = await makeGeneratedLogoFixture();
 
     writeFileSync(join(paths.compactDir, "alpha.webp"), Buffer.from([1, 2, 3]));
 
@@ -176,9 +215,7 @@ describe("checkCompactLogos", () => {
   });
 
   it("fails on an orphaned compact asset", async () => {
-    const { paths } = makePaths();
-    await writeNoiseLogo(paths.logosDir, "alpha.png", 100);
-    await generateCompactLogos(paths);
+    const { paths } = await makeGeneratedLogoFixture();
 
     writeFileSync(join(paths.compactDir, "orphan.webp"), Buffer.from([1, 2, 3]));
 

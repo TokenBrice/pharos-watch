@@ -49,6 +49,24 @@ describe("command palette model", () => {
 
     expect(ranked.map((item) => item.id)).toEqual(["active-coin", "frozen-coin"]);
   });
+  it("keeps higher-scored frozen entries above lower-scored active ones", () => {
+    const candidates = [
+      { id: "active-coin", score: 3, status: "active" as const },
+      { id: "frozen-coin", score: 5, status: "frozen" as const },
+    ];
+    const ranked = rankCommandPaletteResults(candidates);
+    expect(ranked[0].id).toBe("frozen-coin");
+  });
+
+  it("does not mutate the input array", () => {
+    const candidates = [
+      { id: "frozen-coin", score: 5, status: "frozen" as const },
+      { id: "active-coin", score: 5, status: "active" as const },
+    ];
+    const original = [...candidates];
+    rankCommandPaletteResults(candidates);
+    expect(candidates).toEqual(original);
+  });
 
   it("keeps exact ticker matches ahead of higher-prominence fuzzy matches", () => {
     const ranked = rankCommandPaletteResults([
@@ -193,5 +211,102 @@ describe("command palette model", () => {
 
       expect(results.some((result) => result.section === "Pages" && result.href === "/depeg/")).toBe(true);
     }
+  });
+
+  it("floats exact-intent pages above coin substring matches", () => {
+    const pageIntentQueries = [
+      { query: "api", href: "/api/", label: "API Access" },
+      { query: "yield", href: "/yield/", label: "Yield Intelligence" },
+      { query: "depeg", href: "/depeg/", label: "Depeg & Recovery" },
+      { query: "glossary", href: "/learn/glossary/", label: "Glossary" },
+      { query: "psi", href: "/stability-index/", label: "Stability Index" },
+      { query: "mica", href: "/compliance/", label: "Compliance" },
+    ];
+
+    for (const { query, href, label } of pageIntentQueries) {
+      const groups = groupCommandPaletteResults(
+        buildCommandPaletteResultDescriptors({ query, history: [], isDark: false }),
+      );
+      const first = groups[0]?.items[0];
+
+      expect(first, `first result for "${query}"`).toMatchObject({
+        section: "Pages",
+        href,
+        label,
+        lead: true,
+      });
+    }
+  });
+
+  it("leads with the peg-currency page for currency-name queries", () => {
+    const groups = groupCommandPaletteResults(
+      buildCommandPaletteResultDescriptors({ query: "euro", history: [], isDark: false }),
+    );
+
+    expect(groups[0]?.section).toBe("Peg currencies");
+    expect(groups[0]?.items[0]).toMatchObject({
+      href: "/stablecoins/eur/",
+      lead: true,
+    });
+  });
+
+  it("keeps exact coin symbols above page leads", () => {
+    for (const query of ["usdc", "usde", "tether", "eurc"]) {
+      const groups = groupCommandPaletteResults(
+        buildCommandPaletteResultDescriptors({ query, history: [], isDark: false }),
+      );
+      const first = groups[0]?.items[0];
+
+      expect(first, `first result for "${query}"`).toMatchObject({ section: "Stablecoins", kind: "stablecoin" });
+    }
+
+    // The gate is the exact symbol: a page may lead only when no coin matched it.
+    const eurcResults = buildCommandPaletteResultDescriptors({ query: "eurc", history: [], isDark: false });
+    expect(eurcResults.filter((result) => result.lead)).toHaveLength(0);
+  });
+
+  it("recovers coin lookups from a single-character typo", () => {
+    const groups = groupCommandPaletteResults(
+      buildCommandPaletteResultDescriptors({ query: "usdcc", history: [], isDark: false }),
+    );
+
+    expect(groups[0]?.items[0]).toMatchObject({
+      section: "Stablecoins",
+      href: "/stablecoin/usdc-circle/",
+      label: "USD Coin",
+    });
+  });
+
+  it("indexes case studies by title, slug words, and coin symbols", () => {
+    const results = buildCommandPaletteResultDescriptors({ query: "terra", history: [], isDark: false });
+
+    expect(
+      results.some(
+        (result) =>
+          result.section === "Case studies" && result.href === "/learn/case-studies/terra-ust-2022/",
+      ),
+    ).toBe(true);
+  });
+
+  it("emits yield deep-link rows for eligible coins on yield-intent queries", () => {
+    const results = buildCommandPaletteResultDescriptors({ query: "yield", history: [], isDark: false });
+    const yieldRows = results.filter((result) => result.kind === "stablecoin-yield");
+
+    expect(yieldRows.length).toBeGreaterThan(0);
+    expect(yieldRows.length).toBeLessThanOrEqual(3);
+    for (const row of yieldRows) {
+      expect(row.href).toMatch(/^\/stablecoin\/[a-z0-9-]+\/yield\/$/);
+      expect(row.label).toMatch(/ · Yield$/);
+    }
+
+    // USDe itself has no static yield page (only sUSDe does); the gate must
+    // never emit a row for it.
+    const usdeYield = buildCommandPaletteResultDescriptors({ query: "usde yield", history: [], isDark: false });
+    expect(
+      usdeYield.some((result) => result.kind === "stablecoin-yield" && result.id === "coin-yield-usde-ethena"),
+    ).toBe(false);
+    expect(
+      usdeYield.some((result) => result.kind === "stablecoin" && result.href === "/stablecoin/usde-ethena/"),
+    ).toBe(true);
   });
 });

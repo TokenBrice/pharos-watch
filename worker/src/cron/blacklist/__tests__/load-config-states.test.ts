@@ -1,12 +1,34 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { mockD1 } from "@shared/test-utils/mock-d1";
 import { makeNoopD1 } from "../../../test-helpers/noop-d1";
 import { loadBlacklistConfigStates } from "../sync-support";
 import { CONTRACT_CONFIGS } from "../../../lib/blacklist-contracts";
 import { normalizeBlacklistSyncStateKey } from "../../../lib/db";
-import { excludeFrozenIds } from "../../shared/exclude-frozen";
+vi.mock("../../../lib/blacklist-contracts", () => ({
+  CONTRACT_CONFIGS: [
+    {
+      configKey: "ethereum-0xAbCd",
+      stablecoinId: "usdt-tether",
+      stablecoin: "USDT",
+      chain: { chainId: "ethereum", chainName: "Ethereum", evmChainId: 1, type: "evm", explorerUrl: "https://etherscan.io" },
+      contractAddress: "0xAbCd",
+      decimals: 6,
+      events: [],
+    },
+    {
+      configKey: "ethereum-0xEf01",
+      stablecoinId: "usdc-circle",
+      stablecoin: "USDC",
+      chain: { chainId: "ethereum", chainName: "Ethereum", evmChainId: 1, type: "evm", explorerUrl: "https://etherscan.io" },
+      contractAddress: "0xEf01",
+      decimals: 6,
+      events: [],
+    },
+  ],
+}));
 
-const ELIGIBLE = excludeFrozenIds(CONTRACT_CONFIGS, (c) => c.stablecoinId);
+const ELIGIBLE = CONTRACT_CONFIGS;
+afterEach(() => vi.useRealTimers());
 
 describe("loadBlacklistConfigStates", () => {
   it("issues a single bulk blacklist_sync_state query instead of one per config", async () => {
@@ -19,6 +41,7 @@ describe("loadBlacklistConfigStates", () => {
   });
 
   it("retries the bulk blacklist_sync_state query after transient D1 overload", async () => {
+    vi.useFakeTimers();
     const first = ELIGIBLE[0];
     let attempts = 0;
     const db = makeNoopD1({
@@ -38,7 +61,9 @@ describe("loadBlacklistConfigStates", () => {
       dump: async () => new ArrayBuffer(0),
     });
 
-    const { configStates } = await loadBlacklistConfigStates(db);
+    const pending = loadBlacklistConfigStates(db);
+    await vi.runAllTimersAsync();
+    const { configStates } = await pending;
 
     expect(attempts).toBe(2);
     expect(configStates.find((state) => state.configKey === first.configKey)?.cursorValue).toBe(4321);
@@ -67,21 +92,21 @@ describe("loadBlacklistConfigStates", () => {
   });
 
   it("matches a row stored under the normalized config key", async () => {
-    // Pick a config whose key normalizes to a distinct value (mixed-case
-    // contract address, non-tron prefix); skip if none exist in the registry.
-    const target = ELIGIBLE.find((c) => normalizeBlacklistSyncStateKey(c.configKey) !== c.configKey);
-    if (!target) return;
+    const target = ELIGIBLE[0]!;
 
     const db = mockD1([
       {
         match: "FROM blacklist_sync_state",
-        rows: [{ config_key: normalizeBlacklistSyncStateKey(target.configKey), last_block: 999 }],
+        rows: [
+          { config_key: target.configKey, last_block: 999, attempt_generation: 2 },
+          { config_key: normalizeBlacklistSyncStateKey(target.configKey), last_block: 500, cursor_value: 700, attempt_generation: 8 },
+        ],
       },
     ]);
 
     const { configStates } = await loadBlacklistConfigStates(db);
     const state = configStates.find((s) => s.configKey === target.configKey);
-    expect(state?.cursorValue).toBe(999);
+    expect(state).toMatchObject({ configKey: target.configKey, cursorValue: 999, attemptGeneration: 8 });
   });
 
   it("loads typed attempt state while dual-reading legacy last_block", async () => {

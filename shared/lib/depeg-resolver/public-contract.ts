@@ -5,6 +5,35 @@ export type DdrPublicContractValidationResult =
   | { ok: true; basePayloadHash: string }
   | { ok: false; reason: string };
 
+export const DDR_DURATION_EXCEEDED_REASON = "duration-exceeded";
+
+/**
+ * Re-ages the duration half of each row's live overlay against `nowSec`.
+ *
+ * `live.stale` is a payload invariant, not a build artifact: a frozen row whose
+ * anchored `duration.medianResolveAt` has passed no longer bounds the incident,
+ * so it must never be served as fresh. The producer computes it once per cron
+ * build, but the payload is served from cache for up to its TTL, so a row can
+ * outlive its median between build and request. Readers therefore re-evaluate
+ * it with the request clock. Frozen duration evidence, and every other field,
+ * is left untouched — including the live-stripped rows the publication hashes
+ * are computed over.
+ */
+export function applyDurationStaleness(payload: DdrResponse, nowSec: number): DdrResponse {
+  let rows: DdrResponse["rows"] | null = null;
+  for (let index = 0; index < payload.rows.length; index += 1) {
+    const row = payload.rows[index];
+    const medianResolveAt = row.frozen?.duration.medianResolveAt ?? null;
+    if (row.live.stale || medianResolveAt == null || nowSec <= medianResolveAt) continue;
+    rows ??= [...payload.rows];
+    rows[index] = {
+      ...row,
+      live: { ...row.live, stale: true, degradedReason: row.live.degradedReason ?? DDR_DURATION_EXCEEDED_REASON },
+    };
+  }
+  return rows ? { ...payload, rows } : payload;
+}
+
 function stripLive(row: DdrV2ResponseRow): DdrV2Row {
   const { live: _live, ...baseRow } = row;
   const prediction = recordValue(baseRow.prediction);

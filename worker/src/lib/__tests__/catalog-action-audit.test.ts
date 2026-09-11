@@ -1,8 +1,8 @@
 import { DatabaseSync } from "node:sqlite";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { getEndpointDefinitionByKey, type EndpointDefinition, type EndpointKey } from "@shared/lib/api-endpoints";
-import { createSqliteD1 } from "../../test-helpers/sqlite-d1";
-import { createLatestSchemaSqlite } from "../../test-helpers/latest-schema-sqlite";
+import { createSqliteD1 } from "@shared/test-utils/sqlite-d1";
+import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
 import {
   auditCatalogActionResponse,
   auditCatalogActionResponseSafely,
@@ -44,13 +44,16 @@ function rows(sqlite: DatabaseSync): AuditRow[] {
     .all() as unknown as AuditRow[];
 }
 
+const fixtures = createLatestSchemaFixtureTracker();
+
 afterEach(() => {
   vi.restoreAllMocks();
+  fixtures.closeAll();
 });
 
 describe("catalog action canonical audit", () => {
   it("records only allowlisted scope and outcome metadata", async () => {
-    const sqlite = createLatestSchemaSqlite().sqlite;
+    const sqlite = fixtures.open().sqlite;
     const db = createSqliteD1(sqlite);
     const plaintextBodySecret = "plaintext-body-secret";
     const authSecret = "bearer-auth-secret";
@@ -99,7 +102,7 @@ describe("catalog action canonical audit", () => {
   });
 
   it("keeps one row for a same-key replay and adds a row for an explicit new intent", async () => {
-    const sqlite = createLatestSchemaSqlite().sqlite;
+    const sqlite = fixtures.open().sqlite;
     const db = createSqliteD1(sqlite);
     const definition = endpoint("backfill-depegs");
 
@@ -129,7 +132,7 @@ describe("catalog action canonical audit", () => {
 
   it("lets a replay backfill a transiently missing first audit", async () => {
     const warning = vi.spyOn(console, "warn").mockImplementation(() => undefined);
-    const sqlite = createLatestSchemaSqlite().sqlite;
+    const sqlite = fixtures.open().sqlite;
     // Model the table being transiently absent by dropping the real one and
     // restoring its production DDL verbatim mid-test.
     const auditDdl = (sqlite
@@ -163,7 +166,7 @@ describe("catalog action canonical audit", () => {
   });
 
   it("records an explicit mint/burn live request as live despite preview-only catalog metadata", async () => {
-    const sqlite = createLatestSchemaSqlite().sqlite;
+    const sqlite = fixtures.open().sqlite;
     const db = createSqliteD1(sqlite);
 
     await auditCatalogActionResponse({
@@ -177,7 +180,7 @@ describe("catalog action canonical audit", () => {
   });
 
   it("does not let a pre-idempotency failure replace the original intent outcome", async () => {
-    const sqlite = createLatestSchemaSqlite().sqlite;
+    const sqlite = fixtures.open().sqlite;
     const db = createSqliteD1(sqlite);
     const definition = endpoint("backfill-depegs");
     const intentKey = "operator-known-idempotency-key";
@@ -217,7 +220,7 @@ describe("catalog action canonical audit", () => {
   });
 
   it("lets the original success replace an earlier replay-unknown placeholder", async () => {
-    const sqlite = createLatestSchemaSqlite().sqlite;
+    const sqlite = fixtures.open().sqlite;
     const db = createSqliteD1(sqlite);
     const definition = endpoint("backfill-depegs");
     const req = request("/api/backfill-depegs?dry-run=false", "racing-intent");
@@ -255,7 +258,7 @@ describe("catalog action canonical audit", () => {
   });
 
   it("distinguishes an absent batch target from an unsafe configured target", async () => {
-    const sqlite = createLatestSchemaSqlite().sqlite;
+    const sqlite = fixtures.open().sqlite;
     const db = createSqliteD1(sqlite);
     const definition = endpoint("backfill-depegs");
     const unsafeTarget = "../../secret-token";
@@ -282,7 +285,7 @@ describe("catalog action canonical audit", () => {
   });
 
   it("does not let a request-mismatch conflict replace the original intent outcome", async () => {
-    const sqlite = createLatestSchemaSqlite().sqlite;
+    const sqlite = fixtures.open().sqlite;
     const db = createSqliteD1(sqlite);
     const definition = endpoint("backfill-depegs");
 
@@ -314,7 +317,7 @@ describe("catalog action canonical audit", () => {
   });
 
   it("classifies accepted, queued, definite-error, and execution-unknown outcomes", async () => {
-    const sqlite = createLatestSchemaSqlite().sqlite;
+    const sqlite = fixtures.open().sqlite;
     const db = createSqliteD1(sqlite);
     const cases = [
       {
@@ -369,7 +372,7 @@ describe("catalog action canonical audit", () => {
   });
 
   it("leaves richer handler-owned auditing to the handler", async () => {
-    const sqlite = createLatestSchemaSqlite().sqlite;
+    const sqlite = fixtures.open().sqlite;
     const db = createSqliteD1(sqlite);
     const canonical = endpoint("trigger-digest");
     const handlerOwned: EndpointDefinition = {

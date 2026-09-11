@@ -1,17 +1,22 @@
 import { execFileSync } from "node:child_process";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it } from "vitest";
 import { buildGeneratedArtifactPhases, GENERATED_ARTIFACT_REGISTRY } from "../lib/automation-registry.mjs";
+import { createTempRepoTracker } from "./helpers/test-state";
+
+const roots = createTempRepoTracker("artifact-lifecycle");
+afterEach(() => roots.cleanup());
 
 const REPO_ROOT = resolve(import.meta.dirname, "../..");
 
-function isGitIgnored(path: string): boolean {
+function isGitIgnored(path: string, root = REPO_ROOT): boolean {
   try {
-    execFileSync("git", ["check-ignore", "-q", "--", path], { cwd: REPO_ROOT });
+    execFileSync("git", ["check-ignore", "-q", "--", path], { cwd: root, stdio: "pipe" });
     return true;
-  } catch {
-    return false;
+  } catch (error) {
+    if (error && typeof error === "object" && "status" in error && error.status === 1) return false;
+    throw error;
   }
 }
 
@@ -44,14 +49,24 @@ function selectedIds(options: Record<string, unknown>): string[] {
 
 const registry = GENERATED_ARTIFACT_REGISTRY as RegistryArtifact[];
 
-function isFullyGitIgnored(artifact: RegistryArtifact): boolean {
-  return (
-    artifact.outputPaths.length > 0 &&
-    artifact.outputPaths.every((path) => !path.includes("*") && isGitIgnored(path))
-  );
+function hasIgnoredOutput(artifact: RegistryArtifact, root = REPO_ROOT): boolean {
+  return artifact.outputPaths.some((path) => !/[*?\[\]{}]/.test(path) && isGitIgnored(path, root));
 }
 
 describe("generated artifact lifecycle", () => {
+  it("requires bootstrap for mixed tracked and ignored outputs and propagates Git failures", () => {
+    const root = roots.makeRoot();
+    execFileSync("git", ["init", "-q", root]);
+    roots.writeText(root, ".gitignore", "ignored.ts\n");
+    roots.writeText(root, "tracked.ts", "export {};\n");
+    execFileSync("git", ["add", "tracked.ts"], { cwd: root });
+    const artifact: RegistryArtifact = {
+      id: "mixed", buildLifecycle: "compile-input", outputPaths: ["tracked.ts", "ignored.ts"],
+    };
+    expect(hasIgnoredOutput(artifact, root)).toBe(true);
+    expect(isGitIgnored("tracked.ts", root)).toBe(false);
+    expect(() => isGitIgnored("ignored.ts", roots.makeRoot())).toThrow();
+  });
   it("uses offline snapshots for bootstrap and live generation for compile inputs", () => {
     const snapshot = (options: Record<string, unknown>) => buildGeneratedArtifactPhases(options)
       .flatMap(({ artifacts }) => artifacts).find((artifact) => artifact.id === "stablecoin-detail-snapshots")!;
@@ -75,7 +90,6 @@ describe("generated artifact lifecycle", () => {
     expect(selectedIds({ buildLifecycles: ["compile-input"] })).toEqual([
       "stablecoin-catalog",
       "sitemap-dates",
-      "case-study-client-index",
       "docs-metadata",
       "postman",
       "openapi",
@@ -85,6 +99,7 @@ describe("generated artifact lifecycle", () => {
       "stablecoin-client-registry",
       "stablecoin-client-projections",
       "stablecoin-detail-snapshots",
+      "case-study-client-index",
       "editorial-style",
     ]);
   });
@@ -106,7 +121,7 @@ describe("generated artifact lifecycle", () => {
     const historyIds = new Set(historyBootstrapIds());
     const offenders = registry
       .filter(
-        (artifact) => artifact.bootstrap !== true && !historyIds.has(artifact.id) && isFullyGitIgnored(artifact),
+        (artifact) => artifact.bootstrap !== true && !historyIds.has(artifact.id) && hasIgnoredOutput(artifact),
       )
       .map((artifact) => artifact.id);
 

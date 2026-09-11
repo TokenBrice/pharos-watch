@@ -102,7 +102,9 @@ export async function authenticateApiKeyFromFreshCache(
   }
 
   const row = getCachedApiKeyByPrefix(parsed.prefix);
-  if (!row || row.tier === "self-serve") {
+  // Self-serve and donor keys skip the isolate cache so their small quotas stay
+  // global (one D1 read per request) instead of per-isolate.
+  if (!row || row.tier === "self-serve" || row.tier === "donor") {
     return { kind: "unavailable" };
   }
 

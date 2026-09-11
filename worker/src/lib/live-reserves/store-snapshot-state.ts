@@ -1,7 +1,8 @@
-import { getLiveReserveAdapterDefinition } from "@shared/lib/live-reserve-adapters";
+import { computeLiveReserveConfigFingerprint, getLiveReserveAdapterDefinition } from "@shared/lib/live-reserve-adapters";
 import type { StablecoinMeta } from "@shared/types/core";
 import type { LiveReserveAdapterValidationPolicy, LiveReserveSnapshotMetadata } from "@shared/types/live-reserves";
-import type { ReserveCompositionRecord, ReserveSyncStateRecord } from "./store-shared";
+import { LIVE_RESERVE_FRESHNESS_SEC, selectScoringDegradedWarnings, type ReserveCompositionRecord, type ReserveSyncStateRecord } from "./store-shared";
+import { MAX_FUTURE_SOURCE_TIMESTAMP_SKEW_SEC } from "../../cron/reserve-adapters/validate";
 
 export function hasConsistentSnapshotState(
   syncState: Pick<ReserveSyncStateRecord, "lastSuccessAt" | "lastSuccessAttemptId"> | null | undefined,
@@ -35,20 +36,17 @@ export function hasConsistentSnapshotState(
     && syncState.lastSuccessAt === fetchedAt;
 }
 
-export function hasScoringEligibleLiveReserveFreshness(metadata: LiveReserveSnapshotMetadata): boolean {
-  if (metadata.freshnessMode === "unverified") {
-    return false;
-  }
-
-  if (metadata.freshnessMode === "not-applicable") {
-    return true;
-  }
-
-  const hasVerifiedTimestamp =
-    typeof metadata.sourceTimestamp === "number" &&
-    Number.isFinite(metadata.sourceTimestamp) &&
-    metadata.sourceTimestamp > 0;
-  return hasVerifiedTimestamp;
+export function hasScoringEligibleLiveReserveFreshness(
+  metadata: LiveReserveSnapshotMetadata,
+  now = Math.floor(Date.now() / 1000),
+): boolean {
+  if (metadata.diag?.invalidFreshness === true) return false;
+  if (metadata.freshnessMode === "not-applicable") return true;
+  return metadata.freshnessMode === "verified"
+    && typeof metadata.sourceTimestamp === "number"
+    && Number.isFinite(metadata.sourceTimestamp)
+    && metadata.sourceTimestamp > 0
+    && metadata.sourceTimestamp <= now + MAX_FUTURE_SOURCE_TIMESTAMP_SKEW_SEC;
 }
 
 export function hasUncertainWriteState(syncState: ReserveSyncStateRecord | null | undefined): boolean {
@@ -90,4 +88,47 @@ export function isReserveSnapshotStale(
   const adapterMaxAge = validation?.maxSourceAgeSec;
   const sourceMaxAge = Math.min(config?.scoring?.maxSourceAgeSec ?? Infinity, adapterMaxAge ?? Infinity);
   return now - sourceTimestamp > (Number.isFinite(sourceMaxAge) ? sourceMaxAge : fetchFreshnessSec);
+}
+
+export type AdmissionRejectionCode =
+  | "unconfigured" | "suspended" | "missing-snapshot" | "inconsistent-snapshot"
+  | "config-mismatch" | "non-independent" | "stale" | "invalid-freshness"
+  | "degraded-snapshot" | "insufficient-slices";
+
+export interface LiveReserveAdmissionResult {
+  eligible: boolean;
+  reasons: AdmissionRejectionCode[];
+}
+
+/** Snapshot admission deliberately does not depend on a later attempt's status. */
+export function evaluateLiveReserveAdmission(
+  record: ReserveCompositionRecord | null,
+  syncState: ReserveSyncStateRecord | null,
+  coin: StablecoinMeta | undefined,
+  now: number,
+  freshnessSec = LIVE_RESERVE_FRESHNESS_SEC,
+  minSlices = 1,
+): LiveReserveAdmissionResult {
+  const reasons: AdmissionRejectionCode[] = [];
+  const config = coin?.liveReservesConfig;
+  if (!config) reasons.push("unconfigured");
+  if (config?.suspended) reasons.push("suspended");
+  if (!record) {
+    reasons.push("missing-snapshot");
+    return { eligible: false, reasons };
+  }
+  if (!hasConsistentSnapshotState(syncState, record)) reasons.push("inconsistent-snapshot");
+  if (config) {
+    if (record.configFingerprint == null) {
+      console.info("[live-reserves] Legacy snapshot has no config fingerprint", { stablecoinId: record.stablecoinId });
+    } else if (record.configFingerprint !== computeLiveReserveConfigFingerprint(config)) {
+      reasons.push("config-mismatch");
+    }
+  }
+  if (record.adapterEvidenceClass !== "independent") reasons.push("non-independent");
+  if (coin && isReserveSnapshotStale(record, coin, now, freshnessSec)) reasons.push("stale");
+  if (!hasScoringEligibleLiveReserveFreshness(record.metadata, now)) reasons.push("invalid-freshness");
+  if (selectScoringDegradedWarnings(record.warnings, config).length > 0) reasons.push("degraded-snapshot");
+  if (record.slices.length < minSlices) reasons.push("insufficient-slices");
+  return { eligible: reasons.length === 0, reasons };
 }

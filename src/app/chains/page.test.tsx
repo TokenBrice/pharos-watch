@@ -21,8 +21,14 @@ describe("ChainsPage", () => {
     expect(html).toContain("What is the Chain Health Score?");
     expect(html).toContain("Which chains have the most stablecoin supply?");
 
-    expect(html.indexOf("chains client")).toBeLessThan(html.indexOf("Chains FAQ"));
-    expect(html.indexOf("Chains FAQ")).toBeLessThan(html.indexOf("Chain Profile Directory"));
+    const client = html.indexOf("chains client");
+    const faq = html.indexOf("Chains FAQ");
+    const directory = html.indexOf("Chain Profile Directory");
+    expect(client).toBeGreaterThan(-1);
+    expect(faq).toBeGreaterThan(-1);
+    expect(directory).toBeGreaterThan(-1);
+    expect(client).toBeLessThan(faq);
+    expect(faq).toBeLessThan(directory);
   });
 
   it("emits CollectionPage and ItemList structured data for crawlable chain profiles", () => {

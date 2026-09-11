@@ -7,8 +7,7 @@ import {
   crawlSorobanPoolsStage,
   isAquariusSorobanDeployment,
 } from "../crawl-soroban-pools";
-import { createCrawlStageContext } from "../staged-pool";
-import type { StagedPool } from "../types";
+import { discoveryContext } from "./discovery.test-support";
 
 const EURSAFO_TOKEN = "CBOOCGZSVRSZFRE4U2NWR2B4RXYVJWRCBTGOUD2JPI2TDJPWMTJX7FZP";
 const EUTBL_TOKEN = "CBGV2QFQBBGEQRUKUMCPO3SZOHDDYO6SCP5CH6TW7EALKVHCXTMWDDOF";
@@ -21,18 +20,9 @@ function target(address: string): ContractDeployment {
 }
 
 function makeContext(stablecoinId = "eutbl-spiko") {
-  const pools: StagedPool[] = [];
-  return {
-    pools,
-    value: createCrawlStageContext({
-      stablecoinId,
-      knownPoolIds: new Set(),
-      nowSec: 1_800_000_000,
-      pools,
-      priceObs: [],
-      references: { type: "fresh", updatedAt: 1_800_000_000, rates: {} },
-    }),
-  };
+  return discoveryContext(stablecoinId, {
+    references: { type: "fresh", updatedAt: 1_800_000_000, rates: {} },
+  });
 }
 
 function ticker(overrides: Record<string, unknown> = {}) {

@@ -130,6 +130,27 @@ describe("missing detail price enrichment", () => {
     expect(await enrichMissingDetailPrice(mockD1([]), "usdt-tether", response)).toBe(response);
     expect(response.bodyUsed).toBe(false);
   });
+
+  it.each(["{invalid", "null", "[]"])("preserves a successful unusable detail body %s", async (body) => {
+    const response = makeResponse(body);
+    const result = await enrichMissingDetailPrice(mockD1([]), "usdt-tether", response);
+    expect(result.status).toBe(200);
+    expect(result.bodyUsed).toBe(false);
+    expect(await result.text()).toBe(body);
+  });
+
+  it("removes obsolete entity length without clearing an existing stale policy", async () => {
+    const response = new Response(detailBody, { headers: {
+      "Content-Length": String(new TextEncoder().encode(detailBody).length),
+      "Cache-Control": "no-store",
+      Warning: '110 - "Historical detail is stale"',
+    } });
+    const result = await enrichMissingDetailPrice(makeDb(), "usdt-tether", response);
+    expect(result.headers.has("Content-Length")).toBe(false);
+    expect(result.headers.get("Cache-Control")).toBe("no-store");
+    expect(result.headers.get("Warning")).toBe('110 - "Historical detail is stale"');
+    expect(await result.json()).toMatchObject({ price: 0.997, tokens, providerField: "preserved" });
+  });
 });
 
 describe("detail response paths", () => {

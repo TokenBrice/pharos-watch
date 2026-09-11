@@ -43,6 +43,10 @@ export interface DigestRouteFields {
   anthropicApiKey: string | null;
 }
 
+export interface DonorKeyClaimRouteFields {
+  donorKeyClaimRateLimit: RateLimit | undefined;
+}
+
 export interface FeedbackRouteFields {
   feedbackEnv: FeedbackEnv;
 }
@@ -91,6 +95,7 @@ export interface RouteDependencyFieldMap {
   chainRpcs: ChainRpcRouteFields;
   coingeckoApiKey: CoingeckoRouteFields;
   apiKeySelfServeEnv: ApiKeySelfServeRouteFields;
+  donorKeyClaimRateLimit: DonorKeyClaimRouteFields;
   feedbackEnv: FeedbackRouteFields;
   mintBurnFreshnessConfig: MintBurnFreshnessRouteFields;
   workerStatusConfig: WorkerStatusConfigRouteFields;

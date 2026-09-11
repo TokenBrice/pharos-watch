@@ -18,17 +18,6 @@ const AMBIGUOUS_NEAR_PERCENT_HTML = `
 `;
 
 describe("adaptCircleTransparency", () => {
-  it("extracts USDC reserve slices from HTML", () => {
-    const result = adaptCircleTransparency(CIRCLE_HTML, "usdc");
-    expect(result.slices.length).toBe(4);
-    const total = result.slices.reduce((sum, s) => sum + s.pct, 0);
-    expect(total).toBeCloseTo(100, 10);
-    expect(result.metadata).toMatchObject({
-      freshnessMode: "verified",
-      sourceTimestamp: Date.UTC(2026, 7, 6) / 1000,
-    });
-  });
-
   it("uses Circle's reserve disclosure date when the page exposes one", () => {
     const result = adaptCircleTransparency(`${CIRCLE_HTML}<div>As of Aug 06, 2026</div>`, "usdc");
 
@@ -45,23 +34,12 @@ describe("adaptCircleTransparency", () => {
     });
   });
 
-  it("maps USDC slices to very-low risk", () => {
-    const result = adaptCircleTransparency(CIRCLE_HTML, "usdc");
-    for (const slice of result.slices) {
-      expect(slice.risk).toBe("very-low");
-    }
-  });
-
-  it("extracts EURC reserve slices from HTML", () => {
-    const result = adaptCircleTransparency(CIRCLE_HTML, "eurc");
-    expect(result.slices.length).toBe(2);
-    const total = result.slices.reduce((sum, s) => sum + s.pct, 0);
-    expect(total).toBe(100);
-  });
-
   it("normalizes current absolute-value USDC disclosures into percentages", () => {
     const result = adaptCircleTransparency(CIRCLE_HTML, "usdc");
-    expect(result.metadata?.valueMode).toBe("absolute");
+    expect(result.metadata).toMatchObject({
+      freshnessMode: "verified",
+      sourceTimestamp: Date.UTC(2026, 7, 6) / 1000,
+    });
     expect(result.slices).toEqual([
       { sourceKey: "circle:usdc:treasuries-under-3m", name: "<3-Month U.S. Treasuries", pct: 71.9, risk: "very-low" },
       { sourceKey: "circle:usdc:other-bank-deposits", name: "Other Bank Deposits", pct: 13.9, risk: "very-low" },
@@ -72,16 +50,16 @@ describe("adaptCircleTransparency", () => {
 
   it("normalizes current absolute-value EURC disclosures into percentages", () => {
     const result = adaptCircleTransparency(CIRCLE_HTML, "eurc");
-    expect(result.metadata?.valueMode).toBe("absolute");
     expect(result.slices).toEqual([
       { sourceKey: "circle:eurc:other-bank-deposits", name: "Other Bank Deposits", pct: 98.6, risk: "very-low" },
       { sourceKey: "circle:eurc:sifi-deposits", name: "Deposits at Systemically Important Institutions", pct: 1.4, risk: "very-low" },
     ]);
   });
 
-  it("prefers percentage mode when the payload already sums to roughly 100%", () => {
-    const result = adaptCircleTransparency(AMBIGUOUS_NEAR_PERCENT_HTML, "usdc");
-    expect(result.metadata?.valueMode).toBe("percentage");
+  it("reports upstream percentage drift separately from rounding repair", () => {
+    const result = adaptCircleTransparency(AMBIGUOUS_NEAR_PERCENT_HTML.replace('data-usdc-cash="11.35"', 'data-usdc-cash="10.55"'), "usdc");
+    expect(result.metadata?.diag).toMatchObject({ rawSumDeviation: expect.closeTo(0.8, 6) });
+    expect(result.slices.reduce((sum, slice) => sum + slice.pct, 0)).toBeCloseTo(100);
   });
 
   it("throws when no matching canvas found", () => {
@@ -125,21 +103,11 @@ describe("adaptCircleTransparency", () => {
         freshnessSource: "html-disclosure",
       },
     });
-  });
-
-  it("emits a circle-disclosure-timestamp-ambiguous warning when multiple unique 'As of' dates appear outside the disclosure window", () => {
-    const htmlWithoutLocalDate = CIRCLE_HTML.replace(/\bAs of\s+[A-Za-z]{3,9}\s+\d{1,2},\s*\d{4}\b/gi, "");
-    const farPadding = "<div>" + "x".repeat(3_000) + "</div>";
-    const result = adaptCircleTransparency(
-      `<p>As of May 07, 2026</p>${farPadding}${htmlWithoutLocalDate}${farPadding}<p>As of Apr 01, 2026</p>`,
-      "eurc",
-    );
-
-    expect(result.warnings).toEqual(
-      expect.arrayContaining([expect.objectContaining({ code: "circle-disclosure-timestamp-ambiguous" })]),
-    );
-    expect(result.slices.length).toBeGreaterThan(0);
-    expect(result.metadata).toMatchObject({ freshnessMode: "unverified" });
+    expect(result.warnings).toContainEqual(expect.objectContaining({ code: "circle-disclosure-timestamp-ambiguous" }));
+    expect(result.slices).toEqual([
+      { sourceKey: "circle:eurc:other-bank-deposits", name: "Other Bank Deposits", pct: 98.6, risk: "very-low" },
+      { sourceKey: "circle:eurc:sifi-deposits", name: "Deposits at Systemically Important Institutions", pct: 1.4, risk: "very-low" },
+    ]);
   });
 
   it("throws layout-changed when a data-usdc-* attribute carries a multi-dot value like '4.7.18'", () => {
@@ -154,5 +122,37 @@ describe("adaptCircleTransparency", () => {
 
     expect(() => adaptCircleTransparency(html, "usdc")).toThrow(/layout-changed/);
     expect(() => adaptCircleTransparency(html, "usdc")).toThrow(/data-usdc-us-treasuries/);
+  });
+
+  it("accepts a valid allocation with a zero disclosure row and omits the zero slice", () => {
+    const html = `
+<span data-coin="usdc" data-point="100" id="usdc-in-circulation"></span>
+<canvas id="usdc_chartjs_canvas"
+  data-usdc-us-treasuries="70"
+  data-usdc-months="20"
+  data-usdc-cash="10"
+  data-usdc-in-circulation="0">
+</canvas>
+`;
+    const result = adaptCircleTransparency(html, "usdc");
+
+    expect(result.slices).toEqual([
+      { sourceKey: "circle:usdc:treasuries-under-3m", name: "<3-Month U.S. Treasuries", pct: 70, risk: "very-low" },
+      { sourceKey: "circle:usdc:sifi-deposits", name: "Deposits at Systemically Important Institutions", pct: 20, risk: "very-low" },
+      { sourceKey: "circle:usdc:other-bank-deposits", name: "Other Bank Deposits", pct: 10, risk: "very-low" },
+    ]);
+  });
+
+  it("throws layout-changed when every disclosure row reads zero", () => {
+    const html = `
+<span data-coin="usdc" data-point="0" id="usdc-in-circulation"></span>
+<canvas id="usdc_chartjs_canvas"
+  data-usdc-us-treasuries="0"
+  data-usdc-months="0"
+  data-usdc-cash="0"
+  data-usdc-in-circulation="0">
+</canvas>
+`;
+    expect(() => adaptCircleTransparency(html, "usdc")).toThrow(/layout-changed/);
   });
 });

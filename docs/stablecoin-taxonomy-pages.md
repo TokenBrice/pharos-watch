@@ -58,7 +58,7 @@ Peg has no `/stablecoins/peg/` hub. Peg slugs sit directly under `/stablecoins/`
 - The four hubs are `reference` entries and every cohort page is a `taxonomy` entry in `src/lib/public-route-inventory.ts`, sourced from `ALL_STABLECOIN_TAXONOMY_PAGES` and `PEG_SLUGS`. `src/app/__tests__/sitemap-frozen.test.ts` asserts the sitemap is exactly the projection of that inventory, so any added or dropped cohort route surfaces there first.
 - Hubs emit `ItemList` JSON-LD over their cohort links; cohort pages render through `StablecoinTaxonomyShell` (`src/components/stablecoin-taxonomy-shell.tsx`), which emits an `ItemList` of member coins plus a `DefinedTerm` whose `termCode` is the cohort's filter tag (peg pages use the peg currency) and whose defined-term set is the parent axis hub.
 - Legacy `/stablecoins/protocol/*` lineage paths redirect to `/stablecoins/infrastructure/*` in `public/_redirects` and are not sitemap entries.
-- The family has no primary-nav entry. Discovery runs through the hub, the command palette (`src/components/command-palette-model.ts` lists `/stablecoins/` and the three axis hubs), and in-page links such as the homepage peg strip and `/alt-pegs/`.
+- The directory hub `/stablecoins/` is the `Markets` menu's `Stablecoin Directory` entry; cohort and peg pages have no primary-nav entry of their own. Discovery runs through the hub, the command palette (`src/components/command-palette-model.ts` lists `/stablecoins/` and the three axis hubs), and in-page links such as the homepage peg strip and `/alt-pegs/`.
 
 ---
 

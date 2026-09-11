@@ -111,6 +111,65 @@
     }
   ],
   "launchDate": "2021-08-16",
+  "liveReservesConfig": {
+    "adapter": "evm-branch-balances",
+    "version": 1,
+    "semantics": "collateral-mix",
+    "breakerScope": "nusd-nexus",
+    "display": {
+      "url": "https://synapseprotocol.com/",
+      "label": "Synapse nUSD pool"
+    },
+    "inputs": {
+      "primary": {
+        "kind": "onchain-evm",
+        "chain": "ethereum",
+        "rpcMode": "public-rpc"
+      }
+    },
+    "params": {
+      "rpcUrl": "https://ethereum-rpc.publicnode.com",
+      "fallbackRpcUrl": "https://eth.llamarpc.com",
+      "branches": [
+        {
+          "name": "DAI",
+          "holder": "0x1116898DdA4015eD8dDefb84b6e8Bc24528Af2d8",
+          "token": {
+            "chain": "ethereum",
+            "address": "0x6b175474e89094c44da98b954eedeac495271d0f",
+            "decimals": 18
+          },
+          "risk": "low",
+          "coinId": "dai-makerdao",
+          "depType": "collateral"
+        },
+        {
+          "name": "USDC",
+          "holder": "0x1116898DdA4015eD8dDefb84b6e8Bc24528Af2d8",
+          "token": {
+            "chain": "ethereum",
+            "address": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+            "decimals": 6
+          },
+          "risk": "low",
+          "coinId": "usdc-circle",
+          "depType": "collateral"
+        },
+        {
+          "name": "USDT",
+          "holder": "0x1116898DdA4015eD8dDefb84b6e8Bc24528Af2d8",
+          "token": {
+            "chain": "ethereum",
+            "address": "0xdac17f958d2ee523a2206206994597c13d831ec7",
+            "decimals": 6
+          },
+          "risk": "low",
+          "coinId": "usdt-tether",
+          "depType": "collateral"
+        }
+      ]
+    }
+  },
   "mechanismArchetype": "fiat-cash",
   "mechanismArchetypeReview": {
     "disposition": "resolved",

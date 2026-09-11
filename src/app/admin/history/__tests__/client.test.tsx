@@ -1,10 +1,10 @@
 // @vitest-environment jsdom
 
-import type { ReactNode } from "react";
-import { act, cleanup, render, waitFor } from "@testing-library/react";
+import type { ComponentProps } from "react";
+import type { HistorySection } from "../../sections/history-section";
+import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { makeHealthyStatusResponse } from "@/test-utils/status-fixtures";
-import { getActiveAdminWorkspace, isAdminWorkspaceActive } from "@/lib/admin-workspaces";
 
 const {
   useStatusMock,
@@ -29,14 +29,16 @@ vi.mock("@/hooks/admin-api-hooks", () => ({
   useApiKeyAuditLog: useApiKeyAuditLogMock,
 }));
 vi.mock("@/hooks/use-release-metadata", () => ({ useReleaseMetadata: useReleaseMetadataMock }));
-vi.mock("../../workspace-status-boundary", () => ({
-  WorkspaceStatusBoundary: ({ data, children }: { data: unknown; children: (data: unknown) => ReactNode }) =>
-    data ? children(data) : null,
-}));
 vi.mock("../../sections/history-section", () => ({
-  HistorySection: (props: unknown) => {
+  HistorySection: (props: ComponentProps<typeof HistorySection>) => {
     historySectionPropsMock(props);
-    return <div data-testid="history-section">History section mounted</div>;
+    return (
+      <div data-testid="history-section">
+        <button onClick={() => props.setHistoryWindow("30d")}>Last 30 days</button>
+        <button onClick={props.adminActionLog.onRetry}>Retry actions</button>
+        <button onClick={props.credentialAudit.onRetry}>Retry credentials</button>
+      </div>
+    );
   },
 }));
 
@@ -107,13 +109,61 @@ describe("HistoryClient", () => {
     expect(window.location.search).toContain("cause=db_unhealthy");
   });
 
-  it("keeps the routed History workspace reachable and current at the end of the admin sequence", async () => {
+  it("resynchronizes filters and the query window on browser history navigation", () => {
     render(<HistoryClient />);
-    await waitFor(() => expect(historySectionPropsMock).toHaveBeenCalled());
+    act(() => {
+      window.history.replaceState({}, "", "/admin/history/?keep=2&window=30d&severity=warning");
+      window.dispatchEvent(new PopStateEvent("popstate"));
+    });
+    expect(useStatusHistoryMock).toHaveBeenLastCalledWith("30d");
+    expect(historySectionPropsMock.mock.calls.at(-1)?.[0]).toMatchObject({
+      historyWindow: "30d",
+      historyFilters: { severity: "warning", surface: "all", causeCode: null, publicImpact: "all" },
+    });
+  });
 
-    expect(getActiveAdminWorkspace(window.location.pathname)?.id).toBe("history");
-    expect(isAdminWorkspaceActive("/admin/history/", "history")).toBe(true);
-    expect(isAdminWorkspaceActive("/admin/history/", "comms")).toBe(false);
+  it("changes the history window without losing filters or unrelated URL state", () => {
+    render(<HistoryClient />);
+    fireEvent.click(screen.getByRole("button", { name: "Last 30 days" }));
+    expect(useStatusHistoryMock).toHaveBeenLastCalledWith("30d");
+    const query = new URLSearchParams(window.location.search);
+    expect(Object.fromEntries(query)).toMatchObject({
+      keep: "1", window: "30d", severity: "critical", cause: "db_unhealthy",
+    });
+  });
+
+  it("retries all four failed-workspace queries even when one refresh rejects", async () => {
+    const refreshes = [useStatusMock, useStatusHistoryMock, useAdminActionLogMock, useApiKeyAuditLogMock]
+      .map((query) => query.getMockImplementation()!().refetch);
+    useStatusMock.mockReturnValue({
+      data: undefined, error: new Error("status unavailable"), isLoading: false, refetch: refreshes[0],
+    });
+    refreshes[1].mockRejectedValueOnce(new Error("history still unavailable"));
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    try {
+      render(<HistoryClient />);
+      expect(screen.getByRole("alert").textContent).toContain("status unavailable");
+      await act(async () => fireEvent.click(screen.getByRole("button", { name: "Retry" })));
+      for (const refetch of refreshes) expect(refetch).toHaveBeenCalledTimes(1);
+    } finally {
+      warn.mockRestore();
+    }
+  });
+
+  it("retries each operational log independently", () => {
+    const actionRefetch = useAdminActionLogMock.getMockImplementation()!().refetch;
+    const credentialRefetch = useApiKeyAuditLogMock.getMockImplementation()!().refetch;
+    const statusRefetch = useStatusMock.getMockImplementation()!().refetch;
+    const historyRefetch = useStatusHistoryMock.getMockImplementation()!().refetch;
+    render(<HistoryClient />);
+    fireEvent.click(screen.getByRole("button", { name: "Retry actions" }));
+    expect(actionRefetch).toHaveBeenCalledTimes(1);
+    expect(credentialRefetch).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByRole("button", { name: "Retry credentials" }));
+    expect(credentialRefetch).toHaveBeenCalledTimes(1);
+    expect(actionRefetch).toHaveBeenCalledTimes(1);
+    expect(statusRefetch).not.toHaveBeenCalled();
+    expect(historyRefetch).not.toHaveBeenCalled();
   });
 
   it("passes unavailable Worker runtime evidence through without manufacturing deployment metadata", async () => {

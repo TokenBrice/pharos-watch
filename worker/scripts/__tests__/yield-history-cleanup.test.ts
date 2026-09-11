@@ -1,5 +1,5 @@
-import { spawnSync } from "node:child_process";
-import { mkdtempSync, rmSync } from "node:fs";
+import { runOperatorCli } from "./operator-cli.test-support";
+import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { DatabaseSync } from "node:sqlite";
@@ -13,6 +13,14 @@ import {
   runYieldHistoryCleanupCli,
   summarizeYieldHistoryCleanupRows,
 } from "../yield-history-cleanup";
+import { createWorkerD1Client } from "../lib/remote-d1";
+import type * as RemoteD1Module from "../lib/remote-d1";
+import type { RemoteD1Client } from "../lib/remote-d1";
+
+vi.mock("../lib/remote-d1", async (importOriginal) => ({
+  ...(await importOriginal<typeof RemoteD1Module>()),
+  createWorkerD1Client: vi.fn(),
+}));
 
 function createTempDbPath(): string {
   const dir = mkdtempSync(join(tmpdir(), "yield-history-cleanup-test-"));
@@ -52,6 +60,16 @@ function seedDb(path: string): void {
     insert.run("usde-ethena", "66985a81-9c51-46ca-9977-42b4fe7bc6df", 1_700_000_360, 0, 5.2, null, null, null, 10_100_000, "defillama", null, "Ethena staking (sUSDe)", "nav-appreciation");
     insert.run("usds-sky", "d8c4eff5-c8a9-46fc-a888-057c4c668e72", 1_700_000_720, 0, 4.0, null, null, null, 8_000_000, "defillama", null, "Sky Savings Rate (sUSDS)", "lending-vault");
     insert.run("susde-ethena", "onchain:susde-ethena", 1_700_001_080, 1, 5.3, null, null, null, 10_200_000, "onchain", null, "Ethena staking (sUSDe)", "nav-appreciation");
+    insert.run("usde-ethena", "unrelated-pool", 1_700_001_440, 0, 2.0, null, null, null, 100, "defillama", null, "Unrelated lending", "lending");
+  } finally {
+    db.close();
+  }
+}
+
+function readAllRows(path: string) {
+  const db = new DatabaseSync(path);
+  try {
+    return db.prepare("SELECT * FROM yield_history ORDER BY stablecoin_id, source_key, recorded_at").all();
   } finally {
     db.close();
   }
@@ -60,12 +78,62 @@ function seedDb(path: string): void {
 const tempPaths: string[] = [];
 
 afterEach(() => {
+  vi.useRealTimers();
+  vi.clearAllMocks();
   for (const path of tempPaths.splice(0)) {
     rmSync(path.replace(/\/test\.sqlite$/, ""), { recursive: true, force: true });
   }
 });
 
 describe("yield-history-cleanup", () => {
+  it.each([
+    { pause: false, leaseDelta: -1 },
+    { pause: true, leaseDelta: 0 },
+    { pause: true, leaseDelta: 1 },
+    { pause: true, leaseDelta: -1 },
+  ])("enforces Wrangler pause=$pause and lease delta=$leaseDelta for cleanup and restore", async ({ pause, leaseDelta }) => {
+    const now = 1_800_000_000;
+    vi.useFakeTimers();
+    vi.setSystemTime(now * 1000);
+    const path = createTempDbPath();
+    tempPaths.push(path);
+    seedDb(path);
+    const before = readAllRows(path);
+    const artifact = createYieldHistoryCleanupArtifact(loadCleanupRowsFromSqlite(path), "ops");
+    const restorePath = path.replace("test.sqlite", "restore.json");
+    writeFileSync(restorePath, JSON.stringify(artifact));
+    const sqlite = new DatabaseSync(path);
+    try {
+      sqlite.exec("CREATE TABLE cache (key TEXT, value TEXT, updated_at INTEGER); CREATE TABLE cron_leases (job TEXT, lease_until INTEGER)");
+      if (pause) sqlite.prepare("INSERT INTO cache VALUES (?, ?, ?)").run(
+        "yield-history-cleanup:writer-pause", JSON.stringify({ reason: "cleanup", pausedAt: now, operator: "ops" }), now,
+      );
+      sqlite.prepare("INSERT INTO cron_leases VALUES ('sync-yield-data', ?)").run(now + leaseDelta);
+      vi.mocked(createWorkerD1Client).mockReturnValue({
+        query: (sql: string) => sqlite.prepare(sql).all(),
+        executeStatements: (statements: string[]) => { for (const sql of statements) sqlite.exec(sql); },
+        queryRaw: () => "[]",
+      } as RemoteD1Client);
+      const args = ["--execute", "--confirm", "yield-history-cleanup"];
+      const dependencies = { printJson: vi.fn() };
+      if (!pause || leaseDelta >= 0) {
+        const reason = pause ? /lease is active/ : /pause guard is not armed/;
+        await expect(runYieldHistoryCleanupCli(args, dependencies)).rejects.toThrow(reason);
+        expect(readAllRows(path)).toEqual(before);
+        await expect(runYieldHistoryCleanupCli([...args, "--restore", restorePath], dependencies)).rejects.toThrow(reason);
+        expect(readAllRows(path)).toEqual(before);
+      } else {
+        await runYieldHistoryCleanupCli(args, dependencies);
+        expect(readAllRows(path)).toEqual(before.filter((row) =>
+          row.stablecoin_id === "susde-ethena" || row.source_key === "unrelated-pool"));
+        await runYieldHistoryCleanupCli([...args, "--restore", restorePath], dependencies);
+        expect(readAllRows(path)).toEqual(before);
+      }
+    } finally {
+      sqlite.close();
+    }
+  });
+
   it("parses destructive mode through the shared guard with remote dry-run as the default", () => {
     const options = parseYieldHistoryCleanupCliOptions(["--export", "cleanup.json", "--operator", "ops"]);
 
@@ -152,8 +220,8 @@ describe("yield-history-cleanup", () => {
     expect(printJson).toHaveBeenNthCalledWith(2, expect.objectContaining({ cleared: true, remote: true }));
   });
 
-  it("prints direct-run guard refusals without an unhandled rejection", () => {
-    const result = spawnSync(
+  it("[entrypoint integration] prints direct-run guard refusals without an unhandled rejection", async () => {
+    const result = await runOperatorCli(
       join(process.cwd(), "node_modules/.bin/tsx"),
       ["worker/scripts/yield-history-cleanup.ts", "--execute"],
       {
@@ -170,8 +238,8 @@ describe("yield-history-cleanup", () => {
     expect(result.stderr).not.toMatch(/UnhandledPromiseRejection|unhandled rejection/i);
   });
 
-  it("prints direct-run help with exit 0", () => {
-    const result = spawnSync(
+  it("[entrypoint integration] prints direct-run help with exit 0", async () => {
+    const result = await runOperatorCli(
       join(process.cwd(), "node_modules/.bin/tsx"),
       ["worker/scripts/yield-history-cleanup.ts", "--help"],
       {
@@ -258,17 +326,16 @@ describe("yield-history-cleanup", () => {
     tempPaths.push(path);
     seedDb(path);
 
+    const entireTable = readAllRows(path);
+    const survivors = entireTable.filter((row) => row.stablecoin_id === "susde-ethena" || row.source_key === "unrelated-pool");
     const beforeRows = loadCleanupRowsFromSqlite(path);
     const artifact = createYieldHistoryCleanupArtifact(beforeRows, "test-operator");
 
     deleteCleanupRowsFromSqlite(path);
-    const afterDeleteRows = loadCleanupRowsFromSqlite(path);
-    expect(afterDeleteRows).toEqual([]);
+    expect(readAllRows(path)).toEqual(survivors);
 
     restoreCleanupRowsToSqlite(path, artifact.rows);
-    const restoredRows = loadCleanupRowsFromSqlite(path);
-
-    expect(restoredRows).toEqual(beforeRows);
+    expect(readAllRows(path)).toEqual(entireTable);
     expect(artifact.rowCount).toBe(beforeRows.length);
     expect(artifact.operator).toBe("test-operator");
   });

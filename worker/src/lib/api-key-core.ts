@@ -107,7 +107,7 @@ export type ApiKeyAuthenticationResult =
   | { kind: "valid"; key: AuthenticatedApiKey };
 
 type ApiKeyAuditAction = "created" | "updated" | "deactivated" | "rotated";
-type ApiKeyAuditActor = "admin" | "self-serve";
+export type ApiKeyAuditActor = "admin" | "self-serve" | "donor-claim";
 
 const API_KEY_PUBLIC_PROJECTION = `
        id,
@@ -306,7 +306,11 @@ function normalizeOptionalExpiresAt(
     if (!/^-?\d+$/.test(trimmed)) {
       return errorResponse(400, `${fieldName} must be an integer Unix timestamp or null`);
     }
-    return Number.parseInt(trimmed, 10);
+    const parsed = Number.parseInt(trimmed, 10);
+    if (!Number.isFinite(parsed)) {
+      return errorResponse(400, `${fieldName} must be an integer Unix timestamp or null`);
+    }
+    return parsed;
   }
   return errorResponse(400, `${fieldName} must be an integer Unix timestamp or null`);
 }
@@ -344,7 +348,7 @@ export async function buildApiKeyMaterial(pepper: string): Promise<{
   };
 }
 
-function maskApiKeyToken(keyPrefix: string): string {
+export function maskApiKeyToken(keyPrefix: string): string {
   return `${API_KEY_TOKEN_PREFIX}_${keyPrefix}_********`;
 }
 

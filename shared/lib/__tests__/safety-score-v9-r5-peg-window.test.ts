@@ -25,6 +25,7 @@ describe("R5 V9-only 36-month peg-window proxy", () => {
 
   it("floors inactive legacy penalties after a null or older-than-window event", () => {
     expect(derive({ pegScore: 93, lastEventAt: null })).toBe(97);
+    expect(derive({ lastEventAt: undefined })).toBe(97);
     expect(derive({ pegScore: 84, lastEventAt: CLOCK_SEC - pegHistoryWindowSec - 1 })).toBe(97);
   });
 
@@ -36,7 +37,27 @@ describe("R5 V9-only 36-month peg-window proxy", () => {
   it("does not manufacture evidence or disturb current adverse histories", () => {
     expect(derive({ pegScore: null })).toBeNull();
     expect(derive({ pegScore: 99 })).toBe(99);
-    expect(derive({ pegScore: 0, activeDepeg: true, lastEventAt: CLOCK_SEC - 10 })).toBe(0); // MIM/EURS shape
+    expect(derive({ pegScore: 0, activeDepeg: true, lastEventAt: null })).toBe(0);
     expect(derive({ pegScore: 37, activeDepeg: null, lastEventAt: null })).toBe(37);
+  });
+
+  it("rejects fractional and non-finite clocks independently of other valid inputs", () => {
+    for (const clockSec of [CLOCK_SEC + 0.5, NaN, Infinity]) {
+      expect(() => derive({ clockSec })).toThrow(/clockSec/);
+    }
+  });
+
+  it("rejects non-positive and fractional windows", () => {
+    for (const windowSec of [0, -1, 0.5, Infinity]) {
+      expect(() => derive({ windowSec })).toThrow(/windowSec/);
+    }
+  });
+
+  it("rejects invalid quiet floors while accepting both endpoints", () => {
+    for (const quietHistoryFloor of [NaN, Infinity, -1, 101]) {
+      expect(() => derive({ quietHistoryFloor })).toThrow(/quietHistoryFloor/);
+    }
+    expect(derive({ pegScore: 0, quietHistoryFloor: 0 })).toBe(0);
+    expect(derive({ pegScore: 0, quietHistoryFloor: 100 })).toBe(100);
   });
 });

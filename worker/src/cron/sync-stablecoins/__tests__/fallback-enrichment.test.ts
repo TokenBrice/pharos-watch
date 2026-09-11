@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { ACTIVE_META_BY_ID } from "@shared/lib/stablecoins/registry";
-import { createLatestSchemaFixtureTracker } from "../../../test-helpers/latest-schema-sqlite";
+import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
 import { createValidationContextResolver } from "../pricing";
 import { runFallbackPriceEnrichmentPhase } from "../fallback-enrichment";
 import { makePeggedAsset } from "./_fixtures";

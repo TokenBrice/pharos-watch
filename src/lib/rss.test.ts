@@ -1,7 +1,9 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { createRssRoute, escapeXml, renderRss20, rssResponse, toRfc822 } from "./rss";
 
 describe("rss helpers", () => {
+  afterEach(() => vi.useRealTimers());
+
   it("escapes XML special characters", () => {
     expect(escapeXml(`<a href="x">&'</a>`)).toBe(
       "&lt;a href=&quot;x&quot;&gt;&amp;&apos;&lt;/a&gt;",
@@ -56,13 +58,19 @@ describe("rss helpers", () => {
     expect(xml).toContain("]]>");
   });
 
-  it("assembles route output byte-identically to a direct RSS response", async () => {
+  it("serves RSS headers and uses the first item's date", async () => {
     const items = [{
       title: "One & Only",
       link: "https://example.com/one/",
       description: "<p>Body</p>",
       guid: "example:one",
       pubDate: "Thu, 01 Jan 1970 00:00:00 GMT",
+    }, {
+      title: "Second item",
+      link: "https://example.com/two/",
+      description: "Second body",
+      guid: "example:two",
+      pubDate: "Fri, 02 Jan 1970 00:00:00 GMT",
     }];
     const feed = {
       title: "Example Feed",
@@ -73,10 +81,43 @@ describe("rss helpers", () => {
       items,
     };
 
-    const expected = rssResponse(feed);
     const actual = await createRssRoute({ ...feed, items: () => items })();
 
-    expect(await actual.text()).toBe(await expected.text());
-    expect(Array.from(actual.headers.entries())).toEqual(Array.from(expected.headers.entries()));
+    expect(actual.headers.get("Content-Type")).toBe("application/rss+xml; charset=utf-8");
+    expect(actual.headers.get("Cache-Control")).toBe("public, max-age=3600");
+    const xml = await actual.text();
+    expect(xml).toContain("<lastBuildDate>Thu, 01 Jan 1970 00:00:00 GMT</lastBuildDate>");
+    expect(xml).toContain("<title>One &amp; Only</title>");
+    expect(xml).toContain('<guid isPermaLink="false">example:one</guid>');
+  });
+
+  it("prefers an explicit build date over the first item", async () => {
+    const response = rssResponse({
+      title: "Feed", link: "https://example.com", feedUrl: "https://example.com/feed",
+      description: "Feed", language: "en-US",
+      lastBuildDate: "Fri, 02 Jan 1970 00:00:00 GMT",
+      items: [{ title: "Item", link: "https://example.com/item", description: "Body",
+        guid: "item", pubDate: "Thu, 01 Jan 1970 00:00:00 GMT" }],
+    });
+    expect(await response.text()).toContain("<lastBuildDate>Fri, 02 Jan 1970 00:00:00 GMT</lastBuildDate>");
+  });
+
+  it("uses the current clock for an empty route feed", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-05-16T12:00:00Z"));
+    const response = await createRssRoute({
+      title: "Feed", link: "https://example.com", feedUrl: "https://example.com/feed",
+      description: "Feed", items: () => [],
+    })();
+    expect(await response.text()).toContain("<lastBuildDate>Sat, 16 May 2026 12:00:00 GMT</lastBuildDate>");
+  });
+
+  it("propagates asynchronous item loading failures", async () => {
+    const failure = new Error("item source unavailable");
+    const route = createRssRoute({
+      title: "Feed", link: "https://example.com", feedUrl: "https://example.com/feed",
+      description: "Feed", items: async () => { throw failure; },
+    });
+    await expect(route()).rejects.toBe(failure);
   });
 });

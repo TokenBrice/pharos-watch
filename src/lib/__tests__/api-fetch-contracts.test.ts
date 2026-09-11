@@ -5,7 +5,7 @@ import { StablecoinReservesResponseSchema } from "@shared/types/live-reserves";
 import { DdrResponseSchema } from "@shared/types/depeg-resolver";
 import { PHAROS_WEB_ACCEPT_MARKER } from "@shared/lib/request-source-marker";
 import { DEFAULT_REQUEST_TIMEOUT_MS } from "../request-lifecycle";
-import { mockFetch } from "@shared/test-utils/mock-fetch";
+import { jsonResponse, mockFetch } from "@shared/test-utils/mock-fetch";
 import {
   apiRequest,
   apiFetch,
@@ -18,6 +18,22 @@ import {
 } from "../api";
 
 const ORIGINAL_FORCE_SITE_DATA_PROXY = process.env.NEXT_PUBLIC_FORCE_SITE_DATA_PROXY;
+
+/** Minimal schema-valid live-reserve payload; override only the field under test. */
+function reserveBody(overrides: Record<string, unknown> = {}) {
+  return {
+    stablecoinId: "iusd-infinifi",
+    mode: "live",
+    reserves: [{ name: "Test Farm", pct: 100, risk: "low" }],
+    estimated: false,
+    provenance: {
+      evidenceClass: "independent",
+      sourceModel: "dynamic-mix",
+      scoringEligible: true,
+    },
+    ...overrides,
+  };
+}
 
 describe("api contract validation policy", () => {
   afterEach(() => {
@@ -33,10 +49,7 @@ describe("api contract validation policy", () => {
 
   it("throws SchemaValidationError on strict endpoint schema mismatch", async () => {
     vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(
-      new Response(JSON.stringify({ ok: true }), {
-        status: 200,
-        headers: { "Content-Type": "application/json" },
-      }),
+      jsonResponse({ ok: true }),
     );
 
     await expect(
@@ -70,10 +83,7 @@ describe("api contract validation policy", () => {
   it("returns parsed data on strict endpoint when schema matches", async () => {
     const body = { summary: null, coins: [] };
     vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(
-      new Response(JSON.stringify(body), {
-        status: 200,
-        headers: { "Content-Type": "application/json" },
-      }),
+      jsonResponse(body),
     );
 
     const result = await apiFetch("/api/peg-summary", z.object({ summary: z.null(), coins: z.array(z.unknown()) }));
@@ -84,10 +94,7 @@ describe("api contract validation policy", () => {
   it("returns raw successful payloads when no schema is provided", async () => {
     const body = { ok: true, count: 2 };
     vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(
-      new Response(JSON.stringify(body), {
-        status: 200,
-        headers: { "Content-Type": "application/json" },
-      }),
+      jsonResponse(body),
     );
 
     await expect(apiFetch("/api/custom")).resolves.toEqual(body);
@@ -95,10 +102,7 @@ describe("api contract validation policy", () => {
 
   it("throws on schema mismatch by default whenever a schema is provided", async () => {
     vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(
-      new Response(JSON.stringify({ something: "unexpected" }), {
-        status: 200,
-        headers: { "Content-Type": "application/json" },
-      }),
+      jsonResponse({ something: "unexpected" }),
     );
 
     await expect(apiFetch("/api/daily-digest", z.object({ digest: z.string() }))).rejects.toBeInstanceOf(
@@ -110,10 +114,7 @@ describe("api contract validation policy", () => {
     const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
     const raw = { something: "unexpected" };
     vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(
-      new Response(JSON.stringify(raw), {
-        status: 200,
-        headers: { "Content-Type": "application/json" },
-      }),
+      jsonResponse(raw),
     );
 
     const result = await apiFetch("/api/daily-digest", z.object({ digest: z.string() }), undefined, "warn");
@@ -129,10 +130,7 @@ describe("api contract validation policy", () => {
     };
 
     vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(
-      new Response(JSON.stringify(bodyWithMeta), {
-        status: 200,
-        headers: { "Content-Type": "application/json" },
-      }),
+      jsonResponse(bodyWithMeta),
     );
 
     await expect(
@@ -161,10 +159,7 @@ describe("api contract validation policy", () => {
     };
 
     vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(
-      new Response(JSON.stringify(bodyWithMeta), {
-        status: 200,
-        headers: { "Content-Type": "application/json" },
-      }),
+      jsonResponse(bodyWithMeta),
     );
 
     const result = await apiFetchWithMeta(
@@ -178,24 +173,18 @@ describe("api contract validation policy", () => {
 
   it("drops malformed dependency metadata while preserving valid _meta", async () => {
     vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(
-      new Response(
-        JSON.stringify({
-          _meta: {
-            updatedAt: 200,
-            ageSeconds: 20,
-            status: "fresh",
-            dependencies: {
-              bad: { status: "offline", ageSeconds: 50 },
-              price: { updatedAt: null, ageSeconds: null, status: "unavailable", reason: null },
-            },
+      jsonResponse({
+        _meta: {
+          updatedAt: 200,
+          ageSeconds: 20,
+          status: "fresh",
+          dependencies: {
+            bad: { status: "offline", ageSeconds: 50 },
+            price: { updatedAt: null, ageSeconds: null, status: "unavailable", reason: null },
           },
-          ok: true,
-        }),
-        {
-          status: 200,
-          headers: { "Content-Type": "application/json" },
         },
-      ),
+        ok: true,
+      }),
     );
 
     const result = await apiFetchWithMeta("/api/chains", z.object({ ok: z.boolean() }), undefined, 600, "warn");
@@ -250,10 +239,7 @@ describe("api contract validation policy", () => {
     };
 
     vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(
-      new Response(JSON.stringify(ddrPayload), {
-        status: 200,
-        headers: { "Content-Type": "application/json", "X-Data-Age": "0" },
-      }),
+      jsonResponse(ddrPayload, 200, { "X-Data-Age": "0" }),
     );
 
     const result = await apiFetchWithMeta("/api/depeg-resolver", DdrResponseSchema);
@@ -282,10 +268,7 @@ describe("api contract validation policy", () => {
     };
 
     vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(
-      new Response(JSON.stringify(ddrPayload), {
-        status: 200,
-        headers: { "Content-Type": "application/json", "X-Data-Age": "30" },
-      }),
+      jsonResponse(ddrPayload, 200, { "X-Data-Age": "30" }),
     );
 
     const result = await apiFetchWithMeta("/api/depeg-resolver");
@@ -299,10 +282,7 @@ describe("api contract validation policy", () => {
 
   it("preserves strict meta-aware validation failures when no envelope fallback applies", async () => {
     vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(
-      new Response(JSON.stringify({ ok: true }), {
-        status: 200,
-        headers: { "Content-Type": "application/json" },
-      }),
+      jsonResponse({ ok: true }),
     );
 
     await expect(
@@ -311,21 +291,16 @@ describe("api contract validation policy", () => {
   });
 
   it("validates stablecoin chart points before chart consumers use them", () => {
-    expect(
-      StablecoinChartResponseSchema.parse([{
-        date: 1771977600,
-        aggregateUniverse: "legacy-provider-all-stablecoins-v1",
-        totalCirculatingUSD: { peggedUSD: 1, peggedEUR: 2 },
-      }]),
-    ).toEqual([{
+    const point = {
       date: 1771977600,
       aggregateUniverse: "legacy-provider-all-stablecoins-v1",
       totalCirculatingUSD: { peggedUSD: 1, peggedEUR: 2 },
-    }]);
+    };
 
-    expect(() =>
-      StablecoinChartResponseSchema.parse([{ date: "1771977600", totalCirculatingUSD: { peggedUSD: 1 } }]),
-    ).toThrow();
+    expect(StablecoinChartResponseSchema.parse([point])).toEqual([point]);
+
+    // Only `date` differs from the accepted point, so the numeric rule is the sole cause.
+    expect(() => StablecoinChartResponseSchema.parse([{ ...point, date: "1771977600" }])).toThrow();
   });
 
   it("parses valid stablecoin reserve payloads with open metadata details", () => {
@@ -430,10 +405,7 @@ describe("api contract validation policy", () => {
   it("adds the Pharos browser Accept marker for browser-side public API requests", async () => {
     vi.stubGlobal("window", { location: { hostname: "pharos.watch" } });
     const fetchSpy = vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(
-      new Response(JSON.stringify({ ok: true }), {
-        status: 200,
-        headers: { "Content-Type": "application/json" },
-      }),
+      jsonResponse({ ok: true }),
     );
 
     await apiFetch("/api/stablecoins", z.object({ ok: z.boolean() }), undefined, "warn");
@@ -446,10 +418,7 @@ describe("api contract validation policy", () => {
   it("passes request methods into browser URL lane selection", async () => {
     vi.stubGlobal("window", { location: { hostname: "pharos.watch" } });
     const fetchSpy = vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(
-      new Response(JSON.stringify({ ok: true }), {
-        status: 200,
-        headers: { "Content-Type": "application/json" },
-      }),
+      jsonResponse({ ok: true }),
     );
 
     await apiRequest("/api/api-key-requests", { method: "POST" });
@@ -569,15 +538,43 @@ describe("api contract validation policy", () => {
     await rejection;
   });
 
-  it("throws ApiFetchError with status on non-OK responses", async () => {
-    vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(
-      new Response(JSON.stringify({ error: "nope" }), {
-        status: 503,
-        headers: { "Content-Type": "application/json" },
-      }),
+  it("throws ApiFetchError carrying the status, path, and body text of a non-OK response", async () => {
+    vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(jsonResponse({ error: "nope" }, 503));
+
+    const thrown = await apiFetch("/api/stablecoins").catch((error: unknown) => error);
+
+    expect(thrown).toBeInstanceOf(ApiFetchError);
+    expect(thrown).toMatchObject({
+      status: 503,
+      path: "/api/stablecoins",
+      bodyText: JSON.stringify({ error: "nope" }),
+      message: "Failed to fetch /api/stablecoins: 503",
+    });
+  });
+
+  it("reports a null body when an error response body cannot be read", async () => {
+    const unreadableBody = new ReadableStream<Uint8Array>({
+      start(controller) {
+        controller.error(new Error("stream broke"));
+      },
+    });
+    vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(new Response(unreadableBody, { status: 500 }));
+
+    const thrown = await apiFetch("/api/stablecoins").catch((error: unknown) => error);
+
+    expect(thrown).toBeInstanceOf(ApiFetchError);
+    expect(thrown).toMatchObject({ status: 500, path: "/api/stablecoins", bodyText: null });
+  });
+
+  it("returns schema output rather than the raw payload when a schema transforms it", async () => {
+    vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(jsonResponse({ count: 2 }));
+
+    const result = await apiFetch(
+      "/api/custom",
+      z.object({ count: z.number() }).transform((value) => ({ doubled: value.count * 2 })),
     );
 
-    await expect(apiFetch("/api/stablecoins")).rejects.toBeInstanceOf(ApiFetchError);
+    expect(result).toEqual({ doubled: 4 });
   });
 
   it("returns null for 404 when nullOn404 is true", async () => {
@@ -594,62 +591,49 @@ describe("api contract validation policy", () => {
     expect(result).toBeNull();
   });
 
-  it("fetchStablecoinReserves forwards request init abort signals through apiFetch", async () => {
+  it("fetchStablecoinReserves rejects with the caller abort reason while the request is pending", async () => {
     const controller = new AbortController();
-    let capturedSignal: AbortSignal | undefined;
-    const body = {
-      stablecoinId: "iusd-infinifi",
-      mode: "live",
-      reserves: [{ name: "Test Farm", pct: 100, risk: "low" }],
-      estimated: false,
-      provenance: {
-        evidenceClass: "independent",
-        sourceModel: "dynamic-mix",
-        scoringEligible: true,
-      },
-    };
-    vi.spyOn(globalThis, "fetch").mockImplementation(async (_input, init) => {
-      capturedSignal = init?.signal ?? undefined;
-      return new Response(JSON.stringify(body), {
-        status: 200,
-        headers: { "Content-Type": "application/json" },
-      });
+    const fetchSpy = vi.spyOn(globalThis, "fetch").mockImplementation(
+      (_input, init) =>
+        new Promise<Response>((resolve, reject) => {
+          const signal = init?.signal;
+          // A dropped caller signal must surface as a resolved reserve payload,
+          // not as a hung request, so this case fails loudly instead of timing out.
+          if (!signal) {
+            resolve(jsonResponse(reserveBody()));
+            return;
+          }
+          const rejectAborted = () => reject(signal.reason ?? new DOMException("aborted", "AbortError"));
+          if (signal.aborted) {
+            rejectAborted();
+            return;
+          }
+          signal.addEventListener("abort", rejectAborted, { once: true });
+        }),
+    );
+
+    const pending = fetchStablecoinReserves("iusd-infinifi", { signal: controller.signal });
+    const rejection = expect(pending).rejects.toMatchObject({
+      name: "AbortError",
+      message: "reserve panel unmounted",
     });
+    controller.abort(new DOMException("reserve panel unmounted", "AbortError"));
 
-    await expect(fetchStablecoinReserves("iusd-infinifi", { signal: controller.signal })).resolves.toEqual(body);
-
-    expect(capturedSignal).toBeDefined();
-    expect(capturedSignal!.aborted).toBe(false);
-    controller.abort();
-    expect(capturedSignal!.aborted).toBe(true);
+    await rejection;
+    expect(fetchSpy).toHaveBeenCalledOnce();
   });
 
   it("fetchStablecoinReserves validates successful reserve responses", async () => {
-    const body = {
-      stablecoinId: "iusd-infinifi",
-      mode: "live",
-      reserves: [{ name: "Test Farm", pct: 100, risk: "low" }],
-      estimated: false,
-      provenance: {
-        evidenceClass: "independent",
-        sourceModel: "dynamic-mix",
-        scoringEligible: true,
-      },
-    };
+    const body = reserveBody();
     mockFetch([{ match: "/api/stablecoin-reserves/iusd-infinifi", body }], { requireMatch: true });
 
     await expect(fetchStablecoinReserves("iusd-infinifi")).resolves.toEqual(body);
   });
 
-  it("fetchStablecoinReserves throws SchemaValidationError on malformed 200 payloads", async () => {
+  it("fetchStablecoinReserves rejects a reserve payload whose only defect is a non-numeric pct", async () => {
     mockFetch([{
       match: "/api/stablecoin-reserves/iusd-infinifi",
-      body: {
-          stablecoinId: "iusd-infinifi",
-          mode: "live",
-          reserves: [{ name: "Test Farm", pct: "100", risk: "low" }],
-          estimated: false,
-      },
+      body: reserveBody({ reserves: [{ name: "Test Farm", pct: "100", risk: "low" }] }),
     }], { requireMatch: true });
 
     await expect(fetchStablecoinReserves("iusd-infinifi")).rejects.toBeInstanceOf(SchemaValidationError);
@@ -661,16 +645,10 @@ describe("api contract validation policy", () => {
   });
 
   it("captures Warning header in apiFetchWithMeta", async () => {
-    vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(
-      new Response(JSON.stringify({ ok: true }), {
-        status: 200,
-        headers: {
-          "Content-Type": "application/json",
-          "X-Data-Age": "11000",
-          Warning: '110 - "Response is stale (11000s old, max 900s)"',
-        },
-      }),
-    );
+    vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(jsonResponse({ ok: true }, 200, {
+      "X-Data-Age": "11000",
+      Warning: '110 - "Response is stale (11000s old, max 900s)"',
+    }));
 
     const result = await apiFetchWithMeta("/api/daily-digest", z.object({ ok: z.boolean() }), undefined, 900, "warn");
     expect(result.meta?.warning).toContain("Response is stale");
@@ -679,13 +657,7 @@ describe("api contract validation policy", () => {
 
   it("keeps age metadata unknown for a freshness warning when no age source exists", async () => {
     vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(
-      new Response(JSON.stringify({ ok: true }), {
-        status: 200,
-        headers: {
-          "Content-Type": "application/json",
-          Warning: '110 - "Response is degraded"',
-        },
-      }),
+      jsonResponse({ ok: true }, 200, { Warning: '110 - "Response is degraded"' }),
     );
 
     const result = await apiFetchWithMeta("/api/daily-digest", z.object({ ok: z.boolean() }), undefined, 900, "warn");
@@ -701,17 +673,10 @@ describe("api contract validation policy", () => {
   it("combines warning-only body metadata with a header-derived producer clock", async () => {
     vi.setSystemTime(new Date("2026-06-23T10:05:00.000Z"));
     vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(
-      new Response(JSON.stringify({
+      jsonResponse({
         _meta: { status: "degraded", warning: "dependency unavailable" },
         ok: true,
-      }), {
-        status: 200,
-        headers: {
-          "Content-Type": "application/json",
-          Age: "120",
-          "X-Data-Age": "30",
-        },
-      }),
+      }, 200, { Age: "120", "X-Data-Age": "30" }),
     );
 
     const result = await apiFetchWithMeta("/api/chains", z.object({ ok: z.boolean() }));
@@ -726,31 +691,22 @@ describe("api contract validation policy", () => {
 
   it("preserves producer status while attaching a Warning header", async () => {
     vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(
-      new Response(
-        JSON.stringify({
-          _meta: {
-            updatedAt: 200,
-            ageSeconds: 20,
-            status: "fresh",
-            dependencies: {
-              reportCards: {
-                updatedAt: 100,
-                ageSeconds: 120,
-                status: "stale",
-                reason: "stale cache",
-              },
+      jsonResponse({
+        _meta: {
+          updatedAt: 200,
+          ageSeconds: 20,
+          status: "fresh",
+          dependencies: {
+            reportCards: {
+              updatedAt: 100,
+              ageSeconds: 120,
+              status: "stale",
+              reason: "stale cache",
             },
           },
-          ok: true,
-        }),
-        {
-          status: 200,
-          headers: {
-            "Content-Type": "application/json",
-            Warning: '110 - "Response is degraded (20s old, max 600s)"',
-          },
         },
-      ),
+        ok: true,
+      }, 200, { Warning: '110 - "Response is degraded (20s old, max 600s)"' }),
     );
 
     const result = await apiFetchWithMeta("/api/chains", z.object({ ok: z.boolean() }), undefined, 600, "warn");
@@ -773,19 +729,10 @@ describe("api contract validation policy", () => {
 
   it("keeps fresh _meta fresh for non-freshness advisory warnings", async () => {
     vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(
-      new Response(
-        JSON.stringify({
-          _meta: { updatedAt: 200, ageSeconds: 20, status: "fresh" },
-          ok: true,
-        }),
-        {
-          status: 200,
-          headers: {
-            "Content-Type": "application/json",
-            Warning: '199 - "Latest sync-dex-liquidity run shows medium quality drift"',
-          },
-        },
-      ),
+      jsonResponse({
+        _meta: { updatedAt: 200, ageSeconds: 20, status: "fresh" },
+        ok: true,
+      }, 200, { Warning: '199 - "Latest sync-dex-liquidity run shows medium quality drift"' }),
     );
 
     const result = await apiFetchWithMeta("/api/dex-liquidity", z.object({ ok: z.boolean() }), undefined, 3600, "warn");
@@ -800,25 +747,16 @@ describe("api contract validation policy", () => {
 
   it("preserves body-level API warnings in meta-aware fetches", async () => {
     vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(
-      new Response(
-        JSON.stringify({
-          current: null,
-          history: [],
-          warning: "Yield history freshness lookup failed; falling back to cache metadata.",
-          methodology: {
-            version: "7.45",
-            currentVersion: "7.45",
-            changelogPath: "/methodology/yield-changelog/",
-          },
-        }),
-        {
-          status: 200,
-          headers: {
-            "Content-Type": "application/json",
-            "X-Data-Age": "60",
-          },
+      jsonResponse({
+        current: null,
+        history: [],
+        warning: "Yield history freshness lookup failed; falling back to cache metadata.",
+        methodology: {
+          version: "7.45",
+          currentVersion: "7.45",
+          changelogPath: "/methodology/yield-changelog/",
         },
-      ),
+      }, 200, { "X-Data-Age": "60" }),
     );
 
     const result = await apiFetchWithMeta(
@@ -847,13 +785,7 @@ describe("api contract validation policy", () => {
 
   it("leaves X-Data-Age threshold classification to data health", async () => {
     vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(
-      new Response(JSON.stringify({ ok: true }), {
-        status: 200,
-        headers: {
-          "Content-Type": "application/json",
-          "X-Data-Age": "1122",
-        },
-      }),
+      jsonResponse({ ok: true }, 200, { "X-Data-Age": "1122" }),
     );
 
     const result = await apiFetchWithMeta("/api/dex-liquidity", z.object({ ok: z.boolean() }), undefined, 1800);
@@ -864,14 +796,7 @@ describe("api contract validation policy", () => {
   it("accounts for edge Age when X-Data-Age is the only producer clock", async () => {
     vi.setSystemTime(new Date("2026-06-23T10:05:00.000Z"));
     vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(
-      new Response(JSON.stringify({ ok: true }), {
-        status: 200,
-        headers: {
-          "Content-Type": "application/json",
-          Age: "120",
-          "X-Data-Age": "30",
-        },
-      }),
+      jsonResponse({ ok: true }, 200, { Age: "120", "X-Data-Age": "30" }),
     );
 
     const result = await apiFetchWithMeta("/api/dex-liquidity", z.object({ ok: z.boolean() }));
@@ -881,17 +806,10 @@ describe("api contract validation policy", () => {
 
   it("does not apply edge Age when body _meta provides updatedAt", async () => {
     vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(
-      new Response(JSON.stringify({
+      jsonResponse({
         _meta: { updatedAt: 200, ageSeconds: 20, status: "fresh" },
         ok: true,
-      }), {
-        status: 200,
-        headers: {
-          "Content-Type": "application/json",
-          Age: "120",
-          "X-Data-Age": "30",
-        },
-      }),
+      }, 200, { Age: "120", "X-Data-Age": "30" }),
     );
 
     const result = await apiFetchWithMeta("/api/chains", z.object({ ok: z.boolean() }));
@@ -902,14 +820,7 @@ describe("api contract validation policy", () => {
   it("derives X-Data-Age updatedAt from the server Date header when available", async () => {
     vi.setSystemTime(new Date("2026-06-23T10:05:00.000Z"));
     vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(
-      new Response(JSON.stringify({ ok: true }), {
-        status: 200,
-        headers: {
-          "Content-Type": "application/json",
-          Date: "Tue, 23 Jun 2026 10:00:00 GMT",
-          "X-Data-Age": "30",
-        },
-      }),
+      jsonResponse({ ok: true }, 200, { Date: "Tue, 23 Jun 2026 10:00:00 GMT", "X-Data-Age": "30" }),
     );
 
     const result = await apiFetchWithMeta("/api/dex-liquidity", z.object({ ok: z.boolean() }), undefined, 1800);

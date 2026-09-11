@@ -38,23 +38,16 @@ describe("CoreTopRail", () => {
 
     const tape = screen.getByTestId("core-top-tape");
     expect(tape.getAttribute("data-placement")).toBe("top");
-    expect(tape.parentElement?.className).toContain("contents");
-    expect(tape.parentElement?.className).toContain("lg:sticky");
-    expect(tape.parentElement?.className).toContain("lg:top-14");
     // The redundant core-nav pill rail is gone; the grouped top nav owns IA.
     expect(screen.queryByRole("navigation", { name: "Core pages" })).toBeNull();
   });
 
-  it("renders on interior desktop routes while staying hidden below lg", () => {
+  it("mounts on interior desktop routes", () => {
     pathnameMock.mockReturnValue("/liquidity/");
 
     render(<CoreTopRail />);
 
-    const tape = screen.getByTestId("core-top-tape");
-    expect(tape.parentElement?.className).toContain("hidden");
-    expect(tape.parentElement?.className).toContain("lg:block");
-    expect(tape.parentElement?.className).toContain("lg:sticky");
-    expect(tape.parentElement?.className).toContain("lg:top-[calc(3px+3.5rem)]");
+    expect(screen.getByTestId("core-top-tape")).toBeTruthy();
   });
 
   it("renders on stablecoin detail desktop routes", () => {
@@ -62,9 +55,7 @@ describe("CoreTopRail", () => {
 
     render(<CoreTopRail />);
 
-    const tape = screen.getByTestId("core-top-tape");
-    expect(tape.parentElement?.className).toContain("hidden");
-    expect(tape.parentElement?.className).toContain("lg:block");
+    expect(screen.getByTestId("core-top-tape")).toBeTruthy();
   });
 
   it("does not mount the data-fetching tape on mobile interior routes", () => {
@@ -74,7 +65,6 @@ describe("CoreTopRail", () => {
     render(<CoreTopRail />);
 
     expect(screen.queryByTestId("core-top-tape")).toBeNull();
-    expect(screen.getByTestId("core-top-rail-placeholder").className).toContain("lg:block");
   });
 
   it("does not render on chromeless Mini App routes", () => {

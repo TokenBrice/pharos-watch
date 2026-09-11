@@ -1,4 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
+import { withEnv } from "./helpers/test-state";
+import { ACCESS_HEADERS, jsonResponse, textResponse } from "./smoke-ops.test-support";
 
 import {
   assertNonceProtectedHtml,
@@ -14,25 +16,6 @@ import {
   shouldSkipOpsUiProxyAssertion,
   shouldRetryOpsUiProxyStatus,
 } from "../maintenance/smoke-ops.mjs";
-
-function withEnv(name: string, value: string | undefined, fn: () => void) {
-  const original = process.env[name];
-  if (value === undefined) {
-    delete process.env[name];
-  } else {
-    process.env[name] = value;
-  }
-
-  try {
-    fn();
-  } finally {
-    if (original === undefined) {
-      delete process.env[name];
-    } else {
-      process.env[name] = original;
-    }
-  }
-}
 
 describe("getSmokeOpsScope", () => {
   it("defaults to full and accepts canary", () => {
@@ -125,28 +108,15 @@ describe("fetchOpsUiProxyStatus", () => {
     const fetchMock = vi
       .fn()
       .mockResolvedValueOnce(
-        new Response(JSON.stringify({ error: "Unauthorized" }), {
-          status: 401,
-          headers: {
-            "content-type": "application/json",
-            "set-cookie":
-              "CF_Authorization=ui-session; Expires=Sun, 05 Apr 2026 12:51:17 GMT; Path=/; Secure; SameSite=none",
-          },
-        }),
+        jsonResponse({ error: "Unauthorized" }, 401, { "set-cookie": "CF_Authorization=ui-session; Expires=Sun, 05 Apr 2026 12:51:17 GMT; Path=/; Secure; SameSite=none" }),
       )
       .mockResolvedValueOnce(
-        new Response(JSON.stringify({ overallStatus: "degraded" }), {
-          status: 200,
-          headers: { "content-type": "application/json" },
-        }),
+        jsonResponse({ overallStatus: "degraded" }, 200),
       );
 
     const result = await fetchOpsUiProxyStatus(
       "https://ops.pharos.watch/api/admin/status",
-      {
-        "CF-Access-Client-Id": "id",
-        "CF-Access-Client-Secret": "secret",
-      },
+      ACCESS_HEADERS,
       { fetchImpl: fetchMock },
     );
 
@@ -170,21 +140,12 @@ describe("fetchOpsUiProxyStatus", () => {
 
   it("does not retry a 401 when only non-Access cookies are present", async () => {
     const fetchMock = vi.fn().mockResolvedValueOnce(
-      new Response(JSON.stringify({ error: "Unauthorized" }), {
-        status: 401,
-        headers: {
-          "content-type": "application/json",
-          "set-cookie": "cf_clearance=bot-cookie; Path=/; Secure",
-        },
-      }),
+      jsonResponse({ error: "Unauthorized" }, 401, { "set-cookie": "cf_clearance=bot-cookie; Path=/; Secure" }),
     );
 
     const result = await fetchOpsUiProxyStatus(
       "https://ops.pharos.watch/api/admin/status",
-      {
-        "CF-Access-Client-Id": "id",
-        "CF-Access-Client-Secret": "secret",
-      },
+      ACCESS_HEADERS,
       { fetchImpl: fetchMock },
     );
 
@@ -202,26 +163,17 @@ describe("fetchOpsUiProxyStatusWithRetry", () => {
     const fetchMock = vi
       .fn()
       .mockResolvedValueOnce(
-        new Response(body, {
-          status,
-          headers: { "content-type": "text/plain" },
-        }),
+        textResponse(body, status),
       )
       .mockResolvedValueOnce(
-        new Response(JSON.stringify({ overallStatus: "degraded" }), {
-          status: 200,
-          headers: { "content-type": "application/json" },
-        }),
+        jsonResponse({ overallStatus: "degraded" }, 200),
       );
     const sleepMock = vi.fn().mockResolvedValue(undefined);
     const onRetry = vi.fn();
 
     const result = await fetchOpsUiProxyStatusWithRetry(
       "https://ops.pharos.watch/api/admin/status",
-      {
-        "CF-Access-Client-Id": "id",
-        "CF-Access-Client-Secret": "secret",
-      },
+      ACCESS_HEADERS,
       {
         fetchImpl: fetchMock,
         retryCount: 1,
@@ -246,31 +198,19 @@ describe("fetchOpsUiProxyStatusWithRetry", () => {
     const fetchMock = vi
       .fn()
       .mockResolvedValueOnce(
-        new Response("gateway timeout", {
-          status: 504,
-          headers: { "content-type": "text/plain" },
-        }),
+        textResponse("gateway timeout", 504),
       )
       .mockResolvedValueOnce(
-        new Response("gateway timeout", {
-          status: 504,
-          headers: { "content-type": "text/plain" },
-        }),
+        textResponse("gateway timeout", 504),
       )
       .mockResolvedValueOnce(
-        new Response(JSON.stringify({ overallStatus: "healthy" }), {
-          status: 200,
-          headers: { "content-type": "application/json" },
-        }),
+        jsonResponse({ overallStatus: "healthy" }, 200),
       );
     const sleepMock = vi.fn().mockResolvedValue(undefined);
 
     const result = await fetchOpsUiProxyStatusWithRetry(
       "https://ops.pharos.watch/api/admin/status",
-      {
-        "CF-Access-Client-Id": "id",
-        "CF-Access-Client-Secret": "secret",
-      },
+      ACCESS_HEADERS,
       {
         fetchImpl: fetchMock,
         sleepImpl: sleepMock,
@@ -288,31 +228,19 @@ describe("fetchOpsUiProxyStatusWithRetry", () => {
     const fetchMock = vi
       .fn()
       .mockResolvedValueOnce(
-        new Response("gateway timeout", {
-          status: 504,
-          headers: { "content-type": "text/plain" },
-        }),
+        textResponse("gateway timeout", 504),
       )
       .mockResolvedValueOnce(
-        new Response("gateway timeout", {
-          status: 504,
-          headers: { "content-type": "text/plain" },
-        }),
+        textResponse("gateway timeout", 504),
       )
       .mockResolvedValueOnce(
-        new Response("gateway timeout", {
-          status: 504,
-          headers: { "content-type": "text/plain" },
-        }),
+        textResponse("gateway timeout", 504),
       );
     const sleepMock = vi.fn().mockResolvedValue(undefined);
 
     const result = await fetchOpsUiProxyStatusWithRetry(
       "https://ops.pharos.watch/api/admin/status",
-      {
-        "CF-Access-Client-Id": "id",
-        "CF-Access-Client-Secret": "secret",
-      },
+      ACCESS_HEADERS,
       {
         fetchImpl: fetchMock,
         retryDelayMs: 2_000,
@@ -331,16 +259,10 @@ describe("fetchJsonWithRetry", () => {
     const fetchMock = vi
       .fn()
       .mockResolvedValueOnce(
-        new Response(JSON.stringify({ error: "warming" }), {
-          status: 500,
-          headers: { "content-type": "application/json" },
-        }),
+        jsonResponse({ error: "warming" }, 500),
       )
       .mockResolvedValueOnce(
-        new Response(JSON.stringify({ dryRun: true }), {
-          status: 200,
-          headers: { "content-type": "application/json" },
-        }),
+        jsonResponse({ dryRun: true }, 200),
       );
     const sleepMock = vi.fn().mockResolvedValue(undefined);
     const onRetry = vi.fn();
@@ -378,10 +300,7 @@ describe("fetchJsonWithRetry", () => {
 
   it("does not retry direct ops authorization failures", async () => {
     const fetchMock = vi.fn().mockResolvedValueOnce(
-      new Response(JSON.stringify({ error: "Unauthorized" }), {
-        status: 401,
-        headers: { "content-type": "application/json" },
-      }),
+      jsonResponse({ error: "Unauthorized" }, 401),
     );
     const sleepMock = vi.fn().mockResolvedValue(undefined);
 
@@ -406,28 +325,19 @@ describe("hasOpsUiAccessSessionCookie", () => {
 
 describe("shouldSkipOpsUiProxyAssertion", () => {
   it("skips when the proxied request is unauthorized and no UI session cookie was bootstrapped", () => {
-    const response = new Response(JSON.stringify({ error: "Unauthorized" }), {
-      status: 401,
-      headers: { "content-type": "application/json" },
-    });
+    const response = jsonResponse({ error: "Unauthorized" }, 401);
 
     expect(shouldSkipOpsUiProxyAssertion(response, "cf_clearance=bot-cookie")).toBe(true);
   });
 
   it("still skips when a proxied 401 persists even after a UI session cookie was bootstrapped", () => {
-    const response = new Response(JSON.stringify({ error: "Unauthorized" }), {
-      status: 401,
-      headers: { "content-type": "application/json" },
-    });
+    const response = jsonResponse({ error: "Unauthorized" }, 401);
 
     expect(shouldSkipOpsUiProxyAssertion(response, "CF_Authorization=ui-session")).toBe(true);
   });
 
   it("does not skip non-auth failures once the request cleared Access", () => {
-    const response = new Response(JSON.stringify({ error: "Upstream failed" }), {
-      status: 502,
-      headers: { "content-type": "application/json" },
-    });
+    const response = jsonResponse({ error: "Upstream failed" }, 502);
 
     expect(shouldSkipOpsUiProxyAssertion(response, "CF_Authorization=ui-session")).toBe(false);
   });
@@ -451,18 +361,12 @@ describe("shouldRetryOpsUiProxyStatus", () => {
     expect(shouldRetryOpsUiProxyStatus(new Response("gateway timeout", { status: 504 }))).toBe(true);
     expect(
       shouldRetryOpsUiProxyStatus(
-        new Response(JSON.stringify({ error: "Unauthorized" }), {
-          status: 401,
-          headers: { "content-type": "application/json" },
-        }),
+        jsonResponse({ error: "Unauthorized" }, 401),
       ),
     ).toBe(false);
     expect(
       shouldRetryOpsUiProxyStatus(
-        new Response(JSON.stringify({ error: "upstream failed" }), {
-          status: 500,
-          headers: { "content-type": "application/json" },
-        }),
+        jsonResponse({ error: "upstream failed" }, 500),
       ),
     ).toBe(false);
   });
@@ -476,18 +380,12 @@ describe("shouldRetryDirectOpsJson", () => {
     expect(shouldRetryDirectOpsJson(new Response("gateway timeout", { status: 504 }))).toBe(true);
     expect(
       shouldRetryDirectOpsJson(
-        new Response(JSON.stringify({ error: "Unauthorized" }), {
-          status: 401,
-          headers: { "content-type": "application/json" },
-        }),
+        jsonResponse({ error: "Unauthorized" }, 401),
       ),
     ).toBe(false);
     expect(
       shouldRetryDirectOpsJson(
-        new Response(JSON.stringify({ dryRun: true }), {
-          status: 200,
-          headers: { "content-type": "application/json" },
-        }),
+        jsonResponse({ dryRun: true }, 200),
       ),
     ).toBe(false);
   });

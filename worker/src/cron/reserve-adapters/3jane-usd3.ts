@@ -157,6 +157,7 @@ export function adaptThreeJaneUsd3Snapshot(snapshot: ThreeJaneUsd3Snapshot): Ada
   return {
     slices: slicesFromValues([
       {
+        sourceKey: "3jane-usd3:usdc",
         name: "Aave USDC liquidity buffer",
         value: decimalNumberFromBigInt(liquidAssetsRaw, USDC_DECIMALS),
         risk: "medium",
@@ -165,6 +166,7 @@ export function adaptThreeJaneUsd3Snapshot(snapshot: ThreeJaneUsd3Snapshot): Ada
         blacklistable: true,
       },
       {
+        sourceKey: "3jane-usd3:credit-receivables",
         name: "Fintech and crypto credit receivables",
         value: decimalNumberFromBigInt(snapshot.creditPositionAssetsRaw, USDC_DECIMALS),
         risk: "high",
@@ -196,8 +198,6 @@ export function adaptThreeJaneUsd3Snapshot(snapshot: ThreeJaneUsd3Snapshot): Ada
       totalAssetsUsd,
       navUsd,
       collateralizationRatio: totalReserveUsd / totalAssetsUsd,
-      immediateRedeemableUsd,
-      immediateRedeemableRatio: capacityRatio,
       sharePriceUsd: navUsd / decimalNumberFromBigInt(snapshot.totalSupplyRaw, USDC_DECIMALS),
       ...buildRedemptionSnapshotMetadata({
         capacityUsd: immediateRedeemableUsd,

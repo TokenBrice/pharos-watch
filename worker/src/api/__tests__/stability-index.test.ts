@@ -47,7 +47,9 @@ describe("handleStabilityIndex contract tests", () => {
     expect((body as { current: Record<string, unknown> }).current).toHaveProperty("methodologyVersion");
     expect((body as { methodology: Record<string, unknown> }).methodology).toHaveProperty("version");
     expect((body as { methodology: Record<string, unknown> }).methodology).toHaveProperty("changelogPath");
-    expect(Array.isArray((body as { history: unknown[] }).history)).toBe(true);
+    expect(body).toHaveProperty("history", [
+      { date: yesterdayMidnight, score: 71, band: "TREMOR", methodologyVersion: "2.1" },
+    ]);
   });
 
   it("detail mode includes components in history items", async () => {
@@ -60,12 +62,10 @@ describe("handleStabilityIndex contract tests", () => {
     expect(body).toHaveProperty("history");
     expect(body).toHaveProperty("methodology");
     const typedBody = body as { history: Record<string, unknown>[] };
-    expect(Array.isArray(typedBody.history)).toBe(true);
-    // Detail mode adds components to history items
-    if (typedBody.history.length > 0) {
-      expect(typedBody.history[0]).toHaveProperty("components");
-      expect(typedBody.history[0]).toHaveProperty("methodologyVersion");
-    }
+    expect(typedBody.history).toEqual([{
+      date: yesterdayMidnight, score: 71, band: "TREMOR", methodologyVersion: "2.1",
+      components: { severity: 14.2, breadth: 9.7, stressBreadth: 2.4, trend: -0.9 },
+    }]);
   });
 
   it("rejects malformed detail booleans instead of silently treating them as false", async () => {
@@ -235,6 +235,30 @@ describe("handleStabilityIndex contract tests", () => {
     await expect(res.json()).resolves.toEqual({
       error: "PSI current components payload is malformed",
     });
+  });
+
+  it.each([
+    ["input_snapshot", "{bad-snapshot", "input snapshot"],
+    ["input_snapshot", "[]", "input snapshot"],
+    ["components", "[]", "components"],
+  ])("rejects independently malformed %s: %s", async (field, value, label) => {
+    const invalidSample = { ...sampleRow, [field]: value };
+    const db = mockD1([
+      { match: "stability_index_samples", rows: [invalidSample], first: invalidSample },
+      { match: "stability_index", rows: [historyRow] },
+    ]);
+    const response = await handleStabilityIndex(db, new URL("https://x/api/stability-index"));
+    expect(response.status).toBe(503);
+    expect(await response.json()).toEqual({ error: `PSI current ${label} payload is malformed` });
+  });
+
+  it("returns an empty history and null current when neither source exists", async () => {
+    const db = mockD1([
+      { match: "stability_index_samples", rows: [], first: null },
+      { match: "stability_index", rows: [] },
+    ]);
+    const response = await handleStabilityIndex(db, new URL("https://x/api/stability-index"));
+    expect(await readJsonResponse(response, 200)).toMatchObject({ current: null, history: [] });
   });
 
   it("detail mode drops malformed historical component rows and reports malformedRows", async () => {

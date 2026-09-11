@@ -113,7 +113,70 @@ describe("dependency-audit exceptions", () => {
     );
   });
 
-  it("fails closed after the exception expiry date", () => {
+  it("accepts disjoint reviewed advisory roots without cross-contaminating package allowlists", () => {
+    const other = {
+      ...exception, advisoryId: "GHSA-other-fixture", source: 2, dependency: "other",
+      nodes: ["node_modules/other"], affectedPackages: ["other", "other-consumer"],
+    };
+    const report = reviewedReport();
+    report.vulnerabilities.other = {
+      name: "other", severity: "high", nodes: other.nodes, effects: ["other-consumer"],
+      via: [{
+        source: 2, name: "other", dependency: "other", severity: "high", range: "<1.1.18",
+        url: "https://github.com/advisories/GHSA-other-fixture",
+      }],
+    };
+    report.vulnerabilities["other-consumer"] = {
+      name: "other-consumer", severity: "high", nodes: ["node_modules/other-consumer"],
+      effects: [], via: ["other"],
+    };
+    expect(verifyDependencyAuditReport(report, {
+      registry: { version: 1, exceptions: [exception, other] }, now: reviewedNow,
+    })).toEqual({ acceptedExceptionIds: ["GHSA-other-fixture", "GHSA-reviewed-fixture"] });
+  });
+
+  it("rejects both reachable unapproved packages and disconnected indirect vulnerabilities", () => {
+    for (const reachable of [true, false]) {
+      const report = reviewedReport();
+      report.vulnerabilities.unapproved = {
+        name: "unapproved", severity: "high", nodes: ["node_modules/unapproved"],
+        effects: [], via: ["minimatch"],
+      };
+      if (reachable) report.vulnerabilities.minimatch.effects.push("unapproved");
+      expect(() => verifyDependencyAuditReport(report, { registry: reviewedRegistry, now: reviewedNow }))
+        .toThrow(reachable ? "reached unreviewed package unapproved" : "Unreviewed high/critical vulnerability affects unapproved");
+    }
+  });
+
+  it("rejects changed advisory identity, range and additional direct advisories", () => {
+    for (const mutation of [{ source: 2 }, { range: "*" }, { extra: true }]) {
+      const report = reviewedReport();
+      const vulnerability = report.vulnerabilities["brace-expansion"];
+      if ("extra" in mutation) vulnerability.via.push({ source: 2 });
+      else Object.assign(vulnerability.via[0] as object, mutation);
+      expect(() => verifyDependencyAuditReport(report, { registry: reviewedRegistry, now: reviewedNow }))
+        .toThrow("Unreviewed high/critical advisory affects brace-expansion");
+    }
+  });
+
+  it("fails closed for spawn errors, unexpected statuses and malformed JSON", () => {
+    for (const failure of [
+      { error: new Error("spawn failed"), status: null, stdout: JSON.stringify(reviewedReport()), message: "spawn failed" },
+      { status: 2, stdout: JSON.stringify(reviewedReport()), message: "exited unexpectedly" },
+      { status: 0, stdout: "{", message: "did not emit JSON" },
+    ]) {
+      const spawn = (): SpawnSyncReturns<string> => ({
+        pid: 0, output: [], stderr: "", signal: null, ...failure,
+      });
+      expect(() => runFullLockfileDependencyAudit({ spawn, registry: reviewedRegistry, now: reviewedNow }))
+        .toThrow(failure.message);
+    }
+  });
+
+  it("accepts the final expiry-day instant and rejects the next UTC midnight", () => {
+    expect(verifyDependencyAuditReport(reviewedReport(), {
+      registry: reviewedRegistry, now: new Date("2026-08-15T23:59:59.999Z"),
+    })).toEqual({ acceptedExceptionIds: [exception.advisoryId] });
     expect(() =>
       verifyDependencyAuditReport(reviewedReport(), {
         registry: reviewedRegistry,

@@ -67,6 +67,9 @@
     "version": 2,
     "semantics": "single-asset",
     "breakerScope": "usyc-hashnote",
+    "scoring": {
+      "maxSourceAgeSec": 345600
+    },
     "display": {
       "url": "https://usyc.hashnote.com/",
       "label": "Hashnote"
@@ -79,9 +82,11 @@
       }
     },
     "params": {
+      "navScope": "native-fund-share",
       "oracleAddress": "0x74f2199AEb743f68f05943e5715A33EaF2b61f53",
       "tokenAddress": "0x136471a34f6ef19fe571effc1ca711fdb8e49f2b",
-      "assetLabel": "U.S. Treasury Bills and reverse repos",
+      "sourceKey": "chainlink-nav:token:0x136471a34f6ef19fe571effc1ca711fdb8e49f2b",
+      "assetLabel": "Hashnote International Short Duration Yield Fund (USYC) shares",
       "assetRisk": "very-low",
       "rpcUrl": "https://ethereum-rpc.publicnode.com",
       "fallbackRpcUrl": "https://eth.llamarpc.com",

@@ -2,6 +2,7 @@
   "id": "jupusd-jupiter",
   "reserves": [
     {
+      "sourceKey": "jupusd:usdtb",
       "name": "USDtb",
       "pct": 88.5,
       "risk": "low",
@@ -18,6 +19,7 @@
       "liquidityHorizon": "immediate"
     },
     {
+      "sourceKey": "jupusd:usdc",
       "name": "USDC",
       "pct": 11.5,
       "risk": "low",

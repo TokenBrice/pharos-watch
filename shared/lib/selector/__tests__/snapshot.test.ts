@@ -10,7 +10,6 @@ import {
 import { canonicalizeForSid } from "../canonicalize";
 import {
   buildSelectorSnapshotOutput,
-  buildSnapshotComponent,
   buildSnapshotRecommendation,
   buildTradingSnapshotRecommendation,
   buildYieldSnapshotRecommendation,
@@ -184,6 +183,28 @@ describe("selector snapshot contract", () => {
     expect(validateVerifiedSelectorSnapshot(mismatchedBinding)).toEqual({ ok: false, error: "shape" });
     expect(validateSelectorSnapshotResponse(mismatchedBinding)).toEqual({ ok: false, error: "shape" });
     expect(validateVerifiedSelectorSnapshot(tamperedScore)).toEqual({ ok: false, error: "shape" });
+  });
+
+  it.each([
+    { snapshotSchemaVersion: 3 },
+    { provenance: "pharos-verified" },
+    { verification: {} },
+  ])("rejects an isolated verification dispatch marker %j", (marker) => {
+    const legacy = buildSelectorSnapshotOutput();
+    expect(validateSelectorSnapshotResponse(legacy).ok).toBe(true);
+    expect(validateSelectorSnapshotResponse({ ...legacy, ...marker }))
+      .toEqual({ ok: false, error: "shape" });
+  });
+
+  it("rejects an engine binding mismatch and debug on verified responses", () => {
+    const verified = createVerifiedSelectorSnapshot(expectValid(buildSelectorSnapshotOutput()));
+    expect(validateSelectorSnapshotResponse(verified).ok).toBe(true);
+    expect(validateSelectorSnapshotResponse({
+      ...verified,
+      verification: { ...verified.verification, engineVersion: "selector-v1.9" },
+    })).toEqual({ ok: false, error: "shape" });
+    expect(validateSelectorSnapshotResponse({ ...verified, debug: {} }))
+      .toEqual({ ok: false, error: "unsafe" });
   });
 
   it("projects every level onto an exact allowlist", () => {
@@ -413,7 +434,16 @@ describe("selector snapshot contract", () => {
   });
 
   it("rejects reserved keys and pathological nesting", () => {
-    expectInvalid(JSON.parse(`{"__proto__":{"polluted":true}}`));
+    const baseline = buildSelectorSnapshotOutput();
+    expectValid(baseline);
+    for (const key of ["__proto__", "constructor", "prototype"]) {
+      const reserved = JSON.parse(`{"${key}":{"polluted":true}}`);
+      expect(validateSelectorSnapshot({ ...baseline, ...reserved })).toEqual({ ok: false, error: "unsafe" });
+      expect(validateSelectorSnapshot({
+        ...baseline,
+        recommended: [{ ...buildSnapshotRecommendation(), ...reserved }],
+      })).toEqual({ ok: false, error: "unsafe" });
+    }
 
     const nested: Record<string, unknown> = {};
     let cursor = nested;
@@ -479,17 +509,20 @@ describe("selector snapshot contract", () => {
     );
   });
 
-  it("rejects invalid score and component ranges", () => {
-    expectInvalid(
-      buildSelectorSnapshotOutput({
-        recommended: [
-          buildSnapshotRecommendation({
-            score: 101,
-            components: [buildSnapshotComponent({ normalizedValue: 120 })],
-          }),
-        ],
-      }),
-    );
+  it("rejects each invalid score or normalized component independently", () => {
+    expectValid(buildSelectorSnapshotOutput());
+    expectInvalid(buildSelectorSnapshotOutput({
+      recommended: [buildSnapshotRecommendation({ score: 101 })],
+    }));
+    const recommendation = buildSnapshotRecommendation();
+    const components = recommendation.components as Record<string, unknown>[];
+    expectInvalid(buildSelectorSnapshotOutput({
+      recommended: [{
+        ...recommendation,
+        components: components.map((component, index) =>
+          index === 0 ? { ...component, normalizedValue: 120 } : component),
+      }],
+    }));
   });
 
   it("rejects malformed yield source details", () => {
@@ -533,17 +566,21 @@ describe("selector snapshot contract", () => {
     );
   });
 
-  it("rejects malformed optional recommendation diagnostics", () => {
-    expectInvalid(
-      buildSelectorSnapshotOutput({
-        recommended: [
-          buildSnapshotRecommendation({
-            confidenceReasons: ["missing-critical-notAWeight"],
-            rankRobustness: { label: "raw-internal-label", scoreMargin: 1 },
-          }),
-        ],
-      }),
-    );
+  it("rejects each malformed optional diagnostic independently", () => {
+    expectValid(buildSelectorSnapshotOutput({
+      recommended: [buildSnapshotRecommendation({
+        confidenceReasons: [],
+        rankRobustness: { label: "clear-margin", scoreMargin: 1 },
+      })],
+    }));
+    for (const diagnostic of [
+      { confidenceReasons: ["missing-critical-notAWeight"] },
+      { rankRobustness: { label: "raw-internal-label", scoreMargin: 1 } },
+    ]) {
+      expectInvalid(buildSelectorSnapshotOutput({
+        recommended: [buildSnapshotRecommendation(diagnostic)],
+      }));
+    }
   });
 
   it("round-trips a trading snapshot with empty perInputStaleness through persist->load", () => {

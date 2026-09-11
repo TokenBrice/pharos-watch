@@ -7,6 +7,7 @@ import { buildCodexHookConfig } from "../maintenance/setup-agent-hooks.ts";
 import { buildPermissionRequestHookOutput, buildPreToolUseHookOutput, classifyChangedFiles, findPreToolUseViolation, formatContract, getHookHarness, readChangedFiles } from "../ci/pharos-change-contract.ts";
 import { collectChangedFiles, collectStagedFiles } from "../lib/changed-files.mts";
 import { runPrTests } from "../maintenance/run-pr-tests.ts";
+import { runCli as runContractCli } from "../ci/pharos-change-contract.ts";
 
 const shell = (command: string, cwd?: string) => ({ cwd, tool_name: "Bash", tool_input: { command } });
 
@@ -87,8 +88,18 @@ describe("agent engine integration", () => {
     } finally { rmSync(dir, { recursive: true, force: true }); }
   });
 
-  it.each([["--file"], ["--file", "--json"], ["--flie", "src/app/page.tsx"], ["--hook=typo"], ["--base-ref=missing-agent-audit-ref"]].map((args) => ({ args })))("rejects invalid routing input $args", ({ args }) => {
-    const result = spawnSync(process.execPath, ["--import", "tsx", "scripts/ci/pharos-change-contract.ts", ...args], { encoding: "utf8" });
+  it.each([["--file"], ["--file", "--json"], ["--flie", "src/app/page.tsx"], ["--hook=typo"]].map((args) => ({ args })))("rejects invalid routing input $args before writing a contract", ({ args }) => {
+    const stdout = vi.spyOn(process.stdout, "write").mockImplementation(() => true);
+    try {
+      expect(() => runContractCli(args)).toThrow();
+      expect(stdout).not.toHaveBeenCalled();
+    } finally {
+      stdout.mockRestore();
+    }
+  });
+
+  it("fails the process for unavailable change selection", () => {
+    const result = spawnSync(process.execPath, ["--import", "tsx", "scripts/ci/pharos-change-contract.ts", "--base-ref=missing-agent-audit-ref"], { encoding: "utf8" });
     expect(result.status).not.toBe(0);
     expect(result.stdout).toBe("");
   });
@@ -121,6 +132,24 @@ describe("agent engine integration", () => {
   it("prints every required entry in a full multi-family route", () => {
     const contract = classifyChangedFiles(["worker/src/cron/sync-stablecoins.ts", "worker/migrations/0300.sql", "shared/data/stablecoins/coins/usdc-circle.json", "src/app/page.tsx", "scripts/ci/pharos-change-contract.ts"]);
     const output = formatContract(contract);
+    const requiredDocs = [
+      "docs/process/cron-trigger-policy.md",
+      "docs/worker-infrastructure.md#shared-database-helpers",
+      "docs/process/adding-a-stablecoin.md#source-of-truth",
+      "docs/architecture.md#frontend-runtime-and-seo-surface",
+      "docs/scripts.md#operator-cli-contract",
+    ];
+    const requiredChecks = ["npm run check:cron-sync", "npm run check:migrations", "npm run check:stablecoin-data", "npx vitest run src", "npx vitest run scripts/__tests__"];
+    const requiredRules = [
+      "Pick the trigger slot before adding fetch-heavy work.",
+      "Migrations must be backward-compatible because CI applies D1 migrations before the new Worker is live.",
+      "Keep canonical order, generated data, and schemas aligned.",
+      "Static export means route metadata, sitemap, and crawlability can matter even for simple UI changes.",
+    ];
+    expect(contract.docs.map((doc) => doc.anchor ? `${doc.path}#${doc.anchor}` : doc.path)).toEqual(expect.arrayContaining(requiredDocs));
+    expect(contract.checks).toEqual(expect.arrayContaining(requiredChecks));
+    expect(contract.hardRules).toEqual(expect.arrayContaining(requiredRules));
+    for (const entry of [...requiredDocs, ...requiredChecks, ...requiredRules]) expect(output).toContain(entry);
     for (const doc of contract.docs) expect(output).toContain(doc.anchor ? `${doc.path}#${doc.anchor}` : doc.path);
     for (const check of contract.checks) expect(output).toContain(check);
     for (const rule of contract.hardRules) expect(output).toContain(rule);

@@ -45,28 +45,28 @@ function walk(dir: string, out: string[] = []): string[] {
   return out;
 }
 
+// Collected once: both invariants scan the same component tree.
+const COMPONENT_SOURCES: readonly { rel: string; src: string }[] = walk(COMPONENTS_DIR).map((file) => ({
+  rel: toPosixRel(file),
+  src: readFileSync(file, "utf8"),
+}));
+
 describe("design invariants", () => {
   it("never uses Tailwind max-* variants (this pipeline does not emit them)", () => {
-    const files = walk(COMPONENTS_DIR);
-    const offenders: string[] = [];
-    for (const file of files) {
-      const src = readFileSync(file, "utf8");
-      if (/\bmax-(?:sm|md|lg|xl|2xl):/.test(src)) offenders.push(toPosixRel(file));
-    }
+    const offenders = COMPONENT_SOURCES.filter(({ src }) => /\bmax-(?:sm|md|lg|xl|2xl):/.test(src)).map(
+      ({ rel }) => rel,
+    );
     expect(offenders).toEqual([]);
   });
 
   it("font-serif / Newsreader usage is confined to editorial carve-outs", () => {
-    const files = walk(COMPONENTS_DIR);
     const offenders: string[] = [];
 
-    for (const file of files) {
-      const rel = toPosixRel(file);
+    for (const { rel, src } of COMPONENT_SOURCES) {
       if (ALLOWED_SERIF_FILES.has(rel)) continue;
       // Digest editorial surfaces — any current or future file under the
       // digest directory is allowed its serif treatment.
       if (rel.includes("/digest-") || rel.includes("/digest/")) continue;
-      const src = readFileSync(file, "utf8");
       if (/\bfont-serif\b|\bNewsreader\b/.test(src)) {
         offenders.push(rel);
       }

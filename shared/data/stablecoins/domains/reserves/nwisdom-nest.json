@@ -4,37 +4,43 @@
     {
       "name": "Nest private and structured credit vaults",
       "pct": 99.764903,
-      "risk": "high"
+      "risk": "high",
+      "sourceKey": "nest-vault-positions:credit-vaults"
     },
     {
       "name": "pUSD liquid balance",
       "pct": 0.119008,
       "risk": "high",
-      "coinId": "pusd-plume"
+      "coinId": "pusd-plume",
+      "sourceKey": "nest-vault-positions:pusd"
     },
     {
       "name": "Liquid USDC balances",
       "pct": 0.078625,
       "risk": "low",
-      "coinId": "usdc-circle"
+      "coinId": "usdc-circle",
+      "sourceKey": "nest-vault-positions:usdc"
     },
     {
       "name": "Nest Treasury vault (nTBILL)",
       "pct": 0.035732,
       "risk": "low",
-      "coinId": "ntbill-nest"
+      "coinId": "ntbill-nest",
+      "sourceKey": "nest-vault-positions:ntbill"
     },
     {
       "name": "Liquid USDT balances",
       "pct": 0.001485,
       "risk": "low",
-      "coinId": "usdt-tether"
+      "coinId": "usdt-tether",
+      "sourceKey": "nest-vault-positions:usdt"
     },
     {
       "name": "Liquid USDT0 balances",
       "pct": 0.000246,
       "risk": "low",
-      "coinId": "usdt-tether"
+      "coinId": "usdt-tether",
+      "sourceKey": "nest-vault-positions:usdt"
     }
   ],
   "reserveReview": {

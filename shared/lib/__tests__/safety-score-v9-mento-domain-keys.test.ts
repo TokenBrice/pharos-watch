@@ -19,20 +19,13 @@ interface MintAuthoritySidecar {
 }
 
 describe("Safety Score v9 Mento control identity", () => {
-  it("canonicalizes one immediate Mento Safe to one failure-domain key", () => {
-    const sidecars: readonly MintAuthoritySidecar[] = [ceur, chfm, cusd, gbpm, jpym];
-    const keys = new Set(
-      sidecars.flatMap((sidecar) =>
-        sidecar.mintAuthority.controls
-          .filter((control) => control.address?.toLowerCase() === MENTO_SAFE_ADDRESS)
-          .flatMap((control) =>
-            control.failureDomainKeys?.length
-              ? control.failureDomainKeys
-              : [`${control.chain ?? "chain-unresolved"}:${control.address!.toLowerCase()}`],
-          ),
-      ),
+  it.each(Object.entries({ ceur, chfm, cusd, gbpm, jpym }))("%s retains the canonical immediate Safe identity", (_name, sidecar: MintAuthoritySidecar) => {
+    const controls = sidecar.mintAuthority.controls.filter(
+      (control) => control.address?.toLowerCase() === MENTO_SAFE_ADDRESS,
     );
-
-    expect([...keys]).toEqual([MENTO_SAFE_DOMAIN]);
+    expect(controls.length).toBeGreaterThan(0);
+    for (const control of controls) {
+      expect(control.failureDomainKeys).toEqual([MENTO_SAFE_DOMAIN]);
+    }
   });
 });

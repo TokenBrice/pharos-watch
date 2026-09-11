@@ -103,4 +103,40 @@ describe("handleStablecoinSummary", () => {
       nowSpy.mockRestore();
     }
   });
+
+  it("sums already-USD multi-peg balances without price conversion and handles absent monthly history", async () => {
+    const payload = JSON.parse(makeStablecoinsCacheValue());
+    Object.assign(payload.peggedAssets[0], {
+      pegType: "peggedEUR", price: 2,
+      circulating: { peggedEUR: 120, peggedUSD: 30 },
+      circulatingPrevDay: { peggedEUR: 100, peggedUSD: 20 },
+      circulatingPrevWeek: { peggedEUR: 80, peggedUSD: 10 },
+    });
+    delete payload.peggedAssets[0].circulatingPrevMonth;
+    const db = mockD1([{ match: "cache", rows: [], first: {
+      value: JSON.stringify(payload), updated_at: Math.floor(Date.now() / 1000),
+    } }]);
+    const response = await handleStablecoinSummary(db, "usdt-tether");
+    expect(await readJsonResponse(response, 200)).toMatchObject({
+      supplyByPegUsd: { peggedEUR: 120, peggedUSD: 30 },
+      supplyUsd: { current: 150, prevDay: 120, prevWeek: 90, prevMonth: 0, change1d: 30, change7d: 60, change30d: 150 },
+    });
+  });
+
+  it("returns stale publication data with a warning and no reusable cache policy", async () => {
+    const now = 1_800_000_000;
+    const clock = vi.spyOn(Date, "now").mockReturnValue(now * 1000);
+    try {
+      const db = mockD1([{ match: "cache", rows: [], first: {
+        value: makeStablecoinsCacheValue(), updated_at: now - 6000,
+      } }]);
+      const response = await handleStablecoinSummary(db, "usdt-tether");
+      expect(response.headers.get("Cache-Control")).toBe("no-store");
+      expect(response.headers.get("Warning")).toContain("stale");
+      expect(response.headers.get("X-Data-Age")).toBe("6000");
+      expect(await readJsonResponse(response, 200)).toMatchObject({ updatedAt: now - 6000, supplyUsd: { current: 100 } });
+    } finally {
+      clock.mockRestore();
+    }
+  });
 });

@@ -124,7 +124,7 @@ function resolveCreditLiquidityHorizon(
 
 export function adaptIdleCdoEpochVariantSnapshot(
   snapshot: IdleCdoEpochVariantSnapshot,
-  params: Pick<IdleCdoParams, "creditSlice" | "unlentSlice" | "sourceUrls">,
+  params: Pick<IdleCdoParams, "creditSlice" | "unlentSlice" | "sourceUrls" | "expectJuniorTranche">,
 ): AdapterResult {
   const warnings: LiveReserveWarning[] = [];
 
@@ -156,7 +156,15 @@ export function adaptIdleCdoEpochVariantSnapshot(
     snapshot.underlyingDecimals,
   );
 
-  const navDrift = contractValueUsd > 0 ? Math.abs(contractValueUsd - navTotalUsd) / contractValueUsd : 1;
+  // `getContractValue()` includes unclaimed protocol fees, which accrue between
+  // harvests and sit outside the tranche NAVs. Reconcile the NAV sum against the
+  // fee-exclusive contract value so a monotonically accruing fee balance cannot
+  // manufacture a permanent reconciliation degrade.
+  const unclaimedFeesUsd = decimalNumberFromBigInt(snapshot.unclaimedFeesRaw, snapshot.underlyingDecimals);
+  const feeExclusiveContractValueUsd = contractValueUsd - unclaimedFeesUsd;
+  const navDrift = feeExclusiveContractValueUsd > 0
+    ? Math.abs(feeExclusiveContractValueUsd - navTotalUsd) / feeExclusiveContractValueUsd
+    : 1;
   if (navDrift > NAV_RECONCILIATION_TOLERANCE) {
     warnings.push(reserveDegradedWarning(
       "idle-cdo-nav-reconciliation-drift",
@@ -178,11 +186,17 @@ export function adaptIdleCdoEpochVariantSnapshot(
   // Seniority is only worth something while a junior tranche actually carries
   // value. Recording that absence is the honest treatment; the composition is
   // NOT re-rated upward for an "AA senior" label with no first-loss beneath it.
+  // When the config declares a single-tranche vault, the missing junior is a
+  // permanent structural fact (an `info`), not a data-quality degrade — the
+  // first-loss reality stays on the slice's `risk`/`riskFactors`.
   if (snapshot.tranche === "AA" && juniorNavRaw(snapshot) <= 0n) {
-    warnings.push(reserveDegradedWarning(
-      "idle-cdo-no-junior-subordination",
-      "The senior AA tranche has no live junior (BB) NAV beneath it, so it absorbs the first loss on the facility",
-    ));
+    const noJuniorMessage =
+      "The senior AA tranche has no live junior (BB) NAV beneath it, so it absorbs the first loss on the facility";
+    warnings.push(
+      params.expectJuniorTranche
+        ? reserveDegradedWarning("idle-cdo-no-junior-subordination", noJuniorMessage)
+        : reserveInfoWarning("idle-cdo-no-junior-subordination", noJuniorMessage),
+    );
   }
   if (snapshot.unlentRaw <= 0n) {
     warnings.push(reserveInfoWarning(

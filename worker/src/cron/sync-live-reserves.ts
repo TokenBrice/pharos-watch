@@ -48,7 +48,6 @@ import {
 } from "../lib/scheduled-recovery-checkpoint";
 import {
   didReserveSyncAttemptBecomeAuthoritative,
-  repairAuthoritativeReserveSyncHistory,
 } from "../lib/live-reserves/store";
 
 interface ReserveCoinQueueResult {
@@ -59,16 +58,17 @@ interface ReserveCoinQueueResult {
   breaker: LiveReserveBreakerOutcome;
   deferredTail: LiveReserveDeferredTailOutcome;
   attemptFailureSummaries: ReserveSyncAttemptFailureGroup[];
-  phaseTimings: Pick<LiveReservePhaseTimings, "adapter" | "d1CoinPersistence">;
+  phaseTimings: Pick<LiveReservePhaseTimings, "adapter" | "d1CoinPersistence" | "stages">;
 }
 
 function createAbortableAttemptSignal(
   parentSignal: AbortSignal,
   timeoutMs: number,
+  reason = "adapter-timeout",
 ): { signal: AbortSignal; cleanup: () => void } {
   const timeout = createTimeoutSignal({
     timeoutMs,
-    timeoutReason: new Error("adapter-timeout"),
+    timeoutReason: new Error(reason),
     parentSignal,
   });
   const cleanup = () => timeout.dispose();
@@ -260,11 +260,17 @@ async function runAdapterAttempt(
   cacheHit: boolean,
   telemetry: AdapterLatencyCollector,
   adapterCtx?: AdapterContext,
+  deadlineMs?: number,
 ): Promise<AdapterResult> {
-  const { signal: attemptSignal, cleanup } = createAbortableAttemptSignal(signal, adapterTimeoutMs);
+  const remainingMs = (deadlineMs ?? Infinity) - Date.now();
+  if (remainingMs <= 0) throw new Error("run-budget-exhausted");
+  const { signal: attemptSignal, cleanup } = createAbortableAttemptSignal(
+    signal, Math.min(adapterTimeoutMs, remainingMs),
+    remainingMs < adapterTimeoutMs ? "run-budget-exhausted" : "adapter-timeout",
+  );
   const startedMs = Date.now();
   let ioCallCount = 0;
-  let waveCount = 0;
+  let ioActivityBurstCount = 0;
   let activeIo = 0;
   let attemptErrored = true;
   const limiter = createAdapterIoLimiter(RESERVE_ADAPTER_MAX_PARALLEL_IO);
@@ -272,7 +278,7 @@ async function runAdapterAttempt(
     run<T>(label: string, factory: () => Promise<T>, options?: { signal?: AbortSignal }): Promise<T> {
       ioCallCount += 1;
       return limiter.run(label, () => {
-        if (activeIo === 0) waveCount += 1;
+        if (activeIo === 0) ioActivityBurstCount += 1;
         activeIo += 1;
         try {
           const operation = factory();
@@ -307,7 +313,7 @@ async function runAdapterAttempt(
       stage,
       cacheHit,
       ioCallCount,
-      waveCount,
+      ioActivityBurstCount,
       elapsedMs: Date.now() - startedMs,
       error: attemptErrored,
     });
@@ -332,7 +338,7 @@ function observeSharedAdapterResult(
         stage: "primary",
         cacheHit: true,
         ioCallCount: 0,
-        waveCount: 0,
+        ioActivityBurstCount: 0,
         elapsedMs: Date.now() - startedMs,
         error: false,
       });
@@ -345,7 +351,7 @@ function observeSharedAdapterResult(
         stage: "primary",
         cacheHit: true,
         ioCallCount: 0,
-        waveCount: 0,
+        ioActivityBurstCount: 0,
         elapsedMs: Date.now() - startedMs,
         error: true,
       });
@@ -363,6 +369,7 @@ function createReserveAdapterRunner(args: {
   coin: ConfiguredCoin,
   config: LiveReserveConfig,
   adapter: ReserveAdapterDefinition,
+  deadlineMs?: number,
 ) => Promise<AdapterResult> {
   const sharedSourceResults = new Map<string, Promise<AdapterResult>>();
 
@@ -370,6 +377,7 @@ function createReserveAdapterRunner(args: {
     coin: ConfiguredCoin,
     config: LiveReserveConfig,
     adapter: ReserveAdapterDefinition,
+    deadlineMs?: number,
   ): Promise<AdapterResult> => {
     const cacheKey = buildSharedSourceCacheKey(config, adapter);
     if (!cacheKey) {
@@ -383,6 +391,7 @@ function createReserveAdapterRunner(args: {
         false,
         args.telemetry,
         args.adapterCtx,
+        deadlineMs,
       );
     }
 
@@ -408,6 +417,7 @@ function createReserveAdapterRunner(args: {
       false,
       args.telemetry,
       args.adapterCtx,
+      deadlineMs,
     );
     sharedSourceResults.set(cacheKey, resultPromise);
     return resultPromise;
@@ -417,17 +427,23 @@ function createReserveAdapterRunner(args: {
     coin: ConfiguredCoin,
     config: LiveReserveConfig,
     adapter: ReserveAdapterDefinition,
+    deadlineMs?: number,
   ): Promise<AdapterResult> => {
     try {
-      return await tryPrimary(coin, config, adapter);
+      if (Date.now() >= (deadlineMs ?? Infinity)) throw new Error("run-budget-exhausted");
+      return await tryPrimary(coin, config, adapter, deadlineMs);
     } catch (primaryError) {
       const fallbackAttempts: Array<{
         input: LiveReserveConfig["inputs"]["primary"];
         error: unknown;
         index: number;
       }> = [];
-      for (const fb of config.inputs.fallbacks ?? []) {
+      // Hive's second node corroborates the first; substituting it as primary
+      // would falsely turn a failed two-node proof into a one-node success.
+      const fallbackInputs = adapter.key === "hive-hbd-protocol" ? [] : config.inputs.fallbacks ?? [];
+      for (const fb of fallbackInputs) {
         throwIfAborted(args.signal);
+        if (Date.now() >= (deadlineMs ?? Infinity)) throw new Error("run-budget-exhausted");
         try {
           const fbConfig = { ...config, inputs: { ...config.inputs, primary: fb } };
           const fallbackResult = await runAdapterAttempt(
@@ -440,6 +456,7 @@ function createReserveAdapterRunner(args: {
             false,
             args.telemetry,
             args.adapterCtx,
+            deadlineMs,
           );
           const primaryMessage = toErrorMessage(primaryError);
           const truncated = primaryMessage.length > 200
@@ -474,6 +491,7 @@ async function runReserveCoinQueue(args: {
     coin: ConfiguredCoin,
     config: LiveReserveConfig,
     adapter: ReserveAdapterDefinition,
+    deadlineMs?: number,
   ) => Promise<AdapterResult>;
   syncStates: Map<string, ReserveSyncStateRecord>;
   budgetConfig: LiveReserveSyncBudgetConfig;
@@ -509,7 +527,9 @@ async function runReserveCoinQueue(args: {
   const breakerOutcomes = new Map<string, boolean>();
   const breakerCanFetch = new Map<string, boolean>();
   const total = args.orderedCoins.length;
-  const phaseTimings = { adapter: 0, d1CoinPersistence: 0 };
+  const phaseTimings = { adapter: 0, d1CoinPersistence: 0, stages: {
+    checkpoint: 0, breakerRead: 0, beginWrite: 0, failureWrite: 0, authoritativeWrite: 0, progress: 0,
+  } };
   let lastProgressAtMs = 0;
   let lastProgressItemsDone = -1;
   let checkpointBoundaryAdvanced = false;
@@ -523,6 +543,7 @@ async function runReserveCoinQueue(args: {
         `[sync-live-reserves] Run budget exhausted at coin ${index}/${total}, deferring remaining`,
       );
       if (args.checkpoint) {
+        const checkpointStartedMs = Date.now();
         await advanceLiveReserveCheckpoint(args.db, args.checkpoint, {
           nextItemKey: coin.id,
           itemsDone: globalIndex,
@@ -530,6 +551,7 @@ async function runReserveCoinQueue(args: {
             ? { recoveryLeaseUntil: Math.floor(Date.now() / 1000) + 15 * 60 }
             : {}),
         });
+        phaseTimings.stages.checkpoint += Date.now() - checkpointStartedMs;
         checkpointBoundaryAdvanced = true;
       }
       const deferred = await recordDeferredTail(
@@ -557,6 +579,7 @@ async function runReserveCoinQueue(args: {
       || globalIndex - lastProgressItemsDone >= 10
       || Date.now() - lastProgressAtMs >= 15_000;
     if (shouldReportProgress) {
+      const progressStartedMs = Date.now();
       await reportLiveReserveProgress(args.reportProgress, {
         stage: "syncing",
         message: `Syncing ${coin.id}`,
@@ -571,6 +594,7 @@ async function runReserveCoinQueue(args: {
         adapterTelemetryProgress: args.telemetry.progress(),
       });
       lastProgressAtMs = Date.now();
+      phaseTimings.stages.progress += Date.now() - progressStartedMs;
       lastProgressItemsDone = globalIndex;
     }
 
@@ -579,10 +603,14 @@ async function runReserveCoinQueue(args: {
       coin,
       signal: args.signal,
       adapter: getReserveAdapter(config.adapter),
-      runAdapter: args.runAdapter,
       breakerCanFetch,
+      runAdapter: (attemptCoin, attemptConfig, adapter, deadlineMs) =>
+        args.runAdapter(attemptCoin, attemptConfig, adapter, (deadlineMs ?? Infinity) - args.budgetConfig.d1FinalizeTimeoutMs),
       previousState: args.syncStates.get(coin.id) ?? null,
       d1FinalizeTimeoutMs: args.budgetConfig.d1FinalizeTimeoutMs,
+      deadlineMs: args.runStartedMs + args.budgetConfig.runBudgetMs - args.budgetConfig.finalizationMarginMs,
+      checkpoint: args.checkpoint,
+      stageTimings: phaseTimings.stages,
       ...(args.checkpoint
         ? {
             onAttemptStarted: (attemptId: string) =>
@@ -590,6 +618,7 @@ async function runReserveCoinQueue(args: {
                 itemKey: coin.id,
                 domainAttemptId: attemptId,
                 itemsDone: globalIndex,
+                deadlineMs: args.runStartedMs + args.budgetConfig.runBudgetMs - args.budgetConfig.finalizationMarginMs,
                 itemsTotal: args.fullQueue.length,
                 ...(args.checkpoint!.attemptNo > 1
                   ? { recoveryLeaseUntil: Math.floor(Date.now() / 1000) + 15 * 60 }
@@ -634,6 +663,7 @@ async function runReserveCoinQueue(args: {
   }
 
   if (args.checkpoint && args.orderedCoins.length > 0 && !checkpointBoundaryAdvanced) {
+    const checkpointStartedMs = Date.now();
     await advanceLiveReserveCheckpoint(args.db, args.checkpoint, {
       nextItemKey: null,
       itemsDone: args.startIndex + args.orderedCoins.length,
@@ -641,6 +671,7 @@ async function runReserveCoinQueue(args: {
         ? { recoveryLeaseUntil: Math.floor(Date.now() / 1000) + 15 * 60 }
         : {}),
     });
+    phaseTimings.stages.checkpoint += Date.now() - checkpointStartedMs;
   }
 
   return {
@@ -685,16 +716,6 @@ export async function syncLiveReserves(
       checkpoint.currentDomainAttemptId,
     );
     if (authoritative) {
-      const historyRepaired = await repairAuthoritativeReserveSyncHistory(
-        db,
-        checkpointResumeId,
-        checkpoint.currentDomainAttemptId,
-      );
-      if (!historyRepaired) {
-        throw new Error(
-          `live reserve checkpoint history repair lost authoritative generation for ${checkpointResumeId}`,
-        );
-      }
       const completedIndex = SYNC_ORDERED_CONFIGURED_COINS.findIndex((coin) => coin.id === checkpointResumeId);
       if (completedIndex < 0) {
         throw new Error(`live reserve checkpoint item ${checkpointResumeId} no longer exists in the queue`);

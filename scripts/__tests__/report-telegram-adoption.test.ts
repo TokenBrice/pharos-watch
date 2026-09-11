@@ -293,4 +293,53 @@ describe("Telegram adoption reporter", () => {
     expect(report.decision).toEqual({ state: "undecided", reason: "capture-window-incomplete", proceed41: false });
     expect(renderTelegramAdoptionBlock(report)).toContain("undecided (capture-window-incomplete)");
   });
+
+  it("prioritizes missing or negative numerators over missing denominators and events", () => {
+    for (const planningRowsWritten of [undefined, -1]) {
+      const report = collectTelegramAdoptionReport(fixtureClient({
+        cronRows: [
+          dispatchRun(NOW_SEC - CAPTURE_SEC, { planningRowsWritten }),
+          dispatchRun(NOW_SEC - 300, { planningRowsWritten: 0, d1RowsWritten: 40 }),
+        ],
+      }), NOW_SEC);
+      expect(report.decision).toEqual({ state: "undecided", reason: "write-share-numerator-missing", proceed41: false });
+    }
+  });
+
+  it("rejects zero denominators and planning writes exceeding lane writes", () => {
+    for (const [planningRowsWritten, d1RowsWritten] of [[0, 0], [41, 40]]) {
+      const report = collectTelegramAdoptionReport(fixtureClient({
+        cronRows: [
+          dispatchRun(NOW_SEC - CAPTURE_SEC, { planningRowsWritten, d1RowsWritten }),
+          dispatchRun(NOW_SEC - 300, { planningRowsWritten: 0, d1RowsWritten: 0 }),
+        ],
+        latencyRows: [{ source_event_id: "event", detected_at: NOW_SEC - 900, first_enqueued_at: NOW_SEC - 200 }],
+      }), NOW_SEC);
+      expect(report.decision).toEqual({ state: "undecided", reason: "write-share-denominator-invalid", proceed41: false });
+    }
+  });
+
+  it("rejects nonempty captures whose events never enqueue or enqueue before detection", () => {
+    for (const first_enqueued_at of [null, NOW_SEC - 901]) {
+      const report = collectTelegramAdoptionReport(fixtureClient(completeCaptureFixture({
+        dispatchPlanningRows: [30, 30, 30], otherLaneRows: [],
+        latencyRows: [{ source_event_id: "event", detected_at: NOW_SEC - 900, first_enqueued_at }],
+      })), NOW_SEC);
+      expect(report.planning.realSourceEvents).toBe(1);
+      expect(report.planning.enqueuedSourceEvents).toBe(0);
+      expect(report.decision).toEqual({ state: "undecided", reason: "no-valid-real-event-samples", proceed41: false });
+    }
+  });
+
+  it("requires strictly more than 20 percent writes or 600000ms latency", () => {
+    for (const [writes, seconds, proceed41] of [[24, 600, false], [25, 600, true], [24, 601, true]] as const) {
+      const report = collectTelegramAdoptionReport(fixtureClient(completeCaptureFixture({
+        dispatchPlanningRows: [writes, 0, 0], otherLaneRows: [],
+        latencyRows: [{ source_event_id: "event", detected_at: NOW_SEC - 900, first_enqueued_at: NOW_SEC - 900 + seconds }],
+      })), NOW_SEC);
+      expect(report.planning.planningWriteShare).toBe(writes / 120);
+      expect(report.planning.planningToFirstEnqueueMs.p95).toBe(seconds * 1000);
+      expect(report.decision).toEqual({ state: "measured", reason: null, proceed41 });
+    }
+  });
 });

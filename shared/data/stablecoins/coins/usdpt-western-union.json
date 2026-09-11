@@ -50,17 +50,17 @@
     "cadence": "monthly",
     "attestorJurisdiction": "United States",
     "latestReport": {
-      "periodEnd": "2026-06-30",
-      "publishedAt": "2026-07-28",
+      "periodEnd": "2026-07-31",
+      "publishedAt": "2026-08-28",
       "assuranceMethod": "examination",
       "scope": "assets-and-liabilities",
       "liabilityReconciliation": "full",
-      "reviewer": "PoR verification sweep 2026-08 (June report PDF read; composition review advanced in lockstep)",
+      "reviewer": "PoR verification sweep 2026-09 (July report PDF read; manifest compilation reviewed in lockstep)",
       "confidence": "verified",
       "sources": [
         {
-          "label": "Deloitte USDPT reserve examination for June 2026",
-          "url": "https://learn.anchorage.com/06.30.26_USDPT-Stablecoin-Attestation-Report.pdf"
+          "label": "Deloitte USDPT reserve examination for July 2026",
+          "url": "https://learn.anchorage.com/07.31.26_USDPT-Stablecoin-Attestation-Report-signed.pdf"
         },
         {
           "label": "Anchorage Digital USDPT reserve-attestation index",
@@ -109,6 +109,28 @@
   ],
   "custodyModel": "institutional-regulated",
   "governanceQuality": "regulated-entity",
+  "liveReservesConfig": {
+    "adapter": "anchorage-independent-assurance",
+    "version": 2,
+    "semantics": "attestation-mix",
+    "breakerScope": "usdpt-western-union",
+    "display": {
+      "url": "https://www.anchorage.com/platform/usdpt-reserve-attestations-anchorage-digital",
+      "label": "USDPT Reserve Attestations"
+    },
+    "inputs": {
+      "primary": {
+        "kind": "http-html",
+        "url": "https://www.anchorage.com/platform/usdpt-reserve-attestations-anchorage-digital"
+      }
+    },
+    "params": {
+      "product": "USDPT",
+      "profile": "usdpt-v1",
+      "indexHost": "www.anchorage.com",
+      "reportHosts": ["learn.anchorage.com"]
+    }
+  },
   "contracts": [
     {
       "chain": "solana",

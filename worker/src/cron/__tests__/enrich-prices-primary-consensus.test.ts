@@ -181,6 +181,7 @@ describe("fetchPrimaryPrices", () => {
   });
 
   it("admits only fresh retained VUSD aggregate liquidity at the UI floor", async () => {
+    installFetch({});
     const nowSec = Math.floor(Date.now() / 1000);
     const cases = [
       {
@@ -473,14 +474,15 @@ describe("fetchPrimaryPrices", () => {
   });
 
   it("can still evaluate assets without geckoId when other primary-source metadata exists", async () => {
-    const assets = [makePeggedAsset({ id: "usdt-tether", name: "NoGecko", symbol: "NG" })];
+    const assets = [makePeggedAsset({ id: "usdt-tether", name: "NoGecko", symbol: "USDT" })];
 
-    installFetch(async () => new Response(JSON.stringify({}), { status: 200 }));
+    const fetchSpy = installFetch({ binance: { body: [{ symbol: "USDTUSD", price: "1.0004" }] } });
 
     const db = makeTestDb();
     const { results, stats } = await fixtureFetchPrimaryPrices(assets, db);
 
-    expect(results.size).toBe(0);
+    expect(results.get("usdt-tether")).toMatchObject({ price: 1.0004, source: "binance" });
+    expect(fetchSpy.mock.calls.map(([url]) => String(url)).filter((url) => url.includes("/simple/price"))).toEqual([]);
     expect(stats.attempted).toBe(1);
   });
 
@@ -488,16 +490,18 @@ describe("fetchPrimaryPrices", () => {
     const assets = [makePeggedAsset({
       id: "usdt-tether",
       name: "BadGecko",
-      symbol: "BG",
-      geckoId: "something-wrong",
+      symbol: "USDT",
+      geckoId: "wrong",
     })];
 
-    installFetch(async () => new Response(JSON.stringify({}), { status: 200 }));
+    const fetchSpy = installFetch({ binance: { body: [{ symbol: "USDTUSD", price: "1.0004" }] } });
 
     const db = makeTestDb();
     const { results, stats } = await fixtureFetchPrimaryPrices(assets, db);
 
-    expect(results.size).toBe(0);
+    expect(results.get("usdt-tether")).toMatchObject({ price: 1.0004, source: "binance" });
+    expect(fetchSpy.mock.calls.map(([url]) => new URL(String(url)).searchParams.get("ids"))
+      .filter((ids) => ids?.split(",").includes("wrong"))).toEqual([]);
     expect(stats.attempted).toBe(1);
   });
 

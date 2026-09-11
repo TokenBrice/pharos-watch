@@ -4,21 +4,6 @@ import { PublicStatusHistoryResponseSchema, StatusHistoryResponseSchema, StatusR
 import { reserveComposition, statusResponse } from "./status.test-support";
 
 describe("StatusResponseSchema reserve composition contract", () => {
-  it("parses reserve sync cursor and history observability fields", () => {
-    const parsed = StatusResponseSchema.parse(statusResponse());
-
-    expect(parsed.reserveComposition).toMatchObject({
-      cursorTailState: "incomplete",
-      cursorTailError: "cursor write failed",
-      runBudgetTruncationCount: 2,
-      historyWriteGaps: [
-        expect.objectContaining({
-          stablecoinId: "usdc-circle",
-          attemptId: "attempt-1",
-        }),
-      ],
-    });
-  });
 
   it.each([
     ["crons", { "sync-stablecoins": {} }],
@@ -95,31 +80,40 @@ describe("StatusResponseSchema reserve composition contract", () => {
     ]);
   });
 
-  it("rejects reserve composition payloads missing cursor observability fields", () => {
-    const payload = statusResponse();
-    const { cursorTailState: _cursorTailState, ...reserveWithoutCursorState } = payload.reserveComposition;
-
-    const result = StatusResponseSchema.safeParse({
-      ...payload,
-      reserveComposition: reserveWithoutCursorState,
-    });
-
+  it.each([
+    ["current", StatusResponseSchema],
+    ["history", StatusHistoryResponseSchema],
+  ] as const)("preserves and validates reserve deferred-cursor state in %s status", (_name, schema) => {
+    const payload = { ...statusResponse(), transitions: [], hasMore: false };
+    expect(schema.parse(payload).reserveComposition).toEqual(reserveComposition());
+    const { nextCursorStablecoinId: _nextCursor, ...reserveWithoutNextCursor } = payload.reserveComposition;
+    const result = schema.safeParse({ ...payload, reserveComposition: reserveWithoutNextCursor });
     expect(result.success).toBe(false);
+    if (!result.success) {
+      expect(result.error.issues.map((issue) => issue.path)).toContainEqual(["reserveComposition", "nextCursorStablecoinId"]);
+    }
   });
 
-  it("uses the same reserve composition contract for status history", () => {
-    const result = StatusHistoryResponseSchema.safeParse({
-      timestamp: 1_780_000_100,
-      state: null,
-      staleness: null,
-      probe: statusResponse().probe,
-      discrepancy: statusResponse().discrepancy,
-      transitions: [],
-      hasMore: false,
-      reserveComposition: reserveComposition(),
-    });
+  it("preserves additive top-level status fields", () => {
+    const parsed = StatusResponseSchema.parse({ ...statusResponse(), futureHealth: { status: "healthy" } });
+    expect((parsed as Record<string, unknown>).futureHealth).toEqual({ status: "healthy" });
+  });
 
-    expect(result.success).toBe(true);
+  it("distinguishes omitted, false, and true history pagination", () => {
+    const payload = { ...statusResponse(), transitions: [] };
+    expect(StatusHistoryResponseSchema.parse(payload).hasMore).toBeNull();
+    expect(StatusHistoryResponseSchema.parse({ ...payload, hasMore: false }).hasMore).toBe(false);
+    expect(StatusHistoryResponseSchema.parse({ ...payload, hasMore: true }).hasMore).toBe(true);
+  });
+
+  it("accepts null reserve history but requires current reserve composition", () => {
+    const payload = { ...statusResponse(), transitions: [], reserveComposition: null };
+    expect(StatusHistoryResponseSchema.parse(payload).reserveComposition).toBeNull();
+    const result = StatusResponseSchema.safeParse(payload);
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      expect(result.error.issues.map((issue) => issue.path)).toContainEqual(["reserveComposition"]);
+    }
   });
 
   it("validates public status history payloads", () => {

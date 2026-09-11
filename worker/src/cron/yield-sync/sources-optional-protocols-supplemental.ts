@@ -363,11 +363,11 @@ export async function fetchPendleMarketSources(signal?: AbortSignal): Promise<Re
 
 export async function fetchYearnKongSources(signal?: AbortSignal): Promise<ResolvedYieldCandidate[]> {
   const results: ResolvedYieldCandidate[] = [];
-  const seenAddresses = new Set<string>();
   const budget = createOptionalSourceBudget("Yearn Kong sources", OPTIONAL_PROTOCOL_API_BUDGET_MS, signal);
 
   try {
     for (const chainId of [1, 10, 137, 8453, 42161]) {
+      const seenAddresses = new Set<string>();
       if (budget.budgetController.signal.aborted) break;
       try {
         const result = await fetchJsonWithRetry<{ data?: { vaults?: KongVault[] } }>(

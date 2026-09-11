@@ -1,5 +1,4 @@
-import { describe, expect, it, vi } from "vitest";
-import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import type { ContractDeployment } from "@shared/types/core";
 import { sleepWithSignal } from "../../../lib/abort";
 import { crawlTokenPools } from "../../dex-liquidity/crawl-helpers";
@@ -10,18 +9,8 @@ import { classifyDexDeploymentOutcomes } from "../deployment-outcomes";
 import { createCrawlStageContext } from "../staged-pool";
 import type { StagedPool } from "../types";
 
-const TARGET_IDS = new Set([
-  "eursafo-spiko",
-  "eurspkcc-spiko",
-  "eutbl-spiko",
-  "gbpsafo-spiko",
-  "m-m0",
-  "safo-spiko-usd",
-  "spkcc-spiko",
-  "uktbl-spiko",
-  "usdh-hermetica",
-  "ustbl-spiko",
-]);
+const STACKS_TOKEN = "SP000000000000000000002Q6VF78.usdh";
+afterEach(() => vi.restoreAllMocks());
 
 function context(stablecoinId = "supplemental-fixture") {
   return createCrawlStageContext({
@@ -34,21 +23,23 @@ function context(stablecoinId = "supplemental-fixture") {
 }
 
 function target(stablecoinId: string, chain: string): ContractDeployment {
-  const meta = ACTIVE_STABLECOINS.find((coin) => coin.id === stablecoinId)!;
-  return [...(meta.contracts ?? []), ...(meta.tradedContracts ?? [])].find(
-    (deployment) => deployment.chain === chain,
-  )!;
+  const addresses: Record<string, string> = {
+    "usdy-ondo-finance": "ibc/ABC",
+    "usdh-hermetica": STACKS_TOKEN,
+    "hchf-hedera-swiss-franc": "0.0.6070123",
+    "bnusd-balanced": "factory/inj14ejqjyq8um4p3xfqj74yld5waqljf88f9eneuk/inj1qspaxnztkkzahvp6scq6xfpgafejmj2td83r9j",
+    "usdc-circle": "0xa00c59ff5a080d2b954d0c75e46e22a0c371235a",
+  };
+  return { chain, address: addresses[stablecoinId]!, decimals: 6 };
 }
 
 describe("supplemental GeckoTerminal deployment discovery", () => {
-  it("queries the ten production-shaped open-gap deployments and keeps their registry identities", async () => {
-    const targets = ACTIVE_STABLECOINS.flatMap((coin) =>
-      TARGET_IDS.has(coin.id)
-        ? [...(coin.contracts ?? []), ...(coin.tradedContracts ?? [])].filter((deployment) =>
-            ["starknet", "stacks", "mantra"].includes(deployment.chain),
-          )
-        : [],
-    );
+  it("queries fixed supplemental chain identities without admitting an IBC denom as EVM", async () => {
+    const targets: ContractDeployment[] = [
+      { chain: "starknet", address: "0xAbC", decimals: 6 },
+      { chain: "stacks", address: STACKS_TOKEN, decimals: 6 },
+      { chain: "mantra", address: "0xAbCd000000000000000000000000000000000001", decimals: 6 },
+    ];
     // The same repo chain id also carries an IBC denom. It must not be sent to
     // MANTRA EVM or admitted as a checked deployment.
     const mantraIbc = target("usdy-ondo-finance", "mantra");
@@ -65,22 +56,12 @@ describe("supplemental GeckoTerminal deployment discovery", () => {
       },
     });
 
-    expect(targets).toHaveLength(10);
-    expect(fetchPools).toHaveBeenCalledTimes(10);
-    expect(fetchPools.mock.calls.map(([address, network]) => [address, network])).toEqual(
-      targets.map((deployment) => [
-        deployment.chain === "starknet"
-          ? `0x${deployment.address.slice(2).padStart(64, "0").toLowerCase()}`
-          : deployment.chain === "mantra"
-            ? deployment.address.toLowerCase()
-            : deployment.address,
-        deployment.chain === "starknet"
-          ? "starknet-alpha"
-          : deployment.chain === "stacks"
-            ? "stacks"
-            : "mantra-evm",
-      ]),
-    );
+    expect(fetchPools).toHaveBeenCalledTimes(3);
+    expect(fetchPools.mock.calls.map(([address, network]) => [address, network])).toEqual([
+      ["0x0000000000000000000000000000000000000000000000000000000000000abc", "starknet-alpha"],
+      [STACKS_TOKEN, "stacks"],
+      ["0xabcd000000000000000000000000000000000001", "mantra-evm"],
+    ]);
     expect(result.providerChecks).toEqual(
       targets.map((deployment) => ({
         chain: deployment.chain,
@@ -137,7 +118,7 @@ describe("supplemental GeckoTerminal deployment discovery", () => {
     warn.mockRestore();
   });
 
-  it("queries production Hedera and Injective identities while preserving census keys", async () => {
+  it("queries fixed Hedera and Injective identities while preserving census keys", async () => {
     const hchf = target("hchf-hedera-swiss-franc", "hedera");
     const bnusd = target("bnusd-balanced", "injective");
     const fetchPools = vi.fn<typeof fetchGtTokenPools>(async () => []);

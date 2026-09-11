@@ -7,12 +7,6 @@
 import { describe, expect, it } from "vitest";
 import { deriveReportCardsBaseInputGenerationId } from "@shared/lib/report-cards-base-input-identity";
 import { createSupplyAttributionJournalV1 } from "@shared/lib/safety-score-v9-supply-attribution-journal";
-import wrappedMSource from "@shared/data/stablecoins/coins/wm-m0.json";
-import xautMetaSource from "@shared/data/stablecoins/coins/xaut-tether.json";
-import wrappedMRiskReview from "@shared/data/stablecoins/domains/risk-review/wm-m0.json";
-import xautRiskReview from "@shared/data/stablecoins/domains/risk-review/xaut-tether.json";
-import wrappedMMintAuthority from "@shared/data/stablecoins/domains/mint-authority/wm-m0.json";
-import xautMintAuthority from "@shared/data/stablecoins/domains/mint-authority/xaut-tether.json";
 import { evaluateV9FactSet } from "@shared/lib/safety-score-v9/evaluate-set";
 import {
   V9_CANDIDATE_POLICY_V1,
@@ -21,10 +15,7 @@ import {
 import {
   compileSafetyScoreV9FactSetFromFixedInput,
 } from "../safety-score-v9/fact-set";
-import {
-  buildSafetyScoreV9BaselineExtension,
-  type V9ExtensionRegistryMeta,
-} from "../safety-score-v9/extension";
+import { buildSafetyScoreV9BaselineExtension } from "../safety-score-v9/extension";
 import {
   deriveXautRepresentationGroupSupplyAttribution,
   XAUT_SUPPLY_ATTRIBUTION_MAX_AGE_SEC,
@@ -34,17 +25,19 @@ import {
   V9_EVALUATION_TEST_TIMEOUT_MS,
   makeXautObservation,
   makeV9FixedInput as exactFixedInput,
-  v9CoinMaxReviewedAtSec,
   makeV9Extension as extension,
   v9Status,
   withV9WmReviewedDeploymentAttribution as withWmReviewedDeploymentAttribution,
 } from "../../test-helpers/v9-fixed-input";
+import {
+  XAUT_FACT_SET_CLOCK_SEC,
+  wmFactSetFixedInput,
+  wmFactSetMeta,
+  xautFactSetFixedInput,
+  xautFactSetMeta,
+} from "./safety-score-v9-fact-set.test-support";
 
-// Nine hours past each asset's newest reviewed registry date. Both suites only
-// need a clock at or after the committed control/access reviews, so deriving it
-// retires the literal that had to be re-pinned every curation pass.
-const WM_CLOCK_SEC = v9CoinMaxReviewedAtSec("wm-m0") + 9 * 3_600;
-const XAUT_CLOCK_SEC = v9CoinMaxReviewedAtSec("xaut-tether") + 9 * 3_600;
+// The shared builders pin clocks after each asset's newest reviewed registry date.
 
 function nullSupplyReviewExtension(options: {
   bridge?: "not-applicable" | "missing" | "required";
@@ -157,24 +150,15 @@ describe("Safety Score v9 exact base fact-set adapter — supply attribution", {
   });
 
   it("compiles exact wM route shares without bridge-materiality uncertainty", () => {
-    const clockSec = WM_CLOCK_SEC;
     const fixed = withWmReviewedDeploymentAttribution(
-      exactFixedInput({
-        assetId: "wm-m0",
-        clockSec,
+      wmFactSetFixedInput({
         chainSupplyByChain: {},
         aggregateCirculating: { peggedUSD: 87_020_618.58982982 },
         omitLiveReserve: true,
       }),
     );
     const baseline = buildSafetyScoreV9BaselineExtension(fixed, {
-      metaById: new Map([
-        ["wm-m0", ({
-            ...wrappedMSource,
-            bridgeRouteRisk: wrappedMRiskReview.bridgeRouteRisk,
-            mintAuthority: wrappedMMintAuthority.mintAuthority,
-          } as unknown as V9ExtensionRegistryMeta)],
-      ]),
+      metaById: new Map([["wm-m0", wmFactSetMeta()]]),
     });
     const compiled = compileSafetyScoreV9FactSetFromFixedInput(fixed, baseline);
     const wm = compiled.assets[0]!;
@@ -205,11 +189,9 @@ describe("Safety Score v9 exact base fact-set adapter — supply attribution", {
   it("compiles one reviewed XAUt0 group control without destination supply claims", () => {
     // At or after the committed xaut-tether control/access review dates
     // (2026-08-08), so the reviewed mint controls are clock-admissible.
-    const clockSec = XAUT_CLOCK_SEC;
+    const clockSec = XAUT_FACT_SET_CLOCK_SEC;
     const aggregateSupplyUsd = 2_480_000_000;
-    const fixed = exactFixedInput({
-      assetId: "xaut-tether",
-      clockSec,
+    const fixed = xautFactSetFixedInput({
       chainSupplyByChain: {},
       aggregateCirculating: { peggedGOLD: aggregateSupplyUsd },
       omitLiveReserve: true,
@@ -239,16 +221,7 @@ describe("Safety Score v9 exact base fact-set adapter — supply attribution", {
       deriveReportCardsBaseInputGenerationId(fixed);
 
     const baseline = buildSafetyScoreV9BaselineExtension(fixed, {
-      metaById: new Map([
-        [
-          "xaut-tether",
-          ({
-            ...xautMetaSource,
-            bridgeRouteRisk: xautRiskReview.bridgeRouteRisk,
-            mintAuthority: xautMintAuthority.mintAuthority,
-          } as unknown as V9ExtensionRegistryMeta),
-        ],
-      ]),
+      metaById: new Map([["xaut-tether", xautFactSetMeta()]]),
     });
     const compiled =
       compileSafetyScoreV9FactSetFromFixedInput(fixed, baseline);
@@ -426,24 +399,12 @@ describe("Safety Score v9 exact base fact-set adapter — supply attribution", {
   });
 
   it("withholds XAUT when no reconciled V2 supply packet can establish global chain supply", () => {
-    const fixed = exactFixedInput({
-      assetId: "xaut-tether",
-      // At or after the committed 2026-08-08 xaut-tether control review dates.
-      clockSec: XAUT_CLOCK_SEC,
+    const fixed = xautFactSetFixedInput({
       chainSupplyByChain: {},
       omitLiveReserve: true,
     });
     const baseline = buildSafetyScoreV9BaselineExtension(fixed, {
-      metaById: new Map([
-        [
-          "xaut-tether",
-          ({
-            ...xautMetaSource,
-            bridgeRouteRisk: xautRiskReview.bridgeRouteRisk,
-            mintAuthority: xautMintAuthority.mintAuthority,
-          } as unknown as V9ExtensionRegistryMeta),
-        ],
-      ]),
+      metaById: new Map([["xaut-tether", xautFactSetMeta()]]),
     });
     const compiled =
       compileSafetyScoreV9FactSetFromFixedInput(fixed, baseline);
@@ -483,13 +444,11 @@ describe("Safety Score v9 exact base fact-set adapter — supply attribution", {
     );
   });
 
-  it("fails closed when the XAUt0 group reaches the materiality floor", () => {
+  it("fails closed when the circulating-liability denominator pushes XAUt0 above materiality", () => {
     // At or after the committed 2026-08-08 xaut-tether control review dates.
-    const clockSec = XAUT_CLOCK_SEC;
+    const clockSec = XAUT_FACT_SET_CLOCK_SEC;
     const aggregateSupplyUsd = 2_480_000_000;
-    const fixed = exactFixedInput({
-      assetId: "xaut-tether",
-      clockSec,
+    const fixed = xautFactSetFixedInput({
       liquidityScore: 95,
       chainSupplyByChain: {},
       aggregateCirculating: { peggedGOLD: aggregateSupplyUsd },
@@ -532,16 +491,7 @@ describe("Safety Score v9 exact base fact-set adapter — supply attribution", {
       deriveReportCardsBaseInputGenerationId(fixed);
 
     const baseline = buildSafetyScoreV9BaselineExtension(fixed, {
-      metaById: new Map([
-        [
-          "xaut-tether",
-          ({
-            ...xautMetaSource,
-            bridgeRouteRisk: xautRiskReview.bridgeRouteRisk,
-            mintAuthority: xautMintAuthority.mintAuthority,
-          } as unknown as V9ExtensionRegistryMeta),
-        ],
-      ]),
+      metaById: new Map([["xaut-tether", xautFactSetMeta()]]),
     });
     expect(
       baseline.assets[0]!.supplyReview?.selectedBridgeRoutes.find((route) =>
@@ -583,21 +533,13 @@ describe("Safety Score v9 exact base fact-set adapter — supply attribution", {
   });
 
   it("restores the bridge-materiality cap when the wM packet is absent", () => {
-    const fixed = exactFixedInput({
-      assetId: "wm-m0",
-      clockSec: WM_CLOCK_SEC,
+    const fixed = wmFactSetFixedInput({
       chainSupplyByChain: {},
       aggregateCirculating: { peggedUSD: 87_020_618.58982982 },
       omitLiveReserve: true,
     });
     const baseline = buildSafetyScoreV9BaselineExtension(fixed, {
-      metaById: new Map([
-        ["wm-m0", ({
-            ...wrappedMSource,
-            bridgeRouteRisk: wrappedMRiskReview.bridgeRouteRisk,
-            mintAuthority: wrappedMMintAuthority.mintAuthority,
-          } as unknown as V9ExtensionRegistryMeta)],
-      ]),
+      metaById: new Map([["wm-m0", wmFactSetMeta()]]),
     });
     const compiled = compileSafetyScoreV9FactSetFromFixedInput(fixed, baseline);
     const wm = compiled.assets[0]!;
@@ -634,9 +576,7 @@ describe("Safety Score v9 exact base fact-set adapter — supply attribution", {
   });
 
   it("uses the latest rejected attribution record in hashed outcome diagnostics", () => {
-    const fixed = exactFixedInput({
-      assetId: "wm-m0",
-      clockSec: WM_CLOCK_SEC,
+    const fixed = wmFactSetFixedInput({
       chainSupplyByChain: {},
       aggregateCirculating: { peggedUSD: 87_020_618.58982982 },
       omitLiveReserve: true,
@@ -648,13 +588,7 @@ describe("Safety Score v9 exact base fact-set adapter — supply attribution", {
       ],
     };
     const baseline = buildSafetyScoreV9BaselineExtension(fixed, {
-      metaById: new Map([
-        ["wm-m0", ({
-          ...wrappedMSource,
-          bridgeRouteRisk: wrappedMRiskReview.bridgeRouteRisk,
-          mintAuthority: wrappedMMintAuthority.mintAuthority,
-        } as unknown as V9ExtensionRegistryMeta)],
-      ]),
+      metaById: new Map([["wm-m0", wmFactSetMeta()]]),
     });
     const wm = compileSafetyScoreV9FactSetFromFixedInput(fixed, baseline).assets[0]!;
     const outcomeEvidence = wm.evidence.find(
@@ -667,7 +601,6 @@ describe("Safety Score v9 exact base fact-set adapter — supply attribution", {
       observedAtSec: fixed.clockSec,
       rejection: {
         code: "supply-review.attribution-rpc-rejection",
-        reason: "chainRows=0; canonicalizationFailures=0; reviewRoutes=4; attribution=deployment-state-unavailable",
         rejectedAtSec: fixed.clockSec,
       },
     });
@@ -677,6 +610,20 @@ describe("Safety Score v9 exact base fact-set adapter — supply attribution", {
     expect(outcomeEvidence.sourceGenerationId).toBe(
       `supply-review-outcome:v1:${outcomeEvidence.contentSha256}`,
     );
+    const outcomeDigest = () => {
+      const current = buildSafetyScoreV9BaselineExtension(fixed, {
+        metaById: new Map([["wm-m0", wmFactSetMeta()]]),
+      });
+      return compileSafetyScoreV9FactSetFromFixedInput(fixed, current).assets[0]!.evidence.find(
+        (evidence) => evidence.evidenceId === "wm-m0:supply-review-outcome",
+      )!.contentSha256;
+    };
+    fixed.supplyAttributionJournalById["wm-m0"]!.reverse();
+    expect(outcomeDigest()).toBe(outcomeEvidence.contentSha256);
+    fixed.supplyAttributionJournalById["wm-m0"]![0] = rejectedWmAttributionRecord(
+      fixed, fixed.clockSec - 10, "chain-rpc-unavailable",
+    );
+    expect(outcomeDigest()).not.toBe(outcomeEvidence.contentSha256);
   });
 
   it("persists null-review outcome ownership and diagnostics for each integration and producer state", () => {
@@ -685,14 +632,12 @@ describe("Safety Score v9 exact base fact-set adapter — supply attribution", {
         name: "missing-profile",
         extension: { bridge: "missing" as const },
         responsibility: "integration-missing" as const,
-        message: "Circulating USD is known, but the required bridge profile is missing or invalid.",
         observationState: "bounded-unknown" as const,
       },
       {
         name: "ambiguous-route-join",
         extension: { bridge: "required" as const },
         responsibility: "integration-missing" as const,
-        message: "Circulating USD is known, but bridge routes do not form one canonical, unique attribution join.",
         observationState: "bounded-unknown" as const,
       },
       {
@@ -702,7 +647,6 @@ describe("Safety Score v9 exact base fact-set adapter — supply attribution", {
           chainSupplyObservedAtSec: AS_OF_SEC - 501,
         },
         responsibility: "producer-failed" as const,
-        message: "Circulating USD is known, but the supply review or its runtime chain input is stale.",
         observationState: "stale" as const,
       },
     ];
@@ -727,7 +671,6 @@ describe("Safety Score v9 exact base fact-set adapter — supply attribution", {
         sourceGenerationId: expect.stringMatching(/^supply-review-outcome:v1:[a-f0-9]{64}$/),
         rejection: {
           code: `supply-review.${outcomeCase.name}`,
-          reason: "chainRows=1; canonicalizationFailures=0; reviewRoutes=0; attribution=none",
           rejectedAtSec: fixed.clockSec,
         },
       });
@@ -742,7 +685,6 @@ describe("Safety Score v9 exact base fact-set adapter — supply attribution", {
         ownerDomain: "control",
         responsibility: outcomeCase.responsibility,
         observationState: outcomeCase.observationState,
-        message: outcomeCase.message,
         evidenceRefIds: ["alpha:chain-supply", "alpha:supply-review-outcome"],
       });
       expect(alpha.supply.selectedBridgeRoutes).toEqual([]);

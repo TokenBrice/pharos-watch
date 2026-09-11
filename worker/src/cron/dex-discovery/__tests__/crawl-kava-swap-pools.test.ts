@@ -2,8 +2,8 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import type { ContractDeployment } from "@shared/types/core";
 import { mockFetch } from "@shared/test-utils/mock-fetch";
 import { createCrawlStageContext } from "../staged-pool";
+import { discoveryContext } from "./discovery.test-support";
 import { crawlKavaSwapPoolsStage, isKavaSwapDiscoveryDeployment } from "../crawl-kava-swap-pools";
-import type { StagedPool } from "../types";
 
 const KAVA_USDX_ADDRESS = "usdx";
 const KAVA_SWAP_PARAMS_URL = "https://api.data.kava.io/kava/swap/v1beta1/params";
@@ -14,17 +14,7 @@ function target(chain = "kava", address = KAVA_USDX_ADDRESS): ContractDeployment
 }
 
 function context() {
-  const pools: StagedPool[] = [];
-  return {
-    pools,
-    value: createCrawlStageContext({
-      stablecoinId: "usdx-kava",
-      knownPoolIds: new Set(),
-      nowSec: 1_800_000_000,
-      pools,
-      priceObs: [],
-    }),
-  };
+  return discoveryContext("usdx-kava");
 }
 
 function params(allowedPools: Array<{ token_a: string; token_b: string }> = [{ token_a: "ukava", token_b: "usdx" }]) {
@@ -169,6 +159,79 @@ describe("Kava swap pool discovery", () => {
       },
     ]);
     expect(stageContext.pools).toEqual([]);
+  });
+
+  it("degrades partial pages and inconsistent totals instead of certifying empty", async () => {
+    for (const pagination of [{ next_key: "more", total: "0" }, { next_key: null, total: "1" }]) {
+      mockFetch([
+        { match: KAVA_SWAP_PARAMS_URL, body: params() },
+        { match: KAVA_SWAP_POOLS_URL, body: { pools: [], pagination } },
+      ], { requireMatch: true, strictUrl: true });
+      const stage = context();
+      const result = await crawlKavaSwapPoolsStage({ coinTargets: [target()], context: stage.value });
+      expect(result.providerChecks).toEqual([{ chain: "kava", address: "usdx", provider: "kava-swap", status: "degraded" }]);
+      expect(stage.pools).toEqual([]);
+    }
+  });
+
+  it("does not stage or count a disabled USDX pair", async () => {
+    mockFetch([
+      { match: KAVA_SWAP_PARAMS_URL, body: params([]) },
+      { match: KAVA_SWAP_POOLS_URL, body: { pools: [pool("ukava:usdx", "ukava", "100", "usdx", "200")] } },
+    ], { requireMatch: true, strictUrl: true });
+    const stage = context();
+    const result = await crawlKavaSwapPoolsStage({ coinTargets: [target()], context: stage.value });
+    expect(result.providerChecks).toEqual([{ chain: "kava", address: "usdx", provider: "kava-swap", status: "success", observedPoolCount: 0 }]);
+    expect(stage.pools).toEqual([]);
+  });
+
+  it("accepts reversed coin order but rejects a mismatched pool name", async () => {
+    for (const [name, status] of [["ukava:usdx", "success"], ["uatom:usdx", "degraded"]] as const) {
+      mockFetch([
+        { match: KAVA_SWAP_PARAMS_URL, body: params() },
+        { match: KAVA_SWAP_POOLS_URL, body: { pools: [pool(name, "usdx", "200", "ukava", "100")] } },
+      ], { requireMatch: true, strictUrl: true });
+      const stage = context();
+      const result = await crawlKavaSwapPoolsStage({ coinTargets: [target()], context: stage.value });
+      expect(result.providerChecks).toEqual([{
+        chain: "kava", address: "usdx", provider: "kava-swap", status,
+        ...(status === "success" ? { observedPoolCount: 1 } : {}),
+      }]);
+      expect(stage.pools.map((entry) => entry.poolId)).toEqual(status === "success" ? ["kava:ukava:usdx"] : []);
+    }
+  });
+
+  it("stops before requesting pools when the params request exhausts the deadline", async () => {
+    const now = vi.spyOn(Date, "now").mockReturnValue(1000);
+    const fetch = vi.fn(async () => {
+      now.mockReturnValue(2000);
+      return new Response(JSON.stringify(params()));
+    });
+    vi.stubGlobal("fetch", fetch);
+    const stage = createCrawlStageContext({
+      stablecoinId: "usdx-kava", knownPoolIds: new Set(), nowSec: 1, pools: [], priceObs: [], deadlineMs: 1500,
+    });
+    expect(await crawlKavaSwapPoolsStage({ coinTargets: [target()], context: stage })).toEqual({
+      providerChecks: [], stoppedEarly: true,
+    });
+    expect(fetch.mock.calls).toHaveLength(1);
+    expect(stage.pools).toEqual([]);
+  });
+
+  it("propagates parent cancellation during params without requesting pools", async () => {
+    const controller = new AbortController();
+    const reason = new Error("cancel-kava");
+    const fetch = vi.fn(async () => {
+      controller.abort(reason);
+      throw reason;
+    });
+    vi.stubGlobal("fetch", fetch);
+    const stage = createCrawlStageContext({
+      stablecoinId: "usdx-kava", knownPoolIds: new Set(), nowSec: 1, pools: [], priceObs: [], signal: controller.signal,
+    });
+    await expect(crawlKavaSwapPoolsStage({ coinTargets: [target()], context: stage })).rejects.toBe(reason);
+    expect(fetch).toHaveBeenCalledTimes(1);
+    expect(stage.pools).toEqual([]);
   });
 
   it("only serves the native Kava USDX identity, not the tracked Osmosis IBC identity", () => {

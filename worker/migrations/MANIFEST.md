@@ -24,6 +24,8 @@
 | 0235     | `0235_telegram_digest_media_state.sql`                        | Add typed Safety Score map attachment identity and retry-safe media delivery progress to Telegram digest editions. |
 | 0236     | `0236_dex_deployment_attempt_attribution.sql`                 | Add rollout-safe per-deployment DEX census attempt fences while retaining the legacy coin fence as a compatibility fallback. |
 | 0237     | `0237_reserve_composition_history_payload_hash.sql`       | Add nullable payload SHA-256 digest to reserve composition history while retaining payload columns for backward compatibility. |
+| 0238     | `0238_api_key_donor_claims.sql`                           | Add the one-claim-per-wallet supporter API key ledger backing `POST /api/donor-key-claims`. |
+| 0239     | `0239_live_reserve_config_fingerprint.sql`                 | Add nullable configuration fingerprints to reserve composition and attempt state; old Workers remain compatible and new admission rejects unreviewed retained configurations. |
 
 ## Squashed Individual Migrations (absorbed into the 0000 baseline on 2026-07-30)
 
@@ -208,7 +210,14 @@ These were operated against production D1 outside the normal migration path. His
 
 These are not active migration rows. They record stale tables with no current runtime readers or writers where the cleanup action is a dedicated destructive D1 rollout, not a standard deploy migration. `npm run check:migrations` enforces `rollout-safety: backward-compatible` for active migrations and rejects table drops in the normal deploy path.
 
-The queue is currently empty. The 2026-08-26 destructive window cleared the previously queued `api_key_requests.intended_endpoints_json` column and the production-only orphans from the 2026-08-26 parity capture (`agents/be4-baseline-parity-prod-schema-2026-08-26.txt`); the load-bearing repair backlog index from that capture was backfilled as migration `0234`. `d1_migrations` is wrangler-owned bookkeeping and is expected to exist only in production.
+The 2026-08-26 destructive window cleared the previously queued `api_key_requests.intended_endpoints_json` column and the production-only orphans from the 2026-08-26 parity capture (`agents/be4-baseline-parity-prod-schema-2026-08-26.txt`); the load-bearing repair backlog index from that capture was backfilled as migration `0234`. `d1_migrations` is wrangler-owned bookkeeping and is expected to exist only in production.
+
+Queued 2026-09-09 (`findings/infra-store-api.md` IS6; fresh source search found no runtime reader for any of the four outside the baseline DDL — every predicate on the affected tables is `stablecoin_id`-qualified or `attempt_id = ?`):
+
+- `idx_reserve_composition_history_coin_attempt` — fully shadowed by the partial-unique twin `idx_reserve_composition_history_coin_attempt_unique` on the same columns; every predicate is `attempt_id = ?`, which never matches NULL.
+- `idx_reserve_sync_attempt_history_coin_attempt` — fully shadowed by `idx_reserve_sync_attempt_history_coin_attempt_unique` on the same columns; same reasoning.
+- `idx_reserve_sync_state_last_success_attempt` — no unqualified consumer; every `reserve_sync_state` predicate is `stablecoin_id`-qualified (primary key) or per-coin correlated.
+- `idx_reserve_sync_state_pending_attempt` — no unqualified consumer; same reasoning.
 
 ## Append-only Retention Policy
 
@@ -312,6 +321,7 @@ Duplicate numeric prefixes 0056 and 0061 existed in the squashed range (0001–0
 - `0234_mint_burn_price_repair_backlog_index.sql`: additive IF NOT EXISTS index backfill; production already carries the index, so both apply and rollback are no-ops for existing databases.
 - `0235_telegram_digest_media_state.sql`: roll back media delivery by restoring the prior Worker. Keep the nullable map identity columns and defaulted media state; the prior Worker ignores them and continues inserting and draining digest rows unchanged.
 - `0236_dex_deployment_attempt_attribution.sql`: roll back by restoring the prior Worker. Keep both nullable attribution columns and the conservative backfill; the prior Worker ignores them, while a forward Worker detects any later legacy `last_crawl_at` write by marker mismatch and fails closed. Removing either column requires a separate coordinated cleanup rollout.
+- `0238_api_key_donor_claims.sql`: do not roll back the Worker to stop claims; set `DONOR_KEY_CLAIMS_OPEN = false` and redeploy, which keeps the donor-tier auth protections (global limiter, no isolate fallback) for keys already issued. Keep the additive table; issued `donor` keys keep authenticating, and dropping it would strand the one-claim-per-wallet fence. Removing it requires a separate coordinated cleanup rollout after every donor key is deactivated.
 
 ## Rollback Procedure
 

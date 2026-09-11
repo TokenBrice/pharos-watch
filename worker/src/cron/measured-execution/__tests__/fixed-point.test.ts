@@ -44,6 +44,26 @@ describe("measured-execution fixed-point conversions", () => {
     expect(usdToRawAmount(maxInputUsd + 1, 6, 1, { maxInputUsd })).toBeNull();
   });
 
+  it("accepts the exact representable ceiling but rejects one raw unit above", () => {
+    expect(usdToRawAmount(10, 0, 1, { maxRawAmount: 10n })).toBe(10n);
+    expect(usdToRawAmount(11, 0, 1, { maxRawAmount: 10n })).toBeNull();
+  });
+
+  it("distinguishes truncated USD and rounded-zero prices from representable values", () => {
+    expect(usdToRawAmount(0.0000009, 6, 1)).toBeNull();
+    expect(usdToRawAmount(1, 0, 0.000000004)).toBeNull();
+    expect(usdToRawAmount(1, 0, 0.000000005)).toBe(100_000_000n);
+  });
+
+  it("fails closed on nonfinite prices and overflowing finite intermediates", () => {
+    for (const price of [NaN, Infinity, -Infinity, Number.MAX_VALUE]) {
+      expect(rawAmountToUsdOrNull(1n, 6, price)).toBeNull();
+    }
+    expect(usdToRawAmount(Number.MAX_VALUE, 6, 1)).toBeNull();
+    expect(usdToRawAmount(1, 6, Number.MAX_VALUE)).toBeNull();
+    expect(rawAmountToUsdOrNull(10n ** 400n, 0, 1)).toBeNull();
+  });
+
   it("preserves checked and unchecked raw-to-USD behavior", () => {
     expect(rawAmountToUsd(1_250_000n, 6, 1)).toBe(1.25);
     expect(rawAmountToUsdOrNull(0n, 6, 1)).toBe(0);

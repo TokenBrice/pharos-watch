@@ -5,10 +5,10 @@ import {
   ApiKeySelfServePendingResponseSchema,
   buildApiKeySelfServeIssueResponseSchema,
 } from "@shared/types/api-key-requests";
-import type { ApiKeySelfServeRequest, ApiKeySelfServeIssueResponse } from "@shared/types";
+import type { ApiKeySelfServeRequest } from "@shared/types";
 import { submitApiKeyRequest, verifyApiKeyRequestToken } from "../api-key-self-serve";
 import { DEFAULT_REQUEST_TIMEOUT_MS } from "../request-lifecycle";
-import { jsonResponse } from "@shared/test-utils/mock-fetch";
+import { jsonResponse, mockFetch } from "@shared/test-utils/mock-fetch";
 
 const ApiKeySelfServeIssueResponseSchema = buildApiKeySelfServeIssueResponseSchema(
   SELF_SERVE_API_KEY_RATE_LIMIT_PER_MINUTE,
@@ -27,32 +27,7 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
-function legacyIsPendingResponse(payload: unknown): boolean {
-  return !!payload
-    && typeof payload === "object"
-    && "status" in payload
-    && payload.status === "pending_verification";
-}
-
-function legacyIsIssueResponse(payload: unknown): payload is ApiKeySelfServeIssueResponse {
-  if (!payload || typeof payload !== "object") return false;
-  const candidate = payload as Partial<ApiKeySelfServeIssueResponse>;
-  const key = candidate.key;
-  return candidate.status === "issued"
-    && typeof candidate.token === "string"
-    && candidate.token.trim().length > 0
-    && !!key
-    && typeof key === "object"
-    && typeof key.keyPrefix === "string"
-    && key.keyPrefix.trim().length > 0
-    && typeof key.maskedToken === "string"
-    && key.maskedToken.trim().length > 0
-    && key.tier === "self-serve"
-    && key.trafficClass === "external"
-    && key.rateLimitPerMinute === SELF_SERVE_API_KEY_RATE_LIMIT_PER_MINUTE
-    && (typeof key.expiresAt === "number" || key.expiresAt === null);
-}
-
+/** Schema-valid issue payload; overrides mutate one field at a time. */
 function issuePayload(overrides: Record<string, unknown> = {}): Record<string, unknown> {
   return {
     status: "issued",
@@ -96,68 +71,93 @@ function requestBody(): ApiKeySelfServeRequest {
 
 describe("api key self-serve response schemas", () => {
   it.each([
-    { status: "pending_verification", message: "Check your email." },
-    { status: "pending_verification" },
-    { status: "pending_verification", message: 42 },
-    { status: "pending_verification", extra: true },
-    { status: "issued", message: "wrong status" },
-    { message: "missing status" },
-    null,
-    [],
-    "pending_verification",
-  ])("matches the legacy pending-response guard for %#", (payload) => {
-    expect(ApiKeySelfServePendingResponseSchema.safeParse(payload).success).toBe(
-      legacyIsPendingResponse(payload),
-    );
+    { name: "pending status with a message", accepted: true, payload: { status: "pending_verification", message: "ok" } },
+    { name: "pending status alone", accepted: true, payload: { status: "pending_verification" } },
+    {
+      name: "pending status with an unvalidated message type",
+      accepted: true,
+      payload: { status: "pending_verification", message: 42 },
+    },
+    {
+      name: "pending status with unknown passthrough fields",
+      accepted: true,
+      payload: { status: "pending_verification", extra: true },
+    },
+    { name: "issued status", accepted: false, payload: { status: "issued", message: "wrong status" } },
+    { name: "absent status", accepted: false, payload: { message: "missing status" } },
+    { name: "null", accepted: false, payload: null },
+    { name: "array", accepted: false, payload: [] },
+    { name: "bare status string", accepted: false, payload: "pending_verification" },
+  ])("pending-response acceptance is $accepted for $name", ({ payload, accepted }) => {
+    expect(ApiKeySelfServePendingResponseSchema.safeParse(payload).success).toBe(accepted);
   });
 
   it.each([
-    issuePayload(),
-    issuePayload({ usage: undefined }),
-    issuePayload({ usage: { unexpected: true } }),
-    issuePayload({ token: "  ak_live_secret  " }),
-    issuePayloadWithKey({ keyPrefix: "  ak_live  " }),
-    issuePayloadWithKey({ maskedToken: "  ak_live_****  " }),
-    issuePayloadWithKey({ expiresAt: null }),
-    issuePayload({ status: "pending_verification" }),
-    issuePayload({ token: "" }),
-    issuePayload({ token: "   " }),
-    issuePayload({ token: 123 }),
-    issuePayload({ key: null }),
-    issuePayload({ key: "not an object" }),
-    issuePayloadWithKey({ keyPrefix: "" }),
-    issuePayloadWithKey({ keyPrefix: "   " }),
-    issuePayloadWithKey({ maskedToken: "" }),
-    issuePayloadWithKey({ maskedToken: "   " }),
-    issuePayloadWithKey({ tier: "admin" }),
-    issuePayloadWithKey({ trafficClass: "site" }),
-    issuePayloadWithKey({ rateLimitPerMinute: SELF_SERVE_API_KEY_RATE_LIMIT_PER_MINUTE + 1 }),
-    issuePayloadWithKey({ rateLimitPerMinute: String(SELF_SERVE_API_KEY_RATE_LIMIT_PER_MINUTE) }),
-    issuePayloadWithKey({ expiresAt: undefined }),
-    issuePayloadWithKey({ expiresAt: "123" }),
-    null,
-    [],
-    "issued",
-  ])("matches the legacy issue-response guard for %#", (payload) => {
-    expect(ApiKeySelfServeIssueResponseSchema.safeParse(payload).success).toBe(
-      legacyIsIssueResponse(payload),
-    );
+    { name: "the complete issued payload", accepted: true, payload: issuePayload() },
+    { name: "an omitted usage block", accepted: true, payload: issuePayload({ usage: undefined }) },
+    { name: "an unrecognized usage block", accepted: true, payload: issuePayload({ usage: { unexpected: true } }) },
+    { name: "a padded token", accepted: true, payload: issuePayload({ token: "  ak_live_secret  " }) },
+    { name: "a padded key prefix", accepted: true, payload: issuePayloadWithKey({ keyPrefix: "  ak_live  " }) },
+    { name: "a padded masked token", accepted: true, payload: issuePayloadWithKey({ maskedToken: "  ak_live_****  " }) },
+    { name: "a non-expiring key", accepted: true, payload: issuePayloadWithKey({ expiresAt: null }) },
+    { name: "a pending status", accepted: false, payload: issuePayload({ status: "pending_verification" }) },
+    { name: "an empty token", accepted: false, payload: issuePayload({ token: "" }) },
+    { name: "a whitespace-only token", accepted: false, payload: issuePayload({ token: "   " }) },
+    { name: "a numeric token", accepted: false, payload: issuePayload({ token: 123 }) },
+    { name: "a null key", accepted: false, payload: issuePayload({ key: null }) },
+    { name: "a non-object key", accepted: false, payload: issuePayload({ key: "not an object" }) },
+    { name: "an empty key prefix", accepted: false, payload: issuePayloadWithKey({ keyPrefix: "" }) },
+    { name: "a whitespace-only key prefix", accepted: false, payload: issuePayloadWithKey({ keyPrefix: "   " }) },
+    { name: "an empty masked token", accepted: false, payload: issuePayloadWithKey({ maskedToken: "" }) },
+    { name: "a whitespace-only masked token", accepted: false, payload: issuePayloadWithKey({ maskedToken: "   " }) },
+    { name: "an escalated tier", accepted: false, payload: issuePayloadWithKey({ tier: "admin" }) },
+    { name: "an internal traffic class", accepted: false, payload: issuePayloadWithKey({ trafficClass: "site" }) },
+    {
+      name: "a rate limit above the self-serve allowance",
+      accepted: false,
+      payload: issuePayloadWithKey({ rateLimitPerMinute: SELF_SERVE_API_KEY_RATE_LIMIT_PER_MINUTE + 1 }),
+    },
+    {
+      name: "a stringified rate limit",
+      accepted: false,
+      payload: issuePayloadWithKey({ rateLimitPerMinute: String(SELF_SERVE_API_KEY_RATE_LIMIT_PER_MINUTE) }),
+    },
+    { name: "an absent expiry", accepted: false, payload: issuePayloadWithKey({ expiresAt: undefined }) },
+    { name: "a stringified expiry", accepted: false, payload: issuePayloadWithKey({ expiresAt: "123" }) },
+    { name: "null", accepted: false, payload: null },
+    { name: "array", accepted: false, payload: [] },
+    { name: "bare status string", accepted: false, payload: "issued" },
+  ])("issue-response acceptance is $accepted for $name", ({ payload, accepted }) => {
+    expect(ApiKeySelfServeIssueResponseSchema.safeParse(payload).success).toBe(accepted);
   });
 });
 
 describe("api key self-serve requests", () => {
-  it("submits a request and returns the pending response", async () => {
+  it("posts the submitted fields as a JSON body to the request endpoint", async () => {
     const body = { status: "pending_verification", message: "Check your email." };
-    vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(jsonResponse(body));
+    const fetchSpy = mockFetch([{ match: "/api/api-key-requests", body }], { requireMatch: true });
 
     await expect(submitApiKeyRequest(requestBody())).resolves.toEqual(body);
+
+    const history = fetchSpy.getHistory();
+    expect(history).toHaveLength(1);
+    expect(new URL(history[0].url).pathname).toBe("/api/api-key-requests");
+    expect(history[0].method).toBe("POST");
+    expect(history[0].headers["content-type"]).toContain("application/json");
+    expect(JSON.parse(history[0].body ?? "null")).toEqual(requestBody());
   });
 
-  it("verifies a token and returns the issued API key response", async () => {
+  it("sends exactly the supplied token to the verification endpoint", async () => {
     const body = issuePayload();
-    vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(jsonResponse(body));
+    const fetchSpy = mockFetch([{ match: "/api/api-key-requests/verify", body }], { requireMatch: true });
 
     await expect(verifyApiKeyRequestToken("akv_token")).resolves.toEqual(body);
+
+    const history = fetchSpy.getHistory();
+    expect(history).toHaveLength(1);
+    expect(new URL(history[0].url).pathname).toBe("/api/api-key-requests/verify");
+    expect(history[0].method).toBe("POST");
+    expect(JSON.parse(history[0].body ?? "null")).toEqual({ token: "akv_token" });
   });
 
   it("preserves error JSON body messages from failed submissions", async () => {

@@ -8,7 +8,7 @@ import {
   SORT_COLUMN_EVENT,
   type SortColumnEventDetail,
 } from "@/components/providers";
-import { setSidebarShortcutDisabled } from "@/lib/keyboard-shortcut-settings";
+import { setSingleKeyShortcutDisabled } from "@/lib/keyboard-shortcut-settings";
 
 let pathname = "/";
 
@@ -78,7 +78,7 @@ describe("Providers single-key shortcuts (WCAG 2.1.4 disable flag)", () => {
     expect(screen.queryByTestId("route-progress-bar")).toBeNull();
   });
 
-  it("mounts the interactive layer on data routes", async () => {
+  it("cold-loads the interactive layer on data routes", async () => {
     pathname = "/stablecoin/usdt-tether/";
     render(
       <Providers>
@@ -99,7 +99,7 @@ describe("Providers single-key shortcuts (WCAG 2.1.4 disable flag)", () => {
         </Providers>,
       );
 
-      await screen.findByTestId("query-client-provider");
+      await screen.findByTestId("route-progress-bar");
 
       const event = pressKey("3");
 
@@ -107,13 +107,18 @@ describe("Providers single-key shortcuts (WCAG 2.1.4 disable flag)", () => {
       const detail = (onSort.mock.calls[0][0] as CustomEvent<SortColumnEventDetail>).detail;
       expect(detail.columnNumber).toBe(3);
       expect(event.defaultPrevented).toBe(true);
+
+      setSingleKeyShortcutDisabled(true);
+      onSort.mockClear();
+      expect(pressKey("3").defaultPrevented).toBe(false);
+      expect(onSort).not.toHaveBeenCalled();
     } finally {
       window.removeEventListener(SORT_COLUMN_EVENT, onSort as EventListener);
     }
   });
 
   it("ignores numeric column sort when single-key shortcuts are disabled", async () => {
-    setSidebarShortcutDisabled(true);
+    setSingleKeyShortcutDisabled(true);
     const onSort = vi.fn();
     window.addEventListener(SORT_COLUMN_EVENT, onSort as EventListener);
     try {
@@ -123,7 +128,7 @@ describe("Providers single-key shortcuts (WCAG 2.1.4 disable flag)", () => {
         </Providers>,
       );
 
-      await screen.findByTestId("query-client-provider");
+      await screen.findByTestId("route-progress-bar");
 
       const event = pressKey("3");
 
@@ -141,7 +146,7 @@ describe("Providers single-key shortcuts (WCAG 2.1.4 disable flag)", () => {
       </Providers>,
     );
 
-    await screen.findByTestId("query-client-provider");
+    await screen.findByTestId("route-progress-bar");
 
     const event = pressKey("?");
 
@@ -150,14 +155,14 @@ describe("Providers single-key shortcuts (WCAG 2.1.4 disable flag)", () => {
   });
 
   it("ignores ? when single-key shortcuts are disabled", async () => {
-    setSidebarShortcutDisabled(true);
+    setSingleKeyShortcutDisabled(true);
     render(
       <Providers>
         <div />
       </Providers>,
     );
 
-    await screen.findByTestId("query-client-provider");
+    await screen.findByTestId("route-progress-bar");
 
     const event = pressKey("?");
 

@@ -7,28 +7,10 @@ import {
   resolveFallbackChain,
 } from "../address-price-providers";
 import { runCoingeckoOnchainAddressProvider } from "../address-price-providers/coingecko-onchain";
-import type { AddressPriceTarget } from "../address-price-providers";
+import { makeTarget, coingeckoResponse } from "./address-price-providers.test-support";
 
 const LIVE_PROVIDER = "coingecko-onchain-address" as const;
 
-function makeTarget(overrides: Partial<AddressPriceTarget> = {}): AddressPriceTarget {
-  return {
-    stablecoinId: "fixture-usd",
-    symbol: "FUSD",
-    chain: "base",
-    providerChainId: "base",
-    address: "0x0000000000000000000000000000000000000001",
-    origin: "contracts",
-    previousSourceDepth: 1,
-    previousMissingGenerations: 0,
-    alertEligibleMissingPrice: false,
-    recentlyMissingPrice: false,
-    missingPrice: false,
-    expiresBeforeNextGeneration: false,
-    circulatingUsd: 1_000_000,
-    ...overrides,
-  };
-}
 
 afterEach(() => {
   vi.unstubAllGlobals();
@@ -146,15 +128,7 @@ describe("address price providers", () => {
     const target = makeTarget();
     mockFetch([{
       match: () => true,
-      respond: () => Response.json({
-        data: [{
-          attributes: {
-            address: target.address,
-            price_usd: "1.001",
-            total_reserve_in_usd: "75000",
-          },
-        }],
-      }),
+      respond: () => coingeckoResponse(target.address, "1.001", "75000"),
     }]);
 
     const result = await collectAddressPriceProviderQuotes({
@@ -175,16 +149,7 @@ describe("address price providers", () => {
     const target = makeTarget();
     const fetchMock = mockFetch([{
       match: () => true,
-      respond: () => Response.json({
-        data: [{
-          attributes: {
-            address: target.address,
-            price_usd: "1.001",
-            total_reserve_in_usd: "75000",
-            volume_usd: { h24: "10000" },
-          },
-        }],
-      }),
+      respond: () => coingeckoResponse(target.address, "1.001", "75000", "10000"),
     }]);
 
     const result = await runCoingeckoOnchainAddressProvider(

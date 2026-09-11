@@ -37,6 +37,22 @@ const preLaunch = {
 } satisfies StablecoinClientProjectionCoin;
 
 describe("stablecoin client projection generator", () => {
+  it("caps core rows at twenty and preserves repeated peg counts and undated frozen tuples", () => {
+    const core = Array.from({ length: 21 }, (_, index) => ({
+      ...usd, id: `core-${index}`, flags: { pegCurrency: index === 0 ? "GBP" : index === 1 ? "EUR" : "USD" },
+    }));
+    const projection = buildStablecoinClientProjections({
+      tracked: [...core, { ...frozen, frozenAt: undefined }],
+      active: core, coreAggregateActive: core, activeVariants: [], activeStableValueInvestments: [],
+      preLaunch: [], dead: [], pegCountOrder: ["USD", "EUR"], pegOrder: ["GBP", "EUR", "USD"],
+    });
+    expect(projection.homepageTopCoreStablecoins).toEqual(
+      Array.from({ length: 20 }, (_, index) => ({ id: `core-${index}`, name: "USD Core", symbol: "USDC" })),
+    );
+    expect(JSON.stringify(projection.activePegCurrencyCounts)).toBe('{"USD":19,"EUR":1,"GBP":1}');
+    expect(projection.activePegCurrencies).toEqual(["GBP", "EUR", "USD"]);
+    expect(projection.commandPaletteStablecoins[21]).toEqual(["usd-frozen", "Frozen USD", "FUSD", "frozen"]);
+  });
   it("projects ordered lightweight values from a tiny registry fixture", () => {
     const projection = buildStablecoinClientProjections({
       tracked: [usd, eur, frozen, preLaunch],

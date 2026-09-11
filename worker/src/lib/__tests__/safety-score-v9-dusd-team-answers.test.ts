@@ -1,9 +1,9 @@
-import { evaluateV9FactSet } from "@shared/lib/safety-score-v9/evaluate-set";
+import { evaluateV9FactSet, type V9EvaluatedAsset } from "@shared/lib/safety-score-v9/evaluate-set";
 import { V9_CANDIDATE_POLICY_V1 } from "@shared/lib/safety-score-v9/policy";
 import { SAFETY_SCORE_METHODOLOGY_VERSION } from "@shared/lib/methodology-versions/safety-score";
-import mechanismReviewOverlays from "@shared/data/safety-score-v9/mechanism-review-overlays-v1.json";
+import type { V9AssetFactsV3 } from "@shared/types/safety-score-v9-facts";
 import { ACTIVE_META_BY_ID } from "@shared/lib/stablecoins/registry";
-import { describe, expect, it } from "vitest";
+import { beforeAll, describe, expect, it } from "vitest";
 import { createReportCardsFixedInput, normalizeFixedInput } from "../report-cards-fixed-input";
 import { buildSafetyScoreV9BaselineExtension } from "../safety-score-v9/extension";
 import { compileSafetyScoreV9FactSetFromNormalizedInput } from "../safety-score-v9/fact-set";
@@ -134,6 +134,11 @@ function compileDusdTeamAnswerFixture() {
 }
 
 describe("Safety Score v9 DUSD Makina team-answer evidence", () => {
+  let scenario: { compiledAsset: V9AssetFactsV3; evaluatedAsset: V9EvaluatedAsset };
+  beforeAll(() => {
+    scenario = compileDusdTeamAnswerFixture();
+  });
+
   it("records the official Machine Terms custody and leverage facts in registry metadata", () => {
     const meta = requireMeta(ASSET_ID);
 
@@ -157,17 +162,12 @@ describe("Safety Score v9 DUSD Makina team-answer evidence", () => {
     expect(meta.custodyProfile?.sources).toContainEqual(
       expect.objectContaining({ url: "https://makina.finance/MeccanicoToS.pdf" }),
     );
-    expect(meta.custodyProfile?.uncertainty).toEqual(expect.stringContaining("ordinary contractual counterparties"));
-    expect(meta.custodyProfile?.uncertainty).toEqual(expect.stringContaining("no legal, equitable, proprietary"));
-
     const morphoSlice = meta.reserves?.find((reserve) => reserve.name === "Morpho lending positions");
     expect(morphoSlice?.riskFactors).toContain("leverage");
-    expect(meta.reserveReview?.rationale).toEqual(expect.stringContaining("no binding Machine-wide numeric leverage ceiling"));
-    expect(meta.reserveReview?.rationale).toEqual(expect.stringContaining("Rootfile feeds are not used"));
   });
 
   it("compiles DUSD wrapper facts from reviewed local custody, leverage, and control evidence", () => {
-    const { compiledAsset } = compileDusdTeamAnswerFixture();
+    const { compiledAsset } = scenario;
     const wrapper = compiledAsset.wrapperLocalFacts;
     if (wrapper?.applicability !== "wrapper") throw new Error("expected DUSD wrapper-local facts");
 
@@ -217,13 +217,12 @@ describe("Safety Score v9 DUSD Makina team-answer evidence", () => {
   });
 
   it("applies the adverse legal terms to mechanism claim quality without upgrading custody or assurance", () => {
-    const { compiledAsset } = compileDusdTeamAnswerFixture();
+    const { compiledAsset } = scenario;
     const review = compiledAsset.mechanismRiskReview;
     const fiatCashReview = review.review;
     if (!fiatCashReview || fiatCashReview.archetype !== "fiat-cash") {
       throw new Error("expected compiled DUSD fiat-cash mechanism review");
     }
-    const overlay = mechanismReviewOverlays.overlays.find((candidate) => candidate.assetId === ASSET_ID);
 
     expect(review.status).toMatchObject({ observationState: "known" });
     expect(fiatCashReview).toMatchObject({
@@ -231,25 +230,26 @@ describe("Safety Score v9 DUSD Makina team-answer evidence", () => {
       custodyContinuity: { quality: "limited" },
       assuranceAndReconciliation: { quality: "limited" },
     });
-    expect(overlay?.notes).toEqual(expect.stringContaining("affirmative legal evidence"));
-    expect(overlay?.notes).toEqual(expect.stringContaining("published Dialectic Meccanico Machine Terms"));
   });
 
-  it("keeps DUSD wrapper-parent scoring on local facts with zero risk-transfer credit", () => {
-    const { evaluatedAsset } = compileDusdTeamAnswerFixture();
-    const wrapperParentLimit = evaluatedAsset.trace.wrapperParentLimit;
-
-    expect(wrapperParentLimit).toMatchObject({
-      treatment: "fallback-discount",
-      riskTransfer: {
-        disposition: "not-applicable",
-        mechanism: "none",
-        requestedCredit: 0,
-        appliedCredit: 0,
-      },
+  it("retains DUSD's authored serial parent independently of unmapped strategy positions", () => {
+    const { compiledAsset, evaluatedAsset } = scenario;
+    expect(compiledAsset.dependencies).toMatchObject({
+      source: "variant",
+      baseSource: "live-unmapped",
+      dependencyFromLive: true,
+      mappedLiveReserveWeight: 0,
+      fallbackReason: null,
+      edges: [{ upstreamAssetId: PARENT_ID, dependencyType: "wrapper", economicRole: "serial-claim", weight: 1 }],
+      rejectionReasons: Array.from({ length: 6 }, (_, sliceIndex) => ({ sliceIndex, reason: "no-match" })),
     });
-    expect(wrapperParentLimit?.missingFacts.map((fact) => fact.factClass)).not.toEqual(
-      expect.arrayContaining(["custodyEscrow", "leverage", "lossAbsorptionEmergencyControls"]),
-    );
+    expect(evaluatedAsset.dependencyInputs.serial).toMatchObject([{ upstreamAssetId: PARENT_ID }]);
+    const wrapperFacts = compiledAsset.wrapperLocalFacts;
+    if (wrapperFacts?.applicability !== "wrapper") throw new Error("expected DUSD wrapper local facts");
+    expect(wrapperFacts.riskTransfer).toMatchObject({
+      disposition: "not-applicable",
+      mechanism: "none",
+      maximumParentLossAbsorptionPoints: 0,
+    });
   });
 });

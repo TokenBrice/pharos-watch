@@ -104,12 +104,9 @@
   "custodyModel": "institutional-regulated",
   "governanceQuality": "multisig",
   "liveReservesConfig": {
-    "adapter": "fdusd-transparency",
-    "version": 1,
+    "adapter": "fdusd-independent-assurance",
+    "version": 2,
     "semantics": "attestation-mix",
-    "scoring": {
-      "maxSourceAgeSec": 4000000
-    },
     "breakerScope": "fdusd-first-digital",
     "display": {
       "url": "https://www.firstdigitallabs.com/transparency",
@@ -118,14 +115,14 @@
     "inputs": {
       "primary": {
         "kind": "http-html",
-        "url": "https://www.firstdigitallabs.com/transparency"
-      },
-      "fallbacks": [
-        {
-          "kind": "http-html",
-          "url": "https://firstdigitallabs.webflow.io/transparency"
-        }
-      ]
+        "url": "https://firstdigitallabs.webflow.io/transparency"
+      }
+    },
+    "params": {
+      "product": "FDUSD",
+      "profile": "fdusd-v1",
+      "indexHost": "firstdigitallabs.webflow.io",
+      "reportHosts": ["cdn.prod.website-files.com"]
     }
   },
   "launchDate": "2023-04-28"

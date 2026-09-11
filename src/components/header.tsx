@@ -8,19 +8,31 @@ import { ThemeControls } from "@/components/theme-controls";
 import { Sheet, SheetTrigger, SheetContent, SheetDescription, SheetTitle } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import {
-  BOTTOM_NAV_ITEMS,
   NAV_GROUPS,
   QUICK_NAV_ITEMS,
+  START_HERE_NAV_ITEM,
+  isNavItemActive,
   stickyChromeTopOffsetClass,
 } from "@/lib/nav-config";
 import type { NavItem } from "@/lib/nav-config";
 import { ChevronLeft, ChevronRight, ExternalLink, Menu, Search, X } from "lucide-react";
+import { trackEvent } from "@/lib/analytics";
 import { openCommandPalette } from "@/lib/command-palette";
 import { OPEN_NAV_DRAWER_EVENT } from "@/lib/nav-drawer";
-import { isRouteActive } from "@/lib/navigation";
 import { useStartHereNavVisibility } from "@/hooks/use-start-here-nav-visibility";
 
-function MobileNavLink({ item, active, onNavigate }: { item: NavItem; active: boolean; onNavigate: () => void }) {
+function MobileNavLink({
+  item,
+  active,
+  group,
+  onNavigate,
+}: {
+  item: NavItem;
+  active: boolean;
+  /** Analytics bucket for the tap: the category key, or "start-here". */
+  group: string;
+  onNavigate: () => void;
+}) {
   const Icon = item.icon;
   const className = `pharos-focus-ring flex items-center gap-3 rounded-lg border px-3 py-3 transition-[background-color,border-color,color,box-shadow] duration-[160ms] ease-[var(--motion-ease-standard)] ${
     active
@@ -28,12 +40,26 @@ function MobileNavLink({ item, active, onNavigate }: { item: NavItem; active: bo
       : "border-transparent text-muted-foreground hover:border-border/55 hover:bg-muted/45 hover:text-foreground"
   }`;
 
+  // External hrefs fall outside the nav_click contract's internal-path
+  // namespace, so only in-app rows report.
+  function handleClick() {
+    if (!item.external) trackEvent("nav_click", { surface: "drawer", group, href: item.href });
+    onNavigate();
+  }
+
   const body = (
     <>
       <Icon className="h-4 w-4 shrink-0" />
-      <div className="min-w-0 flex-1 text-sm flex items-center gap-1.5">
-        {item.label}
-        {item.external && <ExternalLink className="h-3 w-3 text-muted-foreground/70" aria-hidden="true" />}
+      {/* Desktop menus carry these lines too; without them invented names
+          (FreezeWatch, Compliance, DDR) are illegible in the drawer. */}
+      <div className="min-w-0 flex-1 flex flex-col gap-0.5">
+        <span className="flex items-center gap-1.5 text-sm">
+          {item.label}
+          {item.external && <ExternalLink className="h-3 w-3 text-muted-foreground/70" aria-hidden="true" />}
+        </span>
+        {item.description ? (
+          <span className="text-xs font-normal text-muted-foreground">{item.description}</span>
+        ) : null}
       </div>
     </>
   );
@@ -44,7 +70,7 @@ function MobileNavLink({ item, active, onNavigate }: { item: NavItem; active: bo
         href={item.href}
         target="_blank"
         rel="noopener noreferrer"
-        onClick={onNavigate}
+        onClick={handleClick}
         aria-label={`${item.label} (opens in new tab)`}
         className={className}
       >
@@ -57,7 +83,7 @@ function MobileNavLink({ item, active, onNavigate }: { item: NavItem; active: bo
     <Link
       prefetch={false}
       href={item.href}
-      onClick={onNavigate}
+      onClick={handleClick}
       aria-current={active ? "page" : undefined}
       className={className}
     >
@@ -75,11 +101,10 @@ export function Header() {
   const returnFocusCategoryKeyRef = useRef<string | null>(null);
   const navRef = useRef<HTMLElement>(null);
   const { isReady: startHereReady, shouldShow: shouldShowStartHereNav } = useStartHereNavVisibility();
-  const visibleBottomNavItems = BOTTOM_NAV_ITEMS.filter(
-    (item) => item.href !== "/start/" || (startHereReady && shouldShowStartHereNav),
-  );
-  const priorityBottomNavItems = visibleBottomNavItems.filter((item) => item.href === "/start/");
-  const remainingBottomNavItems = visibleBottomNavItems.filter((item) => item.href !== "/start/");
+  // First-visit pinned slot above the quick rail. Once it retires, Start
+  // Here stays reachable inside the About Pharos category via NAV_GROUPS.
+  const showPinnedStartHere = startHereReady && shouldShowStartHereNav;
+  const pinnedStartHereCount = showPinnedStartHere ? 1 : 0;
   const mobileCategories = NAV_GROUPS.flatMap((group) =>
     group.columns
       ? group.columns.map((column) => ({
@@ -91,7 +116,7 @@ export function Header() {
   );
   const activeCategory = mobileCategories.find((category) => category.key === activeCategoryKey) ?? null;
   // +1 so the quick rail occupies the first animation slot.
-  const mobileLeadItemCount = priorityBottomNavItems.length + 1;
+  const mobileLeadItemCount = pinnedStartHereCount + 1;
   const topOffsetClass = stickyChromeTopOffsetClass(pathname);
 
   function handleOpenChange(nextOpen: boolean) {
@@ -163,15 +188,18 @@ export function Header() {
         </Link>
 
         <div className="flex items-center gap-1">
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-11 w-11"
+          {/* Labeled pill, not a bare icon: search is the fastest path to a
+              coin profile, and an unlabeled magnifier hides that at 360px.
+              shrink-0 keeps the pill intact while the logo text truncates. */}
+          <button
+            type="button"
             onClick={openCommandPalette}
             aria-label="Search stablecoins and pages"
+            className="pharos-focus-ring flex h-9 shrink-0 items-center gap-2 rounded-lg border border-border/70 bg-muted/20 px-3 text-sm text-muted-foreground transition-colors hover:bg-muted/40 hover:text-foreground"
           >
-            <Search className="h-4 w-4" />
-          </Button>
+            <Search className="h-4 w-4" aria-hidden="true" />
+            Search
+          </button>
 
           <Sheet open={open} onOpenChange={handleOpenChange}>
             <SheetTrigger asChild>
@@ -189,7 +217,7 @@ export function Header() {
               // Motion overrides retime the shadcn slide (500/300ms ease-in-out)
               // to the canon 220ms decelerating curve and drop it entirely for
               // prefers-reduced-motion — kept local so ui/sheet stays stock.
-              className="z-[70] w-full sm:max-w-full flex flex-col border-r border-border/70 bg-card/95 p-0 ease-[var(--motion-ease-standard)] data-[state=open]:duration-[220ms] data-[state=closed]:duration-[220ms] motion-reduce:data-[state=open]:animate-none motion-reduce:data-[state=closed]:animate-none"
+              className="z-[70] w-full sm:max-w-full flex flex-col border-r border-border/70 bg-card p-0 ease-[var(--motion-ease-standard)] data-[state=open]:duration-[220ms] data-[state=closed]:duration-[220ms] motion-reduce:data-[state=open]:animate-none motion-reduce:data-[state=closed]:animate-none"
             >
               {/* Header */}
               <div className="flex items-center justify-between px-4 h-14 border-b border-border/70 shrink-0">
@@ -238,7 +266,8 @@ export function Header() {
                         <MobileNavLink
                           key={item.href}
                           item={item}
-                          active={isRouteActive(pathname, item.href)}
+                          active={isNavItemActive(pathname, item)}
+                          group={activeCategory.key}
                           onNavigate={handleNavigate}
                         />
                       ))}
@@ -249,23 +278,21 @@ export function Header() {
                     key="root"
                     className="animate-in fade-in slide-in-from-left-2 duration-[220ms] ease-[var(--motion-ease-standard)] motion-reduce:animate-none"
                   >
-                    {priorityBottomNavItems.length > 0 ? (
+                    {showPinnedStartHere ? (
                       <div
                         className={`animate-in fade-in slide-in-from-left-2 ease-[var(--motion-ease-standard)] [animation-fill-mode:backwards] motion-reduce:animate-none ${
-                          priorityBottomNavItems.some((item) => isRouteActive(pathname, item.href))
+                          isNavItemActive(pathname, START_HERE_NAV_ITEM)
                             ? "border-l-2 border-l-frost-blue pl-3"
                             : "pl-[14px]"
                         }`}
                         style={{ animationDelay: "50ms", animationDuration: "220ms" }}
                       >
-                        {priorityBottomNavItems.map((item) => (
-                          <MobileNavLink
-                            key={item.href}
-                            item={item}
-                            active={isRouteActive(pathname, item.href)}
-                            onNavigate={handleNavigate}
-                          />
-                        ))}
+                        <MobileNavLink
+                          item={START_HERE_NAV_ITEM}
+                          active={isNavItemActive(pathname, START_HERE_NAV_ITEM)}
+                          group="start-here"
+                          onNavigate={handleNavigate}
+                        />
                       </div>
                     ) : null}
 
@@ -273,19 +300,22 @@ export function Header() {
                     <div
                       className="mt-4 grid grid-cols-2 gap-2 pl-[14px] animate-in fade-in slide-in-from-left-2 ease-[var(--motion-ease-standard)] [animation-fill-mode:backwards] motion-reduce:animate-none"
                       style={{
-                        animationDelay: `${priorityBottomNavItems.length * 50}ms`,
+                        animationDelay: `${pinnedStartHereCount * 50}ms`,
                         animationDuration: "220ms",
                       }}
                     >
                       {QUICK_NAV_ITEMS.map((item) => {
                         const Icon = item.icon;
-                        const active = isRouteActive(pathname, item.href);
+                        const active = isNavItemActive(pathname, item);
                         return (
                           <Link
                             key={item.href}
                             prefetch={false}
                             href={item.href}
-                            onClick={handleNavigate}
+                            onClick={() => {
+                              trackEvent("nav_click", { surface: "drawer", group: "rail", href: item.href });
+                              handleNavigate();
+                            }}
                             aria-current={active ? "page" : undefined}
                             className={`pharos-focus-ring flex min-h-16 flex-col justify-between rounded-lg border px-3 py-2.5 transition-colors ${
                               active ? "border-border/70 bg-muted/60" : "border-border/45 bg-muted/20 hover:bg-muted/40"
@@ -300,7 +330,7 @@ export function Header() {
 
                     {/* Category drill-down rows. */}
                     {mobileCategories.map((category, categoryIndex) => {
-                      const categoryIsActive = category.items.some((item) => isRouteActive(pathname, item.href));
+                      const categoryIsActive = category.items.some((item) => isNavItemActive(pathname, item));
                       return (
                         <div
                           key={category.key}
@@ -334,28 +364,6 @@ export function Header() {
                       );
                     })}
 
-                    {remainingBottomNavItems.length > 0 ? (
-                      <div
-                        className={`mt-4 animate-in fade-in slide-in-from-left-2 ease-[var(--motion-ease-standard)] [animation-fill-mode:backwards] motion-reduce:animate-none ${
-                          remainingBottomNavItems.some((item) => isRouteActive(pathname, item.href))
-                            ? "border-l-2 border-l-frost-blue pl-3"
-                            : "pl-[14px]"
-                        }`}
-                        style={{
-                          animationDelay: `${(mobileLeadItemCount + mobileCategories.length) * 50}ms`,
-                          animationDuration: "220ms",
-                        }}
-                      >
-                        {remainingBottomNavItems.map((item) => (
-                          <MobileNavLink
-                            key={item.href}
-                            item={item}
-                            active={isRouteActive(pathname, item.href)}
-                            onNavigate={handleNavigate}
-                          />
-                        ))}
-                      </div>
-                    ) : null}
                   </div>
                 )}
               </nav>

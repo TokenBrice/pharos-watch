@@ -2,6 +2,7 @@
   "id": "eutbl-spiko",
   "reserves": [
     {
+      "sourceKey": "chainlink-nav:token:0xa0769f7a8fc65e47de93797b4e21c073c117fc80",
       "name": "Spiko EU T-Bills Money Market Fund NAV",
       "pct": 100,
       "risk": "low",

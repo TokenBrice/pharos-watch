@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { API_PATHS, getEndpointOpsProxyTimeoutMs } from "@shared/lib/api-endpoints";
 import { MAX_OPS_ADMIN_REQUEST_BODY_BYTES, onRequest } from "../api/admin/[[path]].ts";
 import type { OpsAdminProxyEnv } from "../lib/ops-env";
@@ -105,11 +105,14 @@ function makeStreamedAuthedPost(chunks: string[], headers: Record<string, string
 }
 
 describe("ops admin proxy", () => {
+  beforeEach(() => {
+    verifyAccessJwtUserIdentity.mockReset();
+    verifyAccessJwtUserIdentity.mockResolvedValue({ email: "operator@pharos.watch", subject: "operator-subject" });
+  });
   afterEach(() => {
     vi.useRealTimers();
     vi.unstubAllGlobals();
-    verifyAccessJwtUserIdentity.mockReset();
-    verifyAccessJwtUserIdentity.mockResolvedValue({ email: "operator@pharos.watch", subject: "operator-subject" });
+    vi.restoreAllMocks();
   });
 
   it("keeps the response contract for operator no-store policy", async () => {
@@ -531,14 +534,25 @@ describe("ops admin proxy", () => {
     expect(warnSpy).toHaveBeenCalledWith("[ops-proxy] upstream fetch failed (Error): network down");
   });
 
-  it("returns 504 when the upstream request times out", async () => {
+  it.each([
+    ["status", 20_000],
+    ["status-history?limit=10", 20_000],
+    ["audit-depeg-history?dry-run=true", 45_000],
+    ["request-source-stats", 10_000],
+  ])("times out %s at exactly %i ms", async (path, budget) => {
     vi.useFakeTimers();
-    installOpsTimeout("/api/status");
+    installOpsTimeout(`/api/${path}`);
+    let settled = false;
+    const responsePromise = onRequest(
+      adminContext(makeAuthedRequest(`https://ops.pharos.watch/api/admin/${path}`)),
+    ).then((response) => {
+      settled = true;
+      return response;
+    });
 
-    const responsePromise = onRequest(adminContext(makeAuthedRequest("https://ops.pharos.watch/api/admin/status")));
-
-    await vi.advanceTimersByTimeAsync(20_000);
-
+    await vi.advanceTimersByTimeAsync(budget - 1);
+    expect(settled).toBe(false);
+    await vi.advanceTimersByTimeAsync(1);
     const response = await responsePromise;
     expect(response.status).toBe(504);
     expect(await response.json()).toEqual({ error: "Operator API upstream timed out" });
@@ -574,48 +588,4 @@ describe("ops admin proxy", () => {
     expect(getEndpointOpsProxyTimeoutMs(API_PATHS.requestSourceStatsBase(), 10_000)).toBe(10_000);
   });
 
-  it("gives status-history the status proxy timeout budget", async () => {
-    vi.useFakeTimers();
-    installOpsTimeout("/api/status-history?limit=10");
-
-    const responsePromise = onRequest(
-      adminContext(makeAuthedRequest("https://ops.pharos.watch/api/admin/status-history?limit=10")),
-    );
-
-    await vi.advanceTimersByTimeAsync(20_000);
-
-    const response = await responsePromise;
-    expect(response.status).toBe(504);
-    expect(await response.json()).toEqual({ error: "Operator API upstream timed out" });
-  });
-
-  it("gives audit-depeg-history a longer proxy timeout budget", async () => {
-    vi.useFakeTimers();
-    installOpsTimeout("/api/audit-depeg-history?dry-run=true");
-
-    const responsePromise = onRequest(
-      adminContext(makeAuthedRequest("https://ops.pharos.watch/api/admin/audit-depeg-history?dry-run=true")),
-    );
-
-    await vi.advanceTimersByTimeAsync(45_000);
-
-    const response = await responsePromise;
-    expect(response.status).toBe(504);
-    expect(await response.json()).toEqual({ error: "Operator API upstream timed out" });
-  });
-
-  it("keeps the default 10s proxy timeout on non-status admin routes", async () => {
-    vi.useFakeTimers();
-    installOpsTimeout("/api/request-source-stats");
-
-    const responsePromise = onRequest(
-      adminContext(makeAuthedRequest("https://ops.pharos.watch/api/admin/request-source-stats")),
-    );
-
-    await vi.advanceTimersByTimeAsync(10_000);
-
-    const response = await responsePromise;
-    expect(response.status).toBe(504);
-    expect(await response.json()).toEqual({ error: "Operator API upstream timed out" });
-  });
 });

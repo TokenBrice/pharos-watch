@@ -104,9 +104,6 @@
     "version": 2,
     "semantics": "attestation-mix",
     "breakerScope": "europ-schuman",
-    "scoring": {
-      "maxSourceAgeSec": 10000000
-    },
     "display": {
       "url": "https://schuman.io/reserve-audits/",
       "label": "Schuman Reserve Audits"

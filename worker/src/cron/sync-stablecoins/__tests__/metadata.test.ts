@@ -8,6 +8,27 @@ import {
   MAX_CRON_METADATA_BEFORE_SCHEDULER_ENRICHMENT_BYTES,
 } from "../../../lib/cron-metadata-persistence";
 
+function syncInput(
+  assets: PeggedAsset[],
+): Parameters<typeof buildStablecoinsSyncResult>[0] {
+  return {
+    assets,
+    rawAssetCount: assets.length,
+    droppedMalformedAssets: 0,
+    canonicalDeduplication: { dedupedAssets: assets, duplicateRows: 0, affectedIds: [] },
+    enrichStats: {},
+    priceValidationStats: {},
+    providerDiagnostics: [],
+    rejectedCount: 0,
+    stalenessWarning: false,
+    stalenessCheckFailed: false,
+    gtProbe: { stats: {} as never },
+    depegErrorCount: 0,
+    depegErrors: [],
+    syncStartSec: 1_777_000_000,
+  };
+}
+
 describe("stablecoins pricing metadata", () => {
   it("summarizes weak source coverage and provider rejection counts", () => {
     const assets: PeggedAsset[] = [
@@ -183,24 +204,7 @@ describe("stablecoins pricing metadata", () => {
       circulating: { peggedUSD: stablecoin.id === missingId ? 125_500 : 1 },
     })) as PeggedAsset[];
     const result = buildStablecoinsSyncResult({
-      assets,
-      rawAssetCount: assets.length,
-      droppedMalformedAssets: 0,
-      canonicalDeduplication: {
-        dedupedAssets: assets,
-        duplicateRows: 0,
-        affectedIds: [],
-      },
-      enrichStats: {},
-      priceValidationStats: {},
-      providerDiagnostics: [],
-      rejectedCount: 0,
-      stalenessWarning: false,
-      stalenessCheckFailed: false,
-      gtProbe: { stats: {} as never },
-      depegErrorCount: 0,
-      depegErrors: [],
-      syncStartSec: 1_777_000_000,
+      ...syncInput(assets),
       previousActivePriceCoverage: {
         missingActiveIds: [missingId],
         missingActiveAssets: [{
@@ -265,24 +269,7 @@ describe("stablecoins pricing metadata", () => {
       circulating: { peggedUSD: 1 },
     })) as PeggedAsset[];
     const result = buildStablecoinsSyncResult({
-      assets,
-      rawAssetCount: assets.length,
-      droppedMalformedAssets: 0,
-      canonicalDeduplication: {
-        dedupedAssets: assets,
-        duplicateRows: 0,
-        affectedIds: [],
-      },
-      enrichStats: {},
-      priceValidationStats: {},
-      providerDiagnostics: [],
-      rejectedCount: 0,
-      stalenessWarning: false,
-      stalenessCheckFailed: false,
-      gtProbe: { stats: {} as never },
-      depegErrorCount: 0,
-      depegErrors: [],
-      syncStartSec: 1_777_000_000,
+      ...syncInput(assets),
       previousAcceptedAssetsById: new Map(assets.map((asset) => [
         asset.id,
         {
@@ -318,12 +305,7 @@ describe("stablecoins pricing metadata", () => {
       circulating: { peggedUSD: 1 },
     })) as PeggedAsset[];
     const result = buildStablecoinsSyncResult({
-      assets,
-      rawAssetCount: assets.length,
-      droppedMalformedAssets: 0,
-      canonicalDeduplication: { dedupedAssets: assets, duplicateRows: 0, affectedIds: [] },
-      enrichStats: {},
-      priceValidationStats: {},
+      ...syncInput(assets),
       providerDiagnostics: [{
         source: "coinmarketcap",
         stage: "fallback",
@@ -344,13 +326,6 @@ describe("stablecoins pricing metadata", () => {
           replaySafe: false,
         }],
       }],
-      rejectedCount: 0,
-      stalenessWarning: false,
-      stalenessCheckFailed: false,
-      gtProbe: { stats: {} as never },
-      depegErrorCount: 0,
-      depegErrors: [],
-      syncStartSec: 1_777_000_000,
       previousAcceptedAssetsById: new Map(assets.map((asset) => [
         asset.id,
         {

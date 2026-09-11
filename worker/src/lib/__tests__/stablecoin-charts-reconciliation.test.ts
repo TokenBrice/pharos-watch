@@ -13,16 +13,10 @@ describe("stablecoin-charts reconciliation", () => {
       ({ id }) => ACTIVE_META_BY_ID.get(id)?.llamaId != null,
     );
     expect(llamaBacked).toEqual([{ id: "brz-transfero", pegType: "peggedREAL" }]);
-    expect(STRUCTURAL_SUPPLEMENTAL_CHART_CONFIGS.map(({ id }) => id)).not.toEqual(
-      expect.arrayContaining([
-        "audm-mento",
-        "cadm-mento",
-        "chfm-mento",
-        "copm-mento",
-        "gbpm-mento",
-        "zarm-mento",
-      ]),
-    );
+    const forbidden = [
+      "audm-mento", "cadm-mento", "chfm-mento", "copm-mento", "gbpm-mento", "zarm-mento",
+    ];
+    expect(STRUCTURAL_SUPPLEMENTAL_CHART_CONFIGS.filter(({ id }) => forbidden.includes(id))).toEqual([]);
   });
 
   it("merges structural supplemental history into the base chart series", () => {
@@ -168,5 +162,16 @@ describe("stablecoin-charts reconciliation", () => {
       legacyPoints,
       { date: 250, totalCirculatingUSD: { peggedUSD: 120 }, aggregateUniverse: "core-stablecoins-v1" },
     )).toEqual(legacyPoints);
+  });
+
+  it("replaces equal timestamps but rejects stale current points and preserves input order", () => {
+    const early = { date: 100, totalCirculatingUSD: { peggedUSD: 100 } };
+    const latest = { date: 200, totalCirculatingUSD: { peggedUSD: 120 } };
+    const history = [latest, early];
+    const replacement = { date: 200, totalCirculatingUSD: { peggedUSD: 140 } };
+    expect(appendOrReplaceCurrentStablecoinChartsPoint(history, replacement)).toEqual([early, replacement]);
+    expect(appendOrReplaceCurrentStablecoinChartsPoint(history, { ...replacement, date: 150 })).toEqual([early, latest]);
+    expect(appendOrReplaceCurrentStablecoinChartsPoint(history, null)).toEqual([latest, early]);
+    expect(history).toEqual([latest, early]);
   });
 });

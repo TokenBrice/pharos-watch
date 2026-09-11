@@ -19,15 +19,18 @@ import {
   DEPEG_EVENT_ENTRIES,
 } from "@/lib/depeg-event-page-data";
 
+const entries = sitemap();
+const urls = new Set(entries.map((entry) => entry.url));
+const entriesByUrl = new Map(entries.map((entry) => [entry.url, entry]));
+const byPath = new Map(entries.map((entry) => [new URL(entry.url).pathname, entry]));
+
 describe("sitemap", () => {
   it("emits each canonical URL exactly once", () => {
-    const urls = sitemap().map((entry) => entry.url);
-
-    expect(new Set(urls).size).toBe(urls.length);
+    expect(urls.size).toBe(entries.length);
   });
 
   it("is the machine-readable projection of the canonical public route inventory", () => {
-    const sitemapPaths = sitemap().map((entry) => new URL(entry.url).pathname).sort();
+    const sitemapPaths = entries.map((entry) => new URL(entry.url).pathname).sort();
     expect(sitemapPaths).toEqual([...PUBLIC_ROUTE_PATHS].sort());
   });
 
@@ -51,7 +54,6 @@ describe("sitemap", () => {
       ["/stablecoins/governance/", "weekly", 0.6], ["/stablecoins/infrastructure/", "weekly", 0.6],
       ["/privacy/", "yearly", 0.3], ["/docs/", "monthly", 0.6],
     ];
-    const byPath = new Map(sitemap().map((entry) => [new URL(entry.url).pathname, entry]));
 
     expect(expected.map(([path]) => [
       path,
@@ -61,15 +63,13 @@ describe("sitemap", () => {
   });
 
   it("emits a valid last-modified date for every URL", () => {
-    for (const entry of sitemap()) {
+    for (const entry of entries) {
       expect(entry.lastModified, entry.url).toBeInstanceOf(Date);
       expect(Number.isFinite((entry.lastModified as Date).getTime()), entry.url).toBe(true);
     }
   });
 
   it("includes every frozen detail page (TRACKED source preserves indexability)", () => {
-    const entries = sitemap();
-    const urls = new Set(entries.map((entry) => entry.url));
     for (const id of FROZEN_IDS) {
       expect(urls.has(`${SITE_ORIGIN}${buildStablecoinUrl(id)}`)).toBe(true);
     }
@@ -107,16 +107,12 @@ describe("sitemap", () => {
   });
 
   it("lists the canonical compliance route and omits the retired MiCA route", () => {
-    const entries = sitemap();
-    const urls = new Set(entries.map((entry) => entry.url));
 
     expect(urls.has(`${SITE_ORIGIN}/compliance/`)).toBe(true);
     expect(urls.has(`${SITE_ORIGIN}/mica/`)).toBe(false);
   });
 
   it("includes the compare hub and derives pair lastmod from both detail pages", () => {
-    const entries = sitemap();
-    const entriesByUrl = new Map(entries.map((entry) => [entry.url, entry]));
     const lastEdited = sitemapDates as Record<string, string>;
     const hubEntry = entriesByUrl.get(`${SITE_ORIGIN}/compare/`);
     const pair = STATIC_COMPARISON_PAGES.find((page) => page.slug === "usdt-tether-vs-usdc-circle");
@@ -134,10 +130,9 @@ describe("sitemap", () => {
   });
 
   it("includes substantive editorial dates in enriched comparison lastmod", () => {
-    const entries = new Map(sitemap().map((entry) => [entry.url, entry]));
     const lastEdited = sitemapDates as Record<string, string>;
     for (const pair of STATIC_COMPARISON_PAGES.filter((page) => page.editorial)) {
-      expect(entries.get(`${SITE_ORIGIN}${pair.href}`)?.lastModified).toEqual(new Date(Math.max(
+      expect(entriesByUrl.get(`${SITE_ORIGIN}${pair.href}`)?.lastModified).toEqual(new Date(Math.max(
         new Date(lastEdited[buildStablecoinUrl(pair.left.id)]).getTime(),
         new Date(lastEdited[buildStablecoinUrl(pair.right.id)]).getTime(),
         new Date(pair.editorial!.updatedAt).getTime(),
@@ -146,7 +141,6 @@ describe("sitemap", () => {
   });
 
   it("stamps /changelog/ from the latest changelog entry, floored by its git edit date", () => {
-    const entries = sitemap();
     const entry = entries.find((e) => e.url === `${SITE_ORIGIN}/changelog/`);
     const lastEdited = sitemapDates as Record<string, string>;
     const expected = new Date(
@@ -161,7 +155,6 @@ describe("sitemap", () => {
   });
 
   it("stamps /docs/ from the newest public doc edit date, floored by its git edit date", () => {
-    const entries = sitemap();
     const entry = entries.find((e) => e.url === `${SITE_ORIGIN}/docs/`);
     const lastEdited = sitemapDates as Record<string, string>;
     const metadata = docsMetadata as Record<string, { dateModified: string }>;
@@ -177,8 +170,6 @@ describe("sitemap", () => {
   });
 
   it("lists every digest detail page as durable archive content", () => {
-    const entries = sitemap();
-    const entriesByUrl = new Map(entries.map((entry) => [entry.url, entry]));
 
     for (const digest of digests) {
       const entry = entriesByUrl.get(`${SITE_ORIGIN}/digest/${digest.date}/`);
@@ -190,7 +181,6 @@ describe("sitemap", () => {
   });
 
   it("marks only collision-differentiated depeg pages with the reviewed content revision", () => {
-    const entriesByUrl = new Map(sitemap().map((entry) => [entry.url, entry]));
     const collision = DEPEG_EVENT_ENTRIES.find((event) =>
       COLLIDING_DEPEG_EVENT_SLUGS.has(event.slug),
     );
@@ -214,8 +204,6 @@ describe("sitemap", () => {
   });
 
   it("stamps every case-study detail page from generated per-study dates", () => {
-    const entries = sitemap();
-    const entriesByUrl = new Map(entries.map((entry) => [entry.url, entry]));
     const lastEdited = sitemapDates as Record<string, string>;
 
     expect(entriesByUrl.get(`${SITE_ORIGIN}/learn/`)?.lastModified).toEqual(new Date(lastEdited["/learn/"]));
@@ -228,20 +216,18 @@ describe("sitemap", () => {
   });
 
   it("includes every mechanism explainer route", () => {
-    const entries = new Map(sitemap().map((entry) => [entry.url, entry]));
     const mechanismDate = new Date((sitemapDates as Record<string, string>)["/learn/mechanisms/"]);
     for (const archetype of MECHANISM_ARCHETYPE_VALUES) {
-      const entry = entries.get(`${SITE_ORIGIN}/learn/mechanisms/${archetype}/`);
+      const entry = entriesByUrl.get(`${SITE_ORIGIN}/learn/mechanisms/${archetype}/`);
       expect(entry).toBeDefined();
       expect(entry?.lastModified).toEqual(mechanismDate);
     }
   });
 
   it("uses generated content dates instead of deploy time for unmapped dynamic routes", () => {
-    const entries = new Map(sitemap().map((entry) => [entry.url, entry]));
     const generatedDates = sitemapDates as Record<string, string>;
 
-    expect(entries.get(`${SITE_ORIGIN}/chains/ethereum/`)?.lastModified).toEqual(
+    expect(entriesByUrl.get(`${SITE_ORIGIN}/chains/ethereum/`)?.lastModified).toEqual(
       new Date(
         Math.max(
           new Date(generatedDates["/chains/"]).getTime(),
@@ -250,14 +236,12 @@ describe("sitemap", () => {
         ),
       ),
     );
-    expect(entries.get(`${SITE_ORIGIN}/stablecoins/usd/`)?.lastModified).toEqual(
+    expect(entriesByUrl.get(`${SITE_ORIGIN}/stablecoins/usd/`)?.lastModified).toEqual(
       new Date(generatedDates["/stablecoins/"]),
     );
   });
 
   it("uses an explicit sitemap allowlist for methodology changelog pages", () => {
-    const entries = sitemap();
-    const urls = new Set(entries.map((entry) => entry.url));
 
     for (const path of METHODOLOGY_CHANGELOG_SITEMAP_PATHS) {
       expect(urls.has(`${SITE_ORIGIN}${path}`)).toBe(true);

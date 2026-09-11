@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 
 import { describe, expect, it } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { render, screen, within } from "@testing-library/react";
 import type { ApiRequestAttributionResponse } from "@shared/types";
 import { ApiKeyLoadTable } from "../api-key-load-table";
 
@@ -83,18 +83,72 @@ function makeStats(overrides: Partial<ApiRequestAttributionResponse> = {}): ApiR
 }
 
 describe("ApiKeyLoadTable", () => {
-  it("renders keyed request rows and truncation copy", () => {
+  it("renders keyed request rows with per-key load values and truncation copy", () => {
     render(<ApiKeyLoadTable stats={makeStats()} />);
 
     expect(screen.getByText("API Key Load")).toBeTruthy();
-    expect(screen.getByText("Partner A")).toBeTruthy();
-    expect(screen.getByText("Site Automation")).toBeTruthy();
-    expect(screen.getByText(/Showing the top 25 keys by volume/i)).toBeTruthy();
+    const truncationCopy = screen.getByText(/Showing the top 25 keys by volume/i);
+    expect(truncationCopy.textContent).toContain("1 more key");
+    expect(truncationCopy.textContent).toContain("20 additional keyed requests");
     const tableShell = screen.getByTestId("api-key-load-table");
     expect(tableShell.getAttribute("data-table-id")).toBe("api-key-load");
     expect(screen.getByRole("table", { name: /api key load/i })).toBeTruthy();
-    expect(screen.getByText("external")).toBeTruthy();
-    expect(screen.getByText("site")).toBeTruthy();
+
+    const partnerRow = screen.getByRole("row", { name: /Partner A/ });
+    expect(within(partnerRow).getByText("external")).toBeTruthy();
+    expect(within(partnerRow).getByText("150")).toBeTruthy();
+    expect(within(partnerRow).getByText("68.2%")).toBeTruthy();
+    expect(within(partnerRow).getByText("30.0%")).toBeTruthy();
+    expect(within(partnerRow).getByText("180/min")).toBeTruthy();
+    expect(within(partnerRow).getByText("active")).toBeTruthy();
+
+    const siteRow = screen.getByRole("row", { name: /Site Automation/ });
+    expect(within(siteRow).getByText("site")).toBeTruthy();
+    expect(within(siteRow).getByText("50")).toBeTruthy();
+    expect(within(siteRow).getByText("22.7%")).toBeTruthy();
+    expect(within(siteRow).getByText("10.0%")).toBeTruthy();
+    expect(within(siteRow).getByText("120/min")).toBeTruthy();
+    expect(within(siteRow).getByText("inactive")).toBeTruthy();
+  });
+
+  it("reports the returned key count when results are not truncated", () => {
+    const summary = makeStats().keyedPublicApi;
+    render(
+      <ApiKeyLoadTable
+        stats={makeStats({
+          keyedPublicApi: { ...summary, truncated: false, returnedKeys: 2, omittedKeys: 0, omittedRequests: 0 },
+        })}
+      />,
+    );
+
+    expect(screen.getByText(/2 keys recorded in this window/i)).toBeTruthy();
+  });
+
+  it("derives row status from the snapshot time rather than the current clock", () => {
+    render(
+      <ApiKeyLoadTable
+        stats={makeStats({
+          apiKeys: [
+            {
+              apiKeyId: 11,
+              name: "Lapsed Partner",
+              maskedToken: "ph_live_1111111111111111_********",
+              trafficClass: "external",
+              isActive: true,
+              // Already past the wall clock at audit time, still ahead of generatedAt.
+              expiresAt: 1_750_000_000,
+              rateLimitPerMinute: 60,
+              requestCount: 40,
+              shareOfKeyedRequestsPct: 18.18,
+              shareOfTotalPublicApiRequestsPct: 8,
+            },
+          ],
+        })}
+      />,
+    );
+
+    const row = screen.getByRole("row", { name: /Lapsed Partner/ });
+    expect(within(row).getByText("active")).toBeTruthy();
   });
 
   it("renders an empty state when there is no keyed traffic", () => {

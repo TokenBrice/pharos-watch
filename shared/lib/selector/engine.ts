@@ -11,6 +11,7 @@ import {
   LOW_CONFIDENCE_THRESHOLD,
 } from "./coverage-policy";
 import {
+  applyInputDrivenExclusions,
   evaluateExclusions,
   hasRequiredSignals,
   HOWEY_UNCERTAIN_ASSETS,
@@ -237,6 +238,7 @@ function relaxedFallbackReason(
   if (exclusion == null) return null;
   if (!RELAXED_FALLBACK_ALLOWED_REASONS.has(exclusion.reason)) return null;
   if (input.profile === "treasury") return null;
+  if (applyInputDrivenExclusions(row, input) != null) return null;
   return exclusion.reason;
 }
 

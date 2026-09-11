@@ -12,7 +12,7 @@ export interface MockTableConfig {
   matchBinds?: unknown[];
   /** Rows to return from .all() */
   rows: Record<string, unknown>[];
-  /** Single row to return from .first() (defaults to rows[0]) */
+  /** Explicit .first() result, including null; otherwise inferred from rows. */
   first?: Record<string, unknown> | null;
   /** Optional metadata for .run() responses */
   runMeta?: Record<string, unknown>;
@@ -141,67 +141,50 @@ export function mockD1(tables: MockTableConfig[] = [], options: MockD1Options = 
   }
 
   function createStatement(sql: string, boundValues: unknown[] = []): MockPreparedStatement {
-    const executeAll = async <T>() => {
+    const execute = async () => {
       history.push({ sql, binds: [...boundValues] });
       if (matchesFailure(sql)) throw toError(options.failOn?.error);
       const table = findTable(sql, boundValues);
       if (!table) {
         throw new Error(`mockD1: no match for SQL: ${normalizeSql(sql)}`);
       }
-      if (table?.throwError != null) throw toError(table.throwError);
+      if (table.throwError != null) throw toError(table.throwError);
       await maybeDelay(table);
+      return table;
+    };
+
+    const executeAll = async <T>() => {
+      const table = await execute();
       return {
-        results: (table?.rows ?? []) as T[],
+        results: table.rows as T[],
         success: true,
         meta: {},
       };
     };
 
     const executeFirst = async <T>() => {
-      history.push({ sql, binds: [...boundValues] });
-      if (matchesFailure(sql)) throw toError(options.failOn?.error);
-      const table = findTable(sql, boundValues);
-      if (!table) {
-        throw new Error(`mockD1: no match for SQL: ${normalizeSql(sql)}`);
-      }
-      if (table?.throwError != null) throw toError(table.throwError);
-      await maybeDelay(table);
-      if (table && isCacheKeyLookup(sql) && typeof boundValues[0] === "string") {
+      const table = await execute();
+      if (table.first !== undefined) return table.first as T | null;
+      if (isCacheKeyLookup(sql) && typeof boundValues[0] === "string") {
         const keyedRows = table.rows.filter((row) => typeof row.key === "string");
-        const keyedFirst = table.first && typeof table.first.key === "string" ? table.first : null;
         const matchingRow = keyedRows.find((row) => row.key === boundValues[0]);
         if (matchingRow) return matchingRow as T;
-        if (keyedFirst?.key === boundValues[0]) return keyedFirst as T;
-        if (keyedRows.length > 0 || keyedFirst) return null;
+        if (keyedRows.length > 0) return null;
       }
-      return (table?.first ?? table?.rows?.[0] ?? null) as T | null;
+      return (table.rows[0] ?? null) as T | null;
     };
 
     const executeRun = async () => {
-      history.push({ sql, binds: [...boundValues] });
-      if (matchesFailure(sql)) throw toError(options.failOn?.error);
-      const table = findTable(sql, boundValues);
-      if (!table) {
-        throw new Error(`mockD1: no match for SQL: ${normalizeSql(sql)}`);
-      }
-      if (table?.throwError != null) throw toError(table.throwError);
-      await maybeDelay(table);
+      const table = await execute();
       return {
         success: true,
-        meta: table?.runMeta ?? { changes: options.runChanges?.(sql) ?? 1 },
+        meta: table.runMeta ?? { changes: options.runChanges?.(sql) ?? 1 },
       };
     };
 
     const executeRaw = async <T extends unknown[]>() => {
-      history.push({ sql, binds: [...boundValues] });
-      if (matchesFailure(sql)) throw toError(options.failOn?.error);
-      const table = findTable(sql, boundValues);
-      if (!table) {
-        throw new Error(`mockD1: no match for SQL: ${normalizeSql(sql)}`);
-      }
-      if (table?.throwError != null) throw toError(table.throwError);
-      await maybeDelay(table);
-      return (table?.rows ?? []).map((row) => Object.values(row)) as T[];
+      const table = await execute();
+      return table.rows.map((row) => Object.values(row)) as T[];
     };
 
     return {

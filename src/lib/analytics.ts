@@ -19,6 +19,13 @@ type EventMap = {
   comparison_preset_selected: { preset: string };
   comparison_exported: { method: string; coin_count: number };
   search_performed: { page: string; query_length: number };
+  // Global navigation. `surface` and `group` are bounded chrome identifiers;
+  // `href` is an internal route path, never a query string. The palette
+  // events carry query length and bounded result descriptors only — raw
+  // search text must never be sent.
+  nav_click: { surface: "rail" | "menu" | "drawer" | "bottom_bar"; group: string; href: string };
+  palette_selected: { query_length: number; selected_kind: string; selected_section: string; selected_rank: number };
+  palette_zero_results: { query_length: number };
   // Yield Intelligence decision funnel. Values are bounded enums/ids; raw
   // search text and free-form provider data must never be sent.
   yield_risk_budget_selected: { risk_budget: string; result_count: number };

@@ -1,40 +1,12 @@
 import { describe, expect, it } from "vitest";
-import type { V9ValidatedPolicyEnvelope } from "../../types/safety-score-v9";
 import type { V9FailureDomainRef } from "../../types/safety-score-v9-facts";
 import { commonModeSignalSeverity, type V9CommonModeContext } from "../safety-score-v9/evaluate-set";
 import { V9_CANDIDATE_POLICY_V1 } from "../safety-score-v9/policy";
 
-/**
- * STAGE A pin for owner rulings R2 + D1 (2026-07-17, provisional pending the
- * V8 counterfactual-matrix review):
- *
- *   R2/D5: add "tron", "hyperliquid", and "xrpl" to matureChains
- *   D1: add "raydium" to semantic.materiality.matureVenues
- *
- * The proportional common-mode thresholds shipped in PR #530 and were
- * rebanded by D1 (2026-07-22, 0.05/0.1 -> 0.10/0.25): mature ecosystem
- * domains are diagnostic (low) at ANY share; otherwise proven exposure <10%
- * is diagnostic, 10%-<25% is moderate, and >=25% OR UNKNOWN share is high
- * (fail-closed).
- *
- * The ACTIVE tables pin those threshold semantics at the 9.99/10/24.99/25%
- * boundaries and at unknown share for BOTH domains, using a test-local
- * materiality fixture that already lists the ruled new members — this proves
- * the membership semantics generalize to tron/hyperliquid/xrpl/raydium the moment
- * the policy lists them. The final suite pins that membership against the live
- * candidate policy.
- */
-
-type V9Materiality = V9ValidatedPolicyEnvelope["policy"]["semantic"]["materiality"];
+// Mature ecosystem domains remain diagnostic at any share; other domains use
+// the ruled 10%/25% thresholds and fail closed when exposure is unknown.
 
 const CANDIDATE_MATERIALITY = V9_CANDIDATE_POLICY_V1.policy.semantic.materiality;
-
-/** Test-local materiality with the R2/D1 membership already applied. */
-const STAGE_B_MATERIALITY: V9Materiality = {
-  ...CANDIDATE_MATERIALITY,
-  matureChains: [...CANDIDATE_MATERIALITY.matureChains, "tron", "hyperliquid", "xrpl"],
-  matureVenues: [...CANDIDATE_MATERIALITY.matureVenues, "raydium"],
-};
 
 function contextForChain(chainId: string, share: number | null): V9CommonModeContext {
   return {
@@ -77,7 +49,7 @@ describe("R2/D1 threshold boundary semantics — active (D1 2026-07-22 rebanded 
     const domain: V9FailureDomainRef = { kind: "chain", key: "futurenet" };
     for (const { share, expected } of CHAIN_BOUNDARIES) {
       expect(
-        commonModeSignalSeverity(domain, contextForChain("futurenet", share), STAGE_B_MATERIALITY),
+        commonModeSignalSeverity(domain, contextForChain("futurenet", share), CANDIDATE_MATERIALITY),
         `share=${share}`,
       ).toBe(expected);
     }
@@ -95,7 +67,7 @@ describe("R2/D1 threshold boundary semantics — active (D1 2026-07-22 rebanded 
       dexExposureByDomain: new Map(),
       bridgeExposureByDomain: new Map(),
     };
-    expect(commonModeSignalSeverity(domain, context, STAGE_B_MATERIALITY)).toBe("high");
+    expect(commonModeSignalSeverity(domain, context, CANDIDATE_MATERIALITY)).toBe("high");
   });
 
   it("keeps mature chains diagnostic at every boundary, including >=10% and unknown share", () => {
@@ -103,7 +75,7 @@ describe("R2/D1 threshold boundary semantics — active (D1 2026-07-22 rebanded 
       const domain: V9FailureDomainRef = { kind: "chain", key: chainId };
       for (const { share } of CHAIN_BOUNDARIES) {
         expect(
-          commonModeSignalSeverity(domain, contextForChain(chainId, share), STAGE_B_MATERIALITY),
+          commonModeSignalSeverity(domain, contextForChain(chainId, share), CANDIDATE_MATERIALITY),
           `${chainId} share=${share}`,
         ).toBe("low");
       }
@@ -114,7 +86,7 @@ describe("R2/D1 threshold boundary semantics — active (D1 2026-07-22 rebanded 
     const domain: V9FailureDomainRef = { kind: "dex-protocol", key: "futuredex" };
     for (const { share, expected } of CHAIN_BOUNDARIES) {
       expect(
-        commonModeSignalSeverity(domain, contextForVenue("futuredex", share), STAGE_B_MATERIALITY),
+        commonModeSignalSeverity(domain, contextForVenue("futuredex", share), CANDIDATE_MATERIALITY),
         `share=${share}`,
       ).toBe(expected);
     }
@@ -124,7 +96,7 @@ describe("R2/D1 threshold boundary semantics — active (D1 2026-07-22 rebanded 
     const domain: V9FailureDomainRef = { kind: "dex-protocol", key: "raydium" };
     for (const { share } of CHAIN_BOUNDARIES) {
       expect(
-        commonModeSignalSeverity(domain, contextForVenue("raydium", share), STAGE_B_MATERIALITY),
+        commonModeSignalSeverity(domain, contextForVenue("raydium", share), CANDIDATE_MATERIALITY),
         `share=${share}`,
       ).toBe("low");
     }
@@ -139,28 +111,18 @@ describe("R2/D1 threshold boundary semantics — active (D1 2026-07-22 rebanded 
       const domain: V9FailureDomainRef = { kind: "dex-protocol", key };
       for (const { share } of CHAIN_BOUNDARIES) {
         expect(
-          commonModeSignalSeverity(domain, contextForVenue(key, share), STAGE_B_MATERIALITY),
+          commonModeSignalSeverity(domain, contextForVenue(key, share), CANDIDATE_MATERIALITY),
           `${key} share=${share}`,
         ).toBe("low");
       }
     }
     const unruled: V9FailureDomainRef = { kind: "dex-protocol", key: "futuredex-v2" };
-    expect(commonModeSignalSeverity(unruled, contextForVenue("futuredex-v2", null), STAGE_B_MATERIALITY)).toBe("high");
-    expect(commonModeSignalSeverity(unruled, contextForVenue("futuredex-v2", 0.15), STAGE_B_MATERIALITY)).toBe(
+    expect(commonModeSignalSeverity(unruled, contextForVenue("futuredex-v2", null), CANDIDATE_MATERIALITY)).toBe("high");
+    expect(commonModeSignalSeverity(unruled, contextForVenue("futuredex-v2", 0.15), CANDIDATE_MATERIALITY)).toBe(
       "moderate",
     );
   });
 
-  it("keeps the previously mature chains/venues diagnostic under the extended fixture", () => {
-    for (const chainId of CANDIDATE_MATERIALITY.matureChains) {
-      const domain: V9FailureDomainRef = { kind: "chain", key: chainId };
-      expect(commonModeSignalSeverity(domain, contextForChain(chainId, 0.5), STAGE_B_MATERIALITY), chainId).toBe("low");
-    }
-    for (const venue of CANDIDATE_MATERIALITY.matureVenues) {
-      const domain: V9FailureDomainRef = { kind: "dex-protocol", key: venue };
-      expect(commonModeSignalSeverity(domain, contextForVenue(venue, 0.5), STAGE_B_MATERIALITY), venue).toBe("low");
-    }
-  });
 });
 
 describe("R2/D1/D5 ruled policy membership — live policy", () => {
@@ -175,26 +137,9 @@ describe("R2/D1/D5 ruled policy membership — live policy", () => {
   });
 
   it("keeps the fail-closed thresholds unchanged by the membership edit", () => {
-    // D1 (2026-07-22) rebanded these 0.05/0.1 -> 0.10/0.25; the membership
-    // edit itself (this describe block) leaves them untouched either way.
     expect(CANDIDATE_MATERIALITY.commonModeShareThreshold).toBe(0.1);
     expect(CANDIDATE_MATERIALITY.commonModeHighShareThreshold).toBe(0.25);
     expect(CANDIDATE_MATERIALITY.commonModeSignal).toEqual({ kind: "critical-dependency", severity: "high" });
   });
 
-  it("grades the new members diagnostic under the live candidate policy", () => {
-    for (const chainId of ["tron", "hyperliquid", "xrpl"] as const) {
-      expect(
-        commonModeSignalSeverity({ kind: "chain", key: chainId }, contextForChain(chainId, 0.5), CANDIDATE_MATERIALITY),
-        chainId,
-      ).toBe("low");
-    }
-    expect(
-      commonModeSignalSeverity(
-        { kind: "dex-protocol", key: "raydium" },
-        contextForVenue("raydium", 0.5),
-        CANDIDATE_MATERIALITY,
-      ),
-    ).toBe("low");
-  });
 });

@@ -20,10 +20,9 @@ describe("useAutoExpand", () => {
     expect(result.current.hasNewSignal).toBe(false);
   });
 
-  it("auto-opens during the first definite evaluation so the shell paints without a layout shift", () => {
+  it("auto-opens on the first definite positive evaluation", () => {
     const { result } = renderHook(() => useAutoExpand(true));
 
-    // No timers or follow-up effects required: open on the initial paint.
     expect(result.current.isOpen).toBe(true);
     expect(result.current.hasNewSignal).toBe(false);
   });
@@ -50,6 +49,32 @@ describe("useAutoExpand", () => {
     expect(result.current.isOpen).toBe(true);
     act(() => result.current.setIsOpen(false));
 
+    rerender({ signal: true });
+    expect(result.current.isOpen).toBe(false);
+    expect(result.current.hasNewSignal).toBe(true);
+  });
+
+  it("auto-opens when the first evaluable signal arrives late and stays open on recovery", () => {
+    const { result, rerender } = renderHook(({ signal }) => useAutoExpand(signal), {
+      initialProps: { signal: null as boolean | null },
+    });
+    rerender({ signal: true });
+    expect(result.current.isOpen).toBe(true);
+    expect(result.current.hasNewSignal).toBe(false);
+    rerender({ signal: false });
+    expect(result.current.isOpen).toBe(true);
+    expect(result.current.hasNewSignal).toBe(false);
+  });
+
+  it("clears a collapsed badge without resetting the first-evaluation history through null", () => {
+    const { result, rerender } = renderHook(({ signal }) => useAutoExpand(signal), {
+      initialProps: { signal: false as boolean | null },
+    });
+    rerender({ signal: true });
+    expect(result.current.hasNewSignal).toBe(true);
+    rerender({ signal: false });
+    expect(result.current.hasNewSignal).toBe(false);
+    rerender({ signal: null });
     rerender({ signal: true });
     expect(result.current.isOpen).toBe(false);
     expect(result.current.hasNewSignal).toBe(true);

@@ -21,9 +21,6 @@ const HISTORY_TARGETS = {
     insertValues: (record: ReserveCompositionRecord, payloadSha256: string | null = null) => [
       record.stablecoinId, record.fetchedAt, record.source, record.attemptId ?? null, payloadSha256,
       "", "{}", null, record.warningCount, record.adapterSourceModel, record.adapterEvidenceClass],
-    repairProjection: [
-      "c.stablecoin_id", "c.fetched_at", "c.source", "c.attempt_id", "?", "''", "'{}'", "NULL",
-      "c.warning_count", "c.adapter_source_model", "c.adapter_evidence_class"],
   },
   attempt: {
     table: "reserve_sync_attempt_history",
@@ -33,54 +30,40 @@ const HISTORY_TARGETS = {
       record.stablecoinId, record.attemptedAt, record.adapterKey, record.breakerKey,
       record.attemptId ?? null, record.status, serializeWarnings(record.warnings), record.warningCount,
       record.lastError, JSON.stringify(record.metadata)],
-    repairProjection: [
-      "s.stablecoin_id", "COALESCE(s.last_attempted_at, c.fetched_at)", "s.adapter_key", "s.breaker_key",
-      "c.attempt_id", "s.last_status", "s.warnings", "s.warning_count", "s.last_error", "s.metadata"],
   },
 } as const;
 
 type HistoryTarget = (typeof HISTORY_TARGETS)[keyof typeof HISTORY_TARGETS];
 
-const AUTHORITATIVE_HISTORY_SOURCE = `FROM reserve_composition c
-         JOIN reserve_sync_state s
-           ON s.stablecoin_id = c.stablecoin_id
+function authoritativeSnapshotPredicate(state: "s" | "reserve_sync_state"): string {
+  return `${state}.last_success_at = c.fetched_at
+          AND ${state}.last_attempt_id = c.attempt_id
+          AND ${state}.last_success_attempt_id = c.attempt_id
+          AND ${state}.pending_attempt_id IS NULL`;
+}
+
+/** Strict current-attempt authority; retained older successes use the reader's broader admission policy. */
+const AUTHORITATIVE_SNAPSHOT_JOIN = `FROM reserve_composition c
+         JOIN reserve_sync_state s ON s.stablecoin_id = c.stablecoin_id
         WHERE c.stablecoin_id = ?
           AND c.attempt_id = ?
-          AND s.last_success_at = c.fetched_at
-          AND s.last_attempt_id = c.attempt_id
-          AND s.last_success_attempt_id = c.attempt_id
-          AND s.pending_attempt_id IS NULL`;
-const AUTHORITATIVE_ATTEMPT_READBACK_SOURCE = AUTHORITATIVE_HISTORY_SOURCE.replaceAll("\n", "\n  ");
+          AND ${authoritativeSnapshotPredicate("s")}`;
 
 function buildHistoryInsertStatement(
   db: D1Database,
   target: HistoryTarget,
   values: unknown[],
+  gate: string,
+  gateBinds: unknown[],
 ): D1PreparedStatement {
   // SAFETY: `target` is one of the HISTORY_TARGETS `as const` descriptors above; table/columns are literals.
   return db.prepare(
     `INSERT OR IGNORE INTO ${target.table} (
          ${target.columns.join(",\n         ")}
-       ) VALUES (${values.map(() => "?").join(", ")})`,
-  ).bind(...values);
+       ) SELECT ${values.map(() => "?").join(", ")} WHERE EXISTS (${gate})`,
+  ).bind(...values, ...gateBinds);
 }
 
-function buildHistoryRepairStatement(
-  db: D1Database,
-  target: HistoryTarget,
-  stablecoinId: string,
-  attemptId: string,
-  projectionBinds: readonly unknown[] = [],
-): D1PreparedStatement {
-  // SAFETY: `target` is one of the HISTORY_TARGETS `as const` descriptors above; table/columns/projection are literals.
-  return db.prepare(
-    `INSERT OR IGNORE INTO ${target.table} (
-         ${target.columns.join(",\n         ")}
-       )
-       SELECT ${target.repairProjection.join(",\n              ")}
-         ${AUTHORITATIVE_HISTORY_SOURCE}`,
-  ).bind(...projectionBinds, stablecoinId, attemptId);
-}
 
 
 export function buildReserveCompositionFinalizeSuccessStatement(
@@ -93,7 +76,7 @@ export function buildReserveCompositionFinalizeSuccessStatement(
       `INSERT INTO reserve_composition (
 ${RESERVE_COMPOSITION_INSERT_COLUMNS}
        )
-       SELECT ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
+       SELECT ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
        WHERE EXISTS (
          SELECT 1
            FROM reserve_sync_state
@@ -128,6 +111,7 @@ ${RESERVE_COMPOSITION_CONFLICT_ASSIGNMENTS}
       serializeWarnings(record.warnings),
       record.adapterSourceModel,
       record.adapterEvidenceClass,
+      record.configFingerprint ?? null,
       record.stablecoinId,
       record.attemptId ?? null,
       record.attemptId ?? null,
@@ -147,52 +131,32 @@ export const buildReserveCompositionHistoryInsertStatement = (
   db,
   HISTORY_TARGETS.composition,
   HISTORY_TARGETS.composition.insertValues(record, payloadSha256),
+  `SELECT 1 ${AUTHORITATIVE_SNAPSHOT_JOIN} AND c.fetched_at = ?`,
+  [record.stablecoinId, record.attemptId ?? null, record.fetchedAt],
 );
 
-export const buildReserveSyncAttemptHistoryInsertStatement = (db: D1Database, record: ReserveSyncAttemptHistoryRecord) =>
-  buildHistoryInsertStatement(db, HISTORY_TARGETS.attempt, HISTORY_TARGETS.attempt.insertValues(record));
-
-export const buildReserveCompositionHistoryRepairStatement = (
+export const buildReserveSyncAttemptHistoryInsertStatement = (
   db: D1Database,
-  stablecoinId: string,
-  attemptId: string,
-  payloadSha256: string | null = null,
-) => buildHistoryRepairStatement(
+  record: ReserveSyncAttemptHistoryRecord,
+  mode: "attempt" | "success" | "deferred" = "attempt",
+) => buildHistoryInsertStatement(
   db,
-  HISTORY_TARGETS.composition,
-  stablecoinId,
-  attemptId,
-  [payloadSha256],
+  HISTORY_TARGETS.attempt,
+  HISTORY_TARGETS.attempt.insertValues(record),
+  mode === "deferred"
+    // A scheduling deferral is recorded even when the state upsert preserves a healthy snapshot.
+    ? `SELECT 1 WHERE ? IS NULL AND ? = 'skipped'`
+    : mode === "success"
+    ? `SELECT 1 ${AUTHORITATIVE_SNAPSHOT_JOIN}`
+    : `SELECT 1 FROM reserve_sync_state
+        WHERE stablecoin_id = ? AND last_attempt_id IS ?
+          AND pending_attempt_id IS NULL AND last_attempted_at = ? AND last_status = ?`,
+  mode === "deferred"
+    ? [record.attemptId ?? null, record.status]
+    : mode === "success"
+    ? [record.stablecoinId, record.attemptId ?? null]
+    : [record.stablecoinId, record.attemptId ?? null, record.attemptedAt, record.status],
 );
-
-export const buildReserveSyncAttemptHistoryRepairStatement = (db: D1Database, stablecoinId: string, attemptId: string) =>
-  buildHistoryRepairStatement(db, HISTORY_TARGETS.attempt, stablecoinId, attemptId);
-
-export function buildReserveAuthoritativeHistoryRepairReadbackStatement(
-  db: D1Database,
-  stablecoinId: string,
-  attemptId: string,
-): D1PreparedStatement {
-  return db
-    .prepare(
-      `SELECT 1 AS repaired
-         ${AUTHORITATIVE_HISTORY_SOURCE}
-          AND EXISTS (
-            SELECT 1
-              FROM reserve_composition_history ch
-             WHERE ch.stablecoin_id = c.stablecoin_id
-               AND ch.attempt_id = c.attempt_id
-          )
-          AND EXISTS (
-            SELECT 1
-              FROM reserve_sync_attempt_history ah
-             WHERE ah.stablecoin_id = c.stablecoin_id
-               AND ah.attempt_id = c.attempt_id
-          )
-        LIMIT 1`,
-    )
-    .bind(stablecoinId, attemptId);
-}
 
 export function buildReserveAttemptAuthoritativeReadbackStatement(
   db: D1Database,
@@ -201,7 +165,7 @@ export function buildReserveAttemptAuthoritativeReadbackStatement(
 ): D1PreparedStatement {
   return db.prepare(
     `SELECT 1 AS finalized
-           ${AUTHORITATIVE_ATTEMPT_READBACK_SOURCE}
+           ${AUTHORITATIVE_SNAPSHOT_JOIN}
           LIMIT 1`,
   ).bind(stablecoinId, attemptId);
 }
@@ -215,19 +179,11 @@ export function buildReserveSuccessAuthoritativeReadbackStatement(
   return db
     .prepare(
       `SELECT 1 AS finalized
-         FROM reserve_composition c
-         JOIN reserve_sync_state s
-           ON s.stablecoin_id = c.stablecoin_id
-        WHERE c.stablecoin_id = ?
+         ${AUTHORITATIVE_SNAPSHOT_JOIN}
           AND c.fetched_at = ?
-          AND c.attempt_id = ?
-          AND s.last_success_at = c.fetched_at
-          AND s.last_attempt_id = c.attempt_id
-          AND s.last_success_attempt_id = c.attempt_id
-          AND s.pending_attempt_id IS NULL
         LIMIT 1`,
     )
-    .bind(stablecoinId, fetchedAt, attemptId);
+    .bind(stablecoinId, attemptId, fetchedAt);
 }
 
 export function buildReserveSyncAttemptStartStatement(
@@ -249,14 +205,24 @@ export function buildReserveSyncAttemptStartStatement(
          metadata,
          last_attempt_id,
          pending_attempt_id,
-         last_success_attempt_id
-       ) VALUES (?, ?, ?, ?, NULL, 'skipped', 0, NULL, NULL, '{}', ?, ?, NULL)
+         last_success_attempt_id,
+         config_fingerprint
+       ) SELECT ?, ?, ?, ?, NULL, 'skipped', 0, NULL, NULL, '{}', ?, ?, NULL, ?
+       WHERE ${SQLITE_NOW_MS_EXPRESSION} <= ?
+         ${record.checkpoint ? `AND EXISTS (
+           SELECT 1 FROM worker_scheduled_checkpoints
+           WHERE schedule_key = ? AND slot_started_at = ? AND job = ?
+             AND attempt_no = ? AND execution_generation = ? AND invocation_id = ?
+             AND current_domain_attempt_id = ? AND next_item_key = ?
+             AND state IN ('running', 'recovering')
+         )` : ""}
        ON CONFLICT(stablecoin_id) DO UPDATE SET
          adapter_key = excluded.adapter_key,
          breaker_key = excluded.breaker_key,
          last_attempted_at = excluded.last_attempted_at,
          last_attempt_id = excluded.last_attempt_id,
-         pending_attempt_id = excluded.pending_attempt_id`,
+         pending_attempt_id = excluded.pending_attempt_id,
+         config_fingerprint = excluded.config_fingerprint`,
     )
     .bind(
       record.stablecoinId,
@@ -265,6 +231,13 @@ export function buildReserveSyncAttemptStartStatement(
       record.attemptedAt,
       record.attemptId,
       record.attemptId,
+      record.configFingerprint ?? null,
+      record.deadlineMs ?? Number.MAX_SAFE_INTEGER,
+      ...(record.checkpoint ? [
+        record.checkpoint.scheduleKey, record.checkpoint.slotStartedAt, record.checkpoint.job,
+        record.checkpoint.attemptNo, record.checkpoint.executionGeneration, record.checkpoint.invocationId,
+        record.attemptId, record.stablecoinId,
+      ] : []),
     );
 }
 
@@ -287,7 +260,8 @@ export function buildReserveSyncFinalizeSuccessStatement(
              metadata = ?,
              last_attempt_id = ?,
              pending_attempt_id = NULL,
-             last_success_attempt_id = ?
+             last_success_attempt_id = ?,
+             config_fingerprint = ?
        WHERE stablecoin_id = ?
          AND last_attempt_id = ?
          AND pending_attempt_id = ?
@@ -312,6 +286,7 @@ export function buildReserveSyncFinalizeSuccessStatement(
       JSON.stringify(record.metadata),
       record.lastAttemptId ?? null,
       record.lastSuccessAttemptId ?? null,
+      record.configFingerprint ?? null,
       record.stablecoinId,
       record.lastAttemptId ?? null,
       record.pendingAttemptId ?? null,
@@ -325,6 +300,7 @@ export function buildReserveSyncFinalizeSuccessStatement(
 export function buildReserveSyncFinalizeAttemptStatement(
   db: D1Database,
   record: ReserveSyncStateRecord,
+  deadlineMs = Number.MAX_SAFE_INTEGER,
 ): D1PreparedStatement {
   return db
     .prepare(
@@ -338,10 +314,12 @@ export function buildReserveSyncFinalizeAttemptStatement(
              last_error = ?,
              metadata = ?,
              last_attempt_id = ?,
-             pending_attempt_id = NULL
+             pending_attempt_id = NULL,
+             config_fingerprint = ?
        WHERE stablecoin_id = ?
          AND last_attempt_id = ?
-         AND pending_attempt_id = ?`,
+         AND pending_attempt_id = ?
+         AND ${SQLITE_NOW_MS_EXPRESSION} <= ?`,
     )
     .bind(
       record.adapterKey,
@@ -353,9 +331,11 @@ export function buildReserveSyncFinalizeAttemptStatement(
       record.lastError,
       JSON.stringify(record.metadata),
       record.lastAttemptId ?? null,
+      record.configFingerprint ?? null,
       record.stablecoinId,
       record.lastAttemptId ?? null,
       record.pendingAttemptId ?? null,
+      deadlineMs,
     );
 }
 
@@ -409,9 +389,7 @@ export function buildReserveSyncRecordDeferredStatement(
             AND reserve_sync_state.pending_attempt_id IS NULL
             AND (
               (
-                c.attempt_id IS NOT NULL
-                AND reserve_sync_state.last_attempt_id = c.attempt_id
-                AND reserve_sync_state.last_success_attempt_id = c.attempt_id
+                ${authoritativeSnapshotPredicate("reserve_sync_state")}
               )
               OR (
                 c.attempt_id IS NULL

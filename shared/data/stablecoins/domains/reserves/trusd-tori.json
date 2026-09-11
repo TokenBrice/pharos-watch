@@ -2,6 +2,7 @@
   "id": "trusd-tori",
   "reserves": [
     {
+      "sourceKey": "accountable:tori:deployment:money-markets",
       "name": "Hedged money-market positions at undisclosed custodians (asset-manager mandate)",
       "pct": 62.22038432284772,
       "risk": "medium",
@@ -16,6 +17,7 @@
       ]
     },
     {
+      "sourceKey": "accountable:tori:deployment:delta-neutral-futures-arbitrage",
       "name": "Delta-neutral futures arbitrage and calendar-spread positions",
       "pct": 26.884206551258444,
       "risk": "high",
@@ -30,6 +32,7 @@
       ]
     },
     {
+      "sourceKey": "accountable:tori:deployment:cash-equivalents",
       "name": "Cash and equivalents held as FX collateral at investment banks and exchange venues",
       "pct": 10.412020508191333,
       "risk": "medium",
@@ -43,6 +46,7 @@
       ]
     },
     {
+      "sourceKey": "accountable:tori:deployment:on-chain-buffer",
       "name": "On-chain stablecoin buffer in the minting custodian wallet",
       "pct": 0.483388617702502,
       "risk": "low",
@@ -98,7 +102,10 @@
         "pct": 0.483388617702502,
         "disposition": "basket-needs-split",
         "rationale": "The disclosed buffer combines USDC and USDT without current component weights, so it cannot support a single reserve-linked dependency.",
-        "candidateCoinIds": ["usdc-circle", "usdt-tether"]
+        "candidateCoinIds": [
+          "usdc-circle",
+          "usdt-tether"
+        ]
       }
     ]
   }

@@ -43,6 +43,37 @@
       "decimals": 6
     }
   ],
+  "liveReservesConfig": {
+    "adapter": "evm-branch-balances",
+    "version": 1,
+    "semantics": "collateral-mix",
+    "breakerScope": "jpyt-dephaser",
+    "inputs": {
+      "primary": { "kind": "onchain-evm", "chain": "optimism", "rpcMode": "public-rpc" }
+    },
+    "params": {
+      "sourceUrls": ["https://docs.dephaser.com/concept/what-is-jpyt.md"],
+      "branches": [
+        {
+          "name": "USDT locked on Optimism DepositManager and supplied to Aave V3 (aOptUSDT)",
+          "holder": "0x77c1e40f5e7bb19c34d81f986fb13fe655f23cd9",
+          "token": { "chain": "optimism", "address": "0x6ab707aca953edaefbc4fd23ba73294241490620", "decimals": 6 },
+          "priceToken": { "chain": "optimism", "address": "0x94b008aa00579c1307b0ef2c499ad98a8ce58e58" },
+          "underlyingPrice1to1": true,
+          "risk": "medium", "coinId": "usdt-tether", "depType": "collateral"
+        },
+        {
+          "name": "USDC locked on Base DepositManager and supplied to Aave V3 (aBasUSDC)",
+          "chain": "base",
+          "holder": "0x0eab9d66adb8527cd7c0e7e7c1782580431ec276",
+          "token": { "chain": "base", "address": "0x4e65fe4dba92790696d040ac24aa414708f5c0ab", "decimals": 6 },
+          "priceToken": { "chain": "base", "address": "0x833589fcd6edb6e08f4c7c32d4f71b54bda02913" },
+          "underlyingPrice1to1": true,
+          "risk": "medium", "coinId": "usdc-circle", "depType": "collateral"
+        }
+      ]
+    }
+  },
   "collateralQuality": "alt-lst-bridged-or-mixed",
   "custodyModel": "onchain",
   "governanceQuality": "single-entity",

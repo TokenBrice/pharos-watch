@@ -10,60 +10,10 @@ import { V9_CANDIDATE_POLICY_V1 } from "../safety-score-v9/policy";
 import type {
   V9AssetFactsV2,
   V9FactGapV2,
-  V9FactStatusV2,
   V9ReserveExposureFactV2,
 } from "../../types/safety-score-v9-facts";
 
-const knownStatus = (evidenceId: string): V9FactStatusV2 => ({
-  applicability: { state: "required", policyRuleId: "backing.required", rationale: null, gapId: null },
-  observationState: "known",
-  evidenceRefIds: [evidenceId],
-  gapIds: [],
-});
-
-function exposure(args: {
-  key: string;
-  weight: number;
-  assetClass?: V9ReserveExposureFactV2["assetClass"];
-  trackedAssetId?: string | null;
-  issuer?: string | null;
-  custodian?: string;
-  provenance?: V9ReserveExposureFactV2["provenance"];
-}): V9ReserveExposureFactV2 {
-  return {
-    exposureKey: args.key,
-    classificationKey: `class:${args.key}`,
-    sourceGenerationId: "reserves:test",
-    provenance: args.provenance ?? "curated",
-    ...((args.provenance ?? "curated") === "live" ? {} : { evidenceClass: "independent" as const }),
-    status: knownStatus(`evidence:${args.key}`),
-    name: args.key,
-    weight: args.weight,
-    trackedAssetId: args.trackedAssetId ?? null,
-    assetClass: args.assetClass ?? "cash",
-    issuerOrObligorKey: args.issuer ?? null,
-    riskFactors: [],
-    liquidityHorizon: "immediate",
-    maturityDaysMax: null,
-    failureDomains: [
-      { kind: "reserve-custodian", key: args.custodian ?? `custodian:${args.key}` },
-      ...(args.issuer ? [{ kind: "reserve-issuer" as const, key: args.issuer }] : []),
-    ],
-  };
-}
-
-function asset(
-  reserveExposures: readonly V9ReserveExposureFactV2[],
-  gaps: readonly V9FactGapV2[] = [],
-): V9BackingAssetInput {
-  return {
-    assetId: "asset",
-    reserveStatus: knownStatus("evidence:reserve-envelope"),
-    reserveExposures,
-    gaps,
-    resolvedUpstreamExposures: [],
-  };
-}
+import { asset, exposure, knownStatus, missingMechanism } from "./safety-score-v9-backing.test-support";
 
 function unavailableReview(
   gap: V9FactGapV2,
@@ -524,22 +474,9 @@ describe("Safety Score v9 backing exposure primitives", () => {
   });
 
   it("keeps missing serial components NR for ordinary typed-review evaluation", () => {
-    const gap: V9FactGapV2 = {
-      gapId: "gap:serial-claim",
-      reasonCode: "critical-unresolved",
-      ownerDomain: "backing",
-      policyRuleId: "fiat.claim.required",
-      observationState: "missing",
-      path: { kind: "local-component", componentKey: "claim-and-segregation" },
-      message: "The direct reserve claim is unresolved.",
-      evidenceRefIds: [],
-    };
-    const missingStatus: V9FactStatusV2 = {
-      applicability: { state: "required", policyRuleId: "fiat.claim.required", rationale: null, gapId: null },
-      observationState: "missing",
-      evidenceRefIds: [],
-      gapIds: [gap.gapId],
-    };
+    const { gap, fact: missingClaim } = missingMechanism(
+      "claim-and-segregation", "gap:serial-claim", "fiat.claim.required", "The direct reserve claim is unresolved.",
+    );
     const strongFact = (key: string) => ({
       status: knownStatus(`mechanism:${key}`),
       quality: "strong" as const,
@@ -550,7 +487,7 @@ describe("Safety Score v9 backing exposure primitives", () => {
         archetype: "fiat-cash",
         asset: asset([exposure({ key: "cash", weight: 1 })], [gap]),
         components: [
-          { componentKey: "claim-and-segregation", fact: { status: missingStatus, quality: null, failureDomains: [] } },
+          { componentKey: "claim-and-segregation", fact: missingClaim },
           { componentKey: "custody-continuity", fact: strongFact("custody") },
           { componentKey: "assurance-and-reconciliation", fact: strongFact("assurance") },
         ],
@@ -560,6 +497,29 @@ describe("Safety Score v9 backing exposure primitives", () => {
 
     expect(result).toMatchObject({ rateability: "NR", score: null });
     expect(result.unresolved).toContainEqual(expect.objectContaining({ code: "critical-unresolved", treatment: "NR" }));
+  });
+  it("uses inclusive maturity bands and bounds missing maturity for treasury bills", () => {
+    const scores = [30, 31, null].map((maturityDaysMax) => {
+      const result = evaluateV9ReserveExposures(asset([{
+        ...exposure({ key: "bill", weight: 1, assetClass: "treasury-bill", issuer: "sovereign" }),
+        maturityDaysMax,
+      }]), V9_CANDIDATE_POLICY_V1);
+      return result.contributions.find((entry) => entry.componentKey === "reserve:bill")!.score;
+    });
+    expect(scores[0]).toBeCloseTo(96.3, 8);
+    expect(scores[1]).toBeCloseTo(95.1, 8);
+    expect(scores[2]).toBeCloseTo(87.45, 8);
+  });
+
+  it("ignores maturity for exempt cash but bounds an unknown liquidity horizon", () => {
+    const cash = exposure({ key: "cash", weight: 1 });
+    const evaluate = (overrides: Partial<V9ReserveExposureFactV2>) =>
+      evaluateV9ReserveExposures(asset([{ ...cash, ...overrides }]), V9_CANDIDATE_POLICY_V1);
+    expect(evaluate({ maturityDaysMax: 366 })).toEqual(evaluate({ maturityDaysMax: null }));
+    expect(evaluate({ liquidityHorizon: null }).contributions.find((entry) => entry.componentKey === "reserve:cash")!.score)
+      .toBeCloseTo(79.4, 8);
+    expect(evaluate({ liquidityHorizon: "immediate" }).contributions.find((entry) => entry.componentKey === "reserve:cash")!.score)
+      .toBeCloseTo(98.3, 8);
   });
 });
 
@@ -840,21 +800,54 @@ describe("Safety Score v9 wrapper backing inheritance", () => {
     expect(result.score).toBeCloseTo(90 * 0.99 + backing.boundedUnknownQuality * 0.01, 6);
   });
 
-  it("defers to the fail-closed bounded path when a weak parent cannot beat the floor", () => {
-    const inherited = {
+  it.each([
+    { name: "threshold", weight: 0.99, verified: true },
+    { name: "below threshold", weight: 0.989999, verified: false },
+    { name: "curated", provenance: "curated" as const, verified: false },
+    { name: "wrong parent", trackedAssetId: "other", verified: false },
+    { name: "multiple or unknown exposures", invalidShape: true, verified: false },
+  ])("requires verified single-parent live evidence: $name", ({ weight = 1, provenance = "live" as const, trackedAssetId = "parent", invalidShape, verified }) => {
+    const parent = exposure({ key: "parent", weight, provenance, trackedAssetId, assetClass: "stablecoin" });
+    const variants = invalidShape
+      ? [[{ ...parent, weight: 0.99 }, exposure({ key: "other", weight: 0.01 })],
+        [{ ...parent, status: { ...parent.status, observationState: "bounded-unknown" as const } }]]
+      : [[parent]];
+    for (const reserveExposures of variants) {
+      const result = evaluateV9ReserveExposures({
+        ...asset(reserveExposures),
+        inheritedStablecoinBacking: {
+          parentAssetId: "parent", parentBackingScore: 82, weight: 1, tier: "pure", failureDomains: [],
+        },
+      }, V9_CANDIDATE_POLICY_V1);
+      expect(result.contributions.find((entry) => entry.componentKey === "reserve:inherited-backing:parent"))
+        .toMatchObject({ score: 82, provenance: verified ? "live" : null, observationState: verified ? "known" : "bounded-unknown" });
+      expect(result.unresolved).toEqual(verified ? [] : [
+        expect.objectContaining({ code: "partial-reserve-review", treatment: "ceiling" }),
+      ]);
+    }
+  });
+
+  it.each([34, 35, 35.001])("uses the bounded floor unless parent quality %s exceeds it", (parentBackingScore) => {
+    const result = evaluateV9ReserveExposures(missingReserveAsset({
       parentAssetId: "parent",
-      parentBackingScore: 40,
+      parentBackingScore,
       weight: 1,
-      tier: "wrapped" as const,
-      failureDomains: [{ kind: "reserve-issuer" as const, key: "asset:parent" }],
-    };
-    const withInheritance = evaluateV9ReserveExposures(missingReserveAsset(inherited), V9_CANDIDATE_POLICY_V1);
-    expect(withInheritance.score).toBeCloseTo(40, 6);
-    expect(withInheritance.contributions).toContainEqual(
-      expect.objectContaining({ componentKey: "reserve:inherited-backing:parent" }),
-    );
-    expect(withInheritance.unresolved).toContainEqual(
-      expect.objectContaining({ code: "partial-reserve-review" }),
-    );
+      tier: "wrapped",
+      failureDomains: [{ kind: "reserve-issuer", key: "asset:parent" }],
+    }), V9_CANDIDATE_POLICY_V1);
+    expect(result.score).toBeCloseTo(Math.max(35, parentBackingScore), 6);
+    if (parentBackingScore <= 35) {
+      expect(result.contributions.map((entry) => entry.componentKey)).toEqual([
+        "reserve:unclassified-residual", "reserve:concentration",
+      ]);
+      expect(result.unresolved).toContainEqual(expect.objectContaining({
+        code: "missing-reserve-composition", pathKey: "reserve-envelope",
+      }));
+    } else {
+      expect(result.contributions).toContainEqual(expect.objectContaining({
+        componentKey: "reserve:inherited-backing:parent", score: 35.001,
+      }));
+      expect(result.unresolved).toContainEqual(expect.objectContaining({ code: "partial-reserve-review" }));
+    }
   });
 });

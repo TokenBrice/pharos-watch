@@ -18,6 +18,7 @@ import {
 } from "@shared/lib/filter-tags";
 import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import type { StablecoinData } from "@shared/types";
+import { makeStablecoin } from "@shared/test-utils/stablecoin";
 import type { ColumnId } from "@/hooks/use-preferences";
 import type { CsvColumn } from "@/lib/exports/csv";
 
@@ -29,30 +30,15 @@ vi.mock("@/lib/exports/csv", () => ({
   downloadCsv: downloadCsvMock,
 }));
 
-// Minimal StablecoinData factory
 function makeCoin(id: string, name: string, overrides: Partial<StablecoinData> = {}): StablecoinData {
-  return {
-    id,
-    name,
-    symbol: id.toUpperCase(),
-    geckoId: null,
-    pegType: "peggedUSD",
-    pegMechanism: "fiat-backed",
-    price: 1.0,
-    priceSource: "coingecko",
-    priceConfidence: "high",
-    priceUpdatedAt: null,
-    circulating: { peggedUSD: 1_000_000 },
+  return makeStablecoin({
+    id, name, symbol: id.toUpperCase(),
+    priceSource: "coingecko", priceConfidence: "high",
     circulatingPrevDay: { peggedUSD: 1_000_000 },
     circulatingPrevWeek: { peggedUSD: 1_000_000 },
-    circulatingPrevMonth: {},
-    chainCirculating: {},
-    consensusSources: [],
-    agreeSources: [],
-    supplySource: "defillama",
-    chains: ["ethereum"],
+    supplySource: "defillama", chains: ["ethereum"],
     ...overrides,
-  } as StablecoinData;
+  });
 }
 
 const sortAsc = (key: StablecoinTableSortKey) => ({ key, direction: "asc" as const });

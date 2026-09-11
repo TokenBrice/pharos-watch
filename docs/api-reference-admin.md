@@ -60,11 +60,6 @@ Endpoint sections below do not repeat the CLI header pair. Unless an endpoint sa
 
 Full admin dashboard: cron run history, cache freshness for all keys, data quality metrics, Telegram bot subscriber stats, and operator reconciliation signals.
 
-**Preferred access:**
-
-- Browser: `https://ops.pharos.watch/admin/` -> same-origin `/api/admin/status`
-- CLI: `CF-Access-Client-Id: <id>` and `CF-Access-Client-Secret: <secret>` against `https://ops-api.pharos.watch/api/status`
-
 **Response shape:** `StatusResponse` (exported through `shared/types/index.ts`). The JSON below is illustrative rather than exhaustive; the canonical field list lives in `shared/types/status/response.ts`, with `shared/types/status.ts` retained as its compatibility barrel. It currently includes diagnostics such as `summary.transitionsLast24h`, `yieldHealth`, `publicationHealth`, `providerCircuitHealth`, `canaries`, `dependencyHealth`, `reserveDrift`, `classificationWarnings`, and `reserveComposition.persistentlyStaleIndependentCoins`.
 
 The legacy top-level projections `gtProbe`, `priceProviderDiagnostics`, `cacheBlobSizes`, and the duplicate `alertBroker` block are intentionally omitted from `/api/status`. This is an API response-shape change: public health diagnostics, including `alertBroker`, remain on `/api/health`; producer/provider diagnostics remain in the `sync-stablecoins` cron's latest-run metadata for operator inspection. Retained status sections are validated for their required fields and malformed sections fail closed at the admin client boundary.
@@ -300,6 +295,17 @@ The legacy top-level projections `gtProbe`, `priceProviderDiagnostics`, `cacheBl
     "persistentlyStaleIndependentCoins": [],
     "lastSuccessAt": 1771855800,
     "oldestFreshAgeSec": 3100,
+    "adapterReliability": [
+      {
+        "adapterKey": "circle",
+        "attempts": 72,
+        "ok": 70,
+        "degraded": 1,
+        "error": 1,
+        "skipped": 0,
+        "successRate": 0.972
+      }
+    ],
     "status": "healthy",
     "freshCoverageRatio": 0.89,
     "authoritativeFreshCoverageRatio": 0.83
@@ -499,7 +505,7 @@ Ratio-based on-chain status thresholds apply only when `dataQuality.onchainSuppl
 
 `summary.diagnosticIssueCount` counts best-effort status loader failures such as cache freshness lookups, reserve overview diagnostics, mint/burn diagnostics, and non-stablecoins data-quality subqueries. These issues reduce confidence and appear as info causes, but they do not degrade `availabilityStatus` or `dataQualityStatus` on their own unless all freshness evidence for the affected lane is gone.
 
-`reserveComposition.status` is a derived health signal for live reserve coverage. After bootstrap, it becomes `stale` when `freshCoins === 0`, `degraded` when `freshCoverageRatio < 0.75`, `authoritativeFreshCoverageRatio < 0.5`, or `persistentlyStaleIndependentCoins.length > 0`, and `healthy` otherwise.
+`reserveComposition.status` is a derived health signal for live reserve coverage. After bootstrap, it becomes `stale` when `freshCoins === 0`; `degraded` when `freshCoverageRatio < 0.75`, `authoritativeFreshCoverageRatio < 0.5`, `persistentlyStaleIndependentCoins.length > 0`, or reserve capacity pressure is present — `writeTimeoutUncertain > 0`, or a `runBudgetTruncated` run whose deferred share (`deferredCoins / configuredCoins`) is at least `0.25`; and `healthy` otherwise.
 
 `reserveComposition.freshCoverageRatio` is `freshCoins / configuredCoins`. `reserveComposition.authoritativeFreshCoverageRatio` counts only stronger evidence cohorts (`independentFreshEligible`, `independentFreshUnverified`, `staticValidatedFresh`) over `configuredCoins`.
 
@@ -587,6 +593,19 @@ Machine-readable status timeline endpoint for tooling and incident analysis.
 
 **Response shape:** `StatusHistoryResponse` (defined in `shared/types/index.ts`). The response includes the current `reserveComposition` summary when it can be computed, or `null` if the reserve overview diagnostic query fails. `hasMore` reports whether another matching transition exists beyond the returned page: `true` means the selected window is truncated, `false` proves the returned page covers the matching window, and `null` means the transition query failed and completeness is unknown. Consumers must not infer that no transition occurred from a `true` or `null` result.
 
+### `GET /api/reserve-attempt-history`
+
+Admin-only per-coin attempt timeline for the live-reserve sync lane. This is the first production read path for `reserve_sync_attempt_history`; it turns triage from log grep into a bounded query.
+
+**Query parameters**
+
+| Param  | Type      | Default | Description                                                        |
+| ------ | --------- | ------- | ------------------------------------------------------------------ |
+| `coin` | `string`  | —       | Required stablecoin id (e.g. `usdc-circle`)                        |
+| `limit`| `integer` | `50`    | Number of attempts to return (1–200), newest first                  |
+
+**Response shape:** `{ "coin": string, "attempts": Array<{ stablecoinId, attemptedAt, adapterKey, breakerKey, attemptId, status, failureCategory, warningCodes, lastError, durationMs }> }`. `failureCategory` is the cron-classified failure (`network`, `upstream-http`, `parser-drift`, `validation`, `storage-write`, `circuit-open`, …); `warningCodes` are the attempt-scoped warning codes; `durationMs` is `metadata.diag.durationMs` and is `null` until the adapter emits block-scoped instrumentation. A missing `coin` returns `400`.
+
 ### `GET /api/request-source-stats`
 
 Admin-only site-vs-external demand attribution summary. Aggregates minute-bucketed request counts into a requested window so operators can estimate what share of total request demand is coming from the website itself versus external consumers.
@@ -649,6 +668,8 @@ Admin-only counts projection for the Triage workspace. Returns aggregate credent
 }
 ```
 
+`nonExpiring` counts every key with `expiresAt = null`, so it grows by one for each supporter key issued at `POST /api/donor-key-claims`. A rising count on a release that opened donor claims is expected, not an anomaly; filter the key list by `tier = "donor"` to separate supporter keys from deliberate operator exceptions.
+
 ### `GET /api/api-keys/audit-log`
 
 Admin-only API key lifecycle audit log. Returns recent create/update/deactivate/rotate audit entries from `api_key_audit_log`.
@@ -687,7 +708,7 @@ Admin-only API key creation route.
 | -------------------- | ---------------------- | -------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
 | `name`               | `string`               | Yes      | Display name for the key                                                                                                                    |
 | `ownerEmail`         | `string`               | No       | Optional operator / owner contact                                                                                                           |
-| `tier`               | `"standard" \| "self-serve"` | No       | Issuance tier; defaults to `"standard"`. `"self-serve"` is written by the verified public issuance path                              |
+| `tier`               | `"standard" \| "self-serve" \| "donor"` | No       | Issuance tier; defaults to `"standard"`. `"self-serve"` is written by the verified public issuance path, and `"donor"` by the supporter-key claim at `POST /api/donor-key-claims` |
 | `rateLimitPerMinute` | `integer`              | No       | Per-key threshold (`1`–`10000`, default `120`)                                                                                              |
 | `expiresAt`          | `integer \| null`      | No       | Unix timestamp when the key should expire. Omit to use the default 90-day expiry. Send `null` only for a deliberate non-expiring exception. |
 
@@ -722,13 +743,25 @@ Send `expiresAt: null` only for a deliberate non-expiring exception. Existing ke
 
 Admin-only hard deactivation for an existing API key. This sets `isActive=false`; the secret cannot be used afterward.
 
+Deactivation does not erase the row, wallet-bearing name, or usage metadata. For a donor privacy request, verify control of the wallet and resolve the exact donor key ID and claim prefix through the private operator lane. Deactivate that key first. Then use an operator-reviewed D1 transaction/batch restricted to that ID to delete its rows from `api_key_rate_limit`, `api_key_request_stats`, and `api_key_audit_log`, followed by its `api_keys` row. Read back that these rows are absent and that the original `api_key_donor_claims` row remains unchanged. Do not put the address or tokens in command output, audit detail, or a public feedback issue. There is no public deletion endpoint.
+
+Keep `api_key_donor_claims` as the one-claim fence: it retains the address, prefix, and claim time even after key deletion, and another claim returns `409` when the key row is missing. Tell the requester exactly what remains; this is partial erasure. Removing the claim row is a separate, explicitly authorized reissuance decision, because an eligible wallet can then obtain a new key. The public donation ledger and any separately retained provider backups are outside this key-row deletion procedure; do not promise they have been erased.
+
 **Response shape:** `ApiKeyMutationResponse`
 
 ### `POST /api/api-keys/:id/rotate`
 
 Admin-only secret rotation. The old token stops working immediately and a new plaintext token is returned once. Rotation does not accept expiry input and preserves the current `expiresAt`.
 
+For donor keys, rotation updates the claim prefix and key material in one atomic D1 batch: both writes commit or neither does. Concurrent rotations keep the claim mapped to the surviving key prefix.
+
+Donor eligibility uses Safety Score grades at claim time, not donation time. Later grade changes alone do not revoke or change an issued key; rotation also preserves its tier, quota, and expiry.
+
 **Response shape:** `ApiKeyRotateResponse`
+
+Supporter keys never rotate by self-service: re-signing the claim message returns `409`, so a donor who lost a key asks through the feedback form and an operator rotates it here. The key is named `donor <full lowercase address>`, so the admin list is searchable by the full address.
+
+Correcting the ledger is a two-step operator action. When removing or correcting a donation row in `shared/data/funding/donations.json` leaves a wallet with less than $10 in qualifying stablecoin donations, the runtime does not revoke anything on its own, because eligibility is only read at claim time. Find the `donor` key whose name carries that address and deactivate it with `POST /api/api-keys/:id/deactivate`. Leave the `api_key_donor_claims` row in place: it keeps that address from claiming again, and a re-claim attempt against a deactivated key returns `403` rather than issuing a second key.
 
 ### `GET /api/api-key-requests-admin`
 
@@ -795,6 +828,8 @@ Commodity and CoinGecko-only total-supply fallback replays historical EVM `total
 | `allow-constant-price-fallback` | `"true"`                           | —       | Allow current-price fallback when historical non-USD prices are missing                   |
 | `startDay`                      | `integer \| ISO date (YYYY-MM-DD)` | —       | Lower bound for UTC daily rows written                                                    |
 | `endDay`                        | `integer \| ISO date (YYYY-MM-DD)` | —       | Upper bound for UTC daily rows written; future values clamp to the last completed UTC day |
+| `windowDays`                    | `integer`                          | `30`    | Initial daily-window size (`1`–`90`); explicit values override and persist through continuation cursors |
+| `cursor`                        | `string`                           | —       | Opaque continuation cursor; cursor-only requests resume the stored window size, while an explicit `windowDays` overrides and persists a new size |
 
 ### `POST /api/backfill-stability-index`
 
@@ -1177,7 +1212,7 @@ Admin-only bounded remediation endpoint for recoverable blacklist rows.
 
 - `chainId?: string`
 - `stablecoin?: BlacklistStablecoin` from the shared `BLACKLIST_STABLECOINS` set
-- `limit?: number` default `25`, max `200`
+- `limit?: number` default `25`; max `200` in dry-run mode, max `100` in write mode (`dryRun: false`) so updates commit in one atomic D1 batch — a larger write-mode limit returns `400`
 - `dryRun?: boolean` default `true`
 - `onlyMissingProvenance?: boolean` default `false`; set `true` to restrict the pass to legacy rows missing contract/config provenance
 - `maxAttempts?: number` default `25`

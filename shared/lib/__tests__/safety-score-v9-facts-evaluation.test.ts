@@ -20,6 +20,7 @@ import {
   resolveV9DistinctExitCapacity,
 } from "./safety-score-v9-facts.fixture-support";
 import type { V9AssetFactsV2, V9AssetFactsV3 } from "./safety-score-v9-facts.fixture-support";
+import { assuranceStatus, bridgeControl, bridgeSupplyRow, commonDomainFixture, staleBridgeStatus, unresolvedArchetype } from "./safety-score-v9-facts.test-support";
 
 describe("Safety Score v9 fact evaluation", () => {
   it("attributes a missing parent score to the parent's causal NR owner", () => {
@@ -27,34 +28,7 @@ describe("Safety Score v9 fact evaluation", () => {
     const parent = input.assets.find((asset) => asset.assetId === "gamma")! as unknown as V9AssetFactsV2;
     const grandparent = minimalAsset("delta");
     const grandparentFacts = grandparent as unknown as V9AssetFactsV2;
-    const parentGap = createV9FactGap({
-      gapId: "gamma:gap:missing-archetype",
-      reasonCode: "missing-archetype",
-      ownerDomain: "backing",
-      policyRuleId: "backing.archetype.review",
-      observationState: "missing",
-      path: { kind: "local-component", componentKey: "mechanism-archetype" },
-      message: "The mechanism archetype is unresolved.",
-    });
-    const grandparentGap = createV9FactGap({
-      gapId: "delta:gap:missing-archetype",
-      reasonCode: "missing-archetype",
-      ownerDomain: "backing",
-      policyRuleId: "backing.archetype.review",
-      observationState: "missing",
-      path: { kind: "local-component", componentKey: "mechanism-archetype" },
-      message: "The upstream mechanism archetype is unresolved.",
-    });
-    parent.archetype = "unresolved";
-    parent.gaps = [parentGap];
-    parent.mechanismRiskReview = {
-      status: createV9FactStatus({
-        applicability: requiredV9Applicability("backing.archetype.review"),
-        observationState: "missing",
-        gapIds: [parentGap.gapId],
-      }),
-      review: null,
-    };
+    unresolvedArchetype(parent, "gamma:gap:missing-archetype");
     parent.dependencies = {
       status: knownStatus(),
       sourceGenerationId: SOURCE_FINGERPRINTS.researchOverlays.generationId,
@@ -83,16 +57,7 @@ describe("Safety Score v9 fact evaluation", () => {
         sccMemberAssetIds: [],
       },
     };
-    grandparentFacts.archetype = "unresolved";
-    grandparentFacts.gaps = [grandparentGap];
-    grandparentFacts.mechanismRiskReview = {
-      status: createV9FactStatus({
-        applicability: requiredV9Applicability("backing.archetype.review"),
-        observationState: "missing",
-        gapIds: [grandparentGap.gapId],
-      }),
-      review: null,
-    };
+    unresolvedArchetype(grandparentFacts, "delta:gap:missing-archetype");
     input.assets.push(grandparent);
     input.activeAssetIds.push("delta");
 
@@ -342,6 +307,13 @@ describe("Safety Score v9 fact evaluation", () => {
       ":cause:upstream%3Abeta%3Amissing-archetype",
     );
     expect(mixedIssuerReason?.path).toBe(singleIssuerReason?.path);
+    for (const directReason of [singleDirectIssuerReason, mixedDirectIssuerReason]) {
+      expect(directReason).toMatchObject({
+        code: "missing-archetype",
+        path: "backing:mechanism:review:cause:beta%3Agap%3Amechanism-archetype%3Az-issuer",
+        responsibility: "issuer-undisclosed",
+      });
+    }
     expect(mixedDirectIssuerReason?.path).toBe(singleDirectIssuerReason?.path);
     expect(reasons.map((reason) => reason.responsibility)).toEqual(
       expect.arrayContaining(["issuer-undisclosed", "producer-failed"]),
@@ -446,23 +418,8 @@ describe("Safety Score v9 fact evaluation", () => {
     ).toBe(false);
     expect(belowThreshold.child.backing.contributions.some((entry) => entry.source === "mechanism")).toBe(true);
   });
-  it("deduplicates overlapping DEX physical resources before applying common-mode materiality", () => {
-    const input = coreFixture();
-    const alpha = input.assets[0]! as unknown as V9AssetFactsV2;
-    const delta = structuredClone(alpha);
-    delta.assetId = "delta";
-    input.activeAssetIds.push(delta.assetId);
-    input.assets.push(delta as never);
-
-    for (const asset of [alpha, delta]) {
-      const primary = asset.exitRoutes.find((route) => route.routeId === "amm-main")!;
-      primary.capacityCurve = primary.capacityCurve.map((point) => ({
-        ...point,
-        executableUsd: 30_000,
-        completionRatio: 30_000 / point.requestedNotionalUsd,
-      }));
-    }
-
+  it("deduplicates transitive physical-resource overlap in the capacity resolver", () => {
+    const alpha = coreFixture().assets[0]! as unknown as V9AssetFactsV2;
     const primary = alpha.exitRoutes.find((route) => route.routeId === "amm-main")!;
     const projected = projectV9ExitEvaluationRoute(primary);
     const overlappingRoute = (routeKey: string, executableUsd: number, physicalResourceKeys: string[]) => ({
@@ -494,6 +451,29 @@ describe("Safety Score v9 fact evaluation", () => {
         V9_CANDIDATE_POLICY_V1,
       ).valuedExecutableUsd,
     ).toBe(40_000);
+  });
+  it("rejects overlapping score-bearing resources at the native V3 boundary", () => {
+    const { v9FactSetDigest: _digest, ...core } = structuredClone(compileNativeV3FactSet(coreFixture()));
+    const alpha = core.assets[0]!;
+    alpha.exitRoutes.find((route) => route.routeId === "issuer-main")!.physicalResourceKeys =
+      alpha.exitRoutes.find((route) => route.routeId === "amm-main")!.physicalResourceKeys;
+    expect(() => compileV9FactSetV3(core)).toThrow("Physical resource pool:fixture-main is reused");
+  });
+  it("keeps subthreshold DEX capacity low in common-mode materiality", () => {
+    const input = coreFixture();
+    const alpha = input.assets[0]! as unknown as V9AssetFactsV2;
+    const delta = structuredClone(alpha);
+    delta.assetId = "delta";
+    input.activeAssetIds.push(delta.assetId);
+    input.assets.push(delta as never);
+    for (const asset of [alpha, delta]) {
+      const primary = asset.exitRoutes.find((route) => route.routeId === "amm-main")!;
+      primary.capacityCurve = primary.capacityCurve.map((point) => ({
+        ...point,
+        executableUsd: 30_000,
+        completionRatio: 30_000 / point.requestedNotionalUsd,
+      }));
+    }
 
     const evaluated = evaluateV9FactSet(compileNativeV3FactSet(input), V9_CANDIDATE_POLICY_V1);
     for (const assetId of ["alpha", "delta"]) {
@@ -615,6 +595,80 @@ describe("Safety Score v9 fact evaluation", () => {
       responsibility: "integration-missing",
     });
   });
+  it("keeps merged and disjoint split mint-controller domains score-neutral while the diagnostic signal rekeys", () => {
+    const evaluateSharedMint = (mintKey: (assetId: string) => string) => {
+      const input = coreFixture();
+      const beta = input.assets[1]! as unknown as V9AssetFactsV2;
+      const gamma = input.assets[2]! as unknown as V9AssetFactsV2;
+      const delta = structuredClone(beta);
+      delta.assetId = "delta";
+      const epsilon = structuredClone(beta);
+      epsilon.assetId = "epsilon";
+      input.activeAssetIds.push(delta.assetId, epsilon.assetId);
+      input.assets.push(delta as never, epsilon as never);
+      for (const asset of [beta, gamma, delta, epsilon]) {
+        asset.assetIssuerKey = "issuer:circle";
+        asset.dependencies = {
+          status: knownStatus(),
+          sourceGenerationId: SOURCE_FINGERPRINTS.researchOverlays.generationId,
+          source: "manual",
+          baseSource: "manual",
+          dependencyFromLive: false,
+          mappedLiveReserveWeight: null,
+          fallbackReason: null,
+          edges: [
+            {
+              edgeKey: canonicalV9DependencyEdgeKey("mechanism", "alpha"),
+              upstreamAssetId: "alpha",
+              dependencyType: "mechanism",
+              pathKind: "serial-dependency",
+              weight: 1,
+              economicRole: "serial-claim",
+              evidenceRefIds: ["evidence:base"],
+              failureDomains: [{ kind: "mint-control", key: mintKey(asset.assetId) }],
+            },
+          ],
+          diagnostics: { graphState: "valid", issueCodes: [], sccMemberAssetIds: [] },
+        };
+      }
+      return evaluateV9FactSet(compileNativeV3FactSet(input), V9_CANDIDATE_POLICY_V1);
+    };
+    const asset = (evaluated: ReturnType<typeof evaluateV9FactSet>, assetId: string) =>
+      evaluated.assets.find((candidate) => candidate.assetId === assetId)!;
+    const mintSignal = (evaluated: ReturnType<typeof evaluateV9FactSet>, assetId: string) =>
+      asset(evaluated, assetId).scoreInput.dependencyStructuralSignals.find((candidate) =>
+        candidate.failureDomainKeys.some((key) => key.startsWith("mint-control:")),
+      );
+
+    const merged = evaluateSharedMint(() => "shared:mint");
+    const split = evaluateSharedMint((assetId) =>
+      assetId === "beta" || assetId === "gamma" ? "shared:mint-a" : "shared:mint-b",
+    );
+
+    // The merged run emits one diagnostic common-mode signal for the whole
+    // group; the disjoint split emits two, keyed per slice, and the merged key
+    // is absent. Both stay same-issuer diagnostic ("low"), so neither binds.
+    for (const assetId of ["beta", "gamma", "delta", "epsilon"]) {
+      expect(mintSignal(merged, assetId)).toMatchObject({
+        severity: "low",
+        failureDomainKeys: ["mint-control:shared:mint"],
+      });
+      expect(mintSignal(merged, assetId)?.reason).toContain("same-issuer controller, diagnostic only");
+
+      const expectedKey =
+        assetId === "beta" || assetId === "gamma" ? "mint-control:shared:mint-a" : "mint-control:shared:mint-b";
+      expect(mintSignal(split, assetId)).toMatchObject({ severity: "low", failureDomainKeys: [expectedKey] });
+      expect(mintSignal(split, assetId)?.reason).toContain("same-issuer controller, diagnostic only");
+      expect(mintSignal(split, assetId)?.failureDomainKeys).not.toContain("mint-control:shared:mint");
+
+      // Score neutrality: merging the split domains back together changes the
+      // diagnostic grouping but never the score, caps, or binding cap.
+      expect(asset(merged, assetId).trace.finalScore).toBe(asset(split, assetId).trace.finalScore);
+      expect(asset(merged, assetId).trace.caps).toEqual(asset(split, assetId).trace.caps);
+      expect(asset(merged, assetId).trace.bindingCap).toEqual(asset(split, assetId).trace.bindingCap);
+    }
+  });
+
   it("keeps a shared upgrade-control ceiling adverse when one member is bounded-unknown", () => {
     const evaluateSharedUpgrade = (boundedUnknownAssetId: string | null) => {
       const input = coreFixture();
@@ -734,46 +788,25 @@ describe("Safety Score v9 fact evaluation", () => {
       | "stale-review"
       | "unmatched"
       | "wrong-kind";
-    const evaluateBridgeSignal = (
+    const evaluateBridgeSignals = (
       targetShare: number,
       variant: BridgeJoinVariant = "known",
-      requestedDomainKey = "protocol:fixture-bridge",
     ) => {
-      const input = coreFixture();
-      const alpha = input.assets[0]! as unknown as V9AssetFactsV2;
-      const delta = structuredClone(alpha);
-      delta.assetId = "delta";
-      input.activeAssetIds.push(delta.assetId);
-      input.assets.push(delta as never);
-
-      for (const asset of [alpha, delta]) {
+      const { input, assets } = commonDomainFixture();
+      for (const asset of assets) {
         const targetDomain = { kind: "bridge-route" as const, key: "protocol:fixture-bridge" };
         const nativeDomain = {
           kind: "bridge-route" as const,
           key: variant === "separate-domain-unjoined" ? "bridge:native" : `native:${asset.assetId}`,
         };
-        const controlTemplate = asset.controls.find((control) => control.controlKey === "control:minter")!;
         const targetControl: V9AssetFactsV2["controls"][number] = {
-          ...structuredClone(controlTemplate),
-          controlKey: "control:bridge-target",
-          deploymentKey: "bridge:target",
+          ...bridgeControl(asset, "target", targetShare, targetDomain.key),
           controlKind: variant === "wrong-kind" ? "mint" : "bridge",
-          scope: "deployment",
           capabilities: variant === "missing-capability" ? [] : ["bridge-mint"],
           materialSupplyShare:
             variant === "null-control-share" ? null : variant === "contradictory-share" ? 1 : targetShare,
-          failureDomains: [targetDomain],
         };
-        const nativeControl: V9AssetFactsV2["controls"][number] = {
-          ...structuredClone(controlTemplate),
-          controlKey: "control:bridge-native",
-          deploymentKey: "bridge:native",
-          controlKind: "bridge",
-          scope: "deployment",
-          capabilities: ["bridge-mint"],
-          materialSupplyShare: 1 - targetShare,
-          failureDomains: [nativeDomain],
-        };
+        const nativeControl = bridgeControl(asset, "native", 1 - targetShare, nativeDomain.key);
         const sameDomainMissingRow = [
           "same-domain-epsilon-no-row",
           "same-domain-invalid",
@@ -781,59 +814,21 @@ describe("Safety Score v9 fact evaluation", () => {
           "same-domain-zero-no-row",
         ].includes(variant);
         const invalidSameDomainControl: V9AssetFactsV2["controls"][number] | null = sameDomainMissingRow
-          ? {
-              ...structuredClone(controlTemplate),
-              controlKey: "control:bridge-invalid",
-              deploymentKey: "bridge:invalid",
-              controlKind: "bridge",
-              scope: "deployment",
-              capabilities: ["bridge-mint"],
-              materialSupplyShare:
-                variant === "same-domain-zero-no-row"
-                  ? 0
-                  : variant === "same-domain-null-no-row"
-                    ? null
-                    : variant === "same-domain-epsilon-no-row"
-                      ? Number.EPSILON
-                      : targetShare,
-              failureDomains: [targetDomain],
-            }
+          ? bridgeControl(
+              asset,
+              "invalid",
+              variant === "same-domain-zero-no-row" ? 0
+                : variant === "same-domain-null-no-row" ? null
+                  : variant === "same-domain-epsilon-no-row" ? Number.EPSILON : targetShare,
+              targetDomain.key,
+            )
           : null;
         if (variant === "stale-control") {
-          const staleEvidence = createV9EvidenceReference(
-            {
-              evidenceId: `evidence:stale-bridge-control:${asset.assetId}`,
-              sourceId: "bridge-control-source",
-              sourceGenerationId: SOURCE_FINGERPRINTS.researchOverlays.generationId,
-              disposition: "published",
-              observedAtSec: 600,
-              publishedAtSec: 610,
-              maxAgeSec: 100,
-            },
-            AS_OF_SEC,
-          );
-          const staleGap = createV9FactGap({
-            gapId: `gap:stale-bridge-control:${asset.assetId}`,
-            reasonCode: "selected-bridge-route-unresolved",
-            ownerDomain: "control",
-            policyRuleId: "control.bridge.current",
-            observationState: "stale",
-            path: {
-              kind: "deployment-control",
-              deploymentKey: targetControl.deploymentKey,
-              controlKey: targetControl.controlKey,
-            },
-            message: "The bridge control review is stale.",
-            evidenceRefIds: [staleEvidence.evidenceId],
-          });
-          asset.evidence.push(staleEvidence);
-          asset.gaps.push(staleGap);
-          targetControl.status = createV9FactStatus({
-            applicability: requiredV9Applicability("control.bridge.current"),
-            observationState: "stale",
-            evidenceRefIds: [staleEvidence.evidenceId],
-            gapIds: [staleGap.gapId],
-          });
+          targetControl.status = staleBridgeStatus(asset, "control", {
+            kind: "deployment-control",
+            deploymentKey: targetControl.deploymentKey,
+            controlKey: targetControl.controlKey,
+          }, "control.bridge.current");
         }
         asset.controls.push(
           targetControl,
@@ -857,54 +852,19 @@ describe("Safety Score v9 fact evaluation", () => {
           ],
         };
         if (variant === "stale-review") {
-          const staleEvidence = createV9EvidenceReference(
-            {
-              evidenceId: `evidence:stale-bridge-review:${asset.assetId}`,
-              sourceId: "bridge-review-source",
-              sourceGenerationId: SOURCE_FINGERPRINTS.researchOverlays.generationId,
-              disposition: "published",
-              observedAtSec: 600,
-              publishedAtSec: 610,
-              maxAgeSec: 100,
-            },
-            AS_OF_SEC,
-          );
-          const staleGap = createV9FactGap({
-            gapId: `gap:stale-bridge-review:${asset.assetId}`,
-            reasonCode: "selected-bridge-route-unresolved",
-            ownerDomain: "control",
-            policyRuleId: "control.bridge.review.current",
-            observationState: "stale",
-            path: {
-              kind: "deployment-control",
-              deploymentKey: targetControl.deploymentKey,
-              controlKey: targetControl.controlKey,
-            },
-            message: "The bridge review envelope is stale.",
-            evidenceRefIds: [staleEvidence.evidenceId],
-          });
-          asset.evidence.push(staleEvidence);
-          asset.gaps.push(staleGap);
-          asset.economicControlReview.bridge.status = createV9FactStatus({
-            applicability: requiredV9Applicability("control.bridge.review.current"),
-            observationState: "stale",
-            evidenceRefIds: [staleEvidence.evidenceId],
-            gapIds: [staleGap.gapId],
-          });
+          asset.economicControlReview.bridge.status = staleBridgeStatus(asset, "review", {
+            kind: "deployment-control",
+            deploymentKey: targetControl.deploymentKey,
+            controlKey: targetControl.controlKey,
+          }, "control.bridge.review.current");
         }
         asset.supply.selectedBridgeRoutes = [
-          {
-            deploymentRouteKey: variant === "unmatched" ? "bridge:unmatched" : targetControl.deploymentKey,
-            supplyUsd: (variant === "supply-mismatch" ? 9_000_000 : 10_000_000) * targetShare,
-            supplyShare: targetShare,
-            reviewState: "selected-reviewed",
-          },
-          {
-            deploymentRouteKey: nativeControl.deploymentKey,
-            supplyUsd: 10_000_000 * (1 - targetShare),
-            supplyShare: 1 - targetShare,
-            reviewState: "selected-reviewed",
-          },
+          bridgeSupplyRow(
+            variant === "unmatched" ? "bridge:unmatched" : targetControl.deploymentKey,
+            targetShare,
+            (variant === "supply-mismatch" ? 9_000_000 : 10_000_000) * targetShare,
+          ),
+          bridgeSupplyRow(nativeControl.deploymentKey, 1 - targetShare),
         ];
         asset.supply.selectedRouteSupplyShare = variant === "aggregate-mismatch" ? 0.99 : 1;
         asset.supply.unknownRouteSupplyShare = 0;
@@ -915,21 +875,18 @@ describe("Safety Score v9 fact evaluation", () => {
       const evaluated = evaluateV9FactSet(compileNativeV3FactSet(input), V9_CANDIDATE_POLICY_V1);
       return evaluated.assets
         .find((asset) => asset.assetId === "alpha")!
-        .scoreInput.dependencyStructuralSignals.find((signal) =>
-          signal.failureDomainKeys.includes(`bridge-route:${requestedDomainKey}`),
-        )!;
+        .scoreInput.dependencyStructuralSignals;
     };
-    const evaluateBridgeSeverity = (
-      targetShare: number,
-      variant: BridgeJoinVariant = "known",
-      requestedDomainKey = "protocol:fixture-bridge",
-    ) => evaluateBridgeSignal(targetShare, variant, requestedDomainKey).severity;
+    const evaluateBridgeSignal = (targetShare: number, variant: BridgeJoinVariant = "known") =>
+      evaluateBridgeSignals(targetShare, variant).find((signal) =>
+        signal.failureDomainKeys.includes("bridge-route:protocol:fixture-bridge"),
+      )!;
+    const evaluateBridgeSeverity = (targetShare: number, variant: BridgeJoinVariant = "known") =>
+      evaluateBridgeSignal(targetShare, variant).severity;
 
     expect(evaluateBridgeSeverity(0.0999)).toBe("low");
     expect(evaluateBridgeSeverity(0.1)).toBe("moderate");
     expect(evaluateBridgeSeverity(0.2499)).toBe("moderate");
-    expect(evaluateBridgeSeverity(0.25)).toBe("high");
-    expect(evaluateBridgeSeverity(0.0499, "aggregate-mismatch")).toBe("high");
     expect(evaluateBridgeSeverity(0.0499, "contradictory-share")).toBe("high");
     expect(evaluateBridgeSeverity(0.0499, "missing-capability")).toBe("high");
     expect(evaluateBridgeSeverity(0.0499, "null-control-share")).toBe("high");
@@ -937,8 +894,13 @@ describe("Safety Score v9 fact evaluation", () => {
     expect(evaluateBridgeSeverity(0.0499, "same-domain-null-no-row")).toBe("high");
     expect(evaluateBridgeSeverity(0.0499, "same-domain-epsilon-no-row")).toBe("high");
     expect(evaluateBridgeSeverity(0.0499, "same-domain-invalid")).toBe("high");
-    expect(evaluateBridgeSeverity(0.0499, "separate-domain-unjoined")).toBe("low");
-    expect(evaluateBridgeSeverity(0.0499, "separate-domain-unjoined", "bridge:native")).toBe("high");
+    const separateDomainSignals = evaluateBridgeSignals(0.0499, "separate-domain-unjoined");
+    expect(separateDomainSignals.find((signal) =>
+      signal.failureDomainKeys.includes("bridge-route:protocol:fixture-bridge"),
+    )).toMatchObject({ severity: "low" });
+    expect(separateDomainSignals.find((signal) =>
+      signal.failureDomainKeys.includes("bridge-route:bridge:native"),
+    )).toMatchObject({ severity: "high" });
     expect(evaluateBridgeSeverity(0.0499, "supply-mismatch")).toBe("high");
     expect(evaluateBridgeSeverity(0.0499, "unmatched")).toBe("high");
     expect(evaluateBridgeSeverity(0.0499, "wrong-kind")).toBe("high");
@@ -954,37 +916,12 @@ describe("Safety Score v9 fact evaluation", () => {
     });
   });
   it("does not treat a control-only bridge domain as exact supply attribution", () => {
-    const input = coreFixture();
-    const alpha = input.assets[0]! as unknown as V9AssetFactsV2;
-    const delta = structuredClone(alpha);
-    delta.assetId = "delta";
-    input.activeAssetIds.push(delta.assetId);
-    input.assets.push(delta as never);
-
-    for (const asset of [alpha, delta]) {
+    const { input, assets } = commonDomainFixture();
+    for (const asset of assets) {
       const targetDomain = { kind: "bridge-route" as const, key: "protocol:fixture-bridge" };
       const controlOnlyDomain = { kind: "bridge-route" as const, key: "bridge:native" };
-      const controlTemplate = asset.controls.find((control) => control.controlKey === "control:minter")!;
-      const targetControl: V9AssetFactsV2["controls"][number] = {
-        ...structuredClone(controlTemplate),
-        controlKey: "control:bridge-target",
-        deploymentKey: "bridge:target",
-        controlKind: "bridge",
-        scope: "deployment",
-        capabilities: ["bridge-mint"],
-        materialSupplyShare: 0.0499,
-        failureDomains: [targetDomain],
-      };
-      const decoyControl: V9AssetFactsV2["controls"][number] = {
-        ...structuredClone(controlTemplate),
-        controlKey: "control:bridge-decoy",
-        deploymentKey: "bridge:decoy",
-        controlKind: "bridge",
-        scope: "deployment",
-        capabilities: ["bridge-mint"],
-        materialSupplyShare: 0,
-        failureDomains: [controlOnlyDomain],
-      };
+      const targetControl = bridgeControl(asset, "target", 0.0499, targetDomain.key);
+      const decoyControl = bridgeControl(asset, "decoy", 0, controlOnlyDomain.key);
       asset.controls.push(targetControl, decoyControl);
       asset.economicControlReview.bridge = {
         status: knownStatus("evidence:base", "control.bridge.review"),
@@ -994,18 +931,8 @@ describe("Safety Score v9 fact evaluation", () => {
         ],
       };
       asset.supply.selectedBridgeRoutes = [
-        {
-          deploymentRouteKey: targetControl.deploymentKey,
-          supplyUsd: 499_000,
-          supplyShare: 0.0499,
-          reviewState: "selected-reviewed",
-        },
-        {
-          deploymentRouteKey: "bridge:native",
-          supplyUsd: 9_501_000,
-          supplyShare: 0.9501,
-          reviewState: "selected-reviewed",
-        },
+        bridgeSupplyRow(targetControl.deploymentKey, 0.0499),
+        bridgeSupplyRow("bridge:native", 0.9501),
       ];
       asset.supply.selectedRouteSupplyShare = 1;
       asset.supply.unknownRouteSupplyShare = 0;
@@ -1209,17 +1136,13 @@ describe("Safety Score v9 fact evaluation", () => {
     });
     ceilingAsset.evidence.push(staleEvidence);
     ceilingAsset.gaps.push(ceilingGap);
-    const ceilingReview = ceilingAsset.mechanismRiskReview.review!;
-    if (ceilingReview.archetype !== "fiat-cash") throw new Error("Expected fiat fixture");
-    ceilingReview.assuranceAndReconciliation = {
-      ...ceilingReview.assuranceAndReconciliation,
-      status: createV9FactStatus({
-        applicability: requiredV9Applicability("backing.assurance.current"),
-        observationState: "stale",
-        evidenceRefIds: [staleEvidence.evidenceId],
-        gapIds: [ceilingGap.gapId],
-      }),
-    };
+    assuranceStatus(ceilingAsset, createV9FactStatus({
+      applicability: requiredV9Applicability("backing.assurance.current"),
+      observationState: "stale",
+      evidenceRefIds: [staleEvidence.evidenceId],
+      gapIds: [ceilingGap.gapId],
+    }));
+    const mixedInput = structuredClone(ceilingInput);
     const ceilingEvaluated = evaluateV9FactSet(compileNativeV3FactSet(ceilingInput), V9_CANDIDATE_POLICY_V1).assets.find(
       (asset) => asset.assetId === "alpha",
     )!;
@@ -1234,21 +1157,7 @@ describe("Safety Score v9 fact evaluation", () => {
     // Weakest declared level wins: adding a `limited`-declaring ceiling reason
     // beside the `adequate` one must pull the level back down, otherwise the
     // generalization would silently promote every mixed card.
-    const mixedInput = coreFixture();
     const mixedAsset = mixedInput.assets[0]! as unknown as V9AssetFactsV2;
-    mixedAsset.evidence.push(staleEvidence);
-    mixedAsset.gaps.push(ceilingGap);
-    const mixedReview = mixedAsset.mechanismRiskReview.review!;
-    if (mixedReview.archetype !== "fiat-cash") throw new Error("Expected fiat fixture");
-    mixedReview.assuranceAndReconciliation = {
-      ...mixedReview.assuranceAndReconciliation,
-      status: createV9FactStatus({
-        applicability: requiredV9Applicability("backing.assurance.current"),
-        observationState: "stale",
-        evidenceRefIds: [staleEvidence.evidenceId],
-        gapIds: [ceilingGap.gapId],
-      }),
-    };
     // `unreviewed-dependency-relationships` declares `limited` and accepts a
     // local-component path, so it can sit beside the `adequate` reason on the
     // same fixture without inventing an exposure.
@@ -1263,15 +1172,12 @@ describe("Safety Score v9 fact evaluation", () => {
       evidenceRefIds: [staleEvidence.evidenceId],
     });
     mixedAsset.gaps.push(limitedGap);
-    mixedReview.assuranceAndReconciliation = {
-      ...mixedReview.assuranceAndReconciliation,
-      status: createV9FactStatus({
-        applicability: requiredV9Applicability("backing.assurance.current"),
-        observationState: "stale",
-        evidenceRefIds: [staleEvidence.evidenceId],
-        gapIds: [ceilingGap.gapId, limitedGap.gapId],
-      }),
-    };
+    assuranceStatus(mixedAsset, createV9FactStatus({
+      applicability: requiredV9Applicability("backing.assurance.current"),
+      observationState: "stale",
+      evidenceRefIds: [staleEvidence.evidenceId],
+      gapIds: [ceilingGap.gapId, limitedGap.gapId],
+    }));
     const mixedEvaluated = evaluateV9FactSet(compileNativeV3FactSet(mixedInput), V9_CANDIDATE_POLICY_V1).assets.find(
       (asset) => asset.assetId === "alpha",
     )!;

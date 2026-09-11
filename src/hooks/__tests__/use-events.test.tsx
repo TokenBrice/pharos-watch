@@ -25,6 +25,35 @@ vi.mock("../api-hooks", () => ({
 
 import { CRON_TAPE } from "@/lib/cron-intervals";
 import { useEvents, useLatestEvents } from "../use-events";
+import { makeInfiniteQueryResult } from "./infinite-event-hooks.test-support";
+import type { CursorPageFixture } from "./infinite-event-hooks.test-support";
+
+/**
+ * Cursor pages as the events endpoint serves them: the terminal page carries
+ * no cursor, and only the first page pays for the `total` count.
+ */
+interface EventsPageFixtureData {
+  events: { id: string }[];
+  nextCursor: string | null;
+  total?: number;
+}
+
+const FIRST_PAGE: CursorPageFixture<EventsPageFixtureData> = {
+  data: {
+    events: [{ id: "evt-1" }, { id: "evt-2" }],
+    nextCursor: "cursor-2",
+    total: 3,
+  },
+  meta: { status: "fresh" },
+};
+
+const TERMINAL_PAGE: CursorPageFixture<EventsPageFixtureData> = {
+  data: {
+    events: [{ id: "evt-3" }],
+    nextCursor: null,
+  },
+  meta: null,
+};
 
 describe("useEvents", () => {
   beforeEach(() => {
@@ -33,39 +62,23 @@ describe("useEvents", () => {
     useRegisteredApiQueryMock.mockReset();
   });
 
-  it("flattens paged results and auto-loads remaining pages when requested", async () => {
+  it("auto-loads the outstanding cursor page exactly once and flattens the result", async () => {
     const fetchNextPage = vi.fn(async () => undefined);
-    useInfiniteQueryMock.mockReturnValue({
-      data: {
-        pages: [
-          {
-            data: {
-              events: [{ id: "evt-1" }, { id: "evt-2" }],
-              nextCursor: "cursor-2",
-              total: 3,
-            },
-            meta: { status: "fresh" },
-          },
-          {
-            data: {
-              events: [{ id: "evt-3" }],
-              nextCursor: null,
-            },
-            meta: null,
-          },
-        ],
-      },
-      error: null,
-      fetchNextPage,
-      hasNextPage: true,
-      isFetchingNextPage: false,
-      isLoading: false,
-      isError: false,
-    });
+    // The first render still has a cursor; after the fetch the query reports both
+    // pages and no cursor, which is the only exhausted state real pagination produces.
+    useInfiniteQueryMock.mockReturnValueOnce(
+      makeInfiniteQueryResult([FIRST_PAGE], { fetchNextPage, hasNextPage: true }),
+    );
+    useInfiniteQueryMock.mockReturnValue(
+      makeInfiniteQueryResult([FIRST_PAGE, TERMINAL_PAGE], { fetchNextPage }),
+    );
 
-    const { result } = renderHook(() => useEvents({ coin: "usdc-circle" }, { autoLoadAll: true }));
+    const { result, rerender } = renderHook(() => useEvents({ coin: "usdc-circle" }, { autoLoadAll: true }));
 
     await waitFor(() => expect(fetchNextPage).toHaveBeenCalledOnce());
+    expect(result.current.isFullyLoaded).toBe(false);
+
+    rerender();
 
     expect(result.current.data).toEqual({
       events: [{ id: "evt-1" }, { id: "evt-2" }, { id: "evt-3" }],
@@ -75,6 +88,9 @@ describe("useEvents", () => {
     expect(result.current.isFullyLoaded).toBe(true);
     expect(result.current.meta).toEqual({ status: "fresh" });
     expect(result.current.total).toBe(3);
+    // Traversal stops at exhaustion instead of re-firing on every render.
+    rerender();
+    expect(fetchNextPage).toHaveBeenCalledOnce();
   });
 
   it("builds stable infinite query keys and cursor paths", async () => {

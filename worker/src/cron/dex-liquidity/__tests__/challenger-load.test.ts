@@ -1,8 +1,58 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it } from "vitest";
 import { loadPublishedDexPoolChallengers } from "../challenger-load";
 import { mockD1, type MockD1Database } from "@shared/test-utils/mock-d1";
+import { loaderFixtures, loaderScenario } from "./challenger-load.test-support";
+
+afterEach(() => loaderFixtures.closeAll());
 
 describe("challenger load", () => {
+  it("serves the exact freshness boundary but falls back one second later", async () => {
+    const { db, payload } = loaderScenario();
+    payload(100, "current");
+    const fresh = await loadPublishedDexPoolChallengers(db, 20_000, 1_000, 1_100);
+    const stale = await loadPublishedDexPoolChallengers(db, 20_000, 1_000, 1_101);
+    expect(fresh.challengersByStablecoin.get("coin-a")?.map((row) => row.poolId)).toEqual(["current"]);
+    expect(fresh.diagnostics.staleSnapshotCoins).toEqual([]);
+    expect(stale.challengersByStablecoin.get("coin-a")?.map((row) => row.poolId)).toEqual(["coin-a:legacy:Base"]);
+    expect(stale.diagnostics.staleSnapshotCoins).toEqual(["coin-a"]);
+  });
+
+  it("serves only the generation selected by the published pointer", async () => {
+    const { db, payload } = loaderScenario();
+    payload(99, "old", 0.5, 90_000);
+    payload(100, "current");
+    payload(101, "unpublished", 1.5, 100_000);
+    const result = await loadPublishedDexPoolChallengers(db, 20_000, 1_000, 1_100);
+    expect(result.challengersByStablecoin.get("coin-a")?.map((row) => row.poolId)).toEqual(["current"]);
+  });
+
+  it("falls back for a missing payload generation but keeps an empty pointer authoritative", async () => {
+    const { db, sqlite, payload } = loaderScenario();
+    payload(99, "old");
+    const missing = await loadPublishedDexPoolChallengers(db, 20_000, 1_000, 1_100);
+    expect(missing.challengersByStablecoin.get("coin-a")?.map((row) => row.poolId)).toEqual(["coin-a:legacy:Base"]);
+    sqlite.prepare("UPDATE dex_price_challenger_snapshots SET has_rows = 0").run();
+    const empty = await loadPublishedDexPoolChallengers(db, 20_000, 1_000, 1_100);
+    expect(empty.challengersByStablecoin.get("coin-a")).toEqual([]);
+    expect(empty.diagnostics.legacyFallbackCoins).toEqual([]);
+  });
+
+  it("filters invalid economics without replacing a complete generation with legacy data", async () => {
+    const { db, sqlite, payload } = loaderScenario();
+    payload(100, "zero", 0);
+    payload(100, "negative", -1);
+    payload(100, "nonfinite", Infinity);
+    payload(100, "below-minimum", 1, 19_999);
+    payload(100, "at-minimum", 1, 20_000);
+    const result = await loadPublishedDexPoolChallengers(db, 20_000, 1_000, 1_100);
+    expect(result.challengersByStablecoin.get("coin-a")?.map((row) => row.poolId)).toEqual(["at-minimum"]);
+    sqlite.prepare("DELETE FROM dex_price_challengers WHERE pool_id = 'at-minimum'").run();
+    const filtered = await loadPublishedDexPoolChallengers(db, 20_000, 1_000, 1_100);
+    expect(filtered.challengersByStablecoin.get("coin-a")).toEqual([]);
+    expect(filtered.diagnostics.legacyFallbackCoins).toEqual([]);
+    expect(filtered.diagnostics.mode).toBe("published");
+  });
+
   it("does not run the full legacy JSON load when published snapshots cover", async () => {
     const db = mockD1(
       [

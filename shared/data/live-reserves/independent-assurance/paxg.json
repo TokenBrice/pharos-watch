@@ -1,0 +1,45 @@
+{
+  "schemaVersion": 1,
+  "product": "PAXG",
+  "profile": "paxg-v1",
+  "officialIndexUrl": "https://www.paxos.com/paxg-transparency",
+  "reportUrl": "https://framerusercontent.com/assets/mZxm7J7vQTwbTmOGENYENSpEU.pdf",
+  "reportSha256": "78b777fa8653a38f2f770cd7af905257200c306ed1a58d94ffbf2f63d6d3839e",
+  "reportByteLength": 505159,
+  "reportDate": "2026-07-31",
+  "reportAsOf": "2026-07-31T17:00:00-04:00",
+  "reportTimeZone": "Eastern Daylight Time (UTC-4)",
+  "reportIssuedAt": "2026-08-25T23:59:00-04:00",
+  "attestor": "KPMG LLP",
+  "engagement": "Independent accountants' examination under AICPA attestation standards",
+  "conclusion": "unmodified",
+  "unit": "fine-troy-ounce",
+  "assets": [
+    {
+      "code": "allocated-gold",
+      "label": "London Good Delivery gold in fine troy ounces",
+      "amount": "442217"
+    }
+  ],
+  "liabilities": [
+    {
+      "code": "ethereum",
+      "label": "PAXG redeemable Ethereum tokens",
+      "amount": "441939"
+    },
+    {
+      "code": "solana",
+      "label": "PAXG redeemable Solana tokens",
+      "amount": "278"
+    }
+  ],
+  "reportedAssetTotal": "442217",
+  "computedAssetTotal": "442217",
+  "reportedLiabilityTotal": "442217",
+  "extraction": {
+    "tool": "Poppler pdftotext -layout",
+    "parserVersion": "26.08.0",
+    "normalizedTextSha256": "6643e7345c415b6eb1e6c125b195d5bb7c3049222803f1c29cee5b2b34a8bd51",
+    "pageCount": 8
+  }
+}

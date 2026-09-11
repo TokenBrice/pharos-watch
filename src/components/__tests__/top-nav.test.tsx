@@ -8,10 +8,13 @@ import { NAV_GROUPS, QUICK_NAV_ITEMS, normalizeNavPath } from "@/lib/nav-config"
 import { cleanupFrontendTest, installMatchMediaMock } from "@/test-utils/frontend";
 import { makeHealthyHealthResponse } from "@/test-utils/status-fixtures";
 
-const { useHealthMock } = vi.hoisted(() => ({ useHealthMock: vi.fn() }));
+const { useHealthMock, pathnameMock } = vi.hoisted(() => ({
+  useHealthMock: vi.fn(),
+  pathnameMock: { current: "/" as string },
+}));
 
 vi.mock("next/navigation", () => ({
-  usePathname: () => "/",
+  usePathname: () => pathnameMock.current,
 }));
 
 vi.mock("next-themes", () => ({
@@ -51,6 +54,7 @@ afterEach(() => {
 
 describe("TopNav", () => {
   beforeEach(() => {
+    pathnameMock.current = "/";
     useHealthMock.mockReset();
     useHealthMock.mockReturnValue({
       data: makeHealthyHealthResponse(),
@@ -95,6 +99,8 @@ describe("TopNav", () => {
     // once to stop the masthead overflowing at 1280.
     expect(search.className).toContain("xl:justify-start");
     expect(screen.getByText("Coin or page").className).toContain("xl:inline");
+    // The ⌘K hint arrives with the text label at xl; at lg the rail's full
+    // "Stability" label already fills the 1024px masthead.
     expect(screen.getByText("⌘K").className).toContain("xl:inline");
   });
 
@@ -103,12 +109,12 @@ describe("TopNav", () => {
     const matchMedia = installMatchMediaMock(true);
 
     render(<TopNav />);
-
     expect(matchMedia).toHaveBeenCalledWith("(hover: hover) and (pointer: fine)");
     const trigger = screen.getByRole("button", { name: "Resources" });
+
     fireEvent.mouseEnter(trigger);
 
-    act(() => vi.advanceTimersByTime(249));
+    act(() => vi.advanceTimersByTime(349));
     expect(trigger.getAttribute("aria-expanded")).toBe("false");
     act(() => vi.advanceTimersByTime(1));
     expect(trigger.getAttribute("aria-expanded")).toBe("true");
@@ -122,7 +128,7 @@ describe("TopNav", () => {
     expect(hoverBridge?.className).toContain("pt-2");
   });
 
-  it("switches an open hover panel after 100ms and closes after 250ms", () => {
+  it("opens after 350ms from closed, switches after 100ms, and closes after 250ms", () => {
     vi.useFakeTimers();
     installMatchMediaMock(true);
 
@@ -133,7 +139,7 @@ describe("TopNav", () => {
     const secondTrigger = screen.getByRole("button", { name: secondMenu.label });
 
     fireEvent.mouseEnter(firstTrigger);
-    act(() => vi.advanceTimersByTime(250));
+    act(() => vi.advanceTimersByTime(350));
     expect(firstTrigger.getAttribute("aria-expanded")).toBe("true");
 
     fireEvent.mouseLeave(firstTrigger.closest("[data-section-menu]")!);
@@ -148,6 +154,59 @@ describe("TopNav", () => {
     expect(secondTrigger.getAttribute("aria-expanded")).toBe("true");
     act(() => vi.advanceTimersByTime(1));
     expect(secondTrigger.getAttribute("aria-expanded")).toBe("false");
+  });
+
+  it("marks a section trigger current on detail routes beneath its items", () => {
+    pathnameMock.current = "/stablecoin/usdc-circle/";
+    installMatchMediaMock(true);
+
+    render(<TopNav />);
+
+    // Coin profiles are Directory leaves: the rail stays quiet while the
+    // Markets trigger owns the current section.
+    expect(screen.getByRole("button", { name: "Markets" }).getAttribute("aria-current")).toBe("true");
+    expect(screen.getByRole("button", { name: "Risk" }).getAttribute("aria-current")).toBeNull();
+    expect(screen.getByRole("button", { name: "Tools" }).getAttribute("aria-current")).toBeNull();
+    const rail = document.querySelector('nav[aria-label="Quick links"]');
+    expect([...(rail?.querySelectorAll("a") ?? [])].every((link) => link.getAttribute("aria-current") !== "page")).toBe(
+      true,
+    );
+  });
+
+  it("opens a closed trigger pinned on ArrowDown and roves its panel links", () => {
+    installMatchMediaMock(true);
+
+    render(<TopNav />);
+
+    const trigger = screen.getByRole("button", { name: "Markets" });
+    trigger.focus();
+    fireEvent.keyDown(trigger, { key: "ArrowDown" });
+    expect(trigger.getAttribute("aria-expanded")).toBe("true");
+
+    const links = [
+      ...document.querySelectorAll<HTMLAnchorElement>('[data-section-menu="markets"] a[href]'),
+    ];
+    expect(links.length).toBeGreaterThan(1);
+    expect(document.activeElement).toBe(links[0]);
+
+    fireEvent.keyDown(links[0], { key: "ArrowDown" });
+    expect(document.activeElement).toBe(links[1]);
+
+    fireEvent.keyDown(links[1], { key: "End" });
+    expect(document.activeElement).toBe(links[links.length - 1]);
+
+    fireEvent.keyDown(links[links.length - 1], { key: "ArrowDown" });
+    expect(document.activeElement).toBe(links[0]);
+
+    fireEvent.keyDown(links[0], { key: "ArrowUp" });
+    expect(document.activeElement).toBe(links[links.length - 1]);
+
+    fireEvent.keyDown(links[links.length - 1], { key: "Home" });
+    expect(document.activeElement).toBe(links[0]);
+
+    // Keyboard opens are pinned, not hover-dismissable.
+    fireEvent.mouseLeave(trigger.closest("[data-section-menu]")!);
+    expect(trigger.getAttribute("aria-expanded")).toBe("true");
   });
 
   it("uses disclosure semantics and restores trigger focus on Escape", () => {

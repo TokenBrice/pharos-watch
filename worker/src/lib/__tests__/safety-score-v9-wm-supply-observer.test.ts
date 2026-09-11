@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import { sha256HexFromBytes } from "@shared/lib/sha256";
 import { makeWmDeploymentObservations } from "../../test-helpers/v9-fixed-input";
-import type { ChainRpcConfig } from "../chain-registry";
+import { uint256, addressWord, chainRpcs } from "./safety-score-v9-supply-observation.test-support";
 import type { EvmMulticall3Call, EvmMulticall3Result } from "../evm-rpc";
 import {
   buildReviewedDeploymentRouteInventory,
@@ -48,28 +48,6 @@ const RUNTIME_CODE_BY_CHAIN: Record<string, `0x${string}`> = {
   plume: "0x6080604052600a600c565b005b60186014601a565b605d565b565b5f60587f360894a13ba1a3210667c828492db98dca3e2076cc3735a920a3ca505d382bbc5473ffffffffffffffffffffffffffffffffffffffff1690565b905090565b365f80375f80365f845af43d5f803e8080156076573d5ff35b3d5ffdfea2646970667358221220235077aeb2ddadd8a33ba3e240b110e0341538b2f43ca3e7c2c8d7794680257a64736f6c634300081a0033",
 };
 
-function uint256(value: bigint): `0x${string}` {
-  return `0x${value.toString(16).padStart(64, "0")}`;
-}
-
-function addressWord(address: string): `0x${string}` {
-  return `0x${address.slice(2).toLowerCase().padStart(64, "0")}`;
-}
-
-function chainRpcs(): Map<string, ChainRpcConfig> {
-  return new Map(
-    ["ethereum", "arbitrum", "base"].map((chainId) => [
-      chainId,
-      {
-        chainId,
-        chainName: chainId,
-        type: "evm" as const,
-        rpcUrl: `https://${chainId}.example`,
-        explorerUrl: `https://${chainId}.example/explorer`,
-      },
-    ]),
-  );
-}
 
 function evmImplementationAddress(chainId: string | undefined): string | null {
   if (!chainId) return null;
@@ -136,10 +114,10 @@ function dependencies() {
             },
     ),
     fetchEvmCodeAtBlock: vi.fn(
-      async (chainId: string | undefined, address: string) =>
+      async (chainId: string | undefined, address: string, _blockNumber?: number | "latest") =>
         evmCodeAtBlock(chainId, address),
     ),
-    fetchEvmStorageAtBlock: vi.fn(async (chainId: string | undefined) => {
+    fetchEvmStorageAtBlock: vi.fn(async (chainId: string | undefined, _address?: string, _slot?: string, _blockNumber?: number | "latest") => {
       const implementationAddress = evmImplementationAddress(chainId);
       return implementationAddress ? addressWord(implementationAddress) : null;
     }),
@@ -147,22 +125,27 @@ function dependencies() {
       async (
         chainId: string | undefined,
         calls: readonly EvmMulticall3Call[],
+        _blockNumber?: number | "latest",
       ): Promise<EvmMulticall3Result[] | null> => {
         if (!chainId) return null;
-        const routeId = `${chainId}:0x437cc33344a0b27a429f795ff6b469c72698b291`;
-        const identity = expectedWmDeploymentIdentity(routeId);
-        if (!identity || identity.runtime !== "evm") return null;
+        const token = "0x437cc33344a0b27a429f795ff6b469c72698b291";
+        const underlying = "0x866a2bf4e572cbcf37d5071a7a58503bfb36be1b";
+        const controller = chainId === "ethereum"
+          ? "0xf7f9638cb444d65e5a40bf5ff98ebe4ff319f04e"
+          : chainId === "plume"
+            ? "0x36f586a30502ae3afb555b8aa4dcc05d233c2ece"
+            : "0xd925c84b55e4e44a53749ff5f2a5a13f63d128fd";
         const values: Record<string, `0x${string}`> = {
-          "total-supply": uint256(RAW_BY_CHAIN[chainId]!),
-          decimals: uint256(6n),
-          "m-token": addressWord(identity.underlyingTokenAddress),
-          controller: addressWord(identity.controllerAddress),
+          [`${token}:0x18160ddd`]: uint256(RAW_BY_CHAIN[chainId]!),
+          [`${token}:0x313ce567`]: uint256(6n),
+          [`${token}:0xc3b6f939`]: addressWord(underlying),
+          [`${underlying}:${chainId === "ethereum" ? "0x48545a3c" : "0x6425666b"}`]: addressWord(controller),
         };
-        return calls.map((call) => ({
-          label: call.label,
-          success: true,
-          returnData: values[call.label]!,
-        }));
+        return calls.map((call) => {
+          const value = values[`${call.target.toLowerCase()}:${call.callData}`];
+          if (!value) throw new Error("Unexpected wM request");
+          return { label: call.label, success: true, returnData: value };
+        });
       },
     ),
     fetchSolanaObservation: vi.fn(
@@ -177,7 +160,7 @@ async function observe(overrides: ReturnType<typeof dependencies> = dependencies
       aggregateSupplyUsd: AGGREGATE_SUPPLY_USD,
       registryFingerprint: REGISTRY_FINGERPRINT,
       scoringClockSec: CLOCK_SEC,
-      chainRpcs: chainRpcs(),
+      chainRpcs: chainRpcs(["ethereum", "arbitrum", "base"]),
     },
     overrides,
   );
@@ -220,7 +203,7 @@ describe("wM reviewed deployment observer", () => {
         aggregateSupplyUsd: AGGREGATE_SUPPLY_USD,
         registryFingerprint: REGISTRY_FINGERPRINT,
         scoringClockSec: CLOCK_SEC,
-        chainRpcs: chainRpcs(),
+        chainRpcs: chainRpcs(["ethereum", "arbitrum", "base"]),
       },
       deps,
     );
@@ -244,7 +227,7 @@ describe("wM reviewed deployment observer", () => {
           aggregateSupplyUsd: AGGREGATE_SUPPLY_USD,
           registryFingerprint: REGISTRY_FINGERPRINT,
           scoringClockSec: CLOCK_SEC,
-          chainRpcs: chainRpcs(),
+          chainRpcs: chainRpcs(["ethereum", "arbitrum", "base"]),
         },
         deps,
       ),
@@ -257,6 +240,20 @@ describe("wM reviewed deployment observer", () => {
 
   it("walks back from a head newer than the fixed scoring clock", async () => {
     const deps = dependencies();
+    const selectedBlock = (chainId: string) =>
+      BLOCK_BY_CHAIN[chainId]! - WM_EVM_SAFE_BLOCK_LAG_BY_CHAIN[chainId]! - 1;
+    const readMulticall = deps.fetchEvmMulticall3Aggregate3AtBlock.getMockImplementation()!;
+    deps.fetchEvmMulticall3Aggregate3AtBlock.mockImplementation(async (chainId, calls, block) =>
+      chainId && block === selectedBlock(chainId) ? readMulticall(chainId, calls) : null,
+    );
+    deps.fetchEvmCodeAtBlock.mockImplementation(async (chainId, address, block) =>
+      chainId && block === selectedBlock(chainId) ? evmCodeAtBlock(chainId, address) : "0x6000",
+    );
+    deps.fetchEvmStorageAtBlock.mockImplementation(async (chainId, _address, _slot, block) =>
+      chainId && block === selectedBlock(chainId)
+        ? addressWord(evmImplementationAddress(chainId)!)
+        : addressWord("0x0000000000000000000000000000000000000001"),
+    );
     deps.fetchEvmBlockHeader.mockImplementation(async (chainId, blockNumber) =>
       blockNumber === "finalized"
         ? null
@@ -279,12 +276,27 @@ describe("wM reviewed deployment observer", () => {
         expect.any(Object),
       );
     }
-    expect(deps.fetchEvmMulticall3Aggregate3AtBlock).toHaveBeenCalledWith(
-      expect.any(String),
-      expect.any(Array),
-      expect.any(Number),
-      expect.any(Object),
-    );
+    for (const chainId of Object.keys(BLOCK_BY_CHAIN)) {
+      expect(deps.fetchEvmMulticall3Aggregate3AtBlock).toHaveBeenCalledWith(
+        chainId, expect.any(Array), selectedBlock(chainId), expect.any(Object),
+      );
+      expect(attribution!.deployments.find((row) => row.chainId === chainId)).toMatchObject({
+        blockNumberOrSlot: String(selectedBlock(chainId)),
+        blockTimeSec: TIME_BY_CHAIN[chainId],
+        rawSupply: RAW_BY_CHAIN[chainId]!.toString(),
+      });
+    }
+  });
+
+  it("rejects without state reads when every bounded rewind header is too new", async () => {
+    const deps = dependencies();
+    deps.fetchEvmBlockHeader.mockImplementation(async (_chainId, block) => ({
+      number: block as number, timestamp: CLOCK_SEC + 1, hash: `0x${"a".repeat(64)}`,
+    }));
+    await expect(observe(deps)).resolves.toBeNull();
+    expect(deps.fetchEvmMulticall3Aggregate3AtBlock).not.toHaveBeenCalled();
+    expect(deps.fetchEvmCodeAtBlock).not.toHaveBeenCalled();
+    expect(deps.fetchEvmStorageAtBlock).not.toHaveBeenCalled();
   });
 
   it("rejects the whole packet when Plume or Solana is unavailable", async () => {
@@ -311,7 +323,7 @@ describe("wM reviewed deployment observer", () => {
           aggregateSupplyUsd: AGGREGATE_SUPPLY_USD,
           registryFingerprint: REGISTRY_FINGERPRINT,
           scoringClockSec: CLOCK_SEC,
-          chainRpcs: chainRpcs(),
+          chainRpcs: chainRpcs(["ethereum", "arbitrum", "base"]),
         },
         unavailable,
       ),
@@ -332,28 +344,16 @@ describe("wM reviewed deployment observer", () => {
     await expect(observe(wrongCode)).resolves.toBeNull();
 
     const wrongController = dependencies();
+    const validMulticall = wrongController.fetchEvmMulticall3Aggregate3AtBlock.getMockImplementation()!;
     wrongController.fetchEvmMulticall3Aggregate3AtBlock.mockImplementation(
-      async (chainId, calls): Promise<EvmMulticall3Result[] | null> => {
-        if (!chainId) return null;
-        const routeId = `${chainId}:0x437cc33344a0b27a429f795ff6b469c72698b291`;
-        const identity = expectedWmDeploymentIdentity(routeId);
-        if (!identity || identity.runtime !== "evm") return null;
-        return calls.map((call) => ({
-          label: call.label,
-          success: true,
-          returnData:
-            call.label === "total-supply"
-              ? uint256(RAW_BY_CHAIN[chainId]!)
-              : call.label === "decimals"
-                ? uint256(6n)
-                : call.label === "m-token"
-                  ? addressWord(identity.underlyingTokenAddress)
-                  : addressWord(
-                      chainId === "arbitrum"
-                        ? "0x0000000000000000000000000000000000000001"
-                        : identity.controllerAddress,
-                    ),
-        }));
+      async (chainId, calls) => {
+        const results = await validMulticall(chainId, calls);
+        return results?.map((result, index) => ({
+          ...result,
+          returnData: chainId === "arbitrum" && calls[index]!.callData === "0x6425666b"
+            ? addressWord("0x0000000000000000000000000000000000000001")
+            : result.returnData,
+        })) ?? null;
       },
     );
     await expect(observe(wrongController)).resolves.toBeNull();
@@ -395,7 +395,7 @@ describe("wM reviewed deployment observer", () => {
             aggregateSupplyUsd: AGGREGATE_SUPPLY_USD,
             registryFingerprint: REGISTRY_FINGERPRINT,
             scoringClockSec: CLOCK_SEC,
-            chainRpcs: chainRpcs(),
+            chainRpcs: chainRpcs(["ethereum", "arbitrum", "base"]),
           },
           outdated,
         ),
@@ -568,7 +568,7 @@ describe("wM reviewed deployment observer", () => {
           aggregateSupplyUsd: AGGREGATE_SUPPLY_USD,
           registryFingerprint: REGISTRY_FINGERPRINT,
           scoringClockSec: CLOCK_SEC,
-          chainRpcs: chainRpcs(),
+          chainRpcs: chainRpcs(["ethereum", "arbitrum", "base"]),
           signal: controller.signal,
         },
         dependencies(),

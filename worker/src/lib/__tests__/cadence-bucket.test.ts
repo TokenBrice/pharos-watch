@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { mockD1, type MockTableConfig } from "@shared/test-utils/mock-d1";
 import {
   cadenceBucketFor,
@@ -7,6 +7,13 @@ import {
   failCadenceBucket,
   runCadenceBucketPublication,
 } from "../cadence-bucket";
+import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
+
+const fixtures = createLatestSchemaFixtureTracker();
+afterEach(() => {
+  fixtures.closeAll();
+  vi.restoreAllMocks();
+});
 
 function marker(overrides: Partial<{
   bucket: number;
@@ -52,54 +59,44 @@ describe("cadence buckets", () => {
     })).resolves.toMatchObject({ kind: "skip", reason: "already-completed", bucket: 100 });
   });
 
-  it("reclaims a failed bucket and fences completion to its generation", async () => {
-    const failedValue = marker({ state: "failed" });
-    const db = mockD1([{
-      match: "SELECT value, updated_at FROM cache WHERE key = ?",
-      rows: [{ key: "cadence:test", value: failedValue, updated_at: 1_010 }],
-    }, {
-      match: "UPDATE cache SET value = ?, updated_at = ? WHERE key = ? AND value = ?",
-      rows: [],
-      runMeta: { changes: 1 },
-    }]);
-    const claimResult = await claimCadenceBucket(db, {
-      key: "cadence:test",
-      bucket: 100,
-      nowSec: 1_020,
-      staleClaimAfterSec: 60,
-    });
-
-    expect(claimResult.kind).toBe("claimed");
-    if (claimResult.kind !== "claimed") return;
-    await expect(completeCadenceBucket(db, claimResult.claim, 1_030)).resolves.toBe(true);
-    const completion = db.getHistory().find((entry) =>
-      entry.sql.includes("UPDATE cache SET value = ?, updated_at = ? WHERE key = ? AND value = ?")
-      && String(entry.binds[0]).includes('"state":"completed"')
-    );
-    expect(completion?.binds[3]).toBe(claimResult.claim.serializedClaim);
+  it("rejects stale owners at the reclaim boundary and keeps failed work retryable", async () => {
+    const { db, sqlite } = fixtures.open();
+    const options = { key: "cadence:test", bucket: 100, nowSec: 1_000, staleClaimAfterSec: 60 };
+    const a = await claimCadenceBucket(db, options);
+    expect(a.kind).toBe("claimed");
+    if (a.kind !== "claimed") throw new Error("A did not claim");
+    await expect(claimCadenceBucket(db, { ...options, nowSec: 1_059 }))
+      .resolves.toMatchObject({ kind: "skip", reason: "in-progress" });
+    const b = await claimCadenceBucket(db, { ...options, nowSec: 1_060 });
+    expect(b.kind).toBe("claimed");
+    if (b.kind !== "claimed") throw new Error("B did not reclaim");
+    await expect(completeCadenceBucket(db, a.claim, 1_061)).resolves.toBe(false);
+    await expect(failCadenceBucket(db, a.claim, 1_062)).resolves.toBe(false);
+    expect(sqlite.prepare("SELECT value FROM cache WHERE key = ?").get(options.key)?.value)
+      .toBe(b.claim.serializedClaim);
+    await expect(failCadenceBucket(db, b.claim, 1_063)).resolves.toBe(true);
+    const retry = await claimCadenceBucket(db, { ...options, nowSec: 1_064 });
+    expect(retry.kind).toBe("claimed");
+    if (retry.kind !== "claimed") throw new Error("failed work was not retryable");
+    await expect(completeCadenceBucket(db, retry.claim, 1_065)).resolves.toBe(true);
+    const row = sqlite.prepare("SELECT value FROM cache WHERE key = ?").get(options.key);
+    expect(JSON.parse(String(row?.value))).toMatchObject({ state: "completed", generation: retry.claim.generation });
   });
 
-  it("keeps failed work retryable and permits stale-claim recovery", async () => {
-    const claimedValue = marker({ state: "claimed", claimedAt: 900 });
-    const db = mockD1([{
-      match: "SELECT value, updated_at FROM cache WHERE key = ?",
-      rows: [{ key: "cadence:test", value: claimedValue, updated_at: 900 }],
-    }, {
-      match: "UPDATE cache SET value = ?, updated_at = ? WHERE key = ? AND value = ?",
-      rows: [],
-      runMeta: { changes: 1 },
-    }]);
-    const claimResult = await claimCadenceBucket(db, {
-      key: "cadence:test",
-      bucket: 100,
-      nowSec: 1_020,
-      staleClaimAfterSec: 60,
-    });
-
-    expect(claimResult.kind).toBe("claimed");
-    if (claimResult.kind !== "claimed") return;
-    await expect(failCadenceBucket(db, claimResult.claim, 1_025)).resolves.toBe(true);
-    expect(db.getHistory().some((entry) => String(entry.binds[0]).includes('"state":"failed"'))).toBe(true);
+  it("allows exactly one competing initial publisher", async () => {
+    const { db } = fixtures.open();
+    const publication = vi.fn(async () => ({ itemCount: 1, metadata: '{"lastWriteAdvanced":true}' }));
+    const options = {
+      key: "cadence:race", cadenceSec: 1_800, staleClaimAfterSec: 60,
+      scheduledAtSec: 3_600, startedAtSec: 3_620, job: "test-job",
+      releaseFailureEvent: "test.release-failed", releaseFailureMessage: "release failed", publication,
+    };
+    const results = await Promise.all([
+      runCadenceBucketPublication(db, options),
+      runCadenceBucketPublication(db, options),
+    ]);
+    expect(publication).toHaveBeenCalledTimes(1);
+    expect(results.map((result) => result.itemCount).sort()).toEqual([0, 1]);
   });
 
   it("preserves the publication lifecycle contract", async () => {
@@ -126,7 +123,8 @@ describe("cadence buckets", () => {
       if (testCase.throws) await expect(run).rejects.toBe(error);
       else {
         const result = await run;
-        expect([result.status, result.metadata]).toEqual([testCase.status, testCase.metadata]);
+        expect(result.status).toBe(testCase.status);
+        expect(JSON.parse(result.metadata!)).toEqual(JSON.parse(testCase.metadata!));
       }
       expect(warning).toHaveBeenCalledTimes(testCase.releaseError ? 1 : 0);
       warning.mockRestore();

@@ -2,6 +2,7 @@
   "id": "susdai-usd-ai",
   "reserves": [
     {
+      "sourceKey": "usdai-proof-of-reserves:pyusd",
       "name": "PYUSD (PayPal USD)",
       "pct": 59.29384384,
       "risk": "low",
@@ -15,6 +16,7 @@
       "liquidityHorizon": "immediate"
     },
     {
+      "sourceKey": "usdai-proof-of-reserves:deal",
       "name": "GPU-backed infrastructure loans (NVIDIA hardware)",
       "pct": 40.70615616,
       "risk": "high",

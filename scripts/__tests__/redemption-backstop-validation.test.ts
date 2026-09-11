@@ -40,6 +40,15 @@ function validateFixture(modules: ManifestFixture[]) {
   return validateRedemptionBackstopRegistry({ manifest: toManifest(modules) });
 }
 
+function singleOwner(config: RedemptionBackstopConfig = baseConfig): ManifestFixture {
+  return {
+    name: "issuer",
+    filePath: "issuer.ts",
+    configs: { "usdt-tether": config },
+    allowedRouteFamilies: ["offchain-issuer"],
+  };
+}
+
 describe("validateRedemptionBackstopRegistry", () => {
   it("rejects duplicate factory entries unless the later entry carries an override reason", () => {
     expect(() =>
@@ -47,7 +56,7 @@ describe("validateRedemptionBackstopRegistry", () => {
         ...defineBatch(["usdt-tether"], baseConfig),
         ...defineBatch(["usdt-tether"], baseConfig),
       ]),
-    ).toThrow(/duplicated without an override reason/);
+    ).toThrow(/usdt-tether/);
   });
 
   it("lets a later entry with an override reason win", () => {
@@ -83,7 +92,10 @@ describe("validateRedemptionBackstopRegistry", () => {
         code: "aggregated-residual-issuance",
         effect: "degraded",
       }),
-    ).toContain("lower-bound redemption capacity");
+    ).not.toBeNull();
+    expect(getAllowedRedemptionCapacityWarningReason("usdt-tether", {
+      code: "aggregated-residual-issuance", effect: "degraded",
+    })).toBeNull();
   });
 
   it("allows conservative V9 route reviews and requires cited evidence for a faster settlement", () => {
@@ -104,10 +116,20 @@ describe("validateRedemptionBackstopRegistry", () => {
       expect(faster.error.issues).toContainEqual(
         expect.objectContaining({
           path: ["v9RouteReviewTerms", "settlementModel"],
-          message: "Faster V9 reviewed settlement requires settlementDelaySec, reviewedAt, and at least one docs source",
+          code: "custom",
         }),
       );
     }
+    expect(RedemptionBackstopConfigSchema.safeParse({
+      ...baseConfig,
+      settlementModel: "days",
+      v9RouteReviewTerms: {
+        settlementModel: "same-day",
+        settlementDelaySec: 3600,
+        reviewedAt: "2026-08-24",
+        docs: [{ label: "Settlement terms", url: "https://example.com/terms", supports: ["route"] }],
+      },
+    }).success).toBe(true);
 
     expect(
       RedemptionBackstopConfigSchema.safeParse({
@@ -166,12 +188,7 @@ describe("validateRedemptionBackstopRegistry", () => {
 
   it("surfaces reviewed redemption policy entries in the audit report", () => {
     const result = validateFixture([
-      {
-        name: "issuer",
-        filePath: "issuer.ts",
-        configs: { "usdt-tether": baseConfig },
-        allowedRouteFamilies: ["offchain-issuer"],
-      },
+      singleOwner(),
     ]);
 
     expect(result.policyRows).toContainEqual(
@@ -210,33 +227,6 @@ describe("validateRedemptionBackstopRegistry", () => {
     );
   });
 
-  it("reports duplicate IDs when using the default merged registry path", () => {
-    const result = validateRedemptionBackstopRegistry({
-      manifest: toManifest([
-        {
-          name: "issuer-a",
-          filePath: "issuer-a.ts",
-          configs: { "usdt-tether": baseConfig },
-          allowedRouteFamilies: ["offchain-issuer"],
-        },
-        {
-          name: "issuer-b",
-          filePath: "issuer-b.ts",
-          configs: { "usdt-tether": baseConfig },
-          allowedRouteFamilies: ["offchain-issuer"],
-        },
-      ]),
-    });
-
-    expect(result.findings).toContainEqual(
-      expect.objectContaining({
-        severity: "error",
-        code: "duplicate-id",
-        stablecoinId: "usdt-tether",
-      }),
-    );
-  });
-
   it("fails fast when the runtime registry builder sees duplicate shard IDs", () => {
     expect(() =>
       buildRedemptionBackstopRegistry(
@@ -256,7 +246,7 @@ describe("validateRedemptionBackstopRegistry", () => {
         ]),
       ),
     ).toThrow(
-      'Duplicate redemption backstop config id "usdt-tether" appears in both issuer-a (issuer-a.ts) and issuer-b (issuer-b.ts).',
+      /usdt-tether.*issuer-a.*issuer-b/,
     );
   });
 
@@ -307,17 +297,10 @@ describe("validateRedemptionBackstopRegistry", () => {
 
   it("reports route family mismatches with owner metadata", () => {
     const result = validateFixture([
-      {
-        name: "issuer",
-        filePath: "issuer.ts",
-        configs: {
-          "usdt-tether": {
+      singleOwner({
             ...baseConfig,
             routeFamily: "psm-swap",
-          },
-        },
-        allowedRouteFamilies: ["offchain-issuer"],
-      },
+          }),
     ]);
 
     expect(result.findings).toContainEqual(
@@ -366,161 +349,74 @@ describe("validateRedemptionBackstopRegistry", () => {
     );
   });
 
-  it("rejects live-derived capacity confidence in static configs", () => {
-    const result = validateFixture([
-      {
-        name: "issuer",
-        filePath: "issuer.ts",
-        configs: {
-          "usdt-tether": {
-            ...baseConfig,
-            capacityModel: {
-              kind: "supply-ratio",
-              ratio: 0.1,
-              confidence: "live-direct",
-            },
-          } as unknown as RedemptionBackstopConfig,
-        },
-        allowedRouteFamilies: ["offchain-issuer"],
-      },
-    ]);
-
-    expect(result.findings).toEqual(
-      expect.arrayContaining([
-        expect.objectContaining({
-          severity: "error",
-          code: "static-live-capacity-confidence",
-          stablecoinId: "usdt-tether",
-        }),
-        expect.objectContaining({
-          severity: "error",
-          code: "schema-validation",
-          stablecoinId: "usdt-tether",
-          message: expect.stringContaining("Invalid option"),
-        }),
-      ]),
-    );
-  });
-
-  it("rejects fee model and capacity invariant mismatches", () => {
-    const result = validateFixture([
-      {
-        name: "issuer",
-        filePath: "issuer.ts",
-        configs: {
-          "usdt-tether": {
-            ...baseConfig,
-            capacityModel: {
-              kind: "reserve-sync-metadata",
-              fallbackRatio: 0.1,
-              fallbackUsd: 1_000_000,
-            },
-            costModel: {
-              kind: "dynamic-or-unclear",
-              feeDescription: "Formula fee with tested bounds.",
-              confidence: "formula",
-              feeModelKind: "documented-variable",
-              feeBpsMin: 100,
-              feeBpsMax: 50,
-              stressFeeBps: 25,
-            },
-          } as unknown as RedemptionBackstopConfig,
-        },
-        allowedRouteFamilies: ["offchain-issuer"],
-      },
-    ]);
-
-    expect(result.findings).toEqual(
-      expect.arrayContaining([
-        expect.objectContaining({
-          code: "schema-validation",
-          message: expect.stringContaining("fallbackRatio and fallbackUsd are mutually exclusive"),
-        }),
-        expect.objectContaining({
-          code: "schema-validation",
-          message: expect.stringContaining("feeBpsMin must be less than or equal to feeBpsMax"),
-        }),
-        expect.objectContaining({
-          code: "schema-validation",
-          message: expect.stringContaining("stressFeeBps must be greater than or equal"),
-        }),
-        expect.objectContaining({
-          code: "schema-validation",
-          message: expect.stringContaining("formula fee confidence requires feeModelKind=formula"),
-        }),
-      ]),
-    );
-  });
-
-  it("rejects formula fee model kind without formula confidence", () => {
-    const result = validateFixture([
-      {
-        name: "issuer",
-        filePath: "issuer.ts",
-        configs: {
-          "usdt-tether": {
-            ...baseConfig,
-            costModel: {
-              kind: "dynamic-or-unclear",
-              feeDescription: "Formula fee is documented.",
-              feeModelKind: "formula",
-            },
-          } as unknown as RedemptionBackstopConfig,
-        },
-        allowedRouteFamilies: ["offchain-issuer"],
-      },
-    ]);
-
-    expect(result.findings).toEqual(
-      expect.arrayContaining([
-        expect.objectContaining({
-          code: "schema-validation",
-          stablecoinId: "usdt-tether",
-          message: expect.stringContaining("feeModelKind=formula requires formula fee confidence"),
-        }),
-      ]),
-    );
-  });
-
-  it("rejects duplicate support tags on a redemption document source", () => {
-    const result = validateFixture([
-      {
-        name: "issuer",
-        filePath: "issuer.ts",
-        configs: {
-          "usdt-tether": {
-            ...baseConfig,
-            docs: [
-              {
-                label: "Fixture docs",
-                url: "https://example.com/docs",
-                supports: ["route", "route"],
-              },
-            ],
-          } as unknown as RedemptionBackstopConfig,
-        },
-        allowedRouteFamilies: ["offchain-issuer"],
-      },
-    ]);
-
-    expect(result.findings).toEqual(
-      expect.arrayContaining([
-        expect.objectContaining({
-          code: "schema-validation",
-          stablecoinId: "usdt-tether",
-          message: expect.stringContaining('Duplicate doc support "route"'),
-        }),
-      ]),
-    );
+  it.each([
+    {
+      name: "live-derived static capacity confidence",
+      overrides: { capacityModel: { kind: "supply-ratio", ratio: 0.1, confidence: "live-direct" } },
+      path: ["capacityModel", "confidence"], code: "invalid_value",
+    },
+    {
+      name: "mutually exclusive reserve fallbacks",
+      overrides: { capacityModel: { kind: "reserve-sync-metadata", fallbackRatio: 0.1, fallbackUsd: 1_000_000 } },
+      path: ["capacityModel", "fallbackUsd"], code: "custom",
+    },
+    {
+      name: "inverted fee bounds",
+      overrides: { costModel: { kind: "dynamic-or-unclear", feeDescription: "Reviewed fees", feeBpsMin: 100, feeBpsMax: 50 } },
+      path: ["costModel", "feeBpsMin"], code: "custom",
+    },
+    {
+      name: "stress fee below normal bound",
+      overrides: { costModel: { kind: "dynamic-or-unclear", feeDescription: "Reviewed fees", feeBpsMax: 100, stressFeeBps: 50 } },
+      path: ["costModel", "stressFeeBps"], code: "custom",
+    },
+    {
+      name: "formula confidence with nonformula kind",
+      overrides: { costModel: { kind: "dynamic-or-unclear", feeDescription: "Reviewed fees", confidence: "formula", feeModelKind: "documented-variable" } },
+      path: ["costModel", "feeModelKind"], code: "custom",
+    },
+    {
+      name: "formula kind without formula confidence",
+      overrides: { costModel: { kind: "dynamic-or-unclear", feeDescription: "Reviewed fees", feeModelKind: "formula" } },
+      path: ["costModel", "confidence"], code: "custom",
+    },
+    {
+      name: "duplicate document support",
+      overrides: { docs: [{ label: "Docs", url: "https://example.com/docs", supports: ["route", "route"] }] },
+      path: ["docs", 0, "supports", 1], code: "custom",
+    },
+    {
+      name: "future review date",
+      overrides: { reviewedAt: "2999-01-01" },
+      path: ["reviewedAt"], code: "custom",
+    },
+    {
+      name: "nonpositive daily limit",
+      overrides: { capacityModel: { kind: "supply-ratio", ratio: 0.1, dailyLimitUsd: 0 } },
+      path: ["capacityModel", "dailyLimitUsd"], code: "too_small",
+    },
+  ])("rejects $name with a field-specific issue", ({ overrides, path, code }) => {
+    expect(RedemptionBackstopConfigSchema.safeParse(baseConfig).success).toBe(true);
+    const config = { ...baseConfig, ...overrides } as unknown as RedemptionBackstopConfig;
+    const parsed = RedemptionBackstopConfigSchema.safeParse(config);
+    expect(parsed.success).toBe(false);
+    if (!parsed.success) {
+      expect(parsed.error.issues.map(({ code, path }) => ({ code, path }))).toEqual([{ code, path }]);
+    }
+    const result = validateFixture([singleOwner(config)]);
+    expect(result.findings).toContainEqual(expect.objectContaining({
+      severity: "error", code: "schema-validation", stablecoinId: "usdt-tether",
+    }));
+    if (path.join(".") === "capacityModel.confidence") {
+      expect(result.findings).toContainEqual(expect.objectContaining({
+        code: "static-live-capacity-confidence", stablecoinId: "usdt-tether",
+      }));
+    }
   });
 
   it("warns when documented-bound configs lack route or capacity source support", () => {
     const result = validateFixture([
-      {
-        name: "issuer",
-        filePath: "issuer.ts",
-        configs: {
-          "usdt-tether": {
+      singleOwner({
             ...baseConfig,
             capacityModel: {
               kind: "supply-ratio",
@@ -529,10 +425,7 @@ describe("validateRedemptionBackstopRegistry", () => {
             },
             reviewedAt: "2026-05-12",
             docs: [{ label: "Fixture fee docs", url: "https://example.com/fees", supports: ["fees"] }],
-          },
-        },
-        allowedRouteFamilies: ["offchain-issuer"],
-      },
+          }),
     ]);
 
     expect(result.findings).toEqual(
@@ -555,11 +448,7 @@ describe("validateRedemptionBackstopRegistry", () => {
 
   it("accepts documented-bound configs with explicit route and capacity source support", () => {
     const result = validateFixture([
-      {
-        name: "issuer",
-        filePath: "issuer.ts",
-        configs: {
-          "usdt-tether": {
+      singleOwner({
             ...baseConfig,
             capacityModel: {
               kind: "supply-ratio",
@@ -574,53 +463,13 @@ describe("validateRedemptionBackstopRegistry", () => {
                 supports: ["route", "capacity", "fees"],
               },
             ],
-          },
-        },
-        allowedRouteFamilies: ["offchain-issuer"],
-      },
+          }),
     ]);
 
     const supportWarnings = result.findings.filter(
       (finding) => finding.stablecoinId === "usdt-tether" && finding.code.startsWith("documented-bound-missing-"),
     );
     expect(supportWarnings).toEqual([]);
-  });
-
-  it("rejects invalid review dates and non-positive daily limits", () => {
-    const result = validateFixture([
-      {
-        name: "issuer",
-        filePath: "issuer.ts",
-        configs: {
-          "usdt-tether": {
-            ...baseConfig,
-            reviewedAt: "2999-01-01",
-            docs: [{ label: "Fixture", url: "https://example.com/redemption" }],
-            capacityModel: {
-              kind: "supply-ratio",
-              ratio: 0.1,
-              dailyLimitUsd: 0,
-            },
-          },
-        },
-        allowedRouteFamilies: ["offchain-issuer"],
-      },
-    ]);
-
-    expect(result.findings).toEqual(
-      expect.arrayContaining([
-        expect.objectContaining({
-          code: "schema-validation",
-          stablecoinId: "usdt-tether",
-          message: expect.stringContaining("reviewedAt cannot be in the future"),
-        }),
-        expect.objectContaining({
-          code: "schema-validation",
-          stablecoinId: "usdt-tether",
-          message: expect.stringContaining("Too small"),
-        }),
-      ]),
-    );
   });
 
   it("aligns configured output baskets to the 16-member exit-route asset-key bound", () => {
@@ -652,8 +501,8 @@ describe("validateRedemptionBackstopRegistry", () => {
     });
     expect(mixedTrackedAndUntracked.success).toBe(false);
     if (!mixedTrackedAndUntracked.success) {
-      expect(mixedTrackedAndUntracked.error.issues[0]?.message).toContain(
-        "stable outputAssets must be tracked stablecoin ids",
+      expect(mixedTrackedAndUntracked.error.issues).toContainEqual(
+        expect.objectContaining({ code: "custom", path: ["outputAssets", 1] }),
       );
     }
 
@@ -676,7 +525,7 @@ describe("validateRedemptionBackstopRegistry", () => {
       expect(externalWithoutIdentity.error.issues).toContainEqual(
         expect.objectContaining({
           path: ["unresolvedOutputDisposition"],
-          message: expect.stringContaining("requires unresolvedOutputAssetKeys"),
+          code: "custom",
         }),
       );
     }
@@ -691,7 +540,7 @@ describe("validateRedemptionBackstopRegistry", () => {
       expect(dispositionWithoutReviewDate.error.issues).toContainEqual(
         expect.objectContaining({
           path: ["unresolvedOutputDisposition"],
-          message: expect.stringContaining("requires reviewedAt"),
+          code: "custom",
         }),
       );
     }
@@ -707,7 +556,7 @@ describe("validateRedemptionBackstopRegistry", () => {
       expect(conflicting.error.issues).toContainEqual(
         expect.objectContaining({
           path: ["unresolvedOutputAssetKeys"],
-          message: expect.stringContaining("cannot be combined"),
+          code: "custom",
         }),
       );
     }

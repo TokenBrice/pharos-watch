@@ -2,39 +2,71 @@
   "id": "usde-ethena",
   "reserves": [
     {
+      "sourceKey": "ethena:stable",
       "name": "Liquid Cash strategy basket",
       "pct": 86.9,
       "risk": "medium",
       "assetClass": "other",
       "issuerOrObligor": "Ethena Liquid Cash strategy counterparties: stablecoin issuers, Aave and Morpho markets, tokenized-fund issuers, and institutional borrowers",
-      "riskFactors": ["credit", "counterparty", "custody", "smart-contract", "liquidity", "concentration"],
+      "riskFactors": [
+        "credit",
+        "counterparty",
+        "custody",
+        "smart-contract",
+        "liquidity",
+        "concentration"
+      ],
       "liquidityHorizon": "one-day"
     },
     {
+      "sourceKey": "ethena:eth",
       "name": "ETH / liquid staking collateral",
       "pct": 7.2,
       "risk": "medium",
       "assetClass": "hedged-crypto",
       "issuerOrObligor": "Ethena off-exchange custodians, liquid-staking protocols, and derivatives venues for delta-hedged ETH positions",
-      "riskFactors": ["market", "basis", "counterparty", "custody", "liquidity", "concentration"],
+      "riskFactors": [
+        "market",
+        "basis",
+        "counterparty",
+        "custody",
+        "liquidity",
+        "concentration"
+      ],
       "liquidityHorizon": "one-day"
     },
     {
+      "sourceKey": "ethena:btc",
       "name": "BTC collateral",
       "pct": 5.3,
       "risk": "medium",
       "assetClass": "hedged-crypto",
       "issuerOrObligor": "Ethena off-exchange custodians and derivatives venues for delta-hedged BTC positions",
-      "riskFactors": ["market", "basis", "counterparty", "custody", "liquidity", "concentration"],
+      "riskFactors": [
+        "market",
+        "basis",
+        "counterparty",
+        "custody",
+        "liquidity",
+        "concentration"
+      ],
       "liquidityHorizon": "one-day"
     },
     {
+      "sourceKey": "ethena:other",
       "name": "Other crypto collateral",
       "pct": 0.6,
       "risk": "high",
       "assetClass": "hedged-crypto",
       "issuerOrObligor": "Ethena off-exchange custodians and derivatives venues for delta-hedged SOL and BNB positions",
-      "riskFactors": ["market", "basis", "counterparty", "custody", "liquidity", "concentration"],
+      "riskFactors": [
+        "market",
+        "basis",
+        "counterparty",
+        "custody",
+        "liquidity",
+        "concentration"
+      ],
       "liquidityHorizon": "one-day"
     }
   ],
@@ -73,7 +105,14 @@
         "pct": 86.9,
         "disposition": "basket-needs-split",
         "rationale": "The live row combines several stablecoins, protocol positions, tokenized funds, and institutional loans without current constituent weights, so it cannot be linked to any single tracked asset.",
-        "candidateCoinIds": ["usdt-tether", "usdc-circle", "usdtb-ethena", "pyusd-paypal", "jaaa-janus-henderson-anemoy", "stac-securitize"]
+        "candidateCoinIds": [
+          "usdt-tether",
+          "usdc-circle",
+          "usdtb-ethena",
+          "pyusd-paypal",
+          "jaaa-janus-henderson-anemoy",
+          "stac-securitize"
+        ]
       },
       {
         "reserveIndex": 1,

@@ -8,7 +8,7 @@ Read `docs/editorial-style.md` before writing; its `technical-evidence` register
 
 # Funding Donations Update
 
-Maintain `shared/data/funding/donations.json` for the `pharos-watch.eth` Safe at `0x5d698362edb8aea1c2b2483096bdee3265d860db` on Ethereum, Base, Optimism, Arbitrum, Polygon, and Gnosis. Never edit `shared/data/funding/costs.json` or historical donation rows without explicit approval.
+Maintain `shared/data/funding/donations.json` for the `pharos-watch.eth` Safe at `0x5d698362edb8aea1c2b2483096bdee3265d860db` on Ethereum, Base, Optimism, Arbitrum, Polygon, and Gnosis. Never edit `shared/data/funding/costs.json` or historical donation rows without explicit approval. When an approved correction leaves an address with less than `$10` in qualifying stablecoin donations, the operator must also deactivate the `donor` API key issued to that address (`docs/api-reference-admin.md`); eligibility is checked only at claim time, so the ledger edit revokes nothing by itself. Preserve its claim row to prevent reissuance. Later Safety Score changes alone do not revoke already-issued keys.
 
 ## Safety And Inputs
 
@@ -29,6 +29,8 @@ Maintain `shared/data/funding/donations.json` for the `pharos-watch.eth` Safe at
 ## Approval And Write
 
 Show each proposed row with chain, transaction, asset/amount, receipt-time USD value/source, donor display/kind, plus rejected self-activity and incomplete coverage. After explicit approval, append rows in ascending timestamp order and update `last_updated_at`. If no approved rows remain, make no edits.
+
+Also list the addresses whose approved rows bring their qualifying lifetime total to `$10` or more in `usd_at_receipt`, summed per lowercase address over stablecoin donations only, excluding `pool` rows. The threshold is inclusive, so exactly `$10` qualifies; ETH and other non-stablecoin assets do not, and founder stablecoin rows count. Reuse `shared/lib/funding/donor-eligibility.ts` for the reviewed stablecoin symbol-to-canonical-ID mapping and threshold calculation. Only stablecoins graded A+, A, A-, B+, B, or B- in the current non-held canonical accepted V9 Safety Score publication at claim time count. C/D/F/NR or missing grades do not count; an unavailable, missing, or held publication pauses claims with `503`. Values remain USD at receipt, not claim-time prices. Later grade changes do not revoke or alter an issued key. Verify token contracts during curation; require a reviewed helper allowlist update for a newly supported stablecoin. Report these externally-owned wallets as potential beneficiaries, not guaranteed eligible wallets: the ledger must ship in a release and grades are checked at claim time. The Worker reads donations from the committed file and grades from the current accepted publication. Report that release requirement with the list.
 
 Validate the actual edited file through the same schema used by the funding page, then run the focused calculations:
 

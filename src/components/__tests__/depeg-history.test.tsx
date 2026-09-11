@@ -1,9 +1,10 @@
 // @vitest-environment jsdom
 
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { fireEvent, render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, within } from "@testing-library/react";
 import { DepegHistory } from "@/components/depeg-history";
 import type { DepegEvent } from "@shared/types";
+import { makeEvent } from "./depeg.test-support";
 
 const { useInfiniteDepegEventsMock } = vi.hoisted(() => ({
   useInfiniteDepegEventsMock: vi.fn(),
@@ -17,30 +18,8 @@ afterEach(() => {
   useInfiniteDepegEventsMock.mockReset();
 });
 
-function makeEvent(overrides: Partial<DepegEvent> = {}): DepegEvent {
-  return {
-    id: 1,
-    stablecoinId: "usdc-circle",
-    symbol: "USDC",
-    pegType: "fiat-backed",
-    direction: "below",
-    peakDeviationBps: -150,
-    startedAt: 1_700_000_000,
-    endedAt: 1_700_086_400,
-    startPrice: 0.985,
-    peakPrice: 0.982,
-    recoveryPrice: 0.999,
-    pegReference: 1,
-    source: "live",
-    confirmationSources: null,
-    pendingReason: null,
-    closeReason: null,
-    provenance: null,
-    ...overrides,
-  };
-}
 
-function mockEvents(events: DepegEvent[]) {
+function mockEvents(events: DepegEvent[], overrides: Record<string, unknown> = {}) {
   useInfiniteDepegEventsMock.mockReturnValue({
     data: { events, total: events.length },
     isLoading: false,
@@ -49,19 +28,33 @@ function mockEvents(events: DepegEvent[]) {
     isFetchingNextPage: false,
     loadedCount: events.length,
     isFullyLoaded: true,
+    ...overrides,
   });
 }
 
 describe("DepegHistory provenance badges", () => {
-  it("background-loads every cursor page before computing metrics and local pagination", () => {
-    mockEvents([makeEvent()]);
+  it("withholds partial metrics until all history has loaded", () => {
+    const events = [makeEvent()];
+    mockEvents(events, { data: { events, total: 2 }, isFullyLoaded: false, isFetchingNextPage: true });
+    const view = render(<DepegHistory stablecoinId="usdc-circle" />);
+    expect(screen.getByText(/Loading full history.*1 \/ 2 incidents/)).toBeTruthy();
+    expect(screen.queryByText("Worst Depeg")).toBeNull();
+    expect(screen.queryByText("Current Streak")).toBeNull();
+    expect(screen.queryByLabelText("Go to next page")).toBeNull();
+    mockEvents([...events, makeEvent({ id: 2, peakDeviationBps: -350, endedAt: null })]);
+    view.rerender(<DepegHistory stablecoinId="usdc-circle" />);
+    expect(screen.queryByText(/Loading full history/)).toBeNull();
+    expect(screen.getByText("Worst Depeg").parentElement?.textContent).toContain("-350 bps");
+    expect(screen.getByText("Current Streak").parentElement?.textContent).toContain("Depegged now");
+  });
 
+  it.each([false, true])("offers retry after failure with retained rows=%s", (hasRows) => {
+    const refetch = vi.fn();
+    mockEvents(hasRows ? [makeEvent()] : [], { error: new Error("history unavailable"), refetch });
     render(<DepegHistory stablecoinId="usdc-circle" />);
-
-    expect(useInfiniteDepegEventsMock).toHaveBeenCalledWith({
-      stablecoinId: "usdc-circle",
-      autoLoadAll: true,
-    });
+    expect(screen.queryByTestId("stablecoin-depeg-history-table") !== null).toBe(hasRows);
+    fireEvent.click(screen.getByRole("button", { name: /retry/i }));
+    expect(refetch).toHaveBeenCalledOnce();
   });
 
   it("renders pending_reason and confirmation_sources badges when present", () => {
@@ -115,14 +108,21 @@ describe("DepegHistory incident fold", () => {
     expect(screen.queryByLabelText("Go to next page")).toBeNull();
   });
 
-  it("reveals the paginated remainder when the fold is opened", () => {
-    mockEvents(Array.from({ length: 9 }, (_, i) => makeEvent({ id: i + 1, startedAt: 1_700_000_000 - i * 86_400 })));
-
+  it("pages past 25 incidents then folds back to the newest six", () => {
+    mockEvents(Array.from({ length: 27 }, (_, i) => makeEvent({
+      id: i + 1, startedAt: 1_700_000_000 - i * 86_400, pendingReason: `incident-${i + 1}`,
+    })));
     render(<DepegHistory stablecoinId="usdc-circle" />);
-    fireEvent.click(screen.getByRole("button", { name: "Show all 9 incidents" }));
-
-    expect(tableRowCount()).toBe(9);
-    expect(screen.getByRole("button", { name: "Show less" })).toBeTruthy();
+    const table = screen.getByTestId("stablecoin-depeg-history-table");
+    const identities = () => within(table).getAllByTestId("event-pending-reason").map((node) => node.textContent);
+    expect(identities()).toEqual(Array.from({ length: 6 }, (_, i) => `incident ${i + 1}`));
+    fireEvent.click(screen.getByRole("button", { name: "Show all 27 incidents" }));
+    expect(tableRowCount()).toBe(25);
+    fireEvent.click(screen.getAllByRole("button", { name: "Go to next page" })[0]);
+    expect(identities()).toEqual(["incident 26", "incident 27"]);
+    fireEvent.click(screen.getByRole("button", { name: "Show less" }));
+    expect(identities()).toEqual(Array.from({ length: 6 }, (_, i) => `incident ${i + 1}`));
+    expect(screen.queryByLabelText("Go to next page")).toBeNull();
   });
 
   it("keeps short histories unfolded", () => {

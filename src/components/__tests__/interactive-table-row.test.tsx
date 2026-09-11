@@ -46,4 +46,23 @@ describe("InteractiveTableRow", () => {
     expect(row.getAttribute("aria-controls")).toBe("usdc-panel");
     expect(row.getAttribute("aria-expanded")).toBe("true");
   });
+
+  it("activates once for click and Space, but not other keys or hover", () => {
+    const onActivate = vi.fn();
+    const onHover = vi.fn();
+    render(<table><tbody><InteractiveTableRow onActivate={onActivate} onHover={onHover} ariaLabel="Open coin"><td>Coin</td></InteractiveTableRow></tbody></table>);
+    const row = screen.getByRole("button", { name: "Open coin" });
+    fireEvent.click(row);
+    expect(onActivate).toHaveBeenCalledTimes(1);
+    onActivate.mockClear();
+    expect(fireEvent.keyDown(row, { key: " ", cancelable: true })).toBe(false);
+    expect(onActivate).toHaveBeenCalledTimes(1);
+    onActivate.mockClear();
+    expect(fireEvent.keyDown(row, { key: "ArrowDown", cancelable: true })).toBe(true);
+    fireEvent.focus(row);
+    expect(onHover).toHaveBeenCalledTimes(1);
+    fireEvent.mouseEnter(row);
+    expect(onHover).toHaveBeenCalledTimes(2);
+    expect(onActivate).not.toHaveBeenCalled();
+  });
 });

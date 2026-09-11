@@ -113,10 +113,14 @@ export function orderDependencyGraphNodes(
 ): DependencyGraphOrder {
   const nodes = [...new Set([...nodeIds, ...edges.flatMap((edge) => [edge.from, edge.to])])].sort();
   const diagnostics = diagnoseDependencyGraph(edges);
-  const cyclicComponents = [
-    ...diagnostics.stronglyConnectedComponents,
-    ...diagnostics.selfEdges.map((edge) => [edge.from]),
-  ].sort((left, right) => left[0]!.localeCompare(right[0]!));
+  const cyclicComponents = [...diagnostics.stronglyConnectedComponents];
+  const cycleMembers = new Set(cyclicComponents.flat());
+  for (const edge of diagnostics.selfEdges) {
+    if (cycleMembers.has(edge.from)) continue;
+    cyclicComponents.push([edge.from]);
+    cycleMembers.add(edge.from);
+  }
+  cyclicComponents.sort((left, right) => left[0]!.localeCompare(right[0]!));
   const componentByNode = new Map<string, string>();
   const membersByComponent = new Map<string, string[]>();
   for (const component of cyclicComponents) {

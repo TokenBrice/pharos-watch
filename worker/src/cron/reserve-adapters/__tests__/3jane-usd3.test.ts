@@ -1,8 +1,56 @@
 import { describe, expect, it } from "vitest";
 import { adaptThreeJaneUsd3Snapshot } from "../3jane-usd3";
-import { expectValidAdapterOutput } from "./reserve-adapter.test-support";
+import { expectValidAdapterOutput, installAdapterNetwork, runAdapter, type AdapterRpcValue } from "./reserve-adapter.test-support";
 
 const ONE = 1_000_000n;
+
+function abiWord(value: bigint): string {
+  return value.toString(16).padStart(64, "0");
+}
+
+function usd3Network(dropSelector?: string) {
+  const rpc: Record<string, AdapterRpcValue> = {
+    "0xc1590cd7": 100n * ONE,
+    "0x01e1d114": 100n * ONE,
+    "0x18160ddd": 80n * ONE,
+    "0x4251c354": 5n * ONE,
+    "0xa9b89c07": 80n * ONE,
+    "0x59ddbab2": `0x${[100n, 100n, 75n, 25n].map((value) => abiWord(value * ONE)).join("")}`,
+    "0x04bd4629": 40n * ONE,
+    "0x0517bbab": 0n,
+    "0xbf86d690": false,
+    "balanceOf(address)": 15n * ONE,
+    "0x07a2d13a": (call) => call.data.endsWith(abiWord(25n * ONE)) ? 25n * ONE : 60n * ONE,
+  };
+  if (dropSelector) delete rpc[dropSelector];
+  return installAdapterNetwork({ rpc });
+}
+
+describe("3jane-usd3 adapter", () => {
+  it("fetches the catalog-bound USD3 accounting through the harness", async () => {
+    const { result, network } = await runAdapter("3jane-usd3", "usd3-3jane", {
+      network: usd3Network(),
+      nowSec: 1_757_003_600,
+    });
+
+    expect(result.metadata).toMatchObject({
+      details: { proofKind: "3jane-usd3-onchain-accounting" },
+      totalReserveUsd: 100,
+      totalAssetsUsd: 100,
+      collateralizationRatio: 1,
+      redemption: { capacityUsd: 40, routeStatus: "open" },
+    });
+    expect(network.rpcCalls.some((call) => call.selector === "0x59ddbab2" && call.viaMulticall)).toBe(true);
+  });
+
+  it("fails closed when the nav() read is dropped from the upstream batch", async () => {
+    await expect(runAdapter("3jane-usd3", "usd3-3jane", {
+      network: usd3Network("0xc1590cd7"),
+      nowSec: 1_757_003_600,
+    })).rejects.toThrow(/nav|unanswered/i);
+  });
+});
+
 
 describe("adaptThreeJaneUsd3Snapshot", () => {
   it("separates liquid waUSDC from deployed credit and emits direct redemption capacity", () => {
@@ -28,8 +76,9 @@ describe("adaptThreeJaneUsd3Snapshot", () => {
     });
 
     expect(result.slices).toEqual([
-      { name: "Fintech and crypto credit receivables", pct: 60, risk: "high" },
+      { sourceKey: "3jane-usd3:credit-receivables", name: "Fintech and crypto credit receivables", pct: 60, risk: "high" },
       {
+        sourceKey: "3jane-usd3:usdc",
         name: "Aave USDC liquidity buffer",
         pct: 40,
         risk: "medium",
@@ -44,9 +93,6 @@ describe("adaptThreeJaneUsd3Snapshot", () => {
       totalReserveUsd: 100,
       totalAssetsUsd: 100,
       collateralizationRatio: 1,
-      immediateRedeemableUsd: 40,
-      immediateRedeemableRatio: 0.4,
-      redemptionFeeBps: 0,
       redemption: {
         capacityUsd: 40,
         capacityRatioOfSupply: 0.4,

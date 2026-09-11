@@ -79,13 +79,25 @@ describe("P4 route observation API compatibility", () => {
     const result = normalizeDexScoreDetails(
       JSON.stringify({
         tvlDepth: 10,
+        volumeActivity: 20,
+        poolQuality: 30,
+        durability: 40,
+        pairDiversity: 50,
         exitRouteObservations: [{ routeId: "incomplete" }],
       }),
     );
 
-    expect(result.scoreComponents).toBeNull();
+    expect(result.scoreComponents).toEqual({
+      tvlDepth: 10, volumeActivity: 20, poolQuality: 30, durability: 40, pairDiversity: 50,
+    });
     expect(result.exitRouteObservations).toBeNull();
     expect(result.exitRouteObservationCoverage.status).toBe("unknown");
+  });
+
+  it("yields null score components for a partial legacy envelope", () => {
+    const result = normalizeDexScoreDetails(JSON.stringify({ tvlDepth: 10 }));
+
+    expect(result.scoreComponents).toBeNull();
   });
   it("quarantines oversized observation envelopes", () => {
     const observation = {

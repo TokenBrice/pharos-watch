@@ -194,6 +194,7 @@ export function adaptSgForgeCoinvertible(
   return {
     slices: [
       {
+        sourceKey: "sgforge-coinvertible:cash-deposits",
         name: `${coinType === "eur" ? "Euro" : "U.S. dollar"} cash deposits at ${bankBreakdown.map((bank) => bank.bankName).join(" and ")}`,
         pct: 100,
         risk: "very-low",

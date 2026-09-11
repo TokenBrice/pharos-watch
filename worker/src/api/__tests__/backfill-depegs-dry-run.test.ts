@@ -1,8 +1,13 @@
 import { readJsonResponse } from "../../test-helpers/__shared/auth";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { mockD1 } from "@shared/test-utils/mock-d1";
 import { makeApiRequest, makeApiUrl, stubCryptoForAuth } from "../../test-helpers/__shared/auth";
 import { mockFetch } from "@shared/test-utils/mock-fetch";
+import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
+import { makeReplayDiagnostics } from "./depeg-replay.test-support";
+
+const fixtures = createLatestSchemaFixtureTracker();
+afterEach(() => fixtures.closeAll());
 
 vi.mock("../../lib/stablecoins-cache", () => ({
   loadStablecoinsCache: vi.fn(async () => ({ kind: "missing", reason: "test", payload: null })),
@@ -26,16 +31,7 @@ vi.mock("../backfill-price-sources", async (importOriginal) => {
         { timestamp: 2_000, price: 1.03 },
         { timestamp: 3_000, price: 1.0 },
       ],
-      diagnostics: {
-        granularity: "hourly",
-        sourcesUsed: ["coingecko"],
-        quoteMode: "usd",
-        quoteCurrency: "usd",
-        mergeReasons: [],
-        perSourceStats: [],
-        policyAdjustments: [],
-        finalPointCount: 3,
-      },
+      diagnostics: makeReplayDiagnostics(3),
     })),
   };
 });
@@ -156,16 +152,7 @@ describe("handleBackfillDepegs replay windows", () => {
         { timestamp: 1_000, price: 1.0 },
         { timestamp: 2_000, price: 0.999 },
       ],
-      diagnostics: {
-        granularity: "hourly",
-        sourcesUsed: ["coingecko"],
-        quoteMode: "usd",
-        quoteCurrency: "usd",
-        mergeReasons: [],
-        perSourceStats: [],
-        policyAdjustments: [],
-        finalPointCount: 2,
-      },
+      diagnostics: makeReplayDiagnostics(2),
     });
     const db = mockD1([
       {
@@ -349,76 +336,21 @@ describe("handleBackfillDepegs replay windows", () => {
         { timestamp: day1 + 7_200, price: 1.03 },
         { timestamp: day2 + 3_600, price: 1.0 },
       ],
-      diagnostics: {
-        granularity: "hourly",
-        sourcesUsed: ["coingecko"],
-        quoteMode: "usd",
-        quoteCurrency: "usd",
-        mergeReasons: [],
-        perSourceStats: [],
-        policyAdjustments: [],
-        finalPointCount: 3,
-      },
+      diagnostics: makeReplayDiagnostics(3),
     });
 
-    const db = mockD1([
-      { match: "FROM depeg_events e", rows: [] },
-      { match: "INSERT INTO depeg_backfill_runs", rows: [] },
-      { match: "DELETE FROM depeg_events", rows: [] },
-      { match: "INSERT INTO depeg_events", rows: [] },
-      { match: "INSERT OR REPLACE INTO depeg_event_provenance", rows: [] },
-      {
-        match: "FROM depeg_events WHERE stablecoin_id = ? ORDER BY started_at",
-        matchBinds: ["usdt-tether"],
-        rows: [
-          {
-            id: 1,
-            stablecoin_id: "usdt-tether",
-            symbol: "USDT",
-            peg_type: "peggedUSD",
-            direction: "above",
-            peak_deviation_bps: 300,
-            started_at: day1 + 3_600,
-            ended_at: day2 + 3_600,
-            start_price: 1.02,
-            peak_price: 1.03,
-            recovery_price: 1.0,
-            peg_reference: 1,
-            source: "backfill",
-          },
-          {
-            id: 2,
-            stablecoin_id: "usdt-tether",
-            symbol: "USDT",
-            peg_type: "peggedUSD",
-            direction: "below",
-            peak_deviation_bps: -220,
-            started_at: day2 + (5 * 86_400),
-            ended_at: day2 + (6 * 86_400),
-            start_price: 0.98,
-            peak_price: 0.978,
-            recovery_price: 1.0,
-            peg_reference: 1,
-            source: "backfill",
-          },
-          {
-            id: 3,
-            stablecoin_id: "usdt-tether",
-            symbol: "USDT",
-            peg_type: "peggedUSD",
-            direction: "below",
-            peak_deviation_bps: -150,
-            started_at: day1 + 1_800,
-            ended_at: null,
-            start_price: 0.985,
-            peak_price: 0.985,
-            recovery_price: null,
-            peg_reference: 1,
-            source: "live",
-          },
-        ],
-      },
-    ]);
+    const { db, sqlite } = fixtures.open();
+    const insert = sqlite.prepare(`INSERT INTO depeg_events
+      (id, stablecoin_id, symbol, peg_type, direction, peak_deviation_bps,
+       started_at, ended_at, start_price, peak_price, recovery_price, peg_reference, source)
+      VALUES (?, ?, 'USDT', 'peggedUSD', 'below', -220, ?, ?, 0.98, 0.978, 1, 1, ?)`);
+    insert.run(1, "usdt-tether", day1 + 3_600, day2 + 3_600, "backfill");
+    insert.run(2, "usdt-tether", day2 + 5 * 86_400, day2 + 6 * 86_400, "backfill");
+    insert.run(3, "usdt-tether", day1 + 1_800, null, "live");
+    insert.run(4, "usdc-circle", day1 + 3_600, day2 + 3_600, "backfill");
+    insert.run(5, "usdt-tether", day1 - 86_400, day1 - 1, "backfill");
+    insert.run(6, "usdt-tether", day1 - 2 * 86_400, day1, "backfill");
+    insert.run(7, "usdt-tether", day2 + 86_400 - 1, null, "backfill");
 
     const req = makeApiRequest("/api/backfill-depegs?stablecoin=usdt-tether&startDay=2025-01-01&endDay=2025-01-02", {
       adminKey: "secret",
@@ -434,17 +366,10 @@ describe("handleBackfillDepegs replay windows", () => {
     expect(body.eventsCreated).toBe(1);
     expect(body.errors ?? []).toHaveLength(0);
 
-    const history = db.getHistory();
-    const deleteEntry = history.find((entry) => entry.sql.includes("DELETE FROM depeg_events"));
-    expect(deleteEntry).toMatchObject({
-      binds: ["usdt-tether", day1, day2 + 86_400 - 1],
-    });
-    expect(deleteEntry?.sql).toContain("COALESCE(ended_at, started_at) >= ?");
-    expect(deleteEntry?.sql).toContain("started_at <= ?");
-
-    const inserts = history.filter((entry) => entry.sql.includes("INSERT INTO depeg_events"));
-    expect(inserts).toHaveLength(1);
-    expect(inserts[0]?.binds.slice(0, 2)).toEqual(["usdt-tether", "USDT"]);
+    expect(sqlite.prepare("SELECT id FROM depeg_events WHERE id <= 7 ORDER BY id").all())
+      .toEqual([{ id: 2 }, { id: 3 }, { id: 4 }, { id: 5 }]);
+    expect(sqlite.prepare("SELECT stablecoin_id, source, started_at, ended_at FROM depeg_events WHERE id > 7").all())
+      .toEqual([{ stablecoin_id: "usdt-tether", source: "backfill", started_at: day1 + 3_600, ended_at: day2 + 3_600 }]);
   });
 
   it("deletes overlapping backfill rows when a mutating trusted replay finds zero events", async () => {
@@ -453,16 +378,7 @@ describe("handleBackfillDepegs replay windows", () => {
         { timestamp: 1_000, price: 1.0 },
         { timestamp: 2_000, price: 0.999 },
       ],
-      diagnostics: {
-        granularity: "hourly",
-        sourcesUsed: ["coingecko"],
-        quoteMode: "usd",
-        quoteCurrency: "usd",
-        mergeReasons: [],
-        perSourceStats: [],
-        policyAdjustments: [],
-        finalPointCount: 2,
-      },
+      diagnostics: makeReplayDiagnostics(2),
     });
     const db = mockD1([
       { match: "FROM depeg_events e", rows: [] },

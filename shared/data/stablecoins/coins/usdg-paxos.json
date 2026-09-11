@@ -92,21 +92,21 @@
   "custodyModel": "institutional-top",
   "governanceQuality": "regulated-entity",
   "liveReservesConfig": {
-    "adapter": "curated-validated",
-    "version": 1,
+    "adapter": "paxos-independent-assurance",
+    "version": 2,
     "semantics": "attestation-mix",
     "breakerScope": "usdg-paxos",
     "display": {
-      "url": "https://globaldollar.com/",
-      "label": "Global Dollar"
+      "url": "https://www.paxos.com/usdg-transparency",
+      "label": "Paxos / KPMG USDG assurance"
     },
     "inputs": {
       "primary": {
-        "kind": "onchain-evm",
-        "chain": "ethereum",
-        "rpcMode": "public-rpc"
+        "kind": "http-html",
+        "url": "https://www.paxos.com/usdg-transparency"
       }
-    }
+    },
+    "params": { "product": "USDG" }
   },
   "launchDate": "2024-11-01"
 }

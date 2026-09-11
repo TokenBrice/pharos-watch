@@ -17,7 +17,7 @@ const db = {} as D1Database;
 
 describe("runTelegramDigestDeliveryWithPermit", () => {
   beforeEach(() => {
-    vi.clearAllMocks();
+    vi.resetAllMocks();
     transport.record.mockResolvedValue({ state: "closed" });
   });
 
@@ -92,5 +92,52 @@ describe("runTelegramDigestDeliveryWithPermit", () => {
       [{ chatId: "chat", result: expect.objectContaining({ ok: true }) }],
       expect.any(Number),
     );
+  });
+
+  it("queues without delivery when permit acquisition fails", async () => {
+    transport.claim.mockRejectedValue(new Error("permit unavailable"));
+    const deliver = vi.fn();
+    expect(await runTelegramDigestDeliveryWithPermit({
+      db, creds, owner: "daily-digest", editionKey: "daily:test", deliver,
+    })).toBe("queued: transport-control-unavailable");
+    expect(deliver).not.toHaveBeenCalled();
+    expect(transport.record).not.toHaveBeenCalled();
+  });
+
+  it("releases an allowed permit without sending after abort during acquisition", async () => {
+    const controller = new AbortController();
+    let allow!: (value: { allowed: true }) => void;
+    const promise = new Promise<{ allowed: true }>((resolve) => {
+      allow = resolve;
+    });
+    transport.claim.mockReturnValue(promise);
+    const deliver = vi.fn();
+    const pending = runTelegramDigestDeliveryWithPermit({
+      db, creds, owner: "daily-digest", editionKey: "daily:test", deliver, signal: controller.signal,
+    });
+    controller.abort(new Error("stopped during acquisition"));
+    allow({ allowed: true });
+    expect(await pending).toBe("failed: Error: stopped during acquisition");
+    expect(deliver).not.toHaveBeenCalled();
+    expect(transport.record).toHaveBeenCalledExactlyOnceWith(db, { allowed: true }, [], expect.any(Number));
+  });
+
+  it.each([false, true])("preserves delivery failure when release failure is %s", async (releaseFails) => {
+    transport.claim.mockResolvedValue({ allowed: true });
+    if (releaseFails) transport.record.mockRejectedValue(new Error("release unavailable"));
+    const deliver = vi.fn().mockRejectedValue(new Error("delivery unavailable"));
+    expect(await runTelegramDigestDeliveryWithPermit({
+      db, creds, owner: "daily-digest", editionKey: "daily:test", deliver,
+    })).toBe("failed: Error: delivery unavailable");
+    expect(transport.record).toHaveBeenCalledExactlyOnceWith(db, { allowed: true }, [], expect.any(Number));
+  });
+
+  it("releases an already-handled delivery without inventing a successful send", async () => {
+    transport.claim.mockResolvedValue({ allowed: true });
+    expect(await runTelegramDigestDeliveryWithPermit({
+      db, creds, owner: "daily-digest", editionKey: "daily:test",
+      deliver: async () => ({ status: "already-sent", transportOutcome: null }),
+    })).toBe("already-sent");
+    expect(transport.record).toHaveBeenCalledExactlyOnceWith(db, { allowed: true }, [], expect.any(Number));
   });
 });

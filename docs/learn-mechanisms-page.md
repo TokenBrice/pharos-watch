@@ -89,7 +89,7 @@ These suites run in the ordinary noncritical lane. `scripts/maintenance/build-og
 
 ## Inbound Surfaces
 
-- **Shared navigation:** `src/lib/nav-config.ts` `More` menu → `Learn` column → `Mechanisms`, `Case Studies`, and `Glossary` in desktop/mobile navigation and the command palette
+- **Shared navigation:** `src/lib/nav-config.ts` `Resources` menu → `Research` column → `Mechanisms`, `Case Studies`, and `Glossary` in desktop/mobile navigation and the command palette
 - **Coin detail (`src/components/stablecoin-detail/peg-stability-card.tsx`):** "Learn how X stablecoins work" link directly below the per-coin mechanism diagram, plus the header info affordance, both gated on the resolved mechanism archetype.
 - **Mechanism review panel (`src/components/stablecoin-detail/mechanism-review-panel.tsx`):** "How <archetype> stablecoins work" link, rendered in both the compact rail card and the embedded risk-context fold, gated on a resolved mechanism review.
 - **Stablecoin detail Explore Next (`src/components/stablecoin-detail/explore-next-section.tsx`):** does **not** link the explainer (`PegStabilityCard` already carries that CTA); its archetype-gated slot is a canonical `/screener/?mechanisms=<archetype>&lifecycle=active` deep-link instead.

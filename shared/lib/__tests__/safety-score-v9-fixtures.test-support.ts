@@ -137,6 +137,43 @@ export function makeEconomicControlFacts(
     ...overrides,
   };
 }
+type SupplyPartition = V9EconomicControlAssetFacts["supply"];
+type SupplyPartitionRouteInput = Omit<SupplyPartition["selectedBridgeRoutes"][number], "supplyUsd"> & {
+  supplyUsd?: number;
+};
+
+export type SupplyPartitionOptions = {
+  routes: readonly SupplyPartitionRouteInput[];
+  status?: SupplyPartition["status"];
+} & Partial<Omit<SupplyPartition, "status" | "selectedBridgeRoutes">>;
+
+export function makeSupplyPartition({
+  routes,
+  status = requiredKnown("supply"),
+  ...overrides
+}: SupplyPartitionOptions): SupplyPartition {
+  const selectedRouteSupplyShare = routes
+    .filter((route) => route.reviewState === "selected-reviewed")
+    .reduce((sum, route) => sum + route.supplyShare, 0);
+  const unknownRouteSupplyShare = routes
+    .filter((route) => route.reviewState === "unmatched")
+    .reduce((sum, route) => sum + route.supplyShare, 0);
+  const unreviewedRouteSupplyShare = routes
+    .filter((route) => route.reviewState === "selected-unresolved")
+    .reduce((sum, route) => sum + route.supplyShare, 0);
+
+  return {
+    status,
+    selectedBridgeRoutes: routes.map((route) => ({
+      ...route,
+      supplyUsd: route.supplyUsd ?? route.supplyShare * 100,
+    })),
+    selectedRouteSupplyShare,
+    unknownRouteSupplyShare,
+    unreviewedRouteSupplyShare,
+    ...overrides,
+  };
+}
 
 export function noMintReview(): V9MintMechanismReview {
   return {

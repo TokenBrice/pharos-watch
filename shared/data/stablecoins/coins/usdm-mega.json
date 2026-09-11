@@ -87,5 +87,21 @@
       }
     ]
   },
-  "launchDate": "2026-02-09"
+  "launchDate": "2026-02-09",
+  "liveReservesConfig": {
+    "adapter": "megausd-custody",
+    "version": 1,
+    "semantics": "collateral-mix",
+    "breakerScope": "usdm-mega",
+    "display": {
+      "url": "https://app.megausd.money/",
+      "label": "MegaUSD Transparency"
+    },
+    "inputs": {
+      "primary": {
+        "kind": "http-json",
+        "url": "https://app.megausd.money/api/transparency/backing-and-supply/current"
+      }
+    }
+  }
 }

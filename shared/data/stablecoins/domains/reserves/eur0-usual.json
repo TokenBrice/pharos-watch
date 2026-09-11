@@ -17,7 +17,8 @@
         "counterparty",
         "smart-contract"
       ],
-      "liquidityHorizon": "unknown"
+      "liquidityHorizon": "unknown",
+      "sourceKey": "evm-branch-balances:ethereum:0xa0769f7a8fc65e47de93797b4e21c073c117fc80"
     }
   ],
   "reserveReview": {

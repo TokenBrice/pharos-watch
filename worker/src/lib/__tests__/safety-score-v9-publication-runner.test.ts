@@ -1,6 +1,9 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { makeWorkerSafetyScoreV9Publication } from "../../test-helpers/report-cards-v9";
+import { makeWorkerSafetyScoreV9Publication, makeWorkerV9Card } from "../../test-helpers/report-cards-v9";
 import { createSafetyScoreV9FullRegistryInput } from "./fixtures/safety-score-v9-full-registry-input";
+import { createReportCardsFixedInput } from "../report-cards-fixed-input";
+import { canonicalV9RouteKey } from "@shared/lib/safety-score-v9/facts";
+import { makeV9FixedInput } from "../../test-helpers/v9-fixed-input";
 
 const mocks = vi.hoisted(() => ({
   assess: vi.fn(),
@@ -36,7 +39,7 @@ vi.mock("../safety-score-v9/publication-store", () => ({
 const { runSafetyScoreV9Publication } = await import(
   "../safety-score-v9/publication-runner"
 );
-const fixedInput = createSafetyScoreV9FullRegistryInput();
+const fixedInput = makeV9FixedInput({ assetId: "usdc-circle" });
 
 describe("Safety Score V9 publication runner", () => {
   beforeEach(() => {
@@ -183,6 +186,80 @@ describe("Safety Score V9 publication runner", () => {
       expect.anything(),
       expect.not.objectContaining({ publication: expect.anything() }),
     );
+  });
+
+  it("holds expired measured evidence without replacing accepted grades or alerts, then publishes recovered evidence", async () => {
+    const { assessV9Publication } = await vi.importActual<
+      typeof import("../safety-score-v9/publication-assessment")
+    >("../safety-score-v9/publication-assessment");
+    mocks.assess.mockImplementation(assessV9Publication);
+    const { baseInputGenerationId: _baseId, ...draft } = createSafetyScoreV9FullRegistryInput();
+    const assetId = draft.activeAssetIds[0]!;
+    const observation = draft.dexLiqMap[assetId]!.exitRouteObservations![0]!;
+    draft.v9PublicationInputHealth = {
+      dex: { state: "current", generationId: draft.dexGenerationId, updatedAtSec: draft.clockSec },
+      redemption: { state: "not-applicable", generationId: null, updatedAtSec: null },
+      liveReserves: { state: "available" },
+    };
+    observation.evidenceKind = "measured-executable-depth";
+    observation.confidence = "high";
+    observation.observationHistory = {
+      completeProducerCycleCount: 2,
+      successfulObservationCount: 2,
+      consecutiveSuccessCount: 2,
+      observationWindowStartedAt: draft.clockSec - 12_601,
+      observationWindowEndedAt: draft.clockSec - 10_801,
+      latestOperationalFailureAt: null,
+      conservativeStatistic: "pointwise-minimum",
+      conservativeCapacityCurve: observation.capacityCurve ?? [],
+    };
+    const expiredInput = createReportCardsFixedInput(draft);
+    const card = makeWorkerV9Card({ id: assetId, grade: "A-", score: 81 });
+    card.breakdowns!.exit.primaryRoute!.key = canonicalV9RouteKey("dex", expiredInput.dexGenerationId, observation.routeId);
+    const cards = draft.activeAssetIds.map((id) => id === assetId ? card : makeWorkerV9Card({ id }));
+    const accepted = makeWorkerSafetyScoreV9Publication({
+      cards,
+      publishedAtSec: draft.clockSec - 1_800,
+      sourceGenerations: { dex: expiredInput.dexGenerationId },
+      publicationGenerationId: "report-cards:v9:accepted",
+    });
+    mocks.loadPublication.mockResolvedValue(accepted);
+    const buildCandidate = (input: typeof expiredInput, expired: boolean) => mocks.build.mockReturnValue({
+      candidate: makeWorkerSafetyScoreV9Publication({
+        cards: cards.map((row) => expired && row.id === assetId ? { ...row, grade: "B", score: 72 } : row),
+        completeness: { ...accepted.completeness, ratedCount: cards.length },
+        baseInputGenerationId: input.baseInputGenerationId,
+        publishedAtSec: input.clockSec,
+        sourceGenerations: { dex: input.dexGenerationId },
+      }),
+      compilerFactSchemaDigest: "1".repeat(64),
+      producerCapabilityDigest: "2".repeat(64),
+      quarantines: [], quarantineAffectedAssetIds: [], bridgeJoinDiagnostics: [],
+    });
+    buildCandidate(expiredInput, true);
+    expect(await runSafetyScoreV9Publication({ db: {} as D1Database, fixedInput: expiredInput })).toMatchObject({
+      status: "held", reasons: [{ code: "dex-stale" }], affectedAssetIds: [assetId],
+    });
+    expect(mocks.persist).toHaveBeenCalledTimes(1);
+    const heldWrite = mocks.persist.mock.calls[0]![1];
+    expect(heldWrite).not.toHaveProperty("publication");
+    expect(heldWrite.publicationHealth).toMatchObject({
+      status: "held", acceptedPublicationGenerationId: accepted.publicationGenerationId,
+    });
+    expect(mocks.persistAlertEnvelope).not.toHaveBeenCalled();
+
+    observation.observationHistory.observationWindowEndedAt = draft.clockSec;
+    const recoveredInput = createReportCardsFixedInput(draft);
+    buildCandidate(recoveredInput, false);
+    mocks.persist.mockClear();
+    expect(await runSafetyScoreV9Publication({ db: {} as D1Database, fixedInput: recoveredInput })).toMatchObject({
+      status: "published", outcome: "clean",
+    });
+    expect(mocks.persist).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({
+      publication: expect.objectContaining({ baseInputGenerationId: recoveredInput.baseInputGenerationId }),
+      publicationHealth: expect.objectContaining({ status: "current" }),
+    }));
+    expect(mocks.persistAlertEnvelope).toHaveBeenCalledTimes(1);
   });
 
   it("publishes a bounded quarantine as a productive partial attempt", async () => {

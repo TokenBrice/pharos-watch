@@ -1,9 +1,9 @@
 import { DatabaseSync } from "node:sqlite";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { FROZEN_STABLECOINS } from "@shared/lib/stablecoins/registry";
-import { createSqliteD1 } from "../../../test-helpers/sqlite-d1";
+import { createSqliteD1 } from "@shared/test-utils/sqlite-d1";
 import { setSubscriptionSnooze } from "../snooze";
-import { createLatestSchemaSqlite } from "../../../test-helpers/latest-schema-sqlite";
+import { createLatestSchemaSqlite } from "@shared/test-utils/latest-schema-sqlite";
 
 const NOW_SEC = 1_800_000_000;
 
@@ -124,6 +124,51 @@ describe("setSubscriptionSnooze clear invariants", () => {
         depeg_worsening_bps_step: 250,
         alert_snooze_until_ts: null,
       });
+    } finally {
+      sqlite.close();
+    }
+  });
+
+  it("preserves each independent retention reason when clearing snoozes", async () => {
+    const { sqlite, db } = createSubscriptionDb();
+    try {
+      const reasons = [
+        ["alert_freeze", 1], ["alert_freeze_override", 1], ["safety_mode", "upgrade-only"],
+        ["depeg_worsening_bps_step", 250], ["dews_min_band", "DANGER"],
+      ] as const;
+      for (const [column, value] of reasons) {
+        sqlite.prepare(`INSERT INTO telegram_subscriptions (chat_id, stablecoin_id, ${column}, alert_snooze_until_ts)
+          VALUES (?, 'usdc-circle', ?, ?)`).run(column, value, NOW_SEC + 3600);
+        await setSubscriptionSnooze(db, column, "usdc-circle", null);
+        expect(sqlite.prepare(`SELECT ${column} AS reason, alert_snooze_until_ts FROM telegram_subscriptions
+          WHERE chat_id = ?`).get(column)).toEqual({ reason: value, alert_snooze_until_ts: null });
+      }
+    } finally {
+      sqlite.close();
+    }
+  });
+
+  it("creates and updates snoozes without losing preferences and rolls back a failed operation", async () => {
+    const { sqlite, db } = createSubscriptionDb();
+    try {
+      await setSubscriptionSnooze(db, "42", "usdc-circle", NOW_SEC + 3600);
+      expect(sqlite.prepare("SELECT preference_generation FROM telegram_subscribers WHERE chat_id = '42'").get())
+        .toEqual({ preference_generation: 1 });
+      expect(sqlite.prepare("SELECT alert_snooze_until_ts FROM telegram_subscriptions WHERE chat_id = '42'").get())
+        .toEqual({ alert_snooze_until_ts: NOW_SEC + 3600 });
+      sqlite.exec("UPDATE telegram_subscriptions SET alert_freeze_override = 1, safety_mode = 'upgrade-only'");
+      await setSubscriptionSnooze(db, "42", "usdc-circle", NOW_SEC + 7200);
+      expect(sqlite.prepare("SELECT preference_generation FROM telegram_subscribers WHERE chat_id = '42'").get())
+        .toEqual({ preference_generation: 2 });
+      expect(sqlite.prepare("SELECT alert_snooze_until_ts, alert_freeze_override, safety_mode FROM telegram_subscriptions").get())
+        .toEqual({ alert_snooze_until_ts: NOW_SEC + 7200, alert_freeze_override: 1, safety_mode: "upgrade-only" });
+      const beforeParent = sqlite.prepare("SELECT * FROM telegram_subscribers").all();
+      const beforeRows = sqlite.prepare("SELECT * FROM telegram_subscriptions").all();
+      await expect(setSubscriptionSnooze(db, "42", "usdc-circle", NOW_SEC + 10800, {
+        operationStatements: [db.prepare("INSERT INTO telegram_subscribers (chat_id, created_at, last_active_at) VALUES ('42', 1, 1)")],
+      })).rejects.toThrow();
+      expect(sqlite.prepare("SELECT * FROM telegram_subscribers").all()).toEqual(beforeParent);
+      expect(sqlite.prepare("SELECT * FROM telegram_subscriptions").all()).toEqual(beforeRows);
     } finally {
       sqlite.close();
     }

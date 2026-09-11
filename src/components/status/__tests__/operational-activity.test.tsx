@@ -83,9 +83,12 @@ describe("OperationalActivity", () => {
     expect(screen.getByText("action log offline")).toBeTruthy();
     expect(screen.getByText("credential audit offline")).toBeTruthy();
     fireEvent.click(screen.getByRole("button", { name: "Retry admin action log" }));
-    fireEvent.click(screen.getByRole("button", { name: "Retry credential audit" }));
     expect(retryActions).toHaveBeenCalledOnce();
+    expect(retryCredentials).not.toHaveBeenCalled();
+
+    fireEvent.click(screen.getByRole("button", { name: "Retry credential audit" }));
     expect(retryCredentials).toHaveBeenCalledOnce();
+    expect(retryActions).toHaveBeenCalledOnce();
   });
 
   it("distinguishes loading from a complete empty response without claiming complete coverage", () => {

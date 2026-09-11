@@ -142,6 +142,87 @@ describe("cron workbench model", () => {
     expect(running.rows.map((row) => row.job)).toEqual(["dispatch-telegram-alerts"]);
   });
 
+  it("intersects all filters and drops any row failing a single predicate", () => {
+    const groups: CronWorkbenchGroupInput[] = [
+      {
+        key: "five-minute",
+        title: "Delivery",
+        badge: "~5 min",
+        description: "Delivery work.",
+        entries: [
+          ["sync-stablecoins", makeCron({ healthy: false })],
+          ["reserve-recovery", makeCron()],
+          ["custom-side-job", makeCron({ healthy: false })],
+          ["sync-blacklist", makeCron({ healthy: false, inFlight: { startedAt: 1, updatedAt: 2, stale: true } })],
+        ],
+      },
+      {
+        key: "quarter-hourly",
+        title: "Delivery",
+        badge: "*/15",
+        description: "Shared core ingestion.",
+        entries: [["sync-stablecoins", makeCron({ healthy: false })]],
+      },
+    ];
+
+    const model = buildCronWorkbenchModel(
+      groups,
+      makeFilters({
+        search: "delivery",
+        state: "attention",
+        impact: "public-critical",
+        triggerGroup: "five-minute",
+        running: "idle",
+      }),
+    );
+
+    expect(model.rows.map((row) => row.job)).toEqual(["sync-stablecoins"]);
+    expect(model.filteredCount).toBe(1);
+    expect(model.groups.map((group) => group.key)).toEqual(["five-minute"]);
+  });
+
+  it("sorts rows by state severity before registry and source order", () => {
+    const neutralRun = { startedAt: 1_700_000_000, durationMs: 200, status: "skipped_neutral" as const };
+    const group: CronWorkbenchGroupInput = {
+      key: "mixed",
+      title: "Mixed",
+      badge: "mixed",
+      description: "Mixed severities.",
+      entries: [
+        ["custom-a-healthy", makeCron()],
+        ["custom-b-running", makeCron({ inFlight: { startedAt: 1, updatedAt: 2, stale: false } })],
+        ["custom-c-skipped", makeCron({ lastRun: neutralRun, recentRuns: [neutralRun], healthy: false })],
+        ["custom-d-unknown", makeCron({ telemetryUnknown: true })],
+        [
+          "custom-e-degraded",
+          makeCron({ lastRun: { startedAt: 1_700_000_000, durationMs: 500, status: "degraded" } }),
+        ],
+        ["custom-f-unhealthy", makeCron({ healthy: false })],
+      ],
+    };
+
+    const rows = buildCronWorkbenchModel([group], makeFilters(), 1_700_000_600).rows;
+
+    expect(rows.map((row) => row.job)).toEqual([
+      "custom-f-unhealthy",
+      "custom-e-degraded",
+      "custom-d-unknown",
+      "custom-c-skipped",
+      "custom-b-running",
+      "custom-a-healthy",
+    ]);
+  });
+
+  it("keeps complete group totals while a filter narrows visible rows", () => {
+    const model = buildCronWorkbenchModel(makeGroups(), makeFilters({ running: "running" }));
+
+    expect(model.groups.map((group) => group.key)).toEqual(["five-minute"]);
+    expect(model.groups[0]?.summary).toMatchObject({ total: 2, visible: 1, running: 1 });
+    expect(model.totalCount).toBe(5);
+    expect(model.filteredCount).toBe(1);
+    expect(model.rows.map((row) => row.job)).toEqual(["dispatch-telegram-alerts"]);
+  });
+
   it("classifies stale running and telemetry-unknown jobs without treating them as healthy", () => {
     expect(classifyCronWorkbenchState(makeCron({ inFlight: { startedAt: 1, updatedAt: 2, stale: true } }))).toBe(
       "unhealthy",
@@ -200,16 +281,31 @@ describe("cron workbench model", () => {
     expect(classifyCronWorkbenchState(cron, 1_700_002_000)).toBe("unhealthy");
   });
 
-  it("keeps a degraded required outcome in attention after a neutral skip", () => {
+  it.each([
+    {
+      name: "keeps a degraded required outcome in attention after a neutral skip",
+      requiredStatus: "degraded",
+      cronHealthy: true,
+      expectedState: "degraded",
+      expectedLabel: "Completed with warnings (latest required run)",
+    },
+    {
+      name: "keeps a failed required outcome unhealthy after a neutral skip",
+      requiredStatus: "error",
+      cronHealthy: false,
+      expectedState: "unhealthy",
+      expectedLabel: "Failed (latest required run)",
+    },
+  ] as const)("$name", ({ requiredStatus, cronHealthy, expectedState, expectedLabel }) => {
     const neutralRun = { startedAt: 1_700_000_000, durationMs: 200, status: "skipped_neutral" as const };
-    const degradedRun = { startedAt: 1_699_999_000, durationMs: 800, status: "degraded" as const };
+    const requiredRun = { startedAt: 1_699_999_000, durationMs: 800, status: requiredStatus };
     const cron = makeCron({
       lastRun: neutralRun,
-      recentRuns: [neutralRun, degradedRun],
-      healthy: true,
+      recentRuns: [neutralRun, requiredRun],
+      healthy: cronHealthy,
     });
 
-    expect(classifyCronWorkbenchState(cron)).toBe("degraded");
+    expect(classifyCronWorkbenchState(cron)).toBe(expectedState);
 
     const model = buildCronWorkbenchModel(
       [
@@ -226,41 +322,9 @@ describe("cron workbench model", () => {
 
     expect(model.rows).toHaveLength(1);
     expect(model.rows[0]).toMatchObject({
-      job: "weekly-recap",
-      state: "degraded",
+      state: expectedState,
       rawStatus: "skipped_neutral",
-      statusLabel: "Completed with warnings (latest required run)",
-    });
-  });
-
-  it("keeps a failed required outcome unhealthy after a neutral skip", () => {
-    const neutralRun = { startedAt: 1_700_000_000, durationMs: 200, status: "skipped_neutral" as const };
-    const failedRun = { startedAt: 1_699_999_000, durationMs: 800, status: "error" as const };
-    const cron = makeCron({
-      lastRun: neutralRun,
-      recentRuns: [neutralRun, failedRun],
-      healthy: false,
-    });
-
-    expect(classifyCronWorkbenchState(cron)).toBe("unhealthy");
-
-    const model = buildCronWorkbenchModel(
-      [
-        {
-          key: "weekly",
-          title: "Weekly",
-          badge: "weekly",
-          description: "Weekly maintenance jobs.",
-          entries: [["weekly-recap", cron]],
-        },
-      ],
-      { ...DEFAULT_CRON_WORKBENCH_FILTERS },
-    );
-
-    expect(model.rows[0]).toMatchObject({
-      state: "unhealthy",
-      rawStatus: "skipped_neutral",
-      statusLabel: "Failed (latest required run)",
+      statusLabel: expectedLabel,
     });
   });
 
@@ -350,7 +414,7 @@ describe("cron workbench model", () => {
     }
   });
 
-  it("retains lease and orphan evidence on selected model rows", () => {
+  it("surfaces stale-artifact lease and progress evidence through row search", () => {
     const cron = makeCron({
       staleArtifacts: [
         { kind: "expired-lease", job: "sync-stablecoins", leaseOwner: "owner-a", leaseUntil: 123 },
@@ -362,12 +426,28 @@ describe("cron workbench model", () => {
         },
       ],
     });
-    const row = buildCronWorkbenchModel(
-      [{ key: "q", title: "Quarter", badge: "q", description: "q", entries: [["sync-stablecoins", cron]] }],
-      makeFilters(),
-    ).rows[0]!;
+    const groups: CronWorkbenchGroupInput[] = [
+      {
+        key: "q",
+        title: "Quarter",
+        badge: "q",
+        description: "q",
+        entries: [
+          ["sync-stablecoins", cron],
+          ["snapshot-chain-supply", makeCron()],
+        ],
+      },
+    ];
 
-    expect(row.cron.staleArtifacts).toEqual(cron.staleArtifacts);
+    expect(buildCronWorkbenchModel(groups, makeFilters({ search: "owner-a" })).rows.map((row) => row.job)).toEqual([
+      "sync-stablecoins",
+    ]);
+    expect(buildCronWorkbenchModel(groups, makeFilters({ search: "prices" })).rows.map((row) => row.job)).toEqual([
+      "sync-stablecoins",
+    ]);
+    expect(
+      buildCronWorkbenchModel(groups, makeFilters({ search: "owner-zzz" })).rows.map((row) => row.job),
+    ).toEqual([]);
   });
 
   it("projects budget-only surfaces by real schedule key with severity and registry-order ties", () => {
@@ -396,6 +476,40 @@ describe("cron workbench model", () => {
     expect(groups[0]?.summary).toMatchObject({ total: 1, stale: 1, errors: 0 });
     expect(groups[1]?.rows.map((row) => row.job)).toEqual(["telegram-digest-outbox-drain", "digest-trigger-poll"]);
     expect(groups[1]?.summary).toMatchObject({ total: 2, stale: 2, errors: 0 });
+  });
+
+  it("orders mixed budget surfaces by severity and summarizes error and missing evidence", () => {
+    const groups = buildBudgetOnlySurfaceGroups([
+      makeBudgetSurface({ job: "custom-error", label: "Custom error", telemetryStatus: "fresh", outcome: "error" }),
+      makeBudgetSurface({
+        job: "custom-missing",
+        label: "Custom missing",
+        telemetryStatus: "missing",
+        outcome: "unknown",
+      }),
+      makeBudgetSurface({
+        job: "custom-unreadable",
+        label: "Custom unreadable",
+        telemetryStatus: "unreadable",
+        outcome: "unknown",
+      }),
+      makeBudgetSurface({ job: "custom-stale", label: "Custom stale", telemetryStatus: "stale", outcome: "ok" }),
+      makeBudgetSurface({ job: "custom-degraded", label: "Custom degraded", outcome: "degraded" }),
+      makeBudgetSurface({ job: "custom-unknown", label: "Custom unknown", outcome: "unknown" }),
+      makeBudgetSurface({ job: "custom-fresh", label: "Custom fresh" }),
+    ]);
+
+    expect(groups).toHaveLength(1);
+    expect(groups[0]?.rows.map((row) => row.job)).toEqual([
+      "custom-error",
+      "custom-missing",
+      "custom-unreadable",
+      "custom-stale",
+      "custom-degraded",
+      "custom-unknown",
+      "custom-fresh",
+    ]);
+    expect(groups[0]?.summary).toEqual({ total: 7, fresh: 4, stale: 1, missing: 1, unreadable: 1, errors: 1 });
   });
 
   it("returns explicit empty models for missing cron and budget telemetry", () => {

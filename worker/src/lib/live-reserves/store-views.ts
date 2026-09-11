@@ -24,23 +24,20 @@ import {
 import {
   hasConsistentSnapshotState,
   isReserveSnapshotStale,
-  hasScoringEligibleLiveReserveFreshness,
+  evaluateLiveReserveAdmission,
+  type LiveReserveAdmissionResult,
 } from "./store-snapshot-state";
 
 function buildReserveProvenanceView(
-  record: Pick<ReserveCompositionRecord, "adapterEvidenceClass" | "adapterSourceModel" | "metadata">,
-  syncState: ReserveSyncStateRecord | null,
-  stale: boolean,
+  record: Pick<ReserveCompositionRecord, "adapterEvidenceClass" | "adapterSourceModel" | "metadata" | "warnings">,
+  admission: LiveReserveAdmissionResult,
 ): ReserveProvenanceView {
   const freshnessMode = record.metadata.freshnessMode;
   return {
     evidenceClass: record.adapterEvidenceClass,
     sourceModel: record.adapterSourceModel,
     ...(freshnessMode ? { freshnessMode } : {}),
-    scoringEligible: record.adapterEvidenceClass === "independent"
-      && !stale
-      && syncState?.lastStatus === "ok"
-      && hasScoringEligibleLiveReserveFreshness(record.metadata),
+    scoringEligible: admission.eligible,
   };
 }
 
@@ -149,7 +146,8 @@ export async function resolveReserveResult(
   })
     ? parseReserveCompositionRow(compositionRow, syncState)
     : { record: null, issue: null };
-  const liveSnapshot = consistentSnapshot.record;
+  const admission = evaluateLiveReserveAdmission(consistentSnapshot.record, syncState, meta, now, freshnessSec);
+  const liveSnapshot = admission.reasons.includes("config-mismatch") ? null : consistentSnapshot.record;
   const liveAtCandidate = liveSnapshot?.fetchedAt
     ?? (
       compositionRow && hasConsistentSnapshotState(syncState, {
@@ -163,17 +161,18 @@ export async function resolveReserveResult(
     || (liveSnapshot != null && isReserveSnapshotStale(liveSnapshot, meta, now, freshnessSec));
 
   // Prior live detail deliberately stays visible when the *current* sync attempt
-  // failed: the earlier snapshot was validly observed, and scoring already
-  // excludes it separately by requiring `lastStatus === "ok"`. Only genuine
+  // failed: the earlier snapshot was validly observed, and scoring judges it on
+  // its own warnings, not on the later attempt's status. Only genuine
   // staleness (Worker fetch age or effective upstream observation age, computed
   // above) may demote it, and that surfaces as `live-stale` rather than hiding it.
   if (liveSnapshot) {
-    const provenance = buildReserveProvenanceView(liveSnapshot, syncState, stale);
+    const provenance = buildReserveProvenanceView(liveSnapshot, admission);
     const adapterBadge = buildReserveDisplayBadgeView(liveSnapshot);
     const displayBadge = meta.liveReservesConfig?.semantics === "attestation-mix" && adapterBadge.kind === "live"
       ? { ...buildReserveDisplayBadge("proof"), label: "Attestation" }
       : adapterBadge;
     const evidenceUrls = extractReserveEvidenceUrls(liveSnapshot.metadata, displayUrl);
+    const { diag: _diag, ...publicMetadata } = liveSnapshot.metadata;
     return {
       reserves: liveSnapshot.slices,
       estimated: false,
@@ -183,7 +182,7 @@ export async function resolveReserveResult(
       displayUrl,
       evidenceUrls,
       displayBadge,
-      metadata: liveSnapshot.metadata,
+      metadata: publicMetadata,
       provenance,
       sync: buildSyncView(syncState, stale, {
         enabled: !!meta.liveReservesConfig,

@@ -3,7 +3,8 @@ import {
   resolveYieldSourceKeyRoute,
   YIELD_SOURCE_KEY_ROUTES,
 } from "../yield-source-key-routing";
-import { inferVenueProtocol } from "../source-risk";
+import { buildYieldSourceRisk, inferVenueProtocol } from "../source-risk";
+import type { EvaluatedYieldSource } from "../evaluation-types";
 import { getSupplementalCandidateFamily } from "../supplemental-source-families";
 
 /**
@@ -38,13 +39,32 @@ describe("yield source-key routing table", () => {
       expect(route).not.toBeNull();
       expect(route?.venueProtocol).toBe(venueProtocol);
       expect(route?.family).toBe(family);
-      expect(sourceKey.split(":")[route!.chainSegmentIndex]).toBe(chain);
+      expect(buildYieldSourceRisk({
+        source: { sourceKey, dataSource: "protocol-api", sourceRiskPenalty: 1 } as EvaluatedYieldSource,
+        provenance: null,
+        isBest: true,
+      }).venueChain).toBe(chain);
 
       // The public consumers stay in lockstep with the table.
       expect(inferVenueProtocol({ sourceKey, dataSource: "protocol-api" })).toBe(venueProtocol);
       expect(getSupplementalCandidateFamily(sourceKey)).toBe(family);
     },
   );
+
+  it("prefers existing risk chain, then explicit source chain, over routed chain", () => {
+    const source = {
+      sourceKey: "protocol-api:pendle:arbitrum:0xdef",
+      dataSource: "protocol-api",
+      sourceRiskPenalty: 1,
+      venueChain: "base",
+    } as EvaluatedYieldSource;
+    expect(buildYieldSourceRisk({ source, provenance: null, isBest: true }).venueChain).toBe("base");
+    expect(buildYieldSourceRisk({
+      source: { ...source, sourceRisk: { venueChain: "ethereum" } as EvaluatedYieldSource["sourceRisk"] },
+      provenance: null,
+      isBest: true,
+    }).venueChain).toBe("ethereum");
+  });
 
   it("returns null for unmatched and empty source keys", () => {
     expect(resolveYieldSourceKeyRoute("dl-list:usdc")).toBeNull();

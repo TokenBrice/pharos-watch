@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { renderToStaticMarkup } from "react-dom/server";
 import { RedemptionRouteRail } from "../redemption-route-rail";
+import { REDEMPTION_ACCESS_PASSPORT_LABELS } from "@shared/lib/redemption-backstop-scoring";
 
 const BASE_PROPS = {
   accessLabel: "Issuer / institutional",
@@ -20,22 +21,33 @@ describe("RedemptionRouteRail", () => {
     expect(html).toContain("Stable output");
   });
 
-  it("draws a closed gate for restricted access and an open gate for permissionless routes", () => {
-    const closed = renderToStaticMarkup(<RedemptionRouteRail {...BASE_PROPS} accessModel="issuer-api" />);
-    expect(closed).toContain("bg-foreground/60");
-    expect(closed).not.toContain("border-dashed border-emerald-600/70");
+  it("names the access gate with the published passport vocabulary and the full access label", () => {
+    const restricted = renderToStaticMarkup(<RedemptionRouteRail {...BASE_PROPS} accessModel="issuer-api" />);
 
-    const open = renderToStaticMarkup(
+    expect(restricted).toContain(REDEMPTION_ACCESS_PASSPORT_LABELS["issuer-api"]);
+    expect(restricted).not.toContain(REDEMPTION_ACCESS_PASSPORT_LABELS["permissionless-onchain"]);
+    // The truncating full label stays reachable on hover and in the diagram label.
+    expect(restricted).toContain('title="Issuer / institutional"');
+    expect(restricted).toContain(
+      'aria-label="Redemption route: holders exit through Issuer / institutional access to Offchain issuer, settling Same day into Stable output."',
+    );
+
+    const permissionless = renderToStaticMarkup(
       <RedemptionRouteRail {...BASE_PROPS} accessModel="permissionless-onchain" accessLabel="Permissionless onchain" />,
     );
-    expect(open).toContain("border-dashed border-emerald-600/70");
-    expect(open).not.toContain("bg-foreground/60");
+
+    expect(permissionless).toContain(REDEMPTION_ACCESS_PASSPORT_LABELS["permissionless-onchain"]);
+    expect(permissionless).not.toContain(REDEMPTION_ACCESS_PASSPORT_LABELS["issuer-api"]);
+    expect(permissionless).toContain(
+      'aria-label="Redemption route: holders exit through Permissionless onchain access to Offchain issuer, settling Same day into Stable output."',
+    );
   });
 
-  it("keeps the FactGrid fallback for narrow viewports", () => {
+  it("repeats the route facts in the labelled fallback grid for narrow columns", () => {
     const html = renderToStaticMarkup(<RedemptionRouteRail {...BASE_PROPS} accessModel="manual" />);
-    // The sm:hidden grid carries the same three facts as label-over-value.
-    expect(html).toContain("sm:hidden");
+
+    // The fallback grid carries the same three facts as label-over-value.
+    expect(html).toContain('aria-label="Route properties"');
     expect(html).toContain("Access");
     expect(html).toContain("Settlement");
     expect(html).toContain("Output");

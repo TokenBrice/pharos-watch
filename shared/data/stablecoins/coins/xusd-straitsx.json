@@ -23,17 +23,17 @@
     "attestorJurisdiction": "Singapore",
     "attestorLicense": "ACRA-registered public accountants",
     "latestReport": {
-      "periodEnd": "2026-06-30",
-      "publishedAt": "2026-07-29",
+      "periodEnd": "2026-07-31",
+      "publishedAt": "2026-08-28",
       "assuranceMethod": "examination",
       "scope": "assets-and-liabilities",
       "liabilityReconciliation": "full",
-      "reviewer": "PoR verification sweep 2026-08 (June report PDF read; composition review advanced in lockstep)",
+      "reviewer": "Pharos reserve research (July report PDF and composition reviewed together 2026-09-07)",
       "confidence": "verified",
       "sources": [
         {
-          "label": "KK Yap XUSD reserve account examination - June 30, 2026",
-          "url": "https://cdn.prod.website-files.com/6119d1f2b05f8e65b1739721/6a6c789f7ac035cdb7e226fc_XUSD%20SCS%20Reserve%20Account%20Report%20(30%20June%202026).pdf"
+          "label": "KK Yap & Associates XUSD SCS Reserve Account Report, 31 July 2026",
+          "url": "https://cdn.prod.website-files.com/6119d1f2b05f8e65b1739721/6a9e145187f4227fbe226ec2_XUSD%20SCS%20Reserve%20Account%20Report%20(31%20July%202026).pdf"
         }
       ]
     }
@@ -78,9 +78,6 @@
     "version": 2,
     "semantics": "attestation-mix",
     "breakerScope": "xusd-straitsx",
-    "scoring": {
-      "maxSourceAgeSec": 4000000
-    },
     "display": {
       "url": "https://www.straitsx.com/xusd",
       "label": "StraitsX"
@@ -95,7 +92,9 @@
       "product": "XUSD",
       "profile": "straitsx-v1",
       "indexHost": "www.straitsx.com",
-      "reportHosts": ["cdn.prod.website-files.com"]
+      "reportHosts": [
+        "cdn.prod.website-files.com"
+      ]
     }
   },
   "launchDate": "2024-07-17"

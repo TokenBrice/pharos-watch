@@ -22,3 +22,27 @@ export function makeNoopD1<T extends NoopD1Overrides = Record<never, never>>(
 
   return Object.assign(database, overrides ?? {}) as unknown as D1Database & T;
 }
+
+/**
+ * prepare/bind/run D1 double that counts run() attempts and fails selected
+ * attempts with a caller-supplied error, for retry/backoff coverage. Attempts
+ * are 1-based; returning null succeeds with a single-change D1 result.
+ */
+export function makeRunCountingNoopD1(
+  errorForAttempt: (attempt: number) => Error | null = () => null,
+): D1Database & { getRunCount(): number } {
+  let runCount = 0;
+  return makeNoopD1({
+    prepare: () => ({
+      bind: () => ({
+        run: async () => {
+          runCount += 1;
+          const error = errorForAttempt(runCount);
+          if (error) throw error;
+          return { success: true, meta: { changes: 1 } };
+        },
+      }),
+    }),
+    getRunCount: () => runCount,
+  });
+}

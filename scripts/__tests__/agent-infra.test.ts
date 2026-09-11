@@ -30,11 +30,13 @@ describe("agent hook setup", () => {
     const directory = mkdtempSync(resolve(tmpdir(), "pharos-agent-hooks-"));
     temporaryDirectories.push(directory);
     const hooksPath = resolve(directory, "hooks.json");
+    const options = { hooksPath, configPath: resolve(directory, "absent-config.toml"),
+      worktreePaths: { checkoutRoot: directory, commonDir: resolve(directory, ".git") } };
     vi.spyOn(console, "log").mockImplementation(() => undefined);
 
-    expect(runAgentHookSetup({ hooksPath, install: false })).toBe(1);
-    expect(runAgentHookSetup({ hooksPath, install: true })).toBe(0);
+    expect(runAgentHookSetup({ ...options, install: false })).toBe(1);
+    expect(runAgentHookSetup({ ...options, install: true })).toBe(0);
     expect(readFileSync(hooksPath, "utf8")).toBe(renderCodexHookConfig());
-    expect(runAgentHookSetup({ hooksPath, install: false })).toBe(0);
+    expect(runAgentHookSetup({ ...options, install: false })).toBe(0);
   });
 });

@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { RISK_FREE_RATE_FALLBACK } from "../../lib/constants";
 import { mockCircuitOutcomeRecord, mockFetchRetry } from "../../test-helpers/cron";
 import {
+  BOE_SONIA_COMPOUNDED_INDEX_CSV_SNIPPET,
   installCacheByKey,
   installBenchmarkFetch,
   makeBenchmarkCacheEntry,
@@ -9,24 +10,12 @@ import {
   makeRiskFreeRatesCacheRow,
   makeTbillFetchRoutes,
   makeUnavailableTbillFetchRoutes,
+  TREASURY_XML_SNIPPET,
   type BenchmarkFetchRoutes,
 } from "./rates-cron.test-support";
 import { YIELD_BENCHMARK_KEY_VALUES } from "@shared/types/yield";
 
 vi.mock("../../lib/fetch-retry", () => mockFetchRetry({ fetchWithRetry: vi.fn(), passthroughNonResponse: true }));
-
-const cadenceMocks = vi.hoisted(() => ({
-  claimCadenceBucket: vi.fn(),
-  completeCadenceBucket: vi.fn(),
-  failCadenceBucket: vi.fn(),
-}));
-
-vi.mock("../../lib/cadence-bucket", () => ({
-  cadenceBucketFor: (scheduledAtSec: number, cadenceSec: number) => Math.floor(scheduledAtSec / cadenceSec),
-  claimCadenceBucket: cadenceMocks.claimCadenceBucket,
-  completeCadenceBucket: cadenceMocks.completeCadenceBucket,
-  failCadenceBucket: cadenceMocks.failCadenceBucket,
-}));
 
 vi.mock("../../lib/db-cache", () => ({
   getCache: vi.fn(),
@@ -63,27 +52,8 @@ import { getCache, setCache } from "../../lib/db-cache";
 import { logCronEvent } from "../../lib/cron-logger";
 import { shouldAttemptFetch, recordOutcome } from "../../lib/circuit-breaker";
 
-const TREASURY_XML_SNIPPET = `<QR_BC_CM><LIST_G_WEEK_OF_MONTH>
-<G_WEEK_OF_MONTH><LIST_G_NEW_DATE>
-<G_NEW_DATE><LIST_G_BC_CAT><G_BC_CAT>
-<BC_3MONTH>3.71</BC_3MONTH>
-</G_BC_CAT></LIST_G_BC_CAT><NEW_DATE>03-12-2026</NEW_DATE></G_NEW_DATE>
-<G_NEW_DATE><LIST_G_BC_CAT><G_BC_CAT>
-<BC_3MONTH>3.72</BC_3MONTH>
-</G_BC_CAT></LIST_G_BC_CAT><NEW_DATE>03-13-2026</NEW_DATE></G_NEW_DATE>
-</LIST_G_NEW_DATE></G_WEEK_OF_MONTH>
-</LIST_G_WEEK_OF_MONTH></QR_BC_CM>`;
-
-const BOE_SONIA_COMPOUNDED_INDEX_CSV_SNIPPET = "DATE,IUDZOS2\n01 Jan 2026,100\n01 Apr 2026,101\n";
 // ALFRED graph CSV uses the same observation shape with a date-stamped series column.
 const ALFRED_SONIA_COMPOUNDED_INDEX_CSV_SNIPPET = "observation_date,IUDZOS2_20260625\n2026-01-01,100\n2026-04-01,101\n";
-const CBRT_TLREF_JSON_SNIPPET = JSON.stringify({
-  totalCount: 2,
-  items: [
-    { Tarih: "06-05-2026", TP_BISTTLREF_ORAN: "39.99" },
-    { Tarih: "06-08-2026", TP_BISTTLREF_ORAN: "40.00" },
-  ],
-});
 function mockTbillByUrl(overrides: BenchmarkFetchRoutes = {}, calls?: string[]) {
   installBenchmarkFetch(vi.mocked(fetchWithRetry), makeTbillFetchRoutes(overrides), calls);
 }
@@ -110,17 +80,6 @@ const FROZEN_NOW = new Date("2026-06-25T12:00:00Z");
 beforeEach(() => {
   vi.useFakeTimers({ toFake: ["Date"] });
   vi.setSystemTime(FROZEN_NOW);
-  cadenceMocks.claimCadenceBucket.mockReset().mockResolvedValue({
-    kind: "claimed",
-    claim: {
-      key: "fetch-tbill-rate:weekly",
-      bucket: 0,
-      generation: "test-generation",
-      serializedClaim: "test-claim",
-    },
-  });
-  cadenceMocks.completeCadenceBucket.mockReset().mockResolvedValue(true);
-  cadenceMocks.failCadenceBucket.mockReset().mockResolvedValue(true);
 });
 
 afterEach(() => {
@@ -223,16 +182,28 @@ describe("fetchTbillRate", () => {
   });
 
   it("returns ok from benchmark feeds", async () => {
-    mockTbillByUrl({
-      "id=DGS3MO": (_url, opts) => {
-        expect((opts?.headers as Record<string, string> | undefined)?.["User-Agent"])
-          .toBe("Pharos/1.0 (+https://pharos.watch)");
-        return new Response("DATE,DGS3MO\n2026-03-02,3.72\n", { status: 200 });
-      },
-    });
+    mockTbillByUrl();
 
     const result = await fetchTbillRate(db, undefined, BANXICO_TEST_ENV);
     const metadata = JSON.parse(result.metadata ?? "{}") as Record<string, unknown>;
+    const requests = vi.mocked(fetchWithRetry).mock.calls;
+    const requestOptions = (part: string) => {
+      const request = requests.find(([url]) => String(url).includes(part));
+      expect(request, part).toBeDefined();
+      return request![1];
+    };
+    expect(new Headers(requestOptions("id=DGS3MO")?.headers).get("User-Agent"))
+      .toBe("Pharos/1.0 (+https://pharos.watch)");
+    expect(new Headers(requestOptions("banxico.org.mx")?.headers).get("Bmx-Token")).toBe("test-token");
+    expect(requestOptions("DailyInfoWebServ")?.method).toBe("POST");
+    expect(String(requestOptions("DailyInfoWebServ")?.body)).toContain("KeyRateXML");
+    expect(requestOptions("evds3.tcmb.gov.tr/igmevdsms-dis/fe")?.method).toBe("POST");
+    expect(JSON.parse(String(requestOptions("evds3.tcmb.gov.tr/igmevdsms-dis/fe")?.body)))
+      .toMatchObject({ series: "TP.BISTTLREF.ORAN" });
+    const urls = requests.map(([url]) => String(url));
+    for (const fallback of ["id=DFF", "alfred.stlouisfed.org", "bankofengland.co.uk", "home.treasury.gov"]) {
+      expect(urls.filter((url) => url.includes(fallback))).toEqual([]);
+    }
 
     expect(result.status).toBe("ok");
     expect(metadata.fallbackMode).toBeNull();
@@ -294,30 +265,23 @@ describe("fetchTbillRate", () => {
     expect(Object.keys(latestStructuredCachePayload().benchmarks)).toEqual([...YIELD_BENCHMARK_KEY_VALUES]);
   });
 
-  it("skips weekly benchmark descriptors on a second run in the same week", async () => {
+  it("fetches every benchmark descriptor on each daily run", async () => {
     const calls: string[] = [];
     mockTbillByUrl({}, calls);
-    cadenceMocks.claimCadenceBucket
-      .mockResolvedValueOnce({
-        kind: "claimed",
-        claim: {
-          key: "fetch-tbill-rate:weekly",
-          bucket: 1,
-          generation: "first",
-          serializedClaim: "first-claim",
-        },
-      })
-      .mockResolvedValueOnce({ kind: "skip", reason: "already-completed", bucket: 1 });
 
     await fetchTbillRate(db, undefined, BANXICO_TEST_ENV);
     await fetchTbillRate(db, undefined, BANXICO_TEST_ENV);
 
-    expect(calls.filter((url) => url.includes("data-api.ecb.europa.eu"))).toHaveLength(1);
+    expect(calls.filter((url) => url.includes("data-api.ecb.europa.eu"))).toHaveLength(2);
     expect(calls.filter((url) => url.includes("id=DGS3MO"))).toHaveLength(2);
-    expect(calls.filter((url) => url.includes("report-download"))).toHaveLength(1);
+    expect(calls.filter((url) => url.includes("report-download"))).toHaveLength(2);
+    const circuitOutcomes = vi.mocked(recordOutcome).mock.calls.map(([, key]) => key);
+    for (const key of YIELD_BENCHMARK_KEY_VALUES.filter((key) => key !== "SGD")) {
+      expect(circuitOutcomes.filter((circuitKey) => circuitKey === `TREASURY_RATES:${key}`)).toHaveLength(2);
+    }
   });
 
-  it("isolates an open weekly descriptor circuit from the other descriptors", async () => {
+  it("isolates an open descriptor circuit from the other descriptors", async () => {
     const calls: string[] = [];
     mockTbillByUrl({}, calls);
     vi.mocked(shouldAttemptFetch).mockImplementation(
@@ -901,59 +865,6 @@ describe("fetchTbillRate — new currency fetchers", () => {
     vi.mocked(setCache).mockReset().mockResolvedValue(undefined);
     vi.mocked(shouldAttemptFetch).mockReset().mockResolvedValue(true);
     vi.mocked(recordOutcome).mockReset().mockResolvedValue(mockCircuitOutcomeRecord());
-  });
-
-  it("hits each new endpoint URL and parses its native shape", async () => {
-    const calls: string[] = [];
-    mockNewCurrencyByUrl({
-      "banxico.org.mx": (_url, opts) => {
-        const header = (opts?.headers as Record<string, string> | undefined)?.["Bmx-Token"];
-        expect(header).toBe("test-token");
-        return new Response(
-          JSON.stringify({ bmx: { series: [{ datos: [{ fecha: "26/03/2026", dato: "10.45" }] }] } }),
-          { status: 200 },
-        );
-      },
-      "DailyInfoWebServ": (_url, opts) => {
-        expect(opts?.method).toBe("POST");
-        expect(String(opts?.body ?? "")).toContain("KeyRateXML");
-        return new Response(
-          "<KeyRate><KR><DT>2026-06-11T00:00:00+03:00</DT><Rate>14.50</Rate></KR></KeyRate>",
-          { status: 200 },
-        );
-      },
-      "evds3.tcmb.gov.tr/igmevdsms-dis/fe": (_url, opts) => {
-        expect(opts?.method).toBe("POST");
-        expect(String(opts?.body ?? "")).toContain('"series":"TP.BISTTLREF.ORAN"');
-        return new Response(CBRT_TLREF_JSON_SNIPPET, { status: 200 });
-      },
-    }, calls);
-
-    const result = await fetchTbillRate(db, undefined, { BANXICO_TOKEN: "test-token" });
-    const metadata = JSON.parse(result.metadata ?? "{}") as Record<string, unknown>;
-
-    expect(result.status).toBe("ok");
-    expect(metadata.usdEffrRate).toBe(4.33);
-    expect(metadata.gbpRate).toBeCloseTo(4.05556, 5);
-    expect(metadata.jpyRate).toBe(0.1);
-    expect(metadata.audRate).toBe(4.3);
-    expect(metadata.mxnRate).toBe(10.45);
-    expect(metadata.brlRate).toBeCloseTo(13.638253562615565, 12);
-    expect(metadata.cadRate).toBe(4.75);
-    expect(metadata.rubRate).toBe(14.5);
-    expect(metadata.tryRate).toBe(40);
-    expect(calls.some((u) => u.includes("markets.newyorkfed.org"))).toBe(true);
-    expect(calls.some((u) => u.includes("id=DFF"))).toBe(false);
-    expect(calls.some((u) => u.includes("fred.stlouisfed.org/graph/fredgraph.csv?id=IUDZOS2"))).toBe(true);
-    expect(calls.some((u) => u.includes("alfred.stlouisfed.org/graph/alfredgraph.csv?id=IUDZOS2"))).toBe(false);
-    expect(calls.some((u) => u.includes("bankofengland.co.uk") && u.includes("SeriesCodes=IUDZOS2"))).toBe(false);
-    expect(calls.some((u) => u.includes("stat-search.boj.or.jp"))).toBe(true);
-    expect(calls.some((u) => u.includes("rba.gov.au/statistics/tables/csv/f1-data.csv"))).toBe(true);
-    expect(calls.some((u) => u.includes("banxico.org.mx"))).toBe(true);
-    expect(calls.some((u) => u.includes("api.bcb.gov.br"))).toBe(true);
-    expect(calls.some((u) => u.includes("bankofcanada.ca/valet"))).toBe(true);
-    expect(calls.some((u) => u.includes("cbr.ru/DailyInfoWebServ/DailyInfo.asmx"))).toBe(true);
-    expect(calls.some((u) => u.includes("evds3.tcmb.gov.tr/igmevdsms-dis/fe"))).toBe(true);
   });
 
   it("skips Banxico when BANXICO_TOKEN is missing", async () => {

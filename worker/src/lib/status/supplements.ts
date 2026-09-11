@@ -545,7 +545,7 @@ export async function loadStatusSupplements(
       delta: entry.delta,
     }));
     driftEntries.sort((a, b) => b.delta - a.delta);
-    if (driftEntries.length > 0) reserveDrift = driftEntries;
+    reserveDrift = driftEntries;
   } catch (err) {
     logStatusSupplementWarning(
       "reserve_drift_computation_failed",
@@ -574,7 +574,7 @@ export async function loadStatusSupplements(
         });
       }
     }
-    if (warnings.length > 0) classificationWarnings = warnings;
+    classificationWarnings = warnings;
   } catch (err) {
     logStatusSupplementWarning(
       "classification_warnings_computation_failed",

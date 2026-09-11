@@ -133,4 +133,24 @@ describe("safety-score-v9 composite ceiling gate", () => {
     expect(report.variants.map((variant) => variant.name)).toEqual(["unrestricted", "non-wrapper"]);
     expect(report.passed).toBe(false);
   });
+
+  it("separates wrapper, non-issuer, and issuer donor frontiers at the exact A+ threshold", () => {
+    const report = runCompositeCeilingGate(gateInput({
+      replay: { cards: [
+        { ...donorCard("wrapper", { backing: 95, exit: 95, control: 95 }), caps: [{ source: "parent" }] },
+        donorCard("non-issuer", { backing: 87, exit: 87, control: 87 }),
+        donorCard("issuer", { backing: 80, exit: 80, control: 80 }),
+        { ...donorCard("nr", { backing: 100, exit: 100, control: 100 }), grade: "NR" },
+        { ...donorCard("null", { backing: 100, exit: 100, control: 100 }), score: null },
+      ] },
+      registry: ["wrapper", "issuer", "nr", "null"].map((id) => ({ id, mechanismArchetype: "fiat-cash" })),
+    }));
+
+    expect(report.variants).toEqual([
+      { name: "unrestricted", composite: 95, passed: true },
+      { name: "non-wrapper", composite: 87, passed: true },
+      { name: "issuer-class", composite: 80, passed: false },
+    ]);
+    expect(report.passed).toBe(false);
+  });
 });

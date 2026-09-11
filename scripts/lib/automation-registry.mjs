@@ -47,7 +47,7 @@ export const DEPLOY_IMPACT_REGISTRY = {
     workflowOnlyExactPaths: [".github/workflows/pages-release.yml", ".github/workflows/rebuild-pages.yml"],
   },
   worker: {
-    exactPaths: [],
+    exactPaths: ["shared/data/funding/donations.json"],
     prefixes: ["worker/"],
     sharedExcludedPaths: [
       "shared/lib/pharosville-api-contract.ts",
@@ -62,6 +62,7 @@ export const DEPLOY_IMPACT_REGISTRY = {
     exactPaths: [
       "package-lock.json",
       "package.json",
+      "shared/data/funding/donations.json",
       "worker/package.json",
       "worker/tsconfig.json",
       "worker/wrangler.toml",
@@ -147,11 +148,12 @@ export const GENERATED_ARTIFACT_REGISTRY = [
     checkCommand: "tsx scripts/maintenance/generate-case-study-client-index.ts --check",
     command: "tsx scripts/maintenance/generate-case-study-client-index.ts",
     bootstrap: true,
+    dependsOn: ["stablecoin-client-registry"],
     outputPaths: ["src/lib/case-study-client-index.ts"],
-    phase: 0,
+    phase: 2,
     reproducibility: "deterministic",
     script: "scripts/maintenance/generate-case-study-client-index.ts",
-    sourcePaths: ["src/lib/case-studies/**"],
+    sourcePaths: ["src/lib/case-studies/**", "shared/data/dead-stablecoins.json", "shared/data/stablecoins/coins.client.list.generated.json"],
   }),
   generatedArtifact({
     id: "docs-metadata",

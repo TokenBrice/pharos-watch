@@ -2,8 +2,9 @@
   "id": "avusd-avant",
   "reserves": [
     {
-      "name": "Net stablecoin exposure (long stablecoin positions net of stablecoin borrowings)",
-      "pct": 99.989,
+      "sourceKey": "avant-reserves-api:stablecoin-long",
+      "name": "Long stablecoin positions (gross)",
+      "pct": 98.0555,
       "risk": "medium",
       "assetClass": "stablecoin",
       "issuerOrObligor": "Avant Protocol market-neutral strategy contracts across Aave, Morpho, Kamino, Ethena, and other DeFi protocols",
@@ -11,8 +12,9 @@
       "liquidityHorizon": "seven-days"
     },
     {
-      "name": "Residual hedged crypto, altcoin and derivative exposure",
-      "pct": 0.011,
+      "sourceKey": "avant-reserves-api:other-long",
+      "name": "Long altcoin, token and derivative positions (gross)",
+      "pct": 1.9445,
       "risk": "high",
       "assetClass": "hedged-crypto",
       "issuerOrObligor": "Avant Protocol market-neutral strategy contracts",
@@ -21,8 +23,8 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-08-29",
-    "reviewer": "Codex Avant current transparency review",
+    "reviewedAt": "2026-09-09",
+    "reviewer": "pharos-live-reserve-upgrade (Avant transparency API gross-position re-review)",
     "confidence": "verified",
     "sources": [
       {
@@ -38,26 +40,26 @@
         "url": "https://app.rwa.xyz/assets/avUSD"
       }
     ],
-    "rationale": "Re-opened 2026-08-29. Avant's transparency API latest balance-sheet snapshot is dated 2026-08-25 and reports net NAV $132,520,233.75. Its category breakdown reports net stablecoin exposure $132,505,616.90, positive Other $16,902,033.48, ETH/derivatives $4,855.66, AVAX/derivatives $2,754.29, BTC/derivatives $3.97, and perpetual hedges -$16,895,041.40. The residual non-stablecoin net exposure is $14,616.85. Percentages below normalize those two net categories to NAV (99.989% and 0.011%), without scaling gross or signed positions into fictitious reserves. The stablecoin category remains a basket because long and short positions are not published as a reconciled, holder-exitable allocation by tracked dependency.",
-    "compositionBasis": "Avant Protocol avUSD transparency API net asset breakdown dated 2026-08-25; category values normalized to reported net NAV",
-    "compositionAsOf": "2026-08-25",
+    "rationale": "Re-opened 2026-09-09 against the 2026-09-01T23:59:59Z reserve snapshot (the yield-comparison clock is a separate daily refresh and is not reserve freshness). The leveraged book is expressed gross, never net: gross long positions total $1,024,715,743.45 across Stablecoins ($1,004,786,422.72), Other ($19,921,859.53), ETH/derivatives ($4,780.33), AVAX/derivatives ($2,676.97) and BTC/derivatives ($3.90), while gross debt totals $891,966,994.74 including $19,914,992.49 of perpetual shorts, with net NAV $132,748,763.37 and leverage coverage 114.88%. Percentages below normalize the long categories to the gross-long total; the ETH/AVAX/BTC derivative longs round below slice precision and fold into the altcoin bucket. Netting the $892m debt into 'stablecoins' would hide material leverage, so debt is published as separate disclosure totals and never enters the slices.",
+    "compositionBasis": "Avant Protocol avUSD transparency API gross long positions dated 2026-09-01, normalized to the gross-long total; gross debt and net NAV carried as disclosure totals",
+    "compositionAsOf": "2026-09-01",
     "scope": "full-composition",
-    "knownUnknownExposure": "The API publishes a net stablecoin category but does not provide a clean supply-weighted split by individual tracked stablecoin; gross long/short legs, strategy counterparties, and off-chain custody terms remain unresolved.",
-    "knownUnknownExposurePct": 99.989,
+    "knownUnknownExposure": "Gross long legs are strategy positions, not a reconciled holder-exitable allocation by tracked stablecoin; the issuer reports $17,318,101.27 in bridge positions whose venue chains are not itemized and marks some USDC/HYPE positions with an unknown chain. Counterparty, custody and rehypothecation terms remain unresolved.",
+    "knownUnknownExposurePct": 98.0555,
     "nonLinkDispositions": [
       {
         "reserveIndex": 0,
-        "reserveName": "Net stablecoin exposure (long stablecoin positions net of stablecoin borrowings)",
-        "pct": 99.989,
+        "reserveName": "Long stablecoin positions (gross)",
+        "pct": 98.0555,
         "disposition": "basket-needs-split",
-        "rationale": "The API reports a net category spanning USDe, USDT, USDC, PYUSD, USDG, syrupUSDT, syrupUSDC, and other long/short positions, but no reconciled net allocation by tracked stablecoin."
+        "rationale": "The API reports gross long legs spanning USDe, syrupUSDT, syrupUSDC, USDC, USDT, USDG, PYUSD and other tokens with matching debt legs, but no reconciled holder-exitable allocation by tracked stablecoin; the long legs are strategy positions of a leveraged book."
       },
       {
         "reserveIndex": 1,
-        "reserveName": "Residual hedged crypto, altcoin and derivative exposure",
-        "pct": 0.011,
+        "reserveName": "Long altcoin, token and derivative positions (gross)",
+        "pct": 1.9445,
         "disposition": "untracked-exogenous-asset",
-        "rationale": "The residual is the net of altcoin, crypto-derivative, and perpetual-hedge positions that largely offset; it is treated as untracked exogenous hedged-crypto exposure."
+        "rationale": "Long HYPE, sENA, ENA and other altcoin/token positions plus the ETH/AVAX/BTC derivative longs are strategy legs; they are treated as untracked exogenous hedged-crypto exposure."
       }
     ]
   },

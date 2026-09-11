@@ -36,7 +36,7 @@
   ],
   "governanceQuality": "multisig",
   "liveReservesConfig": {
-    "adapter": "pusd-vault",
+    "adapter": "escrow-balance",
     "version": 1,
     "semantics": "single-asset",
     "breakerScope": "pusd-polymarket",
@@ -52,18 +52,23 @@
       }
     },
     "params": {
-      "vaultAddress": "0xc417fd8e9661c0d2120b64a04bb3278c17e99db1",
-      "assets": [
+      "compareToCoinSupply": true,
+      "holderEligibility": "any-holder",
+      "settlementDelaySec": 0,
+      "reads": [
         {
-          "address": "0x2791bca1f2de4661ed88a30c99a7a9449aa84174",
+          "contract": "0x2791bca1f2de4661ed88a30c99a7a9449aa84174",
+          "erc20BalanceOf": "0xc417fd8e9661c0d2120b64a04bb3278c17e99db1",
           "decimals": 6
         },
         {
-          "address": "0x3c499c542cef5e3811e1192ce70d8cc03d5c3359",
+          "contract": "0x3c499c542cef5e3811e1192ce70d8cc03d5c3359",
+          "erc20BalanceOf": "0xc417fd8e9661c0d2120b64a04bb3278c17e99db1",
           "decimals": 6
         }
       ],
       "slice": {
+        "blacklistable": true,
         "name": "USDC / USDC.e on Polygon",
         "risk": "low",
         "coinId": "usdc-circle",

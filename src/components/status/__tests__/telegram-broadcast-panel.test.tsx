@@ -2,6 +2,7 @@
 
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { AdminMutationError } from "@/lib/admin-access";
 
 const { adminMutationMock } = vi.hoisted(() => ({
   adminMutationMock: vi.fn(),
@@ -96,5 +97,98 @@ describe("TelegramBroadcastPanel", () => {
 
     await waitFor(() => expect(adminMutationMock).toHaveBeenCalledTimes(1));
     expect(adminMutationMock.mock.calls[0]?.[1]?.body).not.toHaveProperty("canaryChatId");
+  });
+
+  it("requires re-preview after the previewed draft is edited", async () => {
+    adminMutationMock.mockResolvedValue(okResult({ targetChatCount: 12, chunkCount: 1 }));
+    render(<TelegramBroadcastPanel />);
+
+    typeMessage("<b>Draft A</b>");
+    // A valid canary is required on top of the confirmed preview.
+    fireEvent.change(screen.getByLabelText("Canary chat ID (private chat)"), { target: { value: "123456789" } });
+    fireEvent.click(button("Preview (dry run)"));
+    await waitFor(() => expect(button("Send live broadcast").disabled).toBe(false));
+
+    // Editing the message breaks the confirmed draft identity: the live send
+    // must not transmit an unreviewed body.
+    typeMessage("<b>Draft B</b>");
+    expect(button("Send live broadcast").disabled).toBe(true);
+
+    // A fresh preview of Draft B re-establishes the confirmation, and the
+    // re-preview request carries the edited draft.
+    fireEvent.click(button("Preview (dry run)"));
+    await waitFor(() => expect(adminMutationMock).toHaveBeenCalledTimes(2));
+    expect(adminMutationMock.mock.calls[1]?.[1]?.body).toMatchObject({ messageHtml: "<b>Draft B</b>" });
+    await waitFor(() => expect(button("Send live broadcast").disabled).toBe(false));
+
+    // Switching the audience the draft was previewed for re-locks the send.
+    fireEvent.change(screen.getByLabelText("Audience"), { target: { value: "global-subscribers" } });
+    expect(button("Send live broadcast").disabled).toBe(true);
+    expect(adminMutationMock).toHaveBeenCalledTimes(2);
+  });
+
+  it("leaves the live send disabled when the preview fails", async () => {
+    adminMutationMock.mockRejectedValue(
+      new AdminMutationError("Preview rejected", { ...okResult({ targetChatCount: 0 }), status: 422 }),
+    );
+    render(<TelegramBroadcastPanel />);
+
+    typeMessage();
+    fireEvent.click(button("Preview (dry run)"));
+
+    await waitFor(() => expect(adminMutationMock).toHaveBeenCalledTimes(1));
+    expect(button("Send live broadcast").disabled).toBe(true);
+  });
+
+  it("does not queue a duplicate preview while one is still in flight", async () => {
+    const { promise: pendingPreview, resolve: releasePreview } = Promise.withResolvers<unknown>();
+    adminMutationMock.mockReturnValue(pendingPreview);
+    render(<TelegramBroadcastPanel />);
+
+    typeMessage();
+    fireEvent.click(button("Preview (dry run)"));
+    // The busy lane disables both actions; a click in that state must not
+    // start a second request behind the pending one.
+    const previewingButton = screen.getByRole("button", { name: "Previewing..." }) as HTMLButtonElement;
+    expect(previewingButton.disabled).toBe(true);
+    expect(button("Send live broadcast").disabled).toBe(true);
+    fireEvent.click(previewingButton);
+    expect(adminMutationMock).toHaveBeenCalledTimes(1);
+
+    releasePreview(okResult({ targetChatCount: 1 }));
+    await waitFor(() => expect(button("Preview (dry run)").disabled).toBe(false));
+  });
+
+  it("enforces whitespace and message-length boundaries on both actions", () => {
+    render(<TelegramBroadcastPanel />);
+
+    typeMessage("   \n\t");
+    expect(button("Preview (dry run)").disabled).toBe(true);
+    expect(button("Send live broadcast").disabled).toBe(true);
+
+    typeMessage("a".repeat(16_000));
+    expect(button("Preview (dry run)").disabled).toBe(false);
+
+    typeMessage(`${"a".repeat(16_000)}!`);
+    expect(button("Preview (dry run)").disabled).toBe(true);
+    expect(button("Send live broadcast").disabled).toBe(true);
+  });
+
+  it("requires a valid canary chat id even after a confirmed preview", async () => {
+    adminMutationMock.mockResolvedValue(okResult({ targetChatCount: 5 }));
+    render(<TelegramBroadcastPanel />);
+
+    typeMessage();
+    fireEvent.click(button("Preview (dry run)"));
+    await waitFor(() => expect(adminMutationMock).toHaveBeenCalledTimes(1));
+    // No canary yet: the fleet send stays locked.
+    expect(button("Send live broadcast").disabled).toBe(true);
+
+    // Leading zero is not a valid private chat id.
+    fireEvent.change(screen.getByLabelText("Canary chat ID (private chat)"), { target: { value: "0123456789" } });
+    expect(button("Send live broadcast").disabled).toBe(true);
+
+    fireEvent.change(screen.getByLabelText("Canary chat ID (private chat)"), { target: { value: "123456789" } });
+    expect(button("Send live broadcast").disabled).toBe(false);
   });
 });

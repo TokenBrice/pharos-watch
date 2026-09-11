@@ -2,6 +2,7 @@
   "id": "apxusd-apyx",
   "reserves": [
     {
+      "sourceKey": "accountable:apyx:deployment:strc",
       "name": "STRC (Strategy preferred equity, BTC-linked)",
       "pct": 58.4,
       "risk": "high",
@@ -16,6 +17,7 @@
       "liquidityHorizon": "unknown"
     },
     {
+      "sourceKey": "accountable:apyx:deployment:inventory",
       "name": "Inventory",
       "pct": 17.0,
       "risk": "high",
@@ -30,6 +32,7 @@
       "liquidityHorizon": "unknown"
     },
     {
+      "sourceKey": "accountable:apyx:deployment:protocol-owned-liquidity",
       "name": "Protocol Owned Liquidity",
       "pct": 17.3,
       "risk": "high",
@@ -44,6 +47,7 @@
       "liquidityHorizon": "unknown"
     },
     {
+      "sourceKey": "accountable:apyx:deployment:cash-equivalents",
       "name": "Cash & Equivalents (USDC, U.S. Treasury Bills)",
       "pct": 7.3,
       "risk": "very-low",

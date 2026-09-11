@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { createLatestSchemaSqlite } from "../../../test-helpers/latest-schema-sqlite";
+import { createLatestSchemaSqlite } from "@shared/test-utils/latest-schema-sqlite";
 
 function openSqliteWithMigrations(): import("node:sqlite").DatabaseSync {
   return createLatestSchemaSqlite().sqlite;

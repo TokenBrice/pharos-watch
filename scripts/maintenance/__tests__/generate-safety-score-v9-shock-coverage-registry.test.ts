@@ -1,33 +1,27 @@
-import { readFileSync } from "node:fs";
-import { resolve } from "node:path";
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { dirname, resolve } from "node:path";
 
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it } from "vitest";
 
 import {
   SHOCK_COVERAGE_REGISTRY_PATH,
   SHOCK_COVERAGE_REPLAY_ATTESTATIONS_PATH,
   buildShockCoverageMeasurementRegistry,
   collectShockCoverageCaptureSources,
-  collectShockCoverageJournalPaths,
   renderShockCoverageMeasurementRegistry,
 } from "../generate-safety-score-v9-shock-coverage-registry";
 
 const REPO_ROOT = resolve(import.meta.dirname, "../../..");
 
-// This case reads, schema-parses, and hashes every committed shock-coverage journal.
-// The corpus grows with each capture — the 2026-08-17 refresh alone added roughly
-// 38k lines — so the default 5s budget is exceeded on CI runners while still passing
-// locally. The assertion is a whole-corpus projection proof, so narrowing its input
-// would weaken it; give it an explicit budget instead, as the other whole-registry
-// V9 suites do.
-const SHOCK_COVERAGE_REGISTRY_TEST_TIMEOUT_MS = 60_000;
+// Compact summaries project committed attestations; this does not replay journal bytes.
+// Byte integrity/replay belongs to generate-safety-score-v9-shock-coverage-attestations.
+const sources = collectShockCoverageCaptureSources(REPO_ROOT);
 
 describe("Safety Score v9 shock-coverage measurement registry", () => {
   it(
-    "is current and exactly projects every shock-coverage journal",
-    { timeout: SHOCK_COVERAGE_REGISTRY_TEST_TIMEOUT_MS },
+    "is current and exactly projects every compact shock-coverage summary",
     () => {
-    const journalPaths = collectShockCoverageJournalPaths(REPO_ROOT);
     const registry = buildShockCoverageMeasurementRegistry(REPO_ROOT);
     const rendered = renderShockCoverageMeasurementRegistry(registry);
     const committed = readFileSync(resolve(REPO_ROOT, SHOCK_COVERAGE_REGISTRY_PATH), "utf8");
@@ -39,7 +33,6 @@ describe("Safety Score v9 shock-coverage measurement registry", () => {
     );
 
     expect(committed).toBe(rendered);
-    expect(registry.measurements).toHaveLength(journalPaths.length);
     expect(
       registry.measurements.map((measurement) => [
         measurement.assetId,
@@ -58,8 +51,10 @@ describe("Safety Score v9 shock-coverage measurement registry", () => {
     );
 
     const sourceByJournalPath = new Map(
-      collectShockCoverageCaptureSources(REPO_ROOT).map((source) => [String(source.summary.summary.journalPath), source]),
+      sources.map((source) => [String(source.summary.summary.journalPath), source]),
     );
+    expect(registry.measurements.map((measurement) => measurement.journalPath).sort())
+      .toEqual([...sourceByJournalPath.keys()].sort());
     for (const measurement of registry.measurements) {
       const source = sourceByJournalPath.get(measurement.journalPath);
       if (!source) throw new Error(`Missing summary for ${measurement.journalPath}`);
@@ -99,4 +94,73 @@ describe("Safety Score v9 shock-coverage measurement registry", () => {
     expect(july17.map((measurement) => measurement.assetId)).toEqual(["bold-liquity", "lusd-liquity"]);
     },
   );
+  const roots: string[] = [];
+  afterEach(() => {
+    for (const root of roots.splice(0)) rmSync(root, { recursive: true, force: true });
+  });
+
+  function fixture() {
+    const root = mkdtempSync(resolve(tmpdir(), "shock-projection-"));
+    roots.push(root);
+    const summary = structuredClone(sources[0].summary);
+    const summaryPath = resolve(root, "shared/data/safety-score-v9/mechanism-measurements", summary.mechanism, "fixture.summary.json");
+    mkdirSync(dirname(summaryPath), { recursive: true });
+    writeFileSync(summaryPath, JSON.stringify(summary));
+    const attestation = {
+      journalPath: String(summary.summary.journalPath), journalSha256: summary.sha256,
+      attestedAt: "2026-09-01", exactReplayPassed: true, callsConsumed: 7, codePinsConsumed: 2,
+    };
+    const attestations = {
+      schemaVersion: 1, kind: "safety-score-v9-shock-coverage-replay-attestations",
+      replayTool: { path: "fixture-replay", version: "1", mode: "offline-byte-identical" },
+      attestedAt: "2026-09-01", attestations: [attestation],
+    };
+    const attestationPath = resolve(root, SHOCK_COVERAGE_REPLAY_ATTESTATIONS_PATH);
+    writeFileSync(attestationPath, JSON.stringify(attestations));
+    return { root, summary, summaryPath, attestation, attestations, attestationPath };
+  }
+
+  it("trusts only a passing attestation for the exact path and digest", () => {
+    const f = fixture();
+    expect(buildShockCoverageMeasurementRegistry(f.root).measurements[0]).toMatchObject({
+      exactReplayPassed: true, replayVerification: { callsConsumed: 7, codePinsConsumed: 2 },
+    });
+    for (const state of ["missing", "digest", "failed"]) {
+      if (state === "missing") rmSync(f.attestationPath);
+      else {
+        f.attestations.attestations = [{
+          ...f.attestation,
+          journalSha256: state === "digest" ? "0".repeat(64) : f.attestation.journalSha256,
+          exactReplayPassed: state !== "failed",
+        }];
+        writeFileSync(f.attestationPath, JSON.stringify(f.attestations));
+      }
+      expect(buildShockCoverageMeasurementRegistry(f.root).measurements[0]).toMatchObject({
+        exactReplayPassed: false, replayVerification: null,
+      });
+    }
+  });
+
+  it("rejects duplicate attestation paths", () => {
+    const f = fixture();
+    f.attestations.attestations.push({ ...f.attestation });
+    writeFileSync(f.attestationPath, JSON.stringify(f.attestations));
+    expect(() => buildShockCoverageMeasurementRegistry(f.root)).toThrow(/paths must be unique/);
+  });
+
+  it("rejects mechanism and journal-directory identity mismatches", () => {
+    const f = fixture();
+    writeFileSync(f.summaryPath, JSON.stringify({ ...f.summary, mechanism: "different-mechanism" }));
+    expect(() => buildShockCoverageMeasurementRegistry(f.root)).toThrow(/mechanism mismatch/);
+    f.summary.summary.journalPath = "captures/different-asset/capture.json";
+    writeFileSync(f.summaryPath, JSON.stringify(f.summary));
+    expect(() => buildShockCoverageMeasurementRegistry(f.root)).toThrow(/journal asset mismatch/);
+  });
+
+  it("rejects duplicate asset clocks even when their journal paths differ", () => {
+    const f = fixture();
+    f.summary.summary.journalPath = `captures/${f.summary.mechanism}/different.json`;
+    writeFileSync(resolve(dirname(f.summaryPath), "second.summary.json"), JSON.stringify(f.summary));
+    expect(() => buildShockCoverageMeasurementRegistry(f.root)).toThrow(/Duplicate shock-coverage measurement clock/);
+  });
 });

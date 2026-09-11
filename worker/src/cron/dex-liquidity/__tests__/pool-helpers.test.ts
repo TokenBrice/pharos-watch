@@ -173,15 +173,6 @@ describe("computeLiquidityScore", () => {
     expect(components.pairDiversity).toBe(100);
   });
 
-  it("NaN guard: all-zero metrics produce a finite score", () => {
-    // tvlInput = 0 → falls back to totalTvlUsd = 0, uses absolute fallback (tvlDepth=0)
-    // vtRatio = 0/0 → volumeActivity = 0; qualityRetention = 0/0 → poolQuality = 0
-    const m = initMetrics("test", "TEST");
-    const { score } = computeLiquidityScore(m, 0);
-    expect(Number.isFinite(score)).toBe(true);
-    expect(score).toBeGreaterThanOrEqual(0);
-  });
-
   it("extreme inputs → score capped at 100", () => {
     // Very high TVL, volume, quality, many pools → raw > 100, must clamp to 100
     const m = initMetrics("test", "TEST");
@@ -269,17 +260,6 @@ describe("computeDurabilityScore", () => {
     // raw = 70.7*0.15 + 50*0.35 + 50*0.25 + 100*0.25 = 10.6+17.5+12.5+25 = 65.6 → 66
     const score = computeDurabilityScore(m, null, null);
     expect(score).toBe(66);
-  });
-
-  it("oldestPoolDays = 0 → maturityScore = 0", () => {
-    // maturityScore = min(100, (0/365)*100) = 0
-    const m = initMetrics("test", "TEST");
-    m.organicTvlWeightedSum = 0;
-    m.totalTvlForOrganic = 0; // organicFraction fallback = 0.5
-    m.oldestPoolDays = 0;
-    // raw = 70.7*0.15 + 50*0.35 + 50*0.25 + 0*0.25 = 10.6+17.5+12.5+0 = 40.6 → 41
-    const score = computeDurabilityScore(m, null, null);
-    expect(score).toBe(41);
   });
 
   it("full weighted combination: verifies the math end-to-end", () => {

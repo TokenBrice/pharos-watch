@@ -5,17 +5,20 @@ import {
   makePendingDepegRow,
 } from "../../test-helpers/pending-depeg-fixtures";
 import { makeAsset } from "../../test-helpers/__shared/fixtures";
-import { createLatestSchemaFixtureTracker } from "../../test-helpers/latest-schema-sqlite";
+import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
 import {
   DEPEG_PENDING_EXPIRY_SEC,
   DEPEG_PENDING_MIN_AGE_SEC,
 } from "../../lib/constants";
 import { normalizePendingDepegRow } from "../../lib/depeg-pending";
+import { deriveDepegSignal } from "../../lib/depeg-signals";
 import type {
   CollectedConfirmationEvidence,
   ConfirmationPlanReady,
 } from "../pending-depeg-confirmation";
 import { evaluatePromotionDecision } from "../pending-depeg-confirmation-decision";
+import { collectConfirmationEvidence } from "../pending-depeg-confirmation-evidence";
+import { emptyEvidence } from "./pending-depeg-confirmation.test-support";
 
 const NOW_SEC = 1_700_000_000;
 const sqliteFixtures = createLatestSchemaFixtureTracker();
@@ -25,25 +28,6 @@ const makePendingRow = (overrides: Partial<ReturnType<typeof makePendingDepegRow
   makePendingDepegRow(overrides, { firstSeenBps: -220, firstPrice: 0.978 });
 const insertPending = insertPendingDepeg;
 
-function emptyEvidence(): CollectedConfirmationEvidence {
-  return {
-    confirmingSources: [],
-    opposingSources: [],
-    unavailableSources: [],
-    circuitOpenSources: [],
-    hardOpposingSources: [],
-    offchainStatus: "insufficient",
-    offchainSourceKey: null,
-    offchainPeakCandidate: null,
-    dexStatus: "insufficient",
-    dexPeakCandidates: [],
-    dexConfirmationKeys: [],
-    cexStatus: "insufficient",
-    cexPeakCandidate: null,
-    poolStatus: "insufficient",
-    poolConfirmations: [],
-  };
-}
 
 function makePlan(overrides: Partial<ConfirmationPlanReady> = {}): ConfirmationPlanReady {
   const row = overrides.row ?? makePendingRow();
@@ -368,6 +352,29 @@ describe("evaluatePromotionDecision", () => {
 });
 
 describe("evaluatePromotionDecision opposite-direction corroboration", () => {
+  it("collects fresh funded opposite-direction DEX evidence without promoting", async () => {
+    const { sqlite, db } = openFixture();
+    const row = makePendingRow({ id: 202 });
+    insertPending(sqlite, row);
+    const plan = makePlan({ row });
+    const evidence = await collectConfirmationEvidence({
+      ...plan, db, now: NOW_SEC, coingeckoAllowed: false, coingeckoApiKey: undefined, signal: undefined, cexAllowed: false, cexPrices: null,
+      dexPriceRows: new Map([[row.stablecoin_id, { stablecoin_id: row.stablecoin_id, dex_price_usd: 1.05, deviation_from_primary_bps: null, source_pool_count: 2, source_total_tvl: 5_000_000, updated_at: NOW_SEC - 30 }]]),
+      dexPriceSources: new Map([[row.stablecoin_id, [
+        { protocol: "curve", sourceFamily: "curve", chain: "ethereum", price: 1.05, tvl: 3_000_000, updatedAt: NOW_SEC - 30 },
+        { protocol: "uniswap", sourceFamily: "uniswap", chain: "ethereum", price: 1.04, tvl: 2_000_000, updatedAt: NOW_SEC - 30 },
+      ]]]),
+      poolChallengers: new Map(),
+    });
+    expect(evidence.dexConfirmationKeys).toEqual([]);
+    expect(evidence.dexStatus).toBe("contradict");
+    expect(evidence.unavailableSources).not.toContain("dex:aggregate-untrusted");
+    await settle(db, plan, evidence);
+    expect(readLifecycle(sqlite, row.stablecoin_id, row.id)).toMatchObject({
+      events: [], pending: undefined,
+      outcomes: [{ outcome: "rejected", final_decision_reason: "secondary-evidence-opposes" }],
+    });
+  });
   it.each([
     {
       id: 200,
@@ -387,12 +394,6 @@ describe("evaluatePromotionDecision opposite-direction corroboration", () => {
         opposingSources: ["coingecko-confirm"],
       }),
       expectedReject: true,
-    },
-    {
-      id: 202,
-      label: "DEX quote",
-      evidence: makeEvidence(),
-      expectedReject: false,
     },
     {
       id: 203,
@@ -433,5 +434,45 @@ describe("evaluatePromotionDecision opposite-direction corroboration", () => {
       expect(state.pending).toMatchObject({ id: row.id });
       expect(state.outcomes).toEqual([]);
     }
+  });
+});
+
+describe("evaluatePromotionDecision promotion peak aggregation across channels", () => {
+  it("promotes with the deepest CEX peak candidate and credits confirmed pools in the event record", async () => {
+    const { sqlite, db } = openFixture();
+    const row = makePendingRow({ id: 205, peak_seen_bps: -300, peak_price: 0.97 });
+    insertPending(sqlite, row);
+    const plan = makePlan({
+      row,
+      authoritativePrice: 0.95,
+      primaryStatus: "confirm",
+      primarySameDirectionDepegged: true,
+      primaryConfirmationSources: ["primary:oracle:pyth", "primary:oracle:chainlink"],
+      temporalSameDirectionConfirmed: true,
+    });
+    const evidence = makeEvidence({
+      cexStatus: "confirm",
+      cexPeakCandidate: { bps: -700, price: 0.93 },
+      poolStatus: "confirm",
+      poolConfirmations: [{
+        key: "curve:curve",
+        pool: { price: 0.94, tvlUsd: 6_000_000, protocol: "curve", sourceFamily: "curve", chain: "ethereum" },
+        signal: deriveDepegSignal(0.94, 1)!,
+      }],
+    });
+
+    await settle(db, plan, evidence);
+
+    const state = readLifecycle(sqlite, row.stablecoin_id, row.id);
+    expect(state.pending).toBeUndefined();
+    expect(state.events[0]).toMatchObject({
+      peak_deviation_bps: -700,
+      peak_price: 0.93,
+      confirmation_sources: "temporal:15m+primary:oracle:pyth+primary:oracle:chainlink+cex:binance+pool:curve:curve",
+    });
+    expect(state.outcomes[0]).toMatchObject({
+      outcome: "promoted",
+      final_decision_reason: "confirmed-by:temporal:15m+primary:oracle:pyth+primary:oracle:chainlink+cex:binance+pool:curve:curve",
+    });
   });
 });

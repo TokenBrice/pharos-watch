@@ -5,7 +5,6 @@ import { encodeUint256 } from "../../lib/evm-selectors";
 import { getPublicRpcUrl } from "../../lib/public-rpc-registry";
 import { rethrowIfAborted } from "../../lib/abort";
 import {
-  buildCoverageShortfallWarnings,
   buildRedemptionSnapshotMetadata,
   decimalNumberFromBigInt,
   fetchJsonAdapterInput,
@@ -41,12 +40,13 @@ export function adaptRiverProtocolInfo(payload: RiverProtocolInfoPayload): Adapt
   if (!Number.isFinite(totalReserveUsd) || !Number.isFinite(supplyUsd) || (totalReserveUsd ?? 0) <= 0 || (supplyUsd ?? 0) <= 0) {
     throw new Error("river-protocol-info missing TVL or circulating supply");
   }
-  const collateralizationRatio = (totalReserveUsd ?? 0) / (supplyUsd ?? 1);
-  const warnings = buildCoverageShortfallWarnings({
-    code: "reserve-undercollateralized",
-    message: (pct) => `River protocol-info TVL covers ${pct}% of circulating satUSD`,
-    coverageRatio: collateralizationRatio,
-  });
+  // Protocol-wide TVL is not satUSD backing — it spans every River product and
+  // chain — so publishing it as a `collateralizationRatio` misstated satUSD
+  // coverage (Base reads 3.2×, R1). The number stays as a clearly-named
+  // diagnostic instead, and no undercollateralization warning is derived from
+  // it.
+  const protocolTvlToSupplyRatio = (totalReserveUsd ?? 0) / (supplyUsd ?? 1);
+  const warnings: LiveReserveWarning[] = [];
 
   const timestampSummary = summarizeSourceTimestamps([
     ...(payload.tvlData ?? []).map((point) => point.timestamp),
@@ -86,12 +86,14 @@ export function adaptRiverProtocolInfo(payload: RiverProtocolInfoPayload): Adapt
           )),
       totalReserveUsd,
       supplyUsd,
-      collateralizationRatio,
       chainCirculatingCount: payload.chainCirculating?.length ?? 0,
       tvlPointCount: payload.tvlData?.length ?? 0,
       circulatingPointCount: payload.circulatingData?.length ?? 0,
       sourceProvenance:
         "Aggregate TVL telemetry only. Kept proof-class until asset-level collateral composition is source-verified.",
+      details: {
+        protocolTvlToSupplyRatio,
+      },
     },
   };
 }

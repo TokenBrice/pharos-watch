@@ -1,6 +1,6 @@
 import { DatabaseSync } from "node:sqlite";
 import { afterEach, describe, expect, it } from "vitest";
-import { createLatestSchemaSqlite } from "../../test-helpers/latest-schema-sqlite";
+import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
 import { emptyAlerts, type RoutedSubscriberAlert } from "../dispatch-telegram-routing";
 import {
   captureTelegramPlanningSubscriberPage,
@@ -37,17 +37,8 @@ import { insertTelegramSubscriber } from "./telegram-subscriber.test-support";
 import { loadTelegramPendingCapacity } from "../../lib/telegram/pending-capacity";
 
 const NOW = 1_800_000_000;
-const databases: DatabaseSync[] = [];
-
-function setupLatestSchema(): { sqlite: DatabaseSync; db: D1Database } {
-  const { sqlite, db } = createLatestSchemaSqlite();
-  databases.push(sqlite);
-  return { sqlite, db };
-}
-
-afterEach(() => {
-  while (databases.length > 0) databases.pop()?.close();
-});
+const { open: setupLatestSchema, closeAll } = createLatestSchemaFixtureTracker();
+afterEach(closeAll);
 
 const EMPTY_EVENTS = JSON.stringify({
   dewsChanges: [],

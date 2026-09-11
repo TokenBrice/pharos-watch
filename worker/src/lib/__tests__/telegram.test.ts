@@ -162,13 +162,21 @@ describe("sendToChat", () => {
     expect(body.disable_notification).toBe(true);
   });
 
-  it("passes caller abort signal through chat sends", async () => {
-    fetchSpy.mockResolvedValueOnce(new Response(JSON.stringify({ ok: true }), { status: 200 }));
+  it("cancels a pending chat send when the caller aborts", async () => {
     const controller = new AbortController();
-
-    await sendToChat("12345", "test", "bot-token", { signal: controller.signal });
-
-    expect(fetchSpy.mock.calls[0][1]?.signal).toBeInstanceOf(AbortSignal);
+    let suppliedSignal: AbortSignal | null = null;
+    fetchSpy.mockImplementationOnce((_input, init) => new Promise<Response>((_resolve, reject) => {
+      suppliedSignal = init!.signal!;
+      suppliedSignal.addEventListener("abort", () => reject(suppliedSignal!.reason), { once: true });
+    }));
+    const pending = sendToChat("12345", "test", "bot-token", { signal: controller.signal });
+    controller.abort();
+    expect(suppliedSignal!.aborted).toBe(true);
+    await expect(pending).resolves.toMatchObject({
+      ok: false,
+      errorClass: "timeout",
+      statusCode: null,
+    });
   });
 
   it("keeps ambiguous long retry-after 429s chat-local", async () => {

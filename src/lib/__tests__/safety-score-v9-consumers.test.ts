@@ -31,6 +31,75 @@ describe("V9 safety consumer projections", () => {
     });
   });
 
+  it("rejects independently changed canonical identity dimensions", () => {
+    const response = makeReportCardsV9Response();
+    const mutations = {
+      methodologyVersion: "9.1",
+      policyId: "another-policy",
+      policyDigest: "e".repeat(64),
+      evaluationBuildDigest: "f".repeat(64),
+      baseInputGenerationId: `report-cards-input:v1:${"1".repeat(64)}`,
+      publicationGenerationId: "another-publication",
+    };
+    for (const [field, value] of Object.entries(mutations)) {
+      expect(resolveV9ConsumerResponse(response, { ...response.safetyScoreIdentity, [field]: value }), field)
+        .toEqual({ status: "unavailable", reason: "identity-mismatch" });
+    }
+    // Model/schema are literal V9 schema constraints, not mutable valid identities.
+    for (const mutation of [{ model: "v8" }, { schemaVersion: 2 }]) {
+      expect(resolveV9ConsumerResponse({
+        ...response, safetyScoreIdentity: { ...response.safetyScoreIdentity, ...mutation },
+      }, response.safetyScoreIdentity)).toEqual({ status: "unavailable", reason: "invalid-v9-response" });
+    }
+  });
+
+  it("rejects held publications even when the held asset is rated", () => {
+    const response = makeReportCardsV9Response();
+    response.publicationHealth = {
+      ...response.publicationHealth, status: "held", heldSinceSec: response.updatedAt,
+      reasons: [{ code: "dex-stale" }],
+    };
+    expect(buildV9PortfolioProjection(response, response.safetyScoreIdentity, [{ coinId: "usdc-circle", amount: 100 }]))
+      .toEqual({ status: "unavailable", reason: "v9-publication-held" });
+  });
+
+  it("ignores nonpositive unknown holdings but rejects an empty positive portfolio", () => {
+    const response = makeReportCardsV9Response();
+    const ignored = [{ coinId: "missing-zero", amount: 0 }, { coinId: "missing-negative", amount: -10 }];
+    for (const holdings of [[], ignored]) {
+      expect(buildV9PortfolioProjection(response, response.safetyScoreIdentity, holdings))
+        .toEqual({ status: "unavailable", reason: "portfolio-empty" });
+    }
+    expect(buildV9PortfolioProjection(response, response.safetyScoreIdentity, [
+      ...ignored, { coinId: "usdc-circle", amount: 100 },
+    ])).toMatchObject({ status: "available", value: { score: 80, pillars: { backing: 80, exit: 82, control: 84 } } });
+  });
+
+  it("rejects a positive holding with no published card", () => {
+    const response = makeReportCardsV9Response();
+    expect(buildV9PortfolioProjection(response, response.safetyScoreIdentity, [
+      { coinId: "usdc-circle", amount: 100 }, { coinId: "missing", amount: 1 },
+    ])).toEqual({ status: "unavailable", reason: "portfolio-card-unavailable" });
+  });
+
+  it("attributes full serial exposure only to held dependents", () => {
+    const dependent = (id: string) => makeV9Card({
+      id, dependencies: {
+        serial: [{ upstreamAssetId: "upstream", score: 80, blocked: false }],
+        basket: [], cycleBlocked: false, reasonCodes: [],
+      },
+    });
+    const response = makeReportCardsV9Response({
+      cards: [dependent("held"), dependent("unheld"), makeV9Card({ id: "upstream" })],
+    });
+    const result = buildV9PortfolioProjection(response, response.safetyScoreIdentity, [{ coinId: "held", amount: 375 }]);
+    expect(result.status).toBe("available");
+    if (result.status !== "available") throw new Error(result.reason);
+    expect(result.value.dependencyExposure).toEqual([{
+      upstreamAssetId: "upstream", dependentAssetId: "held", kind: "serial",
+      materiality: "serial", exposureUsd: 375,
+    }]);
+  });
   it("rejects historical report versions at the live transition boundary", () => {
     const response = makeReportCardsV9Response();
     expect(resolveV9ConsumerResponse(
@@ -132,26 +201,27 @@ describe("V9 safety consumer projections", () => {
     expect(rows.value[0]?.pillars.backing.score).toBeNull();
   });
 
-  it("feeds the stable table, screener, and freezewatch from identical V9 values", () => {
+  it("projects explicit V9 values into stable-table inputs", () => {
     const card = makeV9Card({
       id: "asset-shared",
+      score: 61,
+      grade: "C+",
+      qualityScore: 62,
+      pegAdjustedScore: 61,
       evidence: { level: "adequate", freshness: "current", reasons: [] },
-      weakestPillar: { pillar: "backing", score: 80 },
+      weakestPillar: { pillar: "backing", score: 60 },
     });
     const response = makeReportCardsV9Response({ cards: [card] });
-    const expected = buildV9SafetyTableMap(response, response.safetyScoreIdentity);
     const table = buildStablecoinTableInputs({ reportCardsV9: response }).reportCards;
-    const screener = buildV9SafetyTableMap(response, response.safetyScoreIdentity);
-    const freezewatch = buildV9SafetyTableMap(response, response.safetyScoreIdentity);
-
-    expect(expected.status).toBe("available");
-    expect(screener.status).toBe("available");
-    expect(freezewatch.status).toBe("available");
-    if (expected.status !== "available" || screener.status !== "available" || freezewatch.status !== "available") return;
-
-    expect(table?.[card.id]).toEqual(expected.value[card.id]);
-    expect(screener.value[card.id]).toEqual(expected.value[card.id]);
-    expect(freezewatch.value[card.id]).toEqual(expected.value[card.id]);
+    expect(Object.keys(table ?? {})).toEqual(["asset-shared"]);
+    expect(table?.["asset-shared"]).toMatchObject({
+      score: 61,
+      grade: "C+",
+      riskBucket: "neutral",
+      evidence: { level: "adequate", freshness: "current", reasons: [] },
+      weakestPillar: { pillar: "backing", score: 60 },
+      bindingCapReason: null,
+    });
   });
 
   it("builds a three-pillar portfolio aggregate without inventing an asset grade", () => {

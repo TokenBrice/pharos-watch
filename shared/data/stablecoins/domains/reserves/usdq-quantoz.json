@@ -2,6 +2,7 @@
   "id": "usdq-quantoz",
   "reserves": [
     {
+      "sourceKey": "quantoz-transparency:government-bonds",
       "name": "Government bonds (Netherlands, Germany, and US)",
       "pct": 70,
       "risk": "very-low",
@@ -15,6 +16,7 @@
       "liquidityHorizon": "unknown"
     },
     {
+      "sourceKey": "quantoz-transparency:cash",
       "name": "Cash deposits at Tier 1 European banks",
       "pct": 30,
       "risk": "very-low",

@@ -1,15 +1,25 @@
 // @vitest-environment jsdom
 
 import { act, renderHook } from "@testing-library/react";
-import { beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { useCommandPaletteHistory } from "@/hooks/use-command-palette-history";
 
 const STORAGE_KEY = "pharos-command-palette-history";
+const NOW = 1_750_000_000_000;
+const HISTORY_RETENTION_MS = 7 * 24 * 60 * 60 * 1000;
+
+function makeStoredItem(id: string, timestamp: number) {
+  return { id, type: "stablecoin", label: id.toUpperCase(), href: `/stablecoin/${id}/`, timestamp };
+}
 
 describe("useCommandPaletteHistory", () => {
   beforeEach(() => {
     window.localStorage.clear();
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
   });
 
   it("keeps the same snapshot reference across rerenders when storage is unchanged", () => {
@@ -115,6 +125,61 @@ describe("useCommandPaletteHistory", () => {
       label: "USD Coin",
       sublabel: "USDC",
       href: "/stablecoin/usdc-usd-coin/",
+    });
+  });
+
+  it("drops stored history at or before the seven-day cutoff but keeps fresher records", () => {
+    vi.useFakeTimers({ now: NOW });
+    window.localStorage.setItem(STORAGE_KEY, JSON.stringify([
+      makeStoredItem("stale", NOW - HISTORY_RETENTION_MS - 1_000),
+      makeStoredItem("at-cutoff", NOW - HISTORY_RETENTION_MS),
+      makeStoredItem("fresh", NOW - HISTORY_RETENTION_MS + 1_000),
+    ]));
+
+    const { result } = renderHook(() => useCommandPaletteHistory());
+
+    expect(result.current.history.map((item) => item.id)).toEqual(["fresh"]);
+  });
+
+  it("orders history newest-first and evicts entries beyond five", () => {
+    vi.useFakeTimers({ now: NOW });
+    const { result } = renderHook(() => useCommandPaletteHistory());
+
+    for (const id of ["one", "two", "three", "four", "five", "six"]) {
+      act(() => {
+        vi.advanceTimersByTime(60_000);
+        result.current.addToHistory(id, "stablecoin", id.toUpperCase(), undefined, `/stablecoin/${id}/`);
+      });
+    }
+
+    expect(result.current.history).toHaveLength(5);
+    expect(result.current.history.map((item) => item.id)).toEqual(["six", "five", "four", "three", "two"]);
+    for (let i = 1; i < result.current.history.length; i++) {
+      expect(result.current.history[i].timestamp).toBeLessThan(result.current.history[i - 1].timestamp);
+    }
+  });
+
+  it("moves a re-added entry to the front with its updated fields instead of duplicating it", () => {
+    vi.useFakeTimers({ now: NOW });
+    const { result } = renderHook(() => useCommandPaletteHistory());
+
+    act(() => {
+      result.current.addToHistory("usdc", "stablecoin", "USD Coin", "USDC", "/stablecoin/usdc-usd-coin/");
+    });
+    act(() => {
+      vi.advanceTimersByTime(60_000);
+      result.current.addToHistory("about", "page", "About", undefined, "/about/");
+    });
+    act(() => {
+      vi.advanceTimersByTime(60_000);
+      result.current.addToHistory("usdc", "stablecoin", "USD Coin (updated)", "USDC v2", "/stablecoin/usdc-usd-coin/");
+    });
+
+    expect(result.current.history.map((item) => item.id)).toEqual(["usdc", "about"]);
+    expect(result.current.history[0]).toMatchObject({
+      label: "USD Coin (updated)",
+      sublabel: "USDC v2",
+      timestamp: NOW + 120_000,
     });
   });
 });

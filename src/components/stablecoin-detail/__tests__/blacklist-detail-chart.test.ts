@@ -1,25 +1,59 @@
 // @vitest-environment jsdom
 
-import { createElement, isValidElement } from "react";
+import { cloneElement, createElement, isValidElement, type ReactElement } from "react";
 import { render, screen } from "@testing-library/react";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { QuarterlyStackedBarChart } from "@/components/chart-primitives/quarterly-stacked-bar-chart";
 import { BlacklistDetailChart } from "@/components/stablecoin-detail/blacklist-detail-chart";
 
 const { quarterlyChartMock } = vi.hoisted(() => ({
-  quarterlyChartMock: vi.fn((_: Parameters<typeof QuarterlyStackedBarChart>[0]) => null),
+  quarterlyChartMock: vi.fn(),
 }));
 
 vi.mock("@/components/chart-primitives/quarterly-stacked-bar-chart", () => ({
   QuarterlyStackedBarChart: quarterlyChartMock,
 }));
 
+// The shared frame needs a measured SVG container, so it is replaced by a stub
+// that plots the same rows through the feature-owned tooltip: what a reader can
+// actually see (accessible name, per-quarter event values) stays under test.
+type FrameProps = Parameters<typeof QuarterlyStackedBarChart>[0];
+
+function renderStubbedFrame(props: FrameProps) {
+  const rows = props.data as Array<Record<string, number | string>>;
+  return createElement(
+    "div",
+    { role: "img", "aria-label": props.ariaLabel },
+    ...rows.map((row) =>
+      createElement(
+        "div",
+        { key: String(row.quarter), "data-testid": `plotted-${String(row.quarter)}` },
+        isValidElement(props.tooltipContent)
+          ? cloneElement(props.tooltipContent as ReactElement<Record<string, unknown>>, {
+              active: true,
+              label: row.quarter,
+              payload: props.series.map((series) => ({
+                dataKey: series.dataKey,
+                value: row[series.dataKey],
+                color: series.color,
+              })),
+            })
+          : null,
+      ),
+    ),
+  );
+}
+
+beforeEach(() => {
+  quarterlyChartMock.mockImplementation(renderStubbedFrame);
+});
+
 afterEach(() => {
-  quarterlyChartMock.mockClear();
+  quarterlyChartMock.mockReset();
 });
 
 describe("BlacklistDetailChart", () => {
-  it("keeps its domain chrome while configuring the shared quarterly frame", () => {
+  it("plots every quarter with its own event tallies and suppresses empty series", () => {
     const data = [
       { quarter: "Q1 '26", blacklist: 3, unblacklist: 1, destroy: 2 },
       { quarter: "Q2 '26", blacklist: 4, unblacklist: 0, destroy: 0 },
@@ -28,22 +62,24 @@ describe("BlacklistDetailChart", () => {
     render(createElement(BlacklistDetailChart, { data, isLoading: false }));
 
     expect(screen.getByText("Events per Quarter")).toBeTruthy();
+    expect(screen.getByRole("img", { name: "Quarterly blacklist events chart showing 2 quarters" })).toBeTruthy();
+
+    expect(screen.getByTestId("plotted-Q1 '26").textContent).toBe("Q1 '26blacklist3unblacklist1destroy2");
+    // Zero-count series must not be drawn as rows in the quarter tooltip.
+    expect(screen.getByTestId("plotted-Q2 '26").textContent).toBe("Q2 '26blacklist4");
+  });
+
+  it("keeps the feature-owned legend for all three event types", () => {
+    render(
+      createElement(BlacklistDetailChart, {
+        data: [{ quarter: "Q1 '26", blacklist: 1, unblacklist: 0, destroy: 0 }],
+        isLoading: false,
+      }),
+    );
+
     expect(screen.getByText("Blacklist")).toBeTruthy();
     expect(screen.getByText("Unblacklist")).toBeTruthy();
     expect(screen.getByText("Destroy")).toBeTruthy();
-    expect(quarterlyChartMock).toHaveBeenCalledOnce();
-    const props = quarterlyChartMock.mock.calls[0]![0];
-    expect(props.data).toBe(data);
-    expect(props.series).toEqual([
-      { dataKey: "blacklist", color: "#ef4444", fillOpacity: 0.8 },
-      { dataKey: "unblacklist", color: "#10b981", fillOpacity: 0.7 },
-      { dataKey: "destroy", color: "#f59e0b", fillOpacity: 0.75, radius: [3, 3, 0, 0] },
-    ]);
-    expect(props.yAxis).toEqual({ allowDecimals: false, width: 48 });
-    expect(props.ariaLabel).toBe("Quarterly blacklist events chart showing 2 quarters");
-    expect(props.height).toBe("h-[220px] sm:h-[260px]");
-    expect(isValidElement(props.tooltipContent)).toBe(true);
-    expect(props.children).toBeUndefined();
   });
 
   it("keeps the feature-owned empty state outside the shared chart", () => {

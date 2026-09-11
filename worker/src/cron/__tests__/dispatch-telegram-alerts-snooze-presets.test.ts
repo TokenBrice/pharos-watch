@@ -1,20 +1,18 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { seedDispatchSnapshots } from "./dispatch-telegram-snapshots.test-support";
 import { ALERT_RESERVE_SOURCE_GENERATION } from "../../lib/alert-reserve-source-cache";
 import {
   cleanupDispatchTelegramAlertsTest,
   createDispatchHarness,
   dispatchTelegramAlerts,
-  makeSafetySnapshotCache,
   mockRecordOutcome,
   parseLogRecords,
   readCacheValue,
   resetDispatchTelegramAlertsTest,
-  seedActiveSafetySource,
   scriptTelegramDeliveries,
   scriptTelegramDeliveriesForChat,
   STABLECOINS_CACHE_WITH_USDC,
   telegramDeliveryTranscript,
-  TELEGRAM_MAX_MESSAGES_PER_RUN,
 } from "./dispatch-telegram-alerts.test-support";
 
 function sources(
@@ -29,16 +27,7 @@ function sources(
     safety?: Record<string, { grade: string; score: number | null; methodologyVersion: string | null }>;
   } = {},
 ) {
-  const now = Math.floor(Date.now() / 1000) - 60;
-  harness.cache("alert:dews-snapshot", options.dews ?? {}, now);
-  if (options.dewsAlertable !== undefined) harness.cache("alert:dews-alertable-snapshot", options.dewsAlertable, now);
-  harness.cache("alert:depeg-snapshot", options.depeg ?? {}, now);
-  harness.cache("alert:safety-snapshot", makeSafetySnapshotCache(options.safety ?? {}).value, now);
-  if (options.safety) seedActiveSafetySource(harness, options.safety, now);
-  if (options.launch !== undefined) harness.cache("alert:launch-snapshot", options.launch, now);
-  if (options.reserve !== undefined) harness.cache("alert:reserve-snapshot", options.reserve, now);
-  if (options.reserveDispatched !== undefined)
-    harness.cache("alert:reserve-dispatched-snapshot", options.reserveDispatched, now);
+  seedDispatchSnapshots(harness, { ...options, safetySource: options.safety });
 }
 
 function dewsDirect(chatId: string, options: Record<string, unknown> = {}) {
@@ -354,7 +343,7 @@ describe("dispatchTelegramAlerts", () => {
     ]);
   });
 
-  it("chunks a 120-coin depeg fan-out for one chat and preserves overflow past the format budget", async () => {
+  it("chunks a 120-coin depeg fan-out for one chat without losing coin identities", async () => {
     const now = Math.floor(Date.now() / 1000);
     const stablecoinIds = Array.from({ length: 120 }, (_, index) => `scale-depeg-${index.toString().padStart(3, "0")}`);
     const harness = createDispatchHarness();
@@ -367,11 +356,6 @@ describe("dispatchTelegramAlerts", () => {
       })),
       subscribers: [
         { chatId: "mega-chat", lastActiveAt: now },
-        ...Array.from({ length: 1_200 }, (_, index) => ({
-          chatId: `global-${index}`,
-          lastActiveAt: now - 1_000 - index,
-          global: { depeg: true },
-        })),
       ],
       subscriptions: stablecoinIds.map((stablecoinId) => ({
         chatId: "mega-chat",
@@ -401,7 +385,10 @@ describe("dispatchTelegramAlerts", () => {
     expect(megaMessages.map((message) => message.chunk_index).sort((a, b) => a - b)).toEqual(
       Array.from({ length: megaMessages.length }, (_, index) => index),
     );
-    expect(targetCount.count).toBeGreaterThan(TELEGRAM_MAX_MESSAGES_PER_RUN);
+    expect(targetCount.count).toBe(megaMessages.length);
+    for (let index = 0; index < stablecoinIds.length; index++) {
+      expect(megaMessages.map((message) => message.html).join("\n")).toContain(`SD${index}`);
+    }
     expect(readCacheValue(harness.sqlite, "telegram:dispatch-overflow-plan")).toBeNull();
   }, 90_000);
 

@@ -9,8 +9,15 @@
       "depType": "collateral",
       "assetClass": "protocol-position",
       "issuerOrObligor": "Compound III USDT market and its collateralized borrowers",
-      "riskFactors": ["credit", "liquidity", "counterparty", "smart-contract", "concentration"],
-      "liquidityHorizon": "unknown"
+      "riskFactors": [
+        "credit",
+        "liquidity",
+        "counterparty",
+        "smart-contract",
+        "concentration"
+      ],
+      "liquidityHorizon": "unknown",
+      "sourceKey": "reserve-protocol-dtf:0xeb74ec1d4c1dab412d5d6674f6833fd19d3118ce"
     },
     {
       "name": "Static Aave USDC (saEthUSDC)",
@@ -20,8 +27,15 @@
       "depType": "collateral",
       "assetClass": "protocol-position",
       "issuerOrObligor": "Aave V3 Ethereum USDC market and its supplied-liquidity borrowers",
-      "riskFactors": ["credit", "liquidity", "counterparty", "smart-contract", "concentration"],
-      "liquidityHorizon": "unknown"
+      "riskFactors": [
+        "credit",
+        "liquidity",
+        "counterparty",
+        "smart-contract",
+        "concentration"
+      ],
+      "liquidityHorizon": "unknown",
+      "sourceKey": "reserve-protocol-dtf:0x0adc69041a2b086f8772acce2a754f410f211bed"
     },
     {
       "name": "Wrapped Compound USDC (wcUSDCv3)",
@@ -31,8 +45,15 @@
       "depType": "collateral",
       "assetClass": "protocol-position",
       "issuerOrObligor": "Compound III USDC market and its collateralized borrowers",
-      "riskFactors": ["credit", "liquidity", "counterparty", "smart-contract", "concentration"],
-      "liquidityHorizon": "unknown"
+      "riskFactors": [
+        "credit",
+        "liquidity",
+        "counterparty",
+        "smart-contract",
+        "concentration"
+      ],
+      "liquidityHorizon": "unknown",
+      "sourceKey": "reserve-protocol-dtf:0x27f2f159fe990ba83d57f39fd69661764bebf37a"
     }
   ],
   "reserveReview": {

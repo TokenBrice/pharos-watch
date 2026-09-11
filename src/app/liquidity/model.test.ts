@@ -61,6 +61,21 @@ describe("liquidity page model", () => {
     );
   });
 
+  it("replaces drift warnings with user copy instead of raw flag tokens", () => {
+    const message = formatLiquidityWarningMessage(
+      '199 - "Latest sync-dex-liquidity run shows high quality drift '
+      + '(qualityDrift=high; qualityDriftFlags=major-tvl-cliff:usdg-paxos)"',
+    );
+    expect(message).toBe("Some liquidity data is being re-verified");
+    expect(message).not.toContain("qualityDriftFlags");
+  });
+
+  it("keeps non-drift warnings readable without their machine detail suffix", () => {
+    expect(formatLiquidityWarningMessage(
+      '199 - "Latest sync-dex-liquidity run degraded (failedSources=defillama-yields)"',
+    )).toBe("Latest sync-dex-liquidity run degraded");
+  });
+
   it("keeps visible rows filtered while computing summary stats from the full liquidity map", () => {
     const [usdScored, usdUnrated] = ACTIVE_STABLECOINS.filter((coin) => coin.flags.pegCurrency === "USD");
     const eurScored = ACTIVE_STABLECOINS.find((coin) => coin.flags.pegCurrency === "EUR");

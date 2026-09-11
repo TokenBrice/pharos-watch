@@ -143,14 +143,26 @@ describe("RedemptionBackstopCard", () => {
     );
 
     expect(html).toContain("Daily Capacity");
+    expect(html).toContain("$1.5M");
     expect(html).toContain("Current modeled capacity is daily-limited");
-    expect(html).toContain("Exit correlation:");
-    expect(html).toContain("Scoring capacity:");
-    expect(html).toContain("Modeled exit:");
-    expect(html).toContain("Eventual score:");
-    expect(html).toContain("Retail cost:");
-    expect(html).toContain("Institutional cost:");
+    expect(html).toMatch(/Exit correlation:\s*<span[^>]*>independent issuer rail</);
+    expect(html).toContain("Scoring capacity: $1.5M");
+    expect(html).toContain("Eventual capacity: $20.0M");
+    expect(html).toContain("Queued capacity: $12.0M");
+    expect(html).toContain("Modeled exit: $2.0M");
+    expect(html).toContain("Eventual score: 82/100");
+    // Retail and institutional cost are distinct scores; swapping them must fail.
+    expect(html).toContain("Retail cost: 40/100");
+    expect(html).toContain("Active-user cost: 80/100");
+    expect(html).toContain("Institutional cost: 100/100");
     expect(html).toContain("Confidence Detail");
+    expect(html).toContain("Capacity evidence: 90/100");
+    expect(html).toContain("Fee evidence: 70/100");
+    expect(html).toContain("Route freshness: 80/100");
+    expect(html).toContain("Holder breadth: 60/100");
+    expect(html).toContain("Source quality: 95/100");
+    expect(html).toContain("Reviewed docs age: 12d");
+    expect(html).toContain("live telemetry reviewed");
   });
 
   it("renders configured-but-unrated state when the route has no usable score", () => {

@@ -12,10 +12,11 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { openCommandPalette } from "@/lib/command-palette";
+import { trackEvent } from "@/lib/analytics";
 import {
   NAV_GROUPS,
   QUICK_NAV_ITEMS,
-  normalizeNavPath,
+  isNavItemActive,
   stickyChromeTopOffsetClass,
   type NavGroup,
   type NavItem,
@@ -63,12 +64,14 @@ const UNAVAILABLE_STATUS_MENU = {
  */
 function NavMenuItem({
   item,
+  group,
   isActive,
   withDescription,
   trailing,
   onNavigate,
 }: {
   item: NavItem;
+  group: string;
   isActive: boolean;
   withDescription?: boolean;
   trailing?: React.ReactNode;
@@ -85,7 +88,10 @@ function NavMenuItem({
         prefetch={false}
         aria-current={isActive ? "page" : undefined}
         aria-describedby={hasDescription ? descriptionId : undefined}
-        onClick={onNavigate}
+        onClick={() => {
+          trackEvent("nav_click", { surface: "menu", group, href: item.href });
+          onNavigate();
+        }}
         className={cn(
           "relative flex cursor-default gap-2.5 rounded-lg px-2.5 text-sm outline-hidden select-none transition-colors hover:bg-muted/60 focus:bg-muted/60 focus:text-accent-foreground",
           withDescription ? "items-start py-2" : "items-center py-2",
@@ -123,7 +129,6 @@ function NavMenuItem({
  */
 export function TopNav() {
   const pathname = usePathname();
-  const normalizedPath = normalizeNavPath(pathname ?? "/");
   const topOffsetClass = stickyChromeTopOffsetClass(pathname);
 
   // Desktop-only hover-to-open for the section disclosures, gated to
@@ -136,6 +141,9 @@ export function TopNav() {
   const openTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const closeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const hoverOpenRef = useRef(false);
+  // Set when ArrowDown opens a closed trigger: the panel's rows only exist
+  // after the open state commits, so the first-row focus lands in an effect.
+  const pendingKeyboardOpen = useRef<string | null>(null);
   // Health stays gated to the open panel: a persistent masthead dot would add
   // /api/health polling to every desktop page view.
   const moreMenuOpen = openMenu === MORE_MENU_KEY;
@@ -170,6 +178,16 @@ export function TopNav() {
     return () => document.removeEventListener("pointerdown", closeOnOutsidePointerDown);
   }, [openMenu, sectionMenuOpen]);
 
+  // ArrowDown can open a panel whose rows do not exist yet; land focus on the
+  // first row once that menu's open state has actually committed.
+  useEffect(() => {
+    const key = pendingKeyboardOpen.current;
+    if (!key) return;
+    pendingKeyboardOpen.current = null;
+    if (openMenu !== key) return;
+    sectionNavRef.current?.querySelector<HTMLElement>(`[data-section-menu="${key}"] a[href]`)?.focus();
+  }, [openMenu]);
+
   const cancelOpen = () => {
     if (openTimer.current) {
       clearTimeout(openTimer.current);
@@ -188,12 +206,14 @@ export function TopNav() {
     cancelOpen();
     if (openMenu === key) return;
 
+    // Opening from closed waits longer than switching: a stray sweep across
+    // the bar should not flash panels (NN/g hover-intent guidance).
     openTimer.current = setTimeout(
       () => {
         hoverOpenRef.current = true;
         setOpenMenu(key);
       },
-      openMenu === null ? 250 : 100,
+      openMenu === null ? 350 : 100,
     );
   };
   const closeOnHover = (key: string) => {
@@ -213,6 +233,14 @@ export function TopNav() {
     cancelClose();
     hoverOpenRef.current = false;
     setOpenMenu((current) => (current === key ? null : key));
+  };
+  // Keyboard opens are pinned like clicks and never toggle: ArrowDown on a
+  // closed trigger means "open", and the same key then roves the rows.
+  const openPinned = (key: string) => {
+    cancelOpen();
+    cancelClose();
+    hoverOpenRef.current = false;
+    setOpenMenu(key);
   };
   const closeMenu = () => {
     cancelOpen();
@@ -244,7 +272,7 @@ export function TopNav() {
       <nav aria-label="Quick links" className="flex shrink-0 items-center gap-0.5">
         <span className="flex items-center gap-0.5 rounded-lg bg-muted/35 p-0.5">
           {QUICK_NAV_ITEMS.map((item) => {
-            const isActive = normalizeNavPath(item.href) === normalizedPath;
+            const isActive = isNavItemActive(pathname, item);
             const Icon = item.icon;
             return (
               <Link
@@ -252,8 +280,10 @@ export function TopNav() {
                 href={item.href}
                 prefetch={false}
                 aria-current={isActive ? "page" : undefined}
+                title={item.description}
+                onClick={() => trackEvent("nav_click", { surface: "rail", group: "rail", href: item.href })}
                 className={cn(
-                  "pharos-focus-ring inline-flex h-8 items-center gap-1.5 rounded-md px-2.5 text-sm font-semibold whitespace-nowrap transition-colors",
+                  "pharos-focus-ring inline-flex h-8 items-center gap-1.5 rounded-md px-2 text-sm font-semibold whitespace-nowrap transition-colors xl:px-2.5",
                   isActive
                     ? "bg-background text-foreground shadow-sm"
                     : "text-muted-foreground hover:bg-background/70 hover:text-foreground",
@@ -277,7 +307,7 @@ export function TopNav() {
       <div className="ml-auto flex shrink-0 items-center gap-2">
         <nav ref={sectionNavRef} aria-label="Sections" className="flex shrink-0 items-center gap-0.5">
           {TOP_MENUS.map((menu) => {
-            const isActive = menu.items.some((item) => normalizeNavPath(item.href) === normalizedPath);
+            const isActive = menu.items.some((item) => isNavItemActive(pathname, item));
             const isSectioned = Boolean(menu.columns);
             const isOpen = openMenu === menu.key;
             const panelId = `top-nav-${menu.key}-panel`;
@@ -293,10 +323,47 @@ export function TopNav() {
                   if (isOpen) closeMenu();
                 }}
                 onKeyDown={(event) => {
-                  if (event.key !== "Escape" || !isOpen) return;
+                  if (event.key === "Escape") {
+                    if (!isOpen) return;
+                    event.preventDefault();
+                    closeMenu();
+                    event.currentTarget.querySelector<HTMLButtonElement>("[data-section-trigger]")?.focus();
+                    return;
+                  }
+                  if (event.key !== "ArrowDown" && event.key !== "ArrowUp" && event.key !== "Home" && event.key !== "End") {
+                    return;
+                  }
+                  // Roving lives inside the disclosure panel (still no
+                  // role=menu): arrows step through rows with wrap, Home/End
+                  // jump to the ends.
+                  const links = [
+                    ...event.currentTarget.querySelectorAll<HTMLAnchorElement>(`#${panelId} a[href]`),
+                  ];
+                  if (links.length === 0) {
+                    // The panel is closed and renders no rows yet: ArrowDown
+                    // opens it pinned; the pending-focus effect lands on the
+                    // first row once it exists.
+                    if (event.key !== "ArrowDown") return;
+                    event.preventDefault();
+                    pendingKeyboardOpen.current = menu.key;
+                    openPinned(menu.key);
+                    return;
+                  }
                   event.preventDefault();
-                  closeMenu();
-                  event.currentTarget.querySelector<HTMLButtonElement>("[data-section-trigger]")?.focus();
+                  const currentIndex = links.findIndex((link) => link === document.activeElement);
+                  const nextIndex =
+                    event.key === "Home"
+                      ? 0
+                      : event.key === "End"
+                        ? links.length - 1
+                        : currentIndex === -1
+                          ? event.key === "ArrowDown"
+                            ? 0
+                            : links.length - 1
+                          : event.key === "ArrowDown"
+                            ? (currentIndex + 1) % links.length
+                            : (currentIndex - 1 + links.length) % links.length;
+                  links[nextIndex]?.focus();
                 }}
               >
                 <button
@@ -305,14 +372,10 @@ export function TopNav() {
                   aria-current={isActive ? "true" : undefined}
                   aria-expanded={isOpen}
                   aria-controls={panelId}
-                  onPointerDown={() => {
-                    cancelOpen();
-                    hoverOpenRef.current = false;
-                  }}
-                  onKeyDown={() => {
-                    cancelOpen();
-                    hoverOpenRef.current = false;
-                  }}
+                onPointerDown={() => {
+                  cancelOpen();
+                  hoverOpenRef.current = false;
+                }}
                   onClick={() => activateMenu(menu.key)}
                   className={cn(
                     "pharos-focus-ring inline-flex h-9 items-center gap-1 rounded-md px-3 text-sm font-medium whitespace-nowrap transition-colors",
@@ -342,7 +405,8 @@ export function TopNav() {
                                   <NavMenuItem
                                     key={item.href}
                                     item={item}
-                                    isActive={normalizeNavPath(item.href) === normalizedPath}
+                                    group={menu.key}
+                                    isActive={isNavItemActive(pathname, item)}
                                     onNavigate={closeMenu}
                                     trailing={
                                       item.href === STATUS_HREF ? (
@@ -367,7 +431,8 @@ export function TopNav() {
                             <NavMenuItem
                               key={item.href}
                               item={item}
-                              isActive={normalizeNavPath(item.href) === normalizedPath}
+                              group={menu.key}
+                              isActive={isNavItemActive(pathname, item)}
                               withDescription
                               onNavigate={closeMenu}
                             />
@@ -424,6 +489,9 @@ export function TopNav() {
           type="button"
           onClick={openCommandPalette}
           aria-label="Search"
+          // Icon-only below xl: at 1024 the rail's "Stability" label already
+          // spends the masthead budget, so the ⌘K hint waits for xl with the
+          // text label rather than overflowing the header.
           className="pharos-focus-ring inline-flex h-9 w-9 items-center justify-center gap-2 rounded-lg border border-border/70 bg-muted/20 text-sm text-muted-foreground transition-colors hover:bg-muted/40 hover:text-foreground xl:w-[15rem] xl:justify-start xl:px-3 2xl:w-72"
         >
           <Search className="size-4 shrink-0" aria-hidden />

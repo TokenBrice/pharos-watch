@@ -5,12 +5,17 @@ import {
   formatMethodologyDisplayDate,
   methodologyChangelogEntryId,
   toMethodologyVersionLabel,
+  type MethodologyChangelogEntry,
 } from "../methodology-versions/base";
 import { DDR_METHODOLOGY_CHANGELOG, DDR_V2_EFFECTIVE_AT } from "../methodology-versions/depeg-resolver";
 import {
   SAFETY_SCORE_METHODOLOGY_CHANGELOG,
   SAFETY_SCORE_METHODOLOGY_VERSION,
 } from "../methodology-versions/safety-score";
+
+function entry(version: string, effectiveAt: number): MethodologyChangelogEntry {
+  return { version, title: "", date: "", effectiveAt, summary: "", impact: [], commits: [], reconstructed: false };
+}
 
 describe("compareMethodologyVersions", () => {
   it("orders decimal methodology versions with leading-zero hundredths before tenths", () => {
@@ -31,6 +36,23 @@ describe("compareMethodologyVersions", () => {
 });
 
 describe("createMethodologyVersion", () => {
+  it("rejects a third decimal digit on versions activated from 2026-09-07 on", () => {
+    expect(() =>
+      createMethodologyVersion({
+        currentVersion: "9.461",
+        changelogPath: "/methodology/x",
+        changelog: [entry("9.461", 1_788_739_200)],
+      }),
+    ).toThrow(/at most two decimal digits/i);
+    expect(
+      createMethodologyVersion({
+        currentVersion: "9.47",
+        changelogPath: "/methodology/x",
+        changelog: [entry("9.47", 1_788_739_200), entry("9.461", 1_788_509_806)],
+      }).currentVersion,
+    ).toBe("9.47");
+  });
+
   it("resolves to the higher version when two entries share effectiveAt", () => {
     // Regression guard: v3.9 and v3.8 shared effectiveAt=1776211200 and the
     // loop was silently resolving to 3.8. The sort tiebreak must prefer the
@@ -39,36 +61,9 @@ describe("createMethodologyVersion", () => {
       currentVersion: "3.9",
       changelogPath: "/foo",
       changelog: [
-        {
-          version: "3.9",
-          title: "",
-          date: "",
-          effectiveAt: 1000,
-          summary: "",
-          impact: [],
-          commits: [],
-          reconstructed: false,
-        },
-        {
-          version: "3.8",
-          title: "",
-          date: "",
-          effectiveAt: 1000,
-          summary: "",
-          impact: [],
-          commits: [],
-          reconstructed: false,
-        },
-        {
-          version: "3.7",
-          title: "",
-          date: "",
-          effectiveAt: 900,
-          summary: "",
-          impact: [],
-          commits: [],
-          reconstructed: false,
-        },
+        entry("3.9", 1000),
+        entry("3.8", 1000),
+        entry("3.7", 900),
       ],
     });
     expect(methodology.getVersionAt(1000)).toBe("3.9");
@@ -80,26 +75,8 @@ describe("createMethodologyVersion", () => {
       currentVersion: "10.0",
       changelogPath: "/methodology/two-digit-major-test/",
       changelog: [
-        {
-          version: "9.99",
-          title: "",
-          date: "",
-          effectiveAt: 2000,
-          summary: "",
-          impact: [],
-          commits: [],
-          reconstructed: false,
-        },
-        {
-          version: "10.0",
-          title: "",
-          date: "",
-          effectiveAt: 3000,
-          summary: "",
-          impact: [],
-          commits: [],
-          reconstructed: false,
-        },
+        entry("9.99", 2000),
+        entry("10.0", 3000),
       ],
     });
 
@@ -112,26 +89,8 @@ describe("createMethodologyVersion", () => {
         currentVersion: "2.0",
         changelogPath: "/methodology/chronology-drift-test/",
         changelog: [
-          {
-            version: "2.0",
-            title: "",
-            date: "",
-            effectiveAt: 1000,
-            summary: "",
-            impact: [],
-            commits: [],
-            reconstructed: false,
-          },
-          {
-            version: "1.9",
-            title: "",
-            date: "",
-            effectiveAt: 2000,
-            summary: "",
-            impact: [],
-            commits: [],
-            reconstructed: false,
-          },
+          entry("2.0", 1000),
+          entry("1.9", 2000),
         ],
       }),
     ).toThrow(/activation chronology drift/i);
@@ -143,16 +102,7 @@ describe("createMethodologyVersion", () => {
         currentVersion: "1.0",
         changelogPath: "/methodology/drift-test/",
         changelog: [
-          {
-            version: "2.0",
-            title: "",
-            date: "",
-            effectiveAt: 1000,
-            summary: "",
-            impact: [],
-            commits: [],
-            reconstructed: false,
-          },
+          entry("2.0", 1000),
         ],
       }),
     ).toThrow(/drift/i);
@@ -166,6 +116,30 @@ describe("createMethodologyVersion", () => {
         changelog: [],
       }),
     ).toThrow(/two-segment/i);
+  });
+
+  it("resolves ordinary activation boundaries and the outer timeline", () => {
+    const methodology = createMethodologyVersion({
+      currentVersion: "2.0",
+      changelogPath: "/methodology/window-test/",
+      changelog: [entry("2.0", 2000), entry("1.0", 1000)],
+    });
+    expect(methodology.getVersionAt(999)).toBe("1.0");
+    expect(methodology.getVersionAt(1999)).toBe("1.0");
+    expect(methodology.getVersionAt(2000)).toBe("2.0");
+    expect(methodology.getVersionAt(3000)).toBe("2.0");
+    for (const timestamp of [NaN, Infinity, -Infinity]) {
+      expect(methodology.getVersionAt(timestamp)).toBe("2.0");
+    }
+  });
+
+  it("uses the current version when no activation windows exist", () => {
+    const methodology = createMethodologyVersion({
+      currentVersion: "2.0",
+      changelogPath: "/methodology/empty-test/",
+      changelog: [],
+    });
+    expect(methodology.getVersionAt(0)).toBe("2.0");
   });
 });
 

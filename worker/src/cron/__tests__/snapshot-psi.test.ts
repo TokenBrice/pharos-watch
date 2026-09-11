@@ -1,10 +1,13 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { findD1HistoryEntry } from "@shared/test-utils/mock-d1";
 import { makePsiDailyDb, makePsiSnapshotDb, type MockD1Database } from "./snapshot-cron.test-support";
-import { createLatestSchemaSqlite } from "../../test-helpers/latest-schema-sqlite";
+import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
 import { snapshotPsiDaily } from "../snapshot-psi";
 
 const mockD1 = makePsiSnapshotDb;
+const fixtures = createLatestSchemaFixtureTracker();
+const createLatestSchemaSqlite = fixtures.open;
+afterEach(fixtures.closeAll);
 
 function yesterdayMidnightFrom(nowMs: number): number {
   const now = Math.floor(nowMs / 1000);

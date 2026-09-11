@@ -6,10 +6,7 @@ import { USER_AGENT } from "../../lib/constants";
 import { makeDexApiFetchResult, type DexApiFetchResult, type DexApiPool } from "../../lib/dex-api-common";
 import { classifyClPoolType } from "./direct-source-helpers";
 import { toErrorMessage } from "@shared/lib/error-utils";
-import {
-  DIRECT_API_REQUEST_TIMEOUT_MS,
-  buildDirectApiRequestSignal,
-} from "./direct-api-policy";
+import { DIRECT_API_REQUEST_TIMEOUT_MS } from "./direct-api-policy";
 import {
   describeDexPaginationWriteFailure,
   isDegradingDexPaginationWriteFailure,
@@ -23,7 +20,9 @@ const PAGE_SIZE = 250;
 const TAIL_PAGES_PER_RUN = 2;
 // `poolHourDatas(first: 1000)` can safely cover 40 pools over 24 hourly buckets (40 * 24 = 960 rows max).
 const HOUR_DATA_BATCH_SIZE = 40;
-const SUBGRAPH_TIMEOUT_MS = DIRECT_API_REQUEST_TIMEOUT_MS;
+// Per-attempt budget for one subgraph request; the retrying helper applies it to
+// every attempt, and the provider signal bounds the chain as a whole.
+const SUBGRAPH_ATTEMPT_TIMEOUT_MS = DIRECT_API_REQUEST_TIMEOUT_MS;
 
 // Keep Pancake coverage on the subgraphs that stay within the worker cron budget reliably.
 const PANCAKESWAP_V3_SUBGRAPHS: Record<string, { chain: string; subgraphId: string }> = {
@@ -124,12 +123,22 @@ function summarizeBodySnippet(body: string): string {
 }
 
 async function fetchSubgraphJson<T>(subgraphUrl: string, query: string, signal?: AbortSignal): Promise<T> {
-  const result = await fetchTextWithRetry(subgraphUrl, {
-    method: "POST",
-    headers: { "Content-Type": "application/json", "User-Agent": USER_AGENT },
-    body: JSON.stringify({ query }),
-    signal: buildDirectApiRequestSignal(signal, SUBGRAPH_TIMEOUT_MS),
-  });
+  // `fetchTextWithRetry` owns a fresh per-attempt timeout, so the pre-armed
+  // `buildDirectApiRequestSignal` wrapper must stay out of this call: passing an
+  // outer 15s abort as `opts.signal` aborted attempt 1 and the helper rethrew
+  // past the retry loop, which silently disabled the two retries. Only the
+  // provider/phase signal is composed; it still bounds the chain as a whole.
+  const result = await fetchTextWithRetry(
+    subgraphUrl,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "User-Agent": USER_AGENT },
+      body: JSON.stringify({ query }),
+      signal,
+    },
+    2,
+    { timeoutMs: SUBGRAPH_ATTEMPT_TIMEOUT_MS, throwOnFinalNetworkError: true },
+  );
   if (!result?.response.ok) throw new Error(`returned ${result?.response.status ?? "unknown"}`);
 
   const rawBody = result.body;
@@ -167,6 +176,7 @@ export async function fetchPancakeSwapPools(
   const pools: DexApiPool[] = [];
   const errors: string[] = [];
   const warnings: string[] = [];
+  const degradedChains: string[] = [];
   let successfulChains = 0;
   let pagesFetched = 0;
   let partialChains = 0;
@@ -186,10 +196,13 @@ export async function fetchPancakeSwapPools(
     let nextCursor: number | null = tailStartSkip;
     let cycleCompleted = false;
     let chainPagesFetched = 0;
+    let lastAttemptedSkip = 0;
+    let chainError: string | null = null;
     try {
       for (let pageIndex = 0; pageIndex < pageSkips.length; pageIndex++) {
         const skip = pageSkips[pageIndex]!;
         const displayPage = skip / PAGE_SIZE + 1;
+        lastAttemptedSkip = skip;
         throwIfAborted(signal);
         const data = await fetchSubgraphJson<{ pools?: V3Pool[] }>(subgraphUrl, buildPoolsQuery(skip), signal);
         chainPagesFetched++;
@@ -290,31 +303,50 @@ export async function fetchPancakeSwapPools(
         }
         if (skip > 0) nextCursor = skip + PAGE_SIZE;
       }
-      if (chainPagesFetched > 0) {
-        successfulChains++;
-        if (!cycleCompleted) {
-          partialChains++;
-          warnings.push(`${chain}: pagination partial; resumeFromSkip=${nextCursor}`);
-        }
-        const outcome = await writeDexSourcePaginationState({
-          db,
-          sourceKey,
-          cursor: String(nextCursor ?? PAGE_SIZE),
-          cycleStartedAt: cycleCompleted ? nowSec : (paginationState.cycleStartedAt ?? nowSec),
-          nowSec,
-          completed: cycleCompleted,
-          pagesFetched: chainPagesFetched,
-          diagnostics: warnings.filter((warning) => warning.startsWith(`${chain}:`) || warning.startsWith(`${chain} page`)),
-        });
-        paginationWriteAttempts.push({ sourceKey, outcome });
-        const persistenceWarning = describeDexPaginationWriteFailure(chain, outcome);
-        if (persistenceWarning) warnings.push(persistenceWarning);
-        if (isDegradingDexPaginationWriteFailure(outcome)) cursorPersistenceDegraded = true;
-      }
     } catch (error) {
       rethrowIfAborted(error, signal);
-      errors.push(`${chain}: ${toErrorMessage(error)}`);
+      chainError = toErrorMessage(error);
+      degradedChains.push(chain);
+      errors.push(`${chain}: ${chainError}`);
       logWorkerEventArgs("handler", "warn", "[fetch-pancakeswap]", chain, error);
+    }
+
+    if (chainPagesFetched > 0) {
+      successfulChains++;
+      if (!cycleCompleted) {
+        partialChains++;
+        warnings.push(`${chain}: pagination partial; resumeFromSkip=${nextCursor}`);
+      }
+    }
+
+    // Persist per-chain progress outside the page loop. A chain that throws used
+    // to skip this write entirely, which froze its `dex_source_pagination_state`
+    // row (pancakeswap-v3:bsc sat at cursor 250 for days) and replayed the same
+    // stub pages every hour. A failed chain consumed the page it died on, so
+    // resume one page past it and record the failure on the row.
+    if (chainPagesFetched > 0 || chainError != null) {
+      if (chainError != null) {
+        nextCursor = (lastAttemptedSkip > 0 ? lastAttemptedSkip : tailStartSkip) + PAGE_SIZE;
+      }
+      const chainDiagnostics = warnings.filter(
+        (warning) => warning.startsWith(`${chain}:`) || warning.startsWith(`${chain} page`),
+      );
+      const outcome = await writeDexSourcePaginationState({
+        db,
+        sourceKey,
+        cursor: String(nextCursor ?? PAGE_SIZE),
+        cycleStartedAt: cycleCompleted ? nowSec : (paginationState.cycleStartedAt ?? nowSec),
+        nowSec,
+        completed: cycleCompleted,
+        pagesFetched: chainPagesFetched,
+        diagnostics: chainError == null
+          ? chainDiagnostics
+          : [...chainDiagnostics, `${chain} failure: ${chainError}`],
+      });
+      paginationWriteAttempts.push({ sourceKey, outcome });
+      const persistenceWarning = describeDexPaginationWriteFailure(chain, outcome);
+      if (persistenceWarning) warnings.push(persistenceWarning);
+      if (isDegradingDexPaginationWriteFailure(outcome)) cursorPersistenceDegraded = true;
     }
   }
 
@@ -327,6 +359,7 @@ export async function fetchPancakeSwapPools(
     degraded: errors.length > 0 || cursorPersistenceDegraded,
     errors,
     warnings,
+    ...(degradedChains.length > 0 ? { degradedChains } : {}),
     pagination: {
       state: partialChains > 0 ? "partial" : "complete",
       headRefreshed: successfulChains === Object.keys(PANCAKESWAP_V3_SUBGRAPHS).length,

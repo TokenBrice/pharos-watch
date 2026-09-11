@@ -125,21 +125,24 @@ function makeRawStatusSnapshotRow(now: number, ageSec: number, overrides: Record
   };
 }
 
-function makeMinimalLiveStatusRows(now: number, stateRow: Record<string, unknown> | null = null) {
+function makeMinimalLiveStatusRows(now: number, stateRow: Record<string, unknown> | null = null, healthy = false) {
   const stablecoinsCache = JSON.stringify({
     peggedAssets: [{ id: "usdt-tether", symbol: "USDT", price: 1, circulating: { peggedUSD: 100_000_000 } }],
   });
   return [
-    { match: "cache WHERE key IN", rows: [makeCacheRow("stablecoins"), makeCacheRow("stablecoin-charts")] },
-    { match: "dex_liquidity", rows: [], first: { age: 300 } },
-    { match: "yield_data", rows: [], first: { age: 300 } },
-    { match: "stress_signals", rows: [], first: { age: 300 } },
-    { match: "cron_runs", rows: [makeCronRow("sync-stablecoins", "ok", 30)] },
-    { match: "cache", rows: [], first: { value: stablecoinsCache, updated_at: now - 60 } },
+    { match: "cache WHERE key IN", rows: (healthy
+      ? ["stablecoins", "stablecoin-charts", "usds-status", "fx-rates", "bluechip-ratings"]
+      : ["stablecoins", "stablecoin-charts"]).map((key) => makeCacheRow(key)) },
+    { match: "dex_liquidity", rows: [], first: { age: healthy ? 60 : 300 } },
+    { match: "yield_data", rows: [], first: { age: healthy ? 60 : 300 } },
+    { match: "cron_runs", rows: healthy
+      ? Object.keys(CRON_INTERVALS).map((job) => makeCronRow(job, "ok", 30))
+      : [makeCronRow("sync-stablecoins", "ok", 30)] },
+    { match: "FROM cache WHERE key = ?", matchBinds: ["stablecoins"], rows: [], first: { value: stablecoinsCache, updated_at: now - 60 } },
+    { match: "FROM cache WHERE key = ?", matchBinds: ["ops:d1-capacity:v1"], rows: [], first: null },
+    { match: "key LIKE 'circuit:%'", rows: [] },
     { match: "blacklist_events", rows: [], first: { total: 0, missing: 0, missing_recent: 0 } },
     { match: "depeg_events", rows: [], first: { cnt: 0 } },
-    { match: "onchain_supply WHERE updated_at", rows: [], first: { cnt: 0 } },
-    { match: "onchain_supply WHERE updated_at >", rows: [] },
     { match: "FROM status_state", rows: [], first: stateRow },
   ];
 }
@@ -157,7 +160,7 @@ type StatusD1Section =
 type StatusD1ScenarioOptions = {
   sections?: StatusD1Section[];
   overrides?: MockTableConfig[];
-  optionalOverrides?: MockTableConfig[];
+  healthyLive?: boolean;
   sectionOverrides?: Partial<Record<StatusD1Section, MockTableConfig[]>>;
 };
 
@@ -212,12 +215,12 @@ function sameQuery(left: MockTableConfig, right: MockTableConfig) {
 function buildStatusD1Scenario({
   sections = ["sentinel", "publication", "derived", "reserves", "statusState", "cronState"],
   overrides = [],
-  optionalOverrides = [],
+  healthyLive = false,
   sectionOverrides = {},
 }: StatusD1ScenarioOptions = {}): MockD1Database {
   const now = Math.floor(Date.now() / 1000);
   const sectionDefaults = sections.flatMap<MockTableConfig>((section) =>
-    sectionOverrides[section] ?? (section === "live" ? makeMinimalLiveStatusRows(now) : STATUS_D1_SECTIONS[section]),
+    sectionOverrides[section] ?? (section === "live" ? makeMinimalLiveStatusRows(now, null, healthyLive) : STATUS_D1_SECTIONS[section]),
   );
   const defaults = sectionDefaults.filter(
     (entry, index) => !sectionDefaults.slice(0, index).some((earlier) => sameQuery(entry, earlier)),
@@ -227,7 +230,6 @@ function buildStatusD1Scenario({
   );
   const tables = [
     ...uniqueOverrides,
-    ...optionalOverrides.map((entry) => ({ ...entry, allowUnused: true })),
     ...defaults.filter((entry) => !uniqueOverrides.some((override) => sameQuery(entry, override))),
   ];
   const db = fixtureMockD1(tables, {}, sections.includes("publication"));
@@ -241,6 +243,7 @@ function cleanupStatusTest() {
   } finally {
     pendingStrictD1Assertions.clear();
     vi.restoreAllMocks();
+    vi.unstubAllGlobals();
   }
 }
 

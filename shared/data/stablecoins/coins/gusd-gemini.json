@@ -72,9 +72,9 @@
   "custodyModel": "institutional-top",
   "governanceQuality": "regulated-entity",
   "liveReservesConfig": {
-    "adapter": "single-asset",
-    "version": 1,
-    "semantics": "single-asset",
+    "adapter": "gemini-independent-assurance",
+    "version": 2,
+    "semantics": "attestation-mix",
     "breakerScope": "gusd-gemini",
     "display": {
       "url": "https://www.gemini.com/dollar",
@@ -82,14 +82,9 @@
     },
     "inputs": {
       "primary": {
-        "kind": "onchain-evm",
-        "chain": "ethereum",
-        "rpcMode": "public-rpc"
+        "kind": "http-json",
+        "url": "https://cdn.contentful.com/spaces/jg6lo9a2ukvr/entries?access_token=AIRFWcFNIs83Nw7SKtdz1wLW9j94yxYlS5ef5qHGo8A&content_type=gusdAttestation&order=-fields.reportDate&limit=1000&include=1"
       }
-    },
-    "params": {
-      "label": "U.S. Treasury bills & cash deposits",
-      "risk": "very-low"
     }
   },
   "launchDate": "2018-09-09"

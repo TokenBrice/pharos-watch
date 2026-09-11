@@ -23,9 +23,11 @@ interface ReserveBreakdown {
 }
 
 /**
- * Attested fallback split, used only when the live transparency payload carries
- * no asset-class breakdown. Source: Deloitte-examined RLUSD Reserve Report as
- * of 2026-05-29 (RLUSD_Attestation_Report_-_May_2026_Final.pdf, examined
+ * Attested fallback split, used when the live transparency payload carries no
+ * usable asset-class breakdown (missing or malformed). Republishing it always
+ * emits an `attested-fallback-used` degraded warning so a stale split can never
+ * ride a fresh clock silently. Source: Deloitte-examined RLUSD Reserve Report
+ * as of 2026-05-29 (RLUSD_Attestation_Report_-_May_2026_Final.pdf, examined
  * 2026-06-25): U.S. Treasury bills 65.41%, government money-market funds
  * 19.44%, cash and deposit accounts 15.15%.
  */
@@ -106,12 +108,42 @@ function parseMmDdYyyy(raw: string | undefined): number | null {
   return Math.floor(timestampMs / 1000);
 }
 
+const LABEL_WINDOW_CHARS = 300;
+
 /** Reads an explicit percentage within a short window after a class label. */
 function parseLabeledPct(normalized: string, label: RegExp): number | null {
   const match = normalized.match(label);
   if (!match || match.index === undefined) return null;
-  const window = normalized.slice(match.index, match.index + 300);
+  const window = normalized.slice(match.index, match.index + LABEL_WINDOW_CHARS);
   return parseFirstPercentage(window);
+}
+
+const TREASURY_BILLS_LABEL = /U\.?S\.?\s+Treasury\s+bills?|T-bills/i;
+const GOVERNMENT_MMF_LABEL = /[Gg]overnment\s+money[- ]market\s+funds?/;
+const CASH_LABEL = /[Cc]ash|[Dd]eposit\s+accounts/;
+const RESERVE_CLASS_LABELS = [TREASURY_BILLS_LABEL, GOVERNMENT_MMF_LABEL, CASH_LABEL];
+
+/**
+ * Whether the payload publishes an asset-class breakdown block the parser could
+ * not reconcile, as opposed to carrying no breakdown at all. A breakdown names
+ * at least two of the three NYDFS reserve classes and shows a
+ * percentage-looking token in one of those label windows. The live
+ * transparency page names a single class in marketing prose ("other cash
+ * equivalents", next to a "backed 100%" claim), so one class word plus an
+ * unrelated percentage must not be reported as a malformed breakdown.
+ */
+function carriesBreakdownShape(normalized: string): boolean {
+  let labeledClasses = 0;
+  let labeledPctToken = false;
+  for (const label of RESERVE_CLASS_LABELS) {
+    const match = normalized.match(label);
+    if (!match || match.index === undefined) continue;
+    labeledClasses++;
+    if (normalized.slice(match.index, match.index + LABEL_WINDOW_CHARS).includes("%")) {
+      labeledPctToken = true;
+    }
+  }
+  return labeledClasses >= 2 && labeledPctToken;
 }
 
 /**
@@ -119,11 +151,16 @@ function parseLabeledPct(normalized: string, label: RegExp): number | null {
  * an explicit breakdown (labeled percentages for all three NYDFS reserve
  * classes summing to 100%). Returns null when the payload has no usable
  * breakdown so the caller falls back to the attested static split.
+ *
+ * The live transparency page, verified 2026-09-11, publishes only the balance
+ * block (circulating supply, reserve funds, `As of` date) and an index of
+ * monthly Deloitte attestation PDFs; it carries no per-class percentages, so a
+ * null here is the expected live outcome, not a parser regression.
  */
 export function parseRippleReserveBreakdown(normalized: string): ReserveBreakdown | null {
-  const treasuryBillsPct = parseLabeledPct(normalized, /U\.?S\.?\s+Treasury\s+bills?|T-bills/i);
-  const governmentMoneyMarketFundsPct = parseLabeledPct(normalized, /[Gg]overnment\s+money[- ]market\s+funds?/);
-  const cashPct = parseLabeledPct(normalized, /[Cc]ash|[Dd]eposit\s+accounts/);
+  const treasuryBillsPct = parseLabeledPct(normalized, TREASURY_BILLS_LABEL);
+  const governmentMoneyMarketFundsPct = parseLabeledPct(normalized, GOVERNMENT_MMF_LABEL);
+  const cashPct = parseLabeledPct(normalized, CASH_LABEL);
   if (treasuryBillsPct === null || governmentMoneyMarketFundsPct === null || cashPct === null) return null;
   const total = treasuryBillsPct + governmentMoneyMarketFundsPct + cashPct;
   if (Math.abs(total - 100) > BREAKDOWN_TOTAL_TOLERANCE_PCT) return null;
@@ -133,6 +170,7 @@ export function parseRippleReserveBreakdown(normalized: string): ReserveBreakdow
 function buildReserveSlices(breakdown: ReserveBreakdown): ReserveSlice[] {
   const slices: ReserveSlice[] = [
     {
+      sourceKey: "ripple-transparency:treasury-bills",
       name: "U.S. Treasury bills",
       pct: breakdown.treasuryBillsPct,
       risk: "very-low",
@@ -145,6 +183,7 @@ function buildReserveSlices(breakdown: ReserveBreakdown): ReserveSlice[] {
       maturityDaysMax: 92,
     },
     {
+      sourceKey: "ripple-transparency:government-mmf",
       name: "Government money-market funds",
       pct: breakdown.governmentMoneyMarketFundsPct,
       risk: "very-low",
@@ -154,6 +193,7 @@ function buildReserveSlices(breakdown: ReserveBreakdown): ReserveSlice[] {
       liquidityHorizon: "one-day",
     },
     {
+      sourceKey: "ripple-transparency:cash",
       name: "Cash and deposit accounts",
       pct: breakdown.cashPct,
       risk: "very-low",
@@ -186,6 +226,25 @@ export function adaptRippleTransparency(html: string): AdapterResult {
 
   const collateralizationRatio = reservesUsd / circulatingUsd;
   const warnings: LiveReserveWarning[] = [];
+  let breakdown = parseRippleReserveBreakdown(normalized);
+  if (breakdown == null) {
+    // Missing and malformed live breakdowns are distinguishable: only a
+    // payload shaped like a breakdown (two or more named reserve classes) can
+    // be malformed; a payload that never carried one is not. Either way the
+    // attested split is stale evidence under a fresh clock, so republishing it
+    // silently would launder the September timestamp over May weights — emit
+    // an explicit degraded warning instead.
+    breakdown = ATTESTED_BREAKDOWN_2026_05;
+    const malformed = carriesBreakdownShape(normalized);
+    warnings.push(
+      reserveDegradedWarning(
+        "attested-fallback-used",
+        malformed
+          ? "Ripple transparency payload carries a malformed asset-class breakdown; republishing the attested 2026-05-29 split"
+          : "Ripple transparency payload carries no asset-class breakdown; republishing the attested 2026-05-29 split",
+      ),
+    );
+  }
   if (collateralizationRatio < MIN_RESERVE_RATIO) {
     warnings.push(
       reserveDegradedWarning(
@@ -196,7 +255,7 @@ export function adaptRippleTransparency(html: string): AdapterResult {
   }
 
   return {
-    slices: buildReserveSlices(parseRippleReserveBreakdown(normalized) ?? ATTESTED_BREAKDOWN_2026_05),
+    slices: buildReserveSlices(breakdown),
     ...(warnings.length > 0 ? { warnings } : {}),
     metadata: {
       circulatingUsd,

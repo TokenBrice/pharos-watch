@@ -2,11 +2,17 @@ import { DAY_SECONDS } from "@shared/lib/time-constants";
 import type { DexDiscoveryProvider } from "@shared/lib/dex-deployment-coverage";
 import type { ContractDeployment } from "@shared/types/core";
 
-/** Raw pool entry written to dex_pool_staging by the discovery cron. */
+/**
+ * Raw pool entry written to dex_pool_staging. Discovery owns its own families;
+ * `dl` and `direct_api` rows are the live-lane write-back from the `:10`
+ * source stage, never discovery output.
+ */
 export interface StagedPool {
   poolId: string;
   stablecoinId: string;
   source:
+    | "dl"
+    | "direct_api"
     | "cg_onchain"
     | "gecko_terminal"
     | "dexscreener"
@@ -92,13 +98,30 @@ export const STAGED_POOL_DEFAULTS = {
 } as const;
 
 /**
- * Confidence decay for staged pool freshness.
- * Fresh rows score at 1.0, 24h-old rows decay to 0.5, then fall out entirely.
+ * Staged rows are trusted at full weight for one day: hourly observation is the
+ * norm, so a single missed run costs nothing. Beyond that the weight ramps
+ * linearly to zero at the confidence horizon, sized from the measured census
+ * revisit tail (p95 in the 7–14 day band on 2026-09-10) so a slow rotating
+ * crawl no longer drops pools it simply has not revisited yet.
+ */
+const STAGED_POOL_FRESH_HOURS = 24;
+export const STAGED_POOL_CONFIDENCE_HORIZON_HOURS = 14 * 24;
+/**
+ * Price evidence never inherits the inventory horizon: a staged row older than
+ * this contributes decayed TVL but no price observation and no retained-pool
+ * price, so dex_prices, DDR and peg-summary only ever see day-fresh prices.
+ */
+export const STAGED_POOL_PRICE_MAX_AGE_HOURS = 24;
+
+/**
+ * Confidence decay for staged pool freshness: 1.0 through the fresh window,
+ * then linear to 0 at the confidence horizon.
  */
 export function stagedPoolConfidence(ageHours: number): number {
   ageHours = Math.max(0, ageHours);
-  if (ageHours > 24) return 0;
-  return Math.max(0.5, 1 - ageHours / 48);
+  if (ageHours <= STAGED_POOL_FRESH_HOURS) return 1;
+  if (ageHours >= STAGED_POOL_CONFIDENCE_HORIZON_HOURS) return 0;
+  return (STAGED_POOL_CONFIDENCE_HORIZON_HOURS - ageHours) / (STAGED_POOL_CONFIDENCE_HORIZON_HOURS - STAGED_POOL_FRESH_HOURS);
 }
 
 /**

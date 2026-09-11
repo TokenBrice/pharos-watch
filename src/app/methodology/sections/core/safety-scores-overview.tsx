@@ -62,6 +62,13 @@ export function SafetyScoresOverview() {
         dependency reviews remain unchanged.
       </p>
       <p>
+        Since methodology v9.49, variant parents, explicit wrapped-asset claims, and manual non-collateral
+        relationships survive independently of reserve composition. Unmapped live reserves still cannot restore
+        older curated or manual collateral weights. Dependency facts distinguish unmatched identities, expired
+        matching classifications, and explicitly reviewed non-links. Curated reserve fallback applies only when
+        there is no live composition; partial live mappings retain their live weights.
+      </p>
+      <p>
         Responsibility follows causal provenance instead of the nearest processing stage. An explicit reason-level
         owner is authoritative; inherited reserve gaps, unavailable upstream pillars, and missing parent scores carry
         every originating owner downstream. Every attributed root receives a causal-root-qualified score path even
@@ -95,6 +102,18 @@ export function SafetyScoresOverview() {
         record is already adverse is measured adverse, while a clean record with no usable price stays a quiet
         observation and its deviation is never coerced to zero. These are provenance and
         evidence-retention changes: pillar weights, score math, and grade thresholds are unchanged.
+      </p>
+      <p>
+        Since methodology v9.47, a dependent&apos;s exposure to an upstream with an open reserve gap counts once per
+        upstream cause. The backing projection folds the slice-level reasons an upstream raises into one reason per
+        projected code, source code, and owner on each dependent exposure, and the slice paths survive in the causal
+        key. An upstream on the audited fallback with nine stale reserve slices previously put 18
+        <code className="text-xs">bounded-unknown-reserve-exposure</code> facts on every direct holder. On replay of
+        <code className="text-xs">capture-20260907-0917.json</code> at clock
+        <code className="text-xs">1788772631</code>, open data points fell 1,280 -&gt; 733
+        (<code className="text-xs">published-evidence-expired</code> 602 -&gt; 58,
+        <code className="text-xs">issuer-undisclosed</code> 354 -&gt; 351), 30 assets changed fact counts, 0 scores
+        moved, 0 grades flipped. No evidence was added.
       </p>
       <p>
         Since methodology v9.461, two evaluator mapping defects are corrected without adding evidence. First,

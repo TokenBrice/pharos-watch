@@ -98,9 +98,11 @@
       }
     },
     "params": {
+      "navScope": "native-fund-share",
       "oracleAddress": "0x3BbccB2301759D2e4A5692bA72DAb4b75dC43B1a",
       "tokenAddress": "0x5a0f93d040de44e78f251b03c43be9cf317dcf64",
-      "assetLabel": "Janus Henderson Anemoy AAA CLO Fund NAV",
+      "sourceKey": "chainlink-nav:token:0x5a0f93d040de44e78f251b03c43be9cf317dcf64",
+      "assetLabel": "Janus Henderson Anemoy AAA CLO Fund shares",
       "assetRisk": "high",
       "oracleMethod": "latestRoundData",
       "maxOracleAgeSec": 345600

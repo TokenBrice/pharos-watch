@@ -1,11 +1,21 @@
 import { round4 } from "@shared/lib/math";
 import { DexLiquidityCronMetadataSchema } from "../../lib/schemas";
-import type { DexPriceObs, FullScoreResult, LiquidityMetrics } from "./types";
+import type { DexPriceObs, FullScoreResult } from "./types";
 
 // Re-exported so existing `./orchestrator-drift` consumers keep their import path.
 export { round4 };
 
 export const DRIFT_WATCHLIST = ["usdc-circle", "usdt-tether", "dai-makerdao", "usds-sky", "usde-ethena"] as const;
+
+/**
+ * A drift condition has to hold for this many consecutive productive runs,
+ * measured against the same pre-event baseline, before it becomes a reported
+ * flag. A single-generation diff both fires and self-silences on one noisy
+ * hour, because the collapsed value becomes the next baseline as soon as it
+ * publishes. Confirmation removes every one-hour blip and, in exchange, keeps
+ * a real loss visible until the value recovers.
+ */
+const DRIFT_CONFIRMATION_RUNS = 2;
 
 export type PreviousDexLiquiditySummary = {
   stagedPoolsMerged: number;
@@ -14,6 +24,20 @@ export type PreviousDexLiquiditySummary = {
   measuredBalanceCoveragePct: number;
   weakCoverageCoins: number;
 };
+
+/**
+ * Pending or confirmed drift condition carried between runs. `baselineValue`
+ * is the pre-event baseline — the last run whose value was not itself flagged —
+ * and never the previous run's already-collapsed value, so a condition that is
+ * still present stays reported after the publication that overwrote the row it
+ * was first measured against.
+ */
+export interface DexLiquidityDriftCandidate {
+  flag: string;
+  consecutiveRuns: number;
+  baselineValue: number;
+  observedValue: number;
+}
 
 type DexLiquidityCronMetadata = ReturnType<typeof DexLiquidityCronMetadataSchema.parse>;
 
@@ -33,6 +57,14 @@ export function readPreviousDexLiquiditySummary(parsed: DexLiquidityCronMetadata
   };
 }
 
+export function readPreviousDexLiquidityDriftCandidates(
+  parsed: DexLiquidityCronMetadata | null,
+): DexLiquidityDriftCandidate[] {
+  const candidates = parsed?.sourceCoverage.qualityDriftCandidates;
+  if (!candidates) return [];
+  return candidates.filter((candidate) => Number.isFinite(candidate.baselineValue));
+}
+
 /**
  * A previously-major coin whose TVL lands below this fraction of its prior
  * published value is reported as a per-coin cliff. Same bound as
@@ -45,6 +77,8 @@ const MAJOR_TVL_CLIFF_RATIO = 0.6;
 
 /** Prior TVL below this is dust oscillation, not a cliff worth flagging. */
 const MAJOR_TVL_CLIFF_MIN_PREVIOUS_USD = 5_000_000;
+
+const MAJOR_TVL_CLIFF_FLAG_PREFIX = "major-tvl-cliff:";
 
 export interface DexLiquidityDriftWatchlistDelta {
   stablecoinId: string;
@@ -66,6 +100,7 @@ export interface DexLiquidityMajorTvlCliff {
 
 export interface DexLiquidityDriftSummary {
   qualityDriftFlags: string[];
+  qualityDriftCandidates: DexLiquidityDriftCandidate[];
   qualityDriftSeverity: "none" | "medium" | "high";
   qualityDriftMetrics: {
     previousPriceObservationCoins: number | null;
@@ -88,8 +123,27 @@ export interface DexLiquidityDriftSummary {
   majorTvlCliffs: DexLiquidityMajorTvlCliff[];
 }
 
+/**
+ * Advances one pending condition by a run. The pre-event baseline from a
+ * previous candidate wins over this run's own previous value; a condition that
+ * no longer holds against that baseline clears the candidate, which is how a
+ * confirmed flag ends.
+ */
+function advanceDriftCandidate(
+  previous: DexLiquidityDriftCandidate | undefined,
+  naturalBaseline: number,
+  conditionHolds: (baselineValue: number) => boolean,
+): Pick<DexLiquidityDriftCandidate, "baselineValue" | "consecutiveRuns"> | null {
+  const baselineValue =
+    previous && Number.isFinite(previous.baselineValue) ? previous.baselineValue : naturalBaseline;
+  if (!Number.isFinite(baselineValue) || !conditionHolds(baselineValue)) return null;
+  const previousRuns = previous && Number.isFinite(previous.consecutiveRuns) ? previous.consecutiveRuns : 0;
+  return { baselineValue, consecutiveRuns: Math.max(0, previousRuns) + 1 };
+}
+
 export function computeDexLiquidityDriftSummary(params: {
   previousSummary: PreviousDexLiquiditySummary | null;
+  previousCandidates: DexLiquidityDriftCandidate[];
   priceObservations: Map<string, DexPriceObs[]>;
   stagedMergedCount: number;
   stagedSkippedCount: number;
@@ -103,7 +157,6 @@ export function computeDexLiquidityDriftSummary(params: {
     balance_measured_tvl_usd: number;
   }>;
   scoreResults: Map<string, FullScoreResult>;
-  retainedPoolsByStablecoin: Map<string, LiquidityMetrics["topPools"]>;
   /**
    * Prior published TVL for the coins that were the largest by TVL last run.
    * Reuses the rows the major-coverage guard already loads: a per-coin cliff
@@ -111,10 +164,34 @@ export function computeDexLiquidityDriftSummary(params: {
    */
   previousMajorTvlById: Map<string, number>;
 }): DexLiquidityDriftSummary {
+  const previousCandidatesByFlag = new Map(params.previousCandidates.map((candidate) => [candidate.flag, candidate]));
+  const candidates: DexLiquidityDriftCandidate[] = [];
+  const qualityDriftFlags: string[] = [];
+
+  const confirmCondition = (
+    flag: string,
+    naturalBaseline: number,
+    observedValue: number,
+    conditionHolds: (baselineValue: number) => boolean,
+  ): DexLiquidityDriftCandidate | null => {
+    const advanced = advanceDriftCandidate(previousCandidatesByFlag.get(flag), naturalBaseline, conditionHolds);
+    if (!advanced) return null;
+    const candidate: DexLiquidityDriftCandidate = { flag, ...advanced, observedValue };
+    candidates.push(candidate);
+    if (advanced.consecutiveRuns >= DRIFT_CONFIRMATION_RUNS) qualityDriftFlags.push(flag);
+    return candidate;
+  };
+
   const watchlistDeltas = DRIFT_WATCHLIST.map((stablecoinId) => {
     const previous = params.watchlistPreviousById.get(stablecoinId);
     const currentScore = params.scoreResults.get(stablecoinId);
-    const currentPools = params.retainedPoolsByStablecoin.get(stablecoinId)?.length ?? 0;
+    // The coin's published pool count — the quantity persistence writes to
+    // `dex_liquidity.pool_count` — instead of a curated subset of the same pool
+    // set, so the delta always compares like with like.
+    const currentPoolCount = Object.values(currentScore?.sourceMix ?? {}).reduce(
+      (sum, entry) => sum + (entry?.poolCount ?? 0),
+      0,
+    );
     const currentMeasuredShare =
       currentScore && currentScore.tvl > 0
         ? Math.max(0, Math.min(1, currentScore.balanceMeasuredTvlUsd / currentScore.tvl))
@@ -126,8 +203,8 @@ export function computeDexLiquidityDriftSummary(params: {
     return {
       stablecoinId,
       previousPoolCount: previous?.pool_count ?? 0,
-      currentPoolCount: currentPools,
-      poolCountPctDelta: pctDelta(currentPools, previous?.pool_count ?? 0),
+      currentPoolCount,
+      poolCountPctDelta: pctDelta(currentPoolCount, previous?.pool_count ?? 0),
       previousCoverageConfidence: previous?.coverage_confidence ?? null,
       currentCoverageConfidence: currentScore?.coverageConfidence ?? null,
       previousMeasuredShare: previous ? round4(previousMeasuredShare) : null,
@@ -135,21 +212,42 @@ export function computeDexLiquidityDriftSummary(params: {
     };
   });
 
-  const majorTvlCliffs: DexLiquidityMajorTvlCliff[] = [];
+  const cliffBaselines = new Map<string, number>();
   for (const [stablecoinId, previousTvlUsd] of params.previousMajorTvlById) {
     if (previousTvlUsd < MAJOR_TVL_CLIFF_MIN_PREVIOUS_USD) continue;
+    cliffBaselines.set(stablecoinId, previousTvlUsd);
+  }
+  // A confirmed cliff keeps its pre-event baseline even once the coin drops out
+  // of the previous top ten, which is exactly when the overwritten baseline
+  // would otherwise hide it.
+  for (const candidate of params.previousCandidates) {
+    if (!candidate.flag.startsWith(MAJOR_TVL_CLIFF_FLAG_PREFIX)) continue;
+    const stablecoinId = candidate.flag.slice(MAJOR_TVL_CLIFF_FLAG_PREFIX.length);
+    if (stablecoinId.length === 0 || !Number.isFinite(candidate.baselineValue)) continue;
+    if (!cliffBaselines.has(stablecoinId)) cliffBaselines.set(stablecoinId, candidate.baselineValue);
+  }
+
+  const majorTvlCliffs: DexLiquidityMajorTvlCliff[] = [];
+  for (const [stablecoinId, naturalBaseline] of cliffBaselines) {
     const currentTvlUsd = params.scoreResults.get(stablecoinId)?.tvl ?? 0;
-    if (currentTvlUsd >= previousTvlUsd * MAJOR_TVL_CLIFF_RATIO) continue;
+    const candidate = confirmCondition(
+      `${MAJOR_TVL_CLIFF_FLAG_PREFIX}${stablecoinId}`,
+      naturalBaseline,
+      currentTvlUsd,
+      (baselineValue) => currentTvlUsd < baselineValue * MAJOR_TVL_CLIFF_RATIO,
+    );
+    if (!candidate) continue;
     majorTvlCliffs.push({
       stablecoinId,
-      previousTvlUsd,
+      previousTvlUsd: candidate.baselineValue,
       currentTvlUsd,
-      tvlPctDelta: pctDelta(currentTvlUsd, previousTvlUsd),
+      tvlPctDelta: pctDelta(currentTvlUsd, candidate.baselineValue),
     });
   }
 
+  const priceObservationCoins = params.priceObservations.size;
   const priceObservationPctDelta = params.previousSummary
-    ? pctDelta(params.priceObservations.size, params.previousSummary.priceObservationCoins)
+    ? pctDelta(priceObservationCoins, params.previousSummary.priceObservationCoins)
     : null;
   const stagedPoolsMergedPctDelta = params.previousSummary
     ? pctDelta(params.stagedMergedCount, params.previousSummary.stagedPoolsMerged)
@@ -164,27 +262,42 @@ export function computeDexLiquidityDriftSummary(params: {
     ? params.weakCoverageCoinsBeforeFallback - params.previousSummary.weakCoverageCoins
     : null;
 
-  const qualityDriftFlags: string[] = [];
-  if (priceObservationPctDelta != null && priceObservationPctDelta <= -0.1) {
-    qualityDriftFlags.push("price-observation-drop");
+  if (params.previousSummary) {
+    const previous = params.previousSummary;
+    confirmCondition("price-observation-drop", previous.priceObservationCoins, priceObservationCoins, (baselineValue) => {
+      const delta = pctDelta(priceObservationCoins, baselineValue);
+      return delta != null && delta <= -0.1;
+    });
+    confirmCondition("staged-merge-drop", previous.stagedPoolsMerged, params.stagedMergedCount, (baselineValue) => {
+      const delta = pctDelta(params.stagedMergedCount, baselineValue);
+      return delta != null && delta <= -0.1;
+    });
+    confirmCondition(
+      "measured-balance-drop",
+      previous.measuredBalanceCoveragePct,
+      params.measuredBalanceCoveragePct,
+      (baselineValue) => round4(params.measuredBalanceCoveragePct - baselineValue) <= -0.08,
+    );
+    confirmCondition(
+      "weak-coverage-rise",
+      previous.weakCoverageCoins,
+      params.weakCoverageCoinsBeforeFallback,
+      (baselineValue) => params.weakCoverageCoinsBeforeFallback - baselineValue >= 5,
+    );
   }
-  if (stagedPoolsMergedPctDelta != null && stagedPoolsMergedPctDelta <= -0.1) {
-    qualityDriftFlags.push("staged-merge-drop");
-  }
-  if (measuredBalanceCoverageDelta != null && measuredBalanceCoverageDelta <= -0.08) {
-    qualityDriftFlags.push("measured-balance-drop");
-  }
-  if (weakCoverageDelta != null && weakCoverageDelta >= 5) {
-    qualityDriftFlags.push("weak-coverage-rise");
-  }
+
   for (const delta of watchlistDeltas) {
-    if (delta.poolCountPctDelta != null && delta.poolCountPctDelta <= -0.2) {
-      qualityDriftFlags.push(`watchlist-pool-drop:${delta.stablecoinId}`);
-    }
+    confirmCondition(
+      `watchlist-pool-drop:${delta.stablecoinId}`,
+      delta.previousPoolCount,
+      delta.currentPoolCount,
+      (baselineValue) => {
+        const change = pctDelta(delta.currentPoolCount, baselineValue);
+        return change != null && change <= -0.2;
+      },
+    );
   }
-  for (const cliff of majorTvlCliffs) {
-    qualityDriftFlags.push(`major-tvl-cliff:${cliff.stablecoinId}`);
-  }
+
   const qualityDriftSeverity: DexLiquidityDriftSummary["qualityDriftSeverity"] =
     qualityDriftFlags.length === 0
       ? "none"
@@ -192,17 +305,18 @@ export function computeDexLiquidityDriftSummary(params: {
             (flag) =>
               flag === "measured-balance-drop" ||
               flag.startsWith("watchlist-pool-drop:") ||
-              flag.startsWith("major-tvl-cliff:"),
+              flag.startsWith(MAJOR_TVL_CLIFF_FLAG_PREFIX),
           )
         ? "high"
         : "medium";
 
   return {
     qualityDriftFlags,
+    qualityDriftCandidates: candidates,
     qualityDriftSeverity,
     qualityDriftMetrics: {
       previousPriceObservationCoins: params.previousSummary?.priceObservationCoins ?? null,
-      currentPriceObservationCoins: params.priceObservations.size,
+      currentPriceObservationCoins: priceObservationCoins,
       priceObservationPctDelta,
       previousMeasuredBalanceCoveragePct: params.previousSummary?.measuredBalanceCoveragePct ?? null,
       currentMeasuredBalanceCoveragePct: params.measuredBalanceCoveragePct,

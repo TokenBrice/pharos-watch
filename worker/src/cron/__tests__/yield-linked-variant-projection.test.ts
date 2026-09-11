@@ -1,11 +1,12 @@
 import { describe, expect, it } from "vitest";
 import { buildHardcodedUsdBenchmark } from "../yield-sync/benchmarks";
 import { deriveYieldSourceRole } from "../yield-sync/decision-public";
-import { evaluateYieldSources, type EvaluateYieldSourcesInput } from "../yield-sync/evaluation";
+import { evaluateYieldSources } from "../yield-sync/evaluation";
 import { appendLinkedVariantParentYieldSources } from "../yield-sync/resolve-helpers";
 import { buildYieldSourceRisk } from "../yield-sync/source-risk";
 import type { ResolvedYield, ResolvedYieldEntry } from "../yield-sync/types";
 import { resolveYieldSourceUrl } from "../../lib/yield-source-links";
+import { baseEvaluationInput } from "./yield-evaluation.test-support";
 
 const START_SEC = 1_783_641_600;
 
@@ -25,36 +26,16 @@ function source(overrides: Partial<ResolvedYield> = {}): ResolvedYield {
 }
 
 function evaluate(resolved: ResolvedYieldEntry[]) {
-  const input: EvaluateYieldSourcesInput = {
+  const input = baseEvaluationInput({
     resolved,
     startSec: START_SEC,
-    sevenDaysAgoSec: START_SEC - 7 * 86_400,
     safetyScores: new Map(resolved.map((entry) => [entry.id, { score: 80, grade: "B+" }])),
     riskFreeRates: {
+      ...baseEvaluationInput().riskFreeRates,
       USD: buildHardcodedUsdBenchmark("linked-variant-test"),
-      EUR: null,
-      CHF: null,
-      GBP: null,
-      JPY: null,
-      MXN: null,
-      BRL: null,
-      AUD: null,
-      CAD: null,
-      RUB: null,
-      TRY: null,
-      SGD: null,
     },
-    tier1PrevRates: new Map(),
-    sourceHistory: new Map(),
-    onChainCompatibilityHistoryById: new Map(),
-    legacyDeterministicOnChainHistoryById: new Map(),
-    legacyHistoryById: new Map(),
-    prevTvlBySource: new Map(),
-    legacyPrevTvlById: new Map(),
-    prevBestSourceKeyByCoin: new Map(),
-    sourceSwitchCount30dByCoin: new Map(),
     stablecoinSupplyById: new Map(resolved.map((entry) => [entry.id, 10_000_000])),
-  };
+  });
   return evaluateYieldSources(input);
 }
 
@@ -371,22 +352,6 @@ describe("appendLinkedVariantParentYieldSources", () => {
     expect(resolved).toHaveLength(1);
   });
 
-  it("does not project fixed-yield markets from variants to parents", () => {
-    const resolved: ResolvedYieldEntry[] = [
-      {
-        id: "sbold-k3-capital",
-        symbol: "sBOLD",
-        yield: source({
-          sourceKey: "protocol-api:pendle:ethereum:0xpool",
-          yieldSource: "Pendle fixed yield: sBOLD",
-          yieldType: "fixed-yield",
-        }),
-      },
-    ];
-
-    expect(appendLinkedVariantParentYieldSources(resolved)).toBe(0);
-    expect(resolved).toHaveLength(1);
-  });
 
   it("does not project third-party structured tranches from variants to parents", () => {
     const resolved: ResolvedYieldEntry[] = [

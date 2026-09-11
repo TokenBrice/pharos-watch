@@ -2,24 +2,67 @@
   "id": "money-defi-money",
   "reserves": [
     {
-      "name": "Approved crypto loan collateral",
-      "pct": 100,
-      "risk": "high",
+      "name": "ETH",
+      "pct": 63.9,
+      "risk": "very-low",
       "assetClass": "cryptoasset",
-      "issuerOrObligor": "defi.money LLAMMA market collateral across Arbitrum, Optimism, and Base (WBTC, ETH, and other accepted market collateral)",
+      "issuerOrObligor": "Ethereum native asset held in LLAMMA soft-liquidation bands (no issuer or custodian layer)",
+      "riskFactors": [
+        "market"
+      ],
+      "liquidityHorizon": "immediate",
+      "sourceKey": "money-llamma:weth"
+    },
+    {
+      "name": "wstETH",
+      "pct": 26.5,
+      "risk": "low",
+      "assetClass": "cryptoasset",
+      "issuerOrObligor": "Lido stETH wrapper held in LLAMMA bands",
       "riskFactors": [
         "market",
-        "liquidity",
+        "smart-contract",
+        "liquidity"
+      ],
+      "liquidityHorizon": "immediate",
+      "sourceKey": "money-llamma:wsteth"
+    },
+    {
+      "name": "Custodied BTC (WBTC)",
+      "pct": 4.8,
+      "risk": "medium",
+      "assetClass": "cryptoasset",
+      "issuerOrObligor": "BitGo-custodied WBTC wrapper held in LLAMMA bands",
+      "riskFactors": [
+        "custody",
+        "counterparty",
+        "market",
+        "smart-contract"
+      ],
+      "liquidityHorizon": "immediate",
+      "sourceKey": "money-llamma:wbtc"
+    },
+    {
+      "name": "Other accepted LLAMMA collateral (currently cbBTC)",
+      "pct": 4.8,
+      "risk": "high",
+      "assetClass": "cryptoasset",
+      "issuerOrObligor": "Coinbase-custodied cbBTC wrapper held in LLAMMA bands; any further accepted collateral symbol joins this measured bucket family at runtime",
+      "riskFactors": [
+        "custody",
+        "counterparty",
+        "market",
         "smart-contract",
         "concentration"
       ],
-      "liquidityHorizon": "unknown"
+      "liquidityHorizon": "immediate",
+      "sourceKey": "money-llamma:other-cbbtc"
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-28",
-    "reviewer": "Grok phase-1 reserve research 2026-07-28",
-    "confidence": "manual-review",
+    "reviewedAt": "2026-09-09",
+    "reviewer": "pharos-live-reserve-upgrade (MONEY LLAMMA on-chain census binding)",
+    "confidence": "verified",
     "sources": [
       {
         "label": "defi.money documentation: how MONEY is made",
@@ -30,19 +73,40 @@
         "url": "https://docs.defi.money/welcome/deployments/contracts-addresses"
       }
     ],
-    "rationale": "Write-time re-open 2026-07-28 of defi.money how-is-usdmoney-made and contracts-addresses docs: MONEY is minted only by depositing supported crypto collateral into CDP/LLAMMA-style loans. Per-market collateral inventory still not published as a reconciled weight table; envelope remains 100% approved crypto loan collateral with ku=100.",
-    "compositionBasis": "defi.money documented crvUSD-style CDP architecture and deployment registry; current per-market weights unpublished",
-    "compositionAsOf": "2026-07-28",
+    "rationale": "Bound to the live money-llamma adapter and restated on its exact bucket identities: a 2026-09-09 multicall census of the defi.money controller across Arbitrum (block 503468467), Base (51096679), and Optimism (156691968) enumerated 12 LLAMMA market operators and read 9,853 bands, pricing bands_x/bands_y collateral through DefiLlama quotes. The former unpublished-basket envelope (ku=100) is replaced by the four measured buckets the adapter emits; weights refresh at runtime with each reserve sync.",
+    "compositionBasis": "Live money-llamma adapter bucket identities and capture-time weights from the 2026-09-09 on-chain LLAMMA band census across Arbitrum, Base, and Optimism",
+    "compositionAsOf": "2026-09-09",
     "scope": "full-composition",
-    "knownUnknownExposure": "The complete per-market collateral split (asset identities, debt shares, and band-position conversions across Arbitrum, Optimism, and Base) is not published; the issuer frontend and API are disabled, so no current verifiable composition exists.",
-    "knownUnknownExposurePct": 100,
+    "knownUnknownExposure": "All four live collateral buckets are identified at the capture census; the accepted-collateral set changes with market usage, and any newly accepted symbol surfaces as an additional measured money-llamma:other-<symbol> bucket at runtime rather than hiding inside a reviewed row.",
+    "knownUnknownExposurePct": 0,
     "nonLinkDispositions": [
       {
         "reserveIndex": 0,
-        "reserveName": "Approved crypto loan collateral",
-        "pct": 100,
-        "disposition": "basket-needs-split",
-        "rationale": "The documented envelope spans multiple accepted collateral assets across three chains, but no current per-market weights are published and the disabled frontend prevents issuer-side verification."
+        "reserveName": "ETH",
+        "pct": 63.9,
+        "disposition": "untracked-exogenous-asset",
+        "rationale": "Native ETH held in LLAMMA bands is external crypto collateral, not a tracked stablecoin dependency."
+      },
+      {
+        "reserveIndex": 1,
+        "reserveName": "wstETH",
+        "pct": 26.5,
+        "disposition": "untracked-exogenous-asset",
+        "rationale": "Lido wstETH is external crypto collateral, not a tracked stablecoin dependency."
+      },
+      {
+        "reserveIndex": 2,
+        "reserveName": "Custodied BTC (WBTC)",
+        "pct": 4.8,
+        "disposition": "untracked-exogenous-asset",
+        "rationale": "Custodied Bitcoin wrappers are external crypto collateral, not tracked stablecoin dependencies."
+      },
+      {
+        "reserveIndex": 3,
+        "reserveName": "Other accepted LLAMMA collateral (currently cbBTC)",
+        "pct": 4.8,
+        "disposition": "untracked-exogenous-asset",
+        "rationale": "cbBTC and any further accepted collateral symbols are external crypto assets measured per symbol at runtime, not tracked stablecoin dependencies."
       }
     ]
   },

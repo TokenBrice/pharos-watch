@@ -1,43 +1,50 @@
 import { afterEach, describe, it, expect } from "vitest";
 import { reconcileStatusState } from "../status-state-store";
-import { createLatestSchemaSqlite } from "../../test-helpers/latest-schema-sqlite";
+import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
+
+const fixtures = createLatestSchemaFixtureTracker();
+afterEach(fixtures.closeAll);
 
 describe("reconcileStatusState concurrency (regression)", () => {
-  const openDatabases: import("node:sqlite").DatabaseSync[] = [];
-
-  afterEach(() => {
-    for (const sqlite of openDatabases.splice(0)) sqlite.close();
-  });
-
-  it("does not skip transitions when two callers reconcile simultaneously against the same row", async () => {
-    const { sqlite, db } = createLatestSchemaSqlite();
-    openDatabases.push(sqlite);
-    sqlite
-      .prepare(
-        `INSERT INTO status_state
-         (scope, current_status, raw_status, last_evaluated_at, last_changed_at,
-          consecutive_healthy, consecutive_degraded, consecutive_stale, confidence, causes_json, updated_at)
-         VALUES ('global', 'healthy', 'healthy', 1000, 1000, 5, 0, 0, 0.9, '[]', 1000)`,
-      )
-      .run();
-    // Simulate two in-flight calls that should both see the seed and both
-    // try to write; at most one will win, but both must be observable via
-    // the persisted state (no transition loss for the winning write).
-    const [a, b] = await Promise.all([
-      reconcileStatusState(db, 2000, "degraded", 0.8, []),
-      reconcileStatusState(db, 2000, "degraded", 0.8, []),
+  it("persists exactly one transition when both callers read the pre-escalation row", async () => {
+    const { sqlite, db } = fixtures.open();
+    sqlite.prepare(`INSERT INTO status_state
+      (scope, current_status, raw_status, last_evaluated_at, last_changed_at,
+       consecutive_healthy, consecutive_degraded, consecutive_stale, confidence, causes_json, updated_at)
+      VALUES ('global', 'healthy', 'degraded', 1000, 1000, 0, 1, 0, 0.9, '[]', 1000)`).run();
+    let reads = 0;
+    let release!: () => void;
+    const bothRead = new Promise<void>((resolve) => { release = resolve; });
+    const gatedDb = {
+      ...db,
+      prepare(sql: string) {
+        const statement = db.prepare(sql);
+        if (!sql.startsWith("SELECT ")) return statement;
+        return {
+          ...statement,
+          bind(...values: unknown[]) {
+            const bound = statement.bind(...values);
+            return {
+              ...bound,
+              async first() {
+                const row = await bound.first();
+                if (++reads === 2) release();
+                await bothRead;
+                return row;
+              },
+            };
+          },
+        };
+      },
+    } as D1Database;
+    const results = await Promise.all([
+      reconcileStatusState(gatedDb, 2000, "degraded", 0.8, []),
+      reconcileStatusState(gatedDb, 2000, "degraded", 0.8, []),
     ]);
-    // At least one must report persistenceSucceeded; transition count in
-    // the timeline must equal the number of genuine state changes, never
-    // two "healthy -> degraded" transitions for the same effective event.
-    const persistedOk = [a, b].filter((r) => r.persistenceSucceeded).length;
-    expect(persistedOk).toBeGreaterThanOrEqual(1);
-    const transitions = await db
-      .prepare("SELECT previous_status, next_status FROM status_transitions ORDER BY id")
-      .all<{ previous_status: string; next_status: string }>();
-    const degradations = transitions.results.filter(
-      (t) => t.previous_status === "healthy" && t.next_status === "degraded",
-    );
-    expect(degradations.length).toBeLessThanOrEqual(1);
+    expect(results.every((result) => result.persistenceSucceeded)).toBe(true);
+    expect(sqlite.prepare("SELECT current_status, consecutive_degraded FROM status_state").get())
+      .toEqual({ current_status: "degraded", consecutive_degraded: 2 });
+    expect(sqlite.prepare("SELECT previous_status, next_status, created_at FROM status_transitions").all())
+      .toEqual([{ previous_status: "healthy", next_status: "degraded", created_at: 2000 }]);
   });
 });

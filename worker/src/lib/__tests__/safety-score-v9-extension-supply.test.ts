@@ -239,6 +239,34 @@ describe("buildSafetyScoreV9SupplyReview", () => {
     expect(buildSafetyScoreV9SupplyReview(fixedInput, "alpha", profile(routes))).toBeNull();
   });
 
+  it.each(["duplicate-route", "wrong-chain", "wrong-contract"] as const)(
+    "rejects a full-cardinality deployment packet with %s",
+    (mutation) => {
+      const routes = [
+        { ...ETH_ROUTE, destinationChain: "ethereum", contractAddress: "native" },
+        { ...ETH_ROUTE, id: "base:0x02", destinationChain: "base", contractAddress: "0x02" },
+      ];
+      const deployments = [
+        { routeId: "ethereum:native", chainId: "ethereum", contractAddress: "native", currentSupplyUsd: 60 },
+        { routeId: "base:0x02", chainId: "base", contractAddress: "0x02", currentSupplyUsd: 40 },
+      ];
+      const fixed = {
+        chainCirculatingById: { alpha: {} },
+        safetyScoreV9SupplyAttributionById: {
+          alpha: { model: "reviewed-deployment-unit-partition-v1", deployments },
+        },
+      } as unknown as ReportCardsFixedInput;
+      expect(buildSafetyScoreV9SupplyReview(fixed, "alpha", profile(routes))?.selectedBridgeRoutes).toMatchObject([
+        { deploymentRouteKey: "base:0x02", supplyShare: 0.4 },
+        { deploymentRouteKey: "ethereum:native", supplyShare: 0.6 },
+      ]);
+      if (mutation === "duplicate-route") deployments[1] = { ...deployments[0]!, currentSupplyUsd: 40 };
+      else if (mutation === "wrong-chain") deployments[1]!.chainId = "arbitrum";
+      else deployments[1]!.contractAddress = "0x03";
+      expect(buildSafetyScoreV9SupplyReview(fixed, "alpha", profile(routes))).toBeNull();
+    },
+  );
+
   it("returns null without supply rows and without routes on a multi-chain asset", () => {
     expect(buildSafetyScoreV9SupplyReview(fixedInputStub({}), "alpha", undefined)).toBeNull();
     expect(
@@ -424,8 +452,15 @@ describe("buildSafetyScoreV9SupplyReview", () => {
     expect(beta.selectedBridgeRoutes.find((route) => route.reviewState === "unmatched")?.deploymentRouteKey).toBe(
       "unmatched-chain-label-pool:beta",
     );
-    const betaUnmatchedDomain = beta.failureDomains.find((domain) => domain.key.includes("unmatched-chain-label-pool"));
-    expect(alpha.failureDomains).not.toContainEqual(betaUnmatchedDomain);
+    expect(alpha.failureDomains).toContainEqual({
+      kind: "bridge-route", key: "unmatched-chain-label-pool:alpha",
+    });
+    expect(beta.failureDomains).toContainEqual({
+      kind: "bridge-route", key: "unmatched-chain-label-pool:beta",
+    });
+    expect(alpha.failureDomains).not.toContainEqual({
+      kind: "bridge-route", key: "unmatched-chain-label-pool:beta",
+    });
   });
 
   it("conserves aggregate-only XAUT across free canonical supply and the XAUt0 lock/mint pool", () => {
@@ -529,7 +564,10 @@ describe("buildSafetyScoreV9SupplyReview", () => {
     ]);
   });
 
-  it("fails a representation group closed once its unknown destination split is material", () => {
+  it.each([
+    [9.99, "selected-reviewed", 1, 0],
+    [10, "selected-unresolved", 0.9, 0.1],
+  ] as const)("classifies a representation group with %s percent supply at the materiality boundary", (groupUsd, reviewState, selectedShare, unreviewedShare) => {
     const profile =
       xautRiskReview.bridgeRouteRisk as BridgeRouteRiskProfile;
     const fixedInput = {
@@ -542,7 +580,7 @@ describe("buildSafetyScoreV9SupplyReview", () => {
             routeId:
               "ethereum:0x68749665ff8d2d112fa859aa293f07a622782f38",
             chainId: "ethereum",
-            currentSupplyUsd: 88,
+            currentSupplyUsd: 100 - groupUsd,
           },
           representationGroup: {
             deploymentRouteKey:
@@ -560,7 +598,7 @@ describe("buildSafetyScoreV9SupplyReview", () => {
               "contract:ethereum:0xb9c2321bb7d0db468f570d10a424d1cc8efd696c",
               "protocol:xaut0-omnichain",
             ],
-            currentSupplyUsd: 12,
+            currentSupplyUsd: groupUsd,
           },
         },
       },
@@ -580,12 +618,12 @@ describe("buildSafetyScoreV9SupplyReview", () => {
         ),
       ),
     ).toMatchObject({
-      reviewState: "selected-unresolved",
-      supplyShare: 0.12,
+      reviewState,
+      supplyShare: groupUsd / 100,
     });
-    expect(review!.selectedRouteSupplyShare).toBe(0.88);
+    expect(review!.selectedRouteSupplyShare).toBe(selectedShare);
     expect(review!.unknownRouteSupplyShare).toBe(0);
-    expect(review!.unreviewedRouteSupplyShare).toBe(0.12);
+    expect(review!.unreviewedRouteSupplyShare).toBe(unreviewedShare);
   });
 });
 

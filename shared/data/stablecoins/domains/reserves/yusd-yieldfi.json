@@ -2,6 +2,7 @@
   "id": "yusd-yieldfi",
   "reserves": [
     {
+      "sourceKey": "erc4626-single-asset:ethereum:0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
       "name": "USDC active strategy vaults and private-credit positions",
       "pct": 100,
       "risk": "high",

@@ -125,14 +125,20 @@ describe("Safety Score v9 exact base fact-set adapter — peg and mechanism evid
     expect(compileSafetyScoreV9FactSetFromFixedInput(fixed, baseline).assets[0]!.peg).toMatchObject({ referenceKind, referenceKey });
   });
 
-  it("keeps reviewed dependency edges bounded until live reserve exposure maps them", () => {
+  it("rejects unmapped live dependency edges until live reserve exposure maps them", () => {
     const fixed = exactTwoAssetFixedInput();
     const metaById = dependencyMeta();
     const baseline = buildSafetyScoreV9BaselineExtension(fixed, { metaById });
-    expect(baseline.assets.find((asset) => asset.assetId === "alpha")!.dependencies).toMatchObject({ source: "manual", diagnostics: { graphState: "unresolved" }, edges: [{ upstreamAssetId: "beta", weight: 0.5 }] });
+    expect(baseline.assets.find((asset) => asset.assetId === "alpha")!.dependencies).toMatchObject({
+      source: "live-unmapped", dependencyFromLive: true, mappedLiveReserveWeight: 0,
+      fallbackReason: null, rejectionReasons: [{ sliceIndex: 0, reason: "no-match" }],
+      diagnostics: { graphState: "unresolved" }, edges: [],
+    });
     const compiled = compileSafetyScoreV9FactSetFromFixedInput(fixed, baseline);
     expect(compiled.assets[0]!.dependencies.status).toMatchObject({ observationState: "bounded-unknown" });
-    expect(compiled.assets[0]!.dependencies.edges[0]!.evidenceRefIds).toEqual(compiled.assets[0]!.dependencies.status.evidenceRefIds);
+    expect(compiled.assets[0]!.dependencies).toMatchObject({
+      source: "live-unmapped", edges: [], rejectionReasons: [{ sliceIndex: 0, reason: "no-match" }],
+    });
     expect(evaluateV9FactSet(compiled, V9_CANDIDATE_POLICY_V1).assets[0]!.scoreInput.dependencyReasons.map((reason) => reason.code)).toContain("unreviewed-dependency-relationships");
     const reviewed = metaById.get("alpha")!.dependencyReview!;
     const weightDrift = new Map(metaById);
@@ -143,10 +149,11 @@ describe("Safety Score v9 exact base fact-set adapter — peg and mechanism evid
     expect(buildSafetyScoreV9BaselineExtension(fixed, { metaById: structuralDrift }).assets[0]!.dependencies?.diagnostics.issueCodes).toContain("dependency-review-mismatch");
     const mappedFixed = exactTwoAssetFixedInput({ mapAlphaCollateral: true });
     const mapped = buildSafetyScoreV9BaselineExtension(mappedFixed, { metaById });
-    const mappedAsset = compileSafetyScoreV9FactSetFromFixedInput(mappedFixed, mapped).assets[0]!;
+    const mappedFacts = compileSafetyScoreV9FactSetFromFixedInput(mappedFixed, mapped);
+    const mappedAsset = mappedFacts.assets[0]!;
     expect(mappedAsset.dependencies.status.observationState).toBe("known");
     expect(mappedAsset.reserveExposures).toContainEqual(expect.objectContaining({ trackedAssetId: "beta", weight: 0.5, status: expect.objectContaining({ observationState: "known" }) }));
-    expect(evaluateV9FactSet(compileSafetyScoreV9FactSetFromFixedInput(mappedFixed, mapped), V9_CANDIDATE_POLICY_V1).assets[0]!.scoreInput.dependencyReasons.map((reason) => reason.code)).not.toContain("unreviewed-dependency-relationships");
+    expect(evaluateV9FactSet(mappedFacts, V9_CANDIDATE_POLICY_V1).assets[0]!.scoreInput.dependencyReasons.map((reason) => reason.code)).not.toContain("unreviewed-dependency-relationships");
     const liveMeta = new Map(metaById);
     liveMeta.set("alpha", { ...metaById.get("alpha")!, ...reviewedDependencyMeta() });
     const live = compileSafetyScoreV9FactSetFromFixedInput(mappedFixed, buildSafetyScoreV9BaselineExtension(mappedFixed, { metaById: liveMeta })).assets[0]!;
@@ -204,7 +211,11 @@ describe("Safety Score v9 exact base fact-set adapter — peg and mechanism evid
     const noAdapterAsset = compileSafetyScoreV9FactSetFromFixedInput(noAdapter, buildSafetyScoreV9BaselineExtension(noAdapter, { metaById: metaMap(meta, alphaMeta({ id: "beta" })) })).assets[0]!;
     expect(noAdapterAsset.dependencies.edges).toEqual([]);
     expect(noAdapterAsset.gaps).toContainEqual(expect.objectContaining({ reasonCode: "missing-reserve-composition" }));
-    expect(buildSafetyScoreV9BaselineExtension(exactTwoAssetFixedInput(), { metaById: metaMap(meta, alphaMeta({ id: "beta" })) }).assets[0]!.dependencies).toMatchObject({ diagnostics: { graphState: "unresolved" } });
+    expect(buildSafetyScoreV9BaselineExtension(exactTwoAssetFixedInput(), { metaById: metaMap(meta, alphaMeta({ id: "beta" })) }).assets[0]!.dependencies).toMatchObject({
+      source: "live-unmapped", dependencyFromLive: true, mappedLiveReserveWeight: 0,
+      fallbackReason: null, edges: [], rejectionReasons: [{ sliceIndex: 0, reason: "no-match" }],
+      diagnostics: { graphState: "valid" },
+    });
   });
 
   it("compiles eligible issuer-attested reserves, independent reports, and curated fallbacks", () => {
@@ -234,14 +245,29 @@ describe("Safety Score v9 exact base fact-set adapter — peg and mechanism evid
     freeze.reviews = [{ reviewKey: "blacklist:alpha", source: "upstream", status: structuredClone(bounded), reach: "possible", controlKey: null, upstreamAssetId: "alpha", failureDomains: [{ kind: "mint-control", key: "asset:alpha" }] }];
     freeze.structuralDisposition = "inherited-upstream";
     const gaps = (asset: { gaps: Array<{ gapId: string; reasonCode: string; responsibility: string }> }) => asset.gaps.filter((gap) => gap.gapId.includes(":gap:access:freeze"));
-    expect(gaps(compileSafetyScoreV9FactSetFromFixedInput(exactFixedInput(), reviewed).assets[0]!).every((gap) => gap.reasonCode === "inherited-access-exposure" && gap.responsibility === "measured-adverse")).toBe(true);
+    const inheritedAsset = compileSafetyScoreV9FactSetFromFixedInput(exactFixedInput(), reviewed).assets[0]!;
+    expect(gaps(inheritedAsset)).toMatchObject([
+      { gapId: "alpha:gap:access:freeze", reasonCode: "inherited-access-exposure", responsibility: "measured-adverse" },
+      { gapId: "alpha:gap:access:freeze:blacklist:alpha", reasonCode: "inherited-access-exposure", responsibility: "measured-adverse" },
+    ]);
     const missing = structuredClone(reviewed);
     delete missing.assets[0]!.accessReview!.freeze.structuralDisposition;
-    expect(gaps(compileSafetyScoreV9FactSetFromFixedInput(exactFixedInput(), missing).assets[0]!).every((gap) => gap.reasonCode === "missing-access-review")).toBe(true);
+    const missingAsset = compileSafetyScoreV9FactSetFromFixedInput(exactFixedInput(), missing).assets[0]!;
+    expect(gaps(missingAsset)).toMatchObject([
+      { gapId: "alpha:gap:access:freeze", reasonCode: "missing-access-review", responsibility: "issuer-undisclosed" },
+      { gapId: "alpha:gap:access:freeze:blacklist:alpha", reasonCode: "missing-access-review", responsibility: "issuer-undisclosed" },
+    ]);
     const possible = structuredClone(reviewed);
     possible.assets[0]!.accessReview!.freeze.structuralDisposition = "reviewed-possible";
     possible.assets[0]!.accessReview!.freeze.reviews[0] = { ...possible.assets[0]!.accessReview!.freeze.reviews[0]!, source: "blacklist", upstreamAssetId: null, failureDomains: [] };
-    expect(gaps(compileSafetyScoreV9FactSetFromFixedInput(exactFixedInput(), possible).assets[0]!).every((gap) => gap.reasonCode === "reviewed-possible-access")).toBe(true);
+    const possibleAsset = compileSafetyScoreV9FactSetFromFixedInput(exactFixedInput(), possible).assets[0]!;
+    expect(gaps(possibleAsset)).toMatchObject([
+      { gapId: "alpha:gap:access:freeze", reasonCode: "reviewed-possible-access", responsibility: "measured-adverse" },
+      { gapId: "alpha:gap:access:freeze:blacklist:alpha", reasonCode: "reviewed-possible-access", responsibility: "measured-adverse" },
+    ]);
+    expect(inheritedAsset.accessReview.freeze.status.observationState).toBe("bounded-unknown");
+    expect(missingAsset.accessReview.freeze.status.observationState).toBe(inheritedAsset.accessReview.freeze.status.observationState);
+    expect(possibleAsset.accessReview.freeze.status.observationState).toBe(inheritedAsset.accessReview.freeze.status.observationState);
   });
 
   it("distinguishes measured, stale, and producer-failed supply-floor peg gaps", () => {

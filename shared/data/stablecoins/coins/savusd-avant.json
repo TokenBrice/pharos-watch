@@ -136,6 +136,9 @@
       }
     },
     "params": {
+      "redemptionLock": [
+        { "selector": "cooldownDuration()", "kind": "cooldown-seconds" }
+      ],
       "rpcUrl": "https://avalanche-c-chain-rpc.publicnode.com",
       "fallbackRpcUrl": "https://api.avax.network/ext/bc/C/rpc",
       "slice": {

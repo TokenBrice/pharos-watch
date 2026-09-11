@@ -3,7 +3,7 @@
 import { renderHook } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
-import { DISABLED_DETAIL_QUERY_CONTROLS } from "./use-stablecoin-detail-view-model.test-support";
+import { DISABLED_DETAIL_QUERY_CONTROLS, queryResult } from "./use-stablecoin-detail-view-model.test-support";
 
 const mocks = vi.hoisted(() => ({
   buildStablecoinDetailViewModel: vi.fn(),
@@ -81,76 +81,31 @@ function resetRefetchMocks() {
 }
 
 function installQueryMocks() {
-  mocks.useSupplyHistory.mockReturnValue({
-    data: [],
-    isLoading: false,
-    error: null,
-    refetch: mocks.refetchSupply,
-  });
-  mocks.usePegSummary.mockReturnValue({
-    data: undefined,
-    dataUpdatedAt: 0,
-    error: null,
-    refetch: mocks.refetchPeg,
-    meta: null,
-  });
-  mocks.useDexLiquidity.mockReturnValue({
-    data: undefined,
-    dataUpdatedAt: 0,
-    error: null,
-    refetch: mocks.refetchLiquidity,
-    meta: null,
-  });
-  mocks.useReportCardsV9.mockReturnValue({
-    data: undefined,
-    dataUpdatedAt: 0,
-    error: null,
-    refetch: mocks.refetchReportCards,
-    meta: null,
-  });
-  mocks.useRegisteredApiQuery.mockImplementation((descriptor: { queryKey: readonly unknown[] }) => ({
-    data: undefined,
-    isLoading: false,
-    isError: false,
-    dataUpdatedAt: 0,
-    error: null,
-    refetch: descriptor.queryKey[0] === "stablecoin-live-summary"
-      ? mocks.refetchList
-      : mocks.refetchRedemptionBackstops,
-    meta: null,
-  }));
+  mocks.useSupplyHistory.mockReturnValue(queryResult({ data: [], refetch: mocks.refetchSupply }));
+  mocks.usePegSummary.mockReturnValue(queryResult({ refetch: mocks.refetchPeg }));
+  mocks.useDexLiquidity.mockReturnValue(queryResult({ refetch: mocks.refetchLiquidity }));
+  mocks.useReportCardsV9.mockReturnValue(queryResult({ refetch: mocks.refetchReportCards }));
+  mocks.useRegisteredApiQuery.mockImplementation((descriptor: { queryKey: readonly unknown[] }) =>
+    queryResult({
+      refetch: descriptor.queryKey[0] === "stablecoin-live-summary"
+        ? mocks.refetchList
+        : mocks.refetchRedemptionBackstops,
+    }));
   mocks.useYieldRankings.mockReturnValue({
-    data: { rankings: [] },
-    isLoading: false,
-    error: null,
+    ...queryResult({ data: { rankings: [] }, refetch: mocks.refetchYieldRankings }),
     dataUpdatedAt: 1,
-    meta: null,
-    refetch: mocks.refetchYieldRankings,
   });
   mocks.useStressSignals.mockReturnValue({
-    data: { signals: {} },
-    isLoading: false,
-    error: null,
+    ...queryResult({ data: { signals: {} }, refetch: mocks.refetchStressSignals }),
     dataUpdatedAt: 1,
-    meta: null,
-    refetch: mocks.refetchStressSignals,
   });
-  mocks.useMintBurnFlows.mockReturnValue({
-    data: undefined,
-    isLoading: false,
-    refetch: mocks.refetchFlows,
-  });
-  mocks.useBlacklistSummary.mockReturnValue({
-    data: undefined,
-    isLoading: false,
-    refetch: mocks.refetchBlacklist,
-  });
-  mocks.useStablecoinReserves.mockReturnValue({
+  mocks.useMintBurnFlows.mockReturnValue(queryResult({ refetch: mocks.refetchFlows }));
+  mocks.useBlacklistSummary.mockReturnValue(queryResult({ refetch: mocks.refetchBlacklist }));
+  mocks.useStablecoinReserves.mockReturnValue(queryResult({
     reserveResult: null,
-    error: null,
-    refetch: mocks.refetchReserves,
     isFetching: false,
-  });
+    refetch: mocks.refetchReserves,
+  }));
   mocks.buildStablecoinDetailViewModel.mockImplementation((params) => ({
     status: "loading",
     handleRetryAll: params.core.handleRetryAll,
@@ -225,7 +180,7 @@ describe("useStablecoinDetailViewModel", () => {
 
   it("masks cached supplemental data while controls are disabled", () => {
     const coin = TRACKED_META_BY_ID.get("usdt-tether")!;
-    mocks.useMintBurnFlows.mockReturnValue({
+    mocks.useMintBurnFlows.mockReturnValue(queryResult({
       data: {
         gauge: { score: 0 },
         coins: [{ stablecoinId: coin.id }],
@@ -233,8 +188,8 @@ describe("useStablecoinDetailViewModel", () => {
       },
       isLoading: true,
       refetch: mocks.refetchFlows,
-    });
-    mocks.useBlacklistSummary.mockReturnValue({
+    }));
+    mocks.useBlacklistSummary.mockReturnValue(queryResult({
       data: {
         stats: {
           perCoinTotalEvents: { USDT: 1 },
@@ -242,13 +197,13 @@ describe("useStablecoinDetailViewModel", () => {
       },
       isLoading: true,
       refetch: mocks.refetchBlacklist,
-    });
-    mocks.useStablecoinReserves.mockReturnValue({
+    }));
+    mocks.useStablecoinReserves.mockReturnValue(queryResult({
       reserveResult: { mode: "live", reserves: [] },
       error: new Error("cached reserve error"),
-      refetch: mocks.refetchReserves,
       isFetching: true,
-    });
+      refetch: mocks.refetchReserves,
+    }));
 
     renderHook(() =>
       useStablecoinDetailViewModel({
@@ -327,20 +282,14 @@ describe("useStablecoinDetailViewModel", () => {
 
   it("retries only failed enabled lanes", async () => {
     const coin = TRACKED_META_BY_ID.get("usdt-tether")!;
-    mocks.usePegSummary.mockReturnValue({
-      data: undefined,
-      dataUpdatedAt: 0,
+    mocks.usePegSummary.mockReturnValue(queryResult({
       error: new Error("peg failed"),
       refetch: mocks.refetchPeg,
-      meta: null,
-    });
-    mocks.useReportCardsV9.mockReturnValue({
-      data: undefined,
-      dataUpdatedAt: 0,
+    }));
+    mocks.useReportCardsV9.mockReturnValue(queryResult({
       error: new Error("report cards failed"),
       refetch: mocks.refetchReportCards,
-      meta: null,
-    });
+    }));
     const { result } = renderHook(() =>
       useStablecoinDetailViewModel({
         id: coin.id,
@@ -372,24 +321,18 @@ describe("useStablecoinDetailViewModel", () => {
 
   it("includes enabled supplemental queries in retry-all", async () => {
     const coin = TRACKED_META_BY_ID.get("usdt-tether")!;
-    mocks.useMintBurnFlows.mockReturnValue({
-      data: undefined,
-      isLoading: false,
+    mocks.useMintBurnFlows.mockReturnValue(queryResult({
       error: new Error("flows failed"),
       refetch: mocks.refetchFlows,
-    });
-    mocks.useBlacklistSummary.mockReturnValue({
-      data: undefined,
-      isLoading: false,
+    }));
+    mocks.useBlacklistSummary.mockReturnValue(queryResult({
       error: new Error("blacklist failed"),
       refetch: mocks.refetchBlacklist,
-    });
-    mocks.useStablecoinReserves.mockReturnValue({
-      reserveResult: null,
+    }));
+    mocks.useStablecoinReserves.mockReturnValue(queryResult({
       error: new Error("reserves failed"),
       refetch: mocks.refetchReserves,
-      isFetching: false,
-    });
+    }));
     const { result } = renderHook(() =>
       useStablecoinDetailViewModel({
         id: coin.id,

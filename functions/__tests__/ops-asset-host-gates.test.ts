@@ -78,7 +78,9 @@ describe("ops asset host gates", () => {
       expect(response.headers.get("Cloudflare-CDN-Cache-Control")).toBe("no-store");
       expect(response.headers.get("CDN-Cache-Control")).toBe("no-store");
       expect(response.headers.get("X-Robots-Tag")).toBe("noindex, nofollow");
-      expect(await response.text()).toMatch(/<script nonce="[^"]+">/);
+      const nonce = scriptSrc.match(/'nonce-([^']+)'/)?.[1];
+      expect(nonce).toBeTruthy();
+      expect(await response.text()).toContain(`<script nonce="${nonce}">${surface.marker}</script>`);
     });
   }
 });

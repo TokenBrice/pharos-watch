@@ -35,6 +35,8 @@ import type { YieldAdapterLifecycleEntry } from "../../lib/yield-config/yield-co
 import type { DlPool } from "../yield-sync/types";
 import { buildYieldCoverageEvidenceFingerprint } from "../yield-coverage-review-dispositions";
 import { makeDlYieldPool } from "./yield-resolve.test-support";
+import { makeWorkerReportCardsV9Response } from "../../test-helpers/report-cards-v9";
+import type { PublishedSafetyScoresResultMap } from "../../lib/safety-scores";
 
 const mockFetchEvmUint256AtBlock = vi.mocked(fetchEvmUint256AtBlock);
 const mockLoadDlStablecoinPools = vi.mocked(loadDlStablecoinPools);
@@ -42,15 +44,29 @@ const mockGetCache = vi.mocked(getCache);
 const mockSetCache = vi.mocked(setCache);
 const mockComputeSafetyScoresSnapshot = vi.mocked(computeSafetyScoresSnapshot);
 
-function v8Identity() {
+function successfulSafetySnapshot(): PublishedSafetyScoresResultMap {
+  const { safetyScoreIdentity } = makeWorkerReportCardsV9Response();
   return {
-    model: "v8" as const,
-    schemaVersion: 1 as const,
-    methodologyVersion: SAFETY_SCORE_METHODOLOGY_VERSION,
-    evaluationBuildDigest: "a".repeat(64),
-    baseInputGenerationId: `report-cards-input:v1:${"b".repeat(64)}`,
-    publicationGenerationId: `report-cards:${SAFETY_SCORE_METHODOLOGY_VERSION}:1774526300`,
+    kind: "ok",
+    mode: "map",
+    coveredCount: 1,
+    trackedCount: 1,
+    coverageRatio: 1,
+    scores: new Map([["dllr-sovryn", { score: 49, grade: "D" }]]),
+    source: "safety-score-v9-publication",
+    safetyScoreIdentity,
+    publicationGenerationId: safetyScoreIdentity.publicationGenerationId,
+    methodologyVersion: safetyScoreIdentity.methodologyVersion,
+    publishedAt: Math.floor(Date.now() / 1000),
   };
+}
+
+function protocolBasket(project: string, thirdSymbol: string, thirdTvlUsd: number, firstPool = 1): DlPool[] {
+  return [
+    makeDlYieldPool({ pool: `p${firstPool}`, project, symbol: "USDC", tvlUsd: 4_000_000, apy: 4, apyBase: 4, apyMean30d: 4 }),
+    makeDlYieldPool({ pool: `p${firstPool + 1}`, project, symbol: "USDT", tvlUsd: 4_000_000, apy: 3.5, apyBase: 3.5, apyMean30d: 3.5 }),
+    makeDlYieldPool({ pool: `p${firstPool + 2}`, project, chain: "Arbitrum", symbol: thirdSymbol, tvlUsd: thirdTvlUsd }),
+  ];
 }
 
 afterEach(() => {
@@ -225,19 +241,7 @@ describe("runYieldCoverageAudit", () => {
       }
       return null;
     });
-    mockComputeSafetyScoresSnapshot.mockResolvedValue({
-      kind: "ok",
-      mode: "map",
-      coveredCount: 1,
-      trackedCount: 1,
-      coverageRatio: 1,
-      scores: new Map(),
-      source: "safety-score-v9-publication",
-      safetyScoreIdentity: v8Identity(),
-      publicationGenerationId: v8Identity().publicationGenerationId,
-      methodologyVersion: SAFETY_SCORE_METHODOLOGY_VERSION,
-      publishedAt: Math.floor(Date.now() / 1000),
-    } as never);
+    mockComputeSafetyScoresSnapshot.mockResolvedValue(successfulSafetySnapshot());
 
     const expectedQueue = buildCoverageAuditOperatorQueue({
       gaps: identifyCoverageGaps(
@@ -387,19 +391,7 @@ describe("runYieldCoverageAudit", () => {
       }
       return null;
     });
-    mockComputeSafetyScoresSnapshot.mockResolvedValue({
-      kind: "ok",
-      mode: "map",
-      coveredCount: 1,
-      trackedCount: 1,
-      coverageRatio: 1,
-      scores: new Map(),
-      source: "safety-score-v9-publication",
-      safetyScoreIdentity: v8Identity(),
-      publicationGenerationId: v8Identity().publicationGenerationId,
-      methodologyVersion: SAFETY_SCORE_METHODOLOGY_VERSION,
-      publishedAt: Math.floor(Date.now() / 1000),
-    } as never);
+    mockComputeSafetyScoresSnapshot.mockResolvedValue(successfulSafetySnapshot());
 
     const result = await runYieldCoverageAudit(mockD1([{
       match: "yield_coverage_review_dispositions",
@@ -478,33 +470,7 @@ describe("identifyCoverageGaps", () => {
   });
 
   it("recommends high-confidence protocols with >$10M TVL and 3+ pools", () => {
-    const dlPools: DlPool[] = [
-      makeDlYieldPool({
-        pool: "p1",
-        project: "rising-protocol",
-        symbol: "USDC",
-        tvlUsd: 4_000_000,
-        apy: 4,
-        apyBase: 4,
-        apyMean30d: 4,
-      }),
-      makeDlYieldPool({
-        pool: "p2",
-        project: "rising-protocol",
-        symbol: "USDT",
-        tvlUsd: 4_000_000,
-        apy: 3.5,
-        apyBase: 3.5,
-        apyMean30d: 3.5,
-      }),
-      makeDlYieldPool({
-        pool: "p3",
-        chain: "Arbitrum",
-        project: "rising-protocol",
-        symbol: "USDC",
-        tvlUsd: 3_000_000,
-      }),
-    ];
+    const dlPools = protocolBasket("rising-protocol", "USDC", 3_000_000);
     const gaps = identifyCoverageGaps(
       dlPools,
       new Set(),
@@ -522,33 +488,7 @@ describe("identifyCoverageGaps", () => {
   });
 
   it("carries provided protocol category metadata on recommendations", () => {
-    const dlPools: DlPool[] = [
-      makeDlYieldPool({
-        pool: "p1",
-        project: "category-lender",
-        symbol: "USDC",
-        tvlUsd: 4_000_000,
-        apy: 4,
-        apyBase: 4,
-        apyMean30d: 4,
-      }),
-      makeDlYieldPool({
-        pool: "p2",
-        project: "category-lender",
-        symbol: "USDT",
-        tvlUsd: 4_000_000,
-        apy: 3.5,
-        apyBase: 3.5,
-        apyMean30d: 3.5,
-      }),
-      makeDlYieldPool({
-        pool: "p3",
-        chain: "Arbitrum",
-        project: "category-lender",
-        symbol: "DAI",
-        tvlUsd: 3_000_000,
-      }),
-    ];
+    const dlPools = protocolBasket("category-lender", "DAI", 3_000_000);
 
     const gaps = identifyCoverageGaps(
       dlPools,
@@ -567,57 +507,9 @@ describe("identifyCoverageGaps", () => {
   });
 
   it("requires an allowed lending category before assigning high-confidence", () => {
-    const dlPools: DlPool[] = [
-      makeDlYieldPool({
-        pool: "p1",
-        project: "aggregator-protocol",
-        symbol: "USDC",
-        tvlUsd: 4_000_000,
-        apy: 4,
-        apyBase: 4,
-        apyMean30d: 4,
-      }),
-      makeDlYieldPool({
-        pool: "p2",
-        project: "aggregator-protocol",
-        symbol: "USDT",
-        tvlUsd: 4_000_000,
-        apy: 3.5,
-        apyBase: 3.5,
-        apyMean30d: 3.5,
-      }),
-      makeDlYieldPool({
-        pool: "p3",
-        chain: "Arbitrum",
-        project: "aggregator-protocol",
-        symbol: "DAI",
-        tvlUsd: 4_000_000,
-      }),
-      makeDlYieldPool({
-        pool: "p4",
-        project: "missing-category-protocol",
-        symbol: "USDC",
-        tvlUsd: 4_000_000,
-        apy: 4,
-        apyBase: 4,
-        apyMean30d: 4,
-      }),
-      makeDlYieldPool({
-        pool: "p5",
-        project: "missing-category-protocol",
-        symbol: "USDT",
-        tvlUsd: 4_000_000,
-        apy: 3.5,
-        apyBase: 3.5,
-        apyMean30d: 3.5,
-      }),
-      makeDlYieldPool({
-        pool: "p6",
-        chain: "Arbitrum",
-        project: "missing-category-protocol",
-        symbol: "DAI",
-        tvlUsd: 4_000_000,
-      }),
+    const dlPools = [
+      ...protocolBasket("aggregator-protocol", "DAI", 4_000_000),
+      ...protocolBasket("missing-category-protocol", "DAI", 4_000_000, 4),
     ];
 
     const gaps = identifyCoverageGaps(

@@ -1,66 +1,46 @@
 // @vitest-environment jsdom
 
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
+import { useState } from "react";
 import { describe, expect, it, vi } from "vitest";
-
 import { TableToolbar } from "@/components/table-toolbar";
 import type { ColumnId } from "@/hooks/use-preferences";
 
+function Toolbar({ onExport, exportDisabled = false }: { onExport: () => void; exportDisabled?: boolean }) {
+  const [density, setDensity] = useState<"spacious" | "compact">("spacious");
+  const [columns, setColumns] = useState<ColumnId[]>(["name", "price"]);
+  const [search, setSearch] = useState("");
+  return <TableToolbar density={density} onDensityChange={setDensity}
+    visibleColumns={columns} onVisibleColumnsChange={setColumns}
+    onResetColumns={() => setColumns(["name", "price"])} defaultColumns={["name", "price"]}
+    onExport={onExport} exportDisabled={exportDisabled} searchValue={search} onSearchChange={setSearch} />;
+}
+
 describe("TableToolbar", () => {
-  const defaultColumns: ColumnId[] = ["name", "price"];
-  const defaultProps = {
-    density: "spacious" as const,
-    onDensityChange: vi.fn(),
-    visibleColumns: defaultColumns,
-    onVisibleColumnsChange: vi.fn(),
-    onResetColumns: vi.fn(),
-    defaultColumns,
-    onExport: vi.fn(),
-  };
-
-  it("keeps the title block stacked until xl widths", () => {
-    render(
-      <TableToolbar
-        {...defaultProps}
-      />,
-    );
-
-    const titleBlock = screen.getByText("Table Controls").parentElement;
-    const layoutRow = titleBlock?.parentElement;
-
-    expect(layoutRow?.classList.contains("xl:flex-row")).toBe(true);
-    expect(layoutRow?.classList.contains("xl:items-baseline")).toBe(true);
-    expect(layoutRow?.classList.contains("xl:justify-between")).toBe(true);
-    expect(layoutRow?.classList.contains("sm:flex-row")).toBe(false);
-
-    expect(titleBlock?.classList.contains("xl:flex-1")).toBe(true);
-    expect(titleBlock?.classList.contains("flex-1")).toBe(false);
+  it("updates search, density, column visibility and restores defaults", async () => {
+    render(<Toolbar onExport={vi.fn()} />);
+    const search = screen.getByRole("searchbox", { name: "Search stablecoins" });
+    fireEvent.change(search, { target: { value: "USDC" } });
+    expect((search as HTMLInputElement).value).toBe("USDC");
+    fireEvent.click(screen.getByRole("radio", { name: "Compact rows" }));
+    expect(screen.getByRole("radio", { name: "Compact rows" }).getAttribute("aria-checked")).toBe("true");
+    expect(screen.getByRole("radio", { name: "Spacious rows" }).getAttribute("aria-checked")).toBe("false");
+    fireEvent.pointerDown(screen.getByRole("button", { name: "Columns" }), { button: 0, ctrlKey: false });
+    fireEvent.click(await screen.findByRole("menuitemcheckbox", { name: "Price" }));
+    expect(screen.getByRole("menuitemcheckbox", { name: "Price" }).getAttribute("aria-checked")).toBe("false");
+    fireEvent.click(screen.getByRole("menuitemcheckbox", { name: "Reset to defaults" }));
+    expect(screen.getByRole("menuitemcheckbox", { name: "Price" }).getAttribute("aria-checked")).toBe("true");
+    expect(screen.queryByRole("menuitemcheckbox", { name: "Reset to defaults" })).toBeNull();
   });
 
-  it("keeps overview search on the same toolbar line as table actions", () => {
-    render(
-      <TableToolbar
-        {...defaultProps}
-        variant="figmaOverview"
-        searchValue=""
-        onSearchChange={vi.fn()}
-      />,
-    );
-
-    const search = screen.getByRole("searchbox", { name: "Search stablecoins" });
-    const toolbar = search.closest(".pharos-overview-table-toolbar");
-
-    expect(toolbar?.classList.contains("flex")).toBe(true);
-    expect(toolbar?.classList.contains("flex-wrap")).toBe(true);
-    const densityControl = toolbar?.querySelector('[role="radiogroup"][aria-label="Table density"]');
-    expect(densityControl).toBeTruthy();
-    expect(densityControl?.classList.contains("bg-muted/50")).toBe(true);
-    expect(densityControl?.classList.contains("dark:bg-neutral-900")).toBe(true);
-    expect(densityControl?.classList.contains("w-[84px]")).toBe(true);
-    const activeDensity = densityControl?.querySelector('[role="radio"][aria-checked="true"]');
-    expect(activeDensity?.classList.contains("bg-card")).toBe(true);
-    expect(activeDensity?.classList.contains("dark:bg-neutral-700")).toBe(true);
-    expect(toolbar?.textContent).toContain("Columns");
-    expect(toolbar?.textContent).toContain("Export CSV");
+  it("exports only while enabled", () => {
+    const onExport = vi.fn();
+    const { rerender } = render(<Toolbar onExport={onExport} />);
+    fireEvent.click(screen.getByRole("button", { name: "Export CSV" }));
+    expect(onExport).toHaveBeenCalledTimes(1);
+    rerender(<Toolbar onExport={onExport} exportDisabled />);
+    expect((screen.getByRole("button", { name: "Export CSV" }) as HTMLButtonElement).disabled).toBe(true);
+    fireEvent.click(screen.getByRole("button", { name: "Export CSV" }));
+    expect(onExport).toHaveBeenCalledTimes(1);
   });
 });

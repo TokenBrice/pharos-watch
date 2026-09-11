@@ -1,8 +1,5 @@
-import { readdirSync, readFileSync } from "node:fs";
-import { join } from "node:path";
-import { DatabaseSync } from "node:sqlite";
 import { afterEach, describe, expect, it } from "vitest";
-import { createSqliteD1 } from "../../test-helpers/sqlite-d1";
+import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
 import {
   claimTelegramTransportPermit,
   pruneTelegramTransportObservations,
@@ -16,23 +13,9 @@ import {
 import type { SendToChatResult } from "../telegram";
 
 const NOW = 1_800_000_000;
-const databases: DatabaseSync[] = [];
+const fixtures = createLatestSchemaFixtureTracker();
 
-function setupLatestSchema(): { sqlite: DatabaseSync; db: D1Database } {
-  const sqlite = new DatabaseSync(":memory:");
-  const migrationDir = process.cwd().endsWith("/worker")
-    ? join(process.cwd(), "migrations")
-    : join(process.cwd(), "worker/migrations");
-  for (const file of readdirSync(migrationDir).filter((entry) => entry.endsWith(".sql")).sort()) {
-    sqlite.exec(readFileSync(join(migrationDir, file), "utf8"));
-  }
-  databases.push(sqlite);
-  return { sqlite, db: createSqliteD1(sqlite) };
-}
-
-afterEach(() => {
-  while (databases.length > 0) databases.pop()?.close();
-});
+afterEach(fixtures.closeAll);
 
 function result(
   errorClass: SendToChatResult["errorClass"],
@@ -63,14 +46,14 @@ async function closedPermit(db: D1Database, owner = "owner-a", requestedDistinct
 
 describe("Telegram transport outage control", () => {
   it("replays the latest schema and leaves normal closed-state concurrency unchanged", async () => {
-    const { db } = setupLatestSchema();
+    const { db } = fixtures.open();
     const permit = await closedPermit(db);
     expect(permit).toMatchObject({ allowed: true, reason: "closed", maxDistinctChats: 6 });
     expect(await readTelegramTransportCircuit(db)).toMatchObject({ state: "closed", generation: 0 });
   });
 
   it("holds fresh handoff while open and seeds at most four targets when a probe is due", async () => {
-    const { sqlite, db } = setupLatestSchema();
+    const { sqlite, db } = fixtures.open();
     sqlite.prepare(
       `UPDATE telegram_transport_circuit
           SET state = 'open', generation = 1, next_probe_at = ?, updated_at = ?
@@ -90,7 +73,7 @@ describe("Telegram transport outage control", () => {
   });
 
   it("lets fresh handoff seed a replacement probe after a half-open lease expires", async () => {
-    const { sqlite, db } = setupLatestSchema();
+    const { sqlite, db } = fixtures.open();
     sqlite.prepare(
       `UPDATE telegram_transport_circuit
           SET state = 'half_open',
@@ -114,7 +97,7 @@ describe("Telegram transport outage control", () => {
   });
 
   it("opens immediately on auth failure and denies the untouched tail", async () => {
-    const { db } = setupLatestSchema();
+    const { db } = fixtures.open();
     const permit = await closedPermit(db);
     const circuit = await recordTelegramTransportOutcomes(db, permit, [
       { chatId: "chat-a", result: result("auth_error", { statusCode: 401, permanentFailure: true }) },
@@ -132,7 +115,7 @@ describe("Telegram transport outage control", () => {
   it.each(["server_error", "network", "timeout"] as const)(
     "requires distinct chats before %s opens the circuit",
     async (errorClass) => {
-      const { db } = setupLatestSchema();
+      const { db } = fixtures.open();
       const permit = await closedPermit(db);
       await recordTelegramTransportOutcomes(db, permit, [
         { chatId: "same-chat", result: result(errorClass) },
@@ -153,7 +136,7 @@ describe("Telegram transport outage control", () => {
   );
 
   it("converges separately admitted passes on one generation-fenced open", async () => {
-    const { db } = setupLatestSchema();
+    const { db } = fixtures.open();
     const firstPermit = await closedPermit(db, "owner-a", 2);
     const secondPermit = await closedPermit(db, "owner-b", 2);
     await recordTelegramTransportOutcomes(db, firstPermit, [
@@ -170,7 +153,7 @@ describe("Telegram transport outage control", () => {
   });
 
   it("ignores a stale closed-state result after a newer circuit generation wins", async () => {
-    const { db } = setupLatestSchema();
+    const { db } = fixtures.open();
     const stalePermit = await closedPermit(db, "stale-owner", 1);
     const winnerPermit = await closedPermit(db, "winner", 1);
     await recordTelegramTransportOutcomes(db, winnerPermit, [
@@ -185,7 +168,7 @@ describe("Telegram transport outage control", () => {
   });
 
   it("keeps one chat-local 429 isolated but infers an outage across distinct chats", async () => {
-    const { db } = setupLatestSchema();
+    const { db } = fixtures.open();
     const permit = await closedPermit(db);
     await recordTelegramTransportOutcomes(db, permit, [
       { chatId: "chat-a", result: result("rate_limit", { statusCode: 429, rateLimitScope: "chat" }) },
@@ -200,7 +183,7 @@ describe("Telegram transport outage control", () => {
   });
 
   it("allows one bounded half-open owner and counts only actual distinct attempts", async () => {
-    const { sqlite, db } = setupLatestSchema();
+    const { sqlite, db } = fixtures.open();
     const permit = await closedPermit(db);
     await recordTelegramTransportOutcomes(db, permit, [
       { chatId: "chat-a", result: result("auth_error", { statusCode: 401 }) },
@@ -228,7 +211,7 @@ describe("Telegram transport outage control", () => {
   });
 
   it("releases a half-open probe permit when no send is attempted", async () => {
-    const { sqlite, db } = setupLatestSchema();
+    const { sqlite, db } = fixtures.open();
     const permit = await closedPermit(db);
     await recordTelegramTransportOutcomes(db, permit, [
       { chatId: "chat-a", result: result("auth_error", { statusCode: 401 }) },
@@ -259,7 +242,7 @@ describe("Telegram transport outage control", () => {
   });
 
   it("treats a lone local 429 half-open result as inconclusive", async () => {
-    const { sqlite, db } = setupLatestSchema();
+    const { sqlite, db } = fixtures.open();
     const permit = await closedPermit(db);
     await recordTelegramTransportOutcomes(db, permit, [
       { chatId: "chat-a", result: result("auth_error", { statusCode: 401 }) },
@@ -276,7 +259,7 @@ describe("Telegram transport outage control", () => {
   });
 
   it("fences independent pause generations and expires them automatically", async () => {
-    const { db } = setupLatestSchema();
+    const { db } = fixtures.open();
     const paused = await setTelegramDeliveryPause(db, {
       mode: "admin",
       expectedGeneration: 0,
@@ -304,7 +287,7 @@ describe("Telegram transport outage control", () => {
   });
 
   it("prunes observations beyond the documented bounded retention", async () => {
-    const { sqlite, db } = setupLatestSchema();
+    const { sqlite, db } = fixtures.open();
     sqlite.prepare(
       `INSERT INTO telegram_transport_failure_observations
          (failure_scope, chat_id, error_class, observed_at)

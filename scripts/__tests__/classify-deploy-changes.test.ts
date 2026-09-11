@@ -14,6 +14,23 @@ import {
 } from "../ci/classify-deploy-changes.ts";
 import { DEPLOY_IMPACT_REGISTRY } from "../lib/automation-registry.mjs";
 
+describe("critical owner coverage selection", () => {
+  it("selects coverage for edited owners and deleted base-only owners, but not unrelated tests", () => {
+    expect(classifyChangedFiles(["worker/src/lib/__tests__/auth.test.ts"]).criticalCoverageChanged).toBe(true);
+    const deleted = "worker/src/lib/__tests__/removed.test.ts";
+    expect(classifyChangedFiles([deleted], {
+      baseOwnership: new Map([["worker/src/lib/auth.ts", [deleted]]]),
+    }).criticalCoverageChanged).toBe(true);
+    expect(classifyChangedFiles(["src/unrelated.test.ts"]).criticalCoverageChanged).toBe(false);
+  });
+
+  it("selects coverage for lane and matrix policy changes", () => {
+    for (const file of ["scripts/lib/pr-lanes.mts", "scripts/maintenance/generate-pr-workflow-matrix.ts", ".github/actions/setup-workspace/action.yml"]) {
+      expect(classifyChangedFiles([file]).criticalCoverageChanged).toBe(true);
+    }
+  });
+});
+
 describe("normalizeChangedFiles", () => {
   it("normalizes separators and removes blank entries", () => {
     expect(normalizeChangedFiles("worker\\src\\index.ts\0\0src/app/page.tsx\0")).toEqual([
@@ -47,7 +64,7 @@ describe("hasWorkerDeployImpact", () => {
       "shared/lib/pharosville-api-contract.ts",
       "shared/types/pharosville.ts",
       "shared/lib/selector/engine.ts",
-      "shared/data/funding/donations.json",
+      "shared/data/funding/costs.json",
     ];
 
     for (const file of pagesOnlySharedFiles) {
@@ -140,12 +157,16 @@ describe("hasWorkerReleaseImpact", () => {
     expect(hasWorkerReleaseImpact(["scripts/maintenance/smoke-ui.mjs"])).toBe(false);
     expect(hasWorkerReleaseImpact(["worker/migrations/MANIFEST.md"])).toBe(false);
     expect(hasWorkerReleaseImpact(["worker/src/api/__tests__/health.test.ts"])).toBe(false);
-    expect(hasWorkerReleaseImpact(["shared/lib/public-docs.ts"])).toBe(false);
     expect(hasWorkerReleaseImpact(["shared/lib/__tests__/public-docs.test.ts"])).toBe(false);
-    expect(hasWorkerReleaseImpact(["shared/lib/pharosville-api-contract.ts"])).toBe(false);
-    expect(hasWorkerReleaseImpact(["shared/types/pharosville.ts"])).toBe(false);
-    expect(hasWorkerReleaseImpact(["shared/lib/selector/engine.ts"])).toBe(false);
-    expect(hasWorkerReleaseImpact(["shared/data/funding/donations.json"])).toBe(false);
+  });
+
+  it("releases both surfaces for the donation ledger consumed by supporter claims", () => {
+    expect(classifyChangedFiles(["shared/data/funding/donations.json"])).toMatchObject({
+      workerChanged: true,
+      workerDeployRequired: true,
+      pagesChanged: true,
+      pagesDeployRequired: true,
+    });
   });
 });
 
@@ -271,115 +292,34 @@ describe("classifyDeployChanges", () => {
     expect(result.pagesDeployRequired).toBe(true);
   });
 
-  it("runs only the Pages path for frontend-only push diffs", () => {
-    const execFile = () => "src/app/page.tsx\0docs/testing.md\0";
-
+  it.each([
+    { name: "frontend-only", files: ["src/app/page.tsx", "docs/testing.md"], worker: false, pages: true, publish: true, docsOnly: false },
+    { name: "worker-only", files: ["worker/src/api/health.ts", "docs/testing.md"], worker: true, pages: false, publish: false, docsOnly: false },
+    { name: "mixed shared source", files: ["src/app/page.tsx", "shared/lib/classification.ts"], worker: true, pages: true, publish: true, docsOnly: false },
+    { name: "root packages", files: ["package.json", "package-lock.json", "public/_redirects",
+      "scripts/maintenance/run-pr-static-checks.ts", "scripts/maintenance/smoke-ui.mjs",
+      "shared/lib/public-docs.ts", "src/app/pharosville/page.tsx"], worker: true, pages: true, publish: true, docsOnly: false },
+    { name: "Pages workflow", files: [".github/workflows/pages-release.yml"], worker: false, pages: true, publish: true, docsOnly: false },
+    { name: "internal docs", files: ["docs/testing.md", "docs/process/notes.md"], worker: false, pages: false, publish: false, docsOnly: true },
+    { name: "Pages tests", files: ["src/components/__tests__/header.test.tsx"], worker: false, pages: true, publish: false, docsOnly: false },
+    { name: "source renamed to test", files: ["src/components/header.tsx", "src/components/__tests__/header.test.tsx"],
+      worker: false, pages: true, publish: true, docsOnly: false },
+  ])("routes $name push diffs", ({ files, worker, pages, publish, docsOnly }) => {
     const result = classifyDeployChanges({
       baseSha: "70ed0512d6a23dccc2e5a4e65ff3ab3f4c0e45e2",
       eventName: "push",
-      execFile,
+      execFile: () => files.join("\0"),
       headSha: "25197af364c3c9ada9f9f394e4d65f62e6554f6e",
     });
-
-    expect(result.deployRequired).toBe(true);
-    expect(result.workerChanged).toBe(false);
-    expect(result.workerDeployRequired).toBe(false);
-    expect(result.pagesChanged).toBe(true);
-    expect(result.changedFiles).toEqual(["docs/testing.md", "src/app/page.tsx"]);
-  });
-
-  it("runs only the worker path for worker-only push diffs", () => {
-    const execFile = () => "worker/src/api/health.ts\0docs/testing.md\0";
-
-    const result = classifyDeployChanges({
-      baseSha: "70ed0512d6a23dccc2e5a4e65ff3ab3f4c0e45e2",
-      eventName: "push",
-      execFile,
-      headSha: "25197af364c3c9ada9f9f394e4d65f62e6554f6e",
+    expect(result).toMatchObject({
+      deployRequired: worker || pages,
+      workerChanged: worker,
+      workerDeployRequired: worker,
+      pagesChanged: pages,
+      pagesDeployRequired: publish,
+      docsOnly,
+      changedFiles: [...files].sort(),
     });
-
-    expect(result.deployRequired).toBe(true);
-    expect(result.workerChanged).toBe(true);
-    expect(result.workerDeployRequired).toBe(true);
-    expect(result.pagesChanged).toBe(false);
-    expect(result.changedFiles).toEqual(["docs/testing.md", "worker/src/api/health.ts"]);
-  });
-
-  it("keeps both deploy paths enabled for shared or deploy-infra changes", () => {
-    const execFile = () => "src/app/page.tsx\0shared/lib/classification.ts\0";
-
-    const result = classifyDeployChanges({
-      baseSha: "70ed0512d6a23dccc2e5a4e65ff3ab3f4c0e45e2",
-      eventName: "push",
-      execFile,
-      headSha: "25197af364c3c9ada9f9f394e4d65f62e6554f6e",
-    });
-
-    expect(result.deployRequired).toBe(true);
-    expect(result.workerChanged).toBe(true);
-    expect(result.workerDeployRequired).toBe(true);
-    expect(result.pagesChanged).toBe(true);
-    expect(result.changedFiles).toEqual(["shared/lib/classification.ts", "src/app/page.tsx"]);
-  });
-
-  it("conservatively deploys both surfaces for root package changes", () => {
-    const execFile = () => [
-        "package.json",
-        "package-lock.json",
-        "public/_redirects",
-      "scripts/maintenance/run-pr-static-checks.ts",
-        "scripts/maintenance/smoke-ui.mjs",
-        "shared/lib/public-docs.ts",
-        "src/app/pharosville/page.tsx",
-      ].join("\0");
-
-    const result = classifyDeployChanges({
-      baseSha: "70ed0512d6a23dccc2e5a4e65ff3ab3f4c0e45e2",
-      eventName: "push",
-      execFile,
-      headSha: "25197af364c3c9ada9f9f394e4d65f62e6554f6e",
-    });
-
-    expect(result.deployRequired).toBe(true);
-    expect(result.workerChanged).toBe(true);
-    expect(result.workerDeployRequired).toBe(true);
-    expect(result.pagesChanged).toBe(true);
-  });
-
-  it("treats pages workflow-only changes as Pages-impacting", () => {
-    const execFile = () => ".github/workflows/pages-release.yml\0";
-
-    const result = classifyDeployChanges({
-      baseSha: "70ed0512d6a23dccc2e5a4e65ff3ab3f4c0e45e2",
-      eventName: "push",
-      execFile,
-      headSha: "25197af364c3c9ada9f9f394e4d65f62e6554f6e",
-    });
-
-    expect(result.deployRequired).toBe(true);
-    expect(result.workerChanged).toBe(false);
-    expect(result.workerDeployRequired).toBe(false);
-    expect(result.pagesChanged).toBe(true);
-    expect(result.changedFiles).toEqual([".github/workflows/pages-release.yml"]);
-  });
-
-  it("skips the deploy path for docs-only push diffs", () => {
-    const execFile = () => "docs/testing.md\0docs/process/notes.md\0";
-
-    const result = classifyDeployChanges({
-      baseSha: "70ed0512d6a23dccc2e5a4e65ff3ab3f4c0e45e2",
-      eventName: "push",
-      execFile,
-      headSha: "25197af364c3c9ada9f9f394e4d65f62e6554f6e",
-    });
-
-    expect(result.deployRequired).toBe(false);
-    expect(result.docsOnly).toBe(true);
-    expect(result.workerChanged).toBe(false);
-    expect(result.workerDeployRequired).toBe(false);
-    expect(result.pagesChanged).toBe(false);
-    expect(result.pagesDeployRequired).toBe(false);
-    expect(result.changedFiles).toEqual(["docs/process/notes.md", "docs/testing.md"]);
   });
 
   it("routes the editorial-style generator source through full PR checks", () => {
@@ -387,37 +327,6 @@ describe("classifyDeployChanges", () => {
 
     expect(result.deployRequired).toBe(false);
     expect(result.docsOnly).toBe(false);
-  });
-
-  it("validates test-only Pages changes without publishing them", () => {
-    const execFile = () => "src/components/__tests__/header.test.tsx\0";
-
-    const result = classifyDeployChanges({
-      baseSha: "70ed0512d6a23dccc2e5a4e65ff3ab3f4c0e45e2",
-      eventName: "push",
-      execFile,
-      headSha: "25197af364c3c9ada9f9f394e4d65f62e6554f6e",
-    });
-
-    expect(result.deployRequired).toBe(true);
-    expect(result.docsOnly).toBe(false);
-    expect(result.pagesChanged).toBe(true);
-    expect(result.pagesDeployRequired).toBe(false);
-    expect(result.workerChanged).toBe(false);
-  });
-
-  it("publishes when production source is renamed into a test path", () => {
-    const execFile = () => "src/components/header.tsx\0src/components/__tests__/header.test.tsx\0";
-
-    const result = classifyDeployChanges({
-      baseSha: "70ed0512d6a23dccc2e5a4e65ff3ab3f4c0e45e2",
-      eventName: "push",
-      execFile,
-      headSha: "25197af364c3c9ada9f9f394e4d65f62e6554f6e",
-    });
-
-    expect(result.pagesChanged).toBe(true);
-    expect(result.pagesDeployRequired).toBe(true);
   });
 
   it("passes push refs to git diff as arguments", () => {

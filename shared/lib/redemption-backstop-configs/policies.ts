@@ -100,17 +100,6 @@ export const REDEMPTION_BACKSTOP_POLICY_ENTRIES: readonly RedemptionBackstopPoli
     reviewedAt: "2026-08-12",
   },
   {
-    kind: "degraded-sync-warning-exception",
-    stablecoinId: "usdf-falcon",
-    warningCode: "unknown-asset",
-    capacityNote:
-      "Using Falcon's tracked stablecoin reserve bucket as redemption capacity despite an unmapped altcoin in the high-risk 'other' bucket, which does not back the immediate-redeemable stable slice",
-    reason:
-      "Falcon's stablecoin-bucket redemption capacity stays a reviewed live proxy when the only degraded warning is an unmapped asset in the high-risk 'other' bucket, since that exposure sits outside the immediate-redeemable stable slice the capacity is drawn from.",
-    owner: POLICY_OWNER,
-    reviewedAt: "2026-06-23",
-  },
-  {
     kind: "unused-live-redemption-telemetry",
     stablecoinId: "frax-frax",
     reason:
@@ -125,6 +114,30 @@ export const REDEMPTION_BACKSTOP_POLICY_ENTRIES: readonly RedemptionBackstopPoli
       "Single-asset live-reserve metadata is fee-only for redemption modeling, so no executable-capacity redemption route is configured yet.",
     owner: POLICY_OWNER,
     reviewedAt: "2026-05-23",
+  },
+  {
+    kind: "unused-live-redemption-telemetry",
+    stablecoinId: "witry-brix",
+    reason:
+      "wiTRY's ERC-4626 wrapper feed exposes vault redemption capacity, but no public holder-facing redemption route has been reviewed for the TRY-denominated fund; the telemetry is reserve evidence only until a route is configured.",
+    owner: POLICY_OWNER,
+    reviewedAt: "2026-09-09",
+  },
+  {
+    kind: "unused-live-redemption-telemetry",
+    stablecoinId: "usdat-saturn",
+    reason:
+      "USDat's MultiMint wrapper read exposes the PYUSDx backing balance as capacity telemetry, but no public holder-facing redemption route through the wrapper has been reviewed; the telemetry is reserve evidence only until a route is configured.",
+    owner: POLICY_OWNER,
+    reviewedAt: "2026-09-09",
+  },
+  {
+    kind: "unused-live-redemption-telemetry",
+    stablecoinId: "hchf-hedera-swiss-franc",
+    reason:
+      "HCHF's HLiquity adapter publishes same-run debt-bounded redemption capacity, but the CHF-denominated route has no reviewed public redemption backstop config yet; the telemetry is reserve evidence only until a route is configured.",
+    owner: POLICY_OWNER,
+    reviewedAt: "2026-09-09",
   },
 ];
 

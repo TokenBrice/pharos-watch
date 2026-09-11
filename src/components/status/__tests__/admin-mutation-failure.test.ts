@@ -1,5 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { classifyAdminMutationFailure } from "../admin-mutation-failure";
+import { buildAdminMutationReceiptMetadata } from "../admin-mutation-feedback";
+import type { AdminMutationIntentExecution } from "../admin-mutation-intent";
 import { AdminMutationError, type AdminMutationResult } from "@/lib/admin-access";
 import { RequestFailure } from "@/lib/request";
 
@@ -92,5 +94,32 @@ describe("classifyAdminMutationFailure", () => {
     expect(classifyAdminMutationFailure(new RequestFailure("parse", "/api/admin", "bad json"), KEY)).toBe("failed");
     expect(classifyAdminMutationFailure(new Error("nope"), KEY)).toBe("failed");
     expect(classifyAdminMutationFailure("nope", KEY)).toBe("failed");
+  });
+});
+
+describe("buildAdminMutationReceiptMetadata", () => {
+  it("serializes successful receipts without retaining response bodies or raw output", () => {
+    const secret = "ph_live_one_time_secret";
+    const execution = {
+      httpStatus: 201,
+      idempotentReplay: false,
+      executionCertainty: "confirmed",
+      idempotencyKey: "intent-key",
+      data: { token: secret },
+      output: JSON.stringify({ token: secret }),
+    } as AdminMutationIntentExecution;
+
+    const receipt = buildAdminMutationReceiptMetadata(execution);
+    const serialized = JSON.stringify(receipt);
+
+    expect(receipt).toEqual({
+      httpStatus: 201,
+      idempotentReplay: false,
+      executionCertainty: "confirmed",
+      idempotencyKey: "intent-key",
+    });
+    expect(serialized).not.toContain(secret);
+    expect(serialized).not.toContain("data");
+    expect(serialized).not.toContain("output");
   });
 });

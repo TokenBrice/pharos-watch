@@ -32,7 +32,7 @@ On mount it:
 - applies `markStartHereOpened(...)`
 - writes the updated state back
 
-This persisted flag retires the shell-level `Start Here` shortcut in the mobile nav for repeat sessions. (The desktop top nav does not surface a Start Here entry at all.)
+This persisted flag retires the pinned shell-level `Start Here` shortcut in the mobile nav after the first `/start/` visit; the route then stays reachable permanently under the `Resources` menu's `About Pharos` column on both desktop and mobile. Visibility depends only on `hasOpenedStartHere` — the retired session-count half of the old predicate is gone, and legacy session counters in older stored state are ignored on read.
 
 ---
 

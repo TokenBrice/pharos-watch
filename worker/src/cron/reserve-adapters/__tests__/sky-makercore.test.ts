@@ -1,37 +1,20 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
-import type { StablecoinMeta } from "@shared/types/core";
-import type { LiveReservesConfig } from "@shared/types/live-reserves";
+import { describe, it, expect } from "vitest";
 import {
   adaptSkyModules,
-  fetchSkyMakercoreReserves,
   listUnknownGroups,
   resolveSkyTimestampSummary,
   resolveSkyImmediateRedeemableUsd,
   type SkyGroupResult,
 } from "../sky-makercore";
+import {
+  expectWarningEffect,
+  installAdapterNetwork,
+  runAdapter,
+  type AdapterNetworkSpec,
+} from "./reserve-adapter.test-support";
 
-vi.mock("../helpers", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("../helpers")>();
-  const { makeOnchainCallersMock } = await import("./helpers/onchain-callers-mock");
-  const fetchOnchainRawCall = vi.fn();
-  const fetchOnchainUint256 = vi.fn();
-  return {
-    ...actual,
-    fetchJsonAdapterInput: vi.fn(),
-    fetchOnchainRawCall,
-    fetchOnchainUint256,
-    makeOnchainCallers: makeOnchainCallersMock({
-      uint256: fetchOnchainUint256,
-      raw: fetchOnchainRawCall,
-    }),
-  };
-});
-
-import { fetchJsonAdapterInput, fetchOnchainRawCall, fetchOnchainUint256 } from "../helpers";
-import { getReserveAdapter } from "../index";
-import { validateAdapterOutput } from "../validate";
-
-import { TEST_SIGNAL as signal } from "./reserve-adapter.test-support";
+const SKY_URL = "https://info-sky.blockanalitica.com/groups/?days_ago=1&order=-debt";
+const SKY_NOW = Date.parse("2026-04-05T17:34:24Z") / 1000;
 const SKY_LITE_PSM_USDC_ADDRESS = "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48";
 const SKY_LITE_PSM_USDC_POCKET = "0x37305b1cd40574E4C5Ce33f8e8306Be057fD7341";
 const GEM_SELECTOR = "0x7bd2bea7";
@@ -39,6 +22,34 @@ const POCKET_SELECTOR = "0xcccef9e2";
 
 function encodeAddressWord(address: string): string {
   return `0x${address.replace(/^0x/, "").toLowerCase().padStart(64, "0")}`;
+}
+interface SkyNetworkOptions {
+  capacity?: boolean;
+  balance?: bigint;
+}
+
+function skyNetwork(groups: SkyGroupResult[], options: SkyNetworkOptions = {}): AdapterNetworkSpec {
+  const capacityAvailable = options.capacity ?? true;
+  return {
+    json: { [SKY_URL]: { count: groups.length, results: groups } },
+    rpc: {
+      [`ethereum:${GEM_SELECTOR}`]: capacityAvailable ? encodeAddressWord(SKY_LITE_PSM_USDC_ADDRESS) : null,
+      [`ethereum:${POCKET_SELECTOR}`]: capacityAvailable ? encodeAddressWord(SKY_LITE_PSM_USDC_POCKET) : null,
+      "ethereum:0x70a08231": capacityAvailable ? (options.balance ?? 123_456_000000n) : null,
+    },
+  };
+}
+
+function runSky(
+  groups: SkyGroupResult[],
+  networkOptions: SkyNetworkOptions = {},
+  runOptions: { nowSec?: number; signal?: AbortSignal } = {},
+) {
+  return runAdapter("sky-makercore", "usds-sky", {
+    network: installAdapterNetwork(skyNetwork(groups, networkOptions)),
+    nowSec: runOptions.nowSec ?? SKY_NOW,
+    ...(runOptions.signal ? { signal: runOptions.signal } : {}),
+  });
 }
 
 const SAMPLE_GROUPS: SkyGroupResult[] = [
@@ -94,6 +105,12 @@ const SAMPLE_GROUPS: SkyGroupResult[] = [
 ];
 
 describe("adaptSkyModules", () => {
+  it("rejects drift removing stablecoins.collateral", async () => {
+    const groups = structuredClone(SAMPLE_GROUPS);
+    Reflect.deleteProperty(groups[0], "collateral");
+    await expect(runSky(groups)).rejects.toThrow(/stablecoins.collateral/);
+  });
+
   it("produces 7 slices from all known modules", () => {
     const slices = adaptSkyModules(SAMPLE_GROUPS);
     expect(slices).toHaveLength(7);
@@ -182,6 +199,40 @@ describe("adaptSkyModules", () => {
     expect(otherSlice!.issuerOrObligor).toBe("Sky unknown module");
     expect(otherSlice!.pct).toBe(10);
   });
+
+  it("maps the osero and keel allocators to medium risk without a guessed coinId", () => {
+    const withAllocators: SkyGroupResult[] = [
+      {
+        group: "stablecoins",
+        group_name: "Stablecoins",
+        debt: "9000000000",
+        collateral: "9000000000",
+        datetime: "2026-04-05T17:33:24",
+      },
+      {
+        group: "osero",
+        group_name: "Osero",
+        debt: "25000000",
+        collateral: "25000000",
+        datetime: "2026-04-05T17:33:24",
+      },
+      {
+        group: "keel",
+        group_name: "Keel",
+        debt: "5000000",
+        collateral: "5000000",
+        datetime: "2026-04-05T17:33:24",
+      },
+    ];
+    const slices = adaptSkyModules(withAllocators);
+    const byName = Object.fromEntries(slices.map((s) => [s.name, s]));
+
+    expect(byName["Osero"]).toMatchObject({ risk: "medium", sourceKey: "sky-makercore:module:osero" });
+    expect(byName["Osero"].coinId).toBeUndefined();
+    expect(byName["Keel"]).toMatchObject({ risk: "medium", sourceKey: "sky-makercore:module:keel" });
+    expect(byName["Keel"].coinId).toBeUndefined();
+    expect(byName["Other modules"]).toBeUndefined();
+  });
 });
 
 describe("resolveSkyImmediateRedeemableUsd", () => {
@@ -245,51 +296,24 @@ describe("resolveSkyTimestampSummary", () => {
 });
 
 describe("fetchSkyMakercoreReserves PSM attribution", () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-    vi.mocked(fetchOnchainRawCall).mockImplementation(async ({ data }) => {
-      if (data === GEM_SELECTOR) return encodeAddressWord(SKY_LITE_PSM_USDC_ADDRESS);
-      if (data === POCKET_SELECTOR) return encodeAddressWord(SKY_LITE_PSM_USDC_POCKET);
-      return null;
-    });
-    vi.mocked(fetchOnchainUint256).mockResolvedValue(123_456_000000n);
-  });
-
-  const coin = { id: "usds-sky" } as unknown as StablecoinMeta;
-  const config: LiveReservesConfig = {
-    adapter: "sky-makercore",
-    version: 1,
-    semantics: "protocol-reserve",
-    inputs: {
-      primary: {
-        kind: "http-json",
-        url: "https://info-sky.blockanalitica.com/groups/?days_ago=1&order=-debt",
-      },
-    },
-  };
-
   it("PSM slice carries no coinId attribution and metadata surfaces the multi-stable note", async () => {
-    vi.mocked(fetchJsonAdapterInput).mockResolvedValue({
-      count: 2,
-      results: [
-        {
-          group: "stablecoins",
-          group_name: "Stablecoins",
-          debt: "4000000000",
-          collateral: "4000000000",
-          datetime: "2026-04-05T17:33:24",
-        },
-        {
-          group: "spark",
-          group_name: "Spark",
-          debt: "3000000000",
-          collateral: "3000000000",
-          datetime: "2026-04-05T17:33:24",
-        },
-      ],
-    });
-
-    const result = await fetchSkyMakercoreReserves(coin, config, signal);
+    const groups: SkyGroupResult[] = [
+      {
+        group: "stablecoins",
+        group_name: "Stablecoins",
+        debt: "4000000000",
+        collateral: "4000000000",
+        datetime: "2026-04-05T17:33:24",
+      },
+      {
+        group: "spark",
+        group_name: "Spark",
+        debt: "3000000000",
+        collateral: "3000000000",
+        datetime: "2026-04-05T17:33:24",
+      },
+    ];
+    const { result, network } = await runSky(groups);
     const psmSlice = result.slices.find((s) => s.name === "Stablecoins (PSM)");
     expect(psmSlice).toBeDefined();
     expect(psmSlice?.coinId).toBeUndefined();
@@ -298,7 +322,9 @@ describe("fetchSkyMakercoreReserves PSM attribution", () => {
     const details = result.metadata?.details as { psmComposition?: string };
     expect(details?.psmComposition).toMatch(/USDC.*USDT.*USDP/);
     expect(result.metadata?.skyStablecoinsModuleCollateralUsd).toBe(4000000000);
-    expect(result.metadata?.immediateRedeemableUsd).toBe(123456);
+    expect(result.metadata?.totalReserveUsd).toBe(7000000000);
+    expect(result.metadata?.totalLiabilitiesUsd).toBe(7000000000);
+    expect(result.metadata?.collateralizationRatio).toBe(1);
     expect(result.metadata?.redemption).toMatchObject({
       capacityUsd: 123456,
       capacityKind: "live-direct",
@@ -308,37 +334,31 @@ describe("fetchSkyMakercoreReserves PSM attribution", () => {
       holderEligibility: "any-holder",
       settlementDelaySec: 0,
     });
-    expect(fetchOnchainUint256).toHaveBeenCalledWith(
-      expect.objectContaining({
-        chain: "ethereum",
-        contract: SKY_LITE_PSM_USDC_ADDRESS,
-      }),
-    );
+    expect(network.rpcCalls).toContainEqual(expect.objectContaining({
+      chain: "ethereum",
+      contract: SKY_LITE_PSM_USDC_ADDRESS,
+      selector: "0x70a08231",
+    }));
   });
 
   it("falls back without redemption metadata when LitePSM capacity is unavailable", async () => {
-    vi.mocked(fetchJsonAdapterInput).mockResolvedValue({
-      count: 2,
-      results: [
-        {
-          group: "stablecoins",
-          group_name: "Stablecoins",
-          debt: "4000000000",
-          collateral: "4000000000",
-          datetime: "2026-04-05T17:33:24",
-        },
-        {
-          group: "spark",
-          group_name: "Spark",
-          debt: "3000000000",
-          collateral: "3000000000",
-          datetime: "2026-04-05T17:33:24",
-        },
-      ],
-    });
-    vi.mocked(fetchOnchainRawCall).mockResolvedValue(null);
-
-    const result = await fetchSkyMakercoreReserves(coin, config, signal);
+    const groups: SkyGroupResult[] = [
+      {
+        group: "stablecoins",
+        group_name: "Stablecoins",
+        debt: "4000000000",
+        collateral: "4000000000",
+        datetime: "2026-04-05T17:33:24",
+      },
+      {
+        group: "spark",
+        group_name: "Spark",
+        debt: "3000000000",
+        collateral: "3000000000",
+        datetime: "2026-04-05T17:33:24",
+      },
+    ];
+    const { result } = await runSky(groups, { capacity: false });
 
     expect(result.metadata?.redemption).toBeUndefined();
     expect(result.metadata?.immediateRedeemableUsd).toBeUndefined();
@@ -353,46 +373,7 @@ describe("fetchSkyMakercoreReserves PSM attribution", () => {
   ] as const)(
     "lets the shared materiality policy classify %s unknown debt",
     async (_label, unknownDebt, emitsDiscovery, degraded) => {
-      vi.mocked(fetchJsonAdapterInput).mockResolvedValue({
-        count: 2,
-        results: [
-          {
-            group: "stablecoins",
-            group_name: "Stablecoins",
-            debt: "9000000000",
-            collateral: "9000000000",
-            datetime: "2026-04-05T17:33:24",
-          },
-          {
-            group: "new-module",
-            group_name: "New Module",
-            debt: unknownDebt,
-            collateral: unknownDebt,
-            datetime: "2026-04-05T17:33:24",
-          },
-        ],
-      });
-
-      const result = await fetchSkyMakercoreReserves(coin, config, signal);
-      expect(
-        result.warnings?.some((warning) => warning.code === "unknown-asset" && warning.effect === "info") ?? false,
-      ).toBe(emitsDiscovery);
-      const validation = validateAdapterOutput(result, {
-        adapter: getReserveAdapter("sky-makercore") ?? undefined,
-        now: Date.parse("2026-04-05T17:34:24Z") / 1_000,
-      });
-      expect(
-        validation.warnings.some(
-          (warning) => warning.code === "material-unknown-exposure" && warning.effect === "degraded",
-        ),
-      ).toBe(degraded);
-    },
-  );
-
-  it("degrades when an unknown module has malformed debt", async () => {
-    vi.mocked(fetchJsonAdapterInput).mockResolvedValue({
-      count: 2,
-      results: [
+      const groups: SkyGroupResult[] = [
         {
           group: "stablecoins",
           group_name: "Stablecoins",
@@ -403,82 +384,89 @@ describe("fetchSkyMakercoreReserves PSM attribution", () => {
         {
           group: "new-module",
           group_name: "New Module",
-          debt: "1,000,000,000",
-          collateral: "1000000000",
+          debt: unknownDebt,
+          collateral: unknownDebt,
           datetime: "2026-04-05T17:33:24",
         },
-      ],
-    });
+      ];
+      const { result, report } = await runSky(groups);
+      expect(
+        result.warnings?.some((warning) => warning.code === "unknown-asset" && warning.effect === "info") ?? false,
+      ).toBe(emitsDiscovery);
+      expect(
+        report.warnings.some(
+          (warning) => warning.code === "material-unknown-exposure" && warning.effect === "degraded",
+        ),
+      ).toBe(degraded);
+    },
+  );
 
-    const result = await fetchSkyMakercoreReserves(coin, config, signal);
+  it("degrades when an unknown module has malformed debt", async () => {
+    const groups: SkyGroupResult[] = [
+      {
+        group: "stablecoins",
+        group_name: "Stablecoins",
+        debt: "9000000000",
+        collateral: "9000000000",
+        datetime: "2026-04-05T17:33:24",
+      },
+      {
+        group: "new-module",
+        group_name: "New Module",
+        debt: "1,000,000,000",
+        collateral: "1000000000",
+        datetime: "2026-04-05T17:33:24",
+      },
+    ];
+    const { result } = await runSky(groups);
 
     expect(result.metadata?.unknownExposurePct).toBe(0);
-    expect(result.warnings).toContainEqual(
-      expect.objectContaining({
-        code: "unknown-asset",
-        effect: "degraded",
-        message: expect.stringContaining("new-module"),
-      }),
-    );
+    expectWarningEffect(result, "unknown-asset", "degraded");
   });
 
   it("degrades when a known module has malformed debt", async () => {
-    vi.mocked(fetchJsonAdapterInput).mockResolvedValue({
-      count: 2,
-      results: [
-        {
-          group: "stablecoins",
-          group_name: "Stablecoins",
-          debt: "9,000,000,000",
-          collateral: "9000000000",
-          datetime: "2026-04-05T17:33:24",
-        },
-        {
-          group: "spark",
-          group_name: "Spark",
-          debt: "1000000000",
-          collateral: "1000000000",
-          datetime: "2026-04-05T17:33:24",
-        },
-      ],
-    });
+    const groups: SkyGroupResult[] = [
+      {
+        group: "stablecoins",
+        group_name: "Stablecoins",
+        debt: "9,000,000,000",
+        collateral: "9000000000",
+        datetime: "2026-04-05T17:33:24",
+      },
+      {
+        group: "spark",
+        group_name: "Spark",
+        debt: "1000000000",
+        collateral: "1000000000",
+        datetime: "2026-04-05T17:33:24",
+      },
+    ];
+    const { result } = await runSky(groups);
 
-    const result = await fetchSkyMakercoreReserves(coin, config, signal);
-
-    expect(result.warnings).toContainEqual(
-      expect.objectContaining({
-        code: "malformed-debt",
-        effect: "degraded",
-        message: expect.stringContaining("stablecoins"),
-      }),
-    );
+    expectWarningEffect(result, "malformed-debt", "degraded");
   });
 
-  it("propagates aborts from the optional LitePSM capacity read", async () => {
-    vi.mocked(fetchJsonAdapterInput).mockResolvedValue({
-      count: 2,
-      results: [
-        {
-          group: "stablecoins",
-          group_name: "Stablecoins",
-          debt: "4000000000",
-          collateral: "4000000000",
-          datetime: "2026-04-05T17:33:24",
-        },
-        {
-          group: "spark",
-          group_name: "Spark",
-          debt: "3000000000",
-          collateral: "3000000000",
-          datetime: "2026-04-05T17:33:24",
-        },
-      ],
-    });
+  it("propagates an aborted signal before publishing a snapshot", async () => {
+    const groups: SkyGroupResult[] = [
+      {
+        group: "stablecoins",
+        group_name: "Stablecoins",
+        debt: "4000000000",
+        collateral: "4000000000",
+        datetime: "2026-04-05T17:33:24",
+      },
+      {
+        group: "spark",
+        group_name: "Spark",
+        debt: "3000000000",
+        collateral: "3000000000",
+        datetime: "2026-04-05T17:33:24",
+      },
+    ];
     const controller = new AbortController();
     const reason = new Error("cron timed out");
     controller.abort(reason);
-    vi.mocked(fetchOnchainRawCall).mockRejectedValue(new Error("rpc aborted"));
 
-    await expect(fetchSkyMakercoreReserves(coin, config, controller.signal)).rejects.toBe(reason);
+    await expect(runSky(groups, {}, { signal: controller.signal })).rejects.toBe(reason);
   });
 });

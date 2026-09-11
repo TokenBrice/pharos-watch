@@ -89,9 +89,11 @@ describe("report-card evidence journal runtime", () => {
     expect(alphaOld.journalId).toBe(
       "report-card-evidence:v1:737810dca00eb6f9f55ce9e5926a56a89232dd71dc86cdddddfd83dbc017f3b2",
     );
-    expect(JSON.stringify({ alpha: [alphaOld], beta: [beta] })).toBe(
-      '{"alpha":[{"schemaVersion":1,"lane":"reserve","assetId":"alpha","attemptId":"attempt:old","sourceId":"fixture-reserve-adapter","sourceOriginClass":"onchain-observation","attemptCode":"reserve.collector.attempted","admissionCode":"reserve.admission.accepted","fallbackCode":"reserve.fallback.not-used","attemptedAtSec":100,"completedAtSec":101,"sourceTimestampSec":100,"sourceBlock":null,"contentSha256":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa","sidecarMaterializationSha256":null,"journalId":"report-card-evidence:v1:737810dca00eb6f9f55ce9e5926a56a89232dd71dc86cdddddfd83dbc017f3b2"}],"beta":[{"schemaVersion":1,"lane":"reserve","assetId":"beta","attemptId":"attempt:beta","sourceId":"fixture-reserve-adapter","sourceOriginClass":"onchain-observation","attemptCode":"reserve.collector.attempted","admissionCode":"reserve.admission.accepted","fallbackCode":"reserve.fallback.not-used","attemptedAtSec":150,"completedAtSec":151,"sourceTimestampSec":150,"sourceBlock":null,"contentSha256":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa","sidecarMaterializationSha256":null,"journalId":"report-card-evidence:v1:1b4bf86e533e66c4d1ff46b36df8796495fa1a4767e6c128b0235420803179bc"}]}'
-    );
+    expect(Object.keys(canonical)).toEqual(["alpha", "beta"]);
+    expect(JSON.stringify(canonical)).toBe(JSON.stringify(ReportCardEvidenceJournalByIdV1Schema.parse({
+      alpha: [alphaOld, alphaNew],
+      beta: [beta],
+    })));
   });
 
   it("rejects unknown fields, secret-bearing identifiers, and oversized records", () => {
@@ -141,5 +143,54 @@ describe("report-card evidence journal runtime", () => {
         }),
       ),
     ).toThrow(/fallback disposition/);
+  });
+
+  it("allows timestamp equality but rejects inverted chronology", () => {
+    const equal = payload("alpha", "attempt:equal", 100, { completedAtSec: 100 });
+    expect(createReportCardEvidenceJournalV1(equal)).toMatchObject({
+      attemptedAtSec: 100, completedAtSec: 100, sourceTimestampSec: 100,
+    });
+    expect(() => createReportCardEvidenceJournalV1({ ...equal, attemptedAtSec: 101 })).toThrow();
+    expect(() => createReportCardEvidenceJournalV1({ ...equal, sourceTimestampSec: 101 })).toThrow();
+  });
+
+  it("requires evaluation exactly when collection was attempted", () => {
+    const skipped = payload("alpha", "attempt:skipped", 100, {
+      attemptCode: "reserve.collector.deferred",
+      admissionCode: "reserve.admission.not-evaluated",
+      fallbackCode: "reserve.fallback.unavailable",
+      contentSha256: null,
+    });
+    expect(createReportCardEvidenceJournalV1(skipped).admissionCode).toBe("reserve.admission.not-evaluated");
+    expect(() => createReportCardEvidenceJournalV1({
+      ...skipped, attemptCode: "reserve.collector.attempted",
+    })).toThrow();
+    const accepted = payload("alpha", "attempt:accepted", 100);
+    expect(createReportCardEvidenceJournalV1(accepted).admissionCode).toBe("reserve.admission.accepted");
+    expect(() => createReportCardEvidenceJournalV1({
+      ...accepted, attemptCode: "reserve.collector.not-configured",
+    })).toThrow();
+  });
+
+  it("requires accepted content without a fallback", () => {
+    const accepted = payload("alpha", "attempt:accepted", 100);
+    expect(createReportCardEvidenceJournalV1(accepted).contentSha256).toBe(DIGEST);
+    expect(() => createReportCardEvidenceJournalV1({
+      ...accepted, fallbackCode: "reserve.fallback.curated",
+    })).toThrow();
+    expect(() => createReportCardEvidenceJournalV1({ ...accepted, contentSha256: null })).toThrow();
+  });
+
+  it.each([
+    ["reserve.admission.rejected-sidecar-mismatch", "reserve.fallback.curated"],
+    ["reserve.admission.rejected-stale", "reserve.fallback.reviewed-sidecar"],
+  ] as const)("requires materialization for %s / %s", (admissionCode, fallbackCode) => {
+    const reviewed = payload("alpha", "attempt:sidecar", 100, {
+      admissionCode, fallbackCode, contentSha256: null, sidecarMaterializationSha256: DIGEST,
+    });
+    expect(createReportCardEvidenceJournalV1(reviewed).sidecarMaterializationSha256).toBe(DIGEST);
+    expect(() => createReportCardEvidenceJournalV1({
+      ...reviewed, sidecarMaterializationSha256: null,
+    })).toThrow();
   });
 });

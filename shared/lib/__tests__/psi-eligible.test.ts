@@ -59,32 +59,17 @@ describe("PSI eligibility", () => {
     }
   });
 
-  it("excludes frozen coins from PSI_ELIGIBLE_IDS", () => {
-    for (const id of FROZEN_IDS) {
-      expect(PSI_ELIGIBLE_IDS.has(id)).toBe(false);
-    }
-  });
-
-  it("excludes frozen coins from PSI_ELIGIBLE_META_BY_ID", () => {
-    for (const id of FROZEN_IDS) {
-      expect(PSI_ELIGIBLE_META_BY_ID.has(id)).toBe(false);
-    }
-  });
-
-  it("excludes frozen coins from PSI_ELIGIBLE_STABLECOINS", () => {
+  it("excludes frozen coins from every PSI eligibility representation", () => {
+    expect(FROZEN_IDS.size).toBeGreaterThan(0);
     const ids = new Set(PSI_ELIGIBLE_STABLECOINS.map((s) => s.id));
     for (const id of FROZEN_IDS) {
+      expect(PSI_ELIGIBLE_IDS.has(id)).toBe(false);
+      expect(PSI_ELIGIBLE_META_BY_ID.has(id)).toBe(false);
       expect(ids.has(id)).toBe(false);
     }
   });
 
   it("keeps the client PSI eligibility map in parity with the server map", () => {
-    const allIds = new Set([...CLIENT_PSI_ELIGIBLE_META_BY_ID.keys(), ...PSI_ELIGIBLE_META_BY_ID.keys()]);
-    const eligibilityFlags = [...allIds].sort().map((id) => ({
-      id,
-      clientEligible: CLIENT_PSI_ELIGIBLE_META_BY_ID.has(id),
-      serverEligible: PSI_ELIGIBLE_META_BY_ID.has(id),
-    }));
     const clientEntries = [...CLIENT_PSI_ELIGIBLE_META_BY_ID.entries()]
       .map(([id, meta]) => [id, { id: meta.id, name: meta.name, symbol: meta.symbol }] as const)
       .sort(([left], [right]) => left.localeCompare(right));
@@ -92,7 +77,6 @@ describe("PSI eligibility", () => {
       .map(([id, meta]) => [id, { id: meta.id, name: meta.name, symbol: meta.symbol }] as const)
       .sort(([left], [right]) => left.localeCompare(right));
 
-    expect(eligibilityFlags.every((entry) => entry.clientEligible === entry.serverEligible)).toBe(true);
     expect(clientEntries).toEqual(serverEntries);
   });
 });

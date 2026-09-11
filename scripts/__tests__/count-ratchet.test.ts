@@ -1,7 +1,7 @@
-import { mkdtempSync, readFileSync } from "node:fs";
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it } from "vitest";
 
 import {
   compareCountRatchetCounts,
@@ -16,6 +16,11 @@ const labels = {
   ok: "Example count",
   countNoun: "calls",
 };
+
+const temporaryDirectories: string[] = [];
+afterEach(() => {
+  for (const directory of temporaryDirectories.splice(0)) rmSync(directory, { recursive: true, force: true });
+});
 
 function writable() {
   let value = "";
@@ -35,6 +40,7 @@ describe("count ratchet", () => {
 
   it("writes and subsequently validates a generic count baseline through injected streams", () => {
     const cwd = mkdtempSync(join(tmpdir(), "pharos-count-ratchet-"));
+    temporaryDirectories.push(cwd);
     const stdout = writable();
     const stderr = writable();
     const options = {
@@ -58,6 +64,7 @@ describe("count ratchet", () => {
 
   it("reports a missing baseline with injected labels", () => {
     const cwd = mkdtempSync(join(tmpdir(), "pharos-count-ratchet-"));
+    temporaryDirectories.push(cwd);
     const stdout = writable();
     const stderr = writable();
 
@@ -71,5 +78,37 @@ describe("count ratchet", () => {
       remediation: "Use the example helper.",
     })).toBe(1);
     expect(stderr.text()).toBe("[example] Missing baseline at missing.json. Run with --update-baseline.\n");
+  });
+
+  it("rejects a per-file increase despite a lower total without rewriting the baseline, and accepts decreases", () => {
+    const cwd = mkdtempSync(join(tmpdir(), "pharos-count-ratchet-"));
+    temporaryDirectories.push(cwd);
+    const stderr = writable();
+    const options = {
+      collectCounts: () => ({ "a.ts": 2, "b.ts": 10 }),
+      baselinePath: "baseline.json", cwd, labels, remediation: "Reduce counts.",
+      stdout: writable().stream, stderr: stderr.stream,
+    };
+    expect(runCountRatchet({ ...options, updateBaseline: true })).toBe(0);
+    const baseline = readFileSync(join(cwd, options.baselinePath), "utf8");
+    expect(runCountRatchet({ ...options, collectCounts: () => ({ "a.ts": 3, "b.ts": 1 }) })).toBe(1);
+    expect(stderr.text()).toContain("a.ts: 3 > baseline 2");
+    expect(stderr.text()).not.toContain("b.ts:");
+    expect(readFileSync(join(cwd, options.baselinePath), "utf8")).toBe(baseline);
+    expect(runCountRatchet({ ...options, collectCounts: () => ({ "a.ts": 1, "b.ts": 9 }) })).toBe(0);
+    expect(readFileSync(join(cwd, options.baselinePath), "utf8")).toBe(baseline);
+  });
+
+  it.each(["{", "[]", "null"])("rejects invalid baseline %s without overwriting it", (baseline) => {
+    const cwd = mkdtempSync(join(tmpdir(), "pharos-count-ratchet-"));
+    temporaryDirectories.push(cwd);
+    writeFileSync(join(cwd, "baseline.json"), baseline);
+    const stderr = writable();
+    expect(runCountRatchet({
+      collectCounts: () => ({}), baselinePath: "baseline.json", cwd, labels,
+      remediation: "Reduce counts.", stdout: writable().stream, stderr: stderr.stream,
+    })).toBe(1);
+    expect(stderr.text()).toContain(labels.failedToReadBaseline);
+    expect(readFileSync(join(cwd, "baseline.json"), "utf8")).toBe(baseline);
   });
 });

@@ -1,11 +1,17 @@
 import { describe, expect, it } from "vitest";
-import { scoreV9Input } from "../safety-score-v9/formula";
 import { resolveV9WrapperStrategyTier } from "../safety-score-v9/evaluate-set";
 import { V9_CANDIDATE_POLICY_V1 } from "../safety-score-v9/policy";
 import type { V9InheritedStablecoinBacking } from "../safety-score-v9/backing";
 import type { V9ResolvedDependencyInputs } from "../safety-score-v9/dependencies";
 import type { V9AssetFactsV2 } from "../../types/safety-score-v9-facts";
-import type { V9ScoringInput } from "../../types/safety-score-v9";
+import {
+  coreFixture,
+  fullAsset,
+  minimalAsset,
+  compileNativeV3FactSet,
+  compileV9FactSetV3,
+  evaluateV9FactSet,
+} from "./safety-score-v9-facts.fixture-support";
 
 const POLICY = V9_CANDIDATE_POLICY_V1;
 const DISCOUNT = POLICY.policy.semantic.formula.wrapperStrategyCap; // { pure: 3, staked: 5, vault: 10 }
@@ -39,23 +45,6 @@ function resolvedWithSerial(upstreamAssetIds: string[]): V9ResolvedDependencyInp
 const wrapperSerialEdge = [{ pathKind: "serial-dependency", dependencyType: "wrapper", upstreamAssetId: "usdc-circle" }];
 function inherited(tier: V9InheritedStablecoinBacking["tier"]): V9InheritedStablecoinBacking {
   return { parentAssetId: "usdc-circle", parentBackingScore: 86, weight: 1, tier, failureDomains: [] };
-}
-
-// A rated wrapper whose own composite would land ~90; the parent cap decides it.
-function wrapperOverParent(parentScore: number | null, pillar = 90): V9ScoringInput {
-  return {
-    assetId: "wrapper",
-    pillars: { backing: pillar, exit: pillar, control: pillar },
-    pegScore: 100,
-    pegApplicable: true,
-    evidenceLevel: "strong",
-    trackRecordMonths: 48,
-    activeDepegBps: null,
-    parentRequired: parentScore !== null,
-    parentScore,
-    structuralSignals: [],
-    unresolved: [],
-  };
 }
 
 describe("wrapperStrategyCap policy tiers are monotonic (pure <= staked <= vault)", () => {
@@ -123,31 +112,63 @@ describe("resolveV9WrapperStrategyTier — compiled form drives the current tier
   });
 });
 
-describe("the discounted parent cap binds through the scorer", () => {
-  it("VAULT: a third-party vault lands well below an A-grade parent (82 → 72/B)", () => {
-    const trace = scoreV9Input(wrapperOverParent(82 - DISCOUNT.vault), POLICY);
-    expect(trace.finalScore).toBe(72);
-    expect(trace.finalGrade).toBe("B");
-    expect(trace.bindingCap?.kind).toBe("parent");
-  });
-  it("STAKED: a native savings token over a low-C parent stays out of D (59 → 54/C-)", () => {
-    const trace = scoreV9Input(wrapperOverParent(59 - DISCOUNT.staked), POLICY);
-    expect(trace.finalScore).toBe(54);
-    expect(trace.finalGrade).toBe("C-");
-    expect(trace.bindingCap?.kind).toBe("parent");
-  });
-  it("STAKED sits a tier above VAULT for the same parent (82 → 77/B+ vs 72/B)", () => {
-    expect(scoreV9Input(wrapperOverParent(82 - DISCOUNT.staked), POLICY).finalGrade).toBe("B+");
-    expect(scoreV9Input(wrapperOverParent(82 - DISCOUNT.vault), POLICY).finalGrade).toBe("B");
-  });
-  it("PURE: a 1:1 pass-through barely moves off its parent grade (84 → 81/A-)", () => {
-    const trace = scoreV9Input(wrapperOverParent(84 - DISCOUNT.pure), POLICY);
-    expect(trace.finalScore).toBe(81);
-    expect(trace.finalGrade).toBe("A-");
-  });
-  it("leaves a wrapper already below the discounted cap unchanged", () => {
-    const trace = scoreV9Input(wrapperOverParent(82 - DISCOUNT.vault, 68), POLICY); // cap 72, composite 68
-    expect(trace.finalScore).toBe(68);
-    expect(trace.bindingCap).toBeNull();
+describe("wrapper discounts propagate through the production set evaluator", () => {
+  it.each([
+    { variantKind: "pure-wrapper", form: "pure", discount: 3, limit: 76 },
+    { variantKind: "savings-passthrough", form: "native-staked", discount: 5, limit: 74 },
+    { variantKind: "strategy-vault", form: "strategy-vault", discount: 10, limit: 69 },
+  ] as const)("uses fallback only for incomplete $form facts", ({ variantKind, form, discount, limit }) => {
+    const parent = fullAsset(false) as unknown as V9AssetFactsV2;
+    parent.dependencies.edges = [];
+    parent.reserveExposures = parent.reserveExposures.filter((row) => row.trackedAssetId === null);
+    parent.reserveExposures[0].weight = 1;
+    const wrapper = minimalAsset("wrapper") as unknown as V9AssetFactsV2;
+    wrapper.dependencies.source = "variant";
+    wrapper.variantKind = variantKind;
+    wrapper.dependencies.edges = [{
+      edgeKey: "wrapper:alpha",
+      upstreamAssetId: "alpha",
+      dependencyType: "wrapper",
+      pathKind: "serial-dependency",
+      economicRole: "serial-claim",
+      weight: 1,
+      evidenceRefIds: ["evidence:base"],
+      failureDomains: [],
+    }];
+    const input = coreFixture();
+    input.assets = [parent, wrapper] as unknown as typeof input.assets;
+    input.activeAssetIds = ["alpha", "wrapper"];
+    const compiled = compileNativeV3FactSet(input);
+    const incomplete = evaluateV9FactSet(compiled, POLICY);
+    const parentScore = incomplete.assets.find((asset) => asset.assetId === "alpha")!.trace.finalScore;
+    expect(parentScore).toBe(79);
+    const incompleteWrapper = incomplete.assets.find((asset) => asset.assetId === "wrapper")!;
+    expect(incompleteWrapper.trace.wrapperParentLimit).toMatchObject({
+      form, factsComplete: false, treatment: "fallback-discount", appliedDiscount: discount, limit,
+    });
+    expect(incompleteWrapper.scoreInput.parent.score).toBe(limit);
+
+    const { v9FactSetDigest: _digest, ...completeCore } = structuredClone(compiled);
+    const local = completeCore.assets.find((asset) => asset.assetId === "wrapper")!.wrapperLocalFacts;
+    if (local.applicability !== "wrapper") throw new Error("Expected wrapper facts");
+    for (const fact of Object.values(local.facts)) {
+      fact.disposition = "reviewed";
+      fact.assessment = "none";
+      fact.evidenceRefIds = ["evidence:base"];
+    }
+    local.facts.custodyEscrow.assessment = "critical";
+    local.riskTransfer = {
+      disposition: "not-applicable",
+      mechanism: "none",
+      maximumParentLossAbsorptionPoints: 0,
+      signals: ["no-risk-transfer"],
+      evidenceRefIds: ["evidence:base"],
+    };
+    const complete = evaluateV9FactSet(compileV9FactSetV3(completeCore), POLICY);
+    const completeWrapper = complete.assets.find((asset) => asset.assetId === "wrapper")!;
+    expect(completeWrapper.scoreInput.parent.score).toBe(77);
+    expect(completeWrapper.trace.wrapperParentLimit).toMatchObject({
+      form, factsComplete: true, treatment: "local-facts", fallbackDiscount: 0, appliedDiscount: 2, limit: 77,
+    });
   });
 });

@@ -4,6 +4,7 @@ import { describe, expect, it, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
 import { DEWSAlertFeed } from "@/components/dews-alert-feed";
 import type { StressSignalEntry } from "@shared/types";
+import { makeDews } from "./depeg.test-support";
 
 vi.mock("@/hooks/use-prefetch-stablecoin", () => ({
   usePrefetchStablecoin: () => vi.fn(),
@@ -16,7 +17,7 @@ vi.mock("next/link", async () => {
 
 
 function makeSignal(overrides: Partial<StressSignalEntry> = {}): StressSignalEntry {
-  return {
+  return makeDews({
     score: 70,
     band: "WARNING",
     signals: {
@@ -25,9 +26,8 @@ function makeSignal(overrides: Partial<StressSignalEntry> = {}): StressSignalEnt
     },
     amplifiers: { psi: 1.1, contagion: 1.08 },
     computedAt: 1_700_000_000,
-    methodologyVersion: "v1",
     ...overrides,
-  };
+  });
 }
 
 describe("DEWSAlertFeed", () => {

@@ -25,10 +25,6 @@ const REVIEWED_WARNING_IDS = new Map<string, string>([
     "MegaUSD's 100% reserve slice is an unsplit USDC/USDtb basket with no published current allocation, so a USDC coinId would overstate the dependency.",
   ],
   [
-    "usdm-mega::USDC and USDtb reserve basket::USDT",
-    "MegaUSD's 100% reserve slice is an unsplit USDC/USDtb basket with no published current allocation; the USDT substring in USDtb is not evidence of a direct USDT reserve link.",
-  ],
-  [
     "usdm-mega::USDC and USDtb reserve basket::USDtb",
     "MegaUSD's 100% reserve slice is an unsplit USDC/USDtb basket with no published current allocation, so a USDtb coinId would overstate the dependency.",
   ],
@@ -41,40 +37,8 @@ const REVIEWED_WARNING_IDS = new Map<string, string>([
     "Lorenzo reports a mixed USD1/USDT/USDC and strategy portfolio without current constituent weights, so a USDT coinId would overstate the dependency.",
   ],
   [
-    "gho-aave::GhoDirectFacilitator GSMs Mainnet::GHO",
-    "GHO facilitator labels describe issuance rails, not upstream GHO reserve assets that should inherit coinId linkage.",
-  ],
-  [
-    "gho-aave::CoreGhoDirectMinter::GHO",
-    "GHO direct-minter labels describe facilitator issuance rails, not upstream GHO reserve assets that should inherit coinId linkage.",
-  ],
-  [
-    "gho-aave::LidoGhoDirectMinter::GHO",
-    "GHO direct-minter labels describe facilitator issuance rails, not upstream GHO reserve assets that should inherit coinId linkage.",
-  ],
-  [
-    "gho-aave::GhoDirectFacilitator Plasma::GHO",
-    "GHO facilitator labels describe issuance rails, not upstream GHO reserve assets that should inherit coinId linkage.",
-  ],
-  [
-    "gho-aave::GhoDirectFacilitator GSM Arbitrum::GHO",
-    "This remote GSM facilitator is an issuance rail, not an upstream GHO reserve asset that should inherit coinId linkage.",
-  ],
-  [
-    "gho-aave::HorizonGhoDirectMinter::GHO",
-    "GHO direct-minter labels describe facilitator issuance rails, not upstream GHO reserve assets that should inherit coinId linkage.",
-  ],
-  [
     "apxusd-apyx::Cash & Equivalents (USDC, U.S. Treasury Bills)::USDC",
     "apxUSD's cash bucket aggregates USDC and short-duration U.S. Treasury Bills, so no single coinId is representative.",
-  ],
-  [
-    "bnusd-balanced::Tail borrower collateral (sodaNEAR, sodaPOL, sodaXLM, bnUSD, sodaS, sodaINJ, sodaWBTC, sodaKAIA, sodaLL, sodaSUSDS dust)::DAI",
-    "Substring artifact: the DAI match sits inside sodaINJ. Balanced reports no DAI collateral in this aggregated sub-0.5% tail.",
-  ],
-  [
-    "bnusd-balanced::Tail borrower collateral (sodaNEAR, sodaPOL, sodaXLM, bnUSD, sodaS, sodaINJ, sodaWBTC, sodaKAIA, sodaLL, sodaSUSDS dust)::USDS",
-    "Substring artifact: the USDS match sits inside sodaSUSDS, a below-0.02% wrapped sUSDS tail position that carries no separate weight.",
   ],
   [
     "ist-agoric::Parity Stability Module stablecoin reserves (IBC USDC/USDT/DAI)::USDC",
@@ -169,6 +133,10 @@ const REVIEWED_WARNING_IDS = new Map<string, string>([
     "The reserve label names the subject fund itself, not an upstream OUSG dependency edge.",
   ],
   [
+    "buidl-blackrock::BlackRock BUIDL fund shares::BUIDL",
+    "The reserve label names the subject fund itself, not an upstream BUIDL dependency edge.",
+  ],
+  [
     "pht-pht::Current apcxUSDT-referenced collateral envelope (unreconciled)::USDT",
     "APACX identifies apcxUSDT as an eligible collateral wrapper but does not establish its current PHT balance or reconcile the wrapper to underlying USDT reserves.",
   ],
@@ -189,6 +157,33 @@ const REVIEWED_WARNING_IDS = new Map<string, string>([
     "Kamino kToken position over an Orca USDH-USDC LP; a protocol position whose USDC leg is not separable as a direct USDC holding.",
   ],
 ]);
+
+// Reviewed wrapper spellings, not arbitrary substrings (USDT is not USDtb).
+const WRAPPER_TICKERS: Record<string, string> = {
+  SFRAX: "FRAX", LFRAX: "FRAX", SUSDE: "USDE", HBUSDT: "USDT",
+  APCXUSDT: "USDT", USDCX: "USDC",
+};
+
+function mentionsTicker(label: string, ticker: string): boolean {
+  const upperTicker = ticker.toUpperCase();
+  const tokens = label.toUpperCase().match(/[A-Z0-9](?:[A-Z0-9]|-[A-Z0-9])*/g) ?? [];
+  return tokens.some((token) => {
+    if (token.startsWith("NON-")) return false;
+    return token.split("-").some((part) => part === upperTicker || WRAPPER_TICKERS[part] === upperTicker);
+  });
+}
+
+describe("reserve ticker boundaries", () => {
+  it("distinguishes embedded text from tickers and reviewed wrappers", () => {
+    expect(mentionsTicker("USDtb reserve", "USDT")).toBe(false);
+    expect(mentionsTicker("sodaINJ collateral", "DAI")).toBe(false);
+    expect(mentionsTicker("NON-USDC collateral", "USDC")).toBe(false);
+    expect(mentionsTicker("sUSDe LP", "USDe")).toBe(true);
+    for (const ticker of ["USDC", "USDT", "DAI"]) {
+      expect(mentionsTicker("IBC USDC/USDT/DAI", ticker)).toBe(true);
+    }
+  });
+});
 
 describe("reserve coinId validation", () => {
   it("no coin has both dependencies and reserve-linked coinIds (unless allowed)", () => {
@@ -234,9 +229,8 @@ describe("reserve coinId validation", () => {
       if (!meta.reserves) continue;
       for (const slice of meta.reserves) {
         if (slice.coinId) continue; // already linked
-        const upperName = slice.name.toUpperCase();
         for (const ticker of KNOWN_TICKERS) {
-          if (upperName.includes(ticker.toUpperCase()) && !upperName.includes("NON-" + ticker.toUpperCase())) {
+          if (mentionsTicker(slice.name, ticker)) {
             warnings.push({
               id: `${meta.id}::${slice.name}::${ticker}`,
               message: `${meta.symbol} (${meta.id}): reserve "${slice.name}" mentions ${ticker} but has no coinId`,

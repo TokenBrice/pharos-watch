@@ -5,6 +5,7 @@ import {
   executeEvmQuotePlan,
   materializeEvmQuotePoint,
   type EvmQuotePlanItem,
+  type EvmQuotePlanBatchInput,
 } from "../evm-quote-plan";
 
 interface TestPlan extends EvmQuotePlanItem {
@@ -113,6 +114,62 @@ describe("EVM quote-plan executor", () => {
 
     expect(executeMulticall).not.toHaveBeenCalled();
     expect(outcomes).toEqual(["preflight-failed:0", "preflight-failed:1"]);
+  });
+
+  it("isolates missing labels and null transports by pinned block and chain", async () => {
+    const plans = [plan(0, "ethereum", 10), plan(1, "ethereum", 11),
+      plan(2, "ethereum", 10), plan(3, "base", 10), plan(4, "ethereum", 12)];
+    const executeMulticall = vi.fn(async ({ chain, blockNumber, calls }: EvmQuotePlanBatchInput) =>
+      chain === "ethereum" && blockNumber === 11 ? null : calls
+        .filter((call) => call.label !== "2:target")
+        .map((call) => ({ label: call.label, success: true, returnData: "0x01" as const })),
+    );
+    const outcomes = await executeEvmQuotePlan({
+      plans, outcomes: plans.map(() => "pending"), chainRpcs: new Map(),
+      spec: { batchSize: 8, executeMulticall,
+        resolveResult: (item) => `ok:${item.index}`,
+        materializeTransportFailure: (item) => `failed:${item.index}` },
+    });
+    expect(outcomes).toEqual(["ok:0", "failed:1", "failed:2", "ok:3", "ok:4"]);
+    expect(executeMulticall.mock.calls.map(([input]) => [
+      input.chain, input.blockNumber, input.calls.map((call: { label: string }) => call.label),
+    ]).sort()).toEqual([
+      ["base", 10, ["3:target"]],
+      ["ethereum", 10, ["0:target", "2:target"]],
+      ["ethereum", 11, ["1:target"]],
+      ["ethereum", 12, ["4:target"]],
+    ]);
+  });
+
+  it.each(["before execution", "between batches"])("aborts %s without subsequent RPC work", async (when) => {
+    const controller = new AbortController();
+    const reason = new Error("cancel quote plan");
+    if (when === "before execution") controller.abort(reason);
+    const executeMulticall = vi.fn(async ({ calls }: EvmQuotePlanBatchInput) => {
+      controller.abort(reason);
+      return calls.map((call) => ({
+        label: call.label, success: true, returnData: "0x01" as const,
+      }));
+    });
+    await expect(executeEvmQuotePlan({
+      plans: [plan(0, "ethereum", 10), plan(1, "ethereum", 10)],
+      outcomes: ["pending", "pending"], chainRpcs: new Map(), signal: controller.signal,
+      spec: { batchSize: 1, executeMulticall, resolveResult: () => "ok",
+        materializeTransportFailure: () => "failed" },
+    })).rejects.toThrow(reason);
+    expect(executeMulticall).toHaveBeenCalledTimes(when === "before execution" ? 0 : 1);
+  });
+
+  it("rejects invalid batch sizes before executing work", async () => {
+    const executeMulticall = vi.fn();
+    for (const batchSize of [0, -1, 1.5, NaN, Infinity, Number.MAX_SAFE_INTEGER + 1]) {
+      await expect(executeEvmQuotePlan({
+        plans: [plan(0, "ethereum", 10)], outcomes: ["pending"], chainRpcs: new Map(),
+        spec: { batchSize, executeMulticall, resolveResult: () => "ok",
+          materializeTransportFailure: () => "failed" },
+      })).rejects.toThrow(TypeError);
+    }
+    expect(executeMulticall).not.toHaveBeenCalled();
   });
 
   it("converts raw amounts to USD and clamps favorable execution cost at zero", () => {

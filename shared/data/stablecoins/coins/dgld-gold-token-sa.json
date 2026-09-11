@@ -61,19 +61,18 @@
   "custodyModel": "institutional-regulated",
   "governanceQuality": "single-entity",
   "liveReservesConfig": {
-    "adapter": "single-asset",
+    "adapter": "dgld-gold-mapper",
     "version": 1,
     "semantics": "single-asset",
-    "breakerScope": "dgld-gold-token-sa",
+    "breakerScope": "dgld-gold-mapper",
     "display": {
-      "url": "https://dgld.ch/",
-      "label": "DGLD Official"
+      "url": "https://production-gold-mapper-backend.onrender.com/v1",
+      "label": "DGLD Bar Registry"
     },
     "inputs": {
       "primary": {
-        "kind": "onchain-evm",
-        "chain": "ethereum",
-        "rpcMode": "public-rpc"
+        "kind": "http-json",
+        "url": "https://production-gold-mapper-backend.onrender.com/v1"
       }
     },
     "params": {

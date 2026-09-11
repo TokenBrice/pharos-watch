@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { ScheduledRuntimeContext } from "../context";
+import { makeScheduledRuntime } from "../../../test-helpers/scheduled-runtime.test-support";
 
 vi.mock("../../../cron/dispatch-telegram-alerts", () => ({ dispatchTelegramAlerts: vi.fn() }));
 vi.mock("../../../cron/telegram-recap-planner", () => ({ planTelegramPersonalizedRecaps: vi.fn() }));
@@ -33,23 +34,16 @@ import {
 } from "../../../lib/telegram/webhook-registration";
 
 function buildRuntime(token?: string, recapRolloutMode: string = "public"): ScheduledRuntimeContext {
-  return {
+  return makeScheduledRuntime({
     db: {} as D1Database,
     env: (token
       ? { TELEGRAM_BOT_TOKEN: token, TELEGRAM_RECAP_ROLLOUT_MODE: recapRolloutMode }
       : { TELEGRAM_RECAP_ROLLOUT_MODE: recapRolloutMode }) as ScheduledRuntimeContext["env"],
-    ctx: {} as ExecutionContext,
     cron: "2,7,12,17,22,27,32,37,42,47,52,57 * * * *",
     scheduleKey: "fiveMinuteTelegramAlerts",
     scheduledTimeMs: null,
     slotStartedAt: 1_772_000_000,
-    mintBurnDisabledIds: [],
-    mintBurnDisabledSymbols: [],
-    mintBurnFreshnessConfig: {} as ScheduledRuntimeContext["mintBurnFreshnessConfig"],
-    coingeckoApiKey: null,
-    chainRpcs: new Map(),
-    runLeasedCron: vi.fn(async (_job, fn) => fn(new AbortController().signal, vi.fn())),
-  };
+  });
 }
 
 beforeEach(() => {
@@ -245,11 +239,12 @@ describe("runFiveMinuteTelegramSlot", () => {
   });
 
   it("defers recap planning when risk dispatch consumes the shared slot budget", async () => {
-    vi.mocked(Date.now)
-      .mockReturnValueOnce(0)
-      .mockReturnValueOnce(0)
-      .mockReturnValueOnce(280_000)
-      .mockReturnValue(280_000);
+    let now = 0;
+    vi.mocked(Date.now).mockImplementation(() => now);
+    vi.mocked(dispatchTelegramAlerts).mockImplementationOnce(async () => {
+      now = 280_000;
+      return { itemCount: 1, metadata: "{}" };
+    });
 
     const summary = await runFiveMinuteTelegramSlot(buildRuntime("token"));
 

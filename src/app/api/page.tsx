@@ -1,30 +1,44 @@
 import Link from "next/link";
-import { Activity, ArrowUpRight, BookOpen, Database, LineChart, ShieldCheck } from "lucide-react";
+import { Activity, ArrowUpRight, BookOpen, Database, KeyRound, LineChart, ShieldCheck } from "lucide-react";
 import { ApiKeyRequestForm } from "@/components/api-key-request-form";
 import { CopyButton } from "@/components/copy-button";
+import { DonorKeyClaim } from "@/components/donor-key-claim";
 import { FeaturePageShell } from "@/components/feature-page-shell";
 import { buildPageMetadata } from "@/lib/page-metadata";
+import { API_PATHS } from "@shared/lib/api-endpoints";
+import donationsData from "@shared/data/funding/donations.json";
+import { formatIsoDate } from "@shared/lib/format";
+import { DONOR_API_KEY_MIN_USD, DONOR_API_KEY_RATE_LIMIT_PER_MINUTE } from "@shared/lib/ops-limits";
 import {
+  DONOR_KEY_CLAIMS_OPEN,
   PUBLIC_API_ARTIFACTS,
   PUBLIC_API_HOST,
   PUBLIC_API_KEY_HEADER,
   SELF_SERVE_API_KEY_EXPIRY_DAYS,
   SELF_SERVE_API_KEY_RATE_LIMIT_RPM,
+  SELF_SERVE_ISSUANCE_OPEN,
   buildPublicApiCurlCommand,
 } from "@shared/lib/public-api-contract";
 
 export const metadata = buildPageMetadata({
-  title: "Pharos Stablecoin API: Key Access & Endpoints",
+  title: "Pharos Stablecoin API: Free Safety Grades & Keyed Endpoints",
   description:
-    "Request a Pharos API key and use stablecoin market, peg, liquidity, depeg, and risk endpoints from the public integration lane at api.pharos.watch.",
+    "Read Pharos Safety Score grades for every tracked stablecoin without a key, and use the keyed market, peg, liquidity, depeg, and risk endpoints at api.pharos.watch.",
   canonical: "/api/",
 });
 
+const FREE_GRADES_URL = `${PUBLIC_API_HOST}${API_PATHS.safetyGrades()}`;
+
+// Eligibility follows the committed donation ledger, so the reconciliation date
+// is the honest "as of" for the perk: a donation sent after it counts only once
+// the funding skill appends the row and a release ships.
+const LEDGER_RECONCILED_DATE = formatIsoDate(donationsData.last_updated_at);
+
 const ACCESS_FACTS = [
   {
-    title: "Email Verified",
+    title: "Free Grades",
     description:
-      "A verification link is sent before a key is issued. The API token is revealed once in the browser after verification.",
+      "Safety Score grades for every tracked stablecoin are served without an API key. Everything else on the public host needs one.",
     icon: ShieldCheck,
   },
   {
@@ -34,10 +48,10 @@ const ACCESS_FACTS = [
     icon: ArrowUpRight,
   },
   {
-    title: "Reference Ready",
+    title: "Supporter Key",
     description:
-      "Endpoint contracts, OpenAPI, and Postman artifacts stay on the reference page for implementation work.",
-    icon: BookOpen,
+      `Wallets with at least $${DONOR_API_KEY_MIN_USD} in donations of stablecoins currently graded A or B (including +/−) can claim one key at ${DONOR_API_KEY_RATE_LIMIT_PER_MINUTE} requests per minute, with no scheduled expiry.`,
+    icon: KeyRound,
   },
 ] as const;
 
@@ -124,9 +138,8 @@ export default function ApiAccessPage() {
       title="Pharos API"
       leadParagraphs={[
         <>
-          Request a self-serve key for read-only public stablecoin data. The default key is scoped to external API
-          traffic, limited to {SELF_SERVE_API_KEY_RATE_LIMIT_RPM} requests per minute, and expires after{" "}
-          {SELF_SERVE_API_KEY_EXPIRY_DAYS} days.
+          Safety Score grades for every tracked stablecoin are free and need no key. The full read-only API is
+          keyed: keys are scoped to external API traffic and carry a per-key rate limit and expiry.
         </>,
       ]}
       headerSupplement={
@@ -241,11 +254,17 @@ export default function ApiAccessPage() {
               on protected public routes.
             </li>
             <li>
-              Self-serve keys start at {SELF_SERVE_API_KEY_RATE_LIMIT_RPM} requests per minute and expire after{" "}
-              {SELF_SERVE_API_KEY_EXPIRY_DAYS} days.
+              <code className="rounded bg-muted px-1.5 py-0.5 font-mono text-[0.92em] text-foreground">GET {API_PATHS.safetyGrades()}</code>{" "}
+              needs no key.
             </li>
+            {SELF_SERVE_ISSUANCE_OPEN ? (
+              <li>
+                Self-serve keys start at {SELF_SERVE_API_KEY_RATE_LIMIT_RPM} requests per minute and expire after{" "}
+                {SELF_SERVE_API_KEY_EXPIRY_DAYS} days.
+              </li>
+            ) : null}
             <li>
-              Standard keys can have per-key limits; treat 429 as quota pressure and honor Retry-After when present.
+              Keys carry per-key limits; treat 429 as quota pressure and honor Retry-After when present.
             </li>
             <li>Poll realtime endpoints no faster than 60 seconds and history endpoints roughly hourly.</li>
           </ul>
@@ -272,7 +291,83 @@ export default function ApiAccessPage() {
         </aside>
       </section>
 
-      <ApiKeyRequestForm />
+      <section className="pharos-card-shell px-4 py-5 sm:px-5 sm:py-6">
+        <div className="space-y-2">
+          <p className="pharos-kicker">No API Key Required</p>
+          <h2 className="text-2xl font-semibold tracking-tight text-foreground">Safety Score grades for every stablecoin</h2>
+          <p className="text-sm leading-relaxed text-muted-foreground">
+            One score and grade per tracked stablecoin from the current published Safety Score, with the
+            methodology version and publication status. Same publication as the keyed report cards, refreshed on the
+            same schedule. Coin IDs use the Pharos <code className="rounded bg-muted px-1 py-0.5 font-mono text-[0.92em] text-foreground">ticker-issuer</code> form.
+          </p>
+        </div>
+        <div className="mt-4">
+          <CodeExampleCard example={{ label: "curl", code: `curl ${FREE_GRADES_URL}` }} />
+        </div>
+      </section>
+
+      <section className="pharos-card-shell px-4 py-5 sm:px-5 sm:py-6">
+        <div className="space-y-2">
+          <p className="pharos-kicker">Supporter Key</p>
+          <h2 className="text-2xl font-semibold tracking-tight text-foreground">A thank-you perk for donors</h2>
+          <p className="text-sm leading-relaxed text-muted-foreground">
+            Any externally-owned EVM wallet with at least ${DONOR_API_KEY_MIN_USD} in qualifying stablecoin donations in the{" "}
+            <Link href="/funding/" className="pharos-prose-link">
+              public donation ledger
+            </Link>{" "}
+            can claim one API key. The wallet proves it is yours by signing a short text message: no transaction, no
+            email address, and no payment processor.
+          </p>
+        </div>
+        <ul className="mt-4 space-y-2 text-sm leading-relaxed text-muted-foreground">
+          <li>{DONOR_API_KEY_RATE_LIMIT_PER_MINUTE} requests per minute, no scheduled expiry, revocable, and no SLA.</li>
+          <li>Only donations of stablecoins currently graded A+, A, A−, B+, B, or B− count at claim time. Later grade changes do not revoke an issued key.</li>
+          <li>Claims pause while the current Safety Score publication is held or unavailable.</li>
+          <li>
+            One key per wallet. A lost key is rotated by hand through the{" "}
+            <Link href="/feedback/" className="pharos-prose-link">
+              feedback form
+            </Link>
+            .
+          </li>
+          <li>The donating wallet has to be able to sign: exchange withdrawals and contract wallets do not qualify.</li>
+          <li>Claims are not instant. The donor list is updated once a week, on Sunday mornings; a new donation can only be claimed once it appears on the funding page. Ledger last reconciled {LEDGER_RECONCILED_DATE} UTC.</li>
+        </ul>
+        {DONOR_KEY_CLAIMS_OPEN ? (
+          <DonorKeyClaim />
+        ) : (
+          <p className="mt-4 rounded-md border border-border/60 bg-muted/40 px-3 py-2 text-sm text-muted-foreground">
+            Supporter key claims are paused for now.
+          </p>
+        )}
+      </section>
+
+      <ApiKeyRequestForm issuanceOpen={SELF_SERVE_ISSUANCE_OPEN} />
+      {!SELF_SERVE_ISSUANCE_OPEN ? (
+        <section className="pharos-card-shell px-4 py-5 sm:px-5 sm:py-6">
+          <div className="space-y-2">
+            <p className="pharos-kicker">Keyed Access</p>
+            <h2 className="text-2xl font-semibold tracking-tight text-foreground">Self-serve key issuance is closed</h2>
+          </div>
+          <div className="mt-4 space-y-3 text-sm leading-relaxed text-muted-foreground">
+            <p>
+              New keys are not issued on demand while a paid API tier is being prepared. Keys already issued keep
+              working until their expiry date.
+            </p>
+            <p>
+              If you need keyed access for a project in the meantime, describe it through the{" "}
+              <Link href="/feedback/" className="pharos-prose-link">
+                feedback form
+              </Link>{" "}
+              and it will be reviewed by hand.
+            </p>
+            <p>
+              Integrations that deliver a freely available, non-profit service on top of Pharos data - FrankenCoin and
+              Octav are examples - receive keys at no cost on request through the same form.
+            </p>
+          </div>
+        </section>
+      ) : null}
       </div>
     </FeaturePageShell>
   );

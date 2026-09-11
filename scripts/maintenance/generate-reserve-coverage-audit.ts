@@ -8,7 +8,7 @@ import {
   PRE_LAUNCH_STABLECOINS,
   TRACKED_STABLECOINS,
 } from "@shared/lib/stablecoins/registry";
-import type { LiveReserveEvidenceClass } from "@shared/types/live-reserves";
+import type { LiveReserveEvidenceClass, LiveReserveFreshnessMode } from "@shared/types/live-reserves";
 import type { ReserveSlice, StablecoinMeta } from "@shared/types";
 import {
   buildMarketCapMapFromStablecoins,
@@ -89,6 +89,27 @@ export interface CuratedOnlyReserveCandidateRow extends LiveReserveSourceQuality
   rank: number;
 }
 
+export type ReserveSyncStatus = "ok" | "degraded" | "error" | "skipped";
+
+/** One coin's resolved prod reserve state, as carried by the `--reserve-states` input. */
+export interface ReserveStateRow {
+  id: string;
+  syncStatus: ReserveSyncStatus | null;
+  scoringEligible: boolean | null;
+  freshnessMode: LiveReserveFreshnessMode | null;
+}
+
+/** Per-adapter prod reliability rollup: bound coins and their sync/score-grade split. */
+export interface AdapterReliabilityRow {
+  adapter: string;
+  boundCoinCount: number;
+  syncOk: number;
+  syncDegraded: number;
+  syncError: number;
+  syncSkippedOrUnknown: number;
+  scoreGradeCount: number;
+}
+
 export interface ReserveCoverageAuditInput {
   trackedCoins?: readonly StablecoinMeta[];
   activeCoins?: readonly StablecoinMeta[];
@@ -96,6 +117,7 @@ export interface ReserveCoverageAuditInput {
   frozenCoins?: readonly StablecoinMeta[];
   reportCards?: unknown;
   stablecoins?: unknown;
+  reserveStates?: unknown;
   generatedAt?: string;
   mode?: "static" | "input" | "api" | "prod";
 }
@@ -148,6 +170,11 @@ export interface ReserveCoverageAudit {
   };
   liveEnabledByEvidenceClass: Record<LiveReserveEvidenceClass, number>;
   independentConfiguredButNotScoreGradeIds: string[] | null;
+  freshnessProbeGaps: ReserveEvidenceGapRow[];
+  freshnessUpstreamLimitations: ReserveEvidenceGapRow[];
+  freshnessObservationsMissing: number;
+  adapterReliability: AdapterReliabilityRow[];
+  reserveStatesSupplied: boolean;
   curatedOnlyActiveCandidates: CuratedOnlyReserveCandidateRow[];
   missingReserveReview: ReserveEvidenceGapRow[];
   staleReserveReview: ReserveEvidenceGapRow[];
@@ -169,6 +196,7 @@ interface CliOptions {
   apiBase: string | null;
   reportCardsPath: string | null;
   stablecoinsPath: string | null;
+  reserveStatesPath: string | null;
   format: "markdown" | "json";
   reportPath: string | null;
   generatedAt: string | null;
@@ -293,6 +321,120 @@ function summarizeReportCards(
   };
 }
 
+/** Parses a `--reserve-states` payload into per-coin prod reserve states. */
+export function extractReserveStateRows(payload: unknown): ReserveStateRow[] {
+  const entries: unknown[] = Array.isArray(payload)
+    ? payload
+    : isRecord(payload) && Array.isArray(payload.reserves)
+      ? payload.reserves
+      : [];
+  const rows: ReserveStateRow[] = [];
+  for (const entry of entries) {
+    if (!isRecord(entry)) continue;
+    const id = typeof entry.stablecoinId === "string"
+      ? entry.stablecoinId
+      : typeof entry.id === "string"
+        ? entry.id
+        : "";
+    if (id === "") continue;
+    const provenance = isRecord(entry.provenance) ? entry.provenance : null;
+    const sync = isRecord(entry.sync) ? entry.sync : null;
+    const status = sync?.status;
+    const syncStatus =
+      status === "ok" || status === "degraded" || status === "error" || status === "skipped" ? status : null;
+    const scoringEligible =
+      provenance != null && typeof provenance.scoringEligible === "boolean"
+        ? provenance.scoringEligible
+        : null;
+    const freshnessMode =
+      provenance != null &&
+      (provenance.freshnessMode === "verified" ||
+        provenance.freshnessMode === "unverified" ||
+        provenance.freshnessMode === "not-applicable")
+        ? provenance.freshnessMode
+        : null;
+    rows.push({ id, syncStatus, scoringEligible, freshnessMode });
+  }
+  return rows;
+}
+
+function buildAdapterReliability(
+  activeCoins: readonly StablecoinMeta[],
+  reserveStateRows: readonly ReserveStateRow[],
+): AdapterReliabilityRow[] {
+  const stateById = new Map(reserveStateRows.map((row) => [row.id, row]));
+  const coinsByAdapter = new Map<string, StablecoinMeta[]>();
+  for (const coin of activeCoins) {
+    const adapter = coin.liveReservesConfig?.adapter;
+    if (!adapter) continue;
+    const list = coinsByAdapter.get(adapter) ?? [];
+    list.push(coin);
+    coinsByAdapter.set(adapter, list);
+  }
+  return [...coinsByAdapter.entries()]
+    .map(([adapter, coins]) => {
+      let syncOk = 0;
+      let syncDegraded = 0;
+      let syncError = 0;
+      let syncSkippedOrUnknown = 0;
+      let scoreGradeCount = 0;
+      for (const coin of coins) {
+        const state = stateById.get(coin.id);
+        if (state?.syncStatus === "ok") syncOk += 1;
+        else if (state?.syncStatus === "degraded") syncDegraded += 1;
+        else if (state?.syncStatus === "error") syncError += 1;
+        else syncSkippedOrUnknown += 1;
+        if (state?.scoringEligible === true) scoreGradeCount += 1;
+      }
+      return {
+        adapter,
+        boundCoinCount: coins.length,
+        syncOk,
+        syncDegraded,
+        syncError,
+        syncSkippedOrUnknown,
+        scoreGradeCount,
+      };
+    })
+    .sort((left, right) => right.boundCoinCount - left.boundCoinCount || left.adapter.localeCompare(right.adapter));
+}
+
+function buildFreshnessCoverage(
+  activeCoins: readonly StablecoinMeta[],
+  rows: readonly ReserveStateRow[],
+) {
+  const states = new Map(rows.map((row) => [row.id, row]));
+  const freshnessProbeGaps: ReserveEvidenceGapRow[] = [];
+  const freshnessUpstreamLimitations: ReserveEvidenceGapRow[] = [];
+  let freshnessObservationsMissing = 0;
+  for (const coin of activeCoins) {
+    const config = coin.liveReservesConfig;
+    if (!config) continue;
+    const definition = LIVE_RESERVE_ADAPTER_DEFINITIONS[config.adapter];
+    if (definition.evidenceClass !== "independent") continue;
+    const modes: readonly string[] = "validation" in definition
+      ? definition.validation.allowedFreshnessModes ?? []
+      : [];
+    if (!modes.includes("unverified")) continue;
+    const freshness = states.get(coin.id)?.freshnessMode;
+    if (freshness == null) freshnessObservationsMissing += 1;
+    if ("freshnessLimitation" in definition) {
+      freshnessUpstreamLimitations.push(evidenceGap(
+        coin, `${config.adapter}: ${definition.freshnessLimitation} Latest known: ${freshness ?? "not supplied"}.`,
+      ));
+    } else if (
+      freshness === "unverified" &&
+      "preferredFreshnessMode" in definition &&
+      definition.preferredFreshnessMode != null
+    ) {
+      freshnessProbeGaps.push(evidenceGap(
+        coin, `${config.adapter}: latest unverified; preferred ${definition.preferredFreshnessMode} — probe not built or not producing preferred evidence.`,
+      ));
+    }
+  }
+  return { freshnessProbeGaps, freshnessUpstreamLimitations, freshnessObservationsMissing };
+}
+
 export function buildReserveCoverageAudit(input: ReserveCoverageAuditInput = {}): ReserveCoverageAudit {
   const generatedAt = input.generatedAt ?? new Date().toISOString();
   const trackedCoins = input.trackedCoins ?? TRACKED_STABLECOINS;
@@ -312,6 +454,21 @@ export function buildReserveCoverageAudit(input: ReserveCoverageAuditInput = {})
     .sort();
   for (const id of staleReviewedSourceNoteIds) {
     warnings.push(`Reviewed reserve source-quality note for "${id}" no longer matches any active stablecoin.`);
+  }
+
+  const liveConfiguredAdapterById: Record<string, string> = {};
+  for (const coin of activeCoins) {
+    if (coin.liveReservesConfig?.adapter) {
+      liveConfiguredAdapterById[coin.id] = coin.liveReservesConfig.adapter;
+    }
+  }
+  const liveConfiguredReviewedNoteIds = Object.keys(REVIEWED_LIVE_RESERVE_SOURCE_NOTES)
+    .filter((id) => liveConfiguredAdapterById[id] !== undefined)
+    .sort();
+  for (const id of liveConfiguredReviewedNoteIds) {
+    warnings.push(
+      `Reviewed reserve source-quality note for "${id}" is now live-configured via ${liveConfiguredAdapterById[id]}; delete the note.`,
+    );
   }
 
   let activeReserveSliceCount = 0;
@@ -479,6 +636,7 @@ export function buildReserveCoverageAudit(input: ReserveCoverageAuditInput = {})
   }
 
   const curatedOnlyActiveCandidates = buildCuratedOnlyCandidates(activeCoins, marketCapById);
+  const reserveStateRows = extractReserveStateRows(input.reserveStates);
   let reportCardActiveCount: number | null = null;
   let backingFromLiveReservesActiveCount: number | null = null;
   let dependencyFromLiveActiveCount: number | null = null;
@@ -498,6 +656,9 @@ export function buildReserveCoverageAudit(input: ReserveCoverageAuditInput = {})
 
   return {
     generatedAt,
+    ...buildFreshnessCoverage(activeCoins, reserveStateRows),
+    adapterReliability: buildAdapterReliability(activeCoins, reserveStateRows),
+    reserveStatesSupplied: input.reserveStates !== undefined,
     mode: input.mode ?? (input.reportCards === undefined ? "static" : "input"),
     summary: {
       trackedCount: trackedCoins.length,
@@ -603,6 +764,31 @@ function renderOpaqueReserveSlices(rows: readonly OpaqueReserveSliceRow[]): stri
   });
 }
 
+function renderAdapterReliability(audit: ReserveCoverageAudit): string[] {
+  if (!audit.reserveStatesSupplied) {
+    return [
+      "_Reserve sync state not supplied._ Run with `--reserve-states <file>` (populated from the " +
+        "`/api/stablecoin-reserves/<id>` `provenance`/`sync` fields) to render per-adapter sync-status " +
+        "and score-grade counts.",
+    ];
+  }
+  return renderMarkdownRows({
+    headings: ["adapter", "bound coins", "sync ok", "degraded", "error", "skipped/unknown", "score-grade"],
+    rows: audit.adapterReliability,
+    cells: (row) => [
+        row.adapter,
+        row.boundCoinCount,
+        row.syncOk,
+        row.syncDegraded,
+        row.syncError,
+        row.syncSkippedOrUnknown,
+        row.scoreGradeCount,
+    ],
+    alignments: ["left", "right", "right", "right", "right", "right", "right"],
+    empty: "_None._",
+  });
+}
+
 export function renderReserveCoverageAuditMarkdown(audit: ReserveCoverageAudit): string {
   const clippedGaps = (audit.independentConfiguredButNotScoreGradeIds ?? []).slice(0, SCORE_GRADE_GAP_LIMIT);
   const lines = [
@@ -659,6 +845,22 @@ export function renderReserveCoverageAuditMarkdown(audit: ReserveCoverageAudit):
     `- Independent configured but not score-grade: ${renderNullableCount(
       audit.summary.independentConfiguredButNotScoreGradeCount,
     )}`,
+    "",
+    "## Freshness: Tolerated, Not Preferred",
+    "",
+    "Independent-configured coins observed at tolerated unverified freshness rather than their declared target (probe not built or not producing preferred evidence). This is not an assertion that a new probe alone fixes other scoring exclusions.",
+    "",
+    ...renderEvidenceGapRows(audit.freshnessProbeGaps),
+    "",
+    `Missing latest-known freshness observations: ${audit.freshnessObservationsMissing}. Supply --reserve-states to distinguish observed fallback from absent data.`,
+    "",
+    "### Upstream Freshness Limitations (Not Probe Candidates)",
+    "",
+    ...renderEvidenceGapRows(audit.freshnessUpstreamLimitations),
+    "",
+    "## Adapter Reliability (--prod)",
+    "",
+    ...renderAdapterReliability(audit),
     "",
     "## Independent Configured But Not Score-Grade",
     "",
@@ -727,7 +929,7 @@ export function renderReserveCoverageAuditMarkdown(audit: ReserveCoverageAudit):
 
 export function parseArgs(argv: string[]): CliOptions {
   return parseCoverageAuditCliArgs(argv, {
-    createOptions: (): CliOptions => ({ prod: false, apiBase: null, reportCardsPath: null, stablecoinsPath: null, format: "markdown", reportPath: null, generatedAt: null }),
+    createOptions: (): CliOptions => ({ prod: false, apiBase: null, reportCardsPath: null, stablecoinsPath: null, reserveStatesPath: null, format: "markdown", reportPath: null, generatedAt: null }),
     includeGeneratedAt: true,
     generatedAtMissingMessage: "--generated-at requires an ISO timestamp or 'now'",
     options: [
@@ -735,6 +937,7 @@ export function parseArgs(argv: string[]): CliOptions {
       { flag: "--api-base", kind: "value", missingMessage: "--api-base requires a URL", apply: (options, value) => { options.apiBase = value!; } },
       { flag: "--report-cards", kind: "value", missingMessage: "--report-cards requires a file path", apply: (options, value) => { options.reportCardsPath = value!; } },
       { flag: "--stablecoins", kind: "value", missingMessage: "--stablecoins requires a file path", apply: (options, value) => { options.stablecoinsPath = value!; } },
+      { flag: "--reserve-states", kind: "value", missingMessage: "--reserve-states requires a file path", apply: (options, value) => { options.reserveStatesPath = value!; } },
     ],
     validate: (options) => {
       if (options.prod && options.apiBase) throw new Error("Choose only one of --prod or --api-base.");
@@ -749,12 +952,16 @@ async function loadReportCardInput(
   options: CliOptions,
   cwd: string,
   fetchImpl: typeof fetch,
-): Promise<Pick<ReserveCoverageAuditInput, "reportCards" | "stablecoins" | "mode">> {
+): Promise<Pick<ReserveCoverageAuditInput, "reportCards" | "stablecoins" | "reserveStates" | "mode">> {
+  const reserveStates = options.reserveStatesPath
+    ? readRequiredJsonFile(resolve(cwd, options.reserveStatesPath), "--reserve-states")
+    : undefined;
+
   const fetchedInputs = await loadCoverageAuditSiteDataInputs(
     { prod: options.prod, apiBase: options.apiBase, apiKeyEnv: "RESERVE_COVERAGE_API_KEY" },
     fetchImpl,
   );
-  if (fetchedInputs) return fetchedInputs;
+  if (fetchedInputs) return { ...fetchedInputs, reserveStates };
 
   const reportCards = options.reportCardsPath
     ? readRequiredJsonFile(resolve(cwd, options.reportCardsPath), "--report-cards")
@@ -766,6 +973,7 @@ async function loadReportCardInput(
   return {
     reportCards,
     stablecoins,
+    reserveStates,
     mode: reportCards !== undefined || stablecoins !== undefined ? "input" : "static",
   };
 }

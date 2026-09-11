@@ -2,8 +2,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import type { ContractDeployment } from "@shared/types/core";
 import { mockFetch } from "@shared/test-utils/mock-fetch";
 import { crawlTezosPoolsStage } from "../crawl-tezos-pools";
-import { createCrawlStageContext } from "../staged-pool";
-import type { StagedPool } from "../types";
+import { discoveryContext } from "./discovery.test-support";
 
 const UUSD_ADDRESS = "KT1XRPEPXbZK25r3Htzp2o1x7xdMMmfocKNW";
 const USDT_ADDRESS = "KT1XnTn74bUtxHfDtBmm2bGZAQfhPbvKWR8o";
@@ -14,23 +13,10 @@ function target(address = UUSD_ADDRESS): ContractDeployment {
 }
 
 function context(options?: { stablecoinId?: string; deadlineMs?: number }) {
-  const pools: StagedPool[] = [];
-  return {
-    pools,
-    value: createCrawlStageContext({
-      stablecoinId: options?.stablecoinId ?? "uusd-youves",
-      knownPoolIds: new Set(),
-      nowSec: 1_800_000_000,
-      pools,
-      priceObs: [],
-      deadlineMs: options?.deadlineMs,
-      references: {
-        rates: {},
-        type: "fresh",
-        updatedAt: 1_800_000_000,
-      },
-    }),
-  };
+  return discoveryContext(options?.stablecoinId ?? "uusd-youves", {
+    deadlineMs: options?.deadlineMs,
+    references: { rates: {}, type: "fresh", updatedAt: 1_800_000_000 },
+  });
 }
 
 function balanceRow(

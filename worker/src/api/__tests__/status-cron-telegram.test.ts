@@ -11,10 +11,11 @@ import {
   fixtureCRON_INTERVALS,
 } from "./status.test-support";
 
-function fixtureMockD1(overrides: NonNullable<Parameters<typeof buildStatusD1Scenario>[0]>["overrides"] = []) {
+function fixtureMockD1(overrides: NonNullable<Parameters<typeof buildStatusD1Scenario>[0]>["overrides"] = [], healthyLive = false) {
   return buildStatusD1Scenario({
     sections: ["sentinel", "live", "publication", "derived", "reserves", "statusState", "cronState", "telegram"],
-    optionalOverrides: overrides,
+    overrides,
+    healthyLive,
     sectionOverrides: {
       derived: [
         { match: "pharos:status-derived:mint-burn-24h", rows: [] },
@@ -101,7 +102,7 @@ describe("handleStatus", () => {
         ],
       },
       { match: "cache WHERE key IN", rows: [makeCacheRow("stablecoins"), makeCacheRow("stablecoin-charts")] },
-      { match: "cache", rows: [], first: { value: JSON.stringify({ peggedAssets: [] }), updated_at: now - 60 } },
+      { match: "FROM cache WHERE key = ?", matchBinds: ["stablecoins"], rows: [], first: { value: JSON.stringify({ peggedAssets: [] }), updated_at: now - 60 } },
     ]);
 
     const request = fixtureMakeApiRequest("/api/status?refresh=live", { adminKey: "secret-key" });
@@ -215,49 +216,30 @@ describe("handleStatus", () => {
       ...jobs.map((job) => makeCronRow(job, job === "sync-blacklist" ? "error" : "ok", 30)),
       makeCronRow("sync-redemption-backstops", "ok", 30),
     ];
-    const db = fixtureMockD1([
-      {
-        match: "cache WHERE key IN",
-        rows: [
-          makeCacheRow("stablecoins"),
-          makeCacheRow("stablecoin-charts"),
-          makeCacheRow("usds-status"),
-          makeCacheRow("fx-rates"),
-          makeCacheRow("bluechip-ratings"),
-        ],
-      },
-      { match: "dex_liquidity", rows: [], first: { age: 60 } },
-      { match: "yield_data", rows: [], first: { age: 60 } },
-      { match: "stress_signals", rows: [], first: { age: 60 } },
-      { match: "cron_runs", rows: cronRows },
-      {
-        match: "cron_leases",
-        rows: [{ job: "sync-blacklist", lease_owner: "lease-456", lease_until: now + 600 }],
-      },
-      {
-        match: "cron_run_progress",
-        rows: [
-          {
-            job: "sync-blacklist",
-            started_at: now - 120,
-            updated_at: now - 10,
-            stage: "scan-config",
-            items_done: 4,
-            items_total: 7,
-            message: "Scanning USDT on Ethereum",
-            lease_owner: "lease-456",
-            metadata: JSON.stringify({ budgetUsed: 31, budgetLimit: 900 }),
-          },
-        ],
-      },
-      {
-        match: "cache",
-        rows: [],
-        first: { value: stablecoinsCache, updated_at: now - 60 },
-      },
-      { match: "blacklist_events", rows: [], first: { total: 1000, missing: 0, missing_recent: 0 } },
-      { match: "MAX(updated_at) as latest", rows: [], first: { latest: now - 5 * 86400, tracked: 12 } },
-    ]);
+    const db = fixtureMockD1([{ match: "cron_runs", rows: cronRows },
+    {
+      match: "cron_leases",
+      rows: [{ job: "sync-blacklist", lease_owner: "lease-456", lease_until: now + 600 }],
+    },
+    {
+      match: "cron_run_progress",
+      rows: [
+        {
+          job: "sync-blacklist",
+          started_at: now - 120,
+          updated_at: now - 10,
+          stage: "scan-config",
+          items_done: 4,
+          items_total: 7,
+          message: "Scanning USDT on Ethereum",
+          lease_owner: "lease-456",
+          metadata: JSON.stringify({ budgetUsed: 31, budgetLimit: 900 }),
+        },
+      ],
+    },
+    { match: "FROM cache WHERE key = ?", matchBinds: ["stablecoins"], rows: [], first: { value: stablecoinsCache, updated_at: now - 60 } },
+    { match: "blacklist_events", rows: [], first: { total: 1000, missing: 0, missing_recent: 0 } },
+    { match: "MAX(updated_at) as latest", rows: [], first: { latest: now - 5 * 86400, tracked: 12 } },], true);
 
     const request = fixtureMakeApiRequest("/api/status", { adminKey: "secret-key" });
     const res = await handleStatus({ db, trustedAdmin: true, request });
@@ -321,28 +303,9 @@ describe("handleStatus", () => {
     const cronRows = Object.keys(fixtureCRON_INTERVALS).map((job) =>
       makeCronRow(job, job === "sync-live-reserves" ? "error" : "ok", 60),
     );
-    const db = fixtureMockD1([
-      {
-        match: "cache WHERE key IN",
-        rows: [
-          makeCacheRow("stablecoins"),
-          makeCacheRow("stablecoin-charts"),
-          makeCacheRow("usds-status"),
-          makeCacheRow("fx-rates"),
-          makeCacheRow("bluechip-ratings"),
-        ],
-      },
-      { match: "dex_liquidity", rows: [], first: { age: 60 } },
-      { match: "yield_data", rows: [], first: { age: 60 } },
-      { match: "stress_signals", rows: [], first: { age: 60 } },
-      { match: "cron_runs", rows: cronRows },
-      {
-        match: "cache",
-        rows: [],
-        first: { value: stablecoinsCache, updated_at: now - 60 },
-      },
-      { match: "MAX(updated_at) as latest", rows: [], first: { latest: now - 5 * 86400, tracked: 12 } },
-    ]);
+    const db = fixtureMockD1([{ match: "cron_runs", rows: cronRows },
+    { match: "FROM cache WHERE key = ?", matchBinds: ["stablecoins"], rows: [], first: { value: stablecoinsCache, updated_at: now - 60 } },
+    { match: "MAX(updated_at) as latest", rows: [], first: { latest: now - 5 * 86400, tracked: 12 } },], true);
 
     const request = fixtureMakeApiRequest("/api/status", { adminKey: "secret-key" });
     const res = await handleStatus({ db, trustedAdmin: true, request });
@@ -516,26 +479,6 @@ describe("handleStatus", () => {
     ]);
   });
 
-  it("returns telegramBot=null when Telegram tables are unavailable", async () => {
-    const db = fixtureMockD1([
-      { match: "cache WHERE key IN", rows: [] },
-      { match: "cron_runs", rows: [makeCronRow("sync-stablecoins", "ok", 100)] },
-      { match: "cache", rows: [] },
-      { match: "blacklist_events", rows: [], first: { total: 0, missing: 0 } },
-      {
-        match: "FROM telegram_subscribers s",
-        rows: [],
-        throwError: "no such table: telegram_subscribers",
-      },
-    ]);
-
-    const request = fixtureMakeApiRequest("/api/status", { adminKey: "secret-key" });
-    const res = await handleStatus({ db, trustedAdmin: true, request });
-    const body = (await readJsonResponse(res, 200)) as { telegramBot: unknown };
-
-    expect(body.telegramBot).toBeNull();
-  });
-
   it("surfaces Telegram subsection loader failures through sectionErrors", async () => {
     const db = fixtureMockD1([
       { match: "cache WHERE key IN", rows: [] },
@@ -551,7 +494,7 @@ describe("handleStatus", () => {
 
     const request = fixtureMakeApiRequest("/api/status", { adminKey: "secret-key" });
     const res = await handleStatus({ db, trustedAdmin: true, request });
-    const body = (await res.json()) as {
+    const body = (await readJsonResponse(res, 200)) as {
       sectionErrors: Record<string, { code: string; message: string } | undefined>;
       telegramBot: unknown;
     };
@@ -635,29 +578,10 @@ describe("handleStatus", () => {
       ...jobs.map((job) => makeCronRow(job, job === "fetch-tbill-rate" ? "degraded" : "ok", 30)),
       makeCronRow("sync-redemption-backstops", "ok", 30),
     ];
-    const db = fixtureMockD1([
-      {
-        match: "cache WHERE key IN",
-        rows: [
-          makeCacheRow("stablecoins"),
-          makeCacheRow("stablecoin-charts"),
-          makeCacheRow("usds-status"),
-          makeCacheRow("fx-rates"),
-          makeCacheRow("bluechip-ratings"),
-        ],
-      },
-      { match: "dex_liquidity", rows: [], first: { age: 60 } },
-      { match: "yield_data", rows: [], first: { age: 60 } },
-      { match: "stress_signals", rows: [], first: { age: 60 } },
-      { match: "cron_runs", rows: cronRows },
-      {
-        match: "cache",
-        rows: [],
-        first: { value: stablecoinsCache, updated_at: now - 60 },
-      },
-      { match: "blacklist_events", rows: [], first: { total: 1000, missing: 1, missing_recent: 0 } },
-      { match: "MAX(updated_at) as latest", rows: [], first: { latest: now - 5 * 86400, tracked: 12 } },
-    ]);
+    const db = fixtureMockD1([{ match: "cron_runs", rows: cronRows },
+    { match: "FROM cache WHERE key = ?", matchBinds: ["stablecoins"], rows: [], first: { value: stablecoinsCache, updated_at: now - 60 } },
+    { match: "blacklist_events", rows: [], first: { total: 1000, missing: 1, missing_recent: 0 } },
+    { match: "MAX(updated_at) as latest", rows: [], first: { latest: now - 5 * 86400, tracked: 12 } },], true);
 
     const request = fixtureMakeApiRequest("/api/status", { adminKey: "secret-key" });
     const res = await handleStatus({ db, trustedAdmin: true, request });

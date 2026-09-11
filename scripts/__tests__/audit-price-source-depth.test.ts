@@ -1,7 +1,6 @@
-import { mkdtempSync, readFileSync } from "node:fs";
-import { tmpdir } from "node:os";
+import { readFileSync } from "node:fs";
 import { join } from "node:path";
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import activeStablecoinsFixture from "./fixtures/audit-price-source-depth/active-stablecoins.json";
 import pegSummaryFixture from "./fixtures/audit-price-source-depth/peg-summary.json";
 import stablecoinsFixture from "./fixtures/audit-price-source-depth/stablecoins.json";
@@ -15,6 +14,10 @@ import {
   runCli,
   type AuditStablecoinMeta,
 } from "../maintenance/audit-price-source-depth";
+import { createTempRepoTracker } from "./helpers/test-state";
+
+const { makeRoot, cleanup } = createTempRepoTracker("price-source-depth");
+afterEach(cleanup);
 
 describe("audit-price-source-depth", () => {
   it.each([
@@ -59,54 +62,29 @@ describe("audit-price-source-depth", () => {
     expect(() => parseArgs(["--unknown"])).toThrow("Unknown argument: --unknown");
   });
 
-  it("routes fixture JSON through the shared report runner byte-for-byte", async () => {
-    const cwd = mkdtempSync(join(tmpdir(), "price-source-depth-report-"));
+  it.each([false, true])("writes independently checked fixture results (baseline=%s)", async (baseline) => {
+    const cwd = makeRoot();
     const fixtureDir = join(process.cwd(), "scripts/__tests__/fixtures/audit-price-source-depth");
     const generatedAt = "2026-08-29T00:00:00.000Z";
-    const expectedAudit = buildPriceSourceDepthAudit({
-      activeStablecoins: activeStablecoinsFixture as AuditStablecoinMeta[],
-      pegSummary: pegSummaryFixture,
-      stablecoins: stablecoinsFixture,
-      generatedAt,
-      mode: "input",
-    });
     const stdout = vi.spyOn(process.stdout, "write").mockImplementation(() => true);
     try {
-      await expect(
-        runCli(["--input", fixtureDir, "--json", "--generated-at", generatedAt], cwd),
-      ).resolves.toBe(0);
+      await expect(runCli([
+        "--input", fixtureDir, baseline ? "--write-agents-baseline" : "--json", "--generated-at", generatedAt,
+      ], cwd)).resolves.toBe(0);
       const output = stdout.mock.calls.map(([value]) => String(value)).join("");
-      expect(output).toBe(`${JSON.stringify(expectedAudit, null, 2)}\n`);
+      const target = join(cwd, "agents/source-depth-baseline-2026-08-29.json");
+      const audit = JSON.parse(baseline ? readFileSync(target, "utf8") : output);
+      expect(audit).toMatchObject({
+        generatedAt,
+        activeCount: 7,
+        sourceDepthDistribution: { "0": 3, "1": 1, "2": 1, "3": 1, "4": 0, "5+": 1 },
+        mcapWeightedReach: { totalMarketCapUsd: 1280, sourceAtLeast3MarketCapUsd: 800 },
+      });
+      expect(audit.cohorts.exact2.map((row: { coinId: string }) => row.coinId)).toEqual(["two-source"]);
+      if (baseline) expect(output).toContain(target);
     } finally {
       stdout.mockRestore();
     }
-  });
-
-  it("keeps the baseline flag's default destination and write message", async () => {
-    const cwd = mkdtempSync(join(tmpdir(), "price-source-depth-baseline-"));
-    const fixtureDir = join(process.cwd(), "scripts/__tests__/fixtures/audit-price-source-depth");
-    const generatedAt = "2026-08-29T00:00:00.000Z";
-    const expectedAudit = buildPriceSourceDepthAudit({
-      activeStablecoins: activeStablecoinsFixture as AuditStablecoinMeta[],
-      pegSummary: pegSummaryFixture,
-      stablecoins: stablecoinsFixture,
-      generatedAt,
-      mode: "input",
-    });
-    const stdout = vi.spyOn(process.stdout, "write").mockImplementation(() => true);
-    let writes: string[] = [];
-    try {
-      await expect(
-        runCli(["--input", fixtureDir, "--write-agents-baseline", "--generated-at", generatedAt], cwd),
-      ).resolves.toBe(0);
-      writes = stdout.mock.calls.map(([value]) => String(value));
-    } finally {
-      stdout.mockRestore();
-    }
-
-    const target = join(cwd, "agents/source-depth-baseline-2026-08-29.json");
-    expect(readFileSync(target, "utf8")).toBe(`${JSON.stringify(expectedAudit, null, 2)}\n`);
-    expect(writes).toEqual([`Wrote price source depth audit to ${target}\n`]);
   });
 
   it("uses canonical circulating normalization for mixed peg buckets", () => {
@@ -284,5 +262,24 @@ describe("audit-price-source-depth", () => {
     expect(audit.rows[0].agreeSourceCount).toBe(0);
     expect(audit.rows[0].authoritativeAgreeSourceCount).toBe(0);
     expect(audit.authoritativeAgreeDepthDistribution).toMatchObject({ "0": 1 });
+  });
+
+  it.each([
+    { label: "missing price precedes metadata", price: null, sources: ["pyth", "binance"], geckoId: "fixture", llamaId: "fixture", source: "coingecko", lane: "fallback", impact: "needs-runtime-provider-change" },
+    { label: "CoinGecko precedes DefiLlama and contracts", price: 1, sources: ["pyth", "binance"], geckoId: "fixture", llamaId: "fixture", source: "coingecko", lane: "primary", impact: "moves-to-3" },
+    { label: "DefiLlama precedes discovery", price: 1, sources: ["coingecko", "pyth"], geckoId: "fixture", llamaId: "fixture", source: "defillama-list", lane: "primary", impact: "moves-to-3" },
+    { label: "one source cannot reach three", price: 1, sources: ["pyth"], geckoId: "fixture", llamaId: "fixture", source: "coingecko", lane: "primary", impact: "needs-runtime-provider-change" },
+    { label: "discovery is not confirmed lift", price: 1, sources: ["coingecko", "defillama-list"], geckoId: "fixture", llamaId: "fixture", source: "dex-promoted", lane: "dex-discovery", impact: "needs-runtime-provider-change" },
+  ])("$label", ({ price, sources, geckoId, llamaId, source, lane, impact }) => {
+    const audit = buildPriceSourceDepthAudit({
+      activeStablecoins: [{ id: "candidate", name: "Candidate", symbol: "CAND", geckoId, llamaId,
+        contracts: [{ chain: "ethereum", address: "0xCandidate", decimals: 18 }] }],
+      pegSummary: { coins: [{ id: "candidate", consensusSources: sources, priceSource: "pyth" }] },
+      stablecoins: { peggedAssets: [{ id: "candidate", price, priceSource: "pyth" }] },
+      generatedAt: "2026-05-12T00:00:00.000Z", mode: "input",
+    });
+    expect(audit.rows[0].candidateTriage).toMatchObject({
+      potentialNewSource: source, pipelineLane: lane, expectedMetricImpact: impact,
+    });
   });
 });

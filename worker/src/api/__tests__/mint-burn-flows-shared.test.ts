@@ -5,18 +5,23 @@ import {
   buildCoinCoverageMap,
   cachedFlowFallbackResponse,
   ETHEREUM_CHAIN_ID,
-  FLOW_CACHE_PREFIX,
   readCachedFlow,
   readMintBurnCronSnapshot,
   selectLargestEvents,
 } from "../../lib/mint-burn-flows-service";
 import { MINT_BURN_CONFIGS } from "../../lib/mint-burn-contracts";
 import { DAY_SECONDS } from "@shared/lib/time-constants";
+import { mintBurnScenario } from "../../test-helpers/__shared/mint-burn";
 
-describe("mint/burn flow cache contract", () => {
-  it("pins the flow cache key prefix and exposes a cache reader", () => {
-    expect(FLOW_CACHE_PREFIX).toBe("mint-burn-flows:v3");
-    expect(typeof readCachedFlow).toBe("function");
+describe("readCachedFlow", () => {
+  it("returns only the requested cached window and rejects missing entries", async () => {
+    const db = mintBurnScenario({ flowCache: [
+      { key: "mint-burn-flows:v3:aggregate:24", value: '{"windowHours":24}', updatedAt: 100 },
+      { key: "mint-burn-flows:v3:aggregate:48", value: '{"windowHours":48}', updatedAt: 200 },
+    ] });
+    await expect(readCachedFlow(db, "mint-burn-flows:v3:aggregate:48"))
+      .resolves.toEqual({ value: '{"windowHours":48}', updatedAt: 200 });
+    await expect(readCachedFlow(db, "mint-burn-flows:v3:aggregate:72")).resolves.toBeNull();
   });
 });
 

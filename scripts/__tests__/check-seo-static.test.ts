@@ -1,7 +1,7 @@
 import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import {
   collectSeoStaticCheckResult,
@@ -45,13 +45,13 @@ const BASELINE_HEADERS = `/*
 `;
 
 afterEach(async () => {
-  delete process.env.SEO_CHECK_WORKERS;
+  vi.unstubAllEnvs();
   await Promise.all(roots.splice(0).map((root) => rm(root, { force: true, recursive: true })));
 });
 
 it("keeps parallel page parsing equivalent to the synchronous SEO gate", async () => {
   const root = await makeOutDir();
-  process.env.SEO_CHECK_WORKERS = "2";
+  vi.stubEnv("SEO_CHECK_WORKERS", "2");
   await Promise.all(
     Array.from({ length: 20 }, (_, index) =>
       writePage(root, index === 0 ? "/" : `/parallel-${index}/`),
@@ -167,10 +167,25 @@ function jsonLdScript(data: unknown) {
   return `<script type="application/ld+json">${JSON.stringify(data)}</script>`;
 }
 
-async function writeBaselinePages(root: string, rootLinks: string[] = []) {
-  await writePage(root, "/", { h1: "Home", links: ["/stability-index/", ...rootLinks] });
-  await writePage(root, "/stability-index/", { h1: "Stability Index" });
+async function writeBaselinePages(
+  root: string,
+  rootLinks: string[] = [],
+  overrides: Record<string, Parameters<typeof writePage>[2]> = {},
+  sitemapRoutes?: string[],
+) {
+  await writePage(root, "/", { h1: "Home", links: ["/stability-index/", ...rootLinks], ...overrides["/"] });
+  await writePage(root, "/stability-index/", { h1: "Stability Index", ...overrides["/stability-index/"] });
+  if (sitemapRoutes) await writeSitemap(root, sitemapRoutes);
 }
+
+const HOME_SNIPPET = {
+  title: "Stablecoin Analytics Dashboard: Risk, Pegs & Liquidity | Pharos",
+  description: "Track stablecoin risk, peg health, liquidity, supply, freeze controls, safety scores, and market structure across the Pharos dashboard.",
+};
+const STABILITY_SNIPPET = {
+  title: "Pharos Stability Index: Stablecoin Market Stress | Pharos",
+  description: "Monitor stablecoin market stress through PSI, depeg breadth, severity, liquidity, safety signals, and historical stability-index context.",
+};
 
 describe("check-seo-static", () => {
   it("rejects a previously published archive URL that disappears without a canonical redirect", () => {
@@ -209,13 +224,9 @@ describe("check-seo-static", () => {
 
   it("fails invalid application/ld+json blocks", async () => {
     const root = await makeOutDir();
-    await writePage(root, "/", {
-      h1: "Home",
-      links: ["/stability-index/"],
-      extraHead: '<script type="application/ld+json">{"@context":"https://schema.org",}</script>',
-    });
-    await writePage(root, "/stability-index/", { h1: "Stability Index" });
-    await writeSitemap(root, ["/", "/stability-index/"]);
+    await writeBaselinePages(root, [], {
+      "/": { extraHead: '<script type="application/ld+json">{"@context":"https://schema.org",}</script>' },
+    }, ["/", "/stability-index/"]);
 
     const result = collectFixtureSeoResult(root);
 
@@ -253,9 +264,7 @@ describe("check-seo-static", () => {
 
   it("fails missing og:type on indexable pages", async () => {
     const root = await makeOutDir();
-    await writePage(root, "/", { h1: "Home", links: ["/stability-index/"], ogType: null });
-    await writePage(root, "/stability-index/", { h1: "Stability Index" });
-    await writeSitemap(root, ["/", "/stability-index/"]);
+    await writeBaselinePages(root, [], { "/": { ogType: null } }, ["/", "/stability-index/"]);
 
     const result = collectFixtureSeoResult(root);
 
@@ -298,9 +307,7 @@ describe("check-seo-static", () => {
     await writePage(root, "/", {
       h1: "Home",
       links: ["/compare/"],
-      title: "Stablecoin Analytics Dashboard: Risk, Pegs & Liquidity | Pharos",
-      description:
-        "Track stablecoin risk, peg health, liquidity, supply, freeze controls, safety scores, and market structure across the Pharos dashboard.",
+      ...HOME_SNIPPET,
     });
     await writePage(root, "/compare/", {
       h1: "Compare",
@@ -324,15 +331,11 @@ describe("check-seo-static", () => {
     await writePage(root, "/", {
       h1: "Home",
       links: ["/stability-index/"],
-      title: "Stablecoin Analytics Dashboard: Risk, Pegs & Liquidity | Pharos",
-      description:
-        "Track stablecoin risk, peg health, liquidity, supply, freeze controls, safety scores, and market structure across the Pharos dashboard.",
+      ...HOME_SNIPPET,
     });
     await writePage(root, "/stability-index/", {
       h1: "Stability Index",
-      title: "Pharos Stability Index: Stablecoin Market Stress | Pharos",
-      description:
-        "Monitor stablecoin market stress through PSI, depeg breadth, severity, liquidity, safety signals, and historical stability-index context.",
+      ...STABILITY_SNIPPET,
       googleBotRobots: ["index, follow, max-snippet:-1, max-image-preview:large"],
     });
     await writeSitemap(root, ["/", "/stability-index/"]);
@@ -357,16 +360,12 @@ describe("check-seo-static", () => {
     await writePage(root, "/", {
       h1: "Home",
       links: ["/stability-index/"],
-      title: "Stablecoin Analytics Dashboard: Risk, Pegs & Liquidity | Pharos",
-      description:
-        "Track stablecoin risk, peg health, liquidity, supply, freeze controls, safety scores, and market structure across the Pharos dashboard.",
+      ...HOME_SNIPPET,
       googleBotRobots: ["index, follow, max-snippet:-1, max-image-preview:large, max-video-preview:-1"],
     });
     await writePage(root, "/stability-index/", {
       h1: "Stability Index",
-      title: "Pharos Stability Index: Stablecoin Market Stress | Pharos",
-      description:
-        "Monitor stablecoin market stress through PSI, depeg breadth, severity, liquidity, safety signals, and historical stability-index context.",
+      ...STABILITY_SNIPPET,
       robots: ["index, follow, max-snippet:-1, max-image-preview:large, max-video-preview:-1"],
     });
     await writeSitemap(root, ["/", "/stability-index/"]);
@@ -384,9 +383,7 @@ describe("check-seo-static", () => {
     await writePage(root, "/", {
       h1: "Home",
       links: ["/compare/"],
-      title: "Stablecoin Analytics Dashboard: Risk, Pegs & Liquidity | Pharos",
-      description:
-        "Track stablecoin risk, peg health, liquidity, supply, freeze controls, safety scores, and market structure across the Pharos dashboard.",
+      ...HOME_SNIPPET,
       googleBotRobots: ["index, follow, max-snippet:-1, max-image-preview:large, max-video-preview:-1"],
     });
     await writePage(root, "/compare/", {
@@ -405,64 +402,26 @@ describe("check-seo-static", () => {
     expect(result.errors.some((error) => error.includes("/compare/: missing Google preview directive"))).toBe(false);
   });
 
-  it("fails same-origin og:image / twitter:image references that point at a missing file", async () => {
+  it.each([
+    { kind: "missing", og: "https://pharos.watch/og-missing.png", twitter: "/og-missing.png", localFile: null,
+      errors: ["/: og:image references missing file /og-missing.png", "/: twitter:image references missing file /og-missing.png"] },
+    { kind: "local", og: "https://pharos.watch/og-card.png", twitter: "/og-card.png", localFile: "og-card.png", errors: [] },
+    { kind: "external", og: "https://api.pharos.watch/api/og/stablecoin/usdt-tether",
+      twitter: "https://api.pharos.watch/api/og/stablecoin/usdt-tether", localFile: null, errors: [] },
+  ])("checks $kind social image references", async ({ og, twitter, localFile, errors }) => {
     const root = await makeOutDir();
-    await writePage(root, "/", {
-      h1: "Home",
-      links: ["/stability-index/"],
-      extraHead:
-        '<meta property="og:image" content="https://pharos.watch/og-missing.png"/><meta name="twitter:image" content="/og-missing.png"/>',
-    });
-    await writePage(root, "/stability-index/", { h1: "Stability Index" });
-    await writeSitemap(root, ["/", "/stability-index/"]);
+    if (localFile) await writeFile(path.join(root, localFile), "");
+    await writeBaselinePages(root, [], {
+      "/": { extraHead: `<meta property="og:image" content="${og}"/><meta name="twitter:image" content="${twitter}"/>` },
+    }, ["/", "/stability-index/"]);
 
     const result = collectFixtureSeoResult(root);
-
-    expect(result.errors).toEqual(
-      expect.arrayContaining([
-        expect.stringContaining("/: og:image references missing file /og-missing.png"),
-        expect.stringContaining("/: twitter:image references missing file /og-missing.png"),
-      ]),
-    );
-  });
-
-  it("passes when same-origin og:image references an existing file in out/", async () => {
-    const root = await makeOutDir();
-    await writeFile(path.join(root, "og-card.png"), "");
-    await writePage(root, "/", {
-      h1: "Home",
-      links: ["/stability-index/"],
-      extraHead:
-        '<meta property="og:image" content="https://pharos.watch/og-card.png"/><meta name="twitter:image" content="/og-card.png"/>',
-    });
-    await writePage(root, "/stability-index/", { h1: "Stability Index" });
-    await writeSitemap(root, ["/", "/stability-index/"]);
-
-    const result = collectFixtureSeoResult(root);
-
-    expect(result.errors.some((error) => error.includes("references missing file"))).toBe(false);
-  });
-
-  it("skips external og:image hosts (dynamic /api/og/* worker route)", async () => {
-    const root = await makeOutDir();
-    await writePage(root, "/", {
-      h1: "Home",
-      links: ["/stability-index/"],
-      extraHead:
-        '<meta property="og:image" content="https://api.pharos.watch/api/og/stablecoin/usdt-tether"/><meta name="twitter:image" content="https://api.pharos.watch/api/og/stablecoin/usdt-tether"/>',
-    });
-    await writePage(root, "/stability-index/", { h1: "Stability Index" });
-    await writeSitemap(root, ["/", "/stability-index/"]);
-
-    const result = collectFixtureSeoResult(root);
-
-    expect(result.errors.some((error) => error.includes("references missing file"))).toBe(false);
+    expect(result.errors.filter((error) => error.includes("references missing file"))).toEqual(errors);
   });
 
   it("allows noindex pages to omit canonical", async () => {
     const root = await makeOutDir();
-    await writePage(root, "/", { h1: "Home", links: ["/stability-index/"] });
-    await writePage(root, "/stability-index/", { h1: "Stability Index" });
+    await writeBaselinePages(root);
     await writePage(root, "/404/", {
       h1: "Not Found",
       robots: ["noindex, follow"],
@@ -516,12 +475,9 @@ describe("check-seo-static", () => {
 
   it("fails indexable pages whose canonical does not match their local route", async () => {
     const root = await makeOutDir();
-    await writePage(root, "/", { h1: "Home", links: ["/stability-index/"] });
-    await writePage(root, "/stability-index/", {
-      h1: "Stability Index",
-      canonical: "https://pharos.watch/",
-    });
-    await writeSitemap(root, ["/", "/stability-index/"]);
+    await writeBaselinePages(root, [], {
+      "/stability-index/": { canonical: "https://pharos.watch/" },
+    }, ["/", "/stability-index/"]);
 
     const result = collectFixtureSeoResult(root);
 
@@ -536,13 +492,7 @@ describe("check-seo-static", () => {
 
   it("requires the homepage canonical to include the root slash", async () => {
     const root = await makeOutDir();
-    await writePage(root, "/", {
-      h1: "Home",
-      links: ["/stability-index/"],
-      canonical: "https://pharos.watch",
-    });
-    await writePage(root, "/stability-index/", { h1: "Stability Index" });
-    await writeSitemap(root, ["/", "/stability-index/"]);
+    await writeBaselinePages(root, [], { "/": { canonical: "https://pharos.watch" } }, ["/", "/stability-index/"]);
 
     const result = collectFixtureSeoResult(root);
 
@@ -557,13 +507,7 @@ describe("check-seo-static", () => {
 
   it("fails conflicting robots directives across robots tags", async () => {
     const root = await makeOutDir();
-    await writePage(root, "/", {
-      h1: "Home",
-      links: ["/stability-index/"],
-      robots: ["noindex", "index, follow"],
-    });
-    await writePage(root, "/stability-index/", { h1: "Stability Index" });
-    await writeSitemap(root, ["/", "/stability-index/"]);
+    await writeBaselinePages(root, [], { "/": { robots: ["noindex", "index, follow"] } }, ["/", "/stability-index/"]);
 
     const result = collectFixtureSeoResult(root);
 

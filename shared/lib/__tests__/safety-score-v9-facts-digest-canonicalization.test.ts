@@ -3,10 +3,12 @@ import {
   V9_CANDIDATE_POLICY_V1,
   compileNativeV3FactSet,
   compileV9FactSetV2,
+  compileV9FactSetV3,
   computeV9FactSetDigest,
   coreFixture,
   evaluateV9FactSet,
   parseCompiledV9FactSetV2,
+  readCompiledV9FactSetForEvaluation,
 } from "./safety-score-v9-facts.fixture-support";
 
 describe("Safety Score v9 fact digest canonicalization", () => {
@@ -145,5 +147,36 @@ describe("Safety Score v9 fact digest canonicalization", () => {
 
     const tampered = { ...first, v9FactSetDigest: "0".repeat(64) };
     expect(() => parseCompiledV9FactSetV2(tampered)).toThrow("does not match");
+  });
+  it("binds native V3 semantics and responsibility while excluding compilation time", () => {
+    const first = compileNativeV3FactSet(coreFixture());
+    const { v9FactSetDigest: _digest, ...core } = structuredClone(first);
+    core.compiledAtSec += 500;
+    expect(compileV9FactSetV3(core).v9FactSetDigest).toBe(first.v9FactSetDigest);
+    const supply = core.assets[0]!.supply;
+    if (supply.circulatingUsd === null) throw new Error("Fixture circulating supply must be known");
+    supply.circulatingUsd += 1;
+    supply.chainDistribution!.chains[0]!.supplyUsd += 1;
+    expect(compileV9FactSetV3(core).v9FactSetDigest).not.toBe(first.v9FactSetDigest);
+
+    const { v9FactSetDigest: _ownerDigest, ...ownerCore } = structuredClone(first);
+    const gap = ownerCore.assets[0]!.gaps[0]!;
+    expect(gap.responsibility).not.toBe("issuer-undisclosed");
+    gap.responsibility = "issuer-undisclosed";
+    expect(compileV9FactSetV3(ownerCore).v9FactSetDigest).not.toBe(first.v9FactSetDigest);
+  });
+  it("accepts intact native V3 captures and refuses semantic tampering at the evaluation reader", () => {
+    const first = compileNativeV3FactSet(coreFixture());
+    expect(readCompiledV9FactSetForEvaluation(first)).toEqual({
+      sourceSchemaVersion: 3,
+      sourceFactSetDigest: first.v9FactSetDigest,
+      factSet: first,
+    });
+    const tampered = structuredClone(first);
+    const tamperedSupply = tampered.assets[0]!.supply;
+    if (tamperedSupply.circulatingUsd === null) throw new Error("Fixture circulating supply must be known");
+    tamperedSupply.circulatingUsd += 1;
+    tamperedSupply.chainDistribution!.chains[0]!.supplyUsd += 1;
+    expect(() => readCompiledV9FactSetForEvaluation(tampered)).toThrow("does not match");
   });
 });

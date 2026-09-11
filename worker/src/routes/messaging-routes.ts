@@ -32,6 +32,13 @@ export const MESSAGING_STATIC_ROUTES = [
           handleApiKeyRequest(db, request, apiKeySelfServeEnv, execCtx),
     ),
   ),
+  defineLazyStaticRoute("donor-key-claim", () =>
+    import("../api/donor-key-claims").then(
+      ({ handleDonorKeyClaim }) =>
+        ({ db, request, apiKeyHashPepper, donorKeyClaimRateLimit }) =>
+          handleDonorKeyClaim(db, request, { rateLimiter: donorKeyClaimRateLimit, pepper: apiKeyHashPepper }),
+    ),
+  ),
   defineLazyStaticRoute("api-key-request-verify", () =>
     import("../api/api-key-requests").then(
       ({ handleApiKeyRequestVerify }) =>

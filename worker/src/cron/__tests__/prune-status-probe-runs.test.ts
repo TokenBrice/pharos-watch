@@ -1,12 +1,10 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it } from "vitest";
 import { pruneStatusProbeRuns, runPruneStatusProbeRuns } from "../prune-status-probe-runs";
-import { createLatestSchemaSqlite } from "../../test-helpers/latest-schema-sqlite";
-import { createSqliteD1 } from "../../test-helpers/sqlite-d1";
+import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
 
-function createTestDb(): D1Database {
-  const { sqlite } = createLatestSchemaSqlite();
-  return createSqliteD1(sqlite);
-}
+const fixtures = createLatestSchemaFixtureTracker();
+const createTestDb = () => fixtures.open().db;
+afterEach(fixtures.closeAll);
 
 async function seedProbeRuns(
   db: D1Database,

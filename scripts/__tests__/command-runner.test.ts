@@ -1,8 +1,10 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { existsSync, mkdtempSync, rmSync } from "node:fs";
+import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { setTimeout as delay } from "node:timers/promises";
+import { createServer } from "node:net";
+import type { AddressInfo, Socket } from "node:net";
+import type { CommandResult, SpawnCommand } from "../lib/command-runner.mts";
 import {
   createExecutionUnit,
   createLocalVitestCommand,
@@ -30,7 +32,7 @@ describe("command runner", () => {
         if (cmd === "throw") throw error;
         return new Promise<number>((resolve) => {
           signal?.addEventListener("abort", () => {
-            setTimeout(() => { settled = true; resolve(130); }, 10);
+            queueMicrotask(() => { settled = true; resolve(130); });
           }, { once: true });
         });
       },
@@ -44,21 +46,53 @@ describe("command runner", () => {
 
   it.each(["batches", "parallel"])("kills a real sibling before returning a missing-executable failure in %s", async (coordinator) => {
     const root = mkdtempSync(join(tmpdir(), "command-cleanup-"));
-    const output = join(root, "late-output");
-    const missing = createSpawnCommand(join(root, "missing-executable"), []);
-    const sibling = createSpawnCommand(process.execPath, ["-e",
-      `setTimeout(() => require('node:fs').writeFileSync(${JSON.stringify(output)}, 'late'), 100)`,
-    ]);
+    const server = createServer();
+    const teardown = new AbortController();
+    let socket: Socket | undefined;
+    let siblingResult: CommandResult | undefined;
+    let siblingRun: Promise<CommandResult> | undefined;
+    let watchdog: NodeJS.Timeout | undefined;
     try {
+      await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
+      const ready = new Promise<void>((resolve, reject) => {
+        // Real-process readiness needs a wall-clock watchdog; successful runs never wait for it.
+        watchdog = setTimeout(() => reject(new Error("Child readiness watchdog expired")), 3000);
+        server.once("connection", (connection) => {
+          socket = connection;
+          connection.once("data", () => { clearTimeout(watchdog); resolve(); });
+        });
+      });
+      const missing = createSpawnCommand(join(root, "missing-executable"), []);
+      const sibling = createSpawnCommand(process.execPath, ["-e",
+        `require('node:net').connect(${(server.address() as AddressInfo).port}, '127.0.0.1', function () { this.write('ready'); });`,
+      ]);
       const units = [createExecutionUnit([missing]), createExecutionUnit([sibling])];
-      const options = { reporter: {}, runCommandImpl: runSpawnCommand };
+      const options = {
+        reporter: {},
+        runCommandImpl: async (command: SpawnCommand, env?: Record<string, string>, { signal }: { signal?: AbortSignal } = {}) => {
+          if (command === missing) {
+            await ready;
+            return runSpawnCommand(command, env, { signal });
+          }
+          siblingRun = runSpawnCommand(command, env, {
+            signal: AbortSignal.any([signal!, teardown.signal]),
+          });
+          siblingResult = await siblingRun;
+          return siblingResult;
+        },
+      };
       const result = coordinator === "batches"
         ? await runCommandBatches([units], options)
         : await runParallelExecutionUnits(units, options);
       expect(result).toMatchObject({ status: 1, failedCmd: missing.cmd, error: { code: "ENOENT" } });
-      await delay(180);
-      expect(existsSync(output)).toBe(false);
+      // runSpawnCommand settles a successfully spawned child on close, not on abort.
+      expect(siblingResult).toMatchObject({ status: 130, aborted: true, signal: "SIGTERM" });
     } finally {
+      clearTimeout(watchdog);
+      teardown.abort();
+      await siblingRun;
+      socket?.destroy();
+      await new Promise<void>((resolve) => server.close(() => resolve()));
       rmSync(root, { recursive: true, force: true });
     }
   });

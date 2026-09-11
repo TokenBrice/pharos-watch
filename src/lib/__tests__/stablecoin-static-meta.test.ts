@@ -1,10 +1,14 @@
 import { describe, expect, it } from "vitest";
-import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
+import { makeStablecoinMeta } from "@shared/test-utils/stablecoin";
 import { buildStablecoinStaticMeta } from "@/lib/stablecoin-static-meta";
 
 describe("buildStablecoinStaticMeta", () => {
   it("keeps stablecoin detail static props to the fields needed before site-data loads", () => {
-    const coin = TRACKED_META_BY_ID.get("usdt-tether")!;
+    const coin = makeStablecoinMeta({
+      contracts: [{ chain: "ethereum", address: "0x1", decimals: 6 }],
+      reserves: [{ name: "Cash", pct: 100, risk: "very-low" }],
+      links: [{ label: "Website", url: "https://example.com" }],
+    });
     const staticMeta = buildStablecoinStaticMeta(coin);
 
     expect(staticMeta).toEqual({
@@ -20,7 +24,7 @@ describe("buildStablecoinStaticMeta", () => {
   });
 
   it("carries server-computed detail booleans without adding large metadata", () => {
-    const coin = TRACKED_META_BY_ID.get("usdc-circle")!;
+    const coin = makeStablecoinMeta();
 
     expect(buildStablecoinStaticMeta(coin, { hasCollateralUsage: true }).hasCollateralUsage).toBe(true);
   });

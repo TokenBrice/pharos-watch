@@ -2,14 +2,7 @@
 
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { buildMarkdownWithPreamble, copyMarkdownWithPreamble } from "@/lib/exports/markdown";
-import type { ExportPreamble } from "@/lib/exports/preamble";
-
-const PREAMBLE: ExportPreamble = {
-  endpoint: "stablecoins",
-  asOfISO: "2026-05-16T12:00:00.000Z",
-  sourceUrl: "https://pharos.watch/",
-  methodologyLabel: "safety-score v7.25",
-};
+import { PREAMBLE } from "./exports.test-support";
 
 describe("buildMarkdownWithPreamble", () => {
   it("emits a blockquote preamble, a header row, a separator, and one row per record", () => {

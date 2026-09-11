@@ -21,8 +21,14 @@ import { createScheduledRuntimeContext } from "../../handlers/scheduled/context"
 import {
   closeOpenLeaseDatabases,
   makeLeaseDb,
+  makeRenewalDb,
 } from "./cron-leases.test-support";
-import { makeNoopD1 } from "../../test-helpers/noop-d1";
+
+afterEach(() => {
+  vi.useRealTimers();
+  vi.restoreAllMocks();
+  closeOpenLeaseDatabases();
+});
 
 describe("cron lease primitives", () => {
   beforeEach(() => {
@@ -30,10 +36,6 @@ describe("cron lease primitives", () => {
     vi.setSystemTime(new Date("2026-03-03T10:00:00Z"));
   });
 
-  afterEach(() => {
-    vi.useRealTimers();
-    closeOpenLeaseDatabases();
-  });
 
   it("acquires lease when no row exists", async () => {
     const db = makeLeaseDb();
@@ -162,9 +164,6 @@ describe("runCronWithLease", () => {
     vi.setSystemTime(new Date("2026-03-03T10:00:00Z"));
   });
 
-  afterEach(() => {
-    vi.useRealTimers();
-  });
 
   it("returns skipped_locked when lease acquisition fails", async () => {
     const now = Math.floor(Date.now() / 1000);
@@ -370,32 +369,8 @@ describe("runCronWithLease", () => {
   });
 
   it("resets thrown renew failures after a successful heartbeat", async () => {
-    const renewOutcomes: Array<"throw" | "success"> = ["throw", "success", "throw", "throw"];
-    const sequencedRenewDb = makeNoopD1({
-      prepare: (sql: string) => ({
-        bind: (..._args: unknown[]) => ({
-          run: async () => {
-            if (sql.includes("INSERT INTO cron_leases")) {
-              return { success: true, meta: { changes: 1 } };
-            }
-            if (sql.includes("UPDATE cron_leases")) {
-              const outcome = renewOutcomes.shift();
-              if (outcome === "throw") {
-                throw new Error("permanent D1 renewal error");
-              }
-              return { success: true, meta: { changes: outcome === "success" ? 1 : 0 } };
-            }
-            if (sql.includes("DELETE FROM cron_leases")) {
-              return { success: true, meta: { changes: 1 } };
-            }
-            return { success: true, meta: { changes: 0 } };
-          },
-        }),
-      }),
-      batch: async () => [],
-      exec: async () => ({ count: 0, duration: 0 }),
-      dump: async () => new ArrayBuffer(0),
-    });
+    const failure = new Error("permanent D1 renewal error");
+    const { db: sequencedRenewDb } = makeRenewalDb([failure, 1, failure, failure]);
 
     const runPromise = runCronWithLease(
       sequencedRenewDb,
@@ -425,32 +400,7 @@ describe("runCronWithLease", () => {
   });
 
   it("retries transient D1 overloads before counting a heartbeat failure", async () => {
-    let renewCalls = 0;
-    const transientRenewDb = makeNoopD1({
-      prepare: (sql: string) => ({
-        bind: (..._args: unknown[]) => ({
-          run: async () => {
-            if (sql.includes("INSERT INTO cron_leases")) {
-              return { success: true, meta: { changes: 1 } };
-            }
-            if (sql.includes("UPDATE cron_leases")) {
-              renewCalls++;
-              if (renewCalls === 1) {
-                throw new Error("D1 DB is overloaded");
-              }
-              return { success: true, meta: { changes: 1 } };
-            }
-            if (sql.includes("DELETE FROM cron_leases")) {
-              return { success: true, meta: { changes: 1 } };
-            }
-            return { success: true, meta: { changes: 0 } };
-          },
-        }),
-      }),
-      batch: async () => [],
-      exec: async () => ({ count: 0, duration: 0 }),
-      dump: async () => new ArrayBuffer(0),
-    });
+    const { db: transientRenewDb, observations } = makeRenewalDb([new Error("D1 DB is overloaded"), 1]);
     const randomSpy = vi.spyOn(Math, "random").mockReturnValue(0);
 
     try {
@@ -470,36 +420,14 @@ describe("runCronWithLease", () => {
         leaseRenewSuccesses: 1,
         leaseRenewFailuresTotal: 0,
       });
-      expect(renewCalls).toBe(2);
+      expect(observations.renewals).toBe(2);
     } finally {
       randomSpy.mockRestore();
     }
   });
 
   it("aborts immediately when renewal reports ownership loss", async () => {
-    let renewCalls = 0;
-    const ownershipLostDb = makeNoopD1({
-      prepare: (sql: string) => ({
-        bind: (..._args: unknown[]) => ({
-          run: async () => {
-            if (sql.includes("INSERT INTO cron_leases")) {
-              return { success: true, meta: { changes: 1 } };
-            }
-            if (sql.includes("UPDATE cron_leases")) {
-              renewCalls++;
-              return { success: true, meta: { changes: 0 } };
-            }
-            if (sql.includes("DELETE FROM cron_leases")) {
-              return { success: true, meta: { changes: 1 } };
-            }
-            return { success: true, meta: { changes: 0 } };
-          },
-        }),
-      }),
-      batch: async () => [],
-      exec: async () => ({ count: 0, duration: 0 }),
-      dump: async () => new ArrayBuffer(0),
-    });
+    const { db: ownershipLostDb, observations } = makeRenewalDb([0]);
 
     const runPromise = runCronWithLease(
       ownershipLostDb,
@@ -514,33 +442,11 @@ describe("runCronWithLease", () => {
     const leaseLostExpectation = expect(runPromise).rejects.toBeInstanceOf(CronLeaseLostError);
     await vi.advanceTimersByTimeAsync(1000);
     await leaseLostExpectation;
-    expect(renewCalls).toBe(1);
+    expect(observations.renewals).toBe(1);
   });
 
   it("stops heartbeats and leaves the lease until TTL when the outer abort signal fires", async () => {
-    let renewCalls = 0;
-    const countingDb = makeNoopD1({
-      prepare: (sql: string) => ({
-        bind: (..._args: unknown[]) => ({
-          run: async () => {
-            if (sql.includes("INSERT INTO cron_leases")) {
-              return { success: true, meta: { changes: 1 } };
-            }
-            if (sql.includes("UPDATE cron_leases")) {
-              renewCalls++;
-              return { success: true, meta: { changes: 1 } };
-            }
-            if (sql.includes("DELETE FROM cron_leases")) {
-              return { success: true, meta: { changes: 1 } };
-            }
-            return { success: true, meta: { changes: 0 } };
-          },
-        }),
-      }),
-      batch: async () => [],
-      exec: async () => ({ count: 0, duration: 0 }),
-      dump: async () => new ArrayBuffer(0),
-    });
+    const { db: countingDb, observations } = makeRenewalDb([]);
 
     const ac = new AbortController();
     const runPromise = runCronWithLease(countingDb, "sync-stablecoins", async () => new Promise(() => {}), {
@@ -555,9 +461,10 @@ describe("runCronWithLease", () => {
     await vi.advanceTimersByTimeAsync(CRON_ABANDONED_JOB_GRACE_MS + 1);
     await abandonedExpectation;
 
-    const renewCallsAtAbort = renewCalls;
+    const renewCallsAtAbort = observations.renewals;
     await vi.advanceTimersByTimeAsync(3000);
-    expect(renewCalls).toBe(renewCallsAtAbort);
+    expect(observations.renewals).toBe(renewCallsAtAbort);
+    expect(observations.releases).toBe(0);
   });
 
   it("does not release an abandoned job lease before TTL expiry", async () => {
@@ -620,30 +527,7 @@ describe("runCronWithLease", () => {
   });
 
   it("releases the lease when a lease-loss abort settles during abandonment grace", async () => {
-    const renewOutcomes = [0, 0];
-    let deleteCalls = 0;
-    const renewLostDb = makeNoopD1({
-      prepare: (sql: string) => ({
-        bind: (..._args: unknown[]) => ({
-          run: async () => {
-            if (sql.includes("INSERT INTO cron_leases")) {
-              return { success: true, meta: { changes: 1 } };
-            }
-            if (sql.includes("UPDATE cron_leases")) {
-              return { success: true, meta: { changes: renewOutcomes.shift() ?? 0 } };
-            }
-            if (sql.includes("DELETE FROM cron_leases")) {
-              deleteCalls++;
-              return { success: true, meta: { changes: 1 } };
-            }
-            return { success: true, meta: { changes: 0 } };
-          },
-        }),
-      }),
-      batch: async () => [],
-      exec: async () => ({ count: 0, duration: 0 }),
-      dump: async () => new ArrayBuffer(0),
-    });
+    const { db: renewLostDb, observations } = makeRenewalDb([0]);
 
     const runPromise = runCronWithLease(
       renewLostDb,
@@ -666,7 +550,7 @@ describe("runCronWithLease", () => {
     await vi.advanceTimersByTimeAsync(2000);
     await vi.advanceTimersByTimeAsync(10);
     await leaseLostExpectation;
-    expect(deleteCalls).toBe(1);
+    expect(observations.releases).toBe(1);
   });
 
   it("rejects with CronTimeoutError when the timeout abort wins but the job then fulfills in grace", async () => {
@@ -715,28 +599,7 @@ describe("runCronWithLease", () => {
   });
 
   it("classifies an abandoned job with stopReason 'lease_lost' when renewals fail", async () => {
-    const renewOutcomes = [0, 0];
-    const renewLostDb = makeNoopD1({
-      prepare: (sql: string) => ({
-        bind: (..._args: unknown[]) => ({
-          run: async () => {
-            if (sql.includes("INSERT INTO cron_leases")) {
-              return { success: true, meta: { changes: 1 } };
-            }
-            if (sql.includes("UPDATE cron_leases")) {
-              return { success: true, meta: { changes: renewOutcomes.shift() ?? 0 } };
-            }
-            if (sql.includes("DELETE FROM cron_leases")) {
-              return { success: true, meta: { changes: 1 } };
-            }
-            return { success: true, meta: { changes: 0 } };
-          },
-        }),
-      }),
-      batch: async () => [],
-      exec: async () => ({ count: 0, duration: 0 }),
-      dump: async () => new ArrayBuffer(0),
-    });
+    const { db: renewLostDb } = makeRenewalDb([0]);
 
     const runPromise = runCronWithLease(renewLostDb, "sync-stablecoins", async () => new Promise(() => {}), {
       owner: "owner-z",
@@ -794,9 +657,6 @@ describe("scheduled runtime timeout budgeting", () => {
     vi.setSystemTime(new Date("2026-03-03T10:00:00Z"));
   });
 
-  afterEach(() => {
-    vi.useRealTimers();
-  });
 
   function buildRuntime(db: D1Database, slotBudgetStartedAtMs: number) {
     return createScheduledRuntimeContext(

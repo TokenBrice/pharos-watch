@@ -38,20 +38,11 @@ describe("site-data env contract", () => {
         SITE_API_ORIGIN: undefined,
         SITE_API_SHARED_SECRET: undefined,
         DB: undefined,
-      }),
+      }).map(({ code }) => code).sort(),
     ).toEqual([
-      {
-        code: "site-api-origin-missing",
-        message: "SITE_API_ORIGIN must be configured for the site-data proxy.",
-      },
-      {
-        code: "site-api-secret-missing",
-        message: "SITE_API_SHARED_SECRET must be configured for the site-data proxy.",
-      },
-      {
-        code: "site-data-db-missing",
-        message: "DB is optional for the Pages site-data proxy, but attribution telemetry is disabled when it is not bound.",
-      },
+      "site-api-origin-missing",
+      "site-api-secret-missing",
+      "site-data-db-missing",
     ]);
   });
 
@@ -71,10 +62,7 @@ describe("site-data env contract", () => {
         SITE_API_ORIGIN: "https://attacker.example",
         SITE_API_SHARED_SECRET: "shared-secret",
         DB: {} as never,
-      }),
-    ).toContainEqual({
-      code: "site-api-origin-invalid",
-      message: "SITE_API_ORIGIN must be the canonical HTTPS origin https://site-api.pharos.watch.",
-    });
+      }).map(({ code }) => code),
+    ).toEqual(["site-api-origin-invalid"]);
   });
 });

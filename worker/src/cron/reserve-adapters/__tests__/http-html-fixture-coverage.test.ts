@@ -6,30 +6,21 @@ import { LIVE_RESERVE_ADAPTER_KEYS } from "@shared/types/live-reserves";
 import { LIVE_RESERVE_ADAPTER_DEFINITIONS } from "@shared/lib/live-reserve-adapters";
 
 const TEST_DIR = dirname(fileURLToPath(import.meta.url));
-const ROOT_DIR = resolve(TEST_DIR, "../../../../..");
 const FIXTURES_DIR = resolve(TEST_DIR, "fixtures");
-const REFRESH_SCRIPT = resolve(ROOT_DIR, "scripts/maintenance/refresh-reserve-html-fixtures.ts");
 const CAPTURED_AT_RE = /<!--\s*captured-at:\s*(\d{4}-\d{2}-\d{2}T[\d:]+Z)\s*-->/;
-// Fixtures whose upstream source no longer exists carry an `archived:` header
-// explaining why. They are frozen on purpose: the refresh script must not list
-// them, and they are exempt from the 90-day staleness bound.
+// Archived fixtures are intentionally frozen regression inputs; their reason
+// replaces capture metadata.
 const ARCHIVED_RE = /<!--\s*archived:\s*(\S[^>]*?)\s*-->/;
 const SOURCE_TRIMMED_RE = /<!--\s*source-trimmed:\s*(\S[^>]*?)\s*-->/;
 const SOURCE_RE = /<!--\s*source:\s*(https:\/\/\S+?)\s*-->/;
-const MAX_FIXTURE_AGE_DAYS = 90;
-const DAY_MS = 24 * 60 * 60 * 1000;
-
-function inspectFixtureFreshness(file: string, content: string, now = new Date()) {
-  const match = content.match(CAPTURED_AT_RE);
-  if (!match) return { file, error: `${file}: missing captured-at header` };
-  const capturedAt = new Date(match[1]);
-  if (Number.isNaN(capturedAt.getTime())) return { file, error: `${file}: invalid captured-at timestamp ${match[1]}` };
-  const ageDays = Math.floor((now.getTime() - capturedAt.getTime()) / DAY_MS);
-  if (ageDays > MAX_FIXTURE_AGE_DAYS) {
-    return { file, ageDays, error: `${file}: captured-at ${match[1]} is ${ageDays} days old` };
-  }
-  return { file, ageDays };
-}
+// Capture age (90-day bound, future-dated rejection) and refresh-list
+// membership are owned by `scripts/ci/check-html-fixture-age.ts`
+// (`npm run check:html-fixture-age`, scheduled in
+// .github/workflows/weekly-validation.yml) and covered by
+// `scripts/__tests__/check-html-fixture-age.test.ts`, which reads the script's
+// exported refresh targets instead of its source text. This file only asserts
+// that the metadata a parser run needs is present and parsable, so its verdict
+// does not move with the calendar.
 
 // Adapters that intentionally don't carry an HTML fixture file. Each entry
 // must come with a reason — gated PDFs cannot be checked in, and small
@@ -39,8 +30,16 @@ function inspectFixtureFreshness(file: string, content: string, now = new Date()
 const FIXTURE_EXEMPT_ADAPTERS: Record<string, string> = {
   "attestation-pdf-index": "Upstream is a gated PDF index; HTML page is not the parsed surface.",
   "audx-independent-assurance": "Compact index HTML for newer-report detection is covered inline; evidence is the exact official PDF bytes bound to a reviewed manifest SHA-256.",
+  "brla-independent-assurance": "The Notion index HTML is only a host/reachability gate; the parsed surface is the inline loadPageChunk/getSignedFileUrls record maps in brla-independent-assurance.test.ts, and evidence is the exact official PDF bytes bound to a reviewed manifest SHA-256.",
+  "paxos-independent-assurance": "Inline tests cover the sole parsed HTML surface (main-module script reference); exact reviewed main/product-module hashes bind report selection, and the manifest binds PDF bytes.",
+  "agora-independent-assurance": "Compact Fern docs index HTML for reviewed-link rewriting is covered inline; evidence is the exact official PDF bytes bound to a reviewed manifest SHA-256.",
+  "fidd-independent-assurance": "Compact official index and Widen viewer HTML for newer-report detection are covered inline; evidence is the exact official PDF bytes bound to a reviewed manifest SHA-256.",
+  "issuer-attested-report": "Shared sibling descriptor for BRLV/AUDM: each product profile parses its own compact issuer index inline and evidence is the exact reviewed PDF bytes bound to a manifest SHA-256.",
+  "sbc-independent-assurance": "Compact Brale index HTML for newer-report detection is covered inline; evidence is the exact official PDF bytes bound to a reviewed manifest SHA-256.",
   "quantoz-transparency": "Adapter test uses inline HTML; upstream layout is stable and compact.",
   "ripple-transparency": "Adapter test uses inline HTML; upstream layout is stable and compact.",
+  "onre-holdings-csv": "Adapter parses the published Schedule of Assets CSV (RFC-4180 quoted), not an HTML page; the compact CSV payload is covered inline in tests.",
+  "usdy-holdings-report": "Parses no HTML surface: evidence is the exact Ankura PDF report bytes pinned to a manifest SHA-256, and the live feed is suspended with the reviewed manifest retained as static evidence.",
 };
 
 function fixturePrefixCandidates(key: string): string[] {
@@ -64,6 +63,8 @@ function findFixturesFor(key: string, fixtureNames: readonly string[]): string[]
 describe("http-html adapter fixture coverage", () => {
   const fixtureNames = readdirSync(FIXTURES_DIR);
   const htmlFixtureNames = fixtureNames.filter((name) => name.endsWith(".html")).sort();
+  const fixtureContents = Object.fromEntries(htmlFixtureNames.map((name) =>
+    [name, readFileSync(resolve(FIXTURES_DIR, name), "utf8")]));
   const httpHtmlAdapters = LIVE_RESERVE_ADAPTER_KEYS.filter((key) => {
     const inputKinds = LIVE_RESERVE_ADAPTER_DEFINITIONS[key].primaryInputKinds as readonly string[];
     return inputKinds.includes("http-html");
@@ -96,20 +97,19 @@ describe("http-html adapter fixture coverage", () => {
   });
 
   const archivedFixtureNames = htmlFixtureNames.filter((name) =>
-    ARCHIVED_RE.test(readFileSync(resolve(FIXTURES_DIR, name), "utf8")));
+    ARCHIVED_RE.test(fixtureContents[name]));
   const manuallyTrimmedFixtureNames = htmlFixtureNames.filter((name) =>
-    SOURCE_TRIMMED_RE.test(readFileSync(resolve(FIXTURES_DIR, name), "utf8")));
+    SOURCE_TRIMMED_RE.test(fixtureContents[name]));
   const currentFixtureNames = htmlFixtureNames.filter((name) => !archivedFixtureNames.includes(name));
-  const refreshableFixtureNames = currentFixtureNames.filter((name) => !manuallyTrimmedFixtureNames.includes(name));
 
-  it.each(currentFixtureNames)("%s carries a valid captured-at header no older than 90 whole days", (fixtureName) => {
-    const content = readFileSync(resolve(FIXTURES_DIR, fixtureName), "utf8");
-    const result = inspectFixtureFreshness(fixtureName, content);
-    expect(result.error, result.error).toBeUndefined();
+  it.each(currentFixtureNames)("%s carries a valid captured-at header", (fixtureName) => {
+    const capturedAt = fixtureContents[fixtureName].match(CAPTURED_AT_RE)?.[1];
+    expect(capturedAt, `${fixtureName}: missing captured-at header`).toBeDefined();
+    expect(Number.isFinite(Date.parse(capturedAt!))).toBe(true);
   });
 
   it.each(manuallyTrimmedFixtureNames)("%s identifies its live source and why it is manually trimmed", (fixtureName) => {
-    const content = readFileSync(resolve(FIXTURES_DIR, fixtureName), "utf8");
+    const content = fixtureContents[fixtureName];
     expect(content.match(SOURCE_RE)?.[1], `${fixtureName}: missing HTTPS source header`).toMatch(/^https:\/\//);
     expect(
       content.match(SOURCE_TRIMMED_RE)?.[1]?.trim().length,
@@ -118,43 +118,9 @@ describe("http-html adapter fixture coverage", () => {
   });
 
   it.each(archivedFixtureNames)("%s documents why it is archived instead of refreshed", (fixtureName) => {
-    const content = readFileSync(resolve(FIXTURES_DIR, fixtureName), "utf8");
+    const content = fixtureContents[fixtureName];
     const reason = content.match(ARCHIVED_RE)?.[1] ?? "";
     expect(reason.trim().length, `Archived fixture ${fixtureName} must state why it is frozen`).toBeGreaterThan(20);
   });
 
-  it("keeps the 90-day boundary, invalid/missing headers, and future timestamps explicit", () => {
-    const now = new Date("2026-04-01T12:00:00Z");
-    expect(inspectFixtureFreshness("exact.html", "<!-- captured-at: 2026-01-01T00:00:00Z -->", now)).toEqual({
-      file: "exact.html",
-      ageDays: 90,
-    });
-    expect(inspectFixtureFreshness("stale.html", "<!-- captured-at: 2025-12-31T12:00:00Z -->", now)).toMatchObject({
-      file: "stale.html",
-      ageDays: 91,
-      error: expect.stringContaining("stale.html"),
-    });
-    expect(inspectFixtureFreshness("invalid.html", "<!-- captured-at: 2026-99-99T99:99:99Z -->", now)).toEqual({
-      file: "invalid.html",
-      error: "invalid.html: invalid captured-at timestamp 2026-99-99T99:99:99Z",
-    });
-    expect(inspectFixtureFreshness("missing.html", "<html />", now)).toEqual({
-      file: "missing.html",
-      error: "missing.html: missing captured-at header",
-    });
-    expect(inspectFixtureFreshness("future.html", "<!-- captured-at: 2026-04-02T12:00:00Z -->", now)).toEqual({
-      file: "future.html",
-      ageDays: -1,
-    });
-  });
-
-  it("refresh script lists every refreshable fixture and no archived or deleted one", () => {
-    const script = readFileSync(REFRESH_SCRIPT, "utf8");
-    const refreshFixtures = new Set(Array.from(script.matchAll(/fixture:\s*"([^"]+\.html)"/g), (match) => match[1]));
-    const missing = refreshableFixtureNames.filter((fixtureName) => !refreshFixtures.has(fixtureName));
-    const orphaned = [...refreshFixtures].filter((fixtureName) => !refreshableFixtureNames.includes(fixtureName)).sort();
-
-    expect(missing).toEqual([]);
-    expect(orphaned).toEqual([]);
-  });
 });

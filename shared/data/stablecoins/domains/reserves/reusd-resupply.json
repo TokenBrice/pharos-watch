@@ -14,7 +14,8 @@
         "market",
         "counterparty"
       ],
-      "liquidityHorizon": "unknown"
+      "liquidityHorizon": "unknown",
+      "sourceKey": "resupply-pairs:ethereum:0xf939e0a03fb07f59a73314e73794be0e57ac1b4e"
     },
     {
       "name": "Frax frxUSD lending markets",
@@ -29,7 +30,8 @@
         "market",
         "counterparty"
       ],
-      "liquidityHorizon": "unknown"
+      "liquidityHorizon": "unknown",
+      "sourceKey": "resupply-pairs:ethereum:0xcacd6fd266af91b8aed52accc382b4e165586e29"
     }
   ],
   "reserveReview": {

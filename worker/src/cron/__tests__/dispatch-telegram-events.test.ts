@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { buildTelegramDispatchEvents } from "../dispatch-telegram-events";
 import { makeNoopD1 } from "../../test-helpers/noop-d1";
+import { eventSources, eventSnapshots } from "./dispatch-telegram-events.test-support";
 
 const mocks = vi.hoisted(() => ({
   buildAlertContextLines: vi.fn(),
@@ -28,25 +29,22 @@ describe("buildTelegramDispatchEvents", () => {
   it("uses Reason lines for safety alerts while keeping Context lines on other alert families", async () => {
     const events = await buildTelegramDispatchEvents(
       {} as D1Database,
-      {
-        dewsRows: [{
-          stablecoin_id: "coin-dews",
-          score: 42,
-          band: "WARNING",
-          signals_json: null,
-        }],
-        activeDepegRows: [{
-          stablecoin_id: "coin-depeg",
-          symbol: "DPG",
-          direction: "below",
-          peak_deviation_bps: 260,
-          start_price: 0.974,
-          peak_price: 0.974,
-          peg_reference: 1,
-          event_id: 1,
-        }],
-      } as never,
-      {
+      eventSources({ dewsRows: [{
+        stablecoin_id: "coin-dews",
+        score: 42,
+        band: "WARNING",
+        signals_json: null,
+      }], activeDepegRows: [{
+        stablecoin_id: "coin-depeg",
+        symbol: "DPG",
+        direction: "below",
+        peak_deviation_bps: 260,
+        start_price: 0.974,
+        peak_price: 0.974,
+        peg_reference: 1,
+        event_id: 1,
+      }] }),
+      eventSnapshots({
         currentSafetySnapshot: {
           "coin-safe": {
             grade: "C+",
@@ -64,7 +62,6 @@ describe("buildTelegramDispatchEvents", () => {
             },
           },
         },
-        previousSafetySnapshot: null,
         safeSafetySnapshot: {
           "coin-safe": {
             grade: "B",
@@ -85,11 +82,7 @@ describe("buildTelegramDispatchEvents", () => {
         safeDewsAlertable: { "coin-dews": "WATCH" },
         safeDewsSnapshot: { "coin-dews": "WATCH" },
         safeDepegSnapshot: {},
-        safetySnapshotNeedsSeed: false,
-        dewsSnapshotNeedsSeed: false,
-        depegSnapshotNeedsSeed: false,
-        launchSnapshotNeedsSeed: false,
-      } as never,
+      }),
       (id) => ({ "coin-safe": "SAFE", "coin-dews": "DEWS", "coin-depeg": "DPG" })[id] ?? id,
     );
 
@@ -119,40 +112,28 @@ describe("buildTelegramDispatchEvents", () => {
 
     const events = await buildTelegramDispatchEvents(
       db,
-      {
-        dewsRows: [],
-        activeDepegRows: [{
-          stablecoin_id: "coin-depeg",
-          symbol: "DPG",
-          direction: "below",
-          peak_deviation_bps: 280,
-          start_price: 0.972,
-          peak_price: 0.972,
-          peg_reference: 1,
-          event_id: 2,
-        }],
-      } as never,
-      {
-        currentSafetySnapshot: {},
-        previousSafetySnapshot: null,
-        safeSafetySnapshot: {},
-        safeDewsAlertable: {},
-        safeDewsSnapshot: {},
+      eventSources({ dewsRows: [], activeDepegRows: [{
+        stablecoin_id: "coin-depeg",
+        symbol: "DPG",
+        direction: "below",
+        peak_deviation_bps: 280,
+        start_price: 0.972,
+        peak_price: 0.972,
+        peg_reference: 1,
+        event_id: 2,
+      }] }),
+      eventSnapshots({
         safeDepegSnapshot: {
           "coin-depeg": {
+            stablecoinId: "coin-depeg",
             symbol: "DPG",
             direction: "below",
             deviationBps: 310,
             price: 0.969,
             pegReference: 1,
-            eventId: 1,
           },
         },
-        safetySnapshotNeedsSeed: false,
-        dewsSnapshotNeedsSeed: false,
-        depegSnapshotNeedsSeed: false,
-        launchSnapshotNeedsSeed: false,
-      } as never,
+      }),
       () => "DPG",
     );
 
@@ -163,60 +144,48 @@ describe("buildTelegramDispatchEvents", () => {
   it("emits depeg worsening only when a supported subscriber step is crossed", async () => {
     const events = await buildTelegramDispatchEvents(
       {} as D1Database,
-      {
-        dewsRows: [],
-        activeDepegRows: [
-          {
-            stablecoin_id: "coin-no-step",
-            symbol: "NO",
-            direction: "below",
-            peak_deviation_bps: 150,
-            start_price: 0.985,
-            peak_price: 0.985,
-            peg_reference: 1,
-            event_id: 1,
-          },
-          {
-            stablecoin_id: "coin-step",
-            symbol: "YES",
-            direction: "below",
-            peak_deviation_bps: 251,
-            start_price: 0.9749,
-            peak_price: 0.9749,
-            peg_reference: 1,
-            event_id: 2,
-          },
-        ],
-      } as never,
-      {
-        currentSafetySnapshot: {},
-        previousSafetySnapshot: null,
-        safeSafetySnapshot: {},
-        safeDewsAlertable: {},
-        safeDewsSnapshot: {},
+      eventSources({ dewsRows: [], activeDepegRows: [
+        {
+          stablecoin_id: "coin-no-step",
+          symbol: "NO",
+          direction: "below",
+          peak_deviation_bps: 150,
+          start_price: 0.985,
+          peak_price: 0.985,
+          peg_reference: 1,
+          event_id: 1,
+        },
+        {
+          stablecoin_id: "coin-step",
+          symbol: "YES",
+          direction: "below",
+          peak_deviation_bps: 251,
+          start_price: 0.9749,
+          peak_price: 0.9749,
+          peg_reference: 1,
+          event_id: 2,
+        },
+      ] }),
+      eventSnapshots({
         safeDepegSnapshot: {
           "coin-no-step": {
+            stablecoinId: "coin-no-step",
             symbol: "NO",
             direction: "below",
             deviationBps: 101,
             price: 0.9899,
             pegReference: 1,
-            eventId: 1,
           },
           "coin-step": {
+            stablecoinId: "coin-step",
             symbol: "YES",
             direction: "below",
             deviationBps: 249,
             price: 0.9751,
             pegReference: 1,
-            eventId: 2,
           },
         },
-        safetySnapshotNeedsSeed: false,
-        dewsSnapshotNeedsSeed: false,
-        depegSnapshotNeedsSeed: false,
-        launchSnapshotNeedsSeed: false,
-      } as never,
+      }),
       (id) => id,
     );
 
@@ -232,52 +201,40 @@ describe("buildTelegramDispatchEvents", () => {
   it("uses peak_price for triggered and worsening depeg alert display prices", async () => {
     const events = await buildTelegramDispatchEvents(
       {} as D1Database,
-      {
-        dewsRows: [],
-        activeDepegRows: [
-          {
-            stablecoin_id: "coin-new",
-            symbol: "NEW",
-            direction: "below",
-            peak_deviation_bps: -6000,
-            start_price: 0.9884,
-            peak_price: 0.4,
-            peg_reference: 1,
-            event_id: 1,
-          },
-          {
-            stablecoin_id: "coin-worse",
-            symbol: "WORSE",
-            direction: "below",
-            peak_deviation_bps: -5940,
-            start_price: 0.9884,
-            peak_price: 0.406,
-            peg_reference: 1,
-            event_id: 2,
-          },
-        ],
-      } as never,
-      {
-        currentSafetySnapshot: {},
-        previousSafetySnapshot: null,
-        safeSafetySnapshot: {},
-        safeDewsAlertable: {},
-        safeDewsSnapshot: {},
+      eventSources({ dewsRows: [], activeDepegRows: [
+        {
+          stablecoin_id: "coin-new",
+          symbol: "NEW",
+          direction: "below",
+          peak_deviation_bps: -6000,
+          start_price: 0.9884,
+          peak_price: 0.4,
+          peg_reference: 1,
+          event_id: 1,
+        },
+        {
+          stablecoin_id: "coin-worse",
+          symbol: "WORSE",
+          direction: "below",
+          peak_deviation_bps: -5940,
+          start_price: 0.9884,
+          peak_price: 0.406,
+          peg_reference: 1,
+          event_id: 2,
+        },
+      ] }),
+      eventSnapshots({
         safeDepegSnapshot: {
           "coin-worse": {
+            stablecoinId: "coin-worse",
             symbol: "WORSE",
             direction: "below",
             deviationBps: 3800,
             price: 0.62,
             pegReference: 1,
-            eventId: 2,
           },
         },
-        safetySnapshotNeedsSeed: false,
-        dewsSnapshotNeedsSeed: false,
-        depegSnapshotNeedsSeed: false,
-        launchSnapshotNeedsSeed: false,
-      } as never,
+      }),
       (id) => id,
     );
 
@@ -314,28 +271,19 @@ describe("buildTelegramDispatchEvents", () => {
 
     const events = await buildTelegramDispatchEvents(
       db,
-      { dewsRows: [], activeDepegRows: [] } as never,
-      {
-        currentSafetySnapshot: {},
-        previousSafetySnapshot: null,
-        safeSafetySnapshot: {},
-        safeDewsAlertable: {},
-        safeDewsSnapshot: {},
+      eventSources({ dewsRows: [], activeDepegRows: [] }),
+      eventSnapshots({
         safeDepegSnapshot: {
           "coin-depeg": {
+            stablecoinId: "coin-depeg",
             symbol: "DPG",
             direction: "below",
             deviationBps: 310,
             price: 0.969,
             pegReference: 1,
-            eventId: 1,
           },
         },
-        safetySnapshotNeedsSeed: false,
-        dewsSnapshotNeedsSeed: false,
-        depegSnapshotNeedsSeed: false,
-        launchSnapshotNeedsSeed: false,
-      } as never,
+      }),
       () => "DPG",
     );
 
@@ -364,28 +312,19 @@ describe("buildTelegramDispatchEvents", () => {
 
     const events = await buildTelegramDispatchEvents(
       db,
-      { dewsRows: [], activeDepegRows: [] } as never,
-      {
-        currentSafetySnapshot: {},
-        previousSafetySnapshot: null,
-        safeSafetySnapshot: {},
-        safeDewsAlertable: {},
-        safeDewsSnapshot: {},
+      eventSources({ dewsRows: [], activeDepegRows: [] }),
+      eventSnapshots({
         safeDepegSnapshot: {
           "coin-depeg": {
+            stablecoinId: "coin-depeg",
             symbol: "DPG",
             direction: "below",
             deviationBps: 310,
             price: 0.969,
             pegReference: 1,
-            eventId: 1,
           },
         },
-        safetySnapshotNeedsSeed: false,
-        dewsSnapshotNeedsSeed: false,
-        depegSnapshotNeedsSeed: false,
-        launchSnapshotNeedsSeed: false,
-      } as never,
+      }),
       () => "DPG",
     );
 

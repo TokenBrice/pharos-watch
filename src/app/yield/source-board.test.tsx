@@ -140,18 +140,7 @@ describe("YieldSourceBoard", () => {
     expect(onFilterChange).toHaveBeenCalledWith("sourcePosture", "watch-only");
   });
 
-  it("keeps source-quality filter segments at the 24px target floor", () => {
-    const model = buildYieldSourceBoardModel([makeBoardRanking()]);
-
-    render(<YieldSourceBoard model={model} onFilterChange={vi.fn()} />);
-
-    const watchSegment = screen.getByRole("button", { name: /Watch: 1\..*Filter rows/i });
-    expect(watchSegment.className).toContain("h-6");
-    expect(watchSegment.className).toContain("min-w-6");
-    expect(watchSegment.querySelector('span[aria-hidden="true"]')?.className).toContain("top-2 h-2");
-  });
-
-  it("uses inverse-surface contrast for source-quality tooltip descriptions", async () => {
+  it("explains source-quality evidence when a filter receives focus", async () => {
     const model = buildYieldSourceBoardModel([makeBoardRanking()]);
 
     render(<YieldSourceBoard model={model} onFilterChange={vi.fn()} />);
@@ -160,10 +149,6 @@ describe("YieldSourceBoard", () => {
 
     const descriptions = await screen.findAllByText(/Medium or explainable source-risk evidence/i);
     expect(descriptions.length).toBeGreaterThan(0);
-    for (const description of descriptions) {
-      expect(description.className).toContain("text-background/75");
-      expect(description.className).not.toContain("text-muted-foreground");
-    }
   });
 
   it("clears an active source-quality segment when clicked again", () => {

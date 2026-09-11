@@ -2,6 +2,7 @@
   "id": "yzusd-yuzu",
   "reserves": [
     {
+      "sourceKey": "accountable:yuzu:deployment:ethena-usde-loop",
       "name": "Ethena USDe loop",
       "pct": 31.290154,
       "risk": "high",
@@ -19,6 +20,7 @@
       "liquidityHorizon": "seven-days"
     },
     {
+      "sourceKey": "accountable:yuzu:deployment:sky-usds-staking",
       "name": "Sky USDS staking",
       "pct": 14.720073,
       "risk": "high",
@@ -36,6 +38,7 @@
       "liquidityHorizon": "seven-days"
     },
     {
+      "sourceKey": "accountable:yuzu:deployment:aave-usdc",
       "name": "Aave USDC",
       "pct": 7.770264,
       "risk": "medium",
@@ -52,6 +55,7 @@
       "liquidityHorizon": "one-day"
     },
     {
+      "sourceKey": "accountable:yuzu:deployment:maple-syrupusdt-loop",
       "name": "Maple syrupUSDT loop",
       "pct": 7.221449,
       "risk": "high",
@@ -71,6 +75,7 @@
       "liquidityHorizon": "seven-days"
     },
     {
+      "sourceKey": "accountable:yuzu:deployment:maple-syrupusdg-loop",
       "name": "Maple syrupUSDG loop",
       "pct": 6.569452,
       "risk": "high",
@@ -90,6 +95,7 @@
       "liquidityHorizon": "seven-days"
     },
     {
+      "sourceKey": "accountable:yuzu:deployment:maple-syrupusdc-loop",
       "name": "Maple syrupUSDC loop",
       "pct": 6.487195,
       "risk": "high",
@@ -109,6 +115,7 @@
       "liquidityHorizon": "seven-days"
     },
     {
+      "sourceKey": "accountable:yuzu:deployment:agora-pt-ausd-loop",
       "name": "Agora AUSD Pendle PT loop",
       "pct": 4.931108,
       "risk": "high",
@@ -126,6 +133,7 @@
       "liquidityHorizon": "seven-days"
     },
     {
+      "sourceKey": "accountable:yuzu:deployment:yuzu-yzprime",
       "name": "Yuzu yzPRIME",
       "pct": 4.795226,
       "risk": "medium",
@@ -140,6 +148,7 @@
       "liquidityHorizon": "over-seven-days"
     },
     {
+      "sourceKey": "accountable:yuzu:deployment:superstate-ustb-loop",
       "name": "Superstate USTB loop",
       "pct": 3.726608,
       "risk": "high",
@@ -158,6 +167,7 @@
       "liquidityHorizon": "seven-days"
     },
     {
+      "sourceKey": "accountable:yuzu:deployment:paypal-pyusd-loop",
       "name": "PayPal PYUSD loop",
       "pct": 3.308415,
       "risk": "high",
@@ -176,6 +186,7 @@
       "liquidityHorizon": "seven-days"
     },
     {
+      "sourceKey": "accountable:yuzu:deployment:ethena-susde-loop",
       "name": "Ethena sUSDe loop",
       "pct": 3.292765,
       "risk": "high",
@@ -193,6 +204,7 @@
       "liquidityHorizon": "seven-days"
     },
     {
+      "sourceKey": "accountable:yuzu:deployment:liquidity-buffer",
       "name": "Liquidity buffer",
       "pct": 1.568413,
       "risk": "low",
@@ -209,6 +221,7 @@
       "liquidityHorizon": "immediate"
     },
     {
+      "sourceKey": "accountable:yuzu:deployment:sky-pt-susds-loop",
       "name": "Sky PT sUSDS loop",
       "pct": 1.318023,
       "risk": "high",
@@ -226,6 +239,7 @@
       "liquidityHorizon": "seven-days"
     },
     {
+      "sourceKey": "accountable:yuzu:deployment:fasanara-mglo-loop",
       "name": "Fasanara mGLO loop",
       "pct": 1.248007,
       "risk": "high",
@@ -242,6 +256,7 @@
       "liquidityHorizon": "seven-days"
     },
     {
+      "sourceKey": "accountable:yuzu:deployment:aave-usdt0",
       "name": "Aave USDT0",
       "pct": 0.788435,
       "risk": "medium",
@@ -258,6 +273,7 @@
       "liquidityHorizon": "one-day"
     },
     {
+      "sourceKey": "accountable:yuzu:deployment:fasanara-mglobal-loop",
       "name": "Fasanara mGLOBAL loop",
       "pct": 0.467737,
       "risk": "high",
@@ -277,6 +293,7 @@
       "liquidityHorizon": "seven-days"
     },
     {
+      "sourceKey": "accountable:yuzu:deployment:rest-of-assets",
       "name": "Other reserve assets",
       "pct": 0.348657,
       "risk": "high",
@@ -291,6 +308,7 @@
       "liquidityHorizon": "unknown"
     },
     {
+      "sourceKey": "accountable:yuzu:deployment:agora-pt-ausd",
       "name": "Agora AUSD Pendle PT",
       "pct": 0.147259,
       "risk": "high",
@@ -308,6 +326,7 @@
       "liquidityHorizon": "seven-days"
     },
     {
+      "sourceKey": "accountable:yuzu:deployment:securitize-vbill-loop",
       "name": "Securitize VBILL loop",
       "pct": 0.000608,
       "risk": "high",
@@ -326,8 +345,9 @@
       "liquidityHorizon": "seven-days"
     },
     {
+      "sourceKey": "accountable:yuzu:deployment:aave-rlusd",
       "name": "Aave RLUSD",
-      "pct": 0.000098,
+      "pct": 9.8e-05,
       "risk": "medium",
       "coinId": "rlusd-ripple",
       "depType": "collateral",
@@ -342,8 +362,9 @@
       "liquidityHorizon": "one-day"
     },
     {
+      "sourceKey": "accountable:yuzu:deployment:aave-gho-2",
       "name": "Aave GHO",
-      "pct": 0.000047,
+      "pct": 4.7e-05,
       "risk": "medium",
       "coinId": "gho-aave",
       "depType": "collateral",
@@ -357,8 +378,9 @@
       "liquidityHorizon": "one-day"
     },
     {
+      "sourceKey": "accountable:yuzu:deployment:aave-gho-savings",
       "name": "Aave GHO Savings",
-      "pct": 0.000008,
+      "pct": 8e-06,
       "risk": "low",
       "coinId": "sgho-aave",
       "depType": "collateral",

@@ -15,6 +15,7 @@ import {
 } from "./candidate";
 import {
   assessV9Publication,
+  expiredMeasuredExitAssetIds,
   buildSafetyScoreV9AcceptedPublicationBaseline,
   type SafetyScoreV9AcceptedPublicationBaseline,
   type V9PublicationCoverageFloor,
@@ -432,6 +433,7 @@ export async function runSafetyScoreV9Publication(
       logPublicationGenerationDeltas(publication, acceptedPublication);
       assessment = assessV9Publication({
         inputHealth: fixedInput.v9PublicationInputHealth,
+        expiredMeasuredExitAssetIds: expiredMeasuredExitAssetIds(fixedInput, publication, acceptedPublication),
         candidate: publication,
         acceptedPublication,
         coverageFloors,

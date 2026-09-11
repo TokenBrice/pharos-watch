@@ -1,12 +1,14 @@
 import type { ReserveSlice, StablecoinMeta } from "@shared/types/core";
-import type { LiveReservesConfig } from "@shared/types/live-reserves";
+import type { LiveReservesConfig, LiveReserveWarning } from "@shared/types/live-reserves";
 import type { AdapterContext, AdapterResult } from "./types";
 import {
   fetchJsonWithRetry,
   normalizeSlices,
   parseTimestampLikeToUnixSeconds,
   requireJsonInput,
+  sameRunRenderClockFreshnessMetadata,
 } from "./helpers";
+import { reserveDegradedWarning } from "./warnings";
 
 interface FlyingTulipCollateral {
   address?: string;
@@ -40,7 +42,17 @@ interface FlyingTulipPayload {
   chains?: FlyingTulipChain[];
 }
 
-const EXPECTED_CHAINS = new Map([
+type ExpectedChainProfile = {
+  name: string;
+  collaterals: ReadonlyMap<string, string>;
+  /** Borrow-and-stake carry leg (validated and surfaced as diagnostics). A chain
+   *  may launch lend-only wrappers before its leverage profile is reviewed, in which
+   *  case neither field is set and no strategy pin applies. */
+  borrow?: string;
+  stake?: string;
+};
+
+const EXPECTED_CHAINS: ReadonlyMap<number, ExpectedChainProfile> = new Map([
   [1, {
     name: "Ethereum",
     collaterals: new Map([
@@ -59,7 +71,15 @@ const EXPECTED_CHAINS = new Map([
     borrow: "wS",
     stake: "stS",
   }],
-] as const);
+  [56, {
+    name: "Binance Smart Chain",
+    collaterals: new Map([
+      ["USDC", "0x8ac76a51cc950d9822d68b83fe1ad97b32cd580d"],
+      ["USDT", "0x55d398326f99059ff775485246999027b3197955"],
+      ["FDUSD", "0xc5f0f7b66764f6ec8c8dff7ba683102295e16409"],
+    ]),
+  }],
+]);
 
 const SLICE_META: Record<string, Pick<ReserveSlice, "name" | "risk" | "coinId" | "depType">> = {
   USDC: {
@@ -78,6 +98,12 @@ const SLICE_META: Record<string, Pick<ReserveSlice, "name" | "risk" | "coinId" |
     name: "USSD strategy wrapper (Sonic)",
     risk: "medium",
     coinId: "ussd-sonic-labs",
+    depType: "collateral",
+  },
+  FDUSD: {
+    name: "FDUSD strategy wrapper (Binance Smart Chain)",
+    risk: "medium",
+    coinId: "fdusd-first-digital",
     depType: "collateral",
   },
 };
@@ -103,21 +129,28 @@ export function adaptFlyingTulipFtUsd(payload: FlyingTulipPayload): AdapterResul
     throw new Error("flying-tulip-ftusd lastUpdated is missing or invalid");
   }
 
-  const chains = (payload.chains ?? []).filter((chain) =>
-    chain.tvlUsd !== 0 || chain.metrics?.totalSupplyUsd !== 0
-  );
-  if (chains.length !== EXPECTED_CHAINS.size) {
-    throw new Error(`flying-tulip-ftusd expected ${EXPECTED_CHAINS.size} chains, received ${chains.length}`);
-  }
+  const payloadChains = payload.chains ?? [];
+  // A chain that ships with zero TVL and zero supply (e.g. chain 56 ahead of its BSC
+  // launch) is an inactive placeholder carrying no reserve yet.
+  const chainIsActive = (chain: FlyingTulipChain) =>
+    chain.tvlUsd !== 0 || chain.metrics?.totalSupplyUsd !== 0;
 
   const collateralUsd = new Map<string, number>();
   const diagnostics: Array<Record<string, unknown>> = [];
+  const warnings: LiveReserveWarning[] = [];
   let totalReserveUsd = 0;
   let supplyUsd = 0;
 
+  // Every reviewed chain must be present in the payload. Each present chain is pinned
+  // to its reviewed name and exact collateral addresses once it carries any activity.
   for (const [chainId, expected] of EXPECTED_CHAINS) {
-    const chain = chains.find((candidate) => candidate.chainId === chainId);
-    if (!chain || chain.chainName !== expected.name) {
+    const chain = payloadChains.find((candidate) => candidate.chainId === chainId);
+    if (!chain) {
+      throw new Error(`flying-tulip-ftusd missing expected ${expected.name} chain payload`);
+    }
+    if (!chainIsActive(chain)) continue;
+
+    if (chain.chainName !== expected.name) {
       throw new Error(`flying-tulip-ftusd missing expected ${expected.name} chain payload`);
     }
     const chainTvlUsd = requirePositiveFinite(chain.tvlUsd, `${expected.name} tvlUsd`);
@@ -138,8 +171,14 @@ export function adaptFlyingTulipFtUsd(payload: FlyingTulipPayload): AdapterResul
       collateralUsd.set(symbol, (collateralUsd.get(symbol) ?? 0) + value);
     }
 
+    // Only chains with a reviewed borrow-and-stake profile pin a strategy and emit
+    // carry diagnostics. A freshly-deployed chain (BSC) may run lend-only wrappers
+    // until its leverage profile is reviewed.
+    if (!expected.borrow || !expected.stake) continue;
+    const borrow = expected.borrow;
+    const stake = expected.stake;
     const strategy = (chain.strategies ?? []).find((candidate) =>
-      candidate.tokens?.borrow?.includes(expected.borrow) && candidate.tokens?.staking?.includes(expected.stake)
+      candidate.tokens?.borrow?.includes(borrow) && candidate.tokens?.staking?.includes(stake)
     );
     if (!strategy) {
       throw new Error(`flying-tulip-ftusd ${expected.name} borrow/stake strategy disappeared`);
@@ -148,8 +187,8 @@ export function adaptFlyingTulipFtUsd(payload: FlyingTulipPayload): AdapterResul
       chainId,
       chainName: expected.name,
       deposit: strategy.tokens?.deposit,
-      borrow: expected.borrow,
-      stake: expected.stake,
+      borrow,
+      stake,
       leverage: parseDisplayNumber(strategy.leverage?.value, `${expected.name} leverage`),
       healthFactor: parseDisplayNumber(strategy.healthFactor?.value, `${expected.name} health factor`),
       borrowUsd: parseDisplayNumber(strategy.currentBorrows?.amountUsd, `${expected.name} borrow USD`),
@@ -158,24 +197,44 @@ export function adaptFlyingTulipFtUsd(payload: FlyingTulipPayload): AdapterResul
     });
   }
 
+  // An active chain outside the reviewed set means Flying Tulip deployed somewhere we
+  // have not reviewed. Surface it as a degraded warning (snapshot stored, scoring
+  // blocked) rather than throwing, so a new deployment never flips the coin to error.
+  for (const chain of payloadChains) {
+    if (chain.chainId !== undefined && EXPECTED_CHAINS.has(chain.chainId)) continue;
+    if (!chainIsActive(chain)) continue;
+    const label = chain.chainName ? `${chain.chainName} (chain ${chain.chainId})` : `chain ${chain.chainId}`;
+    warnings.push(
+      reserveDegradedWarning(
+        "unexpected-chain",
+        `flying-tulip-ftusd payload carries an active chain outside the reviewed set: ${label}`,
+      ),
+    );
+  }
+
   const classifiedCollateralUsd = [...collateralUsd.values()].reduce((sum, value) => sum + value, 0);
   if (Math.abs(classifiedCollateralUsd - totalReserveUsd) / totalReserveUsd > 0.001) {
     throw new Error("flying-tulip-ftusd collateral rows do not reconcile to cross-chain TVL");
   }
+
+  // `lastUpdated` is the API's own render/response clock (it tracks request
+  // time), so the verified timestamp is stamped with that basis explicitly.
+  const freshness = sameRunRenderClockFreshnessMetadata(sourceTimestamp);
 
   return {
     slices: normalizeSlices([...collateralUsd.entries()].map(([symbol, value]) => ({
       ...SLICE_META[symbol],
       pct: (value / classifiedCollateralUsd) * 100,
     }))),
+    warnings,
     metadata: {
-      sourceTimestamp,
-      freshnessMode: "verified",
+      ...freshness,
       totalReserveUsd,
       supplyUsd,
       collateralizationRatio: totalReserveUsd / supplyUsd,
       unknownExposurePct: 0,
       details: {
+        ...freshness.details,
         sourceOperator: "Flying Tulip",
         assurance: "first-party index of publicly verifiable on-chain reserve state",
         strategies: diagnostics,

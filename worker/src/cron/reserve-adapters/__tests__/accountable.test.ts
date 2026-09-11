@@ -1,8 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { jsonResponse, mockFetchStrict } from "@shared/test-utils/mock-fetch";
+import type { StablecoinMeta } from "@shared/types/core";
 import { adaptAccountableDashboard } from "../accountable";
 import type { LiveReservesConfig } from "@shared/types/live-reserves";
-import { fetchAccountableReserves } from "../accountable";
 import { getReserveAdapter } from "../index";
 import { validateAdapterOutput } from "../validate";
 import apxusd from "@shared/data/stablecoins/coins/apxusd-apyx.json";
@@ -12,8 +11,9 @@ import yusd from "@shared/data/stablecoins/coins/yusd-aegis.json";
 import yzusd from "@shared/data/stablecoins/coins/yzusd-yuzu.json";
 import utyxsy from "@shared/data/stablecoins/coins/uty-xsy.json";
 import usn from "@shared/data/stablecoins/coins/usn-noon.json";
+import { makeTimestampedYuzuPayload } from "./accountable.test-support";
+import { installAdapterNetwork, runAdapter } from "./reserve-adapter.test-support";
 
-const signal = AbortSignal.timeout(5_000);
 // Production removed NUSD's live config after its endpoint stopped resolving.
 // Keep this inline mapping fixture to exercise the reviewed historical
 // Accountable shape without re-enabling that production feed.
@@ -52,22 +52,25 @@ const NEUTRL_ACCOUNTABLE_TEST_CONFIG: LiveReservesConfig = {
   },
 };
 
-function runAccountablePayload(config: LiveReservesConfig, data: Record<string, unknown>) {
+async function runAccountablePayload(config: LiveReservesConfig, data: Record<string, unknown>) {
   const primary = config.inputs.primary;
   if (primary.kind !== "http-json") {
     throw new Error("expected Accountable primary input to be http-json");
   }
 
-  return fetchAccountableReserves(
-    {} as never,
-    config,
-    signal,
-    {
-      requestCache: new Map([
-        [`json-get:${primary.url}:12000:null`, Promise.resolve({ res: "ok", data })],
-      ]),
+  const coin = {
+    id: config.breakerScope ?? "accountable-test",
+    symbol: "TEST",
+    liveReservesConfig: config,
+  } as StablecoinMeta;
+  const { result } = await runAdapter("accountable", coin, {
+    network: {
+      json: {
+        [primary.url]: { res: "ok", data },
+      },
     },
-  );
+  });
+  return result;
 }
 
 afterEach(() => {
@@ -144,7 +147,7 @@ describe("adaptAccountableDashboard", () => {
     ]);
   });
 
-  it("reconciles reviewed signed reserves_split buckets without emitting negative reserve slices", () => {
+  it("reconciles signed reserves_split buckets without emitting negative reserve slices", () => {
     const result = adaptAccountableDashboard(
       {
         res: "ok",
@@ -168,7 +171,6 @@ describe("adaptAccountableDashboard", () => {
           Avalanche: "high",
           Ethereum: "medium",
         },
-        allowNegativeBuckets: ["Ethereum"],
       },
     );
 
@@ -525,14 +527,14 @@ describe("adaptAccountableDashboard", () => {
       collateralizationRatio: 0.98699,
     });
     expect(result.slices).toEqual([
-      { name: "STRC (Strategy preferred equity, BTC-linked)", pct: 58.4, risk: "high" },
-      { name: "Protocol Owned Liquidity", pct: 17.3, risk: "high" },
-      { name: "Inventory", pct: 17.0, risk: "high" },
-      { name: "Cash & Equivalents (USDC, U.S. Treasury Bills)", pct: 7.3, risk: "very-low" },
+      { sourceKey: "accountable:apyx:deployment:strc", name: "STRC (Strategy preferred equity, BTC-linked)", pct: 58.4, risk: "high" },
+      { sourceKey: "accountable:apyx:deployment:protocol-owned-liquidity", name: "Protocol Owned Liquidity", pct: 17.3, risk: "high" },
+      { sourceKey: "accountable:apyx:deployment:inventory", name: "Inventory", pct: 17.0, risk: "high" },
+      { sourceKey: "accountable:apyx:deployment:cash-equivalents", name: "Cash & Equivalents (USDC, U.S. Treasury Bills)", pct: 7.3, risk: "very-low" },
     ]);
     expect(
       apxusdReserves.reserves
-        .map(({ name, pct, risk }) => ({ name, pct, risk }))
+        .map(({ sourceKey, name, pct, risk }) => ({ sourceKey, name, pct, risk }))
         .sort((a, b) => b.pct - a.pct),
     ).toEqual(result.slices);
     expect(validateAdapterOutput(result, {
@@ -541,37 +543,51 @@ describe("adaptAccountableDashboard", () => {
     }).valid).toBe(true);
   });
 
-  it("sends the Apyx dashboard Origin and Referer headers", async () => {
-    const fetchMock = mockFetchStrict([{
-      match: "https://api.accountable.apyx.fi/dashboard",
-      respond: (request) => {
-        expect(request.headers.get("origin")).toBe("https://accountable.apyx.fi");
-        expect(request.headers.get("referer")).toBe("https://accountable.apyx.fi/");
-        return jsonResponse({
+  it("fetches the Apyx dashboard through its catalog endpoint", async () => {
+    const config = apxusd.liveReservesConfig as LiveReservesConfig;
+    const primary = config.inputs.primary;
+    if (primary.kind !== "http-json") throw new Error("expected Apyx Accountable input to be http-json");
+
+    const network = installAdapterNetwork({
+      json: {
+        [primary.url]: {
           res: "ok",
           data: {
             collateralization: 1,
             ts: "1784376607058",
             reserves: {
               total_reserves: 100,
-              reserves_split: [
-                { value: 100, name: "Cash & Equivalents" },
-              ],
+              reserves_split: [{ value: 100, name: "Cash & Equivalents" }],
             },
           },
-        });
+        },
       },
+    });
+    const { result } = await runAdapter("accountable", "apxusd-apyx", {
+      network,
+      nowSec: 1_784_376_608,
+    });
+
+    expect(network.requests.map((request) => request.url)).toEqual([primary.url]);
+    expect(result.slices).toEqual([{
+      sourceKey: "accountable:apyx:deployment:cash-equivalents",
+      name: "Cash & Equivalents (USDC, U.S. Treasury Bills)",
+      pct: 100,
+      risk: "very-low",
     }]);
-
-    await fetchAccountableReserves(
-      apxusd as never,
-      apxusd.liveReservesConfig as LiveReservesConfig,
-      AbortSignal.timeout(5_000),
-    );
-
-    expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 
+  it("fails closed when the configured reserve bucket is dropped upstream", async () => {
+    const config = apxusd.liveReservesConfig as LiveReservesConfig;
+
+    await expect(runAccountablePayload(config, {
+      collateralization: 1,
+      ts: "1784376607058",
+      reserves: {
+        total_reserves: { value: 100, name: "Total Reserves" },
+      },
+    })).rejects.toThrow(/Unsupported Accountable bucket/);
+  });
   it("treats Unitas deployment buckets as the same high-risk strategy basket", async () => {
     const config = usdu.liveReservesConfig as LiveReservesConfig;
 
@@ -591,13 +607,13 @@ describe("adaptAccountableDashboard", () => {
     });
 
     expect(result.slices).toEqual([
-      { name: "Binance", pct: 50.6, risk: "high" },
-      { name: "Solana", pct: 48.3, risk: "high" },
-      { name: "Bnb_smartchain", pct: 1.1, risk: "high" },
+      { sourceKey: "accountable:unitas:deployment:binance", name: "Binance", pct: 50.6, risk: "high" },
+      { sourceKey: "accountable:unitas:deployment:solana", name: "Solana", pct: 48.3, risk: "high" },
+      { sourceKey: "accountable:unitas:deployment:bnb-smartchain", name: "Bnb_smartchain", pct: 1.1, risk: "high" },
     ]);
   });
 
-  it("rejects poisoned Apyx Accountable mapped buckets before reserve slice normalization", async () => {
+  it("fails closed on an unparseable Apyx Accountable reserves_split value", async () => {
     const config = apxusd.liveReservesConfig as LiveReservesConfig;
 
     await expect(runAccountablePayload(config, {
@@ -612,7 +628,7 @@ describe("adaptAccountableDashboard", () => {
           { value: "not-a-number", name: "Other" },
         ],
       },
-    })).rejects.toThrow(/Accountable reserves_split bucket "STRC" has invalid value/);
+    })).rejects.toThrow(/Accountable reserves_split bucket "Other" has invalid value/);
   });
 
   it("rejects Apyx Accountable mapped buckets that would be silently dropped as zero", async () => {
@@ -630,7 +646,7 @@ describe("adaptAccountableDashboard", () => {
           { value: 0, name: "Other" },
         ],
       },
-    })).rejects.toThrow(/non-positive value: Other, SATA, STRC/);
+    })).rejects.toThrow(/zero value: Other, SATA, STRC/);
   });
 
   it("rejects Accountable bucket totals that materially diverge from total_reserves", () => {
@@ -757,7 +773,7 @@ describe("adaptAccountableDashboard", () => {
     });
 
     expect(result.slices).toEqual([
-      { name: "Liquidity buffer", pct: 100, risk: "low", coinId: "usdt-tether", depType: "collateral" },
+      { sourceKey: "accountable:yuzu:deployment:liquidity-buffer", name: "Liquidity buffer", pct: 100, risk: "low", coinId: "usdt-tether", depType: "collateral" },
     ]);
     expect(result.slices).not.toContainEqual(expect.objectContaining({
       name: "Global Dollar USDG loop",
@@ -811,24 +827,78 @@ describe("adaptAccountableDashboard", () => {
       exposureSplitTimelineTotalReserves: 63_527_322.23,
     });
     expect(result.slices).toEqual([
-      { name: "Liquidity buffer", pct: 100, risk: "low", coinId: "usdt-tether", depType: "collateral" },
+      { sourceKey: "accountable:yuzu:deployment:liquidity-buffer", name: "Liquidity buffer", pct: 100, risk: "low", coinId: "usdt-tether", depType: "collateral" },
     ]);
     expect(result.warnings?.map((warning) => warning.code)).toEqual(["signed-negative-bucket"]);
   });
 
-  it("uses exposure_split_ts, not the newer dashboard envelope timestamp, for Yuzu freshness", async () => {
+  it("degrades the current signed Yuzu exposure split whose net exceeds the reserve total instead of failing the snapshot", async () => {
     const config = yzusd.liveReservesConfig as LiveReservesConfig;
+
+    // Captured 2026-09-11 from https://cache.accountable.capital/dashboard/yuzu: every
+    // exposure_split bucket now wraps its value in an empty-key object, and the Pendle PT loop
+    // buckets are signed.
     const result = await runAccountablePayload(config, {
-      collateralization: 1,
-      ts: "1787848065315",
+      collateralization: 1.095045,
+      ts: "1789113764216",
       reserves: {
-        total_reserves: 1_000,
-        total_supply: 1_000,
-        exposure_split_ts: "2026.08.24 07:31:16 UTC",
-        exposure_split: { Liquidity_Buffer: { "": 1_000 } },
-        timeline: [{ ts: "1787600794262", reserves: 1_000 }],
+        total_reserves: { value: 58_985_325.95, name: "Total Backing Assets", value_rwa: 7_571_879.01 },
+        total_supply: { value: 53_865_657.54, name: "Total TVL" },
+        exposure_split_ts: "2026.09.09 06:53:39 UTC",
+        exposure_split: {
+          "[Securitize]_VBILL_Loop": { "": 387.8 },
+          "[Superstate]_USTB_Loop": { "": 1_314_576.60286784 },
+          "[Ethena]_sUSDe_Pendle_PT_Loop": { "": -7_311_212.03139069 },
+          "[Ethena]_USDe_Loop": { "": 34_314_100.69942264 },
+          "[Ethena]_USDe": { "": 8.08180506854668e-8 },
+          "[Agora]_PT_AUSD": { "": 527.368232779483 },
+          "[Strata]_srUSDe_Pendle_PT_Loop": { "": -6_460_236.588979 },
+          "[Maple]_syrupUSDT_Loop": { "": 4_686_357.13103792 },
+          Liquidity_Buffer: { "": 999_772.8403514099 },
+          "[Maple]_syrupUSDG_Loop": { "": 4_156_007.11462765 },
+          "[Agora]_PT_AUSD_Loop": { "": 957_512.38038019 },
+          "[Sky]_sUSDS_Loop": { "": -0.106646060264309 },
+          "[Ethena]_sUSDe_Loop": { "": 25_543_913.240860812 },
+          "[Maple]_syrupUSDC_Loop": { "": 3_884_580.00930017 },
+          "[Aave]_Gho": { "": 29.7254528139977 },
+          "[Aave]_RLUSD": { "": 62.7277558172802 },
+          Rest_of_Assets: { "": 228.63385745949134 },
+          "[Fasanara]_mGLOBAL_Loop": { "": 297_472.582149001 },
+          "[Yuzu]_yzPRIME": { "": 3_063_702.74075465 },
+          "[Aave]_USDT0": { "": 503_294.863749914 },
+          "[Fasanara]_mGLO_Loop": { "": 788_250.11893378 },
+          "[Aave]_Gho_Savings": { "": 4.72610696572865 },
+          "[Sky]_PT_sUSDS_Loop": { "": 7.69220720329771 },
+        },
+        timeline: [{ ts: "1788994123413", reserves: 63_289_806.86 }],
       },
     });
+
+    expect(result.warnings?.map((warning) => warning.code)).toEqual(["signed-negative-bucket"]);
+    expect(result.warnings?.[0]?.message).toContain(
+      "signed total is 3449533.41 USD above the reconciled reserve total",
+    );
+    expect(result.warnings?.[0]?.effect).toBe("degraded");
+    expect(result.metadata).toMatchObject({
+      bucket: "exposure_split",
+      breakdownCount: 23,
+      mappedBucketCount: 20,
+      signedBucketCount: 3,
+      signedBucketNames: [
+        "[Ethena]_sUSDe_Pendle_PT_Loop",
+        "[Sky]_sUSDS_Loop",
+        "[Strata]_srUSDe_Pendle_PT_Loop",
+      ],
+    });
+    expect(result.metadata?.signedBucketTotalResidual).toBeCloseTo(3_449_533.411, 2);
+    expect(result.slices.map((slice) => slice.name)).not.toContain("Strata srUSDe Pendle PT loop");
+    expect(result.slices.every((slice) => slice.pct > 0)).toBe(true);
+    expect(result.slices.reduce((sum, slice) => sum + slice.pct, 0)).toBeCloseTo(100, 1);
+  });
+
+  it("uses exposure_split_ts, not the newer dashboard envelope timestamp, for Yuzu freshness", async () => {
+    const config = yzusd.liveReservesConfig as LiveReservesConfig;
+    const result = await runAccountablePayload(config, makeTimestampedYuzuPayload());
 
     expect(result.metadata).toMatchObject({
       sourceTimestamp: 1_787_556_676,
@@ -839,17 +909,7 @@ describe("adaptAccountableDashboard", () => {
 
   it("keeps an approximately 81-hour-old truthful Yuzu exposure timestamp stale under the 3-day policy", async () => {
     const config = yzusd.liveReservesConfig as LiveReservesConfig;
-    const result = await runAccountablePayload(config, {
-      collateralization: 1,
-      ts: "1787848065315",
-      reserves: {
-        total_reserves: 1_000,
-        total_supply: 1_000,
-        exposure_split_ts: "2026.08.24 07:31:16 UTC",
-        exposure_split: { Liquidity_Buffer: { "": 1_000 } },
-        timeline: [{ ts: "1787600794262", reserves: 1_000 }],
-      },
-    });
+    const result = await runAccountablePayload(config, makeTimestampedYuzuPayload());
 
     const validation = validateAdapterOutput(result, {
       adapter: getReserveAdapter("accountable") ?? undefined,
@@ -864,20 +924,15 @@ describe("adaptAccountableDashboard", () => {
   it("rejects a timestamped Yuzu exposure split that misses the nearest timeline reserve total by more than 1%", async () => {
     const config = yzusd.liveReservesConfig as LiveReservesConfig;
 
-    await expect(runAccountablePayload(config, {
-      collateralization: 1,
-      ts: "1787848065315",
-      reserves: {
-        total_reserves: 63_527_322.23,
-        total_supply: 63_527_322.23,
-        exposure_split_ts: "2026.08.24 07:31:16 UTC",
-        exposure_split: {
-          "[Global_Dollar]_USDG_Loop": { "": -15_725_261.164036 },
-          Liquidity_Buffer: { "": 79_252_583.394036 },
-        },
-        timeline: [{ ts: "1787600794262", reserves: 65_000_000 }],
+    await expect(runAccountablePayload(config, makeTimestampedYuzuPayload({
+      total_reserves: 63_527_322.23,
+      total_supply: 63_527_322.23,
+      exposure_split: {
+        "[Global_Dollar]_USDG_Loop": { "": -15_725_261.164036 },
+        Liquidity_Buffer: { "": 79_252_583.394036 },
       },
-    })).rejects.toThrow(
+      timeline: [{ ts: "1787600794262", reserves: 65_000_000 }],
+    }))).rejects.toThrow(
       /Accountable exposure_split bucket total 63527322\.23 does not match total_reserves 65000000/,
     );
   });
@@ -885,36 +940,20 @@ describe("adaptAccountableDashboard", () => {
   it("fails closed when a timestamped Yuzu exposure split has no valid timeline reserve total", async () => {
     const config = yzusd.liveReservesConfig as LiveReservesConfig;
 
-    await expect(runAccountablePayload(config, {
-      collateralization: 1,
-      ts: "1787848065315",
-      reserves: {
-        total_reserves: 1_000,
-        total_supply: 1_000,
-        exposure_split_ts: "2026.08.24 07:31:16 UTC",
-        exposure_split: { Liquidity_Buffer: { "": 1_000 } },
-        timeline: [
-          { ts: "not-a-timestamp", reserves: 1_000 },
-          { ts: "1787600794262", reserves: 0 },
-        ],
-      },
-    })).rejects.toThrow(/no valid timeline reserve total/);
+    await expect(runAccountablePayload(config, makeTimestampedYuzuPayload({
+      timeline: [
+        { ts: "not-a-timestamp", reserves: 1_000 },
+        { ts: "1787600794262", reserves: 0 },
+      ],
+    }))).rejects.toThrow(/no valid timeline reserve total/);
   });
 
   it("fails closed when the nearest Yuzu timeline reserve total is more than 24 hours away", async () => {
     const config = yzusd.liveReservesConfig as LiveReservesConfig;
 
-    await expect(runAccountablePayload(config, {
-      collateralization: 1,
-      ts: "1787848065315",
-      reserves: {
-        total_reserves: 1_000,
-        total_supply: 1_000,
-        exposure_split_ts: "2026.08.24 07:31:16 UTC",
-        exposure_split: { Liquidity_Buffer: { "": 1_000 } },
-        timeline: [{ ts: "1787466675000", reserves: 1_000 }],
-      },
-    })).rejects.toThrow(/no contemporaneous timeline reserve total/);
+    await expect(runAccountablePayload(config, makeTimestampedYuzuPayload({
+      timeline: [{ ts: "1787466675000", reserves: 1_000 }],
+    }))).rejects.toThrow(/no contemporaneous timeline reserve total/);
   });
 
   it("keeps current-shaped Yuzu mGLO exposure unlinked while preserving the reviewed risk label", async () => {
@@ -939,6 +978,7 @@ describe("adaptAccountableDashboard", () => {
       depType: "collateral",
     }));
     expect(result.slices).toContainEqual({
+      sourceKey: "accountable:yuzu:deployment:fasanara-mglo-loop",
       name: "Fasanara mGLO loop",
       pct: 40,
       risk: "high",
@@ -1103,6 +1143,111 @@ describe("adaptAccountableDashboard", () => {
       adapter: getReserveAdapter("accountable") ?? undefined,
       now: Date.UTC(2026, 5, 20, 10) / 1000,
     }).valid).toBe(true);
+  });
+
+  it("maps the root-level assetBreakdown layout into reserve slices", () => {
+    // Verbatim Tori Accountable dashboard capture: the four strategy categories
+    // live at data.assetBreakdown (not data.reserves.type*), and their nested
+    // entries sum to the published total_reserves value.
+    const result = adaptAccountableDashboard(
+      {
+        res: "ok",
+        data: {
+          collateralization: 1.00218,
+          ts: "1788968760934",
+          reserves: {
+            interval: "live",
+            verifiability: "100",
+            total_reserves: { name: "Total Reserves", value: 67_390_916.86 },
+            total_supply: { name: "Total Supply", fx: 1, value: 67_244_323.59 },
+          },
+          assetBreakdown: {
+            "On-chain Buffer": { "On-chain Buffer": { status: "private", value: 1_022_633.741500425 } },
+            "Money Markets": { "Money Market Instruments": { status: "private", value: 41_544_625.36 } },
+            "Cash & Equivalents": {
+              "OTC & Exchange Reserve": 0,
+              "FX Collateral": { status: "private", value: 6_796_722.89 },
+              "Bank Cash": { status: "private", value: 206.2812771119609 },
+            },
+            "Delta-Neutral Futures Arbitrage": {
+              "Delta-Neutral Futures Arbitrage": { status: "private", value: 18_026_728.59 },
+            },
+          },
+        },
+      },
+      {
+        layout: "asset-breakdown",
+        riskMap: {
+          "Money Markets": "medium",
+          "Cash & Equivalents": "medium",
+          "Delta-Neutral Futures Arbitrage": "high",
+          "On-chain Buffer": "low",
+        },
+        renameMap: {
+          "Money Markets": "Hedged money-market positions at undisclosed custodians (asset-manager mandate)",
+          "Delta-Neutral Futures Arbitrage": "Delta-neutral futures arbitrage and calendar-spread positions",
+          "Cash & Equivalents": "Cash and equivalents held as FX collateral at investment banks and exchange venues",
+          "On-chain Buffer": "On-chain stablecoin buffer in the minting custodian wallet",
+        },
+      },
+    );
+
+    expect(result.slices).toEqual([
+      { name: "Hedged money-market positions at undisclosed custodians (asset-manager mandate)", pct: 61.7, risk: "medium" },
+      { name: "Delta-neutral futures arbitrage and calendar-spread positions", pct: 26.7, risk: "high" },
+      { name: "Cash and equivalents held as FX collateral at investment banks and exchange venues", pct: 10.1, risk: "medium" },
+      { name: "On-chain stablecoin buffer in the minting custodian wallet", pct: 1.5, risk: "low" },
+    ]);
+    expect(result.metadata).toMatchObject({
+      bucket: "asset-breakdown",
+      layout: "asset-breakdown",
+      breakdownCount: 4,
+      mappedBucketCount: 4,
+      totalReserves: 67_390_916.86,
+      sourceTimestamp: 1_788_968_760,
+      freshnessMode: "verified",
+    });
+    expect(result.metadata?.unknownExposurePct).toBeUndefined();
+    expect(result.warnings).toBeUndefined();
+  });
+
+  it("records unknownExposurePct for unmapped asset-breakdown categories", () => {
+    const result = adaptAccountableDashboard(
+      {
+        res: "ok",
+        data: {
+          collateralization: 1.01,
+          ts: "1788968760934",
+          reserves: {
+            total_reserves: { value: 100 },
+            total_supply: { value: 99 },
+          },
+          assetBreakdown: {
+            "Money Markets": { "Money Market Instruments": { value: 70 } },
+            "Undisclosed Custodian Strategy": { "Custodian Positions": { value: 30 } },
+          },
+        },
+      },
+      {
+        layout: "asset-breakdown",
+        riskMap: { "Money Markets": "medium" },
+      },
+    );
+
+    expect(result.slices).toEqual([
+      { name: "Money Markets", pct: 70, risk: "medium" },
+      { name: "Unknown / unmapped Accountable buckets", pct: 30, risk: "high" },
+    ]);
+    expect(result.metadata).toMatchObject({
+      bucket: "asset-breakdown",
+      layout: "asset-breakdown",
+      unknownBucketCount: 1,
+      unknownExposurePct: 30,
+    });
+    expect(result.warnings?.[0]).toMatchObject({
+      code: "unmapped-bucket",
+      effect: "degraded",
+    });
   });
 });
 

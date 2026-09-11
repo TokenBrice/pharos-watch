@@ -8,8 +8,14 @@
       "coinId": "usyc-hashnote",
       "assetClass": "fund-share",
       "issuerOrObligor": "Hashnote International Short Duration Yield Fund Ltd.",
-      "riskFactors": ["counterparty", "liquidity", "custody", "smart-contract"],
-      "liquidityHorizon": "one-day"
+      "riskFactors": [
+        "counterparty",
+        "liquidity",
+        "custody",
+        "smart-contract"
+      ],
+      "liquidityHorizon": "one-day",
+      "sourceKey": "evm-branch-balances:ethereum:0x136471a34f6ef19fe571effc1ca711fdb8e49f2b"
     }
   ],
   "reserveReview": {

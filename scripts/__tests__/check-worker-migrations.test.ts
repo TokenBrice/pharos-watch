@@ -17,6 +17,38 @@ import {
   validateSchemaObjectManifest,
 } from "../ci/check-worker-migrations.ts";
 
+const manifestText = `
+## Individual Migrations (current active files)
+
+| Sequence | Filename | Description |
+| --- | --- | --- |
+| 0072 | \`0072_telegram_launch_alerts.sql\` | Add launch alerts |
+| 0073 | \`0073_price_cache_provenance.sql\` | Add provenance |
+
+## Retired Individual Migrations
+
+| Sequence | Former Filename | Retirement Note |
+| --- | --- | --- |
+| 0086 | \`0086_treasury_stable_exposure_history.sql\` | Retired |
+
+## Known Anomalies
+`;
+
+const rows = [
+  {
+    type: "table",
+    name: "example",
+    tblName: "example",
+    sql: "CREATE TABLE example (id INTEGER PRIMARY KEY, value TEXT)",
+  },
+  {
+    type: "index",
+    name: "idx_example_value",
+    tblName: "example",
+    sql: "CREATE INDEX idx_example_value ON example(value)",
+  },
+];
+
 describe("parseRolloutSafetyPolicy", () => {
   it("reads the rollout-safety cutoff and required header from the manifest text", () => {
     const policy = parseRolloutSafetyPolicy(`
@@ -34,23 +66,6 @@ describe("parseRolloutSafetyPolicy", () => {
 });
 
 describe("parseManifestMigrationRows", () => {
-  const manifestText = `
-## Individual Migrations (current active files)
-
-| Sequence | Filename | Description |
-| --- | --- | --- |
-| 0072 | \`0072_telegram_launch_alerts.sql\` | Add launch alerts |
-| 0073 | \`0073_price_cache_provenance.sql\` | Add provenance |
-
-## Retired Individual Migrations
-
-| Sequence | Former Filename | Retirement Note |
-| --- | --- | --- |
-| 0086 | \`0086_treasury_stable_exposure_history.sql\` | Retired |
-
-## Known Anomalies
-`;
-
   it("reads migration table rows from a bounded manifest section", () => {
     expect(
       parseManifestMigrationRows(manifestText, {
@@ -65,23 +80,6 @@ describe("parseManifestMigrationRows", () => {
 });
 
 describe("validateManifestMigrationParity", () => {
-  const manifestText = `
-## Individual Migrations (current active files)
-
-| Sequence | Filename | Description |
-| --- | --- | --- |
-| 0072 | \`0072_telegram_launch_alerts.sql\` | Add launch alerts |
-| 0073 | \`0073_price_cache_provenance.sql\` | Add provenance |
-
-## Retired Individual Migrations
-
-| Sequence | Former Filename | Retirement Note |
-| --- | --- | --- |
-| 0086 | \`0086_treasury_stable_exposure_history.sql\` | Retired |
-
-## Known Anomalies
-`;
-
   it("rejects squashed manifest rows whose files are still checked in", () => {
     const squashedManifest = `
 ## Individual Migrations (current active files)
@@ -156,6 +154,52 @@ None. The next migration starts at sequence 0228.
       ),
     ).toThrow("retired manifest rows still have checked-in migration files");
   });
+
+  it("requires the baseline independently of post-baseline parity", () => {
+    expect(() => validateManifestMigrationParity(
+      ["0072_telegram_launch_alerts.sql", "0073_price_cache_provenance.sql"],
+      manifestText,
+    )).toThrow("must include 0000_baseline.sql");
+  });
+
+  it("rejects a duplicate active row even when the filename sets match", () => {
+    const duplicate = manifestText.replace(
+      "## Retired Individual Migrations",
+      "| 0072 | `0072_telegram_launch_alerts.sql` | Duplicate |\n\n## Retired Individual Migrations",
+    );
+    expect(() => validateManifestMigrationParity(
+      ["0000_baseline.sql", "0072_telegram_launch_alerts.sql", "0073_price_cache_provenance.sql"],
+      duplicate,
+    )).toThrow("duplicate active manifest rows: 0072_telegram_launch_alerts.sql");
+  });
+
+  it("rejects sequence mismatches independently in every manifest section", () => {
+    const withSquashed = manifestText.replace(
+      "## Retired Individual Migrations",
+      "## Squashed Individual Migrations\n\n| 0060 | `0060_old.sql` | Squashed |\n\n## Retired Individual Migrations",
+    );
+    const files = ["0000_baseline.sql", "0072_telegram_launch_alerts.sql", "0073_price_cache_provenance.sql"];
+    expect(validateManifestMigrationParity(files, withSquashed)).toEqual({
+      activeManifestCount: 2, retiredManifestCount: 1,
+    });
+    for (const [section, sequence, filename] of [
+      ["active", "0072", "0072_telegram_launch_alerts.sql"],
+      ["retired", "0086", "0086_treasury_stable_exposure_history.sql"],
+      ["squashed", "0060", "0060_old.sql"],
+    ]) {
+      expect(() => validateManifestMigrationParity(
+        files,
+        withSquashed.replace(`| ${sequence} |`, "| 0999 |"),
+      )).toThrow(`${section} manifest sequence/filename mismatches: 0999 -> ${filename}`);
+    }
+  });
+
+  it("identifies an active migration also listed as retired", () => {
+    expect(() => validateManifestMigrationParity(
+      ["0000_baseline.sql", "0072_telegram_launch_alerts.sql", "0073_price_cache_provenance.sql"],
+      manifestText.replace("## Known Anomalies", "| 0072 | `0072_telegram_launch_alerts.sql` | Retired |\n\n## Known Anomalies"),
+    )).toThrow("migration rows listed as both active and retired: 0072_telegram_launch_alerts.sql");
+  });
 });
 
 describe("validateDuplicatePrefixes", () => {
@@ -168,45 +212,23 @@ describe("validateDuplicatePrefixes", () => {
 
 describe("createSchemaFingerprint", () => {
   it("produces a deterministic digest from normalized schema rows", () => {
-    const rows = [
-      {
-        type: "index",
-        name: "idx_example_value",
-        tblName: "example",
-        sql: "CREATE INDEX idx_example_value\nON example(value)",
-      },
-      {
-        type: "table",
-        name: "example",
-        tblName: "example",
-        sql: "CREATE TABLE example (id INTEGER PRIMARY KEY, value TEXT)",
-      },
-    ];
-
     expect(createSchemaFingerprint(rows)).toEqual(createSchemaFingerprint([...rows].reverse()));
     expect(createSchemaFingerprint(rows)).toMatchObject({
       algorithm: "sha256",
       schemaRowCount: 2,
     });
+    expect(createSchemaFingerprint(rows.map((row) => ({
+      ...row,
+      sql: row.sql.replace(/\s+/g, "  \n "),
+    })))).toEqual(createSchemaFingerprint(rows));
+    expect(createSchemaFingerprint(rows.map((row) => ({
+      ...row,
+      sql: row.sql.replace("value TEXT", "value INTEGER"),
+    }))).value).not.toBe(createSchemaFingerprint(rows).value);
   });
 });
 
 describe("schema object manifest", () => {
-  const rows = [
-    {
-      type: "table",
-      name: "example",
-      tblName: "example",
-      sql: "CREATE TABLE example (id INTEGER PRIMARY KEY, value TEXT)",
-    },
-    {
-      type: "index",
-      name: "idx_example_value",
-      tblName: "example",
-      sql: "CREATE INDEX idx_example_value ON example(value)",
-    },
-  ];
-
   it("serializes replayed objects deterministically by type and name", () => {
     expect(createSchemaObjectManifest(rows)).toBe("index\tidx_example_value\ntable\texample\n");
   });
@@ -287,13 +309,18 @@ describe("validateRolloutSafetyAnnotation", () => {
     ).toThrow('only allow "backward-compatible" migrations');
   });
 
-  it("rejects destructive rename or drop statements for new backward-compatible migrations", () => {
+  it.each([
+    ["DROP TABLE old_table;", "DROP TABLE"],
+    ["ALTER TABLE example RENAME TO renamed;", "ALTER TABLE ... RENAME TO"],
+    ["ALTER TABLE example RENAME COLUMN old TO renamed;", "ALTER TABLE ... RENAME COLUMN"],
+    ["ALTER TABLE example DROP COLUMN old;", "ALTER TABLE ... DROP COLUMN"],
+  ])("rejects the independently destructive operation %s", (sql, operation) => {
     expect(() =>
       validateRolloutSafetyAnnotation(
         "0071_replace_table.sql",
-        "-- rollout-safety: backward-compatible\nDROP TABLE old_table;\nALTER TABLE new_table RENAME TO old_table;\n",
+        `-- rollout-safety: backward-compatible\n${sql}`,
       ),
-    ).toThrow("can break the still-live worker");
+    ).toThrow(operation);
   });
 
   it("rejects DROP INDEX in new migrations with the coordinated cleanup path", () => {

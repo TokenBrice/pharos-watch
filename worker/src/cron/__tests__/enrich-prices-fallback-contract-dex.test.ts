@@ -314,28 +314,31 @@ describe("enrichMissingPrices", () => {
     expect(assets[0].priceSource).toBe("coinmarketcap");
   });
 
-  it("does not enrich assets with 'wrong' geckoId via contract passes — falls through to CMC/DexScreener", async () => {
+  it("resolves an asset with a wrong geckoId through independent CMC identity", async () => {
     const assets: PeggedAsset[] = [
       makePeggedAsset({
         symbol: "TOK",
+        id: "test-token",
+        cmcSlug: "test-token",
         price: 0,
-        geckoId: "sometoken-wrong",
+        geckoId: "wrong",
       }),
     ];
 
-    // All APIs return empty — asset stays unpriced
-    fixtureMockFetch([
+    const fetchSpy = fixtureMockFetch([
       { match: "coins.llama.fi", body: { coins: {} } },
       { match: "dexscreener.com", body: { pairs: [] } },
+      { match: "pro-api.coinmarketcap.com", body: cmcCategory([
+        { slug: "test-token", symbol: "TOK", quote: { USD: cmcUsdQuote(1.0003) } },
+      ]) },
     ]);
 
-    const stats = await fixtureEnrichMissingPrices(assets);
+    const stats = await fixtureEnrichMissingPrices(assets, "test-cmc-key");
 
-    // "wrong" geckoIds have no contract address, so pass 1/1b skip them.
-    // Without CMC key or DexScreener match, asset stays missing.
-    expect(stats.pass1).toBe(0);
-    expect(stats.pass1b).toBe(0);
-    expect(stats.finalMissing).toBe(1);
+    expect(stats.passCmc).toBe(1);
+    expect(stats.finalMissing).toBe(0);
+    expect(assets[0]).toMatchObject({ price: 1.0003, priceSource: "coinmarketcap" });
+    expect(fetchSpy.getHistory().filter(({ url }) => new URL(url).searchParams.get("ids")?.split(",").includes("wrong"))).toEqual([]);
   });
 
   it("leaves assets unpriced when all APIs return empty data", async () => {

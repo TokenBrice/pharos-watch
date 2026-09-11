@@ -22,24 +22,6 @@ describe("computeModeledExitSizeUsd", () => {
   });
 });
 
-describe("isStrongLiveDirectRoute", () => {
-  it("requires direct live capacity, dynamic source mode, and immediate exercisability", () => {
-    const base = {
-      capacityConfidence: "live-direct",
-      capacityKind: "live-direct-bounded",
-      sourceMode: "dynamic",
-      accessModel: "permissionless-onchain",
-      settlementModel: "atomic",
-    } as const;
-
-    expect(isStrongLiveDirectRoute(base)).toBe(true);
-    expect(isStrongLiveDirectRoute({ ...base, capacityConfidence: "live-proxy" })).toBe(false);
-    expect(isStrongLiveDirectRoute({ ...base, sourceMode: "static" })).toBe(false);
-    expect(isStrongLiveDirectRoute({ ...base, accessModel: "issuer-api" })).toBe(false);
-    expect(isStrongLiveDirectRoute({ ...base, settlementModel: "days" })).toBe(false);
-  });
-});
-
 describe("computeCapacityScore", () => {
   it("returns null when both inputs are null", () => {
     const result = computeCapacityScore({ immediateCapacityUsd: null, immediateCapacityRatio: null });
@@ -48,17 +30,12 @@ describe("computeCapacityScore", () => {
     expect(result.absoluteCapacityScore).toBeNull();
   });
 
-  it("scores exact breakpoints for coverage ratio", () => {
-    // ratio=0 → 0, ratio=0.5 → 100
-    const zero = computeCapacityScore({ immediateCapacityUsd: null, immediateCapacityRatio: 0 });
-    expect(zero.coverageRatioScore).toBe(0);
-
-    const full = computeCapacityScore({ immediateCapacityUsd: null, immediateCapacityRatio: 0.5 });
-    expect(full.coverageRatioScore).toBe(100);
-
-    const quarter = computeCapacityScore({ immediateCapacityUsd: null, immediateCapacityRatio: 0.25 });
-    expect(quarter.coverageRatioScore).toBe(80);
-  });
+  it.each([[0, 0], [0.01, 20], [0.05, 40], [0.1, 60], [0.25, 80], [0.5, 100]])(
+    "scores coverage ratio %s as %s",
+    (immediateCapacityRatio, expected) => {
+      expect(computeCapacityScore({ immediateCapacityUsd: null, immediateCapacityRatio }).coverageRatioScore).toBe(expected);
+    },
+  );
 
   it("interpolates between breakpoints", () => {
     // ratio=0.075 → between 0.05(40) and 0.10(60), midpoint = 50
@@ -66,14 +43,12 @@ describe("computeCapacityScore", () => {
     expect(mid.coverageRatioScore).toBe(50);
   });
 
-  it("blends ratio (60%) and absolute (40%)", () => {
-    // ratio=0.5→100, usd=250M→100 → 100*0.6 + 100*0.4 = 100
-    const result = computeCapacityScore({ immediateCapacityUsd: 250_000_000, immediateCapacityRatio: 0.5 });
-    expect(result.score).toBe(100);
-
-    // ratio=0→0, usd=0→0 → 0
-    const low = computeCapacityScore({ immediateCapacityUsd: 0, immediateCapacityRatio: 0 });
-    expect(low.score).toBe(0);
+  it.each([
+    [250_000_000, 0, 40],
+    [0, 0.5, 60],
+    [1_000_000, 0.25, 64],
+  ])("blends USD %s and ratio %s into %s", (immediateCapacityUsd, immediateCapacityRatio, expected) => {
+    expect(computeCapacityScore({ immediateCapacityUsd, immediateCapacityRatio }).score).toBe(expected);
   });
 
   it("uses available score when only one dimension exists", () => {
@@ -107,29 +82,12 @@ describe("computeCapacityScore", () => {
     expect(inf.score).toBeNull();
   });
 
-  it("scores exact ratio breakpoints", () => {
-    const bp001 = computeCapacityScore({ immediateCapacityUsd: null, immediateCapacityRatio: 0.01 });
-    expect(bp001.coverageRatioScore).toBe(20);
-    const bp005 = computeCapacityScore({ immediateCapacityUsd: null, immediateCapacityRatio: 0.05 });
-    expect(bp005.coverageRatioScore).toBe(40);
-    const bp010 = computeCapacityScore({ immediateCapacityUsd: null, immediateCapacityRatio: 0.1 });
-    expect(bp010.coverageRatioScore).toBe(60);
-    const bp025 = computeCapacityScore({ immediateCapacityUsd: null, immediateCapacityRatio: 0.25 });
-    expect(bp025.coverageRatioScore).toBe(80);
-  });
-
-  it("scores exact USD breakpoints", () => {
-    const bp100k = computeCapacityScore({ immediateCapacityUsd: 100_000, immediateCapacityRatio: null });
-    expect(bp100k.absoluteCapacityScore).toBe(20);
-    const bp1m = computeCapacityScore({ immediateCapacityUsd: 1_000_000, immediateCapacityRatio: null });
-    expect(bp1m.absoluteCapacityScore).toBe(40);
-    const bp10m = computeCapacityScore({ immediateCapacityUsd: 10_000_000, immediateCapacityRatio: null });
-    expect(bp10m.absoluteCapacityScore).toBe(60);
-    const bp50m = computeCapacityScore({ immediateCapacityUsd: 50_000_000, immediateCapacityRatio: null });
-    expect(bp50m.absoluteCapacityScore).toBe(80);
-    const bp250m = computeCapacityScore({ immediateCapacityUsd: 250_000_000, immediateCapacityRatio: null });
-    expect(bp250m.absoluteCapacityScore).toBe(100);
-  });
+  it.each([[100_000, 20], [1_000_000, 40], [10_000_000, 60], [50_000_000, 80], [250_000_000, 100]])(
+    "scores absolute capacity %s as %s",
+    (immediateCapacityUsd, expected) => {
+      expect(computeCapacityScore({ immediateCapacityUsd, immediateCapacityRatio: null }).absoluteCapacityScore).toBe(expected);
+    },
+  );
 
   it("handles USD beyond top breakpoint without overflow", () => {
     const huge = computeCapacityScore({ immediateCapacityUsd: 1_000_000_000_000, immediateCapacityRatio: null });
@@ -167,7 +125,8 @@ describe("applyCapacityConstraintScoreEffects", () => {
       liveHolderEligibility: "whitelisted-primary",
     });
 
-    expect(result.score).toBeLessThan(80);
+    // 80 × .75 × .65 × .9 × .85 = 29.835, rounded only at the end.
+    expect(result.score).toBe(30);
     expect(result.capsApplied).toEqual([
       "settlement-delay-penalty",
       "queue-depth-penalty",
@@ -176,81 +135,51 @@ describe("applyCapacityConstraintScoreEffects", () => {
     ]);
   });
 
-  it("applies settlement-delay penalties only above each threshold", () => {
-    expect(
-      applyCapacityConstraintScoreEffects({
-        capacityScore: 100,
-        scoringCapacityUsd: 10_000_000,
-        settlementDelaySec: 3_600,
-      }),
-    ).toEqual({
-      score: 100,
-      capsApplied: [],
-    });
-    expect(
-      applyCapacityConstraintScoreEffects({
-        capacityScore: 100,
-        scoringCapacityUsd: 10_000_000,
-        settlementDelaySec: 3_601,
-      }),
-    ).toEqual({
-      score: 90,
-      capsApplied: ["settlement-delay-penalty"],
-    });
-    expect(
-      applyCapacityConstraintScoreEffects({
-        capacityScore: 100,
-        scoringCapacityUsd: 10_000_000,
-        settlementDelaySec: 86_401,
-      }),
-    ).toEqual({
-      score: 75,
-      capsApplied: ["settlement-delay-penalty"],
-    });
-    expect(
-      applyCapacityConstraintScoreEffects({
-        capacityScore: 100,
-        scoringCapacityUsd: 10_000_000,
-        settlementDelaySec: 604_801,
-      }),
-    ).toEqual({
-      score: 60,
-      capsApplied: ["settlement-delay-penalty"],
-    });
+  it.each([
+    [3_600, 100, []],
+    [3_601, 90, ["settlement-delay-penalty"]],
+    [86_401, 75, ["settlement-delay-penalty"]],
+    [604_801, 60, ["settlement-delay-penalty"]],
+  ])("applies delay %s at its band", (settlementDelaySec, score, capsApplied) => {
+    expect(applyCapacityConstraintScoreEffects({
+      capacityScore: 100, scoringCapacityUsd: 10_000_000, settlementDelaySec,
+    })).toEqual({ score, capsApplied });
   });
 
-  it("applies minimum-size penalties from the threshold upward", () => {
-    expect(
-      applyCapacityConstraintScoreEffects({
-        capacityScore: 100,
-        scoringCapacityUsd: 10_000_000,
-        minRedeemUsd: 9_999,
-      }),
-    ).toEqual({
-      score: 100,
-      capsApplied: [],
-    });
-    // Boundary values belong to their own band (unified at-or-above matching).
-    expect(
-      applyCapacityConstraintScoreEffects({
-        capacityScore: 100,
-        scoringCapacityUsd: 10_000_000,
-        minRedeemUsd: 10_000,
-      }),
-    ).toEqual({
-      score: 90,
-      capsApplied: ["minimum-size-penalty"],
-    });
-    expect(
-      applyCapacityConstraintScoreEffects({
-        capacityScore: 100,
-        scoringCapacityUsd: 10_000_000,
-        minRedeemUsd: 1_000_000,
-      }),
-    ).toEqual({
-      score: 75,
-      capsApplied: ["minimum-size-penalty"],
-    });
+  it.each([
+    [9_999, 100, []],
+    [10_000, 90, ["minimum-size-penalty"]],
+    [1_000_000, 75, ["minimum-size-penalty"]],
+  ])("applies minimum %s at its band", (minRedeemUsd, score, capsApplied) => {
+    expect(applyCapacityConstraintScoreEffects({
+      capacityScore: 100, scoringCapacityUsd: 10_000_000, minRedeemUsd,
+    })).toEqual({ score, capsApplied });
+  });
+
+  it("applies queue depth independently of other telemetry", () => {
+    expect(applyCapacityConstraintScoreEffects({
+      capacityScore: 80, scoringCapacityUsd: 10_000_000, queueDepthUsd: 12_000_000,
+    })).toEqual({ score: 52, capsApplied: ["queue-depth-penalty"] });
+  });
+
+  it("applies holder eligibility independently of other telemetry", () => {
+    expect(applyCapacityConstraintScoreEffects({
+      capacityScore: 80, scoringCapacityUsd: 10_000_000, liveHolderEligibility: "whitelisted-primary",
+    })).toEqual({ score: 68, capsApplied: ["live-holder-eligibility-penalty"] });
+  });
+
+  it.each([null, 0])("does not divide queue depth by capacity %s", (scoringCapacityUsd) => {
+    expect(applyCapacityConstraintScoreEffects({
+      capacityScore: 80, scoringCapacityUsd, queueDepthUsd: 12_000_000,
+    })).toEqual({ score: 80, capsApplied: [] });
+  });
+
+  it("preserves an unrated capacity under adverse telemetry", () => {
+    expect(applyCapacityConstraintScoreEffects({
+      capacityScore: null, scoringCapacityUsd: 10_000_000,
+      settlementDelaySec: 172_800, queueDepthUsd: 12_000_000,
+      minRedeemUsd: 100_000, liveHolderEligibility: "whitelisted-primary",
+    })).toEqual({ score: null, capsApplied: [] });
   });
 });
 
@@ -269,18 +198,20 @@ describe("computeRedemptionBackstopScore", () => {
     expect(result.capsApplied).toEqual([]);
   });
 
-  it("computes weighted score correctly", () => {
-    // All 100 → 100*0.20 + 100*0.15 + 100*0.15 + 100*0.25 + 100*0.15 + 100*0.10 = 100
-    const result = computeRedemptionBackstopScore({
+  it.each([
+    ["accessScore", 20],
+    ["settlementScore", 15],
+    ["executionCertaintyScore", 15],
+    ["capacityScore", 25],
+    ["outputAssetQualityScore", 15],
+    ["costScore", 10],
+  ] as const)("weights %s independently", (component, expected) => {
+    expect(computeRedemptionBackstopScore({
       routeFamily: "stablecoin-redeem",
-      accessScore: 100,
-      settlementScore: 100,
-      executionCertaintyScore: 100,
-      capacityScore: 100,
-      outputAssetQualityScore: 100,
-      costScore: 100,
-    });
-    expect(result.score).toBe(100);
+      accessScore: 0, settlementScore: 0, executionCertaintyScore: 0,
+      capacityScore: 0, outputAssetQualityScore: 0, costScore: 0,
+      [component]: 100,
+    })).toEqual({ score: expected, capsApplied: [] });
   });
 
   it("floors a measured zero-capacity route at zero", () => {
@@ -402,14 +333,14 @@ describe("computeRedemptionBackstopScore", () => {
   it("does not apply caps when score is below threshold", () => {
     const result = computeRedemptionBackstopScore({
       routeFamily: "queue-redeem",
-      accessScore: 20,
+      accessScore: 10,
       settlementScore: 20,
-      executionCertaintyScore: 20,
-      capacityScore: 20,
-      outputAssetQualityScore: 20,
-      costScore: 20,
+      executionCertaintyScore: 30,
+      capacityScore: 40,
+      outputAssetQualityScore: 50,
+      costScore: 60,
     });
-    expect(result.score).toBe(20);
+    expect(result.score).toBe(33);
     expect(result.capsApplied).toEqual([]);
   });
 
@@ -429,60 +360,30 @@ describe("computeRedemptionBackstopScore", () => {
     }
   });
 
-  it("queue-redeem cap is NOT applied when weighted score is exactly 70", () => {
-    const result = computeRedemptionBackstopScore({
+  it.each([
+    ["queue-redeem", 70, 70, []],
+    ["queue-redeem", 71, 70, ["queue-route-cap"]],
+    ["offchain-issuer", 65, 65, []],
+    ["offchain-issuer", 66, 65, ["offchain-route-cap"]],
+  ] as const)("caps %s at input %s", (routeFamily, input, score, capsApplied) => {
+    expect(computeRedemptionBackstopScore({
+      routeFamily,
+      accessScore: input, settlementScore: input, executionCertaintyScore: input,
+      capacityScore: input, outputAssetQualityScore: input, costScore: input,
+    })).toEqual({ score, capsApplied });
+  });
+
+  it.each([
+    [50, undefined, 50, ["queue-route-cap", "config-cap"]],
+    [90, undefined, 70, ["queue-route-cap"]],
+    [50, 0, 0, ["zero-executable-capacity"]],
+  ])("resolves config cap %s with executable capacity %s", (totalScoreCap, executableCapacityUsd, score, capsApplied) => {
+    expect(computeRedemptionBackstopScore({
       routeFamily: "queue-redeem",
-      accessScore: 70,
-      settlementScore: 70,
-      executionCertaintyScore: 70,
-      capacityScore: 70,
-      outputAssetQualityScore: 70,
-      costScore: 70,
-    });
-    expect(result.score).toBe(70);
-    expect(result.capsApplied).toEqual([]);
-  });
-
-  it("queue-redeem cap is applied when weighted score is 71", () => {
-    const result = computeRedemptionBackstopScore({
-      routeFamily: "queue-redeem",
-      accessScore: 71,
-      settlementScore: 71,
-      executionCertaintyScore: 71,
-      capacityScore: 71,
-      outputAssetQualityScore: 71,
-      costScore: 71,
-    });
-    expect(result.score).toBe(70);
-    expect(result.capsApplied).toContain("queue-route-cap");
-  });
-
-  it("offchain-issuer cap is NOT applied when weighted score is exactly 65", () => {
-    const result = computeRedemptionBackstopScore({
-      routeFamily: "offchain-issuer",
-      accessScore: 65,
-      settlementScore: 65,
-      executionCertaintyScore: 65,
-      capacityScore: 65,
-      outputAssetQualityScore: 65,
-      costScore: 65,
-    });
-    expect(result.score).toBe(65);
-    expect(result.capsApplied).toEqual([]);
-  });
-
-  it("offchain-issuer cap is applied when weighted score is 66", () => {
-    const result = computeRedemptionBackstopScore({
-      routeFamily: "offchain-issuer",
-      accessScore: 66,
-      settlementScore: 66,
-      executionCertaintyScore: 66,
-      capacityScore: 66,
-      outputAssetQualityScore: 66,
-      costScore: 66,
-    });
-    expect(result.score).toBe(65);
-    expect(result.capsApplied).toContain("offchain-route-cap");
+      accessScore: 100, settlementScore: 100, executionCertaintyScore: 100,
+      capacityScore: 100, outputAssetQualityScore: 100, costScore: 100,
+      totalScoreCap, executableCapacityUsd,
+    })).toEqual({ score, capsApplied });
   });
 });
 
@@ -507,67 +408,23 @@ describe("isStrongLiveDirectRoute", () => {
     expect(isStrongLiveDirectRoute({ ...strongInput, capacityKind: "live-direct-bounded" })).toBe(true);
   });
 
-  it("returns false when the live capacity kind is missing", () => {
-    expect(
-      isStrongLiveDirectRoute({
-        capacityConfidence: "live-direct",
-        sourceMode: "dynamic",
-        accessModel: "permissionless-onchain",
-        settlementModel: "atomic",
-      }),
-    ).toBe(false);
-  });
-
-  it("returns false when the live capacity kind is proxy or queue evidence", () => {
-    expect(isStrongLiveDirectRoute({ ...strongInput, capacityKind: "live-proxy-validated" })).toBe(false);
-    expect(isStrongLiveDirectRoute({ ...strongInput, capacityKind: "live-queue" })).toBe(false);
-  });
-
-  it("returns false for live-proxy capacity confidence", () => {
-    expect(isStrongLiveDirectRoute({ ...strongInput, capacityConfidence: "live-proxy" })).toBe(false);
-  });
-
-  it("returns false for documented-bound capacity confidence", () => {
-    expect(isStrongLiveDirectRoute({ ...strongInput, capacityConfidence: "documented-bound" })).toBe(false);
-  });
-
-  it("returns false for heuristic capacity confidence", () => {
-    expect(isStrongLiveDirectRoute({ ...strongInput, capacityConfidence: "heuristic" })).toBe(false);
-  });
-
-  it("returns false for dynamic legacy capacity confidence", () => {
-    expect(isStrongLiveDirectRoute({ ...strongInput, capacityConfidence: "dynamic" })).toBe(false);
-  });
-
-  it("returns false for estimated source mode", () => {
-    expect(isStrongLiveDirectRoute({ ...strongInput, sourceMode: "estimated" })).toBe(false);
-  });
-
-  it("returns false for static source mode", () => {
-    expect(isStrongLiveDirectRoute({ ...strongInput, sourceMode: "static" })).toBe(false);
-  });
-
-  it("returns false for whitelisted-onchain access", () => {
-    expect(isStrongLiveDirectRoute({ ...strongInput, accessModel: "whitelisted-onchain" })).toBe(false);
-  });
-
-  it("returns false for issuer-api access", () => {
-    expect(isStrongLiveDirectRoute({ ...strongInput, accessModel: "issuer-api" })).toBe(false);
-  });
-
-  it("returns false for manual access", () => {
-    expect(isStrongLiveDirectRoute({ ...strongInput, accessModel: "manual" })).toBe(false);
-  });
-
-  it("returns false for same-day settlement", () => {
-    expect(isStrongLiveDirectRoute({ ...strongInput, settlementModel: "same-day" })).toBe(false);
-  });
-
-  it("returns false for queued settlement", () => {
-    expect(isStrongLiveDirectRoute({ ...strongInput, settlementModel: "queued" })).toBe(false);
-  });
-
-  it("returns false for days settlement", () => {
-    expect(isStrongLiveDirectRoute({ ...strongInput, settlementModel: "days" })).toBe(false);
+  it.each([
+    { capacityKind: undefined },
+    { capacityKind: "live-proxy-validated" },
+    { capacityKind: "live-queue" },
+    { capacityConfidence: "live-proxy" },
+    { capacityConfidence: "documented-bound" },
+    { capacityConfidence: "heuristic" },
+    { capacityConfidence: "dynamic" },
+    { sourceMode: "estimated" },
+    { sourceMode: "static" },
+    { accessModel: "whitelisted-onchain" },
+    { accessModel: "issuer-api" },
+    { accessModel: "manual" },
+    { settlementModel: "same-day" },
+    { settlementModel: "queued" },
+    { settlementModel: "days" },
+  ] as const)("rejects independently adverse route evidence %j", (override) => {
+    expect(isStrongLiveDirectRoute({ ...strongInput, ...override })).toBe(false);
   });
 });

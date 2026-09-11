@@ -7,7 +7,6 @@ import type { LiveReserveWarning, LiveReservesConfig } from "@shared/types/live-
 import {
   fetchEvmBlockHeader,
   fetchEvmBlockHeaderAtTag,
-  fetchEvmCodeAtBlock,
   fetchEvmMulticall3Aggregate3AtBlock,
   fetchEvmStorageAtBlock,
   type EvmBlockHeader,
@@ -45,7 +44,14 @@ const DEFAULTS = {
   maxWithdrawDivergencePct: 1,
   rpcTimeoutMs: 3_000,
   attemptBudgetMs: 19_000,
-  maxAlignmentProbeCount: 20,
+} as const;
+
+// Reviewed average block times (Ethereum 12 s, Gnosis 5 s) used to estimate the
+// aligned historical block when the finalized anchors skew. The estimate is
+// verified on-chain and stepped once, so jitter is corrected rather than trusted.
+const AVG_BLOCK_TIME_SEC = {
+  [ETHEREUM_CHAIN]: 12,
+  [GNOSIS_CHAIN]: 5,
 } as const;
 
 const SELECTORS = {
@@ -218,8 +224,8 @@ async function readExplicitBlock(
 
 /**
  * Finalized tags do not represent a common cross-chain instant. When the
- * finalized anchors differ materially, walk backward on the newer chain and
- * binary-search an explicit block at or before the older anchor's timestamp.
+ * finalized anchors differ materially, estimate the aligned block on the newer
+ * chain from the reviewed average block time, then verify and step once.
  * Every candidate is at or below the finalized anchor, so the aligned block
  * remains finality-bounded without using a latest-state read for balances.
  */
@@ -232,58 +238,46 @@ async function alignFinalizedBlocks(
   ctx: AdapterContext | undefined,
   deadlineMs: number,
 ): Promise<[XdaiBridgeBlock, XdaiBridgeBlock]> {
-  if (Math.abs(ethereumAnchor.timestamp - gnosisAnchor.timestamp) <= maxCrossChainSkewSec) {
+  const skewSec = ethereumAnchor.timestamp - gnosisAnchor.timestamp;
+  if (Math.abs(skewSec) <= maxCrossChainSkewSec) {
     return [ethereumAnchor, gnosisAnchor];
   }
 
-  const ethereumIsNewer = ethereumAnchor.timestamp > gnosisAnchor.timestamp;
+  const ethereumIsNewer = skewSec > 0;
   const newerChain = ethereumIsNewer ? ETHEREUM_CHAIN : GNOSIS_CHAIN;
   const newerAnchor = ethereumIsNewer ? ethereumAnchor : gnosisAnchor;
   const olderTimestamp = ethereumIsNewer ? gnosisAnchor.timestamp : ethereumAnchor.timestamp;
-  let high = newerAnchor;
-  let low: XdaiBridgeBlock | null = null;
-  let step = 1;
+  const blockTimeSec = AVG_BLOCK_TIME_SEC[newerChain];
+  const blocksBehind = Math.max(1, Math.ceil(Math.abs(skewSec) / blockTimeSec));
 
-  for (let probe = 0; probe < DEFAULTS.maxAlignmentProbeCount; probe += 1) {
-    const candidateNumber = Math.max(0, newerAnchor.number - step);
-    const candidate = await readExplicitBlock(
+  let candidate = await readExplicitBlock(
+    newerChain,
+    newerAnchor.number - blocksBehind,
+    newerAnchor.finalityTag,
+    params,
+    signal,
+    ctx,
+    deadlineMs,
+  );
+  if (candidate.timestamp > olderTimestamp) {
+    // Verify-and-step once: block-time jitter can leave the estimate newer than
+    // the older anchor, so step back past the measured residual plus a margin.
+    const residualBlocks = Math.ceil((candidate.timestamp - olderTimestamp) / blockTimeSec) + 1;
+    candidate = await readExplicitBlock(
       newerChain,
-      candidateNumber,
+      Math.max(0, candidate.number - residualBlocks),
       newerAnchor.finalityTag,
       params,
       signal,
       ctx,
       deadlineMs,
     );
-    if (candidate.timestamp <= olderTimestamp) {
-      low = candidate;
-      break;
+    if (candidate.timestamp > olderTimestamp) {
+      throw new Error(`${ADAPTER_KEY}: could not align finalized blocks within the estimated window`);
     }
-    high = candidate;
-    if (candidateNumber === 0) break;
-    step *= 2;
   }
 
-  if (low == null) {
-    throw new Error(`${ADAPTER_KEY}: could not align finalized blocks within the bounded search window`);
-  }
-
-  while (low.number + 1 < high.number) {
-    const middleNumber = Math.floor((low.number + high.number) / 2);
-    const middle = await readExplicitBlock(
-      newerChain,
-      middleNumber,
-      newerAnchor.finalityTag,
-      params,
-      signal,
-      ctx,
-      deadlineMs,
-    );
-    if (middle.timestamp <= olderTimestamp) low = middle;
-    else high = middle;
-  }
-
-  return ethereumIsNewer ? [low, gnosisAnchor] : [ethereumAnchor, low];
+  return ethereumIsNewer ? [candidate, gnosisAnchor] : [ethereumAnchor, candidate];
 }
 
 function pinnedMulticallReader(
@@ -310,31 +304,6 @@ function pinnedMulticallReader(
     ),
     { signal },
   );
-}
-
-async function requireCode(
-  chain: string,
-  address: string,
-  block: XdaiBridgeBlock,
-  params: XdaiBridgeParams,
-  signal: AbortSignal,
-  ctx: AdapterContext | undefined,
-  deadlineMs: number,
-): Promise<void> {
-  const code = await runAdapterIo(
-    ctx,
-    `${ADAPTER_KEY}:${chain}:code:${address}`,
-    () => fetchEvmCodeAtBlock(
-      chain,
-      address,
-      block.number,
-      addressRpcOptions(chain, params, signal, ctx, deadlineMs),
-    ),
-    { signal },
-  );
-  if (code == null || code === "0x" || !/^0x[0-9a-fA-F]+$/.test(code)) {
-    throw new Error(`${ADAPTER_KEY}: ${chain} ${address} has no readable contract code`);
-  }
 }
 
 async function readForeignBridgeOtherSide(
@@ -645,21 +614,6 @@ export async function fetchXdaiBridgeReserves(
       ETHEREUM_CHAIN, block, params, signal, ctx, deadlineMs,
     )(calls),
   });
-
-  await Promise.all([
-    ...[
-      params.foreignBridgeAddress,
-      params.usdsAddress,
-      params.susdsAddress,
-      params.daiAddress,
-      params.sdaiAddress,
-    ].map((address) => requireCode(ETHEREUM_CHAIN, address, ethereumBlock, params, signal, ctx, deadlineMs)),
-    ...[
-      params.homeBridgeAddress,
-      params.blockRewardAddress,
-      params.usdsDepositContractAddress,
-    ].map((address) => requireCode(GNOSIS_CHAIN, address, gnosisBlock, params, signal, ctx, deadlineMs)),
-  ]);
 
   const minted = gnosis.values.mintedTotallyByBridge;
   const burnt = gnosis.values.totalBurntCoins;

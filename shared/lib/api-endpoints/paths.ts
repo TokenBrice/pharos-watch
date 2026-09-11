@@ -87,6 +87,8 @@ export const API_PATHS = {
     buildQueryPath("/api/safety-score-history-v2", { stablecoin: stablecoinId, days }),
   stabilityIndex: (detail = false) => buildQueryPath("/api/stability-index", detail ? { detail: true } : undefined),
   reportCardsV9: () => "/api/report-cards/v9",
+  safetyGrades: () => "/api/safety-grades",
+  donorKeyClaims: () => "/api/donor-key-claims",
   depegResolver: () => "/api/depeg-resolver",
   depegResolverReview: () => "/api/depeg-resolver-review",
   redemptionBackstops: () => "/api/redemption-backstops",
@@ -126,6 +128,9 @@ export const API_PATHS = {
   status: () => "/api/status",
   statusHistoryBase: () => "/api/status-history",
   statusHistory: (params?: { limit?: number }) => buildQueryPath("/api/status-history", { limit: params?.limit }),
+  reserveAttemptHistoryBase: () => "/api/reserve-attempt-history",
+  reserveAttemptHistory: (params?: { coin?: string; limit?: number }) =>
+    buildQueryPath("/api/reserve-attempt-history", { coin: params?.coin, limit: params?.limit }),
   requestSourceStatsBase: () => "/api/request-source-stats",
   requestSourceStats: (params?: { hours?: number; bucketSec?: number; routeLimit?: number; apiKeyLimit?: number }) =>
     buildQueryPath("/api/request-source-stats", {

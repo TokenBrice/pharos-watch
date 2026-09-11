@@ -2,6 +2,7 @@
   "id": "safo-spiko-usd",
   "reserves": [
     {
+      "sourceKey": "spiko-api:safo:total-assets",
       "name": "Fully collateralized overnight total-return swap exposure",
       "pct": 100,
       "risk": "medium",

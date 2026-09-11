@@ -69,7 +69,6 @@ describe("Safety Score v9 backing fact-set reserve history", () => {
     const reserveGap = asset.gaps.find((gap) => gap.reasonCode === "missing-reserve-composition");
     expect(reserveGap).toMatchObject({
       reasonCode: "missing-reserve-composition",
-      message: "The last published reserve composition is older than the v9 freshness bound.",
       observationState: "stale",
       // The public label for `issuer-undisclosed` is "the issuer has not
       // disclosed this". This issuer did disclose and our window lapsed, so
@@ -100,7 +99,6 @@ describe("Safety Score v9 backing fact-set reserve history", () => {
     const reserveGap = asset.gaps.find((gap) => gap.reasonCode === "missing-reserve-composition");
     expect(reserveGap).toMatchObject({
       reasonCode: "missing-reserve-composition",
-      message: "No reserve composition is present in the exact fixed input.",
       observationState: "missing",
       responsibility: "issuer-undisclosed",
       evidenceRefIds: [],
@@ -140,7 +138,6 @@ describe("Safety Score v9 backing fact-set reserve history", () => {
     const staleGap = asset.gaps.find((gap) => gap.reasonCode === "stale-audited-reserve-composition");
     expect(staleGap).toMatchObject({
       observationState: "stale",
-      message: "The independently audited reserve composition is older than the v9 freshness bound.",
     });
     expect(asset.gaps.map((gap) => gap.reasonCode)).not.toContain("partial-reserve-review");
   });

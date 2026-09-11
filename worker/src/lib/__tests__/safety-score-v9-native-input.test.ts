@@ -3,6 +3,9 @@ import { SAFETY_SCORE_METHODOLOGY_VERSION } from "@shared/lib/methodology-versio
 import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import { computeRedemptionPayloadFingerprint } from "@shared/lib/report-cards-fixed-input-identity";
 import { buildSafetyScoreV9InputIdentity } from "@shared/lib/safety-score-v9-input-identity";
+import { computePegScore } from "@shared/lib/peg-score";
+import { buildSafetyScoreV9PegProvenanceSummary, projectSafetyScoreV9PegScoreResult } from "../safety-score-v9/peg-provenance";
+import { pegSummary } from "./safety-score-v9-peg-provenance.test-support";
 import {
   buildNativeV9InputCacheEntry,
   computeNativeDexLiquidityPayloadFingerprint,
@@ -87,6 +90,69 @@ function nativeInput(overrides: Record<string, unknown> = {}): NativeSafetyScore
 }
 
 describe("native Safety Score V9 input", () => {
+  it("rejects independently mismatched writer identities", async () => {
+    const input = nativeInput();
+    const identity = buildSafetyScoreV9InputIdentity({
+      methodologyVersion: input.methodologyVersion,
+      baseInputGenerationId: input.baseInputGenerationId,
+      publicationGenerationId: input.sourceGeneration,
+    });
+    for (const change of [
+      { methodologyVersion: "9.0" },
+      { baseInputGenerationId: `report-cards-input:v1:${"f".repeat(64)}` },
+      { publicationGenerationId: "another-publication" },
+    ]) {
+      const mismatched = buildSafetyScoreV9InputIdentity({ ...identity, ...change });
+      await expect(buildNativeV9InputCacheEntry(input, mismatched)).rejects.toThrow(/does not match its capture identity/);
+    }
+  });
+
+  it("rejects reader envelope generation and identity disagreement", async () => {
+    const input = nativeInput();
+    const identity = buildSafetyScoreV9InputIdentity({
+      methodologyVersion: input.methodologyVersion,
+      baseInputGenerationId: input.baseInputGenerationId,
+      publicationGenerationId: input.sourceGeneration,
+    });
+    const envelope = JSON.parse((await buildNativeV9InputCacheEntry(input, identity)).value);
+    await expect(parseNativeV9InputCacheArtifact(JSON.stringify({
+      ...envelope, sourceGeneration: "another-publication",
+    }))).rejects.toThrow(/generation mismatch/);
+    await expect(parseNativeV9InputCacheArtifact(JSON.stringify({
+      ...envelope,
+      safetyScoreIdentity: buildSafetyScoreV9InputIdentity({ ...identity, baseInputGenerationId: `report-cards-input:v1:${"f".repeat(64)}` }),
+    }))).rejects.toThrow(/identity mismatch/);
+  });
+
+  it("stores only the base capture when nonempty provenance enrichment is supplied", async () => {
+    const input = nativeInput({
+      pegDataById: {
+        "usdc-circle": {
+          ...pegSummary([], CLOCK_SEC, CLOCK_SEC - 86_400, "6.098"),
+          id: "usdc-circle", symbol: "USDC", name: "USD Coin",
+        },
+      },
+    });
+    const identity = buildSafetyScoreV9InputIdentity({
+      methodologyVersion: input.methodologyVersion,
+      baseInputGenerationId: input.baseInputGenerationId,
+      publicationGenerationId: input.sourceGeneration,
+    });
+    const enriched = {
+      ...input,
+      pegProvenanceById: {
+        "usdc-circle": buildSafetyScoreV9PegProvenanceSummary({
+          assetId: "usdc-circle", events: [], trackingStartSec: CLOCK_SEC - 86_400,
+          clockSec: CLOCK_SEC,
+          expectedLegacyInclusive: projectSafetyScoreV9PegScoreResult(computePegScore([], CLOCK_SEC - 86_400, CLOCK_SEC)),
+        }),
+      },
+    };
+    const stored = await buildNativeV9InputCacheEntry(enriched, identity);
+    expect(stored.value).toBe((await buildNativeV9InputCacheEntry(input, identity)).value);
+    await expect(parseNativeV9InputCacheValue(stored.value)).resolves.toEqual(input);
+  });
+
   it("round-trips through the v2 envelope with a verified payload checksum", async () => {
     const input = nativeInput();
     const identity = buildSafetyScoreV9InputIdentity({
@@ -446,6 +512,26 @@ describe("native Safety Score V9 input", () => {
       );
     });
 
+    it("accepts the producer at the scoring clock and rejects negative schema ages", () => {
+      const dexLiqMap = { "usdc-circle": { updatedAt: CLOCK_SEC }, "usdt-tether": { updatedAt: CLOCK_SEC } };
+      const draft = nativeDraft({
+        dexLiqMap,
+        dexGenerationId: `dex-liquidity-${CLOCK_SEC}`,
+        dexPayloadFingerprint: computeNativeDexLiquidityPayloadFingerprint(dexLiqMap, `dex-liquidity-${CLOCK_SEC}`),
+        inputFreshness: {
+          dexLiquidity: { updatedAt: CLOCK_SEC, ageSeconds: 0, stale: false },
+          redemptionBackstops: { updatedAt: null, ageSeconds: null, stale: true },
+        },
+      });
+      expect(normalizeNativeV9Input(draft).inputFreshness.dexLiquidity.ageSeconds).toBe(0);
+      expect(() => normalizeNativeV9Input(nativeDraft({
+        inputFreshness: {
+          dexLiquidity: { updatedAt: CLOCK_SEC + 1, ageSeconds: -1, stale: false },
+          redemptionBackstops: { updatedAt: null, ageSeconds: null, stale: true },
+        },
+      }))).toThrow(/Malformed native V9 input at inputFreshness.dexLiquidity.ageSeconds/);
+    });
+
     it("rejects a producer timestamp later than the scoring clock", () => {
       const updatedAt = CLOCK_SEC + 60;
       const dexLiqMap = {
@@ -462,12 +548,12 @@ describe("native Safety Score V9 input", () => {
               `dex-liquidity-${updatedAt}`,
             ),
             inputFreshness: {
-              dexLiquidity: { updatedAt, ageSeconds: CLOCK_SEC - updatedAt, stale: false },
+              dexLiquidity: { updatedAt, ageSeconds: 0, stale: false },
               redemptionBackstops: { updatedAt: null, ageSeconds: null, stale: true },
             },
           }),
         ),
-      ).toThrow(/Malformed native V9 input|later than scoring clock/);
+      ).toThrow(/later than scoring clock/);
     });
 
     it("rejects a lane age that does not match the clock-derived age", () => {
@@ -484,6 +570,15 @@ describe("native Safety Score V9 input", () => {
     });
 
     it("rejects supply attribution that targets an inactive asset", () => {
+      const attribution = {
+        model: "canonical-lock-mint-partition-v1",
+        observedAtSec: CLOCK_SEC,
+        currentSupplyUsdByChain: { ethereum: 1, arbitrum: 1 },
+      };
+      expect(normalizeNativeV9Input(nativeDraft({
+        safetyScoreV9SupplyAttributionById: { "usdc-circle": attribution },
+        aggregateCirculatingById: { "usdc-circle": { circulating: { peggedUSD: 2 }, observedAtSec: CLOCK_SEC } },
+      })).safetyScoreV9SupplyAttributionById["usdc-circle"]).toEqual(attribution);
       expect(() =>
         normalizeNativeV9Input(
           nativeDraft({
@@ -491,12 +586,12 @@ describe("native Safety Score V9 input", () => {
               "not-tracked": {
                 model: "canonical-lock-mint-partition-v1",
                 observedAtSec: CLOCK_SEC,
-                currentSupplyUsdByChain: { ethereum: 1 },
+                currentSupplyUsdByChain: { ethereum: 1, arbitrum: 1 },
               },
             },
           }),
         ),
-      ).toThrow(/Malformed native V9 input|targets inactive asset/);
+      ).toThrow(/targets inactive asset/);
     });
   });
 });

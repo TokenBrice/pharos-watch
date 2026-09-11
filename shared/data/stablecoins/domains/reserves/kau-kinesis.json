@@ -2,6 +2,7 @@
   "id": "kau-kinesis",
   "reserves": [
     {
+      "sourceKey": "chainlink-por:feed:0xab5dd7dd7669072a1ef27c0ba241120a27a1aec3",
       "name": "Kinesis-native KAU held in a segregated reserve wallet by KMS Labs S.A.",
       "pct": 100,
       "risk": "medium",
@@ -19,8 +20,8 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-09-04",
-    "reviewer": "PoR verification sweep 2026-08 (lockstep coherent refresh: report and composition review updated together from the same artefact)",
+    "reviewedAt": "2026-09-11",
+    "reviewer": "PoR verification sweep 2026-08 (lockstep coherent refresh: report and composition review updated together from the same artefact); coverage-scope review 2026-09-11",
     "confidence": "verified",
     "sources": [
       {
@@ -30,9 +31,17 @@
       {
         "label": "KMS Labs terms, section 8 reserve composition",
         "url": "https://kmslabs.money/kms-labs-tcs/"
+      },
+      {
+        "label": "Kinesis April 2026 Bureau Veritas / Inspectorate audit (issuer cover letter: 2,567,133.466 g fine gold against 2,565,133.465 KAU in circulation at ledger 43137668, 2026-04-20)",
+        "url": "https://kinesis.money/audit-april-2026/"
+      },
+      {
+        "label": "Kinesis KAU chain coin-in-circulation record at ledger 45450621 (3,987,303.5292 KAU, 2026-09-10)",
+        "url": "https://kau-mainnet.kinesisgroup.io/coin_in_circulation/ledger/45450621"
       }
     ],
-    "rationale": "KMS Labs states each ERC-20 KAU is backed 1:1 by Kinesis-native KAU held in segregated wallets maintained by KMS Labs; native KAU's allocated physical-gold backing is a second-layer asset and not the ERC-20 token's direct reserve.",
+    "rationale": "KMS Labs states each ERC-20 KAU is backed 1:1 by Kinesis-native KAU held in segregated wallets maintained by KMS Labs; native KAU's allocated physical-gold backing is a second-layer asset and not the ERC-20 token's direct reserve. Coverage scope measured 2026-09-11: the Chainlink PoR feed's answer (2,567,133.466 with 18 decimals) is the audited Kinesis Cayman fine-gold balance, and the issuer reconciles that balance against Kinesis-native KAU circulation (2,565,133.465 at audit ledger 43137668 on 2026-04-20; 3,987,303.5292 at ledger 45450621 on 2026-09-10), not against any single-chain token supply. The only registry-readable KAU deployment is the Ethereum ERC-20 wrapper 0x14dab79fd7b7b3f748d434812fd6a9aac460ea52 (1,640,000 totalSupply at 2026-09-11, 88.96% of it in one address), which the bridge review and mint-authority review both classify as a KMS Labs representation of native KAU. That wrapper supply is therefore a subset of the native-chain liability the feed covers, so comparing the two produced the artefactual 156.53% over-coverage; the live config declares `incompleteSupplyScope` and publishes no ratio.",
     "compositionBasis": "KMS Labs ERC-20 KAU backing and reserve-wallet disclosure, including terms section 8",
     "compositionAsOf": "2026-09-04",
     "scope": "full-composition",
@@ -44,7 +53,7 @@
         "reserveName": "Kinesis-native KAU held in a segregated reserve wallet by KMS Labs S.A.",
         "pct": 100,
         "disposition": "untracked-exogenous-asset",
-        "rationale": "Kinesis-native KAU is an external reserve token rather than a tracked stablecoin dependency; its allocated physical-gold backing is the second-layer native-KAU asset."
+        "rationale": "Kinesis-native KAU is an external reserve token rather than a tracked stablecoin dependency; its allocated physical-gold backing is the second-layer native-KAU asset. The curated slice keeps its stable chainlink-por feed sourceKey."
       }
     ]
   },

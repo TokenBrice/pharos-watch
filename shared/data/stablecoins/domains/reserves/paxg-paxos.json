@@ -2,6 +2,7 @@
   "id": "paxg-paxos",
   "reserves": [
     {
+      "sourceKey": "paxos-independent-assurance:paxg:allocated-gold",
       "name": "Physical gold bars (London Good Delivery, LBMA-accredited London vaults)",
       "pct": 100,
       "risk": "very-low",
@@ -18,13 +19,13 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-22",
-    "reviewer": "GPT SOL-BIND wave6",
+    "reviewedAt": "2026-09-07",
+    "reviewer": "Pharos reserve research",
     "confidence": "verified",
     "sources": [
       {
-        "label": "KPMG PAXG Redemption Assets Report - May 29, 2026",
-        "url": "https://framerusercontent.com/assets/V9r8HlI6Q7XkJUWPk6VjXu844.pdf"
+        "label": "KPMG PAXG Redemption Assets Report - July 31, 2026",
+        "url": "https://framerusercontent.com/assets/mZxm7J7vQTwbTmOGENYENSpEU.pdf"
       },
       {
         "label": "Paxos PAX Gold product page",
@@ -39,9 +40,9 @@
         "url": "https://support.paxos.com/articles/7204091747-paxg-allocation-and-physical-gold-bar-details-representing-my-paxg-tokens"
       }
     ],
-    "rationale": "KPMG's examination report for May 29, 2026 reports 467,075 PAXG redeemable tokens and 467,075 fine troy ounces of London Good Delivery gold, with no timing differences, temporary differences, surplus, or deficit. Exhibit B identifies London Good Delivery gold as the only redemption asset type. Paxos states that each token represents ownership of an allocated fine troy ounce, and its allocation tool exposes the serial number, brand code, gross weight, fineness, and fine weight of the bars assigned to a holder.",
-    "compositionBasis": "KPMG examination of PAXG redemption assets and redeemable tokens as of May 29, 2026",
-    "compositionAsOf": "2026-05-29",
+    "rationale": "KPMG's unmodified examination as of July 31, 2026 at 5:00 PM Eastern Time, signed August 25, reconciles 442,217 PAXG redeemable tokens (441,939 Ethereum and 278 Solana) to 442,217 fine troy ounces of London Good Delivery gold. Exhibits A-C report no nonredeemable tokens, timing adjustments, or surplus/deficit. Exhibit B identifies allocated gold as the sole redemption asset type and names Brink's Global Services Ltd. and ICBC Standard Bank as LBMA-approved vault providers without provider-level ounce shares. The reviewed official Framer route and product modules are hash-pinned alongside the PDF to detect changes to published report selection.",
+    "compositionBasis": "KPMG examination of PAXG redemption assets and redeemable tokens as of July 31, 2026",
+    "compositionAsOf": "2026-07-31",
     "scope": "full-composition",
     "knownUnknownExposure": "The complete reserve asset type is independently examined as allocated London Good Delivery gold. The report names Brink's Global Services Ltd. and ICBC Standard Bank as the LBMA-approved vault providers but does not disclose the ounces held with each provider.",
     "knownUnknownExposurePct": 0,

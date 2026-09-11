@@ -120,6 +120,16 @@ describe("ScreenerTable desktop table", () => {
     expect(screen.getByRole("link", { name: /Open Safety Score waterfall for USDT/i })).toBeTruthy();
   });
 
+  it("labels the safety summary badge with the projected V9 grade and score", async () => {
+    installViewportMatchMedia(1400);
+
+    render(<ScreenerTable rows={[row]} isLoading={false} hasActiveFilters={false} sort={makeSort()} />);
+
+    await waitFor(() => {
+      expect(screen.getByLabelText("Safety grade B+, score 82")).toBeTruthy();
+    });
+  });
+
   it("skips xl-only sparkline SVGs below the xl breakpoint", async () => {
     installViewportMatchMedia(900);
 
@@ -132,30 +142,19 @@ describe("ScreenerTable desktop table", () => {
     expect(screen.queryByRole("img", { name: /30-day supply trajectory for USDT/i })).toBeNull();
   });
 
-  it("renders sparkline SVGs on xl desktop viewports", async () => {
+  it("renders xl sparkline SVGs and labels the peg column as a worst/current range", async () => {
     installViewportMatchMedia(1400);
 
     render(<ScreenerTable rows={[rowWithSeries]} isLoading={false} hasActiveFilters={false} sort={makeSort()} />);
 
     await waitFor(() => {
       expect(screen.getByRole("img", { name: /Peg range: worst \/ current for USDT/i })).toBeTruthy();
-      expect(screen.getByRole("img", { name: /30-day supply trajectory for USDT/i })).toBeTruthy();
     });
-  });
-
-  it("labels the peg sparkline column as a worst/current range, not a 30-day history", async () => {
-    installViewportMatchMedia(1400);
-
-    render(<ScreenerTable rows={[rowWithSeries]} isLoading={false} hasActiveFilters={false} sort={makeSort()} />);
-
-    await waitFor(() => {
-      expect(screen.getByTestId("stablecoin-screener-table")).toBeTruthy();
-    });
+    expect(screen.getByRole("img", { name: /30-day supply trajectory for USDT/i })).toBeTruthy();
     // The cell renders two endpoint samples (all-time worst, current), so the
     // column must not claim a 30-day window.
-    const header = screen.getByText("Peg Range");
     expect(screen.queryByText("30d Peg")).toBeNull();
-    expect(header.closest("th")?.getAttribute("title")).toBe(
+    expect(screen.getByText("Peg Range").closest("th")?.getAttribute("title")).toBe(
       "Peg range: worst / current deviation (±bps around the peg)",
     );
   });

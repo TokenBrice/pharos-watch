@@ -7,6 +7,7 @@ import {
   makeEconomicControlArgs as args,
   makeEconomicControlFacts as baseFacts,
   makeDeploymentControl,
+  makeSupplyPartition,
   missing,
   requiredKnown,
 } from "./safety-score-v9-fixtures.test-support";
@@ -44,13 +45,12 @@ function boundedReviewResult(
     args({
       facts: {
         ...baseFacts([reviewed]),
-        supply: {
+        supply: makeSupplyPartition({
           status: supplyKnown ? requiredKnown("supply") : boundedUnknown("supply"),
-          selectedBridgeRoutes: selectSupplyRow
+          routes: selectSupplyRow
             ? [
                 {
                   deploymentRouteKey: reviewed.deploymentKey,
-                  supplyUsd: reviewedShare * 100,
                   supplyShare: reviewedShare,
                   reviewState: "selected-reviewed",
                   reviewedRouteKind: "controlled",
@@ -60,7 +60,7 @@ function boundedReviewResult(
           selectedRouteSupplyShare: reviewedShare,
           unknownRouteSupplyShare: unattributedShare,
           unreviewedRouteSupplyShare: unattributedShare === null ? null : 0,
-        },
+        }),
       },
       bridge: {
         status: boundedUnknown("bridge"),

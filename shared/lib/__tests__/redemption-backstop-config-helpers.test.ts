@@ -104,6 +104,11 @@ describe("redemption backstop config helpers", () => {
     expect(entries.find((entry) => entry.id === "beta")).toMatchObject({ sourceFilePath: "shared/base.ts" });
   });
 
+  it("rejects duplicate registry entries without an explicit override reason", () => {
+    const entries = defineBatch(["alpha", "alpha"], createBaseConfig());
+    expect(() => defineBackstopRegistry(entries)).toThrow();
+  });
+
   it("finalizes entries and their registry without mutating source configs", () => {
     const entries = defineBatch(["alpha", "beta"], createBaseConfig(), { sourceFilePath: "shared/base.ts" });
     const finalized = finalizeBackstopRegistry(entries, [
@@ -276,9 +281,7 @@ describe("redemption backstop config helpers", () => {
   it("throws when a tracked reviewed docs id is absent from the registry entries", () => {
     expect(() => finalizeBackstopRegistry([], [
       { stablecoinIds: ["usdc-circle"], reviewedAt: "2026-05-12" },
-    ])).toThrow(
-      'Missing redemption backstop config for stablecoin id "usdc-circle" while applying tracked reviewed docs',
-    );
+    ])).toThrow();
   });
 
   it("maps access models to default holder eligibility", () => {

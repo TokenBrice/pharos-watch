@@ -352,12 +352,19 @@ function buildDocSources(entry: RedemptionBackstopEntry): DocSourceViewModel[] {
   return [];
 }
 
+/**
+ * The eventual-only capacity detail already states the modeled-supply framing
+ * (see `getCapacitySummary`), so the producer note that repeats it
+ * (`worker/src/lib/redemption-backstop-capacity/supply-full.ts`) is redundant.
+ * Matching the whole word "redeemability" instead dropped substantive route
+ * warnings that happen to use it.
+ */
+const REDUNDANT_EVENTUAL_SUPPLY_NOTE = /modeled as eventual redeemability of current supply/i;
+
 function buildFilteredNotes(entry: RedemptionBackstopEntry): string[] {
-  return (
-    entry.notes?.filter(
-      (note) => !(entry.capacitySemantics === "eventual-only" && note.toLowerCase().includes("redeemability")),
-    ) ?? []
-  );
+  const notes = entry.notes ?? [];
+  if (entry.capacitySemantics !== "eventual-only") return notes;
+  return notes.filter((note) => !REDUNDANT_EVENTUAL_SUPPLY_NOTE.test(note));
 }
 
 function feeBpsBreakdownSuffix(entry: RedemptionBackstopEntry): string {

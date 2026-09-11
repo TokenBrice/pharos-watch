@@ -1,0 +1,445 @@
+{
+  "schemaVersion": 1,
+  "kind": "cdp-mechanism-measurement",
+  "assetId": "fxusd-f-x-protocol",
+  "archetype": "cdp",
+  "chain": {
+    "key": "ethereum",
+    "evmChainId": 1
+  },
+  "rpcUrl": "https://eth.blockscout.com/api/eth-rpc",
+  "block": {
+    "number": 25536894,
+    "hash": "0x9b5d38fcb302bfc941f2704759a37402b0a5f9f3c1ad6fc0badaf20219cb6422",
+    "timestampUnix": 1784104535,
+    "timestampIso": "2026-07-15T08:35:35.000Z",
+    "selection": "operator-pinned"
+  },
+  "calls": [
+    {
+      "name": "token.poolManager",
+      "to": "0x085780639cc2cacd35e474e71f4d000e2405d8f6",
+      "signature": "poolManager()",
+      "selector": "0xdc4c90d3",
+      "callData": "0xdc4c90d3",
+      "returnData": "0x000000000000000000000000250893ca4ba5d05626c785e8da758026928fcd24",
+      "decoded": "0x250893ca4ba5d05626c785e8da758026928fcd24"
+    },
+    {
+      "name": "poolManager.fxBASE",
+      "to": "0x250893ca4ba5d05626c785e8da758026928fcd24",
+      "signature": "fxBASE()",
+      "selector": "0x9d8c2910",
+      "callData": "0x9d8c2910",
+      "returnData": "0x00000000000000000000000065c9a641afceb9c0e6034e558a319488fa0fa3be",
+      "decoded": "0x65c9a641afceb9c0e6034e558a319488fa0fa3be"
+    },
+    {
+      "name": "token.totalSupply",
+      "to": "0x085780639cc2cacd35e474e71f4d000e2405d8f6",
+      "signature": "totalSupply()",
+      "selector": "0x18160ddd",
+      "callData": "0x18160ddd",
+      "returnData": "0x000000000000000000000000000000000000000000308919b5bf001a47a90099",
+      "decoded": "58675877814443538807062681"
+    },
+    {
+      "name": "token.legacyTotalSupply",
+      "to": "0x085780639cc2cacd35e474e71f4d000e2405d8f6",
+      "signature": "legacyTotalSupply()",
+      "selector": "0x80b17407",
+      "callData": "0x80b17407",
+      "returnData": "0x00000000000000000000000000000000000000000000000e508b1f905e2331e7",
+      "decoded": "264058184281645855207"
+    },
+    {
+      "name": "poolManager.getPoolInfo(0)",
+      "to": "0x250893ca4ba5d05626c785e8da758026928fcd24",
+      "signature": "getPoolInfo(address)",
+      "selector": "0x06bfa938",
+      "callData": "0x06bfa9380000000000000000000000006ecfa38fee8a5277b91efda204c235814f0122e8",
+      "returnData": "0x000000000000000000000000000000000000000000000a968163f0a57b4000000000000000000000000000000000000000000000000000f26b60c08a7a23c0cf00000000000000000000000000000000000000000000012c719f9eb83c30099100000000000000000000000000000000000000000052b7d2dcc80cd2e400000000000000000000000000000000000000000000000004df402b720c121b9d51dd",
+      "decoded": "rawCollateral=5542210659274569288081 debt=5889974726337127880937949"
+    },
+    {
+      "name": "pool[0].collateralToken",
+      "to": "0x6ecfa38fee8a5277b91efda204c235814f0122e8",
+      "signature": "collateralToken()",
+      "selector": "0xb2016bd4",
+      "callData": "0xb2016bd4",
+      "returnData": "0x0000000000000000000000007f39c581f595b53c5cb19bd0b3f8da6c935e2ca0",
+      "decoded": "0x7f39c581f595b53c5cb19bd0b3f8da6c935e2ca0"
+    },
+    {
+      "name": "pool[0].priceOracle",
+      "to": "0x6ecfa38fee8a5277b91efda204c235814f0122e8",
+      "signature": "priceOracle()",
+      "selector": "0x2630c12f",
+      "callData": "0x2630c12f",
+      "returnData": "0x0000000000000000000000000c5c61025f047cb7e3e85852dc8eafd7b9a4abfb",
+      "decoded": "0x0c5c61025f047cb7e3e85852dc8eafd7b9a4abfb"
+    },
+    {
+      "name": "pool[0].getTotalRawCollaterals",
+      "to": "0x6ecfa38fee8a5277b91efda204c235814f0122e8",
+      "signature": "getTotalRawCollaterals()",
+      "selector": "0xee65a03c",
+      "callData": "0xee65a03c",
+      "returnData": "0x00000000000000000000000000000000000000000000012c6fc541101d4130e3",
+      "decoded": "5542077137158953578723"
+    },
+    {
+      "name": "pool[0].getTotalRawDebts",
+      "to": "0x6ecfa38fee8a5277b91efda204c235814f0122e8",
+      "signature": "getTotalRawDebts()",
+      "selector": "0xf9d45fd2",
+      "callData": "0xf9d45fd2",
+      "returnData": "0x00000000000000000000000000000000000000000004df402b720c121b9d6852",
+      "decoded": "5889974726337127880943698"
+    },
+    {
+      "name": "oracle[0].getPrice",
+      "to": "0x0c5c61025f047cb7e3e85852dc8eafd7b9a4abfb",
+      "signature": "getPrice()",
+      "selector": "0x98d5fdca",
+      "callData": "0x98d5fdca",
+      "returnData": "0x000000000000000000000000000000000000000000000065562d696305e0c9fc000000000000000000000000000000000000000000000065534100a46adc811c0000000000000000000000000000000000000000000000658aa320a9ab1997b4",
+      "decoded": "anchor=1869330886779899791868 min=1869120228329466396956 max=1873111015756194748340"
+    },
+    {
+      "name": "pool[0].isBorrowPaused",
+      "to": "0x6ecfa38fee8a5277b91efda204c235814f0122e8",
+      "signature": "isBorrowPaused()",
+      "selector": "0x70f3c4b1",
+      "callData": "0x70f3c4b1",
+      "returnData": "0x0000000000000000000000000000000000000000000000000000000000000000",
+      "decoded": "false"
+    },
+    {
+      "name": "pool[0].isRedeemPaused",
+      "to": "0x6ecfa38fee8a5277b91efda204c235814f0122e8",
+      "signature": "isRedeemPaused()",
+      "selector": "0x3cd9b53c",
+      "callData": "0x3cd9b53c",
+      "returnData": "0x0000000000000000000000000000000000000000000000000000000000000000",
+      "decoded": "false"
+    },
+    {
+      "name": "poolManager.getPoolInfo(1)",
+      "to": "0x250893ca4ba5d05626c785e8da758026928fcd24",
+      "signature": "getPoolInfo(address)",
+      "selector": "0x06bfa938",
+      "callData": "0x06bfa938000000000000000000000000ab709e26fa6b0a30c119d8c55b887ded24952473",
+      "returnData": "0x0000000000000000000000000000000000000000000000000000002e90edd0000000000000000000000000000000000000000000000000000000001be324c7cb000000000000000000000000000000000000000000000040ee1d3a0593e3a19600000000000000000000000000000000000000000052b7d2dcc80cd2e40000000000000000000000000000000000000000000000002ba9cb39c1d477cde87cd5",
+      "decoded": "rawCollateral=1197749554668393177494 debt=52785639029922129280269525"
+    },
+    {
+      "name": "pool[1].collateralToken",
+      "to": "0xab709e26fa6b0a30c119d8c55b887ded24952473",
+      "signature": "collateralToken()",
+      "selector": "0xb2016bd4",
+      "callData": "0xb2016bd4",
+      "returnData": "0x0000000000000000000000002260fac5e5542a773aa44fbcfedf7c193bc2c599",
+      "decoded": "0x2260fac5e5542a773aa44fbcfedf7c193bc2c599"
+    },
+    {
+      "name": "pool[1].priceOracle",
+      "to": "0xab709e26fa6b0a30c119d8c55b887ded24952473",
+      "signature": "priceOracle()",
+      "selector": "0x2630c12f",
+      "callData": "0x2630c12f",
+      "returnData": "0x000000000000000000000000b3c90e64eb6f456a5f5c17aa99b6aeca6f4a6390",
+      "decoded": "0xb3c90e64eb6f456a5f5c17aa99b6aeca6f4a6390"
+    },
+    {
+      "name": "pool[1].getTotalRawCollaterals",
+      "to": "0xab709e26fa6b0a30c119d8c55b887ded24952473",
+      "signature": "getTotalRawCollaterals()",
+      "selector": "0xee65a03c",
+      "callData": "0xee65a03c",
+      "returnData": "0x000000000000000000000000000000000000000000000040edc12faaa89614f4",
+      "decoded": "1197723647584924734708"
+    },
+    {
+      "name": "pool[1].getTotalRawDebts",
+      "to": "0xab709e26fa6b0a30c119d8c55b887ded24952473",
+      "signature": "getTotalRawDebts()",
+      "selector": "0xf9d45fd2",
+      "callData": "0xf9d45fd2",
+      "returnData": "0x0000000000000000000000000000000000000000002ba9cb39c1d477cde87cd5",
+      "decoded": "52785639029922129280269525"
+    },
+    {
+      "name": "oracle[1].getPrice",
+      "to": "0xb3c90e64eb6f456a5f5c17aa99b6aeca6f4a6390",
+      "signature": "getPrice()",
+      "selector": "0x98d5fdca",
+      "callData": "0x98d5fdca",
+      "returnData": "0x000000000000000000000000000000000000000000000da994ccad5630460f40000000000000000000000000000000000000000000000da994ccad5630460f40000000000000000000000000000000000000000000000db00ee0b19980c666c9",
+      "decoded": "anchor=64518986161160853000000 min=64518986161160853000000 max=64638463286262431639241"
+    },
+    {
+      "name": "pool[1].isBorrowPaused",
+      "to": "0xab709e26fa6b0a30c119d8c55b887ded24952473",
+      "signature": "isBorrowPaused()",
+      "selector": "0x70f3c4b1",
+      "callData": "0x70f3c4b1",
+      "returnData": "0x0000000000000000000000000000000000000000000000000000000000000000",
+      "decoded": "false"
+    },
+    {
+      "name": "pool[1].isRedeemPaused",
+      "to": "0xab709e26fa6b0a30c119d8c55b887ded24952473",
+      "signature": "isRedeemPaused()",
+      "selector": "0x3cd9b53c",
+      "callData": "0x3cd9b53c",
+      "returnData": "0x0000000000000000000000000000000000000000000000000000000000000000",
+      "decoded": "false"
+    },
+    {
+      "name": "fxBase.totalStableToken",
+      "to": "0x65c9a641afceb9c0e6034e558a319488fa0fa3be",
+      "signature": "totalStableToken()",
+      "selector": "0x9ff39038",
+      "callData": "0x9ff39038",
+      "returnData": "0x00000000000000000000000000000000000000000000000000000004743a2950",
+      "decoded": "19129837904"
+    },
+    {
+      "name": "fxBase.totalYieldToken",
+      "to": "0x65c9a641afceb9c0e6034e558a319488fa0fa3be",
+      "signature": "totalYieldToken()",
+      "selector": "0x65d2cb08",
+      "callData": "0x65d2cb08",
+      "returnData": "0x0000000000000000000000000000000000000000002b423d3699fddf9c21eb07",
+      "decoded": "52296615617141833702959879"
+    },
+    {
+      "name": "fxBase.totalSupply",
+      "to": "0x65c9a641afceb9c0e6034e558a319488fa0fa3be",
+      "signature": "totalSupply()",
+      "selector": "0x18160ddd",
+      "callData": "0x18160ddd",
+      "returnData": "0x0000000000000000000000000000000000000000002ad6f1197d895ad0ae92f7",
+      "decoded": "51789918353245539593523959"
+    },
+    {
+      "name": "fxBase.nav",
+      "to": "0x65c9a641afceb9c0e6034e558a319488fa0fa3be",
+      "signature": "nav()",
+      "selector": "0xc1590cd7",
+      "callData": "0xc1590cd7",
+      "returnData": "0x0000000000000000000000000000000000000000000000000e03f7ed67ac7035",
+      "decoded": "1009923340479787061"
+    }
+  ],
+  "logQueries": [
+    {
+      "name": "poolManager.RegisterPool history",
+      "address": "0x250893ca4ba5d05626c785e8da758026928fcd24",
+      "fromBlock": 21529341,
+      "toBlock": 25536894,
+      "topics": [
+        "0xdfc596fabc6581c887262c97695176a79e3c8fc6ab7aaf14700820f3436b8fb9"
+      ],
+      "logs": [
+        {
+          "address": "0x250893ca4ba5d05626c785e8da758026928fcd24",
+          "blockHash": "0xcdc620820c98773b4807a12df3e1b0b06e582f256007a36c1c3750ff509ea913",
+          "blockNumber": "0x1488335",
+          "transactionHash": "0xe4377dac65cdf2b689d425e364801b6f30e16aaa26c9e8756541d1b6818fad03",
+          "transactionIndex": "0x75",
+          "logIndex": "0x13c",
+          "data": "0x",
+          "topics": [
+            "0xdfc596fabc6581c887262c97695176a79e3c8fc6ab7aaf14700820f3436b8fb9",
+            "0x0000000000000000000000006ecfa38fee8a5277b91efda204c235814f0122e8"
+          ],
+          "removed": false
+        },
+        {
+          "address": "0x250893ca4ba5d05626c785e8da758026928fcd24",
+          "blockHash": "0xd5b6aad64f39497f898bf6c2dd76e08647615d41437482752827d1d38549c0a1",
+          "blockNumber": "0x150ee37",
+          "transactionHash": "0x5b4c4027b6329f5f41c6d9e867b0960c2876f20308d615ea442480ecdd017319",
+          "transactionIndex": "0x1f",
+          "logIndex": "0xcf",
+          "data": "0x",
+          "topics": [
+            "0xdfc596fabc6581c887262c97695176a79e3c8fc6ab7aaf14700820f3436b8fb9",
+            "0x000000000000000000000000ab709e26fa6b0a30c119d8c55b887ded24952473"
+          ],
+          "removed": false
+        }
+      ],
+      "decoded": "registeredPools=0x6ecfa38fee8a5277b91efda204c235814f0122e8,0xab709e26fa6b0a30c119d8c55b887ded24952473"
+    }
+  ],
+  "metrics": {
+    "collateralizationRatio": 1.493559,
+    "liquidationCapacityRatio": 0.891605,
+    "applicability": {
+      "collateralizationRatio": {
+        "state": "measured"
+      },
+      "liquidationCapacityRatio": {
+        "state": "measured"
+      }
+    }
+  },
+  "completeness": {
+    "complete": true,
+    "blockers": []
+  },
+  "checks": [
+    {
+      "id": "registration.range",
+      "status": "pass",
+      "detail": "PoolManager deployment block 21529341 is not after pinned block 25536894"
+    },
+    {
+      "id": "registration.pool-set",
+      "status": "pass",
+      "detail": "add-only RegisterPool history contains exactly the 2 configured pools"
+    },
+    {
+      "id": "graph.pool-manager",
+      "status": "pass",
+      "detail": "token manager 0x250893ca4ba5d05626c785e8da758026928fcd24 matches config"
+    },
+    {
+      "id": "graph.fx-base",
+      "status": "pass",
+      "detail": "manager fxBASE 0x65c9a641afceb9c0e6034e558a319488fa0fa3be matches config"
+    },
+    {
+      "id": "supply.positive",
+      "status": "pass",
+      "detail": "fxUSD supply 58675877814443538807062681 is positive"
+    },
+    {
+      "id": "pool[0].unique",
+      "status": "pass",
+      "detail": "pool 0x6ecfa38fee8a5277b91efda204c235814f0122e8 appears once"
+    },
+    {
+      "id": "pool[0].collateral-token",
+      "status": "pass",
+      "detail": "collateral token 0x7f39c581f595b53c5cb19bd0b3f8da6c935e2ca0 matches config"
+    },
+    {
+      "id": "pool[0].price-oracle",
+      "status": "pass",
+      "detail": "price oracle 0x0c5c61025f047cb7e3e85852dc8eafd7b9a4abfb matches config"
+    },
+    {
+      "id": "pool[0].positive-state",
+      "status": "pass",
+      "detail": "collateral 5542077137158953578723 and debt 5889974726337127880943698 are positive"
+    },
+    {
+      "id": "pool[0].manager-accounting",
+      "status": "pass",
+      "detail": "PoolManager raw collateral/debt agree within 0.5% (collateral delta 0.002400%, debt delta 0.000000%)"
+    },
+    {
+      "id": "pool[0].price-positive",
+      "status": "pass",
+      "detail": "oracle anchor 1869330886779899791868 is positive"
+    },
+    {
+      "id": "pool[1].unique",
+      "status": "pass",
+      "detail": "pool 0xab709e26fa6b0a30c119d8c55b887ded24952473 appears once"
+    },
+    {
+      "id": "pool[1].collateral-token",
+      "status": "pass",
+      "detail": "collateral token 0x2260fac5e5542a773aa44fbcfedf7c193bc2c599 matches config"
+    },
+    {
+      "id": "pool[1].price-oracle",
+      "status": "pass",
+      "detail": "price oracle 0xb3c90e64eb6f456a5f5c17aa99b6aeca6f4a6390 matches config"
+    },
+    {
+      "id": "pool[1].positive-state",
+      "status": "pass",
+      "detail": "collateral 1197723647584924734708 and debt 52785639029922129280269525 are positive"
+    },
+    {
+      "id": "pool[1].manager-accounting",
+      "status": "pass",
+      "detail": "PoolManager raw collateral/debt agree within 0.5% (collateral delta 0.002100%, debt delta 0.000000%)"
+    },
+    {
+      "id": "pool[1].price-positive",
+      "status": "pass",
+      "detail": "oracle anchor 64518986161160853000000 is positive"
+    },
+    {
+      "id": "derivation.supply-vs-debt",
+      "status": "pass",
+      "detail": "configured pool debt plus legacy supply diverges 0.000000% from total supply"
+    },
+    {
+      "id": "derivation.fx-base-capacity",
+      "status": "pass",
+      "detail": "token inventory and share NAV capacity agree within 0.022700%"
+    }
+  ],
+  "overlaySources": [
+    {
+      "label": "f(x) fxUSD, PoolManager, long-pool, oracle, and fxBASE state on Ethereum",
+      "url": "https://etherscan.io/address/0x085780639CC2cACd35E474e71f4d000e2405d8f6#readProxyContract"
+    },
+    {
+      "label": "f(x) Protocol documentation",
+      "url": "https://fxprotocol.gitbook.io/fx-docs"
+    }
+  ],
+  "tool": {
+    "name": "measure-cdp-mechanism-metrics",
+    "version": "2"
+  },
+  "family": "fx-protocol-v1",
+  "derived": {
+    "token": "0x085780639cc2cacd35e474e71f4d000e2405d8f6",
+    "poolManager": "0x250893ca4ba5d05626c785e8da758026928fcd24",
+    "fxBase": "0x65c9a641afceb9c0e6034e558a319488fa0fa3be",
+    "totalSupplyRaw": "58675877814443538807062681",
+    "legacySupplyRaw": "264058184281645855207",
+    "totalDebtRaw": "58675613756259257161213223",
+    "totalCollateralValueWad": "87635891412834812494670831",
+    "fxBaseStableRaw": "19129837904",
+    "fxBaseYieldRaw": "52296615617141833702959879",
+    "fxBaseShareSupplyRaw": "51789918353245539593523959",
+    "fxBaseNavRaw": "1009923340479787061",
+    "registeredPools": [
+      "0x6ecfa38fee8a5277b91efda204c235814f0122e8",
+      "0xab709e26fa6b0a30c119d8c55b887ded24952473"
+    ],
+    "pools": [
+      {
+        "address": "0x6ecfa38fee8a5277b91efda204c235814f0122e8",
+        "collateralToken": "0x7f39c581f595b53c5cb19bd0b3f8da6c935e2ca0",
+        "priceOracle": "0x0c5c61025f047cb7e3e85852dc8eafd7b9a4abfb",
+        "collateralRaw": "5542077137158953578723",
+        "debtRaw": "5889974726337127880943698",
+        "anchorPriceRaw": "1869330886779899791868",
+        "borrowPaused": false,
+        "redeemPaused": false
+      },
+      {
+        "address": "0xab709e26fa6b0a30c119d8c55b887ded24952473",
+        "collateralToken": "0x2260fac5e5542a773aa44fbcfedf7c193bc2c599",
+        "priceOracle": "0xb3c90e64eb6f456a5f5c17aa99b6aeca6f4a6390",
+        "collateralRaw": "1197723647584924734708",
+        "debtRaw": "52785639029922129280269525",
+        "anchorPriceRaw": "64518986161160853000000",
+        "borrowPaused": false,
+        "redeemPaused": false
+      }
+    ]
+  }
+}

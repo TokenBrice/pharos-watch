@@ -521,6 +521,7 @@ function resetSyncYieldDataTest() {
   vi.mocked(recordOutcome).mockReset().mockResolvedValue(mockCircuitOutcomeRecord());
   vi.mocked(getChainRpc).mockReset().mockReturnValue(undefined);
   vi.mocked(yieldHelpersModule.findBestLendingPool).mockReset().mockReturnValue(null);
+  vi.mocked(yieldHelpersModule.detectWarningSignals).mockReset().mockReturnValue([]);
   vi.spyOn(safetyScoresModule, "computeSafetyScoresSnapshot").mockResolvedValue({
     kind: "ok",
     mode: "map",

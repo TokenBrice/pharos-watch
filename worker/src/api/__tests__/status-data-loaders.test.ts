@@ -17,7 +17,7 @@ import {
 function statusLoadersD1(overrides: NonNullable<Parameters<typeof buildStatusD1Scenario>[0]>["overrides"] = []) {
   return buildStatusD1Scenario({
     sections: ["sentinel", "live", "publication", "derived", "reserves"],
-    optionalOverrides: overrides,
+    overrides,
     sectionOverrides: {
       reserves: [{ match: "FROM reserve_sync_state", rows: [] }],
     },
@@ -26,6 +26,33 @@ function statusLoadersD1(overrides: NonNullable<Parameters<typeof buildStatusD1S
 
 describe("handleStatus", () => {
   afterEach(cleanupStatusTest);
+  it.each([false, true])("compares strict 5-percent boundaries in severity order (malformed=%s)", async (malformed) => {
+    const now = Math.floor(Date.now() / 1000);
+    const assets = [
+      { id: "usdt-tether", geckoId: "tether", price: 21 },
+      { id: "usdc-circle", geckoId: "usd-coin", price: 21.01 },
+      { id: "pyusd-paypal", geckoId: "paypal-usd", price: 24 },
+    ].map((asset) => ({
+      name: asset.id, symbol: asset.id, pegType: "peggedUSD", pegMechanism: "fiat-backed",
+      circulating: { peggedUSD: 100 }, chainCirculating: {}, chains: [], ...asset,
+    }));
+    fixtureMockFetch([{ match: "/simple/price", respond: () => new Response(malformed ? "{" : JSON.stringify({
+      tether: { usd: 20, last_updated_at: now - 60 },
+      "usd-coin": { usd: 20, last_updated_at: now - 60 },
+      "paypal-usd": { usd: 20, last_updated_at: now - 60 },
+    })) }]);
+    const db = statusLoadersD1([{ match: "FROM cache WHERE key = ?", matchBinds: ["stablecoins"], rows: [], first: { value: JSON.stringify({ peggedAssets: assets }), updated_at: now - 60 } }]);
+    const request = fixtureMakeApiRequest("/api/status", { adminKey: "secret-key" });
+    const response = await handleStatus({ db, trustedAdmin: true, request, coingeckoApiKey: "cg-test-key" });
+    const body = await readJsonResponse(response, 200) as {
+      coingeckoPriceDiff: { comparedCoins: number; mismatchedCount: number; rows: Array<{ stablecoinId: string }> };
+      sectionErrors: Record<string, unknown>;
+    };
+    expect(body.coingeckoPriceDiff.comparedCoins).toBe(malformed ? 0 : 3);
+    expect(body.coingeckoPriceDiff.mismatchedCount).toBe(malformed ? 0 : 2);
+    expect(body.coingeckoPriceDiff.rows.map((row) => row.stablecoinId)).toEqual(malformed ? [] : ["pyusd-paypal", "usdc-circle"]);
+    expect(body.sectionErrors).not.toHaveProperty("coingeckoPriceDiff");
+  });
   it("surfaces tracked CoinGecko price mismatches above threshold", async () => {
     const now = Math.floor(Date.now() / 1000);
     const stablecoinsCache = JSON.stringify({
@@ -87,7 +114,7 @@ describe("handleStatus", () => {
     ]);
 
     const db = statusLoadersD1([
-      { match: "cache", rows: [], first: { value: stablecoinsCache, updated_at: now - 60 } },
+      { match: "FROM cache WHERE key = ?", matchBinds: ["stablecoins"], rows: [], first: { value: stablecoinsCache, updated_at: now - 60 } },
     ]);
 
     const request = fixtureMakeApiRequest("/api/status", { adminKey: "secret-key" });
@@ -200,7 +227,7 @@ describe("handleStatus", () => {
     ]);
 
     const db = statusLoadersD1([
-      { match: "cache", rows: [], first: { value: stablecoinsCache, updated_at: now - 60 } },
+      { match: "FROM cache WHERE key = ?", matchBinds: ["stablecoins"], rows: [], first: { value: stablecoinsCache, updated_at: now - 60 } },
     ]);
 
     const request = fixtureMakeApiRequest("/api/status", { adminKey: "secret-key" });
@@ -253,7 +280,7 @@ describe("handleStatus", () => {
     ]);
 
     const db = statusLoadersD1([
-      { match: "cache", rows: [], first: { value: stablecoinsCache, updated_at: now - 60 } },
+      { match: "FROM cache WHERE key = ?", matchBinds: ["stablecoins"], rows: [], first: { value: stablecoinsCache, updated_at: now - 60 } },
     ]);
 
     const request = fixtureMakeApiRequest("/api/status", { adminKey: "secret-key" });
@@ -341,7 +368,7 @@ describe("handleStatus", () => {
           }),
         }],
       },
-      { match: "cache", rows: [], first: { value: JSON.stringify({ peggedAssets: [] }), updated_at: now - 60 } },
+      { match: "FROM cache WHERE key = ?", matchBinds: ["stablecoins"], rows: [], first: { value: JSON.stringify({ peggedAssets: [] }), updated_at: now - 60 } },
     ]);
 
     const request = fixtureMakeApiRequest("/api/status", { adminKey: "secret-key" });
@@ -408,7 +435,7 @@ describe("handleStatus", () => {
     const now = Math.floor(Date.now() / 1000);
 
     const db = statusLoadersD1([
-      { match: "cache", rows: [], first: { value: JSON.stringify({ peggedAssets: [] }), updated_at: now - 60 } },
+      { match: "FROM cache WHERE key = ?", matchBinds: ["stablecoins"], rows: [], first: { value: JSON.stringify({ peggedAssets: [] }), updated_at: now - 60 } },
     ]);
 
     const request = fixtureMakeApiRequest("/api/status", { adminKey: "secret-key" });
@@ -496,7 +523,7 @@ describe("handleStatus", () => {
     ]);
 
     const db = statusLoadersD1([
-      { match: "cache", rows: [], first: { value: stablecoinsCache, updated_at: now - 60 } },
+      { match: "FROM cache WHERE key = ?", matchBinds: ["stablecoins"], rows: [], first: { value: stablecoinsCache, updated_at: now - 60 } },
     ]);
 
     const request = fixtureMakeApiRequest("/api/status", { adminKey: "secret-key" });
@@ -559,16 +586,9 @@ describe("handleStatus", () => {
       },
       { match: "cron_runs", rows: [makeCronRow("sync-stablecoins")] },
       { match: "cron_run_progress", rows: [] },
-      {
-        match: "cache",
-        rows: [],
-        first: {
-          value: JSON.stringify({
-            peggedAssets: [{ id: "usdt-tether", symbol: "USDT", price: 1.0, circulating: { peggedUSD: 100_000_000 } }],
-          }),
-          updated_at: now - 60,
-        },
-      },
+      { match: "FROM cache WHERE key = ?", matchBinds: ["stablecoins"], rows: [], first: { value: JSON.stringify({
+        peggedAssets: [{ id: "usdt-tether", symbol: "USDT", price: 1.0, circulating: { peggedUSD: 100_000_000 } }],
+      }), updated_at: now - 60 } },
       { match: "blacklist_events", rows: [], first: { total: 10, missing: 0, missing_recent: 0 } },
     ]);
 
@@ -601,15 +621,10 @@ describe("handleStatus", () => {
       },
       { match: "cron_runs", rows: [makeCronRow("sync-stablecoins")] },
       { match: "cron_run_progress", rows: [] },
-      { match: "cache", rows: [], first: { value: stablecoinsCache, updated_at: now - 60 } },
+      { match: "FROM cache WHERE key = ?", matchBinds: ["stablecoins"], rows: [], first: { value: stablecoinsCache, updated_at: now - 60 } },
       { match: "blacklist_events", rows: [], first: { total: 10, missing: 0, missing_recent: 0 } },
       {
         match: "FROM status_state",
-        rows: [],
-        throwError: new Error("no such table: status_state"),
-      },
-      {
-        match: "INSERT INTO status_state",
         rows: [],
         throwError: new Error("no such table: status_state"),
       },
@@ -677,11 +692,7 @@ describe("handleStatus", () => {
         rows: [],
         first: { latest: depegWriterAt },
       },
-      {
-        match: "cache",
-        rows: [],
-        first: { value: stablecoinsCache, updated_at: now - 60 },
-      },
+      { match: "FROM cache WHERE key = ?", matchBinds: ["stablecoins"], rows: [], first: { value: stablecoinsCache, updated_at: now - 60 } },
       { match: "blacklist_events", rows: [], first: { total: 10_000, missing: 0, missing_recent: 0 } },
     ]);
 
@@ -731,7 +742,7 @@ describe("handleStatus", () => {
 
   it("marks data quality stale when the stablecoins cache is malformed", async () => {
     const db = statusLoadersD1([
-      { match: "cache", rows: [], first: { value: "{bad-json", updated_at: Math.floor(Date.now() / 1000) - 60 } },
+      { match: "FROM cache WHERE key = ?", matchBinds: ["stablecoins"], rows: [], first: { value: "{bad-json", updated_at: Math.floor(Date.now() / 1000) - 60 } },
       { match: "blacklist_events", rows: [], first: { total: 0, missing: 0 } },
     ]);
 
@@ -758,11 +769,7 @@ describe("handleStatus", () => {
       peggedAssets: [{ id: "usdt-tether", symbol: "USDT", price: 1.0, circulating: { peggedUSD: 100_000_000 } }],
     });
     const db = statusLoadersD1([
-      {
-        match: "cache",
-        rows: [],
-        first: { value: stablecoinsCache, updated_at: now - 60 },
-      },
+      { match: "FROM cache WHERE key = ?", matchBinds: ["stablecoins"], rows: [], first: { value: stablecoinsCache, updated_at: now - 60 } },
       { match: "blacklist_events", rows: [], throwError: "blacklist query failed" },
     ]);
 
@@ -799,13 +806,8 @@ describe("handleStatus", () => {
     const db = statusLoadersD1([
       { match: "dex_liquidity", rows: [], first: { age: 60 } },
       { match: "yield_data", rows: [], first: { age: 60 } },
-      { match: "stress_signals", rows: [], first: { age: 60 } },
       { match: "cron_runs", rows: cronRows },
-      {
-        match: "cache",
-        rows: [],
-        first: { value: stablecoinsCache, updated_at: now - 60 },
-      },
+      { match: "FROM cache WHERE key = ?", matchBinds: ["stablecoins"], rows: [], first: { value: stablecoinsCache, updated_at: now - 60 } },
       { match: "MAX(updated_at) as latest", rows: [], first: { latest: now - 60, tracked: 12 } },
       { match: "FROM reserve_sync_state", rows: [], throwError: "reserve sync unavailable" },
     ]);

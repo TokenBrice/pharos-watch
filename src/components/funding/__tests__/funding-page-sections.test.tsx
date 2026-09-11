@@ -11,27 +11,29 @@ import {
   YearEndHorizon,
 } from "../funding-page-sections";
 import type { CostLineItem, Donation } from "@shared/lib/funding/schema";
-
+import type { ComponentProps } from "react";
 
 const COSTS: CostLineItem[] = [
   { label: "Ike", category: "team", usd_per_month: 1500 },
   { label: "Alchemy", category: "infra", usd_per_month: 40 },
 ];
 
+type KpiSummary = ComponentProps<typeof FundingKpiRow>["summary"];
+
+function kpiSummary(overrides: Partial<KpiSummary> = {}): KpiSummary {
+  return {
+    currentMonthCommunityUsd: 300,
+    currentMonthFounderUsd: 1000,
+    lifetimeCommunityUsd: 300,
+    lifetimeFounderUsd: 3000,
+    lifetimeCommunityDonorCount: 2,
+    ...overrides,
+  };
+}
+
 describe("FundingKpiRow", () => {
   it("renders numeric KPIs when there is community history", () => {
-    render(
-      <FundingKpiRow
-        summary={{
-          currentMonthCommunityUsd: 300,
-          currentMonthFounderUsd: 1000,
-          lifetimeCommunityUsd: 300,
-          lifetimeFounderUsd: 3000,
-          lifetimeCommunityDonorCount: 2,
-        }}
-        monthlyTargetUsd={1540}
-      />,
-    );
+    render(<FundingKpiRow summary={kpiSummary()} monthlyTargetUsd={1540} />);
     expect(screen.getByText("This month coverage")).toBeTruthy();
     // 300 / 1540 ≈ 19%
     expect(screen.getByText("19%")).toBeTruthy();
@@ -46,13 +48,7 @@ describe("FundingKpiRow", () => {
   it("renders <1% when monthly coverage is positive but rounds to zero", () => {
     render(
       <FundingKpiRow
-        summary={{
-          currentMonthCommunityUsd: 1.24,
-          currentMonthFounderUsd: 0,
-          lifetimeCommunityUsd: 100,
-          lifetimeFounderUsd: 0,
-          lifetimeCommunityDonorCount: 1,
-        }}
+        summary={kpiSummary({ currentMonthCommunityUsd: 1.24, lifetimeCommunityDonorCount: 1 })}
         monthlyTargetUsd={1709}
       />,
     );
@@ -63,13 +59,7 @@ describe("FundingKpiRow", () => {
   it("renders previous-month funding and coverage in a comparison table", () => {
     render(
       <FundingKpiRow
-        summary={{
-          currentMonthCommunityUsd: 1,
-          currentMonthFounderUsd: 0,
-          lifetimeCommunityUsd: 691,
-          lifetimeFounderUsd: 0,
-          lifetimeCommunityDonorCount: 18,
-        }}
+        summary={kpiSummary({ currentMonthCommunityUsd: 1, lifetimeCommunityDonorCount: 18 })}
         monthlyTargetUsd={1709}
         monthlyHistory={[
           { monthKey: "2026-05", label: "May 2026", communityUsd: 866 },
@@ -95,13 +85,11 @@ describe("FundingKpiRow", () => {
   it("shows cold-start copy when lifetime community is zero", () => {
     render(
       <FundingKpiRow
-        summary={{
+        summary={kpiSummary({
           currentMonthCommunityUsd: 0,
-          currentMonthFounderUsd: 0,
           lifetimeCommunityUsd: 0,
-          lifetimeFounderUsd: 0,
           lifetimeCommunityDonorCount: 0,
-        }}
+        })}
         monthlyTargetUsd={1540}
       />,
     );
@@ -174,19 +162,27 @@ describe("SupportCtas", () => {
     expect(screen.getByText(/Recurring streams run on Optimism or Base only/)).toBeTruthy();
     expect(screen.getByText(/recurring Giveth stream on Optimism or Base/)).toBeTruthy();
   });
+
+  it("advertises the supporter API key perk with its threshold and rate limit", () => {
+    render(<SupportCtas />);
+    expect(screen.getByText("Supporter API key")).toBeTruthy();
+    expect(screen.getByText(/at least \$10 in stablecoin donations on this ledger/)).toBeTruthy();
+    expect(screen.getByText(/graded A or B \(including \+\/−\) when claiming/)).toBeTruthy();
+    expect(screen.getByText(/10 requests per minute, no expiry, one per wallet/)).toBeTruthy();
+    expect(screen.getByRole("link", { name: "the API page" }).getAttribute("href")).toMatch(/^\/api\/?$/);
+  });
 });
 
 describe("YearEndHorizon", () => {
-  it("commits to a free dashboard and names the two sustainability streams", () => {
+  it("commits to a free dashboard and points the share link at the Pharos funding page", () => {
     render(<YearEndHorizon />);
     expect(screen.getByText(/dashboard stays free for everyone, forever/)).toBeTruthy();
     expect(screen.getByText(/paid API access for institutional users/)).toBeTruthy();
-    expect(screen.getByText(/self-sustaining by Q4 2026/)).toBeTruthy();
 
-    const shareLink = screen.getByRole("link", { name: "sharing Pharos" });
-    const href = shareLink.getAttribute("href") ?? "";
-    expect(decodeURIComponent(href)).toContain("Stablecoin risk data should be public infrastructure");
-    expect(decodeURIComponent(href)).toContain("Help keep it open: https://pharos.watch");
+    const href = screen.getByRole("link", { name: "sharing Pharos" }).getAttribute("href") ?? "";
+    const shared = new URL(href);
+    expect(shared.origin + shared.pathname).toBe("https://x.com/intent/tweet");
+    expect(shared.searchParams.get("text")).toContain("https://pharos.watch/funding/");
   });
 });
 

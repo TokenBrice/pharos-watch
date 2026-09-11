@@ -627,6 +627,49 @@ describe("DDRR coverage metrics", () => {
     expect(summary.headline.operationalMissRatePct).toBe(1);
   });
 
+  it("counts an incident once when its assigned state also has an operational cause", () => {
+    const { summary } = reviewDdrrV2Rows({
+      coverageRows: [
+        coverage({
+          incidentKey: "ddr2:overlap",
+          predictionState: "data_quality_gap",
+          coverageCause: "data_quality_gap",
+          operationalCoverageCause: "cron_gap",
+          outcomeQualityState: "data_quality_gap",
+        }),
+        coverage({ incidentKey: "ddr2:resolved-control" }),
+      ],
+      nowSec: REVIEWED_AT,
+    });
+    expect(summary.headline.policyUniverseIncidentCount).toBe(2);
+    expect(summary.headline.dataQualityGapCount).toBe(1);
+    expect(summary.headline.missedLockDataQualityGapCount).toBe(1);
+    expect(summary.headline.stateAssignedPct).toBe(1);
+  });
+
+  it("reports an incident with conflicting rows as unassigned instead of over-assigning the universe", () => {
+    const { summary } = reviewDdrrV2Rows({
+      assessments: [assessment({ incidentKey: "ddr2:conflict" })],
+      coverageRows: [
+        coverage({
+          incidentKey: "ddr2:conflict",
+          predictionState: "pending_lock",
+          coverageCause: "active_pending_lock",
+          sourceEventState: "active",
+          actualEndedAt: null,
+        }),
+      ],
+      actualEventsById: new Map([[1, actualEvent({ endedAt: LOCKED_AT + 3_600, recoveryPrice: 1 })]]),
+      nowSec: REVIEWED_AT,
+    });
+
+    expect(summary.headline.policyUniverseIncidentCount).toBe(1);
+    expect(summary.headline.lockedPredictionCount).toBe(1);
+    expect(summary.headline.pendingLockCount).toBe(1);
+    expect(summary.headline.stateAssignedPct).toBe(0);
+    expect(summary.headline.finalizedCoveragePct).toBe(0);
+  });
+
   it("pins coverage state counts separately from operational-cause filters", () => {
     const { summary } = reviewDdrrV2Rows({
       coverageRows: [
@@ -740,7 +783,6 @@ describe("DDRR coverage metrics", () => {
       missedOperationalLockCount: summary.headline.missedOperationalLockCount,
       currentEligibleOpportunityCount: summary.headline.currentEligibleOpportunityCount,
       finalizedOpportunityCount: summary.headline.finalizedOpportunityCount,
-      stateAssignedPct: summary.headline.stateAssignedPct,
       finalizedCoveragePct: summary.headline.finalizedCoveragePct,
       operationalMissRatePct: summary.headline.operationalMissRatePct,
     }).toMatchInlineSnapshot(`
@@ -749,7 +791,7 @@ describe("DDRR coverage metrics", () => {
         "confirmationTimeUnknownCount": 1,
         "currentEligibleOpportunityCount": 7,
         "dataQualityGapCount": 2,
-        "finalizedCoveragePct": 0.9166666666666666,
+        "finalizedCoveragePct": 0.75,
         "finalizedOpportunityCount": 5,
         "lockDeferredCount": 1,
         "missedLockDataQualityGapCount": 1,
@@ -765,7 +807,6 @@ describe("DDRR coverage metrics", () => {
         "publicationFailedCount": 1,
         "publicationRetryPendingCount": 1,
         "resolvedBeforePredictionCount": 1,
-        "stateAssignedPct": 1.1666666666666667,
         "terminalBeforePredictionCount": 1,
       }
     `);

@@ -44,64 +44,8 @@ describe("Safety Score v9 methodology policy", () => {
     // 335 assets. The full 62-row scope (22 owner-gate rows plus 40 beyond it,
     // including the 28 USDT bridge-control rows) was explicitly acknowledged:
     // pathKinds is per-reason-code, so the rows cannot be admitted separately.
-    // 9.1 (2026-08-08): semantic.control gains `mintMergedSignals` — the merged
-    // mint grader's resolved-incident decay caps, key-custody reclassification,
-    // fine multisig quorum ladder, and Safe module modifier. Calibrated against
-    // the Wave-1 release baseline to zero letter-grade flips; see the drift
-    // report attached to the 9.1 changelog entry.
-    // 9.12 (2026-08-08): `resolvedIncidentQualityCaps` moves 79/85/90 ->
-    // 55/70/85. 9.1 shipped the decay mechanism at the strongest ladder that
-    // flipped no grade, which was a calibration constraint rather than a
-    // judgment; the severity is now chosen on merit and every rung is an
-    // existing V9 posture value. One disclosed grade flip (pyusd-paypal A- -> B)
-    // and one score-only move (reusd-resupply 47 -> 45).
-    // 9.13 (2026-08-08): risk-absorption wrapper ownership selects an existing
-    // parent-cap tier outside the policy formula, so the semantic digest is unchanged.
-    // 9.14 engine phase (2026-08-08): `semantic.backing.archetypes` gains the
-    // `commodity-claim` rubric (reserveWeight 0.55; title-and-allocation 0.15,
-    // custody-continuity 0.10, assurance-and-reconciliation 0.13,
-    // physical-redemption 0.07). Vocabulary only — no existing archetype rubric,
-    // signal, weight, or ceiling changes, and no asset resolves to the new
-    // archetype until the phase-2 migration, so no score or grade moves.
-    // 9.17 (2026-08-11): oracle applicability separates genuinely oracleless
-    // mechanisms (95) from privileged internal pricing (45); reviewed
-    // not-applicable paths emit no scored component.
-    // 9.25 (2026-08-18): `accessPostureVocabulary.primaryExit` gains
-    // "undisclosed" so a missing exit surface stops publishing as the reviewed
-    // negative "none". Published-vocabulary only — primaryExit is a posture
-    // projection, not a scoring input, and the 2026-08-18 capture replays with
-    // every score, grade, and pillar score byte-identical.
-    // 9.26 (2026-08-18): the reason registry gains the diagnostic twin
-    // "nonmaterial-bridge-supply-unmatched", so unattributed bridge supply below
-    // the deployment materiality floor is published without a ceiling instead of
-    // taking the material reason's 55. Registry addition only — no existing
-    // reason, treatment, ceiling, weight, or threshold changes.
-    // 9.27 (2026-08-18): the registry gains "scoped-control-question" and
-    // `namedReasonCeilings` gains "control-scoped-gap" (69): a reviewer-named,
-    // fresh, scoped open control question takes the 69 ceiling instead of the
-    // 55 control-unverified ceiling. Existing reasons, treatments, weights, and
-    // the other named ceilings are unchanged.
-    // 9.3 (2026-08-20): mintPostureQuality["none-resolved"] moves 95 -> 100 —
-    // the mint component's top rung scores the proven absence of privileged
-    // mint ability instead of reserving unreachable headroom. Every other
-    // rung, credit, signal, gate, and ceiling is unchanged.
-    // 9.32 (2026-08-21): mintPostureQuality gains
-    // "unbounded-reconciliation-unknown"=35 and "collateral-gated"=50; grading
-    // gains adverseSeasonedCreditCeiling=39. Digest rotates with those keys.
-    // 9.33 (2026-08-21): exit gains staleObservationConfidenceFactor=0.6 — a
-    // route whose observation aged past its lane freshness bound is derated to
-    // the same credit as other low-confidence evidence instead of leaving the
-    // capacity denominator outright. No other exit weight, factor, or ceiling
-    // moves; the digest rotates with the added key.
-    // Reserve evidence expiry now separates a 365-day classification review
-    // from a 31-day composition window plus seven-day reporting grace. These
-    // score-bearing gate names and values rotate the semantic digest.
-    // 2026-08-24 chain-maturity adjudication: matureChains is derived from the
-    // dated five-gate registry and adds cardano, conflux, gnosis, hedera,
-    // klaytn (Kaia), rootstock, and sui. The digest rotates with that set.
-    // 9.45 (2026-08-26): the reason registry gains `unproven-settlement-bound`
-    // (bounded exit evidence gap under the exit-unverified ceiling), rotating
-    // the digest with the added registry entry.
+    // Rotate only with reviewed semantic changes; release history lives in
+    // shared/data/methodology-changelogs/safety-score/v9-activation.ts.
     expect(V9_CANDIDATE_POLICY_V1.semanticDigest).toBe(
       "fa4af0387d3be293f6d6f3882900f0b5a567ed80bd4afa0a7e80563e8a11b455",
     );
@@ -174,30 +118,26 @@ describe("Safety Score v9 methodology policy", () => {
     expect(() => loadV9MethodologyPolicy(invalidBridgeThreshold)).toThrow();
   });
 
-  it("changes the semantic digest for every formerly external score-bearing gate family", () => {
-    const loadChangedPolicy = (change: (policy: V9MethodologyPolicy) => void) => {
-      const policy = candidateClone();
-      change(policy);
-      return loadV9MethodologyPolicy(policy).semanticDigest;
-    };
-
-    expect(loadChangedPolicy((policy) => { policy.semantic.formula.withhold.maxScoreExclusive = 54; }))
-      .not.toBe(V9_CANDIDATE_POLICY_V1.semanticDigest);
-    expect(loadChangedPolicy((policy) => { policy.semantic.formula.danger.fGatePegMultiplierFloor = 0.79; }))
-      .not.toBe(V9_CANDIDATE_POLICY_V1.semanticDigest);
-    expect(loadChangedPolicy((policy) => { policy.semantic.formula.danger.dangerOnlyGrades = ["D", "F"]; }))
-      .not.toBe(V9_CANDIDATE_POLICY_V1.semanticDigest);
-    expect(loadChangedPolicy((policy) => { policy.semantic.control.materialBridgeHighShareThreshold = 0.24; }))
-      .not.toBe(V9_CANDIDATE_POLICY_V1.semanticDigest);
-
-    const evidenceExpiry = V9_CANDIDATE_POLICY_V1.policy.semantic.evidence.evidenceExpiry;
-    for (const field of Object.keys(evidenceExpiry) as (keyof typeof evidenceExpiry)[]) {
-      expect(loadChangedPolicy((policy) => { policy.semantic.evidence.evidenceExpiry[field] += 1; }), field)
-        .not.toBe(V9_CANDIDATE_POLICY_V1.semanticDigest);
-    }
+  const semanticMutations: [string, (policy: V9MethodologyPolicy) => void][] = [
+    ["withhold score", (policy) => { policy.semantic.formula.withhold.maxScoreExclusive = 54; }],
+    ["danger floor", (policy) => { policy.semantic.formula.danger.fGatePegMultiplierFloor = 0.79; }],
+    ["danger grades", (policy) => { policy.semantic.formula.danger.dangerOnlyGrades = ["D", "F"]; }],
+    ["bridge materiality", (policy) => { policy.semantic.control.materialBridgeHighShareThreshold = 0.24; }],
+    ["unknown reconciliation", (policy) => { policy.semantic.control.mintPostureQuality["unbounded-reconciliation-unknown"] = 36; }],
+    ["collateral gated", (policy) => { policy.semantic.control.mintPostureQuality["collateral-gated"] = 51; }],
+    ["seasoned credit ceiling", (policy) => { policy.semantic.control.mintPostureGrading.adverseSeasonedCreditCeiling = 40; }],
+  ];
+  const evidenceExpiry = V9_CANDIDATE_POLICY_V1.policy.semantic.evidence.evidenceExpiry;
+  for (const field of Object.keys(evidenceExpiry) as (keyof typeof evidenceExpiry)[]) {
+    semanticMutations.push([`evidence expiry: ${field}`, (policy) => { policy.semantic.evidence.evidenceExpiry[field] += 1; }]);
+  }
+  it.each(semanticMutations)("changes the semantic digest for %s", (_name, change) => {
+    const policy = candidateClone();
+    change(policy);
+    expect(loadV9MethodologyPolicy(policy).semanticDigest).not.toBe(V9_CANDIDATE_POLICY_V1.semanticDigest);
   });
 
-  it("pins the 9.32 mint posture ladder keys and rotates the digest when they move", () => {
+  it("pins the reviewed mint posture ladder keys and grading values", () => {
     const quality = V9_CANDIDATE_POLICY_V1.policy.semantic.control.mintPostureQuality;
     const grading = V9_CANDIDATE_POLICY_V1.policy.semantic.control.mintPostureGrading;
     expect(quality).toMatchObject({
@@ -225,25 +165,9 @@ describe("Safety Score v9 methodology policy", () => {
     expect(grading.adverseSeasonedCreditCeiling).toBe(39);
     expect(grading.seasonedCreditPoints).toBe(10);
     expect(grading.seasonedCreditMinMonths).toBe(60);
-
-    const bumpedUnknownRecon = candidateClone();
-    bumpedUnknownRecon.semantic.control.mintPostureQuality["unbounded-reconciliation-unknown"] = 36;
-    expect(loadV9MethodologyPolicy(bumpedUnknownRecon).semanticDigest).not.toBe(
-      V9_CANDIDATE_POLICY_V1.semanticDigest,
-    );
-    const bumpedCollateral = candidateClone();
-    bumpedCollateral.semantic.control.mintPostureQuality["collateral-gated"] = 51;
-    expect(loadV9MethodologyPolicy(bumpedCollateral).semanticDigest).not.toBe(
-      V9_CANDIDATE_POLICY_V1.semanticDigest,
-    );
-    const bumpedCeiling = candidateClone();
-    bumpedCeiling.semantic.control.mintPostureGrading.adverseSeasonedCreditCeiling = 40;
-    expect(loadV9MethodologyPolicy(bumpedCeiling).semanticDigest).not.toBe(
-      V9_CANDIDATE_POLICY_V1.semanticDigest,
-    );
   });
 
-  it("lets policy-only replay change a danger gate without editing production scoring", () => {
+  it("loads a changed withholding danger threshold with a distinct digest", () => {
     const changedPolicy = candidateClone();
     changedPolicy.semantic.formula.danger.withholdPegMultiplierFloor = 0.84;
     const policy = loadV9MethodologyPolicy(changedPolicy);
@@ -278,6 +202,33 @@ describe("Safety Score v9 methodology policy", () => {
         schemaVersion: candidatePolicyAsset.schemaVersion,
       }).semanticDigest,
     ).toBe(V9_CANDIDATE_POLICY_V1.semanticDigest);
+  });
+
+  it("accepts a reversed reviewed mature-chain set without changing the digest", () => {
+    const reordered = candidateClone();
+    reordered.semantic.materiality.matureChains.reverse();
+    expect(reordered.semantic.materiality.matureChains).not.toEqual(
+      V9_CANDIDATE_POLICY_V1.policy.semantic.materiality.matureChains,
+    );
+    expect(loadV9MethodologyPolicy(reordered).semanticDigest).toBe(V9_CANDIDATE_POLICY_V1.semanticDigest);
+  });
+
+  it("rejects an authored mature-chain set missing a reviewed slug", () => {
+    const missing = candidateClone();
+    missing.semantic.materiality.matureChains.pop();
+    expect(() => loadV9MethodologyPolicy(missing)).toThrow(/must derive from chain-maturity-reviews/);
+  });
+
+  it("rejects non-string mature-chain members before canonicalizing the set", () => {
+    const malformed = candidateClone();
+    const raw = {
+      ...malformed,
+      semantic: {
+        ...malformed.semantic,
+        materiality: { ...malformed.semantic.materiality, matureChains: [42] },
+      },
+    };
+    expect(() => loadV9MethodologyPolicy(raw)).toThrow(/must be an array of reviewed chain slugs/);
   });
 
   it("freezes the stays-NR reason set to integrity and classification failures", () => {
@@ -347,15 +298,16 @@ describe("Safety Score v9 methodology policy", () => {
     });
   });
 
-  it("excludes lifecycle identity but includes every semantic decision", () => {
+  it("excludes valid policy identities and release versions but includes semantic decisions", () => {
     const relabeled = candidateClone();
-    relabeled.policyId = "safety-score-v9";
+    relabeled.policyId = "safety-score-v9-audit";
+    expect(relabeled.policyId).not.toBe(V9_CANDIDATE_POLICY_V1.policy.policyId);
     expect(loadV9MethodologyPolicy(relabeled).semanticDigest).toBe(V9_CANDIDATE_POLICY_V1.semanticDigest);
 
-    const promoted = candidateClone();
-    promoted.lifecycle = "active";
-    promoted.releaseVersion = "9.0";
-    expect(loadV9MethodologyPolicy(promoted).semanticDigest).toBe(V9_CANDIDATE_POLICY_V1.semanticDigest);
+    const released = candidateClone();
+    released.releaseVersion = "99.0";
+    expect(released.releaseVersion).not.toBe(V9_CANDIDATE_POLICY_V1.policy.releaseVersion);
+    expect(loadV9MethodologyPolicy(released).semanticDigest).toBe(V9_CANDIDATE_POLICY_V1.semanticDigest);
 
     const reweighted = candidateClone();
     reweighted.semantic.formula.pillarWeights.backing = 0.39;

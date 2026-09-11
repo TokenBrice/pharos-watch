@@ -1,39 +1,16 @@
 import { describe, expect, it } from "vitest";
 import { GENIUS_REGIME_STATE } from "@shared/lib/compliance-regime-state";
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
-import type { PegSummaryCoin } from "@shared/types";
+import { makePegSummaryCoin } from "@/test-utils/peg-summary-fixtures";
 import { makeV9Card } from "@/test/fixtures/safety-score-v9";
-import { buildStablecoinDetailHeroViewModel } from "../stablecoin-detail-view-model";
-
-function makePegSummaryCoin(overrides: Partial<PegSummaryCoin> = {}): PegSummaryCoin {
-  return {
-    id: "usdc-circle",
-    symbol: "USDC",
-    name: "USD Coin",
-    pegType: "peggedUSD",
-    pegCurrency: "USD",
-    governance: "centralized",
-    currentDeviationBps: 0,
-    pegScore: 95,
-    pegPct: 99.9,
-    severityScore: 0,
-    spreadPenalty: 0,
-    eventCount: 0,
-    worstDeviationBps: null,
-    activeDepeg: false,
-    lastEventAt: null,
-    trackingSpanDays: 365,
-    methodologyVersion: "test",
-    ...overrides,
-  };
-}
+import { buildDetailHero } from "./stablecoin-detail-view-model.test-support";
 
 describe("stablecoin detail hero view-model builder", () => {
   it("derives hero display metrics and signal rail from raw detail inputs", () => {
     const coin = TRACKED_META_BY_ID.get("usdc-circle");
     expect(coin).toBeDefined();
 
-    const hero = buildStablecoinDetailHeroViewModel({
+    const hero = buildDetailHero({
       coin: coin!,
       coinData: {
         id: "usdc-circle",
@@ -175,7 +152,7 @@ describe("stablecoin detail hero view-model builder", () => {
     const coin = TRACKED_META_BY_ID.get("dai-makerdao");
     expect(coin).toBeDefined();
 
-    const hero = buildStablecoinDetailHeroViewModel({
+    const hero = buildDetailHero({
       coin: coin!,
       coinData: {
         id: "dai-makerdao",
@@ -186,17 +163,6 @@ describe("stablecoin detail hero view-model builder", () => {
         circulating: { peggedUSD: 100 },
         chains: [],
       } as never,
-      isNavToken: false,
-      mcap: 100,
-      supply: 100,
-      prevDay: null,
-      prevWeek: null,
-      prevMonth: null,
-      performanceVsUsd1y: null,
-      pegRef: 1,
-      deviationBps: 0,
-      gaugeDeviationBps: 0,
-      pegReferenceUnavailable: false,
       pegScoreResult: makePegSummaryCoin({
         id: "dai-makerdao",
         symbol: "DAI",
@@ -207,9 +173,6 @@ describe("stablecoin detail hero view-model builder", () => {
         trackingSpanDays: 3,
         activeDepeg: false,
       }),
-      liquidityData: undefined,
-      yieldRanking: null,
-      stressSignal: null,
       reportCard: makeV9Card({
         id: "dai-makerdao",
         accessPosture: {
@@ -221,13 +184,11 @@ describe("stablecoin detail hero view-model builder", () => {
         archetype: "uncategorized",
         label: "Uncategorized",
       },
-      resolvedMechanismArchetype: null,
       mintAuthority: {
         status: "reviewed",
         mintPathLabel: "User-collateralized, governed",
         mintPathShortLabel: "Governed CDP",
       } as never,
-      redemptionBackstop: null,
     });
 
     expect(hero.tertiaryMetrics.find((metric) => metric.key === "peg-score")?.display).toMatchObject({
@@ -248,7 +209,7 @@ describe("stablecoin detail hero view-model builder", () => {
     const coin = TRACKED_META_BY_ID.get("lisusd-lista");
     expect(coin).toBeDefined();
 
-    const hero = buildStablecoinDetailHeroViewModel({
+    const hero = buildDetailHero({
       coin: coin!,
       coinData: {
         id: "lisusd-lista",
@@ -259,21 +220,6 @@ describe("stablecoin detail hero view-model builder", () => {
         circulating: { peggedUSD: 100 },
         chains: [],
       } as never,
-      isNavToken: false,
-      mcap: 100,
-      supply: 100,
-      prevDay: null,
-      prevWeek: null,
-      prevMonth: null,
-      performanceVsUsd1y: null,
-      pegRef: 1,
-      deviationBps: 0,
-      gaugeDeviationBps: 0,
-      pegReferenceUnavailable: false,
-      pegScoreResult: null,
-      liquidityData: undefined,
-      yieldRanking: null,
-      stressSignal: null,
       reportCard: makeV9Card({
         id: "lisusd-lista",
         accessPosture: {
@@ -281,15 +227,9 @@ describe("stablecoin detail hero view-model builder", () => {
           freezeExposure: "possible",
         },
       }),
-      verdict: {
-        archetype: "uncategorized",
-        label: "Uncategorized",
-      },
-      resolvedMechanismArchetype: null,
       mintAuthority: {
         status: "not-reviewed",
       } as never,
-      redemptionBackstop: null,
     });
 
     expect(hero.passportItems.find((item) => item.key === "freeze")).toMatchObject({
@@ -309,7 +249,7 @@ describe("stablecoin detail hero view-model builder", () => {
       },
     } as never;
 
-    const hero = buildStablecoinDetailHeroViewModel({
+    const hero = buildDetailHero({
       coin: sparseCoin,
       coinData: {
         id: "mock-sparse",
@@ -320,26 +260,7 @@ describe("stablecoin detail hero view-model builder", () => {
         circulating: { peggedUSD: 100 },
         chains: [],
       } as never,
-      isNavToken: false,
-      mcap: 100,
-      supply: 100,
-      prevDay: null,
-      prevWeek: null,
-      prevMonth: null,
-      performanceVsUsd1y: null,
-      pegRef: 1,
-      deviationBps: 0,
-      gaugeDeviationBps: 0,
-      pegReferenceUnavailable: false,
-      pegScoreResult: null,
-      liquidityData: undefined,
-      yieldRanking: null,
-      stressSignal: null,
-      reportCard: null,
-      verdict: { archetype: "uncategorized", label: "Uncategorized" },
-      resolvedMechanismArchetype: null,
       mintAuthority: { status: "not-reviewed" } as never,
-      redemptionBackstop: null,
     });
 
     const byKey = new Map(hero.passportItems.map((item) => [item.key, item]));
@@ -376,7 +297,7 @@ describe("stablecoin detail hero view-model builder", () => {
       },
     } as never;
 
-    const hero = buildStablecoinDetailHeroViewModel({
+    const hero = buildDetailHero({
       coin: attestedCoin,
       coinData: {
         id: "mock-attested",
@@ -387,23 +308,6 @@ describe("stablecoin detail hero view-model builder", () => {
         circulating: { peggedUSD: 100 },
         chains: ["ethereum", "base", "solana"],
       } as never,
-      isNavToken: false,
-      mcap: 100,
-      supply: 100,
-      prevDay: null,
-      prevWeek: null,
-      prevMonth: null,
-      performanceVsUsd1y: null,
-      pegRef: 1,
-      deviationBps: 0,
-      gaugeDeviationBps: 0,
-      pegReferenceUnavailable: false,
-      pegScoreResult: null,
-      liquidityData: undefined,
-      yieldRanking: null,
-      stressSignal: null,
-      reportCard: null,
-      verdict: { archetype: "uncategorized", label: "Uncategorized" },
       resolvedMechanismArchetype: "tbill",
       mintAuthority: {
         status: "reviewed",
@@ -429,7 +333,7 @@ describe("stablecoin detail hero view-model builder", () => {
 
     // A decentralized coin omits the attestor chip (it publishes no reserve
     // attestation) and routes jurisdiction to the overview section.
-    const decentralizedHero = buildStablecoinDetailHeroViewModel({
+    const decentralizedHero = buildDetailHero({
       coin: {
         ...(attestedCoin as object),
         flags: { backing: "crypto-backed", governance: "decentralized", pegCurrency: "USD" },
@@ -443,30 +347,12 @@ describe("stablecoin detail hero view-model builder", () => {
         circulating: { peggedUSD: 100 },
         chains: ["ethereum"],
       } as never,
-      isNavToken: false,
-      mcap: 100,
-      supply: 100,
-      prevDay: null,
-      prevWeek: null,
-      prevMonth: null,
-      performanceVsUsd1y: null,
-      pegRef: 1,
-      deviationBps: 0,
-      gaugeDeviationBps: 0,
-      pegReferenceUnavailable: false,
-      pegScoreResult: null,
-      liquidityData: undefined,
-      yieldRanking: null,
-      stressSignal: null,
-      reportCard: null,
-      verdict: { archetype: "uncategorized", label: "Uncategorized" },
       resolvedMechanismArchetype: "cdp",
       mintAuthority: {
         status: "reviewed",
         mintPathLabel: "User-collateralized, governed",
         mintPathShortLabel: "Governed CDP",
       } as never,
-      redemptionBackstop: null,
     });
 
     const decentralizedByKey = new Map(decentralizedHero.passportItems.map((item) => [item.key, item]));
@@ -474,7 +360,7 @@ describe("stablecoin detail hero view-model builder", () => {
     expect(decentralizedByKey.get("jurisdiction")?.href).toBe("#info");
   });
 
-  type HeroBuilderParams = Parameters<typeof buildStablecoinDetailHeroViewModel>[0];
+  type HeroBuilderParams = Parameters<typeof buildDetailHero>[0];
 
   // Shared scaffold for the Issued / MiCA / GENIUS / Record passport cases:
   // a plain centralized mock coin with every conditional dataset absent unless
@@ -492,16 +378,7 @@ describe("stablecoin detail hero view-model builder", () => {
     mintAuthority?: HeroBuilderParams["mintAuthority"];
     redemptionBackstop?: HeroBuilderParams["redemptionBackstop"];
   } = {}) {
-    const basePegScoreResult = {
-      id: "mock-passport",
-      symbol: "MPP",
-      pegScore: 95,
-      pegPct: 99.95,
-      eventCount: 0,
-      trackingSpanDays: 365,
-      activeDepeg: false,
-    };
-    return buildStablecoinDetailHeroViewModel({
+    return buildDetailHero({
       coin: {
         id: "mock-passport",
         symbol: "MPP",
@@ -521,23 +398,7 @@ describe("stablecoin detail hero view-model builder", () => {
         chains: ["ethereum"],
       } as never,
       isNavToken,
-      mcap: 100,
-      supply: 100,
-      prevDay: null,
-      prevWeek: null,
-      prevMonth: null,
-      performanceVsUsd1y: null,
-      pegRef: 1,
-      deviationBps: 0,
-      gaugeDeviationBps: 0,
-      pegReferenceUnavailable: false,
-      pegScoreResult: pegRecord ? ({ ...basePegScoreResult, ...pegRecord } as never) : null,
-      liquidityData: undefined,
-      yieldRanking: null,
-      stressSignal: null,
-      reportCard: null,
-      verdict: { archetype: "uncategorized", label: "Uncategorized" },
-      resolvedMechanismArchetype: null,
+      pegScoreResult: pegRecord ? makePegSummaryCoin({ id: "mock-passport", symbol: "MPP", ...pegRecord }) : null,
       mintAuthority,
       redemptionBackstop,
     });

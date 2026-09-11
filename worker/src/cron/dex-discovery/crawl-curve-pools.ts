@@ -13,9 +13,10 @@ import type { CurveApiPayload } from "../dex-liquidity/types";
 import { DISCOVERY_STAGE_TIMEOUT_MS, buildStageSignal, type CrawlStageContext } from "./staged-pool";
 import type { DexDeploymentProviderCheck } from "./types";
 
-const CURVE_DISCOVERY_FETCH_CONCURRENCY = 2;
-// Curve getPools payloads are large but should stay below the generic 16 MiB body cap.
-const CURVE_DISCOVERY_MAX_RESPONSE_BYTES = 4 * 1024 * 1024;
+const CURVE_DISCOVERY_FETCH_CONCURRENCY = 1;
+// Ethereum's full census exceeds 4 MiB. Serialize the larger bounded reads so
+// the aggregate response-byte budget stays at 8 MiB across active requests.
+const CURVE_DISCOVERY_MAX_RESPONSE_BYTES = 8 * 1024 * 1024;
 
 export interface CurvePoolsStageResult {
   providerChecks: DexDeploymentProviderCheck[];

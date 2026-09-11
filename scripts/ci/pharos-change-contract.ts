@@ -1927,9 +1927,13 @@ export function buildSessionStartContext(contract: ChangeContract): string {
   return sections.join("\n");
 }
 
-interface HookInputResult {
+export interface HookInputResult {
   input: UnknownRecord;
   malformed: boolean;
+}
+
+export interface HookInputDeps {
+  readStdin?: () => string;
 }
 
 type HookMode = "pre-tool-use" | "permission-request" | "session-start";
@@ -2012,9 +2016,9 @@ function appendHookDiagnostic(
   }
 }
 
-function readHookInput(): HookInputResult {
+export function readHookInput({ readStdin = () => readFileSync(0, "utf8") }: HookInputDeps = {}): HookInputResult {
   try {
-    const raw = readFileSync(0, "utf8").trim();
+    const raw = readStdin().trim();
     if (!raw) return { input: {}, malformed: true };
     const parsed: unknown = JSON.parse(raw);
     return isRecord(parsed) ? { input: parsed, malformed: false } : { input: {}, malformed: true };

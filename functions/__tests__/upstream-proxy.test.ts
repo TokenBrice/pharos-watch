@@ -21,6 +21,14 @@ describe("resolveWildcardProxyPath", () => {
     expect(resolveWildcardProxyPath(undefined, "/api/")).toBeNull();
     expect(resolveWildcardProxyPath([], "/api/")).toBeNull();
   });
+
+  it.each([
+    ["resource", "/api/resource"],
+    [["coins", "usd"], "/api/coins/usd"],
+    ["", null],
+  ])("resolves wildcard %j", (path, expected) => {
+    expect(resolveWildcardProxyPath(path, "/api/")).toBe(expected);
+  });
 });
 
 describe("fetchUpstreamProxy", () => {
@@ -55,7 +63,7 @@ describe("fetchUpstreamProxy", () => {
     const [url, init] = fetchSpy.mock.calls[0] ?? [];
     expect(url).toBe(PROXY_OPTIONS.upstreamUrl);
     expect(init?.method).toBe("POST");
-    expect(init?.headers).toBe(PROXY_OPTIONS.headers);
+    expect(Object.fromEntries(new Headers(init?.headers))).toEqual({ "x-proxy-test": "yes" });
     expect(init?.body).toBe("request-body");
     expect(init?.redirect).toBe("manual");
     expect(init?.signal).toBeInstanceOf(AbortSignal);
@@ -71,10 +79,10 @@ describe("fetchUpstreamProxy", () => {
     );
 
     expect(result).toMatchObject({ ok: false, errorKind: "fetch-error" });
+    expect(warnSpy).toHaveBeenCalledOnce();
     if (result.ok) return;
     expect(result.response.status).toBe(502);
     await expect(result.response.json()).resolves.toEqual({ error: "upstream fetch failed" });
-    expect(warnSpy).toHaveBeenCalledWith("[test-proxy] upstream fetch failed (TypeError): network down");
   });
 
   it("rejects an unsafe declared length before reading the response body", async () => {
@@ -122,11 +130,85 @@ describe("fetchUpstreamProxy", () => {
     expect(result.response.status).toBe(502);
     expect(cancelReason).toMatchObject({
       name: "ProxyResponseTooLargeError",
-      message: `Upstream response exceeded ${MAX_PROXY_RESPONSE_BODY_BYTES} bytes`,
     });
   });
 
+  it.each(["fetch", "body"] as const)("classifies the deadline during %s without firing early", async (phase) => {
+    vi.useFakeTimers();
+    vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    const cancel = vi.fn();
+    const fetchSpy = vi.spyOn(globalThis, "fetch").mockImplementation((_url, init) => {
+      if (phase === "body") {
+        return Promise.resolve(new Response(new ReadableStream({ cancel })));
+      }
+      return new Promise<Response>((_resolve, reject) => {
+        init!.signal!.addEventListener("abort", () => reject(init!.signal!.reason), { once: true });
+      });
+    });
+    let settled = false;
+    const pending = fetchUpstreamProxy(new Request("https://pharos.watch/proxy"), {
+      ...PROXY_OPTIONS,
+      timeoutMs: 100,
+    }).then((result) => {
+      settled = true;
+      return result;
+    });
+
+    await vi.advanceTimersByTimeAsync(99);
+    expect(settled).toBe(false);
+    expect(fetchSpy.mock.calls[0]?.[1]?.signal?.aborted).toBe(false);
+    await vi.advanceTimersByTimeAsync(1);
+    const result = await pending;
+    expect(result).toMatchObject({ ok: false, errorKind: "timeout" });
+    expect(result.response.status).toBe(504);
+    await expect(result.response.json()).resolves.toEqual({ error: "upstream timed out" });
+    if (phase === "body") expect(cancel).toHaveBeenCalledWith(PROXY_OPTIONS.timeoutReason);
+    expect(vi.getTimerCount()).toBe(0);
+  });
+
+  it("accepts a closed stream exactly at the byte cap", async () => {
+    const bytes = new Uint8Array(MAX_PROXY_RESPONSE_BODY_BYTES);
+    bytes[0] = 17;
+    bytes[bytes.length - 1] = 29;
+    vi.spyOn(globalThis, "fetch").mockResolvedValue(new Response(new ReadableStream({
+      start(controller) {
+        controller.enqueue(bytes);
+        controller.close();
+      },
+    })));
+    const result = await fetchUpstreamProxy(new Request("https://pharos.watch/proxy"), PROXY_OPTIONS);
+    expect(result.ok).toBe(true);
+    const buffered = await result.response.arrayBuffer();
+    expect(buffered.byteLength).toBe(MAX_PROXY_RESPONSE_BODY_BYTES);
+    expect(Buffer.from(buffered).equals(Buffer.from(bytes.buffer))).toBe(true);
+  });
+
+  it("rejects a safe declared cap-plus-one without pulling content", async () => {
+    const pull = vi.fn();
+    const cancel = vi.fn();
+    vi.spyOn(globalThis, "fetch").mockResolvedValue(new Response(new ReadableStream({
+      pull,
+      cancel,
+    }, { highWaterMark: 0 }), {
+      headers: { "Content-Length": String(MAX_PROXY_RESPONSE_BODY_BYTES + 1) },
+    }));
+    const result = await fetchUpstreamProxy(new Request("https://pharos.watch/proxy"), PROXY_OPTIONS);
+    expect(result).toMatchObject({ ok: false, errorKind: "fetch-error" });
+    expect(result.response.status).toBe(502);
+    expect(pull).not.toHaveBeenCalled();
+    expect(cancel).toHaveBeenCalledWith(expect.objectContaining({ name: "ProxyResponseTooLargeError" }));
+  });
+
+  it("preserves a bodyless 204 response", async () => {
+    vi.spyOn(globalThis, "fetch").mockResolvedValue(new Response(null, { status: 204 }));
+    const result = await fetchUpstreamProxy(new Request("https://pharos.watch/proxy"), PROXY_OPTIONS);
+    expect(result.ok).toBe(true);
+    expect(result.response.status).toBe(204);
+    expect(result.response.body).toBeNull();
+  });
+
   it("propagates a caller abort to a pending upstream body read", async () => {
+    vi.useFakeTimers();
     let resolveReadStarted: (() => void) | undefined;
     const readStarted = new Promise<void>((resolve) => {
       resolveReadStarted = resolve;
@@ -147,10 +229,11 @@ describe("fetchUpstreamProxy", () => {
     const fetchSpy = vi.spyOn(globalThis, "fetch").mockResolvedValue(response);
     const requestController = new AbortController();
     const request = new Request("https://pharos.watch/proxy", { signal: requestController.signal });
-    const resultPromise = fetchUpstreamProxy(request, PROXY_OPTIONS);
+    const resultPromise = fetchUpstreamProxy(request, { ...PROXY_OPTIONS, timeoutMs: 100 });
     const abortReason = new DOMException("client disconnected", "AbortError");
 
     await readStarted;
+    await vi.advanceTimersByTimeAsync(99);
     requestController.abort(abortReason);
 
     const result = await resultPromise;
@@ -161,5 +244,7 @@ describe("fetchUpstreamProxy", () => {
     expect(cancelReason).toBe(abortReason);
     expect(fetchSpy.mock.calls[0]?.[1]?.signal?.aborted).toBe(true);
     expect(fetchSpy.mock.calls[0]?.[1]?.signal?.reason).toBe(abortReason);
+    await vi.advanceTimersByTimeAsync(1);
+    expect(vi.getTimerCount()).toBe(0);
   });
 });

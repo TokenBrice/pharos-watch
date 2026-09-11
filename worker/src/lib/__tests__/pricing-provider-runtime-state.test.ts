@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { makeNoopD1 } from "../../test-helpers/noop-d1";
 import {
   BINANCE_ENVIRONMENT_BLOCK_TTL_SEC,
@@ -6,6 +6,10 @@ import {
   recordProviderEnvironmentAvailable,
   recordProviderEnvironmentBlocked,
 } from "../pricing-provider-runtime-state";
+import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
+
+const fixtures = createLatestSchemaFixtureTracker();
+afterEach(() => fixtures.closeAll());
 
 function makeDb(row: Record<string, unknown> | null = null) {
   const run = vi.fn(async () => ({ meta: { changes: 1 } }));
@@ -43,25 +47,24 @@ describe("pricing provider runtime state", () => {
     });
   });
 
-  it("records a bounded next-probe time for environment blocks", async () => {
-    const { db, bind } = makeDb();
+  it("persists blocking, TTL probing and recovery independently per provider", async () => {
+    const { db } = fixtures.open();
+    const available = { shouldFetch: true, probeOnly: false, blockedStatus: null, nextProbeAt: null };
+    await recordProviderEnvironmentAvailable(db, "binance", 900);
+    expect(await readProviderAvailability(db, "binance", 900)).toEqual(available);
     await recordProviderEnvironmentBlocked(db, "binance", 403, 1_000);
-    expect(bind).toHaveBeenCalledWith(
-      "binance",
-      403,
-      1_000,
-      1_000 + BINANCE_ENVIRONMENT_BLOCK_TTL_SEC,
-      1_000,
-      1_000,
-    );
-  });
-
-  it("records recovery after a successful environment probe", async () => {
-    const { db, bind, run } = makeDb();
-
-    await recordProviderEnvironmentAvailable(db, "binance", 2_000);
-
-    expect(bind).toHaveBeenCalledWith("binance", 2_000, 2_000);
-    expect(run).toHaveBeenCalledTimes(1);
+    await recordProviderEnvironmentBlocked(db, "coinbase", 451, 1_001);
+    const probeAt = 1_000 + BINANCE_ENVIRONMENT_BLOCK_TTL_SEC;
+    expect(await readProviderAvailability(db, "binance", probeAt - 1)).toEqual({
+      shouldFetch: false, probeOnly: false, blockedStatus: 403, nextProbeAt: probeAt,
+    });
+    expect(await readProviderAvailability(db, "binance", probeAt)).toEqual({
+      shouldFetch: true, probeOnly: true, blockedStatus: 403, nextProbeAt: probeAt,
+    });
+    await recordProviderEnvironmentAvailable(db, "binance", probeAt);
+    expect(await readProviderAvailability(db, "binance", probeAt)).toEqual(available);
+    expect(await readProviderAvailability(db, "coinbase", probeAt)).toEqual({
+      shouldFetch: false, probeOnly: false, blockedStatus: 451, nextProbeAt: probeAt + 1,
+    });
   });
 });

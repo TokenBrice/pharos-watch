@@ -43,6 +43,7 @@ type BucketValue = {
   name: string;
   value: number;
   risk: ReserveRisk;
+  sourceKey?: string;
   coinId?: string;
   depType?: ReserveSlice["depType"];
 };
@@ -73,11 +74,9 @@ function createUnknownVaultWarning(
   unknownVaultTypes: Iterable<string>,
   unknownExposurePct: number,
 ): LiveReserveWarning {
-  return buildUnknownExposureWarning({
-    code: "unknown-vault-type",
-    message: `USDD collateral feed includes unmapped vault types: ${Array.from(unknownVaultTypes).sort().join(", ")}`,
-    unknownExposurePct,
-  });
+  return buildUnknownExposureWarning({ adapterKey: "usdd-data-platform", code: "unknown-vault-type",
+  message: `USDD collateral feed includes unmapped vault types: ${Array.from(unknownVaultTypes).sort().join(", ")}`,
+  unknownExposurePct, });
 }
 
 export function adaptUsddLatestCollateral(
@@ -98,9 +97,12 @@ export function adaptUsddLatestCollateral(
   let unknownVaultUsd = 0;
   let totalVaultUsd = 0;
 
-  for (const item of items) {
-    const lockedValue = Number(item.lockedValue ?? 0);
-    if (!Number.isFinite(lockedValue) || lockedValue <= 0) continue;
+  for (const [index, item] of items.entries()) {
+    const lockedValue = item.lockedValue;
+    if (typeof lockedValue !== "number" || !Number.isFinite(lockedValue) || lockedValue < 0) {
+      throw new Error(`usdd-data-platform: collateral item ${index} lockedValue is missing or invalid`);
+    }
+    if (lockedValue === 0) continue;
     totalVaultUsd += lockedValue;
     switch (item.vaultType) {
       case "SA001-A":
@@ -148,11 +150,13 @@ export function adaptUsddLatestCollateral(
       name: "Smart Allocator (stablecoin DeFi via Aave/JustLend)",
       value: bucketValues.smartAllocatorUsd,
       risk: "medium",
+      sourceKey: "usdd-data-platform:smart-allocator",
     },
     {
       name: "USDT (PSM vaults)",
       value: bucketValues.psmUsdtUsd,
       risk: "low",
+      sourceKey: "usdd-data-platform:psm-usdt",
       coinId: "usdt-tether",
       depType: "collateral",
     },
@@ -160,23 +164,27 @@ export function adaptUsddLatestCollateral(
       name: "TRX",
       value: bucketValues.trxUsd,
       risk: "high",
+      sourceKey: "usdd-data-platform:trx",
     },
     {
       name: "USDT (direct vaults)",
       value: bucketValues.directUsdtUsd,
       risk: "high",
+      sourceKey: "usdd-data-platform:direct-usdt",
       coinId: "usdt-tether",
     },
     {
       name: "sTRX (direct vaults)",
       value: bucketValues.stakedTrxUsd,
       risk: "high",
+      sourceKey: "usdd-data-platform:staked-trx",
     },
     ...(unknownVaultUsd > 0
       ? [{
           name: USDD_UNKNOWN_VAULT_SLICE_NAME,
           value: unknownVaultUsd,
           risk: "high" as const,
+          sourceKey: "usdd-data-platform:unknown",
         }]
       : []),
   ];
@@ -387,7 +395,6 @@ export async function fetchUsddDataPlatformReserves(
     metadata: {
       ...adapted.metadata,
       psmGemJoinBalanceRaw: psm.capacityRaw,
-      immediateRedeemableUsd: psm.capacityUsd,
       ...buildRedemptionSnapshotMetadata({
         capacityUsd: psm.capacityUsd,
         capacityKind: "live-direct",

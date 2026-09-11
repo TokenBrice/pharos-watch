@@ -201,6 +201,46 @@ describe("reviewed curated reserve admission", () => {
 });
 
 describe("curated reserve dependency admission", () => {
+  it.each(["no-match", "expired", "non-link"] as const)(
+    "does not restore curated weights after a live %s rejection",
+    (reason) => {
+      const base = makeV9TwoAssetFixedInput({ clockSec: DEPENDENCY_CLOCK_SEC });
+      const {
+        schemaVersion: _schemaVersion, dexPayloadFingerprint: _dexPayloadFingerprint,
+        redemptionPayloadFingerprint: _redemptionPayloadFingerprint, registryFingerprint: _registryFingerprint,
+        inputMethodologyVersions: _inputMethodologyVersions, baseInputGenerationId: _baseInputGenerationId,
+        ...draft
+      } = base;
+      const metaById = dependencyMetaById(reason === "expired" ? "2025-01-01" : "2026-08-19");
+      const meta = metaById.get("alpha")!;
+      meta.reserves = [{
+        sourceKey: "fixture:beta", name: "Beta exposure", pct: 100, risk: "low", coinId: "beta",
+      }];
+      if (reason === "non-link") {
+        meta.reserveReview!.nonLinkDispositions = [{
+          reserveIndex: 0, reserveName: "Beta exposure", pct: 100,
+          disposition: "untracked-exogenous-asset", rationale: "Reference only, not a claim.",
+        }];
+      }
+      const fixed = createReportCardsFixedInput({
+        ...draft,
+        liveReserveMap: { ...base.liveReserveMap, alpha: [{
+          sourceKey: reason === "no-match" ? "fixture:other" : "fixture:beta",
+          name: "Beta exposure", pct: 100, risk: "low",
+          ...(reason === "non-link" ? { coinId: "beta" } : {}),
+        }] },
+      });
+      const extension = buildSafetyScoreV9BaselineExtension(fixed, { metaById });
+      const expected = {
+        source: "live-unmapped", edges: [],
+        rejectionReasons: [{ sliceIndex: 0, reason }],
+      };
+      expect(extension.assets.find((asset) => asset.assetId === "alpha")!.dependencies).toMatchObject(expected);
+      const compiled = compileSafetyScoreV9FactSetFromFixedInput(fixed, extension);
+      expect(compiled.assets.find((asset) => asset.assetId === "alpha")!.dependencies).toMatchObject(expected);
+    },
+  );
+
   it("drops curated basket edges when the reserve review is expired", () => {
     const fixed = makeV9TwoAssetFixedInput({
       omitAlphaReserve: true,
@@ -558,14 +598,19 @@ describe("buildReviewedReserveClassifications", () => {
       reviewed,
       CLOCK_SEC,
     );
-    expect(drifted.every((row) => !row.classificationKey.startsWith("source-native:"))).toBe(true);
+    expect(drifted).toMatchObject([
+      { classificationKey: expect.stringMatching(/^registry-reviewed:/), assetClass: "treasury-bill" },
+      { classificationKey: expect.stringMatching(/^registry-reviewed:/), assetClass: "bank-deposit" },
+    ]);
 
     const grosslyDifferent = buildReviewedReserveClassifications(
       [{ name: "<3-Month U.S. Treasuries", pct: 62, risk: "very-low" }],
       reviewed,
       CLOCK_SEC,
     );
-    expect(grosslyDifferent.every((row) => row.classificationKey.startsWith("registry-reviewed:"))).toBe(true);
+    expect(grosslyDifferent).toMatchObject([
+      { classificationKey: expect.stringMatching(/^registry-reviewed:/), assetClass: "treasury-bill" },
+    ]);
   });
 
   it("uses explicit source keys across label and weight changes and fails closed on key mismatch", () => {
@@ -590,7 +635,7 @@ describe("buildReviewedReserveClassifications", () => {
       assetClass: "treasury-bill",
       issuerOrObligorKey: "United States Treasury",
     });
-    expect(dependencyReserveSlices(matchedLive, reviewed, CLOCK_SEC)[0]).toMatchObject({
+    expect(dependencyReserveSlices(matchedLive, reviewed, CLOCK_SEC).slices[0]).toMatchObject({
       coinId: "treasury-proxy",
     });
 
@@ -603,7 +648,7 @@ describe("buildReviewedReserveClassifications", () => {
       classificationKey: expect.stringMatching(/^source-native:/),
       assetClass: null,
     });
-    expect(dependencyReserveSlices(mismatchedLive, reviewed, CLOCK_SEC)[0]!.coinId).toBeUndefined();
+    expect(dependencyReserveSlices(mismatchedLive, reviewed, CLOCK_SEC).slices[0]!.coinId).toBeUndefined();
   });
 
   it("rejects duplicate explicit source keys on either side", () => {
@@ -619,8 +664,11 @@ describe("buildReviewedReserveClassifications", () => {
       { sourceKey, name: "Cash A", pct: 50, risk: "very-low" as const },
       { sourceKey, name: "Cash B", pct: 50, risk: "very-low" as const },
     ];
-    expect(buildReviewedReserveClassifications(duplicateLive, reviewed, CLOCK_SEC)
-      .every((row) => row.classificationKey.startsWith("source-native:"))).toBe(true);
+    // Both source-key rows share one exposure identity, but ambiguity must
+    // prevent the reviewed bank-deposit classification from being attached.
+    expect(buildReviewedReserveClassifications(duplicateLive, reviewed, CLOCK_SEC)).toMatchObject([
+      { classificationKey: "source-native:reserve:8450f631d74b8b6ac00b13cd", assetClass: null },
+    ]);
 
     const duplicateReviewed = reviewedMeta([
       ...reviewed.reserves!,
@@ -666,7 +714,7 @@ describe("buildReviewedReserveClassifications", () => {
       },
     ];
 
-    const [slice] = dependencyReserveSlices(live, reviewed, CLOCK_SEC);
+    const { slices: [slice] } = dependencyReserveSlices(live, reviewed, CLOCK_SEC);
     expect(slice).toMatchObject({ name: "Beta exposure", pct: 100 });
     expect(slice!.coinId).toBeUndefined();
     expect(slice!.depType).toBeUndefined();
@@ -687,7 +735,7 @@ describe("buildReviewedReserveClassifications", () => {
       { sourceKey: "fixture:alpha:beta-exposure", name: "Beta exposure", pct: 100, risk: "low" },
     ];
 
-    expect(dependencyReserveSlices(live, reviewed, CLOCK_SEC)[0]).toMatchObject({
+    expect(dependencyReserveSlices(live, reviewed, CLOCK_SEC).slices[0]).toMatchObject({
       coinId: "beta",
       depType: "collateral",
     });
@@ -725,7 +773,12 @@ describe("buildReviewedReserveClassifications", () => {
     ]);
 
     expect(buildReviewedReserveClassifications(live, reviewed, CLOCK_SEC)
-      .every((row) => row.classificationKey.startsWith("registry-reviewed:"))).toBe(true);
+      .sort((left, right) => left.issuerOrObligorKey!.localeCompare(right.issuerOrObligorKey!))).toMatchObject([
+      { classificationKey: expect.stringMatching(/^registry-reviewed:/), assetClass: "repo", issuerOrObligorKey: "Leading global banks" },
+      { classificationKey: expect.stringMatching(/^registry-reviewed:/), assetClass: "bank-deposit", issuerOrObligorKey: "Other regulated financial institutions" },
+      { classificationKey: expect.stringMatching(/^registry-reviewed:/), assetClass: "bank-deposit", issuerOrObligorKey: "Systemically important financial institutions" },
+      { classificationKey: expect.stringMatching(/^registry-reviewed:/), assetClass: "treasury-bill", issuerOrObligorKey: "United States Treasury" },
+    ]);
   });
 
   it("rejects the current USDC repartition and USD1 aggregate basket as non-identical", () => {
@@ -761,7 +814,12 @@ describe("buildReviewedReserveClassifications", () => {
       ]),
       CLOCK_SEC,
     );
-    expect(usdc.every((row) => row.classificationKey.startsWith("source-native:"))).toBe(true);
+    expect(usdc).toMatchObject([
+      { classificationKey: expect.stringMatching(/^source-native:/), assetClass: null },
+      { classificationKey: expect.stringMatching(/^source-native:/), assetClass: null },
+      { classificationKey: expect.stringMatching(/^source-native:/), assetClass: null },
+      { classificationKey: expect.stringMatching(/^source-native:/), assetClass: null },
+    ]);
 
     const usd1 = buildReviewedReserveClassifications(
       [{ name: "U.S. Treasury Bills, Money Market Funds & Cash", pct: 100, risk: "very-low" }],

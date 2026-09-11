@@ -1,5 +1,5 @@
-export const PSI_DEPEG_SEVERITY_WEIGHT = 60;
-export const PSI_DEPEG_BREADTH_SCALE = 3;
+const PSI_DEPEG_SEVERITY_WEIGHT = 60;
+const PSI_DEPEG_BREADTH_SCALE = 3;
 
 export interface PsiDepegContributionInput {
   bps: number;

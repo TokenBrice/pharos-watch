@@ -31,6 +31,12 @@ export interface DexLiquidityScoringSourceState {
   failedSources: string[];
   criticalSourceFailures: string[];
   fallbackSignals: string[];
+  /**
+   * Direct-API sources that finished partially, chain-scoped where known
+   * (`pancakeswap-api:bsc`). Optional so staged/decoded source states written
+   * before this key existed still type-check and parse.
+   */
+  degradedSources?: string[];
   directApiSourceSummary: DexLiquidityDirectApiSourceSummary;
 }
 
@@ -47,5 +53,12 @@ export interface DexLiquidityPoolState {
   stagedSkippedByOptionalWildcardIdentityCount: number;
   stagedSkippedByAuthoritativeProtocolCount: number;
   stagedSkipDimensions: StagedPoolSkipDimension[];
+  /**
+   * Live-lane rows handed to the `:10` staging write-back, and entries it
+   * dropped because their id is not a trustworthy exact pool id. Optional so a
+   * stage header written before these counters existed still decodes.
+   */
+  stagedWritebackRows?: number;
+  stagedWritebackSkippedUntrustedIds?: number;
   directApiIntegration: DirectApiIntegrationResult;
 }

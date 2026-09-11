@@ -10,6 +10,7 @@ import {
   htmlParseError,
   parseTimestampLikeToUnixSeconds,
   reserveDegradedWarning,
+  reserveInfoWarning,
   slicesFromValues,
 } from "./helpers";
 import { extractEscapedJsonValueAfterKey } from "./html";
@@ -30,7 +31,7 @@ interface ReMetricsSeriesPoint {
   value?: number;
 }
 
-interface ReMetricsSeries {
+interface ReMetricsCard {
   seriesKey?: string;
   stats?: {
     current?: number;
@@ -51,7 +52,11 @@ interface ReMetricsRedemptionRow {
 }
 
 const ESCAPED_INITIAL_BREAKDOWNS_KEY = "\\\"initialChainBreakdowns\\\":";
-const ESCAPED_SERIES_KEY = "\\\"series\\\":";
+// The metrics page embeds its chart cards (one per `seriesKey`, including
+// `offchain_capital`) under `initialCards`. The older `"series":` anchor is
+// gone from the page (the escape depth changed upstream), so it must not be
+// silently relied on.
+const ESCAPED_INITIAL_CARDS_KEY = "\\\"initialCards\\\":";
 const ESCAPED_INITIAL_TVL_DATA_KEY = "\\\"initialTvlData\\\":";
 const ESCAPED_REDEMPTION_ROWS_KEY = "\\\"redemptionRows\\\":";
 
@@ -132,22 +137,22 @@ function parseInitialChainBreakdowns(html: string): Record<string, ReMetricsChai
   return parsed as Record<string, ReMetricsChainBreakdown>;
 }
 
-function parseSeries(html: string): ReMetricsSeries[] {
+function parseInitialCards(html: string): ReMetricsCard[] {
   let parsed: unknown;
   try {
     parsed = JSON.parse(
-      extractEscapedJsonValueAfterKey(html, ESCAPED_SERIES_KEY, "re-metrics"),
+      extractEscapedJsonValueAfterKey(html, ESCAPED_INITIAL_CARDS_KEY, "re-metrics"),
     ) as unknown;
   } catch (error) {
     throw htmlParseError(
       "re-metrics",
-      `series JSON is malformed: ${toErrorMessage(error)}`,
+      `initialCards JSON is malformed: ${toErrorMessage(error)}`,
     );
   }
   if (!Array.isArray(parsed)) {
-    throw htmlParseError("re-metrics", "series was not an array");
+    throw htmlParseError("re-metrics", "initialCards was not an array");
   }
-  return parsed as ReMetricsSeries[];
+  return parsed as ReMetricsCard[];
 }
 
 function parseInitialTvlData(html: string): ReMetricsTvlPoint[] {
@@ -195,24 +200,35 @@ function lastItem<T>(items: T[] | undefined): T | undefined {
   return items && items.length > 0 ? items[items.length - 1] : undefined;
 }
 
-function extractOffchainCapitalContext(html: string): {
+function extractOffchainCapitalContext(
+  html: string,
+  warnings: LiveReserveWarning[],
+): {
   offchainCapitalUsd: number | null;
   offchainTimestamp: number | null;
 } {
-  if (html.includes(ESCAPED_SERIES_KEY)) {
-    const series = parseSeries(html);
-    const offchainSeries = series.find((entry) => entry.seriesKey === "offchain_capital");
+  if (html.includes(ESCAPED_INITIAL_CARDS_KEY)) {
+    const cards = parseInitialCards(html);
+    const offchainCard = cards.find((entry) => entry.seriesKey === "offchain_capital");
+    warnings.push(reserveInfoWarning(
+      "re-metrics-offchain-capital-branch",
+      "Re Metrics offchain capital read from the page's initialCards series",
+    ));
     return {
-      offchainCapitalUsd: offchainSeries?.stats?.current
-        ?? lastItem(offchainSeries?.points)?.value
+      offchainCapitalUsd: offchainCard?.stats?.current
+        ?? lastItem(offchainCard?.points)?.value
         ?? null,
-      offchainTimestamp: parseTimestampLikeToUnixSeconds(lastItem(offchainSeries?.points)?.date),
+      offchainTimestamp: parseTimestampLikeToUnixSeconds(lastItem(offchainCard?.points)?.date),
     };
   }
 
   if (html.includes(ESCAPED_INITIAL_TVL_DATA_KEY)) {
     const tvlData = parseInitialTvlData(html);
     const latestPoint = lastItem(tvlData);
+    warnings.push(reserveInfoWarning(
+      "re-metrics-offchain-capital-branch",
+      "Re Metrics offchain capital read from the initialTvlData fallback (the initialCards series was absent)",
+    ));
     return {
       offchainCapitalUsd:
         latestPoint?.offchain_capital != null && Number.isFinite(latestPoint.offchain_capital)
@@ -224,7 +240,7 @@ function extractOffchainCapitalContext(html: string): {
 
   throw htmlLayoutChangedError(
     "re-metrics",
-    `missing ${ESCAPED_SERIES_KEY} and ${ESCAPED_INITIAL_TVL_DATA_KEY}`,
+    `missing ${ESCAPED_INITIAL_CARDS_KEY} and ${ESCAPED_INITIAL_TVL_DATA_KEY}`,
   );
 }
 
@@ -256,18 +272,18 @@ function extractInstantRedemptionCapacity(html: string): {
 }
 
 export function adaptReMetrics(html: string): AdapterResult {
+  const warnings: LiveReserveWarning[] = [];
   const breakdowns = parseInitialChainBreakdowns(html);
-  const { offchainCapitalUsd, offchainTimestamp } = extractOffchainCapitalContext(html);
+  const { offchainCapitalUsd, offchainTimestamp } = extractOffchainCapitalContext(html, warnings);
   const instantRedemptionCapacity = extractInstantRedemptionCapacity(html);
 
   const tokenValues = new Map<string, number>();
-  const snapshotTimestamps: number[] = [];
-  const warnings: LiveReserveWarning[] = [];
+  const chainAsOfTimestamps: number[] = [];
 
   for (const breakdown of Object.values(breakdowns)) {
     const asOf = parseTimestampLikeToUnixSeconds(breakdown.asOf);
     if (asOf != null) {
-      snapshotTimestamps.push(asOf);
+      chainAsOfTimestamps.push(asOf);
     }
 
     for (const row of breakdown.rows ?? []) {
@@ -278,9 +294,6 @@ export function adaptReMetrics(html: string): AdapterResult {
       const key = normalizeTokenSymbol(tokenSymbol);
       tokenValues.set(key, (tokenValues.get(key) ?? 0) + valueUsd);
     }
-  }
-  if (offchainTimestamp != null) {
-    snapshotTimestamps.push(offchainTimestamp);
   }
   const stableRedeemableUsd = ["usdc", "usdt", "dai", "frax"]
     .reduce((sum, symbol) => sum + (tokenValues.get(symbol) ?? 0), 0);
@@ -314,9 +327,14 @@ export function adaptReMetrics(html: string): AdapterResult {
     throw htmlLayoutChangedError("re-metrics", "no reserve composition entries found");
   }
 
+  // The composition is the chain-breakdown rows, so its freshness must come
+  // from the chain `asOf` set. The offchain capital series is a daily series
+  // whose date can lag the minute-fresh chain rows by ~9h; MIN-ing it into the
+  // composition clock discarded real freshness headroom, so it is carried
+  // separately as `offchainAsOf` instead (RM1).
   const sourceTimestamp =
-    snapshotTimestamps.length > 0
-      ? Math.min(...snapshotTimestamps)
+    chainAsOfTimestamps.length > 0
+      ? Math.min(...chainAsOfTimestamps)
       : null;
 
   return {
@@ -325,6 +343,7 @@ export function adaptReMetrics(html: string): AdapterResult {
     metadata: {
       chainBreakdownCount: Object.keys(breakdowns).length,
       offchainCapitalUsd,
+      ...(offchainTimestamp != null ? { offchainAsOf: offchainTimestamp } : {}),
       trackedTokenCount: tokenValues.size,
       ...freshnessMetadataFromTimestamp(
         sourceTimestamp,
@@ -334,7 +353,6 @@ export function adaptReMetrics(html: string): AdapterResult {
       stableAssetUsd: stableRedeemableUsd,
       ...(instantRedemptionCapacity
         ? {
-            immediateRedeemableUsd: instantRedemptionCapacity.capacityUsd,
             redemptionRowsCount: instantRedemptionCapacity.rows.length,
             redemption: {
               capacityUsd: instantRedemptionCapacity.capacityUsd,

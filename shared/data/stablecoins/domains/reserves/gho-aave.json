@@ -14,7 +14,8 @@
         "custody"
       ],
       "blacklistabilityExposure": "possible",
-      "liquidityHorizon": "unknown"
+      "liquidityHorizon": "unknown",
+      "sourceKey": "gho:0xe9ac5231faecb633da0fe85fcb2785b8363427d2"
     },
     {
       "name": "CoreGhoDirectMinter",
@@ -27,7 +28,8 @@
         "liquidity",
         "smart-contract"
       ],
-      "liquidityHorizon": "unknown"
+      "liquidityHorizon": "unknown",
+      "sourceKey": "gho:0x5513224daaeabca31af5280727878d52097afa05"
     },
     {
       "name": "HorizonGhoDirectMinter",
@@ -40,7 +42,8 @@
         "liquidity",
         "smart-contract"
       ],
-      "liquidityHorizon": "unknown"
+      "liquidityHorizon": "unknown",
+      "sourceKey": "gho:0xe10c78a3ac7f016ed2de1a89c5479b1039eab9ea"
     },
     {
       "name": "stataUSDT GSM",
@@ -56,7 +59,8 @@
         "smart-contract",
         "custody"
       ],
-      "liquidityHorizon": "immediate"
+      "liquidityHorizon": "immediate",
+      "sourceKey": "gho:0x882285e62656b9623af136ce3078c6bdcc33f5e3"
     },
     {
       "name": "GhoDirectFacilitator Plasma",
@@ -69,7 +73,8 @@
         "liquidity",
         "smart-contract"
       ],
-      "liquidityHorizon": "unknown"
+      "liquidityHorizon": "unknown",
+      "sourceKey": "gho:0x2bd010ab5393ab51b601b99c4b33ba148d9466e9"
     },
     {
       "name": "GhoDirectFacilitator GSM Arbitrum",
@@ -83,7 +88,8 @@
         "smart-contract",
         "custody"
       ],
-      "liquidityHorizon": "unknown"
+      "liquidityHorizon": "unknown",
+      "sourceKey": "gho:0x436dccc028322afc355f608cf582b7d7f19fdfed"
     },
     {
       "name": "LidoGhoDirectMinter",
@@ -96,7 +102,8 @@
         "liquidity",
         "smart-contract"
       ],
-      "liquidityHorizon": "unknown"
+      "liquidityHorizon": "unknown",
+      "sourceKey": "gho:0x2ce01c87fec1b71a9041c52caed46fc5f4807285"
     }
   ],
   "reserveReview": {

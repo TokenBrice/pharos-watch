@@ -1,4 +1,7 @@
+// @vitest-environment jsdom
+
 import { describe, expect, it } from "vitest";
+import { fireEvent, render, screen } from "@testing-library/react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { FreezeSeizureCard } from "../freeze-seizure-card";
 import type { BlacklistabilityClientSummary } from "@/lib/stablecoin-detail-blacklistability-client";
@@ -27,7 +30,6 @@ describe("FreezeSeizureCard", () => {
     expect(html).toContain("Sourced review");
     expect(html).toContain("Reviewed 2026-08-08");
     expect(html).toContain("https://example.com/usdt");
-    expect(html).toContain('hidden=""'); // sources folded by default
   });
 
   it("renders nothing without a review", () => {
@@ -99,11 +101,39 @@ describe("FreezeSeizureCard", () => {
     expect(html).not.toContain("Sources");
   });
 
-  it("cuts long evidence to a lead behind Read more", () => {
+  it("reveals the tail of long evidence behind Read more and folds it again", () => {
     const longEvidence = `${"The verified implementation exposes no holder blacklist or freeze path. ".repeat(12)}TAIL-MARKER`;
-    const html = renderToStaticMarkup(<FreezeSeizureCard summary={{ ...SUMMARY, evidence: longEvidence }} />);
-    expect(html).toContain("Read more");
-    expect(html).not.toContain("TAIL-MARKER");
+    render(<FreezeSeizureCard summary={{ ...SUMMARY, evidence: longEvidence }} />);
+
+    expect(screen.queryByText(/TAIL-MARKER/)).toBeNull();
+
+    fireEvent.click(screen.getByRole("button", { name: /Read more/ }));
+    expect(screen.getByText(/TAIL-MARKER/)).toBeTruthy();
+
+    fireEvent.click(screen.getByRole("button", { name: /Show less/ }));
+    expect(screen.queryByText(/TAIL-MARKER/)).toBeNull();
+  });
+
+  it("renders no evidence toggle when the review is short enough to show whole", () => {
+    render(<FreezeSeizureCard summary={SUMMARY} />);
+
+    expect(screen.getByText(SUMMARY.evidence)).toBeTruthy();
+    expect(screen.queryByRole("button", { name: /Read more/ })).toBeNull();
+  });
+
+  it("keeps the citation unreachable until Sources is opened", () => {
+    render(<FreezeSeizureCard summary={SUMMARY} />);
+
+    const toggle = screen.getByRole("button", { name: /Sources/ });
+    expect(toggle.getAttribute("aria-expanded")).toBe("false");
+    expect(screen.queryByRole("link", { name: "Verified USDT source" })).toBeNull();
+
+    fireEvent.click(toggle);
+
+    expect(toggle.getAttribute("aria-expanded")).toBe("true");
+    expect(screen.getByRole("link", { name: "Verified USDT source" }).getAttribute("href")).toBe(
+      "https://example.com/usdt",
+    );
   });
 
   it("omits the reviewed stamp when the review carries no date", () => {

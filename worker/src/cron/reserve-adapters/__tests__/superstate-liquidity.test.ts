@@ -1,36 +1,9 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
-import { expectValidAdapterOutput } from "./reserve-adapter.test-support";
+import { describe, expect, it } from "vitest";
+import { installAdapterNetwork, expectValidAdapterOutput, runAdapter } from "./reserve-adapter.test-support";
 
-vi.mock("../helpers", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("../helpers")>();
-  return {
-    ...actual,
-    fetchErc20Balance: vi.fn(),
-    fetchJsonWithRetry: vi.fn(),
-  };
-});
+import { adaptSuperstateLiquidity } from "../superstate-liquidity";
 
-vi.mock("../chainlink-nav-core", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("../chainlink-nav-core")>();
-  return {
-    ...actual,
-    fetchChainlinkNavCore: vi.fn(),
-  };
-});
 
-import { adaptSuperstateLiquidity, fetchSuperstateLiquidityReserves } from "../superstate-liquidity";
-import { fetchErc20Balance, fetchJsonWithRetry } from "../helpers";
-import { fetchChainlinkNavCore } from "../chainlink-nav-core";
-import type { StablecoinMeta } from "@shared/types/core";
-import type { LiveReservesConfig } from "@shared/types/live-reserves";
-
-function makeSignal(): AbortSignal {
-  return AbortSignal.timeout(5_000);
-}
-
-beforeEach(() => {
-  vi.clearAllMocks();
-});
 
 describe("adaptSuperstateLiquidity", () => {
   const navResult = {
@@ -64,7 +37,6 @@ describe("adaptSuperstateLiquidity", () => {
       circleUsdAvailable: 2_696_887.17,
       usdcRedemptionIdle: 3_412_248.944618,
       apiLiquidityUsd: 6_109_136.114618,
-      immediateRedeemableUsd: 9_310_000,
       redemption: {
         capacityUsd: 9_310_000,
         capacityKind: "live-direct-bounded",
@@ -125,73 +97,64 @@ describe("adaptSuperstateLiquidity", () => {
 });
 
 describe("fetchSuperstateLiquidityReserves", () => {
-  const coin = { id: "ustb-superstate", contracts: [] } as unknown as StablecoinMeta;
+  const liquidityUrl = "https://api.superstate.com/v1/funds/liquidity";
+  const oracle = "0x289B5036cd942e619E1Ee48670F98d214E745AAC";
+  const token = "0x43415eB6ff9DB7E26A15b704e7A3eDCe97d31C4e";
+  const usdc = "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48";
+  const latestRoundData = `0x${[
+    1n,
+    1_015_000_000n,
+    1_757_000_000n,
+    1_757_000_000n,
+    1n,
+  ].map((word) => word.toString(16).padStart(64, "0")).join("")}`;
 
-  const config: LiveReservesConfig = {
-    adapter: "superstate-liquidity",
-    version: 1,
-    semantics: "single-asset",
-    inputs: {
-      primary: { kind: "onchain-evm", chain: "ethereum", rpcMode: "etherscan-proxy" },
-    },
-    params: {
-      oracleAddress: "0x289B5036cd942e619E1Ee48670F98d214E745AAC",
-      tokenAddress: "0x43415eB6ff9DB7E26A15b704e7A3eDCe97d31C4e",
-      assetLabel: "Short-duration U.S. government securities",
-      assetRisk: "very-low",
-      liquidityUrl: "https://api.superstate.com/v1/funds/liquidity",
-      ticker: "USTB",
-    },
-  };
-
-  it("reads the on-chain USDC balance of the RedemptionIdle contract and emits it as direct capacity", async () => {
-    vi.mocked(fetchChainlinkNavCore).mockResolvedValueOnce({
-      slices: [{ name: "Short-duration U.S. government securities", pct: 100, risk: "very-low" }],
-      metadata: { navPerToken: "10.15" },
-    });
-    vi.mocked(fetchJsonWithRetry).mockResolvedValueOnce({
-      USTB: {
-        circle_usd_available_amount: "2696887.17",
-        usdc_redemption_idle_balance: "3412248.944618",
+  function network(payload: unknown) {
+    return installAdapterNetwork({
+      json: {
+        [liquidityUrl]: payload,
       },
+      rpc: {
+        [`${token}:decimals()`]: 18n,
+        [`${token}:totalSupply()`]: 1_000_000n * 10n ** 18n,
+        [`${oracle}:decimals()`]: 8n,
+        [`${oracle}:latestRoundData()`]: latestRoundData,
+        [`${usdc}:balanceOf(address)`]: 9_310_000_000000n,
+      },
+      block: { number: 23_000_000, timestamp: 1_757_000_000 },
     });
-    vi.mocked(fetchErc20Balance).mockResolvedValueOnce(9_310_000_000000n);
+  }
 
-    const result = await fetchSuperstateLiquidityReserves(coin, config, makeSignal());
+  it("reads the liquidity API and on-chain RedemptionIdle balance through the shared harness", async () => {
+    const { result, network: installed } = await runAdapter("superstate-liquidity", "ustb-superstate", {
+      network: network({
+        USTB: {
+          circle_usd_available_amount: "2696887.17",
+          usdc_redemption_idle_balance: "3412248.944618",
+        },
+      }),
+      nowSec: 1_757_000_100,
+    });
 
-    expect(fetchErc20Balance).toHaveBeenCalledWith(
-      expect.objectContaining({ chain: "ethereum" }),
-      "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
-      "0x4c21b7577c8fe8b0b0669165ee7c8f67fa1454cf",
-      expect.anything(),
-      undefined,
-      undefined,
-      undefined,
-    );
     expect(result.metadata).toMatchObject({
-      immediateRedeemableUsd: 9_310_000,
       redemption: {
         capacityUsd: 9_310_000,
         capacityKind: "live-direct-bounded",
       },
     });
+    expect(installed.requests).toContainEqual({ url: liquidityUrl, method: "GET" });
     expectValidAdapterOutput("superstate-liquidity", result);
   });
 
-  it("fails closed when the on-chain RedemptionIdle balance cannot be read", async () => {
-    vi.mocked(fetchChainlinkNavCore).mockResolvedValueOnce({
-      slices: [{ name: "Short-duration U.S. government securities", pct: 100, risk: "very-low" }],
-      metadata: { navPerToken: "10.15" },
-    });
-    vi.mocked(fetchJsonWithRetry).mockResolvedValueOnce({
-      USTB: {
-        circle_usd_available_amount: "2696887.17",
-        usdc_redemption_idle_balance: "3412248.944618",
-      },
-    });
-    vi.mocked(fetchErc20Balance).mockResolvedValueOnce(null);
-
-    await expect(fetchSuperstateLiquidityReserves(coin, config, makeSignal()))
-      .rejects.toThrow(/RedemptionIdle contract USDC balance/);
+  it("fails closed when the liquidity payload renames a required field", async () => {
+    await expect(runAdapter("superstate-liquidity", "ustb-superstate", {
+      network: network({
+        USTB: {
+          usdc_redemption_idle_balance: "3412248.944618",
+        },
+      }),
+      nowSec: 1_757_000_100,
+      validate: false,
+    })).rejects.toThrow("circle_usd_available_amount");
   });
 });

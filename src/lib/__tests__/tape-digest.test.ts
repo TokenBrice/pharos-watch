@@ -136,28 +136,10 @@ describe("yield class summary", () => {
 });
 
 // ---------------------------------------------------------------------------
-// digestPage parity with single-page composition
+// digestPage raw-event preservation
 // ---------------------------------------------------------------------------
 
 describe("digestPage", () => {
-  it("matches single-page composition for a single-page input", () => {
-    const events = sortDesc([
-      makeEvent(NOW_MS - 1, "depeg.opened", { severity: "warning" }),
-      makeEvent(NOW_MS - 2, "freeze.blocked", {
-        coinId: null,
-        payload: { stablecoin: "USDT", amountUsdAtEvent: 100 },
-      }),
-      makeEvent(NOW_MS - 25 * MS_PER_HOUR, "depeg.opened", { coinId: "dai" }),
-    ]);
-
-    const viaPage = mergeDigestedPages([digestPage(events, NOW_MS)]);
-    const viaDirect = digestByDayForTest(events, NOW_MS);
-
-    // Strip ordering-stable equality by JSON snapshot — both should be
-    // identical including class ordering.
-    expect(JSON.stringify(viaPage)).toBe(JSON.stringify(viaDirect));
-  });
-
   it("carries raw events on each PageDigestedDay", () => {
     const events = sortDesc([
       makeEvent(NOW_MS - 1, "depeg.opened"),

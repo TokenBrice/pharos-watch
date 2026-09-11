@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { renderToStaticMarkup } from "react-dom/server";
 import { CoinFlowCard } from "@/components/coin-flow-card";
+import { buildFlowSummaryNarrative } from "@/lib/flow-signal-ui";
 
 const mintingProps = {
   symbol: "USDT",
@@ -30,60 +31,47 @@ const nrProps = {
 };
 
 describe("CoinFlowCard", () => {
-  it("renders symbol", () => {
+  it("renders minting amount and improving pressure", () => {
     const html = renderToStaticMarkup(<CoinFlowCard {...mintingProps} />);
     expect(html).toContain("USDT");
-  });
-
-  it("renders formatted net 24h flow", () => {
-    const html = renderToStaticMarkup(<CoinFlowCard {...mintingProps} />);
     expect(html).toContain("+$1.24B");
-  });
-
-  it("renders NR when pressureShiftScore is null", () => {
-    const html = renderToStaticMarkup(<CoinFlowCard {...nrProps} />);
-    expect(html).toContain("NR");
-  });
-
-  it("renders pressure shift score for burning coin", () => {
-    const html = renderToStaticMarkup(<CoinFlowCard {...burningProps} />);
-    // score is -28, badge now shows "Worsening -28"
-    expect(html).toContain("-28");
-  });
-
-  it("renders band label in badge for minting coin", () => {
-    const html = renderToStaticMarkup(<CoinFlowCard {...mintingProps} />);
-    // pressureShiftState is "improving" → label is "Improving"
     expect(html).toContain("Improving");
+    expect(html).toContain("58");
   });
 
-  it("renders band label in badge for burning coin", () => {
+  it("renders burning amount and worsening pressure", () => {
     const html = renderToStaticMarkup(<CoinFlowCard {...burningProps} />);
-    // pressureShiftState is "worsening" → label is "Worsening"
+    expect(html).toContain("-$340.00M");
+    expect(html).toContain("-28");
     expect(html).toContain("Worsening");
   });
 
-  it("renders pressure description narrative for minting improving coin", () => {
-    const html = renderToStaticMarkup(<CoinFlowCard {...mintingProps} />);
-    // direction=minting, state=improving → narrative from buildFlowSummaryNarrative
-    expect(html).toContain("Minting, with issuance running stronger than its usual pace.");
-  });
-
-  it("renders pressure description narrative for burning worsening coin", () => {
-    const html = renderToStaticMarkup(<CoinFlowCard {...burningProps} />);
-    // direction=burning, state=worsening
-    expect(html).toContain("Burning, with pressure worsening versus the baseline.");
-  });
-
-  it("does not render pressure description when pressureShiftScore is null", () => {
+  it("renders NR for unrated pressure", () => {
     const html = renderToStaticMarkup(<CoinFlowCard {...nrProps} />);
-    // pressureDisplay is null → description row should not appear
-    expect(html).not.toContain("No current activity");
+    expect(html).toContain("NR");
+    expect(html).not.toContain("Improving");
+    expect(html).not.toContain("Worsening");
   });
+});
 
-  it("renders a pressure bar track element", () => {
-    const html = renderToStaticMarkup(<CoinFlowCard {...mintingProps} />);
-    // The pressure bar container should be present
-    expect(html).toContain("pressure-track");
+describe("buildFlowSummaryNarrative", () => {
+  it.each([
+    ["burning", "improving", /burning/i, /easing/i],
+    ["burning", "stable", /burning/i, /usual/i],
+    ["burning", "worsening", /burning/i, /worsening/i],
+    ["minting", "improving", /minting/i, /stronger/i],
+    ["minting", "stable", /minting/i, /usual/i],
+    ["minting", "worsening", /minting/i, /weaker/i],
+    ["flat", "improving", /flat/i, /stronger/i],
+    ["flat", "stable", /flat/i, /close/i],
+    ["flat", "worsening", /flat/i, /weaker/i],
+    ["burning", "nr", /burning/i, /\bNR\b/],
+    ["minting", "nr", /minting/i, /\bNR\b/],
+    ["flat", "nr", /flat/i, /\bNR\b/],
+    ["inactive", "improving", /no .*activity/i, /\bNR\b/],
+  ] as const)("preserves %s direction and %s pressure meaning", (direction, state, directionMeaning, pressureMeaning) => {
+    const narrative = buildFlowSummaryNarrative(direction, state);
+    expect(narrative).toMatch(directionMeaning);
+    expect(narrative).toMatch(pressureMeaning);
   });
 });

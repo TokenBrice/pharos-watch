@@ -33,6 +33,25 @@ describe("post-deploy acceptance probe selection", () => {
 });
 
 describe("post-deploy acceptance outcomes", () => {
+  it.each([
+    ["passed", "pending", "pending"],
+    ["failed", "pending", "failed"],
+    ["pending", "failed", "failed"],
+  ] as const)("summarizes %s plus %s as %s", (first, second, outcome) => {
+    expect(summarizePostDeployAcceptance([
+      { id: "pages-shell", outcome: first },
+      { id: "worker-health", outcome: second },
+    ]).outcome).toBe(outcome);
+  });
+
+  it("rejects invalid outcomes with the responsible probe identity", () => {
+    expect(() => summarizePostDeployAcceptance([
+      { id: "pages-shell", outcome: "failed" },
+      // Exercise malformed runtime input despite the typed producer contract.
+      { id: "worker-health", outcome: "invalid" as "passed" },
+    ])).toThrow(/worker-health.*invalid outcome/);
+  });
+
   it("makes a failed smoke probe dominate other outcomes", () => {
     expect(
       summarizePostDeployAcceptance([

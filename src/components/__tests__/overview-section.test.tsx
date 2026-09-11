@@ -1,20 +1,20 @@
 // @vitest-environment jsdom
 
-import { beforeAll, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { fireEvent, render, screen } from "@testing-library/react";
-import { renderToStaticMarkup } from "react-dom/server";
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import { ApiFetchError } from "@/lib/api";
 import { ReservePanel } from "@/components/stablecoin-detail/reserve-panel";
 import { makeReserveResponse, renderReservePanelStatic } from "./reserve-panel-test-support";
 
-beforeAll(() => {
-  globalThis.ResizeObserver = class ResizeObserver {
+beforeEach(() => {
+  vi.stubGlobal("ResizeObserver", class ResizeObserver {
     observe() {}
     unobserve() {}
     disconnect() {}
-  };
+  });
 });
+afterEach(() => vi.unstubAllGlobals());
 
 describe("ReservePanel", () => {
   it("surfaces live-reserve API failures when falling back to curated reserve metadata", () => {
@@ -40,19 +40,14 @@ describe("ReservePanel", () => {
     const coin = TRACKED_META_BY_ID.get("iusd-infinifi");
     expect(coin).toBeDefined();
 
-    const html = renderToStaticMarkup(
-      <ReservePanel
-        coin={coin!}
-        reserves={{
+    const html = renderReservePanelStatic({
+      coin: coin!,
+      reserves: makeReserveResponse({
           reserves: [{ name: "Live farm", pct: 100, risk: "low" }],
-          estimated: false,
-          mode: "live",
-          liveAt: 1_700_000_000,
           source: "infinifi",
-        }}
-        reserveFetchError={new TypeError("Failed to fetch")}
-      />,
-    );
+      }),
+      reserveFetchError: new TypeError("Failed to fetch"),
+    });
 
     expect(html).toContain("Live reserve refresh delayed");
     expect(html).toContain("last worker-resolved reserve snapshot");
@@ -62,14 +57,10 @@ describe("ReservePanel", () => {
     const coin = TRACKED_META_BY_ID.get("iusd-infinifi");
     expect(coin).toBeDefined();
 
-    const html = renderToStaticMarkup(
-      <ReservePanel
-        coin={coin!}
-        reserves={{
+    const html = renderReservePanelStatic({
+      coin: coin!,
+      reserves: makeReserveResponse({
           reserves: [{ name: "Live farm", pct: 100, risk: "low" }],
-          estimated: false,
-          mode: "live",
-          liveAt: 1_700_000_000,
           source: "infinifi",
           sync: {
             enabled: true,
@@ -82,10 +73,9 @@ describe("ReservePanel", () => {
             failureCategory: "circuit-open",
             uncertainWrite: true,
           },
-        }}
-        reserveFetchError={null}
-      />,
-    );
+      }),
+      reserveFetchError: null,
+    });
 
     expect(html).toContain("Live reserve sync error");
     expect(html).toContain("Status: error");
@@ -98,14 +88,10 @@ describe("ReservePanel", () => {
     const coin = TRACKED_META_BY_ID.get("iusd-infinifi");
     expect(coin).toBeDefined();
 
-    const html = renderToStaticMarkup(
-      <ReservePanel
-        coin={coin!}
-        reserves={{
+    const html = renderReservePanelStatic({
+      coin: coin!,
+      reserves: makeReserveResponse({
           reserves: [{ name: "Live farm", pct: 100, risk: "low" }],
-          estimated: false,
-          mode: "live",
-          liveAt: 1_700_000_000,
           source: "infinifi",
           sync: {
             enabled: true,
@@ -116,10 +102,9 @@ describe("ReservePanel", () => {
             lastAttemptedAt: 1_700_100_000,
             warnings: ["adapter returned internal retry metadata"],
           },
-        }}
-        reserveFetchError={null}
-      />,
-    );
+      }),
+      reserveFetchError: null,
+    });
 
     expect(html).not.toContain("Operator note");
     expect(html).not.toContain("adapter returned internal retry metadata");
@@ -129,14 +114,10 @@ describe("ReservePanel", () => {
     const coin = TRACKED_META_BY_ID.get("iusd-infinifi");
     expect(coin).toBeDefined();
 
-    const html = renderToStaticMarkup(
-      <ReservePanel
-        coin={coin!}
-        reserves={{
+    const html = renderReservePanelStatic({
+      coin: coin!,
+      reserves: makeReserveResponse({
           reserves: [{ name: "Live farm", pct: 100, risk: "low" }],
-          estimated: false,
-          mode: "live",
-          liveAt: 1_700_000_000,
           source: "infinifi",
           displayBadge: {
             kind: "live",
@@ -148,10 +129,9 @@ describe("ReservePanel", () => {
             freshnessMode: "unverified",
             scoringEligible: false,
           },
-        }}
-        reserveFetchError={null}
-      />,
-    );
+      }),
+      reserveFetchError: null,
+    });
 
     expect(html).toContain("Independent live reserve disclosure");
     expect(html).toContain("freshness is not verified strongly enough for collateral scoring");
@@ -162,14 +142,10 @@ describe("ReservePanel", () => {
     const coin = TRACKED_META_BY_ID.get("crvusd-curve");
     expect(coin).toBeDefined();
 
-    const html = renderToStaticMarkup(
-      <ReservePanel
-        coin={coin!}
-        reserves={{
+    const html = renderReservePanelStatic({
+      coin: coin!,
+      reserves: makeReserveResponse({
           reserves: [{ name: "Custodied BTC (ex: wBTC/cbBTC)", pct: 67, risk: "medium" }],
-          estimated: false,
-          mode: "live",
-          liveAt: 1_700_000_000,
           source: "crvusd",
           displayBadge: {
             kind: "live",
@@ -178,42 +154,11 @@ describe("ReservePanel", () => {
           metadata: {
             yieldBasisCollateralPct: 89.7,
           },
-        }}
-        reserveFetchError={null}
-      />,
-    );
+      }),
+      reserveFetchError: null,
+    });
 
     expect(html).toContain("Yield Basis positions account for 89.7% of this live reserve mix.");
-  });
-
-  it("renders separate Source and Evidence links for authoritative live reserve snapshots", () => {
-    const coin = TRACKED_META_BY_ID.get("gho-aave");
-    expect(coin).toBeDefined();
-
-    const html = renderToStaticMarkup(
-      <ReservePanel
-        coin={coin!}
-        reserves={{
-          reserves: [{ name: "stataUSDC GSM", pct: 100, risk: "low" }],
-          estimated: false,
-          mode: "live",
-          liveAt: 1_700_000_000,
-          source: "gho",
-          displayUrl: "https://aave.tokenlogic.xyz/gho",
-          evidenceUrls: ["https://aave.com/help/gho-stablecoin/stability-module"],
-          displayBadge: {
-            kind: "live",
-            label: "Live",
-          },
-        }}
-        reserveFetchError={null}
-      />,
-    );
-
-    expect(html).toContain(">Source</a>");
-    expect(html).toContain(">Evidence</a>");
-    expect(html).toContain("https://aave.tokenlogic.xyz/gho");
-    expect(html).toContain("https://aave.com/help/gho-stablecoin/stability-module");
   });
 
   it("renders status, source and evidence links, and badge labels accessibly", () => {
@@ -223,11 +168,8 @@ describe("ReservePanel", () => {
     render(
       <ReservePanel
         coin={coin!}
-        reserves={{
+        reserves={makeReserveResponse({
           reserves: [{ name: "stataUSDC GSM", pct: 100, risk: "low" }],
-          estimated: false,
-          mode: "live",
-          liveAt: 1_700_000_000,
           source: "gho",
           displayUrl: "https://aave.tokenlogic.xyz/gho",
           evidenceUrls: ["https://aave.com/help/gho-stablecoin/stability-module"],
@@ -235,7 +177,7 @@ describe("ReservePanel", () => {
             kind: "live",
             label: "Live",
           },
-        }}
+        })}
         reserveFetchError={new TypeError("Failed to fetch")}
         onRetry={() => undefined}
       />,
@@ -259,14 +201,10 @@ describe("ReservePanel", () => {
     const coin = TRACKED_META_BY_ID.get("frax-frax");
     expect(coin).toBeDefined();
 
-    const html = renderToStaticMarkup(
-      <ReservePanel
-        coin={coin!}
-        reserves={{
+    const html = renderReservePanelStatic({
+      coin: coin!,
+      reserves: makeReserveResponse({
           reserves: [{ name: "Reviewed baseline", pct: 100, risk: "very-low" }],
-          estimated: false,
-          mode: "live",
-          liveAt: 1_700_000_000,
           source: "frax",
           displayBadge: {
             kind: "curated-validated",
@@ -277,10 +215,9 @@ describe("ReservePanel", () => {
             sourceModel: "validated-static",
             scoringEligible: false,
           },
-        }}
-        reserveFetchError={null}
-      />,
-    );
+      }),
+      reserveFetchError: null,
+    });
 
     expect(html).toContain("Curated-validated reserve baseline");
     expect(html).toContain("Curated-Validated");
@@ -291,14 +228,10 @@ describe("ReservePanel", () => {
     const coin = TRACKED_META_BY_ID.get("usdd-tron-dao-reserve");
     expect(coin).toBeDefined();
 
-    const html = renderToStaticMarkup(
-      <ReservePanel
-        coin={coin!}
-        reserves={{
+    const html = renderReservePanelStatic({
+      coin: coin!,
+      reserves: makeReserveResponse({
           reserves: [{ name: "Tracked vaults", pct: 100, risk: "medium" }],
-          estimated: false,
-          mode: "live",
-          liveAt: 1_700_000_000,
           source: "usdd-data-platform",
           displayBadge: {
             kind: "live",
@@ -309,10 +242,9 @@ describe("ReservePanel", () => {
             sourceModel: "dynamic-mix",
             scoringEligible: false,
           },
-        }}
-        reserveFetchError={null}
-      />,
-    );
+      }),
+      reserveFetchError: null,
+    });
 
     expect(html).toContain("Live reserve disclosure");
     expect(html).toContain(">Live</span>");

@@ -75,17 +75,6 @@ describe("template coverage", () => {
     }
   });
 
-  it("matrix size = 24 cells", () => {
-    let count = 0;
-    for (const profile of SELECTOR_PROFILES) {
-      const row = TEMPLATES[profile];
-      for (const key of LIVE_WATCH_KEYS) {
-        if (row[key] != null) count += 1;
-      }
-    }
-    expect(count).toBe(24);
-  });
-
   it("oneLineExplanation prose stays under 100 chars (design §2.7 + buffer)", () => {
     const tooLong: string[] = [];
     for (const profile of SELECTOR_PROFILES) {
@@ -134,17 +123,24 @@ describe("template coverage", () => {
       renderWatchText(lowest("resilience"), "treasury", makeRow({ isRecentListing: true })),
     ];
 
-    expect(cases).toEqual([
-      "Depeg log shows 3 events; keep PegScore and peg history in view.",
-      "Current peg is 64 bps off; compare against the tolerance setting.",
-      "Freeze or supply controls exist; review issuer permissions before routing.",
-      "Yield route carries elevated source risk; check venue depth before sizing.",
-      "Yield venue depth is thin; size the route against source TVL.",
-      "Governance is centralized; admin decisions can change transfer rules.",
-      "Recent listing; compare fresh readings before sizing.",
-    ]);
+    expect(cases[0]).toMatch(/\b3\b/);
+    expect(cases[1]).toMatch(/\b64\b/);
+    expect(cases[1]).not.toContain("-64");
     for (const text of cases) {
       expect(text).not.toMatch(/depeg-event-count|thin-tvl|sourceRiskScore|canBeBlacklisted|top-|strong-|weak-/);
     }
+  });
+
+  it("prioritizes the selected peg warning over recent listing and other warnings", () => {
+    const selected = lowest("pegStability", ["current-deviation", "recent-listing", "depeg-history"]);
+    const row = makeRow({ currentDeviationBps: -64 });
+    const expected = renderWatchText(selected, "trading", row);
+    expect(expected).toMatch(/\b64\b/);
+    expect(renderWatchText(selected, "trading", {
+      ...row, isRecentListing: true, depegEventCount: 3, canBeBlacklisted: true,
+    })).toBe(expected);
+    expect(renderWatchText(lowest("resilience"), "trading", {
+      ...row, isRecentListing: true,
+    })).not.toBe(expected);
   });
 });

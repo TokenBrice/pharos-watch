@@ -79,6 +79,48 @@ describe("fetch body timeout guardrail", () => {
     expect(violations.map((violation) => violation.method)).toEqual(["json", "text"]);
   });
 
+  it("preserves omitted Promise.all slots", () => {
+    const violations = findFetchBodyTimeoutViolations(`
+      async function run() {
+        const [, res] = await Promise.all([other(), fetchWithRetry(url)]);
+        return res.json();
+      }
+    `);
+    expect(violations.map(({ variable, method }) => ({ variable, method }))).toEqual([
+      { variable: "res", method: "json" },
+    ]);
+  });
+
+  it("does not carry response assignments into another function", () => {
+    expect(findFetchBodyTimeoutViolations(`
+      async function first() {
+        const res = await fetchWithRetry(url);
+      }
+      function second(res) {
+        return res.json();
+      }
+    `)).toEqual([]);
+  });
+
+  it("ignores comments and string literals containing fetch and body reads", () => {
+    expect(findFetchBodyTimeoutViolations(`
+      /* const res = await fetchWithRetry(url);
+      res.json(); */
+      const example = "const res = await fetchWithRetry(url);";
+      const bodyExample = "res.text()";
+    `)).toEqual([]);
+  });
+
+  it("stops tracking a response after unrelated reassignment", () => {
+    expect(findFetchBodyTimeoutViolations(`
+      async function run() {
+        let res = await fetchWithRetry(url);
+        res = unrelated;
+        return res.json();
+      }
+    `)).toEqual([]);
+  });
+
   it("allows explicitly baselined debt and reports stale baseline entries", () => {
     withTempRepo("pharos-fetch-body-timeouts", {
       "worker/src/cron/provider.ts": `

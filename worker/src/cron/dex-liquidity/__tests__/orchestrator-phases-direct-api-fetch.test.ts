@@ -1,12 +1,13 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   makeDexApiFetchResult,
-  normalizeDexApiPoolsForMerge,
   type DexApiPool,
 } from "../../../lib/dex-api-common";
-import { getCircuitRecord, recordOutcomeSafe } from "../../../lib/circuit-breaker";
+import { recordOutcomeSafe } from "../../../lib/circuit-breaker";
 import type { DirectApiFetcher } from "../orchestrator-phases/direct-api";
 import {
+  buildAttemptedProtocolChains,
+  buildDexDirectApiFetchers,
   compactDirectApiFetchPhasePools,
   runDirectApiFetchPhase,
 } from "../orchestrator-phases/direct-api";
@@ -27,13 +28,6 @@ const circuitStore = vi.hoisted(() => ({
   records: new Map<string, MockCircuitRecord>(),
 }));
 
-vi.mock("../../../lib/dex-api-common", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("../../../lib/dex-api-common")>();
-  return {
-    ...actual,
-    normalizeDexApiPoolsForMerge: vi.fn(actual.normalizeDexApiPoolsForMerge),
-  };
-});
 
 vi.mock("../../../lib/circuit-breaker", () => {
   const defaultRecord = (): MockCircuitRecord => ({
@@ -91,35 +85,54 @@ function makeFetcher(name: string, fn: DirectApiFetcher["fn"]): DirectApiFetcher
   };
 }
 
+function makeDeferred(): { promise: Promise<void>; resolve: () => void } {
+  let resolve!: () => void;
+  const promise = new Promise<void>((promiseResolve) => {
+    resolve = () => promiseResolve();
+  });
+  return { promise, resolve };
+}
+
 describe("runDirectApiFetchPhase", () => {
   beforeEach(() => {
     circuitStore.records.clear();
     vi.clearAllMocks();
   });
 
-  it("runs independent direct API fetchers with bounded parallelism", async () => {
-    let active = 0;
-    let maxActive = 0;
-    const fetchers = ["one", "two", "three", "four"].map((name) =>
-      makeFetcher(name, async () => {
-        active++;
-        maxActive = Math.max(maxActive, active);
-        await new Promise((resolve) => setTimeout(resolve, 10));
-        active--;
-        return makeDexApiFetchResult([], { ok: true, degraded: false, errors: [] });
-      }),
-    );
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
 
-    const result = await runDirectApiFetchPhase({} as D1Database, fetchers);
-
-    expect(result.results.map((entry) => entry.name)).toEqual(["one", "two", "three", "four"]);
-    expect(result.failedSources).toEqual([]);
-    expect(result.fallbackSignals).toEqual([]);
-    expect(maxActive).toBe(1);
+  it("runs providers serially and completes each before starting the next", async () => {
+    const names = ["one", "two", "three", "four"];
+    const starts = names.map(() => makeDeferred());
+    const releases = names.map(() => makeDeferred());
+    const started: string[] = [];
+    const fetchers = names.map((name, index) => makeFetcher(name, async () => {
+      started.push(name);
+      starts[index].resolve();
+      await releases[index].promise;
+      return makeDexApiFetchResult([], { ok: true, degraded: false, errors: [] });
+    }));
+    const pending = runDirectApiFetchPhase({} as D1Database, fetchers);
+    try {
+      for (let index = 0; index < names.length; index++) {
+        await starts[index].promise;
+        expect(started).toEqual(names.slice(0, index + 1));
+        releases[index].resolve();
+      }
+      const result = await pending;
+      expect(result.results.map((entry) => entry.name)).toEqual(names);
+      expect(result.failedSources).toEqual([]);
+      expect(result.fallbackSignals).toEqual([]);
+    } finally {
+      releases.forEach((release) => release.resolve());
+      await pending;
+    }
   });
 
   it("compacts each provider before starting the next while retaining raw counts and exact-key evidence", async () => {
-    const rawPoolCount = 6_673;
+    const rawPoolCount = 4;
     const trackedAddress = "0x1111111111111111111111111111111111111111";
     const makePool = (index: number, tracked: boolean): DexApiPool => ({
       source: "balancer",
@@ -158,10 +171,11 @@ describe("runDirectApiFetchPhase", () => {
       symbolToChainScopedIds: new Map<string, Map<string, string[]>>(),
       contractMetaByChainAddress: new Map(),
     };
+    let poolsAtSecondProviderEntry: number | undefined;
     const fetchers = [
       makeFetcher("first", async () => firstResult),
       makeFetcher("second", async () => {
-        expect(firstResult.pools).toHaveLength(1);
+        poolsAtSecondProviderEntry = firstResult.pools.length;
         return makeDexApiFetchResult([], { ok: true, degraded: false, errors: [] });
       }),
     ];
@@ -176,12 +190,14 @@ describe("runDirectApiFetchPhase", () => {
       skippedInvalidUnitCount: 0,
       skippedUntrackedCount: rawPoolCount - 1,
     });
-    expect(normalizeDexApiPoolsForMerge).toHaveBeenCalledTimes(rawPoolCount);
-    expect(
-      vi.mocked(normalizeDexApiPoolsForMerge).mock.calls.every(([pools]) => pools.length === 1),
-    ).toBe(true);
+    expect(poolsAtSecondProviderEntry).toBe(1);
+    expect(phase.results.find((entry) => entry.name === "second")?.result.ok).toBe(true);
+    expect(phase.failedSources).toEqual([]);
+    expect(compacted.pools.map((pool) => pool.poolAddress)).toEqual([
+      "0x0000000000000000000000000000000000000001",
+    ]);
     expect(authoritative.confirmedExactKeysByProtocol.get("first")).toContain(
-      "ethereum:0x0000000000000000000000000000000000000101",
+      "ethereum:0x0000000000000000000000000000000000000004",
     );
   });
 
@@ -209,7 +225,6 @@ describe("runDirectApiFetchPhase", () => {
         at: 1_800_000_000,
       },
     ]);
-    expect(getCircuitRecord).not.toHaveBeenCalled();
   });
 
   it("skips an open provider circuit without invoking its fetcher", async () => {
@@ -380,7 +395,77 @@ describe("runDirectApiFetchPhase", () => {
     const result = await runDirectApiFetchPhase({} as D1Database, fetchers);
 
     expect(result.failedSources).toEqual(["unavailable-circuit"]);
+    expect(result.degradedSources).toEqual([]);
     expect(result.fallbackSignals).toEqual(["unavailable-circuit-unavailable"]);
     expect(result.sourceWarnings).toEqual(["unavailable-circuit: all pages returned 503"]);
+  });
+
+  it("names the chain that failed inside an otherwise usable source", async () => {
+    const fetchers: DirectApiFetcher[] = [
+      {
+        name: "PancakeSwap",
+        circuitKey: "pancakeswap-api",
+        normalizedProtocol: "pancakeswap",
+        supportedChains: ["bsc", "ethereum", "base"],
+        fn: async () =>
+          makeDexApiFetchResult([], {
+            ok: true,
+            degraded: true,
+            errors: ["bsc: The operation was aborted due to timeout"],
+            degradedChains: ["bsc"],
+          }),
+      },
+    ];
+
+    const result = await runDirectApiFetchPhase({} as D1Database, fetchers);
+
+    expect(result.failedSources).toEqual([]);
+    expect(result.degradedSources).toEqual(["pancakeswap-api:bsc"]);
+    expect(result.fallbackSignals).toEqual(["pancakeswap-api-partial"]);
+    expect(result.attemptedProtocolChains).toEqual([
+      "pancakeswap:bsc",
+      "pancakeswap:ethereum",
+      "pancakeswap:base",
+    ]);
+  });
+
+  it("keeps a degraded source without chain detail at source level", async () => {
+    const fetchers = [
+      makeFetcher("cursorless", async () =>
+        makeDexApiFetchResult([], {
+          ok: true,
+          degraded: true,
+          errors: [],
+        }),
+      ),
+    ];
+
+    const result = await runDirectApiFetchPhase({} as D1Database, fetchers);
+
+    expect(result.degradedSources).toEqual(["cursorless-circuit"]);
+  });
+
+  it("keys attempted coverage by the pool source family each adapter emits", () => {
+    const fetchers = buildDexDirectApiFetchers({
+      db: {} as D1Database,
+      graphApiKey: "graph-key",
+      chainAddressToId: new Map(),
+      symbolToChainScopedIds: new Map(),
+      stablecoinPriceById: new Map(),
+    });
+
+    // Slipstream and CLMM adapters emit a `source` that differs from their
+    // normalized protocol; attempted keys must match the counts that
+    // `acceptedByProtocolChain` records for the same pools.
+    expect(buildAttemptedProtocolChains(fetchers)).toEqual(expect.arrayContaining([
+      "pancakeswap:bsc",
+      "pancakeswap:ethereum",
+      "pancakeswap:base",
+      "aerodrome-slipstream:base",
+      "velodrome-slipstream:optimism",
+      "raydium:solana",
+      "orca:solana",
+      "uniswap-v3-shadow:bsc",
+    ]));
   });
 });

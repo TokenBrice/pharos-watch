@@ -6,6 +6,10 @@ import { fileURLToPath } from "node:url";
 import { DOC_GROUPS, PUBLIC_DOCS, preparePublicDocMarkdown } from "../public-docs";
 
 const DOCS_DIR = join(dirname(fileURLToPath(import.meta.url)), "..", "..", "..", "docs");
+const DOC_SOURCES = PUBLIC_DOCS.map((doc) => ({
+  doc,
+  body: readFileSync(join(DOCS_DIR, doc.source), "utf-8"),
+}));
 
 describe("PUBLIC_DOCS registry", () => {
   it("contains the reviewed initial public set", () => {
@@ -31,16 +35,14 @@ describe("PUBLIC_DOCS registry", () => {
   });
 
   it("uses known groups and H1-led source files", () => {
-    for (const doc of PUBLIC_DOCS) {
+    for (const { doc, body } of DOC_SOURCES) {
       expect(DOC_GROUPS).toContain(doc.group);
-      const body = readFileSync(join(DOCS_DIR, doc.source), "utf-8");
       expect(body.trim()).toMatch(/^#\s+/);
     }
   });
 
   it("rewrites or removes non-public relative links before publication", () => {
-    for (const doc of PUBLIC_DOCS) {
-      const body = readFileSync(join(DOCS_DIR, doc.source), "utf-8");
+    for (const { doc, body } of DOC_SOURCES) {
       const rendered = preparePublicDocMarkdown(body, { absoluteLinks: true, source: doc.source });
       expect(rendered).not.toMatch(/\]\((?:\.\.?\/|[^:/)#]+\.md)/);
       expect(rendered).not.toMatch(/agents\/|AGENTS\.md|\.claude|TODO|FIXME|runbook/i);

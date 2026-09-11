@@ -73,6 +73,9 @@
     "version": 1,
     "semantics": "single-asset",
     "breakerScope": "mmev-midas",
+    "scoring": {
+      "maxSourceAgeSec": 432000
+    },
     "display": {
       "url": "https://midas.app/mmev",
       "label": "Midas mMEV NAV"
@@ -85,8 +88,10 @@
       }
     },
     "params": {
+      "navScope": "portfolio",
       "oracleAddress": "0x5f09Aff8B9b1f488B7d1bbaD4D89648579e55d61",
       "tokenAddress": "0x030b69280892c888670edcdcd8b69fd8026a0bf3",
+      "sourceKey": "chainlink-nav:token:0x030b69280892c888670edcdcd8b69fd8026a0bf3",
       "assetLabel": "MEV Capital DeFi strategy NAV",
       "assetRisk": "high",
       "maxOracleAgeSec": 604800

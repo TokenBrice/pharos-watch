@@ -60,13 +60,10 @@
   "custodyModel": "institutional-regulated",
   "governanceQuality": "single-entity",
   "liveReservesConfig": {
-    "adapter": "attestation-pdf-index",
-    "version": 1,
+    "adapter": "issuer-attested-report",
+    "version": 2,
     "semantics": "attestation-mix",
     "breakerScope": "brlv-crown",
-    "scoring": {
-      "maxSourceAgeSec": 4000000
-    },
     "display": {
       "url": "https://crown-brlv.com/en/transparency/",
       "label": "Crown BRLV Transparency"
@@ -78,22 +75,11 @@
       }
     },
     "params": {
-      "slices": [
-        {
-          "name": "Brazilian Treasury bonds",
-          "pct": 99.9597,
-          "risk": "low"
-        },
-        {
-          "name": "ETFs linked to Tesouro Selic",
-          "pct": 0.0371,
-          "risk": "low"
-        },
-        {
-          "name": "Cash and equivalents",
-          "pct": 0.0032,
-          "risk": "low"
-        }
+      "product": "BRLV",
+      "profile": "brlv-v1",
+      "indexHost": "www.crown-brlv.com",
+      "reportHosts": [
+        "dfg4lo8c2lfcn.cloudfront.net"
       ]
     }
   },

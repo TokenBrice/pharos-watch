@@ -417,27 +417,6 @@ describe("computeDEWS", () => {
     expect(stressed.score).toBeGreaterThan(calm.score);
   });
 
-  it("returns score 0 when fewer than 2 signals available", () => {
-    // Only supply is available (always available) — 1 signal
-    const result = computeDews(
-      makeDewsInput({
-        priceConfidence: "high",
-        price: 1.0,
-        // All optional signals unavailable by default
-        weightedBalanceRatio: null,
-        avgPoolStress: null,
-        liquidityScore: null,
-        hasBlacklistTracking: false,
-        burnVolume24hUsd: null,
-        dexPriceUsd: null,
-      }),
-    );
-    // supply + price = 2 signals with weight 0.40, should be above threshold
-    // If we truly want < 2 signals (totalWeight < 0.30), we'd need only supply (0.25)
-    // which requires making price unavailable too — but price always returns available
-    // So with supply (0.25) + price (0.15) = 0.40 we're above threshold
-    expect(result.score).toBeGreaterThanOrEqual(0);
-  });
 
   it("smooths pool signal with previous reading", () => {
     const withoutSmoothing = computeDews(
@@ -485,58 +464,35 @@ describe("computeDEWS", () => {
 });
 
 describe("DEWS scoring boundaries", () => {
-  // Note on the "weight threshold" tests below:
-  //   Both computeSupplySignal (0.25) and computePriceSignal (0.15) always
-  //   return available: true in the current implementation, so the minimum
-  //   achievable totalWeight is 0.40 — already above the 0.30 threshold.
-  //   We therefore cannot construct an input that drives totalWeight below
-  //   0.30 without modifying the compute functions (out of scope for this
-  //   task), so we assert the realistic boundary: the baseline pair of
-  //   always-available signals produces a non-null score at totalWeight 0.40.
-
-  it("returns a score when only the always-available signals (supply + price = 0.40) are present", () => {
-    const result = computeDEWS(
-      makeDewsInput({
-        weightedBalanceRatio: null,
-        avgPoolStress: null,
-        liquidityScore: null,
-        dexPriceUsd: null,
-        hasBlacklistTracking: false,
-        burnVolume24hUsd: null,
-        mintVolume24hUsd: null,
-        burnBaseline30dUsd: null,
-        flowDataAgeDays: 0,
-        yieldWarnings: [],
-      }),
-    );
-    // totalWeight = 0.25 (supply) + 0.15 (price) = 0.40 >= 0.30 threshold
-    expect(result).not.toBeNull();
+  it("rejects price-only evidence with both supply history anchors missing", () => {
+    expect(computeDEWS(makeDewsInput({
+      circulatingPrevDayAvailable: false,
+      circulatingPrevWeekAvailable: false,
+      pegReferenceAvailable: false,
+    }))).toBeNull();
   });
 
-  it("returns a score at totalWeight === 0.55 (supply + price + diverg, just above threshold)", () => {
-    const result = computeDEWS(
-      makeDewsInput({
-        weightedBalanceRatio: null,
-        avgPoolStress: null,
-        liquidityScore: null,
-        priceConfidence: "high",
-        price: 1.0,
-        pegRef: 1.0,
-        dexPriceUsd: 1.0,
-        hasBlacklistTracking: false,
-      }),
-    );
-    // supply(0.25) + price(0.15) + diverg(0.15) = 0.55
-    expect(result).not.toBeNull();
+  it("accepts exactly 0.30 available weight from price and divergence", () => {
+    expect(computeDEWS(makeDewsInput({
+      circulatingPrevDayAvailable: false,
+      circulatingPrevWeekAvailable: false,
+      dexPriceUsd: 1,
+    }))).toMatchObject({ availableWeight: 0.3, score: 0 });
   });
 
-  it("PSI amplifier is 1.0 at PSI === 75 exactly (no amplification)", () => {
-    const resultAt75 = computeDEWS(makeDewsInput({ psiScore: 75 }));
-    const resultAtNull = computeDEWS(makeDewsInput({ psiScore: null }));
-    // Use tolerance of 1 in case clamp rounding differs on other fixtures
-    // (per plan note). At the default baseline both branches evaluate to
-    // the same integer, but we keep the tolerance to stay resilient.
-    expect(Math.abs((resultAt75?.score ?? 0) - (resultAtNull?.score ?? 0))).toBeLessThanOrEqual(1);
+  it.each([[75, 1], [74, 1.004]] as const)("applies the PSI boundary at %s to nonzero stress", (psiScore, amplifier) => {
+    const result = computeDEWS(makeDewsInput({
+      circulatingPrevDayAvailable: false,
+      circulatingPrevWeekAvailable: false,
+      price: 0.99,
+      dexPriceUsd: 0.99,
+      psiScore,
+    }));
+    expect(result).not.toBeNull();
+    expect(result!.baseScore).toBe(37.5);
+    expect(result!.amplifiers.psi).toBe(amplifier);
+    expect(result!.score).toBe(38);
+    expect(result!.insufficientEvidenceReason).toBeNull();
   });
 
   it("flow signal is unavailable at flowBaselineDays === 6 and available at 7 when fresh", () => {

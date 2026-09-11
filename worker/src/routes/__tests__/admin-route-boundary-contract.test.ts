@@ -1,6 +1,9 @@
-import { describe, expect, it, vi } from "vitest";
-import { createLatestSchemaSqlite } from "../../test-helpers/latest-schema-sqlite";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
 import type { FullRouteContext, StaticRouteDefinition } from "../shared";
+
+const fixtures = createLatestSchemaFixtureTracker();
+afterEach(fixtures.closeAll);
 
 const handlers = vi.hoisted(() => ({
   auditDepegHistory: vi.fn(async () => Response.json({ ok: true })),
@@ -124,7 +127,7 @@ describe("admin route boundary contract", () => {
 
   it("replays an always-idempotent route without invoking its handler twice", async () => {
     const route = findRoute("backfill-depegs");
-    const { db } = createLatestSchemaSqlite();
+    const { db } = fixtures.open();
     const callsBefore = handlers.backfillDepegs.mock.calls.length;
     const options = { db, trustedAdmin: true, idempotencyKey: "route-replay-contract" } as const;
 

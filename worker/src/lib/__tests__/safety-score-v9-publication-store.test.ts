@@ -1,6 +1,6 @@
 import { DatabaseSync } from "node:sqlite";
 import { afterEach, describe, expect, it } from "vitest";
-import { createSqliteD1 } from "../../test-helpers/sqlite-d1";
+import { createSqliteD1 } from "@shared/test-utils/sqlite-d1";
 import { makeWorkerSafetyScoreV9Publication } from "../../test-helpers/report-cards-v9";
 import {
   loadSafetyScoreV9Publication,
@@ -12,7 +12,8 @@ import {
   persistSafetyScoreV9PublicationAttempt,
   SAFETY_SCORE_V9_CACHE_KEYS,
 } from "../safety-score-v9/publication-store";
-import { createLatestSchemaSqlite } from "../../test-helpers/latest-schema-sqlite";
+import { createLatestSchemaSqlite } from "@shared/test-utils/latest-schema-sqlite";
+import { currentInput } from "./safety-score-v9-publication-store.test-support";
 
 const databases: DatabaseSync[] = [];
 
@@ -44,52 +45,15 @@ describe("Safety Score V9 publication store", () => {
       publicationGenerationId: "report-cards:v9:incoming",
       publishedAtSec: 150,
     });
-    const olderHealth = {
-      schemaVersion: 1 as const,
-      status: "current" as const,
-      acceptedPublicationGenerationId: older.publicationGenerationId,
-      acceptedAtSec: older.publishedAtSec,
-      attemptedAtSec: older.publishedAtSec,
-      heldSinceSec: null,
-      reasons: [],
-    };
-    await persistSafetyScoreV9Publication(db, {
-      publication: older,
-      publicationHealth: olderHealth,
-      publicationAttempt: {
-        schemaVersion: 1,
-        attemptedAtSec: 100,
-        outcome: "published-clean",
-        publicationGenerationId: older.publicationGenerationId,
-        quarantines: [],
-        affectedAssetIds: [],
-      },
-      publicationClockSec: 100,
-    });
+    const olderHealth = currentInput(older).publicationHealth;
+    await persistSafetyScoreV9Publication(db, currentInput(older));
     const olderHealthRow = sqlite
       .prepare("SELECT value, updated_at FROM cache WHERE key = ?")
       .get(SAFETY_SCORE_V9_CACHE_KEYS.publicationHealth) as {
         value: string;
         updated_at: number;
       };
-    await persistSafetyScoreV9Publication(db, {
-      publication: newer,
-      publicationHealth: {
-        ...olderHealth,
-        acceptedPublicationGenerationId: newer.publicationGenerationId,
-        acceptedAtSec: newer.publishedAtSec,
-        attemptedAtSec: newer.publishedAtSec,
-      },
-      publicationAttempt: {
-        schemaVersion: 1,
-        attemptedAtSec: 200,
-        outcome: "published-clean",
-        publicationGenerationId: newer.publicationGenerationId,
-        quarantines: [],
-        affectedAssetIds: [],
-      },
-      publicationClockSec: 200,
-    });
+    await persistSafetyScoreV9Publication(db, currentInput(newer));
     sqlite
       .prepare("UPDATE cache SET value = ?, updated_at = ? WHERE key = ?")
       .run(
@@ -97,24 +61,8 @@ describe("Safety Score V9 publication store", () => {
         olderHealthRow.updated_at,
         SAFETY_SCORE_V9_CACHE_KEYS.publicationHealth,
       );
-    await expect(persistSafetyScoreV9Publication(db, {
-      publication: incoming,
-      publicationHealth: {
-        ...olderHealth,
-        acceptedPublicationGenerationId: incoming.publicationGenerationId,
-        acceptedAtSec: incoming.publishedAtSec,
-        attemptedAtSec: incoming.publishedAtSec,
-      },
-      publicationAttempt: {
-        schemaVersion: 1,
-        attemptedAtSec: 150,
-        outcome: "published-clean",
-        publicationGenerationId: incoming.publicationGenerationId,
-        quarantines: [],
-        affectedAssetIds: [],
-      },
-      publicationClockSec: 150,
-    })).rejects.toThrow(/Stale or conflicting Safety Score v9 publication/);
+    await expect(persistSafetyScoreV9Publication(db, currentInput(incoming)))
+      .rejects.toThrow(/Stale or conflicting Safety Score v9 publication/);
     await expect(loadSafetyScoreV9Publication(db)).resolves.toEqual(newer);
     await expect(loadSafetyScoreV9PublicationHealth(db)).resolves.toEqual(
       olderHealth,
@@ -130,28 +78,8 @@ describe("Safety Score V9 publication store", () => {
     const publication = makeWorkerSafetyScoreV9Publication({
       publishedAtSec: 110,
     });
-    const currentHealth = {
-      schemaVersion: 1 as const,
-      status: "current" as const,
-      acceptedPublicationGenerationId: publication.publicationGenerationId,
-      acceptedAtSec: publication.publishedAtSec,
-      attemptedAtSec: publication.publishedAtSec,
-      heldSinceSec: null,
-      reasons: [],
-    };
-    await persistSafetyScoreV9Publication(db, {
-      publication,
-      publicationHealth: currentHealth,
-      publicationAttempt: {
-        schemaVersion: 1,
-        attemptedAtSec: 110,
-        outcome: "published-clean",
-        publicationGenerationId: publication.publicationGenerationId,
-        quarantines: [],
-        affectedAssetIds: [],
-      },
-      publicationClockSec: 110,
-    });
+    const currentHealth = currentInput(publication).publicationHealth;
+    await persistSafetyScoreV9Publication(db, currentInput(publication));
 
     await expect(persistSafetyScoreV9Publication(db, {
       publicationHealth: {
@@ -189,27 +117,8 @@ describe("Safety Score V9 publication store", () => {
     };
     delete trace.evidenceResponsibility.facts;
 
-    await expect(persistSafetyScoreV9Publication(db, {
-      publication,
-      publicationHealth: {
-        schemaVersion: 1,
-        status: "current",
-        acceptedPublicationGenerationId: publication.publicationGenerationId,
-        acceptedAtSec: publication.publishedAtSec,
-        attemptedAtSec: publication.publishedAtSec,
-        heldSinceSec: null,
-        reasons: [],
-      },
-      publicationAttempt: {
-        schemaVersion: 1,
-        attemptedAtSec: 110,
-        outcome: "published-clean",
-        publicationGenerationId: publication.publicationGenerationId,
-        quarantines: [],
-        affectedAssetIds: [],
-      },
-      publicationClockSec: 110,
-    })).rejects.toThrow(/v9\.19\+ publications require per-fact disclosure paths/);
+    await expect(persistSafetyScoreV9Publication(db, currentInput(publication)))
+      .rejects.toThrow(/v9\.19\+ publications require per-fact disclosure paths/);
   });
 
   it("replaces an older publication that the current reader cannot parse", async () => {
@@ -218,27 +127,7 @@ describe("Safety Score V9 publication store", () => {
       publicationGenerationId: "report-cards:v9:older",
       publishedAtSec: 100,
     });
-    await persistSafetyScoreV9Publication(db, {
-      publication: older,
-      publicationHealth: {
-        schemaVersion: 1,
-        status: "current",
-        acceptedPublicationGenerationId: older.publicationGenerationId,
-        acceptedAtSec: older.publishedAtSec,
-        attemptedAtSec: older.publishedAtSec,
-        heldSinceSec: null,
-        reasons: [],
-      },
-      publicationAttempt: {
-        schemaVersion: 1,
-        attemptedAtSec: 100,
-        outcome: "published-clean",
-        publicationGenerationId: older.publicationGenerationId,
-        quarantines: [],
-        affectedAssetIds: [],
-      },
-      publicationClockSec: 100,
-    });
+    await persistSafetyScoreV9Publication(db, currentInput(older));
     sqlite
       .prepare("UPDATE cache SET value = ? WHERE key = ?")
       .run(
@@ -251,27 +140,7 @@ describe("Safety Score V9 publication store", () => {
       publicationGenerationId: "report-cards:v9:replacement",
       publishedAtSec: 110,
     });
-    await persistSafetyScoreV9Publication(db, {
-      publication: replacement,
-      publicationHealth: {
-        schemaVersion: 1,
-        status: "current",
-        acceptedPublicationGenerationId: replacement.publicationGenerationId,
-        acceptedAtSec: replacement.publishedAtSec,
-        attemptedAtSec: replacement.publishedAtSec,
-        heldSinceSec: null,
-        reasons: [],
-      },
-      publicationAttempt: {
-        schemaVersion: 1,
-        attemptedAtSec: 110,
-        outcome: "published-clean",
-        publicationGenerationId: replacement.publicationGenerationId,
-        quarantines: [],
-        affectedAssetIds: [],
-      },
-      publicationClockSec: 110,
-    });
+    await persistSafetyScoreV9Publication(db, currentInput(replacement));
 
     await expect(loadSafetyScoreV9Publication(db)).resolves.toEqual(
       replacement,
@@ -322,29 +191,6 @@ describe("Safety Score V9 publication store", () => {
     const newer = makeWorkerSafetyScoreV9Publication({
       publicationGenerationId: "report-cards:v9:newer",
       publishedAtSec: 200,
-    });
-    const currentInput = (
-      publication: typeof older,
-    ): Parameters<typeof persistSafetyScoreV9Publication>[1] => ({
-      publication,
-      publicationHealth: {
-        schemaVersion: 1,
-        status: "current",
-        acceptedPublicationGenerationId: publication.publicationGenerationId,
-        acceptedAtSec: publication.publishedAtSec,
-        attemptedAtSec: publication.publishedAtSec,
-        heldSinceSec: null,
-        reasons: [],
-      },
-      publicationAttempt: {
-        schemaVersion: 1,
-        attemptedAtSec: publication.publishedAtSec,
-        outcome: "published-clean",
-        publicationGenerationId: publication.publicationGenerationId,
-        quarantines: [],
-        affectedAssetIds: [],
-      },
-      publicationClockSec: publication.publishedAtSec,
     });
     await persistSafetyScoreV9Publication(db, currentInput(older));
     const olderRows = sqlite
@@ -414,31 +260,8 @@ describe("Safety Score V9 publication store", () => {
     const publication = makeWorkerSafetyScoreV9Publication({
       publishedAtSec: 110,
     });
-    const currentHealth = {
-      schemaVersion: 1 as const,
-      status: "current" as const,
-      acceptedPublicationGenerationId:
-        publication.publicationGenerationId,
-      acceptedAtSec: publication.publishedAtSec,
-      attemptedAtSec: publication.publishedAtSec,
-      heldSinceSec: null,
-      reasons: [],
-    };
-
-    await persistSafetyScoreV9Publication(db, {
-      publication,
-      publicationHealth: currentHealth,
-      publicationAttempt: {
-        schemaVersion: 1,
-        attemptedAtSec: publication.publishedAtSec,
-        outcome: "published-clean",
-        publicationGenerationId:
-          publication.publicationGenerationId,
-        quarantines: [],
-        affectedAssetIds: [],
-      },
-      publicationClockSec: publication.publishedAtSec,
-    });
+    const currentHealth = currentInput(publication).publicationHealth;
+    await persistSafetyScoreV9Publication(db, currentInput(publication));
     await expect(loadSafetyScoreV9Publication(db)).resolves.toEqual(
       publication,
     );
@@ -497,27 +320,7 @@ describe("Safety Score V9 publication store", () => {
     await expect(loadSafetyScoreV9PublicationIdentityEnvelope(db)).resolves.toBeNull();
 
     const publication = makeWorkerSafetyScoreV9Publication({ publishedAtSec: 110 });
-    await persistSafetyScoreV9Publication(db, {
-      publication,
-      publicationHealth: {
-        schemaVersion: 1,
-        status: "current",
-        acceptedPublicationGenerationId: publication.publicationGenerationId,
-        acceptedAtSec: publication.publishedAtSec,
-        attemptedAtSec: publication.publishedAtSec,
-        heldSinceSec: null,
-        reasons: [],
-      },
-      publicationAttempt: {
-        schemaVersion: 1,
-        attemptedAtSec: publication.publishedAtSec,
-        outcome: "published-clean",
-        publicationGenerationId: publication.publicationGenerationId,
-        quarantines: [],
-        affectedAssetIds: [],
-      },
-      publicationClockSec: publication.publishedAtSec,
-    });
+    await persistSafetyScoreV9Publication(db, currentInput(publication));
 
     await expect(loadSafetyScoreV9PublicationIdentityEnvelope(db)).resolves.toMatchObject({
       model: "v9",
@@ -539,30 +342,15 @@ describe("Safety Score V9 publication store", () => {
     const publication = makeWorkerSafetyScoreV9Publication({
       publishedAtSec: 110,
     });
-    const currentHealth = {
-      schemaVersion: 1 as const,
-      status: "current" as const,
-      acceptedPublicationGenerationId:
-        publication.publicationGenerationId,
-      acceptedAtSec: publication.publishedAtSec,
-      attemptedAtSec: publication.publishedAtSec,
-      heldSinceSec: null,
-      reasons: [],
-    };
-
+    const input = currentInput(publication);
+    const currentHealth = input.publicationHealth;
     await persistSafetyScoreV9Publication(db, {
-      publication,
-      publicationHealth: currentHealth,
+      ...input,
       publicationAttempt: {
-        schemaVersion: 1,
-        attemptedAtSec: publication.publishedAtSec,
+        ...input.publicationAttempt,
         outcome: "published-partial",
-        publicationGenerationId:
-          publication.publicationGenerationId,
-        quarantines: [],
         affectedAssetIds: ["usdc-circle"],
       },
-      publicationClockSec: publication.publishedAtSec,
     });
 
     await persistSafetyScoreV9PublicationAttempt(db, {

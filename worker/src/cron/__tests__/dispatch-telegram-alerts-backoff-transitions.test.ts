@@ -1,15 +1,15 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { TELEGRAM_TARGET_PLAN_HORIZON_PAGE_SIZE, TELEGRAM_TARGET_PLAN_MAX_STEPS_PER_RUN } from "@shared/lib/telegram-delivery-policy";
+import { seedDispatchSnapshots } from "./dispatch-telegram-snapshots.test-support";
 import {
   cleanupDispatchTelegramAlertsTest,
   createDispatchHarness,
   dispatchTelegramAlerts,
   formatConsolidatedMessageSpy,
-  makeSafetySnapshotCache,
   mockSendToChat,
   parseLogRecords,
   readCacheValue,
   resetDispatchTelegramAlertsTest,
-  seedActiveSafetySource,
   scriptTelegramDeliveries,
   scriptTelegramDeliveriesForChat,
   telegramDeliveryTranscript,
@@ -18,26 +18,6 @@ import {
   type CronProgressUpdate,
 } from "./dispatch-telegram-alerts.test-support";
 
-function sources(
-  harness: ReturnType<typeof createDispatchHarness>,
-  options: {
-    dews?: Record<string, string>;
-    depeg?: Record<string, unknown>;
-    safety?: Record<string, { grade: string; score: number | null; methodologyVersion: string | null }> | string;
-    safetySource?: Record<string, { grade: string; score: number | null; methodologyVersion: string | null }>;
-  } = {},
-) {
-  const now = Math.floor(Date.now() / 1000) - 60;
-  harness.cache("alert:dews-snapshot", options.dews ?? {}, now);
-  harness.cache("alert:depeg-snapshot", options.depeg ?? {}, now);
-  harness.cache(
-    "alert:safety-snapshot",
-    typeof options.safety === "string" ? options.safety : makeSafetySnapshotCache(options.safety ?? {}).value,
-    now,
-  );
-  if (options.safetySource)
-    seedActiveSafetySource(harness, options.safetySource, now);
-}
 
 function dewsSubscribers(count: number, prefix = "chat") {
   const now = Math.floor(Date.now() / 1000);
@@ -74,7 +54,7 @@ describe("dispatchTelegramAlerts", () => {
 
   it("records a fresh-send chat_not_found first strike without deactivating the subscriber", async () => {
     const harness = createDispatchHarness();
-    sources(harness, { dews: { "usdc-circle": "CALM" } });
+    seedDispatchSnapshots(harness, { dews: { "usdc-circle": "CALM" } });
     harness.seed({
       dews: [{ stablecoinId: "usdc-circle" }],
       subscribers: [{ chatId: "99999" }],
@@ -106,12 +86,16 @@ describe("dispatchTelegramAlerts", () => {
   it("deactivates a fresh-send chat_not_found subscriber only on the second strike", async () => {
     const now = Math.floor(Date.now() / 1000);
     const harness = createDispatchHarness();
-    sources(harness, { dews: { "usdc-circle": "CALM" } });
+    seedDispatchSnapshots(harness, { dews: { "usdc-circle": "CALM" } });
     harness.seed({
       dews: [{ stablecoinId: "usdc-circle" }],
-      subscribers: [{ chatId: "99999", consecutiveBlockCount: 1, consecutiveBlockFirstAt: now - 60 }],
-      subscriptions: [{ chatId: "99999", stablecoinId: "usdc-circle", alerts: { dews: true } }],
+      subscribers: [{ chatId: "99999", direct: { launch: true }, global: { launch: true }, consecutiveBlockCount: 1, consecutiveBlockFirstAt: now - 60 }],
+      subscriptions: [{ chatId: "99999", stablecoinId: "usdc-circle", alerts: { dews: true, launch: true } }],
     });
+    expect(harness.sqlite.prepare("SELECT alert_launch, global_alert_launch FROM telegram_subscribers WHERE chat_id = '99999'").get())
+      .toEqual({ alert_launch: 1, global_alert_launch: 1 });
+    expect(harness.sqlite.prepare("SELECT alert_launch FROM telegram_subscriptions WHERE chat_id = '99999'").get())
+      .toEqual({ alert_launch: 1 });
     scriptTelegramDeliveries({
       ok: false,
       blocked: true,
@@ -133,8 +117,8 @@ describe("dispatchTelegramAlerts", () => {
         .get(),
     ).toEqual({ alert_dews: 0, alert_launch: 0, global_alert_launch: 0 });
     expect(
-      harness.sqlite.prepare("SELECT alert_dews FROM telegram_subscriptions WHERE chat_id = '99999'").get(),
-    ).toEqual({ alert_dews: 0 });
+      harness.sqlite.prepare("SELECT alert_dews, alert_launch FROM telegram_subscriptions WHERE chat_id = '99999'").get(),
+    ).toEqual({ alert_dews: 0, alert_launch: 0 });
 
     const attemptedAtDisable = mockSendToChat.mock.calls.length;
     vi.advanceTimersByTime(121_000);
@@ -157,7 +141,7 @@ describe("dispatchTelegramAlerts", () => {
   it("drains pending queue on an eventless dispatch", async () => {
     const now = Math.floor(Date.now() / 1000);
     const harness = createDispatchHarness();
-    sources(harness);
+    seedDispatchSnapshots(harness);
     harness.seed({
       pending: [
         { id: 1, chatId: "100", html: "<b>Old alert</b>", createdAt: now - 120 },
@@ -174,7 +158,7 @@ describe("dispatchTelegramAlerts", () => {
   it("drains existing pending alerts before authoritative target planning", async () => {
     const now = Math.floor(Date.now() / 1000);
     const harness = createDispatchHarness();
-    sources(harness, { dews: { "usdc-circle": "CALM" } });
+    seedDispatchSnapshots(harness, { dews: { "usdc-circle": "CALM" } });
     harness.seed({
       dews: [{ stablecoinId: "usdc-circle", score: 55, band: "WARNING" }],
       pending: [{ id: 1, chatId: "pending-chat", html: "<b>Old alert</b>", createdAt: now - 120 }],
@@ -210,9 +194,9 @@ describe("dispatchTelegramAlerts", () => {
   });
 
   it("captures overflow subscribers durably before bounded materialization", async () => {
-    const subscriberCount = TELEGRAM_MAX_MESSAGES_PER_RUN + 50;
+    const subscriberCount = TELEGRAM_TARGET_PLAN_HORIZON_PAGE_SIZE * TELEGRAM_TARGET_PLAN_MAX_STEPS_PER_RUN + 1;
     const harness = createDispatchHarness();
-    sources(harness, { dews: { "usdc-circle": "CALM" } });
+    seedDispatchSnapshots(harness, { dews: { "usdc-circle": "CALM" } });
     harness.seed({
       dews: [{ stablecoinId: "usdc-circle", score: 55, band: "WARNING" }],
       ...dewsSubscribers(subscriberCount),
@@ -236,10 +220,20 @@ describe("dispatchTelegramAlerts", () => {
     expect(formatConsolidatedMessageSpy).not.toHaveBeenCalled();
   });
 
+  // This case is the file's whole runtime (6.45s of 7.95s, measured 2026-09-09),
+  // and the 3,665-subscriber burst is load-bearing: it is the smallest burst
+  // above the production format budget, so a smaller one would make the
+  // per-cycle bound below trivially true. The cost is production-side and
+  // superlinear in the burst — per-flush target-plan verification (2.43s over
+  // 204 correlated-count reads of the generation's target rows) plus per-send
+  // job-counter reconciliation that re-aggregates every target of the job
+  // (2.35s over 916 transition batches). The same file at 400 subscribers costs
+  // 194ms, and the only phase seeding could skip (subscriber capture) is 110ms,
+  // so pre-seeding target-plan state does not pay here.
   it("C102: caps hot-path formatting at the fresh budget under a market-wide burst", async () => {
-    const subscriberCount = TELEGRAM_MAX_MESSAGES_PER_RUN + TELEGRAM_FORMAT_BUDGET_ALLOWANCE + 400;
+    const subscriberCount = TELEGRAM_MAX_MESSAGES_PER_RUN + TELEGRAM_FORMAT_BUDGET_ALLOWANCE + 1;
     const harness = createDispatchHarness();
-    sources(harness, { dews: { "usdc-circle": "CALM" } });
+    seedDispatchSnapshots(harness, { dews: { "usdc-circle": "CALM" } });
     harness.seed({
       dews: [{ stablecoinId: "usdc-circle", score: 55, band: "WARNING" }],
       ...dewsSubscribers(subscriberCount),
@@ -247,11 +241,15 @@ describe("dispatchTelegramAlerts", () => {
     let metadata: Record<string, number | boolean> | undefined;
     for (let cycle = 0; cycle < 10; cycle++) {
       if (cycle > 0) vi.advanceTimersByTime(121_000);
+      const formattedBefore = formatConsolidatedMessageSpy.mock.calls.length;
       const runMetadata = JSON.parse((await dispatchTelegramAlerts(harness.db, "bot-token")).metadata) as Record<
         string,
         number | boolean
       >;
       metadata = runMetadata;
+      const formatted = formatConsolidatedMessageSpy.mock.calls.length - formattedBefore;
+      expect(formatted).toBeLessThanOrEqual(TELEGRAM_MAX_MESSAGES_PER_RUN + TELEGRAM_FORMAT_BUDGET_ALLOWANCE);
+      if (runMetadata.freshCandidateChats === 0) expect(formatted).toBe(0);
       if (!runMetadata.cappedAtLimit) break;
     }
     const completed = metadata as Record<string, number | boolean>;
@@ -263,11 +261,18 @@ describe("dispatchTelegramAlerts", () => {
     });
     expect(formatConsolidatedMessageSpy).toHaveBeenCalledTimes(subscriberCount);
     expect(readCacheValue(harness.sqlite, "telegram:dispatch-overflow-plan")).toBeNull();
+    for (let cycle = 0; cycle < 10 && telegramDeliveryTranscript.length < subscriberCount; cycle++) {
+      vi.advanceTimersByTime(121_000);
+      await dispatchTelegramAlerts(harness.db, "bot-token");
+    }
+    expect(telegramDeliveryTranscript.map((entry) => entry.chatId).sort()).toEqual(
+      Array.from({ length: subscriberCount }, (_, index) => `chat-${index}`).sort(),
+    );
   }, 45_000);
 
   it("writes snapshots even when subscriber queue is capped", async () => {
     const harness = createDispatchHarness();
-    sources(harness, { dews: { "usdc-circle": "CALM" } });
+    seedDispatchSnapshots(harness, { dews: { "usdc-circle": "CALM" } });
     harness.seed({ dews: [{ stablecoinId: "usdc-circle", score: 55, band: "WARNING" }], ...dewsSubscribers(250) });
     await dispatchTelegramAlerts(harness.db, "bot-token");
 
@@ -277,7 +282,7 @@ describe("dispatchTelegramAlerts", () => {
   it("cleans up expired pending alerts", async () => {
     const now = Math.floor(Date.now() / 1000);
     const harness = createDispatchHarness();
-    sources(harness);
+    seedDispatchSnapshots(harness);
     harness.seed({
       pending: Array.from({ length: 5 }, (_, index) => ({
         id: index + 1,
@@ -300,7 +305,7 @@ describe("dispatchTelegramAlerts", () => {
   it("keeps retryable authoritative targets queued instead of dropping them", async () => {
     const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
     const harness = createDispatchHarness();
-    sources(harness, { dews: { "usdc-circle": "CALM" } });
+    seedDispatchSnapshots(harness, { dews: { "usdc-circle": "CALM" } });
     harness.seed({
       dews: [{ stablecoinId: "usdc-circle", score: 55, band: "WARNING" }],
       ...dewsSubscribers(1, "12345"),
@@ -330,7 +335,7 @@ describe("dispatchTelegramAlerts", () => {
   it("isolates rate-limit deferral to the affected chat and still sends fresh alerts for other chats", async () => {
     const now = Math.floor(Date.now() / 1000);
     const harness = createDispatchHarness();
-    sources(harness, { dews: { "usdc-circle": "CALM" } });
+    seedDispatchSnapshots(harness, { dews: { "usdc-circle": "CALM" } });
     harness.seed({
       dews: [{ stablecoinId: "usdc-circle", score: 55, band: "WARNING" }],
       pending: [{ id: 1, chatId: "old-chat", html: "<b>Old</b>", createdAt: now - 60 }],
@@ -378,7 +383,7 @@ describe("dispatchTelegramAlerts", () => {
   it("defers fresh alerts for chats already in per-chat backoff without sending", async () => {
     const now = Math.floor(Date.now() / 1000);
     const harness = createDispatchHarness();
-    sources(harness, { dews: { "usdc-circle": "CALM" } });
+    seedDispatchSnapshots(harness, { dews: { "usdc-circle": "CALM" } });
     harness.seed({
       dews: [{ stablecoinId: "usdc-circle", score: 55, band: "WARNING" }],
       pending: [{ chatId: "chat-A", html: "<b>Backoff</b>", createdAt: now - 60, notBeforeAt: now + 300 }],
@@ -402,7 +407,7 @@ describe("dispatchTelegramAlerts", () => {
   it("hands global rate limits to the pending transport controller", async () => {
     const now = Math.floor(Date.now() / 1000);
     const harness = createDispatchHarness();
-    sources(harness, { dews: { "usdc-circle": "CALM" } });
+    seedDispatchSnapshots(harness, { dews: { "usdc-circle": "CALM" } });
     harness.seed({ dews: [{ stablecoinId: "usdc-circle", score: 55, band: "WARNING" }], ...dewsSubscribers(8) });
     scriptTelegramDeliveries(
       retryResult({ statusCode: 429, errorClass: "rate_limit", retryAfterSec: 45, rateLimitScope: "global" }),
@@ -422,7 +427,7 @@ describe("dispatchTelegramAlerts", () => {
 
   it("emits worsening depeg alerts when the configured bps step is crossed", async () => {
     const harness = createDispatchHarness();
-    sources(harness, {
+    seedDispatchSnapshots(harness, {
       depeg: {
         "usdc-circle": {
           stablecoinId: "usdc-circle",
@@ -449,7 +454,7 @@ describe("dispatchTelegramAlerts", () => {
 
   it("renders the active depeg peak price when a worsening event moved far past its opening price", async () => {
     const harness = createDispatchHarness();
-    sources(harness, {
+    seedDispatchSnapshots(harness, {
       depeg: {
         "usdc-circle": {
           stablecoinId: "usdc-circle",
@@ -484,7 +489,7 @@ describe("dispatchTelegramAlerts", () => {
 
   it("suppresses fresh global depeg alerts below the configured bps step", async () => {
     const harness = createDispatchHarness();
-    sources(harness);
+    seedDispatchSnapshots(harness);
     harness.seed({
       depegs: [{ stablecoinId: "usdc-circle", peakDeviationBps: 125 }],
       subscribers: [{ chatId: "global-123", global: { depeg: true }, globalDepegWorseningBpsStep: 250 }],
@@ -501,7 +506,7 @@ describe("dispatchTelegramAlerts", () => {
 
   it("sends fresh global depeg alerts when the configured bps step is met", async () => {
     const harness = createDispatchHarness();
-    sources(harness);
+    seedDispatchSnapshots(harness);
     harness.seed({
       depegs: [{ stablecoinId: "usdc-circle", peakDeviationBps: 260, startPrice: 0.974 }],
       subscribers: [{ chatId: "global-123", global: { depeg: true }, globalDepegWorseningBpsStep: 250 }],
@@ -516,7 +521,7 @@ describe("dispatchTelegramAlerts", () => {
 
   it("emits global worsening depeg alerts when the configured global bps step is crossed", async () => {
     const harness = createDispatchHarness();
-    sources(harness, {
+    seedDispatchSnapshots(harness, {
       depeg: {
         "usdc-circle": {
           stablecoinId: "usdc-circle",
@@ -543,13 +548,17 @@ describe("dispatchTelegramAlerts", () => {
   it("clears launch alert flags when deactivating a blocked subscriber", async () => {
     const now = Math.floor(Date.now() / 1000);
     const harness = createDispatchHarness();
-    sources(harness, { dews: { "usdc-circle": "CALM" } });
+    seedDispatchSnapshots(harness, { dews: { "usdc-circle": "CALM" } });
     harness.cache("alert:launch-snapshot", [], now - 60);
     harness.seed({
       dews: [{ stablecoinId: "usdc-circle" }],
-      subscribers: [{ chatId: "99999", consecutiveBlockCount: 1, consecutiveBlockFirstAt: now - 60 }],
-      subscriptions: [{ chatId: "99999", stablecoinId: "usdc-circle", alerts: { dews: true } }],
+      subscribers: [{ chatId: "99999", direct: { launch: true }, global: { launch: true }, consecutiveBlockCount: 1, consecutiveBlockFirstAt: now - 60 }],
+      subscriptions: [{ chatId: "99999", stablecoinId: "usdc-circle", alerts: { dews: true, launch: true } }],
     });
+    expect(harness.sqlite.prepare("SELECT alert_launch, global_alert_launch FROM telegram_subscribers WHERE chat_id = '99999'").get())
+      .toEqual({ alert_launch: 1, global_alert_launch: 1 });
+    expect(harness.sqlite.prepare("SELECT alert_launch FROM telegram_subscriptions WHERE chat_id = '99999'").get())
+      .toEqual({ alert_launch: 1 });
     scriptTelegramDeliveries({
       ok: false,
       blocked: true,
@@ -567,11 +576,20 @@ describe("dispatchTelegramAlerts", () => {
         .prepare("SELECT alert_launch, global_alert_launch FROM telegram_subscribers WHERE chat_id = '99999'")
         .get(),
     ).toEqual({ alert_launch: 0, global_alert_launch: 0 });
+    expect(harness.sqlite.prepare("SELECT alert_launch FROM telegram_subscriptions WHERE chat_id = '99999'").get())
+      .toEqual({ alert_launch: 0 });
+    const attempts = telegramDeliveryTranscript.length;
+    vi.advanceTimersByTime(121_000);
+    harness.cache("alert:launch-snapshot", ["usdc-circle"], now + 61);
+    const next = JSON.parse((await dispatchTelegramAlerts(harness.db, "bot-token")).metadata);
+    expect(next.eventsDetected.launch).toBe(1);
+    expect(next.messagesSent).toBe(0);
+    expect(telegramDeliveryTranscript).toHaveLength(attempts);
   });
 
   it("does not emit a worsening alert when an active depeg flips direction (same stablecoin_id)", async () => {
     const harness = createDispatchHarness();
-    sources(harness, {
+    seedDispatchSnapshots(harness, {
       depeg: { "usdc-circle": { symbol: "USDC", direction: "below", deviationBps: 50, price: 0.995, pegReference: 1 } },
     });
     harness.seed({

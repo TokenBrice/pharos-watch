@@ -1,5 +1,9 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { getAlertSafetyV9SourceGeneration } from "../../lib/alert-safety-source-cache";
+import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
+import { CRON_INTERVALS } from "@shared/lib/cron-jobs";
+
+const fixtures = createLatestSchemaFixtureTracker();
 
 const {
   mockGetCache,
@@ -141,6 +145,7 @@ beforeEach(() => {
 
 afterEach(() => {
   vi.useRealTimers();
+  fixtures.closeAll();
 });
 
 describe("runTelegramDegradationWatchdog · pending backlog", () => {
@@ -234,7 +239,7 @@ describe("runTelegramDegradationWatchdog · pending backlog", () => {
     expect(prepare.mock.calls.some(([sql]) => isPendingCapacityQuery(String(sql)))).toBe(false);
   });
 
-  it("does not trigger on first observation above threshold", async () => {
+  it("records an onset without triggering on first observation above threshold", async () => {
     const store = installCacheStore();
     const db = makeDb({ pendingCount: PENDING_BACKLOG_THRESHOLD + 5 });
 
@@ -242,6 +247,8 @@ describe("runTelegramDegradationWatchdog · pending backlog", () => {
     const meta = JSON.parse(result.metadata ?? "{}");
 
     expect(meta.pendingBacklog.triggered).toBe(false);
+    expect(meta.pendingBacklog.detail).toContain("newly tripped");
+    expect(result.status).toBe("ok");
     expect(store.values.has(WATCHDOG_KEYS.pendingSince)).toBe(true);
   });
 
@@ -313,13 +320,16 @@ describe("runTelegramDegradationWatchdog · pending backlog", () => {
     expect(meta.pendingBacklog.estimatedDrainTimeSec).toBe(35 * 60);
   });
 
-  it("triggers immediately when pending rows are near TTL expiry", async () => {
+  it("triggers near-TTL escalation after onset, including one created this run", async () => {
     const store = installCacheStore();
     const nowSec = Math.floor(Date.now() / 1000);
-    store.values.set(WATCHDOG_KEYS.pendingSince, {
-      value: String(nowSec - 60),
-      updatedAt: nowSec - 60,
-    });
+    const onsetResult = await runTelegramDegradationWatchdog(makeDb({ pendingCount: 3, nearTtl: 1 }));
+    const onsetMeta = JSON.parse(onsetResult.metadata ?? "{}");
+
+    expect(onsetMeta.pendingBacklog.triggered).toBe(false);
+    expect(onsetMeta.pendingBacklog.detail).toContain("newly tripped");
+    expect(onsetResult.status).toBe("ok");
+    expect(store.values.get(WATCHDOG_KEYS.pendingSince)?.value).toBe(String(nowSec));
     const db = makeDb({ pendingCount: 3, nearTtl: 1 });
 
     const result = await runTelegramDegradationWatchdog(db);
@@ -328,6 +338,7 @@ describe("runTelegramDegradationWatchdog · pending backlog", () => {
     expect(meta.pendingBacklog.triggered).toBe(true);
     expect(meta.pendingBacklog.detail).toContain("nearTtl=1");
     expect(meta.pendingBacklog.nearTtl).toBe(1);
+    expect(result.status).toBe("degraded");
   });
 });
 
@@ -388,7 +399,6 @@ describe("runTelegramDegradationWatchdog · safety source", () => {
 
   it("does not trigger until sustained window elapses", async () => {
     const store = installCacheStore();
-    installCacheStore(); // reset
     const nowSec = Math.floor(Date.now() / 1000);
     mockLoadActiveAlertSafetySourceAssessment.mockResolvedValue({
       state: "missing",
@@ -407,6 +417,13 @@ describe("runTelegramDegradationWatchdog · safety source", () => {
     const meta = JSON.parse(result.metadata ?? "{}");
 
     expect(meta.safetySource.triggered).toBe(false);
+    expect(store.values.get(WATCHDOG_KEYS.safetySourceSince)).toEqual({
+      value: String(nowSec - 60), updatedAt: nowSec - 60,
+    });
+    expect(mockSetCache.mock.calls.some(([, key]) => key === WATCHDOG_KEYS.safetySourceSince)).toBe(false);
+    vi.advanceTimersByTime((2 * CRON_INTERVALS["compute-safety-score-v9"] - 60) * 1000);
+    const sustained = await runTelegramDegradationWatchdog(db);
+    expect(JSON.parse(sustained.metadata ?? "{}").safetySource.triggered).toBe(true);
   });
 
   it("recovers when state returns to ok after sustained breach", async () => {
@@ -643,34 +660,21 @@ describe("runTelegramDegradationWatchdog · abort", () => {
 });
 
 describe("runTelegramDegradationWatchdog · aborted-run filter", () => {
-  interface CronRunRow {
-    id?: number;
-    status: "ok" | "degraded" | "error" | "skipped_locked";
+  function makeDbWithCronRows(rows: Array<{
+    id: number;
+    startedAt: number;
+    status: string;
+    job?: string;
     metadata: Record<string, unknown> | null;
-  }
-
-  // Simulates D1 filtering: returns the first row whose status appears in the
-  // SQL's `status IN (...)` clause. Rows are ordered newest-first by the caller.
-  function makeDbWithCronRows(rows: CronRunRow[]): D1Database {
-    const prepare = vi.fn((sql: string) => {
-      const bind = vi.fn(() => statement);
-      const first = vi.fn(async () => {
-        if (isPendingCapacityQuery(sql)) {
-          return makePendingCapacityRow();
-        }
-        if (sql.includes("FROM cron_runs WHERE job = 'dispatch-telegram-alerts'")) {
-          const inMatch = sql.match(/status IN \(([^)]+)\)/);
-          const allowed = inMatch ? new Set(inMatch[1].split(",").map((s) => s.trim().replace(/'/g, ""))) : null;
-          const row = rows.find((r) => (allowed == null ? true : allowed.has(r.status)));
-          if (!row) return null;
-          return { id: row.id ?? 1, metadata: row.metadata == null ? null : JSON.stringify(row.metadata) };
-        }
-        return null;
-      });
-      const statement = { bind, first } as unknown as D1PreparedStatement;
-      return statement;
-    });
-    return { prepare } as unknown as D1Database;
+  }>): D1Database {
+    const { sqlite, db } = fixtures.open();
+    for (const row of rows) {
+      sqlite.prepare(
+        "INSERT INTO cron_runs (id, job, started_at, duration_ms, status, metadata) VALUES (?, ?, ?, 0, ?, ?)",
+      ).run(row.id, row.job ?? "dispatch-telegram-alerts", row.startedAt, row.status,
+        row.metadata == null ? null : JSON.stringify(row.metadata));
+    }
+    return db;
   }
 
   it("skips aborted run and reads the prior succeeded run's metadata", async () => {
@@ -678,9 +682,13 @@ describe("runTelegramDegradationWatchdog · aborted-run filter", () => {
     const nowSec = Math.floor(Date.now() / 1000);
     store.values.set(WATCHDOG_KEYS.zeroSendStreak, { value: "2", updatedAt: nowSec - 60 });
     const db = makeDbWithCronRows([
-      { status: "error", metadata: null },
+      { id: 8, startedAt: 300, status: "error", metadata: null },
+      { id: 9, startedAt: 400, status: "skipped_locked", metadata: null },
+      { id: 10, startedAt: 500, job: "other-job", status: "ok", metadata: {} },
+      { id: 20, startedAt: 100, status: "ok", metadata: {} },
+      { id: 6, startedAt: 200, status: "ok", metadata: {} },
       {
-        status: "ok",
+        id: 7, startedAt: 200, status: "degraded",
         metadata: {
           eventsDetected: { dews: 1, depeg: 0, safety: 0, launch: 0 },
           messagesSent: 5,
@@ -692,10 +700,11 @@ describe("runTelegramDegradationWatchdog · aborted-run filter", () => {
     const meta = JSON.parse(result.metadata ?? "{}");
 
     // The completed run sent messages, so the streak resets.
+    expect(meta.zeroSend.runIdentity).toBe("7");
     expect(meta.zeroSend.streak).toBe(0);
     expect(JSON.parse(store.values.get(WATCHDOG_KEYS.zeroSendStreak)?.value ?? "{}")).toEqual({
       streak: 0,
-      lastRunIdentity: "1",
+      lastRunIdentity: "7",
     });
   });
 
@@ -704,8 +713,8 @@ describe("runTelegramDegradationWatchdog · aborted-run filter", () => {
     const nowSec = Math.floor(Date.now() / 1000);
     store.values.set(WATCHDOG_KEYS.zeroSendStreak, { value: "2", updatedAt: nowSec - 60 });
     const db = makeDbWithCronRows([
-      { status: "error", metadata: null },
-      { status: "error", metadata: null },
+      { id: 1, startedAt: 100, status: "error", metadata: null },
+      { id: 2, startedAt: 200, status: "skipped_locked", metadata: null },
     ]);
 
     const result = await runTelegramDegradationWatchdog(db);

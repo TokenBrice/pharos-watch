@@ -71,6 +71,15 @@ describe("selectorAnswersToScreenerFilters", () => {
     expect(filters.liquidityScoreMin).toBe(65);
   });
 
+  it("relaxes the one-hour constraints for a 24-hour trading exit", () => {
+    const fast = selectorAnswersToScreenerFilters(makeInput({ profile: "trading", exitSpeed: "1h" }));
+    const slow = selectorAnswersToScreenerFilters(makeInput({ profile: "trading", exitSpeed: "24h" }));
+    expect(slow.filters).toMatchObject({ safetyExitMin: 50, liquidityScoreMin: 50 });
+    expect(slow.filters.dewsMax).toBeGreaterThan(fast.filters.dewsMax!);
+    expect(fast.divergenceWarnings.map((warning) => warning.reason)).toContain("effective-tvl-floor-1h");
+    expect(slow.divergenceWarnings.map((warning) => warning.reason)).not.toContain("effective-tvl-floor-1h");
+  });
+
   it("Yield divergenceWarnings includes yield-warning-signals", () => {
     const { divergenceWarnings } = selectorAnswersToScreenerFilters(
       makeInput({ profile: "yield" }),
@@ -105,6 +114,17 @@ describe("selectorAnswersToScreenerFilters", () => {
 });
 
 describe("buildScreenerUrl", () => {
+  it("deduplicates before keeping the first eight coin IDs", () => {
+    const ids = ["a", "b", "a", "c", "d", "b", "e", "f", "g", "h", "i"];
+    const { url } = buildScreenerUrl(makeInput(), "/screener", ids);
+    expect(new URL(url, "https://example.test").searchParams.get("coins")).toBe("a,b,c,d,e,f,g,h");
+  });
+
+  it("omits the coin filter when no IDs are selected", () => {
+    const { url } = buildScreenerUrl(makeInput(), "/screener", []);
+    expect(new URL(url, "https://example.test").searchParams.has("coins")).toBe(false);
+  });
+
   it("returns a path with encoded query string", () => {
     const { url } = buildScreenerUrl(
       makeInput({ profile: "treasury" }),

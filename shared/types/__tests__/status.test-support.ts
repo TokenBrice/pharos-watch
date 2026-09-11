@@ -89,21 +89,7 @@ export function reserveComposition() {
     runBudgetTruncated: true,
     deferredAt: 1_780_000_000,
     nextCursorStablecoinId: "usdc-circle",
-    cursorTailState: "incomplete",
-    cursorTailError: "cursor write failed",
     cursorRecordedAt: 1_780_000_010,
-    cursorTailCompletedAt: null,
-    cursorTailFailedAt: 1_780_000_020,
-    runBudgetTruncationCount: 2,
-    historyWriteGaps: [
-      {
-        stablecoinId: "usdc-circle",
-        fetchedAt: 1_780_000_030,
-        attemptId: "attempt-1",
-        compositionHistoryMissing: true,
-        attemptHistoryMissing: false,
-      },
-    ],
     persistentlyStaleIndependentCoins: [
       { stablecoinId: "hbusdt-hyperbeat", ageSec: 1_300_000 },
     ],
@@ -112,6 +98,7 @@ export function reserveComposition() {
     status: "degraded",
     freshCoverageRatio: 0.93,
     authoritativeFreshCoverageRatio: 0.74,
+    adapterReliability: [],
   };
 }
 

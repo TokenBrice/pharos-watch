@@ -7,10 +7,15 @@ import { fetchHashnoteUsycSource } from "../yield-sync/sources";
 import { RATE_DERIVED_CONFIGS } from "../../lib/yield-config/yield-config";
 
 describe("fetchHashnoteUsycSource", () => {
-  afterEach(cleanupYieldSourceTest);
+  afterEach(() => {
+    vi.useRealTimers();
+    cleanupYieldSourceTest();
+  });
 
   it("derives APY from USYC price reports", async () => {
-    const nowSec = Math.floor(Date.now() / 1000);
+    const nowSec = 1_780_000_000;
+    vi.useFakeTimers();
+    vi.setSystemTime(nowSec * 1000);
     const sevenDaysAgoSec = nowSec - 7 * 86400;
     mockYieldSourceRoutes([
       {
@@ -81,7 +86,6 @@ describe("fetchHashnoteUsycSource", () => {
     ]);
 
     await expect(fetchHashnoteUsycSource()).resolves.toBeNull();
-    vi.useRealTimers();
   });
 
   it("does not keep a rate-derived USYC proxy that can outrank the live Hashnote feed", () => {

@@ -9,7 +9,11 @@ import {
   type V9StructuralSignal,
 } from "../../types/safety-score-v9";
 import type { V9PillarAdverseAttribution } from "../safety-score-v9/formula";
-import { makeV9Pillar as pillar, makeV9ProductionScoreInput as input } from "./safety-score-v9-score.test-support";
+import {
+  makeV9Pillar as pillar,
+  makeV9ProductionScoreInput as input,
+  makeV9WrapperParentLimit as wrapperParentLimit,
+} from "./safety-score-v9-score.test-support";
 
 function reason(
   overrides: Partial<V9PillarReason> = {},
@@ -875,20 +879,13 @@ describe("Safety Score v9 evidence responsibility", () => {
           required: true,
           score: 45,
           propagatedReasons: [],
-          wrapperParentLimit: {
-            schemaVersion: 1,
+          wrapperParentLimit: wrapperParentLimit({
             parentScore: 50,
             form: "native-staked",
             treatment: "fallback-discount",
             localRiskDiscount: 0,
             fallbackDiscount: 5,
             appliedDiscount: 5,
-            riskTransfer: {
-              disposition: "reviewed",
-              mechanism: "none",
-              requestedCredit: 0,
-              appliedCredit: 0,
-            },
             limit: 45,
             factsComplete: false,
             missingFacts: [{
@@ -896,7 +893,7 @@ describe("Safety Score v9 evidence responsibility", () => {
               disposition: "integration-missing",
             }],
             adjustments: [],
-          },
+          }),
         },
       }),
       V9_CANDIDATE_POLICY_V1,
@@ -920,20 +917,13 @@ describe("Safety Score v9 evidence responsibility", () => {
           required: true,
           score: 44,
           propagatedReasons: [],
-          wrapperParentLimit: {
-            schemaVersion: 1,
+          wrapperParentLimit: wrapperParentLimit({
             parentScore: 50,
             form: "strategy-vault",
             treatment: "fallback-discount",
             localRiskDiscount: 6,
             fallbackDiscount: 5,
             appliedDiscount: 6,
-            riskTransfer: {
-              disposition: "reviewed",
-              mechanism: "none",
-              requestedCredit: 0,
-              appliedCredit: 0,
-            },
             limit: 44,
             factsComplete: false,
             missingFacts: [{
@@ -956,7 +946,7 @@ describe("Safety Score v9 evidence responsibility", () => {
                 discountPoints: 1,
               },
             ],
-          },
+          }),
         },
       }),
       V9_CANDIDATE_POLICY_V1,
@@ -976,30 +966,26 @@ describe("Safety Score v9 evidence responsibility", () => {
     expect(trace.boundedUncertaintyAttribution).toEqual([]);
   });
 
-  it("attributes a reviewed wrapper discount to measured local risk", () => {
+  it.each([true, false])("attributes reviewed local risk at the fallback equality boundary (complete=%s)", (factsComplete) => {
     const trace = scoreV9EvaluatedAsset(
       input({
         parent: {
           required: true,
           score: 45,
           propagatedReasons: [],
-          wrapperParentLimit: {
-            schemaVersion: 1,
+          wrapperParentLimit: wrapperParentLimit({
             parentScore: 50,
             form: "strategy-vault",
-            treatment: "local-facts",
+            treatment: factsComplete ? "local-facts" : "fallback-discount",
             localRiskDiscount: 5,
-            fallbackDiscount: 0,
+            fallbackDiscount: factsComplete ? 0 : 5,
             appliedDiscount: 5,
-            riskTransfer: {
-              disposition: "reviewed",
-              mechanism: "none",
-              requestedCredit: 0,
-              appliedCredit: 0,
-            },
             limit: 45,
-            factsComplete: true,
-            missingFacts: [],
+            factsComplete,
+            missingFacts: factsComplete ? [] : [{
+              factClass: "custodyEscrow",
+              disposition: "issuer-undisclosed",
+            }],
             adjustments: [{
               factKey: "measuredUnwind",
               disposition: "reviewed",
@@ -1007,13 +993,14 @@ describe("Safety Score v9 evidence responsibility", () => {
               maximumDiscountPoints: 5,
               discountPoints: 5,
             }],
-          },
+          }),
         },
       }),
       V9_CANDIDATE_POLICY_V1,
     );
 
     expect(trace.finalGrade).toBe("D");
+    expect(trace.finalScore).toBe(45);
     expect(trace.adverseAttribution).toEqual([
       expect.objectContaining({
         source: "wrapper-local",

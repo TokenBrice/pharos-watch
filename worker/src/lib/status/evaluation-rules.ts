@@ -21,8 +21,6 @@ const STATUS_SEVERITY: Record<StatusLevel, number> = {
 
 const STATUS_RESERVE_HIGH_DEFERRED_RATIO = 0.25;
 
-const STATUS_RESERVE_REPEATED_TRUNCATION_COUNT = 2;
-
 // Dataset-level publication budget for the DEX liquidity cache (one missed
 // two-hour scoring runway). This is the cache's endpoint freshness budget from
 // the shared lane descriptor — deliberately distinct from the per-row
@@ -53,14 +51,9 @@ export function evaluateReserveCompositionStatus(
   const deferredShare =
     reserveComposition.configuredCoins > 0 ? reserveComposition.deferredCoins / reserveComposition.configuredCoins : 0;
   const hasUncertainWrites = reserveComposition.writeTimeoutUncertain > 0;
-  const hasIncompleteCursorTail =
-    reserveComposition.cursorTailState === "recording" || reserveComposition.cursorTailState === "incomplete";
-  const hasRepeatedTruncation =
-    reserveComposition.runBudgetTruncationCount >= STATUS_RESERVE_REPEATED_TRUNCATION_COUNT;
   const hasMaterialDeferredTail =
     reserveComposition.runBudgetTruncated && deferredShare >= STATUS_RESERVE_HIGH_DEFERRED_RATIO;
-  const hasReserveCapacityPressure =
-    hasUncertainWrites || hasIncompleteCursorTail || hasRepeatedTruncation || hasMaterialDeferredTail;
+  const hasReserveCapacityPressure = hasUncertainWrites || hasMaterialDeferredTail;
   const status: StatusResponse["reserveComposition"]["status"] =
     bootstrap || reserveComposition.configuredCoins === 0
       ? "healthy"
@@ -532,24 +525,10 @@ function evaluateReserveOperationalDiagnostics(input: DataQualityRuleInput): Par
       ),
     );
   }
-  if (reserve.cursorTailState === "recording" || reserve.cursorTailState === "incomplete") {
-    causes.push(
-      makeCause(
-        "data-quality",
-        "reserve_sync_tail_incomplete",
-        "warning",
-        `Live reserve deferred-tail recording is ${reserve.cursorTailState}` + (reserve.cursorTailError ? ` (${reserve.cursorTailError}).` : "."),
-        { metric: "reserveCursorTailIncomplete", value: 1, threshold: 1 },
-      ),
-    );
-  }
   if (reserve.runBudgetTruncated) {
     const deferredRatio = reserve.configuredCoins > 0 ? reserve.deferredCoins / reserve.configuredCoins : 0;
     const pressureReasons = [
       deferredRatio >= STATUS_RESERVE_HIGH_DEFERRED_RATIO ? `high deferred share ${formatPercentFromRatio(deferredRatio)}` : null,
-      reserve.runBudgetTruncationCount >= STATUS_RESERVE_REPEATED_TRUNCATION_COUNT
-        ? `${reserve.runBudgetTruncationCount} consecutive truncation(s)`
-        : null,
     ].filter((entry): entry is string => entry != null);
     causes.push(
       makeCause(
@@ -560,27 +539,6 @@ function evaluateReserveOperationalDiagnostics(input: DataQualityRuleInput): Par
           (reserve.nextCursorStablecoinId ? `; next cursor ${reserve.nextCursorStablecoinId}` : "") +
           (pressureReasons.length > 0 ? ` (${pressureReasons.join(", ")}).` : "."),
         { metric: "reserveDeferredRatio", value: deferredRatio, threshold: STATUS_RESERVE_HIGH_DEFERRED_RATIO },
-      ),
-    );
-  }
-  if (reserve.historyWriteGaps.length > 0) {
-    const examples = reserve.historyWriteGaps
-      .slice(0, 3)
-      .map((gap) => {
-        const missing = [gap.compositionHistoryMissing ? "composition" : null, gap.attemptHistoryMissing ? "attempt" : null]
-          .filter((entry): entry is string => entry != null)
-          .join("+");
-        return `${gap.stablecoinId}:${missing || "history"}`;
-      })
-      .join(", ");
-    causes.push(
-      makeCause(
-        "data-quality",
-        "reserve_sync_history_write_gap",
-        "warning",
-        `${reserve.historyWriteGaps.length} authoritative live reserve snapshot(s) are missing history rows` +
-          (examples ? ` (${examples}${reserve.historyWriteGaps.length > 3 ? ", ..." : ""}).` : "."),
-        { metric: "reserveHistoryWriteGaps", value: reserve.historyWriteGaps.length, threshold: 1 },
       ),
     );
   }

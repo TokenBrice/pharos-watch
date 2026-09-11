@@ -15,7 +15,8 @@
         "liquidity",
         "custody"
       ],
-      "liquidityHorizon": "unknown"
+      "liquidityHorizon": "unknown",
+      "sourceKey": "initia-wrapper-vault:ausd"
     }
   ],
   "reserveReview": {

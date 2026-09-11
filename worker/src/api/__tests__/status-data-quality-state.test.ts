@@ -1,6 +1,8 @@
 import { readJsonResponse } from "../../test-helpers/__shared/auth";
 import { STATUS_ONCHAIN_FRESH_WINDOW_SEC } from "@shared/lib/status-thresholds";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
+
 import {
   handleStatus,
   makeCacheRow,
@@ -11,11 +13,14 @@ import {
   fixtureCRON_INTERVALS,
   fixtureACTIVE_STABLECOINS,
 } from "./status.test-support";
+const fixtures = createLatestSchemaFixtureTracker();
+afterEach(() => fixtures.closeAll());
 
-function fixtureMockD1(overrides: NonNullable<Parameters<typeof buildStatusD1Scenario>[0]>["overrides"] = []) {
+function fixtureMockD1(overrides: NonNullable<Parameters<typeof buildStatusD1Scenario>[0]>["overrides"] = [], healthyLive = false) {
   return buildStatusD1Scenario({
     sections: ["sentinel", "live", "publication", "derived", "reserves", "statusState"],
-    optionalOverrides: overrides,
+    overrides,
+    healthyLive,
     sectionOverrides: {
       derived: [
         { match: "pharos:status-derived:mint-burn-24h", rows: [] },
@@ -40,12 +45,7 @@ describe("handleStatus", () => {
     const db = fixtureMockD1([
       { match: "dex_liquidity", rows: [], first: { age: 60 } },
       { match: "yield_data", rows: [], first: { age: 60 } },
-      { match: "stress_signals", rows: [], first: { age: 60 } },
-      {
-        match: "cache",
-        rows: [],
-        first: { value: stablecoinsCache, updated_at: now - 60 },
-      },
+      { match: "FROM cache WHERE key = ?", matchBinds: ["stablecoins"], rows: [], first: { value: stablecoinsCache, updated_at: now - 60 } },
       { match: "blacklist_events", rows: [], first: { total: 0, missing: 0 } },
       // Latest on-chain update is too old -> monitor unavailable.
       { match: "MAX(updated_at) as latest", rows: [], first: { latest: now - 5 * 86400, tracked: 12 } },
@@ -75,74 +75,28 @@ describe("handleStatus", () => {
     expect(body.causes.overall.some((cause) => cause.code === "onchain_monitor_unavailable")).toBe(true);
   });
 
-  it("counts only recently refreshed on-chain rows as actively monitored", async () => {
+  it("counts distinct active coins and their latest chain observation at the window boundaries", async () => {
     const now = Math.floor(Date.now() / 1000);
-    const onchainActiveWindowStart = now - 3 * 24 * 3600;
-    const onchainFreshWindowStart = now - STATUS_ONCHAIN_FRESH_WINDOW_SEC;
-    const stablecoinsCache = JSON.stringify({
-      peggedAssets: [{ id: "kau-kinesis", symbol: "KAU", price: 3000, circulating: { peggedXAU: 90_000_000 } }],
-    });
-    const db = fixtureMockD1([
-      { match: "dex_liquidity", rows: [], first: { age: 60 } },
-      { match: "yield_data", rows: [], first: { age: 60 } },
-      { match: "stress_signals", rows: [], first: { age: 60 } },
-      {
-        match: "cache",
-        rows: [],
-        first: { value: stablecoinsCache, updated_at: now - 60 },
-      },
-      { match: "blacklist_events", rows: [], first: { total: 0, missing: 0 } },
-      // Overall latest row is fresh, but only 2 coins are inside the active monitoring window.
-      {
-        match: "MAX(updated_at) as latest",
-        matchBinds: [onchainActiveWindowStart],
-        rows: [],
-        first: { latest: now - 60, tracked: 2 },
-      },
-      // No stale coins inside the active monitoring window.
-      {
-        match: "HAVING latest_update < ?",
-        matchBinds: [onchainActiveWindowStart, onchainFreshWindowStart],
-        rows: [],
-        first: { cnt: 0 },
-      },
-      {
-        match: "onchain_supply WHERE updated_at >",
-        matchBinds: [onchainFreshWindowStart],
-        rows: [],
-        first: null,
-      },
-    ]);
-
+    const { db, sqlite } = fixtures.open();
+    const insert = sqlite.prepare("INSERT INTO onchain_supply VALUES (?, ?, ?, ?)");
+    for (const [id, chain, updatedAt] of [
+      ["fresh", "ethereum", now - 60],
+      ["fresh", "arbitrum", now - STATUS_ONCHAIN_FRESH_WINDOW_SEC - 1],
+      ["boundary", "ethereum", now - STATUS_ONCHAIN_FRESH_WINDOW_SEC],
+      ["stale", "ethereum", now - STATUS_ONCHAIN_FRESH_WINDOW_SEC - 1],
+      ["active-boundary", "ethereum", now - 3 * 86400],
+      ["inactive", "ethereum", now - 3 * 86400 - 1],
+    ] as const) insert.run(id, chain, 100, updatedAt);
     const request = fixtureMakeApiRequest("/api/status", { adminKey: "secret-key" });
     const res = await handleStatus({ db, trustedAdmin: true, request });
-    const body = (await res.json()) as {
-      dataQualityStatus: string;
-      dataQuality: {
-        onchainSupplyMonitoring: string;
-        onchainSupplyTrackedCoins: number;
-        staleOnchainSupply: number;
-        onchainStaleRatio: number;
-      };
-    };
-
-    expect(body.dataQuality.onchainSupplyMonitoring).toBe("active");
-    expect(body.dataQuality.onchainSupplyTrackedCoins).toBe(2);
-    expect(body.dataQuality.staleOnchainSupply).toBe(0);
-    expect(body.dataQuality.onchainStaleRatio).toBe(0);
-    expect(body.dataQualityStatus).toBe("healthy");
-
-    const seenSql = db.getHistory().map((entry) => entry.sql.replace(/\s+/g, " ").trim());
-    expect(
-      seenSql.some((sql) =>
-        sql.includes("COUNT(DISTINCT CASE WHEN updated_at >= ? THEN stablecoin_id END) as tracked FROM onchain_supply"),
-      ),
-    ).toBe(true);
-    expect(
-      seenSql.some((sql) =>
-        sql.includes("FROM onchain_supply WHERE updated_at >= ? GROUP BY stablecoin_id HAVING latest_update < ?"),
-      ),
-    ).toBe(true);
+    const body = await readJsonResponse(res, 200) as { dataQuality: Record<string, unknown> };
+    expect(body.dataQuality).toMatchObject({
+      onchainSupplyMonitoring: "active",
+      onchainSupplyTrackedCoins: 4,
+      staleOnchainSupply: 2,
+      onchainStaleRatio: 0.5,
+      onchainSupplyLatestAt: now - 60,
+    });
   });
 
   it("does not let a tiny on-chain monitor population escalate data quality via ratios alone", async () => {
@@ -174,13 +128,8 @@ describe("handleStatus", () => {
       },
       { match: "dex_liquidity", rows: [], first: { age: 60 } },
       { match: "yield_data", rows: [], first: { age: 60 } },
-      { match: "stress_signals", rows: [], first: { age: 60 } },
       { match: "cron_runs", rows: cronRows },
-      {
-        match: "cache",
-        rows: [],
-        first: { value: stablecoinsCache, updated_at: now - 60 },
-      },
+      { match: "FROM cache WHERE key = ?", matchBinds: ["stablecoins"], rows: [], first: { value: stablecoinsCache, updated_at: now - 60 } },
       { match: "blacklist_events", rows: [], first: { total: 0, missing: 0 } },
       {
         match: "MAX(updated_at) as latest",
@@ -276,13 +225,8 @@ describe("handleStatus", () => {
       },
       { match: "dex_liquidity", rows: [], first: { age: 60 } },
       { match: "yield_data", rows: [], first: { age: 60 } },
-      { match: "stress_signals", rows: [], first: { age: 60 } },
       { match: "cron_runs", rows: cronRows },
-      {
-        match: "cache",
-        rows: [],
-        first: { value: stablecoinsCache, updated_at: now - 60 },
-      },
+      { match: "FROM cache WHERE key = ?", matchBinds: ["stablecoins"], rows: [], first: { value: stablecoinsCache, updated_at: now - 60 } },
       { match: "MAX(updated_at) as latest", rows: [], first: { latest: now - 5 * 86400, tracked: 12 } },
     ]);
 
@@ -311,34 +255,12 @@ describe("handleStatus", () => {
     const cronRows = Object.keys(fixtureCRON_INTERVALS).map((job) =>
       makeCronRow(job, job === "sync-mint-burn" ? "degraded" : "ok", 60),
     );
-    const db = fixtureMockD1([
-      {
-        match: "cache WHERE key IN",
-        rows: [
-          makeCacheRow("stablecoins"),
-          makeCacheRow("stablecoin-charts"),
-          makeCacheRow("usds-status"),
-          makeCacheRow("fx-rates"),
-          makeCacheRow("bluechip-ratings"),
-        ],
-      },
-      { match: "dex_liquidity", rows: [], first: { age: 60 } },
-      { match: "yield_data", rows: [], first: { age: 60 } },
-      { match: "stress_signals", rows: [], first: { age: 60 } },
-      { match: "mint_burn_hourly", rows: [], first: { total: 1234 } },
-      { match: "SELECT MAX(timestamp) as latest FROM mint_burn_events", rows: [], first: { latest: now - 30 } },
-      { match: "SELECT MAX(hour_ts) as latest FROM mint_burn_hourly", rows: [], first: { latest: now - 3600 } },
-      { match: "SELECT symbol, MAX(timestamp) as latest", rows: [{ symbol: "USDT", latest: now - 300 }] },
-      { match: "SELECT status", rows: [], first: { status: "degraded" } },
-      { match: "status = 'ok'", rows: [], first: { started_at: now - 600 } },
-      { match: "cron_runs", rows: cronRows },
-      {
-        match: "cache",
-        rows: [],
-        first: { value: stablecoinsCache, updated_at: now - 60 },
-      },
-      { match: "MAX(updated_at) as latest", rows: [], first: { latest: now - 5 * 86400, tracked: 12 } },
-    ]);
+    const db = fixtureMockD1([{ match: "mint_burn_hourly", rows: [], first: { total: 1234 } },
+    { match: "SELECT status", rows: [], first: { status: "degraded" } },
+    { match: "status = 'ok'", rows: [], first: { started_at: now - 600 } },
+    { match: "cron_runs", rows: cronRows },
+    { match: "FROM cache WHERE key = ?", matchBinds: ["stablecoins"], rows: [], first: { value: stablecoinsCache, updated_at: now - 60 } },
+    { match: "MAX(updated_at) as latest", rows: [], first: { latest: now - 5 * 86400, tracked: 12 } },], true);
 
     const request = fixtureMakeApiRequest("/api/status", { adminKey: "secret-key" });
     const res = await handleStatus({ db, trustedAdmin: true, request });
@@ -365,36 +287,17 @@ describe("handleStatus", () => {
         lastSuccessAt: null,
         openedAt,
       });
-    const db = fixtureMockD1([
-      {
-        match: "cache WHERE key IN",
-        rows: [
-          makeCacheRow("stablecoins"),
-          makeCacheRow("stablecoin-charts"),
-          makeCacheRow("usds-status"),
-          makeCacheRow("fx-rates"),
-          makeCacheRow("bluechip-ratings"),
-        ],
-      },
-      { match: "dex_liquidity", rows: [], first: { age: 60 } },
-      { match: "yield_data", rows: [], first: { age: 60 } },
-      { match: "stress_signals", rows: [], first: { age: 60 } },
-      { match: "cron_runs", rows: cronRows },
-      {
-        match: "key LIKE 'circuit:%'",
-        rows: [
-          { key: "circuit:defillama-stablecoins", value: openCircuitValue(now - 600) },
-          { key: "circuit:coingecko-prices", value: openCircuitValue(now - 540) },
-          { key: "circuit:dexscreener-prices", value: openCircuitValue(now - 480) },
-        ],
-      },
-      {
-        match: "cache",
-        rows: [],
-        first: { value: stablecoinsCache, updated_at: now - 60 },
-      },
-      { match: "MAX(updated_at) as latest", rows: [], first: { latest: now - 5 * 86400, tracked: 12 } },
-    ]);
+    const db = fixtureMockD1([{ match: "cron_runs", rows: cronRows },
+    {
+      match: "key LIKE 'circuit:%'",
+      rows: [
+        { key: "circuit:defillama-stablecoins", value: openCircuitValue(now - 600) },
+        { key: "circuit:coingecko-prices", value: openCircuitValue(now - 540) },
+        { key: "circuit:dexscreener-prices", value: openCircuitValue(now - 480) },
+      ],
+    },
+    { match: "FROM cache WHERE key = ?", matchBinds: ["stablecoins"], rows: [], first: { value: stablecoinsCache, updated_at: now - 60 } },
+    { match: "MAX(updated_at) as latest", rows: [], first: { latest: now - 5 * 86400, tracked: 12 } },], true);
 
     const request = fixtureMakeApiRequest("/api/status", { adminKey: "secret-key" });
     const res = await handleStatus({ db, trustedAdmin: true, request });
@@ -421,36 +324,17 @@ describe("handleStatus", () => {
         lastSuccessAt: null,
         openedAt,
       });
-    const db = fixtureMockD1([
-      {
-        match: "cache WHERE key IN",
-        rows: [
-          makeCacheRow("stablecoins"),
-          makeCacheRow("stablecoin-charts"),
-          makeCacheRow("usds-status"),
-          makeCacheRow("fx-rates"),
-          makeCacheRow("bluechip-ratings"),
-        ],
-      },
-      { match: "dex_liquidity", rows: [], first: { age: 60 } },
-      { match: "yield_data", rows: [], first: { age: 60 } },
-      { match: "stress_signals", rows: [], first: { age: 60 } },
-      { match: "cron_runs", rows: cronRows },
-      {
-        match: "key LIKE 'circuit:%'",
-        rows: [
-          { key: "circuit:live-reserves:ethena", value: openCircuitValue(now - 600) },
-          { key: "circuit:live-reserves:feusd-felix", value: openCircuitValue(now - 540) },
-          { key: "circuit:live-reserves:mtbill-midas", value: openCircuitValue(now - 480) },
-        ],
-      },
-      {
-        match: "cache",
-        rows: [],
-        first: { value: stablecoinsCache, updated_at: now - 60 },
-      },
-      { match: "MAX(updated_at) as latest", rows: [], first: { latest: now - 5 * 86400, tracked: 12 } },
-    ]);
+    const db = fixtureMockD1([{ match: "cron_runs", rows: cronRows },
+    {
+      match: "key LIKE 'circuit:%'",
+      rows: [
+        { key: "circuit:live-reserves:ethena", value: openCircuitValue(now - 600) },
+        { key: "circuit:live-reserves:feusd-felix", value: openCircuitValue(now - 540) },
+        { key: "circuit:live-reserves:mtbill-midas", value: openCircuitValue(now - 480) },
+      ],
+    },
+    { match: "FROM cache WHERE key = ?", matchBinds: ["stablecoins"], rows: [], first: { value: stablecoinsCache, updated_at: now - 60 } },
+    { match: "MAX(updated_at) as latest", rows: [], first: { latest: now - 5 * 86400, tracked: 12 } },], true);
 
     const request = fixtureMakeApiRequest("/api/status", { adminKey: "secret-key" });
     const res = await handleStatus({ db, trustedAdmin: true, request });
@@ -471,12 +355,7 @@ describe("handleStatus", () => {
     const db = fixtureMockD1([
       { match: "dex_liquidity", rows: [], first: { age: 60 } },
       { match: "yield_data", rows: [], first: { age: 60 } },
-      { match: "stress_signals", rows: [], first: { age: 60 } },
-      {
-        match: "cache",
-        rows: [],
-        first: { value: stablecoinsCache, updated_at: now - 60 },
-      },
+      { match: "FROM cache WHERE key = ?", matchBinds: ["stablecoins"], rows: [], first: { value: stablecoinsCache, updated_at: now - 60 } },
       { match: "blacklist_events", rows: [], first: { total: 20000, missing: 40, missing_recent: 0 } },
       { match: "MAX(updated_at) as latest", rows: [], first: { latest: now - 5 * 86400, tracked: 12 } },
     ]);
@@ -501,12 +380,7 @@ describe("handleStatus", () => {
     const db = fixtureMockD1([
       { match: "dex_liquidity", rows: [], first: { age: 60 } },
       { match: "yield_data", rows: [], first: { age: 60 } },
-      { match: "stress_signals", rows: [], first: { age: 60 } },
-      {
-        match: "cache",
-        rows: [],
-        first: { value: stablecoinsCache, updated_at: now - 60 },
-      },
+      { match: "FROM cache WHERE key = ?", matchBinds: ["stablecoins"], rows: [], first: { value: stablecoinsCache, updated_at: now - 60 } },
       { match: "blacklist_events", rows: [], first: { total: 16000, missing: 1, missing_recent: 1 } },
       { match: "MAX(updated_at) as latest", rows: [], first: { latest: now - 5 * 86400, tracked: 12 } },
     ]);
@@ -525,37 +399,30 @@ describe("handleStatus", () => {
     expect(body.dataQualityStatus).toBe("healthy");
   });
 
-  it("excludes intentional Tron blacklist/unblacklist null amounts from blacklist gap metric", async () => {
+  it("excludes intentional Tron null amounts but counts recoverable gaps", async () => {
     const now = Math.floor(Date.now() / 1000);
-    const stablecoinsCache = JSON.stringify({
-      peggedAssets: [{ id: "usdt-tether", symbol: "USDT", price: 1.0, circulating: { peggedUSD: 100_000_000 } }],
-    });
-    const db = fixtureMockD1([
-      { match: "dex_liquidity", rows: [], first: { age: 60 } },
-      { match: "yield_data", rows: [], first: { age: 60 } },
-      { match: "stress_signals", rows: [], first: { age: 60 } },
-      {
-        match: "cache",
-        rows: [],
-        first: { value: stablecoinsCache, updated_at: now - 60 },
-      },
-      { match: "blacklist_events", rows: [], first: { total: 100, missing: 0 } },
-      { match: "MAX(updated_at) as latest", rows: [], first: { latest: now - 5 * 86400, tracked: 12 } },
-    ]) as D1Database & { prepare: (sql: string) => D1PreparedStatement };
-
-    const seenSql: string[] = [];
-    const originalPrepare = db.prepare.bind(db);
-    db.prepare = ((sql: string) => {
-      seenSql.push(sql);
-      return originalPrepare(sql);
-    }) as typeof db.prepare;
-
+    const { db, sqlite } = fixtures.open();
+    const insert = sqlite.prepare(`INSERT INTO blacklist_events
+      (id, stablecoin, chain_id, chain_name, event_type, address, tx_hash, block_number,
+       timestamp, explorer_tx_url, explorer_address_url, amount_status)
+      VALUES (?, 'USDT', ?, ?, ?, 'address', ?, 1, ?, '', '', ?)`);
+    for (const [id, chain, event, status] of [
+      ["intentional-blacklist", "tron", "blacklist", "permanently_unavailable"],
+      ["intentional-unblacklist", "tron", "unblacklist", "permanently_unavailable"],
+      ["recoverable", "ethereum", "blacklist", "recoverable_pending"],
+      ["failed", "tron", "blacklist", "provider_failed"],
+      ["ambiguous", "ethereum", "blacklist", "ambiguous"],
+    ]) insert.run(id, chain, chain, event, id, now - 60, status);
     const request = fixtureMakeApiRequest("/api/status", { adminKey: "secret-key" });
     const res = await handleStatus({ db, trustedAdmin: true, request });
-    expect(res.status).toBe(200);
-
-    const blacklistSql = seenSql.find((sql) => sql.includes("FROM blacklist_events")) ?? "";
-    expect(blacklistSql).toContain("amount_status IN ('recoverable_pending', 'provider_failed', 'ambiguous')");
+    const body = await readJsonResponse(res, 200) as { dataQuality: Record<string, unknown> };
+    // Unblacklist events are outside the blacklist/destroy metric denominator.
+    expect(body.dataQuality).toMatchObject({
+      blacklistTotal: 4,
+      blacklistMissingAmounts: 3,
+      blacklistRecentMissingAmounts: 3,
+      blacklistMissingRatio: 0.75,
+    });
   });
 
   it("returns a degraded fallback payload when the DB health sentinel fails", async () => {
@@ -602,10 +469,9 @@ describe("handleStatus", () => {
       },
       { match: "dex_liquidity", rows: [], throwError: new Error("dex freshness failed") },
       { match: "yield_data", rows: [], first: { age: 60 } },
-      { match: "stress_signals", rows: [], first: { age: 60 } },
       { match: "GROUP BY job", rows: [{ job: "sync-dex-liquidity", started_at: now - 300 }] },
       { match: "UNION ALL", rows: [], throwError: new Error("cron history unavailable") },
-      { match: "cache", rows: [], first: { value: stablecoinsCache, updated_at: now - 60 } },
+      { match: "FROM cache WHERE key = ?", matchBinds: ["stablecoins"], rows: [], first: { value: stablecoinsCache, updated_at: now - 60 } },
       { match: "blacklist_events", rows: [], first: { total: 0, missing: 0 } },
       { match: "MAX(updated_at) as latest", rows: [], first: { latest: now - 5 * 86400, tracked: 12 } },
     ]);
@@ -655,7 +521,7 @@ describe("handleStatus", () => {
         peggedAssets: buildPeggedAssets(total, missing),
       });
       return fixtureMockD1([
-        { match: "cache", rows: [], first: { value: stablecoinsCache, updated_at: now - 60 } },
+        { match: "FROM cache WHERE key = ?", matchBinds: ["stablecoins"], rows: [], first: { value: stablecoinsCache, updated_at: now - 60 } },
       ]);
     }
 
@@ -787,7 +653,7 @@ describe("handleStatus", () => {
               },
             }]
           : []),
-        { match: "cache", rows: [], first: { value: stablecoinsCache, updated_at: now - 60 } },
+        { match: "FROM cache WHERE key = ?", matchBinds: ["stablecoins"], rows: [], first: { value: stablecoinsCache, updated_at: now - 60 } },
       ]);
     }
 
@@ -901,7 +767,7 @@ describe("handleStatus", () => {
         ],
       });
       return fixtureMockD1([
-        { match: "cache", rows: [], first: { value: stablecoinsCache, updated_at: now - 60 } },
+        { match: "FROM cache WHERE key = ?", matchBinds: ["stablecoins"], rows: [], first: { value: stablecoinsCache, updated_at: now - 60 } },
         // On-chain monitor query: latest recent + given tracked count to
         // activate the monitor. Without the explicit match the default mock
         // returns null/0 and monitoring becomes "unavailable" instead of
@@ -953,15 +819,15 @@ describe("handleStatus", () => {
   // Surface the 24-hour transition count in the status summary so operators
   // can detect new flapping lanes as thresholds drift.
   describe("summary.transitionsLast24h", () => {
-    function buildTransitionCountDb(transitionsLast24h: number) {
+    function buildTransitionCountDb(transitionsLast24h: number | null) {
       const now = Math.floor(Date.now() / 1000);
       const stablecoinsCache = JSON.stringify({
         peggedAssets: [{ id: "usdt-tether", symbol: "USDT", price: 1, circulating: { peggedUSD: 100_000_000 } }],
       });
       return fixtureMockD1([
-        { match: "cache", rows: [], first: { value: stablecoinsCache, updated_at: now - 60 } },
+        { match: "FROM cache WHERE key = ?", matchBinds: ["stablecoins"], rows: [], first: { value: stablecoinsCache, updated_at: now - 60 } },
         // The new transitions-count query introduced by Workstream 5.
-        { match: "FROM status_transitions WHERE scope", rows: [], first: { cnt: transitionsLast24h } },
+        { match: "FROM status_transitions WHERE scope", rows: [], first: transitionsLast24h === null ? null : { cnt: transitionsLast24h } },
       ]);
     }
 
@@ -976,7 +842,7 @@ describe("handleStatus", () => {
     });
 
     it("reports 0 when the transitions count query returns nothing", async () => {
-      const db = buildTransitionCountDb(0);
+      const db = buildTransitionCountDb(null);
       const request = fixtureMakeApiRequest("/api/status", { adminKey: "secret-key" });
       const res = await handleStatus({ db, trustedAdmin: true, request });
       const body = (await res.json()) as SummaryBody;
@@ -996,7 +862,7 @@ describe("handleStatus", () => {
         peggedAssets: [{ id: "usdt-tether", symbol: "USDT", price: 1, circulating: { peggedUSD: 100_000_000 } }],
       });
       return [
-        { match: "cache", rows: [], first: { value: stablecoinsCache, updated_at: now - 60 } },
+        { match: "FROM cache WHERE key = ?", matchBinds: ["stablecoins"], rows: [], first: { value: stablecoinsCache, updated_at: now - 60 } },
         { match: "FROM status_state", rows: [], first: stateRow },
       ];
     }

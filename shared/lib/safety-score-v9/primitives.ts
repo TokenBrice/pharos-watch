@@ -7,7 +7,6 @@ import { stableJsonStringifyChunksV1 } from "../stable-json";
 
 // Canonical ordering is a determinism-digest input; it has one definition.
 export { compareText };
-export { clampScore } from "../math";
 
 export function assertScore(value: number, field: string): void {
   if (!Number.isFinite(value) || value < 0 || value > 100) {

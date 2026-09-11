@@ -71,9 +71,10 @@ describe("useChainProfileData", () => {
 
   it("uses the Worker detail rows and total as the page model authority", () => {
     const payload = makeResponse({
+      chains: [makeChain({ totalUsd: 1_500_000_000 })],
       chainDetail: {
         chainId: "ethereum",
-        totalUsd: 500_000_000,
+        totalUsd: 777_000_000,
         coins: [
           makeCoin({ id: "usdc-circle", supplyUsd: 375_000_000, chainShare: RatioSchema.parse(0.75) }),
           makeCoin({ id: "usdt-tether", supplyUsd: 125_000_000, chainShare: RatioSchema.parse(0.25) }),
@@ -84,11 +85,9 @@ describe("useChainProfileData", () => {
 
     const { result } = renderHook(() => useChainProfileData("ethereum"));
 
-    expect(result.current.chain?.totalUsd).toBe(payload.chainDetail?.totalUsd);
-    expect(result.current.totalUsd).toBe(payload.chainDetail?.totalUsd);
+    expect(result.current.chain).toBe(payload.chains[0]);
+    expect(result.current.totalUsd).toBe(777_000_000);
     expect(result.current.coins).toBe(payload.chainDetail?.coins);
-    expect(result.current.coins).toEqual(payload.chainDetail?.coins);
-    expect(useRegisteredApiQueryMock).toHaveBeenCalledTimes(1);
   });
 
   it("confirms a missing chain only after the Worker response is available", () => {

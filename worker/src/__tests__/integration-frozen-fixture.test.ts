@@ -1,105 +1,90 @@
 import { describe, expect, it, vi } from "vitest";
+import { mockD1 } from "@shared/test-utils/mock-d1";
+import { makeApiRequest } from "../test-helpers/__shared/auth";
+import type * as AlchemyLogs from "../lib/alchemy-logs";
 
-// Mock the registry to inject a fixture frozen coin. The fixture exercises
-// every cross-file freeze invariant without polluting the real registry.
-vi.mock("@shared/lib/stablecoins/registry", async () => {
-  const actual =
-    await vi.importActual<typeof import("@shared/lib/stablecoins/registry")>("@shared/lib/stablecoins/registry");
-  const fixtureFrozen = {
-    id: "fixture-frozen",
-    name: "Fixture Frozen",
-    symbol: "FXT",
-    flags: { pegCurrency: "USD", governance: "centralized", backing: "fiat" },
-    status: "frozen" as const,
-    frozenAt: "2026-04-27",
-    obituary: {
-      causeOfDeath: "abandoned" as const,
-      deathDate: "2026-04",
-      epitaph: "Sunset.",
-      obituary: "FXT was sunset.",
-      peakMcap: 1_000_000,
-      sourceUrl: "https://example.com/x",
-      sourceLabel: "Example",
-    },
-    // Cast to the registry's StablecoinMeta shape — fixture exists only for
-    // membership-set assertions, not full meta consumption.
-  } as unknown as (typeof actual.TRACKED_STABLECOINS)[number];
-
-  const trackedStablecoins = [...actual.TRACKED_STABLECOINS, fixtureFrozen];
-  const trackedIds = new Set([...actual.TRACKED_IDS, "fixture-frozen"]);
-  const trackedMetaById = new Map([
-    ...actual.TRACKED_META_BY_ID,
-    ["fixture-frozen", fixtureFrozen],
-  ]);
-  const frozenStablecoins = [...actual.FROZEN_STABLECOINS, fixtureFrozen];
-  const frozenIds = new Set([...actual.FROZEN_IDS, "fixture-frozen"]);
-  const frozenMetaById = new Map([
-    ...actual.FROZEN_META_BY_ID,
-    ["fixture-frozen", fixtureFrozen],
-  ]);
-  const readableStablecoins = [...actual.READABLE_STABLECOINS, fixtureFrozen];
-  const readableIds = new Set([...actual.READABLE_IDS, "fixture-frozen"]);
-  const readableMetaById = new Map([
-    ...actual.READABLE_META_BY_ID,
-    ["fixture-frozen", fixtureFrozen],
-  ]);
-
-  return {
-    ...actual,
-    TRACKED_STABLECOINS: trackedStablecoins,
-    TRACKED_IDS: trackedIds,
-    TRACKED_META_BY_ID: trackedMetaById,
-    FROZEN_STABLECOINS: frozenStablecoins,
-    FROZEN_IDS: frozenIds,
-    FROZEN_META_BY_ID: frozenMetaById,
-    READABLE_STABLECOINS: readableStablecoins,
-    READABLE_IDS: readableIds,
-    READABLE_META_BY_ID: readableMetaById,
-  };
+// Keep the real registry derivation and lifecycle predicates; replace only its input catalog.
+vi.mock("@shared/data/stablecoins/canonical-order.json", () => ({ default: ["fixture-active", "fixture-frozen"] }));
+vi.mock("@shared/data/stablecoins/coins.generated.json", async () => {
+  // The hoisted catalog mock must load its builder before static test imports initialize.
+  const { makeStablecoinMeta } = await import("@shared/test-utils/stablecoin");
+  return { default: [
+    makeStablecoinMeta({ id: "fixture-active", status: "active" }),
+    makeStablecoinMeta({
+      id: "fixture-frozen",
+      status: "frozen",
+      reserves: [{ name: "Archived Treasury holdings", pct: 100, risk: "low" }],
+      liveReservesConfig: {
+        adapter: "infinifi", version: 1, semantics: "protocol-reserve",
+        inputs: { primary: { kind: "http-json", url: "https://example.com/reserves" } },
+      },
+    }),
+  ] };
 });
+vi.mock("../lib/mint-burn-contracts", () => ({
+  MINT_BURN_CONFIGS: [{
+    stablecoinId: "fixture-frozen",
+    chain: { chainId: "ethereum" },
+    contractAddress: "0x0000000000000000000000000000000000000001",
+  }],
+}));
+vi.mock("../lib/alchemy-logs", async (importOriginal) => ({
+  ...await importOriginal<typeof AlchemyLogs>(),
+  getAlchemyBlockNumber: vi.fn(async () => 22_000_000),
+}));
 
-describe("frozen fixture — end-to-end", () => {
-  it("orphan-close skips the fixture coin", async () => {
-    const { shouldCloseOrphanedDepeg } = await import("../cron/depeg-detection/repair");
+import { shouldCloseOrphanedDepeg } from "../cron/depeg-detection/repair";
+import { computeDexPruneSet } from "../cron/dex-liquidity/persistence";
+import { computeStressSignalPruneIds } from "../lib/dews/persistence";
+import { PSI_ELIGIBLE_IDS } from "@shared/lib/psi-eligible";
+import { handleStablecoinReserves } from "../api/stablecoin-reserves";
+import { handleBackfillMintBurn } from "../api/backfill-mint-burn";
+
+describe("frozen lifecycle consumers", () => {
+  it("orphan-close policy preserves frozen coins but closes missing active coins", () => {
     expect(shouldCloseOrphanedDepeg("fixture-frozen", new Set())).toBe(false);
-    // First dynamic import in the file pulls the whole cron graph through the
-    // transform; ~4.4s solo leaves nothing under the 5s default in a parallel run.
-  }, 20_000);
-
-  it("backfill admin endpoint rejects the fixture coin", async () => {
-    const { assertNotFrozen } = await import("../lib/frozen-guards");
-    const response = assertNotFrozen("fixture-frozen");
-    expect(response).not.toBeNull();
-    expect(response!.status).toBe(403);
+    expect(shouldCloseOrphanedDepeg("fixture-active", new Set())).toBe(true);
   });
 
-  it("dex-liquidity prune set preserves the fixture coin", async () => {
-    const { computeDexPruneSet } = await import("../cron/dex-liquidity/persistence");
-    const allDbIds = new Set(["fixture-frozen", "zombie-coin"]);
-    const prune = computeDexPruneSet(allDbIds);
-    expect(prune.has("fixture-frozen")).toBe(false);
-    expect(prune.has("zombie-coin")).toBe(true);
+  it("backfill handler rejects a frozen configured coin without database writes", async () => {
+    const request = makeApiRequest("/api/backfill-mint-burn", {
+      method: "POST",
+      adminKey: "operator",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ configKey: "ethereum-0x0000000000000000000000000000000000000001" }),
+    });
+    const db = mockD1([], { requireMatch: true });
+    const response = await handleBackfillMintBurn({
+      db, request, url: new URL(request.url), trustedAdmin: true, alchemyApiKey: "alchemy-key",
+    });
+    expect(response.status).toBe(403);
+    expect(db.getHistory()).toEqual([]);
   });
 
-  it("DEWS prune preserves the fixture coin", async () => {
-    const { computeStressSignalPruneIds } = await import("../lib/dews/persistence");
-    const result = computeStressSignalPruneIds(
-      new Set(["fixture-frozen", "zombie"]),
-      new Set(),
-    );
-    expect(result.has("fixture-frozen")).toBe(false);
-    expect(result.has("zombie")).toBe(true);
+  it("DEX prune policy preserves frozen coins and removes unknown coins", () => {
+    expect(computeDexPruneSet(new Set(["fixture-frozen", "zombie-coin"]))).toEqual(new Set(["zombie-coin"]));
   });
 
-  it("PSI eligibility excludes the fixture coin", async () => {
-    const { PSI_ELIGIBLE_IDS } = await import("@shared/lib/psi-eligible");
+  it("DEWS prune policy preserves frozen coins and removes unknown coins", () => {
+    expect(computeStressSignalPruneIds(new Set(["fixture-frozen", "zombie"]), new Set())).toEqual(new Set(["zombie"]));
+  });
+
+  it("PSI eligibility includes the active control and excludes the frozen control", () => {
+    expect(PSI_ELIGIBLE_IDS.has("fixture-active")).toBe(true);
     expect(PSI_ELIGIBLE_IDS.has("fixture-frozen")).toBe(false);
   });
 
-  it("/api/stablecoin-reserves accepts the fixture coin id", async () => {
-    // The Worker read-side gate is keyed off READABLE_IDS so the detail-page
-    // endpoints continue serving cached/historical data for frozen coins.
-    const { READABLE_IDS } = await import("@shared/lib/stablecoins/registry");
-    expect(READABLE_IDS.has("fixture-frozen")).toBe(true);
+  it("reserves handler reads preserved reserve data for a frozen coin", async () => {
+    const db = mockD1([
+      { match: "FROM reserve_composition", matchBinds: ["fixture-frozen"], rows: [] },
+      { match: "FROM reserve_sync_state", matchBinds: ["fixture-frozen"], rows: [] },
+    ], { requireMatch: true });
+    const response = await handleStablecoinReserves(db, "fixture-frozen");
+    expect(response.status).toBe(200);
+    expect(await response.json()).toMatchObject({
+      stablecoinId: "fixture-frozen",
+      mode: "curated-fallback",
+      reserves: [{ name: "Archived Treasury holdings", pct: 100, risk: "low" }],
+    });
   });
 });

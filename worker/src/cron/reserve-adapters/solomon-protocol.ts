@@ -94,6 +94,7 @@ export function adaptSolomonProtocolData(payload: SolomonProtocolDataResponse): 
     name: string;
     value: number;
     risk: "low" | "medium" | "high" | "very-high";
+    sourceKey: string;
     coinId?: string;
     depType?: "collateral";
     blacklistable?: boolean;
@@ -104,7 +105,7 @@ export function adaptSolomonProtocolData(payload: SolomonProtocolDataResponse): 
     if (usd <= 0) continue;
     const asset = typeof row.asset === "string" && row.asset.trim() ? row.asset.trim() : "asset";
     const mapped = custodySliceName(asset);
-    values.push({ name: mapped.name, value: usd, risk: mapped.risk });
+    values.push({ sourceKey: `solomon-protocol:custody:${asset.toLowerCase()}`, name: mapped.name, value: usd, risk: mapped.risk });
   }
 
   let usdcUsd = 0;
@@ -120,6 +121,7 @@ export function adaptSolomonProtocolData(payload: SolomonProtocolDataResponse): 
   }
   if (usdcUsd > 0) {
     values.push({
+      sourceKey: "solomon-protocol:vault:usdc",
       name: "USDC on-chain vault and yield-distributor balances",
       value: usdcUsd,
       risk: "low",
@@ -130,6 +132,7 @@ export function adaptSolomonProtocolData(payload: SolomonProtocolDataResponse): 
   }
   if (usdtUsd > 0) {
     values.push({
+      sourceKey: "solomon-protocol:vault:usdt",
       name: "USDT on-chain vault balance",
       value: usdtUsd,
       risk: "low",
@@ -140,6 +143,7 @@ export function adaptSolomonProtocolData(payload: SolomonProtocolDataResponse): 
   }
   if (otherVaultUsd > 0) {
     values.push({
+      sourceKey: "solomon-protocol:vault:other",
       name: "Other on-chain vault balances",
       value: otherVaultUsd,
       risk: "medium",
@@ -151,6 +155,7 @@ export function adaptSolomonProtocolData(payload: SolomonProtocolDataResponse): 
     if (usd <= 0) continue;
     const asset = typeof row.asset === "string" && row.asset.trim() ? row.asset.trim() : "reserve";
     values.push({
+      sourceKey: `solomon-protocol:reserve-fund:${asset.toLowerCase()}`,
       name: `Reserve fund ${asset}`,
       value: usd,
       risk: "medium",
@@ -162,6 +167,7 @@ export function adaptSolomonProtocolData(payload: SolomonProtocolDataResponse): 
   // Cent-level float noise is ignored; a material residual stays visible.
   if (residualUsd > 1) {
     values.push({
+      sourceKey: "solomon-protocol:unknown",
       name: "Unmapped reserve positions (issuer API does not reconcile reserves to supply)",
       value: residualUsd,
       risk: "very-high",

@@ -43,6 +43,17 @@ const BASE_ROW = {
   terminalEvidencePrecision: null,
 } as const;
 
+// One coherent scenario: the locked review forecast 1h of remaining depeg and
+// the incident actually ran 2h past the lock. 2h is the IQR upper bound, so
+// this is the inside-band boundary case, and every dependent duration field
+// below is derived from those two numbers instead of stated independently.
+const LOCKED_AT = 1_700_000_900;
+const IQR_REMAINING_SEC = [1_800, 7_200] as const;
+const PREDICTED_REMAINING_SEC = 3_600;
+const ACTUAL_REMAINING_SEC = IQR_REMAINING_SEC[1];
+const ACTUAL_ENDED_AT = LOCKED_AT + ACTUAL_REMAINING_SEC;
+const SIGNED_DURATION_ERROR_SEC = PREDICTED_REMAINING_SEC - ACTUAL_REMAINING_SEC;
+
 const PREDICTION_ROW = {
   ...BASE_ROW,
   kind: "prediction_review",
@@ -51,34 +62,35 @@ const PREDICTION_ROW = {
   assessmentId: 9,
   predictionMethodologyVersion: "4.0",
   predictionPolicyVersion: "sticky-24h-v1",
-  lockedAt: 1_700_000_900,
-  publishedAt: 1_700_001_000,
+  lockedAt: LOCKED_AT,
+  publishedAt: LOCKED_AT + 100,
   publicationSnapshotToken: "snapshot-1",
   frozen: {
     resolutionTier: "recovery_likely",
-    predictedRemainingSec: 3600,
-    iqrRemainingSec: [1800, 7200],
+    predictedRemainingSec: PREDICTED_REMAINING_SEC,
+    iqrRemainingSec: [...IQR_REMAINING_SEC],
     horizonCells: [],
     stratum: null,
     factors: [],
   },
   actual: {
     kind: "recovered",
-    actualEndedAt: 1_700_010_000,
-    actualRemainingSec: 9000,
+    actualEndedAt: ACTUAL_ENDED_AT,
+    actualRemainingSec: ACTUAL_REMAINING_SEC,
     terminalEvidenceAt: null,
     terminalEvidenceInterval: null,
     terminalEvidencePrecision: null,
-    reviewedAt: 1_700_010_100,
+    reviewedAt: ACTUAL_ENDED_AT + 100,
   },
   verdictReview: "correct_recoverable",
   durationReview: "inside_band",
   horizonReviews: [],
-  predictedRemainingSec: 3600,
-  actualRemainingSec: 9000,
-  signedDurationErrorSec: -3600,
-  absoluteDurationErrorSec: 3600,
+  predictedRemainingSec: PREDICTED_REMAINING_SEC,
+  actualRemainingSec: ACTUAL_REMAINING_SEC,
+  signedDurationErrorSec: SIGNED_DURATION_ERROR_SEC,
+  absoluteDurationErrorSec: Math.abs(SIGNED_DURATION_ERROR_SEC),
   medianReview: null,
+  // Closed interval: an actual equal to the upper bound is still inside.
   withinIqr: true,
 } as unknown as DdrrRow;
 
@@ -139,10 +151,13 @@ describe("DdrTrackRecordSection", () => {
     expect(screen.getByText("DDR track record")).toBeTruthy();
     expect(screen.getByText("1/1 correct")).toBeTruthy();
 
+    // Fact values, not just their labels: one scored forecast, called correctly,
+    // with the median absolute duration miss of this scenario (1h).
     const facts = screen.getByRole("group", { name: "DDR track record facts" });
     expect(facts.textContent).toContain("Forecasts");
     expect(facts.textContent).toContain("Correct");
     expect(facts.textContent).toContain("Median miss");
+    expect(facts.textContent).toContain("1h");
     expect(facts.textContent).toContain("Not called");
 
     const incidents = screen.getByRole("list", { name: "Reviewed depeg incidents" });

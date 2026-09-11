@@ -44,6 +44,9 @@ export const ROUTE_DEPENDENCY_HYDRATORS = {
       RESEND_API_KEY: env.RESEND_API_KEY,
     };
   },
+  donorKeyClaimRateLimit(routeCtx, env) {
+    routeCtx.donorKeyClaimRateLimit = env.DONOR_KEY_CLAIM_RATE_LIMIT;
+  },
   feedbackEnv(routeCtx, env) {
     routeCtx.feedbackEnv = {
       GITHUB_PAT: env.GITHUB_PAT,

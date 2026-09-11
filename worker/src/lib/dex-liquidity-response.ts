@@ -319,7 +319,20 @@ export function getDexLiquidityTrendTolerances() {
   };
 }
 
-export function buildDexLiquidityWarning(latestCron: DexLiquidityCronRow | null, stablecoinId?: string): string | null {
+export type DexLiquidityWarningSurface =
+  | { scope: "global" }
+  | { scope: "coin"; stablecoinId: string };
+
+const GLOBAL_WARNING_SURFACE: DexLiquidityWarningSurface = { scope: "global" };
+
+// Flags that name exactly one stablecoin. Everything else (failed sources, guard
+// proximity, pipeline-wide drift counters) is dataset-wide.
+const COIN_SCOPED_DRIFT_FLAG = /^(major-tvl-cliff|watchlist-pool-drop):.+$/;
+
+export function buildDexLiquidityWarning(
+  latestCron: DexLiquidityCronRow | null,
+  surface: DexLiquidityWarningSurface = GLOBAL_WARNING_SURFACE,
+): string | null {
   if (!latestCron) return null;
 
   let failedSources: string[] = [];
@@ -345,12 +358,18 @@ export function buildDexLiquidityWarning(latestCron: DexLiquidityCronRow | null,
 
   if (latestCron.status !== "degraded" && latestCron.status !== "error" && qualityDriftSeverity === "none") return null;
 
-  // Only a successful, exclusively coin-scoped quality finding can be hidden
-  // on unrelated detail pages. Source failures and unknown flags remain global.
-  if (stablecoinId && latestCron.status === "ok" && failedSources.length === 0
-    && !nearCoverageGuard && !nearValueGuard && !nearMajorCoverageGuard && qualityDriftFlags.length > 0
-    && qualityDriftFlags.every((flag) => /^(major-tvl-cliff|watchlist-pool-drop):.+$/.test(flag))
-    && !qualityDriftFlags.some((flag) => flag.endsWith(`:${stablecoinId}`))) return null;
+  // A successful run whose only quality findings name individual coins does not
+  // warrant a page-level advisory: the global surface never banners for another
+  // coin's cliff, and a coin page reacts only to a flag naming that coin.
+  const coinScopedOnly =
+    failedSources.length === 0
+    && !nearCoverageGuard && !nearValueGuard && !nearMajorCoverageGuard
+    && qualityDriftFlags.length > 0
+    && qualityDriftFlags.every((flag) => COIN_SCOPED_DRIFT_FLAG.test(flag));
+  if (latestCron.status === "ok" && coinScopedOnly) {
+    if (surface.scope === "global") return null;
+    if (!qualityDriftFlags.some((flag) => flag.endsWith(`:${surface.stablecoinId}`))) return null;
+  }
 
   const details: string[] = [];
   if (failedSources.length > 0) details.push(`failedSources=${failedSources.join(",")}`);

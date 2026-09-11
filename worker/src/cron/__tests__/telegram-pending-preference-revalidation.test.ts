@@ -6,8 +6,8 @@ import {
   serializePendingMarkupPolicy,
   type PendingAlertScopeItem,
 } from "../../lib/telegram/pending-provenance";
-import { createSqliteD1 } from "../../test-helpers/sqlite-d1";
-import { createLatestSchemaSqlite } from "../../test-helpers/latest-schema-sqlite";
+import { createSqliteD1 } from "@shared/test-utils/sqlite-d1";
+import { createLatestSchemaSqlite } from "@shared/test-utils/latest-schema-sqlite";
 import {
   revalidatePendingAlertPreferences,
   type PendingPreferenceRevalidation,
@@ -24,12 +24,6 @@ const COIN_ID = "usdc-circle";
 let sqlite: DatabaseSync;
 let db: D1Database;
 
-beforeEach(() => {
-  sqlite = createLatestSchemaSqlite().sqlite;
-  db = createSqliteD1(sqlite);
-});
-
-afterEach(() => sqlite.close());
 
 function insertSubscriber(options: {
   generation?: number;
@@ -167,7 +161,7 @@ async function evaluate(row = pendingRow()): Promise<PendingPreferenceRevalidati
   return outcomes[0];
 }
 
-describe("pending Telegram preference revalidation", () => {
+describe("pending Telegram chunk scope", () => {
   it("carries one identical conservative target-group scope on every split chunk", () => {
     const scope: PendingAlertScopeItem[] = [
       { stablecoinId: COIN_ID, family: "dews" },
@@ -189,6 +183,14 @@ describe("pending Telegram preference revalidation", () => {
     expect(messages).toHaveLength(2);
     expect(messages.map((message) => message.alertScope)).toEqual([scope, scope]);
   });
+});
+
+describe("pending Telegram preference revalidation", () => {
+  beforeEach(() => {
+    sqlite = createLatestSchemaSqlite().sqlite;
+    db = createSqliteD1(sqlite);
+  });
+  afterEach(() => sqlite.close());
 
   it("allows an unchanged direct subscription", async () => {
     insertSubscriber({ generation: 4 });
@@ -284,11 +286,13 @@ describe("pending Telegram preference revalidation", () => {
     insertSubscriber({ generation: 4 });
     insertRecapTarget(4);
     const row = recapRow({ generation: 4 });
-    await expect(evaluate(row)).resolves.toMatchObject({
+    const outcome = await evaluate(row);
+    expect(outcome).toMatchObject({
       kind: "eligible",
       validatedPreferenceGeneration: 4,
-      markupPolicy: expect.objectContaining({ replyMarkup: expect.any(Object) }),
     });
+    if (outcome.kind !== "eligible") throw new Error("recap unexpectedly ineligible");
+    expect(outcome.markupPolicy).toEqual(JSON.parse(row.markup_policy_json!));
   });
 
   it("cancels a paused recap instead of deferring it to the pause sentinel", async () => {

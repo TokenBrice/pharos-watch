@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { ChainRpcConfig } from "../../lib/chain-registry";
 import { mockD1 } from "@shared/test-utils/mock-d1";
 import { mockRegistry } from "../../test-helpers/cron";
+import { makeDlYieldPool } from "./yield-resolve.test-support";
 
 vi.mock("@shared/lib/stablecoins/registry", () => {
   const stablecoins = [
@@ -102,20 +103,13 @@ import type { DlPool } from "../yield-sync/types";
 const mockFetchEvmUint256AtBlock = vi.mocked(fetchEvmUint256AtBlock);
 
 function makeDlPool(overrides: Partial<DlPool> & Pick<DlPool, "pool">): DlPool {
-  return {
-    pool: overrides.pool,
-    chain: overrides.chain ?? "Ethereum",
-    project: overrides.project ?? "ethena",
-    symbol: overrides.symbol ?? "sUSDe",
-    tvlUsd: overrides.tvlUsd ?? 0,
-    apy: overrides.apy ?? 5,
-    apyBase: overrides.apyBase ?? 5,
-    apyReward: overrides.apyReward ?? null,
-    apyMean30d: overrides.apyMean30d ?? 5,
-    stablecoin: overrides.stablecoin ?? false,
-    exposure: overrides.exposure ?? "single",
-    underlyingTokens: overrides.underlyingTokens ?? null,
-  };
+  return makeDlYieldPool({
+    project: "ethena",
+    symbol: "sUSDe",
+    tvlUsd: 0,
+    stablecoin: false,
+    ...overrides,
+  });
 }
 
 function makeDb(prevExchangeRate = 1.0) {

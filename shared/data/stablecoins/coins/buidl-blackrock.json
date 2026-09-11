@@ -90,6 +90,11 @@
       "decimals": 6
     },
     {
+      "chain": "ethereum",
+      "address": "0x6a9da2d710bb9b700acde7cb81f10f1ff8c89041",
+      "decimals": 6
+    },
+    {
       "chain": "solana",
       "address": "GyWgeqpy5GueU2YbkE8xqUeVEokCMMCEeUrfbtMw6phr",
       "decimals": 6
@@ -105,6 +110,34 @@
   "yieldConfig": {
     "yieldSource": "BlackRock T-bill fund",
     "yieldType": "rebase"
+  },
+  "liveReservesConfig": {
+    "adapter": "chronicle-nav",
+    "version": 1,
+    "semantics": "single-asset",
+    "breakerScope": "buidl-blackrock",
+    "display": {
+      "url": "https://chroniclelabs.org/dashboard/proof-of-asset/blackrock-buidl",
+      "label": "Chronicle Proof of Asset: BlackRock BUIDL"
+    },
+    "scoring": {
+      "maxSourceAgeSec": 345600
+    },
+    "inputs": {
+      "primary": {
+        "kind": "onchain-evm",
+        "chain": "ethereum",
+        "rpcMode": "public-rpc"
+      }
+    },
+    "params": {
+      "navScope": "native-fund-share",
+      "consumerAddress": "0x2d6db2116aD7a6e203E72C8DCCfFf23f5315b0Dd",
+      "tokenAddress": "0x7712c34205737192402172409a8F7ccef8aA2AEc",
+      "assetLabel": "BlackRock BUIDL fund shares",
+      "assetRisk": "low",
+      "maxOracleAgeSec": 345600
+    }
   },
   "launchDate": "2024-03-20"
 }

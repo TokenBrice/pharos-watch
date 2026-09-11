@@ -1,298 +1,86 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const mocks = vi.hoisted(() => ({
-  recordWorkerRequestAttribution: vi.fn(() => Promise.resolve()),
-  recordApiKeyRequestAttribution: vi.fn(() => Promise.resolve()),
+  recordWorkerRequestAttribution: vi.fn(async () => {}),
+  recordApiKeyRequestAttribution: vi.fn(async () => {}),
   isApiKeyRequestAttributionDisabled: vi.fn(() => false),
   isRequestSourceAttributionDisabled: vi.fn(() => false),
 }));
 
-vi.mock("../../../lib/request-source-attribution", () => ({
-  recordWorkerRequestAttribution: mocks.recordWorkerRequestAttribution,
-  recordApiKeyRequestAttribution: mocks.recordApiKeyRequestAttribution,
-  isApiKeyRequestAttributionDisabled: mocks.isApiKeyRequestAttributionDisabled,
-  isRequestSourceAttributionDisabled: mocks.isRequestSourceAttributionDisabled,
-}));
+vi.mock("../../../lib/request-source-attribution", () => mocks);
 
-import {
-  createRequestSourceRecorder,
-  isApiKeyRequestAttributionDisabled,
-  isRequestSourceAttributionDisabled,
-} from "../request-source";
+import { createRequestSourceRecorder } from "../request-source";
 
-function makeExecCtx() {
+type RecorderOptions = Parameters<typeof createRequestSourceRecorder>[0];
+const db = {} as D1Database;
+
+function recorderOptions(overrides: Partial<RecorderOptions> = {}): RecorderOptions {
   return {
-    waitUntil: vi.fn(),
-  } as unknown as ExecutionContext & { waitUntil: ReturnType<typeof vi.fn> };
+    request: new Request("https://api.pharos.watch/api/stablecoins", {
+      headers: { Origin: "https://example.com" },
+    }),
+    db,
+    execCtx: { waitUntil: vi.fn() } as unknown as ExecutionContext,
+    isAdmin: false,
+    isSiteProxy: false,
+    apiKeyId: null,
+    apiKeyTrafficClass: null,
+    requestLane: "public-api",
+    pathname: "/api/stablecoins",
+    ...overrides,
+  };
 }
 
 describe("createRequestSourceRecorder", () => {
-  const db = {} as D1Database;
+  beforeEach(() => vi.clearAllMocks());
 
-  beforeEach(() => {
-    vi.clearAllMocks();
-    mocks.recordWorkerRequestAttribution.mockResolvedValue(undefined);
-    mocks.recordApiKeyRequestAttribution.mockResolvedValue(undefined);
-  });
-
-  it("returns a no-op recorder for admin requests", () => {
-    const execCtx = makeExecCtx();
-    const recorder = createRequestSourceRecorder({
-      request: new Request("https://api.pharos.watch/api/stablecoins"),
-      db,
-      execCtx,
-      isAdmin: true,
-      isSiteProxy: false,
-      apiKeyId: null,
-      apiKeyTrafficClass: null,
-      requestLane: "public-api",
-      pathname: "/api/stablecoins",
-    });
-
-    recorder();
-
-    expect(execCtx.waitUntil).not.toHaveBeenCalled();
+  it.each<[string, Partial<RecorderOptions>]>([
+    ["admin", { isAdmin: true }],
+    ["unassigned lane", { requestLane: null }],
+    ["uncredentialed site-api", { requestLane: "site-api" }],
+    ["disabled site-api", { requestLane: "site-api", isSiteProxy: true, attributionDisabled: true }],
+  ])("does not schedule attribution for %s requests", (_label, overrides) => {
+    const options = recorderOptions(overrides);
+    createRequestSourceRecorder(options)();
+    expect(options.execCtx.waitUntil).not.toHaveBeenCalled();
     expect(mocks.recordWorkerRequestAttribution).not.toHaveBeenCalled();
     expect(mocks.recordApiKeyRequestAttribution).not.toHaveBeenCalled();
   });
 
-  it("returns a no-op recorder when no request lane is assigned", () => {
-    const execCtx = makeExecCtx();
-    const recorder = createRequestSourceRecorder({
-      request: new Request("https://api.pharos.watch/api/stablecoins"),
-      db,
-      execCtx,
-      isAdmin: false,
-      isSiteProxy: false,
-      apiKeyId: null,
-      apiKeyTrafficClass: null,
-      requestLane: null,
-      pathname: "/api/stablecoins",
-    });
+  it.each([
+    [false, false, 1, 1],
+    [true, false, 0, 1],
+    [false, true, 1, 0],
+    [true, true, 0, 0],
+  ] as const)("applies route-disabled=%s and key-disabled=%s independently", (attributionDisabled, apiKeyAttributionDisabled, routeWrites, keyWrites) => {
+    const options = recorderOptions({ apiKeyId: 7, apiKeyTrafficClass: "external", attributionDisabled, apiKeyAttributionDisabled });
+    createRequestSourceRecorder(options)();
+    expect(options.execCtx.waitUntil).toHaveBeenCalledTimes(routeWrites || keyWrites ? 1 : 0);
+    expect(mocks.recordWorkerRequestAttribution).toHaveBeenCalledTimes(routeWrites);
+    expect(mocks.recordApiKeyRequestAttribution).toHaveBeenCalledTimes(keyWrites);
+    if (routeWrites) expect(mocks.recordWorkerRequestAttribution).toHaveBeenCalledWith(db,
+      { routeKey: "stablecoins", routePath: "/api/stablecoins" }, "public-api", "external");
+    if (keyWrites) expect(mocks.recordApiKeyRequestAttribution).toHaveBeenCalledWith(db, 7);
+  });
 
-    recorder();
-
-    expect(execCtx.waitUntil).not.toHaveBeenCalled();
-    expect(mocks.recordWorkerRequestAttribution).not.toHaveBeenCalled();
+  it.each<[string, Partial<RecorderOptions>, string, string]>([
+    ["credentialed proxy", { requestLane: "site-api", isSiteProxy: true }, "site-api", "site"],
+    ["browser fallback", {}, "public-api", "external"],
+  ])("classifies %s traffic", (_label, overrides, lane, source) => {
+    const options = recorderOptions(overrides);
+    createRequestSourceRecorder(options)();
+    expect(options.execCtx.waitUntil).toHaveBeenCalledOnce();
+    expect(mocks.recordWorkerRequestAttribution).toHaveBeenCalledWith(db,
+      { routeKey: "stablecoins", routePath: "/api/stablecoins" }, lane, source);
     expect(mocks.recordApiKeyRequestAttribution).not.toHaveBeenCalled();
   });
 
-  it("returns a no-op recorder for site-api traffic without the site proxy credential", () => {
-    const execCtx = makeExecCtx();
-    const recorder = createRequestSourceRecorder({
-      request: new Request("https://ops-api.pharos.watch/api/stablecoins"),
-      db,
-      execCtx,
-      isAdmin: false,
-      isSiteProxy: false,
-      apiKeyId: null,
-      apiKeyTrafficClass: null,
-      requestLane: "site-api",
-      pathname: "/api/stablecoins",
-    });
-
-    recorder();
-
-    expect(execCtx.waitUntil).not.toHaveBeenCalled();
-    expect(mocks.recordWorkerRequestAttribution).not.toHaveBeenCalled();
-    expect(mocks.recordApiKeyRequestAttribution).not.toHaveBeenCalled();
-  });
-
-  it("records site-api traffic as site when the request came through the site proxy", () => {
-    const execCtx = makeExecCtx();
-    const recorder = createRequestSourceRecorder({
-      request: new Request("https://ops-api.pharos.watch/api/stablecoins"),
-      db,
-      execCtx,
-      isAdmin: false,
-      isSiteProxy: true,
-      apiKeyId: null,
-      apiKeyTrafficClass: null,
-      requestLane: "site-api",
-      pathname: "/api/stablecoins",
-    });
-
-    recorder();
-
-    expect(execCtx.waitUntil).toHaveBeenCalledOnce();
-    expect(mocks.recordWorkerRequestAttribution).toHaveBeenCalledWith(
-      db,
-      { routeKey: "stablecoins", routePath: "/api/stablecoins" },
-      "site-api",
-      "site",
-    );
-    expect(mocks.recordApiKeyRequestAttribution).not.toHaveBeenCalled();
-  });
-
-  it("uses the API-key traffic class for public-api requests when present", () => {
-    const execCtx = makeExecCtx();
-    const recorder = createRequestSourceRecorder({
-      request: new Request("https://api.pharos.watch/api/stablecoins", {
-        headers: { Origin: "https://example.com" },
-      }),
-      db,
-      execCtx,
-      isAdmin: false,
-      isSiteProxy: false,
-      apiKeyId: 7,
-      apiKeyTrafficClass: "site",
-      requestLane: "public-api",
-      pathname: "/api/stablecoins",
-    });
-
-    recorder();
-
-    expect(execCtx.waitUntil).toHaveBeenCalledOnce();
-    expect(mocks.recordWorkerRequestAttribution).toHaveBeenCalledWith(
-      db,
-      { routeKey: "stablecoins", routePath: "/api/stablecoins" },
-      "public-api",
-      "site",
-    );
+  it("gives the API-key traffic class precedence over browser classification", () => {
+    const options = recorderOptions({ apiKeyId: 7, apiKeyTrafficClass: "site" });
+    createRequestSourceRecorder(options)();
+    expect(options.execCtx.waitUntil).toHaveBeenCalledOnce();
+    expect(mocks.recordWorkerRequestAttribution).toHaveBeenCalledWith(db,
+      { routeKey: "stablecoins", routePath: "/api/stablecoins" }, "public-api", "site");
     expect(mocks.recordApiKeyRequestAttribution).toHaveBeenCalledWith(db, 7);
-  });
-
-  it("falls back to browser classification for public-api requests without an API-key class", () => {
-    const execCtx = makeExecCtx();
-    const recorder = createRequestSourceRecorder({
-      request: new Request("https://api.pharos.watch/api/stablecoins", {
-        headers: { Origin: "https://example.com" },
-      }),
-      db,
-      execCtx,
-      isAdmin: false,
-      isSiteProxy: false,
-      apiKeyId: null,
-      apiKeyTrafficClass: null,
-      requestLane: "public-api",
-      pathname: "/api/stablecoins",
-    });
-
-    recorder();
-
-    expect(execCtx.waitUntil).toHaveBeenCalledOnce();
-    expect(mocks.recordWorkerRequestAttribution).toHaveBeenCalledWith(
-      db,
-      { routeKey: "stablecoins", routePath: "/api/stablecoins" },
-      "public-api",
-      "external",
-    );
-    expect(mocks.recordApiKeyRequestAttribution).not.toHaveBeenCalled();
-  });
-
-  it("skips low-value route/source writes when attribution is disabled but preserves per-key telemetry", () => {
-    const execCtx = makeExecCtx();
-    const recorder = createRequestSourceRecorder({
-      request: new Request("https://api.pharos.watch/api/stablecoins", {
-        headers: { Origin: "https://example.com" },
-      }),
-      db,
-      execCtx,
-      isAdmin: false,
-      isSiteProxy: false,
-      apiKeyId: 7,
-      apiKeyTrafficClass: "external",
-      requestLane: "public-api",
-      pathname: "/api/stablecoins",
-      attributionDisabled: true,
-    });
-
-    recorder();
-
-    expect(execCtx.waitUntil).toHaveBeenCalledOnce();
-    expect(mocks.recordWorkerRequestAttribution).not.toHaveBeenCalled();
-    expect(mocks.recordApiKeyRequestAttribution).toHaveBeenCalledWith(db, 7);
-  });
-
-  it("skips per-key telemetry when the per-key attribution kill switch is enabled", () => {
-    const execCtx = makeExecCtx();
-    const recorder = createRequestSourceRecorder({
-      request: new Request("https://api.pharos.watch/api/stablecoins", {
-        headers: { Origin: "https://example.com" },
-      }),
-      db,
-      execCtx,
-      isAdmin: false,
-      isSiteProxy: false,
-      apiKeyId: 7,
-      apiKeyTrafficClass: "external",
-      requestLane: "public-api",
-      pathname: "/api/stablecoins",
-      apiKeyAttributionDisabled: true,
-    });
-
-    recorder();
-
-    expect(execCtx.waitUntil).toHaveBeenCalledOnce();
-    expect(mocks.recordWorkerRequestAttribution).toHaveBeenCalledWith(
-      db,
-      { routeKey: "stablecoins", routePath: "/api/stablecoins" },
-      "public-api",
-      "external",
-    );
-    expect(mocks.recordApiKeyRequestAttribution).not.toHaveBeenCalled();
-  });
-
-  it("returns a no-op recorder when both attribution switches suppress all public-api writes", () => {
-    const execCtx = makeExecCtx();
-    const recorder = createRequestSourceRecorder({
-      request: new Request("https://api.pharos.watch/api/stablecoins"),
-      db,
-      execCtx,
-      isAdmin: false,
-      isSiteProxy: false,
-      apiKeyId: 7,
-      apiKeyTrafficClass: "external",
-      requestLane: "public-api",
-      pathname: "/api/stablecoins",
-      attributionDisabled: true,
-      apiKeyAttributionDisabled: true,
-    });
-
-    recorder();
-
-    expect(execCtx.waitUntil).not.toHaveBeenCalled();
-    expect(mocks.recordWorkerRequestAttribution).not.toHaveBeenCalled();
-    expect(mocks.recordApiKeyRequestAttribution).not.toHaveBeenCalled();
-  });
-
-  it("skips site-api attribution when attribution is disabled", () => {
-    const execCtx = makeExecCtx();
-    const recorder = createRequestSourceRecorder({
-      request: new Request("https://site-api.pharos.watch/api/stablecoins"),
-      db,
-      execCtx,
-      isAdmin: false,
-      isSiteProxy: true,
-      apiKeyId: null,
-      apiKeyTrafficClass: null,
-      requestLane: "site-api",
-      pathname: "/api/stablecoins",
-      attributionDisabled: true,
-    });
-
-    recorder();
-
-    expect(execCtx.waitUntil).not.toHaveBeenCalled();
-    expect(mocks.recordWorkerRequestAttribution).not.toHaveBeenCalled();
-    expect(mocks.recordApiKeyRequestAttribution).not.toHaveBeenCalled();
-  });
-
-  it("exposes the attribution kill-switch parser from the request-source module", () => {
-    mocks.isRequestSourceAttributionDisabled.mockReturnValueOnce(true);
-
-    expect(isRequestSourceAttributionDisabled({ REQUEST_SOURCE_ATTRIBUTION_DISABLED: "true" })).toBe(true);
-    expect(mocks.isRequestSourceAttributionDisabled).toHaveBeenCalledWith({
-      REQUEST_SOURCE_ATTRIBUTION_DISABLED: "true",
-    });
-  });
-
-  it("exposes the per-key attribution kill-switch parser from the request-source module", () => {
-    mocks.isApiKeyRequestAttributionDisabled.mockReturnValueOnce(true);
-
-    expect(isApiKeyRequestAttributionDisabled({ API_KEY_REQUEST_ATTRIBUTION_DISABLED: "true" })).toBe(true);
-    expect(mocks.isApiKeyRequestAttributionDisabled).toHaveBeenCalledWith({
-      API_KEY_REQUEST_ATTRIBUTION_DISABLED: "true",
-    });
   });
 });

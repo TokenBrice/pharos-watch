@@ -12,7 +12,6 @@ import {
   TELEGRAM_MESSAGE_CHUNK_LIMIT,
   TELEGRAM_MAX_MESSAGES_PER_RUN,
   TELEGRAM_PENDING_DRAIN_BUDGET,
-  TELEGRAM_SPLIT_VERSION,
   TOP_VIEW_NAMES,
   isDepegStepValue,
 } from "../telegram/constants";
@@ -71,7 +70,4 @@ describe("telegram-constants", () => {
     expect(DISAMBIGUATION_TTL_SEC).toBe(5 * 60);
   });
 
-  it("declares a stable split-version token", () => {
-    expect(TELEGRAM_SPLIT_VERSION).toBe(1);
-  });
 });

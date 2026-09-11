@@ -1,32 +1,23 @@
 import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { describe, it, expect, vi, beforeEach } from "vitest";
-import type { StablecoinMeta } from "@shared/types/core";
-import type { LiveReservesConfig } from "@shared/types/live-reserves";
-
-vi.mock("../helpers", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("../helpers")>();
-  return {
-    ...actual,
-    fetchJsonAdapterInput: vi.fn(),
-  };
-});
-
+import { describe, it, expect } from "vitest";
 import {
   adaptTetherTransparency,
-  fetchTetherTransparencyReserves,
   type TetherTransparencyParams,
   type TetherTransparencyResponse,
 } from "../tether-transparency";
-import { fetchJsonAdapterInput } from "../helpers";
-import { expectValidAdapterOutput, TEST_SIGNAL as signal } from "./reserve-adapter.test-support";
+import { expectValidAdapterOutput, runAdapter } from "./reserve-adapter.test-support";
 
 const FIXTURES_DIR = join(dirname(fileURLToPath(import.meta.url)), "fixtures");
-// Captured 2026-07-09 from GET https://tether.to/transparency.json
+// Captured 2026-07-09 from GET https://app.tether.to/transparency.json
 const TETHER_TRANSPARENCY_FIXTURE = JSON.parse(
   readFileSync(join(FIXTURES_DIR, "tether-transparency.json"), "utf8"),
 ) as TetherTransparencyResponse;
+const TETHER_ENDPOINT = "https://app.tether.to/transparency.json";
+// One hour after the fixture's own publication instant, so freshness policy is
+// exercised against the capture rather than against wall-clock drift.
+const FIXTURE_NOW_SEC = 1_783_555_140 + 3_600;
 
 const USDT_PARAMS: TetherTransparencyParams = {
   currencyIso: "usdt",
@@ -46,26 +37,6 @@ const XAUT_PARAMS: TetherTransparencyParams = {
   currencyIso: "xaut",
   slices: [{ name: "Physical gold bars (LBMA Good Delivery, Swiss vaults)", pct: 100, risk: "very-low" }],
 };
-
-function makeCoin(id: string): StablecoinMeta {
-  return { id, name: id, ticker: id.toUpperCase() } as unknown as StablecoinMeta;
-}
-
-function makeConfig(params: TetherTransparencyParams): LiveReservesConfig {
-  return {
-    adapter: "tether-transparency",
-    version: 1,
-    semantics: "attestation-mix",
-    inputs: {
-      primary: { kind: "http-json", url: "https://tether.to/transparency.json" },
-    },
-    params,
-  } as unknown as LiveReservesConfig;
-}
-
-beforeEach(() => {
-  vi.clearAllMocks();
-});
 
 describe("adaptTetherTransparency", () => {
   it("selects the usdt entry, computes the honest ratio, and persists USD-denominated totals", () => {
@@ -177,39 +148,33 @@ describe("adaptTetherTransparency", () => {
 });
 
 describe("fetchTetherTransparencyReserves", () => {
-  it("fetches the shared transparency.json endpoint and adapts the usdt entry", async () => {
-    vi.mocked(fetchJsonAdapterInput).mockResolvedValue(TETHER_TRANSPARENCY_FIXTURE);
-    const config = makeConfig(USDT_PARAMS);
+  it("fetches the coin's configured transparency endpoint and publishes its reserve totals", async () => {
+    const { result, network } = await runAdapter("tether-transparency", "usdt-tether", {
+      network: { json: { [TETHER_ENDPOINT]: TETHER_TRANSPARENCY_FIXTURE } },
+      nowSec: FIXTURE_NOW_SEC,
+    });
 
-    const result = await fetchTetherTransparencyReserves(makeCoin("usdt-tether"), config, signal);
-
-    expect(fetchJsonAdapterInput).toHaveBeenCalledWith(
-      config,
-      "tether-transparency",
-      signal,
-      12_000,
-      undefined,
-    );
+    expect(network.requests.map((request) => request.url)).toEqual([TETHER_ENDPOINT]);
     expect(result.metadata?.totalAssetsUsd).toBe(189761994736.8062);
+    expect(result.metadata?.freshnessMode).toBe("verified");
   });
 
-  it("fetches the same endpoint and adapts the xaut entry when configured", async () => {
-    vi.mocked(fetchJsonAdapterInput).mockResolvedValue(TETHER_TRANSPARENCY_FIXTURE);
-    const config = makeConfig(XAUT_PARAMS);
+  it("selects the configured currency per coin on the shared endpoint", async () => {
+    const { result } = await runAdapter("tether-transparency", "xaut-tether", {
+      network: { json: { [TETHER_ENDPOINT]: TETHER_TRANSPARENCY_FIXTURE } },
+      nowSec: FIXTURE_NOW_SEC,
+    });
 
-    const result = await fetchTetherTransparencyReserves(makeCoin("xaut-tether"), config, signal);
-
-    expect(result.slices).toEqual([
-      { name: "Physical gold bars (LBMA Good Delivery, Swiss vaults)", pct: 100, risk: "very-low" },
-    ]);
+    expect(result.slices.every((slice) => /gold/i.test(slice.name))).toBe(true);
+    expect(result.metadata).not.toHaveProperty("totalAssetsUsd");
   });
 
-  it("propagates an error when the endpoint request fails", async () => {
-    vi.mocked(fetchJsonAdapterInput).mockRejectedValue(new Error("HTTP 500 for https://tether.to/transparency.json"));
-    const config = makeConfig(USDT_PARAMS);
-
-    await expect(fetchTetherTransparencyReserves(makeCoin("usdt-tether"), config, signal)).rejects.toThrow(
-      "HTTP 500",
-    );
+  it("fails the attempt when the endpoint errors instead of publishing a partial mix", async () => {
+    await expect(
+      runAdapter("tether-transparency", "usdt-tether", {
+        network: { json: { [TETHER_ENDPOINT]: { status: 500, body: "upstream down" } } },
+        nowSec: FIXTURE_NOW_SEC,
+      }),
+    ).rejects.toThrow(/500/);
   });
 });

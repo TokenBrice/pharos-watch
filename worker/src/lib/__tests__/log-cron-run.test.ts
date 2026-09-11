@@ -1,12 +1,18 @@
-import { describe, it, expect, vi } from "vitest";
+import { afterEach, describe, it, expect, vi } from "vitest";
 
 import { logCronRun } from "../cron-logger";
 import { CRON_ABANDONED_JOB_GRACE_MS, CronJobAbandonedError } from "../cron-lease-primitives";
 import { mockD1 } from "@shared/test-utils/mock-d1";
-import { createLatestSchemaSqlite } from "../../test-helpers/latest-schema-sqlite";
+import { createLatestSchemaSqlite, createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
 import { makeNoopD1 } from "../../test-helpers/noop-d1";
 
 describe("logCronRun", () => {
+  const fixtures = createLatestSchemaFixtureTracker();
+  afterEach(() => {
+    fixtures.closeAll();
+    vi.useRealTimers();
+    vi.restoreAllMocks();
+  });
   const db = mockD1([
     { match: "cron_runs", rows: [] },
   ]);
@@ -22,11 +28,13 @@ describe("logCronRun", () => {
   });
 
   it("clears timeout on successful completion (signal not aborted)", async () => {
+    vi.useFakeTimers();
     let signalRef: AbortSignal | undefined;
     await logCronRun(db, "test-job", async (signal) => {
       signalRef = signal;
       return { itemCount: 42 };
     });
+    await vi.advanceTimersByTimeAsync(5 * 60_000 + CRON_ABANDONED_JOB_GRACE_MS + 500);
     expect(signalRef!.aborted).toBe(false);
   });
 
@@ -42,73 +50,37 @@ describe("logCronRun", () => {
   });
 
   it("logs error status when job throws", async () => {
+    const { sqlite, db } = fixtures.open();
     await expect(
       logCronRun(db, "test-job", async () => {
         throw new Error("boom");
       })
     ).rejects.toThrow("boom");
+    expect(sqlite.prepare("SELECT status, item_count, error FROM cron_runs").all())
+      .toEqual([{ status: "error", item_count: null, error: expect.stringContaining("boom") }]);
   });
 
   it("logs successful result when job completes", async () => {
-    // Should not throw
-    await logCronRun(db, "test-job", async () => {
-      return { itemCount: 10, metadata: "test" };
-    });
+    const { sqlite, db } = fixtures.open();
+    await logCronRun(db, "test-job", async () => ({ itemCount: 10, metadata: "test" }));
+    expect(sqlite.prepare("SELECT status, item_count, metadata FROM cron_runs").all())
+      .toEqual([{ status: "ok", item_count: 10, metadata: "test" }]);
   });
 
   it.each(["skipped_locked", "skipped_neutral"] as const)("persists custom status %s", async (status) => {
-    let insertedStatus: string | null = null;
-    const dbWithCapture = makeNoopD1({
-      prepare: (sql: string) => ({
-        bind: (...args: unknown[]) => ({
-          run: async () => {
-            if (sql.includes("INSERT INTO cron_runs")) {
-              insertedStatus = String(args[3] ?? null);
-            }
-            return { success: true, meta: { changes: 1 } };
-          },
-          all: async () => ({ results: [], success: true, meta: {} }),
-          first: async () => null,
-        }),
-        run: async () => ({ success: true, meta: { changes: 1 } }),
-        all: async () => ({ results: [], success: true, meta: {} }),
-        first: async () => null,
-      }),
-      batch: async () => [],
-      exec: async () => ({ count: 0, duration: 0 }),
-      dump: async () => new ArrayBuffer(0),
-    });
+    const { sqlite, db: dbWithCapture } = fixtures.open();
 
     await logCronRun(dbWithCapture, "test-job", async () => ({
       status,
       metadata: JSON.stringify({ reason: status }),
     }));
 
-    expect(insertedStatus).toBe(status);
+    expect(sqlite.prepare("SELECT status, metadata FROM cron_runs").all())
+      .toEqual([{ status, metadata: JSON.stringify({ reason: status }) }]);
   });
 
   it("writes and clears cron_run_progress when the job reports progress", async () => {
-    const operations: string[] = [];
-    const dbWithProgressCapture = makeNoopD1({
-      prepare: (sql: string) => ({
-        bind: (..._args: unknown[]) => ({
-          run: async () => {
-            if (sql.includes("INSERT INTO cron_run_progress")) operations.push("progress-upsert");
-            if (sql.includes("DELETE FROM cron_run_progress")) operations.push("progress-clear");
-            if (sql.includes("INSERT INTO cron_runs")) operations.push("cron-run");
-            return { success: true, meta: { changes: 1 } };
-          },
-          all: async () => ({ results: [], success: true, meta: {} }),
-          first: async () => null,
-        }),
-        run: async () => ({ success: true, meta: { changes: 1 } }),
-        all: async () => ({ results: [], success: true, meta: {} }),
-        first: async () => null,
-      }),
-      batch: async () => [],
-      exec: async () => ({ count: 0, duration: 0 }),
-      dump: async () => new ArrayBuffer(0),
-    });
+    const { sqlite, db: dbWithProgressCapture } = fixtures.open();
 
     await logCronRun(dbWithProgressCapture, "test-job", async (_signal, reportProgress) => {
       await reportProgress({
@@ -117,12 +89,13 @@ describe("logCronRun", () => {
         itemsTotal: 3,
         message: "Scanning config 1/3",
       });
+      expect(sqlite.prepare("SELECT stage, items_done, items_total FROM cron_run_progress").all())
+        .toEqual([{ stage: "scan", items_done: 1, items_total: 3 }]);
       return { itemCount: 1 };
     });
 
-    expect(operations).toContain("progress-upsert");
-    expect(operations).toContain("progress-clear");
-    expect(operations).toContain("cron-run");
+    expect(sqlite.prepare("SELECT * FROM cron_run_progress").all()).toEqual([]);
+    expect(sqlite.prepare("SELECT item_count FROM cron_runs").all()).toEqual([{ item_count: 1 }]);
   });
 
   it("keeps active leased progress across an overlapping invocation", async () => {
@@ -207,44 +180,22 @@ describe("logCronRun", () => {
   });
 
   it("persists slot_started_at into cron_runs and cron_run_progress when provided", async () => {
-    let runSlotStartedAt: number | null = null;
-    let progressSlotStartedAt: number | null = null;
-    const dbWithSlotCapture = makeNoopD1({
-      prepare: (sql: string) => ({
-        bind: (...args: unknown[]) => ({
-          run: async () => {
-            if (sql.includes("INSERT INTO cron_run_progress")) {
-              progressSlotStartedAt = Number(args[2] ?? null);
-            }
-            if (sql.includes("INSERT INTO cron_runs")) {
-              runSlotStartedAt = Number(args[6] ?? null);
-            }
-            return { success: true, meta: { changes: 1 } };
-          },
-          all: async () => ({ results: [], success: true, meta: {} }),
-          first: async () => null,
-        }),
-        run: async () => ({ success: true, meta: { changes: 1 } }),
-        all: async () => ({ results: [], success: true, meta: {} }),
-        first: async () => null,
-      }),
-      batch: async () => [],
-      exec: async () => ({ count: 0, duration: 0 }),
-      dump: async () => new ArrayBuffer(0),
-    });
+    const { sqlite, db: dbWithSlotCapture } = fixtures.open();
 
     await logCronRun(
       dbWithSlotCapture,
       "test-job",
       async (_signal, reportProgress) => {
         await reportProgress({ stage: "started" });
+        expect(sqlite.prepare("SELECT slot_started_at FROM cron_run_progress").all())
+          .toEqual([{ slot_started_at: 1_772_495_700 }]);
         return { itemCount: 1 };
       },
       { slotStartedAt: 1_772_495_700 },
     );
 
-    expect(runSlotStartedAt).toBe(1_772_495_700);
-    expect(progressSlotStartedAt).toBe(1_772_495_700);
+    expect(sqlite.prepare("SELECT slot_started_at FROM cron_runs").all())
+      .toEqual([{ slot_started_at: 1_772_495_700 }]);
   });
 
   it("fails fast with timeout error when job exceeds timeout", async () => {
@@ -263,40 +214,17 @@ describe("logCronRun", () => {
   it("logs abandoned metadata when a timed-out job does not settle", async () => {
     vi.useFakeTimers();
     try {
-      let insertedStatus: string | null = null;
-      let insertedError: string | null = null;
-      let insertedMetadata: string | null = null;
-      const dbWithCapture = makeNoopD1({
-        prepare: (sql: string) => ({
-          bind: (...args: unknown[]) => ({
-            run: async () => {
-              if (sql.includes("INSERT INTO cron_runs")) {
-                insertedStatus = String(args[3] ?? null);
-                insertedError = String(args[4] ?? null);
-                insertedMetadata = typeof args[5] === "string" ? args[5] : null;
-              }
-              return { success: true, meta: { changes: 1 } };
-            },
-            all: async () => ({ results: [], success: true, meta: {} }),
-            first: async () => null,
-          }),
-          run: async () => ({ success: true, meta: { changes: 1 } }),
-          all: async () => ({ results: [], success: true, meta: {} }),
-          first: async () => null,
-        }),
-        batch: async () => [],
-        exec: async () => ({ count: 0, duration: 0 }),
-        dump: async () => new ArrayBuffer(0),
-      });
+      const { sqlite, db: dbWithCapture } = fixtures.open();
 
       const hangingJob = logCronRun(dbWithCapture, "test-job", async () => new Promise(() => {}));
       const abandonedExpectation = expect(hangingJob).rejects.toBeInstanceOf(CronJobAbandonedError);
       await vi.advanceTimersByTimeAsync(5 * 60_000 + CRON_ABANDONED_JOB_GRACE_MS + 500);
       await abandonedExpectation;
 
-      expect(insertedStatus).toBe("error");
-      expect(insertedError).toContain("abandoned");
-      expect(JSON.parse(insertedMetadata ?? "{}")).toMatchObject({
+      const row = sqlite.prepare("SELECT status, error, metadata FROM cron_runs").get()!;
+      expect(row.status).toBe("error");
+      expect(row.error).toContain("abandoned");
+      expect(JSON.parse(String(row.metadata))).toMatchObject({
         reason: "abandoned",
         job: "test-job",
         stopReason: "timeout",
@@ -307,33 +235,14 @@ describe("logCronRun", () => {
   });
 
   it("does not DELETE from cron_runs on successful completion (prune moved to daily cron)", async () => {
-    const sqlStatements: string[] = [];
-    const recordingDb = makeNoopD1({
-      prepare: (sql: string) => {
-        sqlStatements.push(sql);
-        return {
-          bind: () => ({
-            run: async () => ({ success: true, meta: { changes: 1 } }),
-            all: async () => ({ results: [], success: true, meta: {} }),
-            first: async () => null,
-          }),
-          run: async () => ({ success: true, meta: { changes: 1 } }),
-          all: async () => ({ results: [], success: true, meta: {} }),
-          first: async () => null,
-        };
-      },
-      batch: async () => [],
-      exec: async () => ({ count: 0, duration: 0 }),
-      dump: async () => new ArrayBuffer(0),
-    });
+    const { sqlite, db: recordingDb } = fixtures.open();
+    sqlite.exec("INSERT INTO cron_runs (job, started_at, duration_ms, status) VALUES ('historical', 1, 1, 'ok')");
 
     const result = await logCronRun(recordingDb, "test-job", async () => ({ itemCount: 1 }));
     expect(result).toMatchObject({ itemCount: 1 });
 
-    const deletes = sqlStatements.filter((sql) => /DELETE\s+FROM\s+cron_runs/i.test(sql));
-    const inserts = sqlStatements.filter((sql) => /INSERT\s+INTO\s+cron_runs/i.test(sql));
-    expect(deletes).toHaveLength(0);
-    expect(inserts).toHaveLength(1);
+    expect(sqlite.prepare("SELECT job FROM cron_runs ORDER BY started_at").all())
+      .toEqual([{ job: "historical" }, { job: "test-job" }]);
   });
 
   it("deduplicates an append-only cron row after an ambiguous committed retry", async () => {
@@ -375,25 +284,11 @@ describe("logCronRun", () => {
   it("does not rewrite a completed producer as failed when terminal cron telemetry stays overloaded", async () => {
     vi.useFakeTimers();
     const consoleError = vi.spyOn(console, "error").mockImplementation(() => {});
-    const cronRunStatements: string[] = [];
-    const overloadedDb = makeNoopD1({
-      prepare: (sql: string) => ({
-        bind: () => ({
-          run: async () => {
-            if (sql.includes("INSERT INTO cron_runs")) {
-              cronRunStatements.push(sql);
-              throw new Error("D1_ERROR: D1 DB is overloaded. Requests queued for too long.");
-            }
-            return { success: true, meta: { changes: 1 } };
-          },
-          first: async () => null,
-          all: async () => ({ results: [], success: true, meta: {} }),
-        }),
-      }),
-      batch: async () => [],
-      exec: async () => ({ count: 0, duration: 0 }),
-      dump: async () => new ArrayBuffer(0),
-    });
+    const overloadedDb = mockD1([
+      { match: "INSERT INTO cron_runs", rows: [], throwError: new Error("D1_ERROR: D1 DB is overloaded. Requests queued for too long.") },
+      { match: "cron_run_progress", rows: [] },
+      { match: "worker_producer_history", rows: [] },
+    ]);
     const result = {
       status: "ok" as const,
       itemCount: 255,
@@ -413,8 +308,8 @@ describe("logCronRun", () => {
       await vi.runAllTimersAsync();
       await expectation;
 
-      expect(cronRunStatements).toHaveLength(4);
-      expect(cronRunStatements.every((sql) => !sql.includes("'error'"))).toBe(true);
+      const writes = overloadedDb.getHistory().filter(({ sql }) => sql.includes("INSERT INTO cron_runs"));
+      expect(writes.map(({ binds }) => binds[3])).toEqual(["ok", "ok", "ok", "ok"]);
       expect(consoleError).toHaveBeenCalledWith(
         expect.stringContaining("Failed to persist completed cron result for sync-live-reserves"),
       );
@@ -426,27 +321,11 @@ describe("logCronRun", () => {
 
   it("does not overwrite a committed cron result when producer history telemetry fails", async () => {
     const consoleError = vi.spyOn(console, "error").mockImplementation(() => {});
-    const cronRunWrites: Array<{ sql: string; args: unknown[] }> = [];
-    const historyFailureDb = makeNoopD1({
-      prepare: (sql: string) => ({
-        bind: (...args: unknown[]) => ({
-          run: async () => {
-            if (sql.includes("INSERT INTO cron_runs")) {
-              cronRunWrites.push({ sql, args });
-            }
-            if (sql.includes("INSERT INTO worker_producer_history")) {
-              throw new Error("producer history unavailable");
-            }
-            return { success: true, meta: { changes: 1 } };
-          },
-          first: async () => null,
-          all: async () => ({ results: [], success: true, meta: {} }),
-        }),
-      }),
-      batch: async () => [],
-      exec: async () => ({ count: 0, duration: 0 }),
-      dump: async () => new ArrayBuffer(0),
-    });
+    const historyFailureDb = mockD1([
+      { match: "INSERT INTO cron_runs", rows: [] },
+      { match: "cron_run_progress", rows: [] },
+      { match: "INSERT INTO worker_producer_history", rows: [], throwError: new Error("producer history unavailable") },
+    ]);
     const result = { status: "ok" as const, itemCount: 12 };
 
     try {
@@ -461,9 +340,9 @@ describe("logCronRun", () => {
         }),
       ).resolves.toEqual(result);
 
+      const cronRunWrites = historyFailureDb.getHistory().filter(({ sql }) => sql.includes("INSERT INTO cron_runs"));
       expect(cronRunWrites).toHaveLength(1);
-      expect(cronRunWrites[0].args[3]).toBe("ok");
-      expect(cronRunWrites[0].sql).not.toContain("'error'");
+      expect(cronRunWrites[0].binds[3]).toBe("ok");
       expect(consoleError).toHaveBeenCalledWith(
         expect.stringContaining("Failed to persist completed cron result for sync-live-reserves"),
       );

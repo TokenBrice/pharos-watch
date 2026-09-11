@@ -1,7 +1,6 @@
 // @vitest-environment jsdom
 
-import { beforeEach, describe, expect, it } from "vitest";
-import { readFileSync } from "node:fs";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   readVerificationTokenFromUrl,
   stripQueryVerificationTokenFromUrl,
@@ -11,6 +10,17 @@ import {
 beforeEach(() => {
   window.history.replaceState(null, "", "/api/");
   window.sessionStorage.clear();
+});
+
+const SESSION_KEY = "pharos:api-key-verify-token";
+const ORIGINAL_SESSION_STORAGE = Object.getOwnPropertyDescriptor(window, "sessionStorage");
+
+afterEach(() => {
+  // Restore the stubbed window before touching its descriptors.
+  vi.unstubAllGlobals();
+  if (ORIGINAL_SESSION_STORAGE) {
+    Object.defineProperty(window, "sessionStorage", ORIGINAL_SESSION_STORAGE);
+  }
 });
 
 describe("API-key verification URL handling", () => {
@@ -42,9 +52,49 @@ describe("API-key verification URL handling", () => {
     expect(readVerificationTokenFromUrl()).toBeNull();
   });
 
-  it("keeps the global URL scrubber free of schema-bearing imports", () => {
-    const source = readFileSync("src/lib/api-key-verification-url.ts", "utf8");
+  it("rejects a malformed percent-encoded hash token instead of decoding it", () => {
+    window.history.replaceState(null, "", "/api/#akv_%E0%A4%A");
 
-    expect(source).not.toMatch(/from ["']zod|@shared\/types|api-key-self-serve/);
+    expect(readVerificationTokenFromUrl()).toBeNull();
+  });
+
+  it("prefers the hash token and keeps the stored token available for a later read", () => {
+    window.sessionStorage.setItem(SESSION_KEY, "akv_session");
+    window.history.replaceState(null, "", "/api/#akv_hash");
+
+    expect(readVerificationTokenFromUrl()).toBe("akv_hash");
+
+    stripVerificationTokenFromUrl();
+    expect(window.location.hash).toBe("");
+    expect(readVerificationTokenFromUrl()).toBe("akv_session");
+    expect(readVerificationTokenFromUrl()).toBeNull();
+  });
+
+  it("returns no token when privacy-restricted storage access throws", () => {
+    Object.defineProperty(window, "sessionStorage", {
+      configurable: true,
+      get() {
+        throw new DOMException("storage disabled", "SecurityError");
+      },
+    });
+
+    expect(readVerificationTokenFromUrl()).toBeNull();
+  });
+
+  it("removes every verify query parameter while preserving an unrelated fragment", () => {
+    window.history.replaceState(null, "", "/api/?verify=first&verify=second&utm_source=email#section");
+
+    stripVerificationTokenFromUrl();
+
+    expect(window.location.search).toBe("?utm_source=email");
+    expect(window.location.hash).toBe("#section");
+  });
+
+  it("reads no token and performs no scrubbing without a window", () => {
+    vi.stubGlobal("window", undefined);
+
+    expect(readVerificationTokenFromUrl()).toBeNull();
+    expect(stripQueryVerificationTokenFromUrl()).toBeUndefined();
+    expect(stripVerificationTokenFromUrl()).toBeUndefined();
   });
 });

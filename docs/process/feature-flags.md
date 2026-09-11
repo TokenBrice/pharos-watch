@@ -21,7 +21,7 @@ Each flag's default and `expiresAt` are owned by `src/lib/feature-flags.ts`; rea
 | `NEXT_PUBLIC_PHAROS_BLACKLIST_BANNER`        | Retained configuration only; the unmounted recent blacklist banner was removed     |
 | `NEXT_PUBLIC_PHAROS_HERO_VERDICT`            | Idea 1 (hero archetype `VerdictPill`; the `oneLiner` and AI summary are not gated)  |
 | `NEXT_PUBLIC_PHAROS_CHART_ANNOTATIONS`       | Idea 4 (curated + tape event-annotated charts)                                      |
-| `NEXT_PUBLIC_PHAROS_DEPEG_RESOLVER`          | DDR + Outlook Posture on `/depeg/`, detail DDR card; master-gates DDRR (rollback)   |
+| `NEXT_PUBLIC_PHAROS_DEPEG_RESOLVER`          | DDR module on `/depeg/` and its inputs to the depeg outlook hero; homepage DDR overview; detail DDR card and DDR track-record section; master-gates DDRR (rollback) |
 | `NEXT_PUBLIC_PHAROS_DEPEG_RESOLVER_REVIEWER` | Depeg Duration Resolver Reviewer module below DDR on `/depeg/` (emergency rollback) |
 
 `expiresAt` is enforceable: a gated flag carries its date in an `// expiresAt:` comment above the flag in `src/lib/feature-flags.ts`, and a flag with no such comment has no expiry. Past the date, either flip and inline the on-path, or document the reason for keeping the flag. The stale-flag check (`scripts/ci/check-stale-flags.ts`) is enforced by `check:structural` for affected PR paths and every nightly/manual validation run; it fails when any flag's `expiresAt` is today or earlier and warns 30 days ahead.
@@ -80,7 +80,7 @@ has been completed.
 
 - [x] Runtime-neutral DDRR review logic and schemas validate stored DDR assessments against later `depeg_events`.
 - [x] `/api/depeg-resolver-review` is cache-backed, freshness-aware, and returns degraded empty rows before the first snapshot.
-- [x] `/depeg/` renders DDRR below DDR (past the DEWS band, the Outlook Posture module, and the "Live forecasts above · graded below" divider) with prominent Recovery and Duration headline tiles.
+- [x] `/depeg/` renders DDRR below DDR, inside the collapsible "forecast grading · DDRR" section, with Recovery-calls and Duration-calls headline tiles. The DEWS alert feed is embedded in the `DepegOutlookHero` above both.
 - [ ] Production snapshot has at least one stored DDR assessment after launch; until then the module shows the empty review state.
 
 ## Production Rollout

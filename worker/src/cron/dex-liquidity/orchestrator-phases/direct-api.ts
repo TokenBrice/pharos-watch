@@ -67,6 +67,14 @@ export interface DexPoolSourceAdapter {
   name: string;
   circuitKey: string;
   normalizedProtocol: string;
+  /**
+   * `DexApiPool.source` family this adapter emits. `acceptedByProtocolChain`
+   * keys are `source:chain`, so an adapter whose emitted source differs from
+   * `normalizedProtocol` (the slipstream and CLMM slots) declares it here to keep
+   * per-chain telemetry aligned with the accepted counts. Defaults to
+   * `normalizedProtocol`.
+   */
+  poolSource?: string;
   supportedChains: string[];
   /** Defaults to "exhaustive"; declare "bounded-sample" to withhold veto authority. */
   censusScope?: DirectApiCensusScope;
@@ -124,6 +132,17 @@ export interface DirectApiFetchPhaseEntry {
 export interface DirectApiFetchPhaseResult {
   results: DirectApiFetchPhaseEntry[];
   failedSources: string[];
+  /**
+   * Partial failures: sources that completed but lost part of their capture,
+   * chain-scoped where the fetcher reports it (`pancakeswap-api:bsc`). Separate
+   * from `failedSources` so a degraded chain no longer hides behind `ok: true`.
+   */
+  degradedSources: string[];
+  /**
+   * Every configured `poolSource:chain` this phase attempted, including the ones
+   * that returned nothing, so run metadata can show explicit zero counts.
+   */
+  attemptedProtocolChains: string[];
   fallbackSignals: string[];
   sourceWarnings: string[];
   circuitEvents: DirectApiCircuitEvent[];
@@ -404,6 +423,7 @@ export function buildDexDirectApiFetchers(params: {
       name: "Raydium",
       circuitKey: CIRCUIT_SOURCE.RAYDIUM_API,
       normalizedProtocol: "raydium",
+      poolSource: "raydium",
       supportedChains: ["solana"],
       fn: fetchRaydiumPools,
     },
@@ -412,6 +432,7 @@ export function buildDexDirectApiFetchers(params: {
       name: "Orca",
       circuitKey: CIRCUIT_SOURCE.ORCA_API,
       normalizedProtocol: "orca",
+      poolSource: "orca",
       supportedChains: ["solana"],
       fn: (signal) => fetchOrcaPools(signal, params.db),
     },
@@ -420,6 +441,7 @@ export function buildDexDirectApiFetchers(params: {
       name: "Aerodrome Slipstream",
       circuitKey: CIRCUIT_SOURCE.AERODROME_SLIPSTREAM_API,
       normalizedProtocol: "aerodrome",
+      poolSource: "aerodrome-slipstream",
       supportedChains: ["base"],
       // `fetchSugarPools` keeps only pools holding a tracked token, and
       // `fetchSlipstreamPools` then drops any pool with a one-sided reserve or
@@ -457,6 +479,7 @@ export function buildDexDirectApiFetchers(params: {
       name: "Velodrome Slipstream",
       circuitKey: CIRCUIT_SOURCE.VELODROME_SLIPSTREAM_API,
       normalizedProtocol: "velodrome",
+      poolSource: "velodrome-slipstream",
       supportedChains: ["optimism"],
       // Same Sugar extract as Aerodrome Slipstream above.
       censusScope: "bounded-sample",
@@ -492,6 +515,7 @@ export async function runDirectApiFetchPhase(
     DIRECT_API_FETCH_PHASE_CONCURRENCY,
     async ({ name, circuitKey, normalizedProtocol, supportedChains, censusScope, fn }) => {
       const failedSources: string[] = [];
+      const degradedSources: string[] = [];
       const fallbackSignals: string[] = [];
       const sourceWarnings: string[] = [];
       const circuitEvents: DirectApiCircuitEvent[] = [];
@@ -513,6 +537,18 @@ export async function runDirectApiFetchPhase(
         } else if (result.degraded) {
           fallbackSignals.push(`${circuitKey}-partial`);
         }
+        // Partial failures are first-class telemetry: a chain that failed inside
+        // an otherwise usable source names itself here instead of only appearing
+        // as free text. A degraded source with no chain detail is reported at
+        // source level; whole-source failures stay in `failedSources`.
+        if (result.degraded) {
+          const degradedChains = result.degradedChains ?? [];
+          if (degradedChains.length > 0) {
+            degradedSources.push(...degradedChains.map((chain) => `${circuitKey}:${chain}`));
+          } else if (result.ok) {
+            degradedSources.push(circuitKey);
+          }
+        }
         const entry: DirectApiFetchPhaseEntry = {
           name,
           circuitKey,
@@ -523,6 +559,7 @@ export async function runDirectApiFetchPhase(
         };
         return {
           failedSources,
+          degradedSources,
           fallbackSignals,
           sourceWarnings,
           circuitEvents,
@@ -535,6 +572,7 @@ export async function runDirectApiFetchPhase(
           fallbackSignals.push(`${circuitKey}-circuit-open`);
           return {
             failedSources,
+            degradedSources,
             fallbackSignals,
             sourceWarnings,
             circuitEvents,
@@ -560,6 +598,7 @@ export async function runDirectApiFetchPhase(
         fallbackSignals.push(`${circuitKey}-exception`);
         return {
           failedSources,
+          degradedSources,
           fallbackSignals,
           sourceWarnings,
           circuitEvents,
@@ -582,10 +621,35 @@ export async function runDirectApiFetchPhase(
   return {
     results: entries.map((entry) => entry.entry),
     failedSources: entries.flatMap((entry) => entry.failedSources),
+    degradedSources: entries.flatMap((entry) => entry.degradedSources),
+    attemptedProtocolChains: buildAttemptedProtocolChains(fetchers),
     fallbackSignals: entries.flatMap((entry) => entry.fallbackSignals),
     sourceWarnings: entries.flatMap((entry) => entry.sourceWarnings),
     circuitEvents: entries.flatMap((entry) => entry.circuitEvents),
   };
+}
+
+/**
+ * `poolSource:chain` keys the phase attempted. Configured coverage is declared by
+ * the adapters, not by their results, so a protocol:chain that silently returned
+ * nothing (failed chain, open circuit) can still reach run metadata as an
+ * explicit zero. The key matches the `DexApiPool.source` family
+ * `acceptedByProtocolChain` counts under.
+ *
+ * @internal Exported for focused direct-api telemetry tests.
+ */
+export function buildAttemptedProtocolChains(
+  fetchers: readonly Pick<DexPoolSourceAdapter, "normalizedProtocol" | "poolSource" | "supportedChains">[],
+): string[] {
+  return [
+    ...new Set(
+      fetchers.flatMap((fetcher) =>
+        fetcher.supportedChains.map(
+          (chain) => `${fetcher.poolSource ?? fetcher.normalizedProtocol}:${chain}`,
+        ),
+      ),
+    ),
+  ];
 }
 
 function directApiCircuitEventFromOutcome(
@@ -618,6 +682,8 @@ export async function integrateDirectApiLiquidityPhase(params: {
   stablecoinPriceById: Map<string, number>;
   executionTargetContext?: DirectApiExecutionTargetContext;
   preprocessedPoolCounts?: DirectApiPoolCompactionCounts;
+  /** `poolSource:chain` keys the fetch phase attempted; see `runDirectApiFetchPhase`. */
+  attemptedProtocolChains?: readonly string[];
   fallbackCounters?: LiquidityFallbackCounters;
 }): Promise<DirectApiIntegrationResult> {
   if (
@@ -634,6 +700,12 @@ export async function integrateDirectApiLiquidityPhase(params: {
   let directApiSkippedBelowTvlThreshold = 0;
   let directApiSkippedAboveTvlSanityCap = 0;
   const acceptedByProtocolChain: Record<string, number> = {};
+  // Every configured protocol:chain gets an explicit entry before integration, so
+  // a chain that contributed nothing (`pancakeswap:bsc: 0`) is visible in run
+  // metadata instead of silently missing from the map.
+  for (const key of params.attemptedProtocolChains ?? []) {
+    acceptedByProtocolChain[key] ??= 0;
+  }
   const excludedByReason: Record<string, number> = {};
   const normalized = params.preprocessedPoolCounts
     ? {

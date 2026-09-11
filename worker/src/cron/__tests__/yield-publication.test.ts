@@ -4,8 +4,8 @@ import path from "node:path";
 
 import { YIELD_HISTORY_MAX_DAYS } from "@shared/lib/yield-history-policy";
 import { DAY_SECONDS } from "@shared/lib/time-constants";
-import { createSqliteD1 } from "../../test-helpers/sqlite-d1";
-import { createLatestSchemaSqlite } from "../../test-helpers/latest-schema-sqlite";
+import { createSqliteD1 } from "@shared/test-utils/sqlite-d1";
+import { createLatestSchemaSqlite } from "@shared/test-utils/latest-schema-sqlite";
 import { D1_MAX_BOUND_PARAMETERS } from "../../lib/db";
 
 import { type EvaluatedYieldSource } from "../yield-sync/evaluation";
@@ -38,6 +38,14 @@ function resolveMigrationPath(file: string): string {
   return existsSync(fixture) ? fixture : path.join(MIGRATIONS_DIR, file);
 }
 
+function deferred<T>() {
+  let resolve!: (value: T) => void;
+  const promise = new Promise<T>((res) => {
+    resolve = res;
+  });
+  return { promise, resolve };
+}
+
 
 describe("publishYieldCoordinatorResults", () => {
   function parseJsonBind<T>(entry: { binds: unknown[] } | undefined, index = 0): T {
@@ -46,15 +54,10 @@ describe("publishYieldCoordinatorResults", () => {
 
   function makePublicationDb(
     cacheWriteChanges: number,
-    options?: { cacheWriteError?: Error; finalizeError?: Error; finalizeDelayMs?: number },
+    options?: { cacheWriteError?: Error; finalizeError?: Error },
   ) {
     return mockD1([
       { match: "FROM cache WHERE key = ?", matchBinds: ["yield-rankings"], rows: [], first: null },
-      { match: "INSERT OR REPLACE INTO yield_publication_generations", rows: [] },
-      { match: "INSERT OR REPLACE INTO yield_data", rows: [] },
-      { match: "INSERT OR IGNORE INTO yield_history", rows: [] },
-      { match: "INSERT OR REPLACE INTO yield_source_decisions", rows: [] },
-      { match: "INSERT OR REPLACE INTO yield_source_decision_alternatives", rows: [] },
       {
         match: "INSERT INTO cache (key, value, updated_at)",
         rows: [],
@@ -65,21 +68,12 @@ describe("publishYieldCoordinatorResults", () => {
         match: "UPDATE yield_publication_generations",
         rows: [],
         throwError: options?.finalizeError,
-        delayMs: options?.finalizeDelayMs,
       },
       { match: "UPDATE yield_data SET publication_state", rows: [] },
       { match: "UPDATE yield_history SET publication_state", rows: [] },
       { match: "DELETE FROM yield_history", rows: [] },
       { match: "DELETE FROM yield_source_decisions", rows: [] },
       { match: "DELETE FROM yield_source_decision_alternatives", rows: [] },
-      { match: "pharos:yield-sync:daily-history-materialize", rows: [] },
-      { match: "pharos:yield-sync:stale-yield-data-delete", rows: [] },
-      { match: "pharos:yield-sync:yield-data-existing-ids", rows: [], first: null },
-      { match: "pharos:yield-sync:orphan-yield-data-delete", rows: [] },
-      { match: "pharos:yield-sync:history-retention-delete", rows: [] },
-      { match: "pharos:yield-sync:daily-history-retention-delete", rows: [] },
-      { match: "pharos:yield-sync:decision-retention-delete", rows: [] },
-      { match: "ranked_linked_generations", rows: [] },
       { match: "INSERT INTO cache", rows: [], runMeta: { changes: cacheWriteChanges } },
     ]);
   }
@@ -143,30 +137,33 @@ describe("publishYieldCoordinatorResults", () => {
   });
 
   it("does not replace published D1 rows when the rankings cache CAS skips because a newer cache exists", async () => {
-    const db = makePublicationDb(0);
+    const { sqlite, db } = createLatestSchemaSqlite();
+    try {
+      const startSec = Math.floor(FIXED_NOW.getTime() / 1000);
+      const source = makeEvaluatedSource({ id: "usdc-circle" });
+      const params = makePublishParams({
+        db, evaluatedSources: [source],
+        bestSourceKeyByCoin: new Map([[source.id, source.sourceKey]]),
+        previewRankingsPayload: buildPayloadWithObservedAt(startSec, { id: source.id }),
+      });
+      expect(await publishYieldCoordinatorResults({ ...params, startSec: startSec + 1 })).toMatchObject({ ok: true });
+      const tables = ["yield_data", "yield_history", "yield_source_decisions"];
+      const before = tables.map((table) => sqlite.prepare(`SELECT * FROM ${table}`).all());
+      for (const rows of before) expect(rows).toHaveLength(1);
+      const cache = sqlite.prepare("SELECT * FROM cache ORDER BY key").all();
 
-    const result = await publishYieldCoordinatorResults(makePublishParams({ db }));
+      const result = await publishYieldCoordinatorResults({
+        ...params, evaluatedSources: [{ ...source, currentApy: 99, apy30d: 99 }],
+      });
 
-    expect(result).toMatchObject({
-      ok: true,
-      cacheWriteSkipped: true,
-      casSkipped: true,
-    });
-    const history = db.getHistory();
-    const yieldDataInsert = history.find((entry) => entry.sql.includes("INSERT OR REPLACE INTO yield_data"));
-    const yieldHistoryInsert = history.find((entry) => entry.sql.includes("INSERT OR IGNORE INTO yield_history"));
-    const decisionInsert = history.find((entry) => entry.sql.includes("INSERT OR REPLACE INTO yield_source_decisions"));
-    expect(yieldDataInsert?.sql).toContain("(SELECT updated_at FROM cache WHERE key = 'yield-rankings') = ?");
-    expect(yieldHistoryInsert?.sql).toContain("(SELECT updated_at FROM cache WHERE key = 'yield-rankings') = ?");
-    expect(decisionInsert?.sql).toContain("(SELECT updated_at FROM cache WHERE key = 'yield-rankings') = ?");
-    const rows = parseJsonBind<Array<{ publication_state: string }>>(yieldDataInsert);
-    expect(rows[0]?.publication_state).toBe("published");
-    expect(history.some((entry) => entry.sql.includes("SET state = 'failed'"))).toBe(true);
-    expect(
-      history.some(
-        (entry) => entry.sql.includes("UPDATE yield_history SET publication_state = ?") && entry.binds[0] === "failed",
-      ),
-    ).toBe(true);
+      expect(result).toMatchObject({ ok: true, cacheWriteSkipped: true, casSkipped: true });
+      expect(tables.map((table) => sqlite.prepare(`SELECT * FROM ${table}`).all())).toEqual(before);
+      expect(sqlite.prepare("SELECT * FROM cache ORDER BY key").all()).toEqual(cache);
+      expect(sqlite.prepare("SELECT state FROM yield_publication_generations WHERE generation_id = ?")
+        .get(`yield-${startSec}`)).toEqual({ state: "failed" });
+    } finally {
+      sqlite.close();
+    }
   });
 
   it("returns degraded when the atomic publication transaction throws", async () => {
@@ -310,13 +307,37 @@ describe("publishYieldCoordinatorResults", () => {
   });
 
   it("does not publish the freshness sentinel when the cron signal aborts after row publication", async () => {
-    const db = makePublicationDb(1, { finalizeDelayMs: 20 });
+    const db = makePublicationDb(1);
     const controller = new AbortController();
-
+    const entered = deferred<void>();
+    const release = deferred<void>();
+    const prepare = db.prepare.bind(db);
+    const prepareSpy = vi.spyOn(db, "prepare").mockImplementation((sql) => {
+      const statement = prepare(sql);
+      if (!sql.includes("UPDATE yield_publication_generations")) return statement;
+      const bind = statement.bind.bind(statement);
+      statement.bind = (...values) => {
+        const bound = bind(...values);
+        const run = bound.run.bind(bound);
+        bound.run = async () => {
+          entered.resolve();
+          await release.promise;
+          return run();
+        };
+        return bound;
+      };
+      return statement;
+    });
     const resultPromise = publishYieldCoordinatorResults(makePublishParams({ db, signal: controller.signal }));
-    setTimeout(() => controller.abort(new Error("cron timeout")), 0);
-
-    await expect(resultPromise).rejects.toThrow("cron timeout");
+    const rejected = expect(resultPromise).rejects.toThrow("cron timeout");
+    try {
+      await entered.promise;
+      controller.abort(new Error("cron timeout"));
+    } finally {
+      release.resolve();
+      await rejected;
+      prepareSpy.mockRestore();
+    }
     const history = db.getHistory();
     expect(history.some((entry) => entry.sql.includes("INSERT OR REPLACE INTO yield_data"))).toBe(true);
     expect(history.some((entry) => entry.binds[0] === "freshness:yield-data")).toBe(false);
@@ -691,17 +712,39 @@ describe("pruneYieldTables", () => {
     }
   });
 
-  it("chunks stale yield_data cleanup below the D1 bind-variable ceiling while preserving frozen rows", async () => {
-    const db = mockD1();
+  it("chunks stale cleanup below the bind ceiling and preserves frozen and current rows", async () => {
+    const { sqlite, db } = createLatestSchemaSqlite();
     const startSec = Math.floor(FIXED_NOW.getTime() / 1000);
-
-    await pruneYieldTables(db, startSec);
-
-    const staleDeletes = db
-      .getHistory()
-      .filter((entry) => entry.sql.includes("pharos:yield-sync:stale-yield-data-delete"));
-    expect(staleDeletes.length).toBeGreaterThan(1);
-    expect(Math.max(...staleDeletes.map((entry) => entry.binds.length))).toBeLessThanOrEqual(D1_MAX_BOUND_PARAMETERS);
+    const bindCounts: number[] = [];
+    const prepare = db.prepare.bind(db);
+    const prepareSpy = vi.spyOn(db, "prepare").mockImplementation((sql) => {
+      const statement = prepare(sql);
+      if (sql.includes("pharos:yield-sync:stale-yield-data-delete")) {
+        const bind = statement.bind.bind(statement);
+        statement.bind = (...values) => { bindCounts.push(values.length); return bind(...values); };
+      }
+      return statement;
+    });
+    try {
+      const insert = sqlite.prepare(`INSERT INTO yield_data
+        (stablecoin_id, source_key, symbol, current_apy, apy_7d, apy_30d,
+         yield_source, yield_type, data_source, updated_at)
+        VALUES (?, ?, 'TEST', 5, 5, 5, 'Test', 'lending-vault', 'defillama', ?)`);
+      insert.run("usdc-circle", "stale", startSec - 1);
+      insert.run("usdc-circle", "current", startSec);
+      insert.run("usr-resolv", "frozen", startSec - 1);
+      insert.run("not-tracked", "orphan", startSec);
+      await pruneYieldTables(db, startSec);
+      expect(sqlite.prepare("SELECT stablecoin_id, source_key FROM yield_data ORDER BY stablecoin_id").all()).toEqual([
+        { stablecoin_id: "usdc-circle", source_key: "current" },
+        { stablecoin_id: "usr-resolv", source_key: "frozen" },
+      ]);
+      expect(bindCounts.length).toBeGreaterThan(1);
+      expect(Math.max(...bindCounts)).toBeLessThanOrEqual(D1_MAX_BOUND_PARAMETERS);
+    } finally {
+      prepareSpy.mockRestore();
+      sqlite.close();
+    }
   });
 
   it("deletes old null rollout audit rows while retaining inferable trend rows", async () => {

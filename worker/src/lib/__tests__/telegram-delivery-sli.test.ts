@@ -1,30 +1,12 @@
-import { readdirSync, readFileSync } from "node:fs";
-import { join } from "node:path";
-import { DatabaseSync } from "node:sqlite";
+import type { DatabaseSync } from "node:sqlite";
 import { afterEach, describe, expect, it } from "vitest";
-import { createSqliteD1 } from "../../test-helpers/sqlite-d1";
+import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
 import { loadTelegramDeliverySliRollup } from "../telegram/delivery-sli";
 
 const NOW = 1_800_000_000;
-const databases: DatabaseSync[] = [];
+const fixtures = createLatestSchemaFixtureTracker();
 
-function setupLatestSchema(): { sqlite: DatabaseSync; db: D1Database } {
-  const sqlite = new DatabaseSync(":memory:");
-  const migrationDir = process.cwd().endsWith("/worker")
-    ? join(process.cwd(), "migrations")
-    : join(process.cwd(), "worker/migrations");
-  for (const file of readdirSync(migrationDir)
-    .filter((entry) => entry.endsWith(".sql"))
-    .sort()) {
-    sqlite.exec(readFileSync(join(migrationDir, file), "utf8"));
-  }
-  databases.push(sqlite);
-  return { sqlite, db: createSqliteD1(sqlite) };
-}
-
-afterEach(() => {
-  while (databases.length > 0) databases.pop()?.close();
-});
+afterEach(fixtures.closeAll);
 
 function insertSource(
   sqlite: DatabaseSync,
@@ -117,7 +99,7 @@ function insertTargetItems(
 
 describe("Telegram delivery SLI rollup", () => {
   it("derives event and authoritative target SLIs without claiming end-user receipt", async () => {
-    const { sqlite, db } = setupLatestSchema();
+    const { sqlite, db } = fixtures.open();
     insertSource(sqlite, "event-a", NOW - 1_000, NOW + 2_000, NOW - 900);
     insertSource(sqlite, "event-unplanned", NOW - 800, NOW + 2_000, null);
     insertJob(sqlite, "job-a", "event-a", "depeg", NOW - 900, NOW - 100);
@@ -268,7 +250,7 @@ describe("Telegram delivery SLI rollup", () => {
   });
 
   it("caps the scan window and reports empty, stale, and bounded dimensions honestly", async () => {
-    const { sqlite, db } = setupLatestSchema();
+    const { sqlite, db } = fixtures.open();
     insertSource(sqlite, "too-old", NOW - 8 * 86_400, NOW - 7 * 86_400, NOW - 8 * 86_400 + 60);
     insertJob(sqlite, "too-old-job", "too-old", "depeg", NOW - 8 * 86_400, NOW - 7 * 86_400);
     insertTarget(sqlite, {
@@ -319,7 +301,7 @@ describe("Telegram delivery SLI rollup", () => {
   });
 
   it("materializes the bounded source window and forces the source-first target index", async () => {
-    const { sqlite, db } = setupLatestSchema();
+    const { sqlite, db } = fixtures.open();
     insertSource(sqlite, "indexed-event", NOW - 100, NOW + 1_000, NOW - 90);
     const preparedSql: string[] = [];
     const instrumented = {
@@ -343,7 +325,7 @@ describe("Telegram delivery SLI rollup", () => {
   });
 
   it("attributes a mixed target explicitly from item lineage", async () => {
-    const { sqlite, db } = setupLatestSchema();
+    const { sqlite, db } = fixtures.open();
     insertSource(sqlite, "mixed-event", NOW - 100, NOW + 5_400, NOW - 90);
     insertJob(sqlite, "mixed-job", "mixed-event", "depeg", NOW - 90, NOW + 5_400);
     insertTarget(sqlite, {
@@ -373,7 +355,7 @@ describe("Telegram delivery SLI rollup", () => {
   });
 
   it("attributes a freeze target from freeze item lineage", async () => {
-    const { sqlite, db } = setupLatestSchema();
+    const { sqlite, db } = fixtures.open();
     insertSource(sqlite, "freeze-event", NOW - 100, NOW + 5_400, NOW - 90);
     insertJob(sqlite, "freeze-job", "freeze-event", "freeze", NOW - 90, NOW + 5_400);
     insertTarget(sqlite, {
@@ -400,7 +382,7 @@ describe("Telegram delivery SLI rollup", () => {
   });
 
   it("rejects an invalid observation clock", async () => {
-    const { db } = setupLatestSchema();
+    const { db } = fixtures.open();
     await expect(loadTelegramDeliverySliRollup(db, { nowSec: -1 })).rejects.toThrow("nowSec is invalid");
   });
 });

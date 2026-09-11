@@ -21,8 +21,11 @@ export function usdToRawAmount(
     !Number.isFinite(referencePriceUsd) ||
     referencePriceUsd <= 0
   ) return null;
-  const usdScaled = BigInt(Math.floor(inputUsd * Number(USD_SCALE)));
-  const priceScaled = BigInt(Math.round(referencePriceUsd * Number(PRICE_SCALE)));
+  const scaledUsd = Math.floor(inputUsd * Number(USD_SCALE));
+  const scaledPrice = Math.round(referencePriceUsd * Number(PRICE_SCALE));
+  if (!Number.isFinite(scaledUsd) || !Number.isFinite(scaledPrice)) return null;
+  const usdScaled = BigInt(scaledUsd);
+  const priceScaled = BigInt(scaledPrice);
   if (priceScaled <= 0n) return null;
   const amount = usdScaled * 10n ** BigInt(decimals) * PRICE_SCALE / (USD_SCALE * priceScaled);
   return amount > 0n && amount <= (options.maxRawAmount ?? amount) ? amount : null;
@@ -44,7 +47,9 @@ export function rawAmountToUsdOrNull(
   referencePriceUsd: number,
 ): number | null {
   if (amount < 0n || !Number.isInteger(decimals) || decimals < 0 || decimals > 255) return null;
-  const priceScaled = BigInt(Math.round(referencePriceUsd * Number(PRICE_SCALE)));
+  const scaledPrice = Math.round(referencePriceUsd * Number(PRICE_SCALE));
+  if (!Number.isFinite(scaledPrice)) return null;
+  const priceScaled = BigInt(scaledPrice);
   if (priceScaled <= 0n) return null;
   const usd = rawAmountToUsd(amount, decimals, referencePriceUsd);
   return Number.isFinite(usd) && usd >= 0 ? usd : null;

@@ -63,6 +63,7 @@ const RESERVOIR_BUCKETS: readonly ValueBucketRule<ReservoirBalanceItem, Reservoi
     key: "usd1",
     name: "USD1 lending markets",
     risk: "medium",
+    sourceKey: "reservoir:usd1",
     ...wrapperAssetMeta("usd1"),
     // USD1 is the only "USD<digit>" label, so a word-boundary match is safe
     match: (item) => /\bUSD1\b/.test(item.label),
@@ -71,6 +72,7 @@ const RESERVOIR_BUCKETS: readonly ValueBucketRule<ReservoirBalanceItem, Reservoi
     key: "pyusd",
     name: "PYUSD lending markets",
     risk: "medium",
+    sourceKey: "reservoir:pyusd",
     ...wrapperAssetMeta("pyusd"),
     match: (item) => /\bPYUSD\b/.test(item.label),
   },
@@ -78,6 +80,7 @@ const RESERVOIR_BUCKETS: readonly ValueBucketRule<ReservoirBalanceItem, Reservoi
     key: "rlusd",
     name: "RLUSD lending markets",
     risk: "medium",
+    sourceKey: "reservoir:rlusd",
     ...wrapperAssetMeta("rlusd"),
     match: (item) => /\bRLUSD\b/.test(item.label),
   },
@@ -85,6 +88,7 @@ const RESERVOIR_BUCKETS: readonly ValueBucketRule<ReservoirBalanceItem, Reservoi
     key: "ausd",
     name: "AUSD lending markets",
     risk: "medium",
+    sourceKey: "reservoir:ausd",
     ...wrapperAssetMeta("ausd"),
     match: (item) => /\bAUSD\b/.test(item.label),
   },
@@ -92,6 +96,7 @@ const RESERVOIR_BUCKETS: readonly ValueBucketRule<ReservoirBalanceItem, Reservoi
     key: "gho",
     name: "GHO lending markets",
     risk: "medium",
+    sourceKey: "reservoir:gho",
     ...wrapperAssetMeta("gho"),
     // Match GHO as a standalone token or sGHO; exclude RUSD/USDT labels that
     // happen to contain a G.
@@ -101,6 +106,7 @@ const RESERVOIR_BUCKETS: readonly ValueBucketRule<ReservoirBalanceItem, Reservoi
     key: "usdt",
     name: "USDT / USDT0 positions",
     risk: "medium",
+    sourceKey: "reservoir:usdt",
     ...wrapperAssetMeta("usdt"),
     // USDT0 and plain USDT; exclude USDT-adjacent labels like "tUSD".
     match: (item) => /\bUSDT0?\b/.test(item.label),
@@ -109,6 +115,7 @@ const RESERVOIR_BUCKETS: readonly ValueBucketRule<ReservoirBalanceItem, Reservoi
     key: "usdc",
     name: "USDC positions",
     risk: "medium",
+    sourceKey: "reservoir:usdc",
     ...wrapperAssetMeta("usdc"),
     // USDC standalone only; other stablecoins that contain "USD" (USD1/USDT/etc)
     // match their own rules first.
@@ -118,6 +125,7 @@ const RESERVOIR_BUCKETS: readonly ValueBucketRule<ReservoirBalanceItem, Reservoi
     key: "agua",
     name: "Agua Global Carry Vault (USDC-denominated ERC-4626)",
     risk: "high",
+    sourceKey: "reservoir:agua",
     ...wrapperAssetMeta("usdc"),
     match: (item) => /\bAgua\b/i.test(item.label),
   },
@@ -125,18 +133,21 @@ const RESERVOIR_BUCKETS: readonly ValueBucketRule<ReservoirBalanceItem, Reservoi
     key: "rusd",
     name: "rUSD strategy vaults",
     risk: "medium",
+    sourceKey: "reservoir:rusd",
     match: (item) => /\bRUSD\b/.test(item.label),
   },
   {
     key: "prime",
     name: "Hastra / Sentora PRIME credit allocations",
     risk: "high",
+    sourceKey: "reservoir:prime",
     match: (item) => /\bPRIME\b/.test(item.label),
   },
   {
     key: "usdat",
     name: "Pendle PT USDat tokenized-treasury principal token",
     risk: "high",
+    sourceKey: "reservoir:usdat",
     // Reservoir's raw row names the Pendle PT and Pendle resolves the market's
     // underlying asset to the tracked Saturn USDat Ethereum contract.
     coinId: "usdat-saturn",
@@ -287,6 +298,7 @@ export function adaptReservoirReserves(payload: ReservoirReservesResponse): Adap
     getUnknownLabel: (asset) => asset.label,
     totalValue: totalAssets,
     unknownSliceName: "Unmapped reserve positions",
+    unknownSourceKey: "reservoir:unknown",
   });
 
   const totalLiabilities = Number(payload.totalLiabilities);
@@ -357,21 +369,16 @@ export async function fetchReservoirReserves(
   const warnings: LiveReserveWarning[] =
     adapted.unknownAssets.length > 0
       ? [
-          buildUnknownExposureWarning({
-            code: "unknown-position",
-            message: `Unmapped reserve positions: ${adapted.unknownAssets.join(", ")}`,
-            unknownExposurePct: adapted.unknownExposurePct,
-          }),
+          buildUnknownExposureWarning({ adapterKey: "reservoir", code: "unknown-position",
+          message: `Unmapped reserve positions: ${adapted.unknownAssets.join(", ")}`,
+          unknownExposurePct: adapted.unknownExposurePct, }),
         ]
       : [];
   if (adapted.sourceTotalGapPct > SOURCE_TOTAL_RECONCILIATION_THRESHOLD_PCT) {
     warnings.push(
-      buildUnknownExposureWarning({
-        code: "source-total-gap",
-        message: "Reservoir totalAssets exceeds disclosed asset rows",
-        unknownExposurePct: adapted.sourceTotalGapPct,
-        thresholdPct: SOURCE_TOTAL_RECONCILIATION_THRESHOLD_PCT,
-      }),
+      buildUnknownExposureWarning({ adapterKey: "reservoir", code: "source-total-gap",
+      message: "Reservoir totalAssets exceeds disclosed asset rows",
+      unknownExposurePct: adapted.sourceTotalGapPct,  }),
     );
   }
   if (
@@ -445,11 +452,6 @@ export async function fetchReservoirReserves(
       ...(psm != null && psmCapacityUsd != null
         ? {
             psmUnderlyingBalanceRaw: psm.capacityRaw,
-            ...(redeemFeeBps != null ? { redemptionFeeBps: redeemFeeBps } : {}),
-            immediateRedeemableUsd: psmCapacityUsd,
-            ...(adapted.supplyUsd != null && adapted.supplyUsd > 0
-              ? { immediateRedeemableRatio: psmCapacityUsd / adapted.supplyUsd }
-              : {}),
             redemption: {
               capacityUsd: psmCapacityUsd,
               ...(adapted.supplyUsd != null && adapted.supplyUsd > 0

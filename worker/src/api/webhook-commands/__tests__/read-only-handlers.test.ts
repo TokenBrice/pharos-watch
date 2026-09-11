@@ -40,11 +40,7 @@ vi.mock("../../telegram-webhook-status", async (importOriginal) => {
   };
 });
 
-type InlineButton = {
-  text?: string;
-  callback_data?: string;
-  web_app?: { url?: string };
-};
+import { makeCommandContext, buttonsFromMarkup, expectMiniAppButton, type InlineButton } from "./webhook-commands.test-support";
 
 const { fetchSpy, reset: resetTelegramFetchSpy } = createTelegramFetchSpy();
 
@@ -71,29 +67,9 @@ const statusFixture: StatusForCoin = {
 };
 
 function makeContext(overrides: Partial<WebhookCommandContext> = {}): WebhookCommandContext {
-  return {
-    db: mockD1(),
-    chatId: "42",
-    chatType: "private",
-    username: "alice",
-    actorUserId: "99",
-    botToken: "bot-token",
-    replyToChat: vi.fn().mockResolvedValue(undefined),
-    replyToChatWithMarkup: vi.fn().mockResolvedValue(undefined),
-    ...overrides,
-  };
+  return makeCommandContext(mockD1(), overrides);
 }
 
-function buttonsFromMarkup(markup: unknown): InlineButton[] {
-  const typed = markup as { inline_keyboard?: InlineButton[][] } | undefined;
-  return (typed?.inline_keyboard ?? []).flat();
-}
-
-function expectMiniAppButton(buttons: InlineButton[], text: string, startapp: string): void {
-  expect(buttons.some((button) => button.text === text && button.web_app?.url?.includes(`startapp=${startapp}`))).toBe(
-    true,
-  );
-}
 
 function expectCallbackButton(buttons: InlineButton[], text: string, callbackData: string): void {
   expect(buttons.some((button) => button.text === text && button.callback_data === callbackData)).toBe(true);

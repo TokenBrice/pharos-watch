@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
-import { encodeFunctionResult, parseAbi } from "viem/utils";
+import { encodeFunctionData, encodeFunctionResult, parseAbi } from "viem/utils";
+import type { Abi } from "abitype";
 import type {
   EvmMulticall3Call,
   EvmMulticall3Result,
@@ -107,11 +108,63 @@ function storageWord(address: string): Hex {
   return `0x${address.slice(2).padStart(64, "0")}`;
 }
 
+function request(contract: string, abi: Abi, functionName: string, args: readonly unknown[] = []) {
+  return { contract, data: encodeFunctionData({ abi, functionName, args }) };
+}
+
+const EXPECTED_REQUESTS = {
+  "earn-asset": request(EARN_VAULT, ERC4626_ABI, "asset"),
+  "earn-total-assets": request(EARN_VAULT, ERC4626_ABI, "totalAssets"),
+  "earn-validator": request(EARN_VAULT, EARN_VAULT_ABI, "vaultValidator"),
+  "earn-protocol-config": request(EARN_VAULT, EARN_VAULT_ABI, "protocolConfig"),
+  "earn-pause-status": request(EARN_VAULT, EARN_VAULT_ABI, "pauseStatus"),
+  "earn-pending-withdrawals": request(EARN_VAULT, EARN_VAULT_ABI, "getPendingWithdrawalsLength"),
+  "earn-min-withdrawable-shares": request(EARN_VAULT, EARN_VAULT_ABI, "minWithdrawableShares"),
+  "earn-withdrawal-fee": request(EARN_VALIDATOR, EARN_VALIDATOR_ABI, "withdrawalFee", [EARN_VAULT]),
+  "earn-deposit-allow-list-count": request(EARN_VALIDATOR, EARN_VALIDATOR_ABI, "depositAllowListCount", [EARN_VAULT]),
+  "earn-protocol-paused": request(EARN_PROTOCOL_CONFIG, EARN_PROTOCOL_CONFIG_ABI, "getProtocolPauseStatus"),
+  "earn-idle-usdc": request(USDC, ERC20_ABI, "balanceOf", [EARN_VAULT]),
+  "earn-asset-decimals": request(USDC, ERC20_ABI, "decimals"),
+  "dstake-asset": request(DSTAKE_TOKEN, ERC4626_ABI, "asset"),
+  "dstake-total-assets": request(DSTAKE_TOKEN, ERC4626_ABI, "totalAssets"),
+  "dstake-router": request(DSTAKE_TOKEN, DSTAKE_TOKEN_ABI, "router"),
+  "dstake-collateral-vault": request(DSTAKE_TOKEN, DSTAKE_TOKEN_ABI, "collateralVault"),
+  "router-token": request(DSTAKE_ROUTER, DSTAKE_ROUTER_ABI, "dStakeToken"),
+  "router-collateral-vault": request(DSTAKE_ROUTER, DSTAKE_ROUTER_ABI, "collateralVault"),
+  "router-paused": request(DSTAKE_ROUTER, DSTAKE_ROUTER_ABI, "paused"),
+  "router-withdrawal-fee": request(DSTAKE_ROUTER, DSTAKE_ROUTER_ABI, "withdrawalFeeBps"),
+  "router-max-withdrawal-fee": request(DSTAKE_ROUTER, DSTAKE_ROUTER_ABI, "maxWithdrawalFeeBps"),
+  "router-shortfall": request(DSTAKE_ROUTER, DSTAKE_ROUTER_ABI, "currentShortfall"),
+  "router-active-withdrawal-vaults": request(DSTAKE_ROUTER, DSTAKE_ROUTER_ABI, "getActiveVaultsForWithdrawals"),
+  "idle-strategy-asset": request(IDLE_STRATEGY, STRATEGY_VAULT_ABI, "asset"),
+  "idle-strategy-max-withdraw": request(IDLE_STRATEGY, STRATEGY_VAULT_ABI, "maxWithdraw", [COLLATERAL_VAULT]),
+  "idle-strategy-adapter": request(DSTAKE_ROUTER, DSTAKE_ROUTER_ABI, "strategyShareToAdapter", [IDLE_STRATEGY]),
+  "idle-strategy-healthy": request(DSTAKE_ROUTER, DSTAKE_ROUTER_ABI, "isVaultHealthyForWithdrawals", [IDLE_STRATEGY]),
+  "dlend-strategy-asset": request(DLEND_STRATEGY, STRATEGY_VAULT_ABI, "asset"),
+  "dlend-strategy-max-withdraw": request(DLEND_STRATEGY, STRATEGY_VAULT_ABI, "maxWithdraw", [COLLATERAL_VAULT]),
+  "dlend-strategy-adapter": request(DSTAKE_ROUTER, DSTAKE_ROUTER_ABI, "strategyShareToAdapter", [DLEND_STRATEGY]),
+  "dlend-strategy-healthy": request(DSTAKE_ROUTER, DSTAKE_ROUTER_ABI, "isVaultHealthyForWithdrawals", [DLEND_STRATEGY]),
+  "dlend-pool": request(DLEND_STRATEGY, STATIC_ATOKEN_ABI, "POOL"),
+  "dlend-atoken": request(DLEND_STRATEGY, STATIC_ATOKEN_ABI, "aToken"),
+  "dlend-available-liquidity": request(DUSD, ERC20_ABI, "balanceOf", [DLEND_ATOKEN]),
+  "dstake-asset-decimals": request(DUSD, ERC20_ABI, "decimals"),
+} satisfies Record<string, { contract: string; data: Hex }>;
+
+function verifyRequests(calls: readonly EvmMulticall3Call[]) {
+  for (const call of calls) {
+    const expected = EXPECTED_REQUESTS[call.label as keyof typeof EXPECTED_REQUESTS];
+    if (!expected || call.target.toLowerCase() !== expected.contract || call.callData.toLowerCase() !== expected.data) {
+      throw new Error(`Unexpected executable request ${call.label}: ${JSON.stringify(call)}`);
+    }
+  }
+}
+
 interface EarnOverrides {
   withdrawalsPaused?: boolean;
 }
 
 function earnResults(calls: readonly EvmMulticall3Call[], overrides: EarnOverrides = {}): EvmMulticall3Result[] {
+  verifyRequests(calls);
   const values: Record<string, Hex> = {
     "earn-asset": encodeFunctionResult({ abi: ERC4626_ABI, functionName: "asset", result: USDC }),
     "earn-total-assets": encodeFunctionResult({
@@ -186,6 +239,7 @@ function dStakeResults(
   calls: readonly EvmMulticall3Call[],
   overrides: DStakeOverrides = {},
 ): EvmMulticall3Result[] {
+  verifyRequests(calls);
   const dlendMaxWithdraw = 192_389_829_956_990_993_894_191n;
   const values: Record<string, Hex> = {
     "dstake-asset": encodeFunctionResult({ abi: ERC4626_ABI, functionName: "asset", result: DUSD }),
@@ -317,21 +371,31 @@ function client(
 ): ExecutableRedemptionReadClient {
   return {
     blockNumber: vi.fn().mockResolvedValue(BLOCK),
-    blockTimestamp: vi.fn().mockResolvedValue(NOW - 30),
-    codeHash: vi.fn().mockImplementation(async (address: string) =>
-      address.toLowerCase() === options.driftAddress?.toLowerCase()
+    blockTimestamp: vi.fn().mockImplementation(async (block: number) => {
+      if (block !== BLOCK) throw new Error(`Unexpected timestamp block ${block}`);
+      return NOW - 30;
+    }),
+    codeHash: vi.fn().mockImplementation(async (address: string, block: number) => {
+      if (block !== BLOCK) throw new Error(`Unexpected code block ${block}`);
+      return address.toLowerCase() === options.driftAddress?.toLowerCase()
         ? `0x${"f".repeat(64)}`
-        : CODE_HASH_BY_ADDRESS[address.toLowerCase()] ?? null,
-    ),
-    storage: vi.fn().mockImplementation(async (address: string) => {
+        : CODE_HASH_BY_ADDRESS[address.toLowerCase()] ?? null;
+    }),
+    storage: vi.fn().mockImplementation(async (address: string, slot: string, block: number) => {
+      if (slot !== "0x360894a13ba1a3210667c828492db98dca3e2076cc3735a920a3ca505d382bbc" || block !== BLOCK) {
+        throw new Error(`Unexpected storage observation ${slot} at ${block}`);
+      }
       const implementation = IMPLEMENTATION_BY_PROXY[address.toLowerCase()];
       return implementation ? storageWord(implementation) : null;
     }),
-    multicall: vi.fn().mockImplementation(async (calls: readonly EvmMulticall3Call[]) =>
+    multicall: vi.fn().mockImplementation(async (calls: readonly EvmMulticall3Call[], block: number) => {
+      if (block !== BLOCK) throw new Error(`Unexpected multicall block ${block}`);
+      return (
       coin === "earn"
         ? earnResults(calls, options.earnOverrides)
-        : dStakeResults(calls, options.dStakeOverrides),
-    ),
+        : dStakeResults(calls, options.dStakeOverrides)
+      );
+    }),
   };
 }
 

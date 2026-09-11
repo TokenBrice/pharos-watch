@@ -70,6 +70,42 @@ describe("alt-peg-market", () => {
     expect(stats?.yearlyMarketCapChangePct).toBeCloseTo(90, 5);
   });
 
+  it("selects the newest reference at or before the exact yearly cutoff", () => {
+    const cutoff = 1_700_000_000;
+    const point = (date: number, value: number) => ({
+      date, commodityShare: value, fiatNonUsdShare: 0, commodity: value * 10, fiatNonUsd: 0, total: 1_000,
+    });
+    expect(buildAltPegTrendStats([
+      point(cutoff - 100, 1), point(cutoff, 2), point(cutoff + 1, 3),
+      point(cutoff + 365 * 86400, 5),
+    ])).toEqual({
+      latestSharePct: 5, latestAltMarketCap: 50,
+      yearlyShareDeltaPctPoints: 3, yearlyMarketCapChangePct: 150,
+    });
+  });
+
+  it("leaves yearly deltas unknown with less than a year of history", () => {
+    expect(buildAltPegTrendStats([
+      { date: 1, commodityShare: 1, fiatNonUsdShare: 0, commodity: 10, fiatNonUsd: 0, total: 100 },
+      { date: 365 * 86400, commodityShare: 2, fiatNonUsdShare: 0, commodity: 20, fiatNonUsd: 0, total: 100 },
+    ])).toMatchObject({ yearlyShareDeltaPctPoints: null, yearlyMarketCapChangePct: null });
+  });
+
+  it("treats null components as zero without dividing by zero reference capital", () => {
+    expect(buildAltPegTrendStats([
+      { date: 1, commodityShare: null, fiatNonUsdShare: 1, commodity: 0, fiatNonUsd: null, total: 100 },
+      { date: 1 + 365 * 86400, commodityShare: 2, fiatNonUsdShare: null, commodity: null, fiatNonUsd: 20, total: 100 },
+    ])).toEqual({
+      latestSharePct: 2, latestAltMarketCap: 20,
+      yearlyShareDeltaPctPoints: 1, yearlyMarketCapChangePct: null,
+    });
+  });
+
+  it("returns no trend for absent or empty history", () => {
+    expect(buildAltPegTrendStats()).toBeNull();
+    expect(buildAltPegTrendStats([])).toBeNull();
+  });
+
   it("builds taxonomy-backed non-USD link hub groups", () => {
     const groups = buildAltPegLinkHubGroups();
 

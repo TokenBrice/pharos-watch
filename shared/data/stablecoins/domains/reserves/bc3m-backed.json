@@ -2,6 +2,7 @@
   "id": "bc3m-backed",
   "reserves": [
     {
+      "sourceKey": "chainlink-por:feed:0x648e0ff6a36d58f6fce5927cb77601b73cadc2af",
       "name": "AMUNDI GOVIES 0-6 Months Euro Investment Grade ETF shares",
       "pct": 100,
       "risk": "low",

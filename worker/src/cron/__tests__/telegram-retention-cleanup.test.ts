@@ -1,7 +1,7 @@
 import { DatabaseSync } from "node:sqlite";
 import { afterEach, describe, expect, it } from "vitest";
 
-import { createLatestSchemaSqlite } from "../../test-helpers/latest-schema-sqlite";
+import { createLatestSchemaSqlite } from "@shared/test-utils/latest-schema-sqlite";
 import {
   TELEGRAM_PROCESSED_UPDATE_PRUNE_BATCH_LIMIT,
   runTelegramRetentionCleanup,
@@ -192,7 +192,7 @@ describe("runTelegramRetentionCleanup", () => {
     const staleReceivedAt = now - 8 * 24 * 60 * 60;
     insertProcessedUpdates(sqlite, 12_001, staleReceivedAt);
 
-    const result = await runTelegramRetentionCleanup(db);
+    const result = await runTelegramRetentionCleanup(db, undefined, { monotonicNow: () => 0 });
 
     expect(countRows(sqlite, "telegram_processed_updates")).toBe(7_001);
     const metadata = JSON.parse(result.metadata!) as {

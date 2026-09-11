@@ -59,6 +59,9 @@
     "version": 1,
     "semantics": "single-asset",
     "breakerScope": "mapollo-midas",
+    "scoring": {
+      "maxSourceAgeSec": 345600
+    },
     "display": {
       "url": "https://midas.app/mapollo",
       "label": "Midas mAPOLLO NAV"
@@ -71,8 +74,10 @@
       }
     },
     "params": {
+      "navScope": "portfolio",
       "oracleAddress": "0x84303e5568C7B167fa4fEBc6253CDdfe12b7Ee4B",
       "tokenAddress": "0x7cf9dec92ca9fd46f8d86e7798b72624bc116c05",
+      "sourceKey": "chainlink-nav:token:0x7cf9dec92ca9fd46f8d86e7798b72624bc116c05",
       "assetLabel": "Apollo Crypto managed yield strategy NAV",
       "assetRisk": "high",
       "maxOracleAgeSec": 604800

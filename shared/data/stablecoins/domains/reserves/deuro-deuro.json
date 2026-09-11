@@ -2,6 +2,7 @@
   "id": "deuro-deuro",
   "reserves": [
     {
+      "sourceKey": "collateral-positions-api:wfps",
       "name": "WFPS (Wrapped Frankencoin Pool Share)",
       "pct": 85,
       "risk": "very-high",
@@ -16,6 +17,7 @@
       "liquidityHorizon": "over-seven-days"
     },
     {
+      "sourceKey": "collateral-positions-api:wbtc",
       "name": "WBTC (Wrapped BTC)",
       "pct": 13.8,
       "risk": "medium",
@@ -31,6 +33,7 @@
       "liquidityHorizon": "seven-days"
     },
     {
+      "sourceKey": "collateral-positions-api:other",
       "name": "Other collateral",
       "pct": 1.2,
       "risk": "medium",

@@ -93,29 +93,48 @@ describe("runDataInvariantCanary", () => {
     });
   });
 
-  it.each([
-    ["status", "degraded", "warning"],
-    ["alert", "error", "critical"],
-  ] as const)("gives %s mode its operational result semantics", async (mode, expectedStatus, worstSeverity) => {
-    runAndPersistCanaryChecks.mockResolvedValueOnce({
-      mode,
-      observedAt: 1_775_900_000,
-      totalChecks: 1,
-      okCount: 0,
-      degradedCount: mode === "status" ? 1 : 0,
-      errorCount: mode === "alert" ? 1 : 0,
-      skippedCount: 0,
-      worstStatus: mode === "status" ? "degraded" : "error",
-      worstSeverity,
-      results: [{
-        checkId: "failing-check",
-        status: mode === "status" ? "degraded" : "error",
-        severity: worstSeverity,
-        durationMs: 2,
-      }],
-    });
+  it("applies mode precedence to the same error summary", async () => {
+    for (const [mode, status] of [["shadow", "ok"], ["status", "degraded"], ["alert", "error"]] as const) {
+      runAndPersistCanaryChecks.mockResolvedValueOnce({
+        observedAt: 1_775_900_000, totalChecks: 1, okCount: 0, degradedCount: 0,
+        errorCount: 1, skippedCount: 0, worstStatus: "error", worstSeverity: "warning", results: [],
+      });
+      expect((await runDataInvariantCanary(mockD1(), { mode })).status).toBe(status);
+    }
+  });
 
-    const result = await runDataInvariantCanary(mockD1(), { mode, observedAt: 1_775_900_000 });
-    expect(result.status).toBe(expectedStatus);
+  it("escalates critical severity even without an error count", async () => {
+    runAndPersistCanaryChecks.mockResolvedValueOnce({
+      observedAt: 1_775_900_000, totalChecks: 1, okCount: 0, degradedCount: 1,
+      errorCount: 0, skippedCount: 0, worstStatus: "degraded", worstSeverity: "critical", results: [],
+    });
+    expect((await runDataInvariantCanary(mockD1(), { mode: "alert" })).status).toBe("error");
+  });
+
+  it("reports persistence rejection according to operational mode", async () => {
+    for (const [mode, status] of [["status", "degraded"], ["alert", "error"]] as const) {
+      runAndPersistCanaryChecks.mockRejectedValueOnce(new Error("persistence failed"));
+      const result = await runDataInvariantCanary(mockD1(), { mode });
+      expect(result.status).toBe(status);
+      expect(JSON.parse(result.metadata!)).toMatchObject({ persistFailed: true, persistError: "persistence failed" });
+    }
+  });
+
+  it("propagates pre-existing cancellation without invoking persistence", async () => {
+    const controller = new AbortController();
+    const reason = new Error("cancel canary");
+    controller.abort(reason);
+    await expect(runDataInvariantCanary(mockD1(), { mode: "shadow", signal: controller.signal })).rejects.toBe(reason);
+    expect(runAndPersistCanaryChecks).not.toHaveBeenCalled();
+  });
+
+  it("does not turn cancellation during persistence rejection into fail-open success", async () => {
+    const controller = new AbortController();
+    const reason = new Error("cancel persistence");
+    runAndPersistCanaryChecks.mockImplementationOnce(async () => {
+      controller.abort(reason);
+      throw new Error("D1 interrupted");
+    });
+    await expect(runDataInvariantCanary(mockD1(), { mode: "shadow", signal: controller.signal })).rejects.toBe(reason);
   });
 });

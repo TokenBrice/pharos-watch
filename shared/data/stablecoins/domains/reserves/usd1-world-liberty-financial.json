@@ -15,7 +15,8 @@
         "custody",
         "concentration"
       ],
-      "liquidityHorizon": "one-day"
+      "liquidityHorizon": "one-day",
+      "sourceKey": "usd1-bundle-oracle:0x691b74146cdba162449012aa32d3cbf5df77d4c4"
     }
   ],
   "reserveReview": {

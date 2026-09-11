@@ -2,7 +2,7 @@
 
 import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { makeHealthyHealthResponse, makeHealthyStatusResponse } from "@/test-utils/status-fixtures";
+import { makeCriticalOpsResult } from "./admin-client.test-support";
 
 const {
   useCriticalOpsModelMock,
@@ -40,63 +40,9 @@ vi.mock("../status-dashboard/triage-summary", () => ({
 
 import TriageClient from "../client";
 
-const STATUS = makeHealthyStatusResponse();
-const HEALTH = makeHealthyHealthResponse();
-
-function makeCriticalModel() {
-  return {
-    attentionSections: [],
-    browserProbeSummary: null,
-    clientDataStale: false,
-    freshnessFloorMs: 1_700_000_000_000,
-    decision: {
-      systemState: "healthy",
-      systemLabel: "Healthy",
-      publicState: "healthy",
-      adminState: "healthy",
-      evidenceState: "current",
-      evidenceLabel: "Current and complete",
-      nextStep: "no-action",
-      nextStepLabel: "No action",
-      summary: "Public service healthy. Evidence current. No immediate action.",
-      hasPublicAdminDivergence: false,
-    },
-    evidence: {
-      state: "current",
-      label: "Current and complete",
-      requiredQueryCount: 3,
-      currentQueryCount: 3,
-      missingLabels: [],
-      staleLabels: [],
-      refreshErrorLabels: [],
-      oldestRequiredSuccessAtMs: 1_700_000_000_000,
-      oldestRequiredAgeSec: 10,
-    },
-    healthDiffersFromStatus: false,
-    issueGroups: { impacting: [], warnings: [], maintenance: [], watches: [] },
-    latestTransition: null,
-    notices: [],
-    overallTone: {
-      label: "Healthy",
-      badgeClassName: "healthy",
-      valueClassName: "healthy",
-    },
-    querySyncs: [],
-    recommendedActions: [],
-    statusHoldingAge: 60,
-  };
-}
 
 beforeEach(() => {
-  useCriticalOpsModelMock.mockReturnValue({
-    data: STATUS,
-    handleRefresh: vi.fn(),
-    healthData: HEALTH,
-    initialLoadError: null,
-    isLoading: false,
-    lastUpdated: 1_700_000_000_000,
-    model: makeCriticalModel(),
-  });
+  useCriticalOpsModelMock.mockReturnValue(makeCriticalOpsResult());
   useCredentialLifecycleSummaryMock.mockReturnValue({
     data: { generatedAt: 1_700_000_000, totalKeys: 4, active: 4, expiringSoon: 0, expired: 0, nonExpiring: 0, auditAnomalies7d: 0 },
     isLoading: false,
@@ -131,15 +77,9 @@ describe("admin triage client", () => {
   });
 
   it("shows an initial status failure instead of mounting triage", () => {
-    useCriticalOpsModelMock.mockReturnValue({
-      data: undefined,
-      handleRefresh: vi.fn(),
-      healthData: undefined,
+    useCriticalOpsModelMock.mockReturnValue(makeCriticalOpsResult({
       initialLoadError: new Error("status unavailable"),
-      isLoading: false,
-      lastUpdated: 0,
-      model: null,
-    });
+    }));
 
     render(<TriageClient />);
 

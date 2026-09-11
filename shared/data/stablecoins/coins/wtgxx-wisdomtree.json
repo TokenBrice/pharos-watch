@@ -94,6 +94,7 @@
       }
     },
     "params": {
+      "navScope": "native-fund-share",
       "oracleAddress": "0xD13cB763C43B5C058E7Ec40176962c5030F4EB49",
       "tokenAddress": "0x1fecf3d9d4fee7f2c02917a66028a48c6706c179",
       "assetLabel": "U.S. government money market fund shares",

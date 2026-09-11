@@ -5,8 +5,14 @@ import { createCronResult } from "../../lib/cron-result";
 import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import type { LiquidityFallbackCounters, LiquidityMetrics, LlamaPool } from "./types";
 import { runWithOverloadRetry } from "../../lib/d1-overload-retry";
-import { throwIfAborted } from "../../lib/abort";
+import { rethrowIfAborted, throwIfAborted } from "../../lib/abort";
 import { loadPriceValidationReferences } from "../../lib/price-validation";
+import { upsertStagedPools } from "../dex-discovery/persistence";
+import {
+  STAGED_WRITEBACK_MIN_REFRESH_GAP_SEC,
+  buildStagedPoolWriteback,
+  filterDiscoveryOwned,
+} from "./staged-pool-writeback";
 import { buildSymbolLookups, classifyPoolType, initLiquidityFallbackCounters } from "./pool-helpers";
 import { buildChainAddressKey } from "./token-resolution";
 import {
@@ -259,6 +265,7 @@ export async function stageDexLiquidityScoring(
       retention: stored.retention,
       rowsRead: scoringSourceState.primaryRawPoolCount,
       failedSources: scoringSourceState.failedSources,
+      degradedSources: scoringSourceState.degradedSources ?? [],
       fallbackSignals: scoringSourceState.fallbackSignals,
       poolRejections: poolState.poolRejections,
       poolRejectionMateriality: {
@@ -450,6 +457,7 @@ function buildDexLiquidityScoringSourceState(
     failedSources: sourceState.failedSources,
     criticalSourceFailures: sourceState.criticalSourceFailures,
     fallbackSignals: sourceState.fallbackSignals,
+    degradedSources: sourceState.directApiPhase.degradedSources,
     directApiSourceSummary: {
       circuitEvents: sourceState.directApiPhase.circuitEvents,
       sourceWarnings: sourceState.directApiPhase.sourceWarnings,
@@ -797,6 +805,7 @@ async function buildDexLiquidityPoolState(
         sourceState.lookups.contractMetaByChainAddress,
     },
     preprocessedPoolCounts: sourceState.directApiPoolCounts,
+    attemptedProtocolChains: sourceState.directApiPhase.attemptedProtocolChains,
     fallbackCounters: ctx.fallbackCounters,
   });
   logDirectApiSourceSummary(directApiIntegration, sourceState.directApiPhase.circuitEvents);
@@ -817,6 +826,10 @@ async function buildDexLiquidityPoolState(
     },
   });
 
+  // Snapshot this run's live-lane observations before the merge: rows the merge
+  // backfills arrive from dex_pool_staging, so writing them back would advance
+  // refreshed_at every hour and no row would ever age out (immortal registry).
+  const stagedWritebackSnapshot = buildStagedPoolWriteback(metrics, ctx.syncStartSec);
   const staged = await mergeStagedPools(
     ctx.db,
     metrics,
@@ -828,6 +841,30 @@ async function buildDexLiquidityPoolState(
   );
   mergeDexPriceObservationMap(sourceState.priceObservations, staged.priceObservations);
   staged.priceObservations.clear();
+  // Discovery wrote these rows and carries the only price either lane has: the
+  // live-lane copy would relabel them `dl` with `price_usd = NULL` and erase
+  // the observation the merge just sourced.
+  const stagedWriteback = filterDiscoveryOwned(stagedWritebackSnapshot, staged.discoveryOwnedKeys);
+  if (stagedWriteback.skippedDiscoveryOwned > 0) {
+    logWorkerEventArgs("handler", "info",
+      `[dex-liquidity] skipped ${stagedWriteback.skippedDiscoveryOwned} live-lane write-back rows owned by discovery`,
+    );
+  }
+  // Best-effort memory only: publication depends on the merge above, so a D1
+  // failure here costs durability, not this run's output.
+  try {
+    await upsertStagedPools(ctx.db, stagedWriteback.pools, ctx.signal, {
+      minRefreshGapSec: STAGED_WRITEBACK_MIN_REFRESH_GAP_SEC,
+    });
+  } catch (error) {
+    rethrowIfAborted(error, ctx.signal);
+    logWorkerEventArgs("handler", "warn", JSON.stringify({
+      scope: "dex-liquidity",
+      message: "Failed to write live-lane pools back to dex_pool_staging",
+      error: toErrorMessage(error),
+      rows: stagedWriteback.pools.length,
+    }));
+  }
   await enrichEvmV2ExecutionModels({
     metrics,
     chainAddressToId: sourceState.lookups.chainAddressToId,
@@ -898,6 +935,8 @@ async function buildDexLiquidityPoolState(
     stagedSkippedByOptionalWildcardIdentityCount: staged.skippedByOptionalWildcardIdentityCount,
     stagedSkippedByAuthoritativeProtocolCount: staged.skippedByAuthoritativeProtocolCount,
     stagedSkipDimensions: staged.skipDimensions,
+    stagedWritebackRows: stagedWriteback.pools.length,
+    stagedWritebackSkippedUntrustedIds: stagedWriteback.skippedUntrustedIds,
     directApiIntegration,
   };
 }
@@ -951,14 +990,17 @@ async function scoreDexLiquidityPoolState(
   sourceState.protocolTvlCaps.clear();
   sourceState.stablecoinMcapById.clear();
 
+  // The near and hard coverage/value guards are evaluated unconditionally in
+  // the post-scoring analysis, so a run with a critical source failure still
+  // records `nearCoverageGuard`, `nearValueGuard`, and `hardCoverageGuard` in
+  // cron metadata instead of going dark exactly on the worst runs. A critical
+  // failure already forces `degraded` and skipped persistence, so it keeps
+  // suppressing the hard abort that would otherwise replace that metadata with
+  // a thrown error.
   const hasCriticalSourceFailure = sourceState.criticalSourceFailures.length > 0;
-  if (
-    !hasCriticalSourceFailure &&
-    analysis.previousCoverage >= 10 &&
-    analysis.currentCoverage < analysis.minExpectedCoverage
-  ) {
+  if (!hasCriticalSourceFailure && analysis.hardCoverageGuard) {
     throw new Error(
-      `[dex-liquidity] coverage guard tripped: current=${analysis.currentCoverage}, previous=${analysis.previousCoverage}, minExpected=${analysis.minExpectedCoverage}`,
+      `[dex-liquidity] coverage guard tripped: current=${analysis.currentCoverage}, baseline=${analysis.previousCoverage}, minExpected=${analysis.minExpectedCoverage}`,
     );
   }
   if (!hasCriticalSourceFailure && analysis.hardValueGuard) {
@@ -983,6 +1025,7 @@ async function scoreDexLiquidityPoolState(
       currentGlobalTvl: Math.round(analysis.currentGlobalTvl),
     },
     metadata: {
+      hardCoverageGuard: analysis.hardCoverageGuard,
       hardValueGuard: analysis.hardValueGuard,
       hardMajorCoverageGuard: analysis.hardMajorCoverageGuard,
     },
@@ -1237,6 +1280,8 @@ function buildDexLiquidityCronResult(
         stagedPoolsSkippedByOptionalWildcardIdentity: poolState.stagedSkippedByOptionalWildcardIdentityCount,
         stagedPoolsSkippedByAuthoritativeProtocol: poolState.stagedSkippedByAuthoritativeProtocolCount,
         stagedPoolSkipDimensions: poolState.stagedSkipDimensions,
+        stagedWritebackRows: poolState.stagedWritebackRows,
+        stagedWritebackSkippedUntrustedIds: poolState.stagedWritebackSkippedUntrustedIds,
         poolRejections: poolState.poolRejections,
         directApiSourceSummary: {
           acceptedByProtocolChain: poolState.directApiIntegration.acceptedByProtocolChain,

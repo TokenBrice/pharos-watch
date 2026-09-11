@@ -27,6 +27,8 @@ Worst-case gap between scheduled attempts is 48h, leaving a roughly 24h manual/r
 
 Each stage is a separate step, so a partial refresh (for example V1 succeeding and V2 failing) fails the job **before** any branch, commit, or PR is created. Nothing unverified reaches the registry.
 
+Each measure step writes the journal and its committed `<journal>.summary.json` projection together. The attestation and registry generators discover journals only through those summaries (raw bodies leave Git for R2 in the later upload step), so a summary written only at upload time would leave a fresh measurement invisible to the registry and fail the freshness assertion.
+
 ### Replay attestations are load-bearing
 
 `shared/lib/safety-score-v9/archetypes/cdp.ts` rejects any measurement where `exactReplayPassed` is false or `replayVerification` is null, with reason `stress-measurement-exact-replay-not-passed`. A journal committed without a matching attestation therefore scores exactly as if it were missing.

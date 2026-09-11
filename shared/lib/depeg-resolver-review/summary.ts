@@ -128,6 +128,65 @@ function isDurationScoredPredictionRow(row: DdrrV2PredictionReviewRow): row is D
   return row.signedDurationErrorSec != null && row.absoluteDurationErrorSec != null;
 }
 
+type DdrrAssignmentState = DdrrResponseRow["predictionState"];
+
+function isFinalizedAssignmentState(state: DdrrAssignmentState): boolean {
+  switch (state) {
+    case "pending_lock":
+    case "lock_deferred":
+    case "publication_retry_pending":
+      return false;
+    case "frozen":
+    case "no_call":
+    case "invalidated":
+    case "resolved_before_prediction":
+    case "terminal_before_prediction":
+    case "data_quality_gap":
+    case "orphan_closed":
+    case "missed_lock_recovered":
+    case "missed_lock_terminal":
+    case "publication_failed":
+      return true;
+  }
+}
+
+/**
+ * Assignment accounting counts each incident once. Every row carries exactly one
+ * `predictionState`, and an operational cause is an overlay on that state rather
+ * than a second assignment, so grouping by incident before counting keeps the
+ * assigned and finalized shares partitions of the policy universe — at most one
+ * by construction, never by clamping. Rows that disagree about one incident's
+ * state stay unassigned so the shortfall remains visible instead of inflating
+ * the share. Adding a coverage state is a compile error in
+ * `isFinalizedAssignmentState` until it is classified.
+ */
+function summarizeIncidentAssignments(rows: readonly DdrrResponseRow[]): {
+  stateAssignedCount: number;
+  finalizedCoverageCount: number;
+} {
+  const stateByIncident = new Map<string, DdrrAssignmentState | null>();
+  for (const row of rows) {
+    const assigned = stateByIncident.get(row.incidentKey);
+    if (assigned === undefined) {
+      stateByIncident.set(row.incidentKey, row.predictionState);
+    } else if (assigned !== row.predictionState) {
+      stateByIncident.set(row.incidentKey, null);
+    }
+  }
+  let stateAssignedCount = 0;
+  let finalizedCoverageCount = 0;
+  for (const state of stateByIncident.values()) {
+    if (state == null) {
+      continue;
+    }
+    stateAssignedCount += 1;
+    if (isFinalizedAssignmentState(state)) {
+      finalizedCoverageCount += 1;
+    }
+  }
+  return { stateAssignedCount, finalizedCoverageCount };
+}
+
 export function summarizeDdrrMetrics(rows: readonly DdrrResponseRow[]): DdrrV2SummaryMetrics {
   const predictionRows = rows.filter((row): row is DdrrV2PredictionReviewRow => row.kind === "prediction_review");
   const noCallRows = rows.filter((row) => row.kind === "no_call_review");
@@ -187,29 +246,7 @@ export function summarizeDdrrMetrics(rows: readonly DdrrResponseRow[]): DdrrV2Su
     missedNoPredictionCount;
   const finalizedOpportunityCount =
     lockedPredictionCount + noCallCount + invalidatedPredictionCount + publicationFailedCount + missedNoPredictionCount;
-  const stateAssignedCount =
-    lockedPredictionCount +
-    noCallCount +
-    pendingLockCount +
-    lockDeferredCount +
-    resolvedBeforePredictionCount +
-    terminalBeforePredictionCount +
-    dataQualityGapCount +
-    orphanClosedCount +
-    missedNoPredictionCount +
-    publicationRetryPendingCount +
-    publicationFailedCount +
-    invalidatedPredictionCount;
-  const finalizedCoverageCount =
-    lockedPredictionCount +
-    noCallCount +
-    resolvedBeforePredictionCount +
-    terminalBeforePredictionCount +
-    dataQualityGapCount +
-    orphanClosedCount +
-    missedNoPredictionCount +
-    publicationFailedCount +
-    invalidatedPredictionCount;
+  const { stateAssignedCount, finalizedCoverageCount } = summarizeIncidentAssignments(rows);
   const invalidatedByReason = invalidatedRows.reduce<Record<string, number>>((counts, row) => {
     const reason = row.latestErratum.reason;
     counts[reason] = (counts[reason] ?? 0) + 1;

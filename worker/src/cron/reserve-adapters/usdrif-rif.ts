@@ -384,17 +384,17 @@ export async function fetchUsdrifRifReserves(
     throw new Error(`${ADAPTER_KEY}: bucket liabilities do not equal canonical USDRIF total supply`);
   }
 
+  const warnings: LiveReserveWarning[] = [];
   const priceMap = await fetchDefiLlamaPrices([
     { key: "rif", chain: ROOTSTOCK_CHAIN, address: params.rifToken.address },
     { key: "doc", chain: ROOTSTOCK_CHAIN, address: params.docToken.address },
-  ], signal, ctx);
+  ], signal, ctx, warnings);
   const rifMarketPrice = priceMap.get("rif");
   const docMarketPrice = priceMap.get("doc");
   if (rifMarketPrice == null || docMarketPrice == null || rifMarketPrice <= 0 || docMarketPrice <= 0) {
     throw new Error(`${ADAPTER_KEY}: DefiLlama market prices for RIF and DOC are required`);
   }
 
-  const warnings: LiveReserveWarning[] = [];
   const branchDetails: Record<string, unknown>[] = [];
   const marketValues: Array<{ branch: BucketObservation; marketPrice: number; marketValueUsd: number; protocolCoverage: number }> = [];
   for (const branch of [rif, doc]) {

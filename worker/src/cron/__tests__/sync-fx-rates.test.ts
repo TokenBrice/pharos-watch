@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { mockFetch } from "@shared/test-utils/mock-fetch";
 import { CIRCUIT_SOURCE } from "../../lib/constants";
 import { mockFetchRetry } from "../../test-helpers/cron";
+import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
 import {
   findCacheWrite,
   makeChainlinkFxRoutes,
@@ -37,6 +38,7 @@ function resetFetchRetryMocks(): void {
 
 import { syncFxRates } from "../sync-fx-rates";
 describe("syncFxRates", () => {
+  const fixtures = createLatestSchemaFixtureTracker();
   beforeEach(() => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date("2025-06-15T12:00:00Z"));
@@ -44,6 +46,7 @@ describe("syncFxRates", () => {
   });
 
   afterEach(() => {
+    fixtures.closeAll();
     vi.useRealTimers();
     vi.restoreAllMocks();
   });
@@ -99,6 +102,37 @@ describe("syncFxRates", () => {
     expect(cachedMeta.sourceCadenceByPeg.peggedCNH).toBe("calendar-daily");
     expect(cachedMeta.sourceDateByPeg.peggedEUR).toBe("2025-06-15");
     expect(cachedMeta.sourceDateByPeg.peggedCNH).toBe("2025-06-15");
+  });
+  it.each(["fx-rates", "fx-rates-meta"] as const)("reports a publication race lost by %s without replacing its winner", async (winningKey) => {
+    const { db, sqlite } = fixtures.open();
+    const now = Math.floor(Date.now() / 1000);
+    const winningValue = JSON.stringify(winningKey === "fx-rates"
+      ? { peggedEUR: 1.2345 }
+      : { winner: "newer-provenance" });
+    let publishedWinner = false;
+    mockFetch(fxMirrors().map((route) => ({
+      match: route.match,
+      respond: () => {
+        if (!publishedWinner) {
+          publishedWinner = true;
+          sqlite.prepare("INSERT INTO cache (key, value, updated_at) VALUES (?, ?, ?)")
+            .run(winningKey, winningValue, now + 1);
+        }
+        return new Response(JSON.stringify(route.body), { status: route.status ?? 200 });
+      },
+    })));
+
+    const result = await syncFxRates(db);
+    expect(publishedWinner).toBe(true);
+    expect(JSON.parse(result.metadata!)).toMatchObject({
+      casSkipped: true,
+      cacheWriteMode: winningKey === "fx-rates" ? "skipped-newer" : "published",
+      cacheWriteSucceeded: winningKey !== "fx-rates",
+    });
+    if (winningKey === "fx-rates") expect(result.itemCount).toBe(0);
+    else expect(result.itemCount).toBeGreaterThan(0);
+    expect(sqlite.prepare("SELECT value, updated_at FROM cache WHERE key = ?").get(winningKey))
+      .toEqual({ value: winningValue, updated_at: now + 1 });
   });
 
   it("uses fresh commodity peer medians from the stablecoins cache when gold-api.com is unavailable", async () => {

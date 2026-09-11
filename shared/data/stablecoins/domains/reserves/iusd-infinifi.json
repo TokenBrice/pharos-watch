@@ -2,6 +2,7 @@
   "id": "iusd-infinifi",
   "reserves": [
     {
+      "sourceKey": "infinifi:fasanara-gdaf",
       "name": "Fasanara mGLOBAL (GDADF)",
       "pct": 44.052194,
       "risk": "high",
@@ -18,6 +19,7 @@
       "liquidityHorizon": "over-seven-days"
     },
     {
+      "sourceKey": "infinifi:cowswap-fxsave",
       "name": "f(x) fxSAVE",
       "pct": 16.700447,
       "risk": "medium",
@@ -34,6 +36,7 @@
       "liquidityHorizon": "seven-days"
     },
     {
+      "sourceKey": "infinifi:new-silver-junior",
       "name": "New Silver",
       "pct": 10.715996,
       "risk": "high",
@@ -48,6 +51,7 @@
       "liquidityHorizon": "over-seven-days"
     },
     {
+      "sourceKey": "infinifi:spark-susdc-refcode",
       "name": "Spark sUSDC",
       "pct": 10.533433,
       "risk": "low",
@@ -63,6 +67,7 @@
       "liquidityHorizon": "immediate"
     },
     {
+      "sourceKey": "infinifi:new-silver-senior",
       "name": "New Silver 2 Senior",
       "pct": 6.267344,
       "risk": "high",
@@ -76,6 +81,7 @@
       "liquidityHorizon": "seven-days"
     },
     {
+      "sourceKey": "infinifi:fasanara-rwa-farm",
       "name": "Fasanara Genesis Fund",
       "pct": 5.395478,
       "risk": "high",
@@ -90,6 +96,7 @@
       "liquidityHorizon": "over-seven-days"
     },
     {
+      "sourceKey": "infinifi:falconx-farm",
       "name": "FalconX Institutional",
       "pct": 4.190024,
       "risk": "high",
@@ -106,6 +113,7 @@
       "liquidityHorizon": "seven-days"
     },
     {
+      "sourceKey": "infinifi:morpho-steakusdcinfinifi",
       "name": "Morpho infiniFi Ecosystem Vault",
       "pct": 2.093801,
       "risk": "medium",
@@ -122,6 +130,7 @@
       "liquidityHorizon": "seven-days"
     },
     {
+      "sourceKey": "infinifi:base-outland-farm",
       "name": "BASE Liquidity Farm",
       "pct": 0.051283,
       "risk": "high"

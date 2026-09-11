@@ -128,6 +128,11 @@
         "coinId": "usdc-circle",
         "depType": "wrapper",
         "expectedAssetAddress": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48"
+      },
+      "deployedExposure": {
+        "basis": "Maple documents an ERC-4626 claim on a segregated USDC-denominated pool; deployed USDC is that pool's loans and strategies",
+        "reviewedAt": "2026-09-11",
+        "sourceUrl": "https://docs.maple.finance/syrupusdc-for-lenders/introduction"
       }
     }
   },

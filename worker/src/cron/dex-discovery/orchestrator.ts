@@ -183,6 +183,21 @@ export function hasVerifiedEmptyCensus(
   return supportedDeploymentCount > 0 && summary.verifiedNoPoolsCount >= supportedDeploymentCount;
 }
 
+/**
+ * Does this coin's census still carry an unsupported-scope row for a chain the
+ * provider registry now serves? The row is a pre-coverage artifact the backoff
+ * ladder can starve for weeks — the census freshness bound is priced at the t3
+ * cadence — so the crawl rotation must re-attempt the footprint at refresh
+ * cadence and overwrite the row instead of keeping it.
+ */
+export function hasRemappedUnsupportedCensusRow(
+  targets: readonly ContractDeployment[],
+  summary: DiscoveryCensusSummary | undefined,
+): boolean {
+  if (!summary || summary.remappedUnsupportedCount === 0) return false;
+  return targets.some((target) => getDexDiscoveryProviders(target.chain, target.address).length > 0);
+}
+
 export function computeEffectiveTier(
   stablecoinId: string,
   poolCount: number,
@@ -389,7 +404,8 @@ export async function syncDexDiscovery(
         censusVerifiedEmpty,
         (coverage?.hasSupplementalCoverage === true ||
         (coverage?.poolCount === 0 && targets.some((target) =>
-          getDexDiscoveryProviders(target.chain, target.address).length > 0))) &&
+          getDexDiscoveryProviders(target.chain, target.address).length > 0)) ||
+        hasRemappedUnsupportedCensusRow(targets, censusById.get(coin.id))) &&
           isDiscoveryEvidenceRefreshDue(targets, metaById.get(coin.id), nowSec),
       );
 
@@ -487,6 +503,16 @@ export async function syncDexDiscovery(
           coinDeadline,
           validationReferences,
           dexScreenerRunState,
+          onProgress ? async (provider) => {
+            await onProgress({
+              // Reconciliation retains the stage even after clearing progress.
+              stage: `crawl-${provider}:${candidate.stablecoinId}`,
+              itemsDone: index,
+              itemsTotal: eligibleCoins.length,
+              message: `Crawling ${candidate.stablecoinId} via ${provider}`,
+              metadata: { runSeq, tier: candidate.tier, coinsCrawled, poolsDiscovered },
+            });
+          } : undefined,
         );
 
         try {

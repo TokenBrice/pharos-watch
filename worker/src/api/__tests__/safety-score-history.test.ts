@@ -15,12 +15,13 @@ function makeHistoryRow(
   }> = {},
 ) {
   return {
-    recorded_at: overrides.recorded_at ?? 1_772_000_000,
-    grade: overrides.grade ?? "B+",
-    score: overrides.score ?? 78,
-    prev_grade: overrides.prev_grade ?? "B",
-    prev_score: overrides.prev_score ?? 74,
-    methodology_version: overrides.methodology_version ?? "5.5",
+    recorded_at: 1_772_000_000,
+    grade: "B+",
+    score: 78,
+    prev_grade: "B",
+    prev_score: 74,
+    methodology_version: "5.5",
+    ...overrides,
   };
 }
 
@@ -54,7 +55,7 @@ describe("handleSafetyScoreHistory", () => {
     const body = (await readJsonResponse(res, 200)) as Array<Record<string, unknown>>;
     expect(body).toHaveLength(1);
     expect(body[0]).toEqual({
-      date: body[0].date,
+      date: 1_772_000_000,
       grade: "B+",
       score: 78,
       prevGrade: "B",
@@ -67,6 +68,17 @@ describe("handleSafetyScoreHistory", () => {
     const historyQuery = db.getHistory().find((entry) => entry.sql.includes("safety_score_history_v2"));
     expect(historyQuery?.sql).toContain("FROM safety_grade_history legacy");
     expect(historyQuery?.sql).toContain("'initial-baseline', 'organic-grade-change'");
+  });
+
+  it("preserves an initial NR row with null score and predecessor", async () => {
+    const db = mockD1([
+      { match: "safety_grade_history", rows: [makeHistoryRow({ grade: "NR", score: null, prev_grade: null, prev_score: null })] },
+      { match: "cron_runs", rows: [], first: null },
+    ]);
+    const response = await handleSafetyScoreHistory(db, new URL("https://x/api/safety-score-history?stablecoin=usdt-tether"));
+    expect(await readJsonResponse(response, 200)).toEqual([{
+      date: 1_772_000_000, grade: "NR", score: null, prevGrade: null, prevScore: null, methodologyVersion: "5.5",
+    }]);
   });
 
   it("returns empty array when no rows exist", async () => {

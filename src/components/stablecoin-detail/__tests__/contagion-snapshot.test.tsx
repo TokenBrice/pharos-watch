@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import Link from "next/link";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { makeReportCardsV9Response, makeV9Card } from "@/test/fixtures/safety-score-v9";
@@ -32,10 +32,14 @@ vi.mock("next/dynamic", () => ({
       dependencyEdges,
     }: {
       focusCoinId?: string;
-      dependencyEdges?: readonly unknown[];
+      dependencyEdges?: readonly { from: string; to: string }[];
     }) {
       return (
-        <div data-testid="contagion-graph" data-focus={focusCoinId} data-edge-count={dependencyEdges?.length ?? 0} />
+        <div
+          data-testid="contagion-graph"
+          data-focus={focusCoinId}
+          data-edges={(dependencyEdges ?? []).map((edge) => `${edge.from}>${edge.to}`).join(",")}
+        />
       );
     },
 }));
@@ -50,29 +54,32 @@ vi.mock("@/components/stablecoin-detail/collateral-usage-section", () => ({
 
 import { ContagionSnapshot } from "../contagion-snapshot";
 
+function basketOn(upstreamAssetId: string) {
+  return {
+    serial: [],
+    basket: [{ upstreamAssetId, weight: 0.8, score: 84, boundedUnknown: false }],
+    cycleBlocked: false,
+    reasonCodes: [],
+  };
+}
+
 function makeDependencyResponse() {
   return makeReportCardsV9Response({
     cards: [
       makeV9Card({ id: "usdc-circle" }),
-      makeV9Card({
-        id: "usde-ethena",
-        dependencies: {
-          serial: [],
-          basket: [
-            {
-              upstreamAssetId: "usdc-circle",
-              weight: 0.8,
-              score: 84,
-              boundedUnknown: false,
-            },
-          ],
-          cycleBlocked: false,
-          reasonCodes: [],
-        },
-      }),
+      makeV9Card({ id: "usde-ethena", dependencies: basketOn("usdc-circle") }),
     ],
   });
 }
+
+const SUPPLY_DATA = {
+  peggedAssets: [
+    { id: "usdc-circle", circulating: { peggedUSD: 60_000_000_000 } },
+    { id: "usde-ethena", circulating: { peggedUSD: 5_000_000_000 } },
+  ],
+};
+
+const STALE_UPDATED_AT = Date.parse("2026-07-10T00:00:00Z");
 
 describe("ContagionSnapshot", () => {
   beforeEach(() => {
@@ -86,12 +93,7 @@ describe("ContagionSnapshot", () => {
     });
     useStablecoinsMock.mockReset();
     useStablecoinsMock.mockReturnValue({
-      data: {
-        peggedAssets: [
-          { id: "usdc-circle", circulating: { peggedUSD: 60_000_000_000 } },
-          { id: "usde-ethena", circulating: { peggedUSD: 5_000_000_000 } },
-        ],
-      },
+      data: SUPPLY_DATA,
       error: null,
       dataUpdatedAt: 1,
       refetch: vi.fn(),
@@ -111,7 +113,7 @@ describe("ContagionSnapshot", () => {
     );
     const { rerender } = render(content());
     expect(screen.queryByTestId("contagion-graph")).toBeNull();
-    expect(screen.getByText("Loading dependency graph...").className).toContain("min-h-[22rem]");
+    expect(screen.getByText("Loading dependency graph...")).toBeTruthy();
     expect(screen.getByText("Dependency Context")).toBeTruthy();
     expect(screen.getByRole("link", { name: "Related asset" }).getAttribute("href")).toBe("/stablecoin/usde-ethena");
     expect(screen.getByTestId("collateral-usage-mock")).toBeTruthy();
@@ -134,7 +136,7 @@ describe("ContagionSnapshot", () => {
     expect(screen.getByText("Dependency Context")).toBeTruthy();
     const graph = screen.getByTestId("contagion-graph");
     expect(graph.getAttribute("data-focus")).toBe("usde-ethena");
-    expect(graph.getAttribute("data-edge-count")).toBe("1");
+    expect(graph.getAttribute("data-edges")).toBe("usdc-circle>usde-ethena");
     expect(screen.getByTestId("variant-card").textContent).toBe("VARIANT");
   });
 
@@ -234,5 +236,111 @@ describe("ContagionSnapshot", () => {
 
     expect(screen.getByText("Dependency Context")).toBeTruthy();
     expect(screen.getByTestId("variant-card").textContent).toBe("VARIANT");
+  });
+
+  it("hands the graph only the focus coin's own incoming and outgoing edges", () => {
+    useReportCardsV9Mock.mockReturnValue({
+      data: makeReportCardsV9Response({
+        cards: [
+          makeV9Card({ id: "usdc-circle" }),
+          makeV9Card({ id: "usds-sky" }),
+          makeV9Card({ id: "usde-ethena", dependencies: basketOn("usdc-circle") }),
+          makeV9Card({ id: "susde-ethena", dependencies: basketOn("usde-ethena") }),
+          makeV9Card({ id: "dai-makerdao", dependencies: basketOn("usds-sky") }),
+        ],
+      }),
+      error: null,
+      dataUpdatedAt: 1,
+      refetch: vi.fn(),
+    });
+
+    render(<ContagionSnapshot stablecoinId="usde-ethena" />);
+
+    expect(screen.getByTestId("contagion-graph").getAttribute("data-edges")).toBe(
+      "usdc-circle>usde-ethena,usde-ethena>susde-ethena",
+    );
+  });
+
+  it.each([
+    [
+      "report cards",
+      () =>
+        useReportCardsV9Mock.mockReturnValue({
+          data: makeDependencyResponse(),
+          error: new Error("refresh failed"),
+          dataUpdatedAt: STALE_UPDATED_AT,
+          refetch: vi.fn(),
+        }),
+    ],
+    [
+      "stablecoin supply",
+      () =>
+        useStablecoinsMock.mockReturnValue({
+          data: SUPPLY_DATA,
+          error: new Error("refresh failed"),
+          dataUpdatedAt: STALE_UPDATED_AT,
+          refetch: vi.fn(),
+        }),
+    ],
+  ])("keeps the cached graph and warns when the %s refresh fails", (_name, degrade) => {
+    degrade();
+
+    render(<ContagionSnapshot stablecoinId="usde-ethena" />);
+
+    expect(screen.getByRole("status").textContent).toContain(
+      "refresh failed; showing the last available data",
+    );
+    expect(screen.getByTestId("contagion-graph").getAttribute("data-edges")).toBe("usdc-circle>usde-ethena");
+  });
+
+  it("still draws the dependency map when supply data is missing entirely", () => {
+    useStablecoinsMock.mockReturnValue({
+      data: undefined,
+      error: null,
+      dataUpdatedAt: 0,
+      refetch: vi.fn(),
+    });
+
+    render(<ContagionSnapshot stablecoinId="usde-ethena" />);
+
+    expect(screen.getByTestId("contagion-graph").getAttribute("data-edges")).toBe("usdc-circle>usde-ethena");
+    expect(screen.queryByRole("alert")).toBeNull();
+    expect(screen.queryByRole("status")).toBeNull();
+  });
+
+  it("restarts both sources on retry and drops the notice once they recover", () => {
+    const refetchCards = vi.fn();
+    const refetchSupply = vi.fn();
+    const healthyCards = {
+      data: makeDependencyResponse(),
+      error: null,
+      dataUpdatedAt: 1,
+      refetch: refetchCards,
+    };
+    useReportCardsV9Mock.mockReturnValue({ ...healthyCards, data: undefined, error: new Error("V9 unavailable"), dataUpdatedAt: 0 });
+    useStablecoinsMock.mockReturnValue({
+      data: undefined,
+      error: null,
+      dataUpdatedAt: 0,
+      refetch: refetchSupply,
+    });
+
+    const { rerender } = render(<ContagionSnapshot stablecoinId="usde-ethena" />);
+
+    fireEvent.click(screen.getByRole("button", { name: "Retry dependency graph data" }));
+    expect(refetchCards).toHaveBeenCalledTimes(1);
+    expect(refetchSupply).toHaveBeenCalledTimes(1);
+
+    useReportCardsV9Mock.mockReturnValue(healthyCards);
+    useStablecoinsMock.mockReturnValue({
+      data: { peggedAssets: [{ id: "usde-ethena", circulating: { peggedUSD: 5_000_000_000 } }] },
+      error: null,
+      dataUpdatedAt: 2,
+      refetch: refetchSupply,
+    });
+    rerender(<ContagionSnapshot stablecoinId="usde-ethena" />);
+
+    expect(screen.queryByRole("alert")).toBeNull();
+    expect(screen.getByTestId("contagion-graph").getAttribute("data-edges")).toBe("usdc-circle>usde-ethena");
   });
 });

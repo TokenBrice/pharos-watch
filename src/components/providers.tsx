@@ -101,7 +101,7 @@ const InteractiveProviders = lazy(async () => {
         }
 
         if (event.key === "?" && !event.ctrlKey && !event.metaKey && !event.altKey) {
-          if (shortcutSettings.isSidebarShortcutDisabled()) return;
+          if (shortcutSettings.isSingleKeyShortcutDisabled()) return;
           event.preventDefault();
           setKeyboardShortcutsLoaded(true);
           setKeyboardShortcutsOpen(true);
@@ -111,7 +111,7 @@ const InteractiveProviders = lazy(async () => {
         if (event.ctrlKey || event.metaKey || event.altKey) return;
 
         if (event.key >= "1" && event.key <= "9") {
-          if (shortcutSettings.isSidebarShortcutDisabled()) return;
+          if (shortcutSettings.isSingleKeyShortcutDisabled()) return;
           event.preventDefault();
           window.dispatchEvent(
             new CustomEvent<SortColumnEventDetail>(SORT_COLUMN_EVENT, {

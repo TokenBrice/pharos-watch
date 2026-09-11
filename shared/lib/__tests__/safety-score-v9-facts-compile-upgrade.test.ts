@@ -25,6 +25,7 @@ import {
   V9_CANDIDATE_POLICY_V1,
 } from "./safety-score-v9-facts.fixture-support";
 import type { V9AssetFactsV2, V9AssetFactsV3 } from "./safety-score-v9-facts.fixture-support";
+import { unresolvedArchetype } from "./safety-score-v9-facts.test-support";
 
 describe("Safety Score v9 fact compilation and upgrades", () => {
   it("defaults retained v2 fact routes without modeled confidence to low", () => {
@@ -306,25 +307,7 @@ describe("Safety Score v9 fact compilation and upgrades", () => {
   it("retains an unresolved archetype as an explicit fact state", () => {
     const input = coreFixture();
     const beta = input.assets[1]! as unknown as V9AssetFactsV2;
-    const gap = createV9FactGap({
-      gapId: "gap:missing-archetype",
-      reasonCode: "missing-archetype",
-      ownerDomain: "backing",
-      policyRuleId: "backing.archetype.review",
-      observationState: "missing",
-      path: { kind: "local-component", componentKey: "mechanism-archetype" },
-      message: "The mechanism archetype is unresolved.",
-    });
-    beta.archetype = "unresolved";
-    beta.gaps = [gap];
-    beta.mechanismRiskReview = {
-      status: createV9FactStatus({
-        applicability: requiredV9Applicability("backing.archetype.review"),
-        observationState: "missing",
-        gapIds: [gap.gapId],
-      }),
-      review: null,
-    };
+    unresolvedArchetype(beta, "gap:missing-archetype");
     const compiled = compileV9FactSetV2(input);
     expect(compiled.assets.find((asset) => asset.assetId === "beta")?.archetype).toBe("unresolved");
   });
@@ -489,6 +472,17 @@ describe("Safety Score v9 fact compilation and upgrades", () => {
     const input = coreFixture();
     mutate(input);
     expect(() => compileV9FactSetV2(input)).toThrow(message);
+  });
+  it("requires native V3 dependency identities to include their economic role", () => {
+    const { v9FactSetDigest: _digest, ...core } = structuredClone(compileNativeV3FactSet(coreFixture()));
+    const edge = core.assets[0]!.dependencies.edges.find((candidate) => candidate.upstreamAssetId === "beta")!;
+    edge.economicRole = "exit-dependency";
+    edge.pathKind = "local-component";
+    expect(() => compileV9FactSetV3(core)).toThrow("Expected exit-dependency:collateral:beta");
+    edge.edgeKey = "exit-dependency:collateral:beta";
+    expect(compileV9FactSetV3(core).assets[0]!.dependencies.edges).toContainEqual(
+      expect.objectContaining({ edgeKey: "exit-dependency:collateral:beta", economicRole: "exit-dependency" }),
+    );
   });
   it("requires explicit evidence classes for curated reserve rows", () => {
     const input = coreFixture();

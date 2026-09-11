@@ -2,7 +2,7 @@
 title: "Tether (USDT) Stablecoin Analytics"
 canonical: "https://pharos.watch/stablecoin/usdt-tether/"
 description: "Build-time stablecoin profile for Tether (USDT). Live price, supply, peg, liquidity, and flow data are served by the Pharos API."
-dateModified: "2026-08-11"
+dateModified: "2026-09-07"
 ---
 
 
@@ -19,7 +19,7 @@ dateModified: "2026-08-11"
 
 ## Overview
 
-USDT's A+ overall grade is the sound of scale winning arguments: an A+ peg record, an exit pillar scored at the very top of the scale, and economic control landing in A- territory. Backing is the lone B, with secured loans, gold, bitcoin, and equities alongside the Treasury wall. The Q2 2026 BDO attestation keeps assets ahead of liabilities, but the excess reserve buffer nearly halved in a single quarter to roughly $4 billion, a rounding error against a book of well over $180 billion and exactly the line skeptics will watch as gold marks and bitcoin swings flow through it. USDT0 extends the franchise across another wave of chains through lock-and-mint rails, useful for distribution and a reminder that omnichain convenience is not the same thing as issuer decentralization. The redemption floor is real for eligible Tether customers, but it remains governed by Tether's terms, discretion, and quarterly attestation cadence rather than continuous bank-style disclosure. The franchise's two faces stay on display: when OFAC attached 131 TRON addresses to its ISIS-K designation in July, Tether froze every one within hours. This sanction-machine reflex is faster than a bank's response. In Europe the MiCA wall keeps rising, with Revolut set to delist USDT for EU users by the end of August 2026 and force-convert whatever remains. The 2019 accidental 5B mint is still the canonical lesson: the biggest stablecoin can be operationally serious and structurally centralized at the same time.
+USDT's N/A overall grade is the sound of scale winning arguments: the peg record and the exit pillar sit at the top of the scale, economic control is strong, and backing is the weakest of the three pillars. That backing line carries secured loans, gold, bitcoin, and equities alongside the {{term:treasury}}Treasury{{/term}} wall, and the card flags the attested composition as older than v9's freshness bound between quarterly reports. The Q2 2026 BDO attestation keeps assets ahead of liabilities, but the excess reserve buffer nearly halved in a single quarter to roughly $4 billion, a thin cushion against a book of well over $180 billion that gold marks and bitcoin swings flow through. USDT0 extends the franchise across another wave of chains through lock-and-mint rails, useful for distribution and a reminder that omnichain convenience is not the same thing as issuer decentralization. The {{term:redemption}}redemption{{/term}} floor is real for eligible Tether customers, but it remains governed by Tether's terms, discretion, and quarterly {{term:attestation}}attestation{{/term}} cadence rather than continuous bank-style disclosure. The freeze surface is verified at the contract level: the Ethereum token exposes owner-only blacklist, fund-destruction, and pause functions, and Tether's terms reserve the right to use them. In Europe the MiCA wall keeps rising, with Revolut's announced delisting of USDT for EU users at the end of August 2026 and forced conversion of whatever remained. The canonical lesson stands: the biggest stablecoin can be operationally serious and structurally centralized at the same time.
 
 ## Collateral
 

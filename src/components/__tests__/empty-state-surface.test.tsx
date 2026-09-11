@@ -73,18 +73,6 @@ describe("EmptyStateSurface", () => {
     expect(screen.getByText("This is a footnote.")).toBeTruthy();
   });
 
-  it("does not render footnote container when footnote is not provided", () => {
-    const { container } = render(
-      <EmptyStateSurface
-        eyebrow="Guide"
-        title="Empty"
-        description="Nothing here."
-      />,
-    );
-    // Steps are rendered in an <ol>, footnote in a rounded div — verify no ol present
-    expect(container.querySelector("ol")).toBeNull();
-  });
-
   it("renders preview content when provided", () => {
     render(
       <EmptyStateSurface
@@ -95,17 +83,6 @@ describe("EmptyStateSurface", () => {
       />,
     );
     expect(screen.getByTestId("preview-content")).toBeTruthy();
-  });
-
-  it("does not render preview when not provided", () => {
-    render(
-      <EmptyStateSurface
-        eyebrow="Guide"
-        title="Empty"
-        description="Nothing here."
-      />,
-    );
-    expect(screen.queryByTestId("preview-content")).toBeNull();
   });
 
   it("applies custom className to the section", () => {

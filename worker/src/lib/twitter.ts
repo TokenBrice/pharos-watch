@@ -159,6 +159,10 @@ async function uploadTweetImage(imageUrl: string, creds: TwitterCreds): Promise<
     throw new Error(`Safety map image size is invalid: ${imageBytes.byteLength}`);
   }
 
+  return uploadTweetImageBytes(imageBytes, creds);
+}
+
+async function uploadTweetImageBytes(imageBytes: ArrayBuffer, creds: TwitterCreds): Promise<string> {
   const authHeader = await buildOAuthHeader("POST", TWITTER_MEDIA_UPLOAD_URL, creds);
   const body = new FormData();
   body.append("media", new Blob([imageBytes], { type: "image/png" }), "pharos-safety-score-map.png");

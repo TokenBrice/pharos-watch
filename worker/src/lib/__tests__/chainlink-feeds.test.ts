@@ -1,4 +1,6 @@
 import { describe, it, expect, vi, afterEach } from "vitest";
+import { buildLatestRoundDataHex, encodeWord } from "./chainlink-abi.test-support";
+import { createDeferredPromise } from "./deferred.test-support";
 
 vi.mock("../evm-rpc", () => ({
   fetchEvmCallHexAtBlock: vi.fn(),
@@ -10,70 +12,17 @@ import { fetchEtherscanProxyHex, fetchEvmCallHexAtBlock, fetchJsonRpcHexAtUrl } 
 import {
   CHAINLINK_REFERENCE_FEEDS,
   fetchChainlinkReferenceQuoteSnapshot,
-  parseChainlinkLatestRoundData,
-  parseSignedInt256Word,
 } from "../chainlink-feeds";
 
 const mockFetchEvmCallHexAtBlock = vi.mocked(fetchEvmCallHexAtBlock);
 const mockFetchEtherscanProxyHex = vi.mocked(fetchEtherscanProxyHex);
 const mockFetchJsonRpcHexAtUrl = vi.mocked(fetchJsonRpcHexAtUrl);
 
-function encodeWord(value: bigint): string {
-  return value.toString(16).padStart(64, "0");
-}
-
-function encodeSignedWord(value: bigint): string {
-  const normalized = value >= 0n ? value : (1n << 256n) + value;
-  return normalized.toString(16).padStart(64, "0");
-}
-
-function buildLatestRoundDataHex(answer: bigint, updatedAt: number): `0x${string}` {
-  const words = [
-    encodeWord(1n),
-    encodeSignedWord(answer),
-    encodeWord(0n),
-    encodeWord(BigInt(updatedAt)),
-    encodeWord(1n),
-  ];
-  return `0x${words.join("")}`;
-}
-
 afterEach(() => {
+  vi.restoreAllMocks();
   mockFetchEvmCallHexAtBlock.mockReset();
   mockFetchEtherscanProxyHex.mockReset();
   mockFetchJsonRpcHexAtUrl.mockReset();
-});
-
-describe("parseSignedInt256Word", () => {
-  it("parses positive values", () => {
-    expect(parseSignedInt256Word("0".repeat(63) + "5")).toBe(5n);
-  });
-
-  it("parses negative values via two's complement", () => {
-    expect(parseSignedInt256Word("f".repeat(64))).toBe(-1n);
-  });
-});
-
-describe("parseChainlinkLatestRoundData", () => {
-  it("decodes answer and updatedAt from latestRoundData()", () => {
-    const updatedAt = 1_763_888_000;
-    const parsed = parseChainlinkLatestRoundData(buildLatestRoundDataHex(115_820_000n, updatedAt));
-    expect(parsed.answer).toBe(115_820_000n);
-    expect(parsed.updatedAt).toBe(updatedAt);
-  });
-
-  it("accepts the four latestRoundData() words that the parser reads", () => {
-    const updatedAt = 1_763_888_000;
-    const fourWordHex = `0x${buildLatestRoundDataHex(115_820_000n, updatedAt).slice(2, 2 + (64 * 4))}`;
-    const parsed = parseChainlinkLatestRoundData(fourWordHex);
-    expect(parsed.answer).toBe(115_820_000n);
-    expect(parsed.updatedAt).toBe(updatedAt);
-  });
-
-  it("rejects malformed latestRoundData() hex", () => {
-    const malformedHex = `${buildLatestRoundDataHex(115_820_000n, 1_763_888_000).slice(0, -1)}g`;
-    expect(() => parseChainlinkLatestRoundData(malformedHex)).toThrow("malformed hex");
-  });
 });
 
 describe("fetchChainlinkReferenceQuoteSnapshot", () => {
@@ -101,20 +50,23 @@ describe("fetchChainlinkReferenceQuoteSnapshot", () => {
 
     mockFetchEvmCallHexAtBlock.mockResolvedValue(null);
     mockFetchJsonRpcHexAtUrl.mockResolvedValue(null);
+    const chainIds: Record<string, number> = { base: 8453, ethereum: 1, arbitrum: 42161 };
     mockFetchEtherscanProxyHex.mockImplementation(async ({ evmChainId, to, data }) => {
-      expect(evmChainId).toBe(8453);
-      if (to === eurFeed!.proxyAddress && data === "0x313ce567") {
-        return "0x0000000000000000000000000000000000000000000000000000000000000008";
-      }
-      if (to === eurFeed!.proxyAddress && data === "0xfeaf968c") {
-        return buildLatestRoundDataHex(115_820_000n, 1_763_887_900);
-      }
+      const feed = CHAINLINK_REFERENCE_FEEDS.find((candidate) =>
+        candidate.proxyAddress === to && chainIds[candidate.chainId] === evmChainId);
+      if (!feed) return null;
+      if (data === "0x313ce567") return `0x${encodeWord(8n)}`;
+      if (data === "0xfeaf968c") return buildLatestRoundDataHex(115_820_000n, 1_763_887_900);
       return null;
     });
 
-    const quotes = (await fetchChainlinkReferenceQuoteSnapshot(undefined, undefined, 1_763_888_000, undefined, "etherscan-key")).quotes;
-    expect(quotes.get("peggedEUR")?.price).toBeCloseTo(1.1582, 4);
-    expect(mockFetchEtherscanProxyHex).toHaveBeenCalled();
+    const snapshot = await fetchChainlinkReferenceQuoteSnapshot(undefined, undefined, 1_763_888_000, undefined, "etherscan-key");
+    expect(snapshot.quotes.get("peggedEUR")?.price).toBeCloseTo(1.1582, 4);
+    expect(snapshot.summary.fetchErrors).toBe(0);
+    expect(snapshot.summary.usableQuotes).toBe(CHAINLINK_REFERENCE_FEEDS.length);
+    expect(mockFetchEtherscanProxyHex.mock.calls.map(([call]) => [call.evmChainId, call.to, call.data]).sort())
+      .toEqual(CHAINLINK_REFERENCE_FEEDS.flatMap((feed) =>
+        ["0x313ce567", "0xfeaf968c"].map((data) => [chainIds[feed.chainId], feed.proxyAddress, data])).sort());
   });
 
   it("prefers dRPC before shared RPC and Etherscan fallbacks", async () => {
@@ -210,14 +162,67 @@ describe("fetchChainlinkReferenceQuoteSnapshot", () => {
     expect(snapshot.summary.fetchErrors).toBe(0);
   });
 
+  it("enforces numeric and freshness boundaries independently", async () => {
+    const now = 1_763_888_000;
+    const eur = CHAINLINK_REFERENCE_FEEDS.find((feed) => feed.pegKey === "peggedEUR")!;
+    const cases = [
+      { decimals: 36n, answer: 10n ** 36n, updatedAt: now, counter: null },
+      { decimals: 37n, answer: 10n ** 37n, updatedAt: now, counter: "invalidDecimals" },
+      { decimals: 8n, answer: 100_000_000n, updatedAt: now - 21_600, counter: null },
+      { decimals: 8n, answer: 100_000_000n, updatedAt: now - 21_601, counter: "staleQuotes" },
+    ] as const;
+    for (const testCase of cases) {
+      mockFetchEvmCallHexAtBlock.mockImplementation(async (_chain, address, data) => {
+        if (address !== eur.proxyAddress) return null;
+        return data === "0x313ce567" ? `0x${encodeWord(testCase.decimals)}`
+          : buildLatestRoundDataHex(testCase.answer, testCase.updatedAt);
+      });
+      const snapshot = await fetchChainlinkReferenceQuoteSnapshot(undefined, undefined, now);
+      expect(snapshot.quotes.get("peggedEUR")?.price).toBe(testCase.counter ? undefined : 1);
+      if (testCase.counter) expect(snapshot.summary[testCase.counter]).toBe(1);
+      expect(snapshot.summary.fetchErrors).toBe(0);
+    }
+  });
+
+  it.each([[0n, 1_763_888_000], [-1n, 1_763_888_000], [100_000_000n, 0]] as const)(
+    "classifies answer %s at %s as invalid evidence rather than a transport error", async (answer, updatedAt) => {
+      mockFetchEvmCallHexAtBlock.mockImplementation(async (_chain, _address, data) =>
+        data === "0x313ce567" ? `0x${encodeWord(8n)}` : buildLatestRoundDataHex(answer, updatedAt));
+      const snapshot = await fetchChainlinkReferenceQuoteSnapshot(undefined, undefined, 1_763_888_000);
+      expect(snapshot.quotes.size).toBe(0);
+      expect(snapshot.summary.invalidAnswers).toBe(CHAINLINK_REFERENCE_FEEDS.length);
+      expect(snapshot.summary.fetchErrors).toBe(0);
+    },
+  );
+
+  it("rejects cancellation during pending transport", async () => {
+    const controller = new AbortController();
+    const { promise: pending, resolve: started } = createDeferredPromise();
+    mockFetchJsonRpcHexAtUrl.mockImplementation(async () => {
+      started();
+      const promise = new Promise<never>((_, reject) => {
+        controller.signal.addEventListener("abort", () => reject(controller.signal.reason), { once: true });
+      });
+      return promise;
+    });
+    const run = fetchChainlinkReferenceQuoteSnapshot(controller.signal);
+    const rejected = expect(run).rejects.toThrow("cancelled during transport");
+    await pending;
+    controller.abort(new Error("cancelled during transport"));
+    await rejected;
+  });
+
   it("bounds parallel feed fetches to the cron connection budget", async () => {
     let activeCalls = 0;
     let maxActiveCalls = 0;
+    const { promise: gate, resolve: release } = createDeferredPromise();
+    const { promise: pending, resolve: started } = createDeferredPromise();
 
     mockFetchJsonRpcHexAtUrl.mockImplementation(async (_url, _method, params) => {
       activeCalls++;
       maxActiveCalls = Math.max(maxActiveCalls, activeCalls);
-      await new Promise((resolve) => setTimeout(resolve, 1));
+      if (activeCalls === 3) started();
+      await gate;
       activeCalls--;
 
       const [callObj] = params as [{ to: string; data: string }];
@@ -234,7 +239,12 @@ describe("fetchChainlinkReferenceQuoteSnapshot", () => {
       return null;
     });
 
-    const snapshot = await fetchChainlinkReferenceQuoteSnapshot(undefined, undefined, 1_763_888_000);
+    const run = fetchChainlinkReferenceQuoteSnapshot(undefined, undefined, 1_763_888_000);
+    await pending;
+    const initialActive = activeCalls;
+    release();
+    const snapshot = await run;
+    expect(initialActive).toBe(3);
 
     expect(snapshot.summary.usableQuotes).toBe(CHAINLINK_REFERENCE_FEEDS.length);
     expect(maxActiveCalls).toBeLessThanOrEqual(3);

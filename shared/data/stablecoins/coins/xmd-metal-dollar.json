@@ -45,6 +45,54 @@
     }
   ],
   "mechanismArchetype": "fiat-cash",
+  "liveReservesConfig": {
+    "adapter": "xpr-account-balances",
+    "version": 1,
+    "semantics": "collateral-mix",
+    "breakerScope": "xmd-metal-dollar",
+    "display": {
+      "url": "https://explorer.xprnetwork.org/account/xmd.treasury",
+      "label": "xmd.treasury on-chain balances (XPR Network)"
+    },
+    "inputs": {
+      "primary": {
+        "kind": "http-json",
+        "url": "https://proton.greymass.com"
+      },
+      "fallbacks": [
+        {
+          "kind": "http-json",
+          "url": "https://proton.eosusa.io"
+        },
+        {
+          "kind": "http-json",
+          "url": "https://proton.eoscafeblock.com"
+        }
+      ]
+    },
+    "params": {
+      "treasuryAccount": "xmd.treasury",
+      "balanceCode": "xtokens",
+      "supplyCode": "xmd.token",
+      "supplySymbol": "XMD",
+      "slices": [
+        {
+          "symbol": "XUSDC",
+          "name": "XUSDC (bridge-wrapped USDC) held by the xmd.treasury contract",
+          "risk": "low"
+        },
+        {
+          "symbol": "XPYUSD",
+          "name": "XPYUSD (bridge-wrapped PayPal USD) held by the xmd.treasury contract",
+          "risk": "low"
+        }
+      ],
+      "unknownSlice": {
+        "name": "Unmeasured xmd.treasury holdings (non-xtokens basket balances, e.g. MPD)",
+        "risk": "high"
+      }
+    }
+  },
   "mechanismArchetypeReview": {
     "disposition": "resolved",
     "reviewedAt": "2026-07-13",

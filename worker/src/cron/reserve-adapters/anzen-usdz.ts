@@ -27,6 +27,7 @@ import {
   uint256Observation,
   type AnyEvmObservationField,
 } from "./evm-observation-plan";
+import { reserveDegradedWarning, reserveInfoWarning } from "./warnings";
 
 const ADAPTER_KEY = "anzen-usdz";
 const SPCT_POOL_CONTRACT = "0xf30a29F1C540724Fd8c5c4Be1AF604a6C6800D29";
@@ -107,6 +108,7 @@ interface AnzenRedemptionProbe {
   spctUsdcRaw: string;
   usdzUsdcRaw: string;
   routeOpen: boolean;
+  routePaused: boolean;
   feeBps: number | null;
 }
 
@@ -400,21 +402,22 @@ function observeAnzenRedemption(values: ReadonlyMap<string, `0x${string}`>): Anz
   const collateralRate = requireUint(values, "usdz:collateral-rate");
   const oraclePriceRaw = requireUint(values, "oracle:price");
   const mode = requireUint(values, "usdz:mode");
-  if (mode !== 0n) throw new Error(`${ADAPTER_KEY} USDz is in migration mode`);
-  if (requireUint(values, "usdz:total-pooled-spct") <= 0n) throw new Error(`${ADAPTER_KEY} pooled SPCT is zero`);
-  if (oraclePriceRaw < collateralRate) throw new Error(`${ADAPTER_KEY} oracle price is below collateral rate`);
+  const pooledSpctRaw = requireUint(values, "usdz:total-pooled-spct");
+  const routePaused = usdzPaused || spctPaused || !whitelisted || mode !== 0n ||
+    pooledSpctRaw === 0n || oraclePriceRaw < collateralRate;
   const settleableRaw = spctUsdcRaw + usdzUsdcRaw;
   const bindingRaw = reserveUsdRaw < settleableRaw ? reserveUsdRaw : settleableRaw;
   const capacityUsd = decimalNumberFromBigInt(bindingRaw, USDC_DECIMALS);
-  if (!Number.isFinite(capacityUsd) || capacityUsd < 0 || usdzPaused || spctPaused || !whitelisted) {
-    throw new Error(`${ADAPTER_KEY} USDz redemption route is paused or unavailable`);
+  if (!Number.isFinite(capacityUsd) || capacityUsd < 0) {
+    throw new Error(`${ADAPTER_KEY} USDz redemption capacity is not finite`);
   }
   return {
     capacityUsd,
     reserveUsdRaw: reserveUsdRaw.toString(),
     spctUsdcRaw: spctUsdcRaw.toString(),
     usdzUsdcRaw: usdzUsdcRaw.toString(),
-    routeOpen: capacityUsd > 0,
+    routeOpen: !routePaused && capacityUsd > 0,
+    routePaused,
     feeBps: combinedRedeemFeeBps(
       requireUint(values, "usdz:redeem-fee-rate"),
       requireUint(values, "usdz:fee-coefficient"),
@@ -443,44 +446,61 @@ export async function fetchAnzenUsdzReserves(
   const redemption = observeAnzenRedemption(ethereum.values);
   const pooledSpctRaw = requireUint(ethereum.values, "usdz:total-pooled-spct");
   const heldSpctRaw = requireUint(ethereum.values, "spct:balance-of-usdz");
-  if (heldSpctRaw < pooledSpctRaw) throw new Error(`${ADAPTER_KEY} held SPCT is below totalPooledSPCT()`);
   const liabilityRaw = chainObservations.reduce((sum, observation) => sum + observation.rawSupply, 0n);
-  if (pooledSpctRaw < liabilityRaw) throw new Error(`${ADAPTER_KEY} pooled SPCT is below USDz liabilities`);
+  const oraclePriceRaw = requireUint(ethereum.values, "oracle:price");
+  const backedSpctRaw = heldSpctRaw < pooledSpctRaw ? heldSpctRaw : pooledSpctRaw;
+  // getPrice() is USD per SPCT at 18 decimals, matching collateralRate().
+  const reserveValueRaw = backedSpctRaw * oraclePriceRaw / 10n ** 18n;
   const surplusRaw = pooledSpctRaw - liabilityRaw;
   const toleranceRaw = (liabilityRaw / 10_000n) > 1_000n * 10n ** 18n
     ? liabilityRaw / 10_000n
     : 1_000n * 10n ** 18n;
-  if (surplusRaw > toleranceRaw) throw new Error(`${ADAPTER_KEY} pooled SPCT surplus exceeds reviewed tolerance`);
+  const warnings = [];
+  if (heldSpctRaw < pooledSpctRaw || reserveValueRaw < liabilityRaw || liabilityRaw === 0n) {
+    warnings.push(reserveDegradedWarning(
+      "reserve-undercollateralized",
+      `USDz observed pooled SPCT ${pooledSpctRaw}, held SPCT ${heldSpctRaw}, oracle-valued reserve ${reserveValueRaw}, and liabilities ${liabilityRaw}`,
+    ));
+  }
+  if (surplusRaw > toleranceRaw) {
+    warnings.push(reserveInfoWarning("reserve-overcollateralized-dust", "USDz pooled SPCT surplus exceeds the reviewed dust threshold"));
+  }
+  if (redemption.routePaused) {
+    warnings.push(reserveDegradedWarning("route-paused", "USDz redemption route is paused or blocked by its on-chain prerequisites"));
+  }
 
   const supplyByChainUsd = Object.fromEntries(chainObservations.map((observation) => [
     observation.chain,
     decimalNumberFromBigInt(observation.rawSupply, observation.decimals),
   ])) as Record<SupportedSupplyChain, number>;
   const supplyUsd = decimalNumberFromBigInt(liabilityRaw, SPCT_POOL_DECIMALS);
-  const totalReserveUsd = decimalNumberFromBigInt(pooledSpctRaw, SPCT_POOL_DECIMALS);
-  if (!Number.isFinite(supplyUsd) || supplyUsd <= 0 || !Number.isFinite(totalReserveUsd) || totalReserveUsd <= 0) {
+  const totalReserveUsd = decimalNumberFromBigInt(reserveValueRaw, SPCT_POOL_DECIMALS);
+  if (!Number.isFinite(supplyUsd) || !Number.isFinite(totalReserveUsd)) {
     throw new Error(`${ADAPTER_KEY} computed invalid USDz reserve totals`);
   }
 
   return {
-    slices: [{ name: "SPCT (Secured Private Credit Token)", pct: 100, risk: "high" }],
+    slices: [{ sourceKey: "anzen-usdz:spct", name: "SPCT (Secured Private Credit Token)", pct: 100, risk: "high", blacklistable: true }],
+    ...(warnings.length > 0 ? { warnings } : {}),
     metadata: {
       ...notApplicableFreshnessMetadata({
         proofKind: "multichain-usdz-pooled-spct-v2",
-        reserveSourceLabel: "USDz totalPooledSPCT() reconciled to held SPCT",
+        reserveSourceLabel: "Oracle-valued USDz totalPooledSPCT() reconciled to held SPCT",
         supplySourceLabel: "USDz totalSupply() across reviewed OFT/native deployments",
       }),
       totalReserveUsd,
       supplyUsd,
-      collateralizationRatio: totalReserveUsd / supplyUsd,
+      ...(supplyUsd > 0 ? { collateralizationRatio: totalReserveUsd / supplyUsd } : {}),
       details: {
         proofKind: "multichain-usdz-pooled-spct-v2",
-        reserveSourceLabel: "USDz totalPooledSPCT() reconciled to held SPCT",
+        reserveSourceLabel: "Oracle-valued USDz totalPooledSPCT() reconciled to held SPCT",
         supplySourceLabel: "USDz totalSupply() across reviewed OFT/native deployments",
         reserveContract: SPCT_POOL_CONTRACT,
         reserveChain: "ethereum",
         accountedSpctRaw: pooledSpctRaw.toString(),
         heldSpctRaw: heldSpctRaw.toString(),
+        oraclePriceRaw: oraclePriceRaw.toString(),
+        oraclePriceDecimals: 18,
         liabilityRaw: liabilityRaw.toString(),
         surplusSpct: decimalNumberFromBigInt(surplusRaw, SPCT_POOL_DECIMALS),
         underlyingLoanBookScope: "outside adapter composition scope",
@@ -509,7 +529,11 @@ export async function fetchAnzenUsdzReserves(
                 `USDz redeem() read in the same run: reserveUSD() is ${redemption.reserveUsdRaw} and the SPCT pool plus USDz hold ` +
                 `${redemption.spctUsdcRaw} + ${redemption.usdzUsdcRaw} USDC (6 decimals)`,
             }
-          : {}),
+          : redemption.routePaused ? {
+              routeStatus: "paused" as const,
+              routeStatusSource: "onchain" as const,
+              routeStatusReason: "USDz redemption is blocked by observed on-chain route prerequisites",
+            } : {}),
         feeBps: redemption.feeBps,
         sourceUrls: [ANZEN_REDEEM_DOC_URL],
       }),

@@ -105,8 +105,8 @@ Deploy sequence in `.github/workflows/deploy-cloudflare.yml`:
    - runs only when `worker_required=true`, on `ubuntu-latest`, with the protected `production` environment;
    - installs the lockfile workspace, runs `npm run check:migrations`, proves the strict Worker bundle with `npm run check:worker-package`, and only then applies remote D1 migrations;
    - deploys once with `cd worker && npx --no-install wrangler deploy --strict --message ...`; Wrangler synchronizes the checked-in Worker configuration and triggers as part of that supported path;
-   - queries `wrangler deployments status --json` and requires the SHA-tagged deployment to be the sole active version at 100% traffic, then matches that deployment in `wrangler deployments list --json`;
-   - writes `worker-version-activated:<version_id>` once into the existing D1 `cache` table using the matched Cloudflare deployment's `created_on` as both the JSON activation time and `updated_at`. Missing/invalid deployment history or a marker-write failure is logged as a warning and does not fail the deployment; reconciliation therefore remains fail-closed for that version;
+   - captures `wrangler deployments status --json` and `wrangler deployments list --json`, then hands both to `scripts/ci/verify-worker-deployment.ts`, which requires the SHA-tagged deployment to be the sole active version at 100% traffic and selects the activation second from the listed deployment that carries the verified version. The listed history is unordered and may repeat a `created_on`, so selection is by deployment identity plus version match, never by list position or CI wall time;
+   - writes `worker-version-activated:<version_id>` once into the existing D1 `cache` table using the matched Cloudflare deployment's `created_on` as both the JSON activation time and `updated_at`. A status JSON that carries no `id` matches no history entry, so no activation second is selected and the marker is skipped. Missing/invalid deployment history or a marker-write failure is logged as a warning and does not fail the deployment; reconciliation therefore remains fail-closed for that version;
    - fails visibly on migration, deploy, or activation-proof failure. It does not preview-upload, poll deployment status, make a custom-domain request from shared GitHub egress, run browser/ops/transport checks, or automatically roll back.
 3. `pages-release`
    - calls the reusable Pages workflow only when `pages_required=true`;
@@ -116,7 +116,7 @@ Deploy sequence in `.github/workflows/deploy-cloudflare.yml`:
 Reusable Pages sequence in `.github/workflows/pages-release.yml`:
 
 1. Check out full history and install the workspace without a browser. Production Pages builds do not restore `.next/cache`: stale Webpack/PostCSS entries can pair new Tailwind class names in HTML with an older generated stylesheet. Full history remains required for per-route and per-doc generated timestamps.
-2. When `refresh_data=true`, `scripts/maintenance/refresh-pages-release-data.ts` refreshes digests, confirmed depeg events, and public dataset mirrors concurrently through the Origin-gated `https://stablecoin-dashboard.pages.dev/_site-data` proxy into `site-api.pharos.watch`. Digest and depeg refreshes write isolated temporary snapshots and move only successful results into place; public datasets keep their scoped git fallback. The digest sync rejects archive shrink; the depeg sync carries previously published static rows forward when live reclassification would make them sub-threshold, and rejects any remaining published-slug loss. A failed fetch, invalid input, or archive shrink retains only that surface's committed snapshot and continues to the build with a job-summary warning. The orchestration command also writes a machine-readable result JSON under its refresh directory.
+2. When `refresh_data=true`, `scripts/maintenance/refresh-pages-release-data.ts` refreshes digests and confirmed depeg events concurrently, then refreshes public dataset mirrors, all through the Origin-gated `https://stablecoin-dashboard.pages.dev/_site-data` proxy into `site-api.pharos.watch`. Digest and depeg refreshes write isolated temporary snapshots and move only successful results into place; public datasets keep their scoped git fallback. The digest sync rejects archive shrink; the depeg sync carries previously published static rows forward when live reclassification would make them sub-threshold, and rejects any remaining published-slug loss. A failed fetch, invalid input, or archive shrink retains only that surface's committed snapshot and continues to the build with a job-summary warning. The orchestration command also writes a machine-readable result JSON under its refresh directory.
 3. Materialize `compile-input` artifacts before the optional refresh, then `post-refresh` artifacts after it, and build with the production feature-flag environment and clean compiler state. The protected PR gate has already run `next typegen` plus the root TypeScript project, so this post-merge build skips only Next's duplicate typecheck; direct local builds still typecheck by default.
 4. Run feature-flag inlining, build-size/CSS-integrity, and phishing-signature checks concurrently, then run the static SEO and published-archive continuity gate over the same exact artifact. The CSS-integrity gate reads the emitted `out/_next/static/css` bundles and requires the desktop search-width utility, preventing a stale Tailwind stylesheet from shipping beside newer header HTML. The SEO command extracts per-page metadata in bounded worker threads but retains all prior assertions. It also fetches the currently deployed `pages.dev` sitemap and requires every previously published digest/depeg detail URL to remain submitted or have a direct permanent redirect to a submitted canonical. This final continuity gate covers refresh-only routes that are newer than the checked-in snapshots; a fallback build that would regress one of those routes fails before deployment.
 5. Write `out/__pharos_release.json`, publish that exact `out/` directory with one `wrangler pages deploy` command, resolve the latest production deployment through `wrangler pages deployment list --json`, and require one cache-busted target-SHA marker match from that immutable `pages.dev` deployment URL within the bounded polling window.
@@ -135,7 +135,9 @@ Workflow success proves activation identity, not every runtime behavior. The rea
 | Cron/scheduler/ingestion/memory | Worker activation                                      | First matching scheduled execution completes within its expected status, duration, memory, and publication contract      |
 | D1 migration plus runtime use   | Migration and Worker activation steps succeed          | First affected read/write or scheduled path succeeds; rollback notes acknowledge that Worker rollback does not revert D1 |
 
-The acceptance job reads the public Pages shell after a Pages release and the public Worker health endpoint after a Worker release. The job records no cron probe at all, because a short deploy job cannot safely wait for and correlate a future scheduled run; observing the first matching scheduled execution stays a human step. Use `npm run ops:watch-worker-cron` for that bounded read-only cron evidence and `npm run ops:night-watch-worker` only when the owning rollout requires a longer observation window. Until the relevant execution occurs, report “deployment succeeded; operational acceptance pending” rather than “production healthy.”
+`scripts/ci/run-post-deploy-acceptance.ts` is the acceptance job's entrypoint: it reads the public Pages shell after a Pages release and the public Worker health endpoint after a Worker release, then writes the outcome row and evidence table to the job summary and the `outcome` step output. A failed probe exits non-zero; `pending` and `passed` exit zero. The job records no cron probe at all, because a short deploy job cannot safely wait for and correlate a future scheduled run; observing the first matching scheduled execution stays a human step. Use `npm run ops:watch-worker-cron` for that bounded read-only cron evidence and `npm run ops:night-watch-worker` only when the owning rollout requires a longer observation window. Until the relevant execution occurs, report “deployment succeeded; operational acceptance pending” rather than “production healthy.”
+
+The acceptance entrypoint always prints its probe/acceptance JSON to stdout; the job-summary and `outcome` step-output writes are conditional on `GITHUB_STEP_SUMMARY` and `GITHUB_OUTPUT` being set, so running it outside Actions skips those writes instead of failing.
 
 ### Monitoring Without Model Polling
 
@@ -163,7 +165,7 @@ These collectors write evidence; exit zero does not certify health, and night-wa
 Repository settings:
 
 - `main` requires pull requests and the aggregate `PR gate` status check, including administrators. The gate accepts the validation matrix selected from `scripts/lib/pr-lanes.mts`: either the full static-plus-four-test-shard path or the focused docs-only path, with optional docs and four-shard touched-critical coverage lanes. A single preparation job installs dependencies and caches the generated workspace for the matrix; preflight always requires the strict pinned PR secret scan.
-- The GitHub `production` environment is restricted to `main` and is attached only to the Worker and Pages mutating jobs.
+- The GitHub `production` environment is restricted to `main` and is attached to the Worker deploy job, the Pages release job, and the manual zone-cache purge job — the three production-mutating jobs.
 - Production-changing workflows share the `production-deploy` concurrency group and do not cancel an active release.
 
 Repository secrets consumed only by jobs attached to the production environment:
@@ -255,7 +257,7 @@ Scheduled/manual Pages rebuild sequence in `.github/workflows/rebuild-pages.yml`
 - Cloudflare deployment uses the lockfile-installed local Wrangler CLI rather than `cloudflare/wrangler-action`.
 - Worker production custom-domain routes, bindings, and cron triggers remain declared in `worker/wrangler.toml` and deploy together through `wrangler deploy --strict`.
 - The root and Worker manifests keep the same pinned Wrangler version: root scripts own the shared install and dependency overrides, while Worker commands run from `worker/` with `npx --no-install`.
-- The Pages release restores build cache state but does not install Playwright. Cold-cache runs remain valid.
+- The Pages release restores no build cache state (no `.next/cache`, ESLint state, or TypeScript build info) and does not install Playwright; only the setup-node npm cache applies. Cold-cache runs are the normal path.
 
 ### Failure Stop and Surface Classification
 
@@ -280,14 +282,14 @@ When reviewing deploy runtime after optimization work, separate queue time from 
 
 For combined deploys, the native job graph runs `pages-release` only after the required Worker deployment succeeds. Pages-only deploys do not wait on a nonexistent Worker mutation.
 
-Tooling cache restores are best-effort acceleration for `.next/cache`, `.cache/eslint`, and TypeScript build info. Cold-cache runs remain valid and may be slower. Only jobs that produce new tooling state upload a fresh cache; the Pages release restores and saves build state but carries no browser cache dependency.
+Tooling cache restores are best-effort acceleration for `.next/cache`, `.cache/eslint`, and TypeScript build info. Cold-cache runs remain valid and may be slower. Only jobs that produce new tooling state upload a fresh cache; the Pages release enables none of these caches, so it neither restores nor saves build state and carries no browser cache dependency.
 
 ## Runtime Origins
 
 The current origin split is:
 
 - public UI: `pharos.watch`
-- website data API target: `site-api.pharos.watch` in production; preview/local rehearsal may intentionally point the Pages proxy at `api.pharos.watch`
+- website data API target: `site-api.pharos.watch`. The Pages `/_site-data` proxy allowlists exactly this HTTPS origin; any other `SITE_API_ORIGIN` value (including `api.pharos.watch`) is rejected and the proxy fails closed with HTTP 500
 - operator UI: `ops.pharos.watch`
 - public API: `api.pharos.watch`
 - operator API: `ops-api.pharos.watch`

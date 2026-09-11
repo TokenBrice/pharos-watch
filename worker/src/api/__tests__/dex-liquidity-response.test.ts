@@ -195,9 +195,16 @@ describe("selectTrendBaseline", () => {
         coverage_class: "primary",
         coverage_confidence: 0.9,
       },
+      {
+        stablecoin_id: "usdt-tether",
+        total_tvl_usd: 300,
+        snapshot_date: targetSec + 30,
+        coverage_class: "primary",
+        coverage_confidence: 0.9,
+      },
     ];
 
-    expect(selectTrendBaseline(history, targetSec, 12 * 3600)).toEqual(history[1]);
+    expect(selectTrendBaseline(history, targetSec, 12 * 3600)).toEqual(history[2]);
   });
 
   it("rejects rows outside the trend tolerance window", () => {
@@ -213,6 +220,21 @@ describe("selectTrendBaseline", () => {
     ];
 
     expect(selectTrendBaseline(history, targetSec, 12 * 3600)).toBeNull();
+  });
+
+  it("includes exact confidence and tolerance boundaries but excludes nonpositive TVL", () => {
+    const target = 1_700_000_000;
+    const candidate = {
+      stablecoin_id: "usdt-tether", total_tvl_usd: 100, snapshot_date: target + 60,
+      coverage_class: "primary", coverage_confidence: 0.5,
+    };
+    expect(selectTrendBaseline([
+      { ...candidate, snapshot_date: target, total_tvl_usd: 0 },
+      { ...candidate, snapshot_date: target, total_tvl_usd: -1 },
+      { ...candidate, snapshot_date: target, coverage_confidence: 0.499 },
+      candidate,
+    ], target, 60)).toEqual(candidate);
+    expect(selectTrendBaseline([{ ...candidate, snapshot_date: target + 61 }], target, 60)).toBeNull();
   });
 });
 
@@ -248,9 +270,13 @@ describe("buildDexDeploymentCoverage", () => {
         waiver_expires_at: 200,
       },
     ];
+    rows.push({ ...rows[0], contract_address: "0x0000000000000000000000000000000000000001" });
 
     const active = buildDexDeploymentCoverage(rows, 150).get("usdt-tether");
     expect(active).toMatchObject({ verifiedNoPools: 1, providerInaccessible: 1 });
+    expect(active?.deployments.map((deployment) => deployment.contractAddress)).toEqual([
+      "0xdac17f958d2ee523a2206206994597c13d831ec7", "TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t",
+    ]);
     expect(active?.deployments[1]?.waiver).toMatchObject({ owner: "data-platform", expiresAt: 200 });
 
     const expired = buildDexDeploymentCoverage(rows, 200).get("usdt-tether");

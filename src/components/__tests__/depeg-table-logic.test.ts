@@ -7,48 +7,16 @@ import {
 import type { DepegTrackerRow } from "@/lib/depeg-sort";
 import type { PegSummaryCoin, StressSignalEntry } from "@shared/types";
 import type { TableSortState } from "@/hooks/use-sorted-table-rows";
+import { makePegSummaryCoin } from "@/test-utils/peg-summary-fixtures";
+import { makeDews } from "./depeg.test-support";
 
-function makeCoin(overrides: Partial<PegSummaryCoin> = {}): PegSummaryCoin {
-  return {
-    id: "usdc",
-    symbol: "USDC",
-    name: "USD Coin",
-    pegType: "peggedUSD",
-    pegCurrency: "USD",
-    governance: "centralized",
-    currentDeviationBps: 0,
-    pegScore: 100,
-    pegPct: 100,
-    severityScore: 0,
-    spreadPenalty: 0,
-    eventCount: 0,
-    worstDeviationBps: null,
-    activeDepeg: false,
-    lastEventAt: null,
-    trackingSpanDays: 90,
-    methodologyVersion: "v1",
-    dexPriceCheck: null,
-    ...overrides,
-  };
-}
-
-function makeDews(overrides: Partial<StressSignalEntry> = {}): StressSignalEntry {
-  return {
-    score: 0,
-    band: "CALM",
-    signals: {},
-    computedAt: 0,
-    methodologyVersion: "v1",
-    ...overrides,
-  };
-}
 
 function makeRow(
   coinOverrides: Partial<PegSummaryCoin> = {},
   dews: StressSignalEntry | null = null,
 ): DepegTrackerRow {
   return {
-    coin: makeCoin(coinOverrides),
+    coin: makePegSummaryCoin({ id: "usdc", pegScore: 100, trackingSpanDays: 90, ...coinOverrides }),
     dews,
   };
 }

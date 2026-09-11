@@ -2,6 +2,7 @@
   "id": "usdv-solomon",
   "reserves": [
     {
+      "sourceKey": "solomon-protocol:custody:btc",
       "name": "Ceffu-custodied BTC with Binance inverse-perpetual hedge",
       "pct": 23.9276,
       "risk": "medium",
@@ -17,6 +18,7 @@
       "liquidityHorizon": "one-day"
     },
     {
+      "sourceKey": "solomon-protocol:vault:usdc",
       "name": "USDC on-chain vault and yield-distributor balances",
       "pct": 5.5427,
       "risk": "low",
@@ -34,6 +36,7 @@
       "liquidityHorizon": "immediate"
     },
     {
+      "sourceKey": "solomon-protocol:vault:usdt",
       "name": "USDT on-chain vault balance",
       "pct": 1.1567,
       "risk": "low",
@@ -51,6 +54,7 @@
       "liquidityHorizon": "immediate"
     },
     {
+      "sourceKey": "solomon-protocol:custody:sol",
       "name": "Ceffu-custodied SOL with Binance inverse-perpetual hedge",
       "pct": 0.1718,
       "risk": "high",
@@ -66,6 +70,7 @@
       "liquidityHorizon": "one-day"
     },
     {
+      "sourceKey": "solomon-protocol:unknown",
       "name": "Unmapped reserve positions (issuer API does not reconcile reserves to supply)",
       "pct": 69.2012,
       "risk": "very-high",

@@ -8,28 +8,14 @@ import {
   type MethodologyChangelogEntry,
 } from "@shared/lib/methodology-versions/base";
 
-const TEST_CHANGELOG: MethodologyChangelogEntry[] = [
-  {
-    version: "2.0",
-    title: "Second release",
-    date: "2026-02-01",
-    effectiveAt: 1000,
-    summary: "Second version",
-    impact: ["Change A"],
-    commits: ["abc123"],
-    reconstructed: false,
-  },
-  {
-    version: "1.0",
-    title: "Initial release",
-    date: "2026-01-01",
-    effectiveAt: 500,
-    summary: "First version",
-    impact: ["Launch"],
-    commits: ["def456"],
-    reconstructed: true,
-  },
-];
+function entry(version: string, effectiveAt: number, overrides: Partial<MethodologyChangelogEntry> = {}): MethodologyChangelogEntry {
+  return {
+    version, effectiveAt, title: "Release", date: "2026-01-01", summary: "Methodology update",
+    impact: [], commits: [], reconstructed: false, ...overrides,
+  };
+}
+
+const TEST_CHANGELOG = [entry("2.0", 1000), entry("1.0", 500, { reconstructed: true })];
 
 describe("createMethodologyVersion", () => {
   const mv = createMethodologyVersion({
@@ -52,38 +38,7 @@ describe("createMethodologyVersion", () => {
       // currentVersion must match the latest changelog entry (drift guard).
       currentVersion: "2.91",
       changelogPath: "/methodology/test-changelog/",
-      changelog: [
-        {
-          version: "2.9",
-          title: "Middle minor",
-          date: "2026-03-01",
-          effectiveAt: 900,
-          summary: "Middle version",
-          impact: [],
-          commits: [],
-          reconstructed: false,
-        },
-        {
-          version: "2.91",
-          title: "Newer minor",
-          date: "2026-03-02",
-          effectiveAt: 1000,
-          summary: "Newer version",
-          impact: [],
-          commits: [],
-          reconstructed: false,
-        },
-        {
-          version: "2.10",
-          title: "Oldest minor",
-          date: "2026-02-28",
-          effectiveAt: 800,
-          summary: "Oldest version",
-          impact: [],
-          commits: [],
-          reconstructed: false,
-        },
-      ],
+      changelog: [entry("2.9", 900), entry("2.91", 1000), entry("2.10", 800)],
     });
 
     expect(sorted.changelog.map((entry) => entry.version)).toEqual(["2.91", "2.9", "2.10"]);

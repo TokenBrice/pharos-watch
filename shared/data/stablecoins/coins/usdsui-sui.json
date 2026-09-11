@@ -58,5 +58,24 @@
   "collateralQuality": "rwa",
   "custodyModel": "institutional-regulated",
   "governanceQuality": "regulated-entity",
+  "liveReservesConfig": {
+    "adapter": "bridge-transparency",
+    "breakerScope": "usdsui-sui",
+    "version": 1,
+    "semantics": "collateral-mix",
+    "display": {
+      "url": "https://transparency.bridge.xyz/v0/stablecoins/usd_sui",
+      "label": "Bridge Transparency"
+    },
+    "inputs": {
+      "primary": {
+        "kind": "http-json",
+        "url": "https://transparency.bridge.xyz/v0/stablecoins/usd_sui"
+      }
+    },
+    "params": {
+      "slug": "usd_sui"
+    }
+  },
   "launchDate": "2026-03-04"
 }

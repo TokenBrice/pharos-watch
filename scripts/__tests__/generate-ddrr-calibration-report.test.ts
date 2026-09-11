@@ -1,4 +1,4 @@
-import { mkdtempSync, readFileSync, writeFileSync } from "node:fs";
+import { mkdtempSync, rmSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it, vi } from "vitest";
@@ -301,6 +301,72 @@ describe("generate-ddrr-calibration-report", () => {
     });
   });
 
+  it("requires both row and independent-coin support before recommending a retune", () => {
+    for (const [rows, coins, recommendation] of [[49, 20, "hold"], [50, 19, "hold"], [50, 20, "candidate"]] as const) {
+      const report = buildDdrrCalibrationReport(response(Array.from({ length: rows }, (_, i) =>
+        prediction({ stablecoinId: `coin-${i % coins}` }))), { generatedAt: "fixture", source: { mode: "input", detail: "fixture" } });
+      expect(report.durationCalibration.overall).toMatchObject({ rowCount: rows, coinCount: coins, recommendation });
+    }
+  });
+
+  it("keeps signed bias boundaries and empty scored samples distinct", () => {
+    for (const [error, bias] of [[-3600, "too_slow"], [-3599, "balanced"], [3599, "balanced"], [3600, "too_fast"]] as const) {
+      const report = buildDdrrCalibrationReport(response([prediction({ signedDurationErrorSec: error, absoluteDurationErrorSec: Math.abs(error) })]),
+        { generatedAt: "fixture", source: { mode: "input", detail: "fixture" } });
+      expect(report.durationCalibration.overall).toMatchObject({ bias, medianSignedErrorSec: error });
+    }
+    const empty = buildDdrrCalibrationReport(response([prediction({ signedDurationErrorSec: null, absoluteDurationErrorSec: null })]),
+      { generatedAt: "fixture", source: { mode: "input", detail: "fixture" } });
+    expect(empty.durationCalibration.overall).toMatchObject({ rowCount: 0, bias: "insufficient_data", meanSignedErrorSec: null, recommendation: "hold" });
+  });
+
+  it("separates row-weighted errors from equal-coin means", () => {
+    const report = buildDdrrCalibrationReport(response([
+      prediction({ stablecoinId: "a", signedDurationErrorSec: 0, absoluteDurationErrorSec: 0 }),
+      prediction({ stablecoinId: "a", signedDurationErrorSec: 6000, absoluteDurationErrorSec: 6000 }),
+      prediction({ stablecoinId: "b", signedDurationErrorSec: -12000, absoluteDurationErrorSec: 12000 }),
+    ]), { generatedAt: "fixture", source: { mode: "input", detail: "fixture" } });
+    expect(report.durationCalibration.overall).toMatchObject({ meanSignedErrorSec: -2000,
+      meanAbsoluteErrorSec: 6000, coinDedupMeanSignedErrorSec: -4500, medianSignedErrorSec: 0 });
+  });
+
+  it("uses only scored factor assignments as rate denominators and reviews repeated misses", () => {
+    for (const verdict of ["false_terminal", "false_recoverable"] as const) {
+      for (const misses of [1, 2]) {
+        const rows = [prediction({ verdictReview: "correct_recoverable" }), prediction({ verdictReview: "pending" }),
+          ...Array.from({ length: misses }, () => prediction({ verdictReview: verdict }))];
+        const report = buildDdrrCalibrationReport(response(rows), { generatedAt: "fixture", source: { mode: "input", detail: "fixture" } });
+        for (const factor of report.factorAttribution) {
+          expect(factor).toMatchObject({ rowCount: misses + 2, scoredCount: misses + 1, recommendation: misses === 1 ? "monitor" : "review" });
+          expect(factor.falseTerminalRate).toBeCloseTo(verdict === "false_terminal" ? misses / (misses + 1) : 0);
+          expect(factor.falseRecoverableRate).toBeCloseTo(verdict === "false_recoverable" ? misses / (misses + 1) : 0);
+        }
+        expect(report.factorAttribution.map((factor) => factor.factorCode)).toEqual(["K2_backing_impairment", "K5_exit_collapse"]);
+      }
+    }
+  });
+
+  it("warns on degraded and truncated snapshots and excludes invalidated publications", () => {
+    const erratum = { id: 1, state: "invalidated" as const, publicPredictionId: 103, incidentKey: "invalidated",
+      eventId: 4, assessmentId: 203, reason: "false_positive" as const, createdAt: LOCKED_AT,
+      operatorNote: "reviewed", rowHashBefore: null, replacementAssessmentId: null, replacementRowHash: null, createdBy: "reviewer" };
+    const payload = response([prediction(), { ...baseRow(), kind: "invalidated_prediction", publicPredictionId: 103,
+      assessmentId: 203, predictionState: "invalidated", predictionMethodologyVersion: "3.03", predictionPolicyVersion: "sticky-24h-v1",
+      lockedAt: LOCKED_AT, publishedAt: LOCKED_AT, publicationSnapshotToken: "fixture", originalKind: "no_call",
+      originalOutcome: { lockedAt: LOCKED_AT, eventAgeAtLockSec: 72 * 3600, missingReasons: ["missing"],
+        relatedContext: { dewsBand: null, dewsScore: null, liquidityScore: null, safetyGrade: null, safetyScore: null,
+          supplyChange7dPct: null, supplyChange30dPct: null, mintSurge: null } },
+      latestErratum: erratum, errataCount: 1, errataHistory: [erratum] }]);
+    payload._meta.degraded = true;
+    payload._meta.degradedReason = "upstream unavailable";
+    payload._meta.publicRowsTruncated = true;
+    const report = buildDdrrCalibrationReport(payload, { generatedAt: "fixture", source: { mode: "input", detail: "fixture" } });
+    expect(report.sample).toMatchObject({ rowCount: 2, predictionReviewCount: 1, invalidatedPredictionCount: 1 });
+    expect(report.durationCalibration.overall.rowCount).toBe(1);
+    expect(report.warnings).toHaveLength(2);
+    expect(report.warnings).toEqual(expect.arrayContaining([expect.stringMatching(/degraded.*upstream unavailable/), expect.stringMatching(/truncated/)]));
+  });
+
   it("renders markdown sections and escapes table cells", () => {
     const report = buildDdrrCalibrationReport(
       response([
@@ -328,17 +394,21 @@ describe("generate-ddrr-calibration-report", () => {
 
   it("loads saved payloads and writes JSON output", async () => {
     const dir = mkdtempSync(join(tmpdir(), "ddrr-calibration-"));
-    const input = join(dir, "ddrr.json");
-    const generatedAt = "2026-06-29T00:00:00.000Z";
-    writeFileSync(input, JSON.stringify(response([prediction()])), "utf8");
+    try {
+      const input = join(dir, "ddrr.json");
+      const generatedAt = "2026-06-29T00:00:00.000Z";
+      writeFileSync(input, JSON.stringify(response([prediction()])), "utf8");
 
-    await expect(runCli(["--input", input, "--json", "--generated-at", generatedAt], dir)).resolves.toBe(0);
-    const output = join(dir, DEFAULT_DDRR_CALIBRATION_REPORT_PATH);
-    const expected = buildDdrrCalibrationReport(response([prediction()]), {
-      generatedAt,
-      source: { mode: "input", detail: input },
-    });
-    expect(readFileSync(output, "utf8")).toBe(`${JSON.stringify(expected, null, 2)}\n`);
+      await expect(runCli(["--input", input, "--json", "--generated-at", generatedAt], dir)).resolves.toBe(0);
+      const output = join(dir, DEFAULT_DDRR_CALIBRATION_REPORT_PATH);
+      const expected = buildDdrrCalibrationReport(response([prediction()]), {
+        generatedAt,
+        source: { mode: "input", detail: input },
+      });
+      expect(readFileSync(output, "utf8")).toBe(`${JSON.stringify(expected, null, 2)}\n`);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
   });
 
   it("fetches production site-data with site headers", async () => {

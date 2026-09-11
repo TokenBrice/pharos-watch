@@ -75,7 +75,7 @@ npx tsx scripts/maintenance/generate-report-card-registry-fingerprint.ts
 node --import tsx scripts/maintenance/generate-legacy-stablecoin-redirects.ts
 ```
 
-For a layout-only move, the full, client, compliance, Telegram Mini App, report-card fingerprint, and legacy-redirect artifacts must remain byte-identical. If they change, stop and inspect the projection before proceeding.
+For a layout-only move, the full, client, compliance, Telegram Mini App, Worker runtime, report-card fingerprint, and legacy-redirect artifacts must remain byte-identical. If they change, stop and inspect the projection before proceeding.
 
 Validation:
 

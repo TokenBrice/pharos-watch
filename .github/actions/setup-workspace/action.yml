@@ -14,10 +14,6 @@ inputs:
     description: Whether to restore ESLint and TypeScript incremental state.
     required: false
     default: "false"
-  static-cache-save:
-    description: Whether this job should upload fresh ESLint and TypeScript state.
-    required: false
-    default: "false"
   next-cache:
     description: Whether to restore the Next.js compiler cache.
     required: false
@@ -30,10 +26,10 @@ inputs:
     description: Whether to restore the Playwright browser download cache.
     required: false
     default: "false"
-  workspace-cache:
-    description: Whether to restore the PR workspace dependency and generated-artifact cache.
+  workspace-artifact:
+    description: Required run-scoped workspace transport (publish, restore, or none).
     required: false
-    default: "false"
+    default: "none"
   install-deps:
     description: Whether to run npm ci after setup.
     required: false
@@ -58,6 +54,11 @@ inputs:
     required: false
     default: "false"
 
+outputs:
+  static-cache-key:
+    description: Restore key for a designated workflow writer to save after validation.
+    value: ${{ steps.static-cache.outputs.cache-primary-key }}
+
 runs:
   using: composite
   steps:
@@ -73,7 +74,7 @@ runs:
       with:
         node-version: ${{ inputs.node-version }}
 
-    - if: ${{ inputs.static-cache == 'true' || inputs.next-cache == 'true' || inputs.browser-cache == 'true' || inputs.workspace-cache == 'true' }}
+    - if: ${{ inputs.static-cache == 'true' || inputs.next-cache == 'true' || inputs.browser-cache == 'true' }}
       id: cache-key
       shell: bash
       env:
@@ -90,13 +91,14 @@ runs:
         echo "node-key=${node_key}" >> "${GITHUB_OUTPUT}"
 
     - if: ${{ inputs.static-cache == 'true' }}
-      uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
+      id: static-cache
+      uses: actions/cache/restore@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
       with:
         path: |
           .cache/eslint
           *.tsbuildinfo
           worker/*.tsbuildinfo
-        key: static-cache-${{ runner.os }}-${{ steps.cache-key.outputs.node-key }}-${{ hashFiles('package-lock.json', 'tsconfig.json', 'tsconfig.typecheck.json', 'worker/tsconfig.json') }}-${{ github.job }}${{ inputs.static-cache-save == 'true' && format('-{0}-{1}', github.run_id, github.run_attempt) || '' }}
+        key: static-cache-${{ runner.os }}-${{ steps.cache-key.outputs.node-key }}-${{ hashFiles('package-lock.json', 'tsconfig.json', 'tsconfig.typecheck.json', 'worker/tsconfig.json') }}-${{ github.job }}-${{ github.run_id }}-${{ github.run_attempt }}
         restore-keys: |
           static-cache-${{ runner.os }}-${{ steps.cache-key.outputs.node-key }}-${{ hashFiles('package-lock.json', 'tsconfig.json', 'tsconfig.typecheck.json', 'worker/tsconfig.json') }}-${{ github.job }}-
           static-cache-${{ runner.os }}-${{ steps.cache-key.outputs.node-key }}-${{ hashFiles('package-lock.json', 'tsconfig.json', 'tsconfig.typecheck.json', 'worker/tsconfig.json') }}-
@@ -118,12 +120,39 @@ runs:
         path: ~/.cache/ms-playwright
         key: browser-cache-${{ runner.os }}-${{ steps.cache-key.outputs.node-key }}-${{ hashFiles('package-lock.json') }}
 
-    - if: ${{ inputs.workspace-cache == 'true' }}
-      uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
+    - if: ${{ inputs.workspace-artifact == 'restore' }}
+      uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
       with:
-        path: |
+        name: pr-workspace-${{ github.run_id }}-${{ github.run_attempt }}-${{ github.sha }}
+        path: ${{ runner.temp }}/pharos-workspace
+
+    - if: ${{ inputs.workspace-artifact == 'restore' }}
+      shell: bash
+      run: tar -xzf "${RUNNER_TEMP}/pharos-workspace/workspace.tar.gz"
+
+    - if: ${{ inputs.install-deps == 'true' }}
+      shell: bash
+      run: npm ci
+
+    - if: ${{ inputs.install-deps == 'true' && inputs.bootstrap-generated == 'true' }}
+      shell: bash
+      run: npm run bootstrap:generated
+
+    - if: ${{ inputs.install-deps == 'true' && inputs.bootstrap-history == 'true' }}
+      shell: bash
+      run: npm run bootstrap:generated:history
+
+    - name: Verify bootstrap preserved committed artifacts
+      if: ${{ inputs.workspace-artifact != 'none' || (inputs.install-deps == 'true' && inputs.bootstrap-generated == 'true') }}
+      shell: bash
+      run: node --input-type=module -e 'import { assertBootstrapTrackedOutputsUnchanged } from "./scripts/lib/bootstrap-tracked-outputs.mts"; assertBootstrapTrackedOutputsUnchanged();'
+
+    - name: Package required workspace
+      if: ${{ inputs.workspace-artifact == 'publish' }}
+      shell: bash
+      env:
+        WORKSPACE_PATHS: |
           node_modules
-          worker/node_modules
           src/generated
           src/lib/case-study-client-index.ts
           public/openapi.json
@@ -139,26 +168,20 @@ runs:
           shared/data/stablecoins/legacy-llama-redirects.generated.json
           shared/data/safety-score-v9/shock-coverage-measurements-v1.json
           shared/data/safety-score-v9/evaluation-build-manifest-v1.ts
-        key: pr-workspace-${{ runner.os }}-${{ steps.cache-key.outputs.node-key }}-${{ hashFiles('package-lock.json') }}-${{ github.event.pull_request.head.sha }}
+      run: |
+        mkdir -p "${RUNNER_TEMP}/pharos-workspace"
+        mapfile -t paths <<< "${WORKSPACE_PATHS%$'\n'}"
+        if [ -d worker/node_modules ]; then paths+=(worker/node_modules); fi
+        tar -czf "${RUNNER_TEMP}/pharos-workspace/workspace.tar.gz" "${paths[@]}"
 
-    - if: ${{ inputs.install-deps == 'true' }}
-      shell: bash
-      run: npm ci
+    - if: ${{ inputs.workspace-artifact == 'publish' }}
+      uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+      with:
+        name: pr-workspace-${{ github.run_id }}-${{ github.run_attempt }}-${{ github.sha }}
+        path: ${{ runner.temp }}/pharos-workspace/workspace.tar.gz
+        if-no-files-found: error
+        retention-days: 1
 
-    - if: ${{ inputs.install-deps == 'true' && inputs.bootstrap-generated == 'true' }}
-      shell: bash
-      run: npm run bootstrap:generated
-
-    - if: ${{ inputs.install-deps == 'true' && inputs.bootstrap-history == 'true' }}
-      shell: bash
-      run: npm run bootstrap:generated:history
-
-    # Runs for both fresh setup and restore-only consumers. actions/cache saves
-    # in its success-only post step, so repaired tracked bytes cannot be saved.
-    - name: Verify bootstrap preserved committed artifacts
-      if: ${{ inputs.workspace-cache == 'true' || (inputs.install-deps == 'true' && inputs.bootstrap-generated == 'true') }}
-      shell: bash
-      run: node --input-type=module -e 'import { assertBootstrapTrackedOutputsUnchanged } from "./scripts/lib/bootstrap-tracked-outputs.mts"; assertBootstrapTrackedOutputsUnchanged();'
 
     - if: ${{ inputs.install-playwright-chromium == 'true' }}
       shell: bash

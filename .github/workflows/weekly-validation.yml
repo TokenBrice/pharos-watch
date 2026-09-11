@@ -25,6 +25,23 @@ jobs:
         if: always()
         run: npm audit signatures
 
+  html-fixture-age:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/setup-workspace
+      # Reserve adapter fixtures are captures of live issuer dashboards, so
+      # they expire on the calendar rather than on any diff. The PR gate can
+      # never own this: a branch that touches nothing would start failing on
+      # the day a fixture crossed 90 days. The weekly ratchet is the owner.
+      - name: Check reserve HTML fixture capture ages
+        run: npm run check:html-fixture-age
+
   gitleaks:
     runs-on: ubuntu-latest
     timeout-minutes: 10
@@ -35,17 +52,19 @@ jobs:
         with:
           persist-credentials: false
           fetch-depth: 0
-      - uses: ./.github/actions/setup-workspace
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
-          bootstrap-generated: "false"
+          node-version: "24.16.0"
 
       # The gitleaks version + tarball SHA-256 pin lives only in
       # scripts/ci/run-gitleaks.ts, which downloads and checksum-verifies the
-      # pinned binary before scanning.
+      # pinned binary before scanning. The runner imports only Node builtins,
+      # so the scan needs no npm installation, matching the PR preflight
+      # invocation.
       - name: Scan git history for secrets
         env:
           GITLEAKS_FULL_HISTORY: "1"
-        run: node --import tsx scripts/ci/run-gitleaks.ts --range
+        run: node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/ci/run-gitleaks.ts --range
 
   all-critical-ratchet:
     runs-on: ${{ vars.CI_VALIDATE_RUNNER != '' && vars.CI_VALIDATE_RUNNER || 'ubuntu-latest' }}

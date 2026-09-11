@@ -15,7 +15,7 @@ import {
   forecastReadinessLockTrigger,
   forecastReadinessScore,
 } from "@shared/lib/depeg-resolver/forecast-readiness";
-import { buildDdrManifestBasePayload } from "@shared/lib/depeg-resolver/public-contract";
+import { buildDdrManifestBasePayload, DDR_DURATION_EXCEEDED_REASON } from "@shared/lib/depeg-resolver/public-contract";
 import {
   DDR_PREDICTION_POLICY_VERSION,
   DDR_SNAPSHOT_CACHE_GENERATION,
@@ -179,7 +179,17 @@ function buildBasePublicRow(row: DdrRow, incident: DdrCanonicalIncident): Record
   };
 }
 
-function buildLiveOverlay(row: DdrRow, nowSec: number): Record<string, unknown> {
+function buildLiveOverlay(
+  row: DdrRow,
+  nowSec: number,
+  durationMedianResolveAt: number | null,
+): Record<string, unknown> {
+  // Payload invariant: a live overlay must not present a duration estimate that
+  // is no longer bounded by `now`. A frozen prediction whose median resolution
+  // time has passed while the incident is still active has outlived its
+  // estimate, so the overlay flags the row stale instead of pretending the
+  // anchored duration is still a live bound.
+  const durationExceeded = durationMedianResolveAt != null && nowSec > durationMedianResolveAt;
   return {
     currentEventId: row.eventId,
     ageSec: row.ageSec,
@@ -187,8 +197,8 @@ function buildLiveOverlay(row: DdrRow, nowSec: number): Record<string, unknown> 
     currentDeviationBps: row.currentDeviationBps ?? null,
     eventState: "active",
     updatedAt: nowSec,
-    stale: false,
-    degradedReason: null,
+    stale: durationExceeded,
+    degradedReason: durationExceeded ? DDR_DURATION_EXCEEDED_REASON : null,
   };
 }
 
@@ -483,7 +493,7 @@ function buildPublicRows(input: {
     const publicPredictionId = sealed ? publicPredictionIdOf(sealed) : null;
     const publication = publicPredictionId == null ? null : (publicationById.get(publicPredictionId) ?? null);
     const base = buildBasePublicRow(row, incident);
-    const live = buildLiveOverlay(row, input.nowSec);
+    const live = buildLiveOverlay(row, input.nowSec, null);
     const pendingReadiness = sealed ? null : buildPendingReadinessMeta(row, input.nowSec);
 
     if (!sealed) {
@@ -589,6 +599,9 @@ function buildPublicRows(input: {
       relatedContext: row.relatedContext,
       sourceRow: row,
     };
+    const frozenDuration = recordValue(frozen.duration);
+    const frozenMedianResolveAt = nullableNumberValue(frozenDuration?.medianResolveAt);
+    const frozenLive = buildLiveOverlay(row, input.nowSec, frozenMedianResolveAt);
     if (errataHistory.length > 0) {
       return {
         ...buildBasePublicRowFromSealed(sealed, base),
@@ -607,7 +620,7 @@ function buildPublicRows(input: {
         originalOutcome: frozen,
         frozen,
         noCall: null,
-        live,
+        live: frozenLive,
       };
     }
     return {
@@ -623,7 +636,7 @@ function buildPublicRows(input: {
         modelAsOf: sealed.lockedAt,
       }),
       frozen,
-      live,
+      live: frozenLive,
     };
   }) as DdrResponse["rows"];
 }

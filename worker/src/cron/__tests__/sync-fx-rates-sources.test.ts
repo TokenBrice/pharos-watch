@@ -74,10 +74,9 @@ describe("syncFxRates", () => {
   });
 
   it("fires all secondary FX mirror fetches concurrently", async () => {
-    vi.useRealTimers();
-    const callStartedAt: Record<string, number> = {};
-    let inFlight = 0;
-    let maxInFlight = 0;
+    const started = new Set<string>();
+    let release!: () => void;
+    const responses = new Promise<void>((resolve) => { release = resolve; });
     mockFetch([{ match: () => true, respond: async (request) => {
       const url = request.url;
       if (
@@ -93,11 +92,8 @@ describe("syncFxRates", () => {
           : url.includes("@latest")
             ? "jsdelivrLatest"
             : "jsdelivrVersioned";
-        callStartedAt[endpoint] = performance.now();
-        inFlight++;
-        maxInFlight = Math.max(maxInFlight, inFlight);
-        await new Promise((resolve) => setTimeout(resolve, 50));
-        inFlight--;
+        started.add(endpoint);
+        await responses;
         return new Response(
           JSON.stringify({ date: "2025-06-15", usd: { cnh: 7.28, rub: 90, uah: 41, ars: 1400, kgs: 87, ngn: 1370, xof: 560 } }),
           { status: 200 },
@@ -106,14 +102,14 @@ describe("syncFxRates", () => {
       return new Response("not found", { status: 404 });
     } }]);
 
-    await loadSecondaryCurrencyCandidate();
-
-    expect(callStartedAt.jsdelivrLatest).toBeDefined();
-    expect(callStartedAt.jsdelivrVersioned).toBeDefined();
-    expect(callStartedAt.pagesDev).toBeDefined();
-    expect(maxInFlight).toBe(3);
-    expect(Math.abs(callStartedAt.jsdelivrLatest - callStartedAt.pagesDev)).toBeLessThan(20);
-    expect(Math.abs(callStartedAt.jsdelivrLatest - callStartedAt.jsdelivrVersioned)).toBeLessThan(20);
+    const loading = loadSecondaryCurrencyCandidate();
+    try {
+      await vi.advanceTimersByTimeAsync(0);
+      expect([...started].sort()).toEqual(["jsdelivrLatest", "jsdelivrVersioned", "pagesDev"]);
+    } finally {
+      release();
+      await loading;
+    }
   });
 
   it("uses the date-pinned jsdelivr package when @latest is behind", async () => {

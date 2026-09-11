@@ -1,12 +1,19 @@
 // @vitest-environment jsdom
 
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
-import { randomUUID } from "node:crypto";
+import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { ApiKeyRequestForm } from "@/components/api-key-request-form";
+import { clearPendingApiKey, PendingApiKeyRecovery } from "@/components/pending-api-key-recovery";
 import { mockFetch } from "@shared/test-utils/mock-fetch";
 
+const issuedTokens = new Set<string>();
+let caseId = 0;
+const randomUUID = () => `case${++caseId}`;
+
 afterEach(() => {
+  cleanup();
+  for (const token of issuedTokens) clearPendingApiKey(token);
+  issuedTokens.clear();
   vi.unstubAllGlobals();
   vi.restoreAllMocks();
   window.history.replaceState(null, "", "/");
@@ -18,6 +25,7 @@ afterEach(() => {
 });
 
 function issuedResponse(suffix: string, token: string) {
+  issuedTokens.add(token);
   const keyPrefix = `prefix-${suffix}`;
   return {
     status: "issued",
@@ -39,6 +47,25 @@ function issuedResponse(suffix: string, token: string) {
 }
 
 describe("ApiKeyRequestForm", () => {
+  it("retains a verification response delivered after soft navigation", async () => {
+    const token = "ph_test_late_verification";
+    let resolveVerification!: (response: Response) => void;
+    vi.stubGlobal("fetch", vi.fn(() => new Promise<Response>((resolve) => { resolveVerification = resolve; })));
+    window.history.replaceState(null, "", "/api/#akv_delayed");
+    const view = render(<><ApiKeyRequestForm issuanceOpen={false} /><PendingApiKeyRecovery /></>);
+    await waitFor(() => expect(screen.getByText("Verifying email and issuing the API key.")).toBeTruthy());
+    view.rerender(<PendingApiKeyRecovery />);
+    const pendingUnload = new Event("beforeunload", { cancelable: true });
+    window.dispatchEvent(pendingUnload);
+    expect(pendingUnload.defaultPrevented).toBe(true);
+    await act(async () => resolveVerification(new Response(JSON.stringify(issuedResponse("delayed", token)), {
+      status: 201, headers: { "Content-Type": "application/json" },
+    })));
+    expect(screen.getByText(token)).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "I Saved This Key" }));
+    expect(screen.queryByText(token)).toBeNull();
+  });
+
   it("enables submission for a concise completed request", () => {
     const suffix = randomUUID().slice(0, 8);
     render(<ApiKeyRequestForm />);
@@ -127,7 +154,8 @@ describe("ApiKeyRequestForm", () => {
     window.sessionStorage.setItem("pharos:api-key-verify-token", `akv_${suffix}`);
     render(<ApiKeyRequestForm />);
 
-    await waitFor(() => expect(fetchMock).toHaveBeenCalledOnce());
+    await screen.findByText(`ph_test_${suffix}_token`);
+    expect(fetchMock).toHaveBeenCalledOnce();
     expect(window.location.href).toContain("utm_source=email");
     expect(window.location.href).not.toContain(`akv_${suffix}`);
     expect(window.sessionStorage.getItem("pharos:api-key-verify-token")).toBeNull();
@@ -146,7 +174,8 @@ describe("ApiKeyRequestForm", () => {
     window.history.replaceState(null, "", `/api/?verify=qs-${suffix}&utm_source=email#akv_${suffix}`);
     render(<ApiKeyRequestForm />);
 
-    await waitFor(() => expect(fetchMock).toHaveBeenCalledOnce());
+    await screen.findByText(`ph_test_${suffix}_token`);
+    expect(fetchMock).toHaveBeenCalledOnce();
     expect(window.location.href).toContain("utm_source=email");
     expect(window.location.href).not.toContain(`verify=qs-${suffix}`);
     expect(window.location.href).not.toContain(`akv_${suffix}`);
@@ -161,7 +190,7 @@ describe("ApiKeyRequestForm", () => {
     window.history.replaceState(null, "", `/api/?verify=qs-${suffix}&utm_source=email`);
     render(<ApiKeyRequestForm />);
 
-    await new Promise((resolve) => setTimeout(resolve, 0));
+    await act(async () => {});
     expect(fetchMock).not.toHaveBeenCalled();
     expect(window.location.search).not.toContain(`verify=qs-${suffix}`);
     expect(window.location.search).toBe("?utm_source=email");

@@ -1,10 +1,11 @@
 import type { DatabaseSync } from "node:sqlite";
 import type { Mock } from "vitest";
 import type { MockTableConfig } from "@shared/test-utils/mock-d1";
-import { createLatestSchemaSqlite } from "../../test-helpers/latest-schema-sqlite";
-import { createSqliteD1 } from "../../test-helpers/sqlite-d1";
+import { createLatestSchemaSqlite } from "@shared/test-utils/latest-schema-sqlite";
+import { createSqliteD1 } from "@shared/test-utils/sqlite-d1";
 import { makeNoopD1 } from "../../test-helpers/noop-d1";
 import { serializePendingAlertScope, serializePendingMarkupPolicy } from "../../lib/telegram/pending-provenance";
+import { insertTelegramSubscriber, type TelegramSubscriberSeed } from "./telegram-subscriber.test-support";
 
 export const DEFAULT_TELEGRAM_PENDING_D1_TABLES: MockTableConfig[] = [
   { match: "WHERE delivery_state = 'sending'", rows: [] },
@@ -173,53 +174,6 @@ export function insertSourceEventSqlite(
     );
 }
 
-/** Seeds a subscriber row satisfying the production NOT NULL columns. */
-export type TelegramSubscriberSeed = {
-  chatId: string;
-  createdAt?: number;
-  lastActiveAt?: number;
-  preferenceGeneration?: number;
-  alertSnoozeUntilTs?: number | null;
-  quietHoursEnabled?: number;
-  quietHoursStartUtc?: number | null;
-  quietHoursEndUtc?: number | null;
-  timezone?: string | null;
-  globalAlertDews?: number;
-  globalAlertDepeg?: number;
-  globalAlertSafety?: number;
-  globalAlertLaunch?: number;
-  globalAlertReserve?: number;
-  globalAlertFreeze?: number;
-};
-
-export function insertSubscriberSqlite(sqlite: DatabaseSync, row: TelegramSubscriberSeed): void {
-  sqlite
-    .prepare(
-      `INSERT INTO telegram_subscribers (
-         chat_id, created_at, last_active_at, preference_generation, alert_snooze_until_ts,
-         quiet_hours_enabled, quiet_hours_start_utc, quiet_hours_end_utc, timezone,
-         global_alert_dews, global_alert_depeg, global_alert_safety,
-         global_alert_launch, global_alert_reserve, global_alert_freeze
-       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-    )
-    .run(
-      row.chatId,
-      row.createdAt ?? 0,
-      row.lastActiveAt ?? 0,
-      row.preferenceGeneration ?? 0,
-      row.alertSnoozeUntilTs ?? null,
-      row.quietHoursEnabled ?? 0,
-      row.quietHoursStartUtc ?? null,
-      row.quietHoursEndUtc ?? null,
-      row.timezone ?? null,
-      row.globalAlertDews ?? 0,
-      row.globalAlertDepeg ?? 0,
-      row.globalAlertSafety ?? 0,
-      row.globalAlertLaunch ?? 0,
-      row.globalAlertReserve ?? 0,
-      row.globalAlertFreeze ?? 0,
-    );
-}
 
 export type TelegramAlertJobSeed = {
   jobId: string;
@@ -311,7 +265,7 @@ export function insertRiskPendingSqlite(
 ): void {
   const generation = options.generation ?? 1;
   const sourceEventId = options.sourceEventId ?? `source-${options.id}`;
-  insertSubscriberSqlite(sqlite, { chatId: options.chatId, preferenceGeneration: generation, globalAlertDews: 1, globalAlertDepeg: 1, globalAlertSafety: 1 });
+  insertTelegramSubscriber(sqlite, { chatId: options.chatId, createdAt: 0, lastActiveAt: 0, preferenceGeneration: generation, global: { dews: true, depeg: true, safety: true } });
   insertPendingSqlite(sqlite, {
     id: options.id,
     chatId: options.chatId,
@@ -387,10 +341,12 @@ export function insertRecapDeliveryFixture(
   const chatId = options.chatId ?? "recap-delivery";
   const generation = options.generation ?? 4;
   const recapKey = `recap:${chatId}:2026-07-11:v1`;
-  insertSubscriberSqlite(sqlite, {
+  insertTelegramSubscriber(sqlite, {
     chatId,
+    createdAt: 0,
+    lastActiveAt: 0,
     preferenceGeneration: generation,
-    alertSnoozeUntilTs: options.paused ? 4_102_444_800 : null,
+    snoozeUntil: options.paused ? 4_102_444_800 : null,
   });
   sqlite.prepare(
     `INSERT INTO telegram_recap_preferences
@@ -446,7 +402,7 @@ export async function withPendingQueueScenario<T>(
   const now = overrides.now ?? Math.floor(Date.now() / 1000);
   try {
     if (overrides.subscriber) {
-      insertSubscriberSqlite(sqlite, {
+      insertTelegramSubscriber(sqlite, {
         ...overrides.subscriber,
         createdAt: overrides.subscriber.createdAt ?? now,
         lastActiveAt: overrides.subscriber.lastActiveAt ?? now,

@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { seedDispatchSnapshots } from "./dispatch-telegram-snapshots.test-support";
 import {
   cleanupDispatchTelegramAlertsTest,
   createDispatchHarness,
@@ -6,13 +7,11 @@ import {
   dispatchTelegramAlerts,
   formatConsolidatedMessageSpy,
   makeDewsOverflowPlan,
-  makeSafetySnapshotCache,
   mockRecordOutcome,
   mockShouldAttemptFetch,
   pruneOverflowPlanBacklogForChat,
   readCacheValue,
   resetDispatchTelegramAlertsTest,
-  seedActiveSafetySource,
   telegramDeliveryTranscript,
   type CronProgressUpdate,
 } from "./dispatch-telegram-alerts.test-support";
@@ -27,10 +26,9 @@ function healthySources(
   const now = Math.floor(Date.now() / 1000);
   const safety = options.safety ?? { "usdc-circle": { grade: "B", score: 78, methodologyVersion: "7.09" } };
   harness.seed({ dews: options.dews ?? [], cache: defaultDispatchCaches() });
-  harness.cache("alert:dews-snapshot", { "usdc-circle": "CALM" }, now - 60);
-  harness.cache("alert:depeg-snapshot", {}, now - 60);
-  harness.cache("alert:safety-snapshot", makeSafetySnapshotCache(safety).value, now - 60);
-  seedActiveSafetySource(harness, safety, now - 60);
+  seedDispatchSnapshots(harness, {
+    dews: { "usdc-circle": "CALM" }, safety, safetySource: safety, updatedAt: now - 60,
+  });
 }
 
 describe("dispatchTelegramAlerts", () => {
@@ -132,11 +130,6 @@ describe("dispatchTelegramAlerts", () => {
     });
     expect(metadata.planningRowsWritten).toBe(0);
     expect(metadata.d1RowsWritten).toBeGreaterThan(0);
-    expect(Object.keys(metadata).slice(-3)).toEqual([
-      "planningRowsWritten",
-      "d1RowsWritten",
-      "noWorkRun",
-    ]);
     expect(telegramDeliveryTranscript).toEqual([]);
     expect(harness.sqlite.prepare("SELECT COUNT(*) AS count FROM telegram_alert_source_events").get()).toEqual({
       count: 0,

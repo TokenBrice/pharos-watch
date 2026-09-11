@@ -6,7 +6,7 @@ import {
   findSafetyScoreV9ParentAttributionIssues,
   type SafetyScoreV9CurrentCard,
 } from "./safety-score-v9-public";
-import { V9ReasonCodeSchema } from "./safety-score-v9";
+import { V9GradeSchema, V9ReasonCodeSchema } from "./safety-score-v9";
 import { compareText } from "./safety-score-v9-fact-primitives";
 import { Sha256Schema } from "./safety-schema-primitives";
 
@@ -307,3 +307,38 @@ export type ReportCardsV9CurrentResponse = z.infer<typeof ReportCardsV9CurrentRe
  */
 export const ReportCardsV9ResponseSchema = ReportCardsV9CurrentResponseSchema;
 export type ReportCardsV9Response = ReportCardsV9CurrentResponse;
+
+/**
+ * Free-lane projection of the current V9 publication: one grade per coin and
+ * nothing else. Served without an API key; keep it small and stable.
+ */
+export const SafetyGradesResponseSchema = z
+  .object({
+    model: z.literal("v9"),
+    methodologyVersion: z.string().trim().min(1),
+    asOfSec: z.number().int().nonnegative(),
+    updatedAt: z.number().int().nonnegative(),
+    publicationStatus: z.enum(["current", "held"]),
+    grades: z.array(
+      z
+        .object({
+          id: z.string().min(1),
+          score: z.number().min(0).max(100).nullable(),
+          grade: V9GradeSchema,
+        })
+        .strict(),
+    ),
+  })
+  .strict();
+export type SafetyGradesResponse = z.infer<typeof SafetyGradesResponseSchema>;
+
+export function projectSafetyGrades(snapshot: ReportCardsV9CurrentResponse): SafetyGradesResponse {
+  return {
+    model: "v9",
+    methodologyVersion: snapshot.methodology.version,
+    asOfSec: snapshot.asOfSec,
+    updatedAt: snapshot.updatedAt,
+    publicationStatus: snapshot.publicationHealth.status,
+    grades: snapshot.cards.map((card) => ({ id: card.id, score: card.score, grade: card.grade })),
+  };
+}

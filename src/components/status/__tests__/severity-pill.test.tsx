@@ -6,7 +6,7 @@ import { SeverityPill } from "../severity-pill";
 
 
 describe("SeverityPill", () => {
-  it("maps shared severity levels to the centralized badge classes", () => {
+  it("labels each severity and keeps the three levels visually distinguishable", () => {
     render(
       <div>
         <SeverityPill severity="critical" />
@@ -15,8 +15,7 @@ describe("SeverityPill", () => {
       </div>,
     );
 
-    expect(screen.getByText("critical").className).toContain("bg-red-500/15");
-    expect(screen.getByText("warning").className).toContain("bg-amber-500/15");
-    expect(screen.getByText("info").className).toContain("bg-muted");
+    const tones = ["critical", "warning", "info"].map((severity) => screen.getByText(severity).className);
+    expect(new Set(tones).size).toBe(3);
   });
 });

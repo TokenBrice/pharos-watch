@@ -1,8 +1,6 @@
-import { readdirSync, readFileSync } from "node:fs";
-import { join } from "node:path";
 import { DatabaseSync } from "node:sqlite";
 import { describe, expect, it } from "vitest";
-import { createSqliteD1 } from "../../../test-helpers/sqlite-d1";
+import { createLatestSchemaSqlite } from "@shared/test-utils/latest-schema-sqlite";
 import {
   packWatchlistDirectState,
   packWatchlistPresetState,
@@ -17,19 +15,9 @@ import { isSubscribableCoin } from "../../../lib/telegram/subscription-eligibili
 
 const NOW = 1_783_680_000;
 
-function migrationDirectory(): string {
-  return process.cwd().endsWith("/worker")
-    ? join(process.cwd(), "migrations")
-    : join(process.cwd(), "worker/migrations");
-}
 
 function openLatestSchema(): { sqlite: DatabaseSync; db: D1Database } {
-  const sqlite = new DatabaseSync(":memory:");
-  const dir = migrationDirectory();
-  for (const file of readdirSync(dir).filter((entry) => entry.endsWith(".sql")).sort()) {
-    sqlite.exec(readFileSync(join(dir, file), "utf8"));
-  }
-  return { sqlite, db: createSqliteD1(sqlite) };
+  return createLatestSchemaSqlite();
 }
 
 function direct(stablecoinId: string, alertDews: boolean): WatchlistTokenDirectState {
@@ -37,14 +25,16 @@ function direct(stablecoinId: string, alertDews: boolean): WatchlistTokenDirectS
     stablecoinId,
     alertDews,
     alertDepeg: true,
-    alertSafety: false,
-    alertLaunch: false,
-    alertReserve: false,
+    alertSafety: alertDews,
+    alertLaunch: alertDews,
+    alertReserve: !alertDews,
+    alertFreeze: alertDews,
     overrideDews: true,
     overrideDepeg: true,
     overrideSafety: true,
-    overrideLaunch: false,
-    overrideReserve: false,
+    overrideLaunch: true,
+    overrideReserve: true,
+    overrideFreeze: true,
     dewsMinBand: alertDews ? "WARNING" : null,
     safetyMode: "downgrade-only",
     depegWorseningBpsStep: 250,
@@ -271,6 +261,9 @@ describe("watchlist v2 atomic replacement", () => {
           depeg_worsening_bps_step: 500,
         }],
       });
+      const portable = await loadWatchlistPortableState(db, "chat", "catalog-test");
+      expect(portable.preferenceGeneration).toBe(6);
+      expect(portable.state.direct).toEqual([desiredDirect[1], desiredDirect[0]]);
       expect(sqlite.prepare("SELECT 1 FROM telegram_pending_disambiguation WHERE chat_id = 'chat'").get()).toBeUndefined();
       expect(sqlite.prepare("SELECT applied_at FROM telegram_webhook_operation_mutations WHERE update_id = 7001").get()).toEqual({ applied_at: NOW });
       // The expired snooze-only row is cleaned; the active snooze-only row remains until expiry.
@@ -393,9 +386,26 @@ describe("watchlist v2 atomic replacement", () => {
     const { sqlite, db } = openLatestSchema();
     try {
       seed(sqlite, {});
-      const { state } = await loadWatchlistPortableState(db, "chat", "catalog-test");
-      expect(state.direct.map((row) => row.stablecoinId)).not.toContain("usdt-tether");
-      expect(state.direct.map((row) => row.stablecoinId)).not.toContain("frax-frax");
+      sqlite.exec(`
+        INSERT INTO telegram_subscriptions (chat_id, stablecoin_id, alert_freeze_override)
+        VALUES ('chat', 'pyusd-paypal', 1);
+        INSERT INTO telegram_subscriptions (chat_id, stablecoin_id, safety_mode)
+        VALUES ('chat', 'lusd-liquity', 'upgrade-only');
+      `);
+      const { state, preferenceGeneration } = await loadWatchlistPortableState(db, "chat", "catalog-test");
+      expect(preferenceGeneration).toBe(5);
+      const empty = {
+        alertDews: false, alertDepeg: false, alertSafety: false, alertLaunch: false,
+        alertReserve: false, alertFreeze: false, overrideDews: false, overrideDepeg: false,
+        overrideSafety: false, overrideLaunch: false, overrideReserve: false, overrideFreeze: false,
+        dewsMinBand: null, safetyMode: null, depegWorseningBpsStep: null,
+      };
+      expect(state.direct).toEqual([
+        { ...empty, stablecoinId: "dai-makerdao", alertDews: true, overrideDews: true, overrideDepeg: true, dewsMinBand: "WARNING" },
+        { ...empty, stablecoinId: "lusd-liquity", safetyMode: "upgrade-only" },
+        { ...empty, stablecoinId: "pyusd-paypal", overrideFreeze: true },
+        { ...empty, stablecoinId: "usdc-circle", alertDews: true, alertDepeg: true, overrideDews: true, overrideDepeg: true, dewsMinBand: "ALERT", depegWorseningBpsStep: 100 },
+      ]);
     } finally {
       sqlite.close();
     }

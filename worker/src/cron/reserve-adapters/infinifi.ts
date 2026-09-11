@@ -15,6 +15,7 @@ import {
   parseTimestampLikeToUnixSeconds,
   requireJsonInputFromConfig,
   reserveInfoWarning,
+  sourceKeySlug,
   unverifiedFreshnessMetadata,
   verifiedFreshnessMetadata,
 } from "./helpers";
@@ -129,9 +130,11 @@ const SOURCE_TOTAL_RECONCILIATION_THRESHOLD_PCT = 0.5;
 // snapshotter on a 2-hour cadence; its latest point timestamps that snapshot,
 // and matching its value against the live staked exchange rate ties the
 // timestamp to the reserve state we are reporting. History values are rounded
-// to 4 decimals, so the tolerance covers rounding plus sub-cadence yield drift.
+// to 4 decimals, so ±5e-5 is the rounding envelope; 6e-5 admits rounding plus
+// a sliver of sub-cadence drift while rejecting the multi-day drift (2.45d at
+// the previous 5e-4) a monotone yield accumulator can accumulate unnoticed.
 const INFINIFI_RATE_HISTORY_PATH = "/api/protocol/rate-history/siUSD?daysAgo=7";
-const RATE_CROSS_CHECK_TOLERANCE = 5e-4;
+const RATE_CROSS_CHECK_TOLERANCE = 6e-5;
 const RATE_HISTORY_PROBE_TIMEOUT_MS = 6_000;
 
 export function resolveInfiniFiFreshness(
@@ -238,6 +241,7 @@ export function adaptInfiniFi(payload: InfiniFiProtocolData): AdaptInfiniFiResul
     const risk: ReserveSlice["risk"] = config?.risk
       ?? (f.type === "LIQUID" ? "low" : "medium");
     rawSlices.push({
+      sourceKey: `infinifi:${sourceKeySlug(f.name)}`,
       name: f.label,
       pct,
       risk,
@@ -249,6 +253,7 @@ export function adaptInfiniFi(payload: InfiniFiProtocolData): AdaptInfiniFiResul
 
   if (sourceTotalGapPct > SOURCE_TOTAL_RECONCILIATION_THRESHOLD_PCT) {
     rawSlices.push({
+      sourceKey: "infinifi:tvl-gap",
       name: excludedProtocolFarms.length > 0
         ? "InfiniFi protocol-level reserve positions"
         : "Unmapped InfiniFi TVL gap",
@@ -508,21 +513,16 @@ export async function fetchInfiniFiReserves(
   if (payload.code !== "OK") throw new Error("infiniFi API returned non-OK code");
   const adapted = adaptInfiniFi(payload);
   const warnings: LiveReserveWarning[] = adapted.unknownFarms.length > 0
-    ? [buildUnknownExposureWarning({
-        code: "unknown-position",
-        message: `Unmapped reserve positions: ${adapted.unknownFarms.sort().join(", ")}`,
-        unknownExposurePct: adapted.unknownExposurePct,
-      })]
+    ? [buildUnknownExposureWarning({ adapterKey: "infinifi", code: "unknown-position",
+    message: `Unmapped reserve positions: ${adapted.unknownFarms.sort().join(", ")}`,
+    unknownExposurePct: adapted.unknownExposurePct, })]
     : [];
   if (adapted.sourceTotalGapPct > SOURCE_TOTAL_RECONCILIATION_THRESHOLD_PCT) {
-    warnings.push(buildUnknownExposureWarning({
-      code: "source-total-gap",
-      message: adapted.excludedProtocolFarms.length > 0
-        ? `InfiniFi PROTOCOL farm exposure excluded from mapped farm rows: ${adapted.excludedProtocolFarms.join(", ")}`
-        : "InfiniFi total TVL exceeds mapped active farm assets",
-      unknownExposurePct: adapted.sourceTotalGapPct,
-      thresholdPct: SOURCE_TOTAL_RECONCILIATION_THRESHOLD_PCT,
-    }));
+    warnings.push(buildUnknownExposureWarning({ adapterKey: "infinifi", code: "source-total-gap",
+    message: adapted.excludedProtocolFarms.length > 0
+      ? `InfiniFi PROTOCOL farm exposure excluded from mapped farm rows: ${adapted.excludedProtocolFarms.join(", ")}`
+      : "InfiniFi total TVL exceeds mapped active farm assets",
+    unknownExposurePct: adapted.sourceTotalGapPct,  }));
   }
 
   // The freshness probe is optional context: bound it to a hard 6s overall
@@ -566,11 +566,7 @@ export async function fetchInfiniFiReserves(
       ...(adapted.excludedProtocolFarms.length > 0 ? { excludedProtocolFarms: adapted.excludedProtocolFarms } : {}),
       ...freshness,
       totalReserveUsd,
-      immediateRedeemableUsd: adapted.immediateRedeemableUsd,
       illiquidReserveUsd,
-      ...(adapted.supplyUsd != null && adapted.supplyUsd > 0
-        ? { immediateRedeemableRatio: adapted.immediateRedeemableUsd / adapted.supplyUsd }
-        : {}),
       pendingRedemptionsUsd:
         payload.data.stats.asset.pendingRedemptionsAssetNormalized,
       ...(adapted.supplyUsd != null ? { supplyUsd: adapted.supplyUsd } : {}),

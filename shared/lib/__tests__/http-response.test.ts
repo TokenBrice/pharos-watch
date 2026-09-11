@@ -27,6 +27,7 @@ describe("cloneResponse", () => {
   it("strips HEAD bodies and applies header mutations", async () => {
     const cloned = cloneResponse(new Response("body", { headers: { "X-Test": "old" } }), {
       method: "HEAD",
+      body: "explicit replacement must not override HEAD",
       mutateHeaders: (headers) => headers.set("X-Test", "new"),
     });
 
@@ -35,14 +36,26 @@ describe("cloneResponse", () => {
   });
 
   it("supports explicit body and header replacement", async () => {
-    const cloned = cloneResponse(new Response("old", { headers: { "X-Old": "1" } }), {
+    const original = new Response("old", { headers: { "X-Old": "1" } });
+    const replacements = new Headers({ "X-New": "2" });
+    const cloned = cloneResponse(original, {
       body: "new",
-      headers: { "X-New": "2" },
+      headers: replacements,
+      mutateHeaders: (headers) => headers.set("X-New", "mutated"),
     });
 
     expect(cloned.headers.get("X-Old")).toBeNull();
-    expect(cloned.headers.get("X-New")).toBe("2");
+    expect(cloned.headers.get("X-New")).toBe("mutated");
+    expect(original.headers.get("X-Old")).toBe("1");
+    expect(original.headers.get("X-New")).toBeNull();
+    expect(replacements.get("X-New")).toBe("2");
     await expect(cloned.text()).resolves.toBe("new");
+  });
+
+  it("removes the original body with an explicit null replacement", async () => {
+    const cloned = cloneResponse(new Response("old"), { body: null });
+    expect(cloned.body).toBeNull();
+    await expect(cloned.text()).resolves.toBe("");
   });
 });
 
@@ -62,8 +75,17 @@ describe("JSON HTTP response factories", () => {
     const response = createJsonErrorResponse(429, "slow down", {
       headers: { "Retry-After": "12" },
     });
+    expect(response.status).toBe(429);
     expect(response.headers.get("Cache-Control")).toBeNull();
     expect(response.headers.get("Retry-After")).toBe("12");
     await expect(response.json()).resolves.toEqual({ error: "slow down" });
+  });
+
+  it("preserves caller-supplied content type while serializing JSON", async () => {
+    const response = createJsonResponse({ error: "invalid" }, {
+      headers: { "Content-Type": "application/problem+json" },
+    });
+    expect(response.headers.get("Content-Type")).toBe("application/problem+json");
+    await expect(response.json()).resolves.toEqual({ error: "invalid" });
   });
 });

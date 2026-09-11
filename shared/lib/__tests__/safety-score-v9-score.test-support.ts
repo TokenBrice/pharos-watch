@@ -1,5 +1,6 @@
-import type { CompiledV9AssetInput } from "@shared/types/safety-score-v9";
+import type { CompiledV9AssetInput, V9ScoringInput } from "@shared/types/safety-score-v9";
 import { V9_CANDIDATE_POLICY_V1 } from "../safety-score-v9/policy";
+import type { V9WrapperParentLimit } from "../safety-score-v9/wrapper-risk";
 import type {
   V9PillarEvaluation,
   V9ProductionScoreIdentity,
@@ -39,6 +40,59 @@ export function makeV9ProductionScoreInput(
     dependencyStructuralSignals: [],
     ...overrides,
     identity,
+  };
+}
+
+export type V9WrapperParentLimitOptions = Omit<V9WrapperParentLimit, "schemaVersion" | "riskTransfer"> & {
+  riskTransfer?: Partial<V9WrapperParentLimit["riskTransfer"]>;
+};
+
+export function makeV9WrapperParentLimit({
+  riskTransfer,
+  ...overrides
+}: V9WrapperParentLimitOptions): V9WrapperParentLimit {
+  return {
+    schemaVersion: 1,
+    ...overrides,
+    riskTransfer: {
+      disposition: "reviewed",
+      mechanism: "none",
+      requestedCredit: 0,
+      appliedCredit: 0,
+      ...riskTransfer,
+    },
+  };
+}
+
+/**
+ * Default `V9ScoringInput` fixture for suites that score hand-built inputs.
+ * Every field is an override, so a test only states what it varies.
+ */
+export function makeV9ScoringInput({
+  assetId = "fixture",
+  pillars = { backing: 95, exit: 95, control: 95 },
+  pegScore = 100,
+  pegApplicable = true,
+  evidenceLevel = "strong",
+  trackRecordMonths = 48,
+  activeDepegBps = null,
+  parentRequired = false,
+  parentScore = null,
+  structuralSignals = [],
+  unresolved = [],
+}: Partial<V9ScoringInput> = {}): V9ScoringInput {
+  return {
+    assetId,
+    pillars,
+    pegScore,
+    pegApplicable,
+    evidenceLevel,
+    trackRecordMonths,
+    activeDepegBps,
+    parentRequired,
+    parentScore,
+    structuralSignals,
+    unresolved,
   };
 }
 

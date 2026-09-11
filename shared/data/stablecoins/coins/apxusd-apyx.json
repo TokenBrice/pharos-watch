@@ -92,6 +92,14 @@
         "STRC": "STRC (Strategy preferred equity, BTC-linked)",
         "Cash & Equivalents": "Cash & Equivalents (USDC, U.S. Treasury Bills)",
         "SATA": "SATA (Strive preferred equity, BTC-linked)"
+      },
+      "sourceKeyMap": {
+        "STRC": "accountable:apyx:deployment:strc",
+        "Cash & Equivalents": "accountable:apyx:deployment:cash-equivalents",
+        "SATA": "accountable:apyx:deployment:sata",
+        "Protocol Owned Liquidity": "accountable:apyx:deployment:protocol-owned-liquidity",
+        "Inventory": "accountable:apyx:deployment:inventory",
+        "Other": "accountable:apyx:deployment:other"
       }
     }
   },

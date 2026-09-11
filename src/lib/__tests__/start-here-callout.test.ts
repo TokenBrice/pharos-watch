@@ -7,65 +7,32 @@ import {
 
 describe("normalizeStartHereCalloutState", () => {
   it("falls back to the default shape for invalid persisted data", () => {
-    expect(normalizeStartHereCalloutState(null)).toEqual({
-      homepageSessions: 0,
-      hasOpenedStartHere: false,
-    });
-
-    expect(
-      normalizeStartHereCalloutState({
-        homepageSessions: -4,
-        hasOpenedStartHere: "yes",
-      }),
-    ).toEqual({
-      homepageSessions: 0,
+    expect(normalizeStartHereCalloutState(null)).toEqual({ hasOpenedStartHere: false });
+    expect(normalizeStartHereCalloutState({ hasOpenedStartHere: "yes" })).toEqual({
       hasOpenedStartHere: false,
     });
   });
-});
 
-describe("markStartHereOpened", () => {
-  it("sets the opened flag without resetting session history", () => {
-    expect(
-      markStartHereOpened({
-        homepageSessions: 1,
-        hasOpenedStartHere: false,
-      }),
-    ).toEqual({
-      homepageSessions: 1,
+  it("ignores the legacy homepageSessions field from older stored state", () => {
+    expect(normalizeStartHereCalloutState({ homepageSessions: 3, hasOpenedStartHere: true })).toEqual({
       hasOpenedStartHere: true,
     });
   });
 });
 
+describe("markStartHereOpened", () => {
+  it("sets the opened flag", () => {
+    expect(markStartHereOpened({ hasOpenedStartHere: false })).toEqual({ hasOpenedStartHere: true });
+  });
+
+  it("leaves already-opened state untouched", () => {
+    expect(markStartHereOpened({ hasOpenedStartHere: true })).toEqual({ hasOpenedStartHere: true });
+  });
+});
+
 describe("shouldShowStartHereNavigation", () => {
-  it("shows Start Here only for first-session users who have not opened it", () => {
-    expect(
-      shouldShowStartHereNavigation({
-        homepageSessions: 0,
-        hasOpenedStartHere: false,
-      }),
-    ).toBe(true);
-
-    expect(
-      shouldShowStartHereNavigation({
-        homepageSessions: 1,
-        hasOpenedStartHere: false,
-      }),
-    ).toBe(true);
-
-    expect(
-      shouldShowStartHereNavigation({
-        homepageSessions: 2,
-        hasOpenedStartHere: false,
-      }),
-    ).toBe(false);
-
-    expect(
-      shouldShowStartHereNavigation({
-        homepageSessions: 0,
-        hasOpenedStartHere: true,
-      }),
-    ).toBe(false);
+  it("shows Start Here until it has been opened once", () => {
+    expect(shouldShowStartHereNavigation({ hasOpenedStartHere: false })).toBe(true);
+    expect(shouldShowStartHereNavigation({ hasOpenedStartHere: true })).toBe(false);
   });
 });

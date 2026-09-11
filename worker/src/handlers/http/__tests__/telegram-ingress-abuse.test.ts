@@ -1,5 +1,4 @@
-import { readFileSync } from "node:fs";
-import { join } from "node:path";
+import { experimental_readRawConfig } from "wrangler";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const mocks = vi.hoisted(() => ({
@@ -59,13 +58,6 @@ function streamedPost(path: string, chunks: string[]): Request {
   } as RequestInit & { duplex: "half" });
 }
 
-function bindingBlock(wrangler: string, binding: string): string {
-  const marker = `[[ratelimits]]\nname = "${binding}"`;
-  const start = wrangler.indexOf(marker);
-  if (start < 0) throw new Error(`missing Wrangler rate-limit binding ${binding}`);
-  const next = wrangler.indexOf("[[ratelimits]]", start + marker.length);
-  return wrangler.slice(start, next < 0 ? wrangler.length : next);
-}
 
 describe("Telegram ingress abuse gate", () => {
   beforeEach(() => {
@@ -100,17 +92,22 @@ describe("Telegram ingress abuse gate", () => {
     expect(JSON.stringify([...counts.keys()])).not.toContain("203.0.113.");
   });
   it("matches only the three exact POST paths and keeps their binding counters isolated", async () => {
+    const env = createEnv();
     for (const policy of Object.values(TELEGRAM_INGRESS_POLICIES)) {
-      const env = createEnv();
+      vi.clearAllMocks();
       const request = post(policy.path, "{}", { "Content-Length": "2" });
       const result = await evaluateTelegramIngressAbuseGate(request, new URL(request.url), env);
 
       expect(result.response).toBeNull();
       expect(result.request.headers.get("content-length")).toBeNull();
       await expect(result.request.text()).resolves.toBe("{}");
+      for (const other of Object.values(TELEGRAM_INGRESS_POLICIES)) {
+        expect(env[other.binding].limit).toHaveBeenCalledTimes(other === policy ? 1 : 0);
+        expect(env[other.sourceBinding].limit).toHaveBeenCalledTimes(other === policy ? 1 : 0);
+      }
     }
 
-    const env = createEnv();
+    vi.clearAllMocks();
     const wrongMethod = new Request(`https://api.pharos.watch${TELEGRAM_INGRESS_POLICIES.webhook.path}`);
     const nearMatch = post(`${TELEGRAM_INGRESS_POLICIES.webhook.path}/extra`);
     await expect(evaluateTelegramIngressAbuseGate(wrongMethod, new URL(wrongMethod.url), env)).resolves.toEqual({
@@ -262,21 +259,21 @@ describe("Telegram ingress abuse gate", () => {
     });
   });
 
-  it("admits a same-colo launch burst from all 800 current subscribers", async () => {
+  it("reserves launch headroom and rejects requests beyond aggregate capacity", async () => {
     const policy = TELEGRAM_INGRESS_POLICIES.mini_app_session;
-    let used = 0;
+    expect(policy.rateLimit).toBeGreaterThanOrEqual(800 * 2);
+    expect(TELEGRAM_INGRESS_POLICIES.mini_app_mutation.rateLimit).toBeGreaterThanOrEqual(800 * 6 * 2);
+    let used = policy.rateLimit - 2;
     const limiter = createLimiter(async () => ({ success: ++used <= policy.rateLimit }));
     const env = createEnv({ TELEGRAM_MINI_APP_SESSION_PREAUTH_RATE_LIMIT: limiter });
 
-    for (let subscriber = 0; subscriber < 800; subscriber += 1) {
+    for (const status of [200, 200, 429]) {
       const request = post(policy.path, null);
       const result = await evaluateTelegramIngressAbuseGate(request, new URL(request.url), env);
-      expect(result.response).toBeNull();
+      expect(result.response?.status ?? 200).toBe(status);
     }
 
-    expect(limiter.limit).toHaveBeenCalledTimes(800);
-    expect(used).toBeLessThanOrEqual(policy.rateLimit / 2);
-    expect(800 * 6).toBe(TELEGRAM_INGRESS_POLICIES.mini_app_mutation.rateLimit / 2);
+    expect(limiter.limit).toHaveBeenCalledTimes(3);
   });
 
   it.each([
@@ -305,13 +302,15 @@ describe("Telegram ingress abuse gate", () => {
 
 describe("Telegram ingress checked-in bindings", () => {
   it("keeps handler policies and Wrangler bindings aligned", () => {
-    const root = process.cwd();
-    const wrangler = readFileSync(join(root, "worker/wrangler.toml"), "utf8");
+    const { rawConfig } = experimental_readRawConfig({ config: "worker/wrangler.toml" });
 
     for (const policy of Object.values(TELEGRAM_INGRESS_POLICIES)) {
-      const block = bindingBlock(wrangler, policy.binding);
-      expect(block).toContain(`limit = ${policy.rateLimit}`);
-      expect(block).toContain(`period = ${policy.periodSec}`);
+      expect(rawConfig.ratelimits?.filter((binding: { name: string }) => binding.name === policy.binding)).toEqual([
+        expect.objectContaining({ simple: { limit: policy.rateLimit, period: policy.periodSec } }),
+      ]);
+      expect(rawConfig.ratelimits?.filter((binding: { name: string }) => binding.name === policy.sourceBinding)).toEqual([
+        expect.objectContaining({ simple: { limit: policy.rateLimit / 2, period: policy.periodSec } }),
+      ]);
     }
   });
 });

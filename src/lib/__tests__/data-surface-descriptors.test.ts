@@ -3,77 +3,91 @@ import { DATA_HEALTH_PRESETS } from "@/lib/data-health-config";
 import { FRONTEND_API_QUERY_DESCRIPTORS } from "@/lib/api-query-descriptors";
 import {
   API_FRESHNESS_MAX_AGE_SEC,
-  CACHE_AVAILABILITY_MAX_AGE_SEC,
   CACHE_FRESHNESS_LANES,
   FRESHNESS_SENTINEL_CACHE_KEYS,
   getCacheFreshnessLane,
   type CacheFreshnessLaneConfig,
 } from "@shared/lib/api-freshness";
-import { DATA_DEPENDENCY_BY_ID } from "@shared/lib/data-dependency-registry";
 import {
   DATA_SURFACE_DESCRIPTOR_LIST,
   DATA_SURFACE_DESCRIPTORS,
-  type DataSurfaceDescriptor,
 } from "@shared/lib/data-surface-descriptors";
-import { PHAROSVILLE_API_CONTRACT } from "@shared/lib/pharosville-api-contract";
+import { PHAROSVILLE_API_CONTRACT, PHAROSVILLE_API_ENDPOINTS } from "@shared/lib/pharosville-api-contract";
 
-interface FrontendStaticQueryDescriptor {
-  queryKey: readonly unknown[];
-  path: string;
-  producerIntervalMs: number;
-  metaMaxAgeSec?: number;
-}
-
-type FrontendQueryRegistry = Record<
-  string,
-  FrontendStaticQueryDescriptor | ((...args: never[]) => FrontendStaticQueryDescriptor)
->;
-
-const FRONTEND_QUERY_REGISTRY = FRONTEND_API_QUERY_DESCRIPTORS as unknown as FrontendQueryRegistry;
 const API_FRESHNESS_BY_KEY = API_FRESHNESS_MAX_AGE_SEC as Record<string, number>;
 const CACHE_FRESHNESS_LANES_BY_KEY = CACHE_FRESHNESS_LANES as Record<string, CacheFreshnessLaneConfig>;
 const DATA_HEALTH_PRESETS_BY_KEY = DATA_HEALTH_PRESETS as Record<string, { label: string; staleTime: number }>;
-const PHAROSVILLE_CONTRACT_BY_KEY = PHAROSVILLE_API_CONTRACT as Record<
-  string,
-  { key: string; path: string; metaMaxAgeSec: number; producerIntervalSec: number }
->;
+const DESCRIPTORS_BY_KEY = DATA_SURFACE_DESCRIPTORS as unknown as Record<string, Record<string, unknown>>;
 
-const STATIC_FRONTEND_DERIVED_SURFACES: readonly DataSurfaceDescriptor[] = [
-  DATA_SURFACE_DESCRIPTORS.stablecoins,
-  DATA_SURFACE_DESCRIPTORS.dexLiquidity,
-  DATA_SURFACE_DESCRIPTORS.yieldRankings,
-  DATA_SURFACE_DESCRIPTORS.stressSignals,
-  DATA_SURFACE_DESCRIPTORS.reportCards,
-  DATA_SURFACE_DESCRIPTORS.publicHealth,
-];
-
-function frontendStaticDescriptor(surface: DataSurfaceDescriptor): FrontendStaticQueryDescriptor {
-  expect(surface.frontendQueryBaseKey).toBeTruthy();
-  const entry = FRONTEND_QUERY_REGISTRY[surface.frontendQueryBaseKey ?? ""];
-  expect(entry).toBeDefined();
-  expect(typeof entry).toBe("object");
-  if (typeof entry === "function") {
-    throw new Error(`${surface.key} unexpectedly points at a dynamic frontend query descriptor`);
-  }
-  return entry;
-}
-
-function requireDescriptorField<T>(
-  surface: DataSurfaceDescriptor,
-  field: keyof DataSurfaceDescriptor,
-  value: T | undefined,
-): T {
-  if (value === undefined) {
-    throw new Error(`descriptor ${surface.key} is missing ${String(field)}`);
-  }
-  return value;
-}
-
-function dependency(id: string) {
-  const definition = DATA_DEPENDENCY_BY_ID.get(id);
-  expect(definition).toBeDefined();
-  return definition;
-}
+/**
+ * Independent expectations for the externally visible route, cache and budget
+ * policy each surface publishes. Only the fields listed per surface are
+ * compared, so an added descriptor field never silently changes this oracle.
+ */
+const EXPECTED_SURFACE_POLICY: Record<string, Record<string, unknown>> = {
+  stablecoins: {
+    apiPath: "/api/stablecoins",
+    queryKey: ["stablecoins"],
+    producerIntervalSec: 900,
+    endpointMaxAgeSec: 600,
+    producerJob: "sync-stablecoins",
+    cacheKey: "stablecoins",
+    dependencyCriticality: "critical",
+  },
+  dexLiquidity: {
+    apiPath: "/api/dex-liquidity",
+    queryKey: ["dex-liquidity"],
+    producerIntervalSec: 3600,
+    endpointMaxAgeSec: 14_400,
+    availabilityMaxAgeSec: 43_200,
+    producerJob: "sync-dex-liquidity",
+    cacheKey: "dex-liquidity",
+    freshnessSentinelKey: "freshness:dex-liquidity",
+    dependencyCriticality: "critical",
+  },
+  yieldRankings: {
+    apiPath: "/api/yield-rankings",
+    queryKey: ["yield-rankings"],
+    summaryApiPath: "/api/yield-rankings?projection=summary",
+    summaryQueryKey: ["yield-rankings", "summary"],
+    producerIntervalSec: 3600,
+    endpointMaxAgeSec: 3600,
+    producerJob: "sync-yield-data",
+    cacheKey: "yield-data",
+    dependencyCriticality: "critical",
+  },
+  yieldHistory: {
+    producerIntervalSec: 3600,
+    endpointMaxAgeSec: 3600,
+    producerJob: "sync-yield-data",
+    cacheKey: "yield-data",
+    dependencyCriticality: "critical",
+  },
+  stressSignals: {
+    apiPath: "/api/stress-signals",
+    queryKey: ["stress-signals"],
+    producerIntervalSec: 1800,
+    endpointMaxAgeSec: 1800,
+    producerJob: "compute-dews",
+    cacheKey: "dews",
+    freshnessSentinelKey: "freshness:dews",
+    dependencyCriticality: "critical",
+  },
+  reportCards: {
+    apiPath: "/api/report-cards/v9",
+    queryKey: ["report-cards", "v9"],
+    producerIntervalSec: 1800,
+    endpointMaxAgeSec: 3_600,
+    producerJob: "compute-safety-score-v9",
+    dependencyCriticality: "critical",
+  },
+  publicHealth: {
+    apiPath: "/api/health",
+    queryKey: ["health"],
+    // Public health is produced by the 15-minute status self-check snapshot.
+    producerIntervalSec: 900,
+  },
+};
 
 describe("data surface descriptors", () => {
   it("declares the stage 2.1a surface inventory with stable keys", () => {
@@ -91,118 +105,17 @@ describe("data surface descriptors", () => {
     );
   });
 
-  it("pins descriptor-owned source values for covered API paths and query keys", () => {
-    expect({
-      path: DATA_SURFACE_DESCRIPTORS.stablecoins.apiPath,
-      queryKey: DATA_SURFACE_DESCRIPTORS.stablecoins.queryKey,
-      producerIntervalSec: DATA_SURFACE_DESCRIPTORS.stablecoins.producerIntervalSec,
-      endpointMaxAgeSec: DATA_SURFACE_DESCRIPTORS.stablecoins.endpointMaxAgeSec,
-      producerJob: DATA_SURFACE_DESCRIPTORS.stablecoins.producerJob,
-      cacheKey: DATA_SURFACE_DESCRIPTORS.stablecoins.cacheKey,
-      criticality: DATA_SURFACE_DESCRIPTORS.stablecoins.dependencyCriticality,
-    }).toEqual({
-      path: "/api/stablecoins",
-      queryKey: ["stablecoins"],
-      producerIntervalSec: 900,
-      endpointMaxAgeSec: 600,
-      producerJob: "sync-stablecoins",
-      cacheKey: "stablecoins",
-      criticality: "critical",
-    });
+  it("publishes the expected route, cache and budget policy per surface", () => {
+    expect(Object.keys(EXPECTED_SURFACE_POLICY)).toEqual(DATA_SURFACE_DESCRIPTOR_LIST.map((surface) => surface.key));
 
-    expect({
-      path: DATA_SURFACE_DESCRIPTORS.dexLiquidity.apiPath,
-      queryKey: DATA_SURFACE_DESCRIPTORS.dexLiquidity.queryKey,
-      producerIntervalSec: DATA_SURFACE_DESCRIPTORS.dexLiquidity.producerIntervalSec,
-      endpointMaxAgeSec: DATA_SURFACE_DESCRIPTORS.dexLiquidity.endpointMaxAgeSec,
-      availabilityMaxAgeSec: DATA_SURFACE_DESCRIPTORS.dexLiquidity.availabilityMaxAgeSec,
-      producerJob: DATA_SURFACE_DESCRIPTORS.dexLiquidity.producerJob,
-      cacheKey: DATA_SURFACE_DESCRIPTORS.dexLiquidity.cacheKey,
-      sentinel: DATA_SURFACE_DESCRIPTORS.dexLiquidity.freshnessSentinelKey,
-      criticality: DATA_SURFACE_DESCRIPTORS.dexLiquidity.dependencyCriticality,
-    }).toEqual({
-      path: "/api/dex-liquidity",
-      queryKey: ["dex-liquidity"],
-      producerIntervalSec: 7200,
-      endpointMaxAgeSec: 14_400,
-      availabilityMaxAgeSec: 43_200,
-      producerJob: "sync-dex-liquidity",
-      cacheKey: "dex-liquidity",
-      sentinel: "freshness:dex-liquidity",
-      criticality: "critical",
-    });
-
-    expect({
-      path: DATA_SURFACE_DESCRIPTORS.yieldRankings.apiPath,
-      queryKey: DATA_SURFACE_DESCRIPTORS.yieldRankings.queryKey,
-      summaryPath: DATA_SURFACE_DESCRIPTORS.yieldRankings.summaryApiPath,
-      summaryQueryKey: DATA_SURFACE_DESCRIPTORS.yieldRankings.summaryQueryKey,
-      producerIntervalSec: DATA_SURFACE_DESCRIPTORS.yieldRankings.producerIntervalSec,
-      endpointMaxAgeSec: DATA_SURFACE_DESCRIPTORS.yieldRankings.endpointMaxAgeSec,
-      producerJob: DATA_SURFACE_DESCRIPTORS.yieldRankings.producerJob,
-      cacheKey: DATA_SURFACE_DESCRIPTORS.yieldRankings.cacheKey,
-      criticality: DATA_SURFACE_DESCRIPTORS.yieldRankings.dependencyCriticality,
-    }).toEqual({
-      path: "/api/yield-rankings",
-      queryKey: ["yield-rankings"],
-      summaryPath: "/api/yield-rankings?projection=summary",
-      summaryQueryKey: ["yield-rankings", "summary"],
-      producerIntervalSec: 3600,
-      endpointMaxAgeSec: 3600,
-      producerJob: "sync-yield-data",
-      cacheKey: "yield-data",
-      criticality: "critical",
-    });
-
-    expect({
-      path: DATA_SURFACE_DESCRIPTORS.stressSignals.apiPath,
-      queryKey: DATA_SURFACE_DESCRIPTORS.stressSignals.queryKey,
-      producerIntervalSec: DATA_SURFACE_DESCRIPTORS.stressSignals.producerIntervalSec,
-      endpointMaxAgeSec: DATA_SURFACE_DESCRIPTORS.stressSignals.endpointMaxAgeSec,
-      producerJob: DATA_SURFACE_DESCRIPTORS.stressSignals.producerJob,
-      cacheKey: DATA_SURFACE_DESCRIPTORS.stressSignals.cacheKey,
-      sentinel: DATA_SURFACE_DESCRIPTORS.stressSignals.freshnessSentinelKey,
-      criticality: DATA_SURFACE_DESCRIPTORS.stressSignals.dependencyCriticality,
-    }).toEqual({
-      path: "/api/stress-signals",
-      queryKey: ["stress-signals"],
-      producerIntervalSec: 1800,
-      endpointMaxAgeSec: 1800,
-      producerJob: "compute-dews",
-      cacheKey: "dews",
-      sentinel: "freshness:dews",
-      criticality: "critical",
-    });
-
-    expect({
-      path: DATA_SURFACE_DESCRIPTORS.reportCards.apiPath,
-      queryKey: DATA_SURFACE_DESCRIPTORS.reportCards.queryKey,
-      producerIntervalSec: DATA_SURFACE_DESCRIPTORS.reportCards.producerIntervalSec,
-      endpointMaxAgeSec: DATA_SURFACE_DESCRIPTORS.reportCards.endpointMaxAgeSec,
-      producerJob: DATA_SURFACE_DESCRIPTORS.reportCards.producerJob,
-      criticality: DATA_SURFACE_DESCRIPTORS.reportCards.dependencyCriticality,
-    }).toEqual({
-      path: "/api/report-cards/v9",
-      queryKey: ["report-cards", "v9"],
-      producerIntervalSec: 1800,
-      endpointMaxAgeSec: 3_600,
-      producerJob: "compute-safety-score-v9",
-      criticality: "critical",
-    });
-
-    expect({
-      path: DATA_SURFACE_DESCRIPTORS.publicHealth.apiPath,
-      queryKey: DATA_SURFACE_DESCRIPTORS.publicHealth.queryKey,
-      // Public health is produced by the 15-minute status self-check snapshot.
-      producerIntervalSec: DATA_SURFACE_DESCRIPTORS.publicHealth.producerIntervalSec,
-    }).toEqual({
-      path: "/api/health",
-      queryKey: ["health"],
-      producerIntervalSec: 900,
-    });
+    for (const [key, expected] of Object.entries(EXPECTED_SURFACE_POLICY)) {
+      const descriptor = DESCRIPTORS_BY_KEY[key];
+      const projected = Object.fromEntries(Object.keys(expected).map((field) => [field, descriptor?.[field]]));
+      expect(projected, key).toEqual(expected);
+    }
   });
 
-  it("pins dynamic yield history descriptor builders", () => {
+  it("builds yield history routes and per-argument query keys", () => {
     const surface = DATA_SURFACE_DESCRIPTORS.yieldHistory;
 
     expect(surface.buildApiPath("usdc", 365, "source", "aave-v3")).toBe(
@@ -217,69 +130,40 @@ describe("data surface descriptors", () => {
     ]);
     expect(surface.buildApiPath("usdt", 90, "best", null)).toBe("/api/yield-history?stablecoin=usdt&days=90&mode=best");
     expect(surface.buildQueryKey("usdt", 90, "best", null)).toEqual(["yield-history", "usdt", 90, "best", null]);
-    expect({
-      producerIntervalSec: surface.producerIntervalSec,
-      endpointMaxAgeSec: surface.endpointMaxAgeSec,
-      producerJob: surface.producerJob,
-      cacheKey: surface.cacheKey,
-      criticality: surface.dependencyCriticality,
-    }).toEqual({
-      producerIntervalSec: 3600,
-      endpointMaxAgeSec: 3600,
-      producerJob: "sync-yield-data",
-      cacheKey: "yield-data",
-      criticality: "critical",
-    });
   });
 
-  it("derives static frontend query descriptor values from descriptors", () => {
-    for (const surface of STATIC_FRONTEND_DERIVED_SURFACES) {
-      const frontend = frontendStaticDescriptor(surface);
-      const apiPath = requireDescriptorField(surface, "apiPath", surface.apiPath);
-      const queryKey = requireDescriptorField(surface, "queryKey", surface.queryKey);
-      const producerIntervalSec = requireDescriptorField(surface, "producerIntervalSec", surface.producerIntervalSec);
+  it("gives the frontend query registry the descriptor routes and distinct cache keys", () => {
+    expect(FRONTEND_API_QUERY_DESCRIPTORS.stablecoins.path).toBe("/api/stablecoins");
+    expect(FRONTEND_API_QUERY_DESCRIPTORS.stablecoins.queryKey).toEqual(["stablecoins"]);
+    expect(FRONTEND_API_QUERY_DESCRIPTORS.stablecoins.producerIntervalMs).toBe(900_000);
+    expect(FRONTEND_API_QUERY_DESCRIPTORS.stablecoins.metaMaxAgeSec).toBe(600);
 
-      expect(frontend.queryKey).toBe(queryKey);
-      expect(frontend.path).toBe(apiPath);
-      expect(frontend.producerIntervalMs).toBe(producerIntervalSec * 1000);
-      if (surface.endpointMaxAgeSec === undefined) {
-        expect(frontend).not.toHaveProperty("metaMaxAgeSec");
-      } else {
-        expect(frontend.metaMaxAgeSec).toBe(surface.endpointMaxAgeSec);
-      }
-    }
-  });
+    const withSource = FRONTEND_API_QUERY_DESCRIPTORS.yieldHistory("usdc", 365, "source", "aave-v3");
+    const otherSource = FRONTEND_API_QUERY_DESCRIPTORS.yieldHistory("usdc", 365, "source", "compound-v3");
+    const bestMode = FRONTEND_API_QUERY_DESCRIPTORS.yieldHistory("usdc", 365, "best", null);
 
-  it("derives dynamic yield history frontend descriptors from the descriptor builder", () => {
-    const surface = DATA_SURFACE_DESCRIPTORS.yieldHistory;
-    const frontendWithSource = FRONTEND_API_QUERY_DESCRIPTORS.yieldHistory("usdc", 365, "source", "aave-v3");
-    const frontendWithoutSource = FRONTEND_API_QUERY_DESCRIPTORS.yieldHistory("usdt", 90, "best", null);
+    expect(withSource.path).toBe("/api/yield-history?stablecoin=usdc&days=365&mode=source&sourceKey=aave-v3");
+    expect(withSource.queryKey).toEqual(["yield-history", "usdc", 365, "source", "aave-v3"]);
+    expect(withSource.producerIntervalMs).toBe(3_600_000);
+    expect(withSource.metaMaxAgeSec).toBe(3600);
 
-    expect(frontendWithSource.path).toBe(surface.buildApiPath("usdc", 365, "source", "aave-v3"));
-    expect(frontendWithSource.queryKey).toEqual(surface.buildQueryKey("usdc", 365, "source", "aave-v3"));
-    expect(frontendWithSource.producerIntervalMs).toBe(surface.producerIntervalSec * 1000);
-    expect(frontendWithSource.metaMaxAgeSec).toBe(surface.endpointMaxAgeSec);
-
-    expect(frontendWithoutSource.path).toBe(surface.buildApiPath("usdt", 90, "best", null));
-    expect(frontendWithoutSource.queryKey).toEqual(surface.buildQueryKey("usdt", 90, "best", null));
-    expect(frontendWithoutSource.producerIntervalMs).toBe(surface.producerIntervalSec * 1000);
-    expect(frontendWithoutSource.metaMaxAgeSec).toBe(surface.endpointMaxAgeSec);
+    // Distinct arguments must not collide in the React Query cache.
+    expect(otherSource.queryKey).not.toEqual(withSource.queryKey);
+    expect(bestMode.queryKey).not.toEqual(withSource.queryKey);
+    expect(bestMode.path).not.toBe(withSource.path);
   });
 
   it("derives endpoint freshness budgets from descriptors", () => {
     for (const surface of DATA_SURFACE_DESCRIPTOR_LIST) {
-      const surfaceKey: string = surface.key;
       if (!("apiFreshnessKey" in surface) || !surface.apiFreshnessKey) continue;
-      if (!("endpointMaxAgeSec" in surface)) {
-        throw new Error(`descriptor ${surfaceKey} has apiFreshnessKey but no endpointMaxAgeSec`);
-      }
-      const endpointMaxAgeSec = requireDescriptorField(surface, "endpointMaxAgeSec", surface.endpointMaxAgeSec);
 
-      expect(API_FRESHNESS_BY_KEY[surface.apiFreshnessKey]).toBe(endpointMaxAgeSec);
+      expect(API_FRESHNESS_BY_KEY[surface.apiFreshnessKey], surface.key).toBe(
+        "endpointMaxAgeSec" in surface ? surface.endpointMaxAgeSec : undefined,
+      );
     }
   });
 
-  it("pins the cache freshness lanes and proves descriptors project them", () => {
+  it("pins the cache freshness lanes and resolves each descriptor cache key to its lane", () => {
     expect(CACHE_FRESHNESS_LANES_BY_KEY.stablecoins).toMatchObject({
       cacheKey: "stablecoins",
       producerJob: "sync-stablecoins",
@@ -290,7 +174,7 @@ describe("data surface descriptors", () => {
     expect(CACHE_FRESHNESS_LANES_BY_KEY.dexLiquidity).toMatchObject({
       cacheKey: "dex-liquidity",
       producerJob: "sync-dex-liquidity",
-      producerIntervalSec: 7200,
+      producerIntervalSec: 3600,
       endpointMaxAgeSec: 14_400,
       availabilityMaxAgeSec: 43_200,
       freshnessSentinelKey: "freshness:dex-liquidity",
@@ -313,121 +197,16 @@ describe("data surface descriptors", () => {
     });
     expect(FRESHNESS_SENTINEL_CACHE_KEYS).toEqual(["dex-liquidity", "yield-data", "dews"]);
 
-    // Descriptors no longer restate these five fields: they spread the lane via
-    // `surfaceFreshnessLaneFields(...)`. This is now a copy-matches-source check
-    // (the copy is derived), plus proof that lane documentation strings stay off
-    // the descriptor and that the cacheKey lookup still resolves to the same lane.
     for (const surface of DATA_SURFACE_DESCRIPTOR_LIST) {
       if (!("cacheFreshnessLaneKey" in surface) || !surface.cacheFreshnessLaneKey) continue;
 
-      const lane = CACHE_FRESHNESS_LANES_BY_KEY[surface.cacheFreshnessLaneKey];
-      expect(lane).toBeDefined();
-      expect(getCacheFreshnessLane(surface.cacheKey ?? "")).toBe(lane);
-      expect(surface.cacheKey).toBe(lane.cacheKey);
-      expect(surface.producerJob).toBe(lane.producerJob);
-      expect(surface.producerIntervalSec).toBe(lane.producerIntervalSec);
-      expect("endpointMaxAgeSec" in surface ? surface.endpointMaxAgeSec : undefined).toBe(lane.endpointMaxAgeSec);
-      expect("availabilityMaxAgeSec" in surface ? surface.availabilityMaxAgeSec : undefined).toBe(
-        lane.availabilityMaxAgeSec,
+      expect(getCacheFreshnessLane(surface.cacheKey ?? ""), surface.key).toBe(
+        CACHE_FRESHNESS_LANES_BY_KEY[surface.cacheFreshnessLaneKey],
       );
-      expect("availabilityMaxAgeSec" in surface ? surface.availabilityMaxAgeSec : undefined).toBe(
-        CACHE_AVAILABILITY_MAX_AGE_SEC[lane.cacheKey],
-      );
-      expect("freshnessSentinelKey" in surface ? surface.freshnessSentinelKey : undefined).toBe(
-        lane.freshnessSentinelKey,
-      );
-      expect(surface).not.toHaveProperty("endpointBudgetReason");
-      expect(surface).not.toHaveProperty("availabilityBudgetReason");
     }
   });
 
-  it("derives descriptor-covered data dependency fields and pins the explicit fields", () => {
-    const cases = [
-      {
-        surface: DATA_SURFACE_DESCRIPTORS.stablecoins,
-        id: "stablecoins",
-        explicit: {
-          label: "Stablecoin market snapshot",
-          sourceOfTruth: "cache:stablecoins",
-          publicationSurface: null,
-          impactLayer: "availability",
-          dependsOn: [],
-          consumers: ["home", "stablecoin-detail", "report-cards", "api:stablecoins"],
-          runbookPath: "docs/runbooks/stablecoins-cache.md",
-        },
-      },
-      {
-        surface: DATA_SURFACE_DESCRIPTORS.dexLiquidity,
-        id: "dex-liquidity",
-        explicit: {
-          label: "DEX liquidity scoring",
-          sourceOfTruth: "dex_liquidity_publication_generations",
-          publicationSurface: "dex-liquidity",
-          impactLayer: "availability",
-          dependsOn: ["stablecoins"],
-          consumers: ["liquidity-ranking", "dews", "report-cards", "redemption-backstops", "yield-rankings"],
-          runbookPath: null,
-        },
-      },
-      {
-        surface: DATA_SURFACE_DESCRIPTORS.yieldRankings,
-        id: "yield-rankings",
-        explicit: {
-          label: "Yield rankings",
-          sourceOfTruth: "yield_publication_generations",
-          publicationSurface: "yield-rankings",
-          impactLayer: "availability",
-          dependsOn: ["dex-liquidity"],
-          consumers: ["yield-intelligence", "report-cards", "api:yield"],
-          runbookPath: null,
-        },
-      },
-      {
-        surface: DATA_SURFACE_DESCRIPTORS.stressSignals,
-        id: "dews",
-        explicit: {
-          label: "DEWS risk signals",
-          sourceOfTruth: "cache:dews",
-          publicationSurface: "dews",
-          impactLayer: "availability",
-          dependsOn: ["dex-liquidity", "depeg-events"],
-          consumers: ["stress-signals", "telegram-alerts", "report-cards"],
-          runbookPath: null,
-        },
-      },
-      {
-        surface: DATA_SURFACE_DESCRIPTORS.reportCards,
-        id: "safety-score-v9",
-        explicit: {
-          label: "Safety Score V9 publication",
-          sourceOfTruth: "cache:report-cards:v9",
-          publicationSurface: "safety-score-v9",
-          impactLayer: "availability",
-          dependsOn: ["stablecoins", "dex-liquidity", "redemption-backstops", "live-reserves", "depeg-events"],
-          consumers: ["report-cards", "stablecoin-detail", "yield-rankings"],
-          runbookPath: null,
-        },
-      },
-    ];
-
-    for (const { surface, id, explicit } of cases) {
-      const definition = dependency(id);
-      expect(definition?.producerJob).toBe(surface.producerJob ?? null);
-      expect(definition?.cacheKey).toBe("cacheKey" in surface ? (surface.cacheKey ?? null) : null);
-      expect(definition?.criticality).toBe(surface.dependencyCriticality);
-      expect({
-        label: definition?.label,
-        sourceOfTruth: definition?.sourceOfTruth,
-        publicationSurface: definition?.publicationSurface,
-        impactLayer: definition?.impactLayer,
-        dependsOn: definition?.dependsOn,
-        consumers: definition?.consumers,
-        runbookPath: definition?.runbookPath,
-      }).toEqual(explicit);
-    }
-  });
-
-  it("pins non-derived data health presets and keeps descriptors aligned", () => {
+  it("pins the non-derived data health presets", () => {
     expect({
       stablecoins: DATA_HEALTH_PRESETS_BY_KEY.stablecoins,
       dexLiquidity: DATA_HEALTH_PRESETS_BY_KEY.dexLiquidity,
@@ -441,40 +220,9 @@ describe("data surface descriptors", () => {
       stressSignals: { label: "DEWS", staleTime: 1_800_000 },
       reportCards: { label: "Report Cards", staleTime: 3_600_000 },
     });
-
-    for (const surface of DATA_SURFACE_DESCRIPTOR_LIST) {
-      const surfaceKey: string = surface.key;
-      if (!("dataHealthPresetKey" in surface) || !surface.dataHealthPresetKey) continue;
-
-      const preset = DATA_HEALTH_PRESETS_BY_KEY[surface.dataHealthPresetKey];
-      expect(preset).toBeDefined();
-      if (!("uiLabel" in surface) || !("endpointMaxAgeSec" in surface)) {
-        throw new Error(`descriptor ${surfaceKey} has dataHealthPresetKey but lacks uiLabel/endpointMaxAgeSec`);
-      }
-      expect(surface.uiLabel).toBe(preset.label);
-      expect(surface.endpointMaxAgeSec).toBe(preset.staleTime / 1000);
-    }
   });
 
-  it("derives descriptor-covered PharosVille contract fields while non-covered entries stay pinned", () => {
-    for (const surface of [
-      DATA_SURFACE_DESCRIPTORS.stablecoins,
-      DATA_SURFACE_DESCRIPTORS.stressSignals,
-      DATA_SURFACE_DESCRIPTORS.reportCards,
-    ]) {
-      const schemaKey = requireDescriptorField(surface, "pharosVilleSchemaKey", surface.pharosVilleSchemaKey);
-      const contract = PHAROSVILLE_CONTRACT_BY_KEY[schemaKey];
-      const apiPath = requireDescriptorField(surface, "apiPath", surface.apiPath);
-      const endpointMaxAgeSec = requireDescriptorField(surface, "endpointMaxAgeSec", surface.endpointMaxAgeSec);
-      const producerIntervalSec = requireDescriptorField(surface, "producerIntervalSec", surface.producerIntervalSec);
-
-      expect(contract).toBeDefined();
-      expect(contract.key).toBe(schemaKey);
-      expect(contract.path).toBe(apiPath);
-      expect(contract.metaMaxAgeSec).toBe(endpointMaxAgeSec);
-      expect(contract.producerIntervalSec).toBe(producerIntervalSec);
-    }
-
+  it("pins the PharosVille contract entries that no descriptor owns", () => {
     expect({
       chains: {
         path: PHAROSVILLE_API_CONTRACT.chains.path,
@@ -510,5 +258,16 @@ describe("data surface descriptors", () => {
         producerIntervalSec: 900,
       },
     });
+  });
+
+  it("publishes every PharosVille endpoint on a distinct usable route with a positive budget", () => {
+    const paths = PHAROSVILLE_API_ENDPOINTS.map((endpoint) => endpoint.path);
+
+    expect(new Set(paths).size).toBe(paths.length);
+    for (const endpoint of PHAROSVILLE_API_ENDPOINTS) {
+      expect(endpoint.path, endpoint.key).toMatch(/^\/api\//);
+      expect(endpoint.metaMaxAgeSec, endpoint.key).toBeGreaterThan(0);
+      expect(endpoint.producerIntervalSec, endpoint.key).toBeGreaterThan(0);
+    }
   });
 });

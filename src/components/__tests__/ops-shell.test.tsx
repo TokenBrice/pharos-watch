@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 
-import { render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const { usePathnameMock, replaceMock, useOpsUiHostMock, useThemeToggleMock } = vi.hoisted(() => ({
@@ -161,5 +161,23 @@ describe("OpsShell", () => {
     );
 
     await waitFor(() => expect(replaceMock).toHaveBeenCalledWith("/admin/actions/", { scroll: false }));
+  });
+
+  it("exposes and activates the History and Comms workspace routes", () => {
+    render(
+      <OpsShell>
+        <div>Workspace body</div>
+      </OpsShell>,
+    );
+
+    const historyLink = screen.getByRole("link", { name: "History" });
+    expect(historyLink.getAttribute("href")).toBe("/admin/history");
+    fireEvent.click(historyLink);
+    expect(historyLink.getAttribute("href")).toBe("/admin/history");
+
+    const commsLink = screen.getByRole("link", { name: "Comms" });
+    expect(commsLink.getAttribute("href")).toBe("/admin/comms");
+    fireEvent.click(commsLink);
+    expect(commsLink.getAttribute("href")).toBe("/admin/comms");
   });
 });

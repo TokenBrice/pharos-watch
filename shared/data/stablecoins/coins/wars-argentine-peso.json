@@ -113,9 +113,9 @@
     }
   },
   "liveReservesConfig": {
-    "adapter": "single-asset",
+    "adapter": "attestation-pdf-index",
     "version": 1,
-    "semantics": "single-asset",
+    "semantics": "attestation-mix",
     "breakerScope": "wars-argentine-peso",
     "display": {
       "url": "https://www.ripio.com/en/cryptos/local-stablecoins",
@@ -123,14 +123,23 @@
     },
     "inputs": {
       "primary": {
-        "kind": "onchain-evm",
-        "chain": "ethereum",
-        "rpcMode": "public-rpc"
+        "kind": "http-html",
+        "url": "https://www.ripio.com/en/cryptos/local-stablecoins"
       }
     },
     "params": {
-      "label": "Argentine peso bank deposits and local-currency liquid instruments",
-      "risk": "high"
+      "linkMatch": "wARS",
+      "slices": [
+        {
+          "name": "Argentine-peso deposits at Argentine financial institutions",
+          "pct": 100,
+          "risk": "high",
+          "assetClass": "bank-deposit",
+          "issuerOrObligor": "Undisclosed Argentine financial institutions",
+          "riskFactors": ["counterparty", "liquidity", "custody", "concentration"],
+          "liquidityHorizon": "unknown"
+        }
+      ]
     }
   },
   "launchDate": "2025-11-01"

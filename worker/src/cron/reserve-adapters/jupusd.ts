@@ -4,6 +4,7 @@ import type { LiveReservesConfig, LiveReserveWarning } from "@shared/types/live-
 import type { AdapterContext, AdapterResult } from "./types";
 import { toErrorMessage } from "@shared/lib/error-utils";
 import {
+  buildCoverageShortfallWarnings,
   buildRedemptionSnapshotMetadata,
   buildUnknownExposureWarning,
   catchAndWarn,
@@ -155,23 +156,36 @@ export function adaptJupUsdData(
     ? (options.oracle.ripcordDetails || "JupUSD oracle reports ripcord mode")
     : undefined;
   const totalSupply = parseAmount(payload.totalSupply, 6);
-  const ratio = totalSupply > 0 ? Math.min(1, totalReserveUsd / totalSupply) : undefined;
+  if (totalSupply <= 0) {
+    throw new Error("jupusd missing or invalid totalSupply");
+  }
+  // True assets ÷ liability: never clamped, so genuine overcollateralization
+  // shows and a shortfall degrades per the undercollateralization policy.
+  const collateralizationRatio = totalReserveUsd / totalSupply;
+  // Redemption capacity is clamped to the supply that can actually be redeemed.
+  const capacityUsd = Math.min(totalReserveUsd, totalSupply);
+  const ratio = capacityUsd / totalSupply;
   const unknownExposurePct = totalReserveUsd > 0 ? (unknownValue / totalReserveUsd) * 100 : 0;
   const warnings: LiveReserveWarning[] = [];
   if (unknownValue > 0) {
-    warnings.push(buildUnknownExposureWarning({
-      code: "unknown-holding",
-      message: `JupUSD reserve feed included unmapped holding(s): ${Array.from(unknownHoldingNames).sort().join(", ")}`,
-      unknownExposurePct,
-    }));
+    warnings.push(buildUnknownExposureWarning({ adapterKey: "jupusd", code: "unknown-holding",
+    message: `JupUSD reserve feed included unmapped holding(s): ${Array.from(unknownHoldingNames).sort().join(", ")}`,
+    unknownExposurePct, }));
   }
   if (options.extraWarnings?.length) {
     warnings.push(...options.extraWarnings);
   }
+  warnings.push(...buildCoverageShortfallWarnings({
+    code: "reserve-undercollateralized",
+    message: (pct) => `JupUSD reserve holdings cover ${pct}% of reported supply`,
+    coverageRatio: collateralizationRatio,
+    thresholdRatio: 1,
+  }));
 
   return {
     slices: normalizeSlices(
       [...values.values()].map((entry) => ({
+        sourceKey: entry.unknown ? "jupusd:unknown" : `jupusd:${entry.name.toLowerCase()}`,
         name: entry.name,
         pct: (entry.value / totalReserveUsd) * 100,
         risk: entry.risk,
@@ -182,14 +196,13 @@ export function adaptJupUsdData(
     ...(warnings.length > 0 ? { warnings } : {}),
     metadata: {
       totalReserveUsd,
-      ...(totalSupply > 0 ? { supplyUsd: totalSupply } : {}),
+      supplyUsd: totalSupply,
+      collateralizationRatio,
       unknownExposurePct,
       ...(unknownHoldingNames.size > 0 ? { unknownHoldingNames: Array.from(unknownHoldingNames).sort() } : {}),
-      immediateRedeemableUsd: totalReserveUsd,
-      ...(ratio != null ? { immediateRedeemableRatio: ratio } : {}),
       ...buildRedemptionSnapshotMetadata({
-        capacityUsd: totalReserveUsd,
-        ...(ratio != null ? { capacityRatioOfSupply: ratio } : {}),
+        capacityUsd,
+        capacityRatioOfSupply: ratio,
         capacityKind: "live-direct-bounded",
         freshnessKind: sourceTimestamp != null ? "verified-source-timestamp" : "same-run-api",
         ...(sourceTimestamp != null ? { sourceTimestamp } : {}),
@@ -247,7 +260,16 @@ export async function fetchJupUsdReserves(
         )
       : Promise.resolve(null),
   ]);
-  const latestTimestamp = parseTimestampLikeToUnixSeconds(snapshots?.snapshots?.[0]?.timestamp);
+  // The snapshots feed is ordered descending today, but the adapter must not
+  // trust that: an upstream flip to ascending would silently stamp an
+  // eight-month-old "verified" timestamp. Take the newest parseable timestamp
+  // explicitly instead of trusting snapshots[0].
+  const snapshotTimestamps = (snapshots?.snapshots ?? [])
+    .map((entry) => parseTimestampLikeToUnixSeconds(entry?.timestamp))
+    .filter((timestamp): timestamp is number => timestamp != null);
+  const latestTimestamp = snapshotTimestamps.length > 0
+    ? Math.max(...snapshotTimestamps)
+    : null;
   return adaptJupUsdData(payload, {
     sourceTimestamp: latestTimestamp,
     oracle,

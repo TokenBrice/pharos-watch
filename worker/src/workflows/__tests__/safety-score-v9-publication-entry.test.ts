@@ -1,6 +1,8 @@
-import { readFileSync } from "node:fs";
+import { experimental_readRawConfig } from "wrangler";
 import { resolve } from "node:path";
 import { describe, expect, it, vi } from "vitest";
+
+type WranglerWorkflowConfig = { binding: string; class_name: string };
 
 const { publicationImplementationFactory, publicationRunnerFactory } =
   vi.hoisted(() => ({
@@ -32,16 +34,18 @@ describe("SafetyScoreV9PublicationWorkflow entrypoint", () => {
 
   it("matches the Workflow class name configured in Wrangler", async () => {
     const { SafetyScoreV9PublicationWorkflow } = await import("../../index");
-    const wranglerConfig = readFileSync(
-      resolve(process.cwd(), "worker/wrangler.toml"),
-      "utf8",
-    );
+    const { rawConfig } = experimental_readRawConfig({
+      config: resolve(process.cwd(), "worker/wrangler.toml"),
+    });
 
     expect(SafetyScoreV9PublicationWorkflow.name).toBe(
       "SafetyScoreV9PublicationWorkflow",
     );
-    expect(wranglerConfig).toMatch(
-      /\[\[workflows\]\][\s\S]*?class_name = "SafetyScoreV9PublicationWorkflow"/,
-    );
+    expect(
+      rawConfig.workflows?.find(
+        (workflow: WranglerWorkflowConfig) =>
+          workflow.binding === "SAFETY_SCORE_V9_WORKFLOW",
+      ),
+    ).toMatchObject({ class_name: SafetyScoreV9PublicationWorkflow.name });
   });
 });

@@ -109,7 +109,7 @@
     "params": {
       "shareClassSymbol": "UKTBL",
       "slice": {
-        "name": "UK Treasury Bills and cash",
+        "name": "Spiko UK T-Bills Money Market Fund shares",
         "risk": "low"
       }
     }

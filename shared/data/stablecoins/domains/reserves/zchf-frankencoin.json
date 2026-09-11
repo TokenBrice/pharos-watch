@@ -2,6 +2,7 @@
   "id": "zchf-frankencoin",
   "reserves": [
     {
+      "sourceKey": "collateral-positions-api:boss",
       "name": "BOSS (Boss Info AG)",
       "pct": 29.825,
       "risk": "very-high",
@@ -18,6 +19,7 @@
       "liquidityHorizon": "unknown"
     },
     {
+      "sourceKey": "collateral-positions-api:cbbtc",
       "name": "cbBTC (Coinbase Wrapped BTC)",
       "pct": 20.695,
       "risk": "medium",
@@ -33,6 +35,7 @@
       "liquidityHorizon": "immediate"
     },
     {
+      "sourceKey": "collateral-positions-api:wbtc",
       "name": "WBTC (Wrapped BTC)",
       "pct": 13.687,
       "risk": "medium",
@@ -48,6 +51,7 @@
       "liquidityHorizon": "immediate"
     },
     {
+      "sourceKey": "collateral-positions-api:lseth",
       "name": "LsETH (Liquid Staked ETH)",
       "pct": 9.443,
       "risk": "low",
@@ -63,6 +67,7 @@
       "liquidityHorizon": "immediate"
     },
     {
+      "sourceKey": "collateral-positions-api:dqts",
       "name": "DQTS (Draggable quitt.shares)",
       "pct": 7.098,
       "risk": "high",
@@ -79,6 +84,7 @@
       "liquidityHorizon": "unknown"
     },
     {
+      "sourceKey": "collateral-positions-api:wsteth",
       "name": "wstETH (Wrapped liquid staked Ether 2.0)",
       "pct": 7.908,
       "risk": "low",
@@ -94,6 +100,7 @@
       "liquidityHorizon": "immediate"
     },
     {
+      "sourceKey": "collateral-positions-api:spyon",
       "name": "SPYon (SPDR S&P 500 ETF (Ondo Tokenized))",
       "pct": 5.566,
       "risk": "high",
@@ -110,6 +117,7 @@
       "liquidityHorizon": "unknown"
     },
     {
+      "sourceKey": "collateral-positions-api:xaut",
       "name": "XAUt (Tether Gold)",
       "pct": 1.597,
       "risk": "medium",
@@ -128,6 +136,7 @@
       "liquidityHorizon": "unknown"
     },
     {
+      "sourceKey": "collateral-positions-api:paxg",
       "name": "PAXG (Paxos Gold)",
       "pct": 1.313,
       "risk": "medium",
@@ -146,6 +155,7 @@
       "liquidityHorizon": "unknown"
     },
     {
+      "sourceKey": "collateral-positions-api:weth",
       "name": "WETH (Wrapped Ether)",
       "pct": 1.533,
       "risk": "very-low",
@@ -159,6 +169,7 @@
       "liquidityHorizon": "immediate"
     },
     {
+      "sourceKey": "collateral-positions-api:gno",
       "name": "GNO (Gnosis Token)",
       "pct": 0.914,
       "risk": "very-high",
@@ -173,6 +184,7 @@
       "liquidityHorizon": "unknown"
     },
     {
+      "sourceKey": "collateral-positions-api:realu",
       "name": "REALU (RealUnit Shares)",
       "pct": 0.167,
       "risk": "high",
@@ -188,6 +200,7 @@
       "liquidityHorizon": "unknown"
     },
     {
+      "sourceKey": "collateral-positions-api:lends",
       "name": "LENDS (Switzerlend AG C1 Shares SHA)",
       "pct": 0.126,
       "risk": "high",
@@ -204,6 +217,7 @@
       "liquidityHorizon": "over-seven-days"
     },
     {
+      "sourceKey": "collateral-positions-api:ysybold",
       "name": "ysyBOLD",
       "pct": 0.103,
       "risk": "medium",
@@ -220,6 +234,7 @@
       "liquidityHorizon": "unknown"
     },
     {
+      "sourceKey": "collateral-positions-api:crv",
       "name": "CRV",
       "pct": 0.026,
       "risk": "very-high",

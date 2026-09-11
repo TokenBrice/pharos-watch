@@ -8,7 +8,7 @@ A small set of metadata entries is maintained outside the tracked public stablec
 
 Shadow stablecoins preserve historically important collapse events in systems that would otherwise undercount past systemic stress after an asset is delisted from the public dashboard.
 
-`shared/lib/psi-eligible.ts` combines active tracked assets with the shadow set into `PSI_ELIGIBLE_STABLECOINS` / `PSI_ELIGIBLE_IDS`, excluding every non-active tracked entry. Any consumer of that set inherits shadow assets, so depeg detection, DEWS, supply snapshots, and the price/depeg/DEWS replay and backfill paths reach shadow assets through it rather than through their own lists.
+`shared/lib/psi-eligible.ts` combines active tracked assets with the shadow set into `PSI_ELIGIBLE_STABLECOINS` / `PSI_ELIGIBLE_IDS`, excluding every non-active tracked entry. Any consumer of that set inherits shadow assets, so depeg detection, DEWS, and the price/depeg/DEWS replay and backfill paths reach shadow assets through it rather than through their own lists. The supply-snapshot cron is the exception: `worker/src/cron/snapshot-supply.ts` composes its own eligibility set from `WORKER_ACTIVE_IDS` plus `SHADOW_IDS`, so a change to the shadow inventory reaches it through `shared/lib/shadow-stablecoins.ts` directly.
 
 Two scope details do not follow from that rule:
 

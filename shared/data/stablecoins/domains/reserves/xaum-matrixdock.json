@@ -2,6 +2,7 @@
   "id": "xaum-matrixdock",
   "reserves": [
     {
+      "sourceKey": "chainlink-nav:token:0x23ae4fd8e7844cdbc97775496ebd0e8248656028",
       "name": "Physical gold bars (LBMA 99.99%)",
       "pct": 100,
       "risk": "medium",

@@ -1,7 +1,4 @@
-import {
-  buildCompareHrefFromCoinIds,
-  type ParsedVerb,
-} from "@/lib/command-palette-verbs";
+import type { ParsedVerb } from "@/lib/command-palette-verbs";
 
 export interface CommandPaletteVerbPreview {
   label: string;
@@ -24,7 +21,7 @@ export function executeParsedVerb(
   switch (parsedVerb.kind) {
     case "compare": {
       if (parsedVerb.resolvedCoinIds.length === 0) return false;
-      executor.push(buildCompareHrefFromCoinIds(parsedVerb.resolvedCoinIds));
+      executor.push(parsedVerb.href);
       executor.closePalette();
       return true;
     }

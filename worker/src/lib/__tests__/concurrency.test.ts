@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { mapWithConcurrency } from "../concurrency";
+import { createDeferredPromise } from "./deferred.test-support";
 
 describe("mapWithConcurrency", () => {
   it("never exceeds the configured in-flight cap", async () => {
@@ -8,14 +9,22 @@ describe("mapWithConcurrency", () => {
     let inFlight = 0;
     let peak = 0;
 
-    const results = await mapWithConcurrency(Array.from({ length: itemCount }, (_, i) => i), cap, async (n) => {
+    const gates = Array.from({ length: itemCount }, () => createDeferredPromise());
+    const started = Array.from({ length: itemCount }, () => createDeferredPromise());
+    const pending = mapWithConcurrency(Array.from({ length: itemCount }, (_, i) => i), cap, async (n) => {
       inFlight += 1;
       peak = Math.max(peak, inFlight);
-      // Stagger completion so workers really overlap.
-      await new Promise((resolve) => setTimeout(resolve, n % 3));
+      started[n].resolve();
+      await gates[n].promise;
       inFlight -= 1;
       return n * 2;
     });
+    for (let offset = 0; offset < itemCount; offset += cap) {
+      await Promise.all(started.slice(offset, offset + cap).map((gate) => gate.promise));
+      expect(inFlight).toBe(cap);
+      for (let index = offset + cap - 1; index >= offset; index--) gates[index].resolve();
+    }
+    const results = await pending;
 
     expect(peak).toBeLessThanOrEqual(cap);
     expect(peak).toBe(cap); // we created enough work to saturate the pool
@@ -24,11 +33,19 @@ describe("mapWithConcurrency", () => {
 
   it("preserves input order in the results array", async () => {
     const items = ["a", "b", "c", "d", "e"];
-    const results = await mapWithConcurrency(items, 2, async (item, index) => {
-      // Reverse the natural completion order so unordered scheduling can't masquerade.
-      await new Promise((resolve) => setTimeout(resolve, (items.length - index) * 2));
+    const gates = items.map(() => createDeferredPromise());
+    const completed: string[] = [];
+    const pending = mapWithConcurrency(items, items.length, async (item, index) => {
+      await gates[index].promise;
+      completed.push(item);
       return item.toUpperCase();
     });
+    for (let index = items.length - 1; index >= 0; index--) {
+      gates[index].resolve();
+      await gates[index].promise;
+    }
+    const results = await pending;
+    expect(completed).toEqual(["e", "d", "c", "b", "a"]);
     expect(results).toEqual(["A", "B", "C", "D", "E"]);
   });
 
@@ -37,40 +54,26 @@ describe("mapWithConcurrency", () => {
     expect(results).toEqual([]);
   });
 
-  it("rejects with the first task error and stops scheduling new work", async () => {
+  it.each([
+    [new Error("boom"), "boom"],
+    [undefined, "mapWithConcurrency task rejected"],
+  ])("stops scheduling and settles started work after rejection %s", async (error, message) => {
     const started: number[] = [];
-    const cap = 2;
-    const items = [0, 1, 2, 3, 4, 5];
-
-    await expect(
-      mapWithConcurrency(items, cap, async (i) => {
-        started.push(i);
-        if (i === 1) throw new Error("boom");
-        await new Promise((resolve) => setTimeout(resolve, 5));
-        return i;
-      }),
-    ).rejects.toThrow("boom");
-
-    // Tasks 0 and 1 must have started (initial pool fill); later items should not all have run.
-    expect(started).toContain(0);
-    expect(started).toContain(1);
-    expect(started.length).toBeLessThan(items.length);
-  });
-
-  it("stops scheduling new work after a task rejects with undefined", async () => {
-    const started: number[] = [];
-    const cap = 2;
-    const items = [0, 1, 2, 3, 4, 5];
-
-    await expect(
-      mapWithConcurrency(items, cap, async (i) => {
-        started.push(i);
-        if (i === 1) throw undefined;
-        await new Promise((resolve) => setTimeout(resolve, 5));
-        return i;
-      }),
-    ).rejects.toThrow("mapWithConcurrency task rejected");
-
+    const gate = createDeferredPromise();
+    let completed = false;
+    const pending = mapWithConcurrency([0, 1, 2, 3, 4, 5], 2, async (i) => {
+      started.push(i);
+      if (i === 1) throw error;
+      await gate.promise;
+      completed = true;
+      return i;
+    });
+    const rejected = expect(pending).rejects.toThrow(message);
+    await Promise.resolve();
+    expect(started).toEqual([0, 1]);
+    gate.resolve();
+    await rejected;
+    expect(completed).toBe(true);
     expect(started).toEqual([0, 1]);
   });
 

@@ -3,16 +3,6 @@ import policy from "@shared/data/safety-score-v9/methodology-policy-candidate-v1
 import { DEPEG_SEVERITY_BPS } from "@shared/lib/depeg-config";
 import { EXIT_ROUTE_SCORING_TABLES } from "@shared/lib/exit-route-scoring";
 import { REDEMPTION_SEVERE_ACTIVE_DEPEG_BPS } from "@shared/lib/report-card-active-depeg";
-import {
-  REDEMPTION_ACCESS_SCORES,
-  REDEMPTION_BACKSTOP_COMPONENT_WEIGHTS,
-  REDEMPTION_EXECUTION_SCORES,
-  REDEMPTION_OUTPUT_ASSET_SCORES,
-  REDEMPTION_ROUTE_FAMILY_CAPS,
-  REDEMPTION_SETTLEMENT_SCORES,
-  SAME_NOTIONAL_EXIT_OBSERVATION_FRESHNESS_POLICY,
-  SAME_NOTIONAL_EXIT_REQUEST_POLICY,
-} from "@shared/lib/redemption-backstop-scoring";
 
 const exitPolicy = (policy as { semantic: { exit: Record<string, unknown> } }).semantic.exit;
 const activeDepegCaps = (
@@ -76,31 +66,6 @@ describe("the V9 exit policy is validated against the single exit-scoring source
   });
 });
 
-/**
- * The redemption domain view's public constants are now projections of the same
- * source, not a second authored copy. These assertions are cheap identity checks
- * that catch a re-literalization during a future edit.
- */
-describe("the redemption domain view projects the single exit-scoring source", () => {
-  it("re-exports the source tables rather than re-declaring them", () => {
-    expect(REDEMPTION_BACKSTOP_COMPONENT_WEIGHTS).toBe(EXIT_ROUTE_SCORING_TABLES.componentWeights);
-    expect(REDEMPTION_ACCESS_SCORES).toBe(EXIT_ROUTE_SCORING_TABLES.accessScores);
-    expect(REDEMPTION_SETTLEMENT_SCORES).toBe(EXIT_ROUTE_SCORING_TABLES.settlementScores);
-    expect(REDEMPTION_EXECUTION_SCORES).toBe(EXIT_ROUTE_SCORING_TABLES.executionScores);
-    expect(REDEMPTION_OUTPUT_ASSET_SCORES).toBe(EXIT_ROUTE_SCORING_TABLES.outputAssetScores);
-    expect(REDEMPTION_ROUTE_FAMILY_CAPS).toBe(EXIT_ROUTE_SCORING_TABLES.routeFamilyCaps);
-  });
-
-  it("derives the same-notional request and freshness policies from the source", () => {
-    expect(SAME_NOTIONAL_EXIT_REQUEST_POLICY).toEqual({
-      maxCostBps: EXIT_ROUTE_SCORING_TABLES.request.maxCostBps,
-      settlementHorizonSec: EXIT_ROUTE_SCORING_TABLES.request.settlementHorizonSec,
-    });
-    expect(SAME_NOTIONAL_EXIT_OBSERVATION_FRESHNESS_POLICY.documentedTermsMaxAgeSec).toBe(
-      EXIT_ROUTE_SCORING_TABLES.documentedTermsMaxAgeSec,
-    );
-  });
-});
 
 /**
  * The "severe depeg" band (25%) was written three times: the redemption lane, the

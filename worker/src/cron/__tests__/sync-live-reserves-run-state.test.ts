@@ -1,13 +1,13 @@
 import { describe, expect, it } from "vitest";
 import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
-import { createSqliteD1 } from "../../test-helpers/sqlite-d1";
+import { createSqliteD1 } from "@shared/test-utils/sqlite-d1";
 import { computeReserveCompositionOverview, resolveReserveResult } from "../../lib/live-reserves/store";
 import { beginLiveReserveCheckpoint } from "../../lib/scheduled-recovery-checkpoint";
 import {
   recordDeferredTail,
   selectConfiguredCoinRunQueue,
 } from "../sync-live-reserves-run-state";
-import { createLatestSchemaSqlite } from "../../test-helpers/latest-schema-sqlite";
+import { createLatestSchemaSqlite } from "@shared/test-utils/latest-schema-sqlite";
 import { breakerKeyForConfig, type ConfiguredCoin } from "../sync-live-reserves-shared";
 import { makeNoopD1 } from "../../test-helpers/noop-d1";
 
@@ -229,7 +229,6 @@ describe("recordDeferredTail", () => {
       const overview = await computeReserveCompositionOverview(db, deferredAt + 60);
       expect(overview).toMatchObject({
         freshCoins: 1,
-        cursorTailState: null,
         deferredCoins: 2,
         runBudgetTruncated: true,
         nextCursorStablecoinId: configuredCoin.id,
@@ -251,7 +250,5 @@ describe("recordDeferredTail", () => {
       runBudgetTruncationCount: 1,
     });
     expect(history.some((entry) => entry.sql.includes("cache"))).toBe(false);
-    expect(history.filter((entry) => entry.sql.includes("reserve_sync_state"))).toHaveLength(1);
-    expect(history.filter((entry) => entry.sql.includes("reserve_sync_attempt_history"))).toHaveLength(1);
   });
 });

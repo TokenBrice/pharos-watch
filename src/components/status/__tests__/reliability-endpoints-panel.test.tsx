@@ -2,6 +2,7 @@
 
 import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import type { EndpointProbeResult } from "@shared/types";
 import { ReliabilityEndpointsPanel } from "../reliability-endpoints-panel";
 import { buildReliabilityWorkspaceModel } from "@/lib/reliability-workspace-model";
 import { makeHealthyHealthResponse, makeHealthyStatusResponse } from "@/test-utils/status-fixtures";
@@ -78,5 +79,52 @@ describe("ReliabilityEndpointsPanel", () => {
     expect(copied).toContain('"path": "/api/status"');
     expect(copied).not.toContain("Bearer secret");
     expect(copied).not.toContain("token=secret");
+  });
+
+  it("distinguishes absent browser-plane evidence from a successful all-clear probe", () => {
+    const data = makeHealthyStatusResponse();
+    const inputs = {
+      data,
+      healthData: makeHealthyHealthResponse(),
+      healthLoading: false,
+      probes: [] as EndpointProbeResult[],
+      probesLoading: false,
+      requestSourceStats: null,
+      requestSourceLoading: false,
+    };
+
+    const absent = render(
+      <ReliabilityEndpointsPanel
+        model={buildReliabilityWorkspaceModel({ ...inputs, browserProbeSummary: null }).endpoints}
+      />,
+    );
+    const browserCard = screen.getByRole("region", { name: "Browser-origin endpoint probes" });
+    expect(within(browserCard).getByText("Result").nextElementSibling?.textContent).toBe("Unknown");
+    expect(screen.getByText("Browser endpoint evidence is Unknown.")).toBeTruthy();
+    absent.unmount();
+
+    render(
+      <ReliabilityEndpointsPanel
+        model={
+          buildReliabilityWorkspaceModel({
+            ...inputs,
+            browserProbeSummary: {
+              sampleCount: 2,
+              passCount: 2,
+              failCount: 0,
+              degradedCount: 0,
+              staleCount: 0,
+              p95LatencyMs: 20,
+              status: "healthy",
+              updatedAt: data.timestamp,
+            },
+          }).endpoints
+        }
+      />,
+    );
+    const browserPlane = screen.getByRole("region", { name: "Browser-origin endpoint probes" });
+    expect(within(browserPlane).getByText("Result").nextElementSibling?.textContent).toContain("2/2 passing");
+    expect(screen.getByText("No failed or degraded browser endpoints are active.")).toBeTruthy();
+    expect(screen.queryByText("Browser endpoint evidence is Unknown.")).toBeNull();
   });
 });

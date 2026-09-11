@@ -1,8 +1,10 @@
 import { describe, expect, it } from "vitest";
 import type { EndpointProbeResult, StatusCause } from "@shared/types";
 import {
+  makeActivePriceCoverage,
   makeHealthyHealthResponse,
   makeHealthyStatusResponse,
+  makeMissingActiveAsset,
   makeActionRecommendedStatusResponse,
   makePublicationFailureStatusResponse,
   makeScheduledSlotEventMarkerQueryFailedStatusResponse,
@@ -27,18 +29,22 @@ const BASE_QUERY_SYNCS = {
   requestSourceUpdatedAt: 1_000_000,
 };
 
-function buildModel(data = makeHealthyStatusResponse()) {
+function buildModel(
+  data = makeHealthyStatusResponse(),
+  overrides: Partial<Parameters<typeof buildStatusDashboardData>[0]> = {},
+) {
   return buildStatusDashboardData({
     data,
-    healthData: BASE_HEALTH,
+    healthData: makeHealthyHealthResponse(),
     probes: [],
-    querySyncs: BASE_QUERY_SYNCS,
+    querySyncs: { ...BASE_QUERY_SYNCS },
     nowMs: 1_000_000,
     healthError: null,
     probesError: null,
     historyError: null,
     requestSourceError: null,
     historyTransitions: undefined,
+    ...overrides,
   });
 }
 
@@ -73,10 +79,7 @@ describe("status dashboard model", () => {
   });
 
   it("uses the oldest required query timestamp and the shared polling tolerance as the freshness floor", () => {
-    const model = buildStatusDashboardData({
-      data: BASE_STATUS,
-      healthData: BASE_HEALTH,
-      probes: [],
+    const model = buildModel(BASE_STATUS, {
       querySyncs: {
         statusUpdatedAt: 900_000,
         healthUpdatedAt: 810_000,
@@ -84,12 +87,6 @@ describe("status dashboard model", () => {
         historyUpdatedAt: 900_000,
         requestSourceUpdatedAt: 900_000,
       },
-      nowMs: 1_000_000,
-      healthError: null,
-      probesError: null,
-      historyError: null,
-      requestSourceError: null,
-      historyTransitions: undefined,
     });
 
     expect(STATUS_DASHBOARD_FRESHNESS_POLICY.staleAfterMs).toBe(180_000);
@@ -102,17 +99,11 @@ describe("status dashboard model", () => {
   });
 
   it("surfaces endpoint errors as operator notices", () => {
-    const model = buildStatusDashboardData({
-      data: BASE_STATUS,
-      healthData: BASE_HEALTH,
-      probes: [],
-      querySyncs: BASE_QUERY_SYNCS,
-      nowMs: 1_000_000,
+    const model = buildModel(BASE_STATUS, {
       healthError: new Error("health down"),
       probesError: new Error("probes down"),
       historyError: new Error("history down"),
       requestSourceError: new Error("request source down"),
-      historyTransitions: undefined,
     });
 
     expect(model.notices.map((notice) => notice.id)).toEqual([
@@ -205,20 +196,12 @@ describe("status dashboard model", () => {
   });
 
   it("treats a never-loaded required query as partial evidence instead of a zero-age success", () => {
-    const model = buildStatusDashboardData({
-      data: BASE_STATUS,
+    const model = buildModel(BASE_STATUS, {
       healthData: null,
-      probes: [],
       querySyncs: {
         ...BASE_QUERY_SYNCS,
         healthUpdatedAt: 0,
       },
-      nowMs: 1_000_000,
-      healthError: null,
-      probesError: null,
-      historyError: null,
-      requestSourceError: null,
-      historyTransitions: undefined,
     });
 
     expect(model.evidence).toMatchObject({
@@ -255,17 +238,9 @@ describe("status dashboard model", () => {
   });
 
   it("marks retained last-good data with a refresh error as partial evidence", () => {
-    const model = buildStatusDashboardData({
-      data: BASE_STATUS,
-      healthData: BASE_HEALTH,
-      probes: [],
-      querySyncs: BASE_QUERY_SYNCS,
+    const model = buildModel(BASE_STATUS, {
       nowMs: 1_010_000,
       healthError: new Error("refresh timed out"),
-      probesError: null,
-      historyError: null,
-      requestSourceError: null,
-      historyTransitions: undefined,
     });
 
     expect(model.evidence).toMatchObject({
@@ -282,18 +257,9 @@ describe("status dashboard model", () => {
   });
 
   it("keeps retained status data in the model when its background refresh fails", () => {
-    const model = buildStatusDashboardData({
-      data: BASE_STATUS,
-      healthData: BASE_HEALTH,
-      probes: [],
-      querySyncs: BASE_QUERY_SYNCS,
+    const model = buildModel(BASE_STATUS, {
       nowMs: 1_010_000,
       statusError: new Error("status refresh timed out"),
-      healthError: null,
-      probesError: null,
-      historyError: null,
-      requestSourceError: null,
-      historyTransitions: undefined,
     });
 
     expect(model.evidence).toMatchObject({
@@ -310,18 +276,7 @@ describe("status dashboard model", () => {
 
   it("separates public/admin divergence from evidence quality", () => {
     const healthData = { ...BASE_HEALTH, status: "degraded" as const };
-    const model = buildStatusDashboardData({
-      data: BASE_STATUS,
-      healthData,
-      probes: [],
-      querySyncs: BASE_QUERY_SYNCS,
-      nowMs: 1_000_000,
-      healthError: null,
-      probesError: null,
-      historyError: null,
-      requestSourceError: null,
-      historyTransitions: undefined,
-    });
+    const model = buildModel(BASE_STATUS, { healthData });
 
     expect(model.decision).toMatchObject({
       systemState: "degraded",
@@ -357,51 +312,21 @@ describe("status dashboard model", () => {
       ...BASE_HEALTH,
       status: "healthy" as const,
       warnings: ["active-price-coverage-incomplete:nxusd-nereus"],
-      activePriceCoverage: {
-        status: "incomplete" as const,
-        expectedActiveCount: 190,
-        presentActiveCount: 190,
-        pricedActiveCount: 189,
-        missingPriceCount: 1,
-        pricedActiveIds: [],
-        missingActiveIds: ["nxusd-nereus"],
-        affectedMarketCapUsd: 1_500_000,
-        missingActiveAssets: [
-          {
-            stablecoinId: "nxusd-nereus",
-            symbol: "NXUSD",
-            marketCapUsd: 1_500_000,
-            currentPrice: null,
-            currentSource: null,
-            currentObservedAt: null,
-            currentConfidence: null,
-            consecutiveMissingGenerations: 2,
-            lastAcceptedPrice: 1,
-            lastAcceptedSource: "coingecko",
-            lastAcceptedObservedAt: BASE_HEALTH.timestamp - 900,
-            rejectionReason: "no-accepted-price",
-            alertEligible: true,
-          },
-        ],
-        alertEligibleCount: 1,
-        alertEligibleIds: ["nxusd-nereus"],
-        maxConsecutiveMissingGenerations: 2,
-        observedAt: BASE_HEALTH.timestamp,
-      },
+      activePriceCoverage: makeActivePriceCoverage([
+        makeMissingActiveAsset({
+          stablecoinId: "nxusd-nereus",
+          symbol: "NXUSD",
+          marketCapUsd: 1_500_000,
+          consecutiveMissingGenerations: 2,
+          lastAcceptedPrice: 1,
+          lastAcceptedSource: "coingecko",
+          lastAcceptedObservedAt: BASE_HEALTH.timestamp - 900,
+          alertEligible: true,
+        }),
+      ]),
     };
 
-    const model = buildStatusDashboardData({
-      data: statusData,
-      healthData,
-      probes: [],
-      querySyncs: BASE_QUERY_SYNCS,
-      nowMs: 1_000_000,
-      healthError: null,
-      probesError: null,
-      historyError: null,
-      requestSourceError: null,
-      historyTransitions: undefined,
-    });
+    const model = buildModel(statusData, { healthData });
 
     expect(model.issueGroups.impacting).toHaveLength(0);
     expect(model.issueGroups.warnings).toHaveLength(1);
@@ -423,35 +348,16 @@ describe("status dashboard model", () => {
       ...BASE_HEALTH,
       status: "healthy" as const,
       warnings: [],
-      activePriceCoverage: {
-        status: "incomplete" as const,
-        expectedActiveCount: 190,
-        presentActiveCount: 190,
+      activePriceCoverage: makeActivePriceCoverage([], {
         pricedActiveCount: 189,
         missingPriceCount: 1,
-        pricedActiveIds: [],
         missingActiveIds: ["test-dollar"],
         affectedMarketCapUsd: 500_000,
-        missingActiveAssets: [],
-        alertEligibleCount: 0,
-        alertEligibleIds: [],
         maxConsecutiveMissingGenerations: 1,
-        observedAt: BASE_HEALTH.timestamp,
-      },
+      }),
     };
 
-    const model = buildStatusDashboardData({
-      data: BASE_STATUS,
-      healthData,
-      probes: [],
-      querySyncs: BASE_QUERY_SYNCS,
-      nowMs: 1_000_000,
-      healthError: null,
-      probesError: null,
-      historyError: null,
-      requestSourceError: null,
-      historyTransitions: undefined,
-    });
+    const model = buildModel(BASE_STATUS, { healthData });
 
     expect(model.issueGroups.warnings.some((issue) => issue.code === "active_price_coverage_incomplete")).toBe(false);
     expect(model.issueGroups.impacting).toHaveLength(0);
@@ -494,18 +400,7 @@ describe("status dashboard model", () => {
       },
     };
 
-    const model = buildStatusDashboardData({
-      data: BASE_STATUS,
-      healthData,
-      probes: [],
-      querySyncs: BASE_QUERY_SYNCS,
-      nowMs: 1_000_000,
-      healthError: null,
-      probesError: null,
-      historyError: null,
-      requestSourceError: null,
-      historyTransitions: undefined,
-    });
+    const model = buildModel(BASE_STATUS, { healthData });
 
     expect(model.healthDiffersFromStatus).toBe(true);
     expect(model.notices.find((notice) => notice.id === "public-health")).toMatchObject({
@@ -631,18 +526,7 @@ describe("status dashboard model", () => {
       },
     };
 
-    const model = buildStatusDashboardData({
-      data,
-      healthData: BASE_HEALTH,
-      probes: [],
-      querySyncs: BASE_QUERY_SYNCS,
-      nowMs: 1_000_000,
-      healthError: null,
-      probesError: null,
-      historyError: null,
-      requestSourceError: null,
-      historyTransitions: undefined,
-    });
+    const model = buildModel(data);
 
     expect(model.attentionSections.map((section) => section.id).slice(0, 2)).toEqual(["pipeline", "crons"]);
   });

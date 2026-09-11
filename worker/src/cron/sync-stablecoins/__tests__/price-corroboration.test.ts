@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import { DatabaseSync } from "node:sqlite";
-import { createSqliteD1 } from "../../../test-helpers/sqlite-d1";
+import { createSqliteD1 } from "@shared/test-utils/sqlite-d1";
 import * as enrichment from "../enrich-prices";
 import * as shared from "../shared";
 import { PRICE_CORROBORATION_OBSERVATIONS_KEY } from "../price-corroboration-observations";
@@ -27,23 +27,44 @@ function quote(stablecoinId: string, priceUsd: number): AddressPriceQuote {
 }
 
 describe("hourly price corroboration", () => {
-  it("stages fetched observations without promoting the previous published reference", async () => {
+  it.each([false, true])("stages only fetched observations (fresh quote: %s)", async (hasQuote) => {
     const sqlite = new DatabaseSync(":memory:");
     sqlite.exec("CREATE TABLE cache (key TEXT PRIMARY KEY, value TEXT NOT NULL, updated_at INTEGER NOT NULL)");
+    sqlite.exec("CREATE TABLE price_cache (asset_id TEXT PRIMARY KEY, price REAL, updated_at INTEGER, source TEXT, confidence TEXT, observed_at INTEGER, observed_at_mode TEXT, synced_at INTEGER, agree_sources_json TEXT, consensus_sources_json TEXT)");
     const db = createSqliteD1(sqlite);
-    const previous = makePeggedAsset({ id: "usdt-tether", price: 1, priceSource: "coingecko", priceConfidence: "single-source" });
+    const previous = makePeggedAsset({
+      id: "usdt-tether", price: 1, priceSource: "coingecko", priceConfidence: "single-source",
+      priceObservedAt: 1_799_999_900, priceObservedAtMode: "upstream",
+      agreeSources: ["coingecko"], consensusSources: ["coingecko"],
+    });
     const previousLoad = vi.spyOn(shared, "loadPreviousStablecoinsById").mockResolvedValue({
       previousAssetsById: new Map([[previous.id, previous]]), cacheState: { state: "ok" },
     });
+    let capturedProbes: PeggedAsset[] = [];
     const collect = vi.spyOn(enrichment, "enrichMissingPrices").mockImplementation(async (assets) => {
-      expect(assets[0]?.price).toBeNull();
-      // No provider returned a fresh quote. The published reference cannot enter the handoff.
+      capturedProbes = structuredClone(assets);
+      if (hasQuote) Object.assign(assets[0], {
+        price: 0.999,
+        priceSource: "coinmarketcap",
+        priceConfidence: "fallback",
+        priceObservedAt: 1_800_000_000,
+        priceObservedAtMode: "local_fetch",
+      });
       return {} as Awaited<ReturnType<typeof enrichment.enrichMissingPrices>>;
     });
     try {
       await runPriceCorroboration({ db, syncStartSec: 1_800_000_000 });
+      expect(collect).toHaveBeenCalledTimes(1);
+      expect(capturedProbes).toEqual([expect.objectContaining({
+        id: "usdt-tether", price: null, priceSource: undefined, priceConfidence: null,
+        priceObservedAt: null, priceObservedAtMode: null, agreeSources: [], consensusSources: [],
+      })]);
       const row = sqlite.prepare("SELECT value FROM cache WHERE key = ?").get(PRICE_CORROBORATION_OBSERVATIONS_KEY);
-      expect(JSON.parse(String(row?.value))).toEqual([]);
+      expect(JSON.parse(String(row?.value))).toEqual(hasQuote ? [{
+        id: "usdt-tether", source: "coinmarketcap", price: 0.999,
+        observedAt: 1_800_000_000, observedAtMode: "local_fetch",
+      }] : []);
+      expect(previous.price).toBe(1);
     } finally {
       previousLoad.mockRestore();
       collect.mockRestore();
@@ -74,7 +95,7 @@ describe("hourly price corroboration", () => {
     expect(buildPriceCorroborationCohort(assets).map((asset) => asset.id)).toEqual(["missing", "thin"]);
   });
 
-  it("preserves the legacy published price set across a seven-day replay fixture", () => {
+  it("preserves published references while merging corroborating provenance", () => {
     const publicationRows: PeggedAsset[] = [
       makePeggedAsset({
         id: "primary",
@@ -91,38 +112,30 @@ describe("hourly price corroboration", () => {
       ["primary", makePeggedAsset({ id: "primary", price: 1.0002, priceSource: "defillama-contract", priceConfidence: "fallback", priceObservedAt: 1_800_000_000 })],
       ["fallback", makePeggedAsset({ id: "fallback", price: 0.999, priceSource: "coinmarketcap", priceConfidence: "fallback", priceObservedAt: 1_800_000_000 })],
     ]);
-    const legacyPublishedRows = new Map([
-      ["primary", 1],
-      ["fallback", 0.999],
-    ]);
-    for (let day = 0; day < 7; day++) {
-      const entries = buildPriceCorroborationCacheEntries({
-        publishedAssets: publicationRows,
-        fallbackProbes,
-        addressQuotes: new Map([
-          ["primary", [quote("primary", 1.0001)]],
-          ["fallback", [quote("fallback", 0.9991)]],
-        ]),
-        syncedAt: 1_800_000_000 + day * 24 * 60 * 60,
-      });
+    const entries = buildPriceCorroborationCacheEntries({
+      publishedAssets: publicationRows,
+      fallbackProbes,
+      addressQuotes: new Map([
+        ["primary", [quote("primary", 1.0001)]],
+        ["fallback", [quote("fallback", 0.9991)]],
+      ]),
+      syncedAt: 1_800_000_000,
+    });
 
-      const replayedPublicationRows = new Map(entries.map((entry) => [entry.id, entry.price]));
-      expect(replayedPublicationRows).toEqual(legacyPublishedRows);
-      expect(entries).toEqual([
-        expect.objectContaining({
-          id: "primary",
-          price: 1,
-          source: "coingecko+defillama-list",
-          consensusSources: ["coingecko", "defillama-list", "defillama-contract", "coingecko-onchain-address"],
-        }),
-        expect.objectContaining({
-          id: "fallback",
-          price: 0.999,
-          source: "coinmarketcap",
-          confidence: "fallback",
-          agreeSources: ["coinmarketcap", "coingecko-onchain-address"],
-        }),
-      ]);
-    }
+    expect(entries).toEqual([
+      expect.objectContaining({
+        id: "primary",
+        price: 1,
+        source: "coingecko+defillama-list",
+        consensusSources: ["coingecko", "defillama-list", "defillama-contract", "coingecko-onchain-address"],
+      }),
+      expect.objectContaining({
+        id: "fallback",
+        price: 0.999,
+        source: "coinmarketcap",
+        confidence: "fallback",
+        agreeSources: ["coinmarketcap", "coingecko-onchain-address"],
+      }),
+    ]);
   });
 });

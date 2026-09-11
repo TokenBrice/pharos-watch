@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   cacheControlForDegradedPayload,
   errorResponse,
@@ -117,10 +117,13 @@ describe("cacheControlForDegradedPayload", () => {
 });
 
 describe("jsonFreshDegradedResponse", () => {
+  afterEach(() => vi.useRealTimers());
   it.each([
     { degraded: false, cacheControl: "public, s-maxage=300, max-age=60" },
     { degraded: true, cacheControl: "no-store" },
   ])("returns freshness headers with $cacheControl caching", async ({ degraded, cacheControl }) => {
+    vi.useFakeTimers();
+    vi.setSystemTime(1_800_000_000_000);
     const updatedAt = Math.floor(Date.now() / 1_000) - 5;
     const payload = { ok: true, _meta: { degraded } };
 
@@ -128,7 +131,7 @@ describe("jsonFreshDegradedResponse", () => {
 
     expect(res.status).toBe(200);
     expect(res.headers.get("Cache-Control")).toBe(cacheControl);
-    expect(Number(res.headers.get("X-Data-Age"))).toBeGreaterThanOrEqual(0);
+    expect(res.headers.get("X-Data-Age")).toBe("5");
     await expect(res.json()).resolves.toEqual(payload);
   });
 });

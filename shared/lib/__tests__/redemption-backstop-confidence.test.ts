@@ -18,34 +18,20 @@ describe("resolveCapacityConfidence", () => {
     );
   });
 
-  it("defaults reserve-sync-metadata to dynamic when confidence is unset", () => {
-    expect(resolveCapacityConfidence({ kind: "reserve-sync-metadata" })).toBe("dynamic");
+  it.each([
+    [{ kind: "supply-full" }, "heuristic", "eventual-only"],
+    [{ kind: "supply-ratio", ratio: 0.05 }, "heuristic", "immediate-bounded"],
+    [{ kind: "fixed-usd", amountUsd: 1_000_000 }, "documented-bound", "immediate-bounded"],
+    [{ kind: "reserve-sync-metadata" }, "dynamic", "immediate-bounded"],
+  ] as const)("resolves literal defaults for %j", (model, confidence, semantics) => {
+    expect(resolveCapacityConfidence(model)).toBe(confidence);
+    expect(resolveCapacitySemantics(model)).toBe(semantics);
   });
 
-  it("defaults non-reserve-sync models to heuristic when confidence is unset", () => {
-    expect(resolveCapacityConfidence({ kind: "supply-full" })).toBe("heuristic");
-    expect(resolveCapacityConfidence({ kind: "supply-ratio", ratio: 0.05 })).toBe("heuristic");
-  });
-
-  it("defaults fixed USD buffers to documented-bound", () => {
-    expect(resolveCapacityConfidence({ kind: "fixed-usd", amountUsd: 1_000_000 })).toBe("documented-bound");
-  });
-});
-
-describe("resolveCapacitySemantics", () => {
-  it("returns eventual-only for supply-full", () => {
-    expect(resolveCapacitySemantics({ kind: "supply-full" })).toBe("eventual-only");
-    expect(
-      resolveCapacitySemantics({ kind: "supply-full", confidence: "documented-bound", basis: "full-system-eventual" }),
-    ).toBe("eventual-only");
-  });
-
-  it("returns immediate-bounded for supply-ratio", () => {
-    expect(resolveCapacitySemantics({ kind: "supply-ratio", ratio: 0.1 })).toBe("immediate-bounded");
-  });
-
-  it("returns immediate-bounded for reserve-sync-metadata", () => {
-    expect(resolveCapacitySemantics({ kind: "reserve-sync-metadata" })).toBe("immediate-bounded");
+  it("preserves semantics when capacity evidence is explicitly configured", () => {
+    expect(resolveCapacitySemantics({
+      kind: "supply-full", confidence: "documented-bound", basis: "full-system-eventual",
+    })).toBe("eventual-only");
     expect(resolveCapacitySemantics({ kind: "reserve-sync-metadata", fallbackRatio: 0.2 })).toBe("immediate-bounded");
   });
 });
@@ -124,319 +110,128 @@ describe("deriveModelConfidence", () => {
     sourceMode: "dynamic",
     freshnessKind: "same-run-onchain",
   };
-  const detailsFor = (overrides: Partial<ConfidenceArgs> = {}) =>
-    deriveModelConfidenceWithDetails({
-      ...baseResolvedArgs,
-      ...overrides,
-    }).confidenceDetails;
+  const resultFor = (overrides: Partial<ConfidenceArgs> = {}) =>
+    deriveModelConfidenceWithDetails({ ...baseResolvedArgs, ...overrides });
+  const detailsFor = (overrides: Partial<ConfidenceArgs> = {}) => resultFor(overrides).confidenceDetails;
 
-  it("returns low when resolution state is not resolved", () => {
-    expect(
-      deriveModelConfidence({
-        resolutionState: "failed",
-        capacityConfidence: "live-direct",
-        feeConfidence: "fixed",
-      }),
-    ).toBe("low");
-    expect(
-      deriveModelConfidence({
-        resolutionState: "missing-capacity",
-        capacityConfidence: "live-direct",
-        feeConfidence: "fixed",
-      }),
-    ).toBe("low");
-    expect(
-      deriveModelConfidence({
-        resolutionState: "missing-cache",
-        capacityConfidence: "live-direct",
-        feeConfidence: "fixed",
-      }),
-    ).toBe("low");
-    expect(
-      deriveModelConfidence({
-        resolutionState: "impaired",
-        capacityConfidence: "live-direct",
-        feeConfidence: "fixed",
-      }),
-    ).toBe("low");
-  });
-
-  it("returns low when resolved but capacity confidence is heuristic", () => {
-    expect(
-      deriveModelConfidence({
-        resolutionState: "resolved",
-        capacityConfidence: "heuristic",
-        feeConfidence: "fixed",
-      }),
-    ).toBe("low");
-  });
-
-  it("returns high for resolved live-direct with any disclosed fee confidence", () => {
-    expect(
-      deriveModelConfidence({
-        resolutionState: "resolved",
-        capacityConfidence: "live-direct",
-        feeConfidence: "fixed",
-      }),
-    ).toBe("high");
-    expect(
-      deriveModelConfidence({
-        resolutionState: "resolved",
-        capacityConfidence: "live-direct",
-        feeConfidence: "formula",
-      }),
-    ).toBe("high");
-  });
-
-  it("returns medium for resolved live-direct with undisclosed-reviewed fee", () => {
-    expect(
-      deriveModelConfidence({
-        resolutionState: "resolved",
-        capacityConfidence: "live-direct",
-        feeConfidence: "undisclosed-reviewed",
-      }),
-    ).toBe("medium");
-  });
-
-  it("returns medium for resolved live-proxy, dynamic, and documented-bound capacity", () => {
-    for (const capacityConfidence of ["live-proxy", "dynamic", "documented-bound"] as const) {
-      expect(
-        deriveModelConfidence({
-          resolutionState: "resolved",
-          capacityConfidence,
-          feeConfidence: "fixed",
-        }),
-      ).toBe("medium");
+  it("returns low for each unresolved wrapper state with omitted detail inputs", () => {
+    for (const resolutionState of ["failed", "missing-capacity", "missing-cache", "impaired"] as const) {
+      expect(deriveModelConfidence({
+        resolutionState, capacityConfidence: "live-direct", feeConfidence: "fixed",
+      })).toBe("low");
     }
   });
 
-  it("keeps stale documented-bound confidence medium when current route-status evidence exists", () => {
-    const result = deriveModelConfidenceWithDetails({
-      resolutionState: "resolved",
-      capacityConfidence: "documented-bound",
-      feeConfidence: "formula",
-      routeStatus: "open",
-      routeStatusSource: "operator-notice",
-      holderEligibility: "any-holder",
-      sourceMode: "static",
-      reviewedAt: "2024-01-01",
-      now: 1_780_000_000,
-    });
-
-    expect(result.modelConfidence).toBe("medium");
-    expect(result.confidenceDetails.reviewedDocAgeDays).toBeGreaterThan(365);
+  it("returns low with intact public detail scores for unresolved high-quality evidence", () => {
+    for (const resolutionState of ["failed", "missing-capacity", "missing-cache", "impaired"] as const) {
+      expect(resultFor({ resolutionState })).toMatchObject({
+        modelConfidence: "low",
+        confidenceDetails: {
+          capacityEvidenceQuality: 100,
+          feeEvidenceQuality: 100,
+          routeStatusFreshness: 100,
+          holderCohortBreadth: 100,
+          sourceQuality: 100,
+          reviewedDocAgeDays: null,
+        },
+      });
+    }
   });
 
-  it("discounts stale documented-bound routes without current route-status evidence to low", () => {
-    expect(
-      deriveModelConfidenceWithDetails({
-        resolutionState: "resolved",
-        capacityConfidence: "documented-bound",
-        feeConfidence: "formula",
-        routeStatus: "open",
-        routeStatusSource: "static-config",
-        holderEligibility: "any-holder",
-        sourceMode: "static",
-        reviewedAt: "2024-01-01",
-        now: 1_780_000_000,
-      }).modelConfidence,
-    ).toBe("low");
+  it("preserves wrapper confidence when route detail inputs are omitted", () => {
+    const cases = [
+      ["heuristic", "fixed", "low"],
+      ["live-direct", "fixed", "high"],
+      ["live-direct", "formula", "high"],
+      ["live-direct", "undisclosed-reviewed", "medium"],
+      ["live-proxy", "fixed", "medium"],
+      ["dynamic", "fixed", "medium"],
+      ["documented-bound", "fixed", "medium"],
+    ] as const;
+    for (const [capacityConfidence, feeConfidence, expected] of cases) {
+      expect(deriveModelConfidence({ resolutionState: "resolved", capacityConfidence, feeConfidence })).toBe(expected);
+    }
+  });
+
+  it("expires static documentation only after 365 complete days", () => {
+    const reviewedAt = "2024-01-01";
+    const reviewedSec = Date.UTC(2024, 0, 1) / 1_000;
+    for (const [elapsed, age, expected] of [
+      [365 * 86_400, 365, "medium"],
+      [366 * 86_400 - 1, 365, "medium"],
+      [366 * 86_400, 366, "low"],
+    ] as const) {
+      const result = resultFor({
+        capacityConfidence: "documented-bound", feeConfidence: "formula",
+        routeStatusSource: "static-config", sourceMode: "static", freshnessKind: undefined,
+        reviewedAt, now: reviewedSec + elapsed,
+      });
+      expect(result.modelConfidence).toBe(expected);
+      expect(result.confidenceDetails.reviewedDocAgeDays).toBe(age);
+    }
+  });
+
+  it("retains stale documented confidence for every current route-status evidence source", () => {
+    for (const routeStatusSource of ["operator-notice", "protocol-api", "onchain", "market-implied"] as const) {
+      const result = resultFor({
+        capacityConfidence: "documented-bound", feeConfidence: "formula",
+        routeStatusSource, sourceMode: "static", freshnessKind: undefined,
+        reviewedAt: "2024-01-01", now: Date.UTC(2025, 0, 1) / 1_000,
+      });
+      expect(result.modelConfidence, routeStatusSource).toBe("medium");
+      expect(result.confidenceDetails.reviewedDocAgeDays).toBe(366);
+    }
   });
 
   it("keeps live-proxy with undisclosed fees below direct high confidence", () => {
-    expect(
-      deriveModelConfidenceWithDetails({
-        resolutionState: "resolved",
-        capacityConfidence: "live-proxy",
-        feeConfidence: "undisclosed-reviewed",
-        routeStatus: "open",
-        routeStatusSource: "protocol-api",
-        holderEligibility: "any-holder",
-        sourceMode: "dynamic",
-        freshnessKind: "same-run-api",
-      }).modelConfidence,
-    ).toBe("medium");
-  });
-
-  it("returns medium for unknown route status with documented-bound capacity", () => {
-    expect(
-      deriveModelConfidenceWithDetails({
-        resolutionState: "resolved",
-        capacityConfidence: "documented-bound",
-        feeConfidence: "fixed",
-        routeStatus: "unknown",
-        routeStatusSource: "static-config",
-        holderEligibility: "any-holder",
-        sourceMode: "static",
-      }).modelConfidence,
-    ).toBe("medium");
-  });
-
-  it("keeps unknown route status high-confidence when capacity evidence is live-direct", () => {
-    const result = deriveModelConfidenceWithDetails({
-      resolutionState: "resolved",
-      capacityConfidence: "live-direct",
-      feeConfidence: "fixed",
-      routeStatus: "unknown",
-      routeStatusSource: "static-config",
-      holderEligibility: "any-holder",
-      sourceMode: "dynamic",
-      freshnessKind: "same-run-onchain",
-    });
-
-    expect(result.modelConfidence).toBe("high");
-    expect(result.confidenceDetails.reasons).not.toContain(
-      "Route status is unknown without direct live telemetry or a documented capacity bound",
-    );
-  });
-
-  it("returns low for unknown route status with live-proxy capacity", () => {
-    const result = deriveModelConfidenceWithDetails({
-      resolutionState: "resolved",
-      capacityConfidence: "live-proxy",
-      feeConfidence: "fixed",
-      routeStatus: "unknown",
-      routeStatusSource: "static-config",
-      holderEligibility: "any-holder",
-      sourceMode: "dynamic",
-      freshnessKind: "same-run-api",
-    });
-
-    expect(result.modelConfidence).toBe("low");
-    expect(result.confidenceDetails.reasons).toContain(
-      "Route status is unknown without direct live telemetry or a documented capacity bound",
-    );
+    expect(resultFor({
+      capacityConfidence: "live-proxy", feeConfidence: "undisclosed-reviewed",
+      routeStatusSource: "protocol-api", freshnessKind: "same-run-api",
+    }).modelConfidence).toBe("medium");
   });
 
   it("rolls up the unknown-route-status capacity-confidence matrix conservatively", () => {
-    // Only live-direct telemetry or a source-reviewed documented bound may keep
-    // unknown route status above low; live-proxy and heuristic always roll up low.
-    const matrix = [
-      { capacityConfidence: "live-direct", expected: "high" },
-      { capacityConfidence: "live-proxy", expected: "low" },
-      { capacityConfidence: "documented-bound", expected: "medium" },
-      { capacityConfidence: "heuristic", expected: "low" },
-    ] as const;
-
-    for (const { capacityConfidence, expected } of matrix) {
-      const result = deriveModelConfidenceWithDetails({
-        resolutionState: "resolved",
-        capacityConfidence,
-        feeConfidence: "fixed",
-        routeStatus: "unknown",
-        routeStatusSource: "static-config",
-        holderEligibility: "any-holder",
-        sourceMode: "dynamic",
-        freshnessKind: "same-run-onchain",
-      });
-      expect(result.modelConfidence, `capacityConfidence=${capacityConfidence}`).toBe(expected);
+    for (const [capacityConfidence, expected] of [
+      ["live-direct", "high"],
+      ["live-proxy", "low"],
+      ["documented-bound", "medium"],
+      ["heuristic", "low"],
+      ["dynamic", "low"],
+    ] as const) {
+      expect(resultFor({
+        capacityConfidence, routeStatus: "unknown", routeStatusSource: "static-config",
+      }).modelConfidence, capacityConfidence).toBe(expected);
     }
-  });
-
-  it("returns low for unknown route status with dynamic capacity", () => {
-    expect(
-      deriveModelConfidenceWithDetails({
-        resolutionState: "resolved",
-        capacityConfidence: "dynamic",
-        feeConfidence: "fixed",
-        routeStatus: "unknown",
-        routeStatusSource: "static-config",
-        holderEligibility: "any-holder",
-        sourceMode: "dynamic",
-      }).modelConfidence,
-    ).toBe("low");
   });
 
   it("downgrades issuer-discretionary and unknown holder cohorts to low confidence", () => {
     for (const holderEligibility of ["issuer-discretionary", "unknown"] as const) {
-      const result = deriveModelConfidenceWithDetails({
-        resolutionState: "resolved",
-        capacityConfidence: "live-direct",
-        feeConfidence: "fixed",
-        routeStatus: "open",
-        routeStatusSource: "onchain",
-        holderEligibility,
-        sourceMode: "dynamic",
-        freshnessKind: "same-run-onchain",
-      });
-
-      expect(result.modelConfidence).toBe("low");
-      expect(result.confidenceDetails.reasons).toContain("Holder eligibility is narrow or unclear");
+      expect(resultFor({ holderEligibility }).modelConfidence).toBe("low");
     }
   });
 
   it("does not discount future or invalid reviewedAt values as stale documentation", () => {
-    const future = deriveModelConfidenceWithDetails({
-      resolutionState: "resolved",
-      capacityConfidence: "documented-bound",
-      feeConfidence: "fixed",
-      routeStatus: "open",
-      routeStatusSource: "static-config",
-      holderEligibility: "any-holder",
-      sourceMode: "static",
-      reviewedAt: "2027-01-01",
-      now: 1_780_000_000,
-    });
-    const invalid = deriveModelConfidenceWithDetails({
-      resolutionState: "resolved",
-      capacityConfidence: "documented-bound",
-      feeConfidence: "fixed",
-      routeStatus: "open",
-      routeStatusSource: "static-config",
-      holderEligibility: "any-holder",
-      sourceMode: "static",
-      reviewedAt: "not-a-date",
-      now: 1_780_000_000,
-    });
-
-    expect(future.modelConfidence).toBe("medium");
-    expect(future.confidenceDetails.reviewedDocAgeDays).toBe(0);
-    expect(invalid.modelConfidence).toBe("medium");
-    expect(invalid.confidenceDetails.reviewedDocAgeDays).toBeNull();
+    for (const [reviewedAt, age] of [["2027-01-01", 0], ["not-a-date", null]] as const) {
+      const result = resultFor({
+        capacityConfidence: "documented-bound", routeStatusSource: "static-config",
+        sourceMode: "static", freshnessKind: undefined, reviewedAt, now: 1_780_000_000,
+      });
+      expect(result.modelConfidence).toBe("medium");
+      expect(result.confidenceDetails.reviewedDocAgeDays).toBe(age);
+    }
   });
 
   it("records source-quality detail scores for live freshness and static fallback evidence", () => {
-    expect(
-      deriveModelConfidenceWithDetails({
-        resolutionState: "resolved",
-        capacityConfidence: "live-direct",
-        feeConfidence: "fixed",
-        routeStatus: "open",
-        routeStatusSource: "protocol-api",
-        holderEligibility: "any-holder",
-        sourceMode: "dynamic",
-        freshnessKind: "same-run-api",
-      }).confidenceDetails.sourceQuality,
-    ).toBe(90);
-    expect(
-      deriveModelConfidenceWithDetails({
-        resolutionState: "resolved",
-        capacityConfidence: "documented-bound",
-        feeConfidence: "fixed",
-        routeStatus: "open",
-        routeStatusSource: "static-config",
-        holderEligibility: "any-holder",
-        sourceMode: "static",
-      }).confidenceDetails.sourceQuality,
-    ).toBe(40);
+    expect(detailsFor({ routeStatusSource: "protocol-api", freshnessKind: "same-run-api" }).sourceQuality).toBe(90);
+    expect(detailsFor({
+      capacityConfidence: "documented-bound", routeStatusSource: "static-config",
+      sourceMode: "static", freshnessKind: undefined,
+    }).sourceQuality).toBe(40);
   });
 
   it("keeps reviewed-static and unverified freshness on source-mode/default quality fallbacks", () => {
-    const withoutSourceMode: ConfidenceArgs = { ...baseResolvedArgs };
-    delete withoutSourceMode.sourceMode;
-    expect(
-      deriveModelConfidenceWithDetails({
-        ...baseResolvedArgs,
-        sourceMode: "static",
-        freshnessKind: "reviewed-static",
-      }).confidenceDetails.sourceQuality,
-    ).toBe(40);
-    expect(
-      deriveModelConfidenceWithDetails({
-        ...withoutSourceMode,
-        freshnessKind: "unverified",
-      }).confidenceDetails.sourceQuality,
-    ).toBe(50);
+    expect(detailsFor({ sourceMode: "static", freshnessKind: "reviewed-static" }).sourceQuality).toBe(40);
+    expect(detailsFor({ sourceMode: undefined, freshnessKind: "unverified" }).sourceQuality).toBe(50);
   });
 
   it("pins capacity evidence detail scores", () => {

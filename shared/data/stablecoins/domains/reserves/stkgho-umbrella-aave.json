@@ -2,6 +2,7 @@
   "id": "stkgho-umbrella-aave",
   "reserves": [
     {
+      "sourceKey": "erc4626-single-asset:ethereum:0x40d16fc0246ad3160ccc09b8d0d3a2cd28ae6c2f",
       "name": "GHO staked in Aave Umbrella safety module",
       "pct": 100,
       "risk": "high",

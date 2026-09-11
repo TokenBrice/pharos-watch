@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { DdrActiveEventInput } from "@shared/lib/depeg-resolver";
 import type { StablecoinMeta } from "@shared/types/core";
 import { mockD1 as createMockD1, type MockTableConfig } from "@shared/test-utils/mock-d1";
@@ -9,6 +9,7 @@ import {
   makeWorkerV9Card,
 } from "../../../test-helpers/report-cards-v9";
 import type { DdrEventDbRow } from "../types";
+import { makeEventRow, stablecoinsCache } from "./depeg-resolver.test-support";
 import { buildCurrentDeviationMap, loadDdrContext, type DdrLoadedContext } from "../context";
 import { deriveMintSurge, resolveDdrIncidents } from "../incident-resolution";
 import {
@@ -17,6 +18,12 @@ import {
   hydrateV9DependencyImpairment,
   toStructural,
 } from "../utils";
+
+beforeEach(() => clearV9DependencyImpairment());
+afterEach(() => {
+  clearV9DependencyImpairment();
+  vi.restoreAllMocks();
+});
 
 const NOW_SEC = 1_780_358_400;
 const DAY = 86_400;
@@ -81,25 +88,14 @@ function activeInput(overrides: Partial<DdrActiveEventInput> = {}): DdrActiveEve
 }
 
 function activeRow(overrides: Partial<DdrEventDbRow> = {}): DdrEventDbRow {
-  const active = activeInput();
-  return {
-    id: active.id,
-    stablecoin_id: active.stablecoinId,
-    symbol: active.symbol,
-    peg_type: active.pegType,
-    direction: active.direction,
-    peak_deviation_bps: active.peakDeviationBps,
-    started_at: active.startedAt,
-    ended_at: null,
-    recovery_price: null,
-    peg_reference: active.pegReference,
-    source: "live",
-    confirmation_sources: null,
-    pending_reason: null,
-    provenance_replay_run_id: null,
-    provenance_replay_version: null,
+  return makeEventRow({
+    id: 101,
+    stablecoin_id: "usdc-circle",
+    symbol: "USDC",
+    peak_deviation_bps: -350,
+    started_at: NOW_SEC - DAY,
     ...overrides,
-  };
+  });
 }
 
 function supplyHistory(startedAt: number) {
@@ -251,7 +247,6 @@ describe("toStructural", () => {
     expect(structural.mintIncidents).toEqual([
       { date: "2026-05-24", status: "active", resolvedAt: null },
     ]);
-    clearV9DependencyImpairment();
   });
 
   it("falls back to the curated posture band when no V9 projection is installed", () => {
@@ -292,7 +287,6 @@ describe("toStructural", () => {
       { id: "fixture-k1-held", dependencies: { serial: [] } },
     ]);
     expect(toStructural(meta).mintAuthorityScoreBand).toBeNull();
-    clearV9DependencyImpairment();
   });
 
   it("keeps a wrapper healthy when the V9 serial parent is tracked and non-terminal", () => {
@@ -466,27 +460,7 @@ describe("loadDdrContext", () => {
     });
     const db = mockD1([
       ...publishedDewsConfigs(signalsJson),
-      {
-        match: "FROM cache WHERE key = ?",
-        rows: [
-          {
-            key: "stablecoins",
-            value: JSON.stringify({
-              peggedAssets: [
-                {
-                  id: "usdc-circle",
-                  symbol: "USDC",
-                  name: "USD Coin",
-                  pegType: "peggedUSD",
-                  price: 0.97,
-                  circulating: { peggedUSD: 1_000_000_000 },
-                },
-              ],
-            }),
-            updated_at: NOW_SEC,
-          },
-        ],
-      },
+      stablecoinsCache(NOW_SEC),
       { match: "FROM depeg_events WHERE ended_at IS NOT NULL", rows: [] },
       {
         match: "FROM supply_history",
@@ -657,27 +631,7 @@ describe("loadDdrContext", () => {
   it("keeps a missing completed redemption run non-fatal with empty redemption context", async () => {
     const db = mockD1([
       ...publishedDewsConfigs(),
-      {
-        match: "FROM cache WHERE key = ?",
-        rows: [
-          {
-            key: "stablecoins",
-            value: JSON.stringify({
-              peggedAssets: [
-                {
-                  id: "usdc-circle",
-                  symbol: "USDC",
-                  name: "USD Coin",
-                  pegType: "peggedUSD",
-                  price: 0.97,
-                  circulating: { peggedUSD: 1_000_000_000 },
-                },
-              ],
-            }),
-            updated_at: NOW_SEC,
-          },
-        ],
-      },
+      stablecoinsCache(NOW_SEC),
       { match: "FROM redemption_backstop_runs", rows: [] },
     ]);
 
@@ -712,27 +666,7 @@ describe("loadDdrContext", () => {
       });
     const db = mockD1([
       ...publishedDewsConfigs(),
-      {
-        match: "FROM cache WHERE key = ?",
-        rows: [
-          {
-            key: "stablecoins",
-            value: JSON.stringify({
-              peggedAssets: [
-                {
-                  id: "usdc-circle",
-                  symbol: "USDC",
-                  name: "USD Coin",
-                  pegType: "peggedUSD",
-                  price: 1,
-                  circulating: { peggedUSD: 1_000_000_000 },
-                },
-              ],
-            }),
-            updated_at: NOW_SEC,
-          },
-        ],
-      },
+      stablecoinsCache(NOW_SEC, { price: 1 }),
       { match: "FROM redemption_backstop_runs", rows: [] },
     ]);
 
@@ -750,27 +684,7 @@ describe("loadDdrContext", () => {
   it("degrades when the redemption live-signal read fails", async () => {
     const db = mockD1([
       ...publishedDewsConfigs(),
-      {
-        match: "FROM cache WHERE key = ?",
-        rows: [
-          {
-            key: "stablecoins",
-            value: JSON.stringify({
-              peggedAssets: [
-                {
-                  id: "usdc-circle",
-                  symbol: "USDC",
-                  name: "USD Coin",
-                  pegType: "peggedUSD",
-                  price: 0.97,
-                  circulating: { peggedUSD: 1_000_000_000 },
-                },
-              ],
-            }),
-            updated_at: NOW_SEC,
-          },
-        ],
-      },
+      stablecoinsCache(NOW_SEC),
       {
         match: "FROM redemption_backstop_runs",
         rows: [
@@ -804,27 +718,7 @@ describe("loadDdrContext", () => {
   it("degrades when the covered mint-burn read fails", async () => {
     const db = mockD1([
       ...publishedDewsConfigs(),
-      {
-        match: "FROM cache WHERE key = ?",
-        rows: [
-          {
-            key: "stablecoins",
-            value: JSON.stringify({
-              peggedAssets: [
-                {
-                  id: "usdc-circle",
-                  symbol: "USDC",
-                  name: "USD Coin",
-                  pegType: "peggedUSD",
-                  price: 0.97,
-                  circulating: { peggedUSD: 1_000_000_000 },
-                },
-              ],
-            }),
-            updated_at: NOW_SEC,
-          },
-        ],
-      },
+      stablecoinsCache(NOW_SEC),
       { match: "FROM mint_burn_hourly", rows: [], throwError: new Error("hourly rows unavailable") },
       { match: "FROM redemption_backstop_runs", rows: [] },
     ]);

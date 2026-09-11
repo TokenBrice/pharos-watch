@@ -1,5 +1,6 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+afterEach(() => vi.useRealTimers());
 const { buildCacheStatusesMock, detailUpdatedAtStore, deletedCacheKeys, sendToChatMock } = vi.hoisted(() => ({
   buildCacheStatusesMock: vi.fn(),
   detailUpdatedAtStore: new Map<string, number>(),

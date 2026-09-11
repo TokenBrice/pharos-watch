@@ -107,74 +107,19 @@ jobs:
           --message "GitHub Actions deploy ${GITHUB_SHA}"
       - id: verify-worker-deployment
         name: Verify active Worker deployment
+        env:
+          DEPLOYMENT_STATUS_FILE: ${{ runner.temp }}/worker-deployment-status.json
+          DEPLOYMENTS_FILE: ${{ runner.temp }}/worker-deployments.json
         run: |
-          status_file="${RUNNER_TEMP}/worker-deployment-status.json"
-          deployments_file="${RUNNER_TEMP}/worker-deployments.json"
           deployment_history_available=true
-          (cd worker && npx --no-install wrangler deployments status --json) > "${status_file}"
-          if ! (cd worker && npx --no-install wrangler deployments list --json) > "${deployments_file}"; then
+          (cd worker && npx --no-install wrangler deployments status --json) > "${DEPLOYMENT_STATUS_FILE}"
+          if ! (cd worker && npx --no-install wrangler deployments list --json) > "${DEPLOYMENTS_FILE}"; then
             deployment_history_available=false
             echo "::warning::Cloudflare deployment history was unavailable; the activation marker will be skipped."
           fi
 
-          DEPLOYMENT_HISTORY_AVAILABLE="${deployment_history_available}" DEPLOYMENT_STATUS_FILE="${status_file}" DEPLOYMENTS_FILE="${deployments_file}" node <<'NODE'
-          const { appendFileSync, readFileSync } = require("node:fs");
-          const deployment = JSON.parse(readFileSync(process.env.DEPLOYMENT_STATUS_FILE, "utf8"));
-          const versions = Array.isArray(deployment.versions) ? deployment.versions : [];
-          const message = deployment.annotations?.["workers/message"] ?? "";
-          const version = versions[0];
-
-          if (
-            versions.length !== 1
-            || version?.percentage !== 100
-            || typeof version?.version_id !== "string"
-            || message !== `GitHub Actions deploy ${process.env.GITHUB_SHA}`
-          ) {
-            throw new Error(
-              `Active Worker deployment did not match this release: ${JSON.stringify({
-                deploymentId: deployment.id ?? null,
-                message,
-                versions,
-              })}`,
-            );
-          }
-
-          let deployments = [];
-          if (process.env.DEPLOYMENT_HISTORY_AVAILABLE === "true") {
-            try {
-              const parsed = JSON.parse(readFileSync(process.env.DEPLOYMENTS_FILE, "utf8"));
-              deployments = Array.isArray(parsed) ? parsed : [];
-            } catch {
-              console.log("::warning::Cloudflare deployment history JSON was unavailable; the activation marker will be skipped.");
-            }
-          }
-          const listedDeployment = deployments.find((candidate) => candidate?.id === deployment.id);
-          const listedVersions = Array.isArray(listedDeployment?.versions) ? listedDeployment.versions : [];
-          const listedVersionMatches = listedVersions.some(
-            (candidate) => candidate?.version_id === version.version_id,
-          );
-          const activationAtMs = typeof listedDeployment?.created_on === "string"
-            ? Date.parse(listedDeployment.created_on)
-            : Number.NaN;
-          const activationAtSec = Number.isFinite(activationAtMs) && listedVersionMatches
-            ? Math.floor(activationAtMs / 1000)
-            : null;
-
-          console.log(
-            `[worker-deployment] OK deployment=${deployment.id} version=${version.version_id} traffic=100%`,
-          );
-          appendFileSync(process.env.GITHUB_OUTPUT, `worker_version=${version.version_id}\n`);
-          if (Number.isSafeInteger(activationAtSec) && activationAtSec > 0) {
-            appendFileSync(process.env.GITHUB_OUTPUT, `worker_activation_at=${activationAtSec}\n`);
-            console.log(
-              `[worker-deployment] Cloudflare activation created_on=${listedDeployment.created_on} epoch=${activationAtSec}`,
-            );
-          } else {
-            console.log(
-              `::warning::Cloudflare deployment ${deployment.id} had no valid matching created_on; the activation marker will be skipped.`,
-            );
-          }
-          NODE
+          DEPLOYMENT_HISTORY_AVAILABLE="${deployment_history_available}" \
+            node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/ci/verify-worker-deployment.ts
       - name: Record Worker activation marker
         env:
           WORKER_ACTIVATED_AT: ${{ steps.verify-worker-deployment.outputs.worker_activation_at }}
@@ -266,70 +211,4 @@ jobs:
         env:
           PAGES_DEPLOYED: ${{ needs.pages-release.result == 'success' }}
           WORKER_DEPLOYED: ${{ needs.deploy-worker.result == 'success' }}
-        run: |
-          node --input-type=module <<'NODE'
-          import { appendFileSync } from "node:fs";
-
-          import { fetchJsonProbe, collectWorkerHttpProbes } from "./scripts/lib/worker-http-probes.mts";
-          import {
-            selectPostDeployProbes,
-            summarizePostDeployAcceptance,
-          } from "./scripts/lib/post-deploy-acceptance.mts";
-
-          const probes = selectPostDeployProbes({
-            pagesDeployed: process.env.PAGES_DEPLOYED === "true",
-            workerDeployed: process.env.WORKER_DEPLOYED === "true",
-          });
-          const results = [];
-
-          for (const probe of probes) {
-            if (probe.id === "pages-shell") {
-              const response = await fetchJsonProbe(
-                { apiUrl: "https://stablecoin-dashboard.pages.dev" },
-                "/",
-              );
-              const shell = typeof response.payload === "string" ? response.payload : "";
-              results.push({
-                ...probe,
-                outcome: response.ok && /<html[\s>]/i.test(shell) ? "passed" : "failed",
-                detail: "GET " + response.url + " returned " + response.status + ".",
-              });
-              continue;
-            }
-
-            if (probe.id === "worker-health") {
-              const { health } = await collectWorkerHttpProbes(
-                { apiUrl: "https://api.pharos.watch" },
-                { includeHealth: true },
-              );
-              const healthState = health?.payload?.status;
-              results.push({
-                ...probe,
-                outcome: health?.ok && healthState === "healthy" ? "passed" : "failed",
-                detail:
-                  "GET " + (health?.url ?? "https://api.pharos.watch/api/health")
-                  + " returned " + (health?.status ?? 0) + (healthState ? " (" + healthState + ")." : "."),
-              });
-              continue;
-            }
-          }
-
-          const acceptance = summarizePostDeployAcceptance(results);
-          console.log(JSON.stringify({ probes: results, acceptance }, null, 2));
-          const lines = [
-            "## Post-deploy operational acceptance",
-            "",
-            "- Outcome: " + acceptance.outcome,
-            "- " + acceptance.reason,
-            "- Scope: read-only GET probes only; no production mutation or automatic rollback.",
-            "",
-            "| Probe | Surface | Outcome | Evidence |",
-            "| --- | --- | --- | --- |",
-            ...results.map((result) => "| " + result.id + " | " + result.surface + " | " + result.outcome + " | " + result.detail + " |"),
-            "",
-          ];
-          appendFileSync(process.env.GITHUB_STEP_SUMMARY, lines.join("\n") + "\n");
-          appendFileSync(process.env.GITHUB_OUTPUT, "outcome=" + acceptance.outcome + "\n");
-
-          if (acceptance.outcome === "failed") process.exitCode = 1;
-          NODE
+        run: node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/ci/run-post-deploy-acceptance.ts

@@ -62,7 +62,7 @@ jobs:
       - uses: ./.github/actions/setup-workspace
         with:
           bootstrap-history: "true"
-          workspace-cache: "true"
+          workspace-artifact: publish
 
   validation:
     name: ${{ matrix.lane }}${{ matrix.shard && format(' ({0}/{1})', matrix.shard, matrix.shardCount) || '' }}
@@ -84,7 +84,7 @@ jobs:
           install-deps: "false"
           install-playwright-firefox: ${{ matrix.lane == 'static' && needs.preflight.outputs.playwright_firefox_required || 'false' }}
           static-cache: ${{ matrix.lane == 'static' && 'true' || 'false' }}
-          workspace-cache: "true"
+          workspace-artifact: restore
       - name: Run manifest lane
         env:
           PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
@@ -93,7 +93,18 @@ jobs:
           PR_SKIP_DOC_SYNC: ${{ matrix.skipDocSync }}
           PR_LANE_SHARD: ${{ matrix.shard }}
           PR_LANE_SHARD_COUNT: ${{ matrix.shardCount }}
+          # Observability only: the tests lane writes its Vitest wall time and
+          # per-file durations for shard-balance review. Never gates the lane.
+          PR_SHARD_TIMINGS_FILE: ${{ matrix.lane == 'tests' && format('.tmp/pr-test-timings-{0}.json', matrix.shard) || '' }}
         run: node --experimental-strip-types scripts/maintenance/generate-pr-workflow-matrix.ts --run
+      - name: Upload PR test shard timings
+        if: ${{ always() && matrix.lane == 'tests' }}
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: pr-test-timings-${{ matrix.shard }}
+          path: .tmp/pr-test-timings-${{ matrix.shard }}.json
+          if-no-files-found: warn
+          retention-days: 7
       - name: Upload critical coverage blob
         if: ${{ always() && matrix.lane == 'critical-coverage-shards' }}
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
@@ -120,7 +131,7 @@ jobs:
         with:
           bootstrap-generated: "false"
           install-deps: "false"
-          workspace-cache: "true"
+          workspace-artifact: restore
       - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         with:
           pattern: critical-coverage-*

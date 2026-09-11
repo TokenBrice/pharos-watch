@@ -1,228 +1,66 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
-import { LIVE_RESERVE_ADAPTER_DEFINITIONS } from "@shared/lib/live-reserve-adapters";
-import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
-import { mockD1 } from "@shared/test-utils/mock-d1";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { mockRegistry } from "../../test-helpers/cron";
+import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
+import { mockLiveReserveAdapterRegistry, shouldAttemptFetchMock, recordOutcomeSafeMock } from "./live-reserves.test-support";
 
-const getReserveAdapterMock = vi.fn();
-const shouldAttemptFetchMock = vi.fn();
-const recordOutcomeSafeMock = vi.fn();
-const GATE_LOAD_TIMEOUT_MS = 15_000;
+vi.mock("@shared/lib/stablecoins/registry", () => mockRegistry({ stablecoins: ["shared-a", "shared-b", "control"].map((id) => ({
+  id, name: id, symbol: id, flags: { backing: "rwa-backed", pegCurrency: "USD", governance: "centralized", yieldBearing: false, rwa: true, navToken: false },
+  liveReservesConfig: { adapter: "m0", version: 1, semantics: "collateral-mix", inputs: { primary: { kind: "http-json", url: id === "control" ? "https://example.com/control" : "https://example.com/shared" } } },
+})) }));
 
-vi.mock("../reserve-adapters/index", () => ({
-  getReserveAdapter: getReserveAdapterMock,
-}));
+import { syncLiveReserves } from "../sync-live-reserves";
+import { resolveReserveResult } from "../../lib/live-reserves/store";
 
-vi.mock("../../lib/circuit-breaker", () => ({
-  shouldAttemptFetch: shouldAttemptFetchMock,
-  recordOutcomeSafe: recordOutcomeSafeMock,
-}));
+const fixtures = createLatestSchemaFixtureTracker();
+const slices = [{ name: "US Treasuries", pct: 80, risk: "low" as const }, { name: "Cash", pct: 20, risk: "low" as const }];
+const ids = ["control", "shared-a", "shared-b"];
+afterEach(fixtures.closeAll);
+beforeEach(() => {
+  vi.clearAllMocks();
+  shouldAttemptFetchMock.mockResolvedValue(true);
+  recordOutcomeSafeMock.mockResolvedValue(undefined);
+});
 
-const configuredCoins = ACTIVE_STABLECOINS.filter((coin) => coin.liveReservesConfig);
-
-function reserveDb() {
-  return mockD1([
-    { match: "SELECT value, updated_at FROM cache WHERE key = ?", rows: [], first: null },
-    { match: "INSERT OR REPLACE INTO cache", rows: [] },
-    { match: "SELECT key FROM cache WHERE key LIKE 'circuit:live-reserves:%'", rows: [] },
-    { match: "DELETE FROM cache WHERE key", rows: [] },
-    { match: "DELETE FROM reserve_sync_state WHERE stablecoin_id", rows: [] },
-    { match: "DELETE FROM reserve_composition WHERE stablecoin_id", rows: [] },
-    { match: "DELETE FROM reserve_composition_history WHERE rowid IN", rows: [] },
-    { match: "DELETE FROM reserve_sync_attempt_history WHERE rowid IN", rows: [] },
-    { match: "FROM reserve_sync_state", rows: [] },
-    { match: "FROM reserve_composition", rows: [] },
-    { match: "INSERT INTO reserve_sync_state", rows: [] },
-    { match: "UPDATE reserve_sync_state", rows: [] },
-    { match: "INSERT INTO reserve_composition", rows: [] },
-    { match: "INSERT OR IGNORE INTO reserve_composition_history", rows: [] },
-    { match: "INSERT OR IGNORE INTO reserve_sync_attempt_history", rows: [] },
-  ]);
-}
-
-function mockAdapterRegistry(
-  fetchImpl: (
-    coin?: (typeof ACTIVE_STABLECOINS)[number],
-    config?: NonNullable<(typeof ACTIVE_STABLECOINS)[number]["liveReservesConfig"]>,
-  ) => Promise<{
-    slices: Array<{ name: string; pct: number; risk: "low" }>;
-    metadata?: Record<string, unknown>;
-    warnings?: Array<{ code: string; message: string; severity: "warning" | "info"; effect?: string }>;
-  }>,
-) {
-  const fetch = vi.fn(async (coin: (typeof ACTIVE_STABLECOINS)[number], config: NonNullable<(typeof ACTIVE_STABLECOINS)[number]["liveReservesConfig"]>) => {
-    const result = await fetchImpl(coin, config);
-    return {
-      ...result,
-      metadata: result.metadata ?? { freshnessMode: "not-applicable" as const },
-    };
-  });
-  getReserveAdapterMock.mockImplementation((adapterKey: keyof typeof LIVE_RESERVE_ADAPTER_DEFINITIONS) => {
-    const definition = LIVE_RESERVE_ADAPTER_DEFINITIONS[adapterKey];
-    const validation = "validation" in definition ? definition.validation : undefined;
-    return {
-      key: adapterKey,
-      fetch,
-      sourceModel: definition.sourceModel,
-      evidenceClass: definition.evidenceClass,
-      sharedSourceMode: definition.sharedSourceMode,
-      ...(validation ? { validation } : {}),
-    };
-  });
-  return fetch;
-}
-
-describe("reserve sync → API integration", () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-    vi.resetModules();
-    shouldAttemptFetchMock.mockResolvedValue(true);
-    recordOutcomeSafeMock.mockResolvedValue(undefined);
+describe("reserve sync durable API resolution", () => {
+  it("stores successful composition and exposes it through the reserve resolver", async () => {
+    mockLiveReserveAdapterRegistry(async () => ({ slices, metadata: { freshnessMode: "verified", sourceTimestamp: Math.floor(Date.now() / 1000) } }));
+    const { sqlite, db } = fixtures.open();
+    expect(await syncLiveReserves(db, new AbortController().signal, {})).toMatchObject({ status: "ok", itemCount: 3 });
+    expect(sqlite.prepare("SELECT stablecoin_id FROM reserve_composition ORDER BY stablecoin_id").all()).toEqual(ids.map((stablecoin_id) => ({ stablecoin_id })));
+    for (const id of ids) {
+      expect(await resolveReserveResult(db, id, Math.floor(Date.now() / 1000))).toMatchObject({ reserves: slices, sync: { status: "ok" } });
+    }
   });
 
-  describe("happy path: adapter → D1 → API resolution", () => {
-    it("stores valid slices in D1 and records success in sync_state", async () => {
-      const slices = [{ name: "US Treasuries", pct: 80, risk: "low" as const }, { name: "Cash", pct: 20, risk: "low" as const }];
-      mockAdapterRegistry(async () => ({ slices }));
-
-      const { syncLiveReserves } = await import("../sync-live-reserves");
-      const db = reserveDb();
-      const result = await syncLiveReserves(db, new AbortController().signal, {});
-
-      // Sync completes successfully
-      expect(result?.status).toBe("ok");
-      expect(result?.itemCount).toBe(configuredCoins.length);
-
-      // Composition data was written to D1
-      const compositionWrites = db.getHistory().filter((e) => e.sql.includes("reserve_composition"));
-      expect(compositionWrites.length).toBeGreaterThan(0);
-
-      // Sync state was written to D1
-      const syncStateWrites = db.getHistory().filter((e) => e.sql.includes("reserve_sync_state"));
-      expect(syncStateWrites.length).toBeGreaterThan(0);
-
-      // History pruning ran
-      expect(db.getHistory().some((e) => e.sql.includes("DELETE FROM reserve_composition_history"))).toBe(true);
-
-      // Breaker outcomes were recorded
-      expect(recordOutcomeSafeMock).toHaveBeenCalled();
-      for (const call of recordOutcomeSafeMock.mock.calls) {
-        expect(call[2]).toBe(true); // success outcome
-      }
-    }, GATE_LOAD_TIMEOUT_MS);
+  it("preserves previous successful composition after validation rejection", async () => {
+    mockLiveReserveAdapterRegistry(async () => ({ slices, metadata: { freshnessMode: "verified", sourceTimestamp: Math.floor(Date.now() / 1000) } }));
+    const { sqlite, db } = fixtures.open();
+    await syncLiveReserves(db, new AbortController().signal, {});
+    const previous = sqlite.prepare("SELECT * FROM reserve_composition ORDER BY stablecoin_id").all();
+    expect(previous).toHaveLength(3);
+    mockLiveReserveAdapterRegistry(async () => ({ slices: [{ name: "Asset A", pct: 80, risk: "low" }, { name: "Asset B", pct: 25, risk: "low" }] }));
+    expect(await syncLiveReserves(db, new AbortController().signal, {})).toMatchObject({ status: "error", itemCount: 0 });
+    expect(sqlite.prepare("SELECT * FROM reserve_composition ORDER BY stablecoin_id").all()).toEqual(previous);
+    for (const id of ids) expect(await resolveReserveResult(db, id, Math.floor(Date.now() / 1000))).toMatchObject({ reserves: slices });
   });
 
-  describe("adapter failure → sync_state records error", () => {
-    it("records adapter exception with failure details in sync attempt history", async () => {
-      mockAdapterRegistry(async () => {
-        throw new Error("HTTP 503 upstream unavailable");
-      });
-
-      const { syncLiveReserves } = await import("../sync-live-reserves");
-      const db = reserveDb();
-      const result = await syncLiveReserves(db, new AbortController().signal, {});
-
-      // All coins failed
-      expect(result?.status).toBe("error");
-      expect(result?.itemCount).toBe(0);
-
-      // Sync attempt history was written with error details
-      const attemptWrites = db.getHistory().filter((e) => e.sql.includes("reserve_sync_attempt_history"));
-      expect(attemptWrites.length).toBeGreaterThan(0);
-
-      // Check that at least one attempt records the error message
-      const hasErrorMetadata = attemptWrites.some((e) =>
-        e.binds.some(
-          (bind) => typeof bind === "string" && bind.includes("adapter-exception"),
-        ),
-      );
-      expect(hasErrorMetadata).toBe(true);
-
-      // Breaker outcomes record failure
-      expect(recordOutcomeSafeMock).toHaveBeenCalled();
-      for (const call of recordOutcomeSafeMock.mock.calls) {
-        expect(call[2]).toBe(false); // failure outcome
-      }
+  it("shares failed outcomes within a run and retries that source on the next run", async () => {
+    let failShared = true;
+    const fetch = mockLiveReserveAdapterRegistry(async (_coin, config) => {
+      if (config?.inputs.primary.kind === "http-json" && config.inputs.primary.url.endsWith("/shared") && failShared) throw new Error("transient network failure");
+      return { slices, metadata: { freshnessMode: "verified", sourceTimestamp: Math.floor(Date.now() / 1000) } };
     });
-  });
-
-  describe("validation rejection: invalid adapter output not stored", () => {
-    it("rejects slices with pct sum > 102 and does not write composition", async () => {
-      // PCT_SUM_ERROR_TOLERANCE is 2, so sum > 102 is rejected
-      mockAdapterRegistry(async () => ({
-        slices: [
-          { name: "Asset A", pct: 80, risk: "low" as const },
-          { name: "Asset B", pct: 25, risk: "low" as const },
-        ],
-      }));
-
-      const { syncLiveReserves } = await import("../sync-live-reserves");
-      const db = reserveDb();
-      const result = await syncLiveReserves(db, new AbortController().signal, {});
-
-      expect(result?.status).toBe("error");
-      expect(result?.itemCount).toBe(0);
-
-      // Sync attempt history should mention validation-failed
-      const attemptWrites = db.getHistory().filter((e) => e.sql.includes("reserve_sync_attempt_history"));
-      const hasValidationFailure = attemptWrites.some((e) =>
-        e.binds.some(
-          (bind) => typeof bind === "string" && bind.includes("validation-failed"),
-        ),
-      );
-      expect(hasValidationFailure).toBe(true);
-
-      // No composition data should have been written for a validated insert
-      // (beginReserveSyncAttempt writes to sync tables, but finalizeReserveSyncSuccess should NOT have been called)
-      // The reserve_composition inserts only come from finalizeReserveSyncSuccess,
-      // so we check that none of the composition writes contain actual slice data
-      const compositionInserts = db.getHistory().filter(
-        (e) => e.sql.includes("reserve_composition") && e.sql.includes("INSERT"),
-      );
-      // No INSERT into reserve_composition should contain our invalid slices
-      const hasInvalidSlices = compositionInserts.some((e) =>
-        e.binds.some((bind) => typeof bind === "string" && bind.includes("Asset A")),
-      );
-      expect(hasInvalidSlices).toBe(false);
-    });
-  });
-
-  describe("shared-source cache: independent retry after failure", () => {
-    it("retries source-invariant adapter independently after first failure", async () => {
-      // Find a source-invariant adapter to test with
-      const sourceInvariantAdapters = Object.entries(LIVE_RESERVE_ADAPTER_DEFINITIONS)
-        .filter(([, def]) => def.sharedSourceMode === "source-invariant")
-        .map(([key]) => key);
-
-      // If no source-invariant adapters exist in config, skip
-      if (sourceInvariantAdapters.length === 0) return;
-
-      // Find coins using source-invariant adapters
-      const sourceInvariantCoins = configuredCoins.filter(
-        (coin) => coin.liveReservesConfig && sourceInvariantAdapters.includes(coin.liveReservesConfig.adapter),
-      );
-
-      if (sourceInvariantCoins.length < 2) return;
-
-      // Track call count. The first call should fail, subsequent calls should succeed.
-      // Because the .catch() cleanup deletes the cached promise on failure,
-      // the second coin using the same source should retry independently.
-      let callCount = 0;
-      const adapterFetch = mockAdapterRegistry(async () => {
-        callCount++;
-        if (callCount === 1) {
-          throw new Error("transient network failure");
-        }
-        return { slices: [{ name: "Reserve", pct: 100, risk: "low" as const }] };
-      });
-
-      const { syncLiveReserves } = await import("../sync-live-reserves");
-      const db = reserveDb();
-      await syncLiveReserves(db, new AbortController().signal, {});
-
-      // The adapter should have been called more than once — the cache eviction
-      // on failure means subsequent coins retry the fetch independently.
-      expect(adapterFetch).toHaveBeenCalledTimes(callCount);
-      expect(callCount).toBeGreaterThan(1);
-    });
+    const { sqlite, db } = fixtures.open();
+    await syncLiveReserves(db, new AbortController().signal, {});
+    expect(fetch.mock.calls.map(([, config]) => config.inputs.primary.url)).toEqual(["https://example.com/shared", "https://example.com/control"]);
+    expect(sqlite.prepare("SELECT stablecoin_id FROM reserve_composition").all()).toEqual([{ stablecoin_id: "control" }]);
+    expect(sqlite.prepare("SELECT stablecoin_id, last_status, last_error FROM reserve_sync_state WHERE stablecoin_id != 'control' ORDER BY stablecoin_id").all()).toEqual([
+      { stablecoin_id: "shared-a", last_status: "error", last_error: expect.stringContaining("transient network failure") },
+      { stablecoin_id: "shared-b", last_status: "error", last_error: expect.stringContaining("transient network failure") },
+    ]);
+    failShared = false;
+    await syncLiveReserves(db, new AbortController().signal, {});
+    expect(fetch.mock.calls.map(([, config]) => config.inputs.primary.url)).toEqual(["https://example.com/shared", "https://example.com/control", "https://example.com/shared", "https://example.com/control"]);
+    expect(await resolveReserveResult(db, "shared-b", Math.floor(Date.now() / 1000))).toMatchObject({ reserves: slices, sync: { status: "ok" } });
   });
 });

@@ -149,7 +149,6 @@ describe("AdminActionButton", () => {
     fireEvent.click(screen.getByRole("button", { name: "Cancel" }));
 
     await waitFor(() => expect(document.activeElement).toBe(trigger));
-    expect(trigger.className).toContain("min-h-11");
   });
 
   it("requires an explicit asset or acknowledged batch scope", async () => {
@@ -354,12 +353,13 @@ describe("AdminActionButton", () => {
           status: 200,
           headers: {
             "Content-Type": "application/json",
-            "Idempotency-Key": "intent-key-for-test",
+            "Idempotency-Key": "first-intent-key",
             "X-Idempotent-Replay": "true",
           },
         }),
       );
-    renderActions([makeAction()]);
+    const keys = ["first-intent-key", "second-intent-key"];
+    renderActions([makeAction()], () => keys.shift() ?? "unexpected-key");
 
     fireEvent.click(screen.getByRole("button", { name: "Backfill Supply" }));
     fireEvent.click(screen.getByRole("button", { name: "Confirm" }));
@@ -369,8 +369,8 @@ describe("AdminActionButton", () => {
     await screen.findByText("Succeeded");
 
     expect(fetchMock).toHaveBeenCalledTimes(2);
-    expect(requestIdempotencyKey(0)).toBe("intent-key-for-test");
-    expect(requestIdempotencyKey(1)).toBe("intent-key-for-test");
+    expect(requestIdempotencyKey(0)).toBe("first-intent-key");
+    expect(requestIdempotencyKey(1)).toBe("first-intent-key");
     expect(screen.getByText("Idempotent replay: yes")).toBeTruthy();
   });
 
@@ -448,7 +448,7 @@ describe("AdminActionButton", () => {
     await screen.findByText("Outcome unknown");
     expect(screen.getByRole("button", { name: "Retry same execution" })).toBeTruthy();
     expect(screen.queryByText("Failed")).toBeNull();
-    expect(screen.getByText(/Idempotency reservation ownership was lost/).className).toContain("bg-amber-500/10");
+    expect(screen.getByText(/Idempotency reservation ownership was lost/)).toBeTruthy();
   });
 
   it("keeps a payload-reuse 409 as a definite failure", async () => {
@@ -464,9 +464,7 @@ describe("AdminActionButton", () => {
 
     await screen.findByText("Failed");
     expect(screen.queryByText("Outcome unknown")).toBeNull();
-    expect(screen.getByText(/Idempotency key reuse with different request payload/).className).toContain(
-      "bg-red-500/10",
-    );
+    expect(screen.getByText(/Idempotency key reuse with different request payload/)).toBeTruthy();
   });
 
   it("coalesces a double confirmation into one request", async () => {

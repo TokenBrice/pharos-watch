@@ -12,6 +12,33 @@
   ],
   "mappings": [
     {
+      "id": "daily-social-posts",
+      "label": "Daily data graphics for manual social publication",
+      "risk": "high",
+      "sources": [
+        "shared/lib/daily-social*.ts",
+        "scripts/lib/daily-social-capture.ts",
+        "scripts/maintenance/build-daily-social.ts",
+        "scripts/maintenance/publish-daily-social.ts",
+        "functions/social-posts/**"
+      ],
+      "docs": ["docs/daily-social.md"],
+      "background": [
+        { "path": "docs/scripts.md", "anchor": "daily-social-posters" },
+        { "path": "docs/worker-infrastructure.md", "anchor": "cron-scheduling" }
+      ],
+      "checks": [
+        "npx vitest run shared/lib/__tests__/daily-social.test.ts shared/lib/__tests__/daily-social-schedule.test.ts scripts/__tests__/daily-social-capture.test.ts scripts/__tests__/publish-daily-social.test.ts scripts/maintenance/__tests__/build-daily-social.test.ts functions/__tests__/social-posts.test.ts",
+        "npm run check:cron-sync",
+        "npm run check:cron-connections"
+      ],
+      "rules": [
+        "Use the Europe/Belgrade calendar for edition identity and the 14:00 target, including DST.",
+        "Require fresh data and a verified image before an operator posts an edition by hand; the Worker never tweets these graphics automatically.",
+        "Keep the dated manifest immutable."
+      ]
+    },
+    {
       "id": "stablecoin-registry",
       "label": "Stablecoin data and research sidecars",
       "risk": "high",
@@ -217,7 +244,7 @@
       "background": [
         { "path": "docs/depeg-detection.md", "anchor": "thresholds--constants" },
         "docs/dews.md",
-        "docs/depeg-resolver.md",
+        { "path": "docs/depeg-resolver.md", "anchor": "methodology-versioning" },
         { "path": "docs/dex-liquidity.md", "anchor": "dex-liquidity-score" },
         "docs/mint-authority-scoring.md",
         "docs/stability-index.md",

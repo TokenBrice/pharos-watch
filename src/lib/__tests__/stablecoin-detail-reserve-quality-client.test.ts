@@ -252,15 +252,32 @@ describe("projectReserveQualityClientSummary", () => {
     expect(summary!.chipToneClass).toContain("blue");
   });
 
-  it("calls the exit opaque when the unknown share reaches 40%", () => {
+  it.each([[40, "Opaque exit"], [39.9, "Mixed liquidity"]] as const)("classifies %s percent unknown at the opacity boundary", (unknown, label) => {
     const summary = projectReserveQualityClientSummary(
       coinWith([
         { name: "Cash", pct: 59, risk: "very-low", assetClass: "cash", liquidityHorizon: "immediate" },
-        { name: "Undisclosed holdings", pct: 41, risk: "high", assetClass: "other", liquidityHorizon: "unknown" },
+        { name: "Undisclosed holdings", pct: unknown, risk: "high", assetClass: "other", liquidityHorizon: "unknown" },
+        { name: "Private credit", pct: 41 - unknown, risk: "high", assetClass: "private-credit", liquidityHorizon: "over-seven-days" },
       ]),
     );
-    expect(summary!.chipLabel).toBe("Opaque exit");
+    expect(summary!.chipLabel).toBe(label);
     expect(summary!.chipToneClass).toContain("amber");
+  });
+
+  it("prefers liquid coverage when both liquidity and opacity thresholds are met", () => {
+    const summary = projectReserveQualityClientSummary(coinWith([
+      { name: "Cash", pct: 60, risk: "very-low", assetClass: "cash", liquidityHorizon: "immediate" },
+      { name: "Unknown", pct: 40, risk: "high", assetClass: "other", liquidityHorizon: "unknown" },
+    ]));
+    expect(summary!.chipLabel).toBe("Mostly liquid");
+  });
+
+  it("surfaces a medium-risk top slice exactly at the concentration floor", () => {
+    const summary = projectReserveQualityClientSummary(coinWith([
+      { name: "Credit", pct: 20, risk: "medium", assetClass: "private-credit", liquidityHorizon: "over-seven-days" },
+      ...Array.from({ length: 5 }, (_, index) => ({ name: `Cash ${index}`, pct: 16, risk: "very-low", assetClass: "cash", liquidityHorizon: "immediate" })),
+    ]));
+    expect(summary).toMatchObject({ topPositionName: "Credit", topPositionPct: 20 });
   });
 
   it("falls back to mixed liquidity below both liquidity and opacity thresholds", () => {

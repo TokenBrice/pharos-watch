@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it } from "vitest";
 import { mockD1 } from "@shared/test-utils/mock-d1";
 import {
   buildTelegramDeliverySliStatus,
@@ -7,9 +7,12 @@ import {
   mapTelegramBotStats,
 } from "../status/telegram-bot-stats";
 import type { TelegramDeliverySliStatus } from "@shared/types/status";
-import { createLatestSchemaSqlite } from "../../test-helpers/latest-schema-sqlite";
-import { createSqliteD1 } from "../../test-helpers/sqlite-d1";
+import { createLatestSchemaFixtureTracker, createLatestSchemaSqlite } from "@shared/test-utils/latest-schema-sqlite";
+import { createSqliteD1 } from "@shared/test-utils/sqlite-d1";
 import { loadTelegramPendingCapacity } from "../telegram/pending-capacity";
+
+const fixtures = createLatestSchemaFixtureTracker();
+afterEach(fixtures.closeAll);
 
 function unavailableDeliverySli(): TelegramDeliverySliStatus {
   return {
@@ -454,103 +457,24 @@ describe("getTelegramBotStats", () => {
   });
 
   it("sums telegram-inactive-cleanup item_count over the trailing 7-day window", async () => {
-    // The cron runs daily but only performs real deletes on roughly one of
-    // every seven days. Three rows in the window with item_counts 0/37/0 must
-    // surface as 37, not the latest row's 0.
     const now = 1_710_000_100;
-    const db = mockD1([
-      {
-        match: "FROM telegram_subscribers s",
-        first: {
-          total_chats: 1,
-          alert_enabled_chats: 1,
-          deliverable_chats: 1,
-          subscribed_chats: 1,
-          empty_alert_chats: 0,
-          muted_chats_with_subscriptions: 0,
-          dews_chats: 1,
-          depeg_chats: 0,
-          safety_chats: 0,
-          launch_chats: 0,
-          all_types_chats: 0,
-          total_subscriptions: 1,
-          avg_subscriptions_per_subscribed_chat: 1,
-          last_subscriber_activity_at: 1_710_000_000,
-          custom_preference_chats: 0,
-          quiet_hours_enabled_chats: 0,
-        },
-        rows: [],
-      },
-      { match: "FROM telegram_pending_disambiguation", first: { pending_count: 0 }, rows: [] },
-      {
-        match: "MIN(created_at) AS oldest_created_at",
-        first: { pending_count: 0, oldest_created_at: null, due_count: 0, deferred_count: 0, expired_count: 0 },
-        rows: [],
-      },
-      { match: "last_error_class AS error_class", rows: [] },
-      { match: "SELECT COUNT(*) AS pending_count FROM telegram_pending_alerts", first: { pending_count: 0 }, rows: [] },
-      { match: "FROM telegram_subscriptions", rows: [] },
-      { match: "FROM cache WHERE key = ?", rows: [] },
-      {
-        match: "SUM(item_count)",
-        matchBinds: ["telegram-inactive-cleanup", now - 7 * 24 * 60 * 60],
-        first: { total: 37 },
-        rows: [],
-      },
-    ]);
-
+    const { sqlite, db } = fixtures.open();
+    const insert = sqlite.prepare(
+      "INSERT INTO cron_runs (job, started_at, duration_ms, status, item_count) VALUES (?, ?, 1, ?, ?)",
+    );
+    insert.run("telegram-inactive-cleanup", now - 604800, "ok", 12);
+    insert.run("telegram-inactive-cleanup", now - 100, "ok", 25);
+    insert.run("telegram-inactive-cleanup", now, "ok", 0);
+    insert.run("telegram-inactive-cleanup", now - 604801, "ok", 1000);
+    insert.run("telegram-inactive-cleanup", now - 10, "error", 2000);
+    insert.run("other-job", now - 10, "ok", 4000);
     const result = await getTelegramBotStats(db, now);
-
-    const history = db.getHistory();
-    const inactiveQuery = history.find((entry) => entry.sql.includes("SUM(item_count)"));
-    expect(inactiveQuery?.sql).toContain("FROM cron_runs");
-    expect(inactiveQuery?.sql).toContain("status = 'ok'");
     expect(result.inactiveSubscribersCleanedThisWeek).toBe(37);
   });
 
   it("reports 0 inactive cleanup when no run is present in the trailing 7-day window", async () => {
-    // COALESCE(SUM(item_count), 0) returns 0 when the window holds no rows.
     const now = 1_710_000_100;
-    const db = mockD1([
-      {
-        match: "FROM telegram_subscribers s",
-        first: {
-          total_chats: 1,
-          alert_enabled_chats: 1,
-          deliverable_chats: 1,
-          subscribed_chats: 1,
-          empty_alert_chats: 0,
-          muted_chats_with_subscriptions: 0,
-          dews_chats: 1,
-          depeg_chats: 0,
-          safety_chats: 0,
-          launch_chats: 0,
-          all_types_chats: 0,
-          total_subscriptions: 1,
-          avg_subscriptions_per_subscribed_chat: 1,
-          last_subscriber_activity_at: 1_710_000_000,
-          custom_preference_chats: 0,
-          quiet_hours_enabled_chats: 0,
-        },
-        rows: [],
-      },
-      { match: "FROM telegram_pending_disambiguation", first: { pending_count: 0 }, rows: [] },
-      {
-        match: "MIN(created_at) AS oldest_created_at",
-        first: { pending_count: 0, oldest_created_at: null, due_count: 0, deferred_count: 0, expired_count: 0 },
-        rows: [],
-      },
-      { match: "last_error_class AS error_class", rows: [] },
-      { match: "SELECT COUNT(*) AS pending_count FROM telegram_pending_alerts", first: { pending_count: 0 }, rows: [] },
-      { match: "FROM telegram_subscriptions", rows: [] },
-      { match: "FROM cache WHERE key = ?", rows: [] },
-      {
-        match: "SUM(item_count)",
-        matchBinds: ["telegram-inactive-cleanup", now - 7 * 24 * 60 * 60],
-        first: { total: 0 },
-        rows: [],
-      },
-    ]);
+    const { db } = fixtures.open();
 
     const result = await getTelegramBotStats(db, now);
 
@@ -605,100 +529,29 @@ describe("getTelegramBotStats", () => {
 });
 
 describe("loadTelegramMiniAppDailyAggregate", () => {
-  it("counts successful snooze, timezone_change, and unsubscribe events as mutations (not denials)", async () => {
-    // The success-event tuple must cover every event type emitted by
-    // `mutationEventType` in worker/src/api/telegram-mini-app.ts. Otherwise the
-    // operator gauge undercounts mutation traffic. Bind order is asserted
-    // explicitly so any future drift surfaces here.
+  it("counts successful Mini App mutations while excluding bot events, failures, and other days", async () => {
+    const { sqlite, db } = fixtures.open();
     const day = "2026-05-14";
-    const db = mockD1([
-      {
-        match: "FROM telegram_usage_daily",
-        matchBinds: [
-          "mini_app_mutation",
-          "mini_app_recommended_setup",
-          "mini_app_coin_add",
-          "mini_app_coin_remove",
-          "mini_app_quiet_hours",
-          "mini_app_snooze",
-          "mini_app_coin_snooze",
-          "mini_app_forget",
-          "timezone_change",
-          "unsubscribe",
-          "startapp",
-          "menu_or_main_app",
-          day,
-        ],
-        first: {
-          mini_app_sessions: 4,
-          mini_app_mutations: 9,
-          mini_app_denied: 0,
-          mini_app_replay_claimed: 0,
-        },
-        rows: [],
-      },
-    ]);
+    const insert = sqlite.prepare(`INSERT INTO telegram_usage_daily
+      (day, event_type, source_category, outcome, failure_class, count, first_seen_at, last_seen_at)
+      VALUES (?, ?, ?, ?, ?, ?, 1, 1)`);
+    const directTypes = [
+      "mini_app_mutation", "mini_app_recommended_setup", "mini_app_coin_add", "mini_app_coin_remove",
+      "mini_app_quiet_hours", "mini_app_snooze", "mini_app_coin_snooze", "mini_app_forget", "mini_app_recap",
+    ];
+    for (const event of directTypes) insert.run(day, event, "startapp", "success", "", 1);
+    insert.run(day, "timezone_change", "startapp", "success", "", 2);
+    insert.run(day, "unsubscribe", "menu_or_main_app", "success", "", 3);
+    insert.run(day, "timezone_change", "unknown", "success", "", 100);
+    insert.run(day, "unsubscribe", "unknown", "success", "", 200);
+    insert.run(day, "mini_app_coin_add", "startapp", "error", "", 400);
+    insert.run("2026-05-13", "mini_app_coin_add", "startapp", "success", "", 800);
+    insert.run(day, "mini_app_session_valid", "startapp", "success", "", 4);
+    insert.run(day, "mini_app_mutation_denied", "startapp", "denied", "replayed-auth", 2);
+    insert.run(day, "mini_app_mutation_denied", "startapp", "denied", "invalid-auth", 1);
 
-    const aggregate = await loadTelegramMiniAppDailyAggregate(db, day);
-
-    const history = db.getHistory();
-    const aggregateSql = history.find((entry) => entry.sql.includes("FROM telegram_usage_daily"));
-    expect(aggregateSql?.sql).toContain("event_type IN (?, ?, ?, ?, ?, ?, ?, ?)");
-    expect(aggregateSql?.binds).toEqual([
-      "mini_app_mutation",
-      "mini_app_recommended_setup",
-      "mini_app_coin_add",
-      "mini_app_coin_remove",
-      "mini_app_quiet_hours",
-      "mini_app_snooze",
-      "mini_app_coin_snooze",
-      "mini_app_forget",
-      "timezone_change",
-      "unsubscribe",
-      "startapp",
-      "menu_or_main_app",
-      day,
-    ]);
-    expect(aggregate.mutations).toBe(9);
-    expect(aggregate.denied).toBe(0);
-    expect(aggregate.sessions).toBe(4);
-    expect(aggregate.replayClaimed).toBe(0);
-  });
-
-  it("filters shared success event types to Mini App source categories", async () => {
-    const day = "2026-05-14";
-    const db = mockD1([
-      {
-        match: "FROM telegram_usage_daily",
-        matchBinds: [
-          "mini_app_mutation",
-          "mini_app_recommended_setup",
-          "mini_app_coin_add",
-          "mini_app_coin_remove",
-          "mini_app_quiet_hours",
-          "mini_app_snooze",
-          "mini_app_coin_snooze",
-          "mini_app_forget",
-          "timezone_change",
-          "unsubscribe",
-          "startapp",
-          "menu_or_main_app",
-          day,
-        ],
-        first: {
-          mini_app_sessions: 0,
-          mini_app_mutations: 1,
-          mini_app_denied: 0,
-          mini_app_replay_claimed: 0,
-        },
-        rows: [],
-      },
-    ]);
-
-    const aggregate = await loadTelegramMiniAppDailyAggregate(db, day);
-
-    const aggregateSql = db.getHistory().find((entry) => entry.sql.includes("FROM telegram_usage_daily"));
-    expect(aggregateSql?.sql).toContain("source_category IN (?, ?)");
-    expect(aggregate.mutations).toBe(1);
+    expect(await loadTelegramMiniAppDailyAggregate(db, day)).toEqual({
+      sessions: 4, mutations: 14, denied: 3, replayClaimed: 2,
+    });
   });
 });

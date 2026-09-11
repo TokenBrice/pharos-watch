@@ -1,22 +1,10 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { CronProgressUpdate } from "../../lib/cron-logger";
 import { mockRegistry } from "../../test-helpers/cron";
+import { beefyCandidate, emptyRpcTelemetry, emptyVaultsFyiResult } from "./sync-yield-supplemental.test-support";
 
 const OPTIONAL_RPC_MISSING_TARGET_EXAMPLE_LIMIT = 20;
 
-const emptyTelemetry = {
-  targetCount: 0,
-  attemptedCount: 0,
-  resolvedTargetCount: 0,
-  emittedCount: 0,
-  missingTargetCount: 0,
-  missingByChain: {},
-  missingReasonCounts: {},
-  missingTargets: [],
-  missingTargetsTruncated: false,
-  budgetExhausted: false,
-  endpointStrategy: "alternating-fallback-primary" as const,
-};
 
 vi.mock("@shared/lib/stablecoins/registry", () => {
   const stablecoins = [
@@ -40,85 +28,27 @@ vi.mock("@shared/lib/stablecoins/registry", () => {
   return mockRegistry({ stablecoins });
 });
 
-vi.mock("../yield-sync/sources", () => ({
+vi.mock("../yield-sync/sources", async () => {
+  // The hoisted mock factory runs before static fixture imports initialize.
+  const { emptyRpcTelemetry, emptyVaultsFyiResult } = await import("./sync-yield-supplemental.test-support");
+  return {
   COMPOUND_V3_COMETS: [],
   fetchMorphoVaultSources: vi.fn(async () => []),
   fetchPendleMarketSources: vi.fn(async () => []),
   fetchRoycoDawnSources: vi.fn(async () => []),
-  fetchVaultsFyiSources: vi.fn(async () => ({
-    candidates: [],
-    telemetry: {
-      enabled: false,
-      hasKey: false,
-      consumptionMode: "disabled",
-      consumptionReason: "source-disabled",
-      status: "skipped",
-      skipReason: "disabled",
-      requestCount: 0,
-      pageCount: 0,
-      pageCapReached: false,
-      creditsEstimated: 0,
-      creditsCap: 13,
-      creditCapReached: false,
-      monthlyCreditsEstimated: null,
-      monthlyCreditsReserved: null,
-      monthlyCreditsCap: 2500,
-      monthlyCreditsForecast: null,
-      monthlyUnthrottledForecast: null,
-      monthlyBudgetUtilization: null,
-      monthlyBudgetWarning: false,
-      monthlyRunsRemaining: null,
-      monthlyLedgerState: "unavailable",
-      coverageBudgetState: "unavailable",
-      rawVaultCount: 0,
-      rankableCandidateCount: 0,
-      auditOnlyCount: 0,
-      malformedDropCount: 0,
-      unsupportedChainCount: 0,
-      identityMissCount: 0,
-      sizeGateDropCount: 0,
-      warningDropCount: 0,
-      durationMs: 0,
-      budgetMs: 20_000,
-      budgetExhausted: false,
-      dropExamples: [],
-    },
-  })),
+  fetchVaultsFyiSources: vi.fn(async () => emptyVaultsFyiResult()),
   fetchYearnKongSources: vi.fn(async () => []),
   fetchBeefySources: vi.fn(async () => []),
   fetchCompoundV3SupplyRates: vi.fn(async () => ({
     results: [],
-    telemetry: {
-      targetCount: 0,
-      attemptedCount: 0,
-      resolvedTargetCount: 0,
-      emittedCount: 0,
-      missingTargetCount: 0,
-      missingByChain: {},
-      missingReasonCounts: {},
-      missingTargets: [],
-      missingTargetsTruncated: false,
-      budgetExhausted: false,
-      endpointStrategy: "alternating-fallback-primary",
-    },
+    telemetry: emptyRpcTelemetry(),
   })),
   fetchAaveV3SupplyRates: vi.fn(async () => ({
     results: [],
-    telemetry: {
-      targetCount: 0,
-      attemptedCount: 0,
-      resolvedTargetCount: 0,
-      emittedCount: 0,
-      missingTargetCount: 0,
-      missingByChain: {},
-      missingReasonCounts: {},
-      missingTargets: [],
-      missingTargetsTruncated: false,
-      budgetExhausted: false,
-      endpointStrategy: "alternating-fallback-primary",
-    },
+    telemetry: emptyRpcTelemetry(),
   })),
-}));
+  };
+});
 
 vi.mock("../yield-sync/sources-rpc", () => ({
   OPTIONAL_RPC_MISSING_TARGET_EXAMPLE_LIMIT: 20,
@@ -145,52 +75,6 @@ import {
   SUPPLEMENTAL_SOURCE_FAMILY_KEYS,
   SUPPLEMENTAL_SOURCE_FAMILY_CONCURRENCY,
 } from "../yield-sync/supplemental-source-families";
-import type { VaultsFyiSourceResult } from "../yield-sync/sources";
-
-function emptyVaultsFyiResult(
-  overrides: Partial<VaultsFyiSourceResult["telemetry"]> = {},
-): VaultsFyiSourceResult {
-  return {
-    candidates: [],
-    telemetry: {
-      enabled: false,
-      hasKey: false,
-      status: "skipped",
-      skipReason: "disabled",
-      requestCount: 0,
-      pageCount: 0,
-      pageCapReached: false,
-      creditsEstimated: 0,
-      creditsCap: 13,
-      creditCapReached: false,
-      monthlyCreditsEstimated: null,
-      monthlyCreditsReserved: null,
-      monthlyCreditsCap: 2500,
-      monthlyCreditsForecast: null,
-      monthlyUnthrottledForecast: null,
-      monthlyBudgetUtilization: null,
-      monthlyBudgetWarning: false,
-      monthlyRunsRemaining: null,
-      monthlyLedgerState: "unavailable",
-      coverageBudgetState: "unavailable",
-      rawVaultCount: 0,
-      rankableCandidateCount: 0,
-      auditOnlyCount: 0,
-      malformedDropCount: 0,
-      unsupportedChainCount: 0,
-      identityMissCount: 0,
-      sizeGateDropCount: 0,
-      warningDropCount: 0,
-      durationMs: 0,
-      budgetMs: 20_000,
-      budgetExhausted: false,
-      dropExamples: [],
-      ...overrides,
-      consumptionMode: overrides.consumptionMode ?? "disabled",
-      consumptionReason: overrides.consumptionReason ?? "source-disabled",
-    },
-  };
-}
 
 async function flushMicrotasks() {
   for (let i = 0; i < 8; i += 1) {
@@ -207,8 +91,8 @@ describe("syncYieldSupplemental", () => {
     vi.mocked(fetchRoycoDawnSources).mockResolvedValue([]);
     vi.mocked(fetchVaultsFyiSources).mockResolvedValue(emptyVaultsFyiResult());
     vi.mocked(fetchYearnKongSources).mockResolvedValue([]);
-    vi.mocked(fetchCompoundV3SupplyRates).mockResolvedValue({ results: [], telemetry: emptyTelemetry });
-    vi.mocked(fetchAaveV3SupplyRates).mockResolvedValue({ results: [], telemetry: emptyTelemetry });
+    vi.mocked(fetchCompoundV3SupplyRates).mockResolvedValue({ results: [], telemetry: emptyRpcTelemetry() });
+    vi.mocked(fetchAaveV3SupplyRates).mockResolvedValue({ results: [], telemetry: emptyRpcTelemetry() });
     vi.mocked(fetchBeefySources).mockResolvedValue([]);
   });
 
@@ -311,7 +195,7 @@ describe("syncYieldSupplemental", () => {
         },
       ],
       telemetry: {
-        ...emptyTelemetry,
+        ...emptyRpcTelemetry(),
         targetCount: 3,
         attemptedCount: 3,
         resolvedTargetCount: 3,
@@ -402,25 +286,7 @@ describe("syncYieldSupplemental", () => {
 
   it("publishes empty family cache rows to clear previous non-empty caches", async () => {
     vi.mocked(fetchBeefySources).mockResolvedValue([
-      {
-        symbol: "USDC",
-        chain: "ethereum",
-        address: "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
-        yield: {
-          currentApy: 4.1,
-          apyBase: 4.1,
-          apyReward: null,
-          sourcePool: "vault-a",
-          sourceTvlUsd: 1_500_000,
-          dataSource: "protocol-api",
-          exchangeRate: null,
-          sourceKey: "protocol-api:beefy:ethereum:vault-a",
-          yieldSource: "Beefy: vault-a",
-          yieldType: "lending-opportunity",
-          sourceObservedAt: 1_774_526_400,
-          comparisonAnchorObservedAt: null,
-        },
-      },
+      beefyCandidate(),
     ]);
 
     const result = await syncYieldSupplemental({} as D1Database, undefined, new Map());
@@ -540,25 +406,7 @@ describe("syncYieldSupplemental", () => {
 
   it("keeps vaults.fyi audit inventory counts separate from supplemental candidate counts", async () => {
     vi.mocked(fetchBeefySources).mockResolvedValue([
-      {
-        symbol: "USDC",
-        chain: "ethereum",
-        address: "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
-        yield: {
-          currentApy: 4.1,
-          apyBase: 4.1,
-          apyReward: null,
-          sourcePool: "vault-a",
-          sourceTvlUsd: 1_500_000,
-          dataSource: "protocol-api",
-          exchangeRate: null,
-          sourceKey: "protocol-api:beefy:ethereum:vault-a",
-          yieldSource: "Beefy: vault-a",
-          yieldType: "lending-opportunity",
-          sourceObservedAt: 1_774_526_400,
-          comparisonAnchorObservedAt: null,
-        },
-      },
+      beefyCandidate(),
     ]);
     vi.mocked(fetchVaultsFyiSources).mockResolvedValue({
       candidates: [],
@@ -617,25 +465,7 @@ describe("syncYieldSupplemental", () => {
 
   it("does not publish a fresh vaults.fyi family cache when the provider run fails", async () => {
     vi.mocked(fetchBeefySources).mockResolvedValue([
-      {
-        symbol: "USDC",
-        chain: "ethereum",
-        address: "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
-        yield: {
-          currentApy: 4.1,
-          apyBase: 4.1,
-          apyReward: null,
-          sourcePool: "vault-a",
-          sourceTvlUsd: 1_500_000,
-          dataSource: "protocol-api",
-          exchangeRate: null,
-          sourceKey: "protocol-api:beefy:ethereum:vault-a",
-          yieldSource: "Beefy: vault-a",
-          yieldType: "lending-opportunity",
-          sourceObservedAt: 1_774_526_400,
-          comparisonAnchorObservedAt: null,
-        },
-      },
+      beefyCandidate(),
     ]);
     vi.mocked(fetchVaultsFyiSources).mockResolvedValue({
       candidates: [],
@@ -692,7 +522,7 @@ describe("syncYieldSupplemental", () => {
         },
       ],
       telemetry: {
-        ...emptyTelemetry,
+        ...emptyRpcTelemetry(),
         targetCount: 30,
         attemptedCount: 4,
         resolvedTargetCount: 1,
@@ -753,7 +583,7 @@ describe("syncYieldSupplemental", () => {
         },
       ],
       telemetry: {
-        ...emptyTelemetry,
+        ...emptyRpcTelemetry(),
         targetCount: 2,
         attemptedCount: 2,
         resolvedTargetCount: 2,
@@ -798,63 +628,15 @@ describe("syncYieldSupplemental", () => {
 
   it("dedupes exact duplicate candidates and reports the drop count", async () => {
     vi.mocked(fetchBeefySources).mockResolvedValue([
-      {
-        symbol: "USDC",
-        chain: "ethereum",
-        address: "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
-        yield: {
-          currentApy: 5,
-          apyBase: 5,
-          apyReward: null,
-          sourcePool: "vault-a",
-          sourceTvlUsd: 1_000_000,
-          dataSource: "protocol-api",
-          exchangeRate: null,
-          sourceKey: "protocol-api:beefy:ethereum:vault-a",
-          yieldSource: "Beefy: vault-a",
-          yieldType: "lending-vault",
-          sourceObservedAt: 1_774_526_400,
-          comparisonAnchorObservedAt: null,
+      beefyCandidate({}, { currentApy: 5, apyBase: 5, sourceTvlUsd: 1_000_000, yieldType: "lending-vault" }),
+      beefyCandidate({}, { currentApy: 5.5, apyBase: 5.5, sourceTvlUsd: 1_000_000, yieldType: "lending-vault" }),
+      beefyCandidate(
+        { symbol: "USDT", address: "0xdAC17F958D2ee523a2206206994597C13D831ec7" },
+        {
+          currentApy: 4, apyBase: 4, sourcePool: "vault-b", sourceTvlUsd: 2_000_000,
+          sourceKey: "protocol-api:beefy:ethereum:vault-b", yieldSource: "Beefy: vault-b", yieldType: "lending-vault",
         },
-      },
-      {
-        symbol: "USDC",
-        chain: "ethereum",
-        address: "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
-        yield: {
-          currentApy: 5.5,
-          apyBase: 5.5,
-          apyReward: null,
-          sourcePool: "vault-a",
-          sourceTvlUsd: 1_000_000,
-          dataSource: "protocol-api",
-          exchangeRate: null,
-          sourceKey: "protocol-api:beefy:ethereum:vault-a",
-          yieldSource: "Beefy: vault-a",
-          yieldType: "lending-vault",
-          sourceObservedAt: 1_774_526_400,
-          comparisonAnchorObservedAt: null,
-        },
-      },
-      {
-        symbol: "USDT",
-        chain: "ethereum",
-        address: "0xdAC17F958D2ee523a2206206994597C13D831ec7",
-        yield: {
-          currentApy: 4,
-          apyBase: 4,
-          apyReward: null,
-          sourcePool: "vault-b",
-          sourceTvlUsd: 2_000_000,
-          dataSource: "protocol-api",
-          exchangeRate: null,
-          sourceKey: "protocol-api:beefy:ethereum:vault-b",
-          yieldSource: "Beefy: vault-b",
-          yieldType: "lending-vault",
-          sourceObservedAt: 1_774_526_400,
-          comparisonAnchorObservedAt: null,
-        },
-      },
+      ),
     ]);
 
     const result = await syncYieldSupplemental({} as D1Database, undefined, new Map());
@@ -1027,13 +809,13 @@ describe("syncYieldSupplemental", () => {
     vi.mocked(fetchCompoundV3SupplyRates).mockImplementation(
       trackFamily("compoundV3", {
         results: [],
-        telemetry: emptyTelemetry,
+        telemetry: emptyRpcTelemetry(),
       }),
     );
     vi.mocked(fetchAaveV3SupplyRates).mockImplementation(
       trackFamily("aaveV3", {
         results: [],
-        telemetry: emptyTelemetry,
+        telemetry: emptyRpcTelemetry(),
       }),
     );
 
@@ -1068,25 +850,7 @@ describe("syncYieldSupplemental", () => {
   it("keeps successful family results when another supplemental family throws", async () => {
     vi.mocked(fetchMorphoVaultSources).mockRejectedValue(new Error("morpho exploded"));
     vi.mocked(fetchBeefySources).mockResolvedValue([
-      {
-        symbol: "USDC",
-        chain: "ethereum",
-        address: "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
-        yield: {
-          currentApy: 4.1,
-          apyBase: 4.1,
-          apyReward: null,
-          sourcePool: "vault-a",
-          sourceTvlUsd: 1_500_000,
-          dataSource: "protocol-api",
-          exchangeRate: null,
-          sourceKey: "protocol-api:beefy:ethereum:vault-a",
-          yieldSource: "Beefy: vault-a",
-          yieldType: "lending-opportunity",
-          sourceObservedAt: 1_774_526_400,
-          comparisonAnchorObservedAt: null,
-        },
-      },
+      beefyCandidate(),
     ]);
 
     const result = await syncYieldSupplemental({} as D1Database, undefined, new Map());

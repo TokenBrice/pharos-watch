@@ -2,6 +2,7 @@ import { readJsonResponse } from "../../test-helpers/__shared/auth";
 import { describe, expect, it, vi } from "vitest";
 import type { YieldRankingsResponse } from "@shared/types/yield";
 import { mockD1 } from "@shared/test-utils/mock-d1";
+import { makeAltYieldSource, makeYieldRanking } from "@shared/test-utils/yield-ranking-fixtures";
 
 const computeSafetyScoresSnapshotMock = vi.hoisted(() => vi.fn());
 
@@ -30,29 +31,12 @@ function cachedYieldRankings(updatedAt: number): YieldRankingsResponse {
 
   return {
     rankings: [
-      {
-        id: "risk-row",
-        symbol: "RISK",
-        name: "Risk Row",
-        currentApy: 6.2,
-        apy7d: 6.1,
-        apy30d: 6,
-        apyBase: 6,
-        apyReward: null,
-        yieldSource: "Reviewed lending market",
-        yieldType: "lending-opportunity",
-        dataSource: "protocol-api",
-        sourceTvlUsd: 10_000_000,
-        pharosYieldScore: 42,
-        safetyScore: 75,
-        safetyGrade: "B+",
-        yieldToRisk: 0.23,
-        excessYield: 1.5,
-        yieldStability: 0.9,
-        apyVariance30d: 0.2,
-        apyMin30d: 5.8,
-        apyMax30d: 6.3,
-        warningSignals: [],
+      makeYieldRanking({
+        id: "risk-row", symbol: "RISK", name: "Risk Row",
+        currentApy: 6.2, apy7d: 6.1, apy30d: 6, apyBase: 6,
+        yieldSource: "Reviewed lending market", sourceTvlUsd: 10_000_000,
+        pharosYieldScore: 42, safetyScore: 75, safetyGrade: "B+",
+        yieldToRisk: 0.23, excessYield: 1.5, apyVariance30d: 0.2, apyMin30d: 5.8, apyMax30d: 6.3,
         sourceRisk: safetyDerivedSourceRisk,
         rankChangeAttribution: {
           previousPys: 42,
@@ -64,7 +48,7 @@ function cachedYieldRankings(updatedAt: number): YieldRankingsResponse {
           },
         },
         altSources: [
-          {
+          makeAltYieldSource({
             sourceKey: "alternate-risk-row",
             yieldSource: "Alternate reviewed market",
             yieldType: "lending-opportunity",
@@ -73,10 +57,10 @@ function cachedYieldRankings(updatedAt: number): YieldRankingsResponse {
             sourceTvlUsd: 8_000_000,
             dataSource: "protocol-api",
             sourceRisk: safetyDerivedSourceRisk,
-          },
+          }),
         ],
         provenance: null,
-      },
+      }),
     ],
     riskFreeRate: 4.5,
     scalingFactor: 8,

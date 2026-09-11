@@ -7,6 +7,26 @@ export function verifiedFreshnessMetadata(
   };
 }
 
+/**
+ * Verified freshness whose timestamp is the source's own render/response
+ * clock — the instant the payload was rendered or served — rather than an
+ * independently dated as-of time for the reserve state. Render clocks are
+ * accepted as `verified` per the settled policy (P1) and the basis is named
+ * explicitly so consumers can tell a render clock from a dated disclosure.
+ */
+export function sameRunRenderClockFreshnessMetadata(
+  sourceTimestamp: number,
+): {
+  sourceTimestamp: number;
+  freshnessMode: "verified";
+  details: { freshnessSource: "same-run-render-clock" };
+} {
+  return {
+    ...verifiedFreshnessMetadata(sourceTimestamp),
+    details: { freshnessSource: "same-run-render-clock" },
+  };
+}
+
 export function unverifiedFreshnessMetadata(
   source: string,
   reason: string,
@@ -71,6 +91,46 @@ export function summarizeSourceTimestamps(values: readonly unknown[]): SourceTim
     latestSourceTimestamp,
     sourceTimestampSpreadSec: latestSourceTimestamp - sourceTimestamp,
     timestampCount: timestamps.length,
+  };
+}
+
+export interface SourceTimestampCoverageSummary extends SourceTimestampSummary {
+  /** Submitted values that could not be parsed into a timestamp. Callers that
+   *  submit one value per material row must treat a non-zero count as
+   *  incomplete coverage rather than silently letting the remaining rows'
+   *  clock stand in for the whole composition. */
+  untimestampedCount: number;
+}
+
+/**
+ * {@link summarizeSourceTimestamps} variant for callers that submit one value
+ * per material row: unparseable timestamps are counted in
+ * `untimestampedCount` instead of being dropped, so the caller can withhold
+ * verified freshness when any material row lacks a clock.
+ */
+export function summarizeSourceTimestampsRequiringCoverage(
+  values: readonly unknown[],
+): SourceTimestampCoverageSummary | null {
+  const timestamps: number[] = [];
+  let untimestampedCount = 0;
+  for (const value of values) {
+    const parsed = parseTimestampLikeToUnixSeconds(value);
+    if (parsed == null) {
+      untimestampedCount += 1;
+    } else {
+      timestamps.push(parsed);
+    }
+  }
+  if (timestamps.length === 0) {
+    return null;
+  }
+  timestamps.sort((left, right) => left - right);
+  return {
+    sourceTimestamp: timestamps[0],
+    latestSourceTimestamp: timestamps[timestamps.length - 1],
+    sourceTimestampSpreadSec: timestamps[timestamps.length - 1] - timestamps[0],
+    timestampCount: timestamps.length,
+    untimestampedCount,
   };
 }
 

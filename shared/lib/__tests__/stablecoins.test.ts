@@ -61,6 +61,9 @@ function makeStablecoinAsset(overrides: Record<string, unknown> = {}): Record<st
 }
 
 describe("tracked stablecoin metadata", () => {
+  const perCoinGenerated = parseStablecoinMetaAssets(perCoinGeneratedAsset, "coins.generated");
+  const canonicalOrder = parseCanonicalOrderAsset(canonicalOrderAsset, "canonical-order");
+
   it("keeps dEURO on CoinGecko admission while retaining its DefiLlama capture identity", () => {
     expect(TRACKED_META_BY_ID.get("deuro-deuro")).toMatchObject({
       detailProvider: "coingecko",
@@ -70,9 +73,6 @@ describe("tracked stablecoin metadata", () => {
   });
 
   it("loads all JSON registry assets through the shared schemas", () => {
-    const perCoinGenerated = parseStablecoinMetaAssets(perCoinGeneratedAsset, "coins.generated");
-    const canonicalOrder = parseCanonicalOrderAsset(canonicalOrderAsset, "canonical-order");
-
     expect(perCoinGenerated).toHaveLength(TRACKED_META_BY_ID.size);
     expect(canonicalOrder).toHaveLength(TRACKED_META_BY_ID.size);
     expect(perCoinGenerated.length).toBe(canonicalOrder.length);
@@ -84,22 +84,15 @@ describe("tracked stablecoin metadata", () => {
   });
 
   it("keeps canonical order references limited to known tracked IDs", () => {
-    const knownIds = new Set(
-      [...parseStablecoinMetaAssets(perCoinGeneratedAsset, "coins.generated")].map((coin) => coin.id),
-    );
+    const knownIds = new Set(perCoinGenerated.map((coin) => coin.id));
 
-    expect(parseCanonicalOrderAsset(canonicalOrderAsset, "canonical-order").filter((id) => !knownIds.has(id))).toEqual(
-      [],
-    );
+    expect(canonicalOrder.filter((id) => !knownIds.has(id))).toEqual([]);
   });
 
   it("keeps pre-launch metadata in per-coin assets", () => {
-    const perCoinGenerated = parseStablecoinMetaAssets(perCoinGeneratedAsset, "coins.generated");
     const preLaunchCoins = perCoinGenerated.filter((coin) => coin.status === "pre-launch");
 
-    expect(preLaunchCoins).toHaveLength(PRE_LAUNCH_STABLECOINS.length);
     expect(preLaunchCoins.map((coin) => coin.id).sort()).toEqual(PRE_LAUNCH_STABLECOINS.map((coin) => coin.id).sort());
-    expect(preLaunchCoins.every((coin) => coin.status === "pre-launch")).toBe(true);
   });
 
   it("keeps every lifecycle partition aligned after the JSON migration", () => {
@@ -264,20 +257,21 @@ describe("tracked stablecoin metadata", () => {
       tier: "standard-external",
       summary: "ETH branch uses a reviewed external feed path.",
     };
+    const flags = {
+      backing: "crypto-backed", pegCurrency: "USD", governance: "decentralized",
+      yieldBearing: false, rwa: false, navToken: false,
+    };
+    expect(parseStablecoinMetaAssets([makeStablecoinAsset({
+      mechanismArchetype: "cdp", flags,
+      oracleRisk: { ...profile, branchModel: "multi-branch", branches: [branch] },
+    })], "valid multi branch")[0]?.oracleRisk?.branches?.[0]?.id).toBe("eth");
 
     expect(() =>
       parseStablecoinMetaAssets(
         [
           makeStablecoinAsset({
             mechanismArchetype: "cdp",
-            flags: {
-              backing: "crypto-backed",
-              pegCurrency: "USD",
-              governance: "decentralized",
-              yieldBearing: false,
-              rwa: false,
-              navToken: false,
-            },
+            flags,
             oracleRisk: { ...profile, branchModel: "multi-branch" },
           }),
         ],
@@ -290,14 +284,7 @@ describe("tracked stablecoin metadata", () => {
         [
           makeStablecoinAsset({
             mechanismArchetype: "cdp",
-            flags: {
-              backing: "crypto-backed",
-              pegCurrency: "USD",
-              governance: "decentralized",
-              yieldBearing: false,
-              rwa: false,
-              navToken: false,
-            },
+            flags,
             oracleRisk: { ...profile, branches: [branch] },
           }),
         ],
@@ -370,59 +357,17 @@ describe("tracked stablecoin metadata", () => {
   });
 
   it("allows local or http featured content images only", () => {
-    expect(
-      parseStablecoinMetaAssets(
-        [
-          makeStablecoinAsset({
-            featuredContent: [
-              {
-                type: "article",
-                url: "https://example.com/article",
-                title: "Article",
-                image: "/featured/example.png",
-              },
-            ],
-          }),
-        ],
-        "local featured image",
-      ),
-    ).toHaveLength(1);
-
-    expect(
-      parseStablecoinMetaAssets(
-        [
-          makeStablecoinAsset({
-            featuredContent: [
-              {
-                type: "article",
-                url: "https://example.com/article",
-                title: "Article",
-                image: "https://example.com/image.png",
-              },
-            ],
-          }),
-        ],
-        "remote featured image",
-      ),
-    ).toHaveLength(1);
-
-    expect(() =>
-      parseStablecoinMetaAssets(
-        [
-          makeStablecoinAsset({
-            featuredContent: [
-              {
-                type: "article",
-                url: "https://example.com/article",
-                title: "Article",
-                image: "ftp://example.com/image.png",
-              },
-            ],
-          }),
-        ],
-        "bad featured image",
-      ),
-    ).toThrow(/Invalid input/);
+    const content = { type: "article", url: "https://example.com/article", title: "Article" };
+    for (const image of ["/featured/example.png", "https://example.com/image.png"]) {
+      expect(parseStablecoinMetaAssets(
+        [makeStablecoinAsset({ featuredContent: [{ ...content, image }] })],
+        "valid featured image",
+      )[0]?.featuredContent?.[0]?.image).toBe(image);
+    }
+    expect(() => parseStablecoinMetaAssets(
+      [makeStablecoinAsset({ featuredContent: [{ ...content, image: "ftp://example.com/image.png" }] })],
+      "bad featured image",
+    )).toThrow(/Invalid input/);
   });
 
   it("tracks the current implementation-scope variants", () => {
@@ -487,9 +432,7 @@ describe("tracked stablecoin metadata", () => {
 
   it("keeps tracked variant parents active and canonical", () => {
     for (const coin of ACTIVE_STABLECOINS.filter((entry) => entry.variantOf != null)) {
-      const parent = TRACKED_META_BY_ID.get(coin.variantOf!);
-      expect(parent, coin.id).toBeDefined();
-      expect(parent?.status, coin.id).not.toBe("pre-launch");
+      expect(ACTIVE_META_BY_ID.has(coin.variantOf!), coin.id).toBe(true);
       expect(coin.pegReferenceId, coin.id).toBe(coin.variantOf);
     }
   });
@@ -716,6 +659,20 @@ describe("tracked stablecoin metadata", () => {
   });
 
   it("accepts structured reserve facts and validates latest assurance reports", () => {
+    const proofOfReserves = {
+      type: "independent-audit",
+      url: "https://example.com/reports",
+      latestReport: {
+        periodEnd: "2026-06-30",
+        publishedAt: "2026-07-10",
+        assuranceMethod: "examination",
+        scope: "assets-and-liabilities",
+        liabilityReconciliation: "full",
+        reviewer: "test",
+        confidence: "verified",
+        sources: [{ label: "Report", url: "https://example.com/reports/june" }],
+      },
+    };
     const parsed = parseStablecoinMetaAssets(
       [
         makeStablecoinAsset({
@@ -731,42 +688,23 @@ describe("tracked stablecoin metadata", () => {
               maturityDaysMax: 90,
             },
           ],
-          proofOfReserves: {
-            type: "independent-audit",
-            url: "https://example.com/reports",
-            latestReport: {
-              periodEnd: "2026-06-30",
-              publishedAt: "2026-07-10",
-              assuranceMethod: "examination",
-              scope: "assets-and-liabilities",
-              liabilityReconciliation: "full",
-              reviewer: "test",
-              confidence: "verified",
-              sources: [{ label: "Report", url: "https://example.com/reports/june" }],
-            },
-          },
+          proofOfReserves,
         }),
       ],
       "reserve-evidence.json",
     );
     expect(parsed[0]?.reserves?.[0]?.assetClass).toBe("treasury-bill");
+    expect(parsed[0]?.proofOfReserves?.latestReport?.publishedAt).toBe("2026-07-10");
 
     expect(() =>
       parseStablecoinMetaAssets(
         [
           makeStablecoinAsset({
             proofOfReserves: {
-              type: "independent-audit",
-              url: "https://example.com/reports",
+              ...proofOfReserves,
               latestReport: {
-                periodEnd: "2026-07-01",
-                publishedAt: "2026-06-30",
-                assuranceMethod: "audit",
-                scope: "assets-only",
-                liabilityReconciliation: "none",
-                reviewer: "test",
-                confidence: "verified",
-                sources: [{ label: "Report", url: "https://example.com/report" }],
+                ...proofOfReserves.latestReport,
+                publishedAt: "2026-06-29",
               },
             },
           }),
@@ -865,44 +803,25 @@ describe("tracked stablecoin metadata", () => {
     });
   });
 
-  it("rejects malformed dead stablecoin assets with readable schema errors", () => {
-    expect(() =>
-      parseDeadStablecoinAssets(
-        [
-          {
-            id: "broken-dead-coin",
-            name: "Broken Dead Coin",
-            symbol: "DEAD",
-            pegCurrency: "USD",
-            causeOfDeath: "algorithmic-failure",
-            deathDate: "2025-01-01",
-            sourceUrl: "https://example.com",
-          },
-        ],
-        "dead-broken.json",
-      ),
-    ).toThrowError(/dead-broken\.json/);
-  });
-
-  it("rejects malformed dead stablecoin ids", () => {
-    expect(() =>
-      parseDeadStablecoinAssets(
-        [
-          {
-            id: "Broken Dead Coin",
-            name: "Broken Dead Coin",
-            symbol: "DEAD",
-            pegCurrency: "USD",
-            causeOfDeath: "algorithmic-failure",
-            deathDate: "2025-01-01",
-            obituary: "Broken",
-            sourceUrl: "https://example.com",
-            sourceLabel: "Example",
-          },
-        ],
-        "dead-id-broken.json",
-      ),
-    ).toThrowError(/id/);
+  it("rejects malformed dead assets against a valid baseline with readable errors", () => {
+    const asset = {
+      id: "broken-dead-coin",
+      name: "Broken Dead Coin",
+      symbol: "DEAD",
+      pegCurrency: "USD",
+      causeOfDeath: "algorithmic-failure",
+      deathDate: "2025-01-01",
+      obituary: "Broken",
+      sourceUrl: "https://example.com",
+      sourceLabel: "Example",
+    };
+    expect(parseDeadStablecoinAssets([asset], "valid-dead.json")[0]?.id).toBe("broken-dead-coin");
+    expect(() => parseDeadStablecoinAssets(
+      [{ ...asset, obituary: undefined }], "dead-broken.json",
+    )).toThrowError(/dead-broken\.json/);
+    expect(() => parseDeadStablecoinAssets(
+      [{ ...asset, id: "Broken Dead Coin" }], "dead-id-broken.json",
+    )).toThrowError(/id/);
   });
 
   it("does not attach a CoinGecko slug to M by M0 when the base token is not contract-resolved on CoinGecko", () => {
@@ -923,6 +842,7 @@ describe("tracked stablecoin metadata", () => {
     const coin = TRACKED_META_BY_ID.get("bold-liquity");
 
     expect(coin).toBeDefined();
+    expect(coin?.flags.yieldBearing).toBe(false);
     expect(coin?.yieldConfig).toBeUndefined();
   });
 

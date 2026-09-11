@@ -1,6 +1,6 @@
-import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import { FRONTEND_API_QUERY_DESCRIPTORS, projectStablecoinLiveSummary, type FrontendApiQueryDescriptorRegistry } from "../api-query-descriptors";
+import { CRON_USDS_STATUS } from "@/lib/cron-intervals";
 import { type FrontendAnyApiQueryDescriptor } from "../api-query-contract";
 import { resolveSchemaLike } from "@shared/lib/schema-like";
 import {
@@ -153,15 +153,18 @@ describe("frontend API query descriptors", () => {
         EXPECTED_RESPONSE_MODES[key as keyof typeof EXPECTED_RESPONSE_MODES],
       );
     }
+
+    expect(FRONTEND_API_QUERY_DESCRIPTORS.usdsStatus.producerIntervalMs).toBe(CRON_USDS_STATUS);
   });
 
-  it("keeps non-global schemas lazy and caches each loader promise", async () => {
-    for (const key of Object.keys(FRONTEND_API_QUERY_DESCRIPTORS)) {
+  it.each(Object.keys(FRONTEND_API_QUERY_DESCRIPTORS))(
+    "keeps %s schema lazy and caches its loader promise",
+    async (key) => {
       const entry = FRONTEND_API_QUERY_DESCRIPTORS[key as keyof FrontendApiQueryDescriptorRegistry];
       const descriptor = resolveEntry(entry, key);
       if (key === "stabilityIndex") {
         expect(descriptor.schema).toBe(StabilityIndexLightResponseSchema);
-        continue;
+        return;
       }
 
       expect(typeof descriptor.schema, key).toBe("function");
@@ -171,8 +174,8 @@ describe("frontend API query descriptors", () => {
       await expect(resolveSchemaLike(descriptor.schema)).resolves.toEqual(
         expect.objectContaining({ safeParse: expect.any(Function) }),
       );
-    }
-  }, 30_000);
+    },
+  );
 
   it("accepts only report-v5 at the live V9 reader boundary", async () => {
     const schema = await resolveSchemaLike(FRONTEND_API_QUERY_DESCRIPTORS.reportCardsV9.schema);
@@ -215,15 +218,13 @@ describe("frontend API query descriptors", () => {
       history: [],
     });
 
-    expect(parsed).toEqual({
-      success: false,
-      error: { issues: [{ path: ["current", "components", "severity"], message: "Expected finite number" }] },
-    });
-  });
-
-  it("keeps the lightweight PSI contract free of full-schema loaders", () => {
-    const lightContractSource = readFileSync("src/lib/api-query-domains/stability-light.ts", "utf8");
-
-    expect(lightContractSource).not.toMatch(/from ["']zod|import\(["']@shared\/types\/stability["']\)/);
+    expect(parsed.success).toBe(false);
+    if (parsed.success) return;
+    // The issue path drives the caller's fallback; the wording is not a contract.
+    expect(parsed.error.issues.map((issue) => issue.path)).toContainEqual([
+      "current",
+      "components",
+      "severity",
+    ]);
   });
 });

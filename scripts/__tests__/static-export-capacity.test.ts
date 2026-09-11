@@ -68,4 +68,27 @@ describe("static export capacity attribution", () => {
       routesUntilHeadroomFloor: 250,
     });
   });
+
+  it.each([
+    { totalFiles: 12, fileLimit: 21, averageFilesPerRoute: 2.5,
+      expected: [9, 9 / 21, 15, 3, 3, 1] },
+    { totalFiles: 17, fileLimit: 20, averageFilesPerRoute: 2.5,
+      expected: [3, 0.15, 15, -2, 1, -1] },
+    { totalFiles: 23, fileLimit: 20, averageFilesPerRoute: 2.5,
+      expected: [0, 0, 15, -8, 0, -4] },
+    { totalFiles: 12, fileLimit: 20, averageFilesPerRoute: 0,
+      expected: [8, 0.4, 15, 3, 0, 0] },
+    { totalFiles: 1, fileLimit: 0, averageFilesPerRoute: 2.5,
+      expected: [0, 0, 0, -1, 0, -1] },
+  ])("projects guarded fractional capacity for $totalFiles/$fileLimit files at $averageFilesPerRoute per route",
+    ({ totalFiles, fileLimit, averageFilesPerRoute, expected }) => {
+      const [fileHeadroom, headroomRatio, targetMaximumFiles, filesUntilHeadroomFloor,
+        routesUntilHardLimit, routesUntilHeadroomFloor] = expected;
+      expect(projectStaticRouteCapacity({
+        totalFiles, fileLimit, averageFilesPerRoute, minimumHeadroomRatio: 0.25,
+      })).toEqual({
+        fileHeadroom, headroomRatio, targetMaximumFiles, filesUntilHeadroomFloor,
+        routesUntilHardLimit, routesUntilHeadroomFloor,
+      });
+    });
 });

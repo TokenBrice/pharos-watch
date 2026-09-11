@@ -1,10 +1,14 @@
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, beforeAll, describe, expect, it } from "vitest";
+import { resolve } from "node:path";
+import {
+  STABLECOIN_SOURCE_DOMAIN_FIELDS,
+  type StablecoinSourceDomain,
+} from "@shared/lib/stablecoins/schema";
 import {
   buildGeneratedPerCoinAsset,
   findCanonicalOrderIssues,
   findDuplicateStablecoinIds,
   findRecreatedRetiredStablecoinAssetFiles,
-  formatRecreatedRetiredAssetFileIssue,
   loadGeneratedPerCoinCoins,
   loadPerCoinStablecoinEntries,
   loadStablecoinDomainSidecarEntries,
@@ -12,106 +16,18 @@ import {
   type StablecoinSourceEntry,
 } from "../lib/stablecoin-catalog-sources";
 import { createTempRepoTracker } from "./helpers/test-state";
+import {
+  makeCoin, makeReserves, makeReserveReview, makeCustodyProfile,
+  makeMintAuthority, makeGeniusProfile, makeRiskReview,
+} from "./stablecoin-catalog.test-support";
 
 const { cleanup, makeRoot: makeTempRoot, writeJson } = createTempRepoTracker("stablecoin-catalog");
-
-function makeCoin(id: string, overrides: Record<string, unknown> = {}): StablecoinSourceEntry["coin"] {
-  return {
-    id,
-    name: `${id} Coin`,
-    symbol: id.split("-")[0]!.slice(0, 8).toUpperCase(),
-    flags: {
-      backing: "rwa-backed",
-      pegCurrency: "USD",
-      governance: "centralized",
-      yieldBearing: false,
-      rwa: false,
-      navToken: false,
-    },
-    ...overrides,
-  } as StablecoinSourceEntry["coin"];
-}
 
 function makeEntry(id: string, file: string): StablecoinSourceEntry {
   return {
     coin: makeCoin(id),
     file,
     id,
-  };
-}
-
-function makeReserves(): Array<Record<string, unknown>> {
-  return [
-    {
-      name: "Cash",
-      pct: 100,
-      risk: "very-low",
-    },
-  ];
-}
-
-function makeReserveReview(): Record<string, unknown> {
-  return {
-    reviewedAt: "2026-07-12",
-    reviewer: "test",
-    confidence: "verified",
-    sources: [{ label: "Reserve report", url: "https://example.com/reserves" }],
-    rationale: "The fixture reserve composition was reviewed.",
-    compositionBasis: "issuer disclosure",
-    compositionAsOf: "2026-07-01",
-    scope: "full-composition",
-    knownUnknownExposure: "None identified in the fixture.",
-    knownUnknownExposurePct: 0,
-  };
-}
-
-function makeCustodyProfile(): Record<string, unknown> {
-  return {
-    providers: [{ name: "Fixture Bank", role: "bank", sharePct: 100, jurisdiction: "US" }],
-    segregation: "segregated",
-    bankruptcyRemoteness: "contractual-only",
-    rehypothecation: "prohibited",
-    reviewedAt: "2026-07-12",
-    reviewer: "test",
-    confidence: "verified",
-    sources: [{ label: "Custody report", url: "https://example.com/custody" }],
-    uncertainty: "No material custody allocation is unresolved in the fixture.",
-    knownUnknownExposurePct: 0,
-  };
-}
-
-function makeMintAuthority(): Record<string, unknown> {
-  return {
-    mintPath: "unknown",
-    authorityPosture: "unknown",
-    confidence: "unknown",
-    summary: "The fixture mint authority remains unresolved.",
-    review: {
-      sourceFreeRationale: "Catalog loader fixture without external research.",
-      evidence: "The fixture records enough evidence text for strict schema validation.",
-      reviewer: "test",
-      reviewedAt: "2026-07-09",
-    },
-  };
-}
-
-function makeGeniusProfile(): Record<string, unknown> {
-  return {
-    applicability: "unclear",
-    authorizationStatus: "unknown",
-    issuerPathway: "unknown",
-    reviewer: "test",
-    reviewedAt: "2026-07-09",
-  };
-}
-
-function makeBlacklistabilityReview(): Record<string, unknown> {
-  return {
-    reviewedStatus: true,
-    sourceFreeRationale: "Catalog loader fixture without external research.",
-    evidence: "The fixture models a direct blacklistability control surface.",
-    reviewer: "test",
-    reviewedAt: "2026-07-09",
   };
 }
 
@@ -157,11 +73,6 @@ describe("stablecoin catalog source helpers", () => {
     expect(findRecreatedRetiredStablecoinAssetFiles(rootDir)).toEqual([
       "shared/data/stablecoins/usd-major.json",
     ]);
-    expect(formatRecreatedRetiredAssetFileIssue("shared/data/stablecoins/usd-major.json")).toContain(
-      "retired legacy category shard must not exist. " +
-        "Edit shared/data/stablecoins/coins/<id>.json " +
-        "and regenerate shared/data/stablecoins/coins.generated.json instead.",
-    );
   });
 
   it("merges reserves sidecars into per-coin source entries", () => {
@@ -221,19 +132,7 @@ describe("stablecoin catalog source helpers", () => {
     const rootDir = makeTempRoot();
     const mintAuthority = makeMintAuthority();
     const genius = makeGeniusProfile();
-    const blacklistabilityReview = makeBlacklistabilityReview();
-    const oracleRisk = {
-      tier: "opaque-or-unknown",
-      summary: "The fixture oracle design remains unknown.",
-    };
-    const bridgeRouteRisk = {
-      tier: "opaque-or-unknown",
-      summary: "The fixture bridge route remains unknown.",
-      reviewedAt: "2026-07-09",
-      reviewer: "test",
-      confidence: "unknown",
-      sourceFreeRationale: "Catalog loader fixture without external research.",
-    };
+    const { blacklistabilityReview, oracleRisk, bridgeRouteRisk } = makeRiskReview();
 
     writeJson(rootDir, "shared/data/stablecoins/coins/sidecar-usd.json", makeCoin("sidecar-usd"));
     writeJson(rootDir, "shared/data/stablecoins/domains/mint-authority/sidecar-usd.json", {
@@ -501,5 +400,113 @@ describe("stablecoin catalog source helpers", () => {
     expect(() => syncGeneratedPerCoinAsset({ rootDir })).toThrow(
       /coin id "duplicate-usd" must match file id "duplicate-usd-copy"/,
     );
+  });
+});
+
+// Real composed-record coverage. Since the domain split, a base coin file is only
+// one projection of an asset, and the catalog schema's cross-domain refinements
+// (PoR lockstep, reserveReview-needs-reserves, inherited mint authority) can only
+// be satisfied by the merged record. The loader owns that merge, so these four
+// assets are covered here rather than through a filesystem composer in the schema
+// suite: usdt-tether carries an issuer attestation, asusdf-astherus and susds-sky
+// are live-fed wrappers, stusd-stoneyield is a curated-only wrapper.
+describe("real stablecoin catalog composed records", () => {
+  const REPO_ROOT = resolve(import.meta.dirname, "../..");
+  let composedEntries: StablecoinSourceEntry[] = [];
+
+  beforeAll(() => {
+    composedEntries = loadPerCoinStablecoinEntries(REPO_ROOT);
+  });
+
+  function composedEntry(id: string): StablecoinSourceEntry {
+    const entry = composedEntries.find((candidate) => candidate.id === id);
+    if (entry == null) {
+      throw new Error(`${id} is not a tracked per-coin stablecoin source file`);
+    }
+    return entry;
+  }
+
+  function domainFields(coin: StablecoinSourceEntry["coin"], domain: StablecoinSourceDomain): string[] {
+    const fields: readonly Exclude<keyof StablecoinSourceEntry["coin"], "id">[] =
+      STABLECOIN_SOURCE_DOMAIN_FIELDS[domain];
+    return fields.filter((field) => coin[field] != null);
+  }
+
+  it("keeps usdt-tether's proof-of-reserves and curated composition in lockstep across files", () => {
+    const entry = composedEntry("usdt-tether");
+    const { coin } = entry;
+
+    expect(entry.sidecarFiles).toEqual([
+      "shared/data/stablecoins/domains/compliance/usdt-tether.json",
+      "shared/data/stablecoins/domains/mint-authority/usdt-tether.json",
+      "shared/data/stablecoins/domains/reserves/usdt-tether.json",
+      "shared/data/stablecoins/domains/risk-review/usdt-tether.json",
+    ]);
+    // proofOfReserves stays in the base file, compositionAsOf in the reserves
+    // sidecar; only the merged record can satisfy the lockstep refinement.
+    const periodEnd = coin.proofOfReserves?.latestReport?.periodEnd;
+    expect(periodEnd).toBeDefined();
+    expect(coin.reserveReview?.compositionAsOf).toBe(periodEnd);
+    expect(coin.reserves?.length).toBeGreaterThan(1);
+    expect(coin.reserves?.filter((reserve) => reserve.coinId != null)).toEqual([]);
+    expect(coin.reserveReview?.knownUnknownExposurePct).toBeGreaterThan(0);
+    expect(coin.liveReservesConfig?.semantics).toBe("attestation-mix");
+    expect(coin.mintAuthority?.mintPath).toBe("issuer-direct-mint");
+    expect(domainFields(coin, "compliance")).toEqual(["mica", "genius"]);
+    expect(domainFields(coin, "risk-review")).toEqual(["blacklistabilityReview", "bridgeRouteRisk"]);
+  });
+
+  it("agrees on asusdf-astherus's wrapper parent across base, mint-authority, and reserves files", () => {
+    const { coin } = composedEntry("asusdf-astherus");
+
+    expect(coin.variantOf).toBe("usdf-astherus");
+    expect(coin.pegReferenceId).toBe(coin.variantOf);
+    expect(coin.flags.navToken).toBe(true);
+    expect(coin.mintAuthority?.mintPath).toBe("wrapped-or-variant-inherited");
+    expect(coin.mintAuthority?.inheritedFrom).toBe(coin.variantOf);
+    expect(coin.reserves).toEqual([
+      expect.objectContaining({ coinId: coin.variantOf, depType: "wrapper", pct: 100 }),
+    ]);
+    expect(coin.liveReservesConfig?.semantics).toBe("single-asset");
+    expect(coin.custodyProfile).toBeDefined();
+    expect(domainFields(coin, "risk-review")).toEqual(["blacklistabilityReview", "oracleRisk"]);
+  });
+
+  it("composes susds-sky's review-backed wrapper composition with no attestation or custody evidence", () => {
+    const { coin } = composedEntry("susds-sky");
+
+    expect(coin.variantOf).toBe("usds-sky");
+    expect(coin.variantKind).toBe("savings-passthrough");
+    expect(coin.mintAuthority?.inheritedFrom).toBe(coin.variantOf);
+    expect(coin.reserves).toEqual([
+      expect.objectContaining({ coinId: coin.variantOf, depType: "wrapper", pct: 100 }),
+    ]);
+    expect(coin.reserveReview?.scope).toBe("full-composition");
+    // The lockstep pair stays silent here: the sidecar review has no base-file
+    // attestation to agree with, and this reserves sidecar omits custody entirely.
+    expect(coin.proofOfReserves).toBeUndefined();
+    expect(coin.custodyProfile).toBeUndefined();
+    expect(coin.liveReservesConfig?.semantics).toBe("single-asset");
+    expect(domainFields(coin, "risk-review")).toEqual([
+      "blacklistabilityReview",
+      "oracleRisk",
+      "bridgeRouteRisk",
+    ]);
+  });
+
+  it("composes stusd-stoneyield as a curated-only wrapper with no live reserve feed", () => {
+    const { coin } = composedEntry("stusd-stoneyield");
+
+    expect(coin.variantOf).toBe("usdc-circle");
+    expect(coin.variantKind).toBe("strategy-vault");
+    expect(coin.mintAuthority?.inheritedFrom).toBe(coin.variantOf);
+    expect(coin.liveReservesConfig).toBeUndefined();
+    expect(coin.proofOfReserves).toBeUndefined();
+    expect(coin.reserves).toEqual([
+      expect.objectContaining({ coinId: coin.variantOf, depType: "wrapper", pct: 100 }),
+    ]);
+    expect(coin.custodyProfile?.segregation).toBe("unknown");
+    expect(coin.notices?.map((notice) => notice.type)).toEqual(["warning"]);
+    expect(domainFields(coin, "risk-review")).toEqual(["blacklistabilityReview"]);
   });
 });

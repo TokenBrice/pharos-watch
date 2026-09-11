@@ -261,7 +261,7 @@ describe("validateAdapterOutput", () => {
       label: "a redemption capacity ratio outside [0, 1]",
       adapterKey: "ethena" as AdapterKey,
       redemptionTelemetry: true,
-      metadata: { immediateRedeemableRatio: 1.5 },
+      metadata: { redemption: { capacityRatioOfSupply: 1.5 } },
       now: undefined,
       code: "invalid-redemption-capacity-ratio",
     },
@@ -317,8 +317,8 @@ describe("validateAdapterOutput", () => {
       {
         slices: [{ name: "A", pct: 100, risk: "low" }],
         metadata: {
-          immediateRedeemableUsd: -100,
           redemption: {
+            capacityUsd: -100,
             routeStatus: "exploded",
           },
         },

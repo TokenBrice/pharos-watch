@@ -527,8 +527,8 @@ const CRON_JOB_DEFINITIONS_BASE: readonly CronJobDefinitionInput[] = [
   {
     job: "sync-dex-liquidity",
     label: "DEX liquidity scoring",
-    group: "multi-hourly",
-    intervalSec: 2 * 3600,
+    group: "hourly",
+    intervalSec: 3600,
     scheduleKey: "halfHourlyChartsOffset",
     triggerMode: "shared",
     maxConnections: 0, // D1-only consumer of the complete source-stage generation.

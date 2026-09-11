@@ -2,6 +2,7 @@
   "id": "gusd-gemini",
   "reserves": [
     {
+      "sourceKey": "gemini-independent-assurance:gusd:cash-deposits",
       "name": "USD cash deposits",
       "pct": 100,
       "risk": "very-low",

@@ -253,6 +253,19 @@ describe("buildReserveProvenanceNotice", () => {
     expect(notice?.toneClass).toBe(NEUTRAL_PROVENANCE);
   });
 
+  it("proof badge outranks an independent provenance class", () => {
+    const notice = buildReserveProvenanceNotice(
+      makeReserves({
+        mode: "live",
+        provenance: makeProvenance({ evidenceClass: "independent", scoringEligible: true }),
+        displayBadge: { kind: "proof", label: "Proof" },
+      }),
+    );
+    // A dated proof must never be presented as an independent live feed.
+    expect(notice?.title).toBe("Reserve evidence");
+    expect(notice?.message).toContain("does not advance the underlying evidence date");
+  });
+
   it("independent + scoring-eligible → independent disclosure", () => {
     const notice = buildReserveProvenanceNotice(
       makeReserves({ mode: "live", provenance: makeProvenance({ evidenceClass: "independent", scoringEligible: true }) }),
@@ -360,5 +373,74 @@ describe("dated reserve disclosures", () => {
     expect(notice?.rows.join(" ")).not.toContain("5775332");
     expect(buildReserveSyncNotice({ ...reserves, sync: { ...reserves.sync!, status: "error", lastError: "HTTP 503" } })?.title)
       .toBe("Live reserve sync error");
+  });
+
+  it("prefers the report date over the source timestamp", () => {
+    const label = buildReserveFootnoteModel(
+      makeReserves({
+        mode: "live",
+        liveAt: Date.parse("2026-09-05T12:14:32Z") / 1000,
+        metadata: {
+          sourceTimestamp: Date.parse("2026-08-31T00:00:00Z") / 1000,
+          details: { assurance: { reportDate: "2026-06-30" } },
+        },
+      }),
+      true,
+      "rwa backed",
+    )?.text;
+    expect(label).toContain("Report as of 2026-06-30");
+    expect(label).not.toContain("Source as of");
+    expect(label).not.toContain("2026-08-31");
+  });
+
+  it("falls back to the source date when no report date is attested", () => {
+    const label = buildReserveFootnoteModel(
+      makeReserves({
+        mode: "live",
+        liveAt: Date.parse("2026-09-05T12:14:32Z") / 1000,
+        metadata: { sourceTimestamp: Date.parse("2026-06-30T15:59:00Z") / 1000 },
+      }),
+      true,
+      "rwa backed",
+    )?.text;
+    expect(label).toMatch(/^Source as of \w+ 30, 2026 · Checked /);
+    expect(label).not.toContain("Report as of");
+    expect(label).not.toContain("Source date unavailable");
+  });
+
+  it("keeps operational diagnostics when age is not the only warning", () => {
+    const notice = buildReserveSyncNotice(
+      makeReserves({
+        mode: "live-stale",
+        sync: {
+          enabled: true, status: "degraded", stale: true, bootstrap: false,
+          warnings: [
+            "Upstream reserve source timestamp is 5775332s old for dynamic-mix/independent (max 4000000s)",
+            "Adapter returned a partial slice set",
+          ],
+        },
+      }),
+    );
+    expect(notice?.title).toBe("Live reserve sync degraded");
+    expect(notice?.rows).toContain("Adapter returned a partial slice set");
+    expect(notice?.rows).toContain("Status: degraded");
+  });
+
+  it.each([
+    ["an uncertain write", { uncertainWrite: true } as const],
+    ["a recorded last error", { lastError: "HTTP 503" } as const],
+  ])("stays a sync-degraded notice when a stale-age warning arrives with %s", (_label, extra) => {
+    const notice = buildReserveSyncNotice(
+      makeReserves({
+        mode: "live-stale",
+        sync: {
+          enabled: true, status: "degraded", stale: true, bootstrap: false,
+          warnings: ["Upstream reserve source timestamp is 5775332s old for dynamic-mix/independent (max 4000000s)"],
+          ...extra,
+        },
+      }),
+    );
+    expect(notice?.title).toBe("Live reserve sync degraded");
+    expect(notice?.rows.join(" ")).toContain("5775332");
   });
 });

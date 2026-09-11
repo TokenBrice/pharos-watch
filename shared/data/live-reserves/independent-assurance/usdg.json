@@ -1,0 +1,51 @@
+{
+  "schemaVersion": 1,
+  "product": "USDG",
+  "profile": "usdg-v1",
+  "officialIndexUrl": "https://www.paxos.com/usdg-transparency",
+  "reportUrl": "https://framerusercontent.com/assets/IJR7RhuqfckbBnl7fVubmqrnc.pdf",
+  "reportSha256": "0a7d128ef8dfa3e419695d973a28383a82ded85eb02f80890d79c8e58e841509",
+  "reportByteLength": 1731701,
+  "reportDate": "2026-07-31",
+  "reportAsOf": "2026-07-31T17:00:00-04:00",
+  "reportTimeZone": "Eastern Daylight Time (UTC-4)",
+  "reportIssuedAt": "2026-08-26T23:59:00+08:00",
+  "attestor": "KPMG LLP",
+  "engagement": "Independent reasonable assurance under Singapore Standard on Assurance Engagements 3000",
+  "conclusion": "unmodified",
+  "unit": "USD",
+  "assets": [
+    {
+      "code": "cash",
+      "label": "Cash",
+      "amount": "103442070"
+    },
+    {
+      "code": "government-mmf",
+      "label": "Government money market funds, at net asset value",
+      "amount": "1939425768"
+    },
+    {
+      "code": "treasury-bills",
+      "label": "Obligations of U.S. Treasury, at fair value",
+      "amount": "1362008387"
+    }
+  ],
+  "liabilities": [
+    {
+      "code": "all-native-chains",
+      "label": "USDG redeemable tokens: Ethereum, Solana, Ink, X Layer, Arbitrum One and Robinhood (Exhibit A total carried to Exhibit C)",
+      "amount": "3400474143"
+    }
+  ],
+  "reportedAssetTotal": "3404876225",
+  "computedAssetTotal": "3404876225",
+  "reportedLiabilityTotal": "3400474143",
+  "extraction": {
+    "tool": "Poppler pdftotext -layout",
+    "parserVersion": "26.07.0",
+    "normalizedTextSha256": "b6df13b1305a347460ff20ddc6cb5b1a01e621df7a03a755a327ba661c19dad6",
+    "pageCount": 14
+  },
+  "assuranceTier": "independent-assurance"
+}

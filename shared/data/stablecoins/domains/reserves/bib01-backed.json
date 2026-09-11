@@ -2,6 +2,7 @@
   "id": "bib01-backed",
   "reserves": [
     {
+      "sourceKey": "chainlink-por:feed:0xad4395fc414fc1575a7a38c20b0bfdbdb09ee41a",
       "name": "iShares IB01 0-1 year U.S. Treasury bond ETF shares",
       "pct": 100,
       "risk": "low",

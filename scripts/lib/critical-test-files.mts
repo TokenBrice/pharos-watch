@@ -1,15 +1,14 @@
 import {
   collectOwningTests,
-  deriveCriticalOwnership,
+  assertExecutableTestFiles,
   normalizeOwnershipPath,
   type CriticalOwnership,
 } from "./critical-ownership.mts";
-import { CRITICAL_FILES } from "./critical-coverage.mjs";
-const generatedCriticalOwnership = deriveCriticalOwnership({ sourceFiles: CRITICAL_FILES });
+import { CRITICAL_FILES, CRITICAL_OWNERSHIP, criticalCoverageFilesForChanges, selectChangedCriticalSources } from "./critical-coverage.mjs";
 
 export const GLOBAL_INVARIANT_TEST_FILES: string[] = [
   "src/lib/__tests__/reserve-coinid-validation.test.ts",
-  "worker/src/cron/__tests__/telegram-recap-cost-boundary.test.ts",
+  "scripts/ci/check-architecture-boundaries.test.ts",
 ];
 
 export const CRITICAL_CONTRACT_TEST_FILES: string[] = [
@@ -71,24 +70,29 @@ export const ALWAYS_RUN_TEST_FILES: string[] = [
   ]),
 ];
 
-export const CRITICAL_TEST_FILES: string[] = collectOwningTests(CRITICAL_FILES, generatedCriticalOwnership);
+export const CRITICAL_TEST_FILES: string[] = collectOwningTests(CRITICAL_FILES, CRITICAL_OWNERSHIP);
 
 export interface CriticalCoverageBuildOptions {
   changedFiles?: readonly string[];
   criticalFiles?: readonly string[];
   ownership?: CriticalOwnership;
+  exists?: (path: string) => boolean;
+  baseRef?: string;
 }
 
-function selectCriticalCoverageFiles({
-  changedFiles,
-  criticalFiles = CRITICAL_FILES,
-}: CriticalCoverageBuildOptions): string[] {
+function selectCriticalCoverageFiles(options: CriticalCoverageBuildOptions): string[] {
+  const { changedFiles, criticalFiles = criticalCoverageFilesForChanges(changedFiles, options.baseRef) } = options;
   if (changedFiles === undefined) return [...criticalFiles];
+  if (!options.criticalFiles && changedFiles.some((file) => /\.(test|spec)\.[cm]?[jt]sx?$/.test(file))) return [...criticalFiles];
   const changed = new Set(changedFiles.map(normalizeOwnershipPath));
-  return criticalFiles.filter((file) => changed.has(normalizeOwnershipPath(file)));
+  const selected = criticalFiles.filter((file) => changed.has(normalizeOwnershipPath(file)));
+  if (options.criticalFiles) return selected;
+  const affected = selectChangedCriticalSources(changedFiles);
+  return selected.length > 0 && affected.every((file) => selected.includes(file)) ? selected : [...criticalFiles];
 }
 
 function buildCriticalCoverageOptions(criticalFiles: readonly string[]): string[] {
+  if (criticalFiles.length === 0) throw new Error("Empty critical coverage source selection");
   return [
     "--coverage",
     "--coverage.thresholds.lines=0",
@@ -103,6 +107,7 @@ function buildCriticalCoverageOptions(criticalFiles: readonly string[]): string[
 }
 
 export function buildCriticalContractTestArgs(extraArgs: readonly string[] = []): string[] {
+  assertExecutableTestFiles(CRITICAL_CONTRACT_TEST_FILES);
   return ["run", ...CRITICAL_CONTRACT_TEST_FILES, ...extraArgs];
 }
 
@@ -118,10 +123,11 @@ export function buildCriticalCoverageArgs(
   options: CriticalCoverageBuildOptions = {},
 ): string[] {
   const selectedSources = selectCriticalCoverageFiles(options);
-  const ownership = options.ownership ?? generatedCriticalOwnership;
+  const ownership = options.ownership ?? CRITICAL_OWNERSHIP;
   // Keep the execution suite comparable to the checked-in full-suite baseline:
   // other critical owners can exercise a touched source through indirect imports.
   const selectedTests = collectOwningTests(options.criticalFiles ?? CRITICAL_FILES, ownership);
+  assertExecutableTestFiles(selectedTests, { exists: options.exists });
   return [
     "run",
     ...buildCriticalCoverageOptions(selectedSources),
@@ -134,8 +140,9 @@ export function countCriticalCoverageShards(
   options: CriticalCoverageBuildOptions = {},
   maxShards = 4,
 ): number {
-  const ownership = options.ownership ?? generatedCriticalOwnership;
+  const ownership = options.ownership ?? CRITICAL_OWNERSHIP;
   const selectedTests = collectOwningTests(options.criticalFiles ?? CRITICAL_FILES, ownership);
+  if (selectedTests.length === 0) throw new Error("Empty critical coverage test selection");
   return Math.max(1, Math.min(maxShards, selectedTests.length));
 }
 

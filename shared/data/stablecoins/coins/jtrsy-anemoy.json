@@ -104,9 +104,11 @@
       }
     },
     "params": {
+      "navScope": "native-fund-share",
       "oracleAddress": "0x0C2e4Df738e99e8db80012f5bb2a303f3f48Ca74",
       "tokenAddress": "0x8c213ee79581ff4984583c6a801e5263418c4b86",
-      "assetLabel": "Janus Henderson Anemoy Treasury Fund NAV",
+      "sourceKey": "chainlink-nav:token:0x8c213ee79581ff4984583c6a801e5263418c4b86",
+      "assetLabel": "Janus Henderson Anemoy Treasury Fund shares",
       "assetRisk": "very-low",
       "oracleMethod": "latestRoundData",
       "maxOracleAgeSec": 345600

@@ -14,12 +14,21 @@ import {
   type V9OracleControlReview,
 } from "../safety-score-v9/control";
 import { loadV9MethodologyPolicy, resolveV9ReasonPolicy, V9_CANDIDATE_POLICY_V1 } from "../safety-score-v9/policy";
+import { scoreV9EvaluatedAsset } from "@shared/lib/safety-score-v9/score";
+import { compileV9FactSetV3 } from "@shared/lib/safety-score-v9/compile";
+import { evaluateV9FactSet } from "@shared/lib/safety-score-v9/evaluate-set";
+import { createV9FactGapV3 } from "@shared/lib/safety-score-v9/reasons";
+import {
+  compileNativeV3FactSet, coreFixture, knownStatus, noEconomicControlReview,
+} from "./safety-score-v9-facts.fixture-support";
+import { makeV9ProductionScoreInput } from "./safety-score-v9-score.test-support";
 import {
   boundedUnknown,
   makeEconomicControlArgs as args,
   makeEconomicControlFacts as facts,
   makeDeploymentControl as control,
   makeReviewedMintInput,
+  makeSupplyPartition,
   noBridgeReview as noBridge,
   noMintReview as noMint,
   noOracleReview as noOracle,
@@ -90,13 +99,13 @@ function nullShareDeploymentScenario(scenario: NullShareDeploymentScenario) {
         facts: {
           ...facts([nullShareBridge]),
           controlStatus: requiredKnown("controls"),
-          supply: {
+          supply: makeSupplyPartition({
             status: requiredKnown("supply"),
-            selectedBridgeRoutes,
+            routes: selectedBridgeRoutes,
             selectedRouteSupplyShare: reviewedShare,
             unknownRouteSupplyShare: gapShare,
             unreviewedRouteSupplyShare: gapShare === null ? null : 0,
-          },
+          }),
         },
         ...(reviewedBridge
           ? {
@@ -220,9 +229,9 @@ function chainLabelPoolResult(
       facts: {
         ...facts(controls),
         assetId,
-        supply: {
+        supply: makeSupplyPartition({
           status: requiredKnown("supply"),
-          selectedBridgeRoutes: [
+          routes: [
             {
               deploymentRouteKey: reviewedControl.deploymentKey,
               supplyUsd: reviewedShare * 100,
@@ -250,7 +259,7 @@ function chainLabelPoolResult(
           selectedRouteSupplyShare: reviewedShare,
           unknownRouteSupplyShare: (poolShare ?? 0) + namedShare,
           unreviewedRouteSupplyShare: 0,
-        },
+        }),
       },
       bridge: {
         status: requiredKnown("bridge"),
@@ -260,25 +269,11 @@ function chainLabelPoolResult(
   );
 }
 
-// Every tracked asset that carried a producer-failed
-// immaterial-unrecognized-chain-pool fact in the 2026-07-29 baseline, with the
-// pool share measured for it in the publication-exact replay that cleared the
-// group under Safety Score v9.03.
-const MEASURED_CHAIN_LABEL_POOLS = [
-  { assetId: "eurc-circle", poolShare: 1.127575627983762e-7 },
-  { assetId: "eurs-stasis", poolShare: 0.00023167490433921285 },
-  { assetId: "frax-frax", poolShare: 0.00000247225321587023 },
-  { assetId: "fusd-finchain", poolShare: 2.9977780980856436e-7 },
-  { assetId: "pyusd-paypal", poolShare: 7.125766668483089e-10 },
-  { assetId: "sbc-brale", poolShare: 0.004350370441887976 },
-  { assetId: "tusd-trueusd", poolShare: 0.0000040954852087551855 },
-  { assetId: "usbd-bima", poolShare: 0.00007350583479734122 },
-  { assetId: "usdc-circle", poolShare: 0.0004388981967687535 },
-  { assetId: "usdglo-glo", poolShare: 0.00871673920808645 },
-  { assetId: "usdp-parallel", poolShare: 2.9347931689789586e-7 },
-  { assetId: "usdt-tether", poolShare: 0.0007689831247690548 },
-  { assetId: "usdy-ondo-finance", poolShare: 2.2530125252785815e-7 },
-  { assetId: "xsgd-straitsx", poolShare: 0.07916180659603161 },
+// Synthetic shares test materiality independently of the asset identity.
+const REPRESENTATIVE_CHAIN_LABEL_POOLS = [
+  { assetId: "synthetic-a", poolShare: 1e-9 },
+  { assetId: "synthetic-b", poolShare: 0.02 },
+  { assetId: "synthetic-b", poolShare: 0.0999 },
 ] as const;
 
 describe("Safety Score v9 economic control", () => {
@@ -558,15 +553,21 @@ describe("Safety Score v9 economic control", () => {
     });
     const resultFor = (supervision: V9MintSupervision) =>
       evaluateV9EconomicControl(args({ facts: facts([mintControl]), mint: reconciledMint(supervision) }));
+    const results = {
+      unknown: resultFor("unknown"),
+      "attestation-only": resultFor("attestation-only"),
+      none: resultFor("none"),
+      prudential: resultFor("prudential"),
+    };
     const severityFor = (supervision: V9MintSupervision) =>
-      resultFor(supervision).structuralFailures.find((failure) => failure.kind === "centralized-mint");
+      results[supervision].structuralFailures.find((failure) => failure.kind === "centralized-mint");
 
     // R3/R4 keep unknown supervision conservative while grading reviewed
     // supervision inside the control pillar.
     // 9.1: the fixture's mint key is an unattested EOA, so every rung below
     // carries the merged grader's key-custody penalty. The R3 ordering the pin
     // guards (prudential > attestation-only > unknown/none) is unchanged.
-    const unknownResult = resultFor("unknown");
+    const unknownResult = results.unknown;
     expect(unknownResult.components.find((component) => component.kind === "mint")).toMatchObject({
       posture: "unbounded-reconciled",
       score: 55 - UNATTESTED_EOA_PENALTY,
@@ -581,11 +582,11 @@ describe("Safety Score v9 economic control", () => {
     expect(severityFor("none")).toMatchObject({ severity: "high" });
 
     expect(severityFor("prudential")).toBeUndefined();
-    expect(resultFor("prudential").components.find((component) => component.kind === "mint")).toMatchObject({
+    expect(results.prudential.components.find((component) => component.kind === "mint")).toMatchObject({
       posture: "unbounded-reconciled",
       score: 80 - UNATTESTED_EOA_PENALTY,
     });
-    expect(resultFor("attestation-only").components.find((component) => component.kind === "mint")).toMatchObject({
+    expect(results["attestation-only"].components.find((component) => component.kind === "mint")).toMatchObject({
       posture: "unbounded-reconciled",
       score: 70 - UNATTESTED_EOA_PENALTY,
     });
@@ -1136,6 +1137,45 @@ describe("Safety Score v9 economic control", () => {
     expect(result.components.some((component) => component.componentKey === "bridge:unverified")).toBe(false);
   });
 
+  it("carries aggregate control residue through the production pillar adapter into the composite ceiling", () => {
+    const native = compileNativeV3FactSet(coreFixture());
+    for (const unresolved of [false, true]) {
+      const { v9FactSetDigest: _digest, ...input } = structuredClone(native);
+      const asset = input.assets.find((item) => item.assetId === "alpha")!;
+      asset.controls = asset.controls.filter((item) => item.controlKey === "control:freezer");
+      const emptyReview = noEconomicControlReview();
+      asset.economicControlReview = {
+        ...emptyReview,
+        mint: { ...emptyReview.mint, supervision: "unknown", latestResolvedIncidentAtSec: null },
+      };
+      asset.controlStatus = knownStatus();
+      if (unresolved) {
+        const gap = createV9FactGapV3({
+          gapId: "alpha:gap:aggregate-control",
+          reasonCode: "unresolved-control-identity", ownerDomain: "control",
+          policyRuleId: "control.aggregate", observationState: "bounded-unknown",
+          path: { kind: "local-component", componentKey: "controls" },
+          message: "Aggregate control identity remains undisclosed.",
+          evidenceRefIds: ["evidence:base"], responsibility: "issuer-undisclosed",
+        });
+        asset.gaps.push(gap);
+        asset.controlStatus = { ...knownStatus(), observationState: "bounded-unknown", gapIds: [gap.gapId] };
+      }
+      const evaluated = evaluateV9FactSet(compileV9FactSetV3(input), V9_CANDIDATE_POLICY_V1)
+        .assets.find((item) => item.assetId === "alpha")!;
+      const scoreInput = makeV9ProductionScoreInput();
+      scoreInput.pillars.control = evaluated.scoreInput.pillars.control;
+      const trace = scoreV9EvaluatedAsset(scoreInput, V9_CANDIDATE_POLICY_V1);
+      if (unresolved) {
+        expect(trace.finalScore).toBe(55);
+        expect(trace.bindingCap).toMatchObject({ kind: "reason:unresolved-control-identity", source: "evidence" });
+      } else {
+        expect(trace.finalScore).toBeGreaterThan(55);
+        expect(trace.caps.map((cap) => cap.kind)).not.toContain("reason:unresolved-control-identity");
+      }
+    }
+  });
+
   it("keeps unrepresented aggregate control residue fail-closed without section fallbacks", () => {
     const aggregateStatus = boundedUnknown("control.unrepresented-residue");
     const result = evaluateV9EconomicControl(
@@ -1146,14 +1186,11 @@ describe("Safety Score v9 economic control", () => {
         },
       }),
     );
-    const reasonPolicy = resolveV9ReasonPolicy(V9_CANDIDATE_POLICY_V1, "unresolved-control-identity");
 
     expect(result.reasons).toEqual([
       expect.objectContaining({ code: "unresolved-control-identity", path: "controls", controlKey: null }),
     ]);
     expect(result.components.map((component) => component.componentKey)).toEqual(["bridge:native", "mint"]);
-    expect(reasonPolicy.ceiling).toEqual({ kind: "reason:unresolved-control-identity", limit: 55 });
-    expect(Math.min(result.score!, reasonPolicy.ceiling!.limit)).toBe(55);
   });
 
   it("does not let a subthreshold unresolved row erase aggregate control residue", () => {
@@ -1177,14 +1214,11 @@ describe("Safety Score v9 economic control", () => {
         },
       }),
     );
-    const reasonPolicy = resolveV9ReasonPolicy(V9_CANDIDATE_POLICY_V1, "unresolved-control-identity");
 
     expect(result.reasons).toEqual([
       expect.objectContaining({ code: "unresolved-control-identity", path: "controls", controlKey: null }),
     ]);
     expect(result.components.some((component) => component.componentKey === "bridge:unverified")).toBe(false);
-    expect(reasonPolicy.ceiling).toEqual({ kind: "reason:unresolved-control-identity", limit: 55 });
-    expect(Math.min(result.score!, reasonPolicy.ceiling!.limit)).toBe(55);
   });
 
   it("releases a null-share deployment control whose complete partition proves its deployment subthreshold", () => {
@@ -1199,6 +1233,127 @@ describe("Safety Score v9 economic control", () => {
 
     expect(result.reasons).toEqual([]);
     expect(result).toMatchObject({ score: 95, state: "rated" });
+  });
+
+  it("does not infer zero deployment exposure from unreconciled aggregates or totals", () => {
+    const missing = control("bridge:absent", "bridge", {
+      deploymentKey: "solana:absent", scope: "deployment", economicLossScope: "deployment",
+      materialSupplyShare: null, status: boundedUnknown("control.absent"),
+    });
+    for (const [rowShare, aggregateShare] of [[1, 0.9], [0.9, 0.9]]) {
+      const result = evaluateV9EconomicControl(args({
+        facts: {
+          ...facts([missing]), controlStatus: requiredKnown("controls"),
+          supply: makeSupplyPartition({
+            status: requiredKnown("supply"),
+            routes: [{
+              deploymentRouteKey: "ethereum:native",
+              supplyUsd: rowShare * 100,
+              supplyShare: rowShare,
+              reviewState: "selected-reviewed",
+              reviewedRouteKind: "native",
+            }],
+            selectedRouteSupplyShare: aggregateShare,
+            unknownRouteSupplyShare: 0,
+            unreviewedRouteSupplyShare: 0,
+          }),
+        },
+      }));
+      expect(result.reasons).toContainEqual(expect.objectContaining({
+        code: "selected-bridge-route-unresolved", controlKey: missing.controlKey,
+      }));
+    }
+  });
+
+  it("sums split deployment rows before granting null-share relief", () => {
+    const missing = control("bridge:split", "bridge", {
+      deploymentKey: "solana:split", scope: "deployment", economicLossScope: "deployment",
+      materialSupplyShare: null, status: boundedUnknown("control.split"),
+    });
+    const result = evaluateV9EconomicControl(args({
+      facts: {
+        ...facts([missing]), controlStatus: requiredKnown("controls"),
+        supply: makeSupplyPartition({
+          status: requiredKnown("supply"),
+          routes: [
+            {
+              deploymentRouteKey: "ethereum:native",
+              supplyUsd: 90,
+              supplyShare: 0.9,
+              reviewState: "selected-reviewed",
+              reviewedRouteKind: "native",
+            },
+            ...[0.04, 0.06].map((supplyShare) => ({
+              deploymentRouteKey: missing.deploymentKey,
+              supplyUsd: supplyShare * 100,
+              supplyShare,
+              reviewState: "unmatched" as const,
+            })),
+          ],
+          selectedRouteSupplyShare: 0.9,
+          unknownRouteSupplyShare: 0.1,
+          unreviewedRouteSupplyShare: 0,
+        }),
+      },
+    }));
+    expect(result.reasons).toContainEqual(expect.objectContaining({
+      code: "selected-bridge-route-unresolved", controlKey: missing.controlKey,
+    }));
+  });
+
+  it("rejects duplicate bridge reviews and ambiguous controls instead of selecting the first join", () => {
+    const first = control("bridge:first", "bridge", {
+      deploymentKey: "ethereum:controlled", scope: "deployment",
+      economicLossScope: "deployment", materialSupplyShare: 0.95,
+    });
+    const second = { ...first, controlKey: "bridge:second" };
+    const route = { controlKey: first.controlKey, tier: "external-validated-network" as const };
+    const economicFacts: V9EconomicControlAssetFacts = {
+      ...facts([first]),
+      supply: makeSupplyPartition({
+        status: requiredKnown("supply"),
+        routes: [
+          {
+            deploymentRouteKey: first.deploymentKey,
+            supplyUsd: 95,
+            supplyShare: 0.95,
+            reviewState: "selected-reviewed",
+            reviewedRouteKind: "controlled",
+          },
+          {
+            deploymentRouteKey: "unmatched-chain:fixture:arbitrum",
+            supplyUsd: 5,
+            supplyShare: 0.05,
+            reviewState: "unmatched",
+          },
+        ],
+        selectedRouteSupplyShare: 0.95,
+        unknownRouteSupplyShare: 0.05,
+        unreviewedRouteSupplyShare: 0,
+      }),
+    };
+    expect(evaluateV9SubthresholdUnresolvedBridgeJoins(
+      economicFacts, [first], [route], 0.1, 0.1,
+    )).toEqual({ complete: true, cause: null });
+    for (const [controls, routes, code, controlKeys] of [
+      [[first], [route, route], "duplicate-bridge-route-control", [first.controlKey]],
+      [[first, second], [route, { ...route, controlKey: second.controlKey }],
+        "reviewed-row-control-join-not-unique", [first.controlKey, second.controlKey]],
+    ] as const) {
+      expect(evaluateV9SubthresholdUnresolvedBridgeJoins(
+        economicFacts, controls, routes, 0.1, 0.1,
+      )).toMatchObject({ complete: false, cause: { code, controlKeys } });
+      const evaluationArgs = args({
+        facts: { ...economicFacts, controls },
+        bridge: { status: requiredKnown("bridge"), routes },
+      });
+      if (code === "duplicate-bridge-route-control") {
+        expect(() => evaluateV9EconomicControl(evaluationArgs)).toThrow(/Duplicate v9 bridge control/);
+      } else {
+        const result = evaluateV9EconomicControl(evaluationArgs);
+        expect(result.reasons.map((reason) => reason.code)).toContain("nonmaterial-bridge-supply-unmatched");
+      }
+    }
   });
 
   it("keeps a null-share deployment control binding when its partition row is material", () => {
@@ -1383,10 +1538,9 @@ describe("Safety Score v9 economic control", () => {
         args({
           facts: {
             ...facts([unresolvedBridge]),
-            supply: {
-              ...facts().supply,
+            supply: makeSupplyPartition({
               status: supplyStatus,
-              selectedBridgeRoutes: [
+              routes: [
                 {
                   deploymentRouteKey: "ethereum:native",
                   supplyUsd: 100 * (1 - unreviewedRouteSupplyShare),
@@ -1403,7 +1557,7 @@ describe("Safety Score v9 economic control", () => {
               ],
               selectedRouteSupplyShare: 1 - unreviewedRouteSupplyShare,
               unreviewedRouteSupplyShare,
-            },
+            }),
           },
           bridge: { status: requiredKnown("bridge"), routes: [] },
         }),
@@ -1502,24 +1656,13 @@ describe("Safety Score v9 economic control", () => {
     expect(aggregateAtFloor.reasons.map((reason) => reason.code)).toEqual(["material-bridge-supply-unmatched"]);
   });
 
-  it.each(MEASURED_CHAIN_LABEL_POOLS)(
-    "clears the measured chain-label pool for $assetId while holding the RULED D-J floor",
+  it.each(REPRESENTATIVE_CHAIN_LABEL_POOLS)(
+    "clears the synthetic chain-label pool for $assetId at $poolShare",
     ({ assetId, poolShare }) => {
-      // The tolerance only applies below the common-mode floor, so every
-      // measured share this group cleared with must stay strictly under it.
-      // XSGD is the binding case at ~7.9%.
-      expect(poolShare).toBeLessThan(V9_CANDIDATE_POLICY_V1.policy.semantic.materiality.commonModeShareThreshold);
-
-      // At its measured share the pool is tolerated silently: no reason, and
-      // the reviewed route still scores at its tier quality.
       const measured = chainLabelPoolResult(assetId, poolShare, { withPoolControl: false });
       expect(measured.reasons).toEqual([]);
       expect(measured.score).toBe(90);
 
-      // The same asset identity at the floor still fails closed, so the
-      // clearance is bounded by materiality rather than by asset.
-      const atFloor = chainLabelPoolResult(assetId, 0.1, { withPoolControl: false });
-      expect(atFloor.reasons.map((reason) => reason.code)).toEqual(["material-bridge-supply-unmatched"]);
     },
   );
 
@@ -1543,9 +1686,9 @@ describe("Safety Score v9 economic control", () => {
       args({
         facts: {
           ...facts([namedControl]),
-          supply: {
+          supply: makeSupplyPartition({
             status: requiredKnown("supply"),
-            selectedBridgeRoutes: [
+            routes: [
               {
                 deploymentRouteKey: "ethereum:native",
                 supplyUsd: 94,
@@ -1569,7 +1712,7 @@ describe("Safety Score v9 economic control", () => {
             selectedRouteSupplyShare: 0.94,
             unknownRouteSupplyShare: 0.06,
             unreviewedRouteSupplyShare: 0,
-          },
+          }),
         },
         bridge: { status: requiredKnown("bridge"), routes: [] },
       }),
@@ -1595,39 +1738,40 @@ describe("Safety Score v9 economic control", () => {
       materialSupplyShare: 0.00002,
       status: boundedUnknown("control.tempo"),
     });
+    const economicFacts: V9EconomicControlAssetFacts = {
+      ...facts([tempoControl]),
+      supply: makeSupplyPartition({
+        status: requiredKnown("supply"),
+        routes: [
+          {
+            deploymentRouteKey: "ethereum:native",
+            supplyUsd: 99_997,
+            supplyShare: 0.99997,
+            reviewState: "selected-reviewed",
+            reviewedRouteKind: "native",
+          },
+          {
+            deploymentRouteKey: tempoControl.deploymentKey,
+            supplyUsd: 2,
+            supplyShare: 0.00002,
+            reviewState: "selected-reviewed",
+            reviewedRouteKind: "controlled",
+          },
+          {
+            deploymentRouteKey: "unmatched-chain:fixture-asset:icp",
+            supplyUsd: 1,
+            supplyShare: 0.00001,
+            reviewState: "unmatched",
+          },
+        ],
+        selectedRouteSupplyShare: 0.99999,
+        unknownRouteSupplyShare: 0.00001,
+        unreviewedRouteSupplyShare: 0,
+      }),
+    };
     const result = evaluateV9EconomicControl(
       args({
-        facts: {
-          ...facts([tempoControl]),
-          supply: {
-            status: requiredKnown("supply"),
-            selectedBridgeRoutes: [
-              {
-                deploymentRouteKey: "ethereum:native",
-                supplyUsd: 99_997,
-                supplyShare: 0.99997,
-                reviewState: "selected-reviewed",
-                reviewedRouteKind: "native",
-              },
-              {
-                deploymentRouteKey: tempoControl.deploymentKey,
-                supplyUsd: 2,
-                supplyShare: 0.00002,
-                reviewState: "selected-reviewed",
-                reviewedRouteKind: "controlled",
-              },
-              {
-                deploymentRouteKey: "unmatched-chain:fixture-asset:icp",
-                supplyUsd: 1,
-                supplyShare: 0.00001,
-                reviewState: "unmatched",
-              },
-            ],
-            selectedRouteSupplyShare: 0.99999,
-            unknownRouteSupplyShare: 0.00001,
-            unreviewedRouteSupplyShare: 0,
-          },
-        },
+        facts: economicFacts,
         bridge: {
           status: requiredKnown("bridge"),
           routes: [{ controlKey: tempoControl.controlKey, tier: "external-validated-network" as const }],
@@ -1642,37 +1786,7 @@ describe("Safety Score v9 economic control", () => {
     // rather than returning a bare boolean.
     const materiality = V9_CANDIDATE_POLICY_V1.policy.semantic.materiality;
     const join = evaluateV9SubthresholdUnresolvedBridgeJoins(
-      {
-        ...facts([tempoControl]),
-        supply: {
-          status: requiredKnown("supply"),
-          selectedBridgeRoutes: [
-            {
-              deploymentRouteKey: "ethereum:native",
-              supplyUsd: 99_997,
-              supplyShare: 0.99997,
-              reviewState: "selected-reviewed",
-              reviewedRouteKind: "native",
-            },
-            {
-              deploymentRouteKey: tempoControl.deploymentKey,
-              supplyUsd: 2,
-              supplyShare: 0.00002,
-              reviewState: "selected-reviewed",
-              reviewedRouteKind: "controlled",
-            },
-            {
-              deploymentRouteKey: "unmatched-chain:fixture-asset:icp",
-              supplyUsd: 1,
-              supplyShare: 0.00001,
-              reviewState: "unmatched",
-            },
-          ],
-          selectedRouteSupplyShare: 0.99999,
-          unknownRouteSupplyShare: 0.00001,
-          unreviewedRouteSupplyShare: 0,
-        },
-      },
+      economicFacts,
       [tempoControl],
       [{ controlKey: tempoControl.controlKey, tier: "external-validated-network" as const }],
       materiality.deploymentMaterialSharePct / 100,
@@ -1694,9 +1808,9 @@ describe("Safety Score v9 economic control", () => {
     const join = evaluateV9SubthresholdUnresolvedBridgeJoins(
       {
         ...facts(),
-        supply: {
+        supply: makeSupplyPartition({
           status: requiredKnown("supply"),
-          selectedBridgeRoutes: [
+          routes: [
             {
               deploymentRouteKey: "ethereum:native",
               supplyUsd: 100_000,
@@ -1708,7 +1822,7 @@ describe("Safety Score v9 economic control", () => {
           selectedRouteSupplyShare: 1,
           unknownRouteSupplyShare: 0,
           unreviewedRouteSupplyShare: 0,
-        },
+        }),
       },
       [],
       [],
@@ -1729,9 +1843,9 @@ describe("Safety Score v9 economic control", () => {
     ] as const;
     const economicFacts: V9EconomicControlAssetFacts = {
       ...facts([nativeControl]),
-      supply: {
+      supply: makeSupplyPartition({
         status: requiredKnown("supply"),
-        selectedBridgeRoutes: [
+        routes: [
           {
             deploymentRouteKey: nativeControl.deploymentKey,
             supplyUsd: 100 * (1 - residueShare),
@@ -1749,7 +1863,7 @@ describe("Safety Score v9 economic control", () => {
         selectedRouteSupplyShare: 1 - residueShare,
         unknownRouteSupplyShare: residueShare,
         unreviewedRouteSupplyShare: 0,
-      },
+      }),
     };
     const join = evaluateV9SubthresholdUnresolvedBridgeJoins(
       economicFacts,
@@ -1783,9 +1897,9 @@ describe("Safety Score v9 economic control", () => {
     ] as const;
     const economicFacts: V9EconomicControlAssetFacts = {
       ...facts([unmatchedControl]),
-      supply: {
+      supply: makeSupplyPartition({
         status: requiredKnown("supply"),
-        selectedBridgeRoutes: [
+        routes: [
           {
             deploymentRouteKey: "ethereum:bridge-representation",
             supplyUsd: 100 * (1 - residueShare),
@@ -1803,7 +1917,7 @@ describe("Safety Score v9 economic control", () => {
         selectedRouteSupplyShare: 1 - residueShare,
         unknownRouteSupplyShare: residueShare,
         unreviewedRouteSupplyShare: 0,
-      },
+      }),
     };
     const join = evaluateV9SubthresholdUnresolvedBridgeJoins(
       economicFacts,
@@ -1834,17 +1948,15 @@ describe("Safety Score v9 economic control", () => {
       args({
         facts: {
           ...facts(),
-          supply: {
-            ...facts().supply,
-            selectedBridgeRoutes: [
-              {
-                deploymentRouteKey: "ethereum:reviewed",
-                supplyUsd: 100,
-                supplyShare: 1,
-                reviewState: "selected-reviewed",
-              },
-            ],
-          },
+          supply: makeSupplyPartition({
+            status: requiredKnown("supply"),
+            routes: [{
+              deploymentRouteKey: "ethereum:reviewed",
+              supplyUsd: 100,
+              supplyShare: 1,
+              reviewState: "selected-reviewed",
+            }],
+          }),
         },
         bridge: { status: requiredKnown("bridge"), routes: [] },
       }),
@@ -1867,9 +1979,9 @@ describe("Safety Score v9 economic control", () => {
       args({
         facts: {
           ...facts([unresolvedBridge]),
-          supply: {
-            ...facts().supply,
-            selectedBridgeRoutes: [
+          supply: makeSupplyPartition({
+            status: requiredKnown("supply"),
+            routes: [
               {
                 deploymentRouteKey: "ethereum:retained-reviewed",
                 supplyUsd: 91,
@@ -1885,7 +1997,7 @@ describe("Safety Score v9 economic control", () => {
             ],
             selectedRouteSupplyShare: 0.91,
             unreviewedRouteSupplyShare: 0.09,
-          },
+          }),
         },
         bridge: { status: requiredKnown("bridge"), routes: [] },
       }),
@@ -1967,15 +2079,18 @@ describe("Safety Score v9 economic control", () => {
       });
       return {
         ...facts([bridgeControl]),
-        supply: {
+        supply: makeSupplyPartition({
           status: requiredKnown("supply"),
-          selectedBridgeRoutes: [
-            { deploymentRouteKey: "peripheral:dust", supplyUsd: 0, supplyShare: 0, reviewState: "unmatched" },
-          ],
+          routes: [{
+            deploymentRouteKey: "peripheral:dust",
+            supplyUsd: 0,
+            supplyShare: 0,
+            reviewState: "unmatched",
+          }],
           selectedRouteSupplyShare: 1,
           unknownRouteSupplyShare: 0,
           unreviewedRouteSupplyShare: 0,
-        },
+        }),
       };
     };
     const knownBridge: V9BridgeControlReview = { status: requiredKnown("bridge"), routes: [] };

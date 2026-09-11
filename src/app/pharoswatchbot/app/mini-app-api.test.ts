@@ -9,7 +9,6 @@ import {
   TelegramMiniAppStateSchema,
   createTelegramMiniAppSnapshot,
   telegramMiniAppStateRevision,
-  type TelegramMiniAppMutableState,
   type TelegramMiniAppState,
 } from "@shared/lib/telegram-mini-app-contract";
 import { SchemaValidationError } from "@/lib/api";
@@ -21,40 +20,11 @@ import {
   postMiniAppState,
   refreshMiniAppBundleOnce,
 } from "./mini-app-api";
+import { makeMiniAppState } from "./mini-app-test-fixtures";
 
-const mutableState: TelegramMiniAppMutableState = {
-  viewer: {
-    userId: "42",
-    username: "watcher",
-    chatId: "42",
-    chatType: "private",
-    canMutate: true,
-    mutationBlockReason: null,
-  },
-  subscriber: {
-    exists: true,
-    globalAlerts: {
-      dews: true,
-      depeg: true,
-      safety: false,
-      launch: false,
-      reserve: false,
-      freeze: false,
-      depegStepBps: 250,
-    },
-    quietHours: { enabled: false, startHourUtc: null, endHourUtc: null, timezone: "UTC" },
-    recap: { available: false, enabled: false, deliveryHourLocal: 9, timezoneConfirmed: true, nextDueAt: null, lastWindowEndAt: null, lastDeliveredLocalDate: null, lastOutcome: null },
-    snoozeUntilTs: null,
-  },
-  presets: [],
-  subscriptions: [],
-  health: {
-    lastSuccessfulDeliveryAt: null,
-    lastSuccessfulReplyAt: null,
-    queuedAlerts: 0,
-    recentFailureClass: null,
-  },
-};
+const { catalog: _catalog, ...mutableState } = makeMiniAppState({
+  subscriber: { recap: { available: false } },
+});
 
 const legacyState: TelegramMiniAppState = {
   ...mutableState,
@@ -154,6 +124,54 @@ describe("Mini App versioned API client", () => {
 
     await expect(postMiniAppSnapshot("/api/telegram-mini-app/session", { initData: "signed" }))
       .rejects.toMatchObject({ status: 429, code: "rate-limited", retryAfterSec: 3_600 });
+  });
+
+  it("resolves the retry delay from the parsed body before the Retry-After header", async () => {
+    mockFetch([{
+      match: "/api/telegram-mini-app/session",
+      status: 429,
+      body: { code: "rate-limited", retryAfterSec: 120 },
+      headers: { "Retry-After": "30" },
+    }], { requireMatch: true });
+    await expect(postMiniAppSnapshot("/api/telegram-mini-app/session", { initData: "signed" }))
+      .rejects.toMatchObject({ status: 429, code: "rate-limited", retryAfterSec: 120 });
+
+    mockFetch([{
+      match: "/api/telegram-mini-app/session",
+      status: 503,
+      body: { code: "internal", retryAfterSec: 0 },
+      headers: { "Retry-After": "30" },
+    }], { requireMatch: true });
+    await expect(postMiniAppSnapshot("/api/telegram-mini-app/session", { initData: "signed" }))
+      .rejects.toMatchObject({ status: 503, code: "internal", retryAfterSec: 30 });
+  });
+
+  it.each([
+    [0.2, 1],
+    ["90", 90],
+    [-5, null],
+    ["soon", null],
+  ] as const)("normalizes a retryAfterSec of %s to %s", async (retryAfterSec, expected) => {
+    mockFetch([{
+      match: "/api/telegram-mini-app/session",
+      status: 429,
+      body: { code: "rate-limited", retryAfterSec },
+    }], { requireMatch: true });
+
+    await expect(postMiniAppSnapshot("/api/telegram-mini-app/session", { initData: "signed" }))
+      .rejects.toMatchObject({ status: 429, code: "rate-limited", retryAfterSec: expected });
+  });
+
+  it("keeps the HTTP status and header delay when the error body is not JSON", async () => {
+    mockFetch([{
+      match: "/api/telegram-mini-app/session",
+      respond: () => ({
+        response: new Response("<html>bad gateway</html>", { status: 504, headers: { "Retry-After": "45" } }),
+      }),
+    }], { requireMatch: true });
+
+    await expect(postMiniAppSnapshot("/api/telegram-mini-app/session", { initData: "signed" }))
+      .rejects.toMatchObject({ status: 504, code: null, retryAfterSec: 45 });
   });
 
   it("keeps the state-only compatibility wrapper for callers that do not need revision metadata", async () => {
@@ -290,5 +308,46 @@ describe("Mini App versioned API client", () => {
       { refresh },
     )).toBe(false);
     expect(refresh).not.toHaveBeenCalled();
+  });
+
+  it("does not refresh when recording the version target fails", () => {
+    const refresh = vi.fn();
+    const storage = {
+      getItem: () => null,
+      setItem: () => {
+        throw new DOMException("quota exceeded", "QuotaExceededError");
+      },
+    };
+
+    expect(refreshMiniAppBundleOnce(
+      { contractVersion: "3", catalogVersion: "catalog-v2-next" },
+      { storage, refresh },
+    )).toBe(false);
+    expect(refresh).not.toHaveBeenCalled();
+  });
+
+  it("refreshes again when a genuinely new version target is recorded", () => {
+    const values = new Map<string, string>();
+    const storage = {
+      getItem: (key: string) => values.get(key) ?? null,
+      setItem: (key: string, value: string) => {
+        values.set(key, value);
+      },
+    };
+    const refresh = vi.fn();
+
+    expect(refreshMiniAppBundleOnce(
+      { contractVersion: "3", catalogVersion: "catalog-v2" },
+      { storage, refresh },
+    )).toBe(true);
+    expect(refreshMiniAppBundleOnce(
+      { contractVersion: "4", catalogVersion: "catalog-v2" },
+      { storage, refresh },
+    )).toBe(true);
+    expect(refreshMiniAppBundleOnce(
+      { contractVersion: "4", catalogVersion: "catalog-v2" },
+      { storage, refresh },
+    )).toBe(false);
+    expect(refresh).toHaveBeenCalledTimes(2);
   });
 });

@@ -148,4 +148,4 @@ Shell hook payloads accept both `command` and `cmd` fields and pass them through
 
 Set `PHAROS_HOOK_DIAGNOSTICS=1` or pass `--diagnostics` to append one safe JSONL record per hook invocation.
 The default diagnostic file is `agents/hook-diagnostics.jsonl`; set `PHAROS_HOOK_DIAGNOSTICS_FILE` for another local path.
-Records contain the event, decision, rule, path count, and a short command digest, never command text or secrets.
+Records contain a timestamp, harness, event, tool name, decision, rule, the count of protected paths touched, and a short command digest - never command text or secrets.

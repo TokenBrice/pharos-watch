@@ -2,6 +2,7 @@
   "id": "kag-kinesis",
   "reserves": [
     {
+      "sourceKey": "chainlink-por:feed:0x3f0543aa057bcaea152fe9462cb3ffab305a6f8d",
       "name": "Physical silver reserves",
       "pct": 100,
       "risk": "very-low",

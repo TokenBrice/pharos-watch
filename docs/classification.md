@@ -32,7 +32,7 @@ Active Pharos taxonomy no longer exposes `algorithmic` as a standalone backing b
 
 ### Boolean Flags
 
-- `yieldBearing` — token itself accrues yield (e.g., USDY, USDe, BUIDL)
+- `yieldBearing` — token itself accrues yield (e.g., USDY, sUSDe, BUIDL)
 - `rwa` — backed by real-world assets like treasuries/bonds (distinct from `rwa-backed` which also includes plain fiat reserves)
 - `navToken` — price appreciates over time as yield accrues (USYC, USDY, TBILL, YLDS). Excluded from peg deviation metrics; table shows "NAV" instead of bps. Also used for CPI-indexed tokens (FPI) — table shows "CPI" for VAR-pegged navTokens
 

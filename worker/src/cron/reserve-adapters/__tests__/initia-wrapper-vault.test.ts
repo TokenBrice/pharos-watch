@@ -1,16 +1,8 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
-import type { StablecoinMeta } from "@shared/types/core";
-import type { LiveReservesConfig } from "@shared/types/live-reserves";
+import { describe, expect, it } from "vitest";
+import { runAdapter, type AdapterNetwork, type AdapterNetworkSpec } from "./reserve-adapter.test-support";
 
-vi.mock("../request", () => ({
-  fetchJsonPostWithRetry: vi.fn(),
-  fetchJsonWithRetry: vi.fn(),
-}));
-
-import { fetchJsonPostWithRetry, fetchJsonWithRetry } from "../request";
-import { fetchInitiaWrapperVaultReserves } from "../initia-wrapper-vault";
-
-const BASE_URL = "https://rest.initia.example";
+const BASE_URL = "https://rest.initia.xyz";
+const VIEW_URL = `${BASE_URL}/initia/move/v1/view/json`;
 const IUSD_DENOM = "move/6c69733a9e722f3660afb524f89fce957801fa7e4408b8ef8fe89db9627b570e";
 const IUSD_METADATA = "0x6c69733a9e722f3660afb524f89fce957801fa7e4408b8ef8fe89db9627b570e";
 const VAULT_OWNER = "0xfd6a07594842ac5d7501ff55243aff06e4f991f320828be05a4590970145e90a";
@@ -18,43 +10,9 @@ const AUSD0_METADATA = "0x8078cf9fee50e15069402e9d1d9db70b28fc0d5197d79e8a2b41e2
 const MOVE_METADATA_TYPE = "0x1::fungible_asset::Metadata";
 const MOVE_OBJECT_CORE_TYPE = "0x1::object::ObjectCore";
 const IUSD_SUPPLY = "2519552759503";
-
-const coin: StablecoinMeta = {
-  id: "iusd-initia",
-  name: "Initia iUSD",
-  symbol: "iUSD",
-  flags: {
-    backing: "rwa-backed",
-    pegCurrency: "USD",
-    governance: "centralized-dependent",
-    yieldBearing: false,
-    rwa: false,
-    navToken: false,
-  },
-};
-
-function config(): LiveReservesConfig {
-  return {
-    adapter: "initia-wrapper-vault",
-    version: 1,
-    semantics: "single-asset",
-    inputs: { primary: { kind: "http-json", url: BASE_URL } },
-    params: {
-      lcdUrl: BASE_URL,
-      iusdDenom: IUSD_DENOM,
-      iusdMetadataAddress: IUSD_METADATA,
-      vaultOwnerAddress: VAULT_OWNER,
-      ausd0MetadataAddress: AUSD0_METADATA,
-      decimals: 6,
-      slice: {
-        name: "Agora AUSD bridged via LayerZero (Initia AUSD0)",
-        risk: "low",
-        coinId: "ausd-agora",
-        depType: "wrapper",
-      },
-    },
-  } as unknown as LiveReservesConfig;
-}
+const SUPPLY_URL = `${BASE_URL}/cosmos/bank/v1beta1/supply/by_denom?denom=${encodeURIComponent(IUSD_DENOM)}`;
+const IUSD_CORE_URL = `${BASE_URL}/initia/move/v1/accounts/${IUSD_METADATA}/resources/by_struct_tag?struct_tag=${encodeURIComponent(MOVE_OBJECT_CORE_TYPE)}`;
+const AUSD0_RESOURCE_URL = `${BASE_URL}/initia/move/v1/accounts/${AUSD0_METADATA}/resources/by_struct_tag?struct_tag=${encodeURIComponent(MOVE_METADATA_TYPE)}`;
 
 function resource(address: string, structTag: string, data: Record<string, unknown>) {
   return {
@@ -66,7 +24,8 @@ function resource(address: string, structTag: string, data: Record<string, unkno
   };
 }
 
-function mockHealthyReads(
+
+function initiaNetwork(
   vaultBalance = IUSD_SUPPLY,
   ausd0Metadata: Record<string, unknown> = {
     name: "AUSD0",
@@ -74,26 +33,66 @@ function mockHealthyReads(
     decimals: 6,
     project_uri: "https://www.agora.finance",
   },
-): void {
-  vi.mocked(fetchJsonPostWithRetry).mockResolvedValue({ data: JSON.stringify(vaultBalance), events: [], gas_used: "7553" });
-  vi.mocked(fetchJsonWithRetry)
-    .mockResolvedValueOnce({ amount: { denom: IUSD_DENOM, amount: IUSD_SUPPLY } })
-    .mockResolvedValueOnce(resource(IUSD_METADATA, MOVE_OBJECT_CORE_TYPE, { owner: VAULT_OWNER }))
-    .mockResolvedValueOnce(resource(AUSD0_METADATA, MOVE_METADATA_TYPE, ausd0Metadata));
+  supply = IUSD_SUPPLY,
+  owner = VAULT_OWNER,
+): AdapterNetworkSpec {
+  return {
+    json: {
+      [VIEW_URL]: { data: JSON.stringify(vaultBalance), events: [], gas_used: "7553" },
+      [SUPPLY_URL]: { amount: { denom: IUSD_DENOM, amount: supply } },
+      [IUSD_CORE_URL]: resource(IUSD_METADATA, MOVE_OBJECT_CORE_TYPE, { owner }),
+      [AUSD0_RESOURCE_URL]: resource(AUSD0_METADATA, MOVE_METADATA_TYPE, ausd0Metadata),
+    },
+  };
 }
 
-beforeEach(() => {
-  vi.clearAllMocks();
-});
+function runInitia(network: AdapterNetworkSpec | AdapterNetwork = initiaNetwork()) {
+  return runAdapter("initia-wrapper-vault", "iusd-initia", {
+    network,
+    nowSec: 1_800_000_000,
+  });
+}
 
 describe("fetchInitiaWrapperVaultReserves", () => {
-  it("reads the recorded Initia responses and emits one 100% parent slice", async () => {
-    mockHealthyReads();
+  it("publishes one raw unit of underbacking as degraded", async () => {
+    const { result } = await runInitia(initiaNetwork((BigInt(IUSD_SUPPLY) - 1n).toString()));
+    expect(result.metadata?.collateralizationRatio).toBeLessThan(1);
+    expect(result.slices[0].pct).toBe(100);
+    expect(result.warnings).toContainEqual(expect.objectContaining({ code: "reserve-undercollateralized", effect: "degraded" }));
+  });
 
-    const result = await fetchInitiaWrapperVaultReserves(coin, config(), new AbortController().signal);
+  it.each([4_999_999n, 5_000_000n])("preserves a tolerated %s raw-unit surplus", async (surplus) => {
+    const balance = BigInt(IUSD_SUPPLY) + surplus;
+    const { result } = await runInitia(initiaNetwork(balance.toString()));
+    expect(result.metadata?.collateralizationRatio).toBe(Number(balance) / 2519552759503);
+    expect(result.metadata?.collateralizationRatio).toBeGreaterThan(1);
+    expect(result.warnings).toEqual([
+      expect.objectContaining({ code: "reserve-overcollateralized-dust", effect: "info" }),
+    ]);
+  });
+
+  it("publishes a six-AUSD0 surplus without degrading", async () => {
+    const { result } = await runInitia(initiaNetwork((BigInt(IUSD_SUPPLY) + 6_000_000n).toString()));
+    expect(result.metadata?.collateralizationRatio).toBeGreaterThan(1);
+    expect(result.warnings?.every((warning) => warning.effect === "info")).toBe(true);
+  });
+
+  it.each([["0", IUSD_SUPPLY], [IUSD_SUPPLY, "0"]])("publishes observed balance %s and supply %s", async (balance, supply) => {
+    const { result } = await runInitia(initiaNetwork(balance, undefined, supply));
+    expect(result.metadata?.collateralizationRatio).toBe(supply === "0" ? undefined : 0);
+    expect(result.warnings).toContainEqual(expect.objectContaining({ effect: "degraded" }));
+  });
+
+  it("rejects malformed balance data", async () => {
+    await expect(runInitia(initiaNetwork("not-an-amount"))).rejects.toThrow();
+  });
+
+  it("reads the recorded Initia responses and emits one 100% parent slice", async () => {
+    const { result, network } = await runInitia();
 
     expect(result.slices).toEqual([
       {
+        sourceKey: "initia-wrapper-vault:ausd",
         name: "Agora AUSD bridged via LayerZero (Initia AUSD0)",
         pct: 100,
         risk: "low",
@@ -113,58 +112,30 @@ describe("fetchInitiaWrapperVaultReserves", () => {
         ausd0MetadataAddress: AUSD0_METADATA,
       },
     });
-    expect(fetchJsonPostWithRetry).toHaveBeenCalledTimes(1);
-    expect(fetchJsonWithRetry).toHaveBeenCalledTimes(3);
-    expect(fetchJsonPostWithRetry).toHaveBeenCalledWith(
-      `${BASE_URL}/initia/move/v1/view/json`,
-      {
-        address: "0x1",
-        module_name: "primary_fungible_store",
-        function_name: "balance",
-        type_args: [MOVE_METADATA_TYPE],
-        args: [JSON.stringify(VAULT_OWNER), JSON.stringify(AUSD0_METADATA)],
-      },
-      expect.any(AbortSignal),
-      12_000,
-      undefined,
-    );
+    expect(network.requests).toHaveLength(4);
   });
 
   it("fails closed when the iUSD ObjectCore is no longer owned by the vault", async () => {
-    vi.mocked(fetchJsonPostWithRetry).mockResolvedValue({ data: JSON.stringify(IUSD_SUPPLY) });
-    vi.mocked(fetchJsonWithRetry)
-      .mockResolvedValueOnce({ amount: { denom: IUSD_DENOM, amount: IUSD_SUPPLY } })
-      .mockResolvedValueOnce(resource(IUSD_METADATA, MOVE_OBJECT_CORE_TYPE, {
-        owner: "0x1111111111111111111111111111111111111111111111111111111111111111",
-      }));
-
-    await expect(fetchInitiaWrapperVaultReserves(coin, config(), new AbortController().signal))
+    const wrongOwner = "0x1111111111111111111111111111111111111111111111111111111111111111";
+    await expect(runInitia(initiaNetwork(IUSD_SUPPLY, undefined, IUSD_SUPPLY, wrongOwner)))
       .rejects.toThrow("iUSD metadata owner mismatch");
-    expect(fetchJsonPostWithRetry).toHaveBeenCalledTimes(1);
-    expect(fetchJsonWithRetry).toHaveBeenCalledTimes(2);
   });
 
   it("fails closed when AUSD0 metadata has the wrong symbol", async () => {
-    mockHealthyReads(IUSD_SUPPLY, {
+    await expect(runInitia(initiaNetwork(IUSD_SUPPLY, {
       name: "AUSD0",
       symbol: "NOT-AUSD0",
       decimals: 6,
       project_uri: "https://www.agora.finance",
-    });
-
-    await expect(fetchInitiaWrapperVaultReserves(coin, config(), new AbortController().signal))
-      .rejects.toThrow("AUSD0 metadata symbol/name mismatch");
+    }))).rejects.toThrow("AUSD0 metadata symbol/name mismatch");
   });
 
   it("fails closed when AUSD0 metadata has the wrong project_uri", async () => {
-    mockHealthyReads(IUSD_SUPPLY, {
+    await expect(runInitia(initiaNetwork(IUSD_SUPPLY, {
       name: "AUSD0",
       symbol: "AUSD0",
       decimals: 6,
       project_uri: "https://example.invalid",
-    });
-
-    await expect(fetchInitiaWrapperVaultReserves(coin, config(), new AbortController().signal))
-      .rejects.toThrow("AUSD0 metadata project_uri mismatch");
+    }))).rejects.toThrow("AUSD0 metadata project_uri mismatch");
   });
 });

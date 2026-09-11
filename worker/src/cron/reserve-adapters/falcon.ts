@@ -7,10 +7,11 @@ import {
   assertFiniteNonNegativeReserveRows,
   buildBucketSlices,
   buildRedemptionSnapshotMetadata,
+  computeUnknownExposurePct,
   fetchJsonAdapterInput,
   freshnessMetadataFromTimestamp,
   parseTimestampLikeToUnixSeconds,
-  reserveDegradedWarning,
+  reserveInfoWarning,
 } from "./helpers";
 
 interface FalconBreakdownAsset {
@@ -74,28 +75,6 @@ const FALCON_TRACKED_RWA_ASSETS: Partial<Record<string, { name: string; coinId: 
   XAUT: { name: "XAUt gold token assets", coinId: "xaut-tether", risk: "medium" },
 };
 
-/** Well-known altcoins that legitimately go to the "other" bucket without warning. */
-const FALCON_OTHER_KNOWN = new Set([
-  // L1/L2 natives
-  "SOL", "BNB", "TRX", "XRP", "AVAX", "TON", "NEAR", "ATOM", "SEI",
-  "BERA", "POL", "KAVA", "CELO", "EOS", "FLR", "WFLR", "ASTR",
-  "RON", "RONIN", "METIS", "S", "SONIC", "KLAY", "CFX",
-  // DeFi / governance
-  "CRV", "CVX", "UNI", "DODO", "MORPHO", "PENDLE", "EUL",
-  "GNO", "ANKR", "BAL", "SUSHI", "QI",
-  // Popular / meme
-  "FLOKI", "TRUMP", "HMSTR", "DEXE", "FET",
-  // Other known tokens
-  "LUMIA", "JST", "XDC", "SIREN", "MANTA", "JASMY", "DUSK",
-  "MASK", "IOST", "SUN", "BTTC", "BTT", "WLFI",
-  "PROM", "BABY", "DOLO", "LAYER", "PORTAL",
-  "MANTRA", "YGG", "API3", "COTI", "MOVE",
-  "FIDA", "ID", "A", "SOPH",
-]);
-
-/** Only warn about unknown assets above this USD value. */
-const FALCON_UNKNOWN_WARN_THRESHOLD = 10_000;
-
 function bucketForFalconAsset(label: string): FalconBucket {
   if (FALCON_STABLE_ASSETS.has(label)) return "stable";
   if (FALCON_BTC_ASSETS.has(label)) return "btc";
@@ -133,6 +112,12 @@ export function adaptFalconTransparency(payload: FalconTransparencyResponse): Ad
   const warnings: LiveReserveWarning[] = [];
   const trackedStableValues = new Map<string, number>();
   const trackedRwaValues = new Map<string, number>();
+  // Compute each asset's USD value once; it is consumed by the total, the
+  // bucket classifier and the tracked-stable/RWA accumulation below.
+  const assetValues = new Map<FalconBreakdownAsset, number>();
+  for (const asset of assets) {
+    assetValues.set(asset, sumFalconAssetValue(asset));
+  }
   const {
     bucketTotals,
     totalValue: totalAssetUsd,
@@ -140,29 +125,38 @@ export function adaptFalconTransparency(payload: FalconTransparencyResponse): Ad
     unknownValuesByKey,
   } = accumulateBucketedExposure({
     items: assets,
-    getValue: sumFalconAssetValue,
+    getValue: (asset) => assetValues.get(asset)!,
     getBucket: (asset) => {
       const bucket = bucketForFalconAsset(asset.label);
+      const value = assetValues.get(asset)!;
       if (bucket === "stable" && FALCON_TRACKED_STABLE_ASSETS[asset.label]) {
-        trackedStableValues.set(asset.label, (trackedStableValues.get(asset.label) ?? 0) + sumFalconAssetValue(asset));
+        trackedStableValues.set(asset.label, (trackedStableValues.get(asset.label) ?? 0) + value);
       }
       if (bucket === "rwa" && FALCON_TRACKED_RWA_ASSETS[asset.label]) {
-        trackedRwaValues.set(asset.label, (trackedRwaValues.get(asset.label) ?? 0) + sumFalconAssetValue(asset));
+        trackedRwaValues.set(asset.label, (trackedRwaValues.get(asset.label) ?? 0) + value);
       }
       return bucket;
     },
-    isUnknown: (asset, bucket) => bucket === "other" && !FALCON_OTHER_KNOWN.has(asset.label),
+    isUnknown: (_asset, bucket) => bucket === "other",
     getUnknownKey: (asset) => asset.label,
   });
 
-  for (const [label, value] of unknownValuesByKey) {
-    const sharePct = totalAssetUsd > 0 ? (value / totalAssetUsd) * 100 : 0;
-    if (value > FALCON_UNKNOWN_WARN_THRESHOLD || sharePct >= 0.25) {
-      warnings.push(reserveDegradedWarning(
-        "unknown-asset",
-        `Unmapped Falcon asset: ${label} ($${value.toFixed(0)}, ${sharePct.toFixed(2)}%)`,
-      ));
-    }
+  const unknownExposurePct = computeUnknownExposurePct(unknownExposureUsd, totalAssetUsd);
+
+  // Unmapped assets keep their full weight inside the high-risk "other" bucket
+  // and the unknown-exposure total; the shared policy cap (5% for
+  // dynamic-mix/independent) decides whether that exposure degrades the
+  // snapshot. Falcon's unmapped set is a long tail of altcoin dust, so it is
+  // reported as one discovery warning instead of a per-asset degradation.
+  if (unknownValuesByKey.size > 0) {
+    const symbols = Array.from(unknownValuesByKey)
+      .sort(([, left], [, right]) => right - left)
+      .map(([label]) => label);
+    warnings.push(reserveInfoWarning(
+      "unknown-asset",
+      `Unmapped Falcon assets: ${symbols.join(", ")} ` +
+        `(${symbols.length} symbols, $${unknownExposureUsd.toFixed(2)}, ${unknownExposurePct.toFixed(2)}% of reserves)`,
+    ));
   }
 
   const insuranceFund =
@@ -173,6 +167,9 @@ export function adaptFalconTransparency(payload: FalconTransparencyResponse): Ad
     typeof payload.usdf?.supply === "string"
       ? Number(payload.usdf.supply)
       : NaN;
+  if (!Number.isFinite(supplyUsd) || supplyUsd <= 0) {
+    throw new Error("Falcon missing or invalid usdf.supply");
+  }
   const { slices, immediateRedeemableUsd: stableBucketUsd } = buildBucketSlices(
     bucketTotals,
     [
@@ -238,21 +235,17 @@ export function adaptFalconTransparency(payload: FalconTransparencyResponse): Ad
       snapshotDate: payload.snapshot_date,
       supply: payload.usdf?.supply,
       insuranceFund: payload.usdf?.insurance_fund,
-      ...(Number.isFinite(supplyUsd) && supplyUsd > 0 ? { supplyUsd } : {}),
-      immediateRedeemableUsd: stableBucketUsd,
-      ...(Number.isFinite(supplyUsd) && supplyUsd > 0
-        ? { immediateRedeemableRatio: stableBucketUsd / supplyUsd }
-        : {}),
+      supplyUsd,
       assetCount: assets.length,
       ...freshnessMetadataFromTimestamp(
         sourceTimestamp,
         "issuer-api",
         "Falcon transparency payload did not expose a trustworthy snapshot timestamp",
       ),
-      unknownExposurePct: totalAssetUsd > 0 ? (unknownExposureUsd / totalAssetUsd) * 100 : 0,
+      unknownExposurePct,
       ...buildRedemptionSnapshotMetadata({
         capacityUsd: stableBucketUsd,
-        ...(Number.isFinite(supplyUsd) && supplyUsd > 0 ? { capacityRatioOfSupply: stableBucketUsd / supplyUsd } : {}),
+        capacityRatioOfSupply: stableBucketUsd / supplyUsd,
         capacityKind: "live-queue",
         freshnessKind: sourceTimestamp != null ? "verified-source-timestamp" : "unverified",
         ...(sourceTimestamp != null ? { sourceTimestamp } : {}),

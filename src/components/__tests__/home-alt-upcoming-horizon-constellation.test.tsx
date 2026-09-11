@@ -1,48 +1,48 @@
 // @vitest-environment jsdom
 
 import { render, screen } from "@testing-library/react";
-import { describe, expect, it } from "vitest";
-
+import { describe, expect, it, vi } from "vitest";
 import { HomeAltUpcomingHorizonConstellation } from "@/components/home-alt-upcoming-horizon-constellation";
-import { logosById } from "@/lib/logos";
-import { LAUNCH_PHASE_LABELS } from "@/lib/pre-launch";
-import { PRE_LAUNCH_STABLECOINS } from "@shared/lib/stablecoins/registry";
+import type * as HorizonConstellationLayoutModule from "@/lib/horizon-constellation-layout";
+
+const horizonFixture = vi.hoisted(() =>
+  Array.from({ length: 13 }, (_, index) => ({
+    id: `coin-${index}`, name: `Coin ${index}`, symbol: `C${index}`,
+    status: "pre-launch", launchPhase: "announced",
+    expectedLaunchDate: `2027-01-${String(index + 1).padStart(2, "0")}`,
+  })),
+);
+
+vi.mock("@/lib/horizon-constellation-layout", async (importOriginal) => ({
+  ...(await importOriginal<typeof HorizonConstellationLayoutModule>()),
+  HORIZON_PRE_LAUNCH_STABLECOINS: horizonFixture,
+}));
+
+vi.mock("@shared/lib/stablecoins/client-registry", () => ({
+  CLIENT_TRACKED_STABLECOINS: horizonFixture,
+}));
+vi.mock("@/lib/logos", () => ({ logosById: {} }));
 
 describe("HomeAltUpcomingHorizonConstellation", () => {
-
-  it("links visible coins as dots and folds ring overflow into +N tracker links", () => {
+  it("represents thirteen coins as eight dots and an exact five-coin overflow", () => {
     render(<HomeAltUpcomingHorizonConstellation />);
+    const dots = screen.getAllByRole("link").filter((link) => link.getAttribute("href")?.startsWith("/stablecoin/"));
+    expect(dots.map((link) => link.getAttribute("href"))).toEqual([
+      ...Array.from({ length: 8 }, (_, index) => `/stablecoin/coin-${index}`),
+      ...Array.from({ length: 8 }, (_, index) => `/stablecoin/coin-${index}`),
+    ]);
+    expect(screen.getAllByText("+5")).toHaveLength(1);
+    expect(screen.getByRole("link", { name: "5 more announced stablecoins" }).getAttribute("href")).toMatch(/^\/upcoming\/?$/);
+    expect(screen.getByRole("link", { name: "Open tracker" }).getAttribute("href")).toMatch(/^\/upcoming\/?$/);
+  });
 
-    expect(screen.getAllByText("On The Horizon")).toHaveLength(1);
-    expect(screen.queryByText("Nearest launches")).toBeNull();
-    expect(screen.getByRole("link", { name: /open tracker/i }).getAttribute("href")).toBe("/upcoming");
-    expect(document.querySelector(".lg\\:grid")).toBeTruthy();
-    expect(document.querySelector(".lg\\:hidden")).toBeTruthy();
-
-    // Each pre-launch coin is either its own labeled dot-link, or (when its
-    // readiness ring exceeds the dot cap) folded into a "+N" overflow link —
-    // never silently dropped.
-    let linkedCoins = 0;
-    for (const coin of PRE_LAUNCH_STABLECOINS) {
-      expect(coin.launchPhase).toBeDefined();
-      const links = screen.queryAllByLabelText(
-        `${coin.name} (${coin.symbol}) — ${LAUNCH_PHASE_LABELS[coin.launchPhase!]}`,
-        { selector: "a" },
-      );
-      if (links.length > 0) linkedCoins++;
-      if (logosById[coin.id]) {
-        for (const link of links) {
-          expect(link.querySelector("img")?.getAttribute("src")).toBeTruthy();
-        }
-      }
-    }
-    expect(linkedCoins).toBeGreaterThan(0);
-    expect(linkedCoins).toBeLessThanOrEqual(PRE_LAUNCH_STABLECOINS.length);
-
-    // Any "+N" overflow indicator links to the upcoming tracker so capped coins
-    // remain reachable.
-    for (const node of screen.queryAllByText(/^\+\d+$/)) {
-      expect(node.closest("a")?.getAttribute("href")).toContain("/upcoming");
+  it("renders nothing for an empty registry", () => {
+    const coins = horizonFixture.splice(0);
+    try {
+      const { container } = render(<HomeAltUpcomingHorizonConstellation />);
+      expect(container.firstChild).toBeNull();
+    } finally {
+      horizonFixture.push(...coins);
     }
   });
 });

@@ -1,9 +1,46 @@
 import { describe, expect, it } from "vitest";
 import { adaptSolsticeAttestation } from "../solstice-attestation";
-import { validateAdapterOutput } from "../validate";
 import { getReserveAdapter } from "../index";
+import { validateAdapterOutput } from "../validate";
+import { installAdapterNetwork, runAdapter } from "./reserve-adapter.test-support";
 
 describe("adaptSolsticeAttestation", () => {
+  it("selects the newest unsorted point and computes rather than trusts the published ratio", () => {
+    const result = adaptSolsticeAttestation({
+      res: "ok",
+      data: {
+        collateralization: 9,
+        reserves: { timeline: [
+          { ts: 1_776_000_000, reserves: 90, supply: 100 },
+          { ts: 1_778_000_000, reserves: 120, supply: 100 },
+          { ts: 1_777_000_000, reserves: 110, supply: 100 },
+        ] },
+      },
+    });
+    expect(result.metadata).toMatchObject({
+      sourceTimestamp: 1_778_000_000, totalReserveUsd: 120, supplyUsd: 100,
+      collateralizationRatio: 1.2, publishedCollateralizationRatio: 9,
+    });
+  });
+
+  it("does not reuse older reserves when the newest point is malformed", () => {
+    expect(() => adaptSolsticeAttestation({
+      res: "ok",
+      data: { reserves: { timeline: [
+        { ts: 1_776_000_000, reserves: 100, supply: 90 },
+        { ts: 1_778_000_000, supply: 100 },
+      ] } },
+    })).toThrow(/missing reserve\/supply/);
+  });
+
+  it("uses the selected point date when neither envelope nor point has a timestamp", () => {
+    const result = adaptSolsticeAttestation({
+      res: "ok",
+      data: { reserves: { timeline: [{ date: "2026-04-15", reserves: 120, supply: 100 }] } },
+    });
+    expect(result.metadata?.sourceTimestamp).toBe(Date.parse("2026-04-15") / 1000);
+  });
+
   it("maps aggregate Solstice reserve proof as a non-scoring high-risk proof slice", () => {
     const result = adaptSolsticeAttestation({
       res: "ok",
@@ -92,5 +129,170 @@ describe("adaptSolsticeAttestation", () => {
     const adapter = getReserveAdapter("solstice-attestation") ?? undefined;
     const report = validateAdapterOutput(result, { adapter });
     expect(report.valid).toBe(false);
+  });
+
+  it("accepts within the 14-day cap but degrades a proof past it", () => {
+    const sourceTimestamp = 1_788_341_462;
+    const result = adaptSolsticeAttestation({
+      res: "ok",
+      data: {
+        ts: String(sourceTimestamp * 1000),
+        reserves: { timeline: [{ reserves: 1000, supply: 900 }] },
+      },
+    });
+    const adapter = getReserveAdapter("solstice-attestation")!;
+    expect(adapter.evidenceClass).toBe("weak-live-probe");
+    const fresh = validateAdapterOutput(result, { adapter, now: sourceTimestamp + 1_209_600 });
+    const stale = validateAdapterOutput(result, { adapter, now: sourceTimestamp + 1_209_601 });
+    expect(fresh.valid).toBe(true);
+    expect(fresh.warnings).not.toContainEqual(expect.objectContaining({ code: "stale-source-data" }));
+    expect(stale.warnings).toContainEqual(expect.objectContaining({ code: "stale-source-data", effect: "degraded" }));
+  });
+
+  it("emits the attestations evidence basis from the same payload without warnings", () => {
+    const result = adaptSolsticeAttestation({
+      res: "ok",
+      data: {
+        collateralization: 1.004,
+        ts: "1788944462773",
+        attestations: {
+          sev: { addr: "0x9F6745D25E4cc6ad6A0a96F37721Fb495108F794" },
+          merkle_root: { rootHash: "GoShEX4gMDc9Y63zmyo6V51wx6uXWq7dXxfoALWSgWz2", ts: 1788968394288 },
+          snapshot: { ts: 1788967832500 },
+          zkp: {
+            liabilities: { params: JSON.stringify({ dataHash: "7CwrfdDDyytZfKucpRmXBGLb41LQwhTEjumFDyBVkhy3" }) },
+            collateral: { params: JSON.stringify({ dataHash: "DjrDyfVkAkW7KevtLuE5CbxNr2hAiFfEyAytDTUjuKe5" }) },
+          },
+        },
+        reserves: {
+          total_reserves: { value: 1000 },
+          total_supply: { value: 900 },
+          timeline: [{ ts: "1788944462773", reserves: 1000, supply: 900 }],
+        },
+      },
+    });
+    expect(result.metadata?.details).toEqual({
+      evidenceBasis: {
+        merkleRoot: "GoShEX4gMDc9Y63zmyo6V51wx6uXWq7dXxfoALWSgWz2",
+        zkpLiabilitiesHash: "7CwrfdDDyytZfKucpRmXBGLb41LQwhTEjumFDyBVkhy3",
+        zkpCollateralHash: "DjrDyfVkAkW7KevtLuE5CbxNr2hAiFfEyAytDTUjuKe5",
+        snapshotTsMs: 1_788_967_832_500,
+        sevAttestation: "0x9F6745D25E4cc6ad6A0a96F37721Fb495108F794",
+      },
+    });
+    expect(result.metadata).toMatchObject({ attestedTotalReservesUsd: 1000, attestedTotalSupplyUsd: 900 });
+    expect(result.warnings ?? []).toEqual([]);
+  });
+
+  it("degrades when headline totals diverge from the timeline beyond 0.5% and stays quiet within it", () => {
+    const mismatched = adaptSolsticeAttestation({
+      res: "ok",
+      data: {
+        reserves: {
+          total_reserves: { value: 990 },
+          total_supply: { value: 900 },
+          timeline: [{ reserves: 1000, supply: 900 }],
+        },
+      },
+    });
+    expect(mismatched.warnings).toContainEqual(expect.objectContaining({
+      code: "solstice-timeline-total-mismatch",
+      severity: "warning",
+      effect: "degraded",
+    }));
+    const quiet = adaptSolsticeAttestation({
+      res: "ok",
+      data: {
+        reserves: {
+          total_reserves: { value: 996 },
+          total_supply: { value: 900 },
+          timeline: [{ reserves: 1000, supply: 900 }],
+        },
+      },
+    });
+    expect(quiet.warnings).not.toContainEqual(
+      expect.objectContaining({ code: "solstice-timeline-total-mismatch" }),
+    );
+  });
+
+  it("warns info instead of failing when the attestations block is missing", () => {
+    const result = adaptSolsticeAttestation({
+      res: "ok",
+      data: {
+        reserves: {
+          total_reserves: { value: 1000 },
+          total_supply: { value: 900 },
+          timeline: [{ reserves: 1000, supply: 900 }],
+        },
+      },
+    });
+    expect(result.warnings).toContainEqual(expect.objectContaining({
+      code: "solstice-attestations-unavailable",
+      severity: "info",
+      effect: "info",
+    }));
+    expect(result.metadata?.details).not.toHaveProperty("evidenceBasis");
+    const adapter = getReserveAdapter("solstice-attestation")!;
+    expect(validateAdapterOutput(result, { adapter }).valid).toBe(true);
+  });
+
+  it("reports a partial evidence basis when proof fields are missing", () => {
+    const result = adaptSolsticeAttestation({
+      res: "ok",
+      data: {
+        ts: "1776264425730",
+        attestations: {
+          merkle_root: { rootHash: "GoShEX4gMDc9Y63zmyo6V51wx6uXWq7dXxfoALWSgWz2" },
+        },
+        reserves: { timeline: [{ ts: "1776264425730", reserves: 1000, supply: 900 }] },
+      },
+    });
+    expect(result.metadata?.details).toEqual({
+      evidenceBasis: {
+        merkleRoot: "GoShEX4gMDc9Y63zmyo6V51wx6uXWq7dXxfoALWSgWz2",
+        zkpLiabilitiesHash: null,
+        zkpCollateralHash: null,
+        snapshotTsMs: null,
+        sevAttestation: null,
+      },
+    });
+    expect(result.warnings).toContainEqual(expect.objectContaining({
+      code: "solstice-evidence-basis-partial",
+      severity: "info",
+    }));
+  });
+
+});
+
+describe("fetchSolsticeAttestationReserves", () => {
+  const url = "https://attestation-api.solstice.finance/dashboard";
+  const fixture = {
+    res: "ok",
+    data: {
+      collateralization: 1.2,
+      reserves: { timeline: [{ ts: 1_778_000_000, reserves: 120, supply: 100 }] },
+    },
+  };
+  const nowSec = 1_778_000_100;
+
+  it("fetches the attestation payload through the shared network harness", async () => {
+    const { result, network } = await runAdapter("solstice-attestation", "usx-solstice", {
+      network: installAdapterNetwork({ json: { [url]: fixture } }),
+      nowSec,
+    });
+    expect(result.metadata).toMatchObject({ totalReserveUsd: 120, supplyUsd: 100 });
+    expect(network.requests).toEqual([{ url, method: "GET" }]);
+  });
+
+  it("rejects a renamed latest timeline field instead of reusing an older point", async () => {
+    const drifted = {
+      ...fixture,
+      data: { ...fixture.data, reserves: { timeline: [{ ts: 1_778_000_000, supply: 100 }] } },
+    };
+    await expect(runAdapter("solstice-attestation", "usx-solstice", {
+      network: installAdapterNetwork({ json: { [url]: drifted } }),
+      nowSec,
+      validate: false,
+    })).rejects.toThrow("missing reserve/supply");
   });
 });

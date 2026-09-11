@@ -1,4 +1,5 @@
 import type { MockTableConfig } from "@shared/test-utils/mock-d1";
+import { hmacSha256Hex } from "./__shared/auth";
 import type { ApiKeyRow } from "../lib/api-key-core";
 import { makeApiKeyRow } from "./__shared/fixtures";
 
@@ -54,6 +55,88 @@ export function makeRequestAttributionTables(
 type ApiKeyMutationStatementOverrides = Partial<
   Pick<MockTableConfig, "runMeta" | "throwError" | "delayMs" | "allowUnused">
 >;
+type ApiKeyTestRow = ApiKeyRow & Record<string, unknown>;
+
+
+type AuthenticatedApiKeyRowOptions = Omit<Partial<ApiKeyRow>, "secret_hash"> & {
+  pepper?: string;
+  secret?: string;
+};
+
+const DEFAULT_API_KEY_SECRET = "abcdefghijklmnopqrstuvwxyzABCDEF";
+
+export async function makeAuthenticatedApiKeyRow(
+  options: AuthenticatedApiKeyRowOptions = {},
+): Promise<ApiKeyTestRow> {
+  const {
+    pepper = "pepper",
+    secret = DEFAULT_API_KEY_SECRET,
+    ...rowOverrides
+  } = options;
+  return makeApiKeyRow({
+    ...rowOverrides,
+    secret_hash: await hmacSha256Hex(pepper, secret),
+  });
+}
+
+export interface ApiKeyPrefixLookupOptions {
+  prefix?: string;
+  row?: Record<string, unknown> | null;
+}
+
+export function makeApiKeyPrefixLookup(
+  options: ApiKeyPrefixLookupOptions = {},
+): MockTableConfig {
+  const prefix = options.prefix ?? "0123456789abcdef";
+  const row = options.row ?? null;
+  return {
+    match: "FROM api_keys",
+    matchBinds: [prefix],
+    rows: row ? [row] : [],
+    first: row,
+  };
+}
+
+export function makeApiKeyPrefixLookupError(
+  prefix = "0123456789abcdef",
+  error: unknown = new Error("api key lookup unavailable"),
+): MockTableConfig {
+  return {
+    ...makeApiKeyPrefixLookup({ prefix }),
+    throwError: error,
+  };
+}
+
+export interface PreviousPepperTableOptions {
+  prefix?: string;
+  previousPepper?: string;
+  secret?: string;
+  row?: Omit<Partial<ApiKeyRow>, "secret_hash">;
+  update?: ApiKeyMutationStatementOverrides;
+}
+
+export async function makePreviousPepperTables(
+  options: PreviousPepperTableOptions = {},
+): Promise<MockTableConfig[]> {
+  const prefix = options.prefix ?? "0123456789abcdef";
+  const existingRow = await makeAuthenticatedApiKeyRow({
+    pepper: options.previousPepper ?? "old-pepper",
+    secret: options.secret,
+    key_prefix: prefix,
+    pepper_version: 1,
+    ...options.row,
+  });
+  return [
+    makeApiKeyPrefixLookup({ prefix, row: existingRow }),
+    {
+      match: "UPDATE api_keys SET secret_hash",
+      rows: [],
+      runMeta: { changes: 1 },
+      ...options.update,
+    },
+  ];
+}
+
 
 export interface ApiKeyMutationTableOptions {
   id?: number;
@@ -84,6 +167,12 @@ export function makeApiKeyMutationTables(
       matchBinds: [existingRow.id],
       first: existingRow,
       rows: [],
+    },
+    {
+      // Rotation carries a donor claim's prefix; standard keys match no claim row.
+      match: "UPDATE api_key_donor_claims",
+      rows: [],
+      runMeta: { changes: 0 },
     },
     {
       match: "UPDATE api_keys",

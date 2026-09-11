@@ -1,7 +1,7 @@
 import type { MintBurnRow } from "./types";
 
 /** Roundtrip is recognised only when sum(mint) ≈ sum(burn) within this fraction. */
-export const ROUNDTRIP_AMOUNT_TOLERANCE = 0.005; // 0.5%
+const ROUNDTRIP_AMOUNT_TOLERANCE = 0.005; // 0.5%
 
 /**
  * SQL HAVING fragment that mirrors `detectAtomicRoundtrips` for GROUP BY queries

@@ -1,6 +1,14 @@
 import { describe, expect, it } from "vitest";
 import { parsePaletteInput } from "@/lib/command-palette-verbs";
 
+function parseCompareInput(input: string) {
+  const parsed = parsePaletteInput(input);
+  if (parsed.kind !== "compare") {
+    throw new Error(`Expected compare verb for input: ${input}`);
+  }
+  return parsed;
+}
+
 describe("parsePaletteInput", () => {
   it("builds a runnable screener URL from score and taxonomy filters", () => {
     const parsed = parsePaletteInput(
@@ -52,7 +60,40 @@ describe("parsePaletteInput", () => {
       coinSymbols: ["usdt", "usdt", "nope", "usdc"],
       resolvedCoinIds: ["usdt-tether", "usdc-circle"],
       unresolved: ["nope"],
+      href: "/compare/usdt-tether-vs-usdc-circle/",
     });
+  });
+
+  it("parses X-vs-Y phrasing as the compare verb with the static pair page", () => {
+    expect(parsePaletteInput("usdt vs usdc")).toMatchObject({
+      kind: "compare",
+      coinSymbols: ["usdt", "usdc"],
+      resolvedCoinIds: ["usdt-tether", "usdc-circle"],
+      unresolved: [],
+      href: "/compare/usdt-tether-vs-usdc-circle/",
+    });
+
+    // Either order, "versus", and "vs." all resolve to the same canonical pair.
+    expect(parseCompareInput("USDC versus USDe").href).toBe("/compare/usdc-circle-vs-usde-ethena/");
+    expect(parseCompareInput("usdt vs. usdc").href).toBe("/compare/usdt-tether-vs-usdc-circle/");
+    expect(parseCompareInput("usdc vs usdt").href).toBe("/compare/usdt-tether-vs-usdc-circle/");
+
+    // Separator tolerated after the explicit verb keyword too.
+    expect(parseCompareInput("compare usdt vs usdc").resolvedCoinIds).toEqual(["usdt-tether", "usdc-circle"]);
+  });
+
+  it("falls back to the live compare URL for pairs without a static page", () => {
+    expect(parsePaletteInput("dai vs frax")).toMatchObject({
+      kind: "compare",
+      resolvedCoinIds: ["dai-makerdao", "frax-frax"],
+      href: "/compare/?coins=dai-makerdao,frax-frax",
+    });
+  });
+
+  it("keeps separator-only or single-sided input as a plain query", () => {
+    expect(parsePaletteInput("vs usdt")).toEqual({ kind: "none" });
+    expect(parsePaletteInput("usdt vs")).toEqual({ kind: "none" });
+    expect(parsePaletteInput("vs")).toEqual({ kind: "none" });
   });
 
   it("resolves pin and unpin command targets", () => {

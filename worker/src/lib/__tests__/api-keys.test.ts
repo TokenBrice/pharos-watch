@@ -2,7 +2,13 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { mockD1 } from "@shared/test-utils/mock-d1";
 import { hmacSha256Hex } from "../../test-helpers/__shared/auth";
 import { makeApiKeyRow } from "../../test-helpers/__shared/fixtures";
-import { makeApiKeyMutationTables } from "../../test-helpers/api-key-test-support";
+import {
+  makeApiKeyMutationTables,
+  makeApiKeyPrefixLookup,
+  makeApiKeyPrefixLookupError,
+  makeAuthenticatedApiKeyRow,
+  makePreviousPepperTables,
+} from "../../test-helpers/api-key-test-support";
 import {
   API_KEY_AUTH_CACHE_MAX_ENTRIES,
   API_KEY_AUTH_CACHE_TTL_MS,
@@ -23,7 +29,8 @@ import {
   rotateApiKey,
   updateApiKey,
 } from "../api-keys";
-import { getApiKeyRuntimeState, lookupApiKeyByPrefix, normalizeCreateInput } from "../api-key-core";
+import { authenticateApiKeyFromFreshCache } from "../api-key-auth";
+import { getApiKeyRuntimeState, getCachedApiKeyByPrefix, lookupApiKeyByPrefix, normalizeCreateInput } from "../api-key-core";
 
 describe("api key helpers", () => {
   beforeEach(() => {
@@ -46,30 +53,22 @@ describe("api key helpers", () => {
   it("authenticates active API keys by prefix + secret hash", async () => {
     const pepper = "pepper";
     const secret = "abcdefghijklmnopqrstuvwxyzABCDEF";
-    const secretHash = await hmacSha256Hex(pepper, secret);
     const db = mockD1(
       [
-        {
-          match: "FROM api_keys",
-          matchBinds: ["ffffffffffffffff"],
-          rows: [],
-          first: null,
-        },
-        {
-          match: "FROM api_keys",
-          matchBinds: ["0123456789abcdef"],
-          rows: [
-            makeApiKeyRow({
-              secret_hash: secretHash,
-              name: "Smoke",
-              owner_email: "ops@pharos.watch",
-              tier: "ci",
-              traffic_class: "site",
-              rate_limit_per_minute: 180,
-              expires_at: 1_800,
-            }),
-          ],
-        },
+        makeApiKeyPrefixLookup({ prefix: "ffffffffffffffff" }),
+        makeApiKeyPrefixLookup({
+          prefix: "0123456789abcdef",
+          row: await makeAuthenticatedApiKeyRow({
+            pepper,
+            secret,
+            name: "Smoke",
+            owner_email: "ops@pharos.watch",
+            tier: "ci",
+            traffic_class: "site",
+            rate_limit_per_minute: 180,
+            expires_at: 1_800,
+          }),
+        }),
       ],
       { requireMatch: true },
     );
@@ -99,23 +98,20 @@ describe("api key helpers", () => {
   it("rejects expired API keys even when the prefix and secret hash match", async () => {
     const pepper = "pepper";
     const secret = "abcdefghijklmnopqrstuvwxyzABCDEF";
-    const secretHash = await hmacSha256Hex(pepper, secret);
     const db = mockD1(
       [
-        {
-          match: "FROM api_keys",
-          matchBinds: ["0123456789abcdef"],
-          rows: [
-            makeApiKeyRow({
-              secret_hash: secretHash,
-              name: "Expired",
-              owner_email: "ops@pharos.watch",
-              tier: "ci",
-              rate_limit_per_minute: 180,
-              expires_at: 900,
-            }),
-          ],
-        },
+        makeApiKeyPrefixLookup({
+          prefix: "0123456789abcdef",
+          row: await makeAuthenticatedApiKeyRow({
+            pepper,
+            secret,
+            name: "Expired",
+            owner_email: "ops@pharos.watch",
+            tier: "ci",
+            rate_limit_per_minute: 180,
+            expires_at: 900,
+          }),
+        }),
       ],
       { requireMatch: true },
     );
@@ -229,8 +225,20 @@ describe("api key helpers", () => {
     expect(invalidTier).toBeInstanceOf(Response);
     expect((invalidTier as Response).status).toBe(400);
     await expect((invalidTier as Response).json()).resolves.toEqual({
-      error: "tier must be one of: standard, self-serve",
+      error: "tier must be one of: standard, self-serve, donor",
     });
+  });
+
+  it.each(["9".repeat(400), Infinity, "Infinity"])("rejects nonfinite expiry %s before database access", async (expiresAt) => {
+    const body = { name: "Invalid expiry", expiresAt };
+    const normalized = normalizeCreateInput(body);
+    expect(normalized).toBeInstanceOf(Response);
+    expect((normalized as Response).status).toBe(400);
+    const db = mockD1([], { requireMatch: true });
+    const created = await createApiKey(db, "pepper", body, 222);
+    expect(created).toBeInstanceOf(Response);
+    expect((created as Response).status).toBe(400);
+    expect(db.getHistory()).toEqual([]);
   });
 
   it("preserves explicit null expiry as a non-expiring exception", async () => {
@@ -508,19 +516,11 @@ describe("api key helpers", () => {
   it("does not cache misses so newly created keys authenticate immediately", async () => {
     const pepper = "pepper";
     const secret = "abcdefghijklmnopqrstuvwxyzABCDEF";
-    const secretHash = await hmacSha256Hex(pepper, secret);
     const prefix = "aabbccddeeff0011";
 
     // First call: prefix not found (miss)
     const dbMiss = mockD1(
-      [
-        {
-          match: "FROM api_keys",
-          matchBinds: [prefix],
-          rows: [],
-          first: null,
-        },
-      ],
+      [makeApiKeyPrefixLookup({ prefix })],
       { requireMatch: true },
     );
 
@@ -531,20 +531,18 @@ describe("api key helpers", () => {
     // Second call immediately after: prefix now exists (simulating key creation)
     const dbHit = mockD1(
       [
-        {
-          match: "FROM api_keys",
-          matchBinds: [prefix],
-          rows: [
-            makeApiKeyRow({
-              id: 99,
-              key_prefix: prefix,
-              secret_hash: secretHash,
-              name: "Just Created",
-              created_at: 1_000,
-              updated_at: 1_000,
-            }),
-          ],
-        },
+        makeApiKeyPrefixLookup({
+          prefix,
+          row: await makeAuthenticatedApiKeyRow({
+            pepper,
+            secret,
+            id: 99,
+            key_prefix: prefix,
+            name: "Just Created",
+            created_at: 1_000,
+            updated_at: 1_000,
+          }),
+        }),
       ],
       { requireMatch: true },
     );
@@ -561,32 +559,19 @@ describe("api key helpers", () => {
 
     const pepper = "pepper";
     const secret = "abcdefghijklmnopqrstuvwxyzABCDEF";
-    const secretHash = await hmacSha256Hex(pepper, secret);
     const prefix = "0123456789abcdef";
-    const cachedRow = makeApiKeyRow({
+    const cachedRow = await makeAuthenticatedApiKeyRow({
+      pepper,
+      secret,
       key_prefix: prefix,
-      secret_hash: secretHash,
       name: "Cached",
     });
     const dbHit = mockD1(
-      [
-        {
-          match: "FROM api_keys",
-          matchBinds: [prefix],
-          rows: [cachedRow],
-        },
-      ],
+      [makeApiKeyPrefixLookup({ prefix, row: cachedRow })],
       { requireMatch: true },
     );
     const dbUnavailable = mockD1(
-      [
-        {
-          match: "FROM api_keys",
-          matchBinds: [prefix],
-          rows: [],
-          throwError: new Error("lookup failed"),
-        },
-      ],
+      [makeApiKeyPrefixLookupError(prefix, new Error("lookup failed"))],
       { requireMatch: true },
     );
 
@@ -607,12 +592,12 @@ describe("api key helpers", () => {
 
     const pepper = "pepper";
     const secret = "abcdefghijklmnopqrstuvwxyzABCDEF";
-    const secretHash = await hmacSha256Hex(pepper, secret);
     const prefix = "1122334455667788";
-    const cachedRow = makeApiKeyRow({
+    const cachedRow = await makeAuthenticatedApiKeyRow({
+      pepper,
+      secret,
       id: 17,
       key_prefix: prefix,
-      secret_hash: secretHash,
       name: "Self Serve",
       owner_email: "builder@example.com",
       tier: "self-serve",
@@ -620,11 +605,7 @@ describe("api key helpers", () => {
     });
     const dbHit = mockD1(
       [
-        {
-          match: "FROM api_keys",
-          matchBinds: [prefix],
-          rows: [cachedRow],
-        },
+        makeApiKeyPrefixLookup({ prefix, row: cachedRow }),
         {
           match: "FROM api_key_self_serve_revocations",
           matchBinds: [prefix],
@@ -635,14 +616,85 @@ describe("api key helpers", () => {
       { requireMatch: true },
     );
     const dbUnavailable = mockD1(
-      [
-        {
-          match: "FROM api_keys",
-          matchBinds: [prefix],
-          rows: [],
-          throwError: new Error("lookup failed"),
-        },
-      ],
+      [makeApiKeyPrefixLookupError(prefix, new Error("lookup failed"))],
+      { requireMatch: true },
+    );
+
+    await expect(authenticateApiKey(dbHit, `ph_live_${prefix}_${secret}`, pepper)).resolves.toMatchObject({
+      kind: "valid",
+    });
+
+    vi.advanceTimersByTime(API_KEY_AUTH_CACHE_TTL_MS + 1);
+
+    await expect(authenticateApiKey(dbUnavailable, `ph_live_${prefix}_${secret}`, pepper)).resolves.toEqual({
+      kind: "unavailable",
+    });
+  });
+
+  it("never serves donor keys from the isolate fresh cache, even while the row is fresh", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-05-11T10:00:00.000Z"));
+
+    const pepper = "pepper";
+    const secret = "abcdefghijklmnopqrstuvwxyzABCDEF";
+    const rows = {
+      donor: await makeAuthenticatedApiKeyRow({
+        pepper,
+        secret,
+        id: 31,
+        key_prefix: "aabbccddeeff0011",
+        tier: "donor",
+        rate_limit_per_minute: 10,
+      }),
+      standard: await makeAuthenticatedApiKeyRow({
+        pepper,
+        secret,
+        id: 32,
+        key_prefix: "aabbccddeeff0022",
+        tier: "standard",
+      }),
+    };
+    for (const row of Object.values(rows)) {
+      const dbHit = mockD1(
+        [makeApiKeyPrefixLookup({ prefix: row.key_prefix, row })],
+        { requireMatch: true },
+      );
+      await expect(authenticateApiKey(dbHit, `ph_live_${row.key_prefix}_${secret}`, pepper)).resolves.toMatchObject({ kind: "valid" });
+    }
+
+    // Both rows are now cached and fresh; only the standard key may use the cache path.
+    await expect(authenticateApiKeyFromFreshCache(`ph_live_${rows.donor.key_prefix}_${secret}`, pepper)).resolves.toEqual({
+      kind: "unavailable",
+    });
+    await expect(authenticateApiKeyFromFreshCache(`ph_live_${rows.standard.key_prefix}_${secret}`, pepper)).resolves.toMatchObject({
+      kind: "valid",
+    });
+  });
+
+  it("fails closed instead of using stale cache for donor keys when D1 is unavailable", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-05-11T10:00:00.000Z"));
+
+    const pepper = "pepper";
+    const secret = "abcdefghijklmnopqrstuvwxyzABCDEF";
+    const prefix = "2233445566778899";
+    const cachedRow = await makeAuthenticatedApiKeyRow({
+      pepper,
+      secret,
+      id: 23,
+      key_prefix: prefix,
+      name: "donor 0xaa7a…7d66",
+      owner_email: null,
+      tier: "donor",
+      rate_limit_per_minute: 10,
+      expires_at: null,
+    });
+    const dbHit = mockD1(
+      [makeApiKeyPrefixLookup({ prefix, row: cachedRow })],
+      { requireMatch: true },
+    );
+    const dbUnavailable = mockD1(
+      [makeApiKeyPrefixLookupError(prefix, new Error("lookup failed"))],
       { requireMatch: true },
     );
 
@@ -661,29 +713,15 @@ describe("api key helpers", () => {
     const oldPepper = "old-pepper";
     const newPepper = "new-pepper";
     const secret = "abcdefghijklmnopqrstuvwxyzABCDEF";
-    const oldSecretHash = await hmacSha256Hex(oldPepper, secret);
     const prefix = "0123456789abcdef";
 
     const db = mockD1(
-      [
-        {
-          match: "FROM api_keys",
-          matchBinds: [prefix],
-          rows: [
-            makeApiKeyRow({
-              key_prefix: prefix,
-              secret_hash: oldSecretHash,
-              name: "Legacy",
-              pepper_version: 1,
-            }),
-          ],
-        },
-        {
-          match: "UPDATE api_keys SET secret_hash",
-          rows: [],
-          runMeta: { changes: 1 },
-        },
-      ],
+      await makePreviousPepperTables({
+        prefix,
+        previousPepper: oldPepper,
+        secret,
+        row: { name: "Legacy" },
+      }),
       { requireMatch: true },
     );
 
@@ -699,14 +737,7 @@ describe("api key helpers", () => {
 
   it("returns unavailable when API key lookup storage fails", async () => {
     const db = mockD1(
-      [
-        {
-          match: "FROM api_keys",
-          matchBinds: ["0123456789abcdef"],
-          rows: [],
-          throwError: new Error("lookup failed"),
-        },
-      ],
+      [makeApiKeyPrefixLookupError("0123456789abcdef", new Error("lookup failed"))],
       { requireMatch: true },
     );
 
@@ -719,28 +750,15 @@ describe("api key helpers", () => {
     const oldPepper = "old-pepper";
     const newPepper = "new-pepper";
     const secret = "abcdefghijklmnopqrstuvwxyzABCDEF";
-    const oldSecretHash = await hmacSha256Hex(oldPepper, secret);
     const prefix = "0123456789abcdef";
     const db = mockD1(
-      [
-        {
-          match: "FROM api_keys",
-          matchBinds: [prefix],
-          rows: [
-            makeApiKeyRow({
-              key_prefix: prefix,
-              secret_hash: oldSecretHash,
-              name: "Legacy",
-              pepper_version: 1,
-            }),
-          ],
-        },
-        {
-          match: "UPDATE api_keys SET secret_hash",
-          rows: [],
-          throwError: new Error("rehash failed"),
-        },
-      ],
+      await makePreviousPepperTables({
+        prefix,
+        previousPepper: oldPepper,
+        secret,
+        row: { name: "Legacy" },
+        update: { throwError: new Error("rehash failed") },
+      }),
       { requireMatch: true },
     );
 
@@ -805,32 +823,55 @@ describe("api key helpers", () => {
   });
 
   it("caps the isolate-local API key auth cache", async () => {
-    const secretHash = await hmacSha256Hex("pepper", "abcdefghijklmnopqrstuvwxyzABCDEF");
+    vi.useFakeTimers();
+    vi.setSystemTime(1_800_000_000_000);
+    const row = await makeAuthenticatedApiKeyRow({
+      pepper: "pepper",
+      name: "Cached",
+    });
     const db = mockD1([
-      {
-        match: "FROM api_keys",
-        rows: [
-          makeApiKeyRow({
-            secret_hash: secretHash,
-            name: "Cached",
-          }),
-        ],
-      },
+      makeApiKeyPrefixLookup({ prefix: "new-0", row }),
+      makeApiKeyPrefixLookup({ prefix: "new-1", row }),
+      makeApiKeyPrefixLookup({ prefix: "new-2", row }),
     ], { requireMatch: true });
 
-    for (let i = 0; i < API_KEY_AUTH_CACHE_MAX_ENTRIES + 5; i++) {
-      await lookupApiKeyByPrefix(db, i.toString(16).padStart(16, "0"));
+    const state = getApiKeyRuntimeState();
+    for (let i = 0; i < API_KEY_AUTH_CACHE_MAX_ENTRIES - 1; i++) {
+      state.apiKeyCache.set(`seed-${i}`, { row, freshUntilMs: Date.now() + API_KEY_AUTH_CACHE_TTL_MS });
     }
+    for (let i = 0; i < 3; i++) await lookupApiKeyByPrefix(db, `new-${i}`);
+    expect(state.apiKeyCache.size).toBe(API_KEY_AUTH_CACHE_MAX_ENTRIES);
+    expect(getCachedApiKeyByPrefix("seed-0")).toBeNull();
+    expect(getCachedApiKeyByPrefix("new-2")?.name).toBe("Cached");
+  });
 
-    expect(getApiKeyRuntimeState().apiKeyCache.size).toBe(API_KEY_AUTH_CACHE_MAX_ENTRIES);
+  it("expires cached authentication exactly at its TTL", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(1_800_000_000_000);
+    const db = mockD1([
+      makeApiKeyPrefixLookup({
+        prefix: "ttl",
+        row: makeApiKeyRow({ name: "TTL key" }),
+      }),
+    ]);
+    await lookupApiKeyByPrefix(db, "ttl");
+    vi.advanceTimersByTime(API_KEY_AUTH_CACHE_TTL_MS - 1);
+    expect(getCachedApiKeyByPrefix("ttl")?.name).toBe("TTL key");
+    vi.advanceTimersByTime(1);
+    expect(getCachedApiKeyByPrefix("ttl")).toBeNull();
   });
 
   it("caps isolate-local fallback rate-limit buckets", () => {
-    for (let i = 0; i < API_KEY_LOCAL_RATE_LIMIT_MAX_ENTRIES + 5; i++) {
-      expect(checkIsolateLocalApiKeyRateLimit(i + 1, 120, 600)).toBeNull();
+    const state = getApiKeyRuntimeState();
+    for (let i = 1; i < API_KEY_LOCAL_RATE_LIMIT_MAX_ENTRIES; i++) {
+      state.apiKeyFallbackRateLimitById.set(i, { bucketStart: 600, count: 1 });
     }
-
-    expect(getApiKeyRuntimeState().apiKeyFallbackRateLimitById.size).toBe(API_KEY_LOCAL_RATE_LIMIT_MAX_ENTRIES);
+    for (let i = 0; i < 3; i++) {
+      expect(checkIsolateLocalApiKeyRateLimit(API_KEY_LOCAL_RATE_LIMIT_MAX_ENTRIES + i, 1, 600)).toBeNull();
+    }
+    expect(state.apiKeyFallbackRateLimitById.size).toBe(API_KEY_LOCAL_RATE_LIMIT_MAX_ENTRIES);
+    expect(state.apiKeyFallbackRateLimitById.has(1)).toBe(false);
+    expect(checkIsolateLocalApiKeyRateLimit(API_KEY_LOCAL_RATE_LIMIT_MAX_ENTRIES + 2, 1, 600)?.status).toBe(429);
   });
 
   it("caps isolate-local last-used throttling state", async () => {
@@ -842,7 +883,11 @@ describe("api key helpers", () => {
       },
     ], { requireMatch: true });
 
-    for (let i = 0; i < API_KEY_USAGE_UPDATE_CACHE_MAX_ENTRIES + 5; i++) {
+    const state = getApiKeyRuntimeState();
+    for (let i = 1; i < API_KEY_USAGE_UPDATE_CACHE_MAX_ENTRIES; i++) {
+      state.apiKeyLastUsageUpdateById.set(i, 1_000);
+    }
+    for (let i = API_KEY_USAGE_UPDATE_CACHE_MAX_ENTRIES; i < API_KEY_USAGE_UPDATE_CACHE_MAX_ENTRIES + 3; i++) {
       await recordApiKeyUsage(
         db,
         {
@@ -862,6 +907,8 @@ describe("api key helpers", () => {
     }
 
     expect(getApiKeyRuntimeState().apiKeyLastUsageUpdateById.size).toBe(API_KEY_USAGE_UPDATE_CACHE_MAX_ENTRIES);
+    expect(state.apiKeyLastUsageUpdateById.has(1)).toBe(false);
+    expect(state.apiKeyLastUsageUpdateById.has(API_KEY_USAGE_UPDATE_CACHE_MAX_ENTRIES + 3)).toBe(true);
   });
 
   it("records an audit log entry when creating a key", async () => {

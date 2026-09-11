@@ -1,6 +1,6 @@
 import type { ReportCardsV9CurrentResponse } from "@shared/types/report-cards-v9";
-import { beforeEach, describe, expect, it, vi } from "vitest";
-import { createLatestSchemaSqlite } from "../../test-helpers/latest-schema-sqlite";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
 import { makeReportCardsV9Response } from "../../test-helpers/report-cards-v9";
 
 /**
@@ -41,13 +41,16 @@ function heldSnapshot(): ReportCardsV9CurrentResponse {
   });
 }
 
+const fixtures = createLatestSchemaFixtureTracker();
+afterEach(() => fixtures.closeAll());
+
 describe("active Safety Score source", () => {
   beforeEach(() => {
     mocks.snapshotOverride = null;
   });
 
   it("fails closed without falling back to V8", async () => {
-    const { sqlite, db } = createLatestSchemaSqlite();
+    const { db } = fixtures.open();
 
     await expect(loadActiveSafetyScoreSource(db)).resolves.toEqual({
       kind: "error",
@@ -55,7 +58,6 @@ describe("active Safety Score source", () => {
       snapshot: null,
       detail: "Canonical Safety Score V9 publication is unavailable",
     });
-    sqlite.close();
   });
 
   it("projects the canonical active V9 snapshot", async () => {

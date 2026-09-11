@@ -180,19 +180,30 @@ vi.mock("@/components/exploit-notice-banner", () => createNoopComponentMock("Exp
 
 vi.mock("@/components/stablecoin-detail/contagion-snapshot", () => createContagionSnapshotMock());
 
+// Viewport queues belong to every detail scenario, including isolated frozen cases.
+beforeEach(() => {
+  lazyViewportValues.length = 0;
+  nearViewportValues.length = 0;
+  useNearViewportMock.mockReset();
+  useNearViewportMock.mockImplementation((rootMargin?: string) => {
+    const queue = rootMargin === "600px" ? nearViewportValues : lazyViewportValues;
+    const near = useRef(queue.shift() ?? true).current;
+    return { ref: { current: null }, near };
+  });
+});
+
+function renderDetail(coin = TRACKED_META_BY_ID.get("usds-sky")!) {
+  return render(
+    <StablecoinDetailClient id={coin.id} coin={coin} summary={null} staticCoin={buildStablecoinStaticMeta(coin)} />,
+  );
+}
+
+function makeAbsentPriceCoinData() {
+  return { ...makeReadyViewModel().coinData, price: null };
+}
+
 describe("StablecoinDetailClient", () => {
   beforeEach(() => {
-    lazyViewportValues.length = 0;
-    nearViewportValues.length = 0;
-    useNearViewportMock.mockReset();
-    useNearViewportMock.mockImplementation((rootMargin?: string) => {
-      const queue = rootMargin === "600px" ? nearViewportValues : lazyViewportValues;
-      const near = useRef(queue.shift() ?? true).current;
-      return {
-        ref: { current: null },
-        near,
-      };
-    });
     useStablecoinDetailViewModelMock.mockReset();
     useStablecoinDetailViewModelMock.mockReturnValue(makeReadyViewModel());
     longformScrollspyNavMock.mockClear();
@@ -221,73 +232,20 @@ describe("StablecoinDetailClient", () => {
     expect(container.textContent).toContain("Loading research dossier");
   });
 
-  it("loads hero metrics and near-viewport sections without requiring interaction", () => {
-    const coin = TRACKED_META_BY_ID.get("usds-sky")!;
-    nearViewportValues.push(false, true, false);
-
-    render(
-      <StablecoinDetailClient id={coin.id} coin={coin} summary={null} staticCoin={buildStablecoinStaticMeta(coin)} />,
-    );
-
-    expect(useStablecoinDetailViewModelMock).toHaveBeenCalledWith(
-      expect.objectContaining({
-        supplementalQueryControls: {
-          liquidity: true,
-          reportCards: true,
-          redemption: true,
-          yield: true,
-          stress: true,
-          flows: true,
-          blacklist: true,
-          reserves: false,
-        },
-      }),
-    );
-  });
-
-  it("arms the flows query when only the overview zone is near", () => {
-    const coin = TRACKED_META_BY_ID.get("usds-sky")!;
-    nearViewportValues.push(true, false, false);
-
-    render(
-      <StablecoinDetailClient id={coin.id} coin={coin} summary={null} staticCoin={buildStablecoinStaticMeta(coin)} />,
-    );
-
-    expect(useStablecoinDetailViewModelMock).toHaveBeenCalledWith(
-      expect.objectContaining({
-        supplementalQueryControls: {
-          liquidity: true,
-          reportCards: true,
-          redemption: true,
-          yield: true,
-          stress: true,
-          flows: true,
-          blacklist: false,
-          reserves: true,
-        },
-      }),
-    );
-  });
-
-  it("keeps hero metric queries eager while offscreen-only lanes remain disabled", () => {
-    const coin = TRACKED_META_BY_ID.get("usds-sky")!;
-    nearViewportValues.push(false, false, false);
-
-    render(
-      <StablecoinDetailClient id={coin.id} coin={coin} summary={null} staticCoin={buildStablecoinStaticMeta(coin)} />,
-    );
-
-    expect(useStablecoinDetailViewModelMock).toHaveBeenCalledWith(
-      expect.objectContaining({
-        supplementalQueryControls: {
-          ...DISABLED_DETAIL_QUERY_CONTROLS,
-          liquidity: true,
-          reportCards: true,
-          yield: true,
-          stress: true,
-        },
-      }),
-    );
+  it.each([
+    { name: "activity near", near: [false, true, false], redemption: true, flows: true, blacklist: true, reserves: false },
+    { name: "overview near", near: [true, false, false], redemption: true, flows: true, blacklist: false, reserves: true },
+    { name: "all lanes offscreen", near: [false, false, false], redemption: false, flows: false, blacklist: false, reserves: false },
+  ])("keeps hero queries eager with $name", ({ near, redemption, flows, blacklist, reserves }) => {
+    nearViewportValues.push(...near);
+    renderDetail();
+    expect(useStablecoinDetailViewModelMock).toHaveBeenCalledWith(expect.objectContaining({
+      supplementalQueryControls: {
+        ...DISABLED_DETAIL_QUERY_CONTROLS,
+        liquidity: true, reportCards: true, yield: true, stress: true,
+        redemption, flows, blacklist, reserves,
+      },
+    }));
   });
 
   it("keeps flows and blacklist children behind their own lazy gates", () => {
@@ -311,9 +269,7 @@ describe("StablecoinDetailClient", () => {
       }),
     );
 
-    render(
-      <StablecoinDetailClient id={coin.id} coin={coin} summary={null} staticCoin={buildStablecoinStaticMeta(coin)} />,
-    );
+    renderDetail(coin);
 
     expect(screen.queryByTestId("flows-section")).toBeNull();
     expect(screen.queryByTestId("blacklist-section")).toBeNull();
@@ -323,9 +279,7 @@ describe("StablecoinDetailClient", () => {
 
   it("renders the parent variants card outside the overview section", () => {
     const coin = TRACKED_META_BY_ID.get("usds-sky")!;
-    const { container } = render(
-      <StablecoinDetailClient id={coin.id} coin={coin} summary={null} staticCoin={buildStablecoinStaticMeta(coin)} />,
-    );
+    const { container } = renderDetail(coin);
 
     const overviewSections = container.querySelectorAll("#overview");
     expect(overviewSections).toHaveLength(1);
@@ -337,9 +291,7 @@ describe("StablecoinDetailClient", () => {
 
   it("uses one full-width sticky banner scrollspy so desktop sections keep the full content width", () => {
     const coin = TRACKED_META_BY_ID.get("usds-sky")!;
-    const { container } = render(
-      <StablecoinDetailClient id={coin.id} coin={coin} summary={null} staticCoin={buildStablecoinStaticMeta(coin)} />,
-    );
+    const { container } = renderDetail(coin);
 
     const scrollspyNavs = screen.getAllByTestId("scrollspy");
     expect(scrollspyNavs).toHaveLength(1);
@@ -356,9 +308,7 @@ describe("StablecoinDetailClient", () => {
 
   it("renders the xl summary rail as normal-flow content with in-flow copies owning the deep-link anchors", () => {
     const coin = TRACKED_META_BY_ID.get("usds-sky")!;
-    const { container } = render(
-      <StablecoinDetailClient id={coin.id} coin={coin} summary={null} staticCoin={buildStablecoinStaticMeta(coin)} />,
-    );
+    const { container } = renderDetail(coin);
 
     const rail = container.querySelector('aside[aria-label="Coin summary rail"]');
     expect(rail).toBeTruthy();
@@ -391,9 +341,7 @@ describe("StablecoinDetailClient", () => {
       }),
     );
 
-    const { container } = render(
-      <StablecoinDetailClient id={coin.id} coin={coin} summary={null} staticCoin={buildStablecoinStaticMeta(coin)} />,
-    );
+    const { container } = renderDetail(coin);
 
     const reservePanel = await screen.findByTestId("reserve-panel");
     const reportCardAnchor = container.querySelector("#report-card");
@@ -424,9 +372,7 @@ describe("StablecoinDetailClient", () => {
       }),
     );
 
-    render(
-      <StablecoinDetailClient id={coin.id} coin={coin} summary={null} staticCoin={buildStablecoinStaticMeta(coin)} />,
-    );
+    renderDetail(coin);
 
     const reportCardElement = await screen.findByTestId("report-card");
     const reservePanel = await screen.findByTestId("reserve-panel");
@@ -449,9 +395,7 @@ describe("StablecoinDetailClient", () => {
       }),
     );
 
-    render(
-      <StablecoinDetailClient id={coin.id} coin={coin} summary={null} staticCoin={buildStablecoinStaticMeta(coin)} />,
-    );
+    renderDetail(coin);
 
     const reportCardElement = await screen.findByTestId("report-card");
     const reservePanel = await screen.findByTestId("reserve-panel");
@@ -487,9 +431,7 @@ describe("StablecoinDetailClient", () => {
       }),
     );
 
-    const { container } = render(
-      <StablecoinDetailClient id={coin.id} coin={coin} summary={null} staticCoin={buildStablecoinStaticMeta(coin)} />,
-    );
+    const { container } = renderDetail(coin);
 
     const overviewSections = container.querySelectorAll("#overview");
     expect(overviewSections).toHaveLength(1);
@@ -506,9 +448,7 @@ describe("StablecoinDetailClient", () => {
       }),
     );
 
-    const { container } = render(
-      <StablecoinDetailClient id={coin.id} coin={coin} summary={null} staticCoin={buildStablecoinStaticMeta(coin)} />,
-    );
+    const { container } = renderDetail(coin);
 
     expect(container.querySelector("#chart")).toBeNull();
     expect(screen.getAllByTestId("dynamic-detail-section").length).toBeGreaterThan(0);
@@ -549,9 +489,7 @@ describe("StablecoinDetailClient", () => {
     const coin = TRACKED_META_BY_ID.get("usds-sky")!;
     useStablecoinDetailViewModelMock.mockReturnValue(makeReadyViewModel());
 
-    const { container } = render(
-      <StablecoinDetailClient id={coin.id} coin={coin} summary={null} staticCoin={buildStablecoinStaticMeta(coin)} />,
-    );
+    const { container } = renderDetail(coin);
 
     const banner = container.querySelector("#liquidity");
     const chart = container.querySelector("#chart");
@@ -620,9 +558,7 @@ describe("StablecoinDetailClient", () => {
       }),
     );
 
-    render(
-      <StablecoinDetailClient id={coin.id} coin={coin} summary={null} staticCoin={buildStablecoinStaticMeta(coin)} />,
-    );
+    renderDetail(coin);
 
     // Two instances render (liquidity zone + xl right rail); the in-flow
     // liquidity copy is the one wrapped in the #price section.
@@ -644,9 +580,7 @@ describe("StablecoinDetailClient", () => {
       }),
     );
 
-    render(
-      <StablecoinDetailClient id={coin.id} coin={coin} summary={null} staticCoin={buildStablecoinStaticMeta(coin)} />,
-    );
+    renderDetail(coin);
 
     expect(screen.getAllByTestId("price-transparency-card").length).toBeGreaterThan(0);
     expect(screen.queryByTestId("redemption-backstop-card")).toBeNull();
@@ -656,19 +590,7 @@ describe("StablecoinDetailClient", () => {
     const coin = TRACKED_META_BY_ID.get("usds-sky")!;
     useStablecoinDetailViewModelMock.mockReturnValue(
       makeReadyViewModel({
-        coinData: {
-          id: coin.id,
-          name: coin.name,
-          symbol: coin.symbol,
-          pegType: "peggedUSD",
-          price: null,
-          circulating: { peggedUSD: 100 },
-          circulatingPrevDay: { peggedUSD: 99 },
-          circulatingPrevWeek: { peggedUSD: 98 },
-          circulatingPrevMonth: { peggedUSD: 97 },
-          chainCirculating: {},
-          chains: ["ethereum"],
-        },
+        coinData: makeAbsentPriceCoinData(),
         dexPriceCheck: null,
         redemptionBackstop: {
           stablecoinId: coin.id,
@@ -676,9 +598,7 @@ describe("StablecoinDetailClient", () => {
       }),
     );
 
-    const { container } = render(
-      <StablecoinDetailClient id={coin.id} coin={coin} summary={null} staticCoin={buildStablecoinStaticMeta(coin)} />,
-    );
+    const { container } = renderDetail(coin);
 
     expect(screen.queryByTestId("price-transparency-card")).toBeNull();
     const redemptionCard = screen.getByTestId("redemption-backstop-card");
@@ -690,27 +610,13 @@ describe("StablecoinDetailClient", () => {
     const coin = TRACKED_META_BY_ID.get("usds-sky")!;
     useStablecoinDetailViewModelMock.mockReturnValue(
       makeReadyViewModel({
-        coinData: {
-          id: coin.id,
-          name: coin.name,
-          symbol: coin.symbol,
-          pegType: "peggedUSD",
-          price: null,
-          circulating: { peggedUSD: 100 },
-          circulatingPrevDay: { peggedUSD: 99 },
-          circulatingPrevWeek: { peggedUSD: 98 },
-          circulatingPrevMonth: { peggedUSD: 97 },
-          chainCirculating: {},
-          chains: ["ethereum"],
-        },
+        coinData: makeAbsentPriceCoinData(),
         dexPriceCheck: null,
         redemptionBackstop: undefined,
       }),
     );
 
-    render(
-      <StablecoinDetailClient id={coin.id} coin={coin} summary={null} staticCoin={buildStablecoinStaticMeta(coin)} />,
-    );
+    renderDetail(coin);
 
     expect(screen.queryByTestId("price-transparency-card")).toBeNull();
     expect(screen.queryByTestId("redemption-backstop-card")).toBeNull();
@@ -729,7 +635,7 @@ describe("StablecoinDetailClient (frozen)", () => {
   it("renders the FrozenStateBanner alongside the hero when status === frozen", () => {
     const coin = TRACKED_META_BY_ID.get("usds-sky")!;
     useStablecoinDetailViewModelMock.mockReturnValue(makeFrozenViewModel(coin));
-    render(<StablecoinDetailClient id={coin.id} coin={coin} summary={null} staticCoin={buildStablecoinStaticMeta(coin)} />);
+    renderDetail(coin);
     expect(screen.getByRole("heading", { name: /Sunset by issuer\./ })).toBeTruthy();
     expect(screen.getByRole("link", { name: /cemetery/i })).toBeTruthy();
   });
@@ -737,7 +643,7 @@ describe("StablecoinDetailClient (frozen)", () => {
   it("renders FrozenDataNote labels above each chart section", () => {
     const coin = TRACKED_META_BY_ID.get("usds-sky")!;
     useStablecoinDetailViewModelMock.mockReturnValue(makeFrozenViewModel(coin));
-    render(<StablecoinDetailClient id={coin.id} coin={coin} summary={null} staticCoin={buildStablecoinStaticMeta(coin)} />);
+    renderDetail(coin);
     const notes = screen.getAllByText(/no longer collects new metrics/i);
     // Market chart, Distribution, Liquidity, History — non-flow / non-blacklist
     // sections render unconditionally for this fixture.
@@ -754,7 +660,7 @@ describe("StablecoinDetailClient (frozen)", () => {
         updatedAt: "2026-04-01",
       },
     });
-    render(<StablecoinDetailClient id={coin.id} coin={coin} summary={null} staticCoin={buildStablecoinStaticMeta(coin)} />);
+    renderDetail(coin);
 
     const banner = screen.getByRole("heading", { name: /Sunset by issuer\./ });
     const summary = screen.getByTestId("ai-summary");

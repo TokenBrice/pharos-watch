@@ -109,7 +109,9 @@ describe("dex discovery deployment-window rotation", () => {
     expect(runsPerRotation).toBeGreaterThan(1);
 
     const runWindows: string[][] = [];
-    for (let run = 0; run < runsPerRotation; run++) {
+    // Greedy windows leave packing slack at each budget boundary, so landing
+    // the last slice can take one run beyond the raw cost quotient.
+    for (let run = 0; run < runsPerRotation + 1; run++) {
       const result = await syncDexDiscovery(db, null);
       expect(result.status).toBe("ok");
       runWindows.push(lastCrawlWindow());

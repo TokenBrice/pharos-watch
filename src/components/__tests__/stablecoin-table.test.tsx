@@ -8,7 +8,7 @@ import { ALL_COLUMNS } from "@/lib/column-visibility";
 import { cleanupFrontendTest, installMatchMediaMock, resetBrowserStorage } from "@/test-utils/frontend";
 import { buildV9SafetyTableMap } from "@/lib/safety-score-v9-consumers";
 import { makeReportCardsV9Response, makeV9Card } from "@/test/fixtures/safety-score-v9";
-import type { StablecoinData } from "@shared/types";
+import { makeStablecoin } from "@shared/test-utils/stablecoin";
 
 const push = vi.fn();
 const { scrollToIndexMock, virtualItemsMock, virtualTotalSizeMock } = vi.hoisted(() => ({
@@ -45,7 +45,7 @@ vi.mock("@/hooks/use-prefetch-stablecoin", () => ({
   usePrefetchStablecoin: () => vi.fn(),
 }));
 
-const coin = {
+const coin = makeStablecoin({
   id: "usdt-tether",
   name: "Tether",
   symbol: "USDT",
@@ -57,39 +57,39 @@ const coin = {
   circulatingPrevMonth: { peggedUSD: 97_000_000 },
   chainCirculating: {},
   chains: ["Ethereum"],
-} as unknown as StablecoinData;
+});
 
-const usdc = {
+const usdc = makeStablecoin({
   ...coin,
   id: "usdc-circle",
   name: "USD Coin",
   symbol: "USDC",
   circulating: { peggedUSD: 50_000_000 },
-} as unknown as StablecoinData;
+});
 
-const susds = {
+const susds = makeStablecoin({
   ...coin,
   id: "susds-sky",
   name: "Sky Savings USDS",
   symbol: "sUSDS",
   circulating: { peggedUSD: 75_000_000 },
-} as unknown as StablecoinData;
+});
 
-const dai = {
+const dai = makeStablecoin({
   ...coin,
   id: "dai-makerdao",
   name: "Dai",
   symbol: "DAI",
   circulating: { peggedUSD: 90_000_000 },
-} as unknown as StablecoinData;
+});
 
-const lisusd = {
+const lisusd = makeStablecoin({
   ...coin,
   id: "lisusd-lista",
   name: "Lista USD",
   symbol: "LISUSD",
   circulating: { peggedUSD: 75_000_000 },
-} as unknown as StablecoinData;
+});
 
 const reportCardsResponse = makeReportCardsV9Response({
   cards: [

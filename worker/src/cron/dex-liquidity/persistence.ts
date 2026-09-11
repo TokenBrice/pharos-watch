@@ -343,8 +343,8 @@ interface HistoricalSnapshotRow {
   exit_route_summary_json: string | null;
 }
 
-/** @internal Exported for focused prospective-history tests. */
-export function buildDexExitRouteHistoryJson(scoreResult: FullScoreResult): string | null {
+/** @internal */
+function buildDexExitRouteHistoryJson(scoreResult: FullScoreResult): string | null {
   const p4aResult = scoreResult as P4aFullScoreResult;
   if (p4aResult.exitRouteObservations == null && p4aResult.exitRouteObservationCoverage == null) {
     return null;

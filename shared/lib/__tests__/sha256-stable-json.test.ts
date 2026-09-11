@@ -60,6 +60,21 @@ describe("streamed stable JSON", () => {
     );
   });
 
+  it("preserves nested punctuation and escaped Unicode across multiple flushes", () => {
+    const value = {
+      z: ["final remainder", { quoted: "\"\\\n😀\ud800" }],
+      a: Array.from({ length: 3_000 }, (_, index) => ({
+        [`key:${index}:"`]: ["é😀", "\\\"\n\t".repeat(12), { punctuation: "{},:[]" }],
+      })),
+    };
+    const canonical = stableJsonStringifyV1(value);
+    const chunks = [...stableJsonStringifyChunksV1(value)];
+    expect(canonical.length).toBeGreaterThan(2 * 65_536);
+    expect(chunks.length).toBeGreaterThan(2);
+    expect(chunks.join("")).toBe(canonical);
+    expect(sha256HexFromUtf8Chunks(stableJsonStringifyChunksV1(value))).toBe(nodeSha256(canonical));
+  });
+
   it("preserves stable JSON validation errors", () => {
     const invalid = { values: [1, undefined] };
     expect(() => stableJsonStringifyV1(invalid)).toThrow(

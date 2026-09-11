@@ -39,18 +39,25 @@ describe("PsiLighthouseScene", () => {
     const flames = container.querySelector('[data-testid="psi-scene-flames"]');
     expect(flames).toBeTruthy();
     const fills = Array.from(flames?.querySelectorAll("path") ?? []).map((p) => p.getAttribute("fill"));
+    expect(fills.length).toBeGreaterThan(0);
     expect(fills.every((f) => f === PSI_HEX_COLORS[band])).toBe(true);
   });
 
   it("beam wedge reaches farther at score 100 than at score 0", () => {
-    const low = renderScene("MELTDOWN", 0);
-    const high = renderScene("BEDROCK", 100);
+    const low = renderScene("STEADY", 0);
+    const high = renderScene("STEADY", 100);
 
     const primaryLow = low.container.querySelector<SVGPathElement>('[data-testid="psi-scene-beam-primary"]');
     const primaryHigh = high.container.querySelector<SVGPathElement>('[data-testid="psi-scene-beam-primary"]');
     expect(primaryLow?.getAttribute("d")).toBeTruthy();
     expect(primaryHigh?.getAttribute("d")).toBeTruthy();
-    expect(primaryLow?.getAttribute("d")).not.toBe(primaryHigh?.getAttribute("d"));
+    const extent = (path: SVGPathElement | null) => {
+      const coordinates = (path?.getAttribute("d")?.match(/-?\d+\.\d+|-?\d+/g) ?? []).map(Number);
+      expect(coordinates.length).toBeGreaterThan(0);
+      expect(coordinates.every(Number.isFinite)).toBe(true);
+      return Math.max(...coordinates.filter((_, index) => index % 2 === 0));
+    };
+    expect(extent(primaryHigh)).toBeGreaterThan(extent(primaryLow));
 
     // Opacity grows with score
     const lowOpacity = Number(primaryLow?.getAttribute("opacity") ?? "0");
@@ -72,10 +79,14 @@ describe("PsiLighthouseScene", () => {
     expect(highScale).toBeGreaterThan(lowScale);
   });
 
-  it("clamps out-of-range scores without crashing", () => {
-    expect(() => renderScene("STEADY", -50)).not.toThrow();
-    expect(() => renderScene("STEADY", 250)).not.toThrow();
-    expect(() => renderScene("STEADY", Number.NaN)).not.toThrow();
+  it.each([[-50, 0], [250, 100], [Number.NaN, 0]])("clamps score %s to %s geometry", (score, boundary) => {
+    const geometry = (value: number) => {
+      const { container } = renderScene("STEADY", value);
+      const beam = container.querySelector('[data-testid="psi-scene-beam-primary"]')!;
+      const flames = container.querySelector('[data-testid="psi-scene-flames"]')!;
+      return [beam.getAttribute("d"), beam.getAttribute("opacity"), flames.getAttribute("transform")];
+    };
+    expect(geometry(score)).toEqual(geometry(boundary));
   });
 
   it("falls back to neutral styling for an unknown band", () => {

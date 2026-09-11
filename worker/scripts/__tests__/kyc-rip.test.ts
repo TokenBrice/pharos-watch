@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { fetchKycRipRows, type KycRipCurrentBalanceRow } from "../lib/kyc-rip";
 
 function okPayload(data: unknown[]): Response {
@@ -12,7 +12,56 @@ const validCurrentRow = {
   frozen_balance: "12.5",
 };
 
+afterEach(() => vi.useRealTimers());
+
 describe("kyc.rip fetch validation", () => {
+  it("continues full pages with distinct offsets and retains every accepted row", async () => {
+    const rows = Array.from({ length: 1001 }, (_, i) => ({
+      ...validCurrentRow, address: `0x${(i + 1).toString(16).padStart(40, "0")}`,
+    }));
+    const fetchImpl = vi.fn()
+      .mockResolvedValueOnce(okPayload(rows.slice(0, 1000)))
+      .mockResolvedValueOnce(okPayload(rows.slice(1000)));
+    const result = await fetchKycRipRows({ mode: "current-balances", timeoutMs: 1000, minRows: 1001, fetchImpl });
+    expect(result.rows).toEqual(rows);
+    expect(fetchImpl.mock.calls.map(([url]) => new URL(url).searchParams.get("offset"))).toEqual(["0", "1000"]);
+  });
+
+  it.each([1, 2])("separates unsupported rows from the malformed tolerance of %i", async (malformedCount) => {
+    const fetchImpl = vi.fn().mockResolvedValue(okPayload([
+      validCurrentRow,
+      { ...validCurrentRow, asset: "USDC", chain: "TRON" },
+      ...Array.from({ length: malformedCount }, () => ({ ...validCurrentRow, frozen_balance: "bad" })),
+    ]));
+    const result = fetchKycRipRows({
+      mode: "current-balances", timeoutMs: 1000, minRows: 1, maxMalformedRows: 1, fetchImpl,
+    });
+    if (malformedCount === 2) {
+      await expect(result).rejects.toThrow(/2 malformed rows/);
+    } else {
+      expect(await result).toMatchObject({
+        rows: [validCurrentRow],
+        stats: { fetchedRows: 3, acceptedRows: 1, skippedUnsupportedRows: 1, malformedRows: 1 },
+      });
+    }
+  });
+
+  it("validates event transaction hashes while excluding Tron from accepted minimums", async () => {
+    const row = { address: validCurrentRow.address, asset: "USDT", chain: "ETH", tx_hash: `0x${"a".repeat(64)}` };
+    const payload = [row, { ...row, tx_hash: "0x123" }, { ...row, chain: "TRON" }];
+    const result = await fetchKycRipRows({
+      mode: "events", timeoutMs: 1000, minRows: 1, maxMalformedRows: 1,
+      fetchImpl: vi.fn().mockResolvedValue(okPayload(payload)),
+    });
+    expect(result).toMatchObject({
+      rows: [row],
+      stats: { acceptedRows: 1, malformedRows: 1, skippedUnsupportedRows: 1 },
+    });
+    await expect(fetchKycRipRows({
+      mode: "events", timeoutMs: 1000, minRows: 2, maxMalformedRows: 1,
+      fetchImpl: vi.fn().mockResolvedValue(okPayload(payload)),
+    })).rejects.toThrow(/accepted 1 rows, below minimum 2/);
+  });
   it("retries provider 5xx responses and accepts the final valid payload", async () => {
     const fetchImpl = vi.fn()
       .mockResolvedValueOnce(new Response("bad gateway", { status: 502 }))
@@ -96,6 +145,5 @@ describe("kyc.rip fetch validation", () => {
 
     await rejection;
     expect(fetchMock).toHaveBeenCalledTimes(1);
-    vi.useRealTimers();
   });
 });

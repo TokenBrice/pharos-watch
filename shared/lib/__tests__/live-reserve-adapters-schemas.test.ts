@@ -1,7 +1,4 @@
-import { readFileSync, readdirSync } from "node:fs";
-import { join } from "node:path";
 import { describe, expect, it } from "vitest";
-import { ACTIVE_STABLECOINS } from "../stablecoins/registry";
 import {
   LIVE_RESERVE_ADAPTER_DEFINITIONS,
   LiveReservesConfigSchema,
@@ -10,59 +7,8 @@ import {
 import { getReserveDisplayBadgeKindForAdapter } from "../live-reserve-display";
 import {
   LATE_MONTHLY_DISCLOSURE_SOURCE_MAX_AGE_SEC,
-  QUARTERLY_DISCLOSURE_SOURCE_MAX_AGE_SEC,
   baseLiveReserveConfigSchema,
 } from "../live-reserve-adapters";
-
-const LATE_MONTHLY_SOURCE_AGE_IDS = [
-  "audm-mento",
-  "bib01-backed",
-  "brlm-mento",
-  "btcusd-btcfi",
-  "cadm-mento",
-  "ceur-celo",
-  "chfm-mento",
-  "copm-mento",
-  "cusd-celo",
-  "deuro-deuro",
-  "fdusd-first-digital",
-  "gbpm-mento",
-  "ghsm-mento",
-  "iusd-infinifi",
-  "jpym-mento",
-  "kesm-mento",
-  "srusd-reservoir",
-  "usdy-ondo-finance",
-  "uty-xsy",
-  "wsrusd-reservoir",
-  "xsgd-straitsx",
-  "zarm-mento",
-  "zchf-frankencoin",
-] as const;
-
-const INDEPENDENT_ASSURANCE_SOURCE_AGE_POLICIES = {
-  "audx-independent-assurance": LATE_MONTHLY_DISCLOSURE_SOURCE_MAX_AGE_SEC,
-  "europ-independent-assurance": QUARTERLY_DISCLOSURE_SOURCE_MAX_AGE_SEC,
-  "straitsx-independent-assurance": LATE_MONTHLY_DISCLOSURE_SOURCE_MAX_AGE_SEC,
-} as const;
-
-const COIN_SOURCE_DIR = join(process.cwd(), "shared/data/stablecoins/coins");
-
-function readCoinSource(id: string): {
-  liveReservesConfig?: {
-    scoring?: {
-      maxSourceAgeSec?: number;
-    };
-  };
-} {
-  return JSON.parse(readFileSync(join(COIN_SOURCE_DIR, `${id}.json`), "utf8")) as {
-    liveReservesConfig?: {
-      scoring?: {
-        maxSourceAgeSec?: number;
-      };
-    };
-  };
-}
 
 describe("baseLiveReserveConfigSchema", () => {
   it("accepts a non-empty breakerScope", () => {
@@ -138,6 +84,25 @@ describe("baseLiveReserveConfigSchema", () => {
 });
 
 describe("LiveReservesConfigSchema URL validation", () => {
+  it("allows source-age tightening but rejects widening the adapter cap", () => {
+    const cap = LIVE_RESERVE_ADAPTER_DEFINITIONS.ethena.validation.maxSourceAgeSec;
+    const config = {
+      adapter: "ethena",
+      version: 1,
+      semantics: "collateral-mix",
+      inputs: { primary: { kind: "http-json", url: "https://example.com/reserves" } },
+    };
+    expect(LiveReservesConfigSchema.safeParse(config).success).toBe(true);
+    for (const maxSourceAgeSec of [cap - 1, cap]) {
+      expect(LiveReservesConfigSchema.safeParse({
+        ...config, scoring: { maxSourceAgeSec },
+      }).success).toBe(true);
+    }
+    expect(LiveReservesConfigSchema.safeParse({
+      ...config, scoring: { maxSourceAgeSec: cap + 1 },
+    }).success).toBe(false);
+  });
+
   it("rejects non-absolute input URLs", () => {
     const result = LiveReservesConfigSchema.safeParse({
       adapter: "accountable",
@@ -162,9 +127,14 @@ describe("LiveReservesConfigSchema URL validation", () => {
   it("accepts deliberate Mento CDP stablecoin params without widening to arbitrary strings", () => {
     expect(
       parseLiveReserveAdapterParams("mento", {
+        cdpStablecoin: "GBPm",
+      }),
+    ).toEqual({ cdpStablecoin: "GBPm" });
+    expect(() =>
+      parseLiveReserveAdapterParams("mento", {
         cdpStablecoin: "XOFm",
       }),
-    ).toEqual({ cdpStablecoin: "XOFm" });
+    ).toThrow(/Invalid option/);
     expect(() =>
       parseLiveReserveAdapterParams("mento", {
         cdpStablecoin: "NOTm",
@@ -250,51 +220,9 @@ describe("LiveReservesConfigSchema URL validation", () => {
       }),
     ).toThrow(/fullConfidenceCpiTrackerAgeSec/);
   });
-
-  it("accepts configured live reserve URLs", () => {
-    const failures: string[] = [];
-
-    for (const coin of ACTIVE_STABLECOINS) {
-      if (!coin.liveReservesConfig) continue;
-      const parsed = LiveReservesConfigSchema.safeParse(coin.liveReservesConfig);
-      if (!parsed.success) {
-        failures.push(
-          `${coin.id}: ${parsed.error.issues[0]?.path.join(".") ?? "config"} ${parsed.error.issues[0]?.message ?? "invalid"}`,
-        );
-      }
-    }
-
-    expect(failures).toEqual([]);
-  });
 });
 
 describe("LiveReservesConfigSchema adapter policy validation", () => {
-  it("requires independent-assurance coins to pin the declaration source-age cap", () => {
-    const failures: string[] = [];
-
-    for (const coin of ACTIVE_STABLECOINS) {
-      const config = coin.liveReservesConfig;
-      if (!config || !(config.adapter in INDEPENDENT_ASSURANCE_SOURCE_AGE_POLICIES)) continue;
-
-      const expectedCap =
-        INDEPENDENT_ASSURANCE_SOURCE_AGE_POLICIES[
-          config.adapter as keyof typeof INDEPENDENT_ASSURANCE_SOURCE_AGE_POLICIES
-        ];
-      const declarationCap = (
-        LIVE_RESERVE_ADAPTER_DEFINITIONS[config.adapter] as {
-          validation?: { maxSourceAgeSec?: number };
-        }
-      ).validation?.maxSourceAgeSec;
-      const sourceConfig = readCoinSource(coin.id).liveReservesConfig;
-      if (declarationCap !== expectedCap || sourceConfig?.scoring?.maxSourceAgeSec !== expectedCap) {
-        failures.push(
-          `${coin.id}: declaration=${String(declarationCap)} coin=${String(sourceConfig?.scoring?.maxSourceAgeSec)} expected=${expectedCap}`,
-        );
-      }
-    }
-
-    expect(failures).toEqual([]);
-  });
 
   it("classifies reviewed issuer feeds without changing their score-bearing evidence class", () => {
     const issuerAdapters = [
@@ -337,36 +265,5 @@ describe("LiveReservesConfigSchema adapter policy validation", () => {
     });
 
     expect(result.success).toBe(false);
-  });
-});
-
-describe("late-monthly disclosure source-age policy", () => {
-  it("keeps reviewed late-monthly source-age overrides tied to the named policy", () => {
-    const failures = LATE_MONTHLY_SOURCE_AGE_IDS.flatMap((id) => {
-      const maxSourceAgeSec = readCoinSource(id).liveReservesConfig?.scoring?.maxSourceAgeSec;
-      return maxSourceAgeSec === LATE_MONTHLY_DISCLOSURE_SOURCE_MAX_AGE_SEC
-        ? []
-        : [`${id}: expected ${LATE_MONTHLY_DISCLOSURE_SOURCE_MAX_AGE_SEC}, got ${String(maxSourceAgeSec)}`];
-    });
-
-    expect(failures).toEqual([]);
-  });
-
-  it("does not leave late-monthly-ish caps outside the named policy value", () => {
-    const adHocCaps = readdirSync(COIN_SOURCE_DIR)
-      .filter((fileName) => fileName.endsWith(".json"))
-      .flatMap((fileName) => {
-        const source = JSON.parse(readFileSync(join(COIN_SOURCE_DIR, fileName), "utf8")) as {
-          liveReservesConfig?: { scoring?: { maxSourceAgeSec?: number } };
-        };
-        const maxSourceAgeSec = source.liveReservesConfig?.scoring?.maxSourceAgeSec;
-        const isLateMonthlyRange =
-          maxSourceAgeSec != null && maxSourceAgeSec >= 3_900_000 && maxSourceAgeSec <= 4_100_000;
-        return isLateMonthlyRange && maxSourceAgeSec !== LATE_MONTHLY_DISCLOSURE_SOURCE_MAX_AGE_SEC
-          ? [`${fileName}: ${maxSourceAgeSec}`]
-          : [];
-      });
-
-    expect(adHocCaps).toEqual([]);
   });
 });

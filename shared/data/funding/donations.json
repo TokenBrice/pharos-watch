@@ -1,5 +1,5 @@
 {
-  "last_updated_at": 1788681300,
+  "last_updated_at": 1789047370,
   "donations": [
     {
       "chain": "ethereum",
@@ -739,6 +739,42 @@
       "block_timestamp": 1785493455,
       "from_address": "0x5417b2ef14b774c3ccbfd742a6634690117616b9",
       "display": "0x5417b2...16b9",
+      "kind": "community",
+      "asset_symbol": "USDC",
+      "amount_decimal": 10,
+      "usd_at_receipt": 10,
+      "price_note": "stablecoin-1-to-1"
+    },
+    {
+      "chain": "base",
+      "tx_hash": "0xa4cc5b5d137afa130a92624e8a1073e03167c9445283b64a5580a870526ab033",
+      "block_timestamp": 1788798569,
+      "from_address": "0xaa7a9d80971e58641442774c373c94aafee87d66",
+      "display": "tokenbrice.eth",
+      "kind": "community",
+      "asset_symbol": "USDC",
+      "amount_decimal": 50,
+      "usd_at_receipt": 50,
+      "price_note": "stablecoin-1-to-1"
+    },
+    {
+      "chain": "ethereum",
+      "tx_hash": "0xfd15cd453a64cdae4a4e8f64c429aa79bbab42945b35793163f509bd727a46f4",
+      "block_timestamp": 1788944339,
+      "from_address": "0xd9ea85765d8faf064c453d060470c604a56b5005",
+      "display": "0xd9ea85...5005",
+      "kind": "community",
+      "asset_symbol": "USDC",
+      "amount_decimal": 15.108181,
+      "usd_at_receipt": 15.108181,
+      "price_note": "stablecoin-1-to-1"
+    },
+    {
+      "chain": "ethereum",
+      "tx_hash": "0x329799f39cf5ebf0d467370ccf4d2bd47f634d02944be6b2ab05f3670d9297fa",
+      "block_timestamp": 1788965279,
+      "from_address": "0xf0cf1e3ec6264b03241826f5b2abda17b4352a75",
+      "display": "0xf0cf1e...2a75",
       "kind": "community",
       "asset_symbol": "USDC",
       "amount_decimal": 10,

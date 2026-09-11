@@ -35,11 +35,16 @@ describe("core stablecoin aggregate universe", () => {
   });
 
   it("partitions every active listing into the reviewed aggregate classes", () => {
-    const classifiedCount =
-      CORE_AGGREGATE_ACTIVE_STABLECOINS.length +
-      ACTIVE_VARIANT_STABLECOINS.length +
-      ACTIVE_STABLE_VALUE_INVESTMENTS.length;
-
-    expect(classifiedCount).toBe(ACTIVE_STABLECOINS.length);
+    const partitions = [
+      CORE_AGGREGATE_ACTIVE_STABLECOINS, ACTIVE_VARIANT_STABLECOINS, ACTIVE_STABLE_VALUE_INVESTMENTS,
+    ].map((coins) => coins.map((coin) => coin.id));
+    const ids = partitions.flat();
+    expect(ids.toSorted()).toEqual(ACTIVE_STABLECOINS.map((coin) => coin.id).toSorted());
+    expect(new Set(ids).size).toBe(ids.length);
+    for (let i = 0; i < partitions.length; i++) {
+      for (const other of partitions.slice(i + 1)) {
+        expect(partitions[i].filter((id) => other.includes(id))).toEqual([]);
+      }
+    }
   });
 });

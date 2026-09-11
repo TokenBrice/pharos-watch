@@ -74,7 +74,7 @@ const PRIMARY_POOL_LOOKUPS = {
   ]),
 };
 
-describe("fetchDataSources — malformed JSON resilience", () => {
+describe("fetchDataSources — unavailable and malformed decoded sources", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     // Allow DL yields + protocols, block Curve circuit to isolate DL JSON handling
@@ -84,20 +84,21 @@ describe("fetchDataSources — malformed JSON resilience", () => {
     });
   });
 
-  it("degrades gracefully when DL yields returns invalid JSON", async () => {
+  it("returns unavailable when neither yields nor Curve can be fetched", async () => {
     vi.mocked(fetchJsonWithRetry).mockResolvedValueOnce(null)   // yields
       .mockResolvedValueOnce(null);                              // protocols
 
     const db = mockD1();
     const result = await fetchDataSources(null, db, PRIMARY_POOL_LOOKUPS);
     // Curve circuit is closed → curve payloads are all null → catastrophic check triggers → null
-    // The key assertion: no unhandled SyntaxError thrown — function ran to completion.
     expect(result).toBeNull();
     // Circuit breaker should record DL yields failure
     expect(recordOutcome).toHaveBeenCalledWith(expect.anything(), "defillama-yields", false);
   });
 
-  it("degrades gracefully when DL protocols returns invalid JSON", async () => {
+  it.each([null, { response: new Response("", { status: 200 }), body: { protocols: [] } }])(
+    "preserves usable yields when protocols is unavailable or decoded as a non-array: %j",
+    async (protocolResult) => {
     // Provide valid yields with 1000+ pools so dlYieldsAvailable = true
     const pools = Array.from({ length: 1001 }, (_, i) => ({
       pool: `pool-${i}`, chain: "Ethereum", project: `proj-${i}`, symbol: "USDC",
@@ -107,13 +108,12 @@ describe("fetchDataSources — malformed JSON resilience", () => {
       response: new Response("", { status: 200 }),
       body: { data: pools },
     })
-      .mockResolvedValueOnce(null);
+      .mockResolvedValueOnce(protocolResult);
 
     const db = mockD1();
     const result = await fetchDataSources(null, db, PRIMARY_POOL_LOOKUPS);
     // dlYieldsAvailable = true, so catastrophic check passes → returns DataSources
-    expect(result).not.toBeNull();
-    expect(result!.pools).toHaveLength(1001);
+    expect(result?.pools.map((pool) => pool.pool)).toEqual(pools.map((pool) => pool.pool));
     // Circuit breaker should record DL protocols failure
     expect(recordOutcome).toHaveBeenCalledWith(expect.anything(), "defillama-protocols", false);
   });

@@ -71,7 +71,18 @@ vi.mock("@shared/lib/dead-stablecoins", () => ({
   ],
 }));
 
-vi.mock("@shared/lib/stablecoins/registry", () => mockRegistry({ stablecoins: TRACKED_STABLECOINS_MOCK }));
+const FROZEN_STABLECOINS_MOCK = [
+  {
+    id: "dusd-fluid",
+    symbol: "DUSD",
+    name: "Fluid Dollar",
+    status: "frozen",
+    flags: { yieldBearing: false },
+    obituary: { epitaph: "Bankruptcy closed the rail \u2014 redemptions halted; holders stranded" },
+  },
+];
+
+vi.mock("@shared/lib/stablecoins/registry", () => mockRegistry({ stablecoins: TRACKED_STABLECOINS_MOCK, frozenStablecoins: FROZEN_STABLECOINS_MOCK }));
 
 vi.mock("../db-cache", () => ({
   getCache: mockGetCache,
@@ -83,6 +94,7 @@ const {
   CEMETERY_FOOTERS,
   queuePendingTrackedStablecoinAdditions,
 } = await import("../telegram/digest-appendices");
+const { scanTelegramDigestWrapper } = await import("../../cron/digest/wrapper-style-gate");
 
 describe("prepareTelegramDigestAppendices", () => {
   beforeEach(() => {
@@ -119,7 +131,7 @@ describe("prepareTelegramDigestAppendices", () => {
     expect(mockSetCache.mock.calls[2]).toEqual([
       {},
       "frozen_ids_snapshot",
-      JSON.stringify([]),
+      JSON.stringify(["dusd-fluid"]),
     ]);
 
     await prepared.commitSuccess();
@@ -194,7 +206,7 @@ describe("prepareTelegramDigestAppendices", () => {
     expect(mockSetCache.mock.calls[0]).toEqual([
       {},
       "frozen_ids_snapshot",
-      JSON.stringify([]),
+      JSON.stringify(["dusd-fluid"]),
     ]);
 
     await prepared.commitSuccess();
@@ -268,7 +280,7 @@ describe("prepareTelegramDigestAppendices", () => {
     expect(mockSetCache.mock.calls[0]).toEqual([
       {},
       "frozen_ids_snapshot",
-      JSON.stringify([]),
+      JSON.stringify(["dusd-fluid"]),
     ]);
 
     await prepared.commitSuccess();
@@ -341,7 +353,49 @@ describe("prepareTelegramDigestAppendices", () => {
     expect(mockSetCache.mock.calls[1]).toEqual([
       {},
       "frozen_ids_snapshot",
-      JSON.stringify([]),
+      JSON.stringify(["dusd-fluid"]),
     ]);
+  });
+
+  it("renders a newly frozen coin so the appendix passes the delivery-wrapper style gate", async () => {
+    mockGetCache.mockImplementation(async (_db: unknown, key: string) => {
+      if (key === "telegram:cemetery-snapshot") {
+        return {
+          value: JSON.stringify([
+            "pusd-palm-usd-2026-01",
+            "eura-angle-eura-2026-03",
+            "usda-angle-usda-2026-03",
+          ]),
+          updatedAt: 1_778_500_000,
+        };
+      }
+      if (key === "telegram:tracked-stablecoins-snapshot") {
+        return {
+          value: JSON.stringify(["usdt-tether", "usdx-example", "eurx-example"]),
+          updatedAt: 1_778_500_000,
+        };
+      }
+      if (key === "frozen_ids_snapshot") {
+        return { value: JSON.stringify([]), updatedAt: 1_778_500_000 };
+      }
+      return null;
+    });
+
+    const prepared = await prepareTelegramDigestAppendices({} as D1Database);
+
+    expect(prepared.metadata).toMatchObject({ hasAppendix: true, frozenDetected: 1, frozenSymbols: ["DUSD"] });
+    expect(prepared.appendixHtml).toContain("<code>DUSD</code> Fluid Dollar: <i>Bankruptcy closed the rail, redemptions halted; holders stranded</i>");
+    expect(
+      scanTelegramDigestWrapper({
+        rendered: `Title\n\nBody\n\n${prepared.appendixHtml}`,
+        modelTitle: "Title",
+        modelExtended: "Body",
+        cemeteryAppendixHtml: null,
+      }),
+    ).toEqual([]);
+
+    expect(mockSetCache).not.toHaveBeenCalled();
+    await prepared.commitSuccess();
+    expect(mockSetCache).toHaveBeenCalledWith({}, "frozen_ids_snapshot", JSON.stringify(["dusd-fluid"]));
   });
 });

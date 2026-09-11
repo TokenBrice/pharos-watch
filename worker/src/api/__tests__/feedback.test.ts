@@ -8,9 +8,8 @@ import {
   type MockTableConfig,
 } from "@shared/test-utils/mock-d1";
 import { stubCryptoForAuth } from "../../test-helpers/__shared/auth";
-import { createSqliteD1 } from "../../test-helpers/sqlite-d1";
 import type { FeedbackEnv } from "../feedback";
-import { createLatestSchemaSqlite } from "../../test-helpers/latest-schema-sqlite";
+import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
 import { mockFetch } from "@shared/test-utils/mock-fetch";
 
 // Stub fetch and crypto.subtle before importing the handler
@@ -44,16 +43,17 @@ vi.mock("../../lib/structured-log", () => ({
 const { handleFeedback } = await import("../feedback");
 const encoder = new TextEncoder();
 const FEEDBACK_IDEMPOTENCY_KEY = "feedback-test-key";
+const fixtures = createLatestSchemaFixtureTracker();
 
 function mockD1(tables: MockTableConfig[] = [], options: MockD1Options = {}): MockD1Database {
   const canned = createMockD1(tables, options);
-  const sqlite = createLatestSchemaSqlite().sqlite;
-  const durable = createSqliteD1(sqlite);
+  let durable: D1Database | undefined;
   const durableHistory: Array<{ sql: string; binds: unknown[] }> = [];
   return {
     ...canned,
     prepare(query: string) {
       if (!query.includes("admin_idempotency_keys")) return canned.prepare(query);
+      durable ??= fixtures.open().db;
       durableHistory.push({ sql: query, binds: [] });
       return durable.prepare(query);
     },
@@ -62,8 +62,7 @@ function mockD1(tables: MockTableConfig[] = [], options: MockD1Options = {}): Mo
 }
 
 function createDurableFeedbackDb(): { sqlite: DatabaseSync; db: D1Database } {
-  const sqlite = createLatestSchemaSqlite().sqlite;
-  return { sqlite, db: createSqliteD1(sqlite) };
+  return fixtures.open();
 }
 
 /** Build a valid feedback request body */
@@ -153,6 +152,7 @@ describe("handleFeedback", () => {
 
   afterEach(() => {
     vi.unstubAllGlobals();
+    fixtures.closeAll();
   });
 
   it("returns 400 for invalid JSON body", async () => {
@@ -422,98 +422,30 @@ describe("handleFeedback", () => {
     expect(body.ok).toBe(true);
   });
 
-  it("uses the EUR peg reference for EUR-pegged data-correction auto-verification", async () => {
+  it.each([
+    ["eurc-circle", "EURC", "peggedEUR", 1.08, 1.1, -1.818],
+    ["xaut-tether", "XAUT", "peggedGOLD", 2990, 3025, -1.157],
+  ] as const)("uses the %s peg reference for auto-verification", async (id, symbol, pegType, price, reference, deviation) => {
     const db = mockD1([
       { match: "feedback_rate_limit", rows: [], runMeta: { changes: 1 } },
-      {
-        match: "cache",
-        rows: [],
-        first: {
-          value: JSON.stringify({
-            peggedAssets: [
-              {
-                id: "eurc-circle",
-                symbol: "EURC",
-                price: 1.08,
-                pegType: "peggedEUR",
-                circulating: { peggedEUR: 5_000_000 },
-              },
-            ],
-            fxFallbackRates: {
-              peggedEUR: 1.1,
-            },
-          }),
-          updated_at: Math.floor(Date.now() / 1000) - 60,
-        },
-      },
+      { match: "cache", rows: [], first: {
+        value: JSON.stringify({
+          peggedAssets: [{ id, symbol, price, pegType, circulating: { [pegType]: 5_000_000 } }],
+          fxFallbackRates: { [pegType]: reference },
+        }),
+        updated_at: Math.floor(Date.now() / 1000) - 60,
+      } },
     ]);
-
     queueFetch(new Response(JSON.stringify({ id: 5, number: 46 }), { status: 201 }));
-
-    const res = await handleFeedback(
-      db,
-      makeRequest(
-        makeFeedbackBody({
-          type: "data-correction",
-          description: "EURC appears to be showing the wrong peg deviation.",
-          stablecoinId: "eurc-circle",
-          stablecoinName: "EURC",
-        }),
-      ),
-      makeEnv(),
-    );
-
+    const res = await handleFeedback(db, makeRequest(makeFeedbackBody({
+      type: "data-correction", stablecoinId: id, stablecoinName: symbol,
+      description: "The reported peg deviation appears incorrect.",
+    })), makeEnv());
     expect(res.status).toBe(200);
     const [, init] = fetchSpy.mock.calls[0]!;
     const issuePayload = JSON.parse(String(init?.body)) as { body: string };
-    expect(issuePayload.body).toContain("**Peg deviation:** -1.818%");
-  });
-
-  it("uses the commodity peg reference for gold-pegged auto-verification", async () => {
-    const db = mockD1([
-      { match: "feedback_rate_limit", rows: [], runMeta: { changes: 1 } },
-      {
-        match: "cache",
-        rows: [],
-        first: {
-          value: JSON.stringify({
-            peggedAssets: [
-              {
-                id: "xaut-tether",
-                symbol: "XAUT",
-                price: 2990,
-                pegType: "peggedGOLD",
-                circulating: { peggedGOLD: 8_000_000 },
-              },
-            ],
-            fxFallbackRates: {
-              peggedGOLD: 3025,
-            },
-          }),
-          updated_at: Math.floor(Date.now() / 1000) - 60,
-        },
-      },
-    ]);
-
-    queueFetch(new Response(JSON.stringify({ id: 6, number: 47 }), { status: 201 }));
-
-    const res = await handleFeedback(
-      db,
-      makeRequest(
-        makeFeedbackBody({
-          type: "data-correction",
-          description: "XAUT looks off relative to spot gold.",
-          stablecoinId: "xaut-tether",
-          stablecoinName: "Tether Gold",
-        }),
-      ),
-      makeEnv(),
-    );
-
-    expect(res.status).toBe(200);
-    const [, init] = fetchSpy.mock.calls[0]!;
-    const issuePayload = JSON.parse(String(init?.body)) as { body: string };
-    expect(issuePayload.body).toContain("**Peg deviation:** -1.157%");
+    const reported = issuePayload.body.match(/\*\*Peg deviation:\*\* (-?[\d.]+)%/);
+    expect(Number(reported?.[1])).toBe(deviation);
   });
 
   it("returns 200 and creates GitHub issue for feature-request", async () => {

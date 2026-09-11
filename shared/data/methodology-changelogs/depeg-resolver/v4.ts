@@ -2,6 +2,23 @@ import type { MethodologyChangelogEntry } from "@shared/lib/methodology-versions
 
 export const DEPEG_RESOLVER_V4: readonly MethodologyChangelogEntry[] = [
   {
+    version: "4.4",
+    title: "DDRR coverage accounting counts each incident once",
+    date: "2026-09-09",
+    effectiveAt: 1788912000,
+    summary:
+      "DDRR state-assignment and finalized-coverage shares are now counted per incident instead of summed across state and operational-cause buckets, so an incident whose assigned state also carries an operational cause is counted once. No prediction, verdict, duration, or accuracy figure changes; only the two coverage-completeness shares move.",
+    impact: [
+      "`stateAssignedPct` and `finalizedCoveragePct` group review rows by `incidentKey` and give each incident exactly one unit, however many review rows it carries, assigned from the rows' single `predictionState`; an operational cause is an overlay on that state, not a second assignment, and neither share is weighted by row count or depeg duration",
+      "Both shares are at most one by construction rather than by clamping: a data-quality gap or orphan closure attributed to a cron gap, system deferral or missed lock previously counted in both its state bucket and the missed-lock bucket, publishing an assigned share above one",
+      "An incident whose rows disagree about its state is reported as unassigned, so the shortfall stays visible instead of inflating the assigned share",
+      "Published values fall wherever the old double count applied: `finalizedCoveragePct` drops for any window where an operational cause overlapped a data-quality or orphan-closed state, and `stateAssignedPct` no longer exceeds one — it still reads below one when policy-universe incidents have no review rows or disagree about their state",
+      "Per-state counts, `missedNoPredictionCount`, `operationalMissRatePct`, prediction/no-call rates and all accuracy metrics are unchanged",
+    ],
+    commits: [],
+    reconstructed: false,
+  },
+  {
     version: "4.3",
     title: "Continuous depeg windows and reason-authoritative recovery labels",
     date: "2026-08-23",

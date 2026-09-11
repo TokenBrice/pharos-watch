@@ -1,6 +1,11 @@
 import { describe, expect, it, vi } from "vitest";
 
 import { mockFetchRetry } from "../../test-helpers/cron";
+import {
+  BOE_SONIA_COMPOUNDED_INDEX_CSV_SNIPPET,
+  CBRT_TLREF_JSON_SNIPPET,
+  TREASURY_XML_SNIPPET,
+} from "./rates-cron.test-support";
 
 vi.mock("../../lib/fetch-retry", () => mockFetchRetry({ fetchWithRetry: vi.fn(), passthroughNonResponse: true }));
 
@@ -38,17 +43,6 @@ import { parseSixSar3mcCsv } from "../tbill-sources/six";
 import { parseTreasuryYieldXml } from "../tbill-sources/treasury";
 import { parseEtherfuseCetesStablebondPage } from "../yield-sync/etherfuse-cetes";
 
-const TREASURY_XML_SNIPPET = `<QR_BC_CM><LIST_G_WEEK_OF_MONTH>
-<G_WEEK_OF_MONTH><LIST_G_NEW_DATE>
-<G_NEW_DATE><LIST_G_BC_CAT><G_BC_CAT>
-<BC_3MONTH>3.71</BC_3MONTH>
-</G_BC_CAT></LIST_G_BC_CAT><NEW_DATE>03-12-2026</NEW_DATE></G_NEW_DATE>
-<G_NEW_DATE><LIST_G_BC_CAT><G_BC_CAT>
-<BC_3MONTH>3.72</BC_3MONTH>
-</G_BC_CAT></LIST_G_BC_CAT><NEW_DATE>03-13-2026</NEW_DATE></G_NEW_DATE>
-</LIST_G_NEW_DATE></G_WEEK_OF_MONTH>
-</LIST_G_WEEK_OF_MONTH></QR_BC_CM>`;
-
 const ECB_ESTR_3M_CSV_SNIPPET = `KEY,FREQ,BENCHMARK_ITEM,DATA_TYPE_EST,TIME_PERIOD,OBS_VALUE,OBS_STATUS,CONF_STATUS,PRE_BREAK_VALUE,COMMENT_OBS,CALCUL_START_DATE,CALCUL_END_DATE,TIME_FORMAT,BREAKS,COMMENT_TS,COMPILING_ORG,COVERAGE,DATA_COMP,DECIMALS,DISS_ORG,PUBL_ECB,PUBL_MU,PUBL_PUBLIC,TIME_PER_COLLECT,TITLE,TITLE_COMPL,UNIT_INDEX_BASE,UNIT_MEASURE,UNIT_MULT
 EST.B.EU000A2QQF32.CR,B,EU000A2QQF32,CR,2026-03-25,1.93576,A,F,,,,,P1D,,,,"ESA 2010 Sectors: S.121, S.122, S.123, S.124, S.125, S.126, S.127, S.128, S.129",,5,,,,,V,"Compounded euro short-term average rate, 3 months tenor","Compounded euro short-term average rate, 3 months tenor",,PC,0
 EST.B.EU000A2QQF32.CR,B,EU000A2QQF32,CR,2026-03-26,1.9358,A,F,,,,,P1D,,,,"ESA 2010 Sectors: S.121, S.122, S.123, S.124, S.125, S.126, S.127, S.128, S.129",,5,,,,,V,"Compounded euro short-term average rate, 3 months tenor","Compounded euro short-term average rate, 3 months tenor",,PC,0
@@ -60,14 +54,6 @@ const SIX_SAR3MC_CSV_SNIPPET = `date;end_date;start_date;symbol;value;day_count;
 23.03.2026;24.03.2026;24.12.2025;SAR3MC;-0.0540;90;360
 `;
 
-const BOE_SONIA_COMPOUNDED_INDEX_CSV_SNIPPET = "DATE,IUDZOS2\n01 Jan 2026,100\n01 Apr 2026,101\n";
-const CBRT_TLREF_JSON_SNIPPET = JSON.stringify({
-  totalCount: 2,
-  items: [
-    { Tarih: "06-05-2026", TP_BISTTLREF_ORAN: "39.99" },
-    { Tarih: "06-08-2026", TP_BISTTLREF_ORAN: "40.00" },
-  ],
-});
 const ETHERFUSE_CETES_HTML = `<html><body><script id="__NEXT_DATA__" type="application/json">${JSON.stringify({
   props: {
     pageProps: {
@@ -150,6 +136,32 @@ describe("parseBoeSoniaCompoundedIndexCsv", () => {
     const result = parseBoeSoniaCompoundedIndexCsv("DATE,IUDZOS2\n01 Jan 26,100\n01 Apr 26,101\n");
     expect(result?.recordDate).toBe("2026-04-01");
     expect(result?.rate).toBeCloseTo(4.05556, 5);
+  });
+
+  it("selects the latest start on or before the cutoff from unsorted candidates", () => {
+    const result = parseBoeSoniaCompoundedIndexCsv(
+      "DATE,IUDZOS2\n01 Apr 2026,101\n30 Dec 2025,99\n02 Jan 2026,100.5\n01 Jan 2026,100\n",
+    );
+    expect(result?.recordDate).toBe("2026-04-01");
+    expect(result?.rate).toBeCloseTo(4.0555555556, 8);
+  });
+
+  it("annualizes a missing-date gap using 92 elapsed days", () => {
+    const result = parseBoeSoniaCompoundedIndexCsv("DATE,IUDZOS2\n30 Dec 2025,100\n01 Apr 2026,101\n");
+    expect(result?.recordDate).toBe("2026-04-01");
+    expect(result?.rate).toBeCloseTo(3.9673913043, 8);
+  });
+
+  it("returns null without an observation at least 90 days old", () => {
+    expect(parseBoeSoniaCompoundedIndexCsv("DATE,IUDZOS2\n02 Jan 2026,100\n01 Apr 2026,101\n")).toBeNull();
+  });
+
+  it("ignores invalid and nonpositive trailing index rows", () => {
+    const result = parseBoeSoniaCompoundedIndexCsv(
+      "DATE,IUDZOS2\n01 Jan 2026,100\n01 Apr 2026,101\n02 Apr 2026,ND\n03 Apr 2026,0\n04 Apr 2026,-1\n",
+    );
+    expect(result?.recordDate).toBe("2026-04-01");
+    expect(result?.rate).toBeCloseTo(4.0555555556, 8);
   });
 });
 

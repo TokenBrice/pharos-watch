@@ -54,7 +54,7 @@ export function withV9WmReviewedDeploymentAttribution(fixedInput: V9FixedInput) 
   if (!attribution) throw new Error("Could not derive wM supply attribution");
   return normalizeFixedInput({
     ...fixedInput,
-    safetyScoreV9SupplyAttributionById: { "wm-m0": attribution },
+    safetyScoreV9SupplyAttributionById: { ...fixedInput.safetyScoreV9SupplyAttributionById, "wm-m0": attribution },
   });
 }
 

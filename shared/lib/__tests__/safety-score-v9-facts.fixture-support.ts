@@ -229,17 +229,9 @@ export function minimalAsset(assetId: string) {
     economicControlReview: noEconomicControlReview(),
     accessReview: accessReview(),
     peg: {
-      status: knownStatus(),
-      pegKey: "peg:usd",
-      sourceGenerationId: SOURCE_FINGERPRINTS.peg.generationId,
-      referenceKind: "fiat",
-      referenceKey: "USD",
-      methodologyVersion: "fixture-peg-v1",
+      ...fixturePegFact(knownStatus(), SOURCE_FINGERPRINTS.peg.generationId),
       pegScore: 98,
       currentDeviationBps: 2,
-      activeDepeg: false,
-      activeDepegBps: null,
-      trackingSpanDays: 365,
       failureDomains: [{ kind: "oracle-feed", key: "oracle:fixture" }],
     },
     supply: {

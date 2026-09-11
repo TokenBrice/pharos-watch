@@ -28,7 +28,7 @@ Durable rules and roadmap for keeping pharos.watch trusted by browsers and free 
 | ESLint `no-restricted-syntax` (layout files) | every `npm run lint` | `<Script strategy="beforeInteractive">` and inline `<script>` JSX in any `src/app/**/layout.{ts,tsx}` |
 | `check:safe-browsing` | daily GitHub scheduled workflow + manual dispatch | live Google Safe Browsing verdict for `pharos.watch` and high-traffic URLs |
 
-The pinned Gitleaks runner (`node --import tsx scripts/ci/run-gitleaks.ts --worktree`, or `--range`) runs its configuration self-test before scanning. Solana registry exceptions match only the prefixed finding in risk-review JSON, scoped to `generic-api-key`. GitBook exceptions match only explicitly reviewed public CDN UUIDs in stablecoin/safety-score JSON, also scoped to that rule; new UUIDs require review. Both path and token predicates must match (`condition = "AND"`). Neither exception may suppress a whole source line. Self-tests require public identifiers to pass and an adjacent synthetic AWS credential on the same line to remain detectable. Historical fingerprint ignores are unchanged.
+The pinned Gitleaks runner (`node --import tsx scripts/ci/run-gitleaks.ts --worktree`, or `--range`) runs its configuration self-test before scanning. Solana registry exceptions match only the prefixed finding in risk-review JSON, scoped to `generic-api-key`. GitBook exceptions match only explicitly reviewed public CDN UUIDs in stablecoin/safety-score JSON and `data/ai-summaries.json`, also scoped to that rule; new UUIDs require review. Both path and token predicates must match (`condition = "AND"`). Neither exception may suppress a whole source line. Self-tests require public identifiers to pass and an adjacent synthetic AWS credential on the same line to remain detectable. Historical fingerprint ignores are unchanged.
 
 ## Monitoring
 
@@ -70,7 +70,7 @@ These are already in the build; documented here so they aren't accidentally regr
 - `MIT` license declaration in repo root + linked from the about page.
 - Strict CSP for non-script directives: `default-src 'self'`, `object-src 'none'`, `frame-ancestors 'none'`, `base-uri 'self'`, `form-action 'self'`.
 - Standard security headers: HSTS preload, X-Content-Type-Options nosniff, X-Frame-Options DENY, Referrer-Policy strict-origin-when-cross-origin, Permissions-Policy denying camera/mic/geo/payment/usb.
-- Email verification for API key issuance (no anonymous credential issuance).
+- No anonymous credential issuance. The self-serve email-verification path is currently closed (`SELF_SERVE_ISSUANCE_OPEN = false`; `POST /api/api-key-requests` returns 403), so keys are operator-issued apart from the donor claim, which requires a SIWE signature proving control of a wallet with a graded public donation before issuing a `donor`-tier key.
 - Open-source repository (https://github.com/TokenBrice/pharos-watch) with public commit history.
 
 ## Related docs

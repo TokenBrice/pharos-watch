@@ -1,8 +1,7 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { encodeAbiParameters } from "viem/utils";
 import type { StablecoinMeta } from "@shared/types/core";
-import type { LiveReservesConfig } from "@shared/types/live-reserves";
-import { mockFetchStrict } from "@shared/test-utils/mock-fetch";
+import { adapterCoins, expectValidAdapterOutput, installAdapterNetwork, runAdapter, type AdapterRpcCall, type AdapterRpcValue, type AdapterRpcWord } from "./reserve-adapter.test-support";
 
 const EXPECTED_HASHES: Record<string, string> = {
   "0x6000": "0x362165471d41a934b39e4b4ae9f54b35faa8835087f182881c2ba79756183ebd",
@@ -21,25 +20,6 @@ vi.mock("viem/utils", async (importOriginal) => {
   };
 });
 
-const rpc = vi.hoisted(() => ({
-  fetchEvmCallHexAtBlock: vi.fn(),
-  fetchEvmCodeAtBlock: vi.fn(),
-}));
-
-vi.mock("../../../lib/evm-rpc", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("../../../lib/evm-rpc")>();
-  return { ...actual, ...rpc };
-});
-
-import {
-  fetchEvmCallHexAtBlock,
-  fetchEvmCodeAtBlock,
-  MULTICALL3_ADDRESS,
-} from "../../../lib/evm-rpc";
-import { fetchAnzenUsdzReserves } from "../anzen-usdz";
-import { expectValidAdapterOutput } from "./reserve-adapter.test-support";
-
-const signal = new AbortController().signal;
 const ETHEREUM = "0xa469b7ee9ee773642b3e93e842e5d9b5baa10067";
 const BASE = "0x04d5ddf5f3a8939889f11e97f8c4bb48317f1938";
 const ARBITRUM = "0x5018609ab477cc502e170a5accf5312b86a4b94f";
@@ -49,6 +29,7 @@ const SPCT = "0xf30a29f1c540724fd8c5c4be1af604a6c6800d29";
 const USDC = "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48";
 const ORACLE = "0x900fff3bbf47ded50fd4940d055e1324f38b0d4f";
 const ENDPOINT = "0x1a44076050125825900e736c501f859c50fe728c";
+const LAYERZERO_METADATA_URL = "https://metadata.layerzero-api.com/v1/metadata/experiment/ofts/list?symbols=USDz";
 const WAD = 10n ** 18n;
 
 function word(value: bigint | boolean | string): `0x${string}` {
@@ -73,105 +54,152 @@ function encodeSymbol(): `0x${string}` {
   return encodeAbiParameters([{ type: "string" }], ["USDz"]);
 }
 
-function metadataResponse(): Response {
-  return new Response(JSON.stringify({
-    USDz: [{
-      sharedDecimals: 8,
-      endpointVersion: "v2",
-      deployments: {
-        ethereum: { address: ETHEREUM, localDecimals: 18, type: "OFT" },
-        base: { address: BASE, localDecimals: 18, type: "OFT" },
-      },
-    }],
-  }), { headers: { "content-type": "application/json" } });
-}
-
-function aggregateFor(chain: string, overrides: Record<number, `0x${string}`> = {}) {
-  const chainIndex = ["ethereum", "base", "arbitrum", "blast", "manta"].indexOf(chain);
-  const values: `0x${string}`[] = [
-    word(supplies[chainIndex] ?? 1n),
-    word(18n),
-    encodeSymbol(),
-    chain === "ethereum" || chain === "base" ? word(ENDPOINT) : word(0n),
-  ];
-  if (chain === "ethereum") {
-    values.push(
-      word(overrides[4] ? BigInt(overrides[4]) : pooled),
-      word(overrides[5] ?? word(SPCT)),
-      word(overrides[6] ?? word(USDC)),
-      word(overrides[7] ?? word(ORACLE)),
-      overrides[8] ?? word(false),
-      overrides[9] ?? word(WAD),
-      overrides[10] ?? word(0n),
-      overrides[11] ?? word(0n),
-      overrides[12] ?? word(100_000_000n),
-      overrides[13] ?? word(pooled),
-      overrides[14] ?? word(4_000_000_000n),
-      overrides[15] ?? word(false),
-      overrides[16] ?? word(0n),
-      overrides[17] ?? word(100_000_000n),
-      overrides[18] ?? word(true),
-      overrides[19] ?? word(4_000_000_000n),
-      overrides[20] ?? word(0n),
-      overrides[21] ?? word(WAD),
-    );
-  }
-  const encoded = encodeAbiParameters(
-    [{ type: "tuple[]", components: [{ type: "bool" }, { type: "bytes" }] }],
-    [[...values.map<[boolean, `0x${string}`]>((returnData, index) => [!(!["ethereum", "base"].includes(chain) && index === 3), returnData])]],
-  );
-  return encoded;
-}
-
-function primeRpcMocks(overrides: Record<number, `0x${string}`> = {}, codeDrift = false): void {
-  vi.mocked(fetchEvmCodeAtBlock).mockImplementation(async (chain, address) => {
-    if (chain === "ethereum" && address.toLowerCase() === SPCT) return "0x7000";
-    if (chain === "ethereum" && address.toLowerCase() === ORACLE) return "0x7001";
-    if (chain === "ethereum" && address.toLowerCase() === USDC) return "0x7002";
-    const codeIndex = ["ethereum", "base", "arbitrum", "blast", "manta"].indexOf(chain ?? "");
-    return codeDrift && chain === "blast" ? "0xdead" : `0x600${codeIndex}` as `0x${string}`;
-  });
-  vi.mocked(fetchEvmCallHexAtBlock).mockImplementation(async (chain) => aggregateFor(chain ?? "", overrides));
-}
-
-function makeCoin(): StablecoinMeta {
-  return {
-    id: "usdz-anzen",
-    name: "Anzen USDz",
-    symbol: "USDz",
-    contracts: [
-      { chain: "ethereum", address: ETHEREUM, decimals: 18 },
-      { chain: "base", address: BASE, decimals: 18 },
-      { chain: "arbitrum", address: ARBITRUM, decimals: 18 },
-      { chain: "blast", address: BLAST, decimals: 18 },
-      { chain: "manta", address: MANTA, decimals: 18 },
-    ],
-  } as unknown as StablecoinMeta;
-}
-
-const config: LiveReservesConfig = {
-  adapter: "anzen-usdz",
-  version: 2,
-  semantics: "single-asset",
-  inputs: { primary: { kind: "onchain-evm", chain: "ethereum", rpcMode: "public-rpc" } },
+const metadataPayload = {
+  USDz: [{
+    sharedDecimals: 8,
+    endpointVersion: "v2",
+    deployments: {
+      ethereum: { address: ETHEREUM, localDecimals: 18, type: "OFT" },
+      base: { address: BASE, localDecimals: 18, type: "OFT" },
+    },
+  }],
 };
 
-beforeEach(() => {
-  vi.clearAllMocks();
-  primeRpcMocks();
-  mockFetchStrict([{
-    match: "https://metadata.layerzero-api.com/v1/metadata/experiment/ofts/list?symbols=USDz",
-    respond: async () => metadataResponse(),
-  }]);
-});
+function addressArg(selector: string, address: string): string {
+  return `${selector}${address.slice(2).padStart(64, "0")}`;
+}
+
+interface AnzenNetworkOptions {
+  overrides?: Partial<Record<number, `0x${string}`>>;
+  codeDrift?: boolean;
+  dropSelector?: string;
+}
+
+function installAnzenNetwork({
+  overrides = {},
+  codeDrift = false,
+  dropSelector,
+}: AnzenNetworkOptions = {}) {
+  const chains = ["ethereum", "base", "arbitrum", "blast", "manta"] as const;
+  const contracts = [ETHEREUM, BASE, ARBITRUM, BLAST, MANTA];
+  const rpc: Record<string, AdapterRpcValue> = {};
+  const identitiesByChain = chains.map((chain, chainIndex) => {
+    const usdz = contracts[chainIndex]!;
+    const identities: Array<[string, string]> = [
+      [usdz, "0x18160ddd"],
+      [usdz, "0x313ce567"],
+      [usdz, "0x95d89b41"],
+      [usdz, "0x5e280f11"],
+    ];
+    if (chain === "ethereum") {
+      identities.push(
+        [usdz, "0x8abb1eb4"],
+        [usdz, "0x090a1cc8"],
+        [usdz, "0x3e413bee"],
+        [usdz, "0x7dc0d1d0"],
+        [usdz, "0x5c975abb"],
+        [usdz, "0x58a6be1c"],
+        [usdz, "0x295a5212"],
+        [usdz, "0x5872e6fa"],
+        [usdz, "0xf05a6b6d"],
+        [SPCT, addressArg("0x70a08231", usdz)],
+        [SPCT, "0x664692f2"],
+        [SPCT, "0x5c975abb"],
+        [SPCT, "0x5872e6fa"],
+        [SPCT, "0xf05a6b6d"],
+        [SPCT, addressArg("0xc683630d", usdz)],
+        [USDC, addressArg("0x70a08231", SPCT)],
+        [USDC, addressArg("0x70a08231", usdz)],
+        [ORACLE, "0x98d5fdca"],
+      );
+    }
+    return identities;
+  });
+  const selectors = new Set(identitiesByChain.flat().map(([, data]) => data.slice(0, 10)));
+  const valueForCall = (call: AdapterRpcCall) => {
+    const chain = call.chain;
+    if (!chain) return null;
+    const chainIndex = chains.indexOf(chain as typeof chains[number]);
+    const identities = identitiesByChain[chainIndex];
+    if (!identities) return null;
+    const index = identities.findIndex(([address, data]) =>
+      address === call.contract && data === call.data.toLowerCase());
+    if (index < 0) return null;
+    if (overrides[index] !== undefined) return overrides[index]!;
+    if (index === 3 && chainIndex !== 0 && chainIndex !== 1) return null;
+    const values: AdapterRpcWord[] = [
+      supplies[chainIndex] ?? 0n,
+      18n,
+      encodeSymbol(),
+      chainIndex === 0 || chainIndex === 1 ? ENDPOINT : null,
+    ];
+    if (chainIndex === 0) {
+      values.push(
+        pooled,
+        SPCT,
+        USDC,
+        ORACLE,
+        false,
+        WAD,
+        0n,
+        0n,
+        100_000_000n,
+        pooled,
+        4_000_000_000n,
+        false,
+        0n,
+        100_000_000n,
+        true,
+        4_000_000_000n,
+        0n,
+        WAD,
+      );
+    }
+    return values[index] ?? null;
+  };
+  for (const selector of selectors) rpc[selector] = valueForCall;
+  if (dropSelector) delete rpc[dropSelector];
+
+  const code: Record<string, string> = {};
+  for (const [chainIndex, [chain, address]] of chains.map((chain, index) => [chain, contracts[index]!] as const).entries()) {
+    code[`${chain}:${address}`] = codeDrift && chain === "blast" ? "0xdead" : `0x600${chainIndex}`;
+  }
+  code[`ethereum:${SPCT}`] = "0x7000";
+  code[`ethereum:${ORACLE}`] = "0x7001";
+  code[`ethereum:${USDC}`] = "0x7002";
+
+  return installAdapterNetwork({
+    chains: {
+      blast: "https://rpc.blast.io",
+      manta: "https://pacific-rpc.manta.network/http",
+    },
+    json: { [LAYERZERO_METADATA_URL]: metadataPayload },
+    rpc,
+    code,
+  });
+}
+
+interface AnzenRunOptions extends AnzenNetworkOptions {
+  coin?: Partial<StablecoinMeta>;
+}
+
+async function runAnzen(options: AnzenRunOptions = {}) {
+  const { coin, ...networkOptions } = options;
+  const network = installAnzenNetwork(networkOptions);
+  const { result } = await runAdapter("anzen-usdz", "usdz-anzen", {
+    network,
+    ...(coin ? { coin } : {}),
+  });
+  return { result, network };
+}
 
 afterEach(() => vi.unstubAllGlobals());
 
 describe("fetchAnzenUsdzReserves", () => {
   it("uses pooled SPCT, held SPCT, and bridge-adjusted five-chain liabilities", async () => {
-    const result = await fetchAnzenUsdzReserves(makeCoin(), config, signal);
+    const { result, network } = await runAnzen();
 
-    expect(result.slices).toEqual([{ name: "SPCT (Secured Private Credit Token)", pct: 100, risk: "high" }]);
+    expect(result.slices).toEqual([{ sourceKey: "anzen-usdz:spct", name: "SPCT (Secured Private Credit Token)", pct: 100, risk: "high", blacklistable: true }]);
     expect(result.metadata).toMatchObject({
       freshnessMode: "not-applicable",
       details: {
@@ -183,64 +211,99 @@ describe("fetchAnzenUsdzReserves", () => {
     });
     expect(result.metadata?.totalReserveUsd).toBeCloseTo(Number(pooled) / 1e18, 7);
     expect(result.metadata?.supplyUsd).toBeCloseTo(Number(liability) / 1e18, 7);
-    expect(vi.mocked(fetchEvmCodeAtBlock)).toHaveBeenCalledTimes(8);
-    expect(vi.mocked(fetchEvmCallHexAtBlock)).toHaveBeenCalledTimes(5);
-    expect(vi.mocked(fetchEvmCallHexAtBlock).mock.calls.map(([chain]) => chain)).toEqual(
+    expect(network.rpcCalls.some((call) => call.chain === "ethereum" && call.viaMulticall)).toBe(true);
+    expect(network.rpcCalls.map((call) => call.chain)).toEqual(
       expect.arrayContaining(["ethereum", "base", "arbitrum", "blast", "manta"]),
     );
-    for (const [chain, to, _data, block, options] of vi.mocked(fetchEvmCallHexAtBlock).mock.calls) {
-      expect(to).toBe(MULTICALL3_ADDRESS);
-      expect(block).toBe("latest");
-      expect(options).toMatchObject({
-        maxRetries: 0,
-        timeoutMs: 4_000,
-        extraRpcUrls: expect.arrayContaining([expect.stringMatching(/^https:\/\//)]),
-      });
-      expect(chain).toBeTypeOf("string");
-    }
-    const ethereumStateRead = vi.mocked(fetchEvmCallHexAtBlock).mock.calls.find(([chain]) => chain === "ethereum");
-    expect(ethereumStateRead?.[4]?.extraRpcUrls).toEqual([
-      "https://ethereum-rpc.publicnode.com",
-      "https://eth.drpc.org",
-    ]);
     expectValidAdapterOutput("anzen-usdz", result);
   });
 
-  it("fails closed when pooled SPCT is below liabilities, held SPCT is short, or surplus exceeds tolerance", async () => {
-    await expect(fetchAnzenUsdzReserves(makeCoin(), config, signal)).resolves.toBeTruthy();
-
-    primeRpcMocks({ 4: word(liability - 1n) });
-    await expect(fetchAnzenUsdzReserves(makeCoin(), config, signal)).rejects.toThrow("below USDz liabilities");
-
-    primeRpcMocks({ 4: word(pooled), 13: word(pooled - 1n) });
-    await expect(fetchAnzenUsdzReserves(makeCoin(), config, signal)).rejects.toThrow("held SPCT");
-
-    primeRpcMocks({ 4: word(liability + 1_001n * WAD), 13: word(liability + 1_001n * WAD) });
-    await expect(fetchAnzenUsdzReserves(makeCoin(), config, signal)).rejects.toThrow("surplus");
+  it.each([
+    { 4: word(liability - WAD) },
+    { 13: word(liability - WAD) },
+  ])("publishes pooled or held SPCT shortfalls", async (overrides) => {
+    const { result } = await runAnzen({ overrides });
+    expect(result.slices[0].pct).toBe(100);
+    expect(result.metadata?.collateralizationRatio).toBeLessThan(1);
+    expect(result.warnings).toContainEqual(expect.objectContaining({ code: "reserve-undercollateralized", effect: "degraded" }));
+    expectValidAdapterOutput("anzen-usdz", result);
   });
 
-  it("fails closed on reviewed topology, code, identity, pause, and redemption drift", async () => {
-    const coin = makeCoin();
-    coin.contracts = coin.contracts?.filter((entry) => entry.chain !== "blast");
-    await expect(fetchAnzenUsdzReserves(coin, config, signal)).rejects.toThrow("contract set");
+  it("values SPCT at its oracle price and publishes an oracle-driven shortfall", async () => {
+    const { result } = await runAnzen({ overrides: { 21: word(WAD * 9n / 10n) } });
+    expect(result.metadata?.totalReserveUsd).toBeCloseTo(Number(pooled) / 1e18 * 0.9, 7);
+    expect(result.metadata?.collateralizationRatio).toBeLessThan(1);
+    expect(result.warnings).toContainEqual(expect.objectContaining({ code: "reserve-undercollateralized", effect: "degraded" }));
+    expect(result.slices[0].blacklistable).toBe(true);
+    expectValidAdapterOutput("anzen-usdz", result);
+  });
 
-    primeRpcMocks({}, true);
-    await expect(fetchAnzenUsdzReserves(makeCoin(), config, signal)).rejects.toThrow("code hash drifted");
+  it("publishes observed surplus above the reviewed tolerance", async () => {
+    const { result } = await runAnzen({
+      overrides: { 4: word(liability + 1_001n * WAD), 13: word(liability + 1_001n * WAD) },
+    });
+    expect(result.metadata?.collateralizationRatio).toBeGreaterThan(1);
+  });
 
-    primeRpcMocks({ 5: word("0x1111111111111111111111111111111111111111") });
-    await expect(fetchAnzenUsdzReserves(makeCoin(), config, signal)).rejects.toThrow("spct() identity");
+  it("fails closed on reviewed topology, code, and identity drift", async () => {
+    const bound = adapterCoins("anzen-usdz")[0];
+    if (!bound) throw new Error("missing catalog-bound Anzen coin");
+    await expect(runAnzen({
+      coin: { contracts: bound.contracts?.filter((entry) => entry.chain !== "blast") },
+    })).rejects.toThrow("contract set");
 
-    primeRpcMocks({ 8: word(true) });
-    await expect(fetchAnzenUsdzReserves(makeCoin(), config, signal)).rejects.toThrow("paused");
+    await expect(runAnzen({ codeDrift: true })).rejects.toThrow("code hash drifted");
+    await expect(runAnzen({ overrides: { 5: word("0x1111111111111111111111111111111111111111") } })).rejects.toThrow("spct() identity");
   });
 
   it("does not call or use global SPCT totalSupply", async () => {
-    await fetchAnzenUsdzReserves(makeCoin(), config, signal);
-    for (const [chain, to, data] of vi.mocked(fetchEvmCallHexAtBlock).mock.calls) {
-      if (chain === "ethereum") {
-        expect(to).toBe(MULTICALL3_ADDRESS);
-        expect(data.toLowerCase()).toContain(SPCT.slice(2));
-      }
+    const { result, network } = await runAnzen();
+    const ethereumCalls = network.rpcCalls.filter((call) => call.chain === "ethereum");
+    expect(ethereumCalls.map((call) => [call.contract, call.selector])).not.toContainEqual([SPCT, "0x18160ddd"]);
+    expect(result.metadata?.totalReserveUsd).toBeCloseTo(Number(pooled) / 1e18, 7);
+  });
+
+  it("fails closed when the USDz totalSupply field is dropped from the RPC batch", async () => {
+    await expect(runAnzen({ dropSelector: "0x18160ddd" })).rejects.toThrow(/total-supply|unanswered/i);
+  });
+
+  it("bounds redemption by either reserve USD or combined settlement balances, including zero", async () => {
+    for (const [reserve, spct, usdz, expected] of [
+      [3_000_000n, 4_000_000n, 2_000_000n, 3],
+      [9_000_000n, 4_000_000n, 2_000_000n, 6],
+      [9_000_000n, 0n, 0n, 0],
+    ] as const) {
+      const { result } = await runAnzen({
+        overrides: { 14: word(reserve), 19: word(spct), 20: word(usdz) },
+      });
+      expect(result.metadata?.redemption?.capacityUsd).toBe(expected);
+      expect(result.metadata?.details?.redemption).toMatchObject({ routeOpen: expected > 0 });
     }
+  });
+
+  it("compounds both fees and rounds at half a basis point", async () => {
+    // 1% then 2% retains 97.02%; the small fee cases yield 100.495, 100.5, and 100.594 bps.
+    for (const [rate, coefficient, expected] of [[2_000n, 100_000n, 298], [5n, 100_000n, 100], [5n, 99_000n, 101], [6n, 100_000n, 101]] as const) {
+      const { result } = await runAnzen({
+        overrides: { 11: word(1_000n), 12: word(100_000n), 16: word(rate), 17: word(coefficient) },
+      });
+      expect(result.metadata?.redemption?.feeBps).toBe(expected);
+    }
+  });
+
+  it("rejects either invalid fee coefficient or excessive fee rate", async () => {
+    for (const overrides of [{ 12: word(0n) }, { 17: word(0n) }, { 11: word(100_000_001n) }, { 16: word(100_000_001n) }]) {
+      await expect(runAnzen({ overrides })).rejects.toThrow(/coefficient/);
+    }
+  });
+
+  it.each([{ 8: word(true) }, { 15: word(true) }, { 18: word(false) }, { 10: word(1n) }, { 21: word(WAD - 1n) }])("publishes blocked redemption routes as paused", async (overrides) => {
+    const { result } = await runAnzen({ overrides });
+    expect(result.metadata?.redemption?.routeStatus).toBe("paused");
+    expect(result.warnings).toContainEqual(expect.objectContaining({ code: "route-paused", effect: "degraded" }));
+  });
+
+  it("rejects malformed pause evidence", async () => {
+    await expect(runAnzen({ overrides: { 8: word(2n) } })).rejects.toThrow();
   });
 });

@@ -2,7 +2,7 @@ import { DatabaseSync } from "node:sqlite";
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import type { D1Database } from "@cloudflare/workers-types";
 import { describe, expect, it, vi } from "vitest";
-import { createLatestSchemaSqlite } from "../../test-helpers/latest-schema-sqlite";
+import { createLatestSchemaSqlite } from "@shared/test-utils/latest-schema-sqlite";
 import {
   productionHistoricalMintPriceSourceLoader,
   repairHistoricalMintBurnPrices,

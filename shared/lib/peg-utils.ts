@@ -11,7 +11,7 @@ export function mergeDepegSeconds(
   now: number,
 ): number {
   const intervals = events
-    .map((e) => [Math.max(e.startedAt, windowStart), e.endedAt ?? now] as [number, number])
+    .map((e) => [Math.max(e.startedAt, windowStart), Math.min(e.endedAt ?? now, now)] as [number, number])
     .filter(([s, e]) => e > s)
     .sort((a, b) => a[0] - b[0]);
 

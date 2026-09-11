@@ -2,6 +2,7 @@
   "id": "syusd-aegis",
   "reserves": [
     {
+      "sourceKey": "erc4626-single-asset:ethereum:0x4274cd7277c7bb0806bd5fe84b9adae466a8da0a",
       "name": "YUSD staking vault shares",
       "pct": 100,
       "risk": "medium",

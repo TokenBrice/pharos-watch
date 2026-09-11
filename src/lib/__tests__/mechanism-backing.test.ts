@@ -1,6 +1,22 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import mechanismReviewOverlays from "@shared/data/safety-score-v9/mechanism-review-overlays-v1.json";
 import { buildMechanismBackingView } from "../mechanism-backing";
+import * as overlayLookup from "../mechanism-overlay.server";
+
+afterEach(() => vi.restoreAllMocks());
+
+function useOverlay(overrides: Partial<overlayLookup.MechanismOverlayEntry>) {
+  vi.spyOn(overlayLookup, "getMechanismReviewOverlay").mockReturnValue({
+    assetId: "controlled",
+    archetype: "cdp",
+    reviewedAt: "2026-08-01",
+    sources: [{ label: "Reviewed evidence", url: "https://example.com/evidence" }],
+    notes: "Controlled review",
+    metrics: {},
+    components: {},
+    ...overrides,
+  });
+}
 
 interface OverlayShape {
   assetId: string;
@@ -59,13 +75,32 @@ describe("buildMechanismBackingView", () => {
     expect(note?.label).toBe("Margin buffer");
   });
 
-  it("does not expose per-dimension quality ratings", () => {
-    // Owner decision 2026-07-28: the 5-level quality scale stays internal. The
-    // rationale behind a gap is not part of that ruling; the rating word is.
-    for (const assetId of ["usde-ethena", "bold-liquity", "usdc-circle", "lusd-liquity"]) {
-      const serialized = JSON.stringify(buildMechanismBackingView(assetId));
-      expect(serialized).not.toMatch(/"quality"|strong|adequate|limited|weak|failed/);
-    }
+  it("omits internal quality fields while preserving legitimate rationale words", () => {
+    useOverlay({
+      components: {
+        custodyContinuity: { quality: "strong" },
+        branchIsolation: {
+          applicability: "unavailable",
+          rationale: "The venue failed to publish evidence.",
+          sourceUrl: "https://example.com/evidence",
+        },
+      },
+    });
+    expect(buildMechanismBackingView("controlled")).toEqual({
+      archetype: "cdp",
+      reviewedAt: "2026-08-01",
+      metrics: [],
+      protocolFacts: [],
+      notes: [{
+        key: "component:branchIsolation",
+        label: "Branch isolation",
+        state: "unavailable",
+        rationale: "The venue failed to publish evidence.",
+        sourceUrl: "https://example.com/evidence",
+      }],
+      sourceLabel: "Reviewed evidence",
+      sourceUrl: "https://example.com/evidence",
+    });
   });
 
   it("returns null when there is nothing beyond what other modules already show", () => {
@@ -97,31 +132,41 @@ describe("protocol facts", () => {
     expect(labels).toContain("Supply debt divergence");
   });
 
-  it("keeps tickers and acronyms upper-case through humanization", () => {
-    const withAcronyms = OVERLAYS.filter((overlay) =>
-      Object.keys((overlay as unknown as { analogousMetrics?: Record<string, number> }).analogousMetrics ?? {})
-        .some((key) => /Usd$|Usdc|Nav|Hl[A-Z]/.test(key)));
-    expect(withAcronyms.length).toBeGreaterThan(0);
-    for (const overlay of withAcronyms) {
-      for (const fact of buildMechanismBackingView(overlay.assetId)?.protocolFacts ?? []) {
-        // "Hl account value usd" is the failure this guards.
-        expect(fact.label).not.toMatch(/\busd\b|\bnav\b|\bhl\b/);
-      }
-    }
+  it("preserves acronyms and formats signed money, percentages, and distinct ratios", () => {
+    useOverlay({
+      analogousMetrics: {
+        hlAccountValueUsd: -9_700_000,
+        usdcNav: 1.025,
+        reserveShare: 0.125,
+        marginPct: 0.125,
+        collateralCoverageRatio: 1.5,
+        exchangeRateRatio: 1.25,
+      },
+    });
+    expect(buildMechanismBackingView("controlled")?.protocolFacts).toEqual([
+      { key: "hlAccountValueUsd", label: "HL account value", value: "-$9.7M" },
+      { key: "usdcNav", label: "USDC NAV", value: "1.025" },
+      { key: "reserveShare", label: "Reserve share", value: "12.5%" },
+      { key: "marginPct", label: "Margin", value: "0.13%" },
+      { key: "collateralCoverageRatio", label: "Collateral coverage ratio", value: "150.0%" },
+      { key: "exchangeRateRatio", label: "Exchange rate ratio", value: "1.25" },
+    ]);
   });
 
-  it("formats by key suffix rather than raw number dumping", () => {
-    const facts = buildMechanismBackingView("mkusd-prisma")?.protocolFacts
-      ?? buildMechanismBackingView("dai-makerdao")?.protocolFacts
-      ?? [];
-    for (const fact of facts) {
-      expect(fact.value).not.toMatch(/\d{7,}|\.\d{5,}/);
-    }
-  });
-
-  it("truncates a long tail rather than overflowing the rail column", () => {
-    for (const overlay of OVERLAYS) {
-      expect((buildMechanismBackingView(overlay.assetId)?.protocolFacts ?? []).length).toBeLessThanOrEqual(6);
-    }
+  it("retains exactly the first six finite protocol facts", () => {
+    useOverlay({
+      analogousMetrics: {
+        firstCount: 1, secondCount: 2, thirdCount: 3, fourthCount: 4,
+        fifthCount: 5, sixthCount: 6, seventhCount: 7,
+      },
+    });
+    expect(buildMechanismBackingView("controlled")?.protocolFacts).toEqual([
+      { key: "firstCount", label: "First count", value: "1" },
+      { key: "secondCount", label: "Second count", value: "2" },
+      { key: "thirdCount", label: "Third count", value: "3" },
+      { key: "fourthCount", label: "Fourth count", value: "4" },
+      { key: "fifthCount", label: "Fifth count", value: "5" },
+      { key: "sixthCount", label: "Sixth count", value: "6" },
+    ]);
   });
 });

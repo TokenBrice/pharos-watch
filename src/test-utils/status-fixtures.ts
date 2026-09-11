@@ -1,4 +1,6 @@
 import type {
+  ActivePriceCoverageGap,
+  ActivePriceCoverageHealth,
   ApiRequestAttributionResponse,
   EndpointProbeResult,
   HealthResponse,
@@ -6,9 +8,72 @@ import type {
   StatusSectionKey,
 } from "@shared/types";
 import { makeDataQuality, makeReserveComposition, makeStatusSummary } from "@shared/types/__tests__/status.test-support";
+import { makeHealthyHealthResponse } from "@shared/test-utils/health-fixtures";
 
 export const STATUS_FIXTURE_NOW_SECONDS = 1_700_000_000;
 export const STATUS_FIXTURE_NOW_MS = STATUS_FIXTURE_NOW_SECONDS * 1_000;
+
+export function makeMissingActiveAsset(overrides: Partial<ActivePriceCoverageGap> = {}): ActivePriceCoverageGap {
+  return {
+    stablecoinId: "test-dollar",
+    symbol: "TUSD",
+    marketCapUsd: 500_000,
+    currentPrice: null,
+    currentSource: null,
+    currentObservedAt: null,
+    currentConfidence: null,
+    consecutiveMissingGenerations: 1,
+    lastAcceptedPrice: null,
+    lastAcceptedSource: null,
+    lastAcceptedObservedAt: null,
+    rejectionReason: "no-accepted-price",
+    alertEligible: false,
+    ...overrides,
+  };
+}
+
+export function makeActivePriceCoverage(
+  missingAssets: ActivePriceCoverageGap[],
+  overrides: Partial<ActivePriceCoverageHealth> = {},
+): ActivePriceCoverageHealth {
+  const alertEligibleIds = missingAssets.filter((asset) => asset.alertEligible).map((asset) => asset.stablecoinId);
+  return {
+    status: "incomplete",
+    expectedActiveCount: 190,
+    presentActiveCount: 190,
+    pricedActiveCount: 190 - missingAssets.length,
+    missingPriceCount: missingAssets.length,
+    pricedActiveIds: [],
+    missingActiveIds: missingAssets.map((asset) => asset.stablecoinId),
+    affectedMarketCapUsd: missingAssets.reduce((sum, asset) => sum + (asset.marketCapUsd ?? 0), 0),
+    missingActiveAssets: missingAssets,
+    alertEligibleCount: alertEligibleIds.length,
+    alertEligibleIds,
+    maxConsecutiveMissingGenerations: Math.max(0, ...missingAssets.map((asset) => asset.consecutiveMissingGenerations)),
+    observedAt: STATUS_FIXTURE_NOW_SECONDS,
+    ...overrides,
+  };
+}
+
+export function makeDispatchMetadata(overrides: Record<string, unknown> = {}): Record<string, unknown> {
+  return {
+    subscribersNotified: 0,
+    messagesSent: 0,
+    freshAttempted: 0,
+    freshSent: 0,
+    freshRetryQueued: 0,
+    freshPermanentFailures: 0,
+    pendingAttempted: 0,
+    pendingDrained: 0,
+    pendingRetryQueued: 0,
+    pendingDroppedPermanentFailure: 0,
+    pendingDroppedMaxAttemptsFallback: 0,
+    pendingRateLimited: false,
+    safetyAlertsSuppressed: false,
+    reserveAlertsSuppressed: false,
+    ...overrides,
+  };
+}
 
 export function makeCompleteTelegramBotStatus(
   overrides: Partial<NonNullable<StatusResponse["telegramBot"]>> = {},
@@ -140,22 +205,7 @@ export function makeHealthyStatusResponse(): StatusResponse {
           startedAt: 1_699_999_940,
           durationMs: 200,
           status: "ok",
-          metadata: {
-            subscribersNotified: 0,
-            messagesSent: 0,
-            freshAttempted: 0,
-            freshSent: 0,
-            freshRetryQueued: 0,
-            freshPermanentFailures: 0,
-            pendingAttempted: 0,
-            pendingDrained: 0,
-            pendingRetryQueued: 0,
-            pendingDroppedPermanentFailure: 0,
-            pendingDroppedMaxAttemptsFallback: 0,
-            pendingRateLimited: false,
-            safetyAlertsSuppressed: false,
-            reserveAlertsSuppressed: false,
-          },
+          metadata: makeDispatchMetadata(),
         },
         recentRuns: [{ startedAt: 1_699_999_940, durationMs: 200, status: "ok" }],
         expectedIntervalSec: 60,
@@ -264,36 +314,7 @@ export function makeScheduledSlotEventMarkerQueryFailedStatusResponse(
   });
 }
 
-export function makeHealthyHealthResponse(): HealthResponse {
-  return {
-    status: "healthy",
-    timestamp: 1_700_000_000,
-    warnings: [],
-    caches: {},
-    blacklist: {
-      totalEvents: 0,
-      missingAmounts: 0,
-      recentMissingAmounts: 0,
-      recentWindowSec: 86_400,
-      missingRatio: 0,
-    },
-    mintBurn: {
-      totalEvents: 0,
-      latestEventTs: null,
-      latestHourlyTs: null,
-      freshnessAgeSec: null,
-      majorStaleCount: 0,
-      staleMajorSymbols: [],
-      sync: {
-        lastSuccessfulSyncAt: null,
-        freshnessStatus: "fresh",
-        warning: null,
-        criticalLaneHealthy: true,
-      },
-    },
-    circuits: {},
-  };
-}
+export { makeHealthyHealthResponse };
 
 type ApiRequestAttributionResponseOverrides = {
   generatedAt?: number;
@@ -654,8 +675,28 @@ export function makeActionBlockedStatusResponse(base = makeActionRecommendedStat
     reserveComposition: {
       ...base.reserveComposition,
       writeTimeoutUncertain: 1,
-      cursorTailError: "Fixture deferred cursor tail failed.",
       status: "degraded",
+    },
+    crons: {
+      ...base.crons,
+      "sync-live-reserves": {
+        lastRun: {
+          startedAt: base.timestamp - 43_200,
+          durationMs: 120_000,
+          status: "error",
+          itemCount: 0,
+        },
+        recentRuns: [{ startedAt: base.timestamp - 43_200, durationMs: 120_000, status: "error" }],
+        expectedIntervalSec: 14_400,
+        healthy: false,
+        inFlight: {
+          startedAt: base.timestamp - 21_600,
+          updatedAt: base.timestamp - 21_000,
+          stage: "sync",
+          leaseOwner: "fixture-worker",
+          stale: true,
+        },
+      },
     },
   });
 }

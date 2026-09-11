@@ -19,14 +19,10 @@ describe("mint-burn-signals", () => {
   });
 
   it("pins pressure-shift state boundaries", () => {
-    expect(getPressureShiftState(-100)).toBe("worsening");
-    expect(getPressureShiftState(-70)).toBe("worsening");
-    expect(getPressureShiftState(-40)).toBe("worsening");
+    expect(getPressureShiftState(-10.01)).toBe("worsening");
     expect(getPressureShiftState(-10)).toBe("stable");
     expect(getPressureShiftState(10)).toBe("stable");
-    expect(getPressureShiftState(40)).toBe("improving");
-    expect(getPressureShiftState(70)).toBe("improving");
-    expect(getPressureShiftState(100)).toBe("improving");
+    expect(getPressureShiftState(10.01)).toBe("improving");
   });
 
   it("computes literal minting pressure from raw 24h mint vs burn balance", () => {
@@ -51,5 +47,15 @@ describe("mint-burn-signals", () => {
         burnVolume24hUsd: 0,
       }),
     ).toBeNull();
+  });
+
+  it("gives inactivity precedence over nonzero flow", () => {
+    expect(getNetFlowDirection24h({ netFlow24hUsd: 200_000, has24hActivity: false })).toBe("inactive");
+    expect(getNetFlowDirection24h({ netFlow24hUsd: -200_000, has24hActivity: false })).toBe("inactive");
+  });
+
+  it("distinguishes balanced activity from mint-only activity", () => {
+    expect(getLiteralMintingPressureScore({ mintVolume24hUsd: 100, burnVolume24hUsd: 100 })).toBe(0);
+    expect(getLiteralMintingPressureScore({ mintVolume24hUsd: 100, burnVolume24hUsd: 0 })).toBe(100);
   });
 });

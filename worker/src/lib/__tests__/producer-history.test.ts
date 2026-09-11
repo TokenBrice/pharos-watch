@@ -1,12 +1,11 @@
-import { DatabaseSync } from "node:sqlite";
-import { describe, expect, it } from "vitest";
-import { createLatestSchemaSqlite } from "../../test-helpers/latest-schema-sqlite";
+import { afterEach, describe, expect, it } from "vitest";
+import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
 import { loadProducerHeads, pruneProducerHistory, recordProducerOutcome, utcCalendarMonth } from "../producer-history";
 import { recordBudgetSurfaceTelemetry } from "../budget-surface-telemetry";
 
-function createMigratedDb(): { sqlite: DatabaseSync; db: D1Database } {
-  return createLatestSchemaSqlite();
-}
+const fixtures = createLatestSchemaFixtureTracker();
+const createMigratedDb = fixtures.open;
+afterEach(() => fixtures.closeAll());
 
 describe("producer history", () => {
   it("separates latest invocation from latest productive publication without double-counting retries", async () => {
@@ -107,11 +106,10 @@ describe("producer history", () => {
         )
         .get(),
     ).toEqual({ has_publication: 1 });
-    sqlite.close();
   });
 
   it("keeps shared job paths and monthly calendar identities distinct", async () => {
-    const { sqlite, db } = createMigratedDb();
+    const { db } = createMigratedDb();
     for (const [scheduleKey, producerPath, invocationId] of [
       ["digestTriggerPoll", "digestTriggerPoll", "manual"],
       ["daily0805Utc", "daily0805Utc", "scheduled"],
@@ -133,11 +131,10 @@ describe("producer history", () => {
       });
     }
     expect(await loadProducerHeads(db)).toHaveLength(2);
-    sqlite.close();
   });
 
   it("keeps both scheduled snapshot-supply paths queryable", async () => {
-    const { sqlite, db } = createMigratedDb();
+    const { db } = createMigratedDb();
     for (const [scheduleKey, producerPath, invocationId] of [
       ["quarterHourly", "quarterHourly", "quarter"],
       ["daily0800Utc", "daily0800Utc", "fallback"],
@@ -162,7 +159,6 @@ describe("producer history", () => {
       ["daily0800Utc", "snapshot-supply", "daily0800Utc"],
       ["quarterHourly", "snapshot-supply", "quarterHourly"],
     ]);
-    sqlite.close();
   });
 
   it("derives calendar identity across a real UTC month boundary", () => {
@@ -224,7 +220,6 @@ describe("producer history", () => {
     const payload = JSON.parse(cache.value) as Record<string, unknown>;
     expect(payload).toMatchObject({ outcome: "ok", processedCount: 1 });
     expect(payload).not.toHaveProperty("error");
-    sqlite.close();
   });
 
   it("lets a late real completion replace reconciliation-owned synthetic history", async () => {
@@ -282,7 +277,6 @@ describe("producer history", () => {
         productiveCount: 1,
       }),
     ]);
-    sqlite.close();
   });
 
   it("retains budget and calendar history beyond the regular window", async () => {
@@ -305,6 +299,5 @@ describe("producer history", () => {
       .all()
       .map((row) => String((row as { idempotency_key: string }).idempotency_key));
     expect(ids).toEqual(["budget-old", "monthly-old"]);
-    sqlite.close();
   });
 });

@@ -13,44 +13,41 @@
         "liquidity",
         "custody"
       ],
-      "liquidityHorizon": "one-day"
+      "liquidityHorizon": "one-day",
+      "sourceKey": "moc-doc:rbtc"
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-08-23",
-    "reviewer": "GPT Safety Score V9 Tranche 2 (live re-read)",
+    "reviewedAt": "2026-09-07",
+    "reviewer": "OpenAI Codex pinned MoC V1 reserve accounting review",
     "confidence": "verified",
     "sources": [
       {
-        "label": "Money On Chain minting DOCs documentation (read 2026-08-23)",
-        "url": "https://docs.moneyonchain.com/main-rbtc-contract/integration-with-moc-platform/getting-docs/minting-docs"
+        "label": "MoCState verified deployed implementation reviewed 2026-09-07",
+        "url": "https://rootstock.blockscout.com/address/0xf65BE577b252A41887e2f1a19b576A0925201186?tab=contract"
       },
       {
-        "label": "Money On Chain MoC contract documentation (read 2026-08-23)",
-        "url": "https://docs.moneyonchain.com/main-rbtc-contract/money-on-chain-platform/contracts-architecture/moc"
+        "label": "MoC canonical state and BTC oracle addresses",
+        "url": "https://docs.moneyonchain.com/main-rbtc-contract/integration-with-moc-platform/introduction-to-moc/the-moc-state-contract"
       },
       {
-        "label": "MoC protocol contract on Rootstock (Blockscout; read 2026-08-23)",
-        "url": "https://rootstock.blockscout.com/address/0xf773B590aF754D597770937Fa8ea7AbDf2668370"
+        "label": "Money On Chain protocol risk-sharing model",
+        "url": "https://moneyonchain.com/protocol-faq/"
       },
       {
-        "label": "DOC token on Rootstock (Blockscout; read 2026-08-23)",
-        "url": "https://rootstock.blockscout.com/token/0xE700691Da7b9851F2F35f8b8182C69C53ccad9DB"
+        "label": "Rootstock pinned block 9219109",
+        "url": "https://rootstock.blockscout.com/block/9219109"
       },
       {
-        "label": "Rootstock Blockscout - block 9,176,862",
-        "url": "https://rootstock.blockscout.com/block/9176862"
-      },
-      {
-        "label": "Rootstock public RPC - block 9,176,862 (read 2026-08-23)",
+        "label": "Rootstock public RPC used for pinned state reads",
         "url": "https://public-node.rsk.co"
       }
     ],
-    "rationale": "Fresh live re-read on 2026-08-23. At Rootstock block 9,176,862 (hash 0x3d87d43209d3c8be7112d65533f14c6dcd3cc9b60ef56e3299e041dd197207cd; 2026-08-23 17:30:36 UTC), eth_getBalance for MoC proxy 0xf773B590aF754D597770937Fa8ea7AbDf2668370 returned 282.460500975219498625 rBTC, and eth_call totalSupply() (selector 0x18160ddd) on DOC 0xE700691Da7b9851F2F35f8b8182C69C53ccad9DB returned 3,126,808.182966185929591714 DOC. The Money On Chain docs read today state: \"DOC can only be minted in exchange for RBTC\" and MoC \"is also the only one that receives RBTC and holds the actual value of the system.\" The current balance and protocol design support the unchanged 100% rBTC slice; no fiat, Treasury, stablecoin, or other reserve category is asserted.",
-    "compositionBasis": "Money on Chain single-asset rBTC collateral design confirmed against current Rootstock MoC balance and DOC token state",
-    "compositionAsOf": "2026-08-23",
+    "rationale": "At Rootstock block 9219109 (2026-09-07T12:47:43Z), canonical MoC custody and MoCState collateralRbtcInSystem()/rbtcInSystem() both report 273.257760878423658725 rBTC. DOC supply is 2,825,549.027393543076353703, and the valid protocol BTC oracle reports $79,465.80, giving 7.685106987665169x coverage. The verified deployed MoCState implementation returns accounted rBTC as total collateral because X2 leveraged positions are disabled; the X2 share count is zero. globalLockedBitcoin() reserves 35.556793329879559211 rBTC for senior DOC claims and getRbtcRemainder() reports 237.700967548544099514 rBTC of residual risk capital. BPRO bears the residual Bitcoin exposure rather than a second fixed-dollar liability; the full accounted collateral is therefore the correct system coverage numerator, not a DOC-only wallet and not raw unaccounted donations. The live adapter pins reviewed implementation identities, reconciles state DOC supply against the canonical token, checks oracle validity and accounting at one block, caps admitted backing at the actual custody balance, and degrades custody deficits, undercoverage, pause or liquidation.",
+    "compositionBasis": "Canonical Rootstock MoCState accounted rBTC, DOC supply and protocol-valid BTC oracle at one block; custody balance and senior DOC/junior BPRO accounting reconciled",
+    "compositionAsOf": "2026-09-07",
     "scope": "full-composition",
-    "knownUnknownExposure": "No reserve asset class is unclassified; the current MoC balance and DOC total supply were read directly on Rootstock, and the official protocol documentation describes no off-chain reserve component.",
+    "knownUnknownExposure": "The only backing asset class is rBTC. Protocol oracle valuation, Rootstock peg/custody and upgrade risks remain; BPRO residual risk capital is shared system collateral, not a separately guaranteed DOC reserve. Ethereum and Arbitrum DOC representations are not additional collateral or additional canonical DOC liabilities.",
     "knownUnknownExposurePct": 0,
     "nonLinkDispositions": [
       {

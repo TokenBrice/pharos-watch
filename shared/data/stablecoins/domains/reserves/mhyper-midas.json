@@ -2,6 +2,7 @@
   "id": "mhyper-midas",
   "reserves": [
     {
+      "sourceKey": "chainlink-nav:token:0x9b5528528656dbc094765e2abb79f293c21191b9",
       "name": "Hyperithm market-neutral stablecoin strategy NAV",
       "pct": 100,
       "risk": "high",

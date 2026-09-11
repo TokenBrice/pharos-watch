@@ -980,11 +980,41 @@ export function resolveDependencyConcentration(
 /** Venue-risk scores older than this are flagged for re-review (yield v8.292). */
 const VENUE_RISK_SCORE_MAX_AGE_DAYS = 90;
 
-export interface StaleVenueRiskScore {
-  protocol: YieldRiskConfigProtocol;
+export interface StaleVenueRiskScore<K extends string = YieldRiskConfigProtocol> {
+  protocol: K;
   reviewedAt: string;
   ageDays: number;
   confidence: YieldRiskConfigEntry["confidence"];
+}
+
+/** Minimal reviewed-entry shape the staleness calculation reads. */
+export interface ReviewedVenueRiskEntry {
+  reviewedAt: string;
+  confidence?: YieldRiskConfigEntry["confidence"];
+}
+
+/**
+ * Pure staleness calculation over explicitly supplied entries: ages each
+ * `reviewedAt` (a `YYYY-MM-DD` date parsed as UTC midnight) against `nowMs` and
+ * returns the entries strictly older than `maxAgeDays`, newest first. Unparseable
+ * dates are skipped.
+ */
+export function findStaleVenueRiskScoresByEntries<K extends string>(
+  entries: Readonly<Record<K, ReviewedVenueRiskEntry>>,
+  nowMs: number,
+  maxAgeDays: number = VENUE_RISK_SCORE_MAX_AGE_DAYS,
+): StaleVenueRiskScore<K>[] {
+  const stale: StaleVenueRiskScore<K>[] = [];
+  for (const protocol of Object.keys(entries) as K[]) {
+    const entry = entries[protocol];
+    const reviewedMs = Date.parse(`${entry.reviewedAt}T00:00:00Z`);
+    if (!Number.isFinite(reviewedMs)) continue;
+    const ageDays = Math.floor((nowMs - reviewedMs) / 86_400_000);
+    if (ageDays > maxAgeDays) {
+      stale.push({ protocol, reviewedAt: entry.reviewedAt, ageDays, confidence: entry.confidence });
+    }
+  }
+  return stale.sort((a, b) => b.ageDays - a.ageDays);
 }
 
 /**
@@ -996,15 +1026,5 @@ export function findStaleVenueRiskScores(
   nowMs: number,
   maxAgeDays: number = VENUE_RISK_SCORE_MAX_AGE_DAYS,
 ): StaleVenueRiskScore[] {
-  const stale: StaleVenueRiskScore[] = [];
-  for (const protocol of YIELD_RISK_CONFIG_PROTOCOLS) {
-    const entry = YIELD_RISK_CONFIG[protocol];
-    const reviewedMs = Date.parse(`${entry.reviewedAt}T00:00:00Z`);
-    if (!Number.isFinite(reviewedMs)) continue;
-    const ageDays = Math.floor((nowMs - reviewedMs) / 86_400_000);
-    if (ageDays > maxAgeDays) {
-      stale.push({ protocol, reviewedAt: entry.reviewedAt, ageDays, confidence: entry.confidence });
-    }
-  }
-  return stale.sort((a, b) => b.ageDays - a.ageDays);
+  return findStaleVenueRiskScoresByEntries(YIELD_RISK_CONFIG, nowMs, maxAgeDays);
 }

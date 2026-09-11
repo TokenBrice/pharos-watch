@@ -84,7 +84,7 @@ DEX pool imbalances from `dex_liquidity`. Blends:
 
 - 40% balance stress (1 - weighted_balance_ratio)
 - 35% pool stress score (avg_pool_stress)
-- 25% worst single pool imbalance (from top_pools_json)
+- 25% worst single pool imbalance (from `top_pools_json`, counting only pools with at least $100k TVL)
 
 Smoothed with previous reading when available.
 
@@ -176,11 +176,13 @@ Structured evidence is additive with warning-string evidence and the final Yield
 
 | Table                   | Pruning  | Purpose                                |
 | ----------------------- | -------- | -------------------------------------- |
-| `stress_signals`        | 7 days   | Sparse rolling history: at least hourly, plus band changes and score moves of 1+ point |
+| `stress_signals`        | 7 days (frozen IDs exempt) | Sparse rolling history: at least hourly, plus band changes and score moves of 1+ point |
 | `stress_signals_latest` | current  | Latest-row materialization for hot readers and smoothing |
 | `stress_signal_publication_rows` | 2 generations | Exact, complete rows for current and previous publication proofs |
-| `stress_signal_history` | 365 days | Daily snapshots (first exact-coverage run of UTC day) |
+| `stress_signal_history` | 365 days (frozen IDs exempt) | Daily snapshots (first exact-coverage run of UTC day) |
 | `surface_publication_generations` (`surface = "dews"`) | durable | Successfully published generations consumed by Tape and publication health |
+
+Age-based pruning and orphan deletes both skip stablecoin IDs in `FROZEN_IDS`, so frozen coins keep their DEWS history indefinitely.
 
 `cache["dews:published-generation"]` is the completed-publication pointer for current DEWS readers. The cron writes it only after the exact publication buffer and latest rows have been written and both generation row counts match the computed result count. The two-generation buffer keeps the last proven generation readable if a later run is interrupted. The pointer and its `surface_publication_generations` row commit in one D1 batch, so downstream consumers cannot observe a pointer without durable publication proof or ledger a generation whose pointer lost the race to a newer run. Migration `0182` bootstraps the pre-existing pointer, and the Tape projector reconciles the current validated pointer again at runtime to cover the migration-to-deploy window. `cache["freshness:dews"]` remains the healthy-run freshness sentinel and only advances for non-degraded publications.
 
@@ -192,7 +194,7 @@ Structured evidence is additive with warning-string evidence and the final Yield
 
 **Run health semantics:** DEWS records upstream read problems as structured cron metadata (`sourceFailures`, `sourceCoverage`, `validationFailures`). The cron returns `status: "degraded"` when non-bootstrap source dependencies fail (`fallbackMode: "degraded-inputs"`) or when a core persisted input row is malformed (`malformedCoreInputRows > 0`, `fallbackMode: "malformed-persisted-inputs"`). Bootstrap grace is now a one-time state transition, tracked by the `dews:bootstrap-complete` cache sentinel written on the first cron run that reaches persistence — even if that run is degraded by other source failures or wrote no rows. Before that first run, only explicitly optional missing tables are tagged `bootstrapAllowed=true`; once the sentinel exists, those same failures degrade the run normally. Stale `dex_liquidity` and stale `mint_burn_hourly` freshness are recorded in metadata, but rows that meet signal-coverage requirements are still persisted. The same metadata includes `dependencies.dexLiquidity` diagnostics from `dex_liquidity_publication_generations` so operators can distinguish stale DEWS inputs caused by a failed/latest DEX publication from normal downstream catch-up.
 
-**Off-chain confirmation resilience:** CoinGecko and DefiLlama confirmation fetches used by the pending-depeg pipeline are wrapped in a circuit breaker. A sustained provider outage trips the breaker and short-circuits subsequent confirmation lookups until it resets, so a single upstream failure no longer hammers the endpoint for 45 minutes per pending row.
+**Off-chain confirmation resilience:** The CoinGecko confirmation fetch used by the pending-depeg pipeline (and the Binance CEX price fetch beside it) is wrapped in a circuit breaker. A sustained provider outage trips the breaker and short-circuits subsequent confirmation lookups until it resets, so a single upstream failure no longer hammers the endpoint for 45 minutes per pending row.
 
 **Data flow:**
 

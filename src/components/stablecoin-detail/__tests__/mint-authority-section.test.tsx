@@ -190,14 +190,14 @@ describe("MintAuthoritySection", () => {
       />,
     );
 
-    // Resolved incidents are a historical record behind the disclosure, not a
-    // red alarm: red stays reserved for active incidents.
+    // Resolved incidents are a historical record behind the disclosure: each
+    // carries the resolved status word and none is presented as active.
     expect(html).toContain("Incident history");
-    expect(html).toContain("Mint incident 2025-10-04");
+    expect(html).toMatch(/Mint incident 2025-10-04<span[^>]*>Resolved</);
     expect(html).toContain("Second exploit borrowed stablecoin with no collateral.");
-    expect(html).toContain("Mint incident 2024-01-30");
+    expect(html).toMatch(/Mint incident 2024-01-30<span[^>]*>Resolved</);
     expect(html).toContain("First exploit turned the borrow route into bad debt.");
-    expect(html).not.toContain("border-red-500/25");
+    expect(html).not.toMatch(/>Active</);
   });
 
   it("draws the mint rail and band ladder when a symbol is provided, absorbing the path and posture chips", () => {

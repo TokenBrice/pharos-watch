@@ -6,11 +6,11 @@ import {
   buildSafetyScoreV9BaselineExtension,
   type V9ExtensionRegistryMeta,
 } from "../safety-score-v9/extension";
-import { createSafetyScoreV9FullRegistryInput } from "./fixtures/safety-score-v9-full-registry-input";
+import { createSafetyScoreV9FullRegistryInput, FULL_REGISTRY_CLOCK_SEC } from "./fixtures/safety-score-v9-full-registry-input";
 
 const CHILD_ID = "apyusd-apyx";
 const PARENT_ID = "apxusd-apyx";
-const CLOCK_SEC = createSafetyScoreV9FullRegistryInput().clockSec;
+const CLOCK_SEC = FULL_REGISTRY_CLOCK_SEC;
 
 type FullInput = ReturnType<typeof createSafetyScoreV9FullRegistryInput>;
 type TestMeta = V9ExtensionRegistryMeta & { pegReferenceId?: string };
@@ -38,7 +38,7 @@ function reseal(
   return createReportCardsFixedInput({ ...draft, ...overrides });
 }
 
-function twoAssetInput(overrides: Partial<Parameters<typeof createReportCardsFixedInput>[0]> = {}) {
+function selectedTemplate() {
   const full = createSafetyScoreV9FullRegistryInput();
   const ids = [CHILD_ID, PARENT_ID] as const;
   return reseal(full, {
@@ -59,8 +59,13 @@ function twoAssetInput(overrides: Partial<Parameters<typeof createReportCardsFix
     pegProvenanceById: pick(full.pegProvenanceById, ids),
     collateralDriftCoins: full.collateralDriftCoins.filter((coin) => ids.some((id) => id === coin.id)),
     liveToFallbackCoins: full.liveToFallbackCoins.filter((id) => ids.some((candidate) => candidate === id)),
-    ...overrides,
   });
+}
+
+const TWO_ASSET_TEMPLATE = selectedTemplate();
+
+function twoAssetInput(overrides: Partial<Parameters<typeof createReportCardsFixedInput>[0]> = {}) {
+  return reseal(structuredClone(TWO_ASSET_TEMPLATE), overrides);
 }
 
 function metadata(overrides: Partial<Record<string, TestMetaOverrides>> = {}) {
@@ -89,7 +94,7 @@ function childPeg(
 
 function parentDepegPeg(fixedInput: ReturnType<typeof twoAssetInput>, peakBps: number) {
   const parent = fixedInput.pegDataById[PARENT_ID]!;
-  return twoAssetInput({
+  return reseal(fixedInput, {
     pegDataById: {
       ...fixedInput.pegDataById,
       [PARENT_ID]: {

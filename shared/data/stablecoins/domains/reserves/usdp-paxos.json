@@ -2,6 +2,7 @@
   "id": "usdp-paxos",
   "reserves": [
     {
+      "sourceKey": "paxos-independent-assurance:usdp:cash",
       "name": "Cash held for authorized token holders",
       "pct": 77.64,
       "risk": "very-low",
@@ -11,6 +12,7 @@
       "liquidityHorizon": "immediate"
     },
     {
+      "sourceKey": "paxos-independent-assurance:usdp:reverse-repo",
       "name": "Overnight reverse repurchase agreements collateralized by U.S. Treasury obligations",
       "pct": 22.36,
       "risk": "very-low",

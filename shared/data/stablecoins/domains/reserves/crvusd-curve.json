@@ -14,7 +14,8 @@
         "market",
         "liquidity"
       ],
-      "liquidityHorizon": "immediate"
+      "liquidityHorizon": "immediate",
+      "sourceKey": "crvusd:btc"
     },
     {
       "name": "ETH",
@@ -25,7 +26,8 @@
       "riskFactors": [
         "market"
       ],
-      "liquidityHorizon": "immediate"
+      "liquidityHorizon": "immediate",
+      "sourceKey": "crvusd:eth"
     },
     {
       "name": "tBTC",
@@ -39,7 +41,8 @@
         "market",
         "smart-contract"
       ],
-      "liquidityHorizon": "immediate"
+      "liquidityHorizon": "immediate",
+      "sourceKey": "crvusd:tbtc"
     },
     {
       "name": "wstETH / sfrxETH / weETH",
@@ -52,7 +55,8 @@
         "smart-contract",
         "liquidity"
       ],
-      "liquidityHorizon": "immediate"
+      "liquidityHorizon": "immediate",
+      "sourceKey": "crvusd:eth-lst"
     }
   ],
   "reserveReview": {

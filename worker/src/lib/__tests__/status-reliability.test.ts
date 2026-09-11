@@ -16,8 +16,8 @@ import {
 } from "../status-reliability";
 import { STATUS_DEGRADED_TO_STALE_THRESHOLD } from "../status-reliability-shared";
 import { decideNextStatus } from "../status-reliability-decision";
-import { createSqliteD1 } from "../../test-helpers/sqlite-d1";
-import { createLatestSchemaSqlite } from "../../test-helpers/latest-schema-sqlite";
+import { createSqliteD1 } from "@shared/test-utils/sqlite-d1";
+import { createLatestSchemaSqlite } from "@shared/test-utils/latest-schema-sqlite";
 import { makeNoopD1 } from "../../test-helpers/noop-d1";
 
 type StatusLevel = "healthy" | "degraded" | "stale";
@@ -241,6 +241,7 @@ function makeFailingDb(): D1Database {
 describe("status-reliability", () => {
   afterEach(() => {
     vi.restoreAllMocks();
+    vi.useRealTimers();
     for (const sqlite of openDatabases.splice(0)) sqlite.close();
   });
 
@@ -348,9 +349,12 @@ describe("status-reliability", () => {
   });
 
   it("retries status-state batches without duplicating transition rows", async () => {
+    vi.useFakeTimers();
     const { db, store } = makeStatefulDb({ failBatchAfterApplyOnce: true });
 
-    const result = await reconcileStatusState(db, 100, "healthy", 0.95, []);
+    const pending = reconcileStatusState(db, 100, "healthy", 0.95, []);
+    await vi.runAllTimersAsync();
+    const result = await pending;
 
     expect(result.persistenceSucceeded).toBe(true);
     expect(store.stateRow?.current_status).toBe("healthy");
@@ -573,16 +577,19 @@ describe("status-reliability", () => {
   });
 
   it("retries status probe writes without duplicating probe rows", async () => {
+    vi.useFakeTimers();
     const { db, store } = makeStatefulDb({ failRunAfterApplyOnceOnSql: "status_probe_runs" });
 
-    await expect(writeStatusProbeRun(db, 300, {
+    const pending = writeStatusProbeRun(db, 300, {
       status: "healthy",
       sampleCount: 3,
       passCount: 3,
       failCount: 0,
       p95LatencyMs: 90,
       details: { route: "/api/status" },
-    })).resolves.toBe(true);
+    });
+    await vi.runAllTimersAsync();
+    await expect(pending).resolves.toBe(true);
 
     expect(store.probes).toHaveLength(1);
     expect(store.probes[0]?.idempotency_key).toBeTruthy();

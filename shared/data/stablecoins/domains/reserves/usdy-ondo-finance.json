@@ -2,87 +2,396 @@
   "id": "usdy-ondo-finance",
   "reserves": [
     {
-      "name": "US Treasuries",
-      "pct": 97.36,
+      "name": "BNY Mellon US Treasury 912797UL9",
+      "pct": 3.4073266998250955,
       "risk": "very-low",
+      "sourceKey": "usdy-holdings-report:stonex:912797ul9",
       "assetClass": "treasury-bill",
       "issuerOrObligor": "United States Treasury",
       "riskFactors": [
         "credit",
-        "duration",
         "liquidity",
         "custody"
       ],
       "liquidityHorizon": "one-day"
     },
     {
-      "name": "Ondo Stocks issued USDY - USD Value",
-      "pct": 2.62,
-      "risk": "low",
-      "assetClass": "tokenized-security",
-      "issuerOrObligor": "Ondo Stocks",
-      "riskFactors": [
-        "credit",
-        "liquidity",
-        "custody"
-      ],
-      "liquidityHorizon": "one-day"
-    },
-    {
-      "name": "Silicon Valley Bank - Bank Deposits",
-      "pct": 0.02,
+      "name": "BNY Mellon US Treasury 912797TV9",
+      "pct": 1.5069151770759783,
       "risk": "very-low",
-      "assetClass": "bank-deposit",
-      "issuerOrObligor": "Silicon Valley Bank",
+      "sourceKey": "usdy-holdings-report:stonex:912797tv9",
+      "assetClass": "treasury-bill",
+      "issuerOrObligor": "United States Treasury",
       "riskFactors": [
         "credit",
         "liquidity",
         "custody"
       ],
       "liquidityHorizon": "one-day"
+    },
+    {
+      "name": "BNY Mellon US Treasury 912797UD7",
+      "pct": 2.080705620923646,
+      "risk": "very-low",
+      "sourceKey": "usdy-holdings-report:stonex:912797ud7",
+      "assetClass": "treasury-bill",
+      "issuerOrObligor": "United States Treasury",
+      "riskFactors": [
+        "credit",
+        "liquidity",
+        "custody"
+      ],
+      "liquidityHorizon": "one-day"
+    },
+    {
+      "name": "Marex US Treasury 912797UG0",
+      "pct": 5.5270594499516505,
+      "risk": "very-low",
+      "sourceKey": "usdy-holdings-report:marex:912797ug0",
+      "assetClass": "treasury-bill",
+      "issuerOrObligor": "United States Treasury",
+      "riskFactors": [
+        "credit",
+        "liquidity",
+        "custody"
+      ],
+      "liquidityHorizon": "one-day"
+    },
+    {
+      "name": "Marex US Treasury 912797UH8",
+      "pct": 5.988668793138284,
+      "risk": "very-low",
+      "sourceKey": "usdy-holdings-report:marex:912797uh8",
+      "assetClass": "treasury-bill",
+      "issuerOrObligor": "United States Treasury",
+      "riskFactors": [
+        "credit",
+        "liquidity",
+        "custody"
+      ],
+      "liquidityHorizon": "one-day"
+    },
+    {
+      "name": "Marex US Treasury 912797SA6",
+      "pct": 11.912119675935068,
+      "risk": "very-low",
+      "sourceKey": "usdy-holdings-report:marex:912797sa6",
+      "assetClass": "treasury-bill",
+      "issuerOrObligor": "United States Treasury",
+      "riskFactors": [
+        "credit",
+        "liquidity",
+        "custody"
+      ],
+      "liquidityHorizon": "one-day"
+    },
+    {
+      "name": "Marex US Treasury 912797UK1",
+      "pct": 11.781376197367623,
+      "risk": "very-low",
+      "sourceKey": "usdy-holdings-report:marex:912797uk1",
+      "assetClass": "treasury-bill",
+      "issuerOrObligor": "United States Treasury",
+      "riskFactors": [
+        "credit",
+        "liquidity",
+        "custody"
+      ],
+      "liquidityHorizon": "one-day"
+    },
+    {
+      "name": "Marex US Treasury 912797SK4",
+      "pct": 2.348998001971072,
+      "risk": "very-low",
+      "sourceKey": "usdy-holdings-report:marex:912797sk4",
+      "assetClass": "treasury-bill",
+      "issuerOrObligor": "United States Treasury",
+      "riskFactors": [
+        "credit",
+        "liquidity",
+        "custody"
+      ],
+      "liquidityHorizon": "one-day"
+    },
+    {
+      "name": "Marex US Treasury 912797UZ8",
+      "pct": 5.079998488935621,
+      "risk": "very-low",
+      "sourceKey": "usdy-holdings-report:marex:912797uz8",
+      "assetClass": "treasury-bill",
+      "issuerOrObligor": "United States Treasury",
+      "riskFactors": [
+        "credit",
+        "liquidity",
+        "custody"
+      ],
+      "liquidityHorizon": "one-day"
+    },
+    {
+      "name": "Marex US Treasury 912797TV9",
+      "pct": 5.758197286716479,
+      "risk": "very-low",
+      "sourceKey": "usdy-holdings-report:marex:912797tv9",
+      "assetClass": "treasury-bill",
+      "issuerOrObligor": "United States Treasury",
+      "riskFactors": [
+        "credit",
+        "liquidity",
+        "custody"
+      ],
+      "liquidityHorizon": "one-day"
+    },
+    {
+      "name": "Marex US Treasury 912797UD7",
+      "pct": 7.899925380910849,
+      "risk": "very-low",
+      "sourceKey": "usdy-holdings-report:marex:912797ud7",
+      "assetClass": "treasury-bill",
+      "issuerOrObligor": "United States Treasury",
+      "riskFactors": [
+        "credit",
+        "liquidity",
+        "custody"
+      ],
+      "liquidityHorizon": "one-day"
+    },
+    {
+      "name": "Marex US Treasury 912797UE5",
+      "pct": 9.153421257829454,
+      "risk": "very-low",
+      "sourceKey": "usdy-holdings-report:marex:912797ue5",
+      "assetClass": "treasury-bill",
+      "issuerOrObligor": "United States Treasury",
+      "riskFactors": [
+        "credit",
+        "liquidity",
+        "custody"
+      ],
+      "liquidityHorizon": "one-day"
+    },
+    {
+      "name": "Marex US Treasury 912797UX3",
+      "pct": 7.012537843410766,
+      "risk": "very-low",
+      "sourceKey": "usdy-holdings-report:marex:912797ux3",
+      "assetClass": "treasury-bill",
+      "issuerOrObligor": "United States Treasury",
+      "riskFactors": [
+        "credit",
+        "liquidity",
+        "custody"
+      ],
+      "liquidityHorizon": "one-day"
+    },
+    {
+      "name": "Marex US Treasury 912797VF1",
+      "pct": 11.06711816781915,
+      "risk": "very-low",
+      "sourceKey": "usdy-holdings-report:marex:912797vf1",
+      "assetClass": "treasury-bill",
+      "issuerOrObligor": "United States Treasury",
+      "riskFactors": [
+        "credit",
+        "liquidity",
+        "custody"
+      ],
+      "liquidityHorizon": "one-day"
+    },
+    {
+      "name": "Marex US Treasury 912797VQ7",
+      "pct": 6.834463372835907,
+      "risk": "very-low",
+      "sourceKey": "usdy-holdings-report:marex:912797vq7",
+      "assetClass": "treasury-bill",
+      "issuerOrObligor": "United States Treasury",
+      "riskFactors": [
+        "credit",
+        "liquidity",
+        "custody"
+      ],
+      "liquidityHorizon": "one-day"
+    },
+    {
+      "name": "First Citizens Select MMA",
+      "pct": 0.020924884678987624,
+      "risk": "low",
+      "sourceKey": "usdy-holdings-report:first-citizens:mma",
+      "assetClass": "bank-deposit",
+      "issuerOrObligor": "First Citizens Select MMA",
+      "riskFactors": [
+        "credit",
+        "liquidity",
+        "custody"
+      ],
+      "liquidityHorizon": "one-day"
+    },
+    {
+      "name": "StoneX brokerage cash",
+      "pct": 0.00024370067437091717,
+      "risk": "low",
+      "sourceKey": "usdy-holdings-report:stonex:cash",
+      "assetClass": "bank-deposit",
+      "issuerOrObligor": "StoneX brokerage cash",
+      "riskFactors": [
+        "credit",
+        "liquidity",
+        "custody"
+      ],
+      "liquidityHorizon": "one-day"
+    },
+    {
+      "name": "USDY outside LLC report scope (including BVI issuance)",
+      "pct": 2.62,
+      "risk": "high",
+      "sourceKey": "usdy-holdings-report:excluded-issuance"
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-09-04",
+    "reviewedAt": "2026-09-09",
     "reviewer": "OpenAI Codex backing review",
     "confidence": "verified",
     "sources": [
       {
-        "label": "Ondo USDY holdings and transparency page",
-        "url": "https://ondo.finance/usdy"
+        "label": "USDY LLC daily Ankura-reviewed holdings archive",
+        "url": "https://www.dropbox.com/scl/fo/375wdvar3rbc7o23nxsgp/ABoF-avpNclglsNxAeWZO_k/2026/09%20September?rlkey=4icqn1z9bez725wywr30fx52a&dl=0"
       },
       {
-        "label": "Ondo USDY portfolio overview",
-        "url": "https://ondo.finance/usdy"
+        "label": "Exact September 3 USDY LLC report",
+        "url": "https://www.dropbox.com/scl/fo/375wdvar3rbc7o23nxsgp/AMxjiHeSg34U7xZZcGBk_ik/2026/09%20September/Ondo%20USDY%20LLC_ATCAttest_260903.pdf?rlkey=4icqn1z9bez725wywr30fx52a&dl=1"
       }
     ],
-    "rationale": "Ondo's USDY holdings page reports a portfolio overview as of September 3, 2026 at 7:59:59pm EDT totaling $2,205,052,977: US Treasuries 97.36%, Ondo Stocks issued USDY - USD Value 2.62%, and Silicon Valley Bank - Bank Deposits 0.02%. Other Cash and Cash Equivalents is reported only as <0.01% and is omitted from point-valued rows rather than assigned invented precision.",
-    "compositionBasis": "Ondo daily USDY holdings disclosure",
+    "rationale": "September 3 Ankura-reviewed USDY LLC report reconciles 15 Treasury CUSIP positions ($2,146,874,145.15), First Citizens MMA ($461,417.76), and StoneX cash ($5,373.88) to $2,147,340,936.79 against $2,139,209,197.45 LLC principal. It explicitly excludes BVI USDY issuance. Static weights preserve the previously reviewed issuer-disclosed 2.62% BVI scope as high-risk unknown. Live publication is suspended because the daily archive lacks a verified server-discoverable dated HTML/JSON listing. No holding quantities are disclosed.",
+    "compositionBasis": "Ankura-reviewed LLC holdings with explicitly excluded BVI scope",
     "compositionAsOf": "2026-09-03",
     "scope": "full-composition",
-    "knownUnknownExposure": "The issuer publishes the three point-valued categories totaling 100.00%; Other Cash and Cash Equivalents is reported only as <0.01% and is retained as an unquantified residual rather than assigned an invented point percentage.",
-    "knownUnknownExposurePct": 0,
+    "knownUnknownExposure": "BVI-issued USDY is excluded by the LLC report. Static 2.62% reflects September 3 issuer composition and is not a current measurement of excluded issuance.",
+    "knownUnknownExposurePct": 2.62,
     "nonLinkDispositions": [
       {
         "reserveIndex": 0,
-        "reserveName": "US Treasuries",
-        "pct": 97.36,
+        "reserveName": "BNY Mellon US Treasury 912797UL9",
+        "pct": 3.4073266998250955,
         "disposition": "untracked-exogenous-asset",
-        "rationale": "U.S. Treasury bills are external reserve assets rather than tracked stablecoin dependencies."
+        "rationale": "External Treasury or cash position, not a tracked stablecoin dependency."
       },
       {
         "reserveIndex": 1,
-        "reserveName": "Ondo Stocks issued USDY - USD Value",
-        "pct": 2.62,
+        "reserveName": "BNY Mellon US Treasury 912797TV9",
+        "pct": 1.5069151770759783,
         "disposition": "untracked-exogenous-asset",
-        "rationale": "The Ondo Stocks position is an external portfolio asset rather than a tracked stablecoin dependency."
+        "rationale": "External Treasury or cash position, not a tracked stablecoin dependency."
       },
       {
         "reserveIndex": 2,
-        "reserveName": "Silicon Valley Bank - Bank Deposits",
-        "pct": 0.02,
+        "reserveName": "BNY Mellon US Treasury 912797UD7",
+        "pct": 2.080705620923646,
         "disposition": "untracked-exogenous-asset",
-        "rationale": "Silicon Valley Bank deposits are external reserve assets rather than tracked stablecoin dependencies."
+        "rationale": "External Treasury or cash position, not a tracked stablecoin dependency."
+      },
+      {
+        "reserveIndex": 3,
+        "reserveName": "Marex US Treasury 912797UG0",
+        "pct": 5.5270594499516505,
+        "disposition": "untracked-exogenous-asset",
+        "rationale": "External Treasury or cash position, not a tracked stablecoin dependency."
+      },
+      {
+        "reserveIndex": 4,
+        "reserveName": "Marex US Treasury 912797UH8",
+        "pct": 5.988668793138284,
+        "disposition": "untracked-exogenous-asset",
+        "rationale": "External Treasury or cash position, not a tracked stablecoin dependency."
+      },
+      {
+        "reserveIndex": 5,
+        "reserveName": "Marex US Treasury 912797SA6",
+        "pct": 11.912119675935068,
+        "disposition": "untracked-exogenous-asset",
+        "rationale": "External Treasury or cash position, not a tracked stablecoin dependency."
+      },
+      {
+        "reserveIndex": 6,
+        "reserveName": "Marex US Treasury 912797UK1",
+        "pct": 11.781376197367623,
+        "disposition": "untracked-exogenous-asset",
+        "rationale": "External Treasury or cash position, not a tracked stablecoin dependency."
+      },
+      {
+        "reserveIndex": 7,
+        "reserveName": "Marex US Treasury 912797SK4",
+        "pct": 2.348998001971072,
+        "disposition": "untracked-exogenous-asset",
+        "rationale": "External Treasury or cash position, not a tracked stablecoin dependency."
+      },
+      {
+        "reserveIndex": 8,
+        "reserveName": "Marex US Treasury 912797UZ8",
+        "pct": 5.079998488935621,
+        "disposition": "untracked-exogenous-asset",
+        "rationale": "External Treasury or cash position, not a tracked stablecoin dependency."
+      },
+      {
+        "reserveIndex": 9,
+        "reserveName": "Marex US Treasury 912797TV9",
+        "pct": 5.758197286716479,
+        "disposition": "untracked-exogenous-asset",
+        "rationale": "External Treasury or cash position, not a tracked stablecoin dependency."
+      },
+      {
+        "reserveIndex": 10,
+        "reserveName": "Marex US Treasury 912797UD7",
+        "pct": 7.899925380910849,
+        "disposition": "untracked-exogenous-asset",
+        "rationale": "External Treasury or cash position, not a tracked stablecoin dependency."
+      },
+      {
+        "reserveIndex": 11,
+        "reserveName": "Marex US Treasury 912797UE5",
+        "pct": 9.153421257829454,
+        "disposition": "untracked-exogenous-asset",
+        "rationale": "External Treasury or cash position, not a tracked stablecoin dependency."
+      },
+      {
+        "reserveIndex": 12,
+        "reserveName": "Marex US Treasury 912797UX3",
+        "pct": 7.012537843410766,
+        "disposition": "untracked-exogenous-asset",
+        "rationale": "External Treasury or cash position, not a tracked stablecoin dependency."
+      },
+      {
+        "reserveIndex": 13,
+        "reserveName": "Marex US Treasury 912797VF1",
+        "pct": 11.06711816781915,
+        "disposition": "untracked-exogenous-asset",
+        "rationale": "External Treasury or cash position, not a tracked stablecoin dependency."
+      },
+      {
+        "reserveIndex": 14,
+        "reserveName": "Marex US Treasury 912797VQ7",
+        "pct": 6.834463372835907,
+        "disposition": "untracked-exogenous-asset",
+        "rationale": "External Treasury or cash position, not a tracked stablecoin dependency."
+      },
+      {
+        "reserveIndex": 15,
+        "reserveName": "First Citizens Select MMA",
+        "pct": 0.020924884678987624,
+        "disposition": "untracked-exogenous-asset",
+        "rationale": "External Treasury or cash position, not a tracked stablecoin dependency."
+      },
+      {
+        "reserveIndex": 16,
+        "reserveName": "StoneX brokerage cash",
+        "pct": 0.00024370067437091717,
+        "disposition": "untracked-exogenous-asset",
+        "rationale": "External Treasury or cash position, not a tracked stablecoin dependency."
+      },
+      {
+        "reserveIndex": 17,
+        "reserveName": "USDY outside LLC report scope (including BVI issuance)",
+        "pct": 2.62,
+        "disposition": "insufficient-evidence",
+        "rationale": "Reviewed offchain holding; excluded BVI scope has no reconstructible holdings census."
       }
     ]
   },

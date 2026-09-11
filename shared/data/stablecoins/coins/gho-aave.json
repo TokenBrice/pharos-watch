@@ -108,6 +108,7 @@
       "gsmModules": [
         {
           "address": "0x3a3868898305f04bec7fea77becff04c13444112",
+          "facilitatorAddress": "0xE9ac5231fAecb633dA0Fe85Fcb2785b8363427d2",
           "label": "stataUSDC GSM",
           "coinId": "usdc-circle",
           "depType": "collateral",
@@ -115,6 +116,7 @@
         },
         {
           "address": "0x882285e62656b9623af136ce3078c6bdcc33f5e3",
+          "facilitatorAddress": "0xE9ac5231fAecb633dA0Fe85Fcb2785b8363427d2",
           "label": "stataUSDT GSM",
           "coinId": "usdt-tether",
           "depType": "collateral",

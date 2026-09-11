@@ -1,9 +1,6 @@
-import { readFileSync } from "node:fs";
-import { join } from "node:path";
-import { DatabaseSync } from "node:sqlite";
-import type { D1Database, D1PreparedStatement } from "@cloudflare/workers-types";
 import { describe, expect, it } from "vitest";
 import { mockD1, type MockD1Database, type MockTableConfig } from "@shared/test-utils/mock-d1";
+import { makeSqliteD1, type SqliteD1 } from "./repair-tasks.test-support";
 import {
   buildDdrRepairTaskId,
   DDR_REPAIR_RUNNER_BACKOFF_SEC_V1,
@@ -32,55 +29,6 @@ function mockRepairD1(tables: MockTableConfig[] = []): MockD1Database {
   return mockD1([...tables, ...REPAIR_TASK_RUNNER_TABLES]);
 }
 
-interface SqliteD1 extends D1Database {
-  sqlite: DatabaseSync;
-  close(): void;
-}
-
-function makeSqliteD1(): SqliteD1 {
-  const sqlite = new DatabaseSync(":memory:");
-  sqlite.exec(readFileSync(join(process.cwd(), "worker/migrations/0000_baseline.sql"), "utf8"));
-  sqlite.exec(readFileSync(join(process.cwd(), "worker/migrations/0228_depeg_resolver_incident_closed_pre_lock.sql"), "utf8"));
-
-  function statement(sql: string, binds: unknown[] = []): D1PreparedStatement {
-    return {
-      bind: (...nextBinds: unknown[]) => statement(sql, nextBinds),
-      run: async () => {
-        const result = sqlite.prepare(sql).run(...(binds as never[]));
-        return { success: true, meta: { changes: result.changes } };
-      },
-      first: async <T>() => (sqlite.prepare(sql).get(...(binds as never[])) ?? null) as T | null,
-      all: async <T>() => ({
-        results: sqlite.prepare(sql).all(...(binds as never[])) as T[],
-        success: true,
-        meta: {},
-      }),
-    } as unknown as D1PreparedStatement;
-  }
-
-  return {
-    sqlite,
-    prepare: (sql: string) => statement(sql),
-    batch: async (statements: D1PreparedStatement[]) => {
-      sqlite.exec("BEGIN");
-      try {
-        const results = [];
-        for (const item of statements) results.push(await item.run());
-        sqlite.exec("COMMIT");
-        return results as Awaited<ReturnType<D1Database["batch"]>>;
-      } catch (error) {
-        sqlite.exec("ROLLBACK");
-        throw error;
-      }
-    },
-    exec: async (sql: string) => {
-      sqlite.exec(sql);
-      return { count: 0, duration: 0 };
-    },
-    dump: async () => new ArrayBuffer(0),
-    close: () => sqlite.close(),
-  } as SqliteD1;
-}
 
 function seedNaturalPredecessorFixture(
   db: SqliteD1,
@@ -354,6 +302,43 @@ describe("repair tasks", () => {
     ]);
   });
 
+  it("bounds the detail page while aggregating every active task", async () => {
+    const db = makeSqliteD1();
+    try {
+      const insert = db.sqlite.prepare(`INSERT INTO worker_repair_tasks
+        (task_id, kind, subject_id, state, payload_json, created_at, updated_at)
+        VALUES (?, 'ddr-repair-required-event', ?, ?, ?, ?, ?)`);
+      for (let id = 30; id >= 1; id--) {
+        insert.run(`task:${id}`, String(id), "open", JSON.stringify({ reason: `reason-${id}` }), NOW - 100, NOW - 30 + id);
+      }
+      insert.run("closed", "0", "closed", '{"reason":"closed"}', NOW, NOW + 100);
+      await expect(loadDdrRepairDebtDetails(db)).resolves.toEqual({
+        checkedAt: NOW,
+        count: 30,
+        events: Array.from({ length: 25 }, (_, index) => ({ eventId: index + 1, reason: `reason-${index + 1}` })),
+        eventsTruncated: true,
+      });
+    } finally {
+      db.close();
+    }
+  });
+
+  it("omits malformed details without hiding active debt", async () => {
+    const db = makeSqliteD1();
+    try {
+      db.sqlite.exec(`INSERT INTO worker_repair_tasks
+        (task_id, kind, subject_id, state, payload_json, created_at, updated_at) VALUES
+        ('valid', 'ddr-repair-required-event', '3', 'open', '{"reason":"valid"}', ${NOW}, ${NOW}),
+        ('json', 'ddr-repair-required-event', '1', 'failed', '{', ${NOW}, ${NOW}),
+        ('fraction', 'ddr-repair-required-event', '2.5', 'deferred', '{"reason":"invalid"}', ${NOW}, ${NOW})`);
+      await expect(loadDdrRepairDebtDetails(db)).resolves.toEqual({
+        checkedAt: NOW, count: 3, events: [{ eventId: 3, reason: "valid" }], eventsTruncated: true,
+      });
+    } finally {
+      db.close();
+    }
+  });
+
   it("returns an empty DDR detail projection when no active task rows exist", async () => {
     const db = mockRepairD1([
       {
@@ -494,48 +479,29 @@ describe("repair tasks", () => {
     }
   });
 
-  it("defers ambiguous tasks and respects the hard per-run cap", async () => {
-    const tasks = Array.from({ length: DDR_REPAIR_RUNNER_BATCH_LIMIT_V1 + 1 }, (_, index) => ({
-      task_id: `repair:ddr-repair-required-event:${index + 1}`,
-      subject_id: String(index + 1),
-      payload_json: JSON.stringify({ eventId: index + 1 }),
-    }));
-    const db = mockRepairD1([
-      {
-        match: "COUNT(*) AS due_count",
-        rows: [],
-        first: { due_count: tasks.length },
-      },
-      {
-        match: "COUNT(*) AS stale_claim_count",
-        rows: [],
-        first: { stale_claim_count: 0 },
-      },
-      {
-        match: "SELECT task_id, subject_id, payload_json",
-        rows: tasks.slice(0, DDR_REPAIR_RUNNER_BATCH_LIMIT_V1),
-      },
-      {
-        match: "FROM depeg_events target",
-        rows: [],
-        first: null,
-      },
-    ]);
-
-    const result = await runWorkerRepairTaskRunner(db, { nowSec: NOW });
-
-    expect(JSON.parse(result.metadata ?? "{}")).toMatchObject({
-      claimed: DDR_REPAIR_RUNNER_BATCH_LIMIT_V1,
-      deferred: DDR_REPAIR_RUNNER_BATCH_LIMIT_V1,
-      failed: 0,
-      autoRepairCount: 0,
-      batchLimit: DDR_REPAIR_RUNNER_BATCH_LIMIT_V1,
-    });
-    const claims = db.getHistory().filter((entry) => entry.sql.includes("SET state = 'claimed'"));
-    expect(claims).toHaveLength(DDR_REPAIR_RUNNER_BATCH_LIMIT_V1);
-    const deferrals = db.getHistory().filter((entry) => entry.binds.includes("safe-class-not-proven"));
-    expect(deferrals).toHaveLength(DDR_REPAIR_RUNNER_BATCH_LIMIT_V1);
-    expect(deferrals[0]?.binds).toContain(NOW + DDR_REPAIR_RUNNER_BACKOFF_SEC_V1);
+  it("selects only the five highest-priority due tasks", async () => {
+    const db = makeSqliteD1();
+    try {
+      const insert = db.sqlite.prepare(`INSERT INTO worker_repair_tasks
+        (task_id, kind, subject_id, priority, state, payload_json, created_at, updated_at)
+        VALUES (?, 'ddr-repair-required-event', ?, ?, 'open', ?, ?, ?)`);
+      for (let id = 1; id <= 6; id++) {
+        insert.run(`task:${id}`, String(id), 7 - id, JSON.stringify({ eventId: id }), NOW - id, NOW - id);
+      }
+      const result = await runWorkerRepairTaskRunner(db, { nowSec: NOW });
+      expect(JSON.parse(result.metadata ?? "{}")).toMatchObject({
+        claimed: 5, deferred: 5, failed: 0, autoRepairCount: 0,
+        batchLimit: DDR_REPAIR_RUNNER_BATCH_LIMIT_V1,
+      });
+      expect(db.sqlite.prepare(
+        "SELECT subject_id FROM worker_repair_tasks WHERE state = 'deferred' ORDER BY priority",
+      ).all()).toEqual(["6", "5", "4", "3", "2"].map((subject_id) => ({ subject_id })));
+      expect(db.sqlite.prepare(
+        "SELECT state, attempt_count, updated_at, next_attempt_at FROM worker_repair_tasks WHERE task_id = 'task:1'",
+      ).get()).toEqual({ state: "open", attempt_count: 0, updated_at: NOW - 1, next_attempt_at: null });
+    } finally {
+      db.close();
+    }
   });
 
   it("backs off a claimed task when execution fails", async () => {
@@ -578,130 +544,6 @@ describe("repair tasks", () => {
     expect(failure?.binds).toContain(NOW + DDR_REPAIR_RUNNER_BACKOFF_SEC_V1);
   });
 
-  it("executes a T1.2-safe task through authorizations, ordered lineage, and a guarded pointer update", async () => {
-    const db = mockRepairD1([
-      {
-        match: "COUNT(*) AS due_count",
-        rows: [],
-        first: { due_count: 1 },
-      },
-      {
-        match: "COUNT(*) AS stale_claim_count",
-        rows: [],
-        first: { stale_claim_count: 0 },
-      },
-      {
-        match: "SELECT task_id, subject_id, payload_json",
-        rows: [{
-          task_id: "repair:ddr-repair-required-event:42",
-          subject_id: "42",
-          payload_json: JSON.stringify({ eventId: 42 }),
-        }],
-      },
-      {
-        match: "FROM depeg_events target",
-        rows: [],
-        first: {
-          incident_key: "ddr2:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
-          stablecoin_id: "cngn-compliant-naira",
-          peg_currency: "NGN",
-          direction: "below",
-          first_event_id: 40,
-          current_event_id: 41,
-          first_started_at: NOW - 7200,
-          current_started_at: NOW - 1800,
-          first_observed_peak_bucket_bps: 150,
-          closed_pre_lock_at: null,
-          superseded_by_incident_key: null,
-          source_fingerprint: "a".repeat(64),
-          target_event_id: 42,
-          target_stablecoin_id: "cngn-compliant-naira",
-          target_symbol: "cNGN",
-          target_peg_type: "peggedNGN",
-          target_direction: "below",
-          target_started_at: NOW - 600,
-          target_start_price: 0.985,
-          target_peg_reference: 1,
-          target_source: "live",
-          current_event_ended_at: NOW - 1200,
-        },
-      },
-      {
-        match: "LEFT JOIN depeg_resolver_incident_policy_membership",
-        rows: [{
-          incident_key: "ddr2:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
-          stablecoin_id: "cngn-compliant-naira",
-          peg_currency: "NGN",
-          direction: "below",
-          first_event_id: 40,
-          current_event_id: 41,
-          first_started_at: NOW - 7200,
-          current_started_at: NOW - 1800,
-          first_observed_peak_bucket_bps: 150,
-          incident_state: "active",
-          closed_pre_lock_at: null,
-          superseded_by_incident_key: null,
-          source_fingerprint: "a".repeat(64),
-          created_at: NOW - 7200,
-          updated_at: NOW - 1800,
-          membership_incident_key: null,
-          membership_stablecoin_id: null,
-          prediction_policy_version: null,
-          public_tracked_at_first_seen: null,
-          psi_shadow_at_first_seen: null,
-          rollout_active_at_enablement: null,
-          policy_universe_included: null,
-          policy_universe_reason: null,
-          registry_snapshot_json: null,
-          membership_created_at: null,
-          lock_eligible_at: null,
-          deferral_count: null,
-          last_deferral_reason: null,
-          last_state: null,
-          lock_trigger: null,
-          forecast_readiness_score: null,
-          forecast_readiness_version: null,
-          readiness_threshold: null,
-          backstop_at: null,
-          backstop_delay_sec: null,
-        }],
-      },
-      {
-        match: "INSERT INTO depeg_resolver_event_repair_authorizations",
-        rows: [],
-        first: {
-          id: 7,
-          event_id: 42,
-          incident_key: "ddr2:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
-          operation: "incident_link",
-          columns_json: "[]",
-          required_revision_id: null,
-          required_erratum_id: null,
-          reason: "runner",
-          created_at: NOW,
-          expires_at: NOW + 900,
-          created_by: "ddr-worker:repair-task-runner-v1",
-        },
-      },
-    ]);
-
-    const result = await runWorkerRepairTaskRunner(db, { nowSec: NOW });
-
-    expect(JSON.parse(result.metadata ?? "{}")).toMatchObject({
-      mode: "execute",
-      claimed: 1,
-      closed: 1,
-      deferred: 0,
-      failed: 0,
-      autoRepairCount: 1,
-    });
-    const sql = db.getHistory().map((entry) => entry.sql).join("\n");
-    expect(sql).toContain("depeg_resolver_event_repair_authorization_consumptions");
-    expect(sql).toContain("depeg_resolver_incident_event_links");
-    expect(sql).toContain("depeg_resolver_incident_revisions");
-    expect(sql).toContain("depeg_resolver_lock_opportunity_audit");
-    expect(sql).toContain("source_fingerprint");
-  });
 
   it("repairs a safe fixture task atomically against the append-only DDR tables", async () => {
     const db = makeSqliteD1();
@@ -791,6 +633,28 @@ describe("repair tasks", () => {
       expect(db.sqlite.prepare(
         "SELECT COUNT(*) AS count FROM depeg_resolver_event_repair_authorization_consumptions WHERE event_id = 42",
       ).get()).toEqual({ count: 2 });
+    } finally {
+      db.close();
+    }
+  });
+
+  it("preserves a pending lock audit and defers an otherwise safe repair", async () => {
+    const db = makeSqliteD1();
+    try {
+      seedNaturalPredecessorFixture(db);
+      db.sqlite.exec(`INSERT INTO depeg_resolver_lock_opportunity_audit
+        (incident_key, event_id, run_at, eligible_at, health_status, action, created_at)
+        VALUES ('ddr2:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa', 41, ${NOW}, ${NOW}, 'healthy', 'pending', ${NOW})`);
+      await runWorkerRepairTaskRunner(db, { nowSec: NOW });
+      expect(db.sqlite.prepare(
+        "SELECT state, last_error FROM worker_repair_tasks WHERE subject_id = '42'",
+      ).get()).toEqual({ state: "deferred", last_error: "safe-class-not-proven" });
+      expect(db.sqlite.prepare(
+        "SELECT current_event_id FROM depeg_resolver_incidents",
+      ).all()).toEqual([{ current_event_id: 41 }]);
+      expect(db.sqlite.prepare(
+        "SELECT event_id, action FROM depeg_resolver_lock_opportunity_audit",
+      ).all()).toEqual([{ event_id: 41, action: "pending" }]);
     } finally {
       db.close();
     }

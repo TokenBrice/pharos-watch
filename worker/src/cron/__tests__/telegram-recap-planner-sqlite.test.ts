@@ -1,7 +1,7 @@
 import { DatabaseSync } from "node:sqlite";
-import { afterEach, describe, expect, it, vi } from "vitest";
-import { mockFetch } from "@shared/test-utils/mock-fetch";
-import { createLatestSchemaFixtureTracker } from "../../test-helpers/latest-schema-sqlite";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { mockFetch, type MockFetchSpy } from "@shared/test-utils/mock-fetch";
+import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
 import { PAUSE_SENTINEL_TS } from "@shared/lib/telegram-delivery-policy";
 import { planTelegramPersonalizedRecaps } from "../telegram-recap-planner";
 import { buildTelegramRecapDedupeKey } from "../../lib/telegram/recap-store";
@@ -48,7 +48,18 @@ function insertStablecoinsCache(sqlite: DatabaseSync): void {
   }), NOW);
 }
 
-afterEach(closeAll);
+let planningFetch: MockFetchSpy;
+beforeEach(() => {
+  planningFetch = mockFetch([], { requireMatch: true });
+});
+afterEach(() => {
+  try {
+    expect(planningFetch).not.toHaveBeenCalled();
+  } finally {
+    vi.unstubAllGlobals();
+    closeAll();
+  }
+});
 
 describe("telegram personalized recap planner", () => {
   it("plans deterministic direct and explicit global recaps without network access", async () => {
@@ -59,24 +70,18 @@ describe("telegram personalized recap planner", () => {
     markTapeFresh(sqlite);
     insertTape(sqlite, "recap-depeg-1", NOW - 60);
 
-    const fetchMock = mockFetch([], { requireMatch: true });
-    try {
-      const result = await planTelegramPersonalizedRecaps(db, undefined, { nowSec: NOW });
-      expect(result.status).toBe("ok");
-      expect(JSON.parse(result.metadata)).toMatchObject({
-        pagesAttempted: 1,
-        pagesCompleted: 1,
-        queued: 2,
-        factsLoaded: 1,
-        factsAdmitted: 1,
-        factsRejected: 0,
-        aiCalls: 0,
-        externalPlanningFetches: 0,
-      });
-      expect(fetchMock).not.toHaveBeenCalled();
-    } finally {
-      vi.unstubAllGlobals();
-    }
+    const result = await planTelegramPersonalizedRecaps(db, undefined, { nowSec: NOW });
+    expect(result.status).toBe("ok");
+    expect(JSON.parse(result.metadata)).toMatchObject({
+      pagesAttempted: 1,
+      pagesCompleted: 1,
+      queued: 2,
+      factsLoaded: 1,
+      factsAdmitted: 1,
+      factsRejected: 0,
+      aiCalls: 0,
+      externalPlanningFetches: 0,
+    });
 
     expect(sqlite.prepare("SELECT chat_id, source_type, priority FROM telegram_pending_alerts ORDER BY chat_id").all()).toEqual([
       { chat_id: "direct", source_type: "personalized_recap", priority: 100 },

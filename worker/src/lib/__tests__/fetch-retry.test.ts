@@ -1,20 +1,19 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { mockFetch } from "@shared/test-utils/mock-fetch";
+import type * as AbortModule from "../abort";
 
 const {
   sleepWithSignalMock,
   throwIfAbortedMock,
 } = vi.hoisted(() => ({
-  sleepWithSignalMock: vi.fn(async () => undefined),
+  sleepWithSignalMock: vi.fn<(ms: number, signal?: AbortSignal) => Promise<void>>(async () => undefined),
   throwIfAbortedMock: vi.fn(),
 }));
 
-vi.mock("../abort", () => ({
+vi.mock("../abort", async (importOriginal) => ({
+  ...(await importOriginal<typeof AbortModule>()),
   sleepWithSignal: sleepWithSignalMock,
   throwIfAborted: throwIfAbortedMock,
-  // Real behavior: `response-body` reads it through this module, and the
-  // per-attempt timeout assertions below depend on the actual abort reason.
-  abortReason: (signal: AbortSignal, fallback: () => unknown) => signal.reason ?? fallback(),
 }));
 
 import {
@@ -535,6 +534,49 @@ describe("fetchWithRetry", () => {
     }
   });
 
+  it("retries a 200 response whose body is not JSON, then gives up with null", async () => {
+    const fetchMock = mockFetch([{
+      match: () => true,
+      respond: () => new Response("not json"),
+    }]);
+    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+
+    try {
+      const result = await fetchJsonWithRetry(
+        "https://example.com/not-json.json",
+        undefined,
+        2,
+      );
+
+      expect(result).toBeNull();
+      expect(fetchMock).toHaveBeenCalledTimes(3);
+      expect(warnRecords(warnSpy).filter((record) =>
+        record.event === "fetch_retry_attempt_failed"
+      )).toEqual([
+        expect.objectContaining({ errorName: "SyntaxError" }),
+        expect.objectContaining({ errorName: "SyntaxError" }),
+        expect.objectContaining({ errorName: "SyntaxError" }),
+      ]);
+    } finally {
+      warnSpy.mockRestore();
+    }
+  });
+
+  it("parses a JSON body regardless of content type", async () => {
+    mockFetch([{
+      match: () => true,
+      respond: () => new Response('{"ok":true}', { headers: { "Content-Type": "text/plain" } }),
+    }]);
+
+    const result = await fetchJsonWithRetry<{ ok: boolean }>(
+      "https://example.com/wrong-content-type",
+      undefined,
+      0,
+    );
+
+    expect(result?.body).toEqual({ ok: true });
+  });
+
   it("counts UTF-8 bytes while preserving an under-limit multibyte body", async () => {
     const bytes = encode("€🙂");
     const attempt = streamedResponse([bytes.slice(0, 2), bytes.slice(2)]);
@@ -596,5 +638,63 @@ describe("fetchWithRetry", () => {
     } finally {
       warnSpy.mockRestore();
     }
+  });
+});
+
+describe("fetch caller cancellation", () => {
+  beforeEach(async () => {
+    vi.useFakeTimers();
+    const abort = await vi.importActual<typeof AbortModule>("../abort");
+    sleepWithSignalMock.mockImplementation(abort.sleepWithSignal);
+    throwIfAbortedMock.mockImplementation(abort.throwIfAborted);
+  });
+
+  afterEach(() => {
+    sleepWithSignalMock.mockImplementation(async () => undefined);
+    throwIfAbortedMock.mockImplementation(() => undefined);
+    vi.useRealTimers();
+    vi.unstubAllGlobals();
+  });
+
+  it("rejects an already-aborted caller before fetching", async () => {
+    const controller = new AbortController();
+    const reason = new Error("caller cancelled");
+    controller.abort(reason);
+    const fetchSpy = mockFetch([], { requireMatch: true });
+    await expect(fetchJsonWithRetry("https://example.com", { signal: controller.signal })).rejects.toBe(reason);
+    expect(fetchSpy).not.toHaveBeenCalled();
+  });
+
+  it("cancels retry sleep without sending the next request", async () => {
+    const controller = new AbortController();
+    const reason = new Error("caller cancelled");
+    const fetchSpy = mockFetch([{ match: () => true, status: 503, body: "" }]);
+    const pending = fetchJsonWithRetry("https://example.com", { signal: controller.signal });
+    const rejected = expect(pending).rejects.toBe(reason);
+    await vi.advanceTimersByTimeAsync(0);
+    controller.abort(reason);
+    await rejected;
+    await vi.runAllTimersAsync();
+    expect(fetchSpy).toHaveBeenCalledTimes(1);
+  });
+
+  it("rejects caller cancellation while consuming a body without retrying", async () => {
+    const controller = new AbortController();
+    const reason = new Error("caller cancelled");
+    const fetchSpy = mockFetch([{ match: () => true, respond: () => neverEndingResponse("{") }]);
+    const pending = fetchJsonWithRetry("https://example.com", { signal: controller.signal });
+    const rejected = expect(pending).rejects.toBe(reason);
+    await vi.advanceTimersByTimeAsync(0);
+    controller.abort(reason);
+    await rejected;
+    expect(fetchSpy).toHaveBeenCalledTimes(1);
+  });
+
+  it.each([fetchJsonWithRetry, fetchTextWithRetry])("rejects invalid consumed-body limits before fetching", async (fetchBody) => {
+    const fetchSpy = mockFetch([], { requireMatch: true });
+    for (const maxResponseBytes of [-1, 0.5, Infinity, Number.MAX_SAFE_INTEGER + 1]) {
+      await expect(fetchBody("https://example.com", undefined, 0, { maxResponseBytes })).rejects.toBeInstanceOf(RangeError);
+    }
+    expect(fetchSpy).not.toHaveBeenCalled();
   });
 });

@@ -1,10 +1,9 @@
 import { readJsonResponse } from "../../test-helpers/__shared/auth";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import worker from "../../index";
 import { mockD1 } from "@shared/test-utils/mock-d1";
 import { createWorkerEnv } from "../../test-helpers/__shared/worker-env";
 import {
-  hmacSha256Hex,
   makeApiRequest,
   makeExecutionContext,
   stubCryptoForAuth,
@@ -16,9 +15,22 @@ import {
   handleApiKeys,
   handleCredentialLifecycleSummary,
 } from "./api-keys.test-helpers";
-import { makeApiKeyMutationTables, makeRequestAttributionTables } from "../../test-helpers/api-key-test-support";
+import {
+  makeApiKeyMutationTables,
+  makeApiKeyPrefixLookup,
+  makeAuthenticatedApiKeyRow,
+  makeRequestAttributionTables,
+} from "../../test-helpers/api-key-test-support";
 import { resetApiKeyStateForTests } from "../../lib/api-keys";
 import { resetRequestAttributionStateForTests } from "../../lib/request-source-attribution";
+import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
+
+const fixtures = createLatestSchemaFixtureTracker();
+afterEach(() => {
+  fixtures.closeAll();
+  vi.useRealTimers();
+  vi.unstubAllGlobals();
+});
 
 stubCryptoForAuth();
 
@@ -123,28 +135,7 @@ describe("api key handlers", () => {
 
   it("creates keys with the default 90-day expiry when expiresAt is omitted", async () => {
     const nowSec = 2_000;
-    const db = mockD1(
-      [
-        {
-          match: "INSERT INTO api_keys",
-          first: makeApiKeyRow({
-            id: 5,
-            key_prefix: "0011223344556677",
-            name: "Default",
-            expires_at: nowSec + 90 * 24 * 60 * 60,
-            created_at: nowSec,
-            updated_at: nowSec,
-          }),
-          rows: [],
-        },
-        {
-          match: "INSERT INTO api_key_audit_log",
-          rows: [],
-          runMeta: { changes: 1 },
-        },
-      ],
-      { requireMatch: true },
-    );
+    const { sqlite, db } = fixtures.open();
 
     vi.useFakeTimers();
     vi.setSystemTime(new Date(nowSec * 1000));
@@ -163,24 +154,17 @@ describe("api key handlers", () => {
     const body = (await readJsonResponse(response, 201)) as { key: { expiresAt: number | null } };
 
     expect(body.key.expiresAt).toBe(nowSec + 90 * 24 * 60 * 60);
+    expect(sqlite.prepare("SELECT expires_at FROM api_keys").get()).toEqual({
+      expires_at: nowSec + 90 * 24 * 60 * 60,
+    });
     vi.useRealTimers();
   });
 
   it("updates expiresAt through the admin handler", async () => {
-    const db = mockD1(
-      [
-        ...makeApiKeyMutationTables({
-          existingRow: {
-            owner_email: "ops@pharos.watch",
-          },
-          postMutationRow: {
-            expires_at: 5_000,
-            updated_at: 2_000,
-          },
-        }),
-      ],
-      { requireMatch: true },
-    );
+    const { sqlite, db } = fixtures.open();
+    sqlite.exec(`INSERT INTO api_keys
+      (id, key_prefix, secret_hash, name, created_at, updated_at, expires_at)
+      VALUES (7, '0011223344556677', 'hash', 'Ops', 1000, 1000, 3000)`);
 
     const response = await handleApiKeyUpdate(
       db,
@@ -196,6 +180,7 @@ describe("api key handlers", () => {
     const body = (await readJsonResponse(response, 200)) as { key: { expiresAt: number | null } };
 
     expect(body.key.expiresAt).toBe(5_000);
+    expect(sqlite.prepare("SELECT expires_at FROM api_keys WHERE id = 7").get()).toEqual({ expires_at: 5_000 });
   });
 
   it("rejects partially numeric rate-limit updates", async () => {
@@ -232,23 +217,10 @@ describe("api key handlers", () => {
   });
 
   it("preserves the current expiry when rotating a key", async () => {
-    const db = mockD1(
-      [
-        ...makeApiKeyMutationTables({
-          existingRow: {
-            owner_email: "ops@pharos.watch",
-            expires_at: 5_000,
-          },
-          postMutationRow: {
-            key_prefix: "fedcba9876543210",
-            owner_email: "ops@pharos.watch",
-            expires_at: 5_000,
-            updated_at: 2_000,
-          },
-        }),
-      ],
-      { requireMatch: true },
-    );
+    const { sqlite, db } = fixtures.open();
+    sqlite.exec(`INSERT INTO api_keys
+      (id, key_prefix, secret_hash, name, created_at, updated_at, expires_at)
+      VALUES (7, '0011223344556677', 'hash', 'Ops', 1000, 1000, 5000)`);
 
     const response = await handleApiKeyRotate(
       db,
@@ -265,6 +237,7 @@ describe("api key handlers", () => {
     const body = (await readJsonResponse(response, 200)) as { key: { expiresAt: number | null } };
 
     expect(body.key.expiresAt).toBe(5_000);
+    expect(sqlite.prepare("SELECT expires_at FROM api_keys WHERE id = 7").get()).toEqual({ expires_at: 5_000 });
   });
 
   it("reports rotation readback failure as unknown without exposing a replacement token", async () => {
@@ -300,19 +273,17 @@ describe("api key handlers", () => {
 
   it("rejects expired keys in the real public fetch gate", async () => {
     const secret = "abcdefghijklmnopqrstuvwxyzABCDEF";
-    const secretHash = await hmacSha256Hex("pepper", secret);
     const db = mockD1(
       [
-        {
-          match: "FROM api_keys",
-          matchBinds: ["0123456789abcdef"],
-          first: makeApiKeyRow({
-            secret_hash: secretHash,
+        makeApiKeyPrefixLookup({
+          prefix: "0123456789abcdef",
+          row: await makeAuthenticatedApiKeyRow({
+            pepper: "pepper",
+            secret,
             name: "Expired",
             expires_at: 1,
           }),
-          rows: [],
-        },
+        }),
         ...makeRequestAttributionTables(),
       ],
       { requireMatch: true },

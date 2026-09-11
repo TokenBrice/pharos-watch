@@ -1,7 +1,6 @@
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
-import { tmpdir } from "node:os";
+import { mkdirSync, rmSync, writeFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it } from "vitest";
 import { selectChangedGeneratedArtifactIds } from "../ci/select-generated-artifacts.mts";
 import {
   V9_EVALUATION_BUILD_DIGEST_DOMAIN,
@@ -12,9 +11,13 @@ import {
   collectV9EvaluationBuildSourcePaths,
   renderV9EvaluationBuildManifest,
 } from "../maintenance/generate-safety-score-v9-evaluation-build-manifest";
+import { createTempRepoTracker } from "./helpers/test-state";
+
+const roots = createTempRepoTracker("pharos-v9-build-manifest");
+afterEach(() => roots.cleanup());
 
 function fixtureRoot(): string {
-  const root = mkdtempSync(resolve(tmpdir(), "pharos-v9-build-manifest-"));
+  const root = roots.makeRoot();
   for (const path of V9_EVALUATION_BUILD_SOURCE_PATHS) {
     mkdirSync(dirname(resolve(root, path)), { recursive: true });
     writeFileSync(resolve(root, path), `${path}\n`);

@@ -36,9 +36,9 @@ describe("candidate sets", () => {
 
   it("no candidate set offers a retired axis", () => {
     for (const candidates of Object.values(LOWEST_SUB_DIMENSION_CANDIDATES)) {
-      expect(candidates).not.toEqual(
-        expect.arrayContaining(["dependencyRisk", "collateralQuality", "custodyModel"]),
-      );
+      for (const retired of ["dependencyRisk", "collateralQuality", "custodyModel"]) {
+        expect(candidates).not.toContain(retired);
+      }
     }
   });
 });
@@ -111,17 +111,6 @@ describe("selectLowestSubDimension", () => {
     const result = selectLowestSubDimension(row, "treasury", []);
     expect(result?.key).toMatch(/governanceOverride|activeDepegHistory/);
     expect(result?.score).toBe(100);
-  });
-
-  it("returns null when even the synthetic safety net dimensions can't resolve", () => {
-    // Only Yield surfaces yieldVariance/sourceRisk; if those are also absent on a
-    // Treasury row that's been hollowed out the function still returns from
-    // governanceOverride. To exercise the null branch, we override the row to
-    // make every candidate read null — but the design intentionally keeps the
-    // safety net populated, so the branch is effectively unreachable in practice.
-    // The engine raises `template-coverage-gap` if the function were to return
-    // null; here we just document the contract.
-    expect(typeof selectLowestSubDimension).toBe("function");
   });
 
   it("yieldVariance + sourceRisk only surface under Yield profile", () => {

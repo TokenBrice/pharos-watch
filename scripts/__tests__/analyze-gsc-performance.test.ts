@@ -1,7 +1,6 @@
-import { mkdtempSync, writeFileSync } from "node:fs";
-import { tmpdir } from "node:os";
+import { writeFileSync } from "node:fs";
 import { join } from "node:path";
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it } from "vitest";
 import {
   analyzeGscPerformanceInputs,
   renderGscPerformanceReport,
@@ -9,9 +8,10 @@ import {
 } from "../maintenance/analyze-gsc-performance.mjs";
 import { writeStoredZip } from "./helpers/gsc-zip";
 
-function fixtureDir() {
-  return mkdtempSync(join(tmpdir(), "pharos-gsc-performance-"));
-}
+import { createTempRepoTracker } from "./helpers/test-state";
+
+const { makeRoot: fixtureDir, cleanup } = createTempRepoTracker("pharos-gsc-performance");
+afterEach(cleanup);
 
 describe("analyze-gsc-performance", () => {
   it("aggregates page-family CTR gaps and query opportunities from GSC exports", async () => {

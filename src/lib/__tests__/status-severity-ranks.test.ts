@@ -1,36 +1,22 @@
 import { describe, expect, it } from "vitest";
 import type { StatusCause } from "@shared/types";
-import { STATUS_CAUSE_SEVERITY_RANK } from "@/lib/status/cause-severity";
+import { normalizeStatusIssues } from "@/lib/status-dashboard-model";
 import {
   buildWorkspaceModeUrl,
   parseWorkspaceMode,
-  SEVERITY_RANK,
   worstSeverity,
-  type WorkspaceSeverity,
 } from "@/lib/status/workspace-mode";
 
-/**
- * The two status severity vocabularies rank in opposite directions. Both
- * orderings are observable (issue lists put criticals first; workspace tabs
- * open on the worst mode), so pin them here rather than letting a future
- * "dedup" collapse them into one table.
- */
 describe("status severity ranks", () => {
-  it("ranks status causes worst-first so `<` selects the more severe cause", () => {
-    const severities: StatusCause["severity"][] = ["critical", "warning", "info"];
-
-    expect(severities.map((severity) => STATUS_CAUSE_SEVERITY_RANK[severity])).toEqual([0, 1, 2]);
-    expect([...severities].reverse().sort((a, b) => STATUS_CAUSE_SEVERITY_RANK[a] - STATUS_CAUSE_SEVERITY_RANK[b]))
-      .toEqual(["critical", "warning", "info"]);
-    expect(STATUS_CAUSE_SEVERITY_RANK.critical).toBeLessThan(STATUS_CAUSE_SEVERITY_RANK.warning);
-  });
-
-  it("ranks workspace severity best-first so `>` selects the worse state", () => {
-    const severities: WorkspaceSeverity[] = ["healthy", "watch", "unknown", "critical"];
-
-    expect(severities.map((severity) => SEVERITY_RANK[severity])).toEqual([0, 1, 2, 3]);
-    expect(SEVERITY_RANK.critical).toBeGreaterThan(SEVERITY_RANK.unknown);
-    expect(SEVERITY_RANK.unknown).toBeGreaterThan(SEVERITY_RANK.watch);
+  it("normalizes status issues worst-first regardless of input order", () => {
+    const causes: StatusCause[] = (["info", "critical", "warning"] as const).map((severity) => ({
+      code: `test-${severity}`,
+      layer: "data-quality",
+      severity,
+      message: severity,
+    }));
+    const issues = normalizeStatusIssues({ overall: causes, availability: [], dataQuality: [] });
+    expect(issues.map((issue) => issue.severity)).toEqual(["critical", "warning", "info"]);
   });
 
   it("resolves the worst workspace severity, defaulting to healthy when empty", () => {

@@ -10,109 +10,14 @@ import {
   resetBrowserStorage,
 } from "@/test-utils/frontend";
 import { mockFetch, type MockFetchSpy } from "@shared/test-utils/mock-fetch";
+import { baseRecommendation, makePickerQueryData, mockSelectorOutput } from "./picker.test-support";
+import { createVerifiedSelectorSnapshot } from "@shared/lib/selector/snapshot";
 
 // ----------------------------------------------------------------------------
 // Engine mock — installed BEFORE the client import so the synchronous engine
 // call inside `useSelector` resolves to a deterministic SelectorOutput.
 // ----------------------------------------------------------------------------
 
-const baseRecommendation = {
-  id: "usdc-usd-coin",
-  symbol: "USDC",
-  name: "USD Coin",
-  rank: 1 as const,
-  score: 87.4,
-  confidence: 88,
-  components: [
-    {
-      key: "resilience" as const,
-      weight: 20,
-      rawValue: 91,
-      normalizedValue: 91,
-      contribution: 18.2,
-      redistributed: false,
-    },
-    {
-      key: "dependencyRisk" as const,
-      weight: 17,
-      rawValue: 88,
-      normalizedValue: 88,
-      contribution: 14.96,
-      redistributed: false,
-    },
-  ],
-  whyKeys: ["top-safety", "strong-resilience"],
-  lowestSubDimension: {
-    key: "decentralization" as const,
-    score: 45,
-    contextKeys: [],
-  },
-  chainHints: { topByLiquidity: ["Ethereum"], topByYield: [], primary: "Ethereum" },
-  isRecentListing: false,
-  bluechipGrade: "A" as const,
-  safetyGrade: "A" as const,
-  supplyUsd: 32_000_000_000,
-  isBeta: true as const,
-};
-
-function mockSelectorOutput(
-  overrides: {
-    profile?: "treasury" | "yield" | "trading";
-    pegCurrency?: "USD" | "EUR" | "CHF" | "GOLD";
-    input?: SelectorInput;
-    recommended?: unknown[];
-    lowerRanked?: unknown[];
-    closestSurvivors?: unknown[];
-  } = {},
-) {
-  const profile = overrides.profile ?? "treasury";
-  const pegCurrency = overrides.pegCurrency ?? "USD";
-  const input = overrides.input ?? {
-    profile,
-    pegCurrency,
-    horizon: "6mplus" as const,
-    depegTolerance: "zero" as const,
-    composability: "none" as const,
-    exitSpeed: "any" as const,
-    minApy: null,
-    yieldNativeOnly: false,
-    decentralization: "any" as const,
-    custodyOk: "any" as const,
-  };
-  return {
-    profile,
-    input,
-    universe: { active: 380, surviving: 12 },
-    recommended: overrides.recommended ?? [
-      { ...baseRecommendation, profile, recommendedSource: null, perInputStaleness: null },
-    ],
-    lowerRanked: overrides.lowerRanked ?? [],
-    coverageWarnings: {
-      skippedForCoverageCount: 0,
-      skippedForCoverage: [],
-      sparse: false,
-      uneven: false,
-      newListingCount: 0,
-      redistributionCount: 0,
-    },
-    lowConfidence: false,
-    usedRelaxedFallback: false,
-    relaxedReasons: [],
-    exclusionSummary: [],
-    closestSurvivors: overrides.closestSurvivors ?? [],
-    relaxableConstraints: [],
-    timestamp: 1_700_000_000_000,
-    engineVersion: "selector-v1.2",
-    methodologyVersions: {
-      safetyScore: "v7.25",
-      pegScoreAndDews: "v3",
-      yieldIntelligence: "v8",
-      bluechipAlignment: "v1",
-      exclusionFilters: "selector-v1.2",
-    },
-    datasetHash: "abc123",
-  };
-}
 
 function installSnapshotFetch(body: unknown, status = 200): MockFetchSpy {
   return mockFetch([{
@@ -128,6 +33,7 @@ const { runSelectorMock } = vi.hoisted(() => ({
 
 vi.mock("@shared/lib/selector", async () => {
   const actual = await vi.importActual<Record<string, unknown>>("@shared/lib/selector/types");
+  const { validateSelectorSnapshotResponse } = await import("@shared/lib/selector/snapshot");
   return {
     ...actual,
     runSelector: runSelectorMock,
@@ -137,17 +43,7 @@ vi.mock("@shared/lib/selector", async () => {
     })),
     selectorAnswersToScreenerFilters: vi.fn(() => ({ filters: {}, divergenceWarnings: [] })),
     computeSnapshotId: vi.fn(async () => "stub-sid"),
-    validateSelectorSnapshotResponse: vi.fn((value: unknown) => {
-      if (
-        value != null &&
-        typeof value === "object" &&
-        Array.isArray((value as { recommended?: unknown }).recommended) &&
-        (value as { input?: unknown }).input != null
-      ) {
-        return { ok: true, snapshot: value };
-      }
-      return { ok: false, error: "shape" };
-    }),
+    validateSelectorSnapshotResponse,
     getTemplate: vi.fn(() => ({ oneLineExplanation: "Dimension watch line for test." })),
     canonicalizeForDatasetHash: vi.fn((v: unknown) => JSON.stringify(v)),
     SELECTOR_VERSION: "selector-v1.2",
@@ -159,7 +55,7 @@ vi.mock("@shared/lib/selector/data-adapter", () => ({
   buildSelectorRows: vi.fn(() => ({
     rows: new Map(),
     timestamp: 1_700_000_000_000,
-    datasetHash: "abc123",
+    datasetHash: "a".repeat(64),
     methodologyVersions: {
       safetyScore: "v9",
       pegScoreAndDews: "v3",
@@ -176,7 +72,7 @@ vi.mock("@shared/lib/selector/data-adapter", () => ({
 
 vi.mock("@/hooks/use-stablecoins", () => ({
   useStablecoins: () => ({
-    data: { peggedAssets: [{ id: "usdc-usd-coin", circulating: { peggedUSD: 32_000_000_000 } }] },
+    data: { peggedAssets: [{ id: "usdc-circle", circulating: { peggedUSD: 32_000_000_000 } }] },
     dataUpdatedAt: 1,
     isLoading: false,
     isSuccess: true,
@@ -195,38 +91,7 @@ vi.mock("@/hooks/use-hydrated", () => ({
   useHydrated: () => true,
 }));
 
-vi.mock("@/hooks/api-hooks", () => {
-  const stub = () => ({ data: { coins: [] }, dataUpdatedAt: 1, error: null });
-  return {
-    usePegSummary: () => ({ data: { coins: [] }, dataUpdatedAt: 1, error: null }),
-    useReportCardsV9: () => ({
-      data: {
-        cards: [
-          {
-            id: "usdc-usd-coin",
-            overallGrade: "A",
-            overallScore: 90,
-            dimensions: {
-              pegStability: { score: 96 },
-              liquidity: { score: 88 },
-              resilience: { score: 91 },
-              decentralization: { score: 45 },
-              dependencyRisk: { score: 88 },
-            },
-          },
-        ],
-      },
-      dataUpdatedAt: 1,
-      error: null,
-    }),
-    useStressSignals: () => ({ data: { signals: {} }, dataUpdatedAt: 1, error: null }),
-    useDexLiquidity: () => ({ data: {}, dataUpdatedAt: 1, error: null }),
-    useYieldRankings: () => ({ data: { rankings: [] }, dataUpdatedAt: 1, error: null }),
-    useBluechipRatings: () => ({ data: {}, dataUpdatedAt: 1, error: null }),
-    useRedemptionBackstops: () => ({ data: { coins: {} }, dataUpdatedAt: 1, error: null }),
-    _stub: stub,
-  };
-});
+vi.mock("@/hooks/api-hooks", () => makePickerQueryData());
 
 vi.mock("@/lib/logos", () => ({
   logosById: {},
@@ -386,9 +251,8 @@ describe("SelectorClient — state machine", () => {
     expect(botLink.getAttribute("href")).toBe("https://t.me/PharosWatchBot");
   });
 
-  it("excludes unsafe snapshot tokens from the Telegram subscribe command", async () => {
-    const mod = await import("@shared/lib/selector");
-    (mod.runSelector as ReturnType<typeof vi.fn>).mockImplementation((input: SelectorInput) =>
+  it.each(["unsafe token", "all", "freeze"])("excludes unsafe command tokens and falls back to ids for %s", async (symbol) => {
+    runSelectorMock.mockImplementation((input: SelectorInput) =>
       mockSelectorOutput({
         input,
         recommended: [
@@ -403,29 +267,9 @@ describe("SelectorClient — state machine", () => {
           {
             ...baseRecommendation,
             id: "safe-fallback",
-            symbol: "unsafe token",
+            symbol,
             name: "Safe Fallback",
             rank: 2,
-            profile: "treasury",
-            recommendedSource: null,
-            perInputStaleness: null,
-          },
-          {
-            ...baseRecommendation,
-            id: "reserved-symbol-fallback",
-            symbol: "all",
-            name: "Reserved Symbol Fallback",
-            rank: 3,
-            profile: "treasury",
-            recommendedSource: null,
-            perInputStaleness: null,
-          },
-          {
-            ...baseRecommendation,
-            id: "freeze-symbol-fallback",
-            symbol: "freeze",
-            name: "Freeze Symbol Fallback",
-            rank: 4,
             profile: "treasury",
             recommendedSource: null,
             perInputStaleness: null,
@@ -433,15 +277,9 @@ describe("SelectorClient — state machine", () => {
         ],
       }),
     );
-
     setUrlSearch("p=treasury&h=6mplus&d=zero&v=custody&step=result");
     render(<SelectorClient />);
-
-    expect(
-      await screen.findByText(
-        "/subscribe dews, depeg, safety safe-fallback, reserved-symbol-fallback, freeze-symbol-fallback",
-      ),
-    ).toBeTruthy();
+    expect(await screen.findByText("/subscribe dews, depeg, safety safe-fallback")).toBeTruthy();
     expect(screen.queryByText(/all depeg-step 100 usd-top25/)).toBeNull();
   });
 
@@ -749,16 +587,7 @@ describe("SelectorClient — snapshot recall", () => {
   });
 
   it("renders server-recomputed replay output as Pharos-verified", async () => {
-    installSnapshotFetch({
-        ...mockSelectorOutput(),
-        provenance: "pharos-verified",
-        snapshotSchemaVersion: 3,
-        verification: {
-          kind: "pharos-server-recomputed-v1",
-          datasetHash: "abc123",
-          engineVersion: "selector-v1.2",
-        },
-    });
+    installSnapshotFetch(createVerifiedSelectorSnapshot(mockSelectorOutput()));
 
     setUrlSearch("sid=00112233445566778899aabbccddeeff");
     render(<SelectorClient />);
@@ -788,9 +617,8 @@ describe("SelectorClient — snapshot recall", () => {
     vi.unstubAllGlobals();
   });
 
-  it("rejects structurally corrupt snapshot payloads returned with 200", async () => {
-    installSnapshotFetch({ input: { profile: "treasury" }, rows: "not-an-array" });
-
+  it.each(["timestamp", "recommended"])("rejects a corrupt required snapshot field: %s", async (field) => {
+    installSnapshotFetch({ ...mockSelectorOutput(), [field]: "invalid" });
     setUrlSearch("sid=00112233445566778899aabbccddeeff");
     render(<SelectorClient />);
 

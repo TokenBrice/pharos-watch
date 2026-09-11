@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { DAY_SECONDS } from "@shared/lib/time-constants";
-import { createLatestSchemaSqlite } from "../../test-helpers/latest-schema-sqlite";
+import { createLatestSchemaSqlite } from "@shared/test-utils/latest-schema-sqlite";
 import { buildRecomputeStabilityStatements } from "../audit-depeg-history/stability-recompute";
 
 const DAY = Math.floor(new Date("2026-03-05T00:00:00Z").getTime() / 1000);

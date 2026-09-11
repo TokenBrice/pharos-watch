@@ -2,53 +2,14 @@
 
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import type { TelegramMiniAppState } from "../types";
+import { makeMiniAppState } from "../mini-app-test-fixtures";
 import { PresetsPanel } from "./PresetsPanel";
 
-const state: TelegramMiniAppState = {
-  viewer: {
-    userId: "42",
-    username: "watcher",
-    chatId: "42",
-    chatType: "private",
-    canMutate: true,
-    mutationBlockReason: null,
-  },
-  subscriber: {
-    exists: true,
-    globalAlerts: {
-      dews: true,
-      depeg: true,
-      safety: false,
-      launch: false,
-      reserve: false,
-      freeze: false,
-      depegStepBps: 250,
-    },
-    quietHours: { enabled: false, startHourUtc: null, endHourUtc: null, timezone: "UTC" },
-    recap: { available: true, enabled: false, deliveryHourLocal: 9, timezoneConfirmed: true, nextDueAt: null, lastWindowEndAt: null, lastDeliveredLocalDate: null, lastOutcome: null },
-    snoozeUntilTs: null,
-  },
-  presets: [
-    {
-      id: "usd-top25",
-      label: "USD Top 25",
-      alertTypes: { dews: true, depeg: false, safety: false },
-      depegStepBps: 250,
-    },
-  ],
+const state = makeMiniAppState({
+  presets: [{ id: "usd-top25", label: "USD Top 25", alertTypes: { dews: true, depeg: false, safety: false }, depegStepBps: 250 }],
   subscriptions: [],
-  catalog: {
-    recommendedPresets: [{ id: "usd-top25", label: "USD Top 25" }],
-    searchableCoins: [],
-  },
-  health: {
-    lastSuccessfulDeliveryAt: null,
-    lastSuccessfulReplyAt: null,
-    queuedAlerts: 0,
-    recentFailureClass: null,
-  },
-};
+  catalog: { recommendedPresets: [{ id: "usd-top25", label: "USD Top 25" }], searchableCoins: [] },
+});
 
 afterEach(cleanup);
 

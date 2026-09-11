@@ -2,7 +2,12 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { createMockD1Preset, findD1HistoryEntry, type MockD1Database } from "@shared/test-utils/mock-d1";
 import { mockFetch } from "@shared/test-utils/mock-fetch";
 import { mockFetchRetry } from "../../test-helpers/cron";
-import { recordOutcomeSafe } from "../../lib/circuit-breaker";
+import { recordOutcomeSafe, shouldAttemptFetch } from "../../lib/circuit-breaker";
+import { BLUECHIP_SLUG_MAP } from "@shared/lib/bluechip-slugs";
+import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
+import { bluechipResponse } from "./sync-bluechip.test-support";
+
+const fixtures = createLatestSchemaFixtureTracker();
 
 vi.mock("@shared/lib/bluechip-slugs", () => ({
   BLUECHIP_SLUG_MAP: {
@@ -35,44 +40,30 @@ describe("syncBluechip", () => {
   beforeEach(() => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date("2026-03-06T12:00:00Z"));
+    vi.mocked(shouldAttemptFetch).mockResolvedValue(true);
   });
 
   afterEach(() => {
     vi.useRealTimers();
     vi.restoreAllMocks();
+    vi.unstubAllGlobals();
+    fixtures.closeAll();
+    delete BLUECHIP_SLUG_MAP.dai;
+    delete BLUECHIP_SLUG_MAP.usds;
   });
 
   it("writes transformed bluechip ratings to cache on happy path", async () => {
     mockFetch([
       {
         match: "/coin-data/tether",
-        body: {
-          data: [
-            {
-              grade: "A",
-              collateralization: 95,
-              smart_contract_audit: true,
-              date_of_rating: "2026-03-01",
-              date_last_change: "2026-02-15",
-              stability: { translations: [{ summary: "<p>stable</p>" }] },
-            },
-          ],
-        },
+        body: bluechipResponse({ stability: { translations: [{ summary: "<p>stable</p>" }] } }),
       },
       {
         match: "/coin-data/usdc",
-        body: {
-          data: [
-            {
-              grade: "B",
-              collateralization: 88,
-              smart_contract_audit: true,
-              date_of_rating: "2026-03-01",
-              date_last_change: null,
-              management: { translations: [{ summary: "<p>managed</p>" }] },
-            },
-          ],
-        },
+        body: bluechipResponse({
+          grade: "B", collateralization: 88, date_last_change: null,
+          management: { translations: [{ summary: "<p>managed</p>" }] },
+        }),
       },
     ]);
 
@@ -105,36 +96,15 @@ describe("syncBluechip", () => {
     mockFetch([
       {
         match: "/coin-data/tether",
-        body: {
-          data: [
-            {
-              grade: "A",
-              collateralization: 95,
-              smart_contract_audit: true,
-              date_of_rating: "2026-03-01",
-              date_last_change: "2026-02-15",
-              implementation: null,
-              externals: null,
-            },
-          ],
-        },
+        body: bluechipResponse({ implementation: null, externals: null }),
       },
       {
         match: "/coin-data/usdc",
-        body: {
-          data: [
-            {
-              grade: "B+",
-              collateralization: 100,
-              smart_contract_audit: true,
-              date_of_rating: "2026-03-24",
-              date_last_change: null,
-              implementation: null,
-              externals: null,
-              management: { translations: [{ summary: "<p>managed</p>" }] },
-            },
-          ],
-        },
+        body: bluechipResponse({
+          grade: "B+", collateralization: 100, date_of_rating: "2026-03-24", date_last_change: null,
+          implementation: null, externals: null,
+          management: { translations: [{ summary: "<p>managed</p>" }] },
+        }),
       },
     ]);
 
@@ -158,31 +128,11 @@ describe("syncBluechip", () => {
     mockFetch([
       {
         match: "/coin-data/tether",
-        body: {
-          data: [
-            {
-              grade: "A",
-              collateralization: 95,
-              smart_contract_audit: true,
-              date_of_rating: null,
-              date_last_change: "2026-02-15",
-            },
-          ],
-        },
+        body: bluechipResponse({ date_of_rating: null }),
       },
       {
         match: "/coin-data/usdc",
-        body: {
-          data: [
-            {
-              grade: "B+",
-              collateralization: 100,
-              smart_contract_audit: true,
-              date_of_rating: null,
-              date_last_change: null,
-            },
-          ],
-        },
+        body: bluechipResponse({ grade: "B+", collateralization: 100, date_of_rating: null, date_last_change: null }),
       },
     ]);
 
@@ -229,17 +179,7 @@ describe("syncBluechip", () => {
     mockFetch([
       {
         match: "/coin-data/tether",
-        body: {
-          data: [
-            {
-              grade: "A",
-              collateralization: 95,
-              smart_contract_audit: true,
-              date_of_rating: "2026-03-01",
-              date_last_change: "2026-02-15",
-            },
-          ],
-        },
+        body: bluechipResponse(),
       },
       {
         match: "/coin-data/usdc",
@@ -302,17 +242,7 @@ describe("syncBluechip", () => {
     mockFetch([
       {
         match: "/coin-data/tether",
-        body: {
-          data: [
-            {
-              grade: "A",
-              collateralization: 95,
-              smart_contract_audit: true,
-              date_of_rating: "2026-03-01",
-              date_last_change: "2026-02-15",
-            },
-          ],
-        },
+        body: bluechipResponse(),
       },
       {
         match: "/coin-data/usdc",
@@ -367,17 +297,7 @@ describe("syncBluechip", () => {
       },
       {
         match: "/coin-data/usdc",
-        body: {
-          data: [
-            {
-              grade: "B",
-              collateralization: 88,
-              smart_contract_audit: true,
-              date_of_rating: "2026-03-01",
-              date_last_change: null,
-            },
-          ],
-        },
+        body: bluechipResponse({ grade: "B", collateralization: 88, date_last_change: null }),
       },
     ]);
 
@@ -451,5 +371,78 @@ describe("syncBluechip", () => {
     ]);
     expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining("[bluechip] No ratings fetched, preserving cache"));
     expect(getCacheInsert(db as MockD1Database)).toBeUndefined();
+  });
+
+  it.each([6 * 3600 - 1, 6 * 3600])("enforces the freshness cutoff at age %s seconds", async (age) => {
+    const { db, sqlite } = fixtures.open();
+    const value = JSON.stringify({ sentinel: "existing" });
+    const updatedAt = Math.floor(Date.now() / 1000) - age;
+    sqlite.prepare("INSERT INTO cache(key, value, updated_at) VALUES (?, ?, ?)").run("bluechip-ratings", value, updatedAt);
+    const fetch = mockFetch([{ match: () => true, body: { data: [{ grade: "A" }] } }]);
+    const result = await syncBluechip(db);
+    if (age < 6 * 3600) {
+      expect(result.itemCount).toBe(0);
+      expect(JSON.parse(result.metadata ?? "{}")).toMatchObject({ reason: "cache-fresh" });
+      expect(fetch).not.toHaveBeenCalled();
+      expect(sqlite.prepare("SELECT value, updated_at FROM cache WHERE key = 'bluechip-ratings'").get()).toEqual({
+        value, updated_at: updatedAt,
+      });
+    } else {
+      expect(result.itemCount).toBe(2);
+      expect(fetch).toHaveBeenCalledTimes(2);
+      const row = sqlite.prepare("SELECT value, updated_at FROM cache WHERE key = 'bluechip-ratings'").get();
+      expect(JSON.parse(String(row?.value))).toMatchObject({
+        "usdt-tether": { grade: "A" }, "usdc-circle": { grade: "A" },
+      });
+      expect(row?.updated_at).toBe(Math.floor(Date.now() / 1000));
+    }
+  });
+
+  it("preserves cache without HTTP when the circuit is open", async () => {
+    const { db, sqlite } = fixtures.open();
+    sqlite.prepare("INSERT INTO cache(key, value, updated_at) VALUES (?, ?, ?)").run("bluechip-ratings", "{}", 1);
+    vi.mocked(shouldAttemptFetch).mockResolvedValueOnce(false);
+    const fetch = mockFetch([{ match: () => true, body: { data: [] } }]);
+    expect(await syncBluechip(db)).toMatchObject({ status: "degraded", itemCount: 0 });
+    expect(fetch).not.toHaveBeenCalled();
+    expect(sqlite.prepare("SELECT value, updated_at FROM cache WHERE key = 'bluechip-ratings'").get()).toEqual({
+      value: "{}", updated_at: 1,
+    });
+  });
+
+  it("preserves a concurrent newer publication after fetching ratings", async () => {
+    const { db, sqlite } = fixtures.open();
+    const newerAt = Math.floor(Date.now() / 1000) + 1;
+    mockFetch([{ match: () => true, respond: () => {
+      sqlite.prepare("INSERT OR REPLACE INTO cache(key, value, updated_at) VALUES (?, ?, ?)").run("bluechip-ratings", '{"winner":true}', newerAt);
+      return Response.json({ data: [{ grade: "A" }] });
+    } }]);
+    const result = await syncBluechip(db);
+    expect(result.itemCount).toBe(0);
+    expect(JSON.parse(result.metadata ?? "{}")).toMatchObject({ ratingsFetched: 2, ratingsPublished: 0, casSkipped: true });
+    expect(sqlite.prepare("SELECT value, updated_at FROM cache WHERE key = 'bluechip-ratings'").get()).toEqual({
+      value: '{"winner":true}', updated_at: newerAt,
+    });
+  });
+
+  it("cancels during the inter-batch wait without fetching the fourth slug or publishing", async () => {
+    BLUECHIP_SLUG_MAP.dai = "dai-makerdao";
+    BLUECHIP_SLUG_MAP.usds = "usds-sky";
+    const { db, sqlite } = fixtures.open();
+    const controller = new AbortController();
+    const fetch = mockFetch([{ match: () => true, body: { data: [{ grade: "A" }] } }]);
+    const pending = syncBluechip(db, controller.signal);
+    const rejection = expect(pending).rejects.toThrow();
+    try {
+      await vi.advanceTimersByTimeAsync(0);
+      expect(fetch.mock.calls.map(([url]) => String(url).split("/").slice(-1)[0])).toEqual(["tether", "usdc", "dai"]);
+      controller.abort(new Error("cancel between batches"));
+      await rejection;
+      expect(fetch).toHaveBeenCalledTimes(3);
+      expect(sqlite.prepare("SELECT * FROM cache WHERE key = 'bluechip-ratings'").all()).toEqual([]);
+    } finally {
+      controller.abort();
+      await pending.catch(() => {});
+    }
   });
 });

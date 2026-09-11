@@ -109,7 +109,7 @@
     "params": {
       "shareClassSymbol": "gbpSAFO",
       "slice": {
-        "name": "Fully collateralized overnight total-return swap exposure",
+        "name": "Spiko Amundi Overnight Swap Fund (GBP) shares",
         "risk": "medium"
       }
     }

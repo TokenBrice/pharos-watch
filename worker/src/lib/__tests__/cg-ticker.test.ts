@@ -47,6 +47,8 @@ function makeTickerResult(tickers: unknown[]) {
   };
 }
 
+afterEach(() => vi.restoreAllMocks());
+
 describe("pickBestTicker", () => {
   it("picks the USD ticker", () => {
     const tickers = [
@@ -126,15 +128,15 @@ describe("fetchCgTickerPricesDetailed", () => {
     expect(fetchJsonWithRetry).toHaveBeenCalledTimes(2);
   });
 
-  it("passes API key through to the fetch call", async () => {
-    vi.mocked(fetchJsonWithRetry).mockResolvedValue(makeTickerResult([makeTicker()]));
-
-    await fetchCgTickerPricesDetailed([KAU_CONFIG], "my-key");
-
-    // Verify fetch was called — API key plumbing is tested via coingecko.ts unit
-    expect(fetchJsonWithRetry).toHaveBeenCalledTimes(1);
-    const [url] = vi.mocked(fetchJsonWithRetry).mock.calls[0]!;
-    expect(url).toContain("/coins/kinesis-gold/tickers");
+  it("only receives keyed ticker data when the request authenticates", async () => {
+    vi.spyOn(console, "warn").mockImplementation(() => {});
+    vi.mocked(fetchJsonWithRetry).mockImplementation(async (url, init) => {
+      const authenticated = new URL(url).hostname === "pro-api.coingecko.com"
+        && new Headers(init?.headers).get("x-cg-pro-api-key") === "my-key";
+      return authenticated ? makeTickerResult([makeTicker()]) : null;
+    });
+    expect((await fetchCgTickerPricesDetailed([KAU_CONFIG], null)).prices.size).toBe(0);
+    expect((await fetchCgTickerPricesDetailed([KAU_CONFIG], "my-key")).prices.get("kau-kinesis")).toBe(136.76);
   });
 
   it("continues when one coin fails", async () => {

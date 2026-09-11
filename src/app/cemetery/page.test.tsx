@@ -16,7 +16,11 @@ describe("CemeteryPage", () => {
     const html = renderToStaticMarkup(<CemeteryPage />);
 
     expect(html).toContain("Stablecoin Cemetery");
-    expect(html.indexOf("cemetery tombstones")).toBeLessThan(html.indexOf("cemetery charts"));
+    const tombstones = html.indexOf("cemetery tombstones");
+    const charts = html.indexOf("cemetery charts");
+    expect(tombstones).toBeGreaterThan(-1);
+    expect(charts).toBeGreaterThan(-1);
+    expect(tombstones).toBeLessThan(charts);
   });
 
   it("emits cemetery Dataset downloads without site-data URLs", () => {

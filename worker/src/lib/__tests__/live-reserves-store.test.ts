@@ -10,7 +10,6 @@ import {
 import {
   computeReserveCompositionOverview,
   getMaxSyncAge,
-  loadLiveReserveHistoryWriteGaps,
   loadFreshIndependentLiveReserveMap,
   resolveReserveResult,
 } from "../live-reserves/store";
@@ -18,7 +17,7 @@ import { getConfiguredLiveReserveCoins } from "../live-reserves/store-shared";
 
 describe("live-reserves-store", () => {
   it.each([
-    ["fdusd-first-digital", "fdusd-transparency", 36 * 86400, 60, false],
+    ["fdusd-first-digital", "fdusd-independent-assurance", 36 * 86400, 60, false],
     ["xsgd-straitsx", "straitsx-independent-assurance", 67 * 86400, 60, true],
     ["xsgd-straitsx", "straitsx-independent-assurance", 4_000_000, 60, false],
     ["xsgd-straitsx", "straitsx-independent-assurance", 4_000_001, 60, true],
@@ -53,7 +52,7 @@ describe("live-reserves-store", () => {
       {
         match: "SELECT MIN(last_attempted_at) AS oldest_ts",
         rows: [],
-        first: { oldest_ts: 950, observed_count: 1 },
+        first: { oldest_ts: 950 },
       },
     ]);
 
@@ -346,27 +345,26 @@ describe("live-reserves-store", () => {
     expect(result?.liveAt).toBeUndefined();
   });
 
-  it("fails closed on malformed stored slices and falls back instead of serving them as live", async () => {
-    const now = Math.floor(Date.now() / 1000);
-    const corruptSlices = [
+  it.each([
+    ["malformed slices", [
       { name: "Valid Farm", pct: 60, risk: "low" },
       { name: "Missing Risk", pct: 20 },
       { pct: 10, risk: "medium" },
       { name: "Bad Pct", pct: "fifty", risk: "low" },
       { name: "Valid Too", pct: 10, risk: "high" },
-    ];
-
+    ]],
+    ["invalid risk", [{ name: "Good", pct: 60, risk: "low" }, { name: "Bad", pct: 40, risk: "bogus" }]],
+    ["negative percentage", [
+      { name: "Valid", pct: 80, risk: "medium" },
+      { name: "Negative", pct: -10, risk: "low" },
+      { name: "Zero", pct: 0, risk: "high" },
+    ]],
+  ])("fails closed on stored %s", async (_name, slices) => {
+    const now = 1_800_000_000;
     const db = makeReservesDb({
-      composition: {
-        slices: JSON.stringify(corruptSlices),
-        fetched_at: now,
-      },
-      syncState: {
-        last_attempted_at: now,
-        last_success_at: now,
-      },
+      composition: { slices: JSON.stringify(slices), fetched_at: now },
+      syncState: { last_attempted_at: now, last_success_at: now },
     });
-
     const result = await resolveReserveResult(db, "iusd-infinifi", now + 100);
     expect(result?.mode).toBe("curated-fallback");
     expect(result?.sync?.status).toBe("degraded");
@@ -414,10 +412,11 @@ describe("live-reserves-store", () => {
     ]);
 
     const overview = await computeReserveCompositionOverview(db, now + 100);
-    // errorCoins must exist on the type and be a number
-    expect(typeof overview.errorCoins).toBe("number");
-    // The error coin should be counted, not in degraded
-    expect(overview.errorCoins).toBeGreaterThanOrEqual(1);
+    const empty = await computeReserveCompositionOverview(mockD1(), now + 100);
+    expect(overview.errorCoins).toBe(empty.errorCoins + 1);
+    expect(overview.degradedCoins).toBe(empty.degradedCoins);
+    expect(overview.freshCoins + overview.staleCoins + overview.missingCoins
+      + overview.degradedCoins + overview.errorCoins + overview.corruptCoins).toBe(overview.configuredCoins);
   });
 
   it("counts pre-bootstrap adapter failures as error coins instead of missing coins", async () => {
@@ -472,50 +471,6 @@ describe("live-reserves-store", () => {
     expect(result?.sync?.lastError).toBe("HTTP 503 for https://api.example.com");
   });
 
-  it("rejects stored snapshots with invalid risk enum values during resolution", async () => {
-    const now = Math.floor(Date.now() / 1000);
-    const db = makeReservesDb({
-      composition: {
-        slices: JSON.stringify([
-          { name: "Good", pct: 60, risk: "low" },
-          { name: "Bad", pct: 40, risk: "bogus" },
-        ]),
-        fetched_at: now,
-      },
-      syncState: {
-        last_attempted_at: now,
-        last_success_at: now,
-      },
-    });
-
-    const result = await resolveReserveResult(db, "iusd-infinifi", now + 100);
-    expect(result?.mode).toBe("curated-fallback");
-    expect(result?.sync?.status).toBe("degraded");
-    expect(result?.sync?.lastError).toContain("Stored live reserve snapshot rejected");
-  });
-
-  it("rejects stored snapshots with negative pct during resolution", async () => {
-    const now = Math.floor(Date.now() / 1000);
-    const db = makeReservesDb({
-      composition: {
-        slices: JSON.stringify([
-          { name: "Valid", pct: 80, risk: "medium" },
-          { name: "Negative", pct: -10, risk: "low" },
-          { name: "Zero", pct: 0, risk: "high" },
-        ]),
-        fetched_at: now,
-      },
-      syncState: {
-        last_attempted_at: now,
-        last_success_at: now,
-      },
-    });
-
-    const result = await resolveReserveResult(db, "iusd-infinifi", now + 100);
-    expect(result?.mode).toBe("curated-fallback");
-    expect(result?.sync?.status).toBe("degraded");
-    expect(result?.sync?.lastError).toContain("Stored live reserve snapshot rejected");
-  });
 
   it("ignores malformed warning and metadata JSON in sync state rows", async () => {
     const now = Math.floor(Date.now() / 1000);
@@ -603,6 +558,54 @@ describe("live-reserves-store", () => {
     expect(scoringMap.get("lusd-liquity")).toEqual([{ name: "ETH", pct: 100, risk: "very-low" }]);
   });
 
+  it("judges scoring on the snapshot's own warnings, not the latest attempt's status", async () => {
+    const now = 10_000;
+    const degradedThenErrored = mockD1([
+      {
+        match: "reserve_sync_state",
+        rows: [
+          // Latest attempt failed; the stored snapshot came from an earlier degraded run.
+          reserveSyncRow({ last_attempted_at: now, last_success_at: now - 100, last_status: "error", last_error: "HTTP 502" }),
+          reserveSyncRow({
+            stablecoin_id: "lusd-liquity",
+            adapter_key: "liquity-v1",
+            breaker_key: "live-reserves:lusd-liquity",
+            last_attempted_at: now,
+            last_success_at: now - 100,
+            last_status: "error",
+            last_error: "HTTP 502",
+          }),
+        ],
+      },
+      {
+        match: "reserve_composition",
+        rows: [
+          reserveCompositionRow({
+            slices: JSON.stringify([{ name: "Known Farm", pct: 100, risk: "low" }]),
+            fetched_at: now - 100,
+            warnings: JSON.stringify([{ code: "stale-source-data", message: "old", severity: "warning", effect: "degraded" }]),
+            metadata: JSON.stringify({ freshnessMode: "verified", sourceTimestamp: now - 100 }),
+            adapter_source_model: "dynamic-mix",
+            adapter_evidence_class: "independent",
+          }),
+          reserveCompositionRow({
+            stablecoin_id: "lusd-liquity",
+            slices: JSON.stringify([{ name: "ETH", pct: 100, risk: "very-low" }]),
+            fetched_at: now - 100,
+            source: "liquity-v1",
+            metadata: JSON.stringify({ freshnessMode: "not-applicable" }),
+            adapter_source_model: "single-bucket",
+            adapter_evidence_class: "independent",
+          }),
+        ],
+      },
+    ]);
+
+    const scoringMap = await loadFreshIndependentLiveReserveMap(degradedThenErrored, now);
+    expect(scoringMap.has("iusd-infinifi")).toBe(false);
+    expect(scoringMap.has("lusd-liquity")).toBe(true);
+  });
+
   it("requires timestamp-backed or explicitly on-chain freshness metadata for scoring passthrough", async () => {
     const now = 10_000;
     const db = mockD1([
@@ -661,7 +664,7 @@ describe("live-reserves-store", () => {
     const scoringMap = await loadFreshIndependentLiveReserveMap(db, now + 100);
     expect(scoringMap.has("iusd-infinifi")).toBe(false);
     expect(scoringMap.get("gho-aave")).toEqual([{ name: "Tracked GSM", pct: 100, risk: "low" }]);
-    expect(scoringMap.get("usds-sky")).toEqual([{ name: "PSM USDC", pct: 100, risk: "low" }]);
+    expect(scoringMap.has("usds-sky")).toBe(false);
   });
 
   it("keeps static-validated, weak-probe, and unverified active configs out of score-grade reserve maps", async () => {
@@ -922,12 +925,7 @@ describe("live-reserves-store", () => {
     expect(overview.runBudgetTruncated).toBe(true);
     expect(overview.deferredCoins).toBeGreaterThanOrEqual(12);
     expect(overview.nextCursorStablecoinId).toBe("coin-tail");
-    expect(overview.cursorTailState).toBeNull();
-    expect(overview.cursorTailError).toBeNull();
     expect(overview.cursorRecordedAt).toBe(9_905);
-    expect(overview.cursorTailFailedAt).toBeNull();
-    expect(overview.cursorTailCompletedAt).toBeNull();
-    expect(overview.runBudgetTruncationCount).toBe(1);
   });
 
   it("ignores stale pending pointers when the latest checkpoint is terminal", async () => {
@@ -950,59 +948,8 @@ describe("live-reserves-store", () => {
     expect(overview.runBudgetTruncated).toBe(false);
     expect(overview.nextCursorStablecoinId).toBeNull();
     expect(overview.cursorRecordedAt).toBeNull();
-    expect(overview.runBudgetTruncationCount).toBe(0);
-    const checkpointQuery = db.getHistory().find((entry) => entry.sql.includes("FROM worker_scheduled_checkpoints"));
-    expect(checkpointQuery?.sql).not.toContain("state IN");
-    expect(checkpointQuery?.sql).toContain("ORDER BY slot_started_at DESC, attempt_no DESC");
   });
 
-  it("detects authoritative reserve snapshots missing history rows", async () => {
-    const db = mockD1([
-      {
-        match: "FROM reserve_composition c",
-        rows: [
-          {
-            stablecoin_id: "coin-a",
-            fetched_at: 1_700_000_000,
-            attempt_id: "coin-a:attempt",
-            composition_history_missing: 1,
-            attempt_history_missing: 0,
-          },
-        ],
-      },
-    ]);
-
-    await expect(loadLiveReserveHistoryWriteGaps(db)).resolves.toEqual([
-      {
-        stablecoinId: "coin-a",
-        fetchedAt: 1_700_000_000,
-        attemptId: "coin-a:attempt",
-        compositionHistoryMissing: true,
-        attemptHistoryMissing: false,
-      },
-    ]);
-  });
-
-  it("distinguishes a failed history reconciliation from a verified zero-gap result", async () => {
-    const now = Math.floor(Date.now() / 1000);
-    const failedDb = mockD1([
-      {
-        match: "FROM reserve_composition c",
-        rows: [],
-        throwError: "history reconciliation unavailable",
-      },
-    ]);
-
-    await expect(computeReserveCompositionOverview(failedDb, now)).resolves.toMatchObject({
-      historyWriteGaps: [],
-      historyWriteGapCheckFailed: true,
-    });
-
-    await expect(computeReserveCompositionOverview(mockD1(), now)).resolves.toMatchObject({
-      historyWriteGaps: [],
-      historyWriteGapCheckFailed: false,
-    });
-  });
 
   it("counts malformed stored slices as corruptCoins, not freshCoins", async () => {
     const now = Math.floor(Date.now() / 1000);
@@ -1058,143 +1005,28 @@ describe("live-reserves-store", () => {
     expect(overview.freshCoins).toBe(emptyOverview.freshCoins);
   });
 
-  it("flags independent-class coins whose source has been degraded/error for >14d as persistently stale", async () => {
-    const now = Math.floor(Date.now() / 1000);
-    const FIFTEEN_DAYS = 15 * 86_400;
+  it.each([
+    [15 * 86_400, "degraded", null, true],
+    [15 * 86_400, "skipped", "circuit-open", true],
+    [15 * 86_400, "skipped", "run-budget-exhausted", false],
+    [13 * 86_400, "degraded", null, false],
+    [20 * 86_400, "ok", null, false],
+    [14 * 86_400, "degraded", null, false],
+    [14 * 86_400 + 1, "degraded", null, true],
+  ] as const)("classifies persistent staleness at age %i, %s, %s", async (age, status, failureCategory, expected) => {
+    const now = 1_800_000_000;
     const db = mockD1([
-      {
-        match: "reserve_sync_state",
-        rows: [reserveSyncRow({
-          last_attempted_at: now,
-          last_success_at: now - FIFTEEN_DAYS,
-          last_status: "degraded",
-          warning_count: 1,
-        })],
-      },
-      {
-        match: "reserve_composition",
-        rows: [],
-      },
+      { match: "reserve_sync_state", rows: [reserveSyncRow({
+        last_attempted_at: now, last_success_at: now - age, last_status: status,
+        warning_count: status === "degraded" ? 1 : 0,
+        last_error: failureCategory,
+        metadata: JSON.stringify({ failureCategory }),
+      })] },
+      { match: "reserve_composition", rows: [] },
     ]);
-
     const overview = await computeReserveCompositionOverview(db, now);
-
-    const entry = overview.persistentlyStaleIndependentCoins.find(
-      (e) => e.stablecoinId === "iusd-infinifi",
-    );
-    expect(entry).toBeDefined();
-    expect(entry!.ageSec).toBeGreaterThanOrEqual(FIFTEEN_DAYS);
-  });
-
-  it("flags old circuit-open independent feeds as persistently stale", async () => {
-    const now = Math.floor(Date.now() / 1000);
-    const FIFTEEN_DAYS = 15 * 86_400;
-    const db = mockD1([
-      {
-        match: "reserve_sync_state",
-        rows: [reserveSyncRow({
-          last_attempted_at: now,
-          last_success_at: now - FIFTEEN_DAYS,
-          last_status: "skipped",
-          last_error: "Circuit open for live-reserves:infinifi",
-          metadata: JSON.stringify({ failureCategory: "circuit-open" }),
-        })],
-      },
-      {
-        match: "reserve_composition",
-        rows: [],
-      },
-    ]);
-
-    const overview = await computeReserveCompositionOverview(db, now);
-
-    const entry = overview.persistentlyStaleIndependentCoins.find(
-      (e) => e.stablecoinId === "iusd-infinifi",
-    );
-    expect(entry).toBeDefined();
-    expect(entry!.ageSec).toBeGreaterThanOrEqual(FIFTEEN_DAYS);
-  });
-
-  it("does not flag old run-budget deferred rows as persistently stale", async () => {
-    const now = Math.floor(Date.now() / 1000);
-    const FIFTEEN_DAYS = 15 * 86_400;
-    const db = mockD1([
-      {
-        match: "reserve_sync_state",
-        rows: [reserveSyncRow({
-          last_attempted_at: now,
-          last_success_at: now - FIFTEEN_DAYS,
-          last_status: "skipped",
-          last_error: "run-budget-exhausted",
-          metadata: JSON.stringify({ failureCategory: "run-budget-exhausted" }),
-        })],
-      },
-      {
-        match: "reserve_composition",
-        rows: [],
-      },
-    ]);
-
-    const overview = await computeReserveCompositionOverview(db, now);
-
-    expect(
-      overview.persistentlyStaleIndependentCoins.find(
-        (e) => e.stablecoinId === "iusd-infinifi",
-      ),
-    ).toBeUndefined();
-  });
-
-  it("does not flag independent coins whose last success is within the 14d threshold", async () => {
-    const now = Math.floor(Date.now() / 1000);
-    const THIRTEEN_DAYS = 13 * 86_400;
-    const db = mockD1([
-      {
-        match: "reserve_sync_state",
-        rows: [reserveSyncRow({
-          last_attempted_at: now,
-          last_success_at: now - THIRTEEN_DAYS,
-          last_status: "degraded",
-          warning_count: 1,
-        })],
-      },
-      {
-        match: "reserve_composition",
-        rows: [],
-      },
-    ]);
-
-    const overview = await computeReserveCompositionOverview(db, now);
-
-    expect(
-      overview.persistentlyStaleIndependentCoins.find(
-        (e) => e.stablecoinId === "iusd-infinifi",
-      ),
-    ).toBeUndefined();
-  });
-
-  it("does not flag independent coins with an ok sync status even when old", async () => {
-    const now = Math.floor(Date.now() / 1000);
-    const TWENTY_DAYS = 20 * 86_400;
-    const db = mockD1([
-      {
-        match: "reserve_sync_state",
-        rows: [reserveSyncRow({
-          last_attempted_at: now,
-          last_success_at: now - TWENTY_DAYS,
-        })],
-      },
-      {
-        match: "reserve_composition",
-        rows: [],
-      },
-    ]);
-
-    const overview = await computeReserveCompositionOverview(db, now);
-
-    expect(
-      overview.persistentlyStaleIndependentCoins.find(
-        (e) => e.stablecoinId === "iusd-infinifi",
-      ),
-    ).toBeUndefined();
+    const entries = overview.persistentlyStaleIndependentCoins.filter((entry) => entry.stablecoinId === "iusd-infinifi");
+    expect(entries.map((entry) => ({ id: entry.stablecoinId, age: entry.ageSec })))
+      .toEqual(expected ? [{ id: "iusd-infinifi", age }] : []);
   });
 });

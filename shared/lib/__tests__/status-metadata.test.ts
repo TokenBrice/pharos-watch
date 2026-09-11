@@ -4,7 +4,7 @@ import {
   readMetadataBoolean,
   readMetadataNumber,
   readMetadataRecord,
-} from "../status-metadata";
+} from "@shared/lib/status-metadata";
 import { TELEGRAM_ALERT_TYPES } from "../../types/status";
 
 describe("status-metadata", () => {
@@ -40,102 +40,70 @@ describe("status-metadata", () => {
     });
   });
 
-  it("parses telegram dispatch metadata from mixed JSON-compatible values", () => {
-    const metadata = parseTelegramDispatchCronMetadata({
+  it("coerces dispatch counts and distinguishes unavailable numbers from false flags", () => {
+    expect(parseTelegramDispatchCronMetadata({
       subscribersNotified: "12",
       messagesSent: 10,
-      blockedUsersCleanedUp: "1",
-      blockedUsersCleanupFailed: 0,
-      cappedAtLimit: "true",
-      snapshotSeeded: false,
       freshAttempted: "4",
       freshSent: 3,
-      freshRetryQueued: "1",
-      freshPermanentFailures: 0,
       pendingAttempted: "2",
       pendingDrained: 1,
-      pendingRetryQueued: 0,
-      pendingDropped: "0",
-      pendingDroppedTtlExpired: "2",
-      pendingDroppedPermanentFailure: 0,
-      pendingDroppedMaxAttemptsFallback: "1",
-      pendingDeferred: "2",
-      pendingRateLimited: "true",
-      pendingRetryAfterSec: "45",
-      pendingEnqueued: 5,
-      pendingExpired: "2",
-      skipped: "circuit-open",
-      suppressedSafetyChangesAtSeed: "2",
-      reserveAlertSourceState: "stale",
-      reserveAlertSourceAgeSeconds: "28801",
-      reserveAlertsSuppressed: true,
-      reserveAlertSourceGeneration: "reserve-alert-source-v1",
-      eventsDetected: {
-        dews: 2,
-        depeg: "1",
-        depegTriggered: 1,
-        depegResolved: 0,
-        depegWorsening: "3",
-        safety: 4,
-        launch: "5",
-        reserve: "7",
-        suppressedMethodologyChanges: "6",
-      },
-    });
-
-    expect(metadata).toEqual({
+      pendingRetryAfterSec: "bad",
+      cappedAtLimit: "true",
+      snapshotSeeded: "false",
+      pendingRateLimited: "invalid",
+    })).toMatchObject({
       subscribersNotified: 12,
       messagesSent: 10,
-      blockedUsersCleanedUp: 1,
-      blockedUsersCleanupFailed: 0,
-      cappedAtLimit: true,
-      snapshotSeeded: false,
-      eventlessFastPath: false,
-      skipped: "circuit-open",
       freshAttempted: 4,
       freshSent: 3,
-      freshRetryQueued: 1,
-      freshPermanentFailures: 0,
-      freshDeferredPerChat: null,
-      freshCandidateChats: null,
-      freshCandidateCount: null,
       pendingAttempted: 2,
       pendingDrained: 1,
-      pendingRetryQueued: 0,
-      pendingDropped: 0,
-      pendingDroppedTtlExpired: 2,
-      pendingDroppedPermanentFailure: 0,
-      pendingDroppedMaxAttemptsFallback: 1,
-      pendingDeferred: 2,
-      pendingRateLimited: true,
-      pendingRetryAfterSec: 45,
-      pendingEnqueued: 5,
-      pendingExpired: 2,
-      chatsWithActiveSnooze: null,
-      safetyAlertSourceState: null,
-      safetyAlertSourceAgeSeconds: null,
-      safetyAlertsSuppressed: false,
-      safetyAlertSourceGeneration: null,
-      reserveAlertSourceState: "stale",
-      reserveAlertSourceAgeSeconds: 28801,
-      reserveAlertsSuppressed: true,
-      reserveAlertSourceGeneration: "reserve-alert-source-v1",
-      presetQueryFailures: null,
-      presetResolutionFailures: null,
-      presetFailure: false,
-      suppressedSafetyChangesAtSeed: 2,
-      eventsDetected: {
-        dews: 2,
-        depeg: 1,
-        depegTriggered: 1,
-        depegResolved: 0,
-        depegWorsening: 3,
-        safety: 4,
-        launch: 5,
-        reserve: 7,
-        suppressedMethodologyChanges: 6,
-      },
-      perAlertType: null,
+      pendingRetryAfterSec: null,
+      cappedAtLimit: true,
+      snapshotSeeded: false,
+      pendingRateLimited: false,
+    });
+  });
+
+  it("parses nested event counts independently and preserves unknown counts", () => {
+    expect(parseTelegramDispatchCronMetadata({
+      eventsDetected: { dews: "2", depeg: 1, depegTriggered: "3", depegResolved: 0,
+        depegWorsening: "4", safety: 5, launch: "6", reserve: "7", suppressedMethodologyChanges: "bad" },
+    })?.eventsDetected).toEqual({
+      dews: 2, depeg: 1, depegTriggered: 3, depegResolved: 0,
+      depegWorsening: 4, safety: 5, launch: 6, reserve: 7, suppressedMethodologyChanges: null,
+    });
+  });
+
+  it("prefers the primary skip reason and uses the fallback for an empty primary", () => {
+    expect(parseTelegramDispatchCronMetadata({ skipped: "circuit-open", skippedReason: "missing-token" })?.skipped)
+      .toBe("circuit-open");
+    expect(parseTelegramDispatchCronMetadata({ skipped: "", skippedReason: "missing-token" })?.skipped)
+      .toBe("missing-token");
+  });
+
+  it.each([null, []])("rejects non-record dispatch metadata %j", (value) => {
+    expect(parseTelegramDispatchCronMetadata(value)).toBeNull();
+  });
+
+  it("distinguishes malformed containers from malformed category records", () => {
+    expect(parseTelegramDispatchCronMetadata({ eventsDetected: [], perAlertType: [] })).toMatchObject({
+      eventsDetected: null, perAlertType: null,
+    });
+    const metadata = parseTelegramDispatchCronMetadata({
+      eventsDetected: {},
+      perAlertType: { dews: [], depeg: { sent: "bad", firstSendLatencyMs: false } },
+    });
+    expect(metadata?.eventsDetected).toEqual({
+      dews: null, depeg: null, depegTriggered: null, depegResolved: null,
+      depegWorsening: null, safety: null, launch: null, reserve: null, suppressedMethodologyChanges: null,
+    });
+    expect(metadata?.perAlertType?.dews).toEqual({
+      sent: 0, enqueued: 0, failed: 0, blocked: 0, firstSendLatencyMs: null,
+    });
+    expect(metadata?.perAlertType?.depeg).toEqual({
+      sent: 0, enqueued: 0, failed: 0, blocked: 0, firstSendLatencyMs: null,
     });
   });
 

@@ -1,7 +1,9 @@
 import type { ReserveSlice } from "@shared/types/core";
-import type { LiveReserveWarning } from "@shared/types/live-reserves";
+import type { LiveReserveAdapterKey, LiveReserveWarning } from "@shared/types/live-reserves";
+import { getLiveReserveAdapterDefinition, MATERIAL_UNKNOWN_EXPOSURE_PCT } from "@shared/lib/live-reserve-adapters";
 import { reserveDegradedWarning, reserveInfoWarning } from "./warnings";
-export { decimalNumberFromBigInt, decimalStringFromBigInt } from "../../lib/bigint";
+import { decimalNumberFromBigInt, decimalStringFromBigInt } from "../../lib/bigint";
+export { decimalNumberFromBigInt, decimalStringFromBigInt };
 
 const RISK_SEVERITY: Record<ReserveSlice["risk"], number> = {
   "very-low": 0,
@@ -19,11 +21,20 @@ export function worseRisk(a: ReserveSlice["risk"], b: ReserveSlice["risk"]): Res
   return RISK_SEVERITY[a] >= RISK_SEVERITY[b] ? a : b;
 }
 
+/**
+ * Canonical sourceKey suffix slug: lowercase, every character outside
+ * [a-z0-9._-] folded to "-" with repeats collapsed, so the result always
+ * satisfies the ReserveSliceSchema sourceKey pattern.
+ */
+export function sourceKeySlug(value: string): string {
+  return value.toLowerCase().replace(/[^a-z0-9._-]+/g, "-");
+}
+
 interface UnknownExposureWarningOptions {
   code: string;
   message: string;
   unknownExposurePct: number;
-  thresholdPct?: number;
+  adapterKey: LiveReserveAdapterKey;
 }
 
 export function parseBoundedDecimals(value: unknown): number | null {
@@ -49,6 +60,68 @@ export function ratioFromRaw(numerator: bigint, denominator: bigint): number | u
   return Number.isFinite(ratio) ? ratio : undefined;
 }
 
+/**
+ * Raw-amount ratio between two tokens, decimaling each side independently.
+ * Equal-decimals pairs use the lossless bigint path; mixed decimals fall back
+ * to float division and clamp the result at 1 (a backing amount can never
+ * exceed the liability it covers).
+ */
+export function ratioFromTokenAmounts(
+  numeratorRaw: bigint,
+  numeratorDecimals: number,
+  denominatorRaw: bigint,
+  denominatorDecimals: number,
+): number | undefined {
+  if (denominatorRaw <= 0n) return undefined;
+  if (numeratorDecimals === denominatorDecimals) {
+    return ratioFromRaw(numeratorRaw, denominatorRaw);
+  }
+  const numerator = decimalNumberFromBigInt(numeratorRaw, numeratorDecimals);
+  const denominator = decimalNumberFromBigInt(denominatorRaw, denominatorDecimals);
+  if (!Number.isFinite(numerator) || !Number.isFinite(denominator) || denominator <= 0) return undefined;
+  return Math.min(1, numerator / denominator);
+}
+
+/**
+ * Unclamped collateralization ratio between two token amounts: the raw
+ * USD-denominated backing divided by the USD-denominated supply.
+ */
+export function collateralizationRatioFromTokenAmounts(
+  numeratorRaw: bigint,
+  numeratorDecimals: number,
+  denominatorRaw: bigint,
+  denominatorDecimals: number,
+): number | undefined {
+  const numerator = decimalNumberFromBigInt(numeratorRaw, numeratorDecimals);
+  const denominator = decimalNumberFromBigInt(denominatorRaw, denominatorDecimals);
+  if (!Number.isFinite(numerator) || !Number.isFinite(denominator) || denominator <= 0) return undefined;
+  return numerator / denominator;
+}
+
+export interface TokenCapacityRatios {
+  capacityUsd: number;
+  capacityRatioOfSupply: number | undefined;
+  collateralizationRatio: number | undefined;
+}
+
+/**
+ * Wrapper capacity triple: the USD value of a raw backing amount plus its
+ * clamped capacity ratio and unclamped collateralization ratio against a raw
+ * supply amount.
+ */
+export function capacityFromTokenAmounts(
+  backingRaw: bigint,
+  backingDecimals: number,
+  supplyRaw: bigint,
+  supplyDecimals: number,
+): TokenCapacityRatios {
+  return {
+    capacityUsd: decimalNumberFromBigInt(backingRaw, backingDecimals),
+    capacityRatioOfSupply: ratioFromTokenAmounts(backingRaw, backingDecimals, supplyRaw, supplyDecimals),
+    collateralizationRatio: collateralizationRatioFromTokenAmounts(backingRaw, backingDecimals, supplyRaw, supplyDecimals),
+  };
+}
+
 export function assertFiniteNonNegativeReserveRows<Value>(
   values: readonly Value[],
   valueOf: (value: Value) => number,
@@ -66,7 +139,7 @@ export function assertFiniteNonNegativeReserveRows<Value>(
 
 /**
  * Deduplicate and normalize reserve slices so percentages sum to exactly 100%.
- * Slices sharing the same (name, risk, coinId, depType, blacklistable) key are merged by summing pct.
+ * Slices sharing every identity and risk field are merged by summing pct.
  * After rounding, the largest slice absorbs any remainder to maintain the 100% invariant.
  * Returns slices sorted by pct descending.
  */
@@ -83,19 +156,23 @@ export function normalizeSlices(slices: ReserveSlice[], decimals = 1): ReserveSl
 
   for (const slice of slices) {
     if (slice.pct === 0) continue;
-    const key = [
+    const key = JSON.stringify([
       slice.name,
       slice.risk,
-      slice.coinId ?? "",
-      slice.depType ?? "",
-      slice.blacklistable == null ? "" : String(slice.blacklistable),
-    ].join("|");
+      slice.sourceKey,
+      slice.assetClass,
+      slice.issuerOrObligor,
+      slice.coinId,
+      slice.depType,
+      slice.blacklistable,
+      slice.blacklistabilityExposure,
+      slice.riskFactors ? [...slice.riskFactors].sort() : undefined,
+      slice.liquidityHorizon,
+      slice.maturityDaysMax,
+    ]);
     const existing = grouped.get(key);
     if (existing) {
       existing.pct += slice.pct;
-      if (slice.blacklistable != null) {
-        existing.blacklistable = Boolean(existing.blacklistable) || slice.blacklistable;
-      }
     } else {
       grouped.set(key, { ...slice });
     }
@@ -120,6 +197,17 @@ export function normalizeSlices(slices: ReserveSlice[], decimals = 1): ReserveSl
     .map(({ pctUnits, ...slice }) => ({ ...slice, pct: pctUnits / factor }))
     .filter((slice) => slice.pct > 0)
     .sort((a, b) => b.pct - a.pct);
+}
+
+export function normalizeSlicesWithDiagnostics(slices: ReserveSlice[], decimals = 1): {
+  slices: ReserveSlice[];
+  rawSumDeviation: number;
+} {
+  const normalized = normalizeSlices(slices, decimals);
+  return {
+    slices: normalized,
+    rawSumDeviation: Math.abs(slices.reduce((sum, slice) => sum + slice.pct, 0) - 100),
+  };
 }
 
 export function valueUsdFromBigIntPrice(value: bigint, decimals: number, priceUsd: number): number {
@@ -256,6 +344,7 @@ export function buildBucketSlices<Bucket extends string>(
     risk: ReserveSlice["risk"];
     bucket?: Bucket;
     value?: number;
+    sourceKey?: string;
     coinId?: string;
     depType?: ReserveSlice["depType"];
     blacklistable?: boolean;
@@ -296,11 +385,15 @@ export function buildUnknownExposureWarning({
   code,
   message,
   unknownExposurePct,
-  thresholdPct = 5,
+  adapterKey,
 }: UnknownExposureWarningOptions): LiveReserveWarning {
+  const definition = getLiveReserveAdapterDefinition(adapterKey);
+  const thresholdPct = definition && "validation" in definition && "maxUnknownExposurePct" in definition.validation
+    ? definition.validation.maxUnknownExposurePct
+    : MATERIAL_UNKNOWN_EXPOSURE_PCT;
   const roundedPct = unknownExposurePct.toFixed(2);
   const fullMessage = `${message} (${roundedPct}% of reserves)`;
-  return unknownExposurePct >= thresholdPct
+  return thresholdPct != null && unknownExposurePct > thresholdPct
     ? reserveDegradedWarning(code, fullMessage)
     : reserveInfoWarning(code, fullMessage);
 }

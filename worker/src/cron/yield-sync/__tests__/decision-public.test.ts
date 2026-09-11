@@ -103,6 +103,22 @@ function ledgerFor(selected: EvaluatedYieldSource, candidates: EvaluatedYieldSou
 describe("deriveRejectionReasonCode (via buildPublicDecisionLedger alternatives)", () => {
   const selected = makeSource({ sourceKey: "selected", confidenceTier: "curated" });
 
+  it("prioritizes rejected stale evidence over thinner depth", () => {
+    const candidate = makeSource({
+      sourceKey: "alt", rejected: true, anomalies: ["source-stale"], sourceDepthRatio: 1,
+    });
+    const ledger = ledgerFor(makeSource({ sourceKey: "selected", sourceDepthRatio: 5 }), [candidate], 1);
+    expect(ledger.alternatives[0]?.rejectionReasonCode).toBe("stale");
+  });
+
+  it.each([
+    { apyReward: 5, reason: "unspecified" },
+    { apyReward: 5.001, reason: "rewards-only" },
+  ])("classifies the rewards boundary at $apyReward", ({ apyReward, reason }) => {
+    const ledger = ledgerFor(selected, [makeSource({ sourceKey: "alt", currentApy: 10, apyReward })]);
+    expect(ledger.alternatives[0]?.rejectionReasonCode).toBe(reason);
+  });
+
   it("codes 'thinner' when selected depth >= candidate depth * THINNER_RATIO (5)", () => {
     const candidate = makeSource({
       sourceKey: "alt",
@@ -163,14 +179,15 @@ describe("deriveRejectionReasonCode (via buildPublicDecisionLedger alternatives)
   });
 
   it("orders alternatives by absolute apy30d delta and caps at 2", () => {
-    const sel = makeSource({ sourceKey: "selected", apy30d: 5 });
-    const near = makeSource({ sourceKey: "near", yieldType: "lending-vault", apy30d: 6 });
-    const far = makeSource({ sourceKey: "far", yieldType: "lending-vault", apy30d: 20 });
-    const mid = makeSource({ sourceKey: "mid", yieldType: "lending-vault", apy30d: 10 });
+    const sel = makeSource({ sourceKey: "selected", apy30d: 20 });
+    const near = makeSource({ sourceKey: "near", yieldType: "lending-vault", apy30d: 21 });
+    const far = makeSource({ sourceKey: "far", yieldType: "lending-vault", apy30d: 1 });
+    const mid = makeSource({ sourceKey: "mid", yieldType: "lending-vault", apy30d: 25 });
     const ledger = ledgerFor(sel, [near, far, mid]);
     expect(ledger.alternatives).toHaveLength(2);
     expect(ledger.alternatives.map((a) => a.sourceKey)).toEqual(["far", "mid"]);
     expect(ledger.alternatives[0]).toMatchObject({
+      apy30dDelta: -19,
       confidenceTier: "curated",
       sourceRole: "audit-alternate",
       selectionRank: 3,
@@ -179,6 +196,18 @@ describe("deriveRejectionReasonCode (via buildPublicDecisionLedger alternatives)
 });
 
 describe("deriveYieldSourceRole", () => {
+  it("keeps linked external opportunities ahead of fallback classification", () => {
+    const selected = makeSource({ sourceKey: "selected", yieldType: "lending-vault" });
+    const ledger = ledgerFor(selected, [
+      makeSource({ sourceKey: "linked-variant:child", confidenceTier: "fallback" }),
+      makeSource({ sourceKey: "holder", yieldType: "lending-vault", confidenceTier: "fallback" }),
+    ]);
+    expect(ledger.alternatives.map(({ sourceKey, sourceRole }) => ({ sourceKey, sourceRole }))).toEqual([
+      { sourceKey: "linked-variant:child", sourceRole: "external-opportunity" },
+      { sourceKey: "holder", sourceRole: "fallback-proxy" },
+    ]);
+  });
+
   it("labels selected holder sources, retained holder alternates, fallback proxies, external opportunities, and degraded canonicals", () => {
     expect(deriveYieldSourceRole(makeSource({ yieldType: "lending-vault" }), { isSelected: true })).toBe(
       "canonical-holder",

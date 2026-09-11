@@ -3,6 +3,7 @@ import { parseRetryAfterSeconds } from "@shared/lib/retry-after";
 import { sleepWithSignal, throwIfAborted } from "./abort";
 import {
   cancelResponseBodyQuietly,
+  readResponseBytesWithinLimitWithSignal,
   readResponseJsonWithinLimitWithSignal,
   readResponseTextWithSignal,
   readResponseTextWithinLimitWithSignal,
@@ -19,7 +20,7 @@ interface FetchWithRetryOptions {
   returnFinalResponse?: boolean;
   timeoutMs?: number;
   maxRetryDelayMs?: number;
-  /** Applies only when this helper consumes a JSON or text response body. */
+  /** Applies only when this helper consumes a JSON, text, or binary response body. */
   maxResponseBytes?: number;
   waitOnPassthrough429?: boolean;
   /** Retry only thrown transport failures; return the first HTTP response. */
@@ -134,6 +135,34 @@ export async function fetchTextWithRetry(
     options,
     async (response, signal, maxResponseBytes) =>
       await readResponseTextWithinLimitWithSignal(response, maxResponseBytes, signal),
+  );
+}
+
+/**
+ * Fetch a binary body with retry and exponential backoff, reading the body
+ * inside the per-attempt timeout lifecycle. Binary bodies of unsuccessful
+ * final responses are cancelled (never read) and reported as empty bytes, so
+ * the caller still receives the response status while the connection returns
+ * to the pool immediately.
+ */
+export async function fetchBinaryWithRetry(
+  url: string,
+  opts?: RequestInit,
+  maxRetries = 2,
+  options?: FetchWithRetryOptions,
+): Promise<FetchWithRetryBodyResult<Uint8Array> | null> {
+  return await fetchWithRetryInternal<Uint8Array>(
+    url,
+    opts,
+    maxRetries,
+    options,
+    async (response, signal, maxResponseBytes) => {
+      if (!response.ok) {
+        await cancelResponseBodyQuietly(response);
+        return new Uint8Array(0);
+      }
+      return await readResponseBytesWithinLimitWithSignal(response, maxResponseBytes, signal);
+    },
   );
 }
 

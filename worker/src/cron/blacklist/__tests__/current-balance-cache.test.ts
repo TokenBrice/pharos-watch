@@ -2,9 +2,8 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { createBudget } from "../../../lib/evm-logs";
 import type { ContractEventConfig } from "../../../lib/blacklist-contracts";
 import { type BlacklistRunBudget } from "../../../lib/blacklist/run-budget";
-import type { BlacklistRow } from "../../../lib/blacklist/shared";
-import { makeBlacklistRow } from "../../../test-helpers/__shared/fixtures";
-import { mockD1 } from "@shared/test-utils/mock-d1";
+import { ethereumConfig, makeCacheRow } from "./balance.test-support";
+import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
 import { makeNoopD1 } from "../../../test-helpers/noop-d1";
 
 vi.mock("../../../lib/blacklist-current-balances", () => ({
@@ -20,21 +19,6 @@ import { syncCurrentBalanceCacheForRows } from "../../../lib/blacklist/current-b
 import { upsertBlacklistCurrentBalance } from "../../../lib/blacklist-current-balances";
 import { fetchEvmTokenCurrentBalance } from "../../../lib/blacklist/balance-providers";
 
-const ethereumConfig: ContractEventConfig = {
-  configKey: "ethereum-0xdac17f958d2ee523a2206206994597c13d831ec7",
-  chain: {
-    chainId: "ethereum",
-    chainName: "Ethereum",
-    evmChainId: 1,
-    explorerUrl: "https://etherscan.io",
-    type: "evm",
-  },
-  stablecoinId: "usdt-tether",
-  stablecoin: "USDT",
-  contractAddress: "0xdAC17F958D2ee523a2206206994597C13D831ec7",
-  decimals: 6,
-  events: [],
-};
 
 const a7a5Config: ContractEventConfig = {
   configKey: "ethereum-0x6fa0be17e4bea2fcfa22ef89bf8ac9aab0ab0fc9",
@@ -78,23 +62,13 @@ function makePriceDb(price: number | null, updatedAt = Math.floor(Date.now() / 1
   });
 }
 
-type BlacklistRowOverrides = NonNullable<Parameters<typeof makeBlacklistRow>[0]>;
-
-function makeCacheRow(overrides: BlacklistRowOverrides = {}): BlacklistRow {
-  const row = makeBlacklistRow(overrides);
-  return {
-    ...row,
-    methodology_version: row.methodology_version ?? "3.1",
-    amount_attempt_count: row.amount_attempt_count ?? 0,
-    amount_last_attempted_at: row.amount_last_attempted_at ?? null,
-    amount_last_error_class: row.amount_last_error_class ?? null,
-    amount_last_provider: row.amount_last_provider ?? null,
-  };
-}
 
 describe("syncCurrentBalanceCacheForRows", () => {
+  const fixtures = createLatestSchemaFixtureTracker();
   afterEach(() => {
     vi.clearAllMocks();
+    vi.restoreAllMocks();
+    fixtures.closeAll();
   });
 
   it("preserves existing ledger rows on unblacklist events", async () => {
@@ -113,13 +87,7 @@ describe("syncCurrentBalanceCacheForRows", () => {
           tx_hash: "0xtx",
           block_number: 1,
           timestamp: 10,
-          methodology_version: "3.5",
-          contract_address: ethereumConfig.contractAddress,
-          config_key: ethereumConfig.configKey,
           event_signature: "RemovedBlackList(address)",
-          event_topic0: "0xtopic",
-          explorer_tx_url: "https://etherscan.io/tx/0xtx",
-          explorer_address_url: "https://etherscan.io/address/0x111",
         }),
       ],
       makeContext(),
@@ -150,13 +118,7 @@ describe("syncCurrentBalanceCacheForRows", () => {
           tx_hash: "0xdestroy",
           block_number: 2,
           timestamp: 11,
-          methodology_version: "3.5",
-          contract_address: ethereumConfig.contractAddress,
-          config_key: ethereumConfig.configKey,
           event_signature: "DestroyedBlackFunds(address,uint256)",
-          event_topic0: "0xtopic",
-          explorer_tx_url: "https://etherscan.io/tx/0xdestroy",
-          explorer_address_url: "https://etherscan.io/address/0x222",
         }),
       ],
       makeContext(),
@@ -201,13 +163,6 @@ describe("syncCurrentBalanceCacheForRows", () => {
           tx_hash: "0xblacklist",
           block_number: 3,
           timestamp: 12,
-          methodology_version: "3.5",
-          contract_address: ethereumConfig.contractAddress,
-          config_key: ethereumConfig.configKey,
-          event_signature: "AddedBlackList(address)",
-          event_topic0: "0xtopic",
-          explorer_tx_url: "https://etherscan.io/tx/0xblacklist",
-          explorer_address_url: "https://etherscan.io/address/0x333",
         }),
       ],
       makeContext(),
@@ -248,12 +203,6 @@ describe("syncCurrentBalanceCacheForRows", () => {
       block_number: 3,
       timestamp: 12,
       methodology_version: "3.997",
-      contract_address: ethereumConfig.contractAddress,
-      config_key: ethereumConfig.configKey,
-      event_signature: "AddedBlackList(address)",
-      event_topic0: "0xtopic",
-      explorer_tx_url: "https://etherscan.io/tx/0xblacklist-transient",
-      explorer_address_url: "https://etherscan.io/address/0x333c",
     });
     const releaseRow = {
       ...blacklistRow,
@@ -308,13 +257,6 @@ describe("syncCurrentBalanceCacheForRows", () => {
           tx_hash: "0xblacklist-fail",
           block_number: 3,
           timestamp: 12,
-          methodology_version: "3.5",
-          contract_address: ethereumConfig.contractAddress,
-          config_key: ethereumConfig.configKey,
-          event_signature: "AddedBlackList(address)",
-          event_topic0: "0xtopic",
-          explorer_tx_url: "https://etherscan.io/tx/0xblacklist-fail",
-          explorer_address_url: "https://etherscan.io/address/0x333",
         }),
       ],
       makeContext(),
@@ -345,13 +287,16 @@ describe("syncCurrentBalanceCacheForRows", () => {
     const actual = await vi.importActual<typeof import("../../../lib/blacklist-current-balances")>(
       "../../../lib/blacklist-current-balances",
     );
-    const db = mockD1([
-      {
-        match: "UPDATE blacklist_current_balances",
-        rows: [],
-        runMeta: { changes: 1 },
-      },
-    ], { requireMatch: true });
+    const { sqlite, db } = fixtures.open();
+    const previous = {
+      stablecoin: "USDT" as const, chainId: "ethereum", address: "0x333",
+      configKey: ethereumConfig.configKey, contractAddress: ethereumConfig.contractAddress,
+      amountNative: 1250, amountUsd: 1249, source: "current_balance",
+      status: "resolved" as const, observedAt: 100, lastSuccessfulObservedAt: 100,
+      attemptCount: 2, lastAttemptedAt: 100, lastErrorClass: null, consecutiveFailures: 0,
+    };
+    await actual.upsertBlacklistCurrentBalance(db, previous);
+    await actual.upsertBlacklistCurrentBalance(db, { ...previous, address: "0x444", amountNative: 99, amountUsd: 98 });
 
     await actual.upsertBlacklistCurrentBalance(db, {
       stablecoin: "USDT",
@@ -371,12 +316,16 @@ describe("syncCurrentBalanceCacheForRows", () => {
       consecutiveFailures: 1,
     });
 
-    const sql = db.getHistory()[0]?.sql ?? "";
-    expect(sql).toContain("UPDATE blacklist_current_balances");
-    expect(sql).not.toContain("amount_native =");
-    expect(sql).not.toContain("amount_usd =");
-    expect(sql).toContain("last_successful_observed_at = COALESCE");
-    expect(sql).toContain("consecutive_failures = COALESCE(consecutive_failures, 0) + 1");
+    expect(sqlite.prepare(`SELECT address, amount_native, amount_usd, status, observed_at,
+      last_successful_observed_at, attempt_count, last_attempted_at, last_error_class, consecutive_failures
+      FROM blacklist_current_balances ORDER BY address`).all()).toEqual([
+      { address: "0x333", amount_native: 1250, amount_usd: 1249, status: "provider_failed",
+        observed_at: 100, last_successful_observed_at: 100, attempt_count: 3,
+        last_attempted_at: 123, last_error_class: "provider_null", consecutive_failures: 1 },
+      { address: "0x444", amount_native: 99, amount_usd: 98, status: "resolved",
+        observed_at: 100, last_successful_observed_at: 100, attempt_count: 2,
+        last_attempted_at: 100, last_error_class: null, consecutive_failures: 0 },
+    ]);
   });
 
   it("does NOT override genuine zero balance with historical amount for non-gold stablecoins", async () => {
@@ -397,12 +346,6 @@ describe("syncCurrentBalanceCacheForRows", () => {
           block_number: 4,
           timestamp: 13,
           methodology_version: "3.6",
-          contract_address: ethereumConfig.contractAddress,
-          config_key: ethereumConfig.configKey,
-          event_signature: "AddedBlackList(address)",
-          event_topic0: "0xtopic",
-          explorer_tx_url: "https://etherscan.io/tx/0xblacklist2",
-          explorer_address_url: "https://etherscan.io/address/0x444",
         }),
       ],
       makeContext(),
@@ -447,9 +390,6 @@ describe("syncCurrentBalanceCacheForRows", () => {
           contract_address: a7a5Config.contractAddress,
           config_key: a7a5Config.configKey,
           event_signature: "Blacklisted(address)",
-          event_topic0: "0xtopic",
-          explorer_tx_url: "https://etherscan.io/tx/0xa7a5",
-          explorer_address_url: "https://etherscan.io/address/0x555",
         }),
       ],
       makeContext(),
@@ -497,9 +437,6 @@ describe("syncCurrentBalanceCacheForRows", () => {
           contract_address: a7a5Config.contractAddress,
           config_key: a7a5Config.configKey,
           event_signature: "Blacklisted(address)",
-          event_topic0: "0xtopic",
-          explorer_tx_url: "https://etherscan.io/tx/0xa7a5-stale",
-          explorer_address_url: "https://etherscan.io/address/0x666",
         }),
       ],
       makeContext(),

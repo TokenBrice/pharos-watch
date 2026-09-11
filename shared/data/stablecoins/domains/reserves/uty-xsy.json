@@ -2,6 +2,7 @@
   "id": "uty-xsy",
   "reserves": [
     {
+      "sourceKey": "accountable:xsy:deployment:ethereum",
       "name": "Ethereum",
       "pct": 44.757,
       "risk": "high",
@@ -19,6 +20,7 @@
       "liquidityHorizon": "seven-days"
     },
     {
+      "sourceKey": "accountable:xsy:deployment:base",
       "name": "Base",
       "pct": 37.9162,
       "risk": "high",
@@ -36,6 +38,7 @@
       "liquidityHorizon": "seven-days"
     },
     {
+      "sourceKey": "accountable:xsy:deployment:avalanche",
       "name": "Avalanche",
       "pct": 17.235,
       "risk": "high",
@@ -53,6 +56,7 @@
       "liquidityHorizon": "seven-days"
     },
     {
+      "sourceKey": "accountable:xsy:deployment:katana",
       "name": "Katana",
       "pct": 0.0505,
       "risk": "high",
@@ -70,6 +74,7 @@
       "liquidityHorizon": "seven-days"
     },
     {
+      "sourceKey": "accountable:xsy:deployment:copper",
       "name": "Copper",
       "pct": 0.0389,
       "risk": "high",
@@ -87,6 +92,7 @@
       "liquidityHorizon": "seven-days"
     },
     {
+      "sourceKey": "accountable:xsy:deployment:hyperliquid",
       "name": "Hyperliquid",
       "pct": 0.0022,
       "risk": "high",

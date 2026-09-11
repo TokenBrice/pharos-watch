@@ -60,6 +60,9 @@
     "version": 1,
     "semantics": "single-asset",
     "breakerScope": "mf-one-midas",
+    "scoring": {
+      "maxSourceAgeSec": 345600
+    },
     "display": {
       "url": "https://midas.app/mfone",
       "label": "Midas mF-ONE NAV"
@@ -72,8 +75,10 @@
       }
     },
     "params": {
+      "navScope": "portfolio",
       "oracleAddress": "0x8D51DBC85cEef637c97D02bdaAbb5E274850e68C",
       "tokenAddress": "0x238a700ed6165261cf8b2e544ba797bc11e466ba",
+      "sourceKey": "chainlink-nav:token:0x238a700ed6165261cf8b2e544ba797bc11e466ba",
       "assetLabel": "Fasanara F-ONE private-credit and digital-asset strategy NAV",
       "assetRisk": "high",
       "maxOracleAgeSec": 604800
