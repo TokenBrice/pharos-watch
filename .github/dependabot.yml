@@ -21,6 +21,13 @@ updates:
       - dependency-name: "typescript"
         update-types:
           - "version-update:semver-major"
+      # satori 0.33.x hard-imports harfbuzzjs, whose emscripten loader reads
+      # self.location / __filename to fetch hb.wasm; both are undefined in
+      # workerd, so the first OG render throws (vercel/satori#796). Drop this
+      # once a release ships a workerd-compatible loader.
+      - dependency-name: "satori"
+        versions:
+          - ">= 0.33.0, < 0.34.0"
     groups:
       minor-and-patch:
         update-types:
@@ -39,6 +46,10 @@ updates:
       - dependency-name: "typescript"
         update-types:
           - "version-update:semver-major"
+      # See the root entry: satori 0.33.x cannot load harfbuzzjs in workerd.
+      - dependency-name: "satori"
+        versions:
+          - ">= 0.33.0, < 0.34.0"
     groups:
       minor-and-patch:
         update-types:
