@@ -2,6 +2,7 @@ import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 
 import { parseCliInteger, parseStrictCliArgs, runCliEntrypoint, writeCliHelpIfRequested } from "../lib/cli-args.mjs";
+import { buildMechanismCaptureSummary, summaryPathForCapture } from "../lib/mechanism-measurement/capture-summary";
 import { fetchBlockByNumber, pinBlock } from "../lib/mechanism-measurement/core";
 import { JournaledShockCaller, ReplayShockCaller } from "../lib/mechanism-measurement/shock-journal";
 import { measureConfiguredShockCoverageTarget } from "../lib/mechanism-measurement/shock-measure";
@@ -196,6 +197,18 @@ function assertExistingMeasurement(outPath: string, evidence: ShockCoverageEvide
   }
 }
 
+/**
+ * Only compact summaries are committed (raw bodies move to R2 later in the
+ * refresh), and the attestation and registry generators discover journals
+ * through those summaries. Project the summary here so a fresh measurement is
+ * visible to them before the upload step runs.
+ */
+function writeCaptureSummary(journalPath: string): void {
+  const root = process.cwd();
+  const summary = buildMechanismCaptureSummary(readFileSync(journalPath), journalPath, root);
+  writeFileSync(summaryPathForCapture(journalPath), `${JSON.stringify(summary, null, 2)}\n`, "utf8");
+}
+
 async function replayEvidence(path: string): Promise<void> {
   const absolutePath = resolve(path);
   const recorded = ShockCoverageEvidenceV1Schema.parse(JSON.parse(readFileSync(absolutePath, "utf8")));
@@ -244,9 +257,11 @@ async function measureTarget(options: CliOptions, assetId: string): Promise<void
       } catch (error) {
         if (!(error && typeof error === "object" && "code" in error && error.code === "EEXIST")) throw error;
         assertExistingMeasurement(outPath, evidence);
+        writeCaptureSummary(outPath);
         console.log(`[shock-coverage] ${assetId}: identical measurement already recorded at ${outPath}`);
         return;
       }
+      writeCaptureSummary(outPath);
       console.log(
         `[shock-coverage] ${assetId}: block ${evidence.block.number} (${evidence.block.selection}) via ${rpcUrl}\n` +
           `  coverage50=${evidence.measuredFacts.stressLiquidationCoverageRatio} ` +
