@@ -30,6 +30,7 @@ import {
   DISCLOSURE_VALIDATION,
   LATE_MONTHLY_DISCLOSURE_SOURCE_MAX_AGE_SEC,
   LATE_MONTHLY_VERIFIED_VALIDATION,
+  LAGGED_MONTHLY_EXAMINATION_VALIDATION,
   LATEST_STATE_VALIDATION,
   LATEST_STATE_WITH_UNKNOWN_CAP_VALIDATION,
   MATERIAL_UNKNOWN_EXPOSURE_PCT,
@@ -2283,6 +2284,10 @@ export const LIVE_RESERVE_ADAPTER_DESCRIPTOR_DECLARATIONS = {
     // delivery collection (content_type=gusdAttestation), so the reviewed
     // official index is JSON rather than server-rendered HTML.
     primaryInputKinds: ["http-json"],
+    // BPM issues each monthly examination 30-41 days after its as-of date, so
+    // the shared 46-day late-monthly cap cannot be met for ~16 days of every
+    // cycle; see LAGGED_MONTHLY_EXAMINATION_SOURCE_MAX_AGE_SEC.
+    validation: LAGGED_MONTHLY_EXAMINATION_VALIDATION,
   }),
   "sodax-sonic": {
     primaryInputKinds: ["onchain-evm"],
