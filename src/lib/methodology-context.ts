@@ -351,7 +351,7 @@ export const METHODOLOGY_CONTEXT: Record<MethodologyContextKey, MethodologyConte
   pys: {
     title: "PYS",
     summary:
-      "Asks one question: is this APY paying enough for the risk you take? Yield per unit of risk, 0-100. Starts from APY, adds a weighted slice of benchmark spread, then discounts by source risk, stablecoin safety, and yield consistency.",
+      "Asks one question: is this APY paying enough for the risk you take? Yield per unit of risk, 0-100. Starts from APY, adds a weighted slice of benchmark spread, re-bases the local hurdle onto the USD risk-free rate, then discounts by source risk, stablecoin safety, and yield consistency.",
     detail:
       "Not a recommendation or a safety verdict: a D-grade coin can top PYS because it pays a lot for a lot of risk. Read it next to the Safety grade and the row's zone. Source-risk and safety penalties are deliberately steep, and local-currency benchmark outperformance gets explicit credit.",
     methodologyPath: "/methodology/#yield-intelligence-methodology",

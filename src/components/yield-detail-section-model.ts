@@ -46,6 +46,7 @@ export interface YieldDetailReadyModel {
     adjustedRiskPenalty: number;
     benchmarkAdjustment: number;
     benchmarkSpread: number | null;
+    hurdleRebase: number;
     effectiveYield: number;
     scalingFactor: number;
     sourceRiskPenalty: number;
@@ -99,6 +100,7 @@ export function buildYieldDetailModel(
       ranking.yieldStability,
       ranking.benchmarkRate,
       ranking.sourceRisk?.sourceRiskPenalty ?? null,
+      rankingResponse.riskFreeRate,
     ),
     scalingFactor: rankingResponse.scalingFactor,
   };

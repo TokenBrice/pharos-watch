@@ -8,7 +8,7 @@ Risk-adjusted yield tracking and ranking for yield-bearing stablecoins and curat
 
 ## Methodology Versioning
 
-- **Current methodology version:** <!-- GENERATED-START: methodology-version-yield-methodology -->`v8.42`<!-- GENERATED-END: methodology-version-yield-methodology -->
+- **Current methodology version:** <!-- GENERATED-START: methodology-version-yield-methodology -->`v8.43`<!-- GENERATED-END: methodology-version-yield-methodology -->
 - **Public changelog page:** `/methodology/yield-changelog/`
 - **Canonical source:** `shared/lib/methodology-versions/yield-methodology.ts`
 
@@ -402,15 +402,16 @@ The monthly coverage audit now treats both `AUTO_LENDING_POOL_MAP` and `EXPLICIT
 
 ## Pharos Yield Score (PYS)
 
-Risk-adjusted ranking (0–100) that balances yield magnitude against source risk, stablecoin safety, and consistency. PYS answers one question — *is this APY paying enough for the risk taken?* — so it is yield per unit of risk, not a recommendation and not a safety verdict. A D-grade coin can top the leaderboard when it pays a lot for a lot of risk (wTRY at ~38% APY sits beside USDC at ~4.7%). Every surface that names PYS carries that framing, and each row also shows the joint safety × yield **zone** described under Presentation Boundaries.
+Risk-adjusted ranking (0–100) that balances yield magnitude against source risk, stablecoin safety, and consistency. PYS answers one question — *is this APY paying enough for the risk taken?* — so it is yield per unit of risk, not a recommendation and not a safety verdict. A D-grade coin can still rank above an A+ coin when it pays a lot for a lot of risk. Every surface that names PYS carries that framing, and each row also shows the joint safety × yield **zone** described under Presentation Boundaries.
 
-Known limitation (not yet versioned): PYS starts from nominal `apy30d` and weights the benchmark spread at only `PYS_BENCHMARK_SPREAD_WEIGHT` (0.25), so rows pegged to high-rate currencies earn PYS credit for policy-rate compensation rather than real excess yield; wTRY's +1.3% over TLREF scores like a much larger USD spread. A spread-first variant is under evaluation as a separate methodology change.
+Since v8.43 the effective yield is scored on a USD footing: `apy30d + 0.25 · spread + (usdBenchmarkRate − benchmarkRate)`, which is the closed form `usdBenchmarkRate + 1.25 · spread` — the score depends only on the USD risk-free rate and the row's excess over its own local hurdle, so a peg's inflation or policy-rate compensation is never credited as yield (before v8.43 wTRY at ~38% APY, +1.3 over TLREF, ranked beside USDC at +0.8 over T-bills). This is the covered-interest-parity reading of excess yield — it assumes a frictionless hedge and ignores FX basis; PYS does not model FX carry or hedging cost, which is why CHF/EUR rows with hurdles below the USD rate score higher than their nominal APY suggests.
 
 **Formula (`computePYS()` in `shared/lib/yield-scoring.ts`):**
 
 ```
 benchmarkSpread     = apy30d - benchmarkRate
-effectiveYield      = max(0, apy30d + benchmarkSpread * 0.25)
+hurdleRebase        = usdBenchmarkRate - benchmarkRate          (0 when either rate is missing)
+effectiveYield      = max(0, apy30d + benchmarkSpread * 0.25 + hurdleRebase)
 sourceRiskPenalty   = clamp(sourceRisk.sourceRiskPenalty ?? 1, 1, 2.5)
 rowUtility          = effectiveYield / sourceRiskPenalty
 riskPenalty         = max(0.5, (101 - safetyScore) / 20)
@@ -427,7 +428,9 @@ Coordinator evaluation reuses one `computePysComponents()` result for the score 
 | ------------------------------ | ------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `benchmarkRate`                | depends on row           | Row-level benchmark selected from the benchmark registry                                                                                                            |
 | `benchmarkSpread`              | unbounded                | `apy30d - benchmarkRate`; positive means the row clears its local benchmark                                                                                         |
-| `effectiveYield`               | `>= 0`                   | Raw APY plus 25% of benchmark spread, floored at zero before the safety divisor                                                                                     |
+| `usdBenchmarkRate`             | registry `USD` rate      | Reference risk-free rate (`riskFreeRate` on the payload) the local hurdle is swapped for (v8.43). Missing → `hurdleRebase` is 0 and the row scores as under v8.42 |
+| `hurdleRebase`                 | unbounded                | `usdBenchmarkRate - benchmarkRate`; exactly 0 for rows benchmarked at the USD T-bill rate, negative for high-rate pegs (TRY, RUB), positive for CHF/EUR hurdles below the USD rate |
+| `effectiveYield`               | `>= 0`                   | Raw APY plus 25% of benchmark spread plus the hurdle re-base, floored at zero before the safety divisor. Equal benchmark-relative excess scores equally in every currency |
 | `sourceRisk.sourceRiskPenalty` | `1–2.5` after resolution | Nested source-risk multiplier derived from measured source evidence. Missing/invalid values are neutral (`1`); values below 1 clamp to 1 and above 2.5 clamp to 2.5 |
 | `rowUtility`                   | `>= 0`                   | `effectiveYield / sourceRiskPenalty`, used before the safety curve                                                                                                  |
 | `safetyScore`                  | 0–100                    | Report card overall score. `PYS_DEFAULT_SAFETY_SCORE` (40) for unrated coins                                                                                        |
@@ -438,7 +441,7 @@ Coordinator evaluation reuses one `computePysComponents()` result for the score 
 
 Returns 0 when `apy30d <= 0` or the benchmark-aware `effectiveYield` is non-positive.
 
-The shared scorer exposes the intermediate values (`benchmarkSpread`, `benchmarkAdjustment`, `effectiveYield`, `sourceRiskPenalty`, `rowUtility`, `riskPenalty`, `adjustedRiskPenalty`, `yieldEfficiency`, `sustainabilityMult`). Frontend breakdown components should pass the nested `sourceRisk.sourceRiskPenalty` when they surface v8 source-risk details; the final PYS value is always served by the API.
+The shared scorer exposes the intermediate values (`benchmarkSpread`, `benchmarkAdjustment`, `hurdleRebase`, `effectiveYield`, `sourceRiskPenalty`, `rowUtility`, `riskPenalty`, `adjustedRiskPenalty`, `yieldEfficiency`, `sustainabilityMult`). Frontend breakdown components should pass the nested `sourceRisk.sourceRiskPenalty` and the payload `riskFreeRate` when they surface v8 source-risk details or per-factor attribution; the final PYS value is always served by the API.
 
 ### Source-Risk, Rank Attribution, and Neutral Policy
 
@@ -471,7 +474,7 @@ Rollback compatibility is part of the contract. Production-shaped `v7.48` payloa
 | `yieldStability` | `1 - CV(30d samples)`                                                          | 0–1, higher = more consistent. Null if < 2 samples or mean ≈ 0 (`                            | mean | < 1e-10`) |
 | `yieldToRisk`    | `apy30d / (101 - safetyScore)`                                                 | Raw yield per unit of risk                                                                   |
 | `excessYield`    | `apy30d - benchmarkRate`                                                       | 30-day average APY above the row's selected benchmark                                        |
-| `effectiveYield` | `max(0, apy30d + 0.25 * excessYield)`                                          | Benchmark-aware yield term used by PYS before source-risk, safety, and consistency penalties |
+| `effectiveYield` | `max(0, apy30d + 0.25 * excessYield + (usdBenchmarkRate - benchmarkRate))`     | Benchmark-aware yield term used by PYS before source-risk, safety, and consistency penalties |
 | `rowUtility`     | `effectiveYield / sourceRisk.sourceRiskPenalty` after neutral/clamp resolution | Source-risk-adjusted utility term used before the safety penalty                             |
 | `apy7d`          | Timestamp-filtered 7d average                                                  | 7-day trailing APY (uses `recorded_at >= now - 7d`, not proportional slicing)                |
 | `apy30d`         | Simple average of 30d samples                                                  | 30-day trailing APY                                                                          |
@@ -621,11 +624,11 @@ Schedules are owned by `worker/wrangler.toml`, `shared/lib/cron-jobs.ts`, and `s
 
 - The workbench emits `yield_zero_results` only after ranking data has loaded without a query error. Loading, absent-data, and failed-refresh states are not counted as empty-result exposures; a loaded empty payload still is. This event measures an empty view, not a completed conversion or necessarily a failed search.
 - URL filter normalization also waits for loaded, error-free ranking data, so data-derived options cannot erase a valid incoming filter while the request is pending.
-- Leaderboard rows keep a fixed visual budget: confidence, freshness, and warning/source-risk severity. Additional evidence belongs in the expanded panel or detail page.
+- Leaderboard rows keep a fixed visual budget: yield type, zone (row's own benchmark × safety 60; the scatter quadrants are an orientation frame against one chart-wide benchmark, so a non-USD row's chip can differ from its plotted quadrant), confidence, freshness, and warning/source-risk severity. Additional evidence belongs in the expanded panel or detail page.
 - The stablecoin detail section is an at-a-glance summary; `/stablecoin/<id>/yield/` is the history-first workbench. The two surfaces must not duplicate whole panels.
 - Deep-link workbenches are runtime analysis surfaces and remain `noindex`; `/yield/` and stablecoin detail pages are the indexable surfaces.
 - PYS factor attribution neutralizes one factor at a time and recomputes PYS. Per-factor deltas are explanatory and need not sum to the final score.
-- Every row carries a zone chip derived from `resolveYieldZone()` in `src/lib/yield-scatter.ts`: safety `>= 60` × 30-day APY above the row's benchmark (falling back to the visible USD benchmark) yields `Sweet Spot`, `Danger Zone`, `Play It Safe`, or `Why Bother?`. Labels, descriptions, and static badge classes live in `shared/lib/classification.ts` and are shared with the scatter-plot quadrants; unscored rows or rows with no benchmark render no chip. The hero highlight context and the leaderboard PYS tooltip use the same vocabulary so a top-PYS low-grade row reads as well-paid risk, not as an endorsement.
+- Every row carries a zone chip derived from `resolveYieldZone()` in `src/lib/yield-scatter.ts`: safety `>= 60` × 30-day APY above the row's own benchmark (falling back to the visible USD benchmark) yields `Sweet Spot`, `Danger Zone`, `Play It Safe`, or `Why Bother?`. Labels, descriptions, and static badge classes live in `shared/lib/classification.ts` and name the scatter-plot quadrants; unscored rows or rows with no benchmark render no chip. The hero highlight context and the leaderboard PYS tooltip use the same vocabulary so a top-PYS low-grade row reads as well-paid risk, not as an endorsement.
 - `/yield/` lands on the Opportunistic risk band (`YIELD_LANDING_RISK_BUDGET`: safety `>= 50`, warnings hidden). The `risk` URL param selects a band (`conservative`, `balanced`, `opportunistic`, or `any` for no band); an absent param is the landing band. The band only fills risk-budget keys the URL leaves unset, so explicit `minSafety`, `depth`, `sourcePosture`, `sourceConfidence`, or `warnings` params always win. Clearing one of those keys from the filter controls pins `risk=any` and keeps the other band-derived keys explicit. View presets stack on the current filters (active when their override keys match; counts computed on the stacked filters), and the compare drawer always selects from the unbanded universe so a selected low-grade row never disappears.
 
 ### Validation

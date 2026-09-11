@@ -326,6 +326,40 @@ describe("computePYS", () => {
     expect(result).toBe(0);
   });
 
+  describe("USD hurdle re-base (v8.43)", () => {
+    const usdBenchmarkRate = 3.95;
+    const common = { safetyScore: 80, apyVarianceScore: 0.1, scalingFactor: 8, usdBenchmarkRate };
+
+    it("scores equal excess over the local hurdle identically in every currency", () => {
+      const usdRow = computePYS({ ...common, apy30d: 4.95, benchmarkRate: usdBenchmarkRate });
+      const tryRow = computePYS({ ...common, apy30d: 37.86, benchmarkRate: 36.86 });
+      const chfRow = computePYS({ ...common, apy30d: 0.95, benchmarkRate: -0.05 });
+      expect(tryRow).toBe(usdRow);
+      expect(chfRow).toBe(usdRow);
+    });
+
+    it("does not credit a high-rate peg's policy rate as yield", () => {
+      const tryAtHurdle = computePYS({ ...common, apy30d: 36.86, benchmarkRate: 36.86 });
+      const usdAtHurdle = computePYS({ ...common, apy30d: usdBenchmarkRate, benchmarkRate: usdBenchmarkRate });
+      expect(tryAtHurdle).toBe(usdAtHurdle);
+    });
+
+    it("leaves USD-benchmarked rows identical to the pre-v8.43 score", () => {
+      const input = { apy30d: 8.4, safetyScore: 72, apyVarianceScore: 0.18, scalingFactor: 8, benchmarkRate: usdBenchmarkRate };
+      expect(computePYS({ ...input, usdBenchmarkRate })).toBe(computePYS(input));
+    });
+
+    it("falls back to the row's own hurdle when the reference rate is absent", () => {
+      const withoutReference = computePysComponents({ apy30d: 37.86, benchmarkRate: 36.86, safetyScore: 80, apyVarianceScore: 0.1 });
+      expect(withoutReference.hurdleRebase).toBe(0);
+      expect(withoutReference.effectiveYield).toBeCloseTo(37.86 + 0.25, 6);
+    });
+
+    it("floors the re-based effective yield at zero when a high-rate row misses its hurdle badly", () => {
+      expect(computePYS({ ...common, apy30d: 30, benchmarkRate: 36.86 })).toBe(0);
+    });
+  });
+
   it("handles non-USD benchmark rows and missing safety with neutral source risk", () => {
     const result = computePYS({
       apy30d: 3,

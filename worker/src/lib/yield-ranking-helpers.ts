@@ -24,6 +24,8 @@ interface PysNullReasonInput {
   apyVarianceScore: number;
   scalingFactor: number;
   benchmarkRate?: number | null;
+  /** Reference (USD) risk-free rate — see `computePysComponents`. */
+  usdBenchmarkRate?: number | null;
   sourceRiskPenalty?: number | null;
 }
 
@@ -50,6 +52,7 @@ export function derivePysNullReason(input: PysNullReasonInput): YieldPysNullReas
     safetyScore: input.safetyScore,
     apyVarianceScore: input.apyVarianceScore,
     benchmarkRate: input.benchmarkRate,
+    usdBenchmarkRate: input.usdBenchmarkRate,
     sourceRiskPenalty: input.sourceRiskPenalty,
   });
   return derivePysNullReasonFromComponents(input.apy30d, input.scalingFactor, effectiveYield);

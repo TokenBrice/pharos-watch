@@ -240,6 +240,14 @@ interface PysComponentInput {
   safetyScore: number | null;
   apyVarianceScore: number;
   benchmarkRate?: number | null;
+  /**
+   * Reference (USD) risk-free rate the row's hurdle is re-based onto (yield
+   * v8.43). When present with `benchmarkRate`, the effective yield gains
+   * `usdBenchmarkRate - benchmarkRate`, so a high-rate peg's policy-rate
+   * compensation is not scored as excess yield and equal benchmark-relative
+   * excess scores equally in every currency. Absent: v8.42 behaviour.
+   */
+  usdBenchmarkRate?: number | null;
   sourceRiskPenalty?: number | null;
 }
 
@@ -252,6 +260,8 @@ export interface PysComponents {
   sourceRiskPenaltyProvided: boolean;
   benchmarkSpread: number | null;
   benchmarkAdjustment: number;
+  /** `usdBenchmarkRate - benchmarkRate`; 0 for USD-benchmarked rows or when either rate is missing. */
+  hurdleRebase: number;
   effectiveYield: number;
   rowUtility: number;
   yieldEfficiency: number;
@@ -266,7 +276,9 @@ export function computePysComponents(input: PysComponentInput): PysComponents {
   const benchmarkRate = numberValue(input.benchmarkRate);
   const benchmarkSpread = benchmarkRate == null ? null : apy30d - benchmarkRate;
   const benchmarkAdjustment = benchmarkSpread == null ? 0 : benchmarkSpread * PYS_BENCHMARK_SPREAD_WEIGHT;
-  const effectiveYield = Math.max(0, apy30d + benchmarkAdjustment);
+  const usdBenchmarkRate = numberValue(input.usdBenchmarkRate);
+  const hurdleRebase = benchmarkRate == null || usdBenchmarkRate == null ? 0 : usdBenchmarkRate - benchmarkRate;
+  const effectiveYield = Math.max(0, apy30d + benchmarkAdjustment + hurdleRebase);
   const sourceRiskPenaltyResolution = resolvePysSourceRiskPenalty(input.sourceRiskPenalty);
   const rowUtility = effectiveYield / sourceRiskPenaltyResolution.penalty;
   const yieldEfficiency = rowUtility / adjustedRiskPenalty;
@@ -280,6 +292,7 @@ export function computePysComponents(input: PysComponentInput): PysComponents {
     sourceRiskPenaltyProvided: sourceRiskPenaltyResolution.provided,
     benchmarkSpread,
     benchmarkAdjustment,
+    hurdleRebase,
     effectiveYield,
     rowUtility,
     yieldEfficiency,
@@ -293,6 +306,7 @@ interface PYSInput {
   apyVarianceScore: number;
   scalingFactor: number;
   benchmarkRate?: number | null;
+  usdBenchmarkRate?: number | null;
   sourceRiskPenalty?: number | null;
 }
 
@@ -314,7 +328,15 @@ export function computePYSFromComponents(
   );
 }
 
-export function computePYS({ apy30d, safetyScore, apyVarianceScore, scalingFactor, benchmarkRate, sourceRiskPenalty }: PYSInput): number {
+export function computePYS({
+  apy30d,
+  safetyScore,
+  apyVarianceScore,
+  scalingFactor,
+  benchmarkRate,
+  usdBenchmarkRate,
+  sourceRiskPenalty,
+}: PYSInput): number {
   if (!Number.isFinite(apy30d) || apy30d <= 0) return 0;
   if (!Number.isFinite(scalingFactor) || scalingFactor <= 0) return 0;
   return computePYSFromComponents(
@@ -325,6 +347,7 @@ export function computePYS({ apy30d, safetyScore, apyVarianceScore, scalingFacto
       safetyScore,
       apyVarianceScore,
       benchmarkRate,
+      usdBenchmarkRate,
       sourceRiskPenalty,
     }),
   );

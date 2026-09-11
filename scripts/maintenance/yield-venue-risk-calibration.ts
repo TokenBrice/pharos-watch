@@ -58,9 +58,10 @@ function varianceScore(yieldStability: number | null): number {
 async function main(): Promise<void> {
   const res = await fetch(`${API}/api/yield-rankings`, { headers: { "X-API-Key": loadKey() } });
   if (!res.ok) throw new Error(`API ${res.status}`);
-  const body = (await res.json()) as { rankings: Row[]; scalingFactor: number };
+  const body = (await res.json()) as { rankings: Row[]; scalingFactor: number; riskFreeRate: number };
   const rows = body.rankings;
   const scalingFactor = body.scalingFactor;
+  const usdBenchmarkRate = body.riskFreeRate;
 
   let recomputeMatch = 0;
   let recomputeTotal = 0;
@@ -93,6 +94,7 @@ async function main(): Promise<void> {
       apyVarianceScore,
       scalingFactor,
       benchmarkRate: row.benchmarkRate,
+      usdBenchmarkRate,
       sourceRiskPenalty: oldPenalty,
     });
     recomputeTotal += 1;
@@ -127,6 +129,7 @@ async function main(): Promise<void> {
       apyVarianceScore,
       scalingFactor,
       benchmarkRate: row.benchmarkRate,
+      usdBenchmarkRate,
       sourceRiskPenalty: newPenalty,
     });
     const delta = newPys - oldPysRecomputed;

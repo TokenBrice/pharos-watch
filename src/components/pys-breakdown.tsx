@@ -32,6 +32,8 @@ export interface PysBreakdownProps {
   effectiveYield: number;
   benchmarkAdjustment: number;
   benchmarkSpread: number | null;
+  /** `usdBenchmarkRate - benchmarkRate` (yield v8.43); 0 for USD-benchmarked rows. */
+  hurdleRebase?: number;
   benchmarkLabel?: string | null;
   benchmarkSelectionMode?: YieldBenchmarkSelectionMode;
   sourceRiskPenalty: number;
@@ -124,6 +126,7 @@ interface NeutralizeInput {
   apyVarianceScore: number;
   scalingFactor: number;
   benchmarkRate: number | null;
+  usdBenchmarkRate: number | null;
   sourceRiskPenalty: number;
 }
 
@@ -152,6 +155,7 @@ function neutralizeFactorAndRescore(
     apyVarianceScore: neutralized.apyVarianceScore,
     scalingFactor: neutralized.scalingFactor,
     benchmarkRate: neutralized.benchmarkRate,
+    usdBenchmarkRate: neutralized.usdBenchmarkRate,
     sourceRiskPenalty: neutralized.sourceRiskPenalty,
   });
   return actualScore - neutralizedScore;
@@ -212,6 +216,7 @@ function PysBreakdownBody(props: Omit<PysBreakdownProps, "pysNullReason">) {
     effectiveYield,
     benchmarkAdjustment,
     benchmarkSpread,
+    hurdleRebase = 0,
     benchmarkLabel,
     sourceRiskPenalty,
     adjustedRiskPenalty,
@@ -241,6 +246,7 @@ function PysBreakdownBody(props: Omit<PysBreakdownProps, "pysNullReason">) {
     apyVarianceScore,
     scalingFactor: effectiveScalingFactor,
     benchmarkRate,
+    usdBenchmarkRate: benchmarkRate === null ? null : benchmarkRate + hurdleRebase,
     sourceRiskPenalty,
   };
 
@@ -300,6 +306,27 @@ function PysBreakdownBody(props: Omit<PysBreakdownProps, "pysNullReason">) {
               ) : null}
             </span>
             <span aria-hidden="true" className="font-mono tabular-nums">{formatSignedPercent(benchmarkAdjustment, 1)}</span>
+          </div>
+        ) : null}
+        {hurdleRebase !== 0 ? (
+          <div
+            className="flex items-baseline justify-between gap-3"
+            aria-label={`Plus USD hurdle re-base ${formatSignedPercent(hurdleRebase, 1)} (USD risk-free rate minus ${benchmarkRefLabel}; equal excess over the local hurdle scores equally in every currency)`}
+          >
+            <span aria-hidden="true" className="flex items-center gap-1 text-muted-foreground">
+              <span>+ USD hurdle re-base</span>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <span className="inline-flex h-3 w-3 cursor-help items-center justify-center rounded-full text-muted-foreground/70">
+                    <Info className="h-3 w-3" aria-hidden="true" />
+                  </span>
+                </TooltipTrigger>
+                <TooltipContent className="max-w-[260px] text-[11px]">
+                  {`USD risk-free rate minus ${benchmarkRefLabel}. Scores excess over the local hurdle on a USD footing instead of crediting the local policy rate as yield.`}
+                </TooltipContent>
+              </Tooltip>
+            </span>
+            <span aria-hidden="true" className="font-mono tabular-nums">{formatSignedPercent(hurdleRebase, 1)}</span>
           </div>
         ) : null}
         <div className="h-px bg-border/60" aria-hidden="true" />

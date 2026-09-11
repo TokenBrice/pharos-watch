@@ -267,6 +267,7 @@ function StablecoinYieldDetailHeader({
               effectiveYield={model.pysBreakdown.effectiveYield}
               benchmarkAdjustment={model.pysBreakdown.benchmarkAdjustment}
               benchmarkSpread={model.pysBreakdown.benchmarkSpread}
+              hurdleRebase={model.pysBreakdown.hurdleRebase}
               benchmarkLabel={ranking.benchmarkLabel}
               benchmarkSelectionMode={ranking.benchmarkSelectionMode}
               sourceRiskPenalty={model.pysBreakdown.sourceRiskPenalty}

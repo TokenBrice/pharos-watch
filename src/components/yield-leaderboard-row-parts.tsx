@@ -53,6 +53,7 @@ type PysBreakdownValues = {
   adjustedRiskPenalty: number;
   benchmarkAdjustment: number;
   benchmarkSpread: number | null;
+  hurdleRebase: number;
   effectiveYield: number;
   sourceRiskPenalty: number;
   sustainabilityMult: number;
@@ -181,6 +182,7 @@ export function YieldPysValue({
               effectiveYield={breakdown.effectiveYield}
               benchmarkAdjustment={breakdown.benchmarkAdjustment}
               benchmarkSpread={breakdown.benchmarkSpread}
+              hurdleRebase={breakdown.hurdleRebase}
               benchmarkLabel={row.benchmarkLabel}
               benchmarkSelectionMode={getYieldBenchmarkSelectionMode(row)}
               sourceRiskPenalty={breakdown.sourceRiskPenalty}
@@ -593,7 +595,11 @@ export function isOpportunityDerivedYieldRow(row: YieldViewModelRow): boolean {
   return isOpportunityDerivedSafety(row.provenance?.safetyProvenance);
 }
 
-export function deriveYieldRowDisplay(row: YieldViewModelRow, scalingFactor: number) {
+export function deriveYieldRowDisplay(
+  row: YieldViewModelRow,
+  scalingFactor: number,
+  usdBenchmarkRate?: number | null,
+) {
   const labels = formatYieldRowLabels(row);
   const presentation = deriveYieldRowPresentation(row);
   const sourceRole = getYieldWorkbenchSourceRole(row);
@@ -604,6 +610,7 @@ export function deriveYieldRowDisplay(row: YieldViewModelRow, scalingFactor: num
       row.yieldStability,
       row.benchmarkRate,
       row.sourceRisk?.sourceRiskPenalty ?? null,
+      usdBenchmarkRate,
     ),
     scalingFactor,
   };

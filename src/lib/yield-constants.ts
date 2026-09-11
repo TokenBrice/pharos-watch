@@ -59,6 +59,8 @@ export function computePysBreakdown(
   yieldStability: number | null,
   benchmarkRate?: number | null,
   sourceRiskPenalty?: number | null,
+  /** Reference (USD) risk-free rate the effective yield is re-based onto (yield v8.43). */
+  usdBenchmarkRate?: number | null,
 ) {
   const apyVarianceScore = yieldStabilityToApyVarianceScore(yieldStability);
   const {
@@ -66,17 +68,26 @@ export function computePysBreakdown(
     adjustedRiskPenalty,
     benchmarkSpread,
     benchmarkAdjustment,
+    hurdleRebase,
     effectiveYield,
     rowUtility,
     sourceRiskPenalty: resolvedSourceRiskPenalty,
     yieldEfficiency,
     sustainabilityMultiplier,
-  } = computePysComponents({ apy30d, safetyScore, apyVarianceScore, benchmarkRate, sourceRiskPenalty });
+  } = computePysComponents({
+    apy30d,
+    safetyScore,
+    apyVarianceScore,
+    benchmarkRate,
+    usdBenchmarkRate,
+    sourceRiskPenalty,
+  });
   return {
     riskPenalty,
     adjustedRiskPenalty,
     benchmarkSpread,
     benchmarkAdjustment,
+    hurdleRebase,
     effectiveYield,
     rowUtility,
     sourceRiskPenalty: resolvedSourceRiskPenalty,

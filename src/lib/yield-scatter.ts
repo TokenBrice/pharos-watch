@@ -5,8 +5,11 @@ import { percentileLinear } from "@shared/lib/stats";
 export const SAFETY_SCORE_THRESHOLD = 60;
 
 /**
- * Joint safety × yield zone for one row, using the same split as the scatter
- * quadrants. Null when the row is unscored or has no benchmark to compare to.
+ * Joint safety × yield zone for one row: the exact reading against the row's
+ * own benchmark. The scatter quadrants share the vocabulary and the safety
+ * split but draw against one chart-wide benchmark as an orientation frame, so
+ * a non-USD row can sit visually in a different quadrant than its chip.
+ * Null when the row is unscored or has no benchmark to compare to.
  */
 export function resolveYieldZone(
   safetyScore: number | null,

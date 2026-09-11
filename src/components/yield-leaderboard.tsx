@@ -488,7 +488,7 @@ export function YieldMobileCard({
     altSourceCount,
     benchmarkReferenceText,
     breakdown: { adjustedRiskPenalty, benchmarkSpread, sourceRiskPenalty, sustainabilityMult },
-  } = useMemo(() => deriveYieldRowDisplay(row, 1), [row]);
+  } = useMemo(() => deriveYieldRowDisplay(row, 1, riskFreeRate), [row, riskFreeRate]);
 
   return (
     <article

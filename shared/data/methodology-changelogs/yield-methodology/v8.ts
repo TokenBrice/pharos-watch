@@ -2,6 +2,23 @@ import type { MethodologyChangelogEntry } from "@shared/lib/methodology-versions
 
 export const YIELD_METHODOLOGY_V8: readonly MethodologyChangelogEntry[] = [
   {
+    version: "8.43",
+    title: "PYS Re-Bases Non-USD Hurdles onto the USD Risk-Free Rate",
+    date: "2026-09-11",
+    effectiveAt: 1789084800,
+    summary:
+      "Pharos Yield Score credited high-rate pegs for paying their own central-bank rate: Wrapped iTRY at 38% APY, only +1.3 points over the BIST TLREF overnight rate, ranked beside USDC at +0.8 over T-bills. Effective yield now adds the USD risk-free rate minus the row's own benchmark, so a peg's policy-rate compensation is no longer scored as excess yield. USD-benchmarked rows are unchanged.",
+    impact: [
+      "`effectiveYield` becomes `max(0, apy30d + 0.25 * benchmarkSpread + (usdBenchmarkRate - benchmarkRate))`, equivalently `max(0, usdBenchmarkRate + 1.25 * benchmarkSpread)`. The 25% spread slice is retained; the new `hurdleRebase` term is zero for every row benchmarked at the USD 3M T-bill rate, so 141 of the 155 scored rows at rollout are identical to v8.42 (DUSD 85, BOLD 69, USDC 58)",
+      "Wrapped iTRY (`witry-brix`) falls from PYS 44 (rank 5) to 6 (rank ~91). CHF and EUR rows rise because their local hurdles sit below the USD rate (ZCHF 26 → 51, rank 17 → 5; EURC 20 → 33) — this is the covered-interest-parity reading of excess yield on a USD footing, which assumes a frictionless hedge and ignores FX basis; PYS does not model FX carry or hedging cost. Exactly three rows move more than 10 points; the `yield.pys_dropped` tape event fires once, for wiTRY",
+      "Only the 14 rows whose selected benchmark is not the USD T-bill (7 EUR, 3 GBP, 2 CHF, 1 TRY, 1 RUB) and the 6 USD rows benchmarked against `USD_EFFR` carry a non-zero re-base; the six EFFR rows gain about +0.3 effective-yield points",
+      "The hourly write path (`worker/src/cron/yield-sync/evaluation.ts`), the API live-safety recompute (`worker/src/api/yield-rankings-cache.ts`), `derivePysNullReason`, the frontend breakdown and per-factor attribution (`src/lib/yield-constants.ts`, `src/components/pys-breakdown.tsx`), and the venue-risk calibration script all pass the payload `riskFreeRate`, so publish-time, read-time, and displayed scores stay in lockstep. The breakdown shows a `+ USD hurdle re-base` line only when the term is non-zero",
+      "When the reference rate is unavailable the term is zero and the row scores exactly as under v8.42; rows without benchmark metadata are unchanged",
+    ],
+    commits: [],
+    reconstructed: false,
+  },
+  {
     version: "8.42",
     title: "BOLD and yBOLD Stop Sharing One Yield Row",
     date: "2026-08-31",

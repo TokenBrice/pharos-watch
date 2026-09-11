@@ -228,7 +228,7 @@ function YieldInstrumentRowBase({
     isCurrencyMismatchedBenchmark,
     warningCount,
     ...labels
-  } = useMemo(() => deriveYieldRowDisplay(row, scalingFactor), [row, scalingFactor]);
+  } = useMemo(() => deriveYieldRowDisplay(row, scalingFactor, riskFreeRate), [row, scalingFactor, riskFreeRate]);
   const totalSourceCount = 1 + altSourceCount;
   const benchmarkRate = row.benchmarkRate ?? riskFreeRate;
   const excess = benchmarkRate != null ? row.apy30d - benchmarkRate : null;

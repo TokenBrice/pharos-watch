@@ -399,6 +399,9 @@ function evaluateYieldSourceGroup(
       safetyScore,
       apyVarianceScore,
       benchmarkRate,
+      // Re-base every row onto the reference (USD) risk-free rate (yield v8.43) so a
+      // non-USD peg's inflation/policy-rate compensation is not scored as excess yield.
+      usdBenchmarkRate: input.riskFreeRates.USD.rate,
       sourceRiskPenalty: sourceRiskPenaltyInput,
     });
     const computedPharosYieldScore = computePYSFromComponents(apy30d, PYS_SCALING_FACTOR, pysComponents);

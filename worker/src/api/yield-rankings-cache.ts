@@ -81,13 +81,19 @@ function normalizeYieldRankingsContract(
   };
 }
 
-function recomputeYieldScore(row: YieldRanking, safetyInputScore: number, scalingFactor: number): number {
+function recomputeYieldScore(
+  row: YieldRanking,
+  safetyInputScore: number,
+  scalingFactor: number,
+  usdBenchmarkRate: number | null,
+): number {
   return computePYS({
     apy30d: row.apy30d,
     safetyScore: safetyInputScore,
     apyVarianceScore: yieldStabilityToApyVarianceScore(row.yieldStability),
     scalingFactor,
     benchmarkRate: row.benchmarkRate ?? null,
+    usdBenchmarkRate,
     sourceRiskPenalty: row.sourceRisk?.sourceRiskPenalty ?? null,
   });
 }
@@ -281,6 +287,9 @@ function hydrateYieldRankingsWithLiveSafety(
   scores: Map<string, { score: number; grade: string }>,
   source: LiveSafetyHydrationSource,
 ): { payload: YieldRankingsResponse; degradationReasons: string[] } {
+  // Reference (USD) risk-free rate the re-based effective yield anchors on (yield v8.43).
+  // Legacy payloads without a top-level `riskFreeRate` fall back to the USD registry entry.
+  const usdBenchmarkRate = finiteNumber(payload.riskFreeRate) ?? finiteNumber(payload.benchmarks?.USD?.rate) ?? null;
   const hydratedRows = payload.rankings
     .map((row) => {
       const safety = scores.get(row.id);
@@ -320,7 +329,7 @@ function hydrateYieldRankingsWithLiveSafety(
             : benchmarkFreshness === "stale" || warningSignals.includes("benchmark-stale")
               ? ("benchmark-stale" as const)
               : null;
-      const recomputedPharosYieldScore = recomputeYieldScore(row, safetyInputScore, payload.scalingFactor);
+      const recomputedPharosYieldScore = recomputeYieldScore(row, safetyInputScore, payload.scalingFactor, usdBenchmarkRate);
       const pharosYieldScore = evidenceNullReason == null ? recomputedPharosYieldScore : null;
       const pysNullReason =
         evidenceNullReason ??
@@ -332,6 +341,7 @@ function hydrateYieldRankingsWithLiveSafety(
               apyVarianceScore: yieldStabilityToApyVarianceScore(row.yieldStability),
               scalingFactor: payload.scalingFactor,
               benchmarkRate: row.benchmarkRate ?? null,
+              usdBenchmarkRate,
               sourceRiskPenalty: row.sourceRisk?.sourceRiskPenalty ?? null,
             }));
 
