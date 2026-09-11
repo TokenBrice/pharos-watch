@@ -63,6 +63,20 @@ updates:
       default-days: 7
     open-pull-requests-limit: 1
     rebase-strategy: "disabled"
+    ignore:
+      # actions/cache is also pinned inside .github/actions/setup-workspace
+      # (restore + cache), which Dependabot does not scan, so a workflow-only
+      # major bump of cache/save would split the restore/save pair across
+      # majors. Bump all three together by hand.
+      - dependency-name: "actions/cache"
+        update-types:
+          - "version-update:semver-major"
+      - dependency-name: "actions/cache/save"
+        update-types:
+          - "version-update:semver-major"
+      - dependency-name: "actions/cache/restore"
+        update-types:
+          - "version-update:semver-major"
     groups:
       # Dependabot treats each `uses:` path as its own dependency, so a
       # multi-step action such as github/codeql-action/{init,analyze}
