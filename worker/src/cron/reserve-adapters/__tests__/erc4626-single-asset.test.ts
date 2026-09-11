@@ -1,7 +1,11 @@
 import { describe, expect, it } from "vitest";
-import type { LiveReservesConfig } from "@shared/types/live-reserves";
+import type { LiveReserveWarning, LiveReservesConfig } from "@shared/types/live-reserves";
 import { jsonResponse } from "@shared/test-utils/mock-fetch";
-import { installErc4626Network, runTrackedVault } from "./erc4626-single-asset.test-support";
+import {
+  installErc4626Network,
+  runTrackedVault,
+  withoutDeployedExposure,
+} from "./erc4626-single-asset.test-support";
 
 function uint256Result(value: bigint | number): string {
   return `0x${BigInt(value).toString(16).padStart(64, "0")}`;
@@ -34,6 +38,12 @@ function cloneConfigWithoutExpectedAsset(config: LiveReservesConfig): LiveReserv
   };
   delete cloned.params.slice?.expectedAssetAddress;
   return cloned;
+}
+
+// syrupUSDC carries a reviewed deployed-exposure attestation whose info warning
+// is not what these redemption-mechanics cases assert on.
+function nonInfoWarnings(warnings: readonly LiveReserveWarning[] | undefined): readonly LiveReserveWarning[] {
+  return (warnings ?? []).filter((warning) => warning.effect !== "info");
 }
 
 function withRedemptionLiquidity(redemptionLiquidity: {
@@ -105,14 +115,14 @@ function mockYearnV3Rpc(isShutdownRaw?: bigint | number) {
 
 describe("fetchErc4626SingleAssetReserves", () => {
 
-  it("separates held collateral from deployed strategy exposure", async () => {
+  it("separates held collateral from deployed strategy exposure without a reviewed attestation", async () => {
     const balanceOfCalls: Array<{ to?: string; data: string }> = [];
     installErc4626Network({ extraHandlers: [({ call }) => {
       if (call?.data.startsWith("0x70a08231")) balanceOfCalls.push(call);
       return undefined;
     }] });
 
-    const result = await runTrackedVault("syrupusdc-maple");
+    const result = await runTrackedVault("syrupusdc-maple", withoutDeployedExposure);
 
     expect(result.slices).toEqual([
       {
@@ -130,7 +140,7 @@ describe("fetchErc4626SingleAssetReserves", () => {
         risk: "high",
       },
     ]);
-    expect(result.warnings).toBeUndefined();
+    expect(nonInfoWarnings(result.warnings)).toEqual([]);
     expect(result.metadata).toMatchObject({
       freshnessMode: "not-applicable",
       chain: "ethereum",
@@ -158,6 +168,48 @@ describe("fetchErc4626SingleAssetReserves", () => {
     expect(balanceOfCalls).toHaveLength(1);
     expect(balanceOfCalls[0]?.to?.toLowerCase()).toBe("0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48");
     expect(balanceOfCalls[0]?.data).toContain("80ac24aa929eaf5013f6436cda2a7ba190f5cc0b");
+  });
+
+  it("attributes the deployed remainder to the reviewed slice when deployedExposure is attested", async () => {
+    const balanceOfCalls: Array<{ to?: string; data: string }> = [];
+    installErc4626Network({ extraHandlers: [({ call }) => {
+      if (call?.data.startsWith("0x70a08231")) balanceOfCalls.push(call);
+      return undefined;
+    }] });
+
+    const result = await runTrackedVault("syrupusdc-maple");
+
+    expect(result.slices).toEqual([
+      {
+        sourceKey: "erc4626-single-asset:ethereum:0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+        name: "USDC-denominated loan receivables",
+        pct: 100,
+        risk: "medium",
+        coinId: "usdc-circle",
+        depType: "wrapper",
+      },
+    ]);
+    expect(result.metadata).toMatchObject({
+      idleUnderlyingBalanceRaw: "25000000",
+      unknownExposurePct: 0,
+      deployedPct: 75,
+      deployedExposureBasis:
+        "Maple documents an ERC-4626 claim on a segregated USDC-denominated pool; deployed USDC is that pool's loans and strategies",
+      redemption: {
+        capacityUsd: 25,
+        capacityKind: "live-direct",
+        routeStatus: "open",
+      },
+    });
+    expect(result.warnings).toEqual([
+      expect.objectContaining({
+        code: "erc4626-deployed-exposure-reviewed",
+        severity: "info",
+        effect: "info",
+        message: expect.stringContaining("75.00%"),
+      }),
+    ]);
+    expect(balanceOfCalls).toHaveLength(1);
   });
 
   it("preserves BigInt precision when the NAV divergence is just above 1%", async () => {
@@ -310,7 +362,7 @@ describe("fetchErc4626SingleAssetReserves", () => {
 
     const result = await runTrackedVault("syrupusdc-maple", withRedemptionLiquidity({ source: "yearn-v3-withdrawable", settlementDelaySec: 0 }));
 
-    expect(result.warnings).toBeUndefined();
+    expect(nonInfoWarnings(result.warnings)).toEqual([]);
     expect(result.metadata).toMatchObject({
       idleUnderlyingBalanceRaw: "5000000",
       redemptionCapacityRaw: "85000000",
@@ -334,7 +386,7 @@ describe("fetchErc4626SingleAssetReserves", () => {
 
     const result = await runTrackedVault("syrupusdc-maple", withRedemptionLiquidity({ source: "yearn-v3-withdrawable", settlementDelaySec: 0 }));
 
-    expect(result.warnings).toBeUndefined();
+    expect(nonInfoWarnings(result.warnings)).toEqual([]);
     expect(result.metadata).toMatchObject({
       redemptionCapacityRaw: "85000000",
       redemptionCapacitySource: "yearn-v3-withdrawable",
@@ -376,7 +428,7 @@ describe("fetchErc4626SingleAssetReserves", () => {
 
     const result = await runTrackedVault("syrupusdc-maple", withRedemptionLiquidity({ source: "sbold-sp-withdrawable" }));
 
-    expect(result.warnings).toBeUndefined();
+    expect(nonInfoWarnings(result.warnings)).toEqual([]);
     expect(result.metadata).toMatchObject({
       idleUnderlyingBalanceRaw: "1000000",
       redemptionCapacityRaw: "85000000",
@@ -406,7 +458,7 @@ describe("fetchErc4626SingleAssetReserves", () => {
 
     const result = await runTrackedVault("syrupusdc-maple", withRedemptionLiquidity({ source: "sbold-sp-withdrawable" }));
 
-    expect(result.warnings).toBeUndefined();
+    expect(nonInfoWarnings(result.warnings)).toEqual([]);
     expect(result.metadata).toMatchObject({
       redemptionCapacityRaw: "85000000",
       redemptionCapacitySource: "sbold-sp-withdrawable",
@@ -431,7 +483,7 @@ describe("fetchErc4626SingleAssetReserves", () => {
 
     const result = await runTrackedVault("syrupusdc-maple", withRedemptionLiquidity({ source: "sbold-sp-withdrawable" }));
 
-    expect(result.warnings).toBeUndefined();
+    expect(nonInfoWarnings(result.warnings)).toEqual([]);
     expect(result.metadata?.redemption).toEqual({
       capacityUsd: 85,
       capacityRatioOfSupply: 0.85,
@@ -452,7 +504,7 @@ describe("fetchErc4626SingleAssetReserves", () => {
 
     const result = await runTrackedVault("syrupusdc-maple", withRedemptionLiquidity({ source: "sbold-sp-withdrawable" }));
 
-    expect(result.warnings).toEqual([
+    expect(nonInfoWarnings(result.warnings)).toEqual([
       expect.objectContaining({
         code: "sbold-sp-withdrawable-unavailable",
         severity: "warning",
@@ -507,7 +559,7 @@ describe("fetchErc4626SingleAssetReserves", () => {
       });
     }] });
     const result = await runTrackedVault("syrupusdc-maple", withRedemptionLiquidity({ source, chainId: 1 }));
-    expect(result.warnings).toBeUndefined();
+    expect(nonInfoWarnings(result.warnings)).toEqual([]);
     expect(result.metadata).toMatchObject({
       idleUnderlyingBalanceRaw: "0",
       redemptionCapacityRaw: "30000000",
@@ -546,7 +598,7 @@ describe("fetchErc4626SingleAssetReserves", () => {
 
     const result = await runTrackedVault("syrupusdc-maple", withRedemptionLiquidity({ source: "morpho-vault-v2", chainId: 1 }));
 
-    expect(result.warnings).toEqual([
+    expect(nonInfoWarnings(result.warnings)).toEqual([
       expect.objectContaining({
         code: "morpho-vault-v2-identity-mismatch",
         severity: "warning",
@@ -600,7 +652,7 @@ describe("fetchErc4626SingleAssetReserves", () => {
 
     const result = await runTrackedVault("syrupusdc-maple");
 
-    expect(result.warnings).toEqual([
+    expect(nonInfoWarnings(result.warnings)).toEqual([
       expect.objectContaining({
         code: "erc4626-nav-divergence",
         severity: "warning",

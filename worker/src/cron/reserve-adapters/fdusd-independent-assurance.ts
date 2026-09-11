@@ -51,8 +51,12 @@ export const FDUSD_INDEPENDENT_ASSURANCE_PROFILE: IndependentAssuranceProfile = 
 
 function fdusdReportDate(href: string, text: string): string | null {
   const decoded = decodeURIComponent(`${href} ${text}`);
+  // The Webflow CDN filenames use either separator for the report month and
+  // year — "(Feb_2026)" and "(Sept_2025)" sit beside "(July 2026)" — so the
+  // month-year token accepts underscores as well as whitespace. The shared
+  // ambiguity fence still fails closed on a candidate with no date at all.
   const match = decoded.match(
-    /\b(Jan(?:uary)?|Feb(?:ruary)?|Mar(?:ch)?|Apr(?:il)?|May|Jun(?:e)?|Jul(?:y)?|Aug(?:ust)?|Sep(?:t|tember)?|Oct(?:ober)?|Nov(?:ember)?|Dec(?:ember)?)\s+((?:19|20)\d{2})\b/i,
+    /\b(Jan(?:uary)?|Feb(?:ruary)?|Mar(?:ch)?|Apr(?:il)?|May|Jun(?:e)?|Jul(?:y)?|Aug(?:ust)?|Sep(?:t|tember)?|Oct(?:ober)?|Nov(?:ember)?|Dec(?:ember)?)[_\s]+((?:19|20)\d{2})\b/i,
   );
   if (!match) return null;
   const month = monthNumberFromLabel(match[1].slice(0, 3));

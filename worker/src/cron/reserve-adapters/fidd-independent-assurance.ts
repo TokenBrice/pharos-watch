@@ -8,6 +8,14 @@ import type { AdapterContext, AdapterResult } from "./types";
 
 const WIDEN_HOST = "fwc.widen.net";
 
+// Fidelity's WAF answers HTTP 403 to crawler user agents that carry no contact
+// URI — the shared index UA (browser-shaped) and the neutral
+// `Pharos/1.0 (stablecoin analytics)` UA both fail from plain curl — while the
+// same signature with a contact URL is served (verified 2026-09-11). Only the
+// index fetch overrides the shared UA; fwc.widen.net serves the viewer page and
+// the reviewed PDF to the shared UA.
+const FIDD_INDEX_USER_AGENT = "Pharos/1.0 (+https://pharos.watch)";
+
 // Fidelity publishes PwC's monthly FIDD examination on
 // fidelitydigitalassets.com/stablecoin, but the index links a Widen viewer
 // page (fwc.widen.net/s/<id>/...-july26), not the PDF. The viewer page serves
@@ -63,6 +71,7 @@ export const FIDD_INDEPENDENT_ASSURANCE_PROFILE: IndependentAssuranceProfile = {
   },
   isReportCandidate: (href) => /fidelity-digital-assets---fidd-reserve-attestation-report/i.test(href),
   reportDateFromCandidate: fiddReportDate,
+  indexHeaders: { "User-Agent": FIDD_INDEX_USER_AGENT },
   prepareIndexHtml: async (html, signal, ctx) => {
     const viewerMatch = html.match(
       /href\s*=\s*"(https:\/\/fwc\.widen\.net\/s\/[a-z0-9]+\/fidelity-digital-assets---fidd-reserve-attestation-report---july26)"/i,

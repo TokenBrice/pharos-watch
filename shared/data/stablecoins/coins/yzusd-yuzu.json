@@ -273,10 +273,6 @@
         "[Aave]_USDC": "Aave USDC",
         "[Curvance]_AUSD": "Curvance AUSD"
       },
-      "allowNegativeBuckets": [
-        "[Strata]_srUSDe_Pendle_PT_Loop",
-        "[Global_Dollar]_USDG_Loop"
-      ],
       "sourceKeyMap": {
         "[Fluid]_fUSDT0": "accountable:yuzu:deployment:fluid-fusdt0",
         "Liquidity_Buffer": "accountable:yuzu:deployment:liquidity-buffer",

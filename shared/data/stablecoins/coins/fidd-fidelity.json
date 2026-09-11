@@ -84,7 +84,7 @@
       "product": "FIDD",
       "profile": "fidd-v1",
       "indexHost": "www.fidelitydigitalassets.com",
-      "reportHosts": ["fwc.widen.net"]
+      "reportHosts": ["fwc.widen.net", "cf-store.widencdn.net"]
     }
   },
   "launchDate": "2026-02-04"

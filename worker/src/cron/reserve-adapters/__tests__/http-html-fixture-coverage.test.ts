@@ -30,8 +30,8 @@ const SOURCE_RE = /<!--\s*source:\s*(https:\/\/\S+?)\s*-->/;
 const FIXTURE_EXEMPT_ADAPTERS: Record<string, string> = {
   "attestation-pdf-index": "Upstream is a gated PDF index; HTML page is not the parsed surface.",
   "audx-independent-assurance": "Compact index HTML for newer-report detection is covered inline; evidence is the exact official PDF bytes bound to a reviewed manifest SHA-256.",
+  "brla-independent-assurance": "The Notion index HTML is only a host/reachability gate; the parsed surface is the inline loadPageChunk/getSignedFileUrls record maps in brla-independent-assurance.test.ts, and evidence is the exact official PDF bytes bound to a reviewed manifest SHA-256.",
   "paxos-independent-assurance": "Inline tests cover the sole parsed HTML surface (main-module script reference); exact reviewed main/product-module hashes bind report selection, and the manifest binds PDF bytes.",
-  "fdusd-independent-assurance": "Compact Webflow index HTML for newer-report detection is covered inline; evidence is the exact official PDF bytes bound to a reviewed manifest SHA-256.",
   "agora-independent-assurance": "Compact Fern docs index HTML for reviewed-link rewriting is covered inline; evidence is the exact official PDF bytes bound to a reviewed manifest SHA-256.",
   "fidd-independent-assurance": "Compact official index and Widen viewer HTML for newer-report detection are covered inline; evidence is the exact official PDF bytes bound to a reviewed manifest SHA-256.",
   "issuer-attested-report": "Shared sibling descriptor for BRLV/AUDM: each product profile parses its own compact issuer index inline and evidence is the exact reviewed PDF bytes bound to a manifest SHA-256.",

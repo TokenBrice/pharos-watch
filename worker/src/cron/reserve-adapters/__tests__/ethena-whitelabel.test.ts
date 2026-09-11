@@ -63,7 +63,7 @@ describe("adaptEthenaWhitelabel", () => {
     const result = adaptEthenaWhitelabel(SUIUSDE_PAYLOAD, "suiUSDe");
 
     expect(result.slices).toEqual([
-      { sourceKey: "ethena-whitelabel:usde", name: "USDe (Ethena synthetic dollar)", pct: 90.441, risk: "medium", coinId: "usde-ethena" },
+      { sourceKey: "ethena-whitelabel:usde", name: "USDe (Ethena synthetic dollar)", pct: 90.441, risk: "high", coinId: "usde-ethena" },
       { sourceKey: "ethena-whitelabel:usdc", name: "USDC cash-equivalent reserves", pct: 9.537, risk: "low", coinId: "usdc-circle" },
       { sourceKey: "ethena-whitelabel:off-chain", name: "Coinbase Prime custody (off-chain)", pct: 0.022, risk: "low" },
     ]);
@@ -108,7 +108,7 @@ describe("adaptEthenaWhitelabel", () => {
     // Multiple custodians holding USDC collapse into one slice, and Coinbase 2's
     // two asset rows are each attributed to their own asset.
     expect(result.slices).toEqual([
-      { sourceKey: "ethena-whitelabel:usde", name: "USDe (Ethena synthetic dollar)", pct: 90.441, risk: "medium", coinId: "usde-ethena" },
+      { sourceKey: "ethena-whitelabel:usde", name: "USDe (Ethena synthetic dollar)", pct: 90.441, risk: "high", coinId: "usde-ethena" },
       { sourceKey: "ethena-whitelabel:usdc", name: "USDC cash-equivalent reserves", pct: 9.537, risk: "low", coinId: "usdc-circle" },
       { sourceKey: "ethena-whitelabel:off-chain", name: "Coinbase Prime custody (off-chain)", pct: 0.022, risk: "low" },
     ]);

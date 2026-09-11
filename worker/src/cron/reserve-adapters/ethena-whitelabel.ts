@@ -47,7 +47,7 @@ interface AssetConfig {
 const ON_CHAIN_ASSET_CONFIG: Record<string, AssetConfig> = {
   USDE: {
     name: "USDe (Ethena synthetic dollar)",
-    risk: "medium",
+    risk: getCanonicalReserveAssetRisk("USDE") ?? "high",
     coinId: "usde-ethena",
   },
   USDC: {

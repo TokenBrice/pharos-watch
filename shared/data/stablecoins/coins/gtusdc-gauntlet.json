@@ -68,6 +68,11 @@
         "depType": "wrapper",
         "expectedAssetAddress": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48"
       },
+      "deployedExposure": {
+        "basis": "Morpho vault page identifies USDC as the sole deposit asset; deployed USDC sits in Gauntlet-curated lending markets",
+        "reviewedAt": "2026-09-11",
+        "sourceUrl": "https://app.morpho.org/ethereum/vault/0xdd0f28e19c1780eb6396170735d45153d261490d"
+      },
       "redemptionLiquidity": {
         "source": "morpho-vault-v1",
         "chainId": 1

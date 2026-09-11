@@ -70,6 +70,11 @@
       }
     },
     "params": {
+      "deployedExposure": {
+        "basis": "sBOLD deploys its BOLD into Liquity V2 Stability Pools; the vault holds no idle BOLD, so totalAssets() is Stability Pool BOLD",
+        "reviewedAt": "2026-09-11",
+        "sourceUrl": "https://k3-capital.gitbook.io/sbold/technical-details"
+      },
       "redemptionLiquidity": {
         "source": "sbold-sp-withdrawable"
       },

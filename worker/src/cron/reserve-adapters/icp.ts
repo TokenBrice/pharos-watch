@@ -121,29 +121,22 @@ function crc32(bytes: Uint8Array): number {
   return (crc ^ 0xffffffff) >>> 0;
 }
 
+/** RFC 4648 base32 without padding: the final character carries the leftover bits. */
 function base32Encode(bytes: Uint8Array): string {
-  let skip = 0;
+  let buffer = 0;
   let bits = 0;
   let output = "";
-  for (let i = 0; i < bytes.length; ) {
-    const byte = bytes[i];
-    if (skip < 0) {
-      bits |= byte >> -skip;
-    } else {
-      bits = (byte << skip) & 248;
+  for (const byte of bytes) {
+    // The register never holds more than 4 leftover bits, so 16 bits is ample.
+    buffer = ((buffer << 8) | byte) & 0xffff;
+    bits += 8;
+    while (bits >= 5) {
+      bits -= 5;
+      output += BASE32_ALPHABET[(buffer >>> bits) & 0x1f];
     }
-    if (skip > 3) {
-      skip -= 8;
-      i += 1;
-      continue;
-    }
-    if (skip < 4) {
-      output += BASE32_ALPHABET[bits >> 3];
-      skip += 5;
-    }
-    i += 1;
   }
-  return output + (skip < 0 ? BASE32_ALPHABET[bits >> 3] : "");
+  if (bits > 0) output += BASE32_ALPHABET[(buffer << (5 - bits)) & 0x1f];
+  return output;
 }
 
 /** Raw canister-id bytes for a text principal (no tag byte). */
@@ -416,13 +409,15 @@ function decodeCandidValue(buf: Uint8Array, offset: { i: number }, types: Candid
       return out;
     }
     if (t.kind === "record") {
-      return t.fields.map((field) => decodeCandidValue(buf, offset, types, field.type));
+      const record: Map<number, unknown> = new Map();
+      for (const field of t.fields) record.set(field.hash, decodeCandidValue(buf, offset, types, field.type));
+      return record;
     }
     if (t.kind === "variant") {
       const index = Number(lebDecode(buf, offset));
       const field = t.fields[index];
       if (!field) throw new Error("icp: invalid candid variant index");
-      return { variantIndex: index, value: decodeCandidValue(buf, offset, types, field.type) };
+      return new Map([[field.hash, decodeCandidValue(buf, offset, types, field.type)]]);
     }
     throw new Error("icp: unsupported candid composite");
   }
@@ -457,7 +452,12 @@ function decodeCandidValue(buf: Uint8Array, offset: { i: number }, types: Candid
   }
 }
 
-/** Decode a Candid reply (magic + type table + arg types + values) into JS values. */
+/**
+ * Decode a Candid reply (magic + type table + arg types + values) into JS values.
+ * `record` and `variant` decode to a `Map` from field-label hash (`icpLabelId`) to
+ * value, so callers read fields by name instead of relying on the canister's
+ * declared field order, which is not part of the wire contract.
+ */
 export function decodeCandidReply(bytes: Uint8Array): unknown[] {
   if (bytes.byteLength < 4 || new TextDecoder().decode(bytes.slice(0, 4)) !== "DIDL") {
     throw new Error("icp: invalid candid reply magic");

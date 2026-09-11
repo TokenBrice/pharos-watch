@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { Abi } from "abitype";
-import { encodeAbiParameters, encodeFunctionData, parseAbi, parseAbiParameters } from "viem/utils";
+import { encodeAbiParameters, encodeFunctionData, parseAbi, parseAbiParameters, toFunctionSelector } from "viem/utils";
 import { expectWarnings, runAdapter, type AdapterNetworkSpec } from "./reserve-adapter.test-support";
 
 const CONTROLLER = "0x1337F001E280420EcCe9E7B934Fa07D67fdb62CD";
@@ -14,6 +14,8 @@ const OP3 = "0x00000000000000000000000000000000000000a3";
 const AMM1 = "0x00000000000000000000000000000000000000b1";
 const AMM2 = "0x00000000000000000000000000000000000000b2";
 const AMM3 = "0x00000000000000000000000000000000000000b3";
+const BANDS_Y_SELECTOR = toFunctionSelector("bands_y(int256)");
+const BANDS_X_SELECTOR = toFunctionSelector("bands_x(int256)");
 
 const CONTROLLER_ABI = parseAbi([
   "function get_market_count() view returns (uint256)",
@@ -66,6 +68,15 @@ interface Scenario {
   missingPriceFor?: string;
 }
 
+interface MoneyNetworkOptions {
+  /**
+   * Route the arbitrum WBTC market's bands by selector and widen its span to
+   * `0..wbtcMaxBand`, so a realistic census exercises many Multicall3 pages
+   * without 1 500 hand-written routes.
+   */
+  wbtcMaxBand?: number;
+}
+
 const ARB_SUPPLY = 5_000_000n * 10n ** 18n;
 const BASE_SUPPLY = 5_000_000n * 10n ** 18n;
 const OP_SUPPLY = 100n * 10n ** 18n;
@@ -73,6 +84,7 @@ const OP_SUPPLY = 100n * 10n ** 18n;
 function moneyNetwork(
   scenario: Partial<Scenario> = {},
   marketCountOverride = 2,
+  options: MoneyNetworkOptions = {},
 ): AdapterNetworkSpec {
   const moneyPrice = scenario.moneyPrice ?? 1;
   const [arbDebt1, arbDebt2] = scenario.arbitrumDebt ?? [1_000n * 10n ** 18n, 0n];
@@ -101,11 +113,19 @@ function moneyNetwork(
   put("arbitrum", WBTC, ERC20_ABI, "symbol", [], stringWord("WBTC"));
   put("arbitrum", WBTC, ERC20_ABI, "decimals", [], word(8n));
   put("arbitrum", AMM1, LLAMMA_ABI, "min_band", [], intWord(0n));
-  put("arbitrum", AMM1, LLAMMA_ABI, "max_band", [], intWord(1n));
-  put("arbitrum", AMM1, LLAMMA_ABI, "bands_y", [0n], word(500_000n * 10n ** 12n));
-  put("arbitrum", AMM1, LLAMMA_ABI, "bands_x", [0n], word(0n));
-  put("arbitrum", AMM1, LLAMMA_ABI, "bands_y", [1n], word(1n * 10n ** 18n));
-  put("arbitrum", AMM1, LLAMMA_ABI, "bands_x", [1n], word(0n));
+  const wbtcMaxBand = options.wbtcMaxBand ?? 1;
+  put("arbitrum", AMM1, LLAMMA_ABI, "max_band", [], intWord(BigInt(wbtcMaxBand)));
+  if (options.wbtcMaxBand == null) {
+    put("arbitrum", AMM1, LLAMMA_ABI, "bands_y", [0n], word(500_000n * 10n ** 12n));
+    put("arbitrum", AMM1, LLAMMA_ABI, "bands_x", [0n], word(0n));
+    put("arbitrum", AMM1, LLAMMA_ABI, "bands_y", [1n], word(1n * 10n ** 18n));
+    put("arbitrum", AMM1, LLAMMA_ABI, "bands_x", [1n], word(0n));
+  } else {
+    // Every band answers identically: the wide-span case only measures how the
+    // census is batched, not per-band values.
+    rpc[`arbitrum:${AMM1}:bands_y(int256)`] = word(500_000n * 10n ** 12n);
+    rpc[`arbitrum:${AMM1}:bands_x(int256)`] = word(0n);
+  }
   put("arbitrum", OP2, OPERATOR_ABI, "COLLATERAL_TOKEN", [], addressWord(WETH));
   put("arbitrum", OP2, OPERATOR_ABI, "AMM", [], addressWord(AMM2));
   put("arbitrum", OP2, OPERATOR_ABI, "total_debt", [], word(arbDebt2));
@@ -263,5 +283,25 @@ describe("money-llamma adapter", () => {
 
   it("fails closed when the controller market list disagrees with its count", async () => {
     await expect(fetchFixture({}, 3)).rejects.toThrow("get_all_markets returned 2 entries for count 3");
+  });
+
+  it("fits a wide band span into bounded Multicall3 pages", async () => {
+    const run = await runAdapter("money-llamma", "money-defi-money", {
+      network: moneyNetwork({}, 2, { wbtcMaxBand: 1_500 }),
+      nowSec: NOW_SEC,
+    });
+    const arbitrumUrl = run.network.chainRpcs.get("arbitrum")?.rpcUrl ?? "";
+    expect(arbitrumUrl).not.toBe("");
+    // 1 501 bands x (y + x) = 3 002 band reads on top of the two block reads
+    // and the head/operators/metadata rounds. They must fit two Multicall3
+    // pages (2 000 calls each); per-band or 500-call batching would make this
+    // count larger.
+    const arbitrumPosts = run.network.requests.filter((request) => request.url.startsWith(arbitrumUrl)).length;
+    expect(arbitrumPosts).toBe(2 + 3 + 2);
+    expect(run.network.rpcCalls.filter((call) =>
+      !call.viaMulticall && (call.selector === BANDS_Y_SELECTOR || call.selector === BANDS_X_SELECTOR)
+    )).toHaveLength(0);
+    expect(run.network.unmatched).toHaveLength(0);
+    expect(run.result.metadata?.details).toMatchObject({ bandReadCount: 1_501 + 2 + 1 });
   });
 });

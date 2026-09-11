@@ -110,13 +110,26 @@ export interface KrwqSupplyAggregate {
   omittedReadFailureChains: string[];
 }
 
-/** Strict amount parser: finite numbers pass through, numeric strings are
- *  converted, and anything else throws so a malformed payload can never
+/** The custodian feed renders USD amounts as comma-grouped decimal strings
+ *  (`"90,102.08"`). Grouping must be well formed: digits in groups of three
+ *  separated by `,`, or no grouping at all, with an optional `.` fraction. */
+// eslint-disable-next-line security/detect-unsafe-regex -- anchored digit/point/digit shape with disjoint character classes; no ambiguous backtracking path.
+const PLAIN_DECIMAL = /^[+-]?\d+(?:\.\d+)?$/;
+// eslint-disable-next-line security/detect-unsafe-regex -- anchored comma-delimited groups of exactly three digits; separators cannot overlap.
+const GROUPED_DECIMAL = /^[+-]?\d{1,3}(?:,\d{3})+(?:\.\d+)?$/;
+
+/** Strict amount parser: finite numbers pass through, well-formed decimal
+ *  strings (grouped or plain, no currency symbols) are converted, and anything
+ *  else — `1,2,3`, `N/A`, empty — throws so a malformed payload can never
  *  silently read as zero. */
 function parseStrictAmount(value: unknown, label: string): number {
   if (typeof value === "number" && Number.isFinite(value)) return value;
-  if (typeof value === "string" && value.trim() !== "" && Number.isFinite(Number(value))) {
-    return Number(value);
+  if (typeof value === "string") {
+    const trimmed = value.trim();
+    if (PLAIN_DECIMAL.test(trimmed) || GROUPED_DECIMAL.test(trimmed)) {
+      const parsed = Number(trimmed.replace(/,/g, ""));
+      if (Number.isFinite(parsed)) return parsed;
+    }
   }
   throw new Error(`${ADAPTER_KEY} ${label} is not a finite number: ${String(value)}`);
 }

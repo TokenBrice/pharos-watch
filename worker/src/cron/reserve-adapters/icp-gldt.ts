@@ -33,10 +33,9 @@ const GLDT_PER_GRAM = 100;
 const BASE_UNITS_PER_GLDT = 10n ** BigInt(GLDT_DECIMALS);
 const BASE_UNITS_PER_GRAM = BASE_UNITS_PER_GLDT * BigInt(GLDT_PER_GRAM);
 
-// `FractionalizationConfig` variant order from the GLDT swap canister's candid:
-// index 0 = Custom (per-token division), index 1 = General (uniform division).
-// GLDT's GLD bars are uniform, so only General is supported.
-const GENERAL_FRACTIONALIZATION_VARIANT_INDEX = 1;
+// `FractionalizationConfig` case names from the swap canister's candid interface
+// (`get_swap_configs`). GLDT's GLD bars are uniform, so only `General` is supported.
+const GENERAL_FRACTIONALIZATION_CASE = "General";
 
 type IcpGldtParams = LiveReserveAdapterParamsByKey[typeof ADAPTER_KEY];
 
@@ -75,34 +74,44 @@ function principalBytesToText(value: unknown): string {
   return icpPrincipalText(value);
 }
 
+/**
+ * One field of a hash-keyed Candid record (see `decodeCandidReply`). The canister's
+ * declared field order is not stable, so every field is read by its candid label;
+ * a record that changed shape fails closed instead of shifting values into the
+ * wrong slots.
+ */
+function candidField(record: unknown, label: string): unknown {
+  if (!(record instanceof Map)) {
+    throw new Error(`${ADAPTER_KEY}: swap config field ${label} is not inside a candid record`);
+  }
+  const value = record.get(icpLabelId(label));
+  if (value === undefined) {
+    throw new Error(`${ADAPTER_KEY}: swap config record is missing its ${label} field`);
+  }
+  return value;
+}
+
 /** Decode the `vec SwapCanisterConfig` reply into normalized configs. */
-function parseSwapConfigs(decoded: unknown[]): IcpGldtSwapConfig[] {
+export function parseIcpGldtSwapConfigs(decoded: unknown[]): IcpGldtSwapConfig[] {
   const configs = decoded[0];
   if (!Array.isArray(configs)) {
     throw new Error(`${ADAPTER_KEY}: get_swap_configs returned no config vector`);
   }
   return configs.map((entry) => {
-    if (!Array.isArray(entry) || entry.length < 2) {
-      throw new Error(`${ADAPTER_KEY}: malformed swap config record`);
-    }
-    const canisterId = principalBytesToText(entry[0]);
-    const fractionalization = entry[1];
-    if (typeof fractionalization !== "object" || fractionalization === null || Array.isArray(fractionalization)) {
+    const canisterId = principalBytesToText(candidField(entry, "icrc7_canister_id"));
+    const fractionalization = candidField(entry, "fractionalization_config");
+    if (!(fractionalization instanceof Map)) {
       throw new Error(`${ADAPTER_KEY}: malformed fractionalization config`);
     }
-    const variant = fractionalization as { variantIndex?: unknown; value?: unknown };
-    if (variant.variantIndex !== GENERAL_FRACTIONALIZATION_VARIANT_INDEX) {
+    const general = fractionalization.get(icpLabelId(GENERAL_FRACTIONALIZATION_CASE));
+    if (general === undefined) {
       throw new Error(`${ADAPTER_KEY}: custom (per-token) fractionalization config is not supported`);
-    }
-    const fields = variant.value;
-    if (!Array.isArray(fields) || fields.length < 3) {
-      throw new Error(`${ADAPTER_KEY}: malformed general fractionalization config`);
     }
     return {
       canisterId,
-      divisionBaseUnits: toBigInt(fields[0], "division"),
-      swapFeeBaseUnits: toBigInt(fields[1], "swap_fee"),
-      ledgerId: principalBytesToText(fields[2]),
+      divisionBaseUnits: toBigInt(candidField(general, "division"), "division"),
+      swapFeeBaseUnits: toBigInt(candidField(general, "swap_fee"), "swap_fee"),
+      ledgerId: principalBytesToText(candidField(general, "ledger_id")),
     };
   });
 }
@@ -135,8 +144,10 @@ function encodeNullArg(): Uint8Array {
 
 /** `icrc7_balance_of : (vec Account) -> (vec nat)` with one owner account and
  *  no subaccount. The argument type table is hand-built to match the ORIGYN
- *  ICRC-7 `Account = record { owner : principal; subaccount : opt blob }`. */
-function encodeVecAccountArg(ownerCanisterId: string): Uint8Array {
+ *  ICRC-7 `Account = record { owner : principal; subaccount : opt blob }`:
+ *  record fields must reference composite types by table index (the canister's
+ *  Rust candid parser rejects an inline `opt` opcode), and their hashes ascend. */
+export function encodeIcpGldtBalanceOfArg(ownerCanisterId: string): Uint8Array {
   const ownerBytes = icpPrincipalBytes(ownerCanisterId);
   const ownerHash = icpLebEncode(BigInt(icpLabelId("owner")));
   const subaccountHash = icpLebEncode(BigInt(icpLabelId("subaccount")));
@@ -144,11 +155,11 @@ function encodeVecAccountArg(ownerCanisterId: string): Uint8Array {
     [0x44, 0x49, 0x44, 0x4c], // DIDL magic
     [
       0x04, // 4 type-table entries
-      0x6d, 0x79, // 0: vec nat8 (blob)
+      0x6d, 0x7b, // 0: vec nat8 (blob)
       0x6e, 0x00, // 1: opt -> 0
       0x6c, 0x02, // 2: record, 2 fields
       ...ownerHash, 0x68, //     "owner" -> principal
-      ...subaccountHash, 0x6e, 0x01, //     "subaccount" -> opt -> 1
+      ...subaccountHash, 0x01, //     "subaccount" -> 1 (opt blob)
       0x6d, 0x02, // 3: vec -> 2 (vec Account)
     ],
     [0x01, 0x03], // 1 arg of type 3
@@ -289,14 +300,14 @@ export async function fetchIcpGldtReserves(
     throw new Error(`${ADAPTER_KEY}: GLDT ledger supply could not be read`);
   }
 
-  const swapConfigs = parseSwapConfigs(decodeCandidReply(swapQuery.reply));
+  const swapConfigs = parseIcpGldtSwapConfigs(decodeCandidReply(swapQuery.reply));
 
   const balanceQueries = await Promise.all(
     swapConfigs.map((config) =>
       queryIcpCanister({
         canisterId: config.canisterId,
         methodName: "icrc7_balance_of",
-        arg: encodeVecAccountArg(params.swapCanisterId),
+        arg: encodeIcpGldtBalanceOfArg(params.swapCanisterId),
         signal,
         ctx,
       }),

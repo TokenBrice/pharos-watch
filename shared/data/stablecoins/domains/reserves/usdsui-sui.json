@@ -4,7 +4,7 @@
     {
       "name": "Cash",
       "pct": 10.2288,
-      "risk": "low",
+      "risk": "very-low",
       "assetClass": "cash",
       "issuerOrObligor": "Bridge-approved bank counterparties",
       "riskFactors": [
@@ -18,7 +18,7 @@
     {
       "name": "Treasury",
       "pct": 89.7712,
-      "risk": "low",
+      "risk": "very-low",
       "assetClass": "treasury-bill",
       "issuerOrObligor": "United States Treasury",
       "riskFactors": [
@@ -32,8 +32,8 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-09-04",
-    "reviewer": "Grok wave-8 reserve re-verification",
+    "reviewedAt": "2026-09-11",
+    "reviewer": "Grok wave-8 reserve re-verification; Pharos live-reserve tier parity review 2026-09-11",
     "confidence": "probable",
     "sources": [
       {
@@ -45,7 +45,7 @@
         "url": "https://apidocs.bridge.xyz/platform/issuance/reporting-and-transparency"
       }
     ],
-    "rationale": "Bridge's public USDsui transparency endpoint returned total reserves of $74,111,161.57 at 2026-09-04T17:30:29Z, comprising cash of $7,580,669.70 (10.2288%) and Treasury of $66,530,491.87 (89.7712%). The two disclosed categories account for the full reserve composition and collateralization ratio 1.0; provider-level allocations remain outside this composition capture.",
+    "rationale": "Bridge's public USDsui transparency endpoint returned total reserves of $74,111,161.57 at 2026-09-04T17:30:29Z, comprising cash of $7,580,669.70 (10.2288%) and Treasury of $66,530,491.87 (89.7712%). The two disclosed categories account for the full reserve composition and collateralization ratio 1.0; provider-level allocations remain outside this composition capture. Tier parity review 2026-09-11: both categories keep the canonical very-low tier the live bridge-transparency adapter publishes for U.S. Treasury bills and segregated bank cash, so the curated fallback scores 100 and matches the live snapshot instead of drifting 25 points below it.",
     "compositionBasis": "Bridge public USDsui transparency API capture normalized by disclosed reserve category",
     "compositionAsOf": "2026-09-04",
     "scope": "full-composition",

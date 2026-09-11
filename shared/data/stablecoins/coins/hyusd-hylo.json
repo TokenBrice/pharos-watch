@@ -17,7 +17,7 @@
       "usdcMint": "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",
       "lsts": [
         { "mint": "J1toso1uCk3RLmjorhTtrVwY9HJ7X8V9yYac6Y7kGCPn", "name": "jitoSOL", "priceChain": "coingecko", "priceAddress": "jito-staked-sol" },
-        { "mint": "hy1oXYgrBW6PVcJ4s6s2FKavRdwgWTXdfE69AxT7kPT", "name": "hyloSOL", "priceChain": "solana", "priceAddress": "hy1oXYgrBW6pVCj4s6s2FKavRdwgWTXdfE69AxT7kPT" }
+        { "mint": "hy1oXYgrBW6PVcJ4s6s2FKavRdwgWTXdfE69AxT7kPT", "name": "hyloSOL", "priceChain": "solana", "priceAddress": "hy1oXYgrBW6PVcJ4s6s2FKavRdwgWTXdfE69AxT7kPT" }
       ],
       "exoPairs": [
         {

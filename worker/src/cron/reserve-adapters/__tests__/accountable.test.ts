@@ -147,7 +147,7 @@ describe("adaptAccountableDashboard", () => {
     ]);
   });
 
-  it("reconciles reviewed signed reserves_split buckets without emitting negative reserve slices", () => {
+  it("reconciles signed reserves_split buckets without emitting negative reserve slices", () => {
     const result = adaptAccountableDashboard(
       {
         res: "ok",
@@ -171,7 +171,6 @@ describe("adaptAccountableDashboard", () => {
           Avalanche: "high",
           Ethereum: "medium",
         },
-        allowNegativeBuckets: ["Ethereum"],
       },
     );
 
@@ -614,7 +613,7 @@ describe("adaptAccountableDashboard", () => {
     ]);
   });
 
-  it("rejects poisoned Apyx Accountable mapped buckets before reserve slice normalization", async () => {
+  it("fails closed on an unparseable Apyx Accountable reserves_split value", async () => {
     const config = apxusd.liveReservesConfig as LiveReservesConfig;
 
     await expect(runAccountablePayload(config, {
@@ -629,7 +628,7 @@ describe("adaptAccountableDashboard", () => {
           { value: "not-a-number", name: "Other" },
         ],
       },
-    })).rejects.toThrow(/Accountable reserves_split bucket "STRC" has invalid value/);
+    })).rejects.toThrow(/Accountable reserves_split bucket "Other" has invalid value/);
   });
 
   it("rejects Apyx Accountable mapped buckets that would be silently dropped as zero", async () => {
@@ -647,7 +646,7 @@ describe("adaptAccountableDashboard", () => {
           { value: 0, name: "Other" },
         ],
       },
-    })).rejects.toThrow(/non-positive value: Other, SATA, STRC/);
+    })).rejects.toThrow(/zero value: Other, SATA, STRC/);
   });
 
   it("rejects Accountable bucket totals that materially diverge from total_reserves", () => {
@@ -831,6 +830,70 @@ describe("adaptAccountableDashboard", () => {
       { sourceKey: "accountable:yuzu:deployment:liquidity-buffer", name: "Liquidity buffer", pct: 100, risk: "low", coinId: "usdt-tether", depType: "collateral" },
     ]);
     expect(result.warnings?.map((warning) => warning.code)).toEqual(["signed-negative-bucket"]);
+  });
+
+  it("degrades the current signed Yuzu exposure split whose net exceeds the reserve total instead of failing the snapshot", async () => {
+    const config = yzusd.liveReservesConfig as LiveReservesConfig;
+
+    // Captured 2026-09-11 from https://cache.accountable.capital/dashboard/yuzu: every
+    // exposure_split bucket now wraps its value in an empty-key object, and the Pendle PT loop
+    // buckets are signed.
+    const result = await runAccountablePayload(config, {
+      collateralization: 1.095045,
+      ts: "1789113764216",
+      reserves: {
+        total_reserves: { value: 58_985_325.95, name: "Total Backing Assets", value_rwa: 7_571_879.01 },
+        total_supply: { value: 53_865_657.54, name: "Total TVL" },
+        exposure_split_ts: "2026.09.09 06:53:39 UTC",
+        exposure_split: {
+          "[Securitize]_VBILL_Loop": { "": 387.8 },
+          "[Superstate]_USTB_Loop": { "": 1_314_576.60286784 },
+          "[Ethena]_sUSDe_Pendle_PT_Loop": { "": -7_311_212.03139069 },
+          "[Ethena]_USDe_Loop": { "": 34_314_100.69942264 },
+          "[Ethena]_USDe": { "": 8.08180506854668e-8 },
+          "[Agora]_PT_AUSD": { "": 527.368232779483 },
+          "[Strata]_srUSDe_Pendle_PT_Loop": { "": -6_460_236.588979 },
+          "[Maple]_syrupUSDT_Loop": { "": 4_686_357.13103792 },
+          Liquidity_Buffer: { "": 999_772.8403514099 },
+          "[Maple]_syrupUSDG_Loop": { "": 4_156_007.11462765 },
+          "[Agora]_PT_AUSD_Loop": { "": 957_512.38038019 },
+          "[Sky]_sUSDS_Loop": { "": -0.106646060264309 },
+          "[Ethena]_sUSDe_Loop": { "": 25_543_913.240860812 },
+          "[Maple]_syrupUSDC_Loop": { "": 3_884_580.00930017 },
+          "[Aave]_Gho": { "": 29.7254528139977 },
+          "[Aave]_RLUSD": { "": 62.7277558172802 },
+          Rest_of_Assets: { "": 228.63385745949134 },
+          "[Fasanara]_mGLOBAL_Loop": { "": 297_472.582149001 },
+          "[Yuzu]_yzPRIME": { "": 3_063_702.74075465 },
+          "[Aave]_USDT0": { "": 503_294.863749914 },
+          "[Fasanara]_mGLO_Loop": { "": 788_250.11893378 },
+          "[Aave]_Gho_Savings": { "": 4.72610696572865 },
+          "[Sky]_PT_sUSDS_Loop": { "": 7.69220720329771 },
+        },
+        timeline: [{ ts: "1788994123413", reserves: 63_289_806.86 }],
+      },
+    });
+
+    expect(result.warnings?.map((warning) => warning.code)).toEqual(["signed-negative-bucket"]);
+    expect(result.warnings?.[0]?.message).toContain(
+      "signed total is 3449533.41 USD above the reconciled reserve total",
+    );
+    expect(result.warnings?.[0]?.effect).toBe("degraded");
+    expect(result.metadata).toMatchObject({
+      bucket: "exposure_split",
+      breakdownCount: 23,
+      mappedBucketCount: 20,
+      signedBucketCount: 3,
+      signedBucketNames: [
+        "[Ethena]_sUSDe_Pendle_PT_Loop",
+        "[Sky]_sUSDS_Loop",
+        "[Strata]_srUSDe_Pendle_PT_Loop",
+      ],
+    });
+    expect(result.metadata?.signedBucketTotalResidual).toBeCloseTo(3_449_533.411, 2);
+    expect(result.slices.map((slice) => slice.name)).not.toContain("Strata srUSDe Pendle PT loop");
+    expect(result.slices.every((slice) => slice.pct > 0)).toBe(true);
+    expect(result.slices.reduce((sum, slice) => sum + slice.pct, 0)).toBeCloseTo(100, 1);
   });
 
   it("uses exposure_split_ts, not the newer dashboard envelope timestamp, for Yuzu freshness", async () => {

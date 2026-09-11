@@ -12,6 +12,7 @@ import type {
 } from "./live-reserve-core";
 import { RedemptionHolderEligibilitySchema } from "./redemption";
 import type { ReserveEvidenceSourceOriginClass } from "./report-card-evidence-journal";
+import { StrictIsoDateSchema } from "./safety-schema-primitives";
 import {
   ReserveAssetClassSchema,
   ReserveRiskFactorSchema,
@@ -71,10 +72,16 @@ const CONFIG_SINGLE_ASSET_V2 = configPolicy(["single-asset"], [2]);
 const CONFIG_SINGLE_ASSET_V1_V2 = configPolicy(["single-asset"], [1, 2]);
 const CONFIG_ACCOUNTABLE = configPolicy(["collateral-mix", "protocol-reserve"], [1]);
 
-// DUSD's reviewed Machine configuration treats position accounting older than
-// three hours as stale. Match that contract guard instead of the generic
-// dashboard window now that Makina snapshots expose the oldest position time.
-const MAKINA_POSITION_SOURCE_MAX_AGE_SEC = 3 * 60 * 60;
+// Makina's on-chain `positionStaleThreshold` (10800 s on DUSD's Hub Caliber)
+// guards when a Machine AUM update may execute; it is a transaction bound, not
+// the publisher's accounting cadence. Over the 59 days to 2026-09-10 the
+// operator batch-accounted Hub Caliber positions in 110 clusters (intervals:
+// median 10.0 h, p75 17.7 h, p90 24.2 h) and updated Machine AUM 53 times
+// (median gap 24.0 h, p75 30.1 h), so the previous three-hour cap degraded
+// ~78% of production syncs. A day is roughly 2x the median accounting interval
+// and covers its p90, admitting normal cadence while still degrading when a
+// full day of accounting is missing.
+const MAKINA_POSITION_SOURCE_MAX_AGE_SEC = 24 * 60 * 60;
 
 const CONFIG_CURATED_VALIDATED = configPolicy(
   ["attestation-mix", "collateral-mix", "single-asset"],
@@ -290,7 +297,6 @@ const accountableParamsSchema = z
     coinIdMap: stringRecordSchema.optional(),
     depTypeMap: depTypeRecordSchema.optional(),
     totalReservesExcludeBuckets: z.array(z.string().min(1)).optional(),
-    allowNegativeBuckets: z.array(z.string().min(1)).optional(),
   })
   .strict();
 
@@ -665,6 +671,13 @@ const chainlinkPorIssuerCirculationProbeSchema = z
   })
   .strict();
 
+const chainlinkPorIncompleteSupplyScopeSchema = z
+  .object({
+    chain: z.string().trim().min(1),
+    reason: z.string().trim().min(1),
+  })
+  .strict();
+
 const chainlinkPorParamsSchema = z
   .object({
     porFeedAddress: EvmAddressSchema,
@@ -674,6 +687,7 @@ const chainlinkPorParamsSchema = z
     ...OptionalEvmRpcFields,
     ...OptionalOracleFreshnessFields,
     issuerCirculationProbe: chainlinkPorIssuerCirculationProbeSchema.optional(),
+    incompleteSupplyScope: chainlinkPorIncompleteSupplyScopeSchema.optional(),
   })
   .strict();
 
@@ -923,9 +937,23 @@ const fraxtalHopWithdrawableRedemptionLiquiditySchema = z
   })
   .strict();
 
+// Reviewed attestation that a vault's non-idle `totalAssets()` is the same
+// underlying asset held in the protocol position the configured `slice`
+// already names, so that slice descriptor also covers the deployed share. The
+// adapter then publishes one reviewed 100% slice instead of a vault-named
+// high-risk remainder. Only set where the position identity is reviewed.
+const erc4626DeployedExposureSchema = z
+  .object({
+    basis: z.string().min(20),
+    reviewedAt: StrictIsoDateSchema,
+    sourceUrl: AbsoluteUrlSchema.optional(),
+  })
+  .strict();
+
 const erc4626SingleAssetParamsSchema = z
   .object({
     slice: reserveSliceDescriptorSchema,
+    deployedExposure: erc4626DeployedExposureSchema.optional(),
     redemptionRoute: z.literal("async-request").optional(),
     redemptionLock: z.array(z.object({
       selector: z.union([EvmSelectorSchema, z.string().regex(/^[A-Za-z_][A-Za-z0-9_]*\(\)$/)]),
@@ -1714,7 +1742,9 @@ const agoraAssuranceParamsSchema = z
   .strict();
 
 // FIDD: Fidelity Digital Assets transparency index; runtime resolves the
-// reviewed July Widen viewer link and its original PDF download anchor.
+// reviewed July Widen viewer link and its original PDF download anchor. The
+// fwc.widen.net PDF URL 303-redirects to the Widen CDN (cf-store.widencdn.net),
+// so reportHosts pins both the download-anchor host and the redirect target.
 const fiddAssuranceParamsSchema = z
   .object({
     product: z.literal("FIDD"),
@@ -1941,11 +1971,10 @@ export const LIVE_RESERVE_ADAPTER_DESCRIPTOR_DECLARATIONS = {
     redemptionTelemetry: { capacity: "none", fee: "none" },
     validation: LATEST_STATE_VALIDATION,
   },
-  "brla-independent-assurance": declareAdapter(brlaAssuranceParamsSchema, HTTP_DISCLOSURE_ATTESTATION_V2, {
-    // BRLA's official report index is Notion's loadPageChunk/getSignedFileUrls
-    // JSON record maps, not a server-rendered HTML page.
-    primaryInputKinds: ["http-json"],
-  }),
+  // BRLA's official report index is the Notion transparency page fetched as
+  // HTML (host/reachability gate); the pinned evidence is the Notion
+  // loadPageChunk/getSignedFileUrls record maps plus the reviewed PDF bytes.
+  "brla-independent-assurance": declareAdapter(brlaAssuranceParamsSchema, HTTP_DISCLOSURE_ATTESTATION_V2),
   "cadd-independent-assurance": declareAdapter(caddAssuranceParamsSchema, HTTP_DISCLOSURE_ATTESTATION_V2),
   // Live issuer balance-sheet feed (cash + Treasury vs on-chain liability) with
   // measured composition and a verified observation timestamp. The evidence
