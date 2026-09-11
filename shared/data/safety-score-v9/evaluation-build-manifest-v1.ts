@@ -591,19 +591,19 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
   ],
   "captures": [
     {
-      "sha256": "f36b48b5b97b58dd907def365d9c8afebc41dd1fe4b470cdc4ed7a942cbc4396",
-      "r2Key": "captures/bd-basedollar/2026-09-03-block-50816420-shock-coverage.json.gz"
+      "sha256": "9af131c08b78ce4e14c0092cb4875e314429826de768b25118e54155aa723282",
+      "r2Key": "captures/bd-basedollar/2026-09-11-block-51163570-shock-coverage.json.gz"
     },
     {
-      "sha256": "b97d2f1b1a8e5b69068fa7c76925f70aa27d40942b0b041146130460869df1ca",
-      "r2Key": "captures/bold-liquity/2026-09-03-block-25895460-shock-coverage.json.gz"
+      "sha256": "56a71b0c39cb1e36e300afa616c3a9a290541a561595d013166b86f94ae321e2",
+      "r2Key": "captures/bold-liquity/2026-09-11-block-25953096-shock-coverage.json.gz"
     },
     {
-      "sha256": "c7fce583e57e0bca69370d993af498d91b2a595d4a3c4a806746008530cd87dd",
-      "r2Key": "captures/lusd-liquity/2026-09-03-block-25895460-shock-coverage.json.gz"
+      "sha256": "52471c8bd25aedaef24169d729c2d0740d2c1e962e948ccf583038b59389cd2d",
+      "r2Key": "captures/lusd-liquity/2026-09-11-block-25953096-shock-coverage.json.gz"
     }
   ],
-  "digest": "467967c96823ec53d9ae63ebe0979aa64b8db18d46135f3438f011e9cc54e69a"
+  "digest": "538c8b54a8e3d7616ba82022a165b7a41c1c7788e545ab7c695a3d173744c507"
 } as const;
 
 export const SAFETY_SCORE_V9_EVALUATION_BUILD_DIGEST =
