@@ -149,7 +149,13 @@ export function compareCandidates(a: EvaluatedYieldSource, b: EvaluatedYieldSour
 
   if (a.currentApy !== b.currentApy) return b.currentApy - a.currentApy;
 
-  return (b.sourceTvlUsd ?? 0) - (a.sourceTvlUsd ?? 0);
+  const tvlDiff = (b.sourceTvlUsd ?? 0) - (a.sourceTvlUsd ?? 0);
+  if (tvlDiff !== 0) return tvlDiff;
+
+  // B30: fully-tied distinct candidates must not be decided by provider array
+  // order; the source key is the last, stable discriminator (and never 0 for two
+  // distinct keys, so the arbitration is antisymmetric).
+  return a.sourceKey.localeCompare(b.sourceKey);
 }
 
 export function buildSelectionReason(source: EvaluatedYieldSource, rejectedPeers: number): string {

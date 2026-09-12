@@ -5,10 +5,10 @@ import { CRON_INTERVALS } from "@shared/lib/cron-jobs";
 import { YIELD_SAFETY_STALE_COHERENT_MAX_AGE_SEC } from "@shared/lib/yield-safety-fallback";
 import {
   YieldRankingsResponseSchema,
+  YIELD_BENCHMARK_KEY_CURRENCY,
   type YieldCalculationMode,
   type YieldEvidenceClass,
   type YieldRankChangeAttribution,
-  type YieldRankChangeDriver,
   type YieldRanking,
   type YieldRankingsResponse,
   type YieldSafetyReason,
@@ -20,7 +20,12 @@ import { projectYieldRankingsSummary } from "@shared/lib/yield-rankings-summary"
 import type { YieldRankingsSummaryResponse } from "@shared/types/yield-summary";
 import { numberValue as finiteNumber } from "@shared/lib/type-guards";
 import { resolveYieldRowSafety } from "@shared/lib/yield-opportunity-risk";
-import { classifyYieldSourceFreshness, derivePysNullReason } from "../lib/yield-ranking-helpers";
+import { classifyYieldSourceAgeTier, classifyYieldSourceFreshness, derivePysNullReason } from "../lib/yield-ranking-helpers";
+import {
+  buildYieldRankBaseline,
+  buildYieldRankChangeAttribution,
+  compareYieldRankRows,
+} from "../lib/yield-rank-attribution";
 import {
   YIELD_METHODOLOGY_CHANGELOG_PATH,
   YIELD_METHODOLOGY_VERSION,
@@ -34,16 +39,6 @@ import { CACHE_PROFILES, DEFAULT_SAFETY_SCORE } from "../lib/constants";
 import { computeSafetyScoresSnapshot } from "../lib/safety-scores";
 
 const YIELD_RANKINGS_MAX_AGE_SEC = CRON_INTERVALS["sync-yield-data"];
-
-function positiveInteger(value: unknown): number | null {
-  return typeof value === "number" && Number.isInteger(value) && value > 0 ? value : null;
-}
-
-function roundDelta(value: number | null): number | null {
-  if (value == null || !Number.isFinite(value)) return null;
-  const rounded = Number(value.toFixed(4));
-  return Object.is(rounded, -0) ? 0 : rounded;
-}
 
 function buildYieldMethodology(asOf: number) {
   return buildMethodologyEnvelope({
@@ -86,6 +81,8 @@ function recomputeYieldScore(
   safetyInputScore: number,
   scalingFactor: number,
   usdBenchmarkRate: number | null,
+  sourceRiskPenalty: number | null,
+  benchmarkCurrency: string | null,
 ): number {
   return computePYS({
     apy30d: row.apy30d,
@@ -93,8 +90,11 @@ function recomputeYieldScore(
     apyVarianceScore: yieldStabilityToApyVarianceScore(row.yieldStability),
     scalingFactor,
     benchmarkRate: row.benchmarkRate ?? null,
+    // Same-currency USD benchmarks take no re-base credit (v8.43 B24); the
+    // published currency is the write path's `benchmarkMeta.currency ?? key`.
+    benchmarkCurrency,
     usdBenchmarkRate,
-    sourceRiskPenalty: row.sourceRisk?.sourceRiskPenalty ?? null,
+    sourceRiskPenalty,
   });
 }
 
@@ -128,6 +128,18 @@ function resolveHydratedCalculationMode(row: YieldRanking): YieldCalculationMode
 }
 
 function resolveHydratedSourceFreshness(row: YieldRanking): "fresh" | "stale" | "unknown" {
+  // B21: the age bounds were tightened (price-derived 36h -> 30h, rate-derived
+  // 48h -> 36h), so an observation a cached publication stamped `fresh` is never
+  // re-served fresher than its own age allows.
+  if (
+    classifyYieldSourceAgeTier({
+      dataSource: row.dataSource,
+      sourceKey: row.provenance?.sourceKey ?? null,
+      sourceAgeSeconds: finiteNumber(row.provenance?.sourceAgeSeconds),
+    }) === "stale"
+  ) {
+    return "stale";
+  }
   if (row.provenance?.sourceFreshness) return row.provenance.sourceFreshness;
   if (row.warningSignals.includes("data-stale")) return "stale";
   if (row.provenance) {
@@ -145,77 +157,6 @@ function resolveHydratedBenchmarkFreshness(row: YieldRanking): "healthy" | "degr
   if (row.provenance?.benchmarkFreshness) return row.provenance.benchmarkFreshness;
   if (row.warningSignals.includes("benchmark-stale")) return "stale";
   return row.warningSignals.includes("benchmark-degraded") ? "degraded" : "healthy";
-}
-
-function selectRankChangeDriver(params: {
-  row: YieldRanking;
-  anySafetyHydrationChanged: boolean;
-  pysDelta: number | null;
-  rankDelta: number;
-}): YieldRankChangeDriver {
-  if (params.anySafetyHydrationChanged) return "stablecoin-safety";
-  if (params.row.provenance?.sourceSwitch) return "source-switch";
-  const sourceRiskPenalty = finiteNumber(params.row.sourceRisk?.sourceRiskPenalty);
-  if (sourceRiskPenalty != null && sourceRiskPenalty > 1) return "source-risk";
-  if (params.row.warningSignals.includes("data-stale")) return "freshness";
-  if (finiteNumber(params.row.yieldStability) != null && (params.row.yieldStability ?? 1) < 0.7) {
-    return "volatility";
-  }
-  if (
-    finiteNumber(params.row.sourceRisk?.sourceDepthRatio) != null &&
-    (params.row.sourceRisk?.sourceDepthRatio ?? 1) < 0.05
-  ) {
-    return "tvl-depth";
-  }
-  if (params.row.benchmarkIsFallback === true || params.row.benchmarkFallbackMode) return "benchmark";
-  return params.pysDelta == null || params.pysDelta === 0 ? "apy" : "stablecoin-safety";
-}
-
-function buildRankChangeAttribution(params: {
-  originalRow: YieldRanking;
-  hydratedRow: YieldRanking;
-  anySafetyHydrationChanged: boolean;
-}): YieldRankChangeAttribution | null {
-  const previousRank = positiveInteger(params.hydratedRow.publishedRank);
-  const liveRank = positiveInteger(params.hydratedRow.liveRank);
-  if (previousRank == null || liveRank == null || previousRank === liveRank) {
-    return params.originalRow.rankChangeAttribution ?? null;
-  }
-
-  const previousPys = finiteNumber(params.originalRow.pharosYieldScore);
-  const livePys = finiteNumber(params.hydratedRow.pharosYieldScore);
-  const pysDelta = previousPys != null && livePys != null ? roundDelta(livePys - previousPys) : null;
-  const rankDelta = previousRank - liveRank;
-  const sourceRiskPenalty = finiteNumber(params.hydratedRow.sourceRisk?.sourceRiskPenalty);
-  const sourceDepthRatio = finiteNumber(params.hydratedRow.sourceRisk?.sourceDepthRatio);
-
-  const primaryDriver = selectRankChangeDriver({
-    row: params.hydratedRow,
-    anySafetyHydrationChanged: params.anySafetyHydrationChanged,
-    pysDelta,
-    rankDelta,
-  });
-
-  return {
-    previousRank,
-    rankDelta,
-    previousPys,
-    pysDelta,
-    primaryDriver,
-    driverContributions: {
-      apy: primaryDriver === "apy" ? rankDelta : null,
-      benchmark: primaryDriver === "benchmark" ? rankDelta : null,
-      stablecoinSafety: params.anySafetyHydrationChanged ? (pysDelta ?? 0) : null,
-      sourceRisk: sourceRiskPenalty != null && sourceRiskPenalty > 1 ? roundDelta(1 - sourceRiskPenalty) : null,
-      sourceSwitch: params.hydratedRow.provenance?.sourceSwitch ? rankDelta : null,
-      freshness: params.hydratedRow.warningSignals.includes("data-stale") ? rankDelta : null,
-      volatility:
-        finiteNumber(params.hydratedRow.yieldStability) != null && (params.hydratedRow.yieldStability ?? 1) < 0.7
-          ? rankDelta
-          : null,
-      tvlDepth: sourceDepthRatio != null && sourceDepthRatio < 0.05 ? rankDelta : null,
-    },
-  };
 }
 
 /**
@@ -282,6 +223,31 @@ interface LiveSafetyHydrationSource {
   degradationReasons: string[];
 }
 
+/**
+ * C17: one coverage definition for every live-safety state. A row counts as
+ * covered only when its safety came from the live report card (or from an
+ * opportunity score that did not substitute the default) — the previous
+ * fallback-path count of `safetyScore !== null` reported the cached
+ * publish-time snapshot as covered.
+ */
+function countRowSafetyCoverage(rankings: YieldRanking[]): {
+  coveredCount: number;
+  trackedCount: number;
+  coverageRatio: number;
+} {
+  const coveredCount = rankings.filter(
+    (row) =>
+      row.provenance?.safetyProvenance === "live-report-card" ||
+      (row.provenance?.safetyProvenance === "opportunity-safety" && row.provenance.usedDefaultSafety !== true),
+  ).length;
+  const trackedCount = rankings.length;
+  return {
+    coveredCount,
+    trackedCount,
+    coverageRatio: trackedCount > 0 ? Number((coveredCount / trackedCount).toFixed(4)) : 1,
+  };
+}
+
 function hydrateYieldRankingsWithLiveSafety(
   payload: YieldRankingsResponse,
   scores: Map<string, { score: number; grade: string }>,
@@ -329,8 +295,23 @@ function hydrateYieldRankingsWithLiveSafety(
             : benchmarkFreshness === "stale" || warningSignals.includes("benchmark-stale")
               ? ("benchmark-stale" as const)
               : null;
-      const recomputedPharosYieldScore = recomputeYieldScore(row, safetyInputScore, payload.scalingFactor, usdBenchmarkRate);
-      const pharosYieldScore = evidenceNullReason == null ? recomputedPharosYieldScore : null;
+      // B6: the response emits `hydratedSafety.sourceRisk`, so the score must be
+      // computed from that same penalty — a read-path score the emitted evidence
+      // cannot reproduce is not auditable.
+      const hydratedSourceRiskPenalty = hydratedSafety.sourceRisk?.sourceRiskPenalty ?? null;
+      const benchmarkCurrency =
+        row.benchmarkCurrency ??
+        row.provenance?.benchmarkCurrency ??
+        (row.benchmarkKey != null ? YIELD_BENCHMARK_KEY_CURRENCY[row.benchmarkKey] : null) ??
+        null;
+      const recomputedPharosYieldScore = recomputeYieldScore(
+        row,
+        safetyInputScore,
+        payload.scalingFactor,
+        usdBenchmarkRate,
+        hydratedSourceRiskPenalty,
+        benchmarkCurrency,
+      );
       const pysNullReason =
         evidenceNullReason ??
         (recomputedPharosYieldScore > 0
@@ -341,9 +322,27 @@ function hydrateYieldRankingsWithLiveSafety(
               apyVarianceScore: yieldStabilityToApyVarianceScore(row.yieldStability),
               scalingFactor: payload.scalingFactor,
               benchmarkRate: row.benchmarkRate ?? null,
+              benchmarkCurrency,
               usdBenchmarkRate,
-              sourceRiskPenalty: row.sourceRisk?.sourceRiskPenalty ?? null,
+              sourceRiskPenalty: hydratedSourceRiskPenalty,
             }));
+      // B22: the served score is null whenever a reason is published. The UI's NR
+      // gate is `pharosYieldScore === null`, so a hard 0 next to a reason renders
+      // as a scored row and hides the reason.
+      const pharosYieldScore = pysNullReason == null ? recomputedPharosYieldScore : null;
+      // B21: second-tier observation-age signals, so a row whose source stopped
+      // refreshing is not served as fresh for the whole stale window.
+      const sourceAgeTier = classifyYieldSourceAgeTier({
+        dataSource: row.dataSource,
+        sourceKey: row.provenance?.sourceKey ?? null,
+        sourceAgeSeconds: finiteNumber(row.provenance?.sourceAgeSeconds),
+      });
+      if (sourceAgeTier === "aging" && !warningSignals.includes("aging")) {
+        warningSignals.push("aging");
+      }
+      if (sourceAgeTier === "stale" && !warningSignals.includes("data-stale")) {
+        warningSignals.push("data-stale");
+      }
 
       return {
         originalRow: row,
@@ -378,42 +377,32 @@ function hydrateYieldRankingsWithLiveSafety(
         },
       };
     })
-    .sort((a, b) => {
-      const aScore = finiteNumber(a.row.pharosYieldScore);
-      const bScore = finiteNumber(b.row.pharosYieldScore);
-      if (aScore != null || bScore != null) {
-        if (aScore == null) return 1;
-        if (bScore == null) return -1;
-        if (aScore !== bScore) return bScore - aScore;
-      }
-      const apyDiff = b.row.currentApy - a.row.currentApy;
-      if (apyDiff !== 0) return apyDiff;
-      return a.row.name.localeCompare(b.row.name);
-    });
+    .sort((a, b) => compareYieldRankRows(a.row, b.row));
 
-  const anySafetyHydrationChanged = hydratedRows.some((entry) => entry.safetyChanged);
+  // B7: the baseline rank comes from the served comparator over the pre-hydration
+  // rows, so tie-group re-sorting (the publisher ranks by PYS alone) is not
+  // reported as movement.
+  const previousRankById = buildYieldRankBaseline(payload.rankings);
+  const methodologyChanged =
+    payload.methodology != null && payload.methodology.version !== YIELD_METHODOLOGY_VERSION;
   const rankings = hydratedRows.map((entry, index) => {
     const row = {
       ...entry.row,
       liveRank: index + 1,
     };
-    const rankChangeAttribution = buildRankChangeAttribution({
+    const rankChangeAttribution = buildYieldRankChangeAttribution({
       originalRow: entry.originalRow,
       hydratedRow: row,
-      anySafetyHydrationChanged,
+      previousRank: previousRankById.get(entry.originalRow.id) ?? null,
+      safetyChanged: entry.safetyChanged,
+      methodologyChanged,
     });
     return rankChangeAttribution == null && entry.originalRow.rankChangeAttribution === undefined
       ? row
       : { ...row, rankChangeAttribution };
   });
 
-  const coveredCount = rankings.filter(
-    (row) =>
-      row.provenance?.safetyProvenance === "live-report-card" ||
-      (row.provenance?.safetyProvenance === "opportunity-safety" && row.provenance.usedDefaultSafety !== true),
-  ).length;
-  const trackedCount = rankings.length;
-  const coverageRatio = trackedCount > 0 ? Number((coveredCount / trackedCount).toFixed(4)) : 1;
+  const { coveredCount, trackedCount, coverageRatio } = countRowSafetyCoverage(rankings);
   const degradationReasons = [
     ...source.degradationReasons,
     ...(coverageRatio < 0.75 ? ["low-row-safety-coverage"] : []),
@@ -516,8 +505,11 @@ function markYieldRankingsSafetyStale(
   reason: "safety-snapshot-unavailable" | "safety-identity-missing" | "safety-identity-mismatch",
   source: LiveSafetyHydrationSource,
 ): YieldRankingsResponse {
-  const trackedCount = payload.rankings.length;
-  const coveredCount = payload.rankings.filter((row) => row.safetyScore !== null).length;
+  const { coveredCount, trackedCount, coverageRatio } = countRowSafetyCoverage(payload.rankings);
+  // C17: the upstream snapshot reason (`active-safety-score:held`, D1 error, ...)
+  // is part of why hydration is unavailable; surfacing only the read path's own
+  // reason made held, error and missing states indistinguishable.
+  const reasons = [...new Set([reason, ...source.degradationReasons])];
   const { degradationReasons: _degradationReasons, ...liveSafetySource } = source;
   return {
     ...payload,
@@ -527,7 +519,7 @@ function markYieldRankingsSafetyStale(
         code: "yield-safety-hydration-stale",
         message:
           "Live yield safety hydration is unavailable; serving the last coherent published safety snapshot.",
-        reasons: [reason],
+        reasons,
       },
     ],
     provenance: payload.provenance
@@ -538,8 +530,8 @@ function markYieldRankingsSafetyStale(
             fallback: "publish-time-snapshot" as const,
             coveredCount,
             trackedCount,
-            coverageRatio: trackedCount > 0 ? Number((coveredCount / trackedCount).toFixed(4)) : 1,
-            reason,
+            coverageRatio,
+            reason: reasons.join(","),
             ...liveSafetySource,
           },
         }
@@ -558,7 +550,13 @@ function degradeYieldRankingsSafety(
     safetyGrade: "NR" as const,
     safetyReason: reason,
     pharosYieldScore: null,
-    pysNullReason: "safety-unrated" as const,
+    // B37: the row's own reason survived the safety loss (source-stale,
+    // benchmark-stale, apy-non-positive, ...) — rewriting it to `safety-unrated`
+    // discarded why the score was unusable in the first place.
+    pysNullReason:
+      row.pysNullReason != null && row.pysNullReason !== "safety-unrated"
+        ? row.pysNullReason
+        : ("safety-unrated" as const),
     yieldToRisk: null,
     sourceRisk: removeSafetyDerivedSourceRisk(row.sourceRisk),
     altSources: row.altSources.map((alternate) => ({
@@ -584,6 +582,9 @@ function degradeYieldRankingsSafety(
         }
       : null,
   }));
+  const { coveredCount, trackedCount, coverageRatio } = countRowSafetyCoverage(rankings);
+  // C17: surface the upstream snapshot reason alongside the read path's own.
+  const reasons = [...new Set([reason, ...source.degradationReasons])];
   const { degradationReasons: _degradationReasons, ...liveSafetyHydration } = source;
   return {
     ...payload,
@@ -593,7 +594,7 @@ function degradeYieldRankingsSafety(
       {
         code: "yield-safety-hydration-degraded",
         message: "Yield safety is unavailable because the published compact safety snapshot cannot be used.",
-        reasons: [reason],
+        reasons,
       },
     ],
     provenance: payload.provenance
@@ -601,10 +602,10 @@ function degradeYieldRankingsSafety(
           ...payload.provenance,
           liveSafetyHydration: {
             kind: "degraded" as const,
-            coveredCount: 0,
-            trackedCount: rankings.length,
-            coverageRatio: 0,
-            reason,
+            coveredCount,
+            trackedCount,
+            coverageRatio,
+            reason: reasons.join(","),
             ...liveSafetyHydration,
           },
         }

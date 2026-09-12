@@ -81,7 +81,7 @@ const route = createClientFeaturePage({
     },
     leadParagraphs: [
       "Stablecoin yield rankings that weigh every APY against safety and real-world benchmarks.",
-      "Two readings per row: Safety says how likely you are to lose money; PYS says how well the yield pays you for that chance. A high PYS on a D-grade coin is well-paid risk, not a safe pick. The page opens on the Opportunistic band (C+ safety, warnings hidden); widen the Risk tolerance slider to see everything.",
+      "Two readings per row: Safety says how likely you are to lose money; PYS says how well the yield pays you for that chance. A high PYS on a D-grade coin is well-paid risk, not a safe pick. The page opens on the Opportunistic band (C- or above, safety 50+, warnings hidden); widen the Risk tolerance slider to see everything.",
     ],
     leadFullWidth: true,
   },

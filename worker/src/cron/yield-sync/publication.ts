@@ -157,6 +157,11 @@ async function pruneYieldTablesOnce(
 
   await materializeYieldHistoryDaily(db, startSec);
 
+  // yield_history_daily now carries the year-long public window, so raw hourly
+  // rows only need the 30-day full-fidelity policy; the daily tier keeps the
+  // 365-day cutoff. Materialization above ran first, so the trailing raw day
+  // was already closed into the daily tier before it leaves the raw window.
+  const rawPruneCutoff = startSec - YIELD_HISTORY_RAW_DAYS * DAY_SECONDS;
   const pruneCutoff = startSec - YIELD_HISTORY_MAX_DAYS * DAY_SECONDS;
   const frozenIdsList = [...FROZEN_IDS];
   const frozenClause =
@@ -165,7 +170,7 @@ async function pruneYieldTablesOnce(
       : "";
   await db
     .prepare(`/* pharos:yield-sync:history-retention-delete */ DELETE FROM yield_history WHERE recorded_at < ? ${frozenClause}`)
-    .bind(pruneCutoff, ...frozenIdsList)
+    .bind(rawPruneCutoff, ...frozenIdsList)
     .run();
 
   await db

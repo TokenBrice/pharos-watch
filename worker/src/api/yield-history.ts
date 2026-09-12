@@ -7,6 +7,7 @@ import { getCache } from "../lib/db-cache";
 import { buildOnChainSourceKey, isOnChainBootstrapYieldSeed, parseYieldWarningSignals } from "../lib/yield-utils";
 import { resolveYieldSourceUrl } from "../lib/yield-source-links";
 import { logMalformedJsonPath } from "../lib/json-decode-observability";
+import { logWorkerEventArgs } from "../lib/structured-log";
 import { parseJson } from "../lib/json-parse";
 import { parseYieldRankingsPublishedCutoff } from "../lib/yield-rankings-cache";
 import { isSuppressedYieldHistoryRow } from "../lib/yield-history-ownership-handoffs";
@@ -15,11 +16,14 @@ import { isRecord } from "@shared/lib/type-guards";
 import { YIELD_HISTORY_RAW_DAYS } from "@shared/lib/yield-history-policy";
 import { STABLECOIN_HISTORY_QUERY_CONTRACTS } from "@shared/lib/api-query-history";
 import {
+  YIELD_BENCHMARK_KEY_CURRENCY,
   normalizeYieldSourceRisk,
   YieldPysInputsAtPublishSchema,
+  type YieldPysInputsAtPublish,
   type YieldPublicationMetadata,
   type YieldSourceRisk,
 } from "@shared/types/yield";
+import { computePYS } from "@shared/lib/yield-scoring";
 import {
   YIELD_METHODOLOGY_CHANGELOG_PATH,
   YIELD_METHODOLOGY_VERSION,
@@ -149,6 +153,36 @@ function normalizeHistorySourceKey(stablecoinId: string, row: YieldHistoryRow, m
 }
 
 /**
+ * Replay `computePYS` from a stored publish-time snapshot and report whether it
+ * reproduces `pysAtPublish` (B4). A row the publisher left NR carries no number
+ * to reproduce; a v8.42 snapshot predates the USD hurdle re-base, so a non-USD
+ * row legitimately cannot be reproduced from it; anything else that fails to
+ * reproduce is a current producer defect.
+ */
+function classifyPysReproducibility(
+  inputs: YieldPysInputsAtPublish,
+  pysAtPublish: number | null,
+): "exact" | "not-scored" | "legacy-partial" | "invalid" {
+  // NR rows are gated on evidence the snapshot does not carry (freshness), so
+  // their snapshot is unverifiable rather than non-reproducible.
+  if (pysAtPublish == null) return "not-scored";
+  const benchmarkCurrency = YIELD_BENCHMARK_KEY_CURRENCY[inputs.benchmarkKey];
+  const replayed = computePYS({
+    apy30d: inputs.apy30d,
+    safetyScore: inputs.safetyScore,
+    apyVarianceScore: inputs.varianceScore,
+    scalingFactor: inputs.scalingFactor,
+    benchmarkRate: inputs.benchmarkRate,
+    benchmarkCurrency,
+    usdBenchmarkRate: inputs.usdBenchmarkRate ?? null,
+    sourceRiskPenalty: inputs.sourceRiskPenalty,
+  });
+  if (replayed === pysAtPublish) return "exact";
+  if (inputs.usdBenchmarkRate == null && benchmarkCurrency !== "USD") return "legacy-partial";
+  return "invalid";
+}
+
+/**
  * GET /api/yield-history?stablecoin=<id>&days=<n>&mode=best&sourceKey=<key>
  * Returns historical yield data points for a given stablecoin.
  *
@@ -184,10 +218,17 @@ export const handleYieldHistory = async (db: D1Database, url: URL): Promise<Resp
       publishedCutoffResult.status === "ok"
         ? (publication?.cutoffAt ?? publishedCutoffResult.updatedAt)
         : (publishedCutoffLookup.timestamp ?? fallbackPublishedCutoff);
+    // The published cutoff bounds both history windows, so a 0 (neither the
+    // cached payload nor the cron timestamp was readable) would silently serve an
+    // empty history with HTTP 200. Skip the cap and say so instead (C19).
+    const publishedCutoffCap =
+      publishedCutoff > 0 ? publishedCutoff : Number.MAX_SAFE_INTEGER;
     const freshnessWarning =
       publishedCutoffLookup.status === "lookup_failed"
         ? "Yield history freshness lookup failed; falling back to cache metadata."
-        : null;
+        : publishedCutoff > 0
+          ? null
+          : "Yield history published cutoff unavailable; serving history without the published cutoff cap.";
 
     if (publishedCutoffResult.status !== "ok") {
       logMalformedJsonPath({
@@ -205,7 +246,7 @@ export const handleYieldHistory = async (db: D1Database, url: URL): Promise<Resp
     }
 
     const publicationFilter = "AND (publication_generation_id IS NULL OR publication_state = 'published')";
-    const rawCutoff = Math.max(parsed.cutoff, publishedCutoff - YIELD_HISTORY_RAW_DAYS * 24 * 60 * 60);
+    const rawCutoff = Math.max(parsed.cutoff, publishedCutoffCap - YIELD_HISTORY_RAW_DAYS * 24 * 60 * 60);
     const historyColumns =
       "recorded_at, apy, apy_base, apy_reward, exchange_rate, source_tvl_usd, warning_signals, source_key, yield_source, yield_type, data_source, is_best, publication_generation_id, pys_at_publish, safety_at_publish, variance_at_publish, pys_inputs_at_publish";
 
@@ -263,7 +304,7 @@ export const handleYieldHistory = async (db: D1Database, url: URL): Promise<Resp
               sourceKey,
               parsed.stablecoinId,
               parsed.cutoff,
-              publishedCutoff,
+              publishedCutoffCap,
               sourceKey,
               rawCutoff,
             )
@@ -276,12 +317,14 @@ export const handleYieldHistory = async (db: D1Database, url: URL): Promise<Resp
               rawCutoff,
               parsed.stablecoinId,
               parsed.cutoff,
-              publishedCutoff,
+              publishedCutoffCap,
               rawCutoff,
             )
             .all<YieldHistoryRow>();
 
     let previousSourceKey: string | null = null;
+    let invalidPysSnapshotCount = 0;
+    const invalidPysSnapshotSamples: string[] = [];
     const history = (result.results ?? [])
       .filter(
         (row) => !isSuppressedYieldHistoryRow(parsed.stablecoinId, row.source_key) && !isOnChainBootstrapYieldSeed(row),
@@ -322,6 +365,18 @@ export const handleYieldHistory = async (db: D1Database, url: URL): Promise<Resp
             : null;
           pysInputsAtPublish = parsedInputs?.success ? parsedInputs.data : null;
         }
+        const pysReproducibility =
+          pysInputsAtPublish == null
+            ? ("legacy-partial" as const)
+            : classifyPysReproducibility(pysInputsAtPublish, pysAtPublish ?? null);
+        if (pysReproducibility === "invalid") {
+          invalidPysSnapshotCount += 1;
+          if (invalidPysSnapshotSamples.length < 5) {
+            invalidPysSnapshotSamples.push(
+              `${row.source_key ?? normalizedSourceKey}@${row.recorded_at}`,
+            );
+          }
+        }
 
         return {
           date: row.recorded_at,
@@ -348,9 +403,19 @@ export const handleYieldHistory = async (db: D1Database, url: URL): Promise<Resp
           ...(safetyAtPublish !== undefined ? { safetyAtPublish } : {}),
           ...(varianceAtPublish !== undefined ? { varianceAtPublish } : {}),
           pysInputsAtPublish,
-          pysReproducibility: pysInputsAtPublish ? ("exact" as const) : ("legacy-partial" as const),
+          pysReproducibility,
         };
       });
+
+    if (invalidPysSnapshotCount > 0) {
+      logWorkerEventArgs(
+        "api",
+        "warn",
+        `[yield-history] ${invalidPysSnapshotCount} published snapshot(s) do not replay to pys_at_publish`
+          + ` stablecoin=${parsed.stablecoinId}`
+          + ` samples=${invalidPysSnapshotSamples.join(",")}`,
+      );
+    }
 
     const latestHistoryTimestamp =
       history.length > 0

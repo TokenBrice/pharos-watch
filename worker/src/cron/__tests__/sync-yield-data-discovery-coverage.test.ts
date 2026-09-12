@@ -226,6 +226,17 @@ describe("syncYieldData", () => {
               apyMean30d: 4.43603,
             }),
           ], nowSec),
+      // Benchmark freshness is scoring evidence: without the registry row the
+      // resolve falls back to the hardcoded USD constant (ageSeconds null) and
+      // every candidate is a stale-benchmark NR row.
+      risk_free_rate: cacheRow({
+            rate: 4.0,
+            source: "fred-dgs3mo",
+            fetchedAt: nowSec - 3600,
+            recordDate: "2025-06-15",
+            isFallback: false,
+            fallbackMode: null,
+      }, nowSec - 3600),
       "yield:supplemental-sources:v1:morpho": supplementalFamilyCacheRow([{
         symbol: "sDAI",
         chain: "ethereum",
@@ -653,6 +664,16 @@ describe("syncYieldData", () => {
               underlyingTokens: ["0x68749665ff8d2d112fa859aa293f07a622782f38"],
             }),
       ], nowSec),
+      // GOLD pegs select USD as a documented proxy, so the row is only
+      // scoreable while the USD benchmark entry itself is healthy.
+      risk_free_rate: cacheRow({
+            rate: 4.0,
+            source: "fred-dgs3mo",
+            fetchedAt: nowSec - 3600,
+            recordDate: "2025-06-15",
+            isFallback: false,
+            fallbackMode: null,
+      }, nowSec - 3600),
       stablecoins: cacheRow([{ id: "xaut-tether", circulating: { peggedGOLD: 1_000_000_000 } }], nowSec),
     });
     vi.mocked(fixtureShouldAttemptFetch).mockResolvedValue(false);
@@ -702,6 +723,7 @@ describe("syncYieldData", () => {
 
   it("adds conservative B.Protocol LQTY-only APR for LUSD and keeps lending as an alternative source", async () => {
     const db = makeDb();
+    mockHealthyRiskFreeRateCache();
 
     vi.mocked(fixtureGetChainRpc).mockReturnValue({
       chainId: "ethereum",
@@ -800,12 +822,19 @@ describe("syncYieldData", () => {
     expect(bprotocolRow?.data_source).toBe("onchain");
     expect(Number(bprotocolRow?.current_apy)).toBeGreaterThan(1);
     expect(Number(bprotocolRow?.apy_reward)).toBeGreaterThan(1);
-    expect(bprotocolRow?.is_best).toBe(1);
+    // The deterministic B.Protocol adapter publishes no `sourceObservedAt` (B11),
+    // so the row is `source-freshness-unknown`/NR: it keeps its APR but can no
+    // longer be published as the coin's best (B13).
+    expect(bprotocolRow?.pharos_yield_score).toBeNull();
+    expect(bprotocolRow?.is_best).toBe(0);
 
     const aaveRow = findPublishedYieldRow(db, "lusd-liquity", (row) => row.source_key === "pool-lusd-aave");
     expect(aaveRow?.yield_source).toBe("Aave V3");
     expect(aaveRow?.yield_type).toBe("lending-opportunity");
     expect(aaveRow?.data_source).toBe("defillama-auto");
+    // The lending row is the divergent lower-confidence alternative (>35% off the
+    // deterministic read), so it is rejected too: every candidate for the coin is
+    // rejected and B13 publishes no `is_best = 1` row at all.
     expect(aaveRow?.is_best).toBe(0);
   });
 
@@ -911,6 +940,14 @@ describe("syncYieldData", () => {
       "yield-rankings": cacheRow({
         rankings: [{ id: "100" }, ...Array.from({ length: 10 }, () => ({ id: "usdc-circle" }))],
       }, nowSec),
+      risk_free_rate: cacheRow({
+            rate: 4.0,
+            source: "fred-dgs3mo",
+            fetchedAt: nowSec - 3600,
+            recordDate: "2025-06-15",
+            isFallback: false,
+            fallbackMode: null,
+      }, nowSec - 3600),
     });
     fixtureMockFetch([
       {
@@ -955,6 +992,14 @@ describe("syncYieldData", () => {
       "yield-rankings": cacheRow({
         rankings: Array.from({ length: 10 }, (_, index) => ({ id: `legacy-opportunity-${index}` })),
       }, nowSec),
+      risk_free_rate: cacheRow({
+            rate: 4.0,
+            source: "fred-dgs3mo",
+            fetchedAt: nowSec - 3600,
+            recordDate: "2025-06-15",
+            isFallback: false,
+            fallbackMode: null,
+      }, nowSec - 3600),
     });
     fixtureMockFetch([
       {
@@ -993,6 +1038,14 @@ describe("syncYieldData", () => {
 
     installYieldCacheReader(vi.mocked(fixtureGetCache), {
       "yield-rankings": cacheRow("{not-json", nowSec),
+      risk_free_rate: cacheRow({
+            rate: 4.0,
+            source: "fred-dgs3mo",
+            fetchedAt: nowSec - 3600,
+            recordDate: "2025-06-15",
+            isFallback: false,
+            fallbackMode: null,
+      }, nowSec - 3600),
     });
     fixtureMockFetch([
       {

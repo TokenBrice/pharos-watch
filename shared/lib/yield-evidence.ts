@@ -16,6 +16,16 @@ export interface YieldEvidenceAssessmentInput {
    * denominator is shared by all rows regardless of opportunity class.
    */
   opportunityEvidenceComplete?: boolean;
+  /**
+   * Freshness of the USD reference rate a non-USD row's hurdle is re-based onto
+   * (yield v8.43, A3). Omitted for USD-benchmarked rows, whose own
+   * `benchmarkFreshness` already classifies the same entry. A degraded reference
+   * caps the row at `estimated`; a stale one makes the re-based hurdle
+   * meaningless, so the row cannot be scored. Not counted in evidence
+   * completeness: the reference is a cross-cutting scoring input, not a per-row
+   * evidence family.
+   */
+  referenceBenchmarkFreshness?: "healthy" | "degraded" | "stale";
 }
 
 export interface YieldEvidenceAssessment {
@@ -37,7 +47,11 @@ export function assessYieldEvidence(input: YieldEvidenceAssessmentInput): YieldE
   ].filter(Boolean).length;
   const evidenceCompleteness = Number((measuredFieldCount / EVIDENCE_FIELD_COUNT).toFixed(4));
 
-  if (input.sourceFreshness !== "fresh" || input.benchmarkFreshness === "stale") {
+  if (
+    input.sourceFreshness !== "fresh" ||
+    input.benchmarkFreshness === "stale" ||
+    input.referenceBenchmarkFreshness === "stale"
+  ) {
     return { evidenceCompleteness, scoreQualification: "NR" };
   }
 
@@ -46,7 +60,8 @@ export function assessYieldEvidence(input: YieldEvidenceAssessmentInput): YieldE
     input.opportunityEvidenceComplete === false ||
     input.evidenceClass === "modeled-proxy" ||
     input.evidenceClass === "fallback" ||
-    input.benchmarkFreshness === "degraded"
+    input.benchmarkFreshness === "degraded" ||
+    input.referenceBenchmarkFreshness === "degraded"
   ) {
     return { evidenceCompleteness, scoreQualification: "estimated" };
   }

@@ -745,7 +745,7 @@ describe("handleYieldHistory", () => {
       evidenceClass: "direct-onchain",
     };
     const snapshotRow = makeYieldHistoryRow({
-      pys_at_publish: 73.5,
+      pys_at_publish: 91,
       safety_at_publish: 81,
       variance_at_publish: 0.18,
       pys_inputs_at_publish: JSON.stringify(pysInputsAtPublish),
@@ -762,11 +762,120 @@ describe("handleYieldHistory", () => {
         pysReproducibility?: string;
       }>;
     };
-    expect(body.history[0]?.pysAtPublish).toBe(73.5);
+    expect(body.history[0]?.pysAtPublish).toBe(91);
     expect(body.history[0]?.safetyAtPublish).toBe(81);
     expect(body.history[0]?.varianceAtPublish).toBe(0.18);
     expect(body.history[0]?.pysInputsAtPublish).toEqual(pysInputsAtPublish);
     expect(body.history[0]?.pysReproducibility).toBe("exact");
+  });
+
+  it("labels a pre-v8.43 non-USD snapshot legacy-partial instead of exact", async () => {
+    // v8.42 snapshot of a TRY row: it predates the USD hurdle re-base, so its
+    // stored inputs replay to the pre-re-base score (100) rather than 44.
+    const legacyTrySnapshot = {
+      schemaVersion: 1,
+      methodologyVersion: "8.42",
+      apy30d: 38.13,
+      safetyScore: 82,
+      varianceScore: 0.1,
+      benchmarkRate: 36.86,
+      sourceRiskPenalty: 1,
+      scalingFactor: 8,
+      scoreQualification: "rated",
+      benchmarkKey: "TRY",
+      evidenceClass: "curated-observation",
+    };
+    const db = mockD1([
+      {
+        match: "yield_history",
+        rows: [
+          makeYieldHistoryRow({
+            pys_at_publish: 44,
+            safety_at_publish: 82,
+            pys_inputs_at_publish: JSON.stringify(legacyTrySnapshot),
+          }),
+        ],
+      },
+    ]);
+
+    const res = await handleYieldHistory(db, new URL("https://x/api/yield-history?stablecoin=usdt-tether"));
+    const body = (await readJsonResponse(res, 200)) as {
+      history: Array<{ pysReproducibility?: string }>;
+    };
+    expect(body.history[0]?.pysReproducibility).toBe("legacy-partial");
+  });
+
+  it("labels an unreproducible current snapshot invalid and warns", async () => {
+    const v843Snapshot = {
+      schemaVersion: 2,
+      methodologyVersion: "8.43",
+      apy30d: 38.13,
+      safetyScore: 82,
+      varianceScore: 0.1,
+      benchmarkRate: 36.86,
+      sourceRiskPenalty: 1,
+      scalingFactor: 8,
+      scoreQualification: "rated",
+      benchmarkKey: "TRY",
+      evidenceClass: "curated-observation",
+      usdBenchmarkRate: 3.95,
+      hurdleRebase: -32.91,
+    };
+    const db = mockD1([
+      {
+        match: "yield_history",
+        rows: [
+          makeYieldHistoryRow({
+            pys_at_publish: 12,
+            safety_at_publish: 82,
+            pys_inputs_at_publish: JSON.stringify(v843Snapshot),
+          }),
+        ],
+      },
+    ]);
+
+    const res = await handleYieldHistory(db, new URL("https://x/api/yield-history?stablecoin=usdt-tether"));
+    const body = (await readJsonResponse(res, 200)) as {
+      history: Array<{ pysReproducibility?: string }>;
+    };
+    expect(body.history[0]?.pysReproducibility).toBe("invalid");
+  });
+
+  it("labels a snapshot without a published score not-scored instead of invalid", async () => {
+    const v843Snapshot = {
+      schemaVersion: 2,
+      methodologyVersion: "8.43",
+      apy30d: 38.13,
+      safetyScore: 82,
+      varianceScore: 0.1,
+      benchmarkRate: 36.86,
+      sourceRiskPenalty: 1,
+      scalingFactor: 8,
+      scoreQualification: "NR",
+      benchmarkKey: "TRY",
+      evidenceClass: "curated-observation",
+      usdBenchmarkRate: 3.95,
+      hurdleRebase: -32.91,
+    };
+    const db = mockD1([
+      {
+        match: "yield_history",
+        rows: [
+          makeYieldHistoryRow({
+            // NR for a freshness gate: inputs stored, no published number.
+            pys_at_publish: null,
+            safety_at_publish: 82,
+            pys_inputs_at_publish: JSON.stringify(v843Snapshot),
+          }),
+        ],
+      },
+    ]);
+
+    const res = await handleYieldHistory(db, new URL("https://x/api/yield-history?stablecoin=usdt-tether"));
+    const body = (await readJsonResponse(res, 200)) as {
+      history: Array<{ pysReproducibility?: string }>;
+    };
+    expect(body.history[0]?.pysReproducibility).toBe("not-scored");
   });
 
   it("returns nullable snapshot fields when not yet populated", async () => {
@@ -792,6 +901,27 @@ describe("handleYieldHistory", () => {
     expect(body.history[0]?.varianceAtPublish).toBeNull();
     expect(body.history[0]?.pysInputsAtPublish).toBeNull();
     expect(body.history[0]?.pysReproducibility).toBe("legacy-partial");
+  });
+
+  it("serves history without the published cutoff cap when no cutoff resolves", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-03-28T12:00:00Z"));
+    const nowSec = Math.floor(Date.now() / 1000);
+    const db = mockD1([
+      // No cached rankings and no successful cron timestamp: the cutoff resolves to 0.
+      { match: "FROM cache WHERE key = ?", matchBinds: ["yield-rankings"], rows: [], first: null },
+      { match: "MAX(started_at) as started_at FROM cron_runs", rows: [], first: null },
+      { match: "yield_history", rows: [makeYieldHistoryRow({ recorded_at: nowSec - 120 })] },
+    ]);
+
+    const res = await handleYieldHistory(db, new URL("https://x/api/yield-history?stablecoin=usdt-tether"));
+
+    const body = (await readJsonResponse(res, 200)) as { warning?: string; history: unknown[] };
+    expect(body.warning).toContain("cutoff unavailable");
+    expect(body.history).toHaveLength(1);
+
+    const historyQuery = db.getHistory().find((entry) => entry.sql.includes("FROM yield_history h"));
+    expect(historyQuery?.binds).toContain(Number.MAX_SAFE_INTEGER);
   });
 
   it("surfaces a warning and uses cache metadata when the cron timestamp lookup fails", async () => {

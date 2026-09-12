@@ -58,6 +58,14 @@ export interface EvaluatedYieldSource {
   benchmarkLabel: string;
   benchmarkCurrency: string;
   benchmarkRate: number;
+  /**
+   * Reference (USD) risk-free rate the row's hurdle was re-based onto, retained
+   * so the publish-time audit snapshot can replay the score (yield v8.43, B4).
+   * Null when the reference rate was unavailable.
+   */
+  usdBenchmarkRate: number | null;
+  /** `usdBenchmarkRate - benchmarkRate` as scored; 0 when no re-base applied. */
+  hurdleRebase: number;
   benchmarkRecordDate: string | null;
   benchmarkIsFallback: boolean;
   benchmarkFallbackMode: string | null;

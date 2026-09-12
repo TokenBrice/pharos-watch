@@ -108,18 +108,15 @@ export interface YieldRowFacet {
   needsWatchlistAttention: boolean;
 }
 
+/**
+ * The scatter's benchmark frame projection (see `buildYieldStats`) — the only
+ * stats the views consume; row-level tiles derive from the rows themselves.
+ */
 export interface YieldViewModelStats {
-  avgApy: number;
-  medianApy: number;
-  topYield: { symbol: string; apy: number; safetyGrade: string | null } | null;
-  bestPys: { name: string; symbol: string; score: number } | null;
   referenceBenchmark: YieldBenchmarkMeta | null;
   hasMixedBenchmarks: boolean;
   usesDefaultBenchmarkFrame: boolean;
   sharedBenchmarkKey: YieldBenchmarkKey | null;
-  warningRowCount: number;
-  nullSafetyCount: number;
-  nullTvlCount: number;
 }
 
 export interface YieldViewModel {

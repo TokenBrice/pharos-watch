@@ -74,17 +74,41 @@ function recordPrevBestRow(maps: YieldHistoryEvaluationMaps, row: YieldHistorySn
   }
 }
 
-/** Count selected-source switches across a coin's best rows in recorded-at order. */
+/**
+ * Count selected-source switches across a coin's best rows in recorded-at order.
+ *
+ * B2: a segment of one publication is a fetch gap, not a switch — a source that
+ * disappears for one hour and returns would otherwise count twice (out and back).
+ * Collapse every run shorter than two publications before counting adjacent
+ * differences, so only durable source changes are charged.
+ */
 function countSourceSwitches(rows: YieldHistorySnapshotRow[], signal?: AbortSignal): number {
-  let previousSourceKey: string | null = null;
-  let switches = 0;
+  const durableSourceKeys: string[] = [];
+  let runSourceKey: string | null = null;
+  let runLength = 0;
+  const flushRun = () => {
+    if (runSourceKey != null && runLength >= 2) durableSourceKeys.push(runSourceKey);
+    runSourceKey = null;
+    runLength = 0;
+  };
   for (const row of [...rows].sort((a, b) => a.recorded_at - b.recorded_at)) {
     throwIfAborted(signal);
     const sourceKey = normalizePreviousBestSourceKey(row);
-    if (previousSourceKey != null && sourceKey !== previousSourceKey) {
+    if (sourceKey === runSourceKey) {
+      runLength++;
+      continue;
+    }
+    flushRun();
+    runSourceKey = sourceKey;
+    runLength = 1;
+  }
+  flushRun();
+
+  let switches = 0;
+  for (let index = 1; index < durableSourceKeys.length; index++) {
+    if (durableSourceKeys[index] !== durableSourceKeys[index - 1]) {
       switches++;
     }
-    previousSourceKey = sourceKey;
   }
   return switches;
 }

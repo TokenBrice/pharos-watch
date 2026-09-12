@@ -60,20 +60,36 @@ describe("yield coordinator history", () => {
     expect(result.prevBestSourceKeyByCoin.get("coin-a")).toBe("source-a");
   });
 
-  it("counts selected-source switches across 30d history rows", () => {
-    const result = buildYieldHistoryEvaluationInputs({
-      historyRows: [
-        row({ stablecoin_id: "coin-a", source_key: "source-a", is_best: 1, recorded_at: 100 }),
-        row({ stablecoin_id: "coin-a", source_key: "source-a", is_best: 1, recorded_at: 200 }),
-        row({ stablecoin_id: "coin-a", source_key: "source-b", is_best: 1, recorded_at: 300 }),
-        row({ stablecoin_id: "coin-a", source_key: "source-c", is_best: 0, recorded_at: 400 }),
-        row({ stablecoin_id: "coin-a", source_key: "source-a", is_best: 1, recorded_at: 500 }),
-      ],
-      prevTvlRows: [],
-      prevBestRows: [],
-    });
+  it("counts selected-source switches across 30d history rows, collapsing one-publication gaps", () => {
+    const switchesFor = (rows: YieldHistorySnapshotRow[]) =>
+      buildYieldHistoryEvaluationInputs({ historyRows: rows, prevTvlRows: [], prevBestRows: [] })
+        .sourceSwitchCount30dByCoin.get("coin-a");
 
-    expect(result.sourceSwitchCount30dByCoin.get("coin-a")).toBe(2);
+    // Durable runs: A A B B A A -> two switches.
+    expect(switchesFor([
+      row({ source_key: "source-a", is_best: 1, recorded_at: 100 }),
+      row({ source_key: "source-a", is_best: 1, recorded_at: 200 }),
+      row({ source_key: "source-b", is_best: 1, recorded_at: 300 }),
+      row({ source_key: "source-b", is_best: 1, recorded_at: 400 }),
+      row({ source_key: "source-a", is_best: 1, recorded_at: 500 }),
+      row({ source_key: "source-a", is_best: 1, recorded_at: 600 }),
+    ])).toBe(2);
+
+    // B2: a one-publication out-and-back is a fetch gap, not two switches.
+    expect(switchesFor([
+      row({ source_key: "source-a", is_best: 1, recorded_at: 100 }),
+      row({ source_key: "source-a", is_best: 1, recorded_at: 200 }),
+      row({ source_key: "source-b", is_best: 1, recorded_at: 300 }),
+      row({ source_key: "source-a", is_best: 1, recorded_at: 400 }),
+      row({ source_key: "source-a", is_best: 1, recorded_at: 500 }),
+    ])).toBe(0);
+
+    // Non-best rows never participate in the selected-source series.
+    expect(switchesFor([
+      row({ source_key: "source-a", is_best: 1, recorded_at: 100 }),
+      row({ source_key: "source-b", is_best: 0, recorded_at: 200 }),
+      row({ source_key: "source-a", is_best: 1, recorded_at: 300 }),
+    ])).toBe(0);
   });
 
   it("preserves linked on-chain identities across consecutive generations", () => {

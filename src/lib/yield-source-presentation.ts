@@ -148,4 +148,5 @@ export const YIELD_RANK_CHANGE_DRIVER_LABELS: Record<
   freshness: { short: "Freshness", long: "Source freshness changed" },
   volatility: { short: "Volatility", long: "30-day APY volatility changed" },
   "tvl-depth": { short: "Depth", long: "Source TVL depth changed" },
+  methodology: { short: "Methodology", long: "Methodology version changed between the published and served scoring" },
 };

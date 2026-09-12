@@ -243,14 +243,7 @@ describe("syncYieldData", () => {
 
     const result = await fixtureSyncYieldData(db);
     const payload = getYieldRankingsCachePayload(db) as {
-      rankings: Array<{
-        id: string;
-        safetyScore: number | null;
-        safetyGrade: string;
-        safetyReason: string | null;
-        pharosYieldScore: number | null;
-        pysNullReason: string | null;
-      }>;
+      rankings: Array<{ id: string }>;
       provenance: { safetySnapshot: { reason: string | null } };
     };
 
@@ -266,13 +259,11 @@ describe("syncYieldData", () => {
         pys_at_publish: null,
         pys_inputs_at_publish: null,
       });
-    expect(payload.rankings.find((row) => row.id === "lusd-liquity")).toMatchObject({
-      safetyScore: null,
-      safetyGrade: "NR",
-      safetyReason: "safety-snapshot-unavailable",
-      pharosYieldScore: null,
-      pysNullReason: "safety-unrated",
-    });
+    // B13: an unavailable compact safety snapshot forces `NR` on every candidate
+    // for the coin (`scoreQualification` NR), so the publication view is skipped —
+    // the coin keeps the retained rows asserted above but publishes no ranking
+    // entry, rather than a least-bad rejected row as `is_best`/unrated best.
+    expect(payload.rankings.find((row) => row.id === "lusd-liquity")).toBeUndefined();
     expect(payload.provenance.safetySnapshot).toMatchObject({
       reason,
     });

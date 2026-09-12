@@ -207,6 +207,10 @@ describe("syncYieldData", () => {
 
   it("publishes evaluated warning signals into the yield rankings cache", async () => {
     const db = makePublicationCacheDb();
+    // Scoring evidence: without the benchmark registry the USD entry is the
+    // hardcoded fallback (ageSeconds null) and the row is an unpublishable
+    // stale-benchmark NR row under B13.
+    mockHealthyRiskFreeRateCache();
     const actual = await vi.importActual<typeof YieldHelpers>("../yield-helpers");
     vi.spyOn(fixtureYieldHelpersModule, "detectWarningSignals").mockImplementation(actual.detectWarningSignals);
 

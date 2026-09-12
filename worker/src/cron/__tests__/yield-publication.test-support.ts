@@ -43,7 +43,9 @@ export function mockD1(tables: MockTableConfig[] = []) {
   return createMockD1([...tables, ...DEFAULT_YIELD_PUBLICATION_D1_TABLES]);
 }
 
-export function makeBenchmarkMeta(): ParsedYieldBenchmarkMeta {
+export function makeBenchmarkMeta(
+  overrides: Partial<ParsedYieldBenchmarkMeta> = {},
+): ParsedYieldBenchmarkMeta {
   return {
     key: "USD",
     label: "USD 3M T-Bill",
@@ -60,6 +62,7 @@ export function makeBenchmarkMeta(): ParsedYieldBenchmarkMeta {
     lastMarketRecordDate: "2026-03-25",
     lastMarketFetchedAt: Math.floor(FIXED_NOW.getTime() / 1000),
     lastMarketSource: "fred-dgs3mo",
+    ...overrides,
   };
 }
 
@@ -120,6 +123,8 @@ export function makeEvaluatedSource(overrides: Partial<EvaluatedYieldSource> = {
     benchmarkLabel: benchmarkMeta.label!,
     benchmarkCurrency: benchmarkMeta.currency!,
     benchmarkRate: benchmarkMeta.rate,
+    usdBenchmarkRate: benchmarkMeta.rate,
+    hurdleRebase: 0,
     benchmarkRecordDate: benchmarkMeta.recordDate,
     benchmarkIsFallback: false,
     benchmarkFallbackMode: null,

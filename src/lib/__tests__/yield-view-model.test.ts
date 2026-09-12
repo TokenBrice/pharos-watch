@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
+import { scoreToGrade } from "@shared/lib/report-card-core";
 import { makeAltYieldSource, makeYieldProvenance, makeYieldRanking } from "@shared/test-utils/yield-ranking-fixtures";
-import { YIELD_FILTER_AXIS_REGISTRY, buildYieldViewModel, prepareYieldUniverse } from "@/lib/yield-view-model";
+import { YIELD_FILTER_AXIS_REGISTRY, YIELD_RISK_BUDGET_MIN_SAFETY, YIELD_RISK_BUDGET_SPECS, buildYieldViewModel, prepareYieldUniverse } from "@/lib/yield-view-model";
 
 const rows = [
   makeYieldRanking({
@@ -249,16 +250,6 @@ describe("buildYieldViewModel", () => {
       title: "No rows match this view",
       description: "Reset one or more filters to broaden the comparable set.",
     });
-    expect(model.stats.avgApy).toBe(0);
-    expect(model.stats.medianApy).toBe(0);
-  });
-
-  it("keeps empty payload median APY at zero", () => {
-    const model = buildYieldViewModel(prepareYieldUniverse([], null), {});
-
-    expect(model.visibleRows).toEqual([]);
-    expect(model.stats.avgApy).toBe(0);
-    expect(model.stats.medianApy).toBe(0);
   });
 
   it("filters by URL-backed source depth lens", () => {
@@ -675,4 +666,64 @@ describe("buildYieldViewModel", () => {
       YIELD_FILTER_AXIS_REGISTRY.every((axis) => typeof (axis as { matches?: unknown }).matches === "function"),
     ).toBe(true);
   });
+
+  it("counts risk-budget stops on the stacked base of active filters", () => {
+    // peg=non-usd leaves only EURC as a candidate, and the landing band's
+    // safety floor and warnings filter block it — so every stop, including
+    // "All", must count the empty intersection rather than the unfiltered
+    // universe.
+    const blocked = buildYieldViewModel(prepareYieldUniverse(rows, null), { peg: "non-usd" });
+    expect(blocked.visibleRows).toEqual([]);
+    expect(blocked.riskBudget.stops.map((stop) => stop.count)).toEqual([0, 0, 0, 0]);
+
+    // With peg=USD stacked on the neutral band, the "All" stop counts only
+    // USD rows, and the opportunistic band additionally drops warned USDT.
+    const usd = buildYieldViewModel(prepareYieldUniverse(rows, null), { risk: "any", peg: "USD" });
+    expect(usd.riskBudget.stops.find((stop) => stop.key === "all")?.count).toBe(2);
+    expect(usd.riskBudget.stops.find((stop) => stop.key === "opportunistic")?.count).toBe(1);
+  });
+
+  it("round-trips explicit risk-band params instead of flagging them", () => {
+    const opportunistic = buildYieldViewModel(prepareYieldUniverse(rows, null), { risk: "opportunistic" });
+    expect(opportunistic.invalidParamKeys).not.toContain("risk");
+    expect(opportunistic.normalizedParams.risk).toBe("opportunistic");
+    expect(opportunistic.filters).toMatchObject({ minSafety: 50, warnings: "hide" });
+
+    const all = buildYieldViewModel(prepareYieldUniverse(rows, null), { risk: "all" });
+    expect(all.invalidParamKeys).not.toContain("risk");
+    expect(all.normalizedParams.risk).toBe("any");
+    expect(all.filters).toMatchObject({ minSafety: null, warnings: "all" });
+
+    const any = buildYieldViewModel(prepareYieldUniverse(rows, null), { risk: "any" });
+    expect(any.invalidParamKeys).not.toContain("risk");
+
+    const unknown = buildYieldViewModel(prepareYieldUniverse(rows, null), { risk: "yolo" });
+    expect(unknown.invalidParamKeys).toContain("risk");
+    expect(unknown.normalizedParams.risk).toBeNull();
+  });
+
+  it("assigns viewRank from published order, not input array order", () => {
+    const rankedRows = [
+      makeYieldRanking({ id: "bronze", symbol: "BRZ", liveRank: 3, publishedRank: 3 }),
+      makeYieldRanking({ id: "gold", symbol: "GLD", liveRank: 1, publishedRank: 2 }),
+      makeYieldRanking({ id: "unranked", symbol: "UNR", liveRank: null, publishedRank: null, pharosYieldScore: 5 }),
+      makeYieldRanking({ id: "silver", symbol: "SLV", liveRank: null, publishedRank: 2 }),
+    ];
+    const model = buildYieldViewModel(prepareYieldUniverse(rankedRows, null), { risk: "any" });
+
+    expect(model.visibleRows.map((row) => [row.id, row.viewRank])).toEqual([
+      ["gold", 1],
+      ["silver", 2],
+      ["bronze", 3],
+      ["unranked", 4],
+    ]);
+  });
+
+  it.each(["conservative", "balanced", "opportunistic"] as const)(
+    "labels the %s band with the V9 grade at its safety floor",
+    (key) => {
+      const spec = YIELD_RISK_BUDGET_SPECS.find((entry) => entry.key === key);
+      expect(spec?.description).toContain(`${scoreToGrade(YIELD_RISK_BUDGET_MIN_SAFETY[key])} safety`);
+    },
+  );
 });

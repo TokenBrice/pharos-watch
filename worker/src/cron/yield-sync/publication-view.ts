@@ -67,6 +67,15 @@ export function buildYieldPublicationViews(input: {
     if (input.bestSourceKeyByCoin.get(source.id) !== source.sourceKey) {
       continue;
     }
+    // B13: when every candidate was rejected the winner is only the least-bad
+    // rejected row. Publishing a view (and therefore a ranking row) for it would
+    // present a rejected source as the coin's best yield. Tradeoff: the coin is
+    // omitted from the rankings payload for that publication instead, its rows
+    // persist with `is_best = 0`, and no decision row is written — the ledger
+    // keeps the rejection context for the next publication that resolves it.
+    if (source.rejected) {
+      continue;
+    }
     const candidates = input.evaluatedSources
       .filter((candidate) => candidate.id === source.id)
       .sort(compareCandidates);

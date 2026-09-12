@@ -17,6 +17,7 @@ const {
   pushMock,
   leaderboardPropsMock,
   scatterPropsMock,
+  referenceRatesPropsMock,
   staleQueriesMock,
   trackEventMock,
 } = vi.hoisted(() => ({
@@ -28,6 +29,7 @@ const {
   pushMock: vi.fn(),
   leaderboardPropsMock: vi.fn(),
   scatterPropsMock: vi.fn(),
+  referenceRatesPropsMock: vi.fn(),
   staleQueriesMock: vi.fn(),
   trackEventMock: vi.fn(),
 }));
@@ -85,7 +87,10 @@ vi.mock("@/components/yield/yield-source-board", () => ({
 }));
 
 vi.mock("@/components/yield/reference-rates-strip", () => ({
-  ReferenceRatesStrip: () => <div data-testid="reference-rates-strip" />,
+  ReferenceRatesStrip: (props: unknown) => {
+    referenceRatesPropsMock(props);
+    return <div data-testid="reference-rates-strip" />;
+  },
 }));
 
 vi.mock("@/components/yield/coin-index", () => ({
@@ -210,6 +215,36 @@ describe("YieldClient", () => {
     };
     expect(props.rows).toHaveLength(0);
     expect(props.comparisonRows.map((row) => row.id)).toEqual(["usdc-circle", "usdt-tether"]);
+  });
+
+  it("counts hidden-peg benchmark currencies from the row universe", () => {
+    // SGD and MXN have no individual peg filter pill, but the reference-rates
+    // table ships benchmark rows for both and must not read "Tracked 0".
+    useYieldRankingsSummaryMock.mockReturnValue({
+      data: projectYieldRankingsSummary({
+        rankings: [
+          makeYieldRanking({ id: "xsgd-straitsx", symbol: "XSGD", name: "XSGD" }),
+          makeYieldRanking({ id: "mxnb-juno", symbol: "MXNB", name: "MXNB" }),
+        ],
+        riskFreeRate: 4.25,
+        scalingFactor: 1,
+        medianApy: 5,
+        updatedAt: 1_776_000_000,
+        warnings: [],
+      }),
+      meta: null,
+      isLoading: false,
+      error: null,
+      dataUpdatedAt: 1_776_000_000,
+      refetch: vi.fn(),
+    });
+
+    render(<YieldClient />);
+
+    const props = referenceRatesPropsMock.mock.calls.at(-1)?.[0] as {
+      currencyCounts?: Record<string, number>;
+    };
+    expect(props.currencyCounts).toMatchObject({ SGD: 1, MXN: 1 });
   });
 
   it("renders both the risk budget slider and scatter plot when yield rows are visible", () => {

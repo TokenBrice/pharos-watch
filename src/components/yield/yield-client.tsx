@@ -350,21 +350,17 @@ export function YieldClient() {
 
   // Counts the full /yield ranking universe per peg currency (not filter-
   // aware), so the reference-rates table can show how many tracked coins
-  // each benchmark currency covers.
+  // each benchmark currency covers. Filter options omit hidden individual
+  // pegs (SGD, MXN), so count the row facets directly to keep those
+  // benchmark rows honest.
   const currencyCounts = useMemo(() => {
     const counts: Record<string, number> = {};
-    for (const option of viewModel.options.peg) {
-      if (
-        option.value === "all" ||
-        option.value === "non-usd" ||
-        option.value === "aud-cad" ||
-        option.value === "other"
-      )
-        continue;
-      counts[option.value] = option.count;
+    for (const facet of yieldUniverse.rowFacets) {
+      if (facet.peg === null) continue;
+      counts[facet.peg] = (counts[facet.peg] ?? 0) + 1;
     }
     return counts;
-  }, [viewModel.options.peg]);
+  }, [yieldUniverse.rowFacets]);
 
   useEffect(() => {
     if (!data || isLoading || error) return;

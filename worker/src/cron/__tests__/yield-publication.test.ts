@@ -2,7 +2,13 @@ import { describe, expect, it, vi } from "vitest";
 import { existsSync, readFileSync } from "node:fs";
 import path from "node:path";
 
-import { YIELD_HISTORY_MAX_DAYS } from "@shared/lib/yield-history-policy";
+import { YIELD_HISTORY_MAX_DAYS, YIELD_HISTORY_RAW_DAYS } from "@shared/lib/yield-history-policy";
+import { computePYS } from "@shared/lib/yield-scoring";
+import {
+  YIELD_BENCHMARK_KEY_CURRENCY,
+  YIELD_PYS_INPUTS_AT_PUBLISH_SCHEMA_VERSION,
+  type YieldPysInputsAtPublish,
+} from "@shared/types/yield";
 import { DAY_SECONDS } from "@shared/lib/time-constants";
 import { createSqliteD1 } from "@shared/test-utils/sqlite-d1";
 import { createLatestSchemaSqlite } from "@shared/test-utils/latest-schema-sqlite";
@@ -364,6 +370,12 @@ describe("publishYieldCoordinatorResults", () => {
     expect(freshnessIndex).toBeGreaterThan(cacheWriteIndex);
     expect(historyRetentionIndex).toBeGreaterThan(freshnessIndex);
     expect(history[historyRetentionIndex]?.binds[0]).toBe(
+      Math.floor(FIXED_NOW.getTime() / 1000) - YIELD_HISTORY_RAW_DAYS * DAY_SECONDS,
+    );
+    const dailyRetentionIndex = history.findIndex((entry) =>
+      entry.sql.includes("pharos:yield-sync:daily-history-retention-delete"),
+    );
+    expect(history[dailyRetentionIndex]?.binds[0]).toBe(
       Math.floor(FIXED_NOW.getTime() / 1000) - YIELD_HISTORY_MAX_DAYS * DAY_SECONDS,
     );
     expect(handoffCleanupIndex).toBeGreaterThan(historyRetentionIndex);
@@ -509,7 +521,7 @@ describe("publishYieldCoordinatorResults", () => {
     expect(historyRows[0]?.safety_at_publish).toBe(82);
     expect(historyRows[0]?.variance_at_publish).toBe(0.2);
     expect(JSON.parse(historyRows[0]?.pys_inputs_at_publish ?? "null")).toMatchObject({
-      schemaVersion: 1,
+      schemaVersion: YIELD_PYS_INPUTS_AT_PUBLISH_SCHEMA_VERSION,
       apy30d: 4.6,
       safetyScore: 82,
       varianceScore: 0.1,
@@ -518,7 +530,76 @@ describe("publishYieldCoordinatorResults", () => {
       scoreQualification: "rated",
       benchmarkKey: "USD",
       evidenceClass: "curated-observation",
+      // A same-currency USD benchmark stores the reference rate but no re-base (B24).
+      usdBenchmarkRate: 4.2,
+      hurdleRebase: 0,
     });
+  });
+
+  it("stores the v8.43 hurdle re-base so a non-USD row replays to its published PYS", async () => {
+    const TRY_BENCHMARK_RATE = 36.86;
+    const USD_BENCHMARK_RATE = 3.95;
+    const tryBenchmark = makeBenchmarkMeta({
+      key: "TRY",
+      label: "TRY BIST TLREF",
+      currency: "TRY",
+      rate: TRY_BENCHMARK_RATE,
+      lastMarketRate: TRY_BENCHMARK_RATE,
+    });
+    // wiTRY-shaped row: 1.27pp over its own hurdle, so the v8.43 re-base (not the
+    // 25% spread slice) decides the score. Replay of the stored inputs is 44;
+    // without the stored re-base inputs the same inputs replay to 100.
+    const source = makeEvaluatedSource({
+      id: "witry-brix",
+      symbol: "wiTRY",
+      benchmarkKey: "TRY",
+      benchmarkLabel: tryBenchmark.label!,
+      benchmarkCurrency: "TRY",
+      benchmarkRate: TRY_BENCHMARK_RATE,
+      benchmarkMeta: tryBenchmark,
+      usdBenchmarkRate: USD_BENCHMARK_RATE,
+      hurdleRebase: USD_BENCHMARK_RATE - TRY_BENCHMARK_RATE,
+      currentApy: 38.13,
+      apy7d: 38.1,
+      apy30d: 38.13,
+      pharosYieldScore: 44,
+    });
+    const db = makePublicationDb(1);
+    const startSec = Math.floor(FIXED_NOW.getTime() / 1000);
+    const result = await publishYieldCoordinatorResults(
+      makePublishParams({
+        db,
+        evaluatedSources: [source],
+        bestSourceKeyByCoin: new Map([[source.id, source.sourceKey]]),
+        previewRankingsPayload: buildPayloadWithObservedAt(startSec, source),
+      }),
+    );
+    expect(result).toMatchObject({ ok: true });
+
+    const yieldHistoryInsert = db.getHistory().find((entry) => entry.sql.includes("INSERT OR IGNORE INTO yield_history"));
+    const historyRows = parseJsonBind<
+      Array<{ pys_at_publish: number | null; pys_inputs_at_publish: string }>
+    >(yieldHistoryInsert);
+    const published = historyRows[0]?.pys_at_publish;
+    expect(published).toBe(44);
+
+    const snapshot = JSON.parse(historyRows[0]?.pys_inputs_at_publish ?? "null") as YieldPysInputsAtPublish;
+    expect(snapshot.schemaVersion).toBe(YIELD_PYS_INPUTS_AT_PUBLISH_SCHEMA_VERSION);
+    expect(snapshot.benchmarkKey).toBe("TRY");
+    expect(snapshot.usdBenchmarkRate).toBe(USD_BENCHMARK_RATE);
+    expect(snapshot.hurdleRebase).toBeCloseTo(USD_BENCHMARK_RATE - TRY_BENCHMARK_RATE, 6);
+
+    const replayed = computePYS({
+      apy30d: snapshot.apy30d,
+      safetyScore: snapshot.safetyScore,
+      apyVarianceScore: snapshot.varianceScore,
+      scalingFactor: snapshot.scalingFactor,
+      benchmarkRate: snapshot.benchmarkRate,
+      benchmarkCurrency: YIELD_BENCHMARK_KEY_CURRENCY[snapshot.benchmarkKey],
+      usdBenchmarkRate: snapshot.usdBenchmarkRate ?? null,
+      sourceRiskPenalty: snapshot.sourceRiskPenalty,
+    });
+    expect(replayed).toBe(published);
   });
 
   it("classifies retention_reason as 'audit' when no switch, no anomalies, and no rejected higher-confidence source", async () => {

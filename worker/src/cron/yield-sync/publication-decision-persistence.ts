@@ -1,5 +1,8 @@
 import { logWorkerEventArgs } from "../../lib/structured-log";
-import { YieldRankingsResponseSchema } from "@shared/types/yield";
+import {
+  YIELD_PYS_INPUTS_AT_PUBLISH_SCHEMA_VERSION,
+  YieldRankingsResponseSchema,
+} from "@shared/types/yield";
 import { YIELD_METHODOLOGY_VERSION } from "@shared/lib/methodology-versions/yield-methodology";
 import { getCache, type CacheWriteResult } from "../../lib/db-cache";
 import { readCachedJson } from "../../lib/api-cache-read";
@@ -374,7 +377,7 @@ export async function persistEvaluatedYieldSources(
       pys_inputs_at_publish: safetySnapshotUnavailable
         ? null
         : JSON.stringify({
-            schemaVersion: 1,
+            schemaVersion: YIELD_PYS_INPUTS_AT_PUBLISH_SCHEMA_VERSION,
             methodologyVersion: YIELD_METHODOLOGY_VERSION,
             apy30d: source.apy30d,
             safetyScore: source.safetyScore,
@@ -385,6 +388,13 @@ export async function persistEvaluatedYieldSources(
             scoreQualification: source.scoreQualification,
             benchmarkKey: source.benchmarkKey,
             evidenceClass: source.evidenceClass,
+            // The v8.43 hurdle re-base is unrecoverable from the rest of the
+            // snapshot: the governing USD rate lives only in the payload's
+            // `riskFreeRate`, so a replay without it drifts on every non-USD row.
+            ...(source.usdBenchmarkRate != null && Number.isFinite(source.usdBenchmarkRate)
+              ? { usdBenchmarkRate: source.usdBenchmarkRate }
+              : {}),
+            ...(Number.isFinite(source.hurdleRebase) ? { hurdleRebase: source.hurdleRebase } : {}),
           }),
     });
 

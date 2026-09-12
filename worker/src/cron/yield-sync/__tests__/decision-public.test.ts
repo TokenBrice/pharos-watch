@@ -1,7 +1,8 @@
 import { describe, expect, it } from "vitest";
 import { buildPublicDecisionLedger, deriveYieldSourceRole } from "../decision-public";
+import { buildYieldPublicationViews } from "../publication-view";
 import type { EvaluatedYieldSource } from "../evaluation-types";
-import type { YieldSourceRisk } from "@shared/types/yield";
+import type { YieldSourceInputMeta, YieldSourceRisk } from "@shared/types/yield";
 
 /**
  * Audit Q-299: deriveRejectionReasonCode / deriveSelectedReasonCode produce the
@@ -58,6 +59,8 @@ function makeSource(overrides: Partial<EvaluatedYieldSource> = {}): EvaluatedYie
     benchmarkLabel: "T-Bill 3M",
     benchmarkCurrency: "USD",
     benchmarkRate: 4,
+    usdBenchmarkRate: null,
+    hurdleRebase: 0,
     benchmarkRecordDate: null,
     benchmarkIsFallback: false,
     benchmarkFallbackMode: null,
@@ -192,6 +195,38 @@ describe("deriveRejectionReasonCode (via buildPublicDecisionLedger alternatives)
       sourceRole: "audit-alternate",
       selectionRank: 3,
     });
+  });
+});
+
+describe("buildYieldPublicationViews", () => {
+  const dlPoolsMeta: YieldSourceInputMeta = {
+    mode: "dex-cache",
+    updatedAt: 1_700_000_000,
+    ageSeconds: 60,
+    poolCount: 1,
+    fallbackMode: null,
+  };
+
+  it("skips the publication view when every candidate was rejected (B13)", () => {
+    const rejectedWinner = makeSource({ sourceKey: "rejected-winner", rejected: true });
+    const skipped = buildYieldPublicationViews({
+      evaluatedSources: [rejectedWinner],
+      bestSourceKeyByCoin: new Map([[rejectedWinner.id, rejectedWinner.sourceKey]]),
+      startSec: 1_700_000_000,
+      dlPoolsMeta,
+    });
+    expect(skipped.viewsByCoinId.size).toBe(0);
+    // Provenance is still recorded for every evaluated source.
+    expect(skipped.provenanceByKey.size).toBe(1);
+
+    const winner = makeSource({ sourceKey: "winner" });
+    const published = buildYieldPublicationViews({
+      evaluatedSources: [winner],
+      bestSourceKeyByCoin: new Map([[winner.id, winner.sourceKey]]),
+      startSec: 1_700_000_000,
+      dlPoolsMeta,
+    });
+    expect(published.viewsByCoinId.get("coin")?.selected.sourceKey).toBe("winner");
   });
 });
 

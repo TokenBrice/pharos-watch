@@ -37,6 +37,9 @@ describe("syncYieldData publication sentinels", () => {
     const db = makeDb();
     installYieldCacheReader(vi.mocked(fixtureGetCache), {
       "yield-rankings": null,
+      // Scoring evidence: the curated row is only publishable while the USD
+      // benchmark entry it scores against is fresh.
+      risk_free_rate: cacheRow("5.0", nowSec),
       "dl-stablecoin-pools": cacheRow(buildDlStablecoinPoolsCache([
         makeDlYieldPool({ apy: 6.5, apyBase: 6.5, apyMean30d: 6.3 }),
       ], nowSec), nowSec),

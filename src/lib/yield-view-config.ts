@@ -197,7 +197,7 @@ export const YIELD_RISK_BUDGET_SPECS: readonly YieldRiskBudgetSpec[] = [
   {
     key: "balanced",
     label: "Balanced",
-    description: "B- safety, clean/watch sources, hide thin venues, hide warnings",
+    description: "B safety, clean/watch sources, hide thin venues, hide warnings",
     overrides: {
       minSafety: YIELD_RISK_BUDGET_MIN_SAFETY.balanced,
       depth: "hide-thin",
@@ -208,7 +208,7 @@ export const YIELD_RISK_BUDGET_SPECS: readonly YieldRiskBudgetSpec[] = [
   {
     key: "opportunistic",
     label: "Opportunistic",
-    description: "C+ safety, all source postures, hide warnings",
+    description: "C- safety, all source postures, hide warnings",
     overrides: {
       minSafety: YIELD_RISK_BUDGET_MIN_SAFETY.opportunistic,
       warnings: "hide",
