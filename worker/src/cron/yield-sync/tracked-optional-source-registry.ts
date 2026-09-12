@@ -85,12 +85,16 @@ async function loadNavOracleAnchorRow(
     .first<OracleAnchorRow>();
   if (rawRow) return rawRow;
 
-  // Raw history keeps `YIELD_HISTORY_RAW_DAYS` (30), but these NAV-oracle anchors
-  // deliberately look back up to 45 days, so the 30–45 day band now exists only
-  // in the daily tier. Reading it here keeps the documented long-horizon anchor
-  // window satisfiable instead of silently narrowing it to the raw retention
-  // window — which would strand a sparsely-updating NAV oracle (Midas has no
-  // shorter-window fallback, unlike Ondo) once the band is pruned.
+  // Raw history keeps `YIELD_HISTORY_RAW_DAYS` (30) while these NAV-oracle
+  // anchors allow a lookback of up to 45 days. `maxAgeDays` is a floor, not a
+  // requirement — the query takes the newest row past the min-age bound, which
+  // for Midas is normally ~7 days old and comfortably inside raw retention — so
+  // this fallback only matters when the newest qualifying observation sits
+  // outside the raw window (a publication gap longer than the raw policy). It
+  // exists because Midas has no shorter-window retry (Ondo retries at 3/14
+  // days), so without it such a gap would stop the source resolving silently
+  // rather than degrading. `yield_history_daily` keeps a year and carries the
+  // same `exchange_rate`/`publication_state` columns.
   return db
     .prepare(
       `SELECT /* pharos:yield-sync:nav-oracle-prior-anchor-daily */
