@@ -129,20 +129,15 @@ async function fetchPriorWarningSignals(
     const inClause = buildInClause(chunk);
     const rows = await db
       .prepare(
-        `SELECT stablecoin_id, warning_signals
-           FROM (
-             SELECT stablecoin_id,
-                    warning_signals,
-                    ROW_NUMBER() OVER (
-                      PARTITION BY stablecoin_id
-                      ORDER BY recorded_at DESC, source_key DESC
-                    ) AS rn
-               FROM yield_history
-              WHERE stablecoin_id IN (${inClause.sql})
-                AND is_best = 1
-                AND recorded_at <= ?
-           )
-          WHERE rn = 1`,
+        `SELECT c.stablecoin_id,
+                (SELECT h.warning_signals
+                   FROM yield_history h
+                  WHERE h.stablecoin_id = c.stablecoin_id
+                    AND h.is_best = 1
+                    AND h.recorded_at <= ?
+                  ORDER BY h.recorded_at DESC, h.source_key DESC
+                  LIMIT 1) AS warning_signals
+           FROM (SELECT DISTINCT stablecoin_id FROM yield_history WHERE stablecoin_id IN (${inClause.sql})) c`,
       )
       .bind(...inClause.binds, since)
       .all<{ stablecoin_id: string; warning_signals: string | null }>();
@@ -282,19 +277,14 @@ async function fetchPriorPysScores(
     const inClause = buildInClause(chunk);
     const rows = await db
       .prepare(
-        `SELECT stablecoin_id, selected_score
-           FROM (
-             SELECT stablecoin_id,
-                    selected_score,
-                    ROW_NUMBER() OVER (
-                      PARTITION BY stablecoin_id
-                      ORDER BY created_at DESC, generation_id DESC
-                    ) AS rn
-               FROM yield_source_decisions
-              WHERE stablecoin_id IN (${inClause.sql})
-                AND created_at <= ?
-           )
-          WHERE rn = 1`,
+        `SELECT c.stablecoin_id,
+                (SELECT d.selected_score
+                   FROM yield_source_decisions d
+                  WHERE d.stablecoin_id = c.stablecoin_id
+                    AND d.created_at <= ?
+                  ORDER BY d.created_at DESC, d.generation_id DESC
+                  LIMIT 1) AS selected_score
+           FROM (SELECT DISTINCT stablecoin_id FROM yield_source_decisions WHERE stablecoin_id IN (${inClause.sql})) c`,
       )
       .bind(...inClause.binds, since)
       .all<{ stablecoin_id: string; selected_score: number | null }>();

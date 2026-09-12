@@ -14,6 +14,9 @@ const STALE_YIELD_DELETE_FIXED_BIND_COUNT = 1;
 const YIELD_HISTORY_LOAD_CHUNK_SIZE = 30;
 export const MAX_PREVIOUS_TVL_HISTORY_ROWS = 5_000;
 
+const OWNERSHIP_HANDOFF_DELETE_CHUNK_ROWS = 5_000;
+const OWNERSHIP_HANDOFF_DELETE_MAX_ROWS_PER_RUN = 250_000;
+
 function getStaleYieldDeleteChunkSize(frozenIdCount: number): number {
   return Math.max(
     1,
@@ -25,17 +28,29 @@ function getStaleYieldDeleteChunkSize(frozenIdCount: number): number {
 }
 
 export async function purgeYieldHistoryOwnershipHandoffs(db: D1Database): Promise<void> {
+  let remainingBudget = OWNERSHIP_HANDOFF_DELETE_MAX_ROWS_PER_RUN;
   for (const [stablecoinId, sourceKeys] of Object.entries(YIELD_HISTORY_OWNERSHIP_HANDOFFS)) {
     const inClause = buildInClause(sourceKeys);
-    await db
-      .prepare(
-        `/* pharos:yield-sync:ownership-handoff-delete */
-         DELETE FROM yield_history
-         WHERE stablecoin_id = ?
-           AND (source_key IS NULL OR source_key = ? OR source_key IN (${inClause.sql}))`,
-      )
-      .bind(stablecoinId, LEGACY_BEST_YIELD_SOURCE_KEY, ...inClause.binds)
-      .run();
+    while (remainingBudget > 0) {
+      const chunkRows = Math.min(OWNERSHIP_HANDOFF_DELETE_CHUNK_ROWS, remainingBudget);
+      const result = await db
+        .prepare(
+          `/* pharos:yield-sync:ownership-handoff-delete */
+           DELETE FROM yield_history
+           WHERE rowid IN (
+             SELECT rowid
+               FROM yield_history
+              WHERE stablecoin_id = ?
+                AND (source_key IS NULL OR source_key = ? OR source_key IN (${inClause.sql}))
+              LIMIT ?
+           )`,
+        )
+        .bind(stablecoinId, LEGACY_BEST_YIELD_SOURCE_KEY, ...inClause.binds, chunkRows)
+        .run();
+      const changed = Number(result.meta?.changes ?? 0);
+      if (!Number.isFinite(changed) || changed <= 0) break;
+      remainingBudget -= changed;
+    }
     // materializeYieldHistoryDaily copies handed-off rows into the daily tier
     // before this purge runs, so the same key set must be deleted there too or
     // de-registering a handoff re-exposes a year of suppressed rows.
@@ -44,7 +59,7 @@ export async function purgeYieldHistoryOwnershipHandoffs(db: D1Database): Promis
         `/* pharos:yield-sync:ownership-handoff-daily-delete */
          DELETE FROM yield_history_daily
          WHERE stablecoin_id = ?
-           AND (source_key IS NULL OR source_key = ? OR source_key IN (${inClause.sql}))`,
+           AND (source_key = ? OR source_key IN (${inClause.sql}))`,
       )
       .bind(stablecoinId, LEGACY_BEST_YIELD_SOURCE_KEY, ...inClause.binds)
       .run();

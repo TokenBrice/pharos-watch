@@ -36,6 +36,53 @@ export type {
  *  preserved beyond this window for long-running analytics. */
 const AUDIT_DECISION_RETENTION_DAYS = 30;
 
+const DECISION_RETENTION_DELETE_PREDICATE = `(
+             retention_reason = 'audit'
+             OR (
+               retention_reason IS NULL
+               AND COALESCE(source_switch, 0) != 1
+               AND NOT EXISTS (
+                 SELECT 1
+                 FROM json_each(
+                   CASE
+                     WHEN json_valid(yield_source_decisions.alternatives_json)
+                     THEN yield_source_decisions.alternatives_json
+                     ELSE '[]'
+                   END
+                 ) AS alternative
+                 WHERE CASE
+                   WHEN json_valid(alternative.value) AND json_type(alternative.value, '$.anomalies') = 'array'
+                   THEN COALESCE(json_array_length(json_extract(alternative.value, '$.anomalies')), 0)
+                   ELSE 0
+                 END > 0
+                   OR (
+                     json_valid(alternative.value)
+                     AND
+                     json_extract(alternative.value, '$.rejected') = 1
+                     AND CASE json_extract(alternative.value, '$.confidenceTier')
+                       WHEN 'deterministic' THEN 4
+                       WHEN 'curated' THEN 3
+                       WHEN 'discovered' THEN 2
+                       ELSE 1
+                     END > CASE selected_confidence_tier
+                       WHEN 'deterministic' THEN 4
+                       WHEN 'curated' THEN 3
+                       WHEN 'discovered' THEN 2
+                       ELSE 1
+                     END
+                   )
+               )
+             )
+           )`;
+/**
+ * Keep a 90-day completed-generation history for operational incident review.
+ * publication-contract.ts only reads the newest attempted, published, and
+ * failed generations (and derives candidate age from the newest attempt); the
+ * prune protects those rows explicitly, including the current staged/published
+ * generation, so this window does not change the contract's lookback.
+ */
+const YIELD_PUBLICATION_GENERATION_RETENTION_DAYS = 90;
+
 export async function materializeYieldHistoryDaily(
   db: D1Database,
   startSec: number,
@@ -98,7 +145,10 @@ export async function materializeYieldHistoryDaily(
  * same coin has published the linked identity cleanly in two consecutive
  * generations. This prevents a one-off winner change from rewriting evidence.
  */
-export async function cleanupFalseLinkedVariantSourceSwitches(db: D1Database): Promise<number> {
+export async function cleanupFalseLinkedVariantSourceSwitches(
+  db: D1Database,
+  startSec = 0,
+): Promise<number> {
   const result = await db
     .prepare(
         `WITH ranked_linked_generations AS (
@@ -112,6 +162,7 @@ export async function cleanupFalseLinkedVariantSourceSwitches(db: D1Database): P
                ON g.generation_id = d.generation_id
               AND g.state = 'published'
             WHERE d.selected_source_key LIKE 'linked-variant:%'
+              AND d.created_at >= ?
          ), verified_clean_identities AS (
            SELECT stablecoin_id
              FROM ranked_linked_generations
@@ -128,6 +179,7 @@ export async function cleanupFalseLinkedVariantSourceSwitches(db: D1Database): P
             AND previous_best_source_key = 'onchain:' || stablecoin_id
             AND stablecoin_id IN (SELECT stablecoin_id FROM verified_clean_identities)`,
     )
+    .bind(startSec - 7 * DAY_SECONDS)
     .run();
   return result.meta?.changes ?? 0;
 }
@@ -162,8 +214,11 @@ const RETENTION_DELETE_MAX_ROWS_PER_RUN = 250_000;
  * Delete every row of `table` older than `cutoffSec` (by `timeColumn`), in
  * bounded statements, so a large backlog drains across runs instead of failing
  * one. `rowid` is used for the chunk selection because every retention table is
- * a plain rowid table; both tables index their time column, so each bounded
- * statement is an index range scan rather than a full scan.
+ * a plain rowid table; each retention table indexes its time column, so each
+ * bounded statement is an index range scan rather than a full scan.
+ *
+ * `eligibilityClause` adds a static predicate to the bounded selection for
+ * tables whose rows need additional retention guards.
  *
  * Exported with an explicit `maxRows` budget: the production default is
  * {@link RETENTION_DELETE_MAX_ROWS_PER_RUN}, and a smaller budget exercises the
@@ -171,15 +226,25 @@ const RETENTION_DELETE_MAX_ROWS_PER_RUN = 250_000;
  */
 export async function drainRowsBeforeCutoff(params: {
   db: D1Database;
-  table: "yield_history" | "yield_history_daily";
+  table: "yield_history" | "yield_history_daily" | "yield_source_decision_alternatives";
   statementTag: string;
   timeColumn: "recorded_at" | "snapshot_date";
   cutoffSec: number;
   frozenIdsList: number[] | string[];
   frozenClause: string;
+  eligibilityClause?: string;
   maxRows?: number;
 }): Promise<{ deleted: number; budgetExhausted: boolean }> {
-  const { db, table, statementTag, timeColumn, cutoffSec, frozenIdsList, frozenClause } = params;
+  const {
+    db,
+    table,
+    statementTag,
+    timeColumn,
+    cutoffSec,
+    frozenIdsList,
+    frozenClause,
+    eligibilityClause = "",
+  } = params;
   const perRunBudget = Math.max(
     RETENTION_DELETE_CHUNK_ROWS,
     params.maxRows ?? RETENTION_DELETE_MAX_ROWS_PER_RUN,
@@ -195,7 +260,7 @@ export async function drainRowsBeforeCutoff(params: {
          DELETE FROM ${table}
           WHERE rowid IN (
             SELECT rowid FROM ${table}
-             WHERE ${timeColumn} < ? ${frozenClause}
+             WHERE ${timeColumn} < ? ${frozenClause}${eligibilityClause}
              ORDER BY ${timeColumn} ASC
              LIMIT ?
           )`,
@@ -218,6 +283,95 @@ export async function drainRowsBeforeCutoff(params: {
       event: "yield-history-retention-drain-continues",
       message: `Retention drain for ${table} hit its per-run row budget; the remainder continues on the next publication run.`,
       metadata: { table, deleted, budget: perRunBudget },
+    });
+  }
+  return { deleted, budgetExhausted };
+}
+
+/**
+ * Delete audit-only decision rows in bounded, predicate-first chunks. The
+ * candidate query must apply the full retention predicate before LIMIT so
+ * trend-tagged keeper rows cannot consume the chunk and make progress appear
+ * short.
+ */
+export async function drainDecisionRowsBeforeCutoff(params: {
+  db: D1Database;
+  cutoffSec: number;
+  maxRows?: number;
+}): Promise<{ deleted: number; budgetExhausted: boolean }> {
+  const { db, cutoffSec } = params;
+  const perRunBudget = Math.max(
+    RETENTION_DELETE_CHUNK_ROWS,
+    params.maxRows ?? RETENTION_DELETE_MAX_ROWS_PER_RUN,
+  );
+  let remainingBudget = perRunBudget;
+  let deleted = 0;
+  let cursorCreatedAt: number | null = null;
+  let cursorRowId: number | null = null;
+
+  while (remainingBudget > 0) {
+    const chunkRows = Math.min(RETENTION_DELETE_CHUNK_ROWS, remainingBudget);
+    const cursorClause: string =
+      cursorCreatedAt == null
+        ? ""
+        : "AND (created_at > ? OR (created_at = ? AND rowid > ?))";
+    const cursorBinds: number[] =
+      cursorCreatedAt == null ? [] : [cursorCreatedAt, cursorCreatedAt, cursorRowId as number];
+    const candidates: D1Result<{ rowid: number; created_at: number }> = await db
+      .prepare(
+        `/* pharos:yield-sync:decision-retention-delete-candidates */
+         SELECT rowid, created_at
+           FROM yield_source_decisions
+          WHERE created_at < ?
+            AND ${DECISION_RETENTION_DELETE_PREDICATE}
+            ${cursorClause}
+          ORDER BY created_at ASC, rowid ASC
+          LIMIT ?`,
+      )
+      .bind(cutoffSec, ...cursorBinds, chunkRows)
+      .all<{ rowid: number; created_at: number }>();
+    const candidateRows: Array<{ rowid: number; created_at: number }> = candidates.results ?? [];
+    if (candidateRows.length === 0) break;
+
+    const lastCandidate: { rowid: number; created_at: number } =
+      candidateRows[candidateRows.length - 1]!;
+    const lastCreatedAt: number = Number(lastCandidate.created_at);
+    const lastRowId: number = Number(lastCandidate.rowid);
+    if (!Number.isFinite(lastCreatedAt) || !Number.isFinite(lastRowId)) break;
+
+    const result = await db
+      .prepare(
+        `/* pharos:yield-sync:decision-retention-delete */
+         DELETE FROM yield_source_decisions
+          WHERE rowid IN (
+            SELECT rowid
+              FROM yield_source_decisions
+             WHERE created_at < ?
+               AND ${DECISION_RETENTION_DELETE_PREDICATE}
+               ${cursorClause}
+             ORDER BY created_at ASC, rowid ASC
+             LIMIT ?
+          )`,
+      )
+      .bind(cutoffSec, ...cursorBinds, chunkRows)
+      .run();
+    const changed = Number(result.meta?.changes ?? 0);
+    if (!Number.isFinite(changed) || changed <= 0) break;
+    deleted += changed;
+    remainingBudget -= changed;
+    cursorCreatedAt = lastCreatedAt;
+    cursorRowId = lastRowId;
+  }
+
+  const budgetExhausted = remainingBudget <= 0 && deleted >= perRunBudget;
+  if (budgetExhausted) {
+    logWorkerEvent({
+      scope: "handler",
+      level: "info",
+      event: "yield-history-retention-drain-continues",
+      message:
+        "Retention drain for yield_source_decisions hit its per-run row budget; the remainder continues on the next publication run.",
+      metadata: { table: "yield_source_decisions", deleted, budget: perRunBudget },
     });
   }
   return { deleted, budgetExhausted };
@@ -291,66 +445,62 @@ async function pruneYieldTablesOnce(
   });
 
   if (allowDestructiveCleanup) {
-    await cleanupFalseLinkedVariantSourceSwitches(db);
+    await cleanupFalseLinkedVariantSourceSwitches(db, startSec);
     const auditCutoffSec = startSec - AUDIT_DECISION_RETENTION_DAYS * DAY_SECONDS;
+    await drainDecisionRowsBeforeCutoff({ db, cutoffSec: auditCutoffSec });
+    await drainRowsBeforeCutoff({
+      db,
+      table: "yield_source_decision_alternatives",
+      statementTag: "decision-alternatives-retention-delete",
+      timeColumn: "recorded_at",
+      cutoffSec: auditCutoffSec,
+      frozenIdsList: [],
+      frozenClause: "",
+      eligibilityClause: `
+        AND NOT EXISTS (
+          SELECT 1 FROM yield_source_decisions d
+          WHERE d.generation_id = yield_source_decision_alternatives.generation_id
+            AND d.stablecoin_id = yield_source_decision_alternatives.stablecoin_id
+        )`,
+    });
+    const generationCutoffSec =
+      startSec - YIELD_PUBLICATION_GENERATION_RETENTION_DAYS * DAY_SECONDS;
     await db
       .prepare(
-        `/* pharos:yield-sync:decision-retention-delete */
-         DELETE FROM yield_source_decisions
-         WHERE created_at < ?
-           AND (
-             retention_reason = 'audit'
-             OR (
-               retention_reason IS NULL
-               AND COALESCE(source_switch, 0) != 1
-               AND NOT EXISTS (
-                 SELECT 1
-                 FROM json_each(
-                   CASE
-                     WHEN json_valid(yield_source_decisions.alternatives_json)
-                     THEN yield_source_decisions.alternatives_json
-                     ELSE '[]'
-                   END
-                 ) AS alternative
-                 WHERE CASE
-                   WHEN json_valid(alternative.value) AND json_type(alternative.value, '$.anomalies') = 'array'
-                   THEN COALESCE(json_array_length(json_extract(alternative.value, '$.anomalies')), 0)
-                   ELSE 0
-                 END > 0
-                   OR (
-                     json_valid(alternative.value)
-                     AND
-                     json_extract(alternative.value, '$.rejected') = 1
-                     AND CASE json_extract(alternative.value, '$.confidenceTier')
-                       WHEN 'deterministic' THEN 4
-                       WHEN 'curated' THEN 3
-                       WHEN 'discovered' THEN 2
-                       ELSE 1
-                     END > CASE selected_confidence_tier
-                       WHEN 'deterministic' THEN 4
-                       WHEN 'curated' THEN 3
-                       WHEN 'discovered' THEN 2
-                       ELSE 1
-                     END
-                   )
-               )
+        `/* pharos:yield-sync:publication-generation-retention-delete */
+         WITH protected_generations AS (
+           SELECT generation_id
+             FROM (
+               SELECT generation_id
+                 FROM yield_publication_generations
+                ORDER BY started_at DESC
+                LIMIT 1
              )
-           )`,
+           UNION
+           SELECT generation_id
+             FROM (
+               SELECT generation_id
+                 FROM yield_publication_generations
+                WHERE state = 'published'
+                ORDER BY COALESCE(published_at, started_at) DESC, started_at DESC
+                LIMIT 1
+             )
+           UNION
+           SELECT generation_id
+             FROM (
+               SELECT generation_id
+                 FROM yield_publication_generations
+                WHERE state = 'failed'
+                ORDER BY COALESCE(failed_at, started_at) DESC, started_at DESC
+                LIMIT 1
+             )
+         )
+         DELETE FROM yield_publication_generations
+          WHERE state IN ('published', 'failed')
+            AND COALESCE(published_at, failed_at, started_at) < ?
+            AND generation_id NOT IN (SELECT generation_id FROM protected_generations)`,
       )
-      .bind(auditCutoffSec)
-      .run();
-    await db
-      .prepare(
-        `/* pharos:yield-sync:decision-alternatives-retention-delete */
-         DELETE FROM yield_source_decision_alternatives
-         WHERE recorded_at < ?
-           AND NOT EXISTS (
-             SELECT 1 FROM yield_source_decisions d
-             WHERE d.generation_id = yield_source_decision_alternatives.generation_id
-               AND d.stablecoin_id = yield_source_decision_alternatives.stablecoin_id
-           )`,
-      )
-      .bind(auditCutoffSec)
+      .bind(generationCutoffSec)
       .run();
     await purgeYieldHistoryOwnershipHandoffs(db);
   }

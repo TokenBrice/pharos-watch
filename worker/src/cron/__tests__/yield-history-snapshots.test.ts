@@ -11,7 +11,12 @@ import {
   MAX_PREVIOUS_TVL_HISTORY_ROWS,
   purgeYieldHistoryOwnershipHandoffs,
 } from "../yield-sync/history";
-import { drainRowsBeforeCutoff, pruneYieldTables } from "../yield-sync/publication";
+import {
+  cleanupFalseLinkedVariantSourceSwitches,
+  drainDecisionRowsBeforeCutoff,
+  drainRowsBeforeCutoff,
+  pruneYieldTables,
+} from "../yield-sync/publication";
 
 function createDb(): { sqlite: DatabaseSync; db: D1Database } {
   return createLatestSchemaSqlite();
@@ -259,6 +264,75 @@ describe("loadYieldHistorySnapshots", () => {
   });
 });
 
+describe("cleanupFalseLinkedVariantSourceSwitches", () => {
+  let sqlite: DatabaseSync | null = null;
+
+  afterEach(() => {
+    sqlite?.close();
+    sqlite = null;
+  });
+
+  it("uses only the seven-day clean-generation window for reclassification", async () => {
+    const fixture = createDb();
+    sqlite = fixture.sqlite;
+    const startSec = 1_800_000_000;
+    const floorSec = startSec - 7 * DAY_SECONDS;
+    const linkedKey = "linked-variant:child:onchain:child";
+    const insertGeneration = sqlite.prepare(
+      `INSERT INTO yield_publication_generations (generation_id, started_at, state, created_at)
+       VALUES (?, ?, 'published', ?)`,
+    );
+    const insertDecision = sqlite.prepare(
+      `INSERT INTO yield_source_decisions (
+         generation_id, stablecoin_id, selected_source_key, selected_confidence_tier,
+         selected_data_source, selected_apy_30d, selected_reason,
+         previous_best_source_key, source_switch, alternatives_json, created_at, retention_reason
+       ) VALUES (?, ?, ?, 'curated', 'test', 4.2, 'test', ?, ?, '[]', ?, ?)`,
+    );
+    const addDecision = (
+      generationId: string,
+      stablecoinId: string,
+      previousBestSourceKey: string,
+      sourceSwitch: number,
+      createdAt: number,
+      retentionReason: string,
+    ) => {
+      insertGeneration.run(generationId, createdAt, createdAt);
+      insertDecision.run(
+        generationId,
+        stablecoinId,
+        linkedKey,
+        previousBestSourceKey,
+        sourceSwitch,
+        createdAt,
+        retentionReason,
+      );
+    };
+
+    addDecision("in-false", "coin-in", "onchain:coin-in", 1, floorSec + 100, "trend");
+    addDecision("in-clean-1", "coin-in", linkedKey, 0, floorSec + 200, "audit");
+    addDecision("in-clean-2", "coin-in", linkedKey, 0, floorSec + 300, "audit");
+    addDecision("out-old-clean", "coin-out", linkedKey, 0, floorSec - 200, "audit");
+    addDecision("out-false", "coin-out", "onchain:coin-out", 1, floorSec - 100, "trend");
+    addDecision("out-clean-1", "coin-out", linkedKey, 0, floorSec + 400, "audit");
+
+    expect(await cleanupFalseLinkedVariantSourceSwitches(fixture.db, startSec)).toBe(1);
+    expect(
+      sqlite
+        .prepare(
+          `SELECT generation_id, source_switch, retention_reason
+             FROM yield_source_decisions
+            WHERE generation_id IN ('in-false', 'out-false')
+            ORDER BY generation_id`,
+        )
+        .all(),
+    ).toEqual([
+      { generation_id: "in-false", source_switch: 0, retention_reason: "audit" },
+      { generation_id: "out-false", source_switch: 1, retention_reason: "trend" },
+    ]);
+  });
+});
+
 describe("purgeYieldHistoryOwnershipHandoffs", () => {
   let sqlite: DatabaseSync | null = null;
 
@@ -397,5 +471,56 @@ describe("pruneYieldTables retention", () => {
     expect(third.deleted).toBe(2_000);
     expect(third.budgetExhausted).toBe(false);
     expect(countRows()).toBe(0);
+  });
+  it("bounds decision retention by eligible rows while preserving trend keepers", async () => {
+    const fixture = createDb();
+    sqlite = fixture.sqlite;
+    const nowSec = 1_800_000_000;
+    const cutoffSec = nowSec - 30 * DAY_SECONDS;
+    const keeperCount = 4_280;
+    const eligibleCount = 6_000;
+    const insertDecision = sqlite.prepare(
+      `INSERT INTO yield_source_decisions (
+         generation_id, stablecoin_id, selected_source_key, selected_confidence_tier,
+         selected_data_source, selected_apy_30d, selected_reason,
+         source_switch, alternatives_json, created_at, retention_reason
+       ) VALUES (?, 'keeper-coin', 'source', 'curated', 'test', 4.2, 'test', 0, '[]', ?, ?)`,
+    );
+    const firstCreatedAt = cutoffSec - keeperCount - eligibleCount - 10;
+    for (let index = 0; index < keeperCount; index += 1) {
+      insertDecision.run(`keeper-${index}`, firstCreatedAt + index, "trend");
+    }
+    for (let index = 0; index < eligibleCount; index += 1) {
+      insertDecision.run(`eligible-${index}`, firstCreatedAt + keeperCount + index, "audit");
+    }
+
+    const first = await drainDecisionRowsBeforeCutoff({
+      db: fixture.db,
+      cutoffSec,
+      maxRows: 5_000,
+    });
+    expect(first).toEqual({ deleted: 5_000, budgetExhausted: true });
+    expect(
+      sqlite
+        .prepare(
+          "SELECT retention_reason, COUNT(*) AS count FROM yield_source_decisions GROUP BY retention_reason ORDER BY retention_reason",
+        )
+        .all(),
+    ).toEqual([
+      { retention_reason: "audit", count: 1_000 },
+      { retention_reason: "trend", count: keeperCount },
+    ]);
+
+    const second = await drainDecisionRowsBeforeCutoff({
+      db: fixture.db,
+      cutoffSec,
+      maxRows: 5_000,
+    });
+    expect(second).toEqual({ deleted: 1_000, budgetExhausted: false });
+    expect(
+      sqlite
+        .prepare("SELECT retention_reason, COUNT(*) AS count FROM yield_source_decisions GROUP BY retention_reason")
+        .all(),
+    ).toEqual([{ retention_reason: "trend", count: keeperCount }]);
   });
 });

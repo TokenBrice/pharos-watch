@@ -9,9 +9,9 @@ const SEC = 1_700_000_000;
 // raw SQL emitted by the projector, so each pattern only has to be unique
 // enough to disambiguate the projector's two queries.
 const MATCH_FETCH_HISTORY = "is_best = 1 AND recorded_at > ?";
-const MATCH_PRIOR_HISTORY = "recorded_at DESC, source_key DESC";
+const MATCH_PRIOR_HISTORY = "SELECT DISTINCT stablecoin_id FROM yield_history";
 const MATCH_FETCH_DECISIONS = "WHERE created_at > ?";
-const MATCH_PRIOR_DECISIONS = "created_at DESC, generation_id DESC";
+const MATCH_PRIOR_DECISIONS = "SELECT DISTINCT stablecoin_id FROM yield_source_decisions";
 const MATCH_CACHE = "FROM cache WHERE key";
 
 // Seed the watermark cache so `since > 0`; the prior-row lookup is guarded
@@ -229,6 +229,40 @@ describe("yield.warning_emitted projector", () => {
     expect(result.advanced).toBe(SEC);
     expect(tapeInsertBindsForType(db, "yield.warning_emitted")).toHaveLength(3);
   });
+  it("uses source_key DESC to choose the prior row at a shared timestamp", async () => {
+    const db = mockTapeD1(
+      historyTables(
+        [
+          {
+            stablecoin_id: "usdt-tether",
+            source_key: "a-source",
+            recorded_at: SEC + 900,
+            warning_signals: JSON.stringify(["existing", "new-signal"]),
+          },
+        ],
+        [
+          // Both candidates are at the cursor boundary; z-source is the C21 winner.
+          { source_key: "a-source", recorded_at: SEC - 1, warning_signals: JSON.stringify(["loser"]) },
+          { source_key: "z-source", recorded_at: SEC - 1, warning_signals: JSON.stringify(["existing"]) },
+        ],
+      ),
+    ) as MockD1Database;
+
+    await projectYieldWarningEmitted(db);
+    const inserts = tapeInsertBindsForType(db, "yield.warning_emitted");
+    expect(inserts).toHaveLength(1);
+    const payload = JSON.parse(String(inserts[0]![11])) as {
+      prevSignals: string[];
+      newSignals: string[];
+    };
+    expect(payload.prevSignals).toEqual(["existing"]);
+    expect(payload.newSignals).toEqual(["new-signal"]);
+
+    const priorQuery = db.getHistory().find((entry) => entry.sql.includes(MATCH_PRIOR_HISTORY));
+    expect(priorQuery?.sql).toContain("ORDER BY h.recorded_at DESC, h.source_key DESC");
+    expect(priorQuery?.sql).toContain("LIMIT 1");
+  });
+
 });
 
 describe("yield.pys_dropped projector", () => {
@@ -372,6 +406,40 @@ describe("yield.pys_dropped projector", () => {
     const result = await projectYieldPysDropped(db);
     expect(result.projected).toBe(0);
     expect(tapeInsertBindsForType(db, "yield.pys_dropped")).toHaveLength(0);
+  });
+
+  it("uses generation_id DESC to choose the prior row at a shared timestamp", async () => {
+    const db = mockTapeD1(
+      decisionTables(
+        [
+          {
+            stablecoin_id: "usdt-tether",
+            selected_source_key: "aave-v3:usdt",
+            selected_score: 80,
+            created_at: SEC + 900,
+          },
+        ],
+        [
+          // Both candidates are at the cursor boundary; generation-2 is the C21 winner.
+          { generation_id: "generation-1", created_at: SEC - 1, selected_score: 80 },
+          { generation_id: "generation-2", created_at: SEC - 1, selected_score: 95 },
+        ],
+      ),
+    ) as MockD1Database;
+
+    await projectYieldPysDropped(db);
+    const inserts = tapeInsertBindsForType(db, "yield.pys_dropped");
+    expect(inserts).toHaveLength(1);
+    const payload = JSON.parse(String(inserts[0]![11])) as {
+      prevScore: number;
+      newScore: number;
+    };
+    expect(payload.prevScore).toBe(95);
+    expect(payload.newScore).toBe(80);
+
+    const priorQuery = db.getHistory().find((entry) => entry.sql.includes(MATCH_PRIOR_DECISIONS));
+    expect(priorQuery?.sql).toContain("ORDER BY d.created_at DESC, d.generation_id DESC");
+    expect(priorQuery?.sql).toContain("LIMIT 1");
   });
 
   it("prints a drop whose endpoints and delta agree after rounding", async () => {

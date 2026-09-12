@@ -262,7 +262,14 @@ export function makeYieldHistoryRow(
  * of re-declaring the matcher.
  */
 export function yieldSyncPruneTableMatches(): MockTableConfig[] {
-  return [{ match: "pharos:yield-sync:abandoned-staged-generation-finalize", rows: [] }];
+  return [
+    { match: "pharos:yield-sync:abandoned-staged-generation-finalize", rows: [] },
+    // D1 audit follow-up: the generation-retention prune (0240 window) and the
+    // predicate-first decision-retention candidate read both run on every
+    // publication, so a suite without a matcher fails the whole sync.
+    { match: "pharos:yield-sync:publication-generation-retention-delete", rows: [] },
+    { match: "pharos:yield-sync:decision-retention-delete-candidates", rows: [] },
+  ];
 }
 
 /** `mockD1` with the always-issued yield prune matchers appended to a custom list. */
