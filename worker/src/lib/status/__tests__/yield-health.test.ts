@@ -791,12 +791,14 @@ describe("loadYieldHealthSummary", () => {
     );
 
     expect(summary.sourceRiskCoverage).toMatchObject({ totalRows: 270, bestRows: 157, altRows: 113 });
-    // 64 derivation-method rows have no venue, so they leave the depth denominator.
+    // 64 derivation-method rows have no venue at all, and a further 34 sit on the
+    // issuer's own rail (`native-wrapper`/`issuer-savings`), so both leave the
+    // depth denominator.
     expect(summary.sourceRiskCoverage.fields.sourceDepthRatio).toMatchObject({
-      eligibleCount: 206,
-      populatedCount: 199,
-      ineligibleCount: 64,
-      coverageRatio: 0.966,
+      eligibleCount: 172,
+      populatedCount: 172,
+      ineligibleCount: 98,
+      coverageRatio: 1,
     });
     // 98 rows publish one undivided rate, so they leave the reward denominator.
     expect(summary.sourceRiskCoverage.fields.rewardShare).toMatchObject({
@@ -805,11 +807,57 @@ describe("loadYieldHealthSummary", () => {
       coverageRatio: 1,
     });
     expect(summary.sourceRiskCoverage.fields.venueRiskTier).toMatchObject({
-      eligibleCount: 206,
-      bestEligibleCount: 93,
-      altEligibleCount: 113,
+      eligibleCount: 172,
       coverageRatio: 0,
     });
+  });
+
+  it("excludes issuer-native rails from the venue-tier denominator", async () => {
+    // Live shape: 81 of 266 published rows sit on the issuer's own rail
+    // (`native-wrapper` / `issuer-savings`) — Sky sUSDS, Ethena sUSDe,
+    // Circle/Hashnote USYC, BlackRock BUIDL, Liquity Stability Pools and the
+    // rest. None can carry an independent venue tier, so counting them pinned
+    // the tile at 0.718 and made healthy unreachable. The third-party venue
+    // stays in the denominator.
+    const summary = await loadYieldHealthSummary(
+      makeDb([
+        yieldCacheRow("yield-rankings", NOW - 300, {
+          updatedAt: NOW - 300,
+          rankings: [
+            {
+              id: "issuer-rail",
+              dataSource: "onchain",
+              apyBase: 4,
+              apyReward: null,
+              sourceRisk: { sourceRiskPenalty: 1, sourceAgeSeconds: 60, observationCount30d: 4, deploymentPlace: "native-wrapper" },
+            },
+            {
+              id: "third-party-venue",
+              dataSource: "defillama",
+              apyBase: 4,
+              apyReward: null,
+              sourceRisk: {
+                sourceRiskPenalty: 1,
+                sourceAgeSeconds: 60,
+                observationCount30d: 4,
+                deploymentPlace: "lending-market",
+                venueRiskTier: "low",
+              },
+            },
+          ],
+          provenance: healthyYieldProvenance(NOW, 2),
+        }),
+        ...supplementalFamilyRows(NOW - 3600),
+        yieldCacheRow("yield-coverage-audit", NOW - 86400, emptyYieldAudit()),
+      ]),
+      NOW,
+      { "sync-yield-data": cron() },
+    );
+
+    const tier = summary.sourceRiskCoverage.fields.venueRiskTier;
+    expect(tier.eligibleCount).toBe(1);
+    expect(tier.populatedCount).toBe(1);
+    expect(tier.coverageRatio).toBe(1);
   });
 
   it("returns a null coverage ratio when no row can carry the field", async () => {
