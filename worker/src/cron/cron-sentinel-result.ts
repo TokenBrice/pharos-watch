@@ -38,7 +38,7 @@ function worstStatus(results: readonly CronResult[]): CronResult["status"] {
   return "ok";
 }
 
-export function buildCronSentinelResult(
+function buildCronSentinelResult(
   mode: CronSentinelMode,
   sourceResults: readonly CronSentinelSourceResult[],
 ): CronResult {
