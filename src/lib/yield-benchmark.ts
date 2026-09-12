@@ -221,10 +221,10 @@ export function resolveYieldBenchmarkAge(
  * v8.42-scored payload to re-base-aware client code, the display breakdown
  * must not render a re-base line the published badge never used.
  */
-export const YIELD_REBASE_METHODOLOGY_VERSION = 8.43;
+const YIELD_REBASE_METHODOLOGY_VERSION = 8.43;
 
 /** Numeric value of a published methodology version string ("v8.43" -> 8.43). */
-export function parseYieldMethodologyVersion(version: string | null | undefined): number | null {
+function parseYieldMethodologyVersion(version: string | null | undefined): number | null {
   const parsed = Number.parseFloat((version ?? "").replace(/^v/i, ""));
   return Number.isFinite(parsed) ? parsed : null;
 }

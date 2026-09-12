@@ -31,6 +31,7 @@ import {
   FIXED_NOW,
   buildPayloadWithObservedAt,
   makeBenchmarkMeta,
+  makeBenchmarkRegistry,
   makeEvaluatedSource,
   makePublicationViews,
   makeSafetySnapshotMeta,
@@ -180,20 +181,7 @@ describe("publishYieldCoordinatorResults", () => {
     try {
       const startSec = Math.floor(FIXED_NOW.getTime() / 1000);
       const benchmark = makeBenchmarkMeta();
-      const riskFreeRates = {
-        USD: benchmark,
-        EUR: null,
-        CHF: null,
-        GBP: null,
-        JPY: null,
-        MXN: null,
-        BRL: null,
-        AUD: null,
-        CAD: null,
-        RUB: null,
-        TRY: null,
-        SGD: null,
-      };
+      const riskFreeRates = makeBenchmarkRegistry(benchmark);
       // The cached publication ranked three coins; the run below re-ranks them so
       // the served comparator sees a real move for two and no move for one.
       const previousRanking = (id: string, name: string, publishedRank: number, pys: number, currentApy: number) => ({

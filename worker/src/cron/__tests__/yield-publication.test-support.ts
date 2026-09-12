@@ -66,6 +66,20 @@ export function makeBenchmarkMeta(
   };
 }
 
+const NULL_BENCHMARK_CURRENCIES = ["EUR", "CHF", "GBP", "JPY", "MXN", "BRL", "AUD", "CAD", "RUB", "TRY", "SGD"] as const;
+
+/** USD-backed registry with every other tracked currency left empty. */
+export function makeBenchmarkRegistry(
+  usd: ParsedYieldBenchmarkMeta,
+  overrides: Partial<ParsedYieldBenchmarkRegistry> = {},
+): ParsedYieldBenchmarkRegistry {
+  const registry = { USD: usd, ...overrides } as ParsedYieldBenchmarkRegistry;
+  for (const currency of NULL_BENCHMARK_CURRENCIES) {
+    if (!(currency in registry)) registry[currency] = null;
+  }
+  return registry;
+}
+
 export function makeYieldSourceMeta(): YieldSourceInputMeta {
   return {
     mode: "dex-cache",
@@ -176,21 +190,7 @@ export function buildPayloadWithObservedAt(
   const source = makeEvaluatedSource(overrides);
   const comparisonAnchorObservedAt = source.comparisonAnchorObservedAt ?? null;
   const benchmark = makeBenchmarkMeta();
-  const benchmarks: ParsedYieldBenchmarkRegistry = {
-    USD: benchmark,
-    EUR: null,
-    CHF: null,
-    GBP: null,
-    JPY: null,
-    MXN: null,
-    BRL: null,
-    AUD: null,
-    CAD: null,
-    RUB: null,
-    TRY: null,
-    SGD: null,
-    ...options.benchmarkRegistry,
-  };
+  const benchmarks = makeBenchmarkRegistry(benchmark, options.benchmarkRegistry);
 
   return buildYieldRankingsPayloadFromEvaluatedSources({
     evaluatedSources: [source],

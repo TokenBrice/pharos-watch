@@ -43,7 +43,7 @@ import type { YieldHistoryPoint } from "@shared/types";
 /** Source switch impact must move 30d APY by at least this many percentage points to be considered material. */
 export const SOURCE_SWITCH_DELTA_THRESHOLD_PP = 0.5;
 /** The largest 30d single-day APY move must exceed this (in pp) to attribute to organic drift. */
-export const ORGANIC_DELTA_THRESHOLD_PP = 1.0;
+const ORGANIC_DELTA_THRESHOLD_PP = 1.0;
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 const THIRTY_DAYS_MS = 30 * DAY_MS;

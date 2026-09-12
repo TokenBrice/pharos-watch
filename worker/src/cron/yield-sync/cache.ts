@@ -29,6 +29,5 @@ export {
   buildYieldSupplementalFamilyCache,
   parseYieldSupplementalSourcesCache,
   getYieldSupplementalRunOutcomeCacheKey,
-  buildYieldSupplementalRunOutcome,
   parseYieldSupplementalRunOutcome,
 } from "./cache/supplemental-cache-keys";

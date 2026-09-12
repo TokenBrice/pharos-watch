@@ -8,7 +8,7 @@ import type { YieldBenchmarkRegistry } from "@shared/types";
 import type { YieldTableSortKey } from "@/components/yield-table-logic";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import type { YieldViewModelRow } from "@/lib/yield-view-model";
-import { makeYieldViewModelRow, renderYieldMobileCard, YIELD_TEST_PROVENANCE } from "./yield-test-support";
+import { REGISTRY_WITH_EUR, makeYieldViewModelRow, renderYieldMobileCard, YIELD_TEST_PROVENANCE } from "./yield-test-support";
 
 vi.mock("@/components/yield-history-chart", () => ({
   YieldHistoryChart: () => <div data-testid="yield-history-chart" />,
@@ -374,34 +374,6 @@ describe.each(rowRenderers)("%s cohort percentile chip", (_surface, renderRow) =
 // chart-wide USD risk-free frame; the chip must resolve the row's OWN
 // benchmark from the registry first (ZONE-CHIP).
 describe("YieldInstrumentBoard — zone chip benchmark resolution", () => {
-  const REGISTRY_WITH_EUR: YieldBenchmarkRegistry = {
-    USD: {
-      key: "USD",
-      label: "USD 3M T-Bill",
-      currency: "USD",
-      rate: 4.25,
-      recordDate: "2026-09-01",
-      fetchedAt: 1_783_632_600,
-      ageSeconds: 1_800,
-      source: "fred-dgs3mo",
-      isFallback: false,
-      fallbackMode: null,
-      isProxy: false,
-    },
-    EUR: {
-      key: "EUR",
-      label: "EUR 3M compounded €STR",
-      currency: "EUR",
-      rate: 1.94,
-      recordDate: "2026-09-01",
-      fetchedAt: 1_783_632_600,
-      ageSeconds: 1_800,
-      source: "ecb-estr-3m",
-      isFallback: false,
-      fallbackMode: null,
-      isProxy: false,
-    },
-  };
   function eurRowWithoutRate(): YieldViewModelRow {
     return {
       ...baseRow,

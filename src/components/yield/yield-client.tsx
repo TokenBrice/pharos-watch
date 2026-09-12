@@ -45,7 +45,11 @@ import { trackEvent } from "@/lib/analytics";
 import { formatCurrency, formatPercent } from "@shared/lib/format";
 import { dedupeYieldRankings } from "@shared/lib/yield-rankings";
 import { CLIENT_TRACKED_META_BY_ID } from "@shared/lib/stablecoins/client-registry";
-import { YIELD_WORKBENCH_FALLBACK_PARAM, parseYieldWorkbenchFallbackId } from "@shared/lib/yield-workbench-fallback";
+import {
+  YIELD_WORKBENCH_FALLBACK_PARAM,
+  parseYieldWorkbenchFallbackId,
+  resolveYieldWorkbenchFallbackNotice,
+} from "@shared/lib/yield-workbench-fallback";
 import type { YieldBenchmarkRegistry } from "@shared/types";
 import type { YieldRankingsSummaryResponse } from "@shared/types/yield-summary";
 
@@ -224,7 +228,7 @@ function SelectorHandoffNotice({ visible }: { visible: boolean }) {
 }
 
 function YieldWorkbenchFallbackNotice({ stablecoinId }: { stablecoinId: string | null }) {
-  const meta = stablecoinId ? CLIENT_TRACKED_META_BY_ID.get(stablecoinId) : null;
+  const meta = resolveYieldWorkbenchFallbackNotice(stablecoinId, CLIENT_TRACKED_META_BY_ID);
   if (!meta) return null;
 
   return (
@@ -238,7 +242,7 @@ function YieldWorkbenchFallbackNotice({ stablecoinId }: { stablecoinId: string |
           this release. The full leaderboard is shown instead, with {meta.symbol} kept in comparison when available.
         </p>
         <Link
-          href={buildStablecoinUrl(meta.id)}
+          href={buildStablecoinUrl(meta.stablecoinId)}
           className="pharos-focus-ring w-fit shrink-0 rounded-sm font-medium underline underline-offset-4 hover:text-foreground/80"
         >
           View {meta.symbol} dossier

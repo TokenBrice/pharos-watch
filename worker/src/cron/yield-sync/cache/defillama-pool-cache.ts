@@ -24,7 +24,7 @@ interface DlStablecoinPoolsCachePayload {
  * `PYS_APY_SANITY_MAX` so a row that clears this gate cannot be clamped to a
  * perfect PYS downstream.
  */
-export const DL_POOL_APY_ENVELOPE_PERCENT = DETERMINISTIC_APY_SANITY_MAX;
+const DL_POOL_APY_ENVELOPE_PERCENT = DETERMINISTIC_APY_SANITY_MAX;
 
 function isValidDlPool(value: unknown): value is DlPool {
   if (!isRecord(value)) return false;

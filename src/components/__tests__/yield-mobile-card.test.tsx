@@ -2,10 +2,9 @@
 
 import { describe, expect, it, vi } from "vitest";
 import { fireEvent, screen } from "@testing-library/react";
-import type { YieldBenchmarkRegistry } from "@shared/types";
 
 import type { YieldViewModelRow } from "@/lib/yield-view-model";
-import { makeYieldViewModelRow, renderYieldMobileCard } from "./yield-test-support";
+import { REGISTRY_WITH_EUR, makeYieldViewModelRow, renderYieldMobileCard } from "./yield-test-support";
 
 vi.mock("@/components/yield-history-chart", () => ({
   YieldHistoryChart: () => <div data-testid="yield-history-chart" />,
@@ -65,34 +64,6 @@ describe("YieldMobileCard", () => {
 // The chip must resolve a missing row rate from the registry EUR entry (the
 // row's own benchmark) instead of the chart-wide USD risk-free frame.
 describe("YieldMobileCard — zone chip benchmark resolution", () => {
-  const REGISTRY_WITH_EUR: YieldBenchmarkRegistry = {
-    USD: {
-      key: "USD",
-      label: "USD 3M T-Bill",
-      currency: "USD",
-      rate: 4.25,
-      recordDate: "2026-09-01",
-      fetchedAt: 1_783_632_600,
-      ageSeconds: 1_800,
-      source: "fred-dgs3mo",
-      isFallback: false,
-      fallbackMode: null,
-      isProxy: false,
-    },
-    EUR: {
-      key: "EUR",
-      label: "EUR 3M compounded €STR",
-      currency: "EUR",
-      rate: 1.94,
-      recordDate: "2026-09-01",
-      fetchedAt: 1_783_632_600,
-      ageSeconds: 1_800,
-      source: "ecb-estr-3m",
-      isFallback: false,
-      fallbackMode: null,
-      isProxy: false,
-    },
-  };
   const eurRowWithoutRate = {
     ...row,
     benchmarkKey: "EUR",

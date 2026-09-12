@@ -485,6 +485,14 @@ describe("YieldClient", () => {
     expect(screen.queryByRole("region", { name: "Yield workbench fallback" })).toBeNull();
   });
 
+  it("does not render the fallback notice for a coin that has its own static yield workbench", () => {
+    searchParamsMock.set("workbenchFallback", "susdc-spark");
+
+    render(<YieldClient />);
+
+    expect(screen.queryByRole("region", { name: "Yield workbench fallback" })).toBeNull();
+  });
+
   it("risk budget changes preserve non-risk research filters", () => {
     searchParamsMock.set("peg", "USD");
     searchParamsMock.set("q", "coin");
