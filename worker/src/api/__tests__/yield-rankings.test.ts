@@ -1348,7 +1348,7 @@ describe("handleYieldRankings", () => {
     expect(stable?.rankChangeAttribution?.driverContributions?.stablecoinSafety).toBeNull();
   });
 
-  it("attributes a methodology bump when the payload was published under another version", async () => {
+  it("serves no movement for a payload published under another methodology version", async () => {
     const updatedAt = Math.floor(Date.now() / 1000) - 30;
     // The payload must have been published under an *older* version, so the
     // fixture version is derived from the current constant: the mismatch stays
@@ -1395,11 +1395,12 @@ describe("handleYieldRankings", () => {
     const mover = body.rankings.find((entry) => entry.id === "mover-coin");
     const stable = body.rankings.find((entry) => entry.id === "stable-coin");
 
-    // A version bump explains every delta, so it outranks the row-level safety
-    // signal on both the mover and the row it displaced.
+    // Scores from two methodologies are not comparable, so the read path serves
+    // no movement and no driver rather than fabricating a delta from the version
+    // bump alone (B7 rollout: this mislabelled tie-group reorders as movements).
     expect(publishedVersion).not.toBe(YIELD_METHODOLOGY_VERSION);
-    expect(mover?.rankChangeAttribution?.primaryDriver).toBe("methodology");
-    expect(stable?.rankChangeAttribution?.primaryDriver).toBe("methodology");
+    expect(mover?.rankChangeAttribution ?? null).toBeNull();
+    expect(stable?.rankChangeAttribution ?? null).toBeNull();
   });
 
   it("keeps a non-safety pysNullReason through the degraded safety path", async () => {
