@@ -25,10 +25,10 @@ import { useSortedPaginatedTable } from "@/hooks/use-sorted-paginated-table";
 import { TABLE_PAGE_SIZE } from "@/lib/constants";
 import { compareYieldRows, type YieldTableSortKey } from "@/components/yield-table-logic";
 import { buildStablecoinUrl } from "@shared/lib/urls";
-import { formatYieldWarningSignal } from "@/lib/yield-constants";
 import { isOpportunityDerivedSafety } from "@shared/lib/yield-opportunity-provenance";
 import { YIELD_TYPE_LABELS, YIELD_TYPE_STYLES } from "@shared/lib/classification";
 import { formatPercent, formatScore } from "@shared/lib/format";
+import { formatYieldRatioPercent, formatYieldWarningSignal, resolveYieldScoreQualification } from "@/lib/yield-constants";
 import { YieldCohortChip } from "@/components/yield-cohort-chip";
 import { YieldZoneChip } from "@/components/yield-zone-chip";
 import { YieldWhyPysStrip } from "@/components/yield-why-pys-strip";
@@ -171,7 +171,7 @@ const YIELD_EXPORT_COLUMNS: CsvColumn<YieldExportRow>[] = [
   { header: "Name", accessor: (entry) => entry.row.name },
   { header: "APY 30d (%)", accessor: (entry) => entry.row.apy30d },
   { header: "PYS", accessor: (entry) => entry.row.pharosYieldScore ?? "NR" },
-  { header: "PYS qualification", accessor: (entry) => entry.row.provenance?.scoreQualification ?? "unknown" },
+  { header: "PYS qualification", accessor: (entry) => resolveYieldScoreQualification(entry.row) },
   { header: "PYS null reason", accessor: (entry) => entry.row.pysNullReason ?? "" },
   { header: "Safety grade", accessor: (entry) => entry.row.safetyGrade ?? "NR" },
   { header: "Safety score", accessor: (entry) => entry.row.safetyScore ?? "NR" },
@@ -186,10 +186,14 @@ const YIELD_EXPORT_COLUMNS: CsvColumn<YieldExportRow>[] = [
   { header: "Yield type", accessor: (entry) => entry.row.yieldType },
   { header: "Source posture", accessor: (entry) => entry.row.sourcePosture ?? "unknown" },
   { header: "Source confidence", accessor: (entry) => entry.row.provenance?.confidenceTier ?? "unknown" },
-  { header: "Evidence completeness", accessor: (entry) => entry.row.provenance?.evidenceCompleteness ?? "unknown" },
+  { header: "Source risk penalty", accessor: (entry) => entry.row.sourceRisk?.sourceRiskPenalty ?? "unknown" },
+  { header: "Source risk score", accessor: (entry) => entry.row.sourceRisk?.sourceRiskScore ?? "unknown" },
+  { header: "Source age seconds", accessor: (entry) => entry.row.sourceRisk?.sourceAgeSeconds ?? "unknown" },
+  { header: "Venue risk tier", accessor: (entry) => entry.row.sourceRisk?.venueRiskTier ?? "unknown" },
+  { header: "Evidence completeness (%)", accessor: (entry) => formatYieldRatioPercent(entry.row.provenance?.evidenceCompleteness) },
   { header: "Benchmark", accessor: (entry) => entry.row.benchmarkLabel ?? "unknown" },
   { header: "TVL USD", accessor: (entry) => entry.row.sourceTvlUsd ?? "unknown" },
-  { header: "Stability", accessor: (entry) => entry.row.yieldStability ?? "unknown" },
+  { header: "Stability (%)", accessor: (entry) => formatYieldRatioPercent(entry.row.yieldStability) },
   { header: "Warnings", accessor: (entry) => entry.row.warningSignals.join(" | ") },
   { header: "Provider URL", accessor: (entry) => entry.row.yieldSourceUrl ?? "" },
 ];
@@ -353,6 +357,7 @@ export function YieldLeaderboard({
                     logo={logos[row.id]}
                     riskFreeRate={riskFreeRate}
                     medianApy={medianApy}
+                    scalingFactor={scalingFactor}
                     expanded={visibleExpandedId === row.id}
                     isCompared={isCompared}
                     compareDisabled={compareDisabled}
@@ -446,6 +451,7 @@ export function YieldMobileCard({
   logo,
   riskFreeRate,
   medianApy,
+  scalingFactor,
   expanded,
   isCompared,
   compareDisabled,
@@ -457,6 +463,8 @@ export function YieldMobileCard({
   logo?: string;
   riskFreeRate: number;
   medianApy: number;
+  /** Payload scaling factor; threaded so any PYS reuse matches the board. */
+  scalingFactor: number;
   expanded: boolean;
   isCompared: boolean;
   compareDisabled: boolean;
@@ -488,7 +496,7 @@ export function YieldMobileCard({
     altSourceCount,
     benchmarkReferenceText,
     breakdown: { adjustedRiskPenalty, benchmarkSpread, sourceRiskPenalty, sustainabilityMult },
-  } = useMemo(() => deriveYieldRowDisplay(row, 1, riskFreeRate), [row, riskFreeRate]);
+  } = useMemo(() => deriveYieldRowDisplay(row, scalingFactor, riskFreeRate), [row, scalingFactor, riskFreeRate]);
 
   return (
     <article

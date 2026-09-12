@@ -139,6 +139,11 @@ export default function YieldDetailSection({ stablecoinId }: YieldDetailSectionP
   const sourceTvl = view.sourceExplorer.selectedSource.sourceTvlUsd;
   const sourceDepthMeta = YIELD_SOURCE_DEPTH_DEFINITIONS[view.sourceDepthLens];
   const excessYield = ranking.excessYield;
+  // An excess that prints as ±0.00% (|excess| below half of the last displayed
+  // 0.01% digit) is a hurdle match, not a miss; the hurdle label is
+  // schema-optional and needs a spoken default (E20).
+  const excessWithinDisplayPrecision = excessYield != null && Math.abs(excessYield) < 0.005;
+  const benchmarkHurdleLabel = view.ranking.benchmarkLabel ?? "benchmark";
   const historyChart = (
     <YieldHistoryChart
       stablecoinId={stablecoinId}
@@ -166,7 +171,9 @@ export default function YieldDetailSection({ stablecoinId }: YieldDetailSectionP
             neutral caption when the hurdle comparison is unavailable. */}
         <p className="text-sm text-muted-foreground">
           {excessYield != null && view.ranking.apy30d != null
-            ? `APY ${formatPercent(view.ranking.apy30d)} ${excessYield >= 0 ? "clears" : "misses"} the ${view.ranking.benchmarkLabel} hurdle (${formatSignedPercent(excessYield)}); PYS ${view.ranking.pharosYieldScore ?? "NR"} after risk adjustments.`
+            ? `APY ${formatPercent(view.ranking.apy30d)} ${
+                excessWithinDisplayPrecision ? "matches" : excessYield >= 0 ? "clears" : "misses"
+              } the ${benchmarkHurdleLabel} hurdle (${formatSignedPercent(excessWithinDisplayPrecision ? 0 : excessYield)}); PYS ${view.ranking.pharosYieldScore ?? "NR"} after risk adjustments.`
             : "APY trend against the current benchmark hurdle rate and peer median."}
         </p>
 
@@ -206,12 +213,14 @@ export default function YieldDetailSection({ stablecoinId }: YieldDetailSectionP
               <span
                 className={cn(
                   "rounded-full px-1.5 py-0.5 font-mono text-[10px] tabular-nums",
-                  excessYield >= 0
-                    ? "bg-emerald-500/10 text-emerald-700 dark:text-emerald-400"
-                    : "bg-red-500/10 text-red-700 dark:text-red-400",
+                  excessWithinDisplayPrecision
+                    ? "bg-muted text-muted-foreground"
+                    : excessYield >= 0
+                      ? "bg-emerald-500/10 text-emerald-700 dark:text-emerald-400"
+                      : "bg-red-500/10 text-red-700 dark:text-red-400",
                 )}
               >
-                {formatSignedPercent(excessYield)}
+                {formatSignedPercent(excessWithinDisplayPrecision ? 0 : excessYield)}
               </span>
             ) : null}
           </div>
@@ -531,9 +540,24 @@ export function YieldRankMovementCard({ attribution }: { attribution: YieldRankC
   const primaryDriver = attribution?.primaryDriver ?? null;
   const driverContributions = attribution?.driverContributions ?? null;
 
-  // Stable state: render explicit "no movement" card so users see continuity.
+  // Stable state: render explicit "no movement" card so users see continuity —
+  // but only when a baseline was actually measured. The worker omits the
+  // attribution object entirely when previousRank/liveRank is missing, and
+  // claiming stability then would assert something never measured (E21).
   const allZero = (rankDelta === null || rankDelta === 0) && (pysDelta === null || Math.abs(pysDelta) < 0.005);
-  if (!attribution || allZero) {
+  if (!attribution) {
+    return (
+      <div className="rounded-xl border border-border/60 bg-muted/20 px-4 py-3">
+        <p className="text-xs font-semibold uppercase tracking-[0.12em] text-muted-foreground">
+          Movement vs last publication
+        </p>
+        <p className="mt-1.5 text-sm text-muted-foreground">
+          No comparison baseline — movement vs the previous publication was not measured.
+        </p>
+      </div>
+    );
+  }
+  if (allZero) {
     return (
       <div className="rounded-xl border border-border/60 bg-muted/20 px-4 py-3">
         <p className="text-xs font-semibold uppercase tracking-[0.12em] text-muted-foreground">
@@ -543,7 +567,6 @@ export function YieldRankMovementCard({ attribution }: { attribution: YieldRankC
       </div>
     );
   }
-
   const arrow = rankDelta == null ? "■" : rankDelta > 0 ? "▲" : rankDelta < 0 ? "▼" : "■";
   const rankColor =
     rankDelta != null && rankDelta > 0

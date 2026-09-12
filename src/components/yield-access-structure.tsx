@@ -33,7 +33,7 @@ export function YieldAccessStructure({
   compact?: boolean;
   className?: string;
 }) {
-  const flags = sourceRisk?.investabilityFlags ?? [];
+  const flags = sourceRisk?.investabilityFlags;
   const kyc =
     sourceRisk?.kycRequired === true ? "Required" : sourceRisk?.kycRequired === false ? "Not required" : "Unknown";
   const access =
@@ -59,7 +59,9 @@ export function YieldAccessStructure({
       </dl>
       <div className="mt-2 text-xs">
         <span className="text-muted-foreground">Investability flags: </span>
-        <span className="text-foreground">{flags.length > 0 ? flags.join(", ") : "Unknown"}</span>
+        <span className="text-foreground">
+          {flags == null ? "Unknown" : flags.length > 0 ? flags.join(", ") : "None reported"}
+        </span>
       </div>
     </section>
   );

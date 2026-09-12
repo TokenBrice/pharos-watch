@@ -323,6 +323,7 @@ export const handleYieldHistory = async (db: D1Database, url: URL): Promise<Resp
             .all<YieldHistoryRow>();
 
     let previousSourceKey: string | null = null;
+    let previousIsBest: boolean | null = null;
     let invalidPysSnapshotCount = 0;
     const invalidPysSnapshotSamples: string[] = [];
     const history = (result.results ?? [])
@@ -336,8 +337,18 @@ export const handleYieldHistory = async (db: D1Database, url: URL): Promise<Resp
           : null;
         const hasSourceRisk = sourceRiskKey != null && sourceRiskByHistoryKey.has(sourceRiskKey);
         const sourceRisk = sourceRiskKey != null ? sourceRiskByHistoryKey.get(sourceRiskKey) : undefined;
-        const sourceSwitch = mode === "best" && previousSourceKey != null && previousSourceKey !== normalizedSourceKey;
+        const isBest = row.is_best === 1;
+        // Best mode: the canonical series changed source. Source mode: every
+        // row carries the requested sourceKey, so a canonical switch is
+        // observable only as this source gaining/losing the is_best slot —
+        // mark both boundaries so the chart can mark what the switch ledger
+        // lists (E18).
+        const sourceSwitch =
+          mode === "best"
+            ? previousSourceKey != null && previousSourceKey !== normalizedSourceKey
+            : previousIsBest != null && previousIsBest !== isBest;
         previousSourceKey = normalizedSourceKey;
+        previousIsBest = isBest;
 
         const pysAtPublish =
           typeof row.pys_at_publish === "number" && Number.isFinite(row.pys_at_publish)

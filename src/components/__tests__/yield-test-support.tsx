@@ -82,6 +82,7 @@ export function renderYieldMobileCard(
         row={row}
         riskFreeRate={3.5}
         medianApy={4}
+        scalingFactor={overrides.scalingFactor ?? 1}
         expanded={false}
         isCompared={false}
         compareDisabled={false}

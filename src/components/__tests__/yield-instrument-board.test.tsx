@@ -233,7 +233,7 @@ describe("YieldInstrumentBoard", () => {
     const desktopContract = Object.fromEntries(
       displayAttributes.map((attribute) => [attribute, desktopDisplay?.getAttribute(attribute)]),
     );
-    expect(screen.getAllByText("30-day APY: 4.3 percent").length).toBeGreaterThanOrEqual(1);
+    expect(screen.getAllByText("30-day APY: 4.30%").length).toBeGreaterThanOrEqual(1);
     expect(screen.getAllByText("Pharos Yield Score 76.0 out of 100").length).toBeGreaterThanOrEqual(1);
     expect(screen.getAllByLabelText("Safety grade: B+, score 82 out of 100").length).toBeGreaterThanOrEqual(1);
     expect(screen.getByLabelText("Add USDT to compare")).toBeTruthy();
@@ -309,6 +309,26 @@ describe("YieldInstrumentBoard — Why this PYS strip", () => {
   it("does not render the strip when the row is collapsed", () => {
     renderBoard(baseRow, false);
     expect(screen.queryByRole("group", { name: "Why this PYS" })).toBeNull();
+  });
+
+  it("tones the safety gauge from the V9 grade ladder so it matches the badge (E4)", () => {
+    // [safetyScore, expected gauge tone] — grades: 76 B+ (blue; the V9
+    // ladder puts A- at 80, so 82 is emerald), 62 C+
+    // (amber; the old 80/60/40 cuts painted C+ blue), 45 D (orange), 30 F (red).
+    const cases: ReadonlyArray<[number, string]> = [
+      [76, "bg-blue-500"],
+      [62, "bg-amber-500"],
+      [45, "bg-orange-500"],
+      [30, "bg-red-500"],
+    ];
+    for (const [safetyScore, tone] of cases) {
+      const board = renderBoard({ ...baseRow, safetyScore, safetyGrade: null } as YieldViewModelRow);
+      const gauge = board.container.querySelector(
+        `[role="img"][aria-label="Safety score ${safetyScore} of 100"]`,
+      );
+      expect(gauge?.firstElementChild?.className).toContain(tone);
+      board.unmount();
+    }
   });
 });
 

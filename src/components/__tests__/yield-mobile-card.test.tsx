@@ -53,4 +53,10 @@ describe("YieldMobileCard", () => {
     expect(screen.getByText("PYS —")).toBeTruthy();
   });
 
+  it("threads the payload scaling factor through the row display (E7)", () => {
+    // scalingFactor has no visible strip output today; the card must accept
+    // the payload value (live 8) and render the expanded PYS strip unchanged.
+    renderYieldMobileCard(row, { scalingFactor: 8, expanded: true });
+    expect(screen.getByRole("group", { name: "Why this PYS" })).toBeTruthy();
+  });
 });

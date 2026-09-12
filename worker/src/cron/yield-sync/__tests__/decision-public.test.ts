@@ -3,6 +3,7 @@ import { buildPublicDecisionLedger, deriveYieldSourceRole } from "../decision-pu
 import { buildYieldPublicationViews } from "../publication-view";
 import type { EvaluatedYieldSource } from "../evaluation-types";
 import type { YieldSourceInputMeta, YieldSourceRisk } from "@shared/types/yield";
+import { makeBenchmarkMeta } from "../../__tests__/yield-publication.test-support";
 
 /**
  * Audit Q-299: deriveRejectionReasonCode / deriveSelectedReasonCode produce the
@@ -66,7 +67,7 @@ function makeSource(overrides: Partial<EvaluatedYieldSource> = {}): EvaluatedYie
     benchmarkFallbackMode: null,
     benchmarkSelectionMode: "native",
     benchmarkIsProxy: false,
-    benchmarkMeta: {} as EvaluatedYieldSource["benchmarkMeta"],
+    benchmarkMeta: makeBenchmarkMeta(),
     pharosYieldScore: 0,
     pysNullReason: null,
     sourceFreshness: "fresh",

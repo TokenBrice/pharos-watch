@@ -40,6 +40,22 @@ export const YIELD_BENCHMARK_RECORD_MAX_AGE_SEC: Record<YieldBenchmarkKey, numbe
 };
 
 /**
+ * Age of a benchmark's own observation at `nowSec`. `null` when the entry
+ * carries no parseable observation date; a future-dated record clamps to zero,
+ * mirroring the fetch-time guard (`tbill-sources/fred.ts`) that rejects those
+ * rows before they are stored.
+ */
+export function benchmarkRecordAgeSeconds(
+  recordDate: string | null | undefined,
+  nowSec: number,
+): number | null {
+  if (!recordDate) return null;
+  const recordTimestampMs = Date.parse(`${recordDate}T00:00:00Z`);
+  if (!Number.isFinite(recordTimestampMs)) return null;
+  return Math.max(0, nowSec - Math.floor(recordTimestampMs / 1000));
+}
+
+/**
  * Classify a registry entry from its own evidence: the hard 48h fetch-age TTL,
  * plus — when the caller supplies the key's observation bound — the age of the
  * observation the fetch carried. Both are `max`-combined; a future-dated
@@ -66,17 +82,10 @@ export function classifyYieldBenchmarkFreshness(meta: {
     return "stale";
   }
   const maxRecordAgeSec = options?.maxRecordAgeSec;
-  const recordDate = options?.recordDate;
-  if (maxRecordAgeSec != null && Number.isFinite(maxRecordAgeSec) && recordDate) {
-    const recordTimestampMs = Date.parse(`${recordDate}T00:00:00Z`);
-    if (Number.isFinite(recordTimestampMs)) {
-      const recordAgeSec = Math.max(
-        0,
-        Math.floor(Date.now() / 1000) - Math.floor(recordTimestampMs / 1000),
-      );
-      if (recordAgeSec > maxRecordAgeSec) {
-        return "stale";
-      }
+  if (maxRecordAgeSec != null && Number.isFinite(maxRecordAgeSec)) {
+    const recordAgeSec = benchmarkRecordAgeSeconds(options?.recordDate, Math.floor(Date.now() / 1000));
+    if (recordAgeSec != null && recordAgeSec > maxRecordAgeSec) {
+      return "stale";
     }
   }
   if (

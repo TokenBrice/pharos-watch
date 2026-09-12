@@ -176,6 +176,18 @@ describe("selectYieldSource ordering", () => {
     ]), lendInput)?.sourceKey).toBe("unknown");
   });
 
+  it("publishes unknown rail freshness as null instead of a fabricated 0s capture", () => {
+    const selected = selectYieldSource(makeRow([
+      candidate("stale", { freshness: { capturedAt: 1, ageSeconds: 172_800 } }),
+      candidate("unknown", { freshness: null }),
+    ]), lendInput);
+    expect(selected?.sourceKey).toBe("unknown");
+    // The engine still ranks unknown above stale (neutral 50 > 0), but the
+    // returned reading must stay unknown: `{ capturedAt: 0, ageSeconds: 0 }`
+    // rendered as "0s old" — the freshest possible claim from no data.
+    expect(selected?.freshness).toBeNull();
+  });
+
   it("ranks future-dated and nonfinite freshness below every valid reading", () => {
     for (const ageSeconds of [-1, -172_800, Number.NaN, Number.POSITIVE_INFINITY, Number.NEGATIVE_INFINITY]) {
       expect(selectYieldSource(makeRow([

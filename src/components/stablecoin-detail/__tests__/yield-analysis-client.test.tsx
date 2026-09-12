@@ -285,12 +285,13 @@ describe("YieldAnalysisClient", () => {
     expect(screen.queryByRole("button", { name: "Reset to all sources" })).toBeNull();
   });
 
-  it("groups consecutive identical warnings, counts repeats, and orders groups newest first", () => {
+  it("groups same signal-source pairs inside the 24h bucket, counts repeats, and orders groups newest first", () => {
     setRankingsQuery({ data: makeResponse([makeRanking()]) });
     setHistoryQuery([
       makeHistoryPoint({ date: "2026-08-01T10:00:00Z", apy: 0.05, yieldSource: "Primary Source", warningSignals: ["yield-spike"] }),
       makeHistoryPoint({ date: "2026-08-02T10:00:00Z", apy: 0.05, yieldSource: "Primary Source", warningSignals: ["yield-spike"] }),
-      // The APY change breaks the run into its own group even though the signal repeats.
+      // The APY change no longer splits the run: within one 24h bucket the
+      // signal-source pair merges, and the row shows the newest occurrence's APY.
       makeHistoryPoint({ date: "2026-08-03T10:00:00Z", apy: 0.06, yieldSource: "Primary Source", warningSignals: ["yield-spike"] }),
       makeHistoryPoint({ date: "2026-08-04T10:00:00Z", apy: 0.06, yieldSource: "Alt Source", warningSignals: ["yield-divergence"] }),
     ]);
@@ -303,14 +304,13 @@ describe("YieldAnalysisClient", () => {
     );
 
     const rows = Array.from(document.getElementById("warning-signals")!.querySelectorAll("li"));
-    expect(rows).toHaveLength(3);
+    expect(rows).toHaveLength(2);
     expect(rows[0]!.textContent).toContain("Yield divergence");
     expect(rows[0]!.textContent).toContain("Alt Source at 0.06%");
     expect(rows[1]!.textContent).toContain("Yield spike");
-    expect(rows[1]!.textContent).toContain("0.06%");
-    expect(rows[2]!.textContent).toContain("×2");
-    expect(rows[2]!.textContent).toContain("Primary Source at 0.05%");
-    expect(rows[2]!.textContent).toContain("–");
+    expect(rows[1]!.textContent).toContain("×3");
+    expect(rows[1]!.textContent).toContain("Primary Source at 0.06%");
+    expect(rows[1]!.textContent).toContain("–");
   });
 
   it("renders the source transition once and omits a switch stamped with an invalid date", () => {

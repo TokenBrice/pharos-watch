@@ -55,6 +55,27 @@ export function getPysColor(pys: number | null): string {
 }
 
 /**
+ * Published PYS qualification label with the UI's NR/rated fallback — the one
+ * accessor behind the leaderboard/compare "PYS qualification" columns and the
+ * compare drawer's qualification cell, so no surface invents its own fallback.
+ */
+export function resolveYieldScoreQualification(row: {
+  pharosYieldScore: number | null;
+  provenance?: { scoreQualification?: string } | null;
+}): string {
+  return row.provenance?.scoreQualification ?? (row.pharosYieldScore == null ? "NR" : "rated");
+}
+
+/**
+ * CSV cell for a 0-1 ratio the UI renders as a whole-number percent
+ * (stability, evidence completeness) — mirrors the UI's Math.round ratio
+ * display so exported numbers share the surface's units and precision.
+ */
+export function formatYieldRatioPercent(ratio: number | null | undefined): number | string {
+  return typeof ratio === "number" && Number.isFinite(ratio) ? Math.round(ratio * 100) : "unknown";
+}
+
+/**
  * Compute PYS breakdown components for display (tooltips, stat cards).
  * Delegates to the shared PYS module — single source of truth.
  * The final PYS score is served by the API — this is for breakdown UI only.
@@ -67,6 +88,11 @@ export function computePysBreakdown(
   sourceRiskPenalty?: number | null,
   /** Reference (USD) risk-free rate the effective yield is re-based onto (yield v8.43). */
   usdBenchmarkRate?: number | null,
+  /**
+   * Currency the row's benchmark is quoted in. A USD-benchmarked row (USD and
+   * USD_EFFR keys) takes no v8.43 re-base, exactly like the scoring path.
+   */
+  benchmarkCurrency?: string | null,
 ) {
   const apyVarianceScore = yieldStabilityToApyVarianceScore(yieldStability);
   const {
@@ -86,6 +112,7 @@ export function computePysBreakdown(
     apyVarianceScore,
     benchmarkRate,
     usdBenchmarkRate,
+    benchmarkCurrency,
     sourceRiskPenalty,
   });
   return {

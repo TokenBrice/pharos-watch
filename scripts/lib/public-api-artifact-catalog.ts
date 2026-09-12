@@ -23,6 +23,12 @@ export interface PublicApiArtifactEndpoint {
   tags: readonly string[];
   security?: "apiKey" | "none";
   responseSchema?: PublicApiResponseSchemaName;
+  /**
+   * Extra 200-response contracts for endpoints whose query parameters select a
+   * different body shape. Emitted as `oneOf` alongside `responseSchema` so a
+   * spec-validating client accepts every documented variant.
+   */
+  additionalResponseSchemas?: readonly PublicApiResponseSchemaName[];
   parameters?: readonly PublicApiArtifactParameter[];
   postman?: PostmanRequestConfig | readonly PostmanRequestConfig[];
 }
@@ -663,9 +669,10 @@ const PUBLIC_API_ARTIFACT_INPUTS = [
   {
     key: "yield-rankings",
     summary: "Yield rankings",
-    description: "Yield-bearing stablecoin rankings with safety, benchmark-aware context, and optional publication/source-risk metadata fields.",
+    description: "Yield-bearing stablecoin rankings with safety, benchmark-aware context, and optional publication/source-risk metadata fields. `?projection=summary` returns the compact workbench contract instead of the detailed rows.",
     tags: ["Yield"],
     responseSchema: "YieldRankingsResponse",
+    additionalResponseSchemas: ["YieldRankingsSummaryResponse"],
     parameters: [
       {
         name: "projection",

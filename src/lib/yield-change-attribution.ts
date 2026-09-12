@@ -11,10 +11,14 @@
  *
  * Priority order (decision tree):
  *
- *   1. If the BE-provided decisionLedger reports a recent source switch
- *      whose |apy30dDeltaFromPrevious| ≥ {@link SOURCE_SWITCH_DELTA_THRESHOLD_PP}
+ *   1. If the BE-provided decisionLedger reports a source switch whose
+ *      |apy30dDeltaFromPrevious| ≥ {@link SOURCE_SWITCH_DELTA_THRESHOLD_PP}
  *      (in percentage points) and the switch falls inside the 30d window, treat
- *      attribution as "source-switch" with high confidence.
+ *      attribution as "source-switch" with high confidence. The switch
+ *      timestamp comes from the ledger when provided; otherwise it is derived
+ *      client-side from history points carrying `sourceSwitch` (B35), and a
+ *      switch with no observable timestamp inside the fetched history is not
+ *      treated as recent.
  *
  *   2. Otherwise, if the largest move exceeds {@link ORGANIC_DELTA_THRESHOLD_PP}
  *      (in percentage points) and no source switch is reported, attribute it to
@@ -24,8 +28,6 @@
  *   3. If a recent source switch overlaps with an organic-sized move (largest
  *      delta ≥ {@link ORGANIC_DELTA_THRESHOLD_PP}), attribute it to "mixed" with
  *      low confidence.
- *
- *   4. Otherwise return "insufficient-data".
  *
  * The function NEVER throws. Missing decisionLedger, missing history points,
  * and sparse history all degrade gracefully to lower-confidence paths or
@@ -43,7 +45,8 @@ export const SOURCE_SWITCH_DELTA_THRESHOLD_PP = 0.5;
 /** The largest 30d single-day APY move must exceed this (in pp) to attribute to organic drift. */
 export const ORGANIC_DELTA_THRESHOLD_PP = 1.0;
 
-const THIRTY_DAYS_MS = 30 * 24 * 60 * 60 * 1000;
+const DAY_MS = 24 * 60 * 60 * 1000;
+const THIRTY_DAYS_MS = 30 * DAY_MS;
 
 export type YieldChangeAttribution =
   | "source-switch"
@@ -87,6 +90,10 @@ export interface YieldChangeAttributionResult {
 interface NormalisedHistoryPoint {
   ts: number;
   apy: number;
+  /** Raw history fields needed to derive the switch timestamp client-side (B35). */
+  sourceSwitch: boolean;
+  sourceKey: string | null;
+  yieldSource: string | null;
 }
 
 function normaliseHistory(history: YieldHistoryPoint[]): NormalisedHistoryPoint[] {
@@ -100,28 +107,71 @@ function normaliseHistory(history: YieldHistoryPoint[]): NormalisedHistoryPoint[
         : Date.parse(point.date);
     if (!Number.isFinite(ts)) continue;
     if (!Number.isFinite(point.apy)) continue;
-    result.push({ ts, apy: point.apy });
+    result.push({
+      ts,
+      apy: point.apy,
+      sourceSwitch: point.sourceSwitch ?? false,
+      sourceKey: point.sourceKey ?? null,
+      yieldSource: point.yieldSource ?? null,
+    });
   }
   result.sort((a, b) => a.ts - b.ts);
   return result;
 }
-
+/**
+ * Largest day-over-day APY move inside the window. Recent history is hourly
+ * (`yield-history-policy` keeps 30 days of hourly points), so the raw array's
+ * adjacent entries are hour-over-hour noise; thresholds expressed in
+ * percentage points *per day* are applied to one close per UTC day instead.
+ */
 function findLargestDailyDelta(
   history: NormalisedHistoryPoint[],
   windowStartMs: number,
 ): { value: number; ts: number } | null {
-  let best: { value: number; ts: number } | null = null;
-  for (let i = 1; i < history.length; i++) {
-    const current = history[i];
-    const prior = history[i - 1];
+  const dailyCloses = new Map<number, NormalisedHistoryPoint>();
+  for (const point of history) {
     // Require BOTH endpoints inside the window so the delta represents a within-window event.
-    if (current.ts < windowStartMs || prior.ts < windowStartMs) continue;
+    if (point.ts < windowStartMs) continue;
+    const dayBucket = Math.floor(point.ts / DAY_MS);
+    const close = dailyCloses.get(dayBucket);
+    if (!close || point.ts >= close.ts) dailyCloses.set(dayBucket, point);
+  }
+  const closes = [...dailyCloses.values()].sort((a, b) => a.ts - b.ts);
+  let best: { value: number; ts: number } | null = null;
+  for (let i = 1; i < closes.length; i++) {
+    const current = closes[i]!;
+    const prior = closes[i - 1]!;
     const delta = current.apy - prior.apy;
     if (!best || Math.abs(delta) > Math.abs(best.value)) {
       best = { value: delta, ts: current.ts };
     }
   }
   return best;
+}
+
+interface DerivedSwitchContext {
+  switchedAtMs: number;
+  previousSourceKey: string | null;
+  previousSourceLabel: string | null;
+}
+
+/**
+ * The public decision ledger carries no switch timestamp, so derive one from
+ * the history points the worker flags with `sourceSwitch` (latest one wins).
+ * The point adjacent before it supplies the previous source identity.
+ */
+function deriveSwitchContext(history: NormalisedHistoryPoint[]): DerivedSwitchContext | null {
+  let switchIndex = -1;
+  for (let i = 0; i < history.length; i++) {
+    if (history[i]!.sourceSwitch) switchIndex = i;
+  }
+  if (switchIndex === -1) return null;
+  const prior = switchIndex > 0 ? history[switchIndex - 1]! : null;
+  return {
+    switchedAtMs: history[switchIndex]!.ts,
+    previousSourceKey: prior?.sourceKey ?? null,
+    previousSourceLabel: prior?.yieldSource ?? null,
+  };
 }
 
 function daysAgo(ts: number, nowMs: number): number {
@@ -167,7 +217,10 @@ function chooseOrganicConfidence(
 }
 
 function isRecentSwitch(switchedAtMs: number | null | undefined, windowStartMs: number, nowMs: number): boolean {
-  if (switchedAtMs == null) return true; // Assume recent when BE omits the timestamp.
+  // No timestamp anywhere (ledger omitted it and no history point carries
+  // `sourceSwitch`) means the switch was NOT observed inside the fetched
+  // window — recency must not be assumed (B35).
+  if (switchedAtMs == null) return false;
   return switchedAtMs >= windowStartMs && switchedAtMs <= nowMs;
 }
 
@@ -182,25 +235,27 @@ export function classifyApyChange(input: YieldChangeAttributionInput): YieldChan
   const largestDelta = findLargestDailyDelta(history, windowStartMs);
   const ledger = input.decisionLedger ?? null;
   const stability = input.yieldStability ?? null;
+  const switchContext = deriveSwitchContext(history);
+  const switchedAtMs = ledger?.switchedAtMs ?? switchContext?.switchedAtMs ?? null;
 
   // Step 1: high-confidence source-switch attribution from BE ledger.
   if (
     ledger?.sourceSwitch === true &&
     typeof ledger.apy30dDeltaFromPrevious === "number" &&
     Math.abs(ledger.apy30dDeltaFromPrevious) >= SOURCE_SWITCH_DELTA_THRESHOLD_PP &&
-    isRecentSwitch(ledger.switchedAtMs ?? null, windowStartMs, nowMs)
+    isRecentSwitch(switchedAtMs, windowStartMs, nowMs)
   ) {
     const detail = {
-      previousSourceKey: ledger.previousBestSourceKey ?? "previous source",
-      previousSourceLabel: ledger.previousSourceLabel ?? undefined,
+      previousSourceKey:
+        ledger.previousBestSourceKey ?? switchContext?.previousSourceKey ?? "previous source",
+      previousSourceLabel: ledger.previousSourceLabel ?? switchContext?.previousSourceLabel ?? undefined,
       apy30dDelta: ledger.apy30dDeltaFromPrevious,
     };
     // If we ALSO have an organic-sized drift in the window, flag as mixed (lower confidence).
     if (largestDelta && Math.abs(largestDelta.value) >= ORGANIC_DELTA_THRESHOLD_PP) {
       // If the largest move correlates with the switch timing (same calendar day), keep source-switch.
-      const switchTs = ledger.switchedAtMs ?? null;
       const overlapsSwitch =
-        switchTs != null && Math.abs(largestDelta.ts - switchTs) <= 24 * 60 * 60 * 1000;
+        switchedAtMs != null && Math.abs(largestDelta.ts - switchedAtMs) <= 24 * 60 * 60 * 1000;
       if (!overlapsSwitch) {
         return {
           largestDelta,

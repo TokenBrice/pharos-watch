@@ -20,6 +20,7 @@ function makePayload(): YieldRankingsResponse {
           evidenceCompleteness: 0.92,
           scoreQualification: "rated",
         }),
+        sourceRole: "external-opportunity",
         sourceRisk: {
           sourceRiskScore: 22,
           sourceRiskPenalty: 1.11,
@@ -33,6 +34,12 @@ function makePayload(): YieldRankingsResponse {
           venueRiskTier: "medium",
           venueRiskWeighted: 2.3,
           venueRiskConfidence: "verified",
+          dependencyConcentration: {
+            ecosystem: "Circle USYC",
+            severity: "low",
+            note: "detail-only dependency evidence",
+            reviewedAt: "2026-07-01",
+          },
           investabilityFlags: ["detail-only-flag"],
         },
         decisionLedger: {
@@ -125,10 +132,22 @@ describe("handleYieldRankings summary projection", () => {
       ],
       _meta: { updatedAt: UPDATED_AT, ageSeconds: 60, status: "fresh" },
     });
-    expect(body.rankings[0]).not.toHaveProperty("altSources");
+    // B36: the lane, the role, the bounded alternate list and the dependency
+    // evidence ship with the compact row instead of being re-derived client-side.
+    expect(body.rankings[0]).toMatchObject({
+      dataSource: "protocol-api",
+      sourceRole: "external-opportunity",
+      altSources: [
+        { sourceKey: "alt-source", dataSource: "defillama-auto", sourceTvlUsd: 2_000_000 },
+      ],
+      sourceRisk: {
+        dependencyConcentration: { ecosystem: "Circle USYC", severity: "low" },
+      },
+    });
     expect(body.rankings[0]).not.toHaveProperty("decisionLedger");
     expect(body.rankings[0].sourceRisk).not.toHaveProperty("venueProtocol");
     expect(body.rankings[0].sourceRisk).not.toHaveProperty("investabilityFlags");
+    expect(body.rankings[0].altSources[0]).not.toHaveProperty("sourceRisk");
   });
 
   it("preserves the detailed default response", async () => {

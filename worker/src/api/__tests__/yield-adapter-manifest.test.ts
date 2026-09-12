@@ -2,7 +2,12 @@ import { readJsonResponse } from "../../test-helpers/__shared/auth";
 import { describe, expect, it } from "vitest";
 import { handleYieldAdapterManifest } from "../yield-adapter-manifest";
 import { getRouteMatch } from "../../routes/registry";
-import { YIELD_METHODOLOGY_VERSION_LABEL } from "@shared/lib/methodology-versions/yield-methodology";
+import { CACHE_PROFILES } from "../../lib/constants";
+import {
+  YIELD_METHODOLOGY_CHANGELOG,
+  YIELD_METHODOLOGY_VERSION,
+} from "@shared/lib/methodology-versions/yield-methodology";
+import { YIELD_ADAPTER_MANIFEST } from "../../lib/yield-config/yield-config";
 import {
   RATE_DERIVED_CONFIGS,
   YIELD_POOL_MAP,
@@ -22,10 +27,33 @@ describe("handleYieldAdapterManifest", () => {
 
     const body = (await readJsonResponse(res, 200)) as YieldAdapterManifestResponse;
     expect(() => YieldAdapterManifestResponseSchema.parse(body)).not.toThrow();
-    expect(body.methodologyVersion).toBe(YIELD_METHODOLOGY_VERSION_LABEL);
+    // Plain `8.43`, the same format `/api/yield-rankings` publishes; the previous
+    // `v8.43` label made two endpoints describe one methodology differently.
+    expect(body.methodologyVersion).toBe(YIELD_METHODOLOGY_VERSION);
+    expect(body.methodologyVersion).not.toContain("v");
     expect(typeof body.updatedAt).toBe("number");
     expect(Array.isArray(body.entries)).toBe(true);
     expect(body.entries.length).toBeGreaterThan(0);
+
+    // C18: the stamp is registry evidence, never the epoch, and it is at least the
+    // newest adapter lifecycle review the registry carries.
+    const newestReviewSec = Math.max(
+      ...YIELD_ADAPTER_MANIFEST.flatMap((entry) => entry.strategies
+        .map((strategy) => strategy.lifecycleReason?.since)
+        .filter((since): since is string => typeof since === "string")
+        .map((since) => Math.floor(Date.parse(`${since}T00:00:00Z`) / 1000))),
+    );
+    expect(body.updatedAt).toBeGreaterThanOrEqual(newestReviewSec);
+    expect(body.updatedAt).toBeGreaterThan(1_700_000_000);
+    const newestMethodologySec = Math.max(...YIELD_METHODOLOGY_CHANGELOG.map((entry) => entry.effectiveAt));
+    expect(body.updatedAt).toBe(newestMethodologySec);
+  });
+
+  it("serves freshness headers derived from the registry revision", async () => {
+    const res = await handleYieldAdapterManifest();
+    expect(Number(res.headers.get("X-Data-Age"))).toBeGreaterThan(0);
+    expect(res.headers.get("Warning")).toBeNull();
+    expect(res.headers.get("Cache-Control")).toBe(CACHE_PROFILES.standard);
   });
 
   it("covers every adapter family declared in the static registry", async () => {
@@ -48,7 +76,7 @@ describe("handleYieldAdapterManifest", () => {
     const body = (await res.json()) as YieldAdapterManifestResponse;
     const validLifecycles = new Set(["active", "quarantined", "intentional-gap", "experimental"]);
     for (const entry of body.entries) {
-      expect(entry.methodologyVersion).toBe(YIELD_METHODOLOGY_VERSION_LABEL);
+      expect(entry.methodologyVersion).toBe(YIELD_METHODOLOGY_VERSION);
       expect(entry.coinSymbol).toBeTypeOf("string");
       expect(entry.coinSymbol.length).toBeGreaterThan(0);
       if (entry.sourceKey != null) {

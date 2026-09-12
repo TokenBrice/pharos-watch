@@ -16,6 +16,7 @@ import {
   computePYS,
 } from "@shared/lib/yield-scoring";
 import type { YieldPysNullReason } from "@shared/types";
+import { computePysBreakdown } from "@/lib/yield-constants";
 
 function baseProps(overrides: Partial<PysBreakdownProps> = {}): PysBreakdownProps {
   return {
@@ -55,8 +56,8 @@ describe("PysBreakdown", () => {
     expect(container.textContent ?? "").toContain("50.0");
 
     // Core breakdown lines are present.
-    expect(screen.getByLabelText(/Base APY 5.0 percent/)).toBeTruthy();
-    expect(screen.getByLabelText(/Effective yield 4.5 percent/)).toBeTruthy();
+    expect(screen.getByLabelText(/Base APY 5\.00%/)).toBeTruthy();
+    expect(screen.getByLabelText(/Effective yield 4\.50%/)).toBeTruthy();
     expect(screen.getByLabelText(/Divided by source-risk penalty 1.00 times/)).toBeTruthy();
     expect(screen.getByLabelText(/Divided by safety penalty 1.0 times/)).toBeTruthy();
     expect(screen.getByLabelText(/Multiplied by consistency 90 percent/)).toBeTruthy();
@@ -335,5 +336,101 @@ describe("PysBreakdown", () => {
       const badge = screen.getByLabelText("Source-risk penalty hit the methodology cap");
       expect(badge.getAttribute("title")).toBe("Source-risk penalty hit the methodology cap");
     });
+  });
+});
+
+describe("PysBreakdown — printed equation (D14)", () => {
+  // Build the props exactly the way the leaderboard does: from
+  // computePysBreakdown output, not hand-picked numbers.
+  function propsFromComponents(input: {
+    apy30d: number;
+    safetyScore: number | null;
+    yieldStability: number | null;
+    benchmarkRate: number | null;
+    usdBenchmarkRate: number | null;
+    benchmarkCurrency: string | null;
+  }): PysBreakdownProps {
+    const breakdown = computePysBreakdown(
+      input.apy30d,
+      input.safetyScore,
+      input.yieldStability,
+      input.benchmarkRate,
+      null,
+      input.usdBenchmarkRate,
+      input.benchmarkCurrency,
+    );
+    return baseProps({
+      mode: "popover",
+      apy30d: input.apy30d,
+      effectiveYield: breakdown.effectiveYield,
+      benchmarkAdjustment: breakdown.benchmarkAdjustment,
+      benchmarkSpread: breakdown.benchmarkSpread,
+      hurdleRebase: breakdown.hurdleRebase,
+      sourceRiskPenalty: breakdown.sourceRiskPenalty,
+      adjustedRiskPenalty: breakdown.adjustedRiskPenalty,
+      sustainabilityMult: breakdown.sustainabilityMult,
+      safetyScore: input.safetyScore,
+    });
+  }
+
+  function printedPercent(label: string | null, prefix: string): number {
+    const match = label?.match(new RegExp(`${prefix} ([+-]?[\\d.]+)%`));
+    if (!match) throw new Error(`no printed percent for "${prefix}" in: ${label}`);
+    return Number(match[1]);
+  }
+
+  it("prints addends that reconcile with the printed effective yield", () => {
+    renderWithProvider(propsFromComponents({
+      apy30d: 12,
+      safetyScore: 60,
+      yieldStability: 0.6,
+      benchmarkRate: 4,
+      usdBenchmarkRate: 4.32,
+      benchmarkCurrency: "EUR",
+    }));
+    const base = printedPercent(screen.getByLabelText(/Base APY/).getAttribute("aria-label"), "Base APY");
+    const adjustment = printedPercent(
+      screen.getByLabelText(/Plus benchmark adjustment/).getAttribute("aria-label"),
+      "Plus benchmark adjustment",
+    );
+    const rebase = printedPercent(
+      screen.getByLabelText(/Plus USD hurdle re-base/).getAttribute("aria-label"),
+      "Plus USD hurdle re-base",
+    );
+    const effective = printedPercent(
+      screen.getByLabelText(/^Effective yield/).getAttribute("aria-label"),
+      "Effective yield",
+    );
+    // Addends print at 1-2dp, so the printed sum matches the printed total
+    // up to display rounding only.
+    expect(Math.abs(base + adjustment + rebase - effective)).toBeLessThanOrEqual(0.06);
+    expect(effective).toBeCloseTo(12 + 2 + 0.32, 2);
+    expect(screen.queryByLabelText("Effective yield floored at 0%")).toBeNull();
+  });
+
+  it("shows floor 0% and a zero total when the addends sum negative", () => {
+    // USD-benchmarked row: the USD currency skips the re-base, so the printed
+    // addends are exactly Base APY + benchmark adjustment — and their sum is
+    // negative while the printed total reads 0.00%.
+    renderWithProvider(propsFromComponents({
+      apy30d: -1.9,
+      safetyScore: 60,
+      yieldStability: 0.6,
+      benchmarkRate: 0.4,
+      usdBenchmarkRate: 3.95,
+      benchmarkCurrency: "USD",
+    }));
+    const base = printedPercent(screen.getByLabelText(/Base APY/).getAttribute("aria-label"), "Base APY");
+    const adjustment = printedPercent(
+      screen.getByLabelText(/Plus benchmark adjustment/).getAttribute("aria-label"),
+      "Plus benchmark adjustment",
+    );
+    const effective = printedPercent(
+      screen.getByLabelText(/^Effective yield [+-]?[\d]/).getAttribute("aria-label"),
+      "Effective yield",
+    );
+    expect(base + adjustment).toBeLessThan(0);
+    expect(effective).toBe(0);
+    expect(screen.getByLabelText("Effective yield floored at 0%")).toBeTruthy();
   });
 });

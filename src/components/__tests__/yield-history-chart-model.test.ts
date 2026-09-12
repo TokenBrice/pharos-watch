@@ -30,8 +30,8 @@ function point(date: number, apy: number, overrides: Partial<YieldHistoryPoint> 
 const chartProps = { stablecoinId: "fixture", benchmarkRate: 5, medianApy: 5 };
 
 describe("yield history transformations", () => {
-  it("prioritizes overlays, caps the cohort at four, and drops stale internal selection", () => {
-    const sources = ["a", "b", "c", "d", "e"].map((sourceKey) => ({ sourceKey, yieldSource: sourceKey }));
+  it("prioritizes overlays, caps the cohort at eight, and drops stale internal selection", () => {
+    const sources = ["a", "b", "c", "d", "e", "f", "g", "h", "i"].map((sourceKey) => ({ sourceKey, yieldSource: sourceKey }));
     for (const [index, source] of sources.entries()) historyBySource.set(source.sourceKey, [point(BASE, index + 5)]);
     const { result, rerender } = renderHook(
       ({ availableSources, externalSourceKeys }: { availableSources: typeof sources; externalSourceKeys?: string[] }) =>
@@ -40,11 +40,30 @@ describe("yield history transformations", () => {
     );
     act(() => result.current.onSourceChange?.("b"));
     expect(result.current.chartData[0].apy).toBe(6);
-    rerender({ availableSources: sources, externalSourceKeys: ["a", "b", "c", "d", "e"] });
+    rerender({ availableSources: sources, externalSourceKeys: ["a", "b", "c", "d", "e", "f", "g", "h", "i"] });
     expect(result.current.selectedSourceKey).toBe("b");
     expect(result.current.primarySourceKey).toBe("a");
-    expect(result.current.mergedChartData[0]).toMatchObject({ apy: 5, apy_overlay_0: 6, apy_overlay_1: 7, apy_overlay_2: 8 });
-    expect(result.current.overlaySeriesKeys).toEqual(["apy_overlay_0", "apy_overlay_1", "apy_overlay_2"]);
+    expect(result.current.mergedChartData[0]).toMatchObject({
+      apy: 5,
+      apy_overlay_0: 6,
+      apy_overlay_1: 7,
+      apy_overlay_2: 8,
+      apy_overlay_3: 9,
+      apy_overlay_4: 10,
+      apy_overlay_5: 11,
+      apy_overlay_6: 12,
+    });
+    expect(result.current.overlaySeriesKeys).toEqual([
+      "apy_overlay_0",
+      "apy_overlay_1",
+      "apy_overlay_2",
+      "apy_overlay_3",
+      "apy_overlay_4",
+      "apy_overlay_5",
+      "apy_overlay_6",
+    ]);
+    // The 9th source sits beyond MAX_OVERLAY_SOURCES and is reported, not silently dropped.
+    expect(result.current.omittedOverlayKeys).toEqual(["i"]);
     historyBySource.set("best", [point(BASE, 3)]);
     rerender({ availableSources: sources.filter((source) => source.sourceKey !== "b"), externalSourceKeys: undefined });
     expect(result.current.selectedSourceKey).toBe("best");
@@ -67,7 +86,9 @@ describe("yield history transformations", () => {
       point(BASE + 34 * 86_400_000, 8),
     ]);
     const { result, rerender } = renderHook(() => useYieldHistoryChartModel(chartProps));
-    expect(result.current.spikeAnnotations).toEqual([{ date: BASE + 34 * 86_400_000, apy: 8, trailingAvg: 4, ratio: 2 }]);
+    expect(result.current.spikeAnnotations).toEqual([
+      { date: BASE + 34 * 86_400_000, apy: 8, trailingAvg: 4, ratio: 2, windowDays: 3 },
+    ]);
     historyBySource.set("best", [
       ...[0, 1, 2].map((day) => point(BASE + day * 86_400_000, 0.5)),
       point(BASE + 3 * 86_400_000, 2),

@@ -1,6 +1,24 @@
 import { describe, expect, it } from "vitest";
 
-import { computeApyAxis, computeSafetyDomain, nudgeOverlaps } from "@/lib/yield-scatter";
+import { computeApyAxis, computeSafetyDomain, nudgeOverlaps, resolveYieldZone } from "@/lib/yield-scatter";
+
+describe("resolveYieldZone", () => {
+  it("returns null only when no benchmark resolves at all or the row is unscored", () => {
+    expect(resolveYieldZone(80, 5, null)).toBeNull();
+    expect(resolveYieldZone(80, 5, undefined)).toBeNull();
+    expect(resolveYieldZone(80, 5, Number.NaN)).toBeNull();
+    expect(resolveYieldZone(null, 5, 4)).toBeNull();
+  });
+
+  it("maps safety and benchmark-relative yield onto the four zones", () => {
+    expect(resolveYieldZone(80, 6, 4)).toBe("sweet-spot");
+    expect(resolveYieldZone(80, 3, 4)).toBe("play-it-safe");
+    expect(resolveYieldZone(40, 6, 4)).toBe("danger-zone");
+    expect(resolveYieldZone(40, 3, 4)).toBe("why-bother");
+    // Yield exactly at the benchmark is not "paid".
+    expect(resolveYieldZone(80, 4, 4)).toBe("play-it-safe");
+  });
+});
 
 describe("computeSafetyDomain", () => {
   it("falls back to the full safety range when no scores are available", () => {

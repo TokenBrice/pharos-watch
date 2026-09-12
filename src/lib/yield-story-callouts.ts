@@ -4,6 +4,12 @@ export interface YieldStoryCallouts {
   topYield: YieldViewModelRow | null;
   mostStable: YieldViewModelRow | null;
   largestMarket: YieldViewModelRow | null;
+  /**
+   * Rows excluded from the largest-market tile because they publish no source
+   * TVL (E11). The tile reads "largest *tracked* market", not an absolute
+   * fact, and the hero footnotes this count.
+   */
+  unmeasuredTvlCount: number;
 }
 
 export function buildYieldStoryCallouts(
@@ -26,9 +32,14 @@ export function buildYieldStoryCallouts(
     });
   const mostStable = stableAplusRows[0] ?? null;
 
+  // E11: the tile filters rows with no measured source TVL, so a native giant
+  // without a TVL figure can never win. Count the exclusions so the hero can
+  // footnote them instead of presenting the tile as absolute fact.
+  const unmeasuredTvlCount = visibleRows.filter((row) => !((row.sourceTvlUsd ?? 0) > 0)).length;
+
   const largestMarket = [...visibleRows]
     .filter((row) => (row.sourceTvlUsd ?? 0) > 0)
     .sort((a, b) => (b.sourceTvlUsd ?? 0) - (a.sourceTvlUsd ?? 0) || byId(a, b))[0] ?? null;
 
-  return { topYield, mostStable, largestMarket };
+  return { topYield, mostStable, largestMarket, unmeasuredTvlCount };
 }

@@ -2,6 +2,7 @@
 
 import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import type { ComponentType } from "react";
 
 import { YieldClient } from "@/components/yield/yield-client";
 import { makeYieldProvenance, makeYieldRanking } from "@shared/test-utils/yield-ranking-fixtures";
@@ -319,6 +320,88 @@ describe("YieldClient", () => {
 
     const props = scatterPropsMock.mock.calls.at(-1)?.[0] as { rankings: unknown[] };
     expect(props.rankings).toHaveLength(60);
+  });
+
+  it("relabells the largest-market tile as tracked and footnotes the unmeasured-TVL rows", () => {
+    useYieldRankingsSummaryMock.mockReturnValue({
+      data: projectYieldRankingsSummary({
+        rankings: [
+          makeYieldRanking({ id: "usdc-circle", symbol: "USDC", name: "USD Coin", sourceTvlUsd: 5_000_000 }),
+          makeYieldRanking({ id: "usdt-tether", symbol: "USDT", name: "Tether USD", sourceTvlUsd: 10_000_000 }),
+          makeYieldRanking({ id: "usde-ethena", symbol: "USDE", name: "Ethena USDe", sourceTvlUsd: null }),
+        ],
+        riskFreeRate: 4.25,
+        scalingFactor: 1,
+        medianApy: 5,
+        updatedAt: 1_776_000_000,
+        warnings: [],
+      }),
+      meta: null,
+      isLoading: false,
+      error: null,
+      dataUpdatedAt: 1_776_000_000,
+      refetch: vi.fn(),
+    });
+
+    render(<YieldClient />);
+
+    expect(screen.getByText("Largest tracked market")).toBeTruthy();
+    expect(screen.getByText(/1 of 3 rows publish no source TVL/)).toBeTruthy();
+  });
+
+  it("hands the hero scatter the registry and the reference benchmark's age evidence", () => {
+    render(<YieldClient />);
+
+    const props = scatterPropsMock.mock.calls.at(-1)?.[0] as {
+      benchmarks: unknown;
+      benchmarkAgeEvidence: unknown;
+    };
+    expect(props).toHaveProperty("benchmarks");
+    expect(props).toHaveProperty("benchmarkAgeEvidence");
+  });
+
+  it("shows the clipped-outlier count and the unscored-row note on the compact hero scatter", async () => {
+    const { YieldScatterPlot } = (await vi.importActual("@/components/yield-scatter-plot")) as {
+      YieldScatterPlot: ComponentType<{
+        rankings: Array<{ safetyScore: number | null; apy30d: number } & Record<string, unknown>>;
+        benchmarkRate: number;
+        compact?: boolean;
+        frame?: "stage" | "bare";
+        usesDefaultBenchmarkFrame?: boolean;
+      }>;
+    };
+    const scatterRows = [
+      ...Array.from({ length: 13 }, (_, index) =>
+        makeYieldRanking({
+          id: `steady-${index}`,
+          symbol: `S${index}`,
+          name: `Steady ${index}`,
+          apy30d: 5,
+          safetyScore: 50 + index,
+        }),
+      ),
+      makeYieldRanking({ id: "rocket", symbol: "RKT", name: "Rocket", apy30d: 200, safetyScore: 70 }),
+      makeYieldRanking({ id: "unscored", symbol: "UNSC", name: "Unscored", apy30d: 6, safetyScore: null }),
+    ];
+
+    render(
+      <YieldScatterPlot
+        rankings={scatterRows}
+        benchmarkRate={4.25}
+        compact
+        frame="bare"
+        usesDefaultBenchmarkFrame
+      />,
+    );
+
+    // E10: the compact hero surface shows the clipped count...
+    expect(screen.getByText(/outlier pinned above/)).toBeTruthy();
+    // E13: ...labelled as the chart-wide USD frame in mixed views.
+    expect(screen.getByText("(USD frame)")).toBeTruthy();
+    // E17: null-safety rows are annotated, not silently dropped.
+    expect(screen.getByText(/1 row without a safety score not shown/)).toBeTruthy();
+    const figure = screen.getByRole("figure");
+    expect(figure.getAttribute("aria-label")).toContain("1 row without a safety score not shown");
   });
 
   it("keeps the build-static adapter manifest out of live freshness aggregation", () => {

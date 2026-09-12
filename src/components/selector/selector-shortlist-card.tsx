@@ -281,7 +281,9 @@ export function SelectorShortlistCard(props: SelectorShortlistCardProps) {
             <ShieldAlert className="h-3 w-3" aria-hidden="true" />
             <span>
               Source risk: {rec.recommendedSource.sourceRiskTier}. Data freshness:{" "}
-              {preciseStaleness(rec.recommendedSource.freshness.ageSeconds)} old.
+              {rec.recommendedSource.freshness === null
+                ? "unknown"
+                : `${preciseStaleness(rec.recommendedSource.freshness.ageSeconds)} old`}.
             </span>
           </p>
           {yieldSourceUrl || yieldInspectionHref ? (

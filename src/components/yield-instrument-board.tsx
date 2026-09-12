@@ -1,7 +1,10 @@
 "use client";
 
-import { memo, useMemo, type ReactNode } from "react";
+import { REPORT_CARD_GRADE_RANGE_METADATA } from "@shared/lib/classification";
+import { gradeRange, scoreToGrade } from "@shared/lib/report-card-core";
+
 import Link from "next/link";
+import { memo, useMemo, type ReactNode } from "react";
 import { ArrowDown, ArrowUp, ArrowUpRight, ChevronDown } from "lucide-react";
 import { StablecoinLogo } from "@/components/stablecoin-logo";
 import { Badge } from "@/components/ui/badge";
@@ -35,13 +38,14 @@ import { clampScore } from "@shared/lib/math";
 // 30d-Range stay as plain values. Tailwind classes are static strings.
 // ---------------------------------------------------------------------------
 
-// Map a 0-100 safety score to a bar tone (mirrors the 80/60/40 score tiers).
+// Gauge tone follows the V9 grade ladder via scoreToGrade, so a row's gauge
+// can never disagree with its adjacent grade badge; bar classes come from the
+// classification grade-range table (A emerald / B blue / C amber / D orange /
+// F red). The old hardcoded 80/60/40 cuts gave a C+ (60-64) a blue gauge
+// under an amber badge.
 function safetyBarTone(score: number | null): string {
   if (score == null) return "bg-muted-foreground/40";
-  if (score >= 80) return "bg-emerald-500";
-  if (score >= 60) return "bg-sky-500";
-  if (score >= 40) return "bg-amber-500";
-  return "bg-red-500";
+  return REPORT_CARD_GRADE_RANGE_METADATA[gradeRange(scoreToGrade(score))].barClassName;
 }
 
 // Map a PYS score to a bar tone matching getPysColor's 41/21 thresholds.

@@ -222,6 +222,31 @@ describe("buildYieldSourceExplorerModel — rejection hints", () => {
     expect(model.retainedAlternates[0]?.rejectionHint?.code).toBe("lower-conf");
   });
 
+  it("renders the published confidence tier on alternates even when lane inference disagrees (B33)", () => {
+    const model = buildYieldSourceExplorerModel(ranking({
+      dataSource: "protocol-api",
+      provenance: makeYieldProvenance({
+        sourceKey: "primary-source", sourceObservedAt: 1_700_000_000, sourceAgeSeconds: 60,
+        confidenceTier: "curated",
+        selectionReason: "Higher confidence than retained alternates.", benchmarkRecordDate: null,
+      }),
+      sourceRisk: selectedRisk(),
+      altSources: [
+        altSource({
+          sourceKey: "onchain-alt",
+          dataSource: "onchain", // lane inference says "deterministic"
+          confidenceTier: "discovered", // API publishes a lower tier
+          sourceTvlUsd: 10_000_000,
+          sourceRisk: { sourceDepthRatio: 0.05, sourceAgeSeconds: 60, rewardShare: 0 },
+        }),
+      ],
+    }));
+
+    // Fails pre-fix (B33): the tier was fabricated from dataSource.
+    expect(model.retainedAlternates[0]?.confidenceTier).toBe("discovered");
+    expect(model.retainedAlternates[0]?.rejectionHint?.code).toBe("lower-conf");
+  });
+
   it("fires 'smaller' when alternate TVL is at least 5x smaller than selected", () => {
     const model = buildYieldSourceExplorerModel(ranking({
       dataSource: "defillama",

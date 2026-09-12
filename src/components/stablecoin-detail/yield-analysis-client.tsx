@@ -72,8 +72,10 @@ interface WarningSignalEvent {
   sourceLabel: string | null;
 }
 
-/** One timeline row: consecutive identical signals collapse into a single
- * entry with a count and time range so repeats don't drown the timeline. */
+/** One timeline row: occurrences of the same signal from the same source that
+ * sit inside one 24h bucket collapse into a single entry with a count and time
+ * range, so hourly repeats — and two signals interleaved on the same points —
+ * don't drown the timeline (E26). */
 interface WarningSignalGroup {
   signal: string;
   apy: number;
@@ -82,6 +84,8 @@ interface WarningSignalGroup {
   latestTimestamp: number;
   earliestTimestamp: number;
 }
+
+const WARNING_EVENT_BUCKET_MS = 24 * 60 * 60 * 1000;
 
 interface SourceSwitchEvent {
   timestamp: number;
@@ -336,25 +340,28 @@ function deriveWarningEvents(history: YieldHistoryPoint[]): WarningSignalGroup[]
     }
   }
   events.sort((a, b) => b.timestamp - a.timestamp);
-
   const groups: WarningSignalGroup[] = [];
+  const latestGroupByKey = new Map<string, WarningSignalGroup>();
   for (const event of events) {
-    const last = groups[groups.length - 1];
-    if (last && last.signal === event.signal && last.sourceLabel === event.sourceLabel && last.apy === event.apy) {
-      last.count += 1;
-      last.earliestTimestamp = event.timestamp;
+    const key = `${event.signal}\u0000${event.sourceLabel ?? ""}`;
+    const group = latestGroupByKey.get(key);
+    if (group && group.earliestTimestamp - event.timestamp <= WARNING_EVENT_BUCKET_MS) {
+      group.count += 1;
+      group.earliestTimestamp = event.timestamp;
     } else {
-      groups.push({
+      const next: WarningSignalGroup = {
         signal: event.signal,
         apy: event.apy,
         sourceLabel: event.sourceLabel,
         count: 1,
         latestTimestamp: event.timestamp,
         earliestTimestamp: event.timestamp,
-      });
+      };
+      groups.push(next);
+      latestGroupByKey.set(key, next);
     }
   }
-  return groups;
+  return groups.sort((a, b) => b.latestTimestamp - a.latestTimestamp);
 }
 
 function deriveSourceSwitchEvents(history: YieldHistoryPoint[]): SourceSwitchEvent[] {
@@ -582,7 +589,8 @@ export default function YieldAnalysisClient({ id, staticCoin, logoSrc }: YieldAn
           ) : warningEvents.length === 0 ? (
             currentWarningSignals.length === 0 ? (
               <p className="text-sm text-muted-foreground">
-                No warning signals recorded for this stablecoin in the past 90 days.
+                No warning signals recorded in the fetched 90-day history (only the last 30 days are hourly, so
+                signals that resolved between daily snapshots may not appear).
               </p>
             ) : (
               <div className="space-y-3">
@@ -650,7 +658,8 @@ export default function YieldAnalysisClient({ id, staticCoin, logoSrc }: YieldAn
           ) : sourceSwitchEvents.length === 0 ? (
             <div className="space-y-2 text-sm text-muted-foreground">
               <p>
-                No source switches recorded in the past 90 days.
+                No source switches recorded in the fetched 90-day best-source history (only the last 30 days are
+                hourly, so switches that started and ended between daily snapshots may not appear).
                 {sourceSwitchCount30d != null ? ` (30-day switch count: ${sourceSwitchCount30d}.)` : ""}
               </p>
               {readyModel.sourceExplorer.sourceSwitch.changed ? (

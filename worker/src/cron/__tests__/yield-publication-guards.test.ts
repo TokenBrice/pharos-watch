@@ -15,6 +15,7 @@ import {
   LONG_HORIZON_COMPARISON_ANCHOR_STALE_THRESHOLD_MS,
 } from "../yield-helpers";
 import { buildHistoryKey } from "../yield-sync/evaluation";
+import { YIELD_BENCHMARK_SCORE_TTL_SEC } from "../yield-sync/benchmarks";
 import {
   buildYieldRankingsPayloadFromEvaluatedSources,
   validateYieldRankingsPayloadForPublish,
@@ -305,6 +306,111 @@ describe("buildYieldRankingsPayloadFromEvaluatedSources", () => {
     expect(payload.rankings[0]?.decisionLedger?.sourceSwitch).toBe(true);
     expect(payload.rankings[0]?.decisionLedger?.previousBestSourceKey).toBe("price-derived:previous");
     expect(payload.rankings[0]?.decisionLedger?.apy30dDeltaFromPrevious).toBeCloseTo(1.8, 6);
+  });
+
+  it("keeps a benchmark-degraded row scored and adds the degradation warning", () => {
+    const payload = buildPayloadWithObservedAt(Math.floor(FIXED_NOW.getTime() / 1000), {
+      benchmarkFreshness: "degraded",
+    });
+    const ranking = payload.rankings[0];
+
+    expect(ranking?.warningSignals).toContain("benchmark-degraded");
+    expect(ranking?.warningSignals).not.toContain("benchmark-stale");
+    expect(ranking?.pharosYieldScore).toBe(28);
+    expect(ranking?.pysNullReason).toBeNull();
+    expect(ranking?.sourceRole).toBe("degraded-canonical");
+    expect(ranking?.provenance).toMatchObject({
+      benchmarkFreshness: "degraded",
+      scoreQualification: "rated",
+      scoreQualified: true,
+    });
+  });
+
+  it("nulls the score and names the benchmark when the benchmark feed is stale", () => {
+    const payload = buildPayloadWithObservedAt(Math.floor(FIXED_NOW.getTime() / 1000), {
+      benchmarkFreshness: "stale",
+    });
+    const ranking = payload.rankings[0];
+
+    expect(ranking?.warningSignals).toContain("benchmark-stale");
+    expect(ranking?.warningSignals).not.toContain("data-stale");
+    expect(ranking?.pharosYieldScore).toBeNull();
+    expect(ranking?.pysNullReason).toBe("benchmark-stale");
+    expect(ranking?.sourceRole).toBe("degraded-canonical");
+    expect(ranking?.provenance).toMatchObject({
+      sourceFreshness: "fresh",
+      benchmarkFreshness: "stale",
+      scoreQualification: "NR",
+      scoreQualified: false,
+    });
+  });
+
+  it.each([
+    {
+      label: "a proxy-selected row with healthy meta stays healthy",
+      meta: makeBenchmarkMeta(),
+      overrides: { benchmarkSelectionMode: "fallback-usd" as const },
+      expectedFreshness: "healthy",
+      expectedWarning: null,
+      expectedScore: 28,
+    },
+    {
+      label: "a retained fallback meta degrades",
+      meta: makeBenchmarkMeta({ isFallback: true, fallbackMode: "retained" }),
+      overrides: {},
+      expectedFreshness: "degraded",
+      expectedWarning: "benchmark-degraded",
+      expectedScore: 28,
+    },
+    {
+      label: "an observation past the 48h fetch TTL goes stale",
+      meta: makeBenchmarkMeta({ ageSeconds: YIELD_BENCHMARK_SCORE_TTL_SEC + 1 }),
+      overrides: {},
+      expectedFreshness: "stale",
+      expectedWarning: "benchmark-stale",
+      expectedScore: null,
+    },
+  ])(
+    "recomputes freshness from the row meta when the row publishes none — $label",
+    ({ meta, overrides, expectedFreshness, expectedWarning, expectedScore }) => {
+      const payload = buildPayloadWithObservedAt(Math.floor(FIXED_NOW.getTime() / 1000), {
+        // A row that publishes no freshness (legacy/absent evaluation output) must
+        // be classified from its own benchmark meta.
+        benchmarkFreshness: undefined,
+        benchmarkMeta: meta,
+        ...overrides,
+      });
+      const ranking = payload.rankings[0];
+
+      expect(ranking?.provenance?.benchmarkFreshness).toBe(expectedFreshness);
+      if (expectedWarning == null) {
+        // A1: a documented proxy selection is not a degraded feed.
+        expect(ranking?.warningSignals).not.toContain("benchmark-degraded");
+        expect(ranking?.warningSignals).not.toContain("benchmark-stale");
+      } else {
+        expect(ranking?.warningSignals).toContain(expectedWarning);
+      }
+      expect(ranking?.pharosYieldScore).toBe(expectedScore);
+      expect(ranking?.pysNullReason).toBe(expectedScore == null ? "benchmark-stale" : null);
+    },
+  );
+
+  it("prefers the source-stale reason when both the source and the benchmark are stale", () => {
+    const nowSec = Math.floor(FIXED_NOW.getTime() / 1000);
+    const payload = buildPayloadWithObservedAt(nowSec - STALE_THRESHOLD_MS / 1000 - 60, {
+      benchmarkFreshness: "stale",
+    });
+    const ranking = payload.rankings[0];
+
+    expect(ranking?.warningSignals).toEqual(expect.arrayContaining(["data-stale", "benchmark-stale"]));
+    expect(ranking?.pharosYieldScore).toBeNull();
+    expect(ranking?.pysNullReason).toBe("source-stale");
+    expect(ranking?.provenance).toMatchObject({
+      sourceFreshness: "stale",
+      benchmarkFreshness: "stale",
+      scoreQualification: "NR",
+      scoreQualified: false,
+    });
   });
 });
 

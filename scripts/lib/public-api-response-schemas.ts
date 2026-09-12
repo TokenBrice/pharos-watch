@@ -69,6 +69,7 @@ import {
   YieldRankingsResponseSchema,
   YieldVenueRiskScoresSchema,
 } from "@shared/types/yield";
+import { YieldRankingsSummaryResponseSchema } from "@shared/types/yield-summary";
 
 export const StablecoinSummaryResponseSchema = z.object({
   id: z.string(),
@@ -265,6 +266,9 @@ export const PUBLIC_API_RESPONSE_SCHEMAS = {
   MintBurnFlowsResponse: z.union([MintBurnFlowsResponseSchema, MintBurnPerCoinResponseSchema]),
   MintBurnEventsResponse: MintBurnEventsResponseSchema,
   YieldRankingsResponse: YieldRankingsResponseSchema,
+  // `?projection=summary` returns a different 200 body from the same path, so both
+  // variants are published and the operation points at both (F5).
+  YieldRankingsSummaryResponse: YieldRankingsSummaryResponseSchema,
   YieldAdapterManifestResponse: YieldAdapterManifestResponseSchema,
   YieldHistoryResponse: YieldHistoryResponseSchema,
   ChainsResponse: ChainsResponseSchema,

@@ -544,7 +544,7 @@ const CRON_JOB_DEFINITIONS_BASE: readonly CronJobDefinitionInput[] = [
     // data-surface descriptors, and /status maps stale rankings to
     // public-critical), so a failed run must not be filed as a watch-only job.
     statusImpact: "critical",
-    maxConnections: 1, // on-chain rate batch (1); DL pools read from cache written by sync-dex-liquidity-stage (sequential)
+    maxConnections: 2, // Midas mMEV NAV oracle reads a two-call Promise.all pair; everything else is serial (DL pools come from the sync-dex-liquidity-stage cache)
   },
   {
     job: "sync-yield-supplemental",

@@ -255,7 +255,13 @@ export interface RecommendedSource {
   pharosYieldScore: number | null;
   sourceTvlUsd?: number | null;
   sourceRiskTier: "low" | "mid" | "high";
-  freshness: { capturedAt: number; ageSeconds: number };
+  /**
+   * `null` when the winning rail published no freshness reading. The engine
+   * scores unknown freshness as neutral (50), so callers must render it as
+   * unknown — a fabricated `{ capturedAt: 0, ageSeconds: 0 }` would claim the
+   * stalest safe-looking reading on the one signal the card shows.
+   */
+  freshness: { capturedAt: number; ageSeconds: number } | null;
   selectionReason?: string | null;
 }
 

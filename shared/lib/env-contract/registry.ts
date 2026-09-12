@@ -178,7 +178,7 @@ export const ENV_BINDINGS = [
   {
     key: "ETHERSCAN_API_KEY",
     valueType: "string",
-    description: "Etherscan API credential used by blacklist sync and USDS status reads.",
+    description: "Etherscan API credential used by blacklist sync, USDS status reads, and the yield deterministic-read explorer-proxy fallback that keeps Ethereum-family on-chain reads alive during Worker-to-RPC outages.",
     example: { section: "workerOptional", value: "" },
     runtimes: {
       worker: { status: "optional" },

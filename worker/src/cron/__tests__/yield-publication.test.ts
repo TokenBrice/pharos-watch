@@ -1056,3 +1056,102 @@ describe("yield publication migration compatibility", () => {
     }
   });
 });
+
+describe("buildYieldRankingsPayloadFromEvaluatedSources benchmark projection", () => {
+  it("projects a non-USD row's own rate and excess alongside the published registry", () => {
+    const nowSec = Math.floor(FIXED_NOW.getTime() / 1000);
+    const eurBenchmark = makeBenchmarkMeta({
+      key: "EUR",
+      label: "EUR ESTR",
+      currency: "EUR",
+      rate: 2.17,
+      source: "ecb-estr",
+    });
+    const payload = buildPayloadWithObservedAt(
+      nowSec,
+      {
+        benchmarkKey: "EUR",
+        benchmarkLabel: eurBenchmark.label!,
+        benchmarkCurrency: "EUR",
+        benchmarkRate: eurBenchmark.rate,
+        benchmarkMeta: eurBenchmark,
+        excessYield: 2.43,
+      },
+      { benchmarkRegistry: { EUR: eurBenchmark } },
+    );
+
+    expect(payload.rankings[0]).toMatchObject({
+      benchmarkKey: "EUR",
+      benchmarkCurrency: "EUR",
+      benchmarkRate: 2.17,
+      excessYield: 2.43,
+      pharosYieldScore: 28,
+    });
+    // The published registry is the run's reference registry (EUR entry included),
+    // while the row's hurdle stays its own rate rather than the USD reference.
+    expect(payload.benchmarks?.EUR?.rate).toBe(2.17);
+    expect(payload.provenance?.benchmarks?.EUR?.rate).toBe(2.17);
+    expect(payload.riskFreeRate).toBe(4.2);
+  });
+
+  it("keeps a row whose benchmark key has no registry entry on its own evaluated rate", () => {
+    const nowSec = Math.floor(FIXED_NOW.getTime() / 1000);
+    const gbpBenchmark = makeBenchmarkMeta({
+      key: "GBP",
+      label: "GBP SONIA",
+      currency: "GBP",
+      rate: 4.35,
+      source: "boe-sonia",
+    });
+    const payload = buildPayloadWithObservedAt(nowSec, {
+      benchmarkKey: "GBP",
+      benchmarkLabel: gbpBenchmark.label!,
+      benchmarkCurrency: "GBP",
+      benchmarkRate: gbpBenchmark.rate,
+      benchmarkMeta: gbpBenchmark,
+      excessYield: 0.25,
+    });
+
+    expect(payload.rankings[0]).toMatchObject({
+      benchmarkKey: "GBP",
+      benchmarkCurrency: "GBP",
+      benchmarkRate: 4.35,
+      excessYield: 0.25,
+      pharosYieldScore: 28,
+    });
+    // GBP is a null registry slot: the payload must neither fabricate an entry nor
+    // re-base the row onto the USD reference.
+    expect(payload.benchmarks?.GBP).toBeNull();
+    expect(payload.riskFreeRate).toBe(4.2);
+  });
+
+  it("publishes each registry entry's own record bound and publication-time record age", () => {
+    const nowSec = Math.floor(FIXED_NOW.getTime() / 1000);
+    const cadBenchmark = makeBenchmarkMeta({
+      key: "CAD",
+      label: "CAD Bank of Canada Bank Rate",
+      currency: "CAD",
+      rate: 2.75,
+      // A monthly series: far past the 5-day daily bound, inside its own 45-day one.
+      recordDate: "2026-03-01",
+      source: "boc-policy-rate",
+    });
+    const payload = buildPayloadWithObservedAt(
+      nowSec,
+      {},
+      { benchmarkRegistry: { CAD: cadBenchmark } },
+    );
+
+    // USD's observation is 36h old at publication; the 2x-daily fallback bound
+    // amber-tints it without the 5-day daily bound travelling with the rate.
+    expect(payload.benchmarks?.USD).toMatchObject({
+      recordAgeSec: 36 * 3600,
+      maxRecordAgeSec: 5 * DAY_SECONDS,
+    });
+    expect(payload.benchmarks?.CAD).toMatchObject({
+      recordAgeSec: 25 * DAY_SECONDS + 12 * 3600,
+      maxRecordAgeSec: 45 * DAY_SECONDS,
+    });
+    expect(payload.provenance?.benchmarks?.CAD?.maxRecordAgeSec).toBe(45 * DAY_SECONDS);
+  });
+});

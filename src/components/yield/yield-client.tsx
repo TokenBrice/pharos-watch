@@ -39,12 +39,14 @@ import {
 import { buildStablecoinUrl } from "@shared/lib/urls";
 import { YIELD_ZONE_LABELS } from "@shared/lib/classification";
 import { resolveYieldZone } from "@/lib/yield-scatter";
+import { resolveYieldRowBenchmark } from "@/lib/yield-benchmark";
 import { buildYieldStoryCallouts } from "@/lib/yield-story-callouts";
 import { trackEvent } from "@/lib/analytics";
 import { formatCurrency, formatPercent } from "@shared/lib/format";
 import { dedupeYieldRankings } from "@shared/lib/yield-rankings";
 import { CLIENT_TRACKED_META_BY_ID } from "@shared/lib/stablecoins/client-registry";
 import { YIELD_WORKBENCH_FALLBACK_PARAM, parseYieldWorkbenchFallbackId } from "@shared/lib/yield-workbench-fallback";
+import type { YieldBenchmarkRegistry } from "@shared/types";
 import type { YieldRankingsSummaryResponse } from "@shared/types/yield-summary";
 
 interface HeroHighlightRowProps {
@@ -148,8 +150,15 @@ function HeroHighlightRow({ label, logoSrc, name, symbol, value, unit, context, 
   );
 }
 
-function formatHeroRiskContext(row: YieldViewModelRow, riskFreeRate: number): string {
-  const zone = resolveYieldZone(row.safetyScore, row.apy30d, row.benchmarkRate ?? riskFreeRate);
+function formatHeroRiskContext(
+  row: YieldViewModelRow,
+  riskFreeRate: number,
+  benchmarks: YieldBenchmarkRegistry | null | undefined,
+): string {
+  // E5: judge the hero zone against the row's own benchmark — a missing row
+  // rate resolves from the registry by benchmarkKey before the USD frame.
+  const benchmark = resolveYieldRowBenchmark(row, benchmarks, riskFreeRate);
+  const zone = resolveYieldZone(row.safetyScore, row.apy30d, benchmark.rate);
   const safety = row.safetyGrade && row.safetyGrade !== "NR" ? `${row.safetyGrade} safety` : "Safety NR";
   const pys = row.pharosYieldScore !== null ? `PYS ${row.pharosYieldScore.toFixed(1)}` : "PYS NR";
   const posture = row.sourcePosture ? row.sourcePosture.replaceAll("-", " ") : "posture unknown";
@@ -518,6 +527,7 @@ export function YieldClient() {
   }
 
   const exhibitTiles = storyCallouts;
+  const heroBenchmarks = data.benchmarks ?? data.provenance?.benchmarks ?? null;
 
   return (
     <div className="space-y-6">
@@ -542,7 +552,7 @@ export function YieldClient() {
                     Best-paid risk in view <span className="text-foreground/70">· {topPysRow.symbol}</span>
                   </span>
                   <span className="block text-[11px] font-normal text-muted-foreground">
-                    {formatHeroRiskContext(topPysRow, data.riskFreeRate)}
+                    {formatHeroRiskContext(topPysRow, data.riskFreeRate, heroBenchmarks)}
                   </span>
                 </span>
               ) : (
@@ -577,7 +587,7 @@ export function YieldClient() {
                       symbol={exhibitTiles.topYield.symbol}
                       value={formatPercent(exhibitTiles.topYield.apy30d)}
                       unit="APY"
-                      context={formatHeroRiskContext(exhibitTiles.topYield, data.riskFreeRate)}
+                      context={formatHeroRiskContext(exhibitTiles.topYield, data.riskFreeRate, heroBenchmarks)}
                       onClick={() => handleScrollToRow(exhibitTiles.topYield!.id)}
                     />
                   ) : null}
@@ -589,21 +599,27 @@ export function YieldClient() {
                       symbol={exhibitTiles.mostStable.symbol}
                       value={formatPercent(exhibitTiles.mostStable.apy30d)}
                       unit="APY"
-                      context={formatHeroRiskContext(exhibitTiles.mostStable, data.riskFreeRate)}
+                      context={formatHeroRiskContext(exhibitTiles.mostStable, data.riskFreeRate, heroBenchmarks)}
                       onClick={() => handleScrollToRow(exhibitTiles.mostStable!.id)}
                     />
                   ) : null}
                   {exhibitTiles.largestMarket ? (
                     <HeroHighlightRow
-                      label="Largest market"
+                      label="Largest tracked market"
                       logoSrc={logos?.[exhibitTiles.largestMarket.id]}
                       name={exhibitTiles.largestMarket.name}
                       symbol={exhibitTiles.largestMarket.symbol}
                       value={formatCurrency(exhibitTiles.largestMarket.sourceTvlUsd!)}
                       unit="TVL"
-                      context={formatHeroRiskContext(exhibitTiles.largestMarket, data.riskFreeRate)}
+                      context={formatHeroRiskContext(exhibitTiles.largestMarket, data.riskFreeRate, heroBenchmarks)}
                       onClick={() => handleScrollToRow(exhibitTiles.largestMarket!.id)}
                     />
+                  ) : null}
+                  {exhibitTiles.unmeasuredTvlCount > 0 ? (
+                    <p className="px-4 py-2 text-[11px] leading-snug text-muted-foreground">
+                      {exhibitTiles.unmeasuredTvlCount} of {visibleRows.length} rows publish no source TVL and are
+                      not eligible for this tile.
+                    </p>
                   ) : null}
                 </div>
               ) : (
@@ -627,6 +643,8 @@ export function YieldClient() {
                   benchmarkRate={stats.referenceBenchmark?.rate ?? data.riskFreeRate}
                   benchmarkLabel={stats.referenceBenchmark?.label}
                   benchmarkIsFallback={stats.referenceBenchmark?.isFallback}
+                  benchmarks={heroBenchmarks}
+                  benchmarkAgeEvidence={stats.referenceBenchmark ?? null}
                   showBenchmarkReference
                   usesDefaultBenchmarkFrame={stats.usesDefaultBenchmarkFrame}
                   logos={logos}

@@ -344,6 +344,34 @@ describe("handleYieldHistory", () => {
     expect(body.history[1]).toMatchObject({ sourceKey: "rate-derived", sourceSwitch: true });
   });
 
+  it("marks both is_best boundaries in source mode as switches", async () => {
+    // Source mode returns one key per series, so the canonical best-source
+    // switch is observable only as this key gaining and losing the is_best
+    // slot — both boundaries must be marked, and nothing in between.
+    const sourceKey = "aave-v3:usdt";
+    const db = mockD1([
+      {
+        match: "yield_history",
+        rows: [
+          makeYieldHistoryRow({ source_key: sourceKey, recorded_at: 1_771_000_000, is_best: 0 }),
+          makeYieldHistoryRow({ source_key: sourceKey, recorded_at: 1_771_086_400, is_best: 1 }),
+          makeYieldHistoryRow({ source_key: sourceKey, recorded_at: 1_771_172_800, is_best: 1 }),
+          makeYieldHistoryRow({ source_key: sourceKey, recorded_at: 1_771_259_200, is_best: 0 }),
+          makeYieldHistoryRow({ source_key: sourceKey, recorded_at: 1_771_345_600, is_best: 0 }),
+        ],
+      },
+    ]);
+
+    const res = await handleYieldHistory(db, new URL(
+      `https://x/api/yield-history?stablecoin=usdt-tether&sourceKey=${encodeURIComponent(sourceKey)}`,
+    ));
+    const body = (await readJsonResponse(res, 200)) as {
+      history: Array<{ isBest: boolean; sourceSwitch: boolean }>;
+    };
+    expect(body.history.map((point) => point.isBest)).toEqual([false, true, true, false, false]);
+    expect(body.history.map((point) => point.sourceSwitch)).toEqual([false, true, false, true, false]);
+  });
+
   it("normalizes legacy LUSD deterministic keys in best-mode history without a synthetic switch", async () => {
     const legacyRow = makeYieldHistoryRow({
       source_key: "bprotocol-lqty-only",

@@ -37,6 +37,7 @@ ORDER BY recorded_at DESC, alt_source_key ASC;
 ```
 
 Filter generations by `state IN ('staged', 'published', 'failed')` to reproduce the endpoint's `state` filter. Keep result sets small; the retired endpoint capped both generation and decision reads at 25 rows for a reason.
+`failure_reason` on generation rows uses a stable vocabulary; besides ordinary `failed` publishes, a persist-stage abort finalizes the batch as `aborted`, and a staged row older than one hour is pruned to `failed` / `abandoned-staged` by the retention rule.
 
 ## Read-Only D1 Snippets
 
@@ -99,6 +100,7 @@ The `alternatives_json` ledger is intentionally compact and bounded to 4 KB per 
 `/yield/` showing every row as Safety NR — blank scatter chart, `—` hero PYS, zeroed risk-tolerance bands — while APYs still populate is the *safety hydration* failure mode, not a rankings-cache failure. The read path hydrates safety from the live V9 publication only when the identity stamped into the `yield-rankings` cache is evaluator-compatible with it (`safetyScorePublicationIdentitiesAreComparable`). Every scoring deploy rotates the evaluation-build digest, so a mismatch window is expected after each rollout until the next hourly `sync-yield-data` publish.
 
 Since 2026-08-19 the API bridges that window itself: an incompatible or unavailable live publication makes `/api/yield-rankings` serve the cached payload's own publish-time safety values (warning `yield-safety-hydration-stale`, `provenance.liveSafetyHydration.fallback: "publish-time-snapshot"`), and `/api/health` carries the informational warning `yield-safety-publish-time-fallback:<reason>` while staying healthy. The page stays fully populated; no action is needed.
+`provenance.liveSafetyHydration.reason` is a comma-joined list naming every applicable reason, including the upstream snapshot's own reason (for example `safety-snapshot-unavailable,active-safety-score:v9`), and the publish-time-snapshot fallback path counts safety coverage as 0 under the provenance rule instead of counting stored `safetyScore` values.
 
 Investigate only when `/api/health` is `degraded` with a `yield-safety-unrated-serving:<reason>` warning — that means the public surface is actually serving NR safety:
 
@@ -125,6 +127,10 @@ Comparability requires equal `evaluationBuildDigest`, `policyId`, `policyDigest`
 - The cache publication guard skipped overwrite because the new payload failed schema validation, had duplicate IDs, or shrank severely versus the previous cache.
 - Core inputs were degraded: safety snapshot coverage below threshold, retained/stale benchmark fallback, unavailable DeFiLlama pools, deterministic on-chain outage without alternative coverage, or supplemental source loss reducing coverage.
 - D1 rows were staged but cache publication failed or CAS-skipped because a newer cache already exists; the generation remains `failed`, public cache stays on the previous good generation, and generation-aware history rows remain hidden.
+  A compare-and-swap skip now logs a `publication-skipped` event and reports the progress stage `publication-skipped` instead of `publication-complete`; the previous published generation is retained.
+
+- The run resolved no yield-bearing coins and returned `degraded` with metadata reason `no-yield-bearing-coins` — an empty cohort is no longer a healthy run.
+- The published history cutoff could not be read, so `/api/yield-history` served without the published cutoff cap and logged `Yield history published cutoff unavailable; serving history without the published cutoff cap`.
 
 ## Remediation
 
@@ -149,6 +155,7 @@ Comparability requires equal `evaluationBuildDigest`, `policyId`, `policyDigest`
 - Latest `yield_publication_generations` row is `published` or has an understood `failed` reason while the previous public cache remains valid.
 - `yield_data` best-row count is plausible relative to the previous good run, and current rows for the latest public generation carry `publication_state='published'`.
 - `GET /api/yield-history?stablecoin=<id>&days=30` works for a known ranked coin and does not return points newer than the rankings cutoff.
+- Every row serving a null PYS carries an explicit `pysNullReason` (the NR degrade path preserves the original reason), and no row serves `0` while a null reason is set.
 
 ## Rollback Notes
 

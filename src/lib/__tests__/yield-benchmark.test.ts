@@ -1,15 +1,26 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import {
+  YIELD_BENCHMARK_AGE_FALLBACK_BOUND_SEC,
   getYieldBenchmarkDisplayLabel,
   getYieldBenchmarkGapReferenceText,
   getYieldBenchmarkGapUnavailableText,
   getYieldRankingBenchmarkKey,
+  resolveYieldBenchmarkAge,
+  resolveYieldRowBenchmark,
   resolveYieldScatterBenchmarkFrame,
 } from "@/lib/yield-benchmark";
 import type { YieldBenchmarkKey, YieldBenchmarkRegistry, YieldRanking, YieldRankingProvenance } from "@shared/types";
+import type { YieldRankingSummary } from "@shared/types/yield-summary";
 import { makeYieldProvenance, makeYieldRanking } from "@shared/test-utils/yield-ranking-fixtures";
 
+// Age markers resolve against the wall clock; pin it so day counts are exact.
+beforeEach(() => {
+  vi.useFakeTimers({ now: Date.parse("2026-09-12T00:00:00Z") });
+});
+afterEach(() => {
+  vi.useRealTimers();
+});
 const BENCHMARKS: YieldBenchmarkRegistry = {
   USD: {
     key: "USD",
@@ -84,6 +95,122 @@ describe("getYieldBenchmarkDisplayLabel", () => {
         benchmarkIsFallback: true,
       }),
     ).toBe("USD 3M T-Bill (fallback)");
+  });
+
+  it("combines the fallback marker with an age marker for a stale proxy selection", () => {
+    expect(
+      getYieldBenchmarkDisplayLabel({
+        benchmarkLabel: "USD 3M T-Bill",
+        benchmarkIsFallback: true,
+        ageSeconds: 60,
+        recordDate: "2026-08-01",
+      }),
+    ).toBe("USD 3M T-Bill (fallback · 42d old)");
+  });
+});
+
+describe("resolveYieldBenchmarkAge", () => {
+  const NOW = Date.parse("2026-09-12T00:00:00Z");
+
+  it("flags a record older than the default 2x-daily-cadence bound", () => {
+    const age = resolveYieldBenchmarkAge({ ageSeconds: 60, recordDate: "2026-08-01" }, NOW);
+    expect(age.stale).toBe(true);
+    expect(age.boundSeconds).toBe(YIELD_BENCHMARK_AGE_FALLBACK_BOUND_SEC);
+    expect(age.marker).toBe("42d old");
+    expect(age.reason).toContain("42d old");
+    expect(age.reason).toContain("2× the daily benchmark refresh cadence");
+  });
+
+  it("stays fresh inside the default bound", () => {
+    const age = resolveYieldBenchmarkAge({ ageSeconds: 60, recordDate: "2026-09-11" }, NOW);
+    expect(age.stale).toBe(false);
+    expect(age.marker).toBe("");
+    expect(age.reason).toBeNull();
+  });
+
+  it("measures against the published per-key bound when the payload carries one", () => {
+    const withinBound = resolveYieldBenchmarkAge(
+      { ageSeconds: 60, recordDate: "2026-08-01", maxRecordAgeSec: 45 * 24 * 60 * 60 },
+      NOW,
+    );
+    expect(withinBound.stale).toBe(false);
+
+    const pastBound = resolveYieldBenchmarkAge(
+      { recordAgeSec: 50 * 24 * 60 * 60, maxRecordAgeSec: 45 * 24 * 60 * 60 },
+      NOW,
+    );
+    expect(pastBound.stale).toBe(true);
+    expect(pastBound.reason).toContain("50d old");
+    expect(pastBound.reason).toContain("45d freshness bound published for this benchmark");
+  });
+
+  it("prefers a published recordAgeSec over the record date", () => {
+    const age = resolveYieldBenchmarkAge(
+      { recordDate: "2026-08-01", recordAgeSec: 3600 },
+      NOW,
+    );
+    expect(age.stale).toBe(false);
+    expect(age.ageSeconds).toBe(3600);
+  });
+
+  it("flags a fetch age past the bound even without a record date", () => {
+    const age = resolveYieldBenchmarkAge({ ageSeconds: 3 * 24 * 60 * 60 }, NOW);
+    expect(age.stale).toBe(true);
+    expect(age.marker).toBe("3d old");
+  });
+
+  it("clamps a future-dated record to zero age and is not stale without evidence", () => {
+    expect(resolveYieldBenchmarkAge({ recordDate: "2026-10-01" }, NOW).stale).toBe(false);
+    expect(resolveYieldBenchmarkAge({}, NOW).stale).toBe(false);
+    expect(resolveYieldBenchmarkAge(null, NOW).stale).toBe(false);
+  });
+});
+
+describe("resolveYieldRowBenchmark", () => {
+  it("keeps the row's published rate and native label", () => {
+    const resolved = resolveYieldRowBenchmark(buildRanking("eur-a", "EUR"), BENCHMARKS, 4.25);
+    expect(resolved.rate).toBe(1.94);
+    expect(resolved.label).toBe("EUR 3M compounded €STR");
+    expect(resolved.isFallback).toBe(false);
+    expect(resolved.selectionMode).toBe("native");
+  });
+
+  it("resolves a missing row rate from the registry by benchmark key before the USD frame", () => {
+    const { benchmarkRate: _drop, ...row } = buildRanking("eur-b", "EUR");
+    const resolved = resolveYieldRowBenchmark(row as YieldRanking, BENCHMARKS, 4.25);
+    expect(resolved.rate).toBe(1.94);
+    expect(resolved.label).toBe("EUR 3M compounded €STR");
+  });
+
+  it("falls back to the USD registry entry only when the row's key is missing", () => {
+    const { benchmarkRate: _drop, ...row } = buildRanking("chf-b", "CHF");
+    const usdOnly: YieldBenchmarkRegistry = { USD: BENCHMARKS.USD };
+    const resolved = resolveYieldRowBenchmark(row as YieldRanking, usdOnly, null);
+    expect(resolved.rate).toBe(4.25);
+  });
+
+  it("labels a fallback-usd proxy selection even though benchmarkIsFallback is false", () => {
+    const row = makeYieldRanking({ benchmarkSelectionMode: "fallback-usd" });
+    const resolved = resolveYieldRowBenchmark(row, BENCHMARKS, 4.25);
+    expect(resolved.isFallback).toBe(true);
+    expect(resolved.selectionMode).toBe("fallback-usd");
+    expect(resolved.label).toBe("USD 3M T-Bill (fallback)");
+  });
+
+  it("derives the fallback marker from a summary row's fallback flag", () => {
+    const summaryRow = {
+      ...makeYieldRanking({ benchmarkIsFallback: true }),
+      alternateSourceCount: 3,
+    } as YieldRankingSummary;
+    const resolved = resolveYieldRowBenchmark(summaryRow, BENCHMARKS, 4.25);
+    expect(resolved.selectionMode).toBe("fallback-usd");
+    expect(resolved.label).toBe("USD 3M T-Bill (fallback)");
+  });
+
+  it("resolves to a null rate only when nothing resolves at all", () => {
+    const { benchmarkRate: _drop, ...row } = makeYieldRanking({ benchmarkKey: "CHF" });
+    expect(resolveYieldRowBenchmark(row as YieldRanking, null, 4.25).rate).toBe(4.25);
+    expect(resolveYieldRowBenchmark(row as YieldRanking, null, null).rate).toBeNull();
   });
 });
 

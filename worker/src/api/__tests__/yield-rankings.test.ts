@@ -1564,4 +1564,80 @@ describe("handleYieldRankings", () => {
     expect(stale?.pysNullReason).toBe("source-stale");
     expect(stale?.pharosYieldScore).toBeNull();
   });
+
+  it("falls back to the published benchmark warning when the cached provenance carries no benchmark freshness", async () => {
+    const updatedAt = Math.floor(Date.now() / 1000) - 30;
+    const payload = {
+      ...v748RankingsPayload,
+      rankings: [
+        {
+          ...v748RankingsPayload.rankings[0],
+          id: "rated-coin",
+          symbol: "RATE",
+          name: "Rated Coin",
+          warningSignals: ["benchmark-stale"],
+          // The cached publication predates `provenance.benchmarkFreshness`, so
+          // only the published warning signal can classify the served benchmark.
+          provenance: makeYieldProvenance({
+            sourceKey: "pool-a",
+            sourceObservedAt: updatedAt,
+            sourceAgeSeconds: 30,
+            previousBestSourceKey: "pool-a",
+            benchmarkRecordDate: "2026-03-12",
+          }),
+        },
+      ],
+      updatedAt,
+    } satisfies YieldRankingsResponse;
+    const db = makeCacheDb(payload, updatedAt);
+
+    const res = await handleYieldRankings(db);
+    const body = await res.json() as YieldRankingsResponse;
+    const row = body.rankings[0];
+
+    expect(row).toMatchObject({
+      pharosYieldScore: null,
+      pysNullReason: "benchmark-stale",
+      warningSignals: expect.arrayContaining(["benchmark-stale"]),
+      provenance: expect.objectContaining({
+        benchmarkFreshness: "stale",
+        scoreQualification: "NR",
+        scoreQualified: false,
+      }),
+    });
+  });
+
+  it("keeps a benchmark-degraded row scored while recording the degraded freshness", async () => {
+    const updatedAt = Math.floor(Date.now() / 1000) - 30;
+    const payload = {
+      ...v748RankingsPayload,
+      rankings: [
+        {
+          ...v748RankingsPayload.rankings[0],
+          id: "rated-coin",
+          symbol: "RATE",
+          name: "Rated Coin",
+          warningSignals: ["benchmark-degraded"],
+          provenance: makeYieldProvenance({
+            sourceKey: "pool-a",
+            sourceObservedAt: updatedAt,
+            sourceAgeSeconds: 30,
+            previousBestSourceKey: "pool-a",
+            benchmarkRecordDate: "2026-03-12",
+          }),
+        },
+      ],
+      updatedAt,
+    } satisfies YieldRankingsResponse;
+    const db = makeCacheDb(payload, updatedAt);
+
+    const res = await handleYieldRankings(db);
+    const body = await res.json() as YieldRankingsResponse;
+    const row = body.rankings[0];
+
+    expect(row?.pysNullReason ?? null).toBeNull();
+    expect(row?.pharosYieldScore).not.toBeNull();
+    expect(row?.provenance?.benchmarkFreshness).toBe("degraded");
+    expect(row?.provenance?.scoreQualification).toBe("estimated");
+  });
 });

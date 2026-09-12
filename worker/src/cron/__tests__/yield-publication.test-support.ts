@@ -118,7 +118,9 @@ export function makeEvaluatedSource(overrides: Partial<EvaluatedYieldSource> = {
     safetyScore: 82,
     safetyGrade: "A-",
     yieldToRisk: 3.2,
-    excessYield: 0.6,
+    // apy30d (4.6) - benchmarkRate (4.2): evaluation.ts writes the row's own
+    // excess, so a fixture literal that disagrees launders both numbers.
+    excessYield: 0.4,
     benchmarkKey: "USD",
     benchmarkLabel: benchmarkMeta.label!,
     benchmarkCurrency: benchmarkMeta.currency!,
@@ -161,6 +163,14 @@ export function makeEvaluatedSource(overrides: Partial<EvaluatedYieldSource> = {
 export function buildPayloadWithObservedAt(
   sourceObservedAt: number,
   overrides: Partial<EvaluatedYieldSource> = {},
+  options: {
+    /**
+     * Registry entries the payload publishes alongside the USD reference. The
+     * row's own benchmark fields always come from the evaluated source, so a
+     * non-USD case must override both sides to stay coherent.
+     */
+    benchmarkRegistry?: Partial<ParsedYieldBenchmarkRegistry>;
+  } = {},
 ) {
   const startSec = Math.floor(FIXED_NOW.getTime() / 1000);
   const source = makeEvaluatedSource(overrides);
@@ -179,6 +189,7 @@ export function buildPayloadWithObservedAt(
     RUB: null,
     TRY: null,
     SGD: null,
+    ...options.benchmarkRegistry,
   };
 
   return buildYieldRankingsPayloadFromEvaluatedSources({

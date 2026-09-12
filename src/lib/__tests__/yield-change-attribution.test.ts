@@ -1,7 +1,6 @@
 import { describe, expect, it } from "vitest";
 
 import {
-  ORGANIC_DELTA_THRESHOLD_PP,
   SOURCE_SWITCH_DELTA_THRESHOLD_PP,
   classifyApyChange,
 } from "@/lib/yield-change-attribution";
@@ -23,6 +22,10 @@ function point(daysAgo: number, apy: number, overrides: Partial<YieldHistoryPoin
   };
 }
 
+function hourlyPoint(day: number, hour: number, apy: number): YieldHistoryPoint {
+  return point(0, apy, { date: Date.UTC(2026, 4, day, hour) });
+}
+
 describe("classifyApyChange", () => {
   it("returns insufficient-data when history is empty", () => {
     const result = classifyApyChange({ history: [], nowMs: NOW_MS });
@@ -39,8 +42,39 @@ describe("classifyApyChange", () => {
     expect(result.largestDelta).not.toBeNull();
   });
 
-  it("attributes a recent source switch with high confidence", () => {
-    const history = [point(20, 4.0), point(10, 4.05), point(5, 6.1), point(4, 6.0), point(1, 6.05)];
+  it("resamples hourly history to daily closes before applying per-day thresholds", () => {
+    // Hour-over-hour swings of 3–4pp are noise; the daily closes barely move.
+    const history = [
+      hourlyPoint(17, 10, 5.0),
+      hourlyPoint(17, 14, 8.0),
+      hourlyPoint(17, 22, 5.0), // day-17 close
+      hourlyPoint(18, 10, 7.5),
+      hourlyPoint(18, 14, 3.5),
+      hourlyPoint(18, 22, 5.05), // day-18 close
+    ];
+    const result = classifyApyChange({ history, nowMs: NOW_MS });
+    // Fails pre-fix (B34): adjacent hourly points made the 4pp swing "organic".
+    expect(result.attribution).toBe("insufficient-data");
+    expect(result.largestDelta?.value).toBeCloseTo(0.05);
+  });
+
+  it("collapses same-day hourly points into one daily close", () => {
+    const history = [
+      hourlyPoint(17, 9, 4.0),
+      hourlyPoint(18, 10, 5.0),
+      hourlyPoint(18, 23, 5.5), // day-18 close supersedes the earlier 5.0
+    ];
+    const result = classifyApyChange({ history, nowMs: NOW_MS });
+    expect(result.largestDelta?.value).toBeCloseTo(1.5); // 4.0 -> 5.5
+  });
+
+  it("attributes a real switch observed in history with high confidence (no ledger timestamp)", () => {
+    const history = [
+      point(6, 4.0, { sourceKey: "aave-v3", yieldSource: "Aave" }),
+      point(5, 6.1, { sourceKey: "nimbus", yieldSource: "Nimbus", sourceSwitch: true }),
+      point(4, 6.0, { sourceKey: "nimbus", yieldSource: "Nimbus" }),
+      point(1, 6.05, { sourceKey: "nimbus", yieldSource: "Nimbus" }),
+    ];
     const result = classifyApyChange({
       history,
       decisionLedger: {
@@ -48,19 +82,46 @@ describe("classifyApyChange", () => {
         apy30dDeltaFromPrevious: 1.8,
         previousBestSourceKey: "aave-v3",
         previousSourceLabel: "Aave",
-        switchedAtMs: NOW_MS - 5 * DAY_MS,
       },
       nowMs: NOW_MS,
     });
+    // Fails pre-fix (B35): with switchedAtMs always null the largest daily move
+    // (on the switch day) was downgraded to mixed/low confidence.
     expect(result.attribution).toBe("source-switch");
     expect(result.confidence).toBe("high");
-    expect(result.sourceSwitchDetail).toEqual({
-      previousSourceKey: "aave-v3",
-      previousSourceLabel: "Aave",
-      apy30dDelta: 1.8,
-    });
     expect(result.headline).toContain("Aave");
-    expect(result.headline).toMatch(/\+1\.8pp/);
+  });
+
+  it("does not treat a ledger switch without any observable switch point as recent", () => {
+    const history = [point(10, 5.0), point(2, 7.0), point(1, 7.05)];
+    const result = classifyApyChange({
+      history,
+      decisionLedger: { sourceSwitch: true, apy30dDeltaFromPrevious: 1.8 },
+      nowMs: NOW_MS,
+    });
+    // Fails pre-fix (B35): isRecentSwitch(null) returned true, so every ledger
+    // switch was treated as in-window.
+    expect(result.attribution).toBe("organic");
+    expect(result.sourceSwitchDetail).toBeUndefined();
+  });
+
+  it("derives the previous source identity from the history point before the switch", () => {
+    const history = [
+      point(6, 5.0, { sourceKey: "old-src", yieldSource: "Old Source" }),
+      point(5, 5.4, { sourceKey: "new-src", yieldSource: "New Source", sourceSwitch: true }),
+      point(1, 5.45, { sourceKey: "new-src", yieldSource: "New Source" }),
+    ];
+    const result = classifyApyChange({
+      history,
+      decisionLedger: { sourceSwitch: true, apy30dDeltaFromPrevious: 1.0 },
+      nowMs: NOW_MS,
+    });
+    expect(result.attribution).toBe("source-switch");
+    expect(result.sourceSwitchDetail).toEqual({
+      previousSourceKey: "old-src",
+      previousSourceLabel: "Old Source",
+      apy30dDelta: 1.0,
+    });
   });
 
   it("ignores source switch when the delta is below the threshold", () => {
@@ -75,7 +136,7 @@ describe("classifyApyChange", () => {
     expect(result.attribution).not.toBe("source-switch");
   });
 
-  it("ignores source switch when it falls outside the 30d window", () => {
+  it("ignores source switch when the ledger timestamp falls outside the 30d window", () => {
     const ledger = {
       sourceSwitch: true,
       apy30dDeltaFromPrevious: 1.8,
@@ -104,7 +165,7 @@ describe("classifyApyChange", () => {
   });
 
   it("flags mixed attribution when both a source switch AND a non-overlapping organic move exist", () => {
-    // Switch happened 14 days ago; largest organic move is at day 2 (no overlap).
+    // Ledger-timestamped switch 14 days ago; largest organic move at day 2.
     const history = [
       point(20, 4.0),
       point(15, 4.05),
@@ -128,19 +189,21 @@ describe("classifyApyChange", () => {
     expect(result.headline).toMatch(/multiple drivers/i);
   });
 
-  it("keeps source-switch attribution when the largest move overlaps the switch timestamp", () => {
-    const history = [point(20, 4.0), point(15, 4.05), point(14, 6.0), point(1, 6.05)];
+  it("keeps source-switch attribution when the largest move overlaps the derived switch timestamp", () => {
+    const history: YieldHistoryPoint[] = [
+      { ...hourlyPoint(4, 22, 4.05), sourceKey: "aave-v3", yieldSource: "Aave" },
+      { ...hourlyPoint(5, 10, 6.0), sourceKey: "nimbus", yieldSource: "Nimbus", sourceSwitch: true },
+      point(1, 6.05),
+    ];
     const result = classifyApyChange({
       history,
-      decisionLedger: {
-        sourceSwitch: true,
-        apy30dDeltaFromPrevious: 1.8,
-        previousBestSourceKey: "aave-v3",
-        switchedAtMs: NOW_MS - 14 * DAY_MS,
-      },
+      decisionLedger: { sourceSwitch: true, apy30dDeltaFromPrevious: 1.8 },
       nowMs: NOW_MS,
     });
+    // Day closes: 4.05 -> 6.0 on the switch day; the 1.95pp move sits on the
+    // switch timestamp, so the overlap guard keeps source-switch (not mixed).
     expect(result.attribution).toBe("source-switch");
+    expect(result.confidence).toBe("high");
   });
 
   it("degrades gracefully when decisionLedger is absent", () => {
@@ -172,10 +235,5 @@ describe("classifyApyChange", () => {
     ];
     const result = classifyApyChange({ history, nowMs: NOW_MS });
     expect(result.largestDelta?.value).toBeCloseTo(0.5);
-  });
-
-  it("uses constants that match the documented thresholds", () => {
-    expect(SOURCE_SWITCH_DELTA_THRESHOLD_PP).toBe(0.5);
-    expect(ORGANIC_DELTA_THRESHOLD_PP).toBe(1.0);
   });
 });

@@ -213,9 +213,11 @@ export function YieldIntelligenceMethodologySection() {
                     Read-time <code className="text-xs bg-muted px-1 py-0.5 rounded">data-stale</code> warnings are also
                     cadence-aware: hourly families attach only after three missed <code className="text-xs bg-muted px-1 py-0.5 rounded">sync-yield-data</code>{" "}
                     intervals (about 3 hours at the current publisher), while <code className="text-xs bg-muted px-1 py-0.5 rounded">price-derived</code>{" "}
-                    rows wait 36 hours because they are backed by daily <code className="text-xs bg-muted px-1 py-0.5 rounded">supply_history</code>{" "}
-                    snapshots and <code className="text-xs bg-muted px-1 py-0.5 rounded">rate-derived</code> rows wait 48 hours
-                    for the daily benchmark producer. Ordinary exchange-rate anchors expire after 14 days; price-derived and
+                    rows wait 30 hours because they are backed by daily <code className="text-xs bg-muted px-1 py-0.5 rounded">supply_history</code>{" "}
+                    snapshots and <code className="text-xs bg-muted px-1 py-0.5 rounded">rate-derived</code> rows wait 36 hours
+                    for the daily benchmark producer. Each source class also emits a midpoint <code className="text-xs bg-muted px-1 py-0.5 rounded">aging</code>{" "}
+                    warning (27h price-derived, 30h rate-derived) once an observation misses its refresh slot but has not
+                    reached the stale bound. Ordinary exchange-rate anchors expire after 14 days; price-derived and
                     Midas/Ondo NAV anchors remain valid through their configured 45-day comparison window.
                   </p>
                   <p>

@@ -1,10 +1,13 @@
 import type { YieldRanking, YieldRankingsResponse } from "../types/yield";
 import {
+  YIELD_RANKING_SUMMARY_ALT_SOURCE_LIMIT,
   YIELD_RANKINGS_SUMMARY_PROJECTION,
+  YieldRankingSummaryAltSourceSchema,
   YieldRankingSummaryProvenanceSchema,
   YieldRankingSummarySchema,
   YieldRankingSummarySourceRiskSchema,
   type YieldRankingSummary,
+  type YieldRankingSummaryAltSource,
   type YieldRankingSummaryProvenance,
   type YieldRankingSummarySourceRisk,
   type YieldRankingsSummaryResponse,
@@ -22,6 +25,10 @@ const SUMMARY_PROVENANCE_FIELDS = Object.keys(
 const SUMMARY_SOURCE_RISK_FIELDS = Object.keys(
   YieldRankingSummarySourceRiskSchema.shape,
 ) as readonly (keyof YieldRankingSummarySourceRisk)[];
+
+const SUMMARY_ALT_SOURCE_FIELDS = Object.keys(
+  YieldRankingSummaryAltSourceSchema.shape,
+) as readonly (keyof YieldRankingSummaryAltSource)[];
 
 const SUMMARY_RANKING_FIELDS = Object.keys(
   YieldRankingSummarySchema.shape,
@@ -45,12 +52,23 @@ function projectSourceRisk(sourceRisk: YieldRanking["sourceRisk"]): YieldRanking
   return projected as YieldRankingSummarySourceRisk;
 }
 
+function projectAltSource(altSource: YieldRanking["altSources"][number]): YieldRankingSummaryAltSource {
+  const projected: Record<string, unknown> = {};
+  for (const field of SUMMARY_ALT_SOURCE_FIELDS) {
+    projected[field] = (altSource as unknown as Record<string, unknown>)[field];
+  }
+  return projected as YieldRankingSummaryAltSource;
+}
+
 function projectRanking(row: YieldRanking): YieldRankingSummary {
   // Summary fields that are NOT a straight copy of the same-named detail field.
   // Everything else is copied verbatim off the schema's own key list.
   const derived: Partial<Record<keyof YieldRankingSummary, unknown>> = {
     benchmarkIsFallback: row.benchmarkSelectionMode === "fallback-usd" || row.benchmarkIsFallback ? true : undefined,
     alternateSourceCount: row.altSources.length,
+    // Bounded on purpose: the board counts and labels the alternates, it does not
+    // render their full evidence. The count above still reports the true total.
+    altSources: row.altSources.slice(0, YIELD_RANKING_SUMMARY_ALT_SOURCE_LIMIT).map(projectAltSource),
     decisionReasonCode: row.decisionLedger?.selectedReasonCode,
     rankDelta: row.rankChangeAttribution?.rankDelta,
     rankChangeDriver: row.rankChangeAttribution?.primaryDriver,

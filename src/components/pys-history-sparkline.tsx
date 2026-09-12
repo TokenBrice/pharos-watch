@@ -104,7 +104,13 @@ export function PysHistorySparkline({
   const rowXValues = series.points.map((point) => point.ts);
   const stroke = getTrendColor(first.pys, last.pys);
   const delta = last.pys - first.pys;
-  const ariaLabel = `${windowDays}-day PYS history: starts at ${first.pys.toFixed(0)}, ends at ${last.pys.toFixed(0)}, ranges ${series.min.toFixed(0)} to ${series.max.toFixed(0)}`;
+  // The window is bounded by the observed data: label the span actually
+  // plotted, not the requested windowDays (E22).
+  const observedDays = Math.max(
+    1,
+    Math.round((last.ts - first.ts) / (24 * 60 * 60 * 1000)),
+  );
+  const ariaLabel = `${observedDays}-day PYS history: starts at ${first.pys.toFixed(0)}, ends at ${last.pys.toFixed(0)}, ranges ${series.min.toFixed(0)} to ${series.max.toFixed(0)}`;
 
   return (
     <div className={cn("flex flex-col gap-0.5", className)} data-testid="pys-sparkline">

@@ -11,6 +11,7 @@ import type {
   YieldSafetySnapshotMeta,
   YieldSourceInputMeta,
 } from "@shared/types/yield";
+import { YIELD_BENCHMARK_KEY_VALUES } from "@shared/types/yield";
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import { YIELD_METHODOLOGY_VERSION } from "@shared/lib/methodology-versions/yield-methodology";
 import { logWorkerEventArgs } from "../../lib/structured-log";
@@ -32,7 +33,11 @@ import {
 import type { YieldCoinPublicationView } from "./publication-view";
 import { buildYieldMethodology } from "./publication-methodology";
 import { buildYieldSourceRisk } from "./source-risk";
-import { classifyYieldBenchmarkFreshness } from "./benchmarks";
+import {
+  benchmarkRecordAgeSeconds,
+  classifyYieldBenchmarkFreshness,
+  YIELD_BENCHMARK_RECORD_MAX_AGE_SEC,
+} from "./benchmarks";
 
 /**
  * B23: a non-finite measurement serializes to `null`, and the row schema accepts
@@ -352,6 +357,35 @@ function attachRankChangeAttribution(
   }
 }
 
+/**
+ * A2/E9: publish each registry entry with its own observation bound and the
+ * observation age at publication time. Without them every consumer measures
+ * every key against one fallback bound, which amber-tints a healthy 3-day-old
+ * USD observation on the 5-day daily series — and would equally mask CAD's
+ * monthly Bank rate (45d) drifting across a daily cadence.
+ */
+function publishBenchmarkRecordBounds(
+  registry: YieldBenchmarkRegistry | undefined,
+  publishedAtSec: number,
+): YieldBenchmarkRegistry | undefined {
+  if (registry == null) return undefined;
+  return Object.fromEntries(
+    YIELD_BENCHMARK_KEY_VALUES.map((key) => {
+      const meta = registry[key];
+      return [
+        key,
+        meta == null
+          ? meta
+          : {
+            ...meta,
+            maxRecordAgeSec: YIELD_BENCHMARK_RECORD_MAX_AGE_SEC[key],
+            recordAgeSec: benchmarkRecordAgeSeconds(meta.recordDate, publishedAtSec),
+          },
+      ];
+    }),
+  ) as YieldBenchmarkRegistry;
+}
+
 export function buildYieldRankingsPayloadFromEvaluatedSources(
   input: {
     evaluatedSources: EvaluatedYieldSource[];
@@ -478,10 +512,12 @@ export function buildYieldRankingsPayloadFromEvaluatedSources(
   });
   attachRankChangeAttribution(rankings, input.previousPublication);
 
+  const benchmarks = publishBenchmarkRecordBounds(input.riskFreeRateRegistry, input.startSec);
+
   return {
     rankings,
     riskFreeRate: input.riskFreeRate,
-    benchmarks: input.riskFreeRateRegistry,
+    benchmarks,
     scalingFactor: PYS_SCALING_FACTOR,
     medianApy: input.medianApy,
     updatedAt: input.startSec,
@@ -490,7 +526,7 @@ export function buildYieldRankingsPayloadFromEvaluatedSources(
     provenance: {
       selectionMethod: "confidence-weighted" as const,
       benchmark: input.riskFreeRateMeta,
-      benchmarks: input.riskFreeRateRegistry,
+      benchmarks,
       dlPools: input.dlPoolsMeta,
       safetySnapshot: input.safetySnapshot,
     },

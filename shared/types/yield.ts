@@ -428,6 +428,14 @@ const YieldBenchmarkMetaSchema = z.object({
   isFallback: z.boolean(),
   fallbackMode: z.string().nullable(),
   isProxy: z.boolean().optional(),
+  /**
+   * Per-key bound on the age of this entry's own observation (`recordDate`).
+   * Published so consumers judge a monthly series (CAD, 45d) and a daily one
+   * (USD, 5d) against their real cadence instead of a single fallback bound.
+   */
+  maxRecordAgeSec: z.number().optional(),
+  /** Observation age at publication time; `null` when `recordDate` is absent or unparseable. */
+  recordAgeSec: z.number().nullable().optional(),
 });
 
 const YieldBenchmarkRegistrySchema = z.object({

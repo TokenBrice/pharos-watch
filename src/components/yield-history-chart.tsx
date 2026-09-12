@@ -35,9 +35,10 @@ import {
   YieldHistoryTooltip,
 } from "./yield-history-chart-ui";
 
-/** Distinct overlay colors (skip CHART_PALETTE[0] = blue, used by the primary series) */
+/** Distinct overlay colors (CHART_PALETTE[0] = blue is the primary series).
+    Sized for the raised MAX_OVERLAY_SOURCES cap (E19). */
 const SPIKE_COLOR = "oklch(0.72 0.18 35)";
-const OVERLAY_COLORS = [CHART_PALETTE[3], CHART_PALETTE[4], CHART_PALETTE[5]];
+const OVERLAY_COLORS = CHART_PALETTE.slice(3);
 
 export function YieldHistoryChart({
   stablecoinId,
@@ -67,12 +68,22 @@ export function YieldHistoryChart({
   const historyWarning = model.bodyWarning ?? model.historyQuery.meta?.warning ?? null;
 
   const spikeAnnotations = model.spikeAnnotations;
-  const spikesByDate = new Map(
-    spikeAnnotations.map((s) => [s.date, { trailingAvg: s.trailingAvg, ratio: s.ratio }]),
-  );
   const domainMax = model.yDomain[1];
-  /* Render markers only for the most extreme spikes so the plot doesn't fill
-     with overlapping labels when a series has a sustained high-volatility period. */
+  const domainMin = model.yDomain[0];
+  const spikesByDate = new Map(
+    spikeAnnotations.map((s) => [
+      s.date,
+      { trailingAvg: s.trailingAvg, ratio: s.ratio, windowDays: s.windowDays },
+    ]),
+  );
+  // A reference clamped to the domain edge misstates its rate while carrying
+  // the benchmark's name — mark it off-scale on the inline label (E25).
+  const benchmarkReferenceLabel = `${benchmarkLabel ?? "Benchmark"}${
+    benchmarkRate > domainMax ? " ↑ off scale" : benchmarkRate < domainMin ? " ↓ off scale" : ""
+  }`;
+  const medianReferenceLabel = `Peer Median${
+    medianApy > domainMax ? " ↑ off scale" : medianApy < domainMin ? " ↓ off scale" : ""
+  }`;
   const MAX_SPIKE_MARKERS = 3;
   const visibleSpikes = [...spikeAnnotations]
     .sort((a, b) => b.ratio - a.ratio)
@@ -231,25 +242,25 @@ export function YieldHistoryChart({
                 content={<YieldHistoryTooltip showBreakdown={model.effectiveShowBreakdown} compact={compact} spikesByDate={spikesByDate} />}
               />
               <ReferenceLine
-                y={Math.min(Math.max(benchmarkRate, model.yDomain[0]), domainMax)}
+                y={Math.min(Math.max(benchmarkRate, domainMin), domainMax)}
                 stroke={CHART_SLATE}
                 strokeOpacity={0.8}
                 strokeDasharray="6 4"
                 label={
                   referenceLabelStyle
-                    ? { ...referenceLabelStyle, value: benchmarkLabel ?? "Benchmark" }
+                    ? { ...referenceLabelStyle, value: benchmarkReferenceLabel }
                     : undefined
                 }
               />
               {medianApy > 0 ? (
                 <ReferenceLine
-                  y={Math.min(Math.max(medianApy, model.yDomain[0]), domainMax)}
+                  y={Math.min(Math.max(medianApy, domainMin), domainMax)}
                   stroke={CHART_BLUE}
                   strokeOpacity={0.45}
                   strokeDasharray="3 3"
                   label={
                     referenceLabelStyle
-                      ? { ...referenceLabelStyle, value: "Peer Median" }
+                      ? { ...referenceLabelStyle, value: medianReferenceLabel }
                       : undefined
                   }
                 />
@@ -386,6 +397,11 @@ export function YieldHistoryChart({
               {source.label}
             </span>
           ))}
+          {model.omittedOverlayKeys.length > 0 ? (
+            <span className="inline-flex items-center rounded-full border border-border/60 bg-background/55 px-2.5 py-1">
+              +{model.omittedOverlayKeys.length} more not plotted
+            </span>
+          ) : null}
         </div>
         <div className="flex flex-wrap items-center gap-1.5 text-[10px] text-muted-foreground/80">
           <span className="uppercase tracking-[0.12em] text-muted-foreground/70">Markers</span>

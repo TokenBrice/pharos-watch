@@ -11,6 +11,7 @@ import type { YieldSourceDepthLens, YieldSourceRiskDriver } from "@/lib/yield-so
 import { YIELD_TYPE_LABELS, YIELD_TYPE_STYLES } from "@shared/lib/classification";
 import { formatPercentFromRatio } from "@shared/lib/format";
 import { CLIENT_TRACKED_META_BY_ID as TRACKED_META_BY_ID } from "@shared/lib/stablecoins/client-registry";
+import { YIELD_BENCHMARK_KEY_CURRENCY } from "@shared/types/yield";
 import type { StablecoinStatus, YieldRanking, YieldRankingsResponse } from "@shared/types";
 
 export const ALT_SOURCE_INITIAL_COUNT = 6;
@@ -101,6 +102,11 @@ export function buildYieldDetailModel(
       ranking.benchmarkRate,
       ranking.sourceRisk?.sourceRiskPenalty ?? null,
       rankingResponse.riskFreeRate,
+      // Same resolution the scoring/read paths use: USD-benchmarked rows
+      // (including USD_EFFR) take no v8.43 re-base.
+      ranking.benchmarkCurrency ??
+        (ranking.benchmarkKey != null ? YIELD_BENCHMARK_KEY_CURRENCY[ranking.benchmarkKey] : null) ??
+        null,
     ),
     scalingFactor: rankingResponse.scalingFactor,
   };
