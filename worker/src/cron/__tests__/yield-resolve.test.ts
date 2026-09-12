@@ -209,6 +209,62 @@ describe("tracked optional source anchors", () => {
       sqlite.close();
     }
   });
+
+  it("falls back to the daily tier for an anchor older than the raw retention window", async () => {
+    // Raw history keeps 30 days, but the Ondo/Midas NAV anchors deliberately
+    // look back 45. Once the raw 30-45 day band is pruned, the anchor must still
+    // resolve from the daily tier (which keeps a year); otherwise a
+    // sparsely-updating NAV oracle silently loses its anchor and stops
+    // publishing — Midas has no shorter-window fallback, unlike Ondo.
+    const sqlite = createLatestSchemaSqlite().sqlite;
+    try {
+      const nowSec = 1_747_000_000;
+      sqlite
+        .prepare(
+          `INSERT INTO yield_history_daily (
+            stablecoin_id, source_key, snapshot_date, recorded_at, is_best, apy,
+            data_source, exchange_rate, publication_state
+          ) VALUES (?, ?, ?, ?, 1, 0, 'protocol-api', ?, 'published')`,
+        )
+        .run("usdy-ondo-finance", "protocol-api:ondo-usdy-oracle", nowSec - 40 * 86_400, nowSec - 40 * 86_400, 1.11);
+
+      // Nothing inside the raw tier's window for this source.
+      const row = await loadOndoOracleAnchorRow(createSqliteD1(sqlite), nowSec);
+
+      expect(row?.exchange_rate).toBe(1.11);
+      expect(row?.recorded_at).toBe(nowSec - 40 * 86_400);
+    } finally {
+      sqlite.close();
+    }
+  });
+
+  it("prefers the raw tier when both tiers can satisfy the anchor window", async () => {
+    const sqlite = createLatestSchemaSqlite().sqlite;
+    try {
+      const nowSec = 1_747_000_000;
+      sqlite
+        .prepare(
+          `INSERT INTO yield_history (
+            stablecoin_id, source_key, apy, data_source, exchange_rate, recorded_at, publication_state
+          ) VALUES (?, ?, 0, 'protocol-api', ?, ?, 'published')`,
+        )
+        .run("usdy-ondo-finance", "protocol-api:ondo-usdy-oracle", 1.09, nowSec - 10 * 86_400);
+      sqlite
+        .prepare(
+          `INSERT INTO yield_history_daily (
+            stablecoin_id, source_key, snapshot_date, recorded_at, is_best, apy,
+            data_source, exchange_rate, publication_state
+          ) VALUES (?, ?, ?, ?, 1, 0, 'protocol-api', ?, 'published')`,
+        )
+        .run("usdy-ondo-finance", "protocol-api:ondo-usdy-oracle", nowSec - 40 * 86_400, nowSec - 40 * 86_400, 1.11);
+
+      const row = await loadOndoOracleAnchorRow(createSqliteD1(sqlite), nowSec);
+
+      expect(row?.exchange_rate).toBe(1.09);
+    } finally {
+      sqlite.close();
+    }
+  });
 });
 
 // --- Direct resolve-helper contracts ---

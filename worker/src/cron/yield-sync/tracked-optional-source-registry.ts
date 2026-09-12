@@ -68,7 +68,9 @@ async function loadNavOracleAnchorRow(
   minAgeDays: number,
   maxAgeDays: number,
 ): Promise<OracleAnchorRow | null> {
-  return db
+  const newestAllowed = startSec - minAgeDays * DAY_SECONDS;
+  const oldestAllowed = startSec - maxAgeDays * DAY_SECONDS;
+  const rawRow = await db
     .prepare(
       `SELECT /* pharos:yield-sync:nav-oracle-prior-anchor */
          exchange_rate, recorded_at FROM yield_history
@@ -79,7 +81,28 @@ async function loadNavOracleAnchorRow(
          AND (publication_generation_id IS NULL OR publication_state = 'published')
        ORDER BY recorded_at DESC LIMIT 1`,
     )
-    .bind(stablecoinId, sourceKey, startSec - minAgeDays * DAY_SECONDS, startSec - maxAgeDays * DAY_SECONDS)
+    .bind(stablecoinId, sourceKey, newestAllowed, oldestAllowed)
+    .first<OracleAnchorRow>();
+  if (rawRow) return rawRow;
+
+  // Raw history keeps `YIELD_HISTORY_RAW_DAYS` (30), but these NAV-oracle anchors
+  // deliberately look back up to 45 days, so the 30–45 day band now exists only
+  // in the daily tier. Reading it here keeps the documented long-horizon anchor
+  // window satisfiable instead of silently narrowing it to the raw retention
+  // window — which would strand a sparsely-updating NAV oracle (Midas has no
+  // shorter-window fallback, unlike Ondo) once the band is pruned.
+  return db
+    .prepare(
+      `SELECT /* pharos:yield-sync:nav-oracle-prior-anchor-daily */
+         exchange_rate, recorded_at FROM yield_history_daily
+       WHERE stablecoin_id = ? AND source_key = ?
+         AND exchange_rate IS NOT NULL
+         AND recorded_at <= ?
+         AND recorded_at >= ?
+         AND (publication_generation_id IS NULL OR publication_state = 'published')
+       ORDER BY recorded_at DESC LIMIT 1`,
+    )
+    .bind(stablecoinId, sourceKey, newestAllowed, oldestAllowed)
     .first<OracleAnchorRow>();
 }
 
