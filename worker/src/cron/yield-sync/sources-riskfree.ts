@@ -2,7 +2,7 @@ import { DAY_SECONDS } from "@shared/lib/time-constants";
 import { getCache } from "../../lib/db-cache";
 import { computeApyFromPrice, isDeterministicApyWithinSanityBounds } from "../yield-helpers";
 import { buildHardcodedUsdBenchmark, type ParsedYieldBenchmarkMeta, type ParsedYieldBenchmarkRegistry } from "./benchmarks";
-import { parseRiskFreeRateCache, parseRiskFreeRatesCache } from "./cache/normalization";
+import { parseRiskFreeRateCache, parseRiskFreeRatesCacheDetailed } from "./cache/normalization";
 
 const RISK_FREE_RATES_CACHE_KEY = "risk_free_rates";
 const LEGACY_USD_RISK_FREE_RATE_CACHE_KEY = "risk_free_rate";
@@ -76,30 +76,66 @@ export async function loadRiskFreeRateRegistry(
   db: D1Database,
   nowSec = Math.floor(Date.now() / 1000),
 ): Promise<ParsedYieldBenchmarkRegistry> {
+  return (await loadRiskFreeRateRegistryWithState(db, nowSec)).registry;
+}
+
+/**
+ * Readability of the cached `risk_free_rates` row this load started from.
+ * `invalid` means a row existed and could not be parsed at all; `missing` means
+ * there was no row. Callers that publish the registry use it to avoid stamping a
+ * placeholder snapshot over an unreadable row.
+ */
+export type RiskFreeRateRegistryCacheState = "valid" | "invalid" | "missing";
+
+export interface LoadedRiskFreeRateRegistry {
+  registry: ParsedYieldBenchmarkRegistry;
+  cacheState: RiskFreeRateRegistryCacheState;
+}
+
+/**
+ * Same read as `loadRiskFreeRateRegistry`, plus the state of the cache row it
+ * came from. A USD sub-entry that does not parse degrades USD alone — every
+ * other readable key is kept, and USD prefers the readable legacy scalar row
+ * over the hardcoded fallback.
+ */
+export async function loadRiskFreeRateRegistryWithState(
+  db: D1Database,
+  nowSec = Math.floor(Date.now() / 1000),
+): Promise<LoadedRiskFreeRateRegistry> {
   const registryCache = await getCache(db, RISK_FREE_RATES_CACHE_KEY);
-  if (registryCache) {
-    const parsed = parseRiskFreeRatesCache(registryCache.value, registryCache.updatedAt);
-    if (parsed) {
-      return parsed;
-    }
+  const parsedRegistry = registryCache
+    ? parseRiskFreeRatesCacheDetailed(registryCache.value, registryCache.updatedAt, nowSec)
+    : null;
+
+  if (parsedRegistry && !parsedRegistry.invalidKeys.includes("USD")) {
+    return { registry: parsedRegistry.registry, cacheState: "valid" };
   }
 
   const legacyUsdCache = await getCache(db, LEGACY_USD_RISK_FREE_RATE_CACHE_KEY);
-  if (legacyUsdCache) {
-    const parsedUsd = parseRiskFreeRateCache(
-      legacyUsdCache.value,
-      legacyUsdCache.updatedAt,
-      nowSec,
-      { key: "USD" },
-    );
-    if (parsedUsd) {
-      return emptyBenchmarkRegistry(parsedUsd);
-    }
+  const legacyUsd = legacyUsdCache
+    ? parseRiskFreeRateCache(legacyUsdCache.value, legacyUsdCache.updatedAt, nowSec, { key: "USD" })
+    : null;
+
+  if (parsedRegistry) {
+    return {
+      registry: { ...parsedRegistry.registry, USD: legacyUsd ?? parsedRegistry.registry.USD },
+      cacheState: "valid",
+    };
   }
 
-  return emptyBenchmarkRegistry(
-    buildHardcodedUsdBenchmark(
-      registryCache || legacyUsdCache ? "invalid-cache" : "missing-cache",
+  if (legacyUsd) {
+    return {
+      registry: emptyBenchmarkRegistry(legacyUsd),
+      cacheState: registryCache ? "invalid" : "missing",
+    };
+  }
+
+  return {
+    registry: emptyBenchmarkRegistry(
+      buildHardcodedUsdBenchmark(
+        registryCache || legacyUsdCache ? "invalid-cache" : "missing-cache",
+      ),
     ),
-  );
+    cacheState: registryCache ? "invalid" : "missing",
+  };
 }

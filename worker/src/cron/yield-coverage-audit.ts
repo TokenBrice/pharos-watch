@@ -22,8 +22,12 @@ import {
   LENDING_PROTOCOL_ALLOWLIST,
   YIELD_ADAPTER_MANIFEST,
   YIELD_POOL_MAP,
+  YIELD_VARIANT_MAP,
   YIELD_WEIGHTED_POOL_GROUPS,
 } from "../lib/yield-config/yield-config";
+import { resolveYieldSourceKeyRoute } from "./yield-sync/yield-source-key-routing";
+import { normalizeDexSymbol } from "../lib/dex-cron-constants";
+import { normalizeChainId } from "@shared/lib/chains";
 import {
   explainDeterministicAutoLendingEligibility,
   type AutoLendingEligibilityReasonCode,
@@ -59,6 +63,8 @@ const HIGH_CONFIDENCE_TVL_USD = 10_000_000;
 const HIGH_CONFIDENCE_MIN_POOL_COUNT = 3;
 const OPERATOR_QUEUE_ITEM_LIMIT = 20;
 const REPORT_HEADLINE_ITEM_LIMIT = 50;
+/** Bound on native-pool candidate groups carried in the gaps payload. */
+const NATIVE_EXACT_POOL_GROUP_LIMIT = 50;
 const ALLOWLIST_AUDIT_QUEUE_ANCHOR = "YIELD_ALLOWLIST_AUDIT_QUEUE_ANCHOR";
 const DEFILLAMA_PROTOCOLS_SOURCE_URL = "https://api.llama.fi/protocols";
 const DEFILLAMA_YIELD_POOL_CHART_URL = "https://yields.llama.fi/chart";
@@ -174,6 +180,12 @@ export interface LifecycleAuditBuckets {
   lifecycleSummary: LifecycleSummary;
   quarantinedAdapters: LifecycleAdapterBucketItem[];
   intentionalGaps: LifecycleAdapterBucketItem[];
+  /**
+   * Quarantined or intentionally uncovered adapters whose registry
+   * `nextReviewAt` has arrived. The registry date is advisory, so the audit is
+   * the only place a past-due lifecycle review becomes visible.
+   */
+  reviewDueAdapters: LifecycleAdapterBucketItem[];
 }
 
 function lifecycleBucketKey(lifecycle: YieldAdapterLifecycle): keyof LifecycleSummary {
@@ -189,14 +201,23 @@ function lifecycleBucketKey(lifecycle: YieldAdapterLifecycle): keyof LifecycleSu
   }
 }
 
+function isLifecycleReviewDue(nextReviewAt: string | undefined, nowMs: number): boolean {
+  if (!nextReviewAt) return false;
+  // Registry dates are calendar days (`YYYY-MM-DD`); a review is due once that
+  // UTC day starts. Full ISO timestamps are parsed as-is.
+  const dueMs = Date.parse(nextReviewAt.length === 10 ? `${nextReviewAt}T00:00:00Z` : nextReviewAt);
+  return Number.isFinite(dueMs) && dueMs <= nowMs;
+}
+
 /**
  * Pure function: given the set of yield-bearing stablecoin IDs and the typed
  * adapter lifecycle registry, returns a summary count and bounded actionable
- * lists of quarantined adapters and intentional gaps.
+ * lists of quarantined adapters, intentional gaps, and past-due reviews.
  */
 export function summarizeAdapterLifecycle(
   yieldBearingIds: readonly string[],
   lifecycleRegistry: Record<string, YieldAdapterLifecycleEntry> = YIELD_ADAPTER_LIFECYCLE,
+  nowMs: number = Date.now(),
 ): LifecycleAuditBuckets {
   const summary: LifecycleSummary = {
     active: 0,
@@ -206,37 +227,44 @@ export function summarizeAdapterLifecycle(
   };
   const quarantinedAdapters: LifecycleAdapterBucketItem[] = [];
   const intentionalGaps: LifecycleAdapterBucketItem[] = [];
+  const reviewDueAdapters: LifecycleAdapterBucketItem[] = [];
 
   for (const stablecoinId of yieldBearingIds) {
     const entry = lifecycleRegistry[stablecoinId] ?? { lifecycle: "active" };
     summary[lifecycleBucketKey(entry.lifecycle)] += 1;
 
     if (entry.lifecycle === "quarantined" && entry.reason) {
-      quarantinedAdapters.push({
+      const item: LifecycleAdapterBucketItem = {
         stablecoinId,
         code: entry.reason.code,
         since: entry.reason.since,
         nextReviewAt: entry.reason.nextReviewAt,
         note: entry.reason.note,
-      });
+      };
+      quarantinedAdapters.push(item);
+      if (isLifecycleReviewDue(entry.reason.nextReviewAt, nowMs)) reviewDueAdapters.push(item);
     } else if (entry.lifecycle === "intentional-gap" && entry.reason) {
-      intentionalGaps.push({
+      const item: LifecycleAdapterBucketItem = {
         stablecoinId,
         code: entry.reason.code,
         since: entry.reason.since,
         nextReviewAt: entry.reason.nextReviewAt,
         note: entry.reason.note,
-      });
+      };
+      intentionalGaps.push(item);
+      if (isLifecycleReviewDue(entry.reason.nextReviewAt, nowMs)) reviewDueAdapters.push(item);
     }
   }
 
   quarantinedAdapters.sort((a, b) => a.stablecoinId.localeCompare(b.stablecoinId));
   intentionalGaps.sort((a, b) => a.stablecoinId.localeCompare(b.stablecoinId));
+  reviewDueAdapters.sort((a, b) => a.stablecoinId.localeCompare(b.stablecoinId));
 
   return {
     lifecycleSummary: summary,
     quarantinedAdapters: quarantinedAdapters.slice(0, LIFECYCLE_BUCKET_LIMIT),
     intentionalGaps: intentionalGaps.slice(0, LIFECYCLE_BUCKET_LIMIT),
+    reviewDueAdapters: reviewDueAdapters.slice(0, LIFECYCLE_BUCKET_LIMIT),
   };
 }
 
@@ -264,6 +292,37 @@ export interface StaleAutoLendingOverride {
 interface IdentifyStaleAutoLendingOverrideOptions {
   stablecoinSupplyById?: Map<string, number>;
   safetyScores?: Map<string, { score: number }>;
+}
+
+/** Registry that pins a curated DeFiLlama yield surface for one asset (B20). */
+export type CuratedPinRegistry = "native-pool" | "variant-pool" | "weighted-pool-group";
+
+/**
+ * A curated pin whose DeFiLlama surface has disappeared. `missing-pool` is the
+ * only reason this detector emits; `coverage` cross-references the published
+ * rankings so a dead config is distinguishable from a live coverage outage.
+ */
+export interface DeadCuratedPin {
+  stablecoinId: string;
+  registry: CuratedPinRegistry;
+  /** Representative pin value: the absent pool id, or the variant identity. */
+  pin: string;
+  /** Absent curated pool ids (empty for a variant pin, which resolves by symbol). */
+  missingPoolIds: string[];
+  /** Curated pool ids still in the snapshot; a weighted group can fail while partial. */
+  presentPoolIds: string[];
+  reasons: string[];
+  /**
+   * `coverage-outage` when the asset publishes no ranking row, `dead-config`
+   * when it still publishes through another source, `null` when the caller did
+   * not supply the published ranking ids.
+   */
+  coverage: "coverage-outage" | "dead-config" | null;
+}
+
+export interface IdentifyDeadCuratedPinsOptions {
+  /** Stablecoin ids present in the latest published yield rankings cache. */
+  publishedStablecoinIds?: ReadonlySet<string>;
 }
 
 const AUTO_LENDING_AUDIT_REASON: Record<AutoLendingEligibilityReasonCode, string> = {
@@ -327,11 +386,24 @@ export interface ProtocolRecommendation {
   promotionMetadata: ProtocolRecommendationPromotionMetadata;
 }
 
+/**
+ * One tracked yield-bearing asset (or symbol-sharing asset set) with uncovered
+ * high-TVL DeFiLlama pools that look like its native yield surface. Grouped per
+ * resolved asset so a six-chain deployment is one decision, not six queue rows.
+ * The `CoverageGapPool` fields describe the group's largest pool.
+ */
 export interface NativeExactPoolRecommendation extends CoverageGapPool {
   stablecoinIds: string[];
+  /** Every grouped pool id, highest TVL first. */
+  poolIds: string[];
+  /** Distinct chains in the group, highest TVL first. */
+  chains: string[];
+  poolCount: number;
+  totalTvlUsd: number;
 }
 
 export interface VenueRiskConfigMissing {
+  /** Slug an operator would add to the reviewed venue-risk registry. */
   project: string;
   protocolCategory: string | null;
   poolCount: number;
@@ -339,12 +411,40 @@ export interface VenueRiskConfigMissing {
   examplePools: string[];
   examplePoolDetails: ProtocolRecommendationExamplePool[];
   sourceLinks: ProtocolRecommendationSourceLink[];
+  /** Published ranking assets behind a row-derived candidate (empty for pool-derived). */
+  stablecoinIds?: string[];
+  /** Source keys of those rows; they show which route or alias is unreviewed. */
+  sourceKeys?: string[];
+}
+
+/** Published ranking row reduced to the venue evidence the audit needs (A10). */
+export interface PublishedYieldVenueRow {
+  stablecoinId: string;
+  /** Venue slug published in `sourceRisk.venueProtocol`, or null when unresolved. */
+  venueProtocol: string | null;
+  /** Publication provenance source key, used to recover a venue through the route table. */
+  sourceKey: string | null;
+  sourceTvlUsd: number | null;
+}
+
+export interface IdentifyCoverageGapsOptions {
+  /** Latest published ranking rows, for row-derived venue-risk candidates (A10). */
+  publishedVenueRows?: readonly PublishedYieldVenueRow[];
+  /** Stablecoin ids already present in the published rankings (native-pool gate, C7). */
+  publishedStablecoinIds?: ReadonlySet<string>;
 }
 
 export interface CoverageGaps {
-  /** Pools above the TVL threshold that are not in the covered set. */
+  /**
+   * High-TVL uncovered pools on unsupported protocols whose DeFiLlama category
+   * is a lending family or unknown, so an allowlist entry can still fix them.
+   */
   unmatchedHighTvlPools: CoverageGapPool[];
-  /** Protocols with stablecoin pools but not in the lending allowlist. */
+  /**
+   * One representative pool per unsupported protocol whose known DeFiLlama
+   * category is outside the lending families, so the lending allowlist is not
+   * the remedy. Gated on the same high-TVL floor as the headline queue.
+   */
   missingProtocols: CoverageGapPool[];
   /** Actionable protocol recommendations based on TVL and pool count. */
   protocolRecommendations: ProtocolRecommendation[];
@@ -354,7 +454,7 @@ export interface CoverageGaps {
   sourceFamilyAdapterRecommendations: ProtocolRecommendation[];
   /** High-TVL non-allowlisted lending protocols that may warrant allowlist review. */
   lendingAllowlistRecommendations: ProtocolRecommendation[];
-  /** Covered or allowlisted high-TVL venue slugs missing reviewed venue-risk config/aliases. */
+  /** Covered pools and published rows whose venue slug has no reviewed venue-risk config. */
   venueRiskConfigMissing: VenueRiskConfigMissing[];
 }
 
@@ -614,11 +714,20 @@ function buildProtocolQueueItem(
 function buildVenueRiskConfigMissingQueueItem(
   missing: VenueRiskConfigMissing,
 ): CoverageAuditQueueItem {
+  // SRC-SUPP-4: a merged candidate carries both a covered-pool aggregate and
+  // the published rows that resolved to the same venue slug.
+  const publishedRowCount = missing.stablecoinIds?.length ?? 0;
+  const poolDerived = missing.examplePools.length > 0;
+  const detail = publishedRowCount > 0
+    ? poolDerived
+      ? `${missing.poolCount} covered high-TVL pool(s) and ${publishedRowCount} published row(s) resolve to unknown venue risk; add a reviewed registry entry or alias.`
+      : `${publishedRowCount} published row(s) above the high-TVL floor resolve to unknown venue risk; add a reviewed registry entry or alias.`
+    : `${missing.poolCount} covered high-TVL pool(s) resolve to unknown venue risk; add a reviewed registry entry or alias.`;
   return {
     id: queueId("venue-risk-config-missing", missing.project),
     kind: "venue-risk-config-missing" as const,
     title: missing.project,
-    detail: `${missing.poolCount} covered high-TVL pool(s) resolve to unknown venue risk; add a reviewed registry entry or alias.`,
+    detail,
     actionHint: "accept" as const,
     project: missing.project,
     poolCount: missing.poolCount,
@@ -627,6 +736,32 @@ function buildVenueRiskConfigMissingQueueItem(
     examplePools: missing.examplePools,
     examplePoolDetails: missing.examplePoolDetails,
     sourceLinks: missing.sourceLinks,
+    ...(missing.stablecoinIds?.length ? { stablecoinIds: missing.stablecoinIds } : {}),
+    ...(missing.sourceKeys?.length ? { sourceKey: missing.sourceKeys[0] } : {}),
+  };
+}
+
+const CURATED_PIN_REGISTRY_LABEL: Record<CuratedPinRegistry, string> = {
+  "native-pool": "Curated native pool pin",
+  "variant-pool": "Curated variant pin",
+  "weighted-pool-group": "Curated weighted pool group",
+};
+
+function buildDeadCuratedPinQueueItem(pin: DeadCuratedPin): CoverageAuditQueueItem {
+  const coverageDetail = pin.coverage === "coverage-outage"
+    ? "the asset publishes no ranking row"
+    : pin.coverage === "dead-config"
+      ? "the asset still publishes through another source"
+      : "published coverage was not checked";
+  return {
+    id: queueId("stale-auto-lending-override", `${pin.stablecoinId}:${pin.pin}`),
+    kind: "stale-auto-lending-override" as const,
+    title: pin.stablecoinId,
+    detail: `${CURATED_PIN_REGISTRY_LABEL[pin.registry]} ${pin.pin} is absent from the DeFiLlama snapshot; ${coverageDetail}.`,
+    actionHint: "accept" as const,
+    stablecoinIds: [pin.stablecoinId],
+    pool: pin.pin,
+    reasonCodes: [...pin.reasons, ...(pin.coverage ? [pin.coverage] : [])],
   };
 }
 
@@ -635,6 +770,7 @@ export function buildCoverageAuditOperatorQueue({
   manifestMissingIds,
   yieldBearingMissingFromRankings,
   staleAutoLendingOverrides = [],
+  deadCuratedPins = [],
   quarantineReadyToRestore = [],
   nowMs = Date.now(),
   staleVenueRiskScores = findStaleVenueRiskScores(nowMs),
@@ -643,6 +779,7 @@ export function buildCoverageAuditOperatorQueue({
   manifestMissingIds: string[];
   yieldBearingMissingFromRankings: string[];
   staleAutoLendingOverrides?: StaleAutoLendingOverride[];
+  deadCuratedPins?: DeadCuratedPin[];
   quarantineReadyToRestore?: QuarantineRestoreCandidate[];
   nowMs?: number;
   staleVenueRiskScores?: StaleVenueRiskScore[];
@@ -665,24 +802,26 @@ export function buildCoverageAuditOperatorQueue({
       stablecoinIds: [stablecoinId],
     })),
     ...staleAutoLendingOverrides.map(buildStaleOverrideQueueItem),
+    ...deadCuratedPins.map(buildDeadCuratedPinQueueItem),
     ...gaps.unmatchedHighTvlPools.map((pool) => buildPoolQueueItem("unmatched-high-tvl-pool", pool, "watch")),
     ...gaps.missingProtocols.map((pool) => buildPoolQueueItem("missing-protocol", pool, "watch")),
   ];
 
   const recommendationCandidates: CoverageAuditQueueItem[] = [
-    ...gaps.nativeExactPoolRecommendations.map((pool) => ({
-      id: queueId("native-exact-pool", pool.pool),
+    ...gaps.nativeExactPoolRecommendations.map((group) => ({
+      id: queueId("native-exact-pool", group.stablecoinIds.join("-")),
       kind: "native-exact-pool" as const,
-      title: poolTitle(pool),
-      detail: `${pool.chain} native pool for ${pool.stablecoinIds.join(", ")}`,
+      title: poolTitle(group),
+      detail: `${group.poolCount} uncovered pool(s) on ${group.chains.join(", ")} for ${group.stablecoinIds.join(", ")}`,
       actionHint: "accept" as const,
-      stablecoinIds: pool.stablecoinIds,
-      project: pool.project,
-      pool: pool.pool,
-      symbol: pool.symbol,
-      chain: pool.chain,
-      tvlUsd: pool.tvlUsd,
-      apy: pool.apy,
+      stablecoinIds: group.stablecoinIds,
+      project: group.project,
+      pool: group.pool,
+      symbol: group.symbol,
+      chain: group.chain,
+      poolCount: group.poolCount,
+      totalTvlUsd: group.totalTvlUsd,
+      examplePools: group.poolIds,
     })),
     ...gaps.sourceFamilyAdapterRecommendations.map((recommendation) =>
       buildProtocolQueueItem("source-family-adapter", recommendation),
@@ -727,8 +866,66 @@ export function buildCoverageAuditOperatorQueue({
 }
 
 /**
+ * Venue slug an operator still has to review for a published row: the published
+ * venue when it carries no reviewed config, otherwise the venue the source-key
+ * route table attributes to the row's prefix. Returns null when the row already
+ * resolves to a reviewed venue or names no venue at all.
+ */
+function resolvePublishedVenueSlug(row: PublishedYieldVenueRow): string | null {
+  const published = row.venueProtocol?.trim().toLowerCase();
+  if (published) {
+    return resolveReviewedYieldRiskConfig(published) == null ? published : null;
+  }
+  const routed = resolveYieldSourceKeyRoute(row.sourceKey)?.venueProtocol ?? null;
+  if (routed == null) return null;
+  return resolveReviewedYieldRiskConfig(routed) == null ? routed : null;
+}
+
+/**
+ * A10: the DeFiLlama pool loop only sees venues that publish a DL pool, so
+ * protocol-api, on-chain, linked-variant and supplemental venues never queued.
+ * Published rows above the high-TVL floor carry the same registry gap.
+ */
+function buildPublishedVenueRiskConfigMissing(
+  rows: readonly PublishedYieldVenueRow[],
+): VenueRiskConfigMissing[] {
+  const byVenue = new Map<string, { rows: PublishedYieldVenueRow[]; totalTvlUsd: number }>();
+  for (const row of rows) {
+    const tvlUsd = row.sourceTvlUsd;
+    if (tvlUsd == null || !Number.isFinite(tvlUsd) || tvlUsd < HIGH_TVL_THRESHOLD_USD) continue;
+    const venue = resolvePublishedVenueSlug(row);
+    if (venue == null) continue;
+    const entry = byVenue.get(venue) ?? { rows: [], totalTvlUsd: 0 };
+    entry.rows.push(row);
+    entry.totalTvlUsd += tvlUsd;
+    byVenue.set(venue, entry);
+  }
+
+  return [...byVenue.entries()]
+    .map(([project, entry]) => ({
+      project,
+      protocolCategory: null,
+      poolCount: entry.rows.length,
+      totalTvlUsd: entry.totalTvlUsd,
+      examplePools: [],
+      examplePoolDetails: [],
+      sourceLinks: [],
+      stablecoinIds: [...new Set(entry.rows.map((row) => row.stablecoinId))].sort(),
+      sourceKeys: [...new Set(entry.rows.flatMap((row) => (row.sourceKey ? [row.sourceKey] : [])))].sort(),
+    }))
+    .sort((a, b) => b.totalTvlUsd - a.totalTvlUsd)
+    .slice(0, OPERATOR_QUEUE_ITEM_LIMIT);
+}
+
+/**
  * Pure function: given a list of DL pools and the exact DL pool IDs already
  * covered by Pharos, returns coverage gaps.
+ *
+ * Every pool id lands in at most one of the three pool-backed queue buckets
+ * (`nativeExactPoolRecommendations`, `unmatchedHighTvlPools`, `missingProtocols`):
+ * the native-pool candidate is the most specific action, the remaining high-TVL
+ * pools route on DeFiLlama protocol category, and a routed protocol contributes
+ * one representative pool instead of one row per pool.
  *
  * @param dlPools       - Full list of DL stablecoin pools.
  * @param coveredPools  - Set of exact covered DL pool UUIDs.
@@ -738,10 +935,9 @@ export function identifyCoverageGaps(
   coveredPools: Set<string>,
   supportedProtocols: Set<string> = LENDING_PROTOCOL_ALLOWLIST,
   protocolCategoriesByProject: Map<string, string> = new Map(),
+  options: IdentifyCoverageGapsOptions = {},
 ): CoverageGaps {
-  const unmatchedHighTvlPools: CoverageGapPool[] = [];
-  const missingProtocols: CoverageGapPool[] = [];
-  const seenMissingProtocols = new Set<string>();
+  const highTvlUnsupportedPools: CoverageGapPool[] = [];
   const uncoveredStablecoinPools: CoverageGapPool[] = [];
   const venueRiskConfigMissingPools: CoverageGapPool[] = [];
 
@@ -772,34 +968,64 @@ export function identifyCoverageGaps(
     // allowlisted protocol universe; otherwise the report is dominated by
     // pools the runtime already treats as covered opportunities.
     if (pool.tvlUsd >= HIGH_TVL_THRESHOLD_USD && !supportedProtocols.has(pool.project)) {
-      unmatchedHighTvlPools.push(poolEntry);
-    }
-
-    // Flag protocols not in the allowlist (once per project, any TVL)
-    if (
-      !supportedProtocols.has(pool.project) &&
-      !seenMissingProtocols.has(pool.project)
-    ) {
-      seenMissingProtocols.add(pool.project);
-      missingProtocols.push(poolEntry);
+      highTvlUnsupportedPools.push(poolEntry);
     }
   }
 
-  // Sort by TVL descending for easier triage
-  unmatchedHighTvlPools.sort((a, b) => b.tvlUsd - a.tvlUsd);
-  missingProtocols.sort((a, b) => b.tvlUsd - a.tvlUsd);
-
+  // Native candidates are keyed per tracked asset, not per pool: a multi-chain
+  // deployment is one decision. A non-positive or non-finite APY carries no
+  // opportunity, and an asset that already publishes a ranking row is covered
+  // by another source.
   const yieldBearingIdsBySymbol = buildYieldBearingSymbolIndex();
-  const nativeExactPoolRecommendations = uncoveredStablecoinPools
-    .filter((pool) => pool.tvlUsd >= HIGH_TVL_THRESHOLD_USD)
-    .flatMap((pool) => {
-      const stablecoinIds = yieldBearingIdsBySymbol.get(normalizeRecommendationSymbol(pool.symbol));
-      return stablecoinIds
-        ? [{ ...pool, stablecoinIds }]
-        : [];
+  const publishedStablecoinIds = options.publishedStablecoinIds ?? new Set<string>();
+  const nativeGroups = new Map<string, { stablecoinIds: string[]; pools: CoverageGapPool[] }>();
+  for (const pool of uncoveredStablecoinPools) {
+    if (pool.tvlUsd < HIGH_TVL_THRESHOLD_USD) continue;
+    if (!Number.isFinite(pool.apy) || pool.apy <= 0) continue;
+    const resolvedIds = yieldBearingIdsBySymbol.get(normalizeRecommendationSymbol(pool.symbol)) ?? [];
+    const stablecoinIds = resolvedIds.filter((id) => !publishedStablecoinIds.has(id));
+    if (stablecoinIds.length === 0) continue;
+    const groupKey = stablecoinIds.join("|");
+    const group = nativeGroups.get(groupKey) ?? { stablecoinIds, pools: [] };
+    group.pools.push(pool);
+    nativeGroups.set(groupKey, group);
+  }
+  const nativeExactPoolRecommendations: NativeExactPoolRecommendation[] = [...nativeGroups.values()]
+    .map(({ stablecoinIds, pools }) => {
+      const sortedPools = [...pools].sort((a, b) => b.tvlUsd - a.tvlUsd);
+      return {
+        ...sortedPools[0],
+        stablecoinIds,
+        poolIds: sortedPools.map((pool) => pool.pool),
+        chains: [...new Set(sortedPools.map((pool) => pool.chain))],
+        poolCount: sortedPools.length,
+        totalTvlUsd: sortedPools.reduce((total, pool) => total + pool.tvlUsd, 0),
+      };
     })
-    .sort((a, b) => b.tvlUsd - a.tvlUsd)
-    .slice(0, 50);
+    .sort((a, b) => b.totalTvlUsd - a.totalTvlUsd)
+    .slice(0, NATIVE_EXACT_POOL_GROUP_LIMIT);
+
+  // C7: one pool, one bucket. Native candidates claim their pools first; the
+  // rest route on category, because a known non-lending protocol cannot be
+  // fixed by a lending-allowlist entry while an unclassified one still can.
+  const claimedPoolIds = new Set(nativeExactPoolRecommendations.flatMap((group) => group.poolIds));
+  const unmatchedHighTvlPools: CoverageGapPool[] = [];
+  const missingProtocolByProject = new Map<string, CoverageGapPool>();
+  for (const pool of highTvlUnsupportedPools) {
+    if (claimedPoolIds.has(pool.pool)) continue;
+    // Source-family projects carry their own `source-family-adapter` candidates.
+    if (SOURCE_FAMILY_ADAPTER_PROJECTS.has(pool.project)) continue;
+    if (pool.protocolCategory == null || isHighConfidenceProtocolCategory(pool.protocolCategory)) {
+      unmatchedHighTvlPools.push(pool);
+      continue;
+    }
+    const representative = missingProtocolByProject.get(pool.project);
+    if (!representative || pool.tvlUsd > representative.tvlUsd) {
+      missingProtocolByProject.set(pool.project, pool);
+    }
+  }
+  const missingProtocols = [...missingProtocolByProject.values()].sort((a, b) => b.tvlUsd - a.tvlUsd);
+  unmatchedHighTvlPools.sort((a, b) => b.tvlUsd - a.tvlUsd);
 
   const sourceFamilyAdapterRecommendations = buildProtocolRecommendations(
     uncoveredStablecoinPools.filter((pool) => SOURCE_FAMILY_ADAPTER_PROJECTS.has(pool.project)),
@@ -821,7 +1047,34 @@ export function identifyCoverageGaps(
   const protocolRecommendations = buildProtocolRecommendations(
     uncoveredStablecoinPools.filter((pool) => !supportedProtocols.has(pool.project)),
   );
-  const venueRiskConfigMissing = buildVenueRiskConfigMissing(venueRiskConfigMissingPools);
+  const poolDerivedVenueCandidates = buildVenueRiskConfigMissing(venueRiskConfigMissingPools);
+  const poolDerivedVenueProjects = new Set(
+    poolDerivedVenueCandidates.map((candidate) => normalizeProtocolProjectKey(candidate.project)),
+  );
+  const publishedVenueCandidates = buildPublishedVenueRiskConfigMissing(options.publishedVenueRows ?? []);
+  const publishedVenueByProject = new Map(
+    publishedVenueCandidates.map((candidate) => [normalizeProtocolProjectKey(candidate.project), candidate]),
+  );
+  // SRC-SUPP-4: a project can be both a covered pool and a published-row venue.
+  // First-wins filtering dropped the row-derived attribution — the publishing
+  // assets and their unreviewed source keys — from such a project, so the two
+  // views merge instead: the pool aggregation keeps the examples and the
+  // published rows contribute the asset ids and source keys.
+  const venueRiskConfigMissing = [
+    ...poolDerivedVenueCandidates.map((candidate) => {
+      const published = publishedVenueByProject.get(normalizeProtocolProjectKey(candidate.project));
+      return published == null
+        ? candidate
+        : {
+            ...candidate,
+            stablecoinIds: published.stablecoinIds,
+            sourceKeys: published.sourceKeys,
+          };
+    }),
+    ...publishedVenueCandidates.filter(
+      (candidate) => !poolDerivedVenueProjects.has(normalizeProtocolProjectKey(candidate.project)),
+    ),
+  ];
 
   return {
     unmatchedHighTvlPools,
@@ -911,6 +1164,82 @@ export function identifyStaleAutoLendingOverrides(
 }
 
 /**
+ * B20: curated pins resolve silently — a missing DeFiLlama pool falls through
+ * with a log line and no queue item, so a dead pin can zero an asset's yield
+ * coverage for months. This walks every curated pin registry against the loaded
+ * snapshot and cross-references the published rankings, so a dead config is
+ * distinguishable from a live coverage outage.
+ */
+export function identifyDeadCuratedPins(
+  dlPools: DlPool[],
+  options: IdentifyDeadCuratedPinsOptions = {},
+): DeadCuratedPin[] {
+  const snapshotPoolIds = new Set(dlPools.map((pool) => pool.pool));
+  const publishedStablecoinIds = options.publishedStablecoinIds;
+  const classifyCoverage = (stablecoinId: string): DeadCuratedPin["coverage"] => {
+    if (publishedStablecoinIds == null) return null;
+    return publishedStablecoinIds.has(stablecoinId) ? "dead-config" : "coverage-outage";
+  };
+  const pins: DeadCuratedPin[] = [];
+
+  for (const [stablecoinId, poolId] of Object.entries(YIELD_POOL_MAP)) {
+    if (snapshotPoolIds.has(poolId)) continue;
+    pins.push({
+      stablecoinId,
+      registry: "native-pool",
+      pin: poolId,
+      missingPoolIds: [poolId],
+      presentPoolIds: [],
+      reasons: ["missing-pool"],
+      coverage: classifyCoverage(stablecoinId),
+    });
+  }
+
+  for (const [stablecoinId, variant] of Object.entries(YIELD_VARIANT_MAP)) {
+    const variantSymbol = normalizeDexSymbol(variant.variantSymbol);
+    const variantChain = variant.variantChain ? normalizeChainId(variant.variantChain) : null;
+    const variantProject = variant.variantProject?.trim().toLowerCase() ?? "";
+    // Mirrors the runtime variant layer: single-exposure pools, optional chain
+    // and project scoping, normalized symbol equality. An address hit is a
+    // subset of the symbol candidates, so symbol resolution is the live gate.
+    const resolvesToPool = dlPools.some((pool) =>
+      pool.exposure === "single" &&
+      normalizeDexSymbol(pool.symbol) === variantSymbol &&
+      (!variantChain || normalizeChainId(pool.chain) === variantChain) &&
+      (!variantProject || pool.project.trim().toLowerCase() === variantProject));
+    if (resolvesToPool) continue;
+    pins.push({
+      stablecoinId,
+      registry: "variant-pool",
+      pin: variant.variantChain
+        ? `${variant.variantSymbol} on ${variant.variantChain}`
+        : variant.variantSymbol,
+      missingPoolIds: [],
+      presentPoolIds: [],
+      reasons: ["missing-pool"],
+      coverage: classifyCoverage(stablecoinId),
+    });
+  }
+
+  for (const [stablecoinId, group] of Object.entries(YIELD_WEIGHTED_POOL_GROUPS)) {
+    const missingPoolIds = group.poolIds.filter((poolId) => !snapshotPoolIds.has(poolId));
+    if (missingPoolIds.length === 0) continue;
+    pins.push({
+      stablecoinId,
+      registry: "weighted-pool-group",
+      pin: missingPoolIds[0],
+      missingPoolIds,
+      presentPoolIds: group.poolIds.filter((poolId) => snapshotPoolIds.has(poolId)),
+      reasons: ["missing-pool"],
+      coverage: classifyCoverage(stablecoinId),
+    });
+  }
+
+  return pins.sort((a, b) =>
+    a.stablecoinId.localeCompare(b.stablecoinId) || a.pin.localeCompare(b.pin));
+}
+
+/**
  * Async cron function: loads DL pools from cache, loads the existing yield
  * coverage state from the DB, computes gaps, and persists a summary report.
  */
@@ -985,11 +1314,55 @@ export async function runYieldCoverageAudit(
     ...Object.values(EXPLICIT_YIELD_SOURCE_POOL_MAP).flat().map((config) => config.poolId),
     ...Object.values(YIELD_WEIGHTED_POOL_GROUPS).flatMap((config) => config.poolIds),
   ]);
+  const rankingsCache = readCachedJson<{
+    rankings?: Array<{
+      id?: string;
+      sourceTvlUsd?: number | null;
+      sourceRisk?: { venueProtocol?: string | null } | null;
+      provenance?: { sourceKey?: string | null } | null;
+      altSources?: Array<{
+        sourceKey?: string | null;
+        sourceTvlUsd?: number | null;
+        sourceRisk?: { venueProtocol?: string | null } | null;
+      }>;
+    }>;
+  }>(
+    "yield-coverage-audit",
+    "yield-rankings",
+    await getCache(db, "yield-rankings"),
+  );
+  const publishedRankingRows = rankingsCache.status === "ok" ? rankingsCache.data.rankings ?? [] : [];
+  const publishedYieldIds = new Set(
+    publishedRankingRows
+      .map((ranking) => ranking.id)
+      .filter((id): id is string => typeof id === "string"),
+  );
+  // Selected and retained alternate rows both publish venue evidence, and both
+  // carry the registry gap A10 has to queue.
+  const publishedVenueRows: PublishedYieldVenueRow[] = publishedRankingRows.flatMap((ranking) => {
+    const stablecoinId = ranking.id;
+    if (typeof stablecoinId !== "string") return [];
+    return [
+      {
+        stablecoinId,
+        venueProtocol: ranking.sourceRisk?.venueProtocol ?? null,
+        sourceKey: ranking.provenance?.sourceKey ?? null,
+        sourceTvlUsd: ranking.sourceTvlUsd ?? null,
+      },
+      ...(ranking.altSources ?? []).map((alternate) => ({
+        stablecoinId,
+        venueProtocol: alternate.sourceRisk?.venueProtocol ?? null,
+        sourceKey: alternate.sourceKey ?? null,
+        sourceTvlUsd: alternate.sourceTvlUsd ?? null,
+      })),
+    ];
+  });
   const gaps = identifyCoverageGaps(
     dlPools,
     coveredPools,
     LENDING_PROTOCOL_ALLOWLIST,
     protocolCategoryLookup.categoriesByProject,
+    { publishedVenueRows, publishedStablecoinIds: publishedYieldIds },
   );
   await reportAuditProgress("safety-supply-load", "Loading stablecoin supply and safety snapshots", 2, {
     providerFamilies: ["stablecoins-cache", "safety-scores"],
@@ -1033,6 +1406,9 @@ export async function runYieldCoverageAudit(
     stablecoinSupplyById,
     safetyScores: safetySnapshot.scores,
   });
+  const deadCuratedPins = identifyDeadCuratedPins(dlPools, {
+    publishedStablecoinIds: publishedYieldIds,
+  });
   const manifestById = new Map(YIELD_ADAPTER_MANIFEST.map((entry) => [entry.stablecoinId, entry]));
   const manifestMissingIds = ACTIVE_YIELD_BEARING_STABLECOINS
     .filter((coin) => !manifestById.has(coin.id))
@@ -1062,29 +1438,17 @@ export async function runYieldCoverageAudit(
       .map((entry) => entry.stablecoinId),
   )].sort();
 
-  let publishedYieldIds = new Set<string>();
-  const rankingsCache = readCachedJson<{ rankings?: Array<{ id?: string }> }>(
-    "yield-coverage-audit",
-    "yield-rankings",
-    await getCache(db, "yield-rankings"),
-  );
-  if (rankingsCache.status === "ok") {
-    const parsed = rankingsCache.data;
-      publishedYieldIds = new Set(
-        (parsed.rankings ?? [])
-          .map((ranking) => ranking.id)
-          .filter((id): id is string => typeof id === "string"),
-      );
-  }
-
   const yieldBearingMissingFromRankings = ACTIVE_YIELD_BEARING_STABLECOINS
     .filter((coin) => {
       const manifestEntry = manifestById.get(coin.id);
       return manifestEntry?.status !== "intentional-gap" && !publishedYieldIds.has(coin.id);
     })
     .map((coin) => coin.id);
+  const nowMs = Date.now();
   const lifecycleBuckets = summarizeAdapterLifecycle(
     ACTIVE_YIELD_BEARING_STABLECOINS.map((coin) => coin.id),
+    YIELD_ADAPTER_LIFECYCLE,
+    nowMs,
   );
   await reportAuditProgress("quarantine-probe", "Probing quarantined deterministic yield adapters", 3, {
     providerFamilies: ["on-chain-rates"],
@@ -1107,13 +1471,13 @@ export async function runYieldCoverageAudit(
     },
     quarantineProbeSummary: quarantineProbe.summary,
   });
-  const nowMs = Date.now();
   const staleVenueRiskScores = findStaleVenueRiskScores(nowMs);
   const candidateOperatorQueue = buildCoverageAuditOperatorQueue({
     gaps,
     manifestMissingIds,
     yieldBearingMissingFromRankings,
     staleAutoLendingOverrides,
+    deadCuratedPins,
     quarantineReadyToRestore: quarantineProbe.readyToRestore,
     staleVenueRiskScores,
   });
@@ -1129,8 +1493,21 @@ export async function runYieldCoverageAudit(
     nowSec: reportedAt,
     publishedItemLimit: OPERATOR_QUEUE_ITEM_LIMIT,
   });
-  // The 13 count fields shared between the persisted report payload and the
-  // CronResult metadata. The two payloads otherwise diverge deliberately.
+  // C8: the admin panel can only render a bounded slice of the queue, so the
+  // payload carries the composition of the durable queue plus the two reasons
+  // an item is missing from it. candidateItemCount === sum(byKind) +
+  // truncatedItemCount + suppressedItemCount.
+  const queueByKind: Record<string, number> = {};
+  for (const item of [...operatorQueue.headlineGaps, ...operatorQueue.recommendationCandidates]) {
+    queueByKind[item.kind] = (queueByKind[item.kind] ?? 0) + 1;
+  }
+  const queueTotals = {
+    byKind: queueByKind,
+    suppressedItemCount: operatorReviewSummary.suppressedItemCount,
+    truncated: operatorReviewSummary.truncatedItemCount > 0,
+  };
+  // Count fields shared between the persisted report payload and the CronResult
+  // metadata. The two payloads otherwise diverge deliberately.
   const auditCounts = {
     totalDlPools: dlPools.length,
     coveredPoolCount: coveredPools.size,
@@ -1143,6 +1520,8 @@ export async function runYieldCoverageAudit(
     lendingAllowlistRecommendationCount: gaps.lendingAllowlistRecommendations.length,
     venueRiskConfigMissingCount: gaps.venueRiskConfigMissing.length,
     staleAutoLendingOverrideCount: staleAutoLendingOverrides.length,
+    deadCuratedPinCount: deadCuratedPins.length,
+    lifecycleReviewDueCount: lifecycleBuckets.reviewDueAdapters.length,
     exactPoolOverrideCount: explicitPoolOverrides.length,
     exactPoolOverrideNonYieldBearingOpportunityCount: exactPoolOverrideNonYieldBearingOpportunityIds.length,
     staleVenueRiskScoreCount: staleVenueRiskScores.length,
@@ -1168,6 +1547,9 @@ export async function runYieldCoverageAudit(
     staleVenueRiskScores: staleVenueRiskScores.slice(0, OPERATOR_QUEUE_ITEM_LIMIT),
     operatorQueue,
     operatorReviewSummary,
+    queueTotals,
+    deadCuratedPins: deadCuratedPins.slice(0, OPERATOR_QUEUE_ITEM_LIMIT),
+    reviewDueAdapters: lifecycleBuckets.reviewDueAdapters,
     lifecycleSummary: lifecycleBuckets.lifecycleSummary,
     quarantinedAdapters: lifecycleBuckets.quarantinedAdapters,
     quarantineReadyToRestore: quarantineProbe.readyToRestore,
@@ -1196,6 +1578,40 @@ export async function runYieldCoverageAudit(
     },
   });
   await setCache(db, "yield-coverage-audit", JSON.stringify(report));
+  if (deadCuratedPins.length > 0) {
+    await logCronEvent(db, {
+      job: "yield-coverage-audit",
+      eventType: "curated-pin-missing",
+      severity: "warning",
+      message: `${deadCuratedPins.length} curated yield pin(s) are absent from the DeFiLlama snapshot.`,
+      metadata: {
+        deadCuratedPinCount: deadCuratedPins.length,
+        coverageOutageCount: deadCuratedPins.filter((pin) => pin.coverage === "coverage-outage").length,
+        pins: deadCuratedPins.slice(0, REPORT_HEADLINE_ITEM_LIMIT).map((pin) => ({
+          stablecoinId: pin.stablecoinId,
+          registry: pin.registry,
+          pin: pin.pin,
+          coverage: pin.coverage,
+        })),
+      },
+    });
+  }
+  if (lifecycleBuckets.reviewDueAdapters.length > 0) {
+    await logCronEvent(db, {
+      job: "yield-coverage-audit",
+      eventType: "lifecycle-review-due",
+      severity: "warning",
+      message: `${lifecycleBuckets.reviewDueAdapters.length} adapter lifecycle review(s) are past due.`,
+      metadata: {
+        lifecycleReviewDueCount: lifecycleBuckets.reviewDueAdapters.length,
+        reviewDue: lifecycleBuckets.reviewDueAdapters.map((adapter) => ({
+          stablecoinId: adapter.stablecoinId,
+          code: adapter.code,
+          nextReviewAt: adapter.nextReviewAt ?? null,
+        })),
+      },
+    });
+  }
   await reportAuditProgress("complete", "Published yield coverage audit cache", 6, {
     cacheKey: "yield-coverage-audit",
     countTotals: {
@@ -1216,6 +1632,7 @@ export async function runYieldCoverageAudit(
     gaps.lendingAllowlistRecommendations.length +
     gaps.venueRiskConfigMissing.length +
     staleAutoLendingOverrides.length +
+    deadCuratedPins.length +
     staleVenueRiskScores.length +
     quarantineProbe.readyToRestore.length +
     manifestMissingIds.length +
@@ -1234,6 +1651,7 @@ export async function runYieldCoverageAudit(
       intentionalGapCount: intentionalGapIds.length,
       yieldBearingMissingFromRankingsCount: yieldBearingMissingFromRankings.length,
       operatorSuppressedItemCount: operatorQueue.suppressedItemCount,
+      operatorQueueTruncated: queueTotals.truncated,
       protocolCategoryStatus,
       protocolCategoryCount: protocolCategoryLookup.meta.categorizedProtocolCount,
       quarantineReadyToRestoreCount: quarantineProbe.readyToRestore.length,

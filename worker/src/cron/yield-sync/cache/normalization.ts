@@ -4,6 +4,7 @@ import { isFiniteNumber, isRecord } from "@shared/lib/type-guards";
 import { RISK_FREE_RATE_FALLBACK } from "../../../lib/constants";
 import { toFiniteNumber } from "../../../lib/number-utils";
 import {
+  buildHardcodedUsdBenchmark,
   getYieldBenchmarkStaticMeta,
   type ParsedYieldBenchmarkMeta,
   type ParsedYieldBenchmarkRegistry,
@@ -252,56 +253,82 @@ export function parseRiskFreeRateCache(
   return parseRiskFreeRateRecord(raw, cacheUpdatedAt, nowSec, defaults, raw);
 }
 
-export function parseRiskFreeRatesCache(
+export interface ParsedRiskFreeRatesCache {
+  registry: ParsedYieldBenchmarkRegistry;
+  /** Keys whose stored sub-entry exists but did not parse on this read. */
+  invalidKeys: readonly YieldBenchmarkKey[];
+}
+
+/**
+ * Per-key registry parse. USD is non-nullable in the registry contract, but a
+ * single unparseable sub-entry must not discard the other keys: a corrupt USD
+ * row degrades USD alone (to the hardcoded fallback, carrying the reason) while
+ * every readable key is preserved. `invalidKeys` lets the loader prefer the
+ * legacy scalar row for USD when that row is still readable.
+ */
+export function parseRiskFreeRatesCacheDetailed(
   raw: string,
   cacheUpdatedAt: number,
   nowSec = Math.floor(Date.now() / 1000),
-): ParsedYieldBenchmarkRegistry | null {
+): ParsedRiskFreeRatesCache | null {
   try {
     const parsed = JSON.parse(raw) as unknown;
     if (!isRecord(parsed) || !isRecord(parsed.benchmarks)) return null;
     const benchmarks = parsed.benchmarks as Record<string, unknown>;
-    const usdRaw = benchmarks.USD;
-    if (!usdRaw) return null;
 
     const parseBundledBenchmark = (
-      raw: unknown,
+      rawEntry: unknown,
       key: YieldBenchmarkKey,
     ): ParsedYieldBenchmarkMeta | null => {
-      const legacyFallbackValue = isRecord(raw) ? raw : JSON.stringify(raw);
-      return parseRiskFreeRateRecord(raw, cacheUpdatedAt, nowSec, { key }, legacyFallbackValue);
+      const legacyFallbackValue = isRecord(rawEntry) ? rawEntry : JSON.stringify(rawEntry);
+      return parseRiskFreeRateRecord(rawEntry, cacheUpdatedAt, nowSec, { key }, legacyFallbackValue);
     };
 
-    const usd = parseBundledBenchmark(usdRaw, "USD");
-    if (!usd) return null;
-
+    const invalidKeys: YieldBenchmarkKey[] = [];
     const parseOptional = (
       key: YieldBenchmarkKey,
     ): ParsedYieldBenchmarkMeta | null => {
-      const raw = benchmarks[key];
-      if (raw == null) return null;
-      return parseBundledBenchmark(raw, key);
+      const rawEntry = benchmarks[key];
+      if (rawEntry == null) return null;
+      const parsedEntry = parseBundledBenchmark(rawEntry, key);
+      if (!parsedEntry) invalidKeys.push(key);
+      return parsedEntry;
     };
 
+    const usdEntry = benchmarks.USD;
+    const usd = usdEntry == null ? null : parseBundledBenchmark(usdEntry, "USD");
+    if (!usd) invalidKeys.push("USD");
+
     return {
-      USD: usd,
-      USD_EFFR: parseOptional("USD_EFFR"),
-      EUR: parseOptional("EUR"),
-      CHF: parseOptional("CHF"),
-      GBP: parseOptional("GBP"),
-      JPY: parseOptional("JPY"),
-      MXN: parseOptional("MXN"),
-      BRL: parseOptional("BRL"),
-      AUD: parseOptional("AUD"),
-      CAD: parseOptional("CAD"),
-      RUB: parseOptional("RUB"),
-      TRY: parseOptional("TRY"),
-      SGD: parseOptional("SGD"),
+      registry: {
+        USD: usd ?? buildHardcodedUsdBenchmark(usdEntry == null ? "missing-usd-entry" : "invalid-usd-entry"),
+        USD_EFFR: parseOptional("USD_EFFR"),
+        EUR: parseOptional("EUR"),
+        CHF: parseOptional("CHF"),
+        GBP: parseOptional("GBP"),
+        JPY: parseOptional("JPY"),
+        MXN: parseOptional("MXN"),
+        BRL: parseOptional("BRL"),
+        AUD: parseOptional("AUD"),
+        CAD: parseOptional("CAD"),
+        RUB: parseOptional("RUB"),
+        TRY: parseOptional("TRY"),
+        SGD: parseOptional("SGD"),
+      },
+      invalidKeys,
     };
   } catch (err) {
     logWorkerEventArgs("handler", "warn", `[yield-sync] Failed to parse bundled benchmarks cache: ${toErrorMessage(err)}`);
     return null;
   }
+}
+
+export function parseRiskFreeRatesCache(
+  raw: string,
+  cacheUpdatedAt: number,
+  nowSec = Math.floor(Date.now() / 1000),
+): ParsedYieldBenchmarkRegistry | null {
+  return parseRiskFreeRatesCacheDetailed(raw, cacheUpdatedAt, nowSec)?.registry ?? null;
 }
 
 // ---------------------------------------------------------------------------

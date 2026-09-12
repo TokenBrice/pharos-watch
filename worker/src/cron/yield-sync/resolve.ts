@@ -3,6 +3,7 @@ import type { ChainRpcConfig } from "../../lib/chain-registry";
 import { resolveTrackedYieldSources } from "./resolve-tracked-sources";
 import { appendLinkedVariantParentYieldSources, appendPoolFamilyYieldSources, enforceExternalOpportunityTvlEligibility } from "./resolve-helpers";
 import { type ParsedYieldBenchmarkRegistry } from "./benchmarks";
+import type { YieldOptionalSourceOutcome } from "./optional-source-runtime";
 import type {
   DlPool,
   ResolvedYieldCandidate,
@@ -24,6 +25,7 @@ interface ResolveYieldSourcesParams {
   coingeckoApiKey?: string | null;
   supplementalCandidates?: ResolvedYieldCandidate[];
   stablecoinSupplyById: Map<string, number>;
+  onOptionalSourceOutcome?: (outcome: YieldOptionalSourceOutcome) => void;
 }
 
 export async function resolveYieldSources({
@@ -40,6 +42,7 @@ export async function resolveYieldSources({
   coingeckoApiKey,
   supplementalCandidates = [],
   stablecoinSupplyById,
+  onOptionalSourceOutcome,
 }: ResolveYieldSourcesParams): Promise<YieldResolutionResult> {
   const trackedResolution = await resolveTrackedYieldSources({
     db,
@@ -52,6 +55,7 @@ export async function resolveYieldSources({
     signal,
     chainRpcs,
     coingeckoApiKey,
+    onOptionalSourceOutcome,
   });
 
   appendPoolFamilyYieldSources({

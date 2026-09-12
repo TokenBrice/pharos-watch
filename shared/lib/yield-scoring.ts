@@ -30,6 +30,15 @@ export const PYS_BENCHMARK_SPREAD_WEIGHT = 0.25;
 export const PYS_MAX_SOURCE_RISK_PENALTY = 2.5;
 
 /**
+ * Absolute upper envelope on a row's nominal 30d APY (percentage points). Above
+ * it the input is a source-math failure — an unusable NAV anchor, a mis-scaled
+ * pool or a corrupted exchange rate — so the row scores 0 (NR) instead of
+ * clamping into a perfect 100. Mirrors the worker's
+ * `DETERMINISTIC_APY_SANITY_MAX` and the per-adapter caps.
+ */
+export const PYS_APY_SANITY_MAX = 300;
+
+/**
  * Normalize a resolved source-risk multiplier into a 0-100 display score.
  * `penalty = 1.0` (neutral) → 0; `penalty = PYS_MAX_SOURCE_RISK_PENALTY` (2.5) → 100.
  * Returns null when the penalty is not a finite number.
@@ -162,8 +171,13 @@ export interface PysSourceRiskPenaltyInput {
   dependencyConcentrationSeverity?: YieldDependencyConcentrationSeverity | null;
 }
 
+/**
+ * Convert a 0-1 yield-stability ratio into an APY variance score.
+ * Missing and non-finite stabilities return the documented 0 default — never
+ * NaN, which would serialize to null and fail the published payload schema (B12).
+ */
 export function yieldStabilityToApyVarianceScore(yieldStability: number | null | undefined): number {
-  if (yieldStability == null) return 0;
+  if (yieldStability == null || !Number.isFinite(yieldStability)) return 0;
   return Math.max(0, Math.min(1, 1 - yieldStability));
 }
 
@@ -238,8 +252,23 @@ export function derivePysSourceRiskPenalty(input: PysSourceRiskPenaltyInput): nu
 interface PysComponentInput {
   apy30d: number;
   safetyScore: number | null;
-  apyVarianceScore: number;
+  apyVarianceScore: number | null | undefined;
   benchmarkRate?: number | null;
+  /**
+   * Currency the row's benchmark is quoted in. The USD reference rate only
+   * re-bases *foreign* hurdles: a same-currency alternative USD curve (USD_EFFR
+   * and friends) would otherwise credit the spread between two USD rates as
+   * excess yield (yield v8.43, B24). Absent: re-base applies to every key.
+   */
+  benchmarkCurrency?: string | null;
+  /**
+   * Reference (USD) risk-free rate the row's hurdle is re-based onto (yield
+   * v8.43). When present with `benchmarkRate`, the effective yield gains
+   * `usdBenchmarkRate - benchmarkRate`, so a high-rate peg's policy-rate
+   * compensation is not scored as excess yield and equal benchmark-relative
+   * excess scores equally in every currency. Absent: v8.42 behaviour.
+   */
+  usdBenchmarkRate?: number | null;
   sourceRiskPenalty?: number | null;
 }
 
@@ -252,6 +281,8 @@ export interface PysComponents {
   sourceRiskPenaltyProvided: boolean;
   benchmarkSpread: number | null;
   benchmarkAdjustment: number;
+  /** `usdBenchmarkRate - benchmarkRate`; 0 for USD-benchmarked rows or when either rate is missing. */
+  hurdleRebase: number;
   effectiveYield: number;
   rowUtility: number;
   yieldEfficiency: number;
@@ -266,11 +297,21 @@ export function computePysComponents(input: PysComponentInput): PysComponents {
   const benchmarkRate = numberValue(input.benchmarkRate);
   const benchmarkSpread = benchmarkRate == null ? null : apy30d - benchmarkRate;
   const benchmarkAdjustment = benchmarkSpread == null ? 0 : benchmarkSpread * PYS_BENCHMARK_SPREAD_WEIGHT;
-  const effectiveYield = Math.max(0, apy30d + benchmarkAdjustment);
+  const usdBenchmarkRate = numberValue(input.usdBenchmarkRate);
+  const hurdleRebase =
+    benchmarkRate == null || usdBenchmarkRate == null || input.benchmarkCurrency === "USD"
+      ? 0
+      : usdBenchmarkRate - benchmarkRate;
+  const effectiveYield = Math.max(0, apy30d + benchmarkAdjustment + hurdleRebase);
   const sourceRiskPenaltyResolution = resolvePysSourceRiskPenalty(input.sourceRiskPenalty);
   const rowUtility = effectiveYield / sourceRiskPenaltyResolution.penalty;
   const yieldEfficiency = rowUtility / adjustedRiskPenalty;
-  const apyVarianceScore = clamp(numberValue(input.apyVarianceScore) ?? 0, 0, 1);
+  // A missing variance keeps the documented best-case default; a non-finite one
+  // fails closed to maximum variance so an unusable measurement never earns the
+  // full stability credit (B25).
+  const rawVarianceScore = input.apyVarianceScore;
+  const apyVarianceScore =
+    rawVarianceScore == null ? 0 : Number.isFinite(rawVarianceScore) ? clamp(rawVarianceScore, 0, 1) : 1;
   const sustainabilityMultiplier = Math.max(PYS_SUSTAINABILITY_FLOOR, 1.0 - apyVarianceScore);
   return {
     riskPenalty,
@@ -280,6 +321,7 @@ export function computePysComponents(input: PysComponentInput): PysComponents {
     sourceRiskPenaltyProvided: sourceRiskPenaltyResolution.provided,
     benchmarkSpread,
     benchmarkAdjustment,
+    hurdleRebase,
     effectiveYield,
     rowUtility,
     yieldEfficiency,
@@ -293,6 +335,8 @@ interface PYSInput {
   apyVarianceScore: number;
   scalingFactor: number;
   benchmarkRate?: number | null;
+  benchmarkCurrency?: string | null;
+  usdBenchmarkRate?: number | null;
   sourceRiskPenalty?: number | null;
 }
 
@@ -305,8 +349,11 @@ export function computePYSFromComponents(
   components: PysComponents,
 ): number {
   if (!Number.isFinite(apy30d) || apy30d <= 0) return 0;
+  // Absolute envelope: an APY above the sanity bound is a source-math failure,
+  // not a perfect score (B12).
+  if (apy30d > PYS_APY_SANITY_MAX) return 0;
   if (!Number.isFinite(scalingFactor) || scalingFactor <= 0) return 0;
-  if (components.effectiveYield <= 0) return 0;
+  if (!Number.isFinite(components.effectiveYield) || components.effectiveYield <= 0) return 0;
   return clamp(
     Math.round(components.yieldEfficiency * components.sustainabilityMultiplier * scalingFactor),
     0,
@@ -314,7 +361,16 @@ export function computePYSFromComponents(
   );
 }
 
-export function computePYS({ apy30d, safetyScore, apyVarianceScore, scalingFactor, benchmarkRate, sourceRiskPenalty }: PYSInput): number {
+export function computePYS({
+  apy30d,
+  safetyScore,
+  apyVarianceScore,
+  scalingFactor,
+  benchmarkRate,
+  benchmarkCurrency,
+  usdBenchmarkRate,
+  sourceRiskPenalty,
+}: PYSInput): number {
   if (!Number.isFinite(apy30d) || apy30d <= 0) return 0;
   if (!Number.isFinite(scalingFactor) || scalingFactor <= 0) return 0;
   return computePYSFromComponents(
@@ -325,6 +381,8 @@ export function computePYS({ apy30d, safetyScore, apyVarianceScore, scalingFacto
       safetyScore,
       apyVarianceScore,
       benchmarkRate,
+      benchmarkCurrency,
+      usdBenchmarkRate,
       sourceRiskPenalty,
     }),
   );

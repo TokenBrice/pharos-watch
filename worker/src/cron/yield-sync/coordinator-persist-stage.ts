@@ -92,20 +92,41 @@ export async function runYieldCoordinatorPersistStage(
     return publicationResult.result;
   }
 
-  logWorkerEvent({
-    scope: "lib",
-    level: "info",
-    event: "yield-publication-complete",
-    job: "sync-yield-data",
-    message: "Yield source rows and rankings publication completed",
-    metadata: {
-      updatedCount: publicationResult.updatedCount,
-      yieldBearingCoins: fetched.yieldCoins.length,
-    },
-  });
+  const publicationApplied = !publicationResult.cacheWriteSkipped;
+  if (publicationApplied) {
+    logWorkerEvent({
+      scope: "lib",
+      level: "info",
+      event: "yield-publication-complete",
+      job: "sync-yield-data",
+      message: "Yield source rows and rankings publication completed",
+      metadata: {
+        updatedCount: publicationResult.updatedCount,
+        yieldBearingCoins: fetched.yieldCoins.length,
+      },
+    });
+  } else {
+    // The atomic write did not apply, so nothing was published: this run keeps
+    // serving the previous generation and must not read as a completed one.
+    logWorkerEvent({
+      scope: "lib",
+      level: "warn",
+      event: "publication-skipped",
+      job: "sync-yield-data",
+      message: "Yield publication skipped; the previous published generation is retained",
+      metadata: {
+        reason: publicationResult.skipReason,
+        cacheWriteSkipped: true,
+        casSkipped: publicationResult.casSkipped,
+        yieldBearingCoins: fetched.yieldCoins.length,
+      },
+    });
+  }
   await fetched.reportYieldProgress(
-    "publication-complete",
-    "Published yield rankings generation",
+    publicationApplied ? "publication-complete" : "publication-skipped",
+    publicationApplied
+      ? "Published yield rankings generation"
+      : "Yield publication skipped; previous generation retained",
     "yield-publication",
     {
       itemsDone: publicationResult.updatedCount,
@@ -118,6 +139,7 @@ export async function runYieldCoordinatorPersistStage(
         },
         degradationReasons: publicationResult.degradationReasons,
         cacheWriteSkipped: publicationResult.cacheWriteSkipped,
+        cacheWriteSkipReason: publicationResult.skipReason,
       },
     },
   );
@@ -142,7 +164,9 @@ export async function runYieldCoordinatorPersistStage(
       publishedRankingCount: health.currentPublishedRankingCount,
       previousPublishedRankingCount: health.previousPublishedRankingCount,
       dlPoolsMeta: fetched.dlPoolsMeta,
+      dlApyEnvelopeRejectedCount: fetched.dlApyEnvelopeRejectedCount,
       supplementalMeta: fetched.supplementalMeta,
+      optionalSourceFailures: normalized.optionalSourceFailures,
       onChain: {
         ratesResolved: fetched.onChainRates.size,
         ratesConfigured: ON_CHAIN_RATE_CONFIGS.length,
@@ -172,6 +196,7 @@ export async function runYieldCoordinatorPersistStage(
         startSec: fetched.startSec,
       }),
       previousTvlRowsTruncated: normalized.historySnapshots.previousTvlRowsTruncated,
+      publicationStats: publicationResult.publicationStats,
       safetyIdentityChangedBeforePublish,
     }),
   };

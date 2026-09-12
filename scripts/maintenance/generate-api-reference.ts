@@ -31,7 +31,7 @@ export const END_MARKER = "<!-- GENERATED-END: public-endpoints -->";
 interface OpenApiSpec { paths: Record<string, unknown>; info?: Record<string, unknown> }
 interface OpenApiRoute {
   method: string; path: string; operationId: string; summary: string; tags: string;
-  parameters: string; responseCodes: string; responseSchemaRef: string | null; definition: EndpointDefinition;
+  parameters: string; responseCodes: string; responseSchemaRefs: readonly string[]; definition: EndpointDefinition;
 }
 
 const PUBLIC_OPERATION_ORDER = [
@@ -124,16 +124,25 @@ function formatParams(parameters: unknown): string {
     return `\`${String(parameter.name ?? "")}\` (${location}, ${parameter.required ? "required" : "optional"}, ${parameterType(parameter)})`;
   }).join("; ");
 }
-function responseSchemaRef(operation: Record<string, unknown>): string | null {
-  if (!isRecord(operation.responses)) return null;
+function responseSchemaRefs(operation: Record<string, unknown>): readonly string[] {
+  if (!isRecord(operation.responses)) return [];
   for (const code of Object.keys(operation.responses).sort()) {
     if (!code.startsWith("2")) continue;
     const response = operation.responses[code];
     if (!isRecord(response) || !isRecord(response.content)) continue;
     const json = response.content["application/json"];
-    if (isRecord(json) && isRecord(json.schema) && typeof json.schema.$ref === "string") return json.schema.$ref;
+    if (!isRecord(json) || !isRecord(json.schema)) continue;
+    const schema = json.schema;
+    if (typeof schema.$ref === "string") return [schema.$ref];
+    // Query-parameter variants (e.g. `?projection=summary`) are published as a
+    // `oneOf`; document every ref instead of reporting no schema at all.
+    if (Array.isArray(schema.oneOf)) {
+      return schema.oneOf
+        .filter((variant): variant is { $ref: string } => isRecord(variant) && typeof variant.$ref === "string")
+        .map((variant) => variant.$ref);
+    }
   }
-  return null;
+  return [];
 }
 function findDefinition(path: string, method: string): EndpointDefinition {
   const normalized = displayPath(path);
@@ -159,7 +168,7 @@ export function collectOpenApiRoutes(spec: OpenApiSpec): OpenApiRoute[] {
         tags: Array.isArray(operation.tags) ? operation.tags.filter((tag): tag is string => typeof tag === "string").join(", ") : "",
         parameters: formatParams(parameters),
         responseCodes: isRecord(operation.responses) ? Object.keys(operation.responses).sort().join(", ") : "",
-        responseSchemaRef: responseSchemaRef(operation), definition: findDefinition(path, method),
+        responseSchemaRefs: responseSchemaRefs(operation), definition: findDefinition(path, method),
       });
     }
   }
@@ -172,9 +181,11 @@ function authLabel(definition: EndpointDefinition): string {
 function cacheLabel(definition: EndpointDefinition): string {
   return definition.cacheBypass ? "bypass shared endpoint caching" : "shared endpoint caching allowed";
 }
-function schemaLink(ref: string | null): string {
-  if (!ref) return "No JSON success schema is published.";
-  return `[\`${ref.split("/").at(-1) ?? ref}\`](https://pharos.watch/openapi.json${ref})`;
+function schemaLink(refs: readonly string[]): string {
+  if (refs.length === 0) return "No JSON success schema is published.";
+  return refs
+    .map((ref) => `[\`${ref.split("/").at(-1) ?? ref}\`](https://pharos.watch/openapi.json${ref})`)
+    .join(", ");
 }
 function renderQuickReference(routes: readonly OpenApiRoute[]): string {
   return [
@@ -296,7 +307,7 @@ function renderOpenApiRoute(route: OpenApiRoute): string {
   return [
     `### \`${route.method} ${displayPath(route.path)}\``, "", CURATED_OPERATION_NOTES[route.operationId], "",
     `- **Operation ID:** \`${route.operationId}\``, `- **Path:** \`${route.path}\``,
-    `- **Parameters:** ${route.parameters}`, `- **Success response schema:** ${schemaLink(route.responseSchemaRef)}`,
+    `- **Parameters:** ${route.parameters}`, `- **Success response schema:** ${schemaLink(route.responseSchemaRefs)}`,
     `- **Policy:** authentication ${authLabel(route.definition)}; ${cacheLabel(route.definition)} (\`cacheBypass: ${route.definition.cacheBypass}\`).`,
     ...(sourceBackedDetails ? ["", sourceBackedDetails] : []),
   ].join("\n");

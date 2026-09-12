@@ -6,6 +6,7 @@ import {
   installCacheByKey,
   installBenchmarkFetch,
   makeBenchmarkCacheEntry,
+  makeCacheRow,
   makeNewCurrencyFetchRoutes,
   makeRiskFreeRatesCacheRow,
   makeTbillFetchRoutes,
@@ -43,9 +44,12 @@ import {
 
 import {
   buildHardcodedUsdBenchmark,
+  classifyYieldBenchmarkFreshness,
   getBenchmarkKeyForPegCurrency,
+  getYieldBenchmarkStaticMeta,
   resolveBenchmarkForStablecoin,
   withYieldBenchmarkStaticMeta,
+  YIELD_BENCHMARK_RECORD_MAX_AGE_SEC,
 } from "../yield-sync/benchmarks";
 import { fetchWithRetry } from "../../lib/fetch-retry";
 import { getCache, setCache } from "../../lib/db-cache";
@@ -54,12 +58,28 @@ import { shouldAttemptFetch, recordOutcome } from "../../lib/circuit-breaker";
 
 // ALFRED graph CSV uses the same observation shape with a date-stamped series column.
 const ALFRED_SONIA_COMPOUNDED_INDEX_CSV_SNIPPET = "observation_date,IUDZOS2_20260625\n2026-01-01,100\n2026-04-01,101\n";
+
+// The FRED CSV loaders guard the latest DGS3MO/DFF observation against the real
+// clock (YIELD_BENCHMARK_RECORD_MAX_AGE_SEC.USD, five days). The shared routes
+// ship static 2026-03 rows, so override them with rows inside that window
+// relative to FROZEN_NOW; tests that exercise a stale or future-dated feed pass
+// their own override on top.
+const FRESH_FRED_OBSERVATION_DATE = "2026-06-24";
+const FRESH_FRED_ROUTES: BenchmarkFetchRoutes = {
+  "id=DGS3MO": new Response(`DATE,DGS3MO\n${FRESH_FRED_OBSERVATION_DATE},3.72\n`, { status: 200 }),
+  "id=DFF": new Response(`DATE,DFF\n${FRESH_FRED_OBSERVATION_DATE},4.33\n`, { status: 200 }),
+};
+
 function mockTbillByUrl(overrides: BenchmarkFetchRoutes = {}, calls?: string[]) {
-  installBenchmarkFetch(vi.mocked(fetchWithRetry), makeTbillFetchRoutes(overrides), calls);
+  installBenchmarkFetch(vi.mocked(fetchWithRetry), makeTbillFetchRoutes({ ...FRESH_FRED_ROUTES, ...overrides }), calls);
 }
 
 function mockNewCurrencyByUrl(overrides: BenchmarkFetchRoutes = {}, calls?: string[]) {
-  installBenchmarkFetch(vi.mocked(fetchWithRetry), makeNewCurrencyFetchRoutes(overrides), calls);
+  installBenchmarkFetch(
+    vi.mocked(fetchWithRetry),
+    makeNewCurrencyFetchRoutes({ ...FRESH_FRED_ROUTES, ...overrides }),
+    calls,
+  );
 }
 
 function mockUnavailableTbillByUrl(calls?: string[]) {
@@ -246,7 +266,7 @@ describe("fetchTbillRate", () => {
       source: "fred-dgs3mo",
       fallbackMode: null,
       isFallback: false,
-      recordDate: "2026-03-02",
+      recordDate: FRESH_FRED_OBSERVATION_DATE,
     });
     expect(latestStructuredCachePayload().benchmarks.USD_EFFR).toMatchObject({
       key: "USD_EFFR",
@@ -1047,5 +1067,318 @@ describe("resolveBenchmarkForStablecoin", () => {
 
     expect(result.key).toBe("USD");
     expect(result.selectionMode).toBe("fallback-usd");
+  });
+});
+
+describe("classifyYieldBenchmarkFreshness", () => {
+  const FRESH_FETCH = { ageSeconds: 3600, isFallback: false, fallbackMode: null };
+
+  it("stays healthy while the observation is inside its key bound", () => {
+    expect(classifyYieldBenchmarkFreshness(FRESH_FETCH, {
+      recordDate: "2026-06-23",
+      maxRecordAgeSec: YIELD_BENCHMARK_RECORD_MAX_AGE_SEC.USD,
+    })).toBe("healthy");
+  });
+
+  it("goes stale on an observation older than the key bound even when the fetch just succeeded", () => {
+    expect(classifyYieldBenchmarkFreshness(FRESH_FETCH, {
+      recordDate: "2026-03-02",
+      maxRecordAgeSec: YIELD_BENCHMARK_RECORD_MAX_AGE_SEC.USD,
+    })).toBe("stale");
+  });
+
+  it("applies the bound per key: a 42-day-old CAD print is current where USD would be stale", () => {
+    const recordDate = "2026-05-14";
+    expect(classifyYieldBenchmarkFreshness(FRESH_FETCH, {
+      recordDate,
+      maxRecordAgeSec: YIELD_BENCHMARK_RECORD_MAX_AGE_SEC.CAD,
+    })).toBe("healthy");
+    expect(classifyYieldBenchmarkFreshness(FRESH_FETCH, {
+      recordDate,
+      maxRecordAgeSec: YIELD_BENCHMARK_RECORD_MAX_AGE_SEC.USD,
+    })).toBe("stale");
+  });
+
+  it("keeps the fetch-age and fallback rules when no observation bound is supplied", () => {
+    expect(classifyYieldBenchmarkFreshness({ ageSeconds: 60, isFallback: true, fallbackMode: "x" })).toBe("degraded");
+    expect(classifyYieldBenchmarkFreshness({ ageSeconds: null, isFallback: false, fallbackMode: null })).toBe("stale");
+  });
+
+  it("labels CAD as the monthly Bank rate instead of a CORRA overnight series", () => {
+    const label = getYieldBenchmarkStaticMeta("CAD").label;
+    expect(label).toContain("Bank rate");
+    expect(label).toContain("monthly");
+    expect(label).not.toContain("CORRA");
+  });
+});
+
+describe("fetchTbillRate — benchmark observation guard and registry integrity", () => {
+  const db = {} as D1Database;
+  const RETRY_BOUND_SEC = 24 * 3600;
+
+  function runMetadata(result: { metadata?: string }) {
+    return JSON.parse(result.metadata ?? "{}") as Record<string, unknown>;
+  }
+
+  function writtenBenchmarks() {
+    const call = [...vi.mocked(setCache).mock.calls]
+      .reverse()
+      .find((entry) => entry[1] === "risk_free_rates");
+    expect(call).toBeDefined();
+    return (JSON.parse(String(call?.[2])) as {
+      benchmarks: Record<string, {
+        rate: number;
+        source: string;
+        isFallback: boolean;
+        fallbackMode: string | null;
+        recordDate: string | null;
+      } | null>;
+    }).benchmarks;
+  }
+
+  function cacheKeysWritten(): string[] {
+    return vi.mocked(setCache).mock.calls.map((entry) => String(entry[1]));
+  }
+
+  beforeEach(() => {
+    vi.mocked(fetchWithRetry).mockReset();
+    vi.mocked(getCache).mockReset().mockResolvedValue(null);
+    vi.mocked(setCache).mockReset().mockResolvedValue(undefined);
+    vi.mocked(logCronEvent).mockClear();
+    vi.mocked(shouldAttemptFetch).mockReset().mockResolvedValue(true);
+    vi.mocked(recordOutcome).mockReset().mockResolvedValue(mockCircuitOutcomeRecord());
+  });
+
+  it("falls back to Treasury.gov when the FRED DGS3MO CSV is months old", async () => {
+    mockTbillByUrl({
+      "id=DGS3MO": new Response("DATE,DGS3MO\n2026-03-02,3.72\n", { status: 200 }),
+      "home.treasury.gov": new Response(TREASURY_XML_SNIPPET, { status: 200 }),
+    });
+
+    const result = await fetchTbillRate(db, undefined, BANXICO_TEST_ENV);
+
+    expect(runMetadata(result).usdSource).toBe("treasury-yield-xml");
+    expect(writtenBenchmarks().USD).toMatchObject({
+      rate: 3.72,
+      source: "treasury-yield-xml",
+      isFallback: false,
+      recordDate: "2026-03-13",
+    });
+  });
+
+  it("rejects a future-dated DGS3MO row instead of publishing it as market data", async () => {
+    mockTbillByUrl({
+      "id=DGS3MO": new Response("DATE,DGS3MO\n2099-01-01,3.72\n", { status: 200 }),
+      "home.treasury.gov": new Response(TREASURY_XML_SNIPPET, { status: 200 }),
+    });
+
+    const result = await fetchTbillRate(db, undefined, BANXICO_TEST_ENV);
+
+    expect(runMetadata(result).usdSource).toBe("treasury-yield-xml");
+    expect(writtenBenchmarks().USD?.recordDate).toBe("2026-03-13");
+  });
+
+  it("retains the previous USD_EFFR instead of publishing a months-old DFF row", async () => {
+    const retainedEpochSec = Math.floor(FROZEN_NOW.getTime() / 1000) - 48 * 3600;
+    installCacheByKey(vi.mocked(getCache), {
+      risk_free_rates: makeRiskFreeRatesCacheRow({
+        USD: makeBenchmarkCacheEntry({
+          key: "USD",
+          rate: 3.72,
+          recordDate: FRESH_FRED_OBSERVATION_DATE,
+          fetchedAt: retainedEpochSec,
+          source: "fred-dgs3mo",
+        }),
+        USD_EFFR: makeBenchmarkCacheEntry({
+          key: "USD_EFFR",
+          rate: 4.31,
+          recordDate: "2026-03-01",
+          fetchedAt: retainedEpochSec,
+          source: "fred-dff",
+        }),
+        EUR: null,
+        CHF: null,
+        GBP: null,
+        JPY: null,
+        MXN: null,
+        BRL: null,
+        AUD: null,
+        CAD: null,
+        RUB: null,
+        TRY: null,
+        SGD: null,
+      }, retainedEpochSec),
+    });
+    mockTbillByUrl({
+      "markets.newyorkfed.org": null,
+      "id=DFF": new Response("DATE,DFF\n2099-01-01,9.99\n", { status: 200 }),
+    });
+
+    const result = await fetchTbillRate(db, undefined, BANXICO_TEST_ENV);
+    const metadata = runMetadata(result);
+
+    expect(metadata.usdEffrRate).toBe(4.31);
+    expect(String(metadata.fallbackMode)).toContain("usd_effr:usd-effr-sources-failed-retained");
+    expect(writtenBenchmarks().USD_EFFR).toMatchObject({
+      rate: 4.31,
+      isFallback: true,
+      fallbackMode: "usd-effr-sources-failed-retained",
+    });
+  });
+
+  it("degrades a single unparseable USD sub-entry without discarding the readable keys", async () => {
+    installCacheByKey(vi.mocked(getCache), {
+      risk_free_rates: makeRiskFreeRatesCacheRow({
+        USD: { key: "USD", rate: "not-a-number" },
+        EUR: makeBenchmarkCacheEntry({
+          key: "EUR",
+          rate: 1.94,
+          recordDate: "2026-03-24",
+          source: "ecb-estr-3m",
+        }),
+      }, 1774479600),
+    });
+    vi.mocked(shouldAttemptFetch).mockResolvedValue(false);
+    mockUnavailableTbillByUrl();
+
+    const result = await fetchTbillRate(db, undefined, BANXICO_TEST_ENV);
+    const metadata = runMetadata(result);
+
+    expect(metadata.registryCacheState).toBe("valid");
+    expect(writtenBenchmarks().EUR).toMatchObject({
+      rate: 1.94,
+      source: "ecb-estr-3m",
+      fallbackMode: "circuit-open-retained",
+    });
+    expect(writtenBenchmarks().USD).toMatchObject({
+      source: "hardcoded-fallback",
+      fallbackMode: "circuit-open",
+    });
+  });
+
+  it("leaves an unreadable registry untouched when the run resolved no benchmark", async () => {
+    installCacheByKey(vi.mocked(getCache), {
+      risk_free_rates: makeCacheRow("not-json-at-all", 1774479600),
+      risk_free_rate: null,
+    });
+    vi.mocked(shouldAttemptFetch).mockResolvedValue(false);
+    mockUnavailableTbillByUrl();
+
+    const result = await fetchTbillRate(db, undefined, BANXICO_TEST_ENV);
+    const metadata = runMetadata(result);
+
+    expect(metadata.registryCacheState).toBe("invalid");
+    expect(metadata.registryCacheWrite).toBe("skipped-unreadable-cache");
+    expect(cacheKeysWritten()).not.toContain("risk_free_rates");
+    expect(cacheKeysWritten()).not.toContain("risk_free_rate");
+  });
+
+  it("skips the hourly retry while the registry still carries a recent market observation", async () => {
+    const fetchedAt = Math.floor(FROZEN_NOW.getTime() / 1000);
+    installCacheByKey(vi.mocked(getCache), {
+      risk_free_rates: makeRiskFreeRatesCacheRow({
+        USD: makeBenchmarkCacheEntry({
+          key: "USD",
+          rate: 3.91,
+          recordDate: FRESH_FRED_OBSERVATION_DATE,
+          fetchedAt: fetchedAt - 3600,
+          source: "fred-dgs3mo",
+        }),
+      }, fetchedAt - 3600),
+    });
+    const calls: string[] = [];
+    mockTbillByUrl({}, calls);
+
+    const result = await fetchTbillRate(db, undefined, BANXICO_TEST_ENV, {
+      minRegistryAgeSec: RETRY_BOUND_SEC,
+    });
+
+    expect(result.status).toBe("skipped_neutral");
+    expect(result.itemCount).toBe(0);
+    expect(runMetadata(result)).toMatchObject({
+      skipped: true,
+      skipReason: "risk-free-registry-fresh",
+      minRegistryAgeSec: RETRY_BOUND_SEC,
+    });
+    expect(calls).toEqual([]);
+    expect(setCache).not.toHaveBeenCalled();
+  });
+
+  it("refreshes from the hourly retry when the newest market observation exceeds the bound", async () => {
+    const fetchedAt = Math.floor(FROZEN_NOW.getTime() / 1000);
+    installCacheByKey(vi.mocked(getCache), {
+      risk_free_rates: makeRiskFreeRatesCacheRow({
+        USD: makeBenchmarkCacheEntry({
+          key: "USD",
+          rate: 3.91,
+          recordDate: "2026-06-23",
+          fetchedAt: fetchedAt - 25 * 3600,
+          source: "fred-dgs3mo",
+        }),
+      }, fetchedAt - 25 * 3600),
+    });
+    const calls: string[] = [];
+    mockTbillByUrl({}, calls);
+
+    const result = await fetchTbillRate(db, undefined, BANXICO_TEST_ENV, {
+      minRegistryAgeSec: RETRY_BOUND_SEC,
+    });
+
+    expect(result.status).toBe("ok");
+    expect(calls.some((url) => url.includes("id=DGS3MO"))).toBe(true);
+    expect(writtenBenchmarks().USD?.source).toBe("fred-dgs3mo");
+  });
+
+  it("refreshes when USD has no recent observation even though another key does", async () => {
+    const fetchedAt = Math.floor(FROZEN_NOW.getTime() / 1000);
+    installCacheByKey(vi.mocked(getCache), {
+      risk_free_rates: makeRiskFreeRatesCacheRow({
+        USD: makeBenchmarkCacheEntry({
+          key: "USD",
+          rate: 3.91,
+          recordDate: "2026-06-18",
+          fetchedAt: fetchedAt - 26 * 3600,
+          source: "fred-dgs3mo",
+        }),
+        EUR: makeBenchmarkCacheEntry({
+          key: "EUR",
+          rate: 1.94,
+          recordDate: "2026-06-24",
+          fetchedAt: fetchedAt - 600,
+          source: "ecb-estr-3m",
+        }),
+      }, fetchedAt - 600),
+    });
+    const calls: string[] = [];
+    mockTbillByUrl({}, calls);
+
+    const result = await fetchTbillRate(db, undefined, BANXICO_TEST_ENV, {
+      minRegistryAgeSec: RETRY_BOUND_SEC,
+    });
+
+    expect(result.status).toBe("ok");
+    expect(calls.some((url) => url.includes("id=DGS3MO"))).toBe(true);
+  });
+
+  it("keeps the canonical daily invocation unconditional", async () => {
+    const fetchedAt = Math.floor(FROZEN_NOW.getTime() / 1000);
+    installCacheByKey(vi.mocked(getCache), {
+      risk_free_rates: makeRiskFreeRatesCacheRow({
+        USD: makeBenchmarkCacheEntry({
+          key: "USD",
+          rate: 3.91,
+          recordDate: FRESH_FRED_OBSERVATION_DATE,
+          fetchedAt: fetchedAt - 60,
+          source: "fred-dgs3mo",
+        }),
+      }, fetchedAt - 60),
+    });
+    const calls: string[] = [];
+    mockTbillByUrl({}, calls);
+
+    const result = await fetchTbillRate(db, undefined, BANXICO_TEST_ENV);
+
+    expect(result.status).toBe("ok");
+    expect(calls.some((url) => url.includes("id=DGS3MO"))).toBe(true);
   });
 });

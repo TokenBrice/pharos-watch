@@ -2,7 +2,7 @@
 
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { TableBody, TableCell, TableFrame, TableHead, TableHeader, TableRow } from "@/components/table";
-import { getYieldBenchmarkDisplayLabel } from "@/lib/yield-benchmark";
+import { getYieldBenchmarkDisplayLabel, resolveYieldBenchmarkAge, type YieldBenchmarkAgeAssessment } from "@/lib/yield-benchmark";
 import { cn } from "@/lib/utils";
 import { formatPercent } from "@shared/lib/format";
 import { CurrencyFlag } from "@/components/yield/currency-flag";
@@ -29,6 +29,7 @@ interface BenchmarkRow {
   benchmarkLabel: string;
   rate: number;
   recordDate: string | null;
+  age: YieldBenchmarkAgeAssessment;
 }
 
 // Pool input is considered stale once it exceeds 2x the producer cron interval
@@ -78,6 +79,7 @@ function getBenchmarkRows(
         benchmarkLabel,
         rate: b.rate,
         recordDate: b.recordDate,
+        age: resolveYieldBenchmarkAge(b),
       };
     });
 }
@@ -209,7 +211,22 @@ export function ReferenceRatesStrip({
                       </TableCell>
                       <TableCell className="px-3 py-2 text-xs text-muted-foreground">{row.benchmarkLabel}</TableCell>
                       <TableCell className="py-2 pl-3 text-right pharos-numeric text-xs text-muted-foreground/80">
-                        {row.recordDate ?? "—"}
+                        {row.age.stale ? (
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <span
+                                tabIndex={0}
+                                aria-label={row.age.reason ?? undefined}
+                                className="pharos-focus-ring inline-flex min-h-6 cursor-help items-center justify-end rounded-sm text-amber-700 dark:text-amber-300"
+                              >
+                                {row.recordDate ?? "—"}
+                              </span>
+                            </TooltipTrigger>
+                            <TooltipContent className="max-w-[260px] text-xs">{row.age.reason}</TooltipContent>
+                          </Tooltip>
+                        ) : (
+                          row.recordDate ?? "—"
+                        )}
                       </TableCell>
                     </TableRow>
                   );

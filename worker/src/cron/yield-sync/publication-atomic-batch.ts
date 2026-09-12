@@ -1,5 +1,30 @@
 import { runWithOverloadRetry } from "../../lib/d1-overload-retry";
 import type { CacheWriteResult } from "../../lib/db-cache";
+import { logWorkerEvent } from "../../lib/structured-log";
+
+/**
+ * D1 rejects a statement whose bound value exceeds 2,000,000 bytes, and the
+ * published generation is one batch: crossing the cap fails every statement in
+ * it. The published cache value is the largest bound payload (~800 KB at 157
+ * rows), so the guard warns at 1.2M characters — measured in UTF-16 code units,
+ * which under-counts multi-byte characters by a few percent and still leaves
+ * >600 KB of headroom before the hard cap.
+ */
+export const YIELD_PUBLICATION_PAYLOAD_OVERSIZE_CHARS = 1_200_000;
+
+export interface YieldRowsWriteStats {
+  cacheValueChars: number;
+  yieldDataRowsChars: number;
+  historyRowsChars: number;
+  decisionRowsChars: number;
+  decisionAlternativeRowsChars: number;
+  largestPayloadChars: number;
+  oversize: boolean;
+  pysInputsPersistedCount: number;
+  pysInputsNullCount: number;
+}
+
+export type YieldRowsWriteResult = CacheWriteResult & { publicationStats: YieldRowsWriteStats };
 
 export async function publishYieldRowsAtomically(
   db: D1Database,
@@ -13,8 +38,38 @@ export async function publishYieldRowsAtomically(
     decisionRows: Array<Record<string, unknown>>;
     decisionAlternativeRows: Array<Record<string, unknown>>;
   },
-): Promise<CacheWriteResult> {
+): Promise<YieldRowsWriteResult> {
   const cacheValue = JSON.stringify(input.rankingsPayload);
+  const yieldDataRowsJson = JSON.stringify(input.yieldDataRows);
+  const historyRowsJson = JSON.stringify(input.historyRows);
+  const decisionRowsJson = JSON.stringify(input.decisionRows);
+  const decisionAlternativeRowsJson = JSON.stringify(input.decisionAlternativeRows);
+  const largestPayloadChars = Math.max(
+    cacheValue.length,
+    yieldDataRowsJson.length,
+    historyRowsJson.length,
+    decisionRowsJson.length,
+    decisionAlternativeRowsJson.length,
+  );
+  const oversize = largestPayloadChars > YIELD_PUBLICATION_PAYLOAD_OVERSIZE_CHARS;
+  // The replay-evidence column is null exactly for rows whose safety evidence
+  // was unavailable, so its null rate is the run's evidence-loss signal. A
+  // skipped write persists nothing and reports zero for both counters.
+  let pysInputsPersistedCount = 0;
+  for (const row of input.historyRows) {
+    if (row.pys_inputs_at_publish != null) pysInputsPersistedCount += 1;
+  }
+  const buildStats = (written: boolean): YieldRowsWriteStats => ({
+    cacheValueChars: cacheValue.length,
+    yieldDataRowsChars: yieldDataRowsJson.length,
+    historyRowsChars: historyRowsJson.length,
+    decisionRowsChars: decisionRowsJson.length,
+    decisionAlternativeRowsChars: decisionAlternativeRowsJson.length,
+    largestPayloadChars,
+    oversize,
+    pysInputsPersistedCount: written ? pysInputsPersistedCount : 0,
+    pysInputsNullCount: written ? input.historyRows.length - pysInputsPersistedCount : 0,
+  });
   const cacheFreshGuard = "(SELECT updated_at FROM cache WHERE key = 'yield-rankings') = ?";
   const buildStatements = (): D1PreparedStatement[] => [
     db
@@ -66,7 +121,7 @@ export async function publishYieldRowsAtomically(
           FROM json_each(?)
           WHERE ${cacheFreshGuard}`,
       )
-      .bind(JSON.stringify(input.yieldDataRows), input.startSec),
+      .bind(yieldDataRowsJson, input.startSec),
     db
       .prepare(
         `INSERT OR IGNORE INTO yield_history (
@@ -97,7 +152,7 @@ export async function publishYieldRowsAtomically(
             FROM json_each(?)
             WHERE ${cacheFreshGuard}`,
       )
-      .bind(JSON.stringify(input.historyRows), input.startSec),
+      .bind(historyRowsJson, input.startSec),
     db
       .prepare(
         `INSERT OR REPLACE INTO yield_source_decisions (
@@ -138,7 +193,7 @@ export async function publishYieldRowsAtomically(
             FROM json_each(?)
             WHERE ${cacheFreshGuard}`,
       )
-      .bind(JSON.stringify(input.decisionRows), input.startSec),
+      .bind(decisionRowsJson, input.startSec),
     db
       .prepare(
               `INSERT OR REPLACE INTO yield_source_decision_alternatives (
@@ -156,7 +211,7 @@ export async function publishYieldRowsAtomically(
               FROM json_each(?)
               WHERE ${cacheFreshGuard}`,
       )
-      .bind(JSON.stringify(input.decisionAlternativeRows), input.startSec),
+      .bind(decisionAlternativeRowsJson, input.startSec),
     db
       .prepare(
         `UPDATE yield_publication_generations
@@ -168,8 +223,16 @@ export async function publishYieldRowsAtomically(
   ];
 
   const results = await runWithOverloadRetry(() => db.batch(buildStatements()), 3, input.signal);
-
-  return Number(results[0]?.meta?.changes ?? 0) > 0
-    ? { written: true, skippedBecauseNewer: false }
-    : { written: false, skippedBecauseNewer: true };
+  const written = Number(results[0]?.meta?.changes ?? 0) > 0;
+  if (oversize) {
+    logWorkerEvent({
+      scope: "lib",
+      level: "warn",
+      event: "yield-publication-payload-oversize",
+      job: "sync-yield-data",
+      message: `Published yield payload is approaching D1's per-statement value cap (${largestPayloadChars} chars, warn above ${YIELD_PUBLICATION_PAYLOAD_OVERSIZE_CHARS})`,
+      metadata: { generationId: input.generationId, written, largestPayloadChars },
+    });
+  }
+  return { written, skippedBecauseNewer: !written, publicationStats: buildStats(written) };
 }

@@ -4,10 +4,11 @@ import { describe, expect, it, vi } from "vitest";
 import { fireEvent, render, screen } from "@testing-library/react";
 
 import { YieldInstrumentBoard } from "@/components/yield-instrument-board";
+import type { YieldBenchmarkRegistry } from "@shared/types";
 import type { YieldTableSortKey } from "@/components/yield-table-logic";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import type { YieldViewModelRow } from "@/lib/yield-view-model";
-import { makeYieldViewModelRow, renderYieldMobileCard, YIELD_TEST_PROVENANCE } from "./yield-test-support";
+import { REGISTRY_WITH_EUR, makeYieldViewModelRow, renderYieldMobileCard, YIELD_TEST_PROVENANCE } from "./yield-test-support";
 
 vi.mock("@/components/yield-history-chart", () => ({
   YieldHistoryChart: () => <div data-testid="yield-history-chart" />,
@@ -36,6 +37,8 @@ function renderBoard(
     compareDisabled?: boolean;
     onToggleCompare?: (id: string) => void;
     onToggleSort?: (key: YieldTableSortKey) => void;
+    benchmarks?: YieldBenchmarkRegistry | null;
+    methodologyVersion?: string | null;
   } = {},
 ) {
   return render(
@@ -60,6 +63,8 @@ function renderBoard(
         onToggleExpanded={vi.fn()}
         onOpenSourceSheet={vi.fn()}
         onToggleCompare={overrides.onToggleCompare ?? vi.fn()}
+        benchmarks={overrides.benchmarks}
+        methodologyVersion={overrides.methodologyVersion}
       />
     </TooltipProvider>,
   );
@@ -233,7 +238,7 @@ describe("YieldInstrumentBoard", () => {
     const desktopContract = Object.fromEntries(
       displayAttributes.map((attribute) => [attribute, desktopDisplay?.getAttribute(attribute)]),
     );
-    expect(screen.getAllByText("30-day APY: 4.3 percent").length).toBeGreaterThanOrEqual(1);
+    expect(screen.getAllByText("30-day APY: 4.30%").length).toBeGreaterThanOrEqual(1);
     expect(screen.getAllByText("Pharos Yield Score 76.0 out of 100").length).toBeGreaterThanOrEqual(1);
     expect(screen.getAllByLabelText("Safety grade: B+, score 82 out of 100").length).toBeGreaterThanOrEqual(1);
     expect(screen.getByLabelText("Add USDT to compare")).toBeTruthy();
@@ -310,6 +315,26 @@ describe("YieldInstrumentBoard — Why this PYS strip", () => {
     renderBoard(baseRow, false);
     expect(screen.queryByRole("group", { name: "Why this PYS" })).toBeNull();
   });
+
+  it("tones the safety gauge from the V9 grade ladder so it matches the badge (E4)", () => {
+    // [safetyScore, expected gauge tone] — grades: 76 B+ (blue; the V9
+    // ladder puts A- at 80, so 82 is emerald), 62 C+
+    // (amber; the old 80/60/40 cuts painted C+ blue), 45 D (orange), 30 F (red).
+    const cases: ReadonlyArray<[number, string]> = [
+      [76, "bg-blue-500"],
+      [62, "bg-amber-500"],
+      [45, "bg-orange-500"],
+      [30, "bg-red-500"],
+    ];
+    for (const [safetyScore, tone] of cases) {
+      const board = renderBoard({ ...baseRow, safetyScore, safetyGrade: null } as YieldViewModelRow);
+      const gauge = board.container.querySelector(
+        `[role="img"][aria-label="Safety score ${safetyScore} of 100"]`,
+      );
+      expect(gauge?.firstElementChild?.className).toContain(tone);
+      board.unmount();
+    }
+  });
 });
 
 describe.each(rowRenderers)("%s cohort percentile chip", (_surface, renderRow) => {
@@ -342,5 +367,33 @@ describe.each(rowRenderers)("%s cohort percentile chip", (_surface, renderRow) =
 
     expect(screen.queryByText(/^p\d+ of \d+/)).toBeNull();
     expect(screen.queryByText("small peer set")).toBeNull();
+  });
+});
+
+// A row published without a benchmarkRate used to fall straight to the
+// chart-wide USD risk-free frame; the chip must resolve the row's OWN
+// benchmark from the registry first (ZONE-CHIP).
+describe("YieldInstrumentBoard — zone chip benchmark resolution", () => {
+  function eurRowWithoutRate(): YieldViewModelRow {
+    return {
+      ...baseRow,
+      benchmarkKey: "EUR",
+      benchmarkLabel: "EUR 3M compounded €STR",
+      benchmarkRate: undefined,
+      apy30d: 2.0,
+      safetyScore: 82,
+    } as YieldViewModelRow;
+  }
+
+  it("resolves a missing row rate from the registry EUR entry, not the USD frame", () => {
+    // 2.0% APY beats the EUR benchmark (1.94) but not the chart-wide USD
+    // frame (3.5): a Sweet Spot chip proves the EUR rate was used.
+    renderBoard(eurRowWithoutRate(), false, { benchmarks: REGISTRY_WITH_EUR });
+    expect(screen.getByText("Sweet Spot")).toBeTruthy();
+  });
+
+  it("still falls back to the risk-free frame when no registry is provided", () => {
+    renderBoard(eurRowWithoutRate());
+    expect(screen.getByText("Play It Safe")).toBeTruthy();
   });
 });

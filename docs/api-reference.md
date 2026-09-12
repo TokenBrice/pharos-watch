@@ -815,14 +815,14 @@ Returns current Yield Intelligence rankings and risk-adjusted fields.
 - **Operation ID:** `yieldRankings`
 - **Path:** `/api/yield-rankings`
 - **Parameters:** `projection` (query, optional, string)
-- **Success response schema:** [`YieldRankingsResponse`](https://pharos.watch/openapi.json#/components/schemas/YieldRankingsResponse)
+- **Success response schema:** [`YieldRankingsResponse`](https://pharos.watch/openapi.json#/components/schemas/YieldRankingsResponse), [`YieldRankingsSummaryResponse`](https://pharos.watch/openapi.json#/components/schemas/YieldRankingsSummaryResponse)
 - **Policy:** authentication `X-API-Key` required; shared endpoint caching allowed (`cacheBypass: false`).
 
 **Current methodology example**
 
 ```json
 {
-  "currentVersion": "8.42",
+  "currentVersion": "8.43",
   "methodologyVersion": "9.49"
 }
 ```
@@ -841,7 +841,7 @@ Returns the public adapter-coverage and source-status manifest.
 
 ```json
 {
-  "methodologyVersion": "v8.42"
+  "methodologyVersion": "v8.43"
 }
 ```
 
@@ -859,8 +859,8 @@ Returns bounded yield history for one stablecoin and optional source projection.
 
 ```json
 {
-  "currentVersion": "8.42",
-  "methodologyVersion": "8.42"
+  "currentVersion": "8.43",
+  "methodologyVersion": "8.43"
 }
 ```
 

@@ -1,8 +1,17 @@
 import { afterEach, describe, expect, it } from "vitest";
 import { DatabaseSync } from "node:sqlite";
+import { DAY_SECONDS } from "@shared/lib/time-constants";
 import { createLatestSchemaSqlite } from "@shared/test-utils/latest-schema-sqlite";
-import { LEGACY_BEST_YIELD_SOURCE_KEY } from "../../lib/yield-history-ownership-handoffs";
-import { loadYieldHistorySnapshots, MAX_PREVIOUS_TVL_HISTORY_ROWS } from "../yield-sync/history";
+import {
+  LEGACY_BEST_YIELD_SOURCE_KEY,
+  YIELD_HISTORY_OWNERSHIP_HANDOFFS,
+} from "../../lib/yield-history-ownership-handoffs";
+import {
+  loadYieldHistorySnapshots,
+  MAX_PREVIOUS_TVL_HISTORY_ROWS,
+  purgeYieldHistoryOwnershipHandoffs,
+} from "../yield-sync/history";
+import { pruneYieldTables } from "../yield-sync/publication";
 
 function createDb(): { sqlite: DatabaseSync; db: D1Database } {
   return createLatestSchemaSqlite();
@@ -247,5 +256,92 @@ describe("loadYieldHistorySnapshots", () => {
 
   it("uses a default previous TVL cap large enough for normal history", () => {
     expect(MAX_PREVIOUS_TVL_HISTORY_ROWS).toBeGreaterThan(1_000);
+  });
+});
+
+describe("purgeYieldHistoryOwnershipHandoffs", () => {
+  let sqlite: DatabaseSync | null = null;
+
+  afterEach(() => {
+    sqlite?.close();
+    sqlite = null;
+  });
+
+  it("deletes handed-off keys from both the raw and the daily history tier", async () => {
+    const fixture = createDb();
+    sqlite = fixture.sqlite;
+    const [onchainKey, handedOffKey] = YIELD_HISTORY_OWNERSHIP_HANDOFFS["usde-ethena"];
+    insertHistory(sqlite, { stablecoinId: "usde-ethena", sourceKey: LEGACY_BEST_YIELD_SOURCE_KEY, recordedAt: 300 });
+    insertHistory(sqlite, { stablecoinId: "usde-ethena", sourceKey: handedOffKey, recordedAt: 200 });
+    insertHistory(sqlite, { stablecoinId: "usde-ethena", sourceKey: onchainKey, recordedAt: 100 });
+    insertHistory(sqlite, { stablecoinId: "usde-ethena", sourceKey: "valid-source", recordedAt: 150 });
+    insertHistory(sqlite, { stablecoinId: "susde-ethena", sourceKey: LEGACY_BEST_YIELD_SOURCE_KEY, recordedAt: 100 });
+
+    const insertDaily = sqlite.prepare(
+      `INSERT INTO yield_history_daily
+         (stablecoin_id, source_key, snapshot_date, recorded_at, is_best, apy, data_source, publication_state)
+       VALUES (?, ?, 86400, ?, 1, ?, 'defillama', 'published')`,
+    );
+    insertDaily.run("usde-ethena", LEGACY_BEST_YIELD_SOURCE_KEY, 300, 4.0);
+    insertDaily.run("usde-ethena", handedOffKey, 200, 5.0);
+    insertDaily.run("usde-ethena", "valid-source", 150, 3.0);
+    insertDaily.run("susde-ethena", LEGACY_BEST_YIELD_SOURCE_KEY, 100, 6.0);
+
+    await purgeYieldHistoryOwnershipHandoffs(fixture.db);
+
+    // Raw tier: every suppressed key family for the handed-off coin is gone;
+    // other coins and the coin's non-handoff source are untouched.
+    expect(
+      sqlite.prepare("SELECT stablecoin_id, source_key FROM yield_history ORDER BY stablecoin_id, source_key").all(),
+    ).toEqual([
+      { stablecoin_id: "susde-ethena", source_key: LEGACY_BEST_YIELD_SOURCE_KEY },
+      { stablecoin_id: "usde-ethena", source_key: "valid-source" },
+    ]);
+
+    // Daily tier: the same key set is purged there too, while non-handoff
+    // sources of the same coin survive. Without this pass, de-registering a
+    // handoff would instantly re-expose a year of materialized daily rows.
+    expect(
+      sqlite
+        .prepare("SELECT stablecoin_id, source_key FROM yield_history_daily ORDER BY stablecoin_id, source_key")
+        .all(),
+    ).toEqual([
+      { stablecoin_id: "susde-ethena", source_key: LEGACY_BEST_YIELD_SOURCE_KEY },
+      { stablecoin_id: "usde-ethena", source_key: "valid-source" },
+    ]);
+  });
+});
+
+describe("pruneYieldTables retention", () => {
+  let sqlite: DatabaseSync | null = null;
+
+  afterEach(() => {
+    sqlite?.close();
+    sqlite = null;
+  });
+
+  it("prunes raw history at the 30-day raw policy while keeping the year of daily closes", async () => {
+    const fixture = createDb();
+    sqlite = fixture.sqlite;
+    const nowSec = 1_800_000_000;
+
+    insertHistory(sqlite, { stablecoinId: "coin-a", sourceKey: "source-a", recordedAt: nowSec - 10 * DAY_SECONDS });
+    insertHistory(sqlite, { stablecoinId: "coin-a", sourceKey: "source-a", recordedAt: nowSec - 40 * DAY_SECONDS });
+    sqlite
+      .prepare(
+        `INSERT INTO yield_history_daily
+           (stablecoin_id, source_key, snapshot_date, recorded_at, is_best, apy, data_source, publication_state)
+         VALUES ('coin-a', 'source-a', ?, ?, 1, 4.0, 'defillama', 'published')`,
+      )
+      .run(nowSec - 100 * DAY_SECONDS, nowSec - 100 * DAY_SECONDS);
+
+    await pruneYieldTables(fixture.db, nowSec, { allowDestructiveCleanup: false });
+
+    expect(sqlite.prepare("SELECT recorded_at FROM yield_history").all()).toEqual([
+      { recorded_at: nowSec - 10 * DAY_SECONDS },
+    ]);
+    expect(sqlite.prepare("SELECT snapshot_date FROM yield_history_daily").all()).toEqual([
+      { snapshot_date: nowSec - 100 * DAY_SECONDS },
+    ]);
   });
 });

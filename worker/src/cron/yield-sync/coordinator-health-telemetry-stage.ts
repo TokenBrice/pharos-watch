@@ -74,6 +74,12 @@ export async function runYieldCoordinatorHealthTelemetryStage(
     safetySnapshot: safetySnapshotMeta,
     medianApy: normalized.medianApy,
     startSec: fetched.startSec,
+    // B7/B31: the cached payload is the only source of publish-time attribution,
+    // so the loaded snapshot must reach the payload builder here.
+    previousPublication: {
+      rankings: previousYieldPublicationSnapshot.rankings,
+      methodologyVersion: previousYieldPublicationSnapshot.methodologyVersion ?? null,
+    },
   });
   const publishedCoverageGuard = await guardPublishedYieldCoverage({
     previousYieldPublicationSnapshot,
@@ -105,6 +111,7 @@ export async function runYieldCoordinatorHealthTelemetryStage(
       (source) => normalized.bestSourceKeyByCoin.get(source.id) === source.sourceKey,
     ),
     dlPoolsMeta: fetched.dlPoolsMeta,
+    supplementalMeta: fetched.supplementalMeta,
     allDeterministicFailed: fetched.allDeterministicFailed,
     maskedAllDeterministicFailure: onChainHealth.maskedAllDeterministicFailure,
     onChainSkippedDueToCooldown: fetched.onChainSkippedDueToCooldown,

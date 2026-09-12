@@ -77,25 +77,84 @@ describe("buildComparisonAnchorFreshnessMeta", () => {
 });
 
 describe("buildYieldDegradationReasons", () => {
+  const baseParams = {
+    safetySnapshotDegraded: false,
+    safetySnapshotReason: null,
+    selectedSources: [] as EvaluatedYieldSource[],
+    dlPoolsMeta: {
+      mode: "dex-cache" as const,
+      updatedAt: START_SEC,
+      ageSeconds: 0,
+      poolCount: 0,
+      fallbackMode: null,
+    },
+    supplementalMeta: {
+      mode: "cache" as const,
+      updatedAt: START_SEC,
+      ageSeconds: 0,
+      sourceCount: 12,
+      fallbackMode: null,
+      degradedFamilies: [] as string[],
+    },
+    allDeterministicFailed: false,
+    maskedAllDeterministicFailure: false,
+    onChainSkippedDueToCooldown: false,
+    onChainAlternativeCoverageMissingIds: [] as string[],
+    previousTvlRowsTruncated: false,
+  };
+
   it("retains default benchmark fallback health when no source row is selected", () => {
     expect(buildYieldDegradationReasons({
-      safetySnapshotDegraded: false,
-      safetySnapshotReason: null,
+      ...baseParams,
       defaultBenchmarkMeta: buildHardcodedUsdBenchmark("fred-api-error-retained"),
-      selectedSources: [],
-      dlPoolsMeta: {
-        mode: "dex-cache",
+    })).toContain("risk-free-rate:fred-api-error-retained");
+  });
+
+  it("reports total supplemental-lane loss that the aggregate coverage floor cannot see", () => {
+    expect(
+      buildYieldDegradationReasons({
+        ...baseParams,
+        defaultBenchmarkMeta: buildHardcodedUsdBenchmark("test"),
+        supplementalMeta: {
+          mode: "unavailable",
+          updatedAt: null,
+          ageSeconds: null,
+          sourceCount: 0,
+          fallbackMode: "stale-cache",
+          degradedFamilies: [],
+        },
+      }),
+    ).toContain("yield-supplemental:stale-cache");
+  });
+
+  it("reports retained degraded families by name and keeps optional-source failures out of the reasons", () => {
+    const reasons = buildYieldDegradationReasons({
+      ...baseParams,
+      defaultBenchmarkMeta: buildHardcodedUsdBenchmark("test"),
+      supplementalMeta: {
+        mode: "cache",
         updatedAt: START_SEC,
         ageSeconds: 0,
-        poolCount: 0,
-        fallbackMode: null,
+        sourceCount: 40,
+        fallbackMode: "partial-family-cache",
+        degradedFamilies: ["morpho-vault"],
       },
-      allDeterministicFailed: false,
-      maskedAllDeterministicFailure: false,
-      onChainSkippedDueToCooldown: false,
-      onChainAlternativeCoverageMissingIds: [],
-      previousTvlRowsTruncated: false,
-    })).toContain("risk-free-rate:fred-api-error-retained");
+    });
+
+    expect(reasons).toEqual(expect.arrayContaining(["yield-supplemental:family-degraded:morpho-vault"]));
+    // B15/W1d: a failed optional family is not a degraded run on its own (the
+    // sync-yield-data rates-history contract); it travels in the run metadata
+    // asserted in the `buildYieldSyncMetadata` block below.
+    expect(reasons.filter((reason) => reason.startsWith("yield-source:family-failed:"))).toEqual([]);
+  });
+
+  it("stays quiet for a healthy supplemental cache with no optional-source failures", () => {
+    expect(
+      buildYieldDegradationReasons({
+        ...baseParams,
+        defaultBenchmarkMeta: buildHardcodedUsdBenchmark("test"),
+      }).filter((reason) => reason.startsWith("yield-supplemental:") || reason.startsWith("yield-source:family-failed:")),
+    ).toEqual([]);
   });
 });
 
@@ -148,13 +207,19 @@ describe("buildYieldSyncMetadata", () => {
           poolCount: 1,
           fallbackMode: null,
         },
+        dlApyEnvelopeRejectedCount: 3,
         supplementalMeta: {
           mode: "cache",
           updatedAt: START_SEC,
           ageSeconds: 0,
           sourceCount: 0,
           fallbackMode: null,
+          degradedFamilies: [],
         },
+        optionalSourceFailures: [
+          { label: "Midas mMEV NAV oracle source", outcome: "timeout" },
+          { label: "Yearn yBOLD source", outcome: "failed" },
+        ],
         onChain: {
           ratesResolved: 0,
           ratesConfigured: 1,
@@ -180,15 +245,30 @@ describe("buildYieldSyncMetadata", () => {
         cacheWriteSkipped: false,
         comparisonAnchorFreshness,
         previousTvlRowsTruncated: true,
+        publicationStats: {
+          cacheValueChars: 812_345,
+          yieldDataRowsChars: 120_000,
+          historyRowsChars: 90_000,
+          decisionRowsChars: 60_000,
+          decisionAlternativeRowsChars: 10_000,
+          largestPayloadChars: 812_345,
+          oversize: false,
+          pysInputsPersistedCount: 154,
+          pysInputsNullCount: 3,
+        },
       }),
     ) as {
+      publicationStats: { pysInputsPersistedCount: number; pysInputsNullCount: number; largestPayloadChars: number };
       sourceCoverage: {
         publishedRankingCountDelta: number;
+        dlApyEnvelopeRejectedCount: number;
         onChainEnvelopeRejectionCount: number;
         onChainEnvelopeRejections: YieldEnvelopeRejection[];
         onChainEnvelopeRejectionsTruncated: boolean;
         comparisonAnchorFreshness: typeof comparisonAnchorFreshness;
         previousTvlRowsTruncated: boolean;
+        optionalSourceFailures: Array<{ label: string; outcome: string }>;
+        optionalSourceFailureCount: number;
         safetySnapshot: {
           source: string;
           publicationGenerationId: string;
@@ -199,12 +279,29 @@ describe("buildYieldSyncMetadata", () => {
     };
 
     expect(metadata.sourceCoverage.onChainEnvelopeRejectionCount).toBe(26);
+    expect(metadata.sourceCoverage.dlApyEnvelopeRejectedCount).toBe(3);
     expect(metadata.sourceCoverage.publishedRankingCountDelta).toBe(0);
     expect(metadata.sourceCoverage.onChainEnvelopeRejections).toHaveLength(25);
     expect(metadata.sourceCoverage.onChainEnvelopeRejections[0]).toEqual(envelopeRejections[0]);
     expect(metadata.sourceCoverage.onChainEnvelopeRejectionsTruncated).toBe(true);
     expect(metadata.sourceCoverage.comparisonAnchorFreshness).toEqual(comparisonAnchorFreshness);
     expect(metadata.sourceCoverage.previousTvlRowsTruncated).toBe(true);
+    expect(metadata.sourceCoverage.optionalSourceFailures).toEqual([
+      { label: "Midas mMEV NAV oracle source", outcome: "timeout" },
+      { label: "Yearn yBOLD source", outcome: "failed" },
+    ]);
+    expect(metadata.sourceCoverage.optionalSourceFailureCount).toBe(2);
+    expect(metadata.publicationStats).toEqual({
+      cacheValueChars: 812_345,
+      yieldDataRowsChars: 120_000,
+      historyRowsChars: 90_000,
+      decisionRowsChars: 60_000,
+      decisionAlternativeRowsChars: 10_000,
+      largestPayloadChars: 812_345,
+      oversize: false,
+      pysInputsPersistedCount: 154,
+      pysInputsNullCount: 3,
+    });
     expect(metadata.sourceCoverage.safetySnapshot).toMatchObject({
       source: "safety-score-v9-publication",
       publicationGenerationId: "report-cards:v8.299:1800000000",

@@ -213,14 +213,14 @@ describe("YieldHealthCard", () => {
     );
 
     expect(screen.getByText("80/120 rows with sourceRisk")).toBeTruthy();
-    expect(screen.getByText("Warn below 75%")).toBeTruthy();
+    expect(screen.getByText("Warn below 75% of eligible rows")).toBeTruthy();
     expect(screen.getByText(/Coverage queue: 3 gaps · 5 candidates · 2 stale overrides/)).toBeTruthy();
     expect(screen.getByText("Coverage audit operator queue")).toBeTruthy();
     expect(screen.getAllByText("coin-a").length).toBeGreaterThan(0);
     expect(screen.getByText("sUSDe on ethena")).toBeTruthy();
     expect(screen.getByText("Actions: accept, dismiss, intentional-gap, watch")).toBeTruthy();
-    expect(screen.getByText("Venue tier")).toBeTruthy();
-    expect(screen.getByText("30%")).toBeTruthy();
+    expect(screen.getByText(/^Venue tier · /)).toBeTruthy();
+    expect(screen.getByText(/^30% \(best /)).toBeTruthy();
   });
 
   it("renders healthy source-risk coverage state", () => {
@@ -254,8 +254,8 @@ describe("YieldHealthCard", () => {
     );
 
     expect(screen.getByText("120/120 rows with sourceRisk")).toBeTruthy();
-    expect(screen.getByText("95%")).toBeTruthy();
-    expect(screen.getByText("91%")).toBeTruthy();
+    expect(screen.getByText(/^95% \(best /)).toBeTruthy();
+    expect(screen.getByText(/^91% \(best /)).toBeTruthy();
   });
 
   it("renders missing source-risk coverage without crashing", () => {
@@ -328,8 +328,137 @@ describe("YieldHealthCard", () => {
     );
 
     expect(screen.getByText(`${SOURCE_RISK_GOLDEN_ROWS.length}/${SOURCE_RISK_GOLDEN_ROWS.length} rows with sourceRisk`)).toBeTruthy();
-    expect(screen.getByText("63%")).toBeTruthy();
-    expect(screen.getAllByText("13%").length).toBeGreaterThanOrEqual(3);
-    expect(screen.getAllByText("0%").length).toBeGreaterThanOrEqual(2);
+    expect(screen.getByText(/^63% \(best /)).toBeTruthy();
+    expect(screen.getAllByText(/^13% \(best /).length).toBeGreaterThanOrEqual(3);
+    expect(screen.getAllByText(/^0% \(best /).length).toBeGreaterThanOrEqual(2);
+  });
+
+  it("reports proxy selection as a row count, not a degraded feed", () => {
+    const base = makeHealth();
+    render(
+      <YieldHealthCard
+        health={makeHealth({
+          benchmarkRegistry: {
+            ...base.benchmarkRegistry,
+            status: "healthy",
+            benchmarks: {
+              USD: {
+                ...base.benchmarkRegistry.benchmarks.USD,
+                rowCount: 137,
+                fallbackSelectionRowCount: 4,
+                proxySelectionRowCount: 4,
+                status: "healthy",
+              },
+            },
+            unusedBenchmarkKeys: [
+              { key: "CAD", source: "boc-policy-rate", recordDate: "2026-08-01", recordAgeSec: 42 * 86400, ageSec: 3600 },
+            ],
+            unknownKeys: ["XYZ"],
+            unknownKeyRowCount: 2,
+          },
+        })}
+      />,
+    );
+
+    expect(screen.getByText(/USD · 137 rows · 4 proxy-selected/)).toBeTruthy();
+    expect(screen.getByText(/Fetched but unused: CAD \(boc-policy-rate/)).toBeTruthy();
+    expect(screen.getByText(/Unknown published keys: XYZ/)).toBeTruthy();
+  });
+
+  it("renders eligible best and alternate coverage, and n/a where nothing is eligible", () => {
+    const base = makeHealth();
+    render(
+      <YieldHealthCard
+        health={makeHealth({
+          sourceRiskCoverage: {
+            ...base.sourceRiskCoverage,
+            fields: {
+              ...base.sourceRiskCoverage.fields,
+              sourceDepthRatio: {
+                eligibleCount: 206,
+                populatedCount: 199,
+                nullCount: 7,
+                coverageRatio: 0.966,
+                nullRate: 0.034,
+                bestCoverageRatio: 0.95,
+                altCoverageRatio: 0.98,
+              },
+              rewardShare: {
+                eligibleCount: 0,
+                populatedCount: 0,
+                nullCount: 0,
+                coverageRatio: null,
+                nullRate: null,
+                bestCoverageRatio: null,
+                altCoverageRatio: null,
+              },
+            },
+          },
+        })}
+      />,
+    );
+
+    expect(screen.getByText("Depth · 199/206")).toBeTruthy();
+    expect(screen.getByText(/97% \(best 95% \/ alt 98%\)/)).toBeTruthy();
+    expect(screen.getByText(/n\/a \(best n\/a \/ alt n\/a\)/)).toBeTruthy();
+  });
+
+  it("flags a fresh supplemental family that published no sources", () => {
+    const base = makeHealth();
+    render(
+      <YieldHealthCard
+        health={makeHealth({
+          supplemental: {
+            ...base.supplemental,
+            families: {
+              morpho: { updatedAt: 1_700_000_000, ageSec: 1800, sourceCount: 0, status: "healthy" },
+              beefy: { updatedAt: 1_700_000_000, ageSec: 3600, sourceCount: 12, status: "healthy" },
+            },
+          },
+        })}
+      />,
+    );
+
+    expect(screen.getByText(/0 sources \(30m ago\) · fresh but empty/)).toBeTruthy();
+    expect(screen.getByText(/^12 sources \(1h ago\)$/)).toBeTruthy();
+  });
+
+  it("marks a retained family so a degraded fetch is not read as fresh", () => {
+    const base = makeHealth();
+    render(
+      <YieldHealthCard
+        health={makeHealth({
+          supplemental: {
+            ...base.supplemental,
+            degradedFamilies: ["morpho"],
+            families: {
+              morpho: { updatedAt: 1_700_000_000, ageSec: 1800, sourceCount: 8, status: "degraded", retained: true },
+            },
+          },
+        })}
+      />,
+    );
+
+    expect(screen.getByText("8 sources (30m ago) · retained")).toBeTruthy();
+  });
+
+  it("renders whole-queue totals and marks the queue display-only", () => {
+    const base = makeHealth();
+    render(
+      <YieldHealthCard
+        health={makeHealth({
+          coverageAudit: {
+            ...base.coverageAudit,
+            allowedActions: ["accept", "watch"],
+            queueDisplayOnly: true,
+            queueTotals: { byKind: { "manifest-missing": 6, "native-exact-pool": 20 }, suppressedItemCount: 9, truncated: true },
+          },
+        })}
+      />,
+    );
+
+    expect(screen.getByText("Actions: accept, watch (display-only)")).toBeTruthy();
+    expect(screen.getByText(/manifest-missing 6 · native-exact-pool 20 · 9 suppressed · producer-truncated/)).toBeTruthy();
+    expect(screen.getByText(/9 suppressed · truncated/)).toBeTruthy();
   });
 });

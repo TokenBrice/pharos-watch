@@ -11,7 +11,6 @@ import {
 import {
   PUBLIC_API_RESPONSE_COMPONENT_SCHEMAS,
   PUBLIC_API_RESPONSE_SCHEMAS,
-  type PublicApiResponseSchemaName,
 } from "../lib/public-api-response-schemas";
 import { syncGeneratedArtifacts } from "../lib/generated-artifacts";
 import { isDirectRun } from "../lib/smoke-runtime.mjs";
@@ -20,7 +19,16 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 const OUTPUT_PATH = join(__dirname, "../../public/openapi.json");
 const CHECK_MODE = process.argv.includes("--check");
 
-function schemaRef(name: PublicApiResponseSchemaName | "JsonValue") {
+/**
+ * A 200-body contract name: either a registered response schema or the
+ * deliberate JsonValue debt entry. Derived from the catalog endpoint type so a
+ * new `additionalResponseSchemas` variant cannot drift from `responseSchema`.
+ */
+type PublicApiResponseSchemaRefName =
+  | NonNullable<PublicApiArtifactEndpoint["responseSchema"]>
+  | "JsonValue";
+
+function schemaRef(name: PublicApiResponseSchemaRefName) {
   return { $ref: `#/components/schemas/${name}` };
 }
 
@@ -65,7 +73,11 @@ function buildErrorResponses(endpoint: PublicApiArtifactEndpoint) {
 }
 
 function buildOperation(endpoint: PublicApiArtifactEndpoint) {
-  const responseSchema = endpoint.responseSchema ?? "JsonValue";
+  // Without the annotation the spread widens the element type to `string`.
+  const responseSchemas: PublicApiResponseSchemaRefName[] = [
+    endpoint.responseSchema ?? "JsonValue",
+    ...(endpoint.additionalResponseSchemas ?? []),
+  ];
   return {
     tags: endpoint.tags,
     summary: endpoint.summary,
@@ -81,7 +93,9 @@ function buildOperation(endpoint: PublicApiArtifactEndpoint) {
         description: "Successful response. See the public API reference for endpoint-specific payload fields.",
         content: {
           "application/json": {
-            schema: schemaRef(responseSchema),
+            schema: responseSchemas.length === 1
+              ? schemaRef(responseSchemas[0])
+              : { oneOf: responseSchemas.map((name) => schemaRef(name)) },
           },
         },
       },

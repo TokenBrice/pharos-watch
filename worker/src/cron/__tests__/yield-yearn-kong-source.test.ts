@@ -32,7 +32,7 @@ describe("fetchYearnKongSources", () => {
       { match: "kong.yearn.fi", body: { data: { vaults: [] } } },
     ]);
 
-    const results = await fetchYearnKongSources();
+    const { candidates: results } = await fetchYearnKongSources();
     expect(results.map((result) => result.yield.sourceKey)).toEqual([
       "protocol-api:yearn:ethereum:0xbe53a109b494e5c9f97b9cd39fe969be68bf6204",
     ]);
@@ -73,7 +73,7 @@ describe("fetchYearnKongSources", () => {
       },
       { match: "kong.yearn.fi", body: { data: { vaults: [] } } },
     ]);
-    expect(await fetchYearnKongSources()).toEqual([]);
+    expect(await fetchYearnKongSources()).toEqual({ candidates: [], degraded: false });
   });
 
   it("labels non-Yearn vaults as Kong", async () => {
@@ -99,7 +99,7 @@ describe("fetchYearnKongSources", () => {
       },
       { match: "kong.yearn.fi", body: { data: { vaults: [] } } },
     ]);
-    const results = await fetchYearnKongSources();
+    const { candidates: results } = await fetchYearnKongSources();
     expect(results[0].yield.yieldSource).toContain("Kong");
     expect(results[0].yield.sourceKey).toContain("protocol-api:kong:");
   });
@@ -128,7 +128,7 @@ describe("fetchYearnKongSources", () => {
       { match: "kong.yearn.fi", body: { data: { vaults: [] } } },
     ]);
 
-    const results = await fetchYearnKongSources();
+    const { candidates: results } = await fetchYearnKongSources();
     expect(results[0].yield.currentApy).toBeCloseTo(2.5);
     expect(results[0].yield.apyBase).toBeCloseTo(2.5);
   });
@@ -160,7 +160,7 @@ describe("fetchYearnKongSources", () => {
       { match: "kong.yearn.fi", body: { data: { vaults: [] } } },
     ]);
 
-    const results = await fetchYearnKongSources();
+    const { candidates: results } = await fetchYearnKongSources();
     expect(results).toHaveLength(1);
     expect(results[0]).toEqual(
       expect.objectContaining({
@@ -191,8 +191,14 @@ describe("fetchYearnKongSources", () => {
       })),
       { match: "kong.yearn.fi", body: { data: { vaults: [] } } },
     ]);
-    expect((await fetchYearnKongSources()).map((result) => result.yield.sourceKey)).toEqual([
+    expect((await fetchYearnKongSources()).candidates.map((result) => result.yield.sourceKey)).toEqual([
       "protocol-api:yearn:ethereum:0xabc", "protocol-api:yearn:base:0xabc",
     ]);
+  });
+
+  it("reports a degraded fetch when a chain query fails", async () => {
+    mockYieldSourceRoutes([{ match: "kong.yearn.fi", body: { error: "upstream unavailable" }, status: 500 }]);
+
+    await expect(fetchYearnKongSources()).resolves.toEqual({ candidates: [], degraded: true });
   });
 });

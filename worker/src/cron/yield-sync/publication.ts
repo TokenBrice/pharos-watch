@@ -1,4 +1,4 @@
-import { DAY_SECONDS } from "@shared/lib/time-constants";
+import { DAY_SECONDS, HOUR_SECONDS } from "@shared/lib/time-constants";
 import { bucketUnixSecondsToUtcDay } from "@shared/lib/time-buckets";
 import { ACTIVE_STABLECOINS, FROZEN_IDS } from "@shared/lib/stablecoins/registry";
 import { YIELD_HISTORY_MAX_DAYS, YIELD_HISTORY_RAW_DAYS } from "@shared/lib/yield-history-policy";
@@ -155,8 +155,28 @@ async function pruneYieldTablesOnce(
     await deleteOrphanYieldRows(db, managedYieldIds);
   }
 
+  // A generation only stays `staged` while its own run is publishing, and that
+  // run now finalizes the row on abort. Anything left staged past one cron
+  // interval was abandoned by an isolate that never came back; the publication
+  // surface maps `staged` to a live candidate, so it must not linger.
+  await db
+    .prepare(
+      `/* pharos:yield-sync:abandoned-staged-generation-finalize */
+       UPDATE yield_publication_generations
+          SET state = 'failed', failed_at = ?, failure_reason = 'abandoned-staged'
+        WHERE state = 'staged'
+          AND started_at < ?`,
+    )
+    .bind(startSec, startSec - HOUR_SECONDS)
+    .run();
+
   await materializeYieldHistoryDaily(db, startSec);
 
+  // yield_history_daily now carries the year-long public window, so raw hourly
+  // rows only need the 30-day full-fidelity policy; the daily tier keeps the
+  // 365-day cutoff. Materialization above ran first, so the trailing raw day
+  // was already closed into the daily tier before it leaves the raw window.
+  const rawPruneCutoff = startSec - YIELD_HISTORY_RAW_DAYS * DAY_SECONDS;
   const pruneCutoff = startSec - YIELD_HISTORY_MAX_DAYS * DAY_SECONDS;
   const frozenIdsList = [...FROZEN_IDS];
   const frozenClause =
@@ -165,7 +185,7 @@ async function pruneYieldTablesOnce(
       : "";
   await db
     .prepare(`/* pharos:yield-sync:history-retention-delete */ DELETE FROM yield_history WHERE recorded_at < ? ${frozenClause}`)
-    .bind(pruneCutoff, ...frozenIdsList)
+    .bind(rawPruneCutoff, ...frozenIdsList)
     .run();
 
   await db

@@ -1,6 +1,8 @@
 import { describe, it, expect } from "vitest";
 import {
+  PYS_APY_SANITY_MAX,
   PYS_MAX_SOURCE_RISK_PENALTY,
+  PYS_SUSTAINABILITY_FLOOR,
   computePysComponents,
   computePysRewardShare,
   computePYS,
@@ -11,6 +13,7 @@ import {
   derivePysSourceRiskPenalty,
   deriveVenueRiskTier,
   resolvePysSourceRiskPenalty,
+  yieldStabilityToApyVarianceScore,
 } from "../yield-scoring";
 import { SOURCE_RISK_GOLDEN_ROWS } from "@shared/test-utils/yield-source-risk-golden-fixtures";
 
@@ -270,7 +273,7 @@ describe("computePYS", () => {
   });
 
   it("caps at 100", () => {
-    const result = computePYS({ apy30d: 500, safetyScore: 100, apyVarianceScore: 0, scalingFactor: 10 });
+    const result = computePYS({ apy30d: 250, safetyScore: 100, apyVarianceScore: 0, scalingFactor: 10 });
     expect(result).toBe(100);
   });
 
@@ -324,6 +327,108 @@ describe("computePYS", () => {
       benchmarkRate: 8,
     });
     expect(result).toBe(0);
+  });
+
+  describe("USD hurdle re-base (v8.43)", () => {
+    const usdBenchmarkRate = 3.95;
+    const common = { safetyScore: 80, apyVarianceScore: 0.1, scalingFactor: 8, usdBenchmarkRate };
+
+    it("scores equal excess over the local hurdle identically in every currency", () => {
+      const usdRow = computePYS({ ...common, apy30d: 4.95, benchmarkRate: usdBenchmarkRate });
+      const tryRow = computePYS({ ...common, apy30d: 37.86, benchmarkRate: 36.86 });
+      const chfRow = computePYS({ ...common, apy30d: 0.95, benchmarkRate: -0.05 });
+      expect(tryRow).toBe(usdRow);
+      expect(chfRow).toBe(usdRow);
+    });
+
+    it("does not credit a high-rate peg's policy rate as yield", () => {
+      const tryAtHurdle = computePYS({ ...common, apy30d: 36.86, benchmarkRate: 36.86 });
+      const usdAtHurdle = computePYS({ ...common, apy30d: usdBenchmarkRate, benchmarkRate: usdBenchmarkRate });
+      expect(tryAtHurdle).toBe(usdAtHurdle);
+    });
+
+    it("leaves USD-benchmarked rows identical to the pre-v8.43 score", () => {
+      const input = { apy30d: 8.4, safetyScore: 72, apyVarianceScore: 0.18, scalingFactor: 8, benchmarkRate: usdBenchmarkRate };
+      expect(computePYS({ ...input, usdBenchmarkRate })).toBe(computePYS(input));
+    });
+
+    it("falls back to the row's own hurdle when the reference rate is absent", () => {
+      const withoutReference = computePysComponents({ apy30d: 37.86, benchmarkRate: 36.86, safetyScore: 80, apyVarianceScore: 0.1 });
+      expect(withoutReference.hurdleRebase).toBe(0);
+      expect(withoutReference.effectiveYield).toBeCloseTo(37.86 + 0.25, 6);
+    });
+
+    it("stops crediting a same-currency USD benchmark basis as excess yield (B24)", () => {
+      const input = {
+        apy30d: 5,
+        safetyScore: 80,
+        apyVarianceScore: 0.1,
+        scalingFactor: 8,
+        benchmarkRate: 3.63,
+        usdBenchmarkRate: 3.95,
+      };
+      const effrRowed = computePYS({ ...input, benchmarkCurrency: "USD" });
+      expect(effrRowed).toBeLessThan(computePYS(input));
+      expect(
+        computePysComponents({ ...input, benchmarkCurrency: "USD" }).hurdleRebase,
+      ).toBe(0);
+      expect(
+        computePysComponents({ ...input, benchmarkCurrency: "TRY" }).hurdleRebase,
+      ).toBeCloseTo(0.32, 6);
+    });
+
+    it("floors the re-based effective yield at zero when a high-rate row misses its hurdle badly", () => {
+      expect(computePYS({ ...common, apy30d: 30, benchmarkRate: 36.86 })).toBe(0);
+    });
+  });
+
+  describe("non-finite measurement guards (B12/B25)", () => {
+    it("fails a non-finite variance closed to the sustainability floor", () => {
+      for (const apyVarianceScore of [Number.NaN, Number.POSITIVE_INFINITY, Number.NEGATIVE_INFINITY]) {
+        expect(computePysComponents({ apy30d: 5, safetyScore: 80, apyVarianceScore }).sustainabilityMultiplier).toBe(
+          PYS_SUSTAINABILITY_FLOOR,
+        );
+      }
+      expect(
+        computePYS({ apy30d: 8, safetyScore: 80, apyVarianceScore: Number.NaN, scalingFactor: 8 }),
+      ).toBe(computePYS({ apy30d: 8, safetyScore: 80, apyVarianceScore: 1, scalingFactor: 8 }));
+    });
+
+    it("keeps a missing variance at the documented best-case default", () => {
+      const result = computePysComponents({ apy30d: 5, safetyScore: 80, apyVarianceScore: null });
+      expect(result.sustainabilityMultiplier).toBe(1);
+    });
+
+    it("converts missing and non-finite stabilities to the documented 0 variance", () => {
+      expect(yieldStabilityToApyVarianceScore(null)).toBe(0);
+      expect(yieldStabilityToApyVarianceScore(undefined)).toBe(0);
+      expect(yieldStabilityToApyVarianceScore(Number.NaN)).toBe(0);
+      expect(yieldStabilityToApyVarianceScore(Number.POSITIVE_INFINITY)).toBe(0);
+      expect(yieldStabilityToApyVarianceScore(0.32)).toBeCloseTo(0.68, 6);
+      expect(yieldStabilityToApyVarianceScore(1.4)).toBe(0);
+      expect(yieldStabilityToApyVarianceScore(-0.4)).toBe(1);
+    });
+
+    it("returns 0 above the absolute APY envelope instead of a perfect score", () => {
+      for (const apy30d of [PYS_APY_SANITY_MAX + 1, 1e3, 1e6, 1e308]) {
+        expect(computePYS({ apy30d, safetyScore: 100, apyVarianceScore: 0, scalingFactor: 10 })).toBe(0);
+      }
+      expect(computePYS({ apy30d: PYS_APY_SANITY_MAX, safetyScore: 100, apyVarianceScore: 0, scalingFactor: 10 })).toBe(
+        100,
+      );
+    });
+
+    it("rejects a non-finite effective yield in the component entrypoint", () => {
+      const components = computePysComponents({
+        apy30d: 8.4,
+        benchmarkRate: 4.25,
+        safetyScore: 72,
+        apyVarianceScore: 0.18,
+      });
+      for (const effectiveYield of [Number.NaN, Number.POSITIVE_INFINITY, Number.NEGATIVE_INFINITY]) {
+        expect(computePYSFromComponents(8.4, 8, { ...components, effectiveYield })).toBe(0);
+      }
+    });
   });
 
   it("handles non-USD benchmark rows and missing safety with neutral source risk", () => {

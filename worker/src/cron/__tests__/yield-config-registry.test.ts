@@ -444,7 +444,9 @@ describe("yield config registry", () => {
   it("records auto-lending same-symbol collision blocks", () => {
     expect(Object.keys(AUTO_LENDING_COLLISION_BLOCKLIST).sort()).toEqual([
       "cusd-celo",
+      "dusd-alto",
       "nusd-nexus",
+      "sdola-inverse-finance",
       "usda-alpha-partner",
       "usda-avalon",
       "usdcx-movement",
@@ -453,6 +455,34 @@ describe("yield config registry", () => {
       "vusd-virtue",
       "xusd-straitsx",
     ]);
+
+    expect(isAutoLendingCollisionBlockedForStablecoin("dusd-alto", {
+      pool: "a5f9e3ff-9601-553d-a020-60870b3e3f19",
+      project: "yearn-finance",
+      chain: "Ethereum",
+      symbol: "FRXUSDDUSD",
+      underlyingTokens: ["0xCAcd6fd266aF91b8AeD52aCCc382b4e165586E29", "0x63d74d22E689C715a04F2C13962b1f77F443d35b"],
+    })).toBe(true);
+    expect(isAutoLendingCollisionBlockedForStablecoin("sdola-inverse-finance", {
+      pool: "98fcaeb8-6e0a-4552-8f42-41d801a48528",
+      project: "yearn-finance",
+      chain: "Ethereum",
+      symbol: "REUSDSDOLA",
+      underlyingTokens: ["0x57aB1E0003F623289CD798B1824Be09a793e4Bec", "0xb45ad160634c528Cc3D2926d9807104FA3157305"],
+    })).toBe(true);
+    // The multi-asset pins are pool-scoped: another Yearn vault with the same
+    // symbol stays eligible, and a candidate without a pool id cannot match.
+    expect(isAutoLendingCollisionBlockedForStablecoin("dusd-alto", {
+      pool: "00000000-1111-2222-3333-444444444444",
+      project: "yearn-finance",
+      chain: "Ethereum",
+      symbol: "FRXUSDDUSD",
+    })).toBe(false);
+    expect(isAutoLendingCollisionBlockedForStablecoin("dusd-alto", {
+      project: "yearn-finance",
+      chain: "Ethereum",
+      symbol: "FRXUSDDUSD",
+    })).toBe(false);
 
     expect(isAutoLendingCollisionBlockedForStablecoin("usdx-kava", {
       project: "clearpool-lending",

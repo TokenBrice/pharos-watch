@@ -8,6 +8,24 @@ const DetailedYieldRankingProvenanceSchema = DetailedYieldRankingSchema.shape.pr
 const DetailedYieldSourceRiskSchema = DetailedYieldRankingSchema.shape.sourceRisk.unwrap().unwrap();
 const DetailedYieldRankChangeSchema = DetailedYieldRankingSchema.shape.rankChangeAttribution.unwrap().unwrap();
 const DetailedYieldDecisionLedgerSchema = DetailedYieldRankingSchema.shape.decisionLedger.unwrap().unwrap();
+const DetailedAltYieldSourceSchema = DetailedYieldRankingSchema.shape.altSources.unwrap().unwrap().element;
+
+/**
+ * Alternate rails are published as a bounded identity projection: enough to
+ * count and label what the selected source was chosen over (`sourceKey` +
+ * `dataSource` + `confidenceTier`) and to compare its headline economics, but
+ * not the detail-only evidence (rejection codes, venue review, access flags)
+ * that only the arbitration surfaces read.
+ */
+export const YIELD_RANKING_SUMMARY_ALT_SOURCE_LIMIT = 8;
+
+export const YieldRankingSummaryAltSourceSchema = DetailedAltYieldSourceSchema.pick({
+  sourceKey: true,
+  dataSource: true,
+  confidenceTier: true,
+  currentApy: true,
+  sourceTvlUsd: true,
+}).strict();
 
 export const YieldRankingSummaryProvenanceSchema = DetailedYieldRankingProvenanceSchema.pick({
   sourceKey: true,
@@ -34,8 +52,13 @@ export const YieldRankingSummarySourceRiskSchema = DetailedYieldSourceRiskSchema
   venueRiskTier: true,
   venueRiskWeighted: true,
   venueRiskConfidence: true,
+  dependencyConcentration: true,
 }).strict();
 
+// `dataSource` became a strict-contract field on the same branch as the rank
+// attribution fields below, so the pre-deploy cached summary predates all of
+// them. `partial` (not an extend override) keeps the picked field order — the
+// projection emits keys in schema declaration order.
 export const YieldRankingSummarySchema = DetailedYieldRankingSchema.pick({
   id: true,
   symbol: true,
@@ -45,6 +68,7 @@ export const YieldRankingSummarySchema = DetailedYieldRankingSchema.pick({
   yieldSource: true,
   yieldSourceUrl: true,
   yieldType: true,
+  dataSource: true,
   sourceTvlUsd: true,
   pharosYieldScore: true,
   pysNullReason: true,
@@ -58,13 +82,19 @@ export const YieldRankingSummarySchema = DetailedYieldRankingSchema.pick({
   apyMin30d: true,
   apyMax30d: true,
   warningSignals: true,
+  sourceRole: true,
 })
+  .partial({ dataSource: true })
   .extend({
     alternateSourceCount: z.number().int().nonnegative(),
+    altSources: z
+      .array(YieldRankingSummaryAltSourceSchema)
+      .max(YIELD_RANKING_SUMMARY_ALT_SOURCE_LIMIT)
+      .optional(),
     decisionReasonCode: DetailedYieldDecisionLedgerSchema.shape.selectedReasonCode.optional(),
-    rankDelta: DetailedYieldRankChangeSchema.shape.rankDelta,
-    rankChangeDriver: DetailedYieldRankChangeSchema.shape.primaryDriver,
-    rankPysDelta: DetailedYieldRankChangeSchema.shape.pysDelta,
+    rankDelta: DetailedYieldRankChangeSchema.shape.rankDelta.optional(),
+    rankChangeDriver: DetailedYieldRankChangeSchema.shape.primaryDriver.optional(),
+    rankPysDelta: DetailedYieldRankChangeSchema.shape.pysDelta.optional(),
     provenance: YieldRankingSummaryProvenanceSchema.nullable().optional(),
     sourceRisk: YieldRankingSummarySourceRiskSchema.nullable().optional(),
   })
@@ -90,5 +120,6 @@ export const YieldRankingsSummaryResponseSchema = YieldRankingsResponseSchema.om
 
 export type YieldRankingSummaryProvenance = z.infer<typeof YieldRankingSummaryProvenanceSchema>;
 export type YieldRankingSummarySourceRisk = z.infer<typeof YieldRankingSummarySourceRiskSchema>;
+export type YieldRankingSummaryAltSource = z.infer<typeof YieldRankingSummaryAltSourceSchema>;
 export type YieldRankingSummary = z.infer<typeof YieldRankingSummarySchema>;
 export type YieldRankingsSummaryResponse = z.infer<typeof YieldRankingsSummaryResponseSchema>;

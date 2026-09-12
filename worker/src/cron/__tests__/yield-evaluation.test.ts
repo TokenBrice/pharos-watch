@@ -3,18 +3,23 @@ import {
   SOURCE_RISK_GOLDEN_ROWS,
   type YieldSourceRiskGoldenCaseId,
 } from "@shared/test-utils/yield-source-risk-golden-fixtures";
-import { buildHardcodedUsdBenchmark, withYieldBenchmarkStaticMeta } from "../yield-sync/benchmarks";
+import {
+  buildHardcodedUsdBenchmark,
+  withYieldBenchmarkStaticMeta,
+  type ParsedYieldBenchmarkMeta,
+} from "../yield-sync/benchmarks";
 import { buildHistoryKey, evaluateYieldSources, evaluateYieldSourcesCooperative } from "../yield-sync/evaluation";
 import type { EvaluateYieldSourcesInput } from "../yield-sync/evaluation";
+import { compareCandidates } from "../yield-sync/evaluation-arbitration";
 import type { ResolvedYield } from "../yield-sync/types";
-import { baseEvaluationInput, resolvedYield } from "./yield-evaluation.test-support";
+import { baseEvaluationInput, FRESH_BENCHMARK_RECORD_DATE, resolvedYield } from "./yield-evaluation.test-support";
 
 
 function gbpBenchmark(observedAt: number, ageSeconds: number, rate = 4.5) {
   return {
     ...withYieldBenchmarkStaticMeta("GBP", {
       rate,
-      recordDate: "2026-04-17",
+      recordDate: FRESH_BENCHMARK_RECORD_DATE,
       fetchedAt: observedAt,
       ageSeconds,
       source: "fred-sonia-compounded-index-test",
@@ -22,7 +27,7 @@ function gbpBenchmark(observedAt: number, ageSeconds: number, rate = 4.5) {
       fallbackMode: null,
     }),
     lastMarketRate: rate,
-    lastMarketRecordDate: "2026-04-17",
+    lastMarketRecordDate: FRESH_BENCHMARK_RECORD_DATE,
     lastMarketFetchedAt: observedAt,
     lastMarketSource: "fred-sonia-compounded-index-test",
   };
@@ -33,7 +38,7 @@ function benchmarkMeta(key: "USD_EFFR", rate: number) {
   return {
     ...withYieldBenchmarkStaticMeta(key, {
       rate,
-      recordDate: "2026-03-26",
+      recordDate: FRESH_BENCHMARK_RECORD_DATE,
       fetchedAt: 1774479600,
       ageSeconds: 0,
       source: `${key.toLowerCase()}-test`,
@@ -41,9 +46,53 @@ function benchmarkMeta(key: "USD_EFFR", rate: number) {
       fallbackMode: null,
     }),
     lastMarketRate: rate,
-    lastMarketRecordDate: "2026-03-26",
+    lastMarketRecordDate: FRESH_BENCHMARK_RECORD_DATE,
     lastMarketFetchedAt: 1774479600,
     lastMarketSource: `${key.toLowerCase()}-test`,
+  };
+}
+
+function usdBenchmark(overrides: {
+  rate?: number;
+  ageSeconds?: number | null;
+  isFallback?: boolean;
+  fallbackMode?: string | null;
+  recordDate?: string | null;
+} = {}): ParsedYieldBenchmarkMeta {
+  const rate = overrides.rate ?? 4.2;
+  const recordDate = overrides.recordDate ?? FRESH_BENCHMARK_RECORD_DATE;
+  return {
+    ...withYieldBenchmarkStaticMeta("USD", {
+      rate,
+      recordDate,
+      fetchedAt: 1776729600,
+      ageSeconds: overrides.ageSeconds ?? 0,
+      source: "fred-dgs3mo-test",
+      isFallback: overrides.isFallback ?? false,
+      fallbackMode: overrides.fallbackMode ?? null,
+    }),
+    lastMarketRate: rate,
+    lastMarketRecordDate: recordDate,
+    lastMarketFetchedAt: 1776729600,
+    lastMarketSource: "fred-dgs3mo-test",
+  };
+}
+
+function eurBenchmark(rate = 2.17) {
+  return {
+    ...withYieldBenchmarkStaticMeta("EUR", {
+      rate,
+      recordDate: FRESH_BENCHMARK_RECORD_DATE,
+      fetchedAt: 1776729600,
+      ageSeconds: 0,
+      source: "ecb-estr-test",
+      isFallback: false,
+      fallbackMode: null,
+    }),
+    lastMarketRate: rate,
+    lastMarketRecordDate: FRESH_BENCHMARK_RECORD_DATE,
+    lastMarketFetchedAt: 1776729600,
+    lastMarketSource: "ecb-estr-test",
   };
 }
 
@@ -63,9 +112,12 @@ function historyRows(sourceKey: string, count: number, startSec: number, apy = 5
 
 type SourceRiskEvaluationScenario = {
   yield: Partial<ResolvedYield>;
+  /** Additional candidates resolved for the same coin, after the primary source. */
+  extraResolved?: Partial<ResolvedYield>[];
   historyCount: number;
   input?: Partial<EvaluateYieldSourcesInput>;
   expectedSourceSwitchCount30d?: number;
+  expectedAnomaly?: string;
   expectedPys?: number;
   expectedUsedDefaultSafety?: boolean;
 };
@@ -99,6 +151,10 @@ const SOURCE_RISK_EVALUATION_SCENARIOS: Record<YieldSourceRiskGoldenCaseId, Sour
     yield: {
       sourceKey: "defillama:coin-a:switch",
     },
+    // B2: the switch only counts while the previous winner is still a candidate,
+    // so the fixture now resolves the prior source instead of relying on its
+    // absence to manufacture the increment.
+    extraResolved: [{ sourceKey: "defillama:coin-a:prior", currentApy: 3 }],
     historyCount: 9,
     input: {
       prevBestSourceKeyByCoin: new Map([["coin-a", "defillama:coin-a:prior"]]),
@@ -170,7 +226,9 @@ describe("evaluateYieldSources", () => {
 
     expect(cooperative).toEqual(sync);
     expect(sync.rowsRejected).toBeGreaterThan(0);
-    expect(sync.sourceSwitches).toBe(1);
+    // B2: "previous-source" is not among coin-a's candidates, so the absence is a
+    // fetch gap and no switch is charged.
+    expect(sync.sourceSwitches).toBe(0);
     expect(progress[progress.length - 1]).toBe(4);
     expect(progress).toEqual([...progress].sort((a, b) => a - b));
   });
@@ -191,7 +249,14 @@ describe("evaluateYieldSources", () => {
       const result = evaluateYieldSources(baseEvaluationInput({
         startSec,
         sevenDaysAgoSec: startSec - 7 * 86400,
-        resolved: [{ id: "coin-a", symbol: "A", yield: source }],
+        resolved: [
+          { id: "coin-a", symbol: "A", yield: source },
+          ...(scenario.extraResolved ?? []).map((extra) => ({
+            id: "coin-a",
+            symbol: "A",
+            yield: resolvedYield(extra),
+          })),
+        ],
         sourceHistory,
         ...(scenario.input ?? {}),
       }));
@@ -203,6 +268,9 @@ describe("evaluateYieldSources", () => {
       );
       if (scenario.expectedSourceSwitchCount30d != null) {
         expect(evaluated?.sourceSwitchCount30d, row.label).toBe(scenario.expectedSourceSwitchCount30d);
+      }
+      if (scenario.expectedAnomaly != null) {
+        expect(evaluated?.anomalies, row.label).toContain(scenario.expectedAnomaly);
       }
       if (scenario.expectedPys != null) {
         expect(evaluated?.pharosYieldScore, row.label).toBe(scenario.expectedPys);
@@ -982,6 +1050,89 @@ describe("evaluateYieldSources", () => {
     expect(source?.apy7d).toBeCloseTo(5.5, 4);
   });
 
+  it("excludes protocol-api NAV seed rows from rolling APY stats", () => {
+    const startSec = 1776729600;
+    const sourceKey = "protocol-api:midas-mmev-nav-oracle";
+    const result = evaluateYieldSources(baseEvaluationInput({
+      resolved: [
+        {
+          id: "mmev-midas",
+          symbol: "mMEV",
+          yield: resolvedYield({
+            currentApy: 6,
+            apyBase: 6,
+            apyReward: null,
+            sourcePool: null,
+            sourceTvlUsd: null,
+            dataSource: "protocol-api",
+            exchangeRate: 1.06,
+            sourceKey,
+            sourceObservedAt: startSec,
+            comparisonAnchorObservedAt: startSec - 7 * 86400,
+            yieldSource: "Midas mMEV/USD Oracle",
+            yieldType: "nav-appreciation",
+          }),
+        },
+      ],
+      startSec,
+      safetyScores: new Map([["mmev-midas", { score: 74, grade: "B" }]]),
+      sourceHistory: new Map([
+        [
+          buildHistoryKey("mmev-midas", sourceKey),
+          [
+            {
+              stablecoin_id: "mmev-midas",
+              source_key: sourceKey,
+              recorded_at: startSec - 6 * 86400,
+              is_best: 0,
+              apy: 0,
+              apy_base: null,
+              source_tvl_usd: null,
+              data_source: "protocol-api",
+              yield_source: "Midas mMEV/USD Oracle",
+              yield_type: "nav-appreciation",
+              exchange_rate: 1.01,
+            },
+            {
+              stablecoin_id: "mmev-midas",
+              source_key: sourceKey,
+              recorded_at: startSec - 5 * 86400,
+              is_best: 0,
+              apy: 0,
+              apy_base: null,
+              source_tvl_usd: null,
+              data_source: "protocol-api",
+              yield_source: "Midas mMEV/USD Oracle",
+              yield_type: "nav-appreciation",
+              exchange_rate: 1.02,
+            },
+            {
+              stablecoin_id: "mmev-midas",
+              source_key: sourceKey,
+              recorded_at: startSec - 1 * 86400,
+              is_best: 1,
+              apy: 5,
+              apy_base: 5,
+              source_tvl_usd: null,
+              data_source: "protocol-api",
+              yield_source: "Midas mMEV/USD Oracle",
+              yield_type: "nav-appreciation",
+              exchange_rate: 1.05,
+            },
+          ],
+        ],
+      ]),
+      stablecoinSupplyById: new Map([["mmev-midas", 100_000_000]]),
+    }));
+
+    const [source] = result.evaluatedSources;
+    // Both seed rows are inside the 7d window, so carrying them would publish
+    // apy7d/apy30d of 2.75 — only the anchored observation may count.
+    expect(source?.apy30d).toBeCloseTo(5.5, 4);
+    expect(source?.apy7d).toBeCloseTo(5.5, 4);
+    expect(source?.apyMin30d).toBe(5);
+  });
+
   it("uses a source-level benchmark override for PYS provenance without changing resolved APY", () => {
     const input = baseEvaluationInput({
       resolved: [{
@@ -1009,6 +1160,210 @@ describe("evaluateYieldSources", () => {
     expect(source?.benchmarkRate).toBe(3.9);
     expect(source?.benchmarkSelectionMode).toBe("manual-override");
   });
+
+  it("records a transiently missing previous winner instead of a switch", () => {
+    const startSec = 1776729600;
+    const result = evaluateYieldSources(baseEvaluationInput({
+      startSec,
+      resolved: [
+        {
+          id: "coin-a",
+          symbol: "A",
+          yield: resolvedYield({
+            sourceKey: "defillama:coin-a:now",
+            sourceObservedAt: startSec,
+          }),
+        },
+      ],
+      prevBestSourceKeyByCoin: new Map([["coin-a", "defillama:coin-a:gone"]]),
+      sourceSwitchCount30dByCoin: new Map([["coin-a", 4]]),
+    }));
+
+    expect(result.sourceSwitches).toBe(0);
+    const [source] = result.evaluatedSources;
+    expect(source).toMatchObject({
+      sourceKey: "defillama:coin-a:now",
+      sourceSwitchCount30d: 4,
+      anomalies: expect.arrayContaining(["previous-source-transiently-missing"]),
+      // The unpublished gap is not charged, so the penalty keeps the true 4-switch term.
+      sourceRiskPenalty: 1.5,
+    });
+  });
+
+  it("keeps the incumbent when the churn penalty has already saturated (B3 ratchet)", () => {
+    const startSec = 1776729600;
+    for (const prior of [0, 3]) {
+      const result = evaluateYieldSources(baseEvaluationInput({
+        startSec,
+        resolved: [
+          {
+            id: "coin-a",
+            symbol: "A",
+            yield: resolvedYield({
+              sourceKey: "protocol-api:venue:ethereum:0xa",
+              dataSource: "protocol-api",
+              currentApy: 5,
+              sourceTvlUsd: 1_000_000,
+            }),
+          },
+          {
+            id: "coin-a",
+            symbol: "A",
+            yield: resolvedYield({
+              sourceKey: "protocol-api:venue:ethereum:0xb",
+              dataSource: "protocol-api",
+              currentApy: 5.02,
+              sourceTvlUsd: 1_000_000,
+            }),
+          },
+        ],
+        prevBestSourceKeyByCoin: new Map([["coin-a", "protocol-api:venue:ethereum:0xa"]]),
+        sourceSwitchCount30dByCoin: new Map([["coin-a", prior]]),
+      }));
+
+      const label = `prior ${prior}`;
+      expect(result.bestSourceKeyByCoin.get("coin-a"), label).toBe("protocol-api:venue:ethereum:0xa");
+      const incumbent = result.evaluatedSources.find((source) => source.sourceKey.endsWith("0xa"));
+      const challenger = result.evaluatedSources.find((source) => source.sourceKey.endsWith("0xb"));
+      expect(incumbent?.sourceSwitchCount30d, label).toBe(prior);
+      expect(challenger?.sourceSwitchCount30d, label).toBeNull();
+      expect(incumbent?.sourceRiskPenalty, label).toBeCloseTo(1.2 + Math.min(0.3, prior * 0.1), 6);
+      // B42: the alternate drops the switch term it publishes no count for, so the
+      // published alternate utility is not the arbitration utility.
+      expect(challenger?.sourceRiskPenalty, label).toBeCloseTo(1.2, 6);
+    }
+  });
+
+  it("breaks exact arbitration ties deterministically and antisymmetrically", () => {
+    const run = (keys: [string, string]) =>
+      evaluateYieldSources(baseEvaluationInput({
+        resolved: keys.map((sourceKey) => ({
+          id: "coin-a",
+          symbol: "A",
+          yield: resolvedYield({ sourceKey, currentApy: 5, sourceTvlUsd: 1_000_000 }),
+        })),
+      }));
+
+    const forward = run(["defillama:coin-a:alpha", "defillama:coin-a:beta"]);
+    const reversed = run(["defillama:coin-a:beta", "defillama:coin-a:alpha"]);
+    expect(forward.bestSourceKeyByCoin.get("coin-a")).toBe("defillama:coin-a:alpha");
+    expect(reversed.bestSourceKeyByCoin.get("coin-a")).toBe("defillama:coin-a:alpha");
+
+    const [alpha, beta] = forward.evaluatedSources;
+    expect(compareCandidates(alpha!, beta!)).toBe(-compareCandidates(beta!, alpha!));
+    expect(compareCandidates(alpha!, beta!)).toBeLessThan(0);
+  });
+
+  it("does not re-base non-USD rows on a degraded or stale USD reference", () => {
+    const startSec = 1776729600;
+    const run = (usd: ParsedYieldBenchmarkMeta) =>
+      evaluateYieldSources(baseEvaluationInput({
+        startSec,
+        resolved: [
+          {
+            id: "eurc-circle",
+            symbol: "EURC",
+            yield: resolvedYield({
+              sourceKey: "defillama:eurc-circle:main",
+              sourceObservedAt: startSec,
+            }),
+          },
+        ],
+        riskFreeRates: {
+          ...baseEvaluationInput().riskFreeRates,
+          USD: usd,
+          EUR: eurBenchmark(),
+        },
+        safetyScores: new Map([["eurc-circle", { score: 80, grade: "B+" }]]),
+      })).evaluatedSources[0];
+
+    const healthy = run(usdBenchmark());
+    expect(healthy).toMatchObject({
+      benchmarkKey: "EUR",
+      benchmarkFreshness: "healthy",
+      usdBenchmarkRate: 4.2,
+    });
+    expect(healthy?.scoreQualification).not.toBe("NR");
+
+    const degraded = run(usdBenchmark({ isFallback: true, fallbackMode: "retained" }));
+    expect(degraded).toMatchObject({
+      benchmarkFreshness: "healthy",
+      scoreQualification: "estimated",
+      usdBenchmarkRate: null,
+      hurdleRebase: 0,
+    });
+    expect(degraded?.warnings).toContain("reference-benchmark-degraded");
+    expect(degraded?.pharosYieldScore).not.toBeNull();
+    expect(degraded?.pharosYieldScore ?? 0).toBeLessThan(healthy?.pharosYieldScore ?? 0);
+
+    const stale = run(usdBenchmark({ ageSeconds: 49 * 60 * 60 }));
+    expect(stale).toMatchObject({
+      scoreQualification: "NR",
+      pharosYieldScore: null,
+      pysNullReason: "benchmark-stale",
+      usdBenchmarkRate: null,
+      hurdleRebase: 0,
+    });
+    expect(stale?.warnings).toContain("reference-benchmark-degraded");
+  });
+
+  it("gates on the benchmark's own observation age, not just the fetch age (A2)", () => {
+    const startSec = 1776729600;
+    const nineDaysAgo = new Date(Date.now() - 9 * 86_400_000).toISOString().slice(0, 10);
+    // A fresh fetch carrying a nine-day-old observation is a rewound upstream:
+    // the fetch-age TTL alone would stamp it as current market data.
+    const rewoundUsd = usdBenchmark({ recordDate: nineDaysAgo });
+    const run = (resolved: Parameters<typeof evaluateYieldSources>[0]["resolved"]) =>
+      evaluateYieldSources(baseEvaluationInput({
+        startSec,
+        resolved,
+        riskFreeRates: { ...baseEvaluationInput().riskFreeRates, USD: rewoundUsd, EUR: eurBenchmark() },
+      })).evaluatedSources[0];
+
+    const eurRow = run([
+      {
+        id: "eurc-circle",
+        symbol: "EURC",
+        yield: resolvedYield({
+          sourceKey: "defillama:eurc-circle:main",
+          sourceObservedAt: startSec,
+          dataSource: "defillama",
+        }),
+      },
+    ]);
+    // Non-USD rows lose the reference re-base and cannot be scored at all.
+    expect(eurRow).toMatchObject({
+      benchmarkKey: "EUR",
+      benchmarkFreshness: "healthy",
+      scoreQualification: "NR",
+      pharosYieldScore: null,
+      pysNullReason: "benchmark-stale",
+      usdBenchmarkRate: null,
+      hurdleRebase: 0,
+    });
+    expect(eurRow?.warnings).toContain("reference-benchmark-degraded");
+
+    const usdRow = run([
+      {
+        id: "coin-a",
+        symbol: "A",
+        yield: resolvedYield({
+          sourceKey: "defillama:coin-a:main",
+          sourceObservedAt: startSec,
+          dataSource: "defillama",
+        }),
+      },
+    ]);
+    // The row's own benchmark is judged against its own key's record bound.
+    expect(usdRow).toMatchObject({
+      benchmarkKey: "USD",
+      benchmarkFreshness: "stale",
+      scoreQualification: "NR",
+      pharosYieldScore: null,
+      pysNullReason: "benchmark-stale",
+    });
+    expect(usdRow?.warnings).toContain("benchmark-stale");
+  });
 });
 
 describe("opportunity-level risk (yield v8.32)", () => {
@@ -1030,12 +1385,17 @@ describe("opportunity-level risk (yield v8.32)", () => {
       ]),
     })).evaluatedSources;
 
-    // The fixture coin resolves a fallback-USD benchmark, so qualification is
-    // estimated rather than rated; the opportunity contract itself is complete.
+    // A1: `fallback-usd` selection is a per-row methodology decision (coin-a has
+    // no native benchmark feed), not a degraded feed, so the fresh USD benchmark
+    // keeps `benchmarkFreshness` healthy and the row is no longer capped at
+    // `estimated`: with safety observed and the opportunity evidence complete it
+    // now qualifies as `rated`.
     expect(source).toMatchObject({
+      benchmarkSelectionMode: "fallback-usd",
+      benchmarkFreshness: "healthy",
       safetyScore: 80,
       safetyProvenance: "opportunity-safety",
-      scoreQualification: "estimated",
+      scoreQualification: "rated",
       pysNullReason: null,
     });
     expect(source?.pharosYieldScore).toBeGreaterThan(0);

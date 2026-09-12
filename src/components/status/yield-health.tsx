@@ -58,13 +58,29 @@ function coverageStatus(
   field: YieldSourceRiskFieldCoverage | undefined,
   threshold: number,
 ): YieldHealthFieldStatus {
-  if (!field || field.eligibleCount <= 0) return "unknown";
+  if (!field || field.eligibleCount <= 0 || field.coverageRatio == null) return "unknown";
   return field.coverageRatio >= threshold ? "healthy" : "degraded";
+}
+
+function coverageRatioLabel(coverageRatio: number | null | undefined): string {
+  return coverageRatio == null ? "n/a" : formatPercentFromRatio(coverageRatio, 0);
 }
 
 function coverageSubtext(coverage: YieldHealthSummary["sourceRiskCoverage"]): string {
   if (coverage.totalRows <= 0) return "no ranking rows";
   return `${coverage.rowsWithSourceRisk}/${coverage.totalRows} rows with sourceRisk`;
+}
+
+function supplementalFamilyLabel(
+  family: NonNullable<YieldHealthSummary["supplemental"]["families"]>[string],
+): string {
+  const count = family.sourceCount == null ? "unknown" : `${family.sourceCount}`;
+  // A fresh family that found nothing is the visible shape of a wiped snapshot.
+  const emptyFlag = family.status === "healthy" && family.sourceCount === 0 ? " · fresh but empty" : "";
+  // SRC-SUPP-1: a retained row is the previous snapshot, kept because this
+  // run's fetch ended degraded (named in `supplemental.degradedFamilies`).
+  const retainedFlag = family.retained ? " · retained" : "";
+  return `${count} sources (${ageLabel(family.ageSec)})${emptyFlag}${retainedFlag}`;
 }
 
 function auditQueueSubtext(coverageAudit: YieldHealthSummary["coverageAudit"]): string {
@@ -73,12 +89,17 @@ function auditQueueSubtext(coverageAudit: YieldHealthSummary["coverageAudit"]): 
   }
   const stale = coverageAudit.staleAutoLendingOverrideCount ?? 0;
   const staleVenue = coverageAudit.staleVenueRiskScoreCount ?? 0;
-  const staleParts = [
+  const budget = coverageAudit.queueBudget;
+  const suppressed = coverageAudit.queueTotals?.suppressedItemCount ?? 0;
+  const parts = [
     ...(stale > 0 ? [`${stale} stale overrides`] : []),
     ...(staleVenue > 0 ? [`${staleVenue} venue reviews`] : []),
+    ...(suppressed > 0 ? [`${suppressed} suppressed`] : []),
+    ...(coverageAudit.queueTotals?.truncated ? ["truncated"] : []),
+    ...(budget ? [`budget ${budget.headlineGaps}/${budget.recommendationCandidates}`] : []),
   ];
-  const staleText = staleParts.length > 0 ? ` · ${staleParts.join(" · ")}` : "";
-  return `${coverageAudit.headlineGapCount ?? 0} gaps · ${coverageAudit.recommendationCandidateCount ?? 0} candidates${staleText}`;
+  const suffix = parts.length > 0 ? ` · ${parts.join(" · ")}` : "";
+  return `${coverageAudit.headlineGapCount ?? 0} gaps · ${coverageAudit.recommendationCandidateCount ?? 0} candidates${suffix}`;
 }
 
 function rankingSubtext(health: YieldHealthSummary): string {
@@ -221,9 +242,38 @@ export function YieldHealthCard({
               <div key={benchmark.key} className="flex min-w-0 items-center justify-between gap-3 text-xs">
                 <span className="min-w-0 truncate text-muted-foreground">
                   {benchmark.key} · {benchmark.rowCount} row{benchmark.rowCount === 1 ? "" : "s"}
+                  {benchmark.proxySelectionRowCount ? ` · ${benchmark.proxySelectionRowCount} proxy-selected` : ""}
                 </span>
                 <span className={`shrink-0 font-mono font-semibold ${statusClassName(benchmark.status)}`}>
                   {benchmark.status} · {ageLabel(benchmark.ageSec)}
+                </span>
+              </div>
+            ))}
+          </div>
+          {health.benchmarkRegistry.unusedBenchmarkKeys?.length ? (
+            <div className="mt-2 truncate text-[11px] text-muted-foreground">
+              Fetched but unused:{" "}
+              {health.benchmarkRegistry.unusedBenchmarkKeys
+                .map((entry) => `${entry.key} (${entry.source ?? "no feed"}, observed ${ageLabel(entry.recordAgeSec)})`)
+                .join(" · ")}
+            </div>
+          ) : null}
+          {health.benchmarkRegistry.unknownKeys?.length ? (
+            <div className="mt-1 truncate text-[11px] text-destructive">
+              Unknown published keys: {health.benchmarkRegistry.unknownKeys.join(", ")} (
+              {health.benchmarkRegistry.unknownKeyRowCount ?? 0} rows)
+            </div>
+          ) : null}
+        </div>
+
+        <div className="rounded-lg border border-border/50 p-3">
+          <div className="mb-2 text-xs font-medium text-muted-foreground">Supplemental source families</div>
+          <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
+            {Object.entries(health.supplemental.families ?? {}).map(([family, row]) => (
+              <div key={family} className="flex min-w-0 items-center justify-between gap-3 text-xs">
+                <span className="min-w-0 truncate text-muted-foreground">{family}</span>
+                <span className={`shrink-0 font-mono ${statusClassName(row.status)}`}>
+                  {supplementalFamilyLabel(row)}
                 </span>
               </div>
             ))}
@@ -234,7 +284,7 @@ export function YieldHealthCard({
           <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
             <div className="text-xs font-medium text-muted-foreground">Source-risk coverage</div>
             <div className="text-xs text-muted-foreground">
-              Warn below {formatPercentFromRatio(health.sourceRiskCoverage.threshold, 0)}
+              Warn below {formatPercentFromRatio(health.sourceRiskCoverage.threshold, 0)} of eligible rows
             </div>
           </div>
           <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
@@ -243,9 +293,15 @@ export function YieldHealthCard({
               const fieldStatus = coverageStatus(coverage, health.sourceRiskCoverage.threshold);
               return (
                 <div key={field} className="flex items-center justify-between gap-3 text-xs">
-                  <span className="text-muted-foreground">{label}</span>
+                  <span className="text-muted-foreground">
+                    {label}
+                    {coverage ? ` · ${coverage.populatedCount}/${coverage.eligibleCount}` : ""}
+                  </span>
                   <span className={`font-mono font-semibold ${statusClassName(fieldStatus)}`}>
-                    {coverage ? formatPercentFromRatio(coverage.coverageRatio, 0) : "-"}
+                    {coverage ? coverageRatioLabel(coverage.coverageRatio) : "-"}
+                    {coverage
+                      ? ` (best ${coverageRatioLabel(coverage.bestCoverageRatio)} / alt ${coverageRatioLabel(coverage.altCoverageRatio)})`
+                      : ""}
                   </span>
                 </div>
               );
@@ -258,12 +314,24 @@ export function YieldHealthCard({
             <div className="text-xs font-medium text-muted-foreground">Coverage audit operator queue</div>
             <div className="text-xs text-muted-foreground">
               Actions: {health.coverageAudit.allowedActions.join(", ")}
+              {health.coverageAudit.queueDisplayOnly ? " (display-only)" : ""}
             </div>
           </div>
           <div className="grid gap-3 xl:grid-cols-2">
             <QueueItems title="Headline gaps" items={health.coverageAudit.headlineGaps} />
             <QueueItems title="Recommendation candidates" items={health.coverageAudit.recommendationCandidates} />
           </div>
+          {health.coverageAudit.queueTotals ? (
+            <div className="mt-2 text-[11px] text-muted-foreground">
+              Queue totals:{" "}
+              {Object.entries(health.coverageAudit.queueTotals.byKind)
+                .map(([kind, count]) => `${kind} ${count}`)
+                .join(" · ") || "none"}
+              {" · "}
+              {health.coverageAudit.queueTotals.suppressedItemCount} suppressed
+              {health.coverageAudit.queueTotals.truncated ? " · producer-truncated" : ""}
+            </div>
+          ) : null}
           <div className="mt-2 text-[11px] text-muted-foreground">
             Queue state: {health.coverageAudit.queuePersistence}
           </div>
@@ -280,6 +348,25 @@ export function YieldHealthCard({
           <span>
             Coverage queue: {auditQueueSubtext(health.coverageAudit)}
           </span>
+          {health.liveSafetyHydration ? (
+            <span>
+              Live safety hydration:{" "}
+              <span className={statusClassName(health.liveSafetyHydration.status)}>
+                {health.liveSafetyHydration.status}
+              </span>
+              {health.liveSafetyHydration.reason ? ` (${health.liveSafetyHydration.reason})` : ""}
+              {health.liveSafetyHydration.fallback ? ` · ${health.liveSafetyHydration.fallback}` : ""}
+            </span>
+          ) : null}
+          {health.pysInputs ? (
+            <span>
+              PYS inputs:{" "}
+              <span className={statusClassName(health.pysInputs.status)}>
+                {health.pysInputs.persistedCount ?? "unknown"}
+              </span>{" "}
+              persisted · {health.pysInputs.nullCount ?? "unknown"} null
+            </span>
+          ) : null}
           <span>
             Status impact: {health.statusImpact === "public-critical" ? "public critical" : "admin watch"}
           </span>

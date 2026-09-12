@@ -86,8 +86,20 @@ describe("PysHistorySparkline", () => {
     render(<PysHistorySparkline history={history} />);
     const svg = screen.getByRole("img");
     const label = svg.getAttribute("aria-label") ?? "";
-    expect(label).toContain("30-day PYS history");
+    expect(label).toContain("9-day PYS history");
     expect(label).toContain("starts at 50");
     expect(label).toContain("ends at 59");
+  });
+
+  it("labels the observed span, not the requested window, when data is shorter (E22)", () => {
+    const history: PysHistorySparklinePoint[] = Array.from({ length: 8 }, (_, i) => ({
+      ts: BASE_TS + i * 60 * 60 * 1000, // hourly points: 7h span
+      pysAtPublish: 50 + i,
+    }));
+    render(<PysHistorySparkline history={history} />);
+    const svg = screen.getByRole("img");
+    const label = svg.getAttribute("aria-label") ?? "";
+    expect(label).toContain("1-day PYS history");
+    expect(label).not.toContain("30-day PYS history");
   });
 });

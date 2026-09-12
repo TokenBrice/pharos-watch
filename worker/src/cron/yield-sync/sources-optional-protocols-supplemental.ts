@@ -1,5 +1,6 @@
 import { CHAIN_META } from "@shared/lib/chains";
 import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
+import { isRecord } from "@shared/lib/type-guards";
 import { throwIfAborted } from "../../lib/abort";
 import { logWorkerEvent } from "../../lib/structured-log";
 import { fetchJsonWithRetry } from "../../lib/fetch-retry";
@@ -70,6 +71,16 @@ interface TrackedMorphoAsset {
 interface TrackedMorphoFilters {
   symbols: string[];
   assetsByChainAddress: Map<string, TrackedMorphoAsset>;
+}
+
+/**
+ * B1: supplemental fetchers report whether an HTTP/parse failure or a partial
+ * pagination ended the run early, so the writer can retain the previous family
+ * snapshot instead of publishing a fresh, incomplete one.
+ */
+export interface SupplementalFamilyFetchResult {
+  candidates: ResolvedYieldCandidate[];
+  degraded: boolean;
 }
 
 function isNonEmptyString(value: unknown): value is string {
@@ -153,13 +164,14 @@ function isSanePendleExpiry(expiry: string, nowMs: number): boolean {
   return expiryMs >= minExpiryMs && expiryMs <= maxExpiryMs;
 }
 
-export async function fetchMorphoVaultSources(signal?: AbortSignal): Promise<ResolvedYieldCandidate[]> {
+export async function fetchMorphoVaultSources(signal?: AbortSignal): Promise<SupplementalFamilyFetchResult> {
   const budget = createOptionalSourceBudget("Morpho vault sources", OPTIONAL_PROTOCOL_API_BUDGET_MS, signal);
   const filters = buildMorphoFilters();
-  if (filters.symbols.length === 0) return [];
+  if (filters.symbols.length === 0) return { candidates: [], degraded: false };
 
   try {
     const results: ResolvedYieldCandidate[] = [];
+    let degraded = false;
     let skip = 0;
     while (!budget.budgetController.signal.aborted) {
       throwIfAborted(budget.budgetController.signal);
@@ -186,11 +198,15 @@ export async function fetchMorphoVaultSources(signal?: AbortSignal): Promise<Res
         0,
         { timeoutMs: OPTIONAL_PROTOCOL_REQUEST_TIMEOUT_MS },
       );
-      if (!result?.response.ok) return results;
+      if (!result?.response.ok) return { candidates: results, degraded: true };
 
       const body = result.body;
       const items = body.data?.vaults?.items;
-      if (!Array.isArray(items) || items.length === 0) break;
+      if (!Array.isArray(items)) {
+        degraded = true;
+        break;
+      }
+      if (items.length === 0) break;
 
       for (const vault of items) {
         const apy = vault.state?.netApy;
@@ -228,7 +244,8 @@ export async function fetchMorphoVaultSources(signal?: AbortSignal): Promise<Res
       skip += items.length;
       if (items.length < MORPHO_PAGE_SIZE) break;
     }
-    return results;
+    // A budget abort exits pagination mid-run, so the snapshot is partial.
+    return { candidates: results, degraded: degraded || budget.budgetController.signal.aborted };
   } catch (error) {
     if (signal?.aborted) throw error instanceof Error ? error : new Error(String(error));
     if (budget.budgetController.signal.aborted) {
@@ -239,7 +256,7 @@ export async function fetchMorphoVaultSources(signal?: AbortSignal): Promise<Res
         event: "morpho-sources-budget-exhausted",
         message: "Morpho vault sources budget exhausted; continuing without this source family",
       });
-      return [];
+      return { candidates: [], degraded: true };
     }
     logWorkerEvent({
       scope: "lib",
@@ -249,16 +266,17 @@ export async function fetchMorphoVaultSources(signal?: AbortSignal): Promise<Res
       message: "Morpho vault sources failed",
       error,
     });
-    return [];
+    return { candidates: [], degraded: true };
   } finally {
     budget.cleanup();
   }
 }
 
-export async function fetchPendleMarketSources(signal?: AbortSignal): Promise<ResolvedYieldCandidate[]> {
+export async function fetchPendleMarketSources(signal?: AbortSignal): Promise<SupplementalFamilyFetchResult> {
   const results: ResolvedYieldCandidate[] = [];
   const budget = createOptionalSourceBudget("Pendle market sources", OPTIONAL_PROTOCOL_API_BUDGET_MS, signal);
   const nowMs = Date.now();
+  let degraded = false;
 
   try {
     for (const chainId of [1, 42161, 8453]) {
@@ -278,10 +296,17 @@ export async function fetchPendleMarketSources(signal?: AbortSignal): Promise<Re
             0,
             { timeoutMs: OPTIONAL_PROTOCOL_REQUEST_TIMEOUT_MS },
           );
-          if (!result?.response.ok) break;
+          if (!result?.response.ok) {
+            degraded = true;
+            break;
+          }
 
           const body = result.body;
-          if (!Array.isArray(body.results) || body.results.length === 0) break;
+          if (!Array.isArray(body.results)) {
+            degraded = true;
+            break;
+          }
+          if (body.results.length === 0) break;
 
           for (const market of body.results) {
             if (!market.categoryIds?.includes("stables")) continue;
@@ -342,6 +367,7 @@ export async function fetchPendleMarketSources(signal?: AbortSignal): Promise<Re
             message: "Pendle sources budget exhausted; keeping partial results",
             metadata: { resultCount: results.length },
           });
+          degraded = true;
           break;
         }
         logWorkerEvent({
@@ -353,17 +379,19 @@ export async function fetchPendleMarketSources(signal?: AbortSignal): Promise<Re
           metadata: { chainId },
           error,
         });
+        degraded = true;
       }
     }
-    return results;
+    return { candidates: results, degraded };
   } finally {
     budget.cleanup();
   }
 }
 
-export async function fetchYearnKongSources(signal?: AbortSignal): Promise<ResolvedYieldCandidate[]> {
+export async function fetchYearnKongSources(signal?: AbortSignal): Promise<SupplementalFamilyFetchResult> {
   const results: ResolvedYieldCandidate[] = [];
   const budget = createOptionalSourceBudget("Yearn Kong sources", OPTIONAL_PROTOCOL_API_BUDGET_MS, signal);
+  let degraded = false;
 
   try {
     for (const chainId of [1, 10, 137, 8453, 42161]) {
@@ -392,11 +420,17 @@ export async function fetchYearnKongSources(signal?: AbortSignal): Promise<Resol
           0,
           { timeoutMs: OPTIONAL_PROTOCOL_REQUEST_TIMEOUT_MS },
         );
-        if (!result?.response.ok) continue;
+        if (!result?.response.ok) {
+          degraded = true;
+          continue;
+        }
 
         const body = result.body;
         const vaults = body.data?.vaults;
-        if (!Array.isArray(vaults)) continue;
+        if (!Array.isArray(vaults)) {
+          degraded = true;
+          continue;
+        }
 
         for (const vault of vaults) {
           if (
@@ -459,6 +493,7 @@ export async function fetchYearnKongSources(signal?: AbortSignal): Promise<Resol
             message: "Yearn Kong sources budget exhausted; keeping partial results",
             metadata: { resultCount: results.length },
           });
+          degraded = true;
           break;
         }
         logWorkerEvent({
@@ -470,15 +505,16 @@ export async function fetchYearnKongSources(signal?: AbortSignal): Promise<Resol
           metadata: { chainId },
           error,
         });
+        degraded = true;
       }
     }
-    return results;
+    return { candidates: results, degraded };
   } finally {
     budget.cleanup();
   }
 }
 
-export async function fetchBeefySources(signal?: AbortSignal): Promise<ResolvedYieldCandidate[]> {
+export async function fetchBeefySources(signal?: AbortSignal): Promise<SupplementalFamilyFetchResult> {
   const budget = createOptionalSourceBudget("Beefy sources", OPTIONAL_PROTOCOL_API_BUDGET_MS, signal);
   try {
     const [apyRes, vaultsRes, tvlRes] = await Promise.all([
@@ -501,12 +537,17 @@ export async function fetchBeefySources(signal?: AbortSignal): Promise<ResolvedY
         { timeoutMs: OPTIONAL_PROTOCOL_REQUEST_TIMEOUT_MS },
       ),
     ]);
-    if (!apyRes?.response.ok || !vaultsRes?.response.ok || !tvlRes?.response.ok) return [];
+    if (!apyRes?.response.ok || !vaultsRes?.response.ok || !tvlRes?.response.ok) {
+      return { candidates: [], degraded: true };
+    }
 
     const apyMap = apyRes.body;
     const vaults = vaultsRes.body;
     const tvlMap = tvlRes.body;
-    if (!Array.isArray(vaults)) return [];
+    if (!Array.isArray(vaults)) return { candidates: [], degraded: true };
+    // A different document shape here silently matches nothing, so treat it as
+    // a parse failure rather than as "the provider has no eligible vaults".
+    if (!isRecord(apyMap) || !isRecord(tvlMap)) return { candidates: [], degraded: true };
 
     const results: ResolvedYieldCandidate[] = [];
     for (const vault of vaults) {
@@ -542,7 +583,7 @@ export async function fetchBeefySources(signal?: AbortSignal): Promise<ResolvedY
         },
       });
     }
-    return results;
+    return { candidates: results, degraded: false };
   } catch (error) {
     if (signal?.aborted) throw error instanceof Error ? error : new Error(String(error));
     if (budget.budgetController.signal.aborted) {
@@ -553,7 +594,7 @@ export async function fetchBeefySources(signal?: AbortSignal): Promise<ResolvedY
         event: "beefy-sources-budget-exhausted",
         message: "Beefy sources budget exhausted; continuing without this source family",
       });
-      return [];
+      return { candidates: [], degraded: true };
     }
     logWorkerEvent({
       scope: "lib",
@@ -563,7 +604,7 @@ export async function fetchBeefySources(signal?: AbortSignal): Promise<ResolvedY
       message: "Beefy sources failed",
       error,
     });
-    return [];
+    return { candidates: [], degraded: true };
   } finally {
     budget.cleanup();
   }

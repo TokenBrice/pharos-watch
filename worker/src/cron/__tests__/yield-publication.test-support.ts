@@ -43,7 +43,9 @@ export function mockD1(tables: MockTableConfig[] = []) {
   return createMockD1([...tables, ...DEFAULT_YIELD_PUBLICATION_D1_TABLES]);
 }
 
-export function makeBenchmarkMeta(): ParsedYieldBenchmarkMeta {
+export function makeBenchmarkMeta(
+  overrides: Partial<ParsedYieldBenchmarkMeta> = {},
+): ParsedYieldBenchmarkMeta {
   return {
     key: "USD",
     label: "USD 3M T-Bill",
@@ -60,7 +62,22 @@ export function makeBenchmarkMeta(): ParsedYieldBenchmarkMeta {
     lastMarketRecordDate: "2026-03-25",
     lastMarketFetchedAt: Math.floor(FIXED_NOW.getTime() / 1000),
     lastMarketSource: "fred-dgs3mo",
+    ...overrides,
   };
+}
+
+const NULL_BENCHMARK_CURRENCIES = ["EUR", "CHF", "GBP", "JPY", "MXN", "BRL", "AUD", "CAD", "RUB", "TRY", "SGD"] as const;
+
+/** USD-backed registry with every other tracked currency left empty. */
+export function makeBenchmarkRegistry(
+  usd: ParsedYieldBenchmarkMeta,
+  overrides: Partial<ParsedYieldBenchmarkRegistry> = {},
+): ParsedYieldBenchmarkRegistry {
+  const registry = { USD: usd, ...overrides } as ParsedYieldBenchmarkRegistry;
+  for (const currency of NULL_BENCHMARK_CURRENCIES) {
+    if (!(currency in registry)) registry[currency] = null;
+  }
+  return registry;
 }
 
 export function makeYieldSourceMeta(): YieldSourceInputMeta {
@@ -115,11 +132,15 @@ export function makeEvaluatedSource(overrides: Partial<EvaluatedYieldSource> = {
     safetyScore: 82,
     safetyGrade: "A-",
     yieldToRisk: 3.2,
-    excessYield: 0.6,
+    // apy30d (4.6) - benchmarkRate (4.2): evaluation.ts writes the row's own
+    // excess, so a fixture literal that disagrees launders both numbers.
+    excessYield: 0.4,
     benchmarkKey: "USD",
     benchmarkLabel: benchmarkMeta.label!,
     benchmarkCurrency: benchmarkMeta.currency!,
     benchmarkRate: benchmarkMeta.rate,
+    usdBenchmarkRate: benchmarkMeta.rate,
+    hurdleRebase: 0,
     benchmarkRecordDate: benchmarkMeta.recordDate,
     benchmarkIsFallback: false,
     benchmarkFallbackMode: null,
@@ -156,25 +177,20 @@ export function makeEvaluatedSource(overrides: Partial<EvaluatedYieldSource> = {
 export function buildPayloadWithObservedAt(
   sourceObservedAt: number,
   overrides: Partial<EvaluatedYieldSource> = {},
+  options: {
+    /**
+     * Registry entries the payload publishes alongside the USD reference. The
+     * row's own benchmark fields always come from the evaluated source, so a
+     * non-USD case must override both sides to stay coherent.
+     */
+    benchmarkRegistry?: Partial<ParsedYieldBenchmarkRegistry>;
+  } = {},
 ) {
   const startSec = Math.floor(FIXED_NOW.getTime() / 1000);
   const source = makeEvaluatedSource(overrides);
   const comparisonAnchorObservedAt = source.comparisonAnchorObservedAt ?? null;
   const benchmark = makeBenchmarkMeta();
-  const benchmarks: ParsedYieldBenchmarkRegistry = {
-    USD: benchmark,
-    EUR: null,
-    CHF: null,
-    GBP: null,
-    JPY: null,
-    MXN: null,
-    BRL: null,
-    AUD: null,
-    CAD: null,
-    RUB: null,
-    TRY: null,
-    SGD: null,
-  };
+  const benchmarks = makeBenchmarkRegistry(benchmark, options.benchmarkRegistry);
 
   return buildYieldRankingsPayloadFromEvaluatedSources({
     evaluatedSources: [source],

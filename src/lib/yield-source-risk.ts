@@ -149,9 +149,9 @@ const NATIVE_SOURCE_ROLES: Partial<Record<YieldSourceRole, true>> = {
 
 /**
  * Whether the yield accrues on the asset itself rather than in an external
- * venue. `sourceRole` is authoritative wherever the row carries it; the
- * leaderboard's summary projection omits the field, so the holder-versus-
- * opportunity yield-type split decides there.
+ * venue. `sourceRole` is authoritative wherever the row carries it — the
+ * leaderboard's summary projection included — so the holder-versus-
+ * opportunity yield-type split is only a fallback for rows that omit it.
  */
 export function isNativeYieldSource(
   sourceRole: YieldSourceRole | null | undefined,

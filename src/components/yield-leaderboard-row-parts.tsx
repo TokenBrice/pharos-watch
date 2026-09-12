@@ -10,6 +10,7 @@ import { YieldSourceRiskBar } from "@/components/yield-source-risk-bar";
 import { YieldFreshnessLabel } from "@/components/yield-freshness-label";
 import { YieldWhyPysStrip } from "@/components/yield-why-pys-strip";
 import { YieldDecisionLedgerCard } from "@/components/yield-decision-ledger-card";
+import { clampScore } from "@shared/lib/math";
 import {
   getYieldBenchmarkSelectionMode,
   getYieldWorkbenchSourceRole,
@@ -27,7 +28,7 @@ import {
   isOpportunityDerivedSafety,
 } from "@shared/lib/yield-opportunity-provenance";
 import { formatCurrency, formatPercent, formatScore } from "@shared/lib/format";
-import { clampScore } from "@shared/lib/math";
+import { YIELD_BENCHMARK_KEY_CURRENCY } from "@shared/types/yield";
 import { computePysBreakdown, formatYieldWarningSignal, formatYieldWarningSignalDescription, getPysColor } from "@/lib/yield-constants";
 import {
   formatYieldSourceRiskSummary,
@@ -53,6 +54,7 @@ type PysBreakdownValues = {
   adjustedRiskPenalty: number;
   benchmarkAdjustment: number;
   benchmarkSpread: number | null;
+  hurdleRebase: number;
   effectiveYield: number;
   sourceRiskPenalty: number;
   sustainabilityMult: number;
@@ -181,6 +183,7 @@ export function YieldPysValue({
               effectiveYield={breakdown.effectiveYield}
               benchmarkAdjustment={breakdown.benchmarkAdjustment}
               benchmarkSpread={breakdown.benchmarkSpread}
+              hurdleRebase={breakdown.hurdleRebase}
               benchmarkLabel={row.benchmarkLabel}
               benchmarkSelectionMode={getYieldBenchmarkSelectionMode(row)}
               sourceRiskPenalty={breakdown.sourceRiskPenalty}
@@ -593,10 +596,41 @@ export function isOpportunityDerivedYieldRow(row: YieldViewModelRow): boolean {
   return isOpportunityDerivedSafety(row.provenance?.safetyProvenance);
 }
 
-export function deriveYieldRowDisplay(row: YieldViewModelRow, scalingFactor: number) {
+export function formatYieldSafetySrLabel(
+  grade: YieldViewModelRow["safetyGrade"],
+  safetyScore: number | null,
+): string {
+  return grade && grade !== "NR"
+    ? safetyScore !== null
+      ? `Safety grade: ${grade}, score ${Math.round(safetyScore)} out of 100`
+      : `Safety grade: ${grade}`
+    : safetyScore !== null
+      ? `Safety score: ${Math.round(safetyScore)} out of 100, grade unavailable`
+      : "Safety unavailable";
+}
+
+export function deriveYieldRowDisplay(
+  row: YieldViewModelRow,
+  scalingFactor: number,
+  /**
+   * USD reference the effective yield is re-based onto. Callers must pass the
+   * v8.43-gated value (`resolveYieldDisplayRebaseReferenceRate(
+   * methodology.version, riskFreeRate)`): rows scored before the re-base
+   * release were published without one, so an ungated risk-free rate would
+   * render a re-base line the badge never used.
+   */
+  usdBenchmarkRate?: number | null,
+) {
   const labels = formatYieldRowLabels(row);
   const presentation = deriveYieldRowPresentation(row);
   const sourceRole = getYieldWorkbenchSourceRole(row);
+  // Same resolution the scoring/read paths use: the row's carried currency
+  // wins; the benchmark-key table fills the summary projection in (USD_EFFR
+  // rows are USD-benchmarked and must take no v8.43 re-base).
+  const benchmarkCurrency =
+    ("benchmarkCurrency" in row ? row.benchmarkCurrency : null) ??
+    (row.benchmarkKey != null ? YIELD_BENCHMARK_KEY_CURRENCY[row.benchmarkKey] : null) ??
+    null;
   const breakdown = {
     ...computePysBreakdown(
       row.apy30d,
@@ -604,6 +638,8 @@ export function deriveYieldRowDisplay(row: YieldViewModelRow, scalingFactor: num
       row.yieldStability,
       row.benchmarkRate,
       row.sourceRisk?.sourceRiskPenalty ?? null,
+      usdBenchmarkRate,
+      benchmarkCurrency,
     ),
     scalingFactor,
   };
@@ -639,21 +675,14 @@ function formatYieldRowLabels(row: YieldViewModelRow) {
     row.sourceTvlUsd !== null ? formatCurrency(row.sourceTvlUsd) : tvlIsNative ? "Native" : "—";
   const apyLabel = formatPercent(row.apy30d);
   const stabilityPct = row.yieldStability !== null ? Math.round(row.yieldStability * 100) : null;
-
+  const apySrLabel = `30-day APY: ${formatPercent(row.apy30d)}`;
   return {
     apyLabel,
     tvlLabel,
     tvlIsNative,
     stabilityPct,
-    apySrLabel: `30-day APY: ${row.apy30d.toFixed(1)} percent`,
-    safetySrLabel:
-      grade && grade !== "NR"
-        ? safetyScore !== null
-          ? `Safety grade: ${grade}, score ${Math.round(safetyScore)} out of 100`
-          : `Safety grade: ${grade}`
-        : safetyScore !== null
-          ? `Safety score: ${Math.round(safetyScore)} out of 100, grade unavailable`
-          : "Safety unavailable",
+    apySrLabel,
+    safetySrLabel: formatYieldSafetySrLabel(grade, safetyScore),
     pysSrLabel:
       row.pharosYieldScore !== null
         ? `Pharos Yield Score ${formatScore(row.pharosYieldScore)} out of 100`

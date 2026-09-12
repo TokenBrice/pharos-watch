@@ -12,7 +12,10 @@ import type { YieldHistoryPoint } from "@shared/types";
 export const BRAND_ACCENT = "oklch(0.72 0.14 248)";
 export const DEFAULT_DAYS = 90;
 export const PRESET_DAYS = [7, 30, 90, YIELD_HISTORY_MAX_DAYS] as const;
-const MAX_OVERLAY_SOURCES = 4;
+/* Live retained-source counts reach 7 (usdc-circle), so a 4-source cap made the
+   workbench's "every retained source" claim false (E19). Sources beyond the cap
+   are still reported to the legend as omitted. */
+const MAX_OVERLAY_SOURCES = 8;
 const SOURCE_KEY_SUFFIX_LENGTH = 12;
 
 /* Spike-detection parameters (mirrors the `yield-spike` warning signal in docs/yield-intelligence.md):
@@ -35,6 +38,8 @@ interface SpikeAnnotation {
   apy: number;
   trailingAvg: number;
   ratio: number;
+  /** Effective trailing span the average actually covers, in whole days (E22). */
+  windowDays: number;
 }
 
 function computeSpikeAnnotations(
@@ -58,10 +63,13 @@ function computeSpikeAnnotations(
       .filter((p) => p.date >= windowStart && p.apy > 0);
 
     let avg: number;
+    let spanStartTs: number;
     if (trailingPoints.length >= 3) {
       avg = trailingPoints.reduce((sum, p) => sum + p.apy, 0) / trailingPoints.length;
+      spanStartTs = trailingPoints[0]!.date;
     } else if (seriesMean > 0) {
       avg = seriesMean;
+      spanStartTs = chartData[0]!.date;
     } else {
       continue;
     }
@@ -69,7 +77,16 @@ function computeSpikeAnnotations(
 
     const ratio = point.apy / avg;
     if (ratio >= SPIKE_RATIO_THRESHOLD) {
-      result.push({ date: point.date, apy: point.apy, trailingAvg: avg, ratio });
+      // The trailing window is bounded by the fetched range, so a 7d view
+      // averages ~7 days — label the span actually used, not "30d" (E22).
+      const windowDays = Math.max(
+        1,
+        Math.min(
+          Math.round(SPIKE_WINDOW_MS / DAY_MS),
+          Math.round((point.date - spanStartTs) / DAY_MS),
+        ),
+      );
+      result.push({ date: point.date, apy: point.apy, trailingAvg: avg, ratio, windowDays });
     }
   }
   return result;
@@ -252,7 +269,7 @@ function getSourceDisplay(
   fallbackLabel = sourceKey,
 ): YieldHistorySourceDisplay {
   if (sourceKey === "best") {
-    return { sourceKey, label: "Best yield" };
+    return { sourceKey, label: "Canonical (published) source" };
   }
 
   const source = allSources.find((candidate) => candidate.sourceKey === sourceKey);
@@ -363,6 +380,7 @@ export function useYieldHistoryChartModel({
       : "best";
 
   const overlayKeys = externalSourceKeys?.slice(0, MAX_OVERLAY_SOURCES) ?? [];
+  const omittedOverlayKeys = externalSourceKeys?.slice(MAX_OVERLAY_SOURCES) ?? [];
   const primaryOverlayKey = overlayKeys[0] ?? null;
   const additionalOverlayKeys = overlayKeys.slice(1);
   const primarySourceKey = primaryOverlayKey ?? effectiveSelectedSourceKey;
@@ -373,25 +391,16 @@ export function useYieldHistoryChartModel({
     sourceKey: primarySourceKey === "best" ? null : primarySourceKey,
   });
 
-  const overlay1 = useYieldHistory(stablecoinId, {
-    days,
-    mode: "source",
-    sourceKey: additionalOverlayKeys[0] ?? null,
-    enabled: additionalOverlayKeys.length >= 1,
-  });
-  const overlay2 = useYieldHistory(stablecoinId, {
-    days,
-    mode: "source",
-    sourceKey: additionalOverlayKeys[1] ?? null,
-    enabled: additionalOverlayKeys.length >= 2,
-  });
-  const overlay3 = useYieldHistory(stablecoinId, {
-    days,
-    mode: "source",
-    sourceKey: additionalOverlayKeys[2] ?? null,
-    enabled: additionalOverlayKeys.length >= 3,
-  });
-  const overlayQueries = [overlay1, overlay2, overlay3].slice(0, additionalOverlayKeys.length);
+  // Fixed-width overlay slots (React hooks rules): MAX_OVERLAY_SOURCES - 1.
+  const overlayQueries = [
+    useYieldHistory(stablecoinId, { days, mode: "source", sourceKey: additionalOverlayKeys[0] ?? null, enabled: additionalOverlayKeys.length >= 1 }),
+    useYieldHistory(stablecoinId, { days, mode: "source", sourceKey: additionalOverlayKeys[1] ?? null, enabled: additionalOverlayKeys.length >= 2 }),
+    useYieldHistory(stablecoinId, { days, mode: "source", sourceKey: additionalOverlayKeys[2] ?? null, enabled: additionalOverlayKeys.length >= 3 }),
+    useYieldHistory(stablecoinId, { days, mode: "source", sourceKey: additionalOverlayKeys[3] ?? null, enabled: additionalOverlayKeys.length >= 4 }),
+    useYieldHistory(stablecoinId, { days, mode: "source", sourceKey: additionalOverlayKeys[4] ?? null, enabled: additionalOverlayKeys.length >= 5 }),
+    useYieldHistory(stablecoinId, { days, mode: "source", sourceKey: additionalOverlayKeys[5] ?? null, enabled: additionalOverlayKeys.length >= 6 }),
+    useYieldHistory(stablecoinId, { days, mode: "source", sourceKey: additionalOverlayKeys[6] ?? null, enabled: additionalOverlayKeys.length >= 7 }),
+  ].slice(0, additionalOverlayKeys.length);
 
   const chartData = useMemo<YieldHistoryChartPoint[]>(() => {
     return (historyQuery.data?.history ?? [])
@@ -412,7 +421,7 @@ export function useYieldHistoryChartModel({
       return series;
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps -- overlay query result refs are fixed-width
-  }, [overlay1.data, overlay2.data, overlay3.data, overlayQueries.length]);
+  }, [additionalOverlayKeys.length, overlayQueries[0]?.data, overlayQueries[1]?.data, overlayQueries[2]?.data, overlayQueries[3]?.data, overlayQueries[4]?.data, overlayQueries[5]?.data, overlayQueries[6]?.data]);
 
   const mergedChartData = useMemo<YieldHistoryChartSeriesPoint[]>(() => {
     if (overlayData.length === 0 || overlayData.every((series) => series.size === 0)) {
@@ -520,6 +529,7 @@ export function useYieldHistoryChartModel({
     mergedChartData,
     overlayLabels,
     overlaySeriesKeys: additionalOverlayKeys.map((_, index) => `apy_overlay_${index}`),
+    omittedOverlayKeys,
     hasBreakdown,
     effectiveShowBreakdown,
     tickValues,

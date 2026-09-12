@@ -35,6 +35,28 @@ export const YIELD_BENCHMARK_KEY_VALUES = [
   "SGD",
 ] as const;
 export type YieldBenchmarkKey = (typeof YIELD_BENCHMARK_KEY_VALUES)[number];
+
+/**
+ * Currency each benchmark key is quoted in. Every key names its own currency
+ * except `USD_EFFR`, an alternative USD curve: the yield v8.43 hurdle re-base is
+ * skipped when the row's benchmark currency is already USD (B24), so callers
+ * replaying stored inputs need the key → currency mapping.
+ */
+export const YIELD_BENCHMARK_KEY_CURRENCY: Record<YieldBenchmarkKey, string> = {
+  USD: "USD",
+  USD_EFFR: "USD",
+  EUR: "EUR",
+  CHF: "CHF",
+  GBP: "GBP",
+  JPY: "JPY",
+  MXN: "MXN",
+  BRL: "BRL",
+  AUD: "AUD",
+  CAD: "CAD",
+  RUB: "RUB",
+  TRY: "TRY",
+  SGD: "SGD",
+};
 export const YIELD_PYS_NULL_REASONS = [
   "apy-non-positive",
   "effective-yield-non-positive",
@@ -117,6 +139,9 @@ const YIELD_RANK_CHANGE_DRIVER_VALUES = [
   "freshness",
   "volatility",
   "tvl-depth",
+  // A methodology release moved the published score independently of the row's
+  // own inputs (e.g. the v8.43 hurdle re-base), so no evidence field explains it.
+  "methodology",
 ] as const;
 export type YieldRankChangeDriver = (typeof YIELD_RANK_CHANGE_DRIVER_VALUES)[number];
 
@@ -247,8 +272,15 @@ export function normalizeYieldSourceRisk(value: unknown): YieldSourceRisk | null
   return parsed.success ? parsed.data : null;
 }
 
+/**
+ * Written `pys_inputs_at_publish` schema version. v2 adds the v8.43 hurdle
+ * re-base inputs (`usdBenchmarkRate`, `hurdleRebase`); v1 snapshots stay readable
+ * so the read side can still replay pre-v8.43 rows.
+ */
+export const YIELD_PYS_INPUTS_AT_PUBLISH_SCHEMA_VERSION = 2;
+
 export const YieldPysInputsAtPublishSchema = z.object({
-  schemaVersion: z.literal(1),
+  schemaVersion: z.union([z.literal(1), z.literal(YIELD_PYS_INPUTS_AT_PUBLISH_SCHEMA_VERSION)]),
   methodologyVersion: z.string().min(1),
   apy30d: z.number(),
   safetyScore: z.number(),
@@ -259,7 +291,12 @@ export const YieldPysInputsAtPublishSchema = z.object({
   scoreQualification: z.enum(YIELD_SCORE_QUALIFICATION_VALUES),
   benchmarkKey: z.enum(YIELD_BENCHMARK_KEY_VALUES),
   evidenceClass: z.enum(YIELD_EVIDENCE_CLASS_VALUES),
+  /** Reference (USD) risk-free rate the row's hurdle was re-based onto (v8.43+). */
+  usdBenchmarkRate: z.number().optional(),
+  /** `usdBenchmarkRate - benchmarkRate` as scored, or 0 when no re-base applied. */
+  hurdleRebase: z.number().optional(),
 });
+export type YieldPysInputsAtPublish = z.infer<typeof YieldPysInputsAtPublishSchema>;
 
 const YieldHistoryPointSchema = z.object({
   date: z.union([z.number(), z.string()]),
@@ -282,7 +319,15 @@ const YieldHistoryPointSchema = z.object({
   safetyAtPublish: z.number().nullable().optional(),
   varianceAtPublish: z.number().nullable().optional(),
   pysInputsAtPublish: YieldPysInputsAtPublishSchema.nullable().optional(),
-  pysReproducibility: z.enum(["exact", "legacy-partial"]).optional(),
+  /**
+   * Derived by replaying `computePYS` from the stored inputs: `exact` reproduces
+   * `pysAtPublish`, `not-scored` is a row the publisher left NR (its snapshot
+   * exists but no number was published to reproduce), `legacy-partial` is a
+   * pre-v8.43 snapshot whose missing re-base inputs cannot be verified for a
+   * non-USD benchmark, `invalid` is a current-producer defect (no stored input
+   * set reproduces the row).
+   */
+  pysReproducibility: z.enum(["exact", "not-scored", "legacy-partial", "invalid"]).optional(),
 });
 
 const YieldPublicDecisionAlternativeSchema = z.object({
@@ -293,7 +338,7 @@ const YieldPublicDecisionAlternativeSchema = z.object({
   confidenceTier: z.enum(YIELD_SOURCE_CONFIDENCE_TIER_VALUES).optional(),
   calculationMode: z.enum(YIELD_CALCULATION_MODE_VALUES).optional(),
   evidenceClass: z.enum(YIELD_EVIDENCE_CLASS_VALUES).optional(),
-  evidenceCompleteness: z.number().min(0).max(1).optional(),
+  evidenceCompleteness: z.number().min(0).max(1).nullable().optional(),
   scoreQualification: z.enum(YIELD_SCORE_QUALIFICATION_VALUES).optional(),
   sourceRole: z.enum(YIELD_SOURCE_ROLE_VALUES).optional(),
   selectionRank: z.number().int().positive().optional(),
@@ -343,7 +388,7 @@ const AltYieldSourceSchema = z.object({
   confidenceTier: z.enum(YIELD_SOURCE_CONFIDENCE_TIER_VALUES).optional(),
   calculationMode: z.enum(YIELD_CALCULATION_MODE_VALUES).optional(),
   evidenceClass: z.enum(YIELD_EVIDENCE_CLASS_VALUES).optional(),
-  evidenceCompleteness: z.number().min(0).max(1).optional(),
+  evidenceCompleteness: z.number().min(0).max(1).nullable().optional(),
   scoreQualification: z.enum(YIELD_SCORE_QUALIFICATION_VALUES).optional(),
   selectionRank: z.number().int().positive().optional(),
   rejectionReasonCode: z.enum(YIELD_DECISION_REJECTION_REASON_CODES).optional(),
@@ -383,6 +428,14 @@ const YieldBenchmarkMetaSchema = z.object({
   isFallback: z.boolean(),
   fallbackMode: z.string().nullable(),
   isProxy: z.boolean().optional(),
+  /**
+   * Per-key bound on the age of this entry's own observation (`recordDate`).
+   * Published so consumers judge a monthly series (CAD, 45d) and a daily one
+   * (USD, 5d) against their real cadence instead of a single fallback bound.
+   */
+  maxRecordAgeSec: z.number().optional(),
+  /** Observation age at publication time; `null` when `recordDate` is absent or unparseable. */
+  recordAgeSec: z.number().nullable().optional(),
 });
 
 const YieldBenchmarkRegistrySchema = z.object({
@@ -449,7 +502,7 @@ const YieldRankingProvenanceSchema = z.object({
   confidenceTier: z.enum(["deterministic", "curated", "discovered", "fallback"]),
   calculationMode: z.enum(YIELD_CALCULATION_MODE_VALUES).optional(),
   evidenceClass: z.enum(YIELD_EVIDENCE_CLASS_VALUES).optional(),
-  evidenceCompleteness: z.number().min(0).max(1).optional(),
+  evidenceCompleteness: z.number().min(0).max(1).nullable().optional(),
   scoreQualification: z.enum(YIELD_SCORE_QUALIFICATION_VALUES).optional(),
   selectionMethod: z.literal("confidence-weighted"),
   selectionReason: z.string(),
@@ -561,6 +614,18 @@ const YieldResponseWarningSchema = z.object({
   reasons: z.array(z.string()).optional(),
 });
 
+/**
+ * Freshness envelope every cached yield response carries (`_meta`), mirroring
+ * `YieldSummaryFreshnessMetaSchema` in `yield-summary.ts`.
+ */
+const YieldResponseFreshnessMetaSchema = z
+  .object({
+    updatedAt: z.number(),
+    ageSeconds: z.number(),
+    status: z.enum(["fresh", "degraded", "stale"]),
+  })
+  .strict();
+
 export const YieldRankingsResponseSchema = z.object({
   rankings: z.array(YieldRankingSchema),
   riskFreeRate: z.number(),
@@ -568,6 +633,7 @@ export const YieldRankingsResponseSchema = z.object({
   scalingFactor: z.number(),
   medianApy: z.number(),
   updatedAt: z.number(),
+  _meta: YieldResponseFreshnessMetaSchema.optional(),
   provenance: YieldRankingsProvenanceSchema.nullable().optional(),
   warnings: z.array(YieldResponseWarningSchema).optional(),
   publication: YieldPublicationMetadataSchema.nullable().optional(),

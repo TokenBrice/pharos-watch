@@ -49,6 +49,13 @@ ORDER BY newest DESC
 LIMIT 20;
 ```
 
+```sql
+SELECT stablecoin_id, source_key, COUNT(*) AS daily_rows, MAX(snapshot_date) AS newest_day
+GROUP BY stablecoin_id, source_key
+ORDER BY newest_day DESC
+LIMIT 20;
+```
+
 ## Remediation
 
 - For a planned cleanup, follow the deployment-process sequence: deploy protections, arm writer pause, verify no active `sync-yield-data` lease, export targeted rows, rehearse delete and restore locally, run bounded production cleanup, then validate after the next post-V9 writer cycle.
@@ -68,6 +75,7 @@ LIMIT 20;
 - `cache['yield-history-cleanup:writer-pause']` is absent after cleanup.
 - `sync-yield-data` has a fresh post-cleanup run and is no longer returning writer-pause no-ops.
 - Targeted parent/source rows remain absent after the next post-V9 writer cycle.
+- `yield_history_daily` no longer holds rows for the targeted keys either: the cleanup deletes both tiers with the same key-set predicate, and the daily tier is re-materialized from raw history by the post-V9 writer's materialize-before-prune pass.
 - `GET /api/yield-rankings` returns a fresh non-empty payload.
 - `GET /api/yield-history?stablecoin=<wrapper-id>&days=365` returns expected wrapper-owned history without resurrecting parent-owned rows.
 

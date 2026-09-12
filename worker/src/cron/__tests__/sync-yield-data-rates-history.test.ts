@@ -78,6 +78,10 @@ describe("syncYieldData", () => {
               apyMean30d: 0,
             }),
       ], Math.floor(Date.now() / 1000)),
+      // Scoring evidence: without the benchmark registry the USD entry falls back
+      // to the hardcoded constant (ageSeconds null) and both rows publish
+      // stale-benchmark NR, which B13 no longer publishes.
+      risk_free_rate: cacheRow("4.0", nowSec),
     });
     vi.mocked(fixtureShouldAttemptFetch).mockResolvedValue(false);
     fixtureMockFetch([]);
@@ -126,6 +130,10 @@ describe("syncYieldData", () => {
 
     installYieldCacheReader(vi.mocked(fixtureGetCache), {
       "dl-stablecoin-pools": dlPoolsCacheRow([], nowSec),
+      // Scoring evidence: without the benchmark registry the USD entry falls back
+      // to the hardcoded constant (ageSeconds null) and every row is a
+      // stale-benchmark NR row that B13 no longer publishes.
+      risk_free_rate: cacheRow("4.0", nowSec),
     });
     vi.mocked(fixtureShouldAttemptFetch).mockResolvedValue(false);
     fixtureMockFetch([]);
@@ -711,7 +719,10 @@ describe("syncYieldData", () => {
     expect(onChainRow?.exchange_rate_prev).toBe(1.0);
 
     const metadata = JSON.parse(result.metadata ?? "{}") as { sourceSwitches?: number };
-    expect(metadata.sourceSwitches).toBe(1);
+    // B2: the legacy history's best source (`pool-sdai-native`) is not resolved in
+    // this run at all — a source that is absent is a fetch gap, not a switch, so
+    // the counter stays put and the winner records `previous-source-transiently-missing`.
+    expect(metadata.sourceSwitches).toBe(0);
   });
 
   it("reuses legacy B.Protocol history after normalizing the LUSD deterministic source key", async () => {
@@ -759,7 +770,15 @@ describe("syncYieldData", () => {
 
     const onChainRow = findPublishedYieldRow(db, "lusd-liquity", (row) => row.source_key === "onchain:lusd-liquity");
     expect(onChainRow).toBeDefined();
+    // The legacy history is still reused: the 30d mean blends the 8-day-old legacy
+    // 4.5% sample with the current read, which is what the normalized source key
+    // exists to preserve.
+    expect(Number(onChainRow?.apy_30d)).toBeCloseTo((4.5 + Number(onChainRow?.current_apy)) / 2, 6);
+    // B11 gave this adapter `sourceObservedAt`, so the row is no longer
+    // `source-freshness-unknown`: it scores and, with no other candidate for the
+    // coin, it is published as the best row again.
     expect(onChainRow?.is_best).toBe(1);
+    expect(onChainRow?.pharos_yield_score).toBeGreaterThan(0);
 
     const metadata = JSON.parse(result.metadata ?? "{}") as { sourceSwitches?: number };
     expect(metadata.sourceSwitches).toBe(0);

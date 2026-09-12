@@ -3,6 +3,7 @@ import { vi } from "vitest";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { YieldMobileCard } from "@/components/yield-leaderboard";
 import type { YieldViewModelRow } from "@/lib/yield-view-model";
+import type { YieldBenchmarkRegistry } from "@shared/types";
 import type { YieldRankingProvenance } from "@shared/types/yield";
 
 /** Complete provenance record: spreading the factory's own (nullable) field widens the type. */
@@ -82,6 +83,7 @@ export function renderYieldMobileCard(
         row={row}
         riskFreeRate={3.5}
         medianApy={4}
+        scalingFactor={overrides.scalingFactor ?? 1}
         expanded={false}
         isCompared={false}
         compareDisabled={false}
@@ -93,3 +95,33 @@ export function renderYieldMobileCard(
     </TooltipProvider>,
   );
 }
+
+/** Two-currency benchmark registry for zone-chip resolution tests (ZONE-CHIP). */
+export const REGISTRY_WITH_EUR: YieldBenchmarkRegistry = {
+  USD: {
+    key: "USD",
+    label: "USD 3M T-Bill",
+    currency: "USD",
+    rate: 4.25,
+    recordDate: "2026-09-01",
+    fetchedAt: 1_783_632_600,
+    ageSeconds: 1_800,
+    source: "fred-dgs3mo",
+    isFallback: false,
+    fallbackMode: null,
+    isProxy: false,
+  },
+  EUR: {
+    key: "EUR",
+    label: "EUR 3M compounded €STR",
+    currency: "EUR",
+    rate: 1.94,
+    recordDate: "2026-09-01",
+    fetchedAt: 1_783_632_600,
+    ageSeconds: 1_800,
+    source: "ecb-estr-3m",
+    isFallback: false,
+    fallbackMode: null,
+    isProxy: false,
+  },
+};

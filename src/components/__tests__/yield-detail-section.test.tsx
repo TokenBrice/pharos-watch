@@ -449,7 +449,7 @@ describe("YieldDetailSection", () => {
     expect(screen.queryByText("legacy freeform selection reason")).toBeNull();
   });
 
-  it("renders the rank-movement card as 'Stable' when rankChangeAttribution is null", () => {
+  it("renders 'no comparison baseline' when rankChangeAttribution is null (E21)", () => {
     useYieldRankingsMock.mockReturnValue({
       data: makeResponse([makeRanking()]),
       meta: null,
@@ -460,7 +460,59 @@ describe("YieldDetailSection", () => {
     render(<YieldDetailSection stablecoinId="usdn-smardex" />);
 
     expect(screen.getByText("Movement vs last publication")).toBeTruthy();
+    expect(screen.getByText(/No comparison baseline — movement vs the previous publication was not measured/)).toBeTruthy();
+    expect(screen.queryByText("Stable — no movement since last publication.")).toBeNull();
+  });
+
+  it("renders 'Stable' only when a measured baseline shows zero movement (E21)", () => {
+    useYieldRankingsMock.mockReturnValue({
+      data: makeResponse([
+        makeRanking({
+          rankChangeAttribution: {
+            previousRank: 5,
+            rankDelta: 0,
+            pysDelta: 0,
+            primaryDriver: null,
+          },
+        }),
+      ]),
+      meta: null,
+      error: null,
+      isLoading: false,
+    });
+
+    render(<YieldDetailSection stablecoinId="usdn-smardex" />);
+
     expect(screen.getByText("Stable — no movement since last publication.")).toBeTruthy();
+  });
+
+  it("calls sub-basis-point excess a hurdle match and defaults a missing benchmark label (E20)", () => {
+    useYieldRankingsMock.mockReturnValue({
+      data: makeResponse([
+        makeRanking({ excessYield: -0.0000596, benchmarkLabel: undefined }),
+      ]),
+      meta: null,
+      error: null,
+      isLoading: false,
+    });
+
+    const { container } = render(<YieldDetailSection stablecoinId="usdn-smardex" />);
+
+    expect(container.textContent ?? "").toMatch(/matches the benchmark hurdle \(0\.00%\)/);
+    expect(container.textContent ?? "").not.toMatch(/misses the/);
+  });
+
+  it("keeps clears/misses wording outside display precision (E20)", () => {
+    useYieldRankingsMock.mockReturnValue({
+      data: makeResponse([makeRanking({ excessYield: 0.02, benchmarkLabel: "SOFR" })]),
+      meta: null,
+      error: null,
+      isLoading: false,
+    });
+
+    const { container } = render(<YieldDetailSection stablecoinId="usdn-smardex" />);
+
+    expect(container.textContent ?? "").toMatch(/clears the SOFR hurdle \(\+0\.02%\)/);
   });
 
   it("renders rank delta and PYS delta when rankChangeAttribution carries movement", () => {

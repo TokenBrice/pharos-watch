@@ -174,6 +174,7 @@ function compoundDailyAprToApy(aprPercent: number): number {
 }
 
 export async function fetchBprotocolLqtyOnlySource(
+  startSec: number,
   signal?: AbortSignal,
   chainRpcs?: Map<string, ChainRpcConfig>,
   coingeckoApiKey?: string | null,
@@ -260,6 +261,10 @@ export async function fetchBprotocolLqtyOnlySource(
       sourceKey: buildOnChainSourceKey(LIQUITY_V1_LUSD_ID),
       yieldSource: BPROTOCOL_LQTY_ONLY_SOURCE_LABEL,
       yieldType: BPROTOCOL_LQTY_ONLY_SOURCE_TYPE,
+      // B11 — without an observation timestamp the row classifies
+      // `source-freshness-unknown`, is rejected, and the coin can never score.
+      sourceObservedAt: startSec,
+      comparisonAnchorObservedAt: null,
     };
   } catch (error) {
     if (signal?.aborted) {
@@ -278,6 +283,7 @@ export async function fetchBprotocolLqtyOnlySource(
 }
 
 export async function fetchLiquityV2StabilityPoolSource(
+  startSec: number,
   config: LiquityV2SpSourceConfig,
   signal?: AbortSignal,
   chainRpcs?: Map<string, ChainRpcConfig>,
@@ -381,6 +387,10 @@ export async function fetchLiquityV2StabilityPoolSource(
       sourceKey: buildOnChainSourceKey(config.stablecoinId),
       yieldSource: config.sourceLabel,
       yieldType: LIQUITY_V2_SP_SOURCE_TYPE,
+      // B11 — see fetchBprotocolLqtyOnlySource: the missing stamp made
+      // lusd-liquity, bold-liquity and bd-basedollar permanently unscored.
+      sourceObservedAt: startSec,
+      comparisonAnchorObservedAt: null,
     };
   } catch (error) {
     if (signal?.aborted) {

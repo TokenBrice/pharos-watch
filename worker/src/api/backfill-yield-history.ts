@@ -33,6 +33,32 @@ export interface BackfillYieldHistoryRouteContext {
   request?: Request;
 }
 
+/**
+ * B17 — a backfilled row is a historical observation, so it must not claim more than
+ * the pipeline can prove. `is_best` mirrors the coin's currently published selection
+ * (a backfilled row has no arbitration record of its own, and a hardcoded `1`
+ * fabricated best-source points in the source-history series and the switch count),
+ * `data_source` is the adapter's own lane instead of an invented
+ * `protocol-api-backfill` label, and `inserted` is read back from D1 `changes` rather
+ * than assumed — the route is registered as always-idempotent and
+ * `INSERT OR IGNORE` can drop the row on the `(stablecoin_id, source_key,
+ * recorded_at)` primary key.
+ */
+async function loadPublishedBestSourceKey(db: D1Database, stablecoinId: string): Promise<string | null> {
+  const row = await db
+    .prepare(
+      `SELECT /* pharos:yield-backfill:published-best-source */
+         source_key FROM yield_data
+       WHERE stablecoin_id = ? AND is_best = 1
+         AND (publication_generation_id IS NULL OR publication_state = 'published')
+       ORDER BY pharos_yield_score DESC, apy_30d DESC
+       LIMIT 1`,
+    )
+    .bind(stablecoinId)
+    .first<{ source_key: string | null }>();
+  return row?.source_key ?? null;
+}
+
 export async function handleBackfillYieldHistory({
   db,
   url,
@@ -49,8 +75,7 @@ export async function handleBackfillYieldHistory({
     return noCoinsInBatchResponse();
   }
 
-  const insertedRows: D1PreparedStatement[] = [];
-  let rowsInserted = 0;
+  let rowsInsertedCount = 0;
   const coinResults: CoinResult[] = [];
   const skipped: string[] = [];
 
@@ -62,7 +87,9 @@ export async function handleBackfillYieldHistory({
       continue;
     }
 
-    insertedRows.push(
+    const publishedBestSourceKey = await loadPublishedBestSourceKey(db, coin.id);
+    const isBest = publishedBestSourceKey === coin.sourceKey ? 1 : 0;
+    const insertedRow = await batchExecute(db, [
       db
         .prepare(
           `INSERT OR IGNORE INTO yield_history
@@ -77,21 +104,19 @@ export async function handleBackfillYieldHistory({
           source.apyBase,
           source.apyReward,
           source.sourceTvlUsd,
-          "protocol-api-backfill",
-          1,
+          source.dataSource,
+          isBest,
           "[]",
         ),
-    );
-    coinResults.push({ id: coin.id, symbol: coin.symbol, inserted: true });
-  }
+    ]);
 
-  if (insertedRows.length > 0) {
-    rowsInserted = await batchExecute(db, insertedRows);
+    rowsInsertedCount += insertedRow;
+    coinResults.push({ id: coin.id, symbol: coin.symbol, inserted: insertedRow > 0 });
   }
 
   return jsonResponse({
     coinsProcessed: coinResults.length,
-    rowsInserted,
+    rowsInserted: rowsInsertedCount,
     coinResults,
     skipped: skipped.length > 0 ? skipped : undefined,
   });

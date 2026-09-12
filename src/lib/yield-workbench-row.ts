@@ -114,27 +114,12 @@ export function deriveYieldRowPresentation(row: YieldWorkbenchRanking) {
 }
 
 export function getYieldWorkbenchDataSource(row: YieldWorkbenchRanking): string {
-  if (!isYieldRankingSummary(row)) return row.dataSource;
-  switch (row.provenance?.calculationMode) {
-    case "direct-read":
-    case "exchange-rate-math":
-      return "onchain";
-    case "benchmark-model":
-      return "rate-derived";
-    case "price-return":
-      return "price-derived";
-    case "market-api":
-      return row.provenance.confidenceTier === "discovered" ? "defillama-auto" : "protocol-api";
-    default:
-      return "unknown";
-  }
+  // Pre-deploy summary rows carry no `dataSource`; the label helpers render an
+  // empty value rather than inventing one.
+  return row.dataSource ?? "";
 }
 
-/**
- * Source role for a workbench row. The summary projection the leaderboard
- * consumes omits the field, so summary rows resolve to null and callers fall
- * back to the yield-type split.
- */
+/** Projected `sourceRole`; null when the row carries none. */
 export function getYieldWorkbenchSourceRole(row: YieldWorkbenchRanking): YieldSourceRole | null {
-  return isYieldRankingSummary(row) ? null : (row.sourceRole ?? null);
+  return row.sourceRole ?? null;
 }

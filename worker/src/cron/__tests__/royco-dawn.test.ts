@@ -68,8 +68,9 @@ describe("fetchRoycoDawnSources", () => {
           },
         }]);
 
-    const candidates = await fetchRoycoDawnSources();
+    const { candidates, degraded } = await fetchRoycoDawnSources();
 
+    expect(degraded).toBe(false);
     expect(candidates).toHaveLength(2);
     expect(candidates.map((candidate) => candidate.stablecoinId)).toEqual(["apyusd-apyx", "apyusd-apyx"]);
     expect(candidates.map((candidate) => candidate.yield.sourceKey)).toEqual([
@@ -127,7 +128,7 @@ describe("fetchRoycoDawnSources", () => {
           },
         }]);
 
-    const candidates = await fetchRoycoDawnSources();
+    const { candidates } = await fetchRoycoDawnSources();
 
     expect(candidates).toHaveLength(2);
     expect(candidates.map((candidate) => candidate.stablecoinId)).toEqual(["nusd-neutrl", "nusd-neutrl"]);
@@ -169,7 +170,7 @@ describe("fetchRoycoDawnSources", () => {
           },
         }]);
 
-    const candidates = await fetchRoycoDawnSources();
+    const { candidates } = await fetchRoycoDawnSources();
 
     expect(candidates).toHaveLength(2);
     expect(candidates.map((candidate) => [candidate.yield.sourceRisk?.trancheSide, candidate.stablecoinId])).toEqual([
@@ -209,7 +210,7 @@ describe("fetchRoycoDawnSources", () => {
           },
         }]);
 
-    const candidates = await fetchRoycoDawnSources();
+    const { candidates } = await fetchRoycoDawnSources();
 
     expect(candidates).toHaveLength(1);
     expect(candidates[0]?.yield.sourceRisk?.trancheSide).toBe("senior");
@@ -227,9 +228,10 @@ describe("Royco discovery boundaries", () => {
       pages.push(index);
       return Response.json({ count: 101, data: index === 0 ? Array.from({ length: 100 }, (_, i) => makeMarket({ marketId: `first-${i}` })) : [makeMarket({ marketId: "last" })] });
     }));
-    const result = await fetchRoycoDawnSources();
+    const { candidates, degraded } = await fetchRoycoDawnSources();
     expect(pages).toEqual([0, 1]);
-    expect(result.map((candidate) => candidate.yield.sourceKey)).toEqual([...Array.from({ length: 100 }, (_, i) => `royco-dawn:1:first-${i}:senior`), "royco-dawn:1:last:senior"]);
+    expect(degraded).toBe(false);
+    expect(candidates.map((candidate) => candidate.yield.sourceKey)).toEqual([...Array.from({ length: 100 }, (_, i) => `royco-dawn:1:first-${i}:senior`), "royco-dawn:1:last:senior"]);
   });
 
   it("retains earlier candidates when a later page fails", async () => {
@@ -239,7 +241,11 @@ describe("Royco discovery boundaries", () => {
       pages.push(index);
       return index === 0 ? Response.json({ count: 101, data: [makeMarket({ marketId: "survivor" }), ...Array.from({ length: 99 }, () => makeMarket({ listingType: "unverified" }))] }) : new Response("unavailable", { status: 503 });
     }));
-    expect((await fetchRoycoDawnSources()).map((candidate) => candidate.yield.sourceKey)).toEqual(["royco-dawn:1:survivor:senior"]);
+    const { candidates, degraded } = await fetchRoycoDawnSources();
+    expect(candidates.map((candidate) => candidate.yield.sourceKey)).toEqual(["royco-dawn:1:survivor:senior"]);
+    // SRC-SUPP-2: the early end is reported so the writer retains the previous
+    // full snapshot instead of replacing it with this partial page set.
+    expect(degraded).toBe(true);
     expect(pages).toEqual([0, 1]);
   });
 
@@ -258,7 +264,7 @@ describe("Royco discovery boundaries", () => {
       makeMarket({ listingType: "unverified" }), makeMarket({ chainId: 99999999 }),
       makeMarket({ seniorVault: { ...valid.seniorVault, depositToken: { ...valid.seniorVault.depositToken, contractAddress: "0x9999999999999999999999999999999999999999" } } }),
     ] } }]);
-    expect(await fetchRoycoDawnSources()).toEqual([]);
+    expect(await fetchRoycoDawnSources()).toEqual({ candidates: [], degraded: false });
   });
 
   it("accepts exact APY and TVL bounds but rejects values beyond them", async () => {
@@ -268,8 +274,8 @@ describe("Royco discovery boundaries", () => {
       makeMarket({ marketId: "high-apy", seniorVault: { ...valid.seniorVault, apy: 2.0001 } }),
       makeMarket({ marketId: "low-tvl", seniorVault: { ...valid.seniorVault, tvl: { tokenAmountUsd: 99_999 } } }),
     ] } }]);
-    const result = await fetchRoycoDawnSources();
-    expect(result.map((candidate) => candidate.yield.sourceKey)).toEqual(["royco-dawn:1:boundary:senior"]);
-    expect(result[0].yield).toMatchObject({ currentApy: 200, sourceTvlUsd: 100_000 });
+    const { candidates } = await fetchRoycoDawnSources();
+    expect(candidates.map((candidate) => candidate.yield.sourceKey)).toEqual(["royco-dawn:1:boundary:senior"]);
+    expect(candidates[0].yield).toMatchObject({ currentApy: 200, sourceTvlUsd: 100_000 });
   });
 });

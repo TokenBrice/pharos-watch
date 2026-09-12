@@ -28,4 +28,6 @@ export {
   getYieldSupplementalFamilyCacheKey,
   buildYieldSupplementalFamilyCache,
   parseYieldSupplementalSourcesCache,
+  getYieldSupplementalRunOutcomeCacheKey,
+  parseYieldSupplementalRunOutcome,
 } from "./cache/supplemental-cache-keys";

@@ -250,16 +250,20 @@ function YieldEnrichment({ event }: { event: TapeEvent }) {
     const prev = typeof p?.prevScore === "number" ? p.prevScore : null;
     const next = typeof p?.newScore === "number" ? p.newScore : null;
     if (prev == null || next == null) return null;
-    const delta = next - prev;
+    // E28: the pills show rounded endpoints, so the delta is the difference
+    // between what is on screen — 82 → 74 reads (-8), never (-7).
+    const prevRounded = Math.round(prev);
+    const nextRounded = Math.round(next);
+    const delta = nextRounded - prevRounded;
     const arrowColor = SEVERITY_TONE_CLASS.alert.text;
     return renderDeltaPills(
-      Math.round(prev),
-      Math.round(next),
+      prevRounded,
+      nextRounded,
       SCORE_PILL_CLASS,
       TrendingDown,
       arrowColor,
       undefined,
-      formatSignedDelta(delta, String(Math.round(delta))),
+      formatSignedDelta(delta),
       SEVERITY_TONE_CLASS.alert.text,
     );
   }

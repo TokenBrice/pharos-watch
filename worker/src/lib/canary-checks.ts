@@ -10,6 +10,10 @@ import { throwIfAborted } from "./abort";
 import { boundedJson, parseObjectMetadata } from "./json-metadata";
 import { getCache } from "./db-cache";
 import { parseRiskFreeRatesCache } from "../cron/yield-sync/cache";
+import {
+  YIELD_BENCHMARK_RECORD_MAX_AGE_SEC,
+  YIELD_BENCHMARK_SCORE_TTL_SEC,
+} from "../cron/yield-sync/benchmarks";
 import { loadPublishedStressSignalGeneration } from "./stress-signals-current-rows";
 import { loadActiveSafetyScoreSource } from "./safety-score-active-source";
 import type { WorkerCanaryMode } from "./worker-canary-mode";
@@ -129,6 +133,7 @@ const DEWS_MAX_AGE_SEC = 4 * 3600;
 const GBP_BENCHMARK_MAX_FETCH_AGE_SEC = 48 * 3600;
 const GBP_BENCHMARK_MAX_RECORD_AGE_SEC = 7 * 24 * 3600;
 const GBP_BENCHMARK_FRESH_STREAK_CACHE_KEY = "fetch-tbill-rate:gbp-retained-fallback-streak";
+const USD_BENCHMARK_FRESH_STREAK_CACHE_KEY = "fetch-tbill-rate:usd-fresh-streak";
 
 function isFreshAt(timestampSec: number | null, observedAt: number, maxAgeSec: number): boolean {
   return classifyFreshness(
@@ -572,6 +577,74 @@ async function checkGbpBenchmarkCurrent(db: D1Database, observedAt: number) {
   }
 }
 
+/**
+ * USD counterpart of `checkGbpBenchmarkCurrent`. USD is the default hurdle and
+ * the reference rate every non-USD row is re-based against, and it is produced
+ * by the same single daily slot, so this check turns a silent producer stop (or
+ * a fall onto the retained/hardcoded rate) into a failed check before the 48h
+ * scoring TTL nulls every keyed row.
+ */
+async function checkUsdBenchmarkCurrent(db: D1Database, observedAt: number) {
+  try {
+    const ratesCache = await getCache(db, "risk_free_rates");
+    if (!ratesCache) {
+      return degradedResult("risk-free benchmark registry cache is missing", {
+        requiredFreshPublications: 2,
+      });
+    }
+    const registry = parseRiskFreeRatesCache(ratesCache.value, ratesCache.updatedAt, observedAt);
+    const usd = registry?.USD ?? null;
+    const streakCache = await getCache(db, USD_BENCHMARK_FRESH_STREAK_CACHE_KEY);
+    const streak = parseObjectMetadata(streakCache?.value ?? null);
+    const consecutiveFreshRuns = typeof streak?.consecutiveFreshRuns === "number"
+      && Number.isFinite(streak.consecutiveFreshRuns)
+      ? Math.max(0, Math.floor(streak.consecutiveFreshRuns))
+      : 0;
+    const fetchedAgeSec = usd?.fetchedAt != null ? Math.max(0, observedAt - usd.fetchedAt) : null;
+    const recordDateMs = usd?.recordDate ? Date.parse(`${usd.recordDate}T00:00:00Z`) : Number.NaN;
+    const recordAgeSec = Number.isFinite(recordDateMs)
+      ? Math.max(0, observedAt - Math.floor(recordDateMs / 1000))
+      : null;
+    const maxFetchAgeSec = YIELD_BENCHMARK_SCORE_TTL_SEC;
+    const maxRecordAgeSec = YIELD_BENCHMARK_RECORD_MAX_AGE_SEC.USD;
+    const metadata = {
+      source: usd?.source ?? null,
+      recordDate: usd?.recordDate ?? null,
+      fetchedAt: usd?.fetchedAt ?? null,
+      fetchedAgeSec,
+      recordAgeSec,
+      maxFetchAgeSec,
+      maxRecordAgeSec,
+      isFallback: usd?.isFallback ?? null,
+      fallbackMode: usd?.fallbackMode ?? null,
+      consecutiveFreshRuns,
+      requiredFreshPublications: 2,
+    };
+    const problems: string[] = [];
+    if (!usd) problems.push("USD benchmark is missing");
+    if (usd?.isFallback) problems.push(`USD benchmark is fallback (${usd.fallbackMode ?? "unknown"})`);
+    if (!usd || !isFreshAt(usd.fetchedAt ?? null, observedAt, maxFetchAgeSec)) {
+      problems.push("USD benchmark fetch is stale");
+    }
+    if (usd?.recordDate != null && !isFreshAt(
+      Number.isFinite(recordDateMs) ? Math.floor(recordDateMs / 1000) : null,
+      observedAt,
+      maxRecordAgeSec,
+    )) {
+      problems.push("USD benchmark observation is stale");
+    }
+    if (consecutiveFreshRuns < 2) {
+      problems.push(`USD benchmark has ${consecutiveFreshRuns}/2 consecutive fresh publications`);
+    }
+    if (problems.length > 0) {
+      return degradedResult(problems.join("; "), metadata);
+    }
+    return okResult(metadata);
+  } catch (error) {
+    return unavailableResult(error);
+  }
+}
+
 const CANARY_CHECKS: readonly CanaryCheckDefinition[] = [
   {
     checkId: "dex-liquidity-current-publication",
@@ -620,6 +693,12 @@ const CANARY_CHECKS: readonly CanaryCheckDefinition[] = [
     label: "Yield GBP benchmark current",
     description: "GBP SONIA is direct, current, and has published successfully in two consecutive daily generations.",
     run: checkGbpBenchmarkCurrent,
+  },
+  {
+    checkId: "yield-usd-benchmark-current",
+    label: "Yield USD benchmark current",
+    description: "USD T-bill benchmark is direct, current, and has been published fresh in two consecutive generations.",
+    run: checkUsdBenchmarkCurrent,
   },
 ] as const;
 const ACTIVE_CANARY_CHECK_IDS = CANARY_CHECKS.map((definition) => definition.checkId);

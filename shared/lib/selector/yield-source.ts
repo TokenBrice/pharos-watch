@@ -164,7 +164,9 @@ export function selectYieldSource(row: MergedRow, input: SelectorInput): Recomme
     pharosYieldScore: selected.pharosYieldScore,
     sourceTvlUsd: selected.sourceTvlUsd,
     sourceRiskTier: selected.venueRiskTier ?? "mid",
-    freshness: selected.freshness ?? { capturedAt: 0, ageSeconds: 0 },
+    // Unknown stays unknown: `sourceFreshnessScore` ranks a missing reading as
+    // neutral 50, and rendering `{ 0, 0 }` would print "0s old" for the same row.
+    freshness: selected.freshness,
     selectionReason: venueMatchesPreference(selected, input)
       ? "venue-preference"
       : "risk-depth-freshness",

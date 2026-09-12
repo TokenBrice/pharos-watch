@@ -80,7 +80,12 @@ const SCHEDULED_SLOT_PLAN_INPUTS = {
     jobChains: [["sync-live-reserves", "sync-redemption-backstops", "sync-kinesis-supply", "cron-sentinel"]],
   },
   hourlyYieldSync: {
-    jobChains: [["sync-yield-data"]],
+    // Serially ordered on purpose: the opportunistic supplemental catch-up and
+    // the benchmark-registry retry both publish evidence that sync-yield-data
+    // reads in the same slot, so they must land first. One serial chain keeps
+    // the trigger's declared peak at max(3, 1, 2) instead of summing the three
+    // jobs' budgets.
+    jobChains: [["sync-yield-supplemental", "fetch-tbill-rate", "sync-yield-data"]],
   },
   fourHourlyYieldSupplemental: {
     jobChains: [["sync-yield-supplemental"]],
@@ -171,6 +176,12 @@ export const SHARED_SCHEDULED_JOB_IDENTITIES = {
   "weekly-recap": ["digestTriggerPoll", "daily0810Utc"],
   "snapshot-supply": ["quarterHourly", "daily0800Utc"],
   "sync-cl-exit-depth": ["halfHourlyMeasuredExecution", "daily0810Utc"],
+  // New this wave: the hourly yield lane carries an opportunistic supplemental
+  // catch-up and a benchmark-registry retry ahead of sync-yield-data. Both keep
+  // their canonical definition (fourHourlyYieldSupplemental / daily0800Utc) and
+  // share its lease and status row rather than duplicating a job identity.
+  "sync-yield-supplemental": ["hourlyYieldSync", "fourHourlyYieldSupplemental"],
+  "fetch-tbill-rate": ["hourlyYieldSync", "daily0800Utc"],
 } as const satisfies Record<string, readonly CronScheduleKey[]>;
 
 export type ScheduledProducerKind = "scheduled-job" | "budget-only";

@@ -4,6 +4,7 @@ import { finiteDecimalNumberFromBigInt } from "../../lib/bigint";
 import { parseChainlinkLatestRoundData } from "../../lib/chainlink-round-data";
 import { DECIMALS_SELECTOR, LATEST_ROUND_DATA_SELECTOR } from "../../lib/evm-selectors";
 import { fetchEvmCallHexAtBlock, fetchEvmUint256AtBlock } from "../../lib/evm-rpc";
+import { isDeterministicApyWithinSanityBounds } from "../yield-helpers";
 import { OPTIONAL_PROTOCOL_REQUEST_TIMEOUT_MS } from "./optional-source-runtime";
 import type { ResolvedYieldCandidate } from "./types";
 
@@ -130,7 +131,10 @@ export async function fetchMidasMmevNavOracleSource(
     }
 
     const apy = (Math.pow(currentPriceFloat / prevPriceFloat, 365.25 / daysDelta) - 1) * 100;
-    if (!Number.isFinite(apy) || apy < 0) return null;
+    // B12 — a short or mis-anchored window annualizes without bound; the shared
+    // deterministic envelope keeps an absurd NAV move out of PYS (and out of the
+    // published board) instead of clamping it to a perfect score.
+    if (!isDeterministicApyWithinSanityBounds(apy) || apy < 0) return null;
 
     return buildMidasMmevNavCandidate({
       apy,

@@ -1,19 +1,26 @@
 "use client";
 
 import { CheckIcon, DownloadIcon, Share2Icon, XIcon } from "lucide-react";
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
 import { StablecoinLogo } from "@/components/stablecoin-logo";
 import { TableBody, TableCell, TableFrame, TableHead, TableHeader, TableRow } from "@/components/table";
 import { Sheet, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { useYieldCompareSelection } from "@/hooks/use-yield-compare-selection";
 import { formatCurrency, formatPercent, formatScore } from "@shared/lib/format";
 import {
+  formatYieldRatioPercent,
+  formatYieldWarningSignal,
+  resolveYieldScoreQualification,
+} from "@/lib/yield-constants";
+import {
   YIELD_SOURCE_DEPTH_DEFINITIONS,
   YIELD_SOURCE_POSTURE_DEFINITIONS,
   formatYieldSourceRiskSummary,
+  isNativeYieldSource,
 } from "@/lib/yield-source-risk";
-import { formatYieldWarningSignal } from "@/lib/yield-constants";
-import { getYieldDecisionReasonLine } from "@/lib/yield-workbench-row";
+import { getYieldDecisionReasonLine, getYieldWorkbenchSourceRole } from "@/lib/yield-workbench-row";
+import { formatYieldSafetySrLabel, YieldSafetyBadge } from "@/components/yield-leaderboard-row-parts";
+import { isOpportunityDerivedSafety } from "@shared/lib/yield-opportunity-provenance";
 import { trackEvent } from "@/lib/analytics";
 import { copyText } from "@/lib/clipboard";
 import { downloadCsvWithPreamble, type CsvColumn } from "@/lib/exports/csv";
@@ -38,7 +45,7 @@ interface CompareRowDescriptor {
   key: string;
   label: string;
   align: "left" | "right";
-  render: (row: YieldViewModelRow) => string;
+  render: (row: YieldViewModelRow) => ReactNode;
 }
 
 function formatSourcePosture(row: YieldViewModelRow): string {
@@ -61,8 +68,14 @@ function formatVenueTier(row: YieldViewModelRow): string {
   return `${label}${weightedLabel}${confidenceLabel}`;
 }
 
+/** Same native/not-applicable TVL read the board and mobile card use. */
+function formatTvlDisplay(row: YieldViewModelRow): string {
+  if (row.sourceTvlUsd !== null) return formatCurrency(row.sourceTvlUsd);
+  return isNativeYieldSource(getYieldWorkbenchSourceRole(row), row.yieldType) ? "Native" : "—";
+}
+
 function formatEvidenceQualification(row: YieldViewModelRow): string {
-  const qualification = row.provenance?.scoreQualification ?? (row.pharosYieldScore == null ? "NR" : "rated");
+  const qualification = resolveYieldScoreQualification(row);
   const completeness = row.provenance?.evidenceCompleteness;
   return typeof completeness === "number"
     ? `${qualification} (${Math.round(completeness * 100)}% complete)`
@@ -92,12 +105,17 @@ const COMPARE_ROW_DESCRIPTORS: readonly CompareRowDescriptor[] = [
     key: "safety",
     label: "Safety",
     align: "right",
-    render: (row) =>
-      row.safetyGrade && row.safetyGrade !== "NR"
-        ? row.safetyGrade
-        : row.safetyScore !== null
-          ? `${Math.round(row.safetyScore)}/100`
-          : "—",
+    // WHY: routed through YieldSafetyBadge so an opportunity-derived grade
+    // carries the same † provenance marker as the board and mobile card.
+    render: (row) => (
+      <YieldSafetyBadge
+        grade={row.safetyGrade}
+        safetyScore={row.safetyScore}
+        safetySrLabel={formatYieldSafetySrLabel(row.safetyGrade, row.safetyScore)}
+        opportunityDerived={isOpportunityDerivedSafety(row.provenance?.safetyProvenance)}
+        compact
+      />
+    ),
   },
   {
     key: "source",
@@ -166,16 +184,21 @@ const COMPARE_EXPORT_COLUMNS: CsvColumn<YieldViewModelRow>[] = [
   { header: "Name", accessor: (row) => row.name },
   { header: "APY 30d (%)", accessor: (row) => row.apy30d },
   { header: "PYS", accessor: (row) => row.pharosYieldScore ?? "NR" },
-  { header: "PYS qualification", accessor: (row) => row.provenance?.scoreQualification ?? "unknown" },
+  { header: "PYS qualification", accessor: (row) => resolveYieldScoreQualification(row) },
   { header: "PYS null reason", accessor: (row) => row.pysNullReason ?? "" },
   { header: "Safety grade", accessor: (row) => row.safetyGrade ?? "NR" },
   { header: "Safety score", accessor: (row) => row.safetyScore ?? "NR" },
+  {
+    header: "Safety provenance",
+    accessor: (row) =>
+      isOpportunityDerivedSafety(row.provenance?.safetyProvenance) ? "opportunity-derived" : "safety-score-v9",
+  },
   { header: "Source", accessor: (row) => row.yieldSource },
   { header: "Source posture", accessor: (row) => row.sourcePosture ?? "unknown" },
   { header: "Source risk score", accessor: (row) => row.sourceRisk?.sourceRiskScore ?? "unknown" },
   { header: "Venue risk tier", accessor: (row) => row.sourceRisk?.venueRiskTier ?? "unknown" },
   { header: "Depth", accessor: (row) => row.sourceDepthLens },
-  { header: "Stability", accessor: (row) => row.yieldStability ?? "unknown" },
+  { header: "Stability (%)", accessor: (row) => formatYieldRatioPercent(row.yieldStability) },
   { header: "Benchmark", accessor: (row) => row.benchmarkLabel ?? "unknown" },
   { header: "TVL USD", accessor: (row) => row.sourceTvlUsd ?? "unknown" },
   { header: "Warnings", accessor: (row) => row.warningSignals.join(" | ") },
@@ -192,6 +215,11 @@ export function YieldCompareDrawer({
 }: YieldCompareDrawerProps) {
   const { ids, toggle } = useYieldCompareSelection();
   const [shareStatus, setShareStatus] = useState<"shared" | "copied" | "failed" | null>(null);
+  // A stale Shared/copied/failed state must never survive a different
+  // selection or a reopen: reset on ids change and whenever the drawer opens.
+  useEffect(() => {
+    setShareStatus(null);
+  }, [ids, open]);
   const rowsById = useMemo(() => new Map(rows.map((row) => [row.id, row] as const)), [rows]);
   const columns: CompareColumn[] = useMemo(
     () => ids.map((id) => ({ id, row: rowsById.get(id) ?? null })),
@@ -312,7 +340,7 @@ export function YieldCompareDrawer({
                     <div className="grid grid-cols-[minmax(0,0.8fr)_minmax(0,1.2fr)] gap-3 py-2 text-xs">
                       <dt className="text-muted-foreground">TVL</dt>
                       <dd className="text-right font-mono tabular-nums text-foreground">
-                        {row.sourceTvlUsd !== null ? formatCurrency(row.sourceTvlUsd) : "—"}
+                        {formatTvlDisplay(row)}
                       </dd>
                     </div>
                   </dl>
@@ -408,11 +436,7 @@ export function YieldCompareDrawer({
               </TableHead>
               {columns.map((column) => (
                 <TableCell key={column.id} className="px-2 py-2 text-right font-mono tabular-nums text-foreground">
-                  {column.row && column.row.sourceTvlUsd !== null
-                    ? formatCurrency(column.row.sourceTvlUsd)
-                    : column.row
-                      ? "—"
-                      : ""}
+                  {column.row ? formatTvlDisplay(column.row) : ""}
                 </TableCell>
               ))}
             </TableRow>

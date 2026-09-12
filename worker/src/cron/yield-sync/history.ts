@@ -36,6 +36,18 @@ export async function purgeYieldHistoryOwnershipHandoffs(db: D1Database): Promis
       )
       .bind(stablecoinId, LEGACY_BEST_YIELD_SOURCE_KEY, ...inClause.binds)
       .run();
+    // materializeYieldHistoryDaily copies handed-off rows into the daily tier
+    // before this purge runs, so the same key set must be deleted there too or
+    // de-registering a handoff re-exposes a year of suppressed rows.
+    await db
+      .prepare(
+        `/* pharos:yield-sync:ownership-handoff-daily-delete */
+         DELETE FROM yield_history_daily
+         WHERE stablecoin_id = ?
+           AND (source_key IS NULL OR source_key = ? OR source_key IN (${inClause.sql}))`,
+      )
+      .bind(stablecoinId, LEGACY_BEST_YIELD_SOURCE_KEY, ...inClause.binds)
+      .run();
   }
 }
 

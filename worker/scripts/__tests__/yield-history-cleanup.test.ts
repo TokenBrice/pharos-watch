@@ -4,6 +4,8 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { DatabaseSync } from "node:sqlite";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { createLatestSchemaSqlite } from "@shared/test-utils/latest-schema-sqlite";
+import { LEGACY_BEST_YIELD_SOURCE_KEY } from "../../src/lib/yield-history-ownership-handoffs";
 import {
   createYieldHistoryCleanupArtifact,
   deleteCleanupRowsFromSqlite,
@@ -28,48 +30,48 @@ function createTempDbPath(): string {
 }
 
 function seedDb(path: string): void {
-  const db = new DatabaseSync(path);
+  // The drill runs against the real migrated schema: a column that leaves the
+  // migration (or the export list) breaks the round-trip instead of silently
+  // losing data. Every exported column is non-NULL in at least one targeted row.
+  const db = createLatestSchemaSqlite().sqlite;
   try {
-    db.exec(`
-      CREATE TABLE yield_history (
-        stablecoin_id TEXT NOT NULL,
-        source_key TEXT,
-        recorded_at INTEGER NOT NULL,
-        is_best INTEGER NOT NULL DEFAULT 0,
-        apy REAL NOT NULL,
-        apy_base REAL,
-        apy_reward REAL,
-        exchange_rate REAL,
-        source_tvl_usd REAL,
-        data_source TEXT NOT NULL,
-        warning_signals TEXT,
-        yield_source TEXT,
-        yield_type TEXT,
-        PRIMARY KEY (stablecoin_id, source_key, recorded_at)
-      );
-    `);
-
     const insert = db.prepare(`
       INSERT INTO yield_history (
         stablecoin_id, source_key, recorded_at, is_best, apy, apy_base, apy_reward,
-        exchange_rate, source_tvl_usd, data_source, warning_signals, yield_source, yield_type
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        exchange_rate, source_tvl_usd, data_source, warning_signals, yield_source, yield_type,
+        publication_generation_id, publication_state, pys_at_publish, safety_at_publish,
+        variance_at_publish, pys_inputs_at_publish
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `);
 
-    insert.run("usde-ethena", null, 1_700_000_000, 1, 5.1, null, null, null, 10_000_000, "defillama", null, "Ethena staking (sUSDe)", "nav-appreciation");
-    insert.run("usde-ethena", "66985a81-9c51-46ca-9977-42b4fe7bc6df", 1_700_000_360, 0, 5.2, null, null, null, 10_100_000, "defillama", null, "Ethena staking (sUSDe)", "nav-appreciation");
-    insert.run("usds-sky", "d8c4eff5-c8a9-46fc-a888-057c4c668e72", 1_700_000_720, 0, 4.0, null, null, null, 8_000_000, "defillama", null, "Sky Savings Rate (sUSDS)", "lending-vault");
-    insert.run("susde-ethena", "onchain:susde-ethena", 1_700_001_080, 1, 5.3, null, null, null, 10_200_000, "onchain", null, "Ethena staking (sUSDe)", "nav-appreciation");
-    insert.run("usde-ethena", "unrelated-pool", 1_700_001_440, 0, 2.0, null, null, null, 100, "defillama", null, "Unrelated lending", "lending");
+    insert.run("usde-ethena", "66985a81-9c51-46ca-9977-42b4fe7bc6df", 1_700_000_360, 0, 5.2, null, null, 1.0001, 10_100_000, "defillama", null, "Ethena staking (sUSDe)", "nav-appreciation", "gen-usde-2", "published", 55.3, 90.2, 0.013, '{"apy30d":5.2}');
+    insert.run("usde-ethena", LEGACY_BEST_YIELD_SOURCE_KEY, 1_700_000_000, 1, 5.1, 4.9, 0.2, 1.0, 10_000_000, "defillama", '["reward-heavy"]', "Ethena staking (sUSDe)", "nav-appreciation", "gen-usde-1", "published", 55.2, 90.1, 0.012, '{"apy30d":5.1}');
+    insert.run("usds-sky", "d8c4eff5-c8a9-46fc-a888-057c4c668e72", 1_700_000_720, 0, 4.0, null, null, null, 8_000_000, "defillama", null, "Sky Savings Rate (sUSDS)", "lending-vault", "gen-usds-1", "published", 41.5, 88.4, 0.014, '{"apy30d":4.0}');
+    insert.run("susde-ethena", "onchain:susde-ethena", 1_700_001_080, 1, 5.3, null, null, null, 10_200_000, "onchain", null, "Ethena staking (sUSDe)", "nav-appreciation", "gen-susde-1", "published", 56.1, 91.0, 0.015, '{"apy30d":5.3}');
+    insert.run("usde-ethena", "unrelated-pool", 1_700_001_440, 0, 2.0, null, null, null, 100, "defillama", null, "Unrelated lending", "lending", "gen-usde-3", "failed", 12.3, 70.0, 0.02, '{"apy30d":2.0}');
+
+    const insertDaily = db.prepare(`
+      INSERT INTO yield_history_daily (
+        stablecoin_id, source_key, snapshot_date, recorded_at, is_best, apy, apy_base, apy_reward,
+        exchange_rate, source_tvl_usd, data_source, warning_signals, yield_source, yield_type,
+        publication_generation_id, publication_state, pys_at_publish, safety_at_publish,
+        variance_at_publish, pys_inputs_at_publish
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `);
+    insertDaily.run("usde-ethena", "66985a81-9c51-46ca-9977-42b4fe7bc6df", 1_699_968_000, 1_700_000_000, 1, 5.1, 4.9, 0.2, 1.0, 10_000_000, "defillama", null, "Ethena staking (sUSDe)", "nav-appreciation", "gen-usde-1", "published", 55.2, 90.1, 0.012, '{"apy30d":5.1}');
+    insertDaily.run("susde-ethena", "onchain:susde-ethena", 1_699_968_000, 1_700_001_080, 1, 5.3, null, null, null, 10_200_000, "onchain", null, "Ethena staking (sUSDe)", "nav-appreciation", "gen-susde-1", "published", 56.1, 91.0, 0.015, '{"apy30d":5.3}');
+
+    writeFileSync(path, db.serialize());
   } finally {
     db.close();
   }
 }
 
-function readAllRows(path: string) {
+function readAllRows(path: string, table: "yield_history" | "yield_history_daily" = "yield_history") {
   const db = new DatabaseSync(path);
   try {
-    return db.prepare("SELECT * FROM yield_history ORDER BY stablecoin_id, source_key, recorded_at").all();
+    const lastOrderingColumn = table === "yield_history" ? "recorded_at" : "snapshot_date";
+    return db.prepare(`SELECT * FROM ${table} ORDER BY stablecoin_id, source_key, ${lastOrderingColumn}`).all();
   } finally {
     db.close();
   }
@@ -104,11 +106,14 @@ describe("yield-history-cleanup", () => {
     writeFileSync(restorePath, JSON.stringify(artifact));
     const sqlite = new DatabaseSync(path);
     try {
-      sqlite.exec("CREATE TABLE cache (key TEXT, value TEXT, updated_at INTEGER); CREATE TABLE cron_leases (job TEXT, lease_until INTEGER)");
+      // cache and cron_leases already exist with the migrated schemas; the
+      // test only needs the columns the script's guarded queries touch.
       if (pause) sqlite.prepare("INSERT INTO cache VALUES (?, ?, ?)").run(
         "yield-history-cleanup:writer-pause", JSON.stringify({ reason: "cleanup", pausedAt: now, operator: "ops" }), now,
       );
-      sqlite.prepare("INSERT INTO cron_leases VALUES ('sync-yield-data', ?)").run(now + leaseDelta);
+      sqlite
+        .prepare("INSERT INTO cron_leases (job, lease_owner, lease_until, heartbeat_at, updated_at) VALUES ('sync-yield-data', 'test', ?, ?, ?)")
+        .run(now + leaseDelta, now, now);
       vi.mocked(createWorkerD1Client).mockReturnValue({
         query: (sql: string) => sqlite.prepare(sql).all(),
         executeStatements: (statements: string[]) => { for (const sql of statements) sqlite.exec(sql); },
@@ -328,11 +333,15 @@ describe("yield-history-cleanup", () => {
 
     const entireTable = readAllRows(path);
     const survivors = entireTable.filter((row) => row.stablecoin_id === "susde-ethena" || row.source_key === "unrelated-pool");
+    const entireDailyTable = readAllRows(path, "yield_history_daily");
     const beforeRows = loadCleanupRowsFromSqlite(path);
     const artifact = createYieldHistoryCleanupArtifact(beforeRows, "test-operator");
 
     deleteCleanupRowsFromSqlite(path);
     expect(readAllRows(path)).toEqual(survivors);
+    expect(readAllRows(path, "yield_history_daily")).toEqual(
+      entireDailyTable.filter((row) => row.stablecoin_id === "susde-ethena"),
+    );
 
     restoreCleanupRowsToSqlite(path, artifact.rows);
     expect(readAllRows(path)).toEqual(entireTable);

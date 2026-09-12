@@ -4,8 +4,12 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 
 import { YieldCompareDrawer } from "@/components/yield-compare-drawer";
+import { downloadCsvWithPreamble } from "@/lib/exports/csv";
 import type { YieldViewModelRow } from "@/lib/yield-view-model";
 
+vi.mock("@/lib/exports/csv", () => ({
+  downloadCsvWithPreamble: vi.fn(),
+}));
 vi.mock("@/components/ui/sheet", () => ({
   Sheet: ({ open, children }: { open: boolean; children: React.ReactNode }) =>
     open ? <div data-testid="sheet">{children}</div> : null,
@@ -193,5 +197,66 @@ describe("YieldCompareDrawer", () => {
       <YieldCompareDrawer open={false} onOpenChange={vi.fn()} rows={[usdc, usdt]} logos={{}} />,
     );
     expect(container.firstChild).toBeNull();
+  });
+  it("reads a native null-TVL row as Native and marks opportunity-derived safety", () => {
+    window.history.replaceState(null, "", "/yield/?compare=usdc-circle");
+    render(
+      <YieldCompareDrawer
+        open
+        onOpenChange={vi.fn()}
+        rows={[
+          makeRow({
+            sourceTvlUsd: null,
+            yieldType: "lending-vault",
+            safetyGrade: "B",
+            safetyScore: 55,
+            provenance: { safetyProvenance: "opportunity-safety" },
+          } as Partial<YieldViewModelRow>),
+        ]}
+        logos={{}}
+      />,
+    );
+
+    // TVL reads "Native" (mobile list + table), not the board-divergent "—".
+    expect(screen.getAllByText("Native").length).toBeGreaterThan(0);
+    // The safety cell carries the † provenance description, not a bare grade.
+    expect(
+      screen.getAllByLabelText(/Opportunity-derived grade from the yield model/).length,
+    ).toBeGreaterThan(0);
+  });
+
+  it("exports the compare CSV contract: percent stability, provenance, qualification", () => {
+    window.history.replaceState(null, "", "/yield/?compare=usdc-circle");
+    render(
+      <YieldCompareDrawer
+        open
+        onOpenChange={vi.fn()}
+        rows={[
+          makeRow({
+            yieldStability: 0.923,
+            provenance: {
+              scoreQualification: "partial",
+              evidenceCompleteness: 0.71,
+              safetyProvenance: "opportunity-safety",
+            },
+          } as Partial<YieldViewModelRow>),
+        ]}
+        logos={{}}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Export CSV" }));
+
+    expect(downloadCsvWithPreamble).toHaveBeenCalledTimes(1);
+    const [data, columns] = vi.mocked(downloadCsvWithPreamble).mock.calls[0];
+    const cells = Object.fromEntries(
+      (columns as Array<{ header: string; accessor: (row: YieldViewModelRow) => unknown }>).map((column) => [
+        column.header,
+        column.accessor((data as YieldViewModelRow[])[0]),
+      ]),
+    );
+    expect(cells["Stability (%)"]).toBe(92);
+    expect(cells["Safety provenance"]).toBe("opportunity-derived");
+    expect(cells["PYS qualification"]).toBe("partial");
   });
 });

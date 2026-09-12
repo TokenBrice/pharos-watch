@@ -148,6 +148,7 @@ export function normalizeYieldRankChangeAttribution(value: unknown): YieldRankCh
     primaryDriver:
       primaryDriver === "apy" ||
       primaryDriver === "benchmark" ||
+      primaryDriver === "methodology" ||
       primaryDriver === "stablecoin-safety" ||
       primaryDriver === "source-risk" ||
       primaryDriver === "source-switch" ||

@@ -2,6 +2,8 @@ import { describe, expect, it } from "vitest";
 import {
   formatYieldWarningSignal,
   getPysColor,
+  formatYieldRatioPercent,
+  resolveYieldScoreQualification,
   computePysBreakdown,
 } from "@/lib/yield-constants";
 import { computePysComponents, yieldStabilityToApyVarianceScore } from "@shared/lib/yield-scoring";
@@ -93,8 +95,43 @@ describe("computePysBreakdown", () => {
       sourceRiskPenalty: 2,
     });
 
+
     expect(breakdown.sourceRiskPenalty).toBe(2);
     expect(breakdown.rowUtility).toBeCloseTo(expected.rowUtility, 6);
     expect(breakdown.yieldEfficiency).toBeCloseTo(expected.yieldEfficiency, 6);
+  });
+});
+
+describe("computePysBreakdown benchmarkCurrency (USD_EFFR re-base)", () => {
+  it("re-bases a foreign-benchmark row onto the USD reference", () => {
+    const { hurdleRebase } = computePysBreakdown(5, 80, 0.9, 0.4, null, 3.95, "CHF");
+    expect(hurdleRebase).toBeCloseTo(3.55, 6);
+  });
+
+  it("takes no re-base on a USD-benchmarked row (USD_EFFR key)", () => {
+    // EFFR row: benchmarkRate and the USD reference are both USD rates, so
+    // the spread between them must not be credited as excess yield.
+    const { hurdleRebase, effectiveYield } = computePysBreakdown(4.32, 80, 0.9, 4.32, null, 3.95, "USD");
+    expect(hurdleRebase).toBe(0);
+    expect(effectiveYield).toBeCloseTo(4.32, 6);
+  });
+});
+
+describe("formatYieldRatioPercent", () => {
+  it("scales a 0-1 ratio to a whole-number percent and fails unknowns closed", () => {
+    expect(formatYieldRatioPercent(0.923)).toBe(92);
+    expect(formatYieldRatioPercent(null)).toBe("unknown");
+    expect(formatYieldRatioPercent(undefined)).toBe("unknown");
+    expect(formatYieldRatioPercent(Number.NaN)).toBe("unknown");
+  });
+});
+
+describe("resolveYieldScoreQualification", () => {
+  it("falls back to NR/rated from score presence", () => {
+    expect(resolveYieldScoreQualification({ pharosYieldScore: null })).toBe("NR");
+    expect(resolveYieldScoreQualification({ pharosYieldScore: 50 })).toBe("rated");
+    expect(
+      resolveYieldScoreQualification({ pharosYieldScore: 50, provenance: { scoreQualification: "partial" } }),
+    ).toBe("partial");
   });
 });

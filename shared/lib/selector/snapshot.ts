@@ -373,7 +373,18 @@ function isChainHintsShape(value: unknown): boolean {
 
 function isRecommendedSourceShape(value: unknown): boolean {
   if (!isRecord(value)) return false;
-  if (!isRecord(value.freshness)) return false;
+  // A rail whose freshness the yield domain never published carries no reading
+  // at all (E30). A present reading must still be well-formed, so unknown cannot
+  // launder a corrupt timestamp.
+  if (
+    value.freshness !== undefined
+    && value.freshness !== null
+    && (
+      !isRecord(value.freshness)
+      || !isNonNegativeNumber(value.freshness.capturedAt)
+      || !isNonNegativeNumber(value.freshness.ageSeconds)
+    )
+  ) return false;
   return (
     isNonEmptyString(value.protocol)
     && isNonEmptyString(value.chain)
@@ -388,8 +399,6 @@ function isRecommendedSourceShape(value: unknown): boolean {
     && (value.sourceTvlUsd === undefined || value.sourceTvlUsd === null || isNonNegativeNumber(value.sourceTvlUsd))
     && typeof value.sourceRiskTier === "string"
     && SOURCE_RISK_TIERS.has(value.sourceRiskTier)
-    && isNonNegativeNumber(value.freshness.capturedAt)
-    && isNonNegativeNumber(value.freshness.ageSeconds)
     && (value.selectionReason === undefined || isNullableNonEmptyString(value.selectionReason))
   );
 }

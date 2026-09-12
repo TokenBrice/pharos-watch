@@ -37,11 +37,23 @@ export function baseEvaluationInput(overrides: Partial<EvaluateYieldSourcesInput
   };
 }
 
+/**
+ * Observation date for fixture benchmarks that are meant to read as current.
+ * The classifiers apply each key's record-age bound against the real clock
+ * (`YIELD_BENCHMARK_RECORD_MAX_AGE_SEC`), so a hard-coded 2026-04 stamp reads as
+ * a rewound upstream months later. One day back of the fixture's own clock
+ * leaves a full day of headroom inside the 5-day daily bound; a fixture that
+ * wants a *stale* observation passes its own old date instead.
+ */
+const FIXTURE_NOW_MS = Date.now() - 86_400_000;
+export const FRESH_BENCHMARK_RECORD_DATE = new Date(FIXTURE_NOW_MS).toISOString().slice(0, 10);
+
 export function freshUsdBenchmark(observedAt: number, rate = 4.2) {
+  const recordDate = FRESH_BENCHMARK_RECORD_DATE;
   return {
     ...withYieldBenchmarkStaticMeta("USD", {
       rate,
-      recordDate: "2026-04-20",
+      recordDate,
       fetchedAt: observedAt,
       ageSeconds: 0,
       source: "fred-dgs3mo-test",
@@ -49,7 +61,7 @@ export function freshUsdBenchmark(observedAt: number, rate = 4.2) {
       fallbackMode: null,
     }),
     lastMarketRate: rate,
-    lastMarketRecordDate: "2026-04-20",
+    lastMarketRecordDate: recordDate,
     lastMarketFetchedAt: observedAt,
     lastMarketSource: "fred-dgs3mo-test",
   };

@@ -486,11 +486,19 @@ function computeStructuredYieldSignal(
     value += 15;
     warnings.push("structured-stale-source");
   }
-  if (typeof sourceRisk?.sourceSwitchCount30d === "number" && sourceRisk.sourceSwitchCount30d > 0) {
+  // B31: the static evidence branch and the rank-attribution branch describe the
+  // same condition from two sides — the switch (or penalty) the row carries, and
+  // the rank move that same switch produced. Each pair therefore contributes one
+  // increment: the driver branch is a no-op once its static counterpart fired.
+  const countedSourceSwitch =
+    typeof sourceRisk?.sourceSwitchCount30d === "number" && sourceRisk.sourceSwitchCount30d > 0;
+  const countedSourceRiskPenalty =
+    typeof sourceRisk?.sourceRiskPenalty === "number" && sourceRisk.sourceRiskPenalty >= 1.5;
+  if (countedSourceSwitch) {
     value += 20;
     warnings.push("structured-source-switch");
   }
-  if (typeof sourceRisk?.sourceRiskPenalty === "number" && sourceRisk.sourceRiskPenalty >= 1.5) {
+  if (countedSourceRiskPenalty) {
     value += 20;
     warnings.push("structured-source-risk-penalty");
   }
@@ -501,10 +509,10 @@ function computeStructuredYieldSignal(
     value += 10;
     warnings.push("structured-medium-risk-venue");
   }
-  if (attribution?.primaryDriver === "source-switch") {
+  if (attribution?.primaryDriver === "source-switch" && !countedSourceSwitch) {
     value += 20;
     warnings.push("structured-rank-source-switch");
-  } else if (attribution?.primaryDriver === "source-risk") {
+  } else if (attribution?.primaryDriver === "source-risk" && !countedSourceRiskPenalty) {
     value += 20;
     warnings.push("structured-rank-source-risk");
   }

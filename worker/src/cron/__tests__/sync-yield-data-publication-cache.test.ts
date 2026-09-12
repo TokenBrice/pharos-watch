@@ -8,12 +8,12 @@ import {
   resetSyncYieldDataTest,
   cleanupSyncYieldDataTest,
   fixtureSyncYieldData,
-  fixtureMockD1,
   fixtureBatchExecute,
   fixtureGetCache,
   fixtureWriteFreshnessSentinel,
   fixtureShouldAttemptFetch,
   fixtureMockFetch,
+  mockD1WithYieldPruneTables,
   fixtureACTIVE_STABLECOINS,
   fixtureSafetyScoreActiveSourceModule,
   fixtureSafetyScoresModule,
@@ -27,7 +27,7 @@ import { makeDlYieldPool } from "./yield-resolve.test-support";
 import type * as YieldHelpers from "../yield-helpers";
 
 function makePublicationCacheDb(existingIds: Record<string, unknown>[] = []) {
-  return fixtureMockD1([
+  return mockD1WithYieldPruneTables([
     { match: "pharos:yield-sync:yield-data-existing-ids", rows: existingIds },
     { match: "cache", rows: [] },
     { match: "yield_data", rows: [] },
@@ -207,6 +207,10 @@ describe("syncYieldData", () => {
 
   it("publishes evaluated warning signals into the yield rankings cache", async () => {
     const db = makePublicationCacheDb();
+    // Scoring evidence: without the benchmark registry the USD entry is the
+    // hardcoded fallback (ageSeconds null) and the row is an unpublishable
+    // stale-benchmark NR row under B13.
+    mockHealthyRiskFreeRateCache();
     const actual = await vi.importActual<typeof YieldHelpers>("../yield-helpers");
     vi.spyOn(fixtureYieldHelpersModule, "detectWarningSignals").mockImplementation(actual.detectWarningSignals);
 

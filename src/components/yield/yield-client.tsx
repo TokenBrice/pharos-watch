@@ -39,12 +39,18 @@ import {
 import { buildStablecoinUrl } from "@shared/lib/urls";
 import { YIELD_ZONE_LABELS } from "@shared/lib/classification";
 import { resolveYieldZone } from "@/lib/yield-scatter";
+import { resolveYieldRowBenchmark } from "@/lib/yield-benchmark";
 import { buildYieldStoryCallouts } from "@/lib/yield-story-callouts";
 import { trackEvent } from "@/lib/analytics";
 import { formatCurrency, formatPercent } from "@shared/lib/format";
 import { dedupeYieldRankings } from "@shared/lib/yield-rankings";
 import { CLIENT_TRACKED_META_BY_ID } from "@shared/lib/stablecoins/client-registry";
-import { YIELD_WORKBENCH_FALLBACK_PARAM, parseYieldWorkbenchFallbackId } from "@shared/lib/yield-workbench-fallback";
+import {
+  YIELD_WORKBENCH_FALLBACK_PARAM,
+  parseYieldWorkbenchFallbackId,
+  resolveYieldWorkbenchFallbackNotice,
+} from "@shared/lib/yield-workbench-fallback";
+import type { YieldBenchmarkRegistry } from "@shared/types";
 import type { YieldRankingsSummaryResponse } from "@shared/types/yield-summary";
 
 interface HeroHighlightRowProps {
@@ -148,8 +154,15 @@ function HeroHighlightRow({ label, logoSrc, name, symbol, value, unit, context, 
   );
 }
 
-function formatHeroRiskContext(row: YieldViewModelRow, riskFreeRate: number): string {
-  const zone = resolveYieldZone(row.safetyScore, row.apy30d, row.benchmarkRate ?? riskFreeRate);
+function formatHeroRiskContext(
+  row: YieldViewModelRow,
+  riskFreeRate: number,
+  benchmarks: YieldBenchmarkRegistry | null | undefined,
+): string {
+  // E5: judge the hero zone against the row's own benchmark — a missing row
+  // rate resolves from the registry by benchmarkKey before the USD frame.
+  const benchmark = resolveYieldRowBenchmark(row, benchmarks, riskFreeRate);
+  const zone = resolveYieldZone(row.safetyScore, row.apy30d, benchmark.rate);
   const safety = row.safetyGrade && row.safetyGrade !== "NR" ? `${row.safetyGrade} safety` : "Safety NR";
   const pys = row.pharosYieldScore !== null ? `PYS ${row.pharosYieldScore.toFixed(1)}` : "PYS NR";
   const posture = row.sourcePosture ? row.sourcePosture.replaceAll("-", " ") : "posture unknown";
@@ -215,7 +228,7 @@ function SelectorHandoffNotice({ visible }: { visible: boolean }) {
 }
 
 function YieldWorkbenchFallbackNotice({ stablecoinId }: { stablecoinId: string | null }) {
-  const meta = stablecoinId ? CLIENT_TRACKED_META_BY_ID.get(stablecoinId) : null;
+  const meta = resolveYieldWorkbenchFallbackNotice(stablecoinId, CLIENT_TRACKED_META_BY_ID);
   if (!meta) return null;
 
   return (
@@ -229,7 +242,7 @@ function YieldWorkbenchFallbackNotice({ stablecoinId }: { stablecoinId: string |
           this release. The full leaderboard is shown instead, with {meta.symbol} kept in comparison when available.
         </p>
         <Link
-          href={buildStablecoinUrl(meta.id)}
+          href={buildStablecoinUrl(meta.stablecoinId)}
           className="pharos-focus-ring w-fit shrink-0 rounded-sm font-medium underline underline-offset-4 hover:text-foreground/80"
         >
           View {meta.symbol} dossier
@@ -350,21 +363,17 @@ export function YieldClient() {
 
   // Counts the full /yield ranking universe per peg currency (not filter-
   // aware), so the reference-rates table can show how many tracked coins
-  // each benchmark currency covers.
+  // each benchmark currency covers. Filter options omit hidden individual
+  // pegs (SGD, MXN), so count the row facets directly to keep those
+  // benchmark rows honest.
   const currencyCounts = useMemo(() => {
     const counts: Record<string, number> = {};
-    for (const option of viewModel.options.peg) {
-      if (
-        option.value === "all" ||
-        option.value === "non-usd" ||
-        option.value === "aud-cad" ||
-        option.value === "other"
-      )
-        continue;
-      counts[option.value] = option.count;
+    for (const facet of yieldUniverse.rowFacets) {
+      if (facet.peg === null) continue;
+      counts[facet.peg] = (counts[facet.peg] ?? 0) + 1;
     }
     return counts;
-  }, [viewModel.options.peg]);
+  }, [yieldUniverse.rowFacets]);
 
   useEffect(() => {
     if (!data || isLoading || error) return;
@@ -522,6 +531,7 @@ export function YieldClient() {
   }
 
   const exhibitTiles = storyCallouts;
+  const heroBenchmarks = data.benchmarks ?? data.provenance?.benchmarks ?? null;
 
   return (
     <div className="space-y-6">
@@ -546,7 +556,7 @@ export function YieldClient() {
                     Best-paid risk in view <span className="text-foreground/70">· {topPysRow.symbol}</span>
                   </span>
                   <span className="block text-[11px] font-normal text-muted-foreground">
-                    {formatHeroRiskContext(topPysRow, data.riskFreeRate)}
+                    {formatHeroRiskContext(topPysRow, data.riskFreeRate, heroBenchmarks)}
                   </span>
                 </span>
               ) : (
@@ -581,7 +591,7 @@ export function YieldClient() {
                       symbol={exhibitTiles.topYield.symbol}
                       value={formatPercent(exhibitTiles.topYield.apy30d)}
                       unit="APY"
-                      context={formatHeroRiskContext(exhibitTiles.topYield, data.riskFreeRate)}
+                      context={formatHeroRiskContext(exhibitTiles.topYield, data.riskFreeRate, heroBenchmarks)}
                       onClick={() => handleScrollToRow(exhibitTiles.topYield!.id)}
                     />
                   ) : null}
@@ -593,21 +603,27 @@ export function YieldClient() {
                       symbol={exhibitTiles.mostStable.symbol}
                       value={formatPercent(exhibitTiles.mostStable.apy30d)}
                       unit="APY"
-                      context={formatHeroRiskContext(exhibitTiles.mostStable, data.riskFreeRate)}
+                      context={formatHeroRiskContext(exhibitTiles.mostStable, data.riskFreeRate, heroBenchmarks)}
                       onClick={() => handleScrollToRow(exhibitTiles.mostStable!.id)}
                     />
                   ) : null}
                   {exhibitTiles.largestMarket ? (
                     <HeroHighlightRow
-                      label="Largest market"
+                      label="Largest tracked market"
                       logoSrc={logos?.[exhibitTiles.largestMarket.id]}
                       name={exhibitTiles.largestMarket.name}
                       symbol={exhibitTiles.largestMarket.symbol}
                       value={formatCurrency(exhibitTiles.largestMarket.sourceTvlUsd!)}
                       unit="TVL"
-                      context={formatHeroRiskContext(exhibitTiles.largestMarket, data.riskFreeRate)}
+                      context={formatHeroRiskContext(exhibitTiles.largestMarket, data.riskFreeRate, heroBenchmarks)}
                       onClick={() => handleScrollToRow(exhibitTiles.largestMarket!.id)}
                     />
+                  ) : null}
+                  {exhibitTiles.unmeasuredTvlCount > 0 ? (
+                    <p className="px-4 py-2 text-[11px] leading-snug text-muted-foreground">
+                      {exhibitTiles.unmeasuredTvlCount} of {visibleRows.length} rows publish no source TVL and are
+                      not eligible for this tile.
+                    </p>
                   ) : null}
                 </div>
               ) : (
@@ -631,6 +647,8 @@ export function YieldClient() {
                   benchmarkRate={stats.referenceBenchmark?.rate ?? data.riskFreeRate}
                   benchmarkLabel={stats.referenceBenchmark?.label}
                   benchmarkIsFallback={stats.referenceBenchmark?.isFallback}
+                  benchmarks={heroBenchmarks}
+                  benchmarkAgeEvidence={stats.referenceBenchmark ?? null}
                   showBenchmarkReference
                   usesDefaultBenchmarkFrame={stats.usesDefaultBenchmarkFrame}
                   logos={logos}
@@ -663,6 +681,8 @@ export function YieldClient() {
               riskFreeRate={data.riskFreeRate}
               medianApy={data.medianApy ?? 0}
               scalingFactor={data.scalingFactor}
+              benchmarks={data.benchmarks ?? data.provenance?.benchmarks ?? null}
+              methodologyVersion={data.methodology?.version}
               emptyMessage={viewModel.emptyState.description}
               comparisonRows={comparisonRows}
               updatedAt={data.updatedAt}

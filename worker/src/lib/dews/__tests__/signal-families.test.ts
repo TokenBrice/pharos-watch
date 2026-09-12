@@ -226,4 +226,29 @@ describe("DEWS signal family curves", () => {
     expect(result.value).toBe(value);
     expect(result.warnings).toContain(warning);
   });
+
+  it("counts a static branch and its rank-attribution twin once (B31)", () => {
+    const switched = computeYieldSignal(makeDewsInput({
+      yieldSourceRisk: { sourceSwitchCount30d: 1 },
+      yieldRankChangeAttribution: { primaryDriver: "source-switch" },
+    }));
+    expect(switched.value).toBe(20);
+    expect(switched.warnings).toEqual(["structured-source-switch"]);
+
+    const penalised = computeYieldSignal(makeDewsInput({
+      yieldSourceRisk: { sourceRiskPenalty: 1.5 },
+      yieldRankChangeAttribution: { primaryDriver: "source-risk" },
+    }));
+    expect(penalised.value).toBe(20);
+    expect(penalised.warnings).toEqual(["structured-source-risk-penalty"]);
+
+    // The driver branch still carries rows the static line cannot see: a 1.2
+    // penalty drove the rank move but sits below the static 1.5 threshold.
+    const driverOnly = computeYieldSignal(makeDewsInput({
+      yieldSourceRisk: { sourceRiskPenalty: 1.2 },
+      yieldRankChangeAttribution: { primaryDriver: "source-risk" },
+    }));
+    expect(driverOnly.value).toBe(20);
+    expect(driverOnly.warnings).toEqual(["structured-rank-source-risk"]);
+  });
 });

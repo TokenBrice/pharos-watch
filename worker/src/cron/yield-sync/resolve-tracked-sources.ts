@@ -84,7 +84,7 @@ export async function loadTier1PrevRateRows(
      FROM yield_history
      WHERE stablecoin_id = ?
        AND recorded_at <= ?
-       AND exchange_rate IS NOT NULL
+       AND exchange_rate > 0
        AND (publication_generation_id IS NULL OR publication_state = 'published')
      ORDER BY recorded_at DESC
      LIMIT 1`,
@@ -114,6 +114,7 @@ export async function resolveTrackedYieldSources(params: {
   signal?: AbortSignal;
   chainRpcs?: Map<string, ChainRpcConfig>;
   coingeckoApiKey?: string | null;
+  onOptionalSourceOutcome?: (outcome: { label: string; outcome: "failed" | "timeout" }) => void;
 }): Promise<YieldResolutionResult> {
   const resolved: ResolvedYieldEntry[] = [];
   const tier1PrevRates = new Map<string, number | null>();
@@ -146,8 +147,11 @@ export async function resolveTrackedYieldSources(params: {
     const symbol = meta.symbol;
     let hasAnySource = false;
     const rateConfig = onChainRateConfigById.get(id);
-    if (rateConfig && params.onChainRates.has(id)) {
-      const onChainRate = params.onChainRates.get(id)!;
+    const onChainRate = rateConfig ? params.onChainRates.get(id) : undefined;
+    // B26 — a zero or non-finite read is a failed read, not a 0% observation.
+    // Publishing it would write `exchange_rate: 0` (the next run's anchor) plus an
+    // `apy: 0` seed row; the lane stays unresolved and the other lanes still run.
+    if (rateConfig && onChainRate && Number.isFinite(onChainRate.rate) && onChainRate.rate > 0) {
       const { rate } = onChainRate;
       const prevRow = tier1PrevRateRows.get(id);
       tier1PrevRates.set(id, prevRow?.exchangeRate ?? null);
@@ -347,6 +351,7 @@ export async function resolveTrackedYieldSources(params: {
         signal: params.signal,
         chainRpcs: params.chainRpcs,
         coingeckoApiKey: params.coingeckoApiKey,
+        onOutcome: params.onOptionalSourceOutcome,
       });
       if (!optionalYield) continue;
 
@@ -373,6 +378,7 @@ export async function resolveTrackedYieldSources(params: {
       signal: params.signal,
       chainRpcs: params.chainRpcs,
       coingeckoApiKey: params.coingeckoApiKey,
+      onOutcome: params.onOptionalSourceOutcome,
     });
     if (!optionalYield) continue;
 

@@ -1,7 +1,11 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { buildYieldSourceBoardModel, inferLaneConfidenceTier } from "@/lib/yield-source-board-model";
 import { makeAltYieldSource, makeYieldProvenance, makeYieldRanking } from "@shared/test-utils/yield-ranking-fixtures";
 import type { YieldBenchmarkRegistry } from "@shared/types";
+
+afterEach(() => {
+  vi.useRealTimers();
+});
 
 describe("buildYieldSourceBoardModel", () => {
   it("summarizes selected rows, alternate rows, confidence, switches, anomalies, and source-row APY", () => {
@@ -176,6 +180,9 @@ describe("buildYieldSourceBoardModel", () => {
         fallbackMode: null,
       },
     };
+
+    // Deterministic clock: the recordDate below is 1 day old, inside the 2-day bound.
+    vi.useFakeTimers({ now: Date.UTC(2026, 3, 24) });
     const model = buildYieldSourceBoardModel(
       [
         makeYieldRanking({
@@ -189,6 +196,38 @@ describe("buildYieldSourceBoardModel", () => {
     );
 
     expect(model.benchmarkLabels).toEqual([{ label: "USD 3M T-Bill", count: 1 }]);
+  });
+
+  it("marks a benchmark label stale when its recordDate exceeds the freshness bound", () => {
+    // 142 days after the recordDate below — past the 2-day fallback bound.
+    vi.useFakeTimers({ now: Date.UTC(2026, 8, 12) });
+    const benchmarks: YieldBenchmarkRegistry = {
+      USD: {
+        key: "USD",
+        label: "USD 3M T-Bill",
+        currency: "USD",
+        rate: 4.25,
+        recordDate: "2026-04-23",
+        fetchedAt: 1_776_000_000,
+        ageSeconds: 60,
+        source: "fred-dgs3mo",
+        isFallback: false,
+        fallbackMode: null,
+      },
+    };
+    const model = buildYieldSourceBoardModel(
+      [
+        makeYieldRanking({
+          benchmarkKey: "USD",
+          benchmarkLabel: undefined,
+          benchmarkSelectionMode: undefined,
+          benchmarkIsFallback: undefined,
+        }),
+      ],
+      { benchmarks },
+    );
+
+    expect(model.benchmarkLabels).toEqual([{ label: "USD 3M T-Bill (142d old)", count: 1 }]);
   });
 
   it("formats prototype-property dataSource values as unknown labels", () => {

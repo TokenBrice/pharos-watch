@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { mockFetchRetry } from "../../test-helpers/cron";
 import {
@@ -37,6 +37,7 @@ import { parseBocValetSeries } from "../tbill-sources/boc";
 import { parseCbrKeyRateXml } from "../tbill-sources/cbr";
 import { parseCbrtEvdsSeries } from "../tbill-sources/cbrt";
 import { parseEcbCompoundedEstrCsv } from "../tbill-sources/ecb";
+import { parseFredLatest } from "../tbill-sources/fred";
 import { parseNyFedEffrJson } from "../tbill-sources/nyfed";
 import { parseRbaF1MoneyMarketCsv } from "../tbill-sources/rba";
 import { parseSixSar3mcCsv } from "../tbill-sources/six";
@@ -122,6 +123,41 @@ describe("parseNyFedEffrJson", () => {
 
   it("returns null for malformed JSON", () => {
     expect(parseNyFedEffrJson("not json")).toBeNull();
+  });
+});
+
+describe("parseFredLatest", () => {
+  // The St. Louis Fed loaders gate the latest observation against the real
+  // clock, so freeze it: these fixtures are static dates.
+  const FROZEN_NOW = new Date("2026-06-25T12:00:00Z");
+  const DGS3MO_MAX_OBSERVATION_AGE_DAYS = 5;
+
+  beforeEach(() => {
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(FROZEN_NOW);
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it("extracts the latest valid DGS3MO observation inside the observation window", () => {
+    expect(parseFredLatest("DATE,DGS3MO\n2026-06-23,3.72\n2026-06-24,3.71\n", DGS3MO_MAX_OBSERVATION_AGE_DAYS))
+      .toEqual({ recordDate: "2026-06-24", rate: 3.71 });
+  });
+
+  it("rejects a months-old last row so USD falls through to the next provider", () => {
+    expect(parseFredLatest("DATE,DGS3MO\n2026-03-02,3.72\n", DGS3MO_MAX_OBSERVATION_AGE_DAYS)).toBeNull();
+  });
+
+  it("rejects a future-dated last row instead of stamping it fresh", () => {
+    expect(parseFredLatest("DATE,DFF\n2099-01-01,4.33\n", DGS3MO_MAX_OBSERVATION_AGE_DAYS)).toBeNull();
+  });
+
+  it("skips missing-value rows but still guards the latest usable observation", () => {
+    expect(parseFredLatest("DATE,DFF\n2026-03-02,4.33\n2026-06-25,.\n", DGS3MO_MAX_OBSERVATION_AGE_DAYS)).toBeNull();
+    expect(parseFredLatest("DATE,DFF\n2026-06-24,4.33\n2026-06-25,.\n", DGS3MO_MAX_OBSERVATION_AGE_DAYS))
+      .toEqual({ recordDate: "2026-06-24", rate: 4.33 });
   });
 });
 

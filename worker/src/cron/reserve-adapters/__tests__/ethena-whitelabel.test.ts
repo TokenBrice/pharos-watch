@@ -85,7 +85,7 @@ describe("adaptEthenaWhitelabel", () => {
 
   it("is valid under validateAdapterOutput and the off-chain info warning does not degrade the snapshot", () => {
     const result = adaptEthenaWhitelabel(SUIUSDE_PAYLOAD, "suiUSDe");
-    const report = expectValidAdapterOutput("ethena-whitelabel", result);
+    const report = expectValidAdapterOutput("ethena-whitelabel", result, { now: NOW_SEC });
     expect(report.warnings).toEqual([]);
   });
 

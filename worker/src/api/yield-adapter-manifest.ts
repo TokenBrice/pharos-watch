@@ -1,12 +1,13 @@
 import { jsonResponse } from "../lib/api-response";
+import { addFreshnessHeaders } from "../lib/api-freshness-headers";
 import { CACHE_PROFILES } from "../lib/constants";
 import { YIELD_ADAPTER_MANIFEST } from "../lib/yield-config/yield-config";
 import { YIELD_BEARING_STABLECOINS } from "@shared/lib/tracked-stablecoin-utils";
 import {
   YIELD_METHODOLOGY_CHANGELOG,
   YIELD_METHODOLOGY_VERSION,
-  YIELD_METHODOLOGY_VERSION_LABEL,
 } from "@shared/lib/methodology-versions/yield-methodology";
+import { DAY_SECONDS } from "@shared/lib/time-constants";
 import type {
   YieldAdapterManifestFamily,
   YieldAdapterManifestPublicEntry,
@@ -20,9 +21,46 @@ const SYMBOL_BY_STABLECOIN_ID = new Map<string, string>(
   YIELD_BEARING_STABLECOINS.map((meta) => [meta.id, meta.symbol]),
 );
 
-const MANIFEST_UPDATED_AT_SEC =
-  YIELD_METHODOLOGY_CHANGELOG.find((entry) => entry.version === YIELD_METHODOLOGY_VERSION)?.effectiveAt
-  ?? 0;
+/**
+ * Freshness budget for the manifest: the registry's own review cadence (its
+ * lifecycle entries carry quarterly `nextReviewAt` horizons), not a cron
+ * interval. `addFreshnessHeaders` only warns past 8x this budget, so it flags a
+ * registry that has stopped being reviewed rather than a manifest that is
+ * simply older than the live ranking data — which it always is.
+ */
+const MANIFEST_REVIEW_BUDGET_SEC = 90 * DAY_SECONDS;
+
+/**
+ * Revision stamp for the manifest projection.
+ *
+ * The manifest is derived from the static adapter registry, so the honest stamp
+ * is the newest registry evidence this module can see: the most recent adapter
+ * lifecycle review (`lifecycleReason.since`, when a strategy entered its current
+ * `quarantined` / `intentional-gap` state) or the methodology revision that
+ * re-derived the registry, whichever is newer.
+ *
+ * The previous implementation published the *current* methodology entry's date
+ * alone: a registry whose adapter set changed without a version bump kept
+ * reporting an older update than its own content, and a changelog lookup miss
+ * published `updatedAt: 0` (epoch 1970) — with freshness headers attached that
+ * would have served a permanent stale warning plus `no-store`.
+ */
+const MANIFEST_UPDATED_AT_SEC = (() => {
+  const lifecycleReviews = YIELD_ADAPTER_MANIFEST.flatMap((entry) =>
+    entry.strategies
+      .map((strategy) => strategy.lifecycleReason?.since)
+      .filter((since): since is string => typeof since === "string")
+      .map((since) => Math.floor(Date.parse(`${since}T00:00:00Z`) / 1000))
+      .filter((seconds) => Number.isFinite(seconds)),
+  );
+  const methodologyRevisions = YIELD_METHODOLOGY_CHANGELOG
+    .map((entry) => entry.effectiveAt)
+    .filter((effectiveAt) => Number.isFinite(effectiveAt) && effectiveAt > 0);
+  if (lifecycleReviews.length === 0 && methodologyRevisions.length === 0) {
+    throw new Error("Yield adapter manifest has no registry revision date to publish");
+  }
+  return Math.max(...lifecycleReviews, ...methodologyRevisions);
+})();
 
 interface FamilyMapping {
   family: YieldAdapterManifestFamily;
@@ -127,16 +165,21 @@ function buildPublicEntries(
 }
 
 export const handleYieldAdapterManifest = async (): Promise<Response> => {
-    const updatedAtSec = MANIFEST_UPDATED_AT_SEC;
-    const entries = buildPublicEntries(YIELD_METHODOLOGY_VERSION_LABEL, updatedAtSec);
-    const payload: YieldAdapterManifestResponse = {
-      methodologyVersion: YIELD_METHODOLOGY_VERSION_LABEL,
-      updatedAt: updatedAtSec,
-      entries,
-    };
-    return jsonResponse(payload, {
-      headers: {
-        "Cache-Control": CACHE_PROFILES.standard,
-      },
-    });
+  const updatedAtSec = MANIFEST_UPDATED_AT_SEC;
+  // Plain version, matching `/api/yield-rankings`' `methodology.version`; the
+  // `v`-prefixed label is a display string and made the two endpoints disagree.
+  const methodologyVersion = YIELD_METHODOLOGY_VERSION;
+  const entries = buildPublicEntries(methodologyVersion, updatedAtSec);
+  const payload: YieldAdapterManifestResponse = {
+    methodologyVersion,
+    updatedAt: updatedAtSec,
+    entries,
   };
+  return jsonResponse(payload, {
+    headers: addFreshnessHeaders(
+      { "Cache-Control": CACHE_PROFILES.standard },
+      updatedAtSec,
+      MANIFEST_REVIEW_BUDGET_SEC,
+    ),
+  });
+};

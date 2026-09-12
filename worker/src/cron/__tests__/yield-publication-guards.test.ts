@@ -2,7 +2,9 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   buildSourceRiskGoldenFixture,
   getSourceRiskGoldenRow,
+  mergeSourceRiskGoldenFixtures,
 } from "@shared/test-utils/yield-source-risk-golden-fixtures";
+import { computePysRewardShare, derivePysSourceRiskPenalty } from "@shared/lib/yield-scoring";
 
 import {
   PRICE_DERIVED_STALE_THRESHOLD_MS,
@@ -13,6 +15,7 @@ import {
   LONG_HORIZON_COMPARISON_ANCHOR_STALE_THRESHOLD_MS,
 } from "../yield-helpers";
 import { buildHistoryKey } from "../yield-sync/evaluation";
+import { YIELD_BENCHMARK_SCORE_TTL_SEC } from "../yield-sync/benchmarks";
 import {
   buildYieldRankingsPayloadFromEvaluatedSources,
   validateYieldRankingsPayloadForPublish,
@@ -303,6 +306,111 @@ describe("buildYieldRankingsPayloadFromEvaluatedSources", () => {
     expect(payload.rankings[0]?.decisionLedger?.sourceSwitch).toBe(true);
     expect(payload.rankings[0]?.decisionLedger?.previousBestSourceKey).toBe("price-derived:previous");
     expect(payload.rankings[0]?.decisionLedger?.apy30dDeltaFromPrevious).toBeCloseTo(1.8, 6);
+  });
+
+  it("keeps a benchmark-degraded row scored and adds the degradation warning", () => {
+    const payload = buildPayloadWithObservedAt(Math.floor(FIXED_NOW.getTime() / 1000), {
+      benchmarkFreshness: "degraded",
+    });
+    const ranking = payload.rankings[0];
+
+    expect(ranking?.warningSignals).toContain("benchmark-degraded");
+    expect(ranking?.warningSignals).not.toContain("benchmark-stale");
+    expect(ranking?.pharosYieldScore).toBe(28);
+    expect(ranking?.pysNullReason).toBeNull();
+    expect(ranking?.sourceRole).toBe("degraded-canonical");
+    expect(ranking?.provenance).toMatchObject({
+      benchmarkFreshness: "degraded",
+      scoreQualification: "rated",
+      scoreQualified: true,
+    });
+  });
+
+  it("nulls the score and names the benchmark when the benchmark feed is stale", () => {
+    const payload = buildPayloadWithObservedAt(Math.floor(FIXED_NOW.getTime() / 1000), {
+      benchmarkFreshness: "stale",
+    });
+    const ranking = payload.rankings[0];
+
+    expect(ranking?.warningSignals).toContain("benchmark-stale");
+    expect(ranking?.warningSignals).not.toContain("data-stale");
+    expect(ranking?.pharosYieldScore).toBeNull();
+    expect(ranking?.pysNullReason).toBe("benchmark-stale");
+    expect(ranking?.sourceRole).toBe("degraded-canonical");
+    expect(ranking?.provenance).toMatchObject({
+      sourceFreshness: "fresh",
+      benchmarkFreshness: "stale",
+      scoreQualification: "NR",
+      scoreQualified: false,
+    });
+  });
+
+  it.each([
+    {
+      label: "a proxy-selected row with healthy meta stays healthy",
+      meta: makeBenchmarkMeta(),
+      overrides: { benchmarkSelectionMode: "fallback-usd" as const },
+      expectedFreshness: "healthy",
+      expectedWarning: null,
+      expectedScore: 28,
+    },
+    {
+      label: "a retained fallback meta degrades",
+      meta: makeBenchmarkMeta({ isFallback: true, fallbackMode: "retained" }),
+      overrides: {},
+      expectedFreshness: "degraded",
+      expectedWarning: "benchmark-degraded",
+      expectedScore: 28,
+    },
+    {
+      label: "an observation past the 48h fetch TTL goes stale",
+      meta: makeBenchmarkMeta({ ageSeconds: YIELD_BENCHMARK_SCORE_TTL_SEC + 1 }),
+      overrides: {},
+      expectedFreshness: "stale",
+      expectedWarning: "benchmark-stale",
+      expectedScore: null,
+    },
+  ])(
+    "recomputes freshness from the row meta when the row publishes none — $label",
+    ({ meta, overrides, expectedFreshness, expectedWarning, expectedScore }) => {
+      const payload = buildPayloadWithObservedAt(Math.floor(FIXED_NOW.getTime() / 1000), {
+        // A row that publishes no freshness (legacy/absent evaluation output) must
+        // be classified from its own benchmark meta.
+        benchmarkFreshness: undefined,
+        benchmarkMeta: meta,
+        ...overrides,
+      });
+      const ranking = payload.rankings[0];
+
+      expect(ranking?.provenance?.benchmarkFreshness).toBe(expectedFreshness);
+      if (expectedWarning == null) {
+        // A1: a documented proxy selection is not a degraded feed.
+        expect(ranking?.warningSignals).not.toContain("benchmark-degraded");
+        expect(ranking?.warningSignals).not.toContain("benchmark-stale");
+      } else {
+        expect(ranking?.warningSignals).toContain(expectedWarning);
+      }
+      expect(ranking?.pharosYieldScore).toBe(expectedScore);
+      expect(ranking?.pysNullReason).toBe(expectedScore == null ? "benchmark-stale" : null);
+    },
+  );
+
+  it("prefers the source-stale reason when both the source and the benchmark are stale", () => {
+    const nowSec = Math.floor(FIXED_NOW.getTime() / 1000);
+    const payload = buildPayloadWithObservedAt(nowSec - STALE_THRESHOLD_MS / 1000 - 60, {
+      benchmarkFreshness: "stale",
+    });
+    const ranking = payload.rankings[0];
+
+    expect(ranking?.warningSignals).toEqual(expect.arrayContaining(["data-stale", "benchmark-stale"]));
+    expect(ranking?.pharosYieldScore).toBeNull();
+    expect(ranking?.pysNullReason).toBe("source-stale");
+    expect(ranking?.provenance).toMatchObject({
+      sourceFreshness: "stale",
+      benchmarkFreshness: "stale",
+      scoreQualification: "NR",
+      scoreQualified: false,
+    });
   });
 });
 
@@ -661,5 +769,161 @@ describe("validateYieldRankingsPayloadForPublish", () => {
     });
     expect((ranking as Record<string, unknown> | undefined)?.sourceRiskPenalty).toBeUndefined();
     expect((firstAlt as unknown as Record<string, unknown> | undefined)?.sourceRiskPenalty).toBeUndefined();
+  });
+
+});
+
+describe("buildYieldRankingsPayloadFromEvaluatedSources source-risk invariants", () => {
+  it("reproduces every published source-risk penalty and reward share from the row's published terms", () => {
+    const startSec = Math.floor(FIXED_NOW.getTime() / 1000);
+    const benchmark = makeBenchmarkMeta();
+    // The scored penalties come from golden literals (never from the derivation this
+    // test runs), so a publisher that bypasses `derivePysSourceRiskPenalty` — or
+    // publishes terms the score never used — cannot satisfy the invariant below.
+    const rewardHeavy = getSourceRiskGoldenRow("reward-heavy");
+    const staleAge = getSourceRiskGoldenRow("stale-source-age");
+    const churn = getSourceRiskGoldenRow("source-switch-churn");
+    const venueWeight = 3;
+    const venuePenalty = derivePysSourceRiskPenalty({ venueRiskWeighted: venueWeight, venueRiskTier: "medium" });
+
+    const selected = makeEvaluatedSource({
+      sourceKey: "golden:reward-heavy",
+      yieldSource: "Golden Reward Heavy",
+      currentApy: 10,
+      apyBase: 1,
+      apyReward: 9,
+      sourceRisk: buildSourceRiskGoldenFixture("reward-heavy"),
+      sourceRiskPenalty: rewardHeavy.expectedDerivedPenalty,
+    });
+    const staleAgeAlt = makeEvaluatedSource({
+      sourceKey: "golden:stale-source-age",
+      yieldSource: "Golden Stale Source",
+      sourceRisk: buildSourceRiskGoldenFixture("stale-source-age"),
+      sourceRiskPenalty: staleAge.expectedDerivedPenalty,
+    });
+    const thinDepthAlt = makeEvaluatedSource({
+      sourceKey: "golden:thin-depth-bootstrap",
+      yieldSource: "Golden Thin Depth",
+      sourceRisk: mergeSourceRiskGoldenFixtures(["low-source-depth", "bootstrap-observation-count"], {
+        sourceRiskPenalty: 1.55,
+      }),
+      sourceRiskPenalty: 1.55,
+    });
+    // A9: the stored share (0.99) contradicts the row's own decomposition — a base-only
+    // payload proves the reward contribution is zero — so the published terms and the
+    // published penalty must both come from the re-derived share.
+    const storedRewardShareAlt = makeEvaluatedSource({
+      sourceKey: "golden:stored-reward-share",
+      yieldSource: "Golden Stored Reward Share",
+      currentApy: 5,
+      apyBase: 5,
+      apyReward: null,
+      sourceRisk: mergeSourceRiskGoldenFixtures(["reward-heavy"], {
+        sourceRiskPenalty: 1,
+        rewardShare: 0.99,
+      }),
+      sourceRiskPenalty: 1,
+    });
+    const venueAlt = makeEvaluatedSource({
+      sourceKey: "golden:venue-weighted",
+      yieldSource: "Golden Venue Weighted",
+      sourceRisk: buildSourceRiskGoldenFixture("missing-safety", {
+        venueRiskWeighted: venueWeight,
+        venueRiskTier: "medium",
+      }),
+      sourceRiskPenalty: venuePenalty,
+    });
+    // B42: only a best row publishes the switch count, and only a best row's penalty
+    // may include the churn term.
+    const churnSelected = makeEvaluatedSource({
+      id: "churn-coin",
+      symbol: "CHN",
+      sourceKey: "golden:source-switch-churn",
+      yieldSource: "Golden Source Churn",
+      sourceSwitchCount30d: churn.input.sourceSwitchCount30d,
+      sourceRisk: buildSourceRiskGoldenFixture("source-switch-churn"),
+      sourceRiskPenalty: churn.expectedDerivedPenalty,
+    });
+    const evaluatedSources = [
+      selected,
+      staleAgeAlt,
+      thinDepthAlt,
+      storedRewardShareAlt,
+      venueAlt,
+      churnSelected,
+    ];
+
+    const payload = buildYieldRankingsPayloadFromEvaluatedSources({
+      evaluatedSources,
+      publicationViews: makePublicationViews(
+        evaluatedSources,
+        new Map([
+          [selected.id, selected.sourceKey],
+          [churnSelected.id, churnSelected.sourceKey],
+        ]),
+        startSec,
+      ),
+      rankingProvenanceByKey: new Map(),
+      riskFreeRate: benchmark.rate,
+      riskFreeRateMeta: benchmark,
+      riskFreeRateRegistry: { USD: benchmark, EUR: null, CHF: null },
+      dlPoolsMeta: makeYieldSourceMeta(),
+      safetySnapshot: makeSafetySnapshotMeta(),
+      medianApy: 4.5,
+      startSec,
+    });
+
+    expect(payload.rankings).toHaveLength(2);
+    const altRows = payload.rankings.flatMap((ranking) => ranking.altSources ?? []);
+    expect(altRows).toHaveLength(4);
+
+    // Invariant 1 — for every best row and every alternate row, the published penalty
+    // is exactly the derivation from that row's own published terms.
+    const penaltyRows = [
+      ...payload.rankings.map((ranking) => ({ label: ranking.id, risk: ranking.sourceRisk })),
+      ...altRows.map((alt) => ({ label: alt.sourceKey, risk: alt.sourceRisk })),
+    ];
+    for (const { label, risk } of penaltyRows) {
+      expect(risk, label).toBeTruthy();
+      expect(Number.isFinite(risk?.sourceRiskPenalty), label).toBe(true);
+      expect(risk?.sourceRiskPenalty, label).toBe(
+        derivePysSourceRiskPenalty({
+          rewardShare: risk?.rewardShare ?? null,
+          sourceDepthRatio: risk?.sourceDepthRatio ?? null,
+          sourceAgeSeconds: risk?.sourceAgeSeconds ?? null,
+          sourceSwitchCount30d: risk?.sourceSwitchCount30d ?? null,
+          observationCount30d: risk?.observationCount30d ?? null,
+          venueRiskTier: risk?.venueRiskTier ?? null,
+          venueRiskWeighted: risk?.venueRiskWeighted ?? null,
+          dependencyConcentrationSeverity: risk?.dependencyConcentration?.severity ?? null,
+        }),
+      );
+    }
+
+    // Invariant 2 — a best row's published reward share is reproducible from its own
+    // published decomposition (`apyReward / currentApy`, or 0 for a base-only row).
+    for (const ranking of payload.rankings) {
+      const expectedRewardShare =
+        computePysRewardShare(ranking.apyReward ?? null, ranking.currentApy) ??
+        (ranking.apyReward == null && ranking.apyBase != null && ranking.apyBase >= ranking.currentApy - 1e-9
+          ? 0
+          : null);
+      expect(ranking.sourceRisk?.rewardShare ?? null, ranking.id).toBe(expectedRewardShare);
+    }
+
+    // Invariant 3 — alternate rows publish no APY decomposition, so the same rule is
+    // applied to the candidate terms the row was built from.
+    const termsBySourceKey = new Map(evaluatedSources.map((source) => [source.sourceKey, source]));
+    for (const alt of altRows) {
+      const source = termsBySourceKey.get(alt.sourceKey);
+      expect(source, alt.sourceKey).toBeDefined();
+      const apyReward = source?.apyReward ?? null;
+      const apyBase = source?.apyBase ?? null;
+      const currentApy = source?.currentApy ?? 0;
+      const expectedRewardShare =
+        computePysRewardShare(apyReward, currentApy) ??
+        (apyReward == null && apyBase != null && apyBase >= currentApy - 1e-9 ? 0 : null);
+      expect(alt.sourceRisk?.rewardShare ?? null, alt.sourceKey).toBe(expectedRewardShare);
+    }
   });
 });

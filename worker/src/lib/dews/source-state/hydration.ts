@@ -9,6 +9,7 @@
  */
 
 import { DAY_SECONDS } from "@shared/lib/time-constants";
+import { CRON_INTERVALS } from "@shared/lib/cron-jobs";
 import { decodeJsonString } from "../../cache-json";
 import { BLACKLIST_PUBLIC_EVENT_SQL, type BlacklistPersistedRow } from "../../blacklist/shared";
 import { toErrorMessage } from "@shared/lib/error-utils";
@@ -46,6 +47,13 @@ import { classifyFreshness } from "../../status/freshness-oracle";
 export const DEWS_STALE_DEX_LIQUIDITY_SEC = 2 * 3600;
 export const DEWS_PREVIOUS_SIGNAL_SMOOTHING_MAX_AGE_SEC = 2 * 3600;
 const DEWS_STALE_MINT_BURN_SEC = DAY_SECONDS;
+/**
+ * B32: the rankings cache has one producer and two consumers. The API fails
+ * closed at the sync interval; DEWS read whatever was in the row, so a paused
+ * or failing yield lane fed stale source-risk evidence into live scores with
+ * nothing on the run to say so.
+ */
+const DEWS_STALE_YIELD_RANKINGS_SEC = CRON_INTERVALS["sync-yield-data"];
 const DEWS_DEX_PRICE_TRUST_POLICY = getDexTrustPolicy("depeg");
 
 type PreviousStressSignalRow = PreviousStressSignalCurrentRow;
@@ -640,6 +648,16 @@ export async function hydrateYieldRankingsCache(ctx: HydrationContext): Promise<
       },
     });
     if (decoded.ok) {
+      // Stale evidence still scores — blanking it would silently zero every
+      // structured-yield contribution — but the run reports the degradation
+      // instead of treating an unrefreshed publication as current.
+      const rankingsAgeSec = getRowAgeSec(rankingsCache?.updated_at, ctx.nowSec);
+      if (rankingsAgeSec == null || rankingsAgeSec > DEWS_STALE_YIELD_RANKINGS_SEC) {
+        ctx.registerSourceFailure(
+          "yield-rankings-freshness",
+          `yield-rankings age ${rankingsAgeSec ?? "unknown"}s exceeds ${DEWS_STALE_YIELD_RANKINGS_SEC}s`,
+        );
+      }
       for (const ranking of decoded.payload) {
         const row = getObject(ranking);
         const stablecoinId = getString(row?.id);

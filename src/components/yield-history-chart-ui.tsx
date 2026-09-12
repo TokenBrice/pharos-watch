@@ -130,6 +130,8 @@ export function SourceSwitchDot({ cx, cy, payload, active = false }: WarningDotP
 export interface SpikeTooltipInfo {
   trailingAvg: number;
   ratio: number;
+  /** Effective trailing span the average covers, in whole days (E22). */
+  windowDays: number;
 }
 
 export function YieldHistoryTooltip({
@@ -205,7 +207,7 @@ export function YieldHistoryTooltip({
         <div className="mt-2 rounded-md border border-orange-500/25 bg-orange-500/10 px-2.5 py-2 text-[10px] text-orange-700 dark:text-orange-300">
           <span className="block font-medium uppercase tracking-[0.14em]">Yield spike</span>
           <span className="mt-1 block normal-case tracking-normal">
-            {`Current ${formatChartNumber(point.apy)}% is ${formatChartNumber(spikeInfo.ratio, 1, 1)}× the trailing 30d average of ${formatChartNumber(spikeInfo.trailingAvg)}%.`}
+            {`Current ${formatChartNumber(point.apy)}% is ${formatChartNumber(spikeInfo.ratio, 1, 1)}× the trailing ${spikeInfo.windowDays}d average of ${formatChartNumber(spikeInfo.trailingAvg)}%.`}
           </span>
         </div>
       ) : null}
@@ -252,7 +254,7 @@ export function Controls({
   hideSourceSelector?: boolean;
 }) {
   const selectedSourceLabel = selectedSourceKey === "best"
-    ? "Best yield (highest APY)"
+    ? "Canonical (published) source"
     : getYieldHistorySourceDisplayLabel(
         availableSources.find((source) => source.sourceKey === selectedSourceKey) ?? {
           sourceKey: selectedSourceKey,
@@ -304,7 +306,7 @@ export function Controls({
               <DropdownMenuContent align="start" className="max-h-72 w-[min(22rem,calc(100vw-2rem))]">
                 <DropdownMenuRadioGroup value={selectedSourceKey} onValueChange={onSourceChange}>
                   <DropdownMenuRadioItem value="best" className="text-xs">
-                    Best yield (highest APY)
+                    Canonical (published) source
                   </DropdownMenuRadioItem>
                   {availableSources.map((source) => (
                     <DropdownMenuRadioItem key={source.sourceKey} value={source.sourceKey} className="text-xs">

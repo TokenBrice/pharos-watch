@@ -33,6 +33,8 @@ export interface ResolvedYield {
   sourceObservedAt?: number | null;
   comparisonAnchorObservedAt?: number | null;
   sourceRisk?: YieldSourceRisk | null;
+  /** Explicit venue for the row; first input to `resolveYieldVenueProtocol`. */
+  venueProtocol?: string | null;
   benchmarkOverrideKey?: YieldBenchmarkKey | null;
 }
 

@@ -1,12 +1,15 @@
 import { logWorkerEventArgs } from "../../lib/structured-log";
-import { YieldRankingsResponseSchema } from "@shared/types/yield";
+import {
+  YIELD_PYS_INPUTS_AT_PUBLISH_SCHEMA_VERSION,
+  YieldRankingsResponseSchema,
+} from "@shared/types/yield";
 import { YIELD_METHODOLOGY_VERSION } from "@shared/lib/methodology-versions/yield-methodology";
-import { getCache, type CacheWriteResult } from "../../lib/db-cache";
+import { getCache } from "../../lib/db-cache";
 import { readCachedJson } from "../../lib/api-cache-read";
 import { validatePayloadWithSchema } from "../../lib/api-schema";
 import type { EvaluatedYieldSource } from "./evaluation";
 import { getConfidencePriority } from "./evaluation-arbitration";
-import { publishYieldRowsAtomically } from "./publication-atomic-batch";
+import { publishYieldRowsAtomically, type YieldRowsWriteResult } from "./publication-atomic-batch";
 import { deriveRejectionReasonCode, deriveYieldSourceRole } from "./decision-public";
 import type { YieldCoinPublicationView } from "./publication-view";
 import { PYS_SCALING_FACTOR } from "../../lib/constants";
@@ -32,34 +35,49 @@ export interface PreviousYieldPublicationSnapshot {
   status: PreviousYieldPublicationSnapshotStatus;
   rankings: readonly PreviousYieldPublicationRanking[];
   malformed: boolean;
+  /**
+   * B7/B31: `methodology.version` of the cached payload. Publish-time rank
+   * attribution needs it to tell a genuine move from a methodology re-base.
+   * Null when the cache predates the envelope or cannot be read.
+   */
+  methodologyVersion?: string | null;
+}
+
+/** `methodology.version` off a cached payload, when it is a usable string. */
+function readCachedMethodologyVersion(methodology: unknown): string | null {
+  if (methodology == null || typeof methodology !== "object" || Array.isArray(methodology)) return null;
+  if (!("version" in methodology)) return null;
+  const version = methodology.version;
+  return typeof version === "string" && version.length > 0 ? version : null;
 }
 
 export async function loadPreviousYieldPublicationSnapshot(
   db: D1Database,
 ): Promise<PreviousYieldPublicationSnapshot> {
   const previousCache = await getCache(db, "yield-rankings");
-  const previousRankings = readCachedJson<{ rankings?: unknown }>(
+  const previousRankings = readCachedJson<{ rankings?: unknown; methodology?: unknown }>(
     "yield-sync",
     "yield-rankings",
     previousCache,
   );
   if (previousRankings.status === "missing") {
-    return { status: "missing", rankings: [], malformed: false };
+    return { status: "missing", rankings: [], malformed: false, methodologyVersion: null };
   }
   if (previousRankings.status === "malformed") {
-    return { status: "malformed-json", rankings: [], malformed: true };
+    return { status: "malformed-json", rankings: [], malformed: true, methodologyVersion: null };
   }
   const data = previousRankings.data;
   if (data == null || typeof data !== "object" || Array.isArray(data) || !Array.isArray(data.rankings)) {
-    return { status: "malformed-payload", rankings: [], malformed: true };
+    return { status: "malformed-payload", rankings: [], malformed: true, methodologyVersion: null };
   }
   if (data.rankings.some((ranking) => ranking == null || typeof ranking !== "object" || Array.isArray(ranking))) {
-    return { status: "malformed-payload", rankings: [], malformed: true };
+    return { status: "malformed-payload", rankings: [], malformed: true, methodologyVersion: null };
   }
   return {
     status: "ok",
     rankings: data.rankings as PreviousYieldPublicationRanking[],
     malformed: false,
+    methodologyVersion: readCachedMethodologyVersion(data.methodology),
   };
 }
 
@@ -271,6 +289,21 @@ export async function validateYieldRankingsPayloadForPublish(
   return { ok: true, validationFailures: 0 };
 }
 
+export type YieldEvaluatedSourcesWriteResult =
+  | {
+      ok: false;
+      updatedCount: number;
+      validationFailures: number;
+      reason?: string;
+      cacheWrite?: YieldRowsWriteResult;
+    }
+  | {
+      ok: true;
+      updatedCount: number;
+      validationFailures: number;
+      cacheWrite: YieldRowsWriteResult;
+    };
+
 export async function persistEvaluatedYieldSources(
   db: D1Database,
   input: {
@@ -282,21 +315,7 @@ export async function persistEvaluatedYieldSources(
     rankingsPayload: unknown;
     previousYieldPublicationSnapshot: PreviousYieldPublicationSnapshot;
   },
-): Promise<
-  | {
-      ok: false;
-      updatedCount: number;
-      validationFailures: number;
-      reason?: string;
-      cacheWrite?: CacheWriteResult;
-    }
-  | {
-      ok: true;
-      updatedCount: number;
-      validationFailures: number;
-      cacheWrite: CacheWriteResult;
-    }
-> {
+): Promise<YieldEvaluatedSourcesWriteResult> {
   const yieldDataRows: Array<Record<string, unknown>> = [];
   const historyRows: Array<Record<string, unknown>> = [];
   const decisionRows: Array<Record<string, unknown>> = [];
@@ -374,7 +393,7 @@ export async function persistEvaluatedYieldSources(
       pys_inputs_at_publish: safetySnapshotUnavailable
         ? null
         : JSON.stringify({
-            schemaVersion: 1,
+            schemaVersion: YIELD_PYS_INPUTS_AT_PUBLISH_SCHEMA_VERSION,
             methodologyVersion: YIELD_METHODOLOGY_VERSION,
             apy30d: source.apy30d,
             safetyScore: source.safetyScore,
@@ -385,6 +404,13 @@ export async function persistEvaluatedYieldSources(
             scoreQualification: source.scoreQualification,
             benchmarkKey: source.benchmarkKey,
             evidenceClass: source.evidenceClass,
+            // The v8.43 hurdle re-base is unrecoverable from the rest of the
+            // snapshot: the governing USD rate lives only in the payload's
+            // `riskFreeRate`, so a replay without it drifts on every non-USD row.
+            ...(source.usdBenchmarkRate != null && Number.isFinite(source.usdBenchmarkRate)
+              ? { usdBenchmarkRate: source.usdBenchmarkRate }
+              : {}),
+            ...(Number.isFinite(source.hurdleRebase) ? { hurdleRebase: source.hurdleRebase } : {}),
           }),
     });
 

@@ -25,56 +25,20 @@ import {
   type YieldRiskBudgetSpec,
   type YieldViewModelFilters,
 } from "@/lib/yield-view-config";
-import { median } from "@shared/lib/stats";
 
+// Only the scatter's benchmark frame is consumed from the view-model stats
+// (hero callouts and leaderboard derive their tiles from rows directly), so
+// the stats builder stays a thin projection instead of re-aggregating APY and
+// TVL over the visible rows on every URL param change.
 export function buildYieldStats(
   rows: readonly YieldViewModelRow[],
   options: BuildYieldViewModelOptions,
 ): YieldViewModelStats {
-  const benchmarkFrame = resolveYieldScatterBenchmarkFrame({
+  return resolveYieldScatterBenchmarkFrame({
     rankings: [...rows],
     benchmarks: options.benchmarks,
     fallbackBenchmark: options.fallbackBenchmark ?? null,
   });
-  let tvlSum = 0;
-  let weightedApySum = 0;
-  let unweightedApySum = 0;
-  let bestPys: YieldViewModelStats["bestPys"] = null;
-  let topYield: YieldViewModelStats["topYield"] = null;
-  let warningRowCount = 0;
-  let nullSafetyCount = 0;
-  let nullTvlCount = 0;
-  const apys: number[] = [];
-
-  for (const row of rows) {
-    const tvl = row.sourceTvlUsd ?? 0;
-    if (tvl > 0) {
-      tvlSum += tvl;
-      weightedApySum += row.apy30d * tvl;
-    }
-    unweightedApySum += row.apy30d;
-    apys.push(row.apy30d);
-    if (row.pharosYieldScore !== null && (bestPys === null || row.pharosYieldScore > bestPys.score)) {
-      bestPys = { name: row.name, symbol: row.symbol, score: row.pharosYieldScore };
-    }
-    if (topYield === null || row.apy30d > topYield.apy) {
-      topYield = { symbol: row.symbol, apy: row.apy30d, safetyGrade: row.safetyGrade };
-    }
-    if (row.warningSignals.length > 0) warningRowCount += 1;
-    if (row.safetyScore === null) nullSafetyCount += 1;
-    if (row.sourceTvlUsd === null) nullTvlCount += 1;
-  }
-
-  return {
-    avgApy: rows.length === 0 ? 0 : tvlSum > 0 ? weightedApySum / tvlSum : unweightedApySum / rows.length,
-    medianApy: median(apys) ?? 0,
-    topYield,
-    bestPys,
-    warningRowCount,
-    nullSafetyCount,
-    nullTvlCount,
-    ...benchmarkFrame,
-  };
 }
 
 const EMPTY_STATE_SUGGESTION_LIMIT = 3;
@@ -133,10 +97,6 @@ export function buildYieldEmptyState(
   };
 }
 
-function applyOverrides(overrides: Partial<YieldViewModelFilters>): YieldViewModelFilters {
-  return { ...DEFAULT_FILTERS, ...overrides };
-}
-
 // Presets merge onto the current filters when clicked (see
 // `handleApplyPreset`), so counts and the active state must be evaluated on the
 // same stacked base — otherwise the landing risk band makes every count lie.
@@ -178,11 +138,15 @@ export const RISK_BUDGET_FILTER_KEYS: readonly (keyof YieldViewModelFilters)[] =
   "warnings",
 ];
 
-function riskBudgetTargetFilters(spec: YieldRiskBudgetSpec): YieldViewModelFilters {
+// The risk-budget slider merges band overrides onto the current filters when
+// clicked (see `handleApplyRiskBudget`), so like presets its counts and active
+// state must be evaluated on the same stacked base — otherwise an active
+// peg/search filter makes every stop count lie.
+function riskBudgetTargetFilters(filters: YieldViewModelFilters, spec: YieldRiskBudgetSpec): YieldViewModelFilters {
   const riskOverrides = Object.fromEntries(
     RISK_BUDGET_FILTER_KEYS.filter((key) => key in spec.overrides).map((key) => [key, spec.overrides[key]]),
   ) as Partial<YieldViewModelFilters>;
-  return applyOverrides(riskOverrides);
+  return { ...filters, ...riskOverrides };
 }
 
 function filtersMatchRiskBudget(filters: YieldViewModelFilters, spec: YieldRiskBudgetSpec): boolean {
@@ -205,7 +169,7 @@ export function buildYieldRiskBudget(
       key: spec.key,
       label: spec.label,
       description: spec.description,
-      count: countRowsMatchingFilters(facets, riskBudgetTargetFilters(spec)),
+      count: countRowsMatchingFilters(facets, riskBudgetTargetFilters(filters, spec)),
       active,
       overrides: spec.overrides,
     } satisfies YieldRiskBudgetStop;

@@ -42,11 +42,19 @@ export interface TrackedOptionalSourceContext {
   signal?: AbortSignal;
   chainRpcs?: Map<string, ChainRpcConfig>;
   coingeckoApiKey?: string | null;
+  /** B15 — forwarded to `runTimedOptionalSource` so a swallowed failure reaches run metadata. */
+  onOutcome?: (outcome: { label: string; outcome: "failed" | "timeout" }) => void;
 }
 
 interface TrackedOptionalSourceEntry {
   stablecoinId: string;
   sourceKey: string;
+  /**
+   * B15 — set only when the entry's coin is deliberately not in
+   * `ACTIVE_YIELD_BEARING_STABLECOINS`, so the registry cannot silently strand a
+   * source behind a coin that will never be iterated. Absent means "must be active".
+   */
+  intendedDormant?: string;
   run: (context: TrackedOptionalSourceContext) => Promise<ResolvedYield | null>;
 }
 
@@ -113,21 +121,24 @@ function timedOptionalSourceEntry(
     budgetSignal: AbortSignal,
     context: TrackedOptionalSourceContext,
   ) => Promise<ResolvedYield | null>,
+  intendedDormant?: string,
 ): TrackedOptionalSourceEntry {
   return {
     stablecoinId,
     sourceKey,
+    intendedDormant,
     run: (context) =>
       runTimedOptionalSource(
         label,
         context.signal,
         (budgetSignal) => fetchSource(budgetSignal, context),
         null,
+        context.onOutcome,
       ),
   };
 }
 
-const TRACKED_OPTIONAL_SOURCE_REGISTRY: TrackedOptionalSourceEntry[] = [
+export const TRACKED_OPTIONAL_SOURCE_REGISTRY: TrackedOptionalSourceEntry[] = [
   timedOptionalSourceEntry(
     SCRVUSD_CURVE_ID,
     SCRVUSD_CURRENT_RATE_SOURCE_KEY,
@@ -140,12 +151,17 @@ const TRACKED_OPTIONAL_SOURCE_REGISTRY: TrackedOptionalSourceEntry[] = [
     "protocol-api:bima-susbd",
     "BIMA sUSBD source",
     (budgetSignal) => fetchBimaSusbdSource(budgetSignal),
+    // B15 — usbd-bima carries no `flags.yieldBearing`, so `sync-yield-data` never
+    // iterates the coin and this adapter cannot run. Dormant by intent, not broken.
+    "usbd-bima is not yieldBearing in the stablecoin registry, so the active yield cohort never resolves it",
   ),
   timedOptionalSourceEntry(
     CETES_ETHERFUSE_ID,
     "protocol-api:etherfuse-cetes-current-issuance",
     "Etherfuse CETES current-issuance source",
     (budgetSignal) => fetchEtherfuseCetesSource(budgetSignal),
+    // B15 — the coin is quarantined, so it is absent from ACTIVE_YIELD_BEARING_STABLECOINS.
+    "cetes-etherfuse is quarantined and therefore outside the active yield cohort",
   ),
   timedOptionalSourceEntry(
     HASHNOTE_USYC_ID,
@@ -171,6 +187,7 @@ const TRACKED_OPTIONAL_SOURCE_REGISTRY: TrackedOptionalSourceEntry[] = [
           context.chainRpcs,
         ),
         null,
+        context.onOutcome,
       );
     },
   },
@@ -192,6 +209,7 @@ const TRACKED_OPTIONAL_SOURCE_REGISTRY: TrackedOptionalSourceEntry[] = [
           chainRpcs: context.chainRpcs,
         }),
         null,
+        context.onOutcome,
       );
       return candidate?.yield ?? null;
     },
@@ -229,20 +247,20 @@ export const STANDALONE_TRACKED_OPTIONAL_SOURCE_REGISTRY: readonly TrackedOption
     buildOnChainSourceKey(LIQUITY_V1_LUSD_ID),
     "B.Protocol LQTY-only source",
     (budgetSignal, context) =>
-      fetchBprotocolLqtyOnlySource(budgetSignal, context.chainRpcs, context.coingeckoApiKey),
+      fetchBprotocolLqtyOnlySource(context.startSec, budgetSignal, context.chainRpcs, context.coingeckoApiKey),
   ),
   timedOptionalSourceEntry(
     BASEDOLLAR_BD_ID,
     buildOnChainSourceKey(BASEDOLLAR_BD_ID),
     "Base Dollar SP interest-only source",
     (budgetSignal, context) =>
-      fetchLiquityV2StabilityPoolSource(BASEDOLLAR_SP_CONFIG, budgetSignal, context.chainRpcs),
+      fetchLiquityV2StabilityPoolSource(context.startSec, BASEDOLLAR_SP_CONFIG, budgetSignal, context.chainRpcs),
   ),
   timedOptionalSourceEntry(
     LIQUITY_V2_BOLD_ID,
     buildOnChainSourceKey(LIQUITY_V2_BOLD_ID),
     "Liquity V2 SP interest-only source",
     (budgetSignal, context) =>
-      fetchLiquityV2StabilityPoolSource(LIQUITY_V2_SP_CONFIG, budgetSignal, context.chainRpcs),
+      fetchLiquityV2StabilityPoolSource(context.startSec, LIQUITY_V2_SP_CONFIG, budgetSignal, context.chainRpcs),
   ),
 ];

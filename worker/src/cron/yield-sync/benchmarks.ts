@@ -1,4 +1,5 @@
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
+import { YIELD_BENCHMARK_SCORE_TTL_SEC } from "@shared/lib/status-thresholds";
 import type {
   YieldBenchmarkKey,
   YieldBenchmarkMeta,
@@ -7,33 +8,15 @@ import type {
 } from "@shared/types/yield";
 import { RISK_FREE_RATE_FALLBACK } from "../../lib/constants";
 
-export const YIELD_BENCHMARK_SCORE_TTL_SEC = 48 * 60 * 60;
-export type YieldBenchmarkFreshness = "healthy" | "degraded" | "stale";
-
-export function classifyYieldBenchmarkFreshness(meta: {
-  ageSeconds: number | null;
-  isFallback: boolean;
-  fallbackMode: string | null;
-}, options?: {
-  selectionMode?: YieldBenchmarkSelectionMode | null;
-}): YieldBenchmarkFreshness {
-  if (
-    meta.ageSeconds == null ||
-    !Number.isFinite(meta.ageSeconds) ||
-    meta.ageSeconds < 0 ||
-    meta.ageSeconds > YIELD_BENCHMARK_SCORE_TTL_SEC
-  ) {
-    return "stale";
-  }
-  if (
-    meta.isFallback ||
-    meta.fallbackMode != null ||
-    options?.selectionMode === "fallback-usd"
-  ) {
-    return "degraded";
-  }
-  return "healthy";
-}
+// Canonical definition lives in shared/lib/status-thresholds.ts, where the
+// legacy `yieldHealth.benchmark` threshold consumes the same number.
+export { YIELD_BENCHMARK_SCORE_TTL_SEC };
+export {
+  YIELD_BENCHMARK_RECORD_MAX_AGE_SEC,
+  benchmarkRecordAgeSeconds,
+  classifyYieldBenchmarkFreshness,
+  type YieldBenchmarkFreshness,
+} from "@shared/lib/yield-benchmark-freshness";
 
 export interface ParsedYieldBenchmarkMeta extends YieldBenchmarkMeta {
   lastMarketRate: number | null;
@@ -110,8 +93,11 @@ const BENCHMARK_META_BY_KEY: Record<YieldBenchmarkKey, { label: string; currency
     isProxy: false,
   },
   CAD: {
-    // BoC Valet V122530 — overnight repo (CORRA-equivalent).
-    label: "CAD overnight repo (CORRA proxy)",
+    // BoC Valet V122530 is the Bank of Canada's administered Bank rate, announced
+    // monthly on a policy-decision date — not a daily overnight repo (CORRA)
+    // series. Its monthly print is why CAD carries a 45-day observation bound in
+    // YIELD_BENCHMARK_RECORD_MAX_AGE_SEC.
+    label: "CAD Bank rate (policy, monthly)",
     currency: "CAD",
     isProxy: true,
   },

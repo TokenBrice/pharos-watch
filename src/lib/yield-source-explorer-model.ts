@@ -109,7 +109,7 @@ const REJECTION_HINT_DESCRIPTIONS: Record<YieldRejectionHintCode, string> = {
   thinner: "Lower venue depth than the chosen source.",
   stale: "Older observation than the chosen source.",
   "rewards-only": "Most APY comes from incentives, not base yield.",
-  "lower-conf": "Inferred confidence is lower than the chosen source.",
+  "lower-conf": "Published confidence is lower than the chosen source.",
   smaller: "Smaller venue TVL than the chosen source.",
 };
 
@@ -144,8 +144,8 @@ function buildRejectionHint(
     };
   }
 
-  const altTier = inferLaneConfidenceTier(alternate.dataSource);
-  const selTier = inferLaneConfidenceTier(selected.dataSource);
+  const altTier = alternate.confidenceTier;
+  const selTier = selected.confidenceTier;
   if (altTier && selTier && confidenceTierRank(altTier) > confidenceTierRank(selTier)) {
     return {
       code: "lower-conf",
@@ -188,7 +188,7 @@ export function buildYieldSourceExplorerModel(ranking: YieldRanking): YieldSourc
       apy30d: source.apy30d,
       sourceTvlUsd: source.sourceTvlUsd,
       dataSource: source.dataSource,
-      confidenceTier: inferLaneConfidenceTier(source.dataSource),
+      confidenceTier: source.confidenceTier ?? inferLaneConfidenceTier(source.dataSource),
       sourceRisk: source.sourceRisk ?? null,
       isChosen: false,
     })),

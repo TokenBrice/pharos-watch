@@ -331,10 +331,15 @@ function projectRecommendation(
         ? {}
         : { sourceTvlUsd: recommendation.recommendedSource.sourceTvlUsd }),
       sourceRiskTier: recommendation.recommendedSource.sourceRiskTier,
-      freshness: {
-        capturedAt: recommendation.recommendedSource.freshness.capturedAt,
-        ageSeconds: recommendation.recommendedSource.freshness.ageSeconds,
-      },
+      // E30: unknown freshness stays unknown, but the key is always present —
+      // `RecommendedSource.freshness` is nullable rather than optional, and
+      // every consumer branches on `=== null`.
+      freshness: recommendation.recommendedSource.freshness == null
+        ? null
+        : {
+          capturedAt: recommendation.recommendedSource.freshness.capturedAt,
+          ageSeconds: recommendation.recommendedSource.freshness.ageSeconds,
+        },
     },
     perInputStaleness: null,
   };

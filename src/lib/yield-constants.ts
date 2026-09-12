@@ -8,6 +8,9 @@ const WARNING_SIGNAL_LABELS: Record<string, string> = {
   "reward-heavy": "Reward heavy",
   "tvl-outflow": "TVL outflow",
   "data-stale": "Data stale",
+  aging: "Aging observation",
+  "data-freshness-unknown": "Freshness unknown",
+  "reference-benchmark-degraded": "Reference benchmark degraded",
   "benchmark-degraded": "Benchmark degraded",
   "benchmark-stale": "Benchmark stale",
   "safety-unrated": "Safety unrated",
@@ -23,6 +26,9 @@ const WARNING_SIGNAL_DESCRIPTIONS: Record<string, string> = {
   "reward-heavy": "A large share of APY comes from incentives. Inspect the base/reward split and expect rewards to change faster than base yield.",
   "tvl-outflow": "Venue TVL is falling. Check venue depth and recent withdrawals before relying on the quote.",
   "data-stale": "Latest source observation is older than expected. Treat APY as stale until the source refreshes.",
+  aging: "Latest source observation is older than the usual publication cadence but within the stale bound. Expect a refresh; treat the APY as slightly lagged.",
+  "data-freshness-unknown": "The source did not report when it was observed, so freshness cannot be established and PYS is unavailable.",
+  "reference-benchmark-degraded": "The USD reference rate every non-USD hurdle is re-based onto is retained or stale, so this row's PYS is estimated until it refreshes.",
   "benchmark-degraded": "The row uses a retained or fallback benchmark. Treat benchmark-relative comparisons with caution.",
   "benchmark-stale": "The selected benchmark is older than its scoring window, so PYS is unavailable until it refreshes.",
   "safety-unrated": "This estimated PYS uses the conservative 40-point safety fallback until a Report Card score is available.",
@@ -49,6 +55,27 @@ export function getPysColor(pys: number | null): string {
 }
 
 /**
+ * Published PYS qualification label with the UI's NR/rated fallback — the one
+ * accessor behind the leaderboard/compare "PYS qualification" columns and the
+ * compare drawer's qualification cell, so no surface invents its own fallback.
+ */
+export function resolveYieldScoreQualification(row: {
+  pharosYieldScore: number | null;
+  provenance?: { scoreQualification?: string } | null;
+}): string {
+  return row.provenance?.scoreQualification ?? (row.pharosYieldScore == null ? "NR" : "rated");
+}
+
+/**
+ * CSV cell for a 0-1 ratio the UI renders as a whole-number percent
+ * (stability, evidence completeness) — mirrors the UI's Math.round ratio
+ * display so exported numbers share the surface's units and precision.
+ */
+export function formatYieldRatioPercent(ratio: number | null | undefined): number | string {
+  return typeof ratio === "number" && Number.isFinite(ratio) ? Math.round(ratio * 100) : "unknown";
+}
+
+/**
  * Compute PYS breakdown components for display (tooltips, stat cards).
  * Delegates to the shared PYS module — single source of truth.
  * The final PYS score is served by the API — this is for breakdown UI only.
@@ -59,6 +86,13 @@ export function computePysBreakdown(
   yieldStability: number | null,
   benchmarkRate?: number | null,
   sourceRiskPenalty?: number | null,
+  /** Reference (USD) risk-free rate the effective yield is re-based onto (yield v8.43). */
+  usdBenchmarkRate?: number | null,
+  /**
+   * Currency the row's benchmark is quoted in. A USD-benchmarked row (USD and
+   * USD_EFFR keys) takes no v8.43 re-base, exactly like the scoring path.
+   */
+  benchmarkCurrency?: string | null,
 ) {
   const apyVarianceScore = yieldStabilityToApyVarianceScore(yieldStability);
   const {
@@ -66,17 +100,27 @@ export function computePysBreakdown(
     adjustedRiskPenalty,
     benchmarkSpread,
     benchmarkAdjustment,
+    hurdleRebase,
     effectiveYield,
     rowUtility,
     sourceRiskPenalty: resolvedSourceRiskPenalty,
     yieldEfficiency,
     sustainabilityMultiplier,
-  } = computePysComponents({ apy30d, safetyScore, apyVarianceScore, benchmarkRate, sourceRiskPenalty });
+  } = computePysComponents({
+    apy30d,
+    safetyScore,
+    apyVarianceScore,
+    benchmarkRate,
+    usdBenchmarkRate,
+    benchmarkCurrency,
+    sourceRiskPenalty,
+  });
   return {
     riskPenalty,
     adjustedRiskPenalty,
     benchmarkSpread,
     benchmarkAdjustment,
+    hurdleRebase,
     effectiveYield,
     rowUtility,
     sourceRiskPenalty: resolvedSourceRiskPenalty,

@@ -6,12 +6,13 @@ import { useMemo } from "react";
 import { CoinCell } from "@/components/home-alt-mini-cards/coin-cell";
 import { HomeAltTrackerLink } from "@/components/home-alt-tracker-link";
 import { Skeleton } from "@/components/ui/skeleton";
-import { useYieldRankings } from "@/hooks/api-hooks";
+import { useYieldRankingsSummary } from "@/hooks/api-hooks";
 import { logosById } from "@/lib/logos";
 import { buildStablecoinUrl } from "@shared/lib/urls";
 import { formatPercent, formatScore } from "@shared/lib/format";
 import { REPORT_CARD_GRADE_COLORS } from "@shared/lib/classification";
-import type { ReportCardGrade, YieldRanking } from "@shared/types";
+import type { ReportCardGrade } from "@shared/types";
+import type { YieldRankingSummary } from "@shared/types/yield-summary";
 
 const LEADERBOARD_SIZE = 5;
 
@@ -25,16 +26,17 @@ function gradeChipClass(grade: ReportCardGrade): string {
 }
 
 interface OverviewData {
-  coveredCount: number;
-  trackedCount: number;
+  /** `null` when the payload carries no safety-snapshot coverage: "unknown", never "N/N". */
+  coveredCount: number | null;
+  trackedCount: number | null;
   medianApy: number;
   highestRawYield: { symbol: string; apy: number } | null;
-  bestRiskAdjusted: YieldRanking | null;
-  leaders: YieldRanking[];
+  bestRiskAdjusted: YieldRankingSummary | null;
+  leaders: YieldRankingSummary[];
 }
 
 function buildOverview(
-  rankings: readonly YieldRanking[],
+  rankings: readonly YieldRankingSummary[],
   snapshot: { coveredCount: number; trackedCount: number } | null,
 ): OverviewData {
   const highestRawYield = rankings.reduce<{ symbol: string; apy: number } | null>((best, row) => {
@@ -48,8 +50,10 @@ function buildOverview(
     .slice(0, LEADERBOARD_SIZE);
 
   return {
-    coveredCount: snapshot?.coveredCount ?? rankings.length,
-    trackedCount: snapshot?.trackedCount ?? rankings.length,
+    // A degraded payload has no safety snapshot at all; falling back to
+    // `rankings.length` reported "157/157 covered" exactly when nothing was.
+    coveredCount: snapshot?.coveredCount ?? null,
+    trackedCount: snapshot?.trackedCount ?? null,
     medianApy: 0,
     highestRawYield,
     bestRiskAdjusted: leaders[0] ?? null,
@@ -91,18 +95,24 @@ function StatStrip({
   medianApy,
   bestRiskAdjusted,
 }: {
-  coveredCount: number;
-  trackedCount: number;
+  coveredCount: number | null;
+  trackedCount: number | null;
   medianApy: number;
-  bestRiskAdjusted: YieldRanking | null;
+  bestRiskAdjusted: YieldRankingSummary | null;
 }): React.JSX.Element {
   return (
     <div className="grid grid-cols-3 divide-x divide-border/50">
       <div className="flex flex-col gap-1 px-3 py-3 first:pl-0">
         <span className="font-mono text-[10px] uppercase tracking-wide text-muted-foreground">Coverage</span>
         <span className="pharos-numeric text-lg font-semibold text-foreground sm:text-xl">
-          {coveredCount}
-          <span className="text-sm text-muted-foreground/60">/{trackedCount}</span>
+          {coveredCount === null || trackedCount === null ? (
+            <span className="text-muted-foreground">—</span>
+          ) : (
+            <>
+              {coveredCount}
+              <span className="text-sm text-muted-foreground/60">/{trackedCount}</span>
+            </>
+          )}
         </span>
       </div>
       <div className="flex flex-col gap-1 px-3 py-3">
@@ -138,7 +148,7 @@ function LeaderRow({
   rank,
   logoSrc,
 }: {
-  row: YieldRanking;
+  row: YieldRankingSummary;
   rank: number;
   logoSrc: string | undefined;
 }): React.JSX.Element {
@@ -178,7 +188,7 @@ function LeaderRow({
 }
 
 export function HomeAltYieldOverview(): React.JSX.Element | null {
-  const { data, isLoading } = useYieldRankings();
+  const { data, isLoading } = useYieldRankingsSummary();
   const logos = logosById;
   const logoMap = logos ?? {};
 

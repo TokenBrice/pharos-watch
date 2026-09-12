@@ -11,7 +11,7 @@ import {
   computePYS,
   computeSourceRiskScoreFromPenalty,
 } from "@shared/lib/yield-scoring";
-import { formatScore, formatSignedPercent } from "@shared/lib/format";
+import { formatPercent, formatScore, formatSignedPercent } from "@shared/lib/format";
 import {
   YIELD_METHODOLOGY_CHANGELOG_PATH,
   YIELD_METHODOLOGY_VERSION_LABEL,
@@ -32,6 +32,8 @@ export interface PysBreakdownProps {
   effectiveYield: number;
   benchmarkAdjustment: number;
   benchmarkSpread: number | null;
+  /** `usdBenchmarkRate - benchmarkRate` (yield v8.43); 0 for USD-benchmarked rows. */
+  hurdleRebase?: number;
   benchmarkLabel?: string | null;
   benchmarkSelectionMode?: YieldBenchmarkSelectionMode;
   sourceRiskPenalty: number;
@@ -124,6 +126,7 @@ interface NeutralizeInput {
   apyVarianceScore: number;
   scalingFactor: number;
   benchmarkRate: number | null;
+  usdBenchmarkRate: number | null;
   sourceRiskPenalty: number;
 }
 
@@ -152,6 +155,7 @@ function neutralizeFactorAndRescore(
     apyVarianceScore: neutralized.apyVarianceScore,
     scalingFactor: neutralized.scalingFactor,
     benchmarkRate: neutralized.benchmarkRate,
+    usdBenchmarkRate: neutralized.usdBenchmarkRate,
     sourceRiskPenalty: neutralized.sourceRiskPenalty,
   });
   return actualScore - neutralizedScore;
@@ -212,6 +216,7 @@ function PysBreakdownBody(props: Omit<PysBreakdownProps, "pysNullReason">) {
     effectiveYield,
     benchmarkAdjustment,
     benchmarkSpread,
+    hurdleRebase = 0,
     benchmarkLabel,
     sourceRiskPenalty,
     adjustedRiskPenalty,
@@ -241,6 +246,7 @@ function PysBreakdownBody(props: Omit<PysBreakdownProps, "pysNullReason">) {
     apyVarianceScore,
     scalingFactor: effectiveScalingFactor,
     benchmarkRate,
+    usdBenchmarkRate: benchmarkRate === null ? null : benchmarkRate + hurdleRebase,
     sourceRiskPenalty,
   };
 
@@ -258,6 +264,7 @@ function PysBreakdownBody(props: Omit<PysBreakdownProps, "pysNullReason">) {
   const resolvedSourceRiskScore = sourceRiskScore ?? computeSourceRiskScoreFromPenalty(sourceRiskPenalty);
 
   const showDefaultSafety = shouldShowDefaultSafetyBadge(props);
+  const showEffectiveYieldFloor = apy30d + benchmarkAdjustment + hurdleRebase < 0;
   const showSustainabilityFloor = shouldShowSustainabilityFloorBadge(props);
   const showSourceRiskClamp = shouldShowSourceRiskClampBadge(props);
   const showBenchmarkFallback = shouldShowBenchmarkFallbackBadge(props);
@@ -267,10 +274,10 @@ function PysBreakdownBody(props: Omit<PysBreakdownProps, "pysNullReason">) {
       <div className="space-y-0.5">
         <div
           className="flex items-baseline justify-between gap-3"
-          aria-label={`Base APY ${apy30d.toFixed(1)} percent`}
+          aria-label={`Base APY ${formatPercent(apy30d)}`}
         >
           <span aria-hidden="true" className="text-muted-foreground">Base APY</span>
-          <span aria-hidden="true" className="font-mono tabular-nums">{apy30d.toFixed(1)}%</span>
+          <span aria-hidden="true" className="font-mono tabular-nums">{formatPercent(apy30d)}</span>
         </div>
         {benchmarkSpread !== null ? (
           <div
@@ -302,13 +309,45 @@ function PysBreakdownBody(props: Omit<PysBreakdownProps, "pysNullReason">) {
             <span aria-hidden="true" className="font-mono tabular-nums">{formatSignedPercent(benchmarkAdjustment, 1)}</span>
           </div>
         ) : null}
+        {hurdleRebase !== 0 ? (
+          <div
+            className="flex items-baseline justify-between gap-3"
+            aria-label={`Plus USD hurdle re-base ${formatSignedPercent(hurdleRebase, 1)} (USD risk-free rate minus ${benchmarkRefLabel}; equal excess over the local hurdle scores equally in every currency)`}
+          >
+            <span aria-hidden="true" className="flex items-center gap-1 text-muted-foreground">
+              <span>+ USD hurdle re-base</span>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <span className="inline-flex h-3 w-3 cursor-help items-center justify-center rounded-full text-muted-foreground/70">
+                    <Info className="h-3 w-3" aria-hidden="true" />
+                  </span>
+                </TooltipTrigger>
+                <TooltipContent className="max-w-[260px] text-[11px]">
+                  {`USD risk-free rate minus ${benchmarkRefLabel}. Scores excess over the local hurdle on a USD footing instead of crediting the local policy rate as yield.`}
+                </TooltipContent>
+              </Tooltip>
+            </span>
+            <span aria-hidden="true" className="font-mono tabular-nums">{formatSignedPercent(hurdleRebase, 1)}</span>
+          </div>
+        ) : null}
         <div className="h-px bg-border/60" aria-hidden="true" />
         <div
           className="flex items-baseline justify-between gap-3"
-          aria-label={`Effective yield ${effectiveYield.toFixed(1)} percent`}
+          aria-label={`Effective yield ${formatPercent(effectiveYield)}`}
         >
-          <span aria-hidden="true" className="text-foreground">= Effective yield</span>
-          <span aria-hidden="true" className="font-mono tabular-nums">{effectiveYield.toFixed(1)}%</span>
+          <span aria-hidden="true" className="flex items-center gap-1 text-foreground">
+            <span>= Effective yield</span>
+            {showEffectiveYieldFloor ? (
+              <ClampBadge
+                mode={mode}
+                label="floor 0%"
+                tooltip="Addends sum to a negative yield — the methodology floors effective yield at 0%"
+                toneClass={CLAMP_BADGE_AMBER_CLASS}
+                ariaLabel="Effective yield floored at 0%"
+              />
+            ) : null}
+          </span>
+          <span aria-hidden="true" className="font-mono tabular-nums">{formatPercent(effectiveYield)}</span>
         </div>
       </div>
 

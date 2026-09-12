@@ -880,6 +880,54 @@ const YIELD_RISK_CONFIG_PROTOCOL_ALIASES: Record<string, YieldRiskConfigProtocol
   "clearpool-lending": "clearpool",
   sovryn: "sovryn-dex",
   fraxlend: "fraxlend-v2",
+  // A8: DeFiLlama project slugs that name an already-reviewed venue, so the
+  // auto-discovery `pool.project` slot resolves a tier instead of staying unknown.
+  "pendle-v2": "pendle",
+  sdai: "spark-savings",
+};
+
+/**
+ * Venue protocol of every tracked variant child, keyed by the child's stablecoin
+ * id (A8). Wrapper children publish their own `onchain:<childId>` /
+ * `linked-variant:<childId>:...` rows, whose source keys carry no venue, so the
+ * child id is the only stable identifier for the vault that generates the yield.
+ *
+ * Values are venue protocol slugs, not necessarily reviewed keys: a reviewed
+ * slug resolves a venue-risk tier, an unreviewed one keeps the tier `unknown`
+ * and is surfaced by the coverage-audit venue queue (A10) for review — never
+ * backfill a guessed tier here.
+ */
+export const YIELD_VARIANT_CHILD_VENUE_PROTOCOLS: Readonly<Record<string, string>> = {
+  "bbqusdc-steakhouse": "morpho-blue",
+  "gtusdc-gauntlet": "morpho-blue",
+  "gtusdcp-gauntlet": "morpho-blue",
+  "sdai-sky": "spark-savings",
+  "sgho-aave": "aave-v3",
+  "steakusdc-steakhouse": "morpho-blue",
+  "steakusdt-steakhouse": "morpho-blue",
+  "stkgho-umbrella-aave": "aave-v3",
+  "susdc-spark": "spark-savings",
+  "susdt-spark": "spark-savings",
+  "syrupusdc-maple": "maple",
+  "syrupusdt-maple": "maple",
+  "ybold-yearn": "yearn",
+  "yvusdc-yearn": "yearn",
+  // Children whose wrapper venue is reviewed but was unpublished (A8): the Sky
+  // savings-rate stack (sUSDS/stUSDS carry the reviewed Sky/Spark savings-rate
+  // surface, same as the sDAI/Spark entries above), Cap's staked cUSD, and
+  // Curve's crvUSD savings wrapper (crvUSD borrower interest = LlamaLend).
+  "stusds-sky": "spark-savings",
+  "susds-sky": "spark-savings",
+  "stcusd-cap": "cap",
+  "scrvusd-curve": "curve-llamalend",
+  // Children whose wrapper venue is not yet reviewed: they publish the issuing
+  // protocol so the row carries a real venue instead of `null`. Tier stays
+  // `unknown` (PYS-neutral) until their review lands via the coverage queue.
+  "savusd-avant": "avant",
+  "sfrxusd-frax": "frax",
+  "susn-noon": "noon-capital",
+  "susde-ethena": "ethena",
+  "wsrusd-reservoir": "reservoir-protocol",
 };
 
 function isYieldRiskConfigProtocol(value: string): value is YieldRiskConfigProtocol {

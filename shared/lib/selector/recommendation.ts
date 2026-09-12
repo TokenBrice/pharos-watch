@@ -35,7 +35,7 @@ function pickWhyKeys(
   return triggered;
 }
 
-function whyKeyTriggers(
+export function whyKeyTriggers(
   key: WhyKey,
   row: MergedRow,
 ): boolean {
@@ -76,7 +76,13 @@ function whyKeyTriggers(
     case "long-tracking-span":
       return row.trackingSpanDays >= 365;
     case "top-pys":
-      return row.pharosYieldScore != null && row.pharosYieldScore >= 85;
+      // Calibration: the previous `>= 85` cut was calibrated to the pre-rescale
+      // PYS distribution and qualified exactly 1 of 156 live rows. Live histogram
+      // on the current scale (0-100, mass at 10-24): `>= 85` -> 1 row,
+      // `>= 70` -> 1, `>= 60` -> 2, `>= 50` -> 4 rows, so 50 restores the ~2.5%
+      // selectivity the label implies. Re-anchor here, not per-call: every why-key
+      // caller must agree on what "top PYS" means.
+      return row.pharosYieldScore != null && row.pharosYieldScore >= 50;
     case "yield-above-benchmark":
       return (
         row.apy30d != null &&

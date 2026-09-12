@@ -4,7 +4,7 @@ import { describe, expect, it, vi } from "vitest";
 import { fireEvent, screen } from "@testing-library/react";
 
 import type { YieldViewModelRow } from "@/lib/yield-view-model";
-import { makeYieldViewModelRow, renderYieldMobileCard } from "./yield-test-support";
+import { REGISTRY_WITH_EUR, makeYieldViewModelRow, renderYieldMobileCard } from "./yield-test-support";
 
 vi.mock("@/components/yield-history-chart", () => ({
   YieldHistoryChart: () => <div data-testid="yield-history-chart" />,
@@ -53,4 +53,35 @@ describe("YieldMobileCard", () => {
     expect(screen.getByText("PYS —")).toBeTruthy();
   });
 
+  it("threads the payload scaling factor through the row display (E7)", () => {
+    // scalingFactor has no visible strip output today; the card must accept
+    // the payload value (live 8) and render the expanded PYS strip unchanged.
+    renderYieldMobileCard(row, { scalingFactor: 8, expanded: true });
+    expect(screen.getByRole("group", { name: "Why this PYS" })).toBeTruthy();
+  });
+});
+
+// The chip must resolve a missing row rate from the registry EUR entry (the
+// row's own benchmark) instead of the chart-wide USD risk-free frame.
+describe("YieldMobileCard — zone chip benchmark resolution", () => {
+  const eurRowWithoutRate = {
+    ...row,
+    benchmarkKey: "EUR",
+    benchmarkLabel: "EUR 3M compounded €STR",
+    benchmarkRate: undefined,
+    apy30d: 2.0,
+    safetyScore: 82,
+  } as YieldViewModelRow;
+
+  it("resolves a missing row rate from the registry EUR entry, not the USD frame", () => {
+    // 2.0% APY beats the EUR benchmark (1.94) but not the USD frame (3.5):
+    // a Sweet Spot chip proves the EUR rate was used.
+    renderYieldMobileCard(eurRowWithoutRate, { benchmarks: REGISTRY_WITH_EUR });
+    expect(screen.getByText("Sweet Spot")).toBeTruthy();
+  });
+
+  it("still falls back to the risk-free frame when no registry is provided", () => {
+    renderYieldMobileCard(eurRowWithoutRate);
+    expect(screen.getByText("Play It Safe")).toBeTruthy();
+  });
 });

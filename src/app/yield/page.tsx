@@ -16,7 +16,7 @@ const FAQ_ITEMS = [
   {
     question: "What is the Pharos Yield Score (PYS)?",
     answer:
-      "The Pharos Yield Score (PYS) answers one question: is this APY paying enough for the risk you take? It is yield per unit of risk on a 0-100 scale, not a recommendation and not a safety verdict. It starts from 30-day average APY, adds 25% of the row's benchmark spread, divides that effective yield by source-risk and safety-derived penalties, then applies a sustainability multiplier based on APY volatility over the same period. A D-grade stablecoin can post a high PYS because it pays a lot for a lot of risk; read PYS next to the Safety grade and the row's zone (Sweet Spot, Danger Zone, Play It Safe, Why Bother?) before acting on it.",
+      "The Pharos Yield Score (PYS) answers one question: is this APY paying enough for the risk you take? It is yield per unit of risk on a 0-100 scale, not a recommendation and not a safety verdict. It starts from 30-day average APY, adds 25% of the row's benchmark spread, swaps the row's local benchmark hurdle for the USD risk-free rate so a high-rate peg's policy-rate compensation is not scored as yield, divides that effective yield by source-risk and safety-derived penalties, then applies a sustainability multiplier based on APY volatility over the same period. A D-grade stablecoin can post a high PYS because it pays a lot for a lot of risk; read PYS next to the Safety grade and the row's zone (Sweet Spot, Danger Zone, Play It Safe, Why Bother?) before acting on it.",
   },
   {
     question: "How are stablecoin yields sourced?",
@@ -81,7 +81,7 @@ const route = createClientFeaturePage({
     },
     leadParagraphs: [
       "Stablecoin yield rankings that weigh every APY against safety and real-world benchmarks.",
-      "Two readings per row: Safety says how likely you are to lose money; PYS says how well the yield pays you for that chance. A high PYS on a D-grade coin is well-paid risk, not a safe pick. The page opens on the Opportunistic band (C+ safety, warnings hidden); widen the Risk tolerance slider to see everything.",
+      "Two readings per row: Safety says how likely you are to lose money; PYS says how well the yield pays you for that chance. A high PYS on a D-grade coin is well-paid risk, not a safe pick. The page opens on the Opportunistic band (C- or above, safety 50+, warnings hidden); widen the Risk tolerance slider to see everything.",
     ],
     leadFullWidth: true,
   },

@@ -28,7 +28,7 @@ const YIELD_PIPELINE = {
           { className: "flex-1", title: "Tier 2", subtitle: "Curated pools + protocol APIs" },
           { className: "flex-1", title: "Tier 3 / 4", subtitle: "Price- or rate-derived fallback" },
         ] },
-      { cards: [{ className: "w-32 flex flex-shrink-0 flex-col justify-center", title: "Effective Yield", subtitle: "APY + 25% benchmark spread" }] },
+      { cards: [{ className: "w-32 flex flex-shrink-0 flex-col justify-center", title: "Effective Yield", subtitle: "APY + 25% spread, USD-rebased hurdle" }] },
       { wrapperClassName: "flex flex-col gap-2 flex-1", cards: [
           { className: "flex-1", title: "Row Utility", subtitle: "Effective yield ÷ source risk" },
           { className: "flex-1", title: "Yield Efficiency", subtitle: "Row utility ÷ curved safety penalty" },
@@ -46,7 +46,7 @@ const YIELD_PIPELINE = {
           { title: "Tier 2", titleClassName: "text-xs text-foreground font-medium", subtitle: "Curated venues", subtitleClassName: "text-xs text-muted-foreground" },
           { title: "Tier 3 / 4", titleClassName: "text-xs text-foreground font-medium", subtitle: "Fallbacks", subtitleClassName: "text-xs text-muted-foreground" },
         ] },
-      { cards: [{ className: "w-full", title: "Effective Yield", subtitle: "APY + 25% benchmark spread" }] },
+      { cards: [{ className: "w-full", title: "Effective Yield", subtitle: "APY + 25% spread, USD-rebased hurdle" }] },
       { wrapperClassName: "grid grid-cols-3 gap-2 w-full", cards: [
           { title: "Row Utility", titleClassName: "text-xs text-foreground font-medium", subtitle: "yield ÷ source risk", subtitleClassName: "text-xs text-muted-foreground" },
           { title: "Efficiency", titleClassName: "text-xs text-foreground font-medium", subtitle: "utility ÷ safety", subtitleClassName: "text-xs text-muted-foreground" },
@@ -120,14 +120,15 @@ export function YieldIntelligenceMethodologySection() {
                 </p>
               </div>
               <WorkedExample summary="Worked example (verified against computePYS)">
-                <p className="pharos-numeric">Inputs: apy30d=8.4, benchmarkRate=4.25, safetyScore=72, sourceRisk.sourceRiskPenalty=1.2, apyVarianceScore=0.18, scalingFactor=8</p>
+                <p className="pharos-numeric">Inputs: apy30d=8.4, benchmarkRate=4.25, usdBenchmarkRate=4.25, safetyScore=72, sourceRisk.sourceRiskPenalty=1.2, apyVarianceScore=0.18, scalingFactor=8</p>
                 <p className="pharos-numeric">
-                  benchmarkSpread=8.4-4.25=4.15; effectiveYield=max(0,8.4+0.25*4.15)=9.44; riskPenalty=max(0.5,(101-72)/20)=1.45;
+                  benchmarkSpread=8.4-4.25=4.15; hurdleRebase=4.25-4.25=0; effectiveYield=max(0,8.4+0.25*4.15+0)=9.44; riskPenalty=max(0.5,(101-72)/20)=1.45;
                   sourceRiskPenalty=1.2; rowUtility=9.44/1.2=7.87; adjustedPenalty=1.45^1.75=1.92; yieldEfficiency=7.87/1.92=4.10; sustainability=1-0.18=0.82
                 </p>
                 <p className="pharos-numeric">PYS=clamp(round(4.10*0.82*8),0,100)=27</p>
                 <p>
-                  Result: <span className="text-foreground">PYS 27</span>.
+                  Result: <span className="text-foreground">PYS 27</span>. A TRY row with the same +4.15 spread over a 36.86% TLREF
+                  hurdle would carry hurdleRebase=4.25-36.86=-32.61 and score the same 27, not the 100 its 41% nominal APY would imply.
                 </p>
               </WorkedExample>
               <MethodologyDetails summary="Technical details: APY source resolution, confidence arbitration, PYS formula, NAV handling, and limits">
@@ -212,9 +213,11 @@ export function YieldIntelligenceMethodologySection() {
                     Read-time <code className="text-xs bg-muted px-1 py-0.5 rounded">data-stale</code> warnings are also
                     cadence-aware: hourly families attach only after three missed <code className="text-xs bg-muted px-1 py-0.5 rounded">sync-yield-data</code>{" "}
                     intervals (about 3 hours at the current publisher), while <code className="text-xs bg-muted px-1 py-0.5 rounded">price-derived</code>{" "}
-                    rows wait 36 hours because they are backed by daily <code className="text-xs bg-muted px-1 py-0.5 rounded">supply_history</code>{" "}
-                    snapshots and <code className="text-xs bg-muted px-1 py-0.5 rounded">rate-derived</code> rows wait 48 hours
-                    for the daily benchmark producer. Ordinary exchange-rate anchors expire after 14 days; price-derived and
+                    rows wait 30 hours because they are backed by daily <code className="text-xs bg-muted px-1 py-0.5 rounded">supply_history</code>{" "}
+                    snapshots and <code className="text-xs bg-muted px-1 py-0.5 rounded">rate-derived</code> rows wait 36 hours
+                    for the daily benchmark producer. Each source class also emits a midpoint <code className="text-xs bg-muted px-1 py-0.5 rounded">aging</code>{" "}
+                    warning (27h price-derived, 30h rate-derived) once an observation misses its refresh slot but has not
+                    reached the stale bound. Ordinary exchange-rate anchors expire after 14 days; price-derived and
                     Midas/Ondo NAV anchors remain valid through their configured 45-day comparison window.
                   </p>
                   <p>
@@ -236,7 +239,9 @@ export function YieldIntelligenceMethodologySection() {
                   <p className="pharos-numeric text-xs border border-border/60 bg-muted/50 rounded-lg px-4 py-3">
                     benchmarkSpread = apy30d &minus; benchmarkRate
                     <br />
-                    effectiveYield = max(0, apy30d + benchmarkSpread &times; 0.25)
+                    hurdleRebase = usdBenchmarkRate &minus; benchmarkRate
+                    <br />
+                    effectiveYield = max(0, apy30d + benchmarkSpread &times; 0.25 + hurdleRebase)
                     <br />
                     sourceRiskPenalty = deriveOrResolve(sourceRisk, neutral=1, max=2.5)
                     <br />
@@ -252,9 +257,12 @@ export function YieldIntelligenceMethodologySection() {
                   </p>
                   <ul className="list-disc list-inside space-y-1">
                     <li>
-                      <span className="text-foreground">Effective yield</span> keeps raw APY as the anchor, then adds 25%
-                      of the row&apos;s benchmark spread so tighter local-currency cash hurdles can lift the score without
-                      turning PYS into a pure excess-yield ranker
+                      <span className="text-foreground">Effective yield</span> keeps raw APY as the anchor and adds 25%
+                      of the row&apos;s benchmark spread, then swaps the local hurdle for the USD risk-free rate (v8.43). A
+                      peg that only pays its own central-bank rate scores like a USD row holding the T-bill rate, and equal
+                      benchmark-relative excess scores equally in every currency. This is the covered-interest-parity
+                      reading of excess yield: it assumes a frictionless hedge and ignores FX basis, and it is exactly zero
+                      for every row benchmarked at the USD T-bill rate
                     </li>
                     <li>
                       <span className="text-foreground">Source-risk penalty</span> uses nested source-risk evidence from

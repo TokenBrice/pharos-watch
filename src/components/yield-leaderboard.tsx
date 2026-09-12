@@ -25,10 +25,10 @@ import { useSortedPaginatedTable } from "@/hooks/use-sorted-paginated-table";
 import { TABLE_PAGE_SIZE } from "@/lib/constants";
 import { compareYieldRows, type YieldTableSortKey } from "@/components/yield-table-logic";
 import { buildStablecoinUrl } from "@shared/lib/urls";
-import { formatYieldWarningSignal } from "@/lib/yield-constants";
 import { isOpportunityDerivedSafety } from "@shared/lib/yield-opportunity-provenance";
 import { YIELD_TYPE_LABELS, YIELD_TYPE_STYLES } from "@shared/lib/classification";
 import { formatPercent, formatScore } from "@shared/lib/format";
+import { formatYieldRatioPercent, formatYieldWarningSignal, resolveYieldScoreQualification } from "@/lib/yield-constants";
 import { YieldCohortChip } from "@/components/yield-cohort-chip";
 import { YieldZoneChip } from "@/components/yield-zone-chip";
 import { YieldWhyPysStrip } from "@/components/yield-why-pys-strip";
@@ -39,9 +39,9 @@ import {
   deriveYieldRowDisplay,
 } from "@/components/yield-leaderboard-row-parts";
 import { trackEvent } from "@/lib/analytics";
-import {
-  isYieldBenchmarkFallback,
-} from "@/lib/yield-workbench-row";
+import { resolveYieldDisplayRebaseReferenceRate, resolveYieldRowBenchmark } from "@/lib/yield-benchmark";
+import { isYieldBenchmarkFallback } from "@/lib/yield-workbench-row";
+import type { YieldBenchmarkRegistry } from "@shared/types";
 import { downloadCsvWithPreamble, type CsvColumn } from "@/lib/exports/csv";
 import type { YieldViewModelRow } from "@/lib/yield-view-model";
 
@@ -171,7 +171,7 @@ const YIELD_EXPORT_COLUMNS: CsvColumn<YieldExportRow>[] = [
   { header: "Name", accessor: (entry) => entry.row.name },
   { header: "APY 30d (%)", accessor: (entry) => entry.row.apy30d },
   { header: "PYS", accessor: (entry) => entry.row.pharosYieldScore ?? "NR" },
-  { header: "PYS qualification", accessor: (entry) => entry.row.provenance?.scoreQualification ?? "unknown" },
+  { header: "PYS qualification", accessor: (entry) => resolveYieldScoreQualification(entry.row) },
   { header: "PYS null reason", accessor: (entry) => entry.row.pysNullReason ?? "" },
   { header: "Safety grade", accessor: (entry) => entry.row.safetyGrade ?? "NR" },
   { header: "Safety score", accessor: (entry) => entry.row.safetyScore ?? "NR" },
@@ -186,10 +186,14 @@ const YIELD_EXPORT_COLUMNS: CsvColumn<YieldExportRow>[] = [
   { header: "Yield type", accessor: (entry) => entry.row.yieldType },
   { header: "Source posture", accessor: (entry) => entry.row.sourcePosture ?? "unknown" },
   { header: "Source confidence", accessor: (entry) => entry.row.provenance?.confidenceTier ?? "unknown" },
-  { header: "Evidence completeness", accessor: (entry) => entry.row.provenance?.evidenceCompleteness ?? "unknown" },
+  { header: "Source risk penalty", accessor: (entry) => entry.row.sourceRisk?.sourceRiskPenalty ?? "unknown" },
+  { header: "Source risk score", accessor: (entry) => entry.row.sourceRisk?.sourceRiskScore ?? "unknown" },
+  { header: "Source age seconds", accessor: (entry) => entry.row.sourceRisk?.sourceAgeSeconds ?? "unknown" },
+  { header: "Venue risk tier", accessor: (entry) => entry.row.sourceRisk?.venueRiskTier ?? "unknown" },
+  { header: "Evidence completeness (%)", accessor: (entry) => formatYieldRatioPercent(entry.row.provenance?.evidenceCompleteness) },
   { header: "Benchmark", accessor: (entry) => entry.row.benchmarkLabel ?? "unknown" },
   { header: "TVL USD", accessor: (entry) => entry.row.sourceTvlUsd ?? "unknown" },
-  { header: "Stability", accessor: (entry) => entry.row.yieldStability ?? "unknown" },
+  { header: "Stability (%)", accessor: (entry) => formatYieldRatioPercent(entry.row.yieldStability) },
   { header: "Warnings", accessor: (entry) => entry.row.warningSignals.join(" | ") },
   { header: "Provider URL", accessor: (entry) => entry.row.yieldSourceUrl ?? "" },
 ];
@@ -208,6 +212,14 @@ interface YieldLeaderboardProps {
   riskFreeRate: number;
   medianApy: number;
   scalingFactor: number;
+  /**
+   * Benchmark registry from the payload. Lets a row with no published rate
+   * resolve its zone-chip benchmark from its own benchmarkKey instead of the
+   * chart-wide USD frame.
+   */
+  benchmarks?: YieldBenchmarkRegistry | null;
+  /** Payload methodology version; gates the v8.43 re-base reference during a deploy window. */
+  methodologyVersion?: string | null;
   emptyMessage?: string;
   filterSummary?: YieldLeaderboardFilterSummary;
   comparisonRows?: readonly YieldViewModelRow[];
@@ -221,6 +233,8 @@ export function YieldLeaderboard({
   riskFreeRate,
   medianApy,
   scalingFactor,
+  benchmarks = null,
+  methodologyVersion = null,
   emptyMessage,
   filterSummary,
   comparisonRows = rows,
@@ -353,6 +367,9 @@ export function YieldLeaderboard({
                     logo={logos[row.id]}
                     riskFreeRate={riskFreeRate}
                     medianApy={medianApy}
+                    scalingFactor={scalingFactor}
+                    benchmarks={benchmarks}
+                    methodologyVersion={methodologyVersion}
                     expanded={visibleExpandedId === row.id}
                     isCompared={isCompared}
                     compareDisabled={compareDisabled}
@@ -386,6 +403,8 @@ export function YieldLeaderboard({
           riskFreeRate={riskFreeRate}
           medianApy={medianApy}
           scalingFactor={scalingFactor}
+          benchmarks={benchmarks}
+          methodologyVersion={methodologyVersion}
           pageStartIndex={pageStartIndex}
           sortKey={sortKey}
           sortDirection={sortDirection}
@@ -446,6 +465,9 @@ export function YieldMobileCard({
   logo,
   riskFreeRate,
   medianApy,
+  scalingFactor,
+  benchmarks = null,
+  methodologyVersion = null,
   expanded,
   isCompared,
   compareDisabled,
@@ -457,6 +479,16 @@ export function YieldMobileCard({
   logo?: string;
   riskFreeRate: number;
   medianApy: number;
+  /** Payload scaling factor; threaded so any PYS reuse matches the board. */
+  scalingFactor: number;
+  /**
+   * Benchmark registry from the payload. Lets a row with no published rate
+   * resolve its zone-chip benchmark from its own benchmarkKey instead of the
+   * chart-wide USD frame.
+   */
+  benchmarks?: YieldBenchmarkRegistry | null;
+  /** Payload methodology version; gates the v8.43 re-base reference during a deploy window. */
+  methodologyVersion?: string | null;
   expanded: boolean;
   isCompared: boolean;
   compareDisabled: boolean;
@@ -488,7 +520,16 @@ export function YieldMobileCard({
     altSourceCount,
     benchmarkReferenceText,
     breakdown: { adjustedRiskPenalty, benchmarkSpread, sourceRiskPenalty, sustainabilityMult },
-  } = useMemo(() => deriveYieldRowDisplay(row, 1), [row]);
+  } = useMemo(
+    () =>
+      deriveYieldRowDisplay(
+        row,
+        scalingFactor,
+        // Version-gated: pre-8.43 payloads were scored without the re-base.
+        resolveYieldDisplayRebaseReferenceRate(methodologyVersion, riskFreeRate),
+      ),
+    [row, scalingFactor, methodologyVersion, riskFreeRate],
+  );
 
   return (
     <article
@@ -573,7 +614,12 @@ export function YieldMobileCard({
         <Badge variant="outline" className={`text-[10px] ${YIELD_TYPE_STYLES[row.yieldType]?.badge ?? ""}`}>
           {YIELD_TYPE_LABELS[row.yieldType] ?? row.yieldType}
         </Badge>
-        <YieldZoneChip safetyScore={safetyScore} apy30d={row.apy30d} benchmarkRate={row.benchmarkRate ?? riskFreeRate} />
+        <YieldZoneChip
+          safetyScore={safetyScore}
+          apy30d={row.apy30d}
+          // Row rate -> registry entry for the row's key -> USD frame -> risk-free.
+          benchmarkRate={resolveYieldRowBenchmark(row, benchmarks, riskFreeRate).rate}
+        />
         <MobileMetricPill>
           TVL{" "}
           <span className={tvlIsNative ? "text-muted-foreground" : "font-mono tabular-nums text-foreground"}>

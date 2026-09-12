@@ -52,6 +52,12 @@ const YIELD_HISTORY_COLUMNS = [
   "warning_signals",
   "yield_source",
   "yield_type",
+  "publication_generation_id",
+  "publication_state",
+  "pys_at_publish",
+  "safety_at_publish",
+  "variance_at_publish",
+  "pys_inputs_at_publish",
 ] as const;
 
 interface YieldHistoryCleanupTarget {
@@ -73,6 +79,12 @@ export interface YieldHistoryCleanupRow {
   warning_signals: string | null;
   yield_source: string | null;
   yield_type: string | null;
+  publication_generation_id: string | null;
+  publication_state: string | null;
+  pys_at_publish: number | null;
+  safety_at_publish: number | null;
+  variance_at_publish: number | null;
+  pys_inputs_at_publish: string | null;
 }
 
 export interface YieldHistoryCleanupArtifact {
@@ -147,8 +159,15 @@ function buildSelectSql(target: YieldHistoryCleanupTarget): string {
   return `SELECT ${YIELD_HISTORY_COLUMNS.join(", ")} FROM yield_history WHERE ${buildTargetWhereClause(target)} ORDER BY stablecoin_id ASC, recorded_at ASC, source_key ASC`;
 }
 
-function buildDeleteSql(target: YieldHistoryCleanupTarget): string {
-  return `DELETE FROM yield_history WHERE ${buildTargetWhereClause(target)}`;
+function buildDeleteSql(target: YieldHistoryCleanupTarget): string[] {
+  const whereClause = buildTargetWhereClause(target);
+  return [
+    `DELETE FROM yield_history WHERE ${whereClause}`,
+    // The daily materialization copies handed-off rows before this purge runs,
+    // so both tiers must drop the same key set or de-registering a handoff
+    // re-exposes up to a year of suppressed daily rows.
+    `DELETE FROM yield_history_daily WHERE ${whereClause}`,
+  ];
 }
 
 export function summarizeYieldHistoryCleanupRows(rows: readonly YieldHistoryCleanupRow[]): YieldHistoryCleanupSummary {
@@ -203,7 +222,9 @@ export function deleteCleanupRowsFromSqlite(dbPath: string): void {
   const db = new DatabaseSync(dbPath);
   try {
     for (const target of listYieldHistoryCleanupTargets()) {
-      db.exec(buildDeleteSql(target));
+      for (const deleteSql of buildDeleteSql(target)) {
+        db.exec(deleteSql);
+      }
     }
   } finally {
     db.close();
@@ -231,6 +252,12 @@ export function restoreCleanupRowsToSqlite(dbPath: string, rows: readonly YieldH
         row.warning_signals,
         row.yield_source,
         row.yield_type,
+        row.publication_generation_id,
+        row.publication_state,
+        row.pys_at_publish,
+        row.safety_at_publish,
+        row.variance_at_publish,
+        row.pys_inputs_at_publish,
       );
     }
   } finally {
@@ -262,7 +289,7 @@ function loadCleanupRowsFromWrangler(remote: boolean): YieldHistoryCleanupRow[] 
 
 function deleteCleanupRowsFromWrangler(remote: boolean): void {
   execRemoteStatements(
-    listYieldHistoryCleanupTargets().map((target) => buildDeleteSql(target)),
+    listYieldHistoryCleanupTargets().flatMap((target) => buildDeleteSql(target)),
     remote,
   );
 }

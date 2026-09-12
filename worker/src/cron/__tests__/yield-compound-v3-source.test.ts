@@ -29,6 +29,7 @@ describe("fetchCompoundV3SupplyRates", () => {
   afterEach(() => { vi.restoreAllMocks(); });
 
   it("derives APY from per-second supply rate", async () => {
+    const nowSec = Math.floor(Date.now() / 1000);
     mockEvmCall
       .mockResolvedValueOnce(687_700_000_000_000_000n)
       .mockResolvedValueOnce(795_585_475n)
@@ -47,6 +48,13 @@ describe("fetchCompoundV3SupplyRates", () => {
     expect(results[0].yield.sourcePool).toBe("0xc3d688B66703497DAA19211EEdff47f25384cdc3");
     expect(results[0].yield.sourceTvlUsd).toBe(125_000_000);
     expect(results[0].yield.sourceKey).toContain("protocol-api:compound-v3-supply:");
+    // B11/D8: `sourceObservedAt` is what lets the row score at all; a dropped or
+    // non-finite stamp silently leaves the coin unscorable.
+    expect(Number.isFinite(results[0].yield.sourceObservedAt)).toBe(true);
+    expect(results[0].yield.sourceObservedAt).toBeGreaterThan(nowSec - 60);
+    expect(results[0].yield.sourceObservedAt).toBeLessThanOrEqual(Math.floor(Date.now() / 1000));
+    // No comparison anchor is used for this adapter.
+    expect(results[0].yield.comparisonAnchorObservedAt).toBeNull();
     expect(telemetry.resolvedTargetCount).toBe(1);
     expect(telemetry.emittedCount).toBe(1);
     expect(telemetry.missingTargetCount).toBe(0);

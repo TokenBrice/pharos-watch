@@ -351,20 +351,38 @@ function computeRowCohortPercentile(
   };
 }
 
+// viewRank must not depend on the payload's array order: rows rank by their
+// published position (live rank when served, else published rank), then
+// deterministically by PYS, 30d APY, and symbol, so a reordered or shuffled
+// input yields identical ranks and labels. Summary rows omit the rank fields
+// and fall through to the PYS order the payload already publishes.
+function compareYieldRankOrder(a: YieldWorkbenchRanking, b: YieldWorkbenchRanking): number {
+  const rankA = ("liveRank" in a ? a.liveRank : null) ?? ("publishedRank" in a ? a.publishedRank : null) ?? Number.MAX_SAFE_INTEGER;
+  const rankB = ("liveRank" in b ? b.liveRank : null) ?? ("publishedRank" in b ? b.publishedRank : null) ?? Number.MAX_SAFE_INTEGER;
+  if (rankA !== rankB) return rankA - rankB;
+  const pysA = a.pharosYieldScore ?? Number.NEGATIVE_INFINITY;
+  const pysB = b.pharosYieldScore ?? Number.NEGATIVE_INFINITY;
+  if (pysA !== pysB) return pysB - pysA;
+  if (a.apy30d !== b.apy30d) return b.apy30d - a.apy30d;
+  return a.symbol.localeCompare(b.symbol);
+}
+
 export function rankYieldRows(
   facets: readonly YieldRowFacet[],
   filters: YieldViewModelFilters,
   cohortIndex: ReadonlyMap<string, CohortBucket>,
 ): YieldViewModelRow[] {
   const comparisonLabel = getYieldComparisonLabel(filters);
-  return facets.map((facet, index) => ({
-    ...facet.row,
-    peg: facet.peg,
-    viewRank: index + 1,
-    rankLabel: `#${index + 1} in ${comparisonLabel}`,
-    opportunity: facet.opportunity,
-    sourceDepthLens: facet.sourceDepthLens,
-    sourcePosture: facet.sourcePosture,
-    cohortPercentile: computeRowCohortPercentile(facet.row, cohortIndex),
-  }));
+  return [...facets]
+    .toSorted((a, b) => compareYieldRankOrder(a.row, b.row))
+    .map((facet, index) => ({
+      ...facet.row,
+      peg: facet.peg,
+      viewRank: index + 1,
+      rankLabel: `#${index + 1} in ${comparisonLabel}`,
+      opportunity: facet.opportunity,
+      sourceDepthLens: facet.sourceDepthLens,
+      sourcePosture: facet.sourcePosture,
+      cohortPercentile: computeRowCohortPercentile(facet.row, cohortIndex),
+    }));
 }

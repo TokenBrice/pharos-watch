@@ -1,7 +1,10 @@
 "use client";
 
-import { memo, useMemo, type ReactNode } from "react";
+import { REPORT_CARD_GRADE_RANGE_METADATA } from "@shared/lib/classification";
+import { gradeRange, scoreToGrade } from "@shared/lib/report-card-core";
+
 import Link from "next/link";
+import { memo, useMemo, type ReactNode } from "react";
 import { ArrowDown, ArrowUp, ArrowUpRight, ChevronDown } from "lucide-react";
 import { StablecoinLogo } from "@/components/stablecoin-logo";
 import { Badge } from "@/components/ui/badge";
@@ -22,7 +25,9 @@ import {
 } from "@/components/yield-leaderboard-row-parts";
 import { cn } from "@/lib/utils";
 import { buildStablecoinUrl } from "@shared/lib/urls";
+import type { YieldBenchmarkRegistry } from "@shared/types";
 import { trackEvent } from "@/lib/analytics";
+import { resolveYieldDisplayRebaseReferenceRate, resolveYieldRowBenchmark } from "@/lib/yield-benchmark";
 import type { YieldTableSortKey } from "@/components/yield-table-logic";
 import type { YieldViewModelRow } from "@/lib/yield-view-model";
 import { YIELD_TYPE_LABELS, YIELD_TYPE_STYLES } from "@shared/lib/classification";
@@ -35,13 +40,14 @@ import { clampScore } from "@shared/lib/math";
 // 30d-Range stay as plain values. Tailwind classes are static strings.
 // ---------------------------------------------------------------------------
 
-// Map a 0-100 safety score to a bar tone (mirrors the 80/60/40 score tiers).
+// Gauge tone follows the V9 grade ladder via scoreToGrade, so a row's gauge
+// can never disagree with its adjacent grade badge; bar classes come from the
+// classification grade-range table (A emerald / B blue / C amber / D orange /
+// F red). The old hardcoded 80/60/40 cuts gave a C+ (60-64) a blue gauge
+// under an amber badge.
 function safetyBarTone(score: number | null): string {
   if (score == null) return "bg-muted-foreground/40";
-  if (score >= 80) return "bg-emerald-500";
-  if (score >= 60) return "bg-sky-500";
-  if (score >= 40) return "bg-amber-500";
-  return "bg-red-500";
+  return REPORT_CARD_GRADE_RANGE_METADATA[gradeRange(scoreToGrade(score))].barClassName;
 }
 
 // Map a PYS score to a bar tone matching getPysColor's 41/21 thresholds.
@@ -184,6 +190,14 @@ interface YieldInstrumentRowProps {
   riskFreeRate: number;
   medianApy: number;
   scalingFactor: number;
+  /**
+   * Benchmark registry from the payload. Lets a row with no published rate
+   * resolve its zone-chip benchmark from its own benchmarkKey instead of the
+   * chart-wide USD frame.
+   */
+  benchmarks?: YieldBenchmarkRegistry | null;
+  /** Payload methodology version; gates the v8.43 re-base reference during a deploy window. */
+  methodologyVersion?: string | null;
   expanded: boolean;
   isCompared: boolean;
   compareDisabled: boolean;
@@ -200,6 +214,8 @@ function YieldInstrumentRowBase({
   riskFreeRate,
   medianApy,
   scalingFactor,
+  benchmarks = null,
+  methodologyVersion = null,
   expanded,
   isCompared,
   compareDisabled,
@@ -228,10 +244,23 @@ function YieldInstrumentRowBase({
     isCurrencyMismatchedBenchmark,
     warningCount,
     ...labels
-  } = useMemo(() => deriveYieldRowDisplay(row, scalingFactor), [row, scalingFactor]);
+  } = useMemo(
+    () =>
+      deriveYieldRowDisplay(
+        row,
+        scalingFactor,
+        // Version-gated: pre-8.43 payloads were scored without the re-base.
+        resolveYieldDisplayRebaseReferenceRate(methodologyVersion, riskFreeRate),
+      ),
+    [row, scalingFactor, methodologyVersion, riskFreeRate],
+  );
   const totalSourceCount = 1 + altSourceCount;
   const benchmarkRate = row.benchmarkRate ?? riskFreeRate;
   const excess = benchmarkRate != null ? row.apy30d - benchmarkRate : null;
+  // The zone chip judges the row against its OWN benchmark (row rate ->
+  // registry entry for the row's key -> USD frame -> risk-free); the APY bar
+  // and excess line above keep the published-vs-risk-free frame they label.
+  const zoneBenchmarkRate = resolveYieldRowBenchmark(row, benchmarks, riskFreeRate).rate;
 
   return (
     <div className="border-b border-border/55 last:border-b-0">
@@ -287,7 +316,7 @@ function YieldInstrumentRowBase({
             <Badge variant="outline" className={`text-[10px] ${YIELD_TYPE_STYLES[row.yieldType]?.badge ?? ""}`}>
               {YIELD_TYPE_LABELS[row.yieldType] ?? row.yieldType}
             </Badge>
-            <YieldZoneChip safetyScore={safetyScore} apy30d={row.apy30d} benchmarkRate={benchmarkRate} />
+            <YieldZoneChip safetyScore={safetyScore} apy30d={row.apy30d} benchmarkRate={zoneBenchmarkRate} />
             <YieldSignalsIndicator
               row={row}
               sourceRiskMaterial={sourceRiskMaterial}
@@ -496,6 +525,14 @@ interface YieldInstrumentBoardProps {
   riskFreeRate: number;
   medianApy: number;
   scalingFactor: number;
+  /**
+   * Benchmark registry from the payload. Lets a row with no published rate
+   * resolve its zone-chip benchmark from its own benchmarkKey instead of the
+   * chart-wide USD frame.
+   */
+  benchmarks?: YieldBenchmarkRegistry | null;
+  /** Payload methodology version; gates the v8.43 re-base reference during a deploy window. */
+  methodologyVersion?: string | null;
   pageStartIndex: number;
   sortKey: YieldTableSortKey;
   sortDirection: "asc" | "desc";
@@ -520,6 +557,8 @@ export function YieldInstrumentBoard({
   riskFreeRate,
   medianApy,
   scalingFactor,
+  benchmarks = null,
+  methodologyVersion = null,
   pageStartIndex,
   sortKey,
   sortDirection,
@@ -613,6 +652,8 @@ export function YieldInstrumentBoard({
               riskFreeRate={riskFreeRate}
               medianApy={medianApy}
               scalingFactor={scalingFactor}
+              benchmarks={benchmarks}
+              methodologyVersion={methodologyVersion}
               expanded={expandedId === row.id}
               isCompared={compareHas(row.id)}
               compareDisabled={!compareHas(row.id) && !compareCanAdd}

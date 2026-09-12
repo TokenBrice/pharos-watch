@@ -1,7 +1,7 @@
 import { logWorkerEvent, logWorkerEventArgs } from "../../lib/structured-log";
 import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import { normalizeChainId } from "@shared/lib/chains";
-import type { YieldRiskConfigProtocol } from "@shared/lib/yield-source-risk-registry";
+import { YIELD_VARIANT_CHILD_VENUE_PROTOCOLS } from "@shared/lib/yield-source-risk-registry";
 import type { YieldType } from "@shared/types/core";
 import type { YieldDeploymentPlace, YieldSourceRisk } from "@shared/types/yield";
 import {
@@ -425,23 +425,6 @@ function getEffectiveYieldType(entry: ResolvedYieldEntry, fallbackType: YieldTyp
   return entry.yield?.yieldType ?? fallbackType;
 }
 
-const LINKED_VARIANT_REVIEWED_VENUE_BY_OWNER_ID: Readonly<Record<string, YieldRiskConfigProtocol>> = {
-  "bbqusdc-steakhouse": "morpho-blue",
-  "gtusdc-gauntlet": "morpho-blue",
-  "gtusdcp-gauntlet": "morpho-blue",
-  "sdai-sky": "spark-savings",
-  "sgho-aave": "aave-v3",
-  "steakusdc-steakhouse": "morpho-blue",
-  "steakusdt-steakhouse": "morpho-blue",
-  "stkgho-umbrella-aave": "aave-v3",
-  "susdc-spark": "spark-savings",
-  "susdt-spark": "spark-savings",
-  "syrupusdc-maple": "maple",
-  "syrupusdt-maple": "maple",
-  "ybold-yearn": "yearn",
-  "yvusdc-yearn": "yearn",
-};
-
 function inferLinkedVariantDeploymentPlace(
   variantKind: string | undefined,
   childYieldType: YieldType | undefined,
@@ -481,7 +464,7 @@ function buildLinkedVariantSourceRisk(params: {
   const venueProtocol =
     existing.venueProtocol ??
     params.source.project ??
-    LINKED_VARIANT_REVIEWED_VENUE_BY_OWNER_ID[params.childId] ??
+    YIELD_VARIANT_CHILD_VENUE_PROTOCOLS[params.childId] ??
     null;
   const venueChain = resolveLinkedVariantChain(params.childId, params.source, params.contracts);
 
@@ -550,7 +533,7 @@ export function appendLinkedVariantParentYieldSources(resolved: ResolvedYieldEnt
         project:
           entry.yield.sourceRisk?.venueProtocol ??
           entry.yield.project ??
-          LINKED_VARIANT_REVIEWED_VENUE_BY_OWNER_ID[childMeta.id],
+          YIELD_VARIANT_CHILD_VENUE_PROTOCOLS[childMeta.id],
         chain: resolveLinkedVariantChain(childMeta.id, entry.yield, childMeta.contracts),
         sourceRisk: buildLinkedVariantSourceRisk({
           childId: childMeta.id,

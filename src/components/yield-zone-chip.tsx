@@ -6,6 +6,12 @@ import { YIELD_ZONE_DESCRIPTIONS, YIELD_ZONE_LABELS, YIELD_ZONE_STYLES } from "@
 interface YieldZoneChipProps {
   safetyScore: number | null;
   apy30d: number;
+  /**
+   * The row's *resolved* benchmark rate — pass
+   * `resolveYieldRowBenchmark(row, registry, riskFreeRate).rate` so a missing
+   * row rate resolves from the registry by benchmarkKey before the chart-wide
+   * USD frame, and the chip disappears only when no benchmark resolves at all.
+   */
   benchmarkRate: number | null | undefined;
   className?: string;
 }

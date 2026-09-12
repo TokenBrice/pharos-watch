@@ -351,16 +351,16 @@ export const METHODOLOGY_CONTEXT: Record<MethodologyContextKey, MethodologyConte
   pys: {
     title: "PYS",
     summary:
-      "Asks one question: is this APY paying enough for the risk you take? Yield per unit of risk, 0-100. Starts from APY, adds a weighted slice of benchmark spread, then discounts by source risk, stablecoin safety, and yield consistency.",
+      "Asks one question: is this APY paying enough for the risk you take? Yield per unit of risk, 0-100. Starts from APY, adds a weighted slice of benchmark spread, re-bases the local hurdle onto the USD risk-free rate, then discounts by source risk, stablecoin safety, and yield consistency.",
     detail:
-      "Not a recommendation or a safety verdict: a D-grade coin can top PYS because it pays a lot for a lot of risk. Read it next to the Safety grade and the row's zone. Source-risk and safety penalties are deliberately steep, and local-currency benchmark outperformance gets explicit credit.",
+      "Not a recommendation or a safety verdict: a D-grade coin can top PYS because it pays a lot for a lot of risk. Read it next to the Safety grade and the row's zone. Source-risk and safety penalties are deliberately steep, and excess over the local hurdle is scored on a USD footing, so a peg's policy-rate compensation is never credited as yield.",
     methodologyPath: "/methodology/#yield-intelligence-methodology",
     versionLabel: YIELD_METHODOLOGY_VERSION_LABEL,
     changelogPath: YIELD_METHODOLOGY_CHANGELOG_PATH,
   },
   yieldStability: {
     title: "Yield Stability",
-    summary: "30-day APY consistency metric. Higher means the yield series is steadier, not necessarily higher.",
+    summary: "30-day APY consistency metric. Higher means the yield series is steadier, not necessarily higher. Published at two-decimal precision and reused verbatim by the PYS consistency multiplier; rows with too little history resolve the neutral best-case default instead of a penalty.",
     methodologyPath: "/methodology/#yield-intelligence-methodology",
     versionLabel: YIELD_METHODOLOGY_VERSION_LABEL,
     changelogPath: YIELD_METHODOLOGY_CHANGELOG_PATH,
@@ -368,7 +368,7 @@ export const METHODOLOGY_CONTEXT: Record<MethodologyContextKey, MethodologyConte
   yieldWarnings: {
     title: "Yield Warning Signals",
     summary:
-      "Anomaly flags from the yield pipeline such as spikes, divergence, TVL outflow, negative trend, and reward-heavy behavior.",
+      "Anomaly flags from the yield pipeline such as spikes, divergence, TVL outflow, negative trend, and reward-heavy behavior, plus read-time freshness flags (data-stale, aging, freshness unknown) and benchmark/reference degradation signals. A row serving a null PYS always carries an explicit reason.",
     methodologyPath: "/methodology/#yield-intelligence-methodology",
     versionLabel: YIELD_METHODOLOGY_VERSION_LABEL,
     changelogPath: YIELD_METHODOLOGY_CHANGELOG_PATH,

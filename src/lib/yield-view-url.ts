@@ -64,6 +64,12 @@ function parseRiskBudgetParam(value: string | null | undefined): YieldRiskBudget
     : YIELD_LANDING_RISK_BUDGET;
 }
 
+/** URL tokens that parse to a risk-budget band, including the neutral aliases. */
+function isKnownRiskBudgetParam(value: string): boolean {
+  return value === YIELD_RISK_ANY_PARAM || value === "all"
+    || YIELD_RISK_BUDGET_SPECS.some((spec) => spec.key === value);
+}
+
 export function riskBudgetUrlValue(key: YieldRiskBudgetKey): string {
   return key === "all" ? YIELD_RISK_ANY_PARAM : key;
 }
@@ -128,8 +134,12 @@ export function normalizeFilters(rawParams: YieldViewModelUrlParams, options: Yi
     attention: normalizeOption(params.attention, validAttention, DEFAULT_FILTERS.attention),
   };
 
+  // A param that names a band (including the landing band and the "any"/"all"
+  // neutral aliases) round-trips through its URL value; only unknown strings
+  // fall back to the paramless landing state and get flagged for the rewrite.
+  const rawRisk = params.risk?.trim() ?? "";
   const normalizedParams: Record<keyof YieldViewModelUrlParams, string | null> = {
-    risk: risk === YIELD_LANDING_RISK_BUDGET ? null : riskBudgetUrlValue(risk),
+    risk: rawRisk !== "" && isKnownRiskBudgetParam(rawRisk) ? riskBudgetUrlValue(risk) : null,
     peg: filters.peg === DEFAULT_FILTERS.peg ? null : filters.peg,
     yieldType: filters.yieldType === DEFAULT_FILTERS.yieldType ? null : filters.yieldType,
     q: filters.q === DEFAULT_FILTERS.q ? null : filters.q,
@@ -151,7 +161,9 @@ export function normalizeFilters(rawParams: YieldViewModelUrlParams, options: Yi
     .filter((key) => {
       const raw = rawParams[key];
       const normalized = normalizedParams[key];
-      return raw != null && raw.trim() !== "" && raw !== normalized;
+      if (raw == null || raw.trim() === "") return false;
+      if (key === "risk") return !isKnownRiskBudgetParam(raw.trim());
+      return raw !== normalized;
     });
 
   return { filters, normalizedParams, invalidParamKeys };

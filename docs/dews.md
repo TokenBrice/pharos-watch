@@ -155,6 +155,10 @@ Structured Yield Intelligence source-risk and rank-attribution evidence adds the
 | `rankChangeAttribution.primaryDriver = "source-switch"` | 20 |
 | `rankChangeAttribution.primaryDriver = "source-risk"` | 20 |
 
+Both rank-driver rows count at most once per row: `computeStructuredYieldSignal` hoists a rank-attribution driver whose static twin (`sourceRisk.sourceSwitchCount30d > 0`, or the source-risk branches) already fired for the same row, so one counted switch or one `>= 1.5` source-risk penalty contributes +20, not +40. A rank driver with no static counterpart still scores on its own.
+
+`rankChangeAttribution` is populated generation-over-generation at publish time, when the publisher is given the previous publication; a payload without a comparable previous generation carries no rank-attribution evidence, and those rows simply contribute no structured driver points.
+
 Structured evidence is additive with warning-string evidence and the final Yield Anomaly sub-signal still caps at 100. Medium reviewed venue risk adds the bounded `structured-medium-risk-venue` warning, while high reviewed venue risk keeps the stronger `structured-high-risk-venue` warning. Neutral structured rows do not become available zero-stress signals; missing, malformed, or neutral source-risk evidence remains a no-op so legacy warning-only behavior is preserved.
 
 ---
@@ -193,6 +197,7 @@ Age-based pruning and orphan deletes both skip stablecoin IDs in `FROZEN_IDS`, s
 **Cron name:** `compute-dews`
 
 **Run health semantics:** DEWS records upstream read problems as structured cron metadata (`sourceFailures`, `sourceCoverage`, `validationFailures`). The cron returns `status: "degraded"` when non-bootstrap source dependencies fail (`fallbackMode: "degraded-inputs"`) or when a core persisted input row is malformed (`malformedCoreInputRows > 0`, `fallbackMode: "malformed-persisted-inputs"`). Bootstrap grace is now a one-time state transition, tracked by the `dews:bootstrap-complete` cache sentinel written on the first cron run that reaches persistence — even if that run is degraded by other source failures or wrote no rows. Before that first run, only explicitly optional missing tables are tagged `bootstrapAllowed=true`; once the sentinel exists, those same failures degrade the run normally. Stale `dex_liquidity` and stale `mint_burn_hourly` freshness are recorded in metadata, but rows that meet signal-coverage requirements are still persisted. The same metadata includes `dependencies.dexLiquidity` diagnostics from `dex_liquidity_publication_generations` so operators can distinguish stale DEWS inputs caused by a failed/latest DEX publication from normal downstream catch-up.
+A stale `yield-rankings` cache past the `sync-yield-data` producer interval is recorded as the `yield-rankings-freshness` source failure; stale evidence is still consumed, because blanking it would silently zero every structured yield contribution.
 
 **Off-chain confirmation resilience:** The CoinGecko confirmation fetch used by the pending-depeg pipeline (and the Binance CEX price fetch beside it) is wrapped in a circuit breaker. A sustained provider outage trips the breaker and short-circuits subsequent confirmation lookups until it resets, so a single upstream failure no longer hammers the endpoint for 45 minutes per pending row.
 

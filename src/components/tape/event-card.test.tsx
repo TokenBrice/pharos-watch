@@ -371,7 +371,7 @@ describe("EventCard enrichment", () => {
     expect(screen.getByText("(+1.8)")).toBeTruthy();
   });
 
-  it("yield.pys_dropped rounds fractional PYS scores in the pills and delta", () => {
+  it("yield.pys_dropped derives the delta from the rounded pills so the triple is consistent", () => {
     const event = makeEvent({
       type: "yield.pys_dropped",
       severity: "warning",
@@ -384,7 +384,8 @@ describe("EventCard enrichment", () => {
     render(<EventCard event={event} />);
     expect(screen.getByText(/^82$/)).toBeTruthy();
     expect(screen.getByText(/^74$/)).toBeTruthy();
-    expect(screen.getByText("(-7)")).toBeTruthy();
+    // 81.6 → 74.4 displays as 82 → 74; the drop shown must be 82 - 74.
+    expect(screen.getByText("(-8)")).toBeTruthy();
   });
 
   it("yield.warning_emitted prefers newSignals and truncates after three pills", () => {

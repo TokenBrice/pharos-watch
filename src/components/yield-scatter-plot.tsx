@@ -17,14 +17,18 @@ import { useChartContainerReady } from "@/hooks/use-chart-container-ready";
 import { useSvgId } from "@/components/chart-primitives/axes";
 import { StablecoinLogo } from "@/components/stablecoin-logo";
 import { computeApyAxis, computeSafetyDomain, nudgeOverlaps, SAFETY_SCORE_THRESHOLD } from "@/lib/yield-scatter";
-import { getYieldBenchmarkDisplayLabel } from "@/lib/yield-benchmark";
+import {
+  getYieldBenchmarkDisplayLabel,
+  resolveYieldRowBenchmark,
+  type YieldBenchmarkAgeEvidence,
+} from "@/lib/yield-benchmark";
 import { SEVERITY_TONE_CLASS } from "@/lib/severity-tone";
 import { cn } from "@/lib/utils";
 import { YIELD_TYPE_LABELS, YIELD_ZONE_LABELS } from "@shared/lib/classification";
 import { YIELD_RISK_BUDGET_MIN_SAFETY } from "@/lib/yield-view-model";
 import { useIsMobile } from "@/hooks/use-is-mobile";
 import { resolveCompactLogoSrc } from "@/lib/logo-variants";
-import type { YieldType } from "@shared/types";
+import type { YieldType, YieldBenchmarkRegistry } from "@shared/types";
 import type { YieldWorkbenchRanking } from "@/lib/yield-workbench-row";
 
 interface ScatterDataPoint {
@@ -55,6 +59,16 @@ interface YieldScatterPlotProps {
   showBenchmarkReference?: boolean;
   benchmarkIsFallback?: boolean;
   usesDefaultBenchmarkFrame?: boolean;
+  /**
+   * Benchmark registry used to resolve a missing row rate by the row's
+   * benchmark key before the chart-wide USD frame (E5).
+   */
+  benchmarks?: YieldBenchmarkRegistry | null;
+  /**
+   * Age evidence for the chart-wide benchmark, so a stale frame label carries
+   * the shared age marker (E9).
+   */
+  benchmarkAgeEvidence?: YieldBenchmarkAgeEvidence | null;
   logos?: Record<string, string>;
   compact?: boolean;
   /**
@@ -225,7 +239,15 @@ function LogoScatterPoint({
   );
 }
 
-function CustomTooltip({ active, payload }: { active?: boolean; payload?: Array<{ payload: ScatterDataPoint }> }) {
+function CustomTooltip({
+  active,
+  payload,
+  usesDefaultBenchmarkFrame = false,
+}: {
+  active?: boolean;
+  payload?: Array<{ payload: ScatterDataPoint }>;
+  usesDefaultBenchmarkFrame?: boolean;
+}) {
   if (!active || !payload || payload.length === 0) return null;
   const d = payload[0].payload;
   return (
@@ -253,6 +275,7 @@ function CustomTooltip({ active, payload }: { active?: boolean; payload?: Array<
       {d.isClipped && d.clipThreshold !== null ? (
         <p className="text-muted-foreground">
           Chart rail: <span className="pharos-numeric">&gt; {d.clipThreshold.toFixed(0)}%</span>
+          {usesDefaultBenchmarkFrame ? " (USD frame)" : ""}
         </p>
       ) : null}
       <p className="text-muted-foreground">
@@ -274,6 +297,8 @@ export function YieldScatterPlot({
   showBenchmarkReference = true,
   benchmarkIsFallback = false,
   usesDefaultBenchmarkFrame = false,
+  benchmarks = null,
+  benchmarkAgeEvidence = null,
   logos,
   compact = false,
   frame = "stage",
@@ -286,26 +311,31 @@ export function YieldScatterPlot({
   const rawData = useMemo(() => {
     return rankings
       .filter((r) => r.safetyScore !== null)
-      .map((r) => ({
-        x: r.safetyScore!,
-        y: r.apy30d,
-        id: r.id,
-        name: r.name,
-        symbol: r.symbol,
-        yieldType: r.yieldType,
-        safetyGrade: r.safetyGrade,
-        pharosYieldScore: r.pharosYieldScore,
-        yieldSource: r.yieldSource,
-        benchmarkLabel: getYieldBenchmarkDisplayLabel({
-          benchmarkLabel: r.benchmarkLabel ?? benchmarkLabel,
-          benchmarkIsFallback: r.benchmarkIsFallback,
-        }),
-        benchmarkRate: r.benchmarkRate ?? benchmarkRate,
-        excessYield: r.benchmarkRate != null ? r.apy30d - r.benchmarkRate : null,
-        tvl: r.sourceTvlUsd,
-        logoSrc: resolveCompactLogoSrc(logos?.[r.id], compactMarker ? 14 : 16),
-      }));
-  }, [benchmarkLabel, benchmarkRate, compactMarker, logos, rankings]);
+      .map((r) => {
+        // E5: one resolution per row — a missing row rate resolves from the
+        // registry by the row's benchmark key before the chart-wide USD frame,
+        // and the (fallback) marker follows the selection mode rather than the
+        // payload's benchmarkIsFallback flag, which is false on documented
+        // proxy selections.
+        const benchmark = resolveYieldRowBenchmark(r, benchmarks, benchmarkRate);
+        return {
+          x: r.safetyScore!,
+          y: r.apy30d,
+          id: r.id,
+          name: r.name,
+          symbol: r.symbol,
+          yieldType: r.yieldType,
+          safetyGrade: r.safetyGrade,
+          pharosYieldScore: r.pharosYieldScore,
+          yieldSource: r.yieldSource,
+          benchmarkLabel: benchmark.label,
+          benchmarkRate: benchmark.rate ?? benchmarkRate,
+          excessYield: benchmark.rate != null ? r.apy30d - benchmark.rate : null,
+          tvl: r.sourceTvlUsd,
+          logoSrc: resolveCompactLogoSrc(logos?.[r.id], compactMarker ? 14 : 16),
+        };
+      });
+  }, [benchmarks, benchmarkRate, compactMarker, logos, rankings]);
 
   const apyAxis = useMemo(
     () =>
@@ -359,7 +389,36 @@ export function YieldScatterPlot({
   const resolvedBenchmarkLabel = getYieldBenchmarkDisplayLabel({
     benchmarkLabel,
     benchmarkIsFallback,
+    ...benchmarkAgeEvidence,
   });
+
+  // E17: rows dropped for a missing safety score are counted and annotated,
+  // not silently gone — the doc promises the full tracked universe.
+  const droppedUnscoredCount = rankings.length - rawData.length;
+  // E10: the clipped-outlier count renders on every surface — hero viewers see
+  // triangles at the rail, so they get the count too (previously legend-only).
+  // E13: in mixed-currency views the rail is the chart-wide USD frame, so the
+  // pin note says so instead of reading as a per-row benchmark fact.
+  const outlierNote =
+    apyAxis.clippedCount > 0 && apyAxis.clipThreshold !== null ? (
+      <span
+        className={cn(
+          "inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5",
+          SEVERITY_TONE_CLASS.watch.banner,
+        )}
+      >
+        <span className="h-2.5 w-2.5 rounded-full bg-amber-500" />
+        {apyAxis.clippedCount} outlier{apyAxis.clippedCount === 1 ? "" : "s"} pinned above{" "}
+        {apyAxis.clipThreshold.toFixed(0)}%
+        {usesDefaultBenchmarkFrame ? <span className="hidden md:inline">(USD frame)</span> : null}
+      </span>
+    ) : null;
+  const unscoredNote =
+    droppedUnscoredCount > 0 ? (
+      <span>
+        {droppedUnscoredCount} row{droppedUnscoredCount === 1 ? "" : "s"} without a safety score not shown
+      </span>
+    ) : null;
 
   if (data.length === 0) {
     return (
@@ -385,7 +444,7 @@ export function YieldScatterPlot({
               : "pharos-chart-stage h-[600px] overflow-hidden p-2 sm:h-[850px] sm:p-4"
         }
         role="figure"
-        aria-label={`Yield vs safety scatter plot with ${data.length} stablecoins.${usesDefaultBenchmarkFrame ? " The background benchmark frame uses the default USD benchmark for mixed views." : ""}${compact ? " Compressed mini-map." : ""} Use the leaderboard for accessible row actions.`}
+        aria-label={`Yield vs safety scatter plot with ${data.length} stablecoins.${droppedUnscoredCount > 0 ? ` ${droppedUnscoredCount} row${droppedUnscoredCount === 1 ? "" : "s"} without a safety score not shown.` : ""}${usesDefaultBenchmarkFrame ? " The background benchmark frame uses the default USD benchmark for mixed views." : ""}${compact ? " Compressed mini-map." : ""} Use the leaderboard for accessible row actions.`}
       >
         <div ref={chartContainerRef} className="h-full w-full">
           {isChartReady ? (
@@ -501,7 +560,10 @@ export function YieldScatterPlot({
                 width={isMobile ? 28 : 34}
               />
 
-              <Tooltip content={<CustomTooltip />} cursor={false} />
+              <Tooltip
+                content={<CustomTooltip usesDefaultBenchmarkFrame={usesDefaultBenchmarkFrame} />}
+                cursor={false}
+              />
 
               <Scatter
                 data={data}
@@ -514,6 +576,12 @@ export function YieldScatterPlot({
           )}
         </div>
       </div>
+      {outlierNote || unscoredNote ? (
+        <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+          {outlierNote}
+          {unscoredNote}
+        </div>
+      ) : null}
       {compact ? null : (
         <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
           <span className={cn("inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5", SEVERITY_TONE_CLASS.ok.banner)}>
@@ -536,13 +604,6 @@ export function YieldScatterPlot({
             <span className="text-foreground font-medium">Danger zone</span>
             <span className="hidden md:inline">= high APY on low safety</span>
           </span>
-          {apyAxis.clippedCount > 0 && apyAxis.clipThreshold !== null ? (
-            <span className={cn("inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5", SEVERITY_TONE_CLASS.watch.banner)}>
-              <span className="h-2.5 w-2.5 rounded-full bg-amber-500" />
-              {apyAxis.clippedCount} outlier{apyAxis.clippedCount === 1 ? "" : "s"} pinned above{" "}
-              {apyAxis.clipThreshold.toFixed(0)}%
-            </span>
-          ) : null}
         </div>
       )}
     </div>

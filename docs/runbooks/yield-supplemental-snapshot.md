@@ -4,6 +4,7 @@ Triggered by:
 - `sync-yield-supplemental` returning `degraded` with `fallbackMode: "empty-snapshot"`
 - `sync-yield-data` metadata showing `supplementalSourceMode` as `unavailable` or `stale-cache`
 - Optional Aave, Compound, Morpho, Pendle, Yearn/Kong, Beefy, or Royco Dawn rows disappearing from rankings/source boards
+- `sync-yield-data` metadata `supplementalMeta.degradedFamilies` naming families whose last producer run ended degraded and kept the previous snapshot
 
 ## Symptom
 
@@ -11,7 +12,7 @@ The slower supplemental source snapshot is missing, malformed, empty, or older t
 
 ## Impact
 
-Core yield publication should remain available. Optional protocol-API and optional RPC family coverage is reduced, so some alternate sources or best rows may disappear until `sync-yield-supplemental` writes fresh per-family snapshots. A fresh all-empty family snapshot is valid current state and yields zero supplemental candidates; stale or missing supplemental cache does not by itself degrade the post-V9 publisher.
+Core yield publication should remain available. Optional protocol-API and optional RPC family coverage is reduced, so some alternate sources or best rows may disappear until `sync-yield-supplemental` writes fresh per-family snapshots. A fresh all-empty family snapshot is valid current state and yields zero supplemental candidates; a family row absent entirely (missing cache with zero sources) means the lane was never provisioned and does not degrade the core run — the hourly chain provisions it. The acceptance bound is cadence-derived: 1.5× the 4-hour producer cadence (6 hours).
 
 ## First Checks
 
@@ -24,7 +25,7 @@ Core yield publication should remain available. Optional protocol-API and option
 ```sql
 SELECT key, updated_at, length(value) AS bytes, substr(value, 1, 1200) AS value_prefix
 FROM cache
-WHERE key LIKE 'yield:supplemental-sources:v1:%'
+WHERE key LIKE 'yield:supplemental-%'
 ORDER BY key;
 ```
 
@@ -51,6 +52,7 @@ ORDER BY rows DESC;
 - Optional protocol APIs timed out inside the family budget.
 - Optional RPC families exhausted their family budget or missed many chain targets.
 - The cache payload became malformed or older than the supplemental freshness window.
+- One family's upstream fetch failed mid-run (HTTP/parse failure or exhausted pagination). The family skips its cache write, retains the previous snapshot (`retained-previous` in the run-outcome row), and is named in `degradedFamilies` instead of publishing a fresh empty row.
 - `setCacheIfNewer` skipped the write because a newer snapshot already existed.
 
 ## Remediation
@@ -72,6 +74,8 @@ ORDER BY rows DESC;
 - The `yield:supplemental-sources:v1:<family>` rows are present when expected, parseable, and recent. A per-family row with `sourceCount: 0` is valid when that family completed successfully with no deduplicated candidates. A single malformed family row should not block other fresh family rows; all eight current empty rows are valid state.
 - The next `sync-yield-data` metadata shows `supplementalSourceMode: "cache"`; `supplementalSourceCount` may be zero when the current family snapshot is explicitly all-empty.
 - Public rankings/source board show expected optional family rows or alternatives.
+
+- The `yield:supplemental-source-run:v1` outcome row parses and its `familyCacheResults` / `degradedFamilies` match the per-family rows: a degraded family is expected to still hold its previous snapshot, not a fresh empty row.
 
 ## Rollback Notes
 

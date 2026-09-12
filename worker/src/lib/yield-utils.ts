@@ -11,9 +11,19 @@ interface OnChainBootstrapYieldSeedRow {
   exchange_rate?: number | null;
 }
 
+/**
+ * B26 — a bootstrap seed is a first-observation row that carries an anchor but no
+ * yield yet: `apy 0` with a non-null exchange rate and no base/reward split. Both
+ * the Tier-1 `onchain` lane and the `protocol-api` NAV oracles (Ondo, Midas) write
+ * this shape when the prior-anchor lookback window misses, so the predicate is not
+ * lane-scoped: a zero that only means "no anchor yet" must never enter the
+ * apy7d/apy30d windows or the variance samples.
+ *
+ * The name keeps its historical `onchain` spelling to avoid a cross-module rename;
+ * the check itself covers every lane.
+ */
 export function isOnChainBootstrapYieldSeed(row: OnChainBootstrapYieldSeedRow): boolean {
-  return row.data_source === "onchain"
-    && row.exchange_rate != null
+  return row.exchange_rate != null
     && row.apy === 0
     && row.apy_base == null;
 }

@@ -49,7 +49,10 @@ describe("handleBackfillYieldHistory", () => {
   });
 
   it("inserts Zephyr yield history row", async () => {
-    const db = mockD1([{ match: "INSERT OR IGNORE INTO yield_history", rows: [] }]);
+    const db = mockD1([
+      { match: "source_key FROM yield_data", rows: [{ source_key: "protocol-api:zys-zephyr-protocol" }] },
+      { match: "INSERT OR IGNORE INTO yield_history", rows: [] },
+    ]);
 
     const res = await handleBackfillYieldHistory({ db, url: makeApiUrl("/api/backfill-yield-history?stablecoin=zys-zephyr-protocol"), trustedAdmin: true, request: makeApiRequest("/api/backfill-yield-history?stablecoin=zys-zephyr-protocol", { adminKey: "secret" }) });
 
@@ -73,12 +76,43 @@ describe("handleBackfillYieldHistory", () => {
       4.5,
       null,
       null,
-      "protocol-api-backfill",
+      // B17 — the adapter's own lane and the coin's published selection, not an
+      // invented `protocol-api-backfill` label with a hardcoded best flag.
+      "protocol-api",
       1,
       "[]",
     ]);
 
     expect(fetchZephyrZysSource).toHaveBeenCalledTimes(1);
+  });
+
+  it("reports per-row inserted from D1 changes and mirrors real arbitration", async () => {
+    // The coin's published best source is a different row and the primary key
+    // already holds this observation: `INSERT OR IGNORE` changes nothing.
+    const db = mockD1(
+      [
+        { match: "source_key FROM yield_data", rows: [{ source_key: "pool-other" }] },
+        { match: "INSERT OR IGNORE INTO yield_history", rows: [] },
+      ],
+      { runChanges: (sql) => (sql.includes("INSERT OR IGNORE") ? 0 : 1) },
+    );
+
+    const url = makeApiUrl("/api/backfill-yield-history?stablecoin=zys-zephyr-protocol");
+    const res = await handleBackfillYieldHistory({
+      db, url, trustedAdmin: true, request: makeApiRequest(url.toString(), { adminKey: "secret" }),
+    });
+
+    const body = (await readJsonResponse(res, 200)) as {
+      rowsInserted: number;
+      coinResults: Array<{ id: string; symbol: string; inserted: boolean }>;
+    };
+    expect(body.rowsInserted).toBe(0);
+    expect(body.coinResults).toEqual([{ id: "zys-zephyr-protocol", symbol: "ZYS", inserted: false }]);
+
+    const insertStmt = db.getHistory().find((stmt) =>
+      stmt.sql.includes("INSERT OR IGNORE INTO yield_history"),
+    );
+    expect(insertStmt?.binds[8]).toBe(0);
   });
 
   it("skips unavailable protocol observations without writing history", async () => {

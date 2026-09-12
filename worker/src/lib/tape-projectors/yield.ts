@@ -114,7 +114,9 @@ async function fetchYieldHistorySince(
 /**
  * Fetch the most recent best-source warning_signals at-or-before `since` for
  * each coin appearing in the batch, used to seed the per-coin diff for the
- * first sample of each coin in this run.
+ * first sample of each coin in this run. Two rows can share a `recorded_at`
+ * (one publication per source key), so the pick is tie-broken on `source_key`
+ * (C21) rather than left to result order.
  */
 async function fetchPriorWarningSignals(
   db: D1Database,
@@ -127,19 +129,20 @@ async function fetchPriorWarningSignals(
     const inClause = buildInClause(chunk);
     const rows = await db
       .prepare(
-        `SELECT yh.stablecoin_id, yh.warning_signals
-           FROM yield_history yh
-           INNER JOIN (
-             SELECT stablecoin_id, MAX(recorded_at) as max_at
-             FROM yield_history
-             WHERE stablecoin_id IN (${inClause.sql})
-               AND is_best = 1
-               AND recorded_at <= ?
-             GROUP BY stablecoin_id
-           ) latest
-             ON yh.stablecoin_id = latest.stablecoin_id
-            AND yh.recorded_at = latest.max_at
-          WHERE yh.is_best = 1`,
+        `SELECT stablecoin_id, warning_signals
+           FROM (
+             SELECT stablecoin_id,
+                    warning_signals,
+                    ROW_NUMBER() OVER (
+                      PARTITION BY stablecoin_id
+                      ORDER BY recorded_at DESC, source_key DESC
+                    ) AS rn
+               FROM yield_history
+              WHERE stablecoin_id IN (${inClause.sql})
+                AND is_best = 1
+                AND recorded_at <= ?
+           )
+          WHERE rn = 1`,
       )
       .bind(...inClause.binds, since)
       .all<{ stablecoin_id: string; warning_signals: string | null }>();
@@ -279,17 +282,19 @@ async function fetchPriorPysScores(
     const inClause = buildInClause(chunk);
     const rows = await db
       .prepare(
-        `SELECT ysd.stablecoin_id, ysd.selected_score
-           FROM yield_source_decisions ysd
-           INNER JOIN (
-             SELECT stablecoin_id, MAX(created_at) as max_at
-             FROM yield_source_decisions
-             WHERE stablecoin_id IN (${inClause.sql})
-               AND created_at <= ?
-             GROUP BY stablecoin_id
-           ) latest
-             ON ysd.stablecoin_id = latest.stablecoin_id
-            AND ysd.created_at = latest.max_at`,
+        `SELECT stablecoin_id, selected_score
+           FROM (
+             SELECT stablecoin_id,
+                    selected_score,
+                    ROW_NUMBER() OVER (
+                      PARTITION BY stablecoin_id
+                      ORDER BY created_at DESC, generation_id DESC
+                    ) AS rn
+               FROM yield_source_decisions
+              WHERE stablecoin_id IN (${inClause.sql})
+                AND created_at <= ?
+           )
+          WHERE rn = 1`,
       )
       .bind(...inClause.binds, since)
       .all<{ stablecoin_id: string; selected_score: number | null }>();
@@ -348,6 +353,11 @@ export async function projectYieldPysDropped(
         const severity = severityForPysDrop(delta);
         const prevRounded = Math.round(prevScore);
         const newRounded = Math.round(newScore);
+        // E28: the headline arithmetic has to close. Rounding the endpoints and
+        // the raw delta independently printed "82 → 74 (-7)"; the displayed drop
+        // is the difference between the displayed endpoints. The raw delta still
+        // drives the threshold, the severity band and the payload.
+        const displayedDelta = prevRounded - newRounded;
 
         events.push({
           eventId: buildTapeEventId({
@@ -366,7 +376,7 @@ export async function projectYieldPysDropped(
           pegCurrency: null,
           chain: null,
           title: `${symbol} yield score ${prevRounded} → ${newRounded}`,
-          summary: `Published yield score dropped by ${Math.round(delta)} on selected source.`,
+          summary: `Published yield score dropped by ${displayedDelta} on selected source.`,
           payload: {
             prevScore,
             newScore,

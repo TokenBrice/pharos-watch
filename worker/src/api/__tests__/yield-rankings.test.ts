@@ -1,7 +1,7 @@
 import { readJsonResponse } from "../../test-helpers/__shared/auth";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { mockD1 } from "@shared/test-utils/mock-d1";
-import { YieldRankingsResponseSchema, type YieldRankingsResponse } from "@shared/types/yield";
+import { YieldRankingsResponseSchema, type YieldRanking, type YieldRankingsResponse } from "@shared/types/yield";
 import { YIELD_METHODOLOGY_VERSION } from "@shared/lib/methodology-versions/yield-methodology";
 import type { SafetyScoreV9PublicationIdentity } from "@shared/types/safety-score-publication";
 import { computePYS, yieldStabilityToApyVarianceScore } from "@shared/lib/yield-scoring";
@@ -1164,7 +1164,8 @@ describe("handleYieldRankings", () => {
     expect(res.headers.get("Warning")).toContain("199");
     expect(body.warnings?.[0]).toMatchObject({
       code: "yield-safety-hydration-stale",
-      reasons: ["safety-snapshot-unavailable"],
+      // C17: the upstream snapshot reason is threaded next to the read path's own.
+      reasons: ["safety-snapshot-unavailable", snapshotReason],
     });
     expect(body.rankings).toHaveLength(1);
     expect(body.rankings[0]).toMatchObject({
@@ -1176,8 +1177,13 @@ describe("handleYieldRankings", () => {
     });
     expect(body.provenance?.liveSafetyHydration).toMatchObject({
       kind: "degraded",
-      reason: "safety-snapshot-unavailable",
+      reason: `safety-snapshot-unavailable,${snapshotReason}`,
       fallback: "publish-time-snapshot",
+      // C17: one coverage definition on every path — a publish-time snapshot is
+      // not live-report-card safety, so nothing counts as covered here.
+      coveredCount: 0,
+      trackedCount: 1,
+      coverageRatio: 0,
     });
     expect(body._meta.ageSeconds).toBe(30);
   });
@@ -1235,5 +1241,616 @@ describe("handleYieldRankings", () => {
     expect(res.headers.get("Warning")).toContain("safety-identity-missing");
     expect(body._meta.ageSeconds).toBe(3_500);
     expect(body._meta.status).toBe("fresh");
+  });
+
+  it("does not report movement for a tie-group reorder the publisher ranked by PYS alone", async () => {
+    const updatedAt = Math.floor(Date.now() / 1000) - 30;
+    const tieRow = (name: string, publishedRank: number) =>
+      makeYieldRanking({
+        id: name.toLowerCase().replace(/\s+/g, "-"),
+        symbol: name.slice(0, 3).toUpperCase(),
+        name,
+        currentApy: 4,
+        apy7d: 4,
+        apy30d: 4,
+        apyBase: 4,
+        safetyScore: 40,
+        safetyGrade: "NR",
+        pharosYieldScore: 50,
+        publishedRank,
+        provenance: makeYieldProvenance({
+          sourceKey: `pool-${publishedRank}`,
+          sourceObservedAt: updatedAt,
+          sourceAgeSeconds: 30,
+        }),
+      });
+    const db = makeCacheDb({
+      ...v748RankingsPayload,
+      rankings: [tieRow("Charlie Coin", 1), tieRow("Alpha Coin", 2), tieRow("Bravo Coin", 3)],
+      updatedAt,
+    }, updatedAt);
+
+    const res = await handleYieldRankings(db);
+    const body = await res.json() as YieldRankingsResponse;
+
+    // Published order was a PYS-only stable sort; the served order is the live
+    // comparator (PYS, then APY, then name) — the tie group reorders, and the
+    // baseline rank is re-derived with that same comparator.
+    expect(body.rankings.map((row) => row.name)).toEqual(["Alpha Coin", "Bravo Coin", "Charlie Coin"]);
+    expect(body.rankings.map((row) => row.publishedRank)).toEqual([2, 3, 1]);
+    expect(body.rankings.map((row) => row.liveRank)).toEqual([1, 2, 3]);
+    expect(body.rankings.map((row) => row.rankChangeAttribution)).toEqual([
+      undefined, undefined, undefined,
+    ]);
+  });
+
+  it("attributes stablecoin-safety only to the row whose own safety changed", async () => {
+    const updatedAt = Math.floor(Date.now() / 1000) - 30;
+    const row = (id: string, name: string, pharosYieldScore: number, publishedRank: number) =>
+      makeYieldRanking({
+        id,
+        symbol: name.slice(0, 3).toUpperCase(),
+        name,
+        currentApy: 4,
+        apy7d: 4,
+        apy30d: 4,
+        apyBase: 4,
+        safetyScore: 40,
+        safetyGrade: "NR",
+        pharosYieldScore,
+        publishedRank,
+        provenance: makeYieldProvenance({
+          sourceKey: `pool-${id}`,
+          sourceObservedAt: updatedAt,
+          sourceAgeSeconds: 30,
+        }),
+      });
+    const payload = {
+      ...v748RankingsPayload,
+      rankings: [row("mover-coin", "Mover Coin", 10, 1), row("stable-coin", "Stable Coin", 30, 2)],
+      updatedAt,
+    } satisfies YieldRankingsResponse;
+    const db = makeCacheDb(payload, updatedAt);
+    computeSafetyScoresSnapshotMock.mockResolvedValueOnce({
+      kind: "ok",
+      mode: "map",
+      coveredCount: 2,
+      trackedCount: 2,
+      coverageRatio: 1,
+      scores: new Map([
+        ["mover-coin", { score: 88, grade: "A" }],
+        ["stable-coin", { score: 40, grade: "NR" }],
+      ]),
+      source: "safety-score-v9-publication",
+      safetyScoreIdentity: currentSafetyIdentity,
+      publicationGenerationId: currentSafetyIdentity?.publicationGenerationId ?? null,
+      methodologyVersion: V9_METHODOLOGY_VERSION,
+      publishedAt: updatedAt,
+    });
+
+    const res = await handleYieldRankings(db);
+    const body = await res.json() as YieldRankingsResponse;
+    const mover = body.rankings.find((entry) => entry.id === "mover-coin");
+    const stable = body.rankings.find((entry) => entry.id === "stable-coin");
+
+    // The live card lifts the mover above the stable row; only the mover's own
+    // safety differs from publication.
+    expect(mover?.rankChangeAttribution).toMatchObject({
+      previousRank: 2,
+      rankDelta: 1,
+      primaryDriver: "stablecoin-safety",
+    });
+    expect(mover?.rankChangeAttribution?.driverContributions?.stablecoinSafety).toBe(
+      mover?.rankChangeAttribution?.pysDelta,
+    );
+    expect(stable?.rankChangeAttribution).toMatchObject({ previousRank: 1, rankDelta: -1 });
+    expect(stable?.rankChangeAttribution?.primaryDriver).not.toBe("stablecoin-safety");
+    expect(stable?.rankChangeAttribution?.driverContributions?.stablecoinSafety).toBeNull();
+  });
+
+  it("attributes a methodology bump when the payload was published under another version", async () => {
+    const updatedAt = Math.floor(Date.now() / 1000) - 30;
+    // The payload must have been published under an *older* version, so the
+    // fixture version is derived from the current constant: the mismatch stays
+    // real when the constant moves, and the assertion below fails loudly if the
+    // derivation ever lands on the served version.
+    const publishedVersion = YIELD_METHODOLOGY_VERSION.replace(/(\d+)$/, (digits) => `${Math.max(0, Number(digits) - 1)}`);
+    const payload = {
+      ...v748RankingsPayload,
+      rankings: [
+        { ...v748RankingsPayload.rankings[0], id: "mover-coin", symbol: "MOV", name: "Mover Coin", pharosYieldScore: 10, publishedRank: 1 },
+        { ...v748RankingsPayload.rankings[0], id: "stable-coin", symbol: "STA", name: "Stable Coin", pharosYieldScore: 30, publishedRank: 2 },
+      ],
+      methodology: {
+        version: publishedVersion,
+        versionLabel: `v${publishedVersion}`,
+        currentVersion: publishedVersion,
+        currentVersionLabel: `v${publishedVersion}`,
+        changelogPath: "/methodology/yield-intelligence",
+        asOf: updatedAt,
+        isCurrent: false,
+      },
+      updatedAt,
+    } satisfies YieldRankingsResponse;
+    const db = makeCacheDb(payload, updatedAt);
+    computeSafetyScoresSnapshotMock.mockResolvedValueOnce({
+      kind: "ok",
+      mode: "map",
+      coveredCount: 2,
+      trackedCount: 2,
+      coverageRatio: 1,
+      scores: new Map([
+        ["mover-coin", { score: 88, grade: "A" }],
+        ["stable-coin", { score: 40, grade: "NR" }],
+      ]),
+      source: "safety-score-v9-publication",
+      safetyScoreIdentity: currentSafetyIdentity,
+      publicationGenerationId: currentSafetyIdentity?.publicationGenerationId ?? null,
+      methodologyVersion: V9_METHODOLOGY_VERSION,
+      publishedAt: updatedAt,
+    });
+
+    const res = await handleYieldRankings(db);
+    const body = await res.json() as YieldRankingsResponse;
+    const mover = body.rankings.find((entry) => entry.id === "mover-coin");
+    const stable = body.rankings.find((entry) => entry.id === "stable-coin");
+
+    // A version bump explains every delta, so it outranks the row-level safety
+    // signal on both the mover and the row it displaced.
+    expect(publishedVersion).not.toBe(YIELD_METHODOLOGY_VERSION);
+    expect(mover?.rankChangeAttribution?.primaryDriver).toBe("methodology");
+    expect(stable?.rankChangeAttribution?.primaryDriver).toBe("methodology");
+  });
+
+  it("keeps a non-safety pysNullReason through the degraded safety path", async () => {
+    const updatedAt = Math.floor(Date.now() / 1000) - (24 * 3600 + 60);
+    const payload = {
+      ...v748RankingsPayload,
+      rankings: [{
+        ...v748RankingsPayload.rankings[0],
+        id: "stale-coin",
+        symbol: "STA",
+        name: "Stale Coin",
+        pharosYieldScore: null,
+        pysNullReason: "source-stale" as const,
+        warningSignals: ["data-stale"],
+        provenance: {
+          ...v748RankingsPayload.rankings[0].provenance,
+          sourceFreshness: "stale" as const,
+          scoreQualified: false,
+        },
+      }],
+      updatedAt,
+    } satisfies YieldRankingsResponse;
+    const db = makeCacheDb(payload, updatedAt);
+    computeSafetyScoresSnapshotMock.mockResolvedValueOnce({
+      kind: "ok",
+      mode: "map",
+      coveredCount: 1,
+      trackedCount: 1,
+      coverageRatio: 1,
+      scores: new Map([["stale-coin", { score: 88, grade: "A" }]]),
+      source: "safety-score-v9-publication",
+      safetyScoreIdentity: {
+        ...v9Identity("report-cards:v9:other"),
+        evaluationBuildDigest: "c".repeat(64),
+      },
+      publicationGenerationId: "report-cards:v9:other",
+      methodologyVersion: V9_METHODOLOGY_VERSION,
+      publishedAt: updatedAt,
+    });
+
+    const res = await handleYieldRankings(db);
+    const body = await readJsonResponse(res, 200) as YieldRankingsResponse;
+
+    expect(body.rankings[0]).toMatchObject({
+      safetyScore: null,
+      pharosYieldScore: null,
+      // B37: the row's own reason survived; the safety loss did not rewrite it.
+      pysNullReason: "source-stale",
+      warningSignals: ["data-stale", "safety-unrated"],
+    });
+    expect(body.provenance?.liveSafetyHydration?.fallback).toBeUndefined();
+  });
+
+  it("nulls the served score whenever a null reason is published", async () => {
+    const updatedAt = Math.floor(Date.now() / 1000) - 30;
+    const payload = {
+      ...v748RankingsPayload,
+      rankings: [
+        {
+          ...v748RankingsPayload.rankings[0],
+          id: "zero-apy-coin",
+          symbol: "ZRO",
+          name: "Zero Apy Coin",
+          currentApy: 0,
+          apy7d: 0,
+          apy30d: 0,
+          apyBase: 0,
+          pharosYieldScore: 0,
+        },
+        { ...v748RankingsPayload.rankings[0], id: "rated-coin", symbol: "RATE", name: "Rated Coin" },
+      ],
+      updatedAt,
+    } satisfies YieldRankingsResponse;
+    const db = makeCacheDb(payload, updatedAt);
+
+    const res = await handleYieldRankings(db);
+    const body = await res.json() as YieldRankingsResponse;
+    const zeroApy = body.rankings.find((entry) => entry.id === "zero-apy-coin");
+
+    // B22: the UI's NR gate is `pharosYieldScore === null`, so a hard 0 with a
+    // reason nobody renders must not be published.
+    expect(zeroApy?.pharosYieldScore).toBeNull();
+    expect(zeroApy?.pysNullReason).toBe("apy-non-positive");
+  });
+
+  it("reproduces the served score from the served source-risk penalty", async () => {
+    const updatedAt = Math.floor(Date.now() / 1000) - 30;
+    const payload = {
+      ...v748RankingsPayload,
+      rankings: [{
+        ...v748RankingsPayload.rankings[0],
+        id: "rated-coin",
+        symbol: "RATE",
+        name: "Rated Coin",
+        safetyScore: 50,
+        safetyGrade: "C-" as const,
+        sourceRisk: {
+          sourceRiskPenalty: 1.2,
+          venueRiskTier: "medium" as const,
+          sourceDepthRatio: 0.12,
+        },
+      }],
+      updatedAt,
+    } satisfies YieldRankingsResponse;
+    const db = makeCacheDb(payload, updatedAt);
+
+    const res = await handleYieldRankings(db);
+    const body = await res.json() as YieldRankingsResponse;
+    const row = body.rankings[0];
+
+    // B6: the emitted evidence must reproduce the emitted score.
+    expect(row?.pharosYieldScore).toBe(computePYS({
+      apy30d: payload.rankings[0].apy30d,
+      safetyScore: row?.safetyScore ?? 0,
+      apyVarianceScore: yieldStabilityToApyVarianceScore(payload.rankings[0].yieldStability),
+      scalingFactor: payload.scalingFactor,
+      benchmarkRate: payload.rankings[0].benchmarkRate ?? null,
+      benchmarkCurrency: payload.rankings[0].benchmarkCurrency ?? null,
+      sourceRiskPenalty: row?.sourceRisk?.sourceRiskPenalty ?? null,
+    }));
+  });
+
+  it("emits an aging signal and downgrades observations past the tightened daily bounds", async () => {
+    const updatedAt = Math.floor(Date.now() / 1000) - 30;
+    const dailyRow = (id: string, name: string, sourceAgeSeconds: number) =>
+      makeYieldRanking({
+        id,
+        symbol: name.slice(0, 3).toUpperCase(),
+        name,
+        currentApy: 4,
+        apy7d: 4,
+        apy30d: 4,
+        apyBase: 4,
+        dataSource: "price-derived",
+        safetyScore: 40,
+        safetyGrade: "NR",
+        yieldSource: "Supply-history NAV appreciation",
+        provenance: makeYieldProvenance({
+          sourceKey: "price-derived",
+          sourceObservedAt: updatedAt - sourceAgeSeconds,
+          sourceAgeSeconds,
+          // The cached publication stamped both rows fresh under the old bounds.
+          sourceFreshness: "fresh" as const,
+        }),
+      });
+    const payload = {
+      ...v748RankingsPayload,
+      rankings: [
+        dailyRow("aging-coin", "Aging Coin", 28 * 3600),
+        dailyRow("stale-coin", "Stale Coin", 31 * 3600),
+      ],
+      updatedAt,
+    } satisfies YieldRankingsResponse;
+    const db = makeCacheDb(payload, updatedAt);
+
+    const res = await handleYieldRankings(db);
+    const body = await res.json() as YieldRankingsResponse;
+    const aging = body.rankings.find((entry) => entry.id === "aging-coin");
+    const stale = body.rankings.find((entry) => entry.id === "stale-coin");
+
+    // B21: price-derived rows go `aging` after 27h and stale after 30h.
+    expect(aging?.warningSignals).toContain("aging");
+    expect(aging?.warningSignals).not.toContain("data-stale");
+    expect(aging?.pharosYieldScore).not.toBeNull();
+    expect(stale?.warningSignals).toContain("data-stale");
+    expect(stale?.provenance?.sourceFreshness).toBe("stale");
+    expect(stale?.pysNullReason).toBe("source-stale");
+    expect(stale?.pharosYieldScore).toBeNull();
+  });
+
+  it("falls back to the published benchmark warning when the cached provenance carries no benchmark freshness", async () => {
+    const updatedAt = Math.floor(Date.now() / 1000) - 30;
+    const payload = {
+      ...v748RankingsPayload,
+      rankings: [
+        {
+          ...v748RankingsPayload.rankings[0],
+          id: "rated-coin",
+          symbol: "RATE",
+          name: "Rated Coin",
+          warningSignals: ["benchmark-stale"],
+          // The cached publication predates `provenance.benchmarkFreshness`, so
+          // only the published warning signal can classify the served benchmark.
+          provenance: makeYieldProvenance({
+            sourceKey: "pool-a",
+            sourceObservedAt: updatedAt,
+            sourceAgeSeconds: 30,
+            previousBestSourceKey: "pool-a",
+            benchmarkRecordDate: "2026-03-12",
+          }),
+        },
+      ],
+      updatedAt,
+    } satisfies YieldRankingsResponse;
+    const db = makeCacheDb(payload, updatedAt);
+
+    const res = await handleYieldRankings(db);
+    const body = await res.json() as YieldRankingsResponse;
+    const row = body.rankings[0];
+
+    expect(row).toMatchObject({
+      pharosYieldScore: null,
+      pysNullReason: "benchmark-stale",
+      warningSignals: expect.arrayContaining(["benchmark-stale"]),
+      provenance: expect.objectContaining({
+        benchmarkFreshness: "stale",
+        scoreQualification: "NR",
+        scoreQualified: false,
+      }),
+    });
+  });
+
+  it("keeps a benchmark-degraded row scored while recording the degraded freshness", async () => {
+    const updatedAt = Math.floor(Date.now() / 1000) - 30;
+    const payload = {
+      ...v748RankingsPayload,
+      rankings: [
+        {
+          ...v748RankingsPayload.rankings[0],
+          id: "rated-coin",
+          symbol: "RATE",
+          name: "Rated Coin",
+          warningSignals: ["benchmark-degraded"],
+          provenance: makeYieldProvenance({
+            sourceKey: "pool-a",
+            sourceObservedAt: updatedAt,
+            sourceAgeSeconds: 30,
+            previousBestSourceKey: "pool-a",
+            benchmarkRecordDate: "2026-03-12",
+          }),
+        },
+      ],
+      updatedAt,
+    } satisfies YieldRankingsResponse;
+    const db = makeCacheDb(payload, updatedAt);
+
+    const res = await handleYieldRankings(db);
+    const body = await res.json() as YieldRankingsResponse;
+    const row = body.rankings[0];
+
+    expect(row?.pysNullReason ?? null).toBeNull();
+    expect(row?.pharosYieldScore).not.toBeNull();
+    expect(row?.provenance?.benchmarkFreshness).toBe("degraded");
+    expect(row?.provenance?.scoreQualification).toBe("estimated");
+  });
+
+  it("re-bases a non-USD row on the payload's own reference evidence, not the raw rate (A3)", async () => {
+    const updatedAt = Math.floor(Date.now() / 1000) - 30;
+    // Published while the USD reference was degraded: the write path scored the
+    // row with re-base 0 and said so.
+    const publishedScore = computePYS({
+      apy30d: 3,
+      safetyScore: 80,
+      apyVarianceScore: yieldStabilityToApyVarianceScore(0.9),
+      scalingFactor: 8,
+      benchmarkRate: 2.17,
+      benchmarkCurrency: "EUR",
+      usdBenchmarkRate: null,
+      sourceRiskPenalty: null,
+    });
+    const eurRow = makeYieldRanking({
+      id: "eurc-circle",
+      symbol: "EURC",
+      name: "Euro Coin",
+      currentApy: 3,
+      apy7d: 3,
+      apy30d: 3,
+      apyBase: 3,
+      apyReward: null,
+      yieldSource: "EUR holder vault",
+      yieldType: "nav-appreciation",
+      dataSource: "protocol-api",
+      sourceTvlUsd: 1_000_000,
+      safetyScore: 80,
+      safetyGrade: "B+",
+      yieldStability: 0.9,
+      benchmarkKey: "EUR",
+      benchmarkLabel: "EUR €STR",
+      benchmarkCurrency: "EUR",
+      benchmarkRate: 2.17,
+      benchmarkSelectionMode: "native",
+      pharosYieldScore: publishedScore,
+      publishedRank: 1,
+      warningSignals: ["reference-benchmark-degraded"],
+      provenance: makeYieldProvenance({
+        sourceKey: "protocol-api:eurc:vault",
+        sourceObservedAt: updatedAt,
+        sourceAgeSeconds: 30,
+        previousBestSourceKey: "protocol-api:eurc:vault",
+        benchmarkKey: "EUR",
+        benchmarkLabel: "EUR €STR",
+        benchmarkCurrency: "EUR",
+        benchmarkRate: 2.17,
+        benchmarkSelectionMode: "native",
+        benchmarkRecordDate: "2026-03-12",
+        scoreQualification: "estimated",
+      }),
+    });
+    const serve = async (usd: NonNullable<YieldRankingsResponse["benchmarks"]>) => {
+      const db = makeCacheDb(
+        { ...v748RankingsPayload, rankings: [eurRow], benchmarks: usd, updatedAt },
+        updatedAt,
+      );
+      const res = await handleYieldRankings(db);
+      return ((await res.json()) as YieldRankingsResponse).rankings[0];
+    };
+    computeSafetyScoresSnapshotMock.mockImplementation(async () => ({
+      kind: "ok",
+      mode: "map",
+      coveredCount: 1,
+      trackedCount: 1,
+      coverageRatio: 1,
+      scores: new Map([["eurc-circle", { score: 80, grade: "B+" }]]),
+      source: "safety-score-v9-publication",
+      safetyScoreIdentity: currentSafetyIdentity,
+      publicationGenerationId: currentSafetyIdentity?.publicationGenerationId ?? null,
+      methodologyVersion: V9_METHODOLOGY_VERSION,
+      publishedAt: updatedAt,
+    }));
+
+    const degraded = await serve({
+      USD: { ...v748RankingsPayload.benchmarks.USD, isFallback: true, fallbackMode: "retained" },
+    });
+    // Same score the publication served: no re-base, an `estimated` cap that
+    // names the reference, and the warning the write path published.
+    expect(degraded?.pharosYieldScore).toBe(publishedScore);
+    expect(degraded?.provenance?.scoreQualification).toBe("estimated");
+    expect(degraded?.warningSignals).toContain("reference-benchmark-degraded");
+
+    const healthy = await serve({ USD: v748RankingsPayload.benchmarks.USD });
+    const rebasedScore = computePYS({
+      apy30d: 3,
+      safetyScore: 80,
+      apyVarianceScore: yieldStabilityToApyVarianceScore(0.9),
+      scalingFactor: 8,
+      benchmarkRate: 2.17,
+      benchmarkCurrency: "EUR",
+      usdBenchmarkRate: 4.13,
+      sourceRiskPenalty: null,
+    });
+    expect(healthy?.pharosYieldScore).toBe(rebasedScore);
+    // The two reference states must actually differ, or the degraded case above
+    // could pass by accident.
+    expect(rebasedScore).not.toBe(publishedScore);
+    expect(healthy?.pharosYieldScore ?? 0).toBeGreaterThan(publishedScore);
+    expect(healthy?.provenance?.scoreQualification).toBe("partial");
+    expect(healthy?.warningSignals).not.toContain("reference-benchmark-degraded");
+  });
+
+  it("leaves an unmeasurable safety contribution null and names the benchmark for a rebased move (B7)", async () => {
+    const updatedAt = Math.floor(Date.now() / 1000) - 30;
+    const anchor = makeYieldRanking({
+      id: "rated-coin",
+      symbol: "RATE",
+      name: "Rated Coin",
+      currentApy: 12,
+      apy7d: 12,
+      apy30d: 12,
+      apyBase: 12,
+      safetyScore: 80,
+      safetyGrade: "A",
+      pharosYieldScore: 10,
+      publishedRank: 2,
+      provenance: makeYieldProvenance({
+        sourceKey: "pool-anchor",
+        sourceObservedAt: updatedAt,
+        sourceAgeSeconds: 30,
+      }),
+    });
+    // Published with a scored PYS, then served with no score at all: there is no
+    // published/live pair to measure a safety contribution from.
+    const unscoreable = makeYieldRanking({
+      ...anchor,
+      id: "mover-coin",
+      symbol: "MOVE",
+      name: "Mover Coin",
+      currentApy: 0,
+      apy7d: 0,
+      apy30d: 0,
+      apyBase: 0,
+      pharosYieldScore: 40,
+      publishedRank: 1,
+      provenance: makeYieldProvenance({
+        sourceKey: "pool-mover",
+        sourceObservedAt: updatedAt,
+        sourceAgeSeconds: 30,
+      }),
+    });
+    // A re-based (non-USD benchmark) row that cannot hold its published rank.
+    const rebased = makeYieldRanking({
+      ...anchor,
+      id: "rebased-coin",
+      symbol: "REB",
+      name: "Rebased Coin",
+      currentApy: 3,
+      apy7d: 3,
+      apy30d: 3,
+      apyBase: 3,
+      benchmarkKey: "EUR",
+      benchmarkLabel: "EUR €STR",
+      benchmarkCurrency: "EUR",
+      benchmarkRate: 2.17,
+      pharosYieldScore: 100,
+      publishedRank: 1,
+      provenance: makeYieldProvenance({
+        sourceKey: "pool-rebased",
+        sourceObservedAt: updatedAt,
+        sourceAgeSeconds: 30,
+        benchmarkKey: "EUR",
+        benchmarkCurrency: "EUR",
+        benchmarkRate: 2.17,
+      }),
+    });
+    computeSafetyScoresSnapshotMock.mockImplementation(async () => ({
+      kind: "ok",
+      mode: "map",
+      coveredCount: 3,
+      trackedCount: 3,
+      coverageRatio: 1,
+      scores: new Map([
+        // The mover's card was graded NR at publication and is rated now.
+        ["mover-coin", { score: 88, grade: "A" }],
+        ["rated-coin", { score: 80, grade: "A" }],
+        ["rebased-coin", { score: 80, grade: "A" }],
+      ]),
+      source: "safety-score-v9-publication",
+      safetyScoreIdentity: currentSafetyIdentity,
+      publicationGenerationId: currentSafetyIdentity?.publicationGenerationId ?? null,
+      methodologyVersion: V9_METHODOLOGY_VERSION,
+      publishedAt: updatedAt,
+    }));
+    const run = async (row: YieldRanking) => {
+      const db = makeCacheDb({ ...v748RankingsPayload, rankings: [row, anchor], updatedAt }, updatedAt);
+      const res = await handleYieldRankings(db);
+      const body = (await res.json()) as YieldRankingsResponse;
+      return body.rankings.find((entry) => entry.id === row.id);
+    };
+
+    const moved = await run(unscoreable);
+    expect(moved?.rankChangeAttribution?.primaryDriver).toBe("stablecoin-safety");
+    // B7/F6: a null pys delta has no measurable safety contribution — 0 claimed
+    // one the row never had.
+    expect(moved?.rankChangeAttribution?.pysDelta).toBeNull();
+    expect(moved?.rankChangeAttribution?.driverContributions?.stablecoinSafety).toBeNull();
+
+    const rebasedMove = await run(rebased);
+    expect(rebasedMove?.rankChangeAttribution?.pysDelta).not.toBeNull();
+    expect(rebasedMove?.rankChangeAttribution?.primaryDriver).toBe("benchmark");
+    expect(rebasedMove?.rankChangeAttribution?.driverContributions?.benchmark).toBe(
+      rebasedMove?.rankChangeAttribution?.rankDelta,
+    );
+    expect(rebasedMove?.rankChangeAttribution?.driverContributions?.apy).toBeNull();
   });
 });
