@@ -26,6 +26,7 @@
 | 0237     | `0237_reserve_composition_history_payload_hash.sql`       | Add nullable payload SHA-256 digest to reserve composition history while retaining payload columns for backward compatibility. |
 | 0238     | `0238_api_key_donor_claims.sql`                           | Add the one-claim-per-wallet supporter API key ledger backing `POST /api/donor-key-claims`. |
 | 0239     | `0239_live_reserve_config_fingerprint.sql`                 | Add nullable configuration fingerprints to reserve composition and attempt state; old Workers remain compatible and new admission rejects unreviewed retained configurations. |
+| 0240     | `0240_yield_retention_indexes.sql`                         | Add the recorded-at alternatives-retention index for deterministic bounded drains. |
 
 ## Squashed Individual Migrations (absorbed into the 0000 baseline on 2026-07-30)
 
@@ -322,6 +323,7 @@ Duplicate numeric prefixes 0056 and 0061 existed in the squashed range (0001–0
 - `0235_telegram_digest_media_state.sql`: roll back media delivery by restoring the prior Worker. Keep the nullable map identity columns and defaulted media state; the prior Worker ignores them and continues inserting and draining digest rows unchanged.
 - `0236_dex_deployment_attempt_attribution.sql`: roll back by restoring the prior Worker. Keep both nullable attribution columns and the conservative backfill; the prior Worker ignores them, while a forward Worker detects any later legacy `last_crawl_at` write by marker mismatch and fails closed. Removing either column requires a separate coordinated cleanup rollout.
 - `0238_api_key_donor_claims.sql`: do not roll back the Worker to stop claims; set `DONOR_KEY_CLAIMS_OPEN = false` and redeploy, which keeps the donor-tier auth protections (global limiter, no isolate fallback) for keys already issued. Keep the additive table; issued `donor` keys keep authenticating, and dropping it would strand the one-claim-per-wallet fence. Removing it requires a separate coordinated cleanup rollout after every donor key is deactivated.
+- `0240_yield_retention_indexes.sql`: roll back by restoring the prior Worker; keep the additive retention index because it is inert to older Workers and avoids the unbounded alternatives-retention scan. Dropping it requires a separate coordinated cleanup rollout.
 
 ## Rollback Procedure
 
