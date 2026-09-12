@@ -19,9 +19,17 @@ vi.mock("../../../lib/live-reserves/store", () => ({
   getMaxSyncAge: vi.fn(),
   computeReserveCompositionOverview: vi.fn(),
 }));
+const sentinelSourceStates = vi.hoisted(() => new Map<string, { value: string; updatedAt: number }>());
 vi.mock("../../../lib/db-cache", () => ({
   getCache: vi.fn(async () => null),
   setCache: vi.fn(async () => {}),
+  getCaches: vi.fn(async () => new Map(sentinelSourceStates)),
+  setCacheIfNewer: vi.fn(async (_db, key, value, updatedAt) => {
+    if ((sentinelSourceStates.get(key)?.updatedAt ?? -1) < updatedAt) {
+      sentinelSourceStates.set(key, { value, updatedAt });
+    }
+    return { written: true, skippedBecauseNewer: false };
+  }),
 }));
 vi.mock("../../../lib/scheduled-recovery-checkpoint", async () => {
   // vi.mock factories are hoisted above static imports; the fixture must load inside the factory.
@@ -59,6 +67,7 @@ describe("runFourHourlyReserveSyncSlot", () => {
   let errorSpy: ReturnType<typeof vi.spyOn>;
 
   beforeEach(() => {
+    sentinelSourceStates.clear();
     vi.mocked(syncLiveReserves).mockResolvedValue(undefined as never);
     vi.mocked(syncRedemptionBackstops).mockResolvedValue(undefined as never);
     vi.mocked(syncKinesisSupply).mockResolvedValue(undefined as never);
@@ -89,7 +98,7 @@ describe("runFourHourlyReserveSyncSlot", () => {
     recoveryCheckpoint?: ScheduledRecoveryCheckpoint,
   ): ScheduledRuntimeContext {
     return makeScheduledRuntime({
-      db: {} as D1Database,
+      db: { prepare: () => ({ bind: () => ({ first: async () => null }) }) } as unknown as D1Database,
       cron: "11 */4 * * *",
       scheduleKey: "fourHourlyReserveSync",
       scheduledTimeMs: null,

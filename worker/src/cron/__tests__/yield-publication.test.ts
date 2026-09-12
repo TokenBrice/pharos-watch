@@ -462,7 +462,7 @@ describe("publishYieldCoordinatorResults", () => {
     expect(freshnessIndex).toBeGreaterThan(cacheWriteIndex);
     expect(historyRetentionIndex).toBeGreaterThan(freshnessIndex);
     expect(history[historyRetentionIndex]?.binds[0]).toBe(
-      Math.floor(FIXED_NOW.getTime() / 1000) - YIELD_HISTORY_RAW_DAYS * DAY_SECONDS,
+      Math.floor(FIXED_NOW.getTime() / (1000 * DAY_SECONDS)) * DAY_SECONDS - YIELD_HISTORY_RAW_DAYS * DAY_SECONDS,
     );
     const dailyRetentionIndex = history.findIndex((entry) =>
       entry.sql.includes("pharos:yield-sync:daily-history-retention-delete"),
