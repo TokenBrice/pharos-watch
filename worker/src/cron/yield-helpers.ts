@@ -75,10 +75,15 @@ function isChainAllowed(filter: Set<string> | undefined, chain: string | undefin
 }
 
 export function computeApyFromRate(rateNow: number, ratePrev: number, days: number): number {
+  // B12 — a non-finite input (NaN window, Infinity rate) used to propagate NaN out
+  // of the annualization; callers treat NaN as "finite enough" in places, so fail to
+  // the documented zero instead.
+  if (!Number.isFinite(rateNow) || !Number.isFinite(ratePrev) || !Number.isFinite(days)) return 0;
   if (ratePrev <= 0 || rateNow <= 0 || days <= 0) return 0;
   const ratio = rateNow / ratePrev;
   if (ratio === 1) return 0;
-  return (Math.pow(ratio, 365.25 / days) - 1) * 100;
+  const apy = (Math.pow(ratio, 365.25 / days) - 1) * 100;
+  return Number.isFinite(apy) ? apy : 0;
 }
 
 /**
@@ -150,6 +155,33 @@ export function isBlockedYieldOpportunitySource(params: {
 }
 
 /**
+ * B19 — address corroboration must prove a pool holds *this* asset and nothing
+ * else. DeFiLlama marks multi-asset wrappers `exposure: "single"` often enough that
+ * a `.some()` test over `underlyingTokens` returned a Yearn vault holding
+ * `[frxUSD, DUSD]` as the DUSD lending source and an `[sDOLA, untracked]` vault for
+ * sDOLA (board rows #2/#3). A candidate qualifies when its distinct underlying set
+ * is a single address that matches, or when it equals the coin's own address set.
+ */
+function corroboratesUnderlyingSet(
+  pool: { underlyingTokens?: string[] | null },
+  matchedAddresses: ReadonlySet<string>,
+): boolean {
+  if (matchedAddresses.size === 0) return false;
+  const underlyings = new Set(
+    (pool.underlyingTokens ?? [])
+      .map((address) => normalizeTokenAddress(address))
+      .filter((address) => address !== ""),
+  );
+  if (underlyings.size === 1) {
+    const only = [...underlyings][0]!;
+    return matchedAddresses.has(only);
+  }
+  return underlyings.size > 1
+    && underlyings.size === matchedAddresses.size
+    && [...underlyings].every((address) => matchedAddresses.has(address));
+}
+
+/**
  * Returns ALL DL pools that are yield sources for the given coin.
  *
  * Layer 1: YIELD_POOL_MAP (native/primary pool — stablecoin + single exposure required)
@@ -196,9 +228,6 @@ export function matchAllDlPools(
     return isChainAllowed(normalizedChainFilter, poolChain);
   };
   const isReservedForAnotherCoin = (poolId: string): boolean => reservedPoolIds.has(poolId) && poolId !== nativeId;
-  const addressMatches = (pool: { underlyingTokens?: string[] | null }): boolean =>
-    contractSet.size > 0 &&
-    (pool.underlyingTokens ?? []).some((address) => contractSet.has(normalizeTokenAddress(address)));
 
   // Layer 1: Static pool map (native/primary source — stablecoin=true required)
   if (nativeId) {
@@ -228,8 +257,7 @@ export function matchAllDlPools(
     );
 
     const addressCandidates = variantAddress
-      ? baseCandidates.filter((pool) =>
-        (pool.underlyingTokens ?? []).some((address) => normalizeTokenAddress(address) === variantAddress))
+      ? baseCandidates.filter((pool) => corroboratesUnderlyingSet(pool, new Set([variantAddress])))
       : [];
     const symbolCandidates = baseCandidates.filter((pool) => normalizeDexSymbol(pool.symbol) === variantSymbol);
     const filterByProject = <T extends { project?: string }>(candidates: T[]): T[] =>
@@ -279,7 +307,7 @@ export function matchAllDlPools(
       );
 
       const addressCandidates = contractSet.size > 0
-        ? baseCandidates.filter((pool) => addressMatches(pool))
+        ? baseCandidates.filter((pool) => corroboratesUnderlyingSet(pool, contractSet))
         : [];
       if (addressCandidates.length > 0) {
         const best = addressCandidates.reduce((a, b) => b.tvlUsd > a.tvlUsd ? b : a);
@@ -398,10 +426,10 @@ export function findBestLendingPool(
     isChainAllowed(chainFilter, p.chain)
   );
 
-  // Primary match: underlying token address match.
+  // Primary match: underlying token address match, gated on the pool holding a
+  // single distinct underlying asset (or exactly the coin's own address set).
   const addressCandidates = contractSet.size > 0
-    ? baseCandidates.filter((pool) =>
-      (pool.underlyingTokens ?? []).some((address) => contractSet.has(normalizeTokenAddress(address))))
+    ? baseCandidates.filter((pool) => corroboratesUnderlyingSet(pool, contractSet))
     : [];
   if (addressCandidates.length > 0) {
     const best = addressCandidates.reduce((a, b) => (b.tvlUsd > a.tvlUsd ? b : a));

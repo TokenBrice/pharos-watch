@@ -183,6 +183,13 @@ describe("on-chain measured TVL enrichment", () => {
       dataSource: "onchain",
     });
     expect(entry?.yield?.currentApy).toBeGreaterThan(0);
+    // B11/D8: a row without a finite observation stamp classifies
+    // `source-freshness-unknown`, is rejected, and the coin can never score. The
+    // on-chain lane stamps the run clock and the exchange-rate comparison anchor.
+    expect(Number.isFinite(entry?.yield?.sourceObservedAt)).toBe(true);
+    expect(entry?.yield?.sourceObservedAt).toBe(nowSec);
+    expect(Number.isFinite(entry?.yield?.comparisonAnchorObservedAt)).toBe(true);
+    expect(entry?.yield?.comparisonAnchorObservedAt).toBe((entry?.yield?.sourceObservedAt ?? 0) - 8 * 86_400);
   });
 
   it("keeps sourceTvlUsd null when the pinned pool is missing from the DL snapshot", async () => {

@@ -1048,6 +1048,89 @@ describe("evaluateYieldSources", () => {
     expect(source?.apy7d).toBeCloseTo(5.5, 4);
   });
 
+  it("excludes protocol-api NAV seed rows from rolling APY stats", () => {
+    const startSec = 1776729600;
+    const sourceKey = "protocol-api:midas-mmev-nav-oracle";
+    const result = evaluateYieldSources(baseEvaluationInput({
+      resolved: [
+        {
+          id: "mmev-midas",
+          symbol: "mMEV",
+          yield: resolvedYield({
+            currentApy: 6,
+            apyBase: 6,
+            apyReward: null,
+            sourcePool: null,
+            sourceTvlUsd: null,
+            dataSource: "protocol-api",
+            exchangeRate: 1.06,
+            sourceKey,
+            sourceObservedAt: startSec,
+            comparisonAnchorObservedAt: startSec - 7 * 86400,
+            yieldSource: "Midas mMEV/USD Oracle",
+            yieldType: "nav-appreciation",
+          }),
+        },
+      ],
+      startSec,
+      safetyScores: new Map([["mmev-midas", { score: 74, grade: "B" }]]),
+      sourceHistory: new Map([
+        [
+          buildHistoryKey("mmev-midas", sourceKey),
+          [
+            {
+              stablecoin_id: "mmev-midas",
+              source_key: sourceKey,
+              recorded_at: startSec - 6 * 86400,
+              is_best: 0,
+              apy: 0,
+              apy_base: null,
+              source_tvl_usd: null,
+              data_source: "protocol-api",
+              yield_source: "Midas mMEV/USD Oracle",
+              yield_type: "nav-appreciation",
+              exchange_rate: 1.01,
+            },
+            {
+              stablecoin_id: "mmev-midas",
+              source_key: sourceKey,
+              recorded_at: startSec - 5 * 86400,
+              is_best: 0,
+              apy: 0,
+              apy_base: null,
+              source_tvl_usd: null,
+              data_source: "protocol-api",
+              yield_source: "Midas mMEV/USD Oracle",
+              yield_type: "nav-appreciation",
+              exchange_rate: 1.02,
+            },
+            {
+              stablecoin_id: "mmev-midas",
+              source_key: sourceKey,
+              recorded_at: startSec - 1 * 86400,
+              is_best: 1,
+              apy: 5,
+              apy_base: 5,
+              source_tvl_usd: null,
+              data_source: "protocol-api",
+              yield_source: "Midas mMEV/USD Oracle",
+              yield_type: "nav-appreciation",
+              exchange_rate: 1.05,
+            },
+          ],
+        ],
+      ]),
+      stablecoinSupplyById: new Map([["mmev-midas", 100_000_000]]),
+    }));
+
+    const [source] = result.evaluatedSources;
+    // Both seed rows are inside the 7d window, so carrying them would publish
+    // apy7d/apy30d of 2.75 — only the anchored observation may count.
+    expect(source?.apy30d).toBeCloseTo(5.5, 4);
+    expect(source?.apy7d).toBeCloseTo(5.5, 4);
+    expect(source?.apyMin30d).toBe(5);
+  });
+
   it("uses a source-level benchmark override for PYS provenance without changing resolved APY", () => {
     const input = baseEvaluationInput({
       resolved: [{
@@ -1242,12 +1325,17 @@ describe("opportunity-level risk (yield v8.32)", () => {
       ]),
     })).evaluatedSources;
 
-    // The fixture coin resolves a fallback-USD benchmark, so qualification is
-    // estimated rather than rated; the opportunity contract itself is complete.
+    // A1: `fallback-usd` selection is a per-row methodology decision (coin-a has
+    // no native benchmark feed), not a degraded feed, so the fresh USD benchmark
+    // keeps `benchmarkFreshness` healthy and the row is no longer capped at
+    // `estimated`: with safety observed and the opportunity evidence complete it
+    // now qualifies as `rated`.
     expect(source).toMatchObject({
+      benchmarkSelectionMode: "fallback-usd",
+      benchmarkFreshness: "healthy",
       safetyScore: 80,
       safetyProvenance: "opportunity-safety",
-      scoreQualification: "estimated",
+      scoreQualification: "rated",
       pysNullReason: null,
     });
     expect(source?.pharosYieldScore).toBeGreaterThan(0);

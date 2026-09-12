@@ -540,6 +540,10 @@ const CRON_JOB_DEFINITIONS_BASE: readonly CronJobDefinitionInput[] = [
     group: "hourly",
     scheduleKey: "hourlyYieldSync",
     triggerMode: "isolated",
+    // Stale rankings are public-critical (`yieldData` criticality in the
+    // data-surface descriptors, and /status maps stale rankings to
+    // public-critical), so a failed run must not be filed as a watch-only job.
+    statusImpact: "critical",
     maxConnections: 1, // on-chain rate batch (1); DL pools read from cache written by sync-dex-liquidity-stage (sequential)
   },
   {
@@ -624,10 +628,17 @@ const CRON_JOB_DEFINITIONS_BASE: readonly CronJobDefinitionInput[] = [
     job: "fetch-tbill-rate",
     label: "T-bill rate",
     group: "daily",
-    intervalSec: DAY_SECONDS, // USD/EFFR refresh daily; the remaining benchmark descriptors are isolated to a weekly cadence bucket.
+    // Canonical daily refresh. Every benchmark descriptor (USD, EFFR, and each
+    // native currency feed) runs on every invocation — there is no weekly or
+    // per-currency bucketing, so one failed 08:00 run leaves every keyed row
+    // inside the same 48h NR window. `intervalSec` stays DAY_SECONDS because the
+    // hourly yield lane re-invokes this job only as a retry, gated on the
+    // published registry carrying no market observation younger than 24h; those
+    // retries are skipped_neutral when the daily run already refreshed.
+    intervalSec: DAY_SECONDS,
     scheduleKey: "daily0800Utc",
     triggerMode: "shared",
-    maxConnections: 1, // Sequential benchmark fetches; the daily USD/EFFR path and weekly descriptor bucket share this chain.
+    maxConnections: 1, // Sequential benchmark fetches; the daily run and the hourly yield-lane retry serialize on this chain.
     connectionGroup: "daily-0800-fetch-chain",
   },
   {

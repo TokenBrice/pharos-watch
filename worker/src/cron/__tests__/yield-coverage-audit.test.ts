@@ -23,11 +23,18 @@ import {
   buildProtocolCategoryLookupFromCachePayload,
   buildCoverageAuditOperatorQueue,
   identifyCoverageGaps,
+  identifyDeadCuratedPins,
   identifyStaleAutoLendingOverrides,
   isHighConfidenceProtocolCategory,
   runYieldCoverageAudit,
   summarizeAdapterLifecycle,
 } from "../yield-coverage-audit";
+import {
+  AUTO_LENDING_POOL_MAP,
+  YIELD_POOL_MAP,
+  YIELD_VARIANT_MAP,
+  YIELD_WEIGHTED_POOL_GROUPS,
+} from "../../lib/yield-config/yield-config";
 import { probeQuarantinedDeterministicAdapters } from "../yield-coverage-audit-quarantine";
 import { loadDlStablecoinPools } from "../yield-sync/sources";
 import { SAFETY_SCORE_METHODOLOGY_VERSION } from "@shared/lib/methodology-versions/safety-score";
@@ -409,6 +416,91 @@ describe("runYieldCoverageAudit", () => {
     });
     expect(mockSetCache).toHaveBeenCalled();
   });
+
+  it("publishes queue totals that account for every candidate item", async () => {
+    const dlPools: DlPool[] = [
+      makeDlYieldPool({
+        pool: "new-usdc",
+        project: "new-lender",
+        symbol: "USDC",
+        tvlUsd: 12_000_000,
+        apy: 4,
+        apyBase: 4,
+        apyMean30d: 4,
+      }),
+      makeDlYieldPool({
+        pool: "dex-usdt",
+        project: "new-dex",
+        symbol: "USDT",
+        tvlUsd: 30_000_000,
+        apy: 3,
+        apyBase: 3,
+        apyMean30d: 3,
+      }),
+    ];
+    mockLoadDlStablecoinPools.mockResolvedValue({
+      pools: dlPools,
+      meta: { mode: "dex-cache", updatedAt: 1_774_526_300, ageSeconds: 100, poolCount: 2, fallbackMode: null },
+    });
+    mockGetCache.mockImplementation(async (_db, key) => {
+      if (key === "defillama-protocols") {
+        return {
+          value: JSON.stringify({
+            protocols: [
+              { slug: "new-lender", category: "Lending" },
+              { slug: "new-dex", category: "Dexs" },
+            ],
+          }),
+          updatedAt: 1_774_526_300,
+        };
+      }
+      if (key === "yield-rankings") {
+        return { value: JSON.stringify({ rankings: [] }), updatedAt: 1_774_526_300 };
+      }
+      return null;
+    });
+    mockComputeSafetyScoresSnapshot.mockResolvedValue(successfulSafetySnapshot());
+
+    const result = await runYieldCoverageAudit(mockD1([{
+      match: "yield_coverage_review_dispositions",
+      rows: [],
+    }]));
+
+    expect(result.status).toBe("ok");
+    const report = JSON.parse(String(mockSetCache.mock.calls[0]?.[2])) as {
+      queueTotals: { byKind: Record<string, number>; suppressedItemCount: number; truncated: boolean };
+      operatorQueue: {
+        allowedActions: string[];
+        headlineGaps: Array<{ kind: string }>;
+        recommendationCandidates: Array<{ kind: string }>;
+      };
+      operatorReviewSummary: { candidateItemCount: number; truncatedItemCount: number };
+      deadCuratedPinCount: number;
+      lifecycleReviewDueCount: number;
+      reviewDueAdapters: unknown[];
+    };
+    const publishedItems = [
+      ...report.operatorQueue.headlineGaps,
+      ...report.operatorQueue.recommendationCandidates,
+    ];
+    const expectedByKind: Record<string, number> = {};
+    for (const item of publishedItems) expectedByKind[item.kind] = (expectedByKind[item.kind] ?? 0) + 1;
+
+    expect(report.queueTotals.byKind).toEqual(expectedByKind);
+    expect(Object.values(report.queueTotals.byKind).reduce((total, count) => total + count, 0))
+      .toBe(publishedItems.length);
+    // Publication caps each class at 20 items, and this snapshot leaves every
+    // curated pin and ranking row uncovered, so the queue must report truncation.
+    expect(report.queueTotals.truncated).toBe(true);
+    expect(report.operatorReviewSummary.candidateItemCount).toBe(
+      publishedItems.length
+      + report.operatorReviewSummary.truncatedItemCount
+      + report.queueTotals.suppressedItemCount,
+    );
+    expect(report.operatorQueue.allowedActions).toEqual(["accept", "dismiss", "intentional-gap", "watch"]);
+    expect(report.deadCuratedPinCount).toBeGreaterThanOrEqual(Object.keys(YIELD_POOL_MAP).length);
+    expect(report.lifecycleReviewDueCount).toBe(report.reviewDueAdapters.length);
+  });
 });
 
 describe("identifyCoverageGaps", () => {
@@ -438,19 +530,141 @@ describe("identifyCoverageGaps", () => {
     expect(gaps.unmatchedHighTvlPools.length).toBe(0);
   });
 
-  it("identifies protocols not in allowlist", () => {
+  it("routes a known non-lending protocol to one representative missing-protocol row", () => {
+    const dlPools: DlPool[] = [
+      makeDlYieldPool({
+        pool: "dex-usdc",
+        project: "brand-new-dex",
+        symbol: "USDC",
+        tvlUsd: 10_000_000,
+        apy: 4,
+        apyBase: 4,
+        apyMean30d: 4,
+      }),
+      makeDlYieldPool({
+        pool: "dex-usdt",
+        chain: "Base",
+        project: "brand-new-dex",
+        symbol: "USDT",
+        tvlUsd: 25_000_000,
+        apy: 4,
+        apyBase: 4,
+        apyMean30d: 4,
+      }),
+    ];
+
+    const gaps = identifyCoverageGaps(
+      dlPools,
+      new Set(),
+      undefined,
+      new Map([["brand-new-dex", "Dexs"]]),
+    );
+
+    expect(gaps.missingProtocols.map((pool) => pool.pool)).toEqual(["dex-usdt"]);
+    expect(gaps.unmatchedHighTvlPools).toEqual([]);
+  });
+
+  it("drops sub-threshold pools from the protocol bucket", () => {
     const dlPools: DlPool[] = [makeDlYieldPool({
-      pool: "p1",
-      project: "brand-new-protocol",
+      pool: "dust-usdc",
+      project: "dust-dex",
       symbol: "USDC",
-      tvlUsd: 10_000_000,
+      tvlUsd: 900_000,
       apy: 4,
       apyBase: 4,
       apyMean30d: 4,
     })];
-    const gaps = identifyCoverageGaps(dlPools, new Set());
-    expect(gaps.missingProtocols.length).toBeGreaterThan(0);
-    expect(gaps.missingProtocols[0].project).toBe("brand-new-protocol");
+
+    const gaps = identifyCoverageGaps(dlPools, new Set(), undefined, new Map([["dust-dex", "Dexs"]]));
+
+    expect(gaps.missingProtocols).toEqual([]);
+    expect(gaps.unmatchedHighTvlPools).toEqual([]);
+  });
+
+  it("places a pool that qualifies for several buckets in exactly one", () => {
+    const dlPools: DlPool[] = [makeDlYieldPool({
+      pool: "susde-multi",
+      project: "new-yield-venue",
+      symbol: "sUSDe",
+      tvlUsd: 80_000_000,
+      apy: 7,
+      apyBase: 7,
+      apyMean30d: 7,
+    })];
+
+    const gaps = identifyCoverageGaps(
+      dlPools,
+      new Set(),
+      undefined,
+      new Map([["new-yield-venue", "Dexs"]]),
+    );
+
+    expect([
+      ...gaps.nativeExactPoolRecommendations.flatMap((group) => group.poolIds),
+      ...gaps.unmatchedHighTvlPools.map((pool) => pool.pool),
+      ...gaps.missingProtocols.map((pool) => pool.pool),
+    ]).toEqual(["susde-multi"]);
+    expect(gaps.nativeExactPoolRecommendations[0].stablecoinIds).toContain("susde-ethena");
+  });
+
+  it("queues unknown-venue published rows above the high-TVL floor", () => {
+    const gaps = identifyCoverageGaps([], new Set(), undefined, new Map(), {
+      publishedVenueRows: [
+        {
+          stablecoinId: "mega-coin",
+          venueProtocol: "unreviewed-mega-venue",
+          sourceKey: "defillama:mega",
+          sourceTvlUsd: 2_560_000_000,
+        },
+        {
+          stablecoinId: "mega-sibling",
+          venueProtocol: "Unreviewed-Mega-Venue",
+          sourceKey: "defillama:mega-sibling",
+          sourceTvlUsd: 40_000_000,
+        },
+        {
+          stablecoinId: "small-coin",
+          venueProtocol: "unreviewed-small-venue",
+          sourceKey: null,
+          sourceTvlUsd: 1_000_000,
+        },
+        {
+          stablecoinId: "reviewed-coin",
+          venueProtocol: "aave-v3",
+          sourceKey: null,
+          sourceTvlUsd: 900_000_000,
+        },
+        {
+          stablecoinId: "routed-coin",
+          venueProtocol: null,
+          sourceKey: "protocol-api:kong:ethereum:0xabc",
+          sourceTvlUsd: 25_000_000,
+        },
+      ],
+    });
+
+    expect(gaps.venueRiskConfigMissing.map((candidate) => candidate.project))
+      .toEqual(["unreviewed-mega-venue", "kong"]);
+    expect(gaps.venueRiskConfigMissing[0]).toMatchObject({
+      poolCount: 2,
+      totalTvlUsd: 2_600_000_000,
+      stablecoinIds: ["mega-coin", "mega-sibling"],
+      sourceKeys: ["defillama:mega", "defillama:mega-sibling"],
+    });
+
+    const queue = buildCoverageAuditOperatorQueue({
+      gaps,
+      manifestMissingIds: [],
+      yieldBearingMissingFromRankings: [],
+      staleVenueRiskScores: [],
+    });
+    expect(queue.recommendationCandidates).toContainEqual(
+      expect.objectContaining({
+        id: "venue-risk-config-missing:unreviewed-mega-venue",
+        kind: "venue-risk-config-missing",
+        stablecoinIds: ["mega-coin", "mega-sibling"],
+      }),
+    );
   });
 
   it("does not flag high-TVL pools on already-supported allowlisted protocols as unmatched gaps", () => {
@@ -764,7 +978,53 @@ describe("identifyCoverageGaps", () => {
     );
   });
 
-  it("recommends native exact pools for tracked yield-bearing symbols", () => {
+  it("groups native exact pools per tracked asset with chains, pool list and summed TVL", () => {
+    const dlPools: DlPool[] = [
+      makeDlYieldPool({
+        pool: "susde-native",
+        project: "ethena",
+        symbol: "sUSDe",
+        tvlUsd: 50_000_000,
+      }),
+      makeDlYieldPool({
+        pool: "susde-arbitrum",
+        chain: "Arbitrum",
+        project: "ethena",
+        symbol: "sUSDe",
+        tvlUsd: 20_000_000,
+      }),
+    ];
+
+    const gaps = identifyCoverageGaps(dlPools, new Set());
+
+    expect(gaps.nativeExactPoolRecommendations).toHaveLength(1);
+    expect(gaps.nativeExactPoolRecommendations[0]).toMatchObject({
+      pool: "susde-native",
+      poolIds: ["susde-native", "susde-arbitrum"],
+      chains: ["Ethereum", "Arbitrum"],
+      poolCount: 2,
+      totalTvlUsd: 70_000_000,
+      stablecoinIds: ["susde-ethena"],
+    });
+  });
+
+  it("excludes native candidates with no live APY", () => {
+    const dlPools: DlPool[] = [makeDlYieldPool({
+      pool: "susde-lending-market",
+      project: "aave-v3",
+      symbol: "sUSDe",
+      tvlUsd: 236_000_000,
+      apy: 0,
+      apyBase: 0,
+      apyMean30d: 0,
+    })];
+
+    const gaps = identifyCoverageGaps(dlPools, new Set());
+
+    expect(gaps.nativeExactPoolRecommendations).toEqual([]);
+  });
+
+  it("excludes native candidates for assets that already publish a ranking row", () => {
     const dlPools: DlPool[] = [makeDlYieldPool({
       pool: "susde-native",
       project: "ethena",
@@ -772,14 +1032,11 @@ describe("identifyCoverageGaps", () => {
       tvlUsd: 50_000_000,
     })];
 
-    const gaps = identifyCoverageGaps(dlPools, new Set());
+    const gaps = identifyCoverageGaps(dlPools, new Set(), undefined, new Map(), {
+      publishedStablecoinIds: new Set(["susde-ethena"]),
+    });
 
-    expect(gaps.nativeExactPoolRecommendations).toContainEqual(
-      expect.objectContaining({
-        pool: "susde-native",
-        stablecoinIds: expect.arrayContaining(["susde-ethena"]),
-      }),
-    );
+    expect(gaps.nativeExactPoolRecommendations).toEqual([]);
   });
 
   it("marks review-needed for protocols with <$10M TVL or <3 pools", () => {
@@ -800,6 +1057,26 @@ describe("identifyCoverageGaps", () => {
         project: "small-protocol",
         recommendedTier: "review-needed",
       }),
+    );
+  });
+
+  it("emits one missing-pool row per curated auto-lending override when the snapshot is empty", () => {
+    const stale = identifyStaleAutoLendingOverrides([], {});
+
+    expect(stale).toEqual(
+      Object.entries(AUTO_LENDING_POOL_MAP)
+        .map(([stablecoinId, pool]) => ({
+          stablecoinId,
+          pool,
+          reasons: ["missing-pool"],
+          project: null,
+          symbol: null,
+          chain: null,
+          tvlUsd: null,
+          apy: null,
+          requiredMinTvlUsd: null,
+        }))
+        .sort((a, b) => a.stablecoinId.localeCompare(b.stablecoinId)),
     );
   });
 
@@ -1065,6 +1342,112 @@ describe("identifyCoverageGaps", () => {
   });
 });
 
+describe("identifyDeadCuratedPins", () => {
+  it("emits a missing-pool item for every curated pin when the snapshot is empty", () => {
+    const pins = identifyDeadCuratedPins([]);
+
+    expect(pins.filter((pin) => pin.registry === "native-pool").map((pin) => pin.stablecoinId).sort())
+      .toEqual(Object.keys(YIELD_POOL_MAP).sort());
+    expect(pins.filter((pin) => pin.registry === "variant-pool").map((pin) => pin.stablecoinId).sort())
+      .toEqual(Object.keys(YIELD_VARIANT_MAP).sort());
+    expect(pins.filter((pin) => pin.registry === "weighted-pool-group").map((pin) => pin.stablecoinId).sort())
+      .toEqual(Object.keys(YIELD_WEIGHTED_POOL_GROUPS).sort());
+    expect([...new Set(pins.map((pin) => pin.reasons.join(",")))]).toEqual(["missing-pool"]);
+    // Without published ranking ids the audit cannot classify coverage.
+    expect([...new Set(pins.map((pin) => pin.coverage))]).toEqual([null]);
+  });
+
+  it("separates a dead config from a coverage outage and clears resolved pins", () => {
+    const pins = identifyDeadCuratedPins(
+      [makeDlYieldPool({ pool: YIELD_POOL_MAP["susde-ethena"], project: "ethena", symbol: "sUSDe" })],
+      { publishedStablecoinIds: new Set(["usdn-smardex"]) },
+    );
+
+    expect(pins.find((pin) => pin.registry === "native-pool" && pin.stablecoinId === "susde-ethena"))
+      .toBeUndefined();
+    expect(pins.find((pin) => pin.registry === "native-pool" && pin.stablecoinId === "usdn-smardex"))
+      .toMatchObject({
+        pin: YIELD_POOL_MAP["usdn-smardex"],
+        missingPoolIds: [YIELD_POOL_MAP["usdn-smardex"]],
+        reasons: ["missing-pool"],
+        coverage: "dead-config",
+      });
+    expect(pins.find((pin) => pin.registry === "native-pool" && pin.stablecoinId === "aznd-mu-digital"))
+      .toMatchObject({ coverage: "coverage-outage" });
+  });
+
+  it("keeps a variant pin resolved while a single-exposure pool matches its identity", () => {
+    const variant = YIELD_VARIANT_MAP["aznd-mu-digital"];
+    const pins = identifyDeadCuratedPins([makeDlYieldPool({
+      pool: "loaznd-live",
+      chain: "Monad",
+      project: "mu-digital",
+      symbol: variant.variantSymbol,
+      stablecoin: false,
+    })]);
+
+    expect(pins.find((pin) => pin.registry === "variant-pool" && pin.stablecoinId === "aznd-mu-digital"))
+      .toBeUndefined();
+    expect(pins.find((pin) => pin.registry === "variant-pool" && pin.stablecoinId === "nusd-neutrl"))
+      .toMatchObject({ pin: "sNUSD on ethereum", reasons: ["missing-pool"] });
+  });
+
+  it("reports the absent legs of a weighted pool group and the ones still present", () => {
+    const [stablecoinId, group] = Object.entries(YIELD_WEIGHTED_POOL_GROUPS)[0];
+    const pins = identifyDeadCuratedPins(
+      [makeDlYieldPool({
+        pool: group.poolIds[0],
+        project: group.expectedProject,
+        symbol: group.expectedSymbol,
+      })],
+      { publishedStablecoinIds: new Set() },
+    );
+
+    expect(pins.find((pin) => pin.registry === "weighted-pool-group" && pin.stablecoinId === stablecoinId))
+      .toMatchObject({
+        missingPoolIds: group.poolIds.slice(1),
+        presentPoolIds: [group.poolIds[0]],
+        reasons: ["missing-pool"],
+        coverage: "coverage-outage",
+      });
+  });
+
+  it("queues dead pins as headline gaps carrying their coverage classification", () => {
+    const queue = buildCoverageAuditOperatorQueue({
+      gaps: {
+        unmatchedHighTvlPools: [],
+        missingProtocols: [],
+        protocolRecommendations: [],
+        nativeExactPoolRecommendations: [],
+        sourceFamilyAdapterRecommendations: [],
+        lendingAllowlistRecommendations: [],
+        venueRiskConfigMissing: [],
+      },
+      manifestMissingIds: [],
+      yieldBearingMissingFromRankings: [],
+      deadCuratedPins: [{
+        stablecoinId: "usdn-smardex",
+        registry: "native-pool",
+        pin: "f51bb9f9-0a01-4aa2-9c62-b9ef6b55d109",
+        missingPoolIds: ["f51bb9f9-0a01-4aa2-9c62-b9ef6b55d109"],
+        presentPoolIds: [],
+        reasons: ["missing-pool"],
+        coverage: "coverage-outage",
+      }],
+      staleVenueRiskScores: [],
+    });
+
+    expect(queue.headlineGaps).toContainEqual(
+      expect.objectContaining({
+        id: "stale-auto-lending-override:usdn-smardex:f51bb9f9-0a01-4aa2-9c62-b9ef6b55d109",
+        title: "usdn-smardex",
+        stablecoinIds: ["usdn-smardex"],
+        reasonCodes: ["missing-pool", "coverage-outage"],
+      }),
+    );
+  });
+});
+
 describe("probeQuarantinedDeterministicAdapters", () => {
   const quarantinedAdapters = [
     {
@@ -1180,5 +1563,25 @@ describe("summarizeAdapterLifecycle", () => {
     });
     expect(buckets.quarantinedAdapters).toEqual([]);
     expect(buckets.intentionalGaps).toEqual([]);
+  });
+
+  it("flags a lifecycle review whose registry date has arrived", () => {
+    const buckets = summarizeAdapterLifecycle(
+      ["alpha-active", "beta-quarantined", "gamma-gap", "delta-experimental"],
+      syntheticRegistry,
+      Date.parse("2026-05-01T00:00:00Z"),
+    );
+
+    expect(buckets.reviewDueAdapters.map((adapter) => adapter.stablecoinId)).toEqual(["beta-quarantined"]);
+  });
+
+  it("does not flag a lifecycle review before its registry date or without one", () => {
+    const buckets = summarizeAdapterLifecycle(
+      ["beta-quarantined", "gamma-gap"],
+      syntheticRegistry,
+      Date.parse("2026-04-30T23:59:59Z"),
+    );
+
+    expect(buckets.reviewDueAdapters).toEqual([]);
   });
 });

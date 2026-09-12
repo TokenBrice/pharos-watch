@@ -774,11 +774,11 @@ describe("syncYieldData", () => {
     // 4.5% sample with the current read, which is what the normalized source key
     // exists to preserve.
     expect(Number(onChainRow?.apy_30d)).toBeCloseTo((4.5 + Number(onChainRow?.current_apy)) / 2, 6);
-    // The adapter still omits `sourceObservedAt` (B11), so the row is
-    // `source-freshness-unknown`/NR and, with no other candidate for the coin, B13
-    // publishes no best row for it (no `is_best = 1`, no rankings entry).
-    expect(onChainRow?.is_best).toBe(0);
-    expect(onChainRow?.pharos_yield_score).toBeNull();
+    // B11 gave this adapter `sourceObservedAt`, so the row is no longer
+    // `source-freshness-unknown`: it scores and, with no other candidate for the
+    // coin, it is published as the best row again.
+    expect(onChainRow?.is_best).toBe(1);
+    expect(onChainRow?.pharos_yield_score).toBeGreaterThan(0);
 
     const metadata = JSON.parse(result.metadata ?? "{}") as { sourceSwitches?: number };
     expect(metadata.sourceSwitches).toBe(0);

@@ -29,6 +29,7 @@ const EXPECTED_CANARY_CHECK_IDS = [
   "dews-latest-signal",
   "safety-score-v9-publication",
   "yield-gbp-benchmark-current",
+  "yield-usd-benchmark-current",
 ];
 
 function activeV9(options: { held?: boolean; updatedAt?: number } = {}) {
@@ -117,6 +118,12 @@ function gbpCanaryCacheRows(options: { freshRuns?: number; fallback?: boolean } 
     },
     {
       key: "fetch-tbill-rate:gbp-retained-fallback-streak",
+      value: JSON.stringify({ consecutiveFreshRuns: options.freshRuns ?? 2 }),
+      updatedAt: NOW - 60,
+      updated_at: NOW - 60,
+    },
+    {
+      key: "fetch-tbill-rate:usd-fresh-streak",
       value: JSON.stringify({ consecutiveFreshRuns: options.freshRuns ?? 2 }),
       updatedAt: NOW - 60,
       updated_at: NOW - 60,
@@ -276,9 +283,9 @@ describe("worker data invariant canaries", () => {
 
     expect(summary).toMatchObject({
       mode: "status",
-      totalChecks: 8,
+      totalChecks: 9,
 
-      okCount: 8,
+      okCount: 9,
       degradedCount: 0,
       errorCount: 0,
       skippedCount: 0,
@@ -429,6 +436,24 @@ describe("worker data invariant canaries", () => {
     expect(fallback.results.find((result) => result.checkId === "yield-gbp-benchmark-current")).toMatchObject({
       status: "degraded",
       error: expect.stringContaining("GBP benchmark is fallback"),
+    });
+
+    const usdOneRun = await runCanaryChecks(healthyD1({ gbpFreshRuns: 1 }), {
+      observedAt: NOW,
+      mode: "status",
+    });
+    expect(usdOneRun.results.find((result) => result.checkId === "yield-usd-benchmark-current")).toMatchObject({
+      status: "degraded",
+      error: expect.stringContaining("USD benchmark has 1/2 consecutive fresh publications"),
+    });
+
+    const usdFallback = await runCanaryChecks(healthyD1({ gbpFreshRuns: 0, gbpFallback: true }), {
+      observedAt: NOW,
+      mode: "status",
+    });
+    expect(usdFallback.results.find((result) => result.checkId === "yield-usd-benchmark-current")).toMatchObject({
+      status: "degraded",
+      error: expect.stringContaining("0/2 consecutive fresh publications"),
     });
   });
 
@@ -708,7 +733,7 @@ describe("worker data invariant canaries", () => {
     expect(summary.errorCount).toBe(4);
     expect(summary.skippedCount).toBe(0);
     expect(summary.degradedCount).toBe(1);
-    expect(summary.okCount).toBe(3);
+    expect(summary.okCount).toBe(4);
     expect(summary.worstStatus).toBe("error");
   });
 });

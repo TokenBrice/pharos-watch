@@ -4,12 +4,12 @@ import {
   YieldRankingsResponseSchema,
 } from "@shared/types/yield";
 import { YIELD_METHODOLOGY_VERSION } from "@shared/lib/methodology-versions/yield-methodology";
-import { getCache, type CacheWriteResult } from "../../lib/db-cache";
+import { getCache } from "../../lib/db-cache";
 import { readCachedJson } from "../../lib/api-cache-read";
 import { validatePayloadWithSchema } from "../../lib/api-schema";
 import type { EvaluatedYieldSource } from "./evaluation";
 import { getConfidencePriority } from "./evaluation-arbitration";
-import { publishYieldRowsAtomically } from "./publication-atomic-batch";
+import { publishYieldRowsAtomically, type YieldRowsWriteResult } from "./publication-atomic-batch";
 import { deriveRejectionReasonCode, deriveYieldSourceRole } from "./decision-public";
 import type { YieldCoinPublicationView } from "./publication-view";
 import { PYS_SCALING_FACTOR } from "../../lib/constants";
@@ -274,6 +274,21 @@ export async function validateYieldRankingsPayloadForPublish(
   return { ok: true, validationFailures: 0 };
 }
 
+export type YieldEvaluatedSourcesWriteResult =
+  | {
+      ok: false;
+      updatedCount: number;
+      validationFailures: number;
+      reason?: string;
+      cacheWrite?: YieldRowsWriteResult;
+    }
+  | {
+      ok: true;
+      updatedCount: number;
+      validationFailures: number;
+      cacheWrite: YieldRowsWriteResult;
+    };
+
 export async function persistEvaluatedYieldSources(
   db: D1Database,
   input: {
@@ -285,21 +300,7 @@ export async function persistEvaluatedYieldSources(
     rankingsPayload: unknown;
     previousYieldPublicationSnapshot: PreviousYieldPublicationSnapshot;
   },
-): Promise<
-  | {
-      ok: false;
-      updatedCount: number;
-      validationFailures: number;
-      reason?: string;
-      cacheWrite?: CacheWriteResult;
-    }
-  | {
-      ok: true;
-      updatedCount: number;
-      validationFailures: number;
-      cacheWrite: CacheWriteResult;
-    }
-> {
+): Promise<YieldEvaluatedSourcesWriteResult> {
   const yieldDataRows: Array<Record<string, unknown>> = [];
   const historyRows: Array<Record<string, unknown>> = [];
   const decisionRows: Array<Record<string, unknown>> = [];

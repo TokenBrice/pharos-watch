@@ -1,3 +1,4 @@
+import { CRON_INTERVALS } from "./cron-jobs";
 import type { StatusHealthValue } from "../types/status";
 
 // --- Data freshness ratio boundaries ---
@@ -187,10 +188,20 @@ export const STATUS_RESERVE_COMPOSITION_THRESHOLDS = {
 } as const;
 
 // --- Yield health summary ---
+/**
+ * Hard benchmark scoring TTL: a benchmark whose *fetch* age exceeds this bound
+ * is stale and every row keyed to it publishes NR. Authoritative definition —
+ * `worker/src/cron/yield-sync/benchmarks.ts` re-exports it as
+ * `YIELD_BENCHMARK_SCORE_TTL_SEC` so the registry classifier and this legacy
+ * health threshold cannot drift apart.
+ */
+export const YIELD_BENCHMARK_SCORE_TTL_SEC = 48 * 3600;
 export const STATUS_YIELD_HEALTH_THRESHOLDS = {
   safetyCoverageRatio: 0.75,
-  supplementalMaxAgeSec: 6 * 3600,
-  benchmarkMaxAgeSec: 48 * 3600,
+  // 1.5x the supplemental producer cadence: tolerates one missed 4h run before
+  // the retained family markers read stale.
+  supplementalMaxAgeSec: CRON_INTERVALS["sync-yield-supplemental"] * 1.5,
+  benchmarkMaxAgeSec: YIELD_BENCHMARK_SCORE_TTL_SEC,
   coverageAuditMaxAgeSec: 45 * 24 * 3600,
   sourceRiskCoverageRatio: 0.75,
 } as const;

@@ -1,4 +1,6 @@
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
+import { YIELD_BENCHMARK_SCORE_TTL_SEC } from "@shared/lib/status-thresholds";
+import { DAY_SECONDS } from "@shared/lib/time-constants";
 import type {
   YieldBenchmarkKey,
   YieldBenchmarkMeta,
@@ -7,15 +9,53 @@ import type {
 } from "@shared/types/yield";
 import { RISK_FREE_RATE_FALLBACK } from "../../lib/constants";
 
-export const YIELD_BENCHMARK_SCORE_TTL_SEC = 48 * 60 * 60;
+// Canonical definition lives in shared/lib/status-thresholds.ts, where the
+// legacy `yieldHealth.benchmark` threshold consumes the same number.
+export { YIELD_BENCHMARK_SCORE_TTL_SEC };
 export type YieldBenchmarkFreshness = "healthy" | "degraded" | "stale";
 
+/**
+ * Per-key bound on the age of a benchmark's own observation (`recordDate`).
+ * A fetch that just succeeded says nothing about the data it carried: a frozen
+ * or rewound upstream keeps returning an old CSV, and the fetch-age TTL alone
+ * would stamp it as current market data forever. Daily/overnight series get five
+ * days (a long weekend plus one failed run); CAD is the Bank of Canada's monthly
+ * announced Bank rate and CHF's public SAR3MC download is delayed by one
+ * business day, so those carry their own publication cadence.
+ */
+export const YIELD_BENCHMARK_RECORD_MAX_AGE_SEC: Record<YieldBenchmarkKey, number> = {
+  USD: 5 * DAY_SECONDS,
+  USD_EFFR: 5 * DAY_SECONDS,
+  EUR: 5 * DAY_SECONDS,
+  CHF: 5 * DAY_SECONDS,
+  GBP: 5 * DAY_SECONDS,
+  JPY: 5 * DAY_SECONDS,
+  MXN: 5 * DAY_SECONDS,
+  BRL: 5 * DAY_SECONDS,
+  AUD: 5 * DAY_SECONDS,
+  CAD: 45 * DAY_SECONDS,
+  RUB: 5 * DAY_SECONDS,
+  TRY: 5 * DAY_SECONDS,
+  SGD: 5 * DAY_SECONDS,
+};
+
+/**
+ * Classify a registry entry from its own evidence: the hard 48h fetch-age TTL,
+ * plus — when the caller supplies the key's observation bound — the age of the
+ * observation the fetch carried. Both are `max`-combined; a future-dated
+ * observation clamps to zero age here because the fetch-time guard
+ * (`tbill-sources/fred.ts`) already rejects those rows before they are stored.
+ */
 export function classifyYieldBenchmarkFreshness(meta: {
   ageSeconds: number | null;
   isFallback: boolean;
   fallbackMode: string | null;
 }, options?: {
   selectionMode?: YieldBenchmarkSelectionMode | null;
+  /** The benchmark's own observation date, as published on the registry entry. */
+  recordDate?: string | null;
+  /** Per-key bound, normally `YIELD_BENCHMARK_RECORD_MAX_AGE_SEC[key]`. */
+  maxRecordAgeSec?: number | null;
 }): YieldBenchmarkFreshness {
   if (
     meta.ageSeconds == null ||
@@ -24,6 +64,20 @@ export function classifyYieldBenchmarkFreshness(meta: {
     meta.ageSeconds > YIELD_BENCHMARK_SCORE_TTL_SEC
   ) {
     return "stale";
+  }
+  const maxRecordAgeSec = options?.maxRecordAgeSec;
+  const recordDate = options?.recordDate;
+  if (maxRecordAgeSec != null && Number.isFinite(maxRecordAgeSec) && recordDate) {
+    const recordTimestampMs = Date.parse(`${recordDate}T00:00:00Z`);
+    if (Number.isFinite(recordTimestampMs)) {
+      const recordAgeSec = Math.max(
+        0,
+        Math.floor(Date.now() / 1000) - Math.floor(recordTimestampMs / 1000),
+      );
+      if (recordAgeSec > maxRecordAgeSec) {
+        return "stale";
+      }
+    }
   }
   if (
     meta.isFallback ||
@@ -110,8 +164,11 @@ const BENCHMARK_META_BY_KEY: Record<YieldBenchmarkKey, { label: string; currency
     isProxy: false,
   },
   CAD: {
-    // BoC Valet V122530 — overnight repo (CORRA-equivalent).
-    label: "CAD overnight repo (CORRA proxy)",
+    // BoC Valet V122530 is the Bank of Canada's administered Bank rate, announced
+    // monthly on a policy-decision date — not a daily overnight repo (CORRA)
+    // series. Its monthly print is why CAD carries a 45-day observation bound in
+    // YIELD_BENCHMARK_RECORD_MAX_AGE_SEC.
+    label: "CAD Bank rate (policy, monthly)",
     currency: "CAD",
     isProxy: true,
   },

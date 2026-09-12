@@ -106,18 +106,31 @@ export interface AutoLendingCollisionBlock {
   readonly chain?: string;
   readonly symbol?: string;
   readonly underlyingToken?: string;
+  /**
+   * B19 stop-gap: DeFiLlama pool UUID (an 8-char prefix is enough — the loaded
+   * pool id is matched with `startsWith`). Used when project/chain/symbol are
+   * shared with a legitimate venue the coin does not own alone.
+   */
+  readonly pool?: string;
   readonly reason: string;
 }
 
 /**
- * Stablecoin-specific false-positive guards for same-symbol lending pools.
+ * Stablecoin-specific false-positive guards for same-symbol lending pools and
+ * reviewed multi-asset vaults.
  * These are evaluated before both deterministic overrides and dynamic symbol
  * matching, so new DeFiLlama rows cannot silently cross-wire unrelated assets.
+ * A block matches when every field it sets matches: project/chain/symbol and
+ * `underlyingToken` exactly, `pool` as a prefix of the loaded DeFiLlama pool id
+ * (entries may carry an 8-char UUID prefix).
  */
 export const AUTO_LENDING_COLLISION_BLOCKLIST: Record<string, readonly AutoLendingCollisionBlock[]> = {
   "cusd-celo": [
     { project: "pendle", symbol: "CUSD", reason: "Cap CUSD is unrelated to Celo Dollar" },
     { project: "beefy", symbol: "CUSD", reason: "Cap CUSD vault is unrelated to Celo Dollar" },
+  ],
+  "dusd-alto": [
+    { pool: "a5f9e3ff", reason: "multi-asset Yearn vault (frxUSD+DUSD)" },
   ],
   "usda-alpha-partner": [
     { project: "liqwid", chain: "Cardano", symbol: "USDA", reason: "Liqwid USDA is Anzens USDA, not Alpha Partner USDA" },
@@ -136,6 +149,9 @@ export const AUTO_LENDING_COLLISION_BLOCKLIST: Record<string, readonly AutoLendi
       underlyingToken: "0xe556aba6fe6036275ec1f87eda296be72c811bce",
       reason: "Pendle NUSD markets use Neutrl NUSD, not legacy Synapse/Nexus NUSD",
     },
+  ],
+  "sdola-inverse-finance": [
+    { pool: "98fcaeb8", reason: "vault holds sDOLA plus an untracked asset" },
   ],
   "usdx-kava": [
     {
@@ -171,6 +187,7 @@ function normalized(value: string | null | undefined): string | null {
 export function isAutoLendingCollisionBlockedForStablecoin(
   stablecoinId: string,
   pool: {
+    pool?: string | null;
     project?: string | null;
     chain?: string | null;
     symbol?: string | null;
@@ -180,6 +197,7 @@ export function isAutoLendingCollisionBlockedForStablecoin(
   const blocks = AUTO_LENDING_COLLISION_BLOCKLIST[stablecoinId];
   if (!blocks?.length) return false;
 
+  const poolId = normalized(pool.pool);
   const project = normalized(pool.project);
   const chain = normalized(pool.chain);
   const symbol = normalized(pool.symbol);
@@ -190,6 +208,10 @@ export function isAutoLendingCollisionBlockedForStablecoin(
     if (block.chain && normalized(block.chain) !== chain) return false;
     if (block.symbol && normalized(block.symbol) !== symbol) return false;
     if (block.underlyingToken && !underlyingTokens.has(normalized(block.underlyingToken))) return false;
+    if (block.pool) {
+      const blockPoolId = normalized(block.pool);
+      if (!poolId || !blockPoolId || !poolId.startsWith(blockPoolId)) return false;
+    }
     return true;
   });
 }

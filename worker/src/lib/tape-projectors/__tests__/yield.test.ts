@@ -9,9 +9,9 @@ const SEC = 1_700_000_000;
 // raw SQL emitted by the projector, so each pattern only has to be unique
 // enough to disambiguate the projector's two queries.
 const MATCH_FETCH_HISTORY = "is_best = 1 AND recorded_at > ?";
-const MATCH_PRIOR_HISTORY = "MAX(recorded_at) as max_at";
+const MATCH_PRIOR_HISTORY = "recorded_at DESC, source_key DESC";
 const MATCH_FETCH_DECISIONS = "WHERE created_at > ?";
-const MATCH_PRIOR_DECISIONS = "MAX(created_at) as max_at";
+const MATCH_PRIOR_DECISIONS = "created_at DESC, generation_id DESC";
 const MATCH_CACHE = "FROM cache WHERE key";
 
 // Seed the watermark cache so `since > 0`; the prior-row lookup is guarded
@@ -372,5 +372,29 @@ describe("yield.pys_dropped projector", () => {
     const result = await projectYieldPysDropped(db);
     expect(result.projected).toBe(0);
     expect(tapeInsertBindsForType(db, "yield.pys_dropped")).toHaveLength(0);
+  });
+
+  it("prints a drop whose endpoints and delta agree after rounding", async () => {
+    const db = mockTapeD1(
+      decisionTables(
+        [
+          {
+            stablecoin_id: "usdt-tether",
+            selected_source_key: "aave-v3:usdt",
+            selected_score: 71.4,
+            created_at: SEC + 900,
+          },
+        ],
+        [
+          { selected_score: 81.6 },
+        ],
+      ),
+    ) as MockD1Database;
+
+    await projectYieldPysDropped(db);
+    const inserts = tapeInsertBindsForType(db, "yield.pys_dropped");
+    expect(inserts).toHaveLength(1);
+    expect(inserts[0]![9]).toBe("USDT yield score 82 → 71");
+    expect(inserts[0]![10]).toBe("Published yield score dropped by 11 on selected source.");
   });
 });

@@ -5,8 +5,30 @@ vi.mock("../../lib/evm-rpc", () => ({
   fetchEvmUint256AtBlock: vi.fn(),
 }));
 
+// Every sibling supplemental family reaches the network. Only the Aave family is
+// under test here, so the other fetchers reject and their families fall back to an
+// empty result, which is what the runtime does for a real upstream failure.
+vi.mock("../yield-sync/sources", async (importOriginal) => {
+  const actual = await importOriginal<typeof YieldSourcesModule>();
+  const failingFamilyFetch = vi.fn(async () => {
+    throw new Error("family stubbed by the Aave suite");
+  });
+  return {
+    ...actual,
+    fetchMorphoVaultSources: failingFamilyFetch,
+    fetchPendleMarketSources: failingFamilyFetch,
+    fetchYearnKongSources: failingFamilyFetch,
+    fetchBeefySources: failingFamilyFetch,
+    fetchVaultsFyiSources: failingFamilyFetch,
+    fetchRoycoDawnSources: failingFamilyFetch,
+    fetchCompoundV3SupplyRates: failingFamilyFetch,
+  };
+});
+
+import type * as YieldSourcesModule from "../yield-sync/sources";
 import { fetchEvmCallHexAtBlock, fetchEvmUint256AtBlock } from "../../lib/evm-rpc";
 import { fetchAaveV3SupplyRates, type AaveV3RateTarget } from "../yield-sync/sources-rpc";
+import { loadSupplementalSourceFamilies } from "../yield-sync/supplemental-source-families";
 import type { ChainRpcConfig } from "../../lib/chain-registry";
 
 const mockFetchEvmCallHexAtBlock = vi.mocked(fetchEvmCallHexAtBlock);
@@ -259,6 +281,34 @@ describe("fetchAaveV3SupplyRates", () => {
     const addressPart = callData.slice(10).toLowerCase(); // after selector
     expect(addressPart).toHaveLength(64);
     expect(addressPart).toContain(USDC_TARGET.assetAddress.replace("0x", "").toLowerCase());
+  });
+
+  it("stamps the run clock on every Aave candidate the family publishes", async () => {
+    mockFetchEvmCallHexAtBlock.mockResolvedValue(
+      buildGetReserveDataHex(BigInt(Math.round(0.05 * Number(RAY)))),
+    );
+    mockFetchEvmUint256AtBlock.mockResolvedValue(125_000_000_000_000n);
+
+    const startSec = Math.floor(Date.now() / 1000);
+    const { candidates } = await loadSupplementalSourceFamilies({
+      startSec,
+      chainRpcs: makeChainRpcs(),
+    });
+
+    const aaveCandidates = candidates.filter((candidate) =>
+      candidate.yield.sourceKey.startsWith("aave-v3-onchain:"),
+    );
+    expect(aaveCandidates.length).toBeGreaterThan(0);
+    for (const candidate of aaveCandidates) {
+      expect(candidate.yield.currentApy).toBeGreaterThan(0);
+      // B11/D8: the family — not the adapter — stamps the observation for Aave rows.
+      // Without a finite stamp every candidate classifies `source-freshness-unknown`,
+      // is rejected, and its coin can never score.
+      expect(Number.isFinite(candidate.yield.sourceObservedAt)).toBe(true);
+      expect(candidate.yield.sourceObservedAt).toBe(startSec);
+      // No comparison anchor is used for this lane.
+      expect(candidate.yield.comparisonAnchorObservedAt).toBeNull();
+    }
   });
 
   it("calls the correct Aave V3 pool address for each chain", async () => {

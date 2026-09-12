@@ -151,11 +151,9 @@ export interface OnChainRateResult {
   explorerResolvedCount?: number;
 }
 
-type OnChainRateFailureStatus =
-  | "no-rpc|etherscan-empty"
-  | "no-rpc|etherscan-unavailable"
-  | "rpc-empty|etherscan-empty"
-  | "rpc-empty|etherscan-unavailable";
+type OnChainRateRpcStatus = "no-rpc" | "rpc-empty" | "rpc-zero-rate";
+type OnChainRateExplorerStatus = "etherscan-empty" | "etherscan-unavailable" | "etherscan-zero-rate";
+type OnChainRateFailureStatus = `${OnChainRateRpcStatus}|${OnChainRateExplorerStatus}`;
 
 type OnChainRateFetchResult =
   | {
@@ -169,8 +167,8 @@ type OnChainRateFetchResult =
   | { id: string; status: OnChainRateFailureStatus; explorerAttempted: boolean };
 
 function buildOnChainFailureStatus(
-  rpcStatus: "no-rpc" | "rpc-empty",
-  etherscanStatus: "etherscan-empty" | "etherscan-unavailable",
+  rpcStatus: OnChainRateRpcStatus,
+  etherscanStatus: OnChainRateExplorerStatus,
 ): OnChainRateFailureStatus {
   return `${rpcStatus}|${etherscanStatus}` as OnChainRateFailureStatus;
 }
@@ -244,7 +242,12 @@ async function fetchSingleOnChainRate(
 ): Promise<OnChainRateFetchResult> {
   const callData = config.selector + encodeUint256(BigInt(config.inputAmount));
   const rpcUrls = buildOnChainRateRpcUrls(rpc);
-  const rpcStatus: "no-rpc" | "rpc-empty" = rpcUrls.length === 0 ? "no-rpc" : "rpc-empty";
+  const rpcStatus: OnChainRateRpcStatus = rpcUrls.length === 0 ? "no-rpc" : "rpc-empty";
+  // B26 — a zero read is a bootstrap/failed read, not a 0% observation. Publishing
+  // it would write `exchange_rate: 0` and, because `loadTier1PrevRateRows` anchors
+  // on the newest non-null rate, make that zero the next comparison anchor. Treat
+  // it like an unavailable endpoint and keep the reason in the failure breakdown.
+  let sawZeroRate = false;
 
   for (const rpcUrl of rpcUrls) {
     try {
@@ -254,6 +257,10 @@ async function fetchSingleOnChainRate(
         timeoutMs: ON_CHAIN_RATE_REQUEST_TIMEOUT_MS,
       });
       if (raw == null) continue;
+      if (raw === 0n) {
+        sawZeroRate = true;
+        continue;
+      }
       const sourceTvlUsd = await readOptionalErc4626TotalAssetsUsd({
         config,
         rpcUrl,
@@ -279,7 +286,7 @@ async function fetchSingleOnChainRate(
   if (typeof evmChainId !== "number" || !etherscanApiKey) {
     return {
       id: config.stablecoinId,
-      status: buildOnChainFailureStatus(rpcStatus, "etherscan-unavailable"),
+      status: buildOnChainFailureStatus(sawZeroRate ? "rpc-zero-rate" : rpcStatus, "etherscan-unavailable"),
       explorerAttempted: false,
     };
   }
@@ -290,7 +297,7 @@ async function fetchSingleOnChainRate(
       signal,
       timeoutMs: ON_CHAIN_RATE_REQUEST_TIMEOUT_MS,
     });
-    if (raw != null) {
+    if (raw != null && raw > 0n) {
       const sourceTvlUsd = await readOptionalErc4626TotalAssetsUsd({
         config,
         etherscanApiKey,
@@ -305,6 +312,7 @@ async function fetchSingleOnChainRate(
         explorerAttempted: true,
       };
     }
+    if (raw === 0n) sawZeroRate = true;
   } catch (err) {
     if (signal?.aborted) {
       throw err instanceof Error ? err : new Error(String(err));
@@ -313,7 +321,10 @@ async function fetchSingleOnChainRate(
 
   return {
     id: config.stablecoinId,
-    status: buildOnChainFailureStatus(rpcStatus, "etherscan-empty"),
+    status: buildOnChainFailureStatus(
+      sawZeroRate ? "rpc-zero-rate" : rpcStatus,
+      sawZeroRate ? "etherscan-zero-rate" : "etherscan-empty",
+    ),
     explorerAttempted: true,
   };
 }

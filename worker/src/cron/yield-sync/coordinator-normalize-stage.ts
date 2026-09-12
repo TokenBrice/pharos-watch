@@ -3,6 +3,7 @@ import { buildYieldHistoryEvaluationInputsCooperative } from "./coordinator-hist
 import { evaluateYieldSourcesCooperative } from "./evaluation";
 import { loadYieldHistorySnapshots } from "./history";
 import { resolveYieldSources } from "./resolve";
+import type { YieldOptionalSourceOutcome } from "./optional-source-runtime";
 import type { YieldCoordinatorFetchContext } from "./coordinator-fetch-stage";
 
 export interface YieldCoordinatorNormalizeStageParams {
@@ -29,6 +30,7 @@ export async function runYieldCoordinatorNormalizeStage(params: YieldCoordinator
       },
     },
   });
+  const optionalSourceFailures: YieldOptionalSourceOutcome[] = [];
   const { resolved, tier1PrevRates, envelopeRejections } = await resolveYieldSources({
     db: params.db,
     startSec: fetched.startSec,
@@ -43,6 +45,9 @@ export async function runYieldCoordinatorNormalizeStage(params: YieldCoordinator
     coingeckoApiKey: params.coingeckoApiKey,
     supplementalCandidates: fetched.supplementalCandidates,
     stablecoinSupplyById: fetched.stablecoinSupplyById,
+    onOptionalSourceOutcome: (outcome) => {
+      optionalSourceFailures.push(outcome);
+    },
   });
 
   const resolvedWithYield = resolved.filter((entry) => entry.yield != null);
@@ -59,7 +64,9 @@ export async function runYieldCoordinatorNormalizeStage(params: YieldCoordinator
         resolvedCoins: resolvedIds.length,
         resolvedYieldBearingCoins: resolvedYieldBearingIds.size,
         envelopeRejections: envelopeRejections.length,
+        optionalSourceFailureCount: optionalSourceFailures.length,
       },
+      optionalSourceFailures,
     },
   });
 
@@ -194,6 +201,7 @@ export async function runYieldCoordinatorNormalizeStage(params: YieldCoordinator
     resolvedYieldBearingIds,
     resolvedIds,
     envelopeRejections,
+    optionalSourceFailures,
     historySnapshots,
     ...evaluation,
   };

@@ -34,7 +34,7 @@ describe("fetchBeefySources", () => {
       },
     ]);
 
-    const results = await fetchBeefySources();
+    const { candidates: results } = await fetchBeefySources();
     expect(results.length).toBe(1);
     expect(results[0]).toEqual(
       expect.objectContaining({
@@ -75,7 +75,7 @@ describe("fetchBeefySources", () => {
         ],
       },
     ]);
-    expect(await fetchBeefySources()).toEqual([]);
+    expect(await fetchBeefySources()).toEqual({ candidates: [], degraded: false });
   });
 
   it("skips multi-asset LP vaults", async () => {
@@ -103,7 +103,7 @@ describe("fetchBeefySources", () => {
         ],
       },
     ]);
-    expect(await fetchBeefySources()).toEqual([]);
+    expect(await fetchBeefySources()).toEqual({ candidates: [], degraded: false });
   });
 
   it("skips vaults without enough Beefy TVL to pass size gates", async () => {
@@ -127,6 +127,12 @@ describe("fetchBeefySources", () => {
       },
     ]);
 
-    await expect(fetchBeefySources()).resolves.toEqual([]);
+    await expect(fetchBeefySources()).resolves.toEqual({ candidates: [], degraded: false });
+  });
+
+  it("marks the family degraded when an upstream document is unreadable", async () => {
+    mockYieldSourceRoutes([{ match: "api.beefy.finance/apy", status: 500, body: {} }]);
+
+    expect(await fetchBeefySources()).toEqual({ candidates: [], degraded: true });
   });
 });

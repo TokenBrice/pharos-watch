@@ -44,11 +44,21 @@ export type YieldSourceRiskCoverageField = (typeof YIELD_SOURCE_RISK_COVERAGE_FI
 const YieldSourceRiskCoverageFieldSchema = z.enum(YIELD_SOURCE_RISK_COVERAGE_FIELDS);
 
 export const YieldSourceRiskFieldCoverageSchema = z.object({
+  /** Rows on which this field can exist at all (A7 per-field eligibility). */
   eligibleCount: z.number(),
   populatedCount: z.number(),
   nullCount: z.number(),
-  coverageRatio: z.number(),
-  nullRate: z.number(),
+  /** `null` when no row is eligible: absent evidence never reads as full coverage. */
+  coverageRatio: z.number().nullable(),
+  nullRate: z.number().nullable(),
+  /** Rows excluded from the denominator because the field cannot exist for them. */
+  ineligibleCount: z.number().optional(),
+  bestEligibleCount: z.number().optional(),
+  bestPopulatedCount: z.number().optional(),
+  bestCoverageRatio: z.number().nullable().optional(),
+  altEligibleCount: z.number().optional(),
+  altPopulatedCount: z.number().optional(),
+  altCoverageRatio: z.number().nullable().optional(),
 });
 export type YieldSourceRiskFieldCoverage = z.output<typeof YieldSourceRiskFieldCoverageSchema>;
 
@@ -88,14 +98,28 @@ const YieldBenchmarkHealthEntrySchema = z.object({
   label: z.string().nullable(),
   currency: z.string().nullable(),
   rowCount: z.number(),
+  /** Rows that substituted this key for a peg with no native feed. */
   fallbackSelectionRowCount: z.number(),
+  /** Rows whose benchmark is a documented proxy selection, not a feed incident (A1). */
+  proxySelectionRowCount: z.number().optional(),
   fetchedAt: z.number().nullable(),
   ageSec: z.number().nullable(),
   maxAgeSec: z.number(),
+  recordDate: z.string().nullable().optional(),
+  recordAgeSec: z.number().nullable().optional(),
+  maxRecordAgeSec: z.number().nullable().optional(),
   source: z.string().nullable(),
   isFallback: z.boolean().nullable(),
   fallbackMode: z.string().nullable(),
   status: StatusHealthOrUnknownSchema,
+});
+
+const YieldUnusedBenchmarkKeySchema = z.object({
+  key: z.string(),
+  source: z.string().nullable(),
+  recordDate: z.string().nullable(),
+  recordAgeSec: z.number().nullable(),
+  ageSec: z.number().nullable(),
 });
 
 const YieldBenchmarkRegistryHealthSummarySchema = z.object({
@@ -106,6 +130,11 @@ const YieldBenchmarkRegistryHealthSummarySchema = z.object({
   staleBenchmarkCount: z.number(),
   unknownBenchmarkCount: z.number(),
   benchmarks: z.record(z.string(), YieldBenchmarkHealthEntrySchema),
+  /** Fetched keys no published row uses: monitored, but never status-bearing (A6). */
+  unusedBenchmarkKeys: z.array(YieldUnusedBenchmarkKeySchema).optional(),
+  /** Benchmark keys published by rows that the registry does not define (A6). */
+  unknownKeys: z.array(z.string()).optional(),
+  unknownKeyRowCount: z.number().optional(),
 });
 
 export const YIELD_COVERAGE_AUDIT_QUEUE_ACTIONS = [
@@ -220,11 +249,40 @@ export const YieldHealthSummarySchema = z.object({
     recommendationCandidates: z.array(YieldCoverageAuditQueueItemSchema),
     allowedActions: z.array(z.enum(YIELD_COVERAGE_AUDIT_QUEUE_ACTIONS)),
     queuePersistence: z.enum(["deferred", "durable"]),
+    /** Whole-queue accounting from the producer: per-kind counts, suppression, truncation (C8). */
+    queueTotals: z.object({
+      byKind: z.record(z.string(), z.number()),
+      suppressedItemCount: z.number(),
+      truncated: z.boolean(),
+    }).nullable().optional(),
+    /** Documented drain budget the queue backlog is measured against (C4). */
+    queueBudget: z.object({
+      headlineGaps: z.number(),
+      recommendationCandidates: z.number(),
+    }).optional(),
+    /** The rendered queue performs no writes until the admin disposition route lands (C8). */
+    queueDisplayOnly: z.boolean().optional(),
   }),
   sourceRiskCoverage: YieldSourceRiskCoverageSummarySchema,
   comparisonAnchorFreshness: YieldComparisonAnchorFreshnessSummarySchema,
   latestCronStatus: z.string().nullable(),
   latestCronStartedAt: z.number().nullable(),
+  /** Read-time live-safety hydration state behind the publish-time snapshot (C5). */
+  liveSafetyHydration: z.object({
+    status: StatusHealthOrUnknownSchema,
+    reason: z.string().nullable(),
+    fallback: z.string().nullable(),
+    staleCoherentMaxAgeSec: z.number(),
+    cachedAgeSec: z.number().nullable(),
+  }).optional(),
+  /** `pys_inputs_at_publish` persistence from the latest publisher run (C3). */
+  pysInputs: z.object({
+    status: StatusHealthOrUnknownSchema,
+    persistedCount: z.number().nullable(),
+    nullCount: z.number().nullable(),
+    nullRate: z.number().nullable(),
+    threshold: z.number(),
+  }).optional(),
 });
 export type YieldHealthSummary = z.output<typeof YieldHealthSummarySchema>;
 

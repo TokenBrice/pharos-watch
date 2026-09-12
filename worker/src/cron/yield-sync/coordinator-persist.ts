@@ -21,6 +21,8 @@ import {
 import type { YieldBenchmarkMeta, YieldSourceInputMeta } from "@shared/types/yield";
 import type { CronResult } from "../../lib/cron-logger";
 import { createCronResult } from "../../lib/cron-result";
+import type { YieldRowsWriteStats } from "./publication-atomic-batch";
+import type { YieldEvaluatedSourcesWriteResult } from "./publication-decision-persistence";
 import { writeFreshnessSentinel } from "../../lib/db-cache";
 import { rethrowIfAborted, throwIfAborted } from "../../lib/abort";
 
@@ -89,10 +91,24 @@ export async function publishYieldCoordinatorResults(params: {
       validationFailures: number;
       cacheWriteSkipped: boolean;
       casSkipped: boolean;
+      /** Why the atomic write did not apply, when it did not. */
+      skipReason: string | null;
+      publicationStats: YieldRowsWriteStats | null;
     }
 > {
   throwIfAborted(params.signal);
   const generationId = buildYieldPublicationGenerationId(params.startSec);
+  let generationFinalized = false;
+  let publicationApplied = false;
+  const finalizeFailedGeneration = async (reason: string): Promise<void> => {
+    generationFinalized = true;
+    await finalizeYieldPublicationGeneration(params.db, {
+      generationId,
+      state: "failed",
+      timestamp: params.startSec,
+      reason,
+    });
+  };
   const stagedRankingsPayload = attachYieldPublicationMetadata(params.previewRankingsPayload, {
     generationId,
     startSec: params.startSec,
@@ -113,129 +129,136 @@ export async function publishYieldCoordinatorResults(params: {
   });
   throwIfAborted(params.signal);
 
-  const previewPublishability = await validateYieldRankingsPayloadForPublish(
-    stagedRankingsPayload,
-    params.previousYieldPublicationSnapshot,
-  );
-  if (!previewPublishability.ok) {
-    params.degradationReasons.push(previewPublishability.reason ?? "schema-validation-failed");
-    await finalizeYieldPublicationGeneration(params.db, {
-      generationId,
-      state: "failed",
-      timestamp: params.startSec,
-      reason: previewPublishability.reason ?? "schema-validation-failed",
-    });
-    return {
-      ok: false,
-      result: createCronResult({
-        status: "degraded",
-        itemCount: params.resolvedCount,
-        metadata: {
-          reason: "yield-rankings-preflight-failed",
-          publishFailure: previewPublishability.reason ?? "schema-validation-failed",
-          validationFailures: previewPublishability.validationFailures,
-          rowsRejected: params.rowsRejected,
-          divergenceFlags: params.divergenceFlags,
-          sourceSwitches: params.sourceSwitches,
-        },
-      }),
-    };
-  }
-
-  let updatedCount = 0;
-  const publishedRankingsPayload = attachYieldPublicationMetadata(params.previewRankingsPayload, {
-    generationId,
-    startSec: params.startSec,
-    status: "published",
-  });
-  let publicationWrite: Awaited<ReturnType<typeof persistEvaluatedYieldSources>>;
+  // Every exit from here must leave the generation in a terminal state: a
+  // generation left `staged` reads as a live candidate on the publication
+  // surface, so an abort mid-publication has to mark it failed (C11).
   try {
-    throwIfAborted(params.signal);
-    publicationWrite = await persistEvaluatedYieldSources(params.db, {
-      signal: params.signal,
-      evaluatedSources: params.evaluatedSources,
-      publicationViews: params.publicationViews,
+    const previewPublishability = await validateYieldRankingsPayloadForPublish(
+      stagedRankingsPayload,
+      params.previousYieldPublicationSnapshot,
+    );
+    if (!previewPublishability.ok) {
+      params.degradationReasons.push(previewPublishability.reason ?? "schema-validation-failed");
+      await finalizeFailedGeneration(previewPublishability.reason ?? "schema-validation-failed");
+      return {
+        ok: false,
+        result: createCronResult({
+          status: "degraded",
+          itemCount: params.resolvedCount,
+          metadata: {
+            reason: "yield-rankings-preflight-failed",
+            publishFailure: previewPublishability.reason ?? "schema-validation-failed",
+            validationFailures: previewPublishability.validationFailures,
+            rowsRejected: params.rowsRejected,
+            divergenceFlags: params.divergenceFlags,
+            sourceSwitches: params.sourceSwitches,
+          },
+        }),
+      };
+    }
+
+    let updatedCount = 0;
+    const publishedRankingsPayload = attachYieldPublicationMetadata(params.previewRankingsPayload, {
+      generationId,
       startSec: params.startSec,
-      generationId,
-      rankingsPayload: publishedRankingsPayload,
-      previousYieldPublicationSnapshot: params.previousYieldPublicationSnapshot,
+      status: "published",
     });
-  } catch (error) {
-    rethrowIfAborted(error, params.signal);
-    const reason = getD1FailureReason("yield-publication-transaction-failed", error);
-    params.degradationReasons.push(reason);
-    await finalizeYieldPublicationGeneration(params.db, {
-      generationId,
-      state: "failed",
-      timestamp: params.startSec,
-      reason,
-    }).catch((finalizeError: unknown) => {
-      logWorkerEventArgs("handler", "warn", "[sync-yield-data] Failed to mark yield generation failed after publication transaction failure:", finalizeError);
-    });
-    return {
-      ok: false,
-      result: createCronResult({
-        status: "degraded",
-        itemCount: params.resolvedCount,
-        metadata: {
-          reason: "yield-publication-transaction-failed",
-          publishFailure: reason,
-          validationFailures: 0,
-          rowsRejected: params.rowsRejected,
-          divergenceFlags: params.divergenceFlags,
-          sourceSwitches: params.sourceSwitches,
-        },
-      }),
-    };
-  }
-  if (!publicationWrite.ok) {
-    const reason = publicationWrite.reason ?? "schema-validation-failed";
-    params.degradationReasons.push(reason);
-    await finalizeYieldPublicationGeneration(params.db, {
-      generationId,
-      state: "failed",
-      timestamp: params.startSec,
-      reason,
-    });
+    let publicationWrite: YieldEvaluatedSourcesWriteResult;
+    try {
+      throwIfAborted(params.signal);
+      publicationWrite = await persistEvaluatedYieldSources(params.db, {
+        signal: params.signal,
+        evaluatedSources: params.evaluatedSources,
+        publicationViews: params.publicationViews,
+        startSec: params.startSec,
+        generationId,
+        rankingsPayload: publishedRankingsPayload,
+        previousYieldPublicationSnapshot: params.previousYieldPublicationSnapshot,
+      });
+    } catch (error) {
+      rethrowIfAborted(error, params.signal);
+      const reason = getD1FailureReason("yield-publication-transaction-failed", error);
+      params.degradationReasons.push(reason);
+      await finalizeFailedGeneration(reason).catch((finalizeError: unknown) => {
+        logWorkerEventArgs("handler", "warn", "[sync-yield-data] Failed to mark yield generation failed after publication transaction failure:", finalizeError);
+      });
+      return {
+        ok: false,
+        result: createCronResult({
+          status: "degraded",
+          itemCount: params.resolvedCount,
+          metadata: {
+            reason: "yield-publication-transaction-failed",
+            publishFailure: reason,
+            validationFailures: 0,
+            rowsRejected: params.rowsRejected,
+            divergenceFlags: params.divergenceFlags,
+            sourceSwitches: params.sourceSwitches,
+          },
+        }),
+      };
+    }
+    if (!publicationWrite.ok) {
+      const reason = publicationWrite.reason ?? "schema-validation-failed";
+      params.degradationReasons.push(reason);
+      await finalizeFailedGeneration(reason);
+      await pruneYieldTables(params.db, params.startSec, {
+        allowDestructiveCleanup: false,
+        signal: params.signal,
+      });
+      return {
+        ok: true,
+        updatedCount,
+        degradationReasons: params.degradationReasons,
+        validationFailures: publicationWrite.validationFailures,
+        cacheWriteSkipped: true,
+        casSkipped: publicationWrite.cacheWrite?.skippedBecauseNewer === true,
+        skipReason: reason,
+        publicationStats: publicationWrite.cacheWrite?.publicationStats ?? null,
+      };
+    }
+
+    updatedCount = publicationWrite.updatedCount;
+    publicationApplied = true;
+    const publicationStats = publicationWrite.cacheWrite.publicationStats;
+    if (publicationStats?.oversize) {
+      params.degradationReasons.push("yield-publication:payload-oversize");
+    }
+    throwIfAborted(params.signal);
+    try {
+      await writeFreshnessSentinel(params.db, "yield-data", params.startSec, params.signal);
+    } catch (error) {
+      rethrowIfAborted(error, params.signal);
+      const reason = getD1FailureReason("yield-data-freshness-sentinel-failed", error);
+      params.degradationReasons.push(reason);
+      await repairPublishedYieldGenerationFromCache(params.db, params.startSec).catch((repairError: unknown) => {
+        logWorkerEventArgs("handler", "warn", "[sync-yield-data] Failed to repair published yield generation after freshness sentinel failure:", repairError);
+      });
+    }
+
+    throwIfAborted(params.signal);
     await pruneYieldTables(params.db, params.startSec, {
-      allowDestructiveCleanup: false,
+      allowDestructiveCleanup: params.degradationReasons.length === 0,
       signal: params.signal,
     });
+
     return {
       ok: true,
       updatedCount,
       degradationReasons: params.degradationReasons,
       validationFailures: publicationWrite.validationFailures,
-      cacheWriteSkipped: true,
-      casSkipped: publicationWrite.cacheWrite?.skippedBecauseNewer === true,
+      cacheWriteSkipped: false,
+      casSkipped: publicationWrite.cacheWrite.skippedBecauseNewer,
+      skipReason: null,
+      publicationStats,
     };
-  }
-
-  updatedCount = publicationWrite.updatedCount;
-  throwIfAborted(params.signal);
-  try {
-    await writeFreshnessSentinel(params.db, "yield-data", params.startSec, params.signal);
   } catch (error) {
-    rethrowIfAborted(error, params.signal);
-    const reason = getD1FailureReason("yield-data-freshness-sentinel-failed", error);
-    params.degradationReasons.push(reason);
-    await repairPublishedYieldGenerationFromCache(params.db, params.startSec).catch((repairError: unknown) => {
-      logWorkerEventArgs("handler", "warn", "[sync-yield-data] Failed to repair published yield generation after freshness sentinel failure:", repairError);
-    });
+    if (!publicationApplied && !generationFinalized) {
+      const reason = params.signal?.aborted ? "aborted" : getD1FailureReason("yield-publication-failed", error);
+      await finalizeFailedGeneration(reason).catch((finalizeError: unknown) => {
+        logWorkerEventArgs("handler", "warn", "[sync-yield-data] Failed to mark yield generation failed after an aborted publication step:", finalizeError);
+      });
+    }
+    throw error;
   }
-
-  throwIfAborted(params.signal);
-  await pruneYieldTables(params.db, params.startSec, {
-    allowDestructiveCleanup: params.degradationReasons.length === 0,
-    signal: params.signal,
-  });
-
-  return {
-    ok: true,
-    updatedCount,
-    degradationReasons: params.degradationReasons,
-    validationFailures: publicationWrite.validationFailures,
-    cacheWriteSkipped: false,
-    casSkipped: publicationWrite.cacheWrite.skippedBecauseNewer,
-  };
 }

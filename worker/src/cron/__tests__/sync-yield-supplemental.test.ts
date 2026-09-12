@@ -1,7 +1,13 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { CronProgressUpdate } from "../../lib/cron-logger";
 import { mockRegistry } from "../../test-helpers/cron";
-import { beefyCandidate, emptyRpcTelemetry, emptyVaultsFyiResult } from "./sync-yield-supplemental.test-support";
+import {
+  beefyCandidate,
+  degradedFamilyFetch,
+  emptyRpcTelemetry,
+  emptyVaultsFyiResult,
+  healthyFamilyFetch,
+} from "./sync-yield-supplemental.test-support";
 
 const OPTIONAL_RPC_MISSING_TARGET_EXAMPLE_LIMIT = 20;
 
@@ -29,16 +35,19 @@ vi.mock("@shared/lib/stablecoins/registry", () => {
 });
 
 vi.mock("../yield-sync/sources", async () => {
-  // The hoisted mock factory runs before static fixture imports initialize.
-  const { emptyRpcTelemetry, emptyVaultsFyiResult } = await import("./sync-yield-supplemental.test-support");
+  // The hoisted mock factory runs before static fixture imports initialize, so
+  // the fixture module must be loaded dynamically here (vitest hoisting).
+  const { emptyRpcTelemetry, emptyVaultsFyiResult, healthyFamilyFetch } = await import(
+    "./sync-yield-supplemental.test-support"
+  );
   return {
   COMPOUND_V3_COMETS: [],
-  fetchMorphoVaultSources: vi.fn(async () => []),
-  fetchPendleMarketSources: vi.fn(async () => []),
+  fetchMorphoVaultSources: vi.fn(async () => healthyFamilyFetch()),
+  fetchPendleMarketSources: vi.fn(async () => healthyFamilyFetch()),
   fetchRoycoDawnSources: vi.fn(async () => []),
   fetchVaultsFyiSources: vi.fn(async () => emptyVaultsFyiResult()),
-  fetchYearnKongSources: vi.fn(async () => []),
-  fetchBeefySources: vi.fn(async () => []),
+  fetchYearnKongSources: vi.fn(async () => healthyFamilyFetch()),
+  fetchBeefySources: vi.fn(async () => healthyFamilyFetch()),
   fetchCompoundV3SupplyRates: vi.fn(async () => ({
     results: [],
     telemetry: emptyRpcTelemetry(),
@@ -55,10 +64,12 @@ vi.mock("../yield-sync/sources-rpc", () => ({
 }));
 
 vi.mock("../../lib/db-cache", () => ({
+  getCaches: vi.fn(async () => new Map()),
+  setCache: vi.fn(async () => undefined),
   setCacheIfNewer: vi.fn(async () => ({ written: true, skippedBecauseNewer: false })),
 }));
 
-import { setCacheIfNewer } from "../../lib/db-cache";
+import { getCaches, setCache, setCacheIfNewer } from "../../lib/db-cache";
 import {
   fetchAaveV3SupplyRates,
   fetchBeefySources,
@@ -86,14 +97,15 @@ describe("syncYieldSupplemental", () => {
   beforeEach(() => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date("2026-03-26T12:00:00.000Z"));
-    vi.mocked(fetchMorphoVaultSources).mockResolvedValue([]);
-    vi.mocked(fetchPendleMarketSources).mockResolvedValue([]);
+    vi.mocked(fetchMorphoVaultSources).mockResolvedValue(healthyFamilyFetch());
+    vi.mocked(fetchPendleMarketSources).mockResolvedValue(healthyFamilyFetch());
     vi.mocked(fetchRoycoDawnSources).mockResolvedValue([]);
     vi.mocked(fetchVaultsFyiSources).mockResolvedValue(emptyVaultsFyiResult());
-    vi.mocked(fetchYearnKongSources).mockResolvedValue([]);
+    vi.mocked(fetchYearnKongSources).mockResolvedValue(healthyFamilyFetch());
     vi.mocked(fetchCompoundV3SupplyRates).mockResolvedValue({ results: [], telemetry: emptyRpcTelemetry() });
     vi.mocked(fetchAaveV3SupplyRates).mockResolvedValue({ results: [], telemetry: emptyRpcTelemetry() });
-    vi.mocked(fetchBeefySources).mockResolvedValue([]);
+    vi.mocked(fetchBeefySources).mockResolvedValue(healthyFamilyFetch());
+    vi.mocked(getCaches).mockResolvedValue(new Map());
   });
 
   afterEach(() => {
@@ -284,10 +296,10 @@ describe("syncYieldSupplemental", () => {
     });
   });
 
-  it("publishes empty family cache rows to clear previous non-empty caches", async () => {
-    vi.mocked(fetchBeefySources).mockResolvedValue([
-      beefyCandidate(),
-    ]);
+  it("retains the previous family snapshot when the fetch ends degraded", async () => {
+    vi.mocked(fetchBeefySources).mockResolvedValue(healthyFamilyFetch([beefyCandidate()]));
+    // A 5xx from Morpho ends the fetch early: its previous snapshot must survive.
+    vi.mocked(fetchMorphoVaultSources).mockResolvedValue(degradedFamilyFetch());
 
     const result = await syncYieldSupplemental({} as D1Database, undefined, new Map());
 
@@ -296,25 +308,122 @@ describe("syncYieldSupplemental", () => {
     ).toBe(true);
     expect(
       vi.mocked(setCacheIfNewer).mock.calls.some((call) => call[1] === "yield:supplemental-sources:v1:morpho"),
-    ).toBe(true);
-
-    const beefyCall = vi
-      .mocked(setCacheIfNewer)
-      .mock.calls.find((call) => call[1] === "yield:supplemental-sources:v1:beefy");
-    const beefyPayload = JSON.parse(String(beefyCall?.[2])) as { sourceCount: number; data: unknown[] };
-    expect(beefyPayload.sourceCount).toBe(1);
+    ).toBe(false);
 
     const metadata = JSON.parse(result.metadata ?? "{}") as {
-      familyCacheResults?: Record<string, "published" | "skipped-newer" | "empty" | "empty-published">;
+      familyCacheResults?: Record<string, string>;
+      degradedFamilies?: string[];
     };
     expect(metadata.familyCacheResults?.beefy).toBe("published");
+    expect(metadata.familyCacheResults?.morpho).toBe("retained-previous");
+    expect(metadata.degradedFamilies).toEqual(["morpho"]);
+
+    const runOutcomeCall = vi
+      .mocked(setCache)
+      .mock.calls.find((call) => call[1] === "yield:supplemental-source-run:v1");
+    expect(runOutcomeCall).toBeDefined();
+    expect(JSON.parse(String(runOutcomeCall?.[2]))).toMatchObject({
+      version: 1,
+      degradedFamilies: ["morpho"],
+      familyCacheResults: { morpho: "retained-previous", beefy: "published" },
+    });
+  });
+
+  it("retains the previous snapshot when a family callback fails outright", async () => {
+    // A thrown family callback is the other degraded shape: the runner marks the
+    // family failed and the writer must not publish an empty replacement.
+    vi.mocked(fetchMorphoVaultSources).mockRejectedValue(new Error("morpho exploded"));
+    vi.mocked(fetchBeefySources).mockResolvedValue(healthyFamilyFetch([beefyCandidate()]));
+
+    const result = await syncYieldSupplemental({} as D1Database, undefined, new Map());
+
+    const metadata = JSON.parse(result.metadata ?? "{}") as {
+      familyCacheResults?: Record<string, string>;
+      degradedFamilies?: string[];
+    };
+    expect(metadata.familyCacheResults?.morpho).toBe("retained-previous");
+    expect(metadata.degradedFamilies).toEqual(["morpho"]);
+  });
+
+  it("publishes an empty family row when a successful fetch genuinely has no candidates", async () => {
+    vi.mocked(fetchBeefySources).mockResolvedValue(healthyFamilyFetch([beefyCandidate()]));
+
+    const result = await syncYieldSupplemental({} as D1Database, undefined, new Map());
+
     const morphoCall = vi
       .mocked(setCacheIfNewer)
       .mock.calls.find((call) => call[1] === "yield:supplemental-sources:v1:morpho");
     const morphoPayload = JSON.parse(String(morphoCall?.[2])) as { sourceCount: number; data: unknown[] };
     expect(morphoPayload.sourceCount).toBe(0);
     expect(morphoPayload.data).toEqual([]);
+
+    const metadata = JSON.parse(result.metadata ?? "{}") as {
+      familyCacheResults?: Record<string, string>;
+      degradedFamilies?: string[];
+    };
     expect(metadata.familyCacheResults?.morpho).toBe("empty-published");
+    expect(metadata.degradedFamilies).toEqual([]);
+  });
+
+  it("skips the hourly catch-up while the newest family marker is younger than the cadence", async () => {
+    const startSec = 1_774_526_400;
+    vi.mocked(getCaches).mockResolvedValue(new Map([
+      ["yield:supplemental-sources:v1:morpho", { value: "{}", updatedAt: startSec - 3 * 3600 }],
+    ]));
+
+    const result = await syncYieldSupplemental(
+      {} as D1Database,
+      undefined,
+      new Map(),
+      undefined,
+      undefined,
+      { catchUpMinMarkerAgeSec: 4 * 3600 },
+    );
+
+    expect(result.status).toBe("skipped_neutral");
+    expect(result.itemCount).toBe(0);
+    expect(JSON.parse(result.metadata ?? "{}")).toMatchObject({
+      reason: "supplemental-catch-up-not-due",
+      newestFamilyMarkerAgeSec: 3 * 3600,
+      minMarkerAgeSec: 4 * 3600,
+    });
+    expect(fetchMorphoVaultSources).not.toHaveBeenCalled();
+    expect(setCacheIfNewer).not.toHaveBeenCalled();
+  });
+
+  it("runs the catch-up once the newest family marker is older than the cadence", async () => {
+    const startSec = 1_774_526_400;
+    vi.mocked(getCaches).mockResolvedValue(new Map([
+      ["yield:supplemental-sources:v1:morpho", { value: "{}", updatedAt: startSec - 5 * 3600 }],
+    ]));
+
+    const result = await syncYieldSupplemental(
+      {} as D1Database,
+      undefined,
+      new Map(),
+      undefined,
+      undefined,
+      { catchUpMinMarkerAgeSec: 4 * 3600 },
+    );
+
+    expect(result.status).not.toBe("skipped_neutral");
+    expect(fetchMorphoVaultSources).toHaveBeenCalled();
+  });
+
+  it("runs the catch-up when no family marker has ever been written", async () => {
+    vi.mocked(getCaches).mockResolvedValue(new Map());
+
+    const result = await syncYieldSupplemental(
+      {} as D1Database,
+      undefined,
+      new Map(),
+      undefined,
+      undefined,
+      { catchUpMinMarkerAgeSec: 4 * 3600 },
+    );
+
+    expect(result.status).not.toBe("skipped_neutral");
+    expect(fetchMorphoVaultSources).toHaveBeenCalled();
   });
 
   it("registers vaults.fyi as a supplemental family with per-family cache metadata", async () => {
@@ -405,9 +514,7 @@ describe("syncYieldSupplemental", () => {
   });
 
   it("keeps vaults.fyi audit inventory counts separate from supplemental candidate counts", async () => {
-    vi.mocked(fetchBeefySources).mockResolvedValue([
-      beefyCandidate(),
-    ]);
+    vi.mocked(fetchBeefySources).mockResolvedValue(healthyFamilyFetch([beefyCandidate()]));
     vi.mocked(fetchVaultsFyiSources).mockResolvedValue({
       candidates: [],
       telemetry: {
@@ -463,10 +570,8 @@ describe("syncYieldSupplemental", () => {
     });
   });
 
-  it("does not publish a fresh vaults.fyi family cache when the provider run fails", async () => {
-    vi.mocked(fetchBeefySources).mockResolvedValue([
-      beefyCandidate(),
-    ]);
+  it("retains the vaults.fyi snapshot when the provider run fails", async () => {
+    vi.mocked(fetchBeefySources).mockResolvedValue(healthyFamilyFetch([beefyCandidate()]));
     vi.mocked(fetchVaultsFyiSources).mockResolvedValue({
       candidates: [],
       telemetry: {
@@ -483,7 +588,11 @@ describe("syncYieldSupplemental", () => {
     ).toBe(false);
 
     const metadata = JSON.parse(result.metadata ?? "{}") as {
-      familyCacheResults?: Record<string, "published" | "skipped-newer" | "empty" | "empty-published">;
+      familyCacheResults?: Record<
+        string,
+        "published" | "skipped-newer" | "empty" | "empty-published" | "retained-previous"
+      >;
+      degradedFamilies?: string[];
       sourceCoverage?: {
         sourceFamilySummaries?: {
           vaultsFyi?: {
@@ -497,7 +606,8 @@ describe("syncYieldSupplemental", () => {
         };
       };
     };
-    expect(metadata.familyCacheResults?.vaultsFyi).toBe("empty");
+    expect(metadata.familyCacheResults?.vaultsFyi).toBe("retained-previous");
+    expect(metadata.degradedFamilies).toEqual(["vaultsFyi"]);
     expect(metadata.sourceCoverage?.sourceFamilySummaries?.vaultsFyi).toMatchObject({
       status: "failed",
       provider: {
@@ -626,9 +736,13 @@ describe("syncYieldSupplemental", () => {
     ]);
   });
 
-  it("dedupes exact duplicate candidates and reports the drop count", async () => {
-    vi.mocked(fetchBeefySources).mockResolvedValue([
-      beefyCandidate({}, { currentApy: 5, apyBase: 5, sourceTvlUsd: 1_000_000, yieldType: "lending-vault" }),
+  it("dedupes on the newest observation and reports the drop count", async () => {
+    // The older row is a transient APY spike: B27 keeps the current value.
+    vi.mocked(fetchBeefySources).mockResolvedValue(healthyFamilyFetch([
+      beefyCandidate({}, {
+        currentApy: 9.9, apyBase: 9.9, sourceTvlUsd: 1_000_000, yieldType: "lending-vault",
+        sourceObservedAt: 1_774_500_000,
+      }),
       beefyCandidate({}, { currentApy: 5.5, apyBase: 5.5, sourceTvlUsd: 1_000_000, yieldType: "lending-vault" }),
       beefyCandidate(
         { symbol: "USDT", address: "0xdAC17F958D2ee523a2206206994597C13D831ec7" },
@@ -637,7 +751,7 @@ describe("syncYieldSupplemental", () => {
           sourceKey: "protocol-api:beefy:ethereum:vault-b", yieldSource: "Beefy: vault-b", yieldType: "lending-vault",
         },
       ),
-    ]);
+    ]));
 
     const result = await syncYieldSupplemental({} as D1Database, undefined, new Map());
 
@@ -673,6 +787,17 @@ describe("syncYieldSupplemental", () => {
       sourceCoverage?: {
         rawSupplementalCandidates?: number;
         dedupedSupplementalCandidates?: number;
+        sourceFamilySummaries?: {
+          beefy?: {
+            dedupeDiscardedValues?: Array<{
+              sourceKey: string;
+              discardedApy: number;
+              discardedObservedAt: number | null;
+              keptApy: number;
+              keptObservedAt: number | null;
+            }>;
+          };
+        };
         optionalRpcTelemetry?: {
           compoundV3?: { emittedCount?: number };
           aaveV3?: { emittedCount?: number };
@@ -687,10 +812,54 @@ describe("syncYieldSupplemental", () => {
     expect(metadata.sourceCoverage?.dedupedSupplementalCandidates).toBe(2);
     expect(metadata.sourceCoverage?.optionalRpcTelemetry?.compoundV3?.emittedCount).toBe(0);
     expect(metadata.sourceCoverage?.optionalRpcTelemetry?.aaveV3?.emittedCount).toBe(0);
+    expect(metadata.sourceCoverage?.sourceFamilySummaries?.beefy?.dedupeDiscardedValues).toEqual([
+      {
+        sourceKey: "protocol-api:beefy:ethereum:vault-a",
+        discardedApy: 9.9,
+        discardedObservedAt: 1_774_500_000,
+        keptApy: 5.5,
+        keptObservedAt: 1_774_526_400,
+      },
+    ]);
+  });
+
+  it("breaks a dedupe tie on the larger TVL and reports zero degraded families", async () => {
+    const observedAt = 1_774_526_400;
+    vi.mocked(fetchBeefySources).mockResolvedValue(healthyFamilyFetch([
+      beefyCandidate({}, {
+        currentApy: 4.2, apyBase: 4.2, sourceTvlUsd: 1_000_000, sourceObservedAt: observedAt,
+      }),
+      beefyCandidate({}, {
+        currentApy: 3.8, apyBase: 3.8, sourceTvlUsd: 9_000_000, sourceObservedAt: observedAt,
+      }),
+    ]));
+
+    const result = await syncYieldSupplemental({} as D1Database, undefined, new Map());
+
+    const beefyCacheCall = vi
+      .mocked(setCacheIfNewer)
+      .mock.calls.find((call) => call[1] === "yield:supplemental-sources:v1:beefy");
+    const payload = JSON.parse(String(beefyCacheCall?.[2])) as {
+      sourceCount: number;
+      data: Array<{ yield: { currentApy: number; sourceTvlUsd: number } }>;
+    };
+    expect(payload.sourceCount).toBe(1);
+    expect(payload.data[0]?.yield).toMatchObject({ currentApy: 3.8, sourceTvlUsd: 9_000_000 });
+
+    const metadata = JSON.parse(result.metadata ?? "{}") as {
+      degradedFamilies?: string[];
+      sourceCoverage?: {
+        sourceFamilySummaries?: { beefy?: { dedupeDiscardedValues?: Array<{ discardedApy: number }> } };
+      };
+    };
+    expect(metadata.degradedFamilies).toEqual([]);
+    expect(metadata.sourceCoverage?.sourceFamilySummaries?.beefy?.dedupeDiscardedValues).toEqual([
+      expect.objectContaining({ discardedApy: 4.2, keptApy: 3.8 }),
+    ]);
   });
 
   it("drops malformed supplemental source rows with source-family examples", async () => {
-    vi.mocked(fetchBeefySources).mockResolvedValue([
+    vi.mocked(fetchBeefySources).mockResolvedValue(healthyFamilyFetch([
       {
         symbol: "USDC",
         chain: "ethereum",
@@ -729,7 +898,7 @@ describe("syncYieldSupplemental", () => {
           comparisonAnchorObservedAt: null,
         },
       },
-    ]);
+    ]));
 
     const result = await syncYieldSupplemental({} as D1Database, undefined, new Map());
 
@@ -800,10 +969,10 @@ describe("syncYieldSupplemental", () => {
       };
     }
 
-    vi.mocked(fetchMorphoVaultSources).mockImplementation(trackFamily("morpho", []));
-    vi.mocked(fetchPendleMarketSources).mockImplementation(trackFamily("pendle", []));
-    vi.mocked(fetchYearnKongSources).mockImplementation(trackFamily("yearnKong", []));
-    vi.mocked(fetchBeefySources).mockImplementation(trackFamily("beefy", []));
+    vi.mocked(fetchMorphoVaultSources).mockImplementation(trackFamily("morpho", healthyFamilyFetch()));
+    vi.mocked(fetchPendleMarketSources).mockImplementation(trackFamily("pendle", healthyFamilyFetch()));
+    vi.mocked(fetchYearnKongSources).mockImplementation(trackFamily("yearnKong", healthyFamilyFetch()));
+    vi.mocked(fetchBeefySources).mockImplementation(trackFamily("beefy", healthyFamilyFetch()));
     vi.mocked(fetchVaultsFyiSources).mockImplementation(trackFamily("vaultsFyi", emptyVaultsFyiResult()));
     vi.mocked(fetchRoycoDawnSources).mockImplementation(trackFamily("roycoDawn", []));
     vi.mocked(fetchCompoundV3SupplyRates).mockImplementation(
@@ -849,9 +1018,7 @@ describe("syncYieldSupplemental", () => {
 
   it("keeps successful family results when another supplemental family throws", async () => {
     vi.mocked(fetchMorphoVaultSources).mockRejectedValue(new Error("morpho exploded"));
-    vi.mocked(fetchBeefySources).mockResolvedValue([
-      beefyCandidate(),
-    ]);
+    vi.mocked(fetchBeefySources).mockResolvedValue(healthyFamilyFetch([beefyCandidate()]));
 
     const result = await syncYieldSupplemental({} as D1Database, undefined, new Map());
 

@@ -3,6 +3,7 @@ import {
   YIELD_RISK_CONFIG,
   YIELD_RISK_CONFIG_PROTOCOLS,
   YIELD_RISK_CONFIG_REVIEW_CADENCE,
+  YIELD_VARIANT_CHILD_VENUE_PROTOCOLS,
   findStaleVenueRiskScores,
   findStaleVenueRiskScoresByEntries,
   resolveDependencyConcentration,
@@ -56,6 +57,38 @@ describe("yield-source-risk-registry (shared/lib structural integrity)", () => {
     expect(resolveReviewedYieldRiskConfig("compound")).toBe(YIELD_RISK_CONFIG["compound-v3"]);
     expect(resolveReviewedYieldRiskConfig("unreviewed-protocol")).toBeNull();
     expect(resolveReviewedYieldRiskConfig(null)).toBeNull();
+  });
+
+  it("resolves the A8 venue slugs and every variant child id", () => {
+    // DeFiLlama project slugs that name an already-reviewed venue: the 11
+    // `pendle-v2` rows and the legacy sDAI pool otherwise publish unknown tiers.
+    expect(resolveReviewedYieldRiskConfig("pendle-v2")).toBe(YIELD_RISK_CONFIG.pendle);
+    expect(resolveReviewedYieldRiskConfig("sdai")).toBe(YIELD_RISK_CONFIG["spark-savings"]);
+
+    // Child wrappers whose `onchain:<childId>` / `linked-variant:<childId>` rows
+    // carry no venue in the key: the child-id map is their only venue source.
+    for (const childId of [
+      "stusds-sky",
+      "susds-sky",
+      "stcusd-cap",
+      "scrvusd-curve",
+      "savusd-avant",
+      "sfrxusd-frax",
+      "susn-noon",
+      "susde-ethena",
+      "wsrusd-reservoir",
+    ]) {
+      const venue = YIELD_VARIANT_CHILD_VENUE_PROTOCOLS[childId];
+      expect(venue, childId).toBeTruthy();
+      const reviewed = resolveReviewedYieldRiskConfig(venue);
+      // A reviewed venue must derive a real tier; an unreviewed one stays unknown
+      // (never backfilled) but still publishes a venue instead of null.
+      if (reviewed) expect(venueRiskTierOf(reviewed), childId).not.toBe("unknown");
+    }
+    expect(resolveReviewedYieldRiskConfig(YIELD_VARIANT_CHILD_VENUE_PROTOCOLS["susds-sky"]))
+      .toBe(YIELD_RISK_CONFIG["spark-savings"]);
+    expect(resolveReviewedYieldRiskConfig(YIELD_VARIANT_CHILD_VENUE_PROTOCOLS["stcusd-cap"]))
+      .toBe(YIELD_RISK_CONFIG.cap);
   });
 
   it("resolves reviewer-set dependency concentration by stablecoin id", () => {

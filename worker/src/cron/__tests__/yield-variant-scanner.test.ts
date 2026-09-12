@@ -47,13 +47,14 @@ describe("scanForNewVariants", () => {
   });
 
   it("discovers suffix variants at the TVL boundary and deduplicates mixed case", () => {
+    // C20 — the duplicate that survives is the deepest pool, not DeFiLlama's first row.
     const results = scanForNewVariants([
-      makeDlYieldPool({ pool: "first", symbol: "USDCEarn", tvlUsd: 500_000 }),
-      makeDlYieldPool({ pool: "duplicate", symbol: "usdceARN", tvlUsd: 900_000 }),
+      makeDlYieldPool({ pool: "smaller", symbol: "USDCEarn", tvlUsd: 500_000 }),
+      makeDlYieldPool({ pool: "larger", symbol: "usdceARN", tvlUsd: 900_000 }),
     ], new Set(["USDC"]), knownVariants);
     expect(results).toEqual([{
-      baseSymbol: "USDC", variantSymbol: "USDCEarn", poolId: "first",
-      chain: "Ethereum", project: "maker", tvlUsd: 500_000, apy: 5,
+      baseSymbol: "USDC", variantSymbol: "usdceARN", poolId: "larger",
+      chain: "Ethereum", project: "maker", tvlUsd: 900_000, apy: 5,
     }]);
   });
 

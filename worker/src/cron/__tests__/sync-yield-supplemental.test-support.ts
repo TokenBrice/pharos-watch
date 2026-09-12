@@ -1,4 +1,5 @@
-import type { VaultsFyiSourceResult, fetchBeefySources, OptionalRpcFamilyTelemetry } from "../yield-sync/sources";
+import type { OptionalRpcFamilyTelemetry, VaultsFyiSourceResult } from "../yield-sync/sources";
+import type { ResolvedYieldCandidate } from "../yield-sync/types";
 import { emptyTelemetry } from "../yield-sync/vaults-fyi";
 
 export function emptyVaultsFyiResult(
@@ -30,12 +31,10 @@ export function emptyRpcTelemetry(): OptionalRpcFamilyTelemetry {
   };
 }
 
-type BeefyCandidate = Awaited<ReturnType<typeof fetchBeefySources>>[number];
-
 export function beefyCandidate(
-  overrides: Partial<Omit<BeefyCandidate, "yield">> = {},
-  yieldOverrides: Partial<BeefyCandidate["yield"]> = {},
-): BeefyCandidate {
+  overrides: Partial<Omit<ResolvedYieldCandidate, "yield">> = {},
+  yieldOverrides: Partial<ResolvedYieldCandidate["yield"]> = {},
+): ResolvedYieldCandidate {
   return {
         symbol: "USDC",
         chain: "ethereum",
@@ -57,4 +56,16 @@ export function beefyCandidate(
         },
         ...overrides,
   };
+}
+
+/** B1: a successful supplemental family fetch that found no candidates. */
+export function healthyFamilyFetch(
+  candidates: ResolvedYieldCandidate[] = [],
+): { candidates: ResolvedYieldCandidate[]; degraded: boolean } {
+  return { candidates, degraded: false };
+}
+
+/** B1: a supplemental family fetch that an HTTP/parse failure ended early. */
+export function degradedFamilyFetch(): { candidates: ResolvedYieldCandidate[]; degraded: boolean } {
+  return { candidates: [], degraded: true };
 }

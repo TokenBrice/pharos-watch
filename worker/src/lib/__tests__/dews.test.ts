@@ -382,14 +382,17 @@ describe("computeDEWS", () => {
     );
 
     expect(structured.signals.yield.available).toBe(true);
-    expect(structured.signals.yield.value).toBe(100);
+    // B31: reward-heavy 20 + stale-source 15 + source-risk-penalty 20 +
+    // high-risk-venue 25 = 80. The rank attribution's `source-risk` driver is the
+    // same condition as the counted penalty, so it adds no increment and emits no
+    // `structured-rank-source-risk` warning.
+    expect(structured.signals.yield.value).toBe(80);
     expect(structured.signals.yield.warnings).toEqual(
       expect.arrayContaining([
         "structured-reward-heavy",
         "structured-stale-source",
         "structured-source-risk-penalty",
         "structured-high-risk-venue",
-        "structured-rank-source-risk",
       ]),
     );
     expect(structured.score).toBeGreaterThan(legacy.score);

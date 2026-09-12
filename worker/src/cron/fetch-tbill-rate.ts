@@ -12,12 +12,14 @@ import {
 import {
   buildHardcodedUsdBenchmark,
   withYieldBenchmarkStaticMeta,
+  YIELD_BENCHMARK_RECORD_MAX_AGE_SEC,
   type ParsedYieldBenchmarkMeta,
   type ParsedYieldBenchmarkRegistry,
 } from "./yield-sync/benchmarks";
 import { throwIfAborted } from "../lib/abort";
-import { loadRiskFreeRateRegistry } from "./yield-sync/sources-riskfree";
+import { loadRiskFreeRateRegistryWithState } from "./yield-sync/sources-riskfree";
 import { isRecord, numberValue } from "@shared/lib/type-guards";
+import { DAY_SECONDS } from "@shared/lib/time-constants";
 import type { YieldBenchmarkKey } from "@shared/types/yield";
 import type { Env } from "../lib/env";
 
@@ -47,7 +49,15 @@ import { tryCbrKeyRate } from "./tbill-sources/cbr";
 const RISK_FREE_RATES_CACHE_KEY = "risk_free_rates";
 const LEGACY_USD_RISK_FREE_RATE_CACHE_KEY = "risk_free_rate";
 const GBP_RETAINED_FALLBACK_STREAK_CACHE_KEY = "fetch-tbill-rate:gbp-retained-fallback-streak";
+const USD_FRESH_STREAK_CACHE_KEY = "fetch-tbill-rate:usd-fresh-streak";
 const TREASURY_CIRCUIT_PREFIX = "TREASURY_RATES:";
+
+// The FRED CSV loaders reject an observation older than the same per-key
+// cadence bound the registry classifier applies, so a frozen DGS3MO/DFF feed
+// falls through to Treasury XML or the retained benchmark instead of being
+// stamped as fresh market data for another 48 hours.
+const USD_FRED_MAX_OBSERVATION_AGE_DAYS = YIELD_BENCHMARK_RECORD_MAX_AGE_SEC.USD / DAY_SECONDS;
+const USD_EFFR_FRED_MAX_OBSERVATION_AGE_DAYS = YIELD_BENCHMARK_RECORD_MAX_AGE_SEC.USD_EFFR / DAY_SECONDS;
 
 function benchmarkCircuitKey(key: string): string {
   return `${TREASURY_CIRCUIT_PREFIX}${key}`;
@@ -168,6 +178,121 @@ function isFreshGbpBenchmark(benchmark: ParsedYieldBenchmarkMeta | null): boolea
 
 function retainedFallbackMonitorErrorMessage(error: unknown): string {
   return toErrorMessage(error);
+}
+
+interface BenchmarkFreshStreak {
+  consecutiveFreshRuns: number;
+  lastFreshAt: number | null;
+  lastFreshSource: string | null;
+  lastFreshRecordDate: string | null;
+}
+
+function parseBenchmarkFreshStreak(value: string | null | undefined): BenchmarkFreshStreak {
+  const empty: BenchmarkFreshStreak = {
+    consecutiveFreshRuns: 0,
+    lastFreshAt: null,
+    lastFreshSource: null,
+    lastFreshRecordDate: null,
+  };
+  if (!value) return empty;
+  try {
+    const parsed = JSON.parse(value);
+    if (!isRecord(parsed)) return empty;
+    return {
+      consecutiveFreshRuns: Math.max(0, Math.floor(numberValue(parsed.consecutiveFreshRuns) ?? 0)),
+      lastFreshAt: numberValue(parsed.lastFreshAt),
+      lastFreshSource: stringOrNull(parsed.lastFreshSource),
+      lastFreshRecordDate: stringOrNull(parsed.lastFreshRecordDate),
+    };
+  } catch {
+    return empty;
+  }
+}
+
+/**
+ * Consecutive fresh USD publications, read by the `yield-usd-benchmark-current`
+ * canary. GBP keeps its streak inside the retained-fallback monitor record
+ * because it also drives that event feed; USD only needs the liveness counter
+ * that turns "the producer silently stopped publishing" or "USD fell onto a
+ * retained/hardcoded rate" into a visible failed check before the 48h NR cliff
+ * is reached.
+ */
+async function updateUsdFreshStreakMonitor(params: {
+  db: D1Database;
+  benchmark: ParsedYieldBenchmarkMeta | null;
+  fetchedAt: number;
+  signal?: AbortSignal;
+}): Promise<Record<string, unknown>> {
+  const { db, benchmark, fetchedAt, signal } = params;
+  try {
+    const cached = await getCache(db, USD_FRESH_STREAK_CACHE_KEY);
+    throwIfAborted(signal);
+    const previous = parseBenchmarkFreshStreak(cached?.value);
+    const isFresh = benchmark != null && benchmark.isFallback !== true;
+    const streak: BenchmarkFreshStreak = isFresh
+      ? {
+          consecutiveFreshRuns: previous.consecutiveFreshRuns + 1,
+          lastFreshAt: fetchedAt,
+          lastFreshSource: benchmark.source ?? null,
+          lastFreshRecordDate: benchmark.recordDate ?? null,
+        }
+      : { ...previous, consecutiveFreshRuns: 0 };
+
+    await setCache(db, USD_FRESH_STREAK_CACHE_KEY, JSON.stringify(streak), signal);
+    return {
+      usdFreshPublicationStreak: streak.consecutiveFreshRuns,
+      usdFreshPublicationVerifiedTwice: isFresh && streak.consecutiveFreshRuns >= 2,
+      usdLastFreshAt: streak.lastFreshAt,
+      usdLastFreshSource: streak.lastFreshSource,
+      usdLastFreshRecordDate: streak.lastFreshRecordDate,
+    };
+  } catch (error) {
+    if (signal?.aborted) throw error;
+    if (error instanceof DOMException && error.name === "AbortError") throw error;
+    recordCronFailure("fetch-tbill-rate", error, {
+      metadata: {
+        stage: "usd-fresh-streak-monitor",
+        message: retainedFallbackMonitorErrorMessage(error).slice(0, 200),
+      },
+    });
+    return {};
+  }
+}
+
+/**
+ * Decide whether the hourly yield-lane retry has to refresh the benchmark
+ * registry. The age is measured from the newest *market* observation in the
+ * registry, not from the cache row's write time: a run whose providers all
+ * failed still rewrites the row with retained fallbacks, so a row-age test would
+ * let two consecutive failures reach the 48h NR cliff. USD is evaluated on its
+ * own because it is the reference hurdle every non-USD row is scored against —
+ * a healthy peg feed must not mask a USD outage.
+ */
+function resolveBenchmarkRefreshNeed(params: {
+  registry: ParsedYieldBenchmarkRegistry;
+  nowSec: number;
+  minRegistryAgeSec: number;
+}): { refresh: boolean; newestMarketAgeSec: number | null; usdMarketAgeSec: number | null } {
+  const { registry, nowSec, minRegistryAgeSec } = params;
+  const marketFetchedAt: number[] = [];
+  let usdMarketFetchedAt: number | null = null;
+  for (const benchmark of Object.values(registry)) {
+    if (!benchmark?.lastMarketFetchedAt) continue;
+    marketFetchedAt.push(benchmark.lastMarketFetchedAt);
+    if (benchmark.key === "USD") usdMarketFetchedAt = benchmark.lastMarketFetchedAt;
+  }
+  const newest = marketFetchedAt.length > 0 ? Math.max(...marketFetchedAt) : null;
+  const newestMarketAgeSec = newest == null ? null : Math.max(0, nowSec - newest);
+  const usdMarketAgeSec = usdMarketFetchedAt == null ? null : Math.max(0, nowSec - usdMarketFetchedAt);
+  return {
+    refresh:
+      newestMarketAgeSec == null
+      || newestMarketAgeSec > minRegistryAgeSec
+      || usdMarketAgeSec == null
+      || usdMarketAgeSec > minRegistryAgeSec,
+    newestMarketAgeSec,
+    usdMarketAgeSec,
+  };
 }
 
 async function updateGbpRetainedFallbackMonitor(params: {
@@ -442,7 +567,7 @@ async function tryUsdEffrBenchmark(signal?: AbortSignal): Promise<BenchmarkFetch
   const nyFed = await tryNyFedEffr(signal);
   if (nyFed) return nyFed;
 
-  const fred = await tryFredCsv(FRED_EFFR_CSV_URL, signal);
+  const fred = await tryFredCsv(FRED_EFFR_CSV_URL, signal, USD_EFFR_FRED_MAX_OBSERVATION_AGE_DAYS);
   return fred ? { ...fred, source: "fred-dff" } : null;
 }
 
@@ -676,17 +801,48 @@ function buildGbpResponseDiagnosticMetadata(resolved: ResolvedBenchmarkProvider)
   };
 }
 
+export interface FetchTbillRateOptions {
+  /**
+   * Skip this run when the published registry already carries a market
+   * observation newer than this many seconds. Only the hourly yield-lane retry
+   * passes it; the canonical daily 08:00 invocation always refreshes every
+   * descriptor so the daily cadence stays authoritative.
+   */
+  minRegistryAgeSec?: number;
+}
+
 export async function fetchTbillRate(
   db: D1Database,
   signal?: AbortSignal,
   env?: Pick<Env, "BANXICO_TOKEN">,
+  options?: FetchTbillRateOptions,
 ): Promise<CronResult> {
-  const previous = await loadRiskFreeRateRegistry(db);
+  const loaded = await loadRiskFreeRateRegistryWithState(db);
   throwIfAborted(signal);
+  const previous = loaded.registry;
   const fetchedAt = Math.floor(Date.now() / 1000);
+  const minRegistryAgeSec = options?.minRegistryAgeSec ?? null;
+
+  const refreshNeed = minRegistryAgeSec == null
+    ? null
+    : resolveBenchmarkRefreshNeed({ registry: previous, nowSec: fetchedAt, minRegistryAgeSec });
+  if (refreshNeed && !refreshNeed.refresh) {
+    return {
+      status: "skipped_neutral",
+      itemCount: 0,
+      metadata: buildMetadata({
+        skipped: true,
+        skipReason: "risk-free-registry-fresh",
+        minRegistryAgeSec,
+        newestMarketAgeSec: refreshNeed.newestMarketAgeSec,
+        usdMarketAgeSec: refreshNeed.usdMarketAgeSec,
+      }),
+    };
+  }
+
   const usdCircuitSource = benchmarkCircuitKey("USD");
   const usdAllowed = await shouldAttemptFetch(db, usdCircuitSource);
-  const usdFred = usdAllowed ? await tryFredCsv(FRED_TBILL_CSV_URL, signal) : null;
+  const usdFred = usdAllowed ? await tryFredCsv(FRED_TBILL_CSV_URL, signal, USD_FRED_MAX_OBSERVATION_AGE_DAYS) : null;
   const usdParsed = usdFred ?? (usdAllowed ? await tryTreasuryXml(signal) : null);
   const usdSource = usdFred ? "fred-dgs3mo" : usdParsed ? "treasury-yield-xml" : null;
   const usdFallbackMode = usdAllowed ? "all-sources-failed" : "circuit-open";
@@ -723,7 +879,28 @@ export async function fetchTbillRate(
     fetchedAt,
     signal,
   });
-  await writeStructuredBenchmarks(db, benchmarks);
+  const usdFreshStreakMonitor = await updateUsdFreshStreakMonitor({
+    db,
+    benchmark: benchmarks.USD,
+    fetchedAt,
+    signal,
+  });
+
+  const resolvedKeys: YieldBenchmarkKey[] = usdParsed ? ["USD"] : [];
+  for (const descriptor of BENCHMARK_FETCH_DESCRIPTORS) {
+    if (resolvedByKey[descriptor.key]?.parsed) resolvedKeys.push(descriptor.key);
+  }
+  // A cache row that exists but cannot be parsed leaves no evidence behind the
+  // keys this run did not resolve. Rewriting it with the placeholder registry
+  // would destroy the raw row and publish an unverifiable "current" snapshot, so
+  // that specific case is left untouched until something measured is available
+  // (a missing row has nothing to preserve and keeps the historical write).
+  const registryCacheWrite = loaded.cacheState === "invalid" && resolvedKeys.length === 0
+    ? "skipped-unreadable-cache"
+    : "written";
+  if (registryCacheWrite === "written") {
+    await writeStructuredBenchmarks(db, benchmarks);
+  }
 
   const degradationReasons = buildBenchmarkDegradationReasons(usdMeta, resolvedByKey);
   return {
@@ -735,6 +912,10 @@ export async function fetchTbillRate(
       includeDetails: true,
       extraFields: {
         ...gbpRetainedFallbackMonitor,
+        ...usdFreshStreakMonitor,
+        registryCacheState: loaded.cacheState,
+        registryCacheWrite,
+        resolvedBenchmarkKeys: resolvedKeys,
         ...buildGbpResponseDiagnosticMetadata(resolvedByKey.GBP),
       },
     }),

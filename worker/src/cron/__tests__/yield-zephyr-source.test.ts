@@ -35,10 +35,24 @@ describe("fetchZephyrZysSource", () => {
         sourceKey: "protocol-api:zys-zephyr-protocol",
         yieldSource: "Zephyr Scanner ZYS returns",
         yieldType: "nav-appreciation",
-        sourceObservedAt: 1_778_592_715,
+        // B17 — the upstream success time is floored to a stable hourly bucket so
+        // repeated reads cannot write a new phantom row per call.
+        sourceObservedAt: 1_778_590_800,
         comparisonAnchorObservedAt: null,
       }),
     );
+  });
+
+  it("refuses to date a payload the upstream marks x-stale", async () => {
+    mockYieldSourceRoutes([
+      {
+        match: "zephyrprotocol.com/api/v1/historicalreturns",
+        headers: { "x-last-success-at": "1778592715928", "x-stale": "1" },
+        body: { oneDay: { effectiveApy: 9.3084 } },
+      },
+    ]);
+
+    await expect(fetchZephyrZysSource()).resolves.toBeNull();
   });
 
   it("returns null when the one-day effective APY is missing", async () => {

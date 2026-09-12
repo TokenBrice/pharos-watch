@@ -40,7 +40,7 @@ describe("fetchPendleMarketSources", () => {
       { match: "/core/v1/8453/markets?", body: { results: [] } },
     ]);
 
-    const results = await fetchPendleMarketSources();
+    const { candidates: results } = await fetchPendleMarketSources();
     expect(results.map((result) => result.yield.sourceKey)).toEqual(["protocol-api:pendle:ethereum:0xabc"]);
     expect(results[0].yield).toEqual(
       expect.objectContaining({
@@ -85,7 +85,7 @@ describe("fetchPendleMarketSources", () => {
       { match: "/core/v1/8453/markets?", body: { results: [] } },
     ]);
 
-    const results = await fetchPendleMarketSources();
+    const { candidates: results } = await fetchPendleMarketSources();
     expect(results).toEqual([]);
   });
 
@@ -135,7 +135,7 @@ describe("fetchPendleMarketSources", () => {
       { match: "/core/v1/8453/markets?", body: { results: [] } },
     ]);
 
-    await expect(fetchPendleMarketSources()).resolves.toEqual([]);
+    await expect(fetchPendleMarketSources()).resolves.toEqual({ candidates: [], degraded: false });
   });
 
   it("keeps same-address markets on distinct chains", async () => {
@@ -149,10 +149,20 @@ describe("fetchPendleMarketSources", () => {
         categoryIds: ["stables"],
       }] },
     })), { requireMatch: true });
-    expect((await fetchPendleMarketSources()).map((result) => result.yield.sourceKey)).toEqual([
+    expect((await fetchPendleMarketSources()).candidates.map((result) => result.yield.sourceKey)).toEqual([
       "protocol-api:pendle:ethereum:0xabc",
       "protocol-api:pendle:arbitrum:0xabc",
       "protocol-api:pendle:base:0xabc",
     ]);
+  });
+
+  it("reports a degraded fetch when a chain page fails", async () => {
+    mockYieldSourceRoutes([
+      { match: "/core/v1/1/markets?", body: { error: "upstream unavailable" }, status: 500 },
+      { match: "/core/v1/42161/markets?", body: { results: [] } },
+      { match: "/core/v1/8453/markets?", body: { results: [] } },
+    ]);
+
+    await expect(fetchPendleMarketSources()).resolves.toEqual({ candidates: [], degraded: true });
   });
 });

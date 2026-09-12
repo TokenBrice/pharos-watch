@@ -15,6 +15,11 @@ import {
   getYieldSupplementalFamilyCacheKey,
   type DeterministicOnChainHealthState,
 } from "./cache";
+import {
+  getYieldSupplementalRunOutcomeCacheKey,
+  parseYieldSupplementalRunOutcome,
+} from "./cache/supplemental-cache-keys";
+import { SUPPLEMENTAL_SOURCE_STALE_THRESHOLD_MS } from "../../lib/yield-ranking-helpers";
 import { fetchOnChainRates, loadDlStablecoinPools, loadRiskFreeRateRegistry } from "./sources";
 import { buildStablecoinSupplyMapFromCacheValue } from "./supply-map";
 import {
@@ -26,7 +31,10 @@ import type { ResolvedYieldCandidate } from "./types";
 
 const MIN_SAFETY_SCORE_COVERAGE_RATIO = 0.75;
 const DETERMINISTIC_ONCHAIN_HEALTH_CACHE_KEY = "yield:onchain-health:v1";
-const YIELD_SUPPLEMENTAL_MAX_AGE_SEC = 12 * 3600;
+// B9: cache acceptance shares the cadence-derived supplemental staleness bound
+// (`CRON_INTERVALS["sync-yield-supplemental"] * 1.5`) with the row-freshness
+// contract and the status panel, instead of the older 12h literal.
+const YIELD_SUPPLEMENTAL_MAX_AGE_SEC = SUPPLEMENTAL_SOURCE_STALE_THRESHOLD_MS / 1000;
 const DETERMINISTIC_ONCHAIN_COOLDOWN_THRESHOLD = 2;
 const DETERMINISTIC_ONCHAIN_COOLDOWN_SEC = 6 * 3600;
 
@@ -36,6 +44,12 @@ export interface YieldSupplementalCacheMeta {
   ageSeconds: number | null;
   sourceCount: number;
   fallbackMode: string | null;
+  /**
+   * B1/B16: families whose last producer run ended degraded and therefore kept
+   * the previous snapshot (`sync-yield-supplemental` run-outcome row). Empty
+   * when no run outcome is stored yet.
+   */
+  degradedFamilies: string[];
 }
 
 export interface YieldSyncLoadedState {
@@ -76,14 +90,22 @@ async function loadYieldSupplementalCandidates(
   let latestFamilyRowUpdatedAt: number | null = null;
   let invalidFamilyCacheRows = 0;
   let staleFamilyCacheRows = 0;
+  let presentFamilyCacheRows = 0;
 
+  const runOutcomeCacheKey = getYieldSupplementalRunOutcomeCacheKey();
   const familyCacheRows = await getCaches(
     db,
-    SUPPLEMENTAL_SOURCE_FAMILY_KEYS.map((family) => getYieldSupplementalFamilyCacheKey(family)),
+    [
+      ...SUPPLEMENTAL_SOURCE_FAMILY_KEYS.map((family) => getYieldSupplementalFamilyCacheKey(family)),
+      runOutcomeCacheKey,
+    ],
   );
+  const runOutcomeRow = familyCacheRows.get(runOutcomeCacheKey) ?? null;
+  const degradedFamilies = runOutcomeRow ? parseYieldSupplementalRunOutcome(runOutcomeRow.value) : [];
   for (const family of SUPPLEMENTAL_SOURCE_FAMILY_KEYS) {
     const cachedFamily = familyCacheRows.get(getYieldSupplementalFamilyCacheKey(family)) ?? null;
     if (!cachedFamily) continue;
+    presentFamilyCacheRows += 1;
     latestFamilyRowUpdatedAt = Math.max(latestFamilyRowUpdatedAt ?? 0, cachedFamily.updatedAt);
     const requiredFamily = requiredFamilyKeys.has(family);
     if (requiredFamily) requiredFamilyCacheRows += 1;
@@ -120,6 +142,7 @@ async function loadYieldSupplementalCandidates(
         ageSeconds,
         sourceCount: candidates.length,
         fallbackMode,
+        degradedFamilies,
       },
     };
   }
@@ -132,11 +155,12 @@ async function loadYieldSupplementalCandidates(
       ageSeconds: latestFamilyRowUpdatedAt == null ? null : Math.max(0, startSec - latestFamilyRowUpdatedAt),
       sourceCount: 0,
       fallbackMode:
-        familyCacheRows.size === 0
+        presentFamilyCacheRows === 0
           ? "missing-cache"
           : invalidFamilyCacheRows > 0
             ? "invalid-cache"
             : "stale-cache",
+      degradedFamilies,
     },
   };
 }

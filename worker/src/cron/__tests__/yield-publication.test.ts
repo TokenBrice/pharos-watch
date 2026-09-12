@@ -23,7 +23,7 @@ import {
 } from "../yield-sync/publication";
 import type { PreviousYieldPublicationSnapshot } from "../yield-sync/publication";
 import { publishYieldCoordinatorResults } from "../yield-sync/coordinator-persist";
-import { publishYieldRowsAtomically } from "../yield-sync/publication-atomic-batch";
+import { publishYieldRowsAtomically, YIELD_PUBLICATION_PAYLOAD_OVERSIZE_CHARS } from "../yield-sync/publication-atomic-batch";
 import {
   FIXED_NOW,
   buildPayloadWithObservedAt,
@@ -938,6 +938,61 @@ describe("yield publication migration compatibility", () => {
         { generation_id: "g-3", retention_reason: "trend" },
       ]);
     } finally {
+      sqlite.close();
+    }
+  });
+
+  it("measures the published payload and warns before the D1 statement cap", async () => {
+    const { sqlite, db } = createLatestSchemaSqlite();
+    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+    try {
+      const result = await publishYieldRowsAtomically(db, {
+        rankingsPayload: {
+          rankings: [],
+          blob: "x".repeat(YIELD_PUBLICATION_PAYLOAD_OVERSIZE_CHARS + 1),
+        },
+        startSec: 1_774_526_400,
+        generationId: "yield-1774526400",
+        yieldDataRows: [],
+        historyRows: [
+          {
+            stablecoin_id: "coin-a",
+            source_key: "source-a",
+            recorded_at: 1_774_526_400,
+            is_best: 1,
+            apy: 4.2,
+            data_source: "test",
+            publication_generation_id: "yield-1774526400",
+            publication_state: "published",
+            pys_inputs_at_publish: null,
+          },
+          {
+            stablecoin_id: "coin-b",
+            source_key: "source-b",
+            recorded_at: 1_774_526_400,
+            is_best: 1,
+            apy: 4.4,
+            data_source: "test",
+            publication_generation_id: "yield-1774526400",
+            publication_state: "published",
+            pys_inputs_at_publish: JSON.stringify({ schemaVersion: YIELD_PYS_INPUTS_AT_PUBLISH_SCHEMA_VERSION }),
+          },
+        ],
+        decisionRows: [],
+        decisionAlternativeRows: [],
+      });
+
+      expect(result.written).toBe(true);
+      expect(result.publicationStats.cacheValueChars).toBeGreaterThan(YIELD_PUBLICATION_PAYLOAD_OVERSIZE_CHARS);
+      expect(result.publicationStats.oversize).toBe(true);
+      // The replay-evidence counters follow the rows actually bound to the write.
+      expect(result.publicationStats.pysInputsPersistedCount).toBe(1);
+      expect(result.publicationStats.pysInputsNullCount).toBe(1);
+      expect(
+        warnSpy.mock.calls.some((call) => String(call[0]).includes("yield-publication-payload-oversize")),
+      ).toBe(true);
+    } finally {
+      warnSpy.mockRestore();
       sqlite.close();
     }
   });

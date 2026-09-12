@@ -33,7 +33,7 @@ describe("fetchMorphoVaultSources", () => {
       },
     ]);
 
-    const results = await fetchMorphoVaultSources();
+    const { candidates: results } = await fetchMorphoVaultSources();
     expect(results.length).toBe(1);
     const request = JSON.parse(fetchSpy.mock.calls[0][1]?.body as string) as { variables: { symbols: string[] } };
     expect(request.variables.symbols).toContain("USDC");
@@ -63,10 +63,9 @@ describe("fetchMorphoVaultSources", () => {
     );
   });
 
-  it("returns empty array on HTTP error", async () => {
+  it("reports a degraded fetch on HTTP error", async () => {
     mockYieldSourceRoutes([{ match: "api.morpho.org", body: { error: "internal server error" }, status: 500 }]);
-    const results = await fetchMorphoVaultSources();
-    expect(results).toEqual([]);
+    await expect(fetchMorphoVaultSources()).resolves.toEqual({ candidates: [], degraded: true });
   });
 
   it.each([0, 0.03])("accepts the tracked vault only with positive APY (%s)", async (netApy) => {
@@ -91,7 +90,7 @@ describe("fetchMorphoVaultSources", () => {
       },
     ]);
 
-    const results = await fetchMorphoVaultSources();
+    const { candidates: results } = await fetchMorphoVaultSources();
     expect(results.map((result) => result.yield.sourceKey)).toEqual(
       netApy === 0 ? [] : ["protocol-api:morpho-vault:ethereum:0xabc"],
     );
@@ -131,7 +130,7 @@ describe("fetchMorphoVaultSources", () => {
       },
     ]);
 
-    const results = await fetchMorphoVaultSources();
+    const { candidates: results } = await fetchMorphoVaultSources();
     expect(results).toHaveLength(1);
     expect(results[0].symbol).toBe("USDC");
   });
@@ -168,7 +167,7 @@ describe("fetchMorphoVaultSources", () => {
       },
     ]);
 
-    const results = await fetchMorphoVaultSources();
+    const { candidates: results } = await fetchMorphoVaultSources();
     expect(results).toEqual([]);
   });
 
@@ -197,7 +196,7 @@ describe("fetchMorphoVaultSources", () => {
       },
     ]);
 
-    const results = await fetchMorphoVaultSources();
+    const { candidates: results } = await fetchMorphoVaultSources();
     expect(results).toHaveLength(1);
     expect(results[0]).toEqual(
       expect.objectContaining({

@@ -3,7 +3,6 @@ import { resolveYieldRowSafety } from "@shared/lib/yield-opportunity-risk";
 import {
   computePYSFromComponents,
   computePysComponents,
-  computePysRewardShare,
   derivePysSourceRiskPenalty,
   PYS_MAX_SOURCE_RISK_PENALTY,
   yieldStabilityToApyVarianceScore,
@@ -37,7 +36,7 @@ import {
   type ParsedYieldBenchmarkRegistry,
   type YieldBenchmarkFreshness,
 } from "./benchmarks";
-import { inferVenueProtocol, resolveDependencyConcentration } from "./source-risk";
+import { resolveDependencyConcentration, resolveYieldRewardShare, resolveYieldVenueProtocol } from "./source-risk";
 import { buildHistoryKey, pickHistoryRowsForSource } from "./evaluation-history";
 import {
   compareCandidates,
@@ -74,14 +73,6 @@ function isResolvedYieldEntryWithYield(
   entry: ResolvedYieldEntry,
 ): entry is ResolvedYieldEntry & { yield: ResolvedYield } {
   return entry.yield != null;
-}
-
-function getHistoryRowsForStats(
-  dataSource: string,
-  rows: YieldHistorySnapshotRow[],
-): YieldHistorySnapshotRow[] {
-  if (dataSource !== "onchain") return rows;
-  return rows.filter((row) => !isOnChainBootstrapYieldSeed(row));
 }
 
 export interface EvaluateYieldSourcesInput {
@@ -380,7 +371,11 @@ function evaluateYieldSourceGroup(
       input.startSec,
     );
     const historyRows = historySelection.rows;
-    const historyRowsForStats = getHistoryRowsForStats(y.dataSource, historyRows);
+    // B26 — `isOnChainBootstrapYieldSeed` is lane-agnostic: the Tier-1 `onchain`
+    // lane and the `protocol-api` NAV oracles (Ondo, Midas) both write the
+    // anchor-without-yield seed shape, so a seed row must stay out of
+    // apy7d/apy30d and the variance samples regardless of which lane recorded it.
+    const historyRowsForStats = historyRows.filter((row) => !isOnChainBootstrapYieldSeed(row));
     const samples: number[] = [];
     const apy7dSamples: number[] = [];
     for (const row of historyRowsForStats) {
@@ -420,11 +415,17 @@ function evaluateYieldSourceGroup(
       underlyingSafety: safety,
       defaultSafetyScore: DEFAULT_SAFETY_SCORE,
       safetySnapshotUnavailable,
-      // Resolve the reviewed venue config from the same identifier stored as
-      // venueProtocol (DeFiLlama project slug first, then sourceKey inference) so
-      // auto-discovered lending rows — not just native/curated families — pick up
-      // their 5-category venue-risk score.
-      venueProtocolHint: y.project ?? inferVenueProtocol(y),
+      // A8: one venue resolver. The same call feeds the published row
+      // (`buildYieldSourceRisk`), so a row can no longer be scored against one
+      // venue and labelled with another — explicit venueProtocol, then the
+      // variant child-id map, then the DeFiLlama project slug, then the
+      // sourceKey route.
+      venueProtocolHint: resolveYieldVenueProtocol({
+        venueProtocol: y.sourceRisk?.venueProtocol ?? y.venueProtocol ?? null,
+        sourceKey: y.sourceKey,
+        project: y.project ?? null,
+        stablecoinId,
+      }),
       sourceRisk: y.sourceRisk ?? null,
       sourceTvlUsd: y.sourceTvlUsd,
       ratedProvenance: "cached-publish",
@@ -465,12 +466,14 @@ function evaluateYieldSourceGroup(
           ...historyRowsForStats.map((row) => Math.floor(row.recorded_at / DAY_SECONDS)),
           Math.floor(input.startSec / DAY_SECONDS),
         ]).size;
-    // A9: the penalty input must resolve the same reward share the publisher
-    // emits. A base-only payload (apyReward null while apyBase already equals the
-    // current APY) proves the reward share is zero rather than unknown.
-    const rewardShare =
-      computePysRewardShare(y.apyReward, y.currentApy) ??
-      (y.apyReward == null && y.apyBase != null && y.apyBase >= y.currentApy - 1e-9 ? 0 : null);
+    // A9: the penalty input and the published field resolve the reward share
+    // through the same helper, so a base-only payload (apyReward null while
+    // apyBase already equals the current APY) scores the same zero it publishes.
+    const rewardShare = resolveYieldRewardShare({
+      apyReward: y.apyReward,
+      apyBase: y.apyBase,
+      currentApy: y.currentApy,
+    });
     const sourceObservedAt = resolveSourceObservedAt(y, input.dlPoolsMeta);
     const sourceAgeSeconds = resolveSourceAgeSeconds(input.startSec, y, sourceObservedAt, input.dlPoolsMeta);
     const comparisonAnchorAgeSeconds = computeSourceAgeSeconds(input.startSec, y.comparisonAnchorObservedAt);
@@ -480,9 +483,11 @@ function evaluateYieldSourceGroup(
       sourceAgeSeconds,
       comparisonAnchorAgeSeconds,
     });
-    const benchmarkFreshness = classifyYieldBenchmarkFreshness(benchmarkMeta, {
-      selectionMode: benchmarkSelection.selectionMode,
-    });
+    // A1: classify the benchmark entry from the feed's own health only. A
+    // `fallback-usd` selection is a documented per-row methodology decision
+    // (the peg has no native feed), not a degraded feed, so it must not emit
+    // `benchmark-degraded` or cap the row at `estimated`.
+    const benchmarkFreshness = classifyYieldBenchmarkFreshness(benchmarkMeta);
     // A3: only a non-USD benchmark consumes the USD reference rate, so only those
     // rows can be mis-based by a retained or stale reference; USD rows are already
     // covered by their own benchmark freshness.

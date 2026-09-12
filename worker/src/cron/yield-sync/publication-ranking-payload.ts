@@ -6,10 +6,19 @@ import type {
   YieldBenchmarkRegistry,
   YieldPublicDecisionLedger,
   YieldPublicationMetadata,
+  YieldRankChangeAttribution,
+  YieldRanking,
   YieldSafetySnapshotMeta,
   YieldSourceInputMeta,
 } from "@shared/types/yield";
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
+import { YIELD_METHODOLOGY_VERSION } from "@shared/lib/methodology-versions/yield-methodology";
+import { logWorkerEventArgs } from "../../lib/structured-log";
+import {
+  buildYieldRankBaseline,
+  buildYieldRankChangeAttribution,
+  compareYieldRankRows,
+} from "../../lib/yield-rank-attribution";
 import { PYS_SCALING_FACTOR } from "../../lib/constants";
 import { resolveYieldSourceUrl } from "../../lib/yield-source-links";
 import { getComparisonAnchorStaleThresholdMs, getRankingStaleThresholdMs } from "../yield-helpers";
@@ -25,6 +34,36 @@ import { buildYieldMethodology } from "./publication-methodology";
 import { buildYieldSourceRisk } from "./source-risk";
 import { classifyYieldBenchmarkFreshness } from "./benchmarks";
 
+/**
+ * B23: a non-finite measurement serializes to `null`, and the row schema accepts
+ * null only where "no measurement" is a meaningful value. `benchmarkRate` is
+ * optional but *not* nullable, so one NaN there fails publish validation for the
+ * whole generation — every row is skipped behind a generic
+ * `schema-validation-failed`. Non-finite values are therefore named in the log
+ * and either omitted or published as null, degrading the one row that lost its
+ * measurement.
+ */
+function logNonFiniteBaseValue(field: string, rowId: string, disposition: string): void {
+  logWorkerEventArgs(
+    "handler",
+    "warn",
+    `[sync-yield-data] Non-finite ${field} on ${rowId}: ${disposition}`,
+  );
+}
+
+function finiteBaseValue(value: number | null | undefined, field: string, rowId: string): number | null {
+  if (value == null) return null;
+  if (Number.isFinite(value)) return value;
+  logNonFiniteBaseValue(field, rowId, "published as null");
+  return null;
+}
+
+/** Required row fields have nowhere to degrade to; name them before they fail. */
+function requiredBaseValue(value: number, field: string, rowId: string): number {
+  if (!Number.isFinite(value)) logNonFiniteBaseValue(field, rowId, "row cannot validate");
+  return value;
+}
+
 function evaluatedSourceToRanking(
   source: EvaluatedYieldSource,
   provenance: Record<string, unknown> | null,
@@ -33,15 +72,16 @@ function evaluatedSourceToRanking(
   decisionLedger?: YieldPublicDecisionLedger | null,
 ) {
   const meta = TRACKED_META_BY_ID.get(source.id);
+  const benchmarkRate = finiteBaseValue(source.benchmarkRate, "benchmarkRate", source.id);
   return {
     id: source.id,
     symbol: source.symbol,
     name: meta?.name ?? source.symbol,
-    currentApy: source.currentApy,
-    apy7d: source.apy7d,
-    apy30d: source.apy30d,
-    apyBase: source.apyBase,
-    apyReward: source.apyReward,
+    currentApy: requiredBaseValue(source.currentApy, "currentApy", source.id),
+    apy7d: requiredBaseValue(source.apy7d, "apy7d", source.id),
+    apy30d: requiredBaseValue(source.apy30d, "apy30d", source.id),
+    apyBase: finiteBaseValue(source.apyBase, "apyBase", source.id),
+    apyReward: finiteBaseValue(source.apyReward, "apyReward", source.id),
     yieldSource: source.yieldSource,
     yieldSourceUrl: resolveYieldSourceUrl({
       stablecoinId: source.id,
@@ -50,30 +90,34 @@ function evaluatedSourceToRanking(
     }),
     yieldType: source.yieldType,
     dataSource: source.dataSource,
-    sourceTvlUsd: source.sourceTvlUsd,
-    pharosYieldScore: source.pharosYieldScore,
+    sourceTvlUsd: finiteBaseValue(source.sourceTvlUsd, "sourceTvlUsd", source.id),
+    pharosYieldScore: finiteBaseValue(source.pharosYieldScore, "pharosYieldScore", source.id),
     pysNullReason: source.pysNullReason,
-    safetyScore: source.safetyProvenance === "safety-snapshot-unavailable" ? null : source.safetyScore,
+    safetyScore: source.safetyProvenance === "safety-snapshot-unavailable"
+      ? null
+      : finiteBaseValue(source.safetyScore, "safetyScore", source.id),
     safetyGrade: source.safetyGrade,
     safetyReason: source.safetyReason,
-    yieldToRisk: source.yieldToRisk,
-    excessYield: source.excessYield,
+    yieldToRisk: finiteBaseValue(source.yieldToRisk, "yieldToRisk", source.id),
+    excessYield: finiteBaseValue(source.excessYield, "excessYield", source.id),
     benchmarkKey: source.benchmarkKey,
     benchmarkLabel: source.benchmarkLabel,
     benchmarkCurrency: source.benchmarkCurrency,
-    benchmarkRate: source.benchmarkRate,
+    // Optional, not nullable: omitted rather than nulled when it is not a number.
+    ...(benchmarkRate != null ? { benchmarkRate } : {}),
     benchmarkRecordDate: source.benchmarkRecordDate,
     benchmarkIsFallback: source.benchmarkIsFallback,
     benchmarkFallbackMode: source.benchmarkFallbackMode,
     benchmarkSelectionMode: source.benchmarkSelectionMode,
     benchmarkIsProxy: source.benchmarkIsProxy,
-    yieldStability: source.yieldStability,
-    apyVariance30d: source.stdDev30d,
-    apyMin30d: source.apyMin30d,
-    apyMax30d: source.apyMax30d,
+    yieldStability: finiteBaseValue(source.yieldStability, "yieldStability", source.id),
+    apyVariance30d: finiteBaseValue(source.stdDev30d, "apyVariance30d", source.id),
+    apyMin30d: finiteBaseValue(source.apyMin30d, "apyMin30d", source.id),
+    apyMax30d: finiteBaseValue(source.apyMax30d, "apyMax30d", source.id),
     warningSignals: [...source.warnings],
     altSources: [] as AltYieldSource[],
     alternateSummary: undefined as YieldAlternateSummary | null | undefined,
+    rankChangeAttribution: undefined as YieldRankChangeAttribution | null | undefined,
     sourceRisk: buildYieldSourceRisk({ source, provenance, isBest: true }),
     sourceRole: deriveYieldSourceRole(source, { isSelected: true }),
     ...(publicationGenerationId ? { publicationGenerationId } : {}),
@@ -223,6 +267,91 @@ function buildAlternateSummary(
   };
 }
 
+/**
+ * B23: the evidence-completeness denominator the scoring pass used
+ * (`EVIDENCE_FIELD_COUNT` in `@shared/lib/yield-evidence`, consumed through
+ * `assessYieldEvidence`). That constant is module-private today, so the
+ * publish-time re-derivation names its own copy rather than re-typing a bare
+ * `/ 7`; exporting the shared one collapses the pair.
+ */
+const YIELD_EVIDENCE_FIELD_COUNT = 7;
+
+/** Previous publication rows, loose because they are read back off the cache. */
+export interface PreviousPublicationForAttribution {
+  rankings: readonly unknown[];
+  methodologyVersion?: string | null;
+}
+
+/**
+ * A cached row is usable as an attribution baseline only when it carries the
+ * three fields the served comparator reads; anything else would make the
+ * baseline order (and so every reported rank delta) undefined.
+ */
+function toBaselineRow(value: unknown): YieldRanking | null {
+  if (value == null || typeof value !== "object" || Array.isArray(value)) return null;
+  const row = value as Partial<YieldRanking>;
+  if (typeof row.id !== "string" || typeof row.name !== "string") return null;
+  if (typeof row.currentApy !== "number" || !Number.isFinite(row.currentApy)) return null;
+  return row as YieldRanking;
+}
+
+/** The published row fields publish-time attribution reads and writes. */
+interface AttributableRankingRow {
+  id: string;
+  name: string;
+  currentApy: number;
+  pharosYieldScore: number | null;
+  safetyScore: number | null;
+  rankChangeAttribution: YieldRankChangeAttribution | null | undefined;
+}
+
+/**
+ * B7/B31: attribution used to exist only in the read path, so the cached
+ * payload DEWS hydrates never carried it and both rank branches were dead. It
+ * is built here instead, generation over generation: the baseline rank is the
+ * previous publication re-ranked with the served comparator, the new rank is
+ * this publication under the same comparator, and only a comparator-consistent
+ * move is attributed.
+ */
+function attachRankChangeAttribution(
+  rankings: AttributableRankingRow[],
+  previous: PreviousPublicationForAttribution | null | undefined,
+): void {
+  if (previous == null) return;
+  const baselineRows: YieldRanking[] = [];
+  for (const row of previous.rankings) {
+    const baselineRow = toBaselineRow(row);
+    if (baselineRow) baselineRows.push(baselineRow);
+  }
+  if (baselineRows.length === 0) return;
+
+  const previousRankById = buildYieldRankBaseline(baselineRows);
+  const previousRowById = new Map(baselineRows.map((row) => [row.id, row]));
+  const methodologyChanged =
+    previous.methodologyVersion != null && previous.methodologyVersion !== YIELD_METHODOLOGY_VERSION;
+
+  const liveRankById = new Map<string, number>();
+  [...rankings]
+    .sort((a, b) => compareYieldRankRows(a as unknown as YieldRanking, b as unknown as YieldRanking))
+    .forEach((row, index) => liveRankById.set(row.id, index + 1));
+
+  for (const ranking of rankings) {
+    const originalRow = previousRowById.get(ranking.id);
+    if (originalRow == null) continue;
+    const attribution = buildYieldRankChangeAttribution({
+      originalRow,
+      hydratedRow: {
+        ...(ranking as unknown as YieldRanking),
+        liveRank: liveRankById.get(ranking.id) ?? null,
+      },
+      previousRank: previousRankById.get(ranking.id) ?? null,
+      safetyChanged: (originalRow.safetyScore ?? null) !== (ranking.safetyScore ?? null),
+      methodologyChanged,
+    });
+    if (attribution) ranking.rankChangeAttribution = attribution;
+  }
+}
+
 export function buildYieldRankingsPayloadFromEvaluatedSources(
   input: {
     evaluatedSources: EvaluatedYieldSource[];
@@ -236,6 +365,12 @@ export function buildYieldRankingsPayloadFromEvaluatedSources(
     medianApy: number;
     startSec: number;
     publication?: YieldPublicationMetadata | null;
+    /**
+     * Previous publication, as loaded from the `yield-rankings` cache. Present
+     * only when the caller can supply it; without it the payload publishes no
+     * rank-change attribution (B7/B31).
+     */
+    previousPublication?: PreviousPublicationForAttribution | null;
   },
 ) {
   // The publication views are the sole owner of the selection decision: each
@@ -292,10 +427,9 @@ export function buildYieldRankingsPayloadFromEvaluatedSources(
     const staleSource =
       (updatedAtMs > 0 && updatedAtMs < input.startSec * 1000 - staleThresholdMs) ||
       staleComparisonAnchor;
-    const benchmarkFreshness = source.benchmarkFreshness ?? classifyYieldBenchmarkFreshness(
-      source.benchmarkMeta,
-      { selectionMode: source.benchmarkSelectionMode },
-    );
+    // A1: proxy selection is a documented per-row methodology decision, not a
+    // degraded feed, so only the entry's own meta classifies its freshness.
+    const benchmarkFreshness = source.benchmarkFreshness ?? classifyYieldBenchmarkFreshness(source.benchmarkMeta);
     if (staleSource) {
       if (!ranking.warningSignals.includes("data-stale")) {
         ranking.warningSignals = [...ranking.warningSignals, "data-stale"];
@@ -327,7 +461,9 @@ export function buildYieldRankingsPayloadFromEvaluatedSources(
         benchmarkFreshness,
         evidenceCompleteness: Math.max(
           0,
-          Number((source.evidenceCompleteness - newlyMissingEvidenceFields / 7).toFixed(4)),
+          Number(
+            (source.evidenceCompleteness - newlyMissingEvidenceFields / YIELD_EVIDENCE_FIELD_COUNT).toFixed(4),
+          ),
         ),
         scoreQualification: qualificationInvalidated ? "NR" : source.scoreQualification,
         scoreQualified: ranking.pharosYieldScore != null,
@@ -340,6 +476,7 @@ export function buildYieldRankingsPayloadFromEvaluatedSources(
 
     return ranking;
   });
+  attachRankChangeAttribution(rankings, input.previousPublication);
 
   return {
     rankings,

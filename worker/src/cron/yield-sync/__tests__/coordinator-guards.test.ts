@@ -1,11 +1,112 @@
+import type { DatabaseSync } from "node:sqlite";
 import { describe, expect, it } from "vitest";
+
+import { createLatestSchemaSqlite } from "@shared/test-utils/latest-schema-sqlite";
 
 import {
   detectYieldQualityMixRegression,
   guardPublishedYieldCoverage,
   summarizeYieldPublicationQualityMix,
 } from "../coordinator-guards";
+import { pruneYieldTables } from "../publication";
+import { repairPublishedYieldGenerationFromCache } from "../publication-lifecycle";
 import type { PreviousYieldPublicationSnapshot } from "../publication";
+
+const GENERATION_START_SEC = 1_800_000_000;
+
+function insertYieldGeneration(
+  sqlite: DatabaseSync,
+  generationId: string,
+  state: string,
+  startedAt: number,
+  publishedAt: number | null,
+) {
+  sqlite
+    .prepare(
+      `INSERT INTO yield_publication_generations (
+        generation_id, started_at, state, cache_key, ranking_updated_at, ranking_count,
+        source_row_count, best_row_count, decision_count, metadata_json, created_at, published_at
+      ) VALUES (?, ?, ?, 'yield-rankings', ?, 1, 1, 1, 1, '{}', ?, ?)`,
+    )
+    .run(generationId, startedAt, state, startedAt, startedAt, publishedAt);
+}
+
+describe("Yield publication generation lifecycle", () => {
+  it("does not restamp published_at for a generation the cache already proves published", async () => {
+    const { sqlite, db } = createLatestSchemaSqlite();
+    try {
+      sqlite
+        .prepare("INSERT INTO cache (key, value, updated_at) VALUES (?, ?, ?)")
+        .run(
+          "yield-rankings",
+          JSON.stringify({
+            publication: { generationId: "yield-100", status: "published", updatedAt: 100, cutoffAt: 100 },
+          }),
+          100,
+        );
+      insertYieldGeneration(sqlite, "yield-100", "published", 100, 100);
+
+      await repairPublishedYieldGenerationFromCache(db, GENERATION_START_SEC);
+
+      expect(
+        sqlite
+          .prepare("SELECT published_at FROM yield_publication_generations WHERE generation_id = ?")
+          .get("yield-100"),
+      ).toEqual({ published_at: 100 });
+    } finally {
+      sqlite.close();
+    }
+  });
+
+  it("repairs a generation the cache proves published but the row did not", async () => {
+    const { sqlite, db } = createLatestSchemaSqlite();
+    try {
+      sqlite
+        .prepare("INSERT INTO cache (key, value, updated_at) VALUES (?, ?, ?)")
+        .run(
+          "yield-rankings",
+          JSON.stringify({
+            publication: { generationId: "yield-200", status: "published", updatedAt: 200, cutoffAt: 200 },
+          }),
+          200,
+        );
+      insertYieldGeneration(sqlite, "yield-200", "staged", 200, null);
+
+      await repairPublishedYieldGenerationFromCache(db, GENERATION_START_SEC);
+
+      expect(
+        sqlite
+          .prepare("SELECT state, published_at FROM yield_publication_generations WHERE generation_id = ?")
+          .get("yield-200"),
+      ).toEqual({ state: "published", published_at: GENERATION_START_SEC });
+    } finally {
+      sqlite.close();
+    }
+  });
+
+  it("finalizes generations abandoned mid-run and leaves a live staged one alone", async () => {
+    const { sqlite, db } = createLatestSchemaSqlite();
+    try {
+      insertYieldGeneration(sqlite, "yield-abandoned", "staged", GENERATION_START_SEC - 7200, null);
+      insertYieldGeneration(sqlite, "yield-live", "staged", GENERATION_START_SEC - 60, null);
+
+      await pruneYieldTables(db, GENERATION_START_SEC);
+
+      expect(
+        sqlite
+          .prepare(
+            "SELECT generation_id, state, failure_reason FROM yield_publication_generations ORDER BY generation_id",
+          )
+          .all(),
+      ).toEqual([
+        { generation_id: "yield-abandoned", state: "failed", failure_reason: "abandoned-staged" },
+        { generation_id: "yield-live", state: "staged", failure_reason: null },
+      ]);
+    } finally {
+      sqlite.close();
+    }
+  });
+});
 
 function ranking(
   id: string,

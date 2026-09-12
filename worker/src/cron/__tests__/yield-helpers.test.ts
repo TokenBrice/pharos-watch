@@ -555,6 +555,21 @@ describe("matchAllDlPools", () => {
     expect(result).toHaveLength(1);
     expect(result[0]?.pool).toBe("p1");
   });
+
+  it("rejects a multi-asset vault whose underlying set only contains the coin (B19)", () => {
+    const pools = [
+      makeDlYieldPool({
+        pool: "a5f9e3ff", symbol: "vault", project: "yearn", tvlUsd: 8e6, apy: 27.7, apyBase: 27.7,
+        stablecoin: true,
+        underlyingTokens: ["0x111111a1a0667d36bd57c0a9f569b98057111111", "0x222222b2b0667d36bd57c0a9f569b98057222222"],
+      }),
+    ];
+
+    const result = matchAllDlPools("dusd-alto", "DUSD", pools, {}, {}, {
+      contractAddresses: ["0x111111A1A0667d36Bd57c0A9f569b98057111111"],
+    });
+    expect(result).toHaveLength(0);
+  });
 });
 
 describe("findBestLendingPool", () => {
@@ -605,6 +620,24 @@ describe("findBestLendingPool", () => {
     });
     expect(result).not.toBeNull();
     expect(result!.pool).toBe("p5");
+  });
+
+  it("rejects a multi-asset vault that merely contains the coin's address (B19)", () => {
+    // Board rows #2/#3 before this guard: a Yearn vault holding [frxUSD, DUSD] was
+    // the DUSD lending source, and an [sDOLA, untracked] vault the sDOLA one.
+    const poolsWithUnderlying = [
+      ...pools,
+      makeDlYieldPool({
+        pool: "a5f9e3ff", symbol: "yvDUSD", project: "aave-v3", tvlUsd: 50_000_000, apy: 27.7, apyBase: 27.7,
+        stablecoin: true,
+        underlyingTokens: ["0x111111a1a0667d36bd57c0a9f569b98057111111", "0x333333c3c0667d36bd57c0a9f569b98057333333"],
+      }),
+    ];
+
+    const result = findBestLendingPool("DUSD", poolsWithUnderlying, allowlist, {
+      contractAddresses: ["0x111111A1A0667d36Bd57c0A9f569b98057111111"],
+    });
+    expect(result).toBeNull();
   });
 
   it("prefers address match over exact symbol when both are available", () => {

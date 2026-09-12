@@ -105,6 +105,7 @@ export async function runYieldCoordinatorHealthTelemetryStage(
       (source) => normalized.bestSourceKeyByCoin.get(source.id) === source.sourceKey,
     ),
     dlPoolsMeta: fetched.dlPoolsMeta,
+    supplementalMeta: fetched.supplementalMeta,
     allDeterministicFailed: fetched.allDeterministicFailed,
     maskedAllDeterministicFailure: onChainHealth.maskedAllDeterministicFailure,
     onChainSkippedDueToCooldown: fetched.onChainSkippedDueToCooldown,

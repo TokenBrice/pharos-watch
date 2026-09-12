@@ -251,6 +251,25 @@ export function makeYieldHistoryRow(
   };
 }
 
+/**
+ * Statements `pruneYieldTables` issues on every run, including runs that skip
+ * destructive cleanup. C11 (W1d) added the abandoned-staged finalize; its SQL
+ * touches `yield_publication_generations`, which no generic matcher covers, so
+ * a missing entry fails the whole sync with `mockD1: no match for SQL`.
+ *
+ * Registered once here: `makeYieldHistoryDb` composes this list, and suites that
+ * assemble their own table list go through `mockD1WithYieldPruneTables` instead
+ * of re-declaring the matcher.
+ */
+export function yieldSyncPruneTableMatches(): MockTableConfig[] {
+  return [{ match: "pharos:yield-sync:abandoned-staged-generation-finalize", rows: [] }];
+}
+
+/** `mockD1` with the always-issued yield prune matchers appended to a custom list. */
+export function mockD1WithYieldPruneTables(tables: MockTableConfig[] = []): MockD1Database {
+  return mockD1([...tables, ...yieldSyncPruneTableMatches()]);
+}
+
 function makeYieldHistoryTables(historyRows: YieldHistoryFixtureRow[]): MockTableConfig[] {
   return [
     { match: "pharos:yield-sync:daily-history-materialize", rows: [] },
@@ -262,6 +281,7 @@ function makeYieldHistoryTables(historyRows: YieldHistoryFixtureRow[]): MockTabl
     { match: "WITH ranked_linked_generations AS", rows: [] },
     { match: "pharos:yield-sync:decision-retention-delete", rows: [] },
     { match: "pharos:yield-sync:decision-alternatives-retention-delete", rows: [] },
+    ...yieldSyncPruneTableMatches(),
     { match: "pharos:yield-sync:ownership-handoff-delete", rows: [] },
     { match: "source_switch = 0", rows: [] },
     {
@@ -454,7 +474,7 @@ function getYieldRankingsCachePayload(db: MockHistoryDb): unknown {
 }
 
 function makeYieldOrphanDb(orphanIds: string[]) {
-  return mockD1([
+  return mockD1WithYieldPruneTables([
     { match: "pharos:yield-sync:yield-data-existing-ids", rows: orphanIds.map((stablecoin_id) => ({ stablecoin_id })) },
     { match: "cache", rows: [] },
     { match: "yield_data", rows: [] },
@@ -466,7 +486,7 @@ function makeYieldOrphanDb(orphanIds: string[]) {
 }
 
 function makeBrokenYieldRankingsDb() {
-  return mockD1([
+  return mockD1WithYieldPruneTables([
     { match: "cache", rows: [] },
     { match: "yield_data", rows: [{ symbol: "BROKEN", current_apy: 5 }] },
     { match: "yield_history", rows: [] },

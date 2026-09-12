@@ -94,7 +94,9 @@
     "daily-digest": ["digestTriggerPoll", "daily0805Utc"],
     "snapshot-supply": ["quarterHourly", "daily0800Utc"],
     "sync-cl-exit-depth": ["halfHourlyMeasuredExecution", "daily0810Utc"],
-    "weekly-recap": ["digestTriggerPoll", "daily0810Utc"]
+    "weekly-recap": ["digestTriggerPoll", "daily0810Utc"],
+    "sync-yield-supplemental": ["hourlyYieldSync", "fourHourlyYieldSupplemental"],
+    "fetch-tbill-rate": ["hourlyYieldSync", "daily0800Utc"]
   },
   "conditionalJobPaths": ["digestTriggerPoll:daily-digest"],
   "budgetOnlySurfaces": [

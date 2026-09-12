@@ -11,6 +11,8 @@ import {
   type LiquityV2SpSourceConfig,
 } from "../yield-sync/sources";
 
+const TEST_START_SEC = 1_800_000_000;
+
 const TEST_CHAIN_RPCS = new Map<string, ChainRpcConfig>([
   [
     "base",
@@ -128,7 +130,12 @@ describe.each([
     stubBranchRpc(config, values);
 
     const totalDeposits = values.reduce((total, branch) => total + Number(branch.deposits), 0);
-    const result = await fetchLiquityV2StabilityPoolSource(config, undefined, TEST_CHAIN_RPCS);
+    const result = await fetchLiquityV2StabilityPoolSource(TEST_START_SEC, config, undefined, TEST_CHAIN_RPCS);
+
+    // B11/D8 — the missing stamp made these rows `source-freshness-unknown` and the
+    // coin unscorable; keep it pinned so a dropped field fails here instead.
+    expect(result?.sourceObservedAt).toBe(TEST_START_SEC);
+    expect(Number.isFinite(result?.sourceObservedAt)).toBe(true);
 
     expect(result).toEqual(
       expect.objectContaining({
@@ -157,7 +164,7 @@ describe.each([
     const activeInterest = values
       .filter((_branch, index) => index !== shutdownIndex)
       .reduce((total, branch) => total + Number(branch.yearlyInterest), 0);
-    const result = await fetchLiquityV2StabilityPoolSource(config, undefined, TEST_CHAIN_RPCS);
+    const result = await fetchLiquityV2StabilityPoolSource(TEST_START_SEC, config, undefined, TEST_CHAIN_RPCS);
 
     expect(result?.currentApy).toBeCloseTo(75 * activeInterest / totalDeposits, 10);
     expect(result?.sourceTvlUsd).toBe(totalDeposits);
@@ -168,7 +175,7 @@ describe.each([
       failRead: { branchIndex: config.branches.length - 1, selector: SHUTDOWN_TIME_SELECTOR },
     });
 
-    await expect(fetchLiquityV2StabilityPoolSource(config, undefined, TEST_CHAIN_RPCS)).resolves.toBeNull();
+    await expect(fetchLiquityV2StabilityPoolSource(TEST_START_SEC, config, undefined, TEST_CHAIN_RPCS)).resolves.toBeNull();
   });
 
   it("fails closed when the CollateralRegistry reports more branches than configured", async () => {
@@ -176,18 +183,18 @@ describe.each([
       registryCount: BigInt(config.branches.length + 1),
     });
 
-    await expect(fetchLiquityV2StabilityPoolSource(config, undefined, TEST_CHAIN_RPCS)).resolves.toBeNull();
+    await expect(fetchLiquityV2StabilityPoolSource(TEST_START_SEC, config, undefined, TEST_CHAIN_RPCS)).resolves.toBeNull();
   });
 
   it("returns null when total Stability Pool deposits are zero", async () => {
     stubBranchRpc(config, buildBranchValues(config).map((branch) => ({ ...branch, deposits: 0n })));
 
-    await expect(fetchLiquityV2StabilityPoolSource(config, undefined, TEST_CHAIN_RPCS)).resolves.toBeNull();
+    await expect(fetchLiquityV2StabilityPoolSource(TEST_START_SEC, config, undefined, TEST_CHAIN_RPCS)).resolves.toBeNull();
   });
 
   it("returns null without a chain RPC for its deployment", async () => {
     stubBranchRpc(config, buildBranchValues(config));
 
-    await expect(fetchLiquityV2StabilityPoolSource(config, undefined, new Map())).resolves.toBeNull();
+    await expect(fetchLiquityV2StabilityPoolSource(TEST_START_SEC, config, undefined, new Map())).resolves.toBeNull();
   });
 });

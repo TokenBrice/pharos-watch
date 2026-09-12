@@ -822,19 +822,19 @@ describe("syncYieldData", () => {
     expect(bprotocolRow?.data_source).toBe("onchain");
     expect(Number(bprotocolRow?.current_apy)).toBeGreaterThan(1);
     expect(Number(bprotocolRow?.apy_reward)).toBeGreaterThan(1);
-    // The deterministic B.Protocol adapter publishes no `sourceObservedAt` (B11),
-    // so the row is `source-freshness-unknown`/NR: it keeps its APR but can no
-    // longer be published as the coin's best (B13).
-    expect(bprotocolRow?.pharos_yield_score).toBeNull();
-    expect(bprotocolRow?.is_best).toBe(0);
+    // B11: the deterministic B.Protocol adapter publishes `sourceObservedAt` now, so
+    // the row is scorable again and is published as the coin's best row (B13's
+    // all-rejected case no longer applies).
+    expect(bprotocolRow?.pharos_yield_score).toBe(1);
+    expect(bprotocolRow?.is_best).toBe(1);
 
     const aaveRow = findPublishedYieldRow(db, "lusd-liquity", (row) => row.source_key === "pool-lusd-aave");
     expect(aaveRow?.yield_source).toBe("Aave V3");
     expect(aaveRow?.yield_type).toBe("lending-opportunity");
     expect(aaveRow?.data_source).toBe("defillama-auto");
     // The lending row is the divergent lower-confidence alternative (>35% off the
-    // deterministic read), so it is rejected too: every candidate for the coin is
-    // rejected and B13 publishes no `is_best = 1` row at all.
+    // deterministic read), so it stays rejected: the deterministic read is the
+    // coin's published best row and the lending row is only kept as evidence.
     expect(aaveRow?.is_best).toBe(0);
   });
 
@@ -888,7 +888,7 @@ describe("syncYieldData", () => {
     expect(yieldCalls.length).toBe(0);
   });
 
-  it("returns early with itemCount 0 when no yield-bearing coins exist", async () => {
+  it("returns degraded with itemCount 0 when no yield-bearing coins exist", async () => {
     const originalYieldCoins = [...fixtureACTIVE_YIELD_BEARING_STABLECOINS];
     const db = makeDb();
 
@@ -898,7 +898,9 @@ describe("syncYieldData", () => {
       const result = await fixtureSyncYieldData(db);
 
       expect(result.itemCount).toBe(0);
-      expect(result.metadata).toBe("no yield-bearing coins");
+      expect(result.status).toBe("degraded");
+      expect(result.productivity).toEqual({ productive: false, reason: "no-yield-bearing-coins" });
+      expect(JSON.parse(result.metadata ?? "{}")).toEqual({ reason: "no-yield-bearing-coins" });
       expect(fixtureShouldAttemptFetch).not.toHaveBeenCalled();
       expect(fixtureBatchExecute).not.toHaveBeenCalled();
     } finally {

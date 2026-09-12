@@ -4,7 +4,11 @@ import {
   computeSourceRiskScoreFromPenalty,
   deriveVenueRiskTier,
 } from "@shared/lib/yield-scoring";
-import { resolveReviewedYieldRiskConfig, venueRiskWeightedOf } from "@shared/lib/yield-source-risk-registry";
+import {
+  resolveReviewedYieldRiskConfig,
+  venueRiskWeightedOf,
+  YIELD_VARIANT_CHILD_VENUE_PROTOCOLS,
+} from "@shared/lib/yield-source-risk-registry";
 export {
   findStaleVenueRiskScores,
   resolveDependencyConcentration,
@@ -19,6 +23,71 @@ import { numberValue as finiteNumber } from "@shared/lib/type-guards";
 import type { EvaluatedYieldSource } from "./evaluation-types";
 import { resolveYieldSourceKeyRoute } from "./yield-source-key-routing";
 
+/**
+ * Derivation methods are a property of the row's calculation lane, not a venue.
+ * A stored `sourceRisk.venueProtocol` from an earlier publication must not
+ * re-enter the published payload as if it named an operator (A8).
+ */
+const DERIVATION_LANE_TOKENS: Readonly<Record<string, true>> = {
+  "price-derived": true,
+  "rate-derived": true,
+};
+
+/**
+ * The single venue resolver (A8), used by both the scoring path
+ * (`evaluation.ts`) and the publisher (`buildYieldSourceRisk`) so a row can no
+ * longer be scored against one venue and labelled with another.
+ *
+ * Order: explicit `venueProtocol` → tracked variant child-id map → DeFiLlama
+ * project slug → `sourceKey` route. Returns `null` when no venue is known —
+ * never the row's derivation method.
+ */
+export function resolveYieldVenueProtocol(input: {
+  venueProtocol?: string | null;
+  sourceKey: string;
+  project?: string | null;
+  stablecoinId?: string | null;
+}): string | null {
+  const candidates = [
+    input.venueProtocol,
+    input.stablecoinId ? YIELD_VARIANT_CHILD_VENUE_PROTOCOLS[input.stablecoinId] : null,
+    input.project,
+    resolveYieldSourceKeyRoute(input.sourceKey)?.venueProtocol,
+  ];
+  for (const candidate of candidates) {
+    if (typeof candidate !== "string") continue;
+    const trimmed = candidate.trim();
+    if (trimmed && DERIVATION_LANE_TOKENS[trimmed] !== true) return trimmed;
+  }
+  return null;
+}
+
+/**
+ * The one reward-share resolution (A9) shared by the penalty input and the
+ * published field. `computePysRewardShare` returns `null` whenever the payload
+ * omits `apyReward`, but a base-only payload — `apyBase` finite and already
+ * equal to the current APY — proves the reward share is zero rather than
+ * unknown. A value stored by an earlier publication is never reused, so the
+ * published evidence always reproduces the penalty that was actually scored.
+ */
+export function resolveYieldRewardShare(params: {
+  apyReward: number | null | undefined;
+  apyBase: number | null | undefined;
+  currentApy: number | null | undefined;
+}): number | null {
+  const derived = computePysRewardShare(params.apyReward, params.currentApy);
+  if (derived != null) return derived;
+  if (
+    params.apyReward == null &&
+    params.apyBase != null &&
+    params.currentApy != null &&
+    params.apyBase >= params.currentApy - 1e-9
+  ) {
+    return 0;
+  }
+  return null;
+}
+
 function inferDeploymentPlace(source: EvaluatedYieldSource): YieldDeploymentPlace | null {
   if (source.dataSource === "rate-derived") return "rate-derived";
   if (source.dataSource === "price-derived") return "price-derived";
@@ -32,21 +101,9 @@ function inferDeploymentPlace(source: EvaluatedYieldSource): YieldDeploymentPlac
   return null;
 }
 
-export function inferVenueProtocol(source: {
-  sourceKey: string;
-  yieldType?: EvaluatedYieldSource["yieldType"] | null;
-  dataSource: EvaluatedYieldSource["dataSource"];
-}): string | null {
-  const route = resolveYieldSourceKeyRoute(source.sourceKey);
-  if (route) return route.venueProtocol;
-  return source.dataSource === "rate-derived" || source.dataSource === "price-derived"
-    ? source.dataSource
-    : null;
-}
-
 function inferVenueChain(sourceKey: string): string | null {
   const route = resolveYieldSourceKeyRoute(sourceKey);
-  if (!route) return null;
+  if (!route || route.chainSegmentIndex == null) return null;
   return sourceKey.split(":")[route.chainSegmentIndex] ?? null;
 }
 
@@ -81,10 +138,13 @@ export function buildYieldSourceRisk(params: {
 }): YieldSourceRisk {
   const existing = params.source.sourceRisk ?? {};
   const sourceAgeSeconds = finiteNumber(params.provenance?.sourceAgeSeconds);
-  const venueProtocol =
-    existing.venueProtocol ??
-    params.source.venueProtocol ??
-    inferVenueProtocol(params.source);
+  // A8: the publisher resolves the venue through the same resolver the scoring
+  // path uses, so the published label and the scored tier can no longer diverge.
+  const venueProtocol = resolveYieldVenueProtocol({
+    venueProtocol: existing.venueProtocol ?? params.source.venueProtocol,
+    sourceKey: params.source.sourceKey,
+    stablecoinId: params.source.id,
+  });
   const reviewedConfig = resolveReviewedYieldRiskConfig(venueProtocol);
   const reviewedWeighted = reviewedConfig ? venueRiskWeightedOf(reviewedConfig) : null;
 
@@ -93,7 +153,9 @@ export function buildYieldSourceRisk(params: {
       existing.sourceRiskScore ?? computeSourceRiskScoreFromPenalty(params.source.sourceRiskPenalty),
     sourceRiskPenalty: params.source.sourceRiskPenalty,
     sourceDepthRatio: params.source.sourceDepthRatio ?? existing.sourceDepthRatio ?? null,
-    rewardShare: computePysRewardShare(params.source.apyReward, params.source.currentApy) ?? existing.rewardShare ?? null,
+    // A9: re-derived every publication. A base-only payload proves the reward
+    // share is zero; an earlier publication's stored value is never reused.
+    rewardShare: resolveYieldRewardShare(params.source),
     sourceAgeSeconds:
       sourceAgeSeconds == null
         ? (existing.sourceAgeSeconds ?? null)

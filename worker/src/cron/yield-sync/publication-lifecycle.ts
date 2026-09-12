@@ -1,6 +1,7 @@
 import type { YieldPublicationMetadata } from "@shared/types/yield";
 import { batchExecute } from "../../lib/db";
 import { getCache } from "../../lib/db-cache";
+import { logWorkerEvent } from "../../lib/structured-log";
 import { buildYieldMethodology } from "./publication-methodology";
 
 export function buildYieldPublicationGenerationId(startSec: number): string {
@@ -161,6 +162,23 @@ export async function repairPublishedYieldGenerationFromCache(
   const cached = await getCache(db, "yield-rankings");
   const publication = parsePublishedYieldPublicationMetadata(cached);
   if (!publication?.generationId) return false;
+  const existingGeneration = await db
+    .prepare("SELECT state FROM yield_publication_generations WHERE generation_id = ?")
+    .bind(publication.generationId)
+    .first<{ state: string }>();
+  // Publication writes the cache value and the generation state in one atomic
+  // batch, so a row that already reads published needs no repair. Re-running the
+  // published finalize would only restamp `published_at` with this run's clock,
+  // making the admin ledger disagree with the published ranking age.
+  if (existingGeneration?.state === "published") return true;
+  logWorkerEvent({
+    scope: "lib",
+    level: "warn",
+    event: "yield-generation-repaired",
+    job: "sync-yield-data",
+    message: "Cache holds a published yield generation whose row was not published; repairing state",
+    metadata: { generationId: publication.generationId, previousState: existingGeneration?.state ?? null },
+  });
   await finalizeYieldPublicationGeneration(db, {
     generationId: publication.generationId,
     state: "published",

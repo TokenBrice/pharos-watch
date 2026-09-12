@@ -4,6 +4,8 @@ import type { EvaluatedYieldSource } from "./evaluation-types";
 import { classifyYieldBenchmarkFreshness } from "./benchmarks";
 import type { YieldEnvelopeRejection } from "./types";
 import type { YieldSupplementalCacheMeta } from "./state-loading";
+import type { YieldOptionalSourceOutcome } from "./optional-source-runtime";
+import type { YieldRowsWriteStats } from "./publication-atomic-batch";
 import { getComparisonAnchorStaleThresholdMs } from "../yield-helpers";
 
 const YIELD_METADATA_EXAMPLE_LIMIT = 25;
@@ -97,6 +99,7 @@ export function buildYieldDegradationReasons(params: {
   defaultBenchmarkMeta: YieldBenchmarkMeta;
   selectedSources: readonly EvaluatedYieldSource[];
   dlPoolsMeta: YieldSourceInputMeta;
+  supplementalMeta: YieldSupplementalCacheMeta;
   allDeterministicFailed: boolean;
   maskedAllDeterministicFailure: boolean;
   onChainSkippedDueToCooldown: boolean;
@@ -137,6 +140,28 @@ export function buildYieldDegradationReasons(params: {
   if (params.dlPoolsMeta.mode === "unavailable" || params.dlPoolsMeta.fallbackMode === "cache-parse-failed") {
     degradationReasons.push(`dl-pools:${params.dlPoolsMeta.fallbackMode ?? params.dlPoolsMeta.mode}`);
   }
+  // The aggregate coverage floor (60%) cannot see the supplemental lane's share
+  // of published rows, so its own cache state and retained-degraded families are
+  // reported directly instead of waiting for the floor to trip.
+  const supplemental = params.supplementalMeta;
+  // The chained supplemental job (A4/C16) writes these family caches earlier in
+  // the same slot, so `missing-cache` means the lane was never provisioned
+  // rather than lost; the coverage guards own any actual published-row loss.
+  // Every other lane state (stale/invalid cache, retained-degraded families)
+  // still degrades the run.
+  const supplementalLaneUnprovisioned =
+    supplemental.fallbackMode === "missing-cache" && supplemental.sourceCount === 0;
+  if (!supplementalLaneUnprovisioned && (supplemental.mode !== "cache" || supplemental.sourceCount === 0)) {
+    degradationReasons.push(`yield-supplemental:${supplemental.fallbackMode ?? supplemental.mode}`);
+  }
+  for (const family of supplemental.degradedFamilies) {
+    degradationReasons.push(`yield-supplemental:family-degraded:${family}`);
+  }
+  // B15 optional-family failures deliberately do not appear here: a coin whose
+  // optional read failed still publishes from its other coverage, and the
+  // tracked/published coverage guards already defer publication when a failure
+  // leaves a coin with none. The failures stay observable through the run
+  // metadata (`buildYieldSyncMetadata`) and the source-resolution progress row.
   if (params.allDeterministicFailed && !params.maskedAllDeterministicFailure) {
     degradationReasons.push("onchain-rates:all-deterministic-failed");
   }
@@ -201,6 +226,8 @@ export function buildYieldSyncMetadata(input: {
   previousPublishedRankingCount: number;
   dlPoolsMeta: YieldSourceInputMeta;
   supplementalMeta: YieldSupplementalCacheMeta;
+  /** B15 optional-family failures: reported here, never as a degradation reason. */
+  optionalSourceFailures: readonly YieldOptionalSourceOutcome[];
   onChain: YieldOnChainSyncMeta;
   fallbackMode: string | null;
   validationFailures: number;
@@ -208,6 +235,8 @@ export function buildYieldSyncMetadata(input: {
   cacheWriteSkipped: boolean;
   comparisonAnchorFreshness: YieldComparisonAnchorFreshnessMeta;
   previousTvlRowsTruncated: boolean;
+  /** Atomic publication payload sizes and `pys_inputs_at_publish` null rate. */
+  publicationStats: YieldRowsWriteStats | null;
   safetyIdentityChangedBeforePublish?: YieldSafetyIdentityChangeMeta | null;
 }): string {
   const onChain = input.onChain;
@@ -240,6 +269,8 @@ export function buildYieldSyncMetadata(input: {
       supplementalSourceAgeSeconds: input.supplementalMeta.ageSeconds,
       supplementalSourceCount: input.supplementalMeta.sourceCount,
       supplementalFallbackMode: input.supplementalMeta.fallbackMode,
+      optionalSourceFailures: input.optionalSourceFailures,
+      optionalSourceFailureCount: input.optionalSourceFailures.length,
       onChainRatesResolved: onChain.ratesResolved,
       onChainRatesConfigured: onChain.ratesConfigured,
       onChainEnvelopeRejectionCount: onChain.envelopeRejections.length,
@@ -266,6 +297,7 @@ export function buildYieldSyncMetadata(input: {
     validationFailures: input.validationFailures,
     riskFreeRate: input.riskFreeRate,
     cacheWriteSkipped: input.cacheWriteSkipped,
+    ...(input.publicationStats ? { publicationStats: input.publicationStats } : {}),
     ...(input.safetyIdentityChangedBeforePublish
       ? { safetyIdentityChangedBeforePublish: input.safetyIdentityChangedBeforePublish }
       : {}),

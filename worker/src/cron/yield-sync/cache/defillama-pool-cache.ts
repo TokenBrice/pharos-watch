@@ -1,6 +1,7 @@
 import { logWorkerEventArgs } from "../../../lib/structured-log";
 import type { YieldSourceInputMeta } from "@shared/types/yield";
 import { isRecord } from "@shared/lib/type-guards";
+import { DETERMINISTIC_APY_SANITY_MAX } from "../../yield-helpers";
 import type { DlPool } from "../types";
 import {
   isFiniteNumber,
@@ -16,6 +17,15 @@ interface DlStablecoinPoolsCachePayload {
   data: DlPool[];
 }
 
+/**
+ * B12 — upper envelope for a single-exposure stablecoin pool's APY. Siblings cap at
+ * 100/100/20/500/300; this lane accepted any finite value (a 1e9% row passed
+ * `isValidDlPool` and a 1000% pool reached the board). Aligns with the scorer's
+ * `PYS_APY_SANITY_MAX` so a row that clears this gate cannot be clamped to a
+ * perfect PYS downstream.
+ */
+export const DL_POOL_APY_ENVELOPE_PERCENT = DETERMINISTIC_APY_SANITY_MAX;
+
 function isValidDlPool(value: unknown): value is DlPool {
   if (!isRecord(value)) return false;
   if (typeof value.pool !== "string" || value.pool.trim() === "") return false;
@@ -24,7 +34,7 @@ function isValidDlPool(value: unknown): value is DlPool {
   if (typeof value.symbol !== "string" || value.symbol.trim() === "") return false;
   if (value.poolMeta != null && typeof value.poolMeta !== "string") return false;
   if (!isFiniteNumber(value.tvlUsd) || value.tvlUsd < 0) return false;
-  if (!isFiniteNumber(value.apy)) return false;
+  if (!isFiniteNumber(value.apy) || value.apy > DL_POOL_APY_ENVELOPE_PERCENT) return false;
   if (!isNullableFiniteNumber(value.apyBase)) return false;
   if (!isNullableFiniteNumber(value.apyReward)) return false;
   if (value.apyMean30d != null && !isFiniteNumber(value.apyMean30d)) return false;
@@ -42,7 +52,7 @@ function isValidDlPool(value: unknown): value is DlPool {
 export function filterValidDlPools(
   rows: unknown[],
   context: string,
-): { pools: DlPool[]; rejectedCount: number; rejectedExamples: string[] } {
+): { pools: DlPool[]; rejectedCount: number; rejectedExamples: string[]; envelopeRejectedCount: number } {
   const pools: DlPool[] = [];
   const rejected: unknown[] = [];
   for (const row of rows) {
@@ -52,16 +62,38 @@ export function filterValidDlPools(
       rejected.push(row);
     }
   }
+  const envelopeRejected = rejected.filter(
+    (row) =>
+      isRecord(row) &&
+      typeof row.apy === "number" &&
+      Number.isFinite(row.apy) &&
+      row.apy > DL_POOL_APY_ENVELOPE_PERCENT,
+  );
   const rejectedExamples = summarizeInvalidRows(rejected, (row, index) => {
     if (isRecord(row) && typeof row.pool === "string") return row.pool;
     return `row-${index}`;
   });
+  if (envelopeRejected.length > 0) {
+    logWorkerEventArgs("handler", "warn",
+      `[yield-sync] Rejected ${envelopeRejected.length} DL pool row(s) above the ${DL_POOL_APY_ENVELOPE_PERCENT}% APY envelope from ${context}: ${
+        summarizeInvalidRows(envelopeRejected, (row, index) => {
+          if (isRecord(row) && typeof row.pool === "string") return row.pool;
+          return `row-${index}`;
+        }).join(", ")
+      }`,
+    );
+  }
   if (rejected.length > 0) {
     logWorkerEventArgs("handler", "warn",
       `[yield-sync] Dropped ${rejected.length} invalid DL pool rows from ${context}: ${rejectedExamples.join(", ")}`,
     );
   }
-  return { pools, rejectedCount: rejected.length, rejectedExamples };
+  return {
+    pools,
+    rejectedCount: rejected.length,
+    rejectedExamples,
+    envelopeRejectedCount: envelopeRejected.length,
+  };
 }
 
 export function buildDlStablecoinPoolsCache(
@@ -81,11 +113,11 @@ export function parseDlStablecoinPoolsCache(
   raw: string,
   cacheUpdatedAt: number,
   nowSec = Math.floor(Date.now() / 1000),
-): { pools: DlPool[]; meta: YieldSourceInputMeta } | null {
+): { pools: DlPool[]; meta: YieldSourceInputMeta; envelopeRejectedCount: number } | null {
   try {
     const parsed = JSON.parse(raw) as unknown;
     if (isRecord(parsed) && Array.isArray(parsed.data)) {
-      const { pools } = filterValidDlPools(parsed.data, "structured dl-stablecoin-pools cache");
+      const { pools, envelopeRejectedCount } = filterValidDlPools(parsed.data, "structured dl-stablecoin-pools cache");
       const updatedAt = parseCachePayloadUpdatedAt(parsed.updatedAt, cacheUpdatedAt, nowSec);
       if (updatedAt == null) {
         logWorkerEventArgs("handler", "warn", "[yield-sync] Rejected DL pools cache with future updatedAt");
@@ -93,6 +125,7 @@ export function parseDlStablecoinPoolsCache(
       }
       return {
         pools,
+        envelopeRejectedCount,
         meta: {
           mode: "dex-cache",
           updatedAt,

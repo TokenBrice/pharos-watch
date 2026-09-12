@@ -3,7 +3,15 @@ import { CRON_INTERVALS } from "@shared/lib/cron-jobs";
 import { mockD1 } from "@shared/test-utils/mock-d1";
 import { loadYieldHealthSummary } from "../yield-health";
 import type { CronRunStatus, CronStatus } from "@shared/types/status";
-import { emptyYieldAudit, healthyYieldProvenance, yieldCacheRow } from "./yield-health.test-support";
+import { YIELD_SAFETY_STALE_COHERENT_MAX_AGE_SEC } from "@shared/lib/yield-safety-fallback";
+import {
+  emptyYieldAudit,
+  healthyYieldProvenance,
+  liveShapeRankings,
+  liveShapeSourceRows,
+  stampedSafetyIdentity,
+  yieldCacheRow,
+} from "./yield-health.test-support";
 
 const NOW = 1_777_000_000;
 const SUPPLEMENTAL_SOURCE_FAMILIES = [
@@ -685,5 +693,291 @@ describe("loadYieldHealthSummary", () => {
     expect(summary.supplemental.staleFamilyCount).toBe(0);
     expect(summary.supplemental.missingFamilyCount).toBe(5);
     expect(summary.supplemental.families?.morpho?.sourceCount).toBe(4);
+  });
+
+  it("reports a fresh non-fallback USD feed with proxy-selecting rows as healthy", async () => {
+    const rows = liveShapeSourceRows();
+    const usd = {
+      key: "USD",
+      label: "USD 3M T-Bill",
+      currency: "USD",
+      rate: 3.95,
+      recordDate: new Date((NOW - 2 * 86400) * 1000).toISOString().slice(0, 10),
+      fetchedAt: NOW - 59_920,
+      source: "fred-dgs3mo",
+      isFallback: false,
+      fallbackMode: null,
+    };
+    const summary = await loadYieldHealthSummary(
+      makeDb([
+        yieldCacheRow("yield-rankings", NOW - 300, {
+          updatedAt: NOW - 300,
+          rankings: liveShapeRankings(rows),
+          benchmarks: { USD: usd, EUR: { ...usd, key: "EUR", currency: "EUR", source: "ecb-estr" } },
+          provenance: healthyYieldProvenance(NOW, 157),
+        }),
+        ...supplementalFamilyRows(NOW - 3600),
+        yieldCacheRow("yield-coverage-audit", NOW - 86400, emptyYieldAudit()),
+      ]),
+      NOW,
+      { "sync-yield-data": cron() },
+    );
+
+    expect(summary.benchmarkRegistry.benchmarks.USD).toMatchObject({
+      status: "healthy",
+      rowCount: 137,
+      fallbackSelectionRowCount: 4,
+      proxySelectionRowCount: 4,
+    });
+    expect(summary.benchmarkRegistry.status).toBe("healthy");
+  });
+
+  it("measures source-risk coverage over rows that can carry each field", async () => {
+    const rows = liveShapeSourceRows();
+    const summary = await loadYieldHealthSummary(
+      makeDb([
+        yieldCacheRow("yield-rankings", NOW - 300, {
+          updatedAt: NOW - 300,
+          rankings: liveShapeRankings(rows),
+          provenance: healthyYieldProvenance(NOW, 157),
+        }),
+        ...supplementalFamilyRows(NOW - 3600),
+        yieldCacheRow("yield-coverage-audit", NOW - 86400, emptyYieldAudit()),
+      ]),
+      NOW,
+      { "sync-yield-data": cron() },
+    );
+
+    expect(summary.sourceRiskCoverage).toMatchObject({ totalRows: 270, bestRows: 157, altRows: 113 });
+    // 64 derivation-method rows have no venue, so they leave the depth denominator.
+    expect(summary.sourceRiskCoverage.fields.sourceDepthRatio).toMatchObject({
+      eligibleCount: 206,
+      populatedCount: 199,
+      ineligibleCount: 64,
+      coverageRatio: 0.966,
+    });
+    // 98 rows publish one undivided rate, so they leave the reward denominator.
+    expect(summary.sourceRiskCoverage.fields.rewardShare).toMatchObject({
+      eligibleCount: 172,
+      populatedCount: 172,
+      coverageRatio: 1,
+    });
+    expect(summary.sourceRiskCoverage.fields.venueRiskTier).toMatchObject({
+      eligibleCount: 206,
+      bestEligibleCount: 93,
+      altEligibleCount: 113,
+      coverageRatio: 0,
+    });
+  });
+
+  it("returns a null coverage ratio when no row can carry the field", async () => {
+    const summary = await loadYieldHealthSummary(
+      makeDb([
+        yieldCacheRow("yield-rankings", NOW - 300, {
+          updatedAt: NOW - 300,
+          rankings: [{
+            id: "usdy-ondo",
+            dataSource: "price-derived",
+            apyBase: 4,
+            apyReward: null,
+            sourceRisk: { sourceRiskPenalty: 1, sourceAgeSeconds: 60, observationCount30d: 4, deploymentPlace: "price-derived" },
+          }],
+          provenance: healthyYieldProvenance(NOW, 1),
+        }),
+        ...supplementalFamilyRows(NOW - 3600),
+        yieldCacheRow("yield-coverage-audit", NOW - 86400, emptyYieldAudit()),
+      ]),
+      NOW,
+      { "sync-yield-data": cron() },
+    );
+
+    expect(summary.sourceRiskCoverage.fields.rewardShare.coverageRatio).toBeNull();
+    expect(summary.sourceRiskCoverage.fields.sourceDepthRatio.eligibleCount).toBe(0);
+    expect(summary.sourceRiskCoverage.fields.venueRiskTier.coverageRatio).toBeNull();
+  });
+
+  it("requires two evidence families for penalty coverage and a populated field for sourceRisk", async () => {
+    const summary = await loadYieldHealthSummary(
+      makeDb([
+        yieldCacheRow("yield-rankings", NOW - 300, {
+          updatedAt: NOW - 300,
+          rankings: [
+            { id: "one-family", dataSource: "defillama", sourceRisk: { sourceRiskPenalty: 1.2, sourceAgeSeconds: 90 } },
+            { id: "empty-risk", dataSource: "defillama", sourceRisk: {} },
+          ],
+          provenance: healthyYieldProvenance(NOW, 2),
+        }),
+        ...supplementalFamilyRows(NOW - 3600),
+        yieldCacheRow("yield-coverage-audit", NOW - 86400, emptyYieldAudit()),
+      ]),
+      NOW,
+      { "sync-yield-data": cron() },
+    );
+
+    expect(summary.sourceRiskCoverage.fields.sourceRiskPenalty.populatedCount).toBe(0);
+    expect(summary.sourceRiskCoverage.rowsWithSourceRisk).toBe(1);
+  });
+
+  it("reports fetched-but-unused keys without degrading, and unknown published keys with degrading", async () => {
+    const meta = (key: string, recordDate: string) => ({
+      key,
+      currency: key,
+      rate: 4,
+      recordDate,
+      fetchedAt: NOW - 3600,
+      source: `feed-${key.toLowerCase()}`,
+      isFallback: false,
+      fallbackMode: null,
+    });
+    const summary = await loadYieldHealthSummary(
+      makeDb([
+        yieldCacheRow("yield-rankings", NOW - 300, {
+          updatedAt: NOW - 300,
+          rankings: [
+            { id: "usdc-circle", benchmarkKey: "USD" },
+            { id: "mystery-coin", benchmarkKey: "XYZ" },
+          ],
+          benchmarks: {
+            USD: meta("USD", new Date((NOW - 86400) * 1000).toISOString().slice(0, 10)),
+            CAD: meta("CAD", new Date((NOW - 42 * 86400) * 1000).toISOString().slice(0, 10)),
+          },
+          provenance: healthyYieldProvenance(NOW, 2),
+        }),
+        ...supplementalFamilyRows(NOW - 3600),
+        yieldCacheRow("yield-coverage-audit", NOW - 86400, emptyYieldAudit()),
+      ]),
+      NOW,
+      { "sync-yield-data": cron() },
+    );
+
+    expect(summary.benchmarkRegistry.benchmarks.USD?.status).toBe("healthy");
+    expect(summary.benchmarkRegistry.benchmarks.XYZ).toBeUndefined();
+    expect(summary.benchmarkRegistry.unusedBenchmarkKeys).toEqual([
+      expect.objectContaining({ key: "CAD", source: "feed-cad" }),
+    ]);
+    expect(summary.benchmarkRegistry.unusedBenchmarkKeys?.[0]?.recordAgeSec).toBeGreaterThan(41 * 86400);
+    expect(summary.benchmarkRegistry.unknownKeys).toEqual(["XYZ"]);
+    expect(summary.benchmarkRegistry.unknownKeyRowCount).toBe(1);
+    expect(summary.benchmarkRegistry.status).toBe("degraded");
+  });
+
+  it("classifies ranking freshness on the public yield-data 2x/4x bands", async () => {
+    const interval = CRON_INTERVALS["sync-yield-data"];
+    const cases: Array<[number, string]> = [
+      [interval * 2, "healthy"],
+      [interval * 2 + 60, "degraded"],
+      [interval * 4, "degraded"],
+      [interval * 4 + 60, "stale"],
+    ];
+    for (const [ageSec, expected] of cases) {
+      const summary = await loadYieldHealthSummary(
+        makeDb([
+          yieldCacheRow("yield-rankings", NOW - ageSec, {
+            updatedAt: NOW - ageSec,
+            rankings: [{ id: "usdc-circle" }],
+            provenance: healthyYieldProvenance(NOW, 1),
+          }),
+          ...supplementalFamilyRows(NOW - 3600),
+          yieldCacheRow("yield-coverage-audit", NOW - 86400, emptyYieldAudit()),
+        ]),
+        NOW,
+        { "sync-yield-data": cron() },
+      );
+      expect(`${ageSec}:${summary.rankingStatus}`).toBe(`${ageSec}:${expected}`);
+    }
+  });
+
+  it("degrades a fresh coverage audit whose queue exceeds the documented drain budget", async () => {
+    const summary = await loadYieldHealthSummary(
+      makeDb([
+        yieldCacheRow("yield-coverage-audit", NOW - 600, emptyYieldAudit({
+          manifestMissingCount: 200,
+          nativeExactPoolRecommendationCount: 10,
+          queueTotals: { byKind: { "manifest-missing": 6 }, suppressedItemCount: 4, truncated: true },
+          operatorQueue: {
+            persistence: "durable",
+            allowedActions: ["accept", "watch"],
+            headlineGaps: [],
+            recommendationCandidates: [],
+          },
+        })),
+      ]),
+      NOW,
+      { "sync-yield-data": cron() },
+    );
+
+    expect(summary.coverageAudit.status).toBe("degraded");
+    expect(summary.coverageAudit.headlineGapCount).toBe(200);
+    expect(summary.coverageAudit.queueTotals).toEqual({
+      byKind: { "manifest-missing": 6 },
+      suppressedItemCount: 4,
+      truncated: true,
+    });
+    expect(summary.coverageAudit.allowedActions).toEqual(["accept", "watch"]);
+    expect(summary.coverageAudit.queueDisplayOnly).toBe(true);
+  });
+
+  it("degrades when the publisher persisted no PYS inputs for part of the run", async () => {
+    const summary = await loadYieldHealthSummary(
+      makeDb([yieldCacheRow("yield-rankings", NOW - 300, {
+        updatedAt: NOW - 300,
+        rankings: [{ id: "usdc-circle" }],
+        provenance: healthyYieldProvenance(NOW, 1),
+      })]),
+      NOW,
+      { "sync-yield-data": cron("ok", 120, { pysInputsPersistedCount: 100, pysInputsNullCount: 57 }) },
+    );
+
+    expect(summary.pysInputs).toMatchObject({
+      status: "degraded",
+      persistedCount: 100,
+      nullCount: 57,
+      nullRate: 0.3631,
+    });
+    expect(summary.status).toBe("degraded");
+  });
+
+  it("surfaces a publish-time-snapshot safety fallback and its stale-coherent expiry", async () => {
+    const identityRow = { key: "safety-score-v9:publication", publication_identity: null };
+    const loadWithAge = async (ageSec: number) => loadYieldHealthSummary(
+      mockD1(
+        [
+          {
+            match: "json_extract(value, '$.identity')",
+            rows: [identityRow],
+            first: identityRow,
+          },
+          {
+            match: "yield-rankings",
+            rows: [yieldCacheRow("yield-rankings", NOW - ageSec, {
+              updatedAt: NOW - ageSec,
+              rankings: [{ id: "usdc-circle" }],
+              provenance: {
+                safetySnapshot: {
+                  coverageRatio: 1,
+                  coveredCount: 1,
+                  trackedCount: 1,
+                  reason: null,
+                  safetyScoreIdentity: stampedSafetyIdentity(),
+                },
+              },
+            })],
+          },
+        ],
+        { requireMatch: true },
+      ),
+      NOW,
+      { "sync-yield-data": cron() },
+    );
+
+    const fresh = await loadWithAge(3600);
+    expect(fresh.liveSafetyHydration).toMatchObject({
+      status: "degraded",
+      reason: "safety-snapshot-unavailable",
+      fallback: "publish-time-snapshot",
+    });
+
+    const expired = await loadWithAge(YIELD_SAFETY_STALE_COHERENT_MAX_AGE_SEC + 3600);
+    expect(expired.liveSafetyHydration).toMatchObject({ status: "stale", fallback: null });
   });
 });

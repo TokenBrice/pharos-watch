@@ -54,11 +54,25 @@ export interface SupplementalSourceFamilyResult {
   sourceFamilyCount: number;
   inventoryCount?: number;
   status: "ok" | "failed";
+  /**
+   * B1: the fetch ended early (HTTP/parse failure or partial pagination), so the
+   * previous family snapshot is retained instead of being replaced by an
+   * incomplete one.
+   */
+  degraded: boolean;
   telemetry?: OptionalRpcFamilyTelemetry;
   provider?: unknown;
 }
 
 type SupplementalSourceFamilyStatus = SupplementalSourceFamilyResult["status"];
+
+export interface SupplementalDedupeDiscardedValue {
+  sourceKey: string;
+  discardedApy: number;
+  discardedObservedAt: number | null;
+  keptApy: number;
+  keptObservedAt: number | null;
+}
 
 type SourceFamilyCountRecord = Record<SupplementalSourceFamilyKey, number>;
 type SourceFamilyExampleRecord = Record<SupplementalSourceFamilyKey, string[]>;
@@ -84,6 +98,13 @@ export interface SupplementalSourceFamilySummary {
   candidateCount: number;
   inventoryCount?: number;
   malformedDropCount: number;
+  /** B1: true when this family's fetch ended early and its snapshot was retained. */
+  degraded: boolean;
+  /**
+   * B27: values collapsed by the intra-family dedupe, newest `sourceObservedAt`
+   * wins with `sourceTvlUsd` as the tie-break. Bounded example list.
+   */
+  dedupeDiscardedValues?: SupplementalDedupeDiscardedValue[];
   optionalRpc?: {
     targetCount: number;
     attemptedCount: number;
@@ -283,6 +304,7 @@ function buildSourceFamilySummaries(
       rawCandidateCount: 0,
       candidateCount: 0,
       malformedDropCount: malformedSourceDrops.bySourceFamily[family],
+      degraded: true,
     }]),
   ) as SupplementalSourceFamilySummaryRecord;
 
@@ -292,6 +314,7 @@ function buildSourceFamilySummaries(
       rawCandidateCount: result.sourceFamilyCount,
       candidateCount: result.candidates.length,
       malformedDropCount: malformedSourceDrops.bySourceFamily[result.key],
+      degraded: result.degraded,
     };
     if (result.inventoryCount != null) {
       summary.inventoryCount = result.inventoryCount;
@@ -348,49 +371,73 @@ function buildAaveSourceKey(stablecoinId: string, chain: string, assetAddress: s
 async function runMorphoFamily(
   context: SupplementalSourceFamilyContext,
 ): Promise<SupplementalSourceFamilyResult> {
-  const { value: candidates, status } = await runOptionalSupplementalFamily(
+  const { value, status } = await runOptionalSupplementalFamily(
     "Morpho supplemental family",
     context.signal,
     () => fetchMorphoVaultSources(context.signal),
-    [] as ResolvedYieldCandidate[],
+    { candidates: [], degraded: false },
   );
-  return { key: "morpho", candidates, sourceFamilyCount: candidates.length, status };
+  return {
+    key: "morpho",
+    candidates: value.candidates,
+    sourceFamilyCount: value.candidates.length,
+    status,
+    degraded: status === "failed" || value.degraded,
+  };
 }
 
 async function runPendleFamily(
   context: SupplementalSourceFamilyContext,
 ): Promise<SupplementalSourceFamilyResult> {
-  const { value: candidates, status } = await runOptionalSupplementalFamily(
+  const { value, status } = await runOptionalSupplementalFamily(
     "Pendle supplemental family",
     context.signal,
     () => fetchPendleMarketSources(context.signal),
-    [] as ResolvedYieldCandidate[],
+    { candidates: [], degraded: false },
   );
-  return { key: "pendle", candidates, sourceFamilyCount: candidates.length, status };
+  return {
+    key: "pendle",
+    candidates: value.candidates,
+    sourceFamilyCount: value.candidates.length,
+    status,
+    degraded: status === "failed" || value.degraded,
+  };
 }
 
 async function runYearnKongFamily(
   context: SupplementalSourceFamilyContext,
 ): Promise<SupplementalSourceFamilyResult> {
-  const { value: candidates, status } = await runOptionalSupplementalFamily(
+  const { value, status } = await runOptionalSupplementalFamily(
     "Yearn Kong supplemental family",
     context.signal,
     () => fetchYearnKongSources(context.signal),
-    [] as ResolvedYieldCandidate[],
+    { candidates: [], degraded: false },
   );
-  return { key: "yearnKong", candidates, sourceFamilyCount: candidates.length, status };
+  return {
+    key: "yearnKong",
+    candidates: value.candidates,
+    sourceFamilyCount: value.candidates.length,
+    status,
+    degraded: status === "failed" || value.degraded,
+  };
 }
 
 async function runBeefyFamily(
   context: SupplementalSourceFamilyContext,
 ): Promise<SupplementalSourceFamilyResult> {
-  const { value: candidates, status } = await runOptionalSupplementalFamily(
+  const { value, status } = await runOptionalSupplementalFamily(
     "Beefy supplemental family",
     context.signal,
     () => fetchBeefySources(context.signal),
-    [] as ResolvedYieldCandidate[],
+    { candidates: [], degraded: false },
   );
-  return { key: "beefy", candidates, sourceFamilyCount: candidates.length, status };
+  return {
+    key: "beefy",
+    candidates: value.candidates,
+    sourceFamilyCount: value.candidates.length,
+    status,
+    degraded: status === "failed" || value.degraded,
+  };
 }
 
 async function runVaultsFyiFamily(
@@ -417,6 +464,7 @@ async function runVaultsFyiFamily(
     sourceFamilyCount: candidates.length,
     inventoryCount: telemetry?.rawVaultCount,
     status: canPublish ? "ok" : "failed",
+    degraded: status !== "ok" || !canPublish,
     provider: telemetry ? { vaultsFyi: telemetry } : undefined,
   };
 }
@@ -455,6 +503,7 @@ async function runCompoundFamily(
     candidates,
     sourceFamilyCount: results.length,
     status,
+    degraded: status === "failed",
     telemetry,
   };
 }
@@ -469,6 +518,7 @@ async function runAaveFamily(
       candidates: [],
       sourceFamilyCount: 0,
       status: "ok",
+      degraded: false,
       telemetry: EMPTY_OPTIONAL_RPC_TELEMETRY,
     };
   }
@@ -514,6 +564,7 @@ async function runAaveFamily(
     candidates,
     sourceFamilyCount: results.length,
     status,
+    degraded: status === "failed",
     telemetry,
   };
 }
@@ -527,7 +578,13 @@ async function runRoycoDawnFamily(
     () => fetchRoycoDawnSources(context.signal),
     [] as ResolvedYieldCandidate[],
   );
-  return { key: "roycoDawn", candidates, sourceFamilyCount: candidates.length, status };
+  return {
+    key: "roycoDawn",
+    candidates,
+    sourceFamilyCount: candidates.length,
+    status,
+    degraded: status === "failed",
+  };
 }
 
 const SUPPLEMENTAL_SOURCE_FAMILY_REGISTRY = [

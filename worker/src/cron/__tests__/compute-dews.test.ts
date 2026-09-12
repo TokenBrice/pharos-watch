@@ -60,6 +60,83 @@ import { getCache, writeFreshnessSentinel } from "../../lib/db-cache";
 import { computeDEWS } from "../../lib/dews";
 import { derivePegRates } from "@shared/lib/peg-rates";
 import { computeAndStoreDEWS } from "../compute-dews";
+import { CRON_INTERVALS } from "@shared/lib/cron-jobs";
+import { buildHistoryKey } from "../yield-sync/evaluation";
+import { buildYieldRankingsPayloadFromEvaluatedSources } from "../yield-sync/publication";
+import {
+  makeBenchmarkMeta,
+  makeEvaluatedSource,
+  makePublicationViews,
+  makeSafetySnapshotMeta,
+  makeYieldSourceMeta,
+} from "./yield-publication.test-support";
+
+/**
+ * A payload built by the real publisher, so the DEWS consumer is tested against
+ * what production writes into `cache.yield-rankings` (D10).
+ */
+function publishShapedRankingsPayload() {
+  const startSec = Math.floor(Date.now() / 1000);
+  const source = makeEvaluatedSource({
+    id: "usdt-tether",
+    symbol: "USDT",
+    sourceKey: "defillama:usdt-new",
+    pharosYieldScore: 40,
+    sourceSwitchCount30d: 1,
+    previousBestSourceKey: "defillama:usdt-old",
+  });
+  const benchmark = makeBenchmarkMeta();
+  return buildYieldRankingsPayloadFromEvaluatedSources({
+    evaluatedSources: [source],
+    publicationViews: makePublicationViews([source], new Map([[source.id, source.sourceKey]]), startSec),
+    rankingProvenanceByKey: new Map([
+      [
+        buildHistoryKey(source.id, source.sourceKey),
+        {
+          sourceKey: source.sourceKey,
+          sourceObservedAt: startSec,
+          sourceAgeSeconds: 0,
+          confidenceTier: source.confidenceTier,
+          selectionMethod: "confidence-weighted" as const,
+          selectionReason: "test",
+          sourceSwitch: true,
+          previousBestSourceKey: "defillama:usdt-old",
+          usedLegacyHistory: false,
+          usedDefaultSafety: false,
+          anomalies: [],
+        },
+      ],
+    ]),
+    riskFreeRate: benchmark.rate,
+    riskFreeRateMeta: benchmark,
+    dlPoolsMeta: makeYieldSourceMeta(),
+    safetySnapshot: makeSafetySnapshotMeta(),
+    medianApy: 4.5,
+    startSec,
+    previousPublication: {
+      rankings: [
+        {
+          id: "usdt-tether",
+          name: "Tether",
+          currentApy: 4.8,
+          pharosYieldScore: 20,
+          safetyScore: source.safetyScore,
+          publishedRank: 2,
+          warningSignals: [],
+        },
+        {
+          id: "pyusd-paypal",
+          name: "PayPal USD",
+          currentApy: 9,
+          pharosYieldScore: 30,
+          safetyScore: 80,
+          publishedRank: 1,
+          warningSignals: [],
+        },
+      ],
+    },
+  });
+}
 
 interface MakeDbOptions {
   failDexLiquidity?: boolean;
@@ -114,6 +191,7 @@ interface MakeDbOptions {
     publication_state?: string | null;
   }>;
   yieldRankingsPayload?: unknown;
+  yieldRankingsUpdatedAt?: number;
   signalIds?: string[];
   historyIds?: string[];
   historySnapshotIds?: string[];
@@ -263,7 +341,7 @@ function makeDb(sqlSeen: string[], opts: MakeDbOptions = {}): D1Database {
         if (opts.yieldRankingsPayload === undefined) return null as T | null;
         return {
           value: JSON.stringify(opts.yieldRankingsPayload),
-          updated_at: Math.floor(Date.now() / 1000),
+          updated_at: opts.yieldRankingsUpdatedAt ?? Math.floor(Date.now() / 1000),
         } as T;
       }
       if (sql.includes("pharos:dews:publication-generation-count")) {
@@ -788,6 +866,38 @@ describe("computeAndStoreDEWS", () => {
         }),
       }),
     );
+  });
+
+  it("drives the structured branches from a publish-shaped rankings payload", async () => {
+    const sqlSeen: string[] = [];
+    const db = makeDb(sqlSeen, { yieldRankingsPayload: publishShapedRankingsPayload() });
+
+    await computeAndStoreDEWS(db);
+
+    expect(computeDEWS).toHaveBeenCalledWith(
+      expect.objectContaining({
+        stablecoinId: "usdt-tether",
+        yieldSourceRisk: expect.objectContaining({ sourceSwitchCount30d: 1 }),
+        // What the publisher writes — not a hand-seeded fixture — has to reach
+        // the rank branches, or they are dead code (B31/D10).
+        yieldRankChangeAttribution: expect.objectContaining({ primaryDriver: "source-switch" }),
+      }),
+    );
+  });
+
+  it("reports a stale rankings cache as a source failure", async () => {
+    const nowSec = Math.floor(Date.now() / 1000);
+    const db = makeDb([], {
+      yieldRankingsPayload: { rankings: [{ id: "usdt-tether", sourceRisk: { rewardShare: 0.9 } }] },
+      yieldRankingsUpdatedAt: nowSec - CRON_INTERVALS["sync-yield-data"] - 60,
+    });
+
+    const result = await computeAndStoreDEWS(db);
+
+    const metadata = JSON.parse(result.metadata ?? "{}") as {
+      sourceFailures: Array<{ source: string; reason: string }>;
+    };
+    expect(metadata.sourceFailures.map((failure) => failure.source)).toContain("yield-rankings-freshness");
   });
 
   it("degrades on a missing mandatory source table during initial bootstrap", async () => {

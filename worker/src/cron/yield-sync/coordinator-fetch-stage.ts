@@ -1,7 +1,7 @@
 import { ACTIVE_YIELD_BEARING_STABLECOINS } from "@shared/lib/tracked-stablecoin-utils";
 import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import { DAY_SECONDS } from "@shared/lib/time-constants";
-import type { CronProgressReporter, CronResult } from "../../lib/cron-logger";
+import type { CronProgressReporter } from "../../lib/cron-logger";
 import { createCronResult } from "../../lib/cron-result";
 import type { ChainRpcConfig } from "../../lib/chain-registry";
 import { getCache } from "../../lib/db-cache";
@@ -38,7 +38,24 @@ export async function runYieldCoordinatorFetchStage(params: YieldCoordinatorFetc
 
   await reportYieldProgress("preflight", "Preparing yield publication inputs", "yield", { itemsDone: 0 });
   if (yieldCoins.length === 0) {
-    return { ok: false as const, result: { itemCount: 0, metadata: "no yield-bearing coins" } satisfies CronResult };
+    // An empty cohort publishes nothing while every downstream surface keeps
+    // serving the previous generation, so this must not report a healthy run.
+    logWorkerEvent({
+      scope: "lib",
+      level: "warn",
+      event: "yield-sync-no-yield-bearing-coins",
+      job: "sync-yield-data",
+      message: "Yield sync has no active yield-bearing coins; publication skipped",
+    });
+    return {
+      ok: false as const,
+      result: createCronResult({
+        status: "degraded",
+        itemCount: 0,
+        productivity: { productive: false, reason: "no-yield-bearing-coins" },
+        metadata: { reason: "no-yield-bearing-coins" },
+      }),
+    };
   }
 
   const writerPause = parseYieldHistoryWriterPause(

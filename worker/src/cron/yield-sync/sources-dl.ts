@@ -6,10 +6,19 @@ import { recordOutcome, shouldAttemptFetch } from "../../lib/circuit-breaker";
 import { logWorkerEvent } from "../../lib/structured-log";
 import { isYieldRelevantDlPool } from "./pool-filter";
 import { filterValidDlPools, parseDlStablecoinPoolsCache } from "./cache/defillama-pool-cache";
+import { STALE_THRESHOLD_MS } from "../../lib/yield-ranking-helpers";
 import type { DlPool } from "./types";
 
 const DL_YIELDS_URL = "https://yields.llama.fi/pools";
-const MAX_DL_CACHE_AGE_SEC = 6 * 3600;
+/**
+ * B10 — row staleness and cache acceptance must agree. `evaluation.ts` nulls a DL
+ * row's PYS as `source-stale` past `STALE_THRESHOLD_MS` (3x the hourly
+ * `sync-yield-data` interval), so serving a 6h-old snapshot kept ~68 board rows on
+ * one timestamp and flipped the whole DL tier at once when the loader finally
+ * refetched. Derive the acceptance bound from the same contract: past it, prefer a
+ * direct fetch (or publish the snapshot with a non-null `fallbackMode`).
+ */
+const MAX_DL_CACHE_AGE_SEC = STALE_THRESHOLD_MS / 1000;
 
 export async function loadDlStablecoinPools(
   db: D1Database,
