@@ -103,7 +103,7 @@ describe("fetchGoldTokens curated aggregate supply", () => {
     );
     stubGoldUpstreams(78_852_290);
 
-    const [asset] = await fetchGoldTokens({ "pleasing-gold": { usd: PGOLD_PRICE, usd_market_cap: 78_852_290 } });
+    const [asset] = await fetchGoldTokens({ "pleasing-gold": { usd: PGOLD_PRICE, usd_market_cap: 78_852_290, last_updated_at: Math.floor(Date.now() / 1000) } });
 
     expect(asset?.supplySource).toBe("onchain-total-supply");
     expect(asset?.circulating?.peggedGOLD).toBeCloseTo(19_505 * PGOLD_PRICE, 4);
@@ -123,7 +123,7 @@ describe("fetchGoldTokens curated aggregate supply", () => {
     selectCuratedAggregateContractsMock.mockReturnValue(null);
     stubGoldUpstreams(99_000_000);
 
-    const [asset] = await fetchGoldTokens({ "pleasing-gold": { usd: PGOLD_PRICE, usd_market_cap: 78_852_290 } });
+    const [asset] = await fetchGoldTokens({ "pleasing-gold": { usd: PGOLD_PRICE, usd_market_cap: 78_852_290, last_updated_at: Math.floor(Date.now() / 1000) } });
 
     expect(asset?.supplySource).toBe("coingecko-fallback");
     expect(asset?.circulating?.peggedGOLD).toBe(78_852_290);
@@ -145,14 +145,14 @@ describe("fetchGoldTokens curated aggregate supply", () => {
     });
     stubGoldUpstreams(78_852_290);
 
-    const [asset] = await fetchGoldTokens({ "pleasing-gold": { usd: PGOLD_PRICE, usd_market_cap: 78_852_290 } });
+    const [asset] = await fetchGoldTokens({ "pleasing-gold": { usd: PGOLD_PRICE, usd_market_cap: 78_852_290, last_updated_at: Math.floor(Date.now() / 1000) } });
 
     expect(asset?.supplySource).toBe("coingecko-fallback");
     expect(asset?.circulating?.peggedGOLD).toBe(78_852_290);
     expect(asset?.chainCirculating).toEqual({});
   });
 
-  it("keeps positive upstream market cap when price evidence is stale", async () => {
+  it("rejects a stale upstream market cap independently of positive value", async () => {
     const staleAt = Math.floor(Date.now() / 1000) - 9 * 86400;
     selectCuratedAggregateContractsMock.mockReturnValue(null);
     stubGoldUpstreams(null, staleAt);
@@ -165,18 +165,7 @@ describe("fetchGoldTokens curated aggregate supply", () => {
       },
     });
 
-    expect(asset).toMatchObject({
-      id: "pgold-pleasing",
-      price: null,
-      priceConfidence: null,
-      priceUpdatedAt: null,
-      priceObservedAt: null,
-      priceObservedAtMode: null,
-      priceSyncedAt: null,
-      supplySource: "coingecko-fallback",
-      circulating: { peggedGOLD: 78_852_290 },
-    });
-    expect(asset?.priceSource).toBeUndefined();
+    expect(asset).toBeUndefined();
   });
 
   it("still drops a commodity row without trusted price or positive market cap", async () => {

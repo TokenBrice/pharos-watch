@@ -7,7 +7,7 @@ const ARCHIVE_DESCRIPTION =
   "Browse every permanent Pharos depeg event page, grouped by month with dates, peak deviations, and links to the complete incident record.";
 
 export const metadata: Metadata = buildPageMetadata({
-  title: "Stablecoin Depeg Event Archive | Pharos",
+  title: "Stablecoin Depeg Event Archive",
   description: ARCHIVE_DESCRIPTION,
   canonical: "/depeg/archive/",
 });

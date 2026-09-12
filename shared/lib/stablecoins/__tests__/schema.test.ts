@@ -516,7 +516,7 @@ describe("StablecoinMeta schema — mint authority", () => {
     ], "fixture")).toThrow(/none-resolved cannot include mint-capable controls/);
   });
 
-  it("rejects none-resolved-mint when a control can mint or authorize minting", () => {
+  it.each(["direct", "unknown"] as const)("rejects none-resolved-mint with a %s mint control", (directMintAbility) => {
     expect(() => parseStablecoinMetaAssets([
       makeCoin({
         id: "fixture-mint-scoped-minter",
@@ -529,7 +529,7 @@ describe("StablecoinMeta schema — mint authority", () => {
               label: "Real minter",
               role: "direct-minter",
               authorityType: "contract",
-              directMintAbility: "direct",
+              directMintAbility,
             },
           ],
         }),

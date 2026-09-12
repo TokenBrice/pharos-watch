@@ -248,7 +248,7 @@ describe("sync-stablecoins stage helpers", () => {
 
   it("applies curated metadata overrides and address patches", () => {
     const assets = [
-      { id: "usdt-tether", geckoId: "wrong-id", cmcSlug: undefined, navToken: false },
+      { id: "usdt-tether", geckoId: "wrong-id", cmcSlug: undefined, navToken: true },
       { id: "nav-token-test", geckoId: undefined, cmcSlug: undefined, navToken: false },
       { id: "m-m0", geckoId: undefined, cmcSlug: undefined, navToken: false, address: "" },
     ] as unknown as never[];
@@ -262,6 +262,7 @@ describe("sync-stablecoins stage helpers", () => {
       address?: string;
     }>;
 
+    expect(usdt.navToken).toBe(false);
     expect(usdt.geckoId).toBe("canonical-usdt");
     expect(usdt.cmcSlug).toBe("tether");
     expect(nav.navToken).toBe(true);

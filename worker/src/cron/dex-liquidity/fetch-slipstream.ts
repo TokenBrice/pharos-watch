@@ -40,6 +40,9 @@ const SLIPSTREAM_POOL_ABI = parseAbi([
   "function tickSpacing() view returns (int24)",
   "function slot0() view returns (uint160 sqrtPriceX96,int24 tick,uint16 observationIndex,uint16 observationCardinality,uint16 observationCardinalityNext,bool unlocked)",
 ]);
+const SLIPSTREAM_FACTORY_ABI = parseAbi([
+  "function getPool(address tokenA,address tokenB,int24 tickSpacing) view returns (address pool)",
+]);
 
 type SlipstreamProtocol = "aerodrome-slipstream" | "velodrome-slipstream";
 
@@ -128,6 +131,26 @@ async function recoverSlipstreamPoolsFromStaging(input: {
   });
   if (!rawResults) return [];
   const results = mapStagedMulticallResults(rawResults);
+  const factoryCalls = candidates.flatMap((candidate, index) => {
+    const prefix = `slipstream-recovery-${index}`;
+    const tickSpacing = Number(decodeStagedMulticallResult<number>(results.get(`${prefix}-tickSpacing`), SLIPSTREAM_POOL_ABI, "tickSpacing"));
+    if (!Number.isInteger(tickSpacing) || tickSpacing <= 0 || tickSpacing > 32_767) return [];
+    const [token0, token1] = [...candidate.expectedTokens] as [`0x${string}`, `0x${string}`];
+    return [{
+      label: `${prefix}-membership`,
+      target: config.clFactoryAddress,
+      callData: encodeFunctionData({ abi: SLIPSTREAM_FACTORY_ABI, functionName: "getPool", args: [token0, token1, tickSpacing] }),
+    }];
+  });
+  if (factoryCalls.length === 0) return [];
+  const factoryResults = await fetchEvmMulticall3Aggregate3AtBlock(config.chain, factoryCalls, "latest", {
+    signal: input.signal,
+    timeoutMs: DIRECT_API_REQUEST_TIMEOUT_MS,
+    chainRpcs: input.chainRpcs,
+    multicallBatchSize: 60,
+  });
+  if (!factoryResults) return [];
+  const memberships = mapStagedMulticallResults(factoryResults);
   const pools: DexApiPool[] = [];
   for (let index = 0; index < candidates.length; index++) {
     const candidate = candidates[index]!;
@@ -143,6 +166,7 @@ async function recoverSlipstreamPoolsFromStaging(input: {
     );
     if (
       factory !== config.clFactoryAddress.toLowerCase() ||
+      decodeStagedMulticallResult<string>(memberships.get(`${prefix}-membership`), SLIPSTREAM_FACTORY_ABI, "getPool")?.toLowerCase() !== candidate.poolAddress ||
       !token0 ||
       !token1 ||
       !candidate.expectedTokens.has(token0) ||

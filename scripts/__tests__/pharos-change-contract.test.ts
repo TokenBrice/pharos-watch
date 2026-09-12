@@ -1,5 +1,5 @@
 import { execFileSync, spawnSync } from "node:child_process";
-import { mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
+import { linkSync, mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { describe, expect, it } from "vitest";
@@ -1145,6 +1145,25 @@ describe("W2.7 malformed hook payloads", () => {
 });
 
 describe("hook diagnostics", () => {
+  it.each(["symlink", "hardlink", "fifo"])("does not write or block on a diagnostic %s", (kind) => {
+    const directory = mkdtempSync(join(tmpdir(), "pharos-hook-diagnostics-link-"));
+    const target = join(directory, "target");
+    const diagnosticsPath = join(directory, "diagnostics");
+    writeFileSync(target, "unchanged");
+    try {
+      if (kind === "symlink") symlinkSync(target, diagnosticsPath);
+      else if (kind === "hardlink") linkSync(target, diagnosticsPath);
+      else execFileSync("mkfifo", [diagnosticsPath]);
+      const result = runHookCliProcess("pre-tool-use", "{}", {
+        ...process.env, PHAROS_HOOK_DIAGNOSTICS: "1", PHAROS_HOOK_DIAGNOSTICS_FILE: diagnosticsPath,
+      });
+      expect(result.status).toBe(0);
+      expect(readFileSync(target, "utf8")).toBe("unchanged");
+    } finally {
+      rmSync(directory, { recursive: true, force: true });
+    }
+  });
+
   it("does not write diagnostics when disabled", () => {
     const directory = mkdtempSync(join(tmpdir(), "pharos-hook-diagnostics-off-"));
     const diagnosticsPath = join(directory, "hook-diagnostics.jsonl");

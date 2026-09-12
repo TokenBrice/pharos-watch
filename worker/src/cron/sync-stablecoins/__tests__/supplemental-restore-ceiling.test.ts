@@ -51,6 +51,20 @@ function syrupChainCirculating(
 }
 
 describe("mergeSupplementalLastKnownGood carry-forward ceiling", () => {
+  it.each(["cngn-compliant-naira", "mre7yield-midas", "cusdo-openeden", "syzusd-yuzu"])(
+    "does not restore obsolete on-chain roster for %s through either supplemental path", (id) => {
+      const previous = asset({ id, symbol: id, circulating: { peggedUSD: 100 },
+        supplySource: "onchain-total-supply", supplyObservedAt: NOW_SEC - 60,
+        chainCirculating: { Ethereum: chainRow(100) },
+      });
+      for (const current of [[], [asset({ id, symbol: id })]]) {
+        const result = mergeSupplementalLastKnownGood(current, new Map([[id, previous]]), new Set(), NOW_SEC);
+        expect(result.restoredCount).toBe(0);
+        expect(result.assets.some((row) => row.supplySource === "onchain-total-supply")).toBe(false);
+      }
+    },
+  );
+
   it("atomically restores a fresh curated aggregate supply packet over a positive CoinGecko fallback", () => {
     const current = asset({
       id: "syrupusdc-maple",

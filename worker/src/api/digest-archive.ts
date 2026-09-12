@@ -19,6 +19,7 @@ type DigestArchiveInput = {
   riskTape?: unknown[];
 };
 type DigestArchiveMeta = {
+  llm?: { servedModel?: unknown; attempts?: { servedModel?: unknown }[] };
   type?: string;
   internal?: unknown;
   editorialStyleVersion?: string;
@@ -118,11 +119,15 @@ export const handleDigestArchive = async (db: D1Database): Promise<Response> => 
     if (meta?.type === "weekly") {
       digestType = "weekly";
     }
+    const servedModel = Array.isArray(meta?.llm?.attempts)
+      ? meta.llm.attempts[meta.llm.attempts.length - 1]?.servedModel
+      : meta?.llm?.servedModel;
     const isInternal = meta?.internal === true || meta?.internal === 1 || meta?.internal === "true";
     // Legacy rows have no stored style provenance. This display-only marker
     // is computed at the API boundary and is never written back to D1.
     return {
       isInternal,
+      ...(typeof servedModel === "string" && servedModel ? { llm: { servedModel } } : {}),
       digestText: r.digest_text,
       digestTitle: r.digest_title ?? null,
       digestExtended: r.digest_extended ?? null,

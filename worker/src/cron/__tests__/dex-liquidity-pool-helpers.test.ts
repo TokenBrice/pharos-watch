@@ -53,6 +53,9 @@ describe("dex-liquidity pool helpers", () => {
     expect(classifyPoolType("raydium-amm", "Standard - 0.25%")).toBe("raydium-amm");
     expect(classifyPoolType("raydium-amm", "Concentrated - 0.01%")).toBe("raydium-clmm");
     expect(classifyPoolType("Raydium CLMM")).toBe("raydium-clmm");
+    for (const malformed of [123, {}, [], true]) {
+      expect(classifyPoolType("raydium-amm", malformed as unknown as string)).toBe("raydium-amm");
+    }
     expect(classifyPoolType("orca-whirlpool")).toBe("orca-whirlpool");
     expect(classifyPoolType("mystery-dex")).toBe("generic");
 

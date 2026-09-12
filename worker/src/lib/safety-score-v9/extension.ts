@@ -791,9 +791,17 @@ function transferMaterialScope(
     return chainId === null ? [] : [{ chainId, key: safetyScoreV9TransferDeploymentKey(chainId, deployment.address) }];
   });
   const authoritativeDeploymentKeys = [...new Set(authoritativeDeployments.map(({ key }) => key))].sort(compareText);
+  const unresolvedDeclaredChainIds = (meta.contracts ?? [])
+    .filter((deployment) => resolveChainId(deployment.chain) === null)
+    .map((deployment) => deployment.chain.trim().toLowerCase());
+  const unresolvedDeclaredDeploymentKeys = (meta.contracts ?? [])
+    .filter((deployment) => resolveChainId(deployment.chain) === null)
+    .map((deployment) => safetyScoreV9TransferDeploymentKey(deployment.chain.trim().toLowerCase(), deployment.address));
   if (totalSupplyUsd <= 0) {
     const baseScope: SafetyScoreV9TransferMaterialScope = {
       authoritativeDeploymentKeys,
+      unresolvedMaterialChainIds: unresolvedDeclaredChainIds,
+      unresolvedDeclaredDeploymentKeys,
       materialDeploymentKeys: [],
       materialDeploymentScopeComplete: false,
       // No supply rows at all: only a declared supported-chain contract can
@@ -837,6 +845,13 @@ function transferMaterialScope(
   ].sort(compareText);
   return {
     authoritativeDeploymentKeys,
+    unresolvedDeclaredDeploymentKeys,
+    unresolvedMaterialChainIds: [...new Set([
+      ...unresolvedDeclaredChainIds,
+      ...Object.entries(rows)
+        .filter(([chain, row]) => resolveChainId(chain) === null && row.current / totalSupplyUsd >= DEPLOYMENT_MATERIAL_SHARE_THRESHOLD)
+        .map(([chain]) => chain.trim().toLowerCase()),
+    ])].sort(compareText),
     materialDeploymentKeys,
     materialDeploymentScopeComplete:
       unresolvedSupplyUsd / totalSupplyUsd < DEPLOYMENT_MATERIAL_SHARE_THRESHOLD &&

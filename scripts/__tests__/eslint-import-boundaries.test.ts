@@ -38,3 +38,13 @@ describe("ESLint import boundaries", () => {
     expect(messages.filter((message) => message.severity === 2)).toEqual([]);
   });
 });
+
+it.each(["src/lib/__boundary-fixture.ts", "shared/__boundary-fixture.ts", "scripts/__boundary-fixture.ts", "functions/__boundary-fixture.ts"])("rejects dynamic Worker imports from %s", async (filePath) => {
+  const [result] = await eslint.lintText('export const load = () => import("worker/src/lib/auth");', { filePath });
+  expect(result.messages.some((message) => message.ruleId === "pharos/frontend-dynamic-import-boundaries")).toBe(true);
+});
+
+it("rejects static template Worker imports", async () => {
+  const [result] = await eslint.lintText('export const load = () => import(`../../worker/src/lib/auth`);', { filePath: "src/lib/__boundary-fixture.ts" });
+  expect(result.messages.some((message) => message.ruleId === "pharos/frontend-dynamic-import-boundaries")).toBe(true);
+});

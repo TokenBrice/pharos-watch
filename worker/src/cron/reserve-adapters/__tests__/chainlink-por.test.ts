@@ -425,7 +425,7 @@ describe("adaptChainlinkPorResponse with issuer circulation", () => {
     omittedReadFailureChains: [],
   };
 
-  it("compares reserves against issuer circulation and keeps the surplus informational", () => {
+  it("withholds coverage for undated circulation despite a current reserve numerator", () => {
     // Backed-style: 1,018 reserve shares, 155k gross pre-minted, 80 circulating.
     const result = adaptChainlinkPorResponse(
       { reserves: 1018_00000000n, decimals: 8, roundId: 7n, updatedAt: 1710000000 },
@@ -435,7 +435,6 @@ describe("adaptChainlinkPorResponse with issuer circulation", () => {
     );
 
     expect(result.metadata).toMatchObject({
-      liabilityBasis: "issuer-circulating",
       circulatingSupplyTokens: 80,
       supplyTokens: 155_000,
       reserveUnit: "SHARES",
@@ -444,14 +443,15 @@ describe("adaptChainlinkPorResponse with issuer circulation", () => {
     });
     expect(result.metadata?.supplyUsd).toBeUndefined();
     expect(result.metadata?.totalReserveUsd).toBeUndefined();
-    expect(result.metadata?.collateralizationRatio).toBeCloseTo(1018 / 80, 5);
+    expect(result.metadata?.collateralizationRatio).toBeUndefined();
+    expect(result.metadata?.liabilityBasis).toBeUndefined();
     expect(result.warnings?.some((w) => w.code === "por-reserve-under-supply")).not.toBe(true);
     const over = result.warnings?.find((w) => w.code === "por-reserve-over-supply");
-    expect(over?.effect).toBe("info");
-    expect(over?.message).toContain("issuer-held inventory");
+    expect(over).toBeUndefined();
+    expect(result.warnings).toContainEqual(expect.objectContaining({ code: "por-circulation-freshness-unverified", effect: "degraded" }));
   });
 
-  it("degrades when reserves undercover issuer circulation", () => {
+  it("degrades undated circulation without claiming a reliable shortfall", () => {
     const result = adaptChainlinkPorResponse(
       { reserves: 70_00000000n, decimals: 8, roundId: 7n, updatedAt: 1710000000 },
       params,
@@ -460,8 +460,8 @@ describe("adaptChainlinkPorResponse with issuer circulation", () => {
     );
 
     const under = result.warnings?.find((w) => w.code === "por-reserve-under-supply");
-    expect(under?.effect).toBe("degraded");
-    expect(under?.message).toContain("issuer-reported circulating supply");
+    expect(under).toBeUndefined();
+    expect(result.warnings).toContainEqual(expect.objectContaining({ code: "por-circulation-freshness-unverified", effect: "degraded" }));
   });
 
   it("fails closed with a degraded warning and no coverage ratio when the probe fails", () => {
@@ -851,12 +851,13 @@ describe("fetchChainlinkPorReserves", () => {
 
     expect(network.requests.some((request) => request.url === POR_FEED_ENDPOINT)).toBe(true);
     expect(result.metadata).toMatchObject({
-      liabilityBasis: "issuer-circulating",
       circulatingSupplyTokens: 80,
       supplyTokens: 155_000,
     });
-    expect(result.metadata?.collateralizationRatio).toBeCloseTo(1018 / 80, 5);
-    expect(result.warnings?.find((w) => w.code === "por-reserve-over-supply")?.effect).toBe("info");
+    expect(result.metadata?.collateralizationRatio).toBeUndefined();
+    expect(result.metadata?.liabilityBasis).toBeUndefined();
+    expect(result.warnings?.find((w) => w.code === "por-reserve-over-supply")).toBeUndefined();
+    expect(result.warnings).toContainEqual(expect.objectContaining({ code: "por-circulation-freshness-unverified", effect: "degraded" }));
     expect(result.warnings?.some((w) => w.code === "por-reserve-under-supply")).not.toBe(true);
   });
 });

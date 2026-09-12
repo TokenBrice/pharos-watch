@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import type { StagedPool } from "../../dex-discovery/types";
+import { SLIPSTREAM_POOL_IDENTITY_REVIEW_VERSION, type StagedPool } from "../../dex-discovery/types";
 import { initMetrics } from "../pool-helpers";
 import { buildPoolFingerprint } from "../pool-normalization";
 import { createKnownPoolIdentityIndex } from "../pool-identity";
@@ -111,6 +111,14 @@ describe("buildStagedPoolWriteback", () => {
         refreshedAt: NOW,
       },
     ]);
+  });
+
+  it("marks only fresh live Slipstream observations as factory-reviewed", () => {
+    const fresh = makePoolEntry({ source: "direct_api", project: "aerodrome", poolType: "aerodrome-slipstream-1bp" });
+    const metrics = new Map([["usdc-circle", makeMetrics("usdc-circle", [fresh])]]);
+    expect(JSON.parse(buildStagedPoolWriteback(metrics, NOW).pools[0]!.rawJson!)).toEqual({ identityReviewVersion: SLIPSTREAM_POOL_IDENTITY_REVIEW_VERSION });
+    fresh.extra = { measurement: { decayed: true } };
+    expect(buildStagedPoolWriteback(metrics, NOW).pools).toEqual([]);
   });
 
   it("carries measured extras and a price only when the entry measured one", () => {

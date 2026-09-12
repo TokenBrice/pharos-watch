@@ -66,6 +66,9 @@ function staticImportSpecifier(node) {
     return typeof node.source?.value === "string" ? node.source.value : null;
   }
   if (node.type === "ImportExpression") {
+    if (node.source.type === "TemplateLiteral" && node.source.expressions.length === 0) {
+      return node.source.quasis[0].value.cooked;
+    }
     return node.source.type === "Literal" && typeof node.source.value === "string" ? node.source.value : null;
   }
   return null;
@@ -73,6 +76,23 @@ function staticImportSpecifier(node) {
 
 const pharosBoundaryPlugin = {
   rules: {
+    "frontend-dynamic-import-boundaries": {
+      meta: { type: "problem", schema: [], messages: { worker: "ADR-2: non-Worker code must not import worker/src/**." } },
+      create(context) {
+        return {
+          ImportExpression(node) {
+            const specifier = staticImportSpecifier(node);
+            if (!specifier) return;
+            const target = specifier.startsWith(".")
+              ? resolve(dirname(context.filename), specifier)
+              : resolve(process.cwd(), specifier);
+            if (isWithinPath(resolve(process.cwd(), "worker/src"), target)) {
+              context.report({ node, messageId: "worker" });
+            }
+          },
+        };
+      },
+    },
     "worker-import-boundaries": {
       meta: {
         type: "problem",
@@ -278,7 +298,9 @@ const eslintConfig = defineConfig([
   {
     files: NON_WORKER_SOURCE_GLOBS,
     ignores: FRONTEND_TO_WORKER_WAIVED_FILES,
+    plugins: { pharos: pharosBoundaryPlugin },
     rules: {
+      "pharos/frontend-dynamic-import-boundaries": "error",
       "no-restricted-imports": ["error", { patterns: frontendToWorkerRestrictedImportPatterns }],
     },
   },

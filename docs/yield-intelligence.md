@@ -656,3 +656,5 @@ npm run check:cron-connections
 ```
 
 The structured methodology history lives in `shared/data/methodology-changelogs/yield-methodology/`.
+
+Historical raw yield pruning rounds its retention cutoff down to a UTC-day boundary, so no partial trailing day is deleted before the next complete-day compaction. Tape warning and PYS comparisons seed every coin from its last pre-watermark row. Structured yield venue identity takes precedence over child asset ids when resolving source risk; child ids are only a fallback.

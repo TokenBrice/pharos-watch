@@ -10,7 +10,7 @@ import {
   buildPricedSupplementalAsset,
   fetchSupplementalPriceData,
   resolveCuratedAggregateSupplementalSupply,
-  toPositiveFiniteNumber,
+  resolveSupplementalCoinGeckoMcap,
   type CoinGeckoMcapData,
 } from "./shared";
 
@@ -85,7 +85,7 @@ export async function fetchGoldTokens(
 
     for (const token of GOLD_METAS) {
       if (mcapMap[token.id] != null && mcapMap[token.id] > 0) continue;
-      const mcap = token.geckoId ? toPositiveFiniteNumber(cgData[token.geckoId]?.usd_market_cap) : undefined;
+      const mcap = resolveSupplementalCoinGeckoMcap(cgData, token.geckoId);
       if (mcap != null) {
         mcapMap[token.id] = mcap;
         mcapSourceById[token.id] = "coingecko-fallback";

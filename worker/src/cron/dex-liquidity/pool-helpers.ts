@@ -91,7 +91,7 @@ export function classifyPoolType(project: string, poolMeta?: string | null): str
   // the direct fetcher's raydium-clmm classification, so the cross-source
   // dedupe never fires and the same physical pool is admitted twice.
   if (proj.includes("raydium")) {
-    const meta = (poolMeta ?? "").toLowerCase();
+    const meta = (typeof poolMeta === "string" ? poolMeta : "").toLowerCase();
     return proj.includes("clmm") || meta.includes("concentrated") ? "raydium-clmm" : "raydium-amm";
   }
   if (proj.includes("orca")) return "orca-whirlpool";

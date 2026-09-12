@@ -40,6 +40,21 @@ export function toPositiveFiniteNumber(value: unknown): number | null {
   return null;
 }
 
+/** Market-cap fallback must carry its own fresh upstream observation. */
+export function resolveSupplementalCoinGeckoMcap(
+  cgData: CoinGeckoMcapData,
+  geckoId?: string,
+): number | null {
+  const entry = geckoId ? cgData[geckoId] : undefined;
+  const freshness = validatePricingSourceFreshness({
+    source: "coingecko",
+    observedAt: entry?.last_updated_at,
+    observedAtMode: "upstream",
+    requireObservedAt: true,
+  });
+  return freshness.accepted ? toPositiveFiniteNumber(entry?.usd_market_cap) : null;
+}
+
 function normalizeFreshSupplementalPriceResolution(
   resolution: SupplementalPriceResolution,
   options: { requireObservedAt?: boolean } = {},

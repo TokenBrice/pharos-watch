@@ -198,6 +198,23 @@ export async function evaluateAccessGate(
     return gateResult("public-api", notFoundResponse());
   }
 
+  if (isTelegramAdoptionPath(url)) {
+    return gateResult("public-api", notFoundResponse());
+  }
+
+  if (url.pathname === API_PATHS.safetyGrades()) {
+    try {
+      const result = await env.SAFETY_GRADES_RATE_LIMIT.limit({
+        key: request.headers.get("CF-Connecting-IP") ?? "unknown",
+      });
+      if (!result.success) {
+        return gateResult("public-api", errorResponse(429, "Too many requests", { retryAfterSec: 60 }));
+      }
+    } catch {
+      return gateResult("public-api", publicApiUnavailableResponse());
+    }
+  }
+
   if (getPublicApiAccess(url.pathname) === "exempt") {
     return gateResult("public-api");
   }

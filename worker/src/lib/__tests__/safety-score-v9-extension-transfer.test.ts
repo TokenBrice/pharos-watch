@@ -87,6 +87,24 @@ describe("resolveSafetyScoreV9ReviewedTransferFact — non-contract-native appli
     expect(resolved).toEqual({ observationState: "bounded-unknown", posture: null });
   });
 
+  it("refuses unreviewed material chains outside the supported chain registry", () => {
+    const current = review([{ chainId: "zano", contractOrTokenId: "native", posture: "permissionless" }]);
+    expect(resolveSafetyScoreV9ReviewedTransferFact(current, CLOCK_SEC, scope({
+      unresolvedMaterialChainIds: ["zano", "unreviewed-chain"],
+    }))).toEqual({ observationState: "bounded-unknown", posture: null });
+    expect(resolveSafetyScoreV9ReviewedTransferFact(current, CLOCK_SEC, scope({
+      unresolvedMaterialChainIds: ["zano"],
+    }))).toMatchObject({ observationState: "known", posture: "permissionless" });
+  });
+
+  it("requires exact declared token coverage even on an unsupported chain", () => {
+    const current = review([{ chainId: "zano", contractOrTokenId: "token-A", posture: "permissionless" }]);
+    expect(resolveSafetyScoreV9ReviewedTransferFact(current, CLOCK_SEC, scope({
+      unresolvedMaterialChainIds: ["zano"],
+      unresolvedDeclaredDeploymentKeys: ["token-A", "token-B"].map((id) => safetyScoreV9TransferDeploymentKey("zano", id)),
+    }))).toEqual({ observationState: "bounded-unknown", posture: null });
+  });
+
   it("keeps a stale review stale", () => {
     const resolved = resolveSafetyScoreV9ReviewedTransferFact(
       review([{ chainId: "zano", contractOrTokenId: "86143388bd05", posture: "permissionless" }], "2024-01-01"),

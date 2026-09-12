@@ -1122,16 +1122,16 @@ describe("processPoolMetrics", () => {
       [USDC, USDT],
       100,
     )!;
-    const run = (candidates: UniswapV4ExecutionCandidate[]) =>
+    const run = (candidates: UniswapV4ExecutionCandidate[], retainedId = "4dbfda50-1111-2222-3333-444455556666", retainedTokens = [USDC, USDT], poolMeta: string | null = "Uniswap V4 0.01%") =>
       processPoolMetrics({
         pools: [
           makePool({
-            pool: "4dbfda50-1111-2222-3333-444455556666",
+            pool: retainedId,
             project: "uniswap-v4-ethereum",
-            poolMeta: "Uniswap V4 0.01%",
+            poolMeta,
             symbol: "USDC-USDT",
             tvlUsd: 2_000_000,
-            underlyingTokens: [USDC, USDT],
+            underlyingTokens: retainedTokens,
           }),
         ],
         dexProjects: new Set(["uniswap-v4-ethereum"]),
@@ -1159,6 +1159,11 @@ describe("processPoolMetrics", () => {
       hookAddress: UNISWAP_V4_HOOK_FREE_ADDRESS,
     });
     expect(run([candidate])?.extra?.executionCapabilityGate).toBeUndefined();
+
+    expect(run([candidate], poolId, [USDT.toUpperCase().replace("0X", "0x"), USDC], null)?.extra?.measuredExecutionTarget).toBeDefined();
+    expect(run([candidate], poolId, [USDC, "0x0000000000000000000000000000000000000001"])?.extra).toMatchObject({
+      executionCapabilityGate: { family: "measured-execution", reason: "target-unresolved" },
+    });
 
     expect(run([{ ...candidate, activeLiquidity: "0" }])?.extra).toMatchObject({
       executionCapabilityGate: {

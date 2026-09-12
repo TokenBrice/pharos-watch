@@ -8,7 +8,7 @@ import {
   resolveSupplementalPrice,
 } from "../sync-stablecoins/supplemental-assets";
 import { fetchGoldTokens } from "../sync-stablecoins/supplemental-assets/gold";
-import { fetchSupplementalPriceData } from "../sync-stablecoins/supplemental-assets/shared";
+import { resolveSupplementalCoinGeckoMcap, fetchSupplementalPriceData } from "../sync-stablecoins/supplemental-assets/shared";
 import { fillMissingSupplyHistory } from "../sync-stablecoins/phase-helpers";
 import { createMockD1Preset } from "@shared/test-utils/mock-d1";
 import { mockFetch } from "@shared/test-utils/mock-fetch";
@@ -477,4 +477,15 @@ describe("fetchGoldTokens", () => {
     expect(fetchMock).toHaveBeenCalled();
     expect(fetchMock.mock.calls.every(([url]) => !String(url).includes("/protocol/"))).toBe(true);
   });
+});
+
+
+it.each([undefined, 0, Number.NaN, Math.floor(Date.now() / 1000) - 9 * 86400, Math.floor(Date.now() / 1000) + 601])(
+  "rejects commodity market cap with missing, invalid, stale or future timestamp %s", (last_updated_at) => {
+    expect(resolveSupplementalCoinGeckoMcap({ gold: { usd_market_cap: 10_000_000, last_updated_at } }, "gold")).toBeNull();
+  },
+);
+
+it("accepts current market cap even when the independent spot-price field is missing", () => {
+  expect(resolveSupplementalCoinGeckoMcap({ gold: { usd_market_cap: 10_000_000, last_updated_at: Math.floor(Date.now() / 1000) } }, "gold")).toBe(10_000_000);
 });

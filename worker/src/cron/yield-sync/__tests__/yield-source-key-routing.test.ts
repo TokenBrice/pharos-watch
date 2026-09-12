@@ -77,6 +77,9 @@ describe("yield source-key routing table", () => {
   });
 
   it("never publishes the row's derivation method as a venue", () => {
+    expect(resolveYieldVenueProtocol({ stablecoinId: "susdc-spark", sourceKey: "protocol-api:morpho-vault:ethereum:0xabc" })).toBe("morpho-blue");
+    expect(resolveYieldVenueProtocol({ stablecoinId: "susdc-spark", sourceKey: "unrouted", project: "aave-v3" })).toBe("aave-v3");
+    expect(resolveYieldVenueProtocol({ stablecoinId: "susdc-spark", sourceKey: "unrouted" })).toBe("spark-savings");
     for (const dataSource of ["price-derived", "rate-derived"]) {
       expect(resolveYieldVenueProtocol({
         sourceKey: `dl-list:${dataSource}`,

@@ -1,4 +1,5 @@
-import { describe, it, expect } from "vitest";
+import { afterEach, describe, it, expect } from "vitest";
+import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
 import { type MockD1Database, type MockTableConfig } from "@shared/test-utils/mock-d1";
 import { projectYieldWarningEmitted, projectYieldPysDropped } from "../yield";
 import { mockTapeD1, tapeInsertBindsForType } from "./test-support";
@@ -464,5 +465,29 @@ describe("yield.pys_dropped projector", () => {
     expect(inserts).toHaveLength(1);
     expect(inserts[0]![9]).toBe("USDT yield score 82 → 71");
     expect(inserts[0]![10]).toBe("Published yield score dropped by 11 on selected source.");
+  });
+});
+
+const fixtures = createLatestSchemaFixtureTracker();
+afterEach(fixtures.closeAll);
+
+describe("yield projector prior-row SQL", () => {
+  it("binds the watermark before all coin ids for warning and PYS comparisons", async () => {
+    const { db, sqlite } = await fixtures.open();
+    for (const id of ["usdt-tether", "usdc-circle"]) {
+      for (const [time, score] of [[SEC - 1, 80], [SEC + 1, 60]]) {
+        sqlite.prepare(`INSERT INTO yield_history
+          (stablecoin_id, source_key, recorded_at, is_best, apy, data_source, warning_signals)
+          VALUES (?, 'aave-v3:test', ?, 1, 5, 'defillama', ?)`)
+          .run(id, time, JSON.stringify(["reward-heavy"]));
+        sqlite.prepare(`INSERT INTO yield_source_decisions
+          (generation_id, stablecoin_id, selected_source_key, selected_confidence_tier,
+           selected_data_source, selected_apy_30d, selected_score, selected_reason, alternatives_json, created_at)
+          VALUES (?, ?, 'aave-v3:test', 'high', 'defillama', 5, ?, 'best', '[]', ?)`)
+          .run(`generation-${time}`, id, score, time);
+      }
+    }
+    expect(await projectYieldWarningEmitted(db, { since: SEC, until: SEC + 2 })).toMatchObject({ projected: 0 });
+    expect(await projectYieldPysDropped(db, { since: SEC, until: SEC + 2 })).toMatchObject({ projected: 2 });
   });
 });

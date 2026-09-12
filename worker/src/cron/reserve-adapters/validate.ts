@@ -1,4 +1,5 @@
 import type { ReserveSlice } from "@shared/types/core";
+import { ReserveSliceSchema } from "@shared/types/reserves";
 import { DEPENDENCY_TYPE_VALUES } from "@shared/types/dependency-types";
 import {
   LIVE_RESERVE_REDEMPTION_CAPACITY_KIND_VALUES,
@@ -382,6 +383,7 @@ export function validateAdapterOutput(input: ValidationInput, options?: Validati
   const redemptionSourceTimestamp = getFiniteMetadataNumber(redemption ?? undefined, "sourceTimestamp");
   const futureTimestampWarning =
     validateFutureTimestamp(sourceTimestamp, "Upstream reserve source timestamp", now, options?.adapter) ??
+    validateFutureTimestamp(getFiniteMetadataNumber(input.metadata, "newestSourceTimestamp"), "Newest reserve component timestamp", now, options?.adapter) ??
     validateFutureTimestamp(redemptionSourceTimestamp, "Redemption source timestamp", now, options?.adapter);
   if (futureTimestampWarning) {
     return { valid: false, warnings: [futureTimestampWarning] };
@@ -453,6 +455,15 @@ export function validateAdapterOutput(input: ValidationInput, options?: Validati
             `Slice "${slice.name}" links unknown stablecoin ${slice.coinId}`,
           ),
         ],
+      };
+    }
+  }
+
+  for (const slice of input.slices) {
+    if (!ReserveSliceSchema.safeParse(slice).success) {
+      return {
+        valid: false,
+        warnings: [reserveFatalWarning("invalid-slice-schema", "Reserve slice violates the persisted snapshot schema")],
       };
     }
   }

@@ -19,7 +19,7 @@ const LOCAL_DATE_FORMATTER_OPTIONS: Intl.DateTimeFormatOptions = {
 const localFormatterCache = new Map<string, Intl.DateTimeFormat>();
 
 /**
- * One formatter per timezone. The minute-by-minute due-time scan below asks for
+ * Up to 256 formatters, with case-insensitive timezone keys. The minute-by-minute due-time scan below asks for
  * local parts ~1,100 times per scheduling call, and constructing a formatter is
  * about ten times the cost of formatting with an existing one, so a fresh
  * formatter per candidate dominated the whole helper. Throws for a timezone the
@@ -27,13 +27,15 @@ const localFormatterCache = new Map<string, Intl.DateTimeFormat>();
  * caches zones that constructed successfully.
  */
 function localFormatter(timezone: string): Intl.DateTimeFormat {
-  const cached = localFormatterCache.get(timezone);
+  const key = timezone.toLowerCase();
+  const cached = localFormatterCache.get(key);
   if (cached) return cached;
   const formatter = new Intl.DateTimeFormat("en-US", {
     ...LOCAL_DATE_FORMATTER_OPTIONS,
     timeZone: timezone,
   });
-  localFormatterCache.set(timezone, formatter);
+  if (localFormatterCache.size >= 256) localFormatterCache.delete(localFormatterCache.keys().next().value!);
+  localFormatterCache.set(key, formatter);
   return formatter;
 }
 

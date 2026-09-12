@@ -142,6 +142,8 @@ function pinnedDexTrackedStablecoinValuation(
     observation.outputUnitValueUsd === undefined ||
     observation.outputUnitValueSourceId === undefined ||
     observation.outputUnitValueObservedAt === undefined ||
+    (observation.outputUnitValueSourceId.startsWith("dex-amm-output-reference:") &&
+      !observation.outputUnitValueSourceId.endsWith(":tracked-market")) ||
     observation.outputUnitValueObservedAt > observedAtSec + 60
   ) {
     return null;

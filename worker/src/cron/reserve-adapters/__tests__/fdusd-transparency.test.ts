@@ -145,3 +145,12 @@ describe("FDUSD signed reserve reports", () => {
     expect(result.metadata?.freshnessMode).toBe("verified");
   });
 });
+
+
+it("rejects repeated ISAE middle markers without a reserve-account suffix", () => {
+  const href = `ISAE3000_${"Attestation_Report_".repeat(20_000)}.pdf`;
+  const html = `<div role="listitem" class="transparency-report_item"><div>Jul 2026</div><a href="${href}">Download</a></div>`;
+  const started = performance.now();
+  expect(() => selectNewestFdusdSignedReport(html)).toThrow(/no dated signed/);
+  expect(performance.now() - started).toBeLessThan(1_000);
+});

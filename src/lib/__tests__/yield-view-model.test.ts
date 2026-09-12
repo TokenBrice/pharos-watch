@@ -387,6 +387,8 @@ describe("buildYieldViewModel", () => {
       warnings: "all",
     });
     expect(warningsModel.matchingPreset).toBe("watchlist-warnings");
+    expect(warningsModel.normalizedParams.warnings).toBe("all");
+    expect(warningsModel.invalidParamKeys).not.toContain("warnings");
     const watchlist = warningsModel.presets.find((preset) => preset.key === "watchlist-warnings");
     expect(watchlist?.active).toBe(true);
     expect(watchlist?.count).toBe(2);

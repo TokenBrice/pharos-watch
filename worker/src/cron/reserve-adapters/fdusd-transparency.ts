@@ -53,8 +53,12 @@ export function selectNewestFdusdSignedReport(html: string): FdusdReportLink {
     const isLegacySignedReport =
       /FDUSD[ _]+Reserve[ _]+accounts?[ _]+Report/i.test(decodedHref)
       && /(?:signed|final)/i.test(decodedHref);
-    const isIsae3000ReserveReport =
-      /ISAE[ _-]*3000[\s\S]*Attestation[ _]+Report[\s\S]*Reserve(?:s)?[ _]+Accounts?/i.test(decodedHref);
+    // Search successive markers once; repeated middle labels must not cause backtracking.
+    const isae = /ISAE[ _-]*3000/i.exec(decodedHref);
+    const afterIsae = isae ? decodedHref.slice(isae.index + isae[0].length) : "";
+    const attestation = /Attestation[ _]+Report/i.exec(afterIsae);
+    const isIsae3000ReserveReport = attestation != null
+      && /Reserve(?:s)?[ _]+Accounts?/i.test(afterIsae.slice(attestation.index + attestation[0].length));
     if (
       sortTimestamp != null
       && (isLegacySignedReport || isIsae3000ReserveReport)

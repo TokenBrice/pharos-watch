@@ -4,6 +4,7 @@ import type { StablecoinMeta } from "@shared/types/core";
 import { fetchTextWithRetry } from "../../../lib/fetch-retry";
 import { USER_AGENT } from "../../../lib/constants";
 import { cgHeaders, cgUrl } from "../../../lib/coingecko";
+import { validatePricingSourceFreshness } from "../../../lib/pricing-source-freshness";
 import { resolveMarketCap } from "../../../lib/resolve-market-cap";
 import { throwIfAborted } from "../../../lib/abort";
 import type { ChainRpcConfig } from "../../../lib/chain-registry";
@@ -13,6 +14,7 @@ import {
   fetchSupplementalPriceData,
   resolveCuratedAggregateSupplementalSupply,
   resolveSupplementalPrice,
+  resolveSupplementalCoinGeckoMcap,
   type CoinGeckoMcapData,
 } from "./shared";
 
@@ -55,8 +57,14 @@ async function fetchCoinGeckoCirculatingSupplyMap(
   }
 
   const supplyMap = new Map<string, number>();
-  for (const item of cgMarketsRaw as Array<{ id: string; circulating_supply?: number }>) {
-    if (item.circulating_supply != null && item.circulating_supply > 0) {
+  for (const item of cgMarketsRaw as Array<{ id: string; circulating_supply?: number; last_updated?: string }>) {
+    const freshness = validatePricingSourceFreshness({
+      source: "coingecko",
+      observedAt: typeof item.last_updated === "string" ? Date.parse(item.last_updated) / 1000 : null,
+      observedAtMode: "upstream",
+      requireObservedAt: true,
+    });
+    if (freshness.accepted && item.circulating_supply != null && Number.isFinite(item.circulating_supply) && item.circulating_supply > 0) {
       supplyMap.set(item.id, item.circulating_supply);
     }
   }
@@ -82,11 +90,11 @@ export async function fetchSilverTokens(
     const mcapMap: Record<string, number> = {};
     for (const token of SILVER_METAS) {
       if (!token.geckoId) continue;
-      const cgMcap = cgData[token.geckoId]?.usd_market_cap;
+      const cgMcap = resolveSupplementalCoinGeckoMcap(cgData, token.geckoId);
       const circulatingSupply = cgSupplyMap.get(token.geckoId);
       const priceResolution = resolveSupplementalPrice(priceData, cgData, token.geckoId);
       const price = priceResolution?.price ?? 0;
-      const mcap = resolveMarketCap(cgMcap, circulatingSupply, price);
+      const mcap = resolveMarketCap(cgMcap ?? undefined, circulatingSupply, price);
 
       if (mcap > 0) {
         if (circulatingSupply && cgMcap && Math.abs(cgMcap - mcap) / mcap > 0.01) {

@@ -244,3 +244,5 @@ The stablecoin detail Grade History module combines that legacy archive with `GE
 - `src/hooks/api-hooks.ts` exposes `useReportCardsV9` and `useSafetyScoreHistory`.
 
 The retired V8 report-card components, V8 portfolio synthesis, and contagion stress simulator have been removed. A future stress feature must define native V9 semantics rather than recomputing retired V8 dimensions.
+
+Reviewed native transfer applicability retains unresolved material chain identities from supply and declared deployments. A review of one unsupported chain cannot establish another unsupported chain's transfer posture; each chain and each exact declared token identity must be covered by a non-additional reviewed deployment before the native exemption applies.

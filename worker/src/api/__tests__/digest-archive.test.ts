@@ -144,3 +144,13 @@ describe("handleDigestArchive", () => {
     expect(body.digests[0]).not.toHaveProperty("isInternal");
   });
 });
+
+it("projects the actual final served model without substituting the requested model", async () => {
+  const db = mockD1([{ match: "daily_digest", rows: [
+    makeDigestRow({ id: 2, digest_meta: JSON.stringify({ llm: { model: "requested", attempts: [{ servedModel: "first" }, { servedModel: "claude-sonnet-5" }] } }) }),
+    makeDigestRow({ id: 1, digest_meta: JSON.stringify({ llm: { model: "requested", attempts: [{ servedModel: null }] } }) }),
+  ] }]);
+  const body = await (await handleDigestArchive(db)).json() as { digests: { llm?: { servedModel: string } }[] };
+  expect(body.digests[0].llm).toEqual({ servedModel: "claude-sonnet-5" });
+  expect(body.digests[1].llm).toBeUndefined();
+});

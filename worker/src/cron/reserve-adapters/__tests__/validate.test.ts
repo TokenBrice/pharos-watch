@@ -257,3 +257,14 @@ describe("validateAdapterOutput redemption telemetry", () => {
     expect(result.warnings.some((w) => w.code === "redemption-capacity-unverified")).toBe(true);
   });
 });
+
+
+it.each(["solomon-protocol:BTC reserve", `adapter:${"a".repeat(153)}`])("rejects an invalid persisted source key %s", (sourceKey) => {
+  expect(validateAdapterOutput({ slices: [{ sourceKey, name: "Collateral", pct: 100, risk: "low" }] })).toMatchObject({
+    valid: false, warnings: [expect.objectContaining({ code: "invalid-slice-schema", effect: "fatal" })],
+  });
+});
+
+it("accepts a schema-valid source key at the maximum length", () => {
+  expect(validateAdapterOutput({ slices: [{ sourceKey: `adapter:${"a".repeat(152)}`, name: "Collateral", pct: 100, risk: "low" }] }).valid).toBe(true);
+});

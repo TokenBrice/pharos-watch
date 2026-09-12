@@ -3,6 +3,7 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 import { adaptReMetrics } from "../re-metrics";
+import { validateAdapterOutput } from "../validate";
 import { expectValidAdapterOutput, expectWarnings, installAdapterNetwork, runAdapter } from "./reserve-adapter.test-support";
 
 const FIXTURES_DIR = join(dirname(fileURLToPath(import.meta.url)), "fixtures");
@@ -32,7 +33,7 @@ describe("adaptReMetrics", () => {
       trackedTokenCount: 6,
       offchainCapitalUsd: 179595196.93262026,
       offchainAsOf: Date.parse("2026-08-09T00:00:00.000Z") / 1000,
-      sourceTimestamp: Math.floor(Date.parse("2026-08-09T21:23:13.835Z") / 1000),
+      sourceTimestamp: Math.floor(Date.parse("2026-08-09T00:00:00.000Z") / 1000),
       freshnessMode: "verified",
       stableAssetUsd: expect.any(Number),
       redemptionRowsCount: 4,
@@ -192,4 +193,20 @@ describe("fetchReMetricsReserves", () => {
       validate: false,
     })).rejects.toThrow("layout-changed");
   });
+});
+
+
+it.each(["2025-01-01", "2099-01-01", undefined])("does not lend chain freshness to offchain capital dated %s", (date) => {
+  const payload = {
+    initialChainBreakdowns: {
+      ethereum: { asOf: "2026-09-12", rows: [{ tokenSymbol: "usdc", valueWei: "100000000000000000000", valueKnown: true }] },
+    },
+    initialCards: [{ seriesKey: "offchain_capital", stats: { current: 300 }, points: [{ date, value: 300 }] }],
+  };
+  const html = `<script>self.__next_f.push([1,${JSON.stringify(JSON.stringify(payload))}]);</script>`;
+  const result = adaptReMetrics(html);
+  const validated = validateAdapterOutput(result, { now: Date.parse("2026-09-12") / 1000, maxSourceAgeSec: 3 * 86400 });
+  expect([...(result.warnings ?? []), ...validated.warnings]).toContainEqual(expect.objectContaining({ effect: date === "2099-01-01" ? "fatal" : "degraded" }));
+  if (date === "2099-01-01") expect(validated.valid).toBe(false);
+  else expect(result.metadata?.sourceTimestamp).not.toBe(Date.parse("2026-09-12") / 1000);
 });

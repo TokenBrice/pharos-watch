@@ -258,6 +258,41 @@ describe("handleSnapshotsIndex", () => {
 });
 
 describe("handleSnapshotDay", () => {
+  it.each([
+    ["9.14", null, false, 200],
+    ["9.14", "a".repeat(64), false, 200],
+    ["9.14", "invalid", false, 500],
+    ["9.14", null, true, 500],
+    ["9.15", null, false, 500],
+    ["9.2", null, false, 500],
+  ] as const)("validates historical digest at %s (%s, extra=%s)", async (version, digest, extra, status) => {
+    const identity = { ...V9_SAFETY_SCORE_IDENTITY, methodologyVersion: version };
+    const response = makeWorkerReportCardsV9Response({
+      lifecycle: "active", safetyScoreIdentity: identity,
+      asOfSec: 1779105500, updatedAt: 1779105600,
+      cards: [makeWorkerV9Card({ id: "usdc-circle", score: 92, grade: "A+" })],
+    });
+    const envelope = {
+      ...SAMPLE_ENVELOPE,
+      methodologyVersions: { ...SAMPLE_ENVELOPE.methodologyVersions, reportCard: version },
+      safetyScoreIdentity: identity,
+      reportCards: { ...response, cards: response.cards.map((card) => ({
+        ...card, stressStateDigest: digest, ...(extra ? { unexpectedField: true } : {}),
+      })) },
+    };
+    const row = await buildSnapshotRow(envelope);
+    const db = () => mockD1([{ match: "FROM public_snapshots", rows: [], first: row }]);
+    const day = await handleSnapshotDay(db(), ISO_DATE);
+    expect(day.status).toBe(status);
+    const coin = await handleSnapshotCoin(db(), ISO_DATE, "usdc-circle");
+    expect(coin.status).toBe(status);
+    if (status === 200) {
+      expect(await day.text()).toBe(JSON.stringify(envelope));
+      expect(day.headers.get("etag")).toBe(`"${row.content_hash}"`);
+      expect(JSON.stringify(await coin.json())).toContain('"stressStateDigest":' + JSON.stringify(digest));
+    }
+  });
+
   it("returns 400 for malformed date", async () => {
     const db = mockD1();
     const res = await handleSnapshotDay(db, "not-a-date");

@@ -1,7 +1,7 @@
 import { runWorkerRepairTaskRunner } from "../lib/repair-tasks";
 import { runCronDurationWatchdog } from "./cron-duration-watchdog";
 import { runMintBurnGrowthWatchdog } from "./mint-burn-growth-watchdog";
-import { buildCronSentinelResult } from "./cron-sentinel-result";
+import { runCronSentinelSources } from "./cron-sentinel-result";
 
 export async function runDailyCronSentinel(
   db: D1Database,
@@ -11,16 +11,16 @@ export async function runDailyCronSentinel(
     signal?: AbortSignal;
   },
 ) {
-  return buildCronSentinelResult("daily", [
-    { source: "growth", result: await runMintBurnGrowthWatchdog(db, options.signal) },
-    { source: "duration", result: await runCronDurationWatchdog(db, options.signal) },
+  return runCronSentinelSources(db, "daily", [
+    { source: "growth", run: () => runMintBurnGrowthWatchdog(db, options.signal) },
+    { source: "duration", run: () => runCronDurationWatchdog(db, options.signal) },
     {
       source: "repair-debt",
-      result: await runWorkerRepairTaskRunner(db, {
+      run: () => runWorkerRepairTaskRunner(db, {
         nowSec: options.nowSec,
         signal: options.signal,
         enabled: options.repairRunnerEnabled,
       }),
     },
-  ]);
+  ], options.nowSec, options.signal);
 }

@@ -338,7 +338,7 @@ export function YieldClient() {
   const topPysRows = useMemo<YieldViewModelRow[]>(() => {
     return visibleRows
       .filter((row) => row.pharosYieldScore != null)
-      .toSorted((a, b) => (b.pharosYieldScore ?? 0) - (a.pharosYieldScore ?? 0))
+      .sort((a, b) => (b.pharosYieldScore ?? 0) - (a.pharosYieldScore ?? 0))
       .slice(0, 3);
   }, [visibleRows]);
   const topPysRow = topPysRows[0] ?? null;

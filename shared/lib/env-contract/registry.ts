@@ -99,6 +99,12 @@ export const ENV_BINDINGS = [
     runtimes: { worker: { status: "required" } },
   },
   {
+    key: "SAFETY_GRADES_RATE_LIMIT",
+    valueType: "RateLimit",
+    description: "Cloudflare per-IP rate limiter for public safety grades, checked before edge-cache reads.",
+    runtimes: { worker: { status: "required" } },
+  },
+  {
     key: "CORS_ORIGIN",
     valueType: "string",
     description: "Comma-separated CORS allowlist; repo default is `https://pharos.watch,https://ops.pharos.watch`.",

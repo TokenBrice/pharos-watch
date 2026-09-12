@@ -319,14 +319,10 @@ export async function fetchPancakeSwapPools(
       }
     }
 
-    // Persist per-chain progress outside the page loop. A chain that throws used
-    // to skip this write entirely, which froze its `dex_source_pagination_state`
-    // row (pancakeswap-v3:bsc sat at cursor 250 for days) and replayed the same
-    // stub pages every hour. A failed chain consumed the page it died on, so
-    // resume one page past it and record the failure on the row.
+    // Persist failures, but retry the unread page. A failed head must not move the tail.
     if (chainPagesFetched > 0 || chainError != null) {
       if (chainError != null) {
-        nextCursor = (lastAttemptedSkip > 0 ? lastAttemptedSkip : tailStartSkip) + PAGE_SIZE;
+        nextCursor = lastAttemptedSkip > 0 ? lastAttemptedSkip : tailStartSkip;
       }
       const chainDiagnostics = warnings.filter(
         (warning) => warning.startsWith(`${chain}:`) || warning.startsWith(`${chain} page`),

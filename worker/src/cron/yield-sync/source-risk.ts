@@ -38,8 +38,8 @@ const DERIVATION_LANE_TOKENS: Readonly<Record<string, true>> = {
  * (`evaluation.ts`) and the publisher (`buildYieldSourceRisk`) so a row can no
  * longer be scored against one venue and labelled with another.
  *
- * Order: explicit `venueProtocol` → tracked variant child-id map → DeFiLlama
- * project slug → `sourceKey` route. Returns `null` when no venue is known —
+ * Order: explicit `venueProtocol` → DeFiLlama project slug → `sourceKey`
+ * route → tracked variant child-id fallback. Returns `null` when no venue is known —
  * never the row's derivation method.
  */
 export function resolveYieldVenueProtocol(input: {
@@ -50,9 +50,9 @@ export function resolveYieldVenueProtocol(input: {
 }): string | null {
   const candidates = [
     input.venueProtocol,
-    input.stablecoinId ? YIELD_VARIANT_CHILD_VENUE_PROTOCOLS[input.stablecoinId] : null,
     input.project,
     resolveYieldSourceKeyRoute(input.sourceKey)?.venueProtocol,
+    input.stablecoinId ? YIELD_VARIANT_CHILD_VENUE_PROTOCOLS[input.stablecoinId] : null,
   ];
   for (const candidate of candidates) {
     if (typeof candidate !== "string") continue;

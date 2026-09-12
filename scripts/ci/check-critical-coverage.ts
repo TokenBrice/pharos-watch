@@ -18,6 +18,7 @@ import {
   CRITICAL_OWNERSHIP_WAIVERS,
   deriveCriticalOwnership,
   deriveBaseCriticalOwnership,
+  type BaseBlobExec,
   findCriticalOwnershipGaps,
   type CriticalOwnership,
 } from "../lib/critical-ownership.mts";
@@ -28,7 +29,7 @@ const LCOV_PATH = "coverage/lcov.info";
 
 type CoverageWaivers = Record<string, string>;
 type ExitFunction = (code?: string | number | null) => never;
-type GitExec = (file: string, args: readonly string[], options: { encoding: "utf8" }) => string;
+type GitExec = BaseBlobExec;
 
 interface CoverageConsole {
   error(...data: unknown[]): void;
@@ -131,7 +132,7 @@ export function getChangedFilesFromGit(
 ): string[] {
   if (!ref || isAllZeroSha(ref)) return [];
   try {
-    return collectGitPaths({ kind: "range", base: ref, head: "HEAD" }, { execFile });
+    return collectGitPaths({ kind: "range", base: ref, head: "HEAD" }, { execFile: (file, args, options) => execFile(file, args, options).toString() });
   } catch (err) {
     const message = `[coverage] Could not diff against explicit ref "${ref}": ${String(err).slice(0, 200)}`;
     consoleImpl.error(message);
@@ -278,7 +279,7 @@ export function runCriticalCoverageCheck({
       const { base, head } = parseChangedFileArgs([], env);
       changedFiles = collectGitPaths(
         { kind: "range", base: compareRef || base, head, noRenames: true },
-        { execFile },
+        { execFile: (file, args, options) => execFile(file, args, options).toString() },
       );
     } else {
       try {

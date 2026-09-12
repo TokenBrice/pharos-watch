@@ -50,7 +50,12 @@ export function RailCopyFold({
   useEffect(() => {
     if (!id) return;
     const openOnHashMatch = () => {
-      const targetId = decodeURIComponent(window.location.hash.replace(/^#/, ""));
+      let targetId: string;
+      try {
+        targetId = decodeURIComponent(window.location.hash.replace(/^#/, ""));
+      } catch {
+        return;
+      }
       if (targetId === id) revealAnchorTarget(detailsRef.current);
     };
     openOnHashMatch();

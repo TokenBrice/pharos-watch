@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import {
   isValidIanaTimezone,
   localDateInIanaTimezone,
@@ -68,4 +68,31 @@ describe("IANA local time helpers", () => {
       expect(nextIanaLocalHourDueAt(now, zone, hour)).toBeNull();
     }
   });
+});
+
+it("reuses a formatter for case variants of the same zone", () => {
+  const construct = vi.spyOn(Intl, "DateTimeFormat");
+  try {
+    expect(isValidIanaTimezone("Pacific/Chatham")).toBe(true);
+    const count = construct.mock.calls.length;
+    expect(isValidIanaTimezone("pAcIfIc/ChAtHaM")).toBe(true);
+    expect(construct.mock.calls.length).toBe(count);
+  } finally {
+    construct.mockRestore();
+  }
+});
+
+it("evicts old formatter entries instead of retaining an unbounded cache", () => {
+  const formatter = new Intl.DateTimeFormat("en-US", { timeZone: "UTC" });
+  const construct = vi.spyOn(Intl, "DateTimeFormat").mockImplementation(function () { return formatter; });
+  try {
+    for (let index = 0; index < 257; index++) expect(isValidIanaTimezone(`Test/${index}`)).toBe(true);
+    const count = construct.mock.calls.length;
+    expect(isValidIanaTimezone("Test/256")).toBe(true);
+    expect(construct.mock.calls.length).toBe(count);
+    expect(isValidIanaTimezone("Test/0")).toBe(true);
+    expect(construct.mock.calls.length).toBe(count + 1);
+  } finally {
+    construct.mockRestore();
+  }
 });

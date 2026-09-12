@@ -563,6 +563,7 @@ function repairBrokenHtml(chunk: string): string {
 
 /** Split a message into chunks under the given character limit. */
 export function splitMessage(html: string, limit = TELEGRAM_MESSAGE_CHUNK_LIMIT): string[] {
+  if (!Number.isSafeInteger(limit) || limit < 1) throw new RangeError("Message chunk limit must be a positive integer");
   if (html.length <= limit) return [html];
 
   const splitOversizedSection = (section: string): string[] => {
@@ -592,7 +593,9 @@ export function splitMessage(html: string, limit = TELEGRAM_MESSAGE_CHUNK_LIMIT)
         let repaired = repairBrokenHtml(line.slice(index, end));
         // Balancing tags consumes part of the same limit as the original text.
         while (repaired.length > limit) {
-          end -= repaired.length - limit;
+          // Always consume a positive prefix, even when balancing deeply nested
+          // tags adds more bytes than the entire original prefix.
+          end = Math.max(index + 1, end - Math.max(1, repaired.length - limit));
           repaired = repairBrokenHtml(line.slice(index, end));
         }
         if (repaired) parts.push(repaired);

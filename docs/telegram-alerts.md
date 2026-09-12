@@ -37,6 +37,8 @@ Status: **undecided (capture-window-incomplete)** (14-day five-minute dispatch c
 Decision `decision.proceed41`: **false** (undecided: capture-window-incomplete; no 4.1 decision until the 14-day evidence is complete; 4.2/4.3 remain undecided pending separate table-value evidence).
 <!-- GENERATED-END: telegram-adoption -->
 
+Internal adoption telemetry accepts POSTs only through the authenticated site-proxy lane (including authenticated preview traffic) or the admin lane; public API keys do not authorize this endpoint.
+
 ## Personalized Daily Recap
 
 **Rollout state.** The checked-in production Worker config sets `TELEGRAM_RECAP_ROLLOUT_MODE` to `public`; unset or malformed values still fail closed to `off`. The recap is not advertised on the public site or in Telegram's private command menu before `public`. Operators configure `TELEGRAM_RECAP_ROLLOUT_CHAT_IDS` with `wrangler secret put TELEGRAM_RECAP_ROLLOUT_CHAT_IDS` for a canary. Values are exact trimmed chat-ID CSV tokens, not prefixes. `dark` runs the same D1-only projection without writing recap targets, pending rows, or schedule advancement; its aggregate planner metadata is safe to inspect in cron telemetry. `canary` limits planning, delivery, and controls to the exact allowlist. `off` atomically cancels only queued `personalized_recap` targets and pending rows, leaving risk alerts and Daily Digest delivery untouched. `public` enables the feature for all eligible private chats and restores `/recap` in Telegram's command menu.
@@ -466,7 +468,7 @@ If a depeg closes with a recovery reason and reopens for the same coin between t
 ### Message Formatting and Limits
 
 - Messages are HTML-formatted via `formatConsolidatedMessage()`.
-- Long messages are split with `splitMessage(html, 4000)`.
+- Long messages are split with `splitMessage(html, 4000)`. Tag repair always advances through a positive input prefix, including deeply nested HTML; nonpositive or noninteger custom chunk limits are rejected. Split version 3 invalidates older queued chunks for this algorithm change.
 - `sendBatch()` posts in parallel batches of 4, leaving headroom in the repo's six-request trigger budget.
 - Hard cap: `3,600 Telegram message attempts per dispatch run`.
 - `dispatch-telegram-alerts` has a 4.5-minute app-level hard timeout and 30-second lease heartbeats; pending-drain and fresh-send loops stop starting Telegram batches after a 4-minute soft deadline, leaving 30 seconds for durable finalization. The lease TTL adds a one-minute crash fence, so an operation that ignores abort may defer at most the immediately following 5-minute tick instead of suppressing several later slots. Overlapping `skipped_locked` attempts cannot overwrite or clear the active lease owner's progress row.

@@ -17,7 +17,7 @@ Where the signals went:
 | Bridge capabilities | Route-scoped Bridge Risk controls in V9 Economic Control |
 | `authorityPosture` | Validated annotation only; `npx tsx scripts/maintenance/generate-safety-score-v9-mint-posture-queue.ts --replay <path> --output <path>` |
 
-See [report-cards.md](./report-cards.md) for the live methodology.
+See [report-cards.md](./report-cards.md) for the live methodology. DDR uses the derived published mint posture from version `4.5`, retaining this curated annotation as its unavailable-publication fallback. Both `none-resolved` scopes reject unknown direct mint ability: unresolved authority is not evidence of absence; known upgrade-only and parameter-only controls remain permissible in the mint-scoped variant.
 
 ## Current V9 scope
 

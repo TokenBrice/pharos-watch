@@ -36,6 +36,7 @@ Options:
   -h, --help        Show this help`;
 
 interface ApiDigest {
+  llm?: DigestContentEntry["llm"];
   digestText: string;
   digestTitle?: string;
   digestExtended?: string;
@@ -191,6 +192,8 @@ export async function runDigestSync(argv = process.argv.slice(2)) {
           text: d.digestText,
           extended: d.digestExtended || "",
           generatedAt: d.generatedAt,
+          ...(typeof d.llm?.servedModel === "string" && d.llm.servedModel
+            ? { llm: { servedModel: d.llm.servedModel } } : {}),
           digestType: d.digestType ?? ("daily" as const),
           editionNumber: d.editionNumber ?? 0,
           // Provenance is persisted only when the upstream edition actually

@@ -278,12 +278,15 @@ export function adaptReMetrics(html: string): AdapterResult {
   const instantRedemptionCapacity = extractInstantRedemptionCapacity(html);
 
   const tokenValues = new Map<string, number>();
-  const chainAsOfTimestamps: number[] = [];
+  const componentTimestamps: number[] = [];
+  let missingComponentTimestamp = false;
 
   for (const breakdown of Object.values(breakdowns)) {
     const asOf = parseTimestampLikeToUnixSeconds(breakdown.asOf);
-    if (asOf != null) {
-      chainAsOfTimestamps.push(asOf);
+    const hasValue = (breakdown.rows ?? []).some((row) => row.valueKnown && (parseValueUsdFromWei(row.valueWei) ?? 0) > 0);
+    if (hasValue) {
+      if (asOf != null) componentTimestamps.push(asOf);
+      else missingComponentTimestamp = true;
     }
 
     for (const row of breakdown.rows ?? []) {
@@ -327,15 +330,20 @@ export function adaptReMetrics(html: string): AdapterResult {
     throw htmlLayoutChangedError("re-metrics", "no reserve composition entries found");
   }
 
-  // The composition is the chain-breakdown rows, so its freshness must come
-  // from the chain `asOf` set. The offchain capital series is a daily series
-  // whose date can lag the minute-fresh chain rows by ~9h; MIN-ing it into the
-  // composition clock discarded real freshness headroom, so it is carried
-  // separately as `offchainAsOf` instead (RM1).
-  const sourceTimestamp =
-    chainAsOfTimestamps.length > 0
-      ? Math.min(...chainAsOfTimestamps)
-      : null;
+  // Every component contributing to the mix needs its own freshness evidence.
+  if (offchainCapitalUsd != null && offchainCapitalUsd > 0) {
+    if (offchainTimestamp != null) componentTimestamps.push(offchainTimestamp);
+    else missingComponentTimestamp = true;
+  }
+  if (missingComponentTimestamp) {
+    warnings.push(reserveDegradedWarning(
+      "re-metrics-component-undated",
+      "A contributing reserve component has no trustworthy source timestamp",
+    ));
+  }
+  const sourceTimestamp = !missingComponentTimestamp && componentTimestamps.length > 0
+    ? Math.min(...componentTimestamps)
+    : null;
 
   return {
     slices,
@@ -345,6 +353,7 @@ export function adaptReMetrics(html: string): AdapterResult {
       offchainCapitalUsd,
       ...(offchainTimestamp != null ? { offchainAsOf: offchainTimestamp } : {}),
       trackedTokenCount: tokenValues.size,
+      ...(componentTimestamps.length > 0 ? { newestSourceTimestamp: Math.max(...componentTimestamps) } : {}),
       ...freshnessMetadataFromTimestamp(
         sourceTimestamp,
         "nextjs-embedded-payload",

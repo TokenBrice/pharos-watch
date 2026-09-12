@@ -6,6 +6,7 @@ import {
   freshnessMetadataFromTimestamp,
   parseTimestampLikeToUnixSeconds,
   slicesFromValues,
+  sourceKeySlug,
 } from "./helpers";
 
 interface SolomonAssetRow {
@@ -105,7 +106,7 @@ export function adaptSolomonProtocolData(payload: SolomonProtocolDataResponse): 
     if (usd <= 0) continue;
     const asset = typeof row.asset === "string" && row.asset.trim() ? row.asset.trim() : "asset";
     const mapped = custodySliceName(asset);
-    values.push({ sourceKey: `solomon-protocol:custody:${asset.toLowerCase()}`, name: mapped.name, value: usd, risk: mapped.risk });
+    values.push({ sourceKey: `solomon-protocol:custody:${sourceKeySlug(asset)}`, name: mapped.name, value: usd, risk: mapped.risk });
   }
 
   let usdcUsd = 0;
@@ -155,7 +156,7 @@ export function adaptSolomonProtocolData(payload: SolomonProtocolDataResponse): 
     if (usd <= 0) continue;
     const asset = typeof row.asset === "string" && row.asset.trim() ? row.asset.trim() : "reserve";
     values.push({
-      sourceKey: `solomon-protocol:reserve-fund:${asset.toLowerCase()}`,
+      sourceKey: `solomon-protocol:reserve-fund:${sourceKeySlug(asset)}`,
       name: `Reserve fund ${asset}`,
       value: usd,
       risk: "medium",

@@ -1106,3 +1106,11 @@ describe("resolveAlertLinkPreviewOptions", () => {
     expect(resolveAlertLinkPreviewOptions(multiCoinAlerts(), 0)).toBeNull();
   });
 });
+
+it("splits deeply nested HTML with forward progress and rejects invalid limits", () => {
+  const html = "<b>".repeat(1500) + "payload" + "</b>".repeat(1500);
+  const chunks = splitMessage(html);
+  expect(chunks.length).toBeGreaterThan(0);
+  expect(chunks.every((chunk) => chunk.length <= 4000)).toBe(true);
+  expect(() => splitMessage("x", 0)).toThrow(RangeError);
+});

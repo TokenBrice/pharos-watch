@@ -240,6 +240,8 @@ An idle `digestTriggerPoll` with no pending force-run intent or due Monday recov
 
 ---
 
+The digest archive projects only the final generation attempt’s recorded `servedModel` through the public `llm.servedModel` field and the build-time snapshot. Requested model configuration never fills missing provenance; historical editions without a recorded model keep the “Model not recorded” credit.
+
 ## Distribution
 
 The daily digest never blocks on Safety Score map publication. A current manifest or one carried forward by up to two whole UTC days enables the dated map attachment; otherwise the digest still generates and delivers without map attachment or map prose. Attached and persisted URLs always use `manifest.date`, never `latest.png`, and carried-forward captions and prompts identify the date the poster depicts. A complete capture is resolved before generation so the same immutable `safetyMap` object feeds the prompt, stored web snapshot, and channel copy.

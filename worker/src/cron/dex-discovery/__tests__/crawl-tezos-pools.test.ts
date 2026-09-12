@@ -6,7 +6,7 @@ import { discoveryContext } from "./discovery.test-support";
 
 const UUSD_ADDRESS = "KT1XRPEPXbZK25r3Htzp2o1x7xdMMmfocKNW";
 const USDT_ADDRESS = "KT1XnTn74bUtxHfDtBmm2bGZAQfhPbvKWR8o";
-const POOL_ADDRESS = "KT1UJBvm4hv11Uvu6r4c8zE5K2EfmwiRVgsm";
+const POOL_ADDRESS = "KT1JeWiS8j1kic4PHx7aTnEr9p4xVtJNzk5b";
 
 function target(address = UUSD_ADDRESS): ContractDeployment {
   return { chain: "tezos", address, decimals: 12 };
@@ -195,4 +195,20 @@ describe("Tezos uUSD pool discovery", () => {
     ]);
     expect(stageContext.pools).toEqual([]);
   });
+  it.each(["pool", "quote", "token-id"])("rejects a forged %s identity despite trusted-looking metadata", async (forgery) => {
+    const pool = forgery === "pool" ? "KT1UJBvm4hv11Uvu6r4c8zE5K2EfmwiRVgsm" : POOL_ADDRESS;
+    const quote = forgery === "quote" ? "KT1UJBvm4hv11Uvu6r4c8zE5K2EfmwiRVgsm" : USDT_ADDRESS;
+    mockCensus(
+      [{ account: { address: pool, alias: "uUSD/USDT FlatYouves" }, balance: "20000000000000000" }],
+      [
+        balanceRow(pool, "uUSD/USDT FlatYouves", UUSD_ADDRESS, "0", "20000000000000000", "uUSD", "12"),
+        balanceRow(pool, "uUSD/USDT FlatYouves", quote, forgery === "token-id" ? "1" : "0", "20000000000", "USDT", "6"),
+      ],
+    );
+    const stageContext = context();
+    const result = await crawlTezosPoolsStage({ coinTargets: [target()], context: stageContext.value });
+    expect(result.providerChecks[0]).toMatchObject({ status: "degraded", observedPoolCount: 0 });
+    expect(stageContext.pools).toEqual([]);
+  });
+
 });

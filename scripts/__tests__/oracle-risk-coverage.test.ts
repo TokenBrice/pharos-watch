@@ -1,3 +1,4 @@
+import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import type { StablecoinMeta } from "@shared/types";
 import { analyzeOracleRiskCoverage } from "../lib/oracle-risk-coverage";
@@ -327,4 +328,8 @@ describe("analyzeOracleRiskCoverage", () => {
       ]);
     });
   });
+});
+
+it("keeps the coverage analyzer source text-reviewable", () => {
+  expect(readFileSync("scripts/lib/oracle-risk-coverage.ts").includes(0)).toBe(false);
 });

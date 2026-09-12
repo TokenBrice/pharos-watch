@@ -621,7 +621,10 @@ export const DailyDigestResponseSchema = z
   }));
 export type DailyDigestResponse = z.infer<typeof DailyDigestResponseSchema>;
 
+const DigestModelProvenanceSchema = z.object({ servedModel: z.string().nullable().optional() });
+
 export const DigestArchiveEntrySchema = z.object({
+  llm: DigestModelProvenanceSchema.optional(),
   digestText: z.string(),
   digestTitle: z.string().nullable(),
   digestExtended: z.string().nullable(),
@@ -658,6 +661,7 @@ export type DigestArchiveResponse = z.infer<typeof DigestArchiveResponseSchema>;
  */
 export const DigestStoredSnapshotSchema = z.array(
   z.object({
+    llm: DigestArchiveEntrySchema.shape.llm,
     date: z.string().regex(/^\d{4}-\d{2}-\d{2}(?:-weekly)?$/),
     title: DigestArchiveEntrySchema.shape.digestTitle.unwrap(),
     text: DigestArchiveEntrySchema.shape.digestText,

@@ -303,36 +303,29 @@ export function adaptChainlinkPorResponse(
   // declared incomplete supply scope works the same way: the readable
   // deployments are only part of the liability the feed covers, so neither
   // basis applies and the ratio stays withheld.
-  const liabilityBasis: "issuer-circulating" | "onchain-total-supply" | undefined = supplyScope != null
-    ? undefined
-    : probeActive
-      ? (circulationPlausible ? "issuer-circulating" : undefined)
-      : "onchain-total-supply";
-  const liabilityTokens =
-    liabilityBasis === "issuer-circulating" ? circulatingTokens : liabilityBasis != null ? supplyTokens : undefined;
+  // The circulation endpoint exposes no observation timestamp. A fresh oracle
+  // numerator cannot certify that denominator, so retain circulation as diagnostic only.
+  const liabilityBasis = supplyScope == null && !probeActive ? "onchain-total-supply" : undefined;
+  const liabilityTokens = liabilityBasis != null ? supplyTokens : undefined;
   const collateralizationRatio =
     liabilityTokens != null && liabilityTokens > 0 ? reserveValue / liabilityTokens : undefined;
 
-  const liabilityLabel = liabilityBasis === "issuer-circulating"
-    ? "issuer-reported circulating supply"
-    : "multichain token supply";
   const warnings: LiveReserveWarning[] = buildCoverageShortfallWarnings({
     code: "por-reserve-under-supply",
-    message: (pct) => `Chainlink PoR reserves cover ${pct}% of ${liabilityLabel}`,
+    message: (pct) => `Chainlink PoR reserves cover ${pct}% of multichain token supply`,
     coverageRatio: collateralizationRatio,
   });
   if (collateralizationRatio != null && collateralizationRatio > 1.1) {
-    warnings.push(
-      liabilityBasis === "issuer-circulating"
-        ? reserveInfoWarning(
-            "por-reserve-over-supply",
-            `Chainlink PoR reserves cover ${(collateralizationRatio * 100).toFixed(2)}% of issuer-reported circulating supply; the surplus is issuer-held inventory backing`,
-          )
-        : reserveDegradedWarning(
-            "por-reserve-over-supply",
-            `Chainlink PoR reserves cover ${(collateralizationRatio * 100).toFixed(2)}% of multichain token supply (possible scope mismatch)`,
-          ),
-    );
+    warnings.push(reserveDegradedWarning(
+      "por-reserve-over-supply",
+      `Chainlink PoR reserves cover ${(collateralizationRatio * 100).toFixed(2)}% of multichain token supply (possible scope mismatch)`,
+    ));
+  }
+  if (probeActive) {
+    warnings.push(reserveDegradedWarning(
+      "por-circulation-freshness-unverified",
+      "Issuer circulation has no independently verified source timestamp; retained as diagnostic only, with coverage ratio withheld",
+    ));
   }
   if (probeActive && circulation?.failure) {
     warnings.push(

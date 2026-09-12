@@ -74,7 +74,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "shared/lib/methodology-versions/constants.ts",
-      "sha256": "86e04330824e20d3340a96c5de6cbcfbfd046c1f55ac1f355c34eee1c7f8dcdf"
+      "sha256": "c53591c8fb076f5f3c2e96a6dd25f79cfca989b460467407d59e72762e796f21"
     },
     {
       "path": "shared/lib/methodology-versions/current-version.json",
@@ -90,7 +90,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "shared/lib/p4-exit-route-amm-simulation.ts",
-      "sha256": "e4ae1ac1114f2bd3fb34c89cf75f7345415f69a649303d6d1ffa485ebc3020c9"
+      "sha256": "9d559bda045e00ff232e0955bb238b637e345db9315662c6898dcd0c5da9883e"
     },
     {
       "path": "shared/lib/p4-exit-route-capability-policy.ts",
@@ -494,7 +494,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "worker/src/lib/safety-score-v9/extension-routes.ts",
-      "sha256": "0d3ecf809401fba483c6570381382e79f352e04a9017c42869980cde98435245"
+      "sha256": "79d5ec274d45452856eb96206679185e61d8d8d728af4d0a8d8c6db7ad790e68"
     },
     {
       "path": "worker/src/lib/safety-score-v9/extension-shared.ts",
@@ -510,7 +510,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "worker/src/lib/safety-score-v9/extension-transfer.ts",
-      "sha256": "85b783e043618975f26a55e8c4614d86770a21faca729063211afe794e41e6a0"
+      "sha256": "9125d6923aec400e7372902dddcff0bdbbc7db985cc625f6c63c383d82a08d43"
     },
     {
       "path": "worker/src/lib/safety-score-v9/extension-wrapper-allocation.ts",
@@ -518,7 +518,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "worker/src/lib/safety-score-v9/extension.ts",
-      "sha256": "5486d0a5abc57291e847be9409691ca9257ba8b348578901a0122aabfa09b863"
+      "sha256": "c18d694cc9c0ed98b2ad8c9b1ee23ae3f9df4f27ffd0ebce5241bc62866d6fa2"
     },
     {
       "path": "worker/src/lib/safety-score-v9/fact-set-backing.ts",
@@ -603,7 +603,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
       "r2Key": "captures/lusd-liquity/2026-09-11-block-25953096-shock-coverage.json.gz"
     }
   ],
-  "digest": "2fdf2094e9013440bce893ac24acfdc8996d1432c0cfb93dadbcf9d33b23c543"
+  "digest": "4df04cc572d54a250a7274a8398058621ce928fc88481603ef4b8b6a040062ad"
 } as const;
 
 export const SAFETY_SCORE_V9_EVALUATION_BUILD_DIGEST =

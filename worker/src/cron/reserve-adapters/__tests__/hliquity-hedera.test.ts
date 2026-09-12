@@ -191,3 +191,10 @@ describe("fetchHliquityHederaReserves", () => {
     ]));
   });
 });
+
+
+it.each([-601, 601])("rejects a latest mirror block offset by %i seconds before reading contracts", async (offset) => {
+  const network = hederaNetwork();
+  network.json![BLOCK_URL] = { blocks: [{ number: 99_808_682, timestamp: { from: `${NOW_SEC + offset}.0` } }] };
+  await expect(runAdapter("hliquity-hedera", "hchf-hedera-swiss-franc", { network, nowSec: NOW_SEC })).rejects.toThrow(/freshness window/);
+});

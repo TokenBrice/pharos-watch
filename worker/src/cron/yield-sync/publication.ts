@@ -418,7 +418,7 @@ async function pruneYieldTablesOnce(
   // `D1_ERROR: D1 DB exceeded its CPU time limit`, every hour, forever. A chunk
   // that cannot commit leaves the table unchanged, so the drain must be bounded
   // and resumable rather than atomic.
-  const rawPruneCutoff = startSec - YIELD_HISTORY_RAW_DAYS * DAY_SECONDS;
+  const rawPruneCutoff = bucketUnixSecondsToUtcDay(startSec - YIELD_HISTORY_RAW_DAYS * DAY_SECONDS);
   const pruneCutoff = startSec - YIELD_HISTORY_MAX_DAYS * DAY_SECONDS;
   const frozenIdsList = [...FROZEN_IDS];
   const frozenClause =

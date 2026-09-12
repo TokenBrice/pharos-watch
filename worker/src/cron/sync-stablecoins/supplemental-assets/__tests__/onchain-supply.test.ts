@@ -1,6 +1,9 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import type { StablecoinMeta } from "@shared/types/core";
 
+const fetchEearnSuiSupplyMock = vi.hoisted(() => vi.fn());
+vi.mock("../sui-vault-supply", () => ({ fetchEearnSuiSupply: fetchEearnSuiSupplyMock }));
 const fetchErc20TotalSupplyMock = vi.fn();
 const probeTrackedTokenSupplyMock = vi.fn();
 const fetchOnchainUint256Mock = vi.fn();
@@ -171,6 +174,7 @@ function makeMre7yieldMeta(): StablecoinMeta {
     symbol: "mRe7YIELD",
     contracts: [
       { chain: "ethereum", address: "0x87c9053c819bb28e0d73d33059e1b3da80afb0cf", decimals: 18 },
+      { chain: "tac", address: "0x0a72ed3c34352ab2dd912b30f2252638c873d6f0", decimals: 18 },
       { chain: "etherlink", address: "0x733d504435a49fc8c4e9759e756c2846c92f0160", decimals: 18 },
       {
         chain: "starknet",
@@ -430,13 +434,15 @@ describe("fetchCuratedAggregateOnChainMcap", () => {
     probeTrackedTokenSupplyMock.mockImplementation(async (_meta, input) => {
       if (input?.chain === "ethereum") return 6_792_507n * 10n ** 18n;
       if (input?.chain === "etherlink") return 1_041_331n * 10n ** 18n;
+      if (input?.chain === "tac") return 630_603n * 10n ** 18n;
       return null;
     });
     fetchStarknetTotalSupplyMock.mockResolvedValue(175_676n * 10n ** 18n);
 
     const result = await fetchCuratedAggregateOnChainMcap(makeMre7yieldMeta(), 1);
 
-    expect(result?.mcap).toBe(8_009_514);
+    expect(result?.mcap).toBe(8_640_117);
+    expect(result?.chainCirculating?.TAC?.current).toBe(630_603);
     expect(result?.chainCirculating?.Starknet?.current).toBe(175_676);
     expect(fetchStarknetTotalSupplyMock.mock.calls[0]?.[0]).toMatchObject({
       contract: "0x04be8945e61dc3e19ebadd1579a6bd53b262f51ba89e6f8b0c4bc9a7e3c633fc",
@@ -450,5 +456,37 @@ describe("fetchCuratedAggregateOnChainMcap", () => {
     fetchStarknetTotalSupplyMock.mockRejectedValue(new Error("starknet_call failed"));
 
     await expect(fetchCuratedAggregateOnChainMcap(makeMre7yieldMeta(), 1)).resolves.toBeNull();
+  });
+});
+
+
+it.each([undefined, "hyperevm", "sei", "pharos", "berachain"])("conserves syzUSD canonical supply and requires every spoke (unreadable=%s)", async (unreadable) => {
+  fetchErc20TotalSupplyMock.mockImplementation(async (input) => input.chain === unreadable ? null : 10n * 10n ** 18n);
+  probeTrackedTokenSupplyMock.mockImplementation(async (_meta, input) => {
+    if (input.chain === unreadable) return null;
+    return (input.chain === "plasma" ? 100n : 10n) * 10n ** 18n;
+  });
+  const result = await fetchCuratedAggregateOnChainMcap(TRACKED_META_BY_ID.get("syzusd-yuzu")!, 1);
+  if (unreadable) {
+    expect(result).toBeNull();
+  } else {
+    expect(result?.mcap).toBe(100);
+    expect(result?.chainCirculating?.Plasma?.current).toBe(40);
+    expect(Object.keys(result?.chainCirculating ?? {})).toHaveLength(7);
+    expect(Object.values(result?.chainCirculating ?? {}).reduce((sum, row) => sum + row.current, 0)).toBe(100);
+  }
+});
+
+describe("eEARN complete native aggregate", () => {
+  it.each([true, false])("requires both native legs (Sui available=%s)", async (available) => {
+    const meta = TRACKED_META_BY_ID.get("eearn-ember")!;
+    probeTrackedTokenSupplyMock.mockResolvedValue(3_000_000_000_000n);
+    if (available) fetchEearnSuiSupplyMock.mockResolvedValue(7_000_000_000_000n);
+    else fetchEearnSuiSupplyMock.mockRejectedValue(new Error("unavailable"));
+    const result = await fetchCuratedAggregateOnChainMcap(meta, 1.04);
+    if (available) {
+      expect(result?.mcap).toBe(10_400_000);
+      expect(result?.chainCirculating?.Sui.current).toBe(7_280_000);
+    } else expect(result).toBeNull();
   });
 });

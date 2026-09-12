@@ -1,3 +1,4 @@
+import { buildUniswapV4RegisteredExecutionTarget } from "./execution-targets/uniswap-v4";
 import {
   canonicalExitRouteAssetKey,
   canonicalExitRouteChain,
@@ -18,12 +19,9 @@ import {
 } from "@shared/types/measured-execution";
 import {
   buildUniV3ExecutionCandidateKey,
-  buildUniswapV4ExecutionCandidateKey,
-  buildUniswapV4MeasuredExecutionTarget,
   buildUniV3MeasuredExecutionTarget,
   parseUniV3FeePips,
   type UniV3ExecutionCandidate,
-  type UniswapV4ExecutionCandidate,
 } from "../measured-execution/inventory";
 import {
   CURVE_CRYPTOSWAP_ADAPTER_PROFILE_ID,
@@ -203,23 +201,6 @@ function findExactUniV3Candidates(
   for (const candidates of candidatesByKey.values()) {
     for (const candidate of candidates) {
       if (canonicalExitRouteAssetKey(candidate.chain, candidate.poolAddress) === exactPoolKey) {
-        matches.push(candidate);
-      }
-    }
-  }
-  return matches;
-}
-
-function findExactUniswapV4Candidates(
-  candidatesByKey: ReadonlyMap<string, readonly UniswapV4ExecutionCandidate[]>,
-  chain: string,
-  poolId: string,
-): UniswapV4ExecutionCandidate[] {
-  const exactPoolKey = canonicalExitRouteAssetKey(chain, poolId);
-  const matches: UniswapV4ExecutionCandidate[] = [];
-  for (const candidates of candidatesByKey.values()) {
-    for (const candidate of candidates) {
-      if (canonicalExitRouteAssetKey(candidate.chain, candidate.poolId) === exactPoolKey) {
         matches.push(candidate);
       }
     }
@@ -897,40 +878,12 @@ export function buildPoolExecutionCapability(
         })
       : null;
 
-  const uniswapV4FeePips =
-    protocol === "uniswap-v4" ? parseUniV3FeePips(pool.poolMeta) : null;
-  const uniswapV4ExecutionKey =
-    protocol === "uniswap-v4"
-      ? buildUniswapV4ExecutionCandidateKey(
-          chainNorm,
-          pool.underlyingTokens,
-          uniswapV4FeePips,
-        )
-      : null;
-  const keyedUniswapV4Candidates = uniswapV4ExecutionKey
-    ? (context.uniswapV4ExecutionCandidates.get(uniswapV4ExecutionKey) ?? [])
-    : [];
-  const exactUniswapV4Candidates =
-    protocol === "uniswap-v4"
-      ? findExactUniswapV4Candidates(context.uniswapV4ExecutionCandidates, chainNorm, pool.pool)
-      : [];
-  const uniswapV4Candidates =
-    exactUniswapV4Candidates.length > 0
-      ? exactUniswapV4Candidates
-      : keyedUniswapV4Candidates;
-  const uniswapV4MeasuredTarget =
-    protocol === "uniswap-v4" && uniswapV4Candidates.length === 1
-      ? buildUniswapV4MeasuredExecutionTarget({
-          stablecoinId,
-          candidate: uniswapV4Candidates[0]!,
-          stablecoinPriceById: context.stablecoinPriceById,
-          chainAddressToId: context.chainAddressToId,
-          symbolToChainScopedIds: context.symbolToChainScopedIds,
-          validationReferences: context.validationReferences,
-          retainedTvlUsd: rawContribTvl,
-          capturedAt: context.measuredTargetCapturedAt,
-        })
-      : null;
+  const uniswapV4MeasuredTarget = buildUniswapV4RegisteredExecutionTarget({
+    context,
+    identity,
+    enrichment,
+    stablecoinId,
+  })?.measuredExecutionTarget ?? null;
 
   const measuredExecutionTarget =
     curveCryptoSwapMeasuredTarget ??

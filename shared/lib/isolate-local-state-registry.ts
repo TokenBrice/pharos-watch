@@ -68,7 +68,7 @@ export const ISOLATE_LOCAL_STATE_REGISTRY = [
     stateNames: ["localFormatterCache"],
     owner: "IANA local-time scheduling helpers",
     kind: "cache",
-    resetOrTtl: "One Intl.DateTimeFormat per recognized IANA timezone until isolate recycle; unrecognized zones are never cached.",
+    resetOrTtl: "At most 256 Intl.DateTimeFormat entries with case-insensitive timezone keys and oldest-entry eviction; unrecognized zones are never cached.",
     durableTruth: "The subscriber timezone in D1 and the runtime timezone database are authoritative; cached formatters carry no business state.",
   },
   {
@@ -107,7 +107,7 @@ export const ISOLATE_LOCAL_STATE_REGISTRY = [
     sourcePath: "worker/src/cron/depeg-resolver/utils.ts",
     stateNames: [
       "v9DependencyImpairmentByCoin",
-      "v9MintPostureBandByCoin",
+      "v9MintPostureByCoin",
       "v9MintPostureProjectionInstalled",
     ],
     owner: "Depeg resolver V9 dependency and mint-posture projection",
