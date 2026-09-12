@@ -1591,7 +1591,7 @@ describe("P4 DEX exit route observations", () => {
     const stableswapPool = (
       amplification: number,
       balances: [number, number],
-      outputReferencePriceSource: "tracked-market" | "peg-reference" = "tracked-market",
+      outputReferencePriceSource: "tracked-market" | "peg-reference" | "source-token-usd" = "tracked-market",
     ) => ({
       poolId: `ethereum:0x00000000000000000000000000000000000000a${amplification}`,
       project: "curve",
@@ -1663,6 +1663,16 @@ describe("P4 DEX exit route observations", () => {
     expect(pegDerivedObservation.outputUnitValueUsd).toBeUndefined();
     expect(pegDerivedObservation.outputUnitValueSourceId).toBeUndefined();
     expect(pegDerivedObservation.outputUnitValueObservedAt).toBeUndefined();
+
+    const sourceDerivedObservation = buildP4DexExitRouteObservations({
+      stablecoinId: "usdc-circle",
+      observedAt: 1_720_000_000,
+      retainedPools: [stableswapPool(200, [5_000_000, 5_000_000], "source-token-usd")],
+    }).observations[0]!;
+    expect(sourceDerivedObservation.outputUnitValueUsd).toBeUndefined();
+    expect(sourceDerivedObservation.outputUnitValueSourceId).toBeUndefined();
+    expect(sourceDerivedObservation.outputUnitValueObservedAt).toBeUndefined();
+    expect(sourceDerivedObservation.capacityCurve).toEqual(observation.capacityCurve);
 
     // A high-A balanced stable pool fills a request near half its depth
     // within the 200 bps bound — far above what constant-product math with

@@ -3,7 +3,7 @@ import { StablecoinListResponseSchema } from "@shared/types/market";
 import type { PriceSourceHealth } from "@shared/types/status";
 import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import { CHAIN_META } from "@shared/lib/chains";
-import { selectCuratedAggregateOnchainSupplyProbeContracts } from "@shared/lib/onchain-supply-probe";
+import { CURATED_AGGREGATE_ESCROW_RESIDUALS, selectCuratedAggregateOnchainSupplyProbeContracts, selectSupplementalOnchainSupplyProbeContract } from "@shared/lib/onchain-supply-probe";
 import { getCirculatingRaw } from "@shared/lib/supply";
 import { setCacheIfNewer, getCache, getPriceCache, type PriceCacheEntry } from "../../lib/db-cache";
 import { toErrorMessage } from "@shared/lib/error-utils";
@@ -353,6 +353,19 @@ export function replaceZeroSupplyPrimaryAssets(
 }
 
 function isWithinRestoreCeiling(previous: PeggedAsset, nowSec: number): boolean {
+  // Cached on-chain totals must still satisfy today's deployment roster. A
+  // removed or expanded aggregate cannot re-enter through generic carry-forward.
+  if (previous.supplySource === "onchain-total-supply") {
+    const meta = ACTIVE_STABLECOINS.find((entry) => entry.id === String(previous.id));
+    if (!meta) return false;
+    const labels = CURATED_AGGREGATE_SUPPLY_CHAIN_LABELS_BY_ID.get(meta.id);
+    if (labels) {
+      const bucket = getSinglePositiveCirculatingBucket(previous);
+      if (!bucket || !hasReconciledCuratedAggregateSupplyPacket(previous, labels, bucket)) return false;
+    } else if (!selectSupplementalOnchainSupplyProbeContract(meta)) {
+      return false;
+    }
+  }
   const observedAt = normalizeOptionalTimestamp(previous.supplyObservedAt);
   // Rows without provenance get one restore; the cache read path stamps
   // supplyObservedAt from the cache row, so age accrues from there.
@@ -381,6 +394,10 @@ function hasReconciledCuratedAggregateSupplyPacket(
   const aggregateSupply = getCirculatingRaw(asset);
   const chainCirculating = asset.chainCirculating;
   const observedChainLabels = Object.keys(chainCirculating ?? {}).sort();
+  const residualLabel = CURATED_AGGREGATE_ESCROW_RESIDUALS[String(asset.id)]?.unattributedChainLabel;
+  if (residualLabel && observedChainLabels.includes(residualLabel)) {
+    expectedChainLabels = [...expectedChainLabels, residualLabel].sort();
+  }
   if (
     !Number.isFinite(aggregateSupply) ||
     aggregateSupply <= 0 ||

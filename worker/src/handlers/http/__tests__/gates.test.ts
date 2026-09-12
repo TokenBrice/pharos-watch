@@ -82,6 +82,29 @@ describe("evaluateAccessGate", () => {
     }
   });
 
+  it("limits anonymous safety grades before reading data and fails closed", async () => {
+    const env = makeEnv();
+    const limit = vi.fn().mockResolvedValue({ success: true });
+    env.SAFETY_GRADES_RATE_LIMIT = { limit };
+    const request = new Request("https://api.pharos.watch/api/safety-grades", { headers: { "CF-Connecting-IP": "192.0.2.1" } });
+    expect((await evaluateAccessGate(request, new URL(request.url), env)).response).toBeNull();
+    expect(limit).toHaveBeenCalledWith({ key: "192.0.2.1" });
+    expect(apiKeyMocks.authenticateApiKey).not.toHaveBeenCalled();
+    limit.mockResolvedValueOnce({ success: false });
+    expect((await evaluateAccessGate(request, new URL(request.url), env)).response?.status).toBe(429);
+    limit.mockRejectedValueOnce(new Error("unavailable"));
+    expect((await evaluateAccessGate(request, new URL(request.url), env)).response?.status).toBe(503);
+    env.SAFETY_GRADES_RATE_LIMIT = undefined as never;
+    expect((await evaluateAccessGate(request, new URL(request.url), env)).response?.status).toBe(503);
+  });
+
+  it("rejects adoption telemetry outside the trusted site-proxy lane even with a valid API key", async () => {
+    apiKeyMocks.authenticateApiKey.mockResolvedValue({ kind: "valid", key: validKey });
+    const request = new Request("https://api.pharos.watch/api/telegram-adoption", { method: "POST", headers: { "X-API-Key": "valid" } });
+    expect((await evaluateAccessGate(request, new URL(request.url), makeEnv())).response?.status).toBe(404);
+    expect(apiKeyMocks.authenticateApiKey).not.toHaveBeenCalled();
+  });
+
   it("preserves Access-authenticated ops-api admin routing", async () => {
     verifyAccessJwt.mockResolvedValueOnce(true);
     const request = new Request("https://ops-api.pharos.watch/api/status", {

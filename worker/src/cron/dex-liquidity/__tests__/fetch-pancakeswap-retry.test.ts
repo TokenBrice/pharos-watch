@@ -144,16 +144,30 @@ describe("fetchPancakeSwapPools per-attempt retries and chain progress", () => {
     expect(result.errors.join(" ")).toContain("bsc:");
     expect(result.errors.join(" ")).toContain("timed out");
 
-    // The failed chain still writes its own row: its cursor advances past the page
-    // it died on instead of freezing at the stored 250 forever.
+    // Persist diagnostics without skipping the untouched tail after a head failure.
     expect(writes.map((write) => write.sourceKey)).toEqual([
       "pancakeswap-v3:bsc",
       "pancakeswap-v3:ethereum",
       "pancakeswap-v3:base",
     ]);
-    expect(writes[0]).toMatchObject({ cursor: "500", completed: false, pagesFetched: 0 });
+    expect(writes[0]).toMatchObject({ cursor: "250", completed: false, pagesFetched: 0 });
     expect(writes[0]!.diagnostics.join(" ")).toContain("bsc failure:");
     expect(writes.slice(1).map((write) => write.cursor)).toEqual(["250", "250"]);
     expect(writes.slice(1).every((write) => write.completed)).toBe(true);
   });
+  it("retries a failed tail page instead of skipping its inventory", async () => {
+    vi.useFakeTimers();
+    vi.stubGlobal("fetch", vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+      if (String(init?.body).includes("poolHourDatas")) return hourDataResponse();
+      if (!String(input).includes(BSC_SUBGRAPH_ID)) return poolsResponse([]);
+      if (String(init?.body).includes("skip: 0")) return poolsResponse(Array.from({ length: 250 }, (_, i) => makePool(`pool-${i}`)));
+      throw new Error("tail unavailable");
+    }));
+    const writes: RecordedPaginationWrite[] = [];
+    const pending = fetchPancakeSwapPools("graph-key", undefined, makePaginationWriteD1(writes));
+    await vi.advanceTimersByTimeAsync(60_000);
+    await pending;
+    expect(writes[0]).toMatchObject({ cursor: "250", completed: false, pagesFetched: 1 });
+  });
+
 });

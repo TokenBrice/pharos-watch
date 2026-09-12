@@ -308,7 +308,7 @@ describe("classifyDeployChanges", () => {
     const result = classifyDeployChanges({
       baseSha: "70ed0512d6a23dccc2e5a4e65ff3ab3f4c0e45e2",
       eventName: "push",
-      execFile: () => files.join("\0"),
+      execFile: (_file, args) => args[0] === "ls-tree" ? "" : files.join("\0"),
       headSha: "25197af364c3c9ada9f9f394e4d65f62e6554f6e",
     });
     expect(result).toMatchObject({

@@ -197,6 +197,23 @@ describe("deriveMintSurge", () => {
 });
 
 describe("toStructural", () => {
+  it.each([
+    ["bounded-admin", "unbounded-or-compromised", "unbounded-or-compromised"],
+    ["partially-bounded-admin", "concentrated-admin", "concentrated-admin"],
+    ["none-resolved-mint", "none-resolved", "none-resolved-mint"],
+    ["none-resolved", "none-resolved", "none-resolved"],
+    ["bounded-admin", "unknown", "unknown"],
+  ])("uses derived %s / %s with correct mint scope", (curated, derived, expected) => {
+    const meta = { id: "posture-fixture", flags: {}, mintAuthority: { authorityPosture: curated } } as StablecoinMeta;
+    hydrateV9DependencyImpairment([{
+      id: meta.id, dependencies: { serial: [] },
+      breakdowns: { control: { components: [{ kind: "mint", posture: derived }] } },
+    }]);
+    expect(toStructural(meta).authorityPosture).toBe(expected);
+    clearV9DependencyImpairment();
+    expect(toStructural(meta).authorityPosture).toBe(curated);
+  });
+
   it("projects the published V9 mint posture band and incident status", () => {
     // 9.1: the band is hydrated from the V9 publication, not recomputed from
     // curated metadata. An installed projection is authoritative, including

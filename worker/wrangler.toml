@@ -149,6 +149,14 @@ namespace_id = "2026090701"
   limit = 10
   period = 60
 
+[[ratelimits]]
+name = "SAFETY_GRADES_RATE_LIMIT"
+namespace_id = "2026091201"
+
+  [ratelimits.simple]
+  limit = 120
+  period = 60
+
 [vars]
 CORS_ORIGIN = "https://pharos.watch,https://ops.pharos.watch"
 SELF_URL = "https://api.pharos.watch"

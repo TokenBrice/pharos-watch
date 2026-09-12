@@ -419,6 +419,19 @@ describe("pruneYieldTables retention", () => {
     ]);
   });
 
+  it("keeps the whole trailing raw day until its daily close is materialized", async () => {
+    const fixture = createDb();
+    sqlite = fixture.sqlite;
+    const day = Math.floor(1_800_000_000 / DAY_SECONDS) * DAY_SECONDS;
+    const observation = day - 30 * DAY_SECONDS + 60;
+    insertHistory(sqlite, { stablecoinId: "coin-a", sourceKey: "source-a", recordedAt: observation });
+    await pruneYieldTables(fixture.db, day + 23 * 3600, { allowDestructiveCleanup: false });
+    expect(sqlite.prepare("SELECT recorded_at FROM yield_history").all()).toEqual([{ recorded_at: observation }]);
+    await pruneYieldTables(fixture.db, day + DAY_SECONDS, { allowDestructiveCleanup: false });
+    expect(sqlite.prepare("SELECT recorded_at FROM yield_history").all()).toEqual([]);
+    expect(sqlite.prepare("SELECT recorded_at FROM yield_history_daily").all()).toEqual([{ recorded_at: observation }]);
+  });
+
   it("resumes a large retention backlog across bounded statements instead of one fatal delete", async () => {
     // Regression: v8.43 moved the raw-history cutoff from 365d to 30d, putting
     // the entire 30d-365d backlog in scope at once. One unbounded DELETE over

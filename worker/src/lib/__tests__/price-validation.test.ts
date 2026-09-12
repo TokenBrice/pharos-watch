@@ -4,7 +4,7 @@ import { mockRegistry } from "../../test-helpers/cron";
 
 vi.mock("@shared/lib/stablecoins/worker-runtime-registry", () => {
   const stablecoins = [
-    { id: "brz-transfero", pegCurrency: "BRL", navToken: false },
+    { id: "brz-transfero", pegCurrency: "BRL" },
     { id: "ggbr-goldfish-gold", pegCurrency: "GOLD", navToken: false, commodityOunces: 0.001 },
     { id: "ousg-ondo-finance", pegCurrency: "USD", navToken: true },
     { id: "fpi-frax", pegCurrency: "VAR", navToken: true },
@@ -34,6 +34,11 @@ describe("normalizePegTypeFromCurrency", () => {
 });
 
 describe("buildPriceValidationContext", () => {
+  it("does not let provider NAV flags override an omitted tracked false flag", () => {
+    expect(buildPriceValidationContext({ stablecoinId: "brz-transfero", navToken: true }).navToken).toBe(false);
+    expect(buildPriceValidationContext({ stablecoinId: "ousg-ondo-finance", navToken: false }).navToken).toBe(true);
+    expect(buildPriceValidationContext({ stablecoinId: "untracked", navToken: true }).navToken).toBe(true);
+  });
   it("prefers tracked metadata for peg normalization and commodity scaling", () => {
     expect(buildPriceValidationContext({ stablecoinId: "brz-transfero", pegType: "peggedBRL" })).toMatchObject({
       pegType: "peggedREAL",

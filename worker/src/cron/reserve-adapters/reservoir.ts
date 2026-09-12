@@ -60,6 +60,14 @@ const RESERVOIR_STABLE_BUCKET_KEYS: readonly ReservoirBucketKey[] = [
 // (USD1/PYUSD/RLUSD/GHO) are listed before USDT/USDC.
 const RESERVOIR_BUCKETS: readonly ValueBucketRule<ReservoirBalanceItem, ReservoirBucketKey>[] = [
   {
+    key: "agua",
+    name: "Agua Global Carry Vault (USDC-denominated ERC-4626)",
+    risk: "high",
+    sourceKey: "reservoir:agua",
+    ...wrapperAssetMeta("usdc"),
+    match: (item) => /\bAgua\b/i.test(item.label),
+  },
+  {
     key: "usd1",
     name: "USD1 lending markets",
     risk: "medium",
@@ -120,14 +128,6 @@ const RESERVOIR_BUCKETS: readonly ValueBucketRule<ReservoirBalanceItem, Reservoi
     // USDC standalone only; other stablecoins that contain "USD" (USD1/USDT/etc)
     // match their own rules first.
     match: (item) => /\bUSDC\b/.test(item.label) || /\bSteakhouse Prime Instant\b/i.test(item.label),
-  },
-  {
-    key: "agua",
-    name: "Agua Global Carry Vault (USDC-denominated ERC-4626)",
-    risk: "high",
-    sourceKey: "reservoir:agua",
-    ...wrapperAssetMeta("usdc"),
-    match: (item) => /\bAgua\b/i.test(item.label),
   },
   {
     key: "rusd",

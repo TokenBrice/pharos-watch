@@ -25,6 +25,18 @@ function fullActiveIntake(omitIds: string[] = []): PeggedAsset[] {
 }
 
 describe("restoreMissingTrackedAssets", () => {
+  it.each(["cngn-compliant-naira", "mre7yield-midas", "cusdo-openeden", "syzusd-yuzu"])(
+    "does not restore obsolete on-chain roster for %s", (id) => {
+      const previous = asset({ id, symbol: id, circulating: { peggedUSD: 100 },
+        supplySource: "onchain-total-supply", supplyObservedAt: NOW_SEC - 60,
+        chainCirculating: { Ethereum: { current: 100 } },
+      });
+      const result = restoreMissingTrackedAssets(fullActiveIntake([id]), new Map([[id, previous]]), NOW_SEC);
+      expect(result.restoredIds).not.toContain(id);
+      expect(result.assets.some((row) => row.id === id)).toBe(false);
+    },
+  );
+
   it("restores a tracked coin the intake list omitted", () => {
     const current = fullActiveIntake(["usdc-circle"]);
     const previous = new Map([

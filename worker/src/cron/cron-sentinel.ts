@@ -7,7 +7,7 @@ import { runCronDurationWatchdog } from "./cron-duration-watchdog";
 import { runDexExitRouteTurnoverWatchdog } from "./dex-exit-route-turnover-watchdog";
 import { runMintBurnGrowthWatchdog } from "./mint-burn-growth-watchdog";
 import { runReservePostSyncWatchdog } from "./reserve-post-sync-watchdog";
-import { buildCronSentinelResult, type CronSentinelSourceResult } from "./cron-sentinel-result";
+import { runCronSentinelSources } from "./cron-sentinel-result";
 
 export type CronSentinelMode = "status" | "daily" | "turnover" | "reserve-post-sync";
 
@@ -24,17 +24,17 @@ export async function runCronSentinel(
   options: CronSentinelOptions,
 ): Promise<CronResult> {
   const nowSec = options.nowSec ?? Math.floor(Date.now() / 1_000);
-  const sourceResults: CronSentinelSourceResult[] = [];
+  const sources: Parameters<typeof runCronSentinelSources>[2][number][] = [];
   if (options.mode === "status") {
-    sourceResults.push({
+    sources.push({
       source: "freshness",
-      result: await runCronStalenessWatchdog(db, options.signal, {
+      run: () => runCronStalenessWatchdog(db, options.signal, {
         operatorTelegramCreds: options.operatorTelegramCreds ?? null,
       }),
     });
-    sourceResults.push({
+    sources.push({
       source: "digest-publication",
-      result: await runDigestPublicationWatchdog(
+      run: () => runDigestPublicationWatchdog(
         db,
         nowSec,
         { operatorTelegramCreds: options.operatorTelegramCreds ?? null },
@@ -42,27 +42,27 @@ export async function runCronSentinel(
       ),
     });
   } else if (options.mode === "daily") {
-    sourceResults.push({ source: "growth", result: await runMintBurnGrowthWatchdog(db, options.signal) });
-    sourceResults.push({ source: "duration", result: await runCronDurationWatchdog(db, options.signal) });
-    sourceResults.push({
+    sources.push({ source: "growth", run: () => runMintBurnGrowthWatchdog(db, options.signal) });
+    sources.push({ source: "duration", run: () => runCronDurationWatchdog(db, options.signal) });
+    sources.push({
       source: "repair-debt",
-      result: await runWorkerRepairTaskRunner(db, {
+      run: () => runWorkerRepairTaskRunner(db, {
         nowSec,
         signal: options.signal,
         enabled: options.repairRunnerEnabled,
       }),
     });
   } else if (options.mode === "turnover") {
-    sourceResults.push({
+    sources.push({
       source: "turnover",
-      result: await runDexExitRouteTurnoverWatchdog(db, options.signal),
+      run: () => runDexExitRouteTurnoverWatchdog(db, options.signal),
     });
   } else {
-    sourceResults.push({
+    sources.push({
       source: "reserve-post-sync",
-      result: await runReservePostSyncWatchdog(db, options.signal),
+      run: () => runReservePostSyncWatchdog(db, options.signal),
     });
   }
 
-  return buildCronSentinelResult(options.mode, sourceResults);
+  return runCronSentinelSources(db, options.mode, sources, nowSec, options.signal);
 }

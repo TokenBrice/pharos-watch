@@ -3,6 +3,8 @@ import type { StagedPool } from "../dex-discovery/types";
 import { CHAIN_META } from "@shared/lib/chains";
 import { canonicalExitRouteChain, canonicalExitRouteScopedKey } from "@shared/lib/exit-route-identity";
 import {
+  TEZOS_POOL_IDENTITY_REVIEW_VERSION,
+  SLIPSTREAM_POOL_IDENTITY_REVIEW_VERSION,
   STAGED_POOL_CONFIDENCE_HORIZON_HOURS,
   STAGED_POOL_MAX_TVL_USD,
   STAGED_POOL_PRICE_MAX_AGE_HOURS,
@@ -278,6 +280,20 @@ function resolveStagedPoolProfile(stagedPool: StagedPool): {
   };
 }
 
+function hasUnreviewedPoolIdentity(pool: StagedPool): boolean {
+  const expectedVersion = pool.source === "tezos"
+    ? TEZOS_POOL_IDENTITY_REVIEW_VERSION
+    : pool.source === "direct_api" && pool.poolType?.includes("slipstream")
+      ? SLIPSTREAM_POOL_IDENTITY_REVIEW_VERSION
+      : null;
+  if (!expectedVersion) return false;
+  try {
+    return JSON.parse(pool.rawJson ?? "null")?.identityReviewVersion !== expectedVersion;
+  } catch {
+    return true;
+  }
+}
+
 function hasInvalidTvl(stagedPool: StagedPool): boolean {
   return (
     stagedPool.tvlUsd == null ||
@@ -490,7 +506,7 @@ export async function mergeStagedPools(
       continue;
     }
     const stagedPool = toStagedPool(row);
-    if (!stagedPool.poolId || !stagedPool.stablecoinId) {
+    if (!stagedPool.poolId || !stagedPool.stablecoinId || hasUnreviewedPoolIdentity(stagedPool)) {
       skippedCount++;
       incrementSkipDimension(skipDimensions, "malformed_identity", row);
       continue;
@@ -519,7 +535,7 @@ export async function mergeStagedPools(
     const stagedPool = toStagedPool(row);
     // These validation skips were recorded during the identity-count pass to
     // preserve existing skip-dimension ordering.
-    if (!stagedPool.poolId || !stagedPool.stablecoinId || hasInvalidTvl(stagedPool)) continue;
+    if (!stagedPool.poolId || !stagedPool.stablecoinId || hasUnreviewedPoolIdentity(stagedPool) || hasInvalidTvl(stagedPool)) continue;
 
     const entry = buildStagedPoolEntry(stagedPool, nowSec);
     const { dexId, poolType, qualityMultiplier, identity, confidence, priceEligible } = entry;

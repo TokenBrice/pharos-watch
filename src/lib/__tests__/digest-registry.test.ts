@@ -104,3 +104,8 @@ describe("digest registry", () => {
     expect(entry).toMatchObject({ digestType: "daily", editionNumber: 0 });
   });
 });
+
+it("retains the persisted model while parsing an archived edition", () => {
+  const [entry] = DigestStoredSnapshotSchema.parse([{ date: "2026-09-12", title: "Title", text: "Text", extended: "", generatedAt: 1, llm: { servedModel: "claude-sonnet-5" } }]);
+  expect(entry.llm?.servedModel).toBe("claude-sonnet-5");
+});

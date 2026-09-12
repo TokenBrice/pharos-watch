@@ -1,5 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
+  TEZOS_POOL_IDENTITY_REVIEW_VERSION,
+  SLIPSTREAM_POOL_IDENTITY_REVIEW_VERSION,
   STAGED_POOL_CONFIDENCE_HORIZON_HOURS,
   STAGED_POOL_MAX_TVL_USD,
   STAGED_POOL_PRICE_MAX_AGE_HOURS,
@@ -768,6 +770,7 @@ describe("mergeStagedPools", () => {
           protocol: source,
           dex_id: source,
           symbol: `${source}/USD`,
+          raw_json: source === "tezos" ? JSON.stringify({ identityReviewVersion: TEZOS_POOL_IDENTITY_REVIEW_VERSION }) : null,
           price_usd: null,
           refreshed_at: now,
         }),
@@ -779,6 +782,20 @@ describe("mergeStagedPools", () => {
 
     expect(result.mergedCount).toBe(1);
     expect(metrics.get(stablecoinId)?.topPools[0]).toMatchObject({ source });
+  });
+
+  it.each([null, "{}", "{", JSON.stringify({ reserves: [{ identityReviewVersion: TEZOS_POOL_IDENTITY_REVIEW_VERSION }] })])("rejects legacy or unreviewed Tezos staging: %s", async (raw_json) => {
+    const metrics = new Map();
+    const result = await mergeStagedPools(createMockDb([makeStagedPoolRow({ source: "tezos", chain: "tezos", raw_json })]), metrics as never, makeKnownPoolIndex(), 1710000000);
+    expect(result.mergedCount).toBe(0);
+    expect(result.skippedCount).toBe(1);
+    expect(metrics.size).toBe(0);
+  });
+
+  it.each([null, "{}", JSON.stringify({ identityReviewVersion: SLIPSTREAM_POOL_IDENTITY_REVIEW_VERSION })])("only replays factory-reviewed Slipstream writeback: %s", async (raw_json) => {
+    const metrics = new Map();
+    const result = await mergeStagedPools(createMockDb([makeStagedPoolRow({ source: "direct_api", protocol: "aerodrome", pool_type: "aerodrome-slipstream-1bp", raw_json })]), metrics as never, makeKnownPoolIndex(), 1710000000);
+    expect(result.mergedCount).toBe(raw_json?.includes(SLIPSTREAM_POOL_IDENTITY_REVIEW_VERSION) ? 1 : 0);
   });
 
   it("retains exact pool attribution for the ten reviewed cross-asset fixtures", async () => {

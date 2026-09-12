@@ -80,14 +80,14 @@ describe("digest mirror publication", () => {
     const generatedAt = Date.parse("2026-07-19T00:30:00+02:00") / 1000;
     serve([
       { digestText: "Daily", digestTitle: "Daily title", digestExtended: "Details", generatedAt,
-        editionNumber: 8, editorialStyleVersion: "v2", editorialStyleHash: "abc123" },
+        editionNumber: 8, llm: { servedModel: "claude-sonnet-5" }, editorialStyleVersion: "v2", editorialStyleHash: "abc123" },
       { digestText: "Weekly", generatedAt, digestType: "weekly",
         editorialStyleVersion: "pre-policy", editorialStyleHash: "pre-policy" },
     ]);
     await runDigestSync(["--api-url", "https://api.example.com", "--output", output]);
     expect(JSON.parse(readFileSync(output, "utf8"))).toEqual([
       { date: "2026-07-18", title: "Daily title", text: "Daily", extended: "Details", generatedAt,
-        digestType: "daily", editionNumber: 8, editorialStyleVersion: "v2", editorialStyleHash: "abc123" },
+        digestType: "daily", editionNumber: 8, llm: { servedModel: "claude-sonnet-5" }, editorialStyleVersion: "v2", editorialStyleHash: "abc123" },
       { date: "2026-07-18-weekly", title: "Signal & Noise", text: "Weekly", extended: "", generatedAt,
         digestType: "weekly", editionNumber: 0 },
     ]);

@@ -46,6 +46,8 @@ export interface SafetyScoreV9TransferMaterialScope {
   materialDeploymentKeys: readonly string[];
   materialDeploymentScopeComplete: boolean;
   deploymentModel: SafetyScoreV9TransferDeploymentModel;
+  unresolvedMaterialChainIds?: readonly string[];
+  unresolvedDeclaredDeploymentKeys?: readonly string[];
 }
 
 export interface SafetyScoreV9ResolvedTransferReview {
@@ -76,6 +78,15 @@ function reviewIsOutsideContractScope(
 ): boolean {
   return (
     materialScope.deploymentModel === "non-contract-native" &&
+    (materialScope.unresolvedDeclaredDeploymentKeys ?? []).every((key) =>
+      review.deployments.some((deployment) => deployment.scope !== "additional" &&
+        safetyScoreV9TransferDeploymentKey(deployment.chainId.trim().toLowerCase(), deployment.contractOrTokenId) === key),
+    ) &&
+    (materialScope.unresolvedMaterialChainIds ?? []).every((chainId) =>
+      review.deployments.some((deployment) =>
+        deployment.scope !== "additional" && deployment.chainId.trim().toLowerCase() === chainId,
+      ),
+    ) &&
     review.deployments.every((deployment) => resolveChainId(deployment.chainId) === null)
   );
 }

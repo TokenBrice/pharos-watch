@@ -122,7 +122,7 @@ export function preserveStaticDepegArchiveEntries(
 
   for (const previousEntry of selectStaticDepegEventPages(previous)) {
     const currentEntry = mergedBySlug.get(previousEntry.slug);
-    if (currentEntry != null && hasDedicatedDepegEventPage(currentEntry)) continue;
+    if (currentEntry == null || hasDedicatedDepegEventPage(currentEntry)) continue;
     mergedBySlug.set(previousEntry.slug, previousEntry);
   }
 

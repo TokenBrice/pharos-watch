@@ -26,6 +26,7 @@ const ABI = parseAbi([
   "function tokens(uint256 _limit, uint256 _offset, address _account, address[] _addresses) view returns ((address token_address,string symbol,uint8 decimals,uint256 account_balance,bool listed,bool emerging)[])",
 ]);
 const RECOVERY_ABI = parseAbi([
+  "function getPool(address tokenA,address tokenB,int24 tickSpacing) view returns (address pool)",
   "function factory() view returns (address)",
   "function token0() view returns (address)",
   "function token1() view returns (address)",
@@ -285,7 +286,7 @@ describe("fetchSlipstreamPools", () => {
     });
   });
 
-  it("recovers a staged BtcUSD Base pool through the existing Slipstream family", async () => {
+  it.each(["registered", "unregistered", "malformed", "unavailable"])("requires official factory membership for staged Slipstream recovery: %s", async (membership) => {
     const btcusd = "0xe4b20925d9e9a62f1e492e15a81dc0de62804dd4";
     const usdc = "0x833589fcd6edb6e08f4c7c32d4f71b54bda02913";
     const pool = "0x516025f6ed7895b33754e131a09da83355a9ba1b";
@@ -306,6 +307,11 @@ describe("fetchSlipstreamPools", () => {
       { label: "slipstream-recovery-0-token-1-decimals", success: true, returnData: encoded("decimals", 6) },
       { label: "slipstream-recovery-0-token-1-balance", success: true, returnData: encoded("balanceOf", 1_000_000n * 10n ** 6n) },
     ]);
+    vi.mocked(fetchEvmMulticall3Aggregate3AtBlock).mockResolvedValueOnce(membership === "unavailable" ? null : [{
+      label: "slipstream-recovery-0-membership",
+      success: true,
+      returnData: membership === "malformed" ? "0x" : encoded("getPool", membership === "registered" ? pool : "0x0000000000000000000000000000000000000000"),
+    }]);
     const db = makeNoopD1({
       prepare: () => ({
         bind: () => ({
@@ -335,6 +341,12 @@ describe("fetchSlipstreamPools", () => {
       db,
     );
 
+    const membershipCalls = vi.mocked(fetchEvmMulticall3Aggregate3AtBlock).mock.calls[1]?.[1];
+    expect(membershipCalls?.[0]?.target.toLowerCase()).toBe("0x5e7bb104d84c7cb9b682aac2f3d509f5f406809a");
+    if (membership !== "registered") {
+      expect(result.pools).toEqual([]);
+      return;
+    }
     expect(result).toMatchObject({ ok: true, degraded: true });
     expect(result.pools).toHaveLength(1);
     expect(result.pools[0]).toMatchObject({

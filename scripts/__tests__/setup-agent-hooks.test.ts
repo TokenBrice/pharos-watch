@@ -89,3 +89,8 @@ describe("agent hook setup", () => {
     expect(isLinkedWorktree({ checkoutRoot: "/repo/worktrees/feature", commonDir: "../../.git" })).toBe(true);
   });
 });
+
+it("preserves hashes inside quoted hook keys and ignores trailing comments", () => {
+  const key = "/repo#checkout/.codex/hooks.json:pre_tool_use:0:0";
+  expect(parseCodexHookStates(`[hooks.state."${key}"] # table comment\nenabled = false # state comment`).get(key)).toBe(false);
+});

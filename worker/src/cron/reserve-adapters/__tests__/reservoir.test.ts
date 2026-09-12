@@ -508,3 +508,13 @@ describe("adaptReservoirReserves", () => {
     expect(usd1Slice?.pct).toBe(30);
   });
 });
+
+
+it("classifies Agua before its USDC denomination and excludes it from the USDC bucket", () => {
+  const result = adaptReservoirReserves({
+    ...SAMPLE_RESPONSE,
+    assets: [{ label: "Agua Global Carry USDC Vault", totalBalanceValue: "100" }],
+  });
+  expect(result.slices).toEqual([expect.objectContaining({ sourceKey: "reservoir:agua", risk: "high", pct: 100 })]);
+  expect(result.immediateRedeemableUsd).toBe(0);
+});

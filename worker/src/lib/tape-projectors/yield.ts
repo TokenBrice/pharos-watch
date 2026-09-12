@@ -139,7 +139,7 @@ async function fetchPriorWarningSignals(
                   LIMIT 1) AS warning_signals
            FROM (SELECT DISTINCT stablecoin_id FROM yield_history WHERE stablecoin_id IN (${inClause.sql})) c`,
       )
-      .bind(...inClause.binds, since)
+      .bind(since, ...inClause.binds)
       .all<{ stablecoin_id: string; warning_signals: string | null }>();
     for (const row of rows.results ?? []) {
       map.set(row.stablecoin_id, parseSignals(row.warning_signals));
@@ -286,7 +286,7 @@ async function fetchPriorPysScores(
                   LIMIT 1) AS selected_score
            FROM (SELECT DISTINCT stablecoin_id FROM yield_source_decisions WHERE stablecoin_id IN (${inClause.sql})) c`,
       )
-      .bind(...inClause.binds, since)
+      .bind(since, ...inClause.binds)
       .all<{ stablecoin_id: string; selected_score: number | null }>();
     for (const row of rows.results ?? []) {
       const score = row.selected_score;

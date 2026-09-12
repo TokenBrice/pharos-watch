@@ -281,7 +281,7 @@ export function trackedExactAmmOutputValuationFields(
 > {
   if (
     !token.trackedAssetId ||
-    (token.referencePriceSource !== "source-token-usd" && token.referencePriceSource !== "tracked-market")
+    token.referencePriceSource !== "tracked-market"
   ) {
     return {};
   }

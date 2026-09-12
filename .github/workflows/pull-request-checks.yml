@@ -25,11 +25,23 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
+          ref: ${{ github.event.pull_request.base.sha }}
           persist-credentials: false
           fetch-depth: 0
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
           node-version: "24.16.0"
+      - name: Scan PR commits with the trusted base scanner and policy
+        env:
+          GITLEAKS_BASE_REF: ${{ github.event.pull_request.base.sha }}
+          GITLEAKS_HEAD_REF: ${{ github.event.pull_request.head.sha }}
+        run: |
+          git fetch --no-tags origin "${GITLEAKS_HEAD_REF}"
+          node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/ci/run-gitleaks.ts --range
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          fetch-depth: 0
       - name: Run manifest preflight
         id: classify
         env:

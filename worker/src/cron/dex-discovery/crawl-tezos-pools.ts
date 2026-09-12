@@ -1,7 +1,7 @@
+import { TEZOS_POOL_IDENTITY_REVIEW_VERSION } from "./types";
 import { canonicalExitRouteScopedKey } from "@shared/lib/exit-route-identity";
 import {
   isTezosDiscoveryDeployment,
-  TEZOS_UUSD_DISCOVERY_ADDRESS,
 } from "@shared/lib/dex-deployment-coverage";
 import type { ContractDeployment } from "@shared/types/core";
 import { DEX_PRICE_OBSERVATION_MIN_TVL_USD, USER_AGENT } from "../../lib/constants";
@@ -17,7 +17,6 @@ const TEZOS_TZKT_API = "https://api.tzkt.io";
 const TEZOS_PROVIDER = "tezos";
 const TEZOS_POOL_SOURCE = "tezos";
 
-const TEZOS_UUSD_ADDRESS = TEZOS_UUSD_DISCOVERY_ADDRESS;
 const TEZOS_UUSD_TOKEN_ID = "0";
 const TEZOS_UUSD_DECIMALS = 12;
 const TEZOS_REQUEST_TIMEOUT_MS = 8_000;
@@ -37,42 +36,9 @@ const KNOWN_YOUVES_POOL_ADDRESSES: Record<string, true> = {
 const KNOWN_TEZOS_TOKEN_METADATA: Record<string, { symbol: string; decimals: number }> = {
   "KT18fp5rcTW7mbWDmzFwjLDUhs5MeJmagDSZ:17": { symbol: "wUSDC", decimals: 6 },
   "KT1K9gCRgaLRFKTErYt1wVxA3Frb9FjasjTV:0": { symbol: "kUSD", decimals: 18 },
-  "KT1LN4LPSqTMS7Sd2CJw4bbDGRkMv2t68Fy9": { symbol: "USDtz", decimals: 6 },
+  "KT1LN4LPSqTMS7Sd2CJw4bbDGRkMv2t68Fy9:0": { symbol: "USDtz", decimals: 6 },
   "KT1XnTn74bUtxHfDtBmm2bGZAQfhPbvKWR8o:0": { symbol: "USDt", decimals: 6 },
 };
-
-const USD_STABLE_SYMBOLS: Record<string, true> = {
-  DAI: true,
-  KUSD: true,
-  MUSD: true,
-  USDC: true,
-  "USDC.E": true,
-  USDCE: true,
-  USDT: true,
-  USDS: true,
-  USDTA: true,
-  USDTEZ: true,
-  USDTZ: true,
-  WUSDC: true,
-};
-
-const DEFAULT_USD_STABLE_DECIMALS: Record<string, number> = {
-  DAI: 18,
-  KUSD: 18,
-  MUSD: 18,
-  USDC: 6,
-  "USDC.E": 6,
-  USDCE: 6,
-  USDT: 6,
-  USDS: 18,
-  USDTA: 6,
-  USDTEZ: 6,
-  USDTZ: 6,
-  WUSDC: 6,
-};
-
-const EXCLUDED_POOL_LIKE_ALIASES = /reward|saving|vesting|option|engine|intent|lending|farm|fee|treasury|staking/i;
-const POOL_LIKE_ALIAS = /swap|pool|flat|dex|amm|stable|liquidity|quipu|plenty|spicy|vortex/i;
 
 export interface TezosPoolsStageResult {
   providerChecks: DexDeploymentProviderCheck[];
@@ -146,10 +112,6 @@ function parseDecimals(value: unknown): number | null {
   return Number.isSafeInteger(parsed) && parsed >= 0 && parsed <= 36 ? parsed : null;
 }
 
-function normalizeSymbol(symbol: string): string {
-  return symbol.trim().toUpperCase().replace(/\s+/g, "");
-}
-
 function knownMetadataForToken(tokenAddress: string, tokenId: string): { symbol: string; decimals: number } | null {
   return KNOWN_TEZOS_TOKEN_METADATA[`${tokenAddress}:${tokenId}`] ?? null;
 }
@@ -164,11 +126,9 @@ function metadataForToken(
   decimals: number | null;
 } {
   const known = knownMetadataForToken(tokenAddress, tokenId);
-  const resolvedSymbol = symbol ?? known?.symbol ?? null;
-  const normalized = resolvedSymbol ? normalizeSymbol(resolvedSymbol) : null;
   return {
-    symbol: resolvedSymbol,
-    decimals: decimals ?? known?.decimals ?? (normalized ? DEFAULT_USD_STABLE_DECIMALS[normalized] ?? null : null),
+    symbol: known?.symbol ?? symbol,
+    decimals: known?.decimals ?? decimals,
   };
 }
 
@@ -213,16 +173,11 @@ function isContractAddress(address: string): boolean {
 }
 
 
-function isPoolLikeAccount(address: string, alias: string | undefined): boolean {
-  if (KNOWN_YOUVES_POOL_ADDRESSES[address]) return true;
-  if (!alias || EXCLUDED_POOL_LIKE_ALIASES.test(alias)) return false;
-  return /uusd|quipu|plenty|spicy|vortex|flat/i.test(alias) && POOL_LIKE_ALIAS.test(alias);
+function isPoolLikeAccount(address: string): boolean {
+  return KNOWN_YOUVES_POOL_ADDRESSES[address] === true;
 }
 function isUsdStableToken(row: ParsedTokenBalance): boolean {
-  if (row.tokenAddress === TEZOS_UUSD_ADDRESS && row.tokenId === TEZOS_UUSD_TOKEN_ID) return false;
-  if (knownMetadataForToken(row.tokenAddress, row.tokenId)) return true;
-  const normalized = row.symbol ? normalizeSymbol(row.symbol) : "";
-  return USD_STABLE_SYMBOLS[normalized] === true;
+  return knownMetadataForToken(row.tokenAddress, row.tokenId) !== null;
 }
 
 function aliasMentionsSymbol(alias: string | undefined, symbol: string | null): boolean {
@@ -285,7 +240,7 @@ function evaluatePool(
   context: CrawlStageContext,
 ): PoolEvaluation {
   const alias = group.account.alias;
-  if (!isPoolLikeAccount(group.account.address, alias)) return { pool: null, unpriced: false };
+  if (!isPoolLikeAccount(group.account.address)) return { pool: null, unpriced: false };
 
   const tracked = group.rows.find(
     (row) => row.tokenAddress === target.address && row.tokenId === TEZOS_UUSD_TOKEN_ID,
@@ -326,6 +281,7 @@ function evaluatePool(
   const poolId = canonicalExitRouteScopedKey(target.chain, group.account.address);
   const symbol = `uUSD / ${quote.symbol ?? "USD"}`;
   const rawJson = JSON.stringify({
+    identityReviewVersion: TEZOS_POOL_IDENTITY_REVIEW_VERSION,
     account: group.account,
     reserves: [tracked.raw, quote.raw],
   });
@@ -508,9 +464,9 @@ export async function crawlTezosPoolsStage(input: {
   let observedPoolCount = 0;
   let unpricedPoolCount = 0;
   let unclassifiedContractCount = 0;
-  for (const [address, account] of uniqueContracts) {
-    if (!account.alias && !KNOWN_YOUVES_POOL_ADDRESSES[address]) unclassifiedContractCount++;
-    if (!groups.has(address) && isPoolLikeAccount(address, account.alias)) unpricedPoolCount++;
+  for (const address of uniqueContracts.keys()) {
+    if (!isPoolLikeAccount(address)) unclassifiedContractCount++;
+    if (!groups.has(address) && isPoolLikeAccount(address)) unpricedPoolCount++;
   }
   for (const group of groups.values()) {
     const evaluation = evaluatePool(group, target, input.context);

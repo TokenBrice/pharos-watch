@@ -35,7 +35,9 @@ export function DepegResolverMethodologySection() {
         are tuned and backtested against that corpus, DDRR reviewed outcomes, and the recovered-event set rather than
         learned as weights. DDRv4 adds issuer wind-down evidence, mechanism-gated backing impairment, V9 grade context,
         and event-time mint/burn context to the terminality read. Forecast readiness is a publication trigger, not a
-        probability or confidence level.
+        probability or confidence level. Structural mint risk reads the published Safety Score mint posture, with
+        curated fallback when unavailable. A finding of no mint authority on a wrapper does not establish that its
+        parent supply cannot expand.
       </p>
       <p>
         Stage 2 runs only when Stage 1 is not terminal-leaning. It is an empirical landmark-survival estimate over the

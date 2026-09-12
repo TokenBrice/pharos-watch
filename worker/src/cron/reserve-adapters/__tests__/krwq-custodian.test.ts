@@ -51,7 +51,7 @@ const SUPPLY: KrwqSupplyAggregate = {
   omittedReadFailureChains: [],
 };
 
-const TOTAL_RESERVE_USD = 90102.08 + 482631.87 + 105708.96;
+const TOTAL_RESERVE_USD = Number(ONCHAIN_MATCH.usdc) / 1e6 + Number(ONCHAIN_MATCH.frxusd) / 1e18 + Number(ONCHAIN_MATCH.treasury) / 1e6;
 
 function makeCoin(): StablecoinMeta {
   return {
@@ -81,7 +81,7 @@ describe("adaptKrwqCustodian", () => {
   it("maps the three custodian legs and verifies an exact on-chain match", () => {
     const result = adaptKrwqCustodian(PAYLOAD, ONCHAIN_MATCH, SUPPLY);
 
-    expect(result.warnings).toBeUndefined();
+    expect(result.warnings).toContainEqual(expect.objectContaining({ code: "krwq-holder-unverified", effect: "degraded" }));
     expect(result.slices).toEqual(expect.arrayContaining([
       expect.objectContaining({ sourceKey: "krwq-custodian:usdc", name: "USDC custodian reserves", coinId: "usdc-circle", risk: "low" }),
       expect.objectContaining({ name: "frxUSD custodian reserves", coinId: "frxusd-frax", risk: "low" }),
@@ -100,7 +100,7 @@ describe("adaptKrwqCustodian", () => {
   it("parses the live comma-grouped amount strings", () => {
     const result = adaptKrwqCustodian(PAYLOAD, ONCHAIN_MATCH, SUPPLY);
 
-    expect(result.warnings).toBeUndefined();
+    expect(result.warnings).toContainEqual(expect.objectContaining({ code: "krwq-holder-unverified", effect: "degraded" }));
     expect(result.slices).toHaveLength(3);
     expect(result.metadata?.totalReserveUsd).toBeCloseTo(TOTAL_RESERVE_USD, 5);
   });
@@ -125,14 +125,13 @@ describe("adaptKrwqCustodian", () => {
     }
   });
 
-  it("degrades and keeps the issuer value when an on-chain balance diverges", () => {
+  it("degrades and uses the observed balance when it diverges from the issuer", () => {
     const result = adaptKrwqCustodian(PAYLOAD, { ...ONCHAIN_MATCH, usdc: 123n }, SUPPLY);
 
     expect(result.warnings).toEqual(expect.arrayContaining([
       expect.objectContaining({ code: "krwq-onchain-mismatch", effect: "degraded" }),
     ]));
-    expect(result.slices.find((slice) => slice.name === "USDC custodian reserves")).toBeDefined();
-    expect(result.metadata?.totalReserveUsd).toBeCloseTo(TOTAL_RESERVE_USD, 5);
+    expect(result.metadata?.totalReserveUsd).toBeCloseTo(TOTAL_RESERVE_USD - Number(ONCHAIN_MATCH.usdc) / 1e6 + 123 / 1e6, 5);
   });
 
   it("degrades and keeps the issuer value when the frxUSD balanceOf read is null", () => {
@@ -142,7 +141,7 @@ describe("adaptKrwqCustodian", () => {
       expect.objectContaining({ code: "krwq-onchain-read-failed", effect: "degraded" }),
     ]));
     expect(result.slices.find((slice) => slice.name === "frxUSD custodian reserves")).toBeDefined();
-    expect(result.metadata?.totalReserveUsd).toBeCloseTo(TOTAL_RESERVE_USD, 5);
+    expect(result.metadata?.totalReserveUsd).toBeCloseTo(TOTAL_RESERVE_USD - Number(ONCHAIN_MATCH.frxusd) / 1e18 + 482631.87, 5);
   });
 
   it("throws when the payload timestamp is missing", () => {
@@ -184,7 +183,7 @@ describe("fetchKrwqCustodianReserves", () => {
     expect(network.requests.map((request) => request.url)).toContain(KRWQ_URL);
     expect(network.rpcCalls.some((call) => call.viaMulticall && call.chain === "ethereum")).toBe(true);
     expect(network.rpcCalls.some((call) => !call.viaMulticall && call.chain === "base")).toBe(true);
-    expect(result.warnings).toBeUndefined();
+    expect(result.warnings).toContainEqual(expect.objectContaining({ code: "krwq-holder-unverified", effect: "degraded" }));
     expect(result.slices).toHaveLength(3);
   });
 
@@ -208,4 +207,12 @@ describe("registry", () => {
   it("resolves the krwq-custodian adapter", () => {
     expect(getReserveAdapter("krwq-custodian")).not.toBeNull();
   });
+});
+
+
+it.each([0, 9_000_000_000])("ignores independently supplied display value %i when raw balances are available", (totalAssets) => {
+  const result = adaptKrwqCustodian({ ...PAYLOAD, usdc: { ...PAYLOAD.usdc, totalAssets } }, ONCHAIN_MATCH, SUPPLY);
+  expect(result.metadata?.totalReserveUsd).toBeCloseTo(TOTAL_RESERVE_USD, 5);
+  expect(result.slices.find((slice) => slice.sourceKey === "krwq-custodian:usdc")).toBeDefined();
+  expect(result.warnings).toContainEqual(expect.objectContaining({ code: "krwq-holder-unverified", effect: "degraded" }));
 });

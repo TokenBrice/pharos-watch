@@ -100,6 +100,8 @@ describe("sync-depeg-events", () => {
     });
     expect(findMissingStaticDepegArchiveSlugs([published], merged)).toEqual([]);
     expect(() => assertStaticDepegArchivePreserved([published], merged)).not.toThrow();
+    const deleted = preserveStaticDepegArchiveEntries([published], [replacement]);
+    expect(() => assertStaticDepegArchivePreserved([published], deleted)).toThrow("lost 1 published slug");
   });
 
   it("writes full UTC-year shards and changes only the affected shard for a new event", async () => {

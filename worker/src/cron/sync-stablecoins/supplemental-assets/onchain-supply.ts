@@ -1,3 +1,4 @@
+import { fetchEearnSuiSupply } from "./sui-vault-supply";
 import { logWorkerEventArgs } from "../../../lib/structured-log";
 import type { StablecoinMeta } from "@shared/types/core";
 import type { LiveReserveInput } from "@shared/types/live-reserves";
@@ -33,8 +34,8 @@ import { mapWithConcurrency } from "../../../lib/concurrency";
 export { computeExcludedBalanceAdjustedSupplyRaw };
 
 const PREFER_ONCHAIN_SUPPLY_MCAP_IDS = new Set([
-  // CoinGecko's ember-earn market row resolves the Sui token, while Pharos
-  // tracks the Ethereum eEARN vault token used by Royco Dawn.
+  // Prefer the complete native Ethereum + Sui receipt aggregate over a
+  // CoinGecko row that historically covered only Sui.
   "eearn-ember",
 ]);
 const EXCLUDED_BALANCE_READ_CONCURRENCY = 1;
@@ -91,6 +92,10 @@ async function readContractSupplyRaw(input: {
   fallbackRpcUrl?: string;
 }): Promise<bigint | null> {
   const { supplyContract } = input;
+
+  if (input.family === "sui") {
+    return fetchEearnSuiSupply(supplyContract.address, supplyContract.decimals, input.signal);
+  }
 
   if (input.family === "starknet") {
     return fetchStarknetTotalSupply({

@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 import { execFileSync } from "node:child_process";
 import { createHash } from "node:crypto";
-import { appendFileSync, existsSync, mkdirSync, readFileSync, realpathSync } from "node:fs";
+import { appendFileSync, closeSync, constants, existsSync, fstatSync, mkdirSync, openSync, readFileSync, realpathSync } from "node:fs";
 import { dirname, isAbsolute, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -2009,8 +2009,17 @@ function appendHookDiagnostic(
       commandDigest: sha256Prefix(command),
       pathsProtected: countProtectedPaths(hookInput),
     };
+    if (policyPaths(diagnosticPath, REPO_ROOT).some((path) =>
+      PROTECTED_WRITE_RULES.some((rule) => rule.test(path)) || /^worker\/migrations\/.*\.sql$/i.test(path))) return;
     mkdirSync(dirname(diagnosticPath), { recursive: true });
-    appendFileSync(diagnosticPath, `${JSON.stringify(record)}\n`, "utf8");
+    const fd = openSync(diagnosticPath, constants.O_WRONLY | constants.O_APPEND | constants.O_CREAT | constants.O_NOFOLLOW | constants.O_NONBLOCK, 0o600);
+    try {
+      const stat = fstatSync(fd);
+      if (!stat.isFile() || stat.nlink !== 1) return;
+      appendFileSync(fd, `${JSON.stringify(record)}\n`, "utf8");
+    } finally {
+      closeSync(fd);
+    }
   } catch {
     // Diagnostics are best-effort and must never affect hook policy or status.
   }

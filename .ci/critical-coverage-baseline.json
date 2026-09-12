@@ -94,6 +94,7 @@
     "worker/src/cron/sync-stablecoins/price-corroboration-observations.ts": 100,
     "worker/src/cron/sync-stablecoins/price-corroboration.ts": 72.9,
     "worker/src/cron/sync-stablecoins/pricing.ts": 88.5,
+    "worker/src/cron/sync-stablecoins/supplemental-assets/sui-vault-supply.ts": 100,
     "worker/src/cron/sync-yield-data.ts": 100,
     "worker/src/cron/telegram-alert-job-target-outcomes.ts": 90,
     "worker/src/cron/telegram-alert-source-events.ts": 89.5,

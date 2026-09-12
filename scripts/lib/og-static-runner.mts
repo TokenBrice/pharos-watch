@@ -13,7 +13,6 @@ import {
   assertNoStaleOgOutputs,
   contentSha256,
   formatOgWriteStatus,
-  inspectPublishedOgRoster,
   runOgArtifactBuild,
   writeFileIfChanged,
 } from "./og-image-checks.mts";
@@ -103,11 +102,6 @@ function buildManifest({
   )}\n`;
 }
 
-function allPublicOutputsExist(roster: readonly OgStaticCard[], publicDir: string): boolean {
-  const { missing, empty } = inspectPublishedOgRoster(roster, publicDir);
-  return missing.length === 0 && empty.length === 0;
-}
-
 export async function runOgStaticBuild(
   options: OgStaticRunnerOptions,
 ): Promise<{ changedFiles: string[]; staleFiles: string[] }> {
@@ -140,22 +134,9 @@ export async function runOgStaticBuild(
     includePngHashes,
   });
 
-  if (
-    check &&
-    includePngHashes &&
-    existingManifest === expectedManifest &&
-    allPublicOutputsExist(roster, publicDir)
-  ) {
-    for (const card of roster) {
-      console.log(formatOgWriteStatus({
-        check: true,
-        publicPath: resolve(publicDir, card.file),
-      }));
-    }
-    console.log(`${family} OG signatures and PNGs are current.`);
-    return { changedFiles: [], staleFiles: [] };
-  }
-
+  // The checked-in manifest is evidence to compare, not proof that the PNG
+  // was rendered from this source: a source-only signature edit can match it.
+  // Always render in check mode and compare pixels against the published PNG.
   const browser = await firefox.launch({ headless: true });
   const staleFiles: string[] = [];
   try {

@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { StablecoinMeta } from "@shared/types/core";
+import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import { resolveChainId } from "@shared/lib/chains";
 import {
   CURATED_AGGREGATE_CANONICAL_SUPPLY_CHAINS,
@@ -225,7 +226,7 @@ describe("curated on-chain supply paths", () => {
     { id: "yusd-yieldfi", chains: ["ethereum", "arbitrum", "base", "optimism", "sonic", "plume", "katana", "bsc", "avalanche", "plasma"] },
     { id: "savusd-avant", chains: ["avalanche", "ethereum", "linea", "plasma", "berachain", "bsc", "monad", "katana", "megaeth", "sei"],
       canonical: "avalanche", zero: ["katana"], endpoints: { megaeth: "https://mainnet.megaeth.com/rpc" } },
-    { id: "cusdo-openeden", chains: ["ethereum", "base", "bsc", "solana"], mint: "BnANu5CtUogLqcvBNByJuwaRvRxNtVuDcAytwjsUUtqs" },
+    { id: "cusdo-openeden", chains: ["ethereum", "base", "bsc", "solana", "klaytn"], mint: "BnANu5CtUogLqcvBNByJuwaRvRxNtVuDcAytwjsUUtqs" },
     { id: "iauon-ondo", chains: ["ethereum", "bsc", "solana", "hyperevm"],
       mint: "M77ZvkZ8zW5udRbuJCbuwSwavRa7bGAZYMTwru8ondo", zero: ["hyperevm"] },
     { id: "susdai-usd-ai", chains: ["arbitrum", "ethereum", "base", "plasma"] },
@@ -246,8 +247,8 @@ describe("curated on-chain supply paths", () => {
     { id: "witry-brix", chains: ["ethereum", "megaeth"], canonical: "ethereum" },
     { id: "brlv-crown", chains: ["base", "ethereum"], zero: ["ethereum"],
       endpoints: { base: undefined, ethereum: undefined } },
-    { id: "syzusd-yuzu", chains: ["plasma", "ethereum", "monad"], canonical: "plasma",
-      zeroFlags: [undefined, undefined, undefined],
+    { id: "syzusd-yuzu", chains: ["plasma", "ethereum", "monad", "hyperevm", "sei", "pharos", "berachain"], canonical: "plasma",
+      zero: ["hyperevm"],
       endpoints: { plasma: "https://rpc.plasma.to", monad: "https://rpc.monad.xyz" } },
     { id: "idrt-rupiah-token", chains: ["ethereum", "bsc", "polygon", "harmony"],
       zero: ["harmony"], endpoints: { harmony: "https://api.harmony.one" },
@@ -255,8 +256,7 @@ describe("curated on-chain supply paths", () => {
     { id: "ntbill-nest", chains: ["ethereum", "plume", "arbitrum", "bsc", "solana"],
       mint: "2sA2jW9e8EYJkLFpq9hkhxfVUQBwVGJwq6iP4TmTKrL4", zeroFlags: [undefined, undefined, true, true, undefined],
       endpoints: { plume: "https://rpc.plume.org" } },
-    { id: "cngn-compliant-naira", chains: ["base", "bsc", "celo", "solana", "ethereum", "polygon"],
-      mint: "3jiqwBQVRC5zRwHyqvnkQurebJ5RNxg3F5fXMwaxgkv8", zero: ["ethereum", "polygon"], endpoints: { celo: undefined } },
+
   ])("selects reviewed aggregate policy for $id", ({ id, chains, canonical, mint, zero, zeroFlags, endpoints, fallback, runtime }) => {
     const contracts = chains.map((chain, index) => ({
       chain,
@@ -355,6 +355,7 @@ describe("curated on-chain supply paths", () => {
   it("resolves the Starknet legs of mRe7YIELD and sUSN as summed aggregates", () => {
     const mre7 = selectCuratedAggregateOnchainSupplyProbeContracts(makeMeta([
       { chain: "ethereum", address: "0x87c9053c819bb28e0d73d33059e1b3da80afb0cf", decimals: 18 },
+      { chain: "tac", address: "0x0a72ed3c34352ab2dd912b30f2252638c873d6f0", decimals: 18 },
       { chain: "etherlink", address: "0x733d504435a49fc8c4e9759e756c2846c92f0160", decimals: 18 },
       {
         chain: "starknet",
@@ -363,7 +364,7 @@ describe("curated on-chain supply paths", () => {
       },
     ], "mre7yield-midas"));
 
-    expect(mre7?.map((entry) => entry.config.chain)).toEqual(["ethereum", "etherlink", "starknet"]);
+    expect(mre7?.map((entry) => entry.config.chain)).toEqual(["ethereum", "etherlink", "starknet", "tac"]);
     expect(CURATED_AGGREGATE_CANONICAL_SUPPLY_CHAINS["mre7yield-midas"]).toBeUndefined();
     expect(mre7?.find((entry) => entry.config.chain === "etherlink")?.config.rpcUrl)
       .toBe("https://node.mainnet.etherlink.com");
@@ -428,3 +429,34 @@ describe("hasRuntimeOnchainSupplyPath", () => {
     ], "mmxn-moneta-digital"))).toBe(false);
   });
 });
+
+
+it.each(["mre7yield-midas", "cusdo-openeden", "syzusd-yuzu"])("covers every reviewed deployment for %s and rejects a missing leg", (id) => {
+  const meta = TRACKED_META_BY_ID.get(id)!;
+  const selected = selectCuratedAggregateOnchainSupplyProbeContracts(meta)!;
+  expect(selected.map(({ contract }) => `${contract.chain}:${contract.address}`).sort()).toEqual(
+    meta.contracts!.map((contract) => `${contract.chain}:${contract.address}`).sort(),
+  );
+  for (const { contract } of selected) {
+    expect(selectCuratedAggregateOnchainSupplyProbeContracts({ ...meta, contracts: meta.contracts!.filter((entry) => entry !== contract) })).toBeNull();
+  }
+});
+
+it("does not publish cNGN destination float as a global on-chain total without Bantu accounting", () => {
+  expect(selectCuratedAggregateOnchainSupplyProbeContracts(TRACKED_META_BY_ID.get("cngn-compliant-naira")!)).toBeNull();
+});
+
+
+it("fails a summed aggregate closed when the registry adds a deployment before probe review", () => {
+  const meta = TRACKED_META_BY_ID.get("mre7yield-midas")!;
+  expect(selectCuratedAggregateOnchainSupplyProbeContracts({
+    ...meta,
+    contracts: [...meta.contracts!, { chain: "optimism", address: "0x0000000000000000000000000000000000000001", decimals: 18 }],
+  })).toBeNull();
+});
+
+it.each(["hlscope-hamilton-lane", "vnxau-vnx", "dgld-gold-token-sa", "jpym-mento", "chfau-allunity", "apyusd-apyx"])(
+  "withholds the incomplete summed roster for %s until every tracked deployment has reviewed accounting", (id) => {
+    expect(selectCuratedAggregateOnchainSupplyProbeContracts(TRACKED_META_BY_ID.get(id)!)).toBeNull();
+  },
+);

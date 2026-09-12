@@ -25,7 +25,8 @@ function network(options: { shutdown?: boolean; missingDebt?: boolean } = {}): A
   };
   const prices: Record<string, { price: number; timestamp: number; confidence: number }> = {};
   params.branches.forEach((branch, index) => {
-    rpc[`${branch.token.address}:balanceOf(address)`] = index < 4 ? 100n * 10n ** 18n : 10n ** 16n;
+    rpc[`${branch.token.address}:balanceOf(address)`] = 1_000_000n * 10n ** 18n; // Unsolicited balances are not protocol collateral.
+    rpc[`${branch.holder}:getCollBalance()`] = index < 4 ? 100n * 10n ** 18n : 10n ** 16n;
     rpc[`${branch.token.address}:asset()`] = assets[index];
     rpc[`${branch.holder}:getBoldDebt()`] = options.missingDebt && index === 0 ? null : 50n * 10n ** 18n;
     rpc[`${branch.holder}:hasBeenShutDown()`] = options.shutdown === true && index === 0;
@@ -40,8 +41,8 @@ function network(options: { shutdown?: boolean; missingDebt?: boolean } = {}): A
 }
 
 describe("USDaf on-chain rebinding", () => {
-  it("values all six live branches including 18-decimal wrapped WBTC", async () => {
-    const { result } = await runAdapter("liquity-v2-branches", "usdaf-asymmetry", { network: network(), nowSec: NOW });
+  it.each([true, false])("uses accounted collateral despite unsolicited token balances (multicall=%s)", async (multicall) => {
+    const { result } = await runAdapter("liquity-v2-branches", "usdaf-asymmetry", { network: { ...network(), multicall }, nowSec: NOW });
     expect(result.slices.map((slice) => slice.name).sort()).toEqual(["sUSDS", "scrvUSD", "sfrxUSD", "tBTC", "wBTC", "ysyBOLD"].sort());
     for (const slice of result.slices) expect(slice.pct).toBeCloseTo(100 / 6, 0);
     expect(result.slices.find((slice) => slice.name === "wBTC")?.sourceKey).toBe("liquity-v2-branches:ethereum:0xe065bc161b90c9c4bba2de7f1e194b70a3267c47");

@@ -159,6 +159,11 @@ const apiMetaBlocks: readonly DocContractBlock[] = [
 
 const statusBlocks: readonly DocContractBlock[] = [
   {
+    id: "status-blacklist-recent-degraded-threshold",
+    file: "docs/status-dashboard.md",
+    value: String(STATUS_BLACKLIST_THRESHOLDS.missingRecentDegraded),
+  },
+  {
     id: "status-blacklist-recent-stale-threshold",
     file: "docs/status-dashboard.md",
     value: String(STATUS_BLACKLIST_THRESHOLDS.missingRecentStale),

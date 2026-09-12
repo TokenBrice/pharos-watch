@@ -325,6 +325,7 @@ vi.mock("../api/mint-burn-flows", () => ({
 }));
 
 vi.mock("../lib/db-cache", () => ({
+  getCaches: vi.fn(async () => new Map()),
   getCache: cronMocks.getCache,
   setCache: cronMocks.setCache,
   setCacheIfNewer: vi.fn(async () => ({ written: true, skippedBecauseNewer: false })),

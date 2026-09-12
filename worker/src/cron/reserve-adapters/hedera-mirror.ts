@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { fetchJsonPostWithRetry, fetchJsonWithRetry } from "./request";
 import type { AdapterContext } from "./types";
+import { MAX_FUTURE_SOURCE_TIMESTAMP_SKEW_SEC } from "./validate";
 
 /**
  * Bounded read helpers for the public Hedera mirror node REST API
@@ -73,6 +74,10 @@ export async function fetchHederaLatestBlock(
   }
   const block = parsed.data.blocks[0]!;
   const { sec, iso } = parseHederaConsensusTimestamp(block.timestamp.from, `block ${block.number} timestamp`);
+  const nowSec = ctx?.nowSec ?? Math.floor(Date.now() / 1_000);
+  if (nowSec - sec > 10 * 60 || sec - nowSec > MAX_FUTURE_SOURCE_TIMESTAMP_SKEW_SEC) {
+    throw new Error("hedera-mirror: latest block timestamp is outside the accepted freshness window");
+  }
   return { number: block.number, timestampSec: sec, fromIso: iso };
 }
 

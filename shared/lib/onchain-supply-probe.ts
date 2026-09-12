@@ -54,7 +54,9 @@ const ICP_CANISTER_ID_RE = /^[a-z2-7]{5}(-[a-z2-7]{5}){3}-[a-z2-7]{3}$/;
  * original two; Starknet and ICP were added so non-EVM legs can join
  * fail-closed curated aggregates instead of poisoning them.
  */
-export type OnchainSupplyProbeFamily = "evm" | "solana" | "movement" | "starknet" | "icp";
+export const EEARN_SUI_COIN_TYPE = "0x34469c8accdd673df02600265cbbad3688577f0e716866e257f88d448d463492::eearn::EEARN";
+
+export type OnchainSupplyProbeFamily = "evm" | "solana" | "movement" | "starknet" | "icp" | "sui";
 
 const NON_EVM_PROBE_FAMILY_BY_CHAIN: Readonly<Record<string, OnchainSupplyProbeFamily>> = {
   solana: "solana",
@@ -131,20 +133,13 @@ const CURATED_AGGREGATE_ONCHAIN_SUPPLY_CONTRACTS: Record<
     { chain: "base" },
     { chain: "arbitrum", allowZeroSupply: true },
   ],
-  // mRe7YIELD is Ethereum-native with independent Midas burn/mint deployments on
-  // Etherlink and Starknet, so the reviewed legs sum. Verified 2026-07-29:
-  // Ethereum 6,792,507.39 + Etherlink 1,041,331.43 + Starknet 175,676.21.
-  // Etherlink is 13.00% of that total, above the 10% deployment floor, so this
-  // aggregate publishes a genuine material bridge leg instead of a cap. Known
-  // gap: CoinGecko also indexes a TAC deployment
-  // (0x0a72ed3c34352ab2dd912b30f2252638c873d6f0, symbol mRe7YIELD, 630,603.35
-  // read 2026-07-29) that Pharos neither tracks nor reviews; TAC has no chain
-  // registry entry, so that leg stays outside this aggregate and Etherlink
-  // publishes at 13.00% rather than its true 12.05%.
+  // Reviewed issuer-native Midas deployments sum; TAC is a live minting
+  // deployment in the registry and cannot be omitted from the global total.
   "mre7yield-midas": [
     { chain: "ethereum" },
     supplyProbeChain("etherlink"),
     { chain: "starknet" },
+    { chain: "tac", rpcUrl: "https://rpc.tac.build" },
   ],
   // sUSN is Ethereum-native with Noon-operated Hyperlane warp representations on
   // zkSync, Sophon and Starknet. Verified 2026-07-29: a 200-holder sweep that
@@ -279,7 +274,11 @@ const CURATED_AGGREGATE_ONCHAIN_SUPPLY_CONTRACTS: Record<
   // balance, Ethereum cUSDO balanceOf(self) is 0, and CoinGecko's circulating
   // supply reproduces the Ethereum+Base+BSC sum exactly. The Solana mint adds
   // 817,113.90 cUSDO (+5.3%) that CoinGecko never indexes.
-  "cusdo-openeden": [{ chain: "ethereum" }, { chain: "base" }, { chain: "bsc" }, { chain: "solana" }],
+  "cusdo-openeden": [
+    { chain: "ethereum" }, { chain: "base" }, { chain: "bsc" }, { chain: "solana" },
+    // Kaia cUSDO wraps its local USDO, like the other independent vaults.
+    { chain: "klaytn", rpcUrl: "https://public-en.node.kaia.io" },
+  ],
   // sUSDai is an Arbitrum-native ERC-4626 vault carried to Ethereum, Base and
   // Plasma as LayerZero OFT satellites. Verified 2026-07-29: the OAdapter
   // 0xffb20098fd7b8e84762eea4609f299d101427f24 holds zero sUSDai on every chain
@@ -456,13 +455,9 @@ const CURATED_AGGREGATE_ONCHAIN_SUPPLY_CONTRACTS: Record<
     supplyProbeChain("etherlink"),
     { chain: "solana" },
   ],
-  // eEARN is an ERC-4626 vault on Ethereum plus a native Ember Move receipt coin
-  // on Sui (registered 2026-09-10). Sui's supply is not publicly readable: the
-  // treasury cap is unfrozen, so GraphQL `coinMetadata.supply` is null, and no Sui
-  // supply probe family exists. Ethereum stays the sole leg (3,188,127.346337 at
-  // the 2026-09-10 verification, the pre-registration behaviour); the Sui leg is
-  // an acknowledged coverage gap, not a zero.
-  "eearn-ember": [{ chain: "ethereum" }],
+  // Independent native Ethereum and Sui receipts. The Sui reader pins Ember's
+  // vault and reads its embedded TreasuryCap (coinMetadata.supply is null).
+  "eearn-ember": [{ chain: "ethereum" }, { chain: "sui" }],
   // USTB is native on Ethereum and Solana; Plume is Superstate issuer-native
   // burn/mint (bridge() burns source, no lockbox). Verified 2026-08-19:
   // Ethereum 67,696,661.464479 + Plume 169,698.550490 + Solana 224,120.571877
@@ -517,8 +512,8 @@ const CURATED_AGGREGATE_ONCHAIN_SUPPLY_CONTRACTS: Record<
   // Tron. Verified 2026-08-19: Polygon 3,237.185242 + Ethereum 159.936826 +
   // Optimism 0 + Plume 16.267368 = 3,413.389436. Tron 20.012264 (TronGrid
   // block 85473285) is a tracked native issuance with no probe family
-  // (0.58% of 3,433.401700); it stays outside this aggregate rather than
-  // failing the row closed. Plume is absent from buildChainRpcs().
+  // (0.58% of 3,433.401700); the incomplete-roster admission guard now
+  // withholds this aggregate. Plume is absent from buildChainRpcs().
   "hlscope-hamilton-lane": [
     { chain: "polygon" },
     { chain: "ethereum" },
@@ -667,6 +662,10 @@ const CURATED_AGGREGATE_ONCHAIN_SUPPLY_CONTRACTS: Record<
     supplyProbeChain("plasma"),
     { chain: "ethereum" },
     supplyProbeChain("monad"),
+    supplyProbeChain("hyperevm", { allowZeroSupply: true }),
+    { chain: "sei", rpcUrl: "https://evm-rpc.sei-apis.com" },
+    { chain: "pharos", rpcUrl: "https://pharos.drpc.org" },
+    supplyProbeChain("berachain"),
   ],
   // IDRT is minted natively on Ethereum, BSC and Polygon: each is a
   // non-upgradeable Ownable ERC-20 whose owner() is the same PT Rupiah Token
@@ -688,7 +687,7 @@ const CURATED_AGGREGATE_ONCHAIN_SUPPLY_CONTRACTS: Record<
   // IDRTB (BEP-2 IDRTB-178, chain sunset Jun 2024, ~90B with 98.98% parked in
   // one post-migration address) and IDRTL (permissioned Luniverse, no public
   // explorer); the flat 40B addend is issuer-declared supply on those unreadable
-  // ledgers and stays outside this aggregate, like the mRe7YIELD TAC leg.
+  // ledgers and stays outside this aggregate.
   // Publishing the pinned reads restates supply by -47.86%; even crediting
   // IDRTB/IDRTL at face value, CoinGecko's own basis would give ~130.7B today,
   // never the frozen 173.9B (owner-ratified 2026-09-01).
@@ -724,31 +723,10 @@ const CURATED_AGGREGATE_ONCHAIN_SUPPLY_CONTRACTS: Record<
     { chain: "bsc", allowZeroSupply: true },
     { chain: "solana" },
   ],
-  // cNGN is canonically issued on Bantu, which locks Bantu cNGN and mints each
-  // destination representation. Bantu is not a tracked chain and has no probe
-  // family, so there is no readable canonical total to reallocate out of; the six
-  // reviewed representations are minted against Bantu locks and never against one
-  // another, so summing them cannot double count and yields the tracked bridged
-  // float. Verified 2026-09-01: Base 2,078,532,783.999372 (block 50734268) + BSC
-  // 954,400,390.667190 (block 119326002) + Celo 133,788,554.003925 (block
-  // 76357127) + Solana 60,250,023.000000 (slot 443398878) + Ethereum
-  // 137,326.400001 (block 25881783) + Polygon 12,575.400000 (block 93035235) =
-  // 3,227,121,653.470488, -3.09% against CoinGecko's live (not frozen)
-  // 3,329,961,223.913752. Known gaps that stay outside this aggregate rather than
-  // failing it closed (mRe7YIELD/TAC precedent): the unreadable Bantu-native
-  // float, a Lisk representation (0xc7ab2c35ea37236e644c24a4e4a1911c082887c0,
-  // 5,023 cNGN; Lisk has no chain registry entry) and a second Base cNGN
-  // (0xc930784d6e14e2fc2a1f49be1068dc40f24762d3, 1,000,370) that CoinGecko indexes
-  // in place of the reviewed 0x46c85152 deployment. Ethereum and Polygon are each
-  // under 0.005% of supply, so allow them to read zero.
-  "cngn-compliant-naira": [
-    { chain: "base" },
-    { chain: "bsc" },
-    { chain: "celo" },
-    { chain: "solana" },
-    { chain: "ethereum", allowZeroSupply: true },
-    { chain: "polygon", allowZeroSupply: true },
-  ],
+  // cNGN's Bantu-native float has no supported supply reader. Destination
+  // representations (including Lisk and Asset Chain) cannot prove its global
+  // supply; leave it on upstream supply until canonical accounting is available.
+
 };
 
 // These canonical-chain totalSupply values already include tokens escrowed for
@@ -814,6 +792,7 @@ export function isZephyrScannerSupplyId(id: string): boolean {
  * reader exists for that chain family or the address shape is wrong.
  */
 export function onchainSupplyProbeFamily(contract: OnchainSupplyContract): OnchainSupplyProbeFamily | null {
+  if (contract.chain === "sui") return contract.address === EEARN_SUI_COIN_TYPE ? "sui" : null;
   switch (NON_EVM_PROBE_FAMILY_BY_CHAIN[contract.chain]) {
     case "solana":
       return contract.address.length > 0 ? "solana" : null;
@@ -860,6 +839,12 @@ export function selectCuratedAggregateOnchainSupplyProbeContracts(
     selected.push({ config, contract });
   }
 
+  // A summed roster is a global total only when every registered deployment
+  // participates. Canonical lock/mint totals already conserve remote supply.
+  if (!CURATED_AGGREGATE_CANONICAL_SUPPLY_CHAINS[meta.id]
+    && meta.contracts?.some((contract) => !selected.some((entry) => entry.contract === contract))) {
+    return null;
+  }
   return selected;
 }
 

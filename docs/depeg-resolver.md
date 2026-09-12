@@ -13,7 +13,7 @@ DDR is **not investment advice and not a credit rating.** A "Recovery Unlikely" 
 
 ## Methodology Versioning
 
-- **Current methodology version:** <!-- GENERATED-START: methodology-version-depeg-resolver -->`v4.4`<!-- GENERATED-END: methodology-version-depeg-resolver -->
+- **Current methodology version:** <!-- GENERATED-START: methodology-version-depeg-resolver -->`v4.5`<!-- GENERATED-END: methodology-version-depeg-resolver -->
 - **Public changelog page:** `/methodology/depeg-resolver-changelog/`
 - **Canonical source:** `shared/lib/methodology-versions/depeg-resolver.ts`, with shared constants in `shared/lib/methodology-versions/constants.ts` and changelog entries in `shared/data/methodology-changelogs/depeg-resolver/`
 - **Structured changelog:** `shared/data/methodology-changelogs/depeg-resolver/`
@@ -92,6 +92,9 @@ Stage 1 combines **what the coin *is*** (structural fragility — can supply be 
 ### Inputs
 
 **Structural fragility** (static registry plus slow scores): `mintAuthority` posture / path plus the published V9 Economic Control mint-posture band (stored in the legacy-named `mintAuthorityScoreBand` field, with curated authority-posture fallback when no compatible V9 publication is installed) and recent reviewed mint-authority incident dates, optional issuer `windDownAnnouncedAt` / `windDownSourceUrl` (token-scoped; distinct from `frozenAt`), `mechanismArchetype`, governance flag, collateral quality, custody model, reserve risk, blacklistability, dependencies, redemption capacity and route family, and the V9 report-card safety grade / exit pillar as anchors when identified.
+
+Since DDR `4.5`, the published V9 mint posture also supplies the structural authority posture, so curated annotations cannot override the current derived judgment. Missing derived posture falls back to the curated review; an explicit `unknown` remains unknown. V9's `none-resolved` is mint-scoped and maps to `none-resolved-mint` unless an independent curated `none-resolved` review establishes whole-chain absence. This preserves wrapper scope for robustness and recovery anchors. Existing sealed predictions are not rewritten.
+
 
 **Event fingerprint** (event row plus live and reconstructed signals): depth bucket from `peak_deviation_bps`; direction; speed from start-to-peak timing; supply behavior (Δ7d / Δ30d from daily supply history plus mint/burn net flow into the break — the supply-weaponization tell); live DEWS band and which sub-signals fire; liquidity and exit signals (including V9 exit reason codes and measured primary-route capacity when available); concurrent blacklist surge; and the orphan-close flag from related closed events.
 

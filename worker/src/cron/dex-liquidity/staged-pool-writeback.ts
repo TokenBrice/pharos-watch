@@ -4,7 +4,7 @@ import {
 } from "@shared/lib/exit-route-identity";
 import type { LiquidityPoolSourceFamily } from "@shared/types/market";
 import { isValidStagedPoolId } from "../dex-discovery/persistence";
-import type { StagedPool } from "../dex-discovery/types";
+import { SLIPSTREAM_POOL_IDENTITY_REVIEW_VERSION, type StagedPool } from "../dex-discovery/types";
 import { getQualityMultiplier } from "./pool-helpers";
 import { isTrustworthyExactPoolId } from "./pool-identity";
 import type { LiquidityMetrics } from "./types";
@@ -120,7 +120,9 @@ export function buildStagedPoolWriteback(
         quoteSymbol: null,
         priceUsd: measuredPrice != null && measuredPrice > 0 ? measuredPrice : null,
         lockedLiqPct: entry.extra?.lockedLiquidityPct ?? null,
-        rawJson: null,
+        rawJson: entry.source === "direct_api" && entry.poolType.includes("slipstream")
+          ? JSON.stringify({ identityReviewVersion: SLIPSTREAM_POOL_IDENTITY_REVIEW_VERSION })
+          : null,
         discoveredAt: nowSec,
         refreshedAt: nowSec,
       });

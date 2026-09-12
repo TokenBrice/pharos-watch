@@ -95,7 +95,7 @@ export function buildPriceValidationContext(
   const pegType =
     pegTypeFromCurrency(pegCurrency) ??
     input.pegType;
-  const navToken = trackedMeta?.navToken ?? !!input.navToken;
+  const navToken = trackedMeta ? trackedMeta.navToken === true : !!input.navToken;
   const commodityOunces =
     typeof trackedMeta?.commodityOunces === "number" && Number.isFinite(trackedMeta.commodityOunces) && trackedMeta.commodityOunces > 0
       ? trackedMeta.commodityOunces

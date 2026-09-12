@@ -70,6 +70,7 @@
         {
           "name": "ysyBOLD",
           "holder": "0xb87e1e1c4cc2decada13025a8dc8a94bdb77fb63",
+          "balanceRead": { "contract": "0xb87e1e1c4cc2decada13025a8dc8a94bdb77fb63", "selector": "0x0367b302" },
           "token": { "chain": "ethereum", "address": "0x23346b04a7f55b8760e5860aa5a77383d63491cd", "decimals": 18 },
           "risk": "medium",
           "coinId": "bold-liquity",
@@ -78,6 +79,7 @@
         {
           "name": "scrvUSD",
           "holder": "0x244c422663328233a5d1bd5045ff943ba97d046e",
+          "balanceRead": { "contract": "0x244c422663328233a5d1bd5045ff943ba97d046e", "selector": "0x0367b302" },
           "token": { "chain": "ethereum", "address": "0x0655977feb2f289a4ab78af67bab0d17aab84367", "decimals": 18 },
           "risk": "medium",
           "coinId": "scrvusd-curve",
@@ -86,6 +88,7 @@
         {
           "name": "sUSDS",
           "holder": "0x08eaafd8fbb12cf12d6765e80c5b0ff8490c232d",
+          "balanceRead": { "contract": "0x08eaafd8fbb12cf12d6765e80c5b0ff8490c232d", "selector": "0x0367b302" },
           "token": { "chain": "ethereum", "address": "0xa3931d71877c0e7a3148cb7eb4463524fec27fbd", "decimals": 18 },
           "risk": "low",
           "coinId": "susds-sky",
@@ -94,6 +97,7 @@
         {
           "name": "sfrxUSD",
           "holder": "0x20f29569566020d8e49c9843033c370772a93774",
+          "balanceRead": { "contract": "0x20f29569566020d8e49c9843033c370772a93774", "selector": "0x0367b302" },
           "token": { "chain": "ethereum", "address": "0xcf62f905562626cfcdd2261162a51fd02fc9c5b6", "decimals": 18 },
           "risk": "medium",
           "coinId": "sfrxusd-frax",
@@ -102,12 +106,14 @@
         {
           "name": "tBTC",
           "holder": "0xb00d1d5dfd72a440b8c04a5f7b5bc3c8159a7f44",
+          "balanceRead": { "contract": "0xb00d1d5dfd72a440b8c04a5f7b5bc3c8159a7f44", "selector": "0x0367b302" },
           "token": { "chain": "ethereum", "address": "0x18084fba666a33d37592fa2633fd49a74dd93a88", "decimals": 18 },
           "risk": "medium"
         },
         {
           "name": "wBTC",
           "holder": "0xf507e264d507ef64a72aeaf4cc8c270d008fc48a",
+          "balanceRead": { "contract": "0xf507e264d507ef64a72aeaf4cc8c270d008fc48a", "selector": "0x0367b302" },
           "token": { "chain": "ethereum", "address": "0xe065bc161b90c9c4bba2de7f1e194b70a3267c47", "decimals": 18 },
           "priceToken": { "chain": "ethereum", "address": "0x2260fac5e5542a773aa44fbcfedf7c193bc2c599" },
           "underlyingPrice1to1": true,

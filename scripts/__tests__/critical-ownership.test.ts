@@ -91,13 +91,24 @@ describe("critical ownership derivation", () => {
       if (args[0] === "cat-file") {
         expect(args.slice(1)).toEqual(["--batch", "-Z"]);
         expect(options.input).toBe(`base:${test}\0`);
-        return `deadbeef blob 18\0import "../auth";\0`;
+        return `deadbeef blob 17\0import "../auth";\0`;
       }
       throw new Error(`Unexpected Git read: ${args.join(" ")}`);
     });
     expect(ownership.get(source)).toEqual([test]);
     // One batched read replaces one `git show` per candidate file.
     expect(gitReads).toEqual(["ls-tree -r --name-only -z base", "cat-file --batch -Z"]);
+  });
+
+  it("reads base blobs by byte length across embedded NUL and Unicode", () => {
+    const tests = ["src/first.test.ts", "src/second.test.ts"];
+    const bodies = ['// é\0hidden\nimport "./first";', 'import "./second";'];
+    const ownership = deriveBaseCriticalOwnership("base", tests, (_file, args) => {
+      if (args[0] === "ls-tree") return [...tests, "src/first.ts", "src/second.ts"].join("\0") + "\0";
+      return Buffer.concat(bodies.map((body) => Buffer.from(`deadbeef blob ${Buffer.byteLength(body)}\0${body}\0`)));
+    });
+    expect(ownership.get("src/first.ts")).toEqual([tests[0]]);
+    expect(ownership.get("src/second.ts")).toEqual([tests[1]]);
   });
 
   it("ignores test files that do not exist at the base revision", () => {

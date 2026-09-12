@@ -197,8 +197,10 @@ async function fetchLiquityV2BranchState(
     calls.push(
       {
         label: `branch:balance:${index}`,
-        contract: branch.token.address,
-        data: encodeBalanceOfCallData(branch.holder),
+        contract: branch.balanceRead?.contract ?? branch.token.address,
+        data: branch.balanceRead
+          ? branch.balanceRead.selector + (branch.balanceRead.args ?? []).map((word) => word.slice(2)).join("")
+          : encodeBalanceOfCallData(branch.holder),
         allowFailure: true,
       },
       {
@@ -261,7 +263,12 @@ async function fetchLiquityV2BranchState(
   const [balances, redemptionFeeBps] = await Promise.all([
     Promise.all(params.branches.map(async (branch) => ({
       branch,
-      balanceRaw: await fetchErc20Balance(
+      balanceRaw: branch.balanceRead
+        ? await onchain.uint256(
+            branch.balanceRead.contract,
+            branch.balanceRead.selector + (branch.balanceRead.args ?? []).map((word) => word.slice(2)).join(""),
+          )
+        : await fetchErc20Balance(
         input,
         branch.token.address,
         branch.holder,

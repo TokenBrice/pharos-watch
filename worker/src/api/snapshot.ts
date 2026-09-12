@@ -25,6 +25,7 @@ import {
 } from "@shared/types/safety-score-publication";
 import { safetyScorePublicationIdentitiesMatch } from "@shared/lib/safety-score-publication";
 import { isRecord } from "@shared/lib/type-guards";
+import { Sha256Schema } from "@shared/types/safety-schema-primitives";
 import { ReportCardsV9ResponseSchema } from "@shared/types/report-cards-v9";
 import {
   PublicSnapshotEnvelopeSchema,
@@ -178,7 +179,27 @@ function validateV9ReportCards(
   reportCards: Record<string, unknown>,
   identity: Extract<SafetyScorePublicationIdentity, { model: "v9" }>,
 ): string | null {
-  const parsed = ReportCardsV9ResponseSchema.safeParse(reportCards);
+  // Pre-9.15 report-v5 snapshots retained this now-removed nullable digest.
+  // Validate that exact historical field, then validate a copy against the live
+  // contract. Serving still uses the original immutable bytes and card objects.
+  let validationInput = reportCards;
+  const version = identity.methodologyVersion;
+  if (/^9\.\d{1,2}$/.test(version) && Number(version) < 9.15 && Array.isArray(reportCards.cards)) {
+    const cards = [];
+    for (const card of reportCards.cards) {
+      if (isRecord(card) && Object.prototype.hasOwnProperty.call(card, "stressStateDigest")) {
+        if (!Sha256Schema.nullable().safeParse(card.stressStateDigest).success) {
+          return "safety-score-publication-invalid";
+        }
+        const { stressStateDigest: _legacyDigest, ...currentCard } = card;
+        cards.push(currentCard);
+      } else {
+        cards.push(card);
+      }
+    }
+    validationInput = { ...reportCards, cards };
+  }
+  const parsed = ReportCardsV9ResponseSchema.safeParse(validationInput);
   if (!parsed.success) {
     return "safety-score-publication-invalid";
   }

@@ -150,3 +150,14 @@ describe("CI workflow scope", () => {
       "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/ci/run-gitleaks.ts --range");
   });
 });
+
+it("runs secret scanning from trusted base code and policy before checking out PR content", () => {
+  const workflow = parseYaml(readRepoFile(".github/workflows/pull-request-checks.yml"));
+  const steps = workflow.jobs.preflight.steps;
+  const checkouts = steps.filter((step: { uses?: string }) => step.uses?.startsWith("actions/checkout@"));
+  expect(checkouts[0].with.ref).toBe("${{ github.event.pull_request.base.sha }}");
+  const scanner = steps.findIndex((step: { run?: string }) => step.run?.includes("scripts/ci/run-gitleaks.ts --range"));
+  expect(scanner).toBeGreaterThan(steps.indexOf(checkouts[0]));
+  expect(scanner).toBeLessThan(steps.indexOf(checkouts[1]));
+  expect(steps[scanner].env.GITLEAKS_HEAD_REF).toBe("${{ github.event.pull_request.head.sha }}");
+});

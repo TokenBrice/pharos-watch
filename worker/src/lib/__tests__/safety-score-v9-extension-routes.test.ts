@@ -979,6 +979,22 @@ describe("buildSafetyScoreV9RetainedRedemptionRoutes", () => {
     });
   });
 
+  it.each(["source-token-usd", "peg-reference", "pool-implied"])("rejects persisted %s DEX output pins without independent valuation", (source) => {
+    const fixedInput = fixedInputStub(undefined);
+    const route = dexRouteObservation(NOW, {
+      routeId: "dex:asset-input:dl:ethereum%3Apool:ethereum%3Aoutput",
+      output: { kind: "tracked-stablecoin", trackedAssetIds: ["usdt-tether"] },
+      outputUnitValueUsd: 1,
+      outputUnitValueSourceId: `dex-amm-output-reference:curve:${source}`,
+      outputUnitValueObservedAt: NOW,
+    });
+    (fixedInput as { dexLiqMap: Record<string, unknown> }).dexLiqMap = { "asset-input": singleObservationDexLiquidity(route) };
+    (fixedInput as { pegDataById: Record<string, unknown> }).pegDataById = { "usdt-tether": { pegCurrency: "USD", currentDeviationBps: null } };
+    expect(buildSafetyScoreV9RouteReviews(fixedInput, "asset-input")[0]?.output?.valuation).toBeNull();
+    (route as { outputUnitValueSourceId: string }).outputUnitValueSourceId = "dex-amm-output-reference:curve:tracked-market";
+    expect(buildSafetyScoreV9RouteReviews(fixedInput, "asset-input")[0]?.output?.valuation).toMatchObject({ unitValueUsd: 1 });
+  });
+
   it("values a NAV output from the captured NAV price without creating a peg valuation", () => {
     const fixedInput = fixedInputStub(undefined);
     const route = dexRouteObservation(NOW, {

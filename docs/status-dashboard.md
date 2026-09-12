@@ -298,7 +298,7 @@ Computed from missing prices + blacklist gaps + on-chain supply monitor, with be
   - exact stablecoin publication coverage is not complete (`dataQuality.stablecoinPublication.status !== "complete"`, i.e. `incomplete` or `unknown`)
   - exact active-price coverage is unreadable (`activePriceCoverageImpactStatus === "degraded"` from `active_price_coverage_unknown`; incomplete coverage is warning-only)
   - `missingPriceRatio > 0.18`
-  - `blacklistRecentMissingAmounts >= 5` (last 24h)
+  - `blacklistRecentMissingAmounts >= <!-- GENERATED-START: status-blacklist-recent-degraded-threshold -->5<!-- GENERATED-END: status-blacklist-recent-degraded-threshold -->` (last 24h)
   - `blacklistMissingRatio >= 0.01` (1%)
   - `onchainStaleRatio >= 0.1` when `onchainSupplyTrackedCoins >= 10`
   - `onchainDivergenceRatio >= 0.1` when `onchainSupplyTrackedCoins >= 10`

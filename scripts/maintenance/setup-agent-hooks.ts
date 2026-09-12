@@ -90,9 +90,10 @@ export function parseCodexHookStates(configText: string): Map<string, boolean> {
   let activeStateKey: string | undefined;
 
   for (const rawLine of configText.split(/\r?\n/)) {
-    const line = rawLine.replace(/#.*$/, "").trim();
-    const table = line.match(/^\[hooks\.state\."([^"]+)"\]$/);
-    if (table) {
+    const line = rawLine.trim();
+    const table = line.match(/^\[hooks\.state\."([^"]+)"\]/);
+    const trailing = table ? line.slice(table[0].length).trim() : "";
+    if (table && (!trailing || trailing.startsWith("#"))) {
       activeStateKey = table[1];
       continue;
     }
@@ -106,7 +107,7 @@ export function parseCodexHookStates(configText: string): Map<string, boolean> {
       continue;
     }
 
-    const enabled = line.match(/^enabled\s*=\s*(true|false)$/);
+    const enabled = line.split("#", 1)[0].trim().match(/^enabled\s*=\s*(true|false)$/);
     if (enabled) {
       states.set(activeStateKey, enabled[1] === "true");
     }

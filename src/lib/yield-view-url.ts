@@ -157,6 +157,15 @@ export function normalizeFilters(rawParams: YieldViewModelUrlParams, options: Yi
     attention: filters.attention === DEFAULT_FILTERS.attention ? null : filters.attention,
   };
 
+  // Explicit neutral values still matter when the active band supplies a
+  // non-neutral default. Removing them would change the next render's filters.
+  const bandOverrides = YIELD_RISK_BUDGET_SPECS.find((entry) => entry.key === risk)?.overrides ?? {};
+  for (const key of Object.keys(bandOverrides) as Array<keyof YieldViewModelFilters>) {
+    if (rawParams[key] === filters[key] && normalizedParams[key] === null) {
+      normalizedParams[key] = rawParams[key] ?? null;
+    }
+  }
+
   const invalidParamKeys = (Object.keys(normalizedParams) as Array<keyof YieldViewModelUrlParams>)
     .filter((key) => {
       const raw = rawParams[key];

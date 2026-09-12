@@ -7,13 +7,13 @@ const PRIVILEGED_MINT_PATHS = new Set([
 ] satisfies string[]);
 
 const PRIVILEGED_DIRECT_MINT_ABILITIES: ReadonlySet<MintAuthorityDirectMintAbility> = new Set([
-  "direct", "cap-limited", "can-authorize", "upgrade-only", "parameter-only",
+  "direct", "cap-limited", "can-authorize", "upgrade-only", "parameter-only", "unknown",
 ] satisfies MintAuthorityDirectMintAbility[]);
 
 /** Mint-scoped abilities that are themselves a path to new supply. Upgrade and
  * parameter authority disqualify whole-chain, but not mint-scoped, resolution. */
 const PRIVILEGED_MINT_PATH_ABILITIES: ReadonlySet<MintAuthorityDirectMintAbility> = new Set([
-  "direct", "cap-limited", "can-authorize",
+  "direct", "cap-limited", "can-authorize", "unknown",
 ] satisfies MintAuthorityDirectMintAbility[]);
 
 /** Floor for a reviewer sentence that states what was reconciled or supervised. */

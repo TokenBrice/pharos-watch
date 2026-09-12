@@ -66,6 +66,11 @@ describe("RailCopyFold", () => {
     const details = container.querySelector("details");
     expect(details?.open).toBe(false);
 
+    setHash("#%");
+    expect(details?.open).toBe(false);
+    setHash("#%E0%A4");
+    expect(details?.open).toBe(false);
+
     setHash("#reserve-quality");
     expect(details?.open).toBe(false);
 

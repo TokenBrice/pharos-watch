@@ -2,6 +2,10 @@ import { DAY_SECONDS } from "@shared/lib/time-constants";
 import type { DexDiscoveryProvider } from "@shared/lib/dex-deployment-coverage";
 import type { ContractDeployment } from "@shared/types/core";
 
+/** Producer-owned admission marker; legacy Tezos staging requires a fresh identity review. */
+export const TEZOS_POOL_IDENTITY_REVIEW_VERSION = "tezos-reviewed-v1";
+export const SLIPSTREAM_POOL_IDENTITY_REVIEW_VERSION = "slipstream-factory-v1";
+
 /**
  * Raw pool entry written to dex_pool_staging. Discovery owns its own families;
  * `dl` and `direct_api` rows are the live-lane write-back from the `:10`

@@ -13,7 +13,7 @@ import {
 } from "../lib/deploy-impact.mts";
 import { collectGitPaths, splitNullDelimited } from "../lib/changed-files.mts";
 import { CRITICAL_FILES, selectChangedCriticalSources } from "../lib/critical-coverage.mjs";
-import { deriveBaseCriticalOwnership, type CriticalOwnership } from "../lib/critical-ownership.mts";
+import { deriveBaseCriticalOwnership, type BaseBlobExec, type CriticalOwnership } from "../lib/critical-ownership.mts";
 import { isDirectRun } from "../lib/smoke-runtime.mjs";
 import { selectChangedGeneratedArtifactIds } from "./select-generated-artifacts.mts";
 
@@ -35,11 +35,7 @@ const CRITICAL_COVERAGE_INFRA_PATHS = new Set([
   "vitest.config.ts",
 ]);
 
-type GitExec = (
-  file: string,
-  args: readonly string[],
-  options: { encoding: "utf8"; input?: string; maxBuffer?: number },
-) => string;
+type GitExec = BaseBlobExec;
 
 interface DeployClassification {
   changedFiles: string[];
@@ -144,7 +140,7 @@ export function classifyDeployChanges({
   try {
     changedFiles = collectGitPaths(
       { kind: "range", base: baseSha, head: headSha, noRenames: true },
-      { execFile },
+      { execFile: (file, args, options) => execFile(file, args, options).toString() },
     );
   } catch {
     return fullDeploy(`Failed to diff ${baseSha}...${headSha}; falling back to full deploy path`);

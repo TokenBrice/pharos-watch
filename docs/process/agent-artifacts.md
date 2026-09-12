@@ -147,5 +147,5 @@ Hook paths resolve from tool workdir (relative to session cwd), then session cwd
 Shell hook payloads accept both `command` and `cmd` fields and pass them through the same pre-tool and permission-request policy checks.
 
 Set `PHAROS_HOOK_DIAGNOSTICS=1` or pass `--diagnostics` to append one safe JSONL record per hook invocation.
-The default diagnostic file is `agents/hook-diagnostics.jsonl`; set `PHAROS_HOOK_DIAGNOSTICS_FILE` for another local path.
+The default diagnostic file is `agents/hook-diagnostics.jsonl`; set `PHAROS_HOOK_DIAGNOSTICS_FILE` for another local path. Diagnostic writes reject protected paths, symlinks, multiply linked files, and nonregular files; unavailable diagnostics never change the hook decision or exit status. Hook-state reporting preserves `#` characters inside quoted TOML keys.
 Records contain a timestamp, harness, event, tool name, decision, rule, the count of protected paths touched, and a short command digest - never command text or secrets.

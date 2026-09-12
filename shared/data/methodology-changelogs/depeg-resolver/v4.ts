@@ -2,6 +2,21 @@ import type { MethodologyChangelogEntry } from "@shared/lib/methodology-versions
 
 export const DEPEG_RESOLVER_V4: readonly MethodologyChangelogEntry[] = [
   {
+    version: "4.5",
+    title: "Derived mint posture drives structural recovery inputs",
+    date: "2026-09-12",
+    effectiveAt: 1789171200,
+    summary: "DDR now uses the published V9 mint posture for structural fragility and recovery signals, with curated posture fallback when the derived posture is unavailable.",
+    impact: [
+      "A curated optimistic label no longer overrides an adverse published mint posture in duration strata or mint-risk signals",
+      "V9's mint-scoped none-resolved posture maps to none-resolved-mint unless the curated review independently establishes whole-chain absence, preserving the distinction between weak and strong recovery anchors",
+      "Published unknown posture remains authoritative; an absent derived posture retains the curated fallback",
+      "Factor weights, duration landmarks, and sealed prediction history are unchanged; new structural classifications can move where derived and curated postures differ",
+    ],
+    commits: [],
+    reconstructed: false,
+  },
+  {
     version: "4.4",
     title: "DDRR coverage accounting counts each incident once",
     date: "2026-09-09",

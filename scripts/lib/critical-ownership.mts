@@ -248,11 +248,11 @@ export function collectOwningTests(
 }
 
 
-type BaseBlobExec = (
+export type BaseBlobExec = (
   file: string,
   args: readonly string[],
-  options: { encoding: "utf8"; input?: string; maxBuffer?: number },
-) => string;
+  options: { encoding: "utf8" | null; input?: string; maxBuffer?: number },
+) => string | Buffer;
 
 // `git cat-file --batch` buffers every requested blob in one response; the
 // default 1 MiB `execFileSync` buffer overflows on a large test-file diff.
@@ -260,8 +260,8 @@ const BASE_BLOB_BATCH_MAX_BUFFER = 512 * 1024 * 1024;
 
 /**
  * Read a set of base-revision blobs in a single `git cat-file --batch -Z`
- * invocation. NUL-terminated records make each blob's content recoverable
- * without a byte-precise header parse, and one subprocess replaces the former
+ * invocation. Headers are NUL-terminated; bodies use the declared byte length
+ * so embedded NULs cannot shift subsequent records. One subprocess replaces the former
  * per-file `git show` fan-out on a blob:none partial clone.
  */
 function readBaseBlobs(
@@ -271,18 +271,26 @@ function readBaseBlobs(
 ): Map<string, string> {
   const specs = paths.map((path) => `${ref}:${normalizeOwnershipPath(path)}`);
   const output = execFile("git", ["cat-file", "--batch", "-Z"], {
-    encoding: "utf8",
+    encoding: null,
     input: specs.map((spec) => `${spec}\0`).join(""),
     maxBuffer: BASE_BLOB_BATCH_MAX_BUFFER,
   });
-  const records = output.split("\0");
+  const bytes = Buffer.isBuffer(output) ? output : Buffer.from(output);
   const contents = new Map<string, string>();
-  let record = 0;
+  let offset = 0;
   for (let index = 0; index < specs.length; index++) {
-    const header = records[record++];
-    if (header === undefined) break;
-    if (header.endsWith(" missing")) continue; // absent at `ref` (new file)
-    contents.set(normalizeOwnershipPath(paths[index]), records[record++] ?? "");
+    const headerEnd = bytes.indexOf(0, offset);
+    if (headerEnd < 0) throw new Error("Truncated base blob header");
+    const header = bytes.toString("utf8", offset, headerEnd);
+    offset = headerEnd + 1;
+    if (header.endsWith(" missing")) continue;
+    const match = /^[0-9a-f]+ blob (\d+)$/.exec(header);
+    const size = match ? Number(match[1]) : Number.NaN;
+    if (!Number.isSafeInteger(size) || size < 0 || offset + size >= bytes.length || bytes[offset + size] !== 0) {
+      throw new Error("Invalid base blob size or terminator");
+    }
+    contents.set(normalizeOwnershipPath(paths[index]), bytes.toString("utf8", offset, offset + size));
+    offset += size + 1;
   }
   return contents;
 }
@@ -297,7 +305,7 @@ export function deriveBaseCriticalOwnership(
     .filter((file) => TEST_FILE_PATTERN.test(file) && TEST_SCAN_ROOTS.some((root) => file.startsWith(`${root}/`)));
   if (tests.length === 0) return new Map();
   const cwd = process.cwd();
-  const inventory = new Set(execFile("git", ["ls-tree", "-r", "--name-only", "-z", ref], { encoding: "utf8" }).split("\0").filter(Boolean));
+  const inventory = new Set(execFile("git", ["ls-tree", "-r", "--name-only", "-z", ref], { encoding: "utf8" }).toString().split("\0").filter(Boolean));
   const existingTests = tests.filter((file) => inventory.has(file));
   if (existingTests.length === 0) return new Map();
   const contents = readBaseBlobs(ref, existingTests, execFile);

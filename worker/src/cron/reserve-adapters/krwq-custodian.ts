@@ -218,7 +218,10 @@ export function adaptKrwqCustodian(
     throw new Error(`${ADAPTER_KEY} payload has an unreadable timestamp`);
   }
 
-  const warnings: LiveReserveWarning[] = [];
+  const warnings: LiveReserveWarning[] = [reserveDegradedWarning(
+    "krwq-holder-unverified",
+    "Custodian and treasury holders are issuer-provided and have no independently reviewed identity binding",
+  )];
   const sliceInputs: Array<{
     value: number;
     sourceKey: string;
@@ -233,11 +236,10 @@ export function adaptKrwqCustodian(
       throw new Error(`${ADAPTER_KEY} payload missing ${leg.key} leg`);
     }
 
-    const value = parseStrictAmount(legPayload.totalAssets, `${leg.key} totalAssets`);
-    if (value < 0) {
+    const reportedValue = parseStrictAmount(legPayload.totalAssets, `${leg.key} totalAssets`);
+    if (reportedValue < 0) {
       throw new Error(`${ADAPTER_KEY} ${leg.key} totalAssets is negative`);
     }
-    if (value === 0) continue;
 
     let rawApi: bigint | null = null;
     try {
@@ -247,23 +249,28 @@ export function adaptKrwqCustodian(
     }
 
     const balance = onchain[leg.key];
+    const value = balance != null ? decimalNumberFromBigInt(balance, leg.decimals) : reportedValue;
+    if (!Number.isFinite(value) || value < 0) {
+      throw new Error(`${ADAPTER_KEY} ${leg.key} on-chain amount is invalid`);
+    }
     if (balance == null) {
       warnings.push(reserveDegradedWarning(
         "krwq-onchain-read-failed",
-        `${leg.name} could not be verified on-chain (balanceOf failed or reverted); keeping issuer-reported value $${value.toFixed(2)}`,
+        `${leg.name} could not be verified on-chain (balanceOf failed or reverted); using observed value $${value.toFixed(2)}`,
       ));
     } else if (rawApi == null) {
       warnings.push(reserveDegradedWarning(
         "krwq-onchain-unverifiable",
-        `${leg.name} reported no verifiable raw amount; keeping issuer-reported value $${value.toFixed(2)}`,
+        `${leg.name} reported no verifiable raw amount; using observed value $${value.toFixed(2)}`,
       ));
     } else if (balance !== rawApi) {
       warnings.push(reserveDegradedWarning(
         "krwq-onchain-mismatch",
-        `${leg.name} on-chain balance ${balance.toString()} differs from issuer-reported ${rawApi.toString()}; keeping issuer-reported value $${value.toFixed(2)}`,
+        `${leg.name} on-chain balance ${balance.toString()} differs from issuer-reported ${rawApi.toString()}; using observed value $${value.toFixed(2)}`,
       ));
     }
 
+    if (value === 0) continue;
     sliceInputs.push({ sourceKey: `krwq-custodian:${leg.key}`, name: leg.name, value, risk: leg.risk, coinId: leg.coinId });
   }
 

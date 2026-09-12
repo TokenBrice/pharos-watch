@@ -108,8 +108,8 @@ export function applyTrackedAssetOverrides(assets: PeggedAsset[]): void {
     if (meta?.cmcSlug) {
       asset.cmcSlug = meta.cmcSlug;
     }
-    if (meta?.flags?.navToken) {
-      asset.navToken = true;
+    if (meta) {
+      asset.navToken = meta.flags.navToken === true;
     }
     if (!asset.address && TRACKED_ASSET_ADDRESS_OVERRIDES[asset.id]) {
       asset.address = TRACKED_ASSET_ADDRESS_OVERRIDES[asset.id];
