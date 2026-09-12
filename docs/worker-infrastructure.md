@@ -125,7 +125,7 @@ Canonical binding ownership now lives in `shared/lib/env-contract.ts`; the worke
 | `API_KEY_HASH_PEPPER_PREVIOUS` | `string` | optional | - | - | Optional overlap pepper accepted alongside `API_KEY_HASH_PEPPER` during public API key rotation. |
 | `CF_ACCESS_TEAM_DOMAIN` | `string` | optional | required | - | Cloudflare Access team domain used to verify Access JWTs on worker admin requests and the Pages ops proxy. |
 | `CF_ACCESS_OPS_API_AUD` | `string` | optional | - | - | Cloudflare Access audience for worker-side `ops-api.pharos.watch` JWT verification. |
-| `ETHERSCAN_API_KEY` | `string` | optional | - | - | Etherscan API credential used by blacklist sync and USDS status reads. |
+| `ETHERSCAN_API_KEY` | `string` | optional | - | - | Etherscan API credential used by blacklist sync, USDS status reads, and the yield deterministic-read explorer-proxy fallback that keeps Ethereum-family on-chain reads alive during Worker-to-RPC outages. |
 | `TRONGRID_API_KEY` | `string` | optional | - | - | TronGrid API credential used by Tron blacklist sync and Tron live-reserve reads. |
 | `DRPC_API_KEY` | `string` | optional | - | - | dRPC credential used for L2 archive-node balance lookups. |
 | `ALCHEMY_API_KEY` | `string` | optional | - | - | Alchemy credential used for primary chain RPC endpoints. |
