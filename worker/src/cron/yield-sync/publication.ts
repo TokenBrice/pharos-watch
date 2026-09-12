@@ -4,6 +4,7 @@ import { ACTIVE_STABLECOINS, FROZEN_IDS } from "@shared/lib/stablecoins/registry
 import { YIELD_HISTORY_MAX_DAYS, YIELD_HISTORY_RAW_DAYS } from "@shared/lib/yield-history-policy";
 import { deleteOrphanYieldRows, deleteStaleYieldRows, purgeYieldHistoryOwnershipHandoffs } from "./history";
 import { runWithOverloadRetry } from "../../lib/d1-overload-retry";
+import { logWorkerEvent } from "../../lib/structured-log";
 
 export {
   derivePreviousYieldRankingsCount,
@@ -143,6 +144,85 @@ export async function pruneYieldTables(
   await runWithOverloadRetry(() => pruneYieldTablesOnce(db, startSec, options), 3, options?.signal);
 }
 
+/**
+ * Rows removed per statement. Small enough that a single statement stays far
+ * inside the D1 per-query CPU budget even on a wide index scan.
+ */
+const RETENTION_DELETE_CHUNK_ROWS = 5_000;
+/**
+ * Ceiling on rows removed per run. A retention-boundary change can put millions
+ * of rows in scope at once; draining them in one invocation would exceed the D1
+ * CPU limit and fail the whole publication run, so each run removes a bounded
+ * slice and the next run continues. Exceeding this budget is expected after a
+ * boundary change and is reported by the log line below.
+ */
+const RETENTION_DELETE_MAX_ROWS_PER_RUN = 250_000;
+
+/**
+ * Delete every row of `table` older than `cutoffSec` (by `timeColumn`), in
+ * bounded statements, so a large backlog drains across runs instead of failing
+ * one. `rowid` is used for the chunk selection because every retention table is
+ * a plain rowid table; both tables index their time column, so each bounded
+ * statement is an index range scan rather than a full scan.
+ *
+ * Exported with an explicit `maxRows` budget: the production default is
+ * {@link RETENTION_DELETE_MAX_ROWS_PER_RUN}, and a smaller budget exercises the
+ * resumable path in tests.
+ */
+export async function drainRowsBeforeCutoff(params: {
+  db: D1Database;
+  table: "yield_history" | "yield_history_daily";
+  statementTag: string;
+  timeColumn: "recorded_at" | "snapshot_date";
+  cutoffSec: number;
+  frozenIdsList: number[] | string[];
+  frozenClause: string;
+  maxRows?: number;
+}): Promise<{ deleted: number; budgetExhausted: boolean }> {
+  const { db, table, statementTag, timeColumn, cutoffSec, frozenIdsList, frozenClause } = params;
+  const perRunBudget = Math.max(
+    RETENTION_DELETE_CHUNK_ROWS,
+    params.maxRows ?? RETENTION_DELETE_MAX_ROWS_PER_RUN,
+  );
+  let remainingBudget = perRunBudget;
+  let deleted = 0;
+
+  while (remainingBudget > 0) {
+    const chunkRows = Math.min(RETENTION_DELETE_CHUNK_ROWS, remainingBudget);
+    const result = await db
+      .prepare(
+        `/* pharos:yield-sync:${statementTag} */
+         DELETE FROM ${table}
+          WHERE rowid IN (
+            SELECT rowid FROM ${table}
+             WHERE ${timeColumn} < ? ${frozenClause}
+             ORDER BY ${timeColumn} ASC
+             LIMIT ?
+          )`,
+      )
+      .bind(cutoffSec, ...frozenIdsList, chunkRows)
+      .run();
+    const changed = Number(result.meta?.changes ?? 0);
+    if (!Number.isFinite(changed) || changed <= 0) break;
+    deleted += changed;
+    remainingBudget -= changed;
+    // A short statement means the backlog is exhausted.
+    if (changed < chunkRows) break;
+  }
+
+  const budgetExhausted = remainingBudget <= 0 && deleted >= perRunBudget;
+  if (budgetExhausted) {
+    logWorkerEvent({
+      scope: "handler",
+      level: "info",
+      event: "yield-history-retention-drain-continues",
+      message: `Retention drain for ${table} hit its per-run row budget; the remainder continues on the next publication run.`,
+      metadata: { table, deleted, budget: perRunBudget },
+    });
+  }
+  return { deleted, budgetExhausted };
+}
+
 async function pruneYieldTablesOnce(
   db: D1Database,
   startSec: number,
@@ -176,6 +256,14 @@ async function pruneYieldTablesOnce(
   // rows only need the 30-day full-fidelity policy; the daily tier keeps the
   // 365-day cutoff. Materialization above ran first, so the trailing raw day
   // was already closed into the daily tier before it leaves the raw window.
+  //
+  // Both deletes are drained in bounded statements. A retention boundary change
+  // (v8.43 moved the raw cutoff from 365d to 30d) leaves the whole backlog
+  // eligible at once, and one unbounded DELETE over millions of rows exceeds the
+  // D1 per-query CPU limit — which failed the entire run with
+  // `D1_ERROR: D1 DB exceeded its CPU time limit`, every hour, forever. A chunk
+  // that cannot commit leaves the table unchanged, so the drain must be bounded
+  // and resumable rather than atomic.
   const rawPruneCutoff = startSec - YIELD_HISTORY_RAW_DAYS * DAY_SECONDS;
   const pruneCutoff = startSec - YIELD_HISTORY_MAX_DAYS * DAY_SECONDS;
   const frozenIdsList = [...FROZEN_IDS];
@@ -183,15 +271,24 @@ async function pruneYieldTablesOnce(
     frozenIdsList.length > 0
       ? `AND stablecoin_id NOT IN (${frozenIdsList.map(() => "?").join(",")})`
       : "";
-  await db
-    .prepare(`/* pharos:yield-sync:history-retention-delete */ DELETE FROM yield_history WHERE recorded_at < ? ${frozenClause}`)
-    .bind(rawPruneCutoff, ...frozenIdsList)
-    .run();
-
-  await db
-    .prepare(`/* pharos:yield-sync:daily-history-retention-delete */ DELETE FROM yield_history_daily WHERE snapshot_date < ? ${frozenClause}`)
-    .bind(pruneCutoff, ...frozenIdsList)
-    .run();
+  await drainRowsBeforeCutoff({
+    db,
+    table: "yield_history",
+    statementTag: "history-retention-delete",
+    timeColumn: "recorded_at",
+    cutoffSec: rawPruneCutoff,
+    frozenIdsList,
+    frozenClause,
+  });
+  await drainRowsBeforeCutoff({
+    db,
+    table: "yield_history_daily",
+    statementTag: "daily-history-retention-delete",
+    timeColumn: "snapshot_date",
+    cutoffSec: pruneCutoff,
+    frozenIdsList,
+    frozenClause,
+  });
 
   if (allowDestructiveCleanup) {
     await cleanupFalseLinkedVariantSourceSwitches(db);

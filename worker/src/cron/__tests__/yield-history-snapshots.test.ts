@@ -11,7 +11,7 @@ import {
   MAX_PREVIOUS_TVL_HISTORY_ROWS,
   purgeYieldHistoryOwnershipHandoffs,
 } from "../yield-sync/history";
-import { pruneYieldTables } from "../yield-sync/publication";
+import { drainRowsBeforeCutoff, pruneYieldTables } from "../yield-sync/publication";
 
 function createDb(): { sqlite: DatabaseSync; db: D1Database } {
   return createLatestSchemaSqlite();
@@ -343,5 +343,59 @@ describe("pruneYieldTables retention", () => {
     expect(sqlite.prepare("SELECT snapshot_date FROM yield_history_daily").all()).toEqual([
       { snapshot_date: nowSec - 100 * DAY_SECONDS },
     ]);
+  });
+
+  it("resumes a large retention backlog across bounded statements instead of one fatal delete", async () => {
+    // Regression: v8.43 moved the raw-history cutoff from 365d to 30d, putting
+    // the entire 30d-365d backlog in scope at once. One unbounded DELETE over
+    // millions of rows exceeded the D1 per-query CPU limit, failing the whole
+    // publication run with `D1_ERROR: D1 DB exceeded its CPU time limit` — and
+    // it failed the same way every hour. The drain must be bounded and resumable.
+    const fixture = createDb();
+    sqlite = fixture.sqlite;
+    const nowSec = 1_800_000_000;
+    const cutoffSec = nowSec - 30 * DAY_SECONDS;
+    for (let index = 0; index < 12_000; index += 1) {
+      insertHistory(sqlite, {
+        stablecoinId: `coin-${index % 20}`,
+        sourceKey: "source-a",
+        recordedAt: nowSec - 40 * DAY_SECONDS - index,
+      });
+    }
+    const countRows = (): number => {
+      const row = sqlite?.prepare("SELECT COUNT(*) AS n FROM yield_history").get();
+      if (!row || typeof row !== "object" || !("n" in row) || typeof row.n !== "number") {
+        throw new Error("unexpected sqlite count shape");
+      }
+      return row.n;
+    };
+    expect(countRows()).toBe(12_000);
+
+    const drain = () =>
+      drainRowsBeforeCutoff({
+        db: fixture.db,
+        table: "yield_history",
+        statementTag: "history-retention-delete",
+        timeColumn: "recorded_at",
+        cutoffSec,
+        frozenIdsList: [],
+        frozenClause: "",
+        maxRows: 5_000,
+      });
+
+    // Three bounded passes, each capped, and the third finds only the remainder.
+    const first = await drain();
+    expect(first.deleted).toBe(5_000);
+    expect(first.budgetExhausted).toBe(true);
+    expect(countRows()).toBe(7_000);
+
+    const second = await drain();
+    expect(second.deleted).toBe(5_000);
+    expect(countRows()).toBe(2_000);
+
+    const third = await drain();
+    expect(third.deleted).toBe(2_000);
+    expect(third.budgetExhausted).toBe(false);
+    expect(countRows()).toBe(0);
   });
 });
