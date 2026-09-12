@@ -70,6 +70,26 @@ const ASSET_AS_VENUE_DATA_SOURCES: Record<string, boolean> = {
   "price-derived": true,
   "rate-derived": true,
 };
+// Deployment places that are the issuer's own rail rather than a third-party
+// venue: a staked/savings wrapper the issuer operates (`native-wrapper`) or the
+// issuer's own savings module (`issuer-savings`). The same A7 principle applies
+// as for the derivation methods above — the coin IS the venue, so there is no
+// independent venue tier to review, and the coin's Safety Score already prices
+// that risk. Scoring one here would double-count it.
+//
+// Evidence (yield reliability review, 2026-09-12): ~90 fetched sources across 30
+// published slugs still missing a tier — Sky sUSDS/SSR, Circle/Hashnote USYC,
+// Ethena USDe/sUSDe, Ondo USDY/OUSG, BlackRock BUIDL, Invesco/Superstate USTB,
+// FRAX sfrxUSD, Liquity V1/V2 Stability Pools, Base Dollar SP, Curve scrvUSD,
+// Reserve USD3, Origin OUSD, Reservoir sr/wsrUSD, Avant savUSD, Noon sUSN,
+// Yuzu syzUSD, dTRINITY sdUSD, Theo thBILL, YO yoUSD — each an issuer-native
+// product rail, none an independent lending venue. Genuine third-party venues
+// (`strategy-vault`, `lending-market`) stay in the denominator and are queued
+// for review via the coverage-audit `venue-risk-config-missing` path.
+const ISSUER_RAIL_DEPLOYMENT_PLACES: Record<string, boolean> = {
+  "native-wrapper": true,
+  "issuer-savings": true,
+};
 const COVERAGE_AUDIT_QUEUE_ACTIONS = ["accept", "dismiss", "intentional-gap", "watch"] satisfies YieldCoverageAuditQueueAction[];
 const COVERAGE_AUDIT_QUEUE_ITEM_KINDS = [
   "manifest-missing",
@@ -294,7 +314,8 @@ function readSourceRiskCoverageRow(
     isBest,
     assetIsVenue:
       ASSET_AS_VENUE_DATA_SOURCES[dataSource] === true
-      || ASSET_AS_VENUE_DATA_SOURCES[deploymentPlace] === true,
+      || ASSET_AS_VENUE_DATA_SOURCES[deploymentPlace] === true
+      || ISSUER_RAIL_DEPLOYMENT_PLACES[deploymentPlace] === true,
     rewardSplitPossible:
       REWARD_SPLIT_CAPABLE_DATA_SOURCES[dataSource] === true || getNumber(row.apyReward) != null,
   };
