@@ -374,7 +374,8 @@ describe("PysBreakdown — printed equation (D14)", () => {
   }
 
   function printedPercent(label: string | null, prefix: string): number {
-    const match = label?.match(new RegExp(`${prefix} ([+-]?[\\d.]+)%`));
+    const start = label?.indexOf(`${prefix} `) ?? -1;
+    const match = start >= 0 ? label!.slice(start + prefix.length + 1).match(/^([+-]?[\d.]+)%/) : null;
     if (!match) throw new Error(`no printed percent for "${prefix}" in: ${label}`);
     return Number(match[1]);
   }

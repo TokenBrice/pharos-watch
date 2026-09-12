@@ -8,7 +8,6 @@ import {
   resetSyncYieldDataTest,
   cleanupSyncYieldDataTest,
   fixtureSyncYieldData,
-  fixtureMockD1,
   fixtureBatchExecute,
   fixtureGetCache,
   fixtureWriteFreshnessSentinel,

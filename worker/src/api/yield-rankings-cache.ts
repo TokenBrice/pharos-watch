@@ -8,7 +8,6 @@ import {
   YIELD_BENCHMARK_KEY_CURRENCY,
   type YieldCalculationMode,
   type YieldEvidenceClass,
-  type YieldRankChangeAttribution,
   type YieldRanking,
   type YieldRankingsResponse,
   type YieldSafetyReason,
@@ -25,7 +24,7 @@ import {
   classifyYieldBenchmarkFreshness,
   YIELD_BENCHMARK_RECORD_MAX_AGE_SEC,
   type YieldBenchmarkFreshness,
-} from "../cron/yield-sync/benchmarks";
+} from "@shared/lib/yield-benchmark-freshness";
 import {
   buildYieldRankBaseline,
   buildYieldRankChangeAttribution,
