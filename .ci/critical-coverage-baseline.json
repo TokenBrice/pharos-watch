@@ -26,6 +26,7 @@
     "shared/lib/selector/snapshot.ts": 97.9,
     "shared/lib/telegram-adoption-analytics.ts": 100,
     "shared/lib/telegram-mini-app-contract.ts": 100,
+    "shared/lib/yield-benchmark-freshness.ts": 100,
     "shared/lib/yield-scoring.ts": 100,
     "src/app/pharoswatchbot/app/client.tsx": 83.2,
     "src/app/pharoswatchbot/app/mini-app-api.ts": 98.6,
