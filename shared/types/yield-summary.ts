@@ -55,6 +55,10 @@ export const YieldRankingSummarySourceRiskSchema = DetailedYieldSourceRiskSchema
   dependencyConcentration: true,
 }).strict();
 
+// `dataSource` became a strict-contract field on the same branch as the rank
+// attribution fields below, so the pre-deploy cached summary predates all of
+// them. `partial` (not an extend override) keeps the picked field order — the
+// projection emits keys in schema declaration order.
 export const YieldRankingSummarySchema = DetailedYieldRankingSchema.pick({
   id: true,
   symbol: true,
@@ -80,13 +84,17 @@ export const YieldRankingSummarySchema = DetailedYieldRankingSchema.pick({
   warningSignals: true,
   sourceRole: true,
 })
+  .partial({ dataSource: true })
   .extend({
     alternateSourceCount: z.number().int().nonnegative(),
-    altSources: z.array(YieldRankingSummaryAltSourceSchema).max(YIELD_RANKING_SUMMARY_ALT_SOURCE_LIMIT),
+    altSources: z
+      .array(YieldRankingSummaryAltSourceSchema)
+      .max(YIELD_RANKING_SUMMARY_ALT_SOURCE_LIMIT)
+      .optional(),
     decisionReasonCode: DetailedYieldDecisionLedgerSchema.shape.selectedReasonCode.optional(),
-    rankDelta: DetailedYieldRankChangeSchema.shape.rankDelta,
-    rankChangeDriver: DetailedYieldRankChangeSchema.shape.primaryDriver,
-    rankPysDelta: DetailedYieldRankChangeSchema.shape.pysDelta,
+    rankDelta: DetailedYieldRankChangeSchema.shape.rankDelta.optional(),
+    rankChangeDriver: DetailedYieldRankChangeSchema.shape.primaryDriver.optional(),
+    rankPysDelta: DetailedYieldRankChangeSchema.shape.pysDelta.optional(),
     provenance: YieldRankingSummaryProvenanceSchema.nullable().optional(),
     sourceRisk: YieldRankingSummarySourceRiskSchema.nullable().optional(),
   })

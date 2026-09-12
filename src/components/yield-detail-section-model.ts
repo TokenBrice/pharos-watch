@@ -3,7 +3,7 @@
 import { useMemo, useState, type Dispatch, type SetStateAction } from "react";
 import { useYieldRankings } from "@/hooks/api-hooks";
 import { useUrlFilters } from "@/hooks/use-url-filters";
-import { getYieldBenchmarkGapReferenceText } from "@/lib/yield-benchmark";
+import { resolveYieldDisplayRebaseReferenceRate, getYieldBenchmarkGapReferenceText } from "@/lib/yield-benchmark";
 import { getYieldDataSourceMeta } from "@/lib/yield-data-source";
 import { computePysBreakdown, getPysColor } from "@/lib/yield-constants";
 import { buildYieldSourceExplorerModel, type YieldSourceExplorerModel } from "@/lib/yield-source-explorer-model";
@@ -101,7 +101,13 @@ export function buildYieldDetailModel(
       ranking.yieldStability,
       ranking.benchmarkRate,
       ranking.sourceRisk?.sourceRiskPenalty ?? null,
-      rankingResponse.riskFreeRate,
+      // v8.43-gated: a payload scored before the re-base release (still
+      // servable during a deploy window) was published without one, so the
+      // display must not synthesize a re-base line the badge never used.
+      resolveYieldDisplayRebaseReferenceRate(
+        rankingResponse.methodology?.version,
+        rankingResponse.riskFreeRate,
+      ),
       // Same resolution the scoring/read paths use: USD-benchmarked rows
       // (including USD_EFFR) take no v8.43 re-base.
       ranking.benchmarkCurrency ??

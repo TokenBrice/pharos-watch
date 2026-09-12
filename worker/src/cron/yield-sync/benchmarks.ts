@@ -18,24 +18,29 @@ export type YieldBenchmarkFreshness = "healthy" | "degraded" | "stale";
  * Per-key bound on the age of a benchmark's own observation (`recordDate`).
  * A fetch that just succeeded says nothing about the data it carried: a frozen
  * or rewound upstream keeps returning an old CSV, and the fetch-age TTL alone
- * would stamp it as current market data forever. Daily/overnight series get five
- * days (a long weekend plus one failed run); CAD is the Bank of Canada's monthly
- * announced Bank rate and CHF's public SAR3MC download is delayed by one
- * business day, so those carry their own publication cadence.
+ * would stamp it as current market data forever. Bounds follow each series'
+ * real publication calendar, not one size: daily/overnight series get five
+ * days (a long weekend plus one failed run), keys whose calendars have
+ * multi-day holiday clusters carry more (see per-key comments), and CAD is
+ * the Bank of Canada's monthly announced Bank rate.
  */
 export const YIELD_BENCHMARK_RECORD_MAX_AGE_SEC: Record<YieldBenchmarkKey, number> = {
   USD: 5 * DAY_SECONDS,
   USD_EFFR: 5 * DAY_SECONDS,
   EUR: 5 * DAY_SECONDS,
-  CHF: 5 * DAY_SECONDS,
+  // SAR3MC publishes T+1 and the Good Friday + Easter Monday cluster lands the
+  // newest print exactly 5d old, tripping the daily bound every year.
+  CHF: 7 * DAY_SECONDS,
   GBP: 5 * DAY_SECONDS,
   JPY: 5 * DAY_SECONDS,
   MXN: 5 * DAY_SECONDS,
   BRL: 5 * DAY_SECONDS,
   AUD: 5 * DAY_SECONDS,
   CAD: 45 * DAY_SECONDS,
-  RUB: 5 * DAY_SECONDS,
-  TRY: 5 * DAY_SECONDS,
+  // CBR key-rate prints sit ~9-10 days old across every Jan 1-8 holiday cluster.
+  RUB: 12 * DAY_SECONDS,
+  // TCMB Kurban/Bayram holiday clusters can leave the newest print past 5d.
+  TRY: 10 * DAY_SECONDS,
   SGD: 5 * DAY_SECONDS,
 };
 

@@ -1,4 +1,5 @@
 import { numberValue as finiteNumber } from "@shared/lib/type-guards";
+import { YIELD_BENCHMARK_KEY_CURRENCY } from "@shared/types/yield";
 import type {
   YieldRankChangeAttribution,
   YieldRankChangeDriver,
@@ -57,6 +58,26 @@ function roundDelta(value: number | null): number | null {
 }
 
 /**
+ * True when the row's score carries the USD-reference re-base term (yield
+ * v8.43, B24): a benchmark quoted in another currency with a known rate. Such a
+ * row's PYS moves with the reference as well as with its own APY, so a delta
+ * with no other identifiable driver is attributed to the benchmark instead of
+ * to an APY that is only one input to the re-based hurdle.
+ */
+function isRebasedBenchmarkRow(row: YieldRanking): boolean {
+  const benchmarkCurrency =
+    row.benchmarkCurrency ??
+    row.provenance?.benchmarkCurrency ??
+    (row.benchmarkKey != null ? YIELD_BENCHMARK_KEY_CURRENCY[row.benchmarkKey] : null) ??
+    null;
+  return (
+    benchmarkCurrency != null &&
+    benchmarkCurrency !== "USD" &&
+    finiteNumber(row.benchmarkRate ?? row.provenance?.benchmarkRate) != null
+  );
+}
+
+/**
  * Primary driver for a comparator-consistent rank delta.
  *
  * `stablecoin-safety` is returned only when the row's *own* safety differs from
@@ -88,6 +109,7 @@ function selectRankChangeDriver(params: {
     return "tvl-depth";
   }
   if (params.row.benchmarkIsFallback === true || params.row.benchmarkFallbackMode) return "benchmark";
+  if (isRebasedBenchmarkRow(params.row)) return "benchmark";
   return "apy";
 }
 
@@ -139,7 +161,9 @@ export function buildYieldRankChangeAttribution(
     driverContributions: {
       apy: primaryDriver === "apy" ? rankDelta : null,
       benchmark: primaryDriver === "benchmark" ? rankDelta : null,
-      stablecoinSafety: params.safetyChanged ? (pysDelta ?? 0) : null,
+      // A rank delta with no published/live PYS pair has no measurable safety
+      // contribution: 0 claimed a scored move the row never had.
+      stablecoinSafety: params.safetyChanged && pysDelta != null ? pysDelta : null,
       sourceRisk: sourceRiskPenalty != null && sourceRiskPenalty > 1 ? roundDelta(1 - sourceRiskPenalty) : null,
       sourceSwitch: params.hydratedRow.provenance?.sourceSwitch ? rankDelta : null,
       freshness: params.hydratedRow.warningSignals.includes("data-stale") ? rankDelta : null,

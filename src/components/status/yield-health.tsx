@@ -77,7 +77,10 @@ function supplementalFamilyLabel(
   const count = family.sourceCount == null ? "unknown" : `${family.sourceCount}`;
   // A fresh family that found nothing is the visible shape of a wiped snapshot.
   const emptyFlag = family.status === "healthy" && family.sourceCount === 0 ? " · fresh but empty" : "";
-  return `${count} sources (${ageLabel(family.ageSec)})${emptyFlag}`;
+  // SRC-SUPP-1: a retained row is the previous snapshot, kept because this
+  // run's fetch ended degraded (named in `supplemental.degradedFamilies`).
+  const retainedFlag = family.retained ? " · retained" : "";
+  return `${count} sources (${ageLabel(family.ageSec)})${emptyFlag}${retainedFlag}`;
 }
 
 function auditQueueSubtext(coverageAudit: YieldHealthSummary["coverageAudit"]): string {

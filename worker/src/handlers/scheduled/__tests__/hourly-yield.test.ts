@@ -49,6 +49,14 @@ describe("runHourlyYieldSlot", () => {
   });
 
   it("runs the catch-up, the benchmark refresh and the publication in one serial leased chain", async () => {
+    mocks.syncYieldSupplemental.mockResolvedValueOnce({
+      status: "skipped_neutral",
+      itemCount: 0,
+      metadata: JSON.stringify({
+        reason: "supplemental-catch-up-not-due",
+        newestFamilyMarkerAgeSec: 3 * 3600,
+      }),
+    });
     const { runtime, signal, reportProgress, leasedJobs } = buildRuntime();
 
     const summary = await runHourlyYieldSlot(runtime);
@@ -80,6 +88,22 @@ describe("runHourlyYieldSlot", () => {
       runtime.env.ETHERSCAN_API_KEY ?? null,
       reportProgress,
     );
+  });
+
+  it("defers the benchmark retry when the catch-up actually ran in this slot", async () => {
+    // YBH-3: both degraded-mode legs are due; only the catch-up may run before
+    // the publication, so the benchmark retry waits for the next hour.
+    const { runtime } = buildRuntime();
+
+    const summary = await runHourlyYieldSlot(runtime);
+
+    expect(mocks.fetchTbillRate).not.toHaveBeenCalled();
+    expect(summary.jobs.map(({ job, outcome, neutral, reason }) => [job, outcome, neutral, reason])).toEqual([
+      ["sync-yield-supplemental", "ok", undefined, undefined],
+      ["fetch-tbill-rate", "skipped", true, "deferred-after-supplemental-catch-up"],
+      ["sync-yield-data", "ok", undefined, undefined],
+    ]);
+    expect(mocks.syncYieldData).toHaveBeenCalledTimes(1);
   });
 
   it("keeps publishing when the opportunistic catch-up fails", async () => {
@@ -119,6 +143,11 @@ describe("runHourlyYieldSlot", () => {
   });
 
   it("treats a fresh benchmark registry as a neutral no-op, not a failure", async () => {
+    mocks.syncYieldSupplemental.mockResolvedValueOnce({
+      status: "skipped_neutral",
+      itemCount: 0,
+      metadata: JSON.stringify({ reason: "supplemental-catch-up-not-due" }),
+    });
     mocks.fetchTbillRate.mockResolvedValueOnce({
       status: "skipped_neutral",
       itemCount: 0,
@@ -132,8 +161,9 @@ describe("runHourlyYieldSlot", () => {
 
     const summary = await runHourlyYieldSlot(runtime);
 
+    expect(mocks.fetchTbillRate).toHaveBeenCalledTimes(1);
     expect(summary.jobs.map(({ job, outcome }) => [job, outcome])).toEqual([
-      ["sync-yield-supplemental", "ok"],
+      ["sync-yield-supplemental", "skipped"],
       ["fetch-tbill-rate", "skipped"],
       ["sync-yield-data", "ok"],
     ]);

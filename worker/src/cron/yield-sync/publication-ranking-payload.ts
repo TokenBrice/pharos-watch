@@ -463,7 +463,14 @@ export function buildYieldRankingsPayloadFromEvaluatedSources(
       staleComparisonAnchor;
     // A1: proxy selection is a documented per-row methodology decision, not a
     // degraded feed, so only the entry's own meta classifies its freshness.
-    const benchmarkFreshness = source.benchmarkFreshness ?? classifyYieldBenchmarkFreshness(source.benchmarkMeta);
+    // A2: the entry's own observation age is part of that health — a fresh fetch
+    // carrying an old record must not publish as current market data.
+    const benchmarkFreshness =
+      source.benchmarkFreshness ??
+      classifyYieldBenchmarkFreshness(source.benchmarkMeta, {
+        recordDate: source.benchmarkMeta.recordDate,
+        maxRecordAgeSec: YIELD_BENCHMARK_RECORD_MAX_AGE_SEC[source.benchmarkKey],
+      });
     if (staleSource) {
       if (!ranking.warningSignals.includes("data-stale")) {
         ranking.warningSignals = [...ranking.warningSignals, "data-stale"];

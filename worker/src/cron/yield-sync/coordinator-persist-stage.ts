@@ -164,6 +164,7 @@ export async function runYieldCoordinatorPersistStage(
       publishedRankingCount: health.currentPublishedRankingCount,
       previousPublishedRankingCount: health.previousPublishedRankingCount,
       dlPoolsMeta: fetched.dlPoolsMeta,
+      dlApyEnvelopeRejectedCount: fetched.dlApyEnvelopeRejectedCount,
       supplementalMeta: fetched.supplementalMeta,
       optionalSourceFailures: normalized.optionalSourceFailures,
       onChain: {

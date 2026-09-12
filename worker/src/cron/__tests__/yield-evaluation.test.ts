@@ -12,14 +12,14 @@ import { buildHistoryKey, evaluateYieldSources, evaluateYieldSourcesCooperative 
 import type { EvaluateYieldSourcesInput } from "../yield-sync/evaluation";
 import { compareCandidates } from "../yield-sync/evaluation-arbitration";
 import type { ResolvedYield } from "../yield-sync/types";
-import { baseEvaluationInput, resolvedYield } from "./yield-evaluation.test-support";
+import { baseEvaluationInput, FRESH_BENCHMARK_RECORD_DATE, resolvedYield } from "./yield-evaluation.test-support";
 
 
 function gbpBenchmark(observedAt: number, ageSeconds: number, rate = 4.5) {
   return {
     ...withYieldBenchmarkStaticMeta("GBP", {
       rate,
-      recordDate: "2026-04-17",
+      recordDate: FRESH_BENCHMARK_RECORD_DATE,
       fetchedAt: observedAt,
       ageSeconds,
       source: "fred-sonia-compounded-index-test",
@@ -27,7 +27,7 @@ function gbpBenchmark(observedAt: number, ageSeconds: number, rate = 4.5) {
       fallbackMode: null,
     }),
     lastMarketRate: rate,
-    lastMarketRecordDate: "2026-04-17",
+    lastMarketRecordDate: FRESH_BENCHMARK_RECORD_DATE,
     lastMarketFetchedAt: observedAt,
     lastMarketSource: "fred-sonia-compounded-index-test",
   };
@@ -38,7 +38,7 @@ function benchmarkMeta(key: "USD_EFFR", rate: number) {
   return {
     ...withYieldBenchmarkStaticMeta(key, {
       rate,
-      recordDate: "2026-03-26",
+      recordDate: FRESH_BENCHMARK_RECORD_DATE,
       fetchedAt: 1774479600,
       ageSeconds: 0,
       source: `${key.toLowerCase()}-test`,
@@ -46,7 +46,7 @@ function benchmarkMeta(key: "USD_EFFR", rate: number) {
       fallbackMode: null,
     }),
     lastMarketRate: rate,
-    lastMarketRecordDate: "2026-03-26",
+    lastMarketRecordDate: FRESH_BENCHMARK_RECORD_DATE,
     lastMarketFetchedAt: 1774479600,
     lastMarketSource: `${key.toLowerCase()}-test`,
   };
@@ -57,12 +57,14 @@ function usdBenchmark(overrides: {
   ageSeconds?: number | null;
   isFallback?: boolean;
   fallbackMode?: string | null;
+  recordDate?: string | null;
 } = {}): ParsedYieldBenchmarkMeta {
   const rate = overrides.rate ?? 4.2;
+  const recordDate = overrides.recordDate ?? FRESH_BENCHMARK_RECORD_DATE;
   return {
     ...withYieldBenchmarkStaticMeta("USD", {
       rate,
-      recordDate: "2026-04-20",
+      recordDate,
       fetchedAt: 1776729600,
       ageSeconds: overrides.ageSeconds ?? 0,
       source: "fred-dgs3mo-test",
@@ -70,7 +72,7 @@ function usdBenchmark(overrides: {
       fallbackMode: overrides.fallbackMode ?? null,
     }),
     lastMarketRate: rate,
-    lastMarketRecordDate: "2026-04-20",
+    lastMarketRecordDate: recordDate,
     lastMarketFetchedAt: 1776729600,
     lastMarketSource: "fred-dgs3mo-test",
   };
@@ -80,7 +82,7 @@ function eurBenchmark(rate = 2.17) {
   return {
     ...withYieldBenchmarkStaticMeta("EUR", {
       rate,
-      recordDate: "2026-04-17",
+      recordDate: FRESH_BENCHMARK_RECORD_DATE,
       fetchedAt: 1776729600,
       ageSeconds: 0,
       source: "ecb-estr-test",
@@ -88,7 +90,7 @@ function eurBenchmark(rate = 2.17) {
       fallbackMode: null,
     }),
     lastMarketRate: rate,
-    lastMarketRecordDate: "2026-04-17",
+    lastMarketRecordDate: FRESH_BENCHMARK_RECORD_DATE,
     lastMarketFetchedAt: 1776729600,
     lastMarketSource: "ecb-estr-test",
   };
@@ -1303,6 +1305,64 @@ describe("evaluateYieldSources", () => {
       hurdleRebase: 0,
     });
     expect(stale?.warnings).toContain("reference-benchmark-degraded");
+  });
+
+  it("gates on the benchmark's own observation age, not just the fetch age (A2)", () => {
+    const startSec = 1776729600;
+    const nineDaysAgo = new Date(Date.now() - 9 * 86_400_000).toISOString().slice(0, 10);
+    // A fresh fetch carrying a nine-day-old observation is a rewound upstream:
+    // the fetch-age TTL alone would stamp it as current market data.
+    const rewoundUsd = usdBenchmark({ recordDate: nineDaysAgo });
+    const run = (resolved: Parameters<typeof evaluateYieldSources>[0]["resolved"]) =>
+      evaluateYieldSources(baseEvaluationInput({
+        startSec,
+        resolved,
+        riskFreeRates: { ...baseEvaluationInput().riskFreeRates, USD: rewoundUsd, EUR: eurBenchmark() },
+      })).evaluatedSources[0];
+
+    const eurRow = run([
+      {
+        id: "eurc-circle",
+        symbol: "EURC",
+        yield: resolvedYield({
+          sourceKey: "defillama:eurc-circle:main",
+          sourceObservedAt: startSec,
+          dataSource: "defillama",
+        }),
+      },
+    ]);
+    // Non-USD rows lose the reference re-base and cannot be scored at all.
+    expect(eurRow).toMatchObject({
+      benchmarkKey: "EUR",
+      benchmarkFreshness: "healthy",
+      scoreQualification: "NR",
+      pharosYieldScore: null,
+      pysNullReason: "benchmark-stale",
+      usdBenchmarkRate: null,
+      hurdleRebase: 0,
+    });
+    expect(eurRow?.warnings).toContain("reference-benchmark-degraded");
+
+    const usdRow = run([
+      {
+        id: "coin-a",
+        symbol: "A",
+        yield: resolvedYield({
+          sourceKey: "defillama:coin-a:main",
+          sourceObservedAt: startSec,
+          dataSource: "defillama",
+        }),
+      },
+    ]);
+    // The row's own benchmark is judged against its own key's record bound.
+    expect(usdRow).toMatchObject({
+      benchmarkKey: "USD",
+      benchmarkFreshness: "stale",
+      scoreQualification: "NR",
+      pharosYieldScore: null,
+      pysNullReason: "benchmark-stale",
+    });
+    expect(usdRow?.warnings).toContain("benchmark-stale");
   });
 });
 

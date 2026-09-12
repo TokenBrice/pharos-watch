@@ -21,7 +21,11 @@ import type {
   YieldSourceRiskCoverageField,
   YieldSourceRiskCoverageSummary,
 } from "@shared/types/status";
-import { getYieldSupplementalFamilyCacheKey } from "../../cron/yield-sync/cache";
+import {
+  getYieldSupplementalFamilyCacheKey,
+  getYieldSupplementalRunOutcomeCacheKey,
+  parseYieldSupplementalRunOutcome,
+} from "../../cron/yield-sync/cache";
 import {
   REQUIRED_SUPPLEMENTAL_SOURCE_FAMILY_KEYS,
   SUPPLEMENTAL_SOURCE_FAMILY_KEYS,
@@ -676,6 +680,15 @@ function buildSupplementalHealth(
   now: number,
   byKey: Map<string, CacheRow>,
 ): YieldHealthSummary["supplemental"] {
+  // SRC-SUPP-1: the family rows alone cannot show a degraded fetch, because a
+  // retained snapshot keeps its old marker while the run outcome records that
+  // this run's fetch failed. Without it a failing family reads healthy until its
+  // marker crosses the age band.
+  const runOutcomeRow = byKey.get(getYieldSupplementalRunOutcomeCacheKey()) ?? null;
+  const degradedFamilies = runOutcomeRow?.value != null
+    ? parseYieldSupplementalRunOutcome(runOutcomeRow.value)
+    : [];
+  const degradedFamilySet = new Set<string>(degradedFamilies);
   const familyRows = SUPPLEMENTAL_SOURCE_FAMILY_KEYS.map((family) => {
     const row = byKey.get(getYieldSupplementalFamilyCacheKey(family)) ?? null;
     const ageSec = ageSeconds(now, row?.updated_at);
@@ -684,16 +697,24 @@ function buildSupplementalHealth(
       `yield-health:supplemental:${family}`,
     );
     const sourceCount = getNumber(payload?.sourceCount);
-    const status = freshnessStatus(
+    const degraded = degradedFamilySet.has(family);
+    const freshness = freshnessStatus(
       ageSec,
       STATUS_YIELD_HEALTH_THRESHOLDS.supplementalMaxAgeSec,
       { missingIs: "unknown", degradedAfterOne: true },
     );
+    // A degraded family can only read worse than its marker age: the retained
+    // snapshot is stale once its marker ages out, but it is never healthy.
+    const status: YieldHealthFieldStatus = degraded
+      ? freshness === "stale" ? "stale" : "degraded"
+      : freshness;
     return {
       family,
       updatedAt: row?.updated_at ?? null,
       ageSec,
       sourceCount,
+      // Only a family that still holds a previous snapshot has one to retain.
+      retained: degraded && row != null,
       status,
     };
   });
@@ -707,6 +728,7 @@ function buildSupplementalHealth(
         ageSec: row.ageSec,
         sourceCount: row.sourceCount,
         status: row.status,
+        retained: row.retained,
       },
     ]),
   );
@@ -722,6 +744,7 @@ function buildSupplementalHealth(
       degradedFamilyCount: 0,
       staleFamilyCount: 0,
       missingFamilyCount: REQUIRED_SUPPLEMENTAL_SOURCE_FAMILY_KEYS.length,
+      degradedFamilies,
       families,
     };
   }
@@ -740,6 +763,7 @@ function buildSupplementalHealth(
     degradedFamilyCount: requiredFamilyRows.filter((row) => row.status === "degraded").length,
     staleFamilyCount: requiredFamilyRows.filter((row) => row.status === "stale").length,
     missingFamilyCount: requiredFamilyRows.filter((row) => row.status === "unknown").length,
+    degradedFamilies,
     families,
   };
 }
@@ -829,9 +853,10 @@ export async function loadYieldHealthSummary(
     .prepare(
       `SELECT key, value, updated_at
        FROM cache
-       WHERE key IN ('yield-rankings', 'yield-coverage-audit')
+       WHERE key IN ('yield-rankings', 'yield-coverage-audit', ?)
           OR key LIKE 'yield:supplemental-sources:v1:%'`,
     )
+    .bind(getYieldSupplementalRunOutcomeCacheKey())
     .all<CacheRow>();
   const byKey = new Map((rows.results ?? []).map((row) => [row.key, row]));
 

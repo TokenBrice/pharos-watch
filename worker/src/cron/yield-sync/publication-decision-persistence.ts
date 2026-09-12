@@ -35,34 +35,49 @@ export interface PreviousYieldPublicationSnapshot {
   status: PreviousYieldPublicationSnapshotStatus;
   rankings: readonly PreviousYieldPublicationRanking[];
   malformed: boolean;
+  /**
+   * B7/B31: `methodology.version` of the cached payload. Publish-time rank
+   * attribution needs it to tell a genuine move from a methodology re-base.
+   * Null when the cache predates the envelope or cannot be read.
+   */
+  methodologyVersion?: string | null;
+}
+
+/** `methodology.version` off a cached payload, when it is a usable string. */
+function readCachedMethodologyVersion(methodology: unknown): string | null {
+  if (methodology == null || typeof methodology !== "object" || Array.isArray(methodology)) return null;
+  if (!("version" in methodology)) return null;
+  const version = methodology.version;
+  return typeof version === "string" && version.length > 0 ? version : null;
 }
 
 export async function loadPreviousYieldPublicationSnapshot(
   db: D1Database,
 ): Promise<PreviousYieldPublicationSnapshot> {
   const previousCache = await getCache(db, "yield-rankings");
-  const previousRankings = readCachedJson<{ rankings?: unknown }>(
+  const previousRankings = readCachedJson<{ rankings?: unknown; methodology?: unknown }>(
     "yield-sync",
     "yield-rankings",
     previousCache,
   );
   if (previousRankings.status === "missing") {
-    return { status: "missing", rankings: [], malformed: false };
+    return { status: "missing", rankings: [], malformed: false, methodologyVersion: null };
   }
   if (previousRankings.status === "malformed") {
-    return { status: "malformed-json", rankings: [], malformed: true };
+    return { status: "malformed-json", rankings: [], malformed: true, methodologyVersion: null };
   }
   const data = previousRankings.data;
   if (data == null || typeof data !== "object" || Array.isArray(data) || !Array.isArray(data.rankings)) {
-    return { status: "malformed-payload", rankings: [], malformed: true };
+    return { status: "malformed-payload", rankings: [], malformed: true, methodologyVersion: null };
   }
   if (data.rankings.some((ranking) => ranking == null || typeof ranking !== "object" || Array.isArray(ranking))) {
-    return { status: "malformed-payload", rankings: [], malformed: true };
+    return { status: "malformed-payload", rankings: [], malformed: true, methodologyVersion: null };
   }
   return {
     status: "ok",
     rankings: data.rankings as PreviousYieldPublicationRanking[],
     malformed: false,
+    methodologyVersion: readCachedMethodologyVersion(data.methodology),
   };
 }
 

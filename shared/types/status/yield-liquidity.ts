@@ -208,6 +208,13 @@ export const YieldHealthSummarySchema = z.object({
     degradedFamilyCount: z.number().optional(),
     staleFamilyCount: z.number().optional(),
     missingFamilyCount: z.number().optional(),
+    /**
+     * SRC-SUPP-1: families the producer's run-outcome row
+     * (`yield:supplemental-source-run:v1`) named as degraded, i.e. whose fetch
+     * ended early and whose previous snapshot was kept. A family listed here is
+     * never classified healthier than `degraded`.
+     */
+    degradedFamilies: z.array(z.string()).optional(),
     families: z.record(
       z.string(),
       z.object({
@@ -215,6 +222,8 @@ export const YieldHealthSummarySchema = z.object({
         ageSec: z.number().nullable(),
         sourceCount: z.number().nullable(),
         status: StatusHealthOrUnknownSchema,
+        /** True when this row is the retained snapshot from the last degraded fetch. */
+        retained: z.boolean().optional(),
       }),
     ).optional(),
   }),

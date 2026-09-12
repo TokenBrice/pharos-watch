@@ -677,6 +677,8 @@ export function YieldClient() {
               riskFreeRate={data.riskFreeRate}
               medianApy={data.medianApy ?? 0}
               scalingFactor={data.scalingFactor}
+              benchmarks={data.benchmarks ?? data.provenance?.benchmarks ?? null}
+              methodologyVersion={data.methodology?.version}
               emptyMessage={viewModel.emptyState.description}
               comparisonRows={comparisonRows}
               updatedAt={data.updatedAt}

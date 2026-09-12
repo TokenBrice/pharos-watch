@@ -207,6 +207,7 @@ describe("buildYieldSyncMetadata", () => {
           poolCount: 1,
           fallbackMode: null,
         },
+        dlApyEnvelopeRejectedCount: 3,
         supplementalMeta: {
           mode: "cache",
           updatedAt: START_SEC,
@@ -260,6 +261,7 @@ describe("buildYieldSyncMetadata", () => {
       publicationStats: { pysInputsPersistedCount: number; pysInputsNullCount: number; largestPayloadChars: number };
       sourceCoverage: {
         publishedRankingCountDelta: number;
+        dlApyEnvelopeRejectedCount: number;
         onChainEnvelopeRejectionCount: number;
         onChainEnvelopeRejections: YieldEnvelopeRejection[];
         onChainEnvelopeRejectionsTruncated: boolean;
@@ -277,6 +279,7 @@ describe("buildYieldSyncMetadata", () => {
     };
 
     expect(metadata.sourceCoverage.onChainEnvelopeRejectionCount).toBe(26);
+    expect(metadata.sourceCoverage.dlApyEnvelopeRejectedCount).toBe(3);
     expect(metadata.sourceCoverage.publishedRankingCountDelta).toBe(0);
     expect(metadata.sourceCoverage.onChainEnvelopeRejections).toHaveLength(25);
     expect(metadata.sourceCoverage.onChainEnvelopeRejections[0]).toEqual(envelopeRejections[0]);

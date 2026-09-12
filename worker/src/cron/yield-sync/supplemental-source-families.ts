@@ -294,6 +294,21 @@ function buildOptionalRpcSummary(telemetry: OptionalRpcFamilyTelemetry): Supplem
   };
 }
 
+/**
+ * SRC-SUPP-2: the RPC families fetch target-by-target, so a run where some
+ * targets failed resolves with a partial list and an `ok` status. Publishing it
+ * would replace the previous full snapshot with the partial one, so a fetch
+ * that attempted targets and missed any of them is degraded exactly like an
+ * HTTP family that ended early, and the writer retains instead (B1).
+ */
+function rpcFamilyFetchEndedDegraded(
+  status: SupplementalSourceFamilyStatus,
+  telemetry: OptionalRpcFamilyTelemetry | undefined,
+): boolean {
+  return status === "failed"
+    || (telemetry != null && telemetry.attemptedCount > 0 && telemetry.missingTargetCount > 0);
+}
+
 function buildSourceFamilySummaries(
   familyResults: SupplementalSourceFamilyResult[],
   malformedSourceDrops: SupplementalDropBucket,
@@ -503,7 +518,7 @@ async function runCompoundFamily(
     candidates,
     sourceFamilyCount: results.length,
     status,
-    degraded: status === "failed",
+    degraded: rpcFamilyFetchEndedDegraded(status, telemetry),
     telemetry,
   };
 }
@@ -564,7 +579,7 @@ async function runAaveFamily(
     candidates,
     sourceFamilyCount: results.length,
     status,
-    degraded: status === "failed",
+    degraded: rpcFamilyFetchEndedDegraded(status, telemetry),
     telemetry,
   };
 }
@@ -572,18 +587,21 @@ async function runAaveFamily(
 async function runRoycoDawnFamily(
   context: SupplementalSourceFamilyContext,
 ): Promise<SupplementalSourceFamilyResult> {
-  const { value: candidates, status } = await runOptionalSupplementalFamily(
+  const { value, status } = await runOptionalSupplementalFamily(
     "Royco Dawn supplemental family",
     context.signal,
     () => fetchRoycoDawnSources(context.signal),
-    [] as ResolvedYieldCandidate[],
+    { candidates: [], degraded: false },
   );
   return {
     key: "roycoDawn",
-    candidates,
-    sourceFamilyCount: candidates.length,
+    candidates: value.candidates,
+    sourceFamilyCount: value.candidates.length,
     status,
-    degraded: status === "failed",
+    // SRC-SUPP-2: a pagination failure returns the pages fetched so far, so the
+    // early-end flag has to retain the previous full snapshot like the RPC
+    // families' partial telemetry.
+    degraded: status === "failed" || value.degraded,
   };
 }
 

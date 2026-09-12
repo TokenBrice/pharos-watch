@@ -218,6 +218,31 @@ describe("YieldClient", () => {
     expect(props.comparisonRows.map((row) => row.id)).toEqual(["usdc-circle", "usdt-tether"]);
   });
 
+  it("hands the leaderboard the benchmark registry and methodology version the payload carries", () => {
+    const response = makeResponse();
+    useYieldRankingsSummaryMock.mockReturnValue({
+      data: {
+        ...response,
+        benchmarks: { USD: { key: "USD", rate: 4.25, source: "test", fetchedAt: 1_776_000_000, isFallback: false, fallbackMode: null } },
+        methodology: { ...response.methodology, version: "8.43" },
+      },
+      meta: null,
+      isLoading: false,
+      error: null,
+      dataUpdatedAt: 1_776_000_000,
+      refetch: vi.fn(),
+    });
+
+    render(<YieldClient />);
+
+    const props = leaderboardPropsMock.mock.calls.at(-1)?.[0] as {
+      benchmarks: Record<string, { rate: number }> | null;
+      methodologyVersion: string | undefined;
+    };
+    expect(props.benchmarks?.USD?.rate).toBe(4.25);
+    expect(props.methodologyVersion).toBe("8.43");
+  });
+
   it("counts hidden-peg benchmark currencies from the row universe", () => {
     // SGD and MXN have no individual peg filter pill, but the reference-rates
     // table ships benchmark rows for both and must not read "Tracked 0".

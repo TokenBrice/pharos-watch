@@ -2,6 +2,7 @@
 
 import { describe, expect, it, vi } from "vitest";
 import { fireEvent, screen } from "@testing-library/react";
+import type { YieldBenchmarkRegistry } from "@shared/types";
 
 import type { YieldViewModelRow } from "@/lib/yield-view-model";
 import { makeYieldViewModelRow, renderYieldMobileCard } from "./yield-test-support";
@@ -58,5 +59,58 @@ describe("YieldMobileCard", () => {
     // the payload value (live 8) and render the expanded PYS strip unchanged.
     renderYieldMobileCard(row, { scalingFactor: 8, expanded: true });
     expect(screen.getByRole("group", { name: "Why this PYS" })).toBeTruthy();
+  });
+});
+
+// The chip must resolve a missing row rate from the registry EUR entry (the
+// row's own benchmark) instead of the chart-wide USD risk-free frame.
+describe("YieldMobileCard — zone chip benchmark resolution", () => {
+  const REGISTRY_WITH_EUR: YieldBenchmarkRegistry = {
+    USD: {
+      key: "USD",
+      label: "USD 3M T-Bill",
+      currency: "USD",
+      rate: 4.25,
+      recordDate: "2026-09-01",
+      fetchedAt: 1_783_632_600,
+      ageSeconds: 1_800,
+      source: "fred-dgs3mo",
+      isFallback: false,
+      fallbackMode: null,
+      isProxy: false,
+    },
+    EUR: {
+      key: "EUR",
+      label: "EUR 3M compounded €STR",
+      currency: "EUR",
+      rate: 1.94,
+      recordDate: "2026-09-01",
+      fetchedAt: 1_783_632_600,
+      ageSeconds: 1_800,
+      source: "ecb-estr-3m",
+      isFallback: false,
+      fallbackMode: null,
+      isProxy: false,
+    },
+  };
+  const eurRowWithoutRate = {
+    ...row,
+    benchmarkKey: "EUR",
+    benchmarkLabel: "EUR 3M compounded €STR",
+    benchmarkRate: undefined,
+    apy30d: 2.0,
+    safetyScore: 82,
+  } as YieldViewModelRow;
+
+  it("resolves a missing row rate from the registry EUR entry, not the USD frame", () => {
+    // 2.0% APY beats the EUR benchmark (1.94) but not the USD frame (3.5):
+    // a Sweet Spot chip proves the EUR rate was used.
+    renderYieldMobileCard(eurRowWithoutRate, { benchmarks: REGISTRY_WITH_EUR });
+    expect(screen.getByText("Sweet Spot")).toBeTruthy();
+  });
+
+  it("still falls back to the risk-free frame when no registry is provided", () => {
+    renderYieldMobileCard(eurRowWithoutRate);
+    expect(screen.getByText("Play It Safe")).toBeTruthy();
   });
 });

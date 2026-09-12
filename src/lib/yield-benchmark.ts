@@ -119,12 +119,16 @@ export function resolveYieldScatterBenchmarkFrame(params: {
 
 /**
  * Default observation bound when the payload publishes no per-key
- * `maxRecordAgeSec`: twice the daily benchmark producer cadence. The producer
- * (`worker/src/cron/yield-sync/benchmarks.ts`) refines this per key — a monthly
- * series like CAD's Bank rate should ship its own bound — so until it does,
- * entries older than this tint amber instead of being silently trusted.
+ * `maxRecordAgeSec`: the daily-series bound the producer itself uses
+ * (`YIELD_BENCHMARK_RECORD_MAX_AGE_SEC.USD`, 5 days, in
+ * `worker/src/cron/yield-sync/benchmarks.ts`). The producer refines this per
+ * key — a monthly series like CAD's Bank rate always ships its own 45-day
+ * bound — so the fallback only matters for cached payloads that predate
+ * per-key bounds. Mirroring the daily series (instead of a shorter cadence)
+ * keeps a healthy 3-day-old observation from tinting amber just because the
+ * cached entry carries no bound.
  */
-export const YIELD_BENCHMARK_AGE_FALLBACK_BOUND_SEC = 2 * 24 * 60 * 60;
+export const YIELD_BENCHMARK_AGE_FALLBACK_BOUND_SEC = 5 * 24 * 60 * 60;
 
 export interface YieldBenchmarkAgeEvidence {
   /** Fetch age published on the registry entry. */
@@ -202,8 +206,41 @@ export function resolveYieldBenchmarkAge(
     marker: `${age} old`,
     reason: hasPublishedBound
       ? `Observation is ${age} old — past the ${bound} freshness bound published for this benchmark. Treat the rate as lagging.`
-      : `Observation is ${age} old — past the ${bound} freshness bound (2× the daily benchmark refresh cadence). Treat the rate as lagging.`,
+      : `Observation is ${age} old — past the ${bound} freshness bound of a daily benchmark series (this payload published no per-key bound). Treat the rate as lagging.`,
   };
+}
+
+// ---------------------------------------------------------------------------
+// v8.43 re-base window (display breakdown)
+// ---------------------------------------------------------------------------
+
+/**
+ * Yield methodology release that re-based the PYS hurdle onto the USD
+ * reference (`usdBenchmarkRate`). Rows scored by an earlier version were
+ * published *without* the re-base, so while a deploy window serves a
+ * v8.42-scored payload to re-base-aware client code, the display breakdown
+ * must not render a re-base line the published badge never used.
+ */
+export const YIELD_REBASE_METHODOLOGY_VERSION = 8.43;
+
+/** Numeric value of a published methodology version string ("v8.43" -> 8.43). */
+export function parseYieldMethodologyVersion(version: string | null | undefined): number | null {
+  const parsed = Number.parseFloat((version ?? "").replace(/^v/i, ""));
+  return Number.isFinite(parsed) ? parsed : null;
+}
+
+/**
+ * USD reference rate the *display* breakdown may re-base onto: the payload's
+ * risk-free rate once the payload is scored at or after the re-base release,
+ * else null so no re-base is synthesized for rows scored without one.
+ */
+export function resolveYieldDisplayRebaseReferenceRate(
+  methodologyVersion: string | null | undefined,
+  riskFreeRate: number | null | undefined,
+): number | null {
+  const version = parseYieldMethodologyVersion(methodologyVersion);
+  if (version === null || version < YIELD_REBASE_METHODOLOGY_VERSION) return null;
+  return riskFreeRate ?? null;
 }
 
 // ---------------------------------------------------------------------------

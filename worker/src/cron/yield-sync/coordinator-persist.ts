@@ -19,6 +19,7 @@ import {
   type PreviousYieldPublicationSnapshot,
 } from "./publication";
 import type { YieldBenchmarkMeta, YieldSourceInputMeta } from "@shared/types/yield";
+import type { PreviousPublicationForAttribution } from "./publication-ranking-payload";
 import type { CronResult } from "../../lib/cron-logger";
 import { createCronResult } from "../../lib/cron-result";
 import type { YieldRowsWriteStats } from "./publication-atomic-batch";
@@ -41,6 +42,11 @@ export function buildPreviewYieldRankingsArtifacts(params: {
   safetySnapshot: Parameters<typeof buildYieldRankingsPayloadFromEvaluatedSources>[0]["safetySnapshot"];
   medianApy: number;
   startSec: number;
+  /**
+   * B7/B31: previous publication, so the preview payload carries publish-time
+   * rank-change attribution (`rankChangeAttribution`). Absent → no attribution.
+   */
+  previousPublication?: PreviousPublicationForAttribution | null;
 }): {
   previewRankingsPayload: ReturnType<typeof buildYieldRankingsPayloadFromEvaluatedSources>;
   publicationViews: Map<string, YieldCoinPublicationView>;
@@ -65,6 +71,7 @@ export function buildPreviewYieldRankingsArtifacts(params: {
       safetySnapshot: params.safetySnapshot,
       medianApy: params.medianApy,
       startSec: params.startSec,
+      previousPublication: params.previousPublication,
     }),
   };
 }

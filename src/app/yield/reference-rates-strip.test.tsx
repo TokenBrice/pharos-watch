@@ -232,7 +232,7 @@ describe("ReferenceRatesStrip", () => {
     const dateChip = within(cadRow!).getByText("2026-04-08");
     expect(dateChip.className).toContain("amber");
     expect(dateChip.getAttribute("aria-label")).toContain("42d old");
-    expect(dateChip.getAttribute("aria-label")).toContain("2× the daily benchmark refresh cadence");
+    expect(dateChip.getAttribute("aria-label")).toContain("past the 5d");
 
     // Age marker appended through the shared benchmark suffix.
     expect(within(cadRow!).getByText(/42d old/)).toBeTruthy();

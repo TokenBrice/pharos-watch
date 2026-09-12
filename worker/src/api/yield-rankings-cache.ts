@@ -22,6 +22,11 @@ import { numberValue as finiteNumber } from "@shared/lib/type-guards";
 import { resolveYieldRowSafety } from "@shared/lib/yield-opportunity-risk";
 import { classifyYieldSourceAgeTier, classifyYieldSourceFreshness, derivePysNullReason } from "../lib/yield-ranking-helpers";
 import {
+  classifyYieldBenchmarkFreshness,
+  YIELD_BENCHMARK_RECORD_MAX_AGE_SEC,
+  type YieldBenchmarkFreshness,
+} from "../cron/yield-sync/benchmarks";
+import {
   buildYieldRankBaseline,
   buildYieldRankChangeAttribution,
   compareYieldRankRows,
@@ -248,14 +253,47 @@ function countRowSafetyCoverage(rankings: YieldRanking[]): {
   };
 }
 
+/**
+ * A3: publication re-bases a non-USD row's hurdle onto the USD reference only
+ * while that entry classifies healthy on its own feed evidence; a degraded or
+ * stale reference is published with re-base 0 plus a
+ * `reference-benchmark-degraded` warning. The payload publishes the registry
+ * entry's own evidence (`recordDate`, `maxRecordAgeSec`), so the read path
+ * classifies it exactly as `prepareYieldEvaluation` does — consuming the raw
+ * `riskFreeRate` regardless re-scored EUR/GBP/CHF rows ~15 points above the
+ * published value.
+ */
+function resolvePublishedReferenceBenchmark(payload: YieldRankingsResponse): {
+  freshness: YieldBenchmarkFreshness;
+  usdBenchmarkRate: number | null;
+} {
+  const meta = payload.benchmarks?.USD ?? null;
+  // A payload that publishes no registry entry cannot prove the reference
+  // healthy: that is `degraded` (no re-base, rows stay `estimated`), never
+  // `stale` — the reference is unverified, not known-unusable.
+  const freshness =
+    meta == null
+      ? "degraded"
+      : classifyYieldBenchmarkFreshness(meta, {
+          recordDate: meta.recordDate,
+          maxRecordAgeSec: meta.maxRecordAgeSec ?? YIELD_BENCHMARK_RECORD_MAX_AGE_SEC.USD,
+        });
+  return {
+    freshness,
+    usdBenchmarkRate:
+      freshness === "healthy"
+        ? finiteNumber(payload.riskFreeRate) ?? finiteNumber(meta?.rate) ?? null
+        : null,
+  };
+}
+
 function hydrateYieldRankingsWithLiveSafety(
   payload: YieldRankingsResponse,
   scores: Map<string, { score: number; grade: string }>,
   source: LiveSafetyHydrationSource,
 ): { payload: YieldRankingsResponse; degradationReasons: string[] } {
   // Reference (USD) risk-free rate the re-based effective yield anchors on (yield v8.43).
-  // Legacy payloads without a top-level `riskFreeRate` fall back to the USD registry entry.
-  const usdBenchmarkRate = finiteNumber(payload.riskFreeRate) ?? finiteNumber(payload.benchmarks?.USD?.rate) ?? null;
+  const { freshness: referenceBenchmarkFreshness, usdBenchmarkRate } = resolvePublishedReferenceBenchmark(payload);
   const hydratedRows = payload.rankings
     .map((row) => {
       const safety = scores.get(row.id);
@@ -266,11 +304,22 @@ function hydrateYieldRankingsWithLiveSafety(
       const evidenceClass = resolveHydratedEvidenceClass(row);
       const opportunityEvidenceComplete = hydratedSafety.opportunityEvidenceComplete;
       const safetyObserved = hydratedSafety.safetyEvidenceObserved;
+      const benchmarkCurrency =
+        row.benchmarkCurrency ??
+        row.provenance?.benchmarkCurrency ??
+        (row.benchmarkKey != null ? YIELD_BENCHMARK_KEY_CURRENCY[row.benchmarkKey] : null) ??
+        null;
+      // A3: only a non-USD benchmark consumes the USD reference rate; a USD row
+      // is already covered by its own published benchmark freshness.
+      const rowReferenceBenchmarkFreshness =
+        benchmarkCurrency === "USD" ? "healthy" : referenceBenchmarkFreshness;
+      const referenceBenchmarkDegraded = rowReferenceBenchmarkFreshness !== "healthy";
       const evidenceAssessment = assessYieldEvidence({
         evidenceClass,
         safetyObserved,
         sourceFreshness,
         benchmarkFreshness,
+        referenceBenchmarkFreshness: rowReferenceBenchmarkFreshness,
         hasSourceDepth: finiteNumber(hydratedSafety.sourceRisk?.sourceDepthRatio) != null,
         hasVenueRisk: hydratedSafety.venueRiskTier !== "unknown",
         hasHistory: (finiteNumber(hydratedSafety.sourceRisk?.observationCount30d) ?? 0) > 1,
@@ -279,7 +328,8 @@ function hydrateYieldRankingsWithLiveSafety(
       });
       const warningSignals = row.warningSignals.filter((signal) =>
         (signal !== "safety-unrated" || !safetyObserved) &&
-        (signal !== "opportunity-evidence-missing" || !opportunityEvidenceComplete),
+        (signal !== "opportunity-evidence-missing" || !opportunityEvidenceComplete) &&
+        (signal !== "reference-benchmark-degraded" || referenceBenchmarkDegraded),
       );
       if (!safetyObserved && !warningSignals.includes("safety-unrated")) {
         warningSignals.push("safety-unrated");
@@ -287,6 +337,11 @@ function hydrateYieldRankingsWithLiveSafety(
       if (!opportunityEvidenceComplete && !warningSignals.includes("opportunity-evidence-missing")) {
         warningSignals.push("opportunity-evidence-missing");
       }
+      if (referenceBenchmarkDegraded && !warningSignals.includes("reference-benchmark-degraded")) {
+        warningSignals.push("reference-benchmark-degraded");
+      }
+      // The ladder mirrors the write path's `resolveEvidenceNullReason`, so the
+      // served reason and the published one cannot disagree.
       const evidenceNullReason =
         sourceFreshness === "stale" || warningSignals.includes("data-stale")
           ? ("source-stale" as const)
@@ -294,16 +349,13 @@ function hydrateYieldRankingsWithLiveSafety(
             ? ("source-freshness-unknown" as const)
             : benchmarkFreshness === "stale" || warningSignals.includes("benchmark-stale")
               ? ("benchmark-stale" as const)
-              : null;
+              : rowReferenceBenchmarkFreshness === "stale"
+                ? ("benchmark-stale" as const)
+                : null;
       // B6: the response emits `hydratedSafety.sourceRisk`, so the score must be
       // computed from that same penalty — a read-path score the emitted evidence
       // cannot reproduce is not auditable.
       const hydratedSourceRiskPenalty = hydratedSafety.sourceRisk?.sourceRiskPenalty ?? null;
-      const benchmarkCurrency =
-        row.benchmarkCurrency ??
-        row.provenance?.benchmarkCurrency ??
-        (row.benchmarkKey != null ? YIELD_BENCHMARK_KEY_CURRENCY[row.benchmarkKey] : null) ??
-        null;
       const recomputedPharosYieldScore = recomputeYieldScore(
         row,
         safetyInputScore,

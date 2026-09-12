@@ -147,7 +147,7 @@ describe("handleYieldRankings summary projection", () => {
     expect(body.rankings[0]).not.toHaveProperty("decisionLedger");
     expect(body.rankings[0].sourceRisk).not.toHaveProperty("venueProtocol");
     expect(body.rankings[0].sourceRisk).not.toHaveProperty("investabilityFlags");
-    expect(body.rankings[0].altSources[0]).not.toHaveProperty("sourceRisk");
+    expect(body.rankings[0].altSources?.[0]).not.toHaveProperty("sourceRisk");
   });
 
   it("preserves the detailed default response", async () => {

@@ -39,9 +39,9 @@ import {
   deriveYieldRowDisplay,
 } from "@/components/yield-leaderboard-row-parts";
 import { trackEvent } from "@/lib/analytics";
-import {
-  isYieldBenchmarkFallback,
-} from "@/lib/yield-workbench-row";
+import { resolveYieldDisplayRebaseReferenceRate, resolveYieldRowBenchmark } from "@/lib/yield-benchmark";
+import { isYieldBenchmarkFallback } from "@/lib/yield-workbench-row";
+import type { YieldBenchmarkRegistry } from "@shared/types";
 import { downloadCsvWithPreamble, type CsvColumn } from "@/lib/exports/csv";
 import type { YieldViewModelRow } from "@/lib/yield-view-model";
 
@@ -212,6 +212,14 @@ interface YieldLeaderboardProps {
   riskFreeRate: number;
   medianApy: number;
   scalingFactor: number;
+  /**
+   * Benchmark registry from the payload. Lets a row with no published rate
+   * resolve its zone-chip benchmark from its own benchmarkKey instead of the
+   * chart-wide USD frame.
+   */
+  benchmarks?: YieldBenchmarkRegistry | null;
+  /** Payload methodology version; gates the v8.43 re-base reference during a deploy window. */
+  methodologyVersion?: string | null;
   emptyMessage?: string;
   filterSummary?: YieldLeaderboardFilterSummary;
   comparisonRows?: readonly YieldViewModelRow[];
@@ -225,6 +233,8 @@ export function YieldLeaderboard({
   riskFreeRate,
   medianApy,
   scalingFactor,
+  benchmarks = null,
+  methodologyVersion = null,
   emptyMessage,
   filterSummary,
   comparisonRows = rows,
@@ -358,6 +368,8 @@ export function YieldLeaderboard({
                     riskFreeRate={riskFreeRate}
                     medianApy={medianApy}
                     scalingFactor={scalingFactor}
+                    benchmarks={benchmarks}
+                    methodologyVersion={methodologyVersion}
                     expanded={visibleExpandedId === row.id}
                     isCompared={isCompared}
                     compareDisabled={compareDisabled}
@@ -391,6 +403,8 @@ export function YieldLeaderboard({
           riskFreeRate={riskFreeRate}
           medianApy={medianApy}
           scalingFactor={scalingFactor}
+          benchmarks={benchmarks}
+          methodologyVersion={methodologyVersion}
           pageStartIndex={pageStartIndex}
           sortKey={sortKey}
           sortDirection={sortDirection}
@@ -452,6 +466,8 @@ export function YieldMobileCard({
   riskFreeRate,
   medianApy,
   scalingFactor,
+  benchmarks = null,
+  methodologyVersion = null,
   expanded,
   isCompared,
   compareDisabled,
@@ -465,6 +481,14 @@ export function YieldMobileCard({
   medianApy: number;
   /** Payload scaling factor; threaded so any PYS reuse matches the board. */
   scalingFactor: number;
+  /**
+   * Benchmark registry from the payload. Lets a row with no published rate
+   * resolve its zone-chip benchmark from its own benchmarkKey instead of the
+   * chart-wide USD frame.
+   */
+  benchmarks?: YieldBenchmarkRegistry | null;
+  /** Payload methodology version; gates the v8.43 re-base reference during a deploy window. */
+  methodologyVersion?: string | null;
   expanded: boolean;
   isCompared: boolean;
   compareDisabled: boolean;
@@ -496,7 +520,16 @@ export function YieldMobileCard({
     altSourceCount,
     benchmarkReferenceText,
     breakdown: { adjustedRiskPenalty, benchmarkSpread, sourceRiskPenalty, sustainabilityMult },
-  } = useMemo(() => deriveYieldRowDisplay(row, scalingFactor, riskFreeRate), [row, scalingFactor, riskFreeRate]);
+  } = useMemo(
+    () =>
+      deriveYieldRowDisplay(
+        row,
+        scalingFactor,
+        // Version-gated: pre-8.43 payloads were scored without the re-base.
+        resolveYieldDisplayRebaseReferenceRate(methodologyVersion, riskFreeRate),
+      ),
+    [row, scalingFactor, methodologyVersion, riskFreeRate],
+  );
 
   return (
     <article
@@ -581,7 +614,12 @@ export function YieldMobileCard({
         <Badge variant="outline" className={`text-[10px] ${YIELD_TYPE_STYLES[row.yieldType]?.badge ?? ""}`}>
           {YIELD_TYPE_LABELS[row.yieldType] ?? row.yieldType}
         </Badge>
-        <YieldZoneChip safetyScore={safetyScore} apy30d={row.apy30d} benchmarkRate={row.benchmarkRate ?? riskFreeRate} />
+        <YieldZoneChip
+          safetyScore={safetyScore}
+          apy30d={row.apy30d}
+          // Row rate -> registry entry for the row's key -> USD frame -> risk-free.
+          benchmarkRate={resolveYieldRowBenchmark(row, benchmarks, riskFreeRate).rate}
+        />
         <MobileMetricPill>
           TVL{" "}
           <span className={tvlIsNative ? "text-muted-foreground" : "font-mono tabular-nums text-foreground"}>

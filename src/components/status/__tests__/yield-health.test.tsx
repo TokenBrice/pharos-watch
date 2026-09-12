@@ -423,6 +423,25 @@ describe("YieldHealthCard", () => {
     expect(screen.getByText(/^12 sources \(1h ago\)$/)).toBeTruthy();
   });
 
+  it("marks a retained family so a degraded fetch is not read as fresh", () => {
+    const base = makeHealth();
+    render(
+      <YieldHealthCard
+        health={makeHealth({
+          supplemental: {
+            ...base.supplemental,
+            degradedFamilies: ["morpho"],
+            families: {
+              morpho: { updatedAt: 1_700_000_000, ageSec: 1800, sourceCount: 8, status: "degraded", retained: true },
+            },
+          },
+        })}
+      />,
+    );
+
+    expect(screen.getByText("8 sources (30m ago) · retained")).toBeTruthy();
+  });
+
   it("renders whole-queue totals and marks the queue display-only", () => {
     const base = makeHealth();
     render(

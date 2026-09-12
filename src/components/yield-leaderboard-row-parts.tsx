@@ -612,6 +612,13 @@ export function formatYieldSafetySrLabel(
 export function deriveYieldRowDisplay(
   row: YieldViewModelRow,
   scalingFactor: number,
+  /**
+   * USD reference the effective yield is re-based onto. Callers must pass the
+   * v8.43-gated value (`resolveYieldDisplayRebaseReferenceRate(
+   * methodology.version, riskFreeRate)`): rows scored before the re-base
+   * release were published without one, so an ungated risk-free rate would
+   * render a re-base line the badge never used.
+   */
   usdBenchmarkRate?: number | null,
 ) {
   const labels = formatYieldRowLabels(row);

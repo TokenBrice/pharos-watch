@@ -667,6 +667,70 @@ describe("identifyCoverageGaps", () => {
     );
   });
 
+  it("merges published-row attribution into a pool-derived venue candidate", () => {
+    const dlPools: DlPool[] = [makeDlYieldPool({
+      pool: "renamed-usdc",
+      project: "renamed-aave-v3",
+      symbol: "USDC",
+      tvlUsd: 25_000_000,
+      apy: 3,
+      apyBase: 3,
+      apyMean30d: 3,
+    })];
+
+    const gaps = identifyCoverageGaps(
+      dlPools,
+      new Set(),
+      new Set(["renamed-aave-v3"]),
+      new Map([["renamed-aave-v3", "Lending"]]),
+      {
+        publishedVenueRows: [
+          {
+            stablecoinId: "usdc-circle",
+            venueProtocol: "Renamed-Aave-V3",
+            sourceKey: "protocol-api:renamed-aave-v3:usdc",
+            sourceTvlUsd: 25_000_000,
+          },
+          {
+            stablecoinId: "usdt-tether",
+            venueProtocol: "renamed-aave-v3",
+            sourceKey: "protocol-api:renamed-aave-v3:usdt",
+            sourceTvlUsd: 8_000_000,
+          },
+        ],
+      },
+    );
+
+    // SRC-SUPP-4: the covered pool keeps its examples while the published rows
+    // still contribute their assets and unreviewed source keys.
+    expect(gaps.venueRiskConfigMissing).toEqual([
+      expect.objectContaining({
+        project: "renamed-aave-v3",
+        protocolCategory: "Lending",
+        poolCount: 1,
+        totalTvlUsd: 25_000_000,
+        examplePools: ["renamed-usdc"],
+        stablecoinIds: ["usdc-circle", "usdt-tether"],
+        sourceKeys: ["protocol-api:renamed-aave-v3:usdc", "protocol-api:renamed-aave-v3:usdt"],
+      }),
+    ]);
+
+    const queue = buildCoverageAuditOperatorQueue({
+      gaps,
+      manifestMissingIds: [],
+      yieldBearingMissingFromRankings: [],
+      staleVenueRiskScores: [],
+    });
+    expect(queue.recommendationCandidates).toContainEqual(
+      expect.objectContaining({
+        id: "venue-risk-config-missing:renamed-aave-v3",
+        kind: "venue-risk-config-missing",
+        stablecoinIds: ["usdc-circle", "usdt-tether"],
+        sourceKey: "protocol-api:renamed-aave-v3:usdc",
+      }),
+    );
+  });
+
   it("does not flag high-TVL pools on already-supported allowlisted protocols as unmatched gaps", () => {
     const dlPools: DlPool[] = [makeDlYieldPool({
       pool: "aave-pool",

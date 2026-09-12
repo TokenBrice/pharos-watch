@@ -19,6 +19,7 @@ import { DAY_SECONDS } from "@shared/lib/time-constants";
 import { DEFAULT_SAFETY_SCORE, PYS_SCALING_FACTOR } from "../../lib/constants";
 import { isOnChainBootstrapYieldSeed } from "../../lib/yield-utils";
 import { isRealSourceSwitch } from "../../lib/yield-history-ownership-handoffs";
+import { countSourceSwitchesWithTail } from "./coordinator-history";
 import { derivePysNullReasonFromComponents } from "../../lib/yield-ranking-helpers";
 import {
   classifyYieldSourceFreshness,
@@ -33,6 +34,7 @@ import type { ResolvedYield, ResolvedYieldEntry } from "./types";
 import {
   classifyYieldBenchmarkFreshness,
   resolveBenchmarkForStablecoin,
+  YIELD_BENCHMARK_RECORD_MAX_AGE_SEC,
   type ParsedYieldBenchmarkRegistry,
   type YieldBenchmarkFreshness,
 } from "./benchmarks";
@@ -93,6 +95,13 @@ export interface EvaluateYieldSourcesInput {
   legacyPrevTvlById: Map<string, number | null>;
   prevBestSourceKeyByCoin: Map<string, string>;
   sourceSwitchCount30dByCoin?: Map<string, number>;
+  /**
+   * Selected-source history rows per coin (B2/F5). When present, the published
+   * `sourceSwitchCount30d` is recounted with this run's winner appended as the
+   * newest publication; absent callers fall back to `sourceSwitchCount30dByCoin`
+   * plus the incumbent-still-candidate increment.
+   */
+  bestRowsByCoin?: Map<string, YieldHistorySnapshotRow[]>;
   stablecoinSupplyById?: Map<string, number>;
   dlPoolsMeta?: YieldSourceInputMeta;
 }
@@ -300,7 +309,13 @@ function prepareYieldEvaluation(input: EvaluateYieldSourcesInput): PreparedYield
   // stale constant without any row-level signal. Classify it once per run and
   // re-base only on a healthy reference; otherwise rows with a non-USD benchmark
   // publish `estimated`/NR plus a `reference-benchmark-degraded` warning.
-  const referenceBenchmarkFreshness = classifyYieldBenchmarkFreshness(input.riskFreeRates.USD);
+  // A2: the entry's own observation age is part of its health — a frozen or
+  // rewound upstream keeps returning a fresh fetch carrying an old CSV, so a
+  // fetch-age-only classification would re-base rows onto a retained constant.
+  const referenceBenchmarkFreshness = classifyYieldBenchmarkFreshness(input.riskFreeRates.USD, {
+    recordDate: input.riskFreeRates.USD.recordDate,
+    maxRecordAgeSec: YIELD_BENCHMARK_RECORD_MAX_AGE_SEC.USD,
+  });
   const usdBenchmarkRate =
     referenceBenchmarkFreshness === "healthy" && Number.isFinite(input.riskFreeRates.USD.rate)
       ? input.riskFreeRates.USD.rate
@@ -335,12 +350,6 @@ function evaluateYieldSourceGroup(
 ): void {
   const previousBestSourceKey = input.prevBestSourceKeyByCoin.get(stablecoinId) ?? null;
   const priorSwitches30d = input.sourceSwitchCount30dByCoin?.get(stablecoinId) ?? 0;
-  // B2: a source missing from this run's resolved set is a fetch gap, not a
-  // switch. The previous winner only carries switch weight while it is still a
-  // resolvable candidate; a one-hour absence must not arm (or count) a switch.
-  const previousWinnerResolved =
-    previousBestSourceKey != null &&
-    entries.some((entry) => entry.yield.sourceKey === previousBestSourceKey);
   // Derived penalty inputs per source key, kept so the row that wins can be re-derived
   // with its true 30d count after the arbitration role is known.
   const derivedPenaltyInputByKey = new Map<string, PysSourceRiskPenaltyInput>();
@@ -454,7 +463,6 @@ function evaluateYieldSourceGroup(
     // benchmark (USD_EFFR) is not re-based against the USD T-bill rate.
     const benchmarkCurrency = benchmarkMeta.currency ?? benchmarkSelection.key;
     const excessYield = apy30d - benchmarkRate;
-    const wouldSwitch = previousWinnerResolved && isRealSourceSwitch(previousBestSourceKey, sourceKey);
     const prevExchangeRate = input.tier1PrevRates.get(stablecoinId) ?? null;
     const prevTvlUsd = historySelection.usedLegacyHistory
       ? (input.legacyPrevTvlById.get(stablecoinId) ?? null)
@@ -487,7 +495,12 @@ function evaluateYieldSourceGroup(
     // `fallback-usd` selection is a documented per-row methodology decision
     // (the peg has no native feed), not a degraded feed, so it must not emit
     // `benchmark-degraded` or cap the row at `estimated`.
-    const benchmarkFreshness = classifyYieldBenchmarkFreshness(benchmarkMeta);
+    // A2: the entry's own observation age is part of that health — the row's
+    // benchmark is judged against its key's record bound (USD 5d, CAD 45d, ...).
+    const benchmarkFreshness = classifyYieldBenchmarkFreshness(benchmarkMeta, {
+      recordDate: benchmarkMeta.recordDate,
+      maxRecordAgeSec: YIELD_BENCHMARK_RECORD_MAX_AGE_SEC[benchmarkSelection.key],
+    });
     // A3: only a non-USD benchmark consumes the USD reference rate, so only those
     // rows can be mis-based by a retained or stale reference; USD rows are already
     // covered by their own benchmark freshness.
@@ -534,12 +547,12 @@ function evaluateYieldSourceGroup(
     let sourceRiskPenaltyInput = sourceRisk?.sourceRiskPenalty ?? null;
     if (sourceRiskPenaltyInput == null) {
       derivedPenaltyInputByKey.set(sourceKey, derivedPenaltyInput);
-      // B3: arbitration basis = pre-run count + flat switch margin (never saturated);
-      // the chosen row's published penalty is re-derived below.
+      // B3: arbitration basis = pre-run count, no switch term (never saturated).
+      // The flat switch margin is applied after rejections are known, so the
+      // margin and the 30d count share one still-candidate predicate (B2/F4).
       sourceRiskPenaltyInput = Math.min(
         PYS_MAX_SOURCE_RISK_PENALTY,
-        derivePysSourceRiskPenalty(derivedPenaltyInput) +
-          (wouldSwitch ? PYS_SWITCH_ARBITRATION_MARGIN : 0),
+        derivePysSourceRiskPenalty(derivedPenaltyInput),
       );
     }
     const evidenceNullReason = resolveEvidenceNullReason({
@@ -707,21 +720,72 @@ function evaluateYieldSourceGroup(
     };
   });
 
-  const sortedCandidates = [...candidates].sort(compareCandidates);
+  // B2/F4: one predicate decides whether the previous winner still carries
+  // switch weight this run — present *and* publishable, not merely resolved. The
+  // arbitration margin below and the transient-missing anomaly read this single
+  // fact, so a rejected incumbent can no longer arm a margin that a missing
+  // incumbent does not.
+  const previousWinnerStillCandidate =
+    previousBestSourceKey != null &&
+    candidates.some((candidate) => candidate.sourceKey === previousBestSourceKey && !candidate.rejected);
+
+  // B3: the flat switch margin belongs to the arbitration basis (it makes a
+  // challenger beat a live incumbent by a margin), never to the row that gets
+  // published. It can only be applied once rejections are final, so it is added
+  // here instead of while the rows were being built.
+  const arbitratedCandidates = !previousWinnerStillCandidate
+    ? candidates
+    : candidates.map((candidate) => {
+      const derivedPenaltyInput = derivedPenaltyInputByKey.get(candidate.sourceKey);
+      if (derivedPenaltyInput == null || !isRealSourceSwitch(previousBestSourceKey, candidate.sourceKey)) {
+        return candidate;
+      }
+      return {
+        ...candidate,
+        ...resolvePenaltyDerivedFields({
+          apy30d: candidate.apy30d,
+          safetyScore: candidate.safetyScore,
+          apyVarianceScore: candidate.apyVarianceScore,
+          benchmarkRate: candidate.benchmarkRate,
+          benchmarkCurrency: candidate.benchmarkCurrency,
+          usdBenchmarkRate: prepared.usdBenchmarkRate,
+          sourceRiskPenalty: Math.min(
+            PYS_MAX_SOURCE_RISK_PENALTY,
+            candidate.sourceRiskPenalty + PYS_SWITCH_ARBITRATION_MARGIN,
+          ),
+          safetySnapshotUnavailable: input.safetySnapshotAvailable === false,
+          evidenceNullReason: resolveEvidenceNullReason({
+            sourceFreshness: candidate.sourceFreshness,
+            benchmarkFreshness: candidate.benchmarkFreshness,
+            referenceBenchmarkFreshness:
+              candidate.benchmarkCurrency === "USD" ? "healthy" : prepared.referenceBenchmarkFreshness,
+          }),
+        }),
+      };
+    });
+
+  const sortedCandidates = [...arbitratedCandidates].sort(compareCandidates);
   const rejectedPeerCount = sortedCandidates.filter((candidate) => candidate.rejected).length;
   const winner = sortedCandidates.find((candidate) => !candidate.rejected) ?? sortedCandidates[0];
   if (!winner) return;
 
   accumulator.bestSourceKeyByCoin.set(stablecoinId, winner.sourceKey);
-  // B2: the switch only counts when the previous winner is still a publishable
-  // candidate; a transient absence is recorded instead of charged.
+  // B2/F5: the published count is the same selected-source series the recount
+  // reads, with this run's winner appended as the newest publication and the
+  // identical collapse-runs-shorter-than-2 rule applied. A durable switch is
+  // therefore charged from its second consecutive publication, and a
+  // one-publication excursion never publishes a count the next run erases — the
+  // erasure moved a realistic row by ~3 PYS points at the published 8x scale.
+  // Callers that supply only `sourceSwitchCount30dByCoin` (no history rows) keep
+  // the previous approximation; the coordinator always spreads `bestRowsByCoin`.
   const winnerWouldChangeSource = isRealSourceSwitch(previousBestSourceKey, winner.sourceKey);
-  const previousWinnerStillCandidate =
-    previousBestSourceKey != null &&
-    candidates.some((candidate) => candidate.sourceKey === previousBestSourceKey && !candidate.rejected);
-  const winnerIsRealSwitch = winnerWouldChangeSource && previousWinnerStillCandidate;
-  const sourceSwitchCount30d = winnerIsRealSwitch ? priorSwitches30d + 1 : priorSwitches30d;
-  if (winnerIsRealSwitch) {
+  const sourceSwitchCount30d =
+    input.bestRowsByCoin != null
+      ? countSourceSwitchesWithTail(input.bestRowsByCoin.get(stablecoinId) ?? [], winner.sourceKey)
+      : winnerWouldChangeSource && previousWinnerStillCandidate
+        ? priorSwitches30d + 1
+        : priorSwitches30d;
+  if (sourceSwitchCount30d > priorSwitches30d) {
     accumulator.sourceSwitches++;
   }
 

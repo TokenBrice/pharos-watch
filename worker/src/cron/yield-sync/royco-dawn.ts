@@ -238,7 +238,17 @@ function buildExploreBody(pageIndex: number): string {
   });
 }
 
-export async function fetchRoycoDawnSources(signal?: AbortSignal): Promise<ResolvedYieldCandidate[]> {
+export interface RoycoDawnSourceResult {
+  candidates: ResolvedYieldCandidate[];
+  /**
+   * SRC-SUPP-2: true when the paginated walk ended early — a non-ok page
+   * response or a thrown fetch. The caller must retain the previous snapshot
+   * instead of replacing it with this partial list.
+   */
+  degraded: boolean;
+}
+
+export async function fetchRoycoDawnSources(signal?: AbortSignal): Promise<RoycoDawnSourceResult> {
   const budget = createOptionalSourceBudget("Royco Dawn sources", OPTIONAL_PROTOCOL_API_BUDGET_MS, signal);
   const trackedByAddress = buildTrackedAssetByChainAddress();
   const observedAt = Math.floor(Date.now() / 1000);
@@ -263,7 +273,7 @@ export async function fetchRoycoDawnSources(signal?: AbortSignal): Promise<Resol
         0,
         { timeoutMs: OPTIONAL_PROTOCOL_REQUEST_TIMEOUT_MS },
       );
-      if (!result?.response.ok) return results;
+      if (!result?.response.ok) return { candidates: results, degraded: true };
 
       const body = result.body;
       const markets = Array.isArray(body.data) ? body.data : [];
@@ -318,7 +328,7 @@ export async function fetchRoycoDawnSources(signal?: AbortSignal): Promise<Resol
       }
     }
 
-    return results;
+    return { candidates: results, degraded: false };
   } catch (error) {
     if (signal?.aborted) throw error instanceof Error ? error : new Error(String(error));
     if (!budget.budgetController.signal.aborted) {
@@ -333,7 +343,7 @@ export async function fetchRoycoDawnSources(signal?: AbortSignal): Promise<Resol
         error,
       });
     }
-    return results;
+    return { candidates: results, degraded: true };
   } finally {
     budget.cleanup();
   }

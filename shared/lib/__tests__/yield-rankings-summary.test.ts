@@ -324,8 +324,8 @@ describe("projectYieldRankingsSummary", () => {
     expect(summary.rankings[0]).not.toHaveProperty("rankChangeAttribution");
     expect(summary.rankings[0].provenance).not.toHaveProperty("selectionReason");
     expect(summary.rankings[0].sourceRisk).not.toHaveProperty("investabilityFlags");
-    expect(summary.rankings[0].altSources[0]).not.toHaveProperty("sourceRisk");
-    expect(summary.rankings[0].altSources[0]).not.toHaveProperty("rejectionReasonCode");
+    expect(summary.rankings[0].altSources?.[0]).not.toHaveProperty("sourceRisk");
+    expect(summary.rankings[0].altSources?.[0]).not.toHaveProperty("rejectionReasonCode");
   });
 
   it("keeps alternate rails bounded while the count stays truthful", () => {
@@ -447,7 +447,7 @@ describe("projectYieldRankingsSummary", () => {
     expect(Object.keys(row)).toEqual(EXPECTED_ROW_KEYS);
     expect(Object.keys(row.provenance ?? {})).toEqual(EXPECTED_PROVENANCE_KEYS);
     expect(Object.keys(row.sourceRisk ?? {})).toEqual(EXPECTED_SOURCE_RISK_KEYS);
-    expect(Object.keys(row.altSources[0])).toEqual(EXPECTED_ALT_SOURCE_KEYS);
+    expect(Object.keys(row.altSources?.[0] ?? {})).toEqual(EXPECTED_ALT_SOURCE_KEYS);
     // The runtime copy lists are the schemas' own shapes — proving that here means
     // the frozen lists above pin the schema and the projection at the same time.
     expect(Object.keys(YieldRankingSummarySchema.shape)).toEqual(EXPECTED_ROW_KEYS);
@@ -461,7 +461,7 @@ describe("projectYieldRankingsSummary", () => {
     expect(
       YieldRankingSummarySchema.safeParse({
         ...summary.rankings[0],
-        altSources: [{ ...summary.rankings[0].altSources[0], yieldSource: "Detail-only label" }],
+        altSources: [{ ...(summary.rankings[0].altSources?.[0] ?? {}), yieldSource: "Detail-only label" }],
       }).success,
     ).toBe(false);
   });
@@ -475,5 +475,77 @@ describe("projectYieldRankingsSummary", () => {
     expect(rawBytes).toBeLessThanOrEqual(RAW_PAYLOAD_BUDGET_BYTES);
     expect(gzipBytes).toBeLessThanOrEqual(GZIP_PAYLOAD_BUDGET_BYTES);
     expect(gzipBytes / summary.rankings.length).toBeLessThanOrEqual(GZIP_BYTES_PER_ROW_BUDGET);
+  });
+});
+
+// The summary contract became strict about `dataSource`, `altSources`,
+// `rankDelta`, `rankChangeDriver` and `rankPysDelta` in the same release that
+// started emitting them. The worker/CDN cache serves the pre-deploy payload
+// for up to a full cache window after the deploy, so the schema MUST keep
+// accepting that older shape — this fixture freezes it: no `_meta`, benchmark
+// entries without `recordAgeSec`/`maxRecordAgeSec`, and none of the five
+// fields. Deliberately NOT typed as `YieldRankingsSummaryResponse`: the point
+// is that the wire schema admits a payload the current type would reject.
+describe("pre-deploy summary payload compatibility", () => {
+  it("parses a cached summary row that predates the strict-contract fields", () => {
+    const preDeployPayload = {
+      projection: "summary",
+      rankings: [
+        {
+          id: "usdt-tether",
+          symbol: "USDT",
+          name: "Tether",
+          currentApy: 4.32,
+          apy30d: 4.28,
+          yieldSource: "Aave",
+          yieldSourceUrl: "https://app.aave.com",
+          yieldType: "lending-vault",
+          sourceTvlUsd: 2_654_149_397,
+          pharosYieldScore: 61.4,
+          pysNullReason: null,
+          safetyScore: 82,
+          safetyGrade: "B+",
+          benchmarkKey: "USD",
+          benchmarkLabel: "USD 3M T-Bill",
+          benchmarkRate: 4.13,
+          benchmarkIsFallback: false,
+          yieldStability: 0.91,
+          apyMin30d: 4.1,
+          apyMax30d: 4.45,
+          warningSignals: [],
+          sourceRole: "canonical-holder",
+          alternateSourceCount: 2,
+        },
+      ],
+      riskFreeRate: 4.13,
+      benchmarks: {
+        USD: {
+          key: "USD",
+          label: "USD 3M T-Bill",
+          currency: "USD",
+          rate: 4.13,
+          recordDate: "2026-07-09",
+          fetchedAt: 1_783_632_600,
+          ageSeconds: 1_800,
+          source: "fred-dgs3mo",
+          isFallback: false,
+          fallbackMode: null,
+          isProxy: false,
+        },
+      },
+      scalingFactor: 8,
+      medianApy: 4.9,
+      updatedAt: 1_783_632_600,
+    };
+
+    expect(preDeployPayload).not.toHaveProperty("_meta");
+    expect(preDeployPayload.benchmarks.USD).not.toHaveProperty("recordAgeSec");
+    expect(preDeployPayload.benchmarks.USD).not.toHaveProperty("maxRecordAgeSec");
+    for (const field of ["dataSource", "altSources", "rankDelta", "rankChangeDriver", "rankPysDelta"]) {
+      expect(preDeployPayload.rankings[0]).not.toHaveProperty(field);
+    }
+
+    const parsed = YieldRankingsSummaryResponseSchema.safeParse(preDeployPayload);
+    expect(parsed.success).toBe(true);
   });
 });

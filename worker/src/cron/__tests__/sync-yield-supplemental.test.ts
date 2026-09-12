@@ -44,7 +44,7 @@ vi.mock("../yield-sync/sources", async () => {
   COMPOUND_V3_COMETS: [],
   fetchMorphoVaultSources: vi.fn(async () => healthyFamilyFetch()),
   fetchPendleMarketSources: vi.fn(async () => healthyFamilyFetch()),
-  fetchRoycoDawnSources: vi.fn(async () => []),
+  fetchRoycoDawnSources: vi.fn(async () => ({ candidates: [], degraded: false })),
   fetchVaultsFyiSources: vi.fn(async () => emptyVaultsFyiResult()),
   fetchYearnKongSources: vi.fn(async () => healthyFamilyFetch()),
   fetchBeefySources: vi.fn(async () => healthyFamilyFetch()),
@@ -99,7 +99,7 @@ describe("syncYieldSupplemental", () => {
     vi.setSystemTime(new Date("2026-03-26T12:00:00.000Z"));
     vi.mocked(fetchMorphoVaultSources).mockResolvedValue(healthyFamilyFetch());
     vi.mocked(fetchPendleMarketSources).mockResolvedValue(healthyFamilyFetch());
-    vi.mocked(fetchRoycoDawnSources).mockResolvedValue([]);
+    vi.mocked(fetchRoycoDawnSources).mockResolvedValue({ candidates: [], degraded: false });
     vi.mocked(fetchVaultsFyiSources).mockResolvedValue(emptyVaultsFyiResult());
     vi.mocked(fetchYearnKongSources).mockResolvedValue(healthyFamilyFetch());
     vi.mocked(fetchCompoundV3SupplyRates).mockResolvedValue({ results: [], telemetry: emptyRpcTelemetry() });
@@ -327,6 +327,68 @@ describe("syncYieldSupplemental", () => {
       degradedFamilies: ["morpho"],
       familyCacheResults: { morpho: "retained-previous", beefy: "published" },
     });
+  });
+
+  it("retains the previous RPC-family snapshot when some targets fail", async () => {
+    // A per-target RPC failure resolves with a partial list under an `ok`
+    // status; publishing it would replace the previous full snapshot (SRC-SUPP-2).
+    vi.mocked(fetchAaveV3SupplyRates).mockResolvedValue({
+      results: [
+        {
+          stablecoinId: "usdc-circle",
+          symbol: "USDC",
+          chain: "ethereum",
+          assetAddress: "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
+          apy: 4.25,
+          sourceTvlUsd: 100_000_000,
+        },
+      ],
+      telemetry: {
+        ...emptyRpcTelemetry(),
+        targetCount: 3,
+        attemptedCount: 3,
+        resolvedTargetCount: 1,
+        emittedCount: 1,
+        missingTargetCount: 2,
+        missingByChain: { ethereum: 2 },
+        missingReasonCounts: { "rpc-failure": 2 },
+      },
+    });
+
+    const result = await syncYieldSupplemental({} as D1Database, undefined, new Map());
+
+    expect(
+      vi.mocked(setCacheIfNewer).mock.calls.some((call) => call[1] === "yield:supplemental-sources:v1:aaveV3"),
+    ).toBe(false);
+
+    const metadata = JSON.parse(result.metadata ?? "{}") as {
+      familyCacheResults?: Record<string, string>;
+      degradedFamilies?: string[];
+    };
+    expect(metadata.familyCacheResults?.aaveV3).toBe("retained-previous");
+    expect(metadata.degradedFamilies).toContain("aaveV3");
+  });
+
+  it("retains the previous Royco snapshot when pagination ends early", async () => {
+    // SRC-SUPP-2: the paginated Royco walk returns the pages it already fetched
+    // together with `degraded: true` instead of silently replacing the snapshot.
+    vi.mocked(fetchRoycoDawnSources).mockResolvedValue({
+      candidates: [beefyCandidate({}, { sourceKey: "royco-dawn:1:survivor:senior" })],
+      degraded: true,
+    });
+
+    const result = await syncYieldSupplemental({} as D1Database, undefined, new Map());
+
+    expect(
+      vi.mocked(setCacheIfNewer).mock.calls.some((call) => call[1] === "yield:supplemental-sources:v1:roycoDawn"),
+    ).toBe(false);
+
+    const metadata = JSON.parse(result.metadata ?? "{}") as {
+      familyCacheResults?: Record<string, string>;
+      degradedFamilies?: string[];
+    };
+    expect(metadata.familyCacheResults?.roycoDawn).toBe("retained-previous");
+    expect(metadata.degradedFamilies).toContain("roycoDawn");
   });
 
   it("retains the previous snapshot when a family callback fails outright", async () => {
@@ -974,7 +1036,7 @@ describe("syncYieldSupplemental", () => {
     vi.mocked(fetchYearnKongSources).mockImplementation(trackFamily("yearnKong", healthyFamilyFetch()));
     vi.mocked(fetchBeefySources).mockImplementation(trackFamily("beefy", healthyFamilyFetch()));
     vi.mocked(fetchVaultsFyiSources).mockImplementation(trackFamily("vaultsFyi", emptyVaultsFyiResult()));
-    vi.mocked(fetchRoycoDawnSources).mockImplementation(trackFamily("roycoDawn", []));
+    vi.mocked(fetchRoycoDawnSources).mockImplementation(trackFamily("roycoDawn", { candidates: [], degraded: false }));
     vi.mocked(fetchCompoundV3SupplyRates).mockImplementation(
       trackFamily("compoundV3", {
         results: [],

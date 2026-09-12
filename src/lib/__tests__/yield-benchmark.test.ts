@@ -7,6 +7,7 @@ import {
   getYieldBenchmarkGapUnavailableText,
   getYieldRankingBenchmarkKey,
   resolveYieldBenchmarkAge,
+  resolveYieldDisplayRebaseReferenceRate,
   resolveYieldRowBenchmark,
   resolveYieldScatterBenchmarkFrame,
 } from "@/lib/yield-benchmark";
@@ -112,17 +113,22 @@ describe("getYieldBenchmarkDisplayLabel", () => {
 describe("resolveYieldBenchmarkAge", () => {
   const NOW = Date.parse("2026-09-12T00:00:00Z");
 
-  it("flags a record older than the default 2x-daily-cadence bound", () => {
+  it("flags a record older than the default daily-series bound", () => {
     const age = resolveYieldBenchmarkAge({ ageSeconds: 60, recordDate: "2026-08-01" }, NOW);
     expect(age.stale).toBe(true);
     expect(age.boundSeconds).toBe(YIELD_BENCHMARK_AGE_FALLBACK_BOUND_SEC);
     expect(age.marker).toBe("42d old");
     expect(age.reason).toContain("42d old");
-    expect(age.reason).toContain("2× the daily benchmark refresh cadence");
+    expect(age.reason).toContain("daily benchmark series");
+    expect(age.reason).toContain("published no per-key bound");
   });
 
-  it("stays fresh inside the default bound", () => {
-    const age = resolveYieldBenchmarkAge({ ageSeconds: 60, recordDate: "2026-09-11" }, NOW);
+  it("stays fresh inside the default bound (a 3d-old observation on an old payload does not tint)", () => {
+    // 3 days is past the retired 48h fallback but inside the daily-series
+    // bound the fallback now mirrors — exactly the healthy cached entry that
+    // must never render amber.
+    const age = resolveYieldBenchmarkAge({ ageSeconds: 60, recordDate: "2026-09-09" }, NOW);
+    expect(age.ageSeconds).toBe(3 * 24 * 60 * 60);
     expect(age.stale).toBe(false);
     expect(age.marker).toBe("");
     expect(age.reason).toBeNull();
@@ -154,9 +160,9 @@ describe("resolveYieldBenchmarkAge", () => {
   });
 
   it("flags a fetch age past the bound even without a record date", () => {
-    const age = resolveYieldBenchmarkAge({ ageSeconds: 3 * 24 * 60 * 60 }, NOW);
+    const age = resolveYieldBenchmarkAge({ ageSeconds: 6 * 24 * 60 * 60 }, NOW);
     expect(age.stale).toBe(true);
-    expect(age.marker).toBe("3d old");
+    expect(age.marker).toBe("6d old");
   });
 
   it("clamps a future-dated record to zero age and is not stale without evidence", () => {
@@ -278,5 +284,28 @@ describe("resolveYieldScatterBenchmarkFrame", () => {
     expect(result.usesDefaultBenchmarkFrame).toBe(true);
     expect(result.sharedBenchmarkKey).toBeNull();
     expect(result.referenceBenchmark?.key).toBe("USD");
+  });
+});
+
+describe("resolveYieldDisplayRebaseReferenceRate (v8.43 re-base window)", () => {
+  it("passes the risk-free rate through once the payload is scored at the re-base release", () => {
+    expect(resolveYieldDisplayRebaseReferenceRate("v8.43", 3.5)).toBe(3.5);
+    expect(resolveYieldDisplayRebaseReferenceRate("v8.44", 3.5)).toBe(3.5);
+  });
+
+  it("returns null while the payload is scored before the re-base release", () => {
+    expect(resolveYieldDisplayRebaseReferenceRate("v8.42", 3.5)).toBeNull();
+    expect(resolveYieldDisplayRebaseReferenceRate("v8.4", 3.5)).toBeNull();
+  });
+
+  it("returns null when the payload publishes no version to gate on", () => {
+    expect(resolveYieldDisplayRebaseReferenceRate(null, 3.5)).toBeNull();
+    expect(resolveYieldDisplayRebaseReferenceRate(undefined, 3.5)).toBeNull();
+    expect(resolveYieldDisplayRebaseReferenceRate("not-a-version", 3.5)).toBeNull();
+  });
+
+  it("parses the version with or without the leading v", () => {
+    expect(resolveYieldDisplayRebaseReferenceRate("8.43", 3.5)).toBe(3.5);
+    expect(resolveYieldDisplayRebaseReferenceRate("v8.43", null)).toBeNull();
   });
 });

@@ -5,6 +5,7 @@ import {
   isLegacyDeterministicOnChainSourceKey,
   normalizePreviousBestSourceKey,
 } from "./evaluation-history";
+import { LEGACY_BEST_YIELD_SOURCE_KEY } from "../../lib/yield-history-ownership-handoffs";
 
 export interface YieldHistoryEvaluationInputs {
   sourceHistory: Map<string, YieldHistorySnapshotRow[]>;
@@ -15,6 +16,12 @@ export interface YieldHistoryEvaluationInputs {
   legacyPrevTvlById: Map<string, number | null>;
   prevBestSourceKeyByCoin: Map<string, string>;
   sourceSwitchCount30dByCoin: Map<string, number>;
+  /**
+   * Selected-source rows per coin, in the same shape `countSourceSwitches` reads.
+   * The evaluation pass appends this run's winner to the series so the published
+   * 30d count obeys the same collapse rule as the history recount (B2/F5).
+   */
+  bestRowsByCoin: Map<string, YieldHistorySnapshotRow[]>;
 }
 
 function appendHistoryRow(
@@ -75,14 +82,30 @@ function recordPrevBestRow(maps: YieldHistoryEvaluationMaps, row: YieldHistorySn
 }
 
 /**
- * Count selected-source switches across a coin's best rows in recorded-at order.
+ * Count selected-source switches across a coin's best rows in recorded-at order,
+ * optionally with `tailSourceKey` appended as the newest publication.
  *
  * B2: a segment of one publication is a fetch gap, not a switch — a source that
  * disappears for one hour and returns would otherwise count twice (out and back).
  * Collapse every run shorter than two publications before counting adjacent
  * differences, so only durable source changes are charged.
+ *
+ * F4: `legacy-best` is a sentinel, not a source identity, so it is skipped
+ * entirely — the same rule `isRealSourceSwitch` applies to the published signal.
+ * Letting a legacy era enter the durable list charged transitions the publisher
+ * never charges (and a >=2-publication legacy run between two runs of one real
+ * source read as two switches around an unchanged source).
+ *
+ * F5: `tailSourceKey` lets the publisher count the series *including* the run it
+ * is about to publish, so a durable switch is only charged from its second
+ * consecutive publication and a one-publication excursion never publishes a
+ * count the next run erases.
  */
-function countSourceSwitches(rows: YieldHistorySnapshotRow[], signal?: AbortSignal): number {
+export function countSourceSwitchesWithTail(
+  rows: readonly YieldHistorySnapshotRow[],
+  tailSourceKey?: string | null,
+  signal?: AbortSignal,
+): number {
   const durableSourceKeys: string[] = [];
   let runSourceKey: string | null = null;
   let runLength = 0;
@@ -91,17 +114,24 @@ function countSourceSwitches(rows: YieldHistorySnapshotRow[], signal?: AbortSign
     runSourceKey = null;
     runLength = 0;
   };
-  for (const row of [...rows].sort((a, b) => a.recorded_at - b.recorded_at)) {
-    throwIfAborted(signal);
-    const sourceKey = normalizePreviousBestSourceKey(row);
+  // Skipping (rather than flushing) keeps the surrounding runs of one real
+  // source contiguous across a legacy gap, so the gap can never fabricate a
+  // switch out of an unchanged source.
+  const acceptSourceKey = (sourceKey: string) => {
+    if (sourceKey === LEGACY_BEST_YIELD_SOURCE_KEY) return;
     if (sourceKey === runSourceKey) {
       runLength++;
-      continue;
+      return;
     }
     flushRun();
     runSourceKey = sourceKey;
     runLength = 1;
+  };
+  for (const row of [...rows].sort((a, b) => a.recorded_at - b.recorded_at)) {
+    throwIfAborted(signal);
+    acceptSourceKey(normalizePreviousBestSourceKey(row));
   }
+  if (tailSourceKey != null) acceptSourceKey(tailSourceKey);
   flushRun();
 
   let switches = 0;
@@ -160,7 +190,7 @@ export function buildYieldHistoryEvaluationInputs(input: {
   }
 
   for (const [stablecoinId, rows] of maps.bestRowsByCoin) {
-    maps.sourceSwitchCount30dByCoin.set(stablecoinId, countSourceSwitches(rows));
+    maps.sourceSwitchCount30dByCoin.set(stablecoinId, countSourceSwitchesWithTail(rows));
   }
 
   return {
@@ -172,6 +202,7 @@ export function buildYieldHistoryEvaluationInputs(input: {
     legacyPrevTvlById: maps.legacyPrevTvlById,
     prevBestSourceKeyByCoin: maps.prevBestSourceKeyByCoin,
     sourceSwitchCount30dByCoin: maps.sourceSwitchCount30dByCoin,
+    bestRowsByCoin: maps.bestRowsByCoin,
   };
 }
 
@@ -220,7 +251,7 @@ export async function buildYieldHistoryEvaluationInputsCooperative(
   const bestRowsEntries = [...maps.bestRowsByCoin.entries()];
   for (const [index, [stablecoinId, rows]] of bestRowsEntries.entries()) {
     throwIfAborted(options.signal);
-    maps.sourceSwitchCount30dByCoin.set(stablecoinId, countSourceSwitches(rows, options.signal));
+    maps.sourceSwitchCount30dByCoin.set(stablecoinId, countSourceSwitchesWithTail(rows, null, options.signal));
     await checkpoint("source-switches", index + 1, bestRowsEntries.length);
   }
 
@@ -233,5 +264,6 @@ export async function buildYieldHistoryEvaluationInputsCooperative(
     legacyPrevTvlById: maps.legacyPrevTvlById,
     prevBestSourceKeyByCoin: maps.prevBestSourceKeyByCoin,
     sourceSwitchCount30dByCoin: maps.sourceSwitchCount30dByCoin,
+    bestRowsByCoin: maps.bestRowsByCoin,
   };
 }

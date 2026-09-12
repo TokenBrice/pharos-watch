@@ -695,6 +695,48 @@ describe("loadYieldHealthSummary", () => {
     expect(summary.supplemental.families?.morpho?.sourceCount).toBe(4);
   });
 
+  it("degrades a family the run outcome retained even while its marker is fresh", async () => {
+    // SRC-SUPP-1: the fetch failed this run and the snapshot was retained, which
+    // the family row alone cannot show — its marker stays inside the fresh band.
+    const summary = await loadYieldHealthSummary(
+      makeDb([
+        yieldCacheRow("yield-rankings", NOW - 300, {
+          rankings: [],
+          provenance: {
+            safetySnapshot: { coverageRatio: 1, coveredCount: 1, trackedCount: 1, reason: null },
+            benchmark: { fetchedAt: NOW - 3600, ageSeconds: 3600, source: "tbill-cache", isFallback: false },
+          },
+        }),
+        ...supplementalFamilyRows(NOW - 3600),
+        {
+          key: "yield:supplemental-source-run:v1",
+          updated_at: NOW - 60,
+          value: JSON.stringify({
+            version: 1,
+            checkedAt: NOW - 60,
+            familyCacheResults: { morpho: "retained-previous", beefy: "published" },
+            degradedFamilies: ["morpho"],
+          }),
+        },
+        {
+          key: "yield-coverage-audit",
+          updated_at: NOW - 86400,
+          value: "{}",
+        },
+      ]),
+      NOW,
+      { "sync-yield-data": cron() },
+    );
+
+    expect(summary.supplemental.degradedFamilies).toEqual(["morpho"]);
+    expect(summary.supplemental.families?.morpho).toMatchObject({ status: "degraded", retained: true });
+    expect(summary.supplemental.families?.beefy).toMatchObject({ status: "healthy" });
+    expect(summary.supplemental.families?.beefy?.retained).toBe(false);
+    expect(summary.supplemental.degradedFamilyCount).toBe(1);
+    expect(summary.supplemental.freshFamilyCount).toBe(6);
+    expect(summary.supplemental.status).toBe("degraded");
+  });
+
   it("reports a fresh non-fallback USD feed with proxy-selecting rows as healthy", async () => {
     const rows = liveShapeSourceRows();
     const usd = {

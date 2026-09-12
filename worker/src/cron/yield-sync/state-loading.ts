@@ -55,6 +55,8 @@ export interface YieldSupplementalCacheMeta {
 export interface YieldSyncLoadedState {
   dlPools: Awaited<ReturnType<typeof loadDlStablecoinPools>>["pools"];
   dlPoolsMeta: YieldSourceInputMeta;
+  /** SRC-SUPP-3: DL pool rows dropped by the APY envelope during this load. */
+  dlApyEnvelopeRejectedCount: number;
   supplementalCandidates: ResolvedYieldCandidate[];
   supplementalMeta: YieldSupplementalCacheMeta;
   onChainHealthState: DeterministicOnChainHealthState;
@@ -270,7 +272,8 @@ export async function loadYieldSyncState(params: {
     loadRiskFreeRateRegistry(params.db),
     getCache(params.db, "stablecoins"),
   ]);
-  const { pools: dlPools, meta: dlPoolsMeta } = dlPoolsResult;
+  const { pools: dlPools, meta: dlPoolsMeta, envelopeRejectedCount } = dlPoolsResult;
+  const dlApyEnvelopeRejectedCount = envelopeRejectedCount ?? 0;
   const { candidates: supplementalCandidates, meta: supplementalMeta } = supplementalResult;
   const onChainHealthState = onChainHealthCache
     ? parseDeterministicOnChainHealthState(onChainHealthCache.value)
@@ -329,6 +332,7 @@ export async function loadYieldSyncState(params: {
   return {
     dlPools,
     dlPoolsMeta,
+    dlApyEnvelopeRejectedCount,
     supplementalCandidates,
     supplementalMeta,
     onChainHealthState,

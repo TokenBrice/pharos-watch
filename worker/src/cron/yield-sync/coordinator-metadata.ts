@@ -225,6 +225,8 @@ export function buildYieldSyncMetadata(input: {
   publishedRankingCount: number;
   previousPublishedRankingCount: number;
   dlPoolsMeta: YieldSourceInputMeta;
+  /** SRC-SUPP-3: DL pool rows dropped by the APY envelope during this run's load. */
+  dlApyEnvelopeRejectedCount: number;
   supplementalMeta: YieldSupplementalCacheMeta;
   /** B15 optional-family failures: reported here, never as a degradation reason. */
   optionalSourceFailures: readonly YieldOptionalSourceOutcome[];
@@ -264,6 +266,7 @@ export function buildYieldSyncMetadata(input: {
       previousPublishedRankingCount: input.previousPublishedRankingCount,
       publishedRankingCountDelta: input.publishedRankingCount - input.previousPublishedRankingCount,
       dlPoolCount: input.dlPoolsMeta.poolCount,
+      dlApyEnvelopeRejectedCount: input.dlApyEnvelopeRejectedCount,
       supplementalSourceMode: input.supplementalMeta.mode,
       supplementalSourceUpdatedAt: input.supplementalMeta.updatedAt,
       supplementalSourceAgeSeconds: input.supplementalMeta.ageSeconds,

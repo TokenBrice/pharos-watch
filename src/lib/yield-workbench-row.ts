@@ -114,7 +114,9 @@ export function deriveYieldRowPresentation(row: YieldWorkbenchRanking) {
 }
 
 export function getYieldWorkbenchDataSource(row: YieldWorkbenchRanking): string {
-  return row.dataSource;
+  // Pre-deploy summary rows carry no `dataSource`; the label helpers render an
+  // empty value rather than inventing one.
+  return row.dataSource ?? "";
 }
 
 /** Projected `sourceRole`; null when the row carries none. */

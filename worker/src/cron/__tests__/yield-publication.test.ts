@@ -18,9 +18,12 @@ import { type EvaluatedYieldSource } from "../yield-sync/evaluation";
 import {
   buildYieldRankingsPayloadFromEvaluatedSources,
   cleanupFalseLinkedVariantSourceSwitches,
+  loadPreviousYieldPublicationSnapshot,
   materializeYieldHistoryDaily,
   pruneYieldTables,
 } from "../yield-sync/publication";
+import { YIELD_METHODOLOGY_VERSION } from "@shared/lib/methodology-versions/yield-methodology";
+import { buildPreviewYieldRankingsArtifacts } from "../yield-sync/coordinator-persist";
 import type { PreviousYieldPublicationSnapshot } from "../yield-sync/publication";
 import { publishYieldCoordinatorResults } from "../yield-sync/coordinator-persist";
 import { publishYieldRowsAtomically, YIELD_PUBLICATION_PAYLOAD_OVERSIZE_CHARS } from "../yield-sync/publication-atomic-batch";
@@ -167,6 +170,107 @@ describe("publishYieldCoordinatorResults", () => {
       expect(sqlite.prepare("SELECT * FROM cache ORDER BY key").all()).toEqual(cache);
       expect(sqlite.prepare("SELECT state FROM yield_publication_generations WHERE generation_id = ?")
         .get(`yield-${startSec}`)).toEqual({ state: "failed" });
+    } finally {
+      sqlite.close();
+    }
+  });
+
+  it("publishes rank-change attribution from the previous cached payload", async () => {
+    const { sqlite, db } = createLatestSchemaSqlite();
+    try {
+      const startSec = Math.floor(FIXED_NOW.getTime() / 1000);
+      const benchmark = makeBenchmarkMeta();
+      const riskFreeRates = {
+        USD: benchmark,
+        EUR: null,
+        CHF: null,
+        GBP: null,
+        JPY: null,
+        MXN: null,
+        BRL: null,
+        AUD: null,
+        CAD: null,
+        RUB: null,
+        TRY: null,
+        SGD: null,
+      };
+      // The cached publication ranked three coins; the run below re-ranks them so
+      // the served comparator sees a real move for two and no move for one.
+      const previousRanking = (id: string, name: string, publishedRank: number, pys: number, currentApy: number) => ({
+        id,
+        name,
+        currentApy,
+        pharosYieldScore: pys,
+        publishedRank,
+        safetyScore: 80,
+      });
+      sqlite
+        .prepare("INSERT INTO cache (key, value, updated_at) VALUES (?, ?, ?)")
+        .run(
+          "yield-rankings",
+          JSON.stringify({
+            updatedAt: startSec - 3600,
+            methodology: { version: YIELD_METHODOLOGY_VERSION },
+            rankings: [
+              previousRanking("coin-a", "Coin A", 2, 60, 5),
+              previousRanking("coin-b", "Coin B", 1, 90, 9),
+              previousRanking("coin-c", "Coin C", 3, 20, 2),
+            ],
+          }),
+          startSec - 3600,
+        );
+
+      const sources: EvaluatedYieldSource[] = [
+        makeEvaluatedSource({ id: "coin-a", symbol: "A", sourceKey: "defillama:coin-a:now", currentApy: 6, pharosYieldScore: 95 }),
+        makeEvaluatedSource({ id: "coin-b", symbol: "B", sourceKey: "defillama:coin-b:now", currentApy: 7, pharosYieldScore: 50 }),
+        makeEvaluatedSource({ id: "coin-c", symbol: "C", sourceKey: "defillama:coin-c:now", currentApy: 2, pharosYieldScore: 20 }),
+      ];
+      const previousYieldPublicationSnapshot = await loadPreviousYieldPublicationSnapshot(db);
+      expect(previousYieldPublicationSnapshot.methodologyVersion).toBe(YIELD_METHODOLOGY_VERSION);
+
+      const { previewRankingsPayload, publicationViews } = buildPreviewYieldRankingsArtifacts({
+        evaluatedSources: sources,
+        bestSourceKeyByCoin: new Map(sources.map((source) => [source.id, source.sourceKey])),
+        riskFreeRate: benchmark.rate,
+        riskFreeRateMeta: benchmark,
+        riskFreeRates,
+        dlPoolsMeta: makeYieldSourceMeta(),
+        safetySnapshot: makeSafetySnapshotMeta(),
+        medianApy: 4.5,
+        startSec,
+        previousPublication: {
+          rankings: previousYieldPublicationSnapshot.rankings,
+          methodologyVersion: previousYieldPublicationSnapshot.methodologyVersion ?? null,
+        },
+      });
+
+      const result = await publishYieldCoordinatorResults({
+        db,
+        previewRankingsPayload,
+        evaluatedSources: sources,
+        publicationViews,
+        startSec,
+        degradationReasons: [],
+        resolvedCount: sources.length,
+        rowsRejected: 0,
+        divergenceFlags: 0,
+        sourceSwitches: 0,
+        previousYieldPublicationSnapshot,
+      });
+      expect(result).toMatchObject({ ok: true });
+
+      const cacheRow = sqlite
+        .prepare("SELECT value FROM cache WHERE key = ?")
+        .get("yield-rankings") as { value: string } | undefined;
+      const published = JSON.parse(cacheRow?.value ?? "{}") as {
+        rankings: Array<{ id: string; rankChangeAttribution: unknown }>;
+      };
+      const attributionById = new Map(published.rankings.map((row) => [row.id, row.rankChangeAttribution]));
+      // coin-a rose 2 -> 1 and coin-b fell 1 -> 2 under the served comparator.
+      expect(attributionById.get("coin-a")).toMatchObject({ previousRank: 2, rankDelta: 1 });
+      expect(attributionById.get("coin-b")).toMatchObject({ previousRank: 1, rankDelta: -1 });
+      // coin-c did not move, so nothing is attributed.
+      expect(attributionById.get("coin-c") ?? null).toBeNull();
     } finally {
       sqlite.close();
     }

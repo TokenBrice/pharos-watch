@@ -714,14 +714,20 @@ function buildProtocolQueueItem(
 function buildVenueRiskConfigMissingQueueItem(
   missing: VenueRiskConfigMissing,
 ): CoverageAuditQueueItem {
-  const publishedRowDerived = (missing.stablecoinIds?.length ?? 0) > 0;
+  // SRC-SUPP-4: a merged candidate carries both a covered-pool aggregate and
+  // the published rows that resolved to the same venue slug.
+  const publishedRowCount = missing.stablecoinIds?.length ?? 0;
+  const poolDerived = missing.examplePools.length > 0;
+  const detail = publishedRowCount > 0
+    ? poolDerived
+      ? `${missing.poolCount} covered high-TVL pool(s) and ${publishedRowCount} published row(s) resolve to unknown venue risk; add a reviewed registry entry or alias.`
+      : `${publishedRowCount} published row(s) above the high-TVL floor resolve to unknown venue risk; add a reviewed registry entry or alias.`
+    : `${missing.poolCount} covered high-TVL pool(s) resolve to unknown venue risk; add a reviewed registry entry or alias.`;
   return {
     id: queueId("venue-risk-config-missing", missing.project),
     kind: "venue-risk-config-missing" as const,
     title: missing.project,
-    detail: publishedRowDerived
-      ? `${missing.poolCount} published row(s) above the high-TVL floor resolve to unknown venue risk; add a reviewed registry entry or alias.`
-      : `${missing.poolCount} covered high-TVL pool(s) resolve to unknown venue risk; add a reviewed registry entry or alias.`,
+    detail,
     actionHint: "accept" as const,
     project: missing.project,
     poolCount: missing.poolCount,
@@ -1045,10 +1051,29 @@ export function identifyCoverageGaps(
   const poolDerivedVenueProjects = new Set(
     poolDerivedVenueCandidates.map((candidate) => normalizeProtocolProjectKey(candidate.project)),
   );
+  const publishedVenueCandidates = buildPublishedVenueRiskConfigMissing(options.publishedVenueRows ?? []);
+  const publishedVenueByProject = new Map(
+    publishedVenueCandidates.map((candidate) => [normalizeProtocolProjectKey(candidate.project), candidate]),
+  );
+  // SRC-SUPP-4: a project can be both a covered pool and a published-row venue.
+  // First-wins filtering dropped the row-derived attribution — the publishing
+  // assets and their unreviewed source keys — from such a project, so the two
+  // views merge instead: the pool aggregation keeps the examples and the
+  // published rows contribute the asset ids and source keys.
   const venueRiskConfigMissing = [
-    ...poolDerivedVenueCandidates,
-    ...buildPublishedVenueRiskConfigMissing(options.publishedVenueRows ?? [])
-      .filter((candidate) => !poolDerivedVenueProjects.has(normalizeProtocolProjectKey(candidate.project))),
+    ...poolDerivedVenueCandidates.map((candidate) => {
+      const published = publishedVenueByProject.get(normalizeProtocolProjectKey(candidate.project));
+      return published == null
+        ? candidate
+        : {
+            ...candidate,
+            stablecoinIds: published.stablecoinIds,
+            sourceKeys: published.sourceKeys,
+          };
+    }),
+    ...publishedVenueCandidates.filter(
+      (candidate) => !poolDerivedVenueProjects.has(normalizeProtocolProjectKey(candidate.project)),
+    ),
   ];
 
   return {
