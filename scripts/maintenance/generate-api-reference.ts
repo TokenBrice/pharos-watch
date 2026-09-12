@@ -73,7 +73,7 @@ export const CURATED_OPERATION_NOTES: Readonly<Record<string, string>> = {
   digestArchive: "Returns the index of available dated digest snapshots.",
   digestSnapshot: "Returns one digest snapshot selected by date.",
   snapshotsIndex: "Returns the dates available in the public daily snapshot archive.",
-  snapshotsDateJson: "Returns the full public snapshot captured for one date.",
+  snapshotsDateJson: "Returns the full public snapshot captured for one date. Historical report-v5 cards from methodologies before 9.15 may retain a valid nullable `stressStateDigest`; archive validation accepts only that retired field while preserving the original payload and ETag. Current report producers remain strict. The same compatibility applies to dated coin projections.",
   snapshotDateStablecoinStablecoinId: "Returns one stablecoin projection from a dated public snapshot.",
   health: "Provides the unauthenticated availability canary; it is not the operator status dashboard.",
   publicStatusHistory: "Returns a bounded, public-safe status timeline.",

@@ -2,6 +2,8 @@
 
 Safety Score V9 is the sole active stablecoin safety model. It publishes evidence-backed grades from A+ through F, with NR reserved for assets whose required facts cannot be bounded honestly.
 
+> **Agent navigation** — Methodology Identity · V9 Model · Canonical Publication · API · Consumers · History · Frontend.
+
 ## Methodology Identity
 
 - Active model: <!-- GENERATED-START: report-cards-active-model -->`v9`<!-- GENERATED-END: report-cards-active-model -->
