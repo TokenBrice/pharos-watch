@@ -138,6 +138,12 @@ export function buildYieldRankChangeAttribution(
     return params.originalRow.rankChangeAttribution ?? null;
   }
 
+  // A payload published under a different methodology version cannot be scored by
+  // this one: its `pharosYieldScore` came from other rules, so any delta compares
+  // two methodologies rather than movement in this row's evidence. Serve no
+  // movement instead of a fabricated one (B7 rollout).
+  if (params.methodologyChanged) return null;
+
   const previousPys = finiteNumber(params.originalRow.pharosYieldScore);
   const livePys = finiteNumber(params.hydratedRow.pharosYieldScore);
   const pysDelta = previousPys != null && livePys != null ? roundDelta(livePys - previousPys) : null;
