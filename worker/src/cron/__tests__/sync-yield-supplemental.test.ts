@@ -644,6 +644,8 @@ describe("syncYieldSupplemental", () => {
     });
 
     const result = await syncYieldSupplemental({} as D1Database, undefined, new Map());
+    expect(result.status).toBe("degraded");
+    expect(result.itemCount).toBeGreaterThan(0);
 
     expect(
       vi.mocked(setCacheIfNewer).mock.calls.some((call) => call[1] === "yield:supplemental-sources:v1:vaultsFyi"),
@@ -1084,7 +1086,7 @@ describe("syncYieldSupplemental", () => {
 
     const result = await syncYieldSupplemental({} as D1Database, undefined, new Map());
 
-    expect(result.status).toBeUndefined();
+    expect(result.status).toBe("degraded");
     expect(result.itemCount).toBe(1);
 
     const beefyCacheCall = vi

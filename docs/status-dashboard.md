@@ -679,7 +679,7 @@ Data is sourced from the admin-only `GET /api/status` payload. The worker supple
 Renders in the Pipeline "Reserves" tab after `ReserveSyncHealthCard` and before `MetadataIntegrityCard`; Liquidity Health is in the separate "Markets" tab. It compares:
 
 - 24h configured canonical issuance-chain mint/burn net flow from `mint_burn_hourly`
-- 24h matching chain-supply delta from the cached stablecoins payload's `chainCirculating[canonicalChainId].current - circulatingPrevDay`
+- 24h matching chain-supply delta from the cached stablecoins payload's `chainCirculating` entry (`current - circulatingPrevDay`), resolving its explicit `chainId` or legacy display label through the shared chain registry. Missing or non-finite values and ambiguous duplicate chain entries remain `insufficient-source`.
 
 Each row shows:
 
