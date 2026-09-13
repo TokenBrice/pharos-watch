@@ -108,6 +108,8 @@ Workflow YAML is the source of truth. The main validation files are `.github/wor
 
 For deployment/worktree operating procedure, secrets, and rollback, see [Deployment Process](./deployment-process.md).
 
+Same-repository actions and reusable workflows use GitHub’s `$/` references, binding their definitions to the workflow commit rather than mutable checkout contents. Workspace checkouts remain required for npm, scripts, and build inputs. Runners, including any `CI_VALIDATE_RUNNER` override, must support this syntax (Actions runner 2.336.0 or newer).
+
 CI shape:
 
 1. Internal-docs-only PRs run verified-link, source-path, doc-sync, and the generated `AGENTS.md` mirror check. `docs/editorial-style.md` is excluded from this lane so its registered generated module is checked by the full static artifact selection.

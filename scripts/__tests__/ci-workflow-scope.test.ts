@@ -13,7 +13,7 @@ describe("CI workflow scope", () => {
     const steps = workflow.jobs["pages-release"].steps as Array<{
       uses?: string; run?: string; with?: Record<string, unknown>; env?: Record<string, string>;
     }>;
-    const setup = steps.find((step) => step.uses === "./.github/actions/setup-workspace");
+    const setup = steps.find((step) => step.uses === "$/.github/actions/setup-workspace");
     expect(setup?.with?.["bootstrap-generated"]).toBe("false");
     expect(setup?.with?.["next-cache"]).toBeUndefined();
     expect(setup?.with?.["next-cache-save"]).toBeUndefined();
@@ -41,7 +41,7 @@ describe("CI workflow scope", () => {
 
     expect(preflight.some((step) => step.run?.includes("generate-pr-workflow-matrix.ts --preflight"))).toBe(true);
     expect(preflight.some((step) => step.run?.includes("generate-pr-workflow-matrix.ts --matrix"))).toBe(true);
-    expect(preflight.some((step) => step.uses === "./.github/actions/setup-workspace")).toBe(false);
+    expect(preflight.some((step) => step.uses === "$/.github/actions/setup-workspace")).toBe(false);
     expect(
       preflight.find((step) => step.uses?.startsWith("actions/checkout@"))?.with?.["fetch-depth"],
     ).toBe(0);
@@ -57,7 +57,7 @@ describe("CI workflow scope", () => {
     expect(workflow).toContain("merge-multiple: true");
     expect(workflow).toContain("include-hidden-files: true");
     expect(
-      prepareSteps.find((step) => step.uses === "./.github/actions/setup-workspace")?.with?.[
+      prepareSteps.find((step) => step.uses === "$/.github/actions/setup-workspace")?.with?.[
         "bootstrap-history"
       ],
     ).toBe("true");
@@ -125,14 +125,14 @@ describe("CI workflow scope", () => {
     expect(workflow.jobs.prepare).toBeUndefined();
     for (const job of ["full-static", "full-tests", "node26-proof"]) {
       const setup = workflow.jobs[job].steps?.find(
-        (step) => step.uses === "./.github/actions/setup-workspace");
+        (step) => step.uses === "$/.github/actions/setup-workspace");
       expect(workflow.jobs[job].needs).toBeUndefined();
       expect(setup?.with?.["workspace-artifact"]).toBeUndefined();
       expect(setup?.with?.["install-deps"]).toBeUndefined();
       expect(setup?.with?.["bootstrap-history"]).toBe("true");
     }
     expect(workflow.jobs["node26-proof"].steps?.find(
-      (step) => step.uses === "./.github/actions/setup-workspace")?.with?.["node-version"]).toBe("26");
+      (step) => step.uses === "$/.github/actions/setup-workspace")?.with?.["node-version"]).toBe("26");
   });
 
   it("runs the weekly gitleaks scan without npm installation", () => {
@@ -140,7 +140,7 @@ describe("CI workflow scope", () => {
       jobs: Record<string, { steps?: Array<{ uses?: string; run?: string; with?: Record<string, string> }> }>;
     };
     const steps = workflow.jobs.gitleaks.steps ?? [];
-    expect(steps.some((step) => step.uses === "./.github/actions/setup-workspace")).toBe(false);
+    expect(steps.some((step) => step.uses === "$/.github/actions/setup-workspace")).toBe(false);
     // Type stripping for the dependency-free runner needs the pinned Node 24.
     expect(steps.find((step) => step.uses?.startsWith("actions/setup-node@"))?.with).toMatchObject({
       "node-version": "24.16.0",

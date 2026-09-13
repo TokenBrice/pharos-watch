@@ -17,7 +17,7 @@ jobs:
         with:
           persist-credentials: false
           fetch-depth: 1
-      - uses: ./.github/actions/setup-workspace
+      - uses: $/.github/actions/setup-workspace
       - run: npm run check:safe-browsing
         env:
           GOOGLE_SAFE_BROWSING_API_KEY: ${{ secrets.GOOGLE_SAFE_BROWSING_API_KEY }}
