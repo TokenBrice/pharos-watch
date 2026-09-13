@@ -29,9 +29,14 @@
   "governanceQuality": "single-entity",
   "status": "pre-launch",
   "announcedDate": "2025-11",
-  "expectedLaunchDate": "2026",
+  "dateHistory": [
+    {
+      "date": "2026",
+      "setOn": "2026-09-13"
+    }
+  ],
   "launchPhase": "announced",
-  "launchPhaseDetail": "India's first regulated rupee stablecoin; built by Anq with Polygon; 1:1 INR collateralized by cash, fixed deposits, and government securities; designed to prevent USD liquidity outflow; two-tier framework complementing RBI's CBDC; Uniswap v4 whitelisting for compliance. The tentative January 2026 debut has passed with no RBI confirmation, no live circulating supply, and no ARC mention on anq.finance. Its status was uncertain as of mid-2026. In July 2026 the RBI signaled to a Parliamentary Standing Committee that it favors barring banks and regulated entities from exposure to private stablecoins, including rupee-backed ones, putting the project's regulated-INR-stablecoin premise in question",
+  "launchPhaseDetail": "India's first regulated rupee stablecoin; built by Anq with Polygon; 1:1 INR collateralized by cash, fixed deposits, and government securities; designed to prevent USD liquidity outflow; two-tier framework complementing RBI's CBDC; Uniswap v4 whitelisting for compliance. The tentative January 2026 debut has passed with no RBI confirmation, no live circulating supply, and no ARC mention on anq.finance. Its status was uncertain as of mid-2026. In July 2026 the RBI signaled to a Parliamentary Standing Committee that it favors barring banks and regulated entities from exposure to private stablecoins, including rupee-backed ones, putting the project's regulated-INR-stablecoin premise in question. As of September 13 2026 anq.finance still carries no ARC mention; the Parliamentary Standing Committee on Finance rescheduled its Department of Economic Affairs evidence session on virtual digital assets to September 16 2026. No source supports a 2026 launch, so Pharos removed the expectation on September 13 2026",
   "featuredContent": [
     {
       "type": "article",

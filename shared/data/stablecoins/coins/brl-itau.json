@@ -23,15 +23,20 @@
   ],
   "jurisdiction": {
     "country": "Brazil",
-    "regulator": "Banco Central do Brasil (Consulta Publica 111 pending)"
+    "regulator": "Banco Central do Brasil (Resolutions 519/520/521 in force since February 2 2026)"
   },
   "custodyModel": "institutional-regulated",
   "governanceQuality": "regulated-entity",
   "status": "pre-launch",
   "announcedDate": "2025-04-03",
-  "expectedLaunchDate": "2026",
+  "dateHistory": [
+    {
+      "date": "2026",
+      "setOn": "2026-09-13"
+    }
+  ],
   "launchPhase": "announced",
-  "launchPhaseDetail": "Itau Unibanco (Brazil's largest private bank by assets, ~5.6T BRL) is evaluating its own stablecoin. Head of Digital Assets Guto Antunes confirmed exploration at an industry event in Sao Paulo in April 2025: 'we are always open to understanding whether it makes sense for our clients to have a stablecoin, even one in real, within Itau'. Final peg-currency choice (BRL or USD) and product timeline are gated on Brazil's regulatory output via BCB Consulta Publica 111. Itau already participates in the DREX wholesale CBDC pilot, providing distribution-rail experience; ticker not yet announced. Pharos tracks BRL as the most likely first launch given the Brazilian retail base, but the editorial summary documents the open USD option. In May 2026, BCB Resolution 561 (effective Oct 1 2026) banned authorised FX providers from using stablecoins or crypto to settle cross-border remittances, tightening the regulatory backdrop the launch is gated on.",
+  "launchPhaseDetail": "Itau Unibanco (Brazil's largest private bank by assets, ~5.6T BRL) is evaluating its own stablecoin. Head of Digital Assets Guto Antunes confirmed exploration at an industry event in Sao Paulo in April 2025: 'we are always open to understanding whether it makes sense for our clients to have a stablecoin, even one in real, within Itau'. Brazil's virtual-asset framework (Consultas Publicas 109-111) was finalised as BCB Resolutions 519, 520, and 521 in November 2025 and took effect on February 2 2026; peg-currency choice (BRL or USD) and product timeline remain undisclosed. Itau already participates in the DREX wholesale CBDC pilot, providing distribution-rail experience; ticker not yet announced. Pharos tracks BRL as the most likely first launch given the Brazilian retail base, but the editorial summary documents the open USD option. In May 2026, BCB Resolution 561 (effective Oct 1 2026) banned authorised FX providers from using stablecoins or crypto to settle cross-border remittances, tightening the regulatory backdrop. At Blockchain.RIO on August 13 2026 Antunes said stablecoins and tokenised deposits must coexist, without committing to an Itau-issued token. No source has given a launch timeline since the April 2025 remark, so Pharos removed the 2026 expectation on September 13 2026.",
   "featuredContent": [
     {
       "type": "article",

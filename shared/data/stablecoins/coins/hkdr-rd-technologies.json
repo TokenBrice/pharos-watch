@@ -2,7 +2,7 @@
   "id": "hkdr-rd-technologies",
   "name": "RD Technologies HKDR",
   "symbol": "HKDR",
-  "oneLiner": "HKDR is RD InnoTech's pre-launch HKD stablecoin, in HKMA sandbox since 2024 but not in the first April 2026 license batch; H2 2026 candidate.",
+  "oneLiner": "HKDR is RD InnoTech's pre-launch HKD stablecoin, in HKMA sandbox since 2024 but not in the first April 2026 licence batch; no launch date supported by sources.",
   "flags": {
     "backing": "rwa-backed",
     "pegCurrency": "HKD",
@@ -34,11 +34,14 @@
     {
       "date": "2026-H1",
       "setOn": "2026-05-12"
+    },
+    {
+      "date": "2026-H2",
+      "setOn": "2026-09-13"
     }
   ],
-  "expectedLaunchDate": "2026-H2",
   "launchPhase": "auditing",
-  "launchPhaseDetail": "Issued by RD InnoTech Limited (a subsidiary of RD Technologies, founded by former HKMA chief executive Norman Chan); admitted to the HKMA stablecoin issuer sandbox in the first July 2024 cohort. Raised $40M in Series A2 (July 30 2025, led by ZA Global) and signed a Memorandum of Understanding with ZA Bank for HKDR reserve custody and potential distribution pending regulatory approval, the first major collaboration between a licensed HK virtual bank and a stablecoin development company. Hong Kong Stablecoins Ordinance took effect August 1 2025; 36 formal applications were received by the September deadline. HKMA granted its first two stablecoin licences on April 10 2026 to Anchorpoint Financial (FRS01) and HSBC (FRS02). RD InnoTech was not in the first batch. HSBC plans its HKD stablecoin launch for H2 2026; a second licence wave is expected and RD InnoTech, with its early sandbox participation, $40M war chest, and ZA Bank partnership, remains among the credible next-round candidates. HK$25M minimum paid-up capital and 100%+ reserve backing requirements already met under sandbox conditions.",
+  "launchPhaseDetail": "Issued by RD InnoTech Limited (a subsidiary of RD Technologies, founded by former HKMA chief executive Norman Chan); admitted to the HKMA stablecoin issuer sandbox in the first July 2024 cohort. Raised $40M in Series A2 (July 30 2025, led by ZA Global) and signed a Memorandum of Understanding with ZA Bank for HKDR reserve custody and potential distribution pending regulatory approval, the first major collaboration between a licensed HK virtual bank and a stablecoin development company. Hong Kong Stablecoins Ordinance took effect August 1 2025; 36 formal applications were received by the September deadline. HKMA granted its first two stablecoin licences on April 10 2026 to Anchorpoint Financial (FRS01) and HSBC (FRS02). RD InnoTech was not in the first batch. HSBC plans its HKD stablecoin launch for H2 2026; a second licence wave is expected and RD InnoTech, with its early sandbox participation, $40M war chest, and ZA Bank partnership, remains among the credible next-round candidates. HK$25M minimum paid-up capital and 100%+ reserve backing requirements already met under sandbox conditions. As of September 13 2026 the HKMA register (last revised April 23 2026) still lists only the two April licensees, and RD Technologies' 2026 press releases cover Africa expansion and awards without mentioning HKDR. No source supports an H2 2026 launch, so Pharos removed the expectation on September 13 2026.",
   "featuredContent": [
     {
       "type": "article",

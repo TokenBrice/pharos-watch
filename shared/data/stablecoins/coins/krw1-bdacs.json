@@ -64,7 +64,7 @@
   "announcedDate": "2025-09",
   "expectedLaunchDate": "2026",
   "launchPhase": "beta",
-  "launchPhaseDetail": "Pilot phase following successful September 2025 proof of concept; not yet in public circulation. BDACS is South Korea's regulated digital-asset custodian; Woori Bank holds the won reserves and participated directly in the PoC. Initial deployment on Avalanche (cited by KISA for reliability in public-sector use); KRW1 expanded to Polygon in December 2025 for broader payments, remittances, and enterprise reach. October 2025 MoU with Circle positions KRW1 for deployment on Arc (Circle's new Layer 1), where it joins national stablecoin issuers from Japan, Brazil, Mexico, and the Philippines. February 2026 Plume partnership positions KRW1 as Korean institutional settlement rail for tokenized RWA. May 2026 Aptos Foundation partnership brings KRW1 to its first non-EVM chain, leveraging Aptos's payment infrastructure for cross-border remittances and RWA tokenisation. A February 2026 MoU with Com2uS Holdings targets KRW1-based payment infrastructure on the XPLA/CONX chain. Korea's Digital Asset Basic Act (the gate for commercial launch) was excluded from the National Assembly's pre-recess agenda on May 12 2026, with debate not expected to resume until a new parliamentary session after the June 3 elections, pushing any enactment into H2 2026 or later. Commercial launch contingent on that framework.",
+  "launchPhaseDetail": "Pilot phase following successful September 2025 proof of concept; not yet in public circulation. BDACS is South Korea's regulated digital-asset custodian; Woori Bank holds the won reserves and participated directly in the PoC. Initial deployment on Avalanche (cited by KISA for reliability in public-sector use); KRW1 expanded to Polygon in December 2025 for broader payments, remittances, and enterprise reach. October 2025 MoU with Circle positions KRW1 for deployment on Arc (Circle's new Layer 1), where it joins national stablecoin issuers from Japan, Brazil, Mexico, and the Philippines. February 2026 Plume partnership positions KRW1 as Korean institutional settlement rail for tokenized RWA. May 2026 Aptos Foundation partnership brings KRW1 to its first non-EVM chain, leveraging Aptos's payment infrastructure for cross-border remittances and RWA tokenisation. A February 2026 MoU with Com2uS Holdings targets KRW1-based payment infrastructure on the XPLA/CONX chain. KRW1 is live on Aptos with 30M tokens per rwa.xyz, which reported 141.8M KRW1 (about $97K) across Polygon, Aptos, Plume, Ethereum, and BNB Chain with 33 holders on September 13 2026. On September 7 2026 BDACS adopted LayerZero's OFT standard to unify that supply across chains, and on September 8 agreed card-payment rails with XBITU. Korea's Digital Asset Basic Act (the gate for commercial launch) was excluded from the National Assembly's pre-recess agenda on May 12 2026; as of September 3 2026 the unified government bill had still not been introduced, with a first public hearing planned for the end of September. Commercial launch remains contingent on that framework.",
   "featuredContent": [
     {
       "type": "article",
@@ -100,6 +100,13 @@
       "title": "BDACS and Aptos team up to expand KRW1 stablecoin ecosystem",
       "description": "KRW1 expands beyond EVM chains via Aptos Foundation partnership; Aptos cited for low-cost payments, remittances, and real-world asset tokenisation infrastructure.",
       "source": "The Crypto Times"
+    },
+    {
+      "type": "blog",
+      "url": "https://layerzero.network/blog/bdacs-selects-layerzero-oft-standard-for-krw1",
+      "title": "BDACS selects LayerZero OFT standard for KRW1",
+      "description": "LayerZero's account of the omnichain supply design and the chains where KRW1 is live.",
+      "source": "LayerZero"
     }
   ],
   "milestones": [
@@ -177,6 +184,27 @@
       "title": "Korea's finance ministry targets Digital Asset Basic Act passage in the second half of 2026",
       "description": "The Ministry of Economy and Finance set a target of passing the Digital Asset Basic Act in H2 2026, the framework that would authorise won-pegged stablecoin issuers and gate KRW1's commercial launch. The Bank of Korea and the Financial Services Commission remain split over whether issuance should be restricted to bank-majority entities.",
       "sourceUrl": "https://koreatechdesk.com/korea-stablecoin-digital-asset-act-fintech-banks"
+    },
+    {
+      "date": "2026-09-03",
+      "type": "regulatory",
+      "title": "Unified Digital Asset Basic Act bill still not introduced; first public hearing set for late September",
+      "description": "National Policy Committee chair Yoo Dong-soo says the FSC's government bill has not yet arrived, ten private-member bills remain pending, and the bank 50%-plus-one consortium rule is unresolved. The Democratic Party plans a first public hearing at the end of September 2026.",
+      "sourceUrl": "https://www.edaily.co.kr/News/Read?newsId=04159046645576512"
+    },
+    {
+      "date": "2026-09-07",
+      "type": "partnership",
+      "title": "BDACS adopts LayerZero's OFT standard to run KRW1 as a single omnichain supply",
+      "description": "LayerZero says KRW1 will use the Omnichain Fungible Token standard for one unified supply across connected chains, with Stargate executing transfers. The post lists KRW1 as live on Ethereum, Avalanche, and Circle's Arc.",
+      "sourceUrl": "https://layerzero.network/blog/bdacs-selects-layerzero-oft-standard-for-krw1"
+    },
+    {
+      "date": "2026-09-08",
+      "type": "partnership",
+      "title": "BDACS and XBITU agree to build KRW1 card-payment rails",
+      "description": "Singapore-based XBITU is to enable KRW1 spending at Visa and Mastercard merchants and through Apple Pay and Google Pay via automatic conversion, starting with a domestic beta. No launch date was given.",
+      "sourceUrl": "https://www.dataeconomy.co.kr/news/articleView.html?idxno=42517"
     }
   ]
 }

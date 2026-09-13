@@ -38,7 +38,7 @@
   ],
   "expectedLaunchDate": "2026-H2",
   "launchPhase": "launching-soon",
-  "launchPhaseDetail": "Latin America's largest stock exchange (B3/Sao Paulo) is developing B3RL, its own BRL settlement stablecoin for tokenized-asset trading. At B3's Tokenization Day (May 26-27 2026), coverage indicated a later-2026 / H2 2026 window for B3RL and the tokenized-asset registry; the prior H1 2026 window has elapsed with no on-chain deployment visible. Stablecoin backing is expected to include cash and government bonds, with Polygon cited in Brazilian press but ticker B3RL not yet officially confirmed by B3 IR/CVM.",
+  "launchPhaseDetail": "Latin America's largest stock exchange (B3/Sao Paulo) is developing B3RL, its own BRL settlement stablecoin for tokenized-asset trading. At B3's Tokenization Day (May 26-27 2026), coverage indicated a later-2026 / H2 2026 window for B3RL and the tokenized-asset registry; the prior H1 2026 window has elapsed with no on-chain deployment visible. At Expert XP on July 23-24 2026 B3 placed the launch between August and September 2026, and its Q2 2026 results note (August 11) confirmed infrastructure testing of B3RL had begun, which is the first B3-owned confirmation of the ticker. Backing is expected to be mainly cash and Tesouro Nacional securities; Polygon is cited only in Brazilian press. No deployment was visible as of September 13 2026.",
   "featuredContent": [
     {
       "type": "article",
@@ -66,6 +66,13 @@
       "title": "B3 lançará stablecoin em reais ainda neste semestre",
       "description": "B3 OTC and digital-assets director Humberto Costa says the B3RL settlement stablecoin, built on Polygon, will launch in H1 2026, with the tokenization platform following in H2.",
       "source": "InvestNews"
+    },
+    {
+      "type": "article",
+      "url": "https://borainvestir.b3.com.br/noticias/empresas/b3-registra-crescimento-de-12-na-receita-no-segundo-trimestre-de-2026/",
+      "title": "B3 registra crescimento de 12% na receita no segundo trimestre de 2026",
+      "description": "B3's results note confirming that B3RL infrastructure testing has started.",
+      "source": "Bora Investir (B3)"
     }
   ],
   "milestones": [
@@ -96,6 +103,20 @@
       "title": "B3 director confirms B3RL launches \"in the coming months\" at Expert XP 2026",
       "description": "Director Felipe Paiva said B3 launches B3RL in the coming months, with asset tokenization to follow in early 2027; corroborated by Jornal do Comércio on July 24.",
       "sourceUrl": "https://cointelegraph.com.br/news/expert-xp-2026-tokenization"
+    },
+    {
+      "date": "2026-07-24",
+      "type": "milestone",
+      "title": "B3 narrows the B3RL launch window to August-September 2026",
+      "description": "Coverage of Expert XP 2026 reports B3 director Felipe Paiva placing the B3RL launch between August and September 2026, with backing mainly in cash and Tesouro Nacional securities and tokenised assets to follow in early 2027.",
+      "sourceUrl": "https://webitcoin.com.br/b3-acelera-plano-do-b3rl-e-prepara-ativos-tokenizados-em-2027/"
+    },
+    {
+      "date": "2026-08-11",
+      "type": "testnet",
+      "title": "B3's Q2 2026 results note confirms infrastructure testing of B3RL has begun",
+      "description": "B3's own Bora Investir results summary states the company started testing the infrastructure of B3RL, its stablecoin, as a step toward asset tokenisation. It is the first B3-owned source to name the B3RL ticker.",
+      "sourceUrl": "https://borainvestir.b3.com.br/noticias/empresas/b3-registra-crescimento-de-12-na-receita-no-segundo-trimestre-de-2026/"
     }
   ]
 }
