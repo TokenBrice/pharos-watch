@@ -1,8 +1,8 @@
 {
   "id": "pusd-polaris",
-  "name": "Polaris USD",
-  "symbol": "pUSD",
-  "oneLiner": "pUSD is Polaris's pre-launch Liquity-style CDP stablecoin minted against pETH; a Stability Pool routes borrower interest and liquidation flows to holders.",
+  "name": "Polaris USDp",
+  "symbol": "USDp",
+  "oneLiner": "USDp (formerly pUSD) is Polaris's pre-launch Liquity-style CDP stablecoin minted against pETH; a Stability Pool routes interest and liquidations to holders.",
   "flags": {
     "backing": "crypto-backed",
     "governance": "decentralized",
@@ -32,7 +32,7 @@
     }
   ],
   "launchPhase": "testnet",
-  "launchPhaseDetail": "Public testnet open on Sepolia (connect via app.testnet.polarisfinance.io); security review in progress with professional audits upcoming per the site roadmap; mainnet date uncommitted; polarisfinance.io explicitly states no date is set and prioritises security over speed, so the earlier 2026-Q4 expectation was retired on 2026-08-05. Public comms (blog and press) quiet since late April 2026 while testnet infrastructure remains live.",
+  "launchPhaseDetail": "Public testnet open on Sepolia at testnet.polaris.finance (the earlier app.testnet.polarisfinance.io host no longer resolves); official documentation is live at docs.polaris.finance with commits through September 10 2026, and the protocol now labels the asset USDp rather than pUSD. Security review in progress with professional audits upcoming per the site roadmap; mainnet date uncommitted; polarisfinance.io explicitly states no date is set and prioritises security over speed, so the earlier 2026-Q4 expectation was retired on 2026-08-05. Blog and press quiet since late April 2026.",
   "featuredContent": [
     {
       "type": "tweet",
@@ -62,6 +62,13 @@
       "title": "The Path to the North Star",
       "description": "TokenBrice traces Polaris's origins from Robert Lauko's bonding-curve research to today's three-pillar mission: counterparty-free yield, ETH-correlated alternatives, and restoring DeFi credibility against a backdrop where only $184.79M of the $338.9B stablecoin supply is non-freezable.",
       "source": "Polaris Finance Blog"
+    },
+    {
+      "type": "blog",
+      "url": "https://docs.polaris.finance/core-assets/usdp",
+      "title": "USDp - Polaris Documentation",
+      "description": "Official reference for the native Polaris dollar: collateral, minimum collateral ratio, and the Earn Vault.",
+      "source": "Polaris Docs"
     }
   ],
   "milestones": [
@@ -91,6 +98,13 @@
       "title": "TokenBrice publishes 'The Path to the North Star' founder narrative",
       "description": "Long-form post outlining Polaris's three-pillar mission (counterparty-free yield, ETH-correlated yield alternatives, restoring DeFi credibility) and tracing the protocol's lineage to Robert Lauko's bonding-curve research; mainnet timeline still uncommitted.",
       "sourceUrl": "https://polarisfinance.io/blog/path-to-the-north-star/"
+    },
+    {
+      "date": "2026-06-22",
+      "type": "announcement",
+      "title": "Polaris documentation renames pUSD to USDp",
+      "description": "The official docs at docs.polaris.finance describe USDp as the native Polaris dollar (115% minimum collateral ratio, pETH collateral, Earn Vault), and the Sepolia testnet app at testnet.polaris.finance uses the USDp label throughout. The docs repository was created on June 8 2026 and its diagrams switched to USDp wording on June 22; earlier blog posts on polarisfinance.io still say pUSD.",
+      "sourceUrl": "https://docs.polaris.finance/core-assets/usdp"
     }
   ]
 }

@@ -11,6 +11,13 @@
   "pegMechanism": "Coinbase Custom Stablecoin model: Coinbase handles issuance, redemption, custody, security, and compliance; USDF is designed to maintain a stable U.S. dollar value and relies on Coinbase-managed reserve backing and redemption mechanics",
   "mechanismArchetype": "fiat-cash",
   "detailProvider": "defillama",
+  "contracts": [
+    {
+      "chain": "solana",
+      "address": "5AMAA9JV9H97YYVxx8F6FsCMmTwXSuTTQneiup4RYAUQ",
+      "decimals": 6
+    }
+  ],
   "links": [
     {
       "label": "Website",
@@ -40,7 +47,7 @@
     }
   ],
   "launchPhase": "launching-soon",
-  "launchPhaseDetail": "Debut token on Coinbase's Custom Stablecoin platform; went live 2026-05-20 on Solana, 1:1 backed by USDC, with Coinbase Onramp fiat access; serves as the settlement asset for Flipcash's user-created currencies; the on-chain reserve contract (github.com/code-payments/flipcash-program) was audited by Sec3. Not yet listed on DefiLlama or CoinGecko under the Flipcash identity and no public Solana mint address disclosed, so it cannot yet enter Pharos runtime data. As of July 2026 the token remains in Coinbase-exchange operational-only backend testing (no trading, deposits, or withdrawals) and the May 2026 public-launch window has lapsed without a confirmed go-live.",
+  "launchPhaseDetail": "Debut token on Coinbase's Custom Stablecoin platform; went live 2026-05-20 on Solana, 1:1 backed by USDC, with Coinbase Onramp fiat access; serves as the settlement asset for Flipcash's user-created currencies; the on-chain reserve contract (github.com/code-payments/flipcash-program) was audited by Sec3. The Solana mint is 5AMAA9JV9H97YYVxx8F6FsCMmTwXSuTTQneiup4RYAUQ (6 decimals, pinned in the issuer's flipcash-program repository, created January 8 2026); on September 13 2026 it carried 2,875,649.80 USDF across 529 holders with no DEX pairs and no price on Jupiter. USDF is not listed on DefiLlama or CoinGecko, so it cannot yet enter Pharos runtime data. As of July 2026 the token remains in Coinbase-exchange operational-only backend testing (no trading, deposits, or withdrawals) and the May 2026 public-launch window has lapsed without a confirmed go-live.",
   "dependencies": [
     {
       "id": "usdc-circle",

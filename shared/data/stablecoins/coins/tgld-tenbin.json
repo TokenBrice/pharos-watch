@@ -58,7 +58,7 @@
   "announcedDate": "2026-01",
   "expectedLaunchDate": "2026",
   "launchPhase": "beta",
-  "launchPhaseDetail": "Live on Ethereum mainnet since 2026-02-10 in private beta (~$232K market cap, ~54 tGLD, ~36 holders). tGLD is a synthetic gold debt-note from Tenbin AssetCo (BVI) SPC: USDC-collateralized with gold exposure hedged via CME futures, KYC-gated mint/redeem, redeemable in USD stablecoin (no physical metal). Its only public market is a dormant Uniswap V4 tGLD/USDC pool, so CoinGecko's price updates are stale (multi-day) and currently fail Pharos's gold price-freshness gate. Live tracking begins once a usable public price feed exists. A staked variant stGLD (ERC-4626) and testnet sibling FX tokens (tBRL, tMXN) exist; in May 2026 Tenbin deprecated LayerZero following internal security audits and migrated tGLD (and the FX siblings) exclusively to Chainlink CCIP.",
+  "launchPhaseDetail": "Live on Ethereum mainnet since 2026-02-10 in private beta (about $611K market cap, 139.74 tGLD, 74 holders on September 12 2026, up from ~54 tGLD and ~36 holders in June). tGLD is a synthetic gold debt-note from Tenbin AssetCo (BVI) SPC: USDC-collateralized with gold exposure hedged via CME futures, KYC-gated mint/redeem, redeemable in USD stablecoin (no physical metal). Its only public market is a dormant Uniswap V4 tGLD/USDC pool, so CoinGecko's price updates are stale (multi-day) and currently fail Pharos's gold price-freshness gate. Live tracking begins once a usable public price feed exists. A staked variant stGLD (ERC-4626) exists, and sibling FX tokens tBRL and tMXN are now listed as Ethereum mainnet deployments in the Tenbin docs; in May 2026 Tenbin deprecated LayerZero following internal security audits and migrated tGLD (and the FX siblings) exclusively to Chainlink CCIP. Q3 2026 audit reports from Zellic and Verilog were published to the contracts repository on August 26 2026; the docs still describe the proof-of-reserves framework as coming soon.",
   "featuredContent": [
     {
       "type": "article",
@@ -108,6 +108,13 @@
       "title": "JPEG Trading launches RWA curation with tGLD as inaugural Euler asset",
       "description": "JPEG Trading launched an RWA curation business with tGLD as its inaugural curated asset, deploying the first DeFi lending vaults for tGLD on Euler with co-deployed capital.",
       "sourceUrl": "https://www.fintechlaunches.com/announcements/jpeg-trading-launches-rwa-curation-business-tgld-euler-defi-asset-underwriting-liquidity/"
+    },
+    {
+      "date": "2026-08-03",
+      "type": "audit",
+      "title": "Q3 2026 audits by Zellic and Verilog published with remediation reports",
+      "description": "Reports dated August 3 2026 (Zellic final, Verilog marked draft) with remediation notes were added to the tenbin-contracts repository on August 26 2026, followed by fix commits through August 31. Whether the remediated contracts are deployed on mainnet is not stated.",
+      "sourceUrl": "https://github.com/tenbinlabs/tenbin-contracts/tree/master/audit"
     }
   ]
 }

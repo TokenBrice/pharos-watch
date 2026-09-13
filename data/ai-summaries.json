@@ -2969,19 +2969,19 @@
   },
   "pusd-polaris": {
     "title": "Immutable CDP, Yield Included",
-    "text": "pUSD is Polaris Finance's pre-launch Liquity-style immutable CDP stablecoin on Ethereum, built by co-founders TokenBrice and 0xLuude as what they call the successor to Liquity's ethos: immutable core contracts, no admin keys, and no off-chain assets. pUSD is minted against pETH collateral via {{term:cdp}}CDPs{{/term}}, and the {{term:yield-bearing}}yield-bearing{{/term}} angle comes from protocol revenue: borrowing interest, swap fees, conversion gains, and DEX fees, rather than from depositing reserves into Aave. The public testnet is live on Sepolia with audits still ahead and no mainnet date set, since the team says it prioritises security over speed, which leaves it time to prove that you can ship immutability without sacrificing usability. For a market saturated with centralized fiat-backed tokens and yield products built on leverage, pUSD is a deliberate bet that there's still demand for the Liquity V1 philosophy, upgraded.",
-    "updatedAt": "2026-09-07",
+    "text": "USDp, the token Polaris's documentation now labels in place of the earlier pUSD name, is Polaris Finance's pre-launch Liquity-style immutable CDP stablecoin on Ethereum, built by co-founders TokenBrice and 0xLuude as what they call the successor to Liquity's ethos: immutable core contracts, no admin keys, and no off-chain assets. USDp is minted against pETH collateral via {{term:cdp}}CDPs{{/term}}, and the {{term:yield-bearing}}yield-bearing{{/term}} angle comes from protocol revenue: borrowing interest, swap fees, conversion gains, and DEX fees, rather than from depositing reserves into Aave. The public testnet is live on Sepolia with audits still ahead and no mainnet date set, since the team says it prioritises security over speed, which leaves it time to prove that you can ship immutability without sacrificing usability. For a market saturated with centralized fiat-backed tokens and yield products built on leverage, USDp is a deliberate bet that there's still demand for the Liquity V1 philosophy, upgraded.",
+    "updatedAt": "2026-09-13",
     "authoredBy": "ai",
-    "model": "claude-fable-5-1",
-    "factsAsOf": "2026-09-07"
+    "model": "claude-opus-5",
+    "factsAsOf": "2026-09-13"
   },
   "pgold-polaris": {
     "title": "Synthetic Gold, No Vault Required",
-    "text": "Polaris Gold is a pre-launch synthetic gold exposure that shares infrastructure with its sibling pUSD but pegs to gold rather than the dollar, with no physical backing and the protocol risk that comes with a decentralized design. Unlike XAUT or PAXG, which tokenize actual bars in Swiss vaults, pGOLD is minted from the same pETH collateral pool via {{term:cdp}}CDPs{{/term}} on Ethereum. This makes it arguably more decentralized than any gold-pegged token on the market, at the cost of carrying all the risks of crypto collateral in a down market. Whether DeFi users want synthetic gold exposure from immutable contracts instead of custodied metal from Tether or Paxos is an experiment Polaris is willing to run.",
-    "updatedAt": "2026-09-07",
+    "text": "GOLDp (labelled pGOLD in Polaris's earlier posts) is a pre-launch synthetic gold exposure that shares infrastructure with its sibling USDp but pegs to gold rather than the dollar, with no physical backing and the protocol risk that comes with a decentralized design. Unlike XAUT or PAXG, which tokenize actual bars in Swiss vaults, GOLDp is minted from the same pETH collateral pool via {{term:cdp}}CDPs{{/term}} on Ethereum. This makes it arguably more decentralized than any gold-pegged token on the market, at the cost of carrying all the risks of crypto collateral in a down market. Whether DeFi users want synthetic gold exposure from immutable contracts instead of custodied metal from Tether or Paxos is an experiment Polaris is willing to run.",
+    "updatedAt": "2026-09-13",
     "authoredBy": "ai",
-    "model": "claude-fable-5-1",
-    "factsAsOf": "2026-09-07"
+    "model": "claude-opus-5",
+    "factsAsOf": "2026-09-13"
   },
   "usg-tangent": {
     "title": "Productive Collateral, Dynamic Rates",
@@ -5951,11 +5951,11 @@
   },
   "rusd-revolut": {
     "title": "Revolut Dollar Precedent From EURR",
-    "text": "Revolut's USD stablecoin is still unannounced, and the August 2026 launch of its euro sibling made the shape of any dollar token considerably clearer, mostly by invalidating the assumption everyone was working from. The legal substrate looked settled: a MiCA CASP licence from CySEC in October 2025, plus Revolut's Bank-of-Lithuania EMI supplying the e-money-token issuer foundation MiCA Title IV requires. Then Revolut shipped EURR on August 26 and the issuer of record turned out to be Bridge Building S.A., the Luxembourg entity of Stripe-owned Bridge, under a CSSF licence, with Revolut Digital Assets Europe merely distributing. Revolut, holding every licence it needed to issue in-house, chose to rent the issuance instead. That reframes RUSD: the nearest live precedent for a Revolut dollar is a third-party regulated-issuer relationship, which trades balance-sheet control and reserve-disclosure ownership for speed to market. The counterparty question for RUSD therefore shifts to whether Revolut is content to have Stripe's infrastructure sitting between its 65 million users and their {{term:redemption}}redemption{{/term}} rights. Revolut's US path runs separately through an OCC charter application targeting a 2027 launch with stablecoin services from day one: third-party tokens, not confirmed own issuance. Ticker, chain, issuer entity, and reserve and {{term:custody}}custody{{/term}} disclosure model for a USD token all remain unannounced, and the euro launch suggests that reserve disclosure and custody will be the key uncertainties.",
-    "updatedAt": "2026-09-07",
+    "text": "Revolut's USD stablecoin is still unannounced, and the August 2026 launch of its euro sibling made the shape of any dollar token considerably clearer, mostly by invalidating the assumption everyone was working from. The legal substrate looked settled: a MiCA CASP licence from CySEC in October 2025, plus Revolut's Bank-of-Lithuania EMI supplying the e-money-token issuer foundation MiCA Title IV requires. Then Revolut shipped EURR on August 26 and the issuer of record turned out to be Bridge Building S.A., the Luxembourg entity of Stripe-owned Bridge, under a CSSF licence, with Revolut Digital Assets Europe merely distributing. Revolut, holding every licence it needed to issue in-house, chose to rent the issuance instead. That reframes RUSD: the nearest live precedent for a Revolut dollar is a third-party regulated-issuer relationship, which trades balance-sheet control and reserve-disclosure ownership for speed to market. The US path now has a regulatory document behind it: on September 2 2026 the OCC conditionally approved Revolut Bank US, N.A., with opening targeted for the first half of 2027, and the decision records that the bank will offer Revolut-branded stablecoins through a third party, will not be the issuer, and will not manage reserves. That is the EURR template written into a charter, and why Pharos now carries 2027 as the expected launch. Ticker, chain, issuer entity, and reserve and {{term:custody}}custody{{/term}} disclosure model for a USD token all remain unannounced, with {{term:redemption}}redemption{{/term}} rights sitting behind whichever issuer Revolut rents next.",
+    "updatedAt": "2026-09-13",
     "authoredBy": "ai",
-    "model": "claude-fable-5-1",
-    "factsAsOf": "2026-09-07",
+    "model": "claude-opus-5",
+    "factsAsOf": "2026-09-13",
     "sources": [
       {
         "label": "FinTech Futures: Revolut launches euro-backed stablecoin EURR",
@@ -5964,6 +5964,10 @@
       {
         "label": "Blockhead: Revolut launches EURR as it cuts off Tether across Europe",
         "url": "https://www.blockhead.co/2026/08/27/revolut-launches-euro-stablecoin-eurr-as-it-cuts-off-tether-across-europe/"
+      },
+      {
+        "label": "OCC Corporate Decision #1390: Revolut Bank US, N.A.",
+        "url": "https://www.occ.gov/topics/charters-and-licensing/interpretations-and-decisions/2026/cd1390.pdf"
       }
     ]
   },
@@ -6751,15 +6755,19 @@
   },
   "tgld-tenbin": {
     "title": "Synthetic Gold Debt-Note",
-    "text": "tGLD is Tenbin's tokenized gold note, but unlike PAXG or XAUT it holds no vaulted metal. Each token is a Tenbin AssetCo (BVI) debt-note representing the U.S.-dollar value of one troy ounce of gold, collateralized by USDC and hedged with CME gold futures rather than allocated bullion. Mint and redemption are KYC-gated through a Controller and a backend signer that holds the on-chain minter role, and redemptions settle in a USD stablecoin instead of physical metal. Launched on Ethereum mainnet in February 2026 after a $7M Galaxy Ventures-led seed and four security audits, it remains in private beta with a small float, its only public market a near-dormant Uniswap V4 pool and no independent proof-of-reserves attestation. In May 2026 Tenbin retired LayerZero and moved tGLD's cross-chain messaging to Chainlink CCIP; a staked yield variant (stGLD) and testnet FX siblings (tBRL, tMXN) round out the roadmap. Pharos lists tGLD as pre-launch until its public price feed updates frequently enough to clear the gold pricing-freshness gate.",
-    "updatedAt": "2026-09-07",
+    "text": "tGLD is Tenbin's tokenized gold note, but unlike PAXG or XAUT it holds no vaulted metal. Each token is a Tenbin AssetCo (BVI) debt-note representing the U.S.-dollar value of one troy ounce of gold, collateralized by USDC and hedged with CME gold futures rather than allocated bullion. Mint and redemption are KYC-gated through a Controller and a backend signer that holds the on-chain minter role, and redemptions settle in a USD stablecoin instead of physical metal. Launched on Ethereum mainnet in February 2026 after a $7M Galaxy Ventures-led seed and four security audits, it remains in private beta with a small float (under 150 tGLD across a few dozen holders in mid-September 2026, roughly triple June's figure), its only public market a near-dormant Uniswap V4 pool and no independent proof-of-reserves attestation, which the docs still describe as coming soon. In May 2026 Tenbin retired LayerZero and moved tGLD's cross-chain messaging to Chainlink CCIP, and in August it published a second audit round from Zellic and Verilog with remediation notes; a staked yield variant (stGLD) and the FX siblings tBRL and tMXN, now on Ethereum mainnet, round out the line-up. Pharos lists tGLD as pre-launch until its public price feed updates frequently enough to clear the gold pricing-freshness gate.",
+    "updatedAt": "2026-09-13",
     "authoredBy": "ai",
-    "model": "claude-fable-5-1",
-    "factsAsOf": "2026-09-07",
+    "model": "claude-opus-5",
+    "factsAsOf": "2026-09-13",
     "sources": [
       {
         "label": "CoinDesk: Galaxy Digital leads $7M investment in Tenbin",
         "url": "https://www.coindesk.com/business/2026/01/27/galaxy-digital-leads-usd7m-investment-in-tenbin-to-build-improved-tokenized-gold-and-fx-markets"
+      },
+      {
+        "label": "Tenbin contracts repository: audit reports",
+        "url": "https://github.com/tenbinlabs/tenbin-contracts/tree/master/audit"
       }
     ]
   },
@@ -6901,11 +6909,11 @@
   },
   "eurr-revolut": {
     "title": "The Neobank That Rented Its Own Coin",
-    "text": "EURR is live, and Pharos tracks it pre-launch anyway. Revolut launched it on August 26 2026 as the first product of a stablecoin programme long assumed to be arriving in dollars or sterling, phased into Denmark, Poland, and Portugal with the rest of the EEA promised later in the year. The structural surprise is the issuer: Bridge Building S.A., the Luxembourg arm of Stripe-owned Bridge, holds the EMI licence and MiCA authorisation from the CSSF, while Revolut Digital Assets Europe distributes under its CySEC permission and Revolut's own Lithuanian EMI stays out of issuance. Europe's biggest neobank built the distribution and outsourced the balance sheet: the same Bridge Open Issuance model behind MoneyGram's and Deel's tokens, now wearing a consumer brand with 80 million customers behind it. The timing is not subtle either: EURR arrived as Revolut finished pulling Tether's USDt from European retail on August 31, so the euro rail it removed and the euro rail it added are the same shelf. Supply went from a few hundred tokens at launch to more than a million within two weeks, which is a rollout rather than adoption. MiCA does not force reserve composition, custodians, or {{term:attestation}}attestation{{/term}} cadence into public view; all remain undisclosed, and no accepted price source resolves the token, which is why it sits here rather than in the tracked set. A stablecoin distributed by a bank, issued by a payments company, and priced by nobody is a fair snapshot of where regulated euro tokens currently are.",
-    "updatedAt": "2026-09-07",
+    "text": "EURR is live, and Pharos tracks it pre-launch anyway. Revolut launched it on August 26 2026 as the first product of a stablecoin programme long assumed to be arriving in dollars or sterling, phased into Denmark, Poland, and Portugal with the rest of the EEA promised later in the year. The structural surprise is the issuer: Bridge Building S.A., the Luxembourg arm of Stripe-owned Bridge, holds the EMI licence and MiCA authorisation from the CSSF, while Revolut Digital Assets Europe distributes under its CySEC permission. Europe's biggest neobank built the distribution and outsourced the balance sheet. EURR also arrived as Revolut finished pulling Tether's USDt from European retail on August 31, so the euro rail it removed and the euro rail it added are the same shelf. Supply went from a few hundred tokens at launch to more than a million within two weeks, then stalled at about 1.67 million EURR through mid-September; the Polygon deployment holds three tokens. Bridge's reserve page is the first disclosure of what stands behind the token: reserves equal to supply, held entirely as cash deposits at credit institutions, redeemable at par to an EEA IBAN within two business days. Custodian names and an independent {{term:attestation}}attestation{{/term}} remain unpublished, and no accepted price source resolves the token, which is why it sits here rather than in the tracked set. A stablecoin distributed by a bank, issued by a payments company, and priced by nobody is a fair snapshot of where regulated euro tokens currently are.",
+    "updatedAt": "2026-09-13",
     "authoredBy": "ai",
-    "model": "claude-fable-5-1",
-    "factsAsOf": "2026-09-07",
+    "model": "claude-opus-5",
+    "factsAsOf": "2026-09-13",
     "sources": [
       {
         "label": "FinTech Futures: Revolut launches euro-backed stablecoin EURR",
@@ -6918,6 +6926,14 @@
       {
         "label": "DefiLlama: Revolut Euro (stablecoin 436)",
         "url": "https://stablecoins.llama.fi/stablecoin/436"
+      },
+      {
+        "label": "Bridge: EURR reserve disclosure",
+        "url": "https://reserves.bridge.xyz/eurr"
+      },
+      {
+        "label": "Bridge Building S.A.: EURR MiCA white paper (July 2026)",
+        "url": "https://reserves.bridge.xyz/white-papers/bridge-mica-white-paper-eurr-july-2026.pdf"
       }
     ]
   }

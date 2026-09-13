@@ -29,9 +29,15 @@
   "governanceQuality": "regulated-entity",
   "status": "pre-launch",
   "announcedDate": "2025-10-23",
-  "expectedLaunchDate": "2026",
+  "expectedLaunchDate": "2027",
+  "dateHistory": [
+    {
+      "date": "2026",
+      "setOn": "2026-09-13"
+    }
+  ],
   "launchPhase": "announced",
-  "launchPhaseDetail": "Companion to the already-tracked RGBP (Revolut GBP). Revolut secured a MiCA CASP licence from Cyprus (CySEC) on Oct 23 2025 and operates an existing EMI licence in Lithuania, the legal foundations for issuing e-money tokens under MiCA Title IV. In October 2025, Revolut launched fee-free 1:1 USD↔stablecoin swaps (USDC/USDT on Ethereum, Solana, and Tron) for its 65M users; stablecoin payment volumes on the platform surged 156% in 2025 to ~$10.5B. In February 2026, the FCA selected Revolut as one of 4 firms (from 20 applicants) for a UK stablecoin payment testing pilot, though that sandbox is specifically for a GBP token, not USD. Revolut received a full UK banking licence from the PRA (Mar 11 2026) and filed an OCC national bank charter application for Revolut Bank US, N.A. (Mar 5 2026, targeting a 2027 US launch with built-in stablecoin access). Revolut's stablecoin programme shipped on August 26 2026, but in euro rather than dollars. EURR launched on Ethereum in a phased rollout to Denmark, Poland, and Portugal, with Solana, Arbitrum, Optimism, Avalanche, Injective, TON, and Sui support planned, alongside the removal of Tether's USDt from Revolut's European retail offering by August 31 2026. Critically, EURR is issued by Bridge Building S.A., the Luxembourg entity of Stripe-owned Bridge, with Revolut Digital Assets Europe authorised through CySEC. Revolut's Lithuanian EMI was not the issuer of record, contrary to earlier reporting. That correction matters for RUSD: the nearest live precedent for a Revolut dollar token is a third-party MiCA issuer relationship rather than in-house EMT issuance. A Revolut-branded proprietary USD stablecoin still has not been confirmed, and its ticker, chain selection, issuer entity, and reserve disclosure model all remain unannounced.",
+  "launchPhaseDetail": "Companion to the already-tracked RGBP (Revolut GBP). Revolut secured a MiCA CASP licence from Cyprus (CySEC) on Oct 23 2025 and operates an existing EMI licence in Lithuania, the legal foundations for issuing e-money tokens under MiCA Title IV. In October 2025, Revolut launched fee-free 1:1 USD↔stablecoin swaps (USDC/USDT on Ethereum, Solana, and Tron) for its 65M users; stablecoin payment volumes on the platform surged 156% in 2025 to ~$10.5B. In February 2026, the FCA selected Revolut as one of 4 firms (from 20 applicants) for a UK stablecoin payment testing pilot, though that sandbox is specifically for a GBP token, not USD. Revolut received a full UK banking licence from the PRA (Mar 11 2026) and filed an OCC national bank charter application for Revolut Bank US, N.A. (Mar 5 2026, targeting a 2027 US launch with built-in stablecoin access). Revolut's stablecoin programme shipped on August 26 2026, but in euro rather than dollars. EURR launched on Ethereum in a phased rollout to Denmark, Poland, and Portugal, with Solana, Arbitrum, Optimism, Avalanche, Injective, TON, and Sui support planned, alongside the removal of Tether's USDt from Revolut's European retail offering by August 31 2026. Critically, EURR is issued by Bridge Building S.A., the Luxembourg entity of Stripe-owned Bridge, with Revolut Digital Assets Europe authorised through CySEC. Revolut's Lithuanian EMI was not the issuer of record, contrary to earlier reporting. That correction matters for RUSD: the nearest live precedent for a Revolut dollar token is a third-party MiCA issuer relationship rather than in-house EMT issuance. On September 2 2026 the OCC granted preliminary conditional approval for Revolut Bank US, N.A. (Corporate Decision #1390), with opening targeted for the first half of 2027; the decision records that the bank plans to offer Revolut-branded stablecoins through a third-party issuer and will not manage reserves, matching the Bridge template used for EURR. A Revolut-branded USD stablecoin still has not been confirmed, and its ticker, chain selection, issuer entity, and reserve disclosure model all remain unannounced. Pharos moved the expected launch to 2027 on September 13 2026 on the strength of the OCC timeline.",
   "featuredContent": [
     {
       "type": "article",
@@ -66,6 +72,13 @@
       "title": "Revolut's US bank to offer stablecoin services alongside FDIC-insured products: Reuters",
       "description": "Reuters reports Revolut's planned US national bank will integrate stablecoin services with FDIC-insured accounts from launch; own-issuance of a Revolut USD token remains unconfirmed.",
       "source": "The Block"
+    },
+    {
+      "type": "article",
+      "url": "https://www.occ.gov/topics/charters-and-licensing/interpretations-and-decisions/2026/cd1390.pdf",
+      "title": "OCC Corporate Decision #1390: conditional approval of Revolut Bank US, N.A.",
+      "description": "Regulatory decision recording that Revolut-branded stablecoins would be issued by a third party with no reserves managed by the bank.",
+      "source": "OCC"
     }
   ],
   "milestones": [
@@ -124,6 +137,13 @@
       "title": "Revolut completes removal of Tether USDt from its European retail offering",
       "description": "Revolut finishes the phased withdrawal of USDt for European retail customers that began in July 2026, coinciding with the EURR rollout and leaving MiCA-compliant tokens as the euro-stablecoin option on the platform.",
       "sourceUrl": "https://www.blockhead.co/2026/08/27/revolut-launches-euro-stablecoin-eurr-as-it-cuts-off-tether-across-europe/"
+    },
+    {
+      "date": "2026-09-02",
+      "type": "regulatory",
+      "title": "OCC conditionally approves Revolut Bank US; stablecoins to be issued by a third party",
+      "description": "OCC Corporate Decision #1390 grants preliminary conditional approval to charter Revolut Bank US, N.A., subject to at least $95M paid-in capital, FDIC insurance, and Federal Reserve approval; management targets opening in the first half of 2027. The decision states the bank plans to offer Revolut-branded stablecoins through a third party, will not be the issuer, and will not manage any reserves, limiting its role to marketing, access, and custody via Revolut Ltd.",
+      "sourceUrl": "https://www.occ.gov/topics/charters-and-licensing/interpretations-and-decisions/2026/cd1390.pdf"
     }
   ]
 }

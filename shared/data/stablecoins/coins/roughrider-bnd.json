@@ -30,9 +30,15 @@
   },
   "status": "pre-launch",
   "announcedDate": "2025-10",
-  "expectedLaunchDate": "2026-09",
+  "expectedLaunchDate": "2026",
+  "dateHistory": [
+    {
+      "date": "2026-09",
+      "setOn": "2026-09-13"
+    }
+  ],
   "launchPhase": "beta",
-  "launchPhaseDetail": "IC unanimously approved bank-to-bank pilot March 25; risk rated low-to-moderate; 10 local banks interested; cost-neutral model; Fiserv contract negotiations still ongoing (not yet signed). Roughrider will be the first white-label deployment on Fiserv's FIUSD platform (Solana); FIUSD itself slipped from end-2025 to July 2026 (Fiserv CEO, June 3 2026), compressing the runway to Roughrider's September 2026 pilot target, which remains planned",
+  "launchPhaseDetail": "IC unanimously approved bank-to-bank pilot March 25; risk rated low-to-moderate; 10 local banks interested; cost-neutral model; Fiserv contract negotiations still ongoing (not yet signed). Roughrider will be the first white-label deployment on Fiserv's FIUSD platform (Solana); FIUSD itself slipped from end-2025 to July 2026 (Fiserv CEO, June 3 2026), and that July window passed with no go-live announcement and no mention of FIUSD in Fiserv's Q2 2026 results. As of September 13 2026 the Bank of North Dakota's Roughrider page still describes a not-yet-started beta test under a non-binding, zero-cost agreement with total investment to be determined. No source has announced a start, so Pharos widened the September 2026 expectation to the year on September 13 2026",
   "featuredContent": [
     {
       "type": "tweet",
@@ -103,7 +109,7 @@
       "type": "milestone",
       "title": "Fiserv CEO confirms FIUSD platform slips to July 2026; Roughrider September pilot still planned",
       "description": "At the Bernstein Strategic Decisions conference, Fiserv's CEO confirmed the FIUSD platform goes live in July 2026 (from an earlier end-2025 target), compressing the runway to Roughrider's September 2026 state-bank pilot.",
-      "sourceUrl": "https://paymentweek.com/2026-6-3-fiserv-stablecoin-arrives-next-month/"
+      "sourceUrl": "https://www.paymentsdive.com/news/fiserv-stablecoin-arrives-next-month/821877/"
     }
   ]
 }

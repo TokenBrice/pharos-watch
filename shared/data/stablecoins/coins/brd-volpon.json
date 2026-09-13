@@ -21,16 +21,21 @@
   ],
   "jurisdiction": {
     "country": "Brazil",
-    "regulator": "Banco Central do Brasil (Consulta Publica 111 pending)"
+    "regulator": "Banco Central do Brasil (Resolutions 519/520/521 in force since February 2 2026)"
   },
   "custodyModel": "institutional-regulated",
   "governanceQuality": "single-entity",
   "collateralQuality": "rwa",
   "status": "pre-launch",
   "announcedDate": "2026-01-06",
-  "expectedLaunchDate": "2026",
+  "dateHistory": [
+    {
+      "date": "2026",
+      "setOn": "2026-09-13"
+    }
+  ],
   "launchPhase": "announced",
-  "launchPhaseDetail": "Announced Jan 6 2026 on 'Cripto na Real' by former Brazil central bank deputy governor Tony Volpon (BCB 2015-16, ex-UBS/Nomura MD); to be issued by CF Inovacao (co-founded with Jose Carneiro in 2023), targeting institutional investors who want on-chain access to Selic-rate yield (~15%); positioned as the first BRL-pegged token to explicitly share government-debt yield with holders, competing against Crown's BRLV which raised a $13.5M Series A from Paradigm in December 2025; no formal product docs or deployment timeline yet; awaiting BCB Resolution implementation under Public Consultation 111 (FX-classification regime effective February 2 2026); BCB Resolution 561 (published Apr 30 2026, effective Oct 1 2026) further bans stablecoin/crypto settlement in regulated cross-border FX, tightening the regulatory backdrop",
+  "launchPhaseDetail": "Announced Jan 6 2026 on 'Cripto na Real' by former Brazil central bank deputy governor Tony Volpon (BCB 2015-16, ex-UBS/Nomura MD); to be issued by CF Inovacao (co-founded with Jose Carneiro in 2023), targeting institutional investors who want on-chain access to Selic-rate yield (~15%); positioned as the first BRL-pegged token to explicitly share government-debt yield with holders, competing against Crown's BRLV which raised a $13.5M Series A from Paradigm in December 2025; no formal product docs or deployment timeline yet; the BCB framework from Public Consultations 109-111 is now in force as Resolutions 519/520/521 (effective February 2 2026); BCB Resolution 561 (published Apr 30 2026, effective Oct 1 2026) further bans stablecoin/crypto settlement in regulated cross-border FX, tightening the regulatory backdrop. As of September 13 2026 the CF Inovacao website lists no BRD product page and no source has given a timeline, so Pharos removed the 2026 expectation",
   "featuredContent": [
     {
       "type": "article",

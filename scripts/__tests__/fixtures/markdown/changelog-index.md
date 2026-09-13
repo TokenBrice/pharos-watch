@@ -6,6 +6,19 @@ description: "Weekly release notes for Pharos."
 
 # Changelog
 
+## 2026-09-07 to 2026-09-13
+
+Live reserve sync is rebuilt end to end while a free, keyless Safety Score feed opens on the API.
+
+- **Live reserve rebuild**: Phases 0 to 4 of the live reserve upgrade: valuation defects fixed (USD0 decimals, fxUSD pricing), hash-pinned assurance reports for PYUSD, USDG, USDP, GUSD, BRLA and FDUSD, and Sui, Tezos, Cardano and Hedera transports.
+- **Safety Score 9.47 to 9.49**: Inherited upstream reserve gaps count once per cause (open data points 1,280 to 733 on replay), unmapped live reserves cannot restore curated dependency weights, and DDR 4.5 reads the published mint posture.
+- **Yield 8.43**: Non-USD hurdles re-base onto the USD risk-free rate so a peg paying its own inflation earns no excess-yield credit (wiTRY 44 to 6); PYS is reframed as pay-for-risk with zone chips and an explicit non-recommendation.
+- **API access lanes**: GET /api/safety-grades serves one score and grade per coin without a key, self-serve key issuance is closed, and donors above USD 10 claim a non-expiring key by signing a Sign-In-With-Ethereum message.
+- **Security remediation**: A 57-finding review closed provider identity, freshness, supply completeness, scoring provenance and CI trust-boundary gaps; bad Chainlink rounds become evidence, and future or non-finite timestamps fail closed.
+- **Test and docs audit**: Suites across worker, shared, src and scripts moved from SQL-shaped mocks and prose pins to SQLite-backed, executed-effect assertions; a corpus audit corrected 103 source-verified drift claims across 42 documents.
+- **DEX pool memory**: Liquidity Score 6.4 keeps staged pools for 14 days with prices pinned to 24 hours so coverage stops flip-flopping on crawl timing; 19 GeckoTerminal-only chains gained CoinGecko onchain ids for census.
+- **Site and publication**: Resources split into four nav columns, the palette ranks page intents above coin matches, the digest exposes its monthly archive, automatic X posting of daily graphics was retired, and versions cap at two decimals.
+
 ## 2026-08-31 to 2026-09-06
 
 Global navigation and the depeg route are rebuilt while the browser registry drops from 1.52 MB to 247 KB.

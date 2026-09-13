@@ -31,7 +31,7 @@
   "announcedDate": "2025-09",
   "expectedLaunchDate": "2026-Q4",
   "launchPhase": "announced",
-  "launchPhaseDetail": "37-bank consortium across 15 countries (May 20 expansion added ~20 members incl. ABN Amro, Intesa Sanpaolo, Rabobank, Nordea, Raiffeisen Bank International, up from 17); Fireblocks selected as core infrastructure partner Apr 21; French Finance Minister Lescure publicly endorses project (Apr 17); EMI license application with De Nederlandsche Bank pending. Qivalis says it will launch immediately on approval; ERC-20F standard with built-in governance/AML/KYC; launching on Ethereum (primary), Polygon, Base with permissioned KYC layer; ticker not yet published by Qivalis; H2 2026 on track",
+  "launchPhaseDetail": "37-bank consortium across 15 countries (May 20 expansion added ~20 members incl. ABN Amro, Intesa Sanpaolo, Rabobank, Nordea, Raiffeisen Bank International, up from 17); Fireblocks selected as core infrastructure partner Apr 21; French Finance Minister Lescure publicly endorses project (Apr 17); EMI license application with De Nederlandsche Bank pending. Qivalis says it will launch immediately on approval; ERC-20F standard with built-in governance/AML/KYC; launching on Ethereum (primary), Polygon, Base with permissioned KYC layer; ticker not yet published by Qivalis. As of September 13 2026 qivalis.eu still states the EMI application is pending before DNB and that it does not issue electronic money; the H2 2026 target stands, and September 8 2026 secondary reports reaffirmed public Ethereum as the issuance chain without a Qivalis press release",
   "featuredContent": [
     {
       "type": "article",

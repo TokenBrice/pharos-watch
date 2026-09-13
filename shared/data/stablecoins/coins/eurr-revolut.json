@@ -8,7 +8,7 @@
     "pegCurrency": "EUR",
     "governance": "centralized"
   },
-  "collateral": "Reserve composition undisclosed. As a MiCA electronic-money token, EURR must be backed 1:1 by funds safeguarded under Title IV rules, but Bridge Building S.A. has published no reserve breakdown, custodian list, or attestation for the token.",
+  "collateral": "Bridge publishes a reserve disclosure for EURR at reserves.bridge.xyz/eurr: as of September 13 2026 it reports 1,674,916 EURR outstanding against EUR 1,674,916 of reserves, held 100% as cash deposits at credit institutions with no highly liquid financial instruments. The MiCA white paper (July 2026) commits Bridge Building S.A. to redemption at par to an EEA IBAN within two business days at no fee. No independent attestation or custodian list has been published.",
   "pegMechanism": "MiCA electronic-money token pegged 1:1 to the euro, issued on Ethereum by Bridge Building S.A. under a Luxembourg EMI licence and MiCA authorisation, and distributed to retail customers by Revolut Digital Assets Europe Ltd under its CySEC MiCA licence. Revolut applies no spread or fee on euro-to-EURR conversion; independent redemption terms outside the Revolut app are unpublished.",
   "mechanismArchetype": "fiat-cash",
   "detailProvider": "defillama",
@@ -32,7 +32,7 @@
   "announcedDate": "2026-08-26",
   "expectedLaunchDate": "2026",
   "launchPhase": "launching-soon",
-  "launchPhaseDetail": "EURR is live, not forthcoming. Pharos tracks it pre-launch only because it is not yet admissible to runtime data. Revolut launched the token on August 26 2026 as the first product of its stablecoin programme, in euro rather than the dollar or sterling tokens it had been expected to ship first. The issuer of record is Bridge Building S.A., the Luxembourg entity of Stripe-owned Bridge, holding an EMI licence and MiCA authorisation from the CSSF; Revolut Digital Assets Europe Ltd distributes the token under its own CySEC MiCA licence. This is a third-party issuer relationship, not in-house issuance from Revolut's Lithuanian EMI as earlier reporting had assumed. The token is an ERC-20 at 0x8e9c32a536ab623a2e0e9961bce6f5fe7504e084 on Ethereum (6 decimals, name \"Revolut Euro\"), with support for Solana, Arbitrum, Optimism, Avalanche, Injective, TON, and Sui announced as planned. Rollout is phased, reaching Denmark, Poland, and Portugal first with wider EEA availability targeted later in 2026, and Revolut charges no spread or fee on euro-to-EURR conversion. Supply grew from 366 EURR to 250,957 EURR in the first two days, held flat through August 31, then rose again through the first week of September to 1,671,782.16 EURR (about $1.94M) on September 6 2026. DefiLlama began tracking EURR as stablecoin id 436 on August 27 2026 and now carries that supply, but its price field is null. CoinGecko's revolut-euro has since picked up the Ethereum contract mapping and the matching total supply, yet it remains a preview listing returning no price and no market cap, /simple/price returns an empty object, and coins.llama.fi resolves neither the contract nor the CoinGecko id. Supply is measurable; no accepted source returns a fetchable price, so Pharos holds EURR pre-launch until a price path exists. Reserve composition, custodians, and attestation cadence are all undisclosed.",
+  "launchPhaseDetail": "EURR is live, not forthcoming. Pharos tracks it pre-launch only because it is not yet admissible to runtime data. Revolut launched the token on August 26 2026 as the first product of its stablecoin programme, in euro rather than the dollar or sterling tokens it had been expected to ship first. The issuer of record is Bridge Building S.A., the Luxembourg entity of Stripe-owned Bridge, holding an EMI licence and MiCA authorisation from the CSSF; Revolut Digital Assets Europe Ltd distributes the token under its own CySEC MiCA licence. This is a third-party issuer relationship, not in-house issuance from Revolut's Lithuanian EMI as earlier reporting had assumed. The token is an ERC-20 at 0x8e9c32a536ab623a2e0e9961bce6f5fe7504e084 on Ethereum (6 decimals, name \"Revolut Euro\"), with a second deployment on Polygon at 0x11b20f798b70df2201D8F550ADDcc3378b33dd4A holding 3 EURR, and Solana, Arbitrum, Optimism, Avalanche, Injective, TON, and Sui listed as intended networks in the MiCA white paper. That white paper set the public offer start at August 20 2026, six days before the app rollout. Rollout is phased, reaching Denmark, Poland, and Portugal first with wider EEA availability targeted later in 2026, and Revolut charges no spread or fee on euro-to-EURR conversion. Supply grew from 366 EURR to 250,957 EURR in the first two days, held flat through August 31, then rose again through the first week of September to 1,671,782.16 EURR (about $1.94M) on September 6 2026, then held effectively flat at 1,674,912.63 EURR on September 12. DefiLlama began tracking EURR as stablecoin id 436 on August 27 2026 and now carries that supply, but its price field is null. CoinGecko's revolut-euro has since picked up the Ethereum contract mapping and the matching total supply, yet it remains a preview listing returning no price and no market cap, /simple/price returns an empty object, and coins.llama.fi resolves neither the contract nor the CoinGecko id. Supply is measurable; no accepted source returns a fetchable price, so Pharos holds EURR pre-launch until a price path exists. Bridge's reserve page (reserves.bridge.xyz/eurr, updated September 13 2026) reports reserves of EUR 1,674,916 held entirely as cash deposits at credit institutions; custodian names and an independent attestation remain unpublished.",
   "featuredContent": [
     {
       "type": "article",
@@ -47,15 +47,43 @@
       "title": "Revolut Launches Euro Stablecoin EURR as It Cuts Off Tether Across Europe",
       "description": "Details the Bridge Building S.A. issuer structure and CSSF licensing, alongside Revolut's completion of its USDt withdrawal from European retail by August 31 2026.",
       "source": "Blockhead"
+    },
+    {
+      "type": "article",
+      "url": "https://reserves.bridge.xyz/eurr",
+      "title": "Revolut Euro (EURR) reserve disclosure",
+      "description": "Bridge's live reserve page: EURR outstanding, reserve total, asset composition, contract addresses, and redemption portal.",
+      "source": "Bridge"
+    },
+    {
+      "type": "article",
+      "url": "https://reserves.bridge.xyz/white-papers/bridge-mica-white-paper-eurr-july-2026.pdf",
+      "title": "EURR MiCA white paper (July 2026)",
+      "description": "Issuer identity, co-offeror, redemption terms, and intended networks as notified to ESMA.",
+      "source": "Bridge Building S.A."
     }
   ],
   "milestones": [
+    {
+      "date": "2026-08-20",
+      "type": "regulatory",
+      "title": "Bridge's MiCA white paper sets the EURR public offer start at August 20 2026",
+      "description": "The white paper, notified to ESMA on July 23 2026, names Bridge Building S.A. (CSSF EMI W00000024, CASP N00000012) as issuer and Revolut Digital Assets Europe Ltd as co-offeror through the Revolut app and Revolut X. Holders may redeem at par to an EEA IBAN within two business days at no fee. The paper lists Ethereum, Polygon, Solana, Arbitrum, Optimism, Avalanche, Injective, TON, and Sui as intended networks.",
+      "sourceUrl": "https://reserves.bridge.xyz/white-papers/bridge-mica-white-paper-eurr-july-2026.pdf"
+    },
     {
       "date": "2026-08-26",
       "type": "announcement",
       "title": "Revolut launches EURR on Ethereum, issued by Stripe's Bridge under MiCA",
       "description": "Revolut ships the first token of its stablecoin programme as the euro-denominated EURR, phased to customers in Denmark, Poland, and Portugal with wider EEA availability planned later in 2026. Bridge Building S.A. is the issuer of record under a Luxembourg EMI licence and MiCA authorisation from the CSSF, with Revolut Digital Assets Europe Ltd distributing under its CySEC MiCA licence. Support for Solana, Arbitrum, Optimism, Avalanche, Injective, TON, and Sui is planned, and Revolut applies no spread or fee on euro-to-EURR conversion.",
       "sourceUrl": "https://www.fintechfutures.com/blockchain-crypto-digital-assets/revolut-launches-euro-backed-stablecoin-eurr"
+    },
+    {
+      "date": "2026-08-26",
+      "type": "milestone",
+      "title": "EURR deployed on Polygon alongside Ethereum",
+      "description": "Polygon Labs confirms the Polygon deployment at 0x11b20f798b70df2201D8F550ADDcc3378b33dd4A. On-chain supply on Polygon was 3 EURR on September 13 2026, so the Ethereum contract carries effectively all circulating supply.",
+      "sourceUrl": "https://polygon.technology/blog/revolut-launches-eurr-a-euro-backed-stablecoin-on-polygon"
     },
     {
       "date": "2026-08-27",
@@ -70,6 +98,13 @@
       "title": "Revolut completes removal of Tether USDt from European retail alongside the EURR rollout",
       "description": "Revolut finishes the phased withdrawal of USDt for European retail customers that began in July 2026 with a purchase freeze and deposit block, leaving MiCA-compliant tokens including its own EURR as the euro-stablecoin option on the platform.",
       "sourceUrl": "https://www.blockhead.co/2026/08/27/revolut-launches-euro-stablecoin-eurr-as-it-cuts-off-tether-across-europe/"
+    },
+    {
+      "date": "2026-09-13",
+      "type": "milestone",
+      "title": "Bridge reserve page reports 1,674,916 EURR fully backed by cash deposits",
+      "description": "Bridge's live EURR reserve disclosure shows 1,674,916 EURR outstanding against EUR 1,674,916 of reserves, 100% in cash deposits at credit institutions and 0% in highly liquid financial instruments, with redemption routed through redeem.bridge.xyz. Supply has been effectively flat since September 6 2026 (1,671,782 to 1,674,913 EURR). No fetchable price path exists yet.",
+      "sourceUrl": "https://reserves.bridge.xyz/eurr"
     }
   ]
 }
