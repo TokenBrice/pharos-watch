@@ -2,9 +2,45 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { ACTIVE_IDS } from "@shared/lib/stablecoins/registry";
 import { SAFETY_SCORE_METHODOLOGY_VERSION } from "@shared/lib/methodology-versions/safety-score";
 import { mockD1 } from "@shared/test-utils/mock-d1";
-import { getDatasetFreshness } from "../derived-data";
+import { getDatasetFreshness, getMintBurnReconciliation } from "../derived-data";
 
 const NOW = 1_800_000_000;
+
+describe("getMintBurnReconciliation chain identity", () => {
+  it.each([
+    [{ Ethereum: { current: 110, circulatingPrevDay: 100 } }, 10],
+    [{ ethereum: { current: 110, circulatingPrevDay: 100 } }, 10],
+    [{ legacy: { chainId: "ethereum", current: 110, circulatingPrevDay: 100 } }, 10],
+    [{ Ethereum: { chainId: "base", current: 110, circulatingPrevDay: 100 } }, null],
+    [{ Ethereum: { current: 110 } }, null],
+    [{ Ethereum: { current: 110, circulatingPrevDay: null } }, null],
+    [{ Ethereum: { current: 110, circulatingPrevDay: 100 }, ethereum: { current: 110, circulatingPrevDay: 100 } }, null],
+  ])("resolves chain supply without inventing or duplicating history: %j", async (chainCirculating, delta) => {
+    const db = mockD1([
+      {
+        match: "SELECT value, updated_at FROM cache WHERE key = ?",
+        rows: [{
+          value: JSON.stringify({ peggedAssets: [{
+            id: "usdc-circle", symbol: "USDC", price: 1,
+            circulating: { peggedUSD: 1_000_000 }, chainCirculating,
+          }] }),
+          updated_at: NOW,
+        }],
+      },
+      {
+        match: "pharos:status-derived:mint-burn-24h",
+        rows: [{ stablecoin_id: "usdc-circle", chain_id: "ethereum", net_flow_usd: 10 }],
+      },
+      { match: "pharos:status-derived:mint-burn-first-hour-seek", rows: [] },
+    ]);
+    const result = await getMintBurnReconciliation(db, NOW);
+    expect(result?.rows).toHaveLength(1);
+    expect(result?.rows[0]).toMatchObject({
+      chainSupplyDelta24hUsd: delta,
+      status: delta === null ? "insufficient-source" : "ok",
+    });
+  });
+});
 
 afterEach(() => {
   vi.useRealTimers();

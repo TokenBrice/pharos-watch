@@ -1,6 +1,7 @@
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import { STATUS_RECONCILIATION_THRESHOLDS } from "@shared/lib/status-thresholds";
 import { getCirculatingRaw } from "@shared/lib/supply";
+import { resolveChainId } from "@shared/lib/chains";
 import type { MintBurnReconciliationRow, MintBurnReconciliationSummary, StatusResponse } from "@shared/types/status";
 import { buildInClause } from "../db";
 import { MINT_BURN_CONFIGS } from "../mint-burn-contracts";
@@ -247,6 +248,7 @@ export async function getMintBurnReconciliation(
       chainCirculating?: Record<
         string,
         {
+          chainId?: string;
           current?: number;
           circulatingPrevDay?: number;
         }
@@ -313,7 +315,13 @@ export async function getMintBurnReconciliation(
               ? "partial-history"
               : "full";
 
-      const chainSupply = canonicalChainId ? asset.chainCirculating?.[canonicalChainId] : undefined;
+      const matchingSupply = canonicalChainId
+        ? Object.entries(asset.chainCirculating ?? {}).filter(([label, data]) =>
+          data && ((typeof data.chainId === "string" ? resolveChainId(data.chainId) : null)
+            ?? resolveChainId(label)) === canonicalChainId)
+        : [];
+      // Ambiguous aliases must not double-count supply or invent missing history.
+      const chainSupply = matchingSupply.length === 1 ? matchingSupply[0]![1] : undefined;
       const current = chainSupply?.current;
       const prevDay = chainSupply?.circulatingPrevDay;
       if (
