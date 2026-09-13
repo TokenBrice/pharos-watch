@@ -71,7 +71,7 @@ jobs:
           persist-credentials: false
           fetch-depth: 0
           filter: blob:none
-      - uses: ./.github/actions/setup-workspace
+      - uses: $/.github/actions/setup-workspace
         with:
           bootstrap-history: "true"
           workspace-artifact: publish
@@ -90,7 +90,7 @@ jobs:
           persist-credentials: false
           fetch-depth: 0
           filter: blob:none
-      - uses: ./.github/actions/setup-workspace
+      - uses: $/.github/actions/setup-workspace
         with:
           browser-cache: ${{ matrix.lane == 'static' && needs.preflight.outputs.playwright_firefox_required || 'false' }}
           install-deps: "false"
@@ -139,7 +139,7 @@ jobs:
           persist-credentials: false
           fetch-depth: 0
           filter: blob:none
-      - uses: ./.github/actions/setup-workspace
+      - uses: $/.github/actions/setup-workspace
         with:
           bootstrap-generated: "false"
           install-deps: "false"

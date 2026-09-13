@@ -52,7 +52,7 @@ jobs:
           persist-credentials: false
           fetch-depth: 1
 
-      - uses: ./.github/actions/setup-workspace
+      - uses: $/.github/actions/setup-workspace
         with:
           browser-cache: "false"
           bootstrap-generated: "false"
@@ -104,7 +104,7 @@ jobs:
           persist-credentials: false
           fetch-depth: 1
 
-      - uses: ./.github/actions/setup-workspace
+      - uses: $/.github/actions/setup-workspace
         with:
           browser-cache: "true"
           install-playwright-firefox: "true"

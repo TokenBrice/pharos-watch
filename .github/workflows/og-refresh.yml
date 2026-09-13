@@ -17,7 +17,7 @@ jobs:
         with:
           fetch-depth: 0
           persist-credentials: false
-      - uses: ./.github/actions/setup-workspace
+      - uses: $/.github/actions/setup-workspace
         with:
           browser-cache: "true"
           install-playwright-chromium: "true"

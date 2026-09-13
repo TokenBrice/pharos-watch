@@ -174,7 +174,7 @@ describe("PR lane manifest", () => {
     expect(upload!.with.name).toContain("github.sha");
     for (const step of [upload, download]) expect(step!["continue-on-error"]).toBeUndefined();
     for (const job of ["validation", "critical-coverage"]) {
-      const setup = WORKFLOW.jobs[job].steps.find((step) => step.uses === "./.github/actions/setup-workspace");
+      const setup = WORKFLOW.jobs[job].steps.find((step) => step.uses === "$/.github/actions/setup-workspace");
       expect(setup!.with["workspace-artifact"]).toBe("restore");
       expect(setup!.with["install-deps"]).toBe("false");
     }

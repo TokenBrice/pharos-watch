@@ -41,7 +41,7 @@ jobs:
           fetch-depth: 0
           filter: blob:none
           persist-credentials: false
-      - uses: ./.github/actions/setup-workspace
+      - uses: $/.github/actions/setup-workspace
         with:
           node-version: "24.16.0"
           cache-npm: "false"
@@ -93,7 +93,7 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-      - uses: ./.github/actions/setup-workspace
+      - uses: $/.github/actions/setup-workspace
       - name: Check Worker migrations
         run: npm run check:migrations
       - name: Package Worker before D1 mutation
@@ -164,7 +164,7 @@ jobs:
           || needs.deploy-worker.result == 'success'
         )
       }}
-    uses: ./.github/workflows/pages-release.yml
+    uses: $/.github/workflows/pages-release.yml
     with:
       # Code deploys refresh digest/depeg/public-dataset snapshots so digest
       # detail pages, sitemap, and RSS do not regress to the committed
@@ -200,7 +200,7 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-      - uses: ./.github/actions/setup-workspace
+      - uses: $/.github/actions/setup-workspace
         with:
           node-version: "24.16.0"
           cache-npm: "false"

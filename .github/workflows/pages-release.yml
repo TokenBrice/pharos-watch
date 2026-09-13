@@ -45,7 +45,7 @@ jobs:
           fetch-depth: 0
           filter: blob:none
           persist-credentials: false
-      - uses: ./.github/actions/setup-workspace
+      - uses: $/.github/actions/setup-workspace
         with:
           bootstrap-generated: "false"
       - name: Materialize compile-input artifacts

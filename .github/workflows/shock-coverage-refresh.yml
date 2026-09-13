@@ -38,7 +38,7 @@ jobs:
           fetch-depth: 0
           persist-credentials: false
 
-      - uses: ./.github/actions/setup-workspace
+      - uses: $/.github/actions/setup-workspace
 
       # Measurement uses the hardcoded public Ethereum and Base RPC lists in
       # scripts/lib/mechanism-measurement/shock-targets.ts with per-endpoint

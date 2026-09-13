@@ -24,7 +24,7 @@ jobs:
         with:
           fetch-depth: 0
           persist-credentials: false
-      - uses: ./.github/actions/setup-workspace
+      - uses: $/.github/actions/setup-workspace
       - name: Export and normalize the production compiler input
         id: capture
         env:

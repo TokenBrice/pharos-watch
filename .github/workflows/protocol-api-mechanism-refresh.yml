@@ -71,7 +71,7 @@ jobs:
             fi
           fi
 
-      - uses: ./.github/actions/setup-workspace
+      - uses: $/.github/actions/setup-workspace
 
       - name: Capture protocol API mechanism evidence
         env:

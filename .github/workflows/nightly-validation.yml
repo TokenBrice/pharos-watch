@@ -22,7 +22,7 @@ jobs:
         with:
           persist-credentials: false
           fetch-depth: 0
-      - uses: ./.github/actions/setup-workspace
+      - uses: $/.github/actions/setup-workspace
         id: workspace
         with:
           bootstrap-history: "true"
@@ -54,7 +54,7 @@ jobs:
         with:
           persist-credentials: false
           fetch-depth: 0
-      - uses: ./.github/actions/setup-workspace
+      - uses: $/.github/actions/setup-workspace
         with:
           bootstrap-history: "true"
       - run: npm run test:all -- --shard=${{ matrix.shard }}/2
@@ -69,7 +69,7 @@ jobs:
         with:
           persist-credentials: false
           fetch-depth: 0
-      - uses: ./.github/actions/setup-workspace
+      - uses: $/.github/actions/setup-workspace
         with:
           bootstrap-history: "true"
           node-version: "26"
