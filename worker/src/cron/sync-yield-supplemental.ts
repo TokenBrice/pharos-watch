@@ -332,7 +332,7 @@ export async function syncYieldSupplemental(
     syncStartSec: startSec,
   });
 
-  return emptySnapshot
-    ? { status: "degraded", itemCount: 0, metadata }
+  return emptySnapshot || degradedFamilies.length > 0
+    ? { status: "degraded", itemCount: supplementalCandidatesWritten, metadata }
     : { itemCount: supplementalCandidatesWritten, metadata };
 }
