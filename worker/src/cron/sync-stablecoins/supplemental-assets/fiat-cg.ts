@@ -115,9 +115,6 @@ export async function fetchFiatCoinGeckoTokens(
                 {
                   ...(row.chainId ? { chainId: row.chainId } : {}),
                   current: row.current,
-                  circulatingPrevDay: 0,
-                  circulatingPrevWeek: 0,
-                  circulatingPrevMonth: 0,
                 },
               ]),
             );

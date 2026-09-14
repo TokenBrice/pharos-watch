@@ -322,3 +322,7 @@ The [DefiLlama list-supply invariant](./architecture.md#architectural-decision-r
 The **detail** endpoint (`stablecoins.llama.fi/stablecoin/{id}`) returns values in **native currency** (e.g. RUB for A7A5, EUR for EURC). The worker's `stablecoin-detail.ts` handler multiplies by `parsed.price` to convert these to USD before caching.
 
 Do not multiply list endpoint values by price; that would double-convert them.
+
+### Supplemental chain history
+
+Current-only on-chain supply packets omit per-chain `circulatingPrevDay`, `circulatingPrevWeek`, and `circulatingPrevMonth`; zero is reserved for an observed zero baseline. Publication and bounded packet restoration accept missing histories while validating any supplied values. Previous-cache loading removes synthetic chain history from legacy current-only on-chain packets before carry-forward. Chain alias normalization preserves unknown history, and chain summaries exclude missing historical pairs rather than counting the whole current balance as new supply. Mint/burn reconciliation leaves these rows `insufficient-source` until a real baseline is available.

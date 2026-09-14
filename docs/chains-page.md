@@ -80,7 +80,7 @@ Default sort is `totalUsd desc`.
 
 1. `QueryErrorNotice` (inline banner when error + stale data)
 2. `StaleDataBanner` when the chain snapshot is stale
-3. hero card (`ChainHero`) with supply, global share, 24h/7d/30d change (30d deltas and percentages use only chain rows with known previous-month anchors; all with dark-mode colors via `trendColor()`), health badge, `dark:invert` logo support, and the embedded Chain Health breakdown (the `HealthZone` factor grid) whose weight labels derive dynamically from exported constants in `shared/lib/chains/health.ts`
+3. hero card (`ChainHero`) with supply, global share, 24h/7d/30d change (deltas and percentages pair current supply only with known historical anchors for each window; missing coin history and chain windows with no pairs render as “—”, while explicit zero history remains known; all with dark-mode colors via `trendColor()`), health badge, `dark:invert` logo support, and the embedded Chain Health breakdown (the `HealthZone` factor grid) whose weight labels derive dynamically from exported constants in `shared/lib/chains/health.ts`
 4. `ShowYourWorkPanel` rendered immediately below the hero card, exposing the factor math
 5. stablecoin composition grid — rendered from `chainDetail.coins` when the chain summary exists; adaptive 2/3/4-column layout with 1-3 rows, optional `Others` aggregation when the chain has more coins than display cells, and dominant span only when a coin exceeds 35% share in a 3+ column layout
 6. backing-type breakdown — rendered from `chainDetail.coins`; unclassified coins shown as "Other" (zinc-colored) bucket; filter buttons update the stablecoin table by backing type

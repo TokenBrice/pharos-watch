@@ -154,9 +154,6 @@ export async function overlayFallbackCuratedAggregateSupply(
         {
           ...(row.chainId ? { chainId: row.chainId } : {}),
           current: row.current,
-          circulatingPrevDay: 0,
-          circulatingPrevWeek: 0,
-          circulatingPrevMonth: 0,
         },
       ]),
     );

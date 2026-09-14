@@ -73,6 +73,98 @@ describe("aggregateChains", () => {
     expect(ethereum.change30dPct).toBeCloseTo(0.25);
   });
 
+  it("keeps missing history unknown and pairs only known supply, including explicit zero", () => {
+    const input = makeInput({
+      detailChainId: "ethereum",
+      peggedAssets: [
+        { id: "usdt-tether", symbol: "USDT", price: 1, chainCirculating: { ethereum: { current: 100 } } },
+        { id: "usdc-circle", symbol: "USDC", price: 1, chainCirculating: {
+          ethereum: { current: 50, circulatingPrevDay: 0, circulatingPrevWeek: 40, circulatingPrevMonth: 25 },
+        } },
+      ],
+    });
+    const result = aggregateChains(input);
+    expect(result.chains[0]).toMatchObject({
+      totalUsd: 150, change24h: 50, change7d: 10, change7dPct: 0.25, change30d: 25, change30dPct: 1,
+    });
+    expect(result.globalChange7dPct).toBe(0.25);
+    expect(result.chainDetail?.coins[0]).toMatchObject({
+      change24h: null, change24hPct: null, change7d: null, change7dPct: null, change30d: null, change30dPct: null,
+    });
+    expect(result.chainDetail?.coins[1]).toMatchObject({ change24h: 50, change7d: 10, change7dPct: 0.25 });
+
+    const unknown = aggregateChains({ ...input, peggedAssets: input.peggedAssets.slice(0, 1) });
+    expect(unknown.chains[0]).toMatchObject({
+      change24h: null, change24hPct: null, change7d: null, change7dPct: null, change30d: null, change30dPct: null,
+    });
+    expect(unknown.globalChange24hPct).toBeNull();
+    expect(unknown.globalChange7dPct).toBeNull();
+    expect(unknown.globalChange30dPct).toBeNull();
+  });
+
+  it("pairs global production supply only with assets that have historical anchors", () => {
+    const result = aggregateChains(makeInput({ peggedAssets: [
+      { id: "usdt-tether", symbol: "USDT", price: 1, circulating: { peggedUSD: 100 },
+        chainCirculating: { ethereum: { current: 100 } } },
+      { id: "usdc-circle", symbol: "USDC", price: 1, circulating: { peggedUSD: 50 },
+        circulatingPrevDay: { peggedUSD: 40 }, circulatingPrevWeek: { peggedUSD: 40 },
+        circulatingPrevMonth: { peggedUSD: 40 }, chainCirculating: {
+          ethereum: { current: 50, circulatingPrevDay: 40, circulatingPrevWeek: 40, circulatingPrevMonth: 40 },
+        } },
+    ] }));
+    expect(result.globalTotalUsd).toBe(150);
+    expect(result.globalChange24hPct).toBe(0.25);
+    expect(result.globalChange7dPct).toBe(0.25);
+    expect(result.globalChange30dPct).toBe(0.25);
+  });
+
+  it.each([true, false])("retains fully redeemed rows in paired history (aggregate supply: %s)", (aggregateSupply) => {
+    const input = makeInput({ peggedAssets: [
+      { id: "usdt-tether", symbol: "USDT", price: 1,
+        ...(aggregateSupply ? { circulating: { peggedUSD: 0 },
+          circulatingPrevDay: { peggedUSD: 100 }, circulatingPrevWeek: { peggedUSD: 100 },
+          circulatingPrevMonth: { peggedUSD: 100 } } : {}),
+        chainCirculating: { ethereum: { current: 0, circulatingPrevDay: 100, circulatingPrevWeek: 100, circulatingPrevMonth: 100 } } },
+      { id: "usdc-circle", symbol: "USDC", price: 1,
+        ...(aggregateSupply ? { circulating: { peggedUSD: 50 },
+          circulatingPrevDay: { peggedUSD: 50 }, circulatingPrevWeek: { peggedUSD: 50 },
+          circulatingPrevMonth: { peggedUSD: 50 } } : {}),
+        chainCirculating: { ethereum: { current: 50, circulatingPrevDay: 50, circulatingPrevWeek: 50, circulatingPrevMonth: 50 } } },
+    ] });
+    const result = aggregateChains(input);
+    expect(result.chains[0]).toMatchObject({ totalUsd: 50, stablecoinCount: 1, change24h: -100, change7d: -100, change30d: -100 });
+    expect(result.globalChange24hPct).toBeCloseTo(-100 / 150);
+    expect(result.globalChange7dPct).toBeCloseTo(-100 / 150);
+    expect(result.globalChange30dPct).toBeCloseTo(-100 / 150);
+
+    // The only paired current supply is now zero, but its history is still known.
+    input.peggedAssets[1] = { id: "usdc-circle", symbol: "USDC", price: 1,
+      ...(aggregateSupply ? { circulating: { peggedUSD: 50 } } : {}),
+      chainCirculating: { ethereum: { current: 50 } } };
+    const redeemed = aggregateChains(input);
+    expect(redeemed.chains[0]).toMatchObject({ change24h: -100, change24hPct: -1, change7d: -100, change7dPct: -1, change30d: -100, change30dPct: -1 });
+    expect(redeemed.globalChange24hPct).toBe(-1);
+    expect(redeemed.globalChange7dPct).toBe(-1);
+    expect(redeemed.globalChange30dPct).toBe(-1);
+
+    const fullyRedeemed = aggregateChains({ ...input, peggedAssets: input.peggedAssets.slice(0, 1) });
+    expect(fullyRedeemed.globalTotalUsd).toBe(0);
+    expect(fullyRedeemed.globalChange24hPct).toBe(-1);
+    expect(fullyRedeemed.globalChange7dPct).toBe(-1);
+    expect(fullyRedeemed.globalChange30dPct).toBe(-1);
+
+    // Explicit zero/zero is covered history, not an unavailable window.
+    input.peggedAssets[0] = { id: "usdt-tether", symbol: "USDT", price: 1,
+      ...(aggregateSupply ? { circulating: { peggedUSD: 0 }, circulatingPrevDay: { peggedUSD: 0 },
+        circulatingPrevWeek: { peggedUSD: 0 }, circulatingPrevMonth: { peggedUSD: 0 } } : {}),
+      chainCirculating: { ethereum: { current: 0, circulatingPrevDay: 0, circulatingPrevWeek: 0, circulatingPrevMonth: 0 } } };
+    const zero = aggregateChains(input);
+    expect(zero.chains[0]).toMatchObject({ change24h: 0, change24hPct: 0, change7d: 0, change7dPct: 0, change30d: 0, change30dPct: 0 });
+    expect(zero.globalChange24hPct).toBe(0);
+    expect(zero.globalChange7dPct).toBe(0);
+    expect(zero.globalChange30dPct).toBe(0);
+  });
+
   it("sorts by totalUsd descending", () => {
     const result = aggregateChains(makeInput());
     expect(result.chains[0].id).toBe("ethereum");

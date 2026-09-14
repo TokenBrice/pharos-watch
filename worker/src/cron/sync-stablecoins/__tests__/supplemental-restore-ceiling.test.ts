@@ -1,7 +1,9 @@
 import { describe, expect, it } from "vitest";
+import { mockD1 } from "@shared/test-utils/mock-d1";
 import { StablecoinListResponseSchema } from "@shared/types/market";
 import type { PeggedAsset } from "../enrich-prices-shared";
 import {
+  loadPreviousStablecoinsById,
   mergeSupplementalLastKnownGood,
   normalizeStablecoinsPayload,
   replaceZeroSupplyPrimaryAssets,
@@ -51,6 +53,15 @@ function syrupChainCirculating(
 }
 
 describe("mergeSupplementalLastKnownGood carry-forward ceiling", () => {
+  it("strips legacy synthetic chain history before cache restoration, preserving observed zero", async () => {
+    const db = mockD1([{ match: "FROM cache", rows: [{ updated_at: NOW_SEC, value: JSON.stringify({ peggedAssets: [
+      asset({ id: "paxg-paxos", symbol: "PAXG", supplySource: "onchain-total-supply", chainCirculating: { Ethereum: chainRow(100) } }),
+      asset({ id: "usdc-circle", symbol: "USDC", supplySource: "defillama", chainCirculating: { Ethereum: chainRow(100) } }),
+    ] }) }] }]);
+    const { previousAssetsById } = await loadPreviousStablecoinsById(db);
+    expect(previousAssetsById.get("paxg-paxos")?.chainCirculating?.Ethereum).toEqual({ current: 100 });
+    expect(previousAssetsById.get("usdc-circle")?.chainCirculating?.Ethereum?.circulatingPrevDay).toBe(0);
+  });
   it.each(["cngn-compliant-naira", "mre7yield-midas", "cusdo-openeden", "syzusd-yuzu"])(
     "does not restore obsolete on-chain roster for %s through either supplemental path", (id) => {
       const previous = asset({ id, symbol: id, circulating: { peggedUSD: 100 },

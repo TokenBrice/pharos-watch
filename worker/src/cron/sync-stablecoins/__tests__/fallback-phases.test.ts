@@ -525,10 +525,10 @@ describe("overlayFallbackCuratedAggregateSupply", () => {
     expect(susds.circulating).toEqual({ peggedUSD: 4_884_400_000 });
     expect(susds.chains).toEqual(["Ethereum", "Base", "Optimism", "Arbitrum"]);
     expect(susds.chainCirculating).toEqual({
-      Ethereum: { current: 4_517_720_000, chainId: "ethereum", circulatingPrevDay: 0, circulatingPrevWeek: 0, circulatingPrevMonth: 0 },
-      Base: { current: 11_478_000, chainId: "base", circulatingPrevDay: 0, circulatingPrevWeek: 0, circulatingPrevMonth: 0 },
-      Optimism: { current: 4_876_000, chainId: "optimism", circulatingPrevDay: 0, circulatingPrevWeek: 0, circulatingPrevMonth: 0 },
-      Arbitrum: { current: 346_620_000, chainId: "arbitrum", circulatingPrevDay: 0, circulatingPrevWeek: 0, circulatingPrevMonth: 0 },
+      Ethereum: { current: 4_517_720_000, chainId: "ethereum", circulatingPrevDay: undefined, circulatingPrevWeek: undefined, circulatingPrevMonth: undefined },
+      Base: { current: 11_478_000, chainId: "base", circulatingPrevDay: undefined, circulatingPrevWeek: undefined, circulatingPrevMonth: undefined },
+      Optimism: { current: 4_876_000, chainId: "optimism", circulatingPrevDay: undefined, circulatingPrevWeek: undefined, circulatingPrevMonth: undefined },
+      Arbitrum: { current: 346_620_000, chainId: "arbitrum", circulatingPrevDay: undefined, circulatingPrevWeek: undefined, circulatingPrevMonth: undefined },
     });
     expect(other.chainCirculating).toEqual({ Ethereum: { current: 1 } });
   });
