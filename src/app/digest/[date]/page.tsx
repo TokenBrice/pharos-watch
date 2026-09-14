@@ -205,8 +205,11 @@ const route = createStaticSlugRoute({
   getSlug: (digest) => digest.date,
   metadata: (digest) => {
     const formatted = formatDate(digest.date);
+    const dateSuffix = ` (${formatted})`;
+    // Reserve the root layout's brand suffix without truncating the edition date.
+    const title = trimTextAtWordBoundary(digest.title, 70 - dateSuffix.length - " | Pharos".length);
     return buildPageMetadata({
-      title: `${digest.title} (${formatted})`,
+      title: `${title}${dateSuffix}`,
       description: buildDigestMetadataDescription(digest, formatted),
       canonical: `/digest/${digest.date}/`,
       ogImage: "/og-editorial-digest.png",
