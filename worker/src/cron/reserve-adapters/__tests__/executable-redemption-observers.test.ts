@@ -1,3 +1,4 @@
+import { erc20Abi, erc4626Abi } from "../executable-redemption-abis";
 import { describe, expect, it, vi } from "vitest";
 import { encodeFunctionData, encodeFunctionResult, parseAbi } from "viem/utils";
 import type { Abi } from "abitype";
@@ -31,14 +32,6 @@ const DUSD = "0x07fff99e1664d9b116fbc158c0e99785f81ca236";
 const DLEND_POOL = "0x6598dad18bda89a0e58a1f427c8cebc0de90f153";
 const DLEND_ATOKEN = "0x5cc741931d01cb1adde193222dfb1ad75930fd60";
 
-const ERC20_ABI = parseAbi([
-  "function balanceOf(address account) view returns (uint256)",
-  "function decimals() view returns (uint8)",
-]);
-const ERC4626_ABI = parseAbi([
-  "function asset() view returns (address)",
-  "function totalAssets() view returns (uint256)",
-]);
 const EARN_VAULT_ABI = parseAbi([
   "function vaultValidator() view returns (address)",
   "function protocolConfig() view returns (address)",
@@ -69,10 +62,6 @@ const DSTAKE_ROUTER_ABI = parseAbi([
   "function getActiveVaultsForWithdrawals() view returns (address[])",
   "function strategyShareToAdapter(address strategyShare) view returns (address)",
   "function isVaultHealthyForWithdrawals(address strategyShare) view returns (bool)",
-]);
-const STRATEGY_VAULT_ABI = parseAbi([
-  "function asset() view returns (address)",
-  "function maxWithdraw(address owner) view returns (uint256)",
 ]);
 const STATIC_ATOKEN_ABI = parseAbi([
   "function POOL() view returns (address)",
@@ -116,8 +105,8 @@ function request(contract: string, abi: Abi, functionName: string, args: readonl
 }
 
 const EXPECTED_REQUESTS = {
-  "earn-asset": request(EARN_VAULT, ERC4626_ABI, "asset"),
-  "earn-total-assets": request(EARN_VAULT, ERC4626_ABI, "totalAssets"),
+  "earn-asset": request(EARN_VAULT, erc4626Abi, "asset"),
+  "earn-total-assets": request(EARN_VAULT, erc4626Abi, "totalAssets"),
   "earn-validator": request(EARN_VAULT, EARN_VAULT_ABI, "vaultValidator"),
   "earn-protocol-config": request(EARN_VAULT, EARN_VAULT_ABI, "protocolConfig"),
   "earn-pause-status": request(EARN_VAULT, EARN_VAULT_ABI, "pauseStatus"),
@@ -126,10 +115,10 @@ const EXPECTED_REQUESTS = {
   "earn-withdrawal-fee": request(EARN_VALIDATOR, EARN_VALIDATOR_ABI, "withdrawalFee", [EARN_VAULT]),
   "earn-deposit-allow-list-count": request(EARN_VALIDATOR, EARN_VALIDATOR_ABI, "depositAllowListCount", [EARN_VAULT]),
   "earn-protocol-paused": request(EARN_PROTOCOL_CONFIG, EARN_PROTOCOL_CONFIG_ABI, "getProtocolPauseStatus"),
-  "earn-idle-usdc": request(USDC, ERC20_ABI, "balanceOf", [EARN_VAULT]),
-  "earn-asset-decimals": request(USDC, ERC20_ABI, "decimals"),
-  "dstake-asset": request(DSTAKE_TOKEN, ERC4626_ABI, "asset"),
-  "dstake-total-assets": request(DSTAKE_TOKEN, ERC4626_ABI, "totalAssets"),
+  "earn-idle-usdc": request(USDC, erc20Abi, "balanceOf", [EARN_VAULT]),
+  "earn-asset-decimals": request(USDC, erc20Abi, "decimals"),
+  "dstake-asset": request(DSTAKE_TOKEN, erc4626Abi, "asset"),
+  "dstake-total-assets": request(DSTAKE_TOKEN, erc4626Abi, "totalAssets"),
   "dstake-router": request(DSTAKE_TOKEN, DSTAKE_TOKEN_ABI, "router"),
   "dstake-collateral-vault": request(DSTAKE_TOKEN, DSTAKE_TOKEN_ABI, "collateralVault"),
   "collateral-vault-router": request(COLLATERAL_VAULT, DSTAKE_TOKEN_ABI, "router"),
@@ -142,14 +131,14 @@ const EXPECTED_REQUESTS = {
   "router-max-withdrawal-fee": request(DSTAKE_ROUTER, DSTAKE_ROUTER_ABI, "maxWithdrawalFeeBps"),
   "router-shortfall": request(DSTAKE_ROUTER, DSTAKE_ROUTER_ABI, "currentShortfall"),
   "router-active-withdrawal-vaults": request(DSTAKE_ROUTER, DSTAKE_ROUTER_ABI, "getActiveVaultsForWithdrawals"),
-  "dlend-strategy-asset": request(DLEND_STRATEGY, STRATEGY_VAULT_ABI, "asset"),
-  "dlend-strategy-max-withdraw": request(DLEND_STRATEGY, STRATEGY_VAULT_ABI, "maxWithdraw", [COLLATERAL_VAULT]),
+  "dlend-strategy-asset": request(DLEND_STRATEGY, erc4626Abi, "asset"),
+  "dlend-strategy-max-withdraw": request(DLEND_STRATEGY, erc4626Abi, "maxWithdraw", [COLLATERAL_VAULT]),
   "dlend-strategy-adapter": request(DSTAKE_ROUTER, DSTAKE_ROUTER_ABI, "strategyShareToAdapter", [DLEND_STRATEGY]),
   "dlend-strategy-healthy": request(DSTAKE_ROUTER, DSTAKE_ROUTER_ABI, "isVaultHealthyForWithdrawals", [DLEND_STRATEGY]),
   "dlend-pool": request(DLEND_STRATEGY, STATIC_ATOKEN_ABI, "POOL"),
   "dlend-atoken": request(DLEND_STRATEGY, STATIC_ATOKEN_ABI, "aToken"),
-  "dlend-available-liquidity": request(DUSD, ERC20_ABI, "balanceOf", [DLEND_ATOKEN]),
-  "dstake-asset-decimals": request(DUSD, ERC20_ABI, "decimals"),
+  "dlend-available-liquidity": request(DUSD, erc20Abi, "balanceOf", [DLEND_ATOKEN]),
+  "dstake-asset-decimals": request(DUSD, erc20Abi, "decimals"),
 } satisfies Record<string, { contract: string; data: Hex }>;
 
 function verifyRequests(calls: readonly EvmMulticall3Call[]) {
@@ -168,9 +157,9 @@ interface EarnOverrides {
 function earnResults(calls: readonly EvmMulticall3Call[], overrides: EarnOverrides = {}): EvmMulticall3Result[] {
   verifyRequests(calls);
   const values: Record<string, Hex> = {
-    "earn-asset": encodeFunctionResult({ abi: ERC4626_ABI, functionName: "asset", result: USDC }),
+    "earn-asset": encodeFunctionResult({ abi: erc4626Abi, functionName: "asset", result: USDC }),
     "earn-total-assets": encodeFunctionResult({
-      abi: ERC4626_ABI,
+      abi: erc4626Abi,
       functionName: "totalAssets",
       result: 3_200_000_000_000n,
     }),
@@ -215,12 +204,12 @@ function earnResults(calls: readonly EvmMulticall3Call[], overrides: EarnOverrid
       result: false,
     }),
     "earn-idle-usdc": encodeFunctionResult({
-      abi: ERC20_ABI,
+      abi: erc20Abi,
       functionName: "balanceOf",
       result: 199_000_000n,
     }),
     "earn-asset-decimals": encodeFunctionResult({
-      abi: ERC20_ABI,
+      abi: erc20Abi,
       functionName: "decimals",
       result: 6,
     }),
@@ -248,9 +237,9 @@ function dStakeResults(
   verifyRequests(calls);
   const dlendMaxWithdraw = 192_389_829_956_990_993_894_191n;
   const values: Record<string, Hex> = {
-    "dstake-asset": encodeFunctionResult({ abi: ERC4626_ABI, functionName: "asset", result: DUSD }),
+    "dstake-asset": encodeFunctionResult({ abi: erc4626Abi, functionName: "asset", result: DUSD }),
     "dstake-total-assets": encodeFunctionResult({
-      abi: ERC4626_ABI,
+      abi: erc4626Abi,
       functionName: "totalAssets",
       result: 384_250_417_697_649_081_255_185n,
     }),
@@ -303,12 +292,12 @@ function dStakeResults(
       result: overrides.activeWithdrawalVaults ?? [DLEND_STRATEGY],
     }),
     "dlend-strategy-asset": encodeFunctionResult({
-      abi: STRATEGY_VAULT_ABI,
+      abi: erc4626Abi,
       functionName: "asset",
       result: DUSD,
     }),
     "dlend-strategy-max-withdraw": encodeFunctionResult({
-      abi: STRATEGY_VAULT_ABI,
+      abi: erc4626Abi,
       functionName: "maxWithdraw",
       result: dlendMaxWithdraw,
     }),
@@ -333,12 +322,12 @@ function dStakeResults(
       result: DLEND_ATOKEN,
     }),
     "dlend-available-liquidity": encodeFunctionResult({
-      abi: ERC20_ABI,
+      abi: erc20Abi,
       functionName: "balanceOf",
       result: overrides.availableLiquidity ?? dlendMaxWithdraw + 1n,
     }),
     "dstake-asset-decimals": encodeFunctionResult({
-      abi: ERC20_ABI,
+      abi: erc20Abi,
       functionName: "decimals",
       result: 18,
     }),

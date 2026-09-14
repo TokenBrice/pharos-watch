@@ -1,3 +1,4 @@
+import { erc20Abi, erc4626Abi } from "./executable-redemption-abis";
 import type {
   EvmMulticall3Call,
   EvmMulticall3Result,
@@ -34,14 +35,6 @@ const BLOCK_MAX_AGE_SEC = 10 * 60;
 const BLOCK_FUTURE_SKEW_SEC = 60;
 const OBSERVATION_BLOCK_LAG = 2;
 
-const ERC20_ABI = parseAbi([
-  "function balanceOf(address account) view returns (uint256)",
-  "function decimals() view returns (uint8)",
-]);
-const ERC4626_ABI = parseAbi([
-  "function asset() view returns (address)",
-  "function totalAssets() view returns (uint256)",
-]);
 const EARN_VAULT_ABI = parseAbi([
   "function vaultValidator() view returns (address)",
   "function protocolConfig() view returns (address)",
@@ -72,10 +65,6 @@ const DSTAKE_ROUTER_ABI = parseAbi([
   "function getActiveVaultsForWithdrawals() view returns (address[])",
   "function strategyShareToAdapter(address strategyShare) view returns (address)",
   "function isVaultHealthyForWithdrawals(address strategyShare) view returns (bool)",
-]);
-const STRATEGY_VAULT_ABI = parseAbi([
-  "function asset() view returns (address)",
-  "function maxWithdraw(address owner) view returns (uint256)",
 ]);
 const STATIC_ATOKEN_ABI = parseAbi([
   "function POOL() view returns (address)",
@@ -338,14 +327,14 @@ function earnFields() {
     abiObservation({
       label: "earn-asset",
       contract: EARN.vault.address,
-      abi: ERC4626_ABI,
+      abi: erc4626Abi,
       functionName: "asset",
       verify: verifyExpectedAddress(EARN.coinId, "asset", EARN.assetAddress),
     }),
     abiObservation({
       label: "earn-total-assets",
       contract: EARN.vault.address,
-      abi: ERC4626_ABI,
+      abi: erc4626Abi,
       functionName: "totalAssets",
     }),
     abiObservation({
@@ -407,14 +396,14 @@ function earnFields() {
     abiObservation({
       label: "earn-idle-usdc",
       contract: EARN.assetAddress,
-      abi: ERC20_ABI,
+      abi: erc20Abi,
       functionName: "balanceOf",
       args: [EARN.vault.address],
     }),
     abiObservation({
       label: "earn-asset-decimals",
       contract: EARN.assetAddress,
-      abi: ERC20_ABI,
+      abi: erc20Abi,
       functionName: "decimals",
     }),
   ] as const;
@@ -528,10 +517,10 @@ function strategyFields() {
   const strategyAddress = DSTAKE.dlendStrategy.address;
   const adapterAddress = DSTAKE.dlendAdapter.address;
   return [
-    abiField(`${label}-strategy-asset`, strategyAddress, STRATEGY_VAULT_ABI, "asset", {
+    abiField(`${label}-strategy-asset`, strategyAddress, erc4626Abi, "asset", {
       verify: verifyExpectedAddress(DSTAKE.coinId, `${strategyName} strategy asset`, DSTAKE.assetAddress),
     }),
-    abiField(`${label}-strategy-max-withdraw`, strategyAddress, STRATEGY_VAULT_ABI, "maxWithdraw", {
+    abiField(`${label}-strategy-max-withdraw`, strategyAddress, erc4626Abi, "maxWithdraw", {
       args: [DSTAKE.collateralVault.address],
     }),
     abiField(`${label}-strategy-adapter`, DSTAKE.router.address, DSTAKE_ROUTER_ABI, "strategyShareToAdapter", {
@@ -546,10 +535,10 @@ function strategyFields() {
 
 function dStakeFields() {
   return [
-    abiField("dstake-asset", DSTAKE.token.address, ERC4626_ABI, "asset", {
+    abiField("dstake-asset", DSTAKE.token.address, erc4626Abi, "asset", {
       verify: verifyExpectedAddress(DSTAKE.coinId, "asset", DSTAKE.assetAddress),
     }),
-    abiField("dstake-total-assets", DSTAKE.token.address, ERC4626_ABI, "totalAssets"),
+    abiField("dstake-total-assets", DSTAKE.token.address, erc4626Abi, "totalAssets"),
     abiField("dstake-router", DSTAKE.token.address, DSTAKE_TOKEN_ABI, "router", {
       verify: verifyExpectedAddress(DSTAKE.coinId, "token router", DSTAKE.router.address),
     }),
@@ -583,10 +572,10 @@ function dStakeFields() {
     abiField("dlend-atoken", DSTAKE.dlendStrategy.address, STATIC_ATOKEN_ABI, "aToken", {
       verify: verifyExpectedAddress(DSTAKE.coinId, "dLEND aToken", DSTAKE.dlendATokenAddress),
     }),
-    abiField("dlend-available-liquidity", DSTAKE.assetAddress, ERC20_ABI, "balanceOf", {
+    abiField("dlend-available-liquidity", DSTAKE.assetAddress, erc20Abi, "balanceOf", {
       args: [DSTAKE.dlendATokenAddress],
     }),
-    abiField("dstake-asset-decimals", DSTAKE.assetAddress, ERC20_ABI, "decimals"),
+    abiField("dstake-asset-decimals", DSTAKE.assetAddress, erc20Abi, "decimals"),
   ] as const;
 }
 
