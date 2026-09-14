@@ -2,7 +2,7 @@
   "id": "ousg-ondo-finance",
   "name": "Ondo OUSG",
   "symbol": "OUSG",
-  "oneLiner": "OUSG is Ondo's tokenized U.S. T-Bill fund backed mainly by BlackRock BUIDL; a NAV-accreting share (not $1-pegged) limited to U.S. Qualified Purchasers.",
+  "oneLiner": "OUSG is Ondo's tokenized Treasury-fund portfolio; a NAV-accreting share (not $1-pegged) limited to eligible qualified purchasers.",
   "flags": {
     "backing": "rwa-backed",
     "governance": "centralized",
@@ -10,7 +10,7 @@
     "rwa": true,
     "navToken": true
   },
-  "collateral": "Primarily BlackRock USD Institutional Digital Liquidity Fund (BUIDL), which holds short-term U.S. Treasury bills, cash, and repurchase agreements; secondary allocations to BlackRock FedFund (TFDXX) and USDC for liquidity; Ondo I LP is the largest single holder of BUIDL; migrated from iShares SHV ETF to BUIDL in March 2024",
+  "collateral": "Diversified fund portfolio comprising State Street Galaxy SWEEP, BlackRock BUIDL, Franklin BENJI and Fidelity FYOXX, plus USDC at Coinbase, bank deposits and funds in transit/net receivables; issuer publishes dated position values.",
   "pegMechanism": "NAV-accreting fund share token (not pegged to $1); token price rises daily as Treasury income accrues; instant mint/redemption at daily NAV via OUSGInstantManager against USDC (T+0 settlement via BUIDL on-chain liquidity); token transfers restricted to KYC-verified whitelisted addresses on-chain",
   "mechanismArchetype": "tbill",
   "mechanismArchetypeReview": {
@@ -88,7 +88,7 @@
   "custodyModel": "institutional-regulated",
   "governanceQuality": "regulated-entity",
   "liveReservesConfig": {
-    "adapter": "chainlink-nav",
+    "adapter": "ondo-ousg",
     "version": 1,
     "semantics": "single-asset",
     "breakerScope": "ousg-ondo",
@@ -97,7 +97,7 @@
     },
     "display": {
       "url": "https://ondo.finance/ousg",
-      "label": "Ondo NAV Oracle"
+      "label": "Ondo OUSG portfolio"
     },
     "inputs": {
       "primary": {

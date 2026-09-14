@@ -19,10 +19,14 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-28",
-    "reviewer": "GROK-RESEARCH wave-8 phase1 reserve",
+    "reviewedAt": "2026-09-14",
+    "reviewer": "OpenAI Codex reserve disclosure review",
     "confidence": "probable",
     "sources": [
+      {
+        "label": "Midas mGLOBAL transparency dashboard",
+        "url": "https://midas.app/transparency?token=mglobal"
+      },
       {
         "label": "Midas mGLOBAL Aave Horizon launch post (strategy and structure)",
         "url": "https://blog.midas.app/mglobal-is-now-live-on-the-aave-horizon-rwa-market/"
@@ -40,11 +44,11 @@
         "url": "https://midas.app/mGLOBAL"
       }
     ],
-    "rationale": "Write-time re-open 2026-07-28: Midas Aave Horizon post still states mGLOBAL is a security token linked to Fasanara Capital's flagship receivables strategy (primarily short-duration trade receivables, digital invoices and asset-based finance; 60+ countries, 140+ originators, 700,000+ open positions; zero fund-level leverage; NAV-linked, not a fixed-par stablecoin). Independent rwa.xyz asset page classifies mGLOBAL as Asset-Backed Credit providing exposure to Fasanara's Global Fund / GDADF strategy with the same primary asset types and leaves Underlying Assets without a published weight table. Neither source publishes a current loan tape, obligor weights, or sector/geography split, so the reserve stays a single 100% private-credit strategy envelope with basket-needs-split. The issuer's 10% TVL Aave liquidity sleeve and monthly standard redemption are redemption-architecture disclosures, not dual-sourced live reserve-line percentages, and are not invented as a separate cash/stablecoin slice. Product page midas.app/mGLOBAL remains Cloudflare-gated to automated fetchers.",
+    "rationale": "Midas identifies mGLOBAL as exposure to Fasanara receivables and asset-based finance. On September 14 the latest visible aggregate proof-of-reserve report was dated July 13; current product TVL and operational wallets do not refresh that report or disclose a current loan tape. The reserve remains one unresolved private-credit strategy envelope. Redemption-liquidity targets are policy disclosures, not measured reserve-line weights.",
     "compositionBasis": "Midas issuer strategy disclosure plus independent rwa.xyz Asset-Backed Credit / Fasanara Global Fund envelope; no published constituent weights",
     "compositionAsOf": "2026-07-28",
     "scope": "full-composition",
-    "knownUnknownExposure": "No public current loan tape, receivable-level weights, obligor/originator concentrations, warehouse facilities, or live sleeve-vs-GDADF NAV percentages. The 10% TVL instant-redemption sleeve is disclosed as liquidity design only; without dual-source measured allocation it remains inside the unresolved strategy envelope.",
+    "knownUnknownExposure": "Current loan-level weights, obligor and originator concentrations, warehouse facilities and actual cash-versus-receivables allocation remain unverified. The latest visible July 13 aggregate report and disclosed liquidity targets do not establish September composition.",
     "knownUnknownExposurePct": 100,
     "nonLinkDispositions": [
       {

@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import type { StablecoinMeta } from "@shared/types/core";
 import { adaptRippleTransparency, parseRippleReserveBreakdown } from "../ripple-transparency";
 import { expectWarnings, installAdapterNetwork, runAdapter } from "./reserve-adapter.test-support";
 
@@ -213,9 +214,17 @@ describe("parseRippleReserveBreakdown", () => {
 describe("fetchRippleTransparencyReserves", () => {
   const url = "https://ripple.com/solutions/stablecoin/transparency/";
   const nowSec = Date.UTC(2026, 4, 1) / 1000;
+  // Preserve the retired adapter's historical config independently of the live binding.
+  const coin = {
+    id: "rlusd-ripple",
+    liveReservesConfig: {
+      adapter: "ripple-transparency", version: 1, semantics: "attestation-mix",
+      inputs: { primary: { kind: "http-html", url } },
+    },
+  } as StablecoinMeta;
 
   it("fetches RLUSD transparency through the shared network harness", async () => {
-    const { result, network } = await runAdapter("ripple-transparency", "rlusd-ripple", {
+    const { result, network } = await runAdapter("ripple-transparency", coin, {
       network: installAdapterNetwork({ html: { [url]: RIPPLE_HTML } }),
       nowSec,
     });
@@ -224,7 +233,7 @@ describe("fetchRippleTransparencyReserves", () => {
   });
 
   it("rejects a renamed reserve heading instead of publishing an attested fallback", async () => {
-    await expect(runAdapter("ripple-transparency", "rlusd-ripple", {
+    await expect(runAdapter("ripple-transparency", coin, {
       network: installAdapterNetwork({ html: { [url]: RIPPLE_HTML.replace("RLUSD Reserve Funds", "RLUSD Reserves") } }),
       nowSec,
       validate: false,

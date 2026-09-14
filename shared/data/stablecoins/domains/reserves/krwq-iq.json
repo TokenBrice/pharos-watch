@@ -4,7 +4,7 @@
     {
       "sourceKey": "krwq-custodian:usdc",
       "name": "USDC (Circle)",
-      "pct": 18.35,
+      "pct": 13.28,
       "risk": "low",
       "coinId": "usdc-circle",
       "depType": "collateral",
@@ -23,7 +23,7 @@
     {
       "sourceKey": "krwq-custodian:frxusd",
       "name": "frxUSD (Frax)",
-      "pct": 81.65,
+      "pct": 71.14,
       "risk": "low",
       "coinId": "frxusd-frax",
       "depType": "collateral",
@@ -37,11 +37,30 @@
         "liquidity"
       ],
       "liquidityHorizon": "immediate"
+    },
+    {
+      "sourceKey": "krwq-custodian:treasury",
+      "name": "Treasury USDC on Base",
+      "pct": 15.58,
+      "risk": "low",
+      "coinId": "usdc-circle",
+      "depType": "collateral",
+      "blacklistable": true,
+      "assetClass": "stablecoin",
+      "issuerOrObligor": "Circle Internet Financial, Inc.",
+      "riskFactors": [
+        "credit",
+        "counterparty",
+        "custody",
+        "smart-contract",
+        "liquidity"
+      ],
+      "liquidityHorizon": "immediate"
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-08-08",
-    "reviewer": "Pharos reserve research agent (R14 reserve-composition wave)",
+    "reviewedAt": "2026-09-14",
+    "reviewer": "Pharos reserve recovery review",
     "confidence": "verified",
     "sources": [
       {
@@ -53,32 +72,27 @@
         "url": "https://krwq.cash/transparency"
       }
     ],
-    "rationale": "2026-08-08 re-open: KRWQ's live issuer API response timestamped 2026-08-08T17:39Z reports $142,590.41 of USDC, $634,652.75 of frxUSD, and $0.00 of Korean Treasury Bond exposure. Normalizing the two identified reserve values ($777,243.16 total) gives the rounded 18.35% / 81.65% composition. The transparency dashboard independently exposes the same reserve categories and custodians.",
+    "rationale": "The September 14 issuer response reports USDC $90,102.080832, frxUSD $482,631.869317 and Base treasury USDC $105,708.960000. Values normalized over $678,442.910149 supply the three rounded weights. Ethereum custodian totalAssets reads reproduce the first two values. The treasury is currently USDC; a planned Korean Treasury Bond transition is not an observed bond holding. Holder identity and circulating-liability scope remain unverified and the live adapter remains degraded.",
     "compositionBasis": "KRWQ live custodian asset values normalized by current USD value",
-    "compositionAsOf": "2026-08-08",
+    "compositionAsOf": "2026-09-14",
     "scope": "full-composition",
-    "knownUnknownExposure": "All reserve categories and current values in the issuer feed are identified; both slices are tracked stablecoin dependencies.",
+    "knownUnknownExposure": "The three collateral token categories are identified. This classification review does not verify custodian/treasury control or reconcile cross-chain KRWQ liabilities.",
     "knownUnknownExposurePct": 0,
     "nonLinkDispositions": []
   },
   "custodyProfile": {
     "providers": [
       {
-        "name": "Shinhan Securities",
-        "role": "custodian",
-        "jurisdiction": "South Korea"
-      },
-      {
-        "name": "KRWQ custodian-assets and reserve contracts",
+        "name": "Issuer-reported Ethereum custodian contracts and Base treasury",
         "role": "other"
       }
     ],
-    "segregation": "segregated",
-    "bankruptcyRemoteness": "structured",
+    "segregation": "unknown",
+    "bankruptcyRemoteness": "unknown",
     "rehypothecation": "unknown",
-    "reviewedAt": "2026-08-08",
-    "reviewer": "Pharos reserve research agent (R14 reserve-composition wave)",
-    "confidence": "verified",
+    "reviewedAt": "2026-09-14",
+    "reviewer": "Pharos reserve recovery review",
+    "confidence": "manual-review",
     "sources": [
       {
         "label": "KRWQ custodian-assets API",
@@ -89,6 +103,6 @@
         "url": "https://krwq.cash/transparency"
       }
     ],
-    "uncertainty": "The 2026-07-31 re-opened KRWQ API and transparency dashboard identify Shinhan Securities for the KTB slice and separate USDC/frxUSD custodian contracts, but do not establish custody shares for each stablecoin slice, bankruptcy treatment of the stablecoin custodians, or general rehypothecation and failure-continuity terms."
+    "uncertainty": "The API exposes two Ethereum custodians and a Base treasury holding USDC. Ethereum totalAssets balances were reproduced, but the actual vault-to-KRWQ binding, treasury control, segregation, bankruptcy treatment and rehypothecation terms have not been independently established. Shinhan Securities was associated with the proposed Korean Treasury Bond sleeve; the current source reports treasury USDC, not a bond balance."
   }
 }

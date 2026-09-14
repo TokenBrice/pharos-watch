@@ -17,7 +17,7 @@ import {
 } from "./helpers";
 import { buildBrowserHeaders, HTML_ACCEPT_HEADER, NEUTRAL_ADAPTER_HEADERS } from "./request";
 import { buildDocumentedRedemptionTelemetry } from "./redemption";
-import { reserveInfoWarning } from "./warnings";
+import { reserveDegradedWarning, reserveInfoWarning } from "./warnings";
 import {
   parseReportDateCandidates,
   type ParsedReportDateCandidate,
@@ -79,6 +79,9 @@ async function fetchAttestationIndexHtml(
 
 export interface AttestationPdfIndexParams {
   slices: ReserveSlice[];
+  /** Bind a reviewed balance observation to its exact report, independently of
+   *  the publication date in the filename. New reports require a new review. */
+  reviewedReport?: { url: string; balanceDate: string };
   /** Optional regex source (validated to compile) that the newest-dated PDF link
    *  must match against its href + anchor text, so a shared index page cannot
    *  resolve one currency to a sibling currency's certificate. */
@@ -390,22 +393,38 @@ export function adaptAttestationPdfIndex(
     throw htmlLayoutChangedError(ADAPTER_NAME, "no dated PDF attestation/report links found in HTML");
   }
 
+  const hrefMetadata = reportHrefMetadata(latest.href, options.indexUrl);
+  const reviewedReport = params.reviewedReport;
+  const reviewedMatch = reviewedReport != null && reviewedReport.url === hrefMetadata.reportPdfUrl;
+  const sourceTimestamp = reviewedReport
+    ? (reviewedMatch ? Date.parse(`${reviewedReport.balanceDate}T00:00:00Z`) / 1000 : undefined)
+    : latest.date.sourceTimestamp;
+
   return {
     slices,
+    ...(sourceTimestamp == null ? {
+      warnings: [reserveDegradedWarning(
+        "attestation-report-basis-unreviewed",
+        "The newest report has no reviewed balance date; its filename date cannot establish reserve freshness",
+      )],
+    } : {}),
     metadata: {
       diag,
-      ...verifiedFreshnessMetadata(latest.date.sourceTimestamp),
+      ...(sourceTimestamp != null
+        ? verifiedFreshnessMetadata(sourceTimestamp)
+        : unverifiedFreshnessMetadata(ADAPTER_NAME, "Newest report does not match the reviewed balance-date evidence")),
+      ...(reviewedMatch ? { reportBalanceDate: reviewedReport!.balanceDate } : {}),
       reportDate: latest.date.reportDate,
       reportDateLabel: latest.date.reportDateLabel,
       reportDatePrecision: latest.date.reportDatePrecision,
       ...(latest.date.reportPeriod ? { reportPeriod: latest.date.reportPeriod } : {}),
       reportDateSource: latest.date.dateSource,
       ...(latest.text ? { reportLinkText: latest.text } : {}),
-      ...reportHrefMetadata(latest.href, options.indexUrl),
+      ...hrefMetadata,
       compositionMode: COMPOSITION_MODE,
       compositionSource: COMPOSITION_MODE,
       compositionNote: COMPOSITION_NOTE,
-      redemption: buildDocumentedRedemptionTelemetry(latest.date.sourceTimestamp),
+      redemption: buildDocumentedRedemptionTelemetry(sourceTimestamp),
     },
   };
 }

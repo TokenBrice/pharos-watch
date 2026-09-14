@@ -40,6 +40,16 @@ function adapterReview(
  */
 export const DEPENDENCY_TARGET_DISPOSITIONS: readonly DependencyTargetDisposition[] = [
   {
+    targetId: "benji-franklin-templeton",
+    expectedLifecycle: "quarantined",
+    action: "retain-reviewed-link",
+    reviewer: "Codex reserve recovery review",
+    reviewedAt: "2026-09-14",
+    sources: [{ label: "Ondo OUSG dated portfolio", url: "https://ondo.finance/ousg" }],
+    rationale:
+      "OUSG's September 11 portfolio explicitly holds Franklin OnChain U.S. Government Money Fund (BENJI). Retain that measured collateral dependency while the tracked fund is quarantined; the link does not make BENJI scoreable or remove unavailable-upstream treatment.",
+  },
+  {
     targetId: "usr-resolv",
     expectedLifecycle: "frozen",
     action: "retain-reviewed-link",
@@ -127,6 +137,8 @@ export const DEPENDENCY_TARGET_DISPOSITIONS: readonly DependencyTargetDispositio
 
 /** Exact adapters observed producing mapped live dependency sets in the P1b replay. */
 export const DEPENDENCY_ADAPTER_MAPPING_REVIEWS: readonly DependencyAdapterMappingReview[] = [
+  adapterReview("ondo-ousg", "worker/src/cron/reserve-adapters/ondo-ousg.ts", "Maps only the exact reviewed Sanity IDs and matching names/symbols for BUIDL, BENJI and USDC. Other fund, bank and residual rows stay unlinked; quarantined BENJI remains unavailable for upstream scoring.", "2026-09-14"),
+  adapterReview("midas-mtbill", "worker/src/cron/reserve-adapters/midas-mtbill.ts", "Maps only the exact reviewed unleveraged USTB/BUIDL position tuples. The entire residual stays unclassified and unlinked, with source totals and scope required to reconcile.", "2026-09-14"),
   adapterReview("hylo-solana", "worker/src/cron/reserve-adapters/hylo-solana.ts", "Maps only the pinned SPL USDC vault/mint to usdc-circle; the registry-enumerated LST pool and pinned cbBTC/HYPE pools remain untracked cryptoasset exposures. Unknown LSTs or activation of an unreviewed exogenous pair fail closed.", "2026-09-09"),
   adapterReview("3jane-usd3", "worker/src/cron/reserve-adapters/3jane-usd3.ts", "Maps the liquid waUSDC/USDC reserve bucket to the canonical Circle USDC dependency while leaving the private-credit receivables unlinked.", "2026-07-13"),
   adapterReview("accountable", "worker/src/cron/reserve-adapters/accountable.ts", "Maps only configured, canonical asset rows from the Accountable reserve payload."),

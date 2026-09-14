@@ -2,19 +2,62 @@
   "id": "mtbill-midas",
   "reserves": [
     {
-      "sourceKey": "chainlink-nav:token:0xdd629e5241cbc5919847783e6c96b2de4754e438",
-      "name": "BlackRock IB01 T-Bill ETF",
-      "pct": 100,
-      "risk": "very-low",
+      "sourceKey": "midas-mtbill:ustb",
+      "name": "Superstate Short Duration US Government Securities Fund (USTB)",
+      "pct": 93.67,
+      "risk": "low",
+      "coinId": "ustb-superstate",
+      "depType": "collateral",
       "assetClass": "fund-share",
-      "issuerOrObligor": "iShares plc / BlackRock Asset Management Ireland Limited",
-      "riskFactors": ["credit", "duration", "liquidity", "custody", "counterparty", "legal"],
+      "issuerOrObligor": "Superstate Short Duration US Government Securities Fund",
+      "riskFactors": [
+        "credit",
+        "duration",
+        "liquidity",
+        "custody",
+        "counterparty",
+        "legal"
+      ],
+      "liquidityHorizon": "unknown"
+    },
+    {
+      "sourceKey": "midas-mtbill:buidl",
+      "name": "BlackRock USD Institutional Digital Liquidity Fund (BUIDL)",
+      "pct": 6.3,
+      "risk": "low",
+      "coinId": "buidl-blackrock",
+      "depType": "collateral",
+      "assetClass": "fund-share",
+      "issuerOrObligor": "BlackRock USD Institutional Digital Liquidity Fund",
+      "riskFactors": [
+        "credit",
+        "duration",
+        "liquidity",
+        "custody",
+        "counterparty",
+        "legal"
+      ],
+      "liquidityHorizon": "unknown"
+    },
+    {
+      "sourceKey": "midas-mtbill:unclassified-residual",
+      "name": "Unclassified portfolio residual and position rounding",
+      "pct": 0.03,
+      "risk": "high",
+      "assetClass": "other",
+      "issuerOrObligor": "Unidentified mTBILL portfolio assets and counterparties",
+      "riskFactors": [
+        "counterparty",
+        "custody",
+        "liquidity",
+        "legal"
+      ],
       "liquidityHorizon": "unknown"
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-14",
-    "reviewer": "OpenAI Codex backing review",
+    "reviewedAt": "2026-09-14",
+    "reviewer": "OpenAI Codex reserve disclosure review",
     "confidence": "verified",
     "sources": [
       {
@@ -30,23 +73,27 @@
         "url": "https://docs.midas.app/tokens/mtbill/independent-reporting"
       },
       {
-        "label": "iShares IB01 product page",
-        "url": "https://www.ishares.com/uk/individual/en/products/307243/ishares-treasury-bond-0-1yr-ucits"
+        "label": "Midas mTBILL transparency dashboard",
+        "url": "https://midas.app/transparency?token=mtbill"
+      },
+      {
+        "label": "Midas mTBILL issuer portfolio API",
+        "url": "https://api-prod.midas.app/api/transparency?token=mTBILL"
       }
     ],
-    "rationale": "The current live NAV adapter emits one 100% BlackRock IB01 T-Bill ETF slice. Midas documents mTBILL's short-duration Treasury-bill mandate, and BlackRock identifies IB01 as the iShares $ Treasury Bond 0-1yr UCITS ETF holding U.S. Treasury bonds. The ETF's changing security-level holdings remain outside this direct reserve-slice identity.",
-    "compositionBasis": "Current mTBILL live NAV identity cross-checked against Midas disclosures and BlackRock's IB01 product page",
-    "compositionAsOf": "2026-07-14",
+    "rationale": "The September 14 issuer transparency API identifies USTB and BUIDL in an unleveraged Ethereum wallet portfolio. Named positions are reported in USD millions to $1,000 precision; total equity is more precise. The difference is retained as an unclassified residual rather than assigned to named funds. Static percentages are rounded to two decimals; live weights use the source amounts and total. This is issuer-reported portfolio evidence, not independent examination.",
+    "compositionBasis": "Midas mTBILL transparency API updatedAt 2026-09-14T13:06:24.130Z; USD-million position values and reconciled total equity, with explicit residual",
+    "compositionAsOf": "2026-09-14",
     "scope": "full-composition",
-    "knownUnknownExposure": "The exact captured reserve slice is identified as IB01; the ETF's changing security-level holdings, custody allocation, and mTBILL tokenholder assurance remain outside this direct fund-share classification.",
-    "knownUnknownExposurePct": 0,
+    "knownUnknownExposure": "Approximately 0.0323% of source equity is the difference between total equity and rounded named positions. Smaller holdings, rounding and their custody identities remain unresolved; the live adapter preserves the full residual.",
+    "knownUnknownExposurePct": 0.03,
     "nonLinkDispositions": [
       {
-        "reserveIndex": 0,
-        "reserveName": "BlackRock IB01 T-Bill ETF",
-        "pct": 100,
-        "disposition": "untracked-exogenous-asset",
-        "rationale": "The backing consists of off-chain U.S. Treasury Bills and qualifying Treasury-bill fund shares rather than a tracked stablecoin dependency."
+        "reserveIndex": 2,
+        "reserveName": "Unclassified portfolio residual and position rounding",
+        "pct": 0.03,
+        "disposition": "insufficient-evidence",
+        "rationale": "Smaller positions and display rounding are not assigned a token, bank or custodian identity."
       }
     ]
   },

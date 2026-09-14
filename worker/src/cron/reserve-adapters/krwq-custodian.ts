@@ -293,7 +293,7 @@ export function adaptKrwqCustodian(
     ));
   }
 
-  const supplyUsd = supply.contributions.reduce(
+  const grossSupplyTokens = supply.contributions.reduce(
     (total, contribution) => total + decimalNumberFromBigInt(contribution.raw, contribution.decimals),
     0,
   );
@@ -304,10 +304,16 @@ export function adaptKrwqCustodian(
     metadata: {
       ...verifiedFreshnessMetadata(sourceTimestamp),
       totalReserveUsd,
-      ...(supplyUsd > 0
-        ? { supplyUsd, collateralizationRatio: totalReserveUsd / supplyUsd }
-        : {}),
-      details: { timestamp: payload.timestamp },
+      // Gross cross-chain KRWQ is neither USD nor reconciled circulating
+      // liabilities. Keep it diagnostic until FX and bridge exclusions agree.
+      details: {
+        timestamp: payload.timestamp,
+        grossSupplyTokens,
+        supplyUnit: "KRWQ",
+        supplyScope: "gross-onchain-diagnostic",
+        omittedSupplyChains: [...supply.omittedNonEvmChains, ...supply.omittedReadFailureChains],
+        coverageRatioUnavailableReason: "KRW-denominated gross supply requires FX valuation and cross-chain liability reconciliation",
+      },
     },
   };
 }

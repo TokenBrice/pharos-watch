@@ -55,6 +55,10 @@
     {
       "label": "Twitter",
       "url": "https://x.com/matrixdock"
+    },
+    {
+      "label": "Retired networks notice (August 7, 2026)",
+      "url": "https://matrixdock.gitbook.io/matrixdock-docs/english/announcements/discontinuation-of-xaum-support-on-polygon-hashkey-chain-and-tron"
     }
   ],
   "jurisdiction": {
@@ -69,16 +73,6 @@
     {
       "chain": "bsc",
       "address": "0x23ae4fd8e7844cdbc97775496ebd0e8248656028",
-      "decimals": 18
-    },
-    {
-      "chain": "polygon",
-      "address": "0xa7e22972a19dd924afeedf3db28033b146801081",
-      "decimals": 18
-    },
-    {
-      "chain": "tron",
-      "address": "TDfX64Ariz5usffBJjtDbiMuCXVpKiDCEb",
       "decimals": 18
     },
     {
@@ -100,6 +94,11 @@
       "chain": "stellar",
       "address": "XAUM-CC2RBGYNCFBCVENIDL5BFBWPH4OUZM2UA3OD2K2N54GLMWCC4KWPVAGO",
       "decimals": 7
+    },
+    {
+      "chain": "hyperevm",
+      "address": "0x14f0dfc32e8af769961b31ba3e89389bd6797652",
+      "decimals": 9
     }
   ],
   "custodyModel": "institutional-regulated",
@@ -111,7 +110,7 @@
     "breakerScope": "xaum-matrixdock",
     "display": {
       "url": "https://www.matrixdock.com/xaum",
-      "label": "Matrixdock"
+      "label": "Matrixdock XAUm price-reference proxy"
     },
     "inputs": {
       "primary": {
@@ -125,8 +124,8 @@
       "oracleAddress": "0xfa54C1c5F62ea3a5653a0b1b7148E26008eA1501",
       "tokenAddress": "0x23ae4fd8e7844cdbc97775496ebd0e8248656028",
       "sourceKey": "chainlink-nav:token:0x23ae4fd8e7844cdbc97775496ebd0e8248656028",
-      "assetLabel": "Physical gold bars (LBMA 99.99%)",
-      "assetRisk": "very-low",
+      "assetLabel": "XAUm gold exposure (price-derived proxy; reserve quantity unverified)",
+      "assetRisk": "medium",
       "oracleMethod": "latestRoundData",
       "maxOracleAgeSec": 345600
     }

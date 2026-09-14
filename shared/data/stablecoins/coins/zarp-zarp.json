@@ -113,10 +113,18 @@
           "risk": "very-low",
           "assetClass": "bank-deposit",
           "issuerOrObligor": "Old Mutual Wealth Trust Company (JHB) and Standard Bank of South Africa",
-          "riskFactors": ["counterparty", "custody", "concentration"],
+          "riskFactors": [
+            "counterparty",
+            "custody",
+            "concentration"
+          ],
           "liquidityHorizon": "immediate"
         }
-      ]
+      ],
+      "reviewedReport": {
+        "url": "https://kempengroup.co.za/wp-content/uploads/2026/08/ZARP-Stablecoin-Pty-Ltd-Agreed-upon-procedures-report-2026-08-12.pdf",
+        "balanceDate": "2026-08-01"
+      }
     }
   },
   "launchDate": "2021-11-15"

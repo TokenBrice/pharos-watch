@@ -13,10 +13,14 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-20",
-    "reviewer": "Kimi P2 reserve cohort rc-4 (lead usdf-falcon)",
+    "reviewedAt": "2026-09-14",
+    "reviewer": "OpenAI Codex reserve disclosure review",
     "confidence": "verified",
     "sources": [
+      {
+        "label": "Midas mHYPER exposure dashboard",
+        "url": "https://midas.app/transparency?token=mhyper"
+      },
       {
         "label": "Midas mHYPER",
         "url": "https://midas.app/mhyper"
@@ -30,11 +34,11 @@
         "url": "https://www.fordefi.com/customer-stories/how-midas-brings-tokenized-investment-opportunities-on-chain-with-fordefis-defi-native-custody-2ti85"
       }
     ],
-    "rationale": "mHYPER is a certificate tracking a managed market-neutral reference portfolio rather than a claim on one stablecoin. The slice name is aligned to the exact live chainlink-nav adapter row identity so the reviewed classification overlays the captured NAV exposure; public sources identify the strategy and attestation framework, but do not provide a durable position-level composition.",
+    "rationale": "mHYPER is a certificate tracking a managed market-neutral reference portfolio. The September 14 dashboard discloses dated protocol exposures, including anonymously labelled Cex1, Cex2 and Cex3 positions. These protocol weights do not establish underlying asset composition or complete custody identity. The NAV envelope remains unresolved pending complete position and liability reconciliation.",
     "compositionBasis": "Current Midas product and attestation disclosures; live NAV row identity from the Midas Chainlink NAV oracle adapter",
     "compositionAsOf": "2026-07-20",
     "scope": "full-composition",
-    "knownUnknownExposure": "The managed strategy's position-level assets, venues, and weights are not disclosed in a durable static composition.",
+    "knownUnknownExposure": "Dated protocol exposures are published, but the underlying assets, liability offsets and custody identities are incomplete. Anonymous CEX labels account for 38.24% of the rounded September 14 view; that observation is not a curated current reserve weight.",
     "knownUnknownExposurePct": 100,
     "nonLinkDispositions": [
       {
@@ -42,7 +46,7 @@
         "reserveName": "Hyperithm market-neutral stablecoin strategy NAV",
         "pct": 100,
         "disposition": "insufficient-evidence",
-        "rationale": "The strategy mandate is known, but current position-level stablecoin, protocol, and venue exposures are not available for reviewed links."
+        "rationale": "Named protocol exposures provide partial evidence, but do not identify complete underlying asset weights; anonymous CEX exposures and unresolved liabilities prevent complete reviewed dependency links."
       }
     ]
   },

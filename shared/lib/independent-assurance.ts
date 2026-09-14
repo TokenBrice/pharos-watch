@@ -11,6 +11,7 @@ const INDEPENDENT_ASSURANCE_PRODUCTS = [
   "USDG",
   "PAXG",
   "GUSD",
+  "RLUSD",
   "AUDX",
   "EUROP",
   "USDGO",

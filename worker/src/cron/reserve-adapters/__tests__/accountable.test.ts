@@ -758,6 +758,32 @@ describe("adaptAccountableDashboard", () => {
     }).valid).toBe(true);
   });
 
+  it("maps new Yuzu USDG positions without inventing token links or clearing the signed-negative guard", async () => {
+    const config = yzusd.liveReservesConfig as LiveReservesConfig;
+    const result = await runAccountablePayload(config, makeTimestampedYuzuPayload({
+      exposure_split_ts: "2026.09.11 15:47:21 UTC",
+      exposure_split: {
+        "[Aave]_USDG": { "": 401060.966095 },
+        "[Global_Dollar]_PT_USDG_Loop": { "": 1095824.4201706 },
+        "[Sky]_sUSDS_Loop": { "": -0.106673148760028 },
+        Liquidity_Buffer: { "": 57317555.79365808 },
+      },
+      timeline: [{ ts: String(Date.parse("2026-09-11T15:47:21Z")), reserves: 59000823.4 }],
+    }));
+    const aave = result.slices.find((slice) => slice.sourceKey === "accountable:yuzu:deployment:aave-usdg");
+    const loop = result.slices.find((slice) => slice.sourceKey === "accountable:yuzu:deployment:global-dollar-pt-usdg-loop");
+    expect(aave).toMatchObject({ name: "Aave USDG", risk: "medium" });
+    expect(loop).toMatchObject({ name: "Global Dollar USDG Pendle PT loop", risk: "high" });
+    for (const slice of [aave, loop]) {
+      expect(slice?.coinId).toBeUndefined();
+      expect(slice?.depType).toBeUndefined();
+    }
+    expect(result.warnings?.map((warning) => warning.code)).toEqual(["signed-negative-bucket"]);
+    expect(result.warnings?.[0].effect).toBe("degraded");
+    expect(result.metadata?.sourceTimestamp).toBe(Date.parse("2026-09-11T15:47:21Z") / 1000);
+    expect(result.metadata?.unknownBucketCount).toBeUndefined();
+  });
+
   it("omits the current signed Yuzu USDG loop bucket without inflating reserve composition", async () => {
     const config = yzusd.liveReservesConfig as LiveReservesConfig;
 

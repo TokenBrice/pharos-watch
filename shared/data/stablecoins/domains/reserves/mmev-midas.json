@@ -22,10 +22,14 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-20",
-    "reviewer": "Kimi P2 reserve cohort rc-5 (lead ylds-figure)",
+    "reviewedAt": "2026-09-14",
+    "reviewer": "OpenAI Codex reserve disclosure review",
     "confidence": "probable",
     "sources": [
+      {
+        "label": "Midas mMEV and mROX weekly report dated September 8, 2026",
+        "url": "https://drive.google.com/file/d/1Z7pi3nyarivuVjduAYHJ6ILvG4p2QkkZ/view"
+      },
       {
         "label": "Midas mMEV product page",
         "url": "https://midas.app/mmev"
@@ -39,10 +43,10 @@
         "url": "https://docs.midas.app/legal/investment-risks-1-0-1"
       }
     ],
-    "rationale": "Midas identifies the live mMEV exposure as a MEV Capital managed DeFi strategy NAV. The issuer disclosures describe dynamic allocation across DeFi lending, liquidity provision, arbitrage, carry, and liquidation strategies, but does not disclose the current underlying assets, venue allocations, or custody providers. The slice is named to match the live chainlink-nav reserve adapter capture (assetLabel 'MEV Capital DeFi strategy NAV') so the reviewed classification overlays the captured exposure; it remains a bounded aggregate with the underlying allocation explicitly unresolved.",
+    "rationale": "Midas identifies mMEV as a managed DeFi strategy NAV. The September 14 dashboard publishes rounded asset and protocol positions with material borrow offsets and a $100,000 main-position cutoff. The issuer-prepared September 8 weekly report covers mMEV and mROX jointly, with most assets grouped as Market Neutral Strategy. Neither source establishes a complete standalone mMEV reserve allocation; the joint pool must not be assigned in full to mMEV.",
     "compositionBasis": "Midas mMEV product, risk, and transparency disclosures",
     "scope": "full-composition",
-    "knownUnknownExposure": "The complete current underlying strategy allocation, venue exposures, and custody providers are undisclosed; the single NAV slice is the whole envelope, with the strategy internals intentionally unresolved.",
+    "knownUnknownExposure": "Complete signed positions, residuals, custody relationships and allocation of the jointly reported mMEV/mROX pool remain unverified. Published protocol exposures and aggregate joint assets do not resolve standalone mMEV backing weights.",
     "knownUnknownExposurePct": 100,
     "nonLinkDispositions": [
       {
@@ -50,7 +54,7 @@
         "reserveName": "MEV Capital DeFi strategy NAV",
         "pct": 100,
         "disposition": "insufficient-evidence",
-        "rationale": "The product is disclosed only as a managed DeFi strategy NAV without a current structured underlying asset and failure-domain inventory."
+        "rationale": "Published protocol and asset positions provide candidate dependencies, but joint mMEV/mROX scope, borrowing and filtered positions require reconciliation before assigning reserve weights."
       }
     ]
   },
@@ -66,17 +70,21 @@
         "role": "custodian"
       },
       {
-        "name": "Current mMEV strategy manager (2025 manager MPC share; post-RockawayX allocation unverified) and trading venues (undisclosed)",
+        "name": "Current mMEV strategy manager and trading venues (complete custody allocation unverified)",
         "role": "other"
       }
     ],
     "segregation": "unknown",
     "bankruptcyRemoteness": "unknown",
     "rehypothecation": "permitted",
-    "reviewedAt": "2026-07-20",
-    "reviewer": "Kimi P2 reserve cohort rc-5 (lead ylds-figure)",
+    "reviewedAt": "2026-09-14",
+    "reviewer": "OpenAI Codex reserve disclosure review",
     "confidence": "probable",
     "sources": [
+      {
+        "label": "Midas current exposure and reporting scope",
+        "url": "https://drive.google.com/file/d/1Z7pi3nyarivuVjduAYHJ6ILvG4p2QkkZ/view"
+      },
       {
         "label": "Midas smart contracts documentation",
         "url": "https://docs.midas.app/protocol-mechanics/smart-contracts"
@@ -86,7 +94,7 @@
         "url": "https://midas.app/mmev"
       }
     ],
-    "uncertainty": "Midas documents the mMEV token, issuance and redemption vaults, and NAV data-feed contracts, and the strategy disclosures describe a dynamically allocated managed DeFi strategy, so strategy assets are actively deployed and reused by design. The underlying strategy wallets, trading venues, custodians, provider shares, legal segregation, and bankruptcy-remoteness terms are not disclosed.",
+    "uncertainty": "The dashboard names DeFi venues and signed positions, and the September 8 issuer report covers mMEV and mROX jointly. Complete wallet ownership, custody shares, reuse terms, legal segregation and token-specific allocation remain unverified. The joint report is issuer-prepared and does not provide independent custody assurance.",
     "knownUnknownExposurePct": 100
   }
 }

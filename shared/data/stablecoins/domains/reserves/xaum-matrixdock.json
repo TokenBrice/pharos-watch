@@ -8,7 +8,12 @@
       "risk": "medium",
       "assetClass": "commodity-allocated",
       "issuerOrObligor": "LBMA 99.99% physical gold",
-      "riskFactors": ["market", "custody", "liquidity", "counterparty"],
+      "riskFactors": [
+        "market",
+        "custody",
+        "liquidity",
+        "counterparty"
+      ],
       "liquidityHorizon": "unknown"
     }
   ],
@@ -20,25 +25,58 @@
       {
         "label": "Matrixdock XAUm",
         "url": "https://www.matrixdock.com/xaum"
+      },
+      {
+        "label": "Matrixdock XAUm price feeds",
+        "url": "https://matrixdock.gitbook.io/matrixdock-docs/english/gold-token-xaum/smart-contract/price-feeds"
+      },
+      {
+        "label": "Bureau Veritas physical inventory report, issued July 17, 2026",
+        "url": "https://2505056629-files.gitbook.io/~/files/v0/b/gitbook-x-prod.appspot.com/o/spaces%2FZx9GNWaNV9JB3JZlW74D%2Fuploads%2FVaFEA9CzGKo22HcojuSO%2FMatrixdock%20Gold%20Bureau%20Veritas%20Audit%20Jul%202026.pdf?alt=media&token=54e9714e-c65f-4b0c-8bcf-c7869956dd20"
       }
     ],
-    "rationale": "Bureau Veritas July 2026 physical audit (PDF read directly this pass): 100% inventory of 508 gold kilo bars against the Parcel Ownership List dated 30 June 2026 at Brink's HK/SG and Malca-Amit SG, no anomalies; all bars weighed and measured. XAUm tokens and circulating supply appear nowhere in the certificate - the bar-vs-token comparison is issuer-asserted outside the artefact. Composition is a single allocated-gold category; Matrixdock's live disclosure corroborates bar count and weight.",
+    "rationale": "Bureau Veritas July 2026 physical audit (PDF read directly this pass): 100% inventory of 508 gold kilo bars against the Parcel Ownership List dated 30 June 2026 at Brink's HK/SG and Malca-Amit SG, no anomalies; all bars weighed and measured. XAUm tokens and circulating supply appear nowhere in the certificate - the bar-vs-token comparison is issuer-asserted outside the artefact. Composition is a single allocated-gold category; Matrixdock's live disclosure corroborates bar count and weight. September 14 source review confirms the live BSC oracle is an XAUm price-reference feed, not a physical reserve quantity feed; the live NAV row remains an explicitly degraded price-derived proxy. The separately documented Ethereum fallback reserve feed last updated June 8, 2026 (14,209.416 with 18 decimals) and is too stale to substitute. The July report covers June 30 inventory with July 3/8/15 visits; it supplies historical custody evidence, not current token-liability reconciliation.",
     "compositionBasis": "Bureau Veritas physical audit against the Parcel Ownership List dated 30 June 2026",
     "compositionAsOf": "2026-06-30",
     "scope": "full-composition",
-    "knownUnknownExposure": "The complete direct reserve asset is physical gold; the reviewed page does not provide a custodian-by-custodian allocation.",
+    "knownUnknownExposure": "Physical gold is the reported asset category. The June 30 inventory is historical; current token-liability reconciliation, exclusive allocation and encumbrance status remain unverified. The live price-reference proxy does not refresh this composition date.",
     "knownUnknownExposurePct": 0
   },
   "custodyProfile": {
-    "providers": [{"name": "Asian bullion vaults (not publicly named)", "role": "custodian"}],
+    "providers": [
+      {
+        "name": "Brink's Hong Kong (historical June 30 inventory)",
+        "role": "custodian",
+        "jurisdiction": "Hong Kong"
+      },
+      {
+        "name": "Brink's Singapore (historical June 30 inventory)",
+        "role": "custodian",
+        "jurisdiction": "Singapore"
+      },
+      {
+        "name": "Malca-Amit Singapore (historical June 30 inventory)",
+        "role": "custodian",
+        "jurisdiction": "Singapore"
+      }
+    ],
     "segregation": "unknown",
     "bankruptcyRemoteness": "unknown",
     "rehypothecation": "unknown",
-    "reviewedAt": "2026-07-14",
-    "reviewer": "OpenAI Codex backing review",
+    "reviewedAt": "2026-09-14",
+    "reviewer": "OpenAI Codex historical physical-custody evidence review",
     "confidence": "probable",
-    "sources": [{"label": "Matrixdock XAUm", "url": "https://www.matrixdock.com/xaum"}],
-    "uncertainty": "Matrixdock describes reputable Asian vault storage and physical audits but the reviewed page does not establish legal segregation, bankruptcy treatment, rehypothecation terms, or each vault's share.",
+    "sources": [
+      {
+        "label": "Matrixdock XAUm",
+        "url": "https://www.matrixdock.com/xaum"
+      },
+      {
+        "label": "Bureau Veritas physical inventory report, issued July 17, 2026",
+        "url": "https://2505056629-files.gitbook.io/~/files/v0/b/gitbook-x-prod.appspot.com/o/spaces%2FZx9GNWaNV9JB3JZlW74D%2Fuploads%2FVaFEA9CzGKo22HcojuSO%2FMatrixdock%20Gold%20Bureau%20Veritas%20Audit%20Jul%202026.pdf?alt=media&token=54e9714e-c65f-4b0c-8bcf-c7869956dd20"
+      }
+    ],
+    "uncertainty": "Bureau Veritas identifies 103 gold kilo bars at Brink's Hong Kong, 205 at Brink's Singapore and 200 at Malca-Amit Singapore against June 30 inventory. These historical counts do not establish current XAUm-specific allocation, exclusive title, legal segregation, bankruptcy treatment or rehypothecation restrictions. Separate silver inventory is not XAUm gold collateral.",
     "knownUnknownExposurePct": 100
   }
 }

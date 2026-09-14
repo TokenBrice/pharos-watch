@@ -67,6 +67,11 @@
     },
     "params": {
       "cdpStablecoin": "GBPm",
+      "cdpSystem": {
+        "activePoolAddress": "0xa7873F4Bf2A1ea2EB20B1e8A992C4748e78473b2",
+        "defaultPoolAddress": "0x95191e52d01eC060cEA753CDADfEEB07b78D0047",
+        "collateralTokenAddress": "0x765DE816845861e75A25fCA122bb6898B8B1282a"
+      },
       "redemption": {
         "kind": "liquity-v2-cr",
         "collateralRegistryAddress": "0x1bEDD4334335522B0a0e8e610d326B16B0a605Fb",
