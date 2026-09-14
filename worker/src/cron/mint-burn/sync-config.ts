@@ -1,3 +1,5 @@
+import type { MintBurnConservationRecord } from "@shared/types/status";
+import { auditMintBurnConservation, getMintBurnConservationEligibility, persistMintBurnConservation, validateMintBurnParsedConservation, verifyPersistedMintBurnConservation } from "../../lib/mint-burn-conservation";
 import { logWorkerEventArgs } from "../../lib/structured-log";
 import type { AlchemyLogEntry, AlchemyTopicFilter } from "../../lib/alchemy-logs";
 import { fetchAlchemyLogs, resolveBlockTimestamps } from "../../lib/alchemy-logs";
@@ -34,6 +36,9 @@ export interface MintBurnConfigSummary {
   rowsIgnored: number;
   rowsDropped: number;
   errors: number;
+  conservationFailure?: boolean;
+  conservationStatus?: MintBurnConservationRecord["status"];
+  conservationReason?: string;
   failedEventDefs: string[];
   eventCoverage: Array<{
     eventDef: string;
@@ -336,13 +341,81 @@ export async function syncMintBurnConfig(input: SyncMintBurnConfigInput): Promis
       summary.maxBlockSeen = Math.max(summary.maxBlockSeen, row.block_number);
     }
   }
-  const persistResult = await persistMintBurnRows(db, persistableRows, affectedHours, { signal });
+  const fullEventCoverage =
+    summary.eventCoverage.length === config.events.length &&
+    summary.eventCoverage.every((coverage) => coverage.complete && coverage.scannedToBlock >= scanTo);
+  let conservationFence = false;
+  let parserFailure = false;
+  let conservationAudit: MintBurnConservationRecord | null = null;
+  if (getMintBurnConservationEligibility(config).supported) {
+    const audit = await auditMintBurnConservation({
+      config, logs: allConfigLogs, fromBlock, toBlock: scanTo, checkedAt: Math.floor(Date.now() / 1000),
+      complete: fullEventCoverage, rpcUrl: alchemyUrl, budget: configBudget, signal, deadlineMs,
+    });
+    conservationFence = audit.status === "mismatch" || [
+      "invalid-rpc-quantity", "unsafe-rpc-quantity", "invalid-raw-log", "inconsistent-log-block-hash",
+      "conflicting-duplicate-log", "ambiguous-zero-transfer", "closing-log-hash-mismatch", "boundary-reorg",
+    ].includes(audit.reason ?? "");
+    if (fullEventCoverage && summary.missingTimestampCount === 0) {
+      try {
+        validateMintBurnParsedConservation(config, allConfigLogs, fromBlock, scanTo, allParsedRows);
+      } catch {
+        parserFailure = true;
+        conservationFence = true;
+        if (audit.status !== "mismatch") audit.status = "unavailable";
+        audit.reason = "parsed-raw-event-correspondence-failed";
+      }
+    }
+    if (audit.status === "ok" && (summary.missingTimestampCount > 0 || summary.txContextShortfalls > 0)) {
+      audit.status = "unavailable";
+      audit.reason = "incomplete-event-persistence-context";
+    }
+    conservationAudit = audit;
+    // Publish a verified discrepancy even if the subsequent row write fails.
+    if (audit.status === "mismatch") await persistMintBurnConservation(db, audit, signal);
+    summary.conservationStatus = audit.status;
+    summary.conservationReason = audit.reason;
+    if (conservationFence) {
+      summary.errors++;
+      summary.failedEventDefs.push(`conservation:${audit.reason ?? audit.status}`);
+    }
+  }
+  let persistResult;
+  try {
+    persistResult = await persistMintBurnRows(db, parserFailure ? [] : persistableRows, affectedHours, { signal });
+  } catch (error) {
+    if (conservationAudit && conservationAudit.status !== "mismatch") {
+      await persistMintBurnConservation(db, { ...conservationAudit, status: "unavailable", reason: "event-row-write-failed" }, signal);
+    }
+    throw error;
+  }
+  if (conservationAudit?.status === "ok") {
+    let correspondence;
+    try {
+      correspondence = await verifyPersistedMintBurnConservation(db, persistableRows, signal, deadlineMs);
+    } catch (error) {
+      await persistMintBurnConservation(db, { ...conservationAudit, status: "unavailable", reason: "persisted-event-readback-failed" }, signal);
+      throw error;
+    }
+    if (correspondence !== "ok") {
+      conservationAudit.status = "unavailable";
+      conservationAudit.reason = correspondence === "mismatch"
+        ? "persisted-event-correspondence-failed" : "persisted-event-readback-deadline";
+      conservationFence ||= correspondence === "mismatch";
+      summary.conservationStatus = conservationAudit.status;
+      summary.conservationReason = conservationAudit.reason;
+      if (conservationFence) {
+        summary.errors++;
+        summary.failedEventDefs.push(`conservation:${conservationAudit.reason}`);
+      }
+    }
+  }
+  if (conservationAudit && conservationAudit.status !== "mismatch") {
+    await persistMintBurnConservation(db, conservationAudit, signal);
+  }
   summary.rowsInserted += persistResult.inserted;
   summary.rowsIgnored += persistResult.ignored;
 
-  const fullEventCoverage =
-    summary.eventCoverage.length === config.events.length &&
-    summary.eventCoverage.every((coverage) => coverage.complete);
   const eventCoverageFrontier = minOrNull(
     summary.eventCoverage.map((coverage) => coverage.scannedToBlock),
   );
@@ -385,6 +458,11 @@ export async function syncMintBurnConfig(input: SyncMintBurnConfigInput): Promis
     summary.advanceReason = "no-safe-frontier";
   }
 
+  summary.conservationFailure = conservationFence;
+  if (conservationFence) {
+    newLastBlock = null;
+    summary.advanceReason = "no-safe-frontier";
+  }
   if (newLastBlock != null) {
     summary.advancedTo = newLastBlock;
   }

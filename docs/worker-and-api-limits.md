@@ -82,6 +82,8 @@ Current state: `halfHourlyOffset` is the only modeled `5/6` slot and is full for
 
 For `sync-stablecoins`, failed upstream responses must still be consumed or canceled before later passes start. That rule bounds unread bytes, completes transport cleanup, and keeps fetch phases deterministic; it is not a claim that an unread body still occupies Cloudflare's header-wait slot. The late fallback phase remains `CoinMarketCap` -> `Jupiter` -> `DexScreener`.
 
+Mint/burn conservation audits reuse fetched logs inside the existing serialized contract phase. Boundary-header, hash-pinned supply and boundary-recheck batches consume the same per-config/lane request budget and deadline; they introduce no new trigger or parallel connection peak. Exhausted audit capacity remains unverified rather than causing an unlimited retry loop or expanding the lane budget. See [Raw Token Conservation](./mint-burn-flows.md#raw-token-conservation).
+
 The same cleanup rule applies to Worker-side integration clients. Telegram delivery, X posting, and GitHub feedback submission should consume or cancel response bodies before returning so transports do not retain unread streams or unbounded response bytes.
 
 ---

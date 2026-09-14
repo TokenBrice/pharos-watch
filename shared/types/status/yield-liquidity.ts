@@ -295,6 +295,34 @@ export const YieldHealthSummarySchema = z.object({
 });
 export type YieldHealthSummary = z.output<typeof YieldHealthSummarySchema>;
 
+const ConservationUnsignedRawSchema = z.string().max(100).regex(/^(0|[1-9][0-9]*)$/);
+const ConservationSignedRawSchema = z.string().max(100).regex(/^(0|-?[1-9][0-9]*)$/);
+const ConservationBlockSchema = z.number().int().nonnegative().max(Number.MAX_SAFE_INTEGER);
+export const MintBurnConservationRecordSchema = z.object({
+  version: z.literal(1),
+  key: z.string(),
+  configFingerprint: z.string(),
+  stablecoinId: z.string(),
+  chainId: z.string(),
+  address: z.string().regex(/^0x[0-9a-fA-F]{40}$/),
+  decimals: z.number().int().min(0).max(255),
+  checkedAt: ConservationBlockSchema,
+  status: z.enum(["ok", "mismatch", "unavailable", "unsupported"]),
+  reason: z.string().optional(),
+  fromBlock: ConservationBlockSchema.nullable(),
+  toBlock: ConservationBlockSchema.nullable(),
+  fromBlockHash: z.string().regex(/^0x[0-9a-fA-F]{64}$/).optional(),
+  toBlockHash: z.string().regex(/^0x[0-9a-fA-F]{64}$/).optional(),
+  fromTimestamp: ConservationBlockSchema.optional(),
+  toTimestamp: ConservationBlockSchema.optional(),
+  mintRaw: ConservationUnsignedRawSchema.optional(),
+  burnRaw: ConservationUnsignedRawSchema.optional(),
+  supplyDeltaRaw: ConservationSignedRawSchema.optional(),
+  residualRaw: ConservationSignedRawSchema.optional(),
+  logCount: ConservationBlockSchema.optional(),
+});
+export type MintBurnConservationRecord = z.output<typeof MintBurnConservationRecordSchema>;
+
 export const MintBurnReconciliationRowSchema = z.object({
   stablecoinId: z.string(),
   symbol: z.string(),
@@ -305,10 +333,12 @@ export const MintBurnReconciliationRowSchema = z.object({
   status: z.enum(["ok", "warn", "critical", "insufficient-source"]),
   coverageStatus: z.union([MintBurnCoverageStatusSchema, z.literal("unknown")]),
   comparisonIssue: z.string().optional(),
+  conservation: z.array(MintBurnConservationRecordSchema).optional(),
 });
 export type MintBurnReconciliationRow = z.output<typeof MintBurnReconciliationRowSchema>;
 
 export const MintBurnReconciliationSummarySchema = z.object({
+  conservationVersion: z.literal(1).optional(),
   checkedAt: z.number(),
   comparedCoins: z.number(),
   criticalCount: z.number(),

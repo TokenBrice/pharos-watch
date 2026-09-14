@@ -1,13 +1,13 @@
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
-import { STATUS_RECONCILIATION_THRESHOLDS } from "@shared/lib/status-thresholds";
 import { getCirculatingRaw } from "@shared/lib/supply";
 import { resolveChainId } from "@shared/lib/chains";
-import type { MintBurnReconciliationRow, MintBurnReconciliationSummary, StatusResponse } from "@shared/types/status";
+import { MintBurnConservationRecordSchema, type MintBurnConservationRecord, type MintBurnReconciliationRow, type MintBurnReconciliationSummary, type StatusResponse } from "@shared/types/status";
 import { buildInClause } from "../db";
 import { buildCoinCoverageMap, readMintBurnCronSnapshot, type MintBurnCronSnapshot } from "../mint-burn-flows-service";
 import { readMintBurnSyncStateBatch } from "../mint-burn-pipeline/sync-state";
 import { MINT_BURN_PUBLIC_FRESHNESS_MAX_AGE_SEC } from "../mint-burn-health-config";
-import { MINT_BURN_CONFIGS } from "../mint-burn-contracts";
+import { MINT_BURN_CONFIGS, type MintBurnContractConfig } from "../mint-burn-contracts";
+import { mintBurnConservationCacheKey, mintBurnConservationFingerprint, readMintBurnConservationRecords, getMintBurnConservationEligibility } from "../mint-burn-conservation";
 import {
   hasUsableStablecoinsPayload,
   loadStablecoinsCache,
@@ -243,6 +243,58 @@ const REBASING_RECONCILIATION_SCOPE_ISSUES: Readonly<Record<string, string>> = {
   "ousd-origin-protocol": "Rebases change token supply without mint/burn events.",
 };
 
+const CONSERVATION_PASS_MAX_AGE_SEC = 75 * 60;
+
+function validateConservationRecord(
+  config: MintBurnContractConfig,
+  value: unknown,
+  now: number,
+): MintBurnConservationRecord {
+  const unavailable = (reason: string): MintBurnConservationRecord => ({
+    version: 1, key: mintBurnConservationCacheKey(config),
+    configFingerprint: mintBurnConservationFingerprint(config),
+    stablecoinId: config.stablecoinId, chainId: config.chain.chainId,
+    address: config.contractAddress, decimals: config.decimals,
+    checkedAt: now, status: "unavailable", reason, fromBlock: null, toBlock: null,
+  });
+  const eligibility = getMintBurnConservationEligibility(config);
+  if (!eligibility.supported) return { ...unavailable(eligibility.reason ?? "Conservation is unsupported for this contract."), status: "unsupported" };
+  const parsed = MintBurnConservationRecordSchema.safeParse(value);
+  if (!parsed.success) return unavailable(value == null ? "Conservation evidence is not available." : "Conservation evidence is malformed.");
+  const record = parsed.data;
+  if (record.key !== mintBurnConservationCacheKey(config)
+    || record.configFingerprint !== mintBurnConservationFingerprint(config)
+    || record.stablecoinId !== config.stablecoinId || record.chainId !== config.chain.chainId
+    || record.address.toLowerCase() !== config.contractAddress.toLowerCase()
+    || record.decimals !== config.decimals || record.checkedAt > now) {
+    return unavailable("Conservation evidence does not match the current contract configuration or clock.");
+  }
+  if (record.status === "unavailable" || record.status === "unsupported") return record;
+  if (record.fromBlock == null || record.toBlock == null || record.fromBlock >= record.toBlock
+    || record.fromBlock < config.startBlock - 1
+    || !record.fromBlockHash || !record.toBlockHash
+    || /^0x0{64}$/i.test(record.fromBlockHash) || /^0x0{64}$/i.test(record.toBlockHash)
+    || record.fromBlockHash.toLowerCase() === record.toBlockHash.toLowerCase()
+    || record.fromTimestamp == null || record.toTimestamp == null
+    || record.fromTimestamp >= record.toTimestamp || record.toTimestamp > record.checkedAt
+    || record.mintRaw == null || record.burnRaw == null || record.supplyDeltaRaw == null
+    || record.residualRaw == null || record.logCount == null) {
+    return unavailable("Conservation evidence has invalid block boundaries or incomplete arithmetic.");
+  }
+  const residual = BigInt(record.mintRaw) - BigInt(record.burnRaw) - BigInt(record.supplyDeltaRaw);
+  if (residual !== BigInt(record.residualRaw)
+    || (record.status === "ok") !== (residual === 0n)
+    || (record.logCount === 0 && (record.mintRaw !== "0" || record.burnRaw !== "0"))) {
+    return unavailable("Conservation evidence has inconsistent arithmetic or status.");
+  }
+  // A proven mismatch remains unresolved until a verified pass replaces it.
+  if (record.status === "ok" && (now - record.checkedAt > CONSERVATION_PASS_MAX_AGE_SEC
+    || now - record.toTimestamp > CONSERVATION_PASS_MAX_AGE_SEC)) {
+    return { ...record, status: "unavailable", reason: "Conservation evidence is stale." };
+  }
+  return record;
+}
+
 export async function getMintBurnReconciliation(
   db: D1Database,
   now: number,
@@ -285,8 +337,9 @@ export async function getMintBurnReconciliation(
   let extendedSnapshot: MintBurnCronSnapshot;
   let flowRows: D1Result<{ stablecoin_id: string; chain_id: string; net_flow_usd: number }>;
   let firstSeenRows: Array<{ stablecoin_id: string; chain_id: string; first_hour_ts: number }>;
+  let conservationRecords: Map<string, unknown>;
   try {
-    [flowRows, firstSeenRows, lastBlocks, cronSnapshot, extendedSnapshot] = await Promise.all([
+    [flowRows, firstSeenRows, lastBlocks, cronSnapshot, extendedSnapshot, conservationRecords] = await Promise.all([
       db
         .prepare(
           `SELECT /* pharos:status-derived:mint-burn-24h */
@@ -308,6 +361,7 @@ export async function getMintBurnReconciliation(
       readMintBurnSyncStateBatch(db, MINT_BURN_CONFIGS),
       readMintBurnCronSnapshot(db),
       readMintBurnCronSnapshot(db, "sync-mint-burn-extended"),
+      readMintBurnConservationRecords(db, MINT_BURN_CONFIGS),
     ]);
   } catch (err) {
     logWorkerEvent({
@@ -357,46 +411,34 @@ export async function getMintBurnReconciliation(
       const currentOnlySupply = asset.supplySource === "onchain-total-supply"
         || asset.supplySource === "onchain-circulating-supply";
       const prevDay = currentOnlySupply ? undefined : chainSupply?.circulatingPrevDay;
-      const comparisonIssue = REBASING_RECONCILIATION_SCOPE_ISSUES[asset.id]
-        ?? (asset.supplySource === "defillama" ? DEFILLAMA_RECONCILIATION_SCOPE_ISSUES[asset.id] : undefined)
-        ?? (canonicalChainId == null ? "A single configured issuance chain is required." : undefined)
-        ?? (coverageStatus !== "full" && coverageStatus !== "partial-history"
-          ? "A fresh scan covering the comparison window is required." : undefined)
-        ?? (matchingSupply.length !== 1 ? "A unique matching chain-supply entry is required." : undefined)
-        ?? (typeof current !== "number" || !Number.isFinite(current) || current < 0
-          ? "Current chain supply is unavailable." : undefined)
-        ?? (typeof prevDay !== "number" || !Number.isFinite(prevDay) || prevDay < 0
-          ? "An observed prior-day chain supply is required; current-only supply cannot be compared." : undefined);
-      if (comparisonIssue != null || current == null || prevDay == null) {
-        return {
-          stablecoinId: asset.id,
-          symbol: TRACKED_META_BY_ID.get(asset.id)?.symbol ?? asset.symbol,
-          flowNet24hUsd,
-          chainSupplyDelta24hUsd: null,
-          absoluteDiffUsd: null,
-          diffRatio: null,
-          status: "insufficient-source",
-          coverageStatus,
-          comparisonIssue,
-        };
-      }
-
-      const chainSupplyDelta24hUsd = current - prevDay;
-      const absoluteDiffUsd = Math.abs(flowNet24hUsd - chainSupplyDelta24hUsd);
-      const denominator = Math.max(
-        Math.abs(chainSupplyDelta24hUsd),
-        Math.abs(flowNet24hUsd),
-        Math.max(getCirculatingRaw(asset), 1) * 0.005,
-      );
-      const diffRatio = denominator > 0 ? absoluteDiffUsd / denominator : 0;
-      const status: MintBurnReconciliationRow["status"] =
-        absoluteDiffUsd >= STATUS_RECONCILIATION_THRESHOLDS.criticalAbsoluteUsd ||
-        diffRatio >= STATUS_RECONCILIATION_THRESHOLDS.criticalRatio
-          ? "critical"
-          : absoluteDiffUsd >= STATUS_RECONCILIATION_THRESHOLDS.warnAbsoluteUsd ||
-              diffRatio >= STATUS_RECONCILIATION_THRESHOLDS.warnRatio
-            ? "warn"
-            : "ok";
+      const contextIssue = REBASING_RECONCILIATION_SCOPE_ISSUES[asset.id]
+        ?? (asset.supplySource === "defillama" ? DEFILLAMA_RECONCILIATION_SCOPE_ISSUES[asset.id] : undefined);
+      const chainSupplyDelta24hUsd = typeof current === "number" && Number.isFinite(current) && current >= 0
+        && typeof prevDay === "number" && Number.isFinite(prevDay) && prevDay >= 0 ? current - prevDay : null;
+      const absoluteDiffUsd = chainSupplyDelta24hUsd == null ? null : Math.abs(flowNet24hUsd - chainSupplyDelta24hUsd);
+      const denominator = Math.max(Math.abs(chainSupplyDelta24hUsd ?? 0), Math.abs(flowNet24hUsd), Math.max(getCirculatingRaw(asset), 1) * 0.005);
+      const diffRatio = absoluteDiffUsd == null ? null : absoluteDiffUsd / denominator;
+      const configs = MINT_BURN_CONFIGS.filter((config) => config.stablecoinId === asset.id);
+      const conservation = configs.map((config) => {
+        const record = validateConservationRecord(config, conservationRecords.get(mintBurnConservationCacheKey(config)), now);
+        if (record.status !== "ok") return record;
+        const snapshot = config.tier === "extended" ? extendedSnapshot : cronSnapshot;
+        const freshScan = snapshot.startedAt != null && snapshot.startedAt <= now
+          && now - snapshot.startedAt <= MINT_BURN_PUBLIC_FRESHNESS_MAX_AGE_SEC
+          && (snapshot.status === "ok" || snapshot.status === "degraded")
+          && (coverageStatus === "full" || coverageStatus === "partial-history")
+          && (lastBlocks.get(`${config.chain.chainId}-${config.contractAddress}`) ?? -1) >= record.fromBlock!
+          && (snapshot.chainHeads.get(config.chain.chainId) ?? -1) >= record.toBlock!;
+        return freshScan ? record : { ...record, status: "unavailable" as const, reason: "A fresh scan covering the audited blocks is required." };
+      });
+      const status: MintBurnReconciliationRow["status"] = conservation.some((record) => record.status === "mismatch")
+        ? "critical" : conservation.length > 0 && conservation.every((record) => record.status === "ok")
+          ? "ok" : "insufficient-source";
+      const comparisonIssue = [
+        status === "insufficient-source" ? conservation.find((record) => record.status !== "ok")?.reason ?? "Conservation evidence is incomplete." : undefined,
+        contextIssue,
+        "USD flow and source-supply differences are indicative only; their observation windows and scopes may differ.",
+      ].filter(Boolean).join(" ");
 
       return {
         stablecoinId: asset.id,
@@ -407,6 +449,8 @@ export async function getMintBurnReconciliation(
         diffRatio,
         status,
         coverageStatus,
+        comparisonIssue,
+        conservation,
       };
     })
     .sort((a, b) => {
@@ -421,6 +465,7 @@ export async function getMintBurnReconciliation(
     });
 
   return {
+    conservationVersion: 1,
     checkedAt: now,
     comparedCoins: rows.filter((row) => row.status !== "insufficient-source").length,
     criticalCount: rows.filter((row) => row.status === "critical").length,

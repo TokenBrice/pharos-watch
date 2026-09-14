@@ -129,6 +129,22 @@ When omitted, the default is the Transfer convention: mint → `topics[2]` (reci
 
 ---
 
+## Raw Token Conservation
+
+The mint/burn producer performs a bounded integrity audit for reviewed contract identities using the raw logs already fetched by the normal config scan. This is separate from public economic-flow aggregation: small, atomic and bridge events stay in the raw conservation channel even when excluded from public standard flow. No new cron, migration, provider or public supply override is introduced.
+
+For a complete successful range `[fromBlock, toBlock]`, the audit reads boundary headers and pins `totalSupply()` calls to their canonical hashes using [EIP-1898](https://eips.ethereum.org/EIPS/eip-1898). It rechecks the boundary identities before accepting the result. Missing archive support, partial ranges, invalid RPC results, changed hashes, exhausted budget or elapsed deadline produce unverified evidence; there is no fallback to latest-state reads. Contract/topic/range identities, non-removed logs, fixed-width amounts and duplicate consistency are validated before exact native integer summation. Retrieved positive events at or above the configured cutoff must also correspond to parsed row identities, directions and amounts before persistence. A passing verdict is published only after successful writes and a bounded readback confirms every eligible row’s identity, direction, native amount, block and timestamp, including rows retained by `INSERT OR IGNORE`. Missing or conflicting stored rows fence advancement.
+
+All extra RPC work is serialized within the existing per-config and lane request/deadline budgets. Raw logs are reused rather than scanned again. Interior log block identities remain provider evidence; the boundary checks do not independently retrieve every interior header. Exact conservation can detect an unmatched omitted event, but cannot alone detect a provider omitting offsetting mint/burn pairs.
+
+The initial reviewed identities are the thirteen investigated assets (USDS, USDe, USD1, USDG, USDat, MetaMask USD, GUSD, EURe, BOLD, ftUSD, LUSD, Alto DUSD and USDaf) and both BUIDL Ethereum contracts. Admission checks include exact chain/address/decimals and ordinary zero-address Transfer semantics. Rebasing, custom-event and unreviewed configs are explicitly unsupported rather than falsely passing or triggering an invented conservation failure.
+
+Evidence uses existing `cache` rows at `mint-burn:conservation:<configKey>`, with monotonic writes and a fingerprint covering the audited configuration. Storage is one compact latest record per audited contract, not a growing event archive. Unresolved verified mismatches survive unavailable follow-up attempts and clear only after a verified passing audit covers the entire failing range for the same identity. Changing a config invalidates old proof. Cache write failures surface through the producer rather than pretending evidence was published.
+
+A verified native mismatch fences cursor advancement and immediately degrades the affected run so the same range can be retried. Invalid raw identity or parser/stored-row correspondence evidence is likewise not allowed to advance as a clean scan. Pure audit capability/budget unavailability does not independently stall otherwise valid ingestion or count as an ingestion API error; separate conservation counters expose audit failures and unavailable attempts. The operator verdict stays unverified, and existing partial-coverage, timestamp, bridge-context and persistence rules continue to govern progress.
+
+The operator view reads cached evidence only, displays each latest audited range separately, and never treats the old timestamp-less circulating-supply delta as a critical ingestion verdict. See [Status Dashboard: Mint/Burn Reconciliation Card](./status-dashboard.md#mintburn-reconciliation-card). The public mint/burn methodology and its version are unchanged because event cutoffs, classifications, counts, valuation and flow formulas are unchanged.
+
 ## Sync Algorithm
 
 1. **Load sync state** — batch query `mint_burn_sync_state` for all lane-selected contract keys. Falls back to `startBlock - 1` for new configs.
