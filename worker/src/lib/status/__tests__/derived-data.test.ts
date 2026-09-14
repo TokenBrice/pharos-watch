@@ -8,7 +8,7 @@ import { getDatasetFreshness, getMintBurnReconciliation } from "../derived-data"
 const NOW = 1_800_000_000;
 
 describe("getMintBurnReconciliation chain identity", () => {
-  it.each([
+  it.each<[Record<string, unknown>, number | null, string?, string?]>([
     [{ Ethereum: { current: 110, circulatingPrevDay: 100 } }, 10],
     [{ Ethereum: { current: 110, circulatingPrevDay: 0 } }, 110],
     [{ ethereum: { current: 110, circulatingPrevDay: 100 } }, 10],
@@ -23,7 +23,7 @@ describe("getMintBurnReconciliation chain identity", () => {
     [{ Ethereum: { current: 110, circulatingPrevDay: 100 } }, 10, "extended-only"],
     [{ Ethereum: { current: 110, circulatingPrevDay: 0 } }, null, "legacy-onchain"],
     ...["dai-makerdao", "usdd-tron-dao-reserve", "crvusd-curve", "jpyc-jpyc", "tryb-bilira", "frxusd-frax", "fxusd-f-x-protocol", "m-m0", "ousd-origin-protocol"]
-      .map((id) => [{ Ethereum: { current: 110, circulatingPrevDay: 100 } }, null, "", id] as const),
+      .map<[Record<string, unknown>, null, string, string]>((id) => [{ Ethereum: { current: 110, circulatingPrevDay: 100 } }, null, "", id]),
     [{ Ethereum: { current: 110, circulatingPrevDay: 100 } }, 10, "", "usds-sky"],
     [{ Ethereum: { current: 20_000_100, circulatingPrevDay: 100 } }, 20_000_000, "", "usds-sky"],
     [{ Ethereum: { current: 110, circulatingPrevDay: 100 } }, 10, "other-source", "dai-makerdao"],
