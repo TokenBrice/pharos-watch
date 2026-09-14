@@ -2,7 +2,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it, vi } from "vitest";
 import { BLOG_POSTS } from "@/data/blog";
 import { CASE_STUDY_LIST } from "@/lib/case-studies";
-import { DIGEST_ENTRIES } from "@/lib/digest-registry";
+import { DIGEST_BY_DATE, DIGEST_ENTRIES } from "@/lib/digest-registry";
 import { getMechanismExplainerPath } from "@shared/lib/classification";
 import { PUBLIC_DOCS } from "@shared/lib/public-docs";
 import { MECHANISM_ARCHETYPE_VALUES } from "@shared/types/core";
@@ -33,6 +33,23 @@ import CaseStudyPage, * as caseStudyRoute from "@/app/learn/case-studies/[slug]/
 import MechanismPage, * as mechanismRoute from "@/app/learn/mechanisms/[archetype]/page";
 
 describe("static content route adapters", () => {
+  it.each([
+    ["USDS Yield Repeats As Blacklists Multiply", "USDS Yield Repeats As Blacklists…"],
+    ["A Quiet Week", "A Quiet Week"],
+  ])("bounds digest metadata while preserving its date: %s", async (headline, expectedTitle) => {
+    const date = "2026-09-14-weekly";
+    const lookup = vi.spyOn(DIGEST_BY_DATE, "get").mockReturnValueOnce({
+      ...DIGEST_ENTRIES[0]!, date, title: headline, digestType: "weekly",
+    });
+    try {
+      const metadata = await digestRoute.generateMetadata({ params: Promise.resolve({ date }) });
+      expect(metadata.title).toBe(`${expectedTitle} (September 14, 2026)`);
+      expect(`${metadata.title} | Pharos`.length).toBeLessThanOrEqual(70);
+    } finally {
+      lookup.mockRestore();
+    }
+  });
+
   it("emits the exact registered static-param sets", () => {
     expect(blogRoute.generateStaticParams()).toEqual(BLOG_POSTS.map(({ slug }) => ({ slug })));
     expect(docsRoute.generateStaticParams()).toEqual(PUBLIC_DOCS.map(({ slug }) => ({ slug })));
