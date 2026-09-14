@@ -4,6 +4,8 @@ On-chain mint and burn event tracker for stablecoins on their **configured issua
 
 Product scope note: the public `/flows` page now surfaces the configured issuance scope plus per-coin `coverage` metadata so partial history, lagging sync, or unknown current chain-head states are visible to users instead of implied as complete market-wide coverage. Current production scope is Ethereum for most tracked assets, with USDai tracked on native Arbitrum and Base Dollar tracked on native Base as their canonical issuance/redemption chains.
 
+BUIDL Ethereum coverage includes both registered share-class contracts, `0x7712c34205737192402172409a8f7ccef8aa2aec` and `0x6a9da2d710bb9b700acde7cb81f10f1ff8c89041`. DefiLlama's [reviewed issuance configuration](https://github.com/DefiLlama/peggedassets-server/blob/074324b7775b0f18540e28b087fc281bf05d2b17/src/peggedData/peggedData.ts#L5159) sums both tokens in Ethereum supply. Both use six decimals, zero-address Transfer events, and the existing 21,900,000 default coverage floor; this floor is not a verified deployment block. The added contract requires its own bootstrap/backfill and a new extended-lane production execution before coverage can be accepted as current.
+
 The `/flows` page also renders a Flow Receipt directly under the printer/shredder overview. The receipt uses the existing 24-hour coin rows and 7-day hourly buckets to show printed, shredded, and net tracked flow totals, the top 24-hour minter and burner, and the current coverage/lag state. Its labels deliberately describe observed configured-chain events; they do not claim complete market-wide supply creation or redemption.
 
 Operational freshness configuration is shared via `worker/src/lib/mint-burn-health-config.ts`:
@@ -21,7 +23,7 @@ Public `/api/mint-burn-flows` freshness metadata and the `/flows` page intention
 
 ## Methodology Versioning
 
-- **Current methodology version:** <!-- GENERATED-START: methodology-version-mint-burn-flow -->`v6.191`<!-- GENERATED-END: methodology-version-mint-burn-flow -->
+- **Current methodology version:** <!-- GENERATED-START: methodology-version-mint-burn-flow -->`v6.2`<!-- GENERATED-END: methodology-version-mint-burn-flow -->
 - **Public changelog page:** `/methodology/mint-burn-flow-changelog/`
 - **Structured changelog:** `shared/data/methodology-changelogs/mint-burn-flow/`
 

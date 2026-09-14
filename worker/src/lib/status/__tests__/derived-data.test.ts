@@ -22,22 +22,28 @@ describe("getMintBurnReconciliation chain identity", () => {
     [{ Ethereum: { current: 110, circulatingPrevDay: 100 } }, null, "lagging"],
     [{ Ethereum: { current: 110, circulatingPrevDay: 100 } }, 10, "extended-only"],
     [{ Ethereum: { current: 110, circulatingPrevDay: 0 } }, null, "legacy-onchain"],
-  ])("resolves chain supply without inventing or duplicating history: %j", async (chainCirculating, delta, coverageCase = "") => {
+    ...["dai-makerdao", "usdd-tron-dao-reserve", "crvusd-curve", "jpyc-jpyc", "tryb-bilira", "frxusd-frax", "fxusd-f-x-protocol", "m-m0", "ousd-origin-protocol"]
+      .map((id) => [{ Ethereum: { current: 110, circulatingPrevDay: 100 } }, null, "", id] as const),
+    [{ Ethereum: { current: 110, circulatingPrevDay: 100 } }, 10, "", "usds-sky"],
+    [{ Ethereum: { current: 20_000_100, circulatingPrevDay: 100 } }, 20_000_000, "", "usds-sky"],
+    [{ Ethereum: { current: 110, circulatingPrevDay: 100 } }, 10, "other-source", "dai-makerdao"],
+  ])("resolves chain supply without inventing or duplicating history: %j", async (chainCirculating, delta, coverageCase = "", stablecoinId = "usdc-circle") => {
     const db = mockD1([
       {
         match: "SELECT value, updated_at FROM cache WHERE key = ?",
         rows: [{
           value: JSON.stringify({ peggedAssets: [{
-            id: "usdc-circle", symbol: "USDC", price: 1,
+            id: stablecoinId, symbol: "USDC", price: 1,
             circulating: { peggedUSD: 1_000_000 }, chainCirculating,
-            supplySource: coverageCase === "legacy-onchain" ? "onchain-total-supply" : "defillama",
+            supplySource: coverageCase === "legacy-onchain" ? "onchain-total-supply"
+              : coverageCase === "other-source" ? "reviewed-source" : "defillama",
           }] }),
           updated_at: NOW,
         }],
       },
       {
         match: "pharos:status-derived:mint-burn-24h",
-        rows: [{ stablecoin_id: "usdc-circle", chain_id: "ethereum", net_flow_usd: 10 }],
+        rows: [{ stablecoin_id: stablecoinId, chain_id: "ethereum", net_flow_usd: 10 }],
       },
       { match: "pharos:status-derived:mint-burn-first-hour-seek", rows: [] },
       { match: "FROM mint_burn_sync_state", rows: coverageCase === "missing-cursor" ? [] : MINT_BURN_CONFIGS.map((config) => ({
@@ -58,8 +64,9 @@ describe("getMintBurnReconciliation chain identity", () => {
     expect(result?.rows).toHaveLength(1);
     expect(result?.rows[0]).toMatchObject({
       chainSupplyDelta24hUsd: delta,
-      status: delta === null ? "insufficient-source" : "ok",
+      status: delta === null ? "insufficient-source" : delta === 20_000_000 ? "critical" : "ok",
     });
+    expect(result?.rows[0]?.comparisonIssue).toEqual(delta === null ? expect.any(String) : undefined);
   });
 });
 

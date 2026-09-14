@@ -304,6 +304,7 @@ export const MintBurnReconciliationRowSchema = z.object({
   diffRatio: z.number().nullable(),
   status: z.enum(["ok", "warn", "critical", "insufficient-source"]),
   coverageStatus: z.union([MintBurnCoverageStatusSchema, z.literal("unknown")]),
+  comparisonIssue: z.string().optional(),
 });
 export type MintBurnReconciliationRow = z.output<typeof MintBurnReconciliationRowSchema>;
 

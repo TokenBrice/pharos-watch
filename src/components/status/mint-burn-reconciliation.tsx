@@ -106,7 +106,7 @@ export function MintBurnReconciliationCard({
               .
             </p>
             <p className="text-xs text-muted-foreground">
-              Missing supply history or unverified scan coverage is insufficient source. Standard flows exclude
+              Missing history, unverified scans or incompatible supply definitions are insufficient source. Standard flows exclude
               bridge, review, atomic and below-threshold events; this is not an exact total-supply audit.
             </p>
             <div className="text-xs text-muted-foreground">
@@ -154,6 +154,9 @@ export function MintBurnReconciliationCard({
                 </div>
               </div>
 
+              {row.comparisonIssue ? (
+                <p className="mt-3 text-xs text-muted-foreground">{row.comparisonIssue}</p>
+              ) : null}
               <div className="mt-3 grid gap-3 border-t border-border/50 pt-3 text-xs text-muted-foreground sm:grid-cols-3">
                 <div>
                   <div className="text-[10px] uppercase tracking-[0.18em]">Flow net 24h</div>

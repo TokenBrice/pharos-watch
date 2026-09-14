@@ -225,6 +225,22 @@ export async function getDatasetFreshness(db: D1Database): Promise<StatusRespons
   };
 }
 
+// Reviewed upstream definitions, not exceptions based on the size of a gap.
+// Evidence and restoration criteria: docs/status-dashboard.md#mintburn-reconciliation-card.
+const DEFILLAMA_RECONCILIATION_SCOPE_ISSUES: Readonly<Record<string, string>> = {
+  "dai-makerdao": "Upstream supply includes internal DSR balances that ERC-20 mint/burn events do not measure.",
+  "usdd-tron-dao-reserve": "Upstream supply includes internal savings balances and legacy USDD outside the tracked token.",
+  "crvusd-curve": "Upstream supply measures circulating protocol debt, not the pre-minted token supply.",
+  "jpyc-jpyc": "Upstream supply excludes issuer and redemption wallet balances; ordinary transfers change circulation.",
+  "tryb-bilira": "Upstream supply excludes an unreleased wallet balance; ordinary transfers change circulation.",
+  "frxusd-frax": "Upstream supply excludes a treasury balance; ordinary transfers change circulation.",
+  "fxusd-f-x-protocol": "Upstream supply combines fxUSD with fstETH and ffrxETH; tracked events cover fxUSD only.",
+};
+const REBASING_RECONCILIATION_SCOPE_ISSUES: Readonly<Record<string, string>> = {
+  "m-m0": "Earning-index accrual changes token supply without mint/burn events.",
+  "ousd-origin-protocol": "Rebases change token supply without mint/burn events.",
+};
+
 export async function getMintBurnReconciliation(
   db: D1Database,
   now: number,
@@ -339,14 +355,17 @@ export async function getMintBurnReconciliation(
       const currentOnlySupply = asset.supplySource === "onchain-total-supply"
         || asset.supplySource === "onchain-circulating-supply";
       const prevDay = currentOnlySupply ? undefined : chainSupply?.circulatingPrevDay;
-      if (
-        canonicalChainId == null ||
-        (coverageStatus !== "full" && coverageStatus !== "partial-history") ||
-        typeof current !== "number" ||
-        !Number.isFinite(current) || current < 0 ||
-        typeof prevDay !== "number" ||
-        !Number.isFinite(prevDay) || prevDay < 0
-      ) {
+      const comparisonIssue = REBASING_RECONCILIATION_SCOPE_ISSUES[asset.id]
+        ?? (asset.supplySource === "defillama" ? DEFILLAMA_RECONCILIATION_SCOPE_ISSUES[asset.id] : undefined)
+        ?? (canonicalChainId == null ? "A single configured issuance chain is required." : undefined)
+        ?? (coverageStatus !== "full" && coverageStatus !== "partial-history"
+          ? "A fresh scan covering the comparison window is required." : undefined)
+        ?? (matchingSupply.length !== 1 ? "A unique matching chain-supply entry is required." : undefined)
+        ?? (typeof current !== "number" || !Number.isFinite(current) || current < 0
+          ? "Current chain supply is unavailable." : undefined)
+        ?? (typeof prevDay !== "number" || !Number.isFinite(prevDay) || prevDay < 0
+          ? "An observed prior-day chain supply is required; current-only supply cannot be compared." : undefined);
+      if (comparisonIssue != null || current == null || prevDay == null) {
         return {
           stablecoinId: asset.id,
           symbol: TRACKED_META_BY_ID.get(asset.id)?.symbol ?? asset.symbol,
@@ -356,6 +375,7 @@ export async function getMintBurnReconciliation(
           diffRatio: null,
           status: "insufficient-source",
           coverageStatus,
+          comparisonIssue,
         };
       }
 

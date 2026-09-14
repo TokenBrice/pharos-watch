@@ -688,16 +688,35 @@ Each row shows:
 - cursor/head coverage hint (`full`, `partial-history`, `bootstrapping`, `lagging`, `disabled`, or `unknown`)
 - absolute USD difference
 - raw flow net, raw chain delta, and ratio
+- `comparisonIssue`, when present, explains why the row cannot be compared even if scan coverage is full
 
 Severity thresholds are defined in `shared/lib/status-thresholds.ts` (`STATUS_RECONCILIATION_THRESHOLDS`): critical at ≥$100M absolute or ≥30% ratio, warn at ≥$25M or ≥12%.
 
 Comparisons require a single canonical chain, an explicit finite supply baseline (zero is valid), and cursor coverage of at least 24h with a fresh chain-head observation. Missing, stale-head, lagging, or bootstrapping coverage is `insufficient-source`; old first-event rows alone cannot establish current scan coverage. Coverage reuses the flow service cursor/head rules, merging fresh head observations from critical and extended lanes. Legacy `onchain-total-supply`/`onchain-circulating-supply` packets are current-only by contract; their previously serialized zero baselines are not accepted as history. Within each severity, rows sort by descending absolute gap.
+
+Reviewed incompatible definitions also remain `insufficient-source`, with an explicit explanation rather than a critical gap or a healthy verdict. The September 14, 2026 review established:
+
+| Asset | Definition that prevents comparison | Evidence |
+| --- | --- | --- |
+| DAI | Supply adds internal DSR savings balances to ERC-20 supply | [Upstream adapter](https://github.com/DefiLlama/peggedassets-server/blob/074324b7775b0f18540e28b087fc281bf05d2b17/src/adapters/peggedAssets/dai/index.ts) |
+| USDD | Supply includes internal savings balances and legacy-token circulation | [Upstream adapter](https://github.com/DefiLlama/peggedassets-server/blob/074324b7775b0f18540e28b087fc281bf05d2b17/src/adapters/peggedAssets/usdd/index.ts) |
+| crvUSD | Circulating protocol debt changes independently of pre-minted inventory | [Upstream adapter](https://github.com/DefiLlama/peggedassets-server/blob/074324b7775b0f18540e28b087fc281bf05d2b17/src/adapters/peggedAssets/crvusd/index.ts) |
+| JPYC | Supply subtracts issuer and redemption wallet balances | [Upstream adapter](https://github.com/DefiLlama/peggedassets-server/blob/074324b7775b0f18540e28b087fc281bf05d2b17/src/adapters/peggedAssets/jpycoin/index.ts) |
+| TRYB | Supply subtracts an unreleased wallet balance | [Upstream registry](https://github.com/DefiLlama/peggedassets-server/blob/074324b7775b0f18540e28b087fc281bf05d2b17/src/peggedData/peggedData.ts) |
+| frxUSD | Supply subtracts a treasury balance | [Upstream adapter](https://github.com/DefiLlama/peggedassets-server/blob/074324b7775b0f18540e28b087fc281bf05d2b17/src/adapters/peggedAssets/frax-usd/index.ts) |
+| fxUSD | Supply includes fstETH and ffrxETH contracts as well as fxUSD | [Upstream registry](https://github.com/DefiLlama/peggedassets-server/blob/074324b7775b0f18540e28b087fc281bf05d2b17/src/peggedData/peggedData.ts) |
+| M | Earning-index accrual changes supply without mint/burn events | [Token implementation](https://github.com/m0-foundation/protocol/blob/main/src/MToken.sol) |
+| OUSD | Rebases change supply without mint/burn events | [Token implementation](https://github.com/OriginProtocol/origin-dollar/blob/master/contracts/contracts/token/OUSD.sol) |
+
+The upstream-specific exclusions apply only to `supplySource = defillama`; M/OUSD accrual is intrinsic to the token. Restore comparison only after the supply and event definitions are demonstrably equivalent (including excluded balances, debt, accrued supply and contract coverage as applicable). These are source-contract guards, not thresholds fitted to observed gaps. A missing issue field remains valid for older API payloads. No public mint/burn counts, classifications or severity thresholds change.
 
 This is an indicative operator integrity signal, not an exact total-supply audit or public score. Upstream daily supply timestamps are unavailable, so the source windows cannot be proven aligned. Classified standard flows exclude bridge/review/atomic events and configured dust; mint/burn valuation can also differ from supply valuation. Large gaps require investigation and typically mean one of:
 
 - flow coverage is still partial or newly bootstrapping
 - upstream chain distribution moved in a way the mint/burn tracker does not capture
 - ingestion or classification logic needs review
+
+The upstream list chooses a prior daily record at or before the latest hourly observation minus 24 hours, then omits both observation timestamps. Daily detail timestamps can be bucket labels for promoted hourly values. Neither a daily bucket label nor HTTP cache time proves a matching event window; do not shift the flow window to minimize a gap. Accurate temporal reconciliation requires source observation timestamps/blocks or a separate comparison against supply measured at pinned blocks.
 
 ---
 

@@ -2,6 +2,21 @@ import type { MethodologyChangelogEntry } from "@shared/lib/methodology-versions
 
 export const MINT_BURN_FLOW_V6: readonly MethodologyChangelogEntry[] = [
   {
+    version: "6.2",
+    title: "Complete BUIDL Ethereum contract coverage",
+    date: "2026-09-14",
+    effectiveAt: 1789420200,
+    summary:
+      "BUIDL flow tracking includes both registered Ethereum share-class tokens, matching the contract set used by upstream Ethereum supply.",
+    impact: [
+      "The second BUIDL contract joins the extended lane with its own scan cursor; coverage remains incomplete until that contract catches up.",
+      "Both contracts retain the existing six-decimal parsing, 10,000-token threshold, zero-address Transfer detection and default coverage floor.",
+      "Operator reconciliation explains nine verified incompatible supply definitions as insufficient source, without changing public flow classification, scoring formulas or mismatch thresholds.",
+    ],
+    commits: [],
+    reconstructed: false,
+  },
+  {
     version: "6.191",
     title: "Base Dollar native flow coverage",
     date: "2026-08-21",
