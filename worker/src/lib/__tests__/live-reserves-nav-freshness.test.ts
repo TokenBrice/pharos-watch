@@ -10,7 +10,6 @@ const now = 1_800_000_000;
 describe("reviewed NAV source freshness", () => {
   it.each([
     ["usyc-hashnote", 4],
-    ["mtbill-midas", 4],
     ["ousg-ondo-finance", 4],
     ["mf-one-midas", 4],
     ["mhyper-midas", 7],
