@@ -598,7 +598,7 @@ describe("fetchJsonWithRetry", () => {
     if (!(error instanceof Error)) {
       throw new Error("expected fetchJsonWithRetry to reject with an Error");
     }
-    expect(error.message).toContain("JSON parse failed for https://example.com/api (text/html; charset=utf-8)");
+    expect(error.message).toContain("JSON parse failed for https://example.com/api (HTTP 200, text/html; charset=utf-8)");
     expect(error.message).toContain("body starts with: <!DOCTYPE html><html><body>blocked</body></html>");
   });
 
