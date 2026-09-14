@@ -15,24 +15,24 @@
   "geckoId": "ripple-usd",
   "proofOfReserves": {
     "type": "independent-audit",
-    "url": "https://ripple.com/solutions/stablecoin/transparency/",
+    "url": "https://ripple.com/products/stablecoin/transparency/",
     "provider": "Deloitte & Touche LLP",
     "attestorTier": "big4",
     "cadence": "monthly",
     "attestorJurisdiction": "United States",
     "attestorLicense": "AICPA attestation standards",
     "latestReport": {
-      "periodEnd": "2026-06-30",
-      "publishedAt": "2026-07-29",
+      "periodEnd": "2026-07-31",
+      "publishedAt": "2026-08-27",
       "assuranceMethod": "examination",
       "scope": "assets-and-liabilities",
       "liabilityReconciliation": "full",
-      "reviewer": "PoR verification sweep 2026-08 (June report PDF read; composition review advanced in lockstep)",
+      "reviewer": "Independent-assurance migration review 2026-09-14 (July PDF examination and rendered composition table verified in lockstep)",
       "confidence": "verified",
       "sources": [
         {
-          "label": "Deloitte RLUSD Reserves Report - June 2026",
-          "url": "https://cdn.sanity.io/files/ior4a5y3/production/5a9121caa4206788930869cac0f868e5841d7fae.pdf/RLUSD_Attestation_Report_-_June'26_FINAL.pdf"
+          "label": "Deloitte RLUSD Reserves Report - July 2026",
+          "url": "https://cdn.sanity.io/files/ior4a5y3/production/42b2ca149329bbf0e34d5d687d30cbb750eea6b8.pdf/RLUSD_Attestation_Report_-_July_26.docx%20(Final).pdf"
         }
       ]
     }
@@ -67,19 +67,27 @@
   "custodyModel": "institutional-regulated",
   "governanceQuality": "regulated-entity",
   "liveReservesConfig": {
-    "adapter": "ripple-transparency",
-    "version": 1,
+    "adapter": "rlusd-independent-assurance",
+    "version": 2,
     "semantics": "attestation-mix",
     "breakerScope": "rlusd-ripple",
     "display": {
-      "url": "https://ripple.com/solutions/stablecoin/transparency/",
+      "url": "https://ripple.com/products/stablecoin/transparency/",
       "label": "Ripple"
     },
     "inputs": {
       "primary": {
         "kind": "http-html",
-        "url": "https://ripple.com/solutions/stablecoin/transparency/"
+        "url": "https://ripple.com/products/stablecoin/transparency/"
       }
+    },
+    "params": {
+      "product": "RLUSD",
+      "profile": "rlusd-v1",
+      "indexHost": "ripple.com",
+      "reportHosts": [
+        "cdn.sanity.io"
+      ]
     }
   },
   "launchDate": "2024-12-17"

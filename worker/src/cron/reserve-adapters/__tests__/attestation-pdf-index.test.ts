@@ -33,6 +33,31 @@ describe("adaptAttestationPdfIndex", () => {
     vi.unstubAllGlobals();
   });
 
+  it("uses the reviewed balance date and rejects publication dates from a newer unreviewed report", () => {
+    const url = "https://issuer.example/reports/2026-08-12-report.pdf";
+    const params = parseLiveReserveAdapterParams("attestation-pdf-index", {
+      ...CONFIGURED_PARAMS,
+      reviewedReport: { url, balanceDate: "2026-08-01" },
+    });
+    const result = adaptAttestationPdfIndex(`<a href="${url}">August report</a>`, params);
+    expect(result.metadata).toMatchObject({
+      sourceTimestamp: Date.UTC(2026, 7, 1) / 1000,
+      reportDate: "2026-08-12",
+      reportBalanceDate: "2026-08-01",
+      freshnessMode: "verified",
+    });
+    const newer = adaptAttestationPdfIndex(
+      `<a href="${url}">August report</a><a href="https://issuer.example/reports/2026-09-12-report.pdf">September report</a>`,
+      params,
+    );
+    expect(newer.metadata?.sourceTimestamp).toBeUndefined();
+    expect(newer.metadata?.freshnessMode).toBe("unverified");
+    expect(newer.warnings).toContainEqual(expect.objectContaining({ code: "attestation-report-basis-unreviewed", effect: "degraded" }));
+    expect(() => parseLiveReserveAdapterParams("attestation-pdf-index", {
+      ...params, reviewedReport: { url, balanceDate: "2026-02-30" },
+    })).toThrow();
+  });
+
   it("parses Solomon's GitHub attestation index", () => {
     const result = adaptAttestationPdfIndex(`
       <a href="/SolomonLabs/attestations/blob/main/ceffu/2026/2026-03-01.pdf">2026-03-01.pdf</a>

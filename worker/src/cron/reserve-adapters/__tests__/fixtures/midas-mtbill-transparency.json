@@ -1,0 +1,63 @@
+{
+  "reports": {
+    "main_positions": {
+      "pv_usd": {
+        "('USTB', 'CASH', 'wallet', 'ethereum', 'USTB')": 71.457,
+        "('BUIDL', 'CASH', 'wallet', 'ethereum', 'BUIDL')": 4.804
+      },
+      "delta_usd": {
+        "('USTB', 'CASH', 'wallet', 'ethereum', 'USTB')": 71.457,
+        "('BUIDL', 'CASH', 'wallet', 'ethereum', 'BUIDL')": 4.804
+      }
+    },
+    "assets_by_protocol_chain": {
+      "equity": {
+        "('wallet', 'ethereum')": 76.2849938297,
+        "('total', '')": 76.2856204874
+      }
+    },
+    "assets_by_protocol": {
+      "assets": {
+        "wallet": 76.2856204874,
+        "total": 76.2856204874
+      },
+      "equity": {
+        "wallet": 76.2856204874,
+        "total": 76.2856204874
+      },
+      "equity_pct_nav": {
+        "wallet": 100,
+        "total": 100
+      },
+      "protocol_type": {
+        "wallet": "custody",
+        "total": null
+      }
+    },
+    "asset_values": {
+      "pv_usd": {
+        "ethereum": 76.285,
+        "total": 76.286
+      },
+      "pv_pct_nav": {
+        "ethereum": 100,
+        "total": 100
+      }
+    },
+    "assets_by_wallet": {
+      "pv_usd": {
+        "('0x569d7dccbf6923350521ecbc28a555a500c4f0ec', 'mTBILL_Redemption_Vault_Ethereum')": 71.457,
+        "('0x225c19beb8f6ad683b1d3a091dca0fcfc603ecde', 'mTBILL_Fireblocks1')": 4.804,
+        "('0x8c89ddb8e8c64325ea2728828e7b1185c89efe9c', 'mTBILL_Request_Redeemer2')": 0.024,
+        "('total', '')": 76.286
+      },
+      "pv_pct_nav": {
+        "('0x569d7dccbf6923350521ecbc28a555a500c4f0ec', 'mTBILL_Redemption_Vault_Ethereum')": 93.7,
+        "('0x225c19beb8f6ad683b1d3a091dca0fcfc603ecde', 'mTBILL_Fireblocks1')": 6.3,
+        "('0x8c89ddb8e8c64325ea2728828e7b1185c89efe9c', 'mTBILL_Request_Redeemer2')": 0,
+        "('total', '')": 100
+      }
+    }
+  },
+  "updatedAt": "2026-09-14T13:06:24.130Z"
+}

@@ -20,10 +20,14 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-14",
-    "reviewer": "OpenAI Codex Safety Score V9 curation",
+    "reviewedAt": "2026-09-14",
+    "reviewer": "OpenAI Codex reserve disclosure review",
     "confidence": "probable",
     "sources": [
+      {
+        "label": "Midas mF-ONE transparency dashboard",
+        "url": "https://midas.app/transparency?token=mf-one"
+      },
       {
         "label": "Midas mF-ONE product disclosure",
         "url": "https://midas.app/mfone"
@@ -33,18 +37,18 @@
         "url": "https://docs.midas.app/"
       }
     ],
-    "rationale": "Midas describes mF-ONE as indirect exposure to Fasanara Capital's diversified private-credit and digital-asset strategy. The product is a NAV-based tokenized investment strategy rather than a cash-pegged token, so the reserve is represented as one strategy exposure without inventing underlying borrower, asset, or venue weights.",
+    "rationale": "Midas describes mF-ONE as exposure to Fasanara private-credit and digital-asset strategies. The September 11 aggregate proof-of-reserve view and operational wallet listings do not disclose underlying facility or asset weights. The reserve remains one unresolved strategy envelope without invented borrower, asset or venue allocations.",
     "compositionBasis": "Current Midas mF-ONE product disclosure and strategy description",
     "scope": "full-composition",
     "knownUnknownExposure": "Midas identifies the Fasanara strategy and its broad private-credit and digital-asset mandate, but does not publish a current facility-level allocation, borrower concentration, maturity schedule, or custody breakdown in the reviewed sources.",
-    "knownUnknownExposurePct": 0,
+    "knownUnknownExposurePct": 100,
     "nonLinkDispositions": [
       {
         "reserveIndex": 0,
         "reserveName": "Fasanara F-ONE private-credit and digital-asset strategy NAV",
         "pct": 100,
-        "disposition": "untracked-exogenous-asset",
-        "rationale": "The F-ONE strategy is an external private-credit and digital-asset portfolio, not another tracked stablecoin or wrapper with a canonical dependency ID."
+        "disposition": "basket-needs-split",
+        "rationale": "The broad private-credit and digital-asset mandate is identified, but facility-level and digital-asset allocations are not available to split the strategy into reviewed exposures."
       }
     ]
   }

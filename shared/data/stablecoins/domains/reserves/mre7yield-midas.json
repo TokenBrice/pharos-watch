@@ -20,10 +20,14 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-20",
-    "reviewer": "Kimi P2 reserve cohort rc-6 (lead usx-solstice)",
+    "reviewedAt": "2026-09-14",
+    "reviewer": "OpenAI Codex reserve disclosure review",
     "confidence": "verified",
     "sources": [
+      {
+        "label": "Midas mRe7YIELD weekly report dated September 10, 2026",
+        "url": "https://drive.google.com/file/d/1dv8GfJiUsymD8HzQpkIqEHRq-2D97l8N/view"
+      },
       {
         "label": "Midas mRe7YIELD",
         "url": "https://midas.app/mre7yield"
@@ -37,11 +41,11 @@
         "url": "https://docs.midas.app/tokens/mre7yield/risks"
       }
     ],
-    "rationale": "mRe7YIELD is a liquid yield token certificate tracking a Re7 Capital managed DeFi yield strategy (lending, liquidity provisioning, restaking, funding-rate arbitrage, and options) rather than a claim on one stablecoin. The slice name is aligned to the exact live chainlink-nav adapter row identity so the reviewed classification overlays the captured NAV exposure; public sources identify the strategy mandate and attestation framework, but do not provide a durable position-level composition.",
+    "rationale": "mRe7YIELD tracks a Re7 Capital managed DeFi yield strategy. The issuer-prepared September 10 weekly report provides aggregate assets and liabilities and three collateral categories, but approximately 98.29% of reported assets remains grouped as Market Neutral Strategy. Settlement categories do not identify their assets or custodians. This is current aggregate reporting, not complete look-through or independent assurance; the NAV envelope remains unresolved.",
     "compositionBasis": "Current Midas product, risk, and attestation disclosures; live NAV row identity from the Midas Chainlink NAV oracle adapter",
     "compositionAsOf": "2026-07-20",
     "scope": "full-composition",
-    "knownUnknownExposure": "The managed strategy's position-level assets, venues, and weights are not disclosed in a durable static composition.",
+    "knownUnknownExposure": "The September 10 issuer report discloses aggregate strategy and settlement categories, but underlying strategy positions, liabilities, venue weights and settlement-asset custody remain unverified. Its broad categories do not provide a complete classified portfolio.",
     "knownUnknownExposurePct": 100,
     "nonLinkDispositions": [
       {
@@ -49,7 +53,7 @@
         "reserveName": "Re7-managed DeFi yield strategy NAV",
         "pct": 100,
         "disposition": "insufficient-evidence",
-        "rationale": "The strategy mandate is known, but current position-level stablecoin, protocol, and venue exposures are not available for reviewed links."
+        "rationale": "The current issuer report groups most assets as Market Neutral Strategy and does not identify settlement assets or custodians; complete underlying dependencies and weights remain unresolved."
       }
     ]
   },

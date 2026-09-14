@@ -5,6 +5,9 @@ import { CANONICAL_ETH_RESERVE_RISK, getCanonicalReserveAssetRisk } from "@share
 import type { AdapterContext, AdapterResult } from "./types";
 import { toErrorMessage } from "@shared/lib/error-utils";
 import {
+  decimalNumberFromBigInt,
+  fetchOnchainMulticall3,
+  verifiedFreshnessMetadata,
   fetchJsonWithRetry,
   fetchTextWithRetry,
   parseTimestampLikeToUnixSeconds,
@@ -20,6 +23,8 @@ import { requireJsonInput } from "./input-guards";
 import { createTimeoutSignal } from "@shared/lib/timeout-signal";
 import { extractEscapedJsonValueAfterKey } from "./html";
 import { fetchMentoRedemptionMetadata } from "./mento-redemption";
+import { pinnedBlockPlan } from "./evm-observation-plan";
+import { decodeStrictAddressWord, decodeUint256Word } from "./abi-decode";
 
 type MentoCdpStablecoin = "GBPm" | "JPYm" | "CHFm";
 
@@ -44,6 +49,8 @@ interface MentoReserveApiAsset {
 interface MentoCdpTroveApiEntry {
   stablecoin?: unknown;
   collateral_token?: unknown;
+  collateral_amount?: unknown;
+  debt_amount?: unknown;
   collateral_usd?: unknown;
   debt_usd?: unknown;
   ratio?: unknown;
@@ -570,6 +577,99 @@ export function adaptMentoCdpComposition(
   };
 }
 
+// GBPm treasury troves are only a subset of its borrower positions. Observe
+// the complete ActivePool + DefaultPool accounting at one block instead.
+async function fetchMentoCdpSystem(
+  payload: MentoReserveApiResponse,
+  system: { activePoolAddress: string; defaultPoolAddress: string; collateralTokenAddress: string },
+  sourceTimestamp: number | null,
+  signal: AbortSignal,
+  ctx?: AdapterContext,
+): Promise<AdapterResult> {
+  if (sourceTimestamp == null) throw new Error("mento: missing CDP FX source timestamp");
+  if (system.collateralTokenAddress.toLowerCase() !== "0x765de816845861e75a25fca122bb6898b8b1282a") {
+    throw new Error("mento: unsupported CDP collateral token");
+  }
+  if (system.activePoolAddress.toLowerCase() === system.defaultPoolAddress.toLowerCase()) {
+    throw new Error("mento: duplicate CDP pool addresses");
+  }
+  // These amounts are used only to recover the source's GBP/USD conversion,
+  // never as the whole-system collateral or liability denominator.
+  const troves = getCdpTroves(payload).filter((trove) => trove.stablecoin === "GBPm" && trove.status === "active");
+  const fxRates = troves.map((trove) => {
+    const debtNative = typeof trove.debt_amount === "string" && trove.debt_amount.trim() !== ""
+      ? Number(trove.debt_amount) : trove.debt_amount;
+    const collateralNative = typeof trove.collateral_amount === "string" && trove.collateral_amount.trim() !== ""
+      ? Number(trove.collateral_amount) : trove.collateral_amount;
+    if (trove.collateral_token !== "USDm" || parseFiniteUsd(collateralNative) == null
+      || typeof collateralNative !== "number" || collateralNative <= 0
+      || parseFiniteUsd(trove.collateral_usd) == null
+      || mentoCdpDivergence(collateralNative, trove.collateral_usd as number) > 0.000001
+      || parseFiniteUsd(debtNative) == null || typeof debtNative !== "number" || debtNative <= 0
+      || parseFiniteUsd(trove.debt_usd) == null || (trove.debt_usd as number) <= 0) {
+      throw new Error("mento: invalid CDP USDm valuation or GBP/USD conversion");
+    }
+    return (trove.debt_usd as number) / debtNative;
+  });
+  const debtFxUsd = fxRates[0];
+  if (!debtFxUsd || !Number.isFinite(debtFxUsd)
+    || fxRates.some((rate) => !Number.isFinite(rate) || mentoCdpDivergence(rate, debtFxUsd) > 0.000001)) {
+    throw new Error("mento: inconsistent or missing CDP GBP/USD conversion");
+  }
+  const plan = await pinnedBlockPlan({ chain: "celo", signal, ctx });
+  const pools = [system.activePoolAddress, system.defaultPoolAddress];
+  const calls = pools.flatMap((contract, index) => [
+    { label: `${index}:collateral`, contract, data: "0x0367b302" }, // getCollBalance()
+    { label: `${index}:debt`, contract, data: "0x45507998" }, // getBoldDebt()
+    { label: `${index}:token`, contract, data: "0x31b8c946" }, // collToken()
+  ]);
+  const rows = await fetchOnchainMulticall3({ chain: "celo", signal, ctx: plan.ctx, calls });
+  const byLabel = new Map(rows?.filter((row) => row.success).map((row) => [row.label, row.returnData]));
+  let collateralRaw = 0n;
+  let debtRaw = 0n;
+  for (const index of pools.keys()) {
+    const token = decodeStrictAddressWord(byLabel.get(`${index}:token`));
+    const collateral = decodeUint256Word(byLabel.get(`${index}:collateral`));
+    const debt = decodeUint256Word(byLabel.get(`${index}:debt`));
+    if (token !== system.collateralTokenAddress.toLowerCase() || collateral == null || debt == null) {
+      throw new Error(`mento: incomplete CDP pool ${index} accounting or collateral identity mismatch`);
+    }
+    collateralRaw += collateral;
+    debtRaw += debt;
+  }
+  const totalCollateralUsd = decimalNumberFromBigInt(collateralRaw, 18);
+  const totalDebtNative = decimalNumberFromBigInt(debtRaw, 18);
+  const totalDebtUsd = totalDebtNative * debtFxUsd;
+  if (!Number.isFinite(totalCollateralUsd) || totalCollateralUsd <= 0
+    || !Number.isFinite(totalDebtUsd) || totalDebtUsd <= 0) {
+    throw new Error("mento: invalid whole-system CDP collateral or debt");
+  }
+  return {
+    slices: [{ name: CDP_COLLATERAL_CONFIG.USDm.name, pct: 100, risk: "low", coinId: "cusd-celo", depType: "collateral" }],
+    metadata: {
+      cdpStablecoin: "GBPm",
+      totalCollateralUsd,
+      totalDebtUsd,
+      collateralizationRatio: totalCollateralUsd / totalDebtUsd,
+      ...verifiedFreshnessMetadata(Math.min(sourceTimestamp, plan.observedBlock.timestamp)),
+      details: {
+        freshnessSource: "pinned-celo-block-and-dashboard-render-clock",
+        observedBlock: plan.observedBlock,
+        cdpScope: "active-pool-plus-default-pool",
+        collateralTokenAddress: system.collateralTokenAddress,
+        activePoolAddress: system.activePoolAddress,
+        defaultPoolAddress: system.defaultPoolAddress,
+        totalDebtNative,
+        debtFxUsd,
+        debtFxSource: "analytics-api-trove-debt-usd-per-native-gbpm",
+        debtFxSourceTimestamp: sourceTimestamp,
+        debtFxClockBasis: "same-run-dashboard-render-clock",
+        treasuryTroveCount: troves.length,
+      },
+    },
+  };
+}
+
 interface MentoDashboardSnapshot {
   sourceTimestamp: number | null;
   cdpBackings: Map<string, MentoCdpBackingTotals> | null;
@@ -619,15 +719,18 @@ export async function fetchMentoReserves(
     fetchMentoDashboardSnapshot(config, signal, dashboardWarnings, ctx),
   ]);
   const params = parseLiveReserveAdapterParams("mento", config.params);
-  let result = params.cdpStablecoin
+  if (params.cdpSystem && params.cdpStablecoin !== "GBPm") {
+    throw new Error("mento: whole-system CDP configuration is only supported for GBPm");
+  }
+  let result = params.cdpSystem
+    ? await fetchMentoCdpSystem(payload, params.cdpSystem, dashboard?.sourceTimestamp ?? null, signal, ctx)
+    : params.cdpStablecoin
     ? adaptMentoCdpComposition(payload, params.cdpStablecoin, dashboard?.sourceTimestamp ?? null)
     : adaptMentoReserveComposition(payload, dashboard?.sourceTimestamp ?? null);
 
-  // Dashboard-vs-API coherence gate: when the dashboard carries per-stablecoin
-  // CDP totals for this coin and the analytics API trove sums materially
-  // disagree, both sources were still readable, so settled policy E4 publishes
-  // the analytics-API composition degraded instead of failing the attempt
-  // closed. Unreadable/malformed sources keep failing closed at their parsers.
+  // Compare like scopes: configured GBPm pool totals or the other currencies'
+  // API CDP totals against the dashboard. A readable disagreement still
+  // publishes degraded; malformed inputs and failed pool reads fail closed.
   if (params.cdpStablecoin) {
     const dashboardTotals = dashboard?.cdpBackings?.get(params.cdpStablecoin);
     const apiCollateralUsd = result.metadata?.totalCollateralUsd;
@@ -637,7 +740,7 @@ export async function fetchMentoReserves(
       if (divergence) {
         dashboardWarnings.push(reserveDegradedWarning(
           "mento-cdp-coherence-diverged",
-          `Mento dashboard-vs-API coherence diverged for ${params.cdpStablecoin}: dashboard collateral/debt $${dashboardTotals.collateralUsd.toFixed(2)}/$${dashboardTotals.debtUsd.toFixed(2)} vs analytics API $${apiCollateralUsd.toFixed(2)}/$${apiDebtUsd.toFixed(2)} (collateral ${divergence.collateralPct.toFixed(2)}%, debt ${divergence.debtPct.toFixed(2)}%)`,
+          `Mento dashboard-vs-${params.cdpSystem ? "system" : "API"} coherence diverged for ${params.cdpStablecoin}: dashboard collateral/debt $${dashboardTotals.collateralUsd.toFixed(2)}/$${dashboardTotals.debtUsd.toFixed(2)} vs ${params.cdpSystem ? "on-chain system" : "analytics API"} $${apiCollateralUsd.toFixed(2)}/$${apiDebtUsd.toFixed(2)} (collateral ${divergence.collateralPct.toFixed(2)}%, debt ${divergence.debtPct.toFixed(2)}%)`,
         ));
         result = {
           ...result,

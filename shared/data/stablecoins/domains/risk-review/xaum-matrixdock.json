@@ -8,11 +8,11 @@
     "reviewedAt": "2026-05-12"
   },
   "bridgeRouteRisk": {
-    "tier": "issuer-native-burn-mint",
-    "summary": "XAUm is issuer-minted natively by Matrixdock on all eight networks (Ethereum owner verified on-chain; Solana/Stellar/Sui are issuer rails); no third-party bridge carries the claim.",
-    "reviewedAt": "2026-07-20",
-    "reviewer": "Codex bridge route review; Kimi P2 control cohort dc-4 (lead dai-makerdao)",
-    "confidence": "verified",
+    "tier": "opaque-or-unknown",
+    "summary": "Matrixdock retired Polygon, HashKey Chain and Tron on August 7, 2026 and no longer recognizes balances on those contracts. Six retained deployments keep their existing route reviews; HyperEVM token identity is verified, while its mint/bridge/controller classification remains unresolved.",
+    "reviewedAt": "2026-09-14",
+    "reviewer": "OpenAI Codex deployment retirement and HyperEVM identity review",
+    "confidence": "manual-review",
     "protocols": [
       {
         "source": "docs",
@@ -43,6 +43,10 @@
       {
         "label": "Chainlink CCIP architecture",
         "url": "https://docs.chain.link/ccip/concepts/architecture/overview"
+      },
+      {
+        "label": "Matrixdock retired networks notice",
+        "url": "https://matrixdock.gitbook.io/matrixdock-docs/english/announcements/discontinuation-of-xaum-support-on-polygon-hashkey-chain-and-tron"
       }
     ],
     "routes": [
@@ -71,48 +75,6 @@
         "id": "bsc:0x23ae4fd8e7844cdbc97775496ebd0e8248656028",
         "destinationChain": "bsc",
         "contractAddress": "0x23ae4fd8e7844cdbc97775496ebd0e8248656028",
-        "protocol": "Matrixdock native issuance",
-        "issuanceModel": "native-issuance",
-        "routeClass": "native",
-        "riskTier": "issuer-native-burn-mint",
-        "semantics": "native-mint",
-        "scope": "canonical",
-        "reviewDisposition": "reviewed",
-        "reviewNote": "issuer-native deployment under the same Matrixdock operator/owner system; XAUm is issuer-minted natively on this chain, not via a third-party bridge.",
-        "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-07-20",
-        "sources": [
-          {
-            "label": "Matrixdock XAUm",
-            "url": "https://www.matrixdock.com/"
-          }
-        ]
-      },
-      {
-        "id": "polygon:0xa7e22972a19dd924afeedf3db28033b146801081",
-        "destinationChain": "polygon",
-        "contractAddress": "0xa7e22972a19dd924afeedf3db28033b146801081",
-        "protocol": "Matrixdock native issuance",
-        "issuanceModel": "native-issuance",
-        "routeClass": "native",
-        "riskTier": "issuer-native-burn-mint",
-        "semantics": "native-mint",
-        "scope": "canonical",
-        "reviewDisposition": "reviewed",
-        "reviewNote": "issuer-native deployment under the same Matrixdock operator/owner system; XAUm is issuer-minted natively on this chain, not via a third-party bridge.",
-        "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-07-20",
-        "sources": [
-          {
-            "label": "Matrixdock XAUm",
-            "url": "https://www.matrixdock.com/"
-          }
-        ]
-      },
-      {
-        "id": "tron:TDfX64Ariz5usffBJjtDbiMuCXVpKiDCEb",
-        "destinationChain": "tron",
-        "contractAddress": "TDfX64Ariz5usffBJjtDbiMuCXVpKiDCEb",
         "protocol": "Matrixdock native issuance",
         "issuanceModel": "native-issuance",
         "routeClass": "native",
@@ -211,6 +173,32 @@
           {
             "label": "Matrixdock XAUm",
             "url": "https://www.matrixdock.com/"
+          }
+        ]
+      },
+      {
+        "id": "hyperevm:0x14f0dfc32e8af769961b31ba3e89389bd6797652",
+        "destinationChain": "hyperevm",
+        "contractAddress": "0x14f0dfc32e8af769961b31ba3e89389bd6797652",
+        "protocol": "Matrixdock XAUm HyperEVM deployment; transfer controls unresolved",
+        "issuanceModel": "unknown",
+        "routeClass": "unknown",
+        "riskTier": "opaque-or-unknown",
+        "semantics": "unknown",
+        "scope": "unknown",
+        "reviewDisposition": "unresolved",
+        "reviewNote": "Official issuer deployment address matched on HyperEVM chain 999 at block 45888787: name Matrixdock Gold, symbol XAUM, decimals 9. owner() returns 0xb573c94260582f0715fc477928b04a2708dd36d7, but mint, upgrade, bridge messaging and controller constraints were not verified. No native-issuance or bridge-control equivalence is assumed.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-09-14",
+        "observedBlock": 45888787,
+        "sources": [
+          {
+            "label": "Matrixdock XAUm contract addresses",
+            "url": "https://matrixdock.gitbook.io/matrixdock-docs/english/gold-token-xaum/smart-contract/contract-address"
+          },
+          {
+            "label": "HyperEVM official RPC documentation",
+            "url": "https://hyperliquid.gitbook.io/hyperliquid-docs/for-developers/hyperevm"
           }
         ]
       }

@@ -304,6 +304,10 @@ const accountableParamsSchema = z
 const attestationPdfIndexParamsSchema = z
   .object({
     slices: z.array(ReserveSliceSchema).min(1),
+    reviewedReport: z.object({
+      url: AbsoluteUrlSchema,
+      balanceDate: StrictIsoDateSchema,
+    }).strict().optional(),
     linkMatch: z
       .string()
       .trim()
@@ -356,6 +360,12 @@ const europAssuranceParamsSchema = z
     ...assuranceParamsShape,
   })
   .strict();
+
+const rlusdAssuranceParamsSchema = z.object({
+  product: z.literal("RLUSD"),
+  profile: z.literal("rlusd-v1"),
+  ...assuranceParamsShape,
+}).strict();
 
 const straitsxAssuranceParamsSchema = z
   .object({
@@ -1475,6 +1485,11 @@ const mentoRedemptionParamsSchema = z.discriminatedUnion("kind", [
 const mentoParamsSchema = z
   .object({
     cdpStablecoin: z.enum(["GBPm", "JPYm", "CHFm"]).optional(),
+    cdpSystem: z.object({
+      activePoolAddress: EvmAddressSchema,
+      defaultPoolAddress: EvmAddressSchema,
+      collateralTokenAddress: EvmAddressSchema,
+    }).strict().optional(),
     redemption: mentoRedemptionParamsSchema.optional(),
   })
   .strict();
@@ -2028,6 +2043,33 @@ export const LIVE_RESERVE_ADAPTER_DESCRIPTOR_DECLARATIONS = {
     // emit and are not unused-telemetry candidates.
     redemptionTelemetry: { capacity: "direct", capacityParamsGated: true, fee: "none" },
     validation: TIMESTAMPED_FEED_VALIDATION,
+  },
+  "ondo-ousg": {
+    primaryInputKinds: ["onchain-evm"],
+    paramsSchema: chainlinkNavParamsSchema,
+    sourceModel: "dynamic-mix",
+    evidenceClass: "independent",
+    sourceOriginClass: "issuer-attested",
+    preferredFreshnessMode: "verified",
+    sharedSourceMode: "none",
+    configValidation: CONFIG_SINGLE_ASSET_V1_V2,
+    redemptionTelemetry: { capacity: "direct", capacityParamsGated: true, fee: "none" },
+    validation: {
+      ...DASHBOARD_WITH_UNKNOWN_CAP_VALIDATION,
+      maxSourceAgeSec: BUSINESS_DAY_NAV_SOURCE_MAX_AGE_SEC,
+    },
+  },
+  "midas-mtbill": {
+    primaryInputKinds: ["http-json"],
+    paramsSchema: noParamsSchema,
+    sourceModel: "dynamic-mix",
+    evidenceClass: "independent",
+    sourceOriginClass: "issuer-attested",
+    preferredFreshnessMode: "verified",
+    sharedSourceMode: "none",
+    configValidation: CONFIG_COLLATERAL_V1,
+    redemptionTelemetry: { capacity: "none", fee: "none" },
+    validation: DASHBOARD_WITH_UNKNOWN_CAP_VALIDATION,
   },
   "chronicle-nav": {
     primaryInputKinds: ["onchain-evm"],
@@ -2624,6 +2666,12 @@ export const LIVE_RESERVE_ADAPTER_DESCRIPTOR_DECLARATIONS = {
     validation: DASHBOARD_WITH_UNKNOWN_CAP_VALIDATION,
   },
   "ripple-transparency": {
+    provenance: {
+      status: "retired",
+      rationale: "Superseded by the hash-bound Deloitte report manifest (rlusd-independent-assurance); retained for historical review of the transparency-page adapter.",
+      parkedSince: "2026-09-14",
+      nextReview: "2027-03-14",
+    },
     primaryInputKinds: ["http-html"],
     paramsSchema: noParamsSchema,
     sourceModel: "single-bucket",
@@ -2633,6 +2681,7 @@ export const LIVE_RESERVE_ADAPTER_DESCRIPTOR_DECLARATIONS = {
     redemptionTelemetry: { capacity: "none", fee: "none" },
     validation: MONTHLY_VERIFIED_VALIDATION,
   },
+  "rlusd-independent-assurance": declareAdapter(rlusdAssuranceParamsSchema, HTTP_DISCLOSURE_ATTESTATION_V2),
   "sgforge-coinvertible": {
     primaryInputKinds: ["http-html"],
     paramsSchema: sgForgeCoinvertibleParamsSchema,

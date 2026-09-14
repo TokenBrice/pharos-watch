@@ -22,10 +22,14 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-20",
-    "reviewer": "Kimi P2 reserve cohort rc-2 (lead buidl-blackrock)",
+    "reviewedAt": "2026-09-14",
+    "reviewer": "OpenAI Codex reserve disclosure review",
     "confidence": "probable",
     "sources": [
+      {
+        "label": "Midas mAPOLLO exposure dashboard",
+        "url": "https://midas.app/transparency?token=mapollo"
+      },
       {
         "label": "Midas mAPOLLO product page",
         "url": "https://midas.app/mapollo"
@@ -39,10 +43,10 @@
         "url": "https://docs.midas.app/resources/legal-documents/prospectus-documents"
       }
     ],
-    "rationale": "Midas identifies the live mAPOLLO exposure as an Apollo Crypto managed-yield strategy NAV. The signed final terms define a crypto-denominated stablecoin-yield strategy allocating dynamically across market-neutral spot, lending, arbitrage, derivatives, and token rewards, but does not disclose the current underlying assets, venue allocations, or custody providers. The slice is named to match the live chainlink-nav reserve adapter capture (assetLabel 'Apollo Crypto managed yield strategy NAV') so the reviewed classification overlays the captured exposure; it remains a bounded aggregate with the underlying allocation explicitly unresolved.",
+    "rationale": "Midas identifies mAPOLLO as an Apollo Crypto managed-yield strategy NAV. The September 14 transparency view discloses dated asset and protocol positions, including material borrow liabilities. Its main-position table is rounded and excludes absolute deltas below $100,000; it is not a complete reconciled balance sheet. The existing NAV envelope therefore retains unresolved allocation rather than converting positive positions alone into reserve weights.",
     "compositionBasis": "Midas mAPOLLO product, final-terms, and transparency disclosures",
     "scope": "full-composition",
-    "knownUnknownExposure": "The complete current underlying strategy allocation, venue exposures, and custody providers are undisclosed; the single NAV slice is the whole envelope, with the strategy internals intentionally unresolved.",
+    "knownUnknownExposure": "Some assets and venues are disclosed, but complete signed positions, smaller residuals, token-backing scope and custody relationships remain unverified. The 100% unresolved envelope reflects the missing complete allocation, not a claim that no positions are published.",
     "knownUnknownExposurePct": 100,
     "nonLinkDispositions": [
       {
@@ -50,7 +54,7 @@
         "reserveName": "Apollo Crypto managed yield strategy NAV",
         "pct": 100,
         "disposition": "insufficient-evidence",
-        "rationale": "The product is disclosed only as a managed market-neutral strategy NAV without a current structured underlying asset and failure-domain inventory."
+        "rationale": "The public position table identifies candidate asset and protocol dependencies, but rounded, filtered positions and material borrowing do not establish complete net-backing weights for reviewed links."
       }
     ]
   },
@@ -62,17 +66,21 @@
         "jurisdiction": "Ethereum"
       },
       {
-        "name": "Apollo Crypto strategy wallets and trading venues (undisclosed)",
+        "name": "Apollo Crypto strategy wallets and trading venues (complete custody allocation unverified)",
         "role": "other"
       }
     ],
     "segregation": "unknown",
     "bankruptcyRemoteness": "unknown",
     "rehypothecation": "permitted",
-    "reviewedAt": "2026-07-20",
-    "reviewer": "Kimi P2 reserve cohort rc-2 (lead buidl-blackrock)",
+    "reviewedAt": "2026-09-14",
+    "reviewer": "OpenAI Codex reserve disclosure review",
     "confidence": "probable",
     "sources": [
+      {
+        "label": "Midas current exposure and reporting scope",
+        "url": "https://midas.app/transparency?token=mapollo"
+      },
       {
         "label": "Midas mAPOLLO smart contracts",
         "url": "https://docs.midas.app/protocol-mechanics/smart-contracts"
@@ -86,7 +94,7 @@
         "url": "https://docs.midas.app/resources/legal-documents/prospectus-documents"
       }
     ],
-    "uncertainty": "Midas documents the mAPOLLO token, deposit and redemption vaults, and NAV data-feed contracts, and the final terms describe a dynamically allocated market-neutral strategy, so strategy assets are actively deployed and reused by design. The underlying strategy wallets, trading venues, custodians, provider shares, legal segregation, and bankruptcy-remoteness terms are not disclosed. The Midas Attestation Engine notarizes periodic NAV and proof-of-reserve checkpoints (vLayer notarization, LlamaRisk/Canary verification) but does not publish a position-level custody inventory.",
+    "uncertainty": "Midas documents the token, deposit and redemption vaults and NAV data feed. The September 14 dashboard names protocols and signed positions, but does not establish a complete position-level custody inventory, provider shares, legal segregation or bankruptcy-remoteness terms. Material borrowing must remain in any reconciliation; attestation checkpoints do not replace custody look-through.",
     "knownUnknownExposurePct": 100
   }
 }

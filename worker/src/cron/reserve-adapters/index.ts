@@ -74,6 +74,9 @@ import { fetchSbcIndependentAssuranceReserves } from "./sbc-independent-assuranc
 import { fetchReserveProtocolDtfReserves } from "./reserve-protocol-dtf";
 import { fetchReservoirReserves } from "./reservoir";
 import { fetchRippleTransparencyReserves } from "./ripple-transparency";
+import { fetchRlusdIndependentAssuranceReserves } from "./rlusd-independent-assurance";
+import { fetchOndoOusgReserves } from "./ondo-ousg";
+import { fetchMidasMtbillReserves } from "./midas-mtbill";
 import { fetchRiverProtocolInfoReserves } from "./river-protocol-info";
 import { fetchErc4626SingleAssetReserves } from "./erc4626-single-asset";
 import { fetchAstherusEarnWrapperReserves } from "./astherus-earn-wrapper";
@@ -194,6 +197,9 @@ export const LIVE_RESERVE_ADAPTER_FETCHERS: Record<LiveReserveAdapterKey, Adapte
   "reserve-protocol-dtf": fetchReserveProtocolDtfReserves,
   reservoir: fetchReservoirReserves,
   "ripple-transparency": fetchRippleTransparencyReserves,
+  "rlusd-independent-assurance": fetchRlusdIndependentAssuranceReserves,
+  "ondo-ousg": fetchOndoOusgReserves,
+  "midas-mtbill": fetchMidasMtbillReserves,
   "river-protocol-info": fetchRiverProtocolInfoReserves,
   "sgforge-coinvertible": fetchSgForgeCoinvertibleReserves,
   "solstice-attestation": fetchSolsticeAttestationReserves,

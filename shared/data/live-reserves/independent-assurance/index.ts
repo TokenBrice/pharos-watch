@@ -13,6 +13,7 @@ import EUROP from "./europ.json"; MANIFEST_SOURCES.EUROP = EUROP;
 import FDUSD from "./fdusd.json"; MANIFEST_SOURCES.FDUSD = FDUSD;
 import FIDD from "./fidd.json"; MANIFEST_SOURCES.FIDD = FIDD;
 import GUSD from "./gusd.json"; MANIFEST_SOURCES.GUSD = GUSD;
+import RLUSD from "./rlusd.json"; MANIFEST_SOURCES.RLUSD = RLUSD;
 import PYUSD from "./pyusd.json"; MANIFEST_SOURCES.PYUSD = PYUSD;
 import SBC from "./sbc.json"; MANIFEST_SOURCES.SBC = SBC;
 import USDG from "./usdg.json"; MANIFEST_SOURCES.USDG = USDG;

@@ -42,10 +42,10 @@ const ONCHAIN_MATCH: KrwqOnchainBalances = {
   treasury: 105708960000n,
 };
 
-const SUPPLY_USD = 582_354;
+const SUPPLY_TOKENS = 582_354;
 const SUPPLY: KrwqSupplyAggregate = {
   contributions: [
-    { chain: "ethereum", tokenAddress: "0xabc", raw: BigInt(SUPPLY_USD) * 10n ** 18n, decimals: 18 },
+    { chain: "ethereum", tokenAddress: "0xabc", raw: BigInt(SUPPLY_TOKENS) * 10n ** 18n, decimals: 18 },
   ],
   omittedNonEvmChains: [],
   omittedReadFailureChains: [],
@@ -92,8 +92,9 @@ describe("adaptKrwqCustodian", () => {
       freshnessMode: "verified",
       totalReserveUsd: expect.closeTo(TOTAL_RESERVE_USD, 5),
     });
-    expect(result.metadata?.supplyUsd).toBeCloseTo(SUPPLY_USD, 6);
-    expect(result.metadata?.collateralizationRatio).toBeCloseTo(TOTAL_RESERVE_USD / SUPPLY_USD, 6);
+    expect(result.metadata?.supplyUsd).toBeUndefined();
+    expect(result.metadata?.collateralizationRatio).toBeUndefined();
+    expect(result.metadata?.details).toMatchObject({ grossSupplyTokens: SUPPLY_TOKENS, supplyUnit: "KRWQ" });
     expectValidAdapterOutput("krwq-custodian", result);
   });
 
@@ -169,7 +170,7 @@ describe("fetchKrwqCustodianReserves", () => {
         [`ethereum:${USDC_ETHEREUM}:balanceOf(address)`]: 90102080832n,
         [`ethereum:${FRXUSD_ETHEREUM}:balanceOf(address)`]: 482631869316796940855261n,
         [`base:${USDC_BASE}:balanceOf(address)`]: 105708960000n,
-        "totalSupply()": BigInt(SUPPLY_USD) * 10n ** 18n,
+        "totalSupply()": BigInt(SUPPLY_TOKENS) * 10n ** 18n,
       },
     };
   }

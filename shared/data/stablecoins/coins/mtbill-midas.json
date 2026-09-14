@@ -2,7 +2,7 @@
   "id": "mtbill-midas",
   "name": "Midas mTBILL",
   "symbol": "mTBILL",
-  "oneLiner": "mTBILL is Midas's NAV-accreting tokenized U.S. T-Bill fund via BlackRock IB01 ETF, FMA-regulated rails, with daily Ankura Trust NAV attestations.",
+  "oneLiner": "mTBILL is Midas's NAV-accreting Treasury-bill fund token, with disclosed USTB and BUIDL positions and portfolio-level NAV reporting.",
   "flags": {
     "backing": "rwa-backed",
     "governance": "centralized",
@@ -10,18 +10,17 @@
     "rwa": true,
     "navToken": true
   },
-  "collateral": "Short-duration U.S. Treasury Bills (maturity <3 months) via a reference basket of T-Bill ETFs and tokenized funds, primarily BlackRock iShares $ Treasury Bond 0-1yr UCITS ETF (IB01), plus BUIDL; atomic redemption sleeve via tokenized money-market funds (USTB, BUIDL, JTRSY, FAST) within available liquidity; physical custody by Maerki Baumann & Co. AG (Switzerland); security ring-fencing by ATG Azimut Treuhandgesellschaft mbH; target return = 8-week U.S. T-Bill yield minus ~50 bps",
-  "pegMechanism": "NAV-accreting token (not pegged to $1); price launched at ~$1.00 and appreciates continuously as T-bill yield accrues; permissioned mint/redeem at daily NAV via Midas smart contracts in USDC/USDT or fiat; NAV oracle published daily by Ankura Trust Company",
+  "collateral": "Treasury-bill fund portfolio with issuer-reported USTB and BUIDL positions and an explicitly unclassified residual. The transparency source reports rounded position values and a source timestamp; these are portfolio estimates, not independently examined holdings.",
+  "pegMechanism": "NAV-accreting token (not pegged to $1); price launched at ~$1.00 and appreciates continuously as T-bill yield accrues; permissioned mint/redeem at daily NAV via Midas smart contracts in USDC/USDT or fiat; on-chain NAV reporting",
   "mechanismArchetype": "tbill",
   "detailProvider": "coingecko",
   "geckoId": "midas-mtbill",
   "proofOfReserves": {
-    "type": "independent-audit",
-    "url": "https://midas.app/transparency",
-    "provider": "Ankura Trust Company (independent third-party; provides daily on-chain NAV attestations)",
-    "attestorTier": "niche",
-    "cadence": "daily-nav",
-    "attestorJurisdiction": "United States"
+    "type": "real-time",
+    "url": "https://midas.app/transparency?token=mtbill",
+    "provider": "Midas transparency dashboard (issuer-reported portfolio estimates)",
+    "attestorTier": "self",
+    "cadence": "real-time"
   },
   "links": [
     {
@@ -73,32 +72,19 @@
   "custodyModel": "institutional-regulated",
   "governanceQuality": "regulated-entity",
   "liveReservesConfig": {
-    "adapter": "chainlink-nav",
+    "adapter": "midas-mtbill",
     "version": 1,
-    "semantics": "single-asset",
+    "semantics": "collateral-mix",
     "breakerScope": "mtbill-midas",
-    "scoring": {
-      "maxSourceAgeSec": 345600
-    },
     "display": {
-      "url": "https://midas.app/transparency",
-      "label": "Ankura Trust Oracle"
+      "url": "https://midas.app/transparency?token=mtbill",
+      "label": "Midas mTBILL portfolio"
     },
     "inputs": {
       "primary": {
-        "kind": "onchain-evm",
-        "chain": "ethereum",
-        "rpcMode": "etherscan-proxy"
+        "kind": "http-json",
+        "url": "https://api-prod.midas.app/api/transparency?token=mTBILL"
       }
-    },
-    "params": {
-      "navScope": "portfolio",
-      "oracleAddress": "0x056339C044055819E8Db84E71f5f2E1F536b2E5b",
-      "tokenAddress": "0xDD629E5241CbC5919847783e6C96B2De4754e438",
-      "sourceKey": "chainlink-nav:token:0xdd629e5241cbc5919847783e6c96b2de4754e438",
-      "assetLabel": "BlackRock IB01 T-Bill ETF",
-      "assetRisk": "very-low",
-      "maxOracleAgeSec": 345600
     }
   },
   "yieldConfig": {

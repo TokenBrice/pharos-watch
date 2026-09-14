@@ -38,13 +38,17 @@
       {
         "label": "Ondo Global Markets trust and transparency",
         "url": "https://docs.ondo.finance/ondo-global-markets/trust-and-transparency"
+      },
+      {
+        "label": "Ankura Ondo Stocks August 2026 aggregate monthly report",
+        "url": "https://www.dropbox.com/scl/fo/7rlmba8f49nvbp3xwz1of/AP5IeDF7Zhzwb9TK1kEwCD4/Monthly%20Ankura%20-%20Ondo%20Stocks%20-%20Aug%202026_Ankura%20Attestation.pdf?rlkey=hokf0tffqvezfmsto25cvpovs&dl=1"
       }
     ],
-    "rationale": "Write-time re-open 2026-07-28 of Ondo Stocks overview and trust-and-transparency docs (Global Markets URLs redirect to ondo-stocks paths): each Ondo tokenized stock is fully backed by the underlying security together with cash in transit; Ankura Trust verifies holdings. IAUon product page remains live. Cash vs share weights undisclosed → 100% IAU fund-share envelope with knownUnknownExposurePct=100.",
+    "rationale": "Write-time re-open 2026-07-28 of Ondo Stocks overview and trust-and-transparency docs (Global Markets URLs redirect to ondo-stocks paths): each Ondo tokenized stock is fully backed by the underlying security together with cash in transit; Ankura Trust verifies holdings. IAUon product page remains live. Cash vs share weights undisclosed \u2192 100% IAU fund-share envelope with knownUnknownExposurePct=100. September 14 provenance follow-up reviewed the September 9 daily and August 1-31 monthly Ankura reports. Both reconcile aggregate Ondo Stocks and related USDY/USDon collateral; neither supplies IAUon-specific IAU shares, cash allocation or token liabilities. Their aggregate collateralization ratios cannot be attributed to IAUon. The IAU ETF holdings table also describes the underlying ETF rather than the Ondo wrapper reserves; no new composition date or weights are asserted.",
     "compositionBasis": "Ondo IAUon product disclosure and Ondo Global Markets backing and transparency documentation",
     "compositionAsOf": "2026-07-28",
     "scope": "full-composition",
-    "knownUnknownExposure": "The aggregate basket is known to contain IAU shares and cash in transit, but their current weights are not published. Because the 100% reserve entry cannot be split between those categories, the full basket remains known-unknown for composition scoring; custodial broker-dealer identities and provider allocation are also undisclosed.",
+    "knownUnknownExposure": "The aggregate basket contains IAU shares and cash in transit, but the inspected product and current aggregate daily/monthly reports do not provide IAUon-specific weights or liabilities. Alpaca Securities LLC is named as a broker; allocation among providers and attributable cash remain unresolved.",
     "knownUnknownExposurePct": 100,
     "nonLinkDispositions": [
       {
@@ -59,7 +63,7 @@
   "custodyProfile": {
     "providers": [
       {
-        "name": "US-registered custodial broker-dealer(s) holding the underlying IAU shares (undisclosed)",
+        "name": "Alpaca Securities LLC (named Ondo Stocks broker; IAUon-specific allocation undisclosed)",
         "role": "custodian",
         "jurisdiction": "United States"
       },
@@ -72,8 +76,8 @@
     "segregation": "segregated",
     "bankruptcyRemoteness": "structured",
     "rehypothecation": "unknown",
-    "reviewedAt": "2026-07-21",
-    "reviewer": "Kimi P2 reserve cohort rc-5 (lead ylds-figure); OpenAI Codex NR-recovery review",
+    "reviewedAt": "2026-09-14",
+    "reviewer": "OpenAI Codex broker provenance and aggregate-report scope review",
     "confidence": "verified",
     "sources": [
       {
@@ -87,9 +91,17 @@
       {
         "label": "Ondo Global Markets trust and transparency",
         "url": "https://docs.ondo.finance/ondo-global-markets/trust-and-transparency"
+      },
+      {
+        "label": "Ondo IAUon product page (Alpaca brokerage disclosure)",
+        "url": "https://app.ondo.finance/assets/iauon"
+      },
+      {
+        "label": "Ankura Ondo Stocks August 2026 aggregate monthly report",
+        "url": "https://www.dropbox.com/scl/fo/7rlmba8f49nvbp3xwz1of/AP5IeDF7Zhzwb9TK1kEwCD4/Monthly%20Ankura%20-%20Ondo%20Stocks%20-%20Aug%202026_Ankura%20Attestation.pdf?rlkey=hokf0tffqvezfmsto25cvpovs&dl=1"
       }
     ],
-    "uncertainty": "Ondo documents a bankruptcy-remote SPV with segregated assets and accounts, daily Ankura verification, and a first-priority security interest over the collateral, with holdings at one or more US-registered custodial broker-dealers. The broker-dealer identities, provider shares, cash-in-transit allocation, and any reuse restrictions are not published.",
+    "uncertainty": "Ondo documents a bankruptcy-remote SPV, segregated assets/accounts and a first-priority security interest. The product disclosure names Alpaca Securities LLC; current aggregate Ankura reports include Alpaca trading and clearing accounts. Neither the September 9 daily report nor the August monthly report identifies the IAUon-specific shares/cash balance, provider allocation, liabilities or reuse restrictions. Aggregate collateralization does not establish IAUon-specific reserve composition.",
     "knownUnknownExposurePct": 100
   }
 }

@@ -12,6 +12,8 @@
  * or `CORPUS_BACKLOG` (a committed wire capture is still owed) with a reason; the
  * gate fails on any key that is in neither map.
  */
+import { readFileSync } from "node:fs";
+import MIDAS_MTBILL_CAPTURE from "./fixtures/midas-mtbill-transparency.json";
 import { resolveAdapterCoin, type AdapterNetworkSpec, type AdapterRpcValue } from "./reserve-adapter.test-support";
 import { parseLiveReserveAdapterParams } from "@shared/lib/live-reserve-adapters";
 import { BTCFI_HANDLER_ROWS, BTCFI_MARKET_ROWS } from "./reserve-adapter-payloads.test-support";
@@ -68,6 +70,8 @@ export const CORPUS_NOT_REPLAYABLE: Record<string, string> = {
     "Hash-pinned issuer report: the replayable capture is the byte-pinned PDF plus its discovery index, not a JSON/HTML wire payload; owned by issuer-attested-report.test.ts.",
   "openeden-usdo":
     "No bound catalog coin yet (retired, parked, staged or newly declared key), so there is nothing to replay; parser behaviour stays owned by its adapter test file.",
+  "rlusd-independent-assurance":
+    "Hash-pinned issuer report: the replayable capture is the byte-pinned PDF plus its discovery index, not a JSON/HTML wire payload; owned by rlusd-independent-assurance.test.ts.",
   "sbc-independent-assurance":
     "Hash-pinned issuer report: the replayable capture is the byte-pinned PDF plus its discovery index, not a JSON/HTML wire payload; owned by sbc-independent-assurance.test.ts.",
   "straitsx-independent-assurance":
@@ -674,6 +678,53 @@ CORPUS_CASES["river-protocol-info"] = {
   drift: {
     label: "the payload tvl field is dropped",
     network: { json: { [RIVER_ENDPOINT]: { ...RIVER_CAPTURE, tvl: undefined } }, rpc: riverCorpusRpc() },
+    outcome: "error",
+  },
+};
+
+
+// September 14 issuer captures. OUSG keeps synthetic, explicitly scoped NAV
+// and redemption responses alongside the real dated portfolio HTML.
+const MIDAS_MTBILL_ENDPOINT = "https://api-prod.midas.app/api/transparency?token=mTBILL";
+CORPUS_CASES["midas-mtbill"] = {
+  coinId: "mtbill-midas",
+  nowSec: Math.floor(Date.parse(MIDAS_MTBILL_CAPTURE.updatedAt) / 1000) + 120,
+  network: { json: { [MIDAS_MTBILL_ENDPOINT]: MIDAS_MTBILL_CAPTURE } },
+  drift: {
+    label: "the issuer portfolio timestamp is dropped",
+    network: { json: { [MIDAS_MTBILL_ENDPOINT]: { ...MIDAS_MTBILL_CAPTURE, updatedAt: undefined } } },
+    outcome: "error",
+  },
+};
+
+const OUSG_PORTFOLIO_ENDPOINT = "https://ondo.finance/ousg";
+const OUSG_PORTFOLIO_CAPTURE = readFileSync(new URL("./fixtures/ondo-ousg-portfolio.html", import.meta.url), "utf8");
+const OUSG_CORPUS_NOW = Date.parse("2026-09-14T12:00:00Z") / 1000;
+const ousgCorpusRpc = (): Record<string, AdapterRpcValue> => {
+  const { config } = resolveAdapterCoin("ondo-ousg", "ousg-ondo-finance");
+  const params = parseLiveReserveAdapterParams("ondo-ousg", config.params);
+  const redemption = params.redemptionCapacity!;
+  return {
+    [`${params.tokenAddress}:decimals()`]: 18n,
+    [`${params.tokenAddress}:totalSupply()`]: 3_000_000n * 10n ** 18n,
+    [`${params.oracleAddress}:0xb3596f07`]: 113n * 10n ** 18n,
+    [`${params.oracleAddress}:0xeca6f018`]: "0x0000000000000000000000000000000000000123",
+    "0x0000000000000000000000000000000000000123:0xa4a28168": `0x${abiWord(113n * 10n ** 18n)}${abiWord(BigInt(OUSG_CORPUS_NOW - 60))}`,
+    [`${redemption.managerAddress}:0x8f4f9613`]: redemption.routerAddress,
+    [`${redemption.routerAddress}:0x2021065d`]: redemption.sourceAddress,
+    [`${redemption.managerAddress}:${redemption.pauseSelector}`]: false,
+    [`${redemption.managerAddress}:0x884a0501`]: true,
+    [`${redemption.managerAddress}:0x8f8eb812`]: 5_000n * 10n ** 6n,
+    [`${redemption.routerAddress}:0x6cde714a`]: 10_000_000n * 10n ** 6n,
+  };
+};
+CORPUS_CASES["ondo-ousg"] = {
+  coinId: "ousg-ondo-finance",
+  nowSec: OUSG_CORPUS_NOW,
+  network: { html: { [OUSG_PORTFOLIO_ENDPOINT]: OUSG_PORTFOLIO_CAPTURE }, rpc: ousgCorpusRpc() },
+  drift: {
+    label: "the portfolio scope changes to include non-tokenized book-entry interests",
+    network: { html: { [OUSG_PORTFOLIO_ENDPOINT]: OUSG_PORTFOLIO_CAPTURE.replace("excludes OUSG", "includes OUSG") }, rpc: ousgCorpusRpc() },
     outcome: "error",
   },
 };

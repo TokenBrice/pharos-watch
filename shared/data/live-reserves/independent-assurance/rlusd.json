@@ -1,0 +1,51 @@
+{
+  "schemaVersion": 1,
+  "product": "RLUSD",
+  "profile": "rlusd-v1",
+  "officialIndexUrl": "https://ripple.com/products/stablecoin/transparency/",
+  "reportUrl": "https://cdn.sanity.io/files/ior4a5y3/production/42b2ca149329bbf0e34d5d687d30cbb750eea6b8.pdf/RLUSD_Attestation_Report_-_July_26.docx%20(Final).pdf",
+  "reportSha256": "2075f5f36590a10d3da601234da9f2053367dbc734b511bb7d048835d38b6955",
+  "reportByteLength": 395417,
+  "reportDate": "2026-07-31",
+  "reportAsOf": "2026-07-31T21:00:00Z",
+  "reportTimeZone": "America/New_York (5:00pm Eastern Time; EDT, UTC-04:00)",
+  "reportIssuedAt": "2026-08-27T00:00:00Z",
+  "attestor": "Deloitte & Touche LLP",
+  "engagement": "AICPA attestation standards examination providing reasonable assurance over management’s RLUSD Reserve Report assertion, including reserve market value by asset class and outstanding stablecoin units",
+  "conclusion": "unmodified",
+  "unit": "USD",
+  "assets": [
+    {
+      "code": "treasury-bills",
+      "label": "U.S. Treasury bills",
+      "amount": "1077871526"
+    },
+    {
+      "code": "government-mmf",
+      "label": "Government money-market funds",
+      "amount": "258192967"
+    },
+    {
+      "code": "cash",
+      "label": "Cash and deposit accounts",
+      "amount": "239096420"
+    }
+  ],
+  "liabilities": [
+    {
+      "code": "outstanding-rlusd",
+      "label": "Outstanding RLUSD across NYDFS-approved XRPL, Ethereum, Base, Unichain, Optimism, Ink and XRPL EVM Sidechain networks",
+      "amount": "1463694758"
+    }
+  ],
+  "reportedAssetTotal": "1575160913",
+  "computedAssetTotal": "1575160913",
+  "reportedLiabilityTotal": "1463694758",
+  "extraction": {
+    "tool": "Poppler pdftotext -layout; page 5 embedded table visually transcribed from rendered PDF",
+    "parserVersion": "26.08.0",
+    "normalizedTextSha256": "61ef4a060b855a7c61be01b17d882c7cbd0c32410d5f62ceaecb7e3a8354656c",
+    "pageCount": 5
+  },
+  "assuranceTier": "independent-assurance"
+}

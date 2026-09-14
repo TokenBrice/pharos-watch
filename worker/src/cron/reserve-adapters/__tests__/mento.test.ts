@@ -9,6 +9,7 @@ import {
   MENTO_GET_POOL_EXCHANGE_SELECTOR,
   MENTO_POOL_EXCHANGE_ABI_PARAMETERS,
 } from "@shared/lib/mento-contracts";
+import gbpmSource from "@shared/data/stablecoins/coins/gbpm-mento.json";
 import type { LiveReservesConfig } from "@shared/types/live-reserves";
 import {
   adaptMentoCdpComposition,
@@ -563,7 +564,7 @@ describe("mento adapter", () => {
       }),
       // The subject is the dashboard-vs-API gate, not the optional on-chain
       // redemption telemetry.
-      params: { redemption: undefined },
+      params: { redemption: undefined, cdpSystem: undefined },
       nowSec: OVERRIDE_DASHBOARD_NOW_SEC,
     });
 
@@ -594,7 +595,7 @@ describe("mento adapter", () => {
           { stablecoin: "GBPm", collateral_token: "USDm", collateral_usd: 774_785.9598798637, debt_usd: 315_700.2296351052, status: "active" },
         ]),
       }),
-      params: { redemption: undefined },
+      params: { redemption: undefined, cdpSystem: undefined },
       nowSec: OVERRIDE_DASHBOARD_NOW_SEC,
     });
 
@@ -618,7 +619,7 @@ describe("mento adapter", () => {
   ] as const)("accepts $stablecoin when dashboard and API CDP totals agree to 8 decimals", async ({ stablecoin, coinId }) => {
     const { result } = await runAdapter("mento", coinId, {
       network: mentoNetwork({ dashboardHtml: sampleMatchingDashboardHtml(stablecoin) }),
-      params: { redemption: undefined },
+      params: { redemption: undefined, cdpSystem: undefined },
       nowSec: OVERRIDE_DASHBOARD_NOW_SEC,
     });
 
@@ -639,7 +640,7 @@ describe("mento adapter", () => {
 
     const { result } = await runAdapter("mento", "gbpm-mento", {
       network: mentoNetwork({ dashboardHtml: renamedDashboard }),
-      params: { redemption: undefined },
+      params: { redemption: undefined, cdpSystem: undefined },
       nowSec: OVERRIDE_DASHBOARD_NOW_SEC,
     });
 
@@ -996,6 +997,7 @@ describe("mento redemption telemetry", () => {
           [`celo:${liquity.tokenAddress.toLowerCase()}:totalSupply()`]: 1_000n * 10n ** 18n,
         },
       }),
+      params: { cdpSystem: undefined },
       nowSec: OVERRIDE_DASHBOARD_NOW_SEC,
     });
 
@@ -1030,6 +1032,7 @@ describe("mento redemption telemetry", () => {
           [`celo:${liquity.tokenAddress.toLowerCase()}:totalSupply()`]: null,
         },
       }),
+      params: { cdpSystem: undefined },
       nowSec: OVERRIDE_DASHBOARD_NOW_SEC,
     });
 
@@ -1110,5 +1113,93 @@ describe("mento redemption telemetry", () => {
     expect(result.slices).toHaveLength(1);
     expect(result.metadata?.redemption).toBeUndefined();
     expectWarnings(result, ["mento-redemption-telemetry-failed"]);
+  });
+});
+
+
+describe("GBPm whole-system accounting", () => {
+  const system = gbpmSource.liveReservesConfig.params.cdpSystem;
+  const gbpmTroves = [
+    { stablecoin: "GBPm", status: "active", collateral_token: "USDm", collateral_amount: "100", collateral_usd: 100, debt_amount: "20", debt_usd: 27 },
+    { stablecoin: "GBPm", status: "active", collateral_token: "USDm", collateral_amount: "50", collateral_usd: 50, debt_amount: "10", debt_usd: 13.5 },
+  ];
+  function network(rpc: Record<string, AdapterRpcValue> = {}): AdapterNetworkSpec {
+    return {
+      ...mentoNetwork({
+        reserveJson: { cdp_troves: { troves: gbpmTroves } },
+        dashboardHtml: dashboardHtmlWithCdpBackings([{ stablecoin: "GBPm", collateral_usd: 800, debt_usd: 337.5 }]),
+      }),
+      block: { number: 12345, timestamp: OVERRIDE_DASHBOARD_TS_SEC + 10 },
+      rpc: {
+        [`${system.activePoolAddress}:getCollBalance()`]: 700n * 10n ** 18n,
+        [`${system.defaultPoolAddress}:getCollBalance()`]: 100n * 10n ** 18n,
+        [`${system.activePoolAddress}:getBoldDebt()`]: 200n * 10n ** 18n,
+        [`${system.defaultPoolAddress}:getBoldDebt()`]: 50n * 10n ** 18n,
+        "collToken()": `0x${"0".repeat(24)}${USDM_ADDRESS.slice(2)}`,
+        ...rpc,
+      },
+    };
+  }
+  const params = { cdpStablecoin: "GBPm", cdpSystem: system, redemption: undefined };
+
+  it("uses both pools at one block and preserves GBP/USD conversion instead of treasury totals", async () => {
+    const observed = await runAdapter("mento", "gbpm-mento", {
+      network: network(), params, nowSec: OVERRIDE_DASHBOARD_NOW_SEC,
+    });
+    expectWarnings(observed.result, []);
+    expect(observed.result.metadata).toMatchObject({
+      totalCollateralUsd: 800, totalDebtUsd: 337.5, collateralizationRatio: 800 / 337.5,
+      sourceTimestamp: OVERRIDE_DASHBOARD_TS_SEC,
+      details: { totalDebtNative: 250, debtFxUsd: 1.35, cdpScope: "active-pool-plus-default-pool", treasuryTroveCount: 2 },
+    });
+    expect(observed.result.metadata?.cdpActiveTroves).toBeUndefined();
+    expect(observed.result.slices).toMatchObject([{ pct: 100, coinId: "cusd-celo" }]);
+    const reads = observed.network.rpcCalls.filter((call) => call.method === "eth_call");
+    expect(reads.length).toBeGreaterThanOrEqual(6);
+    expect(reads.every((call) => call.block === "0x3039")).toBe(true);
+  });
+
+  it("accepts an empty DefaultPool and retains the older chain observation clock", async () => {
+    const input = network({
+      [`${system.defaultPoolAddress}:getCollBalance()`]: 0n,
+      [`${system.defaultPoolAddress}:getBoldDebt()`]: 0n,
+    });
+    input.block = { number: 12345, timestamp: OVERRIDE_DASHBOARD_TS_SEC - 30 };
+    input.html = { [MENTO_DASHBOARD_URL]: dashboardHtmlWithCdpBackings([{ stablecoin: "GBPm", collateral_usd: 700, debt_usd: 270 }]) };
+    const { result } = await runAdapter("mento", "gbpm-mento", { network: input, params, nowSec: OVERRIDE_DASHBOARD_NOW_SEC });
+    expectWarnings(result, []);
+    expect(result.metadata).toMatchObject({ totalCollateralUsd: 700, totalDebtUsd: 270, sourceTimestamp: OVERRIDE_DASHBOARD_TS_SEC - 30 });
+  });
+
+  it("fails closed when the FX source clock is unavailable", async () => {
+    const input = network();
+    input.html = { [MENTO_DASHBOARD_URL]: "<html>No reserve clock</html>" };
+    await expect(runAdapter("mento", "gbpm-mento", { network: input, params, nowSec: OVERRIDE_DASHBOARD_NOW_SEC }))
+      .rejects.toThrow("missing CDP FX source timestamp");
+  });
+
+  it.each([
+    ["default pool read fails", { [`${system.defaultPoolAddress}:getBoldDebt()`]: null }],
+    ["collateral identity changes", { "collToken()": `0x${"0".repeat(24)}${USDC_ADDRESS.slice(2)}` }],
+  ])("fails closed when %s", async (_label, rpc) => {
+    await expect(runAdapter("mento", "gbpm-mento", {
+      network: network(rpc), params, nowSec: OVERRIDE_DASHBOARD_NOW_SEC,
+    })).rejects.toThrow("accounting or collateral identity mismatch");
+  });
+
+  it.each([0, -1, 30, null])("rejects invalid or inconsistent FX conversion %s", async (debtUsd) => {
+    const input = network();
+    input.json = { [CATALOG_RESERVE_URL]: { cdp_troves: { troves: [gbpmTroves[0], { ...gbpmTroves[1], debt_usd: debtUsd }] } } };
+    await expect(runAdapter("mento", "gbpm-mento", {
+      network: input, params, nowSec: OVERRIDE_DASHBOARD_NOW_SEC,
+    })).rejects.toThrow(/conversion/);
+  });
+
+  it("still degrades a material disagreement with whole-system dashboard totals", async () => {
+    const input = network();
+    input.html = { [MENTO_DASHBOARD_URL]: dashboardHtmlWithCdpBackings([{ stablecoin: "GBPm", collateral_usd: 1600, debt_usd: 337.5 }]) };
+    const { result } = await runAdapter("mento", "gbpm-mento", { network: input, params, nowSec: OVERRIDE_DASHBOARD_NOW_SEC });
+    expectWarningEffect(result, "mento-cdp-coherence-diverged", "degraded");
+    expect(result.metadata?.totalCollateralUsd).toBe(800);
   });
 });
