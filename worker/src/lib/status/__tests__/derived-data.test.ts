@@ -22,7 +22,7 @@ describe("getMintBurnReconciliation chain identity", () => {
     [{ Ethereum: { current: 110, circulatingPrevDay: 100 } }, null, "lagging"],
     [{ Ethereum: { current: 110, circulatingPrevDay: 100 } }, 10, "extended-only"],
     [{ Ethereum: { current: 110, circulatingPrevDay: 0 } }, null, "legacy-onchain"],
-    ...["dai-makerdao", "usdd-tron-dao-reserve", "crvusd-curve", "jpyc-jpyc", "tryb-bilira", "frxusd-frax", "fxusd-f-x-protocol", "m-m0", "ousd-origin-protocol"]
+    ...["dai-makerdao", "usdd-tron-dao-reserve", "crvusd-curve", "jpyc-jpyc", "eurcv-societe-generale-forge", "alusd-alchemix", "tryb-bilira", "frxusd-frax", "fxusd-f-x-protocol", "m-m0", "ousd-origin-protocol"]
       .map<[Record<string, unknown>, null, string, string]>((id) => [{ Ethereum: { current: 110, circulatingPrevDay: 100 } }, null, "", id]),
     [{ Ethereum: { current: 110, circulatingPrevDay: 100 } }, 10, "", "usds-sky"],
     [{ Ethereum: { current: 20_000_100, circulatingPrevDay: 100 } }, 20_000_000, "", "usds-sky"],
