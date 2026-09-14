@@ -302,7 +302,18 @@ export async function loadPreviousStablecoinsById(db: D1Database): Promise<Previ
     const cacheUpdatedAt = normalizeOptionalTimestamp(prevCache.updatedAt);
     return {
       previousAssetsById: new Map(
-        prevData.peggedAssets.map((asset) => [String(asset.id), stampPreviousSupplyObservedAt(asset, cacheUpdatedAt)]),
+        prevData.peggedAssets.map((asset) => {
+          // Older current-only packets serialized unknown history as zero. Never
+          // carry that synthetic history into a fresh or restored publication.
+          if (asset.supplySource === "onchain-total-supply" || asset.supplySource === "onchain-circulating-supply") {
+            for (const row of Object.values(asset.chainCirculating ?? {})) {
+              delete row.circulatingPrevDay;
+              delete row.circulatingPrevWeek;
+              delete row.circulatingPrevMonth;
+            }
+          }
+          return [String(asset.id), stampPreviousSupplyObservedAt(asset, cacheUpdatedAt)];
+        }),
       ),
       cacheState: { state: "ok" },
     };
@@ -412,11 +423,11 @@ function hasReconciledCuratedAggregateSupplyPacket(
 
   let chainSupply = 0;
   for (const row of Object.values(chainCirculating)) {
+    // On-chain packets observe current supply only; historical baselines are optional.
     const requiredValues = [
       row?.current,
-      row?.circulatingPrevDay,
-      row?.circulatingPrevWeek,
-      row?.circulatingPrevMonth,
+      ...[row?.circulatingPrevDay, row?.circulatingPrevWeek, row?.circulatingPrevMonth]
+        .filter((value) => value !== undefined),
     ];
     if (
       requiredValues.some(

@@ -2,9 +2,9 @@ import { resolveChainId } from "./index";
 
 export interface ChainCirculatingPoint {
   current: number;
-  circulatingPrevDay: number;
-  circulatingPrevWeek: number;
-  circulatingPrevMonth: number;
+  circulatingPrevDay?: number;
+  circulatingPrevWeek?: number;
+  circulatingPrevMonth?: number;
 }
 
 export type RawChainCirculating = Record<string, {
@@ -15,8 +15,8 @@ export type RawChainCirculating = Record<string, {
   circulatingPrevMonth?: number;
 }>;
 
-function sanitizeSupply(value: number | undefined): number {
-  return typeof value === "number" && Number.isFinite(value) && value >= 0 ? value : 0;
+function sanitizeSupply(value: number | undefined): number | undefined {
+  return typeof value === "number" && Number.isFinite(value) && value >= 0 ? value : undefined;
 }
 
 function addSupply(current: number, value: number): number {
@@ -41,7 +41,7 @@ export function canonicalizeChainCirculating(
       ?? resolveChainId(rawChainId);
     if (!chainId) continue;
 
-    const current = sanitizeSupply(data.current);
+    const current = sanitizeSupply(data.current) ?? 0;
     const circulatingPrevDay = sanitizeSupply(data.circulatingPrevDay);
     const circulatingPrevWeek = sanitizeSupply(data.circulatingPrevWeek);
     const circulatingPrevMonth = sanitizeSupply(data.circulatingPrevMonth);
@@ -49,9 +49,12 @@ export function canonicalizeChainCirculating(
 
     if (existing) {
       existing.current = addSupply(existing.current, current);
-      existing.circulatingPrevDay = addSupply(existing.circulatingPrevDay, circulatingPrevDay);
-      existing.circulatingPrevWeek = addSupply(existing.circulatingPrevWeek, circulatingPrevWeek);
-      existing.circulatingPrevMonth = addSupply(existing.circulatingPrevMonth, circulatingPrevMonth);
+      existing.circulatingPrevDay = existing.circulatingPrevDay == null || circulatingPrevDay == null
+        ? undefined : addSupply(existing.circulatingPrevDay, circulatingPrevDay);
+      existing.circulatingPrevWeek = existing.circulatingPrevWeek == null || circulatingPrevWeek == null
+        ? undefined : addSupply(existing.circulatingPrevWeek, circulatingPrevWeek);
+      existing.circulatingPrevMonth = existing.circulatingPrevMonth == null || circulatingPrevMonth == null
+        ? undefined : addSupply(existing.circulatingPrevMonth, circulatingPrevMonth);
       continue;
     }
 

@@ -95,6 +95,7 @@ describe("fetchFiatCoinGeckoTokens", () => {
     });
 
     expect(result).toHaveLength(1);
+    expect(result[0]?.chainCirculating?.Ethereum).not.toHaveProperty("circulatingPrevDay");
     expect(result[0]).toMatchObject({
       id: "ftusd-flying-tulip",
       supplySource: "onchain-total-supply",
@@ -102,15 +103,9 @@ describe("fetchFiatCoinGeckoTokens", () => {
       chainCirculating: {
         Ethereum: {
           current: 1_884_739.402999,
-          circulatingPrevDay: 0,
-          circulatingPrevWeek: 0,
-          circulatingPrevMonth: 0,
         },
         Sonic: {
           current: 37_578.423196,
-          circulatingPrevDay: 0,
-          circulatingPrevWeek: 0,
-          circulatingPrevMonth: 0,
         },
       },
     });

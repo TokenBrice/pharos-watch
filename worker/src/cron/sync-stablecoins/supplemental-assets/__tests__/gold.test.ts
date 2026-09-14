@@ -111,11 +111,9 @@ describe("fetchGoldTokens curated aggregate supply", () => {
     expect(asset?.chainCirculating?.Ethereum?.current).toBeCloseTo(110 * PGOLD_PRICE, 4);
     expect(asset?.chainCirculating?.ApeChain?.current).toBeCloseTo(0.05044 * PGOLD_PRICE, 4);
     expect(asset?.chainCirculating?.["Pharos Network"]?.current).toBeCloseTo(1_000 * PGOLD_PRICE, 4);
-    expect(asset?.chainCirculating?.Ethereum).toMatchObject({
-      circulatingPrevDay: 0,
-      circulatingPrevWeek: 0,
-      circulatingPrevMonth: 0,
-    });
+    expect(asset?.chainCirculating?.Ethereum).not.toHaveProperty("circulatingPrevDay");
+    expect(asset?.chainCirculating?.Ethereum).not.toHaveProperty("circulatingPrevWeek");
+    expect(asset?.chainCirculating?.Ethereum).not.toHaveProperty("circulatingPrevMonth");
     expect(probeTrackedTokenSupplyMock).toHaveBeenCalledTimes(4);
   });
 

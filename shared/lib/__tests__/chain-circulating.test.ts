@@ -5,6 +5,15 @@ import {
 } from "../chains/circulating";
 
 describe("chain-circulating", () => {
+  it("preserves unknown history when aliases mix observed and unobserved supply", () => {
+    const point = canonicalizeChainCirculating({
+      Ethereum: { current: 100, circulatingPrevDay: 0 },
+      ethereum: { current: 50 },
+    }).get("ethereum");
+    expect(point?.current).toBe(150);
+    expect(point?.circulatingPrevDay).toBeUndefined();
+    expect(point?.circulatingPrevMonth).toBeUndefined();
+  });
   it("canonicalizes aliases into one chain bucket", () => {
     const chainCirculating: RawChainCirculating = {
       hyperliquid: {
@@ -157,9 +166,9 @@ describe("chain-circulating", () => {
 
     expect(canonical.get("ethereum")).toEqual({
       current: 2,
-      circulatingPrevDay: 3,
-      circulatingPrevWeek: 4,
-      circulatingPrevMonth: 4,
+      circulatingPrevDay: undefined,
+      circulatingPrevWeek: undefined,
+      circulatingPrevMonth: undefined,
     });
   });
 
