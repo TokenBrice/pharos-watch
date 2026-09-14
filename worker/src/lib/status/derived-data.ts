@@ -232,6 +232,8 @@ const DEFILLAMA_RECONCILIATION_SCOPE_ISSUES: Readonly<Record<string, string>> = 
   "usdd-tron-dao-reserve": "Upstream supply includes internal savings balances and legacy USDD outside the tracked token.",
   "crvusd-curve": "Upstream supply measures circulating protocol debt, not the pre-minted token supply.",
   "jpyc-jpyc": "Upstream supply excludes issuer and redemption wallet balances; ordinary transfers change circulation.",
+  "eurcv-societe-generale-forge": "Upstream supply excludes unreleased wallet balances; ordinary transfers change circulation.",
+  "alusd-alchemix": "Upstream supply excludes an unreleased wallet balance; ordinary transfers change circulation.",
   "tryb-bilira": "Upstream supply excludes an unreleased wallet balance; ordinary transfers change circulation.",
   "frxusd-frax": "Upstream supply excludes a treasury balance; ordinary transfers change circulation.",
   "fxusd-f-x-protocol": "Upstream supply combines fxUSD with fstETH and ffrxETH; tracked events cover fxUSD only.",
