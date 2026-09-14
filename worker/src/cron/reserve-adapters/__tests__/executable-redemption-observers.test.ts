@@ -20,11 +20,12 @@ const EARN_VALIDATOR = "0x4c735b0989f1a7464991bcca9f0e8c661ba54465";
 const EARN_PROTOCOL_CONFIG = "0x1dc4836e5a0a95105bee1899e3b6bbb1714480fb";
 const USDC = "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48";
 const DSTAKE_TOKEN = "0x7cb20517776636ed76b68edb3d99dcce356abf02";
-const DSTAKE_ROUTER = "0xdd26c236ec95d03ddf3cb67b7f54864719e9be5a";
+const DSTAKE_ROUTER = "0x6d4a26fe926e88fee41a9fddeda3b50bf98f1ddb";
 const COLLATERAL_VAULT = "0x4acbcfa29fb085097c5f31783403ef7a7930f6fe";
 const IDLE_STRATEGY = "0x78a4dad0ac32c80da6ef60a366b1c035145380bc";
 const DLEND_STRATEGY = "0x576dd487bacfa6e7afd1e3ea03da0763f732d4c9";
-const IDLE_ADAPTER = "0xefd794e2d8024f3c25aa343588dd6d4481b5db7c";
+const GOVERNANCE_MODULE = "0x2fd26c2cbfe0674776a1ff00daa8cffefcc0c88c";
+const REBALANCE_MODULE = "0xd15ccbe652c0c29b1d544a26f902f21dfc5b4f05";
 const DLEND_ADAPTER = "0x1a5bb485c58a86c193b823d0ea031b68813e100f";
 const DUSD = "0x07fff99e1664d9b116fbc158c0e99785f81ca236";
 const DLEND_POOL = "0x6598dad18bda89a0e58a1f427c8cebc0de90f153";
@@ -57,6 +58,8 @@ const DSTAKE_TOKEN_ABI = parseAbi([
   "function collateralVault() view returns (address)",
 ]);
 const DSTAKE_ROUTER_ABI = parseAbi([
+  "function governanceModule() view returns (address)",
+  "function rebalanceModule() view returns (address)",
   "function dStakeToken() view returns (address)",
   "function collateralVault() view returns (address)",
   "function paused() view returns (bool)",
@@ -89,10 +92,10 @@ const CODE_HASH_BY_ADDRESS: Record<string, string> = {
   [DSTAKE_TOKEN]: "0xe5e3693157141608a301682c8c228c0277eac7efc0b98b57f874ca49752b5fd8",
   "0x9c278036c3c4529472751502dfc71bb1f0a3bfd4":
     "0xf3d6aec9f278be5b2140dcca59bfd109bd57bdf4d928e11d2a7b3863bb1b796d",
-  [DSTAKE_ROUTER]: "0x08f865940e3532d14604ba5fdc7560fd35c59dde586a5e5322ae4312be5a9d03",
+  [DSTAKE_ROUTER]: "0xa4167490ee7ee175f6c257a2fad355a67d4061afebc6d65c381a9236e1480f4b",
   [COLLATERAL_VAULT]: "0x9bef4196d31f6ccf89b74f147be85e8a24c19085d59776a48301d3cb06e1def9",
-  [IDLE_STRATEGY]: "0x1dc234de62c077e81b3af54e4c4c6feeef6922213147e4c0b865be07f63f57a8",
-  [IDLE_ADAPTER]: "0x0620eb4be11008952dd737925d15743ec443bed53cf163e5f8244d9e80fe999b",
+  [GOVERNANCE_MODULE]: "0x1434e0df9c945565f750495d8981cc0771cd5a00786bc3373d18bc965c9945a9",
+  [REBALANCE_MODULE]: "0x747c8358f0f87437ec23361620e04745b8d7e103a18a09d0a69dec933820407b",
   [DLEND_STRATEGY]: "0xe448349ec1a422118e4244e737f124d1f5e65ccf696a8eecfe48fc8008e082e2",
   [DLEND_ADAPTER]: "0x958bacf03625c8460aa5b3f30ba4fb4610b47a6c8580e257c2e108c53a1787c4",
 };
@@ -129,6 +132,9 @@ const EXPECTED_REQUESTS = {
   "dstake-total-assets": request(DSTAKE_TOKEN, ERC4626_ABI, "totalAssets"),
   "dstake-router": request(DSTAKE_TOKEN, DSTAKE_TOKEN_ABI, "router"),
   "dstake-collateral-vault": request(DSTAKE_TOKEN, DSTAKE_TOKEN_ABI, "collateralVault"),
+  "collateral-vault-router": request(COLLATERAL_VAULT, DSTAKE_TOKEN_ABI, "router"),
+  "router-governance-module": request(DSTAKE_ROUTER, DSTAKE_ROUTER_ABI, "governanceModule"),
+  "router-rebalance-module": request(DSTAKE_ROUTER, DSTAKE_ROUTER_ABI, "rebalanceModule"),
   "router-token": request(DSTAKE_ROUTER, DSTAKE_ROUTER_ABI, "dStakeToken"),
   "router-collateral-vault": request(DSTAKE_ROUTER, DSTAKE_ROUTER_ABI, "collateralVault"),
   "router-paused": request(DSTAKE_ROUTER, DSTAKE_ROUTER_ABI, "paused"),
@@ -136,10 +142,6 @@ const EXPECTED_REQUESTS = {
   "router-max-withdrawal-fee": request(DSTAKE_ROUTER, DSTAKE_ROUTER_ABI, "maxWithdrawalFeeBps"),
   "router-shortfall": request(DSTAKE_ROUTER, DSTAKE_ROUTER_ABI, "currentShortfall"),
   "router-active-withdrawal-vaults": request(DSTAKE_ROUTER, DSTAKE_ROUTER_ABI, "getActiveVaultsForWithdrawals"),
-  "idle-strategy-asset": request(IDLE_STRATEGY, STRATEGY_VAULT_ABI, "asset"),
-  "idle-strategy-max-withdraw": request(IDLE_STRATEGY, STRATEGY_VAULT_ABI, "maxWithdraw", [COLLATERAL_VAULT]),
-  "idle-strategy-adapter": request(DSTAKE_ROUTER, DSTAKE_ROUTER_ABI, "strategyShareToAdapter", [IDLE_STRATEGY]),
-  "idle-strategy-healthy": request(DSTAKE_ROUTER, DSTAKE_ROUTER_ABI, "isVaultHealthyForWithdrawals", [IDLE_STRATEGY]),
   "dlend-strategy-asset": request(DLEND_STRATEGY, STRATEGY_VAULT_ABI, "asset"),
   "dlend-strategy-max-withdraw": request(DLEND_STRATEGY, STRATEGY_VAULT_ABI, "maxWithdraw", [COLLATERAL_VAULT]),
   "dlend-strategy-adapter": request(DSTAKE_ROUTER, DSTAKE_ROUTER_ABI, "strategyShareToAdapter", [DLEND_STRATEGY]),
@@ -233,6 +235,10 @@ function earnResults(calls: readonly EvmMulticall3Call[], overrides: EarnOverrid
 interface DStakeOverrides {
   paused?: boolean;
   activeWithdrawalVaults?: readonly Hex[];
+  router?: Hex;
+  governanceModule?: Hex;
+  shortfall?: bigint;
+  availableLiquidity?: bigint;
 }
 
 function dStakeResults(
@@ -251,13 +257,16 @@ function dStakeResults(
     "dstake-router": encodeFunctionResult({
       abi: DSTAKE_TOKEN_ABI,
       functionName: "router",
-      result: DSTAKE_ROUTER,
+      result: overrides.router ?? DSTAKE_ROUTER,
     }),
     "dstake-collateral-vault": encodeFunctionResult({
       abi: DSTAKE_TOKEN_ABI,
       functionName: "collateralVault",
       result: COLLATERAL_VAULT,
     }),
+    "collateral-vault-router": encodeFunctionResult({ abi: DSTAKE_TOKEN_ABI, functionName: "router", result: DSTAKE_ROUTER }),
+    "router-governance-module": encodeFunctionResult({ abi: DSTAKE_ROUTER_ABI, functionName: "governanceModule", result: overrides.governanceModule ?? GOVERNANCE_MODULE }),
+    "router-rebalance-module": encodeFunctionResult({ abi: DSTAKE_ROUTER_ABI, functionName: "rebalanceModule", result: REBALANCE_MODULE }),
     "router-token": encodeFunctionResult({
       abi: DSTAKE_ROUTER_ABI,
       functionName: "dStakeToken",
@@ -286,32 +295,12 @@ function dStakeResults(
     "router-shortfall": encodeFunctionResult({
       abi: DSTAKE_ROUTER_ABI,
       functionName: "currentShortfall",
-      result: 0n,
+      result: overrides.shortfall ?? 0n,
     }),
     "router-active-withdrawal-vaults": encodeFunctionResult({
       abi: DSTAKE_ROUTER_ABI,
       functionName: "getActiveVaultsForWithdrawals",
-      result: overrides.activeWithdrawalVaults ?? [IDLE_STRATEGY, DLEND_STRATEGY],
-    }),
-    "idle-strategy-asset": encodeFunctionResult({
-      abi: STRATEGY_VAULT_ABI,
-      functionName: "asset",
-      result: DUSD,
-    }),
-    "idle-strategy-max-withdraw": encodeFunctionResult({
-      abi: STRATEGY_VAULT_ABI,
-      functionName: "maxWithdraw",
-      result: 993_333_681_415_103_920n,
-    }),
-    "idle-strategy-adapter": encodeFunctionResult({
-      abi: DSTAKE_ROUTER_ABI,
-      functionName: "strategyShareToAdapter",
-      result: IDLE_ADAPTER,
-    }),
-    "idle-strategy-healthy": encodeFunctionResult({
-      abi: DSTAKE_ROUTER_ABI,
-      functionName: "isVaultHealthyForWithdrawals",
-      result: true,
+      result: overrides.activeWithdrawalVaults ?? [DLEND_STRATEGY],
     }),
     "dlend-strategy-asset": encodeFunctionResult({
       abi: STRATEGY_VAULT_ABI,
@@ -346,7 +335,7 @@ function dStakeResults(
     "dlend-available-liquidity": encodeFunctionResult({
       abi: ERC20_ABI,
       functionName: "balanceOf",
-      result: dlendMaxWithdraw + 1n,
+      result: overrides.availableLiquidity ?? dlendMaxWithdraw + 1n,
     }),
     "dstake-asset-decimals": encodeFunctionResult({
       abi: ERC20_ABI,
@@ -501,11 +490,42 @@ describe("specialized executable redemption observers", () => {
       feeBps: 10,
       diagnostics: {
         outputAssetAddress: DUSD,
+        routerAddress: DSTAKE_ROUTER,
+        activeWithdrawalVaults: [DLEND_STRATEGY],
+        governanceModuleAddress: GOVERNANCE_MODULE,
+        rebalanceModuleAddress: REBALANCE_MODULE,
         dlendStrategyMaxWithdrawRaw: "192389829956990993894191",
         dlendAvailableLiquidityRaw: "192389829956990993894192",
         currentWithdrawalFeeRaw: "1000",
       },
     });
+  });
+
+  it.each([DSTAKE_ROUTER, GOVERNANCE_MODULE, REBALANCE_MODULE])("rejects unreviewed dTRINITY code at %s", async (driftAddress) => {
+    await expect(observeExecutableRedemptionRoute(
+      "sdusd-dtrinity", DSTAKE_TOKEN, new AbortController().signal, undefined,
+      { client: client("dstake", { driftAddress }), nowSec: NOW },
+    )).rejects.toThrow(/code identity drift/);
+  });
+
+  it.each([
+    { router: "0xdd26c236ec95d03ddf3cb67b7f54864719e9be5a" as Hex },
+    { governanceModule: IDLE_STRATEGY },
+    { activeWithdrawalVaults: [IDLE_STRATEGY, DLEND_STRATEGY] },
+    { availableLiquidity: 1n },
+  ] satisfies DStakeOverrides[])("rejects retired or unreviewed dTRINITY dependencies and invalid liquidity: %o", async (dStakeOverrides) => {
+    await expect(observeExecutableRedemptionRoute(
+      "sdusd-dtrinity", DSTAKE_TOKEN, new AbortController().signal, undefined,
+      { client: client("dstake", { dStakeOverrides }), nowSec: NOW },
+    )).rejects.toThrow(/drift|invalid dLEND/);
+  });
+
+  it("publishes zero executable capacity while dTRINITY reports a shortfall", async () => {
+    const observation = await observeExecutableRedemptionRoute(
+      "sdusd-dtrinity", DSTAKE_TOKEN, new AbortController().signal, undefined,
+      { client: client("dstake", { dStakeOverrides: { shortfall: 1n } }), nowSec: NOW },
+    );
+    expect(observation).toMatchObject({ routeStatus: "degraded", capacityRaw: 0n });
   });
 
   it("fails closed on dTRINITY strategy-set drift and emits zero on a current pause", async () => {

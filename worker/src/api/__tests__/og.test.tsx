@@ -934,6 +934,15 @@ describe("og cards render through satori", () => {
     expect(svg).toContain("<svg");
   });
 
+  it("renders unavailable chain history without inventing zero growth", () => {
+    const markup = renderToStaticMarkup(<ChainCard data={{
+      name: "Ethereum", totalUsd: 100, change7dPercent: null, stablecoinCount: 1,
+      dominanceShare: 1, healthScore: null, healthBand: null, topStablecoins: [],
+    }} />);
+    expect(markup).toContain("— 7d");
+    expect(markup).not.toContain("0.0% 7d");
+  });
+
   it("renders the chain card without health data", async () => {
     const svg = await renderSvg(
       <ChainCard

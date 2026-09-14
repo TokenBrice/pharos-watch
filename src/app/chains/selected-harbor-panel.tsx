@@ -72,7 +72,7 @@ export function SelectedHarborPanel({ entry }: { entry: ChainHarborEntry | null 
             7d wake
           </p>
           <p className={cn("mt-1 font-mono text-lg font-bold tabular-nums", trendColor(entry.change7dPct))}>
-            {formatSignedPercent(entry.change7dPct * 100, 2)}
+            {entry.change7dPct == null ? "—" : formatSignedPercent(entry.change7dPct * 100, 2)}
           </p>
           <p className="text-xs text-muted-foreground">supply change</p>
         </div>

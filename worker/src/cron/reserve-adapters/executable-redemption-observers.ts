@@ -61,6 +61,8 @@ const DSTAKE_TOKEN_ABI = parseAbi([
   "function collateralVault() view returns (address)",
 ]);
 const DSTAKE_ROUTER_ABI = parseAbi([
+  "function governanceModule() view returns (address)",
+  "function rebalanceModule() view returns (address)",
   "function dStakeToken() view returns (address)",
   "function collateralVault() view returns (address)",
   "function paused() view returns (bool)",
@@ -132,20 +134,20 @@ const DSTAKE = {
     implementationCodeHash: "0xf3d6aec9f278be5b2140dcca59bfd109bd57bdf4d928e11d2a7b3863bb1b796d",
   } satisfies ProxyIdentity,
   router: {
-    address: "0xdd26c236ec95d03ddf3cb67b7f54864719e9be5a",
-    codeHash: "0x08f865940e3532d14604ba5fdc7560fd35c59dde586a5e5322ae4312be5a9d03",
+    address: "0x6d4a26fe926e88fee41a9fddeda3b50bf98f1ddb",
+    codeHash: "0xa4167490ee7ee175f6c257a2fad355a67d4061afebc6d65c381a9236e1480f4b",
   } satisfies DirectIdentity,
   collateralVault: {
     address: "0x4acbcfa29fb085097c5f31783403ef7a7930f6fe",
     codeHash: "0x9bef4196d31f6ccf89b74f147be85e8a24c19085d59776a48301d3cb06e1def9",
   } satisfies DirectIdentity,
-  idleStrategy: {
-    address: "0x78a4dad0ac32c80da6ef60a366b1c035145380bc",
-    codeHash: "0x1dc234de62c077e81b3af54e4c4c6feeef6922213147e4c0b865be07f63f57a8",
+  governanceModule: {
+    address: "0x2fd26c2cbfe0674776a1ff00daa8cffefcc0c88c",
+    codeHash: "0x1434e0df9c945565f750495d8981cc0771cd5a00786bc3373d18bc965c9945a9",
   } satisfies DirectIdentity,
-  idleAdapter: {
-    address: "0xefd794e2d8024f3c25aa343588dd6d4481b5db7c",
-    codeHash: "0x0620eb4be11008952dd737925d15743ec443bed53cf163e5f8244d9e80fe999b",
+  rebalanceModule: {
+    address: "0xd15ccbe652c0c29b1d544a26f902f21dfc5b4f05",
+    codeHash: "0x747c8358f0f87437ec23361620e04745b8d7e103a18a09d0a69dec933820407b",
   } satisfies DirectIdentity,
   dlendStrategy: {
     address: "0x576dd487bacfa6e7afd1e3ea03da0763f732d4c9",
@@ -162,7 +164,9 @@ const DSTAKE = {
   sourceUrls: [
     "https://docs.dtrinity.org/protocol-components/sdusd",
     "https://docs.dtrinity.org/security/addresses",
-    "https://github.com/dtrinity/ethereum-solidity-contracts/blob/d3103f8807a0abb23277b79dc136d002b57a6687/contracts/vaults/dstake/DStakeRouterV2.sol",
+    "https://etherscan.io/address/0x6d4a26fe926e88fee41a9fddeda3b50bf98f1ddb#code",
+    "https://etherscan.io/address/0x2fd26c2cbfe0674776a1ff00daa8cffefcc0c88c#code",
+    "https://etherscan.io/address/0xd15ccbe652c0c29b1d544a26f902f21dfc5b4f05#code",
   ],
 } as const;
 
@@ -518,9 +522,11 @@ function abiField(
   } as never) as AnyEvmObservationField;
 }
 
-function strategyFields(label: "idle" | "dlend", strategyAddress: Hex) {
-  const strategyName = label === "idle" ? "idle" : "dLEND";
-  const adapterAddress = label === "idle" ? DSTAKE.idleAdapter.address : DSTAKE.dlendAdapter.address;
+function strategyFields() {
+  const label = "dlend";
+  const strategyName = "dLEND";
+  const strategyAddress = DSTAKE.dlendStrategy.address;
+  const adapterAddress = DSTAKE.dlendAdapter.address;
   return [
     abiField(`${label}-strategy-asset`, strategyAddress, STRATEGY_VAULT_ABI, "asset", {
       verify: verifyExpectedAddress(DSTAKE.coinId, `${strategyName} strategy asset`, DSTAKE.assetAddress),
@@ -556,13 +562,21 @@ function dStakeFields() {
     abiField("router-collateral-vault", DSTAKE.router.address, DSTAKE_ROUTER_ABI, "collateralVault", {
       verify: verifyExpectedAddress(DSTAKE.coinId, "router collateral vault", DSTAKE.collateralVault.address),
     }),
+    abiField("collateral-vault-router", DSTAKE.collateralVault.address, DSTAKE_TOKEN_ABI, "router", {
+      verify: verifyExpectedAddress(DSTAKE.coinId, "collateral vault router", DSTAKE.router.address),
+    }),
+    abiField("router-governance-module", DSTAKE.router.address, DSTAKE_ROUTER_ABI, "governanceModule", {
+      verify: verifyExpectedAddress(DSTAKE.coinId, "governance module", DSTAKE.governanceModule.address),
+    }),
+    abiField("router-rebalance-module", DSTAKE.router.address, DSTAKE_ROUTER_ABI, "rebalanceModule", {
+      verify: verifyExpectedAddress(DSTAKE.coinId, "rebalance module", DSTAKE.rebalanceModule.address),
+    }),
     abiField("router-paused", DSTAKE.router.address, DSTAKE_ROUTER_ABI, "paused"),
     abiField("router-withdrawal-fee", DSTAKE.router.address, DSTAKE_ROUTER_ABI, "withdrawalFeeBps"),
     abiField("router-max-withdrawal-fee", DSTAKE.router.address, DSTAKE_ROUTER_ABI, "maxWithdrawalFeeBps"),
     abiField("router-shortfall", DSTAKE.router.address, DSTAKE_ROUTER_ABI, "currentShortfall"),
     abiField("router-active-withdrawal-vaults", DSTAKE.router.address, DSTAKE_ROUTER_ABI, "getActiveVaultsForWithdrawals"),
-    ...strategyFields("idle", DSTAKE.idleStrategy.address),
-    ...strategyFields("dlend", DSTAKE.dlendStrategy.address),
+    ...strategyFields(),
     abiField("dlend-pool", DSTAKE.dlendStrategy.address, STATIC_ATOKEN_ABI, "POOL", {
       verify: verifyExpectedAddress(DSTAKE.coinId, "dLEND pool", DSTAKE.dlendPoolAddress),
     }),
@@ -592,8 +606,8 @@ async function observeDStake(
       DSTAKE.token,
       DSTAKE.router,
       DSTAKE.collateralVault,
-      DSTAKE.idleStrategy,
-      DSTAKE.idleAdapter,
+      DSTAKE.governanceModule,
+      DSTAKE.rebalanceModule,
       DSTAKE.dlendStrategy,
       DSTAKE.dlendAdapter,
     ],
@@ -607,19 +621,16 @@ async function observeDStake(
   const activeWithdrawalVaults = state.values["router-active-withdrawal-vaults"] as readonly string[];
   if (
     !sameAddressSet(activeWithdrawalVaults, [
-      DSTAKE.idleStrategy.address,
       DSTAKE.dlendStrategy.address,
     ])
   ) {
     fail(DSTAKE.coinId, "active withdrawal strategy set drift");
   }
 
-  const idleMaxWithdrawRaw = state.values["idle-strategy-max-withdraw"] as bigint;
   const dlendMaxWithdrawRaw = state.values["dlend-strategy-max-withdraw"] as bigint;
   const dlendAvailableLiquidityRaw = state.values["dlend-available-liquidity"] as bigint;
   const totalAssetsRaw = state.values["dstake-total-assets"] as bigint;
   if (
-    idleMaxWithdrawRaw < 0n ||
     dlendMaxWithdrawRaw < 0n ||
     dlendAvailableLiquidityRaw < 0n ||
     totalAssetsRaw <= 0n ||
@@ -636,22 +647,16 @@ async function observeDStake(
   const feeBps = fixedPointFeeBpsCeil(currentFeeRaw, 1_000_000n, DSTAKE.coinId);
   const paused = state.values["router-paused"] as boolean;
   const shortfallRaw = state.values["router-shortfall"] as bigint;
-  const idleHealthy = state.values["idle-strategy-healthy"] as boolean;
   const dlendHealthy = state.values["dlend-strategy-healthy"] as boolean;
   const assetDecimals = state.values["dstake-asset-decimals"] as number;
   if (assetDecimals !== DSTAKE.assetDecimals || shortfallRaw < 0n) {
     fail(DSTAKE.coinId, "invalid dSTAKE asset or shortfall state");
   }
 
-  const rawBound =
-    idleMaxWithdrawRaw > dlendMaxWithdrawRaw
-      ? idleMaxWithdrawRaw
-      : dlendMaxWithdrawRaw;
-  const cappedBound = rawBound > totalAssetsRaw ? totalAssetsRaw : rawBound;
+  const cappedBound = dlendMaxWithdrawRaw > totalAssetsRaw ? totalAssetsRaw : dlendMaxWithdrawRaw;
   const routeOpen =
     paused === false &&
     shortfallRaw === 0n &&
-    idleHealthy === true &&
     dlendHealthy === true &&
     cappedBound > 0n;
   return {
@@ -681,9 +686,8 @@ async function observeDStake(
       routerAddress: DSTAKE.router.address,
       collateralVaultAddress: DSTAKE.collateralVault.address,
       activeWithdrawalVaults: activeWithdrawalVaults.map((address) => address.toLowerCase()),
-      idleStrategyAddress: DSTAKE.idleStrategy.address,
-      idleStrategyMaxWithdrawRaw: idleMaxWithdrawRaw.toString(),
-      idleStrategyHealthy: idleHealthy,
+      governanceModuleAddress: DSTAKE.governanceModule.address,
+      rebalanceModuleAddress: DSTAKE.rebalanceModule.address,
       dlendStrategyAddress: DSTAKE.dlendStrategy.address,
       dlendStrategyMaxWithdrawRaw: dlendMaxWithdrawRaw.toString(),
       dlendStrategyHealthy: dlendHealthy,

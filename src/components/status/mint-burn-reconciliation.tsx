@@ -98,15 +98,19 @@ export function MintBurnReconciliationCard({
         <div className={cn("flex flex-wrap items-start justify-between gap-3 rounded-[1rem] px-4 py-3", STATUS_PANEL_SHELL_CLASS)}>
           <div className="space-y-1">
             <p className="text-xs text-muted-foreground">
-              Compares 24h configured canonical issuance-chain mint/burn net flow against the stablecoins cache&apos;s
-              matching chain-supply delta. Critical:{" "}
+              Indicative comparison of the latest completed 24h of classified issuance-chain flows against the upstream
+              chain-supply daily delta. Source observation windows may differ; gaps require investigation. Critical:{" "}
               {`>$${(STATUS_RECONCILIATION_THRESHOLDS.criticalAbsoluteUsd / 1e6).toFixed(0)}M or >${(STATUS_RECONCILIATION_THRESHOLDS.criticalRatio * 100).toFixed(0)}%`}
               . Warn:{" "}
               {`>$${(STATUS_RECONCILIATION_THRESHOLDS.warnAbsoluteUsd / 1e6).toFixed(0)}M or >${(STATUS_RECONCILIATION_THRESHOLDS.warnRatio * 100).toFixed(0)}%`}
               .
             </p>
+            <p className="text-xs text-muted-foreground">
+              Missing supply history or unverified scan coverage is insufficient source. Standard flows exclude
+              bridge, review, atomic and below-threshold events; this is not an exact total-supply audit.
+            </p>
             <div className="text-xs text-muted-foreground">
-              Showing {visibleRows.length} of {summary.rows.length} rows, sorted by severity.
+              Showing {visibleRows.length} of {summary.rows.length} rows, sorted by severity and gap.
             </div>
           </div>
           {canCollapse ? (
@@ -153,7 +157,10 @@ export function MintBurnReconciliationCard({
               <div className="mt-3 grid gap-3 border-t border-border/50 pt-3 text-xs text-muted-foreground sm:grid-cols-3">
                 <div>
                   <div className="text-[10px] uppercase tracking-[0.18em]">Flow net 24h</div>
-                  <div className="mt-1 pharos-numeric text-foreground">{formatCurrency(row.flowNet24hUsd)}</div>
+                  <div className="mt-1 pharos-numeric text-foreground">
+                    {row.coverageStatus === "full" || row.coverageStatus === "partial-history"
+                      ? formatCurrency(row.flowNet24hUsd) : "—"}
+                  </div>
                 </div>
                 <div>
                   <div className="text-[10px] uppercase tracking-[0.18em]">Chain delta 24h</div>

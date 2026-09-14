@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { MINT_BURN_CONFIGS } from "../../mint-burn-contracts";
 import { ACTIVE_IDS } from "@shared/lib/stablecoins/registry";
 import { SAFETY_SCORE_METHODOLOGY_VERSION } from "@shared/lib/methodology-versions/safety-score";
 import { mockD1 } from "@shared/test-utils/mock-d1";
@@ -9,13 +10,19 @@ const NOW = 1_800_000_000;
 describe("getMintBurnReconciliation chain identity", () => {
   it.each([
     [{ Ethereum: { current: 110, circulatingPrevDay: 100 } }, 10],
+    [{ Ethereum: { current: 110, circulatingPrevDay: 0 } }, 110],
     [{ ethereum: { current: 110, circulatingPrevDay: 100 } }, 10],
     [{ legacy: { chainId: "ethereum", current: 110, circulatingPrevDay: 100 } }, 10],
     [{ Ethereum: { chainId: "base", current: 110, circulatingPrevDay: 100 } }, null],
     [{ Ethereum: { current: 110 } }, null],
     [{ Ethereum: { current: 110, circulatingPrevDay: null } }, null],
     [{ Ethereum: { current: 110, circulatingPrevDay: 100 }, ethereum: { current: 110, circulatingPrevDay: 100 } }, null],
-  ])("resolves chain supply without inventing or duplicating history: %j", async (chainCirculating, delta) => {
+    [{ Ethereum: { current: 110, circulatingPrevDay: 100 } }, null, "stale-head"],
+    [{ Ethereum: { current: 110, circulatingPrevDay: 100 } }, null, "missing-cursor"],
+    [{ Ethereum: { current: 110, circulatingPrevDay: 100 } }, null, "lagging"],
+    [{ Ethereum: { current: 110, circulatingPrevDay: 100 } }, 10, "extended-only"],
+    [{ Ethereum: { current: 110, circulatingPrevDay: 0 } }, null, "legacy-onchain"],
+  ])("resolves chain supply without inventing or duplicating history: %j", async (chainCirculating, delta, coverageCase = "") => {
     const db = mockD1([
       {
         match: "SELECT value, updated_at FROM cache WHERE key = ?",
@@ -23,6 +30,7 @@ describe("getMintBurnReconciliation chain identity", () => {
           value: JSON.stringify({ peggedAssets: [{
             id: "usdc-circle", symbol: "USDC", price: 1,
             circulating: { peggedUSD: 1_000_000 }, chainCirculating,
+            supplySource: coverageCase === "legacy-onchain" ? "onchain-total-supply" : "defillama",
           }] }),
           updated_at: NOW,
         }],
@@ -32,8 +40,21 @@ describe("getMintBurnReconciliation chain identity", () => {
         rows: [{ stablecoin_id: "usdc-circle", chain_id: "ethereum", net_flow_usd: 10 }],
       },
       { match: "pharos:status-derived:mint-burn-first-hour-seek", rows: [] },
+      { match: "FROM mint_burn_sync_state", rows: coverageCase === "missing-cursor" ? [] : MINT_BURN_CONFIGS.map((config) => ({
+        config_key: `${config.chain.chainId}-${config.contractAddress}`, last_block: coverageCase === "lagging" ? 90_000_000 : 99_999_999,
+      })) },
+      { match: "FROM cron_runs", matchBinds: ["sync-mint-burn"], rows: [{
+        started_at: coverageCase === "stale-head" || coverageCase === "extended-only" ? NOW - 86400 : NOW,
+        status: "ok", metadata: JSON.stringify({ chainHeads: { ethereum: 100_000_000 } }),
+      }] },
+      { match: "FROM cron_runs", matchBinds: ["sync-mint-burn-extended"], rows: [{
+        started_at: coverageCase === "stale-head" ? NOW - 86400 : NOW,
+        status: "ok", metadata: JSON.stringify({ chainHeads: { ethereum: 100_000_000 } }),
+      }] },
     ]);
     const result = await getMintBurnReconciliation(db, NOW);
+    expect(db.getHistory().find((entry) => entry.sql.includes("mint-burn-24h"))?.binds)
+      .toEqual([Math.floor(NOW / 3600) * 3600 - 86400, Math.floor(NOW / 3600) * 3600]);
     expect(result?.rows).toHaveLength(1);
     expect(result?.rows[0]).toMatchObject({
       chainSupplyDelta24hUsd: delta,

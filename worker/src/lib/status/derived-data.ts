@@ -4,6 +4,9 @@ import { getCirculatingRaw } from "@shared/lib/supply";
 import { resolveChainId } from "@shared/lib/chains";
 import type { MintBurnReconciliationRow, MintBurnReconciliationSummary, StatusResponse } from "@shared/types/status";
 import { buildInClause } from "../db";
+import { buildCoinCoverageMap, readMintBurnCronSnapshot, type MintBurnCronSnapshot } from "../mint-burn-flows-service";
+import { readMintBurnSyncStateBatch } from "../mint-burn-pipeline/sync-state";
+import { MINT_BURN_PUBLIC_FRESHNESS_MAX_AGE_SEC } from "../mint-burn-health-config";
 import { MINT_BURN_CONFIGS } from "../mint-burn-contracts";
 import {
   hasUsableStablecoinsPayload,
@@ -244,6 +247,7 @@ export async function getMintBurnReconciliation(
     stablecoinsCacheResult.payload.peggedAssets as Array<{
       id: string;
       symbol: string;
+      supplySource?: string;
       circulating?: Record<string, number>;
       chainCirculating?: Record<
         string,
@@ -256,19 +260,24 @@ export async function getMintBurnReconciliation(
     }>
   ).filter((asset) => trackedIds.has(asset.id));
 
+  const windowEnd = Math.floor(now / 3600) * 3600;
+  const windowStart = windowEnd - 24 * 3600;
+  let lastBlocks: Map<string, number>;
+  let cronSnapshot: MintBurnCronSnapshot;
+  let extendedSnapshot: MintBurnCronSnapshot;
   let flowRows: D1Result<{ stablecoin_id: string; chain_id: string; net_flow_usd: number }>;
   let firstSeenRows: Array<{ stablecoin_id: string; chain_id: string; first_hour_ts: number }>;
   try {
-    [flowRows, firstSeenRows] = await Promise.all([
+    [flowRows, firstSeenRows, lastBlocks, cronSnapshot, extendedSnapshot] = await Promise.all([
       db
         .prepare(
           `SELECT /* pharos:status-derived:mint-burn-24h */
              stablecoin_id, chain_id, SUM(net_flow_usd) as net_flow_usd
            FROM mint_burn_hourly INDEXED BY idx_mbh_ts
-           WHERE hour_ts >= ?
+           WHERE hour_ts >= ? AND hour_ts < ?
            GROUP BY stablecoin_id, chain_id`,
         )
-        .bind(now - 24 * 3600)
+        .bind(windowStart, windowEnd)
         .all<{ stablecoin_id: string; chain_id: string; net_flow_usd: number }>(),
       loadMintBurnFirstHourRows(
         db,
@@ -278,6 +287,9 @@ export async function getMintBurnReconciliation(
         })),
         "status",
       ),
+      readMintBurnSyncStateBatch(db, MINT_BURN_CONFIGS),
+      readMintBurnCronSnapshot(db),
+      readMintBurnCronSnapshot(db, "sync-mint-burn-extended"),
     ]);
   } catch (err) {
     logWorkerEvent({
@@ -298,22 +310,21 @@ export async function getMintBurnReconciliation(
   const flowMap = new Map(
     (flowRows.results ?? []).map((row) => [`${row.stablecoin_id}|${row.chain_id}`, row.net_flow_usd]),
   );
-  const firstSeenMap = new Map(firstSeenRows.map((row) => [`${row.stablecoin_id}|${row.chain_id}`, row.first_hour_ts]));
+  const freshHeads = new Map<string, number>();
+  for (const snapshot of [cronSnapshot, extendedSnapshot]) {
+    if (snapshot.startedAt == null || now - snapshot.startedAt > MINT_BURN_PUBLIC_FRESHNESS_MAX_AGE_SEC) continue;
+    for (const [chainId, head] of snapshot.chainHeads) {
+      freshHeads.set(chainId, Math.max(freshHeads.get(chainId) ?? 0, head));
+    }
+  }
+  const coverageMap = buildCoinCoverageMap(now, firstSeenRows, lastBlocks, freshHeads);
 
   const rows = assets
     .map<MintBurnReconciliationRow>((asset) => {
       const canonicalChains = configChainsByStablecoin.get(asset.id) ?? new Set<string>();
       const canonicalChainId = canonicalChains.size === 1 ? [...canonicalChains][0]! : null;
       const flowNet24hUsd = canonicalChainId ? (flowMap.get(`${asset.id}|${canonicalChainId}`) ?? 0) : 0;
-      const historyStartAt = canonicalChainId ? (firstSeenMap.get(`${asset.id}|${canonicalChainId}`) ?? null) : null;
-      const coverageStatus: MintBurnReconciliationRow["coverageStatus"] =
-        historyStartAt == null
-          ? "unknown"
-          : historyStartAt > now - 24 * 3600
-            ? "bootstrapping"
-            : historyStartAt > now - 30 * 24 * 3600
-              ? "partial-history"
-              : "full";
+      const coverageStatus = coverageMap.get(asset.id)?.status ?? "unknown";
 
       const matchingSupply = canonicalChainId
         ? Object.entries(asset.chainCirculating ?? {}).filter(([label, data]) =>
@@ -323,13 +334,18 @@ export async function getMintBurnReconciliation(
       // Ambiguous aliases must not double-count supply or invent missing history.
       const chainSupply = matchingSupply.length === 1 ? matchingSupply[0]![1] : undefined;
       const current = chainSupply?.current;
-      const prevDay = chainSupply?.circulatingPrevDay;
+      // These producers only observe current supply. Legacy cache versions used
+      // synthetic zero histories; provenance, not a zero-value heuristic, rejects them.
+      const currentOnlySupply = asset.supplySource === "onchain-total-supply"
+        || asset.supplySource === "onchain-circulating-supply";
+      const prevDay = currentOnlySupply ? undefined : chainSupply?.circulatingPrevDay;
       if (
         canonicalChainId == null ||
+        (coverageStatus !== "full" && coverageStatus !== "partial-history") ||
         typeof current !== "number" ||
-        !Number.isFinite(current) ||
+        !Number.isFinite(current) || current < 0 ||
         typeof prevDay !== "number" ||
-        !Number.isFinite(prevDay)
+        !Number.isFinite(prevDay) || prevDay < 0
       ) {
         return {
           stablecoinId: asset.id,
@@ -378,7 +394,8 @@ export async function getMintBurnReconciliation(
         "insufficient-source": 2,
         ok: 3,
       };
-      return severityOrder[a.status] - severityOrder[b.status];
+      return severityOrder[a.status] - severityOrder[b.status]
+        || (b.absoluteDiffUsd ?? 0) - (a.absoluteDiffUsd ?? 0);
     });
 
   return {

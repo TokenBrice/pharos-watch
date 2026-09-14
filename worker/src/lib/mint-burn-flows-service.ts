@@ -404,7 +404,7 @@ export function selectLargestEvents(rows: EventRow[]): Map<string, EventRow> {
   return bestByCoin;
 }
 
-export async function readMintBurnCronSnapshot(db: D1Database): Promise<MintBurnCronSnapshot> {
+export async function readMintBurnCronSnapshot(db: D1Database, job = MINT_BURN_CRON_JOB): Promise<MintBurnCronSnapshot> {
   try {
     const row = await db
       .prepare(
@@ -414,7 +414,7 @@ export async function readMintBurnCronSnapshot(db: D1Database): Promise<MintBurn
          ORDER BY started_at DESC
          LIMIT 1`,
       )
-      .bind(MINT_BURN_CRON_JOB)
+      .bind(job)
       .first<{ started_at: number | null; status: string | null; metadata: string | null }>();
 
     if (!row) {

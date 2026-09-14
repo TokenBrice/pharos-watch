@@ -81,9 +81,9 @@ const ChainCirculatingSchema = z.record(
   z.object({
     chainId: z.string().optional(),
     current: z.number().finite().nonnegative(),
-    circulatingPrevDay: z.number().finite().nonnegative(),
-    circulatingPrevWeek: z.number().finite().nonnegative(),
-    circulatingPrevMonth: z.number().finite().nonnegative(),
+    circulatingPrevDay: z.number().finite().nonnegative().optional(),
+    circulatingPrevWeek: z.number().finite().nonnegative().optional(),
+    circulatingPrevMonth: z.number().finite().nonnegative().optional(),
   }),
 );
 

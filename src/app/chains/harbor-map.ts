@@ -26,7 +26,7 @@ export interface ChainHarborEntry {
   dominantSharePct: number;
   dominantCargoUsd: number;
   cargos: ChainHarborCargo[];
-  change7dPct: number;
+  change7dPct: number | null;
 }
 
 export interface ChainHarborModel {

@@ -34,7 +34,7 @@ describe("SelectedHarborPanel", () => {
       change7dPct: 0.0123,
     };
 
-    render(createElement(SelectedHarborPanel, { entry }));
+    const { rerender } = render(createElement(SelectedHarborPanel, { entry }));
 
     expect(screen.getByRole("heading", { name: "Ethereum" })).toBeTruthy();
     expect(screen.getByText("86 robust")).toBeTruthy();
@@ -45,5 +45,8 @@ describe("SelectedHarborPanel", () => {
     expect(document.querySelector('img[src="/logos/2-usdc.svg"]')).toBeTruthy();
     expect(document.querySelector('img[src="/logos/1-usdt.svg"]')).toBeTruthy();
     expect(screen.getByText(/not issuer redemption capacity/i)).toBeTruthy();
+    rerender(createElement(SelectedHarborPanel, { entry: { ...entry, change7dPct: null } }));
+    expect(screen.getByText("—")).toBeTruthy();
+    expect(screen.queryByText("+0.00%")).toBeNull();
   });
 });
