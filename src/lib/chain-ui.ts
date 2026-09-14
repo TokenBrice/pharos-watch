@@ -64,7 +64,8 @@ export function chainAccentHex(id: string): string {
   return `oklch(0.68 0.14 ${hash})`;
 }
 
-export function trendColor(value: number): string {
+export function trendColor(value: number | null): string {
+  if (value == null) return "text-muted-foreground";
   return getNetColor(value, {
     positiveClass: "text-emerald-600 dark:text-emerald-400",
     negativeClass: "text-red-600 dark:text-red-400",

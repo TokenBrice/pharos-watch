@@ -128,8 +128,8 @@ export function ChainsLeaderboardClient() {
   }
   if (!data) return null;
 
-  const change7dPct = data.globalChange7dPct * 100;
-  const show7dTrend = Math.abs(change7dPct) >= 0.05;
+  const change7dPct = data.globalChange7dPct == null ? null : data.globalChange7dPct * 100;
+  const show7dTrend = change7dPct != null && Math.abs(change7dPct) >= 0.05;
 
   return (
     <SectionErrorBoundary name="Chains">
@@ -242,7 +242,7 @@ export function ChainsLeaderboardClient() {
                 </TableCell>
                 <TableCell className="text-right pharos-numeric">{formatCompactUsd(chain.totalUsd)}</TableCell>
                 <TableCell className={cn("text-right pharos-numeric", trendColor(chain.change7dPct))}>
-                  {formatSignedPercent(chain.change7dPct * 100, 2)}
+                  {chain.change7dPct == null ? "—" : formatSignedPercent(chain.change7dPct * 100, 2)}
                 </TableCell>
                 <TableCell className="text-right">
                   <div className="flex items-center justify-end gap-2">

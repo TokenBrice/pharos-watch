@@ -119,10 +119,10 @@ export function StablecoinTable({
               </div>
             </TableCell>
             <TableCell className={cn("text-right font-mono tabular-nums", trendColor(coin.change7dPct))}>
-              {formatSignedPercent(coin.change7dPct * 100, 2)}
+              {coin.change7dPct == null ? "—" : formatSignedPercent(coin.change7dPct * 100, 2)}
             </TableCell>
             <TableCell className={cn("text-right font-mono tabular-nums", trendColor(coin.change30dPct))}>
-              {formatSignedPercent(coin.change30dPct * 100, 2)}
+              {coin.change30dPct == null ? "—" : formatSignedPercent(coin.change30dPct * 100, 2)}
             </TableCell>
           </InteractiveTableRow>
         ))}

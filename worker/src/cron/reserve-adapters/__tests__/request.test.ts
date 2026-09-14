@@ -233,6 +233,23 @@ describe("adapter request cache", () => {
     expect(network.fetchSpy).toHaveBeenCalledTimes(1);
   });
 
+  it("reports the final URL and status when a JSON endpoint redirects to HTML without leaking URL credentials", async () => {
+    const response = new Response("<!DOCTYPE html><title>Issuer homepage</title>", {
+      headers: { "content-type": "text/html" },
+    });
+    Object.defineProperty(response, "url", { value: "https://issuer.example/?token=redirect-secret" });
+    vi.stubGlobal("fetch", vi.fn(async () => response));
+    const error = await fetchJsonWithRetry(
+      "https://app.issuer.example/reserves?key=request-secret", new AbortController().signal,
+    ).catch((error: Error) => error);
+
+    expect(error).toBeInstanceOf(Error);
+    expect((error as Error).message).toContain("HTTP 200, text/html; final URL https://issuer.example/?token=[redacted]");
+    expect((error as Error).message).toContain("body starts with: <!DOCTYPE html>");
+    expect((error as Error).message).not.toContain("redirect-secret");
+    expect((error as Error).message).not.toContain("request-secret");
+  });
+
   it("cancels binary error bodies and reports only the host and status", async () => {
     let cancelled = false;
     const responseBody = new ReadableStream<Uint8Array>({

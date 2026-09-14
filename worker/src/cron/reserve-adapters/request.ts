@@ -9,6 +9,7 @@ import { requireHtmlInput, requireJsonInputFromConfig } from "./input-guards";
 import type { AdapterContext } from "./types";
 import { runAdapterIo } from "./concurrency";
 import { toErrorMessage } from "@shared/lib/error-utils";
+import { redactProviderUrls } from "../../lib/safe-error-message";
 
 export const ADAPTER_USER_AGENT = "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36";
 export const HTML_ACCEPT_HEADER = "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8";
@@ -77,8 +78,9 @@ function buildJsonParseError(url: string, res: Response, raw: string, error: unk
   const contentType = res.headers.get("content-type") ?? "unknown";
   const snippet = summarizeResponseBody(raw);
   const detail = toErrorMessage(error);
+  const finalUrl = res.url && res.url !== url ? `; final URL ${redactProviderUrls(res.url)}` : "";
   return new Error(
-    `JSON parse failed for ${url} (${contentType}): ${detail}${snippet ? `; body starts with: ${snippet}` : ""}`,
+    `JSON parse failed for ${redactProviderUrls(url)} (HTTP ${res.status}, ${contentType}${finalUrl}): ${detail}${snippet ? `; body starts with: ${snippet}` : ""}`,
   );
 }
 

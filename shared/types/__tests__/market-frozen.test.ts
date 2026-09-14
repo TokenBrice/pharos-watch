@@ -95,6 +95,12 @@ describe("/api/stablecoins payload shape — contracts field", () => {
 });
 
 describe("/api/stablecoins payload shape — chain supply", () => {
+  it("preserves current-only chain supply without synthesizing historical zeroes", () => {
+    const parsed = StablecoinListResponseSchema.parse({ peggedAssets: [makeRawAsset({
+      chainCirculating: { Ethereum: { current: 1000 } },
+    })] });
+    expect(parsed.peggedAssets[0].chainCirculating.Ethereum).toEqual({ current: 1000 });
+  });
   it.each([
     ["current", -1],
     ["circulatingPrevDay", Number.NaN],

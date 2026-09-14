@@ -87,7 +87,8 @@ function buildHealthUnavailableMessage(meta: ApiMeta | null): string {
   return "Chain Health is temporarily unavailable because report-card inputs are unavailable. Sub-factors are still shown below.";
 }
 
-function TrendValue({ value }: { value: number }) {
+function TrendValue({ value }: { value: number | null }) {
+  if (value == null) return <span className="font-mono text-sm text-muted-foreground">—</span>;
   const Icon = value > 0.001 ? TrendingUp : value < -0.001 ? TrendingDown : Minus;
   return (
     <span className={cn("inline-flex items-center gap-1 font-mono text-sm font-semibold tabular-nums", trendColor(value))}>

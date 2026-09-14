@@ -726,7 +726,7 @@ async function handleChainOg(db: D1Database, chainId: string): Promise<Response>
     ? {
         name: chain.name,
         totalUsd: chain.totalUsd,
-        change7dPercent: ratioToPercentage(chain.change7dPct),
+        change7dPercent: chain.change7dPct == null ? null : ratioToPercentage(chain.change7dPct),
         stablecoinCount: chain.stablecoinCount,
         dominanceShare: chain.dominanceShare,
         healthScore: chain.healthScore,

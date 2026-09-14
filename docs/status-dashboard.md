@@ -678,20 +678,22 @@ Data is sourced from the admin-only `GET /api/status` payload. The worker supple
 
 Renders in the Pipeline "Reserves" tab after `ReserveSyncHealthCard` and before `MetadataIntegrityCard`; Liquidity Health is in the separate "Markets" tab. It compares:
 
-- 24h configured canonical issuance-chain mint/burn net flow from `mint_burn_hourly`
+- Latest completed 24 hourly buckets of configured canonical issuance-chain classified mint/burn net flow from `mint_burn_hourly` (`[floor(now/hour)-24h, floor(now/hour))`)
 - 24h matching chain-supply delta from the cached stablecoins payload's `chainCirculating` entry (`current - circulatingPrevDay`), resolving its explicit `chainId` or legacy display label through the shared chain registry. Missing or non-finite values and ambiguous duplicate chain entries remain `insufficient-source`.
 
 Each row shows:
 
 - stablecoin symbol
 - reconciliation status (`ok`, `warn`, `critical`, `insufficient-source`)
-- coverage hint (`full`, `partial-history`, `bootstrapping`, or `unknown`)
+- cursor/head coverage hint (`full`, `partial-history`, `bootstrapping`, `lagging`, `disabled`, or `unknown`)
 - absolute USD difference
 - raw flow net, raw chain delta, and ratio
 
 Severity thresholds are defined in `shared/lib/status-thresholds.ts` (`STATUS_RECONCILIATION_THRESHOLDS`): critical at ≥$100M absolute or ≥30% ratio, warn at ≥$25M or ≥12%.
 
-This is an operator integrity signal, not a public user-facing score. Large gaps typically mean one of:
+Comparisons require a single canonical chain, an explicit finite supply baseline (zero is valid), and cursor coverage of at least 24h with a fresh chain-head observation. Missing, stale-head, lagging, or bootstrapping coverage is `insufficient-source`; old first-event rows alone cannot establish current scan coverage. Coverage reuses the flow service cursor/head rules, merging fresh head observations from critical and extended lanes. Legacy `onchain-total-supply`/`onchain-circulating-supply` packets are current-only by contract; their previously serialized zero baselines are not accepted as history. Within each severity, rows sort by descending absolute gap.
+
+This is an indicative operator integrity signal, not an exact total-supply audit or public score. Upstream daily supply timestamps are unavailable, so the source windows cannot be proven aligned. Classified standard flows exclude bridge/review/atomic events and configured dust; mint/burn valuation can also differ from supply valuation. Large gaps require investigation and typically mean one of:
 
 - flow coverage is still partial or newly bootstrapping
 - upstream chain distribution moved in a way the mint/burn tracker does not capture
