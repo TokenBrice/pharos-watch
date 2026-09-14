@@ -26,6 +26,12 @@ function makeSummary(rowCount: number): MintBurnReconciliationSummary {
 }
 
 describe("MintBurnReconciliationCard", () => {
+  it("explains an incompatible supply definition despite full scan coverage", () => {
+    const summary = makeSummary(3);
+    summary.rows[2]!.comparisonIssue = "Rebases change token supply without mint/burn events.";
+    render(<MintBurnReconciliationCard summary={summary} />);
+    expect(screen.getByText("Rebases change token supply without mint/burn events.")).toBeTruthy();
+  });
 
   it("collapses the long tail behind a disclosure button", () => {
     render(<MintBurnReconciliationCard summary={makeSummary(8)} />);

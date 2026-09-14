@@ -382,3 +382,22 @@ describe("validateMintBurnBridgeDetection", () => {
     ]);
   });
 });
+
+describe("BUIDL Ethereum supply scope", () => {
+  it("tracks both registered Ethereum share-class tokens", () => {
+    const configs = getMintBurnConfigsForStablecoin("buidl-blackrock");
+    const registered = TRACKED_META_BY_ID.get("buidl-blackrock")!.contracts!
+      .filter((contract) => contract.chain === "ethereum");
+    expect(configs).toHaveLength(2);
+    expect(configs.map((config) => config.contractAddress.toLowerCase()).sort())
+      .toEqual(registered.map((contract) => contract.address.toLowerCase()).sort());
+    for (const config of configs) {
+      expect(config.decimals).toBe(6);
+      expect(config.tier).toBe("extended");
+      expect(config.startBlock).toBe(21_900_000);
+      expect(config.startBlockSource).toBe("default-coverage-floor-2026-03-24");
+      expect(config.startBlockConfidence).toBe("low");
+      expect(config.events).toEqual(EXPECTED_TRANSFER_EVENTS);
+    }
+  });
+});

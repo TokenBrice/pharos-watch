@@ -183,7 +183,8 @@ export function MintBurnFlowMethodologySection() {
                       shared safe coverage frontier when some event definitions or block timestamps are incomplete;
                       established coverage is marked lagging by cadence-derived block progress, or unknown when the
                       current chain head is unavailable. For quiet assets, completed block-scan span proves window
-                      maturity even when the oldest event row has aged out of retention
+                      maturity even when the oldest event row has aged out of retention. BUIDL tracks both registered
+                      Ethereum share-class contracts; coverage requires both scan cursors to catch up
                     </li>
                     <li>
                       <span className="text-foreground">Floor</span> &mdash; denominator is floored at $1M to prevent noise

@@ -420,6 +420,19 @@ export const MINT_BURN_CONFIG_SPECS: MintBurnContractConfigSpec[] = [
       events: transferMintBurn(),
     }),
   ),
+  // DefiLlama's Ethereum BUIDL supply sums both registered share-class tokens.
+  // Keep the second token explicit: default identity resolution selects the first.
+  {
+    chain: ETHEREUM,
+    stablecoinId: "buidl-blackrock",
+    contractAddressOverride: "0x6a9da2d710bb9b700acde7cb81f10f1ff8c89041",
+    decimalsOverride: 6,
+    dustThreshold: 10_000,
+    startBlock: ETHEREUM_COVERAGE_FLOOR_BLOCK,
+    tier: "extended",
+    isDefaultStartBlock: true,
+    events: transferMintBurn(),
+  },
   {
     chain: ARBITRUM,
     stablecoinId: "usdai-usd-ai",
