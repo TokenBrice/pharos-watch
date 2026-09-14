@@ -8,7 +8,7 @@ import { fetchTextWithRetry, verifiedFreshnessMetadata } from "./helpers";
 import { extractEscapedJsonValueAfterKey } from "./html";
 import { MAX_FUTURE_SOURCE_TIMESTAMP_SKEW_SEC } from "./validate";
 
-export const ONDO_OUSG_PORTFOLIO_URL = "https://ondo.finance/ousg";
+const ONDO_OUSG_PORTFOLIO_URL = "https://ondo.finance/ousg";
 const PORTFOLIO_SCOPE = "Current Value excludes OUSG limited partnership interests represented in book-entry (non-tokenized) form.";
 const PORTFOLIO_KEY = '\\"portfolio\\":';
 const PortfolioSchema = z.object({
