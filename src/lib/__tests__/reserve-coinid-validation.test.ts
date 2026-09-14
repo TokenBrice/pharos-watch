@@ -129,10 +129,6 @@ const REVIEWED_WARNING_IDS = new Map<string, string>([
     "The reviewed Hyperbeat portfolio is a dynamic strategy envelope without durable asset or position weights; the hbUSDT product name does not establish a fixed USDT reserve slice.",
   ],
   [
-    "ousg-ondo-finance::OUSG tokenized Treasury fund portfolio::OUSG",
-    "The reserve label names the subject fund itself, not an upstream OUSG dependency edge.",
-  ],
-  [
     "buidl-blackrock::BlackRock BUIDL fund shares::BUIDL",
     "The reserve label names the subject fund itself, not an upstream BUIDL dependency edge.",
   ],
