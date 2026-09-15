@@ -22,6 +22,8 @@ import { TRACKED_ASSET_ADDRESS_OVERRIDES } from "./tracked-asset-overrides";
 
 const DL_CONTRACT_MAX_AGE_SEC = 15 * 60;
 const DL_CONTRACT_MIN_CONFIDENCE = 0.8;
+const DL_CONTRACT_MAX_URL_LENGTH = 8_000;
+const DL_CONTRACT_MAX_BATCHES = 8;
 
 const DL_COINS_CHAIN_PREFIX_BY_CHAIN: Record<string, string> = {
   avalanche: "avax",
@@ -88,42 +90,75 @@ function parseDefiLlamaPriceMap(json: unknown): Map<string, DefiLlamaContractQuo
 async function fetchPriceMapByIds(
   ids: string[],
   source: string,
+  budget: { remaining: number },
   signal?: AbortSignal,
   db?: D1Database,
-): Promise<Map<string, DefiLlamaContractQuote> | null> {
-  if (ids.length === 0) return new Map();
+): Promise<{ prices: Map<string, DefiLlamaContractQuote>; failed: boolean }> {
+  const prices = new Map<string, DefiLlamaContractQuote>();
+  if (ids.length === 0) return { prices, failed: false };
 
   if (db && !(await shouldAttemptFetch(db, CIRCUIT_SOURCE.DL_COINS))) {
-    return new Map();
+    return { prices, failed: false };
   }
 
   // DefiLlama IDs are one URL path segment. Preserve the documented chain:id
   // separator while escaping embedded slashes such as Osmosis IBC denoms.
-  const encodedIds = ids.map((id) => encodeURIComponent(id).replaceAll("%3A", ":"));
-  const result = await fetchJsonWithRetry<unknown>(
-    `${DEFILLAMA_COINS}/prices/current/${encodedIds.join(",")}`,
-    signal ? { signal } : undefined,
-  );
-  if (!result?.response.ok) {
-    if (db) {
-      await recordOutcome(db, CIRCUIT_SOURCE.DL_COINS, false);
+  const prefix = `${DEFILLAMA_COINS}/prices/current/`;
+  const batches: string[] = [];
+  let batch = "";
+  let failed = false;
+  let providerOutcome: boolean | null = null;
+  for (const id of new Set(ids)) {
+    const encoded = encodeURIComponent(id).replaceAll("%3A", ":");
+    if (prefix.length + encoded.length > DL_CONTRACT_MAX_URL_LENGTH) {
+      failed = true;
+      continue;
     }
-    return null;
+    if (batch && prefix.length + batch.length + 1 + encoded.length > DL_CONTRACT_MAX_URL_LENGTH) {
+      batches.push(batch);
+      batch = "";
+    }
+    batch += `${batch ? "," : ""}${encoded}`;
   }
+  if (batch) batches.push(batch);
 
-  try {
-    const prices = parseDefiLlamaPriceMap(result.body);
-    if (db) {
-      await recordOutcome(db, CIRCUIT_SOURCE.DL_COINS, true);
+  for (const encodedBatch of batches) {
+    throwIfAborted(signal);
+    if (budget.remaining <= 0) {
+      failed = true;
+      break;
     }
-    return prices;
-  } catch {
-    logWorkerEventArgs("handler", "error", `[enrich-prices] Failed to parse JSON from ${source}: ${result.response.status}`);
-    if (db) {
-      await recordOutcome(db, CIRCUIT_SOURCE.DL_COINS, false);
+    budget.remaining -= 1;
+    let result: Awaited<ReturnType<typeof fetchJsonWithRetry<unknown>>>;
+    try {
+      result = await fetchJsonWithRetry<unknown>(
+        `${prefix}${encodedBatch}`,
+        signal ? { signal } : undefined,
+      );
+    } catch {
+      throwIfAborted(signal);
+      providerOutcome = false;
+      failed = true;
+      break;
     }
-    return null;
+    throwIfAborted(signal);
+    if (!result?.response.ok) {
+      providerOutcome = false;
+      failed = true;
+      break;
+    }
+    try {
+      for (const [id, quote] of parseDefiLlamaPriceMap(result.body)) prices.set(id, quote);
+      providerOutcome = true;
+    } catch {
+      logWorkerEventArgs("handler", "error", `[enrich-prices] Failed to parse JSON from ${source}: ${result.response.status}`);
+      providerOutcome = false;
+      failed = true;
+      break;
+    }
   }
+  if (db && providerOutcome != null) await recordOutcome(db, CIRCUIT_SOURCE.DL_COINS, providerOutcome);
+  return { prices, failed };
 }
 
 function isDefiLlamaContractQuoteUsable(
@@ -235,6 +270,7 @@ export async function runDlContractPasses(
   let pass1Count = 0;
   let pass1bCount = 0;
   const failures: string[] = [];
+  const budget = { remaining: DL_CONTRACT_MAX_BATCHES };
 
   try {
     const withAddress: DefiLlamaContractLookup[] = [];
@@ -251,12 +287,12 @@ export async function runDlContractPasses(
       const pass1Prices = await fetchPriceMapByIds(
         withAddress.map((lookup) => lookup.coinId),
         "DefiLlama coins API (pass 1)",
+        budget,
         signal,
         db,
       );
-      if (pass1Prices) {
-        pass1Count += applyDefiLlamaContractPrices(assets, withAddress, pass1Prices, fxRates);
-      } else {
+      pass1Count += applyDefiLlamaContractPrices(assets, withAddress, pass1Prices.prices, fxRates);
+      if (pass1Prices.failed) {
         failures.push("dl-contracts");
       }
     }
@@ -278,12 +314,12 @@ export async function runDlContractPasses(
         const pass1bPrices = await fetchPriceMapByIds(
           altLookups.map((lookup) => lookup.coinId),
           "DefiLlama coins API (pass 1b)",
+          budget,
           signal,
           db,
         );
-        if (pass1bPrices) {
-          pass1bCount += applyDefiLlamaContractPrices(assets, altLookups, pass1bPrices, fxRates);
-        } else if (!failures.includes("dl-contracts")) {
+        pass1bCount += applyDefiLlamaContractPrices(assets, altLookups, pass1bPrices.prices, fxRates);
+        if (pass1bPrices.failed && !failures.includes("dl-contracts")) {
           failures.push("dl-contracts");
         }
       }

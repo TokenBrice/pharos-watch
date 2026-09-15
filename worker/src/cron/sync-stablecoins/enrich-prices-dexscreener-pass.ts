@@ -30,7 +30,7 @@ const DEXSCREENER_MAX_REQUESTS = 1;
 const DEXSCREENER_REQUEST_TIMEOUT_MS = 5_000;
 const DEXSCREENER_MAX_RETRIES = 0;
 const DEXSCREENER_PASS_BUDGET_MS = 45_000;
-export const DEXSCREENER_ROTATION_INTERVAL_MS = 15 * 60 * 1_000;
+export const DEXSCREENER_ROTATION_INTERVAL_MS = 60 * 60 * 1_000;
 const DEXSCREENER_PASS_TIMEOUT_ERROR = new DOMException(
   `DexScreener pass timed out after ${DEXSCREENER_PASS_BUDGET_MS}ms`,
   "TimeoutError",
@@ -159,7 +159,7 @@ function selectDexScreenerBatch(
   if (chainGroups.length === 0) return [];
 
   // DexScreener batches cannot cross chains. Rotate the selected chain each
-  // quarter-hour, then rotate within that chain on later visits so a persistent
+  // hour, matching the corroboration cadence, then rotate within that chain so a persistent
   // gap on one network cannot starve candidates on another.
   const chainIndex = ((rotationCycle % chainGroups.length) + chainGroups.length) % chainGroups.length;
   const chainTargets = chainGroups[chainIndex];
@@ -227,7 +227,7 @@ export async function runDexScreenerPass(
    * Wall clock driving the chain-rotation cycle. Production leaves it
    * undefined and reads the real clock; a caller that needs a reproducible
    * pick (a test, a replay) pins it. Without this the chain a run selects
-   * depends on the quarter-hour it happens to execute in, so an assertion on
+   * depends on the hour it happens to execute in, so an assertion on
    * which deployment leads passes locally and fails in CI — which is why the
    * pinned URL in `enrich-prices-fallback-cmc-jupiter.test.ts` had to be
    * weakened to a prefix at `ebe1340c7`.
