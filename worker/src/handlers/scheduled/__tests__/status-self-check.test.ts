@@ -9,6 +9,7 @@ const mocks = vi.hoisted(() => ({
   runCronSentinel: vi.fn(),
   runPriceCorroboration: vi.fn(),
   logCronEvent: vi.fn(async () => undefined),
+  recordBudgetSurfaceTelemetry: vi.fn(async () => undefined),
 }));
 
 vi.mock("../../../cron/status-self-check", () => ({ runStatusSelfCheck: mocks.runStatusSelfCheck }));
@@ -22,6 +23,8 @@ vi.mock("../../../cron/sync-stablecoins/price-corroboration", async (importOrigi
 vi.mock("../../../lib/cron-logger", async (importOriginal) => ({
   ...await importOriginal<typeof import("../../../lib/cron-logger")>(), logCronEvent: mocks.logCronEvent,
 }));
+
+vi.mock("../../../lib/budget-surface-telemetry", () => ({ recordBudgetSurfaceTelemetry: mocks.recordBudgetSurfaceTelemetry }));
 
 import { runStatusSelfCheckSlot } from "../status-self-check";
 
@@ -91,6 +94,9 @@ describe("hourly corroboration before the next publication", () => {
     const ctx = runtime(order);
     await runStatusSelfCheckSlot(ctx);
     expect(order).toEqual(["status-self-check", "data-invariant-canary", "cron-sentinel", "price-corroboration"]);
+    expect(mocks.recordBudgetSurfaceTelemetry).toHaveBeenCalledWith(ctx.db, expect.objectContaining({
+      surface: "price-corroboration", outcome: failed ? "degraded" : "ok", dueCount: 2, processedCount: 1,
+    }));
     expect(mocks.runPriceCorroboration).toHaveBeenCalledWith(expect.objectContaining({
       signal: ctx.slotSignal, syncStartSec: 4140,
     }));
@@ -108,11 +114,16 @@ describe("hourly corroboration before the next publication", () => {
     }));
     expect(JSON.stringify(mocks.logCronEvent.mock.calls)).not.toContain("secret-token");
     expect(summary.jobsErrored).toBe(0);
+    expect(mocks.recordBudgetSurfaceTelemetry).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({
+      surface: "price-corroboration", outcome: "error", error: "Error",
+    }));
+    expect(JSON.stringify(mocks.recordBudgetSurfaceTelemetry.mock.calls)).not.toContain("secret-token");
   });
 
   it.each([24, 39, 54])("does not collect on minute %s", async (minute) => {
     await runStatusSelfCheckSlot(runtime([], minute));
     expect(mocks.runPriceCorroboration).not.toHaveBeenCalled();
     expect(mocks.logCronEvent).not.toHaveBeenCalled();
+    expect(mocks.recordBudgetSurfaceTelemetry).not.toHaveBeenCalled();
   });
 });

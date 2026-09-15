@@ -256,6 +256,8 @@ export interface CronJobMeta extends CronJobDefinition {
 }
 
 export interface CronConnectionBudgetDefinition {
+  /** Override when side work runs less often than its containing trigger. */
+  intervalSec?: number;
   job: string;
   label: string;
   scheduleKey: CronScheduleKey;
@@ -791,6 +793,7 @@ const CRON_CONNECTION_BUDGET_ONLY_DEFINITIONS: readonly CronConnectionBudgetDefi
   {
     job: "price-corroboration",
     label: "Hourly price corroboration",
+    intervalSec: 3600,
     scheduleKey: "statusSelfCheckOffset",
     maxConnections: 4,
     connectionGroup: "status-self-check-chain",
@@ -843,7 +846,8 @@ export const CRON_CONNECTION_BUDGET_ENTRIES: readonly CronConnectionBudgetMeta[]
 ].map((definition) => ({
   ...definition,
   schedule: CRON_SCHEDULES[definition.scheduleKey],
-  intervalSec: CRON_SCHEDULE_DEFINITIONS[definition.scheduleKey].intervalSec,
+  intervalSec: ("intervalSec" in definition ? definition.intervalSec : undefined)
+    ?? CRON_SCHEDULE_DEFINITIONS[definition.scheduleKey].intervalSec,
 }));
 
 /** Job name → expected interval in seconds, derived from definitions. */
