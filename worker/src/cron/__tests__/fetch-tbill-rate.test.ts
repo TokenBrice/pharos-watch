@@ -1304,6 +1304,39 @@ describe("fetchTbillRate — benchmark observation guard and registry integrity"
     expect(setCache).not.toHaveBeenCalled();
   });
 
+  it("does not force hourly catch-up for an unused old policy-rate record", async () => {
+    const fetchedAt = Math.floor(FROZEN_NOW.getTime() / 1000);
+    installCacheByKey(vi.mocked(getCache), {
+      risk_free_rates: makeRiskFreeRatesCacheRow({
+        USD: makeBenchmarkCacheEntry({ key: "USD", rate: 3.91, recordDate: FRESH_FRED_OBSERVATION_DATE,
+          fetchedAt: fetchedAt - 3600, source: "fred-dgs3mo" }),
+        CAD: makeBenchmarkCacheEntry({ key: "CAD", rate: 2.25, recordDate: "2025-01-01",
+          fetchedAt: fetchedAt - 3600, source: "boc-valet-v122530" }),
+      }, fetchedAt - 3600),
+    });
+    const calls: string[] = [];
+    mockTbillByUrl({}, calls);
+    const result = await fetchTbillRate(db, undefined, BANXICO_TEST_ENV, { minRegistryAgeSec: RETRY_BOUND_SEC });
+    expect(result.status).toBe("skipped_neutral");
+    expect(calls).toEqual([]);
+  });
+
+  it("refreshes an expired observation even when the last fetch is recent", async () => {
+    const fetchedAt = Math.floor(FROZEN_NOW.getTime() / 1000);
+    const oldRecordDate = new Date(FROZEN_NOW.getTime() - 6 * 86400_000).toISOString().slice(0, 10);
+    installCacheByKey(vi.mocked(getCache), {
+      risk_free_rates: makeRiskFreeRatesCacheRow({
+        USD: makeBenchmarkCacheEntry({ key: "USD", rate: 3.91, recordDate: oldRecordDate,
+          fetchedAt: fetchedAt - 3600, source: "fred-dgs3mo" }),
+      }, fetchedAt - 3600),
+    });
+    const calls: string[] = [];
+    mockTbillByUrl({}, calls);
+    const result = await fetchTbillRate(db, undefined, BANXICO_TEST_ENV, { minRegistryAgeSec: RETRY_BOUND_SEC });
+    expect(result.status).not.toBe("skipped_neutral");
+    expect(calls.length).toBeGreaterThan(0);
+  });
+
   it("refreshes from the hourly retry when the newest market observation exceeds the bound", async () => {
     const fetchedAt = Math.floor(FROZEN_NOW.getTime() / 1000);
     installCacheByKey(vi.mocked(getCache), {

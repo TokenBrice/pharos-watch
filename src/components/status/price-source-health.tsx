@@ -53,7 +53,7 @@ export function PriceSourceHealthCard({
     );
   }
 
-  const { confidenceDistribution: cd, sourceDistribution: sd, totalAssets } = health;
+  const { confidenceDistribution: cd, sourceDistribution: sd, totalAssets } = health.active ?? health;
   const pct = (n: number) => totalAssets > 0 ? `${((n / totalAssets) * 100).toFixed(1)}%` : "—";
   const lastSyncAgeSeconds = Math.max(0, nowSeconds - health.lastSync);
 
@@ -70,7 +70,7 @@ export function PriceSourceHealthCard({
         <div className="flex items-center justify-between">
           <CardTitle as="h3" className="text-base">Price Source Health</CardTitle>
           <span className="text-xs text-muted-foreground">
-            {totalAssets} assets · synced {formatElapsedSeconds(lastSyncAgeSeconds)} ago
+            {totalAssets} {health.active ? "active assets" : "cached assets"} · synced {formatElapsedSeconds(lastSyncAgeSeconds)} ago
           </span>
         </div>
       </CardHeader>
@@ -92,6 +92,12 @@ export function PriceSourceHealthCard({
             severity={confidenceSeverity("Missing", sd.missing, totalAssets)}
           />
         </div>
+
+        {health.active && (
+          <p className="text-xs text-muted-foreground">
+            Full cache: {health.totalAssets} rows · {health.sourceDistribution.missing} missing · {health.confidenceDistribution.high} high · {health.confidenceDistribution["single-source"]} single · {health.confidenceDistribution.low} low · {health.confidenceDistribution.fallback} fallback. Includes upstream assets outside the active catalog.
+          </p>
+        )}
 
         <div className="text-xs text-muted-foreground">
           <span className="font-medium">Sources:</span>{" "}

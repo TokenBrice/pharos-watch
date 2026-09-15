@@ -10,23 +10,24 @@ const INALPHA_UPDATE_URL = "https://api.nest.credit/v1/vaults/nest-alpha-lp-vaul
 const FIXTURE_NOW = 1_778_474_625;
 
 function nestNetwork(
-  coinId: "nopal-nest" | "inalpha-nest",
+  coinId: "nopal-nest" | "inalpha-nest" | "nbasis-nest",
   positions: unknown,
   price: unknown,
   lastPriceUpdate: unknown,
 ): AdapterNetworkSpec {
   const nopal = coinId === "nopal-nest";
+  const basis = "https://api.nest.credit/v1/vaults/nest-basis-vault/";
   return {
     json: {
-      [nopal ? NOPAL_POSITIONS_URL : INALPHA_POSITIONS_URL]: positions,
-      [nopal ? NOPAL_PRICE_URL : INALPHA_PRICE_URL]: price,
-      [nopal ? NOPAL_UPDATE_URL : INALPHA_UPDATE_URL]: lastPriceUpdate,
+      [coinId === "nbasis-nest" ? `${basis}positions` : nopal ? NOPAL_POSITIONS_URL : INALPHA_POSITIONS_URL]: positions,
+      [coinId === "nbasis-nest" ? `${basis}price` : nopal ? NOPAL_PRICE_URL : INALPHA_PRICE_URL]: price,
+      [coinId === "nbasis-nest" ? `${basis}last-price-update` : nopal ? NOPAL_UPDATE_URL : INALPHA_UPDATE_URL]: lastPriceUpdate,
     },
   };
 }
 
 function runNest(
-  coinId: "nopal-nest" | "inalpha-nest",
+  coinId: "nopal-nest" | "inalpha-nest" | "nbasis-nest",
   positions: unknown,
   price: unknown,
   lastPriceUpdate: unknown,
@@ -147,6 +148,43 @@ describe("fetchNestVaultPositionsReserves", () => {
       },
     });
     expectWarnings(result, ["nest-nav-coverage-gap"]);
+  });
+
+  it("accounts for nBASIS subscriptions separately from settled USCC without inventing a NAV shortfall", async () => {
+    const { result } = await runNest(
+      "nbasis-nest",
+      { data: { positions: {
+        liquidAssets: [{ symbol: "USDC", position: { value: 20513.83421829615 }, pendingTransactions: [] }],
+        yieldAssets: [{ slug: "superstate-uscc", tokens: [{
+          symbol: "USCC", position: { value: 115368.59675977795 },
+          pendingTransactions: [{ type: "PendingDeposit", amount: 1, price: 50000, value: 50000 }],
+        }] }],
+      } } },
+      { data: { nav: 185865.35913807683, price: 1.073847, totalSupply: 173083.650779 } },
+      { data: { lastPriceUpdates: [{ updatedAt: FIXTURE_NOW }] } },
+    );
+    expectWarnings(result, []);
+    expect(result.metadata).toMatchObject({
+      pendingDepositUsd: 50000,
+      pendingWithdrawalUsd: 0,
+      unknownExposurePct: expect.closeTo(26.899, 2),
+      reconciledNavCoverageRatio: expect.closeTo(1.000092, 5),
+    });
+    expect(result.metadata?.navReconciliationResidualUsd).toBeUndefined();
+    expect(result.slices.find((slice) => slice.sourceKey === "nest-vault-positions:pending-deposits"))
+      .toMatchObject({ name: "Nest pending deposits", pct: 26.9, risk: "high" });
+    expect(result.slices.find((slice) => slice.sourceKey === "nest-vault-positions:uscc")?.pct).toBe(62.1);
+  });
+
+  it.each([
+    { pendingTransactions: undefined, error: "missing pendingTransactions array" },
+    { pendingTransactions: [{ type: "PendingWithdrawal", amount: 1, price: 50000, value: 50000 }], error: "cannot reconcile positive nBASIS pending withdrawals" },
+    { pendingTransactions: [{ type: "PendingDeposit", amount: 1, price: 1, value: "unknown" }], error: "invalid pending PendingDeposit value" },
+  ])("keeps nBASIS pending accounting fail-closed: $error", async ({ pendingTransactions, error }) => {
+    await expect(runNest("nbasis-nest", { data: { positions: {
+      liquidAssets: [{ symbol: "USDC", position: { value: 100 }, pendingTransactions }], yieldAssets: [],
+    } } }, { data: { nav: 100 } }, { data: { lastPriceUpdates: [{ updatedAt: FIXTURE_NOW }] } }))
+      .rejects.toThrow(error);
   });
 
   it("keeps other Nest assets on settled-only accounting without pending transaction arrays", async () => {

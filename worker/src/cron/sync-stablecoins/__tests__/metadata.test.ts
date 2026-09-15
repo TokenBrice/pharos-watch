@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
+import { ACTIVE_STABLECOINS, ACTIVE_IDS } from "@shared/lib/stablecoins/registry";
 import { buildPricingSourceAuditReport, buildStablecoinsSyncResult } from "../metadata";
 import type { PeggedAsset } from "../enrich-prices";
 import { normalizeCronMetadataWithLease } from "../../../lib/cron-metadata";
@@ -30,6 +30,21 @@ function syncInput(
 }
 
 describe("stablecoins pricing metadata", () => {
+  it("separates active catalog health from untracked cache rows and counts absent active assets", () => {
+    const assets: PeggedAsset[] = ACTIVE_STABLECOINS.filter((asset) => asset.id !== "usdc-circle").map((asset) => ({
+      id: asset.id, name: asset.name, symbol: asset.symbol,
+      price: asset.id === "usdt-tether" ? null : 1,
+      priceSource: asset.id === "usdt-tether" ? "missing" : "coingecko",
+      priceConfidence: "high",
+    }));
+    assets.push(...["upstream-only-a", "upstream-only-b"].map((id) => ({ id, name: id, symbol: "OTHER", price: null, priceSource: "missing" })));
+    const result = buildStablecoinsSyncResult(syncInput(assets));
+    const metadata = JSON.parse(result.metadata!);
+    expect(metadata.priceSourceHealth).toMatchObject({ totalAssets: ACTIVE_IDS.size + 1, sourceDistribution: { missing: 3 },
+      confidenceDistribution: { high: ACTIVE_IDS.size - 2 }, active: { totalAssets: ACTIVE_IDS.size,
+        sourceDistribution: { missing: 2 }, confidenceDistribution: { high: ACTIVE_IDS.size - 2 } } });
+  });
+
   it("summarizes weak source coverage and provider rejection counts", () => {
     const assets: PeggedAsset[] = [
       {

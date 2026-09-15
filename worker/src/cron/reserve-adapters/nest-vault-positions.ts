@@ -73,7 +73,8 @@ interface NestPendingTransactionValue {
   valueUsd: number;
 }
 
-const NOPAL_ASSET_ID = "nopal-nest";
+// These vaults publish explicit pending deposits alongside settled positions.
+const PENDING_DEPOSIT_VAULTS = new Set(["nopal-nest", "nbasis-nest"]);
 
 function readParams(config: LiveReservesConfig): NestVaultPositionsParams {
   return parseLiveReserveAdapterParams("nest-vault-positions", config.params);
@@ -289,11 +290,11 @@ export async function fetchNestVaultPositionsReserves(
   const priceUsd = parsePositiveNumericLike(price.data?.price);
   const totalSupply = parsePositiveNumericLike(price.data?.totalSupply);
   const sourceTimestamp = readLatestTimestamp(lastPriceUpdate);
-  const reconcileNopal = coin.id === NOPAL_ASSET_ID;
-  if (reconcileNopal && navUsd == null) {
-    throw new Error("nest-vault-positions missing nOPAL NAV");
+  const reconcilePending = PENDING_DEPOSIT_VAULTS.has(coin.id);
+  if (reconcilePending && navUsd == null) {
+    throw new Error(`nest-vault-positions missing ${coin.symbol} NAV`);
   }
-  const pendingTransactions = reconcileNopal
+  const pendingTransactions = reconcilePending
     ? [
         ...liquidTokens.flatMap((token) => readPendingTransactions(token, "liquid")),
         ...yieldAssets.flatMap((asset) => {
@@ -309,8 +310,8 @@ export async function fetchNestVaultPositionsReserves(
   const pendingWithdrawalUsd = pendingTransactions
     .filter((transaction) => transaction.type === "PendingWithdrawal")
     .reduce((sum, transaction) => sum + transaction.valueUsd, 0);
-  if (reconcileNopal && pendingWithdrawalUsd > 0) {
-    throw new Error("nest-vault-positions cannot reconcile positive nOPAL pending withdrawals");
+  if (reconcilePending && pendingWithdrawalUsd > 0) {
+    throw new Error(`nest-vault-positions cannot reconcile positive ${coin.symbol} pending withdrawals`);
   }
   const settledCoverageUsd = settledPositionUsd + pendingDepositUsd;
   const navReconciliationResidualUsd =
@@ -345,7 +346,7 @@ export async function fetchNestVaultPositionsReserves(
     navUsd && navUsd > 0 ? settledCoverageUsd / navUsd : navCoverageRatio;
   const warnings = buildCoverageShortfallWarnings({
     code: "nest-nav-coverage-gap",
-    message: (pct) => reconcileNopal
+    message: (pct) => reconcilePending
       ? `Nest settled positions plus pending deposits cover ${pct}% of reported NAV`
       : `Nest position values cover ${pct}% of reported NAV`,
     coverageRatio: reconciledNavCoverageRatio,
@@ -359,23 +360,25 @@ export async function fetchNestVaultPositionsReserves(
       ...verifiedFreshnessMetadata(sourceTimestamp),
       details: {
         proofKind: "nest-vault-positions-api",
-        ...(reconcileNopal
+        ...(reconcilePending
           ? {
-              reconciliationKind: "settled-plus-pending-deposits-plus-residual-equals-nav",
+              reconciliationKind: coin.id === "nbasis-nest"
+                ? "settled-plus-pending-deposits-compared-with-nav"
+                : "settled-plus-pending-deposits-plus-residual-equals-nav",
               pendingTransactions,
             }
           : {}),
       },
       totalReserveUsd,
       settledPositionUsd,
-      ...(reconcileNopal ? { pendingDepositUsd, pendingWithdrawalUsd } : {}),
+      ...(reconcilePending ? { pendingDepositUsd, pendingWithdrawalUsd } : {}),
       ...(navReconciliationResidualUsd != null ? { navReconciliationResidualUsd } : {}),
       unknownExposurePct,
       ...(navUsd != null ? { navUsd } : {}),
       ...(priceUsd != null ? { priceUsd } : {}),
       ...(totalSupply != null ? { totalSupply } : {}),
       ...(navCoverageRatio != null ? { navCoverageRatio } : {}),
-      ...(reconcileNopal && reconciledNavCoverageRatio != null
+      ...(reconcilePending && reconciledNavCoverageRatio != null
         ? { reconciledNavCoverageRatio }
         : {}),
     },

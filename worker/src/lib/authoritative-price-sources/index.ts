@@ -280,6 +280,12 @@ export async function fetchAuthoritativeLivePriceOverrides(
   const budgetSignal = budgetMs > 0 ? AbortSignal.timeout(budgetMs) : undefined;
   const liveSignal = signal && budgetSignal ? AbortSignal.any([signal, budgetSignal]) : (budgetSignal ?? signal);
   const circuitAttempts = new Map<string, boolean>();
+  const circuitOutcomes = new Map<string, boolean>();
+  // A shared provider is available if any live target succeeds. Asset failures
+  // remain diagnostic failures, but must not close the gate on later targets.
+  const recordLiveOutcome = (source: string, success: boolean): void => {
+    circuitOutcomes.set(source, circuitOutcomes.get(source) === true || success);
+  };
 
   const recordAttempt = (
     asset: PeggedAsset,
@@ -378,8 +384,11 @@ export async function fetchAuthoritativeLivePriceOverrides(
           observedAt: override.observedAt,
         });
         if (circuitSource && options?.db) {
-          await recordOutcomeSafe(options.db, circuitSource, true);
-          circuitAttempts.delete(circuitSource);
+          if (override.source !== CACHED_VAULT_RATE_SOURCE) {
+            recordLiveOutcome(circuitSource, true);
+          } else if (budgetSignal?.aborted || !candidateTimeout?.isTimedOut()) {
+            recordLiveOutcome(circuitSource, false);
+          }
         }
       } else {
         if (stats) stats.emptyCount += 1;
@@ -396,16 +405,14 @@ export async function fetchAuthoritativeLivePriceOverrides(
           ? liveResult.circuitOutcome
           : null;
         if (circuitSource && options?.db && explicitCircuitOutcome === "success") {
-          await recordOutcomeSafe(options.db, circuitSource, true);
-          circuitAttempts.delete(circuitSource);
+          recordLiveOutcome(circuitSource, true);
         } else if (
           circuitSource &&
           options?.db &&
           provider.recordNullLiveResultAsCircuitFailure &&
           shouldRecordLiveCircuitFailure(provider, asset)
         ) {
-          await recordOutcomeSafe(options.db, circuitSource, false);
-          circuitAttempts.delete(circuitSource);
+          recordLiveOutcome(circuitSource, false);
         }
       }
     } catch (error) {
@@ -422,8 +429,7 @@ export async function fetchAuthoritativeLivePriceOverrides(
           candidateAt,
         });
         if (circuitSource && options?.db && shouldRecordLiveCircuitFailure(provider, asset)) {
-          await recordOutcomeSafe(options.db, circuitSource, false);
-          circuitAttempts.delete(circuitSource);
+          recordLiveOutcome(circuitSource, false);
         }
         recordSkippedBudget(index + 1);
         logWorkerEventArgs("lib", "warn", `[authoritative-price-sources] live override budget exhausted after ${budgetMs}ms`);
@@ -450,12 +456,17 @@ export async function fetchAuthoritativeLivePriceOverrides(
         candidateAt,
       });
       if (circuitSource && options?.db && shouldRecordLiveCircuitFailure(provider, asset)) {
-        await recordOutcomeSafe(options.db, circuitSource, false);
-        circuitAttempts.delete(circuitSource);
+        recordLiveOutcome(circuitSource, false);
       }
       logWorkerEventArgs("lib", "warn", `[authoritative-price-sources] ${asset.id} live override failed:`, error);
     } finally {
       candidateTimeout?.dispose();
+    }
+  }
+
+  if (options?.db) {
+    for (const [source, success] of circuitOutcomes) {
+      await recordOutcomeSafe(options.db, source, success);
     }
   }
 

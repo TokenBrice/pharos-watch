@@ -63,14 +63,8 @@ export const PriceSourceDepthDistributionSchema = z.record(
 );
 export type PriceSourceDepthDistribution = z.output<typeof PriceSourceDepthDistributionSchema>;
 
-export const PriceSourceHealthSchema = z.object({
+const PriceSourceHealthDistributionSchema = z.object({
   sourceDistribution: z.record(z.string(), z.number()),
-  /**
-   * Distribution of active canonical assets by candidate `consensusSources`
-   * count. Bucket `5+` contains all assets with five or more candidate
-   * sources.
-   */
-  sourceDepthDistribution: PriceSourceDepthDistributionSchema.optional(),
   confidenceDistribution: z.object({
     high: z.number(),
     "single-source": z.number(),
@@ -78,6 +72,13 @@ export const PriceSourceHealthSchema = z.object({
     fallback: z.number(),
   }),
   totalAssets: z.number(),
+});
+
+export const PriceSourceHealthSchema = PriceSourceHealthDistributionSchema.extend({
+  /** Active catalog only; absent active rows count as missing. Legacy totals retain full-cache scope. */
+  active: PriceSourceHealthDistributionSchema.optional(),
+  /** Active canonical assets grouped by candidate consensus source count. */
+  sourceDepthDistribution: PriceSourceDepthDistributionSchema.optional(),
   lastSync: z.number(),
 });
 export type PriceSourceHealth = z.output<typeof PriceSourceHealthSchema>;
