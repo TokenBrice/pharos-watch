@@ -1,4 +1,4 @@
-import { encodeFunctionData, erc20Abi, keccak256, parseAbi } from "viem";
+import { encodeFunctionData, keccak256, parseAbi } from "viem/utils";
 import { CIRCUIT_SOURCE } from "../constants";
 import { fetchEvmRpcBatch, type EvmRpcBatchCall } from "../evm-rpc";
 import { getPublicFallbackRpcUrls } from "../public-rpc-registry";
@@ -22,6 +22,8 @@ const ABI = parseAbi([
   "function isMinter(address) view returns (bool)",
   "function paused() view returns (bool)",
   "function isBlacklisted(address) view returns (bool)",
+  "function balanceOf(address) view returns (uint256)",
+  "function decimals() view returns (uint8)",
 ]);
 const WORD = /^0x[0-9a-fA-F]{64}$/;
 const addressWord = (address: string) => `0x${address.slice(2).padStart(64, "0")}`;
@@ -52,15 +54,15 @@ export async function fetchDeuroEurcBridgePrice(context: LivePriceContext, signa
     call(BRIDGE, encodeFunctionData({ abi: ABI, functionName: "dEURO" })),
     call(BRIDGE, encodeFunctionData({ abi: ABI, functionName: "minted" })),
     call(DEURO, encodeFunctionData({ abi: ABI, functionName: "isMinter", args: [BRIDGE] })),
-    call(EURC, encodeFunctionData({ abi: erc20Abi, functionName: "balanceOf", args: [BRIDGE] })),
-    call(EURC, encodeFunctionData({ abi: erc20Abi, functionName: "decimals" })),
+    call(EURC, encodeFunctionData({ abi: ABI, functionName: "balanceOf", args: [BRIDGE] })),
+    call(EURC, encodeFunctionData({ abi: ABI, functionName: "decimals" })),
     call(EURC, encodeFunctionData({ abi: ABI, functionName: "paused" })),
     call(EURC, encodeFunctionData({ abi: ABI, functionName: "isBlacklisted", args: [BRIDGE] })),
   ], options);
   if (!results || results.length !== 10) return null;
   const [bridgeCode, tokenCode, ...words] = results;
-  if (typeof bridgeCode !== "string" || !/^0x(?:[0-9a-f]{2})+$/i.test(bridgeCode) ||
-      typeof tokenCode !== "string" || !/^0x(?:[0-9a-f]{2})+$/i.test(tokenCode) ||
+  if (typeof bridgeCode !== "string" || !/^0x[0-9a-f]+$/i.test(bridgeCode) || bridgeCode.length % 2 !== 0 ||
+      typeof tokenCode !== "string" || !/^0x[0-9a-f]+$/i.test(tokenCode) || tokenCode.length % 2 !== 0 ||
       keccak256(bridgeCode as `0x${string}`) !== BRIDGE_CODE_HASH ||
       keccak256(tokenCode as `0x${string}`) !== DEURO_CODE_HASH ||
       !words.every((word) => typeof word === "string" && WORD.test(word))) return null;
