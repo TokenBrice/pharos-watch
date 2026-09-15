@@ -151,7 +151,9 @@ describe("sync-stablecoins stage helpers", () => {
     });
     pricingStageMocks.fetchAuthoritativeLivePriceOverrides.mockResolvedValue(authoritativeOverrides);
 
+    const chainRpcs = new Map();
     const result = await runStablecoinsPricingStage({
+      chainRpcs,
       db: mockD1([{ match: "price_cache", rows: [] }]),
       assets,
       previousAssetsById: new Map(),
@@ -162,6 +164,9 @@ describe("sync-stablecoins stage helpers", () => {
 
     expect("authoritativeOverrideCount" in result ? result.authoritativeOverrideCount : null).toBe(1);
     expect(pricingStageMocks.fetchAuthoritativeLivePriceOverrides).toHaveBeenCalledTimes(2);
+    for (const call of pricingStageMocks.fetchAuthoritativeLivePriceOverrides.mock.calls) {
+      expect(call[3].chainRpcs).toBe(chainRpcs);
+    }
     expect(assets[0]).toMatchObject({
       price: 0.998,
       priceSource: "protocol-redeem",

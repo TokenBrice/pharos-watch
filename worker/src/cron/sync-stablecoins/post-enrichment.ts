@@ -1,3 +1,4 @@
+import type { ChainRpcConfig } from "../../lib/chain-registry";
 import { logWorkerEventArgs } from "../../lib/structured-log";
 /**
  * Shared post-enrichment pipeline stages used by both the main DefiLlama
@@ -104,6 +105,7 @@ export interface PriceValidationResult {
 }
 
 export interface SharedPriceCompletionInput extends Omit<PostEnrichmentInput, "missingBefore"> {
+  chainRpcs?: Map<string, ChainRpcConfig>;
   missingBefore: Set<string>;
   authoritativeOverrides?: Map<string, ProtocolPriceOverride>;
   authoritativeOverrideStats?: AuthoritativeLivePriceOverrideStats;
@@ -456,6 +458,7 @@ export async function runSharedPriceCompletion(
       {
         db: input.db,
         stats: authoritativeOverrideStats,
+        chainRpcs: input.chainRpcs,
         previousMissingGenerationsById: input.previousMissingGenerationsById,
       },
     ),
@@ -468,6 +471,7 @@ export async function runSharedPriceCompletion(
       {
         db: input.db,
         stats: authoritativeOverrideStats,
+        chainRpcs: input.chainRpcs,
         maxProviderLivePriority: 0,
         previousMissingGenerationsById: input.previousMissingGenerationsById,
       },

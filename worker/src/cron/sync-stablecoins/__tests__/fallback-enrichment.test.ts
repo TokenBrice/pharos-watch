@@ -1,3 +1,4 @@
+import * as authoritative from "../../../lib/authoritative-price-sources";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { ACTIVE_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
@@ -30,9 +31,11 @@ describe("runFallbackPriceEnrichmentPhase", () => {
       }
       return Response.json({ coins: {}, pairs: [] });
     }));
+    const chainRpcs = new Map();
+    const authoritativeFetch = vi.spyOn(authoritative, "fetchAuthoritativeLivePriceOverrides").mockResolvedValue(new Map());
     const { db } = fixtures.open();
     const input = {
-      assets, db, syncStartSec: NOW_SEC, coingeckoApiKey: "cg-key",
+      assets, db, syncStartSec: NOW_SEC, coingeckoApiKey: "cg-key", chainRpcs,
       validationContexts: createValidationContextResolver(),
       previousTrustedPrices: new Map(),
       returnIfAborted: () => null,
@@ -40,6 +43,8 @@ describe("runFallbackPriceEnrichmentPhase", () => {
     };
 
     await runFallbackPriceEnrichmentPhase(input);
+    expect(authoritativeFetch).toHaveBeenCalled();
+    for (const call of authoritativeFetch.mock.calls) expect(call[3]?.chainRpcs).toBe(chainRpcs);
 
     expect(assets.map(({ id, price }) => ({ id, price }))).toEqual([
       { id: "dllr-sovryn", price: 1 },

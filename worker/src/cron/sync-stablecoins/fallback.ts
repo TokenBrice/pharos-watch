@@ -1,3 +1,4 @@
+import type { ChainRpcConfig } from "../../lib/chain-registry";
 import { logWorkerEventArgs } from "../../lib/structured-log";
 import type { CronProgressReporter } from "../../lib/cron-logger";
 import type { CoinGeckoMcapData } from "./supplemental-assets";
@@ -67,6 +68,7 @@ export async function syncViaCoingeckoFallback(
   coingeckoApiKey?: string | null,
   reportProgress?: CronProgressReporter,
   jupiterApiKey?: string | null,
+  chainRpcs?: Map<string, ChainRpcConfig>,
 ): Promise<CronResult> {
   const aborted = returnIfAborted(signal, "fallback-start");
   if (aborted) return aborted;
@@ -102,6 +104,7 @@ export async function syncViaCoingeckoFallback(
     await loadStablecoinsPublicationContinuity(db, syncStartSec);
 
   const enrichment = await runFallbackPriceEnrichmentPhase({
+    chainRpcs,
     db,
     assets,
     syncStartSec,

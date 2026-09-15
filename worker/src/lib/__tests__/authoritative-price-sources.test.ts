@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { mockRegistry } from "../../test-helpers/cron";
 
 const fetchEvmCallHexAtBlockMock = vi.fn();
+const fetchEvmRpcBatchMock = vi.fn();
 const fetchEvmBlockNumberMock = vi.fn();
 const fetchEvmBlockTimestampMock = vi.fn();
 const resolveClosestBlockAtOrBeforeTimestampMock = vi.fn();
@@ -80,6 +81,7 @@ vi.mock("@shared/lib/stablecoins/registry", () => ({
 }));
 
 vi.mock("../evm-rpc", () => ({
+  fetchEvmRpcBatch: (...args: unknown[]) => fetchEvmRpcBatchMock(...args),
   fetchEvmCallHexAtBlock: (...args: unknown[]) => fetchEvmCallHexAtBlockMock(...args),
   fetchEvmBlockNumber: (...args: unknown[]) => fetchEvmBlockNumberMock(...args),
   fetchEvmBlockTimestamp: (...args: unknown[]) => fetchEvmBlockTimestampMock(...args),
@@ -348,8 +350,18 @@ describe("authoritative-price-sources", () => {
         {
           signal,
           extraRpcUrls: ["https://rpc.example"],
+          chainRpcs: undefined,
         },
       );
+    });
+
+    it("preserves explicit vault RPC priority over configured routing", async () => {
+      const chainRpcs = new Map();
+      fetchEvmCallHexAtBlockMock.mockResolvedValue(IUSD_QUOTE_HEX);
+      await fetchVaultAssetsPerShareViaSelector(vaultConfig, "0x12345678", "previewRedeem", 123, undefined, { chainRpcs });
+      expect(fetchEvmCallHexAtBlockMock.mock.calls[fetchEvmCallHexAtBlockMock.mock.calls.length - 1]?.[4]).toMatchObject({
+        extraRpcUrls: ["https://rpc.example"], chainRpcs: undefined,
+      });
     });
 
     it("rejects null, zero, and out-of-bounds selector quotes", async () => {
@@ -2119,6 +2131,34 @@ describe("authoritative-price-sources", () => {
 
       expect(overrides.has("gtusdc-gauntlet"), lane).toBe(true);
     }
+  });
+
+  it("passes configured RPC routing through the authoritative stage to vault readers", async () => {
+    const chainRpcs = new Map();
+    fetchEvmCallHexAtBlockMock.mockResolvedValue(`0x${(1_000_000n).toString(16).padStart(64, "0")}`);
+    await fetchLiveOverrides([
+      asset("gtusdc-gauntlet"),
+      freshParent("usdc-circle", 1, "coingecko+kraken", { nowSec: Math.floor(Date.now() / 1000) }),
+    ], { chainRpcs });
+    expect(fetchEvmCallHexAtBlockMock.mock.calls[fetchEvmCallHexAtBlockMock.mock.calls.length - 1]?.[4].chainRpcs).toBe(chainRpcs);
+    expect(fetchEvmCallHexAtBlockMock.mock.calls[fetchEvmCallHexAtBlockMock.mock.calls.length - 1]?.[4].extraRpcUrls).toContain("https://ethereum-rpc.publicnode.com");
+  });
+
+  it("records a provider stage rejection without leaking it into the next missing quote", async () => {
+    fetchEvmRpcBatchMock.mockResolvedValue(null);
+    fetchEvmCallHexAtBlockMock.mockResolvedValue(null);
+    const stats = createAuthoritativeLivePriceOverrideStats();
+    await fetchLiveOverrides([
+      asset("deuro-deuro"),
+      asset("cusd-cap"),
+      freshParent("eurc-circle", 1.15, "coingecko+kraken", { nowSec: Math.floor(Date.now() / 1000) }),
+    ], { stats });
+    expect(stats.assetAttempts.find((row) => row.assetId === "deuro-deuro")).toMatchObject({
+      result: "empty", rejectionClass: "deuro-eurc-bridge:head-unavailable",
+    });
+    expect(stats.assetAttempts.find((row) => row.assetId === "cusd-cap")).toMatchObject({
+      result: "empty", rejectionClass: "missing-quote",
+    });
   });
 
   it("still rejects a thin replay-safe core padded to high confidence and names the parent in the attempt ledger", async () => {

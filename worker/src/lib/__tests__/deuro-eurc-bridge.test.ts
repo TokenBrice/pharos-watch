@@ -38,6 +38,18 @@ describe("dEURO exact EURC redemption bridge", () => {
     for (const call of batch.mock.calls[1][1]) expect(call.params[1]).toEqual({ blockHash: hash, requireCanonical: true });
     expect(deuroEurcBridgeProvider.liveMissingOnly).toBe(true);
   });
+  it("uses configured RPC routing while retaining pinned canonical reads and caller signal", async () => {
+    healthy();
+    const chainRpcs = new Map();
+    const signal = new AbortController().signal;
+    await fetchDeuroEurcBridgePrice({ ...context(), chainRpcs }, signal);
+    for (const call of batch.mock.calls) {
+      expect(call[2].chainRpcs).toBe(chainRpcs);
+      expect(call[2].signal).toBe(signal);
+    }
+    expect(batch.mock.calls[1][1][0].params[1]).toEqual({ blockHash: hash, requireCanonical: true });
+    expect(batch.mock.calls[2][1][0].params).toEqual(["0x123", false]);
+  });
   it.each([
     [0, "0x6000", "bridge code drift"], [1, "0x6000", "token code drift"],
     [2, word(0n), "wrong quote token"], [3, word(0n), "wrong target token"],
@@ -68,6 +80,25 @@ describe("dEURO exact EURC redemption bridge", () => {
     batch.mockReset().mockResolvedValueOnce([{ number: "0x123", hash, timestamp: `0x${now.toString(16)}` }])
       .mockResolvedValueOnce(values).mockResolvedValueOnce([{ hash: word(99n) }]);
     expect(await fetchDeuroEurcBridgePrice(context())).toBeNull();
+  });
+  it.each([
+    [null, "head-unavailable"],
+    [[{ number: "invalid", hash, timestamp: "0x1" }], "head-invalid"],
+  ])("records bounded head rejection evidence", async (result, reason) => {
+    batch.mockResolvedValueOnce(result);
+    const c = context() as ReturnType<typeof context> & { lastRejectionReason?: string };
+    expect(await fetchDeuroEurcBridgePrice(c)).toBeNull();
+    expect(c.lastRejectionReason).toBe(`deuro-eurc-bridge:${reason}`);
+  });
+  it("distinguishes unavailable state from insufficient capacity", async () => {
+    const c = context() as ReturnType<typeof context> & { lastRejectionReason?: string };
+    batch.mockResolvedValueOnce([{ number: "0x123", hash, timestamp: `0x${now.toString(16)}` }])
+      .mockResolvedValueOnce(null);
+    expect(await fetchDeuroEurcBridgePrice(c)).toBeNull();
+    expect(c.lastRejectionReason).toBe("deuro-eurc-bridge:state-unavailable");
+    batch.mockReset(); healthy(); values[6] = word(1n);
+    expect(await fetchDeuroEurcBridgePrice(c)).toBeNull();
+    expect(c.lastRejectionReason).toBe("deuro-eurc-bridge:capacity-insufficient");
   });
   it("propagates caller cancellation", async () => {
     const error = new DOMException("aborted", "AbortError"); batch.mockRejectedValueOnce(error);

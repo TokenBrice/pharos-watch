@@ -1,3 +1,4 @@
+import type { ChainRpcConfig } from "../chain-registry";
 import { logWorkerEventArgs } from "../structured-log";
 import { createTimeoutSignal } from "@shared/lib/timeout-signal";
 import { ACTIVE_IDS } from "@shared/lib/stablecoins/registry";
@@ -196,6 +197,7 @@ export function createAuthoritativeLivePriceOverrideStats(
 }
 
 export interface AuthoritativeLivePriceOverrideOptions {
+  chainRpcs?: Map<string, ChainRpcConfig>;
   db?: D1Database;
   wallClockBudgetMs?: number;
   stats?: AuthoritativeLivePriceOverrideStats;
@@ -243,6 +245,7 @@ export async function fetchAuthoritativeLivePriceOverrides(
 ): Promise<Map<string, CurrentPriceOverride>> {
   const results = new Map<string, CurrentPriceOverride>();
   const liveContext: LivePriceContext = {
+    chainRpcs: options?.chainRpcs,
     assetsById: new Map(assets.map((asset) => [asset.id, { ...asset }])),
     validationReferences,
     vaultRateCache: options?.db
@@ -368,6 +371,7 @@ export async function fetchAuthoritativeLivePriceOverrides(
     const candidateSignal = candidateTimeout?.signal ?? liveSignal;
 
     liveContext.lastUntrustedParent = null;
+    liveContext.lastRejectionReason = null;
     try {
       const liveResult = await provider.fetchLivePrice(asset, liveContext, candidateSignal);
       const override = isValidatedLivePriceNoQuote(liveResult) ? null : liveResult;
@@ -400,7 +404,7 @@ export async function fetchAuthoritativeLivePriceOverrides(
           result: "empty",
           rejectionClass: untrustedParent
             ? `untrusted-parent:${untrustedParent.parentId}:${untrustedParent.reason}`
-            : "missing-quote",
+            : liveContext.lastRejectionReason ?? "missing-quote",
           candidateAt,
         });
         const explicitCircuitOutcome = isValidatedLivePriceNoQuote(liveResult)

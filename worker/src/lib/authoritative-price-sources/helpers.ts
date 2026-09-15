@@ -1,3 +1,4 @@
+import type { ChainRpcConfig } from "../chain-registry";
 import { logWorkerEventArgs } from "../structured-log";
 import { splitCompositePriceSource } from "@shared/lib/pricing-sources";
 import { isReplaySafePriceSource } from "@shared/lib/pricing-source-policy";
@@ -94,11 +95,12 @@ export async function fetchBoundedVaultQuote(
   blockNumberOrTag: number | "latest",
   decodeAssetsPerShare: (outputAmount: bigint) => number,
   signal?: AbortSignal,
-  options?: { throwOnNullQuote?: boolean },
+  options?: { throwOnNullQuote?: boolean; chainRpcs?: Map<string, ChainRpcConfig> },
 ): Promise<number | null> {
   const quoteHex = await fetchEvmCallHexAtBlock(config.chain, config.target, calldata, blockNumberOrTag, {
     signal,
     extraRpcUrls: [...(config.rpcUrls ?? getPublicFallbackRpcUrls(config.chain))],
+    chainRpcs: config.rpcUrls ? undefined : options?.chainRpcs,
   });
   if (!quoteHex) {
     const message = `[authoritative-price-sources] ${config.id}: ${label}() returned null`;
@@ -133,7 +135,7 @@ export async function fetchVaultAssetsPerShareViaSelector(
   label: string,
   blockNumberOrTag: number | "latest",
   signal?: AbortSignal,
-  options?: { throwOnNullQuote?: boolean },
+  options?: { throwOnNullQuote?: boolean; chainRpcs?: Map<string, ChainRpcConfig> },
 ): Promise<number | null> {
   const oneShareRaw = 10n ** BigInt(config.vaultDecimals);
   const calldata = `${selector}${encodeUint256(oneShareRaw)}`;
@@ -203,6 +205,7 @@ export interface HistoricalPriceResolution {
 }
 
 export interface LivePriceContext {
+  chainRpcs?: Map<string, ChainRpcConfig>;
   assetsById: Map<string, PeggedAsset>;
   validationReferences?: PriceValidationReferences;
   /**
@@ -212,6 +215,8 @@ export interface LivePriceContext {
    * rejected parent instead of reporting an opaque missing quote.
    */
   lastUntrustedParent?: { parentId: string; reason: string } | null;
+  /** Fixed provider-owned rejection code for the current attempt; never upstream error text. */
+  lastRejectionReason?: string | null;
   /** Durable last-good vault rates loaded once per stage; read-only for providers. */
   vaultRateCache?: ReadonlyMap<string, CachedVaultRate>;
   /** Fresh live vault rates collected during the stage for one durable post-loop write. */

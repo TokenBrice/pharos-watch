@@ -1,3 +1,4 @@
+import type { ChainRpcConfig } from "../chain-registry";
 import type { PeggedAsset } from "../../cron/sync-stablecoins/enrich-prices-shared";
 import { CIRCUIT_SOURCE } from "../constants";
 import {
@@ -49,7 +50,7 @@ async function fetchIdleCdoTrancheAssetsPerShare(
   config: IdleCdoTrancheConfig,
   blockNumberOrTag: number | "latest",
   signal?: AbortSignal,
-  options?: { throwOnNullQuote?: boolean },
+  options?: { throwOnNullQuote?: boolean; chainRpcs?: Map<string, ChainRpcConfig> },
 ): Promise<number | null> {
   const calldata = `${IDLE_CDO_VIRTUAL_PRICE_SELECTOR}${encodeAddress(config.tranche)}`;
   return fetchBoundedVaultQuote(
@@ -86,7 +87,7 @@ export const idleCdoTrancheProvider: PriceSourceProvider = {
     if (!parent) return null;
 
     const resolved = await resolveVaultAssetsPerShareWithCache(asset, context, () =>
-      fetchIdleCdoTrancheAssetsPerShare(config, "latest", signal, { throwOnNullQuote: true }),
+      fetchIdleCdoTrancheAssetsPerShare(config, "latest", signal, { throwOnNullQuote: true, chainRpcs: context.chainRpcs }),
     );
     if (!resolved) return null;
 
