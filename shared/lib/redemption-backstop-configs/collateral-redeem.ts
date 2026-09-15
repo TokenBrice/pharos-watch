@@ -153,7 +153,7 @@ const MENTO_ROUTE_CONFIGS = defineConfigFamily(
       reviewedAt: REVIEWED_REDEMPTION_OUTPUTS_AT,
       outputAssetType: "stable-basket" as const,
       costModel: documentedVariableFee(
-        "Mento broker pool spread, set on-chain per pool (PoolConfig.spread, currently 5 bps on USDm stable pools per MGP-13); live telemetry supplies the current bps",
+        "Mento V3 FPMM lpFee plus protocolFee, read on-chain for each admitted USDC/USDT pool; the highest fee is reported",
         "formula",
       ),
       docs: [
@@ -165,7 +165,7 @@ const MENTO_ROUTE_CONFIGS = defineConfigFamily(
       ],
       notes: [
         "Mento V3 documents USDm (the tracked cusd-celo asset) as Reserve-backed, while its direct FPMM swap route returns the configured counter asset at the oracle rate minus fees.",
-        "Live reserve sync now enumerates USDm's Mento Broker/BiPoolManager pools (getExchangeIds/getPoolExchange) each run, summing the matched USDC/USDT counter-asset bucket depths as direct redemption capacity and reporting the current pool spread as fee.",
+        "Live reserve sync checks the two reviewed V3 USDm/USDC and USDm/USDT pools at one block. Capacity is below output inventory and stored reserves, and is admitted only when both token trading limits and the oracle quote support that amount; the highest pool fee is reported.",
       ],
     },
     {
