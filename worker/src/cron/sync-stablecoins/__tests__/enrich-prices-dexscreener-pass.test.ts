@@ -144,7 +144,7 @@ describe("runDexScreenerPass", () => {
           status: 429,
           ok: false,
           success: false,
-          errorClass: "upstream-error",
+          errorClass: "rate-limited",
           errorMessage: expect.stringContaining("HTTP 429"),
         }),
       ],
@@ -355,5 +355,32 @@ describe("runDexScreenerPass", () => {
     expect(second.price).toBeNull();
     expect(fetchDsTokenPoolsWithStatus).toHaveBeenCalledTimes(1);
     expect(vi.mocked(fetchDsTokenPoolsWithStatus).mock.calls[0]?.[1]).toBe("0xaaa,0xbbb");
+  });
+});
+
+
+describe("DexScreener observed response diagnostics", () => {
+  afterEach(() => vi.mocked(fetchDsTokenPoolsWithStatus).mockReset());
+
+  it.each([{ pairs: [] }, { pairs: [exactPool("0xabc", "0xpool", "1", 1)] }])("records successful nonresolving calls without failing the circuit", async ({ pairs }) => {
+    vi.mocked(fetchDsTokenPoolsWithStatus).mockResolvedValueOnce({ ok: true, pairs });
+    const db = circuitClosedDb();
+    const result = await runDexScreenerPass([makeMissingAsset({ address: "0xabc", chains: ["Base"] })], undefined, db);
+    expect(result.resolved).toBe(0);
+    expect(result.diagnostics).toEqual([expect.objectContaining({ source: "dexscreener-exact", ok: true,
+      success: true, candidateCount: 1, responseRowCount: pairs.length, resolvedCount: 0 })]);
+    const write = db.getHistory().find((entry) => entry.sql.includes("INSERT OR REPLACE INTO cache")
+      && entry.binds[0] === `circuit:${CIRCUIT_SOURCE.DEXSCREENER_PRICES}`);
+    expect(JSON.parse(String(write?.binds[1]))).toMatchObject({ state: "closed", consecutiveFailures: 0 });
+  });
+
+  it.each([
+    ["DexScreener payload schema changed: expected array or object.pairs[]", "invalid-shape"],
+    ["DexScreener payload contained no valid pair rows", "invalid-pairs"],
+    ["DexScreener JSON parse failed: bad json", "malformed-json"],
+  ])("classifies HTTP200 failure: %s", async (error, errorClass) => {
+    vi.mocked(fetchDsTokenPoolsWithStatus).mockResolvedValueOnce({ ok: false, pairs: [], status: 200, error });
+    const result = await runDexScreenerPass([makeMissingAsset({ address: "0xabc", chains: ["Base"] })], undefined, undefined);
+    expect(result.diagnostics?.[0]).toMatchObject({ status: 200, success: false, errorClass });
   });
 });

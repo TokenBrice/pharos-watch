@@ -31,6 +31,40 @@ export interface PriceCorroborationResult {
   providerDiagnosticCount: number;
 }
 
+/** Persist identifiers/counts only: provider error text and URLs may contain credentials or response bodies. */
+export function summarizePriceCorroboration(result: PriceCorroborationResult) {
+  const stats = result.fallbackStats;
+  const diagnostics = stats.providerDiagnostics ?? [];
+  // Keep this incident's provider visible even when earlier passes emit many rows.
+  const ordered = [...diagnostics].sort((left, right) =>
+    Number(right.source === "dexscreener-exact") - Number(left.source === "dexscreener-exact"));
+  return {
+    cohortSize: result.cohortSize,
+    cacheEntriesWritten: result.cacheEntriesWritten,
+    addressProviderCount: result.addressProviderCount,
+    providerDiagnosticCount: diagnostics.length + result.providerDiagnosticCount,
+    failedPasses: stats.failedPasses.slice(0, 20),
+    totalMissing: stats.totalMissing,
+    finalMissing: stats.finalMissing,
+    resolvedByPass: { defillama: stats.pass1 + stats.pass1b, coinmarketcap: stats.passCmc,
+      jupiter: stats.passJupiter, dexscreener: stats.passDex, coingecko: stats.passCgLowVolume },
+    providerDiagnostics: ordered.slice(0, 20).map((diagnostic) => ({
+      source: diagnostic.source,
+      stage: diagnostic.stage,
+      status: diagnostic.status,
+      ok: diagnostic.ok,
+      success: diagnostic.success,
+      candidateCount: diagnostic.candidateCount,
+      responseRowCount: diagnostic.responseRowCount,
+      resolvedCount: diagnostic.resolvedCount,
+      errorClass: diagnostic.errorClass?.slice(0, 80),
+      ...(diagnostic.source === "dexscreener-exact" ? {
+        chain: /^api\.dexscreener\.com\/tokens\/v1\/([a-z0-9-]+)\//.exec(diagnostic.endpoint)?.[1],
+      } : {}),
+    })),
+  };
+}
+
 function sourceList(asset: PeggedAsset): string[] {
   if (asset.consensusSources?.length) return [...new Set(asset.consensusSources)];
   return asset.priceSource ? splitCompositePriceSource(asset.priceSource) : [];

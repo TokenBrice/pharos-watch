@@ -1,3 +1,4 @@
+import { logCronEvent } from "../../lib/cron-logger";
 import { logWorkerEventArgs } from "../../lib/structured-log";
 /**
  * Quarter-hourly trigger (every 15 min):
@@ -18,6 +19,7 @@ import { syncStablecoins } from "../../cron/sync-stablecoins";
 import {
   isPriceCorroborationSlot,
   runPriceCorroboration,
+  summarizePriceCorroboration,
 } from "../../cron/sync-stablecoins/price-corroboration";
 import { syncFxRates } from "../../cron/sync-fx-rates";
 import { snapshotSupply } from "../../cron/snapshot-supply";
@@ -79,18 +81,23 @@ export async function runQuarterHourlySlot(runtime: ScheduledRuntimeContext) {
           cgApiKey: runtime.coingeckoApiKey,
         },
       });
-      logWorkerEventArgs(
-        "handler",
-        "info",
-        `[price-corroboration] refreshed ${corroboration.cacheEntriesWritten}/${corroboration.cohortSize} low-depth price-cache rows`,
-      );
+      const summary = summarizePriceCorroboration(corroboration);
+      await logCronEvent(runtime.db, {
+        job: "sync-stablecoins",
+        eventType: "price-corroboration",
+        severity: summary.failedPasses.length > 0 || summary.providerDiagnostics.some((row) => !row.success)
+          ? "warning" : "info",
+        message: `Hourly price corroboration refreshed ${corroboration.cacheEntriesWritten}/${corroboration.cohortSize} cache rows`,
+        metadata: { slotStartedAt: runtime.slotStartedAt, workerVersion: runtime.workerVersion ?? null, ...summary },
+      });
     } catch (error) {
-      logWorkerEventArgs(
-        "handler",
-        "warn",
-        "[price-corroboration] hourly best-effort step failed after stablecoin publication:",
-        error,
-      );
+      await logCronEvent(runtime.db, {
+        job: "sync-stablecoins", eventType: "price-corroboration", severity: "warning",
+        message: "Hourly price corroboration failed after stablecoin publication",
+        metadata: { slotStartedAt: runtime.slotStartedAt, workerVersion: runtime.workerVersion ?? null,
+          errorClass: error instanceof Error && ["Error", "TypeError", "RangeError", "TimeoutError", "AbortError"].includes(error.name)
+            ? error.name : "unknown-error" },
+      });
     }
   }
   if (stablecoinsResult && !stablecoinsCacheSafe) {
