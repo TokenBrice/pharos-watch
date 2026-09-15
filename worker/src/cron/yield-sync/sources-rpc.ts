@@ -702,6 +702,11 @@ export async function fetchAaveV3SupplyRates(
             }
 
             const stripped = hex.slice(2);
+            if (stripped.length < 9 * 64 || stripped.length % 64 !== 0 || !/^[0-9a-fA-F]+$/.test(stripped)) {
+              recordOptionalRpcMiss(telemetry, target.chain, targetLabel, "reserve-data-short");
+              accountedTargets.add(targetLabel);
+              return;
+            }
             const liquidityRateHex = readAbiWord(stripped, AAVE_RESERVE_DATA_CURRENT_LIQUIDITY_RATE_WORD);
             if (!liquidityRateHex) {
               recordOptionalRpcMiss(telemetry, target.chain, targetLabel, "reserve-data-short");
@@ -710,6 +715,14 @@ export async function fetchAaveV3SupplyRates(
             }
 
             const currentLiquidityRate = BigInt("0x" + liquidityRateHex);
+            // Discovery probes every tracked token, including assets not listed by Aave.
+            // A decoded zero rate is a successful absence/zero-yield observation, not an RPC miss.
+            if (currentLiquidityRate === 0n) {
+              resolvedTargets.add(targetLabel);
+              telemetry.resolvedTargetCount = resolvedTargets.size;
+              accountedTargets.add(targetLabel);
+              return;
+            }
             const apy = rayToApy(currentLiquidityRate);
             if (!Number.isFinite(apy) || apy <= 0) {
               recordOptionalRpcMiss(telemetry, target.chain, targetLabel, "non-positive-apy");

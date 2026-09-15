@@ -35,7 +35,10 @@ describe("fetchMorphoVaultSources", () => {
 
     const { candidates: results } = await fetchMorphoVaultSources();
     expect(results.length).toBe(1);
-    const request = JSON.parse(fetchSpy.mock.calls[0][1]?.body as string) as { variables: { symbols: string[] } };
+    const requests = fetchSpy.mock.calls.map((call) => JSON.parse(call[1]?.body as string) as { variables: { symbols: string[] } });
+    expect(requests.every((request) => request.variables.symbols.length <= 100)).toBe(true);
+    expect(requests.length).toBeGreaterThan(1);
+    const request = { variables: { symbols: requests.flatMap((entry) => entry.variables.symbols) } };
     expect(request.variables.symbols).toContain("USDC");
     expect(request.variables.symbols).not.toEqual([
       "USDC",

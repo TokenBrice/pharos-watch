@@ -13,6 +13,7 @@ import {
   buildHardcodedUsdBenchmark,
   withYieldBenchmarkStaticMeta,
   YIELD_BENCHMARK_RECORD_MAX_AGE_SEC,
+  benchmarkRecordAgeSeconds,
   type ParsedYieldBenchmarkMeta,
   type ParsedYieldBenchmarkRegistry,
 } from "./yield-sync/benchmarks";
@@ -276,8 +277,13 @@ function resolveBenchmarkRefreshNeed(params: {
   const { registry, nowSec, minRegistryAgeSec } = params;
   const marketFetchedAt: number[] = [];
   let usdMarketFetchedAt: number | null = null;
-  for (const benchmark of Object.values(registry)) {
+  let expiredUsdObservation = false;
+  for (const [key, benchmark] of Object.entries(registry) as Array<[YieldBenchmarkKey, ParsedYieldBenchmarkMeta | null | undefined]>) {
     if (!benchmark?.lastMarketFetchedAt) continue;
+    const observationAge = benchmarkRecordAgeSeconds(benchmark.lastMarketRecordDate, nowSec);
+    if (key === "USD" && observationAge != null && observationAge > YIELD_BENCHMARK_RECORD_MAX_AGE_SEC.USD) {
+      expiredUsdObservation = true;
+    }
     marketFetchedAt.push(benchmark.lastMarketFetchedAt);
     if (benchmark.key === "USD") usdMarketFetchedAt = benchmark.lastMarketFetchedAt;
   }
@@ -286,7 +292,8 @@ function resolveBenchmarkRefreshNeed(params: {
   const usdMarketAgeSec = usdMarketFetchedAt == null ? null : Math.max(0, nowSec - usdMarketFetchedAt);
   return {
     refresh:
-      newestMarketAgeSec == null
+      expiredUsdObservation
+      || newestMarketAgeSec == null
       || newestMarketAgeSec > minRegistryAgeSec
       || usdMarketAgeSec == null
       || usdMarketAgeSec > minRegistryAgeSec,

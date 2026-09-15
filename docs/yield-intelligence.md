@@ -274,6 +274,10 @@ vaults.fyi is an optional supplemental source family for coverage review and sel
 - Provider telemetry exposes `pageCapReached` and `creditCapReached` so expected bounded probes are distinguishable from provider errors.
 - Provider quota/errors fail open: the supplemental family records skipped/partial/failed telemetry but does not make the post-V9 publisher require vaults.fyi. Disabled-family telemetry distinguishes `disabled` (flag off/unset), `no-key` (enabled without runtime secret), and `invalid-config` (malformed enable flag) so operators can tell configuration states apart.
 
+Supplemental discovery preserves complete-family publication when an upstream request or page fails. Morpho splits tracked symbol filters into batches of at most 100 (the public GraphQL limit), paginates each batch independently, and keeps the existing overall request deadline. Aave's successful, structurally valid zero-liquidity-rate response counts as a resolved discovery target with no yield candidate; missing RPC responses and malformed reserve data still degrade the family.
+
+Royco Dawn uses the official `/api/v1/ecosystem/explore` directory with one-based pagination, admits only verified `marketv2` entries, and fetches `/api/v1/market/info/{chainId}/{marketId}` for each market's USD TVL and full tranche-risk evidence. The directory's native-NAV amounts and Day markets are not admitted through the Dawn adapter. Candidate freshness comes from each detail response's APY endpoint timestamp, bounded by the existing six-hour supplemental window; missing/stale APY evidence or a failed detail read retains the prior family snapshot.
+
 ### Opportunity-Level Safety Resolution
 
 One engine resolves every row's published `safetyScore`, `safetyGrade`, `provenance.safetyProvenance`, and `safetyReason` from the underlying stablecoin's Report Card plus opportunity-level risk: `resolveYieldRowSafety(...)` in `shared/lib/yield-opportunity-risk.ts`. The hourly write path (`worker/src/cron/yield-sync/evaluation.ts`) and the API live-safety hydration read path (`worker/src/api/yield-rankings-cache.ts`) both call it, so the read path re-bins the published judgment rather than re-deriving it (ADR-19). The two paths differ in exactly one input — the provenance label a rated resolution carries (`cached-publish` on write, `live-report-card` on hydration).
@@ -548,6 +552,8 @@ https://alfred.stlouisfed.org/graph/alfredgraph.csv?id=IUDZOS2
 - Yield rows switch to a peg-native benchmark when the stablecoin's benchmark currency is supported
 - Rate-derived configs can explicitly override the benchmark key when the asset's benchmark should differ from the peg currency
 - When a native benchmark is unavailable, the row falls back to USD and records `benchmarkSelectionMode: "fallback-usd"`
+
+The hourly benchmark catch-up also refreshes when the required USD market observation exceeds its existing record-age bound, even if the last fetch is younger than 24 hours. This prevents a pre-publication daily fetch from blocking retrieval of a newer official print after the old observation expires. Unused or policy-rate observations do not independently force catch-up. It does not extend observation or fetch TTLs; the USD benchmark canary continues to apply the same current-observation rule.
 
 **Usage:** The hourly core yield sync resolves `excessYield` from 30-day average APY and rate-derived APY against each row's selected benchmark. Detail cards, hero chips, and history charts render that row-level label. The `/yield` scatter plot always keeps a benchmark frame visible: homogeneous scopes use the shared visible benchmark, while mixed scopes use the default USD benchmark as an orientation frame and rely on row-level tags for the exact hurdle. The plot renders the full filter-visible ranking universe; APY outlier capping changes only vertical placement and never removes opportunities.
 

@@ -172,77 +172,82 @@ export async function fetchMorphoVaultSources(signal?: AbortSignal): Promise<Sup
   try {
     const results: ResolvedYieldCandidate[] = [];
     let degraded = false;
-    let skip = 0;
-    while (!budget.budgetController.signal.aborted) {
-      throwIfAborted(budget.budgetController.signal);
-      const result = await fetchJsonWithRetry<{ data?: { vaults?: { items?: MorphoVaultItem[] } } }>(
-        "https://api.morpho.org/graphql",
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json", "User-Agent": USER_AGENT },
-          body: JSON.stringify({
-            query: `query($symbols: [String!]!, $first: Int!, $skip: Int!, $minTvl: Float!) {
-  vaults(first: $first, skip: $skip, where: { listed: true, assetSymbol_in: $symbols, totalAssetsUsd_gte: $minTvl }) {
-    items {
-      address name
-      asset { symbol address }
-      chain { id }
-      state { netApy totalAssetsUsd fee }
+    // Morpho caps assetSymbol_in at 100; keep each filter batch independently paginated.
+    for (let symbolOffset = 0; symbolOffset < filters.symbols.length; symbolOffset += 100) {
+      const symbols = filters.symbols.slice(symbolOffset, symbolOffset + 100);
+      let skip = 0;
+      while (!budget.budgetController.signal.aborted) {
+        throwIfAborted(budget.budgetController.signal);
+        const result = await fetchJsonWithRetry<{ data?: { vaults?: { items?: MorphoVaultItem[] } } }>(
+          "https://api.morpho.org/graphql",
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/json", "User-Agent": USER_AGENT },
+            body: JSON.stringify({
+              query: `query($symbols: [String!]!, $first: Int!, $skip: Int!, $minTvl: Float!) {
+    vaults(first: $first, skip: $skip, where: { listed: true, assetSymbol_in: $symbols, totalAssetsUsd_gte: $minTvl }) {
+      items {
+        address name
+        asset { symbol address }
+        chain { id }
+        state { netApy totalAssetsUsd fee }
+      }
     }
-  }
-}`,
-            variables: { symbols: filters.symbols, first: MORPHO_PAGE_SIZE, skip, minTvl: MORPHO_MIN_TVL_USD },
-          }),
-          signal: budget.signal,
-        },
-        0,
-        { timeoutMs: OPTIONAL_PROTOCOL_REQUEST_TIMEOUT_MS },
-      );
-      if (!result?.response.ok) return { candidates: results, degraded: true };
-
-      const body = result.body;
-      const items = body.data?.vaults?.items;
-      if (!Array.isArray(items)) {
-        degraded = true;
-        break;
-      }
-      if (items.length === 0) break;
-
-      for (const vault of items) {
-        const apy = vault.state?.netApy;
-        if (typeof apy !== "number" || !Number.isFinite(apy) || apy <= 0) continue;
-
-        const tvl = vault.state?.totalAssetsUsd;
-        if (typeof tvl !== "number" || tvl < MORPHO_MIN_TVL_USD) continue;
-        if (!isNonEmptyString(vault.address) || !isNonEmptyString(vault.asset?.symbol)) continue;
-        const chain = resolveCanonicalChain(vault.chain?.id);
-        if (!chain) continue;
-        const trackedAsset = resolveMorphoTrackedAsset(filters, chain, vault.asset);
-        if (!trackedAsset) continue;
-
-        results.push({
-          stablecoinId: trackedAsset.stablecoinId,
-          symbol: trackedAsset.symbol,
-          chain,
-          address: vault.asset.address ?? null,
-          yield: {
-            currentApy: apy * 100,
-            apyBase: apy * 100,
-            apyReward: null,
-            sourcePool: vault.address,
-            sourceTvlUsd: tvl,
-            dataSource: "protocol-api",
-            exchangeRate: null,
-            sourceKey: `protocol-api:morpho-vault:${chain}:${vault.address.toLowerCase()}`,
-            yieldSource: `Morpho: ${vault.name}`,
-            yieldType: "lending-opportunity",
-            sourceObservedAt: Math.floor(Date.now() / 1000),
-            comparisonAnchorObservedAt: null,
+  }`,
+              variables: { symbols, first: MORPHO_PAGE_SIZE, skip, minTvl: MORPHO_MIN_TVL_USD },
+            }),
+            signal: budget.signal,
           },
-        });
+          0,
+          { timeoutMs: OPTIONAL_PROTOCOL_REQUEST_TIMEOUT_MS },
+        );
+        if (!result?.response.ok) return { candidates: results, degraded: true };
+
+        const body = result.body;
+        const items = body.data?.vaults?.items;
+        if (!Array.isArray(items)) {
+          degraded = true;
+          break;
+        }
+        if (items.length === 0) break;
+
+        for (const vault of items) {
+          if (!symbols.includes(vault.asset?.symbol)) continue;
+          const apy = vault.state?.netApy;
+          if (typeof apy !== "number" || !Number.isFinite(apy) || apy <= 0) continue;
+
+          const tvl = vault.state?.totalAssetsUsd;
+          if (typeof tvl !== "number" || tvl < MORPHO_MIN_TVL_USD) continue;
+          if (!isNonEmptyString(vault.address) || !isNonEmptyString(vault.asset?.symbol)) continue;
+          const chain = resolveCanonicalChain(vault.chain?.id);
+          if (!chain) continue;
+          const trackedAsset = resolveMorphoTrackedAsset(filters, chain, vault.asset);
+          if (!trackedAsset) continue;
+
+          results.push({
+            stablecoinId: trackedAsset.stablecoinId,
+            symbol: trackedAsset.symbol,
+            chain,
+            address: vault.asset.address ?? null,
+            yield: {
+              currentApy: apy * 100,
+              apyBase: apy * 100,
+              apyReward: null,
+              sourcePool: vault.address,
+              sourceTvlUsd: tvl,
+              dataSource: "protocol-api",
+              exchangeRate: null,
+              sourceKey: `protocol-api:morpho-vault:${chain}:${vault.address.toLowerCase()}`,
+              yieldSource: `Morpho: ${vault.name}`,
+              yieldType: "lending-opportunity",
+              sourceObservedAt: Math.floor(Date.now() / 1000),
+              comparisonAnchorObservedAt: null,
+            },
+          });
+        }
+        skip += items.length;
+        if (items.length < MORPHO_PAGE_SIZE) break;
       }
-      skip += items.length;
-      if (items.length < MORPHO_PAGE_SIZE) break;
     }
     // A budget abort exits pagination mid-run, so the snapshot is partial.
     return { candidates: results, degraded: degraded || budget.budgetController.signal.aborted };

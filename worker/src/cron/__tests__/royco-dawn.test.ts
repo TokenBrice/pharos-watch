@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { mockRegistry } from "../../test-helpers/cron";
-import { makeMarket, makeVault } from "./royco-dawn.test-support";
-import { mockFetch } from "@shared/test-utils/mock-fetch";
+import { makeMarket, makeVault, installRoycoMarketRoutes } from "./royco-dawn.test-support";
+const mockFetch = (routes: Parameters<typeof installRoycoMarketRoutes>[0]) => vi.stubGlobal("fetch", vi.fn(installRoycoMarketRoutes(routes)));
 
 vi.mock("@shared/lib/stablecoins/registry", () => {
   const stablecoins = [
@@ -38,7 +38,7 @@ describe("fetchRoycoDawnSources", () => {
   });
 
   it("emits senior and junior tranche candidates for tracked deposit tokens", async () => {
-    mockFetch([{ match: "https://dawn.royco.org/api/v1/market/explore", body: {
+    mockFetch([{ match: "https://dawn.royco.org/api/v1/ecosystem/explore", body: {
             count: 1,
             data: [
               makeMarket({
@@ -97,7 +97,7 @@ describe("fetchRoycoDawnSources", () => {
   });
 
   it("maps Royco sNUSD deposit tokens to the tracked Neutrl USD parent", async () => {
-    mockFetch([{ match: "https://dawn.royco.org/api/v1/market/explore", body: {
+    mockFetch([{ match: "https://dawn.royco.org/api/v1/ecosystem/explore", body: {
             count: 1,
             data: [
               makeMarket({
@@ -140,7 +140,7 @@ describe("fetchRoycoDawnSources", () => {
   });
 
   it("resolves each tranche vault to its own tracked deposit token", async () => {
-    mockFetch([{ match: "https://dawn.royco.org/api/v1/market/explore", body: {
+    mockFetch([{ match: "https://dawn.royco.org/api/v1/ecosystem/explore", body: {
             count: 1,
             data: [
               makeMarket({
@@ -179,8 +179,26 @@ describe("fetchRoycoDawnSources", () => {
     ]);
   });
 
+  it("retains the family when a positive tranche has stale observation evidence", async () => {
+    const market = makeMarket();
+    market.seniorVault.apyInfo.duration.end.blockTimestamp -= 7 * 3600;
+    mockFetch([{ match: "ecosystem/explore", body: { count: 1, data: [market] } }]);
+    expect(await fetchRoycoDawnSources()).toEqual({ candidates: [], degraded: true });
+  });
+
+  it("retains the family when a discovered market detail cannot be fetched", async () => {
+    vi.stubGlobal("fetch", vi.fn(async (input) => String(input).includes("/ecosystem/explore")
+      ? Response.json({ count: 1, data: [makeMarket()] }) : new Response("unavailable", { status: 503 })));
+    expect(await fetchRoycoDawnSources()).toEqual({ candidates: [], degraded: true });
+  });
+
+  it("does not admit Day markets through the Dawn risk model", async () => {
+    mockFetch([{ match: "ecosystem/explore", body: { count: 1, data: [makeMarket({ majorType: "day" })] } }]);
+    expect(await fetchRoycoDawnSources()).toEqual({ candidates: [], degraded: false });
+  });
+
   it("drops tranche vaults below the tranche TVL floor", async () => {
-    mockFetch([{ match: "https://dawn.royco.org/api/v1/market/explore", body: {
+    mockFetch([{ match: "https://dawn.royco.org/api/v1/ecosystem/explore", body: {
             count: 1,
             data: [
               makeMarket({
@@ -223,13 +241,14 @@ describe("Royco discovery boundaries", () => {
   it("requests distinct pages and retains candidates from both", async () => {
     const pages: number[] = [];
     vi.stubGlobal("fetch", vi.fn(async (url, init) => {
-      if (String(url) !== "https://dawn.royco.org/api/v1/market/explore") throw new Error("unexpected URL");
+      if (String(url).includes("/market/info/")) return Response.json(makeMarket({ marketId: String(url).split("/").pop() }));
+      if (String(url) !== "https://dawn.royco.org/api/v1/ecosystem/explore") throw new Error("unexpected URL");
       const index = JSON.parse(init.body).page.index;
       pages.push(index);
-      return Response.json({ count: 101, data: index === 0 ? Array.from({ length: 100 }, (_, i) => makeMarket({ marketId: `first-${i}` })) : [makeMarket({ marketId: "last" })] });
+      return Response.json({ count: 101, data: index === 1 ? Array.from({ length: 100 }, (_, i) => makeMarket({ marketId: `first-${i}` })) : [makeMarket({ marketId: "last" })] });
     }));
     const { candidates, degraded } = await fetchRoycoDawnSources();
-    expect(pages).toEqual([0, 1]);
+    expect(pages).toEqual([1, 2]);
     expect(degraded).toBe(false);
     expect(candidates.map((candidate) => candidate.yield.sourceKey)).toEqual([...Array.from({ length: 100 }, (_, i) => `royco-dawn:1:first-${i}:senior`), "royco-dawn:1:last:senior"]);
   });
@@ -237,16 +256,17 @@ describe("Royco discovery boundaries", () => {
   it("retains earlier candidates when a later page fails", async () => {
     const pages: number[] = [];
     vi.stubGlobal("fetch", vi.fn(async (_url, init) => {
+      if (String(_url).includes("/market/info/")) return Response.json(makeMarket({ marketId: "survivor" }));
       const index = JSON.parse(init.body).page.index;
       pages.push(index);
-      return index === 0 ? Response.json({ count: 101, data: [makeMarket({ marketId: "survivor" }), ...Array.from({ length: 99 }, () => makeMarket({ listingType: "unverified" }))] }) : new Response("unavailable", { status: 503 });
+      return index === 1 ? Response.json({ count: 101, data: [makeMarket({ marketId: "survivor" }), ...Array.from({ length: 99 }, () => makeMarket({ listingType: "unverified" }))] }) : new Response("unavailable", { status: 503 });
     }));
     const { candidates, degraded } = await fetchRoycoDawnSources();
     expect(candidates.map((candidate) => candidate.yield.sourceKey)).toEqual(["royco-dawn:1:survivor:senior"]);
     // SRC-SUPP-2: the early end is reported so the writer retains the previous
     // full snapshot instead of replacing it with this partial page set.
     expect(degraded).toBe(true);
-    expect(pages).toEqual([0, 1]);
+    expect(pages).toEqual([1, 2]);
   });
 
   it("rejects caller cancellation during a request", async () => {
@@ -260,8 +280,8 @@ describe("Royco discovery boundaries", () => {
 
   it("rejects unverified and unknown chain or token markets", async () => {
     const valid = makeMarket();
-    mockFetch([{ match: "https://dawn.royco.org/api/v1/market/explore", body: { count: 3, data: [
-      makeMarket({ listingType: "unverified" }), makeMarket({ chainId: 99999999 }),
+    mockFetch([{ match: "https://dawn.royco.org/api/v1/ecosystem/explore", body: { count: 3, data: [
+      makeMarket({ marketId: "unverified", listingType: "unverified" }), makeMarket({ marketId: "unknown-chain", chainId: 99999999 }),
       makeMarket({ seniorVault: { ...valid.seniorVault, depositToken: { ...valid.seniorVault.depositToken, contractAddress: "0x9999999999999999999999999999999999999999" } } }),
     ] } }]);
     expect(await fetchRoycoDawnSources()).toEqual({ candidates: [], degraded: false });
@@ -269,7 +289,7 @@ describe("Royco discovery boundaries", () => {
 
   it("accepts exact APY and TVL bounds but rejects values beyond them", async () => {
     const valid = makeMarket();
-    mockFetch([{ match: "https://dawn.royco.org/api/v1/market/explore", body: { count: 3, data: [
+    mockFetch([{ match: "https://dawn.royco.org/api/v1/ecosystem/explore", body: { count: 3, data: [
       makeMarket({ marketId: "boundary", seniorVault: { ...valid.seniorVault, apy: 2 } }),
       makeMarket({ marketId: "high-apy", seniorVault: { ...valid.seniorVault, apy: 2.0001 } }),
       makeMarket({ marketId: "low-tvl", seniorVault: { ...valid.seniorVault, tvl: { tokenAmountUsd: 99_999 } } }),

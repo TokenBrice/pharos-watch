@@ -263,8 +263,19 @@ describe("fetchAaveV3SupplyRates", () => {
   it("excludes rates where APY is zero (zero liquidity rate)", async () => {
     mockFetchEvmCallHexAtBlock.mockResolvedValue(buildGetReserveDataHex(0n));
 
-    const { results } = await fetchAaveV3SupplyRates([USDC_TARGET], undefined, makeChainRpcs());
+    const { results, telemetry } = await fetchAaveV3SupplyRates([USDC_TARGET], undefined, makeChainRpcs());
     expect(results).toEqual([]);
+    expect(telemetry.resolvedTargetCount).toBe(1);
+    expect(telemetry.missingTargetCount).toBe(0);
+    expect(telemetry.emittedCount).toBe(0);
+  });
+
+  it("does not count a truncated zero-rate ABI as a resolved target", async () => {
+    mockFetchEvmCallHexAtBlock.mockResolvedValue(`0x${"0".repeat(3 * 64)}`);
+    const { results, telemetry } = await fetchAaveV3SupplyRates([USDC_TARGET], undefined, makeChainRpcs());
+    expect(results).toEqual([]);
+    expect(telemetry.resolvedTargetCount).toBe(0);
+    expect(telemetry.missingReasonCounts).toMatchObject({ "reserve-data-short": 1 });
   });
 
   it("encodes getReserveData calldata with selector + padded asset address", async () => {
