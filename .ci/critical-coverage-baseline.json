@@ -139,6 +139,8 @@
     "worker/src/lib/authoritative-price-sources/inherited-tracked.ts": 96.7,
     "worker/src/lib/authoritative-price-sources/jusd-stablecoin-bridge.ts": 96.7,
     "worker/src/lib/authoritative-price-sources/kava-pricefeed.ts": 94.8,
+    "worker/src/lib/authoritative-price-sources/mento-broker.ts": 100,
+    "worker/src/lib/authoritative-price-sources/mento-fpmm.ts": 100,
     "worker/src/lib/authoritative-price-sources/protocol-par.ts": 87.1,
     "worker/src/lib/authoritative-price-sources/protocol-redeem-provider.ts": 100,
     "worker/src/lib/authoritative-price-sources/rate-cache.ts": 100,
