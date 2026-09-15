@@ -500,6 +500,32 @@ describe("authoritative-price-sources", () => {
     expect(circuitReads).toHaveLength(1);
   });
 
+  it.each([true, false])("records one grouped outcome without starving later vaults (success=%s)", async (lastSucceeds) => {
+    const nowSec = Math.floor(Date.now() / 1000);
+    fetchEvmCallHexAtBlockMock.mockImplementation(async (_chain, target) => {
+      if (lastSucceeds && target.toLowerCase() === "0xe1753f2e00940cc31213dd92013cf019dfe4ca1d") {
+        return `0x${encodeUint256(10n ** 18n)}`;
+      }
+      throw new Error("target unavailable");
+    });
+    const db = mockD1([makeCircuitCacheRow(CIRCUIT_SOURCE.PROTOCOL_REDEEM)]);
+    const stats = createAuthoritativeLivePriceOverrideStats();
+    const overrides = await fetchLiveOverrides([
+      ...["usde-ethena", "usds-sky", "aid-gaib", "gho-aave"].map((id) =>
+        freshParent(id, 1, "protocol-redeem", { nowSec })),
+      ...["susde-ethena", "susds-sky", "said-gaib", "sgho-aave"].map((id) => unpricedChild(id)),
+    ], { db, stats });
+    expect(stats.attemptedCount).toBe(4);
+    expect(stats.skippedCircuitOpen).toBe(0);
+    expect(overrides.has("sgho-aave")).toBe(lastSucceeds);
+    const writes = db.getHistory().filter((entry) =>
+      entry.sql.includes("INSERT OR REPLACE INTO cache") && entry.binds[0] === `circuit:${CIRCUIT_SOURCE.PROTOCOL_REDEEM}`);
+    expect(writes).toHaveLength(1);
+    expect(JSON.parse(String(writes[0].binds[1]))).toMatchObject({
+      state: "closed", consecutiveFailures: lastSucceeds ? 0 : 1,
+    });
+  });
+
   it("records thrown live RPC protocol-redeem overrides as grouped circuit failures", async () => {
     fetchEvmCallHexAtBlockMock.mockRejectedValue(new Error("rpc down"));
     const db = mockD1([
@@ -2185,6 +2211,9 @@ describe("authoritative-price-sources", () => {
     expect(override?.price).toBeCloseTo(1.0221 * 0.9999, 6);
     expect(override?.observedAt).toBe(nowSec - 3600);
     expect(stats.cachedRateFallbacks).toBe(1);
+    const circuitWrite = db.getHistory().find((entry) =>
+      entry.sql.includes("INSERT OR REPLACE INTO cache") && entry.binds[0] === `circuit:${CIRCUIT_SOURCE.PROTOCOL_REDEEM}`);
+    expect(JSON.parse(String(circuitWrite?.binds[1]))).toMatchObject({ consecutiveFailures: 1 });
     expect(stats.assetAttempts).toEqual([
       expect.objectContaining({
         assetId: "gtusdc-gauntlet",
@@ -2192,6 +2221,36 @@ describe("authoritative-price-sources", () => {
         source: "protocol-redeem-cached-rate",
       }),
     ]);
+  });
+
+  it("keeps a cached-rate rescue of a candidate timeout circuit-neutral", async () => {
+    vi.useFakeTimers();
+    try {
+      fetchEvmCallHexAtBlockMock.mockImplementation(
+        (_chain, _target, _data, _block, options) => new Promise((_resolve, reject) => {
+          options?.signal?.addEventListener("abort", () => reject(options.signal?.reason), { once: true });
+        }),
+      );
+      const nowSec = Math.floor(Date.now() / 1000);
+      const db = mockD1([
+        makeCircuitCacheRow(CIRCUIT_SOURCE.PROTOCOL_REDEEM),
+        {
+          match: "FROM authoritative_vault_rates",
+          rows: [{ stablecoin_id: "gtusdc-gauntlet", rate: 1.0221, observed_at: nowSec - 3600 }],
+        },
+      ]);
+      const pending = fetchLiveOverrides([
+        unpricedChild("gtusdc-gauntlet"),
+        freshParent("usdc-circle", 1, "coingecko+pyth", { nowSec }),
+      ], { db, wallClockBudgetMs: 10_000 });
+      await vi.advanceTimersByTimeAsync(AUTHORITATIVE_LIVE_CANDIDATE_TIMEOUT_MS);
+      expect((await pending).get("gtusdc-gauntlet")?.source).toBe("protocol-redeem-cached-rate");
+      expect(db.getHistory().filter((entry) =>
+        entry.sql.includes("INSERT OR REPLACE INTO cache") && entry.binds[0] === `circuit:${CIRCUIT_SOURCE.PROTOCOL_REDEEM}`,
+      )).toHaveLength(0);
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it("keeps failing hard when the cached vault rate is too old to trust", async () => {
