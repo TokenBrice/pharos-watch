@@ -16,6 +16,7 @@ import {
 import type { PriceValidationReferences } from "../price-validation";
 import { azndCurvePoolProvider } from "./aznd-curve-pool";
 import { capCusdProvider } from "./cap-cusd";
+import { deuroEurcBridgeProvider } from "./deuro-eurc-bridge";
 import { erc4626NavProvider, previewRedeemProvider } from "./erc4626-nav";
 import {
   CACHED_VAULT_RATE_SOURCE,
@@ -45,6 +46,7 @@ export { resolveVaultNavSupplyPrice } from "./erc4626-nav";
 
 const AUTHORITATIVE_PRICE_PROVIDERS: PriceSourceProvider[] = [
   capCusdProvider,
+  deuroEurcBridgeProvider,
   iusdInfinifiProvider,
   inheritedTrackedPriceProvider,
   protocolParProvider,
