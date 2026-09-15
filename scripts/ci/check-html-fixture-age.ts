@@ -55,6 +55,8 @@ const HEADER_PREFIX_BYTES = 4096;
  * gate, forcing its provenance to be recorded explicitly.
  */
 const NON_HTML_FIXTURE_EXEMPTIONS: Readonly<Record<string, string>> = {
+  "midas-mtbill-transparency.json":
+    "captured 2026-09-14 from the mTBILL issuer transparency API (payload updatedAt 2026-09-14T13:06:24.130Z); frozen JSON regression input cannot carry an HTML-comment capture header",
   "tether-transparency.json":
     "captured 2026-07-09 (per tether-transparency.test.ts); JSON cannot carry an HTML-comment capture header",
   "frax-balance-sheet.json": "JSON cannot carry an HTML-comment capture header",

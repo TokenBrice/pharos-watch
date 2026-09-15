@@ -240,7 +240,7 @@
         "docs/process/ddrr-calibration.md",
         "docs/process/mechanism-overlay-evidence-standard.md"
       ],
-      "docs": ["docs/methodology-page.md", "docs/report-cards.md"],
+      "docs": ["docs/methodology-page.md", { "path": "docs/report-cards.md", "anchor": "methodology-identity" }],
       "background": [
         { "path": "docs/depeg-detection.md", "anchor": "thresholds--constants" },
         "docs/dews.md",
@@ -286,7 +286,8 @@
         "functions/__tests__/safety-map-png.test.ts"
       ],
       "docs": [
-        "docs/report-cards.md",
+        { "path": "docs/report-cards.md", "anchor": "v9-model" },
+        { "path": "docs/report-cards.md", "anchor": "canonical-publication" },
         "docs/mint-authority-scoring.md",
         "docs/safety-score-map.md",
         { "path": "docs/digest-pipeline.md", "anchor": "generation" },
