@@ -685,3 +685,39 @@ describe("loadCronHealth — cron event markers", () => {
     expect(snapshot.scheduledSlotEventMarkerQueryFailed).toBe(true);
   });
 });
+
+
+describe("corroboration event visibility and chronology", () => {
+  const now = 1_775_890_000;
+  const corroboration = { event: "cron_event", job: "sync-stablecoins", eventType: "price-corroboration",
+    severity: "warning", message: "Corroboration response", recordedAt: now - 60,
+    metadata: { slotStartedAt: now - 120, workerVersion: "worker-v1", providerDiagnostics: [{ source: "dexscreener-exact", status: 429 }] } };
+  async function snapshot(events: Array<{ key: string; event: unknown }>) {
+    return loadCronHealth(mockD1([
+      { match: "UNION ALL", rows: seedWithOverrides(now, []) },
+      { match: "FROM cron_leases", rows: [] }, { match: "FROM cron_run_progress", rows: [] },
+      { match: "FROM cache", rows: events.map(({ key, event }) => ({ key, value: JSON.stringify(event), updated_at: now })) },
+    ]), now);
+  }
+  const key = "cron:event:sync-stablecoins:price-corroboration";
+  it("exposes bounded diagnostics only on the owning stablecoin job", async () => {
+    const result = await snapshot([{ key, event: corroboration }]);
+    expect(result.crons["sync-stablecoins"].latestEvent).toEqual(corroboration);
+    expect(result.crons["sync-fx-rates"].latestEvent).toBeUndefined();
+    expect(result.crons["snapshot-supply"].latestEvent).toBeUndefined();
+  });
+  it.each([-30, -60])("preserves newer or equally timed critical slot errors (%s)", async (offset) => {
+    const abandoned = { ...corroboration, job: "quarterHourly", eventType: "scheduled-slot-abandoned",
+      severity: "error", recordedAt: now + offset };
+    for (const reversed of [false, true]) {
+      const events = [{ key, event: corroboration }, { key: "cron:event:quarterhourly:scheduled-slot-abandoned", event: abandoned }];
+      const result = await snapshot(reversed ? events.reverse() : events);
+      expect(result.crons["sync-stablecoins"].latestEvent).toEqual(abandoned);
+      expect(result.crons["sync-fx-rates"].latestEvent).toEqual(abandoned);
+    }
+  });
+  it.each([{ ...corroboration, job: "sync-yield-data" }, { ...corroboration, eventType: "other" }, { broken: true }])("ignores mismatched or malformed event records", async (event) => {
+    const result = await snapshot([{ key, event }]);
+    expect(result.crons["sync-stablecoins"].latestEvent).toBeUndefined();
+  });
+});

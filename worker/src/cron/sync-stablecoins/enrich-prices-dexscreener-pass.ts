@@ -207,6 +207,16 @@ function resolveDexScreenerAddressPrice(
   return isUsableFallbackPrice(asset, price, fxRates) ? price : null;
 }
 
+function dexScreenerFailureKind(result: Awaited<ReturnType<typeof fetchDsTokenPoolsWithStatus>>): string {
+  if (result.hardRefusal) return "rate-limited";
+  if (result.status != null && result.status >= 400) return "http-error";
+  if (result.error?.includes("schema changed")) return "invalid-shape";
+  if (result.error?.includes("no valid pair rows")) return "invalid-pairs";
+  if (result.error?.includes("JSON parse failed")) return "malformed-json";
+  if (result.error?.includes("Fetch failed")) return "no-response";
+  return "upstream-error";
+}
+
 export async function runDexScreenerPass(
   assets: PeggedAsset[],
   fxRates: Record<string, number> | undefined,
@@ -388,10 +398,12 @@ export async function runDexScreenerPass(
             event: "dexscreener-exact-batch-failed",
             message: "DexScreener exact batch lookup failed",
             provider: "dexscreener",
-            metadata: { chain: batchChain, targetCount: batch.length },
+            metadata: { chain: batchChain, targetCount: batch.length,
+              status: lookupResult.status ?? null, contentType: lookupResult.contentType?.slice(0, 80) ?? null,
+              hardRefusal: lookupResult.hardRefusal === true, errorClass: dexScreenerFailureKind(lookupResult) },
           });
           pushExactFailure(
-            "upstream-error",
+            dexScreenerFailureKind(lookupResult),
             lookupResult.error
               ? `DexScreener exact lookup returned no usable response: ${lookupResult.error}`
               : "DexScreener exact lookup returned no usable response",
@@ -410,6 +422,10 @@ export async function runDexScreenerPass(
             resolved += 1;
             resolvedAssetIds.add(entry.asset.id);
           }
+          diagnostics.push({ source: "dexscreener-exact", stage: "fallback",
+            endpoint: endpointLabel(`https://api.dexscreener.com/tokens/v1/${batchChain}/${batchAddressPath}`),
+            status: lookupResult.status ?? null, ok: true, success: true,
+            candidateCount: batch.length, responseRowCount: pairs.length, resolvedCount: resolvedAssetIds.size });
         }
       } else if (batch.length > 0) {
         logWorkerEvent({

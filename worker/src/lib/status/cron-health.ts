@@ -2,6 +2,7 @@ import { CRON_INTERVALS, getCronStatusImpact } from "@shared/lib/cron-jobs";
 import { flattenScheduledSlotPlanJobs, SCHEDULED_SLOT_PLANS } from "@shared/lib/scheduled-runner-registry";
 import { CronRunStatusSchema } from "@shared/types/status";
 import type { CronEvent, CronInFlight, CronRun, CronStaleArtifact, CronStatus } from "@shared/types/status";
+import { cronEventCacheKey } from "../cron-logger";
 import { staleSlotEventCacheKey } from "../scheduled-slot-fence";
 import { buildInClause } from "../db";
 import { logWorkerEvent } from "../structured-log";
@@ -398,9 +399,10 @@ export async function loadCronHealth(
   const cronJobs = Object.keys(CRON_INTERVALS);
   const cronJobInClause = buildInClause(cronJobs);
   const scheduleKeys = Object.keys(SCHEDULED_SLOT_PLANS) as Array<keyof typeof SCHEDULED_SLOT_PLANS>;
-  const eventKeys = scheduleKeys.map(staleSlotEventCacheKey);
-  const eventKeyInClause = buildInClause(eventKeys);
-  const scheduleKeyByEventKey = new Map(eventKeys.map((key, index) => [key, scheduleKeys[index]]));
+  const slotEventKeys = scheduleKeys.map(staleSlotEventCacheKey);
+  const corroborationEventKey = cronEventCacheKey("sync-stablecoins", "price-corroboration");
+  const eventKeyInClause = buildInClause([...slotEventKeys, corroborationEventKey]);
+  const scheduleKeyByEventKey = new Map(slotEventKeys.map((key, index) => [key, scheduleKeys[index]]));
 
   // Fire independent query groups concurrently. The lease→progress
   // dependency is purely an in-memory post-fetch step, so only the raw fetches
@@ -512,12 +514,17 @@ export async function loadCronHealth(
 
   for (const row of slotEventResult.rows) {
     const scheduleKey = scheduleKeyByEventKey.get(row.key);
-    if (!scheduleKey) continue;
     const event = parseCronEvent(row.value);
     if (!event) continue;
-    for (const job of flattenScheduledSlotPlanJobs(SCHEDULED_SLOT_PLANS[scheduleKey])) {
+    const isCorroboration = row.key === corroborationEventKey
+      && event.job === "sync-stablecoins" && event.eventType === "price-corroboration";
+    const jobs = scheduleKey ? flattenScheduledSlotPlanJobs(SCHEDULED_SLOT_PLANS[scheduleKey])
+      : isCorroboration ? ["sync-stablecoins"] : [];
+    for (const job of jobs) {
       const previous = latestEventByJob.get(job);
-      if (!previous || previous.recordedAt < event.recordedAt) {
+      const severityRank = { info: 0, warning: 1, error: 2 };
+      if (!previous || previous.recordedAt < event.recordedAt
+        || (previous.recordedAt === event.recordedAt && severityRank[event.severity] > severityRank[previous.severity])) {
         latestEventByJob.set(job, event);
       }
     }

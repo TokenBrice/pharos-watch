@@ -10,6 +10,8 @@ import {
   buildPriceCorroborationCacheEntries,
   buildPriceCorroborationCohort,
   isPriceCorroborationSlot,
+  summarizePriceCorroboration,
+  type PriceCorroborationResult,
   runPriceCorroboration,
 } from "../price-corroboration";
 import { makePeggedAsset } from "./_fixtures";
@@ -137,5 +139,33 @@ describe("hourly price corroboration", () => {
         agreeSources: ["coinmarketcap", "coingecko-onchain-address"],
       }),
     ]);
+  });
+});
+
+
+describe("bounded corroboration diagnostics", () => {
+  it("retains the failed DexScreener attempt while dropping URLs, credentials and payload text", () => {
+    const diagnostic = { source: "coinmarketcap" as const, stage: "fallback" as const, status: 403,
+      ok: false, success: false, endpoint: "provider.example/api?key=secret-token",
+      errorClass: "http-error", errorMessage: "secret-token response body", snippet: "private payload" };
+    const result: PriceCorroborationResult = {
+      cohortSize: 40, cacheEntriesWritten: 12, addressProviderCount: 1, providerDiagnosticCount: 2,
+      fallbackStats: { totalMissing: 40, finalMissing: 28, pass1: 2, pass1b: 1, passCmc: 5,
+        passJupiter: 2, passDex: 0, passCgLowVolume: 2, failedPasses: [],
+        providerDiagnostics: [...Array.from({ length: 25 }, () => diagnostic), {
+          ...diagnostic, source: "dexscreener-exact", status: 429, errorClass: "rate-limited",
+          endpoint: "api.dexscreener.com/tokens/v1/base/0xprivate-address", candidateCount: 30,
+        }] },
+    };
+    const summary = summarizePriceCorroboration(result);
+    expect(summary.providerDiagnostics).toHaveLength(20);
+    expect(summary.providerDiagnostics[0]).toMatchObject({ source: "dexscreener-exact", chain: "base",
+      status: 429, errorClass: "rate-limited", candidateCount: 30, success: false });
+    expect(summary.providerDiagnosticCount).toBe(28);
+    expect(summary.resolvedByPass.defillama).toBe(3);
+    const serialized = JSON.stringify(summary);
+    for (const forbidden of ["secret-token", "response body", "private payload", "0xprivate-address", "provider.example"]) {
+      expect(serialized).not.toContain(forbidden);
+    }
   });
 });
