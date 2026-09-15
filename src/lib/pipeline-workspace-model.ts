@@ -123,11 +123,12 @@ export function buildPipelineModeSummaries(data: StatusResponse): PipelineModeSu
   const marketStates: PipelineSeverity[] = [];
   let marketCount = loaderErrorCount("markets");
   if (data.priceSourceHealth) {
-    if (data.priceSourceHealth.totalAssets <= 0) {
+    const priceHealth = data.priceSourceHealth.active ?? data.priceSourceHealth;
+    if (priceHealth.totalAssets <= 0) {
       marketStates.push("unknown");
       marketCount += 1;
     } else {
-      const missing = finiteNumber(data.priceSourceHealth.sourceDistribution.missing);
+      const missing = finiteNumber(priceHealth.sourceDistribution.missing);
       if (missing == null) {
         marketStates.push("unknown");
         marketCount += 1;

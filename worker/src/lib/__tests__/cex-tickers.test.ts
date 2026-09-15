@@ -456,6 +456,7 @@ describe("fetchBitstampPrices", () => {
             { pair: "USDT/USD", market: "USDT/USD", last: "1.0001" },
             { pair: "USDC/USD", market: "USDC/USD", last: "0.9999" },
             { pair: "BTC/USD", market: "BTC/USD", last: "65000" },
+            { pair: "DAI/USD", market: "DAI/USD", last: "1" },
       ],
     }]);
 
@@ -464,6 +465,7 @@ describe("fetchBitstampPrices", () => {
     expect(outcome.value.prices.get("USDT")).toBeCloseTo(1.0001, 4);
     expect(outcome.value.prices.get("USDC")).toBeCloseTo(0.9999, 4);
     expect(outcome.value.prices.has("BTC")).toBe(false);
+    expect(outcome.value.prices.has("DAI")).toBe(false);
   });
 
   it("exposes per-pair upstream observed-at derived from Bitstamp `timestamp` field", async () => {

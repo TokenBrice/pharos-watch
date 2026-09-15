@@ -1476,10 +1476,22 @@ const mentoFpmmPoolRedemptionParamsSchema = z
   })
   .strict();
 
+// Reviewed USDm output pools; identities and native units are checked live.
+const mentoFpmmPoolsRedemptionParamsSchema = z.object({
+  kind: z.literal("fpmm-pools"),
+  selfTokenAddress: EvmAddressSchema,
+  pools: z.array(z.object({
+    poolAddress: EvmAddressSchema,
+    counterAsset: z.object({ address: EvmAddressSchema, decimals: z.literal(6) }).strict(),
+  }).strict()).min(1).max(2),
+  ...OptionalSourceUrlsFields,
+}).strict();
+
 const mentoRedemptionParamsSchema = z.discriminatedUnion("kind", [
   mentoBrokerPoolRedemptionParamsSchema,
   mentoLiquityV2CrRedemptionParamsSchema,
   mentoFpmmPoolRedemptionParamsSchema,
+  mentoFpmmPoolsRedemptionParamsSchema,
 ]);
 
 const mentoParamsSchema = z

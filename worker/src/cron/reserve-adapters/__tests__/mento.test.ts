@@ -439,6 +439,7 @@ describe("mento adapter", () => {
   // --- Fetch-level, through the harness --------------------------------------
   it("fetches the catalog-bound reserve composition and dashboard clock through the harness", async () => {
     const { result } = await runAdapter("mento", "cusd-celo", {
+      params: { redemption: undefined },
       network: mentoNetwork(),
       nowSec: CURRENT_DASHBOARD_NOW_SEC,
     });
@@ -541,6 +542,7 @@ describe("mento adapter", () => {
       };
 
     const { result } = await runAdapter("mento", "cusd-celo", {
+      params: { redemption: undefined },
       network: {
         json: { [CATALOG_RESERVE_URL]: respond(CATALOG_RESERVE_URL, SAMPLE_PAYLOAD) },
         html: { [MENTO_DASHBOARD_URL]: respond(MENTO_DASHBOARD_URL, MENTO_DASHBOARD_HTML_FIXTURE) },
