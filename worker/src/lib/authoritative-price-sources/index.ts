@@ -16,6 +16,8 @@ import {
 } from "../pricing-provider-diagnostics";
 import type { PriceValidationReferences } from "../price-validation";
 import { azndCurvePoolProvider } from "./aznd-curve-pool";
+import { mentoFpmmProvider } from "./mento-fpmm";
+import { mentoBrokerProvider } from "./mento-broker";
 import { capCusdProvider } from "./cap-cusd";
 import { deuroEurcBridgeProvider } from "./deuro-eurc-bridge";
 import { erc4626NavProvider, previewRedeemProvider } from "./erc4626-nav";
@@ -52,6 +54,8 @@ const AUTHORITATIVE_PRICE_PROVIDERS: PriceSourceProvider[] = [
   inheritedTrackedPriceProvider,
   protocolParProvider,
   azndCurvePoolProvider,
+  mentoFpmmProvider,
+  mentoBrokerProvider,
   kavaUsdxPricefeedProvider,
   erc4626NavProvider,
   previewRedeemProvider,

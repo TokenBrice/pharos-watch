@@ -84,6 +84,12 @@ export function PricingPipelineMethodologySection() {
         </p>
 
         <p>
+          When CHFm, CADm or COPm has no usable market price, Pharos can use its verified Mento pool or Broker sell quote
+          multiplied by a fresh USDm price. Contract identity, fees, available capacity and trading limits must support the exit. This remains a
+          short-lived fallback price, subject to the same depeg and weak-source safeguards as other soft sources.
+        </p>
+
+        <p>
           <strong className="text-foreground">Freshness tracking.</strong>{" "}
           The live payload distinguishes true upstream observation timestamps from locally stamped fetch-time freshness via{" "}
           <code className="mx-1 text-xs">priceObservedAtMode</code>, so a hard single-source print only becomes

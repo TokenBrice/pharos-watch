@@ -2,6 +2,22 @@ import type { MethodologyChangelogEntry } from "@shared/lib/methodology-versions
 
 export const PRICING_PIPELINE_V6: readonly MethodologyChangelogEntry[] = [
   {
+    version: "6.22",
+    title: "Guarded Mento price recovery",
+    date: "2026-09-15",
+    effectiveAt: 1789482600,
+    summary: "CHFm, CADm and COPm can recover missing prices from verified Mento sell routes and a fresh trusted USDm price.",
+    impact: [
+      "The CHFm-only route verifies pool identity, fresh pinned state, synchronized reserves and balances, bounded fees, quote depth, trading-limit headroom, and the pool's swap-value constraints before admitting a quote",
+      "CADm and COPm use verified Broker routes with oracle, bidirectional breaker, trading-limit, token permission, depth and price-impact checks",
+      "The USD price uses the current trusted USDm price, never assumed dollar parity, and preserves the older parent or block observation time",
+      "The mento-fpmm and mento-broker sources remain fallback-confidence, non-replay-safe, non-depeg-authoritative evidence with a five-minute lifetime and no exemption from soft-source publication safeguards",
+      "Existing prices, source-admission thresholds, supply accounting, and the shared live-override request budget are unchanged; unavailable or unsafe pool state leaves the affected asset missing",
+    ],
+    commits: [],
+    reconstructed: false,
+  },
+  {
     version: "6.215",
     title: "Scoped M0 inheritance and VUSD retained-DEX recovery",
     date: "2026-09-03",
