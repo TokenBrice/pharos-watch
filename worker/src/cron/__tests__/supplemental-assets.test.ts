@@ -480,9 +480,15 @@ describe("fetchGoldTokens", () => {
 });
 
 
-it.each([undefined, 0, Number.NaN, Math.floor(Date.now() / 1000) - 9 * 86400, Math.floor(Date.now() / 1000) + 601])(
+it.each([undefined, 0, Number.NaN, 1_800_000_000 - 9 * 86400, 1_800_000_000 + 601])(
   "rejects commodity market cap with missing, invalid, stale or future timestamp %s", (last_updated_at) => {
-    expect(resolveSupplementalCoinGeckoMcap({ gold: { usd_market_cap: 10_000_000, last_updated_at } }, "gold")).toBeNull();
+    // Keep the future boundary fixed while other tests wait to execute.
+    const clock = vi.spyOn(Date, "now").mockReturnValue(1_800_000_000 * 1000);
+    try {
+      expect(resolveSupplementalCoinGeckoMcap({ gold: { usd_market_cap: 10_000_000, last_updated_at } }, "gold")).toBeNull();
+    } finally {
+      clock.mockRestore();
+    }
   },
 );
 

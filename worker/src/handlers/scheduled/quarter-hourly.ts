@@ -1,4 +1,3 @@
-import { logCronEvent } from "../../lib/cron-logger";
 import { logWorkerEventArgs } from "../../lib/structured-log";
 /**
  * Quarter-hourly trigger (every 15 min):
@@ -16,11 +15,6 @@ import { logWorkerEventArgs } from "../../lib/structured-log";
  * after DEX publication), not in this quarter-hourly slot.
  */
 import { syncStablecoins } from "../../cron/sync-stablecoins";
-import {
-  isPriceCorroborationSlot,
-  runPriceCorroboration,
-  summarizePriceCorroboration,
-} from "../../cron/sync-stablecoins/price-corroboration";
 import { syncFxRates } from "../../cron/sync-fx-rates";
 import { snapshotSupply } from "../../cron/snapshot-supply";
 import { snapshotChainSupply } from "../../cron/snapshot-chain-supply";
@@ -67,39 +61,6 @@ export async function runQuarterHourlySlot(runtime: ScheduledRuntimeContext) {
   const stablecoinsResult = stablecoinsOutcome.result;
   const stablecoinsCapabilities = parseStablecoinsCapabilities(stablecoinsResult);
   const stablecoinsCacheSafe = stablecoinsCapabilities.stablecoinsCache;
-  if (stablecoinsCacheSafe && isPriceCorroborationSlot(runtime.slotStartedAt)) {
-    try {
-      const corroboration = await runPriceCorroboration({
-        db: runtime.db,
-        syncStartSec: runtime.slotStartedAt,
-        signal: runtime.slotSignal,
-        cmcApiKey: runtime.env.CMC_API_KEY,
-        jupiterApiKey: runtime.env.JUPITER_API_KEY,
-        coingeckoApiKey: runtime.coingeckoApiKey,
-        addressProvider: {
-          enabledProviders: runtime.env.ADDRESS_PRICE_PROVIDERS_ENABLED,
-          cgApiKey: runtime.coingeckoApiKey,
-        },
-      });
-      const summary = summarizePriceCorroboration(corroboration);
-      await logCronEvent(runtime.db, {
-        job: "sync-stablecoins",
-        eventType: "price-corroboration",
-        severity: summary.failedPasses.length > 0 || summary.providerDiagnostics.some((row) => !row.success)
-          ? "warning" : "info",
-        message: `Hourly price corroboration refreshed ${corroboration.cacheEntriesWritten}/${corroboration.cohortSize} cache rows`,
-        metadata: { slotStartedAt: runtime.slotStartedAt, workerVersion: runtime.workerVersion ?? null, ...summary },
-      });
-    } catch (error) {
-      await logCronEvent(runtime.db, {
-        job: "sync-stablecoins", eventType: "price-corroboration", severity: "warning",
-        message: "Hourly price corroboration failed after stablecoin publication",
-        metadata: { slotStartedAt: runtime.slotStartedAt, workerVersion: runtime.workerVersion ?? null,
-          errorClass: error instanceof Error && ["Error", "TypeError", "RangeError", "TimeoutError", "AbortError"].includes(error.name)
-            ? error.name : "unknown-error" },
-      });
-    }
-  }
   if (stablecoinsResult && !stablecoinsCacheSafe) {
     logWorkerEventArgs("handler", "warn", "[cron] sync-stablecoins completed without downstream-safe cache write — skipping cache-dependent jobs");
   }

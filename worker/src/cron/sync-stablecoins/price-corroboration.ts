@@ -20,7 +20,8 @@ import { writePriceCorroborationObservations } from "./price-corroboration-obser
 const PRICE_CORROBORATION_SOURCE_DEPTH = 3;
 
 export function isPriceCorroborationSlot(scheduledAtSec: number): boolean {
-  return scheduledAtSec % (60 * 60) === 0;
+  // Collect after the :09 status checks, before the :15 primary publication.
+  return scheduledAtSec % (60 * 60) === 9 * 60;
 }
 
 export interface PriceCorroborationResult {
@@ -181,7 +182,10 @@ export async function runPriceCorroboration(params: {
   coingeckoApiKey?: string | null;
   addressProvider?: AddressPriceProviderRuntimeConfig;
 }): Promise<PriceCorroborationResult> {
-  const { previousAssetsById } = await loadPreviousStablecoinsById(params.db);
+  const { previousAssetsById, cacheState } = await loadPreviousStablecoinsById(params.db);
+  if (cacheState.state !== "ok") {
+    throw new Error("Price corroboration requires a valid published stablecoins cache");
+  }
   const cohort = buildPriceCorroborationCohort(previousAssetsById.values());
   const fallbackProbes = cohort.map(cloneAsFallbackProbe);
   const fallbackStats = await enrichMissingPrices(

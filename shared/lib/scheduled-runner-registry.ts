@@ -46,6 +46,7 @@ const SCHEDULED_SLOT_PLAN_INPUTS = {
       "data-invariant-canary",
       "cron-sentinel",
     ]],
+    budgetOnlyJobs: ["price-corroboration"],
   },
   sixHourlyBlacklist: {
     jobChains: [["sync-blacklist"]],
