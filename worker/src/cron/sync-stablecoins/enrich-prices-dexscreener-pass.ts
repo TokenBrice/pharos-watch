@@ -137,6 +137,7 @@ function buildDexScreenerTargets(asset: PeggedAsset): DexScreenerTarget[] {
 function selectDexScreenerBatch(
   candidates: RankedDexScreenerCandidate[],
   rotationCycle: number,
+  originalMissingPriceIds?: ReadonlySet<string>,
 ): DexScreenerBatchTarget[] {
   const targetsByChain = new Map<string, DexScreenerBatchTarget[]>();
   const maxTargetCount = Math.max(...candidates.map((entry) => entry.exactTargets.length));
@@ -153,9 +154,13 @@ function selectDexScreenerBatch(
     }
   }
 
-  const chainGroups = [...targetsByChain.entries()]
+  const allChainGroups = [...targetsByChain.entries()]
     .sort(([leftChain], [rightChain]) => leftChain.localeCompare(rightChain))
     .map(([, targets]) => targets);
+  const missingChainGroups = originalMissingPriceIds?.size
+    ? allChainGroups.filter((targets) => targets.some(({ entry }) => originalMissingPriceIds.has(entry.asset.id)))
+    : [];
+  const chainGroups = missingChainGroups.length > 0 ? missingChainGroups : allChainGroups;
   if (chainGroups.length === 0) return [];
 
   // DexScreener batches cannot cross chains. Rotate the selected chain each
@@ -164,11 +169,18 @@ function selectDexScreenerBatch(
   const chainIndex = ((rotationCycle % chainGroups.length) + chainGroups.length) % chainGroups.length;
   const chainTargets = chainGroups[chainIndex];
   const chainVisit = Math.floor(rotationCycle / chainGroups.length);
-  const targetOffset =
-    chainTargets.length > DEXSCREENER_BATCH_SIZE
-      ? (chainVisit * DEXSCREENER_BATCH_SIZE) % chainTargets.length
-      : 0;
-  return rotateValues(chainTargets, targetOffset).slice(0, DEXSCREENER_BATCH_SIZE);
+  const missingTargets = chainTargets.filter(({ entry }) => originalMissingPriceIds?.has(entry.asset.id));
+  const otherTargets = chainTargets.filter(({ entry }) => !originalMissingPriceIds?.has(entry.asset.id));
+  const selected: DexScreenerBatchTarget[] = [];
+  // Keep rotation within each priority tier; recovery consumes the same single
+  // request, while already-priced probes use only its spare capacity.
+  for (const targets of [missingTargets, otherTargets]) {
+    const capacity = DEXSCREENER_BATCH_SIZE - selected.length;
+    if (capacity === 0) break;
+    const offset = targets.length > capacity ? (chainVisit * capacity) % targets.length : 0;
+    selected.push(...rotateValues(targets, offset).slice(0, capacity));
+  }
+  return selected;
 }
 
 function getDexPairTrackedTokenSymbol(
@@ -233,6 +245,7 @@ export async function runDexScreenerPass(
    * weakened to a prefix at `ebe1340c7`.
    */
   nowMs?: number,
+  originalMissingPriceIds?: ReadonlySet<string>,
 ): Promise<EnrichPassResult> {
   let resolved = 0;
   const diagnostics: PricingProviderAttemptDiagnostic[] = [];
@@ -318,7 +331,7 @@ export async function runDexScreenerPass(
       parentSignal: signal,
     });
     const dexBudgetDeadlineMs = Date.now() + DEXSCREENER_PASS_BUDGET_MS;
-    const batch = selectDexScreenerBatch(dexCandidates, rotationCycle);
+    const batch = selectDexScreenerBatch(dexCandidates, rotationCycle, originalMissingPriceIds);
 
     try {
       throwIfAborted(passTimeout.signal);

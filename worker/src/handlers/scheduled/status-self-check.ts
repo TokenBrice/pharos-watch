@@ -79,6 +79,7 @@ export async function runStatusSelfCheckSlot(runtime: ScheduledRuntimeContext) {
         cmcApiKey: runtime.env.CMC_API_KEY,
         jupiterApiKey: runtime.env.JUPITER_API_KEY,
         coingeckoApiKey: runtime.coingeckoApiKey,
+        chainRpcs: runtime.chainRpcs,
         addressProvider: {
           enabledProviders: runtime.env.ADDRESS_PRICE_PROVIDERS_ENABLED,
           cgApiKey: runtime.coingeckoApiKey,

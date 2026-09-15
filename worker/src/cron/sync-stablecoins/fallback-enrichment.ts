@@ -86,6 +86,7 @@ export async function runFallbackPriceEnrichmentPhase(
     { itemsTotal: input.assets.length },
   );
   const enrichmentPhase = await runMissingPriceEnrichmentPhase({
+    chainRpcs: input.chainRpcs,
     assets: input.assets,
     db: input.db,
     syncStartSec: input.syncStartSec,

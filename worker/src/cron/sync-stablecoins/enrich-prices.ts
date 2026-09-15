@@ -1,3 +1,4 @@
+import type { ChainRpcConfig } from "../../lib/chain-registry";
 import { throwIfAborted } from "../../lib/abort";
 import type { PricingProviderAttemptDiagnostic } from "../../lib/pricing-provider-diagnostics";
 import { hasMissingPrice, type PeggedAsset } from "./enrich-prices-shared";
@@ -34,6 +35,8 @@ export async function enrichMissingPrices(
   coingeckoApiKey?: string | null,
   onProgress?: EnrichmentProgressReporter,
   previousMissingGenerationsById?: ReadonlyMap<string, number>,
+  originalMissingPriceIds?: ReadonlySet<string>,
+  chainRpcs?: Map<string, ChainRpcConfig>,
 ): Promise<EnrichmentStats> {
   throwIfAborted(signal);
   const totalMissing = assets.filter(hasMissingPrice).length;
@@ -65,6 +68,8 @@ export async function enrichMissingPrices(
     fxRates,
     signal,
     previousMissingGenerationsById,
+    originalMissingPriceIds,
+    chainRpcs,
     onProgress: async (progress) => {
       await onProgress?.({
         phase: progress.phase,

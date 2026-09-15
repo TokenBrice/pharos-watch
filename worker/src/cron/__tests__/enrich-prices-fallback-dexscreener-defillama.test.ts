@@ -16,6 +16,27 @@ import { DEXSCREENER_ROTATION_INTERVAL_MS } from "../sync-stablecoins/enrich-pri
 
 describe("enrichMissingPrices", () => {
   afterEach(cleanupEnrichMissingPricesTest);
+  it.each([true, false])("prefers the freshest usable DL deployment (newer symbol valid: %s)", async (validSymbol) => {
+    const now = Math.floor(Date.now() / 1000);
+    const assets = [makePeggedAsset({
+      id: "test-usd", symbol: "TEST", price: null,
+      address: "0x1111111111111111111111111111111111111111", chains: ["Ethereum", "Base"],
+    })];
+    const fetchSpy = fixtureMockFetch([{
+      match: "coins.llama.fi/prices",
+      body: { coins: {
+        "ethereum:0x1111111111111111111111111111111111111111": dlQuote(1, "TEST", { timestamp: now - 800 }),
+        "base:0x1111111111111111111111111111111111111111": dlQuote(1.01, validSymbol ? "TEST" : "OTHER", { timestamp: now - 30 }),
+      } },
+    }]);
+    const result = await fixtureRunDlContractPasses(assets, undefined);
+    expect(result.resolved).toBe(1);
+    expect(assets[0]).toMatchObject({
+      price: validSymbol ? 1.01 : 1,
+      priceObservedAt: now - (validSymbol ? 30 : 800),
+    });
+    expect(fetchSpy).toHaveBeenCalledTimes(1);
+  });
   it("closes the stale DexScreener exact circuit when no exact candidates remain", async () => {
     const openedAt = Math.floor(Date.now() / 1000) - 3600;
     const db = fixtureMockD1([
@@ -92,6 +113,42 @@ describe("enrichMissingPrices", () => {
       resolved: 0,
       failures: [],
     });
+  });
+
+  it("spends the DexScreener batch on original missing chains and uses spare capacity for probes", async () => {
+    const make = (id: string, chain: string, suffix: number) => makePeggedAsset({
+      id, price: null, address: `${chain}:0x${suffix.toString(16).padStart(40, "0")}`,
+      circulating: { peggedUSD: id.startsWith("probe") ? 1_000_000 : 1 },
+    });
+    const assets = [make("probe-base", "base", 1), make("probe-eth", "ethereum", 2),
+      make("missing-eth", "ethereum", 3), make("missing-sol", "solana", 4)];
+    const missing = new Set(["missing-eth", "missing-sol"]);
+    const fetchSpy = fixtureMockFetch();
+    await fixtureRunDexScreenerPass(assets, undefined, undefined, undefined, undefined, 0, missing);
+    await fixtureRunDexScreenerPass(assets, undefined, undefined, undefined, undefined,
+      DEXSCREENER_ROTATION_INTERVAL_MS, missing);
+    expect(fetchSpy).toHaveBeenCalledTimes(2);
+    const first = String(fetchSpy.mock.calls[0]?.[0]);
+    expect(first).toContain("/ethereum/");
+    expect(first.indexOf("0003")).toBeLessThan(first.indexOf("0002"));
+    expect(first).not.toContain("0001");
+    expect(String(fetchSpy.mock.calls[1]?.[0])).toContain("/solana/");
+  });
+
+  it("rotates every original missing target under the unchanged 30-address cap", async () => {
+    const assets = Array.from({ length: 32 }, (_, index) => makePeggedAsset({
+      id: `missing-${index}`, price: null,
+      address: `ethereum:0x${index.toString(16).padStart(40, "0")}`,
+    }));
+    const missing = new Set(assets.map(({ id }) => id));
+    const fetchSpy = fixtureMockFetch();
+    await fixtureRunDexScreenerPass(assets, undefined, undefined, undefined, undefined, 0, missing);
+    await fixtureRunDexScreenerPass(assets, undefined, undefined, undefined, undefined,
+      DEXSCREENER_ROTATION_INTERVAL_MS, missing);
+    const selections = fetchSpy.mock.calls.map(([url]) => new URL(String(url)).pathname.split("/").slice(-1)[0].split(","));
+    expect(selections).toHaveLength(2);
+    expect(selections.every((addresses) => addresses.length === 30)).toBe(true);
+    expect(new Set(selections.flat()).size).toBe(32);
   });
 
   it("uses tracked metadata to select an exact DexScreener target", async () => {

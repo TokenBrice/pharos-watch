@@ -500,6 +500,28 @@ describe("enrichMissingPrices", () => {
     expect(fetchSpy).not.toHaveBeenCalled();
   });
 
+  it("prioritizes original missing prices while rotating spare CMC capacity", () => {
+    const candidates = Array.from({ length: 50 }, (_, index) => ({
+      index,
+      asset: makePeggedAsset({ id: `coin-${index}`, cmcSlug: `coin-${index}`, price: null }),
+    }));
+    const missing = new Set(["coin-49"]);
+    const first = selectRotatedCmcCandidates(candidates, 0, missing).map(({ asset }) => asset.id);
+    const second = selectRotatedCmcCandidates(candidates, 3_600, missing).map(({ asset }) => asset.id);
+    const third = selectRotatedCmcCandidates(candidates, 7_200, missing).map(({ asset }) => asset.id);
+    expect(first).toHaveLength(25);
+    expect(first[0]).toBe("coin-49");
+    expect(second[0]).toBe("coin-49");
+    expect(new Set([...first, ...second, ...third]).size).toBe(50);
+
+    const manyMissing = new Set(candidates.slice(20).map(({ asset }) => asset.id));
+    const missingFirst = selectRotatedCmcCandidates(candidates, 0, manyMissing);
+    const missingNext = selectRotatedCmcCandidates(candidates, 3_600, manyMissing);
+    expect(missingFirst).toHaveLength(25);
+    expect([...missingFirst, ...missingNext].every(({ asset }) => manyMissing.has(asset.id))).toBe(true);
+    expect(new Set([...missingFirst, ...missingNext].map(({ asset }) => asset.id)).size).toBe(30);
+  });
+
   it("rotates targeted candidates at the hourly quota boundary", () => {
     const candidates = Array.from({ length: 26 }, (_, index) => ({
       index,

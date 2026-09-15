@@ -10,6 +10,7 @@ import {
   type PeggedAsset,
 } from "./enrich-prices.test-support";
 import { makePeggedAsset } from "../sync-stablecoins/__tests__/_fixtures";
+import { buildChainRpcs } from "../../lib/chain-registry";
 
 
 
@@ -17,6 +18,34 @@ import { makePeggedAsset } from "../sync-stablecoins/__tests__/_fixtures";
 
 describe("enrichMissingPrices", () => {
   afterEach(cleanupEnrichMissingPricesTest);
+  it.each([false, true])("uses configured Solana references with bounded public fallback (keyed failure: %s)", async (keyedFailure) => {
+    const currentSlot = 418_913_760;
+    const assets = [makePeggedAsset({ id: "usdg-paxos", symbol: "USDG", price: 0 })];
+    const chainRpcs = buildChainRpcs("test-alchemy-secret", "test-drpc-secret");
+    const fetchSpy = fixtureMockFetch([
+      { match: "solana-mainnet.g.alchemy.com/v2/", matchHeaders: { Authorization: "Bearer test-alchemy-secret" },
+        status: keyedFailure ? 503 : 200, body: keyedFailure ? "test-alchemy-secret" : solanaSlotResponse(currentSlot) },
+      { match: "lb.drpc.org/ogrpc", respond: () => new Response("invalid JSON test-drpc-secret") },
+      { match: "solana-rpc.publicnode.com", body: solanaSlotResponse(currentSlot) },
+      { match: "api.jup.ag/price/v3", body: {
+        "2u1tszSeqZ3qBWF3uNGPFc8TzMk2tdiwknnRMWGWjGWH": {
+          usdPrice: 1.0002, decimals: 6, blockId: currentSlot - 20,
+        },
+      } },
+    ]);
+    const result = await fixtureRunJupiterPass(assets, undefined, undefined, undefined, undefined, chainRpcs);
+    expect(result.resolved).toBe(1);
+    const slotCalls = fetchSpy.getHistory().filter((entry) => entry.body?.includes('"method":"getSlot"'));
+    expect(slotCalls.map((entry) => new URL(entry.url).hostname)).toEqual(keyedFailure
+      ? ["solana-mainnet.g.alchemy.com", "lb.drpc.org", "solana-rpc.publicnode.com"]
+      : ["solana-mainnet.g.alchemy.com"]);
+    expect(result.diagnostics).toEqual(expect.arrayContaining([expect.objectContaining({
+      endpoint: keyedFailure ? "solana-rpc.publicnode.com/" : "solana-mainnet.g.alchemy.com/v2/",
+      success: true, responseRowCount: 1,
+    })]));
+    expect(JSON.stringify(result.diagnostics)).not.toContain("test-alchemy-secret");
+    expect(JSON.stringify(result.diagnostics)).not.toContain("test-drpc-secret");
+  });
   it("fills missing Solana prices from documented Jupiter V3 payloads without liquidity", async () => {
     const currentSlot = 418_913_760;
     const assets: PeggedAsset[] = [

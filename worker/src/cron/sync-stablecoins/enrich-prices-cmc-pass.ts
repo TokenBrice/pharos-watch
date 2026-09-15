@@ -76,13 +76,27 @@ interface CmcVerifiedTargetedQuote {
 export function selectRotatedCmcCandidates(
   candidates: readonly CmcTargetedCandidate[],
   nowSec = Math.floor(Date.now() / 1_000),
+  originalMissingPriceIds?: ReadonlySet<string>,
 ): CmcTargetedCandidate[] {
-  if (candidates.length <= CMC_TARGETED_MAX_SLUGS) return [...candidates];
-  const start = (Math.floor(nowSec / CMC_FETCH_COOLDOWN_SEC) * CMC_TARGETED_MAX_SLUGS) % candidates.length;
-  return Array.from(
-    { length: CMC_TARGETED_MAX_SLUGS },
-    (_, offset) => candidates[(start + offset) % candidates.length]!,
-  );
+  const groups = originalMissingPriceIds?.size
+    ? [
+        candidates.filter(({ asset }) => originalMissingPriceIds.has(asset.id)),
+        candidates.filter(({ asset }) => !originalMissingPriceIds.has(asset.id)),
+      ]
+    : [candidates];
+  const selected: CmcTargetedCandidate[] = [];
+  for (const group of groups) {
+    const capacity = CMC_TARGETED_MAX_SLUGS - selected.length;
+    if (capacity === 0) break;
+    const start = group.length > capacity
+      ? (Math.floor(nowSec / CMC_FETCH_COOLDOWN_SEC) * capacity) % group.length
+      : 0;
+    selected.push(...Array.from(
+      { length: Math.min(capacity, group.length) },
+      (_, offset) => group[(start + offset) % group.length]!,
+    ));
+  }
+  return selected;
 }
 
 function buildSkippedCmcAttempts(
@@ -492,6 +506,7 @@ export async function runCmcPass(
   fxRates: Record<string, number> | undefined,
   db: D1Database | undefined,
   signal?: AbortSignal,
+  originalMissingPriceIds?: ReadonlySet<string>,
 ): Promise<EnrichPassResult> {
   let resolved = 0;
   const diagnostics: PricingProviderAttemptDiagnostic[] = [];
@@ -676,7 +691,7 @@ export async function runCmcPass(
 
         const allTargetedCandidates = collectMissingPriceCandidates(assets)
           .filter((entry) => entry.asset.cmcSlug != null);
-        const targetedCandidates = selectRotatedCmcCandidates(allTargetedCandidates);
+        const targetedCandidates = selectRotatedCmcCandidates(allTargetedCandidates, undefined, originalMissingPriceIds);
         if (targetedCandidates.length > 0) {
           providerAttempts += 1;
           const targeted = await fetchTargetedCmcQuotes({

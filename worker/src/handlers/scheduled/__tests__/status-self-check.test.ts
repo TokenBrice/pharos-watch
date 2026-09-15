@@ -98,7 +98,7 @@ describe("hourly corroboration before the next publication", () => {
       surface: "price-corroboration", outcome: failed ? "degraded" : "ok", dueCount: 2, processedCount: 1,
     }));
     expect(mocks.runPriceCorroboration).toHaveBeenCalledWith(expect.objectContaining({
-      signal: ctx.slotSignal, syncStartSec: 4140,
+      signal: ctx.slotSignal, syncStartSec: 4140, chainRpcs: ctx.chainRpcs,
     }));
     expect(mocks.logCronEvent).toHaveBeenCalledWith(ctx.db, expect.objectContaining({
       job: "sync-stablecoins", eventType: "price-corroboration", severity: failed ? "warning" : "info",
