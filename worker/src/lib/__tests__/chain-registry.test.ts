@@ -35,6 +35,11 @@ describe("buildChainRpcs", () => {
     expect(config?.alchemyPrimary).toBeUndefined();
   });
 
+  it("uses the public Fantom endpoint without a key and as the keyed fallback", () => {
+    expect(buildChainRpcs().get("fantom")?.rpcUrl).toBe("https://fantom.drpc.org");
+    expect(buildChainRpcs(undefined, "test-key").get("fantom")?.fallbackRpcUrl).toBe("https://fantom.drpc.org");
+  });
+
   it("keeps Alchemy API keys out of RPC URLs", () => {
     const ethereum = buildChainRpcs("test-key").get("ethereum");
 

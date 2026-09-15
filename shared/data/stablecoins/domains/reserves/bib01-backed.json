@@ -8,13 +8,20 @@
       "risk": "low",
       "assetClass": "fund-share",
       "issuerOrObligor": "iShares $ Treasury Bond 0-1yr UCITS ETF",
-      "riskFactors": ["duration", "liquidity", "custody", "counterparty", "legal", "concentration"],
+      "riskFactors": [
+        "duration",
+        "liquidity",
+        "custody",
+        "counterparty",
+        "legal",
+        "concentration"
+      ],
       "liquidityHorizon": "unknown"
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-21",
-    "reviewer": "OpenAI Codex V9 NR-recovery review",
+    "reviewedAt": "2026-09-15",
+    "reviewer": "Pharos reserve evidence recovery review",
     "confidence": "verified",
     "sources": [
       {
@@ -28,9 +35,13 @@
       {
         "label": "Backed public assetReserves GraphQL feed - IB01.L",
         "url": "https://api.backed.fi/graphql"
+      },
+      {
+        "label": "Backed issuer-maintained inventory exclusion policy (pinned commit)",
+        "url": "https://github.com/backed-fi/DefiLlama-Adapters/blob/f84435184a132be71222dfa3eedba8d3774c727e/projects/backed/index.js"
       }
     ],
-    "rationale": "Backed identifies bIB01 as a tracker certificate whose sole underlying is the iShares IB01 UCITS ETF. On July 21, 2026, Backed's public assetReserves feed reported 2,008 IB01 reserve shares against 1,967.285993046277 bIB01 in circulation, with Chainlink as provider. The reserve is recorded as one fund-share position; the proof does not justify decomposing the ETF's changing security-level holdings.",
+    "rationale": "Backed identifies bIB01 as a tracker certificate whose sole underlying is the iShares IB01 UCITS ETF. On July 21, 2026, Backed's public assetReserves feed reported 2,008 IB01 reserve shares against 1,967.285993046277 bIB01 in circulation, with Chainlink as provider. The reserve is recorded as one fund-share position; the proof does not justify decomposing the ETF's changing security-level holdings. September 15, 2026 review independently reproduced distributed circulation by subtracting the two issuer-documented working-capital and treasury inventories from same-block gross supply. All eight issuer-documented EVM deployments were checked, including zero-supply Fantom. Current raw amounts match the issuer API on every reported chain; omitted BSC and Fantom deployments independently have zero gross and circulating supply. This establishes a current distributed-certificate denominator without treating the undated API or gross premint inventory as current liabilities. The reserve oracle retains its own observation clock; no fund look-through or legal segregation is inferred.",
     "compositionBasis": "Backed bIB01 product disclosure and Chainlink/The Network Firm reserve proof",
     "compositionAsOf": "2026-07-21",
     "scope": "full-composition",

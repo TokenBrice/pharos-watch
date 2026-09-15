@@ -10,7 +10,8 @@ const PUBLIC_RPC_URLS: Record<string, string> = {
   avalanche: "https://api.avax.network/ext/bc/C/rpc",
   bsc: "https://bsc-dataseed.binance.org",
   gnosis: "https://rpc.gnosischain.com",
-  fantom: "https://rpc.ftm.tools",
+  // rpc.ftm.tools now requires a key; this public endpoint is listed by Fantom.
+  fantom: "https://fantom.drpc.org",
   sonic: "https://rpc.soniclabs.com",
   celo: "https://forno.celo.org",
   tron: "https://api.trongrid.io",

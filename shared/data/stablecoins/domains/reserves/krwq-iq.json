@@ -59,7 +59,7 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-09-14",
+    "reviewedAt": "2026-09-15",
     "reviewer": "Pharos reserve recovery review",
     "confidence": "verified",
     "sources": [
@@ -70,27 +70,43 @@
       {
         "label": "KRWQ transparency dashboard",
         "url": "https://krwq.cash/transparency"
+      },
+      {
+        "label": "Verified KRWQ USDC custodian",
+        "url": "https://eth.blockscout.com/address/0x5573b8db24043beE020C36Ee0Df32694DFFeF04C?tab=contract"
+      },
+      {
+        "label": "Verified KRWQ frxUSD custodian",
+        "url": "https://eth.blockscout.com/address/0x7e88aC6A9C2DaD21feA4dE6b54C764cA4D99C05D?tab=contract"
+      },
+      {
+        "label": "KRWQ custodian-owner Safe",
+        "url": "https://eth.blockscout.com/address/0x56398b89d53e8731bca8C1B06886CFB14BD6b654?tab=contract"
+      },
+      {
+        "label": "KRWQ Base treasury Safe",
+        "url": "https://base.blockscout.com/address/0xA3E0B562C6FD7D6F570B2afC2Cc4e240226D8B54?tab=contract"
       }
     ],
-    "rationale": "The September 14 issuer response reports USDC $90,102.080832, frxUSD $482,631.869317 and Base treasury USDC $105,708.960000. Values normalized over $678,442.910149 supply the three rounded weights. Ethereum custodian totalAssets reads reproduce the first two values. The treasury is currently USDC; a planned Korean Treasury Bond transition is not an observed bond holding. Holder identity and circulating-liability scope remain unverified and the live adapter remains degraded.",
+    "rationale": "The September 15 issuer response and on-chain reads reproduce USDC $90,102.080832, frxUSD $482,631.869317 and Base treasury USDC $105,708.960000. The existing rounded composition is unchanged. Verified Ethereum custodian implementations and live getters bind both holders to canonical KRWQ and their exact collateral tokens. The Base treasury Safe has the same five signers and 3-of-5 threshold as the Ethereum custodian-owner Safe at the reviewed blocks. The adapter pins the three reviewed holders and checks live custodian token bindings; Safe control is dated research, not continuously monitored. Owner recovery functions permit withdrawal of collateral. The planned Korean Treasury Bond sleeve is not an observed holding; circulating-liability scope remains unresolved.",
     "compositionBasis": "KRWQ live custodian asset values normalized by current USD value",
     "compositionAsOf": "2026-09-14",
     "scope": "full-composition",
-    "knownUnknownExposure": "The three collateral token categories are identified. This classification review does not verify custodian/treasury control or reconcile cross-chain KRWQ liabilities.",
+    "knownUnknownExposure": "Collateral categories and reviewed holder/control bindings are identified. Cross-chain circulating liabilities, legal segregation, bankruptcy treatment and rehypothecation terms remain unverified.",
     "knownUnknownExposurePct": 0,
     "nonLinkDispositions": []
   },
   "custodyProfile": {
     "providers": [
       {
-        "name": "Issuer-reported Ethereum custodian contracts and Base treasury",
+        "name": "Reviewed Ethereum custodian contracts and Base treasury Safe",
         "role": "other"
       }
     ],
     "segregation": "unknown",
     "bankruptcyRemoteness": "unknown",
     "rehypothecation": "unknown",
-    "reviewedAt": "2026-09-14",
+    "reviewedAt": "2026-09-15",
     "reviewer": "Pharos reserve recovery review",
     "confidence": "manual-review",
     "sources": [
@@ -101,8 +117,24 @@
       {
         "label": "KRWQ transparency dashboard",
         "url": "https://krwq.cash/transparency"
+      },
+      {
+        "label": "Verified KRWQ USDC custodian",
+        "url": "https://eth.blockscout.com/address/0x5573b8db24043beE020C36Ee0Df32694DFFeF04C?tab=contract"
+      },
+      {
+        "label": "Verified KRWQ frxUSD custodian",
+        "url": "https://eth.blockscout.com/address/0x7e88aC6A9C2DaD21feA4dE6b54C764cA4D99C05D?tab=contract"
+      },
+      {
+        "label": "KRWQ custodian-owner Safe",
+        "url": "https://eth.blockscout.com/address/0x56398b89d53e8731bca8C1B06886CFB14BD6b654?tab=contract"
+      },
+      {
+        "label": "KRWQ Base treasury Safe",
+        "url": "https://base.blockscout.com/address/0xA3E0B562C6FD7D6F570B2afC2Cc4e240226D8B54?tab=contract"
       }
     ],
-    "uncertainty": "The API exposes two Ethereum custodians and a Base treasury holding USDC. Ethereum totalAssets balances were reproduced, but the actual vault-to-KRWQ binding, treasury control, segregation, bankruptcy treatment and rehypothecation terms have not been independently established. Shinhan Securities was associated with the proposed Korean Treasury Bond sleeve; the current source reports treasury USDC, not a bond balance."
+    "uncertainty": "September 15 verified code and pinned reads bind the Ethereum custodians to KRWQ and canonical USDC/frxUSD. Both custodian-owner and Base treasury Safes have the same five signers and 3-of-5 threshold at review; signers are not independently identified humans and future control changes are not continuously monitored. Owner recoverERC20 allows collateral withdrawal and proxies are upgradeable. Segregation, bankruptcy treatment and rehypothecation terms remain unverified. The current treasury holds USDC, not the planned Korean Treasury Bond sleeve."
   }
 }

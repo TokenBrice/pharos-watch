@@ -14,7 +14,7 @@
   },
   "bridgeRouteRisk": {
     "tier": "issuer-native-burn-mint",
-    "summary": "bC3M is issuer-minted natively by Backed on each of the seven deployments (same token address via CREATE2); mint authority per chain is covered by the reviewed mint-authority controls. No third-party bridge carries the claim.",
+    "summary": "bC3M is issuer-minted natively by Backed on each of the eight deployments (same token address via CREATE2); mint authority per chain is covered by the reviewed mint-authority controls. No third-party bridge carries the claim. Fantom was separately reviewed on September 15, 2026 as native issuance with a 3-of-5 minter, separate 2-of-3 token owner and single-EOA proxy upgrader; no Fantom bridge rail is asserted.",
     "reviewedAt": "2026-07-20",
     "reviewer": "Codex bridge route review; Kimi P2 control cohort dc-4 (lead dai-makerdao)",
     "confidence": "probable",
@@ -211,6 +211,35 @@
           {
             "label": "Backed Finance",
             "url": "https://backed.fi/"
+          }
+        ]
+      },
+      {
+        "id": "fantom:0x2f123cf3f37ce3328cc9b5b8415f9ec5109b45e7",
+        "destinationChain": "fantom",
+        "contractAddress": "0x2f123cf3f37ce3328cc9b5b8415f9ec5109b45e7",
+        "protocol": "Backed native multichain issuance",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "bC3M is an issuer-listed native Fantom deployment. Pinned name, symbol and decimals 18 match; transparent proxy implementation and admin bytecode match reviewed Backed code. Minter is 3-of-5 Safe, token owner 2-of-3 Safe, but ProxyAdmin owner is a single EOA, separately scoped in Mint Authority. Gross and net supply were zero at review; that does not remove mint or upgrade authority.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-09-15",
+        "sources": [
+          {
+            "label": "Backed bC3M official Fantom deployment",
+            "url": "https://assets.backed.fi/products/bc3m"
+          },
+          {
+            "label": "Fantom bC3M token",
+            "url": "https://ftmscan.com/address/0x2f123cf3f37ce3328cc9b5b8415f9ec5109b45e7#code"
+          },
+          {
+            "label": "Backed verified token implementation (matching Fantom runtime code)",
+            "url": "https://etherscan.io/address/0x28a0b491650fe761c8a66528422bc7ca24ecaeda#code"
           }
         ]
       }

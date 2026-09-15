@@ -4,7 +4,7 @@
     "mintPath": "issuer-direct-mint",
     "authorityPosture": "unbounded-reconciled",
     "confidence": "verified",
-    "summary": "bC3M has independently mintable native transparent proxies on seven chains. Three chain-group Safe authorities can mint without an on-chain cap, while every chain-local token owner and ProxyAdmin owner resolves to the same separate zero-delay 2-of-3 EOA signer set.",
+    "summary": "bC3M has independently mintable native transparent proxies on eight chains. The seven previously reviewed chains retain their dated Safe-control evidence. Fantom has a separately reviewed 3-of-5 direct minter and 2-of-3 token owner, but its ProxyAdmin is owned by one EOA with no on-chain delay. All native mint paths are uncapped.",
     "upgradeability": {
       "model": "transparent-proxy",
       "deploymentRefs": [
@@ -14,7 +14,8 @@
         "bsc:0x2f123cf3f37ce3328cc9b5b8415f9ec5109b45e7",
         "ethereum:0x2f123cf3f37ce3328cc9b5b8415f9ec5109b45e7",
         "gnosis:0x2f123cf3f37ce3328cc9b5b8415f9ec5109b45e7",
-        "polygon:0x2f123cf3f37ce3328cc9b5b8415f9ec5109b45e7"
+        "polygon:0x2f123cf3f37ce3328cc9b5b8415f9ec5109b45e7",
+        "fantom:0x2f123cf3f37ce3328cc9b5b8415f9ec5109b45e7"
       ],
       "proxyAddresses": [
         "0x2f123cf3f37ce3328cc9b5b8415f9ec5109b45e7"
@@ -37,6 +38,18 @@
         {
           "label": "Backed ProxyAdmin",
           "url": "https://etherscan.io/address/0xf2057bdff8439dbffce073e14a9854945d5e5644#code"
+        },
+        {
+          "label": "Backed bC3M official Fantom deployment",
+          "url": "https://assets.backed.fi/products/bc3m"
+        },
+        {
+          "label": "Fantom bC3M token",
+          "url": "https://ftmscan.com/address/0x2f123cf3f37ce3328cc9b5b8415f9ec5109b45e7#code"
+        },
+        {
+          "label": "Backed verified token implementation (matching Fantom runtime code)",
+          "url": "https://etherscan.io/address/0x28a0b491650fe761c8a66528422bc7ca24ecaeda#code"
         }
       ]
     },
@@ -243,6 +256,164 @@
             "url": "https://etherscan.io/address/0x22f2dfe84a2eacfe5d3ca81d26e610cb94eb1603"
           }
         ]
+      },
+      {
+        "chain": "fantom",
+        "address": "0x8768cda7a463dae1baa6b2500efb025ebd7ffc50",
+        "deploymentRefs": [
+          "fantom:0x2f123cf3f37ce3328cc9b5b8415f9ec5109b45e7"
+        ],
+        "label": "Backed Fantom direct-minter Safe",
+        "role": "direct-minter",
+        "authorityType": "safe",
+        "directMintAbility": "direct",
+        "canRaiseCap": true,
+        "capDescription": "No on-chain mint cap; the configured minter may mint an arbitrary uint256 amount.",
+        "threshold": 3,
+        "signerCount": 5,
+        "timelockDelaySec": 0,
+        "modulesOrGuardsStatus": "none-detected",
+        "failureDomainKeys": [
+          "fantom:0x8768cda7a463dae1baa6b2500efb025ebd7ffc50"
+        ],
+        "safe": {
+          "owners": [
+            "0xce54047c812434da2c03ce58dc3097459ba87056",
+            "0x5f7a4c11bde4f218f0025ef444c369d838ffa2ad",
+            "0x414f6cb44cd975165f8299a5ccbed92aa1a26f58",
+            "0x297c815a70ec3cf394aa3db5b4aa166448961541",
+            "0xa0807ca21101fd097b60795a786569f6a5f5522e"
+          ],
+          "threshold": 3,
+          "enabledModules": [],
+          "guard": "0x0000000000000000000000000000000000000000",
+          "fallbackHandler": "0xf48f2b2d2a534e402487b3ee7c18c33aec0fe5e4",
+          "masterCopy": "0x3e5c63644e683549055b9be8653de26e0b4cd36e",
+          "version": "1.3.0",
+          "observedBlock": 123272963,
+          "observedAt": "2026-09-15",
+          "source": "onchain"
+        },
+        "observedAt": "2026-09-15",
+        "observedBlock": 123272963,
+        "evidence": "At Fantom block 123272963, token minter() returns this Safe. Its separately read signer set and threshold are recorded above; modules and guard are absent. Matching Backed implementation bytecode proves uncapped direct mint ability.",
+        "sources": [
+          {
+            "label": "Backed bC3M official Fantom deployment",
+            "url": "https://assets.backed.fi/products/bc3m"
+          },
+          {
+            "label": "Fantom bC3M token",
+            "url": "https://ftmscan.com/address/0x2f123cf3f37ce3328cc9b5b8415f9ec5109b45e7#code"
+          },
+          {
+            "label": "Backed verified token implementation (matching Fantom runtime code)",
+            "url": "https://etherscan.io/address/0x28a0b491650fe761c8a66528422bc7ca24ecaeda#code"
+          },
+          {
+            "label": "Fantom Safe",
+            "url": "https://ftmscan.com/address/0x8768cda7a463dae1baa6b2500efb025ebd7ffc50"
+          }
+        ]
+      },
+      {
+        "chain": "fantom",
+        "address": "0x49754062e35f7591b93cc4f9915965be89643a65",
+        "deploymentRefs": [
+          "fantom:0x2f123cf3f37ce3328cc9b5b8415f9ec5109b45e7"
+        ],
+        "label": "Backed Fantom token-owner Safe",
+        "role": "minter-admin",
+        "authorityType": "safe",
+        "directMintAbility": "can-authorize",
+        "canRaiseCap": true,
+        "capDescription": "No on-chain mint cap; the token owner can replace the configured uncapped minter.",
+        "threshold": 2,
+        "signerCount": 3,
+        "timelockDelaySec": 0,
+        "modulesOrGuardsStatus": "none-detected",
+        "failureDomainKeys": [
+          "fantom:0x49754062e35f7591b93cc4f9915965be89643a65"
+        ],
+        "safe": {
+          "owners": [
+            "0x2860a2051a93113cb6e931022b658ed1dc68d444",
+            "0xe25b606f393b60adcb85cc127a2d79f78c9cb658",
+            "0xb6aa1f2e164f6160b1d3cf7307c9aa4aac7690f5"
+          ],
+          "threshold": 2,
+          "enabledModules": [],
+          "guard": "0x0000000000000000000000000000000000000000",
+          "fallbackHandler": "0xf48f2b2d2a534e402487b3ee7c18c33aec0fe5e4",
+          "masterCopy": "0x3e5c63644e683549055b9be8653de26e0b4cd36e",
+          "version": "1.3.0",
+          "observedBlock": 123272963,
+          "observedAt": "2026-09-15",
+          "source": "onchain"
+        },
+        "observedAt": "2026-09-15",
+        "observedBlock": 123272963,
+        "evidence": "At Fantom block 123272963, token owner() returns this Safe. Its separately read signer set and threshold are recorded above; modules and guard are absent. Matching Backed implementation bytecode proves ability to replace the minter; this Safe is not the Fantom ProxyAdmin owner.",
+        "sources": [
+          {
+            "label": "Backed bC3M official Fantom deployment",
+            "url": "https://assets.backed.fi/products/bc3m"
+          },
+          {
+            "label": "Fantom bC3M token",
+            "url": "https://ftmscan.com/address/0x2f123cf3f37ce3328cc9b5b8415f9ec5109b45e7#code"
+          },
+          {
+            "label": "Backed verified token implementation (matching Fantom runtime code)",
+            "url": "https://etherscan.io/address/0x28a0b491650fe761c8a66528422bc7ca24ecaeda#code"
+          },
+          {
+            "label": "Fantom Safe",
+            "url": "https://ftmscan.com/address/0x49754062e35f7591b93cc4f9915965be89643a65"
+          }
+        ]
+      },
+      {
+        "chain": "fantom",
+        "address": "0x2860a2051a93113cb6e931022b658ed1dc68d444",
+        "deploymentRefs": [
+          "fantom:0x2f123cf3f37ce3328cc9b5b8415f9ec5109b45e7"
+        ],
+        "label": "Backed Fantom single-EOA ProxyAdmin owner",
+        "role": "proxy-admin",
+        "authorityType": "eoa",
+        "directMintAbility": "upgrade-only",
+        "canRaiseCap": true,
+        "timelockDelaySec": 0,
+        "modulesOrGuardsStatus": "not-applicable",
+        "failureDomainKeys": [
+          "fantom:0x2860a2051a93113cb6e931022b658ed1dc68d444"
+        ],
+        "observedAt": "2026-09-15",
+        "observedBlock": 123272963,
+        "evidence": "At Fantom block 123272963, EIP-1967 admin is 0xf2057bdff8439dbffce073e14a9854945d5e5644 and its owner() is this address. eth_getCode returns 0x: this is a single EOA, not the 2-of-3 token-owner Safe. ProxyAdmin runtime bytecode matches the reviewed Ethereum contract and permits its owner to upgrade token logic without an on-chain delay. No key-custody attestation is asserted.",
+        "sources": [
+          {
+            "label": "Backed bC3M official Fantom deployment",
+            "url": "https://assets.backed.fi/products/bc3m"
+          },
+          {
+            "label": "Fantom bC3M token",
+            "url": "https://ftmscan.com/address/0x2f123cf3f37ce3328cc9b5b8415f9ec5109b45e7#code"
+          },
+          {
+            "label": "Backed verified token implementation (matching Fantom runtime code)",
+            "url": "https://etherscan.io/address/0x28a0b491650fe761c8a66528422bc7ca24ecaeda#code"
+          },
+          {
+            "label": "Fantom ProxyAdmin",
+            "url": "https://ftmscan.com/address/0xf2057bdff8439dbffce073e14a9854945d5e5644#code"
+          },
+          {
+            "label": "Fantom ProxyAdmin owner EOA",
+            "url": "https://ftmscan.com/address/0x2860a2051a93113cb6e931022b658ed1dc68d444"
+          }
+        ]
       }
     ],
     "economicCapSemantics": "unbounded",
@@ -274,9 +445,21 @@
         {
           "label": "Backed Assets Jersey registration document",
           "url": "https://www.mfsa.mt/wp-content/uploads/2025/06/Backed-Assets-JE-Limited-Registration-Document-dated-08-May-2025.pdf"
+        },
+        {
+          "label": "Backed bC3M official Fantom deployment",
+          "url": "https://assets.backed.fi/products/bc3m"
+        },
+        {
+          "label": "Fantom bC3M token",
+          "url": "https://ftmscan.com/address/0x2f123cf3f37ce3328cc9b5b8415f9ec5109b45e7#code"
+        },
+        {
+          "label": "Backed verified token implementation (matching Fantom runtime code)",
+          "url": "https://etherscan.io/address/0x28a0b491650fe761c8a66528422bc7ca24ecaeda#code"
         }
       ],
-      "evidence": "Pinned blocks were Ethereum 25526129, Gnosis 47187209, Base 48592766, Polygon 90179923, BSC 109812367, Arbitrum 483535601, and Avalanche 90233120. Every bC3M deployment was a transparent proxy at the tracked address with implementation 0x28a0b491650fe761c8a66528422bc7ca24ecaeda, ProxyAdmin 0xf2057bdff8439dbffce073e14a9854945d5e5644, and zero beacon. Proxy, implementation, and ProxyAdmin runtime hashes were identical across all seven chains. Direct minters were chain-local 2-of-3 or 3-of-5 Safes, and every token-owner/ProxyAdmin-owner Safe instance resolved to the same separate 2-of-3 EOA signer set. Verified mint() has no cap; setMinter() and ProxyAdmin upgrades are immediate owner-only actions. Economic-control evidence reviewed 2026-07-15: The Network Firm obtains custody data directly and Chainlink refreshes Backed proof-of-reserve values every 24 hours or after a material deviation. The Jersey registration document expressly does not confer regulated status on Backed Assets (JE) Limited, so the recurring reconciliation has no qualifying prudential supervisor. Economic-posture fields reviewed 2026-08-15: chain-local Safes can mint without a cap and a separate issuer-controlled Safe can immediately replace minters or proxy logic; recurring independent proof-of-reserve reporting exists without prudential issuer supervision.",
+      "evidence": "Pinned blocks were Ethereum 25526129, Gnosis 47187209, Base 48592766, Polygon 90179923, BSC 109812367, Arbitrum 483535601, and Avalanche 90233120. Every bC3M deployment was a transparent proxy at the tracked address with implementation 0x28a0b491650fe761c8a66528422bc7ca24ecaeda, ProxyAdmin 0xf2057bdff8439dbffce073e14a9854945d5e5644, and zero beacon. Proxy, implementation, and ProxyAdmin runtime hashes were identical across all seven chains. Direct minters were chain-local 2-of-3 or 3-of-5 Safes, and every token-owner/ProxyAdmin-owner Safe instance resolved to the same separate 2-of-3 EOA signer set. Verified mint() has no cap; setMinter() and ProxyAdmin upgrades are immediate owner-only actions. Economic-control evidence reviewed 2026-07-15: The Network Firm obtains custody data directly and Chainlink refreshes Backed proof-of-reserve values every 24 hours or after a material deviation. The Jersey registration document expressly does not confer regulated status on Backed Assets (JE) Limited, so the recurring reconciliation has no qualifying prudential supervisor. Economic-posture fields reviewed 2026-08-15: chain-local Safes can mint without a cap and a separate issuer-controlled Safe can immediately replace minters or proxy logic; recurring independent proof-of-reserve reporting exists without prudential issuer supervision. Separately reviewed September 15, 2026: Fantom block 123272963 adds the issuer-listed native deployment with matching token/admin runtime code, a 3-of-5 minter, a distinct 2-of-3 token-owner Safe and a zero-delay EOA ProxyAdmin owner. Fantom controls have their own observation dates; earlier chain reviews are not refreshed. The legacy aggregate upgrade reference retains its July review; the additional Fantom upgrade-only control independently carries its EOA authority and Fantom deployment scope.",
       "reviewer": "Codex Safety Score V9 registry pass; Sol economic-posture batch 2026-08-15",
       "reviewedAt": "2026-08-15"
     }

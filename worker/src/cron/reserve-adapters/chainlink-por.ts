@@ -4,7 +4,7 @@ import type { LiveReservesConfig, LiveReserveWarning } from "@shared/types/live-
 import { DAY_SECONDS } from "@shared/lib/time-constants";
 import { CHAIN_META, resolveChainId } from "@shared/lib/chains";
 import { parseLiveReserveAdapterParams, type LiveReserveAdapterParamsByKey } from "@shared/lib/live-reserve-adapters";
-import { DECIMALS_SELECTOR, LATEST_ROUND_DATA_SELECTOR } from "../../lib/evm-selectors";
+import { DECIMALS_SELECTOR, LATEST_ROUND_DATA_SELECTOR, TOTAL_SUPPLY_SELECTOR, encodeBalanceOfCallData } from "../../lib/evm-selectors";
 import { logWorkerEventArgs } from "../../lib/structured-log";
 import type { AdapterContext, AdapterResult } from "./types";
 import { requireChainlinkLatestRoundData } from "../../lib/chainlink-round-data";
@@ -22,6 +22,7 @@ import {
 import { buildDocumentedRedemptionTelemetry } from "./redemption";
 import { MAX_FUTURE_SOURCE_TIMESTAMP_SKEW_SEC } from "./validate";
 import { decodeUint256Word } from "./abi-decode";
+import { pinnedBlockPlan } from "./evm-observation-plan";
 const DEFAULT_MAX_ORACLE_AGE_SEC = 2 * DAY_SECONDS;
 
 export type ChainlinkPorReserveUnit = NonNullable<LiveReserveAdapterParamsByKey["chainlink-por"]["reserveUnit"]>;
@@ -108,6 +109,8 @@ export interface ChainlinkPorCirculationContribution {
  *  deployment matched a canonical configured contract (address + chain). */
 export interface ChainlinkPorCirculationAggregate {
   circulatingTokens: number;
+  verifiedAt?: number;
+  observations?: Array<{ chain: string; block: number; timestamp: number; grossRaw: string; excludedRaw: string }>;
   contributions: ChainlinkPorCirculationContribution[];
 }
 
@@ -268,6 +271,136 @@ async function fetchIssuerCirculation(
   }
 }
 
+// Reviewed issuer policy: backed-fi/DefiLlama-Adapters@f8443518,
+// projects/backed/index.js. These inventories are unsold certificates, not
+// distributed liabilities. Every current and historical deployment is read;
+// the timestamp-less issuer API must corroborate both gross and net exactly.
+const BACKED_INVENTORY_OWNERS = [
+  "0x5f7a4c11bde4f218f0025ef444c369d838ffa2ad",
+  "0x43624c744a4af40754ab19b00b6f681ca56f1e5b",
+] as const;
+const BACKED_CHAINS = ["ethereum", "polygon", "gnosis", "bsc", "avalanche", "fantom", "base", "arbitrum"];
+const BACKED_POLICIES: Record<string, { address: string; symbol: string; reserveSymbol: string; feed: string }> = {
+  "bc3m-backed": { address: "0x2f123cf3f37ce3328cc9b5b8415f9ec5109b45e7", symbol: "bC3M", reserveSymbol: "C3M.MI", feed: "0x648e0ff6a36d58f6fce5927cb77601b73cadc2af" },
+  "bib01-backed": { address: "0xca30c93b02514f86d5c86a6e375e3a330b435fb5", symbol: "bIB01", reserveSymbol: "IB01.L", feed: "0xad4395fc414fc1575a7a38c20b0bfdbdb09ee41a" },
+};
+
+// The API emits scientific-notation strings for uint256 quantities. Expand
+// them without Number rounding; reject fractional, negative or oversized units.
+export function parseBackedRawUnits(value: unknown): bigint | null {
+  if (typeof value === "number") return Number.isSafeInteger(value) && value >= 0 ? BigInt(value) : null;
+  if (typeof value !== "string" || value.length > 160) return null;
+  // Input is capped at 160 characters above; exponent expansion is bounded below.
+  // eslint-disable-next-line security/detect-unsafe-regex
+  const match = /^(\d+)(?:\.(\d+))?(?:[eE]\+?(\d{1,3}))?$/.exec(value);
+  if (!match) return null;
+  const fraction = match[2] ?? "";
+  const shift = Number(match[3] ?? 0) - fraction.length;
+  let digits = match[1] + fraction;
+  if (shift < 0) {
+    if (-shift > digits.length || !/^0*$/.test(digits.slice(shift))) return null;
+    digits = digits.slice(0, shift) || "0";
+  } else {
+    if (digits.length + shift > 160) return null;
+    digits += "0".repeat(shift);
+  }
+  const raw = BigInt(digits);
+  return raw < 2n ** 256n ? raw : null;
+}
+
+async function fetchVerifiedBackedCirculation(
+  coin: StablecoinMeta,
+  params: ChainlinkPorParams,
+  feedChain: string,
+  probe: ChainlinkPorIssuerCirculationProbe,
+  signal: AbortSignal,
+  ctx?: AdapterContext,
+): Promise<{ supply: ChainlinkPorSupplyAggregate; circulation: ChainlinkPorCirculationOutcome }> {
+  const policy = BACKED_POLICIES[coin.id];
+  const contracts = coin.contracts ?? [];
+  let supply: ChainlinkPorSupplyAggregate = {
+    contributions: [], omittedNonEvmChains: [], omittedReadFailureChains: BACKED_CHAINS,
+  };
+  try {
+    if (!policy || params.reserveUnit !== "SHARES" || params.porFeedAddress.toLowerCase() !== policy.feed
+      || feedChain !== "polygon" || probe.url !== "https://api.backed.fi/graphql" || probe.reserveSymbol !== policy.reserveSymbol
+      || contracts.length !== BACKED_CHAINS.length
+      || new Set(contracts.map((contract) => contract.chain)).size !== BACKED_CHAINS.length
+      || contracts.some((contract) => !BACKED_CHAINS.includes(contract.chain)
+        || contract.address.toLowerCase() !== policy.address || contract.decimals !== 18)) {
+      throw new Error("Backed reviewed deployment policy mismatch");
+    }
+    const now = ctx?.nowSec ?? Math.floor(Date.now() / 1000);
+    const settled = await Promise.allSettled(contracts.map(async (contract) => {
+      const plan = await pinnedBlockPlan({ chain: contract.chain, signal,
+        ctx: { ...ctx, observedBlock: ctx?.observedBlock?.chain === contract.chain ? ctx.observedBlock : undefined } });
+      if (now - plan.observedBlock.timestamp > 300 || plan.observedBlock.timestamp > now + MAX_FUTURE_SOURCE_TIMESTAMP_SKEW_SEC) {
+        throw new Error(`Backed ${contract.chain} observation block is not current`);
+      }
+      const calls = [
+        { label: "gross", contract: contract.address, data: TOTAL_SUPPLY_SELECTOR },
+        ...BACKED_INVENTORY_OWNERS.map((owner, index) => ({ label: `inventory${index}`, contract: contract.address, data: encodeBalanceOfCallData(owner) })),
+      ];
+      const rows = await fetchOnchainMulticall3({ chain: contract.chain, signal, ctx: plan.ctx, calls });
+      const values = calls.map((call) => {
+        const matches = rows?.filter((row) => row.label === call.label);
+        if (matches?.length !== 1 || !matches[0].success) throw new Error(`Backed ${contract.chain} ${call.label} read failed`);
+        const raw = decodeUint256Word(matches[0].returnData);
+        if (raw == null) throw new Error(`Backed ${contract.chain} ${call.label} malformed uint256`);
+        return raw;
+      });
+      const [gross, workingCapital, treasury] = values;
+      const excluded = workingCapital + treasury;
+      if (excluded > gross) throw new Error(`Backed ${contract.chain} inventory exceeds total supply`);
+      return { contract, gross, excluded, net: gross - excluded, block: plan.observedBlock };
+    }));
+    const reads = settled.map((result) => {
+      if (result.status === "rejected") throw result.reason;
+      return result.value;
+    });
+    supply = { contributions: reads.map((read) => ({ chain: read.contract.chain, tokenAddress: read.contract.address,
+      raw: read.gross, decimals: 18 })), omittedNonEvmChains: [], omittedReadFailureChains: [] };
+    const payload = await fetchJsonPostWithRetry<BackedAssetReservesResponse>(probe.url,
+      { query: BACKED_CIRCULATION_QUERY }, signal, 10_000, ctx);
+    const assets = payload.data?.assetReserves?.filter((row) => row.symbol === policy.reserveSymbol);
+    if (assets?.length !== 1 || assets[0].token?.length !== 1 || assets[0].token[0].symbol !== policy.symbol) {
+      throw new Error("Backed issuer asset/token identity mismatch");
+    }
+    const deployments = assets[0].token[0].deployments;
+    if (!deployments?.length) throw new Error("Backed issuer deployment list is empty");
+    const seen = new Set<string>();
+    for (const deployment of deployments) {
+      const numericChainId = Number(deployment.chainId);
+      const chain = Number.isSafeInteger(numericChainId) ? resolveChainId(numericChainId) : null;
+      const read = reads.find((entry) => entry.contract.chain === chain);
+      if (!read || deployment.address?.toLowerCase() !== policy.address || seen.has(read.contract.chain)) {
+        throw new Error("Backed issuer deployment identity mismatch or duplicate");
+      }
+      seen.add(read.contract.chain);
+      if (parseBackedRawUnits(deployment.totalSupply) !== read.gross
+        || parseBackedRawUnits(deployment.circulatingSupply) !== read.net) {
+        throw new Error(`Backed ${read.contract.chain} issuer/on-chain raw supply disagreement`);
+      }
+    }
+    if (reads.some((read) => !seen.has(read.contract.chain) && (read.gross !== 0n || read.net !== 0n))) {
+      throw new Error("Backed issuer omits a nonempty deployment");
+    }
+    return {
+      supply,
+      circulation: { aggregate: {
+        circulatingTokens: decimalNumberFromBigInt(reads.reduce((sum, read) => sum + read.net, 0n), 18),
+        verifiedAt: Math.min(...reads.map((read) => read.block.timestamp)),
+        observations: reads.map((read) => ({ chain: read.contract.chain, block: read.block.number,
+          timestamp: read.block.timestamp, grossRaw: read.gross.toString(), excludedRaw: read.excluded.toString() })),
+        contributions: reads.map((read) => ({ chain: read.contract.chain, tokenAddress: read.contract.address,
+          circulatingRaw: read.net.toString(), decimals: 18 })),
+      } },
+    };
+  } catch (error) {
+    return { supply, circulation: { failure: { reason: toErrorMessage(error) } } };
+  }
+}
+
 /** Pure transformation from decoded Chainlink data + params → AdapterResult. Exported for testing. */
 export function adaptChainlinkPorResponse(
   data: ChainlinkPorData,
@@ -303,10 +436,14 @@ export function adaptChainlinkPorResponse(
   // declared incomplete supply scope works the same way: the readable
   // deployments are only part of the liability the feed covers, so neither
   // basis applies and the ratio stays withheld.
-  // The circulation endpoint exposes no observation timestamp. A fresh oracle
-  // numerator cannot certify that denominator, so retain circulation as diagnostic only.
-  const liabilityBasis = supplyScope == null && !probeActive ? "onchain-total-supply" : undefined;
-  const liabilityTokens = liabilityBasis != null ? supplyTokens : undefined;
+  // A timestamp-less endpoint stays diagnostic unless the reviewed inventory
+  // policy has independently reproduced every deployment at current blocks.
+  const verifiedCirculation = circulationPlausible && circulation?.aggregate?.verifiedAt != null
+    && supply != null && supply.omittedNonEvmChains.length === 0 && supply.omittedReadFailureChains.length === 0;
+  const liabilityBasis = supplyScope != null ? undefined : !probeActive ? "onchain-total-supply"
+    : verifiedCirculation ? "onchain-verified-issuer-circulation" : undefined;
+  const liabilityTokens = liabilityBasis === "onchain-verified-issuer-circulation" ? circulatingTokens
+    : liabilityBasis === "onchain-total-supply" ? supplyTokens : undefined;
   const collateralizationRatio =
     liabilityTokens != null && liabilityTokens > 0 ? reserveValue / liabilityTokens : undefined;
 
@@ -321,7 +458,7 @@ export function adaptChainlinkPorResponse(
       `Chainlink PoR reserves cover ${(collateralizationRatio * 100).toFixed(2)}% of multichain token supply (possible scope mismatch)`,
     ));
   }
-  if (probeActive) {
+  if (probeActive && !verifiedCirculation) {
     warnings.push(reserveDegradedWarning(
       "por-circulation-freshness-unverified",
       "Issuer circulation has no independently verified source timestamp; retained as diagnostic only, with coverage ratio withheld",
@@ -430,6 +567,11 @@ export function adaptChainlinkPorResponse(
               ? {
                   circulatingSupplyTokens: circulation.aggregate.circulatingTokens,
                   circulationContributions: circulation.aggregate.contributions,
+                  ...(circulation.aggregate.verifiedAt != null ? {
+                    circulationVerifiedAt: circulation.aggregate.verifiedAt,
+                    circulationObservations: circulation.aggregate.observations,
+                    circulationExcludedInventoryOwners: [...BACKED_INVENTORY_OWNERS],
+                  } : {}),
                 }
               : {}),
             ...(circulation?.failure
@@ -504,6 +646,12 @@ export async function fetchChainlinkPorReserves(
 
   if (!SUPPLY_COMPARABLE_RESERVE_UNITS[params.reserveUnit ?? "USD"]) {
     return adaptChainlinkPorResponse({ reserves: answer, decimals, roundId, updatedAt }, params, null);
+  }
+
+  if (params.issuerCirculationProbe && BACKED_POLICIES[coin.id]) {
+    const verified = await fetchVerifiedBackedCirculation(coin, params, input.chain, params.issuerCirculationProbe, signal, ctx);
+    return adaptChainlinkPorResponse({ reserves: answer, decimals, roundId, updatedAt }, params,
+      verified.supply, verified.circulation);
   }
 
   // 3. Aggregate totalSupply across every registry-typed EVM + Tron chain in

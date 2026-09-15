@@ -8,13 +8,20 @@
       "risk": "low",
       "assetClass": "fund-share",
       "issuerOrObligor": "Amundi ETF GOVIES 0-6 Months EUROMTS Investment Grade UCITS ETF",
-      "riskFactors": ["duration", "liquidity", "custody", "counterparty", "legal", "concentration"],
+      "riskFactors": [
+        "duration",
+        "liquidity",
+        "custody",
+        "counterparty",
+        "legal",
+        "concentration"
+      ],
       "liquidityHorizon": "unknown"
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-21",
-    "reviewer": "OpenAI Codex V9 NR-recovery review",
+    "reviewedAt": "2026-09-15",
+    "reviewer": "Pharos reserve evidence recovery review",
     "confidence": "verified",
     "sources": [
       {
@@ -28,9 +35,13 @@
       {
         "label": "Backed proof-of-reserves methodology",
         "url": "https://docs.backed.fi/backed-ecosystem/proof-of-reserves"
+      },
+      {
+        "label": "Backed issuer-maintained inventory exclusion policy (pinned commit)",
+        "url": "https://github.com/backed-fi/DefiLlama-Adapters/blob/f84435184a132be71222dfa3eedba8d3774c727e/projects/backed/index.js"
       }
     ],
-    "rationale": "Backed identifies bC3M as a tracker certificate whose sole underlying is the Amundi C3M UCITS ETF, which tracks 0-6 month Eurozone government bills. The live chainlink-por adapter emits the source's exact assetLabel \"AMUNDI GOVIES 0-6 Months Euro Investment Grade ETF shares\"; the reviewed sidecar preserves that identity and classifies it as one fund-share position with Amundi as issuer/obligor. Backed's public assetReserves feed reported the C3M.MI reserve and total bC3M circulation with Chainlink as provider on July 21, 2026; Backed states that The Network Firm reads custody-account balances and Chainlink publishes the proof daily or after a material deviation. The reserve is recorded as one fund-share position without estimating the ETF's changing sovereign holdings.",
+    "rationale": "Backed identifies bC3M as a tracker certificate whose sole underlying is the Amundi C3M UCITS ETF, which tracks 0-6 month Eurozone government bills. The live chainlink-por adapter emits the source's exact assetLabel \"AMUNDI GOVIES 0-6 Months Euro Investment Grade ETF shares\"; the reviewed sidecar preserves that identity and classifies it as one fund-share position with Amundi as issuer/obligor. Backed's public assetReserves feed reported the C3M.MI reserve and total bC3M circulation with Chainlink as provider on July 21, 2026; Backed states that The Network Firm reads custody-account balances and Chainlink publishes the proof daily or after a material deviation. The reserve is recorded as one fund-share position without estimating the ETF's changing sovereign holdings. September 15, 2026 review independently reproduced distributed circulation by subtracting the two issuer-documented working-capital and treasury inventories from same-block gross supply. All eight issuer-documented EVM deployments were checked, including zero-supply Fantom. Current raw amounts match the issuer API on every reported chain; omitted BSC and Fantom deployments independently have zero gross and circulating supply. This establishes a current distributed-certificate denominator without treating the undated API or gross premint inventory as current liabilities. The reserve oracle retains its own observation clock; no fund look-through or legal segregation is inferred.",
     "compositionBasis": "Backed bC3M product disclosure and Chainlink/The Network Firm reserve proof",
     "compositionAsOf": "2026-07-21",
     "scope": "full-composition",

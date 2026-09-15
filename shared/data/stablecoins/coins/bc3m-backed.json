@@ -12,7 +12,7 @@
     "navToken": true
   },
   "collateral": "Tracker certificate fully backed by the AMUNDI ETF GOVIES 0-6 MONTHS EUROMTS INVESTMENT GRADE UCITS ETF, held in segregated custody and administered by Backed Assets (Jersey) Limited under Swiss DLT Act framework",
-  "pegMechanism": "EUR-denominated NAV-accreting tracker token (not pegged to €1); price reflects the underlying short-term Eurozone government bond ETF NAV with continuous yield accrual; KYC-gated 1:1 primary mint and redemption via Backed; secondary liquidity on Uniswap and CoW Protocol",
+  "pegMechanism": "EUR-denominated NAV-accreting tracker token (not pegged to €1); price reflects the underlying short-term Eurozone government bond ETF NAV with continuous yield accrual; new issuance closed; KYC-gated redemption remains supported by Backed during the announced wind-down; secondary liquidity on Uniswap and CoW Protocol",
   "mechanismArchetype": "tbill",
   "mechanismArchetypeReview": {
     "disposition": "resolved",
@@ -70,6 +70,10 @@
     {
       "label": "Docs",
       "url": "https://assets.backed.fi/legal-documentation"
+    },
+    {
+      "label": "Wind-down announcement",
+      "url": "https://backed.fi/news-updates/the-future-is-xstocks-upgrading-btokens"
     }
   ],
   "jurisdiction": {
@@ -110,6 +114,11 @@
     },
     {
       "chain": "avalanche",
+      "address": "0x2f123cf3f37ce3328cc9b5b8415f9ec5109b45e7",
+      "decimals": 18
+    },
+    {
+      "chain": "fantom",
       "address": "0x2f123cf3f37ce3328cc9b5b8415f9ec5109b45e7",
       "decimals": 18
     }
@@ -159,13 +168,19 @@
     {
       "type": "info",
       "title": "Multi-chain Backed product",
-      "message": "bC3M is listed across Ethereum, Arbitrum, Avalanche, Base, BNB Chain, Polygon, and Gnosis with the same token address. Pharos keeps those verified Backed deployments grouped under the native multichain product."
+      "message": "bC3M is listed across Ethereum, Arbitrum, Avalanche, Base, BNB Chain, Polygon, Gnosis, and Fantom with the same token address. Pharos keeps those verified Backed deployments grouped under the native multichain product."
     },
     {
       "type": "info",
-      "title": "Reserves proven by Chainlink LedgerLens",
-      "message": "bC3M reserves are proven by the Chainlink LedgerLens Proof-of-Reserve feed on Polygon, which publishes the underlying AMUNDI GOVIES 0-6M ETF share count. Coverage compares that share quantity against Backed's published circulating supply rather than gross on-chain supply, because Backed pre-mints unsold inventory into its own custody."
+      "title": "New issuance closed; redemption supported",
+      "message": "Backed plans to wind down bTokens by the end of 2026. New bC3M issuance is closed; existing holders retain the standard redemption process during the wind-down. Backed lists TBLLx as the ETF upgrade destination, with the exchange ratio determined by the issuer."
+    },
+    {
+      "type": "info",
+      "title": "Coverage excludes unsold inventory",
+      "message": "The Polygon Chainlink LedgerLens feed reports underlying ETF shares. Pharos publishes coverage only when fresh on-chain supply minus two issuer-documented inventory wallets reconciles with Backed's circulating-supply API across all eight documented chains. The API has no observation timestamp of its own; any failed or mismatched read withholds the ratio."
     }
   ],
-  "launchDate": "2023-06-15"
+  "launchDate": "2023-06-15",
+  "marketAvailability": "legacy-or-wind-down"
 }
