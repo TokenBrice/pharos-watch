@@ -3,11 +3,11 @@
   "reserves": [
     {
       "sourceKey": "chainlink-nav:token:0x030b69280892c888670edcdcd8b69fd8026a0bf3",
-      "name": "MEV Capital DeFi strategy NAV",
+      "name": "Midas mMEV strategy NAV (shared with mROX)",
       "pct": 100,
       "risk": "high",
       "assetClass": "hedged-crypto",
-      "issuerOrObligor": "MEV Capital (strategy manager) via Midas mMEV liquid-yield token",
+      "issuerOrObligor": "Midas Software GmbH (mMEV token issuer; strategy shared with mROX)",
       "riskFactors": [
         "basis",
         "counterparty",
@@ -22,7 +22,7 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-09-14",
+    "reviewedAt": "2026-09-15",
     "reviewer": "OpenAI Codex reserve disclosure review",
     "confidence": "probable",
     "sources": [
@@ -41,9 +41,21 @@
       {
         "label": "Midas investment risks disclosure",
         "url": "https://docs.midas.app/legal/investment-risks-1-0-1"
+      },
+      {
+        "label": "Midas mMEV transparency page, explicit shared mROX strategy scope",
+        "url": "https://midas.app/transparency?token=mmev"
+      },
+      {
+        "label": "Midas current joint mROX/mMEV strategy exposure API",
+        "url": "https://api-prod.midas.app/api/transparency?token=mROX"
+      },
+      {
+        "label": "Midas current mMEV final terms, issuer and contractual scope",
+        "url": "https://docs.midas.app/resources/legal-product-documentation/mmev"
       }
     ],
-    "rationale": "Midas identifies mMEV as a managed DeFi strategy NAV. The September 14 dashboard publishes rounded asset and protocol positions with material borrow offsets and a $100,000 main-position cutoff. The issuer-prepared September 8 weekly report covers mMEV and mROX jointly, with most assets grouped as Market Neutral Strategy. Neither source establishes a complete standalone mMEV reserve allocation; the joint pool must not be assigned in full to mMEV.",
+    "rationale": "The September 15 mMEV transparency page explicitly identifies the same underlying strategy and wallets as mROX. Its current exposure matches the issuer API under token=mROX, while token=mMEV remains dated June 18. The fresh joint strategy reports gross assets, material borrow offsets and net equity; main positions exclude absolute deltas below $100,000 and are rounded to $1,000. The issuer-prepared September 8 report also covers mMEV and mROX jointly. Neither source establishes a complete standalone mMEV reserve allocation, and the whole joint pool must not be attributed to mMEV. Current linked final terms identify Midas Software GmbH as issuer; the strategy manager is not the token obligor.",
     "compositionBasis": "Midas mMEV product, risk, and transparency disclosures",
     "scope": "full-composition",
     "knownUnknownExposure": "Complete signed positions, residuals, custody relationships and allocation of the jointly reported mMEV/mROX pool remain unverified. Published protocol exposures and aggregate joint assets do not resolve standalone mMEV backing weights.",
@@ -51,7 +63,7 @@
     "nonLinkDispositions": [
       {
         "reserveIndex": 0,
-        "reserveName": "MEV Capital DeFi strategy NAV",
+        "reserveName": "Midas mMEV strategy NAV (shared with mROX)",
         "pct": 100,
         "disposition": "insufficient-evidence",
         "rationale": "Published protocol and asset positions provide candidate dependencies, but joint mMEV/mROX scope, borrowing and filtered positions require reconciliation before assigning reserve weights."

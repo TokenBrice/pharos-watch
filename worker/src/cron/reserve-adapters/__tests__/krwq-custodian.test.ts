@@ -42,6 +42,8 @@ const ONCHAIN_MATCH: KrwqOnchainBalances = {
   treasury: 105708960000n,
 };
 
+const VERIFIED_BINDINGS = { usdc: true, frxusd: true };
+
 const SUPPLY_TOKENS = 582_354;
 const SUPPLY: KrwqSupplyAggregate = {
   contributions: [
@@ -79,9 +81,9 @@ function makeConfig(): LiveReservesConfig {
 
 describe("adaptKrwqCustodian", () => {
   it("maps the three custodian legs and verifies an exact on-chain match", () => {
-    const result = adaptKrwqCustodian(PAYLOAD, ONCHAIN_MATCH, SUPPLY);
+    const result = adaptKrwqCustodian(PAYLOAD, ONCHAIN_MATCH, SUPPLY, VERIFIED_BINDINGS);
 
-    expect(result.warnings).toContainEqual(expect.objectContaining({ code: "krwq-holder-unverified", effect: "degraded" }));
+    expect(result.warnings ?? []).not.toContainEqual(expect.objectContaining({ code: "krwq-holder-unverified" }));
     expect(result.slices).toEqual(expect.arrayContaining([
       expect.objectContaining({ sourceKey: "krwq-custodian:usdc", name: "USDC custodian reserves", coinId: "usdc-circle", risk: "low" }),
       expect.objectContaining({ name: "frxUSD custodian reserves", coinId: "frxusd-frax", risk: "low" }),
@@ -99,9 +101,9 @@ describe("adaptKrwqCustodian", () => {
   });
 
   it("parses the live comma-grouped amount strings", () => {
-    const result = adaptKrwqCustodian(PAYLOAD, ONCHAIN_MATCH, SUPPLY);
+    const result = adaptKrwqCustodian(PAYLOAD, ONCHAIN_MATCH, SUPPLY, VERIFIED_BINDINGS);
 
-    expect(result.warnings).toContainEqual(expect.objectContaining({ code: "krwq-holder-unverified", effect: "degraded" }));
+    expect(result.warnings ?? []).not.toContainEqual(expect.objectContaining({ code: "krwq-holder-unverified" }));
     expect(result.slices).toHaveLength(3);
     expect(result.metadata?.totalReserveUsd).toBeCloseTo(TOTAL_RESERVE_USD, 5);
   });
@@ -170,6 +172,9 @@ describe("fetchKrwqCustodianReserves", () => {
         [`ethereum:${USDC_ETHEREUM}:balanceOf(address)`]: 90102080832n,
         [`ethereum:${FRXUSD_ETHEREUM}:balanceOf(address)`]: 482631869316796940855261n,
         [`base:${USDC_BASE}:balanceOf(address)`]: 105708960000n,
+        "KRWT_TOKEN()": BigInt("0xc00db6b41473d065027f5ed6fada20fde75f142e"),
+        [`ethereum:${PAYLOAD.usdc!.custodianAddress}:CUSTODIAN_TKN()`]: BigInt(USDC_ETHEREUM),
+        [`ethereum:${PAYLOAD.frxusd!.custodianAddress}:CUSTODIAN_TKN()`]: BigInt(FRXUSD_ETHEREUM),
         "totalSupply()": BigInt(SUPPLY_TOKENS) * 10n ** 18n,
       },
     };
@@ -184,8 +189,29 @@ describe("fetchKrwqCustodianReserves", () => {
     expect(network.requests.map((request) => request.url)).toContain(KRWQ_URL);
     expect(network.rpcCalls.some((call) => call.viaMulticall && call.chain === "ethereum")).toBe(true);
     expect(network.rpcCalls.some((call) => !call.viaMulticall && call.chain === "base")).toBe(true);
-    expect(result.warnings).toContainEqual(expect.objectContaining({ code: "krwq-holder-unverified", effect: "degraded" }));
+    expect(result.warnings ?? []).not.toContainEqual(expect.objectContaining({ code: "krwq-holder-unverified" }));
     expect(result.slices).toHaveLength(3);
+  });
+
+  it.each(["KRWT_TOKEN()", "CUSTODIAN_TKN()"])("fails closed on a mismatched %s getter", async (getter) => {
+    const network = krwqNetwork();
+    network.rpc[`ethereum:${PAYLOAD.usdc!.custodianAddress}:${getter}` as keyof typeof network.rpc] = 1n;
+    const { result } = await runAdapter("krwq-custodian", makeCoin(), { network });
+    expect(result.warnings).toContainEqual(expect.objectContaining({ code: "krwq-holder-unverified", effect: "degraded" }));
+  });
+
+  it("fails closed on nonzero ABI address padding even when the low address matches", async () => {
+    const network = krwqNetwork();
+    network.rpc["KRWT_TOKEN()"] |= 1n << 160n;
+    const { result } = await runAdapter("krwq-custodian", makeCoin(), { network });
+    expect(result.warnings).toContainEqual(expect.objectContaining({ code: "krwq-holder-unverified", effect: "degraded" }));
+  });
+
+  it("fails closed when an immutable getter is unreadable", async () => {
+    const network = krwqNetwork();
+    const { ["KRWT_TOKEN()"]: _missing, ...rpc } = network.rpc;
+    const { result } = await runAdapter("krwq-custodian", makeCoin(), { network: { ...network, rpc } });
+    expect(result.warnings).toContainEqual(expect.objectContaining({ code: "krwq-holder-unverified", effect: "degraded" }));
   });
 
   it("propagates an endpoint failure", async () => {
@@ -212,8 +238,20 @@ describe("registry", () => {
 
 
 it.each([0, 9_000_000_000])("ignores independently supplied display value %i when raw balances are available", (totalAssets) => {
-  const result = adaptKrwqCustodian({ ...PAYLOAD, usdc: { ...PAYLOAD.usdc, totalAssets } }, ONCHAIN_MATCH, SUPPLY);
+  const result = adaptKrwqCustodian({ ...PAYLOAD, usdc: { ...PAYLOAD.usdc, totalAssets } }, ONCHAIN_MATCH, SUPPLY, VERIFIED_BINDINGS);
   expect(result.metadata?.totalReserveUsd).toBeCloseTo(TOTAL_RESERVE_USD, 5);
   expect(result.slices.find((slice) => slice.sourceKey === "krwq-custodian:usdc")).toBeDefined();
+  expect(result.warnings ?? []).not.toContainEqual(expect.objectContaining({ code: "krwq-holder-unverified" }));
+});
+
+it.each(["usdc", "frxusd", "treasury"] as const)("rejects changed %s holder even with matching balances", (key) => {
+  const field = key === "treasury" ? "treasuryAddress" : "custodianAddress";
+  const payload = { ...PAYLOAD, [key]: { ...PAYLOAD[key], [field]: "0x0000000000000000000000000000000000000001" } };
+  const result = adaptKrwqCustodian(payload, ONCHAIN_MATCH, SUPPLY, VERIFIED_BINDINGS);
+  expect(result.warnings).toContainEqual(expect.objectContaining({ code: "krwq-holder-unverified", effect: "degraded" }));
+});
+
+it("withholds holder verification if live getter reads are missing", () => {
+  const result = adaptKrwqCustodian(PAYLOAD, ONCHAIN_MATCH, SUPPLY);
   expect(result.warnings).toContainEqual(expect.objectContaining({ code: "krwq-holder-unverified", effect: "degraded" }));
 });

@@ -53,6 +53,10 @@
     {
       "label": "Proof of Reserves",
       "url": "https://docs.solomonlabs.org/usdv/peg-stability-and-reserves"
+    },
+    {
+      "label": "Legacy wind-down announcement",
+      "url": "https://blog.solomonlabs.org/p/winding-down-the-original-usdv"
     }
   ],
   "contracts": [
@@ -84,8 +88,14 @@
   "notices": [
     {
       "type": "warning",
+      "title": "Legacy USDv wind-down",
+      "message": "This profile tracks the original Solomon USDv mint. Solomon announced that the legacy front end and support end October 16, 2026; the sUSDv unstaking-request deadline is October 9. The replacement USDv uses a different mint and reserve model, with no automatic conversion. Legacy rewards ended August 27."
+    },
+    {
+      "type": "warning",
       "title": "Partial reserve coverage",
-      "message": "USDv has on-chain supply validation and a live issuer protocol-data API, but the API's reported reserve components covered only about 32.9% of protocolTvl at 2026-07-30; the remaining 67.1% is unmapped. Public Ceffu attestations are aggregate, custodian-issued, and stale (latest 2026-04-01). The modeled redemption backstop is limited to approved/whitelisted participants and a documented 0.5% instant reserve buffer; the live feed validates Solana token supply only, while reserve composition is Ceffu-custodied off-exchange and is not on-chain verifiable."
+      "message": "At the September 14, 2026 reserve observation, the issuer API identified about 18.6% of reported protocol TVL; 81.4% remained unmapped. Exchange hedge notional and mirrored custody balances cannot be added as separate backing to fill that gap. The tracked legacy mint uses a Ceffu-custodied delta-neutral strategy; documentation for the replacement USDv does not establish this token's reserve composition."
     }
-  ]
+  ],
+  "marketAvailability": "legacy-or-wind-down"
 }

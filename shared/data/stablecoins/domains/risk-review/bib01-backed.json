@@ -14,7 +14,7 @@
   },
   "bridgeRouteRisk": {
     "tier": "external-lock-mint",
-    "summary": "bIB01 remains independently issuer-native and mintable on all seven authored token deployments; those native issuance rows stay canonical and outside Bridge Risk's bridge-control inventory. A separate six-chain BackedCCIPReceiver rail uses custody lock/release and Chainlink CCIP messaging against the native token addresses, with receiver owners, proxy upgrades, shared custody, router configuration, allowlists, and known router delivery contracts scored here. The CCIP DON/RMN/OCR validation domain is modeled separately because the reviewed record does not enumerate its validator roster, quorum, or controller. The shared custody address is a verified EOA, and each configured CCIP router is retained as a delivery contract rather than a validation authority; the delivery evidence is source-enriched, but the unresolved validation domain keeps this review blocked rather than cleared. The receiver source contains no bIB01 mint or burn path, and BSC has no current receiver deployment.",
+    "summary": "bIB01 remains independently issuer-native and mintable on all eight authored token deployments; those native issuance rows stay canonical and outside Bridge Risk's bridge-control inventory. A separate six-chain BackedCCIPReceiver rail uses custody lock/release and Chainlink CCIP messaging against the native token addresses, with receiver owners, proxy upgrades, shared custody, router configuration, allowlists, and known router delivery contracts scored here. The CCIP DON/RMN/OCR validation domain is modeled separately because the reviewed record does not enumerate its validator roster, quorum, or controller. The shared custody address is a verified EOA, and each configured CCIP router is retained as a delivery contract rather than a validation authority; the delivery evidence is source-enriched, but the unresolved validation domain keeps this review blocked rather than cleared. The receiver source contains no bIB01 mint or burn path, and BSC has no current receiver deployment. Fantom was separately reviewed on September 15, 2026 as native issuance with a 3-of-5 minter, separate 2-of-3 token owner and single-EOA proxy upgrader; no Fantom bridge rail is asserted.",
     "reviewedAt": "2026-08-29",
     "reviewer": "Codex mint-bridge-boundary migration; bib01-backed verified finding; BRDG authority-model review 2026-08-28; Safe-state re-review 2026-08-29",
     "confidence": "manual-review",
@@ -227,6 +227,36 @@
           {
             "label": "Backed Finance documentation",
             "url": "https://docs.backed.fi/"
+          }
+        ]
+      },
+      {
+        "id": "fantom:0xca30c93b02514f86d5c86a6e375e3a330b435fb5",
+        "destinationChain": "fantom",
+        "canonicalChain": "ethereum",
+        "contractAddress": "0xca30c93b02514f86d5c86a6e375e3a330b435fb5",
+        "protocol": "Backed issuer-native bIB01",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "bIB01 is an issuer-listed native Fantom deployment. Pinned name, symbol and decimals 18 match; transparent proxy implementation and admin bytecode match reviewed Backed code. Minter is 3-of-5 Safe, token owner 2-of-3 Safe, but ProxyAdmin owner is a single EOA, separately scoped in Mint Authority. Gross and net supply were zero at review; that does not remove mint or upgrade authority.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-09-15",
+        "sources": [
+          {
+            "label": "Backed bIB01 official Fantom deployment",
+            "url": "https://assets.backed.fi/products/bib01"
+          },
+          {
+            "label": "Fantom bIB01 token",
+            "url": "https://ftmscan.com/address/0xca30c93b02514f86d5c86a6e375e3a330b435fb5#code"
+          },
+          {
+            "label": "Backed verified token implementation (matching Fantom runtime code)",
+            "url": "https://etherscan.io/address/0x28a0b491650fe761c8a66528422bc7ca24ecaeda#code"
           }
         ]
       }
