@@ -196,6 +196,8 @@ export const CIRCUIT_SOURCE = {
   REDSTONE_PRICES: "redstone-prices",
   KAVA_PRICEFEED: "kava-pricefeed",
   AZND_CURVE_POOL: "aznd-curve-pool",
+  MENTO_FPMM: "mento-fpmm",
+  MENTO_BROKER: "mento-broker",
   PROTOCOL_REDEEM: "protocol-redeem",
   CURVE_ONCHAIN: "curve-onchain",
   CURVE_ORACLE: "curve-oracle",

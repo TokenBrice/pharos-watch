@@ -43,6 +43,8 @@ describe("pricing source registry", () => {
       "balancer-dex",
       "curve-dex",
       "curve-thin-onchain",
+      "mento-fpmm",
+      "mento-broker",
       "uniswap-v3-dex",
       "uniswap-v3-exact",
       "uniswap-v4-dex",
@@ -228,6 +230,20 @@ describe("pricing source registry", () => {
       isReplaySafe: false,
     });
 
+    expect(getPricingSourceRegistryEntry("mento-fpmm")).toMatchObject({
+      trustTier: "soft_dex", depegSourceFamily: "dex:mento", maxTrustedAgeSec: 300,
+      isReplaySafe: false, requiresObservedAt: true, freshnessKind: "upstream",
+      canBeDepegAuthoritative: false, canSingleSourceDepegAuthoritative: false,
+    });
+    expect(isPricingSourceSoftGuardrailExempt("mento-fpmm")).toBe(false);
+    expect(isPricingSourceProtocolOverride("mento-fpmm")).toBe(false);
+    expect(getPricingSourceRegistryEntry("mento-broker")).toMatchObject({
+      trustTier: "soft_dex", depegSourceFamily: "dex:mento", maxTrustedAgeSec: 300,
+      isReplaySafe: false, requiresObservedAt: true, freshnessKind: "upstream",
+      canBeDepegAuthoritative: false, canSingleSourceDepegAuthoritative: false,
+    });
+    expect(isPricingSourceSoftGuardrailExempt("mento-broker")).toBe(false);
+    expect(isPricingSourceProtocolOverride("mento-broker")).toBe(false);
     expect(getPricingSourceRegistryEntry("uniswap-v4-dex")).toMatchObject({
       key: "uniswap-v4-dex",
       trustTier: "soft_dex",
