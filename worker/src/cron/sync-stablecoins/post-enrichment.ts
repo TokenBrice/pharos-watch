@@ -119,6 +119,7 @@ export interface SharedPriceCompletionResult extends PriceValidationResult {
 }
 
 export interface MissingPriceEnrichmentInput {
+  chainRpcs?: Map<string, ChainRpcConfig>;
   assets: PeggedAsset[];
   db: D1Database;
   syncStartSec: number;
@@ -535,6 +536,8 @@ export async function runMissingPriceEnrichmentPhase(
     input.coingeckoApiKey,
     input.onProgress,
     input.previousMissingGenerationsById,
+    undefined,
+    input.chainRpcs,
   );
 
   for (const asset of input.assets) {

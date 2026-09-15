@@ -16,6 +16,8 @@ import { enrichMissingPrices, type EnrichmentStats } from "./enrich-prices";
 import type { PeggedAsset } from "./enrich-prices-shared";
 import { clearPriceMetadata, loadPreviousStablecoinsById } from "./shared";
 import { writePriceCorroborationObservations } from "./price-corroboration-observations";
+import { applyTrackedAssetOverrides } from "./phase-helpers";
+import type { ChainRpcConfig } from "../../lib/chain-registry";
 
 const PRICE_CORROBORATION_SOURCE_DEPTH = 3;
 
@@ -181,13 +183,17 @@ export async function runPriceCorroboration(params: {
   jupiterApiKey?: string | null;
   coingeckoApiKey?: string | null;
   addressProvider?: AddressPriceProviderRuntimeConfig;
+  chainRpcs?: Map<string, ChainRpcConfig>;
 }): Promise<PriceCorroborationResult> {
   const { previousAssetsById, cacheState } = await loadPreviousStablecoinsById(params.db);
   if (cacheState.state !== "ok") {
     throw new Error("Price corroboration requires a valid published stablecoins cache");
   }
   const cohort = buildPriceCorroborationCohort(previousAssetsById.values());
+  const originalMissingPriceIds = new Set(cohort.filter((asset) => !hasPublishableCurrentPrice(asset)).map((asset) => asset.id));
   const fallbackProbes = cohort.map(cloneAsFallbackProbe);
+  // Published rows omit provider identifiers and NAV hints needed by fallback validation.
+  applyTrackedAssetOverrides(fallbackProbes);
   const fallbackStats = await enrichMissingPrices(
     fallbackProbes,
     params.cmcApiKey,
@@ -195,6 +201,10 @@ export async function runPriceCorroboration(params: {
     params.signal,
     params.jupiterApiKey,
     params.coingeckoApiKey,
+    undefined,
+    undefined,
+    originalMissingPriceIds,
+    params.chainRpcs,
   );
 
   const providers = resolveEnabledAddressPriceProviders(params.addressProvider);

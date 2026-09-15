@@ -29,6 +29,32 @@ function quote(stablecoinId: string, priceUsd: number): AddressPriceQuote {
 }
 
 describe("hourly price corroboration", () => {
+  it("restores curated fallback hints without changing published rows and preserves original missing priority", async () => {
+    const published = [
+      makePeggedAsset({ id: "susd1plus-lorenzo", symbol: "sUSD1+", price: 0.99, priceSource: "coingecko", priceObservedAt: 1_800_000_000 }),
+      makePeggedAsset({ id: "usdv-solomon", symbol: "USDv", price: null, geckoId: "wrong-generation" }),
+    ];
+    const original = structuredClone(published);
+    const load = vi.spyOn(shared, "loadPreviousStablecoinsById").mockResolvedValue({
+      previousAssetsById: new Map(published.map((asset) => [asset.id, asset])), cacheState: { state: "ok" },
+    });
+    const stop = new Error("collection inspected");
+    const collect = vi.spyOn(enrichment, "enrichMissingPrices").mockRejectedValue(stop);
+    const chainRpcs = new Map();
+    try {
+      await expect(runPriceCorroboration({ db: {} as D1Database, syncStartSec: 1_800_000_540, chainRpcs })).rejects.toBe(stop);
+      const args = collect.mock.calls[0];
+      expect(args[0][0]).toMatchObject({ cmcSlug: "lorenzo-staked-usd1", navToken: true, price: null });
+      expect(args[0][1].geckoId).toBeUndefined();
+      expect(args[8]).toEqual(new Set(["usdv-solomon"]));
+      expect(args[9]).toBe(chainRpcs);
+      expect(published).toEqual(original);
+    } finally {
+      load.mockRestore();
+      collect.mockRestore();
+    }
+  });
+
   it.each([false, true])("stages only fetched observations (fresh quote: %s)", async (hasQuote) => {
     const sqlite = new DatabaseSync(":memory:");
     sqlite.exec("CREATE TABLE cache (key TEXT PRIMARY KEY, value TEXT NOT NULL, updated_at INTEGER NOT NULL)");

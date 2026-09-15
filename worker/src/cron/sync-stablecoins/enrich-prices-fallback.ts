@@ -1,3 +1,4 @@
+import type { ChainRpcConfig } from "../../lib/chain-registry";
 import { logWorkerEventArgs } from "../../lib/structured-log";
 import { hasMissingPrice, type PeggedAsset } from "./enrich-prices-shared";
 import { runCoingeckoLowVolumePass } from "./enrich-prices-coingecko-low-volume-pass";
@@ -31,6 +32,8 @@ interface EnrichmentPassContext {
   fxRates?: Record<string, number>;
   signal?: AbortSignal;
   previousMissingGenerationsById?: ReadonlyMap<string, number>;
+  originalMissingPriceIds?: ReadonlySet<string>;
+  chainRpcs?: Map<string, ChainRpcConfig>;
   onProgress?: EnrichmentPassProgressReporter;
 }
 
@@ -74,8 +77,8 @@ const FALLBACK_PRICE_PASSES: readonly EnrichmentPassDefinition[] = [
     key: "passCmc",
     label: "CoinMarketCap",
     failureLabel: "coinmarketcap",
-    run: async ({ assets, cmcApiKey, fxRates, db, signal }) => {
-      const result = await runCmcPass(assets, cmcApiKey, fxRates, db, signal);
+    run: async ({ assets, cmcApiKey, fxRates, db, signal, originalMissingPriceIds }) => {
+      const result = await runCmcPass(assets, cmcApiKey, fxRates, db, signal, originalMissingPriceIds);
       return {
         counts: {
           passCmc: result.resolved,
@@ -89,8 +92,8 @@ const FALLBACK_PRICE_PASSES: readonly EnrichmentPassDefinition[] = [
     key: "passJupiter",
     label: "Jupiter",
     failureLabel: "jupiter",
-    run: async ({ assets, fxRates, db, signal, jupiterApiKey }) => {
-      const result = await runJupiterPass(assets, fxRates, db, signal, jupiterApiKey);
+    run: async ({ assets, fxRates, db, signal, jupiterApiKey, chainRpcs }) => {
+      const result = await runJupiterPass(assets, fxRates, db, signal, jupiterApiKey, chainRpcs);
       return {
         counts: {
           passJupiter: result.resolved,
@@ -104,8 +107,8 @@ const FALLBACK_PRICE_PASSES: readonly EnrichmentPassDefinition[] = [
     key: "passDex",
     label: "DexScreener",
     failureLabel: "dexscreener",
-    run: async ({ assets, fxRates, db, signal, previousMissingGenerationsById }) => {
-      const result = await runDexScreenerPass(assets, fxRates, db, signal, previousMissingGenerationsById);
+    run: async ({ assets, fxRates, db, signal, previousMissingGenerationsById, originalMissingPriceIds }) => {
+      const result = await runDexScreenerPass(assets, fxRates, db, signal, previousMissingGenerationsById, undefined, originalMissingPriceIds);
       return {
         counts: {
           passDex: result.resolved,

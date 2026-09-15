@@ -7,6 +7,7 @@ import { fetchTextWithRetry } from "../../lib/fetch-retry";
 import { pricesAgreeWithinBps } from "../../lib/price-divergence";
 import { JupiterPriceResponseSchema, SolanaSlotResponseSchema } from "../../lib/schemas";
 import { throwIfAborted } from "../../lib/abort";
+import { getAlchemyAuthHeaders, type ChainRpcConfig } from "../../lib/chain-registry";
 import {
   applyJsonParseFailureDiagnostic,
   applyNonOkProviderDiagnostic,
@@ -72,6 +73,7 @@ export async function runJupiterPass(
   db: D1Database | undefined,
   signal?: AbortSignal,
   jupiterApiKey?: string | null,
+  chainRpcs?: Map<string, ChainRpcConfig>,
 ): Promise<EnrichPassResult> {
   let resolved = 0;
   const diagnostics: PricingProviderAttemptDiagnostic[] = [];
@@ -119,7 +121,7 @@ export async function runJupiterPass(
   let currentSolanaSlot: number | null | undefined;
   const getCurrentSolanaSlot = async (): Promise<number | null> => {
     if (currentSolanaSlot !== undefined) return currentSolanaSlot;
-    const result = await fetchSolanaCurrentSlot(signal);
+    const result = await fetchSolanaCurrentSlot(signal, chainRpcs?.get("solana"));
     currentSolanaSlot = result.slot;
     diagnostics.push(...result.diagnostics);
     return currentSolanaSlot;
@@ -317,13 +319,18 @@ function isFreshJupiterBlock(blockId: number, currentSlot: number): boolean {
   return currentSlot - blockId <= JUPITER_MAX_SLOT_LAG;
 }
 
-async function fetchSolanaCurrentSlot(signal?: AbortSignal): Promise<{
+async function fetchSolanaCurrentSlot(signal?: AbortSignal, configured?: ChainRpcConfig): Promise<{
   slot: number | null;
   diagnostics: PricingProviderAttemptDiagnostic[];
 }> {
   const diagnostics: PricingProviderAttemptDiagnostic[] = [];
 
-  for (const rpcUrl of SOLANA_SLOT_RPC_URLS) {
+  const rpcUrls = configured
+    ? [configured.rpcUrl, configured.fallbackRpcUrl, SOLANA_SLOT_RPC_URLS[2], ...SOLANA_SLOT_RPC_URLS]
+      .filter((url, index, urls): url is string => typeof url === "string" && urls.indexOf(url) === index)
+      .slice(0, SOLANA_SLOT_RPC_URLS.length)
+    : SOLANA_SLOT_RPC_URLS;
+  for (const rpcUrl of rpcUrls) {
     throwIfAborted(signal);
     const baseDiagnostic = {
       source: "jupiter" as const,
@@ -339,6 +346,7 @@ async function fetchSolanaCurrentSlot(signal?: AbortSignal): Promise<{
           Accept: "application/json",
           "Content-Type": "application/json",
           "User-Agent": USER_AGENT,
+          ...getAlchemyAuthHeaders(rpcUrl),
         },
         body: JSON.stringify({
           jsonrpc: "2.0",
@@ -372,6 +380,7 @@ async function fetchSolanaCurrentSlot(signal?: AbortSignal): Promise<{
       const nonOkDiagnostic = await applyNonOkProviderDiagnostic(diagnostic, responseFromBufferedBody(result));
       diagnostics.push({
         ...nonOkDiagnostic,
+        snippet: undefined,
         errorClass: "upstream-error",
         errorMessage: "Solana slot reference returned non-OK",
       });
@@ -387,9 +396,12 @@ async function fetchSolanaCurrentSlot(signal?: AbortSignal): Promise<{
         diagnostics.push(diagnostic);
         continue;
       }
+      diagnostic.success = true;
+      diagnostic.responseRowCount = 1;
+      diagnostics.push(diagnostic);
       return { slot: parsed.data.result, diagnostics };
-    } catch (err) {
-      diagnostics.push(applyJsonParseFailureDiagnostic(diagnostic, err));
+    } catch {
+      diagnostics.push({ ...diagnostic, errorClass: "malformed-json", errorMessage: "Invalid Solana slot JSON response" });
     }
   }
 

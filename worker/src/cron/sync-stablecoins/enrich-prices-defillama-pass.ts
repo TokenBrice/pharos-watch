@@ -240,25 +240,29 @@ function applyDefiLlamaContractPrices(
   prices: Map<string, DefiLlamaContractQuote>,
   fxRates: Record<string, number> | undefined,
 ): number {
-  let resolvedCount = 0;
-  const resolved = new Set<number>();
+  const freshestByIndex = new Map<number, DefiLlamaContractQuote>();
   for (const lookup of lookups) {
-    if (resolved.has(lookup.index)) continue;
     const quote = prices.get(lookup.coinId);
-    if (quote != null && isDefiLlamaContractQuoteUsable(assets[lookup.index], quote, fxRates)) {
-      applyResolvedPrice(
-        assets[lookup.index],
-        quote.price,
-        "defillama-contract",
-        "single-source",
-        quote.observedAt,
-        quote.observedAtMode,
-      );
-      resolvedCount += 1;
-      resolved.add(lookup.index);
+    const previous = freshestByIndex.get(lookup.index);
+    if (
+      quote != null &&
+      (!previous || quote.observedAt > previous.observedAt) &&
+      isDefiLlamaContractQuoteUsable(assets[lookup.index], quote, fxRates)
+    ) {
+      freshestByIndex.set(lookup.index, quote);
     }
   }
-  return resolvedCount;
+  for (const [index, quote] of freshestByIndex) {
+    applyResolvedPrice(
+      assets[index],
+      quote.price,
+      "defillama-contract",
+      "single-source",
+      quote.observedAt,
+      quote.observedAtMode,
+    );
+  }
+  return freshestByIndex.size;
 }
 
 export async function runDlContractPasses(
