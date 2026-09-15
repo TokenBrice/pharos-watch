@@ -107,6 +107,7 @@ export async function runStablecoinsIntakeStage(
         options.coingeckoApiKey,
         options.reportProgress,
         options.jupiterApiKey,
+        options.chainRpcs,
       ),
   });
 
@@ -270,6 +271,7 @@ export async function runStablecoinsPricingStage(
     {
       db: options.db,
       stats: authoritativeOverrideStats,
+      chainRpcs: options.chainRpcs,
       previousMissingGenerationsById: options.previousMissingGenerationsById,
     },
   );
@@ -313,6 +315,7 @@ export async function runStablecoinsPricingStage(
   );
 
   const priceCompletion = await runSharedPriceCompletion({
+    chainRpcs: options.chainRpcs,
     assets: options.assets,
     missingBefore,
     db: options.db,

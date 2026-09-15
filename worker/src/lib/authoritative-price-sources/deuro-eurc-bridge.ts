@@ -29,22 +29,27 @@ const WORD = /^0x[0-9a-fA-F]{64}$/;
 const addressWord = (address: string) => `0x${address.slice(2).padStart(64, "0")}`;
 
 export async function fetchDeuroEurcBridgePrice(context: LivePriceContext, signal?: AbortSignal) {
+  const reject = (reason: string): null => {
+    context.lastRejectionReason = `deuro-eurc-bridge:${reason}`;
+    return null;
+  };
   const parent = resolveTrustedOverrideParent(context, "eurc-circle", () =>
     "[authoritative-price-sources] deuro-deuro: trusted EURC dependency unavailable", {
     allowFreshNonReplaySafeParent: true,
   });
   if (!parent) return null;
-  const options = { signal, extraRpcUrls: getPublicFallbackRpcUrls("ethereum"), maxRetries: 0 };
+  const options = { signal, extraRpcUrls: getPublicFallbackRpcUrls("ethereum"), chainRpcs: context.chainRpcs, maxRetries: 0 };
   const head = (await fetchEvmRpcBatch("ethereum", [
     { method: "eth_getBlockByNumber", params: ["latest", false] },
   ], options))?.[0] as { number?: string; hash?: string; timestamp?: string } | undefined;
-  if (!head || !/^0x[0-9a-f]+$/i.test(head.number ?? "") || !WORD.test(head.hash ?? "") ||
-      !/^0x[0-9a-f]+$/i.test(head.timestamp ?? "")) return null;
+  if (!head) return reject("head-unavailable");
+  if (!/^0x[0-9a-f]+$/i.test(head.number ?? "") || !WORD.test(head.hash ?? "") ||
+      !/^0x[0-9a-f]+$/i.test(head.timestamp ?? "")) return reject("head-invalid");
   const blockNumber = Number(BigInt(head.number!));
-  if (!Number.isSafeInteger(blockNumber) || blockNumber <= 0 || BigInt(head.hash!) === 0n) return null;
+  if (!Number.isSafeInteger(blockNumber) || blockNumber <= 0 || BigInt(head.hash!) === 0n) return reject("head-invalid");
   const observedAt = Number(BigInt(head.timestamp!));
   const now = Math.floor(Date.now() / 1000);
-  if (!Number.isSafeInteger(observedAt) || observedAt <= 0 || observedAt > now + 60 || now - observedAt > 300) return null;
+  if (!Number.isSafeInteger(observedAt) || observedAt <= 0 || observedAt > now + 60 || now - observedAt > 300) return reject("head-stale-or-invalid");
   const block = { blockHash: head.hash, requireCanonical: true };
   const call = (to: string, data: string): EvmRpcBatchCall => ({ method: "eth_call", params: [{ to, data }, block] });
   const results = await fetchEvmRpcBatch("ethereum", [
@@ -59,26 +64,27 @@ export async function fetchDeuroEurcBridgePrice(context: LivePriceContext, signa
     call(EURC, encodeFunctionData({ abi: ABI, functionName: "paused" })),
     call(EURC, encodeFunctionData({ abi: ABI, functionName: "isBlacklisted", args: [BRIDGE] })),
   ], options);
-  if (!results || results.length !== 10) return null;
+  if (!results) return reject("state-unavailable");
+  if (results.length !== 10) return reject("state-invalid");
   const [bridgeCode, tokenCode, ...words] = results;
   if (typeof bridgeCode !== "string" || !/^0x[0-9a-f]+$/i.test(bridgeCode) || bridgeCode.length % 2 !== 0 ||
       typeof tokenCode !== "string" || !/^0x[0-9a-f]+$/i.test(tokenCode) || tokenCode.length % 2 !== 0 ||
       keccak256(bridgeCode as `0x${string}`) !== BRIDGE_CODE_HASH ||
       keccak256(tokenCode as `0x${string}`) !== DEURO_CODE_HASH ||
-      !words.every((word) => typeof word === "string" && WORD.test(word))) return null;
+      !words.every((word) => typeof word === "string" && WORD.test(word))) return reject("state-invalid-or-code-mismatch");
   const [eur, deuro, mintedHex, minterHex, balanceHex, decimalsHex, pausedHex, blacklistedHex] = words as string[];
   if (eur.toLowerCase() !== addressWord(EURC) || deuro.toLowerCase() !== addressWord(DEURO) ||
       BigInt(minterHex) !== 1n || BigInt(decimalsHex) !== 6n || BigInt(pausedHex) !== 0n ||
-      BigInt(blacklistedHex) !== 0n) return null;
+      BigInt(blacklistedHex) !== 0n) return reject("identity-or-redemption-disabled");
   const minted = BigInt(mintedHex);
   const balance = BigInt(balanceHex);
   // Deployed immutable burn ignores the mint horizon, but requires minter permission,
   // allowance and minted capacity. Require 1,000 EUR exit depth and full bridge coverage.
-  if (minted < 1_000n * 10n ** 18n || balance * 10n ** 12n < minted) return null;
+  if (minted < 1_000n * 10n ** 18n || balance * 10n ** 12n < minted) return reject("capacity-insufficient");
   const closing = (await fetchEvmRpcBatch("ethereum", [
     { method: "eth_getBlockByNumber", params: [head.number, false] },
   ], options))?.[0] as { hash?: string } | undefined;
-  if (closing?.hash !== head.hash) return null;
+  if (closing?.hash !== head.hash) return reject("canonical-check-failed");
   const override = buildParentDerivedLiveOverride(parent, 1);
   if (!override) return null;
   return { ...override, observedAt: Math.min(observedAt, parent.trustedParent.observedAt) };

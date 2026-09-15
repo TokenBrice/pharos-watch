@@ -254,7 +254,7 @@ function createVaultNavProvider(input: {
           input.methodLabel,
           "latest",
           signal,
-          { throwOnNullQuote: true },
+          { throwOnNullQuote: true, chainRpcs: context.chainRpcs },
         ),
       );
       if (!resolved) return null;

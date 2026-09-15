@@ -154,11 +154,13 @@ describe("syncViaCoingeckoFallback orchestrator", () => {
       .map((coin) => coin.id).sort();
     const db = mockD1([]);
 
+    const chainRpcs = new Map();
     const result = await syncViaCoingeckoFallback(
       db,
       cgData,
       undefined,
       NOW_SEC,
+      undefined, undefined, undefined, undefined, chainRpcs,
     );
 
     expect(result.status).toBe("degraded");
@@ -188,7 +190,7 @@ describe("syncViaCoingeckoFallback orchestrator", () => {
     });
     expect(subPhaseMocks.loadReplayPriceCacheForTrustedContinuity).toHaveBeenCalledTimes(1);
     expect(subPhaseMocks.runFallbackPriceEnrichmentPhase).toHaveBeenCalledWith(
-      expect.objectContaining({ priceCache: expect.any(Map) }),
+      expect.objectContaining({ priceCache: expect.any(Map), chainRpcs }),
     );
   });
 

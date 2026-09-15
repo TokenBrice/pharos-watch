@@ -60,6 +60,7 @@ describe("runSharedPriceCompletion authoritative repair", () => {
       price: null,
     };
 
+    const chainRpcs = new Map();
     const result = await runSharedPriceCompletion(
       {
         assets: [asset],
@@ -68,6 +69,7 @@ describe("runSharedPriceCompletion authoritative repair", () => {
         syncStartSec: 1_800_000_000,
         validationContexts: createValidationContextResolver(),
         authoritativeOverrides: new Map(),
+        chainRpcs,
         returnIfAborted: () => null,
         abortResult: () => ({ status: "degraded", itemCount: 0, metadata: "aborted" }),
       },
@@ -79,7 +81,7 @@ describe("runSharedPriceCompletion authoritative repair", () => {
       [asset],
       undefined,
       undefined,
-      expect.objectContaining({ maxProviderLivePriority: 0 }),
+      expect.objectContaining({ maxProviderLivePriority: 0, chainRpcs }),
     );
     expect(asset).toMatchObject({
       price: 0.9998,

@@ -1,3 +1,4 @@
+import type { ChainRpcConfig } from "../../lib/chain-registry";
 import {
   createAuthoritativeLivePriceOverrideStats,
   fetchAuthoritativeLivePriceOverrides,
@@ -21,6 +22,7 @@ import { reportStablecoinsStage } from "./runtime";
 import type { CronResult } from "./shared";
 
 interface FallbackPriceEnrichmentInput {
+  chainRpcs?: Map<string, ChainRpcConfig>;
   db: D1Database;
   assets: PeggedAsset[];
   syncStartSec: number;
@@ -63,6 +65,7 @@ export async function runFallbackPriceEnrichmentPhase(
     {
       db: input.db,
       stats: authoritativeOverrideStats,
+      chainRpcs: input.chainRpcs,
       previousMissingGenerationsById: input.previousMissingGenerationsById,
     },
   );
@@ -97,6 +100,7 @@ export async function runFallbackPriceEnrichmentPhase(
   const { missingBefore, enrichStats } = enrichmentPhase;
 
   const priceCompletion = await runSharedPriceCompletion({
+    chainRpcs: input.chainRpcs,
     assets: input.assets,
     missingBefore,
     db: input.db,
