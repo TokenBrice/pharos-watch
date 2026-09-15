@@ -1,3 +1,4 @@
+import { isCoinGeckoHistoryAllowed } from "../../lib/solomon-usdv-identity";
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import { sleep } from "../../lib/abort";
 import { cgHeaders, cgUrl } from "../../lib/coingecko";
@@ -126,7 +127,7 @@ async function auditSingleEventWithCoinGecko(
   const meta = TRACKED_META_BY_ID.get(event.stablecoin_id);
   const geckoId = meta?.geckoId;
 
-  if (!geckoId) {
+  if (!geckoId || !isCoinGeckoHistoryAllowed(geckoId)) {
     return buildAuditEventOutcome(event, "skipped", { attemptedCgFetch: false });
   }
 

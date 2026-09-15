@@ -41,7 +41,7 @@ const { getVariants, isTrackedVariant } = createVariantRelationshipHelpers({
 });
 
 const EURR_PRE_LAUNCH_ID = "eurr-revolut";
-const EXPECTED_TRACKED_STABLECOIN_COUNT = 406;
+const EXPECTED_TRACKED_STABLECOIN_COUNT = 407;
 
 function makeStablecoinAsset(overrides: Record<string, unknown> = {}): Record<string, unknown> {
   return {

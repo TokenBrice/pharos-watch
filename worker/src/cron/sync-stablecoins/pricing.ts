@@ -1,3 +1,4 @@
+import { isSolomonPriceIdentityAllowed } from "../../lib/solomon-usdv-identity";
 import { logWorkerEventArgs } from "../../lib/structured-log";
 import { relativeBps } from "@shared/lib/depeg-signals";
 import {
@@ -263,6 +264,7 @@ export function buildPreviousTrustedPriceLookup(
       agreeSources: string[] | null | undefined;
     },
   ) => {
+    if (!isSolomonPriceIdentityAllowed(assetId, candidate.source, candidate.agreeSources ?? [])) return;
     if (classifyPrimaryDepegTrust({
       price: candidate.price,
       priceSource: candidate.source ?? null,

@@ -98,3 +98,17 @@ describe("handleCoinGeckoOnlyDetail", () => {
     expect(recordOutcomeSafeMock).toHaveBeenCalledWith(db, CIRCUIT_SOURCE.CG_DETAIL_PLATFORMS, false);
   });
 });
+
+it("uses only local detail history for the recycled Solomon CoinGecko identity", async () => {
+  fetchWithRetryMock.mockClear();
+  shouldAttemptFetchMock.mockClear();
+  const detail = makeDetailHelpers(async (tokens) => tokens);
+  const local = Response.json({ tokens: [{ date: 1_800_000_000, totalCirculatingUSD: { peggedUSD: 21_000 } }] });
+  vi.mocked(detail.trySupplyHistoryFallback).mockResolvedValue(local);
+  const response = await handleCoinGeckoOnlyDetail({
+    db: {} as D1Database, stablecoinId: "usdv-solomon-v2", geckoId: "solomon-usdv", pegType: "peggedUSD",
+  }, detail);
+  expect(response).toBe(local);
+  expect(fetchWithRetryMock).not.toHaveBeenCalled();
+  expect(shouldAttemptFetchMock).not.toHaveBeenCalled();
+});

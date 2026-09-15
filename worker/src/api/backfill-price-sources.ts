@@ -1,3 +1,4 @@
+import { isCoinGeckoHistoryAllowed } from "../lib/solomon-usdv-identity";
 import { logWorkerEventArgs } from "../lib/structured-log";
 import { DAY_SECONDS } from "@shared/lib/time-constants";
 import type { StablecoinMeta } from "@shared/types/core";
@@ -241,6 +242,7 @@ export async function fetchCgPriceHistoryHourly(
   coingeckoApiKey: string | null = null,
   signal?: AbortSignal,
 ): Promise<PricePoint[]> {
+  if (!isCoinGeckoHistoryAllowed(geckoId)) return [];
   const seen = new Map<number, number>();
   const HOURLY_EPOCH = Math.floor(new Date("2018-01-30T00:00:00Z").getTime() / 1000);
   const CHUNK_DAYS = 89;
@@ -373,6 +375,7 @@ export async function fetchMarketBackfillPriceSeries(
     finalPointCount: 0,
   };
 
+  if (!isCoinGeckoHistoryAllowed(geckoId)) return { prices: null, diagnostics };
   let rawCgPrices = options?.seedCoinGeckoPrices ?? null;
   if (rawCgPrices == null) {
     const quoteCurrencyCandidates = quoteMode === "native-peg" ? nativeQuoteCurrencies : ["usd"];

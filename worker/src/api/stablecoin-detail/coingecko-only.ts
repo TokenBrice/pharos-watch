@@ -1,3 +1,4 @@
+import { isCoinGeckoHistoryAllowed } from "../../lib/solomon-usdv-identity";
 import { CIRCUIT_SOURCE } from "../../lib/constants";
 import { USER_AGENT } from "../../lib/constants";
 import { cgHeaders, cgUrl } from "../../lib/coingecko";
@@ -63,6 +64,9 @@ export async function handleCoinGeckoOnlyDetail(
   },
   detail: DetailResponseHelpers,
 ): Promise<Response> {
+  if (!isCoinGeckoHistoryAllowed(config.geckoId)) {
+    return handleCacheBackedDetail(config, detail);
+  }
   const cgDetailAllowed = await shouldAttemptFetch(config.db, CIRCUIT_SOURCE.CG_DETAIL_PLATFORMS);
   if (!cgDetailAllowed) {
     const fallback = await detail.trySupplyHistoryFallback("coingecko-circuit-open");

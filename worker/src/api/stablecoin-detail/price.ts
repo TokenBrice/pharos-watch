@@ -1,3 +1,4 @@
+import { LEGACY_SOLOMON_USDV_ID, isSolomonPriceIdentityAllowed } from "../../lib/solomon-usdv-identity";
 import { API_FRESHNESS_MAX_AGE_SEC } from "@shared/lib/api-freshness";
 import { addFreshnessHeaders } from "../../lib/api-freshness-headers";
 import { loadStablecoinsCache } from "../../lib/stablecoins-cache";
@@ -14,6 +15,14 @@ export async function enrichMissingDetailPrice(
   try {
     const detail = await response.clone().json() as Record<string, unknown> | null;
     if (!detail || typeof detail !== "object" || Array.isArray(detail)) return response;
+    if (stablecoinId === LEGACY_SOLOMON_USDV_ID) {
+      delete detail.price;
+      delete detail.gecko_id;
+      delete detail.geckoId;
+      const headers = new Headers(response.headers);
+      headers.delete("Content-Length");
+      response = new Response(JSON.stringify(detail), { status: response.status, statusText: response.statusText, headers });
+    }
     if (typeof detail.price === "number" && Number.isFinite(detail.price) && detail.price > 0) return response;
 
     // Read the publication, not price_cache: a last-good replay could resurrect
@@ -28,6 +37,7 @@ export async function enrichMissingDetailPrice(
     const observedAt = coin?.priceObservedAt ?? coin?.priceUpdatedAt;
     if (
       !coin || coin.frozen ||
+      !isSolomonPriceIdentityAllowed(stablecoinId, coin.priceSource, coin.agreeSources) ||
       typeof coin.price !== "number" || !Number.isFinite(coin.price) || coin.price <= 0 ||
       !coin.priceSource || coin.priceSource === "cached" ||
       (coin.priceConfidence !== "high" && coin.priceConfidence !== "single-source") ||

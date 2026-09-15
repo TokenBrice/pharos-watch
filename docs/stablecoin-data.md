@@ -118,6 +118,8 @@ npm run check:generated-artifacts
 
 If the change affects page counts, feature coverage, reserve coverage, source families, or public methodology behavior, also update the matching route/feature docs from `docs/README.md`.
 
+The Solomon replacement illustrates a provider-ID migration without a canonical-ID migration: `usdv-solomon` remains the active wind-down profile with the original mint and history, while `usdv-solomon-v2` is a distinct live instrument and alone owns CoinGecko's reassigned `solomon-usdv` ID. Both share the verified issuer logo. New-token admission is supported by current exact-mint market activity and positive CoinGecko market cap; small supply is disclosed rather than treated as automatic exclusion. A future legacy freeze requires a separate effective-end review, not merely the announced support deadline. Pricing and history isolation are documented in [Pricing Pipeline](./pricing-pipeline.md#reused-solomon-provider-identity).
+
 ## Cache Admission
 
 `scripts/ci/check-stablecoin-data.ts` validates schema shape, canonical-order consistency, duplicate IDs, absence of the retired legacy category shard files, `coins.generated.json` freshness, wrapper-variant invariants, and whether active assets have a static path into `/api/stablecoins` cache admission. If that check fails, fix metadata or pipeline support rather than bypassing the guard.

@@ -1,3 +1,4 @@
+import { isCoinGeckoHistoryAllowed } from "./solomon-usdv-identity";
 import { USER_AGENT } from "./constants";
 import { cgHeaders, cgUrl } from "./coingecko";
 import { fetchJsonWithRetry } from "./fetch-retry";
@@ -33,6 +34,7 @@ export async function fetchCoinGeckoMarketHistory(
   geckoId: string,
   options: FetchCoinGeckoMarketHistoryOptions = {},
 ): Promise<CoinGeckoMarketHistorySnapshot | null> {
+  if (!isCoinGeckoHistoryAllowed(geckoId)) return null;
   const apiKey = options.apiKey ?? null;
   const retryCount = options.retries;
   const retryOptions = options.timeoutMs != null ? { timeoutMs: options.timeoutMs } : undefined;

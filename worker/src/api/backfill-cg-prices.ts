@@ -1,3 +1,4 @@
+import { isCoinGeckoHistoryAllowed } from "../lib/solomon-usdv-identity";
 import { PSI_ELIGIBLE_STABLECOINS } from "@shared/lib/psi-eligible";
 import { bucketUnixMillisecondsToUtcDay, bucketUnixSecondsToUtcDay } from "@shared/lib/time-buckets";
 import { cgUrl, cgHeaders } from "../lib/coingecko";
@@ -52,6 +53,11 @@ async function executeBackfillCgPrices(db: D1Database, url: URL, cgApiKey?: stri
   for (const meta of coins) {
     if (!meta.geckoId) {
       skipped.push(`${meta.symbol} (no geckoId)`);
+      continue;
+    }
+
+    if (!isCoinGeckoHistoryAllowed(meta.geckoId)) {
+      skipped.push(`${meta.symbol} (recycled CoinGecko identity is current-only)`);
       continue;
     }
 
