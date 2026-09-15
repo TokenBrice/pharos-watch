@@ -1,11 +1,10 @@
 {
   "id": "usdv-solomon",
-  "name": "Solomon USDv",
+  "name": "Solomon USDv (Legacy)",
   "symbol": "USDV",
   "oneLiner": "USDV is Solomon Labs's synthetic dollar on Solana backed by Ceffu-custodied delta-neutral perp margin, with no permissionless public redemption rail.",
   "llamaId": "261",
   "detailProvider": "defillama",
-  "geckoId": "solomon-usdv",
   "flags": {
     "backing": "crypto-backed",
     "governance": "centralized-dependent"
@@ -32,8 +31,8 @@
   "implementationLaunchDate": "2024-12",
   "proofOfReserves": {
     "type": "self-reported",
-    "url": "https://docs.solomonlabs.org/usdv/peg-stability-and-reserves",
-    "provider": "Solomon Labs documentation (no published reserve attestation artefact exists; the former asset-attestations docs URL serves an empty shell, and current docs state USDv reserves are USDG and USDC with direct short-dated US Treasury exposure being added — the earlier Ceffu-custodied basis-trade narrative is gone from the docs)",
+    "url": "https://data.solomonlabs.io/api/solomon-protocol/protocol-data",
+    "provider": "Solomon legacy protocol-data API: issuer-reported Ceffu strategy and reserve components, with a material portion of protocol TVL unmapped. Replacement USDv reserve documentation does not establish the backing of this legacy mint.",
     "attestorTier": "self",
     "cadence": "none"
   },
@@ -52,7 +51,7 @@
     },
     {
       "label": "Proof of Reserves",
-      "url": "https://docs.solomonlabs.org/usdv/peg-stability-and-reserves"
+      "url": "https://data.solomonlabs.io/api/solomon-protocol/protocol-data"
     },
     {
       "label": "Legacy wind-down announcement",

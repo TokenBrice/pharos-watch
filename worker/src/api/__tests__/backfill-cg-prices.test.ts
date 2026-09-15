@@ -5,6 +5,7 @@ import { makeApiUrl, stubCryptoForAuth } from "../../test-helpers/__shared/auth"
 import { makeNoopD1 } from "../../test-helpers/noop-d1";
 import { registerStablecoinParameterContract } from "../../test-helpers/__shared/endpoint-contracts";
 import { mockFetchRetry } from "../../test-helpers/cron/mock-fetch-retry";
+import { fetchJsonWithRetry } from "../../lib/fetch-retry";
 import { handleBackfillCgPricesTrusted } from "../backfill-cg-prices";
 
 stubCryptoForAuth();
@@ -83,4 +84,17 @@ describe("handleBackfillCgPrices", () => {
     expect(body.totalRowsInserted).toBe(0);
     expect(body.errors).toBeUndefined();
   });
+});
+
+
+it("does not import recycled Solomon CG market caps or prices into either generation", async () => {
+  vi.clearAllMocks();
+  for (const id of ["usdv-solomon", "usdv-solomon-v2"]) {
+    const res = await handleBackfillCgPricesTrusted({ db: makeNoopD1(), url: makeApiUrl(`/api/backfill-cg-prices?stablecoin=${id}`) });
+    const body = await readJsonResponse(res, 200) as { coinsProcessed: number; totalRowsInserted: number; skipped: string[] };
+    expect(body.coinsProcessed).toBe(0);
+    expect(body.totalRowsInserted).toBe(0);
+    expect(body.skipped.length).toBe(1);
+  }
+  expect(fetchJsonWithRetry).not.toHaveBeenCalled();
 });

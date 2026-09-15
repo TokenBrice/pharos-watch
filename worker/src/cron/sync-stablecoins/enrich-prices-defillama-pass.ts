@@ -1,3 +1,4 @@
+import { LEGACY_SOLOMON_USDV_ID } from "../../lib/solomon-usdv-identity";
 import { logWorkerEventArgs } from "../../lib/structured-log";
 import { ACTIVE_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import { CHAIN_META, resolveChainId } from "@shared/lib/chains";
@@ -130,6 +131,7 @@ function isDefiLlamaContractQuoteUsable(
   quote: DefiLlamaContractQuote,
   fxRates: Record<string, number> | undefined,
 ): boolean {
+  if (asset.id === LEGACY_SOLOMON_USDV_ID) return false;
   if (quote.symbol.trim().toUpperCase() !== asset.symbol.trim().toUpperCase()) {
     return false;
   }
@@ -238,7 +240,7 @@ export async function runDlContractPasses(
     const withAddress: DefiLlamaContractLookup[] = [];
     for (let index = 0; index < assets.length; index += 1) {
       const asset = assets[index];
-      if (!hasMissingPrice(asset)) continue;
+      if (!hasMissingPrice(asset) || asset.id === LEGACY_SOLOMON_USDV_ID) continue;
       for (const coinId of buildPrimaryContractCoinIds(asset)) {
         withAddress.push({ index, coinId });
       }

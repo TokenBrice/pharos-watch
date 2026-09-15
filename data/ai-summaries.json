@@ -5034,11 +5034,11 @@
     ]
   },
   "usdv-solomon": {
-    "title": "The Ceffu Strategy Dollar",
-    "text": "Solomon's USDv is a Solana synthetic dollar backed by Ceffu-custodied spot crypto hedged with Binance inverse perpetuals, a {{term:delta-neutral}}delta-neutral{{/term}} {{term:basis-trade}}basis trade{{/term}} run by Solomon Labs. The token supply is easy to validate on-chain, and Solomon now publishes a protocol-data API, but that feed is the problem rather than the answer: its identified reserve components cover under a third of reported protocol TVL, the remainder has no issuer-explained allocation, and the only external artefact is an aggregate, custodian-issued Ceffu attestation dated April 2026. Backing is therefore graded on a mostly unmapped book. Direct mint and {{term:redemption}}redemption{{/term}} are restricted to Solomon-approved participants against a small documented reserve buffer, with no permissionless holder rail, which makes exit the weakest of the three pillars on the {{grade}} card. Mint logic can be replaced by a 3-of-9 multisig with no timelock, and reconciliation of supply to reserves is unverified. The SPL mint's freeze authority is disabled, so holders cannot be frozen on-chain, but that is the one control Solomon has given up. USDv is a visible Solana dollar whose backing cannot be audited from the outside, and the card prices that gap.",
-    "updatedAt": "2026-09-07",
+    "title": "Solomon’s Legacy Strategy Dollar",
+    "text": "Solomon's USDv is a Solana synthetic dollar backed by Ceffu-custodied spot crypto hedged with Binance inverse perpetuals, a {{term:delta-neutral}}delta-neutral{{/term}} {{term:basis-trade}}basis trade{{/term}} run by Solomon Labs. The issuer announced a wind-down on August 28: legacy front-end support ends October 16, 2026, with an October 9 sUSDv unstaking-request deadline. The original token remains transferable during the exit period and does not automatically convert into the replacement USDv. The token supply is easy to validate on-chain, and Solomon now publishes a protocol-data API, but that feed is the problem rather than the answer: its identified reserve components cover under a third of reported protocol TVL, the remainder has no issuer-explained allocation, and the reviewed external artefact is an aggregate, custodian-issued Ceffu attestation dated April 2026. Backing is therefore graded on a mostly unmapped book. Direct mint and {{term:redemption}}redemption{{/term}} are restricted to Solomon-approved participants against a small documented reserve buffer, with no permissionless holder rail, which makes exit the weakest of the three pillars on the {{grade}} card. Mint logic can be replaced by a 3-of-9 multisig with no timelock, and reconciliation of supply to reserves is unverified. The SPL mint's freeze authority is disabled, so holders cannot be frozen on-chain, but that is the one control Solomon has given up. USDv is a visible Solana dollar whose backing cannot be audited from the outside, and the card prices that gap.",
+    "updatedAt": "2026-09-15",
     "authoredBy": "ai",
-    "model": "claude-fable-5-1",
+    "model": "gpt-6-astra",
     "factsAsOf": "2026-09-07",
     "claimTokens": [
       {
@@ -5046,6 +5046,16 @@
         "placeholder": "{{grade}}",
         "source": "report-card.grade",
         "factsAsOf": "2026-09-07"
+      }
+    ],
+    "sources": [
+      {
+        "label": "Legacy USDv wind-down announcement (August 28, 2026)",
+        "url": "https://blog.solomonlabs.org/p/winding-down-the-original-usdv"
+      },
+      {
+        "label": "Legacy Ceffu aggregate attestation (April 2026)",
+        "url": "https://github.com/SolomonLabs/attestations/blob/main/ceffu/2026/2026-04-01.pdf"
       }
     ]
   },
@@ -6934,6 +6944,32 @@
       {
         "label": "Bridge Building S.A.: EURR MiCA white paper (July 2026)",
         "url": "https://reserves.bridge.xyz/white-papers/bridge-mica-white-paper-eurr-july-2026.pdf"
+      }
+    ]
+  },
+  "usdv-solomon-v2": {
+    "title": "Solomon’s Separate Reserve Dollar",
+    "text": "Solomon’s replacement USDv uses a new Solana mint and the Chancery program, with no automatic conversion from the original Ceffu-backed token. Its observed program reserves hold USDC and USDG, so holders depend on those stablecoin issuers as well as Solomon’s settlement controls. The reserve-account review identifies the assets in that selected scope; it does not establish a complete financial reconciliation or legal segregation for token holders. Direct minting and redemption require approved-counterparty onboarding, while ordinary holders rely on secondary-market liquidity. Privileged roles can change operating controls and freeze token accounts, and a separate delayed upgrade authority can replace program logic. Rewards require eligible participation and are separate from the token’s dollar peg. The central constraint is the gap between transferable on-chain balances and permissioned access to the underlying reserves.",
+    "updatedAt": "2026-09-15",
+    "authoredBy": "ai",
+    "model": "gpt-6-astra",
+    "factsAsOf": "2026-09-15",
+    "sources": [
+      {
+        "label": "Solomon replacement mint and legacy wind-down",
+        "url": "https://blog.solomonlabs.org/p/winding-down-the-original-usdv"
+      },
+      {
+        "label": "Direct minting and redemption eligibility",
+        "url": "https://docs.solomonlabs.org/usdv/acquiring-and-redeeming/"
+      },
+      {
+        "label": "Replacement reserves and peg stability",
+        "url": "https://docs.solomonlabs.org/usdv/peg-stability-and-reserves/"
+      },
+      {
+        "label": "Chancery roles and authority policy",
+        "url": "https://github.com/SolomonLabs/chancery/blob/0dafa95d1aded954de098208f0f515d436aa496c/docs/policy/01_ROLES_AND_AUTHORITY.md"
       }
     ]
   }

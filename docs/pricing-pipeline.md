@@ -66,6 +66,12 @@ Pyth Hermes was retired from live primary consensus on 2026-08-26 after Pyth's A
 
 > **Historical note (v2.0→v2.1):** The DL coins API (`coins.llama.fi/prices/current/coingecko:{id}`) was removed from primary consensus because it returned CoinGecko-sourced data, creating illusory two-source agreement. It is still used in fallback enrichment via contract-address queries.
 
+### Reused Solomon provider identity
+
+CoinGecko reassigned `solomon-usdv` to the separate Chancery mint in September 2026. The original `usdv-solomon` keeps its DefiLlama 261 USD supply and historical record, but its upstream CoinGecko aliases and DefiLlama list price are removed at intake. The legacy DefiLlama contract-price query also aliases the replacement, so that fallback is excluded. `worker/src/lib/solomon-usdv-identity.ts` rejects those source families, unknown/cached provenance, and contaminated agreement lineage at publication and previous-price replay; exact-mint market quotes still follow the ordinary admission rules. Cached detail responses are sanitized before optional enrichment from the canonical publication.
+
+The replacement `usdv-solomon-v2` alone owns `geckoId: solomon-usdv` and uses the existing CoinGecko supplemental current-price/market-cap path. The recycled provider history is current-only: CoinGecko market-history, direct price backfill, depeg-history audit, hourly price history, caller-provided history seeds and their DefiLlama proxy history are withheld. New detail charts use local supply/cache history, and forward local collection continues. No historical rows are deleted and no guessed migration date divides the mixed provider series.
+
 ### Consensus Rules
 
 Before clustering, repeated quotes with the same source key are collapsed to one provider observation using their median,

@@ -1,3 +1,4 @@
+import { isSolomonPriceIdentityAllowed } from "./solomon-usdv-identity";
 import {
   getPricingSourceRegistryEntry,
   isPricingSourceSoftGuardrailExempt,
@@ -271,6 +272,9 @@ function evaluatePriceForPublication(input: PublishablePriceInput): PricePublica
 }
 
 function validatePriceForPublication(input: PublishablePriceInput): PublishablePriceDecision {
+  if (!isSolomonPriceIdentityAllowed(input.validationContext.stablecoinId, input.source, input.agreeSources)) {
+    return { accepted: false, reason: "provider_identity_mismatch" };
+  }
   const decision = evaluatePriceForPublication(input);
   return { accepted: decision.accepted, reason: decision.reason };
 }

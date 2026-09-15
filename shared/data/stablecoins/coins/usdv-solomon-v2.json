@@ -1,0 +1,83 @@
+{
+  "id": "usdv-solomon-v2",
+  "name": "Solomon USDv",
+  "symbol": "USDV",
+  "oneLiner": "USDv is Solomon’s replacement Solana dollar, backed by USDC and USDG with permissioned minting and redemption.",
+  "detailProvider": "coingecko",
+  "geckoId": "solomon-usdv",
+  "flags": {
+    "backing": "rwa-backed",
+    "governance": "centralized"
+  },
+  "collateral": "The replacement Chancery program holds USDC and USDG reserve assets. The issuer describes additional direct short-dated U.S. Treasury exposure as prospective; this profile does not treat legacy Ceffu strategy assets as backing for the new mint.",
+  "pegMechanism": "Approved counterparties mint USDv against accepted reserve assets and redeem by burning USDv for an approved payout asset, subject to onboarding, liquidity, limits and processing windows. Other holders exit through on-chain markets. Rewards are distributed separately to eligible balances and do not make USDv an appreciating NAV token.",
+  "mechanismArchetype": "fiat-cash",
+  "mechanismArchetypeReview": {
+    "disposition": "resolved",
+    "reviewedAt": "2026-09-15",
+    "reviewer": "Codex reserve research",
+    "rationale": "Current issuer documentation describes reserve-backed issuance and permissioned redemption against stablecoin reserve assets. The separate Chancery mint is not the legacy delta-neutral instrument. July 2026 mainnet deployment and activation evidence establish the implementation month, without claiming that the historical canary was a public launch.",
+    "sources": [
+      {
+        "label": "USDv minting and redemption",
+        "url": "https://docs.solomonlabs.org/usdv/acquiring-and-redeeming/"
+      },
+      {
+        "label": "Chancery deployment report",
+        "url": "https://github.com/SolomonLabs/chancery-integrity-records/blob/main/builds/DEP-00001/DEP-00001_DOC-deployment-report.md"
+      }
+    ]
+  },
+  "implementationLaunchDate": "2026-07",
+  "proofOfReserves": {
+    "type": "self-reported",
+    "url": "https://docs.solomonlabs.org/usdv/peg-stability-and-reserves",
+    "provider": "Solomon reserve disclosures and public Chancery reserve accounts; the Accretion program audit is not a reserve attestation.",
+    "attestorTier": "self",
+    "cadence": "none"
+  },
+  "links": [
+    {
+      "label": "Website",
+      "url": "https://solomonlabs.org/"
+    },
+    {
+      "label": "Docs",
+      "url": "https://docs.solomonlabs.org/usdv/"
+    },
+    {
+      "label": "Twitter",
+      "url": "https://x.com/solomon_labs"
+    },
+    {
+      "label": "Verified mainnet mint",
+      "url": "https://github.com/SolomonLabs/chancery/blob/main/config/networks/mainnet.ts"
+    },
+    {
+      "label": "Legacy wind-down announcement",
+      "url": "https://blog.solomonlabs.org/p/winding-down-the-original-usdv"
+    }
+  ],
+  "contracts": [
+    {
+      "chain": "solana",
+      "address": "USDvUSpnhCr9yBgj3UyVrD239HRUv4RsHwH2FxsWuMk",
+      "decimals": 6
+    }
+  ],
+  "collateralQuality": "rwa",
+  "custodyModel": "onchain",
+  "governanceQuality": "single-entity",
+  "notices": [
+    {
+      "type": "info",
+      "title": "Separate replacement token",
+      "message": "This profile tracks the six-decimal Chancery USDv mint. Original Solomon USDv remains a separate legacy token with no automatic conversion; its supply, reserves and historical prices are not combined here."
+    },
+    {
+      "type": "warning",
+      "title": "Permissioned direct redemption",
+      "message": "Holding USDv does not grant access to direct redemption. Approved counterparties must complete onboarding and comply with limits, processing windows and available liquidity; other holders rely on market liquidity."
+    }
+  ]
+}

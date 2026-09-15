@@ -13,6 +13,7 @@ const DAY_SECONDS = 86_400;
 vi.mock("../../lib/fetch-retry", () => mockFetchRetry({ fetchWithRetry: fetchWithRetryMock }));
 
 import { auditEvents, handleAuditDepegHistoryTrusted } from "../audit-depeg-history";
+import { runCoinGeckoAuditBatch } from "../audit-depeg-history/coingecko-audit";
 
 stubCryptoForAuth();
 
@@ -758,4 +759,22 @@ describe("handleAuditDepegHistory method safety", () => {
     expect(result.auditedEvents.every((e) => e.verdict === "error")).toBe(true);
     expect(db.getHistory().some((entry) => entry.sql.includes("INSERT INTO depeg_event_provenance"))).toBe(false);
   });
+});
+
+
+it("skips recycled Solomon provider history without fetching or invalidating either token's event", async () => {
+  fetchWithRetryMock.mockClear();
+  const events = ["usdv-solomon", "usdv-solomon-v2"].map((stablecoin_id, index) => makeAuditEvent({
+    id: 90 + index, stablecoin_id, symbol: "USDV",
+  }));
+  const result = await runCoinGeckoAuditBatch(makeNoopD1(), events);
+  expect(result.attemptedCgFetches).toBe(0);
+  expect(result.outcomes).toHaveLength(2);
+  for (const outcome of result.outcomes) {
+    expect(outcome).toMatchObject({
+      auditedEvent: { verdict: "skipped", cgMaxBps: null }, attemptedCgFetch: false,
+      upstreamError: false, falsePositiveFound: false, provenanceVerdict: null, invalidatesProvenance: false,
+    });
+  }
+  expect(fetchWithRetryMock).not.toHaveBeenCalled();
 });

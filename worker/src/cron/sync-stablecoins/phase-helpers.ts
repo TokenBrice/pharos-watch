@@ -1,3 +1,4 @@
+import { LEGACY_SOLOMON_USDV_ID } from "../../lib/solomon-usdv-identity";
 import { logWorkerEventArgs } from "../../lib/structured-log";
 import { ACTIVE_META_BY_ID, TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import { getCirculatingRaw, sumPegBuckets } from "@shared/lib/supply";
@@ -102,7 +103,12 @@ export function applyTrackedAssetOverrides(assets: PeggedAsset[]): void {
   for (const asset of assets) {
     const meta = ACTIVE_META_BY_ID.get(String(asset.id));
 
-    if (meta?.geckoId) {
+    if (asset.id === LEGACY_SOLOMON_USDV_ID) {
+      asset.name = meta?.name ?? asset.name;
+      delete asset.geckoId;
+      delete asset.gecko_id;
+      asset.price = null; // DefiLlama supply remains legacy; its price now identifies V2.
+    } else if (meta?.geckoId) {
       asset.geckoId = meta.geckoId;
     }
     if (meta?.cmcSlug) {

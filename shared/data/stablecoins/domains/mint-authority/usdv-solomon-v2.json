@@ -1,0 +1,450 @@
+{
+  "id": "usdv-solomon-v2",
+  "mintAuthority": {
+    "mintPath": "permissioned-minter",
+    "authorityPosture": "concentrated-admin",
+    "confidence": "probable",
+    "summary": "Replacement USDv is minted by the Chancery program PDA through permissioned collateral settlement. Live governance and operational Squads quorums permit one signature, while economic widening remains subject to separate program delays. Program upgrades require three of seven vote-capable members (eight total members) and a two-day Squads delay. Whole-program economic mint bounds remain unresolved.",
+    "upgradeability": {
+      "model": "custom",
+      "proxyAddresses": [
+        "ChnryP5RcZtMvP8vvVyPGUhwCg6uDJc53vCe3sxr11Sz"
+      ],
+      "implementationAddresses": [
+        "BWgWFgZxxF2ndC9PgKS5Fa8c2Nv3PUS34mGbvuBw95Ln"
+      ],
+      "adminAddresses": [
+        "934modVoNj5TUV69Ub3YXJAvGxWvpqRiHAydTadJxA2L"
+      ],
+      "canChangeMintLogic": true,
+      "delaySec": 172800,
+      "controlRef": "Chancery program upgrade Squads vault (3-of-7 voters; eight members)",
+      "observedAt": "2026-09-15",
+      "observedBlock": 447139220,
+      "sources": [
+        {
+          "label": "Solana mainnet finalized Chancery config, ProgramData and Squads accounts (slot 447139220)",
+          "url": "https://api.mainnet-beta.solana.com"
+        },
+        {
+          "label": "Chancery current roles and authority policy",
+          "url": "https://github.com/SolomonLabs/chancery/blob/0dafa95d1aded954de098208f0f515d436aa496c/docs/policy/01_ROLES_AND_AUTHORITY.md"
+        },
+        {
+          "label": "Chancery PDA register",
+          "url": "https://github.com/SolomonLabs/chancery/blob/0dafa95d1aded954de098208f0f515d436aa496c/spec/13_PDA_Register.md"
+        },
+        {
+          "label": "Chancery direct mint implementation",
+          "url": "https://github.com/SolomonLabs/chancery/blob/0dafa95d1aded954de098208f0f515d436aa496c/programs/chancery/src/modules/settlement/instructions/mint_direct.rs"
+        },
+        {
+          "label": "Published Chancery authorities (2026-09-04; current role quorums superseded by chain read)",
+          "url": "https://github.com/SolomonLabs/chancery-integrity-records/blob/main/docs/AUTHORITIES.md"
+        }
+      ]
+    },
+    "controls": [
+      {
+        "chain": "solana",
+        "address": "BWB53KgBqDZ75rMnEKohR3arDBtPtonppTx2RmjkqQ2r",
+        "label": "Chancery issued-token mint-authority PDA",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "directMintAbility": "cap-limited",
+        "canRaiseCap": false,
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-09-15",
+        "observedBlock": 447139220,
+        "sources": [
+          {
+            "label": "Solana mainnet finalized Chancery config, ProgramData and Squads accounts (slot 447139220)",
+            "url": "https://api.mainnet-beta.solana.com"
+          },
+          {
+            "label": "Chancery current roles and authority policy",
+            "url": "https://github.com/SolomonLabs/chancery/blob/0dafa95d1aded954de098208f0f515d436aa496c/docs/policy/01_ROLES_AND_AUTHORITY.md"
+          },
+          {
+            "label": "Chancery PDA register",
+            "url": "https://github.com/SolomonLabs/chancery/blob/0dafa95d1aded954de098208f0f515d436aa496c/spec/13_PDA_Register.md"
+          },
+          {
+            "label": "Chancery direct mint implementation",
+            "url": "https://github.com/SolomonLabs/chancery/blob/0dafa95d1aded954de098208f0f515d436aa496c/programs/chancery/src/modules/settlement/instructions/mint_direct.rs"
+          },
+          {
+            "label": "Published Chancery authorities (2026-09-04; current role quorums superseded by chain read)",
+            "url": "https://github.com/SolomonLabs/chancery-integrity-records/blob/main/docs/AUTHORITIES.md"
+          }
+        ],
+        "evidence": "The Token-2022 mint authority BWB53KgBqDZ75rMnEKohR3arDBtPtonppTx2RmjkqQ2r is independently reproduced from [mint-authority] under ChnryP5RcZtMvP8vvVyPGUhwCg6uDJc53vCe3sxr11Sz and matches the program config. It is a signer-only PDA, not an externally held key. Published direct-mint source requires permissioned principals/pathways, credited collateral, rates, fees and settlement limits before CPI minting. Current USDC per-settlement bounds are 1,000 minimum and 500,000 maximum; USDG and PYUSD are 1,000 minimum and 25,000 maximum at par rates. These are transaction bounds, not an immutable total-supply ceiling. Full active permission/pathway and migration economic bounds remain unreviewed."
+      },
+      {
+        "chain": "solana",
+        "address": "934modVoNj5TUV69Ub3YXJAvGxWvpqRiHAydTadJxA2L",
+        "label": "Chancery program upgrade Squads vault (3-of-7 voters; eight members)",
+        "role": "proxy-admin",
+        "authorityType": "multisig",
+        "directMintAbility": "upgrade-only",
+        "threshold": 3,
+        "signerCount": 7,
+        "timelockDelaySec": 172800,
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-09-15",
+        "observedBlock": 447139220,
+        "sources": [
+          {
+            "label": "Solana mainnet finalized Chancery config, ProgramData and Squads accounts (slot 447139220)",
+            "url": "https://api.mainnet-beta.solana.com"
+          },
+          {
+            "label": "Chancery current roles and authority policy",
+            "url": "https://github.com/SolomonLabs/chancery/blob/0dafa95d1aded954de098208f0f515d436aa496c/docs/policy/01_ROLES_AND_AUTHORITY.md"
+          },
+          {
+            "label": "Chancery PDA register",
+            "url": "https://github.com/SolomonLabs/chancery/blob/0dafa95d1aded954de098208f0f515d436aa496c/spec/13_PDA_Register.md"
+          },
+          {
+            "label": "Chancery direct mint implementation",
+            "url": "https://github.com/SolomonLabs/chancery/blob/0dafa95d1aded954de098208f0f515d436aa496c/programs/chancery/src/modules/settlement/instructions/mint_direct.rs"
+          },
+          {
+            "label": "Published Chancery authorities (2026-09-04; current role quorums superseded by chain read)",
+            "url": "https://github.com/SolomonLabs/chancery-integrity-records/blob/main/docs/AUTHORITIES.md"
+          }
+        ],
+        "evidence": "Finalized slot 447139220 independently derives vault 934modVoNj5TUV69Ub3YXJAvGxWvpqRiHAydTadJxA2L from Squads multisig 4hFbN3HSmz4vBVNsv3MP8DfaKJKjAunrfzaXmQ4x1pQP and decodes threshold 3, 8 members (7 vote-capable), Squads time_lock 172800 seconds, null external config authority and null rent collector. ProgramData BWgWFgZxxF2ndC9PgKS5Fa8c2Nv3PUS34mGbvuBw95Ln directly names this vault as upgrade authority; last program deployment slot is 444033132. This authority can replace mint and reserve control logic after its two-day Squads delay."
+      },
+      {
+        "chain": "solana",
+        "address": "5XW6L6Qde5ppeB82rZ9aUW1DqyXh3bknmz5WEc15jWq9",
+        "label": "Chancery governance Squads vault",
+        "role": "minter-admin",
+        "authorityType": "multisig",
+        "directMintAbility": "can-authorize",
+        "threshold": 1,
+        "signerCount": 6,
+        "timelockDelaySec": 0,
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-09-15",
+        "observedBlock": 447139220,
+        "sources": [
+          {
+            "label": "Solana mainnet finalized Chancery config, ProgramData and Squads accounts (slot 447139220)",
+            "url": "https://api.mainnet-beta.solana.com"
+          },
+          {
+            "label": "Chancery current roles and authority policy",
+            "url": "https://github.com/SolomonLabs/chancery/blob/0dafa95d1aded954de098208f0f515d436aa496c/docs/policy/01_ROLES_AND_AUTHORITY.md"
+          },
+          {
+            "label": "Chancery PDA register",
+            "url": "https://github.com/SolomonLabs/chancery/blob/0dafa95d1aded954de098208f0f515d436aa496c/spec/13_PDA_Register.md"
+          },
+          {
+            "label": "Chancery direct mint implementation",
+            "url": "https://github.com/SolomonLabs/chancery/blob/0dafa95d1aded954de098208f0f515d436aa496c/programs/chancery/src/modules/settlement/instructions/mint_direct.rs"
+          },
+          {
+            "label": "Published Chancery authorities (2026-09-04; current role quorums superseded by chain read)",
+            "url": "https://github.com/SolomonLabs/chancery-integrity-records/blob/main/docs/AUTHORITIES.md"
+          }
+        ],
+        "evidence": "Finalized slot 447139220 independently derives vault 5XW6L6Qde5ppeB82rZ9aUW1DqyXh3bknmz5WEc15jWq9 from Squads multisig 69EGL7EnwL5gGCGsf1m4Rp5tzi6dm5TmfCL32WgjRWzD and decodes threshold 1, 6 members (6 vote-capable), Squads time_lock 0 seconds, null external config authority and null rent collector. This vault matches ChanceryConfig governance_authority. Single-signature Squads quorum does not bypass Chancery pending changes: permission widening and economic changes require semantic-hash-bound proposals and governance acceptance after the applicable program timelock. Published minimum risk-class delays range from 7,200 to 172,800 seconds for widening through irreversible changes. Full currently configured pathway/permission limits were not enumerated. The September 4 disclosure of a 3-of-6 quorum is superseded by this 1-of-6 chain observation."
+      },
+      {
+        "chain": "solana",
+        "address": "AyAL6ujt1v2mJSQuUptvTDC3UySecqBMoY7Z1D1bXZhV",
+        "label": "Chancery operations Squads vault",
+        "role": "other",
+        "authorityType": "multisig",
+        "directMintAbility": "parameter-only",
+        "threshold": 1,
+        "signerCount": 7,
+        "timelockDelaySec": 0,
+        "canRaiseCap": false,
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-09-15",
+        "observedBlock": 447139220,
+        "sources": [
+          {
+            "label": "Solana mainnet finalized Chancery config, ProgramData and Squads accounts (slot 447139220)",
+            "url": "https://api.mainnet-beta.solana.com"
+          },
+          {
+            "label": "Chancery current roles and authority policy",
+            "url": "https://github.com/SolomonLabs/chancery/blob/0dafa95d1aded954de098208f0f515d436aa496c/docs/policy/01_ROLES_AND_AUTHORITY.md"
+          },
+          {
+            "label": "Chancery PDA register",
+            "url": "https://github.com/SolomonLabs/chancery/blob/0dafa95d1aded954de098208f0f515d436aa496c/spec/13_PDA_Register.md"
+          },
+          {
+            "label": "Chancery direct mint implementation",
+            "url": "https://github.com/SolomonLabs/chancery/blob/0dafa95d1aded954de098208f0f515d436aa496c/programs/chancery/src/modules/settlement/instructions/mint_direct.rs"
+          },
+          {
+            "label": "Published Chancery authorities (2026-09-04; current role quorums superseded by chain read)",
+            "url": "https://github.com/SolomonLabs/chancery-integrity-records/blob/main/docs/AUTHORITIES.md"
+          }
+        ],
+        "evidence": "Finalized slot 447139220 independently derives vault AyAL6ujt1v2mJSQuUptvTDC3UySecqBMoY7Z1D1bXZhV from Squads multisig 5xhpNfxUtFYDn4A4d1FhcCWP8E52JQJf9iwCmip78axG and decodes threshold 1, 7 members (7 vote-capable), Squads time_lock 0 seconds, null external config authority and null rent collector. This vault matches operations_authority. Routine administration is distinct from principal/executor mint permission. Operations cannot bypass collateral/pathway checks or independently approve high-impact widening; the published 2-of-7 quorum is superseded by current 1-of-7."
+      },
+      {
+        "chain": "solana",
+        "address": "32W3GbcTPb8J1mhrqrZrUETQkKv5FeigZpAmcoitNxkk",
+        "label": "Chancery emergency Squads vault",
+        "role": "other",
+        "authorityType": "multisig",
+        "directMintAbility": "none",
+        "threshold": 1,
+        "signerCount": 6,
+        "timelockDelaySec": 0,
+        "canRaiseCap": false,
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-09-15",
+        "observedBlock": 447139220,
+        "sources": [
+          {
+            "label": "Solana mainnet finalized Chancery config, ProgramData and Squads accounts (slot 447139220)",
+            "url": "https://api.mainnet-beta.solana.com"
+          },
+          {
+            "label": "Chancery current roles and authority policy",
+            "url": "https://github.com/SolomonLabs/chancery/blob/0dafa95d1aded954de098208f0f515d436aa496c/docs/policy/01_ROLES_AND_AUTHORITY.md"
+          },
+          {
+            "label": "Chancery PDA register",
+            "url": "https://github.com/SolomonLabs/chancery/blob/0dafa95d1aded954de098208f0f515d436aa496c/spec/13_PDA_Register.md"
+          },
+          {
+            "label": "Chancery direct mint implementation",
+            "url": "https://github.com/SolomonLabs/chancery/blob/0dafa95d1aded954de098208f0f515d436aa496c/programs/chancery/src/modules/settlement/instructions/mint_direct.rs"
+          },
+          {
+            "label": "Published Chancery authorities (2026-09-04; current role quorums superseded by chain read)",
+            "url": "https://github.com/SolomonLabs/chancery-integrity-records/blob/main/docs/AUTHORITIES.md"
+          }
+        ],
+        "evidence": "Finalized slot 447139220 independently derives vault 32W3GbcTPb8J1mhrqrZrUETQkKv5FeigZpAmcoitNxkk from Squads multisig uRd4UGLznc2YW2N6bVvVxwaRCCKwEfuG2VuokRfajNQ and decodes threshold 1, 6 members (6 vote-capable), Squads time_lock 0 seconds, null external config authority and null rent collector. This vault matches emergency_authority. Source permits restrictive pauses and basic token freezing; it does not grant reserve withdrawal or unrestricted minting."
+      },
+      {
+        "chain": "solana",
+        "address": "9TY8Wy4SMfrisMUfPK27sA4JysCdAYuNb7KAT45dCvMv",
+        "label": "Chancery treasury Squads vault",
+        "role": "custodian",
+        "authorityType": "multisig",
+        "directMintAbility": "none",
+        "threshold": 1,
+        "signerCount": 7,
+        "timelockDelaySec": 0,
+        "canRaiseCap": false,
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-09-15",
+        "observedBlock": 447139220,
+        "sources": [
+          {
+            "label": "Solana mainnet finalized Chancery config, ProgramData and Squads accounts (slot 447139220)",
+            "url": "https://api.mainnet-beta.solana.com"
+          },
+          {
+            "label": "Chancery current roles and authority policy",
+            "url": "https://github.com/SolomonLabs/chancery/blob/0dafa95d1aded954de098208f0f515d436aa496c/docs/policy/01_ROLES_AND_AUTHORITY.md"
+          },
+          {
+            "label": "Chancery PDA register",
+            "url": "https://github.com/SolomonLabs/chancery/blob/0dafa95d1aded954de098208f0f515d436aa496c/spec/13_PDA_Register.md"
+          },
+          {
+            "label": "Chancery direct mint implementation",
+            "url": "https://github.com/SolomonLabs/chancery/blob/0dafa95d1aded954de098208f0f515d436aa496c/programs/chancery/src/modules/settlement/instructions/mint_direct.rs"
+          },
+          {
+            "label": "Published Chancery authorities (2026-09-04; current role quorums superseded by chain read)",
+            "url": "https://github.com/SolomonLabs/chancery-integrity-records/blob/main/docs/AUTHORITIES.md"
+          }
+        ],
+        "evidence": "Finalized slot 447139220 independently derives vault 9TY8Wy4SMfrisMUfPK27sA4JysCdAYuNb7KAT45dCvMv from Squads multisig AqSWejgnsyE7N32TKiaVgtqiBMxRQP5vm5bCDkejaePQ and decodes threshold 1, 7 members (7 vote-capable), Squads time_lock 0 seconds, null external config authority and null rent collector. Treasury is not a Chancery actor role. Published policy identifies it as the owner of approved reserve destination accounts; observed treasury USDC balance is zero. Current 1-of-7 differs from the published 2-of-5."
+      },
+      {
+        "chain": "solana",
+        "address": "8aV9vKcUZHzcqHMmSN8HtYkWPviariX7YyfxSRzF5Q3K",
+        "label": "Chancery enforcement Squads vault",
+        "role": "other",
+        "authorityType": "multisig",
+        "directMintAbility": "none",
+        "threshold": 1,
+        "signerCount": 6,
+        "timelockDelaySec": 0,
+        "canRaiseCap": false,
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-09-15",
+        "observedBlock": 447139220,
+        "sources": [
+          {
+            "label": "Solana mainnet finalized Chancery config, ProgramData and Squads accounts (slot 447139220)",
+            "url": "https://api.mainnet-beta.solana.com"
+          },
+          {
+            "label": "Chancery current roles and authority policy",
+            "url": "https://github.com/SolomonLabs/chancery/blob/0dafa95d1aded954de098208f0f515d436aa496c/docs/policy/01_ROLES_AND_AUTHORITY.md"
+          },
+          {
+            "label": "Chancery PDA register",
+            "url": "https://github.com/SolomonLabs/chancery/blob/0dafa95d1aded954de098208f0f515d436aa496c/spec/13_PDA_Register.md"
+          },
+          {
+            "label": "Chancery direct mint implementation",
+            "url": "https://github.com/SolomonLabs/chancery/blob/0dafa95d1aded954de098208f0f515d436aa496c/programs/chancery/src/modules/settlement/instructions/mint_direct.rs"
+          },
+          {
+            "label": "Published Chancery authorities (2026-09-04; current role quorums superseded by chain read)",
+            "url": "https://github.com/SolomonLabs/chancery-integrity-records/blob/main/docs/AUTHORITIES.md"
+          }
+        ],
+        "evidence": "Finalized slot 447139220 independently derives vault 8aV9vKcUZHzcqHMmSN8HtYkWPviariX7YyfxSRzF5Q3K from Squads multisig E2RkC3FCXPGrDee2w2NuSmbNZ5TQqxPCrmjPhRJaoHXZ and decodes threshold 1, 6 members (6 vote-capable), Squads time_lock 0 seconds, null external config authority and null rent collector. This vault matches enforcement_authority. Published basic-freeze handler permits this role to freeze individual issued-token accounts with a recorded reason. Reserved permanent-delegate extension is not evidence that forced-transfer/burn handlers are currently active."
+      },
+      {
+        "chain": "solana",
+        "address": "AHSG9gmossBk6Bm8heSXHxAJ6qJPeWUzwcv29Z5WQPb7",
+        "label": "Chancery insurance-admin Squads vault (reserved role)",
+        "role": "other",
+        "authorityType": "multisig",
+        "directMintAbility": "none",
+        "threshold": 1,
+        "signerCount": 6,
+        "timelockDelaySec": 0,
+        "canRaiseCap": false,
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-09-15",
+        "observedBlock": 447139220,
+        "sources": [
+          {
+            "label": "Solana mainnet finalized Chancery config, ProgramData and Squads accounts (slot 447139220)",
+            "url": "https://api.mainnet-beta.solana.com"
+          },
+          {
+            "label": "Chancery current roles and authority policy",
+            "url": "https://github.com/SolomonLabs/chancery/blob/0dafa95d1aded954de098208f0f515d436aa496c/docs/policy/01_ROLES_AND_AUTHORITY.md"
+          },
+          {
+            "label": "Chancery PDA register",
+            "url": "https://github.com/SolomonLabs/chancery/blob/0dafa95d1aded954de098208f0f515d436aa496c/spec/13_PDA_Register.md"
+          },
+          {
+            "label": "Chancery direct mint implementation",
+            "url": "https://github.com/SolomonLabs/chancery/blob/0dafa95d1aded954de098208f0f515d436aa496c/programs/chancery/src/modules/settlement/instructions/mint_direct.rs"
+          },
+          {
+            "label": "Published Chancery authorities (2026-09-04; current role quorums superseded by chain read)",
+            "url": "https://github.com/SolomonLabs/chancery-integrity-records/blob/main/docs/AUTHORITIES.md"
+          }
+        ],
+        "evidence": "Finalized slot 447139220 independently derives vault AHSG9gmossBk6Bm8heSXHxAJ6qJPeWUzwcv29Z5WQPb7 from Squads multisig H8yk1vwT8Mg84X9cMNgUkz2BrVhuVoTPxAzTUGH8LBif and decodes threshold 1, 6 members (6 vote-capable), Squads time_lock 0 seconds, null external config authority and null rent collector. This vault matches insurance_admin_authority; named role existence does not establish insurance cover or a current active insurance program."
+      },
+      {
+        "chain": "solana",
+        "address": "5iMSLkZdvmYZUb3LPbmvynAujEuyyu7azLeQpRSfjY1p",
+        "label": "Chancery Token-2022 freeze-authority PDA",
+        "role": "other",
+        "authorityType": "contract",
+        "directMintAbility": "none",
+        "canRaiseCap": false,
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-09-15",
+        "observedBlock": 447139220,
+        "sources": [
+          {
+            "label": "Solana mainnet finalized Chancery config, ProgramData and Squads accounts (slot 447139220)",
+            "url": "https://api.mainnet-beta.solana.com"
+          },
+          {
+            "label": "Chancery current roles and authority policy",
+            "url": "https://github.com/SolomonLabs/chancery/blob/0dafa95d1aded954de098208f0f515d436aa496c/docs/policy/01_ROLES_AND_AUTHORITY.md"
+          },
+          {
+            "label": "Chancery PDA register",
+            "url": "https://github.com/SolomonLabs/chancery/blob/0dafa95d1aded954de098208f0f515d436aa496c/spec/13_PDA_Register.md"
+          },
+          {
+            "label": "Chancery direct mint implementation",
+            "url": "https://github.com/SolomonLabs/chancery/blob/0dafa95d1aded954de098208f0f515d436aa496c/programs/chancery/src/modules/settlement/instructions/mint_direct.rs"
+          },
+          {
+            "label": "Published Chancery authorities (2026-09-04; current role quorums superseded by chain read)",
+            "url": "https://github.com/SolomonLabs/chancery-integrity-records/blob/main/docs/AUTHORITIES.md"
+          },
+          {
+            "label": "Chancery basic token freeze implementation",
+            "url": "https://github.com/SolomonLabs/chancery/blob/0dafa95d1aded954de098208f0f515d436aa496c/programs/chancery/src/modules/control/instructions/freeze_issued_token_account.rs"
+          }
+        ],
+        "evidence": "The mint freeze authority 5iMSLkZdvmYZUb3LPbmvynAujEuyyu7azLeQpRSfjY1p is independently derived under the current Chancery program and matches ChanceryConfig. The published basic-freeze handler authorizes governance, operations, emergency or enforcement, records a reason and CPI-signs token-account freeze. Mint extensions additionally reserve permanent delegate, pause, transfer-hook and metadata authorities. The live hook programId is null, pausableConfig is not paused and default account state is initialized. Reserved future controls are not represented as active arbitrary seizure."
+      }
+    ],
+    "economicCapSemantics": "unknown",
+    "reconciliation": "unknown",
+    "supervision": "unknown",
+    "review": {
+      "sources": [
+        {
+          "label": "Solana mainnet finalized Chancery config, ProgramData and Squads accounts (slot 447139220)",
+          "url": "https://api.mainnet-beta.solana.com"
+        },
+        {
+          "label": "Chancery current roles and authority policy",
+          "url": "https://github.com/SolomonLabs/chancery/blob/0dafa95d1aded954de098208f0f515d436aa496c/docs/policy/01_ROLES_AND_AUTHORITY.md"
+        },
+        {
+          "label": "Chancery PDA register",
+          "url": "https://github.com/SolomonLabs/chancery/blob/0dafa95d1aded954de098208f0f515d436aa496c/spec/13_PDA_Register.md"
+        },
+        {
+          "label": "Chancery direct mint implementation",
+          "url": "https://github.com/SolomonLabs/chancery/blob/0dafa95d1aded954de098208f0f515d436aa496c/programs/chancery/src/modules/settlement/instructions/mint_direct.rs"
+        },
+        {
+          "label": "Published Chancery authorities (2026-09-04; current role quorums superseded by chain read)",
+          "url": "https://github.com/SolomonLabs/chancery-integrity-records/blob/main/docs/AUTHORITIES.md"
+        }
+      ],
+      "evidence": "Current finalized on-chain mint/config/ProgramData and seven Squads accounts establish the new mint PDA, separate control roles and upgrade path. All seven vault derivations reproduce the declared addresses. Live governance, operations, treasury, enforcement and insurance thresholds differ from the September 4 issuer disclosure, so live values replace those historical claims. Source-level direct settlement checks collateral received, configurable rates and per-transaction limits; one-signature role quorums do not bypass program risk-class pending-change delays. We have not enumerated every live permission, pathway, migration or reserve-outflow policy, so no immutable cap, universally collateral-gated mint posture, continuous financial reconciliation, prudential supervision or new-token insurance coverage is claimed. The old mint, old program, legacy 3-of-9 authority and Ceffu reserve model are excluded.",
+      "reviewer": "Codex replacement USDv control review",
+      "reviewedAt": "2026-09-15",
+      "disposition": "scoreable",
+      "scopedQuestions": [
+        {
+          "controlRef": "Chancery issued-token mint-authority PDA",
+          "question": "What are the complete active principal/executor permissions, pathway limits and legacy-migration bounds, including current reserve-outflow settings?",
+          "reviewedAt": "2026-09-15",
+          "reviewer": "Codex replacement USDv control review",
+          "sources": [
+            {
+              "label": "Solana mainnet finalized Chancery config, ProgramData and Squads accounts (slot 447139220)",
+              "url": "https://api.mainnet-beta.solana.com"
+            },
+            {
+              "label": "Chancery current roles and authority policy",
+              "url": "https://github.com/SolomonLabs/chancery/blob/0dafa95d1aded954de098208f0f515d436aa496c/docs/policy/01_ROLES_AND_AUTHORITY.md"
+            },
+            {
+              "label": "Chancery PDA register",
+              "url": "https://github.com/SolomonLabs/chancery/blob/0dafa95d1aded954de098208f0f515d436aa496c/spec/13_PDA_Register.md"
+            },
+            {
+              "label": "Chancery direct mint implementation",
+              "url": "https://github.com/SolomonLabs/chancery/blob/0dafa95d1aded954de098208f0f515d436aa496c/programs/chancery/src/modules/settlement/instructions/mint_direct.rs"
+            },
+            {
+              "label": "Published Chancery authorities (2026-09-04; current role quorums superseded by chain read)",
+              "url": "https://github.com/SolomonLabs/chancery-integrity-records/blob/main/docs/AUTHORITIES.md"
+            }
+          ]
+        }
+      ]
+    }
+  }
+}

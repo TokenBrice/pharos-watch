@@ -1,0 +1,104 @@
+{
+  "id": "usdv-solomon-v2",
+  "reserves": [
+    {
+      "sourceKey": "chancery:reserve:usdc",
+      "name": "USDC in the Chancery reserve-authority token account",
+      "pct": 95.23864993,
+      "risk": "low",
+      "coinId": "usdc-circle",
+      "depType": "collateral",
+      "blacklistable": true,
+      "assetClass": "stablecoin",
+      "issuerOrObligor": "Circle Internet Financial, Inc.; Chancery reserve program",
+      "riskFactors": [
+        "counterparty",
+        "custody",
+        "smart-contract",
+        "liquidity"
+      ],
+      "liquidityHorizon": "unknown"
+    },
+    {
+      "sourceKey": "chancery:reserve:usdg",
+      "name": "USDG in the Chancery reserve-authority token account",
+      "pct": 4.76135007,
+      "risk": "low",
+      "coinId": "usdg-paxos",
+      "depType": "collateral",
+      "blacklistable": true,
+      "assetClass": "stablecoin",
+      "issuerOrObligor": "Paxos Digital Singapore Pte. Ltd.; Chancery reserve program",
+      "riskFactors": [
+        "counterparty",
+        "custody",
+        "smart-contract",
+        "liquidity"
+      ],
+      "liquidityHorizon": "unknown"
+    }
+  ],
+  "reserveReview": {
+    "reviewedAt": "2026-09-15",
+    "reviewer": "Codex replacement USDv reserve review",
+    "confidence": "probable",
+    "sources": [
+      {
+        "label": "Solomon replacement USDv reserves and peg stability",
+        "url": "https://docs.solomonlabs.org/usdv/peg-stability-and-reserves/"
+      },
+      {
+        "label": "Chancery current mint settlement and canonical reserve ATA binding",
+        "url": "https://github.com/SolomonLabs/chancery/blob/0dafa95d1aded954de098208f0f515d436aa496c/programs/chancery/src/modules/settlement/instructions/mint_direct.rs"
+      },
+      {
+        "label": "Solana mainnet finalized reserve and new USDv mint accounts (slot 447140697)",
+        "url": "https://api.mainnet-beta.solana.com"
+      },
+      {
+        "label": "Chancery authority and reserve custody disclosure (published 2026-09-04; live quorums reviewed separately)",
+        "url": "https://github.com/SolomonLabs/chancery-integrity-records/blob/main/docs/AUTHORITIES.md"
+      }
+    ],
+    "rationale": "The replacement Token-2022 mint USDvUSpnhCr9yBgj3UyVrD239HRUv4RsHwH2FxsWuMk is separate from legacy USDv. At finalized Solana slot 447140697, canonical Chancery reserve-authority accounts held 19,998.646 USDC and 999.81 USDG. Their 20,998.456 nominal dollar units define the displayed 95.23864993% / 4.76135007% mix. The same batch read 21,000 outstanding USDv, leaving 1.544 nominal units unreconciled; that gap is not represented as a reserve asset. Both SPL Token and Token-2022 account inventories for the derived reserve authority exposed only those two reserve accounts; the disclosed treasury vault held zero USDC and no Token-2022 balances. These observations establish the on-chain reserve-account mix, not a complete financial reserve examination or market-valued coverage ratio. Current issuer docs name USDC and USDG and describe direct short-dated Treasury exposure as being added; no current Treasury allocation or custodian is evidenced. No legacy Ceffu holdings, derivatives, attestation or supply is inherited.",
+    "compositionBasis": "Nominal USD-stablecoin units in the replacement Chancery reserve-authority token accounts at finalized slot 447140697, normalized to their actual 20,998.456-unit balance; selected on-chain reserve scope only",
+    "compositionAsOf": "2026-09-15",
+    "scope": "selected-slices",
+    "knownUnknownExposure": "All assets in the observed reserve-authority account scope are identified. The 1.544-unit difference from same-slot USDv supply remains unreconciled. Any assets, liabilities, encumbrances or Treasury positions outside these accounts are not independently reconciled; zero unknown exposure refers only to the selected account mix, not whole-system completeness.",
+    "knownUnknownExposurePct": 0
+  },
+  "custodyProfile": {
+    "providers": [
+      {
+        "name": "Chancery program reserve-authority PDA (Solomon-operated, upgradeable)",
+        "role": "other"
+      }
+    ],
+    "segregation": "unknown",
+    "bankruptcyRemoteness": "unknown",
+    "rehypothecation": "unknown",
+    "reviewedAt": "2026-09-15",
+    "reviewer": "Codex replacement USDv custody review",
+    "confidence": "probable",
+    "sources": [
+      {
+        "label": "Solomon replacement USDv reserves and peg stability",
+        "url": "https://docs.solomonlabs.org/usdv/peg-stability-and-reserves/"
+      },
+      {
+        "label": "Chancery current mint settlement and canonical reserve ATA binding",
+        "url": "https://github.com/SolomonLabs/chancery/blob/0dafa95d1aded954de098208f0f515d436aa496c/programs/chancery/src/modules/settlement/instructions/mint_direct.rs"
+      },
+      {
+        "label": "Solana mainnet finalized reserve and new USDv mint accounts (slot 447140697)",
+        "url": "https://api.mainnet-beta.solana.com"
+      },
+      {
+        "label": "Chancery authority and reserve custody disclosure (published 2026-09-04; live quorums reviewed separately)",
+        "url": "https://github.com/SolomonLabs/chancery-integrity-records/blob/main/docs/AUTHORITIES.md"
+      }
+    ],
+    "uncertainty": "The observed stablecoins are controlled by the Chancery reserve-authority PDA 8anxfyoftY9hPwxdvReet2beFS2HXjcXraPEamo4nGyB. Program source characterizes reserve compartments as operator-side controls, not customer escrow, FBO, trust or beneficial ownership records. Upgrades are controlled by a separate 3-of-8-member Squads multisig with a two-day delay; live operational and treasury roles have single-signature quorums. No new-token off-chain custodian, legal segregation, bankruptcy remoteness or rehypothecation restriction is verified. Circle/Paxos upstream custody is carried through the collateral dependencies, not claimed as direct custody of USDv holders.",
+    "knownUnknownExposurePct": 100
+  }
+}

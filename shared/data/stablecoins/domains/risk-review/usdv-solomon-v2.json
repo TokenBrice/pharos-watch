@@ -1,0 +1,79 @@
+{
+  "id": "usdv-solomon-v2",
+  "blacklistabilityReview": {
+    "reviewedStatus": true,
+    "sources": [
+      {
+        "label": "Replacement USDv Token-2022 mint",
+        "url": "https://solscan.io/token/USDvUSpnhCr9yBgj3UyVrD239HRUv4RsHwH2FxsWuMk"
+      },
+      {
+        "label": "Chancery individual token-account freeze handler",
+        "url": "https://github.com/SolomonLabs/chancery/blob/0dafa95d1aded954de098208f0f515d436aa496c/programs/chancery/src/modules/control/instructions/freeze_issued_token_account.rs"
+      }
+    ],
+    "evidence": "At finalized Solana slot 447140870, the replacement USDv mint is owned by Token-2022 and retains freeze authority 5iMSLkZdvmYZUb3LPbmvynAujEuyyu7azLeQpRSfjY1p. The separately read Chancery configuration binds this authority to the replacement mint. Published freeze_issued_token_account code permits governance, operations, emergency, enforcement or a narrowly authorized permission holder to freeze an individual USDv token account through the authority PDA. This control is distinct from legacy USDv, whose disabled freeze authority is not inherited. Permanent-delegate and pausable extensions are present, but this verdict does not assume a currently executable forced-seizure path merely from those extensions.",
+    "reviewer": "Pharos replacement USDv control review",
+    "reviewedAt": "2026-09-15"
+  },
+  "oracleRisk": {
+    "tier": "privileged-internal-pricing",
+    "summary": "Chancery direct issuance and redemption use configured deposit_rate_e9 and redeem_rate_e9 values. Privileged asset-configuration updates can change these rates subject to program controls. These are internal settlement-price authorities, not independent market-price oracles or borrower liquidation feeds.",
+    "role": "coin-price-feed",
+    "branchModel": "single-path",
+    "branchApplicability": {
+      "disposition": "top-level-only",
+      "reviewedAt": "2026-09-15",
+      "reviewer": "Pharos replacement USDv control review",
+      "rationale": "The replacement mint settles approved counterparties against configured reserve assets at administrator-configured rates. Its reviewed path has no borrower-owned collateral positions or oracle-triggered liquidation branches. Internal settlement rates remain a price-sensitive control even when configured at par.",
+      "sources": [
+        {
+          "label": "Chancery direct mint rate and permission checks",
+          "url": "https://github.com/SolomonLabs/chancery/blob/0dafa95d1aded954de098208f0f515d436aa496c/programs/chancery/src/modules/settlement/instructions/mint_direct.rs"
+        },
+        {
+          "label": "Chancery direct redemption rate and permission checks",
+          "url": "https://github.com/SolomonLabs/chancery/blob/0dafa95d1aded954de098208f0f515d436aa496c/programs/chancery/src/modules/settlement/instructions/redeem_direct.rs"
+        },
+        {
+          "label": "Chancery privileged asset-rate updates",
+          "url": "https://github.com/SolomonLabs/chancery/blob/0dafa95d1aded954de098208f0f515d436aa496c/programs/chancery/src/modules/core/instructions/update_asset_config.rs"
+        }
+      ]
+    },
+    "reviewedAt": "2026-09-15",
+    "reviewer": "Pharos replacement USDv control review",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Chancery direct mint rate and permission checks",
+        "url": "https://github.com/SolomonLabs/chancery/blob/0dafa95d1aded954de098208f0f515d436aa496c/programs/chancery/src/modules/settlement/instructions/mint_direct.rs"
+      },
+      {
+        "label": "Chancery direct redemption rate and permission checks",
+        "url": "https://github.com/SolomonLabs/chancery/blob/0dafa95d1aded954de098208f0f515d436aa496c/programs/chancery/src/modules/settlement/instructions/redeem_direct.rs"
+      },
+      {
+        "label": "Chancery privileged asset-rate updates",
+        "url": "https://github.com/SolomonLabs/chancery/blob/0dafa95d1aded954de098208f0f515d436aa496c/programs/chancery/src/modules/core/instructions/update_asset_config.rs"
+      }
+    ]
+  },
+  "bridgeRouteRisk": {
+    "tier": "single-chain-or-native",
+    "summary": "The reviewed replacement USDv is a native Solana Token-2022 mint controlled by Chancery. The deployment configuration separately identifies legacy USDv; it is not a bridge representation or an automatic conversion of the legacy token. No additional deployment or cross-chain issuance route is asserted.",
+    "reviewedAt": "2026-09-15",
+    "reviewer": "Pharos replacement USDv route review",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Replacement USDv Solana mint",
+        "url": "https://solscan.io/token/USDvUSpnhCr9yBgj3UyVrD239HRUv4RsHwH2FxsWuMk"
+      },
+      {
+        "label": "Solomon announces distinct replacement token and reserve model",
+        "url": "https://blog.solomonlabs.org/p/winding-down-the-original-usdv"
+      }
+    ]
+  }
+}

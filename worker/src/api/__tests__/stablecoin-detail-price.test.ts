@@ -208,3 +208,21 @@ describe("detail response paths", () => {
     expect(ctx.waitUntil).not.toHaveBeenCalled();
   });
 });
+
+
+describe("legacy Solomon detail identity", () => {
+  it.each(["defillama", "coingecko"])("sanitizes cached %s alias data without changing legacy history", async (source) => {
+    const response = await enrichMissingDetailPrice(makeDb({ id: "usdv-solomon", priceSource: source }), "usdv-solomon",
+      makeResponse(JSON.stringify({ tokens, price: 0.99994, gecko_id: "solomon-usdv", geckoId: "solomon-usdv" })));
+    expect(await response.json()).toEqual({ tokens });
+  });
+
+  it("fills a sanitized legacy cache with a fresh canonical exact-mint quote", async () => {
+    const response = await enrichMissingDetailPrice(makeDb({ id: "usdv-solomon", priceSource: "jupiter", price: 0.9988,
+      priceConfidence: "single-source", consensusSources: ["jupiter"], agreeSources: ["jupiter"] }), "usdv-solomon",
+      makeResponse(JSON.stringify({ tokens, price: 0.99994, gecko_id: "solomon-usdv" })));
+    const body = await response.json() as Record<string, unknown>;
+    expect(body).toMatchObject({ tokens, price: 0.9988, priceSource: "jupiter" });
+    expect(body.gecko_id).toBeUndefined();
+  });
+});
