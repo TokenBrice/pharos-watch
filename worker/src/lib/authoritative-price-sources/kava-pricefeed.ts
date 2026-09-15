@@ -8,6 +8,8 @@ import { KavaBlockSchema, parseFinitePositiveDecimal, parseTimestampSec, validat
 import type { CurrentPriceOverride, LivePriceContext, PriceSourceProvider } from "./helpers";
 
 const KAVA_API_BASE = "https://api.data.kava.io";
+const KAVA_HEADER_URL = "https://rpc.data.kava.io/header";
+const KavaRpcHeaderSchema = z.object({ result: KavaBlockSchema.shape.block });
 const KAVA_USDX_ID = "usdx-kava";
 const KAVA_USDX_MARKET_ID = "usdx:usd";
 const KAVA_PRICEFEED_SOURCE = "kava-pricefeed";
@@ -85,14 +87,15 @@ export async function fetchKavaUsdxPrice(signal?: AbortSignal): Promise<KavaUsdx
 
   // Keep these reads serial: each response body is consumed before the next
   // request opens, preserving the cron trigger's shared connection budget.
-  const blockPayload = await fetchKavaJson(`${KAVA_API_BASE}/cosmos/base/tendermint/v1beta1/blocks/latest`, signal);
-  const blockResult = KavaBlockSchema.safeParse(blockPayload);
+  // The native header endpoint avoids downloading the block's variable-size transaction body.
+  const blockPayload = await fetchKavaJson(KAVA_HEADER_URL, signal);
+  const blockResult = KavaRpcHeaderSchema.safeParse(blockPayload);
   if (!blockResult.success) {
     logWorkerEventArgs("lib", "warn", "[kava-pricefeed] latest block response failed schema validation");
     return null;
   }
 
-  const { header } = blockResult.data.block;
+  const { header } = blockResult.data.result;
   const blockPin = validateKavaBlockHeader(header, nowSec);
   if (blockPin == null) {
     logWorkerEventArgs("lib", "warn", "[kava-pricefeed] latest block identity or freshness validation failed");

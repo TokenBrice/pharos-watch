@@ -291,7 +291,7 @@ async function fetchTargetedCmcQuotes(params: {
   rateLimited: boolean;
 }> {
   const slugs = params.candidates.map((entry) => entry.asset.cmcSlug!.toLowerCase());
-  const url = `https://${CMC_QUOTES_ENDPOINT}?slug=${encodeURIComponent(slugs.join(","))}&convert=USD`;
+  const url = `https://${CMC_QUOTES_ENDPOINT}?slug=${encodeURIComponent(slugs.join(","))}&convert=USD&skip_invalid=true`;
   const timeout = AbortSignal.timeout(CMC_REQUEST_TIMEOUT_MS);
   const requestSignal = params.signal ? AbortSignal.any([params.signal, timeout]) : timeout;
   const result = await fetchTextWithRetry(
