@@ -238,23 +238,12 @@ describe("fetchRedstonePrices", () => {
     expect(outcome.value.get("usdt-tether")?.timestamp).toBe(Math.floor(newerTimestamp / 1000));
   });
 
-  it("keys USDH by the configured stablecoin id instead of every USDH symbol peer", async () => {
-    mockFetch([{
-      match: () => true,
-      body: {
-        USDH: {
-          value: 0.9999,
-          source: { "hyperliquid-api-fetcher-usdc": 0.9999, "nest-hyperevm-usdc": 0.9998 },
-          timestamp: Date.now(),
-        },
-      },
-    }]);
-
+  it("does not request or admit the unavailable USDH feed for either symbol peer", async () => {
+    const fetchMock = mockFetch([{ match: () => true, body: {} }]);
     const outcome = await fetchRedstonePrices(["USDH"]);
-
-    expect(outcome.kind).toBe("ok");
-    expect(outcome.value.get("usdh-native-markets")?.price).toBeCloseTo(0.99985, 4);
+    expect(outcome.value.has("usdh-native-markets")).toBe(false);
     expect(outcome.value.has("usdh-hubble")).toBe(false);
+    expect(fetchMock).not.toHaveBeenCalled();
   });
 
   it("bounds solo-retry budget to 5 requests when many batch symbols drop", async () => {

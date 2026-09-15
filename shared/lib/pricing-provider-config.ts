@@ -20,7 +20,6 @@ export const KRAKEN_MARKETS = [
 ] as const;
 
 export const BITSTAMP_MARKETS = [
-  { pair: "DAI/USD", symbol: "DAI" },
   { pair: "PYUSD/USD", symbol: "PYUSD" },
   { pair: "USDC/USD", symbol: "USDC" },
   { pair: "USDT/USD", symbol: "USDT" },
@@ -57,7 +56,6 @@ export const REDSTONE_SYMBOL_CONFIG = [
   { stablecoinId: "pyusd-paypal", metaSymbol: "PYUSD", apiSymbol: "PYUSD" },
   { stablecoinId: "usd1-world-liberty-financial", metaSymbol: "USD1", apiSymbol: "USD1" },
   { stablecoinId: "usdc-circle", metaSymbol: "USDC", apiSymbol: "USDC" },
-  { stablecoinId: "usdh-native-markets", metaSymbol: "USDH", apiSymbol: "USDH" },
   { stablecoinId: "usdt-tether", metaSymbol: "USDT", apiSymbol: "USDT" },
   { stablecoinId: "usde-ethena", metaSymbol: "USDe", apiSymbol: "USDe" },
   { stablecoinId: "xaut-tether", metaSymbol: "XAUT", apiSymbol: "XAUt" },

@@ -49,6 +49,17 @@ describe("audit-pricing-provider-config", () => {
     });
   });
 
+  it("audits current Bitstamp coverage without requiring the unavailable DAI pair", async () => {
+    const fetchImpl = vi.fn(async () => jsonResponse([
+      { name: "PYUSD/USD", trading: "Enabled" },
+      { name: "USDC/USD", trading: "Enabled" },
+      { name: "USDT/USD", trading: "Enabled" },
+    ]));
+    await expect(auditBitstamp(fetchImpl as typeof fetch)).resolves.toMatchObject({
+      ok: true, checked: 3, missing: [],
+    });
+  });
+
   it("throws on provider metadata parse or shape failures", async () => {
     const fetchImpl = vi.fn(async () => jsonResponse({ products: [] }));
 
@@ -82,7 +93,6 @@ describe("audit-pricing-provider-config", () => {
       }
       if (href.includes("bitstamp")) {
         return jsonResponse([
-          { name: "DAI/USD", trading: "Enabled" },
           { name: "PYUSD/USD", trading: "Enabled" },
           { name: "USDC/USD", trading: "Enabled" },
           { name: "USDT/USD", trading: "Enabled" },
@@ -114,7 +124,6 @@ describe("audit-pricing-provider-config", () => {
           PYUSD: {},
           USD1: {},
           USDC: {},
-          USDH: {},
           USDT: {},
           USDe: {},
           XAUt: {},
