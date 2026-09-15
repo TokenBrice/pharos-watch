@@ -1,3 +1,4 @@
+import { ACTIVE_IDS } from "@shared/lib/stablecoins/registry";
 import { hasMissingPrice, type PeggedAsset } from "./enrich-prices";
 import { buildSyncMetadata, type CronResult, type PriceSourceHealth, type TrackedCoverageRestoreResult } from "./shared";
 import type { CanonicalDeduplicationResult } from "./phase-helpers";
@@ -298,6 +299,16 @@ export function buildStablecoinsSyncResult(input: {
 }): CronResult {
   const finalMissing = input.assets.filter(hasMissingPrice).length;
   const priceSourceHealth = buildPriceSourceHealth(input.assets);
+  const activeAssets = input.assets.filter((asset) => ACTIVE_IDS.has(asset.id));
+  const activeHealth = buildPriceSourceHealth(activeAssets);
+  // Missing catalog rows are also missing prices, not a smaller denominator.
+  const absentActiveCount = ACTIVE_IDS.size - new Set(activeAssets.map((asset) => asset.id)).size;
+  activeHealth.sourceDistribution.missing += absentActiveCount;
+  priceSourceHealth.active = {
+    sourceDistribution: activeHealth.sourceDistribution,
+    confidenceDistribution: activeHealth.confidenceDistribution,
+    totalAssets: ACTIVE_IDS.size,
+  };
   const pricingSourceAuditReport = buildPricingSourceAuditReport(input.assets, input.providerDiagnostics ?? []);
   const publicationCoverage = evaluateStablecoinPublicationCoverage(
     input.assets.map((asset) => String(asset.id)),
