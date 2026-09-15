@@ -130,6 +130,7 @@
     "worker/src/lib/auth.ts": 100,
     "worker/src/lib/authoritative-price-sources/aznd-curve-pool.ts": 98.4,
     "worker/src/lib/authoritative-price-sources/cap-cusd.ts": 92.6,
+    "worker/src/lib/authoritative-price-sources/deuro-eurc-bridge.ts": 95.1,
     "worker/src/lib/authoritative-price-sources/erc4626-nav.ts": 100,
     "worker/src/lib/authoritative-price-sources/helpers.ts": 96.4,
     "worker/src/lib/authoritative-price-sources/idle-cdo-tranche.ts": 94.4,

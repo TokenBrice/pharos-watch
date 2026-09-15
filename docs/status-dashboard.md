@@ -633,7 +633,7 @@ Renders in the Admin Pipeline `Markets` tab next to `LiquidityHealthCard` and th
 - **Full-cache context** — original cache-wide row, missing, and confidence counts remain visible below the active tiles, including upstream assets outside the active catalog
 - **Last sync age** — how old the price-health snapshot is
 
-Distribution and confidence data is sourced from `sync-stablecoins` cron metadata stored in the most recent `cron_runs` row. The original top-level distributions keep full-cache scope; the additive `active` object uses the active catalog denominator and source membership. No prices or confidence assignments change. The source-depth distribution is added by the status supplement from the cached stablecoins payload so it reflects active canonical assets without changing the pricing cron metadata contract.
+Distribution and confidence data is sourced from `sync-stablecoins` cron metadata stored in the most recent `cron_runs` row. The original top-level distributions keep full-cache scope; the additive `active` object uses the active catalog denominator and source membership. The Markets tab badge uses that same active missing-price count and denominator when present, falling back to the original cache-wide fields for legacy snapshots. No prices or confidence assignments change. The source-depth distribution is added by the status supplement from the cached stablecoins payload so it reflects active canonical assets without changing the pricing cron metadata contract.
 
 ## CoinGecko Price Drift Card
 

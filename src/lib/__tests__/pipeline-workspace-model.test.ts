@@ -118,6 +118,26 @@ describe("pipeline quality model", () => {
   });
 });
 
+describe("pipeline market price scope", () => {
+  const legacy = {
+    totalAssets: 567, lastSync: 100,
+    confidenceDistribution: { high: 115, "single-source": 325, low: 20, fallback: 1 },
+    sourceDistribution: { missing: 106 },
+  };
+  it.each([
+    ["active", { ...legacy, active: { ...legacy, totalAssets: 334, sourceDistribution: { missing: 16 } } }, 16],
+    ["legacy", legacy, 106],
+    ["empty active population", { ...legacy, active: { ...legacy, totalAssets: 0, sourceDistribution: { missing: 0 } } }, 1],
+  ])("uses the %s population for the Markets badge", (_label, priceSourceHealth, priceIssues) => {
+    const base = makeHealthyStatusResponse();
+    const control = degraded(base, { priceSourceHealth: { ...legacy, sourceDistribution: { missing: 0 } } });
+    const otherIssues = buildPipelineModeSummaries(control).find((mode) => mode.id === "markets")!.issueCount;
+    const data = degraded(base, { priceSourceHealth });
+    expect(buildPipelineModeSummaries(data).find((mode) => mode.id === "markets")!.issueCount)
+      .toBe(otherIssues + priceIssues);
+  });
+});
+
 describe("pipeline coverage summaries", () => {
   it("maps inactive loader errors to human labels while retaining raw keys and codes", () => {
     const base = makeHealthyStatusResponse();
