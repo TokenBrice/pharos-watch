@@ -76,7 +76,7 @@ function nativeQuote() {
 
 function nativePipelineInput(
   asset: PeggedAsset,
-  db = mockD1(),
+  db: D1Database = mockD1(),
   missingBefore = new Set<string>(),
 ): Parameters<typeof runPostEnrichmentPricePipeline>[0] {
   return {
@@ -143,6 +143,93 @@ describe("runPostEnrichmentPricePipeline", () => {
     }
   });
 
+  it("accounts for every observation without changing selection or already-priced assets", async () => {
+    const now = 1_800_000_000;
+    const clock = vi.spyOn(Date, "now").mockReturnValue(now * 1000);
+    const sqlite = new DatabaseSync(":memory:");
+    sqlite.exec("CREATE TABLE cache (key TEXT PRIMARY KEY, value TEXT NOT NULL, updated_at INTEGER NOT NULL)");
+    const db = createSqliteD1(sqlite);
+    const missing = makeAsset({ id: "usdt-tether", pegType: "peggedUSD", price: null });
+    const priced = makeAsset({ id: "usdc-circle", pegType: "peggedUSD", price: 1 });
+    const observation = (id: string, price = 1) => ({
+      id, source: "coinmarketcap", price, observedAt: now - 60, observedAtMode: "upstream" as const,
+    });
+    try {
+      await writePriceCorroborationObservations(db, [
+        observation(missing.id, 0.45), observation(missing.id), observation(missing.id, 1.001),
+        observation(priced.id), observation("absent"),
+        { ...observation(missing.id), source: "cached" },
+        { ...observation(missing.id), observedAt: null },
+        { ...observation(missing.id), observedAt: now + 1 },
+        { ...observation(missing.id), observedAt: now - 3600 },
+      ], now - 30);
+      const result = await runPostEnrichmentPricePipeline({
+        ...nativePipelineInput(missing, db), assets: [missing, priced], priceCache: new Map(),
+      }, "");
+      if (isAbortResult(result)) throw new Error("unexpected abort");
+      expect(missing.price).toBe(1);
+      expect(missing.priceSource).toBe("coinmarketcap");
+      expect(priced.price).toBe(1);
+      expect(priced.priceSource).toBe("coingecko");
+      expect(result.cachedFallbackCount).toBe(1);
+      expect(result.priceObservationEffectiveness).toEqual({
+        stagingStatus: "ok", stagingSlotStartedAt: now - 30, stagingAgeSec: 30,
+        loadedObservationCount: 9, eligibleObservationCount: 5,
+        discarded: { sourceIneligible: 1, unknownTime: 1, futureTime: 1, sourceExpired: 1 },
+        publication: { alreadyPriced: 1, assetAbsent: 1, policyRejected: 1, selected: 1, notNeededAfterSelection: 1 },
+        minimumFreshnessHeadroomSec: 3540,
+      });
+      const effectiveness = result.priceObservationEffectiveness!;
+      expect(Object.values(effectiveness.discarded).reduce((sum, count) => sum + count, 0)
+        + effectiveness.eligibleObservationCount).toBe(effectiveness.loadedObservationCount);
+      expect(Object.values(effectiveness.publication).reduce((sum, count) => sum + count, 0))
+        .toBe(effectiveness.eligibleObservationCount);
+      // Even with no missing assets, the read measures observations that are not needed.
+      const second = await runPostEnrichmentPricePipeline({
+        ...nativePipelineInput(priced, db), priceCache: new Map(),
+      }, "");
+      if (isAbortResult(second)) throw new Error("unexpected abort");
+      expect(second.priceObservationEffectiveness?.publication).toEqual({
+        alreadyPriced: 1, assetAbsent: 4, policyRejected: 0, selected: 0, notNeededAfterSelection: 0,
+      });
+      expect(second.cachedFallbackCount).toBe(0);
+    } finally {
+      clock.mockRestore();
+      sqlite.close();
+    }
+  });
+
+  it.each([
+    [null, 1000, "missing"],
+    ["[]", 1002, "future"],
+    ["[]", 1001 - 4500, "expired"],
+    ["not-json", 1000, "invalid"],
+    ['[{"id":"bad"}]', 1000, "invalid"],
+    ["[]", 1000, "ok"],
+  ] as const)("reports staging state for %s at %s", async (value, slot, status) => {
+    const sqlite = new DatabaseSync(":memory:");
+    sqlite.exec("CREATE TABLE cache (key TEXT PRIMARY KEY, value TEXT NOT NULL, updated_at INTEGER NOT NULL)");
+    if (value !== null) sqlite.prepare("INSERT INTO cache VALUES (?, ?, ?)").run("price:corroboration-observations:v1", value, slot);
+    try {
+      const result = await loadPriceCorroborationObservations(createSqliteD1(sqlite), 1001);
+      expect(result.byId.size).toBe(0);
+      expect(result.summary.stagingStatus).toBe(status);
+      expect(result.summary.loadedObservationCount).toBe(status === "ok" ? 0 : null);
+    } finally {
+      sqlite.close();
+    }
+  });
+
+  it("reports cache read errors but propagates cancellation", async () => {
+    const db = { prepare: () => { throw new Error("private database error"); } } as unknown as D1Database;
+    expect((await loadPriceCorroborationObservations(db, 1001)).summary).toMatchObject({
+      stagingStatus: "read-error", loadedObservationCount: null,
+    });
+    const controller = new AbortController();
+    controller.abort();
+    await expect(loadPriceCorroborationObservations(db, 1001, controller.signal)).rejects.toThrow();
+  });
+
   it("clears an empty hourly collection and rejects an older stage writer", async () => {
     const sqlite = new DatabaseSync(":memory:");
     sqlite.exec("CREATE TABLE cache (key TEXT PRIMARY KEY, value TEXT NOT NULL, updated_at INTEGER NOT NULL)");
@@ -150,10 +237,10 @@ describe("runPostEnrichmentPricePipeline", () => {
     const rows = [{ id: "usdt-tether", source: "coinmarketcap", price: 1, observedAt: 1000, observedAtMode: "upstream" as const }];
     try {
       await writePriceCorroborationObservations(db, rows, 1000);
-      expect((await loadPriceCorroborationObservations(db, 1001)).size).toBe(1);
+      expect((await loadPriceCorroborationObservations(db, 1001)).byId.size).toBe(1);
       await writePriceCorroborationObservations(db, [], 1002);
       await writePriceCorroborationObservations(db, rows, 1001);
-      expect((await loadPriceCorroborationObservations(db, 1003)).size).toBe(0);
+      expect((await loadPriceCorroborationObservations(db, 1003)).byId.size).toBe(0);
     } finally {
       sqlite.close();
     }

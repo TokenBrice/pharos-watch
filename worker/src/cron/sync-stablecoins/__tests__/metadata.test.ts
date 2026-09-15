@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { ACTIVE_STABLECOINS, ACTIVE_IDS } from "@shared/lib/stablecoins/registry";
-import { buildPricingSourceAuditReport, buildStablecoinsSyncResult } from "../metadata";
+import { buildFallbackStablecoinsSyncResult, buildPricingSourceAuditReport, buildStablecoinsSyncResult } from "../metadata";
+import type { PriceObservationEffectiveness } from "../price-corroboration-observations";
 import type { PeggedAsset } from "../enrich-prices";
 import { normalizeCronMetadataWithLease } from "../../../lib/cron-metadata";
 import {
@@ -29,7 +30,31 @@ function syncInput(
   };
 }
 
+const observationEffectiveness: PriceObservationEffectiveness = {
+  stagingStatus: "missing", stagingSlotStartedAt: null, stagingAgeSec: null,
+  loadedObservationCount: null, eligibleObservationCount: 0,
+  discarded: { sourceIneligible: 0, unknownTime: 0, futureTime: 0, sourceExpired: 0 },
+  publication: { alreadyPriced: 0, assetAbsent: 0, policyRejected: 0, selected: 0, notNeededAfterSelection: 0 },
+  minimumFreshnessHeadroomSec: null,
+};
+
 describe("stablecoins pricing metadata", () => {
+  it("preserves observation effectiveness and unknown counts in both publication paths", () => {
+    const main = buildStablecoinsSyncResult({ ...syncInput([]), priceObservationEffectiveness: observationEffectiveness });
+    const metadata = JSON.parse(main.metadata!);
+    const fallback = buildFallbackStablecoinsSyncResult({
+      ...syncInput([]), providerDiagnostics: [], authoritativeOverrideCount: 0,
+      cachedFallbackCount: 0, nativePegCorrectionCount: 0, nativePegFillCount: 0,
+      cacheKey: "stablecoins", syncStartSec: 1_777_000_000,
+      activePriceCoverage: metadata.activePriceCoverage,
+      priceObservationEffectiveness: observationEffectiveness,
+    });
+    for (const result of [main, fallback]) {
+      expect(JSON.parse(result.metadata!).priceObservationEffectiveness).toEqual(observationEffectiveness);
+    }
+    expect(JSON.parse(buildStablecoinsSyncResult(syncInput([])).metadata!).priceObservationEffectiveness).toBeUndefined();
+  });
+
   it("separates active catalog health from untracked cache rows and counts absent active assets", () => {
     const assets: PeggedAsset[] = ACTIVE_STABLECOINS.filter((asset) => asset.id !== "usdc-circle").map((asset) => ({
       id: asset.id, name: asset.name, symbol: asset.symbol,
@@ -321,6 +346,7 @@ describe("stablecoins pricing metadata", () => {
     })) as PeggedAsset[];
     const result = buildStablecoinsSyncResult({
       ...syncInput(assets),
+      priceObservationEffectiveness: observationEffectiveness,
       providerDiagnostics: [{
         source: "coinmarketcap",
         stage: "fallback",
@@ -355,10 +381,12 @@ describe("stablecoins pricing metadata", () => {
 
     expect(new TextEncoder().encode(result.metadata ?? "").byteLength).toBeLessThan(64 * 1024);
     const metadata = JSON.parse(result.metadata ?? "{}") as {
+      priceObservationEffectiveness: PriceObservationEffectiveness;
       metadataCompactedBySizeGuard: boolean;
       priceSourceAttemptLedger: { missingActiveIds: string[]; records: unknown[][] };
     };
     expect(metadata.metadataCompactedBySizeGuard).toBe(true);
+    expect(metadata.priceObservationEffectiveness).toEqual(observationEffectiveness);
     expect(metadata.priceSourceAttemptLedger.missingActiveIds).toContain(missingId);
     expect(metadata.priceSourceAttemptLedger.records).toContainEqual([
       missingId,

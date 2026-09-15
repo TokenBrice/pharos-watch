@@ -9,7 +9,7 @@ import { logWorkerEventArgs } from "../../lib/structured-log";
 import { isPricingSourceSoftGuardrailExempt } from "@shared/lib/pricing-source-registry";
 import { DIVERGENCE_THRESHOLD_BPS } from "@shared/lib/pricing-pipeline-constants";
 import { pricesAgreeWithinBps } from "../../lib/price-divergence";
-import { loadPriceCorroborationObservations } from "./price-corroboration-observations";
+import { loadPriceCorroborationObservations, type PriceObservationEffectiveness } from "./price-corroboration-observations";
 import {
   countDepegAuthoritativeSources,
   getPriceCacheMaxAgeSec,
@@ -96,6 +96,7 @@ export interface PostEnrichmentInput {
 }
 
 export interface PriceValidationResult {
+  priceObservationEffectiveness?: PriceObservationEffectiveness;
   rejectedCount: number;
   cachedFallbackCount: number;
   nativePegCorrectionCount: number;
@@ -358,15 +359,21 @@ export async function runPostEnrichmentPricePipeline(
     (asset) => hasMissingPrice(asset),
   );
   let cachedFallbackCount = 0;
+  const priceCacheReadAbort = returnIfAborted(signal, `${abortStagePrefix}read-price-cache`);
+  if (priceCacheReadAbort) return priceCacheReadAbort;
+  const { byId: staged, summary: priceObservationEffectiveness } = await loadPriceCorroborationObservations(db, now, signal);
+  const assetsById = new Map(assets.map((asset) => [asset.id, asset]));
+  for (const [id, observations] of staged) {
+    const asset = assetsById.get(id);
+    if (!asset) priceObservationEffectiveness.publication.assetAbsent += observations.length;
+    else if (!hasMissingPrice(asset)) priceObservationEffectiveness.publication.alreadyPriced += observations.length;
+  }
   if (stillMissing.length > 0) {
-    const priceCacheReadAbort = returnIfAborted(signal, `${abortStagePrefix}read-price-cache`);
-    if (priceCacheReadAbort) return priceCacheReadAbort;
-    const staged = await loadPriceCorroborationObservations(db, now, signal);
     const priceCache = input.priceCache ?? await getPriceCache(db);
     for (const asset of stillMissing) {
       const candidates = staged.get(asset.id) ?? [];
       const candidatePrices = Object.fromEntries(candidates.map((candidate) => [candidate.source, candidate.price]));
-      for (const candidate of candidates) {
+      for (const [candidateIndex, candidate] of candidates.entries()) {
         const agreeSources = [...new Set(candidates
           .filter((other) => pricesAgreeWithinBps(candidate.price, other.price, DIVERGENCE_THRESHOLD_BPS))
           .map((other) => other.source))];
@@ -380,7 +387,12 @@ export async function runPostEnrichmentPricePipeline(
           validationReferences,
           previousTrustedPrice: previousTrustedPrices?.get(asset.id) ?? null,
         });
-        if (!decision.accepted) continue;
+        if (!decision.accepted) {
+          priceObservationEffectiveness.publication.policyRejected++;
+          continue;
+        }
+        priceObservationEffectiveness.publication.selected++;
+        priceObservationEffectiveness.publication.notNeededAfterSelection += candidates.length - candidateIndex - 1;
         applyAcceptedPriceCandidate({
           asset,
           price: candidate.price,
@@ -435,6 +447,7 @@ export async function runPostEnrichmentPricePipeline(
   }
 
   return {
+    priceObservationEffectiveness,
     rejectedCount,
     cachedFallbackCount,
     nativePegCorrectionCount,

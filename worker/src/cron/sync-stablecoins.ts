@@ -104,6 +104,7 @@ export async function syncStablecoins(
     rejectedCount,
     nativePegCorrectionCount,
     nativePegFillCount,
+    priceObservationEffectiveness,
     priceCacheEntries,
     providerDiagnostics,
   } = pricingStage;
@@ -135,6 +136,7 @@ export async function syncStablecoins(
         rejectedCount,
         nativePegCorrectionCount,
         nativePegFillCount,
+        priceObservationEffectiveness,
         supplyGapReconciliation,
         trackedCoverage,
         gtProbe,

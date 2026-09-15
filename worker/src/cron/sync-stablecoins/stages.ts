@@ -1,3 +1,4 @@
+import type { PriceObservationEffectiveness } from "./price-corroboration-observations";
 import { logWorkerEventArgs } from "../../lib/structured-log";
 import type { ChainRpcConfig } from "../../lib/chain-registry";
 import type { NativePegQuoteSession } from "../../lib/native-peg-quotes";
@@ -175,6 +176,7 @@ export async function runStablecoinsPricingStage(
       rejectedCount: number;
       nativePegCorrectionCount: number;
       nativePegFillCount: number;
+      priceObservationEffectiveness?: PriceObservationEffectiveness;
       cachedFallbackCount: number;
       priceCacheEntries: PriceCacheWriteEntry[];
       providerDiagnostics: NonNullable<Awaited<ReturnType<typeof fetchPrimaryPrices>>["providerDiagnostics"]>;
@@ -342,6 +344,7 @@ export async function runStablecoinsPricingStage(
     cachedFallbackCount,
     nativePegCorrectionCount,
     nativePegFillCount,
+    priceObservationEffectiveness,
     priceCacheEntries,
     providerDiagnostics: nativePegProviderDiagnostics,
   } = priceCompletion;
@@ -373,6 +376,7 @@ export async function runStablecoinsPricingStage(
       nativePegCorrections: nativePegCorrectionCount,
       nativePegFills: nativePegFillCount,
       cachedFallbackPrices: cachedFallbackCount,
+      priceObservationEffectiveness,
     },
   });
 
@@ -385,6 +389,7 @@ export async function runStablecoinsPricingStage(
     rejectedCount,
     nativePegCorrectionCount,
     nativePegFillCount,
+    priceObservationEffectiveness,
     cachedFallbackCount,
     priceCacheEntries,
     providerDiagnostics: [
