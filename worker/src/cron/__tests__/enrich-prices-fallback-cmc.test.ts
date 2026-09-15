@@ -237,7 +237,7 @@ describe("enrichMissingPrices", () => {
     });
   });
 
-  it("retrieves an exact slug through targeted quotes when the category page is truncated", async () => {
+  it("retrieves valid targeted quotes while an unrecognized slug remains unpriced", async () => {
     const assets: PeggedAsset[] = [makePeggedAsset({
       id: "test-dollar",
       name: "Test Dollar",
@@ -250,6 +250,7 @@ describe("enrichMissingPrices", () => {
         decimals: 18,
       }],
     })];
+    assets.push(makePeggedAsset({ id: "unknown-dollar", symbol: "UNKNOWN", price: 0, cmcSlug: "unknown-dollar" }));
     const fetchSpy = fixtureMockFetch([
       { match: "/v1/cryptocurrency/category", body: cmcCategory([], 301) },
       {
@@ -273,9 +274,10 @@ describe("enrichMissingPrices", () => {
     expect(result.resolved).toBe(1);
     expect(assets[0].price).toBe(0.9998);
     expect(assets[0].priceSource).toBe("coinmarketcap");
+    expect(assets[1].price).toBe(0);
     expect(fetchSpy.getHistory().map((entry) => entry.url)).toEqual([
       expect.stringContaining("/v1/cryptocurrency/category"),
-      expect.stringContaining("/v3/cryptocurrency/quotes/latest?slug=test-dollar&convert=USD"),
+      expect.stringContaining("/v3/cryptocurrency/quotes/latest?slug=test-dollar%2Cunknown-dollar&convert=USD&skip_invalid=true"),
     ]);
     expect(result.diagnostics).toEqual(expect.arrayContaining([
       expect.objectContaining({
@@ -296,6 +298,10 @@ describe("enrichMissingPrices", () => {
           state: "attempted",
           result: "resolved",
           replaySafe: false,
+        }), expect.objectContaining({
+          assetId: "unknown-dollar",
+          result: "rejected",
+          rejectionClass: "missing-quote",
         })],
       }),
     ]));

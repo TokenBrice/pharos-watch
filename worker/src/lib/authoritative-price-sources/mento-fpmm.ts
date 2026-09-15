@@ -61,7 +61,12 @@ export async function fetchMentoFpmmPrice(context: LivePriceContext, signal?: Ab
   ].map(([label, target, callData]) => ({ label, target, callData }));
   const rows = await fetchEvmMulticall3Aggregate3AtBlock("celo", calls, block, options);
   throwIfAborted(signal);
-  if (!rows || rows.length !== calls.length || rows.some((row, index) => !row.success || row.label !== calls[index].label)) return reject("state-unavailable");
+  if (!rows) return reject(`state-rpc-null:block-${block}`);
+  if (rows.length !== calls.length || rows.some((row, index) => row.label !== calls[index].label)) {
+    return reject(`state-batch-shape:block-${block}`);
+  }
+  const failedCall = rows.findIndex((row) => !row.success);
+  if (failedCall >= 0) return reject(`state-subcall-${calls[failedCall].label}:block-${block}`);
   const closing = await fetchEvmBlockHeader("celo", block, options);
   throwIfAborted(signal);
   if (!head || closing?.hash !== head.hash) return reject("canonical-check");

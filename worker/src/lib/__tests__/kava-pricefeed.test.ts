@@ -28,7 +28,7 @@ function installFixtureResponses(
   } = {},
 ): void {
   fetchJsonWithRetryMock.mockImplementation(async (url: string) => {
-    if (url.endsWith("/blocks/latest")) return ok(overrides.block ?? structuredClone(fixture.block));
+    if (url === "https://rpc.data.kava.io/header") return ok(overrides.block ?? { result: structuredClone(fixture.block.block) });
     if (url.endsWith("/markets")) return ok(overrides.markets ?? structuredClone(fixture.markets));
     if (url.endsWith("/prices/usdx:usd")) return ok(overrides.aggregate ?? structuredClone(fixture.aggregate));
     if (url.endsWith("/rawprices/usdx:usd")) return ok(overrides.raw ?? structuredClone(fixture.raw));
@@ -61,7 +61,7 @@ describe("Kava USDX pricefeed", () => {
     });
 
     expect(fetchJsonWithRetryMock.mock.calls.map(([url]) => url)).toEqual([
-      "https://api.data.kava.io/cosmos/base/tendermint/v1beta1/blocks/latest",
+      "https://rpc.data.kava.io/header",
       "https://api.data.kava.io/kava/pricefeed/v1beta1/markets",
       "https://api.data.kava.io/kava/pricefeed/v1beta1/prices/usdx:usd",
       "https://api.data.kava.io/kava/pricefeed/v1beta1/rawprices/usdx:usd",
@@ -159,10 +159,11 @@ describe("Kava USDX pricefeed", () => {
   it("fails closed when the Kava block is stale, from another chain, or malformed", async () => {
     vi.spyOn(console, "warn").mockImplementation(() => undefined);
     for (const block of [
-      { block: { header: { ...fixture.block.block.header, time: "2026-07-16T06:10:00Z" } } },
-      { block: { header: { ...fixture.block.block.header, chain_id: "not-kava" } } },
-      { block: { header: { ...fixture.block.block.header, height: "height-unknown" } } },
-      { block: { header: { chain_id: "kava_2222-10" } } },
+      { result: { header: { ...fixture.block.block.header, time: "2026-07-16T06:10:00Z" } } },
+      { result: { header: { ...fixture.block.block.header, chain_id: "not-kava" } } },
+      { result: { header: { ...fixture.block.block.header, time: "2026-07-16T07:22:00Z" } } },
+      { result: { header: { ...fixture.block.block.header, height: "height-unknown" } } },
+      { result: { header: { chain_id: "kava_2222-10" } } },
     ]) {
       fetchJsonWithRetryMock.mockReset();
       installFixtureResponses({ block });

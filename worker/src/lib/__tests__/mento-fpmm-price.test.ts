@@ -96,9 +96,26 @@ describe("CHFm guarded FPMM price", () => {
     pool(overrides);
     expect(await fetchMentoFpmmPrice(context())).toBeNull();
   });
-  it("fails closed on an oracle/breaker multicall revert", async () => {
+  it("records a null RPC result with the pinned block", async () => {
     multicall.mockResolvedValue(null);
-    expect(await fetchMentoFpmmPrice(context())).toBeNull();
+    const ctx = { ...context(), lastRejectionReason: null as string | null };
+    expect(await fetchMentoFpmmPrice(ctx)).toBeNull();
+    expect(ctx.lastRejectionReason).toBe("mento-fpmm:state-rpc-null:block-77580896");
+  });
+  it.each(["short", "wrong-label", "failed-call"])("records bounded %s diagnostics without RPC data", async (kind) => {
+    multicall.mockImplementation(async (_chain, calls) => {
+      const rows = calls.map(({ label }: { label: string }) => ({ label, success: true, returnData: uint(1n) }));
+      if (kind === "short") rows.pop();
+      else if (kind === "wrong-label") rows[0].label = "https://rpc.invalid/secret";
+      else rows[14] = { ...rows[14], success: false, returnData: "secret-upstream-payload" };
+      return rows;
+    });
+    const ctx = { ...context(), lastRejectionReason: null as string | null };
+    expect(await fetchMentoFpmmPrice(ctx)).toBeNull();
+    expect(ctx.lastRejectionReason).toBe(kind === "failed-call"
+      ? "mento-fpmm:state-subcall-smallQuote:block-77580896"
+      : "mento-fpmm:state-batch-shape:block-77580896");
+    expect(ctx.lastRejectionReason).not.toContain("secret");
   });
   it("rejects a reorg between the pinned read and closing header", async () => {
     blockHeader.mockResolvedValueOnce({ number: 77580896, timestamp: Math.floor(Date.now() / 1000), hash: `0x${"cd".repeat(32)}` });
