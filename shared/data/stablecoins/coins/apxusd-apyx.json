@@ -82,15 +82,15 @@
       "bucket": "reserves_split",
       "riskMap": {
         "STRC": "high",
-        "Cash & Equivalents": "very-low",
+        "Cash & Equivalents": "medium",
         "SATA": "high",
         "Protocol Owned Liquidity": "high",
         "Inventory": "high",
         "Other": "high"
       },
       "renameMap": {
-        "STRC": "STRC (Strategy preferred equity, BTC-linked)",
-        "Cash & Equivalents": "Cash & Equivalents (USDC, U.S. Treasury Bills)",
+        "STRC": "STRC / STRCx (Strategy preferred-equity exposure)",
+        "Cash & Equivalents": "Cash & Equivalents (cash, stablecoins, bills and DeFi positions)",
         "SATA": "SATA (Strive preferred equity, BTC-linked)"
       },
       "sourceKeyMap": {
@@ -100,13 +100,14 @@
         "Protocol Owned Liquidity": "accountable:apyx:deployment:protocol-owned-liquidity",
         "Inventory": "accountable:apyx:deployment:inventory",
         "Other": "accountable:apyx:deployment:other"
-      }
+      },
+      "accountingMode": "apyx-net-external-reserves"
     }
   },
   "proofOfReserves": {
     "type": "independent-audit",
     "url": "https://docs.apyx.fi/collateral-and-custody/transparency",
-    "provider": "Wolf & Company, P.C. examines Preference Foundation's monthly securities-balance assertions (including STRC and STRCx); these reports corroborate the disclosed preferred-equity sleeve but do not reconcile all apxUSD reserve buckets or liabilities. The July 2026 opinion is linked from the attestation index and the reserve review.",
+    "provider": "Wolf & Company, P.C. examines Preference Foundation's monthly securities-balance assertions (including brokerage STRC/SATA and tokenized STRCx in self-custodied wallets). The August 2026 opinion, signed September 11, corroborates this preferred-equity sleeve but does not reconcile all external reserve buckets or apxUSD redeemable liabilities.",
     "attestorTier": "niche",
     "cadence": "monthly",
     "attestorJurisdiction": "United States"

@@ -139,7 +139,11 @@
           "riskFactors": ["counterparty", "liquidity", "custody", "concentration"],
           "liquidityHorizon": "unknown"
         }
-      ]
+      ],
+      "reviewedReport": {
+        "url": "https://action.ripio.com/hubfs/2026/wFIAT/ATTESTATION/20260331_wARS_Certification.pdf",
+        "balanceDate": "2026-03-31"
+      }
     }
   },
   "launchDate": "2025-11-01"

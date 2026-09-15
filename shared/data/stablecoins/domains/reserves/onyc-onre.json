@@ -92,7 +92,7 @@
       "pct": 1.73359674,
       "risk": "medium",
       "assetClass": "fund-share",
-      "issuerOrObligor": "Superstate Crypto Carry Fund (USCC)",
+      "issuerOrObligor": "Bitwise Crypto Carry Fund (USCC), a Delaware statutory trust series; managed by Bitwise Investment Manager, LLC, with Superstate tokenization infrastructure",
       "riskFactors": [
         "market",
         "basis",
@@ -193,6 +193,14 @@
     "confidence": "verified",
     "sources": [
       {
+        "label": "Bitwise USCC factsheet (June 1, 2026 manager transition and fund structure)",
+        "url": "https://s3.us-east-1.amazonaws.com/static.bitwiseinvestments.com/uscc/bitwise-crypto-carry-fund-uscc-fact-sheet.pdf"
+      },
+      {
+        "label": "Apex July 31, 2026 ONYC agreed-upon-procedures report (unaudited)",
+        "url": "https://drive.google.com/file/d/1ENqYfzpiOVv4C_ZhtUyPyOrLfTqXTdP8/view"
+      },
+      {
         "label": "OnRe Transparency Hub (live pool data)",
         "url": "https://app.onre.finance/earn/transparency"
       },
@@ -232,7 +240,7 @@
         "reserveName": "USCC",
         "pct": 1.73359674,
         "disposition": "untracked-exogenous-asset",
-        "rationale": "Superstate USCC is a tokenized fund share that is not in the tracked stablecoin registry."
+        "rationale": "Bitwise Crypto Carry Fund USCC is a tokenized fund share that is not in the tracked stablecoin registry."
       },
       {
         "reserveIndex": 10,

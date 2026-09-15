@@ -55,6 +55,9 @@ describe("adaptOnReSchedule", () => {
     expect(result.slices.find((s) => s.sourceKey === "onre-holdings-csv:usdg")!.coinId).toBe("usdg-paxos");
     expect(result.slices.find((s) => s.sourceKey === "onre-holdings-csv:usdc-kamino-lending")!.coinId).toBe("usdc-circle");
     expect(result.slices.find((s) => s.sourceKey === "onre-holdings-csv:usd-cash")!.assetClass).toBe("cash");
+    expect(result.slices.find((s) => s.sourceKey === "onre-holdings-csv:uscc")!.issuerOrObligor).toBe(
+      "Bitwise Crypto Carry Fund (USCC), a Delaware statutory trust series; managed by Bitwise Investment Manager, LLC, with Superstate tokenization infrastructure",
+    );
 
     expect(result.metadata).toMatchObject({
       totalReserveUsd: 290_132_322.20,

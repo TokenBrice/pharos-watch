@@ -42,13 +42,17 @@
       {
         "label": "Midas mGLOBAL product page",
         "url": "https://midas.app/mGLOBAL"
+      },
+      {
+        "label": "Midas mGLOBAL July 13, 2026 SAVE attestation (JTC valuation basis May 31)",
+        "url": "https://gateway.pinata.cloud/ipfs/QmSYEwis7JebUZD3s9FAY6V77hUPNY6vVTfd4yrR75eYwD"
       }
     ],
-    "rationale": "Midas identifies mGLOBAL as exposure to Fasanara receivables and asset-based finance. On September 14 the latest visible aggregate proof-of-reserve report was dated July 13; current product TVL and operational wallets do not refresh that report or disclose a current loan tape. The reserve remains one unresolved private-credit strategy envelope. Redemption-liquidity targets are policy disclosures, not measured reserve-line weights.",
+    "rationale": "Midas identifies mGLOBAL as exposure to Fasanara receivables and asset-based finance. On September 14 the latest visible aggregate proof-of-reserve report was dated July 13; current product TVL and operational wallets do not refresh that report or disclose a current loan tape. The reserve remains one unresolved private-credit strategy envelope. Redemption-liquidity targets are policy disclosures, not measured reserve-line weights. September 15 onchain registry and IPFS follow-up confirmed that July 13 is the attestation publication date, while its JTC fund-manager claim explicitly values Fasanara SA SICAV-RAIF, mGLOBAL Fund, SF 36, Class A USD ACC as of May 31, 2026. The claim reports $34,462,903.46 fund value and $21,841,041.59 pending subscription. These older, distinct amounts cannot be combined with current operational wallet balances or treated as current held fund shares.",
     "compositionBasis": "Midas issuer strategy disclosure plus independent rwa.xyz Asset-Backed Credit / Fasanara Global Fund envelope; no published constituent weights",
     "compositionAsOf": "2026-07-28",
     "scope": "full-composition",
-    "knownUnknownExposure": "Current loan-level weights, obligor and originator concentrations, warehouse facilities and actual cash-versus-receivables allocation remain unverified. The latest visible July 13 aggregate report and disclosed liquidity targets do not establish September composition.",
+    "knownUnknownExposure": "Current loan-level weights, obligor and originator concentrations, warehouse facilities and actual cash-versus-receivables allocation remain unverified. The latest visible July 13 aggregate report and disclosed liquidity targets do not establish September composition. The latest retrieved financial attestation carries a May 31 fund valuation inside a July 13 publication; publication time does not reset the holdings basis.",
     "knownUnknownExposurePct": 100,
     "nonLinkDispositions": [
       {

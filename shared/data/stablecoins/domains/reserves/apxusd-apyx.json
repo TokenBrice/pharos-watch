@@ -3,67 +3,41 @@
   "reserves": [
     {
       "sourceKey": "accountable:apyx:deployment:strc",
-      "name": "STRC (Strategy preferred equity, BTC-linked)",
-      "pct": 58.4,
+      "name": "STRC / STRCx (Strategy preferred-equity exposure)",
+      "pct": 86.7,
       "risk": "high",
       "assetClass": "other",
-      "issuerOrObligor": "Strategy, Inc.",
+      "issuerOrObligor": "Strategy, Inc. preferred equity, held directly and through tokenized STRCx; current split undisclosed",
       "riskFactors": [
         "market",
         "credit",
         "liquidity",
-        "concentration"
-      ],
-      "liquidityHorizon": "unknown"
-    },
-    {
-      "sourceKey": "accountable:apyx:deployment:inventory",
-      "name": "Inventory",
-      "pct": 17.0,
-      "risk": "high",
-      "assetClass": "other",
-      "issuerOrObligor": "Apyx protocol (Preference Capital (BVI) Ltd.)",
-      "riskFactors": [
-        "market",
+        "concentration",
         "custody",
-        "liquidity",
-        "concentration"
-      ],
-      "liquidityHorizon": "unknown"
-    },
-    {
-      "sourceKey": "accountable:apyx:deployment:protocol-owned-liquidity",
-      "name": "Protocol Owned Liquidity",
-      "pct": 17.3,
-      "risk": "high",
-      "assetClass": "other",
-      "issuerOrObligor": "Apyx protocol (Preference Capital (BVI) Ltd.)",
-      "riskFactors": [
-        "market",
-        "liquidity",
-        "smart-contract",
-        "concentration"
+        "smart-contract"
       ],
       "liquidityHorizon": "unknown"
     },
     {
       "sourceKey": "accountable:apyx:deployment:cash-equivalents",
-      "name": "Cash & Equivalents (USDC, U.S. Treasury Bills)",
-      "pct": 7.3,
-      "risk": "very-low",
+      "name": "Cash & Equivalents (cash, stablecoins, bills and DeFi positions)",
+      "pct": 13.3,
+      "risk": "medium",
       "assetClass": "other",
-      "issuerOrObligor": "USDC issuer and United States Treasury; split undisclosed",
+      "issuerOrObligor": "Apyx reserve counterparties and DeFi protocols; cash, stablecoin, Treasury and deployed-position split undisclosed",
       "riskFactors": [
         "counterparty",
         "custody",
-        "liquidity"
+        "liquidity",
+        "smart-contract",
+        "market"
       ],
       "liquidityHorizon": "unknown"
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-09-04",
-    "reviewer": "Codex Apyx current Accountable reserve review",
+    "reviewedAt": "2026-09-16",
+    "reviewer": "Pharos APX net external reserve accounting review",
     "confidence": "verified",
     "sources": [
       {
@@ -85,45 +59,40 @@
       {
         "label": "Wolf & Company July 2026 attestation opinion (PDF)",
         "url": "https://1731598137-files.gitbook.io/~/files/v0/b/gitbook-x-prod.appspot.com/o/spaces%2F6XK8DXRkFImTNSbo86o2%2Fuploads%2FtNc7XacuhGCSgnQRH8wB%2FJuly%202026%20Attestation%20Opinion%20(Final).pdf?alt=media&token=fbbfb1d4-ca86-4186-93d9-400fe5a36be7"
+      },
+      {
+        "label": "Apyx reserve and non-reserve accounting definitions",
+        "url": "https://docs.apyx.fi/collateral-and-custody/accountable-dashboard"
+      },
+      {
+        "label": "Accountable APX public cache mirror",
+        "url": "https://cache.accountable.capital/dashboard/apyx"
+      },
+      {
+        "label": "Wolf August 2026 securities examination, signed September 11",
+        "url": "https://1731598137-files.gitbook.io/~/files/v0/b/gitbook-x-prod.appspot.com/o/spaces%2F6XK8DXRkFImTNSbo86o2%2Fuploads%2F133oAatMzJ47DEJ8gAoT%2FAugust%202026%20Attestation%20Opinion%20(Final).pdf?alt=media"
       }
     ],
-    "rationale": "Refreshed 2026-09-04 with the Accountable dashboard snapshot observed at 2026-09-04T17:29:34.519Z. The reserves_split values are STRC $181,854,291.20, Protocol Owned Liquidity $53,866,845.43, Inventory $53,025,264.62, Cash & Equivalents $22,822,968.30, and Other $6,613.04 against total reserves $311,575,982.58. The live accountable adapter emits the four positive buckets at one decimal (58.4%, 17.3%, 17.0%, and 7.3%); the Other bucket is below the adapter's one-decimal output threshold. STRC remains corroborated by the linked July Wolf & Company examination, while Inventory and Protocol Owned Liquidity remain opaque and Cash & Equivalents combines USDC with Treasury bills.",
-    "compositionBasis": "Timestamped Accountable reserves_split snapshot (2026-09-04) normalized by the current accountable live-reserve adapter",
-    "compositionAsOf": "2026-09-04",
+    "rationale": "Issuer documentation classifies Inventory and Protocol Owned Liquidity as non-reserve, nonredeemable self-issued claims. Gross reserves of $307,593,129.35 less Inventory of $61,062,157.37285687 and POL of $53,894,639.55179605 give $192,636,332.42534712 in external reserves. API supply of $307,573,514.82 less the same own claims gives $192,616,717.8953471 in redeemable claims; the derived ratio of 1.0001018319 matches the reported 1.000102. This reserve accounting does not modify public circulating supply. External STRC/STRCx exposure is 86.74094097%, Cash & Equivalents is 13.25535639%, and Other is 0.00370265%; live one-decimal output rounds to 86.7% and 13.3%. Cash remains conservative because issuer documentation includes lending and liquidity positions. The Wolf August opinion, signed September 11, examines securities as of August 13 and August 31. August 31 holdings include $66,363,383 in brokerage STRC/SATA and $102,095,394 in self-custodied STRCx. The opinion does not reconcile all cash, reserves, or liabilities.",
+    "compositionBasis": "Accountable timestamp 1789502434250; exclude issuer-documented nonredeemable Inventory and POL from both gross asset and claim totals; classify the resulting external reserve mix",
+    "compositionAsOf": "2026-09-15",
     "scope": "full-composition",
-    "knownUnknownExposure": "Inventory and Protocol Owned Liquidity do not disclose constituent assets; Cash & Equivalents cannot be split between USDC and Treasury bills; and the adapter-suppressed Other bucket is not itemized. The July 2026 Wolf & Company report corroborates Preference Foundation securities but does not reconcile all apxUSD liabilities.",
-    "knownUnknownExposurePct": 41.6,
+    "knownUnknownExposure": "Cash & Equivalents combines cash, stablecoins, Treasury bills and deployed DeFi positions without weights; STRC combines direct shares with STRCx without current weights; Other is 0.00370265% and below live one-decimal slice precision. Gross own claims remain separately reconciled in live metadata. Wolf examines securities only, not complete reserves or redeemable liabilities.",
+    "knownUnknownExposurePct": 13.3,
     "nonLinkDispositions": [
       {
         "reserveIndex": 0,
-        "reserveName": "STRC (Strategy preferred equity, BTC-linked)",
-        "pct": 58.4,
+        "reserveName": "STRC / STRCx (Strategy preferred-equity exposure)",
+        "pct": 86.7,
         "disposition": "untracked-exogenous-asset",
-        "rationale": "STRC is preferred equity issued by Strategy rather than a tracked stablecoin dependency."
+        "rationale": "Preferred equity and tokenized STRCx are not tracked stablecoin dependencies; current direct/tokenized split is not supplied."
       },
       {
         "reserveIndex": 1,
-        "reserveName": "Inventory",
-        "pct": 17.0,
-        "disposition": "insufficient-evidence",
-        "rationale": "The current Accountable snapshot names the bucket but does not disclose its constituent assets; its failure domain is the Apyx protocol."
-      },
-      {
-        "reserveIndex": 2,
-        "reserveName": "Protocol Owned Liquidity",
-        "pct": 17.3,
-        "disposition": "insufficient-evidence",
-        "rationale": "The current Accountable snapshot names the bucket but does not disclose its constituent assets; its failure domain is the Apyx protocol."
-      },
-      {
-        "reserveIndex": 3,
-        "reserveName": "Cash & Equivalents (USDC, U.S. Treasury Bills)",
-        "pct": 7.3,
+        "reserveName": "Cash & Equivalents (cash, stablecoins, bills and DeFi positions)",
+        "pct": 13.3,
         "disposition": "basket-needs-split",
-        "rationale": "The source reports one combined cash-and-Treasury category and does not publish its USDC/Treasury split.",
-        "candidateCoinIds": [
-          "usdc-circle"
-        ]
+        "rationale": "Issuer names cash, stablecoins, Treasury bills, lending and liquidity positions without source weights; no specific stablecoin dependency fraction is invented."
       }
     ]
   },

@@ -27,6 +27,7 @@ function installReads(overrides: {
   balance?: bigint;
   paused?: bigint;
   decimals?: bigint;
+  alternativeAssets?: string | null;
 } = {}): AdapterNetworkSpec {
   const decimals = overrides.decimals ?? 6n;
   const wrapper = ADDRESSES.wrapper.toLowerCase();
@@ -41,6 +42,7 @@ function installReads(overrides: {
       [`${pyusdx}:balanceOf(address)`]: word(overrides.balance ?? BALANCE),
       [`${pyusdx}:decimals()`]: word(decimals),
       [`${wrapper}:paused()`]: word(overrides.paused ?? 0n),
+      [`${wrapper}:totalAssets()`]: overrides.alternativeAssets === undefined ? word(0n) : overrides.alternativeAssets,
     },
   };
 }
@@ -78,6 +80,7 @@ describe("saturn-pyusdx adapter", () => {
       pyusdxAddress: ADDRESSES.pyusdx,
       totalSupplyRaw: SUPPLY.toString(),
       underlyingBalanceRaw: BALANCE.toString(),
+      alternativeAssetsRaw: "0",
       wrapperDecimals: 6,
       underlyingDecimals: 6,
       collateralizationRatio: 1,
@@ -124,6 +127,10 @@ describe("saturn-pyusdx adapter", () => {
         message: "Saturn USDat PYUSDx balance covers 91.86% of USDat supply",
       }),
     ]);
+  });
+
+  it.each([word(1n), null, `${word(0n)}${"00".repeat(32)}`])("rejects incomplete alternative backing scope: %s", async (alternativeAssets) => {
+    await expect(fetchFixture({ alternativeAssets })).rejects.toThrow(/alternative-backing scope unavailable|requires a reviewed multi-asset reserve scope/);
   });
 
   it("degrades zero supply and reports a paused MultiMint route as paused", async () => {
