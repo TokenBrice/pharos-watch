@@ -1,7 +1,7 @@
 import { DatabaseSync } from "node:sqlite";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
-import { logCronRun } from "../cron-logger";
+import { logCronRun, cronEventCacheKey } from "../cron-logger";
 import { recordProducerOutcome } from "../producer-history";
 import { sweepStaleScheduledSlotExecutions } from "../scheduled-slot-fence";
 
@@ -542,5 +542,59 @@ describe("scheduled slot reconciliation against the current D1 schema", () => {
       reconciledByWorkerVersionActivatedAt:
         activationDelaySec == null ? null : slotStartedAt + activationDelaySec,
     });
+  });
+});
+
+
+describe("bounded abandonment progress evidence", () => {
+  afterEach(() => fixtures.closeAll());
+
+  it.each([
+    { name: "valid", metadata: JSON.stringify({ currentCoinId: "usdnr-nerona", currentAdapter: "m0-wrapper-underlying",
+      currentBreakerKey: "live-reserves:usdnr-nerona", synced: 260, failed: 1,
+      providerError: "SECRET RESPONSE", endpoint: "https://secret.example/key",
+      adapterTelemetryProgress: { attemptCount: 261, ioCallCount: 300, elapsedTotalMs: 1234, overflow: false,
+        providerError: "SECRET RESPONSE", groupCount: -1 } }), status: "parsed" },
+    { name: "malformed", metadata: "{SECRET RESPONSE", status: "malformed" },
+    { name: "oversized", metadata: JSON.stringify({ currentCoinId: "usdnr-nerona", body: "SECRET RESPONSE".repeat(2000) }), status: "oversized" },
+    { name: "invalid fields", metadata: JSON.stringify({ currentCoinId: "https://secret.example/key", synced: -1,
+      currentAdapter: "a".repeat(161), adapterTelemetryProgress: ["SECRET RESPONSE"] }), status: "parsed" },
+  ])("retains only bounded evidence for $name metadata and remains idempotent", async ({ metadata, status, name }) => {
+    const { sqlite, db } = createMigratedDb();
+    const nowSec = 1_772_004_000;
+    seedZeroDurationDeployInterruptedCase(sqlite, nowSec, { firstSeenAt: null, activatedAt: null });
+    sqlite.prepare("UPDATE cron_run_progress SET items_done = 261, items_total = 278, metadata = ?").run(metadata);
+    const options = { nowSec, staleAfterSec: 1200, slotKey: "halfHourlyMeasuredExecution" };
+    await sweepStaleScheduledSlotExecutions(db, options);
+    const readMetadata = () => JSON.parse((sqlite.prepare("SELECT metadata FROM cron_runs WHERE job = 'sync-cl-exit-depth'").get() as { metadata: string }).metadata);
+    const first = readMetadata();
+    expect(first.progressSnapshot).toMatchObject({ schemaVersion: 1, itemsDone: 261, itemsTotal: 278, metadataStatus: status });
+    if (name === "valid") {
+      expect(first.progressSnapshot).toMatchObject({ currentCoinId: "usdnr-nerona", currentAdapter: "m0-wrapper-underlying",
+        synced: 260, failed: 1, adapterTelemetryProgress: { attemptCount: 261, ioCallCount: 300, elapsedTotalMs: 1234, overflow: false } });
+      expect(first.progressSnapshot.adapterTelemetryProgress).not.toHaveProperty("groupCount");
+    } else {
+      expect(first.progressSnapshot).not.toHaveProperty("currentCoinId");
+    }
+    expect(JSON.stringify(first)).not.toContain("SECRET");
+    expect(JSON.stringify(first)).not.toContain("secret.example");
+    expect(JSON.stringify(first.progressSnapshot).length).toBeLessThan(2000);
+    const event = JSON.parse((sqlite.prepare("SELECT value FROM cache WHERE key = ?").get(cronEventCacheKey("halfHourlyMeasuredExecution", "scheduled-slot-abandoned")) as { value: string }).value);
+    expect(event.metadata.abandonedProgress[0]).toEqual({ job: "sync-cl-exit-depth", ...first.progressSnapshot });
+    expect(sqlite.prepare("SELECT COUNT(*) AS count FROM cron_run_progress").get()).toEqual({ count: 0 });
+    await sweepStaleScheduledSlotExecutions(db, options);
+    expect(readMetadata()).toEqual(first);
+    expect(sqlite.prepare("SELECT COUNT(*) AS count FROM cron_runs WHERE job = 'sync-cl-exit-depth'").get()).toEqual({ count: 1 });
+  });
+
+  it("does not snapshot or clear a child whose matching lease is still heartbeating", async () => {
+    const { sqlite, db } = createMigratedDb();
+    const nowSec = 1_772_004_000;
+    seedZeroDurationDeployInterruptedCase(sqlite, nowSec, { firstSeenAt: null, activatedAt: null });
+    sqlite.prepare("UPDATE cron_leases SET heartbeat_at = ?, lease_until = ?, updated_at = ?").run(nowSec, nowSec + 600, nowSec);
+    sqlite.prepare("UPDATE cron_run_progress SET metadata = ?").run(JSON.stringify({ currentCoinId: "usdnr-nerona" }));
+    await sweepStaleScheduledSlotExecutions(db, { nowSec, staleAfterSec: 1200, slotKey: "halfHourlyMeasuredExecution" });
+    expect(sqlite.prepare("SELECT COUNT(*) AS count FROM cron_run_progress").get()).toEqual({ count: 1 });
+    expect(sqlite.prepare("SELECT COUNT(*) AS count FROM cron_runs WHERE job = 'sync-cl-exit-depth'").get()).toEqual({ count: 0 });
   });
 });

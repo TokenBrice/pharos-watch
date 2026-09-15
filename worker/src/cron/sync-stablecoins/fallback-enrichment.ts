@@ -126,6 +126,7 @@ export async function runFallbackPriceEnrichmentPhase(
     cachedFallbackCount,
     nativePegCorrectionCount,
     nativePegFillCount,
+    priceObservationEffectiveness,
     priceCacheEntries,
     providerDiagnostics,
   } = priceCompletion;
@@ -143,6 +144,7 @@ export async function runFallbackPriceEnrichmentPhase(
         nativePegCorrections: nativePegCorrectionCount,
         nativePegFills: nativePegFillCount,
         cachedFallbackPrices: cachedFallbackCount,
+        priceObservationEffectiveness,
       },
     },
   );
@@ -155,6 +157,7 @@ export async function runFallbackPriceEnrichmentPhase(
     cachedFallbackCount,
     nativePegCorrectionCount,
     nativePegFillCount,
+    priceObservationEffectiveness,
     priceCacheEntries,
     providerDiagnostics: [
       ...(enrichStats.providerDiagnostics ?? []),

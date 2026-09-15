@@ -131,6 +131,7 @@ export async function syncViaCoingeckoFallback(
     cachedFallbackCount,
     nativePegCorrectionCount,
     nativePegFillCount,
+    priceObservationEffectiveness,
     priceCacheEntries,
     providerDiagnostics: fallbackProviderDiagnostics,
   } = enrichment;
@@ -160,6 +161,7 @@ export async function syncViaCoingeckoFallback(
         cachedFallbackCount,
         nativePegCorrectionCount,
         nativePegFillCount,
+        priceObservationEffectiveness,
       },
     },
     policy: buildFallbackStablecoinsPublicationPolicy(assets),

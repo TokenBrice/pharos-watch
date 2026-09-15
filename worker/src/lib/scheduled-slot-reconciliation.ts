@@ -32,7 +32,48 @@ type StaleSlotProgressRow = {
   stage: string | null;
   lease_owner: string | null;
   slot_started_at: number | null;
+  items_done?: number | null;
+  items_total?: number | null;
+  metadata?: string | null;
 };
+
+/** Keep failure context without retaining free text, provider payloads, or unbounded JSON. */
+function snapshotAbandonedProgress(progress: StaleSlotProgressRow) {
+  const snapshot: Record<string, unknown> = { schemaVersion: 1 };
+  const copyCounts = (source: Record<string, unknown>, target: Record<string, unknown>, keys: string[]) => {
+    for (const key of keys) {
+      const value = source[key];
+      if (typeof value === "number" && Number.isSafeInteger(value) && value >= 0) target[key] = value;
+    }
+  };
+  copyCounts({ itemsDone: progress.items_done, itemsTotal: progress.items_total }, snapshot, ["itemsDone", "itemsTotal"]);
+  if (!progress.metadata) return { ...snapshot, metadataStatus: "missing" };
+  if (progress.metadata.length > 16_384) return { ...snapshot, metadataStatus: "oversized" };
+  let metadata: Record<string, unknown>;
+  try {
+    const parsed: unknown = JSON.parse(progress.metadata);
+    if (parsed == null || typeof parsed !== "object" || Array.isArray(parsed)) throw new Error("invalid metadata");
+    metadata = parsed as Record<string, unknown>;
+  } catch {
+    return { ...snapshot, metadataStatus: "malformed" };
+  }
+  snapshot.metadataStatus = "parsed";
+  copyCounts(metadata, snapshot, ["synced", "failed", "skipped"]);
+  for (const key of ["currentCoinId", "currentAdapter", "currentBreakerKey"]) {
+    const value = metadata[key];
+    if (typeof value === "string" && /^[a-z0-9][a-z0-9:_-]{0,159}$/.test(value)) snapshot[key] = value;
+  }
+  const rawTelemetry = metadata.adapterTelemetryProgress;
+  if (rawTelemetry != null && typeof rawTelemetry === "object" && !Array.isArray(rawTelemetry)) {
+    const source = rawTelemetry as Record<string, unknown>;
+    const telemetry: Record<string, unknown> = {};
+    copyCounts(source, telemetry, ["attemptCount", "ioCallCount", "ioActivityBurstCount", "requestCacheHits",
+      "requestCacheMisses", "elapsedTotalMs", "groupCount"]);
+    if (typeof source.overflow === "boolean") telemetry.overflow = source.overflow;
+    if (Object.keys(telemetry).length > 0) snapshot.adapterTelemetryProgress = telemetry;
+  }
+  return snapshot;
+}
 
 type StaleSlotLeaseRow = {
   lease_owner: string;
@@ -56,6 +97,7 @@ export interface StaleSlotReconciliationSummary {
     job: string;
     progressStage: string | null;
     progressUpdatedAt: number;
+    progressSnapshot: ReturnType<typeof snapshotAbandonedProgress>;
     leaseOwner: string | null;
     leaseUntil: number | null;
   }>;
@@ -83,7 +125,7 @@ async function listProgressRowsForStaleSlot(
   const rows = await runWithOverloadRetry(() =>
     db
       .prepare(
-        `SELECT job, started_at, updated_at, stage, lease_owner, slot_started_at
+        `SELECT job, started_at, updated_at, stage, lease_owner, slot_started_at, items_done, items_total, metadata
            FROM cron_run_progress
            WHERE slot_started_at = ?
              AND job IN (${jobPlaceholders})
@@ -433,6 +475,7 @@ async function insertSyntheticStaleCronRun(
         slotOwner: slot.execution_owner,
         progressStage: progress.stage,
         progressUpdatedAt: progress.updated_at,
+        progressSnapshot: snapshotAbandonedProgress(progress),
         leaseOwner: progress.lease_owner,
         leaseUntil: lease?.lease_until ?? null,
         reconciledAt: nowSec,
@@ -572,6 +615,7 @@ async function reconcileStaleSlotArtifacts(
       job: progress.job,
       progressStage: progress.stage,
       progressUpdatedAt: progress.updated_at,
+      progressSnapshot: snapshotAbandonedProgress(progress),
       leaseOwner: null,
       leaseUntil: null,
     });
@@ -610,6 +654,7 @@ async function reconcileStaleSlotArtifacts(
         job: progress.job,
         progressStage: progress.stage,
         progressUpdatedAt: progress.updated_at,
+        progressSnapshot: snapshotAbandonedProgress(progress),
         leaseOwner: progress.lease_owner,
         leaseUntil: null,
       });
@@ -665,6 +710,7 @@ async function reconcileStaleSlotArtifacts(
       job: progress.job,
       progressStage: progress.stage,
       progressUpdatedAt: progress.updated_at,
+      progressSnapshot: snapshotAbandonedProgress(progress),
       leaseOwner: progress.lease_owner,
       leaseUntil: lease.lease_until,
     });
@@ -700,7 +746,12 @@ async function writeStaleSlotEventMarker(
       slotStartedAtActual: slot.started_at,
       slotUpdatedAt: slot.updated_at,
       reconciledAt: nowSec,
-      staleSlotReconciliation: reconciliation,
+      staleSlotReconciliation: {
+        ...reconciliation,
+        abandonedJobs: reconciliation.abandonedJobs.map(({ progressSnapshot: _snapshot, ...job }) => job),
+      },
+      // Keep snapshots shallow enough for the existing cron-event depth bound.
+      abandonedProgress: reconciliation.abandonedJobs.map(({ job, progressSnapshot }) => ({ job, ...progressSnapshot })),
     },
   });
 }

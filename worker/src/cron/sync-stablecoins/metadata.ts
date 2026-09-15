@@ -1,3 +1,4 @@
+import type { PriceObservationEffectiveness } from "./price-corroboration-observations";
 import { ACTIVE_IDS } from "@shared/lib/stablecoins/registry";
 import { hasMissingPrice, type PeggedAsset } from "./enrich-prices";
 import { buildSyncMetadata, type CronResult, type PriceSourceHealth, type TrackedCoverageRestoreResult } from "./shared";
@@ -277,6 +278,7 @@ export function buildStablecoinsSyncResult(input: {
   rejectedCount: number;
   nativePegCorrectionCount?: number;
   nativePegFillCount?: number;
+  priceObservationEffectiveness?: PriceObservationEffectiveness;
   stalenessWarning: boolean;
   stalenessSummary?: { compared: number; identical: number; identicalRatio: number } | null;
   stalenessCheckFailed: boolean;
@@ -356,6 +358,7 @@ export function buildStablecoinsSyncResult(input: {
     rejectedPrices: input.rejectedCount,
     nativePegCorrections: input.nativePegCorrectionCount ?? 0,
     nativePegFills: input.nativePegFillCount ?? 0,
+    priceObservationEffectiveness: input.priceObservationEffectiveness,
     missingPrices: finalMissing,
     priceSourceHealth,
     pricingSourceAuditReport: {
@@ -427,6 +430,7 @@ export function buildStablecoinsSyncResult(input: {
       rejectedPrices: input.rejectedCount,
       nativePegCorrections: input.nativePegCorrectionCount ?? 0,
       nativePegFills: input.nativePegFillCount ?? 0,
+      priceObservationEffectiveness: input.priceObservationEffectiveness,
       depegErrorCount: input.depegErrorCount,
       stalenessCheckFailed: input.stalenessCheckFailed,
       metadataCompactedBySizeGuard: true,
@@ -455,6 +459,7 @@ export function buildFallbackStablecoinsSyncResult(input: {
   cachedFallbackCount: number;
   nativePegCorrectionCount: number;
   nativePegFillCount: number;
+  priceObservationEffectiveness?: PriceObservationEffectiveness;
   stalenessWarning: boolean;
   stalenessSummary?: { compared: number; identical: number; identicalRatio: number } | null;
   stalenessCheckFailed: boolean;
@@ -497,6 +502,7 @@ export function buildFallbackStablecoinsSyncResult(input: {
       rejectedPrices: input.rejectedCount,
       nativePegCorrections: input.nativePegCorrectionCount,
       nativePegFills: input.nativePegFillCount,
+      priceObservationEffectiveness: input.priceObservationEffectiveness,
       cachedFallbackPrices: input.cachedFallbackCount,
       authoritativeOverrides: input.authoritativeOverrideCount,
       authoritativeOverrideStats: input.authoritativeOverrideStats,
