@@ -3,7 +3,7 @@ import { DatabaseSync } from "node:sqlite";
 import { createSqliteD1 } from "@shared/test-utils/sqlite-d1";
 import * as enrichment from "../enrich-prices";
 import * as shared from "../shared";
-import { PRICE_CORROBORATION_OBSERVATIONS_KEY } from "../price-corroboration-observations";
+import { PRICE_CORROBORATION_OBSERVATIONS_KEY, loadPriceCorroborationObservations, writePriceCorroborationObservations } from "../price-corroboration-observations";
 import type { AddressPriceQuote } from "../../../lib/address-price-providers";
 import type { PeggedAsset } from "../enrich-prices";
 import {
@@ -74,8 +74,49 @@ describe("hourly price corroboration", () => {
     }
   });
 
-  it("runs only for the top-of-hour quarter-hour invocation", () => {
-    expect(isPriceCorroborationSlot(1_800_000_000)).toBe(true);
+  it.each(["missing", "malformed", "error"] as const)("preserves staging and avoids providers when published cache is %s", async (state) => {
+    const load = vi.spyOn(shared, "loadPreviousStablecoinsById").mockResolvedValue({
+      previousAssetsById: new Map(), cacheState: state === "error" ? { state, message: "read failed" } : { state },
+    });
+    const collect = vi.spyOn(enrichment, "enrichMissingPrices");
+    const db = { prepare: vi.fn() } as unknown as D1Database;
+    try {
+      await expect(runPriceCorroboration({ db, syncStartSec: 1_800_000_540 })).rejects.toThrow("valid published stablecoins cache");
+      expect(collect).not.toHaveBeenCalled();
+      expect(db.prepare).not.toHaveBeenCalled();
+    } finally {
+      load.mockRestore();
+      collect.mockRestore();
+    }
+  });
+
+  it("makes a 15-minute quote usable at the next publication by collecting at :09", async () => {
+    const sqlite = new DatabaseSync(":memory:");
+    sqlite.exec("CREATE TABLE cache (key TEXT PRIMARY KEY, value TEXT NOT NULL, updated_at INTEGER NOT NULL)");
+    const db = createSqliteD1(sqlite);
+    const hour = 1_800_000_000;
+    const publicationSelection = hour + 17 * 60;
+    const observation = { id: "usdt-tether", source: "defillama-contract", price: 1, observedAtMode: "upstream" as const };
+    try {
+      // Previously fetched at :02, with the source clock already one minute old.
+      await writePriceCorroborationObservations(db, [{ ...observation, observedAt: hour + 60 }], hour);
+      expect((await loadPriceCorroborationObservations(db, publicationSelection)).summary.discarded.sourceExpired).toBe(1);
+      // The same upstream age after the :09 checks leaves seven minutes of headroom.
+      await writePriceCorroborationObservations(db, [{ ...observation, observedAt: hour + 9 * 60 }], hour + 9 * 60);
+      const { summary } = await loadPriceCorroborationObservations(db, publicationSelection);
+      expect(summary.eligibleObservationCount).toBe(1);
+      expect(summary.minimumFreshnessHeadroomSec).toBe(7 * 60);
+    } finally {
+      sqlite.close();
+    }
+  });
+
+  it("runs only for the :09 hourly status-check invocation", () => {
+    expect(isPriceCorroborationSlot(1_800_000_540)).toBe(true);
+    expect(isPriceCorroborationSlot(1_800_000_000)).toBe(false);
+    expect(isPriceCorroborationSlot(1_800_001_440)).toBe(false);
+    expect(isPriceCorroborationSlot(1_800_002_340)).toBe(false);
+    expect(isPriceCorroborationSlot(1_800_003_240)).toBe(false);
     expect(isPriceCorroborationSlot(1_800_000_900)).toBe(false);
     expect(isPriceCorroborationSlot(1_800_001_800)).toBe(false);
     expect(isPriceCorroborationSlot(1_800_002_700)).toBe(false);

@@ -789,6 +789,16 @@ export const CRON_JOB_DEFINITIONS: readonly CronJobMeta[] = CRON_JOB_DEFINITIONS
 
 const CRON_CONNECTION_BUDGET_ONLY_DEFINITIONS: readonly CronConnectionBudgetDefinition[] = [
   {
+    job: "price-corroboration",
+    label: "Hourly price corroboration",
+    scheduleKey: "statusSelfCheckOffset",
+    maxConnections: 4,
+    connectionGroup: "status-self-check-chain",
+    statusTracked: false,
+    notes:
+      "Once hourly at :09, collects fallback observations serially after the monitors for the next :15 publication.",
+  },
+  {
     job: "telegram-registration-reconciliation",
     label: "Telegram registration reconciliation",
     scheduleKey: "fiveMinuteTelegramAlerts",

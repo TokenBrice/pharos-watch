@@ -5,7 +5,7 @@ import { rethrowIfAborted } from "../../lib/abort";
 import { logWorkerEventArgs } from "../../lib/structured-log";
 
 export const PRICE_CORROBORATION_OBSERVATIONS_KEY = "price:corroboration-observations:v1";
-// The next hourly primary publishes before its replacement corroboration runs.
+// Bound the handoff across hourly replacement; source TTLs remain independent.
 const STAGING_MAX_AGE_SEC = (60 + 15) * 60;
 const ObservationsSchema = z.array(z.object({
   id: z.string().min(1),
