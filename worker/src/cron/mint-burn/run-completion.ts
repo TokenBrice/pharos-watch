@@ -66,10 +66,12 @@ export async function completeMintBurnRun(input: CompleteMintBurnRunInput): Prom
   const coverageRatio = input.enabledConfigs.length > 0 ? phase.contractsProcessed / input.enabledConfigs.length : 1;
   const criticalCoverageRatio =
     input.criticalContractsEnabled > 0 ? phase.criticalContractsSatisfied / input.criticalContractsEnabled : 1;
-  const degradedSignal =
+  const conservationFailures = phase.configBreakdown.filter((summary) => summary.conservationFailure).length;
+  const conservationUnavailable = phase.configBreakdown.filter((summary) => summary.conservationStatus === "unavailable").length;
+  const degradedSignal = conservationFailures > 0 || (
     input.lane === "extended"
       ? phase.apiErrors > 1 || input.attemptCoverage.staleAttemptCount > 0
-      : criticalCoverageRatio < 1 || phase.apiErrors > 1;
+      : criticalCoverageRatio < 1 || phase.apiErrors > 1);
   const degradedStreak = degradedSignal ? input.runState.degradedStreak + 1 : 0;
 
   let status: SyncMintBurnStatus = "ok";
@@ -86,7 +88,8 @@ export async function completeMintBurnRun(input: CompleteMintBurnRunInput): Prom
   if (
     status === "ok"
     && (
-      input.attemptCoverage.staleAttemptCount > 0
+      conservationFailures > 0
+      || input.attemptCoverage.staleAttemptCount > 0
       || input.attemptCoverage.persistenceFailed
       || input.runDrilldown.persistenceFailed
     )
@@ -208,6 +211,9 @@ export async function completeMintBurnRun(input: CompleteMintBurnRunInput): Prom
       rowsInserted: summary.rowsInserted,
       rowsDropped: summary.rowsDropped,
       errors: summary.errors,
+      conservationStatus: summary.conservationStatus,
+      conservationReason: summary.conservationReason,
+      conservationFailure: summary.conservationFailure,
       scanFrom: summary.scanFrom,
       scanTo: summary.scanTo,
       advancedTo: summary.advancedTo,
@@ -244,6 +250,8 @@ export async function completeMintBurnRun(input: CompleteMintBurnRunInput): Prom
     contractsSkipped: phase.contractsSkipped,
     contractsDeferredExtended: phase.contractsDeferredExtended,
     apiErrors: phase.apiErrors,
+    conservationFailures,
+    conservationUnavailable,
     validationFailures: 0,
     fallbackMode: null,
     burnClassification: {

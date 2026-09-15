@@ -674,27 +674,29 @@ Data is sourced from the admin-only `GET /api/status` payload. The worker supple
 
 ## Mint/Burn Reconciliation Card
 
-**Component:** `MintBurnReconciliationCard` (`src/components/status/mint-burn-reconciliation.tsx`)
+The operator card is **Mint/Burn Integrity**. It separates a per-contract raw-token conservation audit from the indicative circulating-supply comparison. `mintBurnReconciliation` retains its API field name for compatibility; `conservationVersion: 1` identifies the new verdict contract. Older payloads render unverified rather than presenting an old cross-source gap as a verified failure or success.
 
-Renders in the Pipeline "Reserves" tab after `ReserveSyncHealthCard` and before `MetadataIntegrityCard`; Liquidity Health is in the separate "Markets" tab. It compares:
+### Matched-block integrity
 
-- Latest completed 24 hourly buckets of configured canonical issuance-chain classified mint/burn net flow from `mint_burn_hourly` (`[floor(now/hour)-24h, floor(now/hour))`)
-- 24h matching chain-supply delta from the cached stablecoins payload's `chainCirculating` entry (`current - circulatingPrevDay`), resolving its explicit `chainId` or legacy display label through the shared chain registry. Missing or non-finite values and ambiguous duplicate chain entries remain `insufficient-source`.
+The existing mint/burn producers write compact audit records into `cache` under `mint-burn:conservation:<configKey>`. Status reads these records in bounded batches; it never makes archive RPC calls. Each record identifies the contract, decimals, config fingerprint, audit time, exact block boundaries/hashes, raw mint/burn totals, supply delta and residual in native integer units. Raw events include amounts below the public cutoff and atomic/bridge activity.
 
-Each row shows:
+A successful record proves `rawMint - rawBurn = totalSupply(toBlock) - totalSupply(fromBlock)` for logs after the displayed opening checkpoint through the closing checkpoint. The card shows individual contract ranges; different ranges are not added into a fabricated coin-wide 24-hour audit. This is a latest-scan integrity check, not a proof of complete historical coverage or issuer reserves.
 
-- stablecoin symbol
-- reconciliation status (`ok`, `warn`, `critical`, `insufficient-source`)
-- cursor/head coverage hint (`full`, `partial-history`, `bootstrapping`, `lagging`, `disabled`, or `unknown`)
-- absolute USD difference
-- raw flow net, raw chain delta, and ratio
-- `comparisonIssue`, when present, explains why the row cannot be compared even if scan coverage is full
+- **Verified:** every configured contract has an eligible, valid, matching-identity passing audit whose observation and closing checkpoint are both no older than 75 minutes and current scan/producer coverage is usable.
+- **Critical:** an identity-valid, arithmetically verified native mismatch remains unresolved. An unavailable later attempt does not clear it; verified recovery is required.
+- **Unverified:** missing, stale, malformed, unsupported, partial or otherwise unusable audit evidence. A changed contract/config fingerprint cannot inherit a previous pass.
 
-Severity thresholds are defined in `shared/lib/status-thresholds.ts` (`STATUS_RECONCILIATION_THRESHOLDS`): critical at ≥$100M absolute or ≥30% ratio, warn at ≥$25M or ≥12%.
+The initial reviewed set is the thirteen assets investigated on September 15 plus both BUIDL Ethereum share classes: 15 contracts across 14 assets. Exact identities and Transfer semantics are reviewed explicitly; unsupported configs remain visible and unverified. Adding another asset requires proving compatible totalSupply/zero-address event semantics and adding the exact contract identity to the producer's reviewed set. A reviewed coin does not automatically admit a replacement contract.
 
-Comparisons require a single canonical chain, an explicit finite supply baseline (zero is valid), and cursor coverage of at least 24h with a fresh chain-head observation. Missing, stale-head, lagging, or bootstrapping coverage is `insufficient-source`; old first-event rows alone cannot establish current scan coverage. Coverage reuses the flow service cursor/head rules, merging fresh head observations from critical and extended lanes. Legacy `onchain-total-supply`/`onchain-circulating-supply` packets are current-only by contract; their previously serialized zero baselines are not accepted as history. Within each severity, rows sort by descending absolute gap.
+The API row keeps `conservation` records plus the existing `coverageStatus` and contextual `comparisonIssue`. Audit proof and source comparability are different concerns: a token can pass raw conservation while its issuer-circulation comparison remains unverified. Public flow classifications, dust thresholds, prices, market caps and Safety Scores are unchanged.
 
-Reviewed incompatible definitions also remain `insufficient-source`, with an explicit explanation rather than a critical gap or a healthy verdict. The September 14, 2026 review established:
+### Indicative circulating-supply context
+
+The disclosure retains the completed-hour 24-hour standard flow net, upstream canonical-chain supply delta, absolute difference and ratio. It is labeled indicative and cannot generate an integrity verdict. Source history is current-only for some supplemental assets, while DefiLlama's prior-day stock can represent an earlier daily observation rather than a matched 24-hour boundary. Source observation clocks are not supplied by the public response. Event USD valuations and excluded small/atomic/bridge events introduce additional differences.
+
+The September 15 investigation retrieved 3,115 raw mint/burn events for the frozen thirteen-asset cohort. All thirteen native conservation equations matched exactly, and all 1,627 retrieved eligible event identities matched stored records. USD1/USDS source windows spanned approximately 46 hours; small-event filtering and source circulation/valuation definitions explained why the legacy comparison could not establish an ingestion failure. Exact net equality alone cannot detect a provider omitting offsetting mint/burn pairs; the producer also checks retrieved eligible events against parsed output and reads back their stored native fields before publishing a pass. Existing scan coverage guards remain necessary.
+
+Reviewed upstream definition differences remain explanatory context:
 
 | Asset | Definition that prevents comparison | Evidence |
 | --- | --- | --- |
@@ -709,17 +711,9 @@ Reviewed incompatible definitions also remain `insufficient-source`, with an exp
 | M | Earning-index accrual changes supply without mint/burn events | [Token implementation](https://github.com/m0-foundation/protocol/blob/main/src/MToken.sol) |
 | OUSD | Rebases change supply without mint/burn events | [Token implementation](https://github.com/OriginProtocol/origin-dollar/blob/master/contracts/contracts/token/OUSD.sol) |
 
-The upstream-specific exclusions apply only to `supplySource = defillama`; M/OUSD accrual is intrinsic to the token. Restore comparison only after the supply and event definitions are demonstrably equivalent (including excluded balances, debt, accrued supply and contract coverage as applicable). These are source-contract guards, not thresholds fitted to observed gaps. A missing issue field remains valid for older API payloads. No public mint/burn counts, classifications or severity thresholds change.
+The upstream-specific explanations apply only to DefiLlama supply; M/OUSD accrual is intrinsic to the token. Numeric source gaps are not thresholds fitted to make a row green. A separate issuer-circulation audit would need matched source observations plus treasury, bridge, debt and accrual adjustments. It must not replace the canonical public DefiLlama USD supply.
 
-This is an indicative operator integrity signal, not an exact total-supply audit or public score. Upstream daily supply timestamps are unavailable, so the source windows cannot be proven aligned. Classified standard flows exclude bridge/review/atomic events and configured dust; mint/burn valuation can also differ from supply valuation. Large gaps require investigation and typically mean one of:
-
-- flow coverage is still partial or newly bootstrapping
-- upstream chain distribution moved in a way the mint/burn tracker does not capture
-- ingestion or classification logic needs review
-
-The upstream list chooses a prior daily record at or before the latest hourly observation minus 24 hours, then omits both observation timestamps. Daily detail timestamps can be bucket labels for promoted hourly values. Neither a daily bucket label nor HTTP cache time proves a matching event window; do not shift the flow window to minimize a gap. Accurate temporal reconciliation requires source observation timestamps/blocks or a separate comparison against supply measured at pinned blocks.
-
----
+Producer behavior, budgets and recovery are documented in [Mint/Burn Flows: Raw token conservation](./mint-burn-flows.md#raw-token-conservation).
 
 ## Rendering And Refresh Contract
 

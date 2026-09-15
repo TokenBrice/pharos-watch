@@ -87,6 +87,28 @@ describe("completeMintBurnRun", () => {
     vi.mocked(sweepRecentRoundtrips).mockResolvedValue({ reclassified: 0, affectedHours: new Map(), saturated: false });
   });
 
+  it.each(["extended", "critical"] as const)("immediately degrades %s for one verified conservation failure", async (lane) => {
+    const input = buildRunInput();
+    input.lane = lane;
+    input.phase.configBreakdown = [{ conservationFailure: true, conservationStatus: "mismatch",
+      key: "test", failedEventDefs: [], errors: 1 } as unknown as MintBurnConfigSummary];
+    const result = await completeMintBurnRun(input);
+    expect(result.status).toBe("degraded");
+    expect(result.metadata.conservationFailures).toBe(1);
+    expect(result.metadata.apiErrors).toBe(0);
+  });
+
+  it("keeps diagnostic-only audit unavailability separate from collection health", async () => {
+    const input = buildRunInput();
+    input.lane = "extended";
+    input.phase.configBreakdown = [{ conservationFailure: false, conservationStatus: "unavailable",
+      key: "test", failedEventDefs: [], errors: 0 } as unknown as MintBurnConfigSummary];
+    const result = await completeMintBurnRun(input);
+    expect(result.status).toBe("ok");
+    expect(result.metadata.conservationUnavailable).toBe(1);
+    expect(result.metadata.apiErrors).toBe(0);
+  });
+
   it("keeps apiErrors separate from validationFailures metadata", async () => {
     vi.mocked(setMintBurnRunState).mockResolvedValue(true);
     vi.mocked(getNullPriceBacklog).mockResolvedValue({ recent: 0, historical: 0 });
