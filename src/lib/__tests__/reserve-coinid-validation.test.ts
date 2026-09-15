@@ -37,10 +37,6 @@ const REVIEWED_WARNING_IDS = new Map<string, string>([
     "Lorenzo reports a mixed USD1/USDT/USDC and strategy portfolio without current constituent weights, so a USDT coinId would overstate the dependency.",
   ],
   [
-    "apxusd-apyx::Cash & Equivalents (USDC, U.S. Treasury Bills)::USDC",
-    "apxUSD's cash bucket aggregates USDC and short-duration U.S. Treasury Bills, so no single coinId is representative.",
-  ],
-  [
     "ist-agoric::Parity Stability Module stablecoin reserves (IBC USDC/USDT/DAI)::USDC",
     "IST's PSM bucket aggregates multiple IBC stablecoins, so no single tracked stablecoin coinId is representative.",
   ],

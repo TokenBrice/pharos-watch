@@ -97,7 +97,7 @@ const SLICE_META: Record<string, SliceMeta> = {
     name: "USCC",
     risk: "medium",
     assetClass: "fund-share",
-    issuerOrObligor: "Superstate Crypto Carry Fund (USCC)",
+    issuerOrObligor: "Bitwise Crypto Carry Fund (USCC), a Delaware statutory trust series; managed by Bitwise Investment Manager, LLC, with Superstate tokenization infrastructure",
   },
   "usdg-kamino-lending": {
     sourceKey: "onre-holdings-csv:usdg-kamino-lending",

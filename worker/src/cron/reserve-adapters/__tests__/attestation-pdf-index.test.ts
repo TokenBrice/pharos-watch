@@ -1,6 +1,10 @@
 import type { StablecoinMeta } from "@shared/types/core";
 import type { LiveReservesConfig } from "@shared/types/live-reserves";
 import { parseLiveReserveAdapterParams } from "@shared/lib/live-reserve-adapters";
+import wars from "@shared/data/stablecoins/coins/wars-argentine-peso.json";
+import wbrl from "@shared/data/stablecoins/coins/wbrl-ripio.json";
+import wcop from "@shared/data/stablecoins/coins/wcop-ripio.json";
+import wmxn from "@shared/data/stablecoins/coins/wmxn-ripio.json";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   adaptAttestationPdfIndex,
@@ -31,6 +35,28 @@ function buildConfig(url = "https://issuer.example/transparency/"): LiveReserves
 describe("adaptAttestationPdfIndex", () => {
   afterEach(() => {
     vi.unstubAllGlobals();
+  });
+
+  it.each([wars, wbrl, wcop, wmxn])("keeps $id on reviewed balances until its next report is reviewed", (coin) => {
+    const params = parseLiveReserveAdapterParams("attestation-pdf-index", coin.liveReservesConfig.params);
+    const url = coin.proofOfReserves.latestReport.sources[0].url;
+    const current = `<a href="${url}">Certification</a>`;
+    const result = adaptAttestationPdfIndex(current, params);
+    expect(result.metadata).toMatchObject({
+      reportPdfUrl: url,
+      reportBalanceDate: "2026-03-31",
+      sourceTimestamp: Date.UTC(2026, 2, 31) / 1000,
+      freshnessMode: "verified",
+    });
+
+    const nextUrl = url.replace("20260331", "20260831");
+    const next = adaptAttestationPdfIndex(`${current}<a href="${nextUrl}">Certification</a>`, params);
+    expect(next.metadata).toMatchObject({ reportPdfUrl: nextUrl, freshnessMode: "unverified" });
+    expect(next.metadata?.sourceTimestamp).toBeUndefined();
+    expect(next.warnings).toContainEqual(expect.objectContaining({
+      code: "attestation-report-basis-unreviewed",
+      effect: "degraded",
+    }));
   });
 
   it("uses the reviewed balance date and rejects publication dates from a newer unreviewed report", () => {

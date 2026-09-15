@@ -489,58 +489,28 @@ describe("adaptAccountableDashboard", () => {
     });
   });
 
-  it("maps the reviewed Apyx Accountable reserves_split into STRC-heavy apxUSD slices", async () => {
-    const config = apxusd.liveReservesConfig as LiveReservesConfig;
-
-    // Corrected Accountable capture: 2026-09-04T17:29:34.519Z.
-    const result = await runAccountablePayload(config, {
-      // Keep the undercollateralized headline as a behavior fixture; the
-      // reserve composition below is the corrected same-day capture.
-      collateralization: 0.98699,
-      ts: "1788542974519",
+  it("maps reviewed Apyx own claims out of both sides of the reserve accounting", async () => {
+    const result = await runAccountablePayload(apxusd.liveReservesConfig as LiveReservesConfig, {
+      collateralization: 1.000102, ts: "1789502434250",
       reserves: {
-        interval: "live",
-        verifiability: "100",
-        total_reserves: { value: 311_575_982.58, name: "Total Reserves" },
+        total_reserves: 307593129.35, total_supply: 307573514.82,
+        inventory: 61062157.37285687, pol: 53894639.55179605,
         reserves_split: [
-          { value: 181_854_291.20, name: "STRC" },
-          { value: 53_025_264.62, name: "Inventory" },
-          { value: 53_866_845.43, name: "Protocol Owned Liquidity" },
-          { value: 22_822_968.30, name: "Cash & Equivalents" },
-          { value: 6_613.04, name: "Other" },
+          { name: "STRC", value: 167094567.4 }, { name: "Inventory", value: 61062157.37 },
+          { name: "Protocol Owned Liquidity", value: 53894639.55 },
+          { name: "Cash & Equivalents", value: 25534632.39 }, { name: "Other", value: 7132.64 },
         ],
       },
     });
-
-    expect(result.warnings).toEqual([{
-      code: "reserve-undercollateralized",
-      message: "Accountable dashboard reports 98.70% collateralization",
-      severity: "warning",
-      effect: "degraded",
-    }]);
-    expect(result.metadata).toMatchObject({
-      bucket: "reserves_split",
-      breakdownCount: 5,
-      mappedBucketCount: 5,
-      totalReserves: 311_575_982.58,
-      collateralization: 0.98699,
-      collateralizationRatio: 0.98699,
+    expect(result.warnings ?? []).toEqual([]);
+    expect(result.slices).toEqual(apxusdReserves.reserves.map(({ sourceKey, name, pct, risk }) => ({ sourceKey, name, pct, risk })));
+    expect(result.metadata?.collateralizationBasis).toBe("net-of-protocol-owned");
+    expect(result.metadata?.collateralizationReconciliation).toMatchObject({ basis: "net-of-protocol-owned", grossRatio: expect.any(Number), netRatio: expect.any(Number) });
+    expect(result.metadata?.selfIssuedAccounting).toMatchObject({
+      grossReservesUsd: 307593129.35, grossSupplyUsd: 307573514.82,
+      netExternalReservesUsd: expect.closeTo(192636332.42534712, 5), netRedeemableClaimsUsd: expect.closeTo(192616717.8953471, 5),
+      excludedSelfClaims: [{ name: "Inventory", valueUsd: 61062157.37285687 }, { name: "Protocol Owned Liquidity", valueUsd: 53894639.55179605 }],
     });
-    expect(result.slices).toEqual([
-      { sourceKey: "accountable:apyx:deployment:strc", name: "STRC (Strategy preferred equity, BTC-linked)", pct: 58.4, risk: "high" },
-      { sourceKey: "accountable:apyx:deployment:protocol-owned-liquidity", name: "Protocol Owned Liquidity", pct: 17.3, risk: "high" },
-      { sourceKey: "accountable:apyx:deployment:inventory", name: "Inventory", pct: 17.0, risk: "high" },
-      { sourceKey: "accountable:apyx:deployment:cash-equivalents", name: "Cash & Equivalents (USDC, U.S. Treasury Bills)", pct: 7.3, risk: "very-low" },
-    ]);
-    expect(
-      apxusdReserves.reserves
-        .map(({ sourceKey, name, pct, risk }) => ({ sourceKey, name, pct, risk }))
-        .sort((a, b) => b.pct - a.pct),
-    ).toEqual(result.slices);
-    expect(validateAdapterOutput(result, {
-      adapter: getReserveAdapter("accountable") ?? undefined,
-      now: Date.UTC(2026, 8, 4, 23) / 1000,
-    }).valid).toBe(true);
   });
 
   it("fetches the Apyx dashboard through its catalog endpoint", async () => {
@@ -556,8 +526,8 @@ describe("adaptAccountableDashboard", () => {
             collateralization: 1,
             ts: "1784376607058",
             reserves: {
-              total_reserves: 100,
-              reserves_split: [{ value: 100, name: "Cash & Equivalents" }],
+              total_reserves: 100, total_supply: 100, inventory: 0, pol: 0,
+              reserves_split: [{ value: 100, name: "Cash & Equivalents" }, { value: 0, name: "Inventory" }, { value: 0, name: "Protocol Owned Liquidity" }],
             },
           },
         },
@@ -571,9 +541,9 @@ describe("adaptAccountableDashboard", () => {
     expect(network.requests.map((request) => request.url)).toEqual([primary.url]);
     expect(result.slices).toEqual([{
       sourceKey: "accountable:apyx:deployment:cash-equivalents",
-      name: "Cash & Equivalents (USDC, U.S. Treasury Bills)",
+      name: "Cash & Equivalents (cash, stablecoins, bills and DeFi positions)",
       pct: 100,
-      risk: "very-low",
+      risk: "medium",
     }]);
   });
 
@@ -639,11 +609,13 @@ describe("adaptAccountableDashboard", () => {
       ts: "1780583904415",
       reserves: {
         total_reserves: { value: 180_040_870.38, name: "Total Reserves" },
+        total_supply: 180_040_870.38 / 1.001022, inventory: 0, pol: 0,
         reserves_split: [
           { value: 0, name: "STRC" },
           { value: 180_040_870.38, name: "Cash & Equivalents" },
           { value: 0, name: "SATA" },
           { value: 0, name: "Other" },
+          { value: 0, name: "Inventory" }, { value: 0, name: "Protocol Owned Liquidity" },
         ],
       },
     })).rejects.toThrow(/zero value: Other, SATA, STRC/);
@@ -1460,5 +1432,38 @@ describe("adaptAccountableDashboard collateralization reconciliation", () => {
         { bucket: "reserves_split", riskMap: { "Cash & Equivalents": "very-low" } },
       ),
     ).toThrow(/total_supply has invalid value/);
+  });
+});
+
+
+describe("Apyx reviewed external-reserve guards", () => {
+  function payload() {
+    return { res: "ok", data: { collateralization: 1, ts: "1789502434250", reserves: {
+      total_reserves: 100, total_supply: 100, inventory: 20, pol: 10,
+      reserves_split: [{ name: "STRC", value: 70 }, { name: "Inventory", value: 20 }, { name: "Protocol Owned Liquidity", value: 10 }],
+    } } };
+  }
+  const params = { bucket: "reserves_split", accountingMode: "apyx-net-external-reserves", riskMap: { STRC: "high" } } as const;
+  it.each(["missing", "duplicate", "negative", "scalar-drift", "gross-drift", "ratio-drift", "zero-claims"])("fails closed on %s", (kind) => {
+    const p = payload();
+    if (kind === "missing") p.data.reserves.reserves_split.pop();
+    if (kind === "duplicate") p.data.reserves.reserves_split.push({ name: "Inventory", value: 20 });
+    if (kind === "negative") p.data.reserves.inventory = -1;
+    if (kind === "scalar-drift") p.data.reserves.inventory = 25;
+    if (kind === "gross-drift") p.data.reserves.total_reserves = 105;
+    if (kind === "ratio-drift") p.data.collateralization = 0.9;
+    if (kind === "zero-claims") p.data.reserves.total_supply = 30;
+    expect(() => adaptAccountableDashboard(p, params)).toThrow(/Accountable/);
+  });
+  it("rejects overflowing nested source values", () => {
+    const p = payload();
+    const reserves = { ...p.data.reserves, inventory: { first: 1e308, second: 1e308 } };
+    expect(() => adaptAccountableDashboard({ ...p, data: { ...p.data, reserves } }, params)).toThrow(/self-claim Inventory/);
+  });
+  it("preserves genuine net coverage shortfalls", () => {
+    const p = payload(); p.data.reserves.total_supply = 110; p.data.collateralization = 70 / 80;
+    const r = adaptAccountableDashboard(p, params);
+    expect(r.warnings?.map((row) => row.code)).toEqual(["reserve-undercollateralized"]);
+    expect(r.metadata?.selfIssuedAccounting).toMatchObject({ netExternalReservesUsd: 70, netRedeemableClaimsUsd: 80 });
   });
 });

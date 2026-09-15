@@ -298,6 +298,7 @@ const accountableParamsSchema = z
     coinIdMap: stringRecordSchema.optional(),
     depTypeMap: depTypeRecordSchema.optional(),
     totalReservesExcludeBuckets: z.array(z.string().min(1)).optional(),
+    accountingMode: z.literal("apyx-net-external-reserves").optional(),
   })
   .strict();
 

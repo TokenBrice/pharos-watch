@@ -62,6 +62,7 @@ interface AccountableParams {
   coinIdMap?: Record<string, string>;
   depTypeMap?: Record<string, ReserveSlice["depType"]>;
   totalReservesExcludeBuckets?: string[];
+  accountingMode?: "apyx-net-external-reserves";
 }
 
 const VALID_BUCKETS = new Set(["type", "reserves_split", "deployment", "type_split", "stablecoin_split", "exposure_split", "protocol_split"]);
@@ -370,6 +371,41 @@ function buildDeploymentSnapshotMetadata(
   };
 }
 
+/** Reviewed Apyx non-reserve own claims: https://docs.apyx.fi/collateral-and-custody/accountable-dashboard */
+function reconcileApyxExternalReserves(
+  reserves: NonNullable<NonNullable<AccountableDashboardResponse["data"]>["reserves"]>,
+  breakdown: Array<{ name: string; value: number }>,
+  reportedRatio: number,
+) {
+  const grossReservesUsd = extractOptionalReserveScalar(reserves.total_reserves, "total_reserves", { requirePositive: true });
+  const grossSupplyUsd = extractOptionalReserveScalar(reserves.total_supply, "total_supply", { requirePositive: true });
+  const excludedSelfClaims = [["Inventory", "inventory"], ["Protocol Owned Liquidity", "pol"]].map(([name, field]) => {
+    const rows = breakdown.filter((row) => row.name === name);
+    const scalar = extractOptionalReserveScalar(reserves[field as "inventory" | "pol"], field);
+    if (rows.length !== 1 || scalar == null || !Number.isFinite(scalar) || scalar < 0 || !Number.isFinite(rows[0]!.value) || rows[0]!.value < 0 || Math.abs(rows[0]!.value - scalar) > 1) {
+      throw new Error(`Accountable Apyx self-claim ${name} does not reconcile to its reserve scalar`);
+    }
+    return { name: name!, valueUsd: scalar };
+  });
+  const excludedSelfClaimsUsd = excludedSelfClaims.reduce((sum, row) => sum + row.valueUsd, 0);
+  const grossBucketSum = breakdown.reduce((sum, row) => sum + row.value, 0);
+  if (grossReservesUsd == null || grossSupplyUsd == null || !Number.isFinite(grossReservesUsd) || !Number.isFinite(grossSupplyUsd)
+    || !Number.isFinite(grossBucketSum) || !Number.isFinite(excludedSelfClaimsUsd)
+    || breakdown.some((row) => !Number.isFinite(row.value) || row.value < 0)
+    || Math.abs(grossBucketSum - grossReservesUsd) > 1) {
+    throw new Error("Accountable Apyx gross asset/supply accounting is incomplete");
+  }
+  const netExternalReservesUsd = grossReservesUsd - excludedSelfClaimsUsd;
+  const netRedeemableClaimsUsd = grossSupplyUsd - excludedSelfClaimsUsd;
+  const netCoverageRatio = netExternalReservesUsd / netRedeemableClaimsUsd;
+  if (netExternalReservesUsd <= 0 || netRedeemableClaimsUsd <= 0 || !Number.isFinite(netCoverageRatio) || !Number.isFinite(reportedRatio)
+    || Math.abs(netCoverageRatio - reportedRatio) > COLLATERALIZATION_RECONCILIATION_TOLERANCE) {
+    throw new Error("Accountable Apyx net reserve/claim denominator does not reconcile to collateralization");
+  }
+  return { basis: "net-external-reserves", grossReservesUsd, grossSupplyUsd, excludedSelfClaims,
+    excludedSelfClaimsUsd, netExternalReservesUsd, netRedeemableClaimsUsd, netCoverageRatio };
+}
+
 export function adaptAccountableDashboard(
   payload: AccountableDashboardResponse,
   params: AccountableParams,
@@ -398,10 +434,17 @@ export function adaptAccountableDashboard(
   const coinIdMap = params.coinIdMap ?? {};
   const depTypeMap = params.depTypeMap ?? {};
   const totalReservesExcludeBuckets = new Set(params.totalReservesExcludeBuckets ?? []);
+  if (params.accountingMode && (layout !== "reserves-types" || bucket !== "reserves_split" || totalReservesExcludeBuckets.size > 0)) {
+    throw new Error("Accountable Apyx accounting requires an unmodified reserves_split");
+  }
+  const selfIssuedAccounting = params.accountingMode
+    ? reconcileApyxExternalReserves(payload.data.reserves, breakdown, payload.data.collateralization)
+    : null;
+  const ownClaimNames = new Set(selfIssuedAccounting?.excludedSelfClaims.map((row) => row.name) ?? []);
   const signedBuckets = breakdown.filter((entry) => entry.value < 0);
-  const reconciledBreakdown = breakdown.filter((entry) => !(totalReservesExcludeBuckets.has(entry.name)));
+  const reconciledBreakdown = breakdown.filter((entry) => !(totalReservesExcludeBuckets.has(entry.name) || ownClaimNames.has(entry.name)));
   const positiveBreakdown = reconciledBreakdown.filter((entry) => entry.value > 0);
-  validateMappedBucketValues(breakdown.filter(({ name }) => name in riskMap), breakdownBucket);
+  validateMappedBucketValues(breakdown.filter(({ name }) => name in riskMap && !ownClaimNames.has(name)), breakdownBucket);
   const mapped = positiveBreakdown.filter(({ name }) => name in riskMap);
   const totalReserves = extractOptionalReserveScalar(payload.data.reserves.total_reserves, "total_reserves", {
     requirePositive: true,
@@ -436,12 +479,15 @@ export function adaptAccountableDashboard(
   if (collateralizationRatio == null || collateralizationRatio < 0) {
     throw new Error(`Accountable dashboard returned invalid collateralization: ${String(payload.data.collateralization)}`);
   }
-  const reconciliation = reconcileCollateralization(
+  const derivedReconciliation = reconcileCollateralization(
     collateralizationRatio,
     totalReserves,
     totalSupply,
     protocolOwnedUsd,
   );
+  const reconciliation = selfIssuedAccounting
+    ? { ...derivedReconciliation, basis: "net-of-protocol-owned" as const }
+    : derivedReconciliation;
   const basisSuffix = collateralizationBasisSuffix(reconciliation);
   const collateralizationWarnings = buildCoverageShortfallWarnings({
     code: "reserve-undercollateralized",
@@ -453,7 +499,7 @@ export function adaptAccountableDashboard(
   const protocolOwnedPct = protocolOwnedUsd == null
     ? 0
     : computeUnknownExposurePct(protocolOwnedUsd, protocolOwnedDenominator);
-  const protocolOwnedWarning = protocolOwnedPct > 0
+  const protocolOwnedWarning = protocolOwnedPct > 0 && !selfIssuedAccounting
     ? buildUnknownExposureWarning({ adapterKey: "accountable", code: "protocol-owned-bucket",
     message:
       `Accountable reserves include ${protocolOwnedUsd!.toFixed(2)} USD of issuer-held inventory and protocol-owned liquidity that is not itemized third-party backing`,
@@ -521,6 +567,7 @@ export function adaptAccountableDashboard(
       collateralization: payload.data.collateralization,
       collateralizationRatio,
       collateralizationBasis: reconciliation.basis,
+      ...(selfIssuedAccounting ? { selfIssuedAccounting } : {}),
       collateralizationReconciliation: reconciliation,
       interval: payload.data.reserves.interval,
       verifiability: payload.data.reserves.verifiability,

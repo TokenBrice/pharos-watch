@@ -7,7 +7,7 @@
       "pct": 100,
       "risk": "high",
       "assetClass": "private-credit",
-      "issuerOrObligor": "Fasanara Capital F-ONE strategy",
+      "issuerOrObligor": "Midas Software GmbH (token issuer and beneficiary of the F-ONE note); Infinite Tokens S.A., Compartment D is the reported noteholder; Fasanara manages the reference fund.",
       "riskFactors": [
         "credit",
         "liquidity",
@@ -35,12 +35,16 @@
       {
         "label": "Midas product documentation",
         "url": "https://docs.midas.app/"
+      },
+      {
+        "label": "Midas mFONE September 14, 2026 SAVE attestation (public Fasanara note and fund valuation claim)",
+        "url": "https://gateway.pinata.cloud/ipfs/QmTMkn3M66fzD7mFxFiZ3qVpmzt4FQUqrfcedPL3RPP5Gs"
       }
     ],
-    "rationale": "Midas describes mF-ONE as exposure to Fasanara private-credit and digital-asset strategies. The September 11 aggregate proof-of-reserve view and operational wallet listings do not disclose underlying facility or asset weights. The reserve remains one unresolved strategy envelope without invented borrower, asset or venue allocations.",
+    "rationale": "Midas describes mF-ONE as exposure to Fasanara private-credit and digital-asset strategies. The September 11 aggregate proof-of-reserve view and operational wallet listings do not disclose underlying facility or asset weights. The reserve remains one unresolved strategy envelope without invented borrower, asset or venue allocations. September 15 evidence follow-up retrieved the September 14 onchain-linked SAVE attestation. Its public Fasanara email identifies FASANARA SICAV-RAIF, Sub-Fund 29/F-ONE, Class A-A USD, with Infinite Tokens S.A., Compartment D as noteholder and Midas Software GmbH as beneficiary. This narrows legal and fund identity but does not provide current loan-level composition. The email-derived $59,163,707.13 and $183,228.00 onchain component do not reconcile to the attestation's $65,249,114.22 ops-reported gross reserve; the published calculation uses the ops fallback. No reserve weights or improved coverage are inferred from that remainder.",
     "compositionBasis": "Current Midas mF-ONE product disclosure and strategy description",
     "scope": "full-composition",
-    "knownUnknownExposure": "Midas identifies the Fasanara strategy and its broad private-credit and digital-asset mandate, but does not publish a current facility-level allocation, borrower concentration, maturity schedule, or custody breakdown in the reviewed sources.",
+    "knownUnknownExposure": "The September 14 public Fasanara claim identifies the fund share class, noteholder and beneficiary, but full note-to-token reserve reconciliation, facility-level allocation, borrower concentration, maturity schedule, custody rights and underlying borrowing remain unresolved. Published manager NAV and onchain components leave an unexplained remainder against ops-reported gross reserves; this is an evidence reconciliation gap, not a verified shortfall.",
     "knownUnknownExposurePct": 100,
     "nonLinkDispositions": [
       {
