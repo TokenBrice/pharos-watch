@@ -1,3 +1,4 @@
+import * as circuitBreaker from "../../lib/circuit-breaker";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   maturePairCreatedAt,
@@ -647,4 +648,98 @@ describe("enrichMissingPrices", () => {
     expect(assets[0].price).toBe(0);
   });
 
+});
+
+// The full hourly cohort previously produced a 46KB URL (upstream HTTP 414).
+describe("bounded DefiLlama contract batches", () => {
+  afterEach(cleanupEnrichMissingPricesTest);
+  const cohort = (count: number) => Array.from({ length: count }, (_, index) => makePeggedAsset({
+    id: `batch-${index}`, symbol: "USD", price: null,
+    address: `ethereum:0x${index.toString(16).padStart(40, "0")}`,
+  }));
+  const quoteResponse = (url: string) => Response.json({ coins: Object.fromEntries(
+    url.split("/prices/current/")[1].split(",").map((id) => [decodeURIComponent(id), dlQuote(1, "USD")]),
+  ) });
+
+  it("bounds encoded URLs, deduplicates identities and merges every successful chunk", async () => {
+    const assets = cohort(1_000);
+    assets.push({ ...assets[0], id: "duplicate-contract" });
+    const urls: string[] = [];
+    installFetch((url) => { urls.push(url); return quoteResponse(url); });
+    const result = await fixtureRunDlContractPasses(assets, undefined);
+    expect(result).toMatchObject({ resolved: 1_001, failures: [] });
+    expect(urls.length).toBeGreaterThan(1);
+    expect(urls.every((url) => url.length <= 8_000)).toBe(true);
+    const ids = urls.flatMap((url) => url.split("/prices/current/")[1].split(","));
+    expect(ids).toHaveLength(1_000);
+    expect(new Set(ids).size).toBe(1_000);
+  });
+
+  it.each(["http", "schema"])("retains earlier quotes but reports a later %s failure", async (failure) => {
+    const assets = cohort(500);
+    let calls = 0;
+    installFetch((url) => ++calls === 1 ? quoteResponse(url)
+      : failure === "http" ? Response.json({ error: "unavailable" }, { status: 404 }) : Response.json({ coins: [] }));
+    const result = await fixtureRunDlContractPasses(assets, undefined);
+    expect(result.failures).toEqual(["dl-contracts"]);
+    expect(result.resolved).toBeGreaterThan(0);
+    expect(result.resolved).toBeLessThan(assets.length);
+    expect(assets[0].price).toBe(1);
+    expect(assets[assets.length - 1].price).toBeNull();
+  });
+
+  it("bounds the total batch budget and reports unqueried remainder", async () => {
+    const urls: string[] = [];
+    installFetch((url) => { urls.push(url); return quoteResponse(url); });
+    const result = await fixtureRunDlContractPasses(cohort(2_000), undefined);
+    expect(urls).toHaveLength(8);
+    expect(result.failures).toEqual(["dl-contracts"]);
+    expect(result.resolved).toBeGreaterThan(0);
+    expect(result.resolved).toBeLessThan(2_000);
+  });
+
+  it("does not count local budget exhaustion as a provider failure", async () => {
+    const allowed = vi.spyOn(circuitBreaker, "shouldAttemptFetch").mockResolvedValue(true);
+    const outcome = vi.spyOn(circuitBreaker, "recordOutcome");
+    try {
+      installFetch(quoteResponse);
+      const result = await fixtureRunDlContractPasses(cohort(2_000), undefined, undefined, fixtureMockD1([]));
+      expect(result.failures).toEqual(["dl-contracts"]);
+      expect(outcome).toHaveBeenCalledTimes(1);
+      expect(outcome.mock.calls[0][2]).toBe(true);
+    } finally {
+      allowed.mockRestore();
+      outcome.mockRestore();
+    }
+  });
+
+  it("withholds an individually oversized encoded identity without losing valid peers", async () => {
+    const assets = cohort(1);
+    assets.push(makePeggedAsset({ id: "oversized", symbol: "USD", price: null, address: `osmosis:${"/".repeat(3_000)}` }));
+    const urls: string[] = [];
+    installFetch((url) => { urls.push(url); return quoteResponse(url); });
+    const result = await fixtureRunDlContractPasses(assets, undefined);
+    expect(urls).toHaveLength(1);
+    expect(result).toMatchObject({ resolved: 1, failures: ["dl-contracts"] });
+    expect(assets[1].price).toBeNull();
+  });
+
+  it("shares the eight-batch cap with alternate deployment lookups", async () => {
+    const assets = cohort(1_100);
+    assets.push(makePeggedAsset({ id: "usdt-tether", symbol: "USDT", price: null,
+      address: "ethereum:0xdac17f958d2ee523a2206206994597c13d831ec7" }));
+    const urls: string[] = [];
+    installFetch((url) => { urls.push(url); return quoteResponse(url); });
+    const result = await fixtureRunDlContractPasses(assets, undefined);
+    expect(urls).toHaveLength(8);
+    expect(result).toMatchObject({ resolved: 1_100, pass1b: 0, failures: ["dl-contracts"] });
+  });
+
+  it("propagates the parent abort before another chunk is requested", async () => {
+    const controller = new AbortController();
+    let calls = 0;
+    installFetch((url) => { calls++; controller.abort(); return quoteResponse(url); });
+    await expect(fixtureRunDlContractPasses(cohort(500), undefined, controller.signal)).rejects.toThrow();
+    expect(calls).toBe(1);
+  });
 });
