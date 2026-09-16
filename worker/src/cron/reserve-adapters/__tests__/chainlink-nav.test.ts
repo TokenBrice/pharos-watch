@@ -79,6 +79,7 @@ function navNetwork(overrides: {
   wrapperAddress?: string;
   redemption?: boolean;
   pauseValue?: string;
+  capacity?: bigint;
 } = {}): AdapterNetworkSpec {
   const rpc: Record<string, AdapterRpcValue> = {
     [`${TOKEN_ADDRESS}:${DECIMALS_SELECTOR}`]: overrides.tokenDecimals ?? 18n,
@@ -108,7 +109,7 @@ function navNetwork(overrides: {
     rpc[`${MANAGER_ADDRESS}:0xb235d468`] = overrides.pauseValue ?? encodeUint256Result(0n);
     rpc[`${MANAGER_ADDRESS}:0x884a0501`] = encodeUint256Result(1n);
     rpc[`${MANAGER_ADDRESS}:0x8f8eb812`] = 4_999_990_000_000_000_000_000n;
-    rpc[`${ROUTER_ADDRESS}:0x6cde714a`] = 8_499_999_997_683n;
+    rpc[`${ROUTER_ADDRESS}:0x6cde714a`] = overrides.capacity ?? 8_499_999_997_683n;
   }
   return { rpc };
 }
@@ -329,6 +330,33 @@ describe("fetchChainlinkNavCore", () => {
     });
   });
 
+  it("does not report an open redemption route when available capacity is zero", async () => {
+    const updatedAt = 1_775_684_339;
+    const { result } = await runNav(
+      makeChainlinkNavConfig({
+        params: {
+          assetLabel: "Ondo T-Bills",
+          assetRisk: "very-low",
+          oracleMethod: "getPriceData",
+          redemptionCapacity: {
+            managerAddress: MANAGER_ADDRESS,
+            usdcAddress: USDC_ADDRESS,
+            routerAddress: ROUTER_ADDRESS,
+            sourceAddress: SOURCE_ADDRESS,
+          },
+        },
+      }),
+      navNetwork({ redemption: true, capacity: 0n }),
+      updatedAt + 60,
+    );
+
+    expect(result.metadata?.redemption).toMatchObject({
+      capacityUsd: 0,
+      routeStatus: "unknown",
+      routeStatusReason: "OUSG redemption route reported zero available capacity",
+    });
+  });
+
   it("keeps NAV telemetry when the opt-in redemption probe fails closed", async () => {
     const updatedAt = 1_775_684_339;
     const rawPriceData = "0x"
@@ -362,6 +390,7 @@ describe("fetchChainlinkNavCore", () => {
     expect(result.metadata?.navPerToken).toBe("114.853438");
     expect(result.metadata?.freshnessMode).toBe("verified");
     expect(result.metadata?.redemption).toBeUndefined();
+    expect(result.warnings).toBeUndefined();
   });
 
   it("emits chainlink-nav-wrapper-oracle-malformed when the wrapper oracle returns garbage", async () => {

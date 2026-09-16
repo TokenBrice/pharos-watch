@@ -163,9 +163,13 @@ function normalizeSnapshotMetadata(metadata: Record<string, unknown>): LiveReser
     let hasMalformedRedemptionTelemetry = false;
     for (const key of knownRedemptionNumberKeys) {
       const value = coerceFiniteMetadataNumber(rawRedemption[key]);
-      if (value == null) {
+      const isOutOfRange =
+        (key === "capacityRatioOfSupply" && value != null && (value < 0 || value > 1))
+        || (key === "feeBps" && value != null && (value < 0 || value > 10_000));
+      if (value == null || isOutOfRange) {
         hasMalformedRedemptionTelemetry ||=
-          hasOwnMetadataKey(rawRedemption, key) && isMalformedMetadataNumber(rawRedemption[key]);
+          hasOwnMetadataKey(rawRedemption, key)
+          && (isMalformedMetadataNumber(rawRedemption[key]) || isOutOfRange);
         delete redemption[key];
       } else {
         redemption[key] = value;
@@ -260,14 +264,28 @@ function normalizeSnapshotMetadata(metadata: Record<string, unknown>): LiveReser
   // A nested `redemption` block, when present, always wins.
   if (!Object.prototype.hasOwnProperty.call(metadata, "redemption")) {
     const legacyCapacityUsd = coerceFiniteMetadataNumber(metadata.immediateRedeemableUsd);
-    const legacyCapacityRatio = coerceFiniteMetadataNumber(metadata.immediateRedeemableRatio);
-    const legacyFeeBps = coerceFiniteMetadataNumber(metadata.redemptionFeeBps);
+    const rawLegacyCapacityRatio = coerceFiniteMetadataNumber(metadata.immediateRedeemableRatio);
+    const legacyCapacityRatio =
+      rawLegacyCapacityRatio != null && rawLegacyCapacityRatio >= 0 && rawLegacyCapacityRatio <= 1
+        ? rawLegacyCapacityRatio
+        : undefined;
+    const rawLegacyFeeBps = coerceFiniteMetadataNumber(metadata.redemptionFeeBps);
+    const legacyFeeBps =
+      rawLegacyFeeBps != null && rawLegacyFeeBps >= 0 && rawLegacyFeeBps <= 10_000
+        ? rawLegacyFeeBps
+        : undefined;
     if (legacyCapacityUsd != null || legacyCapacityRatio != null || legacyFeeBps != null) {
       normalized.redemption = {
         ...(legacyCapacityUsd != null ? { capacityUsd: legacyCapacityUsd } : {}),
         ...(legacyCapacityRatio != null ? { capacityRatioOfSupply: legacyCapacityRatio } : {}),
         ...(legacyFeeBps != null ? { feeBps: legacyFeeBps } : {}),
       };
+      if (
+        (rawLegacyCapacityRatio != null && legacyCapacityRatio == null)
+        || (rawLegacyFeeBps != null && legacyFeeBps == null)
+      ) {
+        markMalformedRedemptionTelemetry(normalized.redemption);
+      }
     }
   }
   delete normalized.immediateRedeemableUsd;

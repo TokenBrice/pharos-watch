@@ -118,6 +118,7 @@ export function adaptJupUsdData(
   options: {
     sourceTimestamp?: number | null;
     oracle?: JupUsdOraclePayload | null;
+    oracleConfigured?: boolean;
     extraWarnings?: readonly LiveReserveWarning[];
   } = {},
 ): AdapterResult {
@@ -160,10 +161,14 @@ export function adaptJupUsdData(
   }
 
   const sourceTimestamp = options.sourceTimestamp ?? null;
-  const routeStatus = options.oracle?.ripcord ? "paused" : "open";
+  const routeStatus = options.oracle
+    ? options.oracle.ripcord ? "paused" : "open"
+    : options.oracleConfigured ? "unknown" : undefined;
   const routeStatusReason = options.oracle?.ripcord
     ? (options.oracle.ripcordDetails || "JupUSD oracle reports ripcord mode")
-    : undefined;
+    : options.oracleConfigured && !options.oracle
+      ? "JupUSD oracle route status could not be observed"
+      : undefined;
   const totalSupply = parseAmount(payload.totalSupply, 6);
   if (totalSupply == null || totalSupply <= 0) {
     throw new Error("jupusd missing or invalid totalSupply");
@@ -214,8 +219,8 @@ export function adaptJupUsdData(
         capacityKind: "live-direct-bounded",
         freshnessKind: sourceTimestamp != null ? "verified-source-timestamp" : "same-run-api",
         ...(sourceTimestamp != null ? { sourceTimestamp } : {}),
-        routeStatus,
-        routeStatusSource: "protocol-api",
+        ...(routeStatus ? { routeStatus } : {}),
+        ...(routeStatus ? { routeStatusSource: "protocol-api" as const } : {}),
         ...(routeStatusReason ? { routeStatusReason } : {}),
         holderEligibility: "whitelisted-primary",
         settlementDelaySec: 0,
@@ -252,12 +257,20 @@ export async function fetchJupUsdReserves(
   const [payload, oracle, snapshots] = await Promise.all([
     fetchJupUsdJson<JupUsdDataPayload>("transparency data", input.url, signal, JUPUSD_DATA_BUDGET, ctx),
     params.oracleUrl
-      ? catchAndWarn(
-          fetchJupUsdJson<JupUsdOraclePayload>("oracle", params.oracleUrl, signal, JUPUSD_ORACLE_BUDGET, ctx),
-          "jupusd-oracle-unavailable",
-          `JupUSD oracle feed failed: ${params.oracleUrl}`,
-          extraWarnings,
-        )
+      ? fetchJupUsdJson<JupUsdOraclePayload>(
+          "oracle",
+          params.oracleUrl,
+          signal,
+          JUPUSD_ORACLE_BUDGET,
+          ctx,
+        ).catch((error) => {
+          if (signal.aborted) throw error;
+          extraWarnings.push(reserveDegradedWarning(
+            "jupusd-oracle-unavailable",
+            `JupUSD oracle route status could not be observed: ${toErrorMessage(error)}`,
+          ));
+          return null;
+        })
       : Promise.resolve(null),
     params.snapshotsUrl
       ? catchAndWarn(
@@ -280,6 +293,7 @@ export async function fetchJupUsdReserves(
     : null;
   return adaptJupUsdData(payload, {
     sourceTimestamp: latestTimestamp,
+    oracleConfigured: params.oracleUrl != null,
     oracle,
     extraWarnings,
   });

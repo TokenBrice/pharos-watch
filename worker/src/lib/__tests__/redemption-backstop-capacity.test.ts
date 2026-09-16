@@ -445,6 +445,33 @@ describe("resolveRedemptionCapacity — reserve-sync over-provisioned clamp", ()
     expect(result.notes).toContain("Live redemption capacity has unverified freshness; route-specific approval required");
   });
 
+  it("caps configured fallback-ratio scoring capacity by the live daily limit", async () => {
+    const result = await resolveRedemptionCapacity(
+      {} as D1Database,
+      "lusd-liquity",
+      { kind: "reserve-sync-metadata", fallbackRatio: 0.8 },
+      1_000_000,
+      now,
+      {
+        reserveSnapshotMetadata: baseSnapshot({
+          freshnessMode: "not-applicable",
+          redemption: { dailyLimitUsd: 250_000 },
+        }),
+      },
+    );
+
+    expect(result.immediateCapacityUsd).toBe(800_000);
+    expect(result.immediateCapacityRatio).toBe(0.8);
+    expect(result.scoringCapacityUsd).toBe(250_000);
+    expect(result.scoringCapacityRatio).toBe(0.25);
+    expect(result.capacityProfile).toMatchObject({
+      immediateUsd: 800_000,
+      dailyLimitUsd: 250_000,
+      scoringUsd: 250_000,
+      scoringHorizon: "daily",
+    });
+  });
+
   it.each([
     ["paused", "onchain", "Vault redemptions are paused"],
     ["degraded", "protocol-api", "Redemptions are degraded"],
