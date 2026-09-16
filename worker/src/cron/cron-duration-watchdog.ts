@@ -387,7 +387,7 @@ export async function runCronDurationWatchdog(
         STALE_SLOT_METADATA_REASON,
       ),
   );
-  const results = await db.batch<StatsRow>(statements);
+  const results = await runWithOverloadRetry(() => db.batch<StatsRow>(statements), 3, signal);
   throwIfAborted(signal);
 
   const stats: JobDurationStats[] = watchedJobs.map(([job, timeoutMs], index) => {
@@ -409,63 +409,68 @@ export async function runCronDurationWatchdog(
     };
   });
 
-  const slotRows = await db
-    .prepare(
-      `SELECT
-         slot_key,
-         COUNT(*) AS slots,
-         SUM(CASE WHEN result_status = 'error' THEN 1 ELSE 0 END) AS error_slots,
-         SUM(CASE WHEN is_abandoned = 1 THEN 1 ELSE 0 END) AS abandoned_slots,
-         SUM(CASE WHEN not_started_runs > 0 THEN 1 ELSE 0 END) AS not_started_slots,
-         SUM(CASE WHEN publication_failures > 0 THEN 1 ELSE 0 END) AS publication_failure_slots,
-         SUM(CASE WHEN terminal_accounting_unknown > 0 OR legacy_accounting_unknown = 1 THEN 1 ELSE 0 END)
-           AS terminal_accounting_unknown_slots,
-         SUM(CASE WHEN real_child_failures > 0 THEN 1 ELSE 0 END) AS real_child_failure_slots,
-         SUM(CASE WHEN successful_child_terminals > 0 THEN 1 ELSE 0 END) AS successful_child_terminal_slots,
-         MAX(CASE WHEN is_abandoned = 1 THEN slot_started_at ELSE NULL END) AS latest_abandoned_at
-       FROM (
-         SELECT
-           slot_key,
-           slot_started_at,
-           result_status,
-           CASE WHEN json_valid(metadata)
-             THEN COALESCE(CAST(json_extract(metadata, '$.staleSlotReconciliation.notStartedCronRuns') AS INTEGER), 0)
-             ELSE 0 END AS not_started_runs,
-           CASE WHEN json_valid(metadata)
-             THEN COALESCE(CAST(json_extract(metadata, '$.staleSlotReconciliation.publicationFailures') AS INTEGER), 0)
-             ELSE 0 END AS publication_failures,
-           CASE WHEN json_valid(metadata)
-             THEN COALESCE(CAST(json_extract(metadata, '$.staleSlotReconciliation.terminalAccountingUnknown') AS INTEGER), 0)
-             ELSE 0 END AS terminal_accounting_unknown,
-           CASE WHEN json_valid(metadata)
-             THEN COALESCE(CAST(json_extract(metadata, '$.staleSlotReconciliation.realChildFailures') AS INTEGER), 0)
-             ELSE 0 END AS real_child_failures,
-           CASE WHEN json_valid(metadata)
-             THEN COALESCE(CAST(json_extract(metadata, '$.staleSlotReconciliation.successfulChildTerminals') AS INTEGER), 0)
-             ELSE 0 END AS successful_child_terminals,
-           CASE
-             WHEN result_status = 'error'
-              AND json_valid(metadata)
-              AND json_extract(metadata, '$.error') = ?
-              AND json_type(metadata, '$.staleSlotReconciliation.publicationFailures') IS NULL
-              AND json_type(metadata, '$.staleSlotReconciliation.terminalAccountingUnknown') IS NULL
-              AND json_type(metadata, '$.staleSlotReconciliation.realChildFailures') IS NULL
-              AND json_type(metadata, '$.staleSlotReconciliation.successfulChildTerminals') IS NULL
-              AND json_type(metadata, '$.staleSlotReconciliation.notStartedCronRuns') IS NULL
-             THEN 1 ELSE 0
-           END AS legacy_accounting_unknown,
-           CASE
-             WHEN result_status IN ('error', 'degraded') AND json_valid(metadata) THEN
-               CASE WHEN json_extract(metadata, '$.error') = ? THEN 1 ELSE 0 END
-             ELSE 0
-           END AS is_abandoned
-         FROM cron_slot_executions
-         WHERE slot_started_at > ?
-       )
-       GROUP BY slot_key`,
-    )
-    .bind(STALE_SLOT_ERROR, STALE_SLOT_ERROR, sinceSec)
-    .all<SlotStatsRow>();
+  const slotRows = await runWithOverloadRetry(
+    () =>
+      db
+        .prepare(
+          `SELECT
+             slot_key,
+             COUNT(*) AS slots,
+             SUM(CASE WHEN result_status = 'error' THEN 1 ELSE 0 END) AS error_slots,
+             SUM(CASE WHEN is_abandoned = 1 THEN 1 ELSE 0 END) AS abandoned_slots,
+             SUM(CASE WHEN not_started_runs > 0 THEN 1 ELSE 0 END) AS not_started_slots,
+             SUM(CASE WHEN publication_failures > 0 THEN 1 ELSE 0 END) AS publication_failure_slots,
+             SUM(CASE WHEN terminal_accounting_unknown > 0 OR legacy_accounting_unknown = 1 THEN 1 ELSE 0 END)
+               AS terminal_accounting_unknown_slots,
+             SUM(CASE WHEN real_child_failures > 0 THEN 1 ELSE 0 END) AS real_child_failure_slots,
+             SUM(CASE WHEN successful_child_terminals > 0 THEN 1 ELSE 0 END) AS successful_child_terminal_slots,
+             MAX(CASE WHEN is_abandoned = 1 THEN slot_started_at ELSE NULL END) AS latest_abandoned_at
+           FROM (
+             SELECT
+               slot_key,
+               slot_started_at,
+               result_status,
+               CASE WHEN json_valid(metadata)
+                 THEN COALESCE(CAST(json_extract(metadata, '$.staleSlotReconciliation.notStartedCronRuns') AS INTEGER), 0)
+                 ELSE 0 END AS not_started_runs,
+               CASE WHEN json_valid(metadata)
+                 THEN COALESCE(CAST(json_extract(metadata, '$.staleSlotReconciliation.publicationFailures') AS INTEGER), 0)
+                 ELSE 0 END AS publication_failures,
+               CASE WHEN json_valid(metadata)
+                 THEN COALESCE(CAST(json_extract(metadata, '$.staleSlotReconciliation.terminalAccountingUnknown') AS INTEGER), 0)
+                 ELSE 0 END AS terminal_accounting_unknown,
+               CASE WHEN json_valid(metadata)
+                 THEN COALESCE(CAST(json_extract(metadata, '$.staleSlotReconciliation.realChildFailures') AS INTEGER), 0)
+                 ELSE 0 END AS real_child_failures,
+               CASE WHEN json_valid(metadata)
+                 THEN COALESCE(CAST(json_extract(metadata, '$.staleSlotReconciliation.successfulChildTerminals') AS INTEGER), 0)
+                 ELSE 0 END AS successful_child_terminals,
+               CASE
+                 WHEN result_status = 'error'
+                  AND json_valid(metadata)
+                  AND json_extract(metadata, '$.error') = ?
+                  AND json_type(metadata, '$.staleSlotReconciliation.publicationFailures') IS NULL
+                  AND json_type(metadata, '$.staleSlotReconciliation.terminalAccountingUnknown') IS NULL
+                  AND json_type(metadata, '$.staleSlotReconciliation.realChildFailures') IS NULL
+                  AND json_type(metadata, '$.staleSlotReconciliation.successfulChildTerminals') IS NULL
+                  AND json_type(metadata, '$.staleSlotReconciliation.notStartedCronRuns') IS NULL
+                 THEN 1 ELSE 0
+               END AS legacy_accounting_unknown,
+               CASE
+                 WHEN result_status IN ('error', 'degraded') AND json_valid(metadata) THEN
+                   CASE WHEN json_extract(metadata, '$.error') = ? THEN 1 ELSE 0 END
+                 ELSE 0
+               END AS is_abandoned
+             FROM cron_slot_executions
+             WHERE slot_started_at > ?
+           )
+           GROUP BY slot_key`,
+        )
+        .bind(STALE_SLOT_ERROR, STALE_SLOT_ERROR, sinceSec)
+        .all<SlotStatsRow>(),
+    3,
+    signal,
+  );
   throwIfAborted(signal);
 
   const slotStatsByKey = new Map((slotRows.results ?? []).map((row) => [row.slot_key, row]));

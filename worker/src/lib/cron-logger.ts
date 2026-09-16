@@ -416,6 +416,7 @@ export async function logCronRun(
   let progressWriteTail = Promise.resolve();
   let lastProgressWriteAtMs: number | null = null;
   let lastProgressWriteStage: string | null | undefined;
+  let lastProgressLeaseOwner: string | null = null;
   const reportProgress: CronProgressReporter = (update) => {
     if (shouldSkipCronProgress(job)) return progressWriteTail;
     progressActivated = true;
@@ -441,6 +442,7 @@ export async function logCronRun(
     lastProgressWriteStage = snapshot.stage;
     progressWriteTail = progressWriteTail.then(async () => {
       try {
+        lastProgressLeaseOwner = snapshot.leaseOwner;
         await upsertCronProgress(db, job, startSec, slotStartedAt, snapshot);
       } catch (err) {
         console.warn(`[db] Failed to upsert cron progress for ${job}:`, err);
@@ -655,7 +657,7 @@ export async function logCronRun(
     await progressWriteTail;
     if (progressActivated) {
       try {
-        await clearCronProgress(db, job, startSec, slotStartedAt, progressState.leaseOwner);
+        await clearCronProgress(db, job, startSec, slotStartedAt, lastProgressLeaseOwner);
       } catch (err) {
         console.warn(`[db] Failed to clear cron progress for ${job}:`, err);
       }
