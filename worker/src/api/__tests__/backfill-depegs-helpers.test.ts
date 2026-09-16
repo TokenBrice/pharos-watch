@@ -1,18 +1,84 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { buildFxLookup, fetchHistoricalSecondaryFxRates } from "../../lib/backfill-fx";
+import {
+  PEG_TO_FX,
+  SECONDARY_PEG_TO_FX,
+  buildFxLookup,
+  fetchHistoricalSecondaryFxRates,
+} from "../../lib/backfill-fx";
 import {
   extractDepegEvents,
   findNearestSupply,
   parseSupplyData,
 } from "../backfill-depegs-extraction";
 import { summarizeBackfillReplayDiff } from "../backfill-depegs-preview";
+import { executeBackfillForCoin } from "../backfill-depegs/execution";
 import { mockD1 } from "@shared/test-utils/mock-d1";
 import { mockFetch } from "@shared/test-utils/mock-fetch";
+import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
+import {
+  PRIMARY_CURRENCY_TO_PEG,
+  PRIMARY_PEG_TYPE_TO_CURRENCY_PAIRS,
+  SECONDARY_FX_CURRENCY_TO_PEG,
+  SECONDARY_PEG_TYPE_TO_CURRENCY_PAIRS,
+} from "../../lib/fx-config";
 import { makeBrzBackfillRow } from "./depeg-replay.test-support";
 
 afterEach(() => {
   vi.restoreAllMocks();
   vi.unstubAllGlobals();
+});
+
+describe("historical FX configuration", () => {
+  it("keeps backfill FX coverage in parity with the live currency maps", () => {
+    const invert = (
+      currencyToPeg: Readonly<Record<string, string>>,
+      pegTypeToCurrencyPairs: ReadonlyArray<readonly [string, string]>,
+    ) => {
+      const pegCurrencyByType: Record<string, string> = Object.fromEntries(pegTypeToCurrencyPairs);
+      return Object.fromEntries(
+        Object.entries(currencyToPeg).map(([currency, pegType]) => [
+          pegCurrencyByType[pegType],
+          currency.toUpperCase(),
+        ]),
+      );
+    };
+
+    expect(PEG_TO_FX).toEqual(invert(PRIMARY_CURRENCY_TO_PEG, PRIMARY_PEG_TYPE_TO_CURRENCY_PAIRS));
+    expect(SECONDARY_PEG_TO_FX).toEqual(
+      invert(SECONDARY_FX_CURRENCY_TO_PEG, SECONDARY_PEG_TYPE_TO_CURRENCY_PAIRS),
+    );
+    expect(PEG_TO_FX.BRL).toBe("BRL");
+  });
+
+  it("skips a non-USD coin without any FX reference and performs no writes", async () => {
+    const meta = ACTIVE_STABLECOINS.find((coin) => coin.id === "brz-transfero");
+    expect(meta).toBeDefined();
+    if (!meta) throw new Error("missing BRZ fixture");
+    const applyBackfillEvents = vi.fn();
+    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+
+    const outcome = await executeBackfillForCoin({
+      db: mockD1(),
+      prepared: {
+        meta,
+        geckoId: "unused-because-missing-fx-skips-first",
+        supplyByDate: [],
+        currentSupplyUsd: null,
+      },
+      pegRates: { peggedUSD: 1 },
+      fxRates: undefined,
+      fxSeries: {},
+      commoditySeries: {},
+      replayWindow: null,
+      coingeckoApiKey: null,
+      dryRun: false,
+      applyBackfillEvents,
+    });
+
+    expect(outcome).toEqual({ status: "skipped", eventCount: 0 });
+    expect(applyBackfillEvents).not.toHaveBeenCalled();
+    expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining("missing-fx-reference"));
+  });
 });
 
 describe("parseSupplyData", () => {
@@ -91,15 +157,15 @@ describe("buildFxLookup", () => {
 });
 
 describe("fetchHistoricalSecondaryFxRates", () => {
-  it("fetches date-addressed secondary FX history and converts it to USD-per-unit", async () => {
+  it("builds non-flat ARS and KES historical series for EM backfills", async () => {
     mockFetch([
       {
         match: "@2025-06-14/v1/currencies/usd.min.json",
-        body: { date: "2025-06-14", usd: { cnh: 7.2, rub: 90 } },
+        body: { date: "2025-06-14", usd: { ars: 1_180, kes: 129 } },
       },
       {
         match: "@2025-06-15/v1/currencies/usd.min.json",
-        body: { date: "2025-06-15", usd: { cnh: 7.25, rub: 91 } },
+        body: { date: "2025-06-15", usd: { ars: 1_190, kes: 130 } },
       },
     ]);
 
@@ -113,15 +179,15 @@ describe("fetchHistoricalSecondaryFxRates", () => {
       { match: "INSERT OR REPLACE INTO cache", rows: [] },
     ]);
 
-    const series = await fetchHistoricalSecondaryFxRates(db, ["CNH", "RUB"], "2025-06-14", "2025-06-15");
+    const series = await fetchHistoricalSecondaryFxRates(db, ["ARS", "KES"], "2025-06-14", "2025-06-15");
 
-    expect(series.CNH).toEqual([
-      { timestamp: Math.floor(new Date("2025-06-14T00:00:00Z").getTime() / 1000), rate: 1 / 7.2 },
-      { timestamp: Math.floor(new Date("2025-06-15T00:00:00Z").getTime() / 1000), rate: 1 / 7.25 },
+    expect(series.ARS).toEqual([
+      { timestamp: Math.floor(new Date("2025-06-14T00:00:00Z").getTime() / 1000), rate: 1 / 1_180 },
+      { timestamp: Math.floor(new Date("2025-06-15T00:00:00Z").getTime() / 1000), rate: 1 / 1_190 },
     ]);
-    expect(series.RUB).toEqual([
-      { timestamp: Math.floor(new Date("2025-06-14T00:00:00Z").getTime() / 1000), rate: 1 / 90 },
-      { timestamp: Math.floor(new Date("2025-06-15T00:00:00Z").getTime() / 1000), rate: 1 / 91 },
+    expect(series.KES).toEqual([
+      { timestamp: Math.floor(new Date("2025-06-14T00:00:00Z").getTime() / 1000), rate: 1 / 129 },
+      { timestamp: Math.floor(new Date("2025-06-15T00:00:00Z").getTime() / 1000), rate: 1 / 130 },
     ]);
   });
 
@@ -203,6 +269,110 @@ describe("fetchHistoricalSecondaryFxRates", () => {
 
     expect(series.CNH).toEqual([]);
     expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining("secondary FX validation failed"));
+  });
+
+  it("persists empty-day markers so permanently missing days are not fetched again", async () => {
+    const primary = new Response("missing", { status: 404 });
+    const fallback = new Response("missing", { status: 404 });
+    const fetchSpy = mockFetch([
+      { match: "cdn.jsdelivr.net", outcomes: [{ response: primary }] },
+      { match: ".currency-api.pages.dev", outcomes: [{ response: fallback }] },
+    ], { requireMatch: true });
+    const firstDb = mockD1([
+      {
+        match: "SELECT value, updated_at FROM cache WHERE key = ?",
+        matchBinds: ["fx-history-secondary:2025"],
+        rows: [],
+        first: null,
+      },
+      { match: "INSERT OR REPLACE INTO cache", rows: [] },
+    ]);
+
+    await fetchHistoricalSecondaryFxRates(firstDb, ["ARS"], "2025-06-14", "2025-06-14");
+    const cacheWrite = firstDb.getHistory().find((entry) => entry.sql.includes("INSERT OR REPLACE INTO cache"));
+    const cachedValue = cacheWrite?.binds[1];
+    expect(typeof cachedValue).toBe("string");
+    expect(JSON.parse(cachedValue as string)).toEqual({ "2025-06-14": {} });
+
+    const secondDb = mockD1([
+      {
+        match: "SELECT value, updated_at FROM cache WHERE key = ?",
+        matchBinds: ["fx-history-secondary:2025"],
+        rows: [],
+        first: {
+          value: cachedValue as string,
+          updated_at: Math.floor(Date.now() / 1000),
+        },
+      },
+    ]);
+    await fetchHistoricalSecondaryFxRates(secondDb, ["ARS"], "2025-06-14", "2025-06-14");
+
+    expect(fetchSpy).toHaveBeenCalledTimes(2);
+  });
+
+  it("skips a non-JSON 200 secondary FX day instead of aborting the run", async () => {
+    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const response = new Response("<html>upstream error</html>", { status: 200 });
+    mockFetch([
+      { match: "cdn.jsdelivr.net", outcomes: [{ response }] },
+    ], { requireMatch: true });
+    const db = mockD1([
+      {
+        match: "SELECT value, updated_at FROM cache WHERE key = ?",
+        matchBinds: ["fx-history-secondary:2025"],
+        rows: [],
+        first: null,
+      },
+      { match: "INSERT OR REPLACE INTO cache", rows: [] },
+    ]);
+
+    await expect(
+      fetchHistoricalSecondaryFxRates(db, ["ARS"], "2025-06-14", "2025-06-14"),
+    ).resolves.toEqual({ ARS: [] });
+    expect(response.bodyUsed).toBe(true);
+    expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining("secondary FX returned non-JSON"));
+  });
+
+  it("caps secondary FX fetches at six concurrent requests", async () => {
+    let active = 0;
+    let peak = 0;
+    let markSixStarted!: () => void;
+    const sixStarted = new Promise<void>((resolve) => {
+      markSixStarted = resolve;
+    });
+    let releaseFetches!: () => void;
+    const release = new Promise<void>((resolve) => {
+      releaseFetches = resolve;
+    });
+    mockFetch([
+      {
+        match: "cdn.jsdelivr.net",
+        respond: async (request) => {
+          active++;
+          peak = Math.max(peak, active);
+          if (active === 6) markSixStarted();
+          await release;
+          active--;
+          const date = request.url.match(/currency-api@(\d{4}-\d{2}-\d{2})/)?.[1];
+          return { body: { date, usd: { ars: 1_180 } } };
+        },
+      },
+    ], { requireMatch: true });
+    const db = mockD1([
+      {
+        match: "SELECT value, updated_at FROM cache WHERE key = ?",
+        matchBinds: ["fx-history-secondary:2025"],
+        rows: [],
+        first: null,
+      },
+      { match: "INSERT OR REPLACE INTO cache", rows: [] },
+    ]);
+
+    const fetchPromise = fetchHistoricalSecondaryFxRates(db, ["ARS"], "2025-06-14", "2025-06-20");
+    await sixStarted;
+    expect(peak).toBe(6);
+    releaseFetches();
+    await fetchPromise;
   });
 });
 
