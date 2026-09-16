@@ -504,6 +504,7 @@ async function dispatchTelegramAlertsImpl(
         reportProgress,
         markTelegramDeliveryStarted,
       });
+      result.eventsDetected.freeze = freezeOutbox.observed;
       return addTelegramDispatchMetadataCounters(
         { itemCount: result.messagesSent, metadata: JSON.stringify(result) },
         planningCounters,
@@ -531,6 +532,7 @@ async function dispatchTelegramAlertsImpl(
       markTelegramDeliveryStarted,
     });
 
+    result.eventsDetected.freeze = freezeOutbox.observed;
     return addTelegramDispatchMetadataCounters(
       { itemCount: result.messagesSent, metadata: JSON.stringify(result) },
       planningCounters,

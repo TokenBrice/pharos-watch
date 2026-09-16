@@ -79,14 +79,17 @@ export async function dispatchFreezeAlertOutbox(db: D1Database, nowSec: number):
   observed: number;
   queued: number;
   skippedNoAudience: number;
+  droppedUnparsed: number;
 }> {
   const cached = await getCache(db, FREEZE_CURSOR_KEY);
   const cursor = cached && /^\d+$/.test(cached.value) ? Number(cached.value) : null;
   const loaded = await loadFreshFreezeAlerts(db, cursor, nowSec);
-  if (loaded.state === "stale") return { state: "stale", observed: 0, queued: 0, skippedNoAudience: 0 };
+  if (loaded.state === "stale") {
+    return { state: "stale", observed: 0, queued: 0, skippedNoAudience: 0, droppedUnparsed: 0 };
+  }
   if (loaded.state === "unseeded") {
     if (loaded.cursor != null) await setCache(db, FREEZE_CURSOR_KEY, String(loaded.cursor));
-    return { state: "seeded", observed: 0, queued: 0, skippedNoAudience: 0 };
+    return { state: "seeded", observed: 0, queued: 0, skippedNoAudience: 0, droppedUnparsed: 0 };
   }
 
   const resumable = await db.prepare(
@@ -122,6 +125,7 @@ export async function dispatchFreezeAlertOutbox(db: D1Database, nowSec: number):
     observed: loaded.alerts.length,
     queued,
     skippedNoAudience,
+    droppedUnparsed: loaded.droppedUnparsed ?? 0,
   };
 }
 

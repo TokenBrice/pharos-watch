@@ -312,6 +312,7 @@ interface TelegramDispatchEventsDetected {
   safety: number;
   launch: number;
   reserve: number;
+  freeze: number;
   suppressedMethodologyChanges: number;
 }
 

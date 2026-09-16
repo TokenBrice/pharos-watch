@@ -228,6 +228,7 @@ function emptyResult(snapshotSeeded: boolean, chatsWithActiveSnooze = 0): Dispat
       safety: 0,
       launch: 0,
       reserve: 0,
+      freeze: 0,
       suppressedMethodologyChanges: 0,
     },
     subscribersNotified: 0,
