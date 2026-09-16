@@ -104,18 +104,12 @@ export const CLI_ARGV_POLICY = Object.freeze({
     exempt("scripts/ci/select-generated-artifacts.mts", "read-only"),
     exempt("scripts/ci/sync-staged-generated-artifacts.mts", "build"),
     exempt("scripts/ci/verify-dependency-audit.ts", "read-only"),
-    exempt("scripts/lib/coverage-audit-cli.ts", "build"),
     exempt(
       "scripts/lib/mechanism-measurement/upload.ts",
       "build",
       "Uploads mechanism-measurement capture bodies to the R2 archive bucket and writes local summaries; no production runtime state.",
     ),
     exempt("scripts/lib/og-static-runner.mts", "build"),
-    exempt(
-      "scripts/lib/source-files.mts",
-      "read-only",
-      "Shared source-file utility uses process.argv only for direct-entrypoint detection.",
-    ),
     exempt("scripts/maintenance/analyze-gsc-coverage.mjs", "read-only"),
     exempt("scripts/maintenance/analyze-gsc-performance.mjs", "read-only"),
     exempt("scripts/maintenance/analyze-safety-score-v9-calibration.mjs", "build"),
