@@ -294,7 +294,7 @@ describe("adaptChainlinkPorResponse", () => {
     expect(result.metadata?.supplyCoverageComplete).toBe(false);
   });
 
-  it("degrades and marks supply incomplete when any EVM supply source fails", () => {
+  it("withholds coverage when any EVM supply source fails", () => {
     const result = adaptChainlinkPorResponse(
       { reserves: 100_000_000_000n, decimals: 8, roundId: 42n, updatedAt: 1710000000 },
       params,
@@ -305,8 +305,8 @@ describe("adaptChainlinkPorResponse", () => {
       supplyUsd: 1000,
       supplyReadComplete: false,
       supplyCoverageComplete: false,
-      collateralizationRatio: 1,
     });
+    expect(result.metadata?.collateralizationRatio).toBeUndefined();
     const warning = result.warnings?.find((w) => w.code === "partial-supply-read-failure");
     expect(warning).toBeDefined();
     expect(warning?.effect).toBe("degraded");
@@ -553,7 +553,7 @@ describe("fetchChainlinkPorReserves", () => {
     expect(result.warnings?.find((warning) => warning.code === "por-supply-chain-omitted")?.message).not.toContain("tron");
   });
 
-  it("degrades instead of silently reporting EVM-only coverage when the Tron totalSupply() read fails", async () => {
+  it("degrades and withholds coverage when the Tron totalSupply() read fails", async () => {
     const coin = makePorCoin({
       contracts: [
         { chain: "ethereum", address: "0x0000000000085d4780b73119b644ae5ecd22b376", decimals: 18 },
@@ -581,7 +581,7 @@ describe("fetchChainlinkPorReserves", () => {
     expect(warning?.effect).toBe("degraded");
     expect(warning?.message).toContain("tron");
     expect(result.metadata?.supplyUsd).toBeCloseTo(600, 5);
-    expect(result.metadata?.collateralizationRatio).toBeCloseTo(1010 / 600, 5);
+    expect(result.metadata?.collateralizationRatio).toBeUndefined();
   });
 
   it("does not call the Tron reader or change behavior for coins without a tron contract", async () => {

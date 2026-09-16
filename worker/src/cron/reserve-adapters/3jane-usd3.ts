@@ -9,6 +9,7 @@ import {
   boolObservation,
   customObservation,
   executeEvmObservationPlan,
+  pinnedBlockPlan,
   uint256Observation,
   type AnyEvmObservationField,
 } from "./evm-observation-plan";
@@ -41,6 +42,7 @@ const AVAILABLE_WITHDRAW_LIMIT_SELECTOR = "0x04bd4629";
 const MIN_COMMITMENT_TIME_SELECTOR = "0x0517bbab";
 const IS_SHUTDOWN_SELECTOR = "0xbf86d690";
 const CONVERT_TO_ASSETS_SELECTOR = "0x07a2d13a";
+const THREE_JANE_NAV_MISMATCH_HARD_LIMIT = 0.02;
 
 interface ThreeJaneUsd3Snapshot {
   contractAddress: string;
@@ -125,6 +127,12 @@ export function adaptThreeJaneUsd3Snapshot(snapshot: ThreeJaneUsd3Snapshot): Ada
     ));
   }
   const reportedAssetsMismatchRatio = navUsd > 0 ? Math.abs(totalAssetsUsd - navUsd) / navUsd : 1;
+  const maxNavMismatchRatio = Math.max(navMismatchRatio, reportedAssetsMismatchRatio);
+  if (maxNavMismatchRatio > THREE_JANE_NAV_MISMATCH_HARD_LIMIT) {
+    throw new Error(
+      `${ADAPTER_KEY} reserve accounting differs from nav() by ${(maxNavMismatchRatio * 100).toFixed(3)}%, exceeding the reviewed ${(THREE_JANE_NAV_MISMATCH_HARD_LIMIT * 100).toFixed(0)}% bound`,
+    );
+  }
   if (reportedAssetsMismatchRatio > 0.001) {
     warnings.push(reserveInfoWarning(
       "3jane-usd3-reported-assets-mismatch",
@@ -232,6 +240,14 @@ export async function fetchThreeJaneUsd3Reserves(
   }
   const contractAddress = resolveCoinContractAddress(coin, input.chain);
   if (!contractAddress) throw new Error(`${ADAPTER_KEY} missing Ethereum USD3 contract metadata`);
+  const blockPlan = await pinnedBlockPlan({
+    chain: input.chain,
+    signal,
+    ctx,
+    rpcUrl: ETHEREUM_RPC_URL,
+    fallbackRpcUrl: ETHEREUM_FALLBACK_RPC_URL,
+    timeoutMs: 12_000,
+  });
 
   const core = await executeObservationPlan([
     uint256Observation({ label: "nav", contract: contractAddress, data: NAV_SELECTOR }),
@@ -253,7 +269,7 @@ export async function fetchThreeJaneUsd3Reserves(
     uint256Observation({ label: "minCommitmentTime", contract: contractAddress, data: MIN_COMMITMENT_TIME_SELECTOR }),
     boolObservation({ label: "isShutdown", contract: contractAddress, data: IS_SHUTDOWN_SELECTOR }),
     uint256Observation({ label: "idleUsdc", contract: USDC_ADDRESS, data: encodeBalanceOfCallData(contractAddress) }),
-  ] as const, input.chain, signal, ctx);
+  ] as const, input.chain, signal, blockPlan.ctx);
 
   const suppliedWaUsdcRaw = core.values.suppliedWaUsdc;
   const localWaUsdcRaw = core.values.localWaUsdc;
@@ -286,7 +302,7 @@ export async function fetchThreeJaneUsd3Reserves(
       contract: WAUSDC_ADDRESS,
       data: `${CONVERT_TO_ASSETS_SELECTOR}${encodeUint256(creditPositionRaw)}`,
     }),
-  ] as const, input.chain, signal, ctx);
+  ] as const, input.chain, signal, blockPlan.ctx);
 
   return adaptThreeJaneUsd3Snapshot({
     contractAddress,

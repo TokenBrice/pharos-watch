@@ -41,6 +41,8 @@ describe("3jane-usd3 adapter", () => {
       redemption: { capacityUsd: 40, routeStatus: "open" },
     });
     expect(network.rpcCalls.some((call) => call.selector === "0x59ddbab2" && call.viaMulticall)).toBe(true);
+    const multicallBlocks = new Set(network.rpcCalls.filter((call) => call.viaMulticall).map((call) => call.block));
+    expect(multicallBlocks.size).toBe(1);
   });
 
   it("fails closed when the nav() read is dropped from the upstream batch", async () => {
@@ -111,6 +113,28 @@ describe("adaptThreeJaneUsd3Snapshot", () => {
       },
     });
     expectValidAdapterOutput("3jane-usd3", result);
+  });
+  it("fails closed when reserve accounting diverges materially from nav()", () => {
+    expect(() => adaptThreeJaneUsd3Snapshot({
+      contractAddress: "0x056b269eb1f75477a8666ae8c7fe01b64dd55ecc",
+      navRaw: 100n * ONE,
+      totalAssetsRaw: 100n * ONE,
+      totalSupplyRaw: 80n * ONE,
+      idleUsdcRaw: 15n * ONE,
+      localWaUsdcRaw: 5n * ONE,
+      suppliedWaUsdcRaw: 80n * ONE,
+      marketTotalSupplyAssetsRaw: 100n * ONE,
+      marketTotalSharesRaw: 100n * ONE,
+      marketTotalBorrowAssetsRaw: 75n * ONE,
+      marketLiquidityRaw: 25n * ONE,
+      marketLiquidPositionRaw: 20n * ONE,
+      creditPositionRaw: 100n * ONE,
+      liquidPositionAssetsRaw: 25n * ONE,
+      creditPositionAssetsRaw: 100n * ONE,
+      availableWithdrawRaw: 40n * ONE,
+      minCommitmentTimeRaw: 0n,
+      isShutdown: false,
+    })).toThrow(/reviewed 2% bound/);
   });
 
   it("surfaces shutdown state and keeps bounded recoverable liquidity degraded", () => {

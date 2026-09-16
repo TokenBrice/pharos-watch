@@ -251,6 +251,7 @@ describe("money-llamma adapter", () => {
 
     expect(output.metadata?.moneyPriceUsd).toBe(1.02);
     expect(output.metadata?.totalLiabilitiesUsd).toBeCloseTo(1_500 * 1.02, 5);
+    expect(output.metadata?.collateralizationRatio).toBeCloseTo(380_000 / (1_500 * 1.02), 5);
     expectWarnings(output, ["money-off-par"]);
   });
 
@@ -266,7 +267,7 @@ describe("money-llamma adapter", () => {
     expect(output.metadata?.supplyUsd).toBe(10_000_100);
     expect(output.metadata?.collateralizationRatio).toBeCloseTo(380_000 / 1_500, 5);
     expect(output.metadata?.details).toMatchObject({ liabilityValuation: "par" });
-    expectWarnings(output, ["liability-valued-at-par"]);
+    expectWarnings(output, ["defillama-quote-missing", "liability-valued-at-par"]);
   });
 
   it("degrades instead of erroring when collateral no longer covers debt (E4)", async () => {
