@@ -80,7 +80,7 @@ vi.mock("../../lib/alchemy-logs", () => ({
 vi.mock("../../lib/evm-logs", () => ({
   createBudget: vi.fn((limit = 200) => ({ count: 0, limit })),
   budgetExhausted: vi.fn((budget: { count: number; limit: number }) => budget.count >= budget.limit),
-  decodeUint256AtSlot: vi.fn(() => 50_000),
+  decodeUint256AtSlotOrNull: vi.fn(() => 50_000),
   decodeAddress: vi.fn((hex: string) => "0x" + hex.slice(-40)),
 }));
 

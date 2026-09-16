@@ -3,7 +3,7 @@ import { auditMintBurnConservation, getMintBurnConservationEligibility, persistM
 import { logWorkerEventArgs } from "../../lib/structured-log";
 import type { AlchemyLogEntry, AlchemyTopicFilter } from "../../lib/alchemy-logs";
 import { fetchAlchemyLogs, resolveBlockTimestamps } from "../../lib/alchemy-logs";
-import { budgetExhausted, createBudget, decodeUint256AtSlot } from "../../lib/evm-logs";
+import { budgetExhausted, createBudget, decodeUint256AtSlotOrNull } from "../../lib/evm-logs";
 import type { MintBurnTxContext } from "../../lib/mint-burn-bridge-classifier";
 import { classifyBridgeBurnRows } from "../../lib/mint-burn-pipeline/classification";
 import { parseMintBurnLogs } from "../../lib/mint-burn-pipeline/parse";
@@ -35,6 +35,8 @@ export interface MintBurnConfigSummary {
   rowsInserted: number;
   rowsIgnored: number;
   rowsDropped: number;
+  rowsDroppedDecode: number;
+  earliestDecodeFailureBlock: number | null;
   errors: number;
   conservationFailure?: boolean;
   conservationStatus?: MintBurnConservationRecord["status"];
@@ -119,6 +121,8 @@ export function createMintBurnConfigSummary(
     rowsInserted: 0,
     rowsIgnored: 0,
     rowsDropped: 0,
+    rowsDroppedDecode: 0,
+    earliestDecodeFailureBlock: null,
     errors: 0,
     failedEventDefs: [],
     eventCoverage: [],
@@ -148,8 +152,8 @@ function timestampRequiredBlockForLog(
   log: AlchemyLogEntry,
 ): number | null {
   const slot = eventDef.amountEncoding === "nth-data-uint256" ? (eventDef.dataSlot ?? 0) : 0;
-  const amount = decodeUint256AtSlot(log.data, slot, config.decimals);
-  if (amount <= 0 || amount < config.dustThreshold) return null;
+  const amount = decodeUint256AtSlotOrNull(log.data, slot, config.decimals);
+  if (amount == null || amount <= 0 || amount < config.dustThreshold) return null;
 
   const blockNum = parseInt(log.blockNumber, 16);
   const logIndex = parseInt(log.logIndex, 16);
@@ -303,6 +307,21 @@ export async function syncMintBurnConfig(input: SyncMintBurnConfigInput): Promis
     );
 
     summary.rowsDropped += parsed.dropped;
+    summary.rowsDroppedDecode += parsed.droppedDecode;
+    if (parsed.earliestDecodeFailureBlock != null) {
+      summary.earliestDecodeFailureBlock = summary.earliestDecodeFailureBlock == null
+        ? parsed.earliestDecodeFailureBlock
+        : Math.min(summary.earliestDecodeFailureBlock, parsed.earliestDecodeFailureBlock);
+    }
+    if (parsed.droppedDecode > 0) {
+      logWorkerEventArgs("handler", "warn",
+        `[sync-mint-burn] ${config.symbol} on ${config.chain.chainName}: ` +
+        `dropped ${parsed.droppedDecode} ${eventDefLabel(eventDef)} log(s) with truncated amount data`,
+      );
+      apiErrors++;
+      summary.errors++;
+      summary.failedEventDefs.push(`${eventDefLabel(eventDef)}:amount-decode`);
+    }
     summary.rowsParsed += parsed.rows.length;
 
     allParsedRows.push(...parsed.rows);
@@ -343,7 +362,8 @@ export async function syncMintBurnConfig(input: SyncMintBurnConfigInput): Promis
   }
   const fullEventCoverage =
     summary.eventCoverage.length === config.events.length &&
-    summary.eventCoverage.every((coverage) => coverage.complete && coverage.scannedToBlock >= scanTo);
+    summary.eventCoverage.every((coverage) => coverage.complete && coverage.scannedToBlock >= scanTo) &&
+    summary.rowsDroppedDecode === 0;
   let conservationFence = false;
   let parserFailure = false;
   let conservationAudit: MintBurnConservationRecord | null = null;
@@ -425,8 +445,11 @@ export async function syncMintBurnConfig(input: SyncMintBurnConfigInput): Promis
   const txContextCoverageFrontier = deferredRows.length > 0
     ? Math.min(...deferredRows.map((row) => row.block_number)) - 1
     : null;
+  const decodeCoverageFrontier = summary.earliestDecodeFailureBlock != null
+    ? summary.earliestDecodeFailureBlock - 1
+    : null;
   const partialCoverageFrontier = minOrNull(
-    [eventCoverageFrontier, timestampCoverageFrontier, txContextCoverageFrontier]
+    [eventCoverageFrontier, timestampCoverageFrontier, txContextCoverageFrontier, decodeCoverageFrontier]
       .filter((value): value is number => value != null),
   );
   summary.coverageFrontier = partialCoverageFrontier;

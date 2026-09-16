@@ -101,18 +101,8 @@ export async function enrichRowBalances(opts: {
   const counters = { attempted: 0, succeeded: 0, failed: 0 };
   for (const row of rows) {
     throwIfAborted(signal);
-    if (blacklistRuntimeBudgetReached(runBudget)) {
-      if (row.amount_native == null && row.amount_status !== "permanently_unavailable") {
-        markRecoveryAttempt(row, "none", "runtime_budget");
-      }
-      break;
-    }
-    if (blacklistSubrequestBudgetReached(runBudget)) {
-      if (row.amount_native == null && row.amount_status !== "permanently_unavailable") {
-        markRecoveryAttempt(row, "none", "budget_exhausted");
-      }
-      break;
-    }
+    if (blacklistRuntimeBudgetReached(runBudget)) break;
+    if (blacklistSubrequestBudgetReached(runBudget)) break;
     if (row.amount_native != null) {
       row.amount_usd_at_event ??= computeBlacklistAmountUsdAtEvent(config.stablecoin, row.amount_native, assetPriceUsd);
       continue;
@@ -142,7 +132,7 @@ export async function enrichRowBalances(opts: {
 
         row.amount_native = amount;
         row.amount_usd_at_event = computeBlacklistAmountUsdAtEvent(config.stablecoin, amount, assetPriceUsd);
-        row.amount_source = amountSource;
+        if (amount != null) row.amount_source = amountSource;
         row.amount_status = amount != null ? "resolved" : "provider_failed";
         row.amount_last_error_class = amount != null ? null : "provider_null";
         if (amount != null) {
@@ -544,7 +534,10 @@ export async function backfillAmounts(
                  events.amount_source = 'derived'
                  AND events.amount_native = 0
                  AND events.amount_status = 'resolved'
-                 AND COALESCE(events.amount_attempt_count, 0) < ?
+                 AND (
+                   COALESCE(events.amount_attempt_count, 0) < ?
+                   OR events.amount_last_error_class IN ('runtime_budget', 'budget_exhausted')
+                 )
                )
              )
          AND COALESCE(queue.status, 'pending') IN ('pending', 'retry')
@@ -615,7 +608,10 @@ export async function backfillAmounts(
     if (!config) {
       const wasLegacyDerived = row.amount_source === "derived";
       const derivedRetryExhausted =
-        wasLegacyDerived && (row.amount_attempt_count ?? 0) + 1 >= MAX_DERIVED_RECOVERY_ATTEMPTS;
+        wasLegacyDerived &&
+        row.amount_last_error_class !== "runtime_budget" &&
+        row.amount_last_error_class !== "budget_exhausted" &&
+        (row.amount_attempt_count ?? 0) + 1 >= MAX_DERIVED_RECOVERY_ATTEMPTS;
       stmts.push(
         buildAttemptUpdate(
           row.id,
@@ -706,7 +702,10 @@ export async function backfillAmounts(
     } else {
       const wasLegacyDerived = row.amount_source === "derived";
       const derivedRetryExhausted =
-        wasLegacyDerived && (row.amount_attempt_count ?? 0) + 1 >= MAX_DERIVED_RECOVERY_ATTEMPTS;
+        wasLegacyDerived &&
+        row.amount_last_error_class !== "runtime_budget" &&
+        row.amount_last_error_class !== "budget_exhausted" &&
+        (row.amount_attempt_count ?? 0) + 1 >= MAX_DERIVED_RECOVERY_ATTEMPTS;
       if (wasLegacyDerived) {
         stmts.push(
           buildAttemptUpdate(

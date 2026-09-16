@@ -187,7 +187,7 @@ function decodeEvmLogAmount(
 ): number | null {
   if (!eventDef.hasAmount) return null;
 
-  if (typeof eventDef.amountTopicIndex === "number" && log.topics.length > eventDef.amountTopicIndex) {
+  if (typeof eventDef.amountTopicIndex === "number") {
     return decodeUint256Word(log.topics[eventDef.amountTopicIndex], decimals);
   }
   if (typeof eventDef.amountDataIndex === "number") {

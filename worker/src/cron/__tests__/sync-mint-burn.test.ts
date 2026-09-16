@@ -109,7 +109,7 @@ vi.mock("../../lib/alchemy-logs", () => ({
 vi.mock("../../lib/evm-logs", () => ({
   createBudget: vi.fn((limit = 200) => ({ count: 0, limit })),
   budgetExhausted: vi.fn((budget: { count: number; limit: number }) => budget.count >= budget.limit),
-  decodeUint256AtSlot: vi.fn(() => 50_000),
+  decodeUint256AtSlotOrNull: vi.fn(() => 50_000),
   decodeAddress: vi.fn((hex: string) => "0x" + hex.slice(-40)),
 }));
 
@@ -152,7 +152,7 @@ import {
   getAlchemyTransactionContextBatchMany,
   resolveBlockTimestamps,
 } from "../../lib/alchemy-logs";
-import { createBudget, decodeUint256AtSlot } from "../../lib/evm-logs";
+import { createBudget, decodeUint256AtSlotOrNull } from "../../lib/evm-logs";
 
 function makeDb(opts: {
   runState?: { degradedStreak: number; lastConfigKey?: string | null } | null;
@@ -249,7 +249,7 @@ describe("syncMintBurn", () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date("2026-03-04T12:00:00Z"));
     vi.mocked(createBudget).mockReset().mockImplementation((limit = 200) => ({ count: 0, limit }));
-    vi.mocked(decodeUint256AtSlot).mockReset().mockReturnValue(50_000);
+    vi.mocked(decodeUint256AtSlotOrNull).mockReset().mockReturnValue(50_000);
     vi.mocked(getAlchemyBlockNumber).mockReset().mockResolvedValue(22_000_000);
     vi.mocked(getAlchemyTransactionContextBatchMany).mockReset().mockImplementation(async (_url, txHashes: string[]) =>
       new Map(txHashes.map((txHash) => [txHash, {
@@ -419,6 +419,51 @@ describe("syncMintBurn", () => {
     expect(result.newLastBlock).toBe(21_960_000);
   });
 
+  it("counts truncated amount data as decode failure instead of dust", async () => {
+    const db = makeDb();
+    const config = MINT_BURN_CONFIGS[0]!;
+    const failedBlock = 21_910_000;
+    vi.mocked(decodeUint256AtSlotOrNull).mockReturnValue(null);
+    vi.mocked(fetchAlchemyLogs)
+      .mockResolvedValueOnce({
+        logs: [makeMintLog({ blockNumber: failedBlock })],
+        complete: true,
+        scannedToBlock: 21_960_000,
+        calls: 1,
+        maxDepth: 0,
+      })
+      .mockResolvedValueOnce({
+        logs: [],
+        complete: true,
+        scannedToBlock: 21_960_000,
+        calls: 1,
+        maxDepth: 0,
+      });
+
+    const result = await syncMintBurnConfig({
+      db,
+      config,
+      key: "ethereum-0xdac17f958d2ee523a2206206994597c13d831ec7",
+      tier: "critical",
+      fromBlock: 21_900_000,
+      scanTo: 21_960_000,
+      chainHead: 22_000_000,
+      alchemyUrl: "https://eth-mainnet.g.alchemy.com/v2/",
+      configBudgetLimit: 200,
+      runTimestamp: 1_718_650_752,
+      priceContext: { prices: new Map([["usdt-tether", 1]]), priceHistory: new Map() },
+      chainTimestampCache: new Map(),
+      txContextCache: new Map(),
+      affectedHours: new Map(),
+      safetyMarginBlocks: 10_000,
+    });
+
+    expect(result.summary.rowsDropped).toBe(0);
+    expect(result.summary.rowsDroppedDecode).toBe(1);
+    expect(result.summary.earliestDecodeFailureBlock).toBe(failedBlock);
+    expect(result.newLastBlock).toBe(failedBlock - 1);
+  });
+
   it("resumes from canonical sync-state progress", async () => {
     const db = makeDb({
       syncRows: [{
@@ -582,7 +627,7 @@ describe("syncMintBurn", () => {
   it("does not require timestamps for dust-only logs", async () => {
     const db = makeDb();
 
-    vi.mocked(decodeUint256AtSlot).mockReturnValue(1);
+    vi.mocked(decodeUint256AtSlotOrNull).mockReturnValue(1);
     vi.mocked(fetchAlchemyLogs)
       .mockResolvedValueOnce({
         logs: [makeMintLog({ blockNumber: 21_950_000 })],
