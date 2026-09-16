@@ -39,17 +39,32 @@ interface KinesisCirculationData {
   redemption: number;
 }
 
+function newestDatedRecord(records: unknown[]): unknown {
+  let newest: { record: unknown; timestamp: number } | null = null;
+  for (const record of records) {
+    if (!record || typeof record !== "object") continue;
+    const date = "date" in record ? record.date : undefined;
+    const timestamp = typeof date === "string" || typeof date === "number"
+      ? Date.parse(String(date))
+      : Number.NaN;
+    if (Number.isFinite(timestamp) && (newest == null || timestamp > newest.timestamp)) {
+      newest = { record, timestamp };
+    }
+  }
+  return newest?.record ?? records[records.length - 1];
+}
+
 /** Parse the `/coin_in_circulation` response (single object, raw record array, or Horizon envelope). */
 export function parseKinesisResponse(data: unknown): KinesisCirculationData | null {
   if (Array.isArray(data)) {
     if (data.length === 0) return null;
-    return extractFields(data[data.length - 1]);
+    return extractFields(newestDatedRecord(data));
   }
   if (data && typeof data === "object") {
-    const records = (data as { records?: unknown }).records;
+    const records = "records" in data ? data.records : undefined;
     if (Array.isArray(records)) {
       if (records.length === 0) return null;
-      return extractFields(records[records.length - 1]);
+      return extractFields(newestDatedRecord(records));
     }
   }
   return extractFields(data);

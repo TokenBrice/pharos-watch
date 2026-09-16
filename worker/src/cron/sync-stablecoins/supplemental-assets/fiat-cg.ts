@@ -6,7 +6,7 @@ import { mapWithConcurrency } from "../../../lib/concurrency";
 import type { PeggedAsset } from "../enrich-prices";
 import { buildZephyrProtocolPeggedAsset, fetchZephyrProtocolStats, isZephyrScannerAssetId } from "../zephyr-zsd";
 import { resolveVaultNavSupplyPrice } from "../../../lib/authoritative-price-sources";
-import { fetchCuratedAggregateOnChainMcap, fetchOnChainMcap, prefersOnChainSupplyMcap } from "./onchain-supply";
+import { fetchCuratedAggregateOnChainMcap, fetchOnChainMcap, prefersOnChainSupplyMcap, toPublicChainCirculating } from "./onchain-supply";
 import {
   fetchSupplementalPriceData,
   buildSupplementalAsset,
@@ -110,15 +110,7 @@ export async function fetchFiatCoinGeckoTokens(
           if (aggregateOnChainMcap) {
             mcap = aggregateOnChainMcap.mcap;
             supplySource = aggregateOnChainMcap.supplySource;
-            chainCirculating = Object.fromEntries(
-              Object.entries(aggregateOnChainMcap.chainCirculating ?? {}).map(([chainLabel, row]) => [
-                chainLabel,
-                {
-                  ...(row.chainId ? { chainId: row.chainId } : {}),
-                  current: row.current,
-                },
-              ]),
-            );
+            chainCirculating = toPublicChainCirculating(aggregateOnChainMcap.chainCirculating);
           }
         }
 

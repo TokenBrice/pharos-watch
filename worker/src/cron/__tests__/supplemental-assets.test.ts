@@ -477,6 +477,28 @@ describe("fetchGoldTokens", () => {
     expect(fetchMock).toHaveBeenCalled();
     expect(fetchMock.mock.calls.every(([url]) => !String(url).includes("/protocol/"))).toBe(true);
   });
+
+  it("does not mis-attribute total history to a multi-bucket asset", async () => {
+    const now = new Date();
+    const snapshotDate = (daysAgo: number) => {
+      const date = new Date(now);
+      date.setUTCDate(date.getUTCDate() - daysAgo);
+      date.setUTCHours(0, 0, 0, 0);
+      return Math.floor(date.getTime() / 1000);
+    };
+    const db = mockD1([{
+      match: "SELECT stablecoin_id, snapshot_date, circulating_usd FROM supply_history",
+      rows: [{ stablecoin_id: "multi", snapshot_date: snapshotDate(1), circulating_usd: 100 }],
+    }]);
+    const asset = {
+      id: "multi",
+      circulating: { peggedUSD: 60, peggedEUR: 40 },
+      circulatingPrevDay: null,
+    } as Parameters<typeof fillMissingSupplyHistory>[1][number];
+
+    await expect(fillMissingSupplyHistory(db, [asset])).resolves.toBe(0);
+    expect(asset.circulatingPrevDay).toBeNull();
+  });
 });
 
 

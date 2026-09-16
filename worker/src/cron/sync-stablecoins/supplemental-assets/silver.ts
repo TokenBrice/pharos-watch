@@ -10,7 +10,7 @@ import { throwIfAborted } from "../../../lib/abort";
 import type { ChainRpcConfig } from "../../../lib/chain-registry";
 import type { PeggedAsset } from "../enrich-prices";
 import {
-  buildPricedSupplementalAsset,
+  fetchCommodityTokens,
   fetchSupplementalPriceData,
   resolveCuratedAggregateSupplementalSupply,
   resolveSupplementalPrice,
@@ -106,25 +106,19 @@ export async function fetchSilverTokens(
       }
     }
 
-    // Same per-chain gap as gold: CoinGecko exposes only an aggregate supply,
-    // so curated aggregate probes are the only per-chain path. Keep serial.
-    const tokens: PeggedAsset[] = [];
-    for (const meta of SILVER_METAS) {
-      const aggregate = await resolveCuratedAggregateSupplementalSupply(meta, priceData, cgData, chainRpcs, signal);
-      const mcap = aggregate?.mcap ?? mcapMap[meta.id] ?? 0;
-      if (!mcap) {
-        logWorkerEventArgs("handler", "warn", `[silver] No mcap for ${meta.symbol}, including with mcap=0`);
-      }
-
-      const token = buildPricedSupplementalAsset(meta, priceData, cgData, {
-        mcap,
-        supplySource: aggregate?.supplySource ?? "coingecko-fallback",
-        chainCirculating: aggregate?.chainCirculating,
-      });
-      if (token) tokens.push(token);
-    }
-
-    return tokens;
+    return fetchCommodityTokens(SILVER_METAS, {
+      logPrefix: "silver",
+      priceData,
+      cgData,
+      resolveSupply: async (meta) => {
+        const aggregate = await resolveCuratedAggregateSupplementalSupply(meta, priceData, cgData, chainRpcs, signal);
+        return {
+          mcap: aggregate?.mcap ?? mcapMap[meta.id] ?? 0,
+          supplySource: aggregate?.supplySource ?? "coingecko-fallback",
+          chainCirculating: aggregate?.chainCirculating,
+        };
+      },
+    });
   } catch (err) {
     if (signal?.aborted) throw err instanceof Error ? err : new Error(String(err));
     logWorkerEventArgs("handler", "error", "[silver] fetchSilverTokens failed:", err);

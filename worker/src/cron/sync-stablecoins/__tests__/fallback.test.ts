@@ -108,7 +108,7 @@ vi.mock("../runtime", () => ({
   checkStablecoinsPriceStaleness: subPhaseMocks.checkStablecoinsPriceStaleness,
 }));
 
-import { syncViaCoingeckoFallback } from "../fallback";
+import { restoreFallbackCacheState, syncViaCoingeckoFallback } from "../fallback";
 
 // ---------------------------------------------------------------------------
 // Helpers to build realistic cgData for the REAL registry
@@ -385,5 +385,57 @@ describe("syncViaCoingeckoFallback orchestrator", () => {
       },
       activePublicationCoverage: { complete: false },
     });
+  });
+
+  it("(i) carries previous buckets only within the seven-day restore ceiling", async () => {
+    const freshObservedAt = NOW_SEC - 7 * 86400;
+    const staleObservedAt = freshObservedAt - 1;
+    const previous = (supplyObservedAt: number): PeggedAsset => ({
+      id: "fixture-usd",
+      name: "Fixture",
+      symbol: "FIX",
+      pegType: "peggedUSD",
+      pegMechanism: "fiat-backed",
+      circulating: { peggedUSD: 100 },
+      circulatingPrevDay: { peggedUSD: 90 },
+      circulatingPrevWeek: { peggedUSD: 80 },
+      circulatingPrevMonth: { peggedUSD: 70 },
+      chainCirculating: { Ethereum: { current: 100 } },
+      chains: ["Ethereum"],
+      supplyObservedAt,
+    } as PeggedAsset);
+    const current = (): PeggedAsset => ({
+      ...previous(NOW_SEC),
+      circulatingPrevDay: null,
+      circulatingPrevWeek: null,
+      circulatingPrevMonth: null,
+      chainCirculating: {},
+      chains: [],
+      supplyObservedAt: undefined,
+    });
+    const nowSpy = vi.spyOn(Date, "now").mockReturnValue(NOW_SEC * 1000);
+
+    subPhaseMocks.loadPreviousStablecoinsById.mockResolvedValueOnce({
+      previousAssetsById: new Map([["fixture-usd", previous(freshObservedAt)]]),
+      cacheState: { state: "ok" },
+    });
+    const fresh = current();
+    await restoreFallbackCacheState({ db: mockD1([]), assets: [fresh] });
+    expect(fresh).toMatchObject({
+      circulatingPrevDay: { peggedUSD: 90 },
+      chainCirculating: { Ethereum: { current: 100 } },
+      supplyObservedAt: freshObservedAt,
+    });
+
+    subPhaseMocks.loadPreviousStablecoinsById.mockResolvedValueOnce({
+      previousAssetsById: new Map([["fixture-usd", previous(staleObservedAt)]]),
+      cacheState: { state: "ok" },
+    });
+    const stale = current();
+    await restoreFallbackCacheState({ db: mockD1([]), assets: [stale] });
+    expect(stale.circulatingPrevDay).toBeNull();
+    expect(stale.chainCirculating).toEqual({});
+    expect(stale.supplyObservedAt).toBeUndefined();
+    nowSpy.mockRestore();
   });
 });
