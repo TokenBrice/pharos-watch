@@ -1,6 +1,7 @@
 "use client";
 
 import { THREAT_BAND_LABELS, THREAT_BAND_STYLES } from "@shared/lib/classification";
+import { dewsBandRanges } from "@shared/lib/dews-config";
 import { THREAT_BAND_HEX } from "@/lib/chart-colors";
 import { clampScore } from "@shared/lib/math";
 import type { ThreatBand } from "@shared/lib/classification";
@@ -13,11 +14,12 @@ import type { MethodologyContextKey } from "@/lib/methodology-context";
  * CALM is intentionally collapsed into WATCH on the strip \u2014 the strip exists
  * to show distance to higher bands, not to celebrate calm.
  */
+const [calmRange, watchRange, alertRange, warningRange, dangerRange] = dewsBandRanges();
 const STRIP_BANDS = [
-  { x1: 0, x2: 25, hex: THREAT_BAND_HEX.WATCH, label: "Watch" },
-  { x1: 25, x2: 50, hex: THREAT_BAND_HEX.ALERT, label: "Alert" },
-  { x1: 50, x2: 75, hex: THREAT_BAND_HEX.WARNING, label: "Warning" },
-  { x1: 75, x2: 100, hex: THREAT_BAND_HEX.DANGER, label: "Danger" },
+  { x1: calmRange[0], x2: watchRange[1], hex: THREAT_BAND_HEX.WATCH, label: THREAT_BAND_LABELS.WATCH },
+  { x1: alertRange[0], x2: alertRange[1], hex: THREAT_BAND_HEX.ALERT, label: THREAT_BAND_LABELS.ALERT },
+  { x1: warningRange[0], x2: warningRange[1], hex: THREAT_BAND_HEX.WARNING, label: THREAT_BAND_LABELS.WARNING },
+  { x1: dangerRange[0], x2: dangerRange[1], hex: THREAT_BAND_HEX.DANGER, label: THREAT_BAND_LABELS.DANGER },
 ] as const;
 
 interface DewsBandStripProps {

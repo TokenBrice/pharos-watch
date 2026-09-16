@@ -7,6 +7,7 @@ import { Card, CardHeader, CardContent } from "@/components/ui/card";
 import { useStressSignalDetail } from "@/hooks/api-hooks";
 import { useChartContainerReady } from "@/hooks/use-chart-container-ready";
 import { THREAT_BAND_LABELS, THREAT_BAND_STYLES } from "@shared/lib/classification";
+import { DEWS_THREAT_BANDS } from "@shared/lib/dews-config";
 import { CHART_PALETTE, THREAT_BAND_HEX, SIGNAL_CHART_COLORS } from "@/lib/chart-colors";
 
 /* Figma coin template: the DEWS history chart renders in the frost/teal
@@ -49,13 +50,10 @@ function snapDewsYMax(max: number): number {
   return 100;
 }
 
-/** Map a signal score to its severity color (per-signal, not composite band) */
+/** Map a signal score to its severity color using the canonical DEWS ladder. */
 function signalBarHex(value: number): string {
-  if (value < 25) return THREAT_BAND_HEX.CALM;
-  if (value < 50) return THREAT_BAND_HEX.WATCH;
-  if (value < 75) return THREAT_BAND_HEX.ALERT;
-  if (value < 90) return THREAT_BAND_HEX.WARNING;
-  return THREAT_BAND_HEX.DANGER;
+  const band = DEWS_THREAT_BANDS.find(({ upper }) => value <= upper)?.band ?? "DANGER";
+  return THREAT_BAND_HEX[band];
 }
 
 /* Only `available` signals reach a bar at all (unavailable ones are named in the
@@ -365,7 +363,7 @@ export function DEWSDetail({ stablecoinId }: DEWSDetailProps) {
                   <TimeXAxis dataKey="ts" tickFormatter={(ts: number) => formatChartDate(ts, "short")} />
                   <MonoYAxis domain={[0, showBreakdown ? signalYMax : chartYMax]} width={40} />
                   {(showBreakdown ? signalYMax : chartYMax) >= 50 && (
-                    <ReferenceLine y={25} stroke={THREAT_BAND_HEX.WATCH} strokeDasharray="4 4" strokeOpacity={0.25} />
+                    <ReferenceLine y={DEWS_THREAT_BANDS[1].upper} stroke={THREAT_BAND_HEX.WATCH} strokeDasharray="4 4" strokeOpacity={0.25} />
                   )}
                   <DateTooltip
                     formatter={(val, name) => [

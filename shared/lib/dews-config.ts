@@ -45,3 +45,16 @@ export const DEWS_THREAT_BANDS = [
   { upper: 75, band: "WARNING" },
   { upper: 100, band: "DANGER" },
 ] as const;
+export type DewsBandRange = readonly [lower: number, upper: number];
+
+/**
+ * Return the inclusive score spans represented by the canonical DEWS ladder.
+ * The first band starts at zero; every later band starts one point above the
+ * previous band's upper bound.
+ */
+export function dewsBandRanges(): readonly DewsBandRange[] {
+  return DEWS_THREAT_BANDS.map(({ upper }, index) => [
+    index === 0 ? 0 : DEWS_THREAT_BANDS[index - 1].upper + 1,
+    upper,
+  ] as const);
+}
