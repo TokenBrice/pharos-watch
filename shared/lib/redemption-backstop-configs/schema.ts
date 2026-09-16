@@ -445,34 +445,48 @@ export const RedemptionBackstopConfigSchema = z
       });
     }
 
+    const effectiveCostModel = { ...config.costModel, ...config.v9RouteCostTerms };
     if (
-      config.costModel.feeBpsMin != null &&
-      config.costModel.feeBpsMax != null &&
-      config.costModel.feeBpsMin > config.costModel.feeBpsMax
+      effectiveCostModel.feeBpsMin != null &&
+      effectiveCostModel.feeBpsMax != null &&
+      effectiveCostModel.feeBpsMin > effectiveCostModel.feeBpsMax
     ) {
       ctx.addIssue({
         code: "custom",
-        path: ["costModel", "feeBpsMin"],
+        path: [
+          config.v9RouteCostTerms?.feeBpsMin !== undefined ? "v9RouteCostTerms" : "costModel",
+          "feeBpsMin",
+        ],
         message: "feeBpsMin must be less than or equal to feeBpsMax",
       });
     }
 
     const normalFeeBps =
-      config.costModel.kind === "fee-bps"
-        ? config.costModel.feeBps
-        : (config.costModel.feeBpsMax ?? config.costModel.feeBpsMin);
-    if (config.costModel.stressFeeBps != null && normalFeeBps != null && config.costModel.stressFeeBps < normalFeeBps) {
+      effectiveCostModel.feeBpsMax ??
+      effectiveCostModel.feeBpsMin ??
+      (effectiveCostModel.kind === "fee-bps" ? effectiveCostModel.feeBps : undefined);
+    if (
+      effectiveCostModel.stressFeeBps != null &&
+      normalFeeBps != null &&
+      effectiveCostModel.stressFeeBps < normalFeeBps
+    ) {
       ctx.addIssue({
         code: "custom",
-        path: ["costModel", "stressFeeBps"],
+        path: [
+          config.v9RouteCostTerms?.stressFeeBps !== undefined ? "v9RouteCostTerms" : "costModel",
+          "stressFeeBps",
+        ],
         message: "stressFeeBps must be greater than or equal to the normal fee bound",
       });
     }
 
-    if (config.costModel.feeScenario === "stress" && config.costModel.stressFeeBps == null) {
+    if (effectiveCostModel.feeScenario === "stress" && effectiveCostModel.stressFeeBps == null) {
       ctx.addIssue({
         code: "custom",
-        path: ["costModel", "stressFeeBps"],
+        path: [
+          config.v9RouteCostTerms?.feeScenario !== undefined ? "v9RouteCostTerms" : "costModel",
+          "stressFeeBps",
+        ],
         message: "feeScenario=stress requires stressFeeBps",
       });
     }
