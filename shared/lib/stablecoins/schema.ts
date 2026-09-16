@@ -648,6 +648,15 @@ export const StablecoinMetaAssetSchema: z.ZodType<StablecoinMeta, unknown> = Sta
     }
   })
   .superRefine((meta, ctx) => {
+    if (meta.pegReferenceId != null && meta.variantOf == null) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "pegReferenceId requires variantOf",
+        path: ["variantOf"],
+      });
+    }
+  })
+  .superRefine((meta, ctx) => {
     if (meta.variantOf != null && meta.pegReferenceId != null && meta.variantOf !== meta.pegReferenceId) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
