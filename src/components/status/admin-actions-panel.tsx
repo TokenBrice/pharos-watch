@@ -26,22 +26,13 @@ import {
   deriveStatusActionRecommendations,
   type StatusActionRecommendation,
 } from "@/lib/status/action-recommendations";
+import {
+  STATUS_PAGE_RISK_CLASSES,
+  STATUS_PAGE_RISK_LABELS,
+} from "@/lib/status/dashboard-presentation";
 
 const ADMIN_ACTIONS = getStatusPageActions();
 
-const RISK_LABEL: Record<StatusPageActionRisk, string> = {
-  "read-only": "Read only",
-  low: "Low",
-  moderate: "Moderate",
-  high: "High",
-};
-
-const RISK_CLASS: Record<StatusPageActionRisk, string> = {
-  "read-only": "bg-emerald-500/10 text-emerald-700 dark:text-emerald-300",
-  low: "bg-blue-500/10 text-blue-700 dark:text-blue-300",
-  moderate: "bg-amber-500/10 text-amber-800 dark:text-amber-200",
-  high: "bg-red-500/10 text-red-700 dark:text-red-300",
-};
 
 const ACTIVITY_CLASS: Record<ActionActivity["status"], string> = {
   ready: "bg-muted text-muted-foreground",
@@ -149,7 +140,7 @@ function ActionCatalogRow({
         <div className="min-w-0 space-y-2">
           <div className="flex flex-wrap items-center gap-2">
             <h4 className="text-sm font-semibold text-foreground">{action.label}</h4>
-            <StatusPill className={RISK_CLASS[action.risk]}>{RISK_LABEL[action.risk]}</StatusPill>
+            <StatusPill className={STATUS_PAGE_RISK_CLASSES[action.risk]}>{STATUS_PAGE_RISK_LABELS[action.risk]}</StatusPill>
             <StatusPill
               className={
                 liveReadiness.blocked
@@ -486,7 +477,7 @@ export function AdminActionsPanel({
                 className="h-11 rounded-md border border-input bg-background px-3 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"
               >
                 <option value="all">All risks</option>
-                {Object.entries(RISK_LABEL).map(([value, label]) => (
+                {Object.entries(STATUS_PAGE_RISK_LABELS).map(([value, label]) => (
                   <option key={value} value={value}>
                     {label}
                   </option>

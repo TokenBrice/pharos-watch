@@ -1,8 +1,7 @@
 import Link from "next/link";
 import { cn } from "@/lib/utils";
-import { GENIUS_AUTHORIZATION_STATUS_BADGE_STYLES } from "@shared/lib/genius";
-import { MICA_STATUS_BADGE_STYLES } from "@shared/lib/mica";
-import type { GeniusAuthorizationStatus, MicaStatus } from "@shared/types";
+import { GENIUS_AUTHORIZATION_STATUS_BADGE_STYLES, GENIUS_STATUS_SEGMENT_CLASSES } from "@shared/lib/genius";
+import { MICA_STATUS_BADGE_STYLES, MICA_STATUS_SEGMENT_CLASSES } from "@shared/lib/mica";
 import type { ComplianceStatusDistribution } from "@/lib/compliance-model";
 
 interface DistributionSegment {
@@ -13,26 +12,6 @@ interface DistributionSegment {
   colorClassName: string;
 }
 
-const MICA_SEGMENT_COLOR_CLASSES: Record<MicaStatus, string> = {
-  authorized: "bg-green-600",
-  pending: "bg-amber-600",
-  transitional: "bg-cyan-600",
-  "non-compliant": "bg-red-600",
-  "out-of-scope": "bg-gray-400 dark:bg-gray-500",
-};
-
-const GENIUS_SEGMENT_COLOR_CLASSES: Partial<Record<GeniusAuthorizationStatus, string>> = {
-  "ppsi-approved": "bg-green-600",
-  "state-qualified": "bg-violet-600",
-  "official-application-pending": "bg-amber-600",
-  "issuer-announced-intent": "bg-blue-600",
-};
-
-const GENIUS_NEUTRAL_STATUSES = new Set<GeniusAuthorizationStatus>([
-  "no-public-authorization-found",
-  "unknown",
-  "not-applicable",
-]);
 
 function buildMicaSegments(distribution: ComplianceStatusDistribution["mica"]): DistributionSegment[] {
   return distribution.map(({ status, count }) => ({
@@ -40,14 +19,14 @@ function buildMicaSegments(distribution: ComplianceStatusDistribution["mica"]): 
     label: MICA_STATUS_BADGE_STYLES[status].label,
     count,
     href: `/compliance/?regime=mica&status=${status}`,
-    colorClassName: MICA_SEGMENT_COLOR_CLASSES[status],
+    colorClassName: MICA_STATUS_SEGMENT_CLASSES[status],
   }));
 }
 
 function buildGeniusSegments(distribution: ComplianceStatusDistribution["genius"]): DistributionSegment[] {
   const signalSegments = distribution.flatMap(({ status, count }) => {
-    const colorClassName = GENIUS_SEGMENT_COLOR_CLASSES[status];
-    if (!colorClassName) return [];
+    const colorClassName = GENIUS_STATUS_SEGMENT_CLASSES[status];
+    if (colorClassName == null) return [];
     return [{
       key: status,
       label: GENIUS_AUTHORIZATION_STATUS_BADGE_STYLES[status].label,
@@ -57,7 +36,7 @@ function buildGeniusSegments(distribution: ComplianceStatusDistribution["genius"
     }];
   });
   const neutralCount = distribution.reduce(
-    (total, item) => total + (GENIUS_NEUTRAL_STATUSES.has(item.status) ? item.count : 0),
+    (total, item) => total + (GENIUS_STATUS_SEGMENT_CLASSES[item.status] == null ? item.count : 0),
     0,
   );
   if (neutralCount === 0) return signalSegments;
@@ -68,7 +47,7 @@ function buildGeniusSegments(distribution: ComplianceStatusDistribution["genius"
       label: "No public signal",
       count: neutralCount,
       href: "/compliance/?regime=genius&status=all",
-      colorClassName: "bg-gray-400 dark:bg-gray-500",
+      colorClassName: MICA_STATUS_SEGMENT_CLASSES["out-of-scope"],
     },
   ];
 }

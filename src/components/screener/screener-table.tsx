@@ -24,7 +24,12 @@ import { SafetyScoreTopDriver } from "@/components/safety-score-top-driver";
 import { buildStablecoinUrl } from "@shared/lib/urls";
 import { formatCompactUsd } from "@shared/lib/format";
 import { MINT_AUTHORITY_STATUS_CONFIG } from "@/lib/mint-authority-display";
-import { PEG_METADATA, getMechanismArchetypeLabel } from "@shared/lib/classification";
+import {
+  PEG_METADATA,
+  getMechanismArchetypeLabel,
+  SAFETY_EVIDENCE_BADGE_CLASSES,
+  SAFETY_EVIDENCE_LABELS,
+} from "@shared/lib/classification";
 import { SAFETY_SCORE_METHODOLOGY_VERSION_LABEL } from "@shared/lib/methodology-versions/constants";
 import type { ScreenerRow, ScreenerSortKey } from "@/lib/screener-filters";
 import type { DataTableSortControls } from "@/components/data-table-shell";
@@ -484,19 +489,6 @@ function ScreenerTableRow({
   );
 }
 
-const EVIDENCE_BADGE_CLASSES: Record<ScreenerRow["safetyEvidence"], string> = {
-  strong: "border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300",
-  adequate: "border-sky-500/30 bg-sky-500/10 text-sky-700 dark:text-sky-300",
-  limited: "border-amber-500/30 bg-amber-500/10 text-amber-700 dark:text-amber-300",
-  nr: "border-border/60 bg-muted/30 text-muted-foreground",
-};
-
-const EVIDENCE_LABELS: Record<ScreenerRow["safetyEvidence"], string> = {
-  strong: "Strong",
-  adequate: "Adequate",
-  limited: "Limited",
-  nr: "NR",
-};
 
 // ScreenerRow intentionally remains the existing scalar projection; it does
 // not carry the card freshness enum, so this path reports age as unknown
@@ -536,7 +528,7 @@ function projectScreenerTopDriver(row: ScreenerRow): SafetyScoreV9TopDriver | nu
 function V9Profile({ row, compact = false }: { row: ScreenerRow; compact?: boolean }) {
   const title = row.safetyBindingCapReason
     ? `Binding V9 cap: ${row.safetyBindingCapReason}`
-    : `V9 evidence: ${EVIDENCE_LABELS[row.safetyEvidence]}`;
+    : `V9 evidence: ${SAFETY_EVIDENCE_LABELS[row.safetyEvidence]}`;
   return (
     <span className={`inline-flex ${compact ? "items-center" : "flex-col"} gap-1`} title={title}>
       <span className="inline-flex items-center gap-1 pharos-numeric text-xs">
@@ -546,8 +538,8 @@ function V9Profile({ row, compact = false }: { row: ScreenerRow; compact?: boole
         <span className="text-border">/</span>
         <PillarReading label="C" value={row.safetyControlScore} weakest={row.safetyWeakestPillar === "control"} />
       </span>
-      <span className={`rounded-full border px-1.5 py-0.5 text-[10px] font-semibold leading-none ${EVIDENCE_BADGE_CLASSES[row.safetyEvidence]}`}>
-        {EVIDENCE_LABELS[row.safetyEvidence]}
+      <span className={`rounded-full border px-1.5 py-0.5 text-[10px] font-semibold leading-none ${SAFETY_EVIDENCE_BADGE_CLASSES[row.safetyEvidence]}`}>
+        {SAFETY_EVIDENCE_LABELS[row.safetyEvidence]}
       </span>
     </span>
   );

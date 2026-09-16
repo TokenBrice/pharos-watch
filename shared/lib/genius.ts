@@ -12,6 +12,7 @@ interface GeniusAuthorizationStatusDescriptor {
   badge: BadgeStyle;
   shortLabel: string;
   textCls: string | undefined;
+  segmentClass: string | null;
   description: string;
 }
 
@@ -23,6 +24,7 @@ const GENIUS_AUTHORIZATION_STATUS_DESCRIPTORS = {
     },
     shortLabel: "PPSI Approved",
     textCls: "text-emerald-700 dark:text-emerald-400",
+    segmentClass: "bg-green-600",
     description: "Official source identifies a domestic permitted payment stablecoin issuer approval for this token or issuer pathway.",
   },
   "state-qualified": {
@@ -32,6 +34,7 @@ const GENIUS_AUTHORIZATION_STATUS_DESCRIPTORS = {
     },
     shortLabel: "State Qualified",
     textCls: "text-emerald-700 dark:text-emerald-400",
+    segmentClass: "bg-violet-600",
     description: "Official source identifies a state-qualified payment stablecoin issuer pathway.",
   },
   "official-application-pending": {
@@ -41,6 +44,7 @@ const GENIUS_AUTHORIZATION_STATUS_DESCRIPTORS = {
     },
     shortLabel: "Filing Pending",
     textCls: undefined,
+    segmentClass: "bg-amber-600",
     description: "Public regulator source shows an application or registration is filed and pending.",
   },
   "issuer-announced-intent": {
@@ -50,24 +54,28 @@ const GENIUS_AUTHORIZATION_STATUS_DESCRIPTORS = {
     },
     shortLabel: "Issuer Intent",
     textCls: undefined,
+    segmentClass: "bg-blue-600",
     description: "Issuer or partner materials signal a GENIUS-era issuance path, but no token-specific official approval was found.",
   },
   "no-public-authorization-found": {
     badge: { label: "No Public Auth Found", cls: "bg-muted/40 text-muted-foreground border-border/60" },
     shortLabel: "None Found",
     textCls: "text-muted-foreground",
+    segmentClass: null,
     description: "A dated negative-evidence review found no qualifying public approval, application, or registration source.",
   },
   "not-applicable": {
     badge: { label: "Not Applicable", cls: "bg-muted/40 text-muted-foreground border-border/60" },
     shortLabel: "Not Applicable",
     textCls: "text-muted-foreground",
+    segmentClass: null,
     description: "The reviewed asset is outside the tracked GENIUS payment-stablecoin authorization posture.",
   },
   unknown: {
     badge: { label: "Unknown", cls: "bg-muted/40 text-muted-foreground border-border/60" },
     shortLabel: "Unknown",
     textCls: "text-muted-foreground",
+    segmentClass: null,
     description: "The public posture has not been resolved from available sources.",
   },
 } as const satisfies Record<GeniusAuthorizationStatus, GeniusAuthorizationStatusDescriptor>;
@@ -85,6 +93,10 @@ function projectAuthorizationStatuses<Value>(
 
 export const GENIUS_AUTHORIZATION_STATUS_BADGE_STYLES = projectAuthorizationStatuses(
   (descriptor) => descriptor.badge,
+);
+/** Solid fill classes for signal segments; null means no public signal. */
+export const GENIUS_STATUS_SEGMENT_CLASSES = projectAuthorizationStatuses(
+  (descriptor) => descriptor.segmentClass,
 );
 
 /**

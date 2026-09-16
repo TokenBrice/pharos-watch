@@ -27,7 +27,7 @@ import {
 import type { CoinOption } from "@/lib/compare-types";
 import { SEVERITY_TONE_CLASS } from "@/lib/severity-tone";
 import { cn } from "@/lib/utils";
-import { STATUS_OK_PILL_CLASS } from "@/lib/status-dashboard-model";
+import { STATUS_PAGE_RISK_CLASSES, STATUS_PAGE_RISK_LABELS } from "@/lib/status/dashboard-presentation";
 
 const STATUS_LABEL: Record<AdminActionExecution["status"], string> = {
   ready: "Ready",
@@ -47,19 +47,6 @@ const KIND_LABEL = {
   communication: "Communication",
 } as const;
 
-const RISK_LABEL = {
-  "read-only": "Read only",
-  low: "Low risk",
-  moderate: "Moderate risk",
-  high: "High risk",
-} as const;
-
-const RISK_CLASS = {
-  "read-only": STATUS_OK_PILL_CLASS,
-  low: SEVERITY_TONE_CLASS.info.pill,
-  moderate: SEVERITY_TONE_CLASS.watch.pill,
-  high: SEVERITY_TONE_CLASS.alert.pill,
-} as const;
 
 const RESULT_MODE_LABEL = {
   immediate: "Immediate result",
@@ -309,9 +296,9 @@ export function AdminActionExecutionDialog({
           <div>
             <div className="text-muted-foreground">Risk</div>
             <span
-              className={`mt-0.5 inline-flex rounded-full border px-2 py-0.5 font-medium ${RISK_CLASS[action.risk]}`}
+              className={`mt-0.5 inline-flex rounded-full border px-2 py-0.5 font-medium ${STATUS_PAGE_RISK_CLASSES[action.risk]}`}
             >
-              {RISK_LABEL[action.risk]}
+              {STATUS_PAGE_RISK_LABELS[action.risk]}
             </span>
           </div>
           <div>

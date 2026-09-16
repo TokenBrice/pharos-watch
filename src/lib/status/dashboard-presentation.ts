@@ -1,33 +1,48 @@
 import type { StatusCause, StatusResponse } from "@shared/types";
+import type { StatusPageActionRisk } from "@shared/lib/api-endpoints";
 import type { DashboardIssueKind, DashboardNotice } from "@/lib/status/dashboard-types";
+import { SEVERITY_TONE_CLASS } from "@/lib/severity-tone";
 
 export const STATUS_TONE = {
   healthy: {
     label: "Healthy",
-    badgeClassName: "border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300",
-    valueClassName: "text-emerald-700 dark:text-emerald-400",
+    badgeClassName: SEVERITY_TONE_CLASS.ok.pill,
+    valueClassName: SEVERITY_TONE_CLASS.ok.text,
   },
   degraded: {
     label: "Degraded",
-    badgeClassName: "border-amber-500/30 bg-amber-500/10 text-amber-700 dark:text-amber-300",
-    valueClassName: "text-amber-700 dark:text-amber-400",
+    badgeClassName: SEVERITY_TONE_CLASS.watch.pill,
+    valueClassName: SEVERITY_TONE_CLASS.watch.text,
   },
   stale: {
     label: "Stale",
-    badgeClassName: "border-red-500/30 bg-red-500/10 text-red-700 dark:text-red-300",
-    valueClassName: "text-red-700 dark:text-red-400",
+    badgeClassName: SEVERITY_TONE_CLASS.alert.pill,
+    valueClassName: SEVERITY_TONE_CLASS.alert.text,
   },
 } as const;
 
 export const STATUS_PRIORITY = { healthy: 0, degraded: 1, stale: 2 } as const;
+export const STATUS_PAGE_RISK_LABELS: Record<StatusPageActionRisk, string> = {
+  "read-only": "Read only",
+  low: "Low risk",
+  moderate: "Moderate risk",
+  high: "High risk",
+};
+
+export const STATUS_PAGE_RISK_CLASSES: Record<StatusPageActionRisk, string> = {
+  "read-only": SEVERITY_TONE_CLASS.ok.pill,
+  low: SEVERITY_TONE_CLASS.info.pill,
+  moderate: SEVERITY_TONE_CLASS.watch.pill,
+  high: SEVERITY_TONE_CLASS.alert.pill,
+};
 
 export type OperationalTone = "ok" | "warning" | "error" | "unknown";
 
 export const OPERATIONAL_PILL_CLASS: Record<OperationalTone, string> = {
-  ok: "bg-emerald-500/15 text-emerald-700 dark:text-emerald-400",
-  warning: "bg-amber-500/15 text-amber-700 dark:text-amber-400",
-  error: "bg-red-500/15 text-red-700 dark:text-red-400",
-  unknown: "bg-muted text-muted-foreground",
+  ok: `bg-emerald-500/15 ${SEVERITY_TONE_CLASS.ok.text}`,
+  warning: `bg-amber-500/15 ${SEVERITY_TONE_CLASS.watch.text}`,
+  error: `bg-red-500/15 ${SEVERITY_TONE_CLASS.alert.text}`,
+  unknown: `bg-muted ${SEVERITY_TONE_CLASS.neutral.text}`,
 };
 
 type StatusTimeZoneName = Intl.DateTimeFormatOptions["timeZoneName"];
@@ -79,7 +94,7 @@ export function getSeverityBadgeClass(severity: StatusCause["severity"]): string
 export function getIssueKindBadgeClass(kind: DashboardIssueKind): string {
   if (kind === "impacting") return OPERATIONAL_PILL_CLASS.error;
   if (kind === "warning") return OPERATIONAL_PILL_CLASS.warning;
-  if (kind === "maintenance") return "bg-blue-500/15 text-blue-700 dark:text-blue-400";
+  if (kind === "maintenance") return `bg-blue-500/15 ${SEVERITY_TONE_CLASS.info.text}`;
   return OPERATIONAL_PILL_CLASS.unknown;
 }
 

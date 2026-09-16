@@ -13,8 +13,57 @@
 
 import { isQuietDeviationsEnabled } from "@/lib/feature-flags";
 import { SEVERITY_TONE_CLASS } from "@/lib/severity-tone";
+import type { MintPressureBand } from "@shared/lib/classification";
 
 const THRESHOLDS = { GREEN: 50, AMBER: 200, ORANGE: 500 } as const;
+
+export interface MintPressureStyle {
+  badgeClass: string;
+  valueClass: string;
+  panelClass: string;
+}
+
+/** Presentation styles for the canonical mint-pressure bands. */
+export const MINT_PRESSURE_STYLES: Record<MintPressureBand, MintPressureStyle> = {
+  "no-activity": {
+    badgeClass: "border-border/70 bg-muted/40 text-muted-foreground",
+    valueClass: "text-muted-foreground",
+    panelClass: "border-border/60 bg-background/35",
+  },
+  "mint-dominated": {
+    badgeClass:
+      "border-emerald-600/30 bg-emerald-500/10 text-emerald-700 dark:border-emerald-500/40 dark:bg-emerald-500/15 dark:text-emerald-300",
+    valueClass: SEVERITY_TONE_CLASS.ok.text,
+    panelClass:
+      "border-emerald-600/30 bg-emerald-500/10 dark:border-emerald-500/35 dark:bg-emerald-500/10",
+  },
+  "mint-tilt": {
+    badgeClass:
+      "border-lime-600/30 bg-lime-500/10 text-lime-700 dark:border-lime-500/40 dark:bg-lime-500/15 dark:text-lime-300",
+    valueClass: "text-lime-700 dark:text-lime-400",
+    panelClass:
+      "border-lime-600/30 bg-lime-500/10 dark:border-lime-500/35 dark:bg-lime-500/10",
+  },
+  balanced: {
+    badgeClass: "border-border/70 bg-muted/40 text-foreground",
+    valueClass: "text-foreground",
+    panelClass: "border-border/60 bg-background/40",
+  },
+  "burn-tilt": {
+    badgeClass:
+      "border-amber-600/30 bg-amber-500/10 text-amber-700 dark:border-amber-500/40 dark:bg-amber-500/15 dark:text-amber-300",
+    valueClass: SEVERITY_TONE_CLASS.watch.text,
+    panelClass:
+      "border-amber-600/30 bg-amber-500/10 dark:border-amber-500/35 dark:bg-amber-500/10",
+  },
+  "burn-dominated": {
+    badgeClass:
+      "border-red-600/30 bg-red-500/10 text-red-700 dark:border-red-500/40 dark:bg-red-500/15 dark:text-red-300",
+    valueClass: SEVERITY_TONE_CLASS.alert.text,
+    panelClass:
+      "border-red-600/30 bg-red-500/10 dark:border-red-500/35 dark:bg-red-500/10",
+  },
+};
 
 /** Severity border class with accent opacity — suitable for outlined badges. */
 export function deviationBorderClass(absBps: number): string {
@@ -61,10 +110,10 @@ export function deviationIconName(absBps: number): SeverityIcon {
 type ScoreTier = "green" | "blue" | "amber" | "red";
 
 export const TIER_TEXT: Record<ScoreTier, string> = {
-  green: "text-emerald-700 dark:text-emerald-400",
-  blue: "text-blue-700 dark:text-blue-400",
-  amber: "text-amber-700 dark:text-amber-400",
-  red: "text-red-700 dark:text-red-400",
+  green: SEVERITY_TONE_CLASS.ok.text,
+  blue: SEVERITY_TONE_CLASS.info.text,
+  amber: SEVERITY_TONE_CLASS.watch.text,
+  red: SEVERITY_TONE_CLASS.alert.text,
 };
 
 /**
@@ -152,14 +201,14 @@ export function getDurabilityColor(score: number): string {
 
 /** Map a 0-100 durability score to a Tailwind background color class */
 export function getDurabilityBgColor(score: number): string {
-  if (score >= 70) return "bg-emerald-500";
-  if (score >= 40) return "bg-amber-500";
-  return "bg-red-500";
+  if (score >= 70) return SEVERITY_TONE_CLASS.ok.bar;
+  if (score >= 40) return SEVERITY_TONE_CLASS.watch.bar;
+  return SEVERITY_TONE_CLASS.alert.bar;
 }
 
 /** Semantic color class for ratio-based quality (green/amber/red). */
 export function ratioQualityColor(ratio: number, highThreshold = 0.8, midThreshold = 0.5): string {
-  if (ratio >= highThreshold) return "text-emerald-700 dark:text-emerald-400";
-  if (ratio >= midThreshold) return "text-amber-700 dark:text-amber-400";
-  return "text-red-700 dark:text-red-400";
+  if (ratio >= highThreshold) return SEVERITY_TONE_CLASS.ok.text;
+  if (ratio >= midThreshold) return SEVERITY_TONE_CLASS.watch.text;
+  return SEVERITY_TONE_CLASS.alert.text;
 }
