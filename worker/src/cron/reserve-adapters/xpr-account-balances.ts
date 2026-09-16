@@ -4,6 +4,7 @@ import {
 } from "@shared/lib/live-reserve-adapters";
 import type { StablecoinMeta } from "@shared/types/core";
 import type { LiveReserveWarning, LiveReservesConfig } from "@shared/types/live-reserves";
+import { rethrowIfAborted } from "../../lib/abort";
 import {
   buildUnknownExposureWarning,
   computeUnknownExposurePct,
@@ -259,8 +260,8 @@ export async function fetchXprAccountBalancesReserves(
     try {
       return adaptBatch(await readBatch(baseUrl, params, signal, ctx), params);
     } catch (error) {
+      rethrowIfAborted(error, signal);
       lastError = error;
-      if (signal.aborted) break;
     }
   }
 

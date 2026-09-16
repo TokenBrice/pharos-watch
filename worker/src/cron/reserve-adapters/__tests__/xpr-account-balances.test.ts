@@ -166,4 +166,22 @@ describe("fetchXprAccountBalancesReserves", () => {
       config: { inputs: TWO_NODE_INPUTS },
     })).rejects.toThrow("503");
   });
+
+  it("propagates cancellation without probing a fallback node", async () => {
+    const controller = new AbortController();
+    controller.abort(new Error("xpr adapter cancelled"));
+    const network = installAdapterNetwork({
+      json: {
+        ...xprNetwork(PRIMARY).json!,
+        ...xprNetwork(FALLBACK).json!,
+      },
+    });
+
+    await expect(runAdapter("xpr-account-balances", "xmd-metal-dollar", {
+      network,
+      signal: controller.signal,
+      config: { inputs: TWO_NODE_INPUTS },
+    })).rejects.toThrow("xpr adapter cancelled");
+    expect(network.requests.every((request) => !request.url.startsWith(FALLBACK))).toBe(true);
+  });
 });

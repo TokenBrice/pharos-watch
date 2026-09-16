@@ -2,6 +2,7 @@ import { pinnedBlockPlan } from "./evm-observation-plan";
 import { parseLiveReserveAdapterParams, type LiveReserveAdapterParamsByKey } from "@shared/lib/live-reserve-adapters";
 import type { StablecoinMeta } from "@shared/types/core";
 import type { LiveReservesConfig } from "@shared/types/live-reserves";
+import { toErrorMessage } from "@shared/lib/error-utils";
 import { decodeAbiParameters } from "viem/utils";
 import { throwIfAborted } from "../../lib/abort";
 import type { AdapterContext, AdapterResult } from "./types";
@@ -12,6 +13,7 @@ import {
   fetchOnchainMulticall3,
   notApplicableFreshnessMetadata,
   requireOnchainInput,
+  reserveDegradedWarning,
   slicesFromValues,
 } from "./helpers";
 import { decodeAddressWord, decodeUint256Word } from "./abi-decode";
@@ -322,22 +324,6 @@ export async function fetchResupplyPairsReserves(
     throw new Error("resupply-pairs first-stage multicall failed");
   }
 
-  const guard: RedemptionGuardSnapshot | undefined = redemptionHandlerAddress
-    ? {
-        guardEnabled: decodeBooleanResult(
-          multicallResultByLabel(firstStage, "guard-enabled"),
-          `guardEnabled() for ${redemptionHandlerAddress}`,
-        ),
-        permissionlessPriceThreshold: decodeUint256Result(
-          multicallResultByLabel(firstStage, "permissionless-price-threshold"),
-          `permissionlessPriceThreshold() for ${redemptionHandlerAddress}`,
-        ),
-        reUsdOraclePrice: decodeUint256Result(
-          multicallResultByLabel(firstStage, "reusd-oracle-price"),
-          `reUsdOraclePrice() for ${redemptionHandlerAddress}`,
-        ),
-      }
-    : undefined;
 
   const pairState = pairs.map(({ index, pairAddress, ...pair }) => ({
     ...pair,
@@ -355,9 +341,6 @@ export async function fetchResupplyPairsReserves(
       multicallResultByLabel(firstStage, `pair:${index}:accounting`),
       pairAddress,
     ),
-    rawMaxRedeemableDebt: redemptionHandlerAddress
-      ? multicallResultByLabel(firstStage, `pair:${index}:max-redeemable-debt`)
-      : null,
   }));
 
   const secondStage = await fetchOnchainMulticall3({
@@ -383,7 +366,6 @@ export async function fetchResupplyPairsReserves(
     underlyingAddress,
     collateralAddress,
     accounting,
-    rawMaxRedeemableDebt,
   }) => {
     const totalCollateralAssets = decodeUint256Result(
       multicallResultByLabel(secondStage, `pair:${index}:collateral-assets`),
@@ -415,18 +397,52 @@ export async function fetchResupplyPairsReserves(
       totalBorrowShares: accounting.totalBorrowShares,
       totalCollateralShares: accounting.totalCollateral,
       totalCollateralAssets,
-      ...(redemptionHandlerAddress
-        ? {
-            maxRedeemableDebt: decodeUint256Result(rawMaxRedeemableDebt, `getMaxRedeemableDebt() for ${pairAddress}`),
-          }
-        : {}),
     };
   });
 
+  const warnings: NonNullable<AdapterResult["warnings"]> = [];
+  let snapshotsWithRedemption: readonly ResupplyPairSnapshot[] = snapshots;
+  let redemptionTelemetry: RedemptionTelemetryInput | undefined;
+  if (redemptionHandlerAddress) {
+    try {
+      const guard: RedemptionGuardSnapshot = {
+        guardEnabled: decodeBooleanResult(
+          multicallResultByLabel(firstStage, "guard-enabled"),
+          `guardEnabled() for ${redemptionHandlerAddress}`,
+        ),
+        permissionlessPriceThreshold: decodeUint256Result(
+          multicallResultByLabel(firstStage, "permissionless-price-threshold"),
+          `permissionlessPriceThreshold() for ${redemptionHandlerAddress}`,
+        ),
+        reUsdOraclePrice: decodeUint256Result(
+          multicallResultByLabel(firstStage, "reusd-oracle-price"),
+          `reUsdOraclePrice() for ${redemptionHandlerAddress}`,
+        ),
+      };
+      snapshotsWithRedemption = snapshots.map((snapshot, index) => ({
+        ...snapshot,
+        maxRedeemableDebt: decodeUint256Result(
+          multicallResultByLabel(firstStage, `pair:${index}:max-redeemable-debt`),
+          `getMaxRedeemableDebt() for ${snapshot.pairAddress}`,
+        ),
+      }));
+      redemptionTelemetry = { redemptionHandlerAddress, guard };
+    } catch (error) {
+      warnings.push(reserveDegradedWarning(
+        "resupply-redemption-telemetry-failed",
+        `Resupply redemption telemetry decode failed; reserves published without redemption metadata: ${toErrorMessage(error)}`,
+      ));
+    }
+  }
+
   const result = adaptResupplyPairSnapshots(
-    snapshots,
+    snapshotsWithRedemption,
     params.underlyings,
-    redemptionHandlerAddress && guard ? { redemptionHandlerAddress, guard } : undefined,
+    redemptionTelemetry,
   );
-  return { ...result, metadata: { ...result.metadata, observedBlock: plan.observedBlock } };
+  return {
+    ...result,
+    ...(warnings.length > 0 ? { warnings: [...(result.warnings ?? []), ...warnings] } : {}),
+    metadata: { ...result.metadata, observedBlock: plan.observedBlock },
+  };
 }

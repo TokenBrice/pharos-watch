@@ -139,6 +139,17 @@ describe("fdusd-independent-assurance (AOGB ISAE 3000 limited assurance)", () =>
     );
   });
 
+  it("derives the report month only from the reviewed CDN filename convention", () => {
+    expect(FDUSD_INDEPENDENT_ASSURANCE_PROFILE.reportDateFromCandidate?.(
+      FEB_2026_HREF,
+      "ISAE 3000 Attestation Report August 2026",
+    )).toBe("2026-02-28");
+    expect(FDUSD_INDEPENDENT_ASSURANCE_PROFILE.reportDateFromCandidate?.(
+      "https://cdn.prod.website-files.com/675ab99bf1f7ea944d49a55b/ISAE3000-attestation-report.pdf",
+      "ISAE 3000 Attestation Report August 2026",
+    )).toBeNull();
+  });
+
   it("fails closed when a newer unreviewed ISAE 3000 report appears", async () => {
     installFetch(indexHtml(
       '<a href="https://cdn.prod.website-files.com/675ab99bf1f7ea944d49a55b/cafe_ISAE3000%20-%20Attestation%20Report%20on%20Reserves%20Account%20August%202026.pdf">August 2026</a>',

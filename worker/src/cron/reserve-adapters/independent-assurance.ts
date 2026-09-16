@@ -259,6 +259,16 @@ function collectReportCandidates(html: string, indexUrl: string, profile: Indepe
 
 function parseDiscoveryDate(value: string): string | null {
   const decodedValue = decodeURIComponent(value);
+  const ambiguousNumeric = decodedValue.match(
+    /\b(\d{1,2})[./](\d{1,2})[./](?:19|20)?\d{2}\b/,
+  );
+  if (
+    ambiguousNumeric
+    && Number(ambiguousNumeric[1]) <= 12
+    && Number(ambiguousNumeric[2]) <= 12
+  ) {
+    return null;
+  }
   const shortMonthFirst = decodedValue.match(/\b(\d{1,2})[.]([0-9]{1,2})[.]((?:19|20)?\d{2})\b/);
   if (shortMonthFirst) {
     const month = Number(shortMonthFirst[1]);

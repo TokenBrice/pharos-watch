@@ -20,4 +20,23 @@ describe("audx-independent-assurance", () => {
     })).rejects.toThrow(/reviewed report URL is missing or duplicated/);
     expect(network.requests.map((request) => request.url)).toEqual([reviewed.officialIndexUrl]);
   });
+
+  it("fails closed on ambiguous slash or dot numeric report dates", async () => {
+    for (const ambiguousDate of ["08/09/2026", "08.09.2026"]) {
+      const network = installAdapterNetwork({
+        html: {
+          [reviewed.officialIndexUrl]: `
+            <a href="${reviewed.reportUrl}">31 July 2026 report</a>
+            <a href="https://www.audxtoken.com/reports/report-${ambiguousDate}.pdf">AUDX report</a>
+          `,
+        },
+      });
+
+      await expect(runAdapter("audx-independent-assurance", "audx-aussie-dollar-token", {
+        network,
+        nowSec: 1_757_003_600,
+      })).rejects.toThrow("ambiguous report date");
+      expect(network.requests.map((request) => request.url)).toEqual([reviewed.officialIndexUrl]);
+    }
+  });
 });
