@@ -60,7 +60,7 @@ interface HoneyFactoryRedemptionCapacityParams {
 interface RedemptionCapacityObservation {
   metadata?: Record<string, unknown>;
   warnings: LiveReserveWarning[];
-  /** Lowercased vault or custody-wallet address -> net converted assets (raw units) for custody-mode branches. */
+  /** `${chain}:${lowercased vault or custody-wallet address}` -> net converted assets for custody branches. */
   custodyBackingByHolder?: ReadonlyMap<string, bigint>;
   errorMessage?: string;
 }
@@ -455,12 +455,18 @@ async function observeHoneyFactoryRedemptionCapacity(
     const custodyBackingByHolder = new Map<string, bigint>();
     for (const observation of observations) {
       if (!observation.custodyInfo.isCustodyVault) continue;
-      custodyBackingByHolder.set(observation.vault.toLowerCase(), observation.convertedAssets);
-      if (observation.custodyInfo.custodyAddress != null) {
-        custodyBackingByHolder.set(
-          observation.custodyInfo.custodyAddress.toLowerCase(),
-          observation.convertedAssets,
-        );
+      const holderAddresses = new Set([
+        observation.vault.toLowerCase(),
+        ...(observation.custodyInfo.custodyAddress == null
+          ? []
+          : [observation.custodyInfo.custodyAddress.toLowerCase()]),
+      ]);
+      for (const address of holderAddresses) {
+        const key = `${input.chain}:${address}`;
+        if (custodyBackingByHolder.has(key)) {
+          throw new Error(`${ADAPTER_KEY}: multiple custody vaults resolve to ${key}`);
+        }
+        custodyBackingByHolder.set(key, observation.convertedAssets);
       }
     }
 
@@ -628,7 +634,10 @@ export async function fetchEvmBranchBalancesReserves(
       );
     }
     for (const entry of balances) {
-      const custodyBacking = custodyBackingByHolder.get(entry.branch.holder.toLowerCase());
+      const chain = entry.branch.chain ?? input.chain;
+      const custodyBacking = custodyBackingByHolder.get(
+        `${chain}:${entry.branch.holder.toLowerCase()}`,
+      );
       if (custodyBacking != null) {
         entry.balanceRaw = custodyBacking;
       }
