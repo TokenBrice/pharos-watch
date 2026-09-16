@@ -1,12 +1,8 @@
 import type { ReportCardGrade } from "@shared/types/report-card-grade";
-import {
-  safetyScorePublicationIdentitiesAreComparable,
-  safetyScorePublicationIdentitiesMatch,
-} from "@shared/lib/safety-score-publication";
+import { safetyScorePublicationIdentitiesAreComparable } from "@shared/lib/safety-score-publication";
 import {
   SafetyScorePublicationIdentitySchema,
   type SafetyScorePublicationIdentity,
-  type SafetyScoreV8PublicationIdentity,
 } from "@shared/types/safety-score-publication";
 
 export type SafetyScoreHistoryV2TransitionKind =
@@ -16,7 +12,6 @@ export type SafetyScoreHistoryV2TransitionKind =
   | "rollback-baseline"
   | "restoration-baseline";
 
-export type SafetyScoreHistoryV8Identity = SafetyScoreV8PublicationIdentity;
 export type SafetyScoreHistoryIdentity = SafetyScorePublicationIdentity;
 
 export interface SafetyScoreHistoryCompatibilityRow {
@@ -47,12 +42,6 @@ export interface SafetyScoreHistoryV2Row {
   prev_score: number | null;
 }
 
-export function safetyScoreHistoryIdentitiesMatch(
-  left: SafetyScoreHistoryIdentity,
-  right: SafetyScoreHistoryIdentity,
-): boolean {
-  return safetyScorePublicationIdentitiesMatch(left, right);
-}
 
 /**
  * Determines whether two history rows may represent one organic score series.
@@ -66,9 +55,6 @@ export function safetyScoreHistoryIdentitiesAreComparable(
   return safetyScorePublicationIdentitiesAreComparable(left, right);
 }
 
-export function safetyScoreLegacyHistoryV2Id(stablecoinId: string, recordedAt: number): string {
-  return `safety-score-history:v2:legacy:${encodeURIComponent(stablecoinId)}:${recordedAt}`;
-}
 
 function safetyScoreHistoryV2Id(input: {
   stablecoinId: string;
@@ -222,87 +208,6 @@ export function prepareSafetyScoreHistoryBoundaryWrite(
   });
 }
 
-export interface SafetyScoreHistoryBoundaryCard {
-  stablecoinId: string;
-  grade: ReportCardGrade;
-  score: number | null;
-}
-
-/**
- * Bounded activation, rollback, or restoration baseline writer. It is model
- * neutral and never creates a legacy row, so the caller can invoke it during
- * a cutover without implying an organic grade transition.
- */
-export function prepareSafetyScoreHistoryBoundaryWrites(
-  db: D1Database,
-  input: {
-    cards: readonly SafetyScoreHistoryBoundaryCard[];
-    recordedAt: number;
-    transitionKind: Extract<
-      SafetyScoreHistoryV2TransitionKind,
-      "methodology-boundary-baseline" | "rollback-baseline" | "restoration-baseline"
-    >;
-    identity: SafetyScoreHistoryIdentity;
-    createdAt: number;
-  },
-): D1PreparedStatement[] {
-  const seen = new Set<string>();
-  return input.cards.map((card) => {
-    if (seen.has(card.stablecoinId)) {
-      throw new Error(`Duplicate Safety Score boundary card: ${card.stablecoinId}`);
-    }
-    seen.add(card.stablecoinId);
-    return prepareSafetyScoreHistoryBoundaryWrite(db, {
-      stablecoinId: card.stablecoinId,
-      recordedAt: input.recordedAt,
-      grade: card.grade,
-      score: card.score,
-      transitionKind: input.transitionKind,
-      identity: input.identity,
-      createdAt: input.createdAt,
-    });
-  });
-}
-
-export function prepareV8OrganicSafetyScoreHistoryWrites(
-  db: D1Database,
-  input: {
-    stablecoinId: string;
-    recordedAt: number;
-    grade: ReportCardGrade;
-    score: number | null;
-    prevGrade: ReportCardGrade | null;
-    prevScore: number | null;
-    transitionKind: Extract<SafetyScoreHistoryV2TransitionKind, "initial-baseline" | "organic-grade-change">;
-    identity: SafetyScoreHistoryV8Identity;
-    createdAt: number;
-  },
-): readonly [D1PreparedStatement, D1PreparedStatement] {
-  const legacy = db
-    .prepare(
-      `INSERT OR IGNORE INTO safety_grade_history
-       (stablecoin_id, recorded_at, grade, score, prev_grade, prev_score, methodology_version)
-       VALUES (?, ?, ?, ?, ?, ?, ?)`,
-    )
-    .bind(
-      input.stablecoinId,
-      input.recordedAt,
-      input.grade,
-      input.score,
-      input.prevGrade,
-      input.prevScore,
-      input.identity.methodologyVersion,
-    );
-
-  const v2 = prepareSafetyScoreHistoryV2Write(db, {
-    ...input,
-    previousIdentity: input.transitionKind === "organic-grade-change" ? input.identity : null,
-    historyId: safetyScoreLegacyHistoryV2Id(input.stablecoinId, input.recordedAt),
-    legacyRecordedAt: input.recordedAt,
-  });
-
-  return [legacy, v2] as const;
-}
 
 /**
  * Compatibility projection for the existing public API. Boundary rows stay

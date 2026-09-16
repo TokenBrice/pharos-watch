@@ -35,6 +35,37 @@ import {
 } from "../../test-helpers/v9-fixed-input";
 
 describe("Safety Score v9 exact base fact-set adapter — exit and DEX coverage", { timeout: V9_EVALUATION_TEST_TIMEOUT_MS }, () => {
+  it("canonicalizes fractional capacity points in ascending numeric order", () => {
+    const fixed = structuredClone(exactFixedInput());
+    const observation = fixed.dexLiqMap.alpha!.exitRouteObservations![0]!;
+    observation.capacityCurve = [
+      {
+        requestedNotionalUsd: 2.5,
+        maxCostBps: 10.25,
+        executableUsd: 2.5,
+        completionRatio: 1,
+        executionCostBps: 10,
+      },
+      {
+        requestedNotionalUsd: 10.5,
+        maxCostBps: 9.5,
+        executableUsd: 10.5,
+        completionRatio: 1,
+        executionCostBps: 9,
+      },
+    ];
+    const dex = buildSafetyScoreV9RouteReviews(fixed, "alpha").find(
+      (review) => review.lane === "dex" && review.routeId === observation.routeId,
+    )!;
+    expect(dex.executionCosts.map((point) => [
+      point.maxCostBps,
+      point.requestedNotionalUsd,
+    ])).toEqual([
+      [9.5, 10.5],
+      [10.25, 2.5],
+    ]);
+  });
+
   it("preserves live queued terms through the production review and fact boundary", () => {
     const fixed = queuedRedemptionFixedInput();
     const reviewed = structuredClone(extension());

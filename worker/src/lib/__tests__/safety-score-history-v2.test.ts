@@ -5,25 +5,20 @@ import { fileURLToPath } from "node:url";
 import { afterEach, describe, expect, it } from "vitest";
 import { createSqliteD1 } from "@shared/test-utils/sqlite-d1";
 import { SAFETY_SCORE_METHODOLOGY_VERSION } from "@shared/lib/methodology-versions/safety-score";
-import {
-  safetyScorePublicationIdentitiesAreComparable,
-  safetyScorePublicationIdentitiesMatch,
-} from "@shared/lib/safety-score-publication";
-import type { SafetyScoreV9PublicationIdentity } from "@shared/types/safety-score-publication";
+import { safetyScorePublicationIdentitiesAreComparable } from "@shared/lib/safety-score-publication";
+import type {
+  SafetyScoreV8PublicationIdentity,
+  SafetyScoreV9PublicationIdentity,
+} from "@shared/types/safety-score-publication";
 import {
   SAFETY_SCORE_HISTORY_TAPE_SOURCE_SQL,
   fetchSafetyScoreHistoryCompatibilityRows,
   fetchSafetyScoreHistoryV2Rows,
   fetchLatestSafetyScoreHistoryV2Rows,
   prepareSafetyScoreHistoryBoundaryWrite,
-  prepareSafetyScoreHistoryBoundaryWrites,
   prepareSafetyScoreHistoryV2Write,
-  prepareV8OrganicSafetyScoreHistoryWrites,
   safetyScoreHistoryIdentitiesAreComparable,
-  safetyScoreHistoryIdentitiesMatch,
   safetyScoreHistoryIdentityFromV2Row,
-  safetyScoreLegacyHistoryV2Id,
-  type SafetyScoreHistoryV8Identity,
 } from "../safety-score-history-v2";
 
 const MIGRATIONS_DIR = resolve(dirname(fileURLToPath(import.meta.url)), "../../../migrations");
@@ -78,7 +73,10 @@ function createHistoryDatabase(): { sqlite: DatabaseSync; db: D1Database } {
   return { sqlite, db: createSqliteD1(sqlite) };
 }
 
-function v8Identity(overrides: Partial<SafetyScoreHistoryV8Identity> = {}): SafetyScoreHistoryV8Identity {
+
+function v8Identity(
+  overrides: Partial<SafetyScoreV8PublicationIdentity> = {},
+): SafetyScoreV8PublicationIdentity {
   return {
     model: "v8",
     schemaVersion: 1,
@@ -121,70 +119,22 @@ describe("Safety Score history V2", () => {
     const v9PolicyBoundary = v9Identity({ policyDigest: digest("f") });
 
     const comparisons = [
-      { left: v8Current, right: v8Current, exact: true, comparable: true },
-      { left: v8Current, right: v8Refreshed, exact: false, comparable: true },
-      { left: v9Current, right: v9Current, exact: true, comparable: true },
-      { left: v9Current, right: v9Refreshed, exact: false, comparable: true },
-      { left: v9Current, right: v9PolicyBoundary, exact: false, comparable: false },
-      { left: v8Current, right: v9Current, exact: false, comparable: false },
+      { left: v8Current, right: v8Current, comparable: true },
+      { left: v8Current, right: v8Refreshed, comparable: true },
+      { left: v9Current, right: v9Current, comparable: true },
+      { left: v9Current, right: v9Refreshed, comparable: true },
+      { left: v9Current, right: v9PolicyBoundary, comparable: false },
+      { left: v8Current, right: v9Current, comparable: false },
     ];
 
-    for (const { left, right, exact, comparable } of comparisons) {
-      expect(safetyScoreHistoryIdentitiesMatch(left, right)).toBe(exact);
+    for (const { left, right, comparable } of comparisons) {
       expect(safetyScoreHistoryIdentitiesAreComparable(left, right)).toBe(comparable);
-      expect(safetyScoreHistoryIdentitiesMatch(left, right)).toBe(
-        safetyScorePublicationIdentitiesMatch(left, right),
-      );
       expect(safetyScoreHistoryIdentitiesAreComparable(left, right)).toBe(
         safetyScorePublicationIdentitiesAreComparable(left, right),
       );
     }
   });
 
-  it("dual-writes a legacy organic row and its immutable identity-rich V2 twin", async () => {
-    const { sqlite, db } = createHistoryDatabase();
-    const statements = prepareV8OrganicSafetyScoreHistoryWrites(db, {
-      stablecoinId: "usdc-circle",
-      recordedAt: 200,
-      grade: "A",
-      score: 88,
-      prevGrade: "B+",
-      prevScore: 79,
-      transitionKind: "organic-grade-change",
-      identity: v8Identity(),
-      createdAt: 205,
-    });
-
-    await db.batch([...statements]);
-    await db.batch([...statements]);
-
-    expect(sqlite.prepare("SELECT COUNT(*) AS count FROM safety_grade_history").get()).toEqual({ count: 1 });
-    expect(sqlite.prepare("SELECT COUNT(*) AS count FROM safety_score_history_v2").get()).toEqual({ count: 1 });
-    expect(
-      sqlite
-        .prepare(
-          `SELECT history_id, model, methodology_version, policy_id, policy_digest,
-                  evaluation_build_digest, base_input_generation_id,
-                  model_publication_generation_id, transition_kind,
-                  prev_grade, prev_score, legacy_recorded_at
-             FROM safety_score_history_v2`,
-        )
-        .get(),
-    ).toEqual({
-      history_id: safetyScoreLegacyHistoryV2Id("usdc-circle", 200),
-      model: "v8",
-      methodology_version: METHODOLOGY,
-      policy_id: null,
-      policy_digest: null,
-      evaluation_build_digest: digest("b"),
-      base_input_generation_id: BASE_INPUT_GENERATION_ID,
-      model_publication_generation_id: MODEL_GENERATION_ID,
-      transition_kind: "organic-grade-change",
-      prev_grade: "B+",
-      prev_score: 79,
-      legacy_recorded_at: 200,
-    });
-  });
 
   it("writes a V9 boundary without creating a legacy projection", async () => {
     const { sqlite, db } = createHistoryDatabase();
@@ -218,52 +168,6 @@ describe("Safety Score history V2", () => {
     });
   });
 
-  it("writes bounded rollback baselines without legacy projections or duplicate cards", async () => {
-    const { sqlite, db } = createHistoryDatabase();
-    await db.batch(prepareSafetyScoreHistoryBoundaryWrites(db, {
-      cards: [
-        { stablecoinId: "usdc-circle", grade: "A", score: 88 },
-        { stablecoinId: "usdt-tether", grade: "B+", score: 82 },
-      ],
-      recordedAt: 300,
-      transitionKind: "rollback-baseline",
-      identity: v9Identity(),
-      createdAt: 301,
-    }));
-
-    expect(sqlite.prepare("SELECT COUNT(*) AS count FROM safety_grade_history").get()).toEqual({ count: 0 });
-    expect(
-      sqlite.prepare(
-        `SELECT stablecoin_id, transition_kind, prev_grade, legacy_recorded_at
-           FROM safety_score_history_v2
-          ORDER BY stablecoin_id`,
-      ).all(),
-    ).toEqual([
-      {
-        stablecoin_id: "usdc-circle",
-        transition_kind: "rollback-baseline",
-        prev_grade: null,
-        legacy_recorded_at: null,
-      },
-      {
-        stablecoin_id: "usdt-tether",
-        transition_kind: "rollback-baseline",
-        prev_grade: null,
-        legacy_recorded_at: null,
-      },
-    ]);
-
-    expect(() => prepareSafetyScoreHistoryBoundaryWrites(db, {
-      cards: [
-        { stablecoinId: "usdc-circle", grade: "A", score: 88 },
-        { stablecoinId: "usdc-circle", grade: "A", score: 88 },
-      ],
-      recordedAt: 300,
-      transitionKind: "rollback-baseline",
-      identity: v9Identity(),
-      createdAt: 301,
-    })).toThrow("Duplicate Safety Score boundary card");
-  });
 
   it("rejects a conflicting replay of one V9 history identity", async () => {
     const { db } = createHistoryDatabase();
@@ -303,15 +207,16 @@ describe("Safety Score history V2", () => {
     };
 
     expect(() =>
-      prepareV8OrganicSafetyScoreHistoryWrites(db, {
+      prepareSafetyScoreHistoryV2Write(db, {
         ...common,
         prevGrade: null,
         prevScore: 79,
         transitionKind: "organic-grade-change",
+        previousIdentity: v8Identity(),
       }),
     ).toThrow("requires a previous grade");
     expect(() =>
-      prepareV8OrganicSafetyScoreHistoryWrites(db, {
+      prepareSafetyScoreHistoryV2Write(db, {
         ...common,
         prevGrade: "B+",
         prevScore: null,
@@ -319,7 +224,7 @@ describe("Safety Score history V2", () => {
       }),
     ).toThrow("cannot carry comparable previous values");
     expect(() =>
-      prepareV8OrganicSafetyScoreHistoryWrites(db, {
+      prepareSafetyScoreHistoryV2Write(db, {
         ...common,
         prevGrade: null,
         prevScore: 79,
@@ -359,13 +264,20 @@ describe("Safety Score history V2", () => {
       transitionKind: "organic-grade-change" as const,
       createdAt: 205,
     };
-    await db.batch([...prepareV8OrganicSafetyScoreHistoryWrites(db, { ...common, identity: v8Identity() })]);
+    await db.batch([prepareSafetyScoreHistoryV2Write(db, {
+      ...common,
+      identity: v8Identity(),
+      previousIdentity: v8Identity(),
+      historyId: "v8-organic-replay",
+    })]);
 
     await expect(
       db.batch([
-        ...prepareV8OrganicSafetyScoreHistoryWrites(db, {
+        prepareSafetyScoreHistoryV2Write(db, {
           ...common,
           identity: v8Identity({ evaluationBuildDigest: digest("c") }),
+          previousIdentity: v8Identity({ evaluationBuildDigest: digest("c") }),
+          historyId: "v8-organic-replay",
         }),
       ]),
     ).rejects.toThrow();
@@ -379,7 +291,7 @@ describe("Safety Score history V2", () => {
         ('usdc-circle', 200, 'A', 88, 'B', 75, '${METHODOLOGY}');
     `);
     await db.batch([
-      ...prepareV8OrganicSafetyScoreHistoryWrites(db, {
+      prepareSafetyScoreHistoryV2Write(db, {
         stablecoinId: "usdc-circle",
         recordedAt: 200,
         grade: "A",
@@ -388,6 +300,9 @@ describe("Safety Score history V2", () => {
         prevScore: 75,
         transitionKind: "organic-grade-change",
         identity: v8Identity(),
+        previousIdentity: v8Identity(),
+        historyId: "v8-organic-200",
+        legacyRecordedAt: 200,
         createdAt: 205,
       }),
     ]);

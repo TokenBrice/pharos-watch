@@ -32,6 +32,7 @@ import {
   RouteReviewSchema,
   RouteValuationSchema,
 } from "./fact-set-schema";
+import { canonicalExecutionCostKey } from "./extension-routes";
 import {
   addEvidence,
   addGap,
@@ -102,9 +103,6 @@ function routeEvidence(
   );
 }
 
-function executionCostKey(point: { requestedNotionalUsd: number; maxCostBps: number }): string {
-  return `${point.maxCostBps}:${point.requestedNotionalUsd}`;
-}
 
 function outputValuationEvidence(
   context: AssetBuildContext,
@@ -259,7 +257,9 @@ function buildRoute(
     };
   }
 
-  const costByKey = new Map(args.review.executionCosts.map((point) => [executionCostKey(point), point]));
+  const costByKey = new Map(
+    args.review.executionCosts.map((point) => [canonicalExecutionCostKey(point), point]),
+  );
   const rawCurve = args.observation.capacityCurve ?? [
     {
       requestedNotionalUsd: args.observation.requestedNotionalUsd,
@@ -269,9 +269,9 @@ function buildRoute(
     },
   ];
   const capacityCurve = rawCurve.map((point) => {
-    const cost = costByKey.get(executionCostKey(point));
+    const cost = costByKey.get(canonicalExecutionCostKey(point));
     if (!cost) throw new Error(`Missing execution cost for ${context.asset.assetId}:${routeKey}`);
-    costByKey.delete(executionCostKey(point));
+    costByKey.delete(canonicalExecutionCostKey(point));
     return { ...point, executionCostBps: cost.executionCostBps };
   });
   if (costByKey.size > 0) throw new Error(`Unmatched execution costs for ${context.asset.assetId}:${routeKey}`);

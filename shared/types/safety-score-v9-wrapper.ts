@@ -1,5 +1,10 @@
 import { z } from "zod";
-import { canonicalTextArray, compareText } from "./safety-score-v9-fact-primitives";
+import {
+  canonicalTextArray,
+  compareText,
+  V9WrapperRiskAssessmentSchema,
+} from "./safety-score-v9-fact-primitives";
+import { V9IncidentScopeSchema } from "./safety-score-v9-incidents";
 import { CanonicalTextSchema } from "./safety-schema-primitives";
 
 export const V9WrapperFormSchema = z.enum(["pure", "native-staked", "strategy-vault"]);
@@ -15,31 +20,15 @@ export const V9WrapperFactDispositionSchema = z.enum([
 ]);
 export type V9WrapperFactDisposition = z.infer<typeof V9WrapperFactDispositionSchema>;
 
-export const V9WrapperRiskAssessmentSchema = z.enum(["none", "low", "moderate", "high", "critical"]);
-export type V9WrapperRiskAssessment = z.infer<typeof V9WrapperRiskAssessmentSchema>;
+export { V9WrapperRiskAssessmentSchema };
+export type V9WrapperRiskAssessment =
+  z.infer<typeof V9WrapperRiskAssessmentSchema>;
 
-const V9WrapperIncidentScopeSchema = z.discriminatedUnion("kind", [
-  z.object({ kind: z.literal("root-claim") }).strict(),
-  z
-    .object({
-      kind: z.literal("deployment"),
-      deploymentKey: CanonicalTextSchema,
-      exposureShare: z.number().finite().min(0).max(1),
-    })
-    .strict(),
-  z
-    .object({
-      kind: z.literal("integration-only"),
-      integrationKey: CanonicalTextSchema,
-    })
-    .strict(),
-  z.object({ kind: z.literal("holder-exit") }).strict(),
-]);
 
 const V9WrapperIncidentPostureSchema = z
   .object({
     incidentId: CanonicalTextSchema,
-    scope: V9WrapperIncidentScopeSchema,
+    scope: V9IncidentScopeSchema,
     assessment: V9WrapperRiskAssessmentSchema,
     evidenceRefIds: canonicalTextArray(1, "value"),
   })

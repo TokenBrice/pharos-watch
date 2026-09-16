@@ -20,6 +20,7 @@ import {
   V9RouteSettlementUsdAmountSchema,
   V9VariantKindSchema,
 } from "@shared/types/safety-score-v9-facts";
+import { canonicalV9ExecutionCostKey } from "@shared/types/safety-score-v9-fact-primitives";
 import {
   V9CdpStressCoverageFactSchema,
   V9MechanismRiskReviewSchema,
@@ -248,7 +249,7 @@ export const RouteReviewSchema = z
     physicalResourceKeys: canonicalArrayBy(CanonicalTextSchema, (value) => value),
     executionCosts: canonicalArrayBy(
       RouteExecutionCostSchema,
-      (point) => `${point.maxCostBps}:${point.requestedNotionalUsd}`,
+      canonicalV9ExecutionCostKey,
     ),
     output: RouteOutputReviewSchema.nullable(),
     // Optional for retained extension-v2 compatibility. Current redemption

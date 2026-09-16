@@ -23,6 +23,7 @@ import {
   V9FactStatusV2Schema,
   V9ObservationStateSchema,
   canonicalArrayBy,
+  canonicalV9ExecutionCostKey,
   type V9EvidenceResponsibility,
   type V9FactApplicability,
   type V9FactStatusV2,
@@ -442,7 +443,7 @@ const V9RouteCapacityPointV2Schema = z
 
 const CanonicalCapacityCurveSchema = canonicalArrayBy(
   V9RouteCapacityPointV2Schema,
-  (point) => `${String(point.maxCostBps).padStart(20, "0")}:${String(point.requestedNotionalUsd).padStart(30, "0")}`,
+  canonicalV9ExecutionCostKey,
 );
 
 const V9RouteOutputValuationV2Schema = z

@@ -1,7 +1,9 @@
 import { z } from "zod";
-import { canonicalArrayBy } from "./safety-score-v9-fact-primitives";
+import {
+  canonicalArrayBy,
+  V9WrapperRiskAssessmentSchema,
+} from "./safety-score-v9-fact-primitives";
 import { V9ControlKindSchema } from "./safety-score-v9-fact-input-primitives";
-import { V9WrapperRiskAssessmentSchema } from "./safety-score-v9-wrapper";
 import {
   V9OperationalResilienceIncidentCategorySchema,
   V9OperationalResilienceIncidentStateSchema,
@@ -29,7 +31,7 @@ const V9IncidentSourceSchema = z
   })
   .strict();
 
-const V9IncidentScopeSchema = z.discriminatedUnion("kind", [
+export const V9IncidentScopeSchema = z.discriminatedUnion("kind", [
   z.object({ kind: z.literal("root-claim") }).strict(),
   z
     .object({
@@ -228,24 +230,10 @@ export type V9ControlIncident = Extract<V9ReviewedIncident, { domain: "control" 
 export type V9WrapperLocalIncident = Extract<V9ReviewedIncident, { domain: "wrapper-local" }>;
 export type V9OperationalIncident = Extract<V9ReviewedIncident, { domain: "operational" }>;
 
+// Incident ids are globally unique registry keys, not asset-scoped aliases.
 export const V9ReviewedIncidentRegistrySchema = z
   .object({
     schemaVersion: z.literal(1),
     incidents: canonicalArrayBy(V9ReviewedIncidentSchema, (incident) => incident.incidentId),
   })
-  .strict()
-  .superRefine((registry, ctx) => {
-    const assetIncidentKeys = registry.incidents.map(
-      (incident) => `${incident.assetId}:${incident.incidentId}`,
-    );
-    const duplicate = assetIncidentKeys.find(
-      (key, index) => assetIncidentKeys.indexOf(key) !== index,
-    );
-    if (duplicate !== undefined) {
-      ctx.addIssue({
-        code: "custom",
-        path: ["incidents"],
-        message: `Duplicate asset incident route: ${duplicate}`,
-      });
-    }
-  });
+  .strict();

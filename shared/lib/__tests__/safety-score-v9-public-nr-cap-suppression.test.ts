@@ -137,6 +137,7 @@ function fixture(assetId: string, rated: boolean): V9PublicCardProjectionInput {
               score: 92,
               normalizedWeight: 1,
               weightedScore: 92,
+              effectiveWeight: 1,
               observationState: "known" as const,
               provenance: "curated" as const,
               evidenceRefIds: [],

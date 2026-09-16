@@ -185,43 +185,19 @@ function projectBackingBreakdown(
   if (backing?.score === null || backing?.score === undefined) {
     throw new Error(`Safety Score v9 ${input.trace.assetId} rated card lacks a backing evaluation`);
   }
-  const policy = input.policy.policy.semantic.backing;
-  const archetype =
-    policy.archetypes[backing.archetype as keyof typeof policy.archetypes];
-  if (archetype === undefined) {
-    throw new Error(`Safety Score v9 ${input.trace.assetId} lacks backing policy for ${backing.archetype}`);
-  }
-  const reserveContributions = backing.contributions.filter((item) => item.source !== "mechanism");
-  const mechanismContributions = backing.contributions.filter((item) => item.source === "mechanism");
-  const reserveAvailable = reserveContributions.length > 0;
-  const mechanismAvailable = mechanismContributions.length > 0;
-  const activeReserveWeight = reserveAvailable ? archetype.reserveWeight : 0;
-  const activeMechanismWeight = mechanismAvailable ? 1 - activeReserveWeight : 0;
-  const combinedWeight = activeReserveWeight + activeMechanismWeight;
-  if (combinedWeight <= 0) {
+  const reserveGroupWeight = backing.contributions
+    .filter((contribution) => contribution.source !== "mechanism")
+    .reduce((sum, contribution) => sum + contribution.effectiveWeight, 0);
+  const mechanismGroupWeight = backing.contributions
+    .filter((contribution) => contribution.source === "mechanism")
+    .reduce((sum, contribution) => sum + contribution.effectiveWeight, 0);
+  if (reserveGroupWeight + mechanismGroupWeight <= 0) {
     throw new Error(`Safety Score v9 ${input.trace.assetId} backing breakdown has no active component weight`);
   }
-  const reserveGroupWeight = activeReserveWeight / combinedWeight;
-  const mechanismGroupWeight = activeMechanismWeight / combinedWeight;
-  const concentrationWeight = policy.reserve.concentrationWeight;
-  const hasConcentrationComponent = reserveContributions.some(
-    (contribution) => contribution.source === "reserve-concentration",
-  );
-  const effectiveWeight = (contribution: V9BackingResult["contributions"][number]): number => {
-    if (contribution.source === "mechanism") {
-      return contribution.normalizedWeight * mechanismGroupWeight;
-    }
-    const reserveLocalWeight =
-      contribution.source === "reserve-concentration"
-        ? contribution.normalizedWeight
-        : contribution.normalizedWeight *
-          (hasConcentrationComponent ? 1 - concentrationWeight : 1);
-    return reserveLocalWeight * reserveGroupWeight;
-  };
   const components = [...backing.contributions]
     .sort((left, right) => compareText(left.componentKey, right.componentKey))
     .map((contribution) => {
-      const weight = effectiveWeight(contribution);
+      const weight = contribution.effectiveWeight;
       return {
         key: contribution.componentKey,
         label: publicLabel(input, contribution.componentKey),
@@ -232,6 +208,15 @@ function projectBackingBreakdown(
         observationState: contribution.observationState,
       };
     });
+  const waterfallScore = components.reduce(
+    (sum, component) => sum + component.weightedContribution,
+    0,
+  );
+  if (Math.abs(waterfallScore - backing.score) > 0.000001) {
+    throw new Error(
+      `Safety Score v9 ${input.trace.assetId} backing waterfall does not reconcile to its evaluated pillar`,
+    );
+  }
   const group = (
     key: "reserves" | "mechanism",
     label: string,

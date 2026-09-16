@@ -157,6 +157,10 @@ export interface V9BackingContribution {
   readonly upstreamAssetId: string | null;
 }
 
+export interface V9EffectiveBackingContribution extends V9BackingContribution {
+  readonly effectiveWeight: number;
+}
+
 export interface V9BackingUnresolvedReason {
   readonly code: V9ReasonCode;
   readonly pathKey: string;
@@ -176,7 +180,7 @@ export interface V9BackingResult {
   readonly rateability: "rateable" | "NR";
   readonly score: number | null;
   readonly pillarCeiling: number | null;
-  readonly contributions: readonly V9BackingContribution[];
+  readonly contributions: readonly V9EffectiveBackingContribution[];
   readonly structuralReasons: readonly V9BackingStructuralReason[];
   readonly unresolved: readonly V9BackingUnresolvedReason[];
   readonly evidenceRefIds: readonly string[];
@@ -1182,6 +1186,28 @@ export function evaluateV9ReserveExposures(
   };
 }
 
+function effectiveBackingContributions(
+  contributions: readonly V9BackingContribution[],
+  reserveGroupWeight: number,
+  mechanismGroupWeight: number,
+  concentrationWeight: number,
+): V9EffectiveBackingContribution[] {
+  const hasConcentrationComponent = contributions.some(
+    (contribution) => contribution.source === "reserve-concentration",
+  );
+  return contributions.map((contribution) => {
+    const effectiveWeight =
+      contribution.source === "mechanism"
+        ? contribution.normalizedWeight * mechanismGroupWeight
+        : contribution.source === "reserve-concentration"
+          ? contribution.normalizedWeight * reserveGroupWeight
+          : contribution.normalizedWeight *
+            (hasConcentrationComponent ? 1 - concentrationWeight : 1) *
+            reserveGroupWeight;
+    return { ...contribution, effectiveWeight };
+  });
+}
+
 function finalizeBackingResult(result: Omit<V9BackingResult, "traceDigest">): V9BackingResult {
   const unresolved = canonicalUniqueBy(
     result.unresolved.map((reason) => ({ ...reason, gapIds: uniqueSorted(reason.gapIds) })),
@@ -1264,7 +1290,12 @@ function evaluateV9ArchetypeBackingInternal(
         reserve.structuralReasons.length === 0
           ? null
           : Math.min(...reserve.structuralReasons.map((reason) => reason.ceiling)),
-      contributions: reserve.contributions,
+      contributions: effectiveBackingContributions(
+        reserve.contributions,
+        1,
+        0,
+        backing.reserve.concentrationWeight,
+      ),
       structuralReasons: reserve.structuralReasons,
       unresolved: reserve.unresolved,
       evidenceRefIds: reserve.contributions.flatMap((contribution) => contribution.evidenceRefIds),
@@ -1397,7 +1428,12 @@ function evaluateV9ArchetypeBackingInternal(
     rateability,
     score,
     pillarCeiling,
-    contributions,
+    contributions: effectiveBackingContributions(
+      contributions,
+      combinedWeight > SCORE_EPSILON ? activeReserveWeight / combinedWeight : 0,
+      combinedWeight > SCORE_EPSILON ? activeMechanismWeight / combinedWeight : 0,
+      backing.reserve.concentrationWeight,
+    ),
     structuralReasons,
     unresolved,
     evidenceRefIds: contributions.flatMap((contribution) => contribution.evidenceRefIds),
