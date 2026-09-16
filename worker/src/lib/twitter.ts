@@ -13,12 +13,12 @@ export interface TwitterCreds {
 }
 
 export class TwitterPostError extends Error {
-  readonly twitterDeliveryFailureKind: "definitive_failure" | "execution_unknown";
+  readonly twitterDeliveryFailureKind: "definitive_failure" | "retryable_failure" | "execution_unknown";
   readonly statusCode: number | null;
 
   constructor(
     message: string,
-    failureKind: "definitive_failure" | "execution_unknown",
+    failureKind: "definitive_failure" | "retryable_failure" | "execution_unknown",
     statusCode: number | null = null,
   ) {
     super(message);
@@ -113,10 +113,15 @@ async function postTweet(text: string, creds: TwitterCreds, mediaId?: string): P
   }
 
   if (!res.ok) {
-    const clearRejection = res.status >= 400 && res.status < 500 && body.trim().length > 0;
+    const clearRejection = res.status >= 400
+      && res.status < 500
+      && res.status !== 429
+      && body.trim().length > 0;
     throw new TwitterPostError(
       `Twitter API ${res.status}: ${body.slice(0, 300) || "empty response"}`,
-      clearRejection ? "definitive_failure" : "execution_unknown",
+      res.status === 429
+        ? "retryable_failure"
+        : clearRejection ? "definitive_failure" : "execution_unknown",
       res.status,
     );
   }
