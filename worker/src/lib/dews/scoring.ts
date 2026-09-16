@@ -168,6 +168,7 @@ export function buildDewsScoringResult(options: BuildDewsScoringResultOptions): 
       blacklistEvents24h: blacklistCounts?.count24h ?? 0,
       blacklistEvents7d: blacklistCounts?.count7d ?? 0,
       hasBlacklistTracking,
+      blacklistSourceOk: sourceState.blacklistSourceOk,
       burnVolume24hUsd: mintBurn?.burn24h ?? null,
       mintVolume24hUsd: mintBurn?.mint24h ?? null,
       burnBaseline30dUsd: mintBurn?.burnBaseline ?? null,

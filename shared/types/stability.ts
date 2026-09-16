@@ -65,16 +65,12 @@ const UsdsImplementationAddressSchema = z
 export const UsdsStatusResponseSchema = z
   .object({
     implementationAddress: UsdsImplementationAddressSchema,
-    freezeCapabilityPresent: z.unknown().optional(),
+    freezeCapabilityPresent: z.boolean(),
     lastChecked: z.unknown().optional(),
   })
   .transform((value) => {
-    const freezeCapabilityPresent =
-      typeof value.freezeCapabilityPresent === "boolean"
-        ? value.freezeCapabilityPresent
-        : false;
     return {
-      freezeCapabilityPresent,
+      freezeCapabilityPresent: value.freezeCapabilityPresent,
       implementationAddress: value.implementationAddress,
       lastChecked:
         typeof value.lastChecked === "number" && Number.isFinite(value.lastChecked) && value.lastChecked >= 0

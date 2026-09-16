@@ -40,6 +40,10 @@ import {
 const SPIKE_COLOR = "oklch(0.72 0.18 35)";
 const OVERLAY_COLORS = CHART_PALETTE.slice(3);
 
+type NullableBenchmarkYieldHistoryChartProps = Omit<YieldHistoryChartProps, "benchmarkRate"> & {
+  benchmarkRate: number | null;
+};
+
 export function YieldHistoryChart({
   stablecoinId,
   benchmarkRate,
@@ -52,10 +56,11 @@ export function YieldHistoryChart({
   hideSourceSelector = false,
   externalSourceKey,
   externalSourceKeys,
-}: YieldHistoryChartProps) {
+}: NullableBenchmarkYieldHistoryChartProps) {
+  const chartModelBenchmarkRate = benchmarkRate ?? medianApy;
   const model = useYieldHistoryChartModel({
     stablecoinId,
-    benchmarkRate,
+    benchmarkRate: chartModelBenchmarkRate,
     benchmarkLabel,
     benchmarkIsFallback,
     medianApy,
@@ -78,9 +83,11 @@ export function YieldHistoryChart({
   );
   // A reference clamped to the domain edge misstates its rate while carrying
   // the benchmark's name — mark it off-scale on the inline label (E25).
-  const benchmarkReferenceLabel = `${benchmarkLabel ?? "Benchmark"}${
-    benchmarkRate > domainMax ? " ↑ off scale" : benchmarkRate < domainMin ? " ↓ off scale" : ""
-  }`;
+  const benchmarkReferenceLabel = benchmarkRate == null
+    ? null
+    : `${benchmarkLabel ?? "Benchmark"}${
+        benchmarkRate > domainMax ? " ↑ off scale" : benchmarkRate < domainMin ? " ↓ off scale" : ""
+      }`;
   const medianReferenceLabel = `Peer Median${
     medianApy > domainMax ? " ↑ off scale" : medianApy < domainMin ? " ↓ off scale" : ""
   }`;
@@ -241,17 +248,19 @@ export function YieldHistoryChart({
                 cursor={{ stroke: "var(--color-border)", strokeWidth: 1, strokeDasharray: "3 3" }}
                 content={<YieldHistoryTooltip showBreakdown={model.effectiveShowBreakdown} compact={compact} spikesByDate={spikesByDate} />}
               />
-              <ReferenceLine
-                y={Math.min(Math.max(benchmarkRate, domainMin), domainMax)}
-                stroke={CHART_SLATE}
-                strokeOpacity={0.8}
-                strokeDasharray="6 4"
-                label={
-                  referenceLabelStyle
-                    ? { ...referenceLabelStyle, value: benchmarkReferenceLabel }
-                    : undefined
-                }
-              />
+              {benchmarkRate != null ? (
+                <ReferenceLine
+                  y={Math.min(Math.max(benchmarkRate, domainMin), domainMax)}
+                  stroke={CHART_SLATE}
+                  strokeOpacity={0.8}
+                  strokeDasharray="6 4"
+                  label={
+                    referenceLabelStyle
+                      ? { ...referenceLabelStyle, value: benchmarkReferenceLabel }
+                      : undefined
+                  }
+                />
+              ) : null}
               {medianApy > 0 ? (
                 <ReferenceLine
                   y={Math.min(Math.max(medianApy, domainMin), domainMax)}
@@ -376,15 +385,21 @@ export function YieldHistoryChart({
             <span className="h-2 w-2 rounded-full" style={{ backgroundColor: BRAND_ACCENT }} />
             {model.primarySourceLabel.label}
           </span>
-          <span className="inline-flex items-center gap-1.5 rounded-full border border-border/60 bg-background/55 px-2.5 py-1">
-            <span className="font-mono tabular-nums">{formatChartNumber(benchmarkRate)}%</span>
-            Benchmark: {benchmarkLabel ?? "Rate"}
-            {benchmarkIsFallback ? (
-              <span className="rounded bg-amber-500/15 px-1 py-px text-[9px] font-medium uppercase tracking-[0.1em] text-amber-700 dark:text-amber-400">
-                fallback
-              </span>
-            ) : null}
-          </span>
+          {benchmarkRate != null ? (
+            <span className="inline-flex items-center gap-1.5 rounded-full border border-border/60 bg-background/55 px-2.5 py-1">
+              <span className="font-mono tabular-nums">{formatChartNumber(benchmarkRate)}%</span>
+              Benchmark: {benchmarkLabel ?? "Rate"}
+              {benchmarkIsFallback ? (
+                <span className="rounded bg-amber-500/15 px-1 py-px text-[9px] font-medium uppercase tracking-[0.1em] text-amber-700 dark:text-amber-400">
+                  fallback
+                </span>
+              ) : null}
+            </span>
+          ) : (
+            <span className="inline-flex items-center rounded-full border border-border/60 bg-background/55 px-2.5 py-1">
+              No benchmark
+            </span>
+          )}
           {medianApy > 0 ? (
             <span className="inline-flex items-center gap-1.5 rounded-full border border-border/60 bg-background/55 px-2.5 py-1">
               <span className="font-mono tabular-nums">{formatChartNumber(medianApy)}%</span>

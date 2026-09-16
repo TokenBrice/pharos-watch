@@ -1,5 +1,4 @@
 import { API_FRESHNESS_MAX_AGE_SEC } from "@shared/lib/api-freshness";
-import type { UsdsStatusResponse } from "@shared/types";
 import { UsdsStatusResponseSchema } from "@shared/types/stability";
 import {
   BluechipRatingsMapSchema,
@@ -67,15 +66,5 @@ export const handleUsdsStatus = createCacheHandler(
   {
     schema: UsdsStatusResponseSchema,
     malformedMessage: "Cached usds-status payload is malformed",
-    transform: (payload, { cached }) => {
-      const status = payload as UsdsStatusResponse;
-      if (status.lastChecked > 0) {
-        return status;
-      }
-      return {
-        ...status,
-        lastChecked: cached.updatedAt,
-      };
-    },
   },
 );

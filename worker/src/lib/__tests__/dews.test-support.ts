@@ -29,6 +29,7 @@ export function makeDewsInput(overrides: Partial<DEWSInput> = {}): DEWSInput {
     blacklistEvents24h: 0,
     blacklistEvents7d: 0,
     hasBlacklistTracking: false,
+    blacklistSourceOk: true,
     // Mint/burn flow
     burnVolume24hUsd: null,
     mintVolume24hUsd: null,

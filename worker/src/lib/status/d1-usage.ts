@@ -354,8 +354,8 @@ async function readD1TableGrowthMeasurement(
     .first<D1TableGrowthMeasurement>();
 }
 
-async function claimD1TableGrowthRun(db: D1Database, utcDay: number): Promise<boolean> {
-  const result = await db
+async function markD1TableGrowthRunComplete(db: D1Database, utcDay: number): Promise<void> {
+  await db
     .prepare(
       `INSERT INTO cache (key, value, updated_at) VALUES (?, ?, ?)
        ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = excluded.updated_at
@@ -367,7 +367,6 @@ async function claimD1TableGrowthRun(db: D1Database, utcDay: number): Promise<bo
       utcDay,
     )
     .run();
-  return result.meta.changes > 0;
 }
 
 async function loadCachedD1TableGrowthSnapshot(
@@ -383,10 +382,11 @@ export async function refreshD1TableGrowthSnapshot(
 ): Promise<D1TableGrowthSnapshot | null> {
   const utcDay = Math.floor(observedAt / D1_TABLE_GROWTH_SNAPSHOT_INTERVAL_SEC)
     * D1_TABLE_GROWTH_SNAPSHOT_INTERVAL_SEC;
-  const claimed = await claimD1TableGrowthRun(db, utcDay);
-  if (!claimed) return loadCachedD1TableGrowthSnapshot(db);
-
   const previous = await loadCachedD1TableGrowthSnapshot(db);
+  if (previous?.utcDay === utcDay) return previous;
+  const baselineIsComparable = previous != null
+    && observedAt >= previous.checkedAt
+    && observedAt - previous.checkedAt <= D1_TABLE_GROWTH_SNAPSHOT_INTERVAL_SEC * 1.5;
   const discovery = buildD1TableGrowthDiscoveryQuery();
   const discovered = await db
     .prepare(discovery.sql)
@@ -407,7 +407,7 @@ export async function refreshD1TableGrowthSnapshot(
       tableName,
       rowCount,
       previousRowCount: previousRow?.rowCount ?? null,
-      rowCountDelta: previousRow ? rowCount - previousRow.rowCount : null,
+      rowCountDelta: previousRow && baselineIsComparable ? rowCount - previousRow.rowCount : null,
       oldestTimestamp: toNumber(measurement.oldest_timestamp),
       newestTimestamp: toNumber(measurement.newest_timestamp),
     });
@@ -439,6 +439,7 @@ export async function refreshD1TableGrowthSnapshot(
     JSON.stringify(envelope),
     observedAt,
   );
+  await markD1TableGrowthRunComplete(db, utcDay);
   return snapshot;
 }
 

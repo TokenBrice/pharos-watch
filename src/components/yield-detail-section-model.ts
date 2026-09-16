@@ -30,7 +30,7 @@ export interface YieldDetailReadyModel {
   status: "ready";
   ranking: YieldRanking;
   benchmarkSubtitle?: string;
-  benchmarkRate: number;
+  benchmarkRate: number | null;
   medianApy: number;
   benchmarkIsFallback: boolean;
   sourceExplorer: YieldSourceExplorerModel;
@@ -124,7 +124,7 @@ export function buildYieldDetailModel(
     status: "ready",
     ranking,
     benchmarkSubtitle: getYieldBenchmarkGapReferenceText(ranking, { includePeriod: false }),
-    benchmarkRate: ranking.benchmarkRate ?? rankingResponse.riskFreeRate ?? 0,
+    benchmarkRate: ranking.benchmarkRate ?? rankingResponse.riskFreeRate ?? null,
     medianApy: rankingResponse.medianApy ?? 0,
     benchmarkIsFallback: ranking.benchmarkSelectionMode === "fallback-usd" || !!ranking.benchmarkIsFallback,
     sourceExplorer,

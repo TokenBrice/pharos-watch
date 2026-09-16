@@ -105,7 +105,7 @@ const DEWS_HYDRATION_REGISTRY = [
     ["liqHist7dMap", "liqHistRowsRead"],
     (result) => ({ dexLiquidityHistory: result.liqHistRowsRead }),
   ),
-  defineHydration("blacklistEvents", hydration.hydrateBlacklistEvents, ["blacklistCounts"],
+  defineHydration("blacklistEvents", hydration.hydrateBlacklistEvents, ["blacklistCounts", "blacklistSourceOk"],
     (result) => ({ blacklistEvents: result.rowsRead }),
   ),
   defineHydration(

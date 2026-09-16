@@ -286,6 +286,47 @@ describe("computeDEWS", () => {
     const result = computeDews(makeDewsInput({ hasBlacklistTracking: false }));
     expect(result.signals.black.available).toBe(false);
   });
+  it("redistributes blacklist weight when the tracked source failed", () => {
+    const observedZero = computeDews(makeDewsInput({
+      hasBlacklistTracking: true,
+      blacklistSourceOk: true,
+    }));
+    const sourceFailed = computeDews(makeDewsInput({
+      hasBlacklistTracking: true,
+      blacklistSourceOk: false,
+    }));
+
+    expect(sourceFailed.signals.black).toMatchObject({
+      value: 0,
+      available: false,
+      unavailableReason: "blacklist-source-failed",
+    });
+    expect(sourceFailed.effectiveWeights.black).toBeUndefined();
+    expect(sourceFailed.availableWeight).toBeCloseTo(observedZero.availableWeight - 0.1);
+    expect(sourceFailed.effectiveWeights.supply).toBeGreaterThan(observedZero.effectiveWeights.supply);
+  });
+
+
+  it("redistributes blacklist weight when the tracked source failed", () => {
+    const observedZero = computeDews(makeDewsInput({
+      hasBlacklistTracking: true,
+      blacklistSourceOk: true,
+    }));
+    const sourceFailed = computeDews(makeDewsInput({
+      hasBlacklistTracking: true,
+      blacklistSourceOk: false,
+    }));
+
+    expect(observedZero.signals.black).toMatchObject({ value: 0, available: true });
+    expect(sourceFailed.signals.black).toMatchObject({
+      value: 0,
+      available: false,
+      unavailableReason: "blacklist-source-failed",
+    });
+    expect(sourceFailed.availableWeight).toBeCloseTo(observedZero.availableWeight - 0.1);
+    expect(sourceFailed.effectiveWeights.black).toBeUndefined();
+    expect(sourceFailed.effectiveWeights.supply).toBeGreaterThan(observedZero.effectiveWeights.supply!);
+  });
 
   it("integrates mint/burn flow signal when available", () => {
     const result = computeDews(

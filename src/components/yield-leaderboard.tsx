@@ -238,7 +238,7 @@ export function YieldLeaderboard({
   emptyMessage,
   filterSummary,
   comparisonRows = rows,
-  updatedAt = Math.floor(Date.now() / 1000),
+  updatedAt,
   methodologyLabel = "Pharos Yield Score current",
 }: YieldLeaderboardProps) {
   const [expandedId, setExpandedId] = useState<string | null>(null);
@@ -249,6 +249,7 @@ export function YieldLeaderboard({
   const initialCompareProcessed = useRef(false);
   const rowsById = useMemo(() => new Map(comparisonRows.map((row) => [row.id, row] as const)), [comparisonRows]);
   const detailedRankings = useYieldRankings({ enabled: sheetRankingId !== null });
+  const effectiveUpdatedAt = updatedAt ?? Math.floor(detailedRankings.dataUpdatedAt / 1000);
   const sheetRanking = useMemo(
     () => (sheetRankingId ? (detailedRankings.data?.rankings.find((row) => row.id === sheetRankingId) ?? null) : null),
     [detailedRankings.data?.rankings, sheetRankingId],
@@ -335,7 +336,7 @@ export function YieldLeaderboard({
           sortKey={sortKey}
           sortDirection={sortDirection}
           exportRows={sorted}
-          updatedAt={updatedAt}
+          updatedAt={effectiveUpdatedAt}
           methodologyLabel={methodologyLabel}
         />
       ) : null}
@@ -453,7 +454,7 @@ export function YieldLeaderboard({
         onOpenChange={setCompareDrawerOpen}
         rows={comparisonRows}
         logos={logos}
-        updatedAt={updatedAt}
+        updatedAt={effectiveUpdatedAt}
         methodologyLabel={methodologyLabel}
       />
     </TooltipProvider>
@@ -733,7 +734,7 @@ export function YieldMobileCard({
           ) : null}
           <YieldHistoryChart
             stablecoinId={row.id}
-            benchmarkRate={row.benchmarkRate ?? riskFreeRate}
+            benchmarkRate={row.benchmarkRate ?? null}
             benchmarkLabel={row.benchmarkLabel}
             benchmarkIsFallback={isYieldBenchmarkFallback(row)}
             medianApy={medianApy}
