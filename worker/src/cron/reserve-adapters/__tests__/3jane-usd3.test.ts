@@ -8,11 +8,12 @@ function abiWord(value: bigint): string {
   return value.toString(16).padStart(64, "0");
 }
 
-function usd3Network(dropSelector?: string) {
+function usd3Network(dropSelector?: string, shareDecimals = 6n) {
   const rpc: Record<string, AdapterRpcValue> = {
     "0xc1590cd7": 100n * ONE,
     "0x01e1d114": 100n * ONE,
     "0x18160ddd": 80n * ONE,
+    "0x313ce567": shareDecimals,
     "0x4251c354": 5n * ONE,
     "0xa9b89c07": 80n * ONE,
     "0x59ddbab2": `0x${[100n, 100n, 75n, 25n].map((value) => abiWord(value * ONE)).join("")}`,
@@ -50,6 +51,13 @@ describe("3jane-usd3 adapter", () => {
       network: usd3Network("0xc1590cd7"),
       nowSec: 1_757_003_600,
     })).rejects.toThrow(/nav|unanswered/i);
+  });
+
+  it("fails closed when USD3 share decimals drift", async () => {
+    await expect(runAdapter("3jane-usd3", "usd3-3jane", {
+      network: usd3Network(undefined, 18n),
+      nowSec: 1_757_003_600,
+    })).rejects.toThrow(/share token decimals drifted/);
   });
 });
 

@@ -136,8 +136,14 @@ export function adaptMatrixdockFrsState(state: MatrixdockFrsState, params: Matri
     ));
   }
 
-  if (state.feedDecimals !== EXPECTED_DECIMALS || state.tokenDecimals !== EXPECTED_DECIMALS) {
-    throw new Error(`${ADAPTER_KEY}: unexpected decimals (feed ${state.feedDecimals}, token ${state.tokenDecimals})`);
+  if (
+    state.feedDecimals !== EXPECTED_DECIMALS ||
+    state.tokenDecimals !== EXPECTED_DECIMALS ||
+    state.suiDecimals !== EXPECTED_DECIMALS
+  ) {
+    throw new Error(
+      `${ADAPTER_KEY}: unexpected decimals (feed ${state.feedDecimals}, token ${state.tokenDecimals}, Sui ${state.suiDecimals})`,
+    );
   }
 
   const reserveOz = decimalNumberFromBigInt(state.reserveRaw, state.feedDecimals);

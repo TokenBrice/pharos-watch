@@ -111,6 +111,7 @@ function installAnzenNetwork({
         [USDC, addressArg("0x70a08231", SPCT)],
         [USDC, addressArg("0x70a08231", usdz)],
         [ORACLE, "0x98d5fdca"],
+        [SPCT, "0x313ce567"],
       );
     }
     return identities;
@@ -153,6 +154,7 @@ function installAnzenNetwork({
         4_000_000_000n,
         0n,
         WAD,
+        18n,
       );
     }
     return values[index] ?? null;
@@ -265,6 +267,10 @@ describe("fetchAnzenUsdzReserves", () => {
 
   it("fails closed when the USDz totalSupply field is dropped from the RPC batch", async () => {
     await expect(runAnzen({ dropSelector: "0x18160ddd" })).rejects.toThrow(/total-supply|unanswered/i);
+  });
+
+  it("fails closed when SPCT decimals drift", async () => {
+    await expect(runAnzen({ overrides: { 22: word(6n) } })).rejects.toThrow(/SPCT decimals drifted/);
   });
 
   it("bounds redemption by either reserve USD or combined settlement balances, including zero", async () => {

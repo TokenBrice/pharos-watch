@@ -1,7 +1,7 @@
 import type { StablecoinMeta } from "@shared/types/core";
 import type { LiveReservesConfig, LiveReserveWarning } from "@shared/types/live-reserves";
 import { decodeAbiParameters } from "viem/utils";
-import { encodeBalanceOfCallData, encodeUint256 } from "../../lib/evm-selectors";
+import { DECIMALS_SELECTOR, encodeBalanceOfCallData, encodeUint256 } from "../../lib/evm-selectors";
 import { getPublicRpcUrl, getSecondaryFallbackRpcUrl } from "../../lib/public-rpc-registry";
 import type { AdapterContext, AdapterResult } from "./types";
 import { resolveCoinContractAddress } from "./evm";
@@ -253,6 +253,12 @@ export async function fetchThreeJaneUsd3Reserves(
     uint256Observation({ label: "nav", contract: contractAddress, data: NAV_SELECTOR }),
     uint256Observation({ label: "totalAssets", contract: contractAddress, data: TOTAL_ASSETS_SELECTOR }),
     uint256Observation({ label: "totalSupply", contract: contractAddress, data: TOTAL_SUPPLY_SELECTOR }),
+    uint256Observation({
+      label: "totalSupplyDecimals",
+      contract: contractAddress,
+      data: DECIMALS_SELECTOR,
+      verify: (value) => value === BigInt(USDC_DECIMALS) ? null : "share token decimals drifted",
+    }),
     uint256Observation({ label: "localWaUsdc", contract: contractAddress, data: BALANCE_OF_WAUSDC_SELECTOR }),
     uint256Observation({ label: "suppliedWaUsdc", contract: contractAddress, data: SUPPLIED_WAUSDC_SELECTOR }),
     customObservation({
