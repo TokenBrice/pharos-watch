@@ -16,6 +16,14 @@ describe("cron sentinel persisted source state", () => {
       expect(status.status).toBe("degraded");
       expect(JSON.parse(status.metadata!).sources.growth).toMatchObject({ status: "degraded", observedAt: 100 });
       expect((await runCronSentinelSources(db, "daily", [{ source: "growth", run: async () => ({ status: "ok" }) }], 50)).status).toBe("degraded");
+      const expired = await runCronSentinelSources(
+        db,
+        "status",
+        [{ source: "freshness", run: async () => ({ status: "ok" }) }],
+        200_000,
+      );
+      expect(expired.status).toBe("ok");
+      expect(JSON.parse(expired.metadata!).sources.growth).toBeUndefined();
       expect((await runCronSentinelSources(db, "daily", [{ source: "growth", run: async () => ({ status: "ok" }) }], 300)).status).toBe("ok");
     } finally {
       sqlite.close();
