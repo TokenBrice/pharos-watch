@@ -1,6 +1,10 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { DAY_SECONDS } from "@shared/lib/time-constants";
 import type { PegSummaryCoin } from "@shared/types/market";
+import {
+  getCacheJsonParseFailureCountersForTests,
+  resetCacheJsonParseFailureCountersForTests,
+} from "../api-cache-read";
 
 const cacheRows = vi.hoisted(() => new Map<string, { value: string; updatedAt: number }>());
 const getCacheMock = vi.hoisted(() => vi.fn());
@@ -32,6 +36,7 @@ function snapshot(
 
 describe("publishPegAnalyticsCache", () => {
   beforeEach(() => {
+    resetCacheJsonParseFailureCountersForTests();
     cacheRows.clear();
     getCacheMock.mockReset();
     getCacheMock.mockImplementation(async (_db: unknown, key: string) => cacheRows.get(key) ?? null);
@@ -85,6 +90,14 @@ describe("publishPegAnalyticsCache", () => {
     if (loaded.kind === "ok") {
       expect(loaded.payload.computedAtSec).toBe(NOW_SEC + 900);
     }
+  });
+  it("records malformed cache JSON through the shared parse-failure counter", async () => {
+    cacheRows.set("peg-analytics", { value: "{bad-json", updatedAt: NOW_SEC });
+
+    await expect(
+      loadPegAnalyticsCache({} as D1Database, { maxAgeMs: Number.MAX_SAFE_INTEGER }),
+    ).resolves.toEqual({ kind: "miss", reason: "json-parse-failed" });
+    expect(getCacheJsonParseFailureCountersForTests()["peg-analytics:peg-analytics"]?.count).toBe(1);
   });
 
   it("reports a failed publish instead of failing its caller", async () => {

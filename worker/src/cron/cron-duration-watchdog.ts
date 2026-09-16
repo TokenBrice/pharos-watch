@@ -76,10 +76,6 @@ interface SlotAbandonmentStats {
   errorSlots: number;
   abandonedSlots: number;
   notStartedSlots: number;
-  publicationFailureSlots: number;
-  terminalAccountingUnknownSlots: number;
-  realChildFailureSlots: number;
-  successfulChildTerminalSlots: number;
   latestAbandonedAt: number | null;
   abandonmentRatio: number;
 }
@@ -102,10 +98,6 @@ interface SlotStatsRow {
   error_slots: number | null;
   abandoned_slots: number | null;
   not_started_slots: number | null;
-  publication_failure_slots: number | null;
-  terminal_accounting_unknown_slots: number | null;
-  real_child_failure_slots: number | null;
-  successful_child_terminal_slots: number | null;
   latest_abandoned_at: number | null;
 }
 
@@ -419,11 +411,6 @@ export async function runCronDurationWatchdog(
              SUM(CASE WHEN result_status = 'error' THEN 1 ELSE 0 END) AS error_slots,
              SUM(CASE WHEN is_abandoned = 1 THEN 1 ELSE 0 END) AS abandoned_slots,
              SUM(CASE WHEN not_started_runs > 0 THEN 1 ELSE 0 END) AS not_started_slots,
-             SUM(CASE WHEN publication_failures > 0 THEN 1 ELSE 0 END) AS publication_failure_slots,
-             SUM(CASE WHEN terminal_accounting_unknown > 0 OR legacy_accounting_unknown = 1 THEN 1 ELSE 0 END)
-               AS terminal_accounting_unknown_slots,
-             SUM(CASE WHEN real_child_failures > 0 THEN 1 ELSE 0 END) AS real_child_failure_slots,
-             SUM(CASE WHEN successful_child_terminals > 0 THEN 1 ELSE 0 END) AS successful_child_terminal_slots,
              MAX(CASE WHEN is_abandoned = 1 THEN slot_started_at ELSE NULL END) AS latest_abandoned_at
            FROM (
              SELECT
@@ -433,29 +420,6 @@ export async function runCronDurationWatchdog(
                CASE WHEN json_valid(metadata)
                  THEN COALESCE(CAST(json_extract(metadata, '$.staleSlotReconciliation.notStartedCronRuns') AS INTEGER), 0)
                  ELSE 0 END AS not_started_runs,
-               CASE WHEN json_valid(metadata)
-                 THEN COALESCE(CAST(json_extract(metadata, '$.staleSlotReconciliation.publicationFailures') AS INTEGER), 0)
-                 ELSE 0 END AS publication_failures,
-               CASE WHEN json_valid(metadata)
-                 THEN COALESCE(CAST(json_extract(metadata, '$.staleSlotReconciliation.terminalAccountingUnknown') AS INTEGER), 0)
-                 ELSE 0 END AS terminal_accounting_unknown,
-               CASE WHEN json_valid(metadata)
-                 THEN COALESCE(CAST(json_extract(metadata, '$.staleSlotReconciliation.realChildFailures') AS INTEGER), 0)
-                 ELSE 0 END AS real_child_failures,
-               CASE WHEN json_valid(metadata)
-                 THEN COALESCE(CAST(json_extract(metadata, '$.staleSlotReconciliation.successfulChildTerminals') AS INTEGER), 0)
-                 ELSE 0 END AS successful_child_terminals,
-               CASE
-                 WHEN result_status = 'error'
-                  AND json_valid(metadata)
-                  AND json_extract(metadata, '$.error') = ?
-                  AND json_type(metadata, '$.staleSlotReconciliation.publicationFailures') IS NULL
-                  AND json_type(metadata, '$.staleSlotReconciliation.terminalAccountingUnknown') IS NULL
-                  AND json_type(metadata, '$.staleSlotReconciliation.realChildFailures') IS NULL
-                  AND json_type(metadata, '$.staleSlotReconciliation.successfulChildTerminals') IS NULL
-                  AND json_type(metadata, '$.staleSlotReconciliation.notStartedCronRuns') IS NULL
-                 THEN 1 ELSE 0
-               END AS legacy_accounting_unknown,
                CASE
                  WHEN result_status IN ('error', 'degraded') AND json_valid(metadata) THEN
                    CASE WHEN json_extract(metadata, '$.error') = ? THEN 1 ELSE 0 END
@@ -466,7 +430,7 @@ export async function runCronDurationWatchdog(
            )
            GROUP BY slot_key`,
         )
-        .bind(STALE_SLOT_ERROR, STALE_SLOT_ERROR, sinceSec)
+        .bind(STALE_SLOT_ERROR, sinceSec)
         .all<SlotStatsRow>(),
     3,
     signal,
@@ -484,10 +448,6 @@ export async function runCronDurationWatchdog(
       errorSlots: row?.error_slots ?? 0,
       abandonedSlots,
       notStartedSlots: row?.not_started_slots ?? 0,
-      publicationFailureSlots: row?.publication_failure_slots ?? 0,
-      terminalAccountingUnknownSlots: row?.terminal_accounting_unknown_slots ?? 0,
-      realChildFailureSlots: row?.real_child_failure_slots ?? 0,
-      successfulChildTerminalSlots: row?.successful_child_terminal_slots ?? 0,
       latestAbandonedAt: row?.latest_abandoned_at ?? null,
       abandonmentRatio: slots > 0 ? abandonedSlots / slots : 0,
     };
