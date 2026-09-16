@@ -174,6 +174,7 @@ export function assertBlacklistRebuildFailureRate(
 
 export function assertBlacklistRebuildWriterGuard(d1: BlacklistRebuildD1Client, nowSec = Math.floor(Date.now() / 1000)): void {
   const pauseRows = d1.query<{ paused: number }>(
+    // SAFETY: constant key escaped via sqlString.
     `SELECT 1 AS paused FROM cache WHERE key = ${sqlString(BLACKLIST_CURRENT_BALANCE_WRITER_PAUSE_KEY)} LIMIT 1`,
   );
   if (pauseRows[0]?.paused !== 1) {
@@ -199,6 +200,7 @@ export function buildCurrentBalanceMutationStatements(
   const staleRowPredicate = activeIds.length > 0 ? ` AND id NOT IN (${activeIds.join(", ")})` : "";
   return [
     // Keep active rows in place so provider_failed upserts can retain their last resolved values.
+    // SAFETY: stablecoin/chainId/ids are escaped via sqlString; predicate is built from escaped literals only.
     `DELETE FROM blacklist_current_balances WHERE stablecoin = ${sqlString(stablecoin)} AND chain_id = ${sqlString(chainId)}${staleRowPredicate};`,
     ...rowsToWrite.map(
       (row) =>
@@ -359,6 +361,7 @@ async function main(argv = process.argv.slice(2)) {
     const pausePayload = sqlString(JSON.stringify({ reason: SCRIPT_NAME, pausedAt }));
     const statement = options.armWriterPause
       ? `INSERT OR REPLACE INTO cache (key, value, updated_at) VALUES (${sqlString(BLACKLIST_CURRENT_BALANCE_WRITER_PAUSE_KEY)}, ${pausePayload}, ${pausedAt});`
+      // SAFETY: constant key escaped via sqlString.
       : `DELETE FROM cache WHERE key = ${sqlString(BLACKLIST_CURRENT_BALANCE_WRITER_PAUSE_KEY)};`;
     d1.executeStatements([statement], "blacklist-current-balance-writer-pause");
     console.log(JSON.stringify({
