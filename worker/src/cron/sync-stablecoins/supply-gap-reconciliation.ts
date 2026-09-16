@@ -9,6 +9,7 @@ import { DEFILLAMA_BASE, USER_AGENT } from "../../lib/constants";
 import { fetchTextWithRetry } from "../../lib/fetch-retry";
 import { throwIfAborted } from "../../lib/abort";
 import { logWorkerEvent } from "../../lib/structured-log";
+import { validatePricingSourceFreshness } from "../../lib/pricing-source-freshness";
 import type { PeggedAsset } from "./enrich-prices";
 import { fetchCuratedAggregateOnChainMcap } from "./supplemental-assets/onchain-supply";
 import { toPositiveFiniteNumber } from "./supplemental-assets/shared";
@@ -22,6 +23,7 @@ const MAX_LOOKBACK_POINT_DISTANCE_MS = 3 * 24 * 60 * 60 * 1000;
 
 interface CoinGeckoCurrentMcapRow {
   usd_market_cap?: number;
+  last_updated_at?: number;
 }
 
 interface CoinGeckoRecentMarketChart {
@@ -148,7 +150,9 @@ async function fetchCurrentCoinGeckoMarketCaps(
 
   const result = await fetchTextWithRetry(
     cgUrl(
-      cgSimplePricePath(`ids=${encodeURIComponent(geckoIds.join(","))}&vs_currencies=usd&include_market_cap=true`),
+      cgSimplePricePath(
+        `ids=${encodeURIComponent(geckoIds.join(","))}&vs_currencies=usd&include_market_cap=true&include_last_updated_at=true`,
+      ),
       coingeckoApiKey ?? null,
     ),
     {
@@ -303,7 +307,15 @@ function buildSupplyGapCandidates(
       const missingChainIds = metadataChainIds.filter((chainId) => !knownChainIds.has(chainId));
       if (missingChainIds.length === 0) continue;
 
-      const cgMarketCap = toPositiveFiniteNumber(currentMarketCaps[meta.geckoId]?.usd_market_cap);
+      const currentMarketCap = currentMarketCaps[meta.geckoId];
+      const freshness = validatePricingSourceFreshness({
+        source: "coingecko",
+        observedAt: currentMarketCap?.last_updated_at,
+        observedAtMode: "upstream",
+        requireObservedAt: true,
+      });
+      if (!freshness.accepted) continue;
+      const cgMarketCap = toPositiveFiniteNumber(currentMarketCap?.usd_market_cap);
       if (cgMarketCap == null || cgMarketCap <= dlMarketCap * COINGECKO_GAP_THRESHOLD_RATIO) {
         continue;
       }
@@ -331,7 +343,7 @@ function buildSupplyGapCandidates(
   return candidates;
 }
 
-function applySingleMissingChainRemainder(
+function applySingleMissingChainGap(
   candidate: MissingChainSupplyGapCandidate,
   totals: { current: number; day: number; week: number; month: number },
 ): number | null {
@@ -343,12 +355,27 @@ function applySingleMissingChainRemainder(
     week: getCirculatingRaw({ circulating: candidate.asset.circulatingPrevWeek ?? undefined }),
     month: getCirculatingRaw({ circulating: candidate.asset.circulatingPrevMonth ?? undefined }),
   };
-  const remainderCurrent = Math.max(0, totals.current - dlTotals.current);
-  const remainderDay = Math.max(0, totals.day - dlTotals.day);
-  const remainderWeek = Math.max(0, totals.week - dlTotals.week);
-  const remainderMonth = Math.max(0, totals.month - dlTotals.month);
+  const attributedCurrent = [...canonicalizeChainCirculating(candidate.asset.chainCirculating).values()]
+    .reduce((sum, row) => sum + row.current, 0);
+  const baselineTolerance = Math.max(0.01, dlTotals.current * 1e-9);
+  if (!Number.isFinite(attributedCurrent) || Math.abs(attributedCurrent - dlTotals.current) > baselineTolerance) {
+    return null;
+  }
+  const reconciledTotals = {
+    current: Math.max(dlTotals.current, totals.current),
+    day: Math.max(dlTotals.day, totals.day),
+    week: Math.max(dlTotals.week, totals.week),
+    month: Math.max(dlTotals.month, totals.month),
+  };
+  const remainderCurrent = reconciledTotals.current - dlTotals.current;
+  const remainderDay = reconciledTotals.day - dlTotals.day;
+  const remainderWeek = reconciledTotals.week - dlTotals.week;
+  const remainderMonth = reconciledTotals.month - dlTotals.month;
 
-  if (![remainderCurrent, remainderDay, remainderWeek, remainderMonth].every(Number.isFinite)) return null;
+  if (
+    remainderCurrent <= 0 ||
+    ![remainderCurrent, remainderDay, remainderWeek, remainderMonth].every(Number.isFinite)
+  ) return null;
 
   const chainId = candidate.missingChainIds[0];
   const chainLabel = CHAIN_META[chainId]?.name ?? chainId;
@@ -361,7 +388,12 @@ function applySingleMissingChainRemainder(
     circulatingPrevMonth: remainderMonth,
   };
   candidate.asset.chainCirculating = chainCirculating;
-  return remainderCurrent;
+  candidate.asset.circulating = { [candidate.pegKey]: reconciledTotals.current };
+  candidate.asset.circulatingPrevDay = { [candidate.pegKey]: reconciledTotals.day };
+  candidate.asset.circulatingPrevWeek = { [candidate.pegKey]: reconciledTotals.week };
+  candidate.asset.circulatingPrevMonth = { [candidate.pegKey]: reconciledTotals.month };
+  candidate.asset.supplySource = "coingecko-gap-fill";
+  return reconciledTotals.current;
 }
 
 function getPegReferencePriceUsd(
@@ -369,6 +401,7 @@ function getPegReferencePriceUsd(
   fxFallbackRates?: Record<string, number>,
 ): number | null {
   const meta = ACTIVE_META_BY_ID.get(String(candidate.asset.id));
+  if (meta?.flags.navToken || meta?.flags.yieldBearing) return null;
   if (meta?.flags.pegCurrency === "USD") return 1;
 
   const rate = toPositiveFiniteNumber(fxFallbackRates?.[candidate.pegKey]);
@@ -521,16 +554,17 @@ export async function reconcileTrackedSupplyGaps(
     };
 
     if (candidate.kind === "missing-chain") {
-      const remainderCurrent = applySingleMissingChainRemainder(candidate, totals);
-      if (remainderCurrent == null) continue;
+      const fromSource = candidate.asset.supplySource ?? null;
+      const reconciledCurrent = applySingleMissingChainGap(candidate, totals);
+      if (reconciledCurrent == null) continue;
 
       candidate.asset.chains = buildKnownDisplayChains(candidate.asset.id, candidate.asset.chains);
       reconciledIds.push(candidate.asset.id);
       reconciledAssets.push({
         id: candidate.asset.id,
         reason: "coingecko-gap-fill",
-        fromSource: candidate.asset.supplySource ?? null,
-        toValue: remainderCurrent,
+        fromSource,
+        toValue: reconciledCurrent,
       });
       byReason["coingecko-gap-fill"] += 1;
       continue;
