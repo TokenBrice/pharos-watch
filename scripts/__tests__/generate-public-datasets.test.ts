@@ -146,11 +146,11 @@ describe("generate-public-datasets", () => {
     });
   });
 
-  it("preserves checked-in mirrors during release when the configured live source is blocked", async () => {
+  it("fails a stale release but preserves checked-in mirrors when the configured live source is blocked", async () => {
     const root = await makeRoot();
     await copyDatasetWorkspace(root);
     const before = await datasetBytes(root);
-    const { stderr } = await execFileAsync(
+    await expect(execFileAsync(
       process.execPath,
       ["--import", "tsx", "scripts/maintenance/generate-public-datasets.ts"],
       {
@@ -167,9 +167,11 @@ describe("generate-public-datasets", () => {
         },
         timeout: 15_000,
       },
-    );
+    )).rejects.toMatchObject({
+      code: 1,
+      stderr: expect.stringContaining("checked-in mirrors are not current"),
+    });
 
-    expect(stderr).toContain("preserving checked-in public dataset mirrors");
     expect(await datasetBytes(root)).toEqual(before);
   });
 

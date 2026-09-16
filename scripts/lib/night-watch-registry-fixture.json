@@ -101,6 +101,7 @@
   "conditionalJobPaths": ["digestTriggerPoll:daily-digest"],
   "budgetOnlySurfaces": [
     "digest-trigger-poll",
+    "price-corroboration",
     "telegram-digest-outbox-drain",
     "telegram-registration-reconciliation"
   ]
