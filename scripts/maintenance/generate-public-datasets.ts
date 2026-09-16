@@ -89,7 +89,11 @@ const ROW_FLOORS: Readonly<Record<PublicDatasetTopic, number>> = {
 };
 const CHECK_ROW_FLOORS: Readonly<Record<PublicDatasetTopic, number>> = {
   ...ROW_FLOORS,
-  "depeg-history": 300,
+  // Calibrated against the observed 90-day event rate. The July 2026 value of
+  // 300 reflected the spring depeg storm (~1,200 events/month); since June the
+  // rate is ~30-40/month, so a healthy window holds ~100 rows. Keep the floor
+  // well below that to reject truncation without rejecting calm markets.
+  "depeg-history": 60,
 };
 
 type SnapshotEnvelope = Pick<PublicSnapshotEnvelopeV2, "snapshotDate" | "generatedAt" | "stablecoins"> & {
