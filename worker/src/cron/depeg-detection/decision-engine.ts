@@ -479,10 +479,7 @@ function decideExistingEvent(
     now,
     asset,
     price,
-    bps,
-    direction,
     threshold,
-    pegRef,
     primaryTrust,
     dexRow,
     dexAbsBps,
@@ -493,11 +490,19 @@ function decideExistingEvent(
   const commands: DepegPersistenceCommand[] = [];
   const seenEventIds: number[] = [];
   const diagnostics: DepegDiagnostic[] = [];
+  const nativeEvent = isNativePegEvent(existing);
+  const eventSignal = nativeEvent ? ctx.nativeSignal : ctx.primarySignal;
+  const eventPrice = nativeEvent ? ctx.nativePegPrice : price;
+  if (eventSignal == null || eventPrice == null) {
+    return { seenEventIds: [existing.id], commands, diagnostics };
+  }
+  const { bps, direction } = eventSignal;
+  const pegRef = nativeEvent ? 1 : ctx.pegRef;
 
   // Direction change: retire the live row only on authoritative contradiction
   // or corroborated same-direction DEX support for the replacement move.
   if (existing.direction !== direction) {
-    if (primaryTrust === "authoritative" || dexSupportsDirection) {
+    if (nativeEvent || primaryTrust === "authoritative" || dexSupportsDirection) {
       commands.push({
         type: "close-event",
         id: existing.id,
@@ -505,7 +510,15 @@ function decideExistingEvent(
         recoveryPrice: null,
         closeReason: "superseded-direction",
       });
-      commands.push(buildPendingCommand(asset, now, direction, bps, price, pegRef, pendingReason));
+      commands.push(buildPendingCommand(
+        asset,
+        now,
+        direction,
+        bps,
+        eventPrice,
+        pegRef,
+        nativeEvent ? markNativeOriginPending(pendingReason) : pendingReason,
+      ));
     } else if (primaryTrust === "confirm_required") {
       seenEventIds.push(existing.id);
       diagnostics.push(withDiagnostic(
@@ -702,19 +715,21 @@ export function decideDepegAsset(input: DepegAssetDecisionInput): DepegAssetDeci
   if (derived.kind === "skip") return derived.decision;
 
   const { ctx } = derived;
+  if (input.existing && isNativePegEvent(input.existing) && ctx.nativeSignal == null) {
+    return {
+      trackedCoinId: ctx.trackedCoinId,
+      seenEventIds: [input.existing.id],
+      commands: [],
+      diagnostics: [],
+    };
+  }
   const nativeVeto = applyNativeQuoteVeto(ctx, input.existing);
   if (nativeVeto) return nativeVeto;
 
   const nativeOpening = input.existing ? null : decideNewNativePegDepeg(ctx);
-  const existingNativeSignal = input.existing && isNativePegEvent(input.existing)
+  const existingSignal = input.existing && isNativePegEvent(input.existing)
     ? ctx.nativeSignal
-    : null;
-  const existingSignal = existingNativeSignal ?? {
-    bps: ctx.bps,
-    absBps: ctx.absBps,
-    absRawBps: ctx.rawAbsBps,
-    direction: ctx.direction,
-  };
+    : ctx.primarySignal;
   const nativeShowsRecovery = signalIsWithinThreshold(ctx.nativeSignal, ctx.recoveryThreshold);
   const shouldEvaluateRecovery = input.existing != null && (
     signalIsWithinThreshold(existingSignal, ctx.recoveryThreshold) || nativeShowsRecovery

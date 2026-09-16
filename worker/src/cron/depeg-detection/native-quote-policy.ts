@@ -71,15 +71,20 @@ export function resolveDirectRecovery(params: {
   primarySupportsRecovery: boolean;
   primaryRecoveryContradicted: boolean;
 }): Pick<Extract<DepegPersistenceCommand, { type: "close-event" }>, "recoveryPrice" | "closeReason"> | null {
-  if (signalIsWithinThreshold(params.nativeSignal, params.recoveryThreshold)) {
+  const nativeEvent = isNativePegEvent(params.existing);
+  if (nativeEvent) {
+    if (
+      params.nativePegPrice == null ||
+      !signalIsWithinThreshold(params.nativeSignal, params.recoveryThreshold)
+    ) return null;
     return {
-      recoveryPrice: isNativePegEvent(params.existing) ? params.nativePegPrice : null,
+      recoveryPrice: params.nativePegPrice,
       closeReason: "recovered-native",
     };
   }
   if (!params.primarySupportsRecovery || params.primaryRecoveryContradicted) return null;
   return {
-    recoveryPrice: recoveryPriceForEvent(params.existing, params.primaryPrice),
+    recoveryPrice: params.primaryPrice,
     closeReason: "recovered-primary",
   };
 }
