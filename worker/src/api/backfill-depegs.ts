@@ -1,4 +1,4 @@
-import { logWorkerEventArgs } from "../lib/structured-log";
+import { logWorkerEvent, logWorkerEventArgs } from "../lib/structured-log";
 import { PSI_ELIGIBLE_STABLECOINS } from "@shared/lib/psi-eligible";
 import { jsonResponse } from "../lib/api-response";
 import { selectBackfillCoins } from "../lib/backfill-query";
@@ -7,12 +7,14 @@ import type { D1Database } from "@cloudflare/workers-types";
 import { toErrorMessage } from "@shared/lib/error-utils";
 import {
   buildBackfillDeleteStmt,
+  loadIncompleteBackfillReplayWindow,
   loadSealedBackfillReplayConflicts,
   parseOptionalDayWindow,
   type BackfillReplayWindow,
 } from "./backfill-depegs-window";
 import type { BackfillReplayPreview } from "./backfill-depegs-preview";
 import type {
+  BackfillApplyResult,
   BackfillEventProvenanceInput,
   BackfillRunInput,
   PersistedBackfillEvent,
@@ -36,7 +38,7 @@ export async function applyBackfillEvents(
   events: PersistedBackfillEvent[],
   replayWindow: BackfillReplayWindow | null,
   run?: BackfillRunInput,
-): Promise<void> {
+): Promise<BackfillApplyResult> {
   const sealedConflicts = await loadSealedBackfillReplayConflicts(db, meta.id, replayWindow);
   if (sealedConflicts.length > 0) {
     const conflictList = sealedConflicts
@@ -60,7 +62,7 @@ export async function applyBackfillEvents(
       if (run) {
         await buildUpsertBackfillRunStmt(db, meta, run, "complete", Math.floor(Date.now() / 1000), 0, null).run();
       }
-      return;
+      return { provenanceMismatchCount: 0 };
     }
     const insertStmts = events.map((e) =>
       db
@@ -96,8 +98,41 @@ export async function applyBackfillEvents(
     const provenanceStmts = events
       .filter((event): event is typeof event & { provenance: BackfillEventProvenanceInput } => event.provenance != null)
       .map((event) => buildInsertProvenanceStmt(db, meta, event, event.provenance, Math.floor(Date.now() / 1000)));
+    let provenanceChanges = 0;
     for (let i = 0; i < provenanceStmts.length; i += BATCH_CHUNK_SIZE) {
-      await db.batch(provenanceStmts.slice(i, i + BATCH_CHUNK_SIZE));
+      const results = await db.batch(provenanceStmts.slice(i, i + BATCH_CHUNK_SIZE));
+      provenanceChanges += results.reduce((sum, result) => sum + (result.meta.changes ?? 0), 0);
+    }
+    const provenanceMismatchCount = Math.abs(provenanceStmts.length - provenanceChanges);
+    if (provenanceMismatchCount > 0) {
+      const mismatchError =
+        `provenance writes changed ${provenanceChanges} row(s) for ${provenanceStmts.length} event(s)`;
+      logWorkerEvent({
+        scope: "api",
+        level: "error",
+        event: "backfill_depegs_provenance_mismatch",
+        runId: run?.runId,
+        status: "incomplete",
+        message: `[backfill-depegs] ${meta.symbol}: ${mismatchError}`,
+        metadata: {
+          stablecoinId: meta.id,
+          expectedProvenanceCount: provenanceStmts.length,
+          provenanceChanges,
+          provenanceMismatchCount,
+        },
+      });
+      if (run) {
+        await buildUpsertBackfillRunStmt(
+          db,
+          meta,
+          run,
+          "incomplete",
+          Math.floor(Date.now() / 1000),
+          insertedCount,
+          mismatchError,
+        ).run();
+      }
+      return { provenanceMismatchCount };
     }
     if (run) {
       await buildUpsertBackfillRunStmt(
@@ -110,6 +145,7 @@ export async function applyBackfillEvents(
         null,
       ).run();
     }
+    return { provenanceMismatchCount: 0 };
   } catch (error) {
     if (run) {
       try {
@@ -170,13 +206,19 @@ async function executeBackfillDepegs(
   });
 
   let totalEvents = 0;
+  let provenanceMismatchCount = 0;
   const errors: string[] = [];
   const skipped: string[] = [];
+  const consumeIncompleteWindow =
+    !dryRun && replayWindow == null && !url.searchParams.has("stablecoin");
   const previews: BackfillReplayPreview[] = [];
 
   // Process coins sequentially. Each still needs CG price history fetch, so
   // serializing avoids memory pressure from parsing multiple large JSON bodies.
   for (const prepared of plan.preparedCoins) {
+    const coinReplayWindow = consumeIncompleteWindow
+      ? await loadIncompleteBackfillReplayWindow(db, prepared.meta.id)
+      : replayWindow;
     const outcome = await executeBackfillForCoin({
       db,
       prepared,
@@ -184,10 +226,13 @@ async function executeBackfillDepegs(
       fxRates: plan.fxRates,
       fxSeries: plan.fxSeries,
       commoditySeries: plan.commoditySeries,
-      replayWindow,
+      replayWindow: coinReplayWindow,
       coingeckoApiKey: coingeckoApiKey ?? null,
       dryRun,
-      applyBackfillEvents: (meta, events, window, run) => applyBackfillEvents(db, meta, events, window, run),
+      applyBackfillEvents: async (meta, events, appliedWindow, run) => {
+        const result = await applyBackfillEvents(db, meta, events, appliedWindow, run);
+        provenanceMismatchCount += result.provenanceMismatchCount;
+      },
     });
     if (outcome.status === "skipped") {
       skipped.push(prepared.meta.symbol);
@@ -228,6 +273,7 @@ async function executeBackfillDepegs(
     buildAdminJobSummary({
       coinsProcessed: coins.length,
       eventsCreated: totalEvents,
+      provenanceMismatchCount,
       skipped,
       errors,
       commodities:

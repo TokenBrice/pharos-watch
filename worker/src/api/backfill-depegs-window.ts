@@ -148,6 +148,41 @@ function buildReplayWindow(
   };
 }
 
+export async function loadIncompleteBackfillReplayWindow(
+  db: D1Database,
+  stablecoinId: string,
+): Promise<BackfillReplayWindow | null> {
+  const row = await db
+    .prepare(
+      `SELECT status, start_day, end_day, context_days
+       FROM depeg_backfill_runs
+       WHERE stablecoin_id = ?
+       ORDER BY started_at DESC, rowid DESC
+       LIMIT 1`,
+    )
+    .bind(stablecoinId)
+    .first<{
+      status: string;
+      start_day: number | null;
+      end_day: number | null;
+      context_days: number | null;
+    }>();
+  if (
+    row?.status !== "incomplete" ||
+    (row.start_day == null && row.end_day == null) ||
+    row.context_days == null ||
+    !Number.isInteger(row.context_days) ||
+    row.context_days < 0 ||
+    row.context_days > MAX_BACKFILL_REPLAY_CONTEXT_DAYS ||
+    (row.start_day != null && !Number.isInteger(row.start_day)) ||
+    (row.end_day != null && !Number.isInteger(row.end_day)) ||
+    (row.start_day != null && row.end_day != null && row.start_day > row.end_day)
+  ) {
+    return null;
+  }
+  return buildReplayWindow(row.start_day, row.end_day, row.context_days);
+}
+
 export function timestampInReplayWindow(timestamp: number, replayWindow: BackfillReplayWindow | null): boolean {
   if (replayWindow?.replayStartSec != null && timestamp < replayWindow.replayStartSec) return false;
   if (replayWindow?.replayEndSec != null && timestamp > replayWindow.replayEndSec) return false;
@@ -172,27 +207,28 @@ export function existingRowOverlapsReplayWindow(
   return eventOverlapsReplayWindow({ startedAt: row.started_at, endedAt: row.ended_at }, replayWindow);
 }
 
+const SEALED_EVENT_DELETE_GUARD = ` AND id NOT IN (
+  SELECT l.event_id
+  FROM depeg_resolver_incident_event_links l
+  JOIN depeg_resolver_public_predictions p ON p.incident_key = l.incident_key
+)`;
+
 export function buildBackfillDeleteStmt(
   db: D1Database,
   stablecoinId: string,
   replayWindow: BackfillReplayWindow | null,
 ): D1PreparedStatement {
-  if (!replayWindow) {
-    return db
-      .prepare("DELETE FROM depeg_events WHERE stablecoin_id = ? AND source = 'backfill'")
-      .bind(stablecoinId);
-  }
-
   let sql = "DELETE FROM depeg_events WHERE stablecoin_id = ? AND source = 'backfill'";
   const binds: unknown[] = [stablecoinId];
-  if (replayWindow.compareStartSec != null) {
+  if (replayWindow?.compareStartSec != null) {
     sql += " AND COALESCE(ended_at, started_at) >= ?";
     binds.push(replayWindow.compareStartSec);
   }
-  if (replayWindow.compareEndSec != null) {
+  if (replayWindow?.compareEndSec != null) {
     sql += " AND started_at <= ?";
     binds.push(replayWindow.compareEndSec);
   }
+  sql += SEALED_EVENT_DELETE_GUARD;
   return db.prepare(sql).bind(...binds);
 }
 
