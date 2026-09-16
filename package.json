@@ -84,7 +84,7 @@
     "test:visual": "playwright test tests/visual/*.spec.ts",
     "test:a11y:hydrated": "playwright test tests/visual/a11y/axe-routes-hydrated.spec.ts",
     "test:ops-browser": "playwright test --config playwright.ops.config.ts",
-    "test:smoke-api": "node scripts/maintenance/smoke-api.mjs",
+    "test:smoke-api": "node --import tsx scripts/maintenance/smoke-api.mjs",
     "test:smoke-transport": "node scripts/maintenance/smoke-transport.mjs",
     "test:smoke-ops": "node scripts/maintenance/smoke-ops.mjs",
     "test:smoke-pages-assets": "node scripts/maintenance/smoke-pages-assets.mjs",

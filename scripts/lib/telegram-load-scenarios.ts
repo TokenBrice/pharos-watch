@@ -1,5 +1,6 @@
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
+import { parseAssignments } from "./wrangler-toml.mjs";
 import {
   estimateTelegramTargetPlanCoordinatorBound,
   PENDING_TTL_SEC,
@@ -216,12 +217,11 @@ export function simulateProductionCalibratedDispatch(): ProductionCalibratedDisp
  */
 function readDispatchCpuMs(wranglerPath = resolve("worker/wrangler.toml")): number {
   try {
-    const toml = readFileSync(wranglerPath, "utf8");
-    const match = toml.match(/^\s*cpu_ms\s*=\s*(\d+)/m);
-    if (match) {
-      const parsed = Number(match[1]);
-      if (Number.isFinite(parsed) && parsed > 0) return parsed;
-    }
+    const assignment = parseAssignments(readFileSync(wranglerPath, "utf8")).find(
+      ({ key, section }) => key === "cpu_ms" && section === "limits",
+    );
+    const parsed = Number(assignment?.value.trim());
+    if (Number.isFinite(parsed) && parsed > 0) return parsed;
   } catch {
     // fall through to the documented default
   }

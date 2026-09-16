@@ -29,9 +29,34 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  refresh:
+  targets:
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.targets.outputs.matrix }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 1
+          persist-credentials: false
+
+      - id: targets
+        shell: bash
+        run: |
+          set -euo pipefail
+          target_file="shared/data/safety-score-v9/shock-coverage-targets.json"
+          jq -e '
+            (.assetIds | type == "array" and length > 0 and all(.[]; type == "string" and test("^[a-z0-9][a-z0-9-]*$"))) and
+            (.assetIds | length == (unique | length))
+          ' "$target_file" >/dev/null
+          echo "matrix=$(jq -c '{asset: .assetIds}' "$target_file")" >> "$GITHUB_OUTPUT"
+
+  measure:
+    needs: targets
     runs-on: ubuntu-latest
     timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJSON(needs.targets.outputs.matrix) }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -44,14 +69,44 @@ jobs:
       # scripts/lib/mechanism-measurement/shock-targets.ts with per-endpoint
       # failover. No RPC credential is required. Any target that cannot be
       # measured on any endpoint fails the job before anything is committed.
-      - name: Measure Liquity V1 shock coverage
-        run: npx tsx scripts/maintenance/measure-cdp-shock-coverage.ts --asset lusd-liquity
+      - name: Measure shock coverage for ${{ matrix.asset }}
+        run: npx tsx scripts/maintenance/measure-cdp-shock-coverage.ts --asset "${{ matrix.asset }}"
 
-      - name: Measure Liquity V2 shock coverage
-        run: npx tsx scripts/maintenance/measure-cdp-shock-coverage.ts --asset bold-liquity
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: shock-coverage-${{ matrix.asset }}
+          path: shared/data/safety-score-v9/mechanism-measurements/${{ matrix.asset }}
+          if-no-files-found: error
 
-      - name: Measure Base Dollar Liquity V2 shock coverage
-        run: npx tsx scripts/maintenance/measure-cdp-shock-coverage.ts --asset bd-basedollar
+  refresh:
+    needs: measure
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - uses: $/.github/actions/setup-workspace
+
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          pattern: shock-coverage-*
+          path: .tmp/shock-coverage-artifacts
+          merge-multiple: false
+
+      - name: Restore measured target directories
+        run: |
+          set -euo pipefail
+          target_root="shared/data/safety-score-v9/mechanism-measurements"
+          for artifact_dir in .tmp/shock-coverage-artifacts/shock-coverage-*; do
+            [ -d "$artifact_dir" ] || continue
+            asset="${artifact_dir##*/}"
+            asset="${asset#shock-coverage-}"
+            mkdir -p "$target_root/$asset"
+            cp -R "$artifact_dir"/. "$target_root/$asset/"
+          done
 
       # Byte-replays every new journal offline and attests it. A journal that
       # does not replay byte-identically throws here, so an unverified
@@ -113,9 +168,9 @@ jobs:
         env:
           AUTOMATION_GITHUB_TOKEN: ${{ secrets.SHOCK_COVERAGE_GITHUB_TOKEN || secrets.OG_REFRESH_GITHUB_TOKEN }}
           PR_BODY: |
-            Automated shock-coverage refresh for `lusd-liquity`, `bold-liquity`, and `bd-basedollar`. Every journal in this PR replayed byte-identically offline before the registry was regenerated.
+            Automated shock-coverage refresh for the configured targets in `shared/data/safety-score-v9/shock-coverage-targets.json`. Every journal in this PR replayed byte-identically offline before the registry was regenerated.
 
-            **Merge promptly.** The V9 CDP freshness bound is 72h measured from the pinned block timestamp, not from merge time. Past it the engine fails closed to legacy LCR and LUSD drops to `unsafe-backing:high`, taking BOLD's and BD's ratings with it.
+            **Merge promptly.** The V9 CDP freshness bound is 72h measured from the pinned block timestamp, not from merge time. Past it the engine fails closed to legacy LCR and the affected ratings will fall back to legacy LCR.
 
             See [docs/process/shock-coverage-refresh.md](../blob/main/docs/process/shock-coverage-refresh.md).
         run: |

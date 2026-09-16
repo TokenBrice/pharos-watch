@@ -4,7 +4,7 @@ import { z } from "zod";
 import { DEAD_STABLECOINS } from "@shared/lib/dead-stablecoins";
 import { CHAIN_META } from "@shared/lib/chains";
 import { COMMODITY_PEG_CURRENCIES, isCommodityPeg } from "@shared/lib/filter-tags";
-import { hasRuntimeOnchainSupplyPath } from "@shared/lib/onchain-supply-probe";
+import { DEDICATED_SINGLE_TOKEN_GOLD_PROTOCOL_SLUGS, isDedicatedSingleTokenGoldProtocolSlug } from "@shared/lib/commodity-protocols";
 import { CanonicalOrderAssetSchema } from "@shared/lib/stablecoins/schema";
 import { type ListingDecisionRegistry } from "@shared/lib/stablecoins/listing-governance";
 import { isActiveStablecoinMeta, isReadableStablecoinMeta } from "@shared/lib/stablecoins/status";
@@ -12,6 +12,7 @@ import { validateMintBridgeOwnership } from "@shared/lib/stablecoins/mint-bridge
 import { validateVariantRelationships } from "@shared/lib/stablecoins/validate-variants";
 import { findCollateralProseReserveDriftFindings } from "@shared/lib/stablecoins/collateral-prose-reserve-drift";
 import { classifyPegClass, normalizePegTypeFromCurrency } from "@shared/lib/peg-price-bounds";
+import { hasRuntimeOnchainSupplyPath } from "@shared/lib/onchain-supply-probe";
 import type { DeadStablecoin, StablecoinMeta } from "@shared/types";
 import { MANIFEST_SOURCES } from "@shared/data/live-reserves/independent-assurance";
 import listingDecisionsAsset from "@shared/data/stablecoins/listing-decisions.json";
@@ -48,15 +49,7 @@ const UNWIRED_INDEPENDENT_ASSURANCE_PRODUCTS: Record<string, true> = {
 const BASE58_PATTERN = /^[1-9A-HJ-NP-Za-km-z]+$/;
 const XRPL_COMPOSITE_PATTERN = /^[A-Za-z0-9]{3,40}[.-]r[1-9A-HJ-NP-Za-km-z]{24,34}$/;
 
-const RESERVE_TOTAL_ALLOWLIST = new Set<string>();
 const SAFETY_SCORE_V9_PUBLIC_BACKING_COMPONENT_LABEL_MAX_LENGTH = 160;
-// Keep synchronized with DEDICATED_SINGLE_TOKEN_GOLD_PROTOCOL_SLUGS in
-// worker/src/cron/sync-stablecoins/supplemental-assets/gold.ts. This CI script
-// mirrors the small runtime allowlist instead of importing the Worker fetch graph.
-const DEDICATED_SINGLE_TOKEN_GOLD_PROTOCOL_SLUGS = new Set([
-  "tether-gold",
-  "paxos-gold",
-]);
 const ACTIVE_DEAD_LLAMA_ID_OVERLAP_ALLOWLIST = new Set([
   // Kava USDX remains a live tracked feed while the cemetery keeps the 2022
   // UST-collateral depeg incident as a separate historical row.
@@ -204,11 +197,11 @@ function getCommodityOuncesIssue(coin: StablecoinMeta): string | null {
 
 export function getCommodityProtocolSlugIssue(coin: StablecoinMeta): string | null {
   if (!isCommodityPeg(coin.flags.pegCurrency) || !coin.protocolSlug) return null;
-  if (DEDICATED_SINGLE_TOKEN_GOLD_PROTOCOL_SLUGS.has(coin.protocolSlug)) return null;
+  if (isDedicatedSingleTokenGoldProtocolSlug(coin.protocolSlug)) return null;
 
   return (
     `${coin.flags.pegCurrency}-pegged commodity asset has non-dedicated protocolSlug "${coin.protocolSlug}" ` +
-    "(allowlisted for protocol-mcap supply: tether-gold, paxos-gold); the gold supply lane ignores it, " +
+    `(allowlisted for protocol-mcap supply: ${Object.keys(DEDICATED_SINGLE_TOKEN_GOLD_PROTOCOL_SLUGS).join(", ")}); the gold supply lane ignores it, ` +
     "but confirm the slug is intentional for TVL history / selector concentration grouping"
   );
 }
@@ -237,7 +230,7 @@ function getReserveTotalIssue(coin: StablecoinMeta): string | null {
     return "reserve pct total must be greater than 0";
   }
 
-  if (!RESERVE_TOTAL_ALLOWLIST.has(coin.id) && !validateReserveCompositionTotal(coin.reserves, "full")) {
+  if (!validateReserveCompositionTotal(coin.reserves, "full")) {
     return `reserve pct total ${total} is outside 100 +/- ${RESERVE_COMPOSITION_TOTAL_TOLERANCE_PCT}`;
   }
 
