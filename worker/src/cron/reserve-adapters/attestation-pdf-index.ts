@@ -4,14 +4,13 @@ import { ReserveSliceSchema } from "@shared/types/reserves";
 import { parseLiveReserveAdapterParams } from "@shared/lib/live-reserve-adapters";
 import type { AdapterContext, AdapterResult } from "./types";
 import {
+  collectPdfAnchors,
   decodeHtmlEntities,
   fetchPrimaryHtmlInput,
   fetchTextWithRetry,
   htmlLayoutChangedError,
   normalizeSlices,
-  readHtmlAttribute,
   requireHtmlInput,
-  stripTags,
   unverifiedFreshnessMetadata,
   verifiedFreshnessMetadata,
 } from "./helpers";
@@ -283,47 +282,14 @@ function parseBestReportDate(value: string, source: ReportDateSource): ReportDat
 }
 
 function collectPdfLinkCandidates(html: string): PdfLinkCandidate[] {
-  const anchorRegex = /<a\b[^>]*\bhref\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s>]+))[^>]*>([\s\S]*?)<\/a>/gi;
-  const gatedUrlRegex = /<[^>]+\bdata-gated-url\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s>]+))[^>]*>/gi;
   const candidates: PdfLinkCandidate[] = [];
-
-  for (const match of html.matchAll(anchorRegex)) {
-    const href = decodeHtmlEntities((match[1] ?? match[2] ?? match[3] ?? "").trim());
-    if (!href || !isPdfHref(href)) {
-      continue;
-    }
-
-    const text = stripTags(match[4] ?? "");
-    if (!isAttestationReportLink(href, text)) {
-      continue;
-    }
-    const date = parseBestReportDate(href, "href") ?? parseBestReportDate(text, "text");
-    if (!date) {
-      continue;
-    }
-
-    candidates.push({ href, text, date });
+  for (const anchor of collectPdfAnchors(html)) {
+    const href = decodeHtmlEntities(anchor.href.trim());
+    if (!href || !isPdfHref(href)) continue;
+    if (!isAttestationReportLink(href, anchor.text)) continue;
+    const date = parseBestReportDate(href, "href") ?? parseBestReportDate(anchor.text, "text");
+    if (date) candidates.push({ href, text: anchor.text, date });
   }
-
-  for (const match of html.matchAll(gatedUrlRegex)) {
-    const tag = match[0] ?? "";
-    const href = decodeHtmlEntities((match[1] ?? match[2] ?? match[3] ?? "").trim());
-    if (!href || !isPdfHref(href)) {
-      continue;
-    }
-
-    const text = readHtmlAttribute(tag, "data-gated-asset") ?? "";
-    if (!isAttestationReportLink(href, text)) {
-      continue;
-    }
-    const date = parseBestReportDate(href, "href") ?? parseBestReportDate(text, "text");
-    if (!date) {
-      continue;
-    }
-
-    candidates.push({ href, text, date });
-  }
-
   return candidates;
 }
 

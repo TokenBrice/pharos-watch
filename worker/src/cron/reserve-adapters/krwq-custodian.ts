@@ -12,6 +12,8 @@ import {
   fetchErc20TotalSupply,
   fetchJsonAdapterInput,
   fetchOnchainMulticall3,
+  parseDigitString,
+  parseFiniteNumber,
   parseTimestampLikeToUnixSeconds,
   reserveDegradedWarning,
   reserveInfoWarning,
@@ -125,43 +127,21 @@ export interface KrwqSupplyAggregate {
   omittedReadFailureChains: string[];
 }
 
-/** The custodian feed renders USD amounts as comma-grouped decimal strings
- *  (`"90,102.08"`). Grouping must be well formed: digits in groups of three
- *  separated by `,`, or no grouping at all, with an optional `.` fraction. */
-// eslint-disable-next-line security/detect-unsafe-regex -- anchored digit/point/digit shape with disjoint character classes; no ambiguous backtracking path.
-const PLAIN_DECIMAL = /^[+-]?\d+(?:\.\d+)?$/;
-// eslint-disable-next-line security/detect-unsafe-regex -- anchored comma-delimited groups of exactly three digits; separators cannot overlap.
-const GROUPED_DECIMAL = /^[+-]?\d{1,3}(?:,\d{3})+(?:\.\d+)?$/;
-
-/** Strict amount parser: finite numbers pass through, well-formed decimal
- *  strings (grouped or plain, no currency symbols) are converted, and anything
- *  else — `1,2,3`, `N/A`, empty — throws so a malformed payload can never
- *  silently read as zero. */
 function parseStrictAmount(value: unknown, label: string): number {
-  if (typeof value === "number" && Number.isFinite(value)) return value;
-  if (typeof value === "string") {
-    const trimmed = value.trim();
-    if (PLAIN_DECIMAL.test(trimmed) || GROUPED_DECIMAL.test(trimmed)) {
-      const parsed = Number(trimmed.replace(/,/g, ""));
-      if (Number.isFinite(parsed)) return parsed;
-    }
-  }
-  throw new Error(`${ADAPTER_KEY} ${label} is not a finite number: ${String(value)}`);
+  return parseFiniteNumber(value, {
+    label: `${ADAPTER_KEY} ${label}`,
+    allowGrouped: true,
+  });
 }
 
-/** Raw-unit parser for the issuer's `totalAssetsRaw` fields. The frxUSD raw
- *  amount exceeds `Number.MAX_SAFE_INTEGER`, so numeric strings are the only
- *  lossless representation; small amounts may arrive as safe integers. */
 function parseRawAmount(value: unknown, label: string): bigint {
-  if (typeof value === "string") {
-    const trimmed = value.trim();
-    if (/^\d+$/.test(trimmed)) return BigInt(trimmed);
-    throw new Error(`${ADAPTER_KEY} ${label} is not an unsigned integer string: ${String(value)}`);
-  }
   if (typeof value === "number" && Number.isSafeInteger(value) && value >= 0) {
     return BigInt(value);
   }
-  throw new Error(`${ADAPTER_KEY} ${label} is not an unsigned integer: ${String(value)}`);
+  return parseDigitString(
+    value,
+    `${ADAPTER_KEY} ${label} is not an unsigned integer${typeof value === "string" ? " string" : ""}: ${String(value)}`,
+  );
 }
 
 function holderAddressFor(payload: KrwqCustodianPayload, key: KrwqLegKey): string | null {

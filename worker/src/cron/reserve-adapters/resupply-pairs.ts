@@ -19,6 +19,10 @@ import {
 import { decodeAddressWord, decodeUint256Word } from "./abi-decode";
 import { normalizeEvmAddress } from "./evm";
 import { multicallResultByLabel } from "./onchain-identity";
+import {
+  ERC4626_ASSET_SELECTOR as ASSET_SELECTOR,
+  ERC4626_CONVERT_TO_ASSETS_SELECTOR as CONVERT_TO_ASSETS_SELECTOR,
+} from "./erc4626";
 
 type ResupplyPairsParams = LiveReserveAdapterParamsByKey["resupply-pairs"];
 type ResupplyUnderlyingDescriptor = ResupplyPairsParams["underlyings"][number];
@@ -39,12 +43,10 @@ interface ResupplyPairSnapshot {
 const UNDERLYING_SELECTOR = "0x6f307dc3";
 const COLLATERAL_SELECTOR = "0xd8dfeb45";
 const GET_PAIR_ACCOUNTING_SELECTOR = "0xcdd72d52";
-const CONVERT_TO_ASSETS_SELECTOR = "0x07a2d13a";
 const GET_MAX_REDEEMABLE_DEBT_SELECTOR = "0x43bad45b";
 const GUARD_ENABLED_SELECTOR = "0x901654fc";
 const PERMISSIONLESS_PRICE_THRESHOLD_SELECTOR = "0x0e3d9f3c";
 const REUSD_ORACLE_PRICE_SELECTOR = "0xc6af1dda";
-const ASSET_SELECTOR = "0x38d52e0f";
 const DECIMALS_SELECTOR = "0x313ce567";
 const REDEMPTION_GUARD_DECIMALS = 18;
 

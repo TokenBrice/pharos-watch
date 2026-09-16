@@ -25,6 +25,10 @@ import { decodeAddressWord, decodeBoolWord, decodeUint256Word } from "./abi-deco
 import { normalizeEvmAddress } from "./evm";
 import { validateDecimals } from "./slice-math";
 import { pinnedBlockPlan } from "./evm-observation-plan";
+import {
+  ERC4626_ASSET_SELECTOR,
+  ERC4626_CONVERT_TO_ASSETS_SELECTOR as CONVERT_TO_ASSETS_SELECTOR,
+} from "./erc4626";
 
 type ReserveProtocolDtfParams = LiveReserveAdapterParamsByKey["reserve-protocol-dtf"];
 type ReserveProtocolDtfAssetDescriptor = NonNullable<ReserveProtocolDtfParams["assets"]>[number];
@@ -38,8 +42,6 @@ const QUOTE_SELECTOR = "0x3913d11a";
 const PRICE_SELECTOR = "0xa035b1fe";
 const COLLATERAL_STATUS_SELECTOR = "0x200d2ed2";
 const FULLY_COLLATERALIZED_SELECTOR = "0xe45a5b2d";
-const CONVERT_TO_ASSETS_SELECTOR = "0x07a2d13a";
-const ERC4626_ASSET_SELECTOR = "0x38d52e0f";
 const EXCHANGE_RATE_SELECTOR = "0x3ba0b9a9";
 const UNDERLYING_COMET_SELECTOR = "0x97008d6c";
 const COMET_BASE_TOKEN_SELECTOR = "0xc55dae63";

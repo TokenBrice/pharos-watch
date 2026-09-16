@@ -2,6 +2,49 @@ export interface StrictAmountEntry {
   amount?: number | string;
 }
 
+export interface ParseFiniteNumberOptions {
+  label: string;
+  min?: number;
+  allowGrouped?: boolean;
+}
+
+export function parseFiniteNumber(value: unknown, options: ParseFiniteNumberOptions): number {
+  let parsed = Number.NaN;
+  if (typeof value === "number") {
+    parsed = value;
+  } else if (typeof value === "string" && value.trim() !== "") {
+    const trimmed = value.trim();
+    if (
+      !options.allowGrouped
+      || /^[+-]?\d+(?:\.\d+)?$/.test(trimmed)
+      || /^[+-]?\d{1,3}(?:,\d{3})+(?:\.\d+)?$/.test(trimmed)
+    ) {
+      parsed = Number(options.allowGrouped ? trimmed.replace(/,/g, "") : trimmed);
+    }
+  }
+  if (!Number.isFinite(parsed) || (options.min != null && parsed < options.min)) {
+    throw new Error(`${options.label} is not a finite number: ${String(value)}`);
+  }
+  return parsed;
+}
+
+export function requireRecord(
+  value: unknown,
+  errorMessage: string,
+): Record<string, unknown> {
+  if (typeof value !== "object" || value === null || Array.isArray(value)) {
+    throw new Error(errorMessage);
+  }
+  return value as Record<string, unknown>;
+}
+
+export function parseDigitString(value: unknown, errorMessage: string): bigint {
+  if (typeof value !== "string" || !/^\d+$/.test(value)) {
+    throw new Error(errorMessage);
+  }
+  return BigInt(value);
+}
+
 /**
  * Binds a strict amount parser to an adapter key so error messages keep the
  * adapter's own prefix. Finite numbers pass through, numeric strings are
@@ -9,13 +52,7 @@ export interface StrictAmountEntry {
  * silently read as zero.
  */
 export function strictAmountParser(adapterKey: string): (value: unknown, label: string) => number {
-  return (value, label) => {
-    if (typeof value === "number" && Number.isFinite(value)) return value;
-    if (typeof value === "string" && value.trim() !== "" && Number.isFinite(Number(value))) {
-      return Number(value);
-    }
-    throw new Error(`${adapterKey} ${label} is not a finite number: ${String(value)}`);
-  };
+  return (value, label) => parseFiniteNumber(value, { label: `${adapterKey} ${label}` });
 }
 
 /**

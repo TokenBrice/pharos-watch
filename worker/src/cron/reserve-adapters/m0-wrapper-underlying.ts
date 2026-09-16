@@ -15,15 +15,14 @@ import {
 import { decodeAddressWord, decodeBoolWord, decodeUint8Word } from "./abi-decode";
 import { normalizeEvmAddress, resolveCoinContractAddress } from "./evm";
 import {
-  buildCoverageShortfallWarnings,
   makeOnchainCallers,
   notApplicableFreshnessMetadata,
   requireOnchainInput,
   type OnchainCallers,
 } from "./helpers";
-import { capacityFromTokenAmounts } from "./slice-math";
 import { reserveDegradedWarning } from "./warnings";
 import type { AdapterContext, AdapterResult } from "./types";
+import { readWrapperCoverage, wrapperCoverageResult } from "./wrapper-coverage";
 
 const ADAPTER_KEY = "m0-wrapper-underlying";
 const DEFAULT_M_TOKEN_SELECTOR = "0xc3b6f939"; // mToken()
@@ -254,39 +253,31 @@ export async function fetchM0WrapperUnderlyingReserves(
     }
   }
 
-  const { capacityUsd, capacityRatioOfSupply, collateralizationRatio } = capacityFromTokenAmounts(
+  const coverage = readWrapperCoverage({
     underlyingBalanceRaw,
     underlyingDecimals,
     totalSupplyRaw,
     wrapperDecimals,
-  );
-  const warnings = buildCoverageShortfallWarnings({
-    code: "reserve-undercollateralized",
-    message: (pct) => `M0 wrapper underlying balance covers ${pct}% of wrapper supply`,
-    coverageRatio: collateralizationRatio,
   });
-  if (params.mode === "m-extension" && routeStatus === "unknown") {
-    warnings.push(
-      reserveDegradedWarning(
+  const warnings = params.mode === "m-extension" && routeStatus === "unknown"
+    ? [reserveDegradedWarning(
         "m0-extension-route-unverified",
         routeStatusReason ?? "Could not verify M0 SwapFacility redemption path status",
-      ),
-    );
-  }
+      )]
+    : [];
   const sliceConfig = parseSliceConfig(params);
-
-  return {
-    slices: [
-      {
-        sourceKey: "m0-wrapper-underlying:m",
-        name: sliceConfig.name,
-        pct: 100,
-        risk: sliceConfig.risk,
-        ...(sliceConfig.coinId ? { coinId: sliceConfig.coinId } : {}),
-        ...(sliceConfig.depType ? { depType: sliceConfig.depType } : {}),
-      },
-    ],
-    ...(warnings.length > 0 ? { warnings } : {}),
+  return wrapperCoverageResult({
+    coverage,
+    slice: {
+      sourceKey: "m0-wrapper-underlying:m",
+      name: sliceConfig.name,
+      pct: 100,
+      risk: sliceConfig.risk,
+      ...(sliceConfig.coinId ? { coinId: sliceConfig.coinId } : {}),
+      ...(sliceConfig.depType ? { depType: sliceConfig.depType } : {}),
+    },
+    warningMessage: (pct) => `M0 wrapper underlying balance covers ${pct}% of wrapper supply`,
+    warnings,
     metadata: {
       ...notApplicableFreshnessMetadata({
         proofKind: "m0-wrapper-underlying-balance",
@@ -295,29 +286,16 @@ export async function fetchM0WrapperUnderlyingReserves(
       chain: input.chain,
       wrapperAddress,
       mTokenAddress,
-      totalSupplyRaw: totalSupplyRaw.toString(),
-      wrapperDecimals,
-      underlyingBalanceRaw: underlyingBalanceRaw.toString(),
-      underlyingDecimals,
       ...(additionalDeployments.length > 0 ? { deployments: deploymentBreakdown } : {}),
-      ...(collateralizationRatio != null && Number.isFinite(collateralizationRatio)
-        ? { collateralizationRatio }
-        : {}),
       ...(swapFacilityAddress ? { swapFacilityAddress } : {}),
       ...(swapFacilityPaused != null ? { swapFacilityPaused } : {}),
       ...(swapperCanRedeem != null ? { swapperCanRedeem } : {}),
-      redemption: {
-        capacityUsd,
-        ...(capacityRatioOfSupply != null ? { capacityRatioOfSupply } : {}),
-        capacityKind: "live-direct" as const,
-        freshnessKind: "same-run-onchain" as const,
-        routeStatus,
-        routeStatusSource: "onchain" as const,
-        ...(routeStatusReason ? { routeStatusReason } : {}),
-        holderEligibility,
-        settlementDelaySec: 0,
-        ...(params.sourceUrls ? { sourceUrls: params.sourceUrls } : {}),
-      },
     },
-  };
+    redemption: {
+      routeStatus,
+      ...(routeStatusReason ? { routeStatusReason } : {}),
+      holderEligibility,
+      ...(params.sourceUrls ? { sourceUrls: params.sourceUrls } : {}),
+    },
+  });
 }

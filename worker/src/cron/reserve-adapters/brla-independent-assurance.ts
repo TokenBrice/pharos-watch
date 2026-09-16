@@ -7,16 +7,17 @@ import {
 import { parseLiveReserveAdapterParams, type LiveReserveAdapterParamsByKey } from "@shared/lib/live-reserve-adapters";
 import type { ReserveSlice, StablecoinMeta } from "@shared/types/core";
 import type { LiveReservesConfig } from "@shared/types/live-reserves";
-import { sha256Hex } from "../../lib/hash";
 import { computeUnknownExposurePct, normalizeSlices } from "./helpers";
-import { buildIndependentAssuranceReserveResult, type IndependentAssuranceProfile } from "./independent-assurance";
-import { fetchBinaryResponseWithRetry, fetchJsonPostWithRetry, fetchTextResponseWithRetry } from "./request";
+import {
+  buildIndependentAssuranceReserveResult,
+  verifyAssurancePdf,
+  type IndependentAssuranceProfile,
+} from "./independent-assurance";
+import { fetchJsonPostWithRetry, fetchTextResponseWithRetry } from "./request";
 import type { AdapterContext, AdapterResult } from "./types";
 import { reserveDegradedWarning } from "./warnings";
 
 const ADAPTER_KEY = "brla-independent-assurance";
-const MAX_PDF_BYTES = 4 * 1024 * 1024;
-const PDF_MAGIC = "%PDF-";
 
 /**
  * Reviewed 2026-09-09: pinned Notion block identity for the July 31, 2026 UHY
@@ -238,40 +239,16 @@ export async function fetchAndVerifyBrlaPdf(args: {
   signal: AbortSignal;
   ctx?: AdapterContext;
 }): Promise<{ responseUrl: string; byteLength: number }> {
-  const response = await fetchBinaryResponseWithRetry(args.signedUrl, args.signal, 15_000, args.ctx, {
-    headers: {
-      Accept: "application/pdf,application/octet-stream;q=0.9",
-      "User-Agent": "Mozilla/5.0 Pharos reserve verifier",
-    },
-    maxRetries: 0,
-    maxResponseBytes: MAX_PDF_BYTES,
+  const artifact = await verifyAssurancePdf({
+    manifest: args.manifest,
+    reportUrl: args.signedUrl,
+    reportHosts: args.reportHosts,
+    adapterKey: ADAPTER_KEY,
+    signal: args.signal,
+    ctx: args.ctx,
+    responseHostError: () => `${ADAPTER_KEY}: PDF response host is not reviewed`,
   });
-  const finalHost = (() => {
-    try {
-      return new URL(response.finalUrl).hostname.toLowerCase();
-    } catch {
-      return "";
-    }
-  })();
-  if (!args.reportHosts.includes(finalHost)) {
-    throw new Error(`${ADAPTER_KEY}: PDF response host is not reviewed`);
-  }
-  const bytes = response.body;
-  if (bytes.length !== args.manifest.reportByteLength) {
-    throw new Error(
-      `${ADAPTER_KEY}: PDF byte length ${bytes.length} does not match reviewed ${args.manifest.reportByteLength}`,
-    );
-  }
-  const contentType = (response.headers.get("content-type") ?? "").toLowerCase();
-  const magic = new TextDecoder().decode(bytes.slice(0, PDF_MAGIC.length));
-  if (!contentType.startsWith("application/pdf") && magic !== PDF_MAGIC) {
-    throw new Error(`${ADAPTER_KEY}: official artifact is not a PDF`);
-  }
-  const digest = await sha256Hex(bytes);
-  if (digest !== args.manifest.reportSha256.toLowerCase()) {
-    throw new Error(`${ADAPTER_KEY}: PDF SHA-256 ${digest} does not match reviewed manifest`);
-  }
-  return { responseUrl: response.finalUrl, byteLength: bytes.length };
+  return { responseUrl: artifact.responseUrl, byteLength: artifact.byteLength };
 }
 type BrlaAssetClassification = IndependentAssuranceProfile["classifications"][string];
 const BRLA_CLASSIFICATIONS: Record<string, BrlaAssetClassification> = {

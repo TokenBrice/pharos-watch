@@ -13,7 +13,7 @@ import {
   fetchIndependentAssuranceReserves,
   type IndependentAssuranceProfile,
 } from "./independent-assurance";
-import { formatValidIsoDate } from "./report-date";
+import { anchorageReportDate } from "./anchorage-independent-assurance";
 
 const ADAPTER_KEY = "usdgo-transparency";
 const SAME_PERIOD_CROSS_CHECK_MAX_AGE_SEC = 3 * 24 * 60 * 60;
@@ -61,7 +61,7 @@ export const USDGO_INDEPENDENT_ASSURANCE_PROFILE: IndependentAssuranceProfile = 
   },
   isReportCandidate: (href) =>
     /USDGO[-_ ]Stablecoin[-_ ]Attestation[-_ ]Report/i.test(decodeURIComponent(href)),
-  reportDateFromCandidate: usdgoReportDate,
+  reportDateFromCandidate: anchorageReportDate("USDGO"),
 };
 
 interface UsdgoIssuerCrossCheckPayload {
@@ -69,15 +69,6 @@ interface UsdgoIssuerCrossCheckPayload {
   data?: Record<string, unknown>;
 }
 
-function usdgoReportDate(href: string): string | null {
-  const fileName = decodeURIComponent(new URL(href).pathname.split("/").pop() ?? "");
-  const match = fileName.match(/^(\d{2})[.](\d{2})[.](\d{2})_USDGO[-_]Stablecoin[-_]Attestation[-_]Report/i);
-  if (!match) return null;
-  const month = Number(match[1]);
-  const day = Number(match[2]);
-  const year = 2000 + Number(match[3]);
-  return formatValidIsoDate(year, month, day, 2000);
-}
 
 function parseMillionUsd(value: unknown, label: string): number {
   const parsed = typeof value === "number" ? value : typeof value === "string" ? Number(value) : Number.NaN;

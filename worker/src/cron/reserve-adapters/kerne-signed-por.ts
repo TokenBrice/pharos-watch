@@ -14,6 +14,7 @@ import {
   decimalNumberFromBigInt,
   fetchJsonAdapterInput,
   fetchOnchainMulticall3,
+  parseFiniteNumber,
   reserveDegradedWarning,
   slicesFromValues,
   verifiedFreshnessMetadata,
@@ -55,13 +56,19 @@ function requireString(value: unknown, label: string): string {
 }
 
 function parseFiniteNonNegative(value: unknown, label: string): number {
-  if (typeof value === "number" && Number.isFinite(value) && value >= 0) return value;
-  throw new Error(`${ADAPTER_KEY} payload ${label} is not a finite non-negative number: ${String(value)}`);
+  try {
+    return parseFiniteNumber(value, { label, min: 0 });
+  } catch {
+    throw new Error(`${ADAPTER_KEY} payload ${label} is not a finite non-negative number: ${String(value)}`);
+  }
 }
 
 function parseTimestamp(value: unknown): number {
-  if (typeof value === "number" && Number.isFinite(value) && value > 0) return value;
-  throw new Error(`${ADAPTER_KEY} signed payload has an unreadable timestamp`);
+  try {
+    return parseFiniteNumber(value, { label: "timestamp", min: Number.MIN_VALUE });
+  } catch {
+    throw new Error(`${ADAPTER_KEY} signed payload has an unreadable timestamp`);
+  }
 }
 
 /** EIP-191 personal_sign message hash over a 32-byte digest. */

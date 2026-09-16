@@ -4,6 +4,7 @@ import type { AdapterContext, AdapterResult } from "./types";
 import {
   fetchJsonAdapterInput,
   freshnessMetadataFromTimestamp,
+  parseFiniteNumber,
   parseTimestampLikeToUnixSeconds,
   slicesFromValues,
   sourceKeySlug,
@@ -37,22 +38,20 @@ export interface SolomonProtocolDataResponse {
 }
 
 function parseUsd(value: unknown, field: string): number {
-  if (typeof value === "number" && Number.isFinite(value)) return value;
-  if (typeof value === "string" && value.trim()) {
-    const parsed = Number(value);
-    if (Number.isFinite(parsed)) return parsed;
+  try {
+    return parseFiniteNumber(value, { label: field });
+  } catch {
+    throw new Error(`solomon-protocol missing/invalid ${field}`);
   }
-  throw new Error(`solomon-protocol missing/invalid ${field}`);
 }
 
 function optionalUsd(value: unknown): number {
   if (value == null || value === "") return 0;
-  if (typeof value === "number" && Number.isFinite(value)) return value;
-  if (typeof value === "string" && value.trim()) {
-    const parsed = Number(value);
-    if (Number.isFinite(parsed)) return parsed;
+  try {
+    return parseFiniteNumber(value, { label: "optional USD value" });
+  } catch {
+    return 0;
   }
-  return 0;
 }
 
 function rowUsd(row: SolomonAssetRow): number {

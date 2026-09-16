@@ -1,3 +1,29 @@
+import { readHtmlAttribute as readAttribute, stripTags as stripHtmlTags } from "./html";
+
+export interface PdfAnchor {
+  href: string;
+  text: string;
+}
+
+export function collectPdfAnchors(html: string): PdfAnchor[] {
+  const candidates: PdfAnchor[] = [];
+  const anchorPattern = /<a\b[^>]*\bhref\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s>]+))[^>]*>([\s\S]*?)<\/a>/gi;
+  const gatedPattern = /<[^>]+\bdata-gated-url\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s>]+))[^>]*>/gi;
+  for (const match of html.matchAll(anchorPattern)) {
+    candidates.push({
+      href: match[1] ?? match[2] ?? match[3] ?? "",
+      text: stripHtmlTags(match[4] ?? ""),
+    });
+  }
+  for (const match of html.matchAll(gatedPattern)) {
+    candidates.push({
+      href: match[1] ?? match[2] ?? match[3] ?? "",
+      text: readAttribute(match[0] ?? "", "data-gated-asset") ?? "",
+    });
+  }
+  return candidates;
+}
+
 export {
   isHttpJsonInput,
   isHttpHtmlInput,
@@ -6,13 +32,13 @@ export {
   requireJsonInputFromConfig,
   requireOnchainInput,
 } from "./input-guards";
-export { accumulateBucketedExposure, classifyBucketedValues } from "./classification";
 export {
   assertFiniteNonNegativeReserveRows,
   buildCoverageShortfallWarnings,
   buildUnknownExposureWarning,
   buildBucketSlices,
   computeUnknownExposurePct,
+  decimalFromDigitString,
   decimalNumberFromBigInt,
   decimalStringFromBigInt,
   isReserveRisk,
@@ -84,7 +110,15 @@ export {
   type MultichainSupplyAggregate,
   type MultichainSupplyContribution,
 } from "./multichain-supply";
-export { strictAmountParser, sumBackingAssetAmounts, type StrictAmountEntry } from "./strict-amount";
+export {
+  parseDigitString,
+  parseFiniteNumber,
+  requireRecord,
+  strictAmountParser,
+  sumBackingAssetAmounts,
+  type ParseFiniteNumberOptions,
+  type StrictAmountEntry,
+} from "./strict-amount";
 export { readImplementationSlotAddress, requireExpectedAddress } from "./onchain-identity";
 export { buildRedemptionSnapshotMetadata, probeOptionalRedemptionRateBps } from "./redemption";
 export { getJsonPath } from "./json-path";
