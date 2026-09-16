@@ -97,7 +97,8 @@ function logDispatchMetadataWarning(reason: string): void {
 
 function hasMalformedDispatchCounts(value: unknown): boolean {
   const record = readMetadataRecord(value);
-  const events = readMetadataRecord(record?.eventsDetected);
+  if (!record) return true;
+  const events = readMetadataRecord(record.eventsDetected);
   if (!events) return true;
   for (const key of [
     "dews",
