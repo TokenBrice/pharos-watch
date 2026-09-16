@@ -18,6 +18,20 @@ const ALLOWED_SCRIPT_PREFIXES = [
 ];
 const SCRIPT_COMMANDS = ["node", "tsx"];
 const SCRIPT_PATH_TERMINATORS = new Set([" ", "\t", "\r", "\n", "`", "'", '"', ")"]);
+const NODE_FLAGS_WITH_VALUE = [
+  "--conditions",
+  "--env-file",
+  "--eval",
+  "--import",
+  "--input-type",
+  "--loader",
+  "--print",
+  "--require",
+  "-C",
+  "-e",
+  "-p",
+  "-r",
+];
 // Reverse mode: every runnable script in these directories must be *runnable*
 // — referenced from package.json, a CI workflow, or another script. `docs/` is
 // deliberately excluded: a documentation row describes a script, it does not
@@ -85,7 +99,21 @@ export function collectScriptEntrypoints(content: string, { allowLineBreaks = fa
           pathStart += char === "\r" && content[pathStart + 1] === "\n" ? 2 : 1;
           continue;
         }
-        break;
+
+        let tokenEnd = pathStart;
+        while (tokenEnd < content.length && !SCRIPT_PATH_TERMINATORS.has(content[tokenEnd] ?? "")) {
+          tokenEnd += 1;
+        }
+        const token = content.slice(pathStart, tokenEnd);
+        if (!/^--?\w/u.test(token)) break;
+
+        pathStart = tokenEnd;
+        if (!token.includes("=") && NODE_FLAGS_WITH_VALUE.includes(token)) {
+          while (pathStart < content.length && /\s/.test(content[pathStart] ?? "")) pathStart += 1;
+          while (pathStart < content.length && !SCRIPT_PATH_TERMINATORS.has(content[pathStart] ?? "")) {
+            pathStart += 1;
+          }
+        }
       }
 
       const hasRepoScriptPrefix = ["scripts/", ".github/scripts/"].some((prefix) =>
@@ -106,7 +134,7 @@ export function collectScriptEntrypoints(content: string, { allowLineBreaks = fa
     }
   }
 
-  return entrypoints;
+  return [...new Set(entrypoints)];
 }
 
 export function collectScriptEntrypointErrors({ root = process.cwd() }: { root?: string } = {}): { errors: string[]; scannedFileCount: number } {

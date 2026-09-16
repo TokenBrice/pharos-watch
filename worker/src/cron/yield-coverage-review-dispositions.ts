@@ -205,6 +205,7 @@ async function loadDispositions(
 ): Promise<Map<string, YieldCoverageReviewDispositionRow>> {
   const uniqueIds = [...new Set(queueItemIds)];
   if (uniqueIds.length === 0) return new Map();
+  // SAFETY: DISPOSITION_TABLE is fixed and inClause contains only generated bind placeholders.
   const rows = await runChunkedInRead(
     uniqueIds,
     (inClause) =>

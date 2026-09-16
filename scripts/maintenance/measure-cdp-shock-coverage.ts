@@ -6,6 +6,7 @@ import { buildMechanismCaptureSummary, summaryPathForCapture } from "../lib/mech
 import { fetchBlockByNumber, pinBlock } from "../lib/mechanism-measurement/core";
 import { JournaledShockCaller, ReplayShockCaller } from "../lib/mechanism-measurement/shock-journal";
 import { measureConfiguredShockCoverageTarget } from "../lib/mechanism-measurement/shock-measure";
+import { redactRpcUrlForEvidence } from "../lib/mechanism-measurement/rpc-provenance";
 import { ShockCoverageEvidenceV1Schema, type ShockCoverageEvidenceV1 } from "../lib/mechanism-measurement/shock-schema";
 import {
   assessShockCoverageApplicability,
@@ -242,8 +243,9 @@ async function measureTarget(options: CliOptions, assetId: string): Promise<void
     try {
       const block = options.block == null ? await pinBlock(rpcUrl) : await fetchBlockByNumber(rpcUrl, options.block);
       const caller = new JournaledShockCaller(rpcUrl, { blockHash: block.hash, requireCanonical: true });
+      const evidenceRpcUrl = redactRpcUrlForEvidence(rpcUrl);
       const evidence = ShockCoverageEvidenceV1Schema.parse(
-        await measureConfiguredShockCoverageTarget(caller, target, block, rpcUrl),
+        await measureConfiguredShockCoverageTarget(caller, target, block, evidenceRpcUrl),
       );
       const date = evidence.block.timestampIso.slice(0, 10);
       const outPath = resolve(
@@ -263,7 +265,7 @@ async function measureTarget(options: CliOptions, assetId: string): Promise<void
       }
       writeCaptureSummary(outPath);
       console.log(
-        `[shock-coverage] ${assetId}: block ${evidence.block.number} (${evidence.block.selection}) via ${rpcUrl}\n` +
+        `[shock-coverage] ${assetId}: block ${evidence.block.number} (${evidence.block.selection}) via ${evidence.rpcUrl}\n` +
           `  coverage50=${evidence.measuredFacts.stressLiquidationCoverageRatio} ` +
           `Q50=${evidence.measuredFacts.stressLiquidatableDebt} ` +
           `O50=${evidence.measuredFacts.stressPoolOffsetDebt}\n` +
@@ -273,7 +275,7 @@ async function measureTarget(options: CliOptions, assetId: string): Promise<void
     } catch (error) {
       lastError = error;
       console.warn(
-        `[shock-coverage] ${assetId}: ${rpcUrl} failed - ${error instanceof Error ? error.message : String(error)}`,
+        `[shock-coverage] ${assetId}: ${redactRpcUrlForEvidence(rpcUrl)} failed - ${error instanceof Error ? error.message : String(error)}`,
       );
     }
   }

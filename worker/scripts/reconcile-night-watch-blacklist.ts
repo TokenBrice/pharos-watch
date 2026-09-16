@@ -559,6 +559,7 @@ function verifyEvents(expected: readonly FrozenManifestEvent[], stored: readonly
 }
 
 function loadCursorRows(d1: RemoteD1Client): { tron: CursorRow | null; arbitrum: CursorRow[] } {
+  // SAFETY: table/columns are fixed and manifest.configKey is SQL-quoted by sqlString.
   const rows = d1.query<CursorRow>(
     `SELECT config_key, cursor_value, last_block, last_observed_safe_head
      FROM blacklist_sync_state

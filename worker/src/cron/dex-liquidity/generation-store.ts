@@ -123,6 +123,7 @@ export function createDexGenerationStore<ChildRowsKey extends string = "deletedC
       );
       deletedChildRows = Number(childRows.meta?.changes ?? 0);
 
+      // SAFETY: spec table/column fragments are closed literal unions and candidateWhere is internally constructed.
       const manifestCandidates = `
     SELECT candidate.rowid
       FROM ${spec.manifestTable} candidate

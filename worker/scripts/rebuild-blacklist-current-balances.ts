@@ -197,6 +197,7 @@ export function buildCurrentBalanceMutationStatements(
 ): string[] {
   const activeIds = rowsToWrite.map((row) => sqlString(row.id));
   const staleRowPredicate = activeIds.length > 0 ? ` AND id NOT IN (${activeIds.join(", ")})` : "";
+  // SAFETY: identifiers are fixed; every interpolated value is SQL-quoted by sqlString.
   return [
     // Keep active rows in place so provider_failed upserts can retain their last resolved values.
     `DELETE FROM blacklist_current_balances WHERE stablecoin = ${sqlString(stablecoin)} AND chain_id = ${sqlString(chainId)}${staleRowPredicate};`,
@@ -357,6 +358,7 @@ async function main(argv = process.argv.slice(2)) {
     }
     const pausedAt = Math.floor(Date.now() / 1000);
     const pausePayload = sqlString(JSON.stringify({ reason: SCRIPT_NAME, pausedAt }));
+    // SAFETY: the cache table is fixed and the constant key/payload are SQL-quoted by sqlString.
     const statement = options.armWriterPause
       ? `INSERT OR REPLACE INTO cache (key, value, updated_at) VALUES (${sqlString(BLACKLIST_CURRENT_BALANCE_WRITER_PAUSE_KEY)}, ${pausePayload}, ${pausedAt});`
       : `DELETE FROM cache WHERE key = ${sqlString(BLACKLIST_CURRENT_BALANCE_WRITER_PAUSE_KEY)};`;
@@ -369,6 +371,7 @@ async function main(argv = process.argv.slice(2)) {
     return;
   }
 
+  // SAFETY: table/columns are fixed and both CLI-selected filters are SQL-quoted by sqlString.
   const sql = `
     SELECT id, stablecoin, chain_id, chain_name, event_type, address, amount_native, amount_usd_at_event,
            amount_source, amount_status, tx_hash, block_number, timestamp, methodology_version, contract_address,

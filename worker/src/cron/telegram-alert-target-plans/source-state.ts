@@ -75,6 +75,7 @@ const TARGET_EXPIRY_PROGRESS_STEPS = [
 ] as const;
 
 function buildTargetExpiryUpdateSql(step: TargetExpiryStep): string {
+  // SAFETY: step comes from TARGET_EXPIRY_STEPS; every interpolated SQL fragment is a fixed literal.
   return `UPDATE ${step.table}
           ${step.setSql}
         WHERE rowid IN (

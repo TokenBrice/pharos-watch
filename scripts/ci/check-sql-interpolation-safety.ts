@@ -35,17 +35,22 @@ export function scanSqlInterpolationSafety(
     scanFile: ({ relativePath, content, root }) => {
       const violations: SqlSafetyViolation[] = [];
       const lines = content.split("\n");
-      for (let index = 0; index < lines.length; index++) {
-        const line = lines[index];
-        if (!SQL_INTERPOLATION_PATTERN.test(line)) continue;
-
-        const context = lines.slice(Math.max(0, index - 5), index + 1).join("\n");
+      const pattern = new RegExp(
+        SQL_INTERPOLATION_PATTERN.source,
+        SQL_INTERPOLATION_PATTERN.flags.includes("g")
+          ? SQL_INTERPOLATION_PATTERN.flags
+          : `${SQL_INTERPOLATION_PATTERN.flags}g`,
+      );
+      for (const match of content.matchAll(pattern)) {
+        const index = match.index;
+        const lineIndex = content.slice(0, index).split("\n").length - 1;
+        const context = lines.slice(Math.max(0, lineIndex - 5), lineIndex + 6).join("\n");
         if (hasSqlSafetySignal(context)) continue;
 
         violations.push({
           file: relativePath,
-          line: index + 1,
-          text: line.trim(),
+          line: lineIndex + 1,
+          text: lines[lineIndex]!.trim(),
           root,
         });
       }
