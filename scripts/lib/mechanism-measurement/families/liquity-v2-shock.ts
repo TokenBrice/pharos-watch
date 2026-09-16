@@ -19,6 +19,7 @@ import {
   SHOCK_FRACTIONS_PPM,
   type LiquityV2ShockCoverageTarget,
 } from "../shock-targets";
+import { LIQUITY_V2_CALLS } from "./liquity-v2";
 
 const WAD = 10n ** 18n;
 
@@ -78,8 +79,7 @@ async function readConfiguredBranchGraph(
     name: `addressesRegistry[${configuredIndex}].stabilityPool`,
     role: "graph",
     to,
-    signature: "stabilityPool()",
-    selector: "0x048c661d",
+    ...LIQUITY_V2_CALLS.stabilityPool,
   });
   const priceFeed = await readAddress(caller, {
     name: `addressesRegistry[${configuredIndex}].priceFeed`,
@@ -92,8 +92,7 @@ async function readConfiguredBranchGraph(
     name: `addressesRegistry[${configuredIndex}].activePool`,
     role: "graph",
     to,
-    signature: "activePool()",
-    selector: "0x7f7dde4a",
+    ...LIQUITY_V2_CALLS.activePool,
   });
   const defaultPool = await readAddress(caller, {
     name: `addressesRegistry[${configuredIndex}].defaultPool`,
@@ -239,8 +238,7 @@ export async function measureLiquityV2ShockCoverage(
     name: "token.collateralRegistryAddress",
     role: "graph",
     to: token,
-    signature: "collateralRegistryAddress()",
-    selector: "0x45a74626",
+    ...LIQUITY_V2_CALLS.collateralRegistryAddress,
   });
   requirePass(
     checks,
@@ -253,8 +251,7 @@ export async function measureLiquityV2ShockCoverage(
       name: "collateralRegistry.totalCollaterals",
       role: "enumeration",
       to: collateralRegistry,
-      signature: "totalCollaterals()",
-      selector: "0x30504b6f",
+      ...LIQUITY_V2_CALLS.totalCollaterals,
     }),
   );
   requirePass(
@@ -269,16 +266,14 @@ export async function measureLiquityV2ShockCoverage(
       name: `collateralRegistry.troveManager[${branchIndex}]`,
       role: "enumeration",
       to: collateralRegistry,
-      signature: "getTroveManager(uint256)",
-      selector: "0x0bc17feb",
+      ...LIQUITY_V2_CALLS.getTroveManager,
       args: [BigInt(branchIndex)],
     },
     {
       name: `collateralRegistry.token[${branchIndex}]`,
       role: "enumeration",
       to: collateralRegistry,
-      signature: "getToken(uint256)",
-      selector: "0xe4b50cb8",
+      ...LIQUITY_V2_CALLS.getToken,
       args: [BigInt(branchIndex)],
     },
   ]).flat();
@@ -345,8 +340,7 @@ export async function measureLiquityV2ShockCoverage(
         name: `troveManager[${branchIndex}].stabilityPool`,
         role: "graph",
         to: graph.troveManager,
-        signature: "stabilityPool()",
-        selector: "0x048c661d",
+        ...LIQUITY_V2_CALLS.stabilityPool,
       },
       {
         name: `troveManager[${branchIndex}].sortedTroves`,
@@ -366,8 +360,7 @@ export async function measureLiquityV2ShockCoverage(
         name: `troveManager[${branchIndex}].activePool`,
         role: "graph",
         to: graph.troveManager,
-        signature: "activePool()",
-        selector: "0x7f7dde4a",
+        ...LIQUITY_V2_CALLS.activePool,
       },
     ];
     const crossCheckReturns = await caller.batch(crossCheckSpecs);
@@ -484,15 +477,13 @@ export async function measureLiquityV2ShockCoverage(
       name: `troveManager[${branchIndex}].getEntireBranchColl`,
       role: "state",
       to: graph.troveManager,
-      signature: "getEntireBranchColl()",
-      selector: "0x3ecaaa3f",
+      ...LIQUITY_V2_CALLS.getEntireBranchColl,
     });
     const protocolDebt = await readUint(caller, {
       name: `troveManager[${branchIndex}].getEntireBranchDebt`,
       role: "state",
       to: graph.troveManager,
-      signature: "getEntireBranchDebt()",
-      selector: "0x105b403b",
+      ...LIQUITY_V2_CALLS.getEntireBranchDebt,
     });
     const stabilityPoolDeposits = await readUint(caller, {
       name: `stabilityPool[${branchIndex}].deposits`,
@@ -505,8 +496,7 @@ export async function measureLiquityV2ShockCoverage(
       name: `troveManager[${branchIndex}].shutdownTime`,
       role: "state",
       to: graph.troveManager,
-      signature: "shutdownTime()",
-      selector: "0x58569081",
+      ...LIQUITY_V2_CALLS.shutdownTime,
     });
     requirePass(
       checks,
@@ -518,8 +508,7 @@ export async function measureLiquityV2ShockCoverage(
       name: `troveManager[${branchIndex}].getUnbackedPortionPriceAndRedeemability`,
       role: "state",
       to: graph.troveManager,
-      signature: "getUnbackedPortionPriceAndRedeemability()",
-      selector: "0x4ea15f37",
+      ...LIQUITY_V2_CALLS.priceAndRedeemability,
     });
     const unbackedDebt = decodeUintWord(priceResult, 0, `branch[${branchIndex}].unbackedDebt`);
     const price = decodeUintWord(priceResult, 1, `branch[${branchIndex}].price`);

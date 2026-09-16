@@ -1,5 +1,6 @@
 import {
   decodeAddressWord,
+  decodeBoolWord,
   decodeUintWord,
   relativeDeltaPct,
   requireCheck,
@@ -12,6 +13,110 @@ import type { LiquityV2MeasurementTarget } from "../targets";
 import type { LiquityV2MeasurementEvidence } from "../schema";
 
 const WAD = 10n ** 18n;
+export const LIQUITY_V2_CALLS = {
+  collateralRegistryAddress: { signature: "collateralRegistryAddress()", selector: "0x45a74626" },
+  totalSupply: { signature: "totalSupply()", selector: "0x18160ddd" },
+  totalCollaterals: { signature: "totalCollaterals()", selector: "0x30504b6f" },
+  getTroveManager: { signature: "getTroveManager(uint256)", selector: "0x0bc17feb" },
+  getToken: { signature: "getToken(uint256)", selector: "0xe4b50cb8" },
+  getEntireBranchColl: { signature: "getEntireBranchColl()", selector: "0x3ecaaa3f" },
+  getEntireBranchDebt: { signature: "getEntireBranchDebt()", selector: "0x105b403b" },
+  stabilityPool: { signature: "stabilityPool()", selector: "0x048c661d" },
+  activePool: { signature: "activePool()", selector: "0x7f7dde4a" },
+  getBoldDebt: { signature: "getBoldDebt()", selector: "0x45507998" },
+  shutdownTime: { signature: "shutdownTime()", selector: "0x58569081" },
+  priceAndRedeemability: {
+    signature: "getUnbackedPortionPriceAndRedeemability()",
+    selector: "0x4ea15f37",
+  },
+} as const;
+
+interface LiquityV2BranchCallNames {
+  collateral: string;
+  debt: string;
+  deposits: string;
+  priceAndRedeemability: string;
+  shutdownTime: string;
+  stabilityPool: string;
+}
+
+interface ReadLiquityV2BranchOptions {
+  afterDebt?: (debt: bigint) => Promise<void>;
+  caller: EthCallJournal;
+  controller: string;
+  depositsCall: { signature: string; selector: string };
+  labels: {
+    collateral: string;
+    debt: string;
+    deposits: string;
+    price: string;
+    redeemable: string;
+    shutdownTime: string;
+    stabilityPool: string;
+  };
+  names: LiquityV2BranchCallNames;
+}
+
+export interface LiquityV2BranchState {
+  collateral: bigint;
+  debt: bigint;
+  price: bigint;
+  redeemable: boolean;
+  shutdownTime: number;
+  spDeposits: bigint;
+  stabilityPool: string;
+}
+
+export async function readLiquityV2Branch({
+  afterDebt,
+  caller,
+  controller,
+  depositsCall,
+  labels,
+  names,
+}: ReadLiquityV2BranchOptions): Promise<LiquityV2BranchState> {
+  const collateral = decodeUintWord(
+    await caller.call({ name: names.collateral, to: controller, ...LIQUITY_V2_CALLS.getEntireBranchColl }),
+    0,
+    labels.collateral,
+  );
+  caller.recordDecoded(collateral.toString());
+  const debt = decodeUintWord(
+    await caller.call({ name: names.debt, to: controller, ...LIQUITY_V2_CALLS.getEntireBranchDebt }),
+    0,
+    labels.debt,
+  );
+  caller.recordDecoded(debt.toString());
+  await afterDebt?.(debt);
+  const stabilityPool = decodeAddressWord(
+    await caller.call({ name: names.stabilityPool, to: controller, ...LIQUITY_V2_CALLS.stabilityPool }),
+    labels.stabilityPool,
+  );
+  caller.recordDecoded(stabilityPool);
+  const spDeposits = decodeUintWord(
+    await caller.call({ name: names.deposits, to: stabilityPool, ...depositsCall }),
+    0,
+    labels.deposits,
+  );
+  caller.recordDecoded(spDeposits.toString());
+  const shutdownTime = Number(
+    decodeUintWord(
+      await caller.call({ name: names.shutdownTime, to: controller, ...LIQUITY_V2_CALLS.shutdownTime }),
+      0,
+      labels.shutdownTime,
+    ),
+  );
+  caller.recordDecoded(String(shutdownTime));
+  const priceResult = await caller.call({
+    name: names.priceAndRedeemability,
+    to: controller,
+    ...LIQUITY_V2_CALLS.priceAndRedeemability,
+  });
+  const price = decodeUintWord(priceResult, 1, labels.price);
+  const redeemable = decodeBoolWord(priceResult, 2, labels.redeemable);
+  caller.recordDecoded(`price=${price} redeemable=${redeemable}`);
+  return { collateral, debt, price, redeemable, shutdownTime, spDeposits, stabilityPool };
+}
 
 interface BranchReading {
   index: number;
@@ -49,8 +154,7 @@ export async function measureLiquityV2(
     await caller.call({
       name: "token.collateralRegistryAddress",
       to: token,
-      signature: "collateralRegistryAddress()",
-      selector: "0x45a74626",
+      ...LIQUITY_V2_CALLS.collateralRegistryAddress,
     }),
     "collateralRegistryAddress",
   );
@@ -63,7 +167,7 @@ export async function measureLiquityV2(
   );
 
   const totalSupply = decodeUintWord(
-    await caller.call({ name: "token.totalSupply", to: token, signature: "totalSupply()", selector: "0x18160ddd" }),
+    await caller.call({ name: "token.totalSupply", to: token, ...LIQUITY_V2_CALLS.totalSupply }),
     0,
     "totalSupply",
   );
@@ -75,8 +179,7 @@ export async function measureLiquityV2(
       await caller.call({
         name: "registry.totalCollaterals",
         to: collateralRegistry,
-        signature: "totalCollaterals()",
-        selector: "0x30504b6f",
+        ...LIQUITY_V2_CALLS.totalCollaterals,
       }),
       0,
       "totalCollaterals",
@@ -96,8 +199,7 @@ export async function measureLiquityV2(
       await caller.call({
         name: `registry.getTroveManager(${index})`,
         to: collateralRegistry,
-        signature: "getTroveManager(uint256)",
-        selector: "0x0bc17feb",
+        ...LIQUITY_V2_CALLS.getTroveManager,
         args: [BigInt(index)],
       }),
       "getTroveManager",
@@ -107,72 +209,43 @@ export async function measureLiquityV2(
       await caller.call({
         name: `registry.getToken(${index})`,
         to: collateralRegistry,
-        signature: "getToken(uint256)",
-        selector: "0xe4b50cb8",
+        ...LIQUITY_V2_CALLS.getToken,
         args: [BigInt(index)],
       }),
       "getToken",
     );
     caller.recordDecoded(collateralToken);
 
-    const collateral = decodeUintWord(
-      await caller.call({
-        name: `troveManager[${index}].getEntireBranchColl`,
-        to: troveManager,
-        signature: "getEntireBranchColl()",
-        selector: "0x3ecaaa3f",
-      }),
-      0,
-      "getEntireBranchColl",
-    );
-    caller.recordDecoded(collateral.toString());
-    const debt = decodeUintWord(
-      await caller.call({
-        name: `troveManager[${index}].getEntireBranchDebt`,
-        to: troveManager,
-        signature: "getEntireBranchDebt()",
-        selector: "0x105b403b",
-      }),
-      0,
-      "getEntireBranchDebt",
-    );
-    caller.recordDecoded(debt.toString());
-
-    const stabilityPool = decodeAddressWord(
-      await caller.call({
-        name: `troveManager[${index}].stabilityPool`,
-        to: troveManager,
-        signature: "stabilityPool()",
-        selector: "0x048c661d",
-      }),
-      "stabilityPool",
-    );
-    caller.recordDecoded(stabilityPool);
-    const spDeposits = decodeUintWord(
-      await caller.call({
-        name: `stabilityPool[${index}].${target.spDeposits.signature}`,
-        to: stabilityPool,
-        signature: target.spDeposits.signature,
-        selector: target.spDeposits.selector,
-      }),
-      0,
-      target.spDeposits.signature,
-    );
-    caller.recordDecoded(spDeposits.toString());
-
-    const shutdownTime = Number(
-      decodeUintWord(
-        await caller.call({
-          name: `troveManager[${index}].shutdownTime`,
-          to: troveManager,
-          signature: "shutdownTime()",
-          selector: "0x58569081",
-        }),
-        0,
-        "shutdownTime",
-      ),
-    );
-    caller.recordDecoded(String(shutdownTime));
+    const {
+      collateral,
+      debt,
+      price: priceWei,
+      redeemable,
+      shutdownTime,
+      spDeposits,
+      stabilityPool,
+    } = await readLiquityV2Branch({
+      caller,
+      controller: troveManager,
+      depositsCall: target.spDeposits,
+      labels: {
+        collateral: "getEntireBranchColl",
+        debt: "getEntireBranchDebt",
+        deposits: target.spDeposits.signature,
+        price: "getUnbackedPortionPriceAndRedeemability.price",
+        redeemable: "getUnbackedPortionPriceAndRedeemability.redeemable",
+        shutdownTime: "shutdownTime",
+        stabilityPool: "stabilityPool",
+      },
+      names: {
+        collateral: `troveManager[${index}].getEntireBranchColl`,
+        debt: `troveManager[${index}].getEntireBranchDebt`,
+        deposits: `stabilityPool[${index}].${target.spDeposits.signature}`,
+        priceAndRedeemability: `troveManager[${index}].getUnbackedPortionPriceAndRedeemability`,
+        shutdownTime: `troveManager[${index}].shutdownTime`,
+        stabilityPool: `troveManager[${index}].stabilityPool`,
+      },
+    });
     // A shut-down branch has a frozen price and asymmetric mechanics; measuring
     // through it silently would misstate system health, so adjudicate manually.
     requireCheck(
@@ -181,18 +254,6 @@ export async function measureLiquityV2(
       shutdownTime === 0,
       `branch ${index} shutdownTime is 0 (never shut down)`,
     );
-
-    // (uint256 unbacked, uint256 price, bool redeemable): fresh fetchPrice-backed
-    // branch price; the redeemable flag doubles as the protocol's own oracle-health signal.
-    const unbackedRet = await caller.call({
-      name: `troveManager[${index}].getUnbackedPortionPriceAndRedeemability`,
-      to: troveManager,
-      signature: "getUnbackedPortionPriceAndRedeemability()",
-      selector: "0x4ea15f37",
-    });
-    const priceWei = decodeUintWord(unbackedRet, 1, "getUnbackedPortionPriceAndRedeemability.price");
-    const redeemable = decodeUintWord(unbackedRet, 2, "getUnbackedPortionPriceAndRedeemability.redeemable") !== 0n;
-    caller.recordDecoded(`price=${priceWei} redeemable=${redeemable}`);
     requireCheck(
       checks,
       `branch[${index}].price`,

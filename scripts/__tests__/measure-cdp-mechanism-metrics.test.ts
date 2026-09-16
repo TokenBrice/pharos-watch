@@ -1,6 +1,6 @@
 import { createHash } from "node:crypto";
 import { existsSync, readFileSync, rmSync, writeFileSync } from "node:fs";
-import { join } from "node:path";
+import { dirname, join } from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { EthCallJournal, EthCallSpec } from "../lib/mechanism-measurement/core";
 import { encodeWord, ReplayEthCaller } from "../lib/mechanism-measurement/core";
@@ -431,6 +431,19 @@ describe("capture resolution", () => {
     expect(readFileSync(capture.cachePath)).toEqual(capture.body);
     const offline = remote(async () => { throw new Error("offline"); });
     expect(await resolveCaptureBody(capture.bodyPath, { ...capture, r2Client: offline })).toEqual(capture.body);
+  });
+
+  it("derives the default cache directory from a scratch root at call time", async () => {
+    const capture = captureFixture();
+    const scratchRoot = dirname(capture.bodyPath);
+    const expectedCache = join(scratchRoot, "agents/.cache/measurements", `${capture.sha256}.json`);
+    expect(
+      await resolveCaptureBody("capture.json", {
+        rootDir: scratchRoot,
+        r2Client: remote(async () => capture.body),
+      }),
+    ).toEqual(capture.body);
+    expect(readFileSync(expectedCache)).toEqual(capture.body);
   });
 
   it("falls through missing pinned data to gzip ordinary data and rejects total absence", async () => {
