@@ -27,6 +27,9 @@ const SILVER_SOURCE_KEY = "matrixdock-frs:silver";
 const UNIT_PIN_TOLERANCE_PCT = 0.5;
 const EXPECTED_DECIMALS = 9;
 const MAX_FUTURE_SOURCE_TIMESTAMP_SKEW_SEC = 600;
+// The issuer feed is updated on a roughly monthly cadence. Allow the normal
+// month-end operating lag, but surface a frozen round beyond that heartbeat.
+const MAX_RESERVE_FEED_AGE_SEC = 4_000_000;
 
 const OZ_PER_TOKEN_SELECTOR = "0x73b16bc7"; // ozPerToken()
 const SUI_GRAPHQL_ENDPOINT = "https://graphql.mainnet.sui.io/graphql";
@@ -120,10 +123,17 @@ async function fetchSuiCoinSupply(
 export function adaptMatrixdockFrsState(state: MatrixdockFrsState, params: MatrixdockFrsParams): AdapterResult {
   const warnings: LiveReserveWarning[] = [];
 
-  // ── Feed freshness sanity (the read itself is latest-state; the round
-  //    timestamp is surfaced as diagnostics rather than a verified age gate). ─
+  // ── Feed freshness sanity. The feed is deviation-triggered, so it remains
+  //    not-applicable freshness, but an unboundedly old round is degraded. ──
   if (state.feedUpdatedAt > state.nowSec + MAX_FUTURE_SOURCE_TIMESTAMP_SKEW_SEC) {
     throw new Error(`${ADAPTER_KEY}: feed round timestamp is in the future (${state.feedUpdatedAt - state.nowSec}s)`);
+  }
+  const feedAgeSec = state.nowSec - state.feedUpdatedAt;
+  if (feedAgeSec > MAX_RESERVE_FEED_AGE_SEC) {
+    warnings.push(reserveDegradedWarning(
+      "stale-reserve-feed",
+      `${ADAPTER_KEY}: reserve feed round is ${feedAgeSec}s old (max ${MAX_RESERVE_FEED_AGE_SEC}s)`,
+    ));
   }
 
   if (state.feedDecimals !== EXPECTED_DECIMALS || state.tokenDecimals !== EXPECTED_DECIMALS) {

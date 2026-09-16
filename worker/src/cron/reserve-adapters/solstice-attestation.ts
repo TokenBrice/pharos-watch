@@ -157,10 +157,13 @@ export function adaptSolsticeAttestation(payload: SolsticeDashboardPayload): Ada
     throw new Error("solstice-attestation missing reserve/supply timeline values");
   }
 
-  const sourceTimestamp =
-    parseTimestampLikeToUnixSeconds(payload.data.ts)
-    ?? parseTimestampLikeToUnixSeconds(point?.ts)
+  const envelopeTimestamp = parseTimestampLikeToUnixSeconds(payload.data.ts);
+  const pointTimestamp =
+    parseTimestampLikeToUnixSeconds(point?.ts)
     ?? parseTimestampLikeToUnixSeconds(point?.date);
+  const sourceTimestamp = envelopeTimestamp != null && pointTimestamp != null
+    ? Math.min(envelopeTimestamp, pointTimestamp)
+    : envelopeTimestamp ?? pointTimestamp;
   const freshnessMetadata = freshnessMetadataFromTimestamp(
     sourceTimestamp,
     "solstice-attestation-api",

@@ -6,6 +6,7 @@ import type { LiveReserveWarning, LiveReservesConfig } from "@shared/types/live-
 import type { AdapterContext, AdapterResult } from "./types";
 import {
   fetchJsonWithRetry,
+  reserveDegradedWarning,
   reserveInfoWarning,
 } from "./helpers";
 import {
@@ -138,6 +139,23 @@ async function readIssuerCrossCheck(
     source: url,
   };
 }
+function assuranceReportMatchesManifest(
+  metadata: Record<string, unknown>,
+  manifestReportDate: string,
+  manifestTimestamp: number,
+): boolean {
+  const details = metadata.details;
+  const assurance = details && typeof details === "object" && !Array.isArray(details)
+    ? (details as Record<string, unknown>).assurance
+    : null;
+  const discoveredReportDate = assurance && typeof assurance === "object" && !Array.isArray(assurance)
+    ? (assurance as Record<string, unknown>).reportDate
+    : null;
+  if (typeof discoveredReportDate === "string") {
+    return discoveredReportDate === manifestReportDate;
+  }
+  return metadata.sourceTimestamp === manifestTimestamp;
+}
 
 function compareCrossCheck(
   report: { sourceTimestamp: number; values: Record<string, number> },
@@ -222,14 +240,30 @@ export async function fetchUsdgoTransparencyReserves(
   const reportSurplusUsd = reportValues.totalReserveUsd - reportValues.supplyUsd;
   const metadata = assurance.metadata ?? {};
   const assuranceDetails = metadata.details && typeof metadata.details === "object" ? metadata.details : {};
+  const manifestTimestamp = Math.floor(reportTimestamp / 1_000);
+  const reportMatchesManifest = assuranceReportMatchesManifest(
+    metadata,
+    manifest.reportDate,
+    manifestTimestamp,
+  );
+  if (!reportMatchesManifest) {
+    warnings.push(reserveDegradedWarning(
+      "usdgo-assurance-report-date-mismatch",
+      "USDGO discovered assurance report date does not match the reviewed manifest; retaining the assurance freshness verdict",
+    ));
+  }
   return {
     slices: assurance.slices,
     ...(warnings.length > 0 ? { warnings } : {}),
     metadata: {
       ...metadata,
-      sourceTimestamp: Math.floor(reportTimestamp / 1_000),
-      freshnessMode: "verified",
-      unknownExposurePct: 0,
+      ...(reportMatchesManifest
+        ? {
+            sourceTimestamp: manifestTimestamp,
+            freshnessMode: "verified" as const,
+            unknownExposurePct: 0,
+          }
+        : {}),
       totalReserveUsd: reportValues.totalReserveUsd,
       totalAssetsUsd: reportValues.totalReserveUsd,
       totalLiabilitiesUsd: reportValues.supplyUsd,

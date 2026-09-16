@@ -41,7 +41,7 @@ describe("adaptSolsticeAttestation", () => {
     expect(result.metadata?.sourceTimestamp).toBe(Date.parse("2026-04-15") / 1000);
   });
 
-  it("maps aggregate Solstice reserve proof as a non-scoring high-risk proof slice", () => {
+  it("binds aggregate freshness to the older selected point timestamp", () => {
     const result = adaptSolsticeAttestation({
       res: "ok",
       data: {
@@ -68,7 +68,7 @@ describe("adaptSolsticeAttestation", () => {
     ]);
     expect(result.metadata).toMatchObject({
       freshnessMode: "verified",
-      sourceTimestamp: 1776264425,
+      sourceTimestamp: 1776200000,
       totalReserveUsd: 301_500_000,
       supplyUsd: 300_000_000,
       collateralizationRatio: 1.005,
