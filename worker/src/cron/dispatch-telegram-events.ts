@@ -6,8 +6,6 @@ import {
 import { classifyDepegClosure } from "@shared/lib/depeg-closure";
 import type { SafetyScorePublicationIdentity } from "@shared/types/safety-score-publication";
 import { throwIfAborted } from "../lib/abort";
-import { readCachedJson } from "../lib/api-cache-read";
-import { getCache } from "../lib/db-cache";
 import { buildInClause, chunkArray } from "../lib/db";
 import { DEPEG_STEP_VALUES } from "../lib/telegram/constants";
 import {
@@ -16,7 +14,6 @@ import {
   type DepegResolved,
   type DepegWorsening,
 } from "../lib/telegram/alerts";
-import { SNAPSHOT_KEYS } from "./telegram-alert-snapshots";
 import { buildAlertContextLines } from "./telegram-alert-context";
 import {
   buildDewsChanges,
@@ -28,9 +25,10 @@ import {
   addSafetyReasonLines,
   type SafetyChangeWithExplain,
 } from "./telegram-alert-safety-reasons";
-import type {
-  buildDispatchSnapshotState,
-  loadDispatchSourceData,
+import {
+  parseSnapshotIds,
+  type buildDispatchSnapshotState,
+  type loadDispatchSourceData,
 } from "./dispatch-telegram-state";
 
 type DispatchSourceData = Awaited<ReturnType<typeof loadDispatchSourceData>>;
@@ -286,14 +284,7 @@ export async function buildTelegramDispatchEvents(
     ? buildSafetyChanges(currentSafetySnapshot, safeSafetySnapshot, getSymbol)
     : { changes: [], suppressedMethodologyChanges: 0 };
 
-  const previousLaunchSnapshot = readCachedJson<string[]>(
-    "dispatch-telegram-alerts",
-    SNAPSHOT_KEYS.launch,
-    await getCache(db, SNAPSHOT_KEYS.launch),
-  );
-  const prevLaunchIds = previousLaunchSnapshot.status === "ok" && Array.isArray(previousLaunchSnapshot.data)
-    ? new Set<string>(previousLaunchSnapshot.data)
-    : new Set<string>();
+  const prevLaunchIds = new Set(parseSnapshotIds(sourceData.launchCache) ?? []);
   const currentLaunchIds = new Set(WORKER_PRE_LAUNCH_STABLECOINS.map((c) => c.id));
 
   const launchPromoted = buildLaunchPromotions(prevLaunchIds, currentLaunchIds, WORKER_ACTIVE_IDS, WORKER_TRACKED_META_BY_ID);

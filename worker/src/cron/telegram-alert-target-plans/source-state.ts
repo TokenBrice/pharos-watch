@@ -3,6 +3,19 @@ import {
   type TelegramTargetPlanningClaim,
 } from "./types";
 import { reconcileTelegramAlertJobCounters } from "../telegram-alert-job-target-outcomes";
+export function PENDING_TERMINAL_DUPLICATE_PREDICATE(
+  pendingAlias: string,
+  targetAlias: string,
+): string {
+  return `${pendingAlias}.dedupe_key = ${targetAlias}.pending_dedupe_key
+    AND ${pendingAlias}.source_event_id IS NOT ${targetAlias}.source_event_id
+    AND ${pendingAlias}.chat_id = ${targetAlias}.chat_id
+    AND ${pendingAlias}.message_html = ${targetAlias}.message_html
+    AND COALESCE(${pendingAlias}.chunk_index, 0) = ${targetAlias}.chunk_index
+    AND COALESCE(${pendingAlias}.alert_type, '') = ${targetAlias}.alert_type
+    AND COALESCE(${pendingAlias}.markup_policy_json, '') = ${targetAlias}.markup_policy_json
+    AND ${pendingAlias}.delivery_state IN ('sent', 'execution_unknown')`;
+}
 
 interface TargetPlanningSourceRow {
   source_event_id: string;
@@ -382,14 +395,7 @@ export async function reopenTelegramTargetPlanDeliveryAfterIdentityCollision(
                AND target.status = 'planned'
                AND EXISTS (
                  SELECT 1 FROM telegram_pending_alerts pending
-                  WHERE pending.dedupe_key = target.pending_dedupe_key
-                    AND pending.source_event_id IS NOT target.source_event_id
-                    AND pending.chat_id = target.chat_id
-                    AND pending.message_html = target.message_html
-                    AND COALESCE(pending.chunk_index, 0) = target.chunk_index
-                    AND COALESCE(pending.alert_type, '') = target.alert_type
-                    AND COALESCE(pending.markup_policy_json, '') = target.markup_policy_json
-                    AND pending.delivery_state IN ('sent', 'execution_unknown')
+                  WHERE ${PENDING_TERMINAL_DUPLICATE_PREDICATE("pending", "target")}
                )
           )`,
     )

@@ -7,7 +7,10 @@ import {
   buildPendingAlertUpsertSql,
   pendingPrioritySql,
 } from "../telegram-pending/upsert-sql";
-import { markTelegramTargetPlanDegraded } from "./source-state";
+import {
+  markTelegramTargetPlanDegraded,
+  PENDING_TERMINAL_DUPLICATE_PREDICATE,
+} from "./source-state";
 import {
   TELEGRAM_TARGET_PLAN_CLAIM_TTL_SEC,
   TELEGRAM_TARGET_PLAN_ENQUEUE_PAGE_SIZE,
@@ -67,14 +70,7 @@ async function suppressPriorTerminalDedupeCollisions(
                 CASE (
                   SELECT pending.delivery_state
                     FROM telegram_pending_alerts pending
-                   WHERE pending.dedupe_key = telegram_alert_job_targets.pending_dedupe_key
-                     AND pending.source_event_id IS NOT telegram_alert_job_targets.source_event_id
-                     AND pending.chat_id = telegram_alert_job_targets.chat_id
-                     AND pending.message_html = telegram_alert_job_targets.message_html
-                     AND COALESCE(pending.chunk_index, 0) = telegram_alert_job_targets.chunk_index
-                     AND COALESCE(pending.alert_type, '') = telegram_alert_job_targets.alert_type
-                     AND COALESCE(pending.markup_policy_json, '') = telegram_alert_job_targets.markup_policy_json
-                     AND pending.delivery_state IN ('sent', 'execution_unknown')
+                   WHERE ${PENDING_TERMINAL_DUPLICATE_PREDICATE("pending", "telegram_alert_job_targets")}
                    LIMIT 1
                 )
                   WHEN 'sent' THEN 'duplicate_prior_delivery'
@@ -88,14 +84,7 @@ async function suppressPriorTerminalDedupeCollisions(
                 CASE (
                   SELECT pending.delivery_state
                     FROM telegram_pending_alerts pending
-                   WHERE pending.dedupe_key = telegram_alert_job_targets.pending_dedupe_key
-                     AND pending.source_event_id IS NOT telegram_alert_job_targets.source_event_id
-                     AND pending.chat_id = telegram_alert_job_targets.chat_id
-                     AND pending.message_html = telegram_alert_job_targets.message_html
-                     AND COALESCE(pending.chunk_index, 0) = telegram_alert_job_targets.chunk_index
-                     AND COALESCE(pending.alert_type, '') = telegram_alert_job_targets.alert_type
-                     AND COALESCE(pending.markup_policy_json, '') = telegram_alert_job_targets.markup_policy_json
-                     AND pending.delivery_state IN ('sent', 'execution_unknown')
+                   WHERE ${PENDING_TERMINAL_DUPLICATE_PREDICATE("pending", "telegram_alert_job_targets")}
                    LIMIT 1
                 )
                   WHEN 'sent' THEN 'duplicate_prior_delivery'
@@ -107,14 +96,7 @@ async function suppressPriorTerminalDedupeCollisions(
                 CASE (
                   SELECT pending.delivery_state
                     FROM telegram_pending_alerts pending
-                   WHERE pending.dedupe_key = telegram_alert_job_targets.pending_dedupe_key
-                     AND pending.source_event_id IS NOT telegram_alert_job_targets.source_event_id
-                     AND pending.chat_id = telegram_alert_job_targets.chat_id
-                     AND pending.message_html = telegram_alert_job_targets.message_html
-                     AND COALESCE(pending.chunk_index, 0) = telegram_alert_job_targets.chunk_index
-                     AND COALESCE(pending.alert_type, '') = telegram_alert_job_targets.alert_type
-                     AND COALESCE(pending.markup_policy_json, '') = telegram_alert_job_targets.markup_policy_json
-                     AND pending.delivery_state IN ('sent', 'execution_unknown')
+                   WHERE ${PENDING_TERMINAL_DUPLICATE_PREDICATE("pending", "telegram_alert_job_targets")}
                    LIMIT 1
                 )
                   WHEN 'sent' THEN 'duplicate_prior_delivery'
@@ -126,14 +108,7 @@ async function suppressPriorTerminalDedupeCollisions(
           AND final_delivery_state IS NULL
           AND EXISTS (
             SELECT 1 FROM telegram_pending_alerts pending
-             WHERE pending.dedupe_key = telegram_alert_job_targets.pending_dedupe_key
-               AND pending.source_event_id IS NOT telegram_alert_job_targets.source_event_id
-               AND pending.chat_id = telegram_alert_job_targets.chat_id
-               AND pending.message_html = telegram_alert_job_targets.message_html
-               AND COALESCE(pending.chunk_index, 0) = telegram_alert_job_targets.chunk_index
-               AND COALESCE(pending.alert_type, '') = telegram_alert_job_targets.alert_type
-               AND COALESCE(pending.markup_policy_json, '') = telegram_alert_job_targets.markup_policy_json
-               AND pending.delivery_state IN ('sent', 'execution_unknown')
+             WHERE ${PENDING_TERMINAL_DUPLICATE_PREDICATE("pending", "telegram_alert_job_targets")}
           )`,
     )
     .bind(nowSec, nowSec, sourceEventId, generation, JSON.stringify(targetKeys))
