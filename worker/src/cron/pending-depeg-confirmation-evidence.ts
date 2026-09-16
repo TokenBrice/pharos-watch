@@ -66,7 +66,7 @@ async function evaluateOffchainConfirmer(args: {
   symbol: string;
   geckoId: string;
   pegReference: number;
-  secondaryBar: number;
+  threshold: number;
   direction: PendingDepegState["direction"];
   agreeSources: string[] | undefined;
   priceSource: string | null | undefined;
@@ -80,7 +80,7 @@ async function evaluateOffchainConfirmer(args: {
     symbol,
     geckoId,
     pegReference,
-    secondaryBar,
+    threshold,
     direction,
     agreeSources,
     priceSource,
@@ -139,7 +139,7 @@ async function evaluateOffchainConfirmer(args: {
     const timestampStatus = classifyConfirmationTimestamp(observedAt, now);
     if (offchainPrice && offchainPrice > 0 && timestampStatus === "fresh") {
       const offchainSignal = deriveDepegSignal(offchainPrice, pegReference);
-      const status = classifyDirectionalSignal(offchainSignal, secondaryBar, direction);
+      const status = classifyDirectionalSignal(offchainSignal, threshold, direction);
       logWorkerEvent({
         scope: "lib",
         job: "confirm-pending-depegs",
@@ -152,7 +152,7 @@ async function evaluateOffchainConfirmer(args: {
           symbol,
           price: offchainPrice,
           deviationBps: offchainSignal?.absBps ?? "n/a",
-          secondaryBarBps: secondaryBar,
+          thresholdBps: threshold,
         },
       });
       await recordOutcomeSafe(db, circuitKey, true);
@@ -205,7 +205,7 @@ export async function collectConfirmationEvidence(
     asset,
     meta,
     pegReference,
-    secondaryBar,
+    threshold,
     nativeSignal,
     nativePegQuote,
     nativeSourceKey,
@@ -240,7 +240,7 @@ export async function collectConfirmationEvidence(
   const geckoId = meta?.geckoId;
   const isNativeOrigin = isNativeOriginPending(pendingState.reason);
   if (nativeSignal != null && !isNativeOrigin) {
-    evidence.offchainStatus = classifyDirectionalSignal(nativeSignal, secondaryBar, pendingState.direction);
+    evidence.offchainStatus = classifyDirectionalSignal(nativeSignal, threshold, pendingState.direction);
     evidence.offchainSourceKey = nativeSourceKey;
     if (evidence.offchainStatus === "confirm") {
       evidence.offchainPeakCandidate = { bps: nativeSignal.bps, price: nativePegQuote?.price ?? null };
@@ -261,7 +261,7 @@ export async function collectConfirmationEvidence(
         pegCurrency: nativePegQuote?.pegCurrency ?? meta?.flags.pegCurrency ?? "native",
         price: nativePegQuote?.price ?? "n/a",
         deviationBps: nativeSignal.absBps,
-        secondaryBarBps: secondaryBar,
+        thresholdBps: threshold,
       },
     });
   } else if (geckoId && !isNativeOrigin) {
@@ -270,7 +270,7 @@ export async function collectConfirmationEvidence(
       symbol: row.symbol,
       geckoId,
       pegReference,
-      secondaryBar,
+      threshold,
       direction: pendingState.direction,
       agreeSources: asset?.agreeSources,
       priceSource: asset?.priceSource,
@@ -306,26 +306,26 @@ export async function collectConfirmationEvidence(
     addSource(evidence.unavailableSources, "dex:usd-native-origin");
   } else if (dexRow != null && isTrustedDexPriceRow(dexRow, now, "depeg")) {
     const dexSignal = deriveDepegSignal(dexRow.dex_price_usd, pegReference);
-    const aggregateDexStatus = classifyDirectionalSignal(dexSignal, secondaryBar, pendingState.direction);
+    const aggregateDexStatus = classifyDirectionalSignal(dexSignal, threshold, pendingState.direction);
     const protocolSources = dexPriceSources.get(row.stablecoin_id);
     const confirmGroups = collectDexProtocolCorroborations(
       protocolSources,
       pegReference,
-      secondaryBar,
+      threshold,
       pendingState.direction,
       "confirm",
     );
     const recoverGroups = collectDexProtocolCorroborations(
       protocolSources,
       pegReference,
-      secondaryBar,
+      threshold,
       pendingState.direction,
       "recover",
     );
     const contradictGroups = collectDexProtocolCorroborations(
       protocolSources,
       pegReference,
-      secondaryBar,
+      threshold,
       pendingState.direction,
       "contradict",
     );
@@ -359,7 +359,7 @@ export async function collectConfirmationEvidence(
         symbol: row.symbol,
         price: dexRow.dex_price_usd,
         deviationBps: dexSignal?.absBps ?? "n/a",
-        secondaryBarBps: secondaryBar,
+        thresholdBps: threshold,
         aggregateStatus: aggregateDexStatus,
         confirmGroupCount: confirmGroups.length,
         recoverGroupCount: recoverGroups.length,
@@ -382,7 +382,7 @@ export async function collectConfirmationEvidence(
     const cexPrice = cexPrices.get(row.symbol.toUpperCase());
     if (cexPrice && cexPrice > 0) {
       const cexSignal = deriveDepegSignal(cexPrice, pegReference);
-      evidence.cexStatus = classifyDirectionalSignal(cexSignal, secondaryBar, pendingState.direction);
+      evidence.cexStatus = classifyDirectionalSignal(cexSignal, threshold, pendingState.direction);
       if (evidence.cexStatus === "confirm") {
         evidence.cexPeakCandidate = { bps: cexSignal?.bps, price: cexPrice };
         addSource(evidence.confirmingSources, "cex:binance");
@@ -402,7 +402,7 @@ export async function collectConfirmationEvidence(
           symbol: row.symbol,
           price: cexPrice,
           deviationBps: cexSignal?.absBps ?? "n/a",
-          secondaryBarBps: secondaryBar,
+          thresholdBps: threshold,
         },
       });
     }
@@ -422,7 +422,7 @@ export async function collectConfirmationEvidence(
       const poolSignal = deriveDepegSignal(pool.price, pegReference);
       if (poolSignal == null) continue;
       const poolGroupKey = dexPoolIndependentGroupKey(pool);
-      const currentPoolStatus = classifyDirectionalSignal(poolSignal, secondaryBar, pendingState.direction);
+      const currentPoolStatus = classifyDirectionalSignal(poolSignal, threshold, pendingState.direction);
       if (currentPoolStatus === "confirm") {
         const existing = poolConfirmGroups.get(poolGroupKey);
         const candidate = { key: poolGroupKey, pool, signal: poolSignal };
@@ -490,7 +490,7 @@ export async function collectConfirmationEvidence(
         highTvlConfirmation: poolHighTvlConfirm != null,
         contradictGroupCount: poolContradictGroups.size,
         recoverGroupCount: poolRecoverGroups.size,
-        secondaryBarBps: secondaryBar,
+        thresholdBps: threshold,
       },
     });
   } else {

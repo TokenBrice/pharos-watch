@@ -12,7 +12,7 @@ import {
 } from "@shared/types/depeg-resolver";
 import {
   buildForecastReadinessBackstop,
-  forecastReadinessLockTrigger,
+  evaluateForecastReadinessLock,
   forecastReadinessScore,
 } from "@shared/lib/depeg-resolver/forecast-readiness";
 import { buildDdrManifestBasePayload, DDR_DURATION_EXCEEDED_REASON } from "@shared/lib/depeg-resolver/public-contract";
@@ -131,36 +131,19 @@ function buildPendingReadinessMeta(
   eligibleAt: number;
   policyDelaySec: number;
   lockTrigger: Exclude<DdrLockTrigger, "scheduled_24h"> | null;
+  eligible: boolean;
 } {
   const readiness = forecastReadinessScore(row);
   const backstop = buildForecastReadinessBackstop({ startedAt: row.startedAt, nowSec });
-  const trigger = forecastReadinessLockTrigger({ readiness, backstop });
-  if (trigger === "readiness_backstop") {
-    const eligibleAt = backstop.backstopAt ?? row.startedAt;
-    return {
-      readiness,
-      backstop,
-      eligibleAt,
-      policyDelaySec: backstop.delaySec,
-      lockTrigger: "readiness_backstop",
-    };
-  }
-  if (trigger === "forecast_readiness") {
-    return {
-      readiness,
-      backstop,
-      eligibleAt: nowSec,
-      policyDelaySec: Math.max(0, nowSec - row.startedAt),
-      lockTrigger: "forecast_readiness",
-    };
-  }
-  const eligibleAt = backstop.backstopAt ?? row.startedAt;
   return {
+    ...evaluateForecastReadinessLock({
+      startedAt: row.startedAt,
+      nowSec,
+      readiness,
+      backstop,
+    }),
     readiness,
     backstop,
-    eligibleAt,
-    policyDelaySec: Math.max(0, eligibleAt - row.startedAt),
-    lockTrigger: null,
   };
 }
 
@@ -497,8 +480,7 @@ function buildPublicRows(input: {
     const pendingReadiness = sealed ? null : buildPendingReadinessMeta(row, input.nowSec);
 
     if (!sealed) {
-      const lockEligible =
-        pendingReadiness?.backstop.reached === true || pendingReadiness?.readiness.strictEarlyLockReady === true;
+      const lockEligible = pendingReadiness?.eligible === true;
       return {
         ...base,
         kind: "pending",

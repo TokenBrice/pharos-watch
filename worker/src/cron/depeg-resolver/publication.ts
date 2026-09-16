@@ -1,18 +1,14 @@
 import {
-  DDR_FORECAST_READINESS_BACKSTOP_DELAY_SEC,
   DDR_PREDICTION_POLICY_VERSION,
   DDR_SNAPSHOT_CACHE_GENERATION,
   DDR_VERSION_STAMP,
 } from "@shared/lib/methodology-versions/depeg-resolver";
 import {
   buildForecastReadinessBackstop,
+  evaluateForecastReadinessLock,
   forecastReadinessScore,
-  meetsStrictEarlyLockReadiness,
 } from "@shared/lib/depeg-resolver/forecast-readiness";
 import type {
-  DdrForecastReadiness,
-  DdrForecastReadinessBackstop,
-  DdrLockTrigger,
   DdrPredictionErratum,
   DdrRow,
 } from "@shared/types/depeg-resolver";
@@ -56,61 +52,6 @@ export async function loadSealedAndPublicationState(input: {
   return { sealed, firstPublication };
 }
 
-type DdrReadinessLockDecision =
-  | {
-      eligible: true;
-      eligibleAt: number;
-      policyDelaySec: number;
-      lockTrigger: Exclude<DdrLockTrigger, "scheduled_24h">;
-      readiness: DdrForecastReadiness;
-      backstop: DdrForecastReadinessBackstop;
-    }
-  | {
-      eligible: false;
-      eligibleAt: number;
-      policyDelaySec: number;
-      lockTrigger: null;
-      readiness: DdrForecastReadiness;
-      backstop: DdrForecastReadinessBackstop;
-    };
-
-function evaluateReadinessLock(row: DdrRow, nowSec: number): DdrReadinessLockDecision {
-  const readiness = forecastReadinessScore(row);
-  const backstop = buildForecastReadinessBackstop({ startedAt: row.startedAt, nowSec });
-  const backstopAt = backstop.backstopAt ?? row.startedAt + DDR_FORECAST_READINESS_BACKSTOP_DELAY_SEC;
-
-  if (backstop.reached) {
-    return {
-      eligible: true,
-      eligibleAt: backstopAt,
-      policyDelaySec: backstop.delaySec,
-      lockTrigger: "readiness_backstop",
-      readiness,
-      backstop,
-    };
-  }
-
-  if (meetsStrictEarlyLockReadiness(readiness)) {
-    return {
-      eligible: true,
-      eligibleAt: nowSec,
-      policyDelaySec: Math.max(0, nowSec - row.startedAt),
-      lockTrigger: "forecast_readiness",
-      readiness,
-      backstop,
-    };
-  }
-
-  return {
-    eligible: false,
-    eligibleAt: backstopAt,
-    policyDelaySec: backstop.delaySec,
-    lockTrigger: null,
-    readiness,
-    backstop,
-  };
-}
-
 export async function sealEligibleLocks(input: {
   stores: DdrV2StoreContracts;
   db: D1Database;
@@ -137,29 +78,38 @@ export async function sealEligibleLocks(input: {
 
     if (sealedByKey.has(incident.incidentKey)) continue;
 
-    const lock = evaluateReadinessLock(row, input.nowSec);
-    if (!lock.eligible) {
+    const readiness = forecastReadinessScore(row);
+    const backstop = buildForecastReadinessBackstop({ startedAt: row.startedAt, nowSec: input.nowSec });
+    const lockDecision = evaluateForecastReadinessLock({
+      startedAt: row.startedAt,
+      nowSec: input.nowSec,
+      readiness,
+      backstop,
+    });
+    if (!lockDecision.eligible) {
       await input.stores.recordLockDeferral(input.db, {
         incidentKey: incident.incidentKey,
         eventId: row.eventId,
         runId: input.ddrRunId,
         runAt: input.runAt,
-        eligibleAt: lock.eligibleAt,
+        eligibleAt: lockDecision.eligibleAt,
         predictionPolicyVersion: DDR_PREDICTION_POLICY_VERSION,
         healthStatus: "healthy",
         action: "pending",
         reason: null,
         syncCapabilities: input.syncCapabilities,
         lockTrigger: null,
-        forecastReadinessScore: lock.readiness.score,
-        forecastReadinessVersion: lock.readiness.version,
-        readinessThreshold: lock.readiness.threshold,
-        backstopAt: lock.backstop.backstopAt ?? null,
-        backstopDelaySec: lock.backstop.delaySec,
+        forecastReadinessScore: readiness.score,
+        forecastReadinessVersion: readiness.version,
+        readinessThreshold: readiness.threshold,
+        backstopAt: backstop.backstopAt ?? null,
+        backstopDelaySec: backstop.delaySec,
       });
       pendingCount += 1;
       continue;
     }
+
+    const lock = { ...lockDecision, readiness, backstop };
 
     const lockTiming = computeLockTiming(incident, input.nowSec, lock.eligibleAt);
     const sealedPayload = buildSealPayload(row, incident, input.nowSec, lockTiming, lock);

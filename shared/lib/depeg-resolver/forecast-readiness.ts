@@ -229,11 +229,49 @@ export function buildForecastReadinessBackstop(input: {
   };
 }
 
-export function forecastReadinessLockTrigger(input: {
+export type DdrForecastReadinessLockDecision =
+  | {
+      eligible: true;
+      eligibleAt: number;
+      policyDelaySec: number;
+      lockTrigger: Exclude<DdrLockTrigger, "scheduled_24h">;
+    }
+  | {
+      eligible: false;
+      eligibleAt: number;
+      policyDelaySec: number;
+      lockTrigger: null;
+    };
+
+export function evaluateForecastReadinessLock(input: {
+  startedAt: number;
+  nowSec: number;
   readiness: Pick<DdrForecastReadiness, "score">;
-  backstop?: Pick<DdrForecastReadinessBackstop, "reached"> | null;
-}): DdrLockTrigger {
-  if (input.backstop?.reached === true) return "readiness_backstop";
-  if (meetsStrictEarlyLockReadiness(input.readiness)) return "forecast_readiness";
-  return "scheduled_24h";
+  backstop: Pick<DdrForecastReadinessBackstop, "delaySec" | "backstopAt" | "reached">;
+}): DdrForecastReadinessLockDecision {
+  const backstopAt = input.backstop.backstopAt ?? input.startedAt + input.backstop.delaySec;
+  if (input.backstop.reached === true) {
+    return {
+      eligible: true,
+      eligibleAt: backstopAt,
+      policyDelaySec: input.backstop.delaySec,
+      lockTrigger: "readiness_backstop",
+    };
+  }
+
+  if (meetsStrictEarlyLockReadiness(input.readiness)) {
+    return {
+      eligible: true,
+      eligibleAt: input.nowSec,
+      policyDelaySec: Math.max(0, input.nowSec - input.startedAt),
+      lockTrigger: "forecast_readiness",
+    };
+  }
+
+  return {
+    eligible: false,
+    eligibleAt: backstopAt,
+    policyDelaySec: input.backstop.delaySec,
+    lockTrigger: null,
+  };
 }

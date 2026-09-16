@@ -42,7 +42,6 @@ function makePlan(overrides: Partial<ConfirmationPlanReady> = {}): ConfirmationP
     meta: undefined,
     pegReference: 1,
     threshold: 100,
-    secondaryBar: 100,
     nativeSignal: null,
     nativePegQuote: undefined,
     nativeSourceKey: "native:usd",

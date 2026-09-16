@@ -43,16 +43,13 @@ export function resolvePeakUpdateCommand(params: {
   primaryPrice: number;
   primaryTrust: "authoritative" | "confirm_required";
   dexSupportsDirection: boolean;
-  dexSupportsSecondaryBarDirection: boolean;
 }): Extract<DepegPersistenceCommand, { type: "update-peak" }> | null {
   const nativeEvent = isNativePegEvent(params.existing);
   const signal = nativeEvent ? params.nativeSignal : params.primarySignal;
   const price = nativeEvent ? params.nativePegPrice : params.primaryPrice;
   const canUpdate = nativeEvent
     ? signal != null && signal.direction === params.existing.direction && price != null
-    : params.primaryTrust === "authoritative" ||
-      params.dexSupportsDirection ||
-      (params.primaryTrust === "confirm_required" && params.dexSupportsSecondaryBarDirection);
+    : params.primaryTrust === "authoritative" || params.dexSupportsDirection;
   if (!canUpdate || !signal || signal.absBps <= Math.abs(params.existing.peak_deviation_bps)) return null;
   return {
     type: "update-peak",

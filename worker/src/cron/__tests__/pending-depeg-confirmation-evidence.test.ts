@@ -33,7 +33,6 @@ function input(overrides: Partial<ConfirmationEvidenceInput> = {}): Confirmation
     meta: usdMeta,
     pegReference: 1,
     threshold: 100,
-    secondaryBar: 100,
     nativeSignal: null,
     nativePegQuote: undefined,
     nativeSourceKey: "native:usd",
