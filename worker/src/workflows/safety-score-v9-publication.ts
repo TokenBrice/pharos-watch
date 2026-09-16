@@ -351,6 +351,11 @@ export async function writeSafetyScoreV9ShadowPublication(
          END`,
     ).bind(gated.shadowKey, gated.shadowValue, gated.updatedAt),
     db.prepare(
+      `DELETE FROM cache
+        WHERE key LIKE ?
+          AND key <> ?`,
+    ).bind(`${SAFETY_SCORE_V9_SHADOW_CACHE_PREFIX}:%`, gated.shadowKey),
+    db.prepare(
       `INSERT INTO cron_runs
          (job, started_at, duration_ms, status, item_count, metadata,
           slot_started_at, error, idempotency_key)

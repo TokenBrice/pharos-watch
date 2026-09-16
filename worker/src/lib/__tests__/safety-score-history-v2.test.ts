@@ -14,6 +14,7 @@ import {
   SAFETY_SCORE_HISTORY_TAPE_SOURCE_SQL,
   fetchSafetyScoreHistoryCompatibilityRows,
   fetchSafetyScoreHistoryV2Rows,
+  fetchLatestSafetyScoreHistoryV2Rows,
   prepareSafetyScoreHistoryBoundaryWrite,
   prepareSafetyScoreHistoryBoundaryWrites,
   prepareSafetyScoreHistoryV2Write,
@@ -576,6 +577,67 @@ describe("Safety Score history V2", () => {
         'initial-baseline', 'A', 88, NULL, NULL, NULL, 301
        );
     `)).toThrow();
+  });
+
+  it("loads only the latest V2 row per coin with a deterministic history-id tiebreak", async () => {
+    const { db } = createHistoryDatabase();
+    await db.batch([
+      prepareSafetyScoreHistoryV2Write(db, {
+        stablecoinId: "usdc-circle",
+        recordedAt: 200,
+        grade: "B",
+        score: 72,
+        prevGrade: null,
+        prevScore: null,
+        transitionKind: "initial-baseline",
+        identity: v9Identity({ publicationGenerationId: "safety-score-v9:200" }),
+        historyId: "history:older",
+        createdAt: 200,
+      }),
+      prepareSafetyScoreHistoryV2Write(db, {
+        stablecoinId: "usdc-circle",
+        recordedAt: 300,
+        grade: "A-",
+        score: 82,
+        prevGrade: null,
+        prevScore: null,
+        transitionKind: "initial-baseline",
+        identity: v9Identity({ publicationGenerationId: "safety-score-v9:300-a" }),
+        historyId: "history:300:a",
+        createdAt: 300,
+      }),
+      prepareSafetyScoreHistoryV2Write(db, {
+        stablecoinId: "usdc-circle",
+        recordedAt: 300,
+        grade: "A",
+        score: 85,
+        prevGrade: null,
+        prevScore: null,
+        transitionKind: "initial-baseline",
+        identity: v9Identity({ publicationGenerationId: "safety-score-v9:300-z" }),
+        historyId: "history:300:z",
+        createdAt: 301,
+      }),
+      prepareSafetyScoreHistoryV2Write(db, {
+        stablecoinId: "usdt-tether",
+        recordedAt: 250,
+        grade: "B+",
+        score: 78,
+        prevGrade: null,
+        prevScore: null,
+        transitionKind: "initial-baseline",
+        identity: v9Identity({ publicationGenerationId: "safety-score-v9:250" }),
+        historyId: "history:tether",
+        createdAt: 250,
+      }),
+    ]);
+
+    const rows = await fetchLatestSafetyScoreHistoryV2Rows(db);
+
+    expect(rows.map((row) => [row.stablecoin_id, row.history_id, row.grade])).toEqual([
+      ["usdc-circle", "history:300:z", "A"],
+      ["usdt-tether", "history:tether", "B+"],
+    ]);
   });
 
 });
