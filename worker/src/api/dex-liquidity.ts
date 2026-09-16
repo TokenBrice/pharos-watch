@@ -137,10 +137,14 @@ export const handleDexLiquidity = async (db: D1Database): Promise<Response> => {
       `dex-liquidity:${id}:score_components_json`,
     );
 
-    const topPools = normalizeTopPools(row.top_pools_json, `dex-liquidity:${id}:top_pools_json`);
+    const normalizedTopPools = normalizeTopPools(row.top_pools_json, `dex-liquidity:${id}:top_pools_json`);
+    const parseOk = normalizedTopPools !== null;
+    const topPools = normalizedTopPools ?? [];
     const inferred7dMeasured =
-      topPools.length === 0 ||
-      topPools.every((pool) => typeof pool.volumeUsd7d === "number" && Number.isFinite(pool.volumeUsd7d));
+      parseOk && (
+        topPools.length === 0 ||
+        topPools.every((pool) => typeof pool.volumeUsd7d === "number" && Number.isFinite(pool.volumeUsd7d))
+      );
     const totalVolume7dMeasured = row.total_volume_7d_measured != null
       ? row.total_volume_7d_measured === 1
       : inferred7dMeasured;
