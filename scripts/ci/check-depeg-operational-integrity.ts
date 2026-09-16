@@ -72,7 +72,7 @@ WHERE status = 'complete'
 ];
 
 interface D1ResultEnvelope {
-  results?: unknown[];
+  results: unknown[];
 }
 
 function printUsage(): void {
@@ -98,12 +98,24 @@ function runWrangler(database: string, remote: boolean): number {
         return result.status ?? 1;
       }
       const output = result.stdout.trim();
-      let rows: unknown[] = [];
+      let rows: unknown[];
       try {
-        const parsed = JSON.parse(output) as D1ResultEnvelope | D1ResultEnvelope[];
-        rows = Array.isArray(parsed) ? (parsed[0]?.results ?? []) : (parsed.results ?? []);
-      } catch {
-        process.stdout.write(output + "\n");
+        const parsed: unknown = JSON.parse(output);
+        const envelope = Array.isArray(parsed) ? parsed[0] : parsed;
+        if (
+          envelope === null
+          || typeof envelope !== "object"
+          || !Array.isArray((envelope as Partial<D1ResultEnvelope>).results)
+        ) {
+          throw new Error("expected a results array");
+        }
+        rows = (envelope as D1ResultEnvelope).results;
+      } catch (error) {
+        process.stderr.write(
+          `FAIL ${check.name}: could not parse Wrangler JSON (${error instanceof Error ? error.message : String(error)})\n`,
+        );
+        if (output) process.stderr.write(`${output}\n`);
+        return 1;
       }
       if (rows.length > 0) {
         failures++;

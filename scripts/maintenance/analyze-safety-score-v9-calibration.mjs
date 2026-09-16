@@ -1126,7 +1126,14 @@ function distributionGateMetrics(replay, rated, scoreQuartiles) {
   // D2 — supply-observation coverage and NR materiality.
   const nrSupplies = cards
     .filter((card) => card.grade === "NR")
-    .map((card) => knownSupplyUsd(factsById.get(card.id)) ?? 0);
+    .map((card) => knownSupplyUsd(factsById.get(card.id)));
+  const allNrSuppliesObserved = nrSupplies.every((supply) => supply !== null);
+  const maxNrSupplyUsd =
+    nrSupplies.length === 0
+      ? 0
+      : allNrSuppliesObserved
+        ? round(Math.max(...nrSupplies), 2)
+        : null;
 
   // D3 — under-evidenced F.
   const fCards = rated.filter((card) => card.grade === "F");
@@ -1167,7 +1174,7 @@ function distributionGateMetrics(replay, rated, scoreQuartiles) {
     gated: {
       materialEvidenceCoverageExTop2: exTopSupply > 0 ? round(exTopEvidenced / exTopSupply) : null,
       supplyObservationCoverage: rated.length > 0 ? round(observed.length / rated.length) : null,
-      maxNrSupplyUsd: nrSupplies.length > 0 ? round(Math.max(...nrSupplies), 2) : 0,
+      maxNrSupplyUsd,
       unattributedFCount: unattributedF.length,
       unattributedFSupplyShare: observedSupply > 0 ? round(unattributedFSupply / observedSupply) : null,
       freeFloatingLargestBucketShare: freeFloatingShare(freeFloatingBuckets),

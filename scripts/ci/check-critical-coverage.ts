@@ -25,6 +25,9 @@ import {
 import { collectGitPaths, parseChangedFileArgs } from "../lib/changed-files.mts";
 import { isDirectRun } from "../lib/smoke-runtime.mjs";
 
+const WAIVER_REVIEW_HARD_FAIL_AGE_DAYS = 30;
+const WAIVER_REVIEW_PRINT_LIMIT = 10;
+
 const LCOV_PATH = "coverage/lcov.info";
 
 type CoverageWaivers = Record<string, string>;
@@ -70,44 +73,77 @@ export const CRITICAL_COVERAGE_BRANCH_FLOORS: Record<string, number> = {
   "worker/src/lib/price-publication-state.ts": 40,
 };
 
+function parseCoveragePercentage(env: NodeJS.ProcessEnv, name: string, fallback: number): number {
+  const raw = env[name];
+  if (raw === undefined) return fallback;
+  const value = Number(raw.trim());
+  if (raw.trim() === "" || !Number.isFinite(value) || value < 0 || value > 100) {
+    throw new Error(`${name} must be a number between 0 and 100`);
+  }
+  return value;
+}
+
 // Explicit per-file minimums for critical reliability paths.
 function getCriticalThresholds(env: NodeJS.ProcessEnv = process.env): Record<string, number> {
   return {
-    "worker/src/lib/stablecoins-cache.ts": Number.parseFloat(env.CRITICAL_COVERAGE_THRESHOLD_STABLECOINS_CACHE ?? "50"),
-    "worker/src/lib/auth.ts": Number.parseFloat(env.CRITICAL_COVERAGE_THRESHOLD_AUTH ?? "70"),
-    "worker/src/lib/evm-rpc.ts": Number.parseFloat(env.CRITICAL_COVERAGE_THRESHOLD_EVM_RPC ?? "70"),
-    "worker/src/lib/safety-scores.ts": Number.parseFloat(env.CRITICAL_COVERAGE_THRESHOLD_SAFETY_SCORES ?? "40"),
-    "worker/src/handlers/scheduled.ts": Number.parseFloat(env.CRITICAL_COVERAGE_THRESHOLD_SCHEDULED ?? "40"),
-    "worker/src/cron/daily-digest.ts": Number.parseFloat(env.CRITICAL_COVERAGE_THRESHOLD_DAILY_DIGEST ?? "40"),
-    "worker/src/api/stablecoin-detail.ts": Number.parseFloat(env.CRITICAL_COVERAGE_THRESHOLD_STABLECOIN_DETAIL ?? "30"),
-    "worker/src/api/health.ts": Number.parseFloat(env.CRITICAL_COVERAGE_THRESHOLD_HEALTH ?? "60"),
-    "worker/src/api/status.ts": Number.parseFloat(env.CRITICAL_COVERAGE_THRESHOLD_STATUS ?? "40"),
-    "worker/src/cron/dex-liquidity/orchestrator.ts": Number.parseFloat(env.CRITICAL_COVERAGE_THRESHOLD_DEX_ORCHESTRATOR ?? "55"),
-    "worker/src/lib/api-pagination.ts": Number.parseFloat(env.CRITICAL_COVERAGE_THRESHOLD_API_PAGINATION ?? "70"),
+    "worker/src/lib/stablecoins-cache.ts": parseCoveragePercentage(
+      env,
+      "CRITICAL_COVERAGE_THRESHOLD_STABLECOINS_CACHE",
+      50,
+    ),
+    "worker/src/lib/auth.ts": parseCoveragePercentage(env, "CRITICAL_COVERAGE_THRESHOLD_AUTH", 70),
+    "worker/src/lib/evm-rpc.ts": parseCoveragePercentage(env, "CRITICAL_COVERAGE_THRESHOLD_EVM_RPC", 70),
+    "worker/src/lib/safety-scores.ts": parseCoveragePercentage(
+      env,
+      "CRITICAL_COVERAGE_THRESHOLD_SAFETY_SCORES",
+      40,
+    ),
+    "worker/src/handlers/scheduled.ts": parseCoveragePercentage(env, "CRITICAL_COVERAGE_THRESHOLD_SCHEDULED", 40),
+    "worker/src/cron/daily-digest.ts": parseCoveragePercentage(
+      env,
+      "CRITICAL_COVERAGE_THRESHOLD_DAILY_DIGEST",
+      40,
+    ),
+    "worker/src/api/stablecoin-detail.ts": parseCoveragePercentage(
+      env,
+      "CRITICAL_COVERAGE_THRESHOLD_STABLECOIN_DETAIL",
+      30,
+    ),
+    "worker/src/api/health.ts": parseCoveragePercentage(env, "CRITICAL_COVERAGE_THRESHOLD_HEALTH", 60),
+    "worker/src/api/status.ts": parseCoveragePercentage(env, "CRITICAL_COVERAGE_THRESHOLD_STATUS", 40),
+    "worker/src/cron/dex-liquidity/orchestrator.ts": parseCoveragePercentage(
+      env,
+      "CRITICAL_COVERAGE_THRESHOLD_DEX_ORCHESTRATOR",
+      55,
+    ),
+    "worker/src/lib/api-pagination.ts": parseCoveragePercentage(
+      env,
+      "CRITICAL_COVERAGE_THRESHOLD_API_PAGINATION",
+      70,
+    ),
   };
 }
 
 function getCriticalBranchThresholds(env: NodeJS.ProcessEnv = process.env): Record<string, number> {
-  const getThreshold = (value: string | undefined, fallback: number): number => {
-    const parsed = Number.parseFloat(value ?? "");
-    return Number.isFinite(parsed) ? parsed : fallback;
-  };
-
   return {
-    "worker/src/lib/auth.ts": getThreshold(
-      env.CRITICAL_COVERAGE_BRANCH_THRESHOLD_AUTH,
+    "worker/src/lib/auth.ts": parseCoveragePercentage(
+      env,
+      "CRITICAL_COVERAGE_BRANCH_THRESHOLD_AUTH",
       CRITICAL_COVERAGE_BRANCH_FLOORS["worker/src/lib/auth.ts"],
     ),
-    "worker/src/lib/evm-rpc.ts": getThreshold(
-      env.CRITICAL_COVERAGE_BRANCH_THRESHOLD_EVM_RPC,
+    "worker/src/lib/evm-rpc.ts": parseCoveragePercentage(
+      env,
+      "CRITICAL_COVERAGE_BRANCH_THRESHOLD_EVM_RPC",
       CRITICAL_COVERAGE_BRANCH_FLOORS["worker/src/lib/evm-rpc.ts"],
     ),
-    "worker/src/lib/safety-scores.ts": getThreshold(
-      env.CRITICAL_COVERAGE_BRANCH_THRESHOLD_SAFETY_SCORES,
+    "worker/src/lib/safety-scores.ts": parseCoveragePercentage(
+      env,
+      "CRITICAL_COVERAGE_BRANCH_THRESHOLD_SAFETY_SCORES",
       CRITICAL_COVERAGE_BRANCH_FLOORS["worker/src/lib/safety-scores.ts"],
     ),
-    "worker/src/lib/price-publication-state.ts": getThreshold(
-      env.CRITICAL_COVERAGE_BRANCH_THRESHOLD_PRICE_PUBLICATION_STATE,
+    "worker/src/lib/price-publication-state.ts": parseCoveragePercentage(
+      env,
+      "CRITICAL_COVERAGE_BRANCH_THRESHOLD_PRICE_PUBLICATION_STATE",
       CRITICAL_COVERAGE_BRANCH_FLOORS["worker/src/lib/price-publication-state.ts"],
     ),
   };
@@ -183,9 +219,6 @@ export function runCriticalCoverageCompletenessGuard({
     ownershipWaivers,
   });
   const missingOwnership = findCriticalOwnershipGaps(criticalFiles, ownership, ownershipWaivers);
-  // Waiver review dates are advisory. A calendar date passing is a prompt to
-  // re-review coverage, not evidence that the merge being gated is unsafe, so
-  // the queue is reported and the weekly maintenance lane picks it up.
   const waiverReviewQueue = collectCriticalCoverageWaiverReviewQueue(waivers, {
     candidateFiles,
     today: reviewToday,
@@ -197,16 +230,27 @@ export function runCriticalCoverageCompletenessGuard({
   for (const [label, rows] of reviewGroups) {
     if (rows.length === 0) continue;
     consoleImpl.log(`[coverage] Critical coverage waiver reviews ${label}:`);
-    for (const waiver of rows) {
+    consoleImpl.log(`[coverage] ${rows.length} waiver review(s) ${label}`);
+    for (const waiver of rows.slice(0, WAIVER_REVIEW_PRINT_LIMIT)) {
       consoleImpl.log(`  ${waiver.file} reviewAfter=${waiver.reviewAfter}`);
     }
+    if (rows.length > WAIVER_REVIEW_PRINT_LIMIT) {
+      consoleImpl.log(`  ... ${rows.length - WAIVER_REVIEW_PRINT_LIMIT} more`);
+    }
   }
+
+  const reviewCutoff = new Date(reviewToday);
+  reviewCutoff.setUTCHours(0, 0, 0, 0);
+  reviewCutoff.setUTCDate(reviewCutoff.getUTCDate() - WAIVER_REVIEW_HARD_FAIL_AGE_DAYS);
+  const reviewCutoffDate = reviewCutoff.toISOString().slice(0, 10);
+  const lapsedWaivers = waiverReviewQueue.due.filter((waiver) => waiver.reviewAfter < reviewCutoffDate);
 
   if (
     waiverErrors.length === 0
     && staleWaivers.length === 0
     && missingEnrollment.length === 0
     && missingOwnership.length === 0
+    && lapsedWaivers.length === 0
   ) {
     return true;
   }
@@ -216,6 +260,17 @@ export function runCriticalCoverageCompletenessGuard({
     consoleImpl.error("[coverage] Invalid critical-coverage waivers:");
     for (const error of waiverErrors) {
       consoleImpl.error(`  ${error}`);
+    }
+  }
+  if (lapsedWaivers.length > 0) {
+    consoleImpl.error(
+      `[coverage] ${lapsedWaivers.length} critical-coverage waiver review(s) are more than ${WAIVER_REVIEW_HARD_FAIL_AGE_DAYS} days overdue:`,
+    );
+    for (const waiver of lapsedWaivers.slice(0, WAIVER_REVIEW_PRINT_LIMIT)) {
+      consoleImpl.error(`  ${waiver.file} reviewAfter=${waiver.reviewAfter}`);
+    }
+    if (lapsedWaivers.length > WAIVER_REVIEW_PRINT_LIMIT) {
+      consoleImpl.error(`  ... ${lapsedWaivers.length - WAIVER_REVIEW_PRINT_LIMIT} more`);
     }
   }
   if (staleWaivers.length > 0) {
@@ -251,13 +306,23 @@ export function runCriticalCoverageCheck({
   completenessOptions = {},
   exit = process.exit,
 }: CriticalCoverageCheckOptions = {}): void {
-  const threshold = Number.parseFloat(env.CRITICAL_COVERAGE_THRESHOLD ?? "40");
-  const ratchetTolerance = Number.parseFloat(env.CRITICAL_COVERAGE_RATCHET_TOLERANCE ?? "0");
+  let threshold: number;
+  let ratchetTolerance: number;
+  let criticalThresholds: Record<string, number>;
+  let criticalBranchThresholds: Record<string, number>;
+  try {
+    threshold = parseCoveragePercentage(env, "CRITICAL_COVERAGE_THRESHOLD", 40);
+    ratchetTolerance = parseCoveragePercentage(env, "CRITICAL_COVERAGE_RATCHET_TOLERANCE", 0);
+    criticalThresholds = getCriticalThresholds(env);
+    criticalBranchThresholds = getCriticalBranchThresholds(env);
+  } catch (error) {
+    consoleImpl.error(`[coverage] Invalid coverage environment: ${error instanceof Error ? error.message : String(error)}`);
+    exit(1);
+    return;
+  }
   const baselinePath = env.CRITICAL_COVERAGE_BASELINE_FILE ?? ".ci/critical-coverage-baseline.json";
   const compareRef = (env.CRITICAL_COVERAGE_COMPARE_REF ?? "").trim();
   const ratchetAll = env.CRITICAL_COVERAGE_RATCHET_ALL === "1";
-  const criticalThresholds = getCriticalThresholds(env);
-  const criticalBranchThresholds = getCriticalBranchThresholds(env);
 
   if (!runCriticalCoverageCompletenessGuard({ ...completenessOptions, consoleImpl, exit })) {
     return;

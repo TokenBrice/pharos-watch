@@ -179,6 +179,7 @@ These collectors write evidence; exit zero does not certify health, and night-wa
 Repository settings:
 
 - `main` requires pull requests and the aggregate `PR gate` status check, including administrators. The gate accepts the validation matrix selected from `scripts/lib/pr-lanes.mts`: either the full static-plus-four-test-shard path or the focused docs-only path, with optional docs and four-shard touched-critical coverage lanes. A single preparation job installs dependencies and caches the generated workspace for the matrix; preflight always requires the strict pinned PR secret scan.
+- Critical-coverage waiver cohorts are re-reviewed and re-dated quarterly by the owning teams. The completeness gate reports reviews due within 14 days, caps each printed queue at 10 entries plus the remaining count, and fails once any review is more than 30 days overdue.
 - The GitHub `production` environment is restricted to `main` and is attached to the Worker deploy job, the Pages release job, and the manual zone-cache purge job — the three production-mutating jobs.
 - Production-changing workflows share the `production-deploy` concurrency group and do not cancel an active release.
 

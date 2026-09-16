@@ -66,23 +66,24 @@ function replaceManagedCspLines(contents: string): { next: string; errors: strin
 export function runSiteCspSyncCheck(argv = process.argv.slice(2)): void {
   const { write } = parseArgs(argv);
   const contents = readFileSync(HEADERS_PATH, "utf8");
-  const { next, errors, changed } = replaceManagedCspLines(contents);
+  let result = replaceManagedCspLines(contents);
 
-  if (write && changed) {
-    writeFileSync(HEADERS_PATH, next);
+  if (write && result.changed) {
+    writeFileSync(HEADERS_PATH, result.next);
     console.log("Updated public/_headers CSP lines from shared site-csp policy.");
-    return;
+    result = replaceManagedCspLines(result.next);
   }
 
-  if (errors.length > 0) {
+  if (result.errors.length > 0) {
     console.error("Site CSP/static header drift detected:");
-    for (const error of errors) {
+    for (const error of result.errors) {
       console.error(`  ${error}`);
     }
     console.error("");
     console.error("Regenerate the managed CSP lines with:");
     console.error("  npx --no-install tsx scripts/ci/check-site-csp-sync.ts --write");
-    process.exit(1);
+    process.exitCode = 1;
+    return;
   }
 
   console.log("Site CSP/static header sync check passed.");
