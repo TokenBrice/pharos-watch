@@ -36,7 +36,6 @@ jobs:
       NEXT_PUBLIC_PHAROS_CHART_ANNOTATIONS: ${{ vars.NEXT_PUBLIC_PHAROS_CHART_ANNOTATIONS }}
       NEXT_PUBLIC_PHAROS_DEPEG_RESOLVER: ${{ vars.NEXT_PUBLIC_PHAROS_DEPEG_RESOLVER }}
       NEXT_PUBLIC_PHAROS_DEPEG_RESOLVER_REVIEWER: ${{ vars.NEXT_PUBLIC_PHAROS_DEPEG_RESOLVER_REVIEWER }}
-      PAGES_REFRESH_RESULT_PATH: ${{ runner.temp }}/pages-refresh-${{ github.run_id }}-${{ github.run_attempt }}/result.json
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -53,6 +52,9 @@ jobs:
         # The dataset refresh consumes the generated stablecoin catalog, so
         # compile inputs must exist before the refresh runs.
         run: npm run prebuild -- --build-lifecycle=compile-input
+      - name: Resolve release-data refresh result path
+        # runner.temp is not available in job-level env; export it per step.
+        run: echo "PAGES_REFRESH_RESULT_PATH=${RUNNER_TEMP}/pages-refresh-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}/result.json" >> "$GITHUB_ENV"
       - name: Refresh API-backed release data
         id: refresh-data
         if: ${{ inputs.refresh_data }}
