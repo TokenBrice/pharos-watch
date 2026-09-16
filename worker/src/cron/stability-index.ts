@@ -175,6 +175,7 @@ export async function computeAndStoreStabilityIndex(db: D1Database, signal?: Abo
   const grouped = new Map<string, DepegRow[]>();
   for (const r of activeDepegs.results ?? []) {
     const canonicalId = canonicalizePsiStablecoinId(r.stablecoin_id);
+    if (!CORE_PSI_ELIGIBLE_IDS.has(canonicalId)) continue;
     const list = grouped.get(canonicalId) ?? [];
     list.push(r);
     grouped.set(canonicalId, list);
@@ -190,12 +191,16 @@ export async function computeAndStoreStabilityIndex(db: D1Database, signal?: Abo
     factor: number;
   }[] = [];
   let replayPriceFallbackCount = 0;
+  let openDepegsWithoutPrice = 0;
 
   for (const [coinId, events] of grouped) {
     const currentPrice = priceById.get(coinId);
     const replayPrice = replayPriceById.get(coinId);
     const price = currentPrice ?? replayPrice;
-    if (!price) continue;
+    if (!price) {
+      openDepegsWithoutPrice++;
+      continue;
+    }
     if (currentPrice == null && replayPrice != null) {
       replayPriceFallbackCount++;
     }
@@ -226,6 +231,27 @@ export async function computeAndStoreStabilityIndex(db: D1Database, signal?: Abo
   }
 
   throwIfAborted(signal);
+  if (openDepegsWithoutPrice > 0) {
+    return createCronResult({
+      status: "degraded",
+      itemCount: 0,
+      metadata: {
+        fallbackMode: "open-depeg-price-unavailable",
+        openDepegsWithoutPrice,
+        replayPriceFallbackCount,
+        totalMcapUsd,
+        mcap7dChangePct,
+        depegCount: depegs.length,
+        dewsStressBreadth,
+        dewsUnavailable,
+        dewsFailureReason,
+        dewsLatestComputedAt,
+        dewsRowsRead,
+        dewsMaxAgeSec: DEWS_STRESS_MAX_AGE_SEC,
+        preservedCurrentSample: true,
+      },
+    });
+  }
 
   const result = computeStabilityIndex({ depegs, totalMcapUsd, mcap7dChangePct, dewsStressBreadth });
   if (!result) {
@@ -271,6 +297,7 @@ export async function computeAndStoreStabilityIndex(db: D1Database, signal?: Abo
         dewsRowsRead,
         dewsMaxAgeSec: DEWS_STRESS_MAX_AGE_SEC,
         replayPriceFallbackCount,
+        openDepegsWithoutPrice,
         contributors,
         methodologyVersion: PSI_METHODOLOGY_VERSION,
       }),
@@ -313,6 +340,7 @@ export async function computeAndStoreStabilityIndex(db: D1Database, signal?: Abo
       dewsRowsRead,
       dewsMaxAgeSec: DEWS_STRESS_MAX_AGE_SEC,
       replayPriceFallbackCount,
+      openDepegsWithoutPrice,
     },
   });
 }
