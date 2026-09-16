@@ -126,6 +126,7 @@ async function projectFreezeVariant(
         chainId: row.chain_id,
         chainName: row.chain_name,
         amountUsdAtEvent: row.amount_usd_at_event,
+        ...(row.amount_usd_at_event == null && spec.variant === "blocked" ? { amountUnknown: true } : {}),
         sourceEventId: row.id,
         stablecoinId: row.config_key ? getBlacklistConfigByKey(row.config_key)?.stablecoinId ?? null : null,
       },

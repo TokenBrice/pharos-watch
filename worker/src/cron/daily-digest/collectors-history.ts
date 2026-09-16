@@ -118,6 +118,7 @@ export async function collectHistoricalContext(
            WHERE json_extract(input_data, '$.stabilityIndex.score') <= ?
              AND generated_at < ?
              AND (${NON_WEEKLY_DIGEST_SQL_FILTER})
+             AND json_extract(input_data, '$.aggregateUniverse') = 'core-stablecoins-v1'
            ORDER BY generated_at DESC LIMIT 1`,
         )
         .bind(displayScore, ctx.todayTs)

@@ -413,7 +413,7 @@ export async function resumeDailyDigestDelivery(
   throwIfAborted(signal);
   if (!row) return { kind: "no-publishable-digest" };
   const countResult = await db
-    .prepare(`SELECT COUNT(*) as cnt FROM daily_digest WHERE ${NON_WEEKLY_DIGEST_SQL_FILTER}`)
+    .prepare(`SELECT COUNT(*) as cnt FROM daily_digest WHERE (${NON_WEEKLY_DIGEST_SQL_FILTER}) AND (${NON_BLOCKED_DIGEST_SQL_FILTER})`)
     .all<{ cnt: number }>();
   throwIfAborted(signal);
   const editionNumber = countResult.results?.[0]?.cnt ?? null;
