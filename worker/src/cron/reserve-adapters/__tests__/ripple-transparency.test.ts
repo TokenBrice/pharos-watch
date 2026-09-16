@@ -91,7 +91,7 @@ describe("adaptRippleTransparency", () => {
     ]);
   });
 
-  it("reads the live payload's balances and reports the missing breakdown as absent, not malformed", () => {
+  it("binds fallback composition freshness to the attested date while reading live balances", () => {
     const result = adaptRippleTransparency(RIPPLE_HTML_LIVE);
 
     expect(result.metadata).toMatchObject({
@@ -99,7 +99,7 @@ describe("adaptRippleTransparency", () => {
       reservesUsd: 2_517_700_000,
       collateralizationRatio: 2_517_700_000 / 2_395_600_000,
       freshnessMode: "verified",
-      sourceTimestamp: Date.UTC(2026, 8, 3) / 1000,
+      sourceTimestamp: Date.UTC(2026, 4, 29) / 1000,
     });
     expect(result.slices.map((slice) => [slice.name, slice.pct])).toEqual([
       ["U.S. Treasury bills", 65.41],

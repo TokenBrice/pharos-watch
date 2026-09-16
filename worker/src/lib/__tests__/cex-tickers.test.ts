@@ -418,12 +418,13 @@ describe("fetchKrakenPrices", () => {
     expect(outcome.value.has("BTC")).toBe(false);
   });
 
-  it("returns no-data outcome when Kraken returns an API error", async () => {
+  it("returns upstream-error outcome when Kraken returns an API error", async () => {
     mockFetch([{ match: () => true, body: { error: ["EGeneral:Temporary lockout"], result: {} } }]);
 
     const outcome = await fetchKrakenPrices(["USDT"]);
-    expect(outcome.kind).toBe("no-data");
+    expect(outcome.kind).toBe("upstream-error");
     expect(outcome.value.size).toBe(0);
+    expect(outcome).toMatchObject({ reason: "EGeneral:Temporary lockout" });
   });
 
   it("returns upstream-error when HTTP request fails", async () => {

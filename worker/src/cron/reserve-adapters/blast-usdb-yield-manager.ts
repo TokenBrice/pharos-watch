@@ -1,7 +1,7 @@
 import type { StablecoinMeta } from "@shared/types/core";
 import type { LiveReservesConfig } from "@shared/types/live-reserves";
 import { parseLiveReserveAdapterParams } from "@shared/lib/live-reserve-adapters";
-import { TOTAL_SUPPLY_SELECTOR, TOTAL_VALUE_SELECTOR } from "../../lib/evm-selectors";
+import { DECIMALS_SELECTOR, TOTAL_SUPPLY_SELECTOR, TOTAL_VALUE_SELECTOR } from "../../lib/evm-selectors";
 import type { AdapterContext, AdapterResult } from "./types";
 import {
   decimalNumberFromBigInt,
@@ -50,15 +50,22 @@ export async function fetchBlastUsdbYieldManagerReserves(
       timeoutMs,
     },
   );
-  const [totalValueRaw, totalSupplyRaw] = await Promise.all([
+  const [totalValueRaw, managerDecimals, totalSupplyRaw, supplyDecimals] = await Promise.all([
     managerOnchain.uint256(params.yieldManagerAddress, TOTAL_VALUE_SELECTOR),
+    managerOnchain.uint256(params.yieldManagerAddress, DECIMALS_SELECTOR),
     supplyOnchain.uint256(params.supplyTokenAddress, TOTAL_SUPPLY_SELECTOR),
+    supplyOnchain.uint256(params.supplyTokenAddress, DECIMALS_SELECTOR),
   ]);
   if (totalValueRaw == null || totalValueRaw <= 0n) {
     throw new Error("blast-usdb-yield-manager totalValue probe failed");
   }
   if (totalSupplyRaw == null || totalSupplyRaw <= 0n) {
     throw new Error("blast-usdb-yield-manager totalSupply probe failed");
+  }
+  if (managerDecimals !== 18n || supplyDecimals !== 18n) {
+    throw new Error(
+      `blast-usdb-yield-manager unexpected decimals (manager ${managerDecimals}, supply ${supplyDecimals})`,
+    );
   }
 
   const totalReserveUsd = decimalNumberFromBigInt(totalValueRaw, 18);

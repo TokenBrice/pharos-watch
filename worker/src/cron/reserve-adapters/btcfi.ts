@@ -37,12 +37,13 @@ export function adaptBtcfi(market: BtcfiMarketRow[], handlers: BtcfiHandlerRow[]
   const handlerMap = new Map(handlers.map((handler) => [handler.id, handler]));
   const symbolValues = new Map<string, { value: number; risk: ReserveSlice["risk"] }>();
   const unknownSymbols = new Set<string>();
+  const unknownHandlerIds = new Set<number>();
   let unknownValue = 0;
   let total = 0;
 
   for (const row of market) {
     const handler = handlerMap.get(row.token_handler_id);
-    if (!handler || handler.isStable) continue;
+    if (handler?.isStable) continue;
     const value = typeof row.deposit_value === "string" && row.deposit_value.trim()
       ? Number(row.deposit_value)
       : NaN;
@@ -50,6 +51,10 @@ export function adaptBtcfi(market: BtcfiMarketRow[], handlers: BtcfiHandlerRow[]
       throw new Error(`btcfi missing or invalid deposit_value for handler ${row.token_handler_id}`);
     }
     if (value === 0) continue;
+    if (!handler) {
+      unknownHandlerIds.add(row.token_handler_id);
+      continue;
+    }
 
     const normalized = handler.symbol.trim().toUpperCase();
     const canonicalRisk = getCanonicalReserveAssetRisk(normalized);
@@ -93,6 +98,10 @@ export function adaptBtcfi(market: BtcfiMarketRow[], handlers: BtcfiHandlerRow[]
     "unknown-btc-wrapper",
     `btcfi handler bucketed into unmapped BTC variants: ${symbol}`,
   ));
+  warnings.push(...Array.from(unknownHandlerIds).map((handlerId) => reserveDegradedWarning(
+    "unknown-handler",
+    `btcfi market row references unknown handler id: ${handlerId}`,
+  )));
 
   return {
     slices,

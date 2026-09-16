@@ -258,11 +258,19 @@ const ALLOWED_EXTRA_KEYS = new Set<string>([
   "measuredExecution",
 ]);
 
+const TOP_POOLS_PARSE_FAILURE = Symbol("top-pools-parse-failure");
+
+export function normalizeTopPools(json: string): DexLiquidityPoolResponse[];
+export function normalizeTopPools(
+  json: string | null,
+  context?: string,
+): DexLiquidityPoolResponse[] | null;
 export function normalizeTopPools(
   json: string | null,
   context = "dex-liquidity-response:top_pools_json",
-): DexLiquidityPoolResponse[] {
-  const parsed = safeJsonParse<unknown>(json, [], context);
+): DexLiquidityPoolResponse[] | null {
+  const parsed = safeJsonParse<unknown>(json, TOP_POOLS_PARSE_FAILURE, context);
+  if (parsed === TOP_POOLS_PARSE_FAILURE) return null;
   if (!Array.isArray(parsed)) return [];
 
   const pools: DexLiquidityPoolResponse[] = [];

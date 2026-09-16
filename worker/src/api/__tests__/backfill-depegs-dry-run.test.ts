@@ -48,7 +48,7 @@ vi.mock("../../lib/backfill-fx", async (importOriginal) => {
 
 import { handleBackfillDepegsTrusted } from "../backfill-depegs";
 import { fetchMarketBackfillPriceSeries } from "../backfill-price-sources";
-import { buildCommodityMedianSeriesFromCg } from "../../lib/backfill-fx";
+import { buildCommodityMedianSeriesFromCg, fetchHistoricalFxRates } from "../../lib/backfill-fx";
 
 stubCryptoForAuth();
 
@@ -280,6 +280,9 @@ describe("handleBackfillDepegs replay windows", () => {
   });
 
   it("requests native-peg market replay for supported non-USD fiat assets", async () => {
+    vi.mocked(fetchHistoricalFxRates).mockResolvedValueOnce({
+      EUR: [{ timestamp: 1_000, rate: 1.08 }],
+    });
     mockFetch([
       {
         match: "/stablecoin/",

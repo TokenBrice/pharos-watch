@@ -70,6 +70,7 @@ type ConditionState = "ok" | "stale";
 
 interface DigestPublicationWatchdogState {
   date: string;
+  weekDate: string;
   statuses: Partial<Record<DigestPublicationCondition, ConditionState>>;
   alerted: DigestPublicationCondition[];
   recovered: DigestPublicationCondition[];
@@ -88,7 +89,7 @@ interface MapManifestObservation {
 }
 
 export interface DigestPublicationWatchdogOptions {
-  /** Operator-only destination. Null suppresses Telegram while state advances. */
+  /** Operator-only destination. Null suppresses delivery and leaves transitions pending. */
   operatorTelegramCreds?: TelegramCreds | null;
 }
 
@@ -114,10 +115,17 @@ function parseState(value: string | null | undefined): DigestPublicationWatchdog
     const alerted = parsed.alerted.filter(isDigestPublicationCondition);
     const recovered = (Array.isArray(parsed.recovered) ? parsed.recovered : [])
       .filter(isDigestPublicationCondition);
-    return { date: parsed.date, statuses, alerted, recovered };
+    const weekDate = typeof parsed.weekDate === "string" && /^\d{4}-\d{2}-\d{2}$/.test(parsed.weekDate)
+      ? parsed.weekDate
+      : parsed.date;
+    return { date: parsed.date, weekDate, statuses, alerted, recovered };
   } catch {
     return null;
   }
+}
+
+function isWeeklyCondition(condition: DigestPublicationCondition): boolean {
+  return condition.startsWith("weekly-");
 }
 
 async function readFirst<T>(
@@ -247,6 +255,8 @@ async function readPublicationObservations(
   db: D1Database,
   date: string,
   dayStartSec: number,
+  weeklyDate: string,
+  weekStartSec: number,
   nowSec: number,
   options: {
     dailyDue: boolean;
@@ -310,18 +320,18 @@ async function readPublicationObservations(
           AND (${NON_INTERNAL_DIGEST_SQL_FILTER})
           AND (${NON_BLOCKED_DIGEST_SQL_FILTER})
         LIMIT 1`,
-      [dayStartSec, nowSec],
+      [weekStartSec, nowSec],
       signal,
     );
     const weeklyTelegram = await readFirst<{ state: string }>(
       db,
       "SELECT state FROM telegram_digest_outbox WHERE edition_key = ?",
-      [`weekly:${date}`],
+      [`weekly:${weeklyDate}`],
       signal,
     );
     const weeklyTwitterSent = await readTwitterLedgerDelivered(
       db,
-      `weekly-recap:twitter-sent:${date}`,
+      `weekly-recap:twitter-sent:${weeklyDate}`,
       signal,
     );
     observations.push(
@@ -372,13 +382,18 @@ export async function runDigestPublicationWatchdog(
   const date = formatIsoDate(nowSec);
   const dayStartSec = Math.floor(Date.parse(`${date}T00:00:00Z`) / 1000);
   const utcDay = new Date(nowSec * 1000).getUTCDay();
+  const daysSinceMonday = (utcDay + 6) % 7;
+  const weekStartSec = dayStartSec - daysSinceMonday * 24 * 3600;
+  const weekDate = formatIsoDate(weekStartSec);
   const dailyDue = isDueAfter(dayStartSec, nowSec, DAILY_DIGEST_DUE_AFTER_SEC);
-  const weeklyDue = utcDay === 1 && isDueAfter(dayStartSec, nowSec, WEEKLY_DIGEST_DUE_AFTER_SEC);
+  const weeklyDue = isDueAfter(weekStartSec, nowSec, WEEKLY_DIGEST_DUE_AFTER_SEC);
   const mapDue = isDueAfter(dayStartSec, nowSec, MAP_READY_AFTER_SEC);
   const { observations, map } = await readPublicationObservations(
     db,
     date,
     dayStartSec,
+    weekDate,
+    weekStartSec,
     nowSec,
     { dailyDue, weeklyDue, mapDue },
     signal,
@@ -388,15 +403,20 @@ export async function runDigestPublicationWatchdog(
   const alertCache = await getCache(db, DIGEST_WATCHDOG_ALERT_KEY, signal);
   const previous = parseState(stateCache?.value);
   const sameDay = previous?.date === date;
-  const previousStatuses = sameDay ? previous?.statuses ?? {} : {};
-  const alerted = new Set<DigestPublicationCondition>(sameDay ? previous?.alerted ?? [] : []);
-  const recoveredToday = new Set<DigestPublicationCondition>(sameDay ? previous?.recovered ?? [] : []);
+  const sameWeek = previous?.weekDate === weekDate;
+  const alerted = new Set<DigestPublicationCondition>(
+    (previous?.alerted ?? []).filter((condition) => isWeeklyCondition(condition) ? sameWeek : sameDay),
+  );
+  const recoveredToday = new Set<DigestPublicationCondition>(
+    (previous?.recovered ?? []).filter((condition) => isWeeklyCondition(condition) ? sameWeek : sameDay),
+  );
   const stale: DigestPublicationObservation[] = [];
   const recovered: DigestPublicationObservation[] = [];
   const nextStatuses: DigestPublicationWatchdogState["statuses"] = {};
 
   for (const observation of observations) {
-    const prior = previousStatuses[observation.condition] ?? "ok";
+    const sameScope = isWeeklyCondition(observation.condition) ? sameWeek : sameDay;
+    const prior = sameScope ? previous?.statuses[observation.condition] ?? "ok" : "ok";
     nextStatuses[observation.condition] = observation.state;
     if (observation.state === "stale") {
       if (prior !== "stale" && !alerted.has(observation.condition)) {
@@ -409,17 +429,13 @@ export async function runDigestPublicationWatchdog(
     }
   }
 
-  await setCache(
-    db,
-    DIGEST_WATCHDOG_STATE_KEY,
-    JSON.stringify({
-      date,
-      statuses: nextStatuses,
-      alerted: [...alerted],
-      recovered: [...recoveredToday],
-    } satisfies DigestPublicationWatchdogState),
-    signal,
-  );
+  const nextState = JSON.stringify({
+    date,
+    weekDate,
+    statuses: nextStatuses,
+    alerted: [...alerted],
+    recovered: [...recoveredToday],
+  } satisfies DigestPublicationWatchdogState);
 
   const transitions = {
     stale: stale.map((observation) => observation.condition),
@@ -443,13 +459,16 @@ export async function runDigestPublicationWatchdog(
         buildAlertText(date, stale, recovered),
         signal,
       );
-      if (delivery.ok && hasBlockingTransition) {
+      if (delivery.ok) {
         transitions.sent = true;
-        await setCache(db, DIGEST_WATCHDOG_ALERT_KEY, String(nowSec), signal);
-      } else if (delivery.ok) {
-        transitions.sent = true;
+        await setCache(db, DIGEST_WATCHDOG_STATE_KEY, nextState, signal);
+        if (hasBlockingTransition) {
+          await setCache(db, DIGEST_WATCHDOG_ALERT_KEY, String(nowSec), signal);
+        }
       }
     }
+  } else {
+    await setCache(db, DIGEST_WATCHDOG_STATE_KEY, nextState, signal);
   }
 
   const blockingStale = observations.filter((observation) => (

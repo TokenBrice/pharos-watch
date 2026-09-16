@@ -1,7 +1,8 @@
 // @vitest-environment jsdom
 
 import { renderToStaticMarkup } from "react-dom/server";
-import { describe, expect, it } from "vitest";
+import { render } from "@testing-library/react";
+import { describe, expect, it, vi } from "vitest";
 import type { StablecoinMeta } from "@shared/types";
 import { PreLaunchDetail } from "@/components/pre-launch-detail";
 
@@ -50,4 +51,24 @@ describe("PreLaunchDetail", () => {
     expect(html).not.toContain("<details");
     expect(html).toContain("Pre-launch Stablecoin Tracker");
   });
+  it("computes launch progress from the browser date instead of the build date", () => {
+    vi.useFakeTimers();
+    const timelineCoin = {
+      ...coin,
+      announcedDate: "2026-01-01",
+      expectedLaunchDate: "2027-01-01",
+    };
+
+    vi.setSystemTime(new Date("2026-04-01T00:00:00Z"));
+    const first = render(<PreLaunchDetail coin={timelineCoin} logoSrc={undefined} summary={null} logos={{}} />);
+    const firstProgress = Number((first.getByRole("progressbar").firstElementChild as HTMLElement).style.width.slice(0, -1));
+    first.unmount();
+
+    vi.setSystemTime(new Date("2026-04-02T00:00:00Z"));
+    const second = render(<PreLaunchDetail coin={timelineCoin} logoSrc={undefined} summary={null} logos={{}} />);
+    const secondProgress = Number((second.getByRole("progressbar").firstElementChild as HTMLElement).style.width.slice(0, -1));
+    expect(secondProgress).toBeGreaterThan(firstProgress);
+    vi.useRealTimers();
+  });
+
 });

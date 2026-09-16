@@ -856,7 +856,12 @@ describe("fetchEvmBranchBalancesReserves", () => {
     );
 
     expect(result.slices).toEqual([{ sourceKey: "evm-branch-balances:ethereum:0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb", name: "USDC branch", pct: 100, risk: "low", coinId: "usdc-circle" }]);
-    expect(result.warnings).toBeUndefined();
+    expect(result.warnings).toEqual([
+      expect.objectContaining({
+        code: "defillama-quote-missing",
+        effect: "degraded",
+      }),
+    ]);
   });
 
   it("fails closed when an underlying price substitution has not been reviewed", async () => {

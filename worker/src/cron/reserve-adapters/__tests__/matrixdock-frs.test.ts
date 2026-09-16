@@ -49,8 +49,12 @@ describe("adaptMatrixdockFrsState", () => {
     expect(result.warnings?.some((warning) => warning.code === "reserve-unit-mismatch")).toBe(true);
   });
 
-  it("throws on a non-9 decimals contract", () => {
-    expect(() => adaptMatrixdockFrsState({ ...STATE, feedDecimals: 8 }, PARAMS)).toThrow("unexpected decimals");
+  it.each([
+    { feedDecimals: 8 },
+    { tokenDecimals: 8 },
+    { suiDecimals: 8 },
+  ])("throws when any observed decimals value is not 9", (override) => {
+    expect(() => adaptMatrixdockFrsState({ ...STATE, ...override }, PARAMS)).toThrow("unexpected decimals");
   });
 
   it("throws when the feed answer is non-positive", () => {

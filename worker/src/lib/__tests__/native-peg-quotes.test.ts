@@ -1,4 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { TRACKED_STABLECOINS } from "@shared/lib/stablecoins/registry";
+import { PEG_CURRENCY_VALUES } from "@shared/types/core";
 
 const fetchWithRetryMock = vi.fn();
 
@@ -36,6 +38,34 @@ describe("native-peg-quotes", () => {
     expect(getNativePegQueryCurrencies("KGS")).toEqual([]);
     expect(getNativePegQueryCurrencies("NGN")).toEqual(["ngn"]);
     expect(getNativePegQueryCurrencies("XOF")).toEqual([]);
+  });
+
+  it("covers every registry fiat selected for direct native quotes", () => {
+    const intentionallyUnsupported: Record<string, true> = {
+      CLP: true,
+      COP: true,
+      GHS: true,
+      GOLD: true,
+      KES: true,
+      KGS: true,
+      OTHER: true,
+      PEN: true,
+      SILVER: true,
+      VAR: true,
+      XOF: true,
+    };
+    const registryCurrencies = new Set(
+      TRACKED_STABLECOINS
+        .map((coin) => coin.flags.pegCurrency)
+        .filter((currency) => currency !== "USD" && !intentionallyUnsupported[currency]),
+    );
+    // CNY is the provider alias paired with the registry's CNH label.
+    registryCurrencies.add("CNY");
+
+    const supportedCurrencies = PEG_CURRENCY_VALUES.filter(
+      (currency) => normalizeSupportedPegCurrency(currency) != null,
+    );
+    expect([...supportedCurrencies].sort()).toEqual([...registryCurrencies].sort());
   });
 
   it("fetches direct native quotes for supported non-USD fiat pegs", async () => {

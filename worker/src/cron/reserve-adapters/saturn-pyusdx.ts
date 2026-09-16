@@ -147,6 +147,14 @@ export async function fetchSaturnPyusdxReserves(
       reserveDegradedWarning("route-paused", "Saturn USDat MultiMint paused() returned true on-chain"),
     );
   }
+  if (paused == null) {
+    warnings.push(
+      reserveDegradedWarning(
+        "saturn-pyusdx-route-unverified",
+        "Could not verify Saturn USDat MultiMint paused() route status",
+      ),
+    );
+  }
 
   const slice: ReserveSlice = {
     sourceKey: "saturn-pyusdx:pyusd",
@@ -179,11 +187,17 @@ export async function fetchSaturnPyusdxReserves(
         ...(capacityRatioOfSupply != null ? { capacityRatioOfSupply } : {}),
         capacityKind: "live-direct" as const,
         freshnessKind: "same-run-onchain" as const,
-        routeStatus: paused === true ? "paused" : capacityUsd > 0 ? "open" : "unknown",
+        routeStatus: paused === true
+          ? "paused"
+          : paused === false && capacityUsd > 0
+            ? "open"
+            : "unknown",
         routeStatusSource: "onchain" as const,
         ...(paused === true
           ? { routeStatusReason: "Saturn USDat MultiMint paused() returned true on-chain" }
-          : {}),
+          : paused == null
+            ? { routeStatusReason: "Could not verify Saturn USDat MultiMint paused() route status" }
+            : {}),
         // Reviewed: USDat wrap/unwrap is KYC-gated through the PYUSDx
         // SwapFacility and the MultiMint retains whitelist controls.
         holderEligibility: "whitelisted-primary" as const,

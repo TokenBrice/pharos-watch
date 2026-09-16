@@ -424,7 +424,13 @@ function inferStablecoinDecimals(symbol: string): number {
 }
 
 export interface CompoundV3SupplyRateResult {
-  results: Array<{ stablecoinId: string; yield: ResolvedYield }>;
+  results: Array<{
+    stablecoinId: string;
+    chain: string;
+    comet: string;
+    symbol: string;
+    yield: ResolvedYield;
+  }>;
   telemetry: OptionalRpcFamilyTelemetry;
 }
 
@@ -433,7 +439,7 @@ export async function fetchCompoundV3SupplyRates(
   signal?: AbortSignal,
   chainRpcs?: Map<string, ChainRpcConfig>,
 ): Promise<CompoundV3SupplyRateResult> {
-  const results: Array<{ stablecoinId: string; yield: ResolvedYield }> = [];
+  const results: CompoundV3SupplyRateResult["results"] = [];
   const telemetry = createOptionalRpcFamilyTelemetry(targets.length);
   const accountedTargets = new Set<string>();
   const budget = createOptionalSourceBudget("Compound V3 supply rates", OPTIONAL_PROTOCOL_RPC_BUDGET_MS, signal);
@@ -519,7 +525,7 @@ export async function fetchCompoundV3SupplyRates(
         }
 
         results.push({
-          stablecoinId: target.stablecoinId,
+          ...target,
           yield: {
             currentApy: apy, apyBase: apy, apyReward: null,
             sourcePool: target.comet, sourceTvlUsd, dataSource: "protocol-api",

@@ -10,6 +10,7 @@ import { recordOutcomeSafe } from "../lib/circuit-breaker";
 import {
   collectDexProtocolCorroborations,
   dexPoolIndependentGroupKey,
+  dexProtocolGroupKey,
   isNativeOriginPending,
 } from "../lib/depeg-helpers";
 import {
@@ -340,12 +341,12 @@ export async function collectConfirmationEvidence(
       evidence.dexStatus = "recover";
       const keys = buildDexConfirmationKeys(recoverGroups.map((group) => group.key));
       addSources(evidence.opposingSources, keys);
-      addSources(evidence.hardOpposingSources, keys);
+      addSources(evidence.hardOpposingSources, recoverGroups.map((group) => `dex-family:${group.key}`));
     } else if (aggregateDexStatus === "contradict" && contradictGroups.length >= DEPEG_DEX_PROTOCOL_CORROBORATION_MIN) {
       evidence.dexStatus = "contradict";
       const keys = buildDexConfirmationKeys(contradictGroups.map((group) => group.key));
       addSources(evidence.opposingSources, keys);
-      addSources(evidence.hardOpposingSources, keys);
+      addSources(evidence.hardOpposingSources, contradictGroups.map((group) => `dex-family:${group.key}`));
     }
     logWorkerEvent({
       scope: "lib",
@@ -410,6 +411,8 @@ export async function collectConfirmationEvidence(
   const poolConfirmGroups = new Map<string, PoolConfirmation>();
   const poolContradictGroups = new Set<string>();
   const poolRecoverGroups = new Set<string>();
+  const poolContradictFamilies = new Set<string>();
+  const poolRecoverFamilies = new Set<string>();
   let poolHighTvlConfirm: PoolConfirmation | null = null;
   const pools = poolChallengers.get(row.stablecoin_id);
   if (isNativeOrigin) {
@@ -449,8 +452,10 @@ export async function collectConfirmationEvidence(
         });
       } else if (currentPoolStatus === "contradict") {
         poolContradictGroups.add(poolGroupKey);
+        poolContradictFamilies.add(dexProtocolGroupKey(pool));
       } else if (currentPoolStatus === "recover") {
         poolRecoverGroups.add(poolGroupKey);
+        poolRecoverFamilies.add(dexProtocolGroupKey(pool));
       }
     }
     if (poolHighTvlConfirm != null || poolConfirmGroups.size >= POOL_CHALLENGE_CONFIRM_MIN) {
@@ -464,12 +469,12 @@ export async function collectConfirmationEvidence(
       evidence.poolStatus = "contradict";
       const keys = [...poolContradictGroups].map(buildPoolGroupKey);
       addSources(evidence.opposingSources, keys);
-      addSources(evidence.hardOpposingSources, keys);
+      addSources(evidence.hardOpposingSources, [...poolContradictFamilies].map((family) => `dex-family:${family}`));
     } else if (poolRecoverGroups.size > 0 && poolConfirmGroups.size === 0 && poolContradictGroups.size === 0) {
       evidence.poolStatus = "recover";
       const keys = [...poolRecoverGroups].map(buildPoolGroupKey);
       addSources(evidence.opposingSources, keys);
-      addSources(evidence.hardOpposingSources, keys);
+      addSources(evidence.hardOpposingSources, [...poolRecoverFamilies].map((family) => `dex-family:${family}`));
     }
     logWorkerEvent({
       scope: "lib",

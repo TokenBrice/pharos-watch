@@ -179,9 +179,13 @@ export async function collectActiveDepegs(
   }
 }
 
+type DigestBlacklistActivity = NonNullable<DigestInputData["blacklistActivity"]> & {
+  unpricedEventCount: number;
+};
+
 export async function collectBlacklistActivity(
   ctx: CollectorContext,
-): Promise<CollectorResult<DigestInputData["blacklistActivity"]>> {
+): Promise<CollectorResult<DigestBlacklistActivity | undefined>> {
   try {
     const blRows = await ctx.db
       .prepare(
@@ -190,16 +194,27 @@ export async function collectBlacklistActivity(
       .bind(ctx.nowSec - SECONDS.ONE_DAY, ctx.nowSec)
       .all<{ symbol: string; chain_name: string; event_type: string; amount_usd_at_event: number | null }>();
     const blEvents = blRows.results ?? [];
-    if (blEvents.length > 0) {
-      const eventCount = blEvents.length;
-      const totalAmountUsd = blEvents.reduce((sum, event) => sum + (event.amount_usd_at_event ?? 0), 0);
-      const hasLargeEvent = blEvents.some((event) => (event.amount_usd_at_event ?? 0) > 10_000_000);
+    const activityEvents = blEvents.filter((event) => event.event_type === "blacklist" || event.event_type === "destroy");
+    if (activityEvents.length > 0) {
+      const eventCount = activityEvents.length;
+      const unpricedEventCount = activityEvents.filter((event) => event.amount_usd_at_event == null).length;
+      const totalAmountUsd = activityEvents.reduce(
+        (sum, event) => sum + (event.amount_usd_at_event == null ? 0 : event.amount_usd_at_event),
+        0,
+      );
+      // An unknown amount may be larger than the promotion threshold. Treat it
+      // as a potential large event so an unrecovered freeze is not silently
+      // suppressed as a quiet day; unpricedEventCount carries the uncertainty
+      // through the persisted digest quality data.
+      const hasLargeEvent = activityEvents.some(
+        (event) => event.amount_usd_at_event == null || event.amount_usd_at_event > 10_000_000,
+      );
       if (eventCount >= 2 || hasLargeEvent) {
         return collectorOk({
           eventCount,
           totalAmountUsd,
-          topEvents: blEvents
-            .filter((event) => event.event_type === "blacklist" || event.event_type === "destroy")
+          unpricedEventCount,
+          topEvents: activityEvents
             .slice(0, 5)
             .map((event) => ({
               symbol: event.symbol,

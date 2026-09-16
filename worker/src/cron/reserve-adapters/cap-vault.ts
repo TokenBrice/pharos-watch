@@ -69,7 +69,7 @@ interface CapVaultAssetState {
   paused: boolean;
   /**
    * When omitted, only recognized USD-like reserves use the 1.0 peg
-   * assumption. Configured non-USD-like assets must provide priceUsd.
+   * assumption. Non-USD-like assets must provide priceUsd.
    */
   priceUsd?: number;
   /** Source-bound current unit value used for the proportional output basket. */
@@ -116,6 +116,9 @@ function isRecognizedUsdLikeReserve(asset: CapVaultAssetState): boolean {
 
 function priceForCapAsset(asset: CapVaultAssetState): number {
   if (asset.priceUsd != null) return asset.priceUsd;
+  if (asset.totalSupplied > 0 && !isRecognizedUsdLikeReserve(asset)) {
+    throw new Error(`cap-vault asset "${asset.name}" missing priceUsd and is not USD-like`);
+  }
   return 1.0;
 }
 
@@ -220,13 +223,13 @@ export function adaptCapVaultState(args: {
       `Cap vault returned unconfigured asset "${asset.name}" (${asset.address}); exposure is classified high risk`,
     ));
   }
-  const unknownUnpricedAssets = unknownAssets.filter((asset) => (
-    asset.priceUsd == null && !isRecognizedUsdLikeReserve(asset)
+  const unknownUsdLikeAssets = unknownAssets.filter((asset) => (
+    asset.priceUsd == null && isRecognizedUsdLikeReserve(asset)
   ));
-  for (const asset of unknownUnpricedAssets) {
+  for (const asset of unknownUsdLikeAssets) {
     warnings.push(reserveInfoWarning(
       "cap-vault-unknown-asset-peg-assumed",
-      `Cap vault unconfigured asset "${asset.name}" (${asset.address}) has no configured priceUsd and is not USD-like; valued at 1 USD per unit, which may misstate reserve totals`,
+      `Cap vault unconfigured asset "${asset.name}" (${asset.address}) is recognized as USD-like; valued at 1 USD per unit`,
     ));
   }
   const unpricedNonUsdAssets = activeAssets.filter((asset) => (

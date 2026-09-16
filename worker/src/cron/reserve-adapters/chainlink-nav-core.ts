@@ -1,5 +1,9 @@
 import type { ReserveSlice, StablecoinMeta } from "@shared/types/core";
-import type { LiveReserveRedemptionTelemetry, LiveReservesConfig } from "@shared/types/live-reserves";
+import type {
+  LiveReserveRedemptionTelemetry,
+  LiveReservesConfig,
+  LiveReserveWarning,
+} from "@shared/types/live-reserves";
 import { DAY_SECONDS } from "@shared/lib/time-constants";
 import { parseLiveReserveAdapterParams } from "@shared/lib/live-reserve-adapters";
 import { toErrorMessage } from "@shared/lib/error-utils";
@@ -106,6 +110,8 @@ function decodeDecimalsResult(raw: bigint | null, source: string): number {
 async function probeRedemptionCapacity(
   params: ChainlinkNavParams,
   onchain: OnchainCallers,
+  signal: AbortSignal,
+  warnings: LiveReserveWarning[],
 ): Promise<LiveReserveRedemptionTelemetry | null> {
   const redemption = params.redemptionCapacity;
   if (!redemption) return null;
@@ -145,24 +151,32 @@ async function probeRedemptionCapacity(
       return null;
     }
 
-    const routeOpen = !paused && acceptsUsdc;
+    const capacityUsd = decimalNumberFromBigInt(capacityRaw, 6);
+    const routeOpen = !paused && acceptsUsdc && capacityUsd > 0;
     return {
-      capacityUsd: decimalNumberFromBigInt(capacityRaw, 6),
+      capacityUsd,
       capacityKind: "live-direct",
       freshnessKind: "same-run-onchain",
-      routeStatus: routeOpen ? "open" : "paused",
+      routeStatus: routeOpen ? "open" : paused || !acceptsUsdc ? "paused" : "unknown",
       routeStatusSource: "onchain",
       routeStatusReason: paused
         ? "OUSG InstantManager redeemPaused() is true"
-        : acceptsUsdc
-        ? "OUSG InstantManager redeemPaused() is false and USDC is accepted for redemption"
-        : "OUSG InstantManager does not accept USDC for redemption",
+        : !acceptsUsdc
+        ? "OUSG InstantManager does not accept USDC for redemption"
+        : capacityUsd <= 0
+        ? "OUSG redemption route reported zero available capacity"
+        : "OUSG InstantManager redeemPaused() is false and USDC is accepted for redemption",
       holderEligibility: "whitelisted-primary",
       settlementDelaySec: 0,
       minRedeemUsd: decimalNumberFromBigInt(minimumRedemptionRaw, 18),
       sourceUrls: [...ONDO_OUSG_REDEMPTION_SOURCE_URLS],
     };
-  } catch {
+  } catch (error) {
+    if (signal.aborted) throw error;
+    warnings.push(reserveDegradedWarning(
+      "redemption-probe-unreadable",
+      `chainlink-nav redemption probe could not be read: ${toErrorMessage(error)}`,
+    ));
     return null;
   }
 }
@@ -416,7 +430,7 @@ export async function fetchChainlinkNavCore(
     params,
   );
   if (params.redemptionCapacity) {
-    const redemption = await probeRedemptionCapacity(params, onchain);
+    const redemption = await probeRedemptionCapacity(params, onchain, signal, warnings);
     if (redemption) {
       adapted.metadata = { ...adapted.metadata, redemption };
     }

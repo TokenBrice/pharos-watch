@@ -213,7 +213,7 @@ describe("digest publication watchdog", () => {
     expect(sendToChatMock.mock.calls[1]?.[1]).toContain("Late digest conditions");
   });
 
-  it("checks the weekly row and Telegram edition only on Monday", async () => {
+  it("re-checks weekly publication against the current Monday after Monday", async () => {
     const monday = await runDigestPublicationWatchdog(
       fakeDb({ weeklyRow: false, weeklyTelegram: "pending", twitterState: JSON.stringify({ state: "sent" }) }),
       at("2026-08-31T08:36:00Z"),
@@ -231,10 +231,10 @@ describe("digest publication watchdog", () => {
       at("2026-09-01T08:36:00Z"),
       { operatorTelegramCreds: { botToken: "bot", chatId: "ops" } },
     );
-    expect(tuesday.status).toBe("ok");
-    expect(JSON.parse(tuesday.metadata ?? "{}").conditions["weekly-row"]).toBeUndefined();
-    expect(JSON.parse(tuesday.metadata ?? "{}").conditions["weekly-twitter"]).toBeUndefined();
-    expect(sendToChatMock).not.toHaveBeenCalled();
+    expect(tuesday.status).toBe("degraded");
+    expect(JSON.parse(tuesday.metadata ?? "{}").conditions["weekly-row"].state).toBe("stale");
+    expect(JSON.parse(tuesday.metadata ?? "{}").conditions["weekly-twitter"].state).toBe("ok");
+    expect(sendToChatMock).toHaveBeenCalledTimes(1);
   });
 
   it("alerts when the weekly recap never reached X", async () => {
@@ -313,25 +313,27 @@ describe("digest publication watchdog", () => {
     expect(state).toMatchObject({ date: "2026-09-01", alerted: ["daily-row"], recovered: ["daily-row"] });
   });
 
-  it("does not record successful delivery or consume the cooldown when Telegram fails", async () => {
-    sendToChatMock.mockResolvedValue({ ok: false });
+  it("retries a failed delivery without consuming its transition", async () => {
+    sendToChatMock.mockResolvedValueOnce({ ok: false }).mockResolvedValue({ ok: true });
     const db = fakeDb({ dailyRow: false, twitterState: JSON.stringify({ state: "sent" }) });
-    const result = await runDigestPublicationWatchdog(db, at(`${DATE}T08:31:00Z`), {
+    const first = await runDigestPublicationWatchdog(db, at(`${DATE}T08:31:00Z`), {
       operatorTelegramCreds: { botToken: "bot", chatId: "ops" },
     });
-    expect(sendToChatMock).toHaveBeenCalledTimes(1);
-    expect(result.status).toBe("degraded");
-    expect(JSON.parse(result.metadata ?? "{}").alertTransitions.sent).toBe(false);
+    expect(JSON.parse(first.metadata ?? "{}").alertTransitions).toMatchObject({
+      stale: ["daily-row"], sent: false,
+    });
     expect(db.cache.has("digest-publication-watchdog:alert:v1")).toBe(false);
-    // audit: C1 — subsequent notification retry policy is deferred by PLAN §7.
-    const retry = await runDigestPublicationWatchdog(db, at(`${DATE}T09:31:00Z`), {
+
+    const retry = await runDigestPublicationWatchdog(db, at(`${DATE}T08:32:00Z`), {
       operatorTelegramCreds: { botToken: "bot", chatId: "ops" },
     });
-    expect(retry.status).toBe("degraded");
-    expect(JSON.parse(retry.metadata ?? "{}").conditions["daily-row"].state).toBe("stale");
+    expect(JSON.parse(retry.metadata ?? "{}").alertTransitions).toMatchObject({
+      stale: ["daily-row"], sent: true,
+    });
+    expect(sendToChatMock).toHaveBeenCalledTimes(2);
   });
 
-  it("keeps a second blocking condition visible during and after the shared cooldown", async () => {
+  it("re-alerts a second blocking condition after the shared cooldown", async () => {
     const db = fakeDb({ dailyRow: false, twitterState: JSON.stringify({ state: "sent" }) });
     const options = { operatorTelegramCreds: { botToken: "bot", chatId: "ops" } };
     await runDigestPublicationWatchdog(db, at(`${DATE}T08:31:00Z`), options);
@@ -341,12 +343,13 @@ describe("digest publication watchdog", () => {
       stale: ["weekly-row"], cooldown: true, sent: false,
     });
     expect(sendToChatMock).toHaveBeenCalledTimes(1);
+
     const after = await runDigestPublicationWatchdog(db, at(`${DATE}T09:01:00Z`), options);
-    expect(JSON.parse(after.metadata ?? "{}").conditions).toMatchObject({
-      "daily-row": { state: "stale" }, "weekly-row": { state: "stale" },
+    expect(JSON.parse(after.metadata ?? "{}").alertTransitions).toMatchObject({
+      stale: ["weekly-row"], cooldown: false, sent: true,
     });
-    expect(after.status).toBe("degraded");
-    // audit: C1 — deferred notification replay needs the PLAN §7 policy decision.
+    expect(sendToChatMock).toHaveBeenCalledTimes(2);
+    expect(sendToChatMock.mock.calls[1]?.[1]).toContain("weekly recap row");
   });
 
   it("executes publication time, internal, blocked, and edition filters against SQLite", async () => {
@@ -367,14 +370,20 @@ describe("digest publication watchdog", () => {
     expect(await conditions()).toMatchObject({ "daily-row": { state: "ok" }, "weekly-row": { state: "ok" } });
   });
 
-  it("suppresses Telegram completely when operator credentials are null while advancing state", async () => {
+  it("leaves a transition pending when operator credentials are null", async () => {
     const db = fakeDb({ dailyRow: false, twitterState: JSON.stringify({ state: "sent" }) });
     const result = await runDigestPublicationWatchdog(db, at("2026-08-31T08:31:00Z"), {
       operatorTelegramCreds: null,
     });
     expect(sendToChatMock).not.toHaveBeenCalled();
-    const state = JSON.parse(db.cache.get("digest-publication-watchdog:state:v1")?.value ?? "{}");
-    expect(state.statuses["daily-row"]).toBe("stale");
+    expect(db.cache.has("digest-publication-watchdog:state:v1")).toBe(false);
     expect(result.status).toBe("degraded");
+
+    const retry = await runDigestPublicationWatchdog(db, at("2026-08-31T08:32:00Z"), {
+      operatorTelegramCreds: { botToken: "bot", chatId: "ops" },
+    });
+    expect(JSON.parse(retry.metadata ?? "{}").alertTransitions).toMatchObject({
+      stale: ["daily-row"], sent: true,
+    });
   });
 });

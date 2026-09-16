@@ -92,6 +92,7 @@ export interface DewsSourceState {
   liqHist7dMap: Map<string, LiquidityHistorySnapshot>;
   liqHistRowsRead: number;
   blacklistCounts: BlacklistCountByStablecoinId;
+  blacklistSourceOk: boolean;
   prevSignals: Map<string, { signals: Record<string, { value: number }>; computedAt: number; ageSec: number }>;
   prevSignalStaleIds: Set<string>;
   mintBurnMap: Map<string, MintBurnSnapshot>;

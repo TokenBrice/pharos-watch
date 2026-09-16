@@ -436,11 +436,14 @@ export function adaptChainlinkPorResponse(
   // declared incomplete supply scope works the same way: the readable
   // deployments are only part of the liability the feed covers, so neither
   // basis applies and the ratio stays withheld.
+  // A partial gross supply aggregate is also withheld rather than used for a
+  // coverage verdict.
   // A timestamp-less endpoint stays diagnostic unless the reviewed inventory
   // policy has independently reproduced every deployment at current blocks.
   const verifiedCirculation = circulationPlausible && circulation?.aggregate?.verifiedAt != null
     && supply != null && supply.omittedNonEvmChains.length === 0 && supply.omittedReadFailureChains.length === 0;
-  const liabilityBasis = supplyScope != null ? undefined : !probeActive ? "onchain-total-supply"
+  const supplyReadComplete = supply != null && supply.omittedReadFailureChains.length === 0;
+  const liabilityBasis = supplyScope != null ? undefined : !probeActive && supplyReadComplete ? "onchain-total-supply"
     : verifiedCirculation ? "onchain-verified-issuer-circulation" : undefined;
   const liabilityTokens = liabilityBasis === "onchain-verified-issuer-circulation" ? circulatingTokens
     : liabilityBasis === "onchain-total-supply" ? supplyTokens : undefined;

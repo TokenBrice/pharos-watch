@@ -5,6 +5,7 @@ const YIELD_MANAGER = "0xa230285d5683c74935ad14c446e137c8c8828438";
 const USDB = "0x4300000000000000000000000000000000000003";
 const TOTAL_VALUE_SELECTOR = "0xd4c3eea0";
 const TOTAL_SUPPLY_SELECTOR = "0x18160ddd";
+const DECIMALS_SELECTOR = "0x313ce567";
 const NOW_SEC = 1_788_912_032;
 
 describe("fetchBlastUsdbYieldManagerReserves", () => {
@@ -13,7 +14,9 @@ describe("fetchBlastUsdbYieldManagerReserves", () => {
       network: {
         rpc: {
           [`ethereum:${YIELD_MANAGER}:${TOTAL_VALUE_SELECTOR}`]: 120n * 10n ** 18n,
+          [`ethereum:${YIELD_MANAGER}:${DECIMALS_SELECTOR}`]: 18n,
           [`${USDB}:${TOTAL_SUPPLY_SELECTOR}`]: 100n * 10n ** 18n,
+          [`${USDB}:${DECIMALS_SELECTOR}`]: 18n,
         },
       },
       nowSec: NOW_SEC,
@@ -47,7 +50,9 @@ describe("fetchBlastUsdbYieldManagerReserves", () => {
       network: {
         rpc: {
           [`ethereum:${YIELD_MANAGER}:${TOTAL_VALUE_SELECTOR}`]: 98n * 10n ** 18n,
+          [`ethereum:${YIELD_MANAGER}:${DECIMALS_SELECTOR}`]: 18n,
           [`${USDB}:${TOTAL_SUPPLY_SELECTOR}`]: 100n * 10n ** 18n,
+          [`${USDB}:${DECIMALS_SELECTOR}`]: 18n,
         },
       },
       nowSec: NOW_SEC,
@@ -63,10 +68,29 @@ describe("fetchBlastUsdbYieldManagerReserves", () => {
       network: {
         rpc: {
           [`ethereum:${YIELD_MANAGER}:${TOTAL_VALUE_SELECTOR}`]: null,
+          [`ethereum:${YIELD_MANAGER}:${DECIMALS_SELECTOR}`]: 18n,
           [`${USDB}:${TOTAL_SUPPLY_SELECTOR}`]: 100n * 10n ** 18n,
+          [`${USDB}:${DECIMALS_SELECTOR}`]: 18n,
         },
       },
       nowSec: NOW_SEC,
     })).rejects.toThrow(/totalValue/);
+  });
+
+  it.each([
+    ["manager", 6n, 18n],
+    ["supply", 18n, 6n],
+  ])("fails closed when %s decimals drift", async (_label, managerDecimals, supplyDecimals) => {
+    await expect(runAdapter("blast-usdb-yield-manager", "usdb-blast", {
+      network: {
+        rpc: {
+          [`ethereum:${YIELD_MANAGER}:${TOTAL_VALUE_SELECTOR}`]: 120n * 10n ** 18n,
+          [`ethereum:${YIELD_MANAGER}:${DECIMALS_SELECTOR}`]: managerDecimals,
+          [`${USDB}:${TOTAL_SUPPLY_SELECTOR}`]: 100n * 10n ** 18n,
+          [`${USDB}:${DECIMALS_SELECTOR}`]: supplyDecimals,
+        },
+      },
+      nowSec: NOW_SEC,
+    })).rejects.toThrow(/unexpected decimals/);
   });
 });

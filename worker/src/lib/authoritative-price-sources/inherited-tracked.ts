@@ -2,6 +2,7 @@ import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import type { StablecoinMeta } from "@shared/types/core";
 import { fetchMarketBackfillPriceSeries } from "../../api/backfill-price-sources";
 import type { PeggedAsset } from "../../cron/sync-stablecoins/enrich-prices-shared";
+import { hasPublishableCurrentPrice } from "../price-publication-state";
 import {
   buildParentDerivedLiveOverride,
   PROTOCOL_REDEEM_SOURCE,
@@ -31,6 +32,7 @@ interface InheritedTrackedPriceConfig {
   allowFreshNonReplaySafeParent?: boolean;
   allowFreshReplaySafeSingleSourceParent?: boolean;
   requireReportedSingleSourceConfidence?: boolean;
+  marketPriceWins?: boolean;
 }
 
 const INHERITED_TRACKED_PRICE_CONFIGS = {
@@ -57,11 +59,13 @@ const INHERITED_TRACKED_PRICE_CONFIGS = {
     allowFreshReplaySafeSingleSourceParent: true,
   },
   [USDNR_NERONA_ID]: { parentId: WM_M0_ID },
-  // 0.99 multiplier: WEUSD redeems at 1% below USDC parity per PicWe's documented redemption fee
-  // (Phase 1 mint/redeem at 1:1 USDC minus 1% fee). Note: secondary-market price is ~$0.91 —
-  // this override only models the redemption-floor, not the live market price.
-  // TODO: revisit if PicWe clarifies the fee schedule or switches to market-price sourcing.
-  [WEUSD_PICWE_ID]: { parentId: USDC_CIRCLE_ID, multiplier: 0.99 },
+  // WEUSD's 0.99 redemption floor is only a missing-price fallback. A usable
+  // secondary-market quote must remain visible so depeg detection sees discounts.
+  [WEUSD_PICWE_ID]: {
+    parentId: USDC_CIRCLE_ID,
+    multiplier: 0.99,
+    marketPriceWins: true,
+  },
 } as const satisfies Record<string, InheritedTrackedPriceConfig>;
 
 function getInheritedTrackedPriceConfig(stablecoinId: string): InheritedTrackedPriceConfig | null {
@@ -101,6 +105,7 @@ export const inheritedTrackedPriceProvider: PriceSourceProvider = {
   ): Promise<CurrentPriceOverride | null> {
     const config = getInheritedTrackedPriceConfig(asset.id);
     if (!config) return null;
+    if (config.marketPriceWins && hasPublishableCurrentPrice(asset)) return null;
 
     const parent = resolveTrustedOverrideParent(
       context,
@@ -116,6 +121,9 @@ export const inheritedTrackedPriceProvider: PriceSourceProvider = {
     if (!parent) return null;
 
     return buildParentDerivedLiveOverride(parent, config.multiplier ?? 1);
+  },
+  matchesHistoricalPrices(stablecoinId: string): boolean {
+    return !getInheritedTrackedPriceConfig(stablecoinId)?.marketPriceWins;
   },
   async fetchHistoricalPrices(
     meta: StablecoinMeta,

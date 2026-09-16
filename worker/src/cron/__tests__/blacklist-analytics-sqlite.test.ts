@@ -22,13 +22,17 @@ describe("public blacklist analytics eligibility", () => {
       trackedStablecoinAssets: [], trackedStablecoinIds: new Set(), coreAggregateStablecoinAssets: [],
       coreAggregateStablecoinIds: new Set(), stablecoinAssetById: new Map(), mcapById: new Map(),
       stablecoinsCacheIsFresh: true });
-    expect.soft(await hydrate()).toEqual({ blacklistCounts: new Map(), rowsRead: 0 });
+    expect.soft(await hydrate()).toEqual({ blacklistCounts: new Map(), blacklistSourceOk: true, rowsRead: 0 });
     expect.soft(await collect()).toEqual({ value: undefined, degradedReasons: [] });
     expect(registerSourceFailure).not.toHaveBeenCalled();
 
     insert.run("public-1", "0xtx3", NOW - 30, null);
     insert.run("public-2", "0xtx4", NOW - 40, null);
-    expect(await hydrate()).toEqual({ blacklistCounts: new Map([["eurc-circle", { count24h: 2, count7d: 2 }]]), rowsRead: 2 });
+    expect(await hydrate()).toEqual({
+      blacklistCounts: new Map([["eurc-circle", { count24h: 2, count7d: 2 }]]),
+      blacklistSourceOk: true,
+      rowsRead: 2,
+    });
     expect(await collect()).toMatchObject({ value: { eventCount: 2, totalAmountUsd: 0 }, degradedReasons: [] });
   });
 });

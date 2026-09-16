@@ -83,11 +83,21 @@ const DECISION_RETENTION_DELETE_PREDICATE = `(
  */
 const YIELD_PUBLICATION_GENERATION_RETENTION_DAYS = 90;
 
-export async function materializeYieldHistoryDaily(
+const YIELD_DAILY_MATERIALIZATION_MAX_DAYS_PER_RUN = 31;
+
+type YieldDailyMaterializationResult = {
+  changes: number;
+  lastSnapshotDate: number | null;
+};
+
+async function materializeYieldHistoryDailyRange(
   db: D1Database,
   startSec: number,
-): Promise<number> {
-  const snapshotDate = bucketUnixSecondsToUtcDay(startSec - (YIELD_HISTORY_RAW_DAYS + 1) * DAY_SECONDS);
+): Promise<YieldDailyMaterializationResult> {
+  const rawPruneCutoff = bucketUnixSecondsToUtcDay(
+    startSec - YIELD_HISTORY_RAW_DAYS * DAY_SECONDS,
+  );
+  const snapshotDate = rawPruneCutoff - DAY_SECONDS;
   const result = await db
     .prepare(
       `/* pharos:yield-sync:daily-history-materialize */
@@ -98,22 +108,38 @@ export async function materializeYieldHistoryDaily(
          publication_generation_id, publication_state, pys_at_publish,
          safety_at_publish, variance_at_publish, pys_inputs_at_publish
        )
-       SELECT stablecoin_id, source_key, ?, recorded_at, is_best,
+       WITH materialization_state AS (
+         SELECT COALESCE(MAX(snapshot_date) + ${DAY_SECONDS}, ?) AS first_snapshot_date
+           FROM yield_history_daily
+       ), pending_days AS (
+         SELECT DISTINCT
+                CAST(h.recorded_at / ${DAY_SECONDS} AS INTEGER) * ${DAY_SECONDS} AS snapshot_date
+           FROM yield_history h
+           CROSS JOIN materialization_state state
+          WHERE h.recorded_at >= state.first_snapshot_date
+            AND h.recorded_at < ?
+            AND (h.publication_state IS NULL OR h.publication_state = 'published')
+          ORDER BY snapshot_date ASC
+          LIMIT ${YIELD_DAILY_MATERIALIZATION_MAX_DAYS_PER_RUN}
+       ), ranked AS (
+         SELECT h.*,
+                pending_days.snapshot_date,
+                ROW_NUMBER() OVER (
+                  PARTITION BY h.stablecoin_id, h.source_key, pending_days.snapshot_date
+                  ORDER BY h.recorded_at DESC, h.rowid DESC
+                ) AS row_rank
+           FROM pending_days
+           JOIN yield_history h
+             ON h.recorded_at >= pending_days.snapshot_date
+            AND h.recorded_at < pending_days.snapshot_date + ${DAY_SECONDS}
+          WHERE h.publication_state IS NULL OR h.publication_state = 'published'
+       )
+       SELECT stablecoin_id, source_key, snapshot_date, recorded_at, is_best,
               apy, apy_base, apy_reward, exchange_rate, source_tvl_usd,
               data_source, warning_signals, yield_source, yield_type,
               publication_generation_id, publication_state, pys_at_publish,
               safety_at_publish, variance_at_publish, pys_inputs_at_publish
-         FROM (
-           SELECT h.*,
-                  ROW_NUMBER() OVER (
-                    PARTITION BY h.stablecoin_id, h.source_key
-                    ORDER BY h.recorded_at DESC, h.rowid DESC
-                  ) AS row_rank
-             FROM yield_history h
-            WHERE h.recorded_at >= ?
-              AND h.recorded_at < ?
-              AND (h.publication_state IS NULL OR h.publication_state = 'published')
-         ) ranked
+         FROM ranked
         WHERE row_rank = 1
        ON CONFLICT(stablecoin_id, source_key, snapshot_date) DO UPDATE SET
          recorded_at = excluded.recorded_at,
@@ -133,11 +159,32 @@ export async function materializeYieldHistoryDaily(
          safety_at_publish = excluded.safety_at_publish,
          variance_at_publish = excluded.variance_at_publish,
          pys_inputs_at_publish = excluded.pys_inputs_at_publish
-       WHERE excluded.recorded_at > yield_history_daily.recorded_at`,
+       WHERE excluded.recorded_at > yield_history_daily.recorded_at
+       RETURNING snapshot_date`,
     )
-    .bind(snapshotDate, snapshotDate, snapshotDate + DAY_SECONDS)
-    .run();
-  return result.meta?.changes ?? 0;
+    .bind(snapshotDate, rawPruneCutoff)
+    .all<{ snapshot_date: number }>();
+  let lastSnapshotDate: number | null = null;
+  for (const row of result.results ?? []) {
+    const returnedSnapshotDate = Number(row.snapshot_date);
+    if (
+      Number.isFinite(returnedSnapshotDate) &&
+      (lastSnapshotDate == null || returnedSnapshotDate > lastSnapshotDate)
+    ) {
+      lastSnapshotDate = returnedSnapshotDate;
+    }
+  }
+  return {
+    changes: result.meta?.changes ?? result.results?.length ?? 0,
+    lastSnapshotDate,
+  };
+}
+
+export async function materializeYieldHistoryDaily(
+  db: D1Database,
+  startSec: number,
+): Promise<number> {
+  return (await materializeYieldHistoryDailyRange(db, startSec)).changes;
 }
 
 /**
@@ -404,7 +451,7 @@ async function pruneYieldTablesOnce(
     .bind(startSec, startSec - HOUR_SECONDS)
     .run();
 
-  await materializeYieldHistoryDaily(db, startSec);
+  const dailyMaterialization = await materializeYieldHistoryDailyRange(db, startSec);
 
   // yield_history_daily now carries the year-long public window, so raw hourly
   // rows only need the 30-day full-fidelity policy; the daily tier keeps the
@@ -418,7 +465,18 @@ async function pruneYieldTablesOnce(
   // `D1_ERROR: D1 DB exceeded its CPU time limit`, every hour, forever. A chunk
   // that cannot commit leaves the table unchanged, so the drain must be bounded
   // and resumable rather than atomic.
-  const rawPruneCutoff = bucketUnixSecondsToUtcDay(startSec - YIELD_HISTORY_RAW_DAYS * DAY_SECONDS);
+  const desiredRawPruneCutoff = bucketUnixSecondsToUtcDay(
+    startSec - YIELD_HISTORY_RAW_DAYS * DAY_SECONDS,
+  );
+  // If a long outage leaves more than one bounded materialization batch, retain
+  // the untouched raw suffix. The next run resumes after the newest daily row.
+  const rawPruneCutoff =
+    dailyMaterialization.lastSnapshotDate == null
+      ? desiredRawPruneCutoff
+      : Math.min(
+          desiredRawPruneCutoff,
+          dailyMaterialization.lastSnapshotDate + DAY_SECONDS,
+        );
   const pruneCutoff = startSec - YIELD_HISTORY_MAX_DAYS * DAY_SECONDS;
   const frozenIdsList = [...FROZEN_IDS];
   const frozenClause =

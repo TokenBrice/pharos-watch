@@ -1303,6 +1303,16 @@ describe("authoritative-price-sources", () => {
     });
   });
 
+  it("preserves a usable WEUSD market quote instead of applying the redemption floor", async () => {
+    const nowSec = Math.floor(Date.now() / 1000);
+    const overrides = await fetchLiveOverrides([
+      freshParent("weusd-picwe", 0.91, "coingecko", { nowSec }),
+      freshParent("usdc-circle", 0.99998, "coingecko+pyth", { nowSec }),
+    ]);
+
+    expect(overrides.has("weusd-picwe")).toBe(false);
+  });
+
   it("returns protocol-par live overrides only for active direct-redeem fiat assets", async () => {
     const overrides = await fetchLiveOverrides(
       [
@@ -1581,6 +1591,22 @@ describe("authoritative-price-sources", () => {
         { timestamp: 1_776_003_600, price: 1.00006 },
       ],
     });
+  });
+
+  it("leaves WEUSD historical replay to market-price sources", async () => {
+    const result = await fetchAuthoritativeHistoricalPriceSeries(
+      makeHistoricalMeta("weusd-picwe", "Wrapped eUSD", "WEUSD"),
+      {
+        candidateTimestamps: [1_776_000_000, 1_776_003_600],
+      },
+    );
+
+    expect(result).toEqual({
+      matched: false,
+      source: null,
+      prices: null,
+    });
+    expect(fetchMarketBackfillPriceSeriesMock).not.toHaveBeenCalled();
   });
 
   it("passes the CoinGecko API key through authoritative market-history replays", async () => {

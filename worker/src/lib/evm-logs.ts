@@ -78,18 +78,7 @@ export function decodeUint256Word(hexData: string | null | undefined, decimals: 
   return decimalNumberFromBigInt(BigInt("0x" + cleaned), decimals);
 }
 
-/**
- * Decode a specific 32-byte slot (0-indexed) from ABI-encoded event data.
- * Handles multi-param events where the amount is not in the first slot.
- * Returns 0 when the data is shorter than expected.
- */
-export function decodeUint256AtSlot(hexData: string, slotIndex: number, decimals: number): number {
-  const cleaned = hexData.startsWith("0x") ? hexData.slice(2) : hexData;
-  const start = slotIndex * 64;
-  const slot = cleaned.slice(start, start + 64);
-  if (slot.length < 64) return 0;
-  return decimalNumberFromBigInt(BigInt("0x" + slot), decimals);
-}
+
 
 export function decodeUint256AtSlotOrNull(hexData: string, slotIndex: number, decimals: number): number | null {
   return decodeUint256Word(readDataWord(hexData, slotIndex), decimals);

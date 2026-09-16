@@ -159,10 +159,17 @@ export function adaptFalconTransparency(payload: FalconTransparencyResponse): Ad
     ));
   }
 
-  const insuranceFund =
-    typeof payload.usdf?.insurance_fund === "string"
-      ? Number(payload.usdf.insurance_fund)
-      : NaN;
+  const insuranceFundRaw = payload.usdf?.insurance_fund;
+  const insuranceFund = insuranceFundRaw == null
+    ? 0
+    : typeof insuranceFundRaw === "number"
+      ? insuranceFundRaw
+      : typeof insuranceFundRaw === "string" && insuranceFundRaw.trim()
+        ? Number(insuranceFundRaw)
+        : NaN;
+  if (!Number.isFinite(insuranceFund) || insuranceFund < 0) {
+    throw new Error(`Falcon invalid usdf.insurance_fund: ${String(insuranceFundRaw)}`);
+  }
   const supplyUsd =
     typeof payload.usdf?.supply === "string"
       ? Number(payload.usdf.supply)
@@ -219,7 +226,7 @@ export function adaptFalconTransparency(payload: FalconTransparencyResponse): Ad
       },
       {
         name: "Insurance fund",
-        value: Number.isFinite(insuranceFund) && insuranceFund > 0 ? insuranceFund : 0,
+        value: insuranceFund > 0 ? insuranceFund : 0,
         risk: "medium",
       },
     ],

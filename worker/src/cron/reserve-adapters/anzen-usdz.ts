@@ -31,7 +31,7 @@ import { reserveDegradedWarning, reserveInfoWarning } from "./warnings";
 
 const ADAPTER_KEY = "anzen-usdz";
 const SPCT_POOL_CONTRACT = "0xf30a29F1C540724Fd8c5c4Be1AF604a6C6800D29";
-const SPCT_POOL_DECIMALS = 18;
+const EXPECTED_SPCT_DECIMALS = 18;
 const SUPPLY_CHAINS = ["ethereum", "base", "arbitrum", "blast", "manta"] as const;
 type SupportedSupplyChain = (typeof SUPPLY_CHAINS)[number];
 
@@ -211,6 +211,12 @@ function buildStateFields(chain: SupportedSupplyChain, usdz: string) {
     rawObservation({ label: "usdc:spct-balance", contract: USDC_CONTRACT, data: encodeAddressCallData(BALANCE_OF_SELECTOR, SPCT_POOL_CONTRACT) }),
     rawObservation({ label: "usdc:usdz-balance", contract: USDC_CONTRACT, data: encodeAddressCallData(BALANCE_OF_SELECTOR, usdz) }),
     rawObservation({ label: "oracle:price", contract: SPCT_PRICE_ORACLE_CONTRACT, data: ORACLE_GET_PRICE_SELECTOR }),
+    uint256Observation({
+      label: "spct:decimals",
+      contract: SPCT_POOL_CONTRACT,
+      data: DECIMALS_SELECTOR,
+      verify: (value) => value === BigInt(EXPECTED_SPCT_DECIMALS) ? null : "SPCT decimals drifted",
+    }),
   );
   return fields;
 }
@@ -473,8 +479,8 @@ export async function fetchAnzenUsdzReserves(
     observation.chain,
     decimalNumberFromBigInt(observation.rawSupply, observation.decimals),
   ])) as Record<SupportedSupplyChain, number>;
-  const supplyUsd = decimalNumberFromBigInt(liabilityRaw, SPCT_POOL_DECIMALS);
-  const totalReserveUsd = decimalNumberFromBigInt(reserveValueRaw, SPCT_POOL_DECIMALS);
+  const supplyUsd = decimalNumberFromBigInt(liabilityRaw, EXPECTED_SPCT_DECIMALS);
+  const totalReserveUsd = decimalNumberFromBigInt(reserveValueRaw, EXPECTED_SPCT_DECIMALS);
   if (!Number.isFinite(supplyUsd) || !Number.isFinite(totalReserveUsd)) {
     throw new Error(`${ADAPTER_KEY} computed invalid USDz reserve totals`);
   }
@@ -502,7 +508,7 @@ export async function fetchAnzenUsdzReserves(
         oraclePriceRaw: oraclePriceRaw.toString(),
         oraclePriceDecimals: 18,
         liabilityRaw: liabilityRaw.toString(),
-        surplusSpct: decimalNumberFromBigInt(surplusRaw, SPCT_POOL_DECIMALS),
+        surplusSpct: decimalNumberFromBigInt(surplusRaw, EXPECTED_SPCT_DECIMALS),
         underlyingLoanBookScope: "outside adapter composition scope",
         supplyByChainUsd,
         supplyChains: SUPPLY_CHAINS,

@@ -68,21 +68,62 @@ function extractTokenRow(html: string, token: string): string {
   return table.slice(rowStart, nextRow < 0 ? table.length : nextRow);
 }
 
+function extractLabeledRowCells(row: string, token: string): {
+  totalSupply: string;
+  reserveRatio: string;
+  allocation: string;
+} {
+  const cellStarts = [...row.matchAll(/<div\b[^>]*\brole=["']cell["'][^>]*>/gi)];
+  if (cellStarts.length !== 4) {
+    throw htmlLayoutChangedError(ADAPTER_KEY, `missing or extra labelled columns in ${token} reserve row`);
+  }
+  const cells = cellStarts.map((match, index) => {
+    const start = (match.index ?? 0) + match[0].length;
+    const end = cellStarts[index + 1]?.index ?? row.length;
+    return stripTags(row.slice(start, end)).trim();
+  });
+  // Public HTML label comparison; not a secret.
+  // eslint-disable-next-line security/detect-possible-timing-attacks
+  if (cells[0] !== token) {
+    throw htmlLayoutChangedError(ADAPTER_KEY, `currency column does not identify ${token}`);
+  }
+  return {
+    totalSupply: cells[1] ?? "",
+    reserveRatio: cells[2] ?? "",
+    allocation: cells[3] ?? "",
+  };
+}
+
+function parseLabeledPercentage(raw: string, label: string): number {
+  const match = raw.match(/^([\d.,-]+)\s*%$/);
+  const value = match ? parseLocalizedNumber(match[1] ?? "") : null;
+  if (value == null) {
+    throw htmlLayoutChangedError(ADAPTER_KEY, `missing or malformed ${label} column`);
+  }
+  return value;
+}
+
+function parseLabeledAllocation(raw: string): [cashPct: number, governmentBondPct: number] {
+  const match = raw.match(/^([\d.,-]+)\s*%\s*\/\s*([\d.,-]+)\s*%$/);
+  const cashPct = match ? parseLocalizedNumber(match[1] ?? "") : null;
+  const governmentBondPct = match ? parseLocalizedNumber(match[2] ?? "") : null;
+  if (cashPct == null || governmentBondPct == null) {
+    throw htmlLayoutChangedError(ADAPTER_KEY, "missing, reordered, or extra reserve-allocation percentages");
+  }
+  return [cashPct, governmentBondPct];
+}
+
 export function adaptQuantozTransparency(html: string, token: string): AdapterResult {
   const sourceTimestamp = extractQuantozTimestamp(html);
-  const rowText = stripTags(extractTokenRow(html, token));
-  const supplyMatch = rowText.match(/[€$]\s*[\d.,]+/);
-  const percentValues = rowText
-    .split("%")
-    .slice(0, -1)
-    .map((segment) => parseLocalizedNumber(segment.trim().split(/\s+/).pop() ?? ""))
-    .filter((value): value is number => value != null);
-
+  const row = extractTokenRow(html, token);
+  const cells = extractLabeledRowCells(row, token);
+  const supplyMatch = cells.totalSupply.match(/^[€$]\s*[\d.,]+$/);
   const totalSupply = supplyMatch ? parseLocalizedNumber(supplyMatch[0]) : null;
-  const [reserveRatioPct, cashPct, governmentBondPct] = percentValues;
+  const reserveRatioPct = parseLabeledPercentage(cells.reserveRatio, "reserve ratio");
+  const [cashPct, governmentBondPct] = parseLabeledAllocation(cells.allocation);
 
-  if (totalSupply == null || reserveRatioPct == null || cashPct == null || governmentBondPct == null) {
-    throw htmlLayoutChangedError(ADAPTER_KEY, `missing ${token} supply, reserve ratio, or allocation values`);
+  if (totalSupply == null) {
+    throw htmlLayoutChangedError(ADAPTER_KEY, `missing or malformed ${token} total-supply column`);
   }
 
   const allocationPcts = [cashPct, governmentBondPct];

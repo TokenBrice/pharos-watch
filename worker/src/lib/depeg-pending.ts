@@ -149,9 +149,18 @@ export function buildUpsertPendingDepegStmt(
          WHEN ${preservesEpisode} THEN depeg_pending.first_price
          ELSE excluded.first_price
        END,
-       last_seen_bps = excluded.last_seen_bps,
-       last_seen_at = excluded.last_seen_at,
-       last_price = excluded.last_price,
+       last_seen_bps = CASE
+         WHEN ${preservesEpisode} AND excluded.last_seen_at < depeg_pending.last_seen_at THEN depeg_pending.last_seen_bps
+         ELSE excluded.last_seen_bps
+       END,
+       last_seen_at = CASE
+         WHEN ${preservesEpisode} AND excluded.last_seen_at < depeg_pending.last_seen_at THEN depeg_pending.last_seen_at
+         ELSE excluded.last_seen_at
+       END,
+       last_price = CASE
+         WHEN ${preservesEpisode} AND excluded.last_seen_at < depeg_pending.last_seen_at THEN depeg_pending.last_price
+         ELSE excluded.last_price
+       END,
        peak_seen_bps = CASE
          WHEN ${preservesEpisode} THEN
            CASE

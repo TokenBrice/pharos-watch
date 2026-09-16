@@ -10,6 +10,7 @@ import { decodeJsonString } from "./cache-json";
 import { logMalformedJsonPath } from "./json-decode-observability";
 import { toErrorMessage } from "@shared/lib/error-utils";
 import { bucketUnixSecondsToUtcDay } from "@shared/lib/time-buckets";
+import { CHAIN_META } from "@shared/lib/chains";
 
 import { FLOW_CACHE_PREFIX } from "./mint-burn-flow-cache-keys";
 
@@ -65,17 +66,31 @@ export const FLOW_DEFAULT_WINDOW_HOURS = 24;
 export const MINT_BURN_AGGREGATE_PUBLISH_WINDOWS = [FLOW_DEFAULT_WINDOW_HOURS, 168] as const;
 export const MINT_BURN_CRON_JOB = "sync-mint-burn";
 const MINT_BURN_COVERAGE_LAG_MAX_BLOCKS = 10_000;
-const MINT_BURN_EXPECTED_BLOCK_TIME_SEC: Record<string, number> = {
-  arbitrum: 0.25,
-  ethereum: 12,
+const MINT_BURN_EXPECTED_BLOCK_TIME_SEC_BY_EVM_CHAIN_ID: Readonly<Record<number, number>> = {
+  1: 12,
+  10: 2,
+  56: 3,
+  100: 5,
+  137: 2,
+  8453: 2,
+  42161: 0.25,
+  43114: 2,
 };
+// For registry-known EVM chains without a reviewed value, one second is a
+// conservative coverage default: it may delay declaring a complete window,
+// but cannot inflate one. IDs absent from the registry remain unknown.
+const CONSERVATIVE_EVM_BLOCK_TIME_SEC = 1;
 
-function expectedBlockTimeSec(chainId: string): number {
-  return MINT_BURN_EXPECTED_BLOCK_TIME_SEC[chainId] ?? 12;
+function expectedBlockTimeSec(chainId: string): number | null {
+  const evmChainId = CHAIN_META[chainId]?.evmChainId;
+  if (evmChainId == null) return null;
+  return MINT_BURN_EXPECTED_BLOCK_TIME_SEC_BY_EVM_CHAIN_ID[evmChainId]
+    ?? CONSERVATIVE_EVM_BLOCK_TIME_SEC;
 }
 
-function coverageLagThresholdBlocks(chainId: string): number {
+function coverageLagThresholdBlocks(chainId: string): number | null {
   const blockTimeSec = expectedBlockTimeSec(chainId);
+  if (blockTimeSec == null) return null;
   return Math.max(1, Math.min(
     MINT_BURN_COVERAGE_LAG_MAX_BLOCKS,
     Math.ceil(MINT_BURN_PUBLIC_FRESHNESS_MAX_AGE_SEC / blockTimeSec),
@@ -576,24 +591,34 @@ export function buildCoinCoverageMap(
     // Use the shortest scanned span across the coin's configs as a conservative
     // fallback so retention cannot regress established coverage to
     // "bootstrapping".
-    const scannedWindowSec = Math.min(...configs.map((config, index) =>
-      Math.max(0, lastSyncedBlocks[index]! - config.startBlock + 1)
-        * expectedBlockTimeSec(config.chain.chainId),
-    ));
+    const expectedBlockTimes = configs.map((config) =>
+      expectedBlockTimeSec(config.chain.chainId),
+    );
+    const hasUnknownBlockTime = expectedBlockTimes.some((blockTimeSec) => blockTimeSec == null);
+    const scannedWindowSec = hasUnknownBlockTime
+      ? null
+      : Math.min(...configs.map((config, index) =>
+          Math.max(0, lastSyncedBlocks[index]! - config.startBlock + 1)
+            * expectedBlockTimes[index]!,
+        ));
     const has24hWindow =
       (historyStartAt != null && historyStartAt <= nowSec - (24 * 3600))
-      || scannedWindowSec >= 24 * 3600;
+      || (scannedWindowSec != null && scannedWindowSec >= 24 * 3600);
     const has30dWindow =
       (historyStartAt != null && historyStartAt <= nowSec - (30 * DAY_SECONDS))
-      || scannedWindowSec >= 30 * DAY_SECONDS;
+      || (scannedWindowSec != null && scannedWindowSec >= 30 * DAY_SECONDS);
     const has90dWindow =
       (historyStartAt != null && historyStartAt <= nowSec - (90 * DAY_SECONDS))
-      || scannedWindowSec >= 90 * DAY_SECONDS;
+      || (scannedWindowSec != null && scannedWindowSec >= 90 * DAY_SECONDS);
 
     const status =
       disabled ? "disabled" :
+      hasUnknownBlockTime && historyStartAt == null ? "unknown" :
       !has24hWindow || lastSyncedBlock < startBlock ? "bootstrapping" :
-      measuredLags.some((entry) => entry.lagBlocks > coverageLagThresholdBlocks(entry.chainId)) ? "lagging" :
+      measuredLags.some((entry) => {
+        const lagThreshold = coverageLagThresholdBlocks(entry.chainId);
+        return lagThreshold != null && entry.lagBlocks > lagThreshold;
+      }) ? "lagging" :
       hasUnknownChainHead ? "unknown" :
       !has30dWindow ? "partial-history" :
       "full";

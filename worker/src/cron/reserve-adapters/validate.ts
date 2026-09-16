@@ -125,6 +125,14 @@ function getMetadataObject(metadata: Record<string, unknown> | undefined, key: s
 function describeAdapter(adapter: ReserveAdapterDefinition | undefined): string {
   return adapter ? ` for ${adapter.sourceModel}/${adapter.evidenceClass}` : "";
 }
+function freshnessPolicyIsUnverifiedOnly(adapter: ReserveAdapterDefinition | undefined): boolean {
+  const allowedFreshnessModes = adapter?.validation?.allowedFreshnessModes;
+  return (
+    Array.isArray(allowedFreshnessModes) &&
+    allowedFreshnessModes.length === 1 &&
+    allowedFreshnessModes[0] === "unverified"
+  );
+}
 
 function validateFutureTimestamp(
   value: number | null,
@@ -271,12 +279,8 @@ function validateRedemptionTelemetry(
   // already restricts freshness to "unverified" only — in that case the output
   // is expected to be unverified and re-degrading on top of that policy would
   // double-count the same freshness concern.
-  const allowedFreshnessModes = adapter?.validation?.allowedFreshnessModes;
-  const freshnessPolicyIsUnverifiedOnly =
-    Array.isArray(allowedFreshnessModes) &&
-    allowedFreshnessModes.length === 1 &&
-    allowedFreshnessModes[0] === "unverified";
-  if (hasCapacityTelemetry && freshnessKind === "unverified" && !freshnessPolicyIsUnverifiedOnly) {
+  const policyIsUnverifiedOnly = freshnessPolicyIsUnverifiedOnly(adapter);
+  if (hasCapacityTelemetry && freshnessKind === "unverified" && !policyIsUnverifiedOnly) {
     warnings.push(
       reserveDegradedWarning(
         "redemption-capacity-unverified",
@@ -498,6 +502,7 @@ export function validateAdapterOutput(input: ValidationInput, options?: Validati
   }
 
   const maxSourceAgeSec = options?.maxSourceAgeSec ?? options?.adapter?.validation?.maxSourceAgeSec;
+  const policyIsUnverifiedOnly = freshnessPolicyIsUnverifiedOnly(options?.adapter);
   if (maxSourceAgeSec != null && sourceTimestamp != null) {
     const ageSec = now - sourceTimestamp;
     if (ageSec > maxSourceAgeSec) {
@@ -508,6 +513,13 @@ export function validateAdapterOutput(input: ValidationInput, options?: Validati
         ),
       );
     }
+  } else if (maxSourceAgeSec != null && !policyIsUnverifiedOnly) {
+    warnings.push(
+      reserveDegradedWarning(
+        "stale-source-undeterminable",
+        `Upstream reserve source timestamp is unavailable${adapterLabel}; declared source-age policy cannot be evaluated`,
+      ),
+    );
   }
 
   const maxUnknownExposurePct = options?.adapter?.validation?.maxUnknownExposurePct;
@@ -589,7 +601,12 @@ export function validateAdapterOutput(input: ValidationInput, options?: Validati
     }
   }
 
-  if (maxSourceAgeSec != null && sourceTimestamp == null && freshnessMode === "unverified") {
+  if (
+    maxSourceAgeSec != null &&
+    sourceTimestamp == null &&
+    freshnessMode === "unverified" &&
+    policyIsUnverifiedOnly
+  ) {
     warnings.push(
       reserveInfoWarning(
         "freshness-unverified",

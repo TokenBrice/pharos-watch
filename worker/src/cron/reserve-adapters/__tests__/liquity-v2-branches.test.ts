@@ -720,7 +720,7 @@ describe("fetchLiquityV2BranchReserves Beraborrow branches", () => {
         }),
       ]),
     });
-    expectWarnings(result, ["branch-protocol-price-fallback"]);
+    expectWarnings(result, ["branch-protocol-price-fallback", "defillama-quote-missing"]);
     expectWarningEffect(result, "branch-protocol-price-fallback", "info");
     expect(network.rpcCalls.some((call) =>
       call.contract === wberaBranch.holder.toLowerCase() && call.selector === nectParams.debtSelector

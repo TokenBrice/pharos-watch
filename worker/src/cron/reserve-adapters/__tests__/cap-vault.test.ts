@@ -205,33 +205,44 @@ describe("adaptCapVaultState", () => {
     expect(result.metadata?.redemption?.capacityUsd).toBe(100);
   });
 
-  it("classifies unknown active vault assets as high risk with a degraded warning", () => {
+  it("fails closed for an unknown non-USD-like asset with positive supply", () => {
+    expect(() =>
+      adaptCapVaultState({
+        contractAddress: "0xcccc62962d17b8914c62d74ffb843d73b2a3cccc",
+        supplyUsd: 100,
+        assets: [makeCapAsset({
+          address: "0x9999999999999999999999999999999999999999",
+          name: "WBTC",
+          risk: "high",
+          configured: false,
+          decimals: 8,
+          totalSupplied: 25,
+          available: 25,
+        })],
+      }),
+    ).toThrow('cap-vault asset "WBTC" missing priceUsd and is not USD-like');
+  });
+
+  it("warns when an unknown USD-like asset uses the 1 USD peg assumption", () => {
     const result = adaptCapVaultState({
       contractAddress: "0xcccc62962d17b8914c62d74ffb843d73b2a3cccc",
       supplyUsd: 100,
       assets: [makeCapAsset({
         address: "0x9999999999999999999999999999999999999999",
-        name: "Cap asset 0x9999...9999",
+        name: "USDC",
         risk: "high",
         configured: false,
-        decimals: 18,
+        decimals: 6,
         totalSupplied: 25,
         available: 25,
       })],
     });
 
-    expect(result.slices).toEqual([
-      { sourceKey: "cap-vault:0x9999999999999999999999999999999999999999", name: "Cap asset 0x9999...9999", pct: 100, risk: "high" },
-    ]);
-    const warning = result.warnings?.find((w) => w.code === "unknown-vault-asset");
-    expect(warning).toBeDefined();
-    expect(warning?.effect).toBe("degraded");
-    expect(result.metadata?.unknownExposurePct).toBe(100);
-    // Unconfigured, unpriced, non-USD-like assets are valued at $1.00; surface
-    // that the fallback may misstate reserve totals.
-    const pegWarning = result.warnings?.find((w) => w.code === "cap-vault-unknown-asset-peg-assumed");
-    expect(pegWarning).toBeDefined();
-    expect(pegWarning?.severity).toBe("info");
+    expect(result.warnings).toEqual(expect.arrayContaining([
+      expect.objectContaining({ code: "unknown-vault-asset", effect: "degraded" }),
+      expect.objectContaining({ code: "cap-vault-unknown-asset-peg-assumed", severity: "info" }),
+    ]));
+    expect(result.metadata?.totalReserveUsd).toBe(25);
   });
 
   it("fails closed for configured non-USD-like assets without priceUsd", () => {
@@ -366,18 +377,12 @@ describe("fetchCapVaultReserves", () => {
     expect(result.metadata?.redemption).not.toHaveProperty("feeBps");
   });
 
-  it("defaults an unconfigured on-chain asset to high risk and emits a degraded warning", async () => {
-    const { result } = await runAdapter("cap-vault", "cusd-cap", {
+  it("fails closed for an unconfigured on-chain asset that is not symbol-recognized as USD-like", async () => {
+    await expect(runAdapter("cap-vault", "cusd-cap", {
       network: capNetwork(),
       params: { assets: [] },
       nowSec: CAP_NOW,
-    });
-    expect(result.slices).toEqual([
-      expect.objectContaining({ name: "Cap asset 0xa0b8...eb48", risk: "high" }),
-    ]);
-    const warning = result.warnings?.find((w) => w.code === "unknown-vault-asset");
-    expect(warning).toBeDefined();
-    expect(warning?.effect).toBe("degraded");
+    })).rejects.toThrow(/missing priceUsd and is not USD-like/);
   });
 
   it("maps current cusd-cap WTGXX vault asset when explicitly configured", async () => {

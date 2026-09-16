@@ -1,5 +1,5 @@
 import type { AlchemyLogEntry } from "../alchemy-logs";
-import { decodeAddress, decodeUint256AtSlot, readDataWord } from "../evm-logs";
+import { decodeAddress, decodeUint256AtSlotOrNull, readDataWord } from "../evm-logs";
 import type { MintBurnContractConfig, MintBurnEventDef } from "../mint-burn-contracts";
 import { findMintBurnHistoricalPrice } from "./context";
 import type { MintBurnPriceHistoryPoint, MintBurnRow } from "./types";
@@ -46,14 +46,31 @@ export function parseMintBurnLogs(
   prices: Map<string, number>,
   priceHistory: Map<string, MintBurnPriceHistoryPoint[]>,
   runTimestamp: number,
-): { rows: MintBurnRow[]; dropped: number } {
+): {
+  rows: MintBurnRow[];
+  dropped: number;
+  droppedDecode: number;
+  earliestDecodeFailureBlock: number | null;
+} {
   const rows: MintBurnRow[] = [];
   const direction = eventDef.direction;
   let dropped = 0;
+  let droppedDecode = 0;
+  let earliestDecodeFailureBlock: number | null = null;
 
   for (const log of logs) {
     const slot = eventDef.amountEncoding === "nth-data-uint256" ? (eventDef.dataSlot ?? 0) : 0;
-    const amount = decodeUint256AtSlot(log.data, slot, config.decimals);
+    const amount = decodeUint256AtSlotOrNull(log.data, slot, config.decimals);
+    if (amount == null) {
+      droppedDecode++;
+      const blockNum = parseInt(log.blockNumber, 16);
+      if (Number.isFinite(blockNum)) {
+        earliestDecodeFailureBlock = earliestDecodeFailureBlock == null
+          ? blockNum
+          : Math.min(earliestDecodeFailureBlock, blockNum);
+      }
+      continue;
+    }
     if (amount <= 0 || amount < config.dustThreshold) {
       dropped++;
       continue;
@@ -114,5 +131,5 @@ export function parseMintBurnLogs(
     });
   }
 
-  return { rows, dropped };
+  return { rows, dropped, droppedDecode, earliestDecodeFailureBlock };
 }

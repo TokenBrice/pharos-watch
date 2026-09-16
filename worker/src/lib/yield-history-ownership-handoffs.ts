@@ -51,7 +51,7 @@ export const YIELD_HISTORY_OWNERSHIP_HANDOFFS: Record<string, string[]> = {
     "664664bb-31e0-4e65-808d-6dc82bdb05bb",
   ],
   "reusd-re-protocol": [
-    "protocol-api:re-protocol-reusde",
+    "protocol-api:re-protocol-reusd",
   ],
 };
 

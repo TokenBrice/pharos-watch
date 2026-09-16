@@ -1,4 +1,6 @@
 import { describe, expect, it } from "vitest";
+import type { StablecoinData } from "@shared/types/market";
+import { buildDewsScoringResult } from "../../../lib/dews/scoring";
 import { loadDewsSourceState } from "../../../lib/dews/source-state";
 import { CONTRACT_CONFIGS } from "../../../lib/blacklist-contracts";
 import { makeNoopD1 } from "../../../test-helpers/noop-d1";
@@ -161,6 +163,54 @@ describe("loadDewsSourceState legacy signals_json hydration", () => {
     expect((prev?.signals as Record<string, unknown>).amplifiers).toBeUndefined();
   });
 
+  it("drops malformed legacy smoothing values instead of hydrating non-finite signals", async () => {
+    const db = mockDbWithPrevRows([
+      {
+        stablecoin_id: "usdt-tether",
+        signals_json: JSON.stringify({
+          supply: { value: 5, available: true },
+          pool: { value: null, available: true },
+          diverg: { value: "100", available: true },
+        }),
+        band: "DANGER",
+        computed_at: nowSec - 600,
+      },
+    ]);
+
+    const sourceState = await loadDewsSourceState({
+      db,
+      nowSec,
+      bootstrapPending: false,
+      registerSourceFailure: () => {},
+      registerMalformedPersistedInput: () => {},
+    });
+
+    const signals = sourceState.prevSignals.get("usdt-tether")?.signals;
+    expect(signals).toEqual({ supply: { value: 5, available: true } });
+    expect(signals?.pool).toBeUndefined();
+    expect(signals?.diverg).toBeUndefined();
+
+    const asset = {
+      id: "usdt-tether",
+      name: "Tether",
+      symbol: "USDT",
+      pegType: "peggedUSD",
+      price: 1,
+      priceConfidence: "high",
+      circulating: { peggedUSD: 10_000_000 },
+      circulatingPrevDay: { peggedUSD: 10_000_000 },
+      circulatingPrevWeek: { peggedUSD: 10_000_000 },
+    } as unknown as StablecoinData;
+    const result = buildDewsScoringResult({
+      assetById: new Map([["usdt-tether", asset]]),
+      pegRates: {},
+      sourceState,
+      registerMalformedPersistedInput: () => {},
+    }).results[0];
+    expect(result?.band).not.toBe("DANGER");
+    expect(Number.isFinite(result?.score ?? Number.NaN)).toBe(true);
+  });
+
   it("prefers newer latest-table rows while keeping legacy-only rows", async () => {
     const latestPayload = { signals: { supply: { value: 8, available: true } } };
     const legacyPayload = { signals: { supply: { value: 3, available: true } } };
@@ -251,6 +301,13 @@ describe("loadDewsSourceState legacy signals_json hydration", () => {
               rewardShare: 0.9,
               sourceAgeSeconds: 30_000,
               venueRiskTier: "unknown",
+              venueRiskScores: {
+                audits: 1,
+                centralization: 2,
+                fundsManagement: 3,
+                liquidity: 4,
+                operational: 5,
+              },
             },
             rankChangeAttribution: {
               rankDelta: -5,
@@ -275,6 +332,13 @@ describe("loadDewsSourceState legacy signals_json hydration", () => {
       rewardShare: 0.9,
       sourceAgeSeconds: 30_000,
       venueRiskTier: "unknown",
+      venueRiskScores: {
+        audits: 1,
+        centralization: 2,
+        fundsManagement: 3,
+        liquidity: 4,
+        operational: 5,
+      },
     });
     expect(sourceState.yieldRankChangeAttribution.get("usdt-tether")).toMatchObject({
       rankDelta: -5,
@@ -308,6 +372,7 @@ describe("loadDewsSourceState legacy signals_json hydration", () => {
     expect(sourceState.blacklistCounts.get("usda-avalon")).toEqual({ count24h: 1, count7d: 1 });
     expect(sourceState.blacklistCounts.has("USDA")).toBe(false);
     expect(sourceState.blacklistCounts.has("usda-anzens")).toBe(false);
+    expect(sourceState.blacklistSourceOk).toBe(true);
   });
 
   it("hydrates identical values when source reads settle in reverse order", async () => {
@@ -404,6 +469,7 @@ describe("loadDewsSourceState legacy signals_json hydration", () => {
     expect(reversed.state.prevSignals.get("usdc-circle")?.signals.supply).toEqual({
       value: 7, available: true,
     });
+    expect(reversed.state.blacklistSourceOk).toBe(false);
     expect(reversed.failures).toEqual(new Set([
       "dex-liquidity", "dex-prices", "dex-liquidity-history", "blacklist-events",
       "stress-signals-latest", "mint-burn-hourly", "yield-data", "yield-rankings", "stability-index-samples",

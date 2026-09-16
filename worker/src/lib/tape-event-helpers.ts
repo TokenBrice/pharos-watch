@@ -49,9 +49,11 @@ export function severityForDepegOpened(absBps: number): TapeEventSeverity {
 }
 
 export function severityForFreezeBlocked(amountUsd: number | null): TapeEventSeverity {
-  const usd = amountUsd ?? 0;
-  if (usd >= 10_000_000) return "severe";
-  if (usd >= 1_000_000) return "warning";
+  // An unrecovered amount may be arbitrarily large; keep it below the
+  // highest known tier rather than treating the unknown as zero.
+  if (amountUsd == null) return "warning";
+  if (amountUsd >= 10_000_000) return "severe";
+  if (amountUsd >= 1_000_000) return "warning";
   return "notice";
 }
 

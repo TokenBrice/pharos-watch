@@ -1,85 +1,64 @@
 import { logWorkerEventArgs } from "./structured-log";
 import { FX_RATE_BOUNDS } from "@shared/lib/peg-price-bounds";
 
-export const PRIMARY_FX_CURRENCIES = [
-  "EUR",
-  "GBP",
-  "CHF",
-  "BRL",
-  "JPY",
-  "IDR",
-  "SGD",
-  "TRY",
-  "AUD",
-  "ZAR",
-  "CAD",
-  "CNY",
-  "PHP",
-  "MXN",
-  "MYR",
-  "KRW",
-  "HKD",
-  "INR",
+export const PRIMARY_PEG_TYPE_TO_CURRENCY_PAIRS = [
+  ["peggedEUR", "EUR"],
+  ["peggedGBP", "GBP"],
+  ["peggedCHF", "CHF"],
+  ["peggedREAL", "BRL"],
+  ["peggedJPY", "JPY"],
+  ["peggedIDR", "IDR"],
+  ["peggedSGD", "SGD"],
+  ["peggedTRY", "TRY"],
+  ["peggedAUD", "AUD"],
+  ["peggedZAR", "ZAR"],
+  ["peggedCAD", "CAD"],
+  ["peggedCNY", "CNY"],
+  ["peggedPHP", "PHP"],
+  ["peggedMXN", "MXN"],
+  ["peggedMYR", "MYR"],
+  ["peggedKRW", "KRW"],
+  ["peggedHKD", "HKD"],
+  ["peggedINR", "INR"],
 ] as const;
 
-export const PRIMARY_CURRENCY_TO_PEG: Record<string, string> = {
-  EUR: "peggedEUR",
-  GBP: "peggedGBP",
-  CHF: "peggedCHF",
-  BRL: "peggedREAL",
-  JPY: "peggedJPY",
-  IDR: "peggedIDR",
-  SGD: "peggedSGD",
-  TRY: "peggedTRY",
-  AUD: "peggedAUD",
-  ZAR: "peggedZAR",
-  CAD: "peggedCAD",
-  CNY: "peggedCNY",
-  PHP: "peggedPHP",
-  MXN: "peggedMXN",
-  MYR: "peggedMYR",
-  KRW: "peggedKRW",
-  HKD: "peggedHKD",
-  INR: "peggedINR",
-};
+export const PRIMARY_FX_CURRENCIES = PRIMARY_PEG_TYPE_TO_CURRENCY_PAIRS.map(([, currency]) => currency);
+
+export const PRIMARY_CURRENCY_TO_PEG: Record<string, string> = Object.fromEntries(
+  PRIMARY_PEG_TYPE_TO_CURRENCY_PAIRS.map(([pegType, currency]) => [currency, pegType]),
+);
 
 // Keys are lowercase ISO codes as returned by the fawazahmed0 currency API.
 // Peg values must match REALTIME_FX_CURRENCY_TO_PEG below for the same currencies
 // (asserted by fx-config.test.ts); only the key casing differs by source format.
-export const SECONDARY_FX_CURRENCY_TO_PEG: Record<string, string> = {
-  cnh: "peggedCNH",
-  rub: "peggedRUB",
-  uah: "peggedUAH",
-  ars: "peggedARS",
-  kgs: "peggedKGS",
-  ngn: "peggedNGN",
-  xof: "peggedXOF",
-  vnd: "peggedVND",
-  kes: "peggedKES",
-  ghs: "peggedGHS",
-  cop: "peggedCOP",
-  clp: "peggedCLP",
-  pen: "peggedPEN",
-};
+export const SECONDARY_PEG_TYPE_TO_CURRENCY_PAIRS = [
+  ["peggedCNH", "CNH"],
+  ["peggedRUB", "RUB"],
+  ["peggedUAH", "UAH"],
+  ["peggedARS", "ARS"],
+  ["peggedKGS", "KGS"],
+  ["peggedNGN", "NGN"],
+  ["peggedXOF", "XOF"],
+  ["peggedVND", "VND"],
+  ["peggedKES", "KES"],
+  ["peggedGHS", "GHS"],
+  ["peggedCOP", "COP"],
+  ["peggedCLP", "CLP"],
+  ["peggedPEN", "PEN"],
+] as const;
+
+export const SECONDARY_FX_CURRENCY_TO_PEG: Record<string, string> = Object.fromEntries(
+  SECONDARY_PEG_TYPE_TO_CURRENCY_PAIRS.map(([pegType, currency]) => [currency.toLowerCase(), pegType]),
+);
 
 // Keys are uppercase ISO codes (the realtime source's response format). The
 // secondary block mirrors SECONDARY_FX_CURRENCY_TO_PEG above with uppercased keys;
 // the two must agree on peg values after casing (asserted by fx-config.test.ts).
 export const REALTIME_FX_CURRENCY_TO_PEG: Record<string, string> = {
   ...PRIMARY_CURRENCY_TO_PEG,
-  CNH: "peggedCNH",
-  RUB: "peggedRUB",
-  UAH: "peggedUAH",
-  ARS: "peggedARS",
-  KGS: "peggedKGS",
-  NGN: "peggedNGN",
-  XOF: "peggedXOF",
-  VND: "peggedVND",
-  KES: "peggedKES",
-  GHS: "peggedGHS",
-  COP: "peggedCOP",
-  CLP: "peggedCLP",
-  PEN: "peggedPEN",
+  ...Object.fromEntries(
+    SECONDARY_PEG_TYPE_TO_CURRENCY_PAIRS.map(([pegType, currency]) => [currency, pegType]),
+  ),
 };
 
 export const EXPECTED_FX_PEG_KEYS = [

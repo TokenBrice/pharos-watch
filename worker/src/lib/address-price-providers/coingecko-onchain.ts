@@ -110,6 +110,16 @@ export async function runCoingeckoOnchainAddressProvider(
           continue;
         }
         const liquidityUsd = parseNonNegativeNumber(attrs.total_reserve_in_usd);
+        const reviewedOverride = isReviewedAddressPriceTargetOverride({
+          provider: "coingecko-onchain-address",
+          stablecoinId: target.stablecoinId,
+          chain: target.chain,
+          address: target.address,
+        });
+        if (liquidityUsd == null && !reviewedOverride) {
+          incrementReason(rejectedTargets, "missing-liquidity");
+          continue;
+        }
         if (liquidityUsd != null && liquidityUsd < ADDRESS_PROVIDER_MIN_LIQUIDITY_USD) {
           incrementReason(rejectedTargets, "price-rejected");
           continue;

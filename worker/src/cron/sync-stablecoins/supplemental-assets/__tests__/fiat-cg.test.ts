@@ -72,7 +72,34 @@ describe("fetchFiatCoinGeckoTokens", () => {
     resolveVaultNavSupplyPriceMock.mockReset().mockResolvedValue(null);
   });
 
-  it("prefers curated aggregate on-chain supply over stale CoinGecko market cap for ftUSD", async () => {
+  it("prefers fresh CoinGecko market cap over curated aggregate on-chain supply", async () => {
+    const nowSec = Math.floor(Date.now() / 1000);
+    fetchWithRetryMock.mockResolvedValueOnce(
+      new Response(JSON.stringify({ coins: {} }), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      }),
+    );
+
+    const result = await fetchFiatCoinGeckoTokens({
+      "flying-tulip-usd": {
+        usd: 1,
+        usd_market_cap: 868_459.9588768134,
+        last_updated_at: nowSec,
+      },
+    });
+
+    expect(result).toHaveLength(1);
+    expect(result[0]).toMatchObject({
+      id: "ftusd-flying-tulip",
+      supplySource: "coingecko-fallback",
+      circulating: { peggedUSD: 868_459.9588768134 },
+      chainCirculating: {},
+    });
+    expect(probeTrackedTokenSupplyMock).not.toHaveBeenCalled();
+  });
+
+  it("uses curated aggregate on-chain supply when CoinGecko market cap is stale", async () => {
     const nowSec = Math.floor(Date.now() / 1000);
     fetchWithRetryMock.mockResolvedValueOnce(
       new Response(JSON.stringify({ coins: {} }), {
@@ -90,7 +117,7 @@ describe("fetchFiatCoinGeckoTokens", () => {
       "flying-tulip-usd": {
         usd: 1,
         usd_market_cap: 868_459.9588768134,
-        last_updated_at: nowSec,
+        last_updated_at: nowSec - 7 * 24 * 60 * 60,
       },
     });
 

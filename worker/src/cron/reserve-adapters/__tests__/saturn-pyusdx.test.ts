@@ -26,6 +26,7 @@ function installReads(overrides: {
   supply?: bigint;
   balance?: bigint;
   paused?: bigint;
+  pausedResult?: string | null;
   decimals?: bigint;
   alternativeAssets?: string | null;
 } = {}): AdapterNetworkSpec {
@@ -41,7 +42,9 @@ function installReads(overrides: {
       [`${wrapper}:decimals()`]: word(decimals),
       [`${pyusdx}:balanceOf(address)`]: word(overrides.balance ?? BALANCE),
       [`${pyusdx}:decimals()`]: word(decimals),
-      [`${wrapper}:paused()`]: word(overrides.paused ?? 0n),
+      [`${wrapper}:paused()`]: overrides.pausedResult === undefined
+        ? word(overrides.paused ?? 0n)
+        : overrides.pausedResult,
       [`${wrapper}:totalAssets()`]: overrides.alternativeAssets === undefined ? word(0n) : overrides.alternativeAssets,
     },
   };
@@ -147,5 +150,21 @@ describe("saturn-pyusdx adapter", () => {
         expect.objectContaining({ code: "route-paused", effect: "degraded" }),
       ]),
     );
+  });
+
+  it("degrades the route to unknown when paused() is unreadable", async () => {
+    const output = await fetchFixture({ pausedResult: null }, { validate: false });
+
+    expect(output.metadata?.redemption).toMatchObject({
+      routeStatus: "unknown",
+      routeStatusSource: "onchain",
+      routeStatusReason: "Could not verify Saturn USDat MultiMint paused() route status",
+    });
+    expect(output.warnings).toEqual(expect.arrayContaining([
+      expect.objectContaining({
+        code: "saturn-pyusdx-route-unverified",
+        effect: "degraded",
+      }),
+    ]));
   });
 });

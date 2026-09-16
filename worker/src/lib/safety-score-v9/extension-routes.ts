@@ -27,6 +27,10 @@ type RetainedRoute = ExtensionAsset["retainedRoutes"][number];
 type RouteReview = ExtensionAsset["routeReviews"][number];
 type RouteOutputReview = NonNullable<RouteReview["output"]>;
 type RouteValuation = NonNullable<RouteOutputReview["valuation"]>;
+type TrackedStablecoinValuation = Pick<
+  RouteValuation,
+  "basis" | "unitValueUsd" | "expectedUnitValueUsd" | "confidence" | "observedAtSec" | "sourceId"
+>;
 type RedemptionSettlementModel = RedemptionBackstopConfig["settlementModel"];
 type ComposedDexExit = NonNullable<RedemptionBackstopConfig["v9ComposedDexExit"]>;
 
@@ -83,10 +87,7 @@ function trackedStablecoinValuation(
   fixedInput: Readonly<SafetyScoreV9CompilerInput>,
   trackedAssetId: string,
   observedAtSec: number,
-): Pick<
-  RouteValuation,
-  "basis" | "unitValueUsd" | "expectedUnitValueUsd" | "confidence" | "observedAtSec" | "sourceId"
-> | null {
+): TrackedStablecoinValuation | null {
   const peg = fixedInput.pegDataById[trackedAssetId];
   if (peg?.currentDeviationBps !== null && peg?.currentDeviationBps !== undefined) {
     const unitValueUsd = 1 + peg.currentDeviationBps / 10_000;
@@ -132,12 +133,32 @@ function trackedStablecoinValuation(
   };
 }
 
+function expectedTrackedStablecoinUnitValueUsd(
+  fixedInput: Readonly<SafetyScoreV9CompilerInput>,
+  trackedAssetId: string,
+): number | null {
+  const navPrice = fixedInput.navPriceById?.[trackedAssetId];
+  const peg = fixedInput.pegDataById[trackedAssetId];
+  const legacyUsdPeg =
+    peg?.pegCurrency === undefined &&
+    peg?.currentDeviationBps !== null &&
+    peg?.currentDeviationBps !== undefined;
+  const expectedUnitValueUsd =
+    navPrice?.priceUsd ??
+    (peg?.pegCurrency === "USD" || legacyUsdPeg ? 1 : peg?.pegReference?.valueUsd ?? null);
+  return expectedUnitValueUsd !== null &&
+    Number.isFinite(expectedUnitValueUsd) &&
+    expectedUnitValueUsd > 0
+    ? expectedUnitValueUsd
+    : null;
+}
+
 function pinnedDexTrackedStablecoinValuation(
   fixedInput: Readonly<SafetyScoreV9CompilerInput>,
   observation: ExitRouteObservation,
   trackedAssetId: string,
   observedAtSec: number,
-): ReturnType<typeof trackedStablecoinValuation> {
+): TrackedStablecoinValuation | null {
   if (
     observation.outputUnitValueUsd === undefined ||
     observation.outputUnitValueSourceId === undefined ||
@@ -153,14 +174,9 @@ function pinnedDexTrackedStablecoinValuation(
   // own expected USD value; treating every tracked stablecoin as a $1 asset
   // would misvalue non-USD pegs. NAV products retain their observed NAV basis.
   const navPrice = fixedInput.navPriceById?.[trackedAssetId];
-  const peg = fixedInput.pegDataById[trackedAssetId];
-  const expectedUnitValueUsd =
-    navPrice?.priceUsd ??
-    (peg?.pegCurrency === "USD" ? 1 : peg?.pegReference?.valueUsd ?? null);
+  const expectedUnitValueUsd = expectedTrackedStablecoinUnitValueUsd(fixedInput, trackedAssetId);
   if (
     expectedUnitValueUsd === null ||
-    !Number.isFinite(expectedUnitValueUsd) ||
-    expectedUnitValueUsd <= 0 ||
     observation.outputUnitValueUsd / expectedUnitValueUsd > 2
   ) {
     return null;
@@ -176,6 +192,25 @@ function pinnedDexTrackedStablecoinValuation(
   };
 }
 
+function pinnedRedemptionTrackedStablecoinValuation(
+  fixedInput: Readonly<SafetyScoreV9CompilerInput>,
+  observation: ExitRouteObservation,
+  trackedAssetId: string,
+  observedAtSec: number,
+): TrackedStablecoinValuation | null {
+  if (observation.outputUnitValueUsd === undefined) return null;
+  const expectedUnitValueUsd = expectedTrackedStablecoinUnitValueUsd(fixedInput, trackedAssetId);
+  if (expectedUnitValueUsd === null) return null;
+  return {
+    basis: fixedInput.navPriceById?.[trackedAssetId] ? "nav" : "price",
+    unitValueUsd: observation.outputUnitValueUsd,
+    expectedUnitValueUsd,
+    confidence: "high",
+    observedAtSec,
+    sourceId: "redemption-route-pinned-output-value",
+  };
+}
+
 /**
  * Values one enumerated output identity. Untracked identities resolve only
  * through a reviewed fixed-rate receipt conversion; everything else stays
@@ -185,7 +220,7 @@ function outputIdentityValuation(
   fixedInput: Readonly<SafetyScoreV9CompilerInput>,
   assetKey: string,
   observedAtSec: number,
-): ReturnType<typeof trackedStablecoinValuation> {
+): TrackedStablecoinValuation | null {
   const tracked = trackedStablecoinValuation(fixedInput, assetKey, observedAtSec);
   if (tracked) return tracked;
   const underlyingAssetId = REVIEWED_FIXED_RATE_RECEIPT_UNDERLYING[assetKey];
@@ -283,14 +318,12 @@ function buildOutputReview(
             ? pinnedDexTrackedStablecoinValuation(fixedInput, observation, assetKeys[0]!, observedAtSec)
             : null)
         : observation.outputUnitValueUsd !== undefined
-          ? {
-              basis: "price" as const,
-              unitValueUsd: observation.outputUnitValueUsd,
-              expectedUnitValueUsd: 1,
-              confidence: "high" as const,
+          ? pinnedRedemptionTrackedStablecoinValuation(
+              fixedInput,
+              observation,
+              assetKeys[0]!,
               observedAtSec,
-              sourceId: "redemption-route-pinned-output-value",
-            }
+            )
           : capturedValuation;
     if (tracked) {
       valuation = {
@@ -735,32 +768,31 @@ export function buildSafetyScoreV9RouteReviews(
 ): RouteReview[] {
   const reviews: RouteReview[] = [];
   const seenResources = new Set<string>();
+  const addReview = (review: RouteReview): void => {
+    // A physical resource may only back one score-bearing route; further
+    // observations of the same resource stay diagnostic across both lanes.
+    const reused = review.physicalResourceKeys.some((key) => seenResources.has(key));
+    for (const key of review.physicalResourceKeys) seenResources.add(key);
+    reviews.push(reused ? { ...review, coverageClass: "diagnostic" } : review);
+  };
   const dexObservations = [...(fixedInput.dexLiqMap[assetId]?.exitRouteObservations ?? [])].sort((left, right) =>
     compareText(left.routeId, right.routeId),
   );
   for (const observation of dexObservations) {
-    const review = buildDexRouteReview(fixedInput, assetId, observation);
-    // A physical pool may only back one score-bearing route; further
-    // observations of the same pool stay diagnostic.
-    const reused = review.physicalResourceKeys.some((key) => seenResources.has(key));
-    for (const key of review.physicalResourceKeys) seenResources.add(key);
-    reviews.push(reused ? { ...review, coverageClass: "diagnostic" } : review);
+    addReview(buildDexRouteReview(fixedInput, assetId, observation));
   }
   const composedExit = getRedemptionBackstopConfig(assetId)?.v9ComposedDexExit;
   if (composedExit) {
     for (const retained of buildSafetyScoreV9ComposedDexRoutes(fixedInput, assetId)) {
-      const review = buildDexRouteReview(fixedInput, assetId, retained.observation, composedExit);
-      const reused = review.physicalResourceKeys.some((key) => seenResources.has(key));
-      for (const key of review.physicalResourceKeys) seenResources.add(key);
-      reviews.push(reused ? { ...review, coverageClass: "diagnostic" } : review);
+      addReview(buildDexRouteReview(fixedInput, assetId, retained.observation, composedExit));
     }
   }
   const redemption = fixedInput.redemptionBackstopMap[assetId];
   for (const observation of redemption?.capacityProfile?.exitRouteObservations ?? []) {
-    reviews.push(buildRedemptionRouteReview(fixedInput, redemption!, observation));
+    addReview(buildRedemptionRouteReview(fixedInput, redemption!, observation));
   }
   for (const retained of buildSafetyScoreV9RetainedRedemptionRoutes(fixedInput, assetId)) {
-    reviews.push(buildRedemptionRouteReview(fixedInput, redemption!, retained.observation));
+    addReview(buildRedemptionRouteReview(fixedInput, redemption!, retained.observation));
   }
   return reviews.sort((left, right) => compareText(`${left.lane}:${left.routeId}`, `${right.lane}:${right.routeId}`));
 }

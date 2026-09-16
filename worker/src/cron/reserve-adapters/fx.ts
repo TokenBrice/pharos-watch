@@ -185,7 +185,7 @@ async function fetchFxApiReserves(
       "https://fxprotocol.gitbook.io/fx-docs",
     ],
     {
-      wstETH: { address: TOKEN_META.wstETH.address, decimals: TOKEN_META.wstETH.apiDecimals },
+      wstETH: { address: TOKEN_META.wstETH.rawUnitAddress, decimals: TOKEN_META.wstETH.apiDecimals },
       wbtc: { address: TOKEN_META.wbtc.address, decimals: TOKEN_META.wbtc.apiDecimals },
     },
   );

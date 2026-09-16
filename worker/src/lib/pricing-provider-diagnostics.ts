@@ -36,6 +36,7 @@ export type PricingProviderRejectionReason =
   | "malformed-json"
   | "missing-quote"
   | "missing-provider"
+  | "missing-liquidity"
   | "no-candidates"
   | "non-ok"
   | "price-rejected"

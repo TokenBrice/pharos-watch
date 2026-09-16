@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { PeggedAsset } from "../enrich-prices";
 import type * as StablecoinRegistry from "@shared/lib/stablecoins/registry";
+import { getCirculatingRaw } from "@shared/lib/supply";
 
 const fetchTextWithRetryMock = vi.hoisted(() => vi.fn());
 
@@ -29,7 +30,15 @@ import { fetchCuratedAggregateOnChainMcap } from "../supplemental-assets/onchain
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
-function makeAsset(): PeggedAsset {
+interface ChainCirculatingRowFixture extends Record<string, unknown> {
+  current: number;
+}
+
+type SupplyGapAssetFixture = PeggedAsset & {
+  chainCirculating: Record<string, ChainCirculatingRowFixture>;
+};
+
+function makeAsset(): SupplyGapAssetFixture {
   return {
     id: "eurcv-societe-generale-forge",
     name: "EUR CoinVertible",
@@ -48,11 +57,15 @@ function makeAsset(): PeggedAsset {
   };
 }
 
-function mockCoinGeckoHistory(points: [number, number][], marketCap = 130): void {
+function mockCoinGeckoHistory(
+  points: [number, number][],
+  marketCap = 130,
+  lastUpdatedAt = Math.floor(Date.now() / 1000),
+): void {
   fetchTextWithRetryMock.mockImplementation((url: string) => ({
     response: { ok: true },
     body: JSON.stringify(url.includes("/simple/price")
-      ? { "societe-generale-forge-eurcv": { usd_market_cap: marketCap } }
+      ? { "societe-generale-forge-eurcv": { usd_market_cap: marketCap, last_updated_at: lastUpdatedAt } }
       : { market_caps: points }),
   }));
 }
@@ -80,7 +93,7 @@ describe("supply-gap reconciliation ordering", () => {
 });
 
 describe("CoinGecko missing-chain remainder reconciliation", () => {
-  it("preserves DefiLlama totals and attributes bucket remainders to one missing chain", async () => {
+  it("raises aggregate buckets while attributing remainders to one missing chain", async () => {
     const nowMs = Date.now();
     const asset = makeAsset();
     mockCoinGeckoHistory([
@@ -93,10 +106,10 @@ describe("CoinGecko missing-chain remainder reconciliation", () => {
     const result = await reconcileTrackedSupplyGaps([asset]);
 
     expect(result.totalReconciled).toBe(1);
-    expect(asset.supplySource).toBe("defillama");
-    expect(asset.circulating).toEqual({ peggedEUR: 100 });
+    expect(asset.supplySource).toBe("coingecko-gap-fill");
+    expect(asset.circulating).toEqual({ peggedEUR: 130 });
     expect(asset.circulatingPrevDay).toEqual({ peggedEUR: 90 });
-    expect(asset.circulatingPrevWeek).toEqual({ peggedEUR: 80 });
+    expect(asset.circulatingPrevWeek).toEqual({ peggedEUR: 110 });
     expect(asset.circulatingPrevMonth).toEqual({ peggedEUR: 70 });
     expect(asset.chainCirculating?.["XRP Ledger"]).toEqual({
       chainId: "xrpl",
@@ -105,11 +118,14 @@ describe("CoinGecko missing-chain remainder reconciliation", () => {
       circulatingPrevWeek: 30,
       circulatingPrevMonth: 0,
     });
+    const chainCurrent = Object.values(asset.chainCirculating ?? {})
+      .reduce((sum, row) => sum + row.current, 0);
+    expect(chainCurrent).toBe(getCirculatingRaw(asset));
     expect(result.assets).toEqual([{
       id: asset.id,
       reason: "coingecko-gap-fill",
       fromSource: "defillama",
-      toValue: 30,
+      toValue: 130,
     }]);
   });
 
@@ -278,19 +294,52 @@ describe("CoinGecko missing-chain remainder reconciliation", () => {
     });
   });
 
-  it("fails closed when the current CoinGecko history point is stale", async () => {
-    const staleNowMs = Date.now() - (3 * DAY_MS);
-    const asset = makeAsset();
+  it("does not par-value a NAV token when chart history is unavailable", async () => {
+    const asset: PeggedAsset = {
+      id: "fpi-frax",
+      name: "Frax Price Index",
+      symbol: "FPI",
+      pegType: "peggedVAR",
+      supplySource: "defillama",
+      circulating: { peggedVAR: 0 },
+      circulatingPrevDay: { peggedVAR: 0 },
+      circulatingPrevWeek: { peggedVAR: 0 },
+      circulatingPrevMonth: { peggedVAR: 0 },
+      chainCirculating: {},
+      chains: ["Ethereum"],
+    };
     const before = structuredClone(asset);
-    mockCoinGeckoHistory([
-      [Date.now() - (30 * DAY_MS), 65],
-      [Date.now() - (7 * DAY_MS), 110],
-      [staleNowMs, 130],
-    ]);
+    fetchTextWithRetryMock.mockResolvedValue({
+      response: { ok: true },
+      body: JSON.stringify([]),
+    });
 
     const result = await reconcileTrackedSupplyGaps([asset]);
 
     expect(result.totalReconciled).toBe(0);
+    expect(fetchCuratedAggregateOnChainMcap).not.toHaveBeenCalled();
+    expect(asset).toEqual(before);
+  });
+
+  it("does not select a stale CoinGecko gate observation as a candidate", async () => {
+    const nowMs = Date.now();
+    const asset = makeAsset();
+    const before = structuredClone(asset);
+    mockCoinGeckoHistory(
+      [
+        [nowMs - (30 * DAY_MS), 65],
+        [nowMs - (7 * DAY_MS), 110],
+        [nowMs - DAY_MS, 85],
+        [nowMs, 130],
+      ],
+      130,
+      Math.floor((nowMs - (3 * DAY_MS)) / 1000),
+    );
+
+    const result = await reconcileTrackedSupplyGaps([asset]);
+
+    expect(result.totalReconciled).toBe(0);
+    expect(fetchTextWithRetryMock).toHaveBeenCalledTimes(1);
     expect(asset).toEqual(before);
   });
 });

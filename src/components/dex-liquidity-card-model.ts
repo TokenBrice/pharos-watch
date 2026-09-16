@@ -7,10 +7,67 @@ type PoolBalanceDetails = NonNullable<NonNullable<DexLiquidityPool["extra"]>["ba
 // Pure helpers
 // ---------------------------------------------------------------------------
 
+const HHI_BANDS = [
+  {
+    min: 0.35,
+    key: "crowded",
+    concentrationLabel: "High",
+    color: "text-red-700 dark:text-red-400",
+    throatLabel: "Crowded exits",
+    interpretation: "Exit depth is crowded into a small set of venues.",
+  },
+  {
+    min: 0.18,
+    key: "visible",
+    concentrationLabel: "Medium",
+    color: "text-amber-700 dark:text-amber-400",
+    throatLabel: "Visible route concentration",
+    interpretation: "Exit depth is usable, but route concentration is visible.",
+  },
+  {
+    min: Number.NEGATIVE_INFINITY,
+    key: "broad",
+    concentrationLabel: "Low",
+    color: "text-emerald-700 dark:text-emerald-400",
+    throatLabel: "Broad route diversity",
+    interpretation: "Exit depth is broadly distributed across venues.",
+  },
+] as const;
+
+export type HhiBand = (typeof HHI_BANDS)[number];
+
+export function getHhiBand(hhi: number): HhiBand {
+  return HHI_BANDS.find((band) => hhi >= band.min)!;
+}
+
 export function getConcentrationLabel(hhi: number): { label: string; color: string } {
-  if (hhi >= 0.5) return { label: "High", color: "text-red-700 dark:text-red-400" };
-  if (hhi >= 0.25) return { label: "Medium", color: "text-amber-700 dark:text-amber-400" };
-  return { label: "Low", color: "text-emerald-700 dark:text-emerald-400" };
+  const band = getHhiBand(hhi);
+  return { label: band.concentrationLabel, color: band.color };
+}
+
+export function getOrganicFractionTier(
+  fraction: number,
+  maturityDays = 0,
+): { label: "Organic" | "Mixed" | "Established" | "Incentivized"; badgeClass: string; summaryColor: string } {
+  if (fraction >= 0.7) {
+    return {
+      label: "Organic",
+      badgeClass: "text-emerald-600 bg-emerald-500/10",
+      summaryColor: "text-emerald-700 dark:text-emerald-400",
+    };
+  }
+  if (fraction >= 0.3 || maturityDays >= 365) {
+    return {
+      label: maturityDays >= 365 && fraction < 0.3 ? "Established" : "Mixed",
+      badgeClass: "text-amber-600 bg-amber-500/10",
+      summaryColor: "text-amber-700 dark:text-amber-400",
+    };
+  }
+  return {
+    label: "Incentivized",
+    badgeClass: "text-red-600 bg-red-500/10",
+    summaryColor: "text-red-700 dark:text-red-400",
+  };
 }
 
 export function formatFeeTierLabel(feeTier: number): string {

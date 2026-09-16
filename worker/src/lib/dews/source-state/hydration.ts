@@ -340,6 +340,7 @@ export async function hydrateDexLiquidityHistory(ctx: HydrationContext): Promise
 
 export interface BlacklistHydration {
   blacklistCounts: BlacklistCountByStablecoinId;
+  blacklistSourceOk: boolean;
   rowsRead: number;
 }
 
@@ -378,6 +379,7 @@ function resolveBlacklistEventStablecoinId(row: BlacklistEventHydrationRow): str
 export async function hydrateBlacklistEvents(ctx: HydrationContext): Promise<BlacklistHydration> {
   const blacklistCounts: BlacklistCountByStablecoinId = new Map();
   let blacklistRowsRead = 0;
+  let blacklistSourceOk = false;
   try {
     const rows = await ctx.db
       .prepare(
@@ -389,6 +391,7 @@ export async function hydrateBlacklistEvents(ctx: HydrationContext): Promise<Bla
       .bind(ctx.nowSec - 7 * DAY_SECONDS)
       .all<BlacklistEventHydrationRow>();
     blacklistRowsRead = rows.results?.length ?? 0;
+    blacklistSourceOk = true;
 
     const cutoff24h = ctx.nowSec - DAY_SECONDS;
     for (const row of rows.results ?? []) {
@@ -402,7 +405,7 @@ export async function hydrateBlacklistEvents(ctx: HydrationContext): Promise<Bla
   } catch (error) {
     ctx.registerSourceFailure("blacklist-events", error);
   }
-  return { blacklistCounts, rowsRead: blacklistRowsRead };
+  return { blacklistCounts, blacklistSourceOk, rowsRead: blacklistRowsRead };
 }
 
 export interface PreviousStressSignalsHydration {

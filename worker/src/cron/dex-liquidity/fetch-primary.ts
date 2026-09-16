@@ -439,13 +439,16 @@ export async function buildCurveLookups(
         const coinBalances = pool.coins.map((coin) => {
           const raw = parseFloat(coin.poolBalance);
           const decimals = parseInt(coin.decimals, 10);
-          const usdBalance = isNaN(raw) || isNaN(decimals) ? 0 : (raw / 10 ** decimals) * (coin.usdPrice || 1);
+          const usdBalance =
+            isNaN(raw) || isNaN(decimals) || !(coin.usdPrice > 0)
+              ? 0
+              : (raw / 10 ** decimals) * coin.usdPrice;
           return { coin, usdBalance };
         });
 
         // Compute balance ratio (min/max) — 1.0 = perfectly balanced
         const totalUsd = coinBalances.reduce((sum, { usdBalance }) => sum + usdBalance, 0);
-        const balances = coinBalances.map(({ usdBalance }) => usdBalance).filter((balance) => balance > 0);
+        const balances = coinBalances.map(({ usdBalance }) => usdBalance);
 
         let balanceRatio = 1;
         if (balances.length >= 2) {

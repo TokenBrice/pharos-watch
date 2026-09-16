@@ -6,6 +6,9 @@ import type { BlacklistStablecoin } from "@shared/types/market";
 import type { D1Database } from "@cloudflare/workers-types";
 import { recordRuntimeFallbackUsage } from "./runtime-fallback-telemetry";
 
+export const BLACKLIST_CURRENT_BALANCE_WRITER_PAUSE_KEY =
+  "blacklist-current-balances-rebuild:writer-pause";
+
 export interface BlacklistCurrentBalanceRow {
   id: string;
   stablecoin: BlacklistStablecoin;
@@ -83,7 +86,8 @@ async function markExistingCurrentBalanceProviderFailed(
            last_attempted_at = ?,
            last_error_class = ?,
            consecutive_failures = COALESCE(consecutive_failures, 0) + 1
-       WHERE id = ?`,
+       WHERE id = ?
+         AND NOT EXISTS (SELECT 1 FROM cache WHERE key = ?)`,
     )
     .bind(
       options.attachIdentity ? 1 : 0,
@@ -95,6 +99,7 @@ async function markExistingCurrentBalanceProviderFailed(
       row.lastAttemptedAt,
       row.lastErrorClass,
       id,
+      BLACKLIST_CURRENT_BALANCE_WRITER_PAUSE_KEY,
     )
     .run();
   return (result.meta.changes ?? 0) > 0;
@@ -212,7 +217,8 @@ export async function upsertBlacklistCurrentBalance(
           amount_native, amount_usd, source, status, observed_at,
           last_successful_observed_at, attempt_count, last_attempted_at,
           last_error_class, consecutive_failures)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+       SELECT ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
+       WHERE NOT EXISTS (SELECT 1 FROM cache WHERE key = ?)
        ON CONFLICT(id) DO UPDATE SET
          config_key = COALESCE(excluded.config_key, blacklist_current_balances.config_key),
          contract_address = COALESCE(excluded.contract_address, blacklist_current_balances.contract_address),
@@ -275,6 +281,7 @@ export async function upsertBlacklistCurrentBalance(
       row.lastAttemptedAt,
       row.lastErrorClass,
       row.status === "provider_failed" ? row.consecutiveFailures || 1 : 0,
+      BLACKLIST_CURRENT_BALANCE_WRITER_PAUSE_KEY,
     )
     .run();
 }

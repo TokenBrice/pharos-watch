@@ -93,7 +93,7 @@ function projectLiveSummary(
     pegType: `pegged${coin.flags.pegCurrency}`,
     pegMechanism: coin.pegMechanism ?? "unknown",
     price: summary.price,
-    priceSource: summary.priceSource ?? (coin.detailProvider === "coingecko" ? "coingecko" : "defillama"),
+    priceSource: summary.priceSource,
     priceConfidence: summary.priceConfidence,
     priceUpdatedAt: summary.priceUpdatedAt,
     priceObservedAt: summary.priceObservedAt,

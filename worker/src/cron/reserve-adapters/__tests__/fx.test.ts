@@ -5,7 +5,7 @@ import { runAdapter, type AdapterNetworkSpec } from "./reserve-adapter.test-supp
 
 const FX_API_ENDPOINT = "https://fx.example/tvl";
 const API_PRICE_ENDPOINT =
-  "https://coins.llama.fi/prices/current/ethereum:0x2260fac5e5542a773aa44fbcfedf7c193bc2c599,ethereum:0x7f39c581f595b53c5cb19bd0b3f8da6c935e2ca0";
+  "https://coins.llama.fi/prices/current/ethereum:0x2260fac5e5542a773aa44fbcfedf7c193bc2c599,ethereum:0xae7ab96520de3a18e5e111b5eaab095312d7fe84";
 const ONCHAIN_PRICE_ENDPOINT =
   "https://coins.llama.fi/prices/current/ethereum:0x2260fac5e5542a773aa44fbcfedf7c193bc2c599,ethereum:0xae7ab96520de3a18e5e111b5eaab095312d7fe84";
 const WSTETH_POOL = "0x6Ecfa38FeE8a5277B91eFdA204c235814F0122E8";
@@ -35,7 +35,7 @@ function apiPayload(extra: Record<string, { collateralBalance: string }> = {}) {
 function apiPrices(nowSec: number, includeWbtc = true) {
   return {
     coins: {
-      "ethereum:0x7f39c581f595b53c5cb19bd0b3f8da6c935e2ca0": {
+      "ethereum:0xae7ab96520de3a18e5e111b5eaab095312d7fe84": {
         price: 4_000,
         timestamp: nowSec,
         confidence: 1,
@@ -135,7 +135,7 @@ describe("adaptFx", () => {
   });
 
   it("values API WBTC at eight decimals rather than the on-chain eighteen", async () => {
-    const { result } = await runAdapter("fx", fxCoin, {
+    const { result, network } = await runAdapter("fx", fxCoin, {
       config: apiConfig,
       network: {
         json: {
@@ -145,6 +145,7 @@ describe("adaptFx", () => {
       },
       nowSec: 1_800_000_000,
     });
+    expect(network.requests.map((request) => request.url)).toContain(API_PRICE_ENDPOINT);
     expect(result.slices).toEqual([
       { sourceKey: "fx:wbtc", name: "WBTC", pct: 92.6, risk: "medium" },
       { sourceKey: "fx:wsteth", name: "wstETH (Lido)", pct: 7.4, risk: "low" },

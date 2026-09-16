@@ -14,13 +14,18 @@ import {
   EXTRA_COLORS,
   chainColorClass,
   chainLogo,
+  protocolLogo,
   prettifyProtocol,
   normalizeChain,
-  protocolLogo,
 } from "@/lib/dex-display-constants";
 import { getDurabilityColor, getDurabilityBgColor } from "@/lib/severity-colors";
 import { BalanceBar } from "@/components/balance-bar";
-import { formatFeeTierLabel, getPoolVariantLabel, formatBalanceDetails } from "@/components/dex-liquidity-card-model";
+import {
+  formatFeeTierLabel,
+  getOrganicFractionTier,
+  getPoolVariantLabel,
+  formatBalanceDetails,
+} from "@/components/dex-liquidity-card-model";
 import { TableBody, TableCell, TableFrame, TableHead, TableHeader, TableRow } from "@/components/table";
 import type { DexLiquidityPool, DexLiquidityData } from "@shared/types";
 import { LIQUIDITY_SCORE_WEIGHTS } from "@shared/lib/liquidity-score-weights";
@@ -422,21 +427,12 @@ export function DurabilityBadge({ score }: { score: number | null }) {
 
 function OrganicBadge({ fraction, maturityDays }: { fraction: number | undefined; maturityDays?: number }) {
   if (fraction == null) return null;
-  // Mature pools (>1yr) with long-running reward programs aren't mercenary farming
-  const mature = (maturityDays ?? 0) >= 365;
-  let label: string;
-  let color: string;
-  if (fraction >= 0.7) {
-    label = "Organic";
-    color = "text-emerald-600 bg-emerald-500/10";
-  } else if (fraction >= 0.3 || mature) {
-    label = mature && fraction < 0.3 ? "Established" : "Mixed";
-    color = "text-amber-600 bg-amber-500/10";
-  } else {
-    label = "Incentivized";
-    color = "text-red-600 bg-red-500/10";
-  }
-  return <span className={`text-xs px-1.5 py-0.5 rounded-full font-medium ${color}`}>{label}</span>;
+  const tier = getOrganicFractionTier(fraction, maturityDays);
+  return (
+    <span className={`text-xs px-1.5 py-0.5 rounded-full font-medium ${tier.badgeClass}`}>
+      {tier.label}
+    </span>
+  );
 }
 
 function StressDot({ stress }: { stress: number | undefined }) {

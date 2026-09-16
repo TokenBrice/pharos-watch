@@ -2,6 +2,21 @@ import type { MethodologyChangelogEntry } from "@shared/lib/methodology-versions
 
 export const PRICING_PIPELINE_V6: readonly MethodologyChangelogEntry[] = [
   {
+    version: "6.23",
+    title: "Fail-closed DEX corroboration and liquidity evidence",
+    date: "2026-09-17",
+    effectiveAt: 1789596111,
+    summary:
+      "A lone promoted DEX protocol can no longer enter primary consensus without an agreeing hard source, and unreviewed exact-address quotes now require parseable liquidity.",
+    impact: [
+      "Zero validated non-DEX sources no longer act as implicit corroboration for a single promoted DEX protocol; the candidate is rejected with explicit lacked-corroboration telemetry",
+      "CoinGecko Onchain quotes for unreviewed targets are rejected when total reserve liquidity is missing, malformed, or below the existing $50K floor; the reviewed VUSD override remains scoped to its verified deployment",
+      "Kraken API error arrays are provider failures rather than healthy empty coverage, and direct CEX orderbook responses are endpoint-size bounded",
+    ],
+    commits: [],
+    reconstructed: false,
+  },
+  {
     version: "6.22",
     title: "Guarded Mento price recovery",
     date: "2026-09-15",

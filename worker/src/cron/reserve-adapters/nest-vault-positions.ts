@@ -7,6 +7,7 @@ import {
   fetchJsonWithRetry,
   parsePositiveNumericLike,
   slicesFromValues,
+  strictAmountParser,
   verifiedFreshnessMetadata,
 } from "./helpers";
 
@@ -75,6 +76,7 @@ interface NestPendingTransactionValue {
 
 // These vaults publish explicit pending deposits alongside settled positions.
 const PENDING_DEPOSIT_VAULTS = new Set(["nopal-nest", "nbasis-nest"]);
+const parsePositionValue = strictAmountParser("nest-vault-positions");
 
 function readParams(config: LiveReservesConfig): NestVaultPositionsParams {
   return parseLiveReserveAdapterParams("nest-vault-positions", config.params);
@@ -85,7 +87,12 @@ function asArray(value: unknown): unknown[] {
 }
 
 function readValue(token: NestPositionToken): number {
-  return parsePositiveNumericLike(token.position?.value) ?? 0;
+  const symbol = typeof token.symbol === "string" ? token.symbol : "Unknown";
+  const value = parsePositionValue(token.position?.value, `${symbol} position value`);
+  if (value < 0) {
+    throw new Error(`nest-vault-positions ${symbol} position value is negative`);
+  }
+  return value;
 }
 
 function readNonNegativeNumericLike(value: unknown, label: string): number {

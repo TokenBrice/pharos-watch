@@ -335,8 +335,12 @@ export function computeDivergSignal(input: DEWSInput): SignalResult {
 }
 
 export function computeBlacklistSignal(input: DEWSInput): SignalResult {
-  if (!input.hasBlacklistTracking) {
-    return { value: 0, available: false };
+  if (!input.hasBlacklistTracking || input.blacklistSourceOk === false) {
+    return {
+      value: 0,
+      available: false,
+      ...(!input.hasBlacklistTracking ? {} : { unavailableReason: "blacklist-source-failed" }),
+    };
   }
 
   const { blacklistEvents24h, blacklistEvents7d } = input;

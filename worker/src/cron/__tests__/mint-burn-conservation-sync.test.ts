@@ -31,7 +31,12 @@ beforeEach(() => {
     blockNumber: "0x66", logIndex: "0x0" }], complete: true, scannedToBlock: 102 } as never)
     .mockResolvedValueOnce({ logs: [], complete: true, scannedToBlock: 102 } as never);
   vi.mocked(resolveBlockTimestamps).mockResolvedValue(new Map([[102, 1100]]));
-  vi.mocked(parseMintBurnLogs).mockReturnValue({ rows: [{ ...row }], dropped: 0 });
+  vi.mocked(parseMintBurnLogs).mockReturnValue({
+    rows: [{ ...row }],
+    dropped: 0,
+    droppedDecode: 0,
+    earliestDecodeFailureBlock: null,
+  });
   vi.mocked(classifyBridgeBurnRows).mockResolvedValue({ effectiveBurns: 0, bridgeBurns: 0, reviewBurns: 0,
     txContextShortfalls: 0, deferredTxHashes: [] });
   vi.mocked(persistMintBurnRows).mockResolvedValue({ inserted: 1, ignored: 0, roundtripsDetected: 0 } as never);

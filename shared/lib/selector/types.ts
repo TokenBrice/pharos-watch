@@ -628,7 +628,8 @@ export interface MergedRow {
   sourceSwitch: boolean;
   yieldProtocolSlug: string | null;
   yieldVenueChain: string | null;
-  yieldHistoryDays: number;
+  /** Distinct UTC observation days represented in the trailing 30-day window. */
+  yieldObservationDays30d: number;
   yieldFreshness: { capturedAt: number; ageSeconds: number } | null;
   yieldSources?: readonly YieldSourceCandidate[];
 

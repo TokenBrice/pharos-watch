@@ -187,6 +187,8 @@ describe("completeMintBurnRun", () => {
       rowsInserted: 0,
       rowsIgnored: 0,
       rowsDropped: 0,
+      rowsDroppedDecode: 0,
+      earliestDecodeFailureBlock: null,
       errors: 0,
       failedEventDefs: [],
       eventCoverage: [],

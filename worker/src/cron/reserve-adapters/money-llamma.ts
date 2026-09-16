@@ -411,6 +411,7 @@ function adaptMoneyCensuses(
   censuses: readonly ChainCensus[],
   extraWarnings: readonly LiveReserveWarning[] = [],
   liabilityValuation: "market" | "par" = "market",
+  liabilityPrice = 1,
 ): AdapterResult {
   const warnings: LiveReserveWarning[] = [...extraWarnings];
 
@@ -478,7 +479,9 @@ function adaptMoneyCensuses(
       totalLiabilitiesTokens: totalDebtTokens,
       supplyTokens,
       marketCount,
-      ...(totalDebtTokens > 0 ? { collateralizationRatio: totalCollateralUsd / totalDebtTokens } : {}),
+      ...(totalDebtTokens > 0
+        ? { collateralizationRatio: totalCollateralUsd / (totalDebtTokens * liabilityPrice) }
+        : {}),
     },
   };
 }
@@ -540,7 +543,7 @@ export async function fetchMoneyReserves(
   const totalDebtTokens = censuses.reduce((sum, census) => sum + census.markets.reduce((acc, m) => acc + m.debtTokens, 0), 0);
   const totalCollateralUsd = censuses.reduce((sum, census) => sum + census.markets.reduce((acc, m) => acc + m.collateralUsd, 0), 0);
 
-  const result = adaptMoneyCensuses(censuses, warnings, liabilityValuation);
+  const result = adaptMoneyCensuses(censuses, warnings, liabilityValuation, liabilityPrice);
   const primaryBlock = chainBlocks.find((block) => block.chain === "arbitrum") ?? chainBlocks[0];
 
   const finalWarnings: LiveReserveWarning[] = [...(result.warnings ?? [])];

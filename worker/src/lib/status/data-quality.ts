@@ -153,9 +153,17 @@ export async function getDataQuality(
   const totalStablecoins = hasExactPublicationEvidence
     ? stablecoinPublication.expectedActiveCount
     : activeCanonicalAssets.length;
-  const missingPrices = activeCanonicalAssets.filter(
-    (asset: { price?: number | null }) => asset.price == null || asset.price === 0,
-  ).length + (stablecoinPublication.status === "incomplete" ? stablecoinPublication.missingActiveIds.length : 0);
+  const missingActiveIds = new Set(
+    activeCanonicalAssets
+      .filter((asset: { price?: number | null }) => asset.price == null || asset.price === 0)
+      .map((asset) => asset.id),
+  );
+  if (stablecoinPublication.status === "incomplete") {
+    for (const id of stablecoinPublication.missingActiveIds) {
+      missingActiveIds.add(id);
+    }
+  }
+  const missingPrices = missingActiveIds.size;
 
   let blacklistTotal = 0;
   let blacklistMissingAmounts = 0;

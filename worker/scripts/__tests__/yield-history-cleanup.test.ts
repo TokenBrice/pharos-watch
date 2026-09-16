@@ -11,6 +11,7 @@ import {
   deleteCleanupRowsFromSqlite,
   loadCleanupRowsFromSqlite,
   parseYieldHistoryCleanupCliOptions,
+  parseYieldHistoryCleanupArtifact,
   restoreCleanupRowsToSqlite,
   runYieldHistoryCleanupCli,
   summarizeYieldHistoryCleanupRows,
@@ -347,5 +348,45 @@ describe("yield-history-cleanup", () => {
     expect(readAllRows(path)).toEqual(entireTable);
     expect(artifact.rowCount).toBe(beforeRows.length);
     expect(artifact.operator).toBe("test-operator");
+  });
+
+  it("rejects a truncated restore artifact before changing sqlite", async () => {
+    const path = createTempDbPath();
+    tempPaths.push(path);
+    seedDb(path);
+    const before = readAllRows(path);
+    const artifact = createYieldHistoryCleanupArtifact(loadCleanupRowsFromSqlite(path), "ops");
+    const truncated = structuredClone(artifact) as unknown as {
+      rows: Array<Record<string, unknown>>;
+    };
+    delete truncated.rows[0]!.apy;
+    const restorePath = path.replace("test.sqlite", "truncated.json");
+    writeFileSync(restorePath, JSON.stringify(truncated));
+
+    await expect(runYieldHistoryCleanupCli([
+      "--sqlite",
+      path,
+      "--restore",
+      restorePath,
+      "--execute",
+    ], { printJson: vi.fn() })).rejects.toThrow(/apy/);
+    expect(readAllRows(path)).toEqual(before);
+  });
+
+  it("rejects drifted targets and non-finite restore numbers", () => {
+    const artifact = createYieldHistoryCleanupArtifact([], "ops");
+    expect(() => parseYieldHistoryCleanupArtifact({
+      ...artifact,
+      targets: [{ stablecoinId: "unexpected", sourceKeys: [] }],
+    })).toThrow(/targets do not match/);
+
+    const path = createTempDbPath();
+    tempPaths.push(path);
+    seedDb(path);
+    const withRows = createYieldHistoryCleanupArtifact(loadCleanupRowsFromSqlite(path), "ops");
+    expect(() => parseYieldHistoryCleanupArtifact({
+      ...withRows,
+      rows: [{ ...withRows.rows[0]!, apy: Number.POSITIVE_INFINITY }, ...withRows.rows.slice(1)],
+    })).toThrow(/Infinity/);
   });
 });

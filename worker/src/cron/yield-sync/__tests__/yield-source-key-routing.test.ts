@@ -32,6 +32,7 @@ describe("yield source-key routing table", () => {
     { sourceKey: "aave-v3-onchain:base:0x666", venueProtocol: "aave-v3", family: "aaveV3", chain: "base" },
     { sourceKey: "royco-dawn:ethereum:tranche-1", venueProtocol: "royco-dawn", family: "roycoDawn", chain: "ethereum" },
     // B29: standalone first-party readers — no chain segment, no supplemental family.
+    { sourceKey: "protocol-api:yearn:ybold", venueProtocol: "yearn", family: null, chain: null },
     { sourceKey: "protocol-api:bima-susbd", venueProtocol: "bima", family: null, chain: null },
     { sourceKey: "protocol-api:etherfuse-cetes-current-issuance", venueProtocol: "etherfuse", family: null, chain: null },
     { sourceKey: "protocol-api:hashnote-usyc", venueProtocol: "hashnote", family: null, chain: null },

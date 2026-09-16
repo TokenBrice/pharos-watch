@@ -96,7 +96,7 @@ const StablecoinDataRawSchema = z.object({
   pegType: z.string(),
   pegMechanism: z.string(),
   price: z.number().nullable(),
-  priceSource: z.string(),
+  priceSource: z.string().nullable(),
   priceConfidence: PriceConfidenceSchema.nullable().optional(),
   priceUpdatedAt: z.number().nullable().optional(),
   priceObservedAt: z.number().nullable().optional(),

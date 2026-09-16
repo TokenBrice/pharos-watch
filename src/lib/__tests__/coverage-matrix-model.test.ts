@@ -407,4 +407,44 @@ describe("buildCoverageMatrixModel", () => {
       count: 1,
     });
   });
+  it("excludes unavailable and NAV-only prices from source-depth denominators", () => {
+    const coin = CLIENT_TRACKED_META_BY_ID.get("usdc-circle");
+    expect(coin).toBeDefined();
+    const common = {
+      stablecoins: resource({
+        peggedAssets: [{ id: coin!.id, circulating: { peggedUSD: 1_000 } }],
+      } as never),
+      dexLiquidity: resource({} as never),
+      redemptionBackstops: resource({ coins: {} } as never),
+      yieldRankings: resource({ rankings: [] } as never),
+      mintBurnFlows: resource({ coins: [] } as never),
+      reportCards: resource(makeReportCardsV9Response({ cards: [] })),
+    };
+
+    const unavailable = buildCoverageMatrixModel({
+      ...common,
+      pegSummary: resource<never>(undefined, { error: new Error("price outage") }),
+      activeStablecoins: [coin!],
+    });
+    expect(unavailable.sourceDepthProgress).toMatchObject({
+      totalCount: 0,
+      atTargetCount: 0,
+      belowTargetCount: 0,
+      atTargetPct: null,
+      atTargetMcapPct: null,
+    });
+
+    const navOnly = buildCoverageMatrixModel({
+      ...common,
+      pegSummary: resource({ coins: [] } as never),
+      activeStablecoins: [{ ...coin!, flags: { ...coin!.flags, navToken: true } }],
+    });
+    expect(navOnly.sourceDepthProgress).toMatchObject({
+      totalCount: 0,
+      belowTargetCount: 0,
+      atTargetPct: null,
+      atTargetMcapPct: null,
+    });
+  });
+
 });

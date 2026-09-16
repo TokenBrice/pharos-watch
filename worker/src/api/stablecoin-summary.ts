@@ -6,9 +6,9 @@ import { CACHE_PROFILES } from "../lib/constants";
 import { loadStablecoinsCache } from "../lib/stablecoins-cache";
 import {
   getCirculatingRaw,
-  getPrevDayRaw,
+  getPrevDayRawOrNull,
   getPrevMonthRawOrNull,
-  getPrevWeekRaw,
+  getPrevWeekRawOrNull,
 } from "@shared/lib/supply";
 
 export const handleStablecoinSummary = async (
@@ -26,9 +26,9 @@ export const handleStablecoinSummary = async (
   }
 
   const currentSupplyUsd = getCirculatingRaw(coin);
-  const prevDaySupplyUsd = getPrevDayRaw(coin);
-  const prevWeekSupplyUsd = getPrevWeekRaw(coin);
-  const prevMonthSupplyUsd = getPrevMonthRawOrNull(coin) ?? 0;
+  const prevDaySupplyUsd = getPrevDayRawOrNull(coin);
+  const prevWeekSupplyUsd = getPrevWeekRawOrNull(coin);
+  const prevMonthSupplyUsd = getPrevMonthRawOrNull(coin);
 
   return jsonResponse({
     id: coin.id,
@@ -48,9 +48,9 @@ export const handleStablecoinSummary = async (
       prevDay: prevDaySupplyUsd,
       prevWeek: prevWeekSupplyUsd,
       prevMonth: prevMonthSupplyUsd,
-      change1d: currentSupplyUsd - prevDaySupplyUsd,
-      change7d: currentSupplyUsd - prevWeekSupplyUsd,
-      change30d: currentSupplyUsd - prevMonthSupplyUsd,
+      change1d: prevDaySupplyUsd == null ? null : currentSupplyUsd - prevDaySupplyUsd,
+      change7d: prevWeekSupplyUsd == null ? null : currentSupplyUsd - prevWeekSupplyUsd,
+      change30d: prevMonthSupplyUsd == null ? null : currentSupplyUsd - prevMonthSupplyUsd,
     },
     chainCount: coin.chains.length,
     updatedAt: stablecoinsCache.updatedAt,

@@ -24,24 +24,27 @@
 
 import { decodeJsonString } from "../../cache-json";
 import { unwrapStressSignalsEnvelope } from "@shared/lib/stress-signals-envelope";
-import type { YieldRankChangeAttribution, YieldSourceRisk } from "@shared/types/yield";
+import {
+  normalizeYieldRankChangeAttribution,
+  normalizeYieldSourceRisk,
+} from "@shared/types/yield";
 import type { PersistedJsonDecodeReason } from "../contracts";
 
 export function getObject(value: unknown): Record<string, unknown> | null {
   return value && typeof value === "object" && !Array.isArray(value) ? (value as Record<string, unknown>) : null;
 }
 
-export function getNumber(value: unknown): number | null {
-  return typeof value === "number" && Number.isFinite(value) ? value : null;
-}
-
 export function getString(value: unknown): string | null {
   return typeof value === "string" && value.length > 0 ? value : null;
+}
+export function getNumber(value: unknown): number | null {
+  return typeof value === "number" && Number.isFinite(value) ? value : null;
 }
 
 export function getBoolean(value: unknown): boolean | null {
   return typeof value === "boolean" ? value : null;
 }
+
 
 export type LegacyDecodeResult<T> =
   | { ok: true; payload: T }
@@ -56,7 +59,7 @@ export function decodeLegacyStressSignals(
   signalsJson: string | null,
   computedAt: number,
 ): LegacyDecodeResult<Record<string, { value: number }>> {
-  const decoded = decodeJsonString<Record<string, unknown>, PersistedJsonDecodeReason>(signalsJson, {
+  const decoded = decodeJsonString<Record<string, { value: number }>, PersistedJsonDecodeReason>(signalsJson, {
     updatedAt: computedAt,
     missingReason: "missing",
     parseErrorReason: "json-parse-failed",
@@ -65,98 +68,21 @@ export function decodeLegacyStressSignals(
       if (unwrapped == null) {
         return { ok: false, reason: "invalid-shape" as const };
       }
-      return { ok: true, payload: unwrapped.signals };
+      const signals: Record<string, { value: number }> = {};
+      for (const [key, signal] of Object.entries(unwrapped.signals)) {
+        const row = getObject(signal);
+        if (row != null && typeof row.value === "number" && Number.isFinite(row.value)) {
+          signals[key] = { ...row, value: row.value };
+        }
+      }
+      return { ok: true, payload: signals };
     },
   });
   if (!decoded.ok) return { ok: false, reason: decoded.reason };
-  return { ok: true, payload: decoded.payload as Record<string, { value: number }> };
+  return { ok: true, payload: decoded.payload };
 }
 
-export function normalizeYieldSourceRisk(value: unknown): YieldSourceRisk | null {
-  const row = getObject(value);
-  if (!row) return null;
-  const venueRiskTier = getString(row.venueRiskTier);
-  const deploymentPlace = getString(row.deploymentPlace);
-  const trancheSide = getString(row.trancheSide);
-  const marketStatus = getString(row.marketStatus);
-  return {
-    sourceRiskScore: getNumber(row.sourceRiskScore),
-    sourceRiskPenalty: getNumber(row.sourceRiskPenalty),
-    sourceDepthRatio: getNumber(row.sourceDepthRatio),
-    rewardShare: getNumber(row.rewardShare),
-    sourceAgeSeconds: getNumber(row.sourceAgeSeconds),
-    observationCount30d: getNumber(row.observationCount30d),
-    sourceSwitchCount30d: getNumber(row.sourceSwitchCount30d),
-    deploymentPlace:
-      deploymentPlace === "native-wrapper" ||
-      deploymentPlace === "issuer-savings" ||
-      deploymentPlace === "lending-market" ||
-      deploymentPlace === "strategy-vault" ||
-      deploymentPlace === "structured-tranche" ||
-      deploymentPlace === "lp-or-dex" ||
-      deploymentPlace === "rwa-fund" ||
-      deploymentPlace === "reward-program" ||
-      deploymentPlace === "rate-derived" ||
-      deploymentPlace === "price-derived"
-        ? deploymentPlace
-        : null,
-    venueProtocol: getString(row.venueProtocol),
-    venueChain: getString(row.venueChain),
-    venueRiskTier:
-      venueRiskTier === "low" || venueRiskTier === "medium" || venueRiskTier === "high" || venueRiskTier === "unknown"
-        ? venueRiskTier
-        : null,
-    investabilityFlags: Array.isArray(row.investabilityFlags)
-      ? row.investabilityFlags.filter((flag): flag is string => typeof flag === "string")
-      : [],
-    trancheSide: trancheSide === "senior" || trancheSide === "junior" ? trancheSide : null,
-    trancheSafetyScore: getNumber(row.trancheSafetyScore),
-    trancheSafetyPenalty: getNumber(row.trancheSafetyPenalty),
-    underlyingSafetyScore: getNumber(row.underlyingSafetyScore),
-    marketCoverageRatio: getNumber(row.marketCoverageRatio),
-    marketMinCoverageRatio: getNumber(row.marketMinCoverageRatio),
-    marketUtilizationRatio: getNumber(row.marketUtilizationRatio),
-    marketUtilizationLimitRatio: getNumber(row.marketUtilizationLimitRatio),
-    marketDrawdownRatio: getNumber(row.marketDrawdownRatio),
-    marketTotalDrawdowns: getNumber(row.marketTotalDrawdowns),
-    marketStatus:
-      marketStatus === "normal" ||
-      marketStatus === "protected" ||
-      marketStatus === "unhealthy" ||
-      marketStatus === "critical"
-        ? marketStatus
-        : null,
-    marketTvlUsd: getNumber(row.marketTvlUsd),
-    trancheTvlUsd: getNumber(row.trancheTvlUsd),
-    trancheShareTokenAddress: getString(row.trancheShareTokenAddress),
-    trancheDepositTokenAddress: getString(row.trancheDepositTokenAddress),
-    withdrawalDelaySeconds: getNumber(row.withdrawalDelaySeconds),
-    kycRequired: getBoolean(row.kycRequired),
-    accessRestricted: getBoolean(row.accessRestricted),
-  };
-}
-
-export function normalizeYieldRankChangeAttribution(value: unknown): YieldRankChangeAttribution | null {
-  const row = getObject(value);
-  if (!row) return null;
-  const primaryDriver = getString(row.primaryDriver);
-  return {
-    previousRank: getNumber(row.previousRank),
-    rankDelta: getNumber(row.rankDelta),
-    previousPys: getNumber(row.previousPys),
-    pysDelta: getNumber(row.pysDelta),
-    primaryDriver:
-      primaryDriver === "apy" ||
-      primaryDriver === "benchmark" ||
-      primaryDriver === "methodology" ||
-      primaryDriver === "stablecoin-safety" ||
-      primaryDriver === "source-risk" ||
-      primaryDriver === "source-switch" ||
-      primaryDriver === "freshness" ||
-      primaryDriver === "volatility" ||
-      primaryDriver === "tvl-depth"
-        ? primaryDriver
-        : null,
-    driverContributions: null,
-  };
-}
+export {
+  normalizeYieldRankChangeAttribution,
+  normalizeYieldSourceRisk,
+};

@@ -15,6 +15,7 @@ import {
   parseBoundedDecimals,
   parseTimestampLikeToUnixSeconds,
   requireJsonInput,
+  reserveDegradedWarning,
 } from "./helpers";
 
 const ADAPTER_KEY = "jupusd";
@@ -100,12 +101,12 @@ async function fetchJupUsdJson<T>(
   }
 }
 
-function parseAmount(amount: string | undefined, decimals: number | undefined): number {
-  if (typeof amount !== "string" || !/^\d+$/.test(amount)) return 0;
+function parseAmount(amount: string | undefined, decimals: number | undefined): number | null {
+  if (typeof amount !== "string" || !/^\d+$/.test(amount)) return null;
   const precision = decimals == null ? 0 : parseBoundedDecimals(decimals);
-  if (precision == null) return 0;
+  if (precision == null) return null;
   const parsed = decimalNumberFromBigInt(BigInt(amount), precision);
-  return Number.isFinite(parsed) && parsed > 0 ? parsed : 0;
+  return Number.isFinite(parsed) && parsed >= 0 ? parsed : null;
 }
 
 function resolveHoldingMeta(name: string): Pick<JupUsdHoldingValue, "risk" | "coinId" | "depType" | "unknown"> {
@@ -117,17 +118,26 @@ export function adaptJupUsdData(
   options: {
     sourceTimestamp?: number | null;
     oracle?: JupUsdOraclePayload | null;
+    oracleConfigured?: boolean;
     extraWarnings?: readonly LiveReserveWarning[];
   } = {},
 ): AdapterResult {
   const values = new Map<string, JupUsdHoldingValue>();
   const unknownHoldingNames = new Set<string>();
+  const warnings: LiveReserveWarning[] = [];
   let unknownValue = 0;
-  for (const holding of payload.holdings ?? []) {
+  for (const [holdingIndex, holding] of (payload.holdings ?? []).entries()) {
     const name = typeof holding.name === "string" && holding.name.trim().length > 0
       ? holding.name.trim()
       : "Unmapped reserve holding";
     const value = parseAmount(holding.amount, holding.decimals);
+    if (value == null) {
+      warnings.push(reserveDegradedWarning(
+        "unparseable-holding",
+        `JupUSD holding ${holdingIndex} (${name}) has an unparseable amount or decimal scale`,
+      ));
+      continue;
+    }
     if (value <= 0) continue;
     const current = values.get(name);
     const meta = resolveHoldingMeta(name);
@@ -151,12 +161,16 @@ export function adaptJupUsdData(
   }
 
   const sourceTimestamp = options.sourceTimestamp ?? null;
-  const routeStatus = options.oracle?.ripcord ? "paused" : "open";
+  const routeStatus = options.oracle
+    ? options.oracle.ripcord ? "paused" : "open"
+    : options.oracleConfigured ? "unknown" : undefined;
   const routeStatusReason = options.oracle?.ripcord
     ? (options.oracle.ripcordDetails || "JupUSD oracle reports ripcord mode")
-    : undefined;
+    : options.oracleConfigured && !options.oracle
+      ? "JupUSD oracle route status could not be observed"
+      : undefined;
   const totalSupply = parseAmount(payload.totalSupply, 6);
-  if (totalSupply <= 0) {
+  if (totalSupply == null || totalSupply <= 0) {
     throw new Error("jupusd missing or invalid totalSupply");
   }
   // True assets ÷ liability: never clamped, so genuine overcollateralization
@@ -166,7 +180,6 @@ export function adaptJupUsdData(
   const capacityUsd = Math.min(totalReserveUsd, totalSupply);
   const ratio = capacityUsd / totalSupply;
   const unknownExposurePct = totalReserveUsd > 0 ? (unknownValue / totalReserveUsd) * 100 : 0;
-  const warnings: LiveReserveWarning[] = [];
   if (unknownValue > 0) {
     warnings.push(buildUnknownExposureWarning({ adapterKey: "jupusd", code: "unknown-holding",
     message: `JupUSD reserve feed included unmapped holding(s): ${Array.from(unknownHoldingNames).sort().join(", ")}`,
@@ -206,8 +219,8 @@ export function adaptJupUsdData(
         capacityKind: "live-direct-bounded",
         freshnessKind: sourceTimestamp != null ? "verified-source-timestamp" : "same-run-api",
         ...(sourceTimestamp != null ? { sourceTimestamp } : {}),
-        routeStatus,
-        routeStatusSource: "protocol-api",
+        ...(routeStatus ? { routeStatus } : {}),
+        ...(routeStatus ? { routeStatusSource: "protocol-api" as const } : {}),
         ...(routeStatusReason ? { routeStatusReason } : {}),
         holderEligibility: "whitelisted-primary",
         settlementDelaySec: 0,
@@ -244,12 +257,20 @@ export async function fetchJupUsdReserves(
   const [payload, oracle, snapshots] = await Promise.all([
     fetchJupUsdJson<JupUsdDataPayload>("transparency data", input.url, signal, JUPUSD_DATA_BUDGET, ctx),
     params.oracleUrl
-      ? catchAndWarn(
-          fetchJupUsdJson<JupUsdOraclePayload>("oracle", params.oracleUrl, signal, JUPUSD_ORACLE_BUDGET, ctx),
-          "jupusd-oracle-unavailable",
-          `JupUSD oracle feed failed: ${params.oracleUrl}`,
-          extraWarnings,
-        )
+      ? fetchJupUsdJson<JupUsdOraclePayload>(
+          "oracle",
+          params.oracleUrl,
+          signal,
+          JUPUSD_ORACLE_BUDGET,
+          ctx,
+        ).catch((error) => {
+          if (signal.aborted) throw error;
+          extraWarnings.push(reserveDegradedWarning(
+            "jupusd-oracle-unavailable",
+            `JupUSD oracle route status could not be observed: ${toErrorMessage(error)}`,
+          ));
+          return null;
+        })
       : Promise.resolve(null),
     params.snapshotsUrl
       ? catchAndWarn(
@@ -272,6 +293,7 @@ export async function fetchJupUsdReserves(
     : null;
   return adaptJupUsdData(payload, {
     sourceTimestamp: latestTimestamp,
+    oracleConfigured: params.oracleUrl != null,
     oracle,
     extraWarnings,
   });

@@ -8,10 +8,6 @@ import { digestDisplay } from "@/lib/fonts/digest";
 import { cn } from "@/lib/utils";
 import type { DigestArchiveEntry } from "@shared/types";
 
-const FALLBACK_DIGEST_PREVIEW = {
-  title: "USDC Bleeds $819M In A Week",
-  text: "$819M out of Circle in seven days, $74.86B left on the books, 6% below April's ATH. Yield pages flag USDG, JTRSY, PAXG without corroboration. PMUSD still 3,464 bps underwater.",
-} as const;
 
 function compactDigestText(value: string | null | undefined): string | null {
   const compact = value?.replace(/\s+/g, " ").trim();
@@ -44,17 +40,19 @@ function getPreviousDailyEditions({
 export function DailyDigestCard(): React.JSX.Element {
   const { data } = useDailyDigest();
   const { data: archiveData } = useDigestArchive();
-  const title = compactDigestText(data?.digestTitle) ?? FALLBACK_DIGEST_PREVIEW.title;
+  const title = data
+    ? compactDigestText(data.digestTitle) ?? "Daily Digest"
+    : "Daily digest is unavailable — read the latest on Telegram";
   const editionPrefix = data?.editionNumber ? `#${data.editionNumber}` : null;
   const previousEditions = getPreviousDailyEditions({
     entries: archiveData?.digests,
     currentEditionNumber: data?.editionNumber,
     currentGeneratedAt: data?.generatedAt,
   });
-  const text =
-    compactDigestText(data?.digest) ??
-    compactDigestText(splitDigestParagraphs(data?.digestExtended)[0]) ??
-    FALLBACK_DIGEST_PREVIEW.text;
+  const text = data
+    ? compactDigestText(data.digest) ??
+      compactDigestText(splitDigestParagraphs(data.digestExtended)[0])
+    : null;
 
   return (
     <div className="pharos-card-shell relative h-full min-h-0 overflow-hidden px-5 pt-7 text-center">
@@ -102,9 +100,11 @@ export function DailyDigestCard(): React.JSX.Element {
               title
             )}
           </h4>
-          <p className={`${digestDisplay.className} mt-2 text-xs leading-relaxed text-muted-foreground`}>
-            {text}
-          </p>
+          {text ? (
+            <p className={`${digestDisplay.className} mt-2 text-xs leading-relaxed text-muted-foreground`}>
+              {text}
+            </p>
+          ) : null}
           <div
             aria-hidden="true"
             className="pointer-events-none absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-card via-card/85 to-transparent"

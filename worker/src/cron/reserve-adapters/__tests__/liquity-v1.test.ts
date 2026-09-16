@@ -127,6 +127,7 @@ describe("fetchLiquityV1Reserves", () => {
       v1Network({ collateral: 100n * WAD, debt: 100n * WAD }, null, null),
     );
     expect(result.warnings).toEqual([
+      expect.objectContaining({ code: "defillama-quote-missing" }),
       expect.objectContaining({ code: "liquity-v1-eth-price-unavailable" }),
     ]);
     expect(result.metadata?.collateralizationRatio).toBeUndefined();

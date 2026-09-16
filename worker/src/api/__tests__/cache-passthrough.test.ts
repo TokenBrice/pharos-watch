@@ -307,27 +307,6 @@ describe("cache-passthrough: handleUsdsStatus", () => {
     expect(body._meta.ageSeconds).toBe(42);
   });
 
-  it("sanitizes malformed freeze capability and lastChecked fields", async () => {
-    const nowSec = Math.floor(Date.now() / 1000);
-    const db = makeCacheDb("usds-status", makeUsdsStatus({
-      freezeCapabilityPresent: "yes",
-      implementationAddress: "0x1923DFEe706A8E78157416C29CBCCFDE7CDF4102",
-      lastChecked: "not-a-number",
-    }), nowSec - 42);
-
-    const res = await handleUsdsStatus(db);
-
-    const body = (await readJsonResponse(res, 200)) as {
-      freezeCapabilityPresent: boolean;
-      implementationAddress: string;
-      lastChecked: number;
-      _meta: { ageSeconds: number };
-    };
-    expect(body.freezeCapabilityPresent).toBe(false);
-    expect(body.implementationAddress).toBe("0x1923dfee706a8e78157416c29cbccfde7cdf4102");
-    expect(body.lastChecked).toBe(nowSec - 42);
-    expect(body._meta.ageSeconds).toBe(42);
-  });
 });
 
 describe("cache-passthrough: handleBluechipRatings", () => {

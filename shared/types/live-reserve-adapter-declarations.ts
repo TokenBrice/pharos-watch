@@ -998,6 +998,8 @@ const escrowBalanceSelectorReadSchema = z
     contract: EvmAddressSchema,
     selector: EvmSelectorSchema,
     args: z.array(EvmWordSchema).optional(),
+    // Capacity treats one whole escrowed token as one USD; every configured
+    // member must therefore be a reviewed USD-pegged asset.
     decimals: z.number().int().nonnegative().max(36),
     identityCheck: escrowBalanceIdentityCheckSchema.optional(),
   })
@@ -1007,6 +1009,8 @@ const escrowBalanceErc20ReadSchema = z
   .object({
     contract: EvmAddressSchema,
     erc20BalanceOf: EvmAddressSchema,
+    // Capacity treats one whole escrowed token as one USD; every configured
+    // member must therefore be a reviewed USD-pegged asset.
     decimals: z.number().int().nonnegative().max(36),
     identityCheck: escrowBalanceIdentityCheckSchema.optional(),
   })
@@ -1038,6 +1042,8 @@ const escrowBalanceSingleParamsSchema = z
     contract: EvmAddressSchema,
     selector: EvmSelectorSchema,
     args: z.array(EvmWordSchema).optional(),
+    // Capacity treats one whole escrowed token as one USD, so the configured
+    // asset must be a reviewed USD-pegged asset.
     decimals: z.number().int().nonnegative().max(36),
     // Optional boolean view on the same contract; a true word withholds the
     // route instead of publishing capacity as freely redeemable.

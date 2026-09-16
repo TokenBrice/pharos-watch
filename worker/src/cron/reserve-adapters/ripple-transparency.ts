@@ -36,6 +36,7 @@ const ATTESTED_BREAKDOWN_2026_05: ReserveBreakdown = {
   governmentMoneyMarketFundsPct: 19.44,
   cashPct: 15.15,
 };
+const ATTESTED_BREAKDOWN_2026_05_TIMESTAMP = Date.UTC(2026, 4, 29) / 1_000;
 
 const BREAKDOWN_TOTAL_TOLERANCE_PCT = 0.5;
 
@@ -227,14 +228,15 @@ export function adaptRippleTransparency(html: string): AdapterResult {
   const collateralizationRatio = reservesUsd / circulatingUsd;
   const warnings: LiveReserveWarning[] = [];
   let breakdown = parseRippleReserveBreakdown(normalized);
+  let freshnessTimestamp = sourceTimestamp;
   if (breakdown == null) {
     // Missing and malformed live breakdowns are distinguishable: only a
     // payload shaped like a breakdown (two or more named reserve classes) can
     // be malformed; a payload that never carried one is not. Either way the
-    // attested split is stale evidence under a fresh clock, so republishing it
-    // silently would launder the September timestamp over May weights — emit
-    // an explicit degraded warning instead.
+    // attested split must carry its own age rather than borrowing the live
+    // balance clock. The minimum also preserves an older balance date.
     breakdown = ATTESTED_BREAKDOWN_2026_05;
+    freshnessTimestamp = Math.min(sourceTimestamp, ATTESTED_BREAKDOWN_2026_05_TIMESTAMP);
     const malformed = carriesBreakdownShape(normalized);
     warnings.push(
       reserveDegradedWarning(
@@ -261,7 +263,7 @@ export function adaptRippleTransparency(html: string): AdapterResult {
       circulatingUsd,
       reservesUsd,
       collateralizationRatio,
-      ...verifiedFreshnessMetadata(sourceTimestamp),
+      ...verifiedFreshnessMetadata(freshnessTimestamp),
     },
   };
 }

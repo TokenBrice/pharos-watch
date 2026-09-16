@@ -209,7 +209,7 @@
         "worker/src/api/backfill-*.ts"
       ],
       "docs": [
-        "docs/deployment-process.md",
+        { "path": "docs/deployment-process.md", "anchor": "concurrency-and-rollback-scope" },
         { "path": "docs/worker-infrastructure.md", "anchor": "shared-database-helpers" }
       ],
       "background": [{ "path": "worker/migrations/MANIFEST.md", "anchor": "individual-migrations-current-active-files" }, "docs/process/d1-baseline-squash-plan.md"],
@@ -318,7 +318,7 @@
       "docs": [
         { "path": "docs/worker-infrastructure.md", "anchor": "env-interface" },
         { "path": "docs/operator-origin-access.md", "anchor": "runtime-origin-bindings" },
-        "docs/deployment-process.md",
+        { "path": "docs/deployment-process.md", "anchor": "github-deploy-inputs" },
         "docs/scripts.md",
         "README.md"
       ],

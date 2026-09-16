@@ -14,12 +14,13 @@ import { useDexLiquidity } from "@/hooks/api-hooks";
 import type { DexLiquidityData } from "@shared/types/market";
 import { formatCurrency, formatPercentFromRatio } from "@shared/lib/format";
 import { formatLiquiditySourceMix, getLiquidityCoverageBadge } from "@/lib/liquidity-coverage";
-import { getScoreTier, TIER_PILL, ratioQualityColor } from "@/lib/severity-colors";
+import { getScoreTier, SCORE_TIER_CUTOFFS, TIER_PILL } from "@/lib/severity-colors";
 import { BalanceBar } from "@/components/balance-bar";
 import {
   buildLiquidityVerdictLine,
   getConcentrationLabel,
   getLiquidityEvidenceLabel,
+  getOrganicFractionTier,
 } from "@/components/dex-liquidity-card-model";
 import { MethodologyCardActions, MethodologyLabel } from "@/components/methodology-hint";
 import { ModuleDisclosure } from "@/components/stablecoin-detail/module-disclosure";
@@ -60,12 +61,12 @@ const DEX_SCORE_BANDS: readonly SpectrumBand[] = [
   { key: "t60", label: "", fillClass: "bg-blue-500/70", textClass: "text-blue-700 dark:text-blue-400" },
   { key: "t80", label: "", fillClass: "bg-emerald-500/70", textClass: "text-emerald-700 dark:text-emerald-400" },
 ];
-const DEX_SCORE_CUTOFFS = [0, 40, 60, 80] as const;
+const DEX_SCORE_CUTOFFS = Object.values(SCORE_TIER_CUTOFFS);
 
 function dexScoreBandKey(score: number): string {
-  if (score >= 80) return "t80";
-  if (score >= 60) return "t60";
-  if (score >= 40) return "t40";
+  if (score >= SCORE_TIER_CUTOFFS.green) return "t80";
+  if (score >= SCORE_TIER_CUTOFFS.blue) return "t60";
+  if (score >= SCORE_TIER_CUTOFFS.amber) return "t40";
   return "t0";
 }
 
@@ -308,7 +309,9 @@ export function DexLiquidityCard({ stablecoinId }: { stablecoinId: string }) {
                   {liq.organicFraction != null && (
                     <div>
                       <span className="text-muted-foreground">Organic: </span>
-                      <span className={`font-mono tabular-nums ${ratioQualityColor(liq.organicFraction)}`}>
+                      <span
+                        className={`font-mono tabular-nums ${getOrganicFractionTier(liq.organicFraction).summaryColor}`}
+                      >
                         {formatPercentFromRatio(liq.organicFraction, 0)}
                       </span>
                     </div>

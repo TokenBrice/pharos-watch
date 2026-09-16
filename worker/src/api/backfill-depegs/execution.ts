@@ -8,6 +8,7 @@ import {
   OTHER_COIN_FX,
   buildFxLookup,
 } from "../../lib/backfill-fx";
+import { logWorkerEvent } from "../../lib/structured-log";
 import type { BackfillReplayWindow } from "../backfill-depegs-window";
 import {
   buildBackfillReplayPreview,
@@ -25,7 +26,7 @@ import {
   inferBackfillConfidence,
 } from "./persistence";
 
-const BACKFILL_REPLAY_VERSION = "depeg-backfill-v6.0";
+const BACKFILL_REPLAY_VERSION = "depeg-backfill-v6.1";
 
 /**
  * Apply-callback signature: implemented by the entrypoint so this module
@@ -111,20 +112,22 @@ export async function executeBackfillForCoin(opts: {
     const resolvedFallback =
       fallback ?? (typeof seriesAnchor === "number" && seriesAnchor > 0 ? seriesAnchor : null);
     if (resolvedFallback == null) {
-      // RUB previously resolved to a hardcoded 0.011 here. That constant was removed
-      // because a timeless quote can invent or conceal a depeg, and the surrounding
-      // default of 1 would be ~90x wrong for RUB — far worse than no replay at all.
-      // Fail closed for it rather than substituting either number.
-      //
-      // The generic `1` default below is wrong for every non-USD peg, not just RUB
-      // (it asserts 1 USD per unit). That is pre-existing behaviour and changing it
-      // suppresses replay requests this module is expected to make, so it is left
-      // alone here and called out rather than silently widened.
-      if (peg === "RUB") {
-        return { status: "skipped", eventCount: 0 };
-      }
+      logWorkerEvent({
+        scope: "api",
+        level: "warn",
+        event: "backfill-depegs-coin-skipped",
+        status: "skipped",
+        message: `[backfill-depegs] Skipping ${meta.symbol}: no FX reference is available`,
+        metadata: {
+          stablecoinId: meta.id,
+          symbol: meta.symbol,
+          pegCurrency: peg,
+          reason: "missing-fx-reference",
+        },
+      });
+      return { status: "skipped", eventCount: 0 };
     }
-    getPegRef = buildFxLookup(series, resolvedFallback ?? 1);
+    getPegRef = buildFxLookup(series, resolvedFallback);
   }
 
   try {

@@ -36,6 +36,16 @@ const OPENEDEN_BROWSER_HEADERS = buildBrowserHeaders(
 );
 
 export function adaptOpenEdenUsdo(payload: OpenEdenReserveCompositionResponse): AdapterResult {
+  for (const [field, value] of [
+    ["reserveAssetsInUsd", payload.reserveAssetsInUsd],
+    ["usdoAmount", payload.usdoAmount],
+  ] as const) {
+    if (!Number.isFinite(value) || value < 0) {
+      throw new Error(
+        `openeden-usdo ${field} is not a finite non-negative number: ${String(value)}`,
+      );
+    }
+  }
   const sourceTimestamp = parseTimestampLikeToUnixSeconds(payload.date ?? null);
   const componentTotal =
     payload.totalTbillAmountInUsd

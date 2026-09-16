@@ -296,17 +296,20 @@ export async function resolveReserveSyncCapacity(
   }
 
   if (model.fallbackRatio != null && supplyUsd != null && supplyUsd > 0) {
+    const capacityFields = buildReserveSyncCapacityFields({
+      rawCapacityUsd: supplyUsd * model.fallbackRatio,
+      reportedCapacityRatio: model.fallbackRatio,
+      supplyUsd,
+      dailyLimitUsd: liveMetadata.dailyLimitUsd,
+      capacityProfileConfidence: fallbackCapacityConfidence,
+      applyDailyLimit: true,
+    });
     return {
-      immediateCapacityUsd: supplyUsd * model.fallbackRatio,
-      immediateCapacityRatio: model.fallbackRatio,
-      scoringCapacityUsd: supplyUsd * model.fallbackRatio,
-      scoringCapacityRatio: model.fallbackRatio,
-      capacityProfile: {
-        immediateUsd: supplyUsd * model.fallbackRatio,
-        scoringUsd: supplyUsd * model.fallbackRatio,
-        scoringHorizon: "immediate",
-        capacityProfileConfidence: fallbackCapacityConfidence,
-      },
+      immediateCapacityUsd: capacityFields.immediateCapacityUsd,
+      immediateCapacityRatio: capacityFields.immediateCapacityRatio,
+      scoringCapacityUsd: capacityFields.scoringCapacityUsd,
+      scoringCapacityRatio: capacityFields.scoringCapacityRatio,
+      capacityProfile: capacityFields.capacityProfile,
       ...buildReserveSyncFallbackFields(model, liveMetadata, {
         capacityConfidence: fallbackCapacityConfidence,
         capacitySemantics,

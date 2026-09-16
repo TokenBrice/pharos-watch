@@ -29,6 +29,7 @@ function createSourceState(): DewsSourceState {
     liqHist7dMap: new Map(),
     liqHistRowsRead: 0,
     blacklistCounts: new Map([["usda-avalon", { count24h: 10, count7d: 10 }]]),
+    blacklistSourceOk: true,
     prevSignals: new Map(),
     prevSignalStaleIds: new Set(),
     mintBurnMap: new Map(),
@@ -84,5 +85,35 @@ describe("buildDewsScoringResult blacklist attribution", () => {
       available: false,
       value: 0,
     });
+  });
+
+  it("marks tracked blacklist evidence unavailable when the source load failed", () => {
+    const observedZeroState = createSourceState();
+    observedZeroState.blacklistCounts = new Map();
+    const failedState = createSourceState();
+    failedState.blacklistCounts = new Map();
+    failedState.blacklistSourceOk = false;
+
+    const assetById = new Map([["usda-avalon", createAsset("usda-avalon")]]);
+    const observedZero = buildDewsScoringResult({
+      assetById,
+      pegRates: {},
+      sourceState: observedZeroState,
+      registerMalformedPersistedInput: () => {},
+    }).results[0]!;
+    const sourceFailed = buildDewsScoringResult({
+      assetById,
+      pegRates: {},
+      sourceState: failedState,
+      registerMalformedPersistedInput: () => {},
+    }).results[0]!;
+    expect(observedZero.signals.black).toMatchObject({ value: 0, available: true });
+    expect(sourceFailed.signals.black).toMatchObject({
+      value: 0,
+      available: false,
+      unavailableReason: "blacklist-source-failed",
+    });
+    expect(sourceFailed.availableWeight).toBeCloseTo(observedZero.availableWeight - 0.1);
+    expect(sourceFailed.effectiveWeights.black).toBeUndefined();
   });
 });

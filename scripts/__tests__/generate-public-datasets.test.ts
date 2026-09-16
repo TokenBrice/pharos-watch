@@ -1,5 +1,5 @@
 import { execFile } from "node:child_process";
-import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { promisify } from "node:util";
@@ -146,11 +146,15 @@ describe("generate-public-datasets", () => {
     });
   });
 
-  it("preserves checked-in mirrors during release when the configured live source is blocked", async () => {
+  it("fails a stale release but preserves checked-in mirrors when the configured live source is blocked", async () => {
     const root = await makeRoot();
     await copyDatasetWorkspace(root);
+    // Force the copied workspace to be stale regardless of the repo's current mirror date.
+    const redirectsPath = path.join(root, "public/_redirects");
+    const staleRedirects = (await readFile(redirectsPath, "utf8")).replace(/\/(\d{4}-\d{2}-\d{2})\.(csv|json|ndjson) 200/g, "/2026-05-16.$2 200");
+    await writeFile(redirectsPath, staleRedirects);
     const before = await datasetBytes(root);
-    const { stderr } = await execFileAsync(
+    await expect(execFileAsync(
       process.execPath,
       ["--import", "tsx", "scripts/maintenance/generate-public-datasets.ts"],
       {
@@ -167,9 +171,11 @@ describe("generate-public-datasets", () => {
         },
         timeout: 15_000,
       },
-    );
+    )).rejects.toMatchObject({
+      code: 1,
+      stderr: expect.stringContaining("checked-in mirrors are not current"),
+    });
 
-    expect(stderr).toContain("preserving checked-in public dataset mirrors");
     expect(await datasetBytes(root)).toEqual(before);
   });
 
@@ -453,7 +459,7 @@ describe("generate-public-datasets", () => {
 
     expect(testExports.checkTopic("depeg-history", artifactDirs(datasetsDir, redirectsPath))).toEqual({
       ok: false,
-      reason: expect.stringContaining("rowCount 1 below required floor 300"),
+      reason: expect.stringContaining("rowCount 1 below required floor 60"),
     });
   });
 

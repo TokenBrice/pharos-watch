@@ -213,7 +213,7 @@ describe("fetchJupUsdReserves", () => {
     ]));
   });
 
-  it("emits jupusd-oracle-unavailable info warning when oracle feed fails", async () => {
+  it("marks route unknown and degrades when the configured oracle probe fails", async () => {
     const { result } = await runAdapter("jupusd", makeCoin(), {
       network: network({ oracle: { status: 502, body: "oracle unavailable" } }),
       nowSec: 1_776_003_600,
@@ -222,9 +222,13 @@ describe("fetchJupUsdReserves", () => {
     expect(result.warnings).toEqual(expect.arrayContaining([
       expect.objectContaining({
         code: "jupusd-oracle-unavailable",
-        effect: "info",
+        effect: "degraded",
       }),
     ]));
+    expect(result.metadata?.redemption).toMatchObject({
+      routeStatus: "unknown",
+      routeStatusSource: "protocol-api",
+    });
   });
 
   it("emits no warnings when both snapshots and oracle succeed", async () => {

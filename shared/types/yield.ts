@@ -373,6 +373,29 @@ const YieldRankChangeAttributionSchema = z.object({
     .nullable()
     .optional(),
 });
+const YieldRankChangeAttributionFieldSchemas = YieldRankChangeAttributionSchema.shape;
+type YieldRankChangeAttributionField = keyof typeof YieldRankChangeAttributionFieldSchemas;
+const YIELD_RANK_CHANGE_ATTRIBUTION_FIELDS = Object.keys(
+  YieldRankChangeAttributionFieldSchemas,
+) as YieldRankChangeAttributionField[];
+
+export function normalizeYieldRankChangeAttribution(value: unknown): YieldRankChangeAttribution | null {
+  if (!isPlainRecord(value)) return null;
+
+  const normalized: Record<string, unknown> = {};
+  for (const field of YIELD_RANK_CHANGE_ATTRIBUTION_FIELDS) {
+    if (!hasOwn(value, field)) continue;
+    const parsed = YieldRankChangeAttributionFieldSchemas[field].safeParse(value[field]);
+    if (parsed.success && parsed.data !== undefined) {
+      normalized[field] = parsed.data;
+    }
+  }
+
+  if (Object.keys(normalized).length === 0) return null;
+  const parsed = YieldRankChangeAttributionSchema.safeParse(normalized);
+  return parsed.success ? parsed.data : null;
+}
+
 
 const AltYieldSourceSchema = z.object({
   sourceKey: z.string(),

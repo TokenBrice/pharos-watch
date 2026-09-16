@@ -77,6 +77,7 @@ export interface DEWSInput {
   blacklistEvents24h: number;
   blacklistEvents7d: number;
   hasBlacklistTracking: boolean;
+  blacklistSourceOk?: boolean;
   // Mint/burn flow (optional — from mint_burn_hourly)
   burnVolume24hUsd: number | null;
   mintVolume24hUsd: number | null;

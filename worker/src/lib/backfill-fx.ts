@@ -15,45 +15,47 @@ import { getCache, setCache } from "./db-cache";
 import { FrankfurterTimeSeriesSchema, SecondaryFxResponseSchema } from "./external-api-schemas";
 import { rethrowIfAborted } from "./abort";
 import { mapWithConcurrency } from "./concurrency";
+import {
+  PRIMARY_CURRENCY_TO_PEG,
+  PRIMARY_PEG_TYPE_TO_CURRENCY_PAIRS,
+  SECONDARY_FX_CURRENCY_TO_PEG,
+  SECONDARY_PEG_TYPE_TO_CURRENCY_PAIRS,
+} from "./fx-config";
 import type { D1Database } from "@cloudflare/workers-types";
 import { fetchCgPriceHistoryHourly, type HistoricalMarketBackfillRange } from "../api/backfill-price-sources";
 
-const SECONDARY_FX_FETCH_CONCURRENCY = 8;
+const SECONDARY_FX_FETCH_CONCURRENCY = 6;
 const COMMODITY_MEDIAN_FETCH_CONCURRENCY = 6;
 
 // ── Historical FX rate support ──────────────────────────────────────
 
-/** Maps pegCurrency → frankfurter currency code (ECB-published) */
-export const PEG_TO_FX: Record<string, string> = {
-  EUR: "EUR",
-  GBP: "GBP",
-  CHF: "CHF",
-  BRL: "BRL",
-  JPY: "JPY",
-  IDR: "IDR",
-  SGD: "SGD",
-  TRY: "TRY",
-  AUD: "AUD",
-  ZAR: "ZAR",
-  CAD: "CAD",
-  CNY: "CNY",
-  PHP: "PHP",
-  MXN: "MXN",
-  MYR: "MYR",
-  KRW: "KRW",
-};
+function invertCurrencyToPegMap(
+  currencyToPeg: Readonly<Record<string, string>>,
+  pegTypeToCurrencyPairs: ReadonlyArray<readonly [string, string]>,
+): Record<string, string> {
+  const pegCurrencyByType: Record<string, string> = Object.fromEntries(pegTypeToCurrencyPairs);
+  return Object.fromEntries(
+    Object.entries(currencyToPeg).map(([currency, pegType]) => {
+      const pegCurrency = pegCurrencyByType[pegType];
+      if (!pegCurrency) {
+        throw new Error(`Missing backfill currency pair for ${pegType}`);
+      }
+      return [pegCurrency, currency.toUpperCase()];
+    }),
+  );
+}
 
-/** Maps pegCurrency → secondary currency-api code for non-ECB historical FX */
-export const SECONDARY_PEG_TO_FX: Record<string, string> = {
-  CNH: "CNH",
-  RUB: "RUB",
-  UAH: "UAH",
-  ARS: "ARS",
-  KGS: "KGS",
-  NGN: "NGN",
-  XOF: "XOF",
-  VND: "VND",
-};
+/** Maps registry pegCurrency → frankfurter currency code (ECB-published). */
+export const PEG_TO_FX: Record<string, string> = invertCurrencyToPegMap(
+  PRIMARY_CURRENCY_TO_PEG,
+  PRIMARY_PEG_TYPE_TO_CURRENCY_PAIRS,
+);
+
+/** Maps registry pegCurrency → secondary currency-api code for non-ECB historical FX. */
+export const SECONDARY_PEG_TO_FX: Record<string, string> = invertCurrencyToPegMap(
+  SECONDARY_FX_CURRENCY_TO_PEG,
+  SECONDARY_PEG_TYPE_TO_CURRENCY_PAIRS,
+);
 
 /** Maps coin ID → historical FX code override for OTHER-pegged coins */
 export const OTHER_COIN_FX: Record<string, string> = {
@@ -148,7 +150,14 @@ async function fetchHistoricalSecondaryFxDay(date: string, signal?: AbortSignal)
     return null;
   }
 
-  const raw = JSON.parse(result.body) as unknown;
+  let raw: unknown;
+  try {
+    raw = JSON.parse(result.body) as unknown;
+  } catch (err) {
+    rethrowIfAborted(err, signal);
+    logWorkerEventArgs("lib", "warn", `[backfill-depegs] secondary FX returned non-JSON for ${date}`, err);
+    return null;
+  }
   const parsed = SecondaryFxResponseSchema.safeParse(raw);
   if (!parsed.success) {
     logWorkerEventArgs("lib", "warn", `[backfill-depegs] secondary FX validation failed for ${date}: ${parsed.error.message}`);
@@ -199,7 +208,11 @@ export async function fetchHistoricalSecondaryFxRates(
         chunk.map(async (date) => [date, await fetchHistoricalSecondaryFxDay(date, signal)] as const),
       );
       for (const [date, dailyRates] of fetched) {
-        mergeDateRates(yearCache, date, dailyRates);
+        if (dailyRates) {
+          mergeDateRates(yearCache, date, dailyRates);
+        } else {
+          yearCache[date] = {};
+        }
       }
     }
 

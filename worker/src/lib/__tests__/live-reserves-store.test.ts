@@ -14,6 +14,7 @@ import {
   resolveReserveResult,
 } from "../live-reserves/store";
 import { getConfiguredLiveReserveCoins } from "../live-reserves/store-shared";
+import { parseSnapshotMetadata } from "../live-reserves/store-row-decoding";
 
 describe("live-reserves-store", () => {
   it.each([
@@ -469,6 +470,28 @@ describe("live-reserves-store", () => {
     expect(result?.mode).toBe("curated-fallback");
     expect(result?.reserves).not.toEqual(LIVE_SLICES);
     expect(result?.sync?.lastError).toBe("HTTP 503 for https://api.example.com");
+  });
+
+  it("drops out-of-range redemption ratios and fees from legacy stored rows", () => {
+    const nested = parseSnapshotMetadata(JSON.stringify({
+      redemption: {
+        capacityUsd: 100,
+        capacityRatioOfSupply: 1.1,
+        feeBps: -1,
+      },
+    }));
+    expect(nested.redemption).toMatchObject({ capacityUsd: 100 });
+    expect(nested.redemption).not.toHaveProperty("capacityRatioOfSupply");
+    expect(nested.redemption).not.toHaveProperty("feeBps");
+
+    const flat = parseSnapshotMetadata(JSON.stringify({
+      immediateRedeemableUsd: 100,
+      immediateRedeemableRatio: -0.1,
+      redemptionFeeBps: 10_001,
+    }));
+    expect(flat.redemption).toMatchObject({ capacityUsd: 100 });
+    expect(flat.redemption).not.toHaveProperty("capacityRatioOfSupply");
+    expect(flat.redemption).not.toHaveProperty("feeBps");
   });
 
 
