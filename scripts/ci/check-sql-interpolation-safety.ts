@@ -35,6 +35,8 @@ export function scanSqlInterpolationSafety(
     scanFile: ({ relativePath, content, root }) => {
       const violations: SqlSafetyViolation[] = [];
       const lines = content.split("\n");
+      // Source is the module-constant SQL_INTERPOLATION_PATTERN; only the global flag is added.
+      // eslint-disable-next-line security/detect-non-literal-regexp
       const pattern = new RegExp(
         SQL_INTERPOLATION_PATTERN.source,
         SQL_INTERPOLATION_PATTERN.flags.includes("g")

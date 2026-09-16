@@ -92,9 +92,9 @@ export function isFreshnessWarningHeader(warningHeader: string): boolean {
  * stable cache family instead of pinning the UI to one suffix so a harmless
  * rewording of the scheduled warning does not bypass the shared contract.
  */
-const SCHEDULED_REFRESH_WARNING_PATTERN =
-  /stablecoin\s+detail\s+cache\s+(?:is\s+)?stale\b[\s\S]*\brefresh\b/i;
-
 export function isScheduledRefreshWarning(warningHeader: string): boolean {
-  return SCHEDULED_REFRESH_WARNING_PATTERN.test(warningHeader);
+  const normalized = warningHeader.replace(/\s+/g, " ");
+  const prefix = /stablecoin detail cache (?:is )?stale\b/i.exec(normalized);
+  if (!prefix) return false;
+  return /\brefresh\b/i.test(normalized.slice(prefix.index + prefix[0].length));
 }

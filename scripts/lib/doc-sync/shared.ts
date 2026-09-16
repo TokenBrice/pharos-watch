@@ -1,5 +1,3 @@
-/* eslint-disable security/detect-unsafe-regex -- the regexes run only on bounded checked-in docs, not untrusted input. */
-
 import { readFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
