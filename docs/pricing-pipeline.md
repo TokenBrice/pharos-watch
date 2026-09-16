@@ -239,7 +239,7 @@ After market/oracle consensus, the provider registry under `worker/src/lib/autho
 | `xo-exodus`              | inherits fresh tracked `wm-m0` pricing as a Solana M0 extension unit            |
 | `usdn-noble`             | inherits fresh tracked `m-m0` pricing as an M0-backed rebasing Noble unit       |
 | `usdnr-nerona`           | inherits tracked `wm-m0` pricing as an M0 extension unit                        |
-| `weusd-picwe`            | inherits tracked `usdc-circle` pricing with PicWe's documented 1% redemption-fee haircut |
+| `weusd-picwe`            | missing-price fallback to tracked `usdc-circle` with PicWe's 1% redemption-fee haircut |
 | `sofid-sofi`             | direct USD redemption-par reference for observable on-chain supply              |
 | `usbd-bima`              | direct USD redemption-par reference for observable DefiLlama supply             |
 | `usdq-quill`             | direct USD redemption-par reference for observable DefiLlama supply             |
@@ -328,9 +328,14 @@ Current tracked-base inheritance paths are:
 - `xo-exodus -> wm-m0`
 - `usdn-noble -> m-m0`
 - `usdnr-nerona -> wm-m0`
-- `weusd-picwe -> usdc-circle` with a 1% redemption-fee haircut
+- `weusd-picwe -> usdc-circle` with a 1% redemption-fee haircut, only when no usable live market price exists
 
-This prevents thin secondary-market child-token prints, or missing child-market coverage, from dragging PegScore away from the executable value of the tracked parent rail.
+WEUSD is market-price-wins: a usable live market quote is never replaced by the 0.99 redemption floor. Historical
+replay likewise uses market history rather than synthesizing the redemption floor; unavailable market history fails
+closed by preserving existing replay rows.
+
+For the other inheritance paths, this prevents thin secondary-market child-token prints, or missing child-market
+coverage, from dragging PegScore away from the executable value of the tracked parent rail.
 
 Scoped redemption-par references cover active assets with observable runtime supply and a source-reviewed primary redemption route, but no dependable current market quote. USD routes publish nominal USD parity through `protocol-redeem`; fee and capacity risk remains modeled in the redemption-backstop methodology rather than being hidden inside the token price. Non-USD routes must have a fresh or static FX reference for the peg currency before live publishing, and fall back to normal market/native-peg history until historical FX replay exists. The current scoped set is:
 
