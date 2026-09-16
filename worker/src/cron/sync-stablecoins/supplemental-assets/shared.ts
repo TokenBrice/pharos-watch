@@ -282,7 +282,7 @@ export async function resolveCuratedAggregateSupplementalSupply(
   };
 }
 
-export function buildPricedSupplementalAsset(
+function buildPricedSupplementalAsset(
   meta: StablecoinMeta,
   priceData: SupplementalDefiLlamaPriceData,
   cgData: CoinGeckoMcapData,

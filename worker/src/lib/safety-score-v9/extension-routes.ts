@@ -36,7 +36,7 @@ type RedemptionSettlementModel = RedemptionBackstopConfig["settlementModel"];
 type ComposedDexExit = NonNullable<RedemptionBackstopConfig["v9ComposedDexExit"]>;
 
 export const canonicalExecutionCostKey = canonicalV9ExecutionCostKey;
-export function canonicalExecutionCosts(
+function canonicalExecutionCosts(
   observation: ExitRouteObservation,
   resolveCostBps: (point: {
     requestedNotionalUsd: number;

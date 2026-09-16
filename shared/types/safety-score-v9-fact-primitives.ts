@@ -34,7 +34,6 @@ export function canonicalTextArray(minLength = 0, duplicateNoun = "key") {
 }
 
 export const V9WrapperRiskAssessmentSchema = z.enum(["none", "low", "moderate", "high", "critical"]);
-export type V9WrapperRiskAssessment = z.infer<typeof V9WrapperRiskAssessmentSchema>;
 
 const CanonicalStringArraySchema = canonicalTextArray();
 

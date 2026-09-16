@@ -53,7 +53,6 @@ export {
 export {
   SafetyScoreV9AccessPostureSchema,
   SafetyScoreV9PillarSchema,
-  V9_BOUNDED_ATTRIBUTION_REASON_CODES,
 } from "./safety-score-v9-public-facts";
 export type { SafetyScoreV9Cap, SafetyScoreV9EvidenceFreshness, SafetyScoreV9NrReason, SafetyScoreV9PublicReason } from "./safety-score-v9-public-facts";
 

@@ -1,4 +1,4 @@
-export const MONTH_LABEL = [
+const MONTH_LABEL = [
   "January",
   "February",
   "March",
@@ -12,10 +12,6 @@ export const MONTH_LABEL = [
   "November",
   "December",
 ] as const;
-
-export const MONTH_INDEX: Readonly<Record<string, number>> = Object.fromEntries(
-  MONTH_LABEL.map((label, index) => [label.toLowerCase(), index]),
-);
 
 const MONTH_INDEX_BY_PREFIX: Readonly<Record<string, number>> = Object.fromEntries(
   MONTH_LABEL.map((label, index) => [label.slice(0, 3).toLowerCase(), index]),
