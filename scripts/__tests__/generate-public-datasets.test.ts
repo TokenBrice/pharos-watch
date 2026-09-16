@@ -1,5 +1,5 @@
 import { execFile } from "node:child_process";
-import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { promisify } from "node:util";
@@ -149,6 +149,10 @@ describe("generate-public-datasets", () => {
   it("fails a stale release but preserves checked-in mirrors when the configured live source is blocked", async () => {
     const root = await makeRoot();
     await copyDatasetWorkspace(root);
+    // Force the copied workspace to be stale regardless of the repo's current mirror date.
+    const redirectsPath = path.join(root, "public/_redirects");
+    const staleRedirects = (await readFile(redirectsPath, "utf8")).replace(/\/(\d{4}-\d{2}-\d{2})\.(csv|json|ndjson) 200/g, "/2026-05-16.$2 200");
+    await writeFile(redirectsPath, staleRedirects);
     const before = await datasetBytes(root);
     await expect(execFileAsync(
       process.execPath,
@@ -455,7 +459,7 @@ describe("generate-public-datasets", () => {
 
     expect(testExports.checkTopic("depeg-history", artifactDirs(datasetsDir, redirectsPath))).toEqual({
       ok: false,
-      reason: expect.stringContaining("rowCount 1 below required floor 300"),
+      reason: expect.stringContaining("rowCount 1 below required floor 60"),
     });
   });
 
