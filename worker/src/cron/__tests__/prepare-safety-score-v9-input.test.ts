@@ -150,7 +150,7 @@ function snapshotInputs() {
     v9PublicationInputHealth: {
       dex: { state: "current" as const, generationId: DEX_GENERATION_ID, updatedAtSec: DEX_UPDATED_AT },
       redemption: { state: "not-applicable" as const, generationId: null, updatedAtSec: null },
-      liveReserves: { state: "available" as const },
+      liveReserves: { state: "available" as const, coverageRatio: 1 },
     },
   };
 }

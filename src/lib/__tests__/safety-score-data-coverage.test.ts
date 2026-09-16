@@ -407,12 +407,14 @@ describe("describeDataCoverageHoldCauses", () => {
     const causes = describeDataCoverageHoldCauses([
       { code: "dex-stale" },
       { code: "live-reserves-unavailable" },
+      { code: "live-reserves-coverage-below-floor" },
       { code: "coverage-floor-failed", floorIds: ["floor-a", "floor-b"] },
     ]);
 
     expect(causes).toEqual([
       "DEX liquidity data is behind schedule.",
       "Live reserve data is unavailable.",
+      "Live reserve coverage is below the publication floor.",
       "Coverage fell below the required floor for 2 checks.",
     ]);
     expect(causes.join(" ")).not.toContain("floor-a");

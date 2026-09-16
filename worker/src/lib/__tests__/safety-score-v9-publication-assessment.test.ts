@@ -68,7 +68,7 @@ function currentInputHealth(): V9PublicationInputHealth {
       generationId: "redemption:test",
       updatedAtSec: 1_700_000_000,
     },
-    liveReserves: { state: "available" },
+    liveReserves: { state: "available", coverageRatio: 1 },
   };
 }
 
@@ -232,7 +232,7 @@ describe("Safety Score V9 publication assessment", () => {
     ],
     [
       "live-reserves-unavailable",
-      { liveReserves: { state: "unavailable" as const } },
+      { liveReserves: { state: "unavailable" as const, coverageRatio: null } },
     ],
   ] as Array<
     [
@@ -240,7 +240,7 @@ describe("Safety Score V9 publication assessment", () => {
       {
         dex?: { state: "stale" | "unavailable" };
         redemption?: { state: "stale" | "unavailable" };
-        liveReserves?: { state: "unavailable" };
+        liveReserves?: { state: "unavailable"; coverageRatio: null };
       },
     ]
   >)("holds a known global input failure: %s", (code, patch) => {
@@ -267,6 +267,25 @@ describe("Safety Score V9 publication assessment", () => {
     ).toMatchObject({
       decision: "hold",
       reasons: [{ code }],
+    });
+  });
+
+  it("holds fulfilled live-reserve coverage below the calibrated 90% floor", () => {
+    const assess = (coverageRatio: number) =>
+      assessV9Publication({
+        inputHealth: {
+          ...currentInputHealth(),
+          liveReserves: { state: "available", coverageRatio },
+        },
+        candidate: candidate(),
+        acceptedPublication: acceptedPublication(),
+        coverageFloors: [],
+      });
+
+    expect(assess(0.9).decision).toBe("publish");
+    expect(assess(0.899)).toMatchObject({
+      decision: "hold",
+      reasons: [{ code: "live-reserves-coverage-below-floor" }],
     });
   });
 

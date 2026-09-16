@@ -52,7 +52,7 @@ function nativeDraft(overrides: Record<string, unknown> = {}): Record<string, un
     v9PublicationInputHealth: {
       dex: { state: "current", generationId: `dex-liquidity-${DEX_UPDATED_AT}`, updatedAtSec: DEX_UPDATED_AT },
       redemption: { state: "not-applicable", generationId: null, updatedAtSec: null },
-      liveReserves: { state: "available" },
+      liveReserves: { state: "available", coverageRatio: 1 },
     },
     pegDataById: {},
     activeDepegPeakBpsById: {},

@@ -141,6 +141,18 @@ describe("report-card V9 publication input health", () => {
     });
     expect(inputs.v9PublicationInputHealth.liveReserves).toEqual({
       state: "unavailable",
+      coverageRatio: null,
+    });
+  });
+
+  it("records zero coverage for a fulfilled empty independent reserve map", async () => {
+    const inputs = await loadReportCardsSnapshotInputs(db(), {
+      preloadedStablecoinsCache: stablecoinsCache(),
+    });
+
+    expect(inputs.v9PublicationInputHealth.liveReserves).toEqual({
+      state: "available",
+      coverageRatio: 0,
     });
   });
 
