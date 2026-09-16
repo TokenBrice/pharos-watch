@@ -125,7 +125,7 @@ function isScoreTapeEventType(type: string): boolean {
   return type === "score.upgraded" || type === "score.downgraded";
 }
 
-function normalizeScoreTapePayload(row: TapeEventRow, payload: Record<string, unknown>): Record<string, unknown> {
+function normalizeScoreTapePayload(row: TapeEventRow, payload: Record<string, unknown>): Record<string, unknown> | null {
   if (!isScoreTapeEventType(row.type)) return payload;
 
   const parsed = ScoreTapeEventPayloadSchema.safeParse(payload);
@@ -149,10 +149,17 @@ function normalizeScoreTapePayload(row: TapeEventRow, payload: Record<string, un
     if (legacy.success) return legacy.data;
   }
 
-  throw new Error(`Invalid score tape event payload: ${row.source_table}:${row.source_row_id}`);
+  return null;
 }
 
-export function rowToTapeEvent(row: TapeEventRow): TapeEvent {
+/**
+ * Map a persisted row for the read path. Invalid score payloads return null so
+ * callers can drop only that row; projector writes validate with a throwing
+ * schema parse before insertion.
+ */
+export function rowToTapeEvent(row: TapeEventRow): TapeEvent | null {
+  const payload = normalizeScoreTapePayload(row, parsePayload(row.payload_json));
+  if (payload == null) return null;
   return {
     id: row.event_id,
     type: row.type,
@@ -165,7 +172,7 @@ export function rowToTapeEvent(row: TapeEventRow): TapeEvent {
     chain: row.chain,
     title: row.title,
     summary: row.summary,
-    payload: normalizeScoreTapePayload(row, parsePayload(row.payload_json)),
+    payload,
     sourceTable: row.source_table,
     sourceRowId: row.source_row_id,
     transition: row.transition,

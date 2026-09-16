@@ -15,9 +15,10 @@ import { toErrorMessage } from "@shared/lib/error-utils";
  *   - maxRows    int; per-class scan cap (default 5000, max 50000).
  *   - dryRun     bool; compute but do not write or advance watermarks.
  *
- * The first-observation projectors (methodology / cemetery / lifecycle) ignore
- * `since`/`until` since they scan static sources keyed by id; they still honor
- * `dryRun`.
+ * The first-observation projectors (`methodology.bumped`,
+ * `cemetery.entry.added`, and `lifecycle.tracked.frozen`) ignore `since`,
+ * `until`, and `maxRows` since they scan static sources keyed by ID; they
+ * still honor `dryRun`.
  */
 import { errorResponse, jsonResponse } from "../lib/api-response";
 import { runAdminJob, readAdminIntegerParam } from "../lib/admin-job";
@@ -26,6 +27,12 @@ import type { ProjectorOptions } from "../lib/tape-projectors/types";
 
 const DEFAULT_MAX_ROWS = 5_000;
 const MAX_MAX_ROWS = 50_000;
+
+const IGNORED_PARAMS_BY_CLASS: Record<string, readonly string[]> = {
+  "methodology.bumped": ["since", "until", "maxRows"],
+  "cemetery.entry.added": ["since", "until", "maxRows"],
+  "lifecycle.tracked.frozen": ["since", "until", "maxRows"],
+};
 
 function readRepeatable(url: URL, key: string): string[] {
   return url.searchParams
@@ -103,6 +110,11 @@ export async function handleBackfillTape({
     };
 
     const perClass: Record<string, number> = {};
+    const ignoredParams: Record<string, readonly string[]> = {};
+    for (const job of selectedJobs) {
+      const ignored = IGNORED_PARAMS_BY_CLASS[job.name];
+      if (ignored) ignoredParams[job.name] = ignored;
+    }
     const errors: { name: string; message: string }[] = [];
     let total = 0;
 
@@ -126,6 +138,7 @@ export async function handleBackfillTape({
         since: since ?? null,
         until: until ?? null,
         selectedClasses: selectedJobs.map((job) => job.name),
+        ignoredParams,
         projected: total,
         perClass,
         errors,

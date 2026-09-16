@@ -871,7 +871,7 @@ Backfills protocol API yield-history rows for the curated target set used by yie
 
 ### `POST /api/backfill-tape`
 
-Runs the same TAPE projectors used by the `project-tape` cron with operator-supplied window and limit overrides. Writes are idempotent on `(source_table, source_row_id, transition)`, so the endpoint is safe to re-run. First-observation projectors such as methodology, cemetery, and lifecycle ignore `since` / `until` because they scan static sources keyed by ID.
+Runs the same TAPE projectors used by the `project-tape` cron with operator-supplied window and limit overrides. Writes are idempotent on `(source_table, source_row_id, transition)`, so the endpoint is safe to re-run. `depeg.peak_worsened` honors `since` / `until` against open rows' `started_at` and paginates through all matching rows. The first-observation projectors `methodology.bumped`, `cemetery.entry.added`, and `lifecycle.tracked.frozen` are window- and cap-blind: they ignore `since`, `until`, and `maxRows` because they scan static sources keyed by ID.
 
 **Request body or query parameters**
 
@@ -888,6 +888,8 @@ Query parameters win when the same field is supplied in both places.
 
 Supported projector classes are `depeg.opened`, `depeg.resolved`, `depeg.peak_worsened`, `freeze.blocked`, `freeze.unblocked`, `freeze.destroyed`, `score.upgraded`, `score.downgraded`, `psi.band_changed`, `dews.band_transitions`, `mint_burn.large_flow`, `yield.warning_emitted`, `yield.pys_dropped`, `methodology.bumped`, `cemetery.entry.added`, and `lifecycle.tracked.frozen`. `dews.band_transitions` is the single DEWS projector class and emits both `dews.escalated` and `dews.deescalated` tape events. `depeg.resolved` projects only recovery-backed depeg closures, not coverage-loss, orphan, or superseded-direction terminal rows.
 
+For every selected blind class, the response `ignoredParams` map lists the ignored fields (`since`, `until`, and `maxRows`). Other classes honor all supplied window and cap parameters.
+
 **Response**
 
 ```json
@@ -898,6 +900,7 @@ Supported projector classes are `depeg.opened`, `depeg.resolved`, `depeg.peak_wo
   "since": null,
   "until": null,
   "selectedClasses": ["depeg.opened"],
+  "ignoredParams": {},
   "projected": 12,
   "perClass": { "depeg.opened": 12 },
   "errors": []

@@ -196,6 +196,38 @@ async function savePeakSeenMap(db: D1Database, map: PeakWorsenedSeenMap): Promis
   await setCache(db, PEAK_WORSENED_CACHE_KEY, JSON.stringify(map));
 }
 
+async function fetchOpenDepegRows(
+  db: D1Database,
+  since: number | null,
+  until: number | null,
+  afterId: number | null,
+  limit: number,
+): Promise<DepegSourceRow[]> {
+  const conditions = ["source = 'live'", "ended_at IS NULL"];
+  const binds: unknown[] = [];
+  if (since != null) {
+    conditions.push("started_at > ?");
+    binds.push(since);
+  }
+  if (until != null) {
+    conditions.push("started_at <= ?");
+    binds.push(until);
+  }
+  if (afterId != null) {
+    conditions.push("id > ?");
+    binds.push(afterId);
+  }
+
+  const sql = `SELECT id, stablecoin_id, symbol, peg_type, direction, peak_deviation_bps,
+                      started_at, ended_at, start_price, peg_reference, source
+                 FROM depeg_events
+                 WHERE ${conditions.join(" AND ")}
+                 ORDER BY id ASC
+                 LIMIT ?`;
+  const result = await db.prepare(sql).bind(...binds, limit).all<DepegSourceRow>();
+  return result.results ?? [];
+}
+
 /**
  * For each OPEN depeg row whose magnitude exceeds the previously recorded
  * peak, emit one `depeg.peak_worsened` event. Idempotent because the source
@@ -209,68 +241,74 @@ export async function projectDepegPeakWorsened(
 ): Promise<ProjectorResult> {
   const limit = options?.maxRows ?? DEFAULT_BATCH_LIMIT;
   const dryRun = options?.dryRun === true;
+  const since = options?.since ?? null;
+  const until = options?.until ?? null;
   const seenMap = await loadPeakSeenMap(db);
-  const nextMap: PeakWorsenedSeenMap = {};
-
-  const sql = `SELECT id, stablecoin_id, symbol, peg_type, direction, peak_deviation_bps,
-                      started_at, ended_at, start_price, peg_reference, source
-                 FROM depeg_events
-                 WHERE source = 'live' AND ended_at IS NULL
-                 ORDER BY id ASC
-                 LIMIT ?`;
-  const rowsResult = await db.prepare(sql).bind(limit).all<DepegSourceRow>();
-
-  const rows = rowsResult.results ?? [];
+  // Keep observations outside a bounded backfill window intact. An unbounded
+  // cron scan can rebuild the map from currently open rows and prune closures.
+  const nextMap: PeakWorsenedSeenMap = since != null || until != null
+    ? { ...seenMap }
+    : {};
   const events: TapeEventInsert[] = [];
   const nowMs = Date.now();
+  let afterId: number | null = null;
 
-  for (const row of rows) {
-    const absBps = Math.abs(row.peak_deviation_bps);
-    const prevAbsBps = seenMap[String(row.id)] ?? 0;
-    nextMap[String(row.id)] = Math.max(absBps, prevAbsBps);
+  while (true) {
+    const rows = await fetchOpenDepegRows(db, since, until, afterId, limit);
+    for (const row of rows) {
+      const key = String(row.id);
+      const absBps = Math.abs(row.peak_deviation_bps);
+      const prevAbsBps = nextMap[key] ?? seenMap[key] ?? 0;
+      nextMap[key] = Math.max(absBps, prevAbsBps);
 
-    if (absBps <= prevAbsBps) continue;
-    if (prevAbsBps === 0) {
-      // First time we have seen this open row in the seen-map. Treat it as a
-      // baseline observation and do not emit — the row's `depeg.opened` event
-      // already carries its initial magnitude. Future runs will only fire on a
-      // genuine worsening past this baseline.
-      continue;
+      if (absBps <= prevAbsBps) continue;
+      if (prevAbsBps === 0) {
+        // First time we have seen this open row in the seen-map. Treat it as a
+        // baseline observation and do not emit — the row's `depeg.opened` event
+        // already carries its initial magnitude. Future runs will only fire on
+        // a genuine worsening past this baseline.
+        continue;
+      }
+
+      const sign = row.direction === "below" ? "−" : "+";
+      const sourceRowId = `${row.id}:${absBps}`;
+      const transition = "updated";
+      const type = "depeg.peak_worsened";
+
+      events.push({
+        eventId: buildTapeEventId({ tsMs: nowMs, type, sourceTable: "depeg_events", sourceRowId, transition }),
+        type,
+        severity: severityForDepegOpened(absBps),
+        ts: nowMs,
+        endsAt: null,
+        coinId: row.stablecoin_id,
+        issuerId: deriveIssuerId(row.stablecoin_id),
+        pegCurrency: row.peg_type,
+        chain: null,
+        title: `${row.symbol} depeg peak worsened (${sign}${absBps} bps)`,
+        summary: `Deviation widened to ${sign}${absBps} bps from ${sign}${prevAbsBps} bps.`,
+        payload: {
+          symbol: row.symbol,
+          direction: row.direction,
+          absDeviationBps: absBps,
+          prevAbsDeviationBps: prevAbsBps,
+          signedDeviationBps: row.peak_deviation_bps,
+          pegReference: row.peg_reference,
+          startedAt: row.started_at,
+          depegEventId: row.id,
+        },
+        sourceTable: "depeg_events",
+        sourceRowId,
+        transition,
+        sourceUrl: coinSourceUrl(row.stablecoin_id),
+        methodologyVersion: getDepegDewsMethodologyVersionAt(row.started_at),
+      });
     }
 
-    const sign = row.direction === "below" ? "−" : "+";
-    const sourceRowId = `${row.id}:${absBps}`;
-    const transition = "updated";
-    const type = "depeg.peak_worsened";
-
-    events.push({
-      eventId: buildTapeEventId({ tsMs: nowMs, type, sourceTable: "depeg_events", sourceRowId, transition }),
-      type,
-      severity: severityForDepegOpened(absBps),
-      ts: nowMs,
-      endsAt: null,
-      coinId: row.stablecoin_id,
-      issuerId: deriveIssuerId(row.stablecoin_id),
-      pegCurrency: row.peg_type,
-      chain: null,
-      title: `${row.symbol} depeg peak worsened (${sign}${absBps} bps)`,
-      summary: `Deviation widened to ${sign}${absBps} bps from ${sign}${prevAbsBps} bps.`,
-      payload: {
-        symbol: row.symbol,
-        direction: row.direction,
-        absDeviationBps: absBps,
-        prevAbsDeviationBps: prevAbsBps,
-        signedDeviationBps: row.peak_deviation_bps,
-        pegReference: row.peg_reference,
-        startedAt: row.started_at,
-        depegEventId: row.id,
-      },
-      sourceTable: "depeg_events",
-      sourceRowId,
-      transition,
-      sourceUrl: coinSourceUrl(row.stablecoin_id),
-      methodologyVersion: getDepegDewsMethodologyVersionAt(row.started_at),
-    });
+    if (rows.length < limit) break;
+    const lastId = rows[rows.length - 1]?.id;
+    if (lastId == null || (afterId != null && lastId <= afterId)) break;
+    afterId = lastId;
   }
 
   if (!dryRun) {

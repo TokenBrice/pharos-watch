@@ -10,6 +10,7 @@ import { getLatestSuccessfulCronTimestamp, buildFreshnessMeta } from "../lib/api
 import { CACHE_PROFILES } from "../lib/constants";
 import { queryTapeEvents, type TapeEventQueryFilters } from "../lib/tape-event-store";
 import { rowToTapeEvent } from "../lib/tape-event-helpers";
+import { logWorkerEvent } from "../lib/structured-log";
 import {
   SEVERITY_RANK,
   TAPE_EVENT_SEVERITY_VALUES,
@@ -181,7 +182,29 @@ export const handleEvents = async (db: D1Database, url: URL): Promise<Response> 
     includeTotal,
   });
 
-  const events: TapeEvent[] = rows.map(rowToTapeEvent);
+  const events: TapeEvent[] = [];
+  let droppedRows = 0;
+  for (const row of rows) {
+    const event = rowToTapeEvent(row);
+    if (event == null) {
+      droppedRows++;
+      logWorkerEvent({
+        scope: "api",
+        level: "warn",
+        event: "tape_event_row_dropped",
+        route: "/api/events",
+        message: "Dropped malformed tape event row",
+        metadata: {
+          eventId: row.event_id,
+          type: row.type,
+          sourceTable: row.source_table,
+          sourceRowId: row.source_row_id,
+        },
+      });
+      continue;
+    }
+    events.push(event);
+  }
 
   let nextCursor: string | null = null;
   if (hasMore && rows.length > 0) {
@@ -197,6 +220,7 @@ export const handleEvents = async (db: D1Database, url: URL): Promise<Response> 
   return jsonFreshResponse(
     {
       events,
+      droppedRows,
       nextCursor,
       total: includeTotal ? total : null,
       totalExact: includeTotal,

@@ -28,9 +28,9 @@ function emptyDb(): MockD1Database {
     { match: "FROM yield_source_decisions", rows: [] },
     { match: "FROM safety_score_history_v2", rows: [] },
     { match: "FROM safety_grade_history", rows: [] },
-    // first-observation projectors look at tape_events; mark every entry as
-    // already-emitted by handing back a wildcard row per query.
-    { match: "SELECT source_row_id FROM tape_events", rows: [{ source_row_id: "*" }] },
+    // First-observation projectors probe each source key; return an observed
+    // marker regardless of the key so this suite exercises dispatch only.
+    { match: "SELECT 1 AS observed", rows: [{ observed: 1 }] },
   ]) as MockD1Database;
 }
 
@@ -81,6 +81,26 @@ describe("handleBackfillTape", () => {
       }) });
     const body = (await readJsonResponse(res, 200)) as { selectedClasses: string[] };
     expect(body.selectedClasses).toEqual(["depeg.opened", "score.upgraded"]);
+  });
+
+  it("reports ignored window and cap params for blind projector classes", async () => {
+    const path = "/api/backfill-tape?class=methodology.bumped&class=cemetery.entry.added"
+      + "&class=lifecycle.tracked.frozen&since=100&until=200&maxRows=2&dryRun=true";
+    const res = await handleBackfillTape({
+      db: emptyDb(),
+      url: makeApiUrl(path),
+      trustedAdmin: true,
+      request: makeApiRequest(path, { method: "POST", adminKey: "secret" }),
+    });
+    const body = (await readJsonResponse(res, 200)) as {
+      ignoredParams: Record<string, string[]>;
+    };
+
+    expect(body.ignoredParams).toEqual({
+      "methodology.bumped": ["since", "until", "maxRows"],
+      "cemetery.entry.added": ["since", "until", "maxRows"],
+      "lifecycle.tracked.frozen": ["since", "until", "maxRows"],
+    });
   });
 
   it("returns a non-success status when a selected projector fails", async () => {
