@@ -65,6 +65,41 @@ function makeIdempotencyDb(options: TestDbOptions = {}): D1Database & {
           return { success: true, meta: { changes: 1 } };
         }
 
+        if (sql.includes("SET response_status = ?") && sql.includes("execution_started_at = NULL")) {
+          const [
+            status,
+            owner,
+            createdAt,
+            action,
+            idempotencyKey,
+            requestHash,
+            expectedStatus,
+            expectedStartedAt,
+            expectedGeneration,
+            expectedCreatedAt,
+          ] = args as [number, string, number, string, string, string, number, number, number, number];
+          const record = store.get(`${action}:${idempotencyKey}`);
+          if (
+            !record ||
+            record.request_hash !== requestHash ||
+            record.response_status !== expectedStatus ||
+            record.execution_started_at !== expectedStartedAt ||
+            record.reservation_generation !== expectedGeneration ||
+            record.created_at !== expectedCreatedAt
+          ) {
+            return { success: true, meta: { changes: 0 } };
+          }
+          Object.assign(record, {
+            response_status: status,
+            response_body: "",
+            reservation_owner: owner,
+            reservation_generation: expectedGeneration + 1,
+            execution_started_at: null,
+            created_at: createdAt,
+          });
+          return { success: true, meta: { changes: 1 } };
+        }
+
         if (sql.includes("reservation_generation = reservation_generation + 1")) {
           const [owner, createdAt, action, idempotencyKey, requestHash, expectedStatus, expectedGeneration, cutoff] =
             args as [string, number, string, string, string, number, number, number];
@@ -115,6 +150,38 @@ function makeIdempotencyDb(options: TestDbOptions = {}): D1Database & {
             return { success: true, meta: { changes: 0 } };
           }
           record.execution_started_at = startedAt;
+          return { success: true, meta: { changes: 1 } };
+        }
+
+        if (sql.includes("SET response_status = ?") && sql.includes("AND execution_started_at < ?")) {
+          const [
+            status,
+            body,
+            createdAt,
+            action,
+            idempotencyKey,
+            requestHash,
+            expectedStatus,
+            expectedStartedAt,
+            expectedGeneration,
+            cutoff,
+          ] = args as [number, string, number, string, string, string, number, number, number, number];
+          const record = store.get(`${action}:${idempotencyKey}`);
+          if (
+            !record ||
+            record.request_hash !== requestHash ||
+            record.response_status !== expectedStatus ||
+            record.execution_started_at !== expectedStartedAt ||
+            record.reservation_generation !== expectedGeneration ||
+            record.execution_started_at >= cutoff
+          ) {
+            return { success: true, meta: { changes: 0 } };
+          }
+          Object.assign(record, {
+            response_status: status,
+            response_body: body,
+            created_at: createdAt,
+          });
           return { success: true, meta: { changes: 1 } };
         }
 
@@ -173,10 +240,14 @@ function makeIdempotencyDb(options: TestDbOptions = {}): D1Database & {
         }
 
         if (sql.includes("DELETE FROM admin_idempotency_keys")) {
-          const [cutoff, pendingStatus] = args as [number, number];
+          const [cutoff, pendingStatus, executionUnknownStatus] = args as [number, number, number];
           let changes = 0;
           for (const [key, record] of store) {
-            if (record.created_at < cutoff && record.response_status !== pendingStatus) {
+            if (
+              record.created_at < cutoff &&
+              record.response_status !== pendingStatus &&
+              record.response_status !== executionUnknownStatus
+            ) {
               store.delete(key);
               changes++;
             }
@@ -530,6 +601,76 @@ describe("runIdempotentAdminAction", () => {
 
     expect(retry.status).toBe(503);
     expect(calls).toBe(0);
+  });
+
+  it("recovers a started reservation after 24 hours only after recording its unknown outcome", async () => {
+    const now = 1_800_000_000;
+    vi.spyOn(Date, "now").mockReturnValue(now * 1000);
+    const db = makeIdempotencyDb();
+    let started!: () => void;
+    const startedPromise = new Promise<void>((resolve) => {
+      started = resolve;
+    });
+    const first = runIdempotentAdminAction(db, "backfill-depegs", request("stale-started"), async () => {
+      started();
+      return new Promise<Response>(() => {});
+    });
+    void first;
+    await startedPromise;
+    const pending = db.getRecord("backfill-depegs", "stale-started")!;
+    pending.execution_started_at = now - 25 * 60 * 60;
+
+    let retryCalls = 0;
+    const recovered = await runIdempotentAdminAction(db, "backfill-depegs", request("stale-started"), async () =>
+      Response.json({ calls: ++retryCalls }, { status: 202 }),
+    );
+    const history = db.getHistory();
+    const unknownMarkerIndex = history.findIndex((entry) => entry.sql.includes("AND execution_started_at < ?"));
+    const takeoverIndex = history.findIndex(
+      (entry) => entry.sql.includes("SET response_status = ?") && entry.sql.includes("execution_started_at = NULL"),
+    );
+
+    expect(recovered.status).toBe(202);
+    expect(retryCalls).toBe(1);
+    expect(unknownMarkerIndex).toBeGreaterThanOrEqual(0);
+    expect(history[unknownMarkerIndex]?.binds[0]).toBe(-2);
+    expect(takeoverIndex).toBeGreaterThan(unknownMarkerIndex);
+    expect(pending).toMatchObject({ response_status: 202, reservation_generation: 2 });
+    vi.restoreAllMocks();
+  });
+
+  it("retains execution_unknown records beyond the seven-day terminal TTL", async () => {
+    const now = 1_800_000_000;
+    vi.spyOn(Date, "now").mockReturnValue(now * 1000);
+    const db = makeIdempotencyDb();
+    let unknownCalls = 0;
+    const unknown = await runIdempotentAdminAction(
+      db,
+      "backfill-depegs",
+      request("old-execution-unknown"),
+      async (): Promise<Response> => {
+        unknownCalls++;
+        throw new Error("effect may have happened");
+      },
+    );
+    expect(unknown.status).toBe(503);
+    db.getRecord("backfill-depegs", "old-execution-unknown")!.created_at = now - 8 * 24 * 60 * 60;
+
+    await runIdempotentAdminAction(db, "backfill-depegs", request("trigger-prune"), async () =>
+      Response.json({ ok: true }),
+    );
+    const replay = await runIdempotentAdminAction(
+      db,
+      "backfill-depegs",
+      request("old-execution-unknown"),
+      async () => Response.json({ impossible: ++unknownCalls }),
+    );
+
+    expect(replay.status).toBe(503);
+    expect(replay.headers.get("X-Idempotent-Replay")).toBe("true");
+    expect(unknownCalls).toBe(1);
+    expect(db.getRecord("backfill-depegs", "old-execution-unknown")?.response_status).toBe(-2);
+    vi.restoreAllMocks();
   });
 
   it("stores and replays execution_unknown when execution throws", async () => {

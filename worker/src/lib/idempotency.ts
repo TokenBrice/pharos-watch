@@ -37,6 +37,7 @@ const PENDING_RESPONSE_STATUS = -1;
 const EXECUTION_UNKNOWN_RESPONSE_STATUS = -2;
 const EXECUTION_UNKNOWN_HTTP_STATUS = 503;
 const PENDING_TAKEOVER_AFTER_SECONDS = 20 * 60;
+const STARTED_TAKEOVER_AFTER_SECONDS = DAY_SECONDS;
 const EXECUTION_UNKNOWN_MESSAGE =
   "The prior idempotent action started, but its terminal response is unconfirmed. Operator reconciliation is required before retrying.";
 
@@ -156,6 +157,102 @@ async function takeOverAbandonedUnstartedReservation(
     return null;
   }
 }
+async function takeOverAbandonedStartedReservation(
+  db: D1Database,
+  action: string,
+  key: string,
+  fingerprint: string,
+  owner: string,
+  existingGeneration: number,
+  executionStartedAt: number,
+  now: number,
+): Promise<ReservationToken | null> {
+  const cutoff = now - STARTED_TAKEOVER_AFTER_SECONDS;
+  const executionUnknownBody = buildExecutionUnknownBody();
+  try {
+    const unknownResult = await db
+      .prepare(
+        `UPDATE admin_idempotency_keys
+            SET response_status = ?,
+                response_body = ?,
+                created_at = ?
+          WHERE action = ?
+            AND idempotency_key = ?
+            AND request_hash = ?
+            AND response_status = ?
+            AND execution_started_at = ?
+            AND reservation_generation = ?
+            AND execution_started_at < ?`,
+      )
+      .bind(
+        EXECUTION_UNKNOWN_RESPONSE_STATUS,
+        executionUnknownBody,
+        now,
+        action,
+        key,
+        fingerprint,
+        PENDING_RESPONSE_STATUS,
+        executionStartedAt,
+        existingGeneration,
+        cutoff,
+      )
+      .run();
+    if ((unknownResult.meta?.changes ?? 0) !== 1) return null;
+
+    logWorkerEvent({
+      scope: "admin",
+      level: "warn",
+      event: "idempotency_stale_started_execution_unknown",
+      route: action,
+      source: "admin_idempotency_keys",
+      message: "Marked a stale started idempotency attempt as execution_unknown before takeover",
+    });
+
+    const takeoverResult = await db
+      .prepare(
+        `UPDATE admin_idempotency_keys
+            SET response_status = ?,
+                response_body = '',
+                reservation_owner = ?,
+                reservation_generation = reservation_generation + 1,
+                execution_started_at = NULL,
+                created_at = ?
+          WHERE action = ?
+            AND idempotency_key = ?
+            AND request_hash = ?
+            AND response_status = ?
+            AND execution_started_at = ?
+            AND reservation_generation = ?
+            AND created_at = ?`,
+      )
+      .bind(
+        PENDING_RESPONSE_STATUS,
+        owner,
+        now,
+        action,
+        key,
+        fingerprint,
+        EXECUTION_UNKNOWN_RESPONSE_STATUS,
+        executionStartedAt,
+        existingGeneration,
+        now,
+      )
+      .run();
+    return (takeoverResult.meta?.changes ?? 0) === 1 ? { owner, generation: existingGeneration + 1 } : null;
+  } catch (error) {
+    logWorkerEvent({
+      scope: "admin",
+      level: "warn",
+      event: "idempotency_started_takeover_failed",
+      route: action,
+      source: "admin_idempotency_keys",
+      message: "Stale started idempotency reservation takeover failed",
+      error,
+    });
+    return null;
+  }
+}
+
 
 async function beginReservationExecution(
   db: D1Database,
@@ -274,9 +371,9 @@ async function pruneTerminalIdempotencyRecords(db: D1Database, action: string, n
     .prepare(
       `DELETE FROM admin_idempotency_keys
         WHERE created_at < ?
-          AND response_status <> ?`,
+          AND response_status NOT IN (?, ?)`,
     )
-    .bind(now - 7 * DAY_SECONDS, PENDING_RESPONSE_STATUS)
+    .bind(now - 7 * DAY_SECONDS, PENDING_RESPONSE_STATUS, EXECUTION_UNKNOWN_RESPONSE_STATUS)
     .run()
     .catch((error) => {
       logWorkerEvent({
@@ -340,12 +437,22 @@ export async function runIdempotentAction(
       true,
     );
   }
-  if (existing.execution_started_at != null) {
-    return withIdempotencyHeaders(buildExecutionUnknownResponse(), key, true);
-  }
-
   let token: ReservationToken | null = insertedReservation ? { owner, generation: 1 } : null;
-  if (!token) {
+  if (existing.execution_started_at != null) {
+    token = await takeOverAbandonedStartedReservation(
+      db,
+      action,
+      key,
+      fingerprint,
+      owner,
+      existing.reservation_generation,
+      existing.execution_started_at,
+      now,
+    );
+    if (!token) {
+      return withIdempotencyHeaders(buildExecutionUnknownResponse(), key, true);
+    }
+  } else if (!token) {
     token = await takeOverAbandonedUnstartedReservation(
       db,
       action,
@@ -355,9 +462,9 @@ export async function runIdempotentAction(
       existing.reservation_generation,
       now,
     );
-  }
-  if (!token) {
-    return withIdempotencyHeaders(errorResponse(409, "Idempotency key is currently reserved"), key, true);
+    if (!token) {
+      return withIdempotencyHeaders(errorResponse(409, "Idempotency key is currently reserved"), key, true);
+    }
   }
 
   const executionStarted = await beginReservationExecution(db, action, key, fingerprint, token, now);
