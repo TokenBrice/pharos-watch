@@ -19,24 +19,24 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-09-09",
+    "reviewedAt": "2026-09-16",
     "reviewer": "PoR verification sweep 2026-09 (lockstep coherent refresh: report and composition review updated together from the same artefact)",
     "confidence": "verified",
     "sources": [
       {
-        "label": "Baker Tilly WM CADD CSAE 3000 reasonable-assurance report - July 2026",
-        "url": "https://drive.google.com/file/d/19cuC3Y91BCr1AopeCfzq53oZJD7HeEET/view"
+        "label": "Baker Tilly WM CADD CSAE 3000 reasonable-assurance report - August 2026",
+        "url": "https://drive.google.com/file/d/1TGC4WdV7shMJPTwAYErRNrCns7LsH6TX/view"
       },
       {
         "label": "CADD reserve attestations",
         "url": "https://tetradg.com/cadd-reserve-attestations/"
       }
     ],
-    "rationale": "Baker Tilly WM LLP CSAE 3000 reasonable-assurance examination at dual dates 28 and 31 July 2026 (report dated 2026-09-04, PDF read this pass; positive opinion): reserves 100% Canadian dollar cash - CAD 1,194,448.5 at July 31 against 1,188,399.38 CADD in circulation on Base, Tempo and Ethereum (excess CAD 6,049.12); the permitted T-bill/MMF/other categories are all 0%. Trustee: Tetra Trust Company for the CADD Reserve Trust.",
-    "compositionBasis": "Baker Tilly WM examination as of July 31, 2026",
-    "compositionAsOf": "2026-07-31",
+    "rationale": "Baker Tilly WM LLP CSAE 3000 reasonable-assurance examination at dual dates 13 and 31 August 2026 (report dated 2026-09-15, PDF read this pass; positive opinion): reserves 100% Canadian dollar cash - CAD 1,207,253.18 at August 31 against 1,207,019.18 CADD in circulation on Base, Tempo and Ethereum, net of the report-defined circulation exclusions (excess CAD 234); the permitted T-bill/MMF/other categories are all 0%. Trustee: Tetra Trust Company for the CADD Reserve Trust.",
+    "compositionBasis": "Baker Tilly WM examination as of August 31, 2026",
+    "compositionAsOf": "2026-08-31",
     "scope": "full-composition",
-    "knownUnknownExposure": "The independently assured reserve class and liability reconciliation are complete at July 31; individual reserve-bank identities and account allocations remain undisclosed.",
+    "knownUnknownExposure": "The independently assured reserve class and liability reconciliation are complete at August 31; individual reserve-bank identities and account allocations remain undisclosed.",
     "knownUnknownExposurePct": 0,
     "nonLinkDispositions": [
       {
