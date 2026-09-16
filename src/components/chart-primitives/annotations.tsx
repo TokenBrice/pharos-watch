@@ -72,6 +72,7 @@ const ANNOTATION_DATE_FMT = new Intl.DateTimeFormat("en-US", {
   month: "short",
   day: "numeric",
   year: "numeric",
+  timeZone: "UTC",
 });
 
 /**
@@ -255,7 +256,7 @@ export function AnnotationDensityStrip({
               fillOpacity={alpha}
             >
               <title>
-                {`${b.count} event${b.count === 1 ? "" : "s"} · ${new Date(b.startMs).toLocaleDateString("en-US", { month: "short", year: "numeric" })}`}
+                {`${b.count} event${b.count === 1 ? "" : "s"} · ${new Date(b.startMs).toLocaleDateString("en-US", { month: "short", year: "numeric", timeZone: "UTC" })}`}
               </title>
             </rect>
           );

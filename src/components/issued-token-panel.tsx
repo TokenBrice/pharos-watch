@@ -3,6 +3,7 @@
 import type { RefObject } from "react";
 import { Copy, Terminal } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { formatDateTimeLocale } from "@shared/lib/format";
 
 export interface IssuedTokenPanelProps {
   token: string;
@@ -49,7 +50,7 @@ export function IssuedTokenPanel({
         <p className="text-base font-semibold">Copy this token now.</p>
         <p className="mt-1 text-xs leading-relaxed opacity-90">{onceCopy}</p>
         <p className="mt-2 text-xs opacity-90">
-          Prefix {keyPrefix} - {expiresAt == null ? "No expiry" : `Expires ${new Date(expiresAt * 1000).toLocaleString()}`}
+          Prefix {keyPrefix} - {expiresAt == null ? "No expiry" : `Expires ${formatDateTimeLocale(expiresAt)}`}
         </p>
         {!tokenSecured ? (
           <p className="mt-2 text-xs font-medium opacity-95">
