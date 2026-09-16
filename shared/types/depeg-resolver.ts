@@ -266,6 +266,7 @@ export const DdrLineageSchema = z.object({
   incidentCount: z.number().int().nonnegative(),
   coinCount: z.number().int().nonnegative(),
   quarantinedCoins: z.number().int().nonnegative(),
+  trainingRowsTruncated: z.boolean().optional(),
 });
 export type DdrLineage = z.infer<typeof DdrLineageSchema>;
 
