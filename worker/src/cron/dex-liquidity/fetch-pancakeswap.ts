@@ -4,7 +4,7 @@ import { rethrowIfAborted, throwIfAborted } from "../../lib/abort";
 import { DAY_SECONDS } from "@shared/lib/time-constants";
 import { USER_AGENT } from "../../lib/constants";
 import { makeDexApiFetchResult, type DexApiFetchResult, type DexApiPool } from "../../lib/dex-api-common";
-import { classifyClPoolType } from "./direct-source-helpers";
+import { classifyClPoolType, DEFAULT_CL_FEE_BPS } from "./direct-source-helpers";
 import { toErrorMessage } from "@shared/lib/error-utils";
 import { DIRECT_API_REQUEST_TIMEOUT_MS } from "./direct-api-policy";
 import {
@@ -262,7 +262,7 @@ export async function fetchPancakeSwapPools(
           if (!Number.isFinite(tvlUsd) || tvlUsd <= 0) continue;
 
           const feeTier = parseInt(pool.feeTier, 10);
-          const feeBps = Number.isFinite(feeTier) ? feeTier / 100 : 5;
+          const feeBps = Number.isFinite(feeTier) ? feeTier / 100 : DEFAULT_CL_FEE_BPS;
           const reserve0 = parseFloat(pool.totalValueLockedToken0);
           const reserve1 = parseFloat(pool.totalValueLockedToken1);
           // DexApiPool.price is token0/token1. Pancake names that ratio token1Price.

@@ -127,15 +127,24 @@ export async function loadLegacyDexPoolChallengers(
 
     const qualifying: DexPriceChallengerLoadRow[] = [];
     for (const source of sources) {
-        if (source.tvl < minPoolTvlUsd || !Number.isFinite(source.price) || source.price <= 0) continue;
+        const price = typeof source.price === "number" ? source.price : Number(source.price);
+        const tvl = Number(source.tvl);
+        if (
+          typeof source.chain !== "string" ||
+          typeof source.protocol !== "string" ||
+          !Number.isFinite(price) ||
+          price <= 0 ||
+          !Number.isFinite(tvl) ||
+          tvl < minPoolTvlUsd
+        ) continue;
         qualifying.push({
           stablecoinId: row.stablecoin_id,
           poolId: `${row.stablecoin_id}:${source.protocol}:${source.chain}`,
           chain: source.chain,
           protocol: source.protocol,
           sourceFamily: "legacy-price-sources",
-          priceUsd: source.price,
-          tvlUsd: source.tvl,
+          priceUsd: price,
+          tvlUsd: tvl,
           snapshotAt: row.updated_at,
           publishedAt: row.updated_at,
         });

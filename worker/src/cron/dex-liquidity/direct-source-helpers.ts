@@ -2,6 +2,8 @@ import { buildPoolIdentity, type PoolIdentity } from "./pool-identity";
 import { buildChainAddressKey } from "./token-resolution";
 import type { DexApiPool } from "../../lib/dex-api-common";
 
+export const DEFAULT_CL_FEE_BPS = 500;
+
 export function normalizeFeeRateFromBps(feeBps: number | null | undefined): number | null {
   if (feeBps == null || !Number.isFinite(feeBps) || feeBps <= 0) return null;
   return feeBps / 10_000;
@@ -11,17 +13,23 @@ export function classifyClPoolType(
   protocol: "pancakeswap" | "aerodrome-slipstream" | "velodrome-slipstream",
   feeBps: number | null | undefined,
 ): string {
-  const normalizedFeeBps = feeBps != null && Number.isFinite(feeBps) ? feeBps : 500;
+  const normalizedFeeBps =
+    feeBps != null && Number.isFinite(feeBps)
+      ? feeBps
+      : protocol === "pancakeswap"
+        ? DEFAULT_CL_FEE_BPS
+        : 30;
   const prefix = protocol === "pancakeswap" ? "pancakeswap-v3" : protocol;
   if (normalizedFeeBps <= 1) return `${prefix}-1bp`;
   if (normalizedFeeBps <= 5) return `${prefix}-5bp`;
-  // PancakeSwap V3 uses distinct 25bp and 100bp tiers. Slipstream pool_fee units
-  // are unverified (A6 deferred), so Slipstream stays on the legacy 30bp bucket.
+  // PancakeSwap V3 uses distinct 25bp and 100bp tiers. Slipstream pool_fee
+  // values are basis points with reviewed 1bp, 5bp, 30bp, and 100bp tiers.
   if (protocol === "pancakeswap") {
     if (normalizedFeeBps <= 25) return `${prefix}-25bp`;
     if (normalizedFeeBps <= 30) return `${prefix}-30bp`;
     return `${prefix}-100bp`;
   }
+  if (normalizedFeeBps > 30) return `${prefix}-100bp`;
   return `${prefix}-30bp`;
 }
 
