@@ -16,7 +16,7 @@ import {
   DDR_OUTCOME_LABELS,
   DDR_VERDICT_LABELS,
   formatMetricPercent,
-  formatPercent,
+  formatReviewerPercent,
   formatDdrSignedDuration,
   getActualOutcome,
   getCoverageMetric,
@@ -123,7 +123,7 @@ describe("DDR review derivations", () => {
     expect(getRowTime(coverageRow)).toBe(7202);
     expect(getSignedDurationError(predictionRow)).toBe(3600);
     expect(getSignedDurationError(noCallRow)).toBeNull();
-    expect(formatPercent(0.5)).toBe("50%");
+    expect(formatReviewerPercent(0.5)).toBe("50%");
     expect(formatMetricPercent(null)).toBe("—");
   });
 

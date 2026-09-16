@@ -6,6 +6,7 @@ import {
   PEG_CURRENCY_VALUES,
   PriceConfidenceSchema,
   PriceObservedAtModeSchema,
+  PriceSourceConfidenceProfileSchema,
 } from "./core";
 import { ContractDeploymentSchema } from "./stablecoin-meta-schemas";
 import {
@@ -71,11 +72,6 @@ export const StablecoinDetailResponseSchema = z.object({
 }).passthrough();
 export type StablecoinDetailResponse = z.infer<typeof StablecoinDetailResponseSchema>;
 
-const PriceSourceConfidenceProfileSchema = z.object({
-  activeDexLanes: z.number().int().min(0),
-  freshestDexLaneAgeSec: z.number().int().min(0).nullable(),
-  aggregateLaneOnly: z.boolean(),
-});
 const ChainCirculatingSchema = z.record(
   z.string(),
   z.object({
@@ -597,12 +593,6 @@ export const DepegEventsResponseSchema = z.object({
   events: z.array(DepegEventSchema),
   total: z.number(),
   totalExact: z.boolean().optional(),
-  counts: z
-    .object({
-      incidents: z.number().int().nonnegative(),
-      thresholdCrossings: z.number().int().nonnegative(),
-    })
-    .optional(),
   nextCursor: z.string().nullable().optional(),
   pending: z.array(DepegPendingIncidentSchema).optional(),
   methodology: MethodologyEnvelopeSchema.optional(),

@@ -24,7 +24,7 @@ import {
   buildDdrReviewerRows,
   buildDdrTimelineModel,
   formatMetricPercent,
-  formatPercent,
+  formatReviewerPercent,
   formatDdrSignedDuration,
   getActualOutcome,
   getCoverageMetric,
@@ -194,7 +194,7 @@ function VersionAccuracyStrip({ summary }: { summary: DdrrSummary }) {
             </div>
             <span className="pharos-meta pharos-numeric w-36 shrink-0 whitespace-nowrap text-right">
               {segment.accuracy != null
-                ? `${formatPercent(segment.accuracy)} · ${segment.scored} scored`
+                ? `${formatReviewerPercent(segment.accuracy)} · ${segment.scored} scored`
                 : "maturing · 0 scored"}
             </span>
             <span
@@ -232,7 +232,7 @@ function CalibrationLedger({ summary, rows }: { summary: DdrrSummary; rows: read
     scored === 0
       ? "none scored yet"
       : scored >= CALIBRATION_THRESHOLD && pct != null
-        ? `correct · ${formatPercent(pct)}`
+        ? `correct · ${formatReviewerPercent(pct)}`
         : "correct so far";
 
   return (

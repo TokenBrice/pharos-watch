@@ -444,12 +444,12 @@ export function formatDecimal(value: number, minimumFractionDigits = 2, maximumF
   return formatter.format(value);
 }
 
-/** Format a percentage to fixed decimals with % suffix. Returns "-" for nullish. */
+/** Format a percentage-point value (0-100 scale) to fixed decimals with % suffix. Returns "-" for nullish. */
 export function formatPercent(value: number | null | undefined, decimals = 2): string {
   return isFiniteNumber(value) ? `${value.toFixed(decimals)}%` : "-";
 }
 
-/** Format a signed percentage with +/- prefix and % suffix. Returns `nullFallback` (default "-") for nullish. */
+/** Format a signed percentage-point value (0-100 scale) with +/- prefix and % suffix. Returns `nullFallback` (default "-") for nullish. */
 export function formatSignedPercent(value: number | null | undefined, decimals = 2, nullFallback = "-"): string {
   if (!isFiniteNumber(value)) return nullFallback;
   const sign = value > 0 ? "+" : "";

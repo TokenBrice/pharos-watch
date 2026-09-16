@@ -1097,6 +1097,7 @@ export const CustodyProfileSchema = z
           .object({
             name: z.string().min(1),
             role: z.enum(CUSTODY_PROVIDER_ROLE_VALUES),
+            /** Percentage points on a 0-100 scale, not a 0-1 ratio. */
             sharePct: z.number().finite().min(0).max(100).optional(),
             jurisdiction: z.string().min(1).optional(),
           })

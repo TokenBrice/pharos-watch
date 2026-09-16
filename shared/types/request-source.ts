@@ -13,6 +13,7 @@ const ApiRequestAttributionSplitSchema = z.object({
   siteRequests: z.number(),
   externalRequests: z.number(),
   totalRequests: z.number(),
+  /** Percentage points on a 0-100 scale, not a 0-1 ratio. */
   siteSharePct: z.number(),
   externalSharePct: z.number(),
 });

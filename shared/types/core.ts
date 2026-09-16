@@ -763,6 +763,13 @@ export interface PriceSourceConfidenceProfile {
   freshestDexLaneAgeSec: number | null;
   aggregateLaneOnly: boolean;
 }
+export const PriceSourceConfidenceProfileSchema: z.ZodType<PriceSourceConfidenceProfile> = z
+  .object({
+    activeDexLanes: z.number().int().min(0),
+    freshestDexLaneAgeSec: z.number().int().min(0).nullable(),
+    aggregateLaneOnly: z.boolean(),
+  })
+  .strict();
 
 export interface PegAssetBase {
   id: string;

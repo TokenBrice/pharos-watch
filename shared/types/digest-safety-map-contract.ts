@@ -1,3 +1,5 @@
+import { isRecord } from "@shared/lib/type-guards";
+
 export const DIGEST_SAFETY_MAP_TIERS = ["A", "B", "C", "D", "F"] as const;
 export type DigestSafetyMapTier = typeof DIGEST_SAFETY_MAP_TIERS[number];
 export type DigestSafetyMapProfile = "canonical" | "archive-compatible";
@@ -7,6 +9,7 @@ export interface DigestSafetyMapTierSummary {
   range: string;
   count: number;
   mcapUsd: number;
+  /** Percentage points on a 0-100 scale, not a 0-1 ratio. */
   sharePct: number;
   leaders: Array<{ symbol: string; score: number; mcapUsd: number }>;
 }
@@ -54,10 +57,6 @@ export interface DigestSafetyMapArchiveCapture {
 export interface DigestSafetyMapContractIssue {
   path: (string | number)[];
   message: string;
-}
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null;
 }
 
 function isNonNegativeFinite(value: unknown): value is number {

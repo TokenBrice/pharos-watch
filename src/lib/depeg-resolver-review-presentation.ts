@@ -123,7 +123,7 @@ export function isTrackRecordRow(row: DdrrResponseRow): boolean {
   return row.kind === "prediction_review";
 }
 
-export function formatPercent(value: number | null): string {
+export function formatReviewerPercent(value: number | null): string {
   if (value == null || !Number.isFinite(value)) return "N/A";
   return formatPercentFromRatio(value, Number.isInteger(value * 100) ? 0 : 1);
 }
@@ -134,7 +134,7 @@ export function getCoverageState(row: DdrrResponseRow): DdrrCoverageState | null
 
 export function formatMetricPercent(value: number | null | undefined): string {
   if (value == null || !Number.isFinite(value)) return "—";
-  return formatPercent(value);
+  return formatReviewerPercent(value);
 }
 
 export function getVerdictReview(row: DdrrResponseRow): DdrrVerdictReview {
