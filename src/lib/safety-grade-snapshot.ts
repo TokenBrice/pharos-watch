@@ -24,7 +24,7 @@ export interface SnapshotSafetyAssessment {
 
 const SCORES_LATEST_DATASET = PUBLIC_DATASET_CURRENT_EXPORTS["scores-latest"] as ScoresLatestDataset;
 
-export function assertCurrentPublicDatasetFresh(
+function assertCurrentPublicDatasetFresh(
   now = new Date(),
   snapshotDate = PUBLIC_DATASET_CURRENT_DATE,
 ): void {
