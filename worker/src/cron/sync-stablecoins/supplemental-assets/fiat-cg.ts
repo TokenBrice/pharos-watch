@@ -13,6 +13,7 @@ import {
   pegTypeKey,
   resolveLowVolumeCoinGeckoPrice,
   resolveSupplementalContractPrice,
+  resolveSupplementalCoinGeckoMcap,
   resolveSupplementalPrice,
   toPositiveFiniteNumber,
   type CoinGeckoMcapData,
@@ -41,8 +42,8 @@ export async function fetchFiatCoinGeckoTokens(
 
     const mcapMap: Record<string, number> = {};
     for (const token of FIAT_CG_METAS) {
-      const mcap = token.geckoId ? toPositiveFiniteNumber(cgData[token.geckoId]?.usd_market_cap) : undefined;
-      if (mcap && mcap > 0) mcapMap[token.id] = mcap;
+      const mcap = resolveSupplementalCoinGeckoMcap(cgData, token.geckoId);
+      if (mcap != null) mcapMap[token.id] = mcap;
     }
 
     const results = await mapWithConcurrency(
@@ -104,7 +105,7 @@ export async function fetchFiatCoinGeckoTokens(
 
         // Fallback: on-chain totalSupply × market/peg-reference price when CG has no market cap.
         // This keeps preview-only plain-par fiat assets in supply coverage without inventing a live market quote.
-        if (priceForSupply != null) {
+        if ((preferOnChainMcap || !mcap) && priceForSupply != null) {
           const aggregateOnChainMcap = await fetchCuratedAggregateOnChainMcap(meta, priceForSupply, chainRpcs, signal);
           if (aggregateOnChainMcap) {
             mcap = aggregateOnChainMcap.mcap;
@@ -121,7 +122,7 @@ export async function fetchFiatCoinGeckoTokens(
           }
         }
 
-        if ((preferOnChainMcap || !mcap) && priceForSupply != null) {
+        if (!mcap && priceForSupply != null) {
           const onChainMcap = await fetchOnChainMcap(meta, priceForSupply, chainRpcs, signal);
           if (onChainMcap) {
             mcap = onChainMcap.mcap;
