@@ -53,7 +53,7 @@ export const SENSITIVE_COPY_ROOTS: readonly string[] = [
 ];
 const SOURCE_EXTENSIONS = new Set([".ts", ".tsx", ".css"]);
 
-/** Multi-word by design: code identifiers are camelCase, so these only match prose. */
+/** Most terms are multi-word to avoid camelCase identifiers; `airdrop` is the deliberate single-word exception. */
 export const FORBIDDEN_COPY: readonly SensitiveCopyRule[] = [
   { id: "seed-phrase", terms: ["seed phrase", "recovery phrase", "private key"] },
   { id: "connect-wallet", terms: ["connect wallet", "connect your wallet", "wallet connect"] },

@@ -2,7 +2,7 @@
 
 Cloudflare Worker serving the Pharos API. It handles HTTP routing, edge caching, CORS, admin auth, and scheduled runtime work. `worker/wrangler.toml` owns deployed expressions, `CRON_JOB_DEFINITIONS` owns status-tracked jobs, and `CRON_CONNECTION_BUDGET_ENTRIES` also covers budget-only scheduled surfaces. Run the cron sync and connection-budget checks for the current topology.
 
-Execution note: the `snapshot-supply` retry path runs on the `*/15 * * * *` trigger only after a downstream-safe `sync-stablecoins` cache write. The `0 8 * * *` daily fallback additionally requires the `stablecoins` cache row to be written at or after that scheduled slot start before it can consume write-once daily artifacts.
+Execution note: the `snapshot-supply` retry path runs on the logical quarter-hour schedule, deployed as the `0/15/30/45 * * * *` hourly aliases, only after a downstream-safe `sync-stablecoins` cache write. The `0 8 * * *` daily fallback additionally requires the `stablecoins` cache row to be written at or after that scheduled slot start before it can consume write-once daily artifacts.
 
 **Deployed at:** `api.pharos.watch` (public integration API), `site-api.pharos.watch` (website-internal data lane), and `ops-api.pharos.watch` (operator lane; pair with Cloudflare Access before use)
 
@@ -677,7 +677,7 @@ Most high-risk external integrations are protected by per-source circuit breaker
 - **Open threshold**: 3 consecutive failures
 - **Probe interval**: 30 minutes (one request allowed to test recovery)
 - **Transitions**: state changes emit structured Worker events (`circuit_opened`, `circuit_probe_failed`, `circuit_recovered`); there is no webhook fan-out on the breaker path
-- **Health impact**: 3 or more public-impact open circuits degrade `/api/health`; scoped `live-reserves:*`, optional `dexscreener-liquidity` / `dexscreener-search`, and single-asset `kava-pricefeed` and `aznd-curve-pool` breakers are excluded from that source-wide count. They remain in admin provider diagnostics, while reserve and exact active-price coverage own their public impact. The retired `mento-broker`, `usx-stable-pools`, `pyth-prices`, and `jusd-citrea-bridge` cache keys are no longer active sources and are filtered from Worker diagnostics. `isPublicImpactCircuitKey()` in `shared/lib/public-health.ts` is the exclusion predicate.
+- **Health impact**: 3 or more public-impact open circuits degrade `/api/health`; scoped `live-reserves:*`, optional `dexscreener-liquidity` / `dexscreener-search`, and single-asset `kava-pricefeed`, `aznd-curve-pool`, and `mento-broker` breakers are excluded from that source-wide count. They remain in admin provider diagnostics, while reserve and exact active-price coverage own their public impact. The retired `usx-stable-pools`, `pyth-prices`, and `jusd-citrea-bridge` cache keys are no longer active sources and are filtered from Worker diagnostics. `isPublicImpactCircuitKey()` in `shared/lib/public-health.ts` is the exclusion predicate.
 
 The breaker key registry is `CIRCUIT_SOURCE` in `worker/src/lib/constants.ts`; each entry maps to a `circuit:<source>` cache key, and `sync-live-reserves` additionally opens dynamic `live-reserves:<scope>` keys per configured breaker scope. Read the current inventory and each key's callers from that constant rather than from a table here. Only the classifications that are not obvious from the source belong in this document:
 

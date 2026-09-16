@@ -248,8 +248,8 @@ Use dependency maintenance as a dedicated routine, not as incidental churn insid
 
 Current explicitly deferred major cohort:
 
-- `eslint@10` — next review: 2026-08-15
-- `typescript@6` — next review: 2026-08-15
+- `eslint@10` — reviewed 2026-09, still deferred; next review: 2026-12-15
+- `typescript@6` — reviewed 2026-09, still deferred; next review: 2026-12-15
 - `satori@0.33.x` — blocked, not deferred: 0.33 hard-imports `harfbuzzjs`, whose loader reads `self.location`/`__filename` to fetch `hb.wasm` and throws in workerd on the first OG render (`scripts/__tests__/og-worker-runtime.test.ts` returns 500; vercel/satori#796). Dependabot ignores the range; re-test when upstream ships a workerd-compatible loader.
 
 The root `fflate` override pins Satori’s transitive dependency to patched `0.7.5` for [GHSA-px8p-9vwx-vf98](https://github.com/advisories/GHSA-px8p-9vwx-vf98). Keep it until Satori releases a compatible dependency update; the Worker OG renderer uses Satori for font decoding and rendering.

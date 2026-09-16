@@ -160,7 +160,7 @@ Canonical per-job wrapper-timeout roster. Each cron job receives an `AbortSignal
 | `sync-cl-exit-depth`       | 9 min   | Score-bearing measured-execution lane; the producer stops RPC work at eight minutes, leaving a minute to publish a complete quote generation and record the cron result                                                | `worker/src/lib/cron-timeouts.ts` |
 | `dispatch-telegram-alerts` | 4.5 min | Dedicated five-minute lane with a 4-minute send-loop soft deadline, 30 seconds for durable finalization, and a 30-second lease heartbeat; pending-drain and fresh-send loops stop starting Telegram batches near the four-minute mark, releasing pending claims or queueing the untouched fresh tail so slow Bot API runs yield the next trigger interval. The shorter crash fence prevents an unabortable operation from suppressing several later slots | `shared/lib/telegram-delivery-policy.ts` (`TELEGRAM_DISPATCH_TIMEOUT_MS`), `worker/src/lib/cron-timeouts.ts`, `worker/src/handlers/scheduled/context.ts` |
 | `daily-digest`             | 14 min  | Expanded LLM generation + persistence/distribution, still below the 15-minute scheduled-trigger ceiling                                                                                                                | `worker/src/lib/cron-timeouts.ts` |
-| `weekly-recap`             | 14 min  | Weekly Anthropic recap on the independent 08:10 Monday trigger; uses the same Anthropic budget and two-channel publication tail as daily, so the wrapper preserves the same post-LLM headroom                           | `worker/src/lib/cron-timeouts.ts` |
+| `weekly-recap`             | 14 min  | Weekly Anthropic recap in the daily 08:10 UTC slot, with an in-code Monday UTC gate; uses the same Anthropic budget and two-channel publication tail as daily, so the wrapper preserves the same post-LLM headroom                    | `worker/src/lib/cron-timeouts.ts`, `worker/src/cron/weekly-recap.ts` |
 
 `docs/worker-infrastructure.md` links here instead of repeating this roster.
 
@@ -236,13 +236,13 @@ JSON/text fetch callers that need per-request timeout coverage across body consu
   route-only packet. The measured packet becomes score-facing only after both
   directions have three complete and three successful fresh cycles; until then
   the reserve simulation stays score-facing. Its last-known-good quote and
-  history use a two-hour ceiling so three half-hour observations survive
-  scheduler jitter; the retained profile keeps its original quote block and
-  timestamp, then falls back to the reserve model on expiry. Exact absent
-  bytecode is semantic drift and cannot retain last-known-good evidence, while
-  an unavailable RPC response remains an operational failure. Other measured
-  adapters retain their one-hour ceiling. This does not widen the EVM
-  request/runtime ceilings.
+  history share the uniform three-hour ceiling used by every measured adapter,
+  allowing repeated half-hour observations to survive scheduler jitter; the
+  retained profile keeps its original quote block and timestamp, then falls
+  back to the reserve model on expiry. Exact absent bytecode is semantic drift
+  and cannot retain last-known-good evidence, while an unavailable RPC response
+  remains an operational failure. This does not widen the EVM request/runtime
+  ceilings.
 - `sync-dex-discovery` is deliberately best-effort. Short per-source request timeouts and the 12-minute shared budget are there to force a partial `degraded` result before the platform can hard-kill the invocation. Lower-priority tier-2/tier-3 candidates are deterministically sharded across their cadence windows so one modulo run does not inherit the entire tier queue at once.
 - Missing-price fallback is intentionally time-bounded so a bad upstream day cannot consume the whole `sync-stablecoins` slot.
 - Replay-safe price continuity has a hard six-hour ceiling and also obeys any shorter per-source `maxTrustedAgeSec`. Low/fallback or non-replay-safe sources are never eligible. The separate verified-CMC provider cache is limited to the original quote's one-hour age, preserves its upstream timestamp, stays fallback confidence, and revalidates identity and peg bounds on reuse.
