@@ -191,9 +191,23 @@ describe("EVM blacklist contiguous coverage", () => {
     });
   });
 
-  it("pins the cursor when a required topic has no proven coverage", async () => {
+  it("keeps rows and advances to the covered frontier when a required topic has no coverage", async () => {
     vi.mocked(fetchEvmLogsForTopicWithCompleteness)
-      .mockResolvedValueOnce({ logs: [], complete: true, scannedToBlock: 120, calls: 1, maxDepth: 0 })
+      .mockResolvedValueOnce({
+        logs: [{
+          address: "0x" + "44".repeat(20),
+          topics: [TOPIC_A, ADDRESS_WORD],
+          data: "0x",
+          blockNumber: "0x6e",
+          timeStamp: "0x3e8",
+          transactionHash: "0x" + "55".repeat(32),
+          logIndex: "0x0",
+        }],
+        complete: true,
+        scannedToBlock: 120,
+        calls: 1,
+        maxDepth: 0,
+      })
       .mockResolvedValueOnce({
         logs: [],
         complete: false,
@@ -217,10 +231,13 @@ describe("EVM blacklist contiguous coverage", () => {
     );
 
     expect(result).toMatchObject({
-      scannedToBlock: null,
+      scannedToBlock: 120,
       coverageOutcome: "missing_topic",
       coveredTopicCount: 1,
+      maxBlock: 110,
     });
+    expect(result.rows).toHaveLength(1);
+    expect(result.rows[0]?.block_number).toBe(110);
   });
 
   it("stops before the earliest RPC log whose timestamp is unresolved", async () => {

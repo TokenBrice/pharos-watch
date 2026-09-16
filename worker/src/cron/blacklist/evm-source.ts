@@ -348,7 +348,7 @@ export async function fetchEvmEventsIncremental(
   let chainHead: number | null = knownChainHead ?? null;
   let safeHead: number | null = chainHead == null ? null : getEvmSafeHead(evmChainId, chainHead);
   let usedRpcLogs = false;
-  let scannedToBlock: number | null = null;
+  let minCoveredScannedToBlock: number | null = null;
   let incomplete = false;
   let coveredTopicCount = 0;
   let providerCalls = 0;
@@ -553,14 +553,11 @@ export async function fetchEvmEventsIncremental(
               eventScannedToBlock = Math.min(eventScannedToBlock, earliestMissingBlock - 1);
             }
           }
-          scannedToBlock = scannedToBlock == null ? eventScannedToBlock : Math.min(scannedToBlock, eventScannedToBlock);
           topicScannedToBlock = eventScannedToBlock;
 
           const parsed = parseEvmLogsWithCoverage(config, fetchedLogs.logs as Array<AlchemyLogEntry>, blockTimestamps);
           if (parsed.coverageCeiling != null) {
             eventScannedToBlock = Math.min(eventScannedToBlock, Math.max(fromBlock - 1, parsed.coverageCeiling));
-            scannedToBlock =
-              scannedToBlock == null ? eventScannedToBlock : Math.min(scannedToBlock, eventScannedToBlock);
             topicScannedToBlock = eventScannedToBlock;
           }
           rows = parsed.rows;
@@ -583,15 +580,19 @@ export async function fetchEvmEventsIncremental(
     }
     if (topicScannedToBlock != null && (topicScannedToBlock >= fromBlock || noRangeRequired)) {
       coveredTopicCount += preferRpcLogs ? rpcTopicHashes.length : 1;
-      scannedToBlock = scannedToBlock == null ? topicScannedToBlock : Math.min(scannedToBlock, topicScannedToBlock);
+      minCoveredScannedToBlock =
+        minCoveredScannedToBlock == null
+          ? topicScannedToBlock
+          : Math.min(minCoveredScannedToBlock, topicScannedToBlock);
     }
 
     allRows.push(...rows);
   }
 
-  const commonScannedToBlock = coveredTopicCount === topicHashes.length ? scannedToBlock : null;
   const coveredRows =
-    commonScannedToBlock == null ? [] : allRows.filter((row) => row.block_number <= commonScannedToBlock);
+    minCoveredScannedToBlock == null
+      ? []
+      : allRows.filter((row) => row.block_number <= minCoveredScannedToBlock);
   const coveredMaxBlock = coveredRows.reduce((max, row) => Math.max(max, row.block_number), fromBlock - 1);
   const coverageOutcome: BlacklistScanCoverageOutcome = incomplete
     ? "incomplete"
@@ -600,7 +601,7 @@ export async function fetchEvmEventsIncremental(
         ? "missing_topic"
         : "provider_error"
       : apiError
-        ? commonScannedToBlock != null && commonScannedToBlock >= fromBlock
+        ? minCoveredScannedToBlock != null && minCoveredScannedToBlock >= fromBlock
           ? "partial"
           : "provider_error"
         : coveredRows.length === 0
@@ -613,7 +614,7 @@ export async function fetchEvmEventsIncremental(
     apiError,
     chainHead,
     usedRpcLogs,
-    scannedToBlock: commonScannedToBlock,
+    scannedToBlock: minCoveredScannedToBlock,
     safeHead,
     incomplete,
     coverageOutcome,
