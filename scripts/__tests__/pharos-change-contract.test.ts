@@ -732,6 +732,20 @@ describe("hard-block hook outputs", () => {
     expect(output).toEqual({});
   });
 
+  it("blocks guarded command substitutions hidden in heredoc bodies", () => {
+    const output = buildPreToolUseHookOutput({
+      tool_input: {
+        command: [
+          "cat <<EOF",
+          "$(npx wrangler d1 execute stablecoin-db --remote --command 'DELETE FROM cache')",
+          "EOF",
+        ].join("\n"),
+      },
+    });
+
+    expect(requireBlockingReason(output)).toContain("opaque shell construct");
+  });
+
   it("allows help output for deploy-shaped commands", () => {
     const output = buildPreToolUseHookOutput({
       tool_input: {
@@ -989,6 +1003,7 @@ SELECT 1"`,
     "PRAGMA foreign_keys = ON",
     "SELECT 1; DELETE FROM prices",
     "WITH rows AS (SELECT 1) DELETE FROM prices WHERE id IN (SELECT * FROM rows)",
+    "WITH d AS (DELETE FROM t RETURNING *) SELECT count(*) FROM d",
     "-- comment mentioning SELECT\nUPDATE prices SET value = 1",
   ] as const;
 
