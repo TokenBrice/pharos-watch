@@ -1,4 +1,8 @@
-import { isRecord } from "@shared/lib/type-guards";
+// shared/types must stay dependency-free of shared/lib (check:shared-types-imports), so the
+// record guard is local here rather than imported from @shared/lib/type-guards.
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null;
+}
 
 export const DIGEST_SAFETY_MAP_TIERS = ["A", "B", "C", "D", "F"] as const;
 export type DigestSafetyMapTier = typeof DIGEST_SAFETY_MAP_TIERS[number];
