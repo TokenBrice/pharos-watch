@@ -553,6 +553,406 @@ describe("decideDepegAsset", () => {
     }));
   });
 
+  it("supersedes a native-peg event when the native quote reverses direction", () => {
+    const decision = decideDepegAsset({
+      now: 1_750_000_900,
+      asset: makeAsset({
+        id: "brz-transfero",
+        symbol: "BRZ",
+        price: 0.1919,
+        pegType: "peggedREAL",
+      }),
+      meta: brlMeta,
+      existing: makeExistingEvent({
+        direction: "below",
+        peak_deviation_bps: -242,
+        start_price: 0.9758,
+        peak_price: 0.9758,
+        peg_reference: 1,
+      }),
+      pegRates: { peggedREAL: 0.191895 },
+      pegRateSources: { peggedREAL: "median" },
+      pegRateCounts: { peggedREAL: 3 },
+      nativePegQuote: {
+        stablecoinId: "brz-transfero",
+        geckoId: "brz",
+        pegCurrency: "BRL",
+        price: 1.03,
+        updatedAt: 1_750_000_840,
+      },
+    });
+
+    expect(decision.seenEventIds).toEqual([]);
+    expect(decision.commands).toEqual([
+      {
+        type: "close-event",
+        id: 7,
+        endedAt: 1_750_000_900,
+        recoveryPrice: null,
+        closeReason: "superseded-direction",
+      },
+      expect.objectContaining({
+        type: "upsert-pending",
+        payload: expect.objectContaining({
+          stablecoinId: "brz-transfero",
+          direction: "above",
+          bps: 300,
+          price: 1.03,
+          pegReference: 1,
+          reason: expect.stringContaining("native-origin"),
+        }),
+      }),
+    ]);
+  });
+
+  it("keeps a live event when an untrusted primary reading reverses direction", () => {
+    const decision = decideDepegAsset({
+      now: 1_750_000_900,
+      asset: makeAsset({
+        price: 1.02,
+        priceSource: "cached",
+        priceConfidence: "low",
+      }),
+      meta: usdMeta,
+      existing: makeExistingEvent({
+        stablecoin_id: "usdt-tether",
+        symbol: "USDT",
+        peg_type: "peggedUSD",
+        direction: "below",
+        peak_deviation_bps: -200,
+        start_price: 0.98,
+        peak_price: 0.98,
+        peg_reference: 1,
+      }),
+      pegRates: { peggedUSD: 1 },
+      pegRateSources: { peggedUSD: "median" },
+      pegRateCounts: { peggedUSD: 4 },
+    });
+
+    expect(decision.seenEventIds).toEqual([7]);
+    expect(decision.commands).toEqual([]);
+    expect(decision.diagnostics).toEqual([
+      {
+        level: "warn",
+        message: "[depeg] Kept live event for USDT (id=7) through confirm-required opposite reading: existing=below, primary=above (200bps)",
+      },
+    ]);
+  });
+
+  it("closes a live event when circulating coverage falls below the event floor", () => {
+    const decision = decideDepegAsset({
+      now: 1_750_000_900,
+      asset: makeAsset({ circulating: { ethereum: 1 } }),
+      meta: usdMeta,
+      existing: makeExistingEvent({
+        stablecoin_id: "usdt-tether",
+        symbol: "USDT",
+        peg_type: "peggedUSD",
+        direction: "below",
+        peg_reference: 1,
+      }),
+      pegRates: { peggedUSD: 1 },
+      pegRateSources: { peggedUSD: "median" },
+      pegRateCounts: { peggedUSD: 4 },
+    });
+
+    expect(decision.seenEventIds).toEqual([]);
+    expect(decision.commands).toEqual([
+      {
+        type: "close-event",
+        id: 7,
+        endedAt: 1_750_000_900,
+        recoveryPrice: null,
+        closeReason: "coverage-lost-supply",
+      },
+    ]);
+    expect(decision.diagnostics).toEqual([
+      {
+        level: "log",
+        message: "[depeg] Closing live event for USDT: supply $1 is below the live-event floor",
+      },
+    ]);
+  });
+
+  it("preserves a live event when a thin fiat peg reference is not authoritative", () => {
+    const decision = decideDepegAsset({
+      now: 1_750_000_900,
+      asset: makeAsset({
+        id: "brz-transfero",
+        symbol: "BRZ",
+        price: 0.1919,
+        pegType: "peggedREAL",
+      }),
+      meta: brlMeta,
+      existing: makeExistingEvent(),
+      pegRates: { peggedREAL: 0.191895 },
+      pegRateSources: { peggedREAL: "median" },
+      pegRateCounts: { peggedREAL: 2 },
+    });
+
+    expect(decision.seenEventIds).toEqual([7]);
+    expect(decision.commands).toEqual([]);
+    expect(decision.diagnostics).toEqual([
+      {
+        level: "warn",
+        message: "[depeg] Skipped live-state mutation for BRZ: thin BRL peg reference lacks FX fallback",
+      },
+    ]);
+  });
+
+  it("keeps an ongoing event open when only the aggregate DEX price disagrees", () => {
+    const decision = decideDepegAsset({
+      now: 1_750_000_900,
+      asset: makeAsset({ price: 0.98 }),
+      meta: usdMeta,
+      existing: makeExistingEvent({
+        stablecoin_id: "usdt-tether",
+        symbol: "USDT",
+        peg_type: "peggedUSD",
+        direction: "below",
+        peak_deviation_bps: -200,
+        started_at: 1_749_997_300,
+        start_price: 0.98,
+        peak_price: 0.98,
+        peg_reference: 1,
+      }),
+      pegRates: { peggedUSD: 1 },
+      pegRateSources: { peggedUSD: "median" },
+      pegRateCounts: { peggedUSD: 4 },
+      dexRow: {
+        stablecoin_id: "usdt-tether",
+        dex_price_usd: 1.001,
+        deviation_from_primary_bps: null,
+        source_pool_count: 5,
+        source_total_tvl: 5_000_000,
+        updated_at: 1_750_000_840,
+      },
+    });
+
+    expect(decision.seenEventIds).toEqual([7]);
+    expect(decision.commands).toEqual([]);
+    expect(decision.diagnostics).toEqual([
+      {
+        level: "warn",
+        message: "[depeg] DEX disagrees with ongoing event for USDT: primary=-200bps vs DEX=10bps (event age 60min); keeping event open until the recovery path confirms resolution",
+      },
+    ]);
+  });
+
+  it("suppresses a new event when independent DEX protocols show recovery", () => {
+    const decision = decideDepegAsset({
+      now: 1_750_000_900,
+      asset: makeAsset({ price: 0.98 }),
+      meta: usdMeta,
+      pegRates: { peggedUSD: 1 },
+      pegRateSources: { peggedUSD: "median" },
+      pegRateCounts: { peggedUSD: 4 },
+      dexRow: {
+        stablecoin_id: "usdt-tether",
+        dex_price_usd: 0.999,
+        deviation_from_primary_bps: null,
+        source_pool_count: 2,
+        source_total_tvl: 5_000_000,
+        updated_at: 1_750_000_840,
+      },
+      protocolSources: [
+        {
+          protocol: "curve",
+          chain: "ethereum",
+          sourceFamily: "curve",
+          price: 0.999,
+          tvl: 2_500_000,
+          updatedAt: 1_750_000_840,
+        },
+        {
+          protocol: "uniswap-v3",
+          chain: "ethereum",
+          sourceFamily: "uniswap-v3",
+          price: 1.001,
+          tvl: 2_500_000,
+          updatedAt: 1_750_000_840,
+        },
+      ],
+    });
+
+    expect(decision.seenEventIds).toEqual([]);
+    expect(decision.commands).toEqual([]);
+    expect(decision.diagnostics).toEqual([
+      {
+        level: "log",
+        message: "[depeg] Suppressed new event for USDT: primary=-200bps but DEX=10bps (2 pools, $5.0M TVL)",
+      },
+    ]);
+  });
+
+  it("clears recovery progress when independent DEX protocols still show the depeg", () => {
+    const decision = decideDepegAsset({
+      now: 1_750_000_900,
+      asset: makeAsset({ price: 1.001 }),
+      meta: usdMeta,
+      existing: makeExistingEvent({
+        stablecoin_id: "usdt-tether",
+        symbol: "USDT",
+        peg_type: "peggedUSD",
+        direction: "below",
+        peak_deviation_bps: -200,
+        start_price: 0.98,
+        peak_price: 0.98,
+        peg_reference: 1,
+        recovery_first_seen_at: 1_750_000_300,
+        recovery_last_seen_at: 1_750_000_840,
+      }),
+      pegRates: { peggedUSD: 1 },
+      pegRateSources: { peggedUSD: "median" },
+      pegRateCounts: { peggedUSD: 4 },
+      dexRow: {
+        stablecoin_id: "usdt-tether",
+        dex_price_usd: 0.98,
+        deviation_from_primary_bps: null,
+        source_pool_count: 2,
+        source_total_tvl: 5_000_000,
+        updated_at: 1_750_000_840,
+      },
+      protocolSources: [
+        {
+          protocol: "curve",
+          chain: "ethereum",
+          sourceFamily: "curve",
+          price: 0.98,
+          tvl: 2_500_000,
+          updatedAt: 1_750_000_840,
+        },
+        {
+          protocol: "uniswap-v3",
+          chain: "ethereum",
+          sourceFamily: "uniswap-v3",
+          price: 0.981,
+          tvl: 2_500_000,
+          updatedAt: 1_750_000_840,
+        },
+      ],
+    });
+
+    expect(decision.seenEventIds).toEqual([7]);
+    expect(decision.commands).toEqual([{ type: "clear-recovery", id: 7 }]);
+    expect(decision.diagnostics).toEqual([
+      {
+        level: "warn",
+        message: "[depeg] Kept USDT open despite primary recovery: primary recovery is contradicted by 2 DEX protocol group(s) still showing the below depeg",
+      },
+    ]);
+  });
+
+  it("keeps a recovered reading open when DEX recovery lacks independent support", () => {
+    const decision = decideDepegAsset({
+      now: 1_750_000_900,
+      asset: makeAsset({
+        price: 1.001,
+        priceSource: "cached",
+        priceConfidence: "low",
+      }),
+      meta: usdMeta,
+      existing: makeExistingEvent({
+        stablecoin_id: "usdt-tether",
+        symbol: "USDT",
+        peg_type: "peggedUSD",
+        direction: "below",
+        peak_deviation_bps: -200,
+        start_price: 0.98,
+        peak_price: 0.98,
+        peg_reference: 1,
+      }),
+      pegRates: { peggedUSD: 1 },
+      pegRateSources: { peggedUSD: "median" },
+      pegRateCounts: { peggedUSD: 4 },
+      dexRow: {
+        stablecoin_id: "usdt-tether",
+        dex_price_usd: 0.999,
+        deviation_from_primary_bps: null,
+        source_pool_count: 1,
+        source_total_tvl: 5_000_000,
+        updated_at: 1_750_000_840,
+      },
+      protocolSources: [
+        {
+          protocol: "curve",
+          chain: "ethereum",
+          sourceFamily: "curve",
+          price: 0.999,
+          tvl: 5_000_000,
+          updatedAt: 1_750_000_840,
+        },
+      ],
+    });
+
+    expect(decision.seenEventIds).toEqual([7]);
+    expect(decision.commands).toEqual([]);
+    expect(decision.diagnostics).toEqual([
+      {
+        level: "warn",
+        message: "[depeg] Ignored aggregate DEX recovery for USDT: 1 corroborating protocol group(s), challenged=false; keeping event open until corroborated recovery appears",
+      },
+    ]);
+  });
+
+  it("continues recovery after a recent confirming observation", () => {
+    const decision = decideDepegAsset({
+      now: 1_750_000_900,
+      asset: makeAsset({ price: 1.001 }),
+      meta: usdMeta,
+      existing: makeExistingEvent({
+        stablecoin_id: "usdt-tether",
+        symbol: "USDT",
+        peg_type: "peggedUSD",
+        direction: "below",
+        peak_deviation_bps: -200,
+        start_price: 0.98,
+        peak_price: 0.98,
+        peg_reference: 1,
+        recovery_first_seen_at: 1_750_000_600,
+        recovery_last_seen_at: 1_750_000_840,
+      }),
+      pegRates: { peggedUSD: 1 },
+      pegRateSources: { peggedUSD: "median" },
+      pegRateCounts: { peggedUSD: 4 },
+    });
+
+    expect(decision.seenEventIds).toEqual([7]);
+    expect(decision.commands).toEqual([
+      {
+        type: "continue-recovery",
+        id: 7,
+        lastSeenAt: 1_750_000_900,
+      },
+    ]);
+  });
+
+  it("clears recovery progress when the primary price returns to the depeg", () => {
+    const decision = decideDepegAsset({
+      now: 1_750_000_900,
+      asset: makeAsset({ price: 0.98 }),
+      meta: usdMeta,
+      existing: makeExistingEvent({
+        stablecoin_id: "usdt-tether",
+        symbol: "USDT",
+        peg_type: "peggedUSD",
+        direction: "below",
+        peak_deviation_bps: -300,
+        start_price: 0.98,
+        peak_price: 0.97,
+        peg_reference: 1,
+        recovery_first_seen_at: 1_750_000_600,
+        recovery_last_seen_at: 1_750_000_840,
+      }),
+      pegRates: { peggedUSD: 1 },
+      pegRateSources: { peggedUSD: "median" },
+      pegRateCounts: { peggedUSD: 4 },
+    });
+
+    expect(decision.seenEventIds).toEqual([7]);
+    expect(decision.commands).toEqual([{ type: "clear-recovery", id: 7 }]);
+  });
+
   it("keeps an event open until the full recovery window elapses", () => {
     const now = 1_750_000_900;
     const tolerance = DEPEG_MAX_CONTINUOUS_OBSERVATION_GAP_SEC;
