@@ -14,9 +14,9 @@ import type { ApiMeta } from "@shared/types/api-meta";
 import type { CacheStatus } from "@shared/types/status";
 import { buildFxCacheStatus, getFxRatesMetaKey, hydrateFxRateState } from "./fx-rate-state";
 import {
-  FRESHNESS_SENTINEL_CONFIGS,
   getFreshnessSentinelCacheKey,
   getFreshnessSentinelProducerJob,
+  listFreshnessSentinelBackedCacheKeys,
   listFreshnessSentinelCacheKeys,
   type FreshnessSentinelBackedCacheKey,
   type FreshnessSentinelValidationReason,
@@ -72,8 +72,6 @@ interface SentinelBackedFreshnessResult {
   warnings: string[];
 }
 
-const SENTINEL_BACKED_CACHE_KEYS = Object.keys(FRESHNESS_SENTINEL_CONFIGS) as FreshnessSentinelBackedCacheKey[];
-const SENTINEL_BACKED_CACHE_KEY_SET = new Set<string>(SENTINEL_BACKED_CACHE_KEYS);
 
 const TABLE_FRESHNESS_FALLBACK_QUERIES: Partial<Record<FreshnessSentinelBackedCacheKey, string>> = {
   "dex-liquidity": `SELECT (? - MAX(updated_at)) as age
@@ -128,11 +126,12 @@ function buildSentinelValidationWarning(
 
 async function loadProducerCronFallbacks(
   db: D1Database,
+  sentinelBackedCacheKeys: readonly FreshnessSentinelBackedCacheKey[],
 ): Promise<{
   timestampsByKey: Map<FreshnessSentinelBackedCacheKey, number>;
   errorMessage: string | null;
 }> {
-  const producerJobs = [...new Set(SENTINEL_BACKED_CACHE_KEYS.map((key) => getFreshnessSentinelProducerJob(key)))];
+  const producerJobs = [...new Set(sentinelBackedCacheKeys.map((key) => getFreshnessSentinelProducerJob(key)))];
   if (producerJobs.length === 0) {
     return {
       timestampsByKey: new Map(),
@@ -152,7 +151,7 @@ async function loadProducerCronFallbacks(
       .bind(...inClause.binds)
       .all<{ job: string; started_at: number | null }>();
     const keyByJob = new Map(
-      SENTINEL_BACKED_CACHE_KEYS.map((key) => [getFreshnessSentinelProducerJob(key), key]),
+      sentinelBackedCacheKeys.map((key) => [getFreshnessSentinelProducerJob(key), key]),
     );
     const timestampsByKey = new Map<FreshnessSentinelBackedCacheKey, number>();
     for (const row of rows.results ?? []) {
@@ -338,9 +337,11 @@ export async function buildCacheStatuses(
   statusFloor: "healthy" | "degraded" | "stale";
   warnings: string[];
 }> {
+  const sentinelBackedCacheKeys = listFreshnessSentinelBackedCacheKeys();
+  const sentinelBackedCacheKeySet = new Set<string>(sentinelBackedCacheKeys);
   const sentinelCacheKeys = listFreshnessSentinelCacheKeys();
   const cacheOnlyKeys = Object.keys(CACHE_FRESHNESS_THRESHOLDS).filter(
-    (key) => !SENTINEL_BACKED_CACHE_KEY_SET.has(key),
+    (key) => !sentinelBackedCacheKeySet.has(key),
   );
   const fxMetaKey = getFxRatesMetaKey();
   const cacheLookupKeys = Array.from(
@@ -392,7 +393,7 @@ export async function buildCacheStatuses(
         })(),
       )
     : null;
-  const cronFallbackLookup = await loadProducerCronFallbacks(db);
+  const cronFallbackLookup = await loadProducerCronFallbacks(db, sentinelBackedCacheKeys);
 
   for (const [key, maxAge] of Object.entries(CACHE_FRESHNESS_THRESHOLDS)) {
     let ageSeconds: number | null;
@@ -407,7 +408,7 @@ export async function buildCacheStatuses(
       } else if (fx.statusFloor === "degraded" && statusFloor === "healthy") {
         statusFloor = "degraded";
       }
-    } else if (SENTINEL_BACKED_CACHE_KEY_SET.has(key)) {
+    } else if (sentinelBackedCacheKeySet.has(key)) {
       const freshness = await resolveSentinelBackedFreshness({
         db,
         key: key as FreshnessSentinelBackedCacheKey,

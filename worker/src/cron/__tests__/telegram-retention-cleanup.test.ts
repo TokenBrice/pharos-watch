@@ -6,6 +6,10 @@ import {
   TELEGRAM_PROCESSED_UPDATE_PRUNE_BATCH_LIMIT,
   runTelegramRetentionCleanup,
 } from "../telegram-retention-cleanup";
+import {
+  cleanupExpiredPendingAlerts,
+  TELEGRAM_PENDING_SENT_RETENTION_SEC,
+} from "../telegram-pending/cleanup";
 
 const databases: DatabaseSync[] = [];
 
@@ -339,5 +343,24 @@ describe("runTelegramRetentionCleanup", () => {
     expect(metadata.reEngagementWarningCachePruned).toBe(1);
     expect(metadata.retentionDays.shortLivedChatCache).toBe(7);
     expect(metadata.retentionDays.reEngagementWarningCache).toBe(30);
+  });
+
+  it("reaps old sent pending rows while retaining recent delivery evidence", async () => {
+    const { sqlite, db } = setupLatestSchema();
+    const now = 1_800_000_000;
+    const insert = sqlite.prepare(
+      `INSERT INTO telegram_pending_alerts
+         (id, chat_id, message_html, created_at, updated_at, delivery_state, delivery_completed_at)
+       VALUES (?, ?, 'sent', ?, ?, 'sent', ?)`,
+    );
+    const oldCompletedAt = now - TELEGRAM_PENDING_SENT_RETENTION_SEC - 1;
+    const recentCompletedAt = now - TELEGRAM_PENDING_SENT_RETENTION_SEC + 1;
+    insert.run(1, "old-chat", oldCompletedAt, oldCompletedAt, oldCompletedAt);
+    insert.run(2, "recent-chat", recentCompletedAt, recentCompletedAt, recentCompletedAt);
+
+    await expect(cleanupExpiredPendingAlerts(db, now)).resolves.toBe(1);
+    expect(sqlite.prepare(
+      "SELECT id, delivery_completed_at FROM telegram_pending_alerts ORDER BY id",
+    ).all()).toEqual([{ id: 2, delivery_completed_at: recentCompletedAt }]);
   });
 });

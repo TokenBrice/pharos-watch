@@ -507,6 +507,7 @@ export async function logCronRun(
     const productivity = inferCronProductivity(resolvedResult, parsedMetadata);
     const publicationCount = productivity.publications?.length ?? 0;
     const persistedMetadata = compactCronMetadataForPersistence(resolvedResult?.metadata, parsedMetadata).metadata;
+    const resolvedError = resolvedResult?.error == null ? null : stripSensitive(resolvedResult.error);
     const producer = options?.producer;
     persistingCompletedTelemetry = true;
     if (producer) {
@@ -526,7 +527,7 @@ export async function logCronRun(
           resolvedResult?.itemCount ?? null,
           persistedMetadata,
           slotStartedAt,
-          resolvedResult?.error ?? null,
+          resolvedError,
           cronRunIdempotencyKey,
           producer.scheduleKey,
           producer.producerPath,
@@ -547,7 +548,7 @@ export async function logCronRun(
         outcome: producerOutcomeForResult(resolvedResult),
         itemCount: resolvedResult?.itemCount ?? null,
         metadata: persistedMetadata,
-        error: resolvedResult?.error ?? null,
+        error: resolvedError,
         productivity,
       });
     } else {
@@ -567,7 +568,7 @@ export async function logCronRun(
             resolvedResult?.itemCount ?? null,
             persistedMetadata,
             slotStartedAt,
-            resolvedResult?.error ?? null,
+            resolvedError,
             cronRunIdempotencyKey,
           )
           .run(),
@@ -581,6 +582,7 @@ export async function logCronRun(
       return resolvedResult;
     }
     const terminalMetadata = compactCronMetadataForPersistence(serializeTerminalCronMetadata(e)).metadata;
+    const classifiedError = classifyError(e);
     try {
       const completedAt = Math.floor(Date.now() / 1000);
       const producer = options?.producer;
@@ -602,7 +604,7 @@ export async function logCronRun(
             job,
             startSec,
             Date.now() - startMs,
-            String(e),
+            classifiedError.message,
             terminalMetadata,
             slotStartedAt,
             cronRunIdempotencyKey,
@@ -623,7 +625,7 @@ export async function logCronRun(
           outcome: producerOutcomeForError(e),
           itemCount: null,
           metadata: terminalMetadata,
-          error: String(e),
+          error: classifiedError.message,
           productivity: { productive: false, reason: producerOutcomeForError(e) },
         });
       } else {
@@ -640,7 +642,7 @@ export async function logCronRun(
               startSec,
               Date.now() - startMs,
               "error",
-              String(e),
+              classifiedError.message,
               terminalMetadata,
               slotStartedAt,
               cronRunIdempotencyKey,

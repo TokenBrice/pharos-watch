@@ -28,4 +28,25 @@ describe("cron progress cleanup", () => {
 
     expect(sqlite.prepare("SELECT * FROM cron_run_progress").all()).toEqual([]);
   });
+
+  it("redacts signed URLs from thrown and resolved cron errors before persistence", async () => {
+    const { sqlite, db } = fixtures.open();
+    const signedUrl = "https://provider.example/data?token=super-secret";
+
+    await expect(logCronRun(db, "thrown-error", async () => {
+      throw new Error(`request failed for ${signedUrl}`);
+    })).rejects.toThrow(signedUrl);
+
+    await logCronRun(db, "resolved-error", async () => ({
+      status: "error",
+      error: `upstream rejected ${signedUrl}`,
+    }));
+
+    expect(
+      sqlite.prepare("SELECT job, error FROM cron_runs ORDER BY job").all(),
+    ).toEqual([
+      { job: "resolved-error", error: "upstream rejected [url]" },
+      { job: "thrown-error", error: "request failed for [url]" },
+    ]);
+  });
 });

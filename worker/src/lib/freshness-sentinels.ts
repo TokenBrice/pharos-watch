@@ -28,11 +28,11 @@ export interface FreshnessSentinelValidationResult {
   payload?: FreshnessSentinelPayload;
   reason?: FreshnessSentinelValidationReason;
 }
+type FreshnessSentinelConfig = { cacheKey: string; producerJob: string };
+type FreshnessSentinelConfigs = Record<FreshnessSentinelBackedCacheKey, FreshnessSentinelConfig>;
 
-function buildFreshnessSentinelConfigs(): Record<
-  FreshnessSentinelBackedCacheKey,
-  { cacheKey: string; producerJob: string }
-> {
+
+function buildFreshnessSentinelConfigs(): FreshnessSentinelConfigs {
   return Object.fromEntries(
     FRESHNESS_SENTINEL_CACHE_KEYS.map((cacheKey) => {
       const lane = getCacheFreshnessLane(cacheKey);
@@ -47,21 +47,40 @@ function buildFreshnessSentinelConfigs(): Record<
         },
       ];
     }),
-  ) as Record<FreshnessSentinelBackedCacheKey, { cacheKey: string; producerJob: string }>;
+  ) as FreshnessSentinelConfigs;
 }
 
-export const FRESHNESS_SENTINEL_CONFIGS = buildFreshnessSentinelConfigs();
+let freshnessSentinelConfigState:
+  | { ok: true; value: FreshnessSentinelConfigs }
+  | { ok: false; error: unknown }
+  | undefined;
+
+export function getFreshnessSentinelConfigs(): Readonly<FreshnessSentinelConfigs> {
+  if (!freshnessSentinelConfigState) {
+    try {
+      freshnessSentinelConfigState = { ok: true, value: buildFreshnessSentinelConfigs() };
+    } catch (error) {
+      freshnessSentinelConfigState = { ok: false, error };
+    }
+  }
+  if (!freshnessSentinelConfigState.ok) throw freshnessSentinelConfigState.error;
+  return freshnessSentinelConfigState.value;
+}
+
+export function listFreshnessSentinelBackedCacheKeys(): FreshnessSentinelBackedCacheKey[] {
+  return Object.keys(getFreshnessSentinelConfigs()) as FreshnessSentinelBackedCacheKey[];
+}
 
 export function getFreshnessSentinelCacheKey(key: FreshnessSentinelBackedCacheKey): string {
-  return FRESHNESS_SENTINEL_CONFIGS[key].cacheKey;
+  return getFreshnessSentinelConfigs()[key].cacheKey;
 }
 
 export function getFreshnessSentinelProducerJob(key: FreshnessSentinelBackedCacheKey): string {
-  return FRESHNESS_SENTINEL_CONFIGS[key].producerJob;
+  return getFreshnessSentinelConfigs()[key].producerJob;
 }
 
 export function listFreshnessSentinelCacheKeys(): string[] {
-  return Object.values(FRESHNESS_SENTINEL_CONFIGS).map((config) => config.cacheKey);
+  return Object.values(getFreshnessSentinelConfigs()).map((config) => config.cacheKey);
 }
 
 export function validateFreshnessSentinelPayload(params: {

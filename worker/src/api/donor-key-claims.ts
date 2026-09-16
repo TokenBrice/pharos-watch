@@ -2,6 +2,7 @@ import donationsAsset from "@shared/data/funding/donations.json";
 import { DONOR_CLAIM_SIWE_DOMAIN, buildDonorClaimSiweMessage } from "@shared/lib/donor-key-claim";
 import { isEligibleDonor, sumEligibleDonationsByAddress } from "@shared/lib/funding/donor-eligibility";
 import { DonationsFileSchema } from "@shared/lib/funding/schema";
+import type { DonationsFile } from "@shared/lib/funding/schema";
 import {
   DONOR_API_KEY_MIN_USD,
   DONOR_API_KEY_RATE_LIMIT_PER_MINUTE,
@@ -38,8 +39,21 @@ const ALREADY_CLAIMED_MESSAGE =
   "This wallet already claimed its supporter key; to rotate a lost key use the feedback form at https://pharos.watch/feedback/";
 const REVOKED_MESSAGE = "The supporter key for this wallet was revoked; see https://pharos.watch/feedback/";
 
-// The ledger is repo data; qualifying grades are loaded at claim time.
-const donationsLedger = DonationsFileSchema.parse(donationsAsset);
+let donationsLedgerState:
+  | { ok: true; value: DonationsFile }
+  | { ok: false; error: unknown }
+  | undefined;
+
+function getDonationsLedger(): DonationsFile {
+  if (!donationsLedgerState) {
+    const parsed = DonationsFileSchema.safeParse(donationsAsset);
+    donationsLedgerState = parsed.success
+      ? { ok: true, value: parsed.data }
+      : { ok: false, error: parsed.error };
+  }
+  if (!donationsLedgerState.ok) throw donationsLedgerState.error;
+  return donationsLedgerState.value;
+}
 
 interface DonorClaimDeps {
   rateLimiter: RateLimit | undefined;
@@ -138,6 +152,13 @@ export async function handleDonorKeyClaim(
       RATE_LIMIT_RETRY_AFTER_SEC,
     );
   }
+  let donationsLedger: DonationsLedger;
+  try {
+    donationsLedger = getDonationsLedger();
+  } catch {
+    return claimError(503, UNAVAILABLE_MESSAGE, "donations_ledger_invalid");
+  }
+
 
   const body = await parseRequestJsonWithSchema(request, DonorKeyClaimRequestSchema, {
     maxBytes: CLAIM_BODY_MAX_BYTES,
