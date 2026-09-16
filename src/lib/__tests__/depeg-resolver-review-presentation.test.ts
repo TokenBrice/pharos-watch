@@ -4,6 +4,7 @@ import {
   DdrrResponseRowSchema,
   type DdrrRow,
 } from "@shared/types/depeg-resolver-review";
+import { RatioSchema } from "@shared/types/ratio";
 import {
   coverageRow,
   makePredictionPolicySegment,
@@ -220,12 +221,12 @@ describe("DDR review derivations", () => {
       ...summarizeDdrrRows([]).headline,
       policyUniverseIncidentCount: 20,
       recoveryLikelihoodScoredCount: 8,
-      predictionRatePct: 0.65,
+      predictionRatePct: RatioSchema.parse(0.65),
       lockedPredictionCount: 9,
       publicationRetryPendingCount: 1,
       publicationFailedCount: 0,
-      noCallRatePct: 0.1,
-      invalidatedPct: 0.05,
+      noCallRatePct: RatioSchema.parse(0.1),
+      invalidatedPct: RatioSchema.parse(0.05),
     };
 
     expect(getCoverageMetric(headline, "scoreableCoveragePct")).toBe(0.4);

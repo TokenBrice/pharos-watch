@@ -9,6 +9,7 @@ import {
   evaluateForecastReadinessLock,
   forecastReadinessScore,
   meetsStrictEarlyLockReadiness,
+  type DdrForecastReadinessInput,
 } from "../forecast-readiness";
 
 const benchmarkedHorizon = {

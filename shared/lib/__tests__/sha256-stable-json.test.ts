@@ -60,6 +60,16 @@ describe("streamed stable JSON", () => {
     );
   });
 
+  it("round-trips canonical data and hashes the exact serialized bytes", () => {
+    const value = { z: ["é", 3, null], a: { enabled: true } };
+    const canonical = stableJsonStringifyV1(value);
+
+    expect(JSON.parse(canonical)).toEqual(value);
+    expect(sha256Hex(canonical)).toBe(
+      createHash("sha256").update(Buffer.from(canonical, "utf8")).digest("hex"),
+    );
+  });
+
   it("preserves nested punctuation and escaped Unicode across multiple flushes", () => {
     const value = {
       z: ["final remainder", { quoted: "\"\\\n😀\ud800" }],

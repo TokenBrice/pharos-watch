@@ -13,6 +13,7 @@ import {
 } from "@/components/depeg-resolver-review-test-support";
 import { summarizeDdrrRows } from "@shared/lib/depeg-resolver-review";
 import type { DdrrResponse, DdrrSummary } from "@shared/types";
+import { RatioSchema } from "@shared/types/ratio";
 
 vi.mock("@/lib/feature-flags", () => ({
   isDepegResolverReviewerEnabled: () => true,
@@ -37,7 +38,7 @@ function makeSummary(headline: Partial<DdrrSummary["headline"]> = {}): DdrrSumma
 const summary: DdrrSummary = makeSummary({
   recoveryLikelihoodCorrectCount: 2,
   recoveryLikelihoodScoredCount: 4,
-  recoveryLikelihoodAccuracyPct: 0.5,
+  recoveryLikelihoodAccuracyPct: RatioSchema.parse(0.5),
   durationScoredCount: 2,
   meanSignedDurationErrorSec: 3600,
   meanAbsoluteDurationErrorSec: 5400,
@@ -148,7 +149,7 @@ describe("DepegResolverReviewerModule", () => {
               ...summary.headline,
               recoveryLikelihoodCorrectCount: 5,
               recoveryLikelihoodScoredCount: 5,
-              recoveryLikelihoodAccuracyPct: 1,
+              recoveryLikelihoodAccuracyPct: RatioSchema.parse(1),
             },
           },
         })}
@@ -171,12 +172,12 @@ describe("DepegResolverReviewerModule", () => {
               ...summary.headline,
               policyUniverseIncidentCount: 20,
               recoveryLikelihoodScoredCount: 8,
-              predictionRatePct: 0.65,
+              predictionRatePct: RatioSchema.parse(0.65),
               lockedPredictionCount: 9,
               publicationRetryPendingCount: 1,
               publicationFailedCount: 0,
-              noCallRatePct: 0.1,
-              invalidatedPct: 0.05,
+              noCallRatePct: RatioSchema.parse(0.1),
+              invalidatedPct: RatioSchema.parse(0.05),
             },
           },
           rows: [row, coverageRow],
