@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import Image from "next/image";
-import { Suspense, useEffect, useState } from "react";
+import { Suspense, useMemo, useSyncExternalStore } from "react";
 import { ExternalLink, Globe, Calendar, Shield, ArrowLeft, FileText, BookOpen, Play, Bell } from "lucide-react";
 import { CLIENT_ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/client-registry";
 import { BACKING_LABELS, GOVERNANCE_LABELS, PEG_LABELS_SHORT } from "@shared/lib/classification";
@@ -68,6 +68,10 @@ function formatSummaryUpdatedAt(updatedAt: string): string {
   return formatLongDate(new Date(`${updatedAt}T00:00:00Z`), { utc: true });
 }
 
+const subscribeToHydration = () => () => {};
+const getClientHydrationSnapshot = () => true;
+const getServerHydrationSnapshot = () => false;
+
 // ---------------------------------------------------------------------------
 // Sub-components
 // ---------------------------------------------------------------------------
@@ -75,11 +79,12 @@ function formatSummaryUpdatedAt(updatedAt: string): string {
 function TimelineBar({ announcedDate, expectedLaunchDate }: { announcedDate: string; expectedLaunchDate: string }) {
   const start = parseFuzzyDate(announcedDate);
   const end = parseFuzzyDate(expectedLaunchDate);
-  const [now, setNow] = useState<Date | null>(null);
-
-  useEffect(() => {
-    setNow(new Date());
-  }, []);
+  const isHydrated = useSyncExternalStore(
+    subscribeToHydration,
+    getClientHydrationSnapshot,
+    getServerHydrationSnapshot,
+  );
+  const now = useMemo(() => (isHydrated ? new Date() : null), [isHydrated]);
 
   if (!start || !end || end <= start) return null;
 

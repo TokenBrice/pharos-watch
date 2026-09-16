@@ -65,7 +65,7 @@ describe("native-peg-quotes", () => {
     const supportedCurrencies = PEG_CURRENCY_VALUES.filter(
       (currency) => normalizeSupportedPegCurrency(currency) != null,
     );
-    expect(supportedCurrencies.toSorted()).toEqual([...registryCurrencies].toSorted());
+    expect([...supportedCurrencies].sort()).toEqual([...registryCurrencies].sort());
   });
 
   it("fetches direct native quotes for supported non-USD fiat pegs", async () => {

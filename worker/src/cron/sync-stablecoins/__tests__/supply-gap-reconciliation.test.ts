@@ -30,7 +30,15 @@ import { fetchCuratedAggregateOnChainMcap } from "../supplemental-assets/onchain
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
-function makeAsset(): PeggedAsset {
+interface ChainCirculatingRowFixture extends Record<string, unknown> {
+  current: number;
+}
+
+type SupplyGapAssetFixture = PeggedAsset & {
+  chainCirculating: Record<string, ChainCirculatingRowFixture>;
+};
+
+function makeAsset(): SupplyGapAssetFixture {
   return {
     id: "eurcv-societe-generale-forge",
     name: "EUR CoinVertible",

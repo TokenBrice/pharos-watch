@@ -324,7 +324,7 @@ export function YieldLeaderboard({
     if (initialCompareProcessed.current) return;
     initialCompareProcessed.current = true;
     if (!initialCompareDeepLink.current) return;
-    setCompareDrawerOpen(true);
+    queueMicrotask(() => setCompareDrawerOpen(true));
     trackEvent("yield_compare_opened", { source: "deep_link", coin_count: compare.ids.length });
   }, [compare.ids.length]);
 

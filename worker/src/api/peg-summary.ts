@@ -216,7 +216,7 @@ export const handlePegSummary = async (db: D1Database): Promise<Response> => {
       pegReferenceUnavailable: pegData.pegReferenceUnavailable,
       depegEventCoverageLimited: pegData.depegEventCoverageLimited,
       pegScore: pegData.pegScore,
-      priceSource: asset?.priceSource,
+      priceSource: asset?.priceSource ?? undefined,
       priceConfidence: asset?.priceConfidence ?? null,
       priceObservedAt: asset?.priceObservedAt ?? null,
       priceObservedAtMode: asset?.priceObservedAtMode ?? null,

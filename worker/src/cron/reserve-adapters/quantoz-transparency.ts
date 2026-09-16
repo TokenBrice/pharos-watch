@@ -82,6 +82,8 @@ function extractLabeledRowCells(row: string, token: string): {
     const end = cellStarts[index + 1]?.index ?? row.length;
     return stripTags(row.slice(start, end)).trim();
   });
+  // Public HTML label comparison; not a secret.
+  // eslint-disable-next-line security/detect-possible-timing-attacks
   if (cells[0] !== token) {
     throw htmlLayoutChangedError(ADAPTER_KEY, `currency column does not identify ${token}`);
   }
