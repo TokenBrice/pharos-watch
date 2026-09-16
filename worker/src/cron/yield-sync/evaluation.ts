@@ -865,52 +865,65 @@ function finalizeYieldEvaluation(accumulator: YieldEvaluationAccumulator): Evalu
 }
 
 export function evaluateYieldSources(input: EvaluateYieldSourcesInput): EvaluateYieldSourcesResult {
-  const prepared = prepareYieldEvaluation(input);
-  const accumulator = createEvaluationAccumulator();
-  for (const [stablecoinId, entries] of prepared.resolvedByCoin) {
-    evaluateYieldSourceGroup(input, stablecoinId, entries, prepared, accumulator);
-  }
-  return finalizeYieldEvaluation(accumulator);
+  return evaluateYieldSourcesCooperative(input, { synchronous: true });
 }
 
-export async function evaluateYieldSourcesCooperative(
+export function evaluateYieldSourcesCooperative(
   input: EvaluateYieldSourcesInput,
-  options: EvaluateYieldSourcesCooperativeOptions = {},
-): Promise<EvaluateYieldSourcesResult> {
+  options: EvaluateYieldSourcesCooperativeOptions & { synchronous: true },
+): EvaluateYieldSourcesResult;
+export function evaluateYieldSourcesCooperative(
+  input: EvaluateYieldSourcesInput,
+  options?: EvaluateYieldSourcesCooperativeOptions,
+): Promise<EvaluateYieldSourcesResult>;
+export function evaluateYieldSourcesCooperative(
+  input: EvaluateYieldSourcesInput,
+  options: EvaluateYieldSourcesCooperativeOptions & { synchronous?: boolean } = {},
+): EvaluateYieldSourcesResult | Promise<EvaluateYieldSourcesResult> {
   const prepared = prepareYieldEvaluation(input);
   const accumulator = createEvaluationAccumulator();
   const groups = [...prepared.resolvedByCoin.entries()];
-  const yieldEveryCoins = Math.max(1, options.yieldEveryCoins ?? 10);
-  const yieldToEventLoop = options.yieldToEventLoop ?? defaultYieldToEventLoop;
 
-  const reportProgress = async (phase: EvaluateYieldSourcesProgress["phase"], coinsDone: number) => {
-    await options.onProgress?.({
-      phase,
-      coinsDone,
-      coinsTotal: groups.length,
-      evaluatedSources: accumulator.evaluatedSources.length,
-      bestSourceCoins: accumulator.bestSourceKeyByCoin.size,
-      rowsRejected: accumulator.rowsRejected,
-      divergenceFlags: accumulator.divergenceFlags,
-      sourceSwitches: accumulator.sourceSwitches,
-    });
-  };
-
-  await reportProgress("coin-evaluation", 0);
-
-  for (const [index, [stablecoinId, entries]] of groups.entries()) {
-    throwIfAborted(options.signal);
-    evaluateYieldSourceGroup(input, stablecoinId, entries, prepared, accumulator);
-    const coinsDone = index + 1;
-    if (coinsDone === groups.length || coinsDone % yieldEveryCoins === 0) {
-      await reportProgress("coin-evaluation", coinsDone);
-      await yieldToEventLoop(options.signal);
+  if (options.synchronous) {
+    for (const [stablecoinId, entries] of groups) {
+      evaluateYieldSourceGroup(input, stablecoinId, entries, prepared, accumulator);
     }
+    return finalizeYieldEvaluation(accumulator);
   }
 
-  throwIfAborted(options.signal);
-  const result = finalizeYieldEvaluation(accumulator);
-  await reportProgress("warning-finalization", groups.length);
-  await yieldToEventLoop(options.signal);
-  return result;
+  return (async () => {
+    const yieldEveryCoins = Math.max(1, options.yieldEveryCoins ?? 10);
+    const yieldToEventLoop = options.yieldToEventLoop ?? defaultYieldToEventLoop;
+
+    const reportProgress = async (phase: EvaluateYieldSourcesProgress["phase"], coinsDone: number) => {
+      await options.onProgress?.({
+        phase,
+        coinsDone,
+        coinsTotal: groups.length,
+        evaluatedSources: accumulator.evaluatedSources.length,
+        bestSourceCoins: accumulator.bestSourceKeyByCoin.size,
+        rowsRejected: accumulator.rowsRejected,
+        divergenceFlags: accumulator.divergenceFlags,
+        sourceSwitches: accumulator.sourceSwitches,
+      });
+    };
+
+    await reportProgress("coin-evaluation", 0);
+
+    for (const [index, [stablecoinId, entries]] of groups.entries()) {
+      throwIfAborted(options.signal);
+      evaluateYieldSourceGroup(input, stablecoinId, entries, prepared, accumulator);
+      const coinsDone = index + 1;
+      if (coinsDone === groups.length || coinsDone % yieldEveryCoins === 0) {
+        await reportProgress("coin-evaluation", coinsDone);
+        await yieldToEventLoop(options.signal);
+      }
+    }
+
+    throwIfAborted(options.signal);
+    const result = finalizeYieldEvaluation(accumulator);
+    await reportProgress("warning-finalization", groups.length);
+    await yieldToEventLoop(options.signal);
+    return result;
+  })();
 }

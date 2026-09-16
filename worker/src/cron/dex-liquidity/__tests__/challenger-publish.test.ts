@@ -4,7 +4,7 @@ import { createLatestSchemaSqlite } from "@shared/test-utils/latest-schema-sqlit
 import {
   buildDexPriceChallengerPublicationPlan,
   DEX_PRICE_CHALLENGER_BATCH_SIZE,
-  getDexPriceChallengerPublicationStatements,
+  DEX_PRICE_CHALLENGER_PAYLOAD_INSERT_SQL,
   publishDexPriceChallengerSnapshots,
   selectDexPriceChallengerRowsFromPools,
 } from "../challenger-publish";
@@ -137,15 +137,21 @@ describe("challenger publish", () => {
 
     expect(completePlan.skipReason).toBeNull();
     expect(completePlan.shouldPublishSnapshot).toBe(true);
-    expect(completePlan.payloadStatements).toHaveLength(2);
-    expect(completePlan.snapshotStatement).not.toBeNull();
-
-    const ordered = getDexPriceChallengerPublicationStatements(completePlan);
-    expect(ordered.map((stmt) => stmt.sql)).toEqual([
-      completePlan.payloadStatements[0]!.sql,
-      completePlan.payloadStatements[1]!.sql,
-      completePlan.snapshotStatement!.sql,
+    expect(completePlan.payloadRows).toHaveLength(2);
+    expect(completePlan.payloadRows[0]).toEqual([
+      "usdt-tether",
+      1_700_000_000,
+      "pool-a",
+      "Ethereum",
+      "curve",
+      "gecko-terminal",
+      0.999,
+      10_000,
     ]);
+    expect(DEX_PRICE_CHALLENGER_PAYLOAD_INSERT_SQL).toContain(
+      "INSERT INTO dex_price_challengers",
+    );
+    expect(completePlan.snapshotStatement).not.toBeNull();
 
     const incompletePlan = buildDexPriceChallengerPublicationPlan({
       stablecoinId: "usdt-tether",
@@ -167,7 +173,7 @@ describe("challenger publish", () => {
     expect(incompletePlan.skipReason).toBe("incomplete-coverage");
     expect(incompletePlan.shouldPublishSnapshot).toBe(false);
     expect(incompletePlan.snapshotStatement).toBeNull();
-    expect(incompletePlan.payloadStatements).toHaveLength(1);
+    expect(incompletePlan.payloadRows).toHaveLength(1);
   });
 
   it("excludes blocked dead DEX pools from challenger selection", () => {

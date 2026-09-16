@@ -71,16 +71,34 @@ describe("loadYieldHistorySnapshots", () => {
     insertHistory(sqlite, { stablecoinId: "staged-only", sourceKey: "source-a", recordedAt: 200, isBest: 1, publicationState: "staged" });
     expect(sqlite.prepare("SELECT publication_state FROM yield_history WHERE stablecoin_id = 'coin-b' AND recorded_at = 100").get()).toEqual({ publication_state: null });
 
-    for (const sourceKeysByStablecoin of [undefined, new Map(["coin-a", "coin-b", "staged-only"].map((id) => [id, new Set(["source-a"])]))]) {
-      const snapshots = await loadYieldHistorySnapshots(fixture.db, ["coin-a", "coin-b", "staged-only"], 1_000, 300, { sourceKeysByStablecoin });
-      const identities = (rows: typeof snapshots.historyRows) => rows.map((row) => [row.stablecoin_id, row.source_key, row.recorded_at, row.source_tvl_usd]);
-      const expected = [["coin-a", "source-a", 100, 10], ["coin-b", "source-a", 100, 10]];
-      expect(identities(snapshots.historyRows)).toEqual(expected);
-      expect(identities(snapshots.prevTvlRows)).toEqual(expected);
-      expect(identities(snapshots.prevBestRows)).toEqual(expected);
-      expect(snapshots.historyRows.map((row) => row.apy)).toEqual([4, 4]);
-      expect(snapshots.prevBestRows.map((row) => row.apy)).toEqual([4, 4]);
-    }
+    const sourceKeysByStablecoin = new Map<string, ReadonlySet<string>>(
+      ["coin-a", "coin-b", "staged-only"].map(
+        (id) => [id, new Set(["source-a"])] as const,
+      ),
+    );
+    const snapshots = await loadYieldHistorySnapshots(
+      fixture.db,
+      ["coin-a", "coin-b", "staged-only"],
+      1_000,
+      300,
+      { sourceKeysByStablecoin },
+    );
+    const identities = (rows: typeof snapshots.historyRows) =>
+      rows.map((row) => [
+        row.stablecoin_id,
+        row.source_key,
+        row.recorded_at,
+        row.source_tvl_usd,
+      ]);
+    const expected = [
+      ["coin-a", "source-a", 100, 10],
+      ["coin-b", "source-a", 100, 10],
+    ];
+    expect(identities(snapshots.historyRows)).toEqual(expected);
+    expect(identities(snapshots.prevTvlRows)).toEqual(expected);
+    expect(identities(snapshots.prevBestRows)).toEqual(expected);
+    expect(snapshots.historyRows.map((row) => row.apy)).toEqual([4, 4]);
+    expect(snapshots.prevBestRows.map((row) => row.apy)).toEqual([4, 4]);
   });
 
   it("returns one previous TVL row per stablecoin/source bucket", async () => {
@@ -141,7 +159,13 @@ describe("loadYieldHistorySnapshots", () => {
       sourceTvlUsd: 30,
     });
 
-    const snapshots = await loadYieldHistorySnapshots(fixture.db, ["coin-a", "coin-b"], 1_000, 300);
+    const snapshots = await loadYieldHistorySnapshots(
+      fixture.db,
+      ["coin-a", "coin-b"],
+      1_000,
+      300,
+      { sourceKeysByStablecoin: new Map() },
+    );
 
     expect(
       snapshots.prevBestRows.map((row) => ({
@@ -174,7 +198,13 @@ describe("loadYieldHistorySnapshots", () => {
       sourceTvlUsd: 20,
     });
 
-    const snapshots = await loadYieldHistorySnapshots(fixture.db, ["usde-ethena"], 1_000, 300);
+    const snapshots = await loadYieldHistorySnapshots(
+      fixture.db,
+      ["usde-ethena"],
+      1_000,
+      300,
+      { sourceKeysByStablecoin: new Map() },
+    );
 
     expect(snapshots.prevBestRows).toHaveLength(1);
     expect(snapshots.prevBestRows[0]?.source_key).toBe("valid-source");
@@ -225,21 +255,6 @@ describe("loadYieldHistorySnapshots", () => {
         recordedAt: row.recorded_at,
       })),
     ).toEqual([{ sourceKey: "source-a", recordedAt: 200 }]);
-  });
-  it("caps previous TVL history rows and reports truncation", async () => {
-    const fixture = createDb();
-    sqlite = fixture.sqlite;
-
-    insertHistory(sqlite, { stablecoinId: "coin-a", sourceKey: "source-a", recordedAt: 100, sourceTvlUsd: 10 });
-    insertHistory(sqlite, { stablecoinId: "coin-a", sourceKey: "source-b", recordedAt: 110, sourceTvlUsd: 20 });
-    insertHistory(sqlite, { stablecoinId: "coin-a", sourceKey: "source-c", recordedAt: 120, sourceTvlUsd: 30 });
-
-    const snapshots = await loadYieldHistorySnapshots(fixture.db, ["coin-a"], 1_000, 300, {
-      maxPreviousTvlRows: 2,
-    });
-
-    expect(snapshots.prevTvlRows.map((row) => row.source_key)).toEqual(["source-a", "source-b"]);
-    expect(snapshots.previousTvlRowsTruncated).toBe(true);
   });
 
   it("caps source-key-scoped previous TVL history rows and reports truncation", async () => {

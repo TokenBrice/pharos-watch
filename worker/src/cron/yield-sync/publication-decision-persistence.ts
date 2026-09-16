@@ -204,7 +204,7 @@ function serializeBoundedDecisionAlternatives(
   return "[]";
 }
 
-function classifyDecisionRetention(input: {
+export function classifyDecisionRetention(input: {
   sourceSwitch: boolean;
   source: EvaluatedYieldSource;
   candidates: EvaluatedYieldSource[];

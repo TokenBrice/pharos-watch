@@ -36,44 +36,8 @@ export type {
  *  preserved beyond this window for long-running analytics. */
 const AUDIT_DECISION_RETENTION_DAYS = 30;
 
-const DECISION_RETENTION_DELETE_PREDICATE = `(
-             retention_reason = 'audit'
-             OR (
-               retention_reason IS NULL
-               AND COALESCE(source_switch, 0) != 1
-               AND NOT EXISTS (
-                 SELECT 1
-                 FROM json_each(
-                   CASE
-                     WHEN json_valid(yield_source_decisions.alternatives_json)
-                     THEN yield_source_decisions.alternatives_json
-                     ELSE '[]'
-                   END
-                 ) AS alternative
-                 WHERE CASE
-                   WHEN json_valid(alternative.value) AND json_type(alternative.value, '$.anomalies') = 'array'
-                   THEN COALESCE(json_array_length(json_extract(alternative.value, '$.anomalies')), 0)
-                   ELSE 0
-                 END > 0
-                   OR (
-                     json_valid(alternative.value)
-                     AND
-                     json_extract(alternative.value, '$.rejected') = 1
-                     AND CASE json_extract(alternative.value, '$.confidenceTier')
-                       WHEN 'deterministic' THEN 4
-                       WHEN 'curated' THEN 3
-                       WHEN 'discovered' THEN 2
-                       ELSE 1
-                     END > CASE selected_confidence_tier
-                       WHEN 'deterministic' THEN 4
-                       WHEN 'curated' THEN 3
-                       WHEN 'discovered' THEN 2
-                       ELSE 1
-                     END
-                   )
-               )
-             )
-           )`;
+const DECISION_RETENTION_DELETE_PREDICATE =
+  "retention_reason = 'audit' AND COALESCE(source_switch, 0) != 1";
 /**
  * Keep a 90-day completed-generation history for operational incident review.
  * publication-contract.ts only reads the newest attempted, published, and
