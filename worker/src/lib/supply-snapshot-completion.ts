@@ -1,3 +1,4 @@
+import { compareCodeUnits } from "@shared/lib/compare";
 import { sha256Hex } from "@shared/lib/sha256";
 import { startOfUtcDaySec } from "@shared/lib/time-buckets";
 import { getCache } from "./db-cache";
@@ -125,8 +126,8 @@ function canonicalizeAppliedWaivers(
       expiresAt: waiver.expiresAt,
     }))
     .sort((a, b) => (
-      a.stablecoinId.localeCompare(b.stablecoinId)
-      || a.owner.localeCompare(b.owner)
+      compareCodeUnits(a.stablecoinId, b.stablecoinId)
+      || compareCodeUnits(a.owner, b.owner)
       || a.expiresAt - b.expiresAt
     ));
 }

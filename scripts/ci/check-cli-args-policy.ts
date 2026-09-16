@@ -4,6 +4,7 @@ import { execFileSync } from "node:child_process";
 import { readFileSync } from "node:fs";
 import { dirname, extname, posix, resolve } from "node:path";
 import ts from "typescript";
+import { compareCodeUnits } from "@shared/lib/compare";
 import { CLI_ARGV_EXEMPTION_CATEGORIES, CLI_ARGV_POLICY } from "../lib/cli-argv-policy.mjs";
 import { reportViolations } from "../lib/report-violations.mts";
 import { runAsCli } from "../lib/source-files.mts";
@@ -169,11 +170,11 @@ function findDuplicatePaths(records: readonly CliPolicyPathEntry[]): string[] {
     if (typeof record.path === "string" && seen.has(record.path)) duplicates.add(record.path);
     seen.add(record.path);
   }
-  return [...duplicates].sort();
+  return [...duplicates].sort(compareCodeUnits);
 }
 
 function isSorted(paths: readonly unknown[]): boolean {
-  return paths.every((path, index) => index === 0 || String(paths[index - 1]).localeCompare(String(path)) <= 0);
+  return paths.every((path, index) => index === 0 || compareCodeUnits(String(paths[index - 1]), String(path)) <= 0);
 }
 
 export function evaluateCliArgsPolicy({
@@ -191,7 +192,7 @@ export function evaluateCliArgsPolicy({
   const errors: string[] = [];
   const strictEntries = Array.isArray(policy?.strict) ? policy.strict : [];
   const exemptions = Array.isArray(policy?.exemptions) ? policy.exemptions : [];
-  const discovered = [...new Set(discoveredPaths)].sort();
+  const discovered = [...new Set(discoveredPaths)].sort(compareCodeUnits);
   const discoveredSet = new Set(discovered);
   const readCachedSource = createSourceReader(readSource);
 
@@ -297,7 +298,7 @@ export function collectRepositoryProcessArgvFiles(cwd = process.cwd()): string[]
         return false;
       }
     })
-    .sort();
+    .sort(compareCodeUnits);
 }
 
 /**

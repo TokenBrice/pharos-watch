@@ -1,3 +1,4 @@
+import { compareCodeUnits } from "@shared/lib/compare";
 import { numberValue as finiteNumber } from "@shared/lib/type-guards";
 import { YIELD_BENCHMARK_KEY_CURRENCY } from "@shared/types/yield";
 import type {
@@ -30,7 +31,7 @@ export function compareYieldRankRows(a: YieldRanking, b: YieldRanking): number {
   }
   const apyDiff = b.currentApy - a.currentApy;
   if (apyDiff !== 0) return apyDiff;
-  return a.name.localeCompare(b.name);
+  return compareCodeUnits(a.name, b.name);
 }
 
 /**

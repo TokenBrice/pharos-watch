@@ -1,3 +1,4 @@
+import { compareCodeUnits } from "@shared/lib/compare";
 import { logWorkerEventArgs } from "./structured-log";
 import {
   DEX_LIQUIDITY_PUBLISHED_ROW_FILTER,
@@ -17,6 +18,7 @@ import {
 import { CRON_INTERVALS } from "@shared/lib/cron-jobs";
 import { DEX_LIQUIDITY_EVIDENCE_MAX_AGE_SEC } from "@shared/lib/cron-cadences";
 import { CHAIN_META, resolveChainId } from "@shared/lib/chains";
+import { getLiveReserveAdapterDefinition } from "@shared/lib/live-reserve-adapters";
 import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import type { DexDeploymentSupplyCoverage } from "./report-cards-fixed-input";
 import type { ReserveSlice } from "@shared/types/core";
@@ -61,9 +63,11 @@ const EMPTY_DEX_LIQUIDITY_SNAPSHOT: DexLiquidityLoadResult = {
 
 const REPORT_CARD_DEX_LIQUIDITY_FRESHNESS_SEC = DEX_LIQUIDITY_EVIDENCE_MAX_AGE_SEC;
 const REPORT_CARD_REDEMPTION_FRESHNESS_SEC = CRON_INTERVALS["sync-redemption-backstops"] * 2;
-const HAS_APPLICABLE_LIVE_RESERVE_CONFIG = ACTIVE_STABLECOINS.some(
-  (coin) => coin.liveReservesConfig !== undefined,
-);
+const CONFIGURED_INDEPENDENT_LIVE_RESERVE_COIN_COUNT = ACTIVE_STABLECOINS.filter(
+  (coin) =>
+    coin.liveReservesConfig !== undefined &&
+    getLiveReserveAdapterDefinition(coin.liveReservesConfig.adapter)?.evidenceClass === "independent",
+).length;
 
 type DeploymentOutcome = "observed_pools" | "verified_no_pools" | "provider_inaccessible";
 
@@ -226,7 +230,7 @@ export function computeDexDeploymentSupplyCoverage(
   let unknownSupplyUsd = 0;
   const unknownChains: string[] = [];
 
-  for (const [chain, supplyUsd] of [...supplyByChain.entries()].sort(([left], [right]) => left.localeCompare(right))) {
+  for (const [chain, supplyUsd] of [...supplyByChain.entries()].sort(([left], [right]) => compareCodeUnits(left, right))) {
     if (supplyUsd <= 0) continue;
     const contracts = contractsByChain.get(chain) ?? [];
     const outcomes = outcomesByChain.get(chain) ?? [];
@@ -411,6 +415,11 @@ export async function loadReportCardsSnapshotInputs(
     liveReserveMapResult.status === "fulfilled" && "provenanceById" in liveReserveMapResult.value
       ? liveReserveMapResult.value.provenanceById
       : new Map<string, LiveReserveSnapshotProvenance>();
+  const liveReserveCoverageRatio =
+    liveReserveMapResult.status !== "fulfilled" ||
+    CONFIGURED_INDEPENDENT_LIVE_RESERVE_COIN_COUNT === 0
+      ? null
+      : liveReserveMap.size / CONFIGURED_INDEPENDENT_LIVE_RESERVE_COIN_COUNT;
 
   const redemptionFreshness = buildFreshnessEntry(
     redemptionBackstopSnapshot.latestUpdatedAt,
@@ -484,10 +493,11 @@ export async function loadReportCardsSnapshotInputs(
       },
       liveReserves: {
         state:
-          HAS_APPLICABLE_LIVE_RESERVE_CONFIG &&
+          CONFIGURED_INDEPENDENT_LIVE_RESERVE_COIN_COUNT > 0 &&
           liveReserveMapResult.status === "rejected"
             ? "unavailable"
             : "available",
+        coverageRatio: liveReserveCoverageRatio,
       },
     },
   };
