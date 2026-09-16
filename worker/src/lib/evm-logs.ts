@@ -1,5 +1,5 @@
 import { ETHERSCAN_V2_BASE } from "./constants";
-import { decimalNumberFromBigInt } from "./bigint";
+import { decimalNumberFromBigInt, parseQuantityHex } from "./bigint";
 import { fetchJsonWithRetry } from "./fetch-retry";
 import { logWorkerEvent } from "./structured-log";
 
@@ -125,9 +125,10 @@ export async function getEvmBlockNumber(
       );
       return result?.response.ok ? result.body : null;
     });
-    if (!json?.result || !/^0x[0-9a-fA-F]+$/.test(json.result)) return null;
-    const parsed = Number.parseInt(json.result, 16);
-    return Number.isFinite(parsed) ? parsed : null;
+    const parsed = parseQuantityHex(json?.result);
+    if (parsed == null) return null;
+    const parsedNumber = Number(parsed);
+    return Number.isFinite(parsedNumber) ? parsedNumber : null;
   } catch {
     return null;
   }
@@ -208,8 +209,8 @@ export async function fetchEvmLogsForTopicWithCompleteness(
   if (apiKey) params.set("apikey", apiKey);
 
   budget.count++;
-  const timeout = AbortSignal.timeout(timeoutMs);
   const json = await rateLimit(async () => {
+    const timeout = AbortSignal.timeout(timeoutMs);
     const result = await fetchJsonWithRetry<{ status: string; message: string; result: EtherscanLogEntry[] }>(
       `${ETHERSCAN_V2_BASE}?${params}`,
       {

@@ -19,3 +19,11 @@ export function finiteDecimalNumberFromBigInt(value: bigint, decimals: number): 
   const parsed = decimalNumberFromBigInt(value, decimals);
   return Number.isFinite(parsed) ? parsed : null;
 }
+export function parseQuantityHex(value: unknown): bigint | null {
+  if (typeof value !== "string" || !/^0x[0-9a-fA-F]+$/.test(value)) return null;
+  try {
+    return BigInt(value);
+  } catch {
+    return null;
+  }
+}
