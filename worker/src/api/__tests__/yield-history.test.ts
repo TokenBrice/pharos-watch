@@ -5,6 +5,7 @@ import { makeYieldHistoryRow } from "../../test-helpers/__shared/fixtures";
 import { registerStablecoinParameterContract } from "../../test-helpers/__shared/endpoint-contracts";
 import { handleYieldHistory } from "../yield-history";
 import { YIELD_HISTORY_OWNERSHIP_HANDOFFS } from "../../lib/yield-history-ownership-handoffs";
+import { YIELD_SOURCE_REGISTRY } from "../../lib/yield-config/yield-config";
 import { YieldHistoryResponseSchema, type YieldHistoryResponse } from "@shared/types/yield";
 import {
   SOURCE_RISK_GOLDEN_PUBLICATION_GENERATION_ID,
@@ -430,7 +431,7 @@ describe("handleYieldHistory", () => {
       ]),
     );
     expect(YIELD_HISTORY_OWNERSHIP_HANDOFFS["reusd-re-protocol"]).toEqual([
-      "protocol-api:re-protocol-reusde",
+      "protocol-api:re-protocol-reusd",
     ]);
 
     for (const [stablecoinId, sourceKeys] of Object.entries(YIELD_HISTORY_OWNERSHIP_HANDOFFS)) {
@@ -451,6 +452,27 @@ describe("handleYieldHistory", () => {
         expect(body.current, `${stablecoinId}:${sourceKey}`).toBeNull();
         expect(body.history, `${stablecoinId}:${sourceKey}`).toEqual([]);
       }
+    }
+  });
+
+  it("anchors every ownership handoff to an emitted registry source key", () => {
+    // Handoffs retain historical keys, so each entry must keep at least one
+    // source that is still emitted by the current adapter registry.
+    const emittedSourceKeys = new Set(
+      YIELD_SOURCE_REGISTRY.flatMap((entry) => [
+        entry.nativePoolId,
+        entry.weightedPoolGroupSourceKey,
+        entry.onChainRate ? `onchain:${entry.stablecoinId}` : undefined,
+        entry.directProtocolApiSourceKey,
+        entry.autoLendingPoolId,
+      ].filter((sourceKey): sourceKey is string => typeof sourceKey === "string")),
+    );
+
+    for (const [stablecoinId, sourceKeys] of Object.entries(YIELD_HISTORY_OWNERSHIP_HANDOFFS)) {
+      expect(
+        sourceKeys.some((sourceKey) => emittedSourceKeys.has(sourceKey)),
+        stablecoinId,
+      ).toBe(true);
     }
   });
 

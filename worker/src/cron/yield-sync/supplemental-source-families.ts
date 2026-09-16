@@ -500,15 +500,10 @@ async function runCompoundFamily(
 
   const candidates: ResolvedYieldCandidate[] = [];
   for (const result of results) {
-    const target = COMPOUND_V3_COMETS.find(
-      (entry) =>
-        result.yield.sourceKey === `protocol-api:compound-v3-supply:${entry.chain}:${entry.comet.toLowerCase()}`,
-    );
-    if (!target) continue;
     candidates.push({
-      symbol: target.symbol,
-      chain: target.chain,
-      address: getTrackedContractAddress(result.stablecoinId, target.chain),
+      symbol: result.symbol,
+      chain: result.chain,
+      address: getTrackedContractAddress(result.stablecoinId, result.chain),
       yield: result.yield,
     });
   }

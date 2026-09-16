@@ -34,6 +34,7 @@ export interface YieldSourceKeyRoute {
 export const YIELD_SOURCE_KEY_ROUTES: readonly YieldSourceKeyRoute[] = [
   { prefix: "protocol-api:morpho-vault:", venueProtocol: "morpho-blue", chainSegmentIndex: 2, family: "morpho" },
   { prefix: "protocol-api:pendle:", venueProtocol: "pendle", chainSegmentIndex: 2, family: "pendle" },
+  { prefix: "protocol-api:yearn:ybold", venueProtocol: "yearn", chainSegmentIndex: null, family: null },
   { prefix: "protocol-api:yearn:", venueProtocol: "yearn", chainSegmentIndex: 2, family: "yearnKong" },
   { prefix: "protocol-api:kong:", venueProtocol: "kong", chainSegmentIndex: 2, family: "yearnKong" },
   { prefix: "protocol-api:k3:", venueProtocol: "k3", chainSegmentIndex: 2, family: "yearnKong" },
