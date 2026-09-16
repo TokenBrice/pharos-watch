@@ -84,7 +84,7 @@ function mapTrackedSubgraphPriceObservations(config: {
   chain: string;
   protocol: "uniswap-v3" | "aerodrome";
   tvl: number;
-  tokenEntries: Array<{ symbol: string; address: string; usdPrice: number }>;
+  tokenEntries: Array<{ symbol: string; address: string; usdPrice: number; tvl?: number }>;
   chainAddressToId: Map<string, string>;
   symbolToChainScopedIds: Map<string, Map<string, string[]>>;
   references?: PriceValidationReferences;
@@ -93,7 +93,7 @@ function mapTrackedSubgraphPriceObservations(config: {
   const mapped: SubgraphPriceObservation[] = [];
   const { chain, protocol, tvl, tokenEntries, chainAddressToId, symbolToChainScopedIds, references, identity } = config;
 
-  for (const { symbol, address, usdPrice } of tokenEntries) {
+  for (const { symbol, address, usdPrice, tvl: observationTvl } of tokenEntries) {
     const resolved = resolveTrackedStablecoinId(
       { chain, address, symbol },
       { chainAddressToId, symbolToChainScopedIds },
@@ -104,7 +104,7 @@ function mapTrackedSubgraphPriceObservations(config: {
       stablecoinId: resolved.stablecoinId,
       obs: {
         price: usdPrice,
-        tvl,
+        tvl: observationTvl ?? tvl,
         chain,
         protocol,
         poolKey: identity.exactPoolKey ?? undefined,
@@ -312,10 +312,13 @@ export async function fetchAerodromeData(
         if (isNaN(reserve0) || isNaN(reserve1) || reserve0 <= 0 || reserve1 <= 0) return [];
         if (isNaN(token0Price) || isNaN(token1Price) || token0Price <= 0 || token1Price <= 0) return [];
 
-        const denom = reserve0 * token1Price + reserve1;
+        // Aerodrome's Pair schema follows the standard orientation:
+        // token0Price is token1 per token0, so convert reserve0 into
+        // token1 units before deriving each leg's USD price.
+        const denom = reserve0 * token0Price + reserve1;
         if (denom <= 0) return [];
         const price1Usd = reserveUSD / denom;
-        const price0Usd = token1Price * price1Usd;
+        const price0Usd = token0Price * price1Usd;
         const reserve0Usd = reserve0 * price0Usd;
         const reserve1Usd = reserve1 * price1Usd;
 
@@ -327,8 +330,8 @@ export async function fetchAerodromeData(
         const sym0 = normalizeDexSymbol(pair.token0.symbol);
         const sym1 = normalizeDexSymbol(pair.token1.symbol);
         const pricedTokens = [
-          { symbol: sym0, address: pair.token0.id, usdPrice: price0Usd },
-          { symbol: sym1, address: pair.token1.id, usdPrice: price1Usd },
+          { symbol: sym0, address: pair.token0.id, usdPrice: price0Usd, tvl: reserve0Usd },
+          { symbol: sym1, address: pair.token1.id, usdPrice: price1Usd, tvl: reserve1Usd },
         ];
 
         const identity = buildPoolIdentity({
