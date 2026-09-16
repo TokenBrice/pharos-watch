@@ -1,3 +1,4 @@
+import { nextIanaLocalHourDueAt } from "@shared/lib/iana-local-time";
 import { executeAtomicBatch } from "../db";
 import {
   TELEGRAM_RECAP_CADENCE,
@@ -258,6 +259,48 @@ export async function setTelegramRecapPreference(
   sideEffectStatements.push(...(options.operationStatements ?? []));
   await executeAtomicBatch(db, sideEffectStatements);
   return true;
+}
+
+export type ApplyTelegramRecapPreferenceResult =
+  | { kind: "applied"; nextDueAt: number | null }
+  | { kind: "timezone-required" }
+  | { kind: "schedule-failed" }
+  | { kind: "stale" };
+
+export async function applyRecapPreference(
+  db: D1Database,
+  input: {
+    chatId: string;
+    subscriber: { timezone?: string | null; preference_generation?: number | null };
+    enabled: boolean;
+    deliveryHourLocal: number;
+    nowSec: number;
+    mutationAlreadyApplied?: boolean;
+  },
+  beforeApply?: (
+    scheduled: { timezone: string | null; nextDueAt: number | null },
+  ) => Promise<TelegramRecapPreferenceMutationOptions | void>,
+): Promise<ApplyTelegramRecapPreferenceResult> {
+  const timezone = input.subscriber.timezone ?? null;
+  if (input.enabled && timezone == null) return { kind: "timezone-required" };
+  const nextDueMs = input.enabled && timezone != null
+    ? nextIanaLocalHourDueAt(input.nowSec * 1000, timezone, input.deliveryHourLocal)
+    : null;
+  if (input.enabled && nextDueMs == null) return { kind: "schedule-failed" };
+  const nextDueAt = nextDueMs == null ? null : Math.floor(nextDueMs / 1000);
+  const mutationOptions = await beforeApply?.({ timezone, nextDueAt });
+  if (!input.mutationAlreadyApplied) {
+    const applied = await setTelegramRecapPreference(db, {
+      chatId: input.chatId,
+      enabled: input.enabled,
+      deliveryHourLocal: input.deliveryHourLocal,
+      nextDueAt,
+      nowSec: input.nowSec,
+      expectedPreferenceGeneration: Number(input.subscriber.preference_generation ?? 0),
+    }, mutationOptions ?? {});
+    if (!applied) return { kind: "stale" };
+  }
+  return { kind: "applied", nextDueAt };
 }
 
 /** Return a bounded due page. Pagination is schedule-based, so no cursor is needed. */

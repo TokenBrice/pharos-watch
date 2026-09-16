@@ -454,7 +454,6 @@ async function resolveMemberships(
       failureKind: "resolution-failed",
       reason: resolved.reason,
       presetCount: listTelegramPresets().length,
-      subscriberRowCount: 1,
       requestedStablecoinCount: idsForType(source.events, page.alert_type).length,
     });
     return "resolution-failed";

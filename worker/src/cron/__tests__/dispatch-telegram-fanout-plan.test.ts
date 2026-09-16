@@ -86,7 +86,7 @@ describe("dispatch telegram fanout planning", () => {
       },
       {
         loadSubscriberRowsBatch: direct,
-        loadPresetSubscriberRowsBatch: preset,
+        loadPresetSubscribers: preset,
         loadGlobalSubscriberRows: global,
         loadPerCoinSnoozeMap: snooze,
         loadPerCoinExplicitlyOffMap: explicitlyOff,
@@ -121,7 +121,12 @@ describe("dispatch telegram fanout planning", () => {
     const summary = summarizePresetFanoutFailures(fanoutInputs({
       preset: {
         dews: { kind: "query-failed", error: new Error("d1 unavailable") },
-        depeg: { kind: "resolution-failed" },
+        depeg: {
+          kind: "partial",
+          rows: new Map(),
+          queryFailures: 0,
+          resolutionFailures: 1,
+        },
         safety: { kind: "ok", rows: new Map() },
       },
     }));

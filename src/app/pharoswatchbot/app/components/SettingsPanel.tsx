@@ -558,6 +558,7 @@ export function SettingsPanel({ state, canMutate, canReadPortability, isMutating
         canMutate={canMutate}
         canReadPortability={canReadPortability}
         isMutating={isPortabilityRequestBusy}
+        isWriteLocked={isMutating}
         pendingOperation={pendingOperation}
         onExport={onExportWatchlist}
         onPreview={onPreviewWatchlistImport}

@@ -23,6 +23,13 @@ export interface TelegramTransportFailure {
   migrateToChatId?: string;
 }
 
+export class TelegramSendOriginatedError extends Error {
+  constructor(message: string, options?: ErrorOptions) {
+    super(message, options);
+    this.name = "TelegramSendOriginatedError";
+  }
+}
+
 export function parseTelegramTransportErrorClass(value: string | null): TelegramTransportErrorClass | null {
   switch (value) {
     case "blocked":

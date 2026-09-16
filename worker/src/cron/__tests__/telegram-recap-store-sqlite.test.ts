@@ -2,6 +2,7 @@ import { DatabaseSync } from "node:sqlite";
 import { afterEach, describe, expect, it } from "vitest";
 import { createLatestSchemaSqlite } from "@shared/test-utils/latest-schema-sqlite";
 import {
+  applyRecapPreference,
   cancelQueuedTelegramRecapsForRollout,
   getTelegramRecapPreference,
   listDueTelegramRecapPreferences,
@@ -60,6 +61,33 @@ describe("telegram recap store on latest SQLite schema", () => {
     await expect(listDueTelegramRecapPreferences(db, NOW)).resolves.toHaveLength(1);
     await expect(setTelegramRecapPreference(db, preferenceInput("42", 0, NOW + 10))).resolves.toBe(false);
     expect(sqlite.prepare("SELECT next_due_at, preference_generation FROM telegram_recap_preferences p JOIN telegram_subscribers s USING (chat_id) WHERE p.chat_id = '42'").get()).toEqual({ next_due_at: NOW - 1, preference_generation: 1 });
+  });
+
+  it("computes identical command and callback schedules for the same snapshot and clock", async () => {
+    const { sqlite, db } = setup();
+    subscriber(sqlite, "42");
+    sqlite.prepare("UPDATE telegram_subscribers SET timezone = 'America/New_York' WHERE chat_id = '42'").run();
+    const snapshot = sqlite.prepare(
+      "SELECT timezone, preference_generation FROM telegram_subscribers WHERE chat_id = '42'",
+    ).get() as { timezone: string; preference_generation: number };
+    const dueTimes: Array<number | null> = [];
+
+    for (const _surface of ["command", "callback"] as const) {
+      const result = await applyRecapPreference(db, {
+        chatId: "42",
+        subscriber: snapshot,
+        enabled: true,
+        deliveryHourLocal: 9,
+        nowSec: NOW,
+        mutationAlreadyApplied: true,
+      }, async ({ nextDueAt }) => {
+        dueTimes.push(nextDueAt);
+      });
+      expect(result.kind).toBe("applied");
+    }
+
+    expect(dueTimes).toHaveLength(2);
+    expect(dueTimes[0]).toBe(dueTimes[1]);
   });
 
   it("rejects a recap write after a concurrent timezone or preference mutation", async () => {

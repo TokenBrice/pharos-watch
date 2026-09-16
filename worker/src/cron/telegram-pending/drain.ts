@@ -75,6 +75,7 @@ import {
   preparePendingSendingTransition,
 } from "./transitions";
 
+import { TelegramSendOriginatedError } from "../../lib/telegram/transport-errors";
 export const PENDING_CLAIM_TTL_SEC = 10 * 60;
 const PENDING_WAVE_FINALIZATION_RESERVE_MS = 15_000;
 const DEFAULT_RETRY_DELAY_SEC = PENDING_BACKOFF_SCHEDULE_SEC[0];
@@ -897,14 +898,21 @@ export async function drainPendingQueue(
   const scheduledResults = await schedulePerChatBatches(
     sendableRows,
     SEND_BATCH_SIZE,
-    ({ row, message, disableWebPagePreview }) =>
-      sendToChat(row.chat_id, row.message_html, botToken, {
-        disableWebPagePreview,
-        linkPreviewOptions: message.linkPreviewOptions,
-        disableNotification: message.disableNotification,
-        replyMarkup: message.replyMarkup,
-        signal,
-      }),
+    async ({ row, message, disableWebPagePreview }) => {
+      try {
+        return await sendToChat(row.chat_id, row.message_html, botToken, {
+          disableWebPagePreview,
+          linkPreviewOptions: message.linkPreviewOptions,
+          disableNotification: message.disableNotification,
+          replyMarkup: message.replyMarkup,
+          signal,
+        });
+      } catch (error) {
+        throw new TelegramSendOriginatedError("Telegram send threw before returning a delivery result", {
+          cause: error,
+        });
+      }
+    },
     {
       signal,
       softDeadlineAtMs: sendDeadlineAtMs,

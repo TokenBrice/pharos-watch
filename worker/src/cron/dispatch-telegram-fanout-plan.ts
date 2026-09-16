@@ -63,11 +63,7 @@ export function summarizePresetFanoutFailures(
   );
   const presetResolutionFailures = presetResults.reduce(
     (count, result) => count + (
-      result.kind === "resolution-failed"
-        ? 1
-        : result.kind === "partial"
-          ? result.resolutionFailures
-          : 0
+      result.kind === "partial" ? result.resolutionFailures : 0
     ),
     0,
   );

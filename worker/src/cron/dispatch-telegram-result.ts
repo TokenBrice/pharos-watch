@@ -1,3 +1,4 @@
+import { TelegramSendOriginatedError } from "../lib/telegram/transport-errors";
 import type { TelegramDispatchCronResult } from "@shared/types";
 import { TELEGRAM_DISPATCH_INTERVAL_SEC, TELEGRAM_PENDING_DRAIN_BUDGET } from "./telegram-pending";
 import { emptyPerAlertTypeDelivery } from "./dispatch-telegram-routing";
@@ -161,13 +162,14 @@ function isAbortError(error: unknown): boolean {
   );
 }
 
+
 export function shouldRecordTelegramDispatchFailure(
   error: unknown,
   signal: AbortSignal | undefined,
   telegramDeliveryStarted: boolean,
 ): boolean {
-  if (signal?.aborted || isAbortError(error)) return false;
-  return telegramDeliveryStarted;
+  if (signal?.aborted || isAbortError(error) || !telegramDeliveryStarted) return false;
+  return error instanceof TelegramSendOriginatedError;
 }
 
 function emptyPerAlertTypeTargets(): PerAlertTypeTargets {
