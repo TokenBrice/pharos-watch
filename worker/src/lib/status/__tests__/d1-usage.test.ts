@@ -380,4 +380,49 @@ describe("refreshD1TableGrowthSnapshot", () => {
     expect(db.getHistory().some((entry) => entry.sql.includes("FROM sqlite_master"))).toBe(false);
     expect(() => db.assertAllMatchesUsed()).not.toThrow();
   });
+
+  it("rejects malformed cached table-growth rows instead of returning cast data", async () => {
+    const db = mockD1([
+      {
+        match: "INSERT INTO cache (key, value, updated_at)",
+        rows: [],
+        runMeta: { changes: 1 },
+      },
+      {
+        match: "SELECT value, updated_at FROM cache WHERE key = ?",
+        matchBinds: [D1_TABLE_GROWTH_SNAPSHOT_CACHE_KEY],
+        rows: [{
+          key: D1_TABLE_GROWTH_SNAPSHOT_CACHE_KEY,
+          value: JSON.stringify({
+            version: 1,
+            snapshot: {
+              checkedAt: NOW,
+              utcDay: Math.floor(NOW / 86_400) * 86_400,
+              previousCheckedAt: null,
+              tables: [{
+                tableName: "supply_history",
+                rowCount: "poisoned",
+                previousRowCount: null,
+                rowCountDelta: null,
+                oldestTimestamp: null,
+                newestTimestamp: null,
+              }],
+              topGrowers: [],
+            },
+          }),
+          updated_at: NOW,
+        }],
+      },
+      {
+        match: "FROM sqlite_master",
+        rows: [],
+      },
+    ], { requireMatch: true });
+
+    await expect(refreshD1TableGrowthSnapshot(db, NOW)).resolves.toMatchObject({
+      checkedAt: NOW,
+      tables: [],
+      topGrowers: [],
+    });
+  });
 });

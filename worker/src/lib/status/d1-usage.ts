@@ -5,6 +5,8 @@ import { fetchTextWithRetry } from "../fetch-retry";
 import { isRecord } from "@shared/lib/type-guards";
 import { logWorkerEvent } from "../structured-log";
 import { getCache, setCacheIfNewer } from "../db-cache";
+import { parseJsonObjectWithSchema } from "../json-parse";
+import { z } from "zod";
 import {
   D1_CAPACITY_OBSERVATION_INTERVAL_SEC,
   loadCachedD1CapacityAssessment,
@@ -136,6 +138,32 @@ interface D1TableGrowthCacheEnvelope {
   version: 1;
   snapshot: D1TableGrowthSnapshot;
 }
+
+const FiniteNumberSchema = z.number().finite();
+const D1TableGrowthRowSchema = z.object({
+  tableName: z.string(),
+  rowCount: FiniteNumberSchema,
+  previousRowCount: FiniteNumberSchema.nullable(),
+  rowCountDelta: FiniteNumberSchema.nullable(),
+  oldestTimestamp: FiniteNumberSchema.nullable(),
+  newestTimestamp: FiniteNumberSchema.nullable(),
+});
+const D1TableGrowthTopGrowerSchema = z.object({
+  tableName: z.string(),
+  rowCount: FiniteNumberSchema,
+  rowCountDelta: FiniteNumberSchema,
+});
+export const D1TableGrowthSnapshotSchema = z.object({
+  checkedAt: FiniteNumberSchema,
+  utcDay: FiniteNumberSchema,
+  previousCheckedAt: FiniteNumberSchema.nullable(),
+  tables: z.array(D1TableGrowthRowSchema),
+  topGrowers: z.array(D1TableGrowthTopGrowerSchema),
+});
+const D1TableGrowthCacheEnvelopeSchema = z.object({
+  version: z.literal(D1_TABLE_GROWTH_SNAPSHOT_VERSION),
+  snapshot: D1TableGrowthSnapshotSchema,
+});
 
 interface D1DatabaseInfoResult {
   uuid?: string;
@@ -294,17 +322,7 @@ function parseAnalyticsEnvelope(
 }
 
 function parseD1TableGrowthSnapshot(value: string): D1TableGrowthSnapshot | null {
-  let parsed: unknown;
-  try {
-    parsed = JSON.parse(value) as unknown;
-  } catch {
-    return null;
-  }
-  if (!isRecord(parsed) || parsed.version !== D1_TABLE_GROWTH_SNAPSHOT_VERSION) return null;
-  if (!isRecord(parsed.snapshot) || !Array.isArray(parsed.snapshot.tables)) return null;
-  if (!Array.isArray(parsed.snapshot.topGrowers)) return null;
-  if (typeof parsed.snapshot.checkedAt !== "number" || typeof parsed.snapshot.utcDay !== "number") return null;
-  return parsed.snapshot as unknown as D1TableGrowthSnapshot;
+  return parseJsonObjectWithSchema(value, D1TableGrowthCacheEnvelopeSchema)?.snapshot ?? null;
 }
 
 function buildD1TableGrowthDiscoveryQuery(): { sql: string; binds: unknown[] } {

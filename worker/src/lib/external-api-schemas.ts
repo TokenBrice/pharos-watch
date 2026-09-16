@@ -34,8 +34,14 @@ export const TronEventsResponseSchema = z.object({
 // --- CoinGecko market chart (Q11) ---
 export const CoinGeckoMarketChartSchema = z.object({
   prices: z.array(z.tuple([z.number(), z.number()])),
+  market_caps: z.array(z.tuple([z.number(), z.number()])).optional(),
 });
 
+export const CoinGeckoCoinDetailSchema = z.object({
+  market_data: z.object({
+    circulating_supply: z.number().optional(),
+  }).optional(),
+});
 // --- Frankfurter FX rates (Q11) ---
 export const FrankfurterTimeSeriesSchema = z.object({
   base: z.string(),

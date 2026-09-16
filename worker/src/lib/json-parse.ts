@@ -1,5 +1,6 @@
 import { logWorkerEventArgs } from "./structured-log";
 import { toErrorMessage } from "@shared/lib/error-utils";
+import type { ZodType } from "zod";
 
 export interface JsonParseFailure {
   context?: string;
@@ -84,4 +85,15 @@ export function parseJsonObject<T extends Record<string, unknown> = Record<strin
     return fallback;
   }
   return parsed.value as T;
+}
+
+export function parseJsonObjectWithSchema<T extends Record<string, unknown>>(
+  value: string | null | undefined,
+  schema: ZodType<T>,
+  contextOrOptions?: string | JsonParseOptions,
+): T | null {
+  const parsed = parseJsonObject(value, contextOrOptions);
+  if (!parsed) return null;
+  const validated = schema.safeParse(parsed);
+  return validated.success ? validated.data : null;
 }

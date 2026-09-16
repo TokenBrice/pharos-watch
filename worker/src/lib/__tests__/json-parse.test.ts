@@ -1,7 +1,9 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { z } from "zod";
 import {
   parseJson,
   parseJsonObject,
+  parseJsonObjectWithSchema,
   parseJsonStringArray,
   tryParseJson,
 } from "../json-parse";
@@ -27,6 +29,15 @@ describe("json parse helpers", () => {
     expect(parseJsonObject(JSON.stringify(["not-object"]), undefined, { fallback: true })).toEqual({
       fallback: true,
     });
+  });
+
+  it("validates parsed objects with the supplied schema", () => {
+    const schema = z.object({ value: z.number() });
+
+    expect(parseJsonObjectWithSchema(JSON.stringify({ value: 1 }), schema)).toEqual({ value: 1 });
+    expect(parseJsonObjectWithSchema(JSON.stringify({ value: "1" }), schema)).toBeNull();
+    expect(parseJsonObjectWithSchema(JSON.stringify(["not-object"]), schema)).toBeNull();
+    expect(parseJsonObjectWithSchema("{bad-json", schema)).toBeNull();
   });
 
   it("emits context-aware parse failures when requested", () => {
