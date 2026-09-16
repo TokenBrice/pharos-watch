@@ -133,6 +133,7 @@ describe("snapshotSafetyGradeHistory", () => {
         {
           assetId: card.id,
           code: "fact-build-failed",
+          message: "fixture quarantine",
         },
       ],
       affectedAssetIds: [card.id],

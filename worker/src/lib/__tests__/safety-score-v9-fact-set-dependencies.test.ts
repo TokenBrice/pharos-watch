@@ -671,7 +671,11 @@ describe("Safety Score v9 exact base fact-set adapter — dependencies, roles an
     );
 
     expect(result.quarantines).toEqual([
-      { assetId: "alpha", code: "fact-build-failed" },
+      {
+        assetId: "alpha",
+        code: "fact-build-failed",
+        message: "Reserve classification overlay conflicts with exact base facts for alpha",
+      },
     ]);
     expect(asset.gaps).toContainEqual(
       expect.objectContaining({
@@ -738,7 +742,11 @@ describe("Safety Score v9 exact base fact-set adapter — dependencies, roles an
       "beta",
     ]);
     expect(result.quarantines).toEqual([
-      { assetId: "alpha", code: "fact-build-failed" },
+      {
+        assetId: "alpha",
+        code: "fact-build-failed",
+        message: "Reserve classification overlay conflicts with exact base facts for alpha",
+      },
     ]);
     const isolatedBeta = result.factSet.assets.find(
       (asset) => asset.assetId === "beta",

@@ -381,7 +381,11 @@ describe("Safety Score v9 exact base fact-set adapter — peg and mechanism evid
     const conflicting = extension();
     conflicting.assets[0]!.routeReviews[0]!.output!.assetKeys = ["fiat:EUR"];
     const materialized = materializeSafetyScoreV9FactSetExtension(exactFixedInput(), conflicting);
-    expect(compileSafetyScoreV9FactSetWithIsolationFromValidatedExtension(exactFixedInput(), materialized).quarantines).toEqual([{ assetId: "alpha", code: "fact-build-failed" }]);
+    expect(compileSafetyScoreV9FactSetWithIsolationFromValidatedExtension(exactFixedInput(), materialized).quarantines).toEqual([{
+      assetId: "alpha",
+      code: "fact-build-failed",
+      message: "Route output review conflicts with exact base facts for alpha:dex:dex-liquidity-9900:dex:primary",
+    }]);
   });
 
   it("prefers reviewed transfer facts and preserves absent, mismatched, and stale fallbacks", () => {

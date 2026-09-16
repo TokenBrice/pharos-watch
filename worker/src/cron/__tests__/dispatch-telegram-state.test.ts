@@ -259,6 +259,7 @@ describe("buildDispatchSnapshotState", () => {
             {
               assetId: "usdc-circle",
               code: "fact-build-failed",
+              message: "fixture quarantine",
             },
           ],
           affectedAssetIds: ["usdc-circle"],

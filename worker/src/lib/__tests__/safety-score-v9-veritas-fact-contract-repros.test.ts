@@ -179,7 +179,9 @@ describe("VERITAS finding VER-007: nonconserving supply review is accepted as kn
     const materialized = materializeSafetyScoreV9FactSetExtension(normalized, extension);
     const result = compileSafetyScoreV9FactSetWithIsolationFromValidatedExtension(normalized, materialized);
 
-    expect(result.quarantines).toEqual([{ assetId: "alpha", code: "fact-build-failed" }]);
+    expect(result.quarantines).toEqual([
+      { assetId: "alpha", code: "fact-build-failed", message: expect.any(String) },
+    ]);
   });
 });
 

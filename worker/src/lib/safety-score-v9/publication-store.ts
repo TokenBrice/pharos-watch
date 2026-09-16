@@ -33,9 +33,9 @@ const V9AssetQuarantineSchema = z
       "fact-build-failed",
       "fact-validation-failed",
     ]),
+    message: z.string().min(1).max(500),
   })
   .strict();
-
 const V9PublicationAttemptFailureSchema = z
   .object({
     stage: z.enum([
@@ -482,6 +482,33 @@ export async function persistSafetyScoreV9Publication(
       );
     }
   }
+  if (health.status === "held" && health.acceptedAtSec !== null) {
+    // Recheck before preparing any writes. The no-op update is a compare-and-swap
+    // probe: a concurrent current publication produces zero changes and aborts
+    // this held attempt without mutating the accepted publication or its health.
+    const [publicationRecheck] = await executeAtomicBatch(
+      db,
+      [
+        db
+          .prepare(
+            `UPDATE cache
+             SET value = value
+             WHERE key = ? AND updated_at = ?`,
+          )
+          .bind(
+            SAFETY_SCORE_V9_CACHE_KEYS.publication,
+            health.acceptedAtSec,
+          ),
+      ],
+      { signal: input.signal, returnResults: true },
+    );
+    if ((publicationRecheck?.meta.changes ?? 0) !== 1) {
+      throw new SafetyScoreV9PublicationConflictError(
+        "Held Safety Score v9 publication changed before persistence",
+      );
+    }
+  }
+
 
   const cacheStatement = db.prepare(
     `INSERT INTO cache (key, value, updated_at) VALUES (?, ?, ?)
@@ -507,23 +534,6 @@ export async function persistSafetyScoreV9Publication(
         publicationValue,
         input.publicationClockSec,
       ),
-    );
-  }
-  if (health.status === "held" && health.acceptedAtSec !== null) {
-    // Recheck the retained publication inside the atomic batch. A concurrent
-    // current publication must roll this held attempt back instead of letting
-    // health advance with the identity loaded before the race.
-    statements.push(
-      db
-        .prepare(
-          `UPDATE cache
-           SET value = CASE WHEN updated_at = ? THEN value ELSE NULL END
-           WHERE key = ?`,
-        )
-        .bind(
-          health.acceptedAtSec,
-          SAFETY_SCORE_V9_CACHE_KEYS.publication,
-        ),
     );
   }
   statements.push(

@@ -1,4 +1,5 @@
 import { compileV9FactSetV3 } from "@shared/lib/safety-score-v9/compile";
+import { toErrorMessage } from "@shared/lib/error-utils";
 import {
   createV9FactStatus,
   requiredV9Applicability,
@@ -26,6 +27,7 @@ import {
 import { assertSafetyScoreV9ExactExtensionAssets } from "./fact-set-boundary";
 import { hydrateSafetyScoreV9ShockCoverageExtension } from "./extension-shock";
 import { safetyScoreV9ChainSupplySourcePayload } from "./supply-attribution";
+import { logWorkerEvent } from "../structured-log";
 import {
   SafetyScoreV9FactSetExtensionV2Schema,
   type AssetExtension,
@@ -70,10 +72,17 @@ export { deriveSafetyScoreV9PegScore } from "./fact-set-peg-supply";
 export type V9AssetQuarantineCode =
   | "fact-build-failed"
   | "fact-validation-failed";
-
 export interface V9AssetQuarantine {
   assetId: string;
   code: V9AssetQuarantineCode;
+  message: string;
+}
+
+function quarantineFailureMessage(error: unknown): string {
+  return (
+    toErrorMessage(error).trim() ||
+    "Safety Score v9 asset fact compilation failed"
+  ).slice(0, 500);
 }
 
 export interface SafetyScoreV9FactCompilationResult {
@@ -386,12 +395,21 @@ function compileAssetOutcome(
   let reserves: ReturnType<typeof buildReserves>;
   try {
     reserves = buildReserves(context);
-  } catch {
+  } catch (error) {
+    const message = quarantineFailureMessage(error);
+    logWorkerEvent({
+      scope: "lib",
+      level: "warn",
+      event: "safety_score_v9_asset_quarantined",
+      message: `Safety Score v9 asset ${asset.assetId} quarantined: ${message}`,
+      metadata: { assetId: asset.assetId, message },
+    });
     return {
       facts: buildQuarantinedAssetFacts(context, rawDependencies),
       quarantine: {
         assetId: asset.assetId,
         code: "fact-build-failed",
+        message,
       },
     };
   }
@@ -405,12 +423,21 @@ function compileAssetOutcome(
   let facts: V9AssetFactsV3;
   try {
     facts = buildAssetFacts(context, dependencies, reserves);
-  } catch {
+  } catch (error) {
+    const message = quarantineFailureMessage(error);
+    logWorkerEvent({
+      scope: "lib",
+      level: "warn",
+      event: "safety_score_v9_asset_quarantined",
+      message: `Safety Score v9 asset ${asset.assetId} quarantined: ${message}`,
+      metadata: { assetId: asset.assetId, message },
+    });
     return {
       facts: buildQuarantinedAssetFacts(context, dependencies),
       quarantine: {
         assetId: asset.assetId,
         code: "fact-build-failed",
+        message,
       },
     };
   }
@@ -421,6 +448,7 @@ function compileAssetOutcome(
       quarantine: {
         assetId: asset.assetId,
         code: "fact-validation-failed",
+        message: quarantineFailureMessage(parsed.error),
       },
     };
   }
