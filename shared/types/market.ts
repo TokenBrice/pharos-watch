@@ -842,11 +842,11 @@ const BlacklistSummaryStatsSchema = z.object({
   recentCount: z.number(),
   recentCount24h: z.number(),
   recoverableGapCount: z.number(),
-  perCoinBlacklistCounts: z.record(z.enum(BLACKLIST_STABLECOINS), z.number()),
-  perCoinTotalEvents: z.record(z.enum(BLACKLIST_STABLECOINS), z.number()),
-  perCoinFrozenAddressCount: z.record(z.enum(BLACKLIST_STABLECOINS), z.number()),
-  perCoinFrozenTotal: z.record(z.enum(BLACKLIST_STABLECOINS), z.number()),
-  perCoinDestroyedTotal: z.record(z.enum(BLACKLIST_STABLECOINS), z.number()),
+  perCoinBlacklistCounts: z.record(z.string(), z.number()),
+  perCoinTotalEvents: z.record(z.string(), z.number()),
+  perCoinFrozenAddressCount: z.record(z.string(), z.number()),
+  perCoinFrozenTotal: z.record(z.string(), z.number()),
+  perCoinDestroyedTotal: z.record(z.string(), z.number()),
   perCoinQuarterlyEventTypes: z.record(z.enum(BLACKLIST_STABLECOINS), z.array(BlacklistQuarterlyEventTypePointSchema)),
   // Key is `z.string()` (not the BLACKLIST_STABLECOINS enum) so older cached
   // payloads — which either omit the field entirely or carry a partial record
