@@ -107,33 +107,37 @@ async function markExistingCurrentBalanceProviderFailed(
 
 export async function loadBlacklistCurrentBalanceMap(
   db: D1Database,
+  minLastSuccessfulObservedAt?: number,
 ): Promise<Map<string, BlacklistCurrentBalanceRow>> {
-  const result = await db
-    .prepare(
-      `SELECT id, stablecoin, chain_id, address, config_key, contract_address,
-              amount_native, amount_usd, source, status, observed_at,
-              last_successful_observed_at, attempt_count, last_attempted_at,
-              last_error_class, consecutive_failures
-       FROM blacklist_current_balances`,
-    )
-    .all<{
-      id: string;
-      stablecoin: BlacklistStablecoin;
-      chain_id: string;
-      address: string;
-      config_key: string | null;
-      contract_address: string | null;
-      amount_native: number | null;
-      amount_usd: number | null;
-      source: string;
-      status: "resolved" | "provider_failed";
-      observed_at: number;
-      last_successful_observed_at: number | null;
-      attempt_count: number;
-      last_attempted_at: number | null;
-      last_error_class: string | null;
-      consecutive_failures: number | null;
-    }>();
+  const statement = db.prepare(
+    `SELECT id, stablecoin, chain_id, address, config_key, contract_address,
+            amount_native, amount_usd, source, status, observed_at,
+            last_successful_observed_at, attempt_count, last_attempted_at,
+            last_error_class, consecutive_failures
+     FROM blacklist_current_balances${
+       minLastSuccessfulObservedAt == null ? "" : "\n     WHERE last_successful_observed_at >= ?"
+     }`,
+  );
+  const result = await (minLastSuccessfulObservedAt == null
+    ? statement
+    : statement.bind(minLastSuccessfulObservedAt)).all<{
+    id: string;
+    stablecoin: BlacklistStablecoin;
+    chain_id: string;
+    address: string;
+    config_key: string | null;
+    contract_address: string | null;
+    amount_native: number | null;
+    amount_usd: number | null;
+    source: string;
+    status: "resolved" | "provider_failed";
+    observed_at: number;
+    last_successful_observed_at: number | null;
+    attempt_count: number;
+    last_attempted_at: number | null;
+    last_error_class: string | null;
+    consecutive_failures: number | null;
+  }>();
 
   const rows = (result.results ?? []).map((row) => {
     const snapshot: BlacklistCurrentBalanceRow = {
