@@ -204,7 +204,7 @@ type ParsedEvmLogs = {
   coverageCeiling: number | null;
 };
 
-function parseEvmLogsWithCoverage(
+export function parseEvmLogsWithCoverage(
   config: ContractEventConfig,
   logs: EvmLogLike[],
   blockTimestamps?: Map<number, number>,
@@ -277,14 +277,6 @@ function parseEvmLogsWithCoverage(
     );
   }
   return { rows, coverageCeiling };
-}
-
-export function parseEvmLogs(
-  config: ContractEventConfig,
-  logs: EvmLogLike[],
-  blockTimestamps?: Map<number, number>,
-): BlacklistRow[] {
-  return parseEvmLogsWithCoverage(config, logs, blockTimestamps).rows;
 }
 
 async function resolveRpcLogTarget(

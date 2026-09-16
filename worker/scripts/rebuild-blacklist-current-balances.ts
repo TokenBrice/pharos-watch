@@ -8,7 +8,7 @@ import { buildChainRpcs } from "../src/lib/chain-registry";
 import { decimalNumberFromBigInt } from "../src/lib/bigint";
 import { encodeBalanceOfCallData } from "../src/lib/evm-selectors";
 import { createBudget, createRateLimiter } from "../src/lib/evm-logs";
-import { fetchEvmTokenCurrentBalance } from "../src/cron/blacklist/balance-providers";
+import { fetchEvmTokenCurrentBalance } from "../src/lib/blacklist/balance-providers";
 import { tronBase58ToHex } from "../src/lib/tron-address";
 import type { BlacklistStablecoin } from "../../shared/types/market";
 import { BLACKLIST_CURRENT_BALANCE_WRITER_PAUSE_KEY } from "../src/lib/blacklist-current-balances";

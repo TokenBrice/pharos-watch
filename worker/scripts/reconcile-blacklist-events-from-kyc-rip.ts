@@ -2,8 +2,8 @@ import { pathToFileURL } from "node:url";
 import { createPublicClient, http, toHex } from "viem";
 import { mainnet } from "viem/chains";
 import { runCliEntrypoint, writeCliHelpIfRequested } from "../../scripts/lib/cli-args.mjs";
-import { parseEvmLogs } from "../src/cron/blacklist/evm-source";
-import type { BlacklistRow } from "../src/cron/blacklist/shared";
+import { parseEvmLogsWithCoverage } from "../src/cron/blacklist/evm-source";
+import type { BlacklistRow } from "../src/lib/blacklist/shared";
 import {
   getBlacklistConfigsForSymbolAndChain,
   type ContractEventConfig,
@@ -103,7 +103,7 @@ async function fetchReceiptRow(
 ): Promise<BlacklistRow | null> {
   const receipt = await client.getTransactionReceipt({ hash: txHash });
   const block = await client.getBlock({ blockNumber: receipt.blockNumber });
-  const parsed = parseEvmLogs(
+  const parsed = parseEvmLogsWithCoverage(
     config,
     receipt.logs.map((log) => ({
       address: log.address,
@@ -116,7 +116,7 @@ async function fetchReceiptRow(
     })) satisfies ParsedReceiptLog[],
   );
 
-  return parsed.find((row) =>
+  return parsed.rows.find((row) =>
     row.event_type === "blacklist"
     && row.address.toLowerCase() === address.toLowerCase()
     && row.tx_hash.toLowerCase() === txHash.toLowerCase(),

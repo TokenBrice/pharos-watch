@@ -23,7 +23,6 @@ import { chainConfig, type ContractEventConfig } from "../../../lib/blacklist-co
 import type { BlacklistRunBudget } from "../../../lib/blacklist/run-budget";
 
 const DEFAULT_BLACKLIST_AMOUNT_D1_TABLES: MockTableConfig[] = [
-  { match: "blacklist-amount-repair-queue-release-expired", rows: [] },
   { match: "blacklist-amount-repair-queue-enqueue", rows: [] },
   { match: "blacklist-amount-repair-queue-reconcile-resolved", rows: [] },
   { match: "amount_attempt_count = COALESCE", rows: [] },
