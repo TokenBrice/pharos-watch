@@ -63,7 +63,13 @@ export async function crawlCurvePoolsStage(input: {
 
         const poolData = payload?.data?.poolData;
         if (!Array.isArray(poolData)) {
-          return targets.map(({ address }) => ({ chain, address, provider: "curve", status: "failure" }));
+          return targets.map(({ address }) => ({
+            chain,
+            address,
+            provider: "curve",
+            status: "failure",
+            retryable: true,
+          }));
         }
         return targets.map(({ address }) => {
           const tokenAddress = canonicalExitRouteScopedId(chain, address);
@@ -77,7 +83,13 @@ export async function crawlCurvePoolsStage(input: {
         });
       } catch (err) {
         if (input.context.signal?.aborted) throw err;
-        return targets.map(({ address }) => ({ chain, address, provider: "curve", status: "failure" }));
+        return targets.map(({ address }) => ({
+          chain,
+          address,
+          provider: "curve",
+          status: "failure",
+          retryable: true,
+        }));
       }
     },
     { signal: input.context.signal },

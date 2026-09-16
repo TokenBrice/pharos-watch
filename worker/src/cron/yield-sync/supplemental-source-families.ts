@@ -154,8 +154,10 @@ function shouldPublishVaultsFyiFamilyCache(
   candidateCount: number,
 ): boolean {
   if (!telemetry) return false;
-  if (telemetry.status === "ok" || telemetry.status === "partial") return true;
-  if (telemetry.skipReason === "credit-cap") return candidateCount > 0;
+  if (telemetry.status === "ok") return true;
+  if (telemetry.status === "partial") {
+    return telemetry.skipReason === "credit-cap" && candidateCount > 0;
+  }
   return telemetry.skipReason === "disabled"
     || telemetry.skipReason === "no-key"
     || telemetry.skipReason === "invalid-config";

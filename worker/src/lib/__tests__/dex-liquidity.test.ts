@@ -114,7 +114,8 @@ describe("loadDexLiquiditySnapshot", () => {
     });
   });
 
-  it("rejects redemption-family observations persisted in the DEX lane", async () => {
+  it("quarantines redemption-family observations without suppressing valid rows", async () => {
+    const consoleError = vi.spyOn(console, "error").mockImplementation(() => undefined);
     const redemptionObservation = {
       routeId: "redeem:misrouted",
       routeFamily: "issuer-redemption",
@@ -147,9 +148,16 @@ describe("loadDexLiquiditySnapshot", () => {
       },
     };
 
-    await expect(
-      loadDexLiquiditySnapshot(mockDb([liquidityRow({ score_components_json: JSON.stringify(scoreComponents) })])),
-    ).rejects.toThrow("Invalid persisted DEX exit-route observations for usdc-circle");
+    const result = await loadDexLiquiditySnapshot(mockDb([
+      liquidityRow({ score_components_json: JSON.stringify(scoreComponents) }),
+      liquidityRow({ stablecoin_id: "valid" }),
+    ]));
+
+    expect(Object.keys(result.map)).toEqual(["valid"]);
+    expect(consoleError).toHaveBeenCalledWith(
+      expect.stringContaining("usdc-circle"),
+    );
+    consoleError.mockRestore();
   });
 
   it("quarantines malformed coverage evidence without suppressing valid rows", async () => {

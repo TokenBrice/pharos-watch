@@ -186,12 +186,17 @@ export async function loadDexLiquiditySnapshot(db: D1Database): Promise<DexLiqui
     processedStablecoinIds.add(row.stablecoin_id);
     let coverageClass: LiquidityCoverageClass | null;
     let coverageConfidence: number | null;
+    let exitRouteDetails: Pick<
+      DexLiquiditySnapshot,
+      "exitRouteObservations" | "exitRouteObservationCoverage"
+    >;
     try {
       coverageClass = parseCoverageClass(row.coverage_class, row.stablecoin_id);
       coverageConfidence = parseCoverageConfidence(row.coverage_confidence, row.stablecoin_id);
       if ((coverageClass === null) !== (coverageConfidence === null)) {
         throw new Error(`Incomplete dex_liquidity coverage evidence for ${row.stablecoin_id}`);
       }
+      exitRouteDetails = parseExitRouteDetails(row.score_components_json, row.stablecoin_id);
     } catch (error) {
       logWorkerEventArgs("lib", "error", `[dex-liquidity] Quarantining malformed evidence row for ${row.stablecoin_id}:`, error);
       continue;
@@ -205,7 +210,7 @@ export async function loadDexLiquiditySnapshot(db: D1Database): Promise<DexLiqui
       concentrationHhi: row.concentration_hhi,
       poolCount: row.pool_count,
       chainCount: row.chain_count,
-      ...parseExitRouteDetails(row.score_components_json, row.stablecoin_id),
+      ...exitRouteDetails,
     };
     if (typeof row.methodology_version === "string" && row.methodology_version.trim()) {
       snapshot.methodologyVersion = row.methodology_version.trim();

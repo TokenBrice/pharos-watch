@@ -193,12 +193,12 @@ export async function crawlHorizonPoolsStage(input: {
           ? ((body as { _embedded: Record<string, unknown> })._embedded.records)
           : null;
       if (!Array.isArray(records)) {
-        providerChecks.push(makeDexDeploymentProviderCheck(target, "horizon", "failure"));
+        providerChecks.push(makeDexDeploymentProviderCheck(target, "horizon", "failure", { retryable: true }));
         continue;
       }
       const pools = records.map((record) => parseHorizonPool(record, horizonAsset));
       if (pools.some((pool) => pool == null)) {
-        providerChecks.push(makeDexDeploymentProviderCheck(target, "horizon", "failure"));
+        providerChecks.push(makeDexDeploymentProviderCheck(target, "horizon", "failure", { retryable: true }));
         continue;
       }
 
@@ -242,7 +242,7 @@ export async function crawlHorizonPoolsStage(input: {
       }));
     } catch (err) {
       if (input.context.signal?.aborted) throw err;
-      providerChecks.push(makeDexDeploymentProviderCheck(target, "horizon", "failure"));
+      providerChecks.push(makeDexDeploymentProviderCheck(target, "horizon", "failure", { retryable: true }));
     }
   }
 

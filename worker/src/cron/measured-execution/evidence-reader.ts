@@ -1,11 +1,25 @@
-import { DEX_CURVE_STABLESWAP_MEASURED_FRESHNESS_MAX_SEC, DexMeasuredExecutionProfileSchema, DexMeasuredExecutionTargetSchema,
-  getDexMeasuredExecutionFreshnessMaxSec, type DexMeasuredExecutionObservationHistory, type DexMeasuredExecutionProfile, type DexMeasuredExecutionTarget } from "@shared/types/measured-execution";
+import {
+  DEX_CURVE_STABLESWAP_MEASURED_FRESHNESS_MAX_SEC,
+  DEX_MEASURED_FRESHNESS_MAX_SEC,
+  DexMeasuredExecutionProfileSchema,
+  DexMeasuredExecutionTargetSchema,
+  getDexMeasuredExecutionFreshnessMaxSec,
+  type DexMeasuredExecutionObservationHistory,
+  type DexMeasuredExecutionProfile,
+  type DexMeasuredExecutionTarget,
+} from "@shared/types/measured-execution";
 import { runWithOverloadRetry } from "../../lib/d1-overload-retry";
 import { parseJson } from "../../lib/json-parse";
+import { logWorkerEvent } from "../../lib/structured-log";
 import { DEX_MEASURED_QUOTE_SURFACE, DEX_MEASURED_TARGET_SURFACE, hashMeasuredTargetIds, latestPublishedGeneration,
   loadSupersededQuoteGenerationIds, parsePersistedJson, type MeasuredQuoteGenerationDependency, type SurfaceGenerationRow } from "./generation-store";
 import { summarizeDexMeasuredExecutionHistory, type DexMeasuredExecutionHistoryCycle } from "./history";
-const DEX_MEASURED_HISTORY_LOOKBACK_MAX_SEC = DEX_CURVE_STABLESWAP_MEASURED_FRESHNESS_MAX_SEC;
+// This generation-level query must cover the longest adapter-specific freshness
+// window; row admission below still applies the exact per-adapter bound.
+const DEX_MEASURED_HISTORY_LOOKBACK_MAX_SEC = Math.max(
+  DEX_MEASURED_FRESHNESS_MAX_SEC,
+  DEX_CURVE_STABLESWAP_MEASURED_FRESHNESS_MAX_SEC,
+);
 /** Preserve the full window while keeping proof-heavy history rows below the scoring graph's heap peak. */
 const DEX_MEASURED_HISTORY_TARGET_BATCH_SIZE = 16;
 /** Bound raw target/profile JSON beside the assembled DEX pool graph. */
@@ -670,8 +684,16 @@ export async function loadLatestPublishedDexMeasuredQuoteEvidence(
         }
       }
     }
-  } catch {
+  } catch (error) {
     // Current-generation evidence remains usable if the optional LKG read fails.
+    logWorkerEvent({
+      scope: "lib",
+      level: "warn",
+      event: "measured_execution.lkg_enrichment_failed",
+      job: "sync-dex-liquidity",
+      message: "Could not enrich current DEX measured evidence with last-known-good history",
+      error,
+    });
   }
 
   for (const [targetId, entry] of byTargetId) {

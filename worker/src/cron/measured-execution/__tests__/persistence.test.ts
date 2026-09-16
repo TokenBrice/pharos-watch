@@ -313,6 +313,47 @@ describe("measured execution last-known-good selection", () => {
     });
   });
 
+  it("logs an LKG enrichment read failure while returning current evidence", async () => {
+    const measuredTarget = fixtureTarget("ethereum");
+    const { db: currentDb } = evidenceDb({
+      target: measuredTarget,
+      latest: {
+        status: "failed",
+        failureReason: "request-budget-exhausted",
+        profile: null,
+      },
+      historical: [],
+    });
+    const prepareCurrent = currentDb.prepare.bind(currentDb);
+    const db = makeNoopD1({
+      prepare: vi.fn((query: string) => {
+        if (query.includes("SELECT history_generation.generation_id")) {
+          return {
+            bind: () => ({
+              all: async () => {
+                throw new Error("forced LKG D1 read failure");
+              },
+            }),
+          };
+        }
+        return prepareCurrent(query);
+      }),
+    });
+    const consoleWarn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+
+    const evidence = await loadLatestPublishedDexMeasuredQuoteEvidence(db);
+
+    expect(evidence?.byTargetId.get(measuredTarget.targetId)).toMatchObject({
+      status: "failed",
+      failureReason: "request-budget-exhausted",
+      resolution: "latest",
+    });
+    expect(consoleWarn).toHaveBeenCalledWith(
+      expect.stringContaining('"event":"measured_execution.lkg_enrichment_failed"'),
+    );
+    consoleWarn.mockRestore();
+  });
+
   it("preserves mature conservative history across a latest operational failure", async () => {
     const measuredTarget = fixtureTarget("ethereum");
     const newerProfile = fixtureProfile(measuredTarget, {

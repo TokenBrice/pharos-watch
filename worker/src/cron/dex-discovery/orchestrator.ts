@@ -517,8 +517,10 @@ export async function syncDexDiscovery(
 
         try {
           if (!hasDiscoveryFinalizationWindow(deadlineMs)) {
+            // The provider work already completed, so preserve its staged rows
+            // before reserving the remaining run budget for finalization.
+            await upsertStagedPools(db, result.pools, signal);
             budgetExhausted = true;
-            stagingWritesSkippedForBudget += 1;
             break;
           }
           await upsertStagedPools(db, result.pools, signal);

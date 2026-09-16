@@ -86,4 +86,31 @@ describe("Curve discovery pool fetching", () => {
       { chain: "gnosis", address: second.address, provider: "curve", status: "success", observedPoolCount: 1 },
     ]);
   });
+
+  it.each([
+    ["malformed response", async () => ({ response: new Response(null, { status: 200 }), body: {} })],
+    ["transport failure", async () => { throw new Error("timeout"); }],
+  ])("keeps a %s retryable instead of recording a provider outage", async (_label, fetchResult) => {
+    const deployment = target("ethereum", 1);
+    vi.mocked(fetchJsonWithRetry).mockImplementation(fetchResult as never);
+
+    const result = await crawlCurvePoolsStage({
+      coinTargets: [deployment],
+      context: createCrawlStageContext({
+        stablecoinId: "test",
+        knownPoolIds: new Set(),
+        nowSec: 1_800_000_000,
+        pools: [],
+        priceObs: [],
+      }),
+    });
+
+    expect(result.providerChecks).toEqual([{
+      chain: deployment.chain,
+      address: deployment.address,
+      provider: "curve",
+      status: "failure",
+      retryable: true,
+    }]);
+  });
 });
