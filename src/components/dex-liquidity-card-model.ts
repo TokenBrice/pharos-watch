@@ -7,7 +7,7 @@ type PoolBalanceDetails = NonNullable<NonNullable<DexLiquidityPool["extra"]>["ba
 // Pure helpers
 // ---------------------------------------------------------------------------
 
-export const HHI_BANDS = [
+const HHI_BANDS = [
   {
     min: 0.35,
     key: "crowded",
