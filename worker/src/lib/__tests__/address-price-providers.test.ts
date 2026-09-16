@@ -169,4 +169,30 @@ describe("address price providers", () => {
       observedAtMode: "local_fetch",
     })]);
   });
+  it("rejects an unreviewed CoinGecko quote without parseable liquidity", async () => {
+    const target = makeTarget();
+    mockFetch([{
+      match: () => true,
+      body: {
+        data: [{
+          attributes: {
+            address: target.address,
+            price_usd: "1.001",
+          },
+        }],
+      },
+    }]);
+
+    const result = await runCoingeckoOnchainAddressProvider(
+      [target],
+      "cg-key",
+      undefined,
+      1_800_000_000,
+      Date.now() + 60_000,
+    );
+
+    expect(result.quotes).toEqual([]);
+    expect(result.rejectedTargets).toEqual({ "missing-liquidity": 1 });
+  });
+
 });

@@ -15,6 +15,9 @@ const CEX_ORDERBOOK_RETRIES = 0;
 const ORDERBOOK_DEPTH_BAND = 0.02;
 const MAX_SPREAD_BPS = 100;
 const MAJOR_SYMBOLS = new Set(["USDC", "USDT"]);
+const BINANCE_ORDERBOOK_MAX_RESPONSE_BYTES = 256 * 1024;
+const COINBASE_ORDERBOOK_MAX_RESPONSE_BYTES = 2 * 1024 * 1024;
+const KRAKEN_ORDERBOOK_MAX_RESPONSE_BYTES = 512 * 1024;
 
 type Venue = "binance" | "coinbase" | "kraken";
 
@@ -100,7 +103,11 @@ export function computeOrderbookDepth(args: {
   };
 }
 
-async function fetchJson(url: string, signal?: AbortSignal): Promise<unknown | null> {
+async function fetchJson(
+  url: string,
+  maxResponseBytes: number,
+  signal?: AbortSignal,
+): Promise<unknown | null> {
   const result = await fetchJsonWithRetry<unknown>(
     url,
     {
@@ -108,7 +115,7 @@ async function fetchJson(url: string, signal?: AbortSignal): Promise<unknown | n
       headers: { Accept: "application/json", "User-Agent": USER_AGENT },
     },
     CEX_ORDERBOOK_RETRIES,
-    { timeoutMs: CEX_ORDERBOOK_TIMEOUT_MS },
+    { timeoutMs: CEX_ORDERBOOK_TIMEOUT_MS, maxResponseBytes },
   );
   return result?.response.ok ? result.body : null;
 }
@@ -119,7 +126,8 @@ export async function fetchBinanceOrderbookDepths(signal?: AbortSignal): Promise
   for (const market of markets) {
     throwIfAborted(signal);
     const payload = await fetchJson(
-      `https://api.binance.com/api/v3/depth?symbol=${market.pair}&limit=1000`,
+      `https://api.binance.com/api/v3/depth?symbol=${market.pair}&limit=500`,
+      BINANCE_ORDERBOOK_MAX_RESPONSE_BYTES,
       signal,
     ) as { bids?: unknown[]; asks?: unknown[] } | null;
     if (!payload) continue;
@@ -142,6 +150,7 @@ export async function fetchCoinbaseOrderbookDepths(signal?: AbortSignal): Promis
     throwIfAborted(signal);
     const payload = await fetchJson(
       `${CEX_PROVIDER_AUDIT_CONFIG.coinbase.metadataUrl}/${product.productId}/book?level=2`,
+      COINBASE_ORDERBOOK_MAX_RESPONSE_BYTES,
       signal,
     ) as { bids?: unknown[]; asks?: unknown[] } | null;
     if (!payload) continue;
@@ -164,6 +173,7 @@ export async function fetchKrakenOrderbookDepths(signal?: AbortSignal): Promise<
     throwIfAborted(signal);
     const payload = await fetchJson(
       `https://api.kraken.com/0/public/Depth?pair=${market.requestPair}&count=500`,
+      KRAKEN_ORDERBOOK_MAX_RESPONSE_BYTES,
       signal,
     ) as { error?: string[]; result?: Record<string, { bids?: unknown[]; asks?: unknown[] }> } | null;
     if (!payload || (Array.isArray(payload.error) && payload.error.length > 0)) continue;

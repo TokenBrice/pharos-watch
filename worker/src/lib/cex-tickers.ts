@@ -417,7 +417,7 @@ export async function fetchKrakenPrices(
     }
     if (Array.isArray(payload.error) && payload.error.length > 0) {
       logWorkerEvent({ scope: "lib", level: "warn", event: "cex_kraken_api_error", message: "Kraken ticker API returned an error", provider: "kraken", metadata: { errors: payload.error } });
-      return { kind: "no-data", value: results };
+      return { kind: "upstream-error", value: results, reason: payload.error.join("; ") };
     }
 
     applyTickerRows(

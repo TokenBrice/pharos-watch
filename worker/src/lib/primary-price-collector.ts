@@ -388,7 +388,6 @@ export function buildPrimarySourceCandidates(
   );
   const hasDexCorroboration =
     promotedDexProtocolCandidates.length > 1 ||
-    sources.length === 0 ||
     (hasHardCorroborator &&
       promotedDexProtocolCandidates.some((dexSource) =>
         sources.some(

@@ -63,6 +63,33 @@ describe("buildPrimarySourceCandidates", () => {
     expect(priceSourceConfidenceProfile).toBeNull();
   });
 
+  it("rejects a lone promoted DEX protocol when no validated source can corroborate it", () => {
+    const collected = makeCollected({
+      protocolSources: [
+        {
+          protocol: "balancer",
+          price: 1.0,
+          tvl: 500_000,
+          updatedAt: 1_700_000_000,
+          chain: "ethereum",
+        },
+      ],
+    });
+
+    const { sources, dexCandidateTelemetry, priceSourceConfidenceProfile } =
+      buildPrimarySourceCandidates({ id: "dusd-test", symbol: "DUSD" }, collected, { nowSec: 1_700_000_030 });
+
+    expect(sources).toEqual([]);
+    expect(dexCandidateTelemetry).toMatchObject([
+      {
+        sourceKey: "balancer-dex",
+        status: "excluded",
+        reason: "lacked_corroboration",
+      },
+    ]);
+    expect(priceSourceConfidenceProfile).toBeNull();
+  });
+
   it("accepts a single promoted DEX protocol when a hard CEX source agrees and withholds the aggregate", () => {
     const collected = makeCollected({
       binancePrice: 1.0,
