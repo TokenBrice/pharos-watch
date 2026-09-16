@@ -1,7 +1,11 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { mockD1 } from "@shared/test-utils/mock-d1";
 import type { MintBurnContractConfig } from "../../lib/mint-burn-contracts";
-import type { MintBurnConfigSummary, SyncMintBurnConfigResult } from "../mint-burn/sync-config";
+import {
+  createMintBurnConfigSummary,
+  type MintBurnConfigSummary,
+  type SyncMintBurnConfigResult,
+} from "../mint-burn/sync-config";
 import {
   deferConfig,
   loadDeferredConfigs,
@@ -169,34 +173,13 @@ function makeConfig(overrides?: Partial<MintBurnContractConfig>): MintBurnContra
 
 function makeSummary(overrides?: Partial<MintBurnConfigSummary>): MintBurnConfigSummary {
   return {
-    key: "ethereum-0xaaaa",
-    symbol: "USDT",
-    chainId: "ethereum",
-    tier: "critical",
-    attempted: true,
-    skippedReason: null,
-    scanFrom: 22_000_000,
-    scanTo: 22_050_000,
-    advancedTo: null,
-    maxBlockSeen: 0,
-    rowsRead: 0,
-    rowsParsed: 0,
-    rowsInserted: 0,
-    rowsIgnored: 0,
-    rowsDropped: 0,
-    rowsDroppedDecode: 0,
-    earliestDecodeFailureBlock: null,
-    errors: 0,
-    failedEventDefs: [],
-    eventCoverage: [],
-    coverageFrontier: null,
+    ...createMintBurnConfigSummary(makeConfig(), "ethereum-0xaaaa", "critical", {
+      attempted: true,
+      scanFrom: 22_000_000,
+      scanTo: 22_050_000,
+      requestBudgetLimit: 100,
+    }),
     advanceReason: "no-safe-frontier",
-    missingTimestampCount: 0,
-    earliestMissingTimestampBlock: null,
-    txContextShortfalls: 0,
-    bridgeClassificationDeferredRows: 0,
-    requestBudgetLimit: 100,
-    requestBudgetUsed: 10,
     ...overrides,
   };
 }
