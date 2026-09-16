@@ -33,8 +33,6 @@ import {
   TELEGRAM_P95_SEND_LATENCY_MS,
   WATCHER_TARGETS,
   type LoadScenarioResult,
-  type ProductionCalibratedDispatchScenario,
-  type SyntheticFixtureSummary,
   type SyntheticTelegramFixture,
 } from "../lib/telegram-load-scenarios";
 import {

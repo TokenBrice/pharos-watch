@@ -34,7 +34,7 @@ export function readWrapperCoverage(args: {
 export function wrapperCoverageResult(args: {
   coverage: WrapperCoverage;
   slice: ReserveSlice;
-  warningMessage: (coveragePct: number) => string;
+  warningMessage: (coveragePct: string) => string;
   warnings?: LiveReserveWarning[];
   metadata: Record<string, unknown>;
   redemption: {

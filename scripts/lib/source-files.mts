@@ -9,6 +9,10 @@ interface CollectSourceFileOptions {
   skipDotEntries?: boolean;
 }
 
+export function normalizeRelPath(path: string): string {
+  return path.replaceAll("\\", "/");
+}
+
 export function resolveSourceRoot(root: string, cwd = process.cwd()): string {
   return isAbsolute(root) ? root : join(cwd, root);
 }

@@ -3,7 +3,7 @@
 import { existsSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { reportViolations } from "../lib/report-violations.mts";
-import { collectSourceFilesUnderRoots } from "../lib/source-files.mts";
+import { collectSourceFilesUnderRoots, normalizeRelPath } from "../lib/source-files.mts";
 import { runDirectCli } from "../lib/cli-args.mjs";
 import {
   PROVIDER_RESILIENCE_REGISTRY,

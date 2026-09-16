@@ -22,6 +22,7 @@ import {
 } from "@shared/lib/redemption-backstop-scoring";
 import type { RedemptionBackstopConfig } from "@shared/lib/redemption-backstop-configs/shared";
 import { resolveStaticCostScore } from "../lib/redemption-audit-helpers";
+import { readJsonFile } from "../lib/catalog-json";
 import { isDirectRun } from "../lib/smoke-runtime.mjs";
 
 const ROOT = process.cwd();

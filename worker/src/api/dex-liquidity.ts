@@ -20,6 +20,7 @@ import {
   type DexLiquidityCronRow,
   type DexDeploymentOutcomeRow,
   type DexHistoryRow,
+  type DexPriceRow,
 } from "../lib/dex-liquidity-response";
 import { toErrorMessage } from "@shared/lib/error-utils";
 

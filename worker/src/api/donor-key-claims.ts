@@ -152,7 +152,7 @@ export async function handleDonorKeyClaim(
       RATE_LIMIT_RETRY_AFTER_SEC,
     );
   }
-  let donationsLedger: DonationsLedger;
+  let donationsLedger: DonationsFile;
   try {
     donationsLedger = getDonationsLedger();
   } catch {

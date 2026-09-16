@@ -163,7 +163,7 @@ describe("measured execution durable publication", () => {
     await publishDexMeasuredQuoteGeneration({
       db,
       generationId: "torn-quotes",
-      targetGeneration: { ...published, targets: [target] },
+      targetGeneration: { ...published, targets: [target], publishedAt: 1_000 },
       outcomes: [{ target, status: "failed", failureReason: "pool-revert" }],
       quotedAt: 1_060,
     });

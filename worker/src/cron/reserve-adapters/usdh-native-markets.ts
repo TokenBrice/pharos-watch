@@ -16,13 +16,13 @@ export function adaptUsdhNativeMarkets(html: string): AdapterResult {
     linkMatch: String.raw`/attestations/\d{4}_[a-z]+[.]pdf`,
   });
   const metadata = result.metadata ?? {};
-  if (result.metadata?.sourceTimestamp == null) {
+  const sourceTimestamp = result.metadata?.sourceTimestamp;
+  if (sourceTimestamp == null) {
     throw htmlLayoutChangedError(
       "usdh-native-markets",
       "no /attestations/YYYY_<month>.pdf link found in HTML",
     );
   }
-  const sourceTimestamp = typeof metadata.sourceTimestamp === "number" ? metadata.sourceTimestamp : null;
   const attestationPeriod = typeof metadata.reportPeriod === "string" ? metadata.reportPeriod : undefined;
   const attestationPdfPath = typeof metadata.reportPdfPath === "string" ? metadata.reportPdfPath : undefined;
   return {

@@ -170,7 +170,10 @@ export function verifyMechanismRefresh(
 
 export function runMechanismRefreshVerifierCli(argv: readonly string[] = process.argv.slice(2)): void {
   const options = parseMechanismRefreshVerifierArgs(argv);
-  if (writeCliHelpIfRequested(options, USAGE)) return;
+  if (options.help) {
+    writeCliHelpIfRequested(options, USAGE);
+    return;
+  }
   verifyMechanismRefresh(options);
 }
 

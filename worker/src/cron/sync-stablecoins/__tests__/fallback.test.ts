@@ -14,6 +14,7 @@ import {
   runFallbackIntakePhase,
 } from "../fallback-intake";
 import type { PeggedAsset } from "../enrich-prices";
+import type { PreviousStablecoinsLoadResult } from "../shared";
 
 const NOW_SEC = 1_700_000_000;
 
@@ -22,9 +23,9 @@ const NOW_SEC = 1_700_000_000;
 // ---------------------------------------------------------------------------
 
 const subPhaseMocks = vi.hoisted(() => ({
-  loadPreviousStablecoinsById: vi.fn(async () => ({
+  loadPreviousStablecoinsById: vi.fn(async (): Promise<PreviousStablecoinsLoadResult> => ({
     previousAssetsById: new Map<string, PeggedAsset>(),
-    cacheState: { state: "missing" as const },
+    cacheState: { state: "missing" },
   })),
   loadFreshFxRates: vi.fn(async () => ({
     fxFallbackRates: undefined,

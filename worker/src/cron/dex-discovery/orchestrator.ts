@@ -316,7 +316,7 @@ export async function syncDexDiscovery(
   let coinsCrawled = 0;
   let poolsDiscovered = 0;
   let budgetExhausted = false;
-  let stagingWritesSkippedForBudget = 0;
+  const stagingWritesSkippedForBudget = 0;
   let cleanupSkippedForBudget = false;
   let cleanup: Awaited<ReturnType<typeof cleanupStaging>> | null = null;
   let deploymentOutcomesWritten = 0;

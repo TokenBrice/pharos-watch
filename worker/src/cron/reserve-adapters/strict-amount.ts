@@ -8,18 +8,40 @@ export interface ParseFiniteNumberOptions {
   allowGrouped?: boolean;
 }
 
+function isAsciiDigits(value: string): boolean {
+  if (value.length === 0) return false;
+  for (let index = 0; index < value.length; index++) {
+    const code = value.charCodeAt(index);
+    if (code < 48 || code > 57) return false;
+  }
+  return true;
+}
+
+function isDecimal(value: string): boolean {
+  const unsigned = value[0] === "+" || value[0] === "-" ? value.slice(1) : value;
+  const parts = unsigned.split(".");
+  return parts.length <= 2 && parts.every(isAsciiDigits);
+}
+
+function isGroupedDecimal(value: string): boolean {
+  const unsigned = value[0] === "+" || value[0] === "-" ? value.slice(1) : value;
+  const parts = unsigned.split(".");
+  if (parts.length > 2 || (parts.length === 2 && !isAsciiDigits(parts[1]))) return false;
+  const groups = parts[0].split(",");
+  return groups.length > 1
+    && groups[0].length <= 3
+    && isAsciiDigits(groups[0])
+    && groups.slice(1).every((group) => group.length === 3 && isAsciiDigits(group));
+}
+
 export function parseFiniteNumber(value: unknown, options: ParseFiniteNumberOptions): number {
   let parsed = Number.NaN;
   if (typeof value === "number") {
     parsed = value;
   } else if (typeof value === "string" && value.trim() !== "") {
     const trimmed = value.trim();
-    if (
-      !options.allowGrouped
-      || /^[+-]?\d+(?:\.\d+)?$/.test(trimmed)
-      || /^[+-]?\d{1,3}(?:,\d{3})+(?:\.\d+)?$/.test(trimmed)
-    ) {
-      parsed = Number(options.allowGrouped ? trimmed.replace(/,/g, "") : trimmed);
+    if (!options.allowGrouped || isDecimal(trimmed) || isGroupedDecimal(trimmed)) {
+      parsed = Number(options.allowGrouped ? trimmed.replaceAll(",", "") : trimmed);
     }
   }
   if (!Number.isFinite(parsed) || (options.min != null && parsed < options.min)) {

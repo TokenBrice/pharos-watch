@@ -10,12 +10,10 @@ import { fetchWithRetry } from "../../../lib/fetch-retry";
 import { buildAlchemyRpcUrl } from "../../../lib/chain-registry";
 import {
   ADAPTER_USER_AGENT,
-  accumulateBucketedExposure,
   buildCoverageShortfallWarnings,
   buildRedemptionSnapshotMetadata,
   buildBucketSlices,
   buildUnknownExposureWarning,
-  classifyBucketedValues,
   computeUnknownExposurePct,
   decimalStringFromBigInt,
   fetchDefiLlamaPrices,
@@ -33,6 +31,7 @@ import {
   valueUsdFromBigIntPrice,
   verifiedFreshnessMetadata,
 } from "../helpers";
+import { accumulateBucketedExposure, classifyBucketedValues } from "../classification";
 
 function solanaCoin(): StablecoinMeta {
   return {

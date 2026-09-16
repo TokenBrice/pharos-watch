@@ -492,6 +492,8 @@ describe("fetchGoldTokens", () => {
     }]);
     const asset = {
       id: "multi",
+      name: "Multi-bucket fixture",
+      symbol: "MULTI",
       circulating: { peggedUSD: 60, peggedEUR: 40 },
       circulatingPrevDay: null,
     } as Parameters<typeof fillMissingSupplyHistory>[1][number];
