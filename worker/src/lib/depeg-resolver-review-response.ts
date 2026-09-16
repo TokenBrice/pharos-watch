@@ -1,7 +1,7 @@
 import { summarizeDdrrRows } from "@shared/lib/depeg-resolver-review";
+import { DDRR_REVIEWER_VERSION } from "@shared/lib/methodology-versions/depeg-resolver";
 import {
   DDRR_PUBLIC_WARNING,
-  DDRR_REVIEWER_VERSION,
   type DdrrResponse,
   type DdrrSummary,
 } from "@shared/types/depeg-resolver-review";

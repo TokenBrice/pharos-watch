@@ -91,14 +91,10 @@ export const QUARANTINED_STABLECOINS: readonly StablecoinMeta[] = registry.lifec
 
 export const QUARANTINED_IDS: ReadonlySet<string> = registry.lifecycle.quarantined.ids;
 
-export const QUARANTINED_META_BY_ID: ReadonlyMap<string, StablecoinMeta> = registry.lifecycle.quarantined.metaById;
-
 /** Out-of-scope assets retained only for historical identity and readback. */
 export const DELISTED_STABLECOINS: readonly StablecoinMeta[] = registry.lifecycle.delisted.stablecoins;
 
 export const DELISTED_IDS: ReadonlySet<string> = registry.lifecycle.delisted.ids;
-
-export const DELISTED_META_BY_ID: ReadonlyMap<string, StablecoinMeta> = registry.lifecycle.delisted.metaById;
 
 /**
  * Stablecoins whose checked-in identity remains readable after launch (active +

@@ -20,6 +20,7 @@ export const RESPONSIBILITIES = V9_PUBLIC_EVIDENCE_RESPONSIBILITIES;
 export const SCORE_TOLERANCE = 0.0002;
 export const EXIT_SCORE_TOLERANCE = 0.03;
 export const PUBLIC_SCORE_ROUNDING_HEADROOM = 0.5;
+export const V9_NEUTRAL_CONTROL_SCORE = 95;
 // Validation-only mirrors of policy-owned values: these check published output rather than
 // computing it, so they are deliberately NOT admitted to the policy digest — that would rotate it
 // without changing any score. They should still be derived, because a validator that re-encodes a

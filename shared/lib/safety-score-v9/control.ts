@@ -12,6 +12,7 @@ import type {
   V9StructuralSignalKind,
   V9ValidatedPolicyEnvelope,
 } from "../../types/safety-score-v9";
+import { V9_NEUTRAL_CONTROL_SCORE } from "../../types/safety-score-v9-public-facts";
 import {
   assertV9ReasonCodesRegistered,
   assertV9ValidatedPolicyEnvelope,
@@ -1541,7 +1542,7 @@ export function evaluateV9EconomicControl(args: EvaluateV9EconomicControlArgs): 
     : bindingScores.length > 0
       ? Math.min(...bindingScores)
       : neutralWithoutBindingControls
-        ? 95
+        ? V9_NEUTRAL_CONTROL_SCORE
         : null;
 
   return {

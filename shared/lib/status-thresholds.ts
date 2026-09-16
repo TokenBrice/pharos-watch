@@ -163,15 +163,6 @@ export const STATUS_PRICE_CONFIDENCE_BANDS = {
 /** Percent gap (Pharos vs CoinGecko) above which a coin's cross-source price is flagged as divergent. */
 export const STATUS_COINGECKO_PRICE_DIFF_THRESHOLD_PCT = 5;
 
-// --- Mint/burn reconciliation thresholds ---
-/** USD amounts are absolute; ratios are fractions of expected change. Critical tier wins over warn when either trips. */
-export const STATUS_RECONCILIATION_THRESHOLDS = {
-  criticalAbsoluteUsd: 100_000_000,
-  criticalRatio: 0.3,
-  warnAbsoluteUsd: 25_000_000,
-  warnRatio: 0.12,
-} as const;
-
 // --- Reserve metadata drift thresholds ---
 /** Drift threshold expressed in raw delta points of the reserve composition score (NOT percentage). */
 export const STATUS_RESERVE_DRIFT_THRESHOLD_POINTS = 15;

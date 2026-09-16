@@ -27,6 +27,7 @@ import {
   EXIT_SCORE_TOLERANCE,
   isUniqueSorted,
   numbersAgree,
+  V9_NEUTRAL_CONTROL_SCORE,
   PUBLIC_SCORE_ROUNDING_HEADROOM,
   RESPONSIBILITIES,
   SafetyScoreV9AccessPostureSchema,
@@ -1250,7 +1251,7 @@ const SafetyScoreV9ControlBreakdownSchema = z
     const binding = breakdown.components.filter((component) => component.binding);
     const bindingScoreReconciles =
       binding.length === 0
-        ? numbersAgree(breakdown.evaluatedScore, 95)
+        ? numbersAgree(breakdown.evaluatedScore, V9_NEUTRAL_CONTROL_SCORE)
         : numbersAgree(
             Math.min(...binding.map((component) => component.score)),
             breakdown.evaluatedScore,

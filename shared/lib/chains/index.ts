@@ -303,18 +303,5 @@ export const DS_CHAIN_MAP: Record<string, string> = buildProviderChainMap("dexsc
 /** Our chain name -> GeckoTerminal network ID. */
 export const GT_CHAIN_MAP: Record<string, string> = buildProviderChainMap("geckoTerminal");
 
-
-/** Our chain name -> Alchemy Prices API network ID. */
-export const ALCHEMY_CHAIN_MAP: Record<string, string> = buildProviderChainMap("alchemy");
-
-/** Our chain name -> Moralis EVM Price API chain ID. */
-export const MORALIS_CHAIN_MAP: Record<string, string> = buildProviderChainMap("moralis");
-
-/** Our chain name -> DexPaprika network ID. */
-export const DEXPAPRIKA_CHAIN_MAP: Record<string, string> = buildProviderChainMap("dexpaprika");
-
-/** Our chain name -> Birdeye x-chain header value. */
-export const BIRDEYE_CHAIN_MAP: Record<string, string> = buildProviderChainMap("birdeye");
-
 /** GeckoTerminal-only canonical chains used as a primary backfill when CG onchain is enabled. */
 export const GT_ONLY_CHAIN_MAP: Record<string, string> = subtractChainMaps(GT_CHAIN_MAP, CG_CHAIN_MAP);
