@@ -227,11 +227,10 @@ export async function runDexExitRouteTurnoverWatchdog(
   const current = buildRouteSnapshot(generation.generation_id, publishedRows.results ?? []);
   const previousCache = await getCache(db, DEX_EXIT_ROUTE_TURNOVER_SNAPSHOT_CACHE_KEY, signal);
   throwIfAborted(signal);
-  await setCache(db, DEX_EXIT_ROUTE_TURNOVER_SNAPSHOT_CACHE_KEY, JSON.stringify(current), signal);
-  throwIfAborted(signal);
 
+  let result: CronResult;
   if (previousCache === null) {
-    return createCronResult({
+    result = createCronResult({
       itemCount: 0,
       metadata: {
         currentGenerationId: current.generationId,
@@ -244,34 +243,37 @@ export async function runDexExitRouteTurnoverWatchdog(
         worstOffenders: [],
       },
     });
+  } else {
+    const previous = parsePreviousRouteSnapshot(previousCache.value);
+    const evaluations = compareRouteSnapshots(previous, current);
+    const changedCoinCount = evaluations.filter(
+      (evaluation) => evaluation.jaccardDistance > 0 || evaluation.evidenceKindChangedCount > 0,
+    ).length;
+    const alerting = evaluations.filter(
+      (evaluation) => evaluation.jaccardDistance >= DEX_EXIT_ROUTE_TURNOVER_ALERT_THRESHOLD,
+    );
+    const evidenceKindChangedRouteCount = evaluations.reduce(
+      (sum, evaluation) => sum + evaluation.evidenceKindChangedCount,
+      0,
+    );
+    const metadata = JSON.stringify({
+      currentGenerationId: current.generationId,
+      previousGenerationId: previous.generationId,
+      baselineCreated: false,
+      comparedCoinCount: evaluations.length,
+      changedCoinCount,
+      evidenceKindChangedRouteCount,
+      alertingCoinCount: alerting.length,
+      turnoverAlertThreshold: DEX_EXIT_ROUTE_TURNOVER_ALERT_THRESHOLD,
+      highestObservedTurnover: evaluations[0]?.jaccardDistance ?? 0,
+      worstOffenders: alerting.slice(0, MAX_WORST_OFFENDERS),
+    });
+    result = alerting.length === 0
+      ? { itemCount: evaluations.length, metadata }
+      : { status: "degraded", itemCount: evaluations.length, metadata };
   }
 
-  const previous = parsePreviousRouteSnapshot(previousCache.value);
-  const evaluations = compareRouteSnapshots(previous, current);
-  const changedCoinCount = evaluations.filter(
-    (evaluation) => evaluation.jaccardDistance > 0 || evaluation.evidenceKindChangedCount > 0,
-  ).length;
-  const alerting = evaluations.filter(
-    (evaluation) => evaluation.jaccardDistance >= DEX_EXIT_ROUTE_TURNOVER_ALERT_THRESHOLD,
-  );
-  const evidenceKindChangedRouteCount = evaluations.reduce(
-    (sum, evaluation) => sum + evaluation.evidenceKindChangedCount,
-    0,
-  );
-  const metadata = JSON.stringify({
-    currentGenerationId: current.generationId,
-    previousGenerationId: previous.generationId,
-    baselineCreated: false,
-    comparedCoinCount: evaluations.length,
-    changedCoinCount,
-    evidenceKindChangedRouteCount,
-    alertingCoinCount: alerting.length,
-    turnoverAlertThreshold: DEX_EXIT_ROUTE_TURNOVER_ALERT_THRESHOLD,
-    highestObservedTurnover: evaluations[0]?.jaccardDistance ?? 0,
-    worstOffenders: alerting.slice(0, MAX_WORST_OFFENDERS),
-  });
-
-  return alerting.length === 0
-    ? { itemCount: evaluations.length, metadata }
-    : { status: "degraded", itemCount: evaluations.length, metadata };
+  await setCache(db, DEX_EXIT_ROUTE_TURNOVER_SNAPSHOT_CACHE_KEY, JSON.stringify(current), signal);
+  throwIfAborted(signal);
+  return result;
 }
