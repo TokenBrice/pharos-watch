@@ -1,9 +1,9 @@
 #!/usr/bin/env node
 
-import { existsSync, readFileSync, statSync } from "node:fs";
-import { extname, relative, resolve } from "node:path";
+import { existsSync, readFileSync } from "node:fs";
+import { extname, resolve } from "node:path";
 import { reportViolations } from "../lib/report-violations.mts";
-import { collectSourceFiles } from "../lib/source-files.mts";
+import { collectSourceFilesUnderRoots } from "../lib/source-files.mts";
 import { isDirectRun } from "../lib/smoke-runtime.mjs";
 
 const SCAN_ROOTS = ["scripts", "docs", "package.json", ".github/workflows", ".github/actions"];
@@ -42,18 +42,6 @@ const REVERSE_ENTRYPOINT_EXTENSIONS = new Set([".mjs", ".js", ".ts"]);
 const REVERSE_REFERENCE_ROOTS = ["scripts", "package.json", ".github"];
 const REVERSE_REFERENCE_EXTENSIONS = new Set([".md", ".mjs", ".js", ".ts", ".tsx", ".json", ".yml", ".yaml"]);
 
-function collectFiles(root: string, path: string, acc: string[], extensions: ReadonlySet<string> = SOURCE_EXTENSIONS): void {
-  const abs = resolve(root, path);
-  if (!existsSync(abs)) return;
-  const stats = statSync(abs);
-  if (stats.isFile()) {
-    if (extensions.has(extname(abs))) acc.push(abs);
-    return;
-  }
-  if (!stats.isDirectory()) return;
-
-  acc.push(...collectSourceFiles(abs, { extensions, excludedDirs: SKIP_DIRS }));
-}
 
 function isTestPath(path: string): boolean {
   return path.includes("__tests__") || /\.test\.[a-z]+$/.test(path);
@@ -138,17 +126,16 @@ export function collectScriptEntrypoints(content: string, { allowLineBreaks = fa
 }
 
 export function collectScriptEntrypointErrors({ root = process.cwd() }: { root?: string } = {}): { errors: string[]; scannedFileCount: number } {
-  const files: string[] = [];
-  for (const scanRoot of SCAN_ROOTS) {
-    collectFiles(root, scanRoot, files);
-  }
+  const files = collectSourceFilesUnderRoots(SCAN_ROOTS, root, {
+    extensions: SOURCE_EXTENSIONS,
+    excludedDirs: SKIP_DIRS,
+  });
 
   const errors: string[] = [];
 
-  for (const file of files) {
-    const relFile = relative(root, file).replaceAll("\\", "/");
-    const content = readFileSync(file, "utf8");
-    const allowLineBreaks = [".yml", ".yaml"].includes(extname(file));
+  for (const relFile of files) {
+    const content = readFileSync(resolve(root, relFile), "utf8");
+    const allowLineBreaks = [".yml", ".yaml"].includes(extname(relFile));
     for (const entrypoint of collectScriptEntrypoints(content, { allowLineBreaks })) {
       const scriptPath = normalizeScriptPath(entrypoint);
       if (scriptPath === "scripts/") continue;
@@ -163,24 +150,23 @@ export function collectScriptEntrypointErrors({ root = process.cwd() }: { root?:
   }
 
   // Reverse check: flag runnable scripts that nothing references (dead scripts).
-  const reverseCandidates: string[] = [];
-  for (const dir of REVERSE_ENTRYPOINT_DIRS) {
-    collectFiles(root, dir, reverseCandidates, REVERSE_ENTRYPOINT_EXTENSIONS);
-  }
-  const referenceFiles: string[] = [];
-  for (const referenceRoot of REVERSE_REFERENCE_ROOTS) {
-    collectFiles(root, referenceRoot, referenceFiles, REVERSE_REFERENCE_EXTENSIONS);
-  }
+  const reverseCandidates = collectSourceFilesUnderRoots(REVERSE_ENTRYPOINT_DIRS, root, {
+    extensions: REVERSE_ENTRYPOINT_EXTENSIONS,
+    excludedDirs: SKIP_DIRS,
+  });
+  const referenceFiles = collectSourceFilesUnderRoots(REVERSE_REFERENCE_ROOTS, root, {
+    extensions: REVERSE_REFERENCE_EXTENSIONS,
+    excludedDirs: SKIP_DIRS,
+  });
   const referenceContents = referenceFiles
-    .filter((file) => !isTestPath(relative(root, file).replaceAll("\\", "/")))
-    .map((file) => ({ file, content: readFileSync(file, "utf8") }));
+    .filter((file) => !isTestPath(file))
+    .map((file) => ({ file, content: readFileSync(resolve(root, file), "utf8") }));
 
-  for (const candidate of reverseCandidates) {
-    const relPath = relative(root, candidate).replaceAll("\\", "/");
+  for (const relPath of reverseCandidates) {
     if (isTestPath(relPath)) continue;
     const bare = relPath.replace(/\.(mjs|js|ts)$/, "");
     const referenced = referenceContents.some(
-      ({ file, content }) => file !== candidate && (content.includes(relPath) || content.includes(bare)),
+      ({ file, content }) => file !== relPath && (content.includes(relPath) || content.includes(bare)),
     );
     if (!referenced) {
       errors.push(`${relPath}: unreferenced script — wire it into package.json/CI or delete it`);

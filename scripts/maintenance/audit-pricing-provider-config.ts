@@ -1,4 +1,5 @@
 import { isRecord } from "@shared/lib/type-guards";
+import { runDirectCli } from "../lib/cli-args.mjs";
 import {
   BINANCE_MARKETS,
   BITSTAMP_MARKETS,
@@ -341,9 +342,7 @@ async function main(): Promise<void> {
   sections.forEach(printSection);
 }
 
-if (process.argv[1]?.endsWith("audit-pricing-provider-config.ts")) {
-  main().catch((error) => {
-    console.error("[pricing-provider-audit] failed:", error instanceof Error ? error.message : error);
-    process.exitCode = 1;
-  });
-}
+runDirectCli(import.meta.url, () => main().catch((error) => {
+  console.error("[pricing-provider-audit] failed:", error instanceof Error ? error.message : error);
+  process.exitCode = 1;
+}));

@@ -7,7 +7,7 @@ import { selectChangedGeneratedArtifactIds } from "../ci/select-generated-artifa
 import { GENERATED_ARTIFACT_REGISTRY } from "../lib/automation-registry.mjs";
 import {
   parseStrictCliArgs,
-  runCliEntrypoint,
+  runDirectCli,
   writeCliHelpIfRequested,
 } from "../lib/cli-args.mjs";
 import {
@@ -16,9 +16,9 @@ import {
   runExecutionUnit,
   runSpawnCommand,
   type CommandImplementation,
-  type CommandResult,
   type SpawnCommand,
 } from "../lib/command-runner.mts";
+import { runGateLanes } from "../lib/gate-lanes.mts";
 import { matchesOwnershipGlob, PATH_FAMILIES, type PathFamily } from "../lib/doc-ownership-registry.mts";
 import {
   formatFailureTail,
@@ -200,10 +200,6 @@ function formatPlan(plan: FocusedCheckPlan): string {
   return lines.join("\n");
 }
 
-function normalizeCommandResult(result: number | CommandResult): CommandResult {
-  return typeof result === "number" ? { status: result, aborted: false } : result;
-}
-
 function createCheckCommand(check: FocusedCheck): SpawnCommand {
   const tokens = check.argv ? [...check.argv] : check.command.trim().split(/\s+/);
   const executable = tokens.shift();
@@ -255,7 +251,7 @@ export async function runFocusedChecks({
   }
 
   const startedAt = now();
-  const lanes = plan.checks.map(makeLane);
+  const plannedLanes = plan.checks.map(makeLane);
   if (args.planOnly) {
     const report: FocusedCheckReport = {
       changedFiles: plan.changedFiles,
@@ -263,7 +259,7 @@ export async function runFocusedChecks({
       classification: plan.classification,
       durationMs: Math.max(0, now() - startedAt),
       fallbackOnlyPaths: plan.fallbackOnlyPaths,
-      lanes,
+      lanes: plannedLanes,
       planOnly: true,
       status: "planned",
     };
@@ -271,42 +267,35 @@ export async function runFocusedChecks({
     return 0;
   }
 
-  let failed = false;
-  for (const [index, check] of plan.checks.entries()) {
-    if (failed) continue;
-    const command = createCheckCommand(check);
-    const laneStartedAt = now();
-    let result: CommandResult;
-    try {
-      result = await runExecutionUnit(createExecutionUnit([command]), {
+  const lanes = await runGateLanes(plan.checks, {
+    command: (check) => check.command,
+    failureTail: (result) => result.status === 0 ? "" : formatFailureTail(result.output),
+    id: (check) => check.command,
+    now,
+    run: (check) => {
+      const command = createCheckCommand(check);
+      return runExecutionUnit(createExecutionUnit([command]), {
         getCommandEnv: () => env as Record<string, string>,
         reporter: {
           start: (cmd) => writeLine(args.json ? stderr : stdout, "[check:focused] " + cmd),
         },
         runCommandImpl: async (spawnCommand, extraEnv, options) => {
-          const commandResult = normalizeCommandResult(await runCommandImpl(spawnCommand, extraEnv, options));
-          if (!args.json && commandResult.status === 0 && commandResult.output) {
-            stdout.write(commandResult.output);
+          const result = await runCommandImpl(spawnCommand, extraEnv, options);
+          if (
+            !args.json &&
+            typeof result !== "number" &&
+            result.status === 0 &&
+            result.output
+          ) {
+            stdout.write(result.output);
           }
-          return commandResult;
+          return result;
         },
       });
-    } catch (error) {
-      result = {
-        status: 1,
-        aborted: false,
-        output: error instanceof Error ? error.message : String(error),
-      };
-    }
-
-    lanes[index] = {
-      ...lanes[index],
-      durationMs: Math.max(0, now() - laneStartedAt),
-      failureTail: result.status === 0 ? "" : formatFailureTail(result.output),
-      status: result.status === 0 ? "passed" : "failed",
-    };
-    if (result.status !== 0) failed = true;
-  }
+    },
+    status: (result) => result.status === 0 ? "passed" : "failed",
+  });
+  const failed = lanes.some((lane) => lane.status === "failed");
 
   const report: FocusedCheckReport = {
     changedFiles: plan.changedFiles,
@@ -323,8 +312,6 @@ export async function runFocusedChecks({
   return failed ? 1 : 0;
 }
 
-if (import.meta.url === "file://" + process.argv[1]) {
-  runCliEntrypoint(async () => {
-    process.exitCode = await runFocusedChecks();
-  }, { label: "check:focused", usage: USAGE });
-}
+runDirectCli(import.meta.url, async () => {
+  process.exitCode = await runFocusedChecks();
+}, { label: "check:focused", usage: USAGE });

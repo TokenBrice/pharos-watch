@@ -4,6 +4,7 @@ import { existsSync } from "node:fs";
 import { collectChangedFiles, parseChangedFileArgs } from "../lib/changed-files.mts";
 import { createExecutionUnit, createSpawnCommand, runExecutionUnit, runSpawnCommand, type CommandImplementation, type SpawnCommand } from "../lib/command-runner.mts";
 import { localBin } from "../lib/local-bin.mts";
+import { runDirectCli } from "../lib/cli-args.mjs";
 
 const LINTABLE_EXTENSION = /\.(?:[cm]?[jt]sx?)$/;
 
@@ -60,8 +61,6 @@ export async function runChangedEslint({
   return result.status;
 }
 
-if (import.meta.url === `file://${process.argv[1]}`) {
-  runChangedEslint().then((status) => {
-    process.exit(status);
-  });
-}
+runDirectCli(import.meta.url, async () => {
+  process.exitCode = await runChangedEslint();
+});

@@ -8,8 +8,9 @@ import {
   runDirectCli,
   writeCliHelpIfRequested,
 } from "../lib/cli-args.mjs";
-import { splitLines } from "../lib/doc-files.mts";
+import { iterInlineCodeSpans } from "../lib/doc-files.mts";
 import { reportViolations } from "../lib/report-violations.mts";
+import { isRecord } from "@shared/lib/type-guards";
 
 const CODE_EXTENSIONS = new Set([
   ".ts",
@@ -97,10 +98,6 @@ export interface DocSymbolScanResult {
   violations: DocSymbolOccurrence[];
 }
 
-interface InlineCodeSpan {
-  line: number;
-  value: string;
-}
 
 interface DocSymbolScanOptions {
   documents: readonly DocSymbolDocument[];
@@ -115,9 +112,6 @@ interface RoutedDocOwnership {
 
 type CodePathLister = (args: readonly string[]) => string;
 
-function isRecord(value: unknown): value is RecordLike {
-  return value !== null && typeof value === "object" && !Array.isArray(value);
-}
 
 function getStringArray(record: RecordLike, key: string): string[] {
   const value = record[key];
@@ -174,26 +168,6 @@ export function getRoutedDocPaths(
   return [...new Set(candidates.map((candidate) => canonicalRepoPath(repoRoot, candidate)).filter((path): path is string => path !== null))].sort();
 }
 
-export function iterInlineCodeSpans(content: string): InlineCodeSpan[] {
-  const spans: InlineCodeSpan[] = [];
-  let inFence = false;
-
-  for (const [lineIndex, line] of splitLines(content).entries()) {
-    if (line.trim().startsWith("```")) {
-      inFence = !inFence;
-      continue;
-    }
-    if (inFence) continue;
-
-    const regex = /`([^`\n]+)`/g;
-    let match: RegExpExecArray | null;
-    while ((match = regex.exec(line)) !== null) {
-      spans.push({ line: lineIndex + 1, value: match[1] ?? "" });
-    }
-  }
-
-  return spans;
-}
 
 function isCandidateToken(token: string): boolean {
   return (
@@ -209,7 +183,7 @@ function isCandidateToken(token: string): boolean {
 }
 
 export function extractDocSymbolOccurrences(content: string, doc: string): DocSymbolOccurrence[] {
-  return iterInlineCodeSpans(content)
+  return [...iterInlineCodeSpans(content)]
     .filter((span) => isCandidateToken(span.value))
     .map((span) => ({ doc, line: span.line, token: span.value }));
 }

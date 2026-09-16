@@ -1,14 +1,15 @@
 #!/usr/bin/env tsx
 
-import { existsSync, readFileSync } from "node:fs";
+import { existsSync } from "node:fs";
 import { resolve } from "node:path";
 import type { PriceSourceDepthAudit, PriceSourceDepthRow } from "./audit-price-source-depth";
 import { ACTIVE_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import type { ContractDeployment, StablecoinMeta } from "@shared/types";
 import { isRecord, numberValue, stringValue } from "@shared/lib/type-guards";
+import { runDirectCli } from "../lib/cli-args.mjs";
 import {
   parseCoverageAuditCliArgs,
-  runAsMain,
+  readJsonFile,
   runCoverageAuditCli,
   toPositiveInt,
 } from "../lib/coverage-audit-cli";
@@ -107,9 +108,6 @@ interface CliOptions {
   reportPath: string | null;
 }
 
-function readJsonFile(path: string): unknown {
-  return JSON.parse(readFileSync(path, "utf8")) as unknown;
-}
 
 function usage(): string {
   return [
@@ -450,4 +448,6 @@ export async function runCli(
   });
 }
 
-runAsMain(import.meta.url, runCli);
+runDirectCli(import.meta.url, async () => {
+  process.exitCode = await runCli();
+});

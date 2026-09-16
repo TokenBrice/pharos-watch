@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 import { reportViolations } from "../lib/report-violations.mts";
 import { scanSourceGate } from "../lib/source-gate.mts";
-import { runAsCli } from "../lib/source-files.mts";
+import { runDirectCli } from "../lib/cli-args.mjs";
 
 export const DEFAULT_SQL_SAFETY_ROOTS = ["worker/src", "worker/scripts", "scripts"];
 export const SQL_INTERPOLATION_PATTERN = /`\s*(?:(?:SELECT|DELETE|UPDATE|INSERT)[^`]*(?:FROM|INTO|UPDATE|JOIN)\s+\$\{|(?:SELECT|DELETE|UPDATE)[^`]*(?:WHERE|AND|OR|SET)\s+[\w.]+\s*=\s*['"]?\$\{)/i;
@@ -79,4 +79,6 @@ export function main(argv: readonly string[] = process.argv.slice(2), cwd = proc
   return printSqlInterpolationSafetyReport(report);
 }
 
-runAsCli(import.meta.url, main);
+runDirectCli(import.meta.url, () => {
+  process.exitCode = main();
+});

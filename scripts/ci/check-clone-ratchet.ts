@@ -4,7 +4,8 @@ import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { relative } from "node:path";
 import { runCountRatchet } from "../lib/count-ratchet.mts";
-import { collectSourceFilesUnderRoot, runAsCli } from "../lib/source-files.mts";
+import { collectSourceFilesUnderRoot } from "../lib/source-files.mts";
+import { runDirectCli } from "../lib/cli-args.mjs";
 
 /**
  * Duplicated-code ratchet.
@@ -64,7 +65,7 @@ export function significantLines(source: string): string[] {
         line = "";
         break;
       }
-      line = (line.slice(0, 0) + line.slice(close + 2)).trim();
+      line = line.slice(close + 2).trim();
     }
 
     if (line.length === 0) continue;
@@ -195,4 +196,6 @@ export function checkCloneRatchet({
   });
 }
 
-runAsCli(import.meta.url, () => checkCloneRatchet({ updateBaseline: process.argv.includes("--update-baseline") }));
+runDirectCli(import.meta.url, () => {
+  process.exitCode = checkCloneRatchet({ updateBaseline: process.argv.includes("--update-baseline") });
+});

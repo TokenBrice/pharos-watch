@@ -34,3 +34,8 @@ export function linePattern(label: string): RegExp {
   // eslint-disable-next-line security/detect-non-literal-regexp -- labels are fixed literals from the reviewed extraction tables below.
   return new RegExp(`^\\s*${label}\\d*\\s+\\$?${AMOUNT}\\s*$`, "im");
 }
+
+export function scheduleAmountPattern(schedule: string, label: string): RegExp {
+  // eslint-disable-next-line security/detect-non-literal-regexp -- schedule/label are fixed literals from reviewed extraction tables.
+  return new RegExp(`${schedule}[\\s\\S]*?^\\s*${label}\\s+\\$?${AMOUNT}\\s*$`, "im");
+}

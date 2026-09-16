@@ -6,14 +6,13 @@ import { collectChangedFiles, parseChangedFileArgs } from "../lib/changed-files.
 import {
   createExecutionUnit,
   createNpmScriptCommand,
-  runExecutionUnit,
   runParallelExecutionUnits,
   runSpawnCommand,
   type CommandImplementation,
-  type CommandResult,
   type ExecutionResult,
   type NpmScriptCommand,
 } from "../lib/command-runner.mts";
+import { runGateLanes } from "../lib/gate-lanes.mts";
 import {
   formatFailureTail,
   reportGateResult,
@@ -23,6 +22,7 @@ import {
 } from "../lib/report-violations.mts";
 import { hasTelegramLoadGuardImpact } from "../lib/telegram-load-guard.mts";
 import { PATH_FAMILIES, matchesOwnershipGlob } from "../lib/doc-ownership-registry.mts";
+import { runDirectCli } from "../lib/cli-args.mjs";
 
 const ROOT_DEPENDENCY_PATHS = new Set(["package.json", "package-lock.json"]);
 const STRUCTURAL_CHECK_EXACT_PATHS = new Set(["package.json", "package-lock.json"]);
@@ -212,53 +212,49 @@ export async function runPrStaticChecks({
     laneIndexes.set(trackedCommand, index);
     return trackedCommand;
   };
-  const sequentialUnit = createExecutionUnit(
-    sequential.map((command) => createTrackedCommand(command)),
-  );
+  const sequentialCommands = sequential.map(createTrackedCommand);
   const parallelUnits = parallel.map((command) => createExecutionUnit([
     createTrackedCommand(command),
   ]));
-  const trackedRunner: CommandImplementation<NpmScriptCommand> = async (command, extraEnv, options) => {
-    const index = laneIndexes.get(command);
-    const commandStartedAt = Date.now();
-    let rawResult: number | CommandResult;
-    try {
-      rawResult = await runCommandImpl(command, extraEnv, options);
-    } catch (error) {
-      rawResult = {
-        status: 1,
-        aborted: false,
-        output: error instanceof Error ? error.message : String(error),
-      };
+  const runTrackedLanes = async (
+    trackedCommands: readonly NpmScriptCommand[],
+    signal: AbortSignal,
+    reportStarts: boolean,
+  ): Promise<ExecutionResult> => {
+    let executionResult: ExecutionResult = { status: 0, failedCmd: null, aborted: false };
+    const reports = await runGateLanes(trackedCommands, {
+      command: (command) => command.cmd,
+      failureTail: (result, command) => result.status === 0 || result.aborted
+        ? ""
+        : formatFailureTail(result.output ?? formatNpmFailure({ ...result, failedCmd: command.cmd })),
+      id: (command) => command.scriptName,
+      onResult: (result, command) => {
+        if (result.status !== 0) executionResult = { ...result, failedCmd: command.cmd };
+      },
+      run: (command) => {
+        if (signal.aborted) return { status: 130, aborted: true };
+        if (reportStarts) reporter.start(command.cmd);
+        return runCommandImpl(command, env as Record<string, string>, { signal });
+      },
+      status: (result) => result.status === 0 ? "passed" : result.aborted ? "skipped" : "failed",
+    });
+    for (const [index, command] of trackedCommands.entries()) {
+      const laneIndex = laneIndexes.get(command);
+      if (laneIndex !== undefined) laneReports[laneIndex] = reports[index];
     }
-    const result = typeof rawResult === "number" ? { status: rawResult, aborted: false } : rawResult;
-    if (index !== undefined) {
-      laneReports[index] = {
-        ...laneReports[index],
-        durationMs: Math.max(0, Date.now() - commandStartedAt),
-        failureTail: result.status === 0 || result.aborted
-          ? ""
-          : formatFailureTail(result.output ?? formatNpmFailure({ ...result, failedCmd: command.cmd })),
-        status: result.status === 0 ? "passed" : result.aborted ? "skipped" : "failed",
-      };
-    }
-    return result;
+    return executionResult;
   };
-  const getCommandEnv = () => env as Record<string, string>;
   const controller = new AbortController();
+  const trackedRunner: CommandImplementation<NpmScriptCommand> = (command, _extraEnv, options) =>
+    runTrackedLanes([command], options?.signal ?? controller.signal, false);
   const stopOnFailure = <T extends ExecutionResult>(promise: Promise<T>): Promise<T> => promise.then((result) => {
     if (result.status !== 0) controller.abort();
     return result;
   });
   const [sequentialResult, parallelResult] = await Promise.all([
-    stopOnFailure(runExecutionUnit<NpmScriptCommand>(sequentialUnit, {
-      getCommandEnv,
-      reporter,
-      runCommandImpl: trackedRunner,
-      signal: controller.signal,
-    })),
+    stopOnFailure(runTrackedLanes(sequentialCommands, controller.signal, true)),
     stopOnFailure(runParallelExecutionUnits(parallelUnits, {
-      getCommandEnv,
+      getCommandEnv: () => env as Record<string, string>,
       maxParallel,
       reporter,
       runCommandImpl: trackedRunner,
@@ -284,13 +280,12 @@ export async function runPrStaticChecks({
   return failed ? 1 : 0;
 }
 
-if (import.meta.url === `file://${process.argv[1]}`) {
-  runPrStaticChecks()
-    .then((code) => {
-      process.exitCode = code;
-    })
-    .catch((error) => {
-      console.error(`[check:pr:static] ${error instanceof Error ? error.message : String(error)}`);
-      process.exitCode = 1;
-    });
-}
+runDirectCli(import.meta.url, () => runPrStaticChecks().then(
+  (code) => {
+    process.exitCode = code;
+  },
+  (error) => {
+    console.error(`[check:pr:static] ${error instanceof Error ? error.message : String(error)}`);
+    process.exitCode = 1;
+  },
+));

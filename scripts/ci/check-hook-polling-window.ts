@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 import { reportViolations } from "../lib/report-violations.mts";
 import { scanSourceGate } from "../lib/source-gate.mts";
-import { runAsCli } from "../lib/source-files.mts";
+import { runDirectCli } from "../lib/cli-args.mjs";
 
 /**
  * Enforces the AGENTS.md polling rule: cron-backed hooks must derive
@@ -146,4 +146,6 @@ export function main(argv: readonly string[] = process.argv.slice(2), cwd = proc
   return printHookPollingWindowReport(report);
 }
 
-runAsCli(import.meta.url, main);
+runDirectCli(import.meta.url, () => {
+  process.exitCode = main();
+});

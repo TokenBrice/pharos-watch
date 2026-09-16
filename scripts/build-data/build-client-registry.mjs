@@ -685,8 +685,6 @@ export function buildClientRegistryOutput({
 
   return {
     output: `${JSON.stringify(listCoins)}\n`,
-    listOutput: `${JSON.stringify(listCoins)}\n`,
-    slimCoins: listCoins,
     listCoins,
     detailCoins,
     detailOutputs,

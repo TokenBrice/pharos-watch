@@ -23,7 +23,7 @@
 import { readFileSync, readdirSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { reportViolations } from "../lib/report-violations.mts";
-import { runAsCli } from "../lib/source-files.mts";
+import { runDirectCli } from "../lib/cli-args.mjs";
 import {
   HTML_FIXTURE_REFRESH_TARGETS,
   type HtmlFixtureCapture,
@@ -276,4 +276,6 @@ export function runHtmlFixtureAgeCheck({
   });
 }
 
-runAsCli(import.meta.url, () => runHtmlFixtureAgeCheck());
+runDirectCli(import.meta.url, () => {
+  process.exitCode = runHtmlFixtureAgeCheck();
+});

@@ -3,7 +3,7 @@
 import { existsSync, readFileSync, statSync } from "node:fs";
 import { spawnSync } from "node:child_process";
 import { relative, resolve } from "node:path";
-import { getVerifiedDocFiles, splitLines } from "../lib/doc-files.mts";
+import { getVerifiedDocFiles, iterInlineCodeSpans } from "../lib/doc-files.mts";
 import { reportViolations } from "../lib/report-violations.mts";
 
 const repoRoot = process.cwd();
@@ -35,36 +35,12 @@ const ROOT_FILE_NAMES = new Set([
   "vitest.config.ts",
 ]);
 
-interface InlineCodeSpan {
-  line: number;
-  value: string;
-}
 
 interface HistoricalCandidate {
   revision: string;
   path: string;
 }
 
-function* iterInlineCodeSpans(content: string): Generator<InlineCodeSpan> {
-  let inFence = false;
-
-  for (const [lineIndex, line] of splitLines(content).entries()) {
-    if (line.trim().startsWith("```")) {
-      inFence = !inFence;
-      continue;
-    }
-    if (inFence) continue;
-
-    const regex = /`([^`\n]+)`/g;
-    let match;
-    while ((match = regex.exec(line)) !== null) {
-      yield {
-        line: lineIndex + 1,
-        value: match[1],
-      };
-    }
-  }
-}
 
 function trimToken(token: string): string {
   return stripLineColumnSuffix(token

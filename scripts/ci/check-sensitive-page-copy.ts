@@ -15,7 +15,8 @@
 
 import { readFileSync } from "node:fs";
 import { relative } from "node:path";
-import { collectSourceFilesUnderRoot, formatScannedOk, runAsCli } from "../lib/source-files.mts";
+import { collectSourceFilesUnderRoot, formatScannedOk } from "../lib/source-files.mts";
+import { runDirectCli } from "../lib/cli-args.mjs";
 
 interface SensitiveCopyRule {
   id: string;
@@ -161,4 +162,6 @@ export function checkSensitivePageCopy({
   return 1;
 }
 
-runAsCli(import.meta.url, () => process.exit(checkSensitivePageCopy()));
+runDirectCli(import.meta.url, () => {
+  process.exit(checkSensitivePageCopy());
+});

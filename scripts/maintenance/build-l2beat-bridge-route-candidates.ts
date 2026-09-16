@@ -8,6 +8,7 @@ import {
   type L2BeatBridgeRouteReviewRow,
 } from "@shared/lib/chains/l2beat-audit";
 import { ACTIVE_META_BY_ID, ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
+import { runDirectCli } from "../lib/cli-args.mjs";
 import {
   assertCandidateReportLimitChoice,
   createCandidateReportCliOptions,
@@ -17,7 +18,6 @@ import {
   renderCoverageAuditReport,
   resolveGeneratedAt,
   resolveSelectedStablecoins,
-  runAsMain,
   writeCandidateReportCliOutput,
 } from "../lib/coverage-audit-cli";
 
@@ -149,4 +149,6 @@ export async function runCli(
   return 0;
 }
 
-runAsMain(import.meta.url, runCli);
+runDirectCli(import.meta.url, async () => {
+  process.exitCode = await runCli();
+});

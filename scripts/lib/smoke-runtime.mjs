@@ -120,8 +120,15 @@ export function getBoundedWorkerCount(taskCount, requested, { fallback = 1, maxi
   if (taskCount <= 0) return 0;
   return Math.min(taskCount, maximum, parsePositiveInt(requested, fallback));
 }
+export function chunkRoundRobin(items, workerCount) {
+  if (!Array.isArray(items) || items.length === 0 || workerCount <= 0) return [];
+  const count = Math.min(items.length, workerCount);
+  const chunks = Array.from({ length: count }, () => []);
+  items.forEach((item, index) => chunks[index % count].push(item));
+  return chunks;
+}
 
-export function chunkWorkerItems(items, workerCount) {
+export function chunkContiguous(items, workerCount) {
   if (!Array.isArray(items) || items.length === 0 || workerCount <= 0) return [];
   const chunkSize = Math.ceil(items.length / Math.min(items.length, workerCount));
   const chunks = [];

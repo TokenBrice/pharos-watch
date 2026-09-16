@@ -299,15 +299,6 @@ export function readQueueCandidates(existingBody: string): Candidate[] {
   return candidates;
 }
 
-export function filterAgainstExisting(
-  candidates: Candidate[],
-  existingBody: string,
-  _lastSweptAt: string | null = null,
-): Candidate[] {
-  // Legacy date-only cursors cannot prove same-day or recovered-source coverage.
-  const existing = new Set(readQueueCandidates(existingBody).map(candidateId));
-  return candidates.filter((c) => !existing.has(candidateId(c)));
-}
 
 function renderRow(c: Candidate): string {
   const sevTag = c.severity ? ` | severity: ${c.severity}` : "";

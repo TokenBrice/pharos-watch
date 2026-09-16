@@ -19,6 +19,7 @@ import {
   PER_COIN_SOURCE_DIR,
   STABLECOIN_DOMAIN_SOURCE_DIR,
 } from "./stablecoin-catalog-sources";
+import { formatJson, hasOwnField } from "./catalog-json";
 
 export interface StablecoinSidecarMigrationOptions {
   check?: boolean;
@@ -38,9 +39,6 @@ export interface StablecoinSidecarMigrationResult {
   sidecarFile: string;
 }
 
-function formatJson(value: unknown): string {
-  return `${JSON.stringify(value, null, 2)}\n`;
-}
 
 function readJsonObject(relativePath: string, rootDir: string): Record<string, unknown> {
   const absolutePath = resolve(rootDir, relativePath);
@@ -55,9 +53,6 @@ function readJsonObject(relativePath: string, rootDir: string): Record<string, u
   return value as Record<string, unknown>;
 }
 
-function hasOwnField(value: object, field: PropertyKey): boolean {
-  return Object.prototype.hasOwnProperty.call(value, field);
-}
 
 function formatSchemaError(relativePath: string, issues: Array<{ message: string; path: PropertyKey[] }>): Error {
   const summary = issues

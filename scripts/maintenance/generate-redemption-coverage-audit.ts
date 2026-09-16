@@ -13,7 +13,8 @@ import {
   QUARANTINED_STABLECOINS,
   TRACKED_STABLECOINS,
 } from "@shared/lib/stablecoins/registry";
-import { parseCoverageAuditCliArgs, runAsMain, writeOutputFile } from "../lib/coverage-audit-cli";
+import { runDirectCli } from "../lib/cli-args.mjs";
+import { parseCoverageAuditCliArgs, writeOutputFile } from "../lib/coverage-audit-cli";
 import {
   REDEMPTION_COVERAGE_DISPOSITIONS,
   REDEMPTION_COVERAGE_REASON_CODES,
@@ -76,7 +77,6 @@ export interface RedemptionCoverageAudit {
     quarantinedUnconfigured: number;
     delistedUnconfigured: number;
     frozenUnconfigured: number;
-    activeUnclassified: number;
     activeDefaultClassified: number;
     heuristicConfiguredRoutes: number;
     validationErrors: number;
@@ -88,7 +88,7 @@ export interface RedemptionCoverageAudit {
 }
 
 export interface RedemptionCoverageAuditCheckFinding {
-  code: "active-unclassified-gaps" | "active-default-classified-gaps" | "reviewed-disposition-invalid";
+  code: "active-default-classified-gaps" | "reviewed-disposition-invalid";
   message: string;
 }
 
@@ -431,7 +431,6 @@ export function generateRedemptionCoverageAudit(
       quarantinedUnconfigured: quarantinedCoins.filter((coin) => !configuredIds.has(coin.id)).length,
       delistedUnconfigured: delistedCoins.filter((coin) => !configuredIds.has(coin.id)).length,
       frozenUnconfigured: frozenCoins.filter((coin) => !configuredIds.has(coin.id)).length,
-      activeUnclassified: activeUnconfigured.filter((row) => !row.disposition || !row.reasonCode).length,
       activeDefaultClassified: activeUnconfigured.filter((row) => row.classificationSource !== "reviewed-registry")
         .length,
       heuristicConfiguredRoutes: heuristicConfiguredRoutes.length,
@@ -490,7 +489,6 @@ export function renderRedemptionCoverageAuditMarkdown(audit: RedemptionCoverageA
     `- Active coins: ${audit.summary.activeCoins}`,
     `- Active configured routes: ${audit.summary.activeConfigured}`,
     `- Active unconfigured gaps: ${audit.summary.activeUnconfigured}`,
-    `- Active unclassified gaps: ${audit.summary.activeUnclassified}`,
     `- Active default-classified gaps: ${audit.summary.activeDefaultClassified}`,
     `- Pre-launch unconfigured exclusions: ${audit.summary.preLaunchUnconfigured}`,
     `- Quarantined unconfigured exclusions: ${audit.summary.quarantinedUnconfigured}`,
@@ -551,12 +549,6 @@ export function evaluateRedemptionCoverageAudit(
     code: "reviewed-disposition-invalid",
     message,
   }));
-  if (audit.summary.activeUnclassified > 0) {
-    findings.push({
-      code: "active-unclassified-gaps",
-      message: `Active unconfigured redemption gaps include ${audit.summary.activeUnclassified} unclassified rows.`,
-    });
-  }
   if (options.strictActiveGaps && audit.summary.activeDefaultClassified > 0) {
     findings.push({
       code: "active-default-classified-gaps",
@@ -597,4 +589,6 @@ export function runCli(
   return findings.length > 0 ? 1 : 0;
 }
 
-runAsMain(import.meta.url, runCli);
+runDirectCli(import.meta.url, async () => {
+  process.exitCode = await runCli();
+});

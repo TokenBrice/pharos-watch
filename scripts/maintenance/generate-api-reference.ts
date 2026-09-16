@@ -21,6 +21,7 @@ import {
   REDEMPTION_ROUTE_FAMILY_CAPS,
 } from "@shared/lib/redemption-backstop-scoring";
 import { RedemptionCapacityConfidenceSchema } from "@shared/types/redemption";
+import { isRecord } from "@shared/lib/type-guards";
 
 const ROOT = resolve(fileURLToPath(import.meta.url), "../../..");
 const OPENAPI_PATH = resolve(ROOT, "public/openapi.json");
@@ -101,9 +102,6 @@ const SUPPLEMENTAL_NOTES: Readonly<Record<(typeof SUPPLEMENTAL_ENDPOINT_ORDER)[n
   "telegram-webhook": "Receives Telegram Bot API updates; callers outside Telegram should not use it.",
 };
 
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return value !== null && typeof value === "object" && !Array.isArray(value);
-}
 export function loadOpenapi(path = OPENAPI_PATH): OpenApiSpec {
   const parsed: unknown = JSON.parse(readFileSync(path, "utf8"));
   if (!isRecord(parsed) || !isRecord(parsed.paths)) throw new Error("openapi.json is missing `paths`");

@@ -1,5 +1,5 @@
-import { mkdirSync, writeFileSync } from "node:fs";
-import { dirname } from "node:path";
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { dirname, resolve } from "node:path";
 import { argv as processArgv } from "node:process";
 import { parseArgs } from "node:util";
 import { isDirectRun } from "./smoke-runtime.mjs";
@@ -117,10 +117,24 @@ export function requireCliString(value, name) {
   return value;
 }
 
+/**
+ * @param {string} path
+ * @param {string | Uint8Array} contents
+ * @param {{ cwd?: string, ifChanged?: boolean }} [options]
+ * @returns {string} The resolved output path.
+ */
+export function writeFileResolved(path, contents, { cwd = process.cwd(), ifChanged = false } = {}) {
+  const target = resolve(cwd, path);
+  const next = Buffer.isBuffer(contents) ? contents : Buffer.from(contents);
+  if (ifChanged && existsSync(target) && readFileSync(target).equals(next)) return target;
+  mkdirSync(dirname(target), { recursive: true });
+  writeFileSync(target, contents);
+  return target;
+}
+
 /** @param {string} path @param {string} contents */
 export function writeJsonOutput(path, contents) {
-  mkdirSync(dirname(path), { recursive: true });
-  writeFileSync(path, contents, "utf8");
+  writeFileResolved(path, contents);
 }
 
 /** @param {unknown} value @param {{ name: string, min?: number, max?: number }} bounds */

@@ -6,30 +6,13 @@ import {
 } from "@shared/lib/cron-jobs";
 import { SCHEDULED_SLOT_PLANS } from "@shared/lib/scheduled-runner-registry";
 import { isDirectRun } from "../lib/smoke-runtime.mjs";
+import type {
+  CronConnectionBudgetConfigForCheck,
+  CronConnectionBudgetEntryForCheck,
+  CronGrowthHeadroomPolicyForCheck,
+  ScheduledSlotPlanForCheck,
+} from "../lib/cron-check-types.mts";
 
-interface CronConnectionBudgetEntryForCheck {
-  job: string;
-  maxConnections: number;
-  connectionGroup?: string;
-  scheduleKey: string;
-  statusTracked: boolean;
-}
-
-interface CronConnectionBudgetConfigForCheck {
-  maxPerTrigger: number;
-  failAt: number;
-  fullForNewFetchHeavyWorkAt: number;
-}
-
-interface CronGrowthHeadroomPolicyForCheck {
-  maxFetchCapableEntriesBeforeRebalance: number;
-  maxHeadroomFullTriggersBeforeRebalance: number;
-  queuesOrWorkflowsReview: {
-    connectionPressureAt: number;
-    fanoutPerRun: number;
-    p95DurationMs: number;
-  };
-}
 
 export interface CronConnectionGroupReport {
   peak: number;
@@ -66,10 +49,6 @@ export interface CronConnectionBudgetReport {
   triggerReports: CronConnectionTriggerReport[];
 }
 
-interface ScheduledSlotPlanForCheck {
-  jobChains: readonly (readonly string[])[];
-  budgetOnlyJobs?: readonly string[];
-}
 
 function pluralize(count: number, singular: string): string {
   if (count === 1) return `${count} ${singular}`;

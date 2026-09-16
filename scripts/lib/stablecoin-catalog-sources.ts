@@ -15,6 +15,7 @@ import {
   StablecoinMetaSourceAssetSchema,
   type StablecoinSourceDomain,
 } from "@shared/lib/stablecoins/schema";
+import { formatJson, hasOwnField } from "./catalog-json";
 
 export const STABLECOIN_DATA_DIR = "shared/data/stablecoins";
 // Retired category shards. They were emptied compatibility shells before deletion;
@@ -82,9 +83,6 @@ function formatSchemaIssues(issues: Array<{ message: string; path?: unknown[] }>
     .join("; ");
 }
 
-function formatJson(value: unknown): string {
-  return `${JSON.stringify(value, null, 2)}\n`;
-}
 
 function readJson(relativePath: string, rootDir: string): unknown {
   const absolutePath = resolve(rootDir, relativePath);
@@ -146,9 +144,6 @@ function stablecoinIdFromJsonFileName(fileName: string): string {
   return fileName.slice(0, -".json".length);
 }
 
-function hasOwnField(value: object, field: PropertyKey): boolean {
-  return Object.prototype.hasOwnProperty.call(value, field);
-}
 
 function orderStablecoinMetaFields(meta: StablecoinMeta): StablecoinMeta {
   const source = meta as unknown as Record<string, unknown>;

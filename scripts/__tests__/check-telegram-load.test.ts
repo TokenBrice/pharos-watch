@@ -17,9 +17,9 @@ import {
   STATUS_PATH_MAX_DURATION_MS,
   summarizeFixture,
   type QueryPlanCheckDefinition,
-  type TelegramLoadCheckReport,
 } from "../ci/check-telegram-load";
 import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
+import type { TelegramLoadCheckReport } from "../lib/telegram-load-report";
 
 const databases = createLatestSchemaFixtureTracker();
 afterEach(databases.closeAll);

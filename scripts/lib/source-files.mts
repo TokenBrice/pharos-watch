@@ -1,6 +1,5 @@
 import { existsSync, readdirSync, statSync } from "node:fs";
-import { extname, isAbsolute, join } from "node:path";
-import { isDirectRun } from "./smoke-runtime.mjs";
+import { extname, isAbsolute, join, relative } from "node:path";
 
 export const DEFAULT_SOURCE_FILE_EXCLUDED_DIRS = new Set(["__tests__", "__mocks__", "node_modules"]);
 
@@ -67,13 +66,36 @@ export function collectSourceFilesUnderRoot(
   return collectSourceFiles(absolute, { extensions, excludedDirs, skipDotEntries });
 }
 
+/**
+ * @param {readonly string[]} roots
+ * @param {string} cwd
+ * @param {{ extensions?: Iterable<string>, excludedDirs?: Iterable<string>, skipDotEntries?: boolean }} [options]
+ */
+export function collectSourceFilesUnderRoots(
+  roots: readonly string[],
+  cwd = process.cwd(),
+  options: CollectSourceFileOptions = {},
+): string[] {
+  const extensionSet = options.extensions === undefined ? undefined : new Set(options.extensions);
+  const excludedDirSet = options.excludedDirs === undefined
+    ? undefined
+    : options.excludedDirs instanceof Set
+      ? options.excludedDirs
+      : new Set(options.excludedDirs);
+  const normalizedOptions: CollectSourceFileOptions = {
+    ...options,
+    ...(extensionSet === undefined ? {} : { extensions: extensionSet }),
+    ...(excludedDirSet === undefined ? {} : { excludedDirs: excludedDirSet }),
+  };
+
+  return roots
+    .flatMap((root) => collectSourceFilesUnderRoot(root, cwd, normalizedOptions))
+    .filter((file) => extensionSet === undefined || extensionSet.size === 0 || extensionSet.has(extname(file)))
+    .map((file) => relative(cwd, file).replaceAll("\\", "/"))
+    .sort();
+}
+
 export function formatScannedOk(label: string, count: number): string {
   return `${label}: OK (${count} file${count === 1 ? "" : "s"} scanned)\n`;
 }
 
-export function runAsCli(importMetaUrl: string, main: () => number | void): void {
-  if (isDirectRun(importMetaUrl, process.argv[1])) {
-    const exitCode = main();
-    if (exitCode !== undefined) process.exitCode = exitCode;
-  }
-}

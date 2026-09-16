@@ -7,7 +7,7 @@ import ts from "typescript";
 import { compareCodeUnits } from "@shared/lib/compare";
 import { CLI_ARGV_EXEMPTION_CATEGORIES, CLI_ARGV_POLICY } from "../lib/cli-argv-policy.mjs";
 import { reportViolations } from "../lib/report-violations.mts";
-import { runAsCli } from "../lib/source-files.mts";
+import { runDirectCli } from "../lib/cli-args.mjs";
 import { getScriptKind } from "../lib/ts-ast.mts";
 
 const SOURCE_EXTENSIONS = new Set([".cjs", ".cts", ".js", ".jsx", ".mjs", ".mts", ".ts", ".tsx"]);
@@ -345,4 +345,6 @@ export function checkCliArgsPolicy({
   return 0;
 }
 
-runAsCli(import.meta.url, () => checkCliArgsPolicy());
+runDirectCli(import.meta.url, () => {
+  process.exitCode = checkCliArgsPolicy();
+});

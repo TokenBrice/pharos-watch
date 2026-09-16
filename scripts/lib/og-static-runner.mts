@@ -7,7 +7,6 @@ import {
 } from "node:fs";
 import { resolve } from "node:path";
 import { pathToFileURL } from "node:url";
-import { isDirectRun } from "./smoke-runtime.mjs";
 import { buildSvgBrowserDocument } from "./og-svg.mts";
 import {
   assertNoStaleOgOutputs,
@@ -238,6 +237,4 @@ export async function runOgStaticCli({
   }
 }
 
-export function runOgStaticMain(importMetaUrl: string, main: () => Promise<void>): void {
-  if (isDirectRun(importMetaUrl, process.argv[1])) void main();
-}
+

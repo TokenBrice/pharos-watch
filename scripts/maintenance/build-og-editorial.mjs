@@ -21,7 +21,8 @@ import { readFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { escapeXml } from "../lib/og-svg.mts";
-import { runOgStaticCli, runOgStaticMain } from "../lib/og-static-runner.mts";
+import { runDirectCli } from "../lib/cli-args.mjs";
+import { runOgStaticCli } from "../lib/og-static-runner.mts";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = resolve(__dirname, "../..");
@@ -152,4 +153,4 @@ export async function main() {
   });
 }
 
-runOgStaticMain(import.meta.url, main);
+runDirectCli(import.meta.url, main);

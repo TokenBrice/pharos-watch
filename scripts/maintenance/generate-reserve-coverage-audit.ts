@@ -23,7 +23,7 @@ import {
   stringValue,
   type UnknownRecord,
 } from "../lib/coverage-audit-cli";
-import { runAsMain } from "../lib/coverage-audit-cli";
+import { runDirectCli } from "../lib/cli-args.mjs";
 import { renderMarkdownRows } from "../lib/markdown-report";
 import {
   DEFAULT_SOURCE_QUALITY_NOTE,
@@ -995,4 +995,6 @@ export async function runCli(
   });
 }
 
-runAsMain(import.meta.url, runCli);
+runDirectCli(import.meta.url, async () => {
+  process.exitCode = await runCli();
+});

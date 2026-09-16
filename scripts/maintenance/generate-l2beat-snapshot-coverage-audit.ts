@@ -18,9 +18,9 @@ import {
   readJsonFile,
   resolveGeneratedAt,
   runCoverageAuditCli,
-  runAsMain,
   stringValue,
 } from "../lib/coverage-audit-cli";
+import { runDirectCli } from "../lib/cli-args.mjs";
 import { markdownValue, renderMarkdownRows } from "../lib/markdown-report";
 
 const L2BEAT_SUMMARY_URL = "https://l2beat.com/api/scaling/summary";
@@ -397,4 +397,6 @@ export async function runCli(
   });
 }
 
-runAsMain(import.meta.url, runCli);
+runDirectCli(import.meta.url, async () => {
+  process.exitCode = await runCli();
+});

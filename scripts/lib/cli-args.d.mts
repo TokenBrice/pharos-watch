@@ -25,6 +25,11 @@ export class CliUsageError extends Error {
 export function parseStrictCliArgs(argv: readonly string[], config?: StrictCliConfig): StrictCliResult;
 export function assertCliUsage(condition: unknown, message: string): asserts condition;
 export function requireCliString(value: unknown, name: string): string;
+export function writeFileResolved(
+  path: string,
+  contents: string | Uint8Array,
+  options?: { cwd?: string; ifChanged?: boolean },
+): string;
 export function writeJsonOutput(path: string, contents: string): void;
 export function parseCliInteger(
   value: unknown,

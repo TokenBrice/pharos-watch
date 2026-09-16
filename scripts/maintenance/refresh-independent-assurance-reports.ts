@@ -15,6 +15,15 @@ import type { CompilerProfile } from "../lib/independent-assurance-profiles/shar
 
 const MANIFEST_DIR = resolve("shared/data/live-reserves/independent-assurance");
 const PRODUCTS = Object.keys(COMPILER_PROFILES) as IndependentAssuranceProduct[];
+const TOLERANCE_OVERRIDES: Partial<Record<
+  IndependentAssuranceProduct,
+  NonNullable<Parameters<typeof reconcileIndependentAssuranceManifest>[1]>
+>> = {
+  EUROP: {
+    reportedAssetTotalTolerance: { absolute: "1", relativePpm: 1 },
+    reportedLiabilityTotalTolerance: { absolute: "1", relativePpm: 1 },
+  },
+};
 
 function amountFromMatch(
   match: RegExpMatchArray | null,
@@ -105,12 +114,7 @@ function compile(pdfPath: string, config: CompilerProfile): IndependentAssurance
       pageCount,
     },
   });
-  reconcileIndependentAssuranceManifest(manifest, config.product === "EUROP"
-    ? {
-        reportedAssetTotalTolerance: { absolute: "1", relativePpm: 1 },
-        reportedLiabilityTotalTolerance: { absolute: "1", relativePpm: 1 },
-      }
-    : undefined);
+  reconcileIndependentAssuranceManifest(manifest, TOLERANCE_OVERRIDES[config.product]);
   return manifest;
 }
 
@@ -157,12 +161,7 @@ if (checkOnly && !parseFlag("--product") && !pdfPath) {
         row.treatment !== manifestAdjustments[index]?.treatment)) {
       throw new Error(`Offline profile ${product} adjustment definitions differ from reviewed manifest`);
     }
-    reconcileIndependentAssuranceManifest(manifest, product === "EUROP"
-      ? {
-          reportedAssetTotalTolerance: { absolute: "1", relativePpm: 1 },
-          reportedLiabilityTotalTolerance: { absolute: "1", relativePpm: 1 },
-        }
-      : undefined);
+    reconcileIndependentAssuranceManifest(manifest, TOLERANCE_OVERRIDES[product]);
     console.log(`Validated ${product}: registered manifest, compiler profile, and reconciliation (no PDF re-extraction)`);
   }
 } else {

@@ -4,7 +4,7 @@ import { existsSync, readFileSync, statSync } from "node:fs";
 import { dirname, isAbsolute, relative, resolve } from "node:path";
 import { getVerifiedDocFiles, splitLines } from "../lib/doc-files.mts";
 import { reportViolations } from "../lib/report-violations.mts";
-import { runAsCli } from "../lib/source-files.mts";
+import { runDirectCli } from "../lib/cli-args.mjs";
 import { collectMarkdownReferences, requiresDocNavigation } from "../lib/doc-markdown.mts";
 
 const NAVIGATION_SCAN_LINES = 20;
@@ -143,4 +143,6 @@ export function main(repoRoot = process.cwd()): number {
   });
 }
 
-runAsCli(import.meta.url, main);
+runDirectCli(import.meta.url, () => {
+  process.exitCode = main();
+});

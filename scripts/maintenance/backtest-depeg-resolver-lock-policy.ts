@@ -9,9 +9,9 @@ import {
   DDR_FORECAST_READINESS_BACKSTOP_DELAY_SEC,
   DDR_FORECAST_READINESS_STRICT_EARLY_LOCK_THRESHOLD,
 } from "@shared/lib/methodology-versions/depeg-resolver";
+import { runDirectCli } from "../lib/cli-args.mjs";
 import {
   parseCoverageAuditCliArgs,
-  runAsMain,
   runCoverageAuditCli,
 } from "../lib/coverage-audit-cli";
 
@@ -425,4 +425,6 @@ export async function runCli(argv = process.argv.slice(2), cwd = process.cwd()):
   });
 }
 
-runAsMain(import.meta.url, runCli);
+runDirectCli(import.meta.url, async () => {
+  process.exitCode = await runCli();
+});

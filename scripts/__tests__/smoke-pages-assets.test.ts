@@ -3,7 +3,6 @@ import { describe, expect, it } from "vitest";
 import {
   REPRESENTATIVE_YIELD_CANARY_IDS,
   buildYieldDeepRoutes,
-  chunkItems,
   classifyFirstPartyAsset,
   extractScriptUrls,
   findFrameworkErrorMarker,
@@ -12,6 +11,7 @@ import {
   hasExpectedAssetMime,
   isFatalRuntimeMessage,
 } from "../lib/pages-asset-smoke.mjs";
+import { chunkRoundRobin } from "../lib/smoke-runtime.mjs";
 
 describe("Pages asset-coherence smoke helpers", () => {
   it("selects unique top rankings and appends representative deep routes", () => {
@@ -83,7 +83,7 @@ describe("Pages asset-coherence smoke helpers", () => {
   });
 
   it("chunks work evenly without dropping routes", () => {
-    expect(chunkItems([1, 2, 3, 4, 5], 2)).toEqual([
+    expect(chunkRoundRobin([1, 2, 3, 4, 5], 2)).toEqual([
       [1, 3, 5],
       [2, 4],
     ]);

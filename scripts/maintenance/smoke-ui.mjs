@@ -2,7 +2,7 @@
 
 import {
   assert,
-  chunkWorkerItems,
+  chunkContiguous,
   ensureHttpUrl,
   isDirectRun,
   launchChromiumBrowser,
@@ -114,7 +114,7 @@ export function getOverflowWorkerCount(mode, routeCount, skipOverflow = false) {
 }
 
 export function chunkOverflowRoutes(routes, workerCount) {
-  return chunkWorkerItems(routes, workerCount);
+  return chunkContiguous(routes, workerCount);
 }
 
 export function getOverflowRoutes(mode) {

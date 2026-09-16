@@ -7,6 +7,7 @@ import { toErrorMessage } from "@shared/lib/error-utils";
 import { getPricingSourceRegistryEntry } from "@shared/lib/pricing-source-registry";
 import { splitCompositePriceSource } from "@shared/lib/pricing-sources";
 import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
+import { runDirectCli } from "../lib/cli-args.mjs";
 import {
   circulatingForStablecoinRow,
   extractStablecoinRows,
@@ -21,6 +22,7 @@ import {
   parseCoverageAuditCliArgs,
   readJsonFile,
   runCoverageAuditCli,
+  uniqueStrings,
   stringValue,
   type UnknownRecord,
 } from "../lib/coverage-audit-cli";
@@ -219,9 +221,6 @@ function normalizeStringArray(value: unknown): string[] {
   return uniqueStrings(value.filter((entry): entry is string => typeof entry === "string" && entry.trim().length > 0));
 }
 
-function uniqueStrings(values: string[]): string[] {
-  return [...new Set(values.map((value) => value.trim()).filter((value) => value.length > 0))];
-}
 
 function expandCompositeSources(sources: string[]): string[] {
   return uniqueStrings(sources.flatMap((source) => splitCompositePriceSource(source)));
@@ -855,14 +854,12 @@ export async function runCli(
   });
 }
 
-if (process.argv[1]?.endsWith("audit-price-source-depth.ts")) {
-  runCli().then(
-    (exitCode) => {
-      process.exitCode = exitCode;
-    },
-    (error: unknown) => {
-      console.error(toErrorMessage(error));
-      process.exitCode = 1;
-    },
-  );
-}
+runDirectCli(import.meta.url, () => runCli().then(
+  (exitCode) => {
+    process.exitCode = exitCode;
+  },
+  (error: unknown) => {
+    console.error(toErrorMessage(error));
+    process.exitCode = 1;
+  },
+));

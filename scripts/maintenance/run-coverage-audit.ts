@@ -25,6 +25,7 @@ import {
   type SpawnCommand,
 } from "../lib/command-runner.mts";
 import { localBin } from "../lib/local-bin.mts";
+import { runDirectCli } from "../lib/cli-args.mjs";
 
 export const DOMAIN_SCRIPTS = {
   "redemption-backstops": "scripts/ci/check-redemption-backstops.ts",
@@ -167,8 +168,6 @@ export async function runCoverageAudit(
   return status;
 }
 
-if (import.meta.url === `file://${process.argv[1]}`) {
-  void runCoverageAudit().then((status) => {
-    process.exitCode = status;
-  });
-}
+runDirectCli(import.meta.url, async () => {
+  process.exitCode = await runCoverageAudit();
+});

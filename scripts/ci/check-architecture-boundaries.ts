@@ -4,7 +4,8 @@ import { existsSync, realpathSync } from "node:fs";
 import { builtinModules, createRequire } from "node:module";
 import { dirname, extname, relative, resolve } from "node:path";
 import ts from "typescript";
-import { collectSourceFiles, runAsCli } from "../lib/source-files.mts";
+import { collectSourceFiles } from "../lib/source-files.mts";
+import { runDirectCli } from "../lib/cli-args.mjs";
 import { getScriptKind, parseSourceFile } from "../lib/ts-ast.mts";
 
 const ROOT = resolve(import.meta.dirname, "../..");
@@ -251,12 +252,13 @@ export function checkArchitectureBoundaries(root = ROOT, rules: readonly Rule[] 
   return [...violations].sort();
 }
 
-runAsCli(import.meta.url, () => {
+runDirectCli(import.meta.url, () => {
   const violations = checkArchitectureBoundaries();
   if (violations.length) {
     console.error(`Architecture boundaries failed:\n${violations.join("\n")}`);
-    return 1;
+    process.exitCode = 1;
+    return;
   }
   console.log("Architecture boundaries: OK (5 resolved-dependency policies)");
-  return 0;
+  process.exitCode = 0;
 });
