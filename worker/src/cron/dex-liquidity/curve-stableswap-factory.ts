@@ -1,10 +1,10 @@
 import {
   canonicalExitRouteAssetKey,
   canonicalExitRouteChain,
-  canonicalExitRouteScopedId,
 } from "@shared/lib/exit-route-identity";
 import type { DexAmmExecutionModel, DexExecutionCapabilityGate } from "@shared/types/market";
-import { decodeAbiParameters, encodeFunctionData, keccak256, parseAbi } from "viem/utils";
+import { toTokenUnits } from "@shared/lib/math";
+import { encodeFunctionData, keccak256, parseAbi } from "viem/utils";
 
 import { rethrowIfAborted, throwIfAborted } from "../../lib/abort";
 import type { ChainRpcConfig } from "../../lib/chain-registry";
@@ -13,9 +13,20 @@ import {
   fetchEvmBlockNumber,
   fetchEvmCodeAtBlock,
   fetchEvmMulticall3Aggregate3AtBlock,
-  type EvmBlockHeader,
   type EvmMulticall3Result,
 } from "../../lib/evm-rpc";
+import {
+  curveAmplificationFromContract,
+  curveConservativeFeeRate,
+  decodeEvmCaptureAddress,
+  decodeEvmCaptureAddressArray,
+  decodeEvmCaptureBool,
+  decodeEvmCaptureString,
+  decodeEvmCaptureUint256,
+  decodeEvmCaptureUint256Array,
+  isFreshEvmCaptureHeader,
+  mapEvmCaptureResults,
+} from "./evm-capture-helpers";
 import { normalizeProtocol } from "./pool-helpers";
 import { hasScoreFacingMeasuredExecution, resolveUniqueTrackedTokenIndex } from "./scoring-helpers";
 import type { LiquidityMetrics, PoolEntry, SymbolLookups } from "./types";
@@ -75,7 +86,6 @@ export const CURVE_STABLESWAP_FACTORY_DEPLOYMENTS: readonly CurveStableswapFacto
 /** A source-stage capture must reflect the current head, not a reusable quote profile. */
 const CURVE_STABLESWAP_FACTORY_CAPTURE_MAX_AGE_SEC = 10 * 60;
 
-const CURVE_STABLESWAP_FEE_DENOMINATOR = 10n ** 10n;
 const MAX_POOL_COINS = 8;
 const MAX_CALLS_PER_MULTICALL_ROUND = 96;
 
@@ -137,10 +147,6 @@ interface FactoryPoolState {
 
 type CurveGateReason = DexExecutionCapabilityGate["reason"];
 
-function asEvmAddress(chain: string, value: string | null | undefined): `0x${string}` | null {
-  const normalized = canonicalExitRouteScopedId(chain, value ?? "");
-  return /^0x[a-f0-9]{40}$/.test(normalized) ? (normalized as `0x${string}`) : null;
-}
 
 /**
  * The stage owns exactly one gate: a Curve StableSwap row whose physical pool
@@ -159,71 +165,6 @@ function gateReference(reference: FactoryReference, reason: CurveGateReason): vo
   reference.pool.extra = extra;
 }
 
-function resultMap(results: readonly EvmMulticall3Result[]): Map<string, EvmMulticall3Result> {
-  return new Map(results.map((result) => [result.label, result]));
-}
-
-function decodeUint256(result: EvmMulticall3Result | undefined): bigint | null {
-  if (!result?.success) return null;
-  try {
-    const [value] = decodeAbiParameters([{ type: "uint256" }], result.returnData);
-    return value;
-  } catch {
-    return null;
-  }
-}
-
-function decodeUint256Array(result: EvmMulticall3Result | undefined): bigint[] | null {
-  if (!result?.success) return null;
-  try {
-    const [values] = decodeAbiParameters([{ type: "uint256[]" }], result.returnData);
-    return Array.isArray(values) ? [...values] : null;
-  } catch {
-    return null;
-  }
-}
-
-function decodeAddress(chain: string, result: EvmMulticall3Result | undefined): `0x${string}` | null {
-  if (!result?.success) return null;
-  try {
-    const [address] = decodeAbiParameters([{ type: "address" }], result.returnData);
-    return asEvmAddress(chain, address);
-  } catch {
-    return null;
-  }
-}
-
-function decodeAddressArray(chain: string, result: EvmMulticall3Result | undefined): `0x${string}`[] | null {
-  if (!result?.success) return null;
-  try {
-    const [values] = decodeAbiParameters([{ type: "address[]" }], result.returnData);
-    if (!Array.isArray(values)) return null;
-    const addresses = values.map((value) => asEvmAddress(chain, value as string));
-    return addresses.some((address) => address == null) ? null : (addresses as `0x${string}`[]);
-  } catch {
-    return null;
-  }
-}
-
-function decodeBool(result: EvmMulticall3Result | undefined): boolean | null {
-  if (!result?.success) return null;
-  try {
-    const [value] = decodeAbiParameters([{ type: "bool" }], result.returnData);
-    return value;
-  } catch {
-    return null;
-  }
-}
-
-function decodeString(result: EvmMulticall3Result | undefined): string | null {
-  if (!result?.success) return null;
-  try {
-    const [value] = decodeAbiParameters([{ type: "string" }], result.returnData);
-    return typeof value === "string" && value.trim().length > 0 ? value.trim() : null;
-  } catch {
-    return null;
-  }
-}
 
 async function runMulticallRounds(input: {
   chain: string;
@@ -245,21 +186,7 @@ async function runMulticallRounds(input: {
     if (!results) return null;
     collected.push(...results);
   }
-  return resultMap(collected);
-}
-
-function isFreshHeader(header: EvmBlockHeader, nowSec: number): boolean {
-  return (
-    Number.isSafeInteger(nowSec) &&
-    header.timestamp <= nowSec + 60 &&
-    nowSec - header.timestamp <= CURVE_STABLESWAP_FACTORY_CAPTURE_MAX_AGE_SEC
-  );
-}
-
-function toTokenUnits(value: bigint, decimals: number): number | null {
-  if (!Number.isInteger(decimals) || decimals < 0 || decimals > 36 || value <= 0n) return null;
-  const amount = Number(value) / 10 ** decimals;
-  return Number.isFinite(amount) && amount > 0 ? amount : null;
+  return mapEvmCaptureResults(collected);
 }
 
 /**
@@ -300,29 +227,17 @@ function buildCurveStableswapFactoryExecutionModel(input: {
       return { model: null, reason: "rate-bearing-inputs" };
     }
   }
-  if (state.amplification <= 0n) {
+  const amplification = curveAmplificationFromContract(state.amplification, tokenCount);
+  if (amplification == null) {
     return { model: null, reason: "invalid-invariant-parameters" };
   }
-  // Curve NG `A()` exposes the contract convention (Ann = A_contract * n).
-  // The shared simulator uses the plain paper convention (Ann = A * n^n).
-  const amplification = Number(state.amplification) / tokenCount ** (tokenCount - 1);
-  if (!Number.isFinite(amplification) || amplification <= 0) {
-    return { model: null, reason: "invalid-invariant-parameters" };
-  }
-  if (state.fee < 0n || state.fee >= CURVE_STABLESWAP_FEE_DENOMINATOR || state.offpegFeeMultiplier <= 0n) {
-    return { model: null, reason: "invalid-invariant-parameters" };
-  }
-  // StableSwap-NG charges `fee` on balance and scales toward
-  // `fee * offpeg_fee_multiplier / 1e10` off balance. The closed-form model
-  // takes one fixed fee, so the capture carries the off-balance maximum: an
-  // upper bound on fee is a lower bound on exit capacity, matching the bound
-  // the reviewed rate-bearing path already publishes.
-  const feeMultiplier =
-    state.offpegFeeMultiplier > CURVE_STABLESWAP_FEE_DENOMINATOR
-      ? Number(state.offpegFeeMultiplier) / Number(CURVE_STABLESWAP_FEE_DENOMINATOR)
-      : 1;
-  const feeRate = (Number(state.fee) / Number(CURVE_STABLESWAP_FEE_DENOMINATOR)) * feeMultiplier;
-  if (!Number.isFinite(feeRate) || feeRate < 0 || feeRate >= 1) {
+  // The shared closed-form model carries the off-balance maximum so its fee
+  // remains a conservative lower bound on exit capacity.
+  const feeRate =
+    state.offpegFeeMultiplier > 0n
+      ? curveConservativeFeeRate(state.fee, state.offpegFeeMultiplier)
+      : null;
+  if (feeRate == null) {
     return { model: null, reason: "invalid-invariant-parameters" };
   }
 
@@ -409,7 +324,7 @@ async function readIndexedPools(input: {
     input.rpcOptions,
   );
   if (!countResults) return null;
-  const poolCount = decodeUint256(resultMap(countResults).get("pool-count"));
+  const poolCount = decodeEvmCaptureUint256(mapEvmCaptureResults(countResults).get("pool-count"));
   // A factory past the reviewed bound fails closed: a truncated inventory can
   // resolve the wrong physical pool, and a wrong pool is worse than no route.
   if (poolCount == null || poolCount <= 0n || poolCount > BigInt(deployment.maxIndexedPools)) return null;
@@ -433,7 +348,7 @@ async function readIndexedPools(input: {
   if (!listResults) return null;
   const addresses: { index: number; address: `0x${string}` }[] = [];
   for (let index = 0; index < Number(poolCount); index++) {
-    const address = decodeAddress(deployment.chain, listResults.get(`pool-list-${index}`));
+    const address = decodeEvmCaptureAddress(deployment.chain, listResults.get(`pool-list-${index}`));
     if (!address) return null;
     addresses.push({ index, address });
   }
@@ -453,7 +368,7 @@ async function readIndexedPools(input: {
   if (!coinResults) return null;
   const indexed: IndexedPool[] = [];
   for (const { index, address } of addresses) {
-    const coins = decodeAddressArray(deployment.chain, coinResults.get(`pool-coins-${index}`));
+    const coins = decodeEvmCaptureAddressArray(deployment.chain, coinResults.get(`pool-coins-${index}`));
     if (!coins || coins.length < 2 || coins.length > MAX_POOL_COINS) continue;
     indexed.push({ index, address, coins });
   }
@@ -513,16 +428,16 @@ async function readPoolState(input: {
   // The factory must still claim this pool as a plain pool built from the
   // reviewed blueprint; a metapool or a foreign implementation is a different
   // model and is refused here rather than approximated.
-  if (decodeBool(results.get("is-meta")) !== false) return null;
-  const implementation = decodeAddress(deployment.chain, results.get("implementation"));
+  if (decodeEvmCaptureBool(results.get("is-meta")) !== false) return null;
+  const implementation = decodeEvmCaptureAddress(deployment.chain, results.get("implementation"));
   if (!implementation || implementation !== deployment.expectedPoolImplementationAddress) return null;
 
-  const decimals = decodeUint256Array(results.get("decimals"));
-  const balances = decodeUint256Array(results.get("balances"));
-  const amplification = decodeUint256(results.get("amplification"));
-  const fee = decodeUint256(results.get("fee"));
-  const offpegFeeMultiplier = decodeUint256(results.get("offpeg-fee-multiplier"));
-  const storedRates = decodeUint256Array(results.get("stored-rates"));
+  const decimals = decodeEvmCaptureUint256Array(results.get("decimals"));
+  const balances = decodeEvmCaptureUint256Array(results.get("balances"));
+  const amplification = decodeEvmCaptureUint256(results.get("amplification"));
+  const fee = decodeEvmCaptureUint256(results.get("fee"));
+  const offpegFeeMultiplier = decodeEvmCaptureUint256(results.get("offpeg-fee-multiplier"));
+  const storedRates = decodeEvmCaptureUint256Array(results.get("stored-rates"));
   if (
     !decimals ||
     !balances ||
@@ -537,7 +452,7 @@ async function readPoolState(input: {
   ) {
     return null;
   }
-  const symbols = pool.coins.map((_, index) => decodeString(results.get(`symbol-${index}`)));
+  const symbols = pool.coins.map((_, index) => decodeEvmCaptureString(results.get(`symbol-${index}`)));
   if (symbols.some((symbol) => symbol == null)) return null;
 
   return {
@@ -574,7 +489,11 @@ async function enrichDeployment(input: {
   const blockNumber = await input.dependencies.fetchBlockNumber(deployment.chain, rpcOptions);
   if (blockNumber == null) return;
   const header = await input.dependencies.fetchBlockHeader(deployment.chain, blockNumber, rpcOptions);
-  if (!header || header.number !== blockNumber || !isFreshHeader(header, input.nowSec)) return;
+  if (
+    !header ||
+    header.number !== blockNumber ||
+    !isFreshEvmCaptureHeader(header, input.nowSec, CURVE_STABLESWAP_FACTORY_CAPTURE_MAX_AGE_SEC)
+  ) return;
 
   const factoryCode = await input.dependencies.fetchCodeAtBlock(
     deployment.chain,
@@ -666,7 +585,11 @@ async function enrichDeployment(input: {
     !confirmedHeader ||
     confirmedHeader.number !== header.number ||
     confirmedHeader.hash.toLowerCase() !== header.hash.toLowerCase() ||
-    !isFreshHeader(confirmedHeader, input.nowSec)
+    !isFreshEvmCaptureHeader(
+      confirmedHeader,
+      input.nowSec,
+      CURVE_STABLESWAP_FACTORY_CAPTURE_MAX_AGE_SEC,
+    )
   ) {
     // The capture straddled a reorg or went stale mid-read; withdraw every
     // model this run published and restore the unresolved join.

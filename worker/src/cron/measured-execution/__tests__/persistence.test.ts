@@ -156,6 +156,27 @@ describe("measured execution durable publication", () => {
     await expect(loadLatestPublishedDexMeasuredQuoteEvidence(db)).rejects.toThrow("incomplete");
   });
 
+  it("rejects the same torn terminal row in full and selected evidence scans", async () => {
+    const { db, sqlite } = databases.open();
+    const target = fixtureTarget("ethereum");
+    const published = await publishDexMeasuredTargetInventory({ db, targets: [target], capturedAt: 1_000 });
+    await publishDexMeasuredQuoteGeneration({
+      db,
+      generationId: "torn-quotes",
+      targetGeneration: { ...published, targets: [target] },
+      outcomes: [{ target, status: "failed", failureReason: "pool-revert" }],
+      quotedAt: 1_060,
+    });
+    sqlite.prepare(
+      "UPDATE dex_measured_execution_quotes SET status = 'measured', failure_reason = NULL WHERE generation_id = ?",
+    ).run("torn-quotes");
+
+    for (const options of [undefined, { targetIds: [target.targetId] }]) {
+      await expect(loadLatestPublishedDexMeasuredQuoteEvidence(db, undefined, options))
+        .rejects.toThrow("torn terminal identity");
+    }
+  });
+
   it("loads all identities across current keyset pages with deferred profiles", async () => {
     const { db } = databases.open();
     const targets = Array.from({ length: DEX_MEASURED_CURRENT_EVIDENCE_PAGE_SIZE * 2 + 1 }, (_, index) => fixtureTarget(`test-chain-${index}`));

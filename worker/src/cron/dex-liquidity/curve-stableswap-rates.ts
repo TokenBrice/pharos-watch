@@ -1,10 +1,10 @@
 import {
   canonicalExitRouteAssetKey,
   canonicalExitRouteChain,
-  canonicalExitRouteScopedId,
 } from "@shared/lib/exit-route-identity";
 import type { DexAmmExecutionModel } from "@shared/types/market";
-import { decodeAbiParameters, encodeFunctionData, parseAbi } from "viem/utils";
+import { toTokenUnits } from "@shared/lib/math";
+import { encodeFunctionData, parseAbi } from "viem/utils";
 
 import { rethrowIfAborted, throwIfAborted } from "../../lib/abort";
 import type { ChainRpcConfig } from "../../lib/chain-registry";
@@ -12,9 +12,18 @@ import {
   fetchEvmBlockHeader,
   fetchEvmBlockNumber,
   fetchEvmMulticall3Aggregate3AtBlock,
-  type EvmBlockHeader,
   type EvmMulticall3Result,
 } from "../../lib/evm-rpc";
+import {
+  asEvmCaptureAddress,
+  curveAmplificationFromContract,
+  curveConservativeFeeRate,
+  decodeEvmCaptureAddress,
+  decodeEvmCaptureUint256,
+  decodeEvmCaptureUint256Array,
+  isFreshEvmCaptureHeader,
+  mapEvmCaptureResults,
+} from "./evm-capture-helpers";
 import { hasScoreFacingMeasuredExecution } from "./scoring-helpers";
 import type {
   CurveStableswapRateInputExecutionCandidate,
@@ -32,7 +41,6 @@ export const CURVE_STABLESWAP_FEE_BOUND = 0.001;
 /** A source-stage capture must reflect the current head, not a reusable quote profile. */
 export const CURVE_STABLESWAP_RATE_CAPTURE_MAX_AGE_SEC = 10 * 60;
 
-const CURVE_STABLESWAP_FEE_DENOMINATOR = 10n ** 10n;
 const CURVE_STABLESWAP_NG_ABI = parseAbi([
   "function get_balances() view returns (uint256[])",
   "function stored_rates() view returns (uint256[])",
@@ -76,10 +84,6 @@ interface CurveRatePoolState {
   coinAddresses: `0x${string}`[];
 }
 
-function asEvmAddress(chain: string, value: string | null | undefined): `0x${string}` | null {
-  const normalized = canonicalExitRouteScopedId(chain, value ?? "");
-  return /^0x[a-f0-9]{40}$/.test(normalized) ? (normalized as `0x${string}`) : null;
-}
 
 function isRateBearingGate(pool: PoolEntry): boolean {
   const gate = pool.extra?.executionCapabilityGate;
@@ -109,42 +113,6 @@ function sameCoinLayout(
   );
 }
 
-function resultMap(results: readonly EvmMulticall3Result[]): Map<string, EvmMulticall3Result> {
-  return new Map(results.map((result) => [result.label, result]));
-}
-
-function decodeUint256Array(result: EvmMulticall3Result | undefined): bigint[] | null {
-  if (!result?.success) return null;
-  try {
-    const [values] = decodeAbiParameters([{ type: "uint256[]" }], result.returnData);
-    return Array.isArray(values) ? [...values] : null;
-  } catch {
-    return null;
-  }
-}
-
-function decodeUint256(result: EvmMulticall3Result | undefined): bigint | null {
-  if (!result?.success) return null;
-  try {
-    const [value] = decodeAbiParameters([{ type: "uint256" }], result.returnData);
-    return value;
-  } catch {
-    return null;
-  }
-}
-
-function decodeAddress(
-  chain: string,
-  result: EvmMulticall3Result | undefined,
-): `0x${string}` | null {
-  if (!result?.success) return null;
-  try {
-    const [address] = decodeAbiParameters([{ type: "address" }], result.returnData);
-    return asEvmAddress(chain, address);
-  } catch {
-    return null;
-  }
-}
 
 function parsePoolState(input: {
   chain: string;
@@ -153,11 +121,11 @@ function parsePoolState(input: {
   results: Map<string, EvmMulticall3Result>;
 }): CurveRatePoolState | null {
   const prefix = `curve-rate-${input.index}`;
-  const balances = decodeUint256Array(input.results.get(`${prefix}-balances`));
-  const rates = decodeUint256Array(input.results.get(`${prefix}-rates`));
-  const amplification = decodeUint256(input.results.get(`${prefix}-A`));
-  const fee = decodeUint256(input.results.get(`${prefix}-fee`));
-  const offpegFeeMultiplier = decodeUint256(input.results.get(`${prefix}-offpeg-fee-multiplier`));
+  const balances = decodeEvmCaptureUint256Array(input.results.get(`${prefix}-balances`));
+  const rates = decodeEvmCaptureUint256Array(input.results.get(`${prefix}-rates`));
+  const amplification = decodeEvmCaptureUint256(input.results.get(`${prefix}-A`));
+  const fee = decodeEvmCaptureUint256(input.results.get(`${prefix}-fee`));
+  const offpegFeeMultiplier = decodeEvmCaptureUint256(input.results.get(`${prefix}-offpeg-fee-multiplier`));
   const expectedCoins = input.probe.candidate.coins;
   if (
     !balances ||
@@ -165,7 +133,6 @@ function parsePoolState(input: {
     amplification == null ||
     amplification <= 0n ||
     fee == null ||
-    fee >= CURVE_STABLESWAP_FEE_DENOMINATOR ||
     offpegFeeMultiplier == null ||
     balances.length !== expectedCoins.length ||
     rates.length !== expectedCoins.length ||
@@ -177,17 +144,11 @@ function parsePoolState(input: {
 
   const coinAddresses: `0x${string}`[] = [];
   for (let coinIndex = 0; coinIndex < expectedCoins.length; coinIndex++) {
-    const address = decodeAddress(input.chain, input.results.get(`${prefix}-coin-${coinIndex}`));
+    const address = decodeEvmCaptureAddress(input.chain, input.results.get(`${prefix}-coin-${coinIndex}`));
     if (!address || address !== expectedCoins[coinIndex]!.address) return null;
     coinAddresses.push(address);
   }
   return { balances, rates, amplification, fee, offpegFeeMultiplier, coinAddresses };
-}
-
-function toTokenUnits(value: bigint, decimals: number): number | null {
-  if (!Number.isInteger(decimals) || decimals < 0 || decimals > 36 || value <= 0n) return null;
-  const amount = Number(value) / 10 ** decimals;
-  return Number.isFinite(amount) && amount > 0 ? amount : null;
 }
 
 function rateFactor(rate: bigint, decimals: number): number | null {
@@ -207,23 +168,12 @@ function buildRateAwareExecutionModel(input: {
   const { candidate, state } = input;
   const tokenCount = candidate.coins.length;
   if (tokenCount < 2 || tokenCount > 8) return null;
-  // Curve NG A() exposes the contract convention (Ann = A_contract * n).
-  // The shared simulator uses the plain paper convention (Ann = A * n^n).
-  const amplification = Number(state.amplification) / tokenCount ** (tokenCount - 1);
-  if (!Number.isFinite(amplification) || amplification <= 0) return null;
-  // StableSwap-NG charges `fee` while the swapped pair sits on balance and
-  // scales it toward `fee * offpeg_fee_multiplier / 1e10` as that pair goes
-  // off balance (`_dynamic_fee`); multipliers at or below the 1e10 denominator
-  // mean the static fee. The shared closed-form model accepts one fixed fee, so
-  // the captured model carries the off-balance maximum: an upper bound on fee
-  // is a lower bound on exit capacity, matching the conservative bound the
-  // source-only Curve path already publishes.
-  const feeMultiplier =
-    state.offpegFeeMultiplier > CURVE_STABLESWAP_FEE_DENOMINATOR
-      ? Number(state.offpegFeeMultiplier) / Number(CURVE_STABLESWAP_FEE_DENOMINATOR)
-      : 1;
-  const feeRate = (Number(state.fee) / Number(CURVE_STABLESWAP_FEE_DENOMINATOR)) * feeMultiplier;
-  if (!Number.isFinite(feeRate) || feeRate < 0 || feeRate >= 1) return null;
+  const amplification = curveAmplificationFromContract(state.amplification, tokenCount);
+  if (amplification == null) return null;
+  // The shared closed-form model carries the off-balance maximum so its fee
+  // remains a conservative lower bound on exit capacity.
+  const feeRate = curveConservativeFeeRate(state.fee, state.offpegFeeMultiplier);
+  if (feeRate == null) return null;
 
   let hasNonBaseRate = false;
   const tokens = candidate.coins.map((coin, index) => {
@@ -282,13 +232,6 @@ function buildRateAwareExecutionModel(input: {
   };
 }
 
-function isFreshHeader(header: EvmBlockHeader, nowSec: number): boolean {
-  return (
-    Number.isSafeInteger(nowSec) &&
-    header.timestamp <= nowSec + 60 &&
-    nowSec - header.timestamp <= CURVE_STABLESWAP_RATE_CAPTURE_MAX_AGE_SEC
-  );
-}
 
 function buildPoolCalls(probes: readonly CurveRateProbe[], offset: number) {
   return probes.flatMap((probe, batchIndex) => {
@@ -354,7 +297,11 @@ async function enrichChain(input: {
     return;
   }
   const header = await input.dependencies.fetchBlockHeader(input.chain, blockNumber, rpcOptions);
-  if (!header || header.number !== blockNumber || !isFreshHeader(header, input.nowSec)) {
+  if (
+    !header ||
+    header.number !== blockNumber ||
+    !isFreshEvmCaptureHeader(header, input.nowSec, CURVE_STABLESWAP_RATE_CAPTURE_MAX_AGE_SEC)
+  ) {
     input.probes.forEach(clearProbe);
     return;
   }
@@ -373,7 +320,7 @@ async function enrichChain(input: {
       input.probes.forEach(clearProbe);
       return;
     }
-    const byLabel = resultMap(results);
+    const byLabel = mapEvmCaptureResults(results);
     for (let batchIndex = 0; batchIndex < probes.length; batchIndex++) {
       const probe = probes[batchIndex]!;
       states.set(
@@ -390,7 +337,11 @@ async function enrichChain(input: {
     !confirmedHeader ||
     confirmedHeader.number !== header.number ||
     confirmedHeader.hash.toLowerCase() !== header.hash.toLowerCase() ||
-    !isFreshHeader(confirmedHeader, input.nowSec)
+    !isFreshEvmCaptureHeader(
+      confirmedHeader,
+      input.nowSec,
+      CURVE_STABLESWAP_RATE_CAPTURE_MAX_AGE_SEC,
+    )
   ) {
     input.probes.forEach(clearProbe);
     return;
@@ -457,7 +408,7 @@ export async function enrichCurveStableswapRateInputExecutionModels(input: {
   const probesByChain = new Map<string, Map<string, CurveRateProbe>>();
   for (const reference of references) {
     const chain = canonicalExitRouteChain(reference.pool.chain);
-    const poolAddress = asEvmAddress(chain, reference.candidate.poolAddress);
+    const poolAddress = asEvmCaptureAddress(chain, reference.candidate.poolAddress);
     if (!poolAddress || poolAddress !== reference.candidate.poolAddress) {
       clearCandidate(reference);
       continue;

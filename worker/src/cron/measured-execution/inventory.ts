@@ -264,6 +264,50 @@ interface ClMeasuredExecutionTargetInput {
   capturedAt: number;
 }
 
+function resolveClImpliedOutputPrice(input: {
+  candidate: Pick<
+    UniV3ExecutionCandidate | SlipstreamExecutionCandidate | UniswapV4ExecutionCandidate,
+    "chain" | "tokens" | "token0Price" | "token1Price"
+  > & { poolAddress?: string; poolId?: string };
+  stablecoinId: string;
+  inputIndex: number;
+  inputPrice: number;
+  outputPrice: number | null;
+  rejectionEvent: string;
+  source: string;
+}): number | null {
+  if (input.outputPrice != null) return input.outputPrice;
+  const spotInputPerOutput =
+    input.inputIndex === 0 ? input.candidate.token0Price : input.candidate.token1Price;
+  const impliedOutputPrice = input.inputPrice * spotInputPerOutput;
+  if (
+    Number.isFinite(impliedOutputPrice) &&
+    impliedOutputPrice > 0 &&
+    Math.round(impliedOutputPrice * 100_000_000) > 0
+  ) {
+    return impliedOutputPrice;
+  }
+  if (Number.isFinite(impliedOutputPrice) && impliedOutputPrice > 0) {
+    logWorkerEvent({
+      scope: "lib",
+      level: "warn",
+      event: input.rejectionEvent,
+      job: "sync-dex-liquidity",
+      source: input.source,
+      message: "Rejected a pool-implied output reference below measured-execution price precision",
+      metadata: {
+        chain: input.candidate.chain,
+        poolAddress: input.candidate.poolAddress ?? input.candidate.poolId,
+        stablecoinId: input.stablecoinId,
+        token0Price: input.candidate.token0Price,
+        token1Price: input.candidate.token1Price,
+        impliedOutputPrice,
+      },
+    });
+  }
+  return null;
+}
+
 function buildClMeasuredExecutionTarget(
   input: ClMeasuredExecutionTargetInput,
   adapter: {
@@ -304,51 +348,25 @@ function buildClMeasuredExecutionTarget(
   );
   if (inputPrice == null || !Number.isFinite(inputPrice) || inputPrice <= 0) return null;
   const outputStablecoinId = input.chainAddressToId.get(buildChainAddressKey(candidate.chain, tokenOut.address));
-  let outputPrice = getTokenReferenceUsdPrice(
-    tokenOut,
-    candidate.chain,
-    input.chainAddressToId,
-    symbolToChainScopedIds,
-    input.validationReferences,
-    input.stablecoinPriceById,
-  );
-  if (outputPrice == null) {
-    // An untracked counter asset (WETH, WBTC, …) has no direct reference, so
-    // the whole target gated to target-unresolved. The subgraph candidate's
-    // spot prices (decimal-adjusted; token0Price is token1's price in token0
-    // units, token1Price is token0's price in token1 units — the convention
-    // the Uni V3 price-observation indexer already consumes) plus the input
-    // leg's direct reference imply the output reference — the same derivation
-    // deriveTokenUsdPrice uses for display pricing and
-    // applyRaydiumPoolImpliedReferences uses for Raydium execution models.
-    // Only price resolution may be repaired this way; identity failures above
-    // stay gated.
-    const spotInputPerOutput = inputIndex === 0 ? candidate.token0Price : candidate.token1Price;
-    const impliedOutputPrice = inputPrice * spotInputPerOutput;
-    const fixedPointPrice = Math.round(impliedOutputPrice * 100_000_000);
-    if (Number.isFinite(impliedOutputPrice) && impliedOutputPrice > 0 && fixedPointPrice > 0) {
-      outputPrice = impliedOutputPrice;
-    } else if (Number.isFinite(impliedOutputPrice) && impliedOutputPrice > 0) {
-      logWorkerEvent({
-        scope: "lib",
-        level: "warn",
-        event: adapter.protocol === "uniswap-v3"
-          ? "univ3_implied_reference_rejected"
-          : "slipstream_implied_reference_rejected",
-        job: "sync-dex-liquidity",
-        source: adapter.source,
-        message: "Rejected a pool-implied output reference below measured-execution price precision",
-        metadata: {
-          chain: candidate.chain,
-          poolAddress: candidate.poolAddress,
-          stablecoinId: input.stablecoinId,
-          token0Price: candidate.token0Price,
-          token1Price: candidate.token1Price,
-          impliedOutputPrice,
-        },
-      });
-    }
-  }
+  const outputPrice = resolveClImpliedOutputPrice({
+    candidate,
+    stablecoinId: input.stablecoinId,
+    inputIndex,
+    inputPrice,
+    outputPrice: getTokenReferenceUsdPrice(
+      tokenOut,
+      candidate.chain,
+      input.chainAddressToId,
+      symbolToChainScopedIds,
+      input.validationReferences,
+      input.stablecoinPriceById,
+    ),
+    rejectionEvent:
+      adapter.protocol === "uniswap-v3"
+        ? "univ3_implied_reference_rejected"
+        : "slipstream_implied_reference_rejected",
+    source: adapter.source,
+  });
   if (outputPrice == null || !Number.isFinite(outputPrice) || outputPrice <= 0) return null;
   if (!hasCoherentClSpotPrice(candidate, inputIndex, inputPrice, outputPrice)) {
     return null;
@@ -480,26 +498,22 @@ export function buildUniswapV4MeasuredExecutionTarget(input: {
   if (inputPrice == null || !Number.isFinite(inputPrice) || inputPrice <= 0) return null;
   const outputStablecoinId = input.chainAddressToId.get(buildChainAddressKey(chain, tokenOut.address));
   if (outputStablecoinId === input.stablecoinId) return null;
-  let outputPrice = getTokenReferenceUsdPrice(
-    tokenOut,
-    chain,
-    input.chainAddressToId,
-    symbolToChainScopedIds,
-    input.validationReferences,
-    input.stablecoinPriceById,
-  );
-  if (outputPrice == null) {
-    const spotInputPerOutput =
-      inputIndex === 0 ? input.candidate.token0Price : input.candidate.token1Price;
-    const impliedOutputPrice = inputPrice * spotInputPerOutput;
-    if (
-      Number.isFinite(impliedOutputPrice) &&
-      impliedOutputPrice > 0 &&
-      Math.round(impliedOutputPrice * 100_000_000) > 0
-    ) {
-      outputPrice = impliedOutputPrice;
-    }
-  }
+  const outputPrice = resolveClImpliedOutputPrice({
+    candidate: input.candidate,
+    stablecoinId: input.stablecoinId,
+    inputIndex,
+    inputPrice,
+    outputPrice: getTokenReferenceUsdPrice(
+      tokenOut,
+      chain,
+      input.chainAddressToId,
+      symbolToChainScopedIds,
+      input.validationReferences,
+      input.stablecoinPriceById,
+    ),
+    rejectionEvent: "uniswap_v4_implied_reference_rejected",
+    source: "uniswap-v4",
+  });
   if (outputPrice == null || !Number.isFinite(outputPrice) || outputPrice <= 0) return null;
   const spotInputPerOutput =
     inputIndex === 0 ? input.candidate.token0Price : input.candidate.token1Price;
@@ -568,6 +582,32 @@ export function buildUniV3MeasuredExecutionTarget(
   });
 }
 
+function buildClStyleMeasuredExecutionTargets<TCandidate>(
+  pools: readonly DexApiPool[],
+  spec: {
+    source: DexApiPool["source"];
+    validate(pool: DexApiPool): boolean;
+    buildCandidate(pool: DexApiPool): { candidate: TCandidate; stablecoinIds: Set<string> } | null;
+    buildTarget(input: {
+      stablecoinId: string;
+      candidate: TCandidate;
+      pool: DexApiPool;
+    }): DexMeasuredExecutionTarget | null;
+  },
+): Map<string, DexMeasuredExecutionTarget> {
+  const targets = new Map<string, DexMeasuredExecutionTarget>();
+  for (const pool of pools) {
+    if (pool.source !== spec.source || !spec.validate(pool)) continue;
+    const built = spec.buildCandidate(pool);
+    if (!built) continue;
+    for (const stablecoinId of built.stablecoinIds) {
+      const target = spec.buildTarget({ stablecoinId, candidate: built.candidate, pool });
+      if (target) targets.set(buildMeasuredPoolDirectionKey(stablecoinId, target.poolId), target);
+    }
+  }
+  return targets;
+}
+
 export function buildUniV3DirectMeasuredExecutionTargets(input: {
   pools: readonly DexApiPool[];
   chainAddressToId: Map<string, string>;
@@ -576,59 +616,60 @@ export function buildUniV3DirectMeasuredExecutionTargets(input: {
   stablecoinPriceById?: Map<string, number>;
   capturedAt: number;
 }): Map<string, DexMeasuredExecutionTarget> {
-  const targets = new Map<string, DexMeasuredExecutionTarget>();
-  for (const pool of input.pools) {
-    if (
-      pool.source !== "uniswap-v3-shadow" ||
-      pool.tokens.length !== 2 ||
-      pool.feeRate == null ||
-      !Number.isFinite(pool.feeRate) ||
-      pool.feeRate <= 0 ||
-      !Number.isFinite(pool.tvlUsd) ||
-      pool.tvlUsd <= 0 ||
-      pool.price == null ||
-      !Number.isFinite(pool.price) ||
-      pool.price <= 0
-    ) continue;
-    const [token0, token1] = pool.tokens;
-    const poolAddress = normalizeEvmAddress(pool.poolAddress);
-    const token0Address = normalizeEvmAddress(token0.address);
-    const token1Address = normalizeEvmAddress(token1.address);
-    const feePips = Math.round(pool.feeRate * 1_000_000);
-    if (
-      !poolAddress ||
-      !token0Address ||
-      !token1Address ||
-      token0Address === token1Address ||
-      !Number.isInteger(feePips) ||
-      feePips <= 0 ||
-      feePips > 1_000_000 ||
-      !Number.isInteger(token0.decimals) ||
-      token0.decimals < 0 ||
-      token0.decimals > 255 ||
-      !Number.isInteger(token1.decimals) ||
-      token1.decimals < 0 ||
-      token1.decimals > 255
-    ) continue;
-    const candidate: UniV3ExecutionCandidate = {
-      chain: pool.chain,
-      poolAddress,
-      feePips,
-      tvlUsd: pool.tvlUsd,
-      token0Price: 1 / pool.price,
-      token1Price: pool.price,
-      tokens: [
-        { address: token0Address, symbol: token0.symbol, decimals: token0.decimals },
-        { address: token1Address, symbol: token1.symbol, decimals: token1.decimals },
-      ],
-    };
-    const stablecoinIds = new Set(
-      candidate.tokens
-        .map((token) => input.chainAddressToId.get(buildChainAddressKey(pool.chain, token.address)))
-        .filter((stablecoinId): stablecoinId is string => Boolean(stablecoinId)),
-    );
-    for (const stablecoinId of stablecoinIds) {
-      const target = buildUniV3MeasuredExecutionTarget({
+  return buildClStyleMeasuredExecutionTargets(input.pools, {
+    source: "uniswap-v3-shadow",
+    validate: (pool) =>
+      pool.tokens.length === 2 &&
+      pool.feeRate != null &&
+      Number.isFinite(pool.feeRate) &&
+      pool.feeRate > 0 &&
+      Number.isFinite(pool.tvlUsd) &&
+      pool.tvlUsd > 0 &&
+      pool.price != null &&
+      Number.isFinite(pool.price) &&
+      pool.price > 0,
+    buildCandidate: (pool) => {
+      const [token0, token1] = pool.tokens;
+      const poolAddress = normalizeEvmAddress(pool.poolAddress);
+      const token0Address = normalizeEvmAddress(token0.address);
+      const token1Address = normalizeEvmAddress(token1.address);
+      const feePips = Math.round(pool.feeRate! * 1_000_000);
+      if (
+        !poolAddress ||
+        !token0Address ||
+        !token1Address ||
+        token0Address === token1Address ||
+        !Number.isInteger(feePips) ||
+        feePips <= 0 ||
+        feePips > 1_000_000 ||
+        !Number.isInteger(token0.decimals) ||
+        token0.decimals < 0 ||
+        token0.decimals > 255 ||
+        !Number.isInteger(token1.decimals) ||
+        token1.decimals < 0 ||
+        token1.decimals > 255
+      ) return null;
+      const candidate: UniV3ExecutionCandidate = {
+        chain: pool.chain,
+        poolAddress,
+        feePips,
+        tvlUsd: pool.tvlUsd,
+        token0Price: 1 / pool.price!,
+        token1Price: pool.price!,
+        tokens: [
+          { address: token0Address, symbol: token0.symbol, decimals: token0.decimals },
+          { address: token1Address, symbol: token1.symbol, decimals: token1.decimals },
+        ],
+      };
+      const stablecoinIds = new Set(
+        candidate.tokens
+          .map((token) => input.chainAddressToId.get(buildChainAddressKey(pool.chain, token.address)))
+          .filter((stablecoinId): stablecoinId is string => Boolean(stablecoinId)),
+      );
+      return { candidate, stablecoinIds };
+    },
+    buildTarget: ({ stablecoinId, candidate, pool }) =>
+      buildUniV3MeasuredExecutionTarget({
         stablecoinId,
         candidate,
         stablecoinPriceById: input.stablecoinPriceById,
@@ -637,11 +678,8 @@ export function buildUniV3DirectMeasuredExecutionTargets(input: {
         validationReferences: input.validationReferences,
         retainedTvlUsd: pool.tvlUsd,
         capturedAt: input.capturedAt,
-      });
-      if (target) targets.set(buildMeasuredPoolDirectionKey(stablecoinId, target.poolId), target);
-    }
-  }
-  return targets;
+      }),
+  });
 }
 
 export function buildSlipstreamMeasuredExecutionTarget(
@@ -663,69 +701,68 @@ export function buildSlipstreamMeasuredExecutionTargets(input: {
   stablecoinPriceById?: Map<string, number>;
   capturedAt: number;
 }): Map<string, DexMeasuredExecutionTarget> {
-  const targets = new Map<string, DexMeasuredExecutionTarget>();
-  for (const pool of input.pools) {
-    if (
-      pool.source !== "aerodrome-slipstream" ||
-      pool.tokens.length !== 2 ||
-      !Number.isInteger(pool.tickSpacing) ||
-      pool.tickSpacing == null ||
-      pool.tickSpacing <= 0 ||
-      pool.tickSpacing > 8_388_607 ||
-      !Number.isFinite(pool.tvlUsd) ||
-      pool.tvlUsd <= 0
-    ) continue;
-
-    const [token0, token1] = pool.tokens;
-    const poolAddress = normalizeEvmAddress(pool.poolAddress);
-    const token0Address = normalizeEvmAddress(token0.address);
-    const token1Address = normalizeEvmAddress(token1.address);
-    const token0PriceUsd = token0.priceUsd;
-    const token1PriceUsd = token1.priceUsd;
-    const spotToken1PerToken0 = pool.price;
-    if (
-      !poolAddress ||
-      !token0Address ||
-      !token1Address ||
-      token0Address === token1Address ||
-      !token0.symbol.trim() ||
-      !token1.symbol.trim() ||
-      !Number.isInteger(token0.decimals) ||
-      token0.decimals < 0 ||
-      token0.decimals > 255 ||
-      !Number.isInteger(token1.decimals) ||
-      token1.decimals < 0 ||
-      token1.decimals > 255 ||
-      token0PriceUsd == null ||
-      !Number.isFinite(token0PriceUsd) ||
-      token0PriceUsd <= 0 ||
-      token1PriceUsd == null ||
-      !Number.isFinite(token1PriceUsd) ||
-      token1PriceUsd <= 0 ||
-      spotToken1PerToken0 == null ||
-      !Number.isFinite(spotToken1PerToken0) ||
-      spotToken1PerToken0 <= 0
-    ) continue;
-
-    const candidate: SlipstreamExecutionCandidate = {
-      chain: pool.chain,
-      poolAddress,
-      tickSpacing: pool.tickSpacing,
-      tvlUsd: pool.tvlUsd,
-      token0Price: 1 / spotToken1PerToken0,
-      token1Price: spotToken1PerToken0,
-      tokens: [
-        { address: token0Address, symbol: token0.symbol, decimals: token0.decimals },
-        { address: token1Address, symbol: token1.symbol, decimals: token1.decimals },
-      ],
-    };
-    const stablecoinIds = new Set(
-      candidate.tokens
-        .map((token) => input.chainAddressToId.get(buildChainAddressKey(pool.chain, token.address)))
-        .filter((stablecoinId): stablecoinId is string => Boolean(stablecoinId)),
-    );
-    for (const stablecoinId of stablecoinIds) {
-      const target = buildSlipstreamMeasuredExecutionTarget({
+  return buildClStyleMeasuredExecutionTargets(input.pools, {
+    source: "aerodrome-slipstream",
+    validate: (pool) =>
+      pool.tokens.length === 2 &&
+      Number.isInteger(pool.tickSpacing) &&
+      pool.tickSpacing != null &&
+      pool.tickSpacing > 0 &&
+      pool.tickSpacing <= 8_388_607 &&
+      Number.isFinite(pool.tvlUsd) &&
+      pool.tvlUsd > 0,
+    buildCandidate: (pool) => {
+      const [token0, token1] = pool.tokens;
+      const poolAddress = normalizeEvmAddress(pool.poolAddress);
+      const token0Address = normalizeEvmAddress(token0.address);
+      const token1Address = normalizeEvmAddress(token1.address);
+      const token0PriceUsd = token0.priceUsd;
+      const token1PriceUsd = token1.priceUsd;
+      const spotToken1PerToken0 = pool.price;
+      if (
+        !poolAddress ||
+        !token0Address ||
+        !token1Address ||
+        token0Address === token1Address ||
+        !token0.symbol.trim() ||
+        !token1.symbol.trim() ||
+        !Number.isInteger(token0.decimals) ||
+        token0.decimals < 0 ||
+        token0.decimals > 255 ||
+        !Number.isInteger(token1.decimals) ||
+        token1.decimals < 0 ||
+        token1.decimals > 255 ||
+        token0PriceUsd == null ||
+        !Number.isFinite(token0PriceUsd) ||
+        token0PriceUsd <= 0 ||
+        token1PriceUsd == null ||
+        !Number.isFinite(token1PriceUsd) ||
+        token1PriceUsd <= 0 ||
+        spotToken1PerToken0 == null ||
+        !Number.isFinite(spotToken1PerToken0) ||
+        spotToken1PerToken0 <= 0
+      ) return null;
+      const candidate: SlipstreamExecutionCandidate = {
+        chain: pool.chain,
+        poolAddress,
+        tickSpacing: pool.tickSpacing!,
+        tvlUsd: pool.tvlUsd,
+        token0Price: 1 / spotToken1PerToken0,
+        token1Price: spotToken1PerToken0,
+        tokens: [
+          { address: token0Address, symbol: token0.symbol, decimals: token0.decimals },
+          { address: token1Address, symbol: token1.symbol, decimals: token1.decimals },
+        ],
+      };
+      const stablecoinIds = new Set(
+        candidate.tokens
+          .map((token) => input.chainAddressToId.get(buildChainAddressKey(pool.chain, token.address)))
+          .filter((stablecoinId): stablecoinId is string => Boolean(stablecoinId)),
+      );
+      return { candidate, stablecoinIds };
+    },
+    buildTarget: ({ stablecoinId, candidate, pool }) =>
+      buildSlipstreamMeasuredExecutionTarget({
         stablecoinId,
         candidate,
         stablecoinPriceById: input.stablecoinPriceById,
@@ -734,9 +771,6 @@ export function buildSlipstreamMeasuredExecutionTargets(input: {
         validationReferences: input.validationReferences,
         retainedTvlUsd: pool.tvlUsd,
         capturedAt: input.capturedAt,
-      });
-      if (target) targets.set(buildMeasuredPoolDirectionKey(stablecoinId, target.poolId), target);
-    }
-  }
-  return targets;
+      }),
+  });
 }

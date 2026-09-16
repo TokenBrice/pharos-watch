@@ -140,6 +140,84 @@ function isCoherentHistoricalQuoteRow(
   return profile == null && Boolean(row.failure_reason?.trim());
 }
 
+function validateSparseQuoteRow<
+  TTarget extends { targetId: string },
+  TProfile extends {
+    targetId: string;
+    targetGenerationId: string;
+    quoteGenerationId: string;
+  },
+>(
+  row: SparseCurrentQuoteWithTargetRow,
+  input: {
+    label: string;
+    quoteGenerationId: string;
+    targetGenerationId: string;
+    targetSchema: { parse(value: unknown): TTarget };
+    profileSchema: { parse(value: unknown): TProfile };
+    deferProfiles?: boolean;
+  },
+): {
+  entry: {
+    quotedTarget: TTarget;
+    status: "measured" | "failed";
+    failureReason: string | null;
+    profile: TProfile | null;
+    deferredProfileJson?: string;
+  };
+  omitted: boolean;
+} {
+  const quotedTarget = input.targetSchema.parse(
+    parsePersistedJson(row.target_json, `${input.label} measured target JSON`),
+  );
+  if (quotedTarget.targetId !== row.target_id) {
+    throw new Error(`${input.label} measured quote ${row.target_id} has a mismatched target row`);
+  }
+  const quoteGenerationId = row.quote_generation_id ?? row.generation_id ?? null;
+  if (quoteGenerationId == null) {
+    return {
+      entry: {
+        quotedTarget,
+        status: "failed",
+        failureReason: "budget-deferred",
+        profile: null,
+      },
+      omitted: true,
+    };
+  }
+  const profile = row.quote_profile_json
+    ? input.profileSchema.parse(
+        parsePersistedJson(row.quote_profile_json, `${input.label} measured profile JSON`),
+      )
+    : null;
+  if (
+    (row.status === "measured" &&
+      (row.target_generation_id !== input.targetGenerationId ||
+        profile == null ||
+        row.failure_reason != null ||
+        profile.targetId !== row.target_id ||
+        profile.targetGenerationId !== input.targetGenerationId ||
+        profile.quoteGenerationId !== input.quoteGenerationId)) ||
+    (row.status === "failed" &&
+      (row.target_generation_id !== input.targetGenerationId || profile != null || !row.failure_reason?.trim())) ||
+    row.status == null
+  ) {
+    throw new Error(`${input.label} measured quote row ${row.target_id} has a torn terminal identity`);
+  }
+  return {
+    entry: {
+      quotedTarget,
+      status: row.status,
+      failureReason: row.failure_reason,
+      profile: input.deferProfiles ? null : profile,
+      ...(input.deferProfiles && row.quote_profile_json
+        ? { deferredProfileJson: row.quote_profile_json }
+        : {}),
+    },
+    omitted: false,
+  };
+}
+
 async function loadCurrentMeasuredQuoteEvidence<
   TTarget extends { targetId: string },
   TProfile extends {
@@ -302,47 +380,15 @@ async function loadCurrentMeasuredQuoteEvidence<
         input.signal,
       );
       for (const row of selectedResult.results ?? []) {
-        const quotedTarget = input.targetSchema.parse(
-          parsePersistedJson(row.target_json, `${input.label} measured target JSON`),
-        );
-        if (quotedTarget.targetId !== row.target_id) {
-          throw new Error(`${input.label} measured quote ${row.target_id} has a mismatched target row`);
-        }
-        const quoteGenerationId = row.quote_generation_id ?? row.generation_id ?? null;
-        if (quoteGenerationId == null) {
-          byTargetId.set(row.target_id, {
-            quotedTarget,
-            status: "failed",
-            failureReason: "budget-deferred",
-            profile: null,
-          });
-          continue;
-        }
-        const profile = row.quote_profile_json
-          ? input.profileSchema.parse(
-              parsePersistedJson(row.quote_profile_json, `${input.label} measured profile JSON`),
-            )
-          : null;
-        if (
-          (row.status === "measured" &&
-            (row.target_generation_id !== targetGenerationId ||
-              profile == null ||
-              row.failure_reason != null ||
-              profile.targetId !== row.target_id ||
-              profile.targetGenerationId !== targetGenerationId ||
-              profile.quoteGenerationId !== generation.generation_id)) ||
-          (row.status === "failed" &&
-            (row.target_generation_id !== targetGenerationId || profile != null || !row.failure_reason?.trim())) ||
-          row.status == null
-        ) {
-          throw new Error(`${input.label} measured quote row ${row.target_id} has a torn terminal identity`);
-        }
-        byTargetId.set(row.target_id, {
-          quotedTarget,
-          status: row.status,
-          failureReason: row.failure_reason,
-          profile,
+        const validated = validateSparseQuoteRow(row, {
+          label: input.label,
+          quoteGenerationId: generation.generation_id,
+          targetGenerationId,
+          targetSchema: input.targetSchema,
+          profileSchema: input.profileSchema,
+          deferProfiles: input.deferProfiles,
         });
+        byTargetId.set(row.target_id, validated.entry);
       }
     }
     if (byTargetId.size !== selectedTargetIds.length) {
@@ -396,54 +442,18 @@ async function loadCurrentMeasuredQuoteEvidence<
       if (row.target_id <= afterTargetId || byTargetId.has(row.target_id)) {
         throw new Error(`${input.label} measured quote evidence pagination did not advance`);
       }
-      const quotedTarget = input.targetSchema.parse(
-        parsePersistedJson(row.target_json, `${input.label} measured target JSON`),
-      );
-      if (quotedTarget.targetId !== row.target_id) {
-        throw new Error(`${input.label} measured quote ${row.target_id} has a mismatched target row`);
-      }
       targetIds.push(row.target_id);
-      const quoteGenerationId = row.quote_generation_id ?? row.generation_id ?? null;
-      if (quoteGenerationId == null) {
-        omittedRowsSeen++;
-        byTargetId.set(row.target_id, {
-          quotedTarget,
-          status: "failed",
-          failureReason: "budget-deferred",
-          profile: null,
-        });
-        afterTargetId = row.target_id;
-        continue;
-      }
-      persistedRowsSeen++;
-      const profile = row.quote_profile_json
-        ? input.profileSchema.parse(
-            parsePersistedJson(row.quote_profile_json, `${input.label} measured profile JSON`),
-          )
-        : null;
-      if (
-        (row.status === "measured" &&
-          (row.target_generation_id !== targetGenerationId ||
-            profile == null ||
-            row.failure_reason != null ||
-            profile.targetId !== row.target_id ||
-            profile.targetGenerationId !== targetGenerationId ||
-            profile.quoteGenerationId !== generation.generation_id)) ||
-        (row.status === "failed" &&
-          (row.target_generation_id !== targetGenerationId || profile != null || !row.failure_reason?.trim())) ||
-        row.status == null
-      ) {
-        throw new Error(`${input.label} measured quote row ${row.target_id} has a torn terminal identity`);
-      }
-      byTargetId.set(row.target_id, {
-        quotedTarget,
-        status: row.status,
-        failureReason: row.failure_reason,
-        profile: input.deferProfiles ? null : profile,
-        ...(input.deferProfiles && row.quote_profile_json
-          ? { deferredProfileJson: row.quote_profile_json }
-          : {}),
+      const validated = validateSparseQuoteRow(row, {
+        label: input.label,
+        quoteGenerationId: generation.generation_id,
+        targetGenerationId,
+        targetSchema: input.targetSchema,
+        profileSchema: input.profileSchema,
+        deferProfiles: input.deferProfiles,
       });
+      if (validated.omitted) omittedRowsSeen++;
+      else persistedRowsSeen++;
+      byTargetId.set(row.target_id, validated.entry);
       afterTargetId = row.target_id;
     }
     page.length = 0;
@@ -468,7 +478,7 @@ async function loadCurrentMeasuredQuoteEvidence<
 export async function loadLatestPublishedDexMeasuredQuoteEvidence(
   db: D1Database,
   signal?: AbortSignal,
-  options: { deferProfiles?: boolean } = {},
+  options: { deferProfiles?: boolean; targetIds?: readonly string[] } = {},
 ): Promise<LoadedDexMeasuredQuoteEvidence | null> {
   const currentEvidence = await loadCurrentMeasuredQuoteEvidence({
     db,
@@ -478,6 +488,7 @@ export async function loadLatestPublishedDexMeasuredQuoteEvidence(
     targetSchema: DexMeasuredExecutionTargetSchema,
     profileSchema: DexMeasuredExecutionProfileSchema,
     deferProfiles: options.deferProfiles,
+    targetIds: options.targetIds,
     signal,
   });
   if (!currentEvidence) return null;
@@ -556,7 +567,9 @@ export async function loadLatestPublishedDexMeasuredQuoteEvidence(
         3,
         signal,
       );
-      const historicalTargetIds = (historicalTargetResult.results ?? []).map((row) => row.target_id);
+      const historicalTargetIds = (historicalTargetResult.results ?? [])
+        .map((row) => row.target_id)
+        .filter((targetId) => options.targetIds == null || byTargetId.has(targetId));
       for (let offset = 0; offset < historicalTargetIds.length; offset += DEX_MEASURED_HISTORY_TARGET_BATCH_SIZE) {
         const targetIdBatch = historicalTargetIds.slice(offset, offset + DEX_MEASURED_HISTORY_TARGET_BATCH_SIZE);
         const lkgBlockedTargetIds = new Set<string>();
