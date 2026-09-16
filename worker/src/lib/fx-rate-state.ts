@@ -117,7 +117,11 @@ function buildBootstrapMeta(cache: CacheRow, rates: Record<string, number>): FxR
   };
 }
 
-function parseFxMeta(value: string, fallback: CacheRow, rates: Record<string, number>): FxRatesMeta {
+function parseFxMeta(
+  value: string,
+  fallback: CacheRow,
+  rates: Record<string, number>,
+): { meta: FxRatesMeta; bootstrapped: boolean } {
   const decoded = decodeJsonString<FxRatesMeta, "json-parse-failed" | "invalid-payload">(value, {
     parseErrorReason: "json-parse-failed",
     normalize: (parsed) => {
@@ -156,9 +160,9 @@ function parseFxMeta(value: string, fallback: CacheRow, rates: Record<string, nu
   });
 
   if (decoded.ok) {
-    return decoded.payload;
+    return { meta: decoded.payload, bootstrapped: false };
   }
-  return buildBootstrapMeta(fallback, rates);
+  return { meta: buildBootstrapMeta(fallback, rates), bootstrapped: true };
 }
 
 export function getFxRatesMetaKey(): string {
@@ -381,6 +385,7 @@ export function getFxReferenceTypeFromState(
 
   const mode = state.sourceModeByPeg[pegKey];
   if (mode === "hardcoded") return "static";
+  if (state.bootstrapMetadata) return "stale";
 
   const updatedAt = state.sourceUpdatedAtByPeg[pegKey] ?? null;
   const freshness = evaluateFxSourceFreshness(
@@ -430,9 +435,10 @@ export function hydrateFxRateState(
   const rates = decodedRates.payload;
   if (Object.keys(rates).length === 0) return null;
 
-  const meta = metaCache
+  const metadata = metaCache
     ? parseFxMeta(metaCache.value, ratesCache, rates)
-    : buildBootstrapMeta(ratesCache, rates);
+    : { meta: buildBootstrapMeta(ratesCache, rates), bootstrapped: true };
+  const { meta } = metadata;
 
   const nowSec = Math.floor(Date.now() / 1000);
   return {
@@ -455,7 +461,7 @@ export function hydrateFxRateState(
     ecbDate: meta.ecbDate ?? null,
     previousCacheUpdatedAt: meta.previousCacheUpdatedAt ?? ratesCache.updatedAt,
     consecutiveFallbackRuns: meta.consecutiveFallbackRuns,
-    bootstrapMetadata: !metaCache,
+    bootstrapMetadata: metadata.bootstrapped,
   };
 }
 
