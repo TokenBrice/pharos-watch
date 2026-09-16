@@ -1,6 +1,7 @@
 import { logWorkerEventArgs } from "../lib/structured-log";
 import { ACTIVE_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import { derivePegRates } from "@shared/lib/peg-rates";
+import { DEX_PROTOCOL_SOURCE_FRESHNESS_SEC } from "@shared/lib/depeg-config";
 import type { PegAssetBase } from "@shared/types/core";
 import {
   CIRCUIT_SOURCE,
@@ -96,7 +97,7 @@ export async function confirmPendingDepegs(
 
   throwIfAborted(signal);
   const dexPriceRows = await loadDexPriceRows(db);
-  const dexPriceSources = await loadDexPriceSources(db, DEX_FRESHNESS_SEC);
+  const dexPriceSources = await loadDexPriceSources(db, DEX_PROTOCOL_SOURCE_FRESHNESS_SEC);
 
   throwIfAborted(signal);
   const poolChallengers = await loadDexPoolChallengers(db, POOL_CHALLENGE_MIN_TVL, DEX_FRESHNESS_SEC, now);

@@ -1,5 +1,6 @@
 import { logWorkerEvent, logWorkerEventArgs } from "./structured-log";
 import { MAX_OPEN_DEPEG_EVENTS } from "./constants";
+import { DEX_PROTOCOL_SOURCE_FRESHNESS_SEC } from "@shared/lib/depeg-config";
 import {
   DEPEG_EVENT_CLOSE_REASON_VALUES,
   type DepegEvent,
@@ -294,7 +295,7 @@ export function countDexProtocolCorroborations(
 /** Load per-protocol price breakdowns from dex_prices.price_sources_json for trusted rows. */
 export async function loadDexPriceSources(
   db: D1Database,
-  maxAgeSec = 2100, // 35 min = 30min cron + 5min buffer
+  maxAgeSec = DEX_PROTOCOL_SOURCE_FRESHNESS_SEC,
   telemetry?: DexPriceSourceLoadTelemetry,
 ): Promise<Map<string, DexPoolSource[]>> {
   const nowSec = Math.floor(Date.now() / 1000);
@@ -359,11 +360,11 @@ export async function loadDexPriceSources(
     }
     return result;
   } catch (err) {
-    const msg = toErrorMessage(err);
-    if (!isMissingTableError(err)) {
-      logWorkerEventArgs("lib", "error", "[depeg-helpers] Unexpected error loading dex price sources:", msg);
+    if (isMissingTableError(err)) {
+      return new Map();
     }
-    return new Map();
+    logWorkerEventArgs("lib", "error", "[depeg-helpers] Unexpected error loading dex price sources:", toErrorMessage(err));
+    throw err;
   }
 }
 
