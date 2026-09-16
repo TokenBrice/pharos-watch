@@ -78,7 +78,10 @@ export default function FlowsClient({ faqItems }: { faqItems: readonly FaqItem[]
   const isWeeklyFromChart = hours === 168;
   const {
     data: weeklyData,
+    meta: weeklyMeta,
     isLoading: isWeeklyQueryLoading,
+    error: weeklyError,
+    dataUpdatedAt: weeklyUpdatedAt,
     refetch: refetchWeekly,
   } = useMintBurnFlows(168, { enabled: !isWeeklyFromChart });
 
@@ -93,7 +96,7 @@ export default function FlowsClient({ faqItems }: { faqItems: readonly FaqItem[]
   const coins = summaryData?.coins ?? [];
   const hourly = chartData?.hourly ?? [];
   const weeklyHourly = (isWeeklyFromChart ? chartData?.hourly : weeklyData?.hourly) ?? [];
-  const error = summaryError ?? chartError;
+  const error = summaryError ?? chartError ?? (!isWeeklyFromChart ? weeklyError : null);
   const hasData = !!summaryData || !!chartData;
   const scopeLabel = summaryData?.scope?.label ?? "Configured issuance chains";
   const syncWarning = summaryData?.sync?.warning ?? chartData?.sync?.warning ?? null;
@@ -134,6 +137,17 @@ export default function FlowsClient({ faqItems }: { faqItems: readonly FaqItem[]
                   error: chartError,
                   hasData: !!chartData,
                   meta: chartMeta,
+                },
+              ]
+            : []),
+          ...(!isWeeklyFromChart
+            ? [
+                {
+                  label: "Mint/Burn Flows (Weekly)",
+                  dataUpdatedAt: weeklyUpdatedAt,
+                  error: weeklyError,
+                  hasData: !!weeklyData,
+                  meta: weeklyMeta,
                 },
               ]
             : []),

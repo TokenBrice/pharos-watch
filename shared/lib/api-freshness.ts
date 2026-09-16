@@ -83,3 +83,18 @@ export const API_FRESHNESS_MAX_AGE_SEC = {
 export function isFreshnessWarningHeader(warningHeader: string): boolean {
   return /(?:^|,\s*)110\b/.test(warningHeader) || /Response is (?:degraded|stale)/i.test(warningHeader);
 }
+
+/**
+ * Does a `Warning` response header describe a stale stablecoin-detail cache
+ * refresh?
+ *
+ * The worker emits both scheduled and failed refresh variants. Match the
+ * stable cache family instead of pinning the UI to one suffix so a harmless
+ * rewording of the scheduled warning does not bypass the shared contract.
+ */
+const SCHEDULED_REFRESH_WARNING_PATTERN =
+  /stablecoin\s+detail\s+cache\s+(?:is\s+)?stale\b[\s\S]*\brefresh\b/i;
+
+export function isScheduledRefreshWarning(warningHeader: string): boolean {
+  return SCHEDULED_REFRESH_WARNING_PATTERN.test(warningHeader);
+}
