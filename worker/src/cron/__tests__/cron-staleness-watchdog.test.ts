@@ -214,6 +214,49 @@ describe("cron staleness watchdog", () => {
     vi.useRealTimers();
   });
 
+  it("re-alerts a second stale producer after the shared cooldown", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-08-22T00:00:00Z"));
+    const db = fakeDb();
+    const options = { operatorTelegramCreds: { botToken: "bot", chatId: "ops" } };
+    mockCacheStatus({ stablecoins: 2_000 });
+    await runCronStalenessWatchdog(db, undefined, options);
+
+    vi.setSystemTime(new Date(Date.now() + 60_000));
+    mockCacheStatus({ stablecoins: 2_000, "dex-liquidity": 15_000 });
+    const during = await runCronStalenessWatchdog(db, undefined, options);
+    expect(JSON.parse(during.metadata ?? "{}").alertTransitions).toMatchObject({
+      stale: ["sync-dex-liquidity"], cooldown: true, sent: false,
+    });
+
+    vi.setSystemTime(new Date(Date.now() + CRON_STALENESS_ALERT_COOLDOWN_SEC * 1_000));
+    const after = await runCronStalenessWatchdog(db, undefined, options);
+    expect(JSON.parse(after.metadata ?? "{}").alertTransitions).toMatchObject({
+      stale: ["sync-dex-liquidity"], cooldown: false, sent: true,
+    });
+    expect(sendToChatMock).toHaveBeenCalledTimes(2);
+    expect(sendToChatMock.mock.calls[1]?.[1]).toContain("sync-dex-liquidity");
+  });
+
+  it("retries a stale transition after alert delivery fails", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-08-22T00:00:00Z"));
+    sendToChatMock.mockResolvedValueOnce({ ok: false }).mockResolvedValue({ ok: true });
+    const db = fakeDb();
+    const options = { operatorTelegramCreds: { botToken: "bot", chatId: "ops" } };
+    mockCacheStatus({ stablecoins: 2_000 });
+
+    const first = await runCronStalenessWatchdog(db, undefined, options);
+    expect(JSON.parse(first.metadata ?? "{}").alertTransitions).toMatchObject({
+      stale: ["sync-stablecoins"], sent: false,
+    });
+    const retry = await runCronStalenessWatchdog(db, undefined, options);
+    expect(JSON.parse(retry.metadata ?? "{}").alertTransitions).toMatchObject({
+      stale: ["sync-stablecoins"], sent: true,
+    });
+    expect(sendToChatMock).toHaveBeenCalledTimes(2);
+  });
+
   it("degrades when detail cache writes are failing", async () => {
     mockCacheStatus({ stablecoins: 0 });
     const result = await runCronStalenessWatchdog(fakeDb([{ key: "detail-write-failure:usdt-tether", value: JSON.stringify({ reason: "value-too-large", bytes: 21_000_000 }), updated_at: Math.floor(Date.now() / 1000) - 60 }]));

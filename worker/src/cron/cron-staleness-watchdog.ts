@@ -365,7 +365,7 @@ export interface CronStalenessWatchdogOptions {
   /**
    * Private operator chat credentials. Freshness transitions are ops signal,
    * not audience content: they must never be sent with the public digest
-   * channel creds. Null suppresses the alert (state tracking still advances).
+   * channel creds. Null suppresses delivery and leaves transitions pending.
    */
   operatorTelegramCreds?: TelegramCreds | null;
 }
@@ -378,8 +378,8 @@ async function alertOnFreshnessTransitions(params: {
   signal?: AbortSignal;
 }): Promise<{ stale: string[]; recovered: string[]; sent: boolean; cooldown: boolean }> {
   const [stateCache, alertCache] = await Promise.all([
-    getCache(params.db, WATCHDOG_STATE_KEY),
-    getCache(params.db, WATCHDOG_ALERT_KEY),
+    getCache(params.db, WATCHDOG_STATE_KEY, params.signal),
+    getCache(params.db, WATCHDOG_ALERT_KEY, params.signal),
   ]);
   const previous = parseProducerFreshnessState(stateCache?.value);
   const next: ProducerFreshnessState = {};
@@ -394,9 +394,9 @@ async function alertOnFreshnessTransitions(params: {
     if (current === "stale") stale.push(observation.producerJob);
     else recovered.push(observation.producerJob);
   }
-  await setCache(params.db, WATCHDOG_STATE_KEY, JSON.stringify(next));
 
   if (stale.length === 0 && recovered.length === 0) {
+    await setCache(params.db, WATCHDOG_STATE_KEY, JSON.stringify(next), params.signal);
     return { stale, recovered, sent: false, cooldown: false };
   }
   const lastAlertAt = Number(alertCache?.value);
@@ -414,10 +414,12 @@ async function alertOnFreshnessTransitions(params: {
     `<b>Pharos freshness watchdog</b>\n\n${sections.join("\n")}`,
     params.signal,
   );
-  if (delivery.ok) {
-    await setCache(params.db, WATCHDOG_ALERT_KEY, String(params.nowSec));
+  if (!delivery.ok) {
+    return { stale, recovered, sent: false, cooldown: false };
   }
-  return { stale, recovered, sent: delivery.ok, cooldown: false };
+  await setCache(params.db, WATCHDOG_STATE_KEY, JSON.stringify(next), params.signal);
+  await setCache(params.db, WATCHDOG_ALERT_KEY, String(params.nowSec), params.signal);
+  return { stale, recovered, sent: true, cooldown: false };
 }
 
 export async function runCronStalenessWatchdog(
