@@ -1,5 +1,5 @@
 import { logWorkerEventArgs } from "./structured-log";
-import { getCache, setCache } from "./db-cache";
+import { getCache, setCacheIfNewer } from "./db-cache";
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import { DAY_SECONDS } from "@shared/lib/time-constants";
 import { bucketUnixSecondsToUtcDay } from "@shared/lib/time-buckets";
@@ -40,7 +40,8 @@ function isValidPayload(value: unknown): value is PegAnalyticsCachePayload {
 }
 
 export async function writePegAnalyticsCache(db: D1Database, payload: PegAnalyticsCachePayload): Promise<void> {
-  await setCache(db, PEG_ANALYTICS_CACHE_KEY, JSON.stringify(payload));
+  const body = JSON.stringify(payload);
+  await setCacheIfNewer(db, PEG_ANALYTICS_CACHE_KEY, body, payload.computedAtSec);
 }
 
 /**
