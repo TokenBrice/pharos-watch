@@ -6,29 +6,47 @@ import {
   type DexLiquidityData,
   type LiquidityCoverageClass,
 } from "@shared/types/market";
-import { classifyLiquidityEvidence } from "@shared/lib/dex-liquidity-evidence";
+import {
+  classifyLiquidityEvidence,
+  type LiquidityEvidenceClassification,
+} from "@shared/lib/dex-liquidity-evidence";
 import { canonicalExitRouteAssetKey } from "@shared/lib/exit-route-identity";
 import { WORKER_ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/worker-runtime-registry";
 import { parseJsonObject } from "./json-parse";
 
-interface DexLiquidityRow {
+export interface DexLiquidityRow {
   stablecoin_id: string;
+  total_tvl_usd: number;
+  total_volume_24h_usd: number;
+  total_volume_7d_usd: number;
+  total_volume_7d_measured?: number | null;
+  pool_count: number;
+  pair_count: number;
+  chain_count: number;
+  protocol_tvl_json: string | null;
+  chain_tvl_json: string | null;
+  top_pools_json: string | null;
   liquidity_score: number | null;
   concentration_hhi: number | null;
-  pool_count: number;
-  chain_count: number;
-  total_tvl_usd: number;
+  depth_stability: number | null;
+  updated_at: number;
   effective_tvl_usd: number | null;
+  avg_pool_stress: number | null;
+  weighted_balance_ratio: number | null;
+  organic_fraction: number | null;
+  durability_score: number | null;
+  score_components_json: string | null;
+  locked_liquidity_pct: number | null;
   coverage_class: string | null;
   coverage_confidence: number | null;
+  source_mix_json: string | null;
   balance_measured_tvl_usd: number | null;
   organic_measured_tvl_usd: number | null;
-  score_components_json: string | null;
-  methodology_version: string | null;
-  deployment_chain: string | null;
-  deployment_contract_address: string | null;
-  deployment_outcome: "observed_pools" | "verified_no_pools" | "provider_inaccessible" | null;
-  updated_at: number | null;
+  // Column is NOT NULL DEFAULT in D1; no NULL rows remain (verified 2026-08-19).
+  methodology_version: string;
+  deployment_chain?: string | null;
+  deployment_contract_address?: string | null;
+  deployment_outcome?: "observed_pools" | "verified_no_pools" | "provider_inaccessible" | null;
 }
 
 type DexLiquiditySnapshot = Pick<DexLiquidityData, "liquidityScore" | "concentrationHhi" | "poolCount" | "chainCount"> &
@@ -45,6 +63,7 @@ type DexLiquiditySnapshot = Pick<DexLiquidityData, "liquidityScore" | "concentra
       | "exitRouteObservations"
       | "exitRouteObservationCoverage"
       | "methodologyVersion"
+      | "trendworthy"
     >
   > & {
     deploymentCoverage?: {
@@ -98,6 +117,71 @@ function parseCoverageConfidence(value: number | null, stablecoinId: string): nu
     throw new Error(`Invalid dex_liquidity coverage_confidence for ${stablecoinId}: ${value}`);
   }
   return value;
+}
+/**
+ * Coverage columns were added after the first DEX publications. A non-global
+ * row with both columns absent is retained as legacy observed-but-unmeasured
+ * evidence; every published surface must use this same conservative default.
+ */
+const NULL_COVERAGE_DEFAULT = {
+  coverageClass: "legacy" as const,
+  coverageConfidence: 0.5,
+};
+
+type DexLiquidityEvidenceRow = Pick<
+  DexLiquidityRow,
+  | "total_tvl_usd"
+  | "coverage_class"
+  | "coverage_confidence"
+> & Partial<
+  Pick<
+    DexLiquidityRow,
+    | "effective_tvl_usd"
+    | "balance_measured_tvl_usd"
+    | "organic_measured_tvl_usd"
+    | "stablecoin_id"
+  >
+>;
+
+export interface NormalizedDexLiquidityEvidence {
+  coverageClass: LiquidityCoverageClass | null;
+  coverageConfidence: number;
+  liquidityEvidenceClass: LiquidityEvidenceClassification["liquidityEvidenceClass"];
+  hasMeasuredLiquidityEvidence: boolean;
+  trendworthy: boolean;
+  effectiveTvlUsd: number;
+  balanceMeasuredTvlUsd: number;
+  organicMeasuredTvlUsd: number;
+}
+
+export function normalizeDexLiquidityEvidence(row: DexLiquidityEvidenceRow): NormalizedDexLiquidityEvidence {
+  const stablecoinId = row.stablecoin_id ?? "history";
+  const rawCoverageClass = stablecoinId === "__global__" ? null : row.coverage_class;
+  if (
+    stablecoinId !== "__global__" &&
+    (rawCoverageClass === null) !== (row.coverage_confidence === null)
+  ) {
+    throw new Error(`Incomplete dex_liquidity coverage evidence for ${stablecoinId}`);
+  }
+  const coverageClass = parseCoverageClass(
+    stablecoinId === "__global__" ? null : (rawCoverageClass ?? NULL_COVERAGE_DEFAULT.coverageClass),
+    stablecoinId,
+  );
+  const coverageConfidence = parseCoverageConfidence(
+    row.coverage_confidence ?? NULL_COVERAGE_DEFAULT.coverageConfidence,
+    stablecoinId,
+  );
+  if (coverageConfidence == null) {
+    throw new Error(`Missing normalized dex_liquidity coverage confidence for ${stablecoinId}`);
+  }
+  return {
+    coverageClass,
+    coverageConfidence,
+    ...classifyLiquidityEvidence(row.total_tvl_usd, coverageClass, coverageConfidence),
+    effectiveTvlUsd: row.effective_tvl_usd ?? 0,
+    balanceMeasuredTvlUsd: row.balance_measured_tvl_usd ?? 0,
+    organicMeasuredTvlUsd: row.organic_measured_tvl_usd ?? 0,
+  };
 }
 
 function parseExitRouteDetails(
@@ -184,45 +268,28 @@ export async function loadDexLiquiditySnapshot(db: D1Database): Promise<DexLiqui
 
     if (processedStablecoinIds.has(row.stablecoin_id)) continue;
     processedStablecoinIds.add(row.stablecoin_id);
-    let coverageClass: LiquidityCoverageClass | null;
-    let coverageConfidence: number | null;
+    let evidence: NormalizedDexLiquidityEvidence;
     let exitRouteDetails: Pick<
       DexLiquiditySnapshot,
       "exitRouteObservations" | "exitRouteObservationCoverage"
     >;
     try {
-      coverageClass = parseCoverageClass(row.coverage_class, row.stablecoin_id);
-      coverageConfidence = parseCoverageConfidence(row.coverage_confidence, row.stablecoin_id);
-      if ((coverageClass === null) !== (coverageConfidence === null)) {
-        throw new Error(`Incomplete dex_liquidity coverage evidence for ${row.stablecoin_id}`);
-      }
+      evidence = normalizeDexLiquidityEvidence(row);
       exitRouteDetails = parseExitRouteDetails(row.score_components_json, row.stablecoin_id);
     } catch (error) {
       logWorkerEventArgs("lib", "error", `[dex-liquidity] Quarantining malformed evidence row for ${row.stablecoin_id}:`, error);
       continue;
     }
-    const evidence =
-      coverageClass != null && coverageConfidence != null
-        ? classifyLiquidityEvidence(row.total_tvl_usd, coverageClass, coverageConfidence)
-        : null;
     const snapshot: DexLiquiditySnapshot = {
       liquidityScore: row.liquidity_score,
       concentrationHhi: row.concentration_hhi,
       poolCount: row.pool_count,
       chainCount: row.chain_count,
+      ...evidence,
       ...exitRouteDetails,
     };
     if (typeof row.methodology_version === "string" && row.methodology_version.trim()) {
       snapshot.methodologyVersion = row.methodology_version.trim();
-    }
-    if (coverageClass != null && coverageConfidence != null && evidence != null) {
-      snapshot.coverageClass = coverageClass;
-      snapshot.coverageConfidence = coverageConfidence;
-      snapshot.liquidityEvidenceClass = evidence.liquidityEvidenceClass;
-      snapshot.hasMeasuredLiquidityEvidence = evidence.hasMeasuredLiquidityEvidence;
-      snapshot.effectiveTvlUsd = row.effective_tvl_usd ?? 0;
-      snapshot.balanceMeasuredTvlUsd = row.balance_measured_tvl_usd ?? 0;
-      snapshot.organicMeasuredTvlUsd = row.organic_measured_tvl_usd ?? 0;
     }
     map[row.stablecoin_id] = snapshot;
     if (row.updated_at != null && (latestUpdatedAt == null || row.updated_at > latestUpdatedAt)) {

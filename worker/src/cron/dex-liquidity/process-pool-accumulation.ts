@@ -73,7 +73,7 @@ export function accumulatePoolMetrics(
     metric.totalVolume7dMeasured = false;
   }
   metric.poolCount++;
-  metric.chains.add(pool.chain);
+  metric.chains.add(chainNorm);
   metric.pairs.add(pool.symbol);
   metric.qualityAdjustedTvl += poolQualityAdjustedTvl;
   metric.effectiveTvl += poolEffectiveTvl;
@@ -89,8 +89,8 @@ export function accumulatePoolMetrics(
   metric.oldestPoolDays = Math.max(metric.oldestPoolDays, poolMaturityDays);
   metric.protocolTvl[protocol] =
     (metric.protocolTvl[protocol] ?? 0) + rawContribTvl;
-  metric.chainTvl[pool.chain] =
-    (metric.chainTvl[pool.chain] ?? 0) + rawContribTvl;
+  metric.chainTvl[chainNorm] =
+    (metric.chainTvl[chainNorm] ?? 0) + rawContribTvl;
 
   const poolPrice = curveData?.tokenPrices[meta.symbol.toUpperCase()];
   // Preserve the native physical identity after a proven address/unique-token join.
@@ -100,14 +100,14 @@ export function accumulatePoolMetrics(
     poolId: exactCurveAddress
       ? canonicalExitRouteAssetKey(chainNorm, exactCurveAddress)
       : isTrustworthyExactPoolId(pool.pool, pool.project)
-      ? canonicalExitRouteAssetKey(pool.chain, pool.pool)
+      ? canonicalExitRouteAssetKey(chainNorm, pool.pool)
       : (buildPoolFingerprint(
           chainNorm,
           pool.project,
           pool.underlyingTokens ?? [],
-        ) ?? canonicalExitRouteAssetKey(pool.chain, pool.pool)),
+        ) ?? canonicalExitRouteAssetKey(chainNorm, pool.pool)),
     project: protocol,
-    chain: pool.chain,
+    chain: chainNorm,
     tvlUsd: rawContribTvl,
     symbol: pool.symbol,
     volumeUsd1d,

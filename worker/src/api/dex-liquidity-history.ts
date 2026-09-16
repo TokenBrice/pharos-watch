@@ -1,6 +1,6 @@
 import { handleStablecoinHistoryRequest } from "../lib/api-history";
 import { CACHE_PROFILES } from "../lib/constants";
-import { classifyLiquidityEvidence } from "./dex-liquidity-evidence";
+import { normalizeDexLiquidityEvidence, type DexLiquidityRow } from "../lib/dex-liquidity";
 import { safeJsonParse } from "../lib/api-cache-read";
 import {
   ExitRouteObservationCoverageSchema,
@@ -9,17 +9,18 @@ import {
 } from "@shared/types/market";
 import { STABLECOIN_HISTORY_QUERY_CONTRACTS } from "@shared/lib/api-query-history";
 
-interface LiquidityHistoryRow {
-  total_tvl_usd: number;
+type LiquidityHistoryRow = Pick<
+  DexLiquidityRow,
+  | "total_tvl_usd"
+  | "coverage_class"
+  | "coverage_confidence"
+> & {
   total_volume_24h_usd: number;
   liquidity_score: number | null;
   snapshot_date: number;
-  coverage_class: string | null;
-  coverage_confidence: number | null;
-  // Column is NOT NULL DEFAULT in D1; no NULL rows remain (verified 2026-08-19).
   methodology_version: string;
   exit_route_summary_json: string | null;
-}
+};
 
 function parseRouteSummary(json: string | null) {
   const raw = safeJsonParse<unknown>(json, null, "dex-liquidity-history:exit_route_summary_json");
@@ -54,13 +55,13 @@ export const handleDexLiquidityHistory = async (db: D1Database, url: URL): Promi
         return result.results ?? [];
       },
       mapRow: (row) => {
-        const coverageClass = row.coverage_class ?? "legacy";
-        const coverageConfidence = row.coverage_confidence ?? 0.5;
-        const { liquidityEvidenceClass, hasMeasuredLiquidityEvidence, trendworthy } = classifyLiquidityEvidence(
-          row.total_tvl_usd,
+        const {
           coverageClass,
           coverageConfidence,
-        );
+          liquidityEvidenceClass,
+          hasMeasuredLiquidityEvidence,
+          trendworthy,
+        } = normalizeDexLiquidityEvidence(row);
         return {
           tvl: row.total_tvl_usd,
           volume24h: row.total_volume_24h_usd,

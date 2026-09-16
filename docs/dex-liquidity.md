@@ -1,6 +1,6 @@
 # DEX Liquidity Score & Price Cross-Validation
 
-> **Agent navigation** — Grep the heading you need: Methodology Versioning · DEX Liquidity Score · Discovery Cron · DEX Price Cross-Validation.
+> **Agent navigation** — Grep the heading you need: Methodology Versioning · DEX Liquidity Score · Published chain-label casing · Discovery Cron · DEX Price Cross-Validation.
 
 ## Methodology Versioning
 
@@ -13,6 +13,9 @@
 ## DEX Liquidity Score
 
 Hourly full publication admits recovered quotes at the next `:16` instead of waiting for an even hour. Source requests and the `:46` reuse path keep their existing cadence. Full generation and active-target writes run twice as often; each uses the existing bounded persistence buffers and retention. Public history remains one reusable daily snapshot, not an hourly series. The reviewed DEX evidence maximum age remains four hours (`DEX_LIQUIDITY_EVIDENCE_MAX_AGE_SEC`), and measured-history high confidence remains three hours; operational cadence changes do not tighten those scoring bounds.
+### Published chain-label casing
+
+Persisted DEX rows use the canonical internal chain id from `canonicalExitRouteChain()` (lowercase registry/alias keys). The `chain_tvl_json` keys, `PoolEntry.chain`, and `top_pools_json` chain values therefore use one canonical casing per chain; aggregate stages must not re-lowercase or substitute display names. Presentation adapters map those ids to `CHAIN_META` display names only.
 
 Production runs the DEX source stage hourly and keeps the consumer's paired physical trigger shape. `sync-dex-liquidity-stage` loads external sources and writes the exact scoring input at `10 * * * *`. `sync-dex-liquidity` consumes that stage at `16 * * * *`, publishes DEX-implied prices hourly, and publishes the composite liquidity score (0-100), score history, and active measured-execution target inventory every hour. At `46 * * * *` it reuses the exact current liquidity generation for the dependent Safety Score V9 input preparation without rewriting DEX price, liquidity, history, or target surfaces. A missing current generation bootstraps with a full publication. The split invocation remains the only entrypoint: `stageDexLiquidityScoring()` followed by `consumeDexLiquidityScoringStage()`.
 

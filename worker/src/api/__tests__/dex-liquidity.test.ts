@@ -403,6 +403,36 @@ describe("handleDexLiquidity", () => {
     expect(coin).toHaveProperty("balanceMeasuredTvlUsd");
     expect(coin).toHaveProperty("organicMeasuredTvlUsd");
   });
+  it("uses the shared conservative default for null coverage", async () => {
+    const db = mockDexD1([
+      {
+        match: "dex_liquidity",
+        rows: [makeDexLiquidityRow({
+          coverage_class: null,
+          coverage_confidence: null,
+          effective_tvl_usd: null,
+          balance_measured_tvl_usd: null,
+          organic_measured_tvl_usd: null,
+        })],
+      },
+      { match: "dex_liquidity_history", rows: [] },
+      { match: "dex_prices", rows: [] },
+    ]);
+    const body = await readJsonResponse<Record<string, Record<string, unknown>>>(
+      await handleDexLiquidity(db),
+      200,
+    );
+    expect(body["usdt-tether"]).toMatchObject({
+      coverageClass: "legacy",
+      coverageConfidence: 0.5,
+      liquidityEvidenceClass: "observed_unmeasured",
+      hasMeasuredLiquidityEvidence: false,
+      trendworthy: false,
+      effectiveTvlUsd: 0,
+      balanceMeasuredTvlUsd: 0,
+      organicMeasuredTvlUsd: 0,
+    });
+  });
 
   it.each([
     [0, "fallback", 0.5, "observed_unmeasured", false],

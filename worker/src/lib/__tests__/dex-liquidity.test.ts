@@ -63,6 +63,7 @@ describe("loadDexLiquiditySnapshot", () => {
           coverageConfidence: 0.9,
           liquidityEvidenceClass: "measured",
           hasMeasuredLiquidityEvidence: true,
+          trendworthy: true,
           effectiveTvlUsd: 15_000_000,
           balanceMeasuredTvlUsd: 12_000_000,
           organicMeasuredTvlUsd: 9_000_000,
@@ -110,6 +111,14 @@ describe("loadDexLiquiditySnapshot", () => {
       concentrationHhi: null,
       poolCount: 1,
       chainCount: 1,
+      coverageClass: "legacy",
+      coverageConfidence: 0.5,
+      liquidityEvidenceClass: "observed_unmeasured",
+      hasMeasuredLiquidityEvidence: false,
+      trendworthy: false,
+      effectiveTvlUsd: 0,
+      balanceMeasuredTvlUsd: 0,
+      organicMeasuredTvlUsd: 0,
       methodologyVersion: "5.10",
     });
   });

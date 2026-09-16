@@ -1,4 +1,3 @@
-import { CHAIN_META } from "@shared/lib/chains";
 import { canonicalExitRouteAssetKey, canonicalExitRouteChain } from "@shared/lib/exit-route-identity";
 import type { LiquidityFallbackCounters, LiquidityMetrics, PoolEntry, PoolMeasurementFlags, GtNewPool, CgNewPool } from "./types";
 import {
@@ -11,10 +10,6 @@ import {
 import { STAGED_POOL_DEFAULTS } from "../dex-discovery/types";
 
 type SecondaryPool = GtNewPool | CgNewPool;
-
-function toChainDisplay(chain: string): string {
-  return CHAIN_META[canonicalExitRouteChain(chain)]?.name ?? chain;
-}
 
 export function addSecondaryPoolContribution(
   metrics: Map<string, LiquidityMetrics>,
@@ -30,7 +25,8 @@ export function addSecondaryPoolContribution(
     metrics.set(stablecoinId, m);
   }
 
-  const incomingPoolId = canonicalExitRouteAssetKey(pool.chain, pool.address);
+  const chain = canonicalExitRouteChain(pool.chain);
+  const incomingPoolId = canonicalExitRouteAssetKey(chain, pool.address);
   const existingPool = existingPoolsById
     ? existingPoolsById.get(incomingPoolId)
     : m.topPools.find((existing) => existing.poolId === incomingPoolId);
@@ -79,7 +75,6 @@ export function addSecondaryPoolContribution(
     hasMeasuredBalance,
   });
   const stressIndex = computePoolStress(balanceRatio, organicFraction, pool.maturityDays, pairQuality);
-  const chainDisplay = toChainDisplay(pool.chain);
   const protocol = normalizeProtocol(pool.dexId);
   const measurement: PoolMeasurementFlags | undefined = pool.measurement;
   const lockedLiquidityPct = "lockedLiquidityPct" in pool ? pool.lockedLiquidityPct : null;
@@ -97,7 +92,7 @@ export function addSecondaryPoolContribution(
     m.totalVolume7dMeasured = false;
   }
   m.poolCount++;
-  m.chains.add(chainDisplay);
+  m.chains.add(chain);
   m.pairs.add(pool.symbol);
   m.qualityAdjustedTvl += qualityAdjustedTvl;
   m.effectiveTvl += effectiveTvl;
@@ -115,12 +110,12 @@ export function addSecondaryPoolContribution(
   }
 
   m.protocolTvl[protocol] = (m.protocolTvl[protocol] ?? 0) + pool.tvlUsd;
-  m.chainTvl[chainDisplay] = (m.chainTvl[chainDisplay] ?? 0) + pool.tvlUsd;
+  m.chainTvl[chain] = (m.chainTvl[chain] ?? 0) + pool.tvlUsd;
 
   const poolEntry: PoolEntry = {
     poolId: incomingPoolId,
     project: protocol,
-    chain: chainDisplay,
+    chain,
     tvlUsd: pool.tvlUsd,
     symbol: pool.symbol,
     volumeUsd1d: pool.volume24hUsd,

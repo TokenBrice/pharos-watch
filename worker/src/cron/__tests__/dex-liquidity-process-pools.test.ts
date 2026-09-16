@@ -476,8 +476,8 @@ describe("processPoolMetrics", () => {
       sushiswap: 200_000,
     });
     expect(usdt?.chainTvl).toEqual({
-      Ethereum: 2_350_000,
-      Base: 300_000,
+      ethereum: 2_350_000,
+      base: 300_000,
     });
     expect(usdt?.totalTvlForBalance).toBe(1_750_000);
     expect(usdt?.organicTvlWeightedSum).toBe(900_000);
