@@ -88,10 +88,15 @@ export async function generateDailyDigest(
     return reportDigestMissingApiKey(reportProgress, "daily digest");
   }
 
-  // Check if latest digest is <1h old and valid (not a broken code-block response)
+  // Check if the latest publishable daily digest is <1h old and valid (not a broken code-block response)
   const latest = await db
     .prepare(
-      "SELECT generated_at, digest_text FROM daily_digest ORDER BY generated_at DESC LIMIT 1",
+      `SELECT generated_at, digest_text FROM daily_digest
+       WHERE (${NON_WEEKLY_DIGEST_SQL_FILTER})
+         AND (${NON_INTERNAL_DIGEST_SQL_FILTER})
+         AND (${NON_BLOCKED_DIGEST_SQL_FILTER})
+        ORDER BY generated_at DESC
+        LIMIT 1`,
     )
     .first<{ generated_at: number; digest_text: string }>();
 

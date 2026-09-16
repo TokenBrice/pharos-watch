@@ -396,6 +396,7 @@ export function classifyDigestChannelStatus(status: string): DigestChannelDispos
 
   if (
     status.startsWith("failed:")
+    || status === "pending"
     || status === "skipped: circuit-open"
     || status === "skipped: in-flight"
     || status === "skipped: stale-safety-identity"
