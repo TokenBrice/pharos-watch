@@ -110,7 +110,7 @@ describe("loadPriceValidationReferences", () => {
     vi.useRealTimers();
   });
 
-  it("returns fresh cached references within the freshness window", async () => {
+  it("keeps fresh cached references stale until source metadata is available", async () => {
     const nowSec = Math.floor(Date.now() / 1000);
     const db = mockD1([
       {
@@ -132,9 +132,9 @@ describe("loadPriceValidationReferences", () => {
 
     const result = await loadPriceValidationReferences(db);
 
-    expect(result.type).toBe("fresh");
+    expect(result.type).toBe("stale");
     expect(result.rates).toEqual({ peggedEUR: 1.08, peggedJPY: 0.0067 });
-    expect(result.typeByPeg).toMatchObject({ peggedEUR: "fresh", peggedJPY: "fresh" });
+    expect(result.typeByPeg).toMatchObject({ peggedEUR: "stale", peggedJPY: "stale" });
   });
 
   it("returns stale cached references after the freshness window", async () => {

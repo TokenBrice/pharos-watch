@@ -455,6 +455,7 @@ describe("fetchYamatoReserves", () => {
     expect(result.metadata?.redemption).not.toHaveProperty("capacityUsd");
     expect(result.metadata?.redemption).toMatchObject({ capacityRatioOfSupply: 0.325 });
     expect(result.warnings).toEqual([
+      expect.objectContaining({ code: "defillama-quote-missing" }),
       expect.objectContaining({ code: "yamato-eth-price-unavailable" }),
     ]);
   });

@@ -414,8 +414,9 @@ describe("pruneYieldTables retention", () => {
     expect(sqlite.prepare("SELECT recorded_at FROM yield_history").all()).toEqual([
       { recorded_at: nowSec - 10 * DAY_SECONDS },
     ]);
-    expect(sqlite.prepare("SELECT snapshot_date FROM yield_history_daily").all()).toEqual([
+    expect(sqlite.prepare("SELECT snapshot_date FROM yield_history_daily ORDER BY snapshot_date").all()).toEqual([
       { snapshot_date: nowSec - 100 * DAY_SECONDS },
+      { snapshot_date: Math.floor((nowSec - 40 * DAY_SECONDS) / DAY_SECONDS) * DAY_SECONDS },
     ]);
   });
 

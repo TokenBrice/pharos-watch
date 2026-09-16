@@ -366,11 +366,6 @@ describe("refreshD1TableGrowthSnapshot", () => {
     };
     const db = mockD1([
       {
-        match: "INSERT INTO cache (key, value, updated_at)",
-        rows: [],
-        runMeta: { changes: 0 },
-      },
-      {
         match: "SELECT value, updated_at FROM cache WHERE key = ?",
         matchBinds: [D1_TABLE_GROWTH_SNAPSHOT_CACHE_KEY],
         rows: [{

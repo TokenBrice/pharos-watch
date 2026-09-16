@@ -217,7 +217,7 @@ describe("collectConfirmationEvidence recover and opposing classification", () =
     const evidence = await collect(noOffchain({ dexPriceRows: dexRows(NOW_SEC - 30, 0.997), dexPriceSources: dexSources(NOW_SEC - 30, 0.997) }));
     expect(evidence.dexStatus).toBe("recover");
     expect(evidence.opposingSources).toEqual(expect.arrayContaining(["dex:curve", "dex:uniswap"]));
-    expect(evidence.hardOpposingSources).toEqual(expect.arrayContaining(["dex:curve", "dex:uniswap"]));
+    expect(evidence.hardOpposingSources).toEqual(expect.arrayContaining(["dex-family:curve", "dex-family:uniswap"]));
     expect(evidence.confirmingSources).toEqual([]);
     expect(evidence.dexConfirmationKeys).toEqual([]);
   });

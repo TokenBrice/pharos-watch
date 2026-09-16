@@ -237,7 +237,7 @@ describe("enrichRowBalances", () => {
     expect(rows[0].amount_usd_at_event).toBe(12.5);
   });
 
-  it("marks runtime budget exhaustion without provider calls", async () => {
+  it("leaves rows retryable when the runtime budget is exhausted without provider calls", async () => {
     const rows = [makeRow()];
     const limiter = async () => {
       throw new Error("provider should not be called");
@@ -252,8 +252,9 @@ describe("enrichRowBalances", () => {
     });
 
     expect(result).toEqual({ attempted: 0, succeeded: 0, failed: 0 });
-    expect(rows[0].amount_last_error_class).toBe("runtime_budget");
-    expect(rows[0].amount_last_provider).toBe("none");
+    expect(rows[0].amount_attempt_count).toBe(0);
+    expect(rows[0].amount_last_error_class).toBeNull();
+    expect(rows[0].amount_last_provider).toBeNull();
   });
 
   it("rethrows provider aborts instead of marking amount recovery as failed", async () => {
