@@ -4,6 +4,7 @@ import { readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { DatabaseSync } from "node:sqlite";
+import { z } from "zod";
 import { runCliEntrypoint, writeCliHelpIfRequested } from "../../scripts/lib/cli-args.mjs";
 import { parseYieldHistoryWriterPause, YIELD_HISTORY_CLEANUP_WRITER_PAUSE_KEY } from "../src/lib/yield-history-cleanup";
 import {
@@ -95,6 +96,39 @@ export interface YieldHistoryCleanupArtifact {
   rows: YieldHistoryCleanupRow[];
 }
 
+const nullableFiniteNumber = z.number().finite().nullable();
+const yieldHistoryCleanupRowSchema = z.object({
+  stablecoin_id: z.string(),
+  source_key: z.string().nullable(),
+  recorded_at: z.number().finite(),
+  is_best: z.number().finite(),
+  apy: z.number().finite(),
+  apy_base: nullableFiniteNumber,
+  apy_reward: nullableFiniteNumber,
+  exchange_rate: nullableFiniteNumber,
+  source_tvl_usd: nullableFiniteNumber,
+  data_source: z.string(),
+  warning_signals: z.string().nullable(),
+  yield_source: z.string().nullable(),
+  yield_type: z.string().nullable(),
+  publication_generation_id: z.string().nullable(),
+  publication_state: z.string().nullable(),
+  pys_at_publish: nullableFiniteNumber,
+  safety_at_publish: nullableFiniteNumber,
+  variance_at_publish: nullableFiniteNumber,
+  pys_inputs_at_publish: z.string().nullable(),
+}).strict();
+const yieldHistoryCleanupArtifactSchema = z.object({
+  generatedAt: z.number().finite(),
+  operator: z.string().nullable(),
+  targets: z.array(z.object({
+    stablecoinId: z.string(),
+    sourceKeys: z.array(z.string()),
+  }).strict()),
+  rowCount: z.number().int().nonnegative(),
+  rows: z.array(yieldHistoryCleanupRowSchema),
+}).strict();
+
 export interface YieldHistoryCleanupSummary {
   totalRows: number;
   byStablecoin: Record<string, number>;
@@ -127,6 +161,20 @@ function listYieldHistoryCleanupTargets(): YieldHistoryCleanupTarget[] {
   }));
 }
 
+export function parseYieldHistoryCleanupArtifact(value: unknown): YieldHistoryCleanupArtifact {
+  const artifact = yieldHistoryCleanupArtifactSchema.parse(value);
+  const expectedTargets = listYieldHistoryCleanupTargets();
+  if (JSON.stringify(artifact.targets) !== JSON.stringify(expectedTargets)) {
+    throw new Error("Cleanup artifact targets do not match current yield-history ownership handoffs");
+  }
+  if (artifact.rowCount !== artifact.rows.length) {
+    throw new Error(
+      `Cleanup artifact rowCount ${artifact.rowCount} does not match rows length ${artifact.rows.length}`,
+    );
+  }
+  return artifact;
+}
+
 function buildYieldHistoryWriterPausePayload(
   reason = SCRIPT_NAME,
   operator: string | null = null,
@@ -141,7 +189,10 @@ function buildYieldHistoryWriterPausePayload(
 
 function sqlValue(value: unknown): string {
   if (value == null) return "NULL";
-  if (typeof value === "number") return Number.isFinite(value) ? String(value) : "NULL";
+  if (typeof value === "number") {
+    if (!Number.isFinite(value)) throw new Error("Refusing to serialize a non-finite SQL number");
+    return String(value);
+  }
   return sqlString(String(value));
 }
 
@@ -455,6 +506,7 @@ export async function runYieldHistoryCleanupCli(
   }
 
   if (restorePath) {
+    const artifact = parseYieldHistoryCleanupArtifact(JSON.parse(readFileSync(restorePath, "utf8")));
     if (!sqlitePath) {
       if (!execute) {
         throw new Error("Refusing remote restore without --execute");
@@ -468,7 +520,6 @@ export async function runYieldHistoryCleanupCli(
       }
     }
 
-    const artifact = JSON.parse(readFileSync(restorePath, "utf8")) as YieldHistoryCleanupArtifact;
     if (sqlitePath) {
       restoreCleanupRowsToSqlite(sqlitePath, artifact.rows);
       writeJson({

@@ -1,7 +1,13 @@
 import { runOperatorCli } from "./operator-cli.test-support";
+import { DatabaseSync } from "node:sqlite";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
-import { parseArgs } from "../rebuild-blacklist-current-balances";
+import {
+  assertBlacklistRebuildFailureRate,
+  assertBlacklistRebuildWriterGuard,
+  buildCurrentBalanceMutationStatements,
+  parseArgs,
+} from "../rebuild-blacklist-current-balances";
 
 const SCRIPT_NAME = "rebuild-blacklist-current-balances";
 
@@ -14,6 +20,7 @@ describe("rebuild blacklist current balances script args", () => {
       remote: false,
     });
     expect(() => parseArgs(["--execute"])).toThrow(/live mutation requires/);
+    expect(parseArgs(["--force"])).toMatchObject({ dryRun: true, force: true });
   });
 
   it("parses numeric flags as positive integers", () => {
@@ -49,6 +56,77 @@ describe("rebuild blacklist current balances script args", () => {
     expect(() => parseArgs(["--local", "--remote"])).toThrow(/mutually exclusive/);
     expect(() => parseArgs(["--execute", "--dry-run"])).toThrow(/mutually exclusive/);
     expect(() => parseArgs(["tron"])).toThrow(/Unexpected argument/);
+  });
+
+  it("preserves resolved amounts when a provider failure is rebuilt", () => {
+    const db = new DatabaseSync(":memory:");
+    try {
+      db.exec(`
+        CREATE TABLE blacklist_current_balances (
+          id TEXT PRIMARY KEY,
+          stablecoin TEXT NOT NULL,
+          chain_id TEXT NOT NULL,
+          address TEXT NOT NULL,
+          amount_native REAL,
+          amount_usd REAL,
+          source TEXT NOT NULL,
+          status TEXT NOT NULL,
+          observed_at INTEGER NOT NULL,
+          attempt_count INTEGER NOT NULL,
+          last_attempted_at INTEGER,
+          last_error_class TEXT
+        );
+        INSERT INTO blacklist_current_balances VALUES
+          ('USDT:tron:TExisting', 'USDT', 'tron', 'TExisting', 12.5, 12.5, 'current_balance', 'resolved', 100, 3, 100, NULL);
+      `);
+      const statements = buildCurrentBalanceMutationStatements("USDT", "tron", [{
+        id: "USDT:tron:TExisting",
+        stablecoin: "USDT",
+        chainId: "tron",
+        address: "TExisting",
+        amountNative: null,
+        amountUsd: null,
+        source: "current_balance",
+        status: "provider_failed",
+        observedAt: 200,
+        attemptCount: 1,
+        lastAttemptedAt: 200,
+        lastErrorClass: "HTTP 500",
+      }]);
+
+      db.exec(statements.join("\n"));
+
+      expect(db.prepare(
+        "SELECT amount_native, amount_usd, source, status, observed_at, attempt_count FROM blacklist_current_balances",
+      ).get()).toEqual({
+        amount_native: 12.5,
+        amount_usd: 12.5,
+        source: "current_balance",
+        status: "provider_failed",
+        observed_at: 100,
+        attempt_count: 4,
+      });
+    } finally {
+      db.close();
+    }
+  });
+
+  it("fails closed on excessive provider failures unless force is explicit", () => {
+    expect(() => assertBlacklistRebuildFailureRate(2, 10, false)).toThrow(/Refusing rebuild/);
+    expect(() => assertBlacklistRebuildFailureRate(2, 10, true)).not.toThrow();
+    expect(() => assertBlacklistRebuildFailureRate(1, 10, false)).not.toThrow();
+  });
+
+  it("requires the writer pause and rejects an active sync-blacklist lease", () => {
+    expect(() => assertBlacklistRebuildWriterGuard({
+      query: (sql: string) => sql.includes("FROM cache") ? [{ paused: 1 }] : [{ lease_until: 1_001 }],
+    } as never, 1_000)).toThrow(/sync-blacklist lease is active/);
+    expect(() => assertBlacklistRebuildWriterGuard({
+      query: () => [],
+    } as never, 1_000)).toThrow(/writer pause is not armed/);
+    expect(() => assertBlacklistRebuildWriterGuard({
+      query: (sql: string) => sql.includes("FROM cache") ? [{ paused: 1 }] : [{ lease_until: 999 }],
+    } as never, 1_000)).not.toThrow();
   });
 
   it("[entrypoint integration] prints help with exit 0 and reports usage mistakes with exit 2", async () => {
