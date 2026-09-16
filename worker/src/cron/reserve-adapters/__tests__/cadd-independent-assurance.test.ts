@@ -15,8 +15,8 @@ const TEST_DIR = dirname(fileURLToPath(import.meta.url));
 const PDF_BYTES = new TextEncoder().encode("%PDF-1.7\nfixture\n");
 const INDEX_HOST = "tetradg.com";
 const REPORT_HOSTS = ["drive.google.com", "drive.usercontent.google.com"];
-const AUGUST_ANCHOR =
-  '<li data-section-id="mpyslq"><a href="https://drive.google.com/file/d/1AugFailsClosedPlaceholderID/view?usp=sharing" target="_blank" rel="noopener">August 2026 attestation</a></li>';
+const SEPTEMBER_ANCHOR =
+  '<li data-section-id="mpyslq"><a href="https://drive.google.com/file/d/1SepFailsClosedPlaceholderID/view?usp=sharing" target="_blank" rel="noopener">September 2026 attestation</a></li>';
 
 
 function indexFixture(): string {
@@ -60,27 +60,27 @@ describe("cadd-independent-assurance (Baker Tilly CSAE 3000)", () => {
     vi.restoreAllMocks();
   });
 
-  it("reviews the July 31 2026 reasonable assurance report and reconciles CAD circulation across Base, Tempo and Ethereum", () => {
+  it("reviews the August 31 2026 reasonable assurance report and reconciles CAD circulation across Base, Tempo and Ethereum", () => {
     const manifest = getIndependentAssuranceManifest("CADD");
     expect(manifest.assuranceTier).toBe("independent-assurance");
     expect(manifest.conclusion).toBe("unmodified");
     expect(manifest.attestor).toBe("Baker Tilly WM LLP");
-    expect(manifest.reportAsOf).toBe("2026-07-31T23:59:00Z");
+    expect(manifest.reportAsOf).toBe("2026-08-31T23:59:00Z");
     expect(reconcileIndependentAssuranceManifest(manifest)).toMatchObject({
-      computedAssetTotal: "1194448.5",
-      liabilityTotal: "1188399.38",
+      computedAssetTotal: "1207253.18",
+      liabilityTotal: "1207019.18",
       reportedAssetDifference: "0",
       reportedLiabilityDifference: "0",
     });
     expect(manifest.assets).toEqual([
-      { code: "cad-cash", label: "Canadian Dollar Cash", amount: "1194448.5" },
+      { code: "cad-cash", label: "Canadian Dollar Cash", amount: "1207253.18" },
     ]);
     expect(manifest.liabilities).toHaveLength(1);
     const liability = manifest.liabilities[0];
     for (const chain of ["Base", "Tempo", "Ethereum"]) {
       expect(liability.label).toContain(chain);
     }
-    expect(liability.amount).toBe("1188399.38");
+    expect(liability.amount).toBe("1207019.18");
   });
 
   it("declares the independent / independent-assurance descriptor", () => {
@@ -104,6 +104,7 @@ describe("cadd-independent-assurance (Baker Tilly CSAE 3000)", () => {
     const date = CADD_INDEPENDENT_ASSURANCE_PROFILE.reportDateFromCandidate!;
     expect(date("", "June 2026 attestation")).toBe("2026-06-30");
     expect(date("", "July 2026 attestation")).toBe("2026-07-31");
+    expect(date("", "August 2026 attestation")).toBe("2026-08-31");
     expect(date("", "Daily Reserve Ratio Reports")).toBeNull();
     expect(
       CADD_INDEPENDENT_ASSURANCE_PROFILE.isReportCandidate(
@@ -127,7 +128,7 @@ describe("cadd-independent-assurance (Baker Tilly CSAE 3000)", () => {
   });
 
   it("fails closed when a newer unreviewed attestation appears on the index", async () => {
-    const html = indexFixture() + AUGUST_ANCHOR;
+    const html = indexFixture() + SEPTEMBER_ANCHOR;
     installFetch(html);
     await expect(verifyIndex()).rejects.toThrow("newer unreviewed report");
   });
