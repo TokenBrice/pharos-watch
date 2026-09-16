@@ -1,5 +1,13 @@
 import { describe, it, expect } from "vitest";
-import { getDewsRiskLevel } from "../risk";
+import { getDewsRiskLevel, isThreatBand } from "../risk";
+
+const PROTOTYPE_KEYS = ["toString", "constructor"] as const;
+
+describe("isThreatBand", () => {
+  it.each(PROTOTYPE_KEYS)("rejects inherited prototype key %s", (value) => {
+    expect(isThreatBand(value)).toBe(false);
+  });
+});
 
 describe("getDewsRiskLevel", () => {
   // DewsRiskLevel is a 2-tier collapse below ALERT: WATCH has no level of its

@@ -59,7 +59,7 @@ export const THREAT_BAND_ORDER = projectThreatBands((descriptor) => descriptor.o
 const DEWS_ALERT_BANDS = ["ALERT", "WARNING", "DANGER"] as const satisfies readonly ThreatBand[];
 
 export function isThreatBand(value: string): value is ThreatBand {
-  return value in THREAT_BAND_ORDER;
+  return Object.hasOwn(THREAT_BAND_ORDER, value);
 }
 
 export function isDewsAlertBand(value: string): value is (typeof DEWS_ALERT_BANDS)[number] {
