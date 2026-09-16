@@ -15,6 +15,7 @@ import {
   parseBoundedDecimals,
   parseTimestampLikeToUnixSeconds,
   requireJsonInput,
+  reserveDegradedWarning,
 } from "./helpers";
 
 const ADAPTER_KEY = "jupusd";
@@ -100,12 +101,12 @@ async function fetchJupUsdJson<T>(
   }
 }
 
-function parseAmount(amount: string | undefined, decimals: number | undefined): number {
-  if (typeof amount !== "string" || !/^\d+$/.test(amount)) return 0;
+function parseAmount(amount: string | undefined, decimals: number | undefined): number | null {
+  if (typeof amount !== "string" || !/^\d+$/.test(amount)) return null;
   const precision = decimals == null ? 0 : parseBoundedDecimals(decimals);
-  if (precision == null) return 0;
+  if (precision == null) return null;
   const parsed = decimalNumberFromBigInt(BigInt(amount), precision);
-  return Number.isFinite(parsed) && parsed > 0 ? parsed : 0;
+  return Number.isFinite(parsed) && parsed >= 0 ? parsed : null;
 }
 
 function resolveHoldingMeta(name: string): Pick<JupUsdHoldingValue, "risk" | "coinId" | "depType" | "unknown"> {
@@ -122,12 +123,20 @@ export function adaptJupUsdData(
 ): AdapterResult {
   const values = new Map<string, JupUsdHoldingValue>();
   const unknownHoldingNames = new Set<string>();
+  const warnings: LiveReserveWarning[] = [];
   let unknownValue = 0;
-  for (const holding of payload.holdings ?? []) {
+  for (const [holdingIndex, holding] of (payload.holdings ?? []).entries()) {
     const name = typeof holding.name === "string" && holding.name.trim().length > 0
       ? holding.name.trim()
       : "Unmapped reserve holding";
     const value = parseAmount(holding.amount, holding.decimals);
+    if (value == null) {
+      warnings.push(reserveDegradedWarning(
+        "unparseable-holding",
+        `JupUSD holding ${holdingIndex} (${name}) has an unparseable amount or decimal scale`,
+      ));
+      continue;
+    }
     if (value <= 0) continue;
     const current = values.get(name);
     const meta = resolveHoldingMeta(name);
@@ -156,7 +165,7 @@ export function adaptJupUsdData(
     ? (options.oracle.ripcordDetails || "JupUSD oracle reports ripcord mode")
     : undefined;
   const totalSupply = parseAmount(payload.totalSupply, 6);
-  if (totalSupply <= 0) {
+  if (totalSupply == null || totalSupply <= 0) {
     throw new Error("jupusd missing or invalid totalSupply");
   }
   // True assets ÷ liability: never clamped, so genuine overcollateralization
@@ -166,7 +175,6 @@ export function adaptJupUsdData(
   const capacityUsd = Math.min(totalReserveUsd, totalSupply);
   const ratio = capacityUsd / totalSupply;
   const unknownExposurePct = totalReserveUsd > 0 ? (unknownValue / totalReserveUsd) * 100 : 0;
-  const warnings: LiveReserveWarning[] = [];
   if (unknownValue > 0) {
     warnings.push(buildUnknownExposureWarning({ adapterKey: "jupusd", code: "unknown-holding",
     message: `JupUSD reserve feed included unmapped holding(s): ${Array.from(unknownHoldingNames).sort().join(", ")}`,

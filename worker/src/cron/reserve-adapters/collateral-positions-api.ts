@@ -178,9 +178,9 @@ function inferDepType(symbol: string): ReserveSlice["depType"] | undefined {
   return getProtocolAssetConfig(symbol)?.depType;
 }
 
-function parseCollateralBalance(raw: string | undefined, decimals: number): bigint {
-  if (typeof raw !== "string" || !/^\d+$/.test(raw)) return 0n;
-  if (parseBoundedDecimals(decimals) == null) return 0n;
+function parseCollateralBalance(raw: string | undefined, decimals: number): bigint | null {
+  if (typeof raw !== "string" || !/^\d+$/.test(raw)) return null;
+  if (parseBoundedDecimals(decimals) == null) return null;
   return BigInt(raw);
 }
 
@@ -207,16 +207,22 @@ export function adaptCollateralPositions(
   const priceTimestamps: unknown[] = [];
 
   for (const entry of Object.values(details)) {
-    const totalBalance = entry.positions.reduce((acc, position) => {
-      if (position.closed || position.denied) return acc;
-      return acc + parseCollateralBalance(position.collateralBalance, entry.decimals);
-    }, 0n);
+    let totalBalance = 0n;
+    for (const [positionIndex, position] of entry.positions.entries()) {
+      if (position.closed || position.denied) continue;
+      const balance = parseCollateralBalance(position.collateralBalance, entry.decimals);
+      if (balance == null) {
+        warnings.push(reserveDegradedWarning(
+          "unparseable-collateral-balance",
+          `Unparseable ${entry.symbol} collateral balance at position ${positionIndex}`,
+        ));
+        continue;
+      }
+      totalBalance += balance;
+      if (balance > 0n) activePositionCount += 1;
+    }
 
     if (totalBalance <= 0n) continue;
-    activePositionCount += entry.positions.filter((position) => {
-      if (position.closed || position.denied) return false;
-      return parseCollateralBalance(position.collateralBalance, entry.decimals) > 0n;
-    }).length;
 
     const priceInfo = prices[entry.address.toLowerCase()];
     const usdPrice = priceInfo?.price?.usd;
@@ -267,10 +273,18 @@ export function adaptCollateralPositions(
   let mintedUsd = 0;
   let mintedCoverageComplete = true;
   for (const entry of Object.values(details)) {
-    for (const position of entry.positions) {
-      if (position.closed || position.denied) continue;
+    for (const [positionIndex, position] of entry.positions.entries()) {
+      if (position.closed || position.denied || position.minted == null) continue;
       const mintedDecimals = position.zchfDecimals ?? entry.decimals;
       const mintedRaw = parseCollateralBalance(position.minted, mintedDecimals);
+      if (mintedRaw == null) {
+        mintedCoverageComplete = false;
+        warnings.push(reserveDegradedWarning(
+          "unparseable-minted-balance",
+          `Unparseable ${entry.symbol} minted liability at position ${positionIndex}`,
+        ));
+        continue;
+      }
       if (mintedRaw <= 0n) continue;
       const mintedPrice = position.zchf
         ? prices[position.zchf.toLowerCase()]?.price?.usd
@@ -338,7 +352,7 @@ export function adaptCollateralPositions(
       collateralAssetCount: Object.keys(details).length,
       activePositionCount,
       missingPriceCount: missingPriceSymbols.size,
-      unknownAssetCount: warnings.length,
+      unknownAssetCount: unknownValues.length,
       unknownExposurePct: total > 0 ? (unknownExposureUsd / total) * 100 : 0,
       totalReserveUsd: total,
       ...(mintedUsd > 0 && mintedCoverageComplete
