@@ -10,6 +10,7 @@
  */
 
 import { formatLongDate, formatShortDate } from "@shared/lib/format";
+import { isRecord } from "@shared/lib/type-guards";
 import type { DigestArchiveEntry, DigestForwardLookOutcome, DigestNextTrigger } from "@shared/types/digest";
 
 /** Inline style for body text — Courier italic for raw intel aesthetic */
@@ -141,10 +142,6 @@ const DIGEST_TRIGGER_CLASS_ALIASES: Record<string, DigestNextTrigger["metric"]> 
   liquidity: "liquidity-score",
   "liquidity-score": "liquidity-score",
 };
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null;
-}
 
 function normalizeDigestTriggerMetric(value: unknown): DigestNextTrigger["metric"] | null {
   if (typeof value !== "string") return null;

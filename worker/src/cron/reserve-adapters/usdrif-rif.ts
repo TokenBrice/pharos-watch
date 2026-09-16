@@ -1,4 +1,5 @@
 import { parseLiveReserveAdapterParams, type LiveReserveAdapterParamsByKey } from "@shared/lib/live-reserve-adapters";
+import { toTokenUnits } from "@shared/lib/math";
 import type { StablecoinMeta } from "@shared/types/core";
 import type { LiveReserveWarning, LiveReservesConfig } from "@shared/types/live-reserves";
 import { encodeAddress, encodeUint256 } from "../../lib/evm-selectors";
@@ -184,8 +185,8 @@ function percentDifference(left: number, right: number): number {
 }
 
 function decimal(raw: bigint, decimals: number, label: string): number {
-  const value = Number(raw) / 10 ** decimals;
-  if (!Number.isFinite(value) || value < 0) throw new Error(`${ADAPTER_KEY}: ${label} is not safely representable`);
+  const value = raw === 0n ? 0 : toTokenUnits(raw, decimals);
+  if (value == null) throw new Error(`${ADAPTER_KEY}: ${label} is not safely representable`);
   return value;
 }
 

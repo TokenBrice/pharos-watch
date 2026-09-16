@@ -3,6 +3,7 @@ import {
   type LiveReserveAdapterParamsByKey,
 } from "@shared/lib/live-reserve-adapters";
 import { getCirculatingRaw } from "@shared/lib/supply";
+import { toTokenUnits } from "@shared/lib/math";
 import type { StablecoinMeta } from "@shared/types/core";
 import type { LiveReserveWarning, LiveReservesConfig } from "@shared/types/live-reserves";
 import { hasUsableStablecoinsPayload, loadStablecoinsCache } from "../../lib/stablecoins-cache";
@@ -60,8 +61,8 @@ function sumUnitQuantity(utxos: KoiosUtxo[], unit: { policyId: string; assetName
 }
 
 function decimalUnits(raw: bigint, decimals: number): number {
-  const units = Number(raw) / 10 ** decimals;
-  if (!Number.isFinite(units) || units < 0) {
+  const units = raw === 0n ? 0 : toTokenUnits(raw, decimals);
+  if (units == null) {
     throw new Error(`${ADAPTER_KEY}: unit conversion overflow for ${raw.toString()}`);
   }
   return units;

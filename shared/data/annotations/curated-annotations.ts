@@ -7,6 +7,7 @@
  * in the JSON assets and are intentionally not added to runtime annotations.
  */
 import canonicalOrderAsset from "../stablecoins/canonical-order.json";
+import { isRecord } from "@shared/lib/type-guards";
 import {
   CHART_ANNOTATION_KINDS,
   type ChartAnnotation,
@@ -333,10 +334,6 @@ const ISO_UTC_RE = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{1,3})?Z$/;
 
 function invalid(coinId: string, index: number, message: string): never {
   throw new Error('Invalid curated annotation ' + coinId + '[' + index + ']: ' + message);
-}
-
-function isRecord(value: unknown): value is CuratedAnnotationSource {
-  return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
 function toTimestamp(value: unknown, coinId: string, index: number): number {

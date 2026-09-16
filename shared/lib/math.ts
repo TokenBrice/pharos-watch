@@ -1,5 +1,12 @@
 export const BPS_PER_UNIT = 10_000;
 
+/** Convert a positive raw token amount to finite token units, or null when invalid. */
+export function toTokenUnits(raw: bigint, decimals: number): number | null {
+  if (!Number.isInteger(decimals) || decimals < 0 || decimals > 36 || raw <= 0n) return null;
+  const amount = Number(raw) / 10 ** decimals;
+  return Number.isFinite(amount) && amount > 0 ? amount : null;
+}
+
 /** Clamp a number to [min, max]. NaN → min, ±Infinity → nearest bound. */
 export function clamp(value: number, min: number, max: number): number {
   if (!Number.isFinite(value)) {
