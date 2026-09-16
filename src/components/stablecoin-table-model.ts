@@ -164,7 +164,6 @@ export function useStablecoinTableRows({
   searchQuery,
   sort,
   renderedSet,
-  pegRates,
   pegScores,
   dexLiquidity,
   pinnedStablecoinIds,
@@ -181,7 +180,6 @@ export function useStablecoinTableRows({
   searchQuery?: string;
   sort: StablecoinTableSort;
   renderedSet: ReadonlySet<ColumnId>;
-  pegRates: Record<string, number>;
   pegScores?: Map<string, PegSummaryCoin>;
   dexLiquidity?: DexLiquidityMap;
   pinnedStablecoinIds: readonly string[];
@@ -203,12 +201,11 @@ export function useStablecoinTableRows({
         filtered,
         sort,
         effectiveSortKey,
-        pegRates,
         pegScores,
         dexLiquidity,
         reportCards,
       }),
-    [dexLiquidity, effectiveSortKey, filtered, pegRates, pegScores, reportCards, sort],
+    [dexLiquidity, effectiveSortKey, filtered, pegScores, reportCards, sort],
   );
   const displayed = useMemo(
     () => prioritizePinnedStablecoins(sorted, pinnedStablecoinIds),

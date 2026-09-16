@@ -81,7 +81,6 @@ describe("SelectorResultSummary", () => {
           filterChips: [{ label: "DEWS", value: "60 max" }],
           answerChips: [{ key: "peg", label: "Peg", value: "USD" }],
           priorityLabels: ["Safety", "Resilience", "Dependency Risk"],
-          sessionRecovery: { message: "A previous Selector result is available.", onRestore: vi.fn() },
         })}
       />,
     );
@@ -230,23 +229,20 @@ describe("SelectorSnapshotBanner", () => {
     expect(screen.queryByText("Unverified client snapshot")).toBeNull();
   });
 
-  it("renders snapshot comparison deltas with aria-busy loading support", () => {
+  it("keeps current-data comparison behind the single snapshot action", () => {
+    const onCompareToToday = vi.fn();
+
     render(
       <SelectorSnapshotBanner
         mode="frozen"
         capturedAt={1_700_000_000_000}
-        comparison={{
-          status: "changed",
-          summary: "Rank order changed against current data.",
-          deltas: [{ label: "USDC rank", previous: 1, current: 2 }],
-        }}
+        onCompareToToday={onCompareToToday}
       />,
     );
 
-    expect(screen.getByText(/Rank order changed/i)).toBeTruthy();
-    expect(screen.getByText("Unverified client snapshot")).toBeTruthy();
-    expect(screen.getByText(/did not reproduce its scores from canonical source data/i)).toBeTruthy();
-    expect(screen.getByText(/USDC rank/i)).toBeTruthy();
-    expect(screen.getByText(/1 → 2/i)).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: /Compare to today/i }));
+
+    expect(onCompareToToday).toHaveBeenCalledOnce();
+    expect(screen.queryByText(/snapshot differs from today's data/i)).toBeNull();
   });
 });

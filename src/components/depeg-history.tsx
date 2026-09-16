@@ -90,10 +90,10 @@ export function DepegHistory({
   const meta = TRACKED_STABLECOINS.find((s) => s.id === stablecoinId);
   const pegCurrency = meta?.flags.pegCurrency ?? "USD";
   const events = data?.events ?? EMPTY_EVENTS;
-  const totalIncidents = data?.counts?.incidents ?? data?.total ?? events.length;
-  const thresholdCrossings = data?.counts?.thresholdCrossings ?? (
-    isFullyLoaded ? events.reduce((sum, event) => sum + (event.constituentEventCount ?? 1), 0) : null
-  );
+  const totalIncidents = data?.total ?? events.length;
+  const thresholdCrossings = isFullyLoaded
+    ? events.reduce((sum, event) => sum + (event.constituentEventCount ?? 1), 0)
+    : null;
   const sorted = useMemo(() => sortEvents(events), [events]);
   const metrics = isFullyLoaded ? computePegStability(sorted, earliestTrackingDate ?? null) : null;
   const worstDeviationBps = metrics?.worstDeviationBps ?? null;

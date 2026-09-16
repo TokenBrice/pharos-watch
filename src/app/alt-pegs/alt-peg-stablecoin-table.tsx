@@ -39,7 +39,6 @@ interface AltPegStablecoinTableProps {
   data: StablecoinData[] | undefined;
   isLoading: boolean;
   logos?: Record<string, string>;
-  pegRates?: Record<string, number>;
   pegScores?: Map<string, PegSummaryCoin>;
   dexLiquidity?: DexLiquidityMap;
   reportCards?: Record<string, V9SafetyTableRow>;
@@ -49,7 +48,6 @@ export function AltPegStablecoinTable({
   data,
   isLoading,
   logos,
-  pegRates,
   pegScores,
   dexLiquidity,
   reportCards,
@@ -105,7 +103,6 @@ export function AltPegStablecoinTable({
         isLoading={isLoading}
         activeFilters={EMPTY_FILTERS}
         logos={logos}
-        pegRates={pegRates}
         pegScores={pegScores}
         dexLiquidity={dexLiquidity}
         reportCards={reportCards}

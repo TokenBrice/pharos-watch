@@ -305,7 +305,6 @@ export async function apiFetchWithMeta<T>(
   path: string,
   schema?: SchemaLike<T>,
   init?: RequestInit,
-  _maxAgeSec = 900,
   contractMode?: ApiContractMode,
   requestOptions?: ApiRequestOptions,
 ): Promise<{ data: T; meta: ApiMeta | null }> {

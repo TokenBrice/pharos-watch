@@ -1,5 +1,4 @@
 import { API_PATHS } from "@shared/lib/api-endpoints/paths";
-import { API_FRESHNESS_MAX_AGE_SEC } from "@shared/lib/api-freshness";
 import { isFiniteNumber, isRecord } from "@shared/lib/type-guards";
 import type { StabilityIndexResponse } from "@shared/types/stability";
 import { CRON_STABILITY_INDEX } from "@/lib/cron-intervals";
@@ -66,7 +65,6 @@ export const STABILITY_INDEX_QUERY_DESCRIPTOR = defineApiQuery(
     queryKey: ["stability-index"] as const,
     path: API_PATHS.stabilityIndex(),
     producerIntervalMs: CRON_STABILITY_INDEX,
-    metaMaxAgeSec: API_FRESHNESS_MAX_AGE_SEC.stabilityIndex,
   },
   "meta",
   StabilityIndexLightResponseSchema,

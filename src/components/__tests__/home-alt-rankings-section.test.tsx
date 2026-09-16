@@ -66,7 +66,6 @@ vi.mock("@/hooks/use-pinned-stablecoins", () => ({
 
 vi.mock("@/components/homepage-client-view-model", () => ({
   buildHomepageCriticalViewModel: () => ({
-    pegRates: {},
     pegScores: new Map(),
     filteredRowCount: 392,
   }),

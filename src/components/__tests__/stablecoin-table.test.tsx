@@ -130,7 +130,6 @@ describe("StablecoinTable", () => {
   it("normalizes persisted column visibility from localStorage", async () => {
     localStorage.setItem("pharos-table-columns", JSON.stringify(["mcap", "bogus"]));
 
-    render(<StablecoinTable data={[coin]} isLoading={false} activeFilters={[]} pegRates={{}} />);
 
     await waitFor(() => {
       expect(screen.getByText("Market Cap")).toBeTruthy();
@@ -164,7 +163,6 @@ describe("StablecoinTable", () => {
         data={[coin]}
         isLoading={false}
         activeFilters={[]}
-        pegRates={{}}
         reportCards={reportCards}
       />,
     );
@@ -186,7 +184,6 @@ describe("StablecoinTable", () => {
         data={[coin]}
         isLoading={false}
         activeFilters={[]}
-        pegRates={{}}
         reportCards={reportCards}
       />,
     );
@@ -198,7 +195,6 @@ describe("StablecoinTable", () => {
   });
 
   it("keeps horizontal scrolling enabled on the table viewport", () => {
-    render(<StablecoinTable data={[coin]} isLoading={false} activeFilters={[]} pegRates={{}} />);
 
     const table = screen.getAllByRole("table")[0];
     const shell = screen.getByTestId("stablecoin-overview-table");
@@ -218,7 +214,6 @@ describe("StablecoinTable", () => {
   });
 
   it("sizes the table to the visible columns so fixed-layout cells never squeeze below content width", () => {
-    render(<StablecoinTable data={[coin]} isLoading={false} activeFilters={[]} pegRates={{}} />);
 
     const table = screen.getAllByRole("table")[0] as HTMLTableElement;
     const scrollContainer = table?.parentElement;
@@ -237,7 +232,6 @@ describe("StablecoinTable", () => {
         data={[coin]}
         isLoading={false}
         activeFilters={[]}
-        pegRates={{}}
         initialVisibleColumns={ALL_COLUMNS.map((column) => column.id)}
       />,
     );
@@ -251,7 +245,6 @@ describe("StablecoinTable", () => {
         data={[coin]}
         isLoading={false}
         activeFilters={[]}
-        pegRates={{}}
         showHeaderMethodologyHints={false}
       />,
     );
@@ -272,7 +265,6 @@ describe("StablecoinTable", () => {
         data={[coin]}
         isLoading={false}
         activeFilters={[]}
-        pegRates={{}}
         reportCards={reportCards}
       />,
     );
@@ -289,7 +281,6 @@ describe("StablecoinTable", () => {
         data={[dai]}
         isLoading={false}
         activeFilters={[]}
-        pegRates={{}}
         reportCards={reportCards}
       />,
     );
@@ -306,7 +297,6 @@ describe("StablecoinTable", () => {
         data={[lisusd]}
         isLoading={false}
         activeFilters={[]}
-        pegRates={{}}
         reportCards={reportCards}
       />,
     );
@@ -323,7 +313,6 @@ describe("StablecoinTable", () => {
         data={[coin]}
         isLoading={false}
         activeFilters={[]}
-        pegRates={{}}
         onTogglePinnedStablecoin={onTogglePinned}
       />,
     );
@@ -341,7 +330,6 @@ describe("StablecoinTable", () => {
         data={[coin]}
         isLoading={false}
         activeFilters={[]}
-        pegRates={{}}
         pinnedStablecoinIds={["usdt-tether"]}
         onTogglePinnedStablecoin={vi.fn()}
       />,
@@ -356,7 +344,6 @@ describe("StablecoinTable", () => {
         data={[coin, usdc]}
         isLoading={false}
         activeFilters={[]}
-        pegRates={{}}
         pinnedStablecoinIds={["usdc-circle"]}
         onTogglePinnedStablecoin={vi.fn()}
       />,
@@ -381,7 +368,6 @@ describe("StablecoinTable", () => {
         data={[coin, usdc]}
         isLoading={false}
         activeFilters={[]}
-        pegRates={{}}
         pinnedStablecoinIds={["usdc-circle"]}
         onTogglePinnedStablecoin={vi.fn()}
       />,
@@ -395,7 +381,6 @@ describe("StablecoinTable", () => {
   });
 
   it("adds full variant context to the accessible detail link", () => {
-    render(<StablecoinTable data={[susds]} isLoading={false} activeFilters={[]} pegRates={{}} />);
 
     expect(screen.getByLabelText("Savings variant")).toBeTruthy();
     expect(
@@ -407,16 +392,15 @@ describe("StablecoinTable", () => {
   it("does not reset vertical scroll on rerender when pinning is disabled", () => {
     const rows = [coin, usdc];
     const activeFilters: never[] = [];
-    const pegRates = {};
 
     const { rerender } = render(
-      <StablecoinTable data={rows} isLoading={false} activeFilters={activeFilters} pegRates={pegRates} />,
+      <StablecoinTable data={rows} isLoading={false} activeFilters={activeFilters} />,
     );
 
     const scrollToMock = vi.mocked(HTMLElement.prototype.scrollTo);
     scrollToMock.mockClear();
 
-    rerender(<StablecoinTable data={rows} isLoading={false} activeFilters={activeFilters} pegRates={pegRates} />);
+    rerender(<StablecoinTable data={rows} isLoading={false} activeFilters={activeFilters} />);
 
     expect(scrollToMock).not.toHaveBeenCalled();
   });
@@ -425,7 +409,6 @@ describe("StablecoinTable", () => {
     virtualItemsMock.splice(0, virtualItemsMock.length, { index: 1, start: 40, end: 80 });
     virtualTotalSizeMock.current = 80;
 
-    render(<StablecoinTable data={[coin, usdc]} isLoading={false} activeFilters={[]} pegRates={{}} />);
 
     const bodyRows = document.querySelectorAll("tbody tr");
     const spacerCell = bodyRows[0]?.querySelector("td");
@@ -440,7 +423,6 @@ describe("StablecoinTable", () => {
   });
 
   it("keeps the virtual cursor idle until row intent", async () => {
-    render(<StablecoinTable data={[coin]} isLoading={false} activeFilters={[]} pegRates={{}} />);
 
     const row = screen.getByText("USDT").closest("tr");
 
@@ -456,7 +438,6 @@ describe("StablecoinTable", () => {
   });
 
   it("scrolls the virtual cursor only when keyboard intent targets an offscreen row", async () => {
-    render(<StablecoinTable data={[coin, usdc]} isLoading={false} activeFilters={[]} pegRates={{}} />);
 
     const firstLink = screen.getByRole("link", { name: /View Tether \(USDT\) details/i });
     firstLink.focus();

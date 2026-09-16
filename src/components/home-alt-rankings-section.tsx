@@ -87,7 +87,7 @@ export function HomeAltRankingsSection({ titleId }: HomeAltRankingsSectionProps)
     () => buildHomepageOptionalViewModel({ reportCardsData, stressData }),
     [reportCardsData, stressData],
   );
-  const { pegRates, pegScores, filteredRowCount } = useMemo(
+  const { pegScores, filteredRowCount } = useMemo(
     () =>
       buildHomepageCriticalViewModel({
         stablecoinsData,
@@ -181,7 +181,6 @@ export function HomeAltRankingsSection({ titleId }: HomeAltRankingsSectionProps)
           activeFilters={filters.activeFilters}
           eligibleIds={eligibleIds}
           logos={logos}
-          pegRates={pegRates}
           pegScores={pegScores}
           dexLiquidity={dexLiquidity ?? undefined}
           reportCards={reportCardMap}

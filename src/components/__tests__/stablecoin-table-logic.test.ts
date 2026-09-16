@@ -245,7 +245,6 @@ describe("sortStablecoins — name", () => {
       filtered: coins,
       sort: sortAsc("name"),
       effectiveSortKey: "name",
-      pegRates: {},
     });
     expect(result.map((c) => c.name)).toEqual(["Apple", "Zebra"]);
   });
@@ -256,7 +255,6 @@ describe("sortStablecoins — name", () => {
       filtered: coins,
       sort: sortDesc("name"),
       effectiveSortKey: "name",
-      pegRates: {},
     });
     expect(result.map((c) => c.name)).toEqual(["Zebra", "Apple"]);
   });
@@ -269,7 +267,6 @@ describe("sortStablecoins — price", () => {
       filtered: coins,
       sort: sortAsc("price"),
       effectiveSortKey: "price",
-      pegRates: {},
     });
     expect(result[0].id).toBe("b");
     expect(result[1].id).toBe("a");
@@ -281,7 +278,6 @@ describe("sortStablecoins — price", () => {
       filtered: coins,
       sort: sortDesc("price"),
       effectiveSortKey: "price",
-      pegRates: {},
     });
     expect(result[0].id).toBe("b");
   });
@@ -309,7 +305,6 @@ describe("sortStablecoins — price", () => {
       filtered: coins,
       sort: sortAsc("price"),
       effectiveSortKey: "price",
-      pegRates: {},
     });
 
     expect(result.map((coin) => coin.id)).toEqual(["b", "c", "a"]);
@@ -328,7 +323,6 @@ describe("sortStablecoins — peg deviation", () => {
       filtered: coins,
       sort: sortAsc("peg"),
       effectiveSortKey: "peg",
-      pegRates: {},
       pegScores: new Map([
         ["higher", { id: "higher", currentDeviationBps: 50 } as never],
         ["lower", { id: "lower", currentDeviationBps: 49 } as never],
@@ -349,7 +343,6 @@ describe("sortStablecoins — peg deviation", () => {
       filtered: coins,
       sort: sortAsc("peg"),
       effectiveSortKey: "peg",
-      pegRates: {},
       pegScores: new Map([
         ["missing", { id: "missing", currentDeviationBps: null } as never],
         ["invalid", { id: "invalid", currentDeviationBps: null } as never],
@@ -372,7 +365,6 @@ describe("sortStablecoins — mcap", () => {
       filtered: coins,
       sort: sortDesc("mcap"),
       effectiveSortKey: "mcap",
-      pegRates: {},
     });
     expect(result[0].id).toBe("large");
   });
@@ -386,7 +378,6 @@ describe("sortStablecoins — mcap", () => {
       filtered: coins,
       sort: sortAsc("mcap"),
       effectiveSortKey: "mcap",
-      pegRates: {},
     });
     expect(result[0].id).toBe("small");
   });
@@ -419,7 +410,6 @@ describe("sortStablecoins — stability (pegScore)", () => {
       filtered: coins,
       sort: sortDesc("stability"),
       effectiveSortKey: "stability",
-      pegRates: {},
       pegScores,
     });
     expect(result[0].id).toBe("a");
@@ -442,7 +432,6 @@ describe("sortStablecoins — stability (pegScore)", () => {
       filtered: coins,
       sort: sortDesc("stability"),
       effectiveSortKey: "stability",
-      pegRates: {},
       pegScores,
     });
     expect(result[0].id).toBe("hasScore");
@@ -471,7 +460,6 @@ describe("sortStablecoins — liquidity (dexLiquidity)", () => {
       filtered: coins,
       sort: sortDesc("liquidity"),
       effectiveSortKey: "liquidity",
-      pegRates: {},
       dexLiquidity,
     });
     expect(result[0].id).toBe("high");
@@ -491,7 +479,6 @@ describe("sortStablecoins — liquidity (dexLiquidity)", () => {
       filtered: coins,
       sort: sortDesc("liquidity"),
       effectiveSortKey: "liquidity",
-      pegRates: {},
       dexLiquidity,
     });
     expect(result[0].id).toBe("hasLiq");
@@ -514,7 +501,6 @@ describe("sortStablecoins — grade (reportCards)", () => {
       filtered: coins,
       sort: sortDesc("grade"),
       effectiveSortKey: "grade",
-      pegRates: {},
       reportCards,
     });
     expect(result[0].id).toBe("a");
@@ -534,7 +520,6 @@ describe("sortStablecoins — grade (reportCards)", () => {
       filtered: coins,
       sort: sortDesc("grade"),
       effectiveSortKey: "grade",
-      pegRates: {},
       reportCards,
     });
     expect(result[0].id).toBe("hasGrade");
@@ -565,7 +550,6 @@ describe("sortStablecoins — blacklistable", () => {
       filtered: [runtimePossible, lisusd],
       sort: sortAsc("blacklistable"),
       effectiveSortKey: "blacklistable",
-      pegRates: {},
       reportCards,
     });
 
@@ -615,7 +599,6 @@ describe("sortStablecoins — change24h", () => {
       filtered: [growing, shrinking],
       sort: sortDesc("change24h"),
       effectiveSortKey: "change24h",
-      pegRates: {},
     });
     expect(result[0].id).toBe("grow");
   });
@@ -635,8 +618,41 @@ describe("sortStablecoins — change7d", () => {
       filtered: [growing, stable],
       sort: sortAsc("change7d"),
       effectiveSortKey: "change7d",
-      pegRates: {},
     });
     expect(result[0].id).toBe("stable");
+  });
+});
+
+describe("supply-change semantics", () => {
+  it("sorts missing previous supply as neutral and exports it as null", () => {
+    const missing = makeCoin("missing", "Missing", {
+      circulating: { peggedUSD: 1_000_000 },
+      circulatingPrevDay: undefined,
+    });
+    const growing = makeCoin("grow", "Growing", {
+      circulating: { peggedUSD: 1_100_000 },
+      circulatingPrevDay: { peggedUSD: 1_000_000 },
+    });
+    const shrinking = makeCoin("shrink", "Shrinking", {
+      circulating: { peggedUSD: 900_000 },
+      circulatingPrevDay: { peggedUSD: 1_000_000 },
+    });
+
+    const sorted = sortStablecoins({
+      filtered: [missing, shrinking, growing],
+      sort: sortDesc("change24h"),
+      effectiveSortKey: "change24h",
+    });
+    expect(sorted.map((coin) => coin.id)).toEqual(["grow", "missing", "shrink"]);
+
+    downloadCsvMock.mockReset();
+    exportStablecoinsCsv([missing]);
+    const [, columns] = downloadCsvMock.mock.calls[0]! as [
+      StablecoinData[],
+      CsvColumn<StablecoinData>[],
+      string,
+    ];
+    const changeColumn = columns.find((column) => column.header === "24h Change (%)");
+    expect(changeColumn?.accessor(missing, 0)).toBeNull();
   });
 });

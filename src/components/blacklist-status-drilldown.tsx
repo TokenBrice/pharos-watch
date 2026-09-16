@@ -80,7 +80,6 @@ export function BlacklistStatusDrilldown({
         isLoading={!stablecoins}
         activeFilters={[]}
         logos={logos}
-        pegRates={tableInputs.pegRates}
         pegScores={tableInputs.pegScores}
         dexLiquidity={dexLiquidity ?? undefined}
         reportCards={reportCards}

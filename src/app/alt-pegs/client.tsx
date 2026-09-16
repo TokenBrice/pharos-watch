@@ -313,7 +313,6 @@ export function AltPegsClient() {
           data={stablecoinsQuery.data?.peggedAssets}
           isLoading={stablecoinsQuery.isLoading}
           logos={logos}
-          pegRates={tableInputs.pegRates}
           pegScores={tableInputs.pegScores}
           dexLiquidity={dexLiquidityQuery.data ?? undefined}
           reportCards={tableInputs.reportCards}

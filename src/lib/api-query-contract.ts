@@ -4,7 +4,6 @@ export interface FrontendApiQueryBaseDescriptor {
   queryKey: readonly unknown[];
   path: string;
   producerIntervalMs: number;
-  metaMaxAgeSec?: number;
 }
 
 export interface FrontendStaticApiQueryBaseDescriptor {
