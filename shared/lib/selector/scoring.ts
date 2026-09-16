@@ -278,7 +278,7 @@ export function scoreRow(
     if (reason.startsWith("missing-critical-")) confidence -= 8;
   }
   confidence = clamp(confidence, 0, 100);
-  if (profile === "yield" && row.yieldHistoryDays < 60) {
+  if (profile === "yield" && row.yieldObservationDays30d < 21) {
     confidence = Math.min(confidence, 80);
     confidenceReasons.add("short-yield-history");
   }

@@ -468,7 +468,7 @@ function evaluateYieldSourceGroup(
       ? (input.legacyPrevTvlById.get(stablecoinId) ?? null)
       : (input.prevTvlBySource.get(buildHistoryKey(stablecoinId, sourceKey)) ?? null);
     const sourceDepthRatio = computeSourceDepthRatio(y.sourceTvlUsd, input.stablecoinSupplyById?.get(stablecoinId));
-    const observationCount30d = historySelection.usedLegacyHistory
+    const distinctObservationDays30d = historySelection.usedLegacyHistory
       ? null
       : new Set([
           ...historyRowsForStats.map((row) => Math.floor(row.recorded_at / DAY_SECONDS)),
@@ -520,7 +520,7 @@ function evaluateYieldSourceGroup(
       // Distinct observation days, not raw row count: the read path can only see
       // the published `observationCount30d`, so both sides test the same fact
       // (legacy-history rows publish null and stay unqualified).
-      hasHistory: (observationCount30d ?? 0) > 1,
+      hasHistory: (distinctObservationDays30d ?? 0) > 1,
       hasYieldDecomposition: y.apyBase != null || y.apyReward != null,
       opportunityEvidenceComplete,
     });
@@ -539,7 +539,7 @@ function evaluateYieldSourceGroup(
       sourceDepthRatio,
       sourceAgeSeconds,
       sourceSwitchCount30d: priorSwitches30d,
-      observationCount30d,
+      observationCount30d: distinctObservationDays30d,
       venueRiskTier: resolvedVenueRiskTier,
       venueRiskWeighted: resolvedVenueRiskWeighted,
       dependencyConcentrationSeverity: dependencyConcentration?.severity ?? null,
@@ -660,7 +660,7 @@ function evaluateYieldSourceGroup(
       prevExchangeRate,
       prevTvlUsd,
       sourceDepthRatio,
-      observationCount30d,
+      observationCount30d: distinctObservationDays30d,
       sourceSwitchCount30d: null,
       anomalies,
       warnings: freshnessWarnings,

@@ -154,7 +154,7 @@ export function buildSelectorRows(args: BuildSelectorRowsArgs): BuildSelectorRow
         (yieldRisk?.sourceSwitchCount30d ?? 0) > 0,
       yieldProtocolSlug: yieldRisk?.venueProtocol ?? yieldEntry?.yieldSource ?? null,
       yieldVenueChain: yieldRisk?.venueChain ?? null,
-      yieldHistoryDays: yieldRisk?.observationCount30d ?? 0,
+      yieldObservationDays30d: yieldRisk?.observationCount30d ?? 0,
       yieldFreshness: yieldFreshnessFrom(yieldEntry, args.now),
       yieldSources: buildYieldSourceCandidates(yieldEntry, args.now),
 
@@ -223,7 +223,7 @@ export function buildSelectorRows(args: BuildSelectorRowsArgs): BuildSelectorRow
         sourceSwitch: row.sourceSwitch,
         yieldProtocolSlug: row.yieldProtocolSlug,
         yieldVenueChain: row.yieldVenueChain,
-        yieldHistoryDays: row.yieldHistoryDays,
+        yieldObservationDays30d: row.yieldObservationDays30d,
         yieldFreshnessAgeSec: row.yieldFreshness?.ageSeconds ?? null,
         effectiveTvlUsd: row.effectiveTvlUsd,
         concentrationHhi: row.concentrationHhi,

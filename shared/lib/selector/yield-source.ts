@@ -129,7 +129,7 @@ function fallbackYieldSources(row: MergedRow): YieldSourceCandidate[] {
       deploymentPlace: row.deploymentPlace,
       sourceDepthRatio: null,
       sourceSwitchCount30d: row.sourceSwitch ? 1 : 0,
-      observationCount30d: row.yieldHistoryDays,
+      observationCount30d: row.yieldObservationDays30d,
       freshness: row.yieldFreshness,
       isPrimary: true,
     },

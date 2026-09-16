@@ -172,6 +172,12 @@ describe("yield ingestion", () => {
     expect(adaptYield({ yieldType: "structured-tranche", safetyScore: 99 }).safetyScore).toBeNull();
   });
 
+  it("names the trailing-window count as distinct 30d observation days", () => {
+    const row = adaptYield({ sourceRisk: { observationCount30d: 30 } });
+    expect(row.yieldObservationDays30d).toBe(30);
+    expect(row).not.toHaveProperty("yieldHistoryDays");
+  });
+
   it("honors benchmark precedence and explicit false source-switch evidence", () => {
     const response = { provenance: { benchmark: { rate: 3 } }, riskFreeRate: 4 };
     const cases = [

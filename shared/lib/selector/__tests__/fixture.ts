@@ -92,7 +92,7 @@ export function makeMergedRow(overrides: Partial<MergedRow> = {}): MergedRow {
     sourceSwitch: false,
     yieldProtocolSlug: null,
     yieldVenueChain: null,
-    yieldHistoryDays: 365,
+    yieldObservationDays30d: 30,
     yieldFreshness: null,
     trackingSpanDays: 365,
     isRecentListing: false,

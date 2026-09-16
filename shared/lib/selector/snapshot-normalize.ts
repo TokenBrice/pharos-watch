@@ -52,6 +52,7 @@ const SUPPORTED_ENGINE_VERSIONS = new Set<string>(SELECTOR_SNAPSHOT_SUPPORTED_EN
 const CURRENT_GENERATION_ENGINE_VERSIONS = new Set<string>([
   "selector-v2.0",
   "selector-v2.1",
+  "selector-v2.2",
   SELECTOR_VERSION,
 ]);
 
