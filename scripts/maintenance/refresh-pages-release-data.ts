@@ -37,6 +37,13 @@ export interface ReleaseRefreshResult {
   resultPath: string;
 }
 
+export function shouldFailReleaseRefresh(result: ReleaseRefreshResult): boolean {
+  const allProducersFailed =
+    !result.digests.ok && !result.depegEvents.ok && !result.publicDatasets.ok;
+  const rollbackFailed = !result.publicDatasets.ok && !result.publicDatasets.rolledBack;
+  return allProducersFailed || rollbackFailed;
+}
+
 interface RefreshProducerContext {
   outputPath?: string;
 }
@@ -183,7 +190,7 @@ export async function refreshPagesReleaseData({
       datasetsLog,
       "::warning::public-dataset refresh failed; using committed public datasets",
     );
-    const rollback = await dependencies.rollbackPublicDatasets();
+    const rollback = await settledProducer(() => dependencies.rollbackPublicDatasets(), {});
     rolledBack = rollback.status === 0;
     datasetsLog += rollback.output ?? "";
     if (!rolledBack) {
@@ -235,6 +242,13 @@ if (isDirectRun(import.meta.url, process.argv[1])) {
   void runCliEntrypoint(async () => {
     const options = parseArgs(process.argv.slice(2));
     if (writeCliHelpIfRequested(options, USAGE)) return;
-    await refreshPagesReleaseData(options);
+    const result = await refreshPagesReleaseData(options);
+    if (shouldFailReleaseRefresh(result)) {
+      throw new Error(
+        !result.publicDatasets.ok && !result.publicDatasets.rolledBack
+          ? "Public-dataset refresh and rollback both failed"
+          : "All release-data producers failed",
+      );
+    }
   }, { label: "refresh-pages-release-data", usage: USAGE });
 }

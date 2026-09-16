@@ -36,6 +36,7 @@ jobs:
       NEXT_PUBLIC_PHAROS_CHART_ANNOTATIONS: ${{ vars.NEXT_PUBLIC_PHAROS_CHART_ANNOTATIONS }}
       NEXT_PUBLIC_PHAROS_DEPEG_RESOLVER: ${{ vars.NEXT_PUBLIC_PHAROS_DEPEG_RESOLVER }}
       NEXT_PUBLIC_PHAROS_DEPEG_RESOLVER_REVIEWER: ${{ vars.NEXT_PUBLIC_PHAROS_DEPEG_RESOLVER_REVIEWER }}
+      PAGES_REFRESH_RESULT_PATH: ${{ runner.temp }}/pages-refresh-${{ github.run_id }}-${{ github.run_attempt }}/result.json
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -53,6 +54,7 @@ jobs:
         # compile inputs must exist before the refresh runs.
         run: npm run prebuild -- --build-lifecycle=compile-input
       - name: Refresh API-backed release data
+        id: refresh-data
         if: ${{ inputs.refresh_data }}
         env:
           DIGEST_API_URL: https://stablecoin-dashboard.pages.dev/_site-data
@@ -60,6 +62,22 @@ jobs:
           PUBLIC_DATASETS_API_URL: https://stablecoin-dashboard.pages.dev/_site-data
           PUBLIC_DATASETS_REQUIRE_API: "1"
         run: node --import tsx scripts/maintenance/refresh-pages-release-data.ts
+      - name: Validate release-data refresh result
+        if: ${{ always() && inputs.refresh_data && steps.refresh-data.outcome != 'skipped' }}
+        run: |
+          node <<'NODE'
+          const { readFileSync } = require("node:fs");
+          const result = JSON.parse(readFileSync(process.env.PAGES_REFRESH_RESULT_PATH, "utf8"));
+          const allFailed =
+            !result.digests?.ok && !result.depegEvents?.ok && !result.publicDatasets?.ok;
+          const rollbackFailed =
+            result.publicDatasets?.ok === false && result.publicDatasets?.rolledBack !== true;
+          if (allFailed || rollbackFailed) {
+            throw new Error(
+              `Release-data refresh gate failed: ${JSON.stringify({ allFailed, rollbackFailed })}`,
+            );
+          }
+          NODE
       - name: Build clean production export
         # Production builds deliberately start without a restored .next/cache.
         # A stale Webpack/PostCSS entry can otherwise pair new Tailwind class
@@ -90,15 +108,33 @@ jobs:
         run: |
           total_files="$(find out -type f | wc -l | tr -d ' ')"
           output_size="$(du -sh out | awk '{print $1}')"
-          {
-            echo "## Pages release"
-            echo ""
-            echo "- Commit: \`${GITHUB_SHA}\`"
-            echo "- Output: ${total_files} files, ${output_size}"
-            echo "- Data refreshed: \`${{ inputs.refresh_data }}\`"
-            echo "- Run: ${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
-            echo "- Rollback: select the prior successful deployment in Cloudflare Pages deployment history."
-          } >> "$GITHUB_STEP_SUMMARY"
+          TOTAL_FILES="${total_files}" OUTPUT_SIZE="${output_size}" node <<'NODE'
+          const { appendFileSync, existsSync, readFileSync } = require("node:fs");
+          const result = existsSync(process.env.PAGES_REFRESH_RESULT_PATH)
+            ? JSON.parse(readFileSync(process.env.PAGES_REFRESH_RESULT_PATH, "utf8"))
+            : null;
+          const allOk = result
+            ? result.digests?.ok === true
+              && result.depegEvents?.ok === true
+              && result.publicDatasets?.ok === true
+            : null;
+          const refreshSummary = result
+            ? [
+                `- Data refreshed: \`${allOk}\``,
+                `- Refresh producers: digest=\`${result.digests?.ok === true}\`, depeg=\`${result.depegEvents?.ok === true}\`, public datasets=\`${result.publicDatasets?.ok === true}\``,
+              ]
+            : ["- Data refreshed: `not requested`"];
+          appendFileSync(process.env.GITHUB_STEP_SUMMARY, [
+            "## Pages release",
+            "",
+            `- Commit: \`${process.env.GITHUB_SHA}\``,
+            `- Output: ${process.env.TOTAL_FILES} files, ${process.env.OUTPUT_SIZE}`,
+            ...refreshSummary,
+            `- Run: ${process.env.GITHUB_SERVER_URL}/${process.env.GITHUB_REPOSITORY}/actions/runs/${process.env.GITHUB_RUN_ID}`,
+            "- Rollback: select the prior successful deployment in Cloudflare Pages deployment history.",
+            "",
+          ].join("\n"));
+          NODE
       - name: Deploy Pages
         run: >-
           npx --no-install wrangler pages deploy out

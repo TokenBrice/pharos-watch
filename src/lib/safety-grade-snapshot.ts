@@ -1,4 +1,8 @@
-import { PUBLIC_DATASET_CURRENT_EXPORTS } from "@/lib/datasets/public-dataset-current";
+import {
+  PUBLIC_DATASET_CURRENT_DATE,
+  PUBLIC_DATASET_CURRENT_EXPORTS,
+  PUBLIC_DATASET_MAX_AGE_DAYS,
+} from "@/lib/datasets/public-dataset-current";
 import { getV9GradeRiskBucket, type V9GradeRiskBucket } from "@shared/lib/safety-grade-buckets";
 import { SAFETY_GRADE_VALUES, type SafetyGrade } from "@shared/types/report-card-grade";
 
@@ -19,6 +23,25 @@ export interface SnapshotSafetyAssessment {
 }
 
 const SCORES_LATEST_DATASET = PUBLIC_DATASET_CURRENT_EXPORTS["scores-latest"] as ScoresLatestDataset;
+
+export function assertCurrentPublicDatasetFresh(
+  now = new Date(),
+  snapshotDate = PUBLIC_DATASET_CURRENT_DATE,
+): void {
+  const todayUtc = Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate());
+  const snapshotUtc = Date.parse(`${snapshotDate}T00:00:00Z`);
+  const ageDays = (todayUtc - snapshotUtc) / 86_400_000;
+  if (!Number.isInteger(ageDays) || ageDays < 0 || ageDays > PUBLIC_DATASET_MAX_AGE_DAYS) {
+    throw new Error(
+      `Public scores-latest mirror is stale (${snapshotDate}); `
+      + `expected a snapshot no more than ${PUBLIC_DATASET_MAX_AGE_DAYS} days old`,
+    );
+  }
+}
+
+if (process.env.NODE_ENV === "production") {
+  assertCurrentPublicDatasetFresh();
+}
 
 function isSafetyGrade(value: unknown): value is SafetyGrade {
   return typeof value === "string" && (SAFETY_GRADE_VALUES as readonly string[]).includes(value);

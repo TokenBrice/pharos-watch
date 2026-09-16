@@ -81,6 +81,18 @@ Tracked ownership handoffs and source-attribution corrections use `worker/script
 6. Run the bounded production cleanup only after the restore drill passes.
 7. Verify the parent/source rows stay absent after the next hourly writer cycle.
 
+## Blacklist Current-Balance Rebuild
+
+Use `worker/scripts/rebuild-blacklist-current-balances.ts` only after the source event set is complete:
+
+1. Preview, then arm the writer pause with `--arm-writer-pause`; live changes require `--execute --confirm rebuild-blacklist-current-balances` and an explicit `--local` or `--remote` target.
+2. Wait for the `sync-blacklist` cron lease to expire. The rebuild checks both the pause key and lease before provider work and again immediately before mutation.
+3. Run the rebuild as a dry-run first. Provider lookups still run, but D1 remains unchanged; inspect `failedCount` before proceeding.
+4. Run the confirmed rebuild. More than 10% provider failures abort before D1 mutation. `--force` bypasses only this failure-rate guard and should be used only after reviewing the provider failures.
+5. Verify current balances, then preview and execute `--clear-writer-pause`. Do not clear the pause after a failed rebuild until the retained rows have been checked.
+
+Active rows stay in place during the rebuild so a transient `provider_failed` result retains the last resolved native/USD amounts and source. Each Wrangler statement chunk is transactional, so a statement failure rolls back that chunk instead of committing a partial delete or insert sequence.
+
 ## CI Deploy Sequence
 
 Production responsibility is split deliberately:
@@ -116,11 +128,11 @@ Deploy sequence in `.github/workflows/deploy-cloudflare.yml`:
 Reusable Pages sequence in `.github/workflows/pages-release.yml`:
 
 1. Check out full history and install the workspace without a browser. Production Pages builds do not restore `.next/cache`: stale Webpack/PostCSS entries can pair new Tailwind class names in HTML with an older generated stylesheet. Full history remains required for per-route and per-doc generated timestamps.
-2. When `refresh_data=true`, `scripts/maintenance/refresh-pages-release-data.ts` refreshes digests and confirmed depeg events concurrently, then refreshes public dataset mirrors, all through the Origin-gated `https://stablecoin-dashboard.pages.dev/_site-data` proxy into `site-api.pharos.watch`. Digest and depeg refreshes write isolated temporary snapshots and move only successful results into place; public datasets keep their scoped git fallback. The digest sync rejects archive shrink; the depeg sync carries previously published static rows forward when live reclassification would make them sub-threshold, and rejects any remaining published-slug loss. A failed fetch, invalid input, or archive shrink retains only that surface's committed snapshot and continues to the build with a job-summary warning. The orchestration command also writes a machine-readable result JSON under its refresh directory.
+2. When `refresh_data=true`, `scripts/maintenance/refresh-pages-release-data.ts` refreshes digests and confirmed depeg events concurrently, then refreshes public dataset mirrors, all through the Origin-gated `https://stablecoin-dashboard.pages.dev/_site-data` proxy into `site-api.pharos.watch`. Digest and depeg refreshes write isolated temporary snapshots and move only successful results into place; public datasets keep their scoped git fallback. The digest sync rejects archive shrink; the depeg sync carries previously published static rows forward when live reclassification would make them sub-threshold, and rejects any remaining published-slug loss. One failed producer may retain that surface's committed snapshot, but the refresh step reads its machine-readable result and fails before build when all three producers fail or when public-dataset rollback fails. The job summary records the actual producer outcomes rather than the requested refresh mode.
 3. Materialize `compile-input` artifacts before the optional refresh, then `post-refresh` artifacts after it, and build with the production feature-flag environment and clean compiler state. The protected PR gate has already run `next typegen` plus the root TypeScript project, so this post-merge build skips only Next's duplicate typecheck; direct local builds still typecheck by default.
 4. Run feature-flag inlining, build-size/CSS-integrity, and phishing-signature checks concurrently, then run the static SEO and published-archive continuity gate over the same exact artifact. The CSS-integrity gate reads the emitted `out/_next/static/css` bundles and requires the desktop search-width utility, preventing a stale Tailwind stylesheet from shipping beside newer header HTML. The SEO command extracts per-page metadata in bounded worker threads but retains all prior assertions. It also fetches the currently deployed `pages.dev` sitemap and requires every previously published digest/depeg detail URL to remain submitted or have a direct permanent redirect to a submitted canonical. This final continuity gate covers refresh-only routes that are newer than the checked-in snapshots; a fallback build that would regress one of those routes fails before deployment.
 5. Write `out/__pharos_release.json`, publish that exact `out/` directory with one `wrangler pages deploy` command, resolve the latest production deployment through `wrangler pages deployment list --json`, and require one cache-busted target-SHA marker match from that immutable `pages.dev` deployment URL within the bounded polling window.
-6. Record the commit, run URL, artifact size/file count, refresh mode, immutable deployment URL, marker result, and the manual Cloudflare Pages deployment-history rollback pointer in the job summary.
+6. Record the commit, run URL, artifact size/file count, actual per-producer refresh outcomes, immutable deployment URL, marker result, and the manual Cloudflare Pages deployment-history rollback pointer in the job summary.
 
 There is no Pages browser installation, local proxy, GitHub Jobs API polling, deploy retry loop, broad live smoke suite, or automatic rollback in this path. The single post-publish deployment query identifies the just-published production deployment without depending on custom-domain edge treatment of GitHub shared egress. A failed marker proof leaves the failed deployment and its evidence visible for operator assessment instead of automatically changing production again.
 
@@ -250,9 +262,9 @@ When the weekly job finds a new high/critical full-lockfile advisory, fix it, pi
 Scheduled/manual Pages rebuild sequence in `.github/workflows/rebuild-pages.yml`:
 
 - Schedule: `17 8 * * *` UTC, after the 08:05 UTC daily digest slot.
-- The workflow has one main-only reusable job and calls `pages-release.yml` with `refresh_data: true`.
+- The workflow has one main-only reusable job and calls `pages-release.yml` with `refresh_data: true`; this active schedule is the dataset-refresh trigger.
 - It uses the reusable Pages sequence above: attempt to refresh all three API-backed datasets through the production `stablecoin-dashboard.pages.dev/_site-data` proxy, then build and verify the exact artifact, publish once, and verify the release marker on the immutable production deployment URL.
-- Refresh failure, invalid data, or archive shrink restores the committed snapshots and continues fail-open. Later build, artifact, SEO-continuity, deployment, and release-marker checks remain fail-closed. The rebuild intentionally skips Worker deployment and broad live smoke lanes.
+- A single digest, depeg, or public-dataset producer failure can use its scoped committed fallback. Total producer failure and public-dataset rollback failure stop the release, and the two-day alias-age guard stops frozen mirrors before publication.
 - Manual rebuild dispatch uses the same path and the shared `production-deploy` lock.
 
 ### Wrangler and Workspace Layout
