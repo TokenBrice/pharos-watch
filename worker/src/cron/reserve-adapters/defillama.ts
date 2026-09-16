@@ -42,7 +42,11 @@ export async function fetchDefiLlamaPrices(
   const prices = new Map<string, number>();
   for (const { key, assetKey } of lookups) {
     const quote = quotes[assetKey];
-    if (!quote || typeof quote.price !== "number" || !Number.isFinite(quote.price) || quote.price <= 0) continue;
+    if (!quote || typeof quote.price !== "number" || !Number.isFinite(quote.price) || quote.price <= 0) {
+      const message = `DefiLlama quote ${assetKey} is missing or non-numeric`;
+      if (warnings) warnings.push(reserveDegradedWarning("defillama-quote-missing", message));
+      continue;
+    }
     const stale = typeof quote.timestamp !== "number" || !Number.isFinite(quote.timestamp)
       || quote.timestamp <= 0 || now - quote.timestamp > 86_400;
     const uncertain = typeof quote.confidence !== "number" || !Number.isFinite(quote.confidence) || quote.confidence < 0.8;

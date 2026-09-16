@@ -1,3 +1,5 @@
+import { z } from "zod";
+
 import type { ReserveSlice, StablecoinMeta } from "@shared/types/core";
 import type { LiveReservesConfig, LiveReserveWarning } from "@shared/types/live-reserves";
 import type { AdapterContext, AdapterResult } from "./types";
@@ -61,6 +63,39 @@ export interface InfiniFiProtocolData {
     farms: InfiniFiFarm[];
   };
 }
+
+const infiniFiFarmSchema = z.object({
+  name: z.string().min(1),
+  label: z.string().min(1),
+  assetsNormalized: z.number().finite().nonnegative(),
+  type: z.enum(["LIQUID", "ILLIQUID", "PROTOCOL"]),
+  underlyingAssetSymbol: z.string().min(1),
+});
+
+const infiniFiProtocolDataSchema = z.object({
+  code: z.literal("OK"),
+  data: z.object({
+    stats: z.object({
+      asset: z.object({
+        totalTVLAssetNormalized: z.number().finite().nonnegative(),
+        totalLiquidAssetNormalized: z.number().finite().nonnegative().optional(),
+        totalIlliquidAssetNormalized: z.number().finite().nonnegative().optional(),
+        pendingRedemptionsAssetNormalized: z.number().finite().nonnegative().optional(),
+      }),
+      staked: z.object({
+        exchangeRateNormalized: z.number().finite().nonnegative().optional(),
+      }).optional(),
+      receipt: z.object({
+        totalSupplyNormalized: z.number().finite().nonnegative().optional(),
+      }).optional(),
+    }),
+    /** Pre-2026-08 payload shape; the live feed nests receipt under `stats`. */
+    receipt: z.object({
+      totalSupplyNormalized: z.number().finite().nonnegative().optional(),
+    }).optional(),
+    farms: z.array(infiniFiFarmSchema),
+  }),
+});
 
 function readReceiptSupply(payload: InfiniFiProtocolData): number | undefined {
   return payload.data.stats.receipt?.totalSupplyNormalized ?? payload.data.receipt?.totalSupplyNormalized;
@@ -509,8 +544,12 @@ export async function fetchInfiniFiReserves(
   const primaryInput = requireJsonInputFromConfig(config, "infinifi");
 
   const url = primaryInput.url;
-  const payload = await fetchJsonWithRetry<InfiniFiProtocolData>(url, signal, 12_000, ctx);
-  if (payload.code !== "OK") throw new Error("infiniFi API returned non-OK code");
+  const rawPayload = await fetchJsonWithRetry<unknown>(url, signal, 12_000, ctx);
+  const parsedPayload = infiniFiProtocolDataSchema.safeParse(rawPayload);
+  if (!parsedPayload.success) {
+    throw new Error(`infinifi API payload failed schema validation: ${parsedPayload.error.message}`);
+  }
+  const payload = parsedPayload.data;
   const adapted = adaptInfiniFi(payload);
   const warnings: LiveReserveWarning[] = adapted.unknownFarms.length > 0
     ? [buildUnknownExposureWarning({ adapterKey: "infinifi", code: "unknown-position",
