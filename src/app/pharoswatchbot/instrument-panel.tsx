@@ -257,10 +257,13 @@ export function InstrumentPanel() {
                 <dd className="mt-3 pharos-numeric text-3xl font-semibold leading-none text-foreground">
                   {follows.display ?? "—"}
                 </dd>
-                <dd className="mt-3 text-xs text-muted-foreground">
-                  {formatCount(data.explicitCoinSubscriptions ?? data.coinSubscriptions)} explicit ·{" "}
-                  {formatCount(data.presetImpliedCoinSubscriptions ?? 0)} preset-implied
-                </dd>
+                {typeof data.explicitCoinSubscriptions === "number" &&
+                typeof data.presetImpliedCoinSubscriptions === "number" ? (
+                  <dd className="mt-3 text-xs text-muted-foreground">
+                    {formatCount(data.explicitCoinSubscriptions)} explicit ·{" "}
+                    {formatCount(data.presetImpliedCoinSubscriptions)} preset-implied
+                  </dd>
+                ) : null}
                 {typeof data.activePresetFollowers === "number" ? (
                   <dd className="mt-1 text-xs text-muted-foreground">
                     {formatCount(data.activePresetFollowers)} chats using presets

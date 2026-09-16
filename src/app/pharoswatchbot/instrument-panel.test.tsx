@@ -141,12 +141,17 @@ describe("InstrumentPanel", () => {
   it("renders generic partial telemetry state without exposing operator errors", () => {
     mockPulse({
       ...pulse,
+      explicitCoinSubscriptions: undefined,
+      presetImpliedCoinSubscriptions: undefined,
       quality: { status: "partial", unavailableFields: ["topCoins"], errors: { topCoins: "D1 unavailable" } },
     });
     render(<InstrumentPanel />);
 
     expect(screen.getByText("Partial telemetry")).toBeTruthy();
     expect(screen.getByText(/Some public Telegram telemetry is temporarily unavailable/i)).toBeTruthy();
+    expect(screen.getByText(TELEGRAM_METRIC_SEMANTICS.coinFollows.label)).toBeTruthy();
+    expect(screen.getByText("5,621")).toBeTruthy();
+    expect(screen.queryByText(/explicit.*preset-implied/i)).toBeNull();
     expect(screen.queryByText(/D1 unavailable/i)).toBeNull();
   });
 
