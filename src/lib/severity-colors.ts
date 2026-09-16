@@ -96,11 +96,17 @@ export function scoreToColorClass(
   }
   return fallbackClass;
 }
+export const SCORE_TIER_CUTOFFS = {
+  red: 0,
+  amber: 40,
+  blue: 60,
+  green: 80,
+} as const;
 
 const SCORE_TEXT_THRESHOLDS = [
-  { min: 80, className: TIER_TEXT.green },
-  { min: 60, className: TIER_TEXT.blue },
-  { min: 40, className: TIER_TEXT.amber },
+  { min: SCORE_TIER_CUTOFFS.green, className: TIER_TEXT.green },
+  { min: SCORE_TIER_CUTOFFS.blue, className: TIER_TEXT.blue },
+  { min: SCORE_TIER_CUTOFFS.amber, className: TIER_TEXT.amber },
   { min: Number.NEGATIVE_INFINITY, className: TIER_TEXT.red },
 ] as const;
 
@@ -118,9 +124,9 @@ const DURABILITY_TEXT_THRESHOLDS = [
 
 /** Map a 0-100 liquidity/durability score to a tier */
 export function getScoreTier(score: number): ScoreTier {
-  if (score >= 80) return "green";
-  if (score >= 60) return "blue";
-  if (score >= 40) return "amber";
+  if (score >= SCORE_TIER_CUTOFFS.green) return "green";
+  if (score >= SCORE_TIER_CUTOFFS.blue) return "blue";
+  if (score >= SCORE_TIER_CUTOFFS.amber) return "amber";
   return "red";
 }
 

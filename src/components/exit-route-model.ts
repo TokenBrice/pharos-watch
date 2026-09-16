@@ -12,6 +12,7 @@ import {
 import type { DexLiquidityData } from "@shared/types";
 import { DEX_GLOBAL_KEY } from "@shared/types/market";
 import type { LiquidityStatsData } from "@/components/liquidity-stats-types";
+import { getHhiBand } from "@/components/dex-liquidity-card-model";
 
 const MAX_EXIT_ROUTE_ITEMS = 5;
 const ROUTE_SCALE_DOMAIN_PCT = 75;
@@ -162,18 +163,12 @@ export function routePacketCount(sharePct: number): number {
 
 export function throatLabelForCrowding(concentrationHhi: number | null): string {
   const hhi = finiteNumber(concentrationHhi, Number.NaN);
-  if (!Number.isFinite(hhi)) return "Crowding not scored";
-  if (hhi < 0.18) return "Broad route diversity";
-  if (hhi < 0.35) return "Visible route concentration";
-  return "Crowded exits";
+  return Number.isFinite(hhi) ? getHhiBand(hhi).throatLabel : "Crowding not scored";
 }
 
 export function crowdingBand(concentrationHhi: number | null): ExitRouteCrowdingBand {
   const hhi = finiteNumber(concentrationHhi, Number.NaN);
-  if (!Number.isFinite(hhi)) return "unknown";
-  if (hhi < 0.18) return "broad";
-  if (hhi < 0.35) return "visible";
-  return "crowded";
+  return Number.isFinite(hhi) ? getHhiBand(hhi).key : "unknown";
 }
 
 const THROAT_HALF_WIDTH_BY_BAND: Record<ExitRouteCrowdingBand, number> = {
@@ -405,11 +400,7 @@ export function buildLiquidityExitRouteModel(
   const interpretation =
     concentrationHhi == null
       ? "Route concentration is not scored for this snapshot."
-      : concentrationHhi < 0.18
-        ? "Exit depth is broadly distributed across venues."
-        : concentrationHhi < 0.35
-          ? "Exit depth is usable, but route concentration is visible."
-          : "Exit depth is crowded into a small set of venues.";
+      : getHhiBand(concentrationHhi).interpretation;
 
   return {
     totalTvlUsd: globalData.totalTvlUsd,

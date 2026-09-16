@@ -1,6 +1,8 @@
+"use client";
+
 import Link from "next/link";
 import Image from "next/image";
-import { Suspense } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { ExternalLink, Globe, Calendar, Shield, ArrowLeft, FileText, BookOpen, Play, Bell } from "lucide-react";
 import { CLIENT_ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/client-registry";
 import { BACKING_LABELS, GOVERNANCE_LABELS, PEG_LABELS_SHORT } from "@shared/lib/classification";
@@ -73,21 +75,32 @@ function formatSummaryUpdatedAt(updatedAt: string): string {
 function TimelineBar({ announcedDate, expectedLaunchDate }: { announcedDate: string; expectedLaunchDate: string }) {
   const start = parseFuzzyDate(announcedDate);
   const end = parseFuzzyDate(expectedLaunchDate);
-  const now = new Date();
+  const [now, setNow] = useState<Date | null>(null);
+
+  useEffect(() => {
+    setNow(new Date());
+  }, []);
 
   if (!start || !end || end <= start) return null;
+
+  if (!now) {
+    return (
+      <div className="min-h-[54px] space-y-2">
+        <div className="flex items-center justify-between text-xs text-muted-foreground">
+          <span>{formatFuzzyDate(announcedDate)}</span>
+          <span>Expected: {formatFuzzyDate(expectedLaunchDate)}</span>
+        </div>
+        <div className="h-2 w-full rounded-full bg-muted/40" aria-hidden="true" />
+      </div>
+    );
+  }
 
   const totalMs = end.getTime() - start.getTime();
   const elapsedMs = now.getTime() - start.getTime();
   const pct = clampScore((elapsedMs / totalMs) * 100);
 
-  // ARIA values for accessibility
-  const ariaValueNow = Math.round(pct);
-  const ariaValueMin = 0;
-  const ariaValueMax = 100;
-
   return (
-    <div className="space-y-2">
+    <div className="min-h-[54px] space-y-2">
       <div className="flex items-center justify-between text-xs text-muted-foreground">
         <span>{formatFuzzyDate(announcedDate)}</span>
         <span>Expected: {formatFuzzyDate(expectedLaunchDate)}</span>
@@ -95,9 +108,9 @@ function TimelineBar({ announcedDate, expectedLaunchDate }: { announcedDate: str
       <div
         className="relative h-2 w-full overflow-hidden rounded-full bg-muted/40"
         role="progressbar"
-        aria-valuenow={ariaValueNow}
-        aria-valuemin={ariaValueMin}
-        aria-valuemax={ariaValueMax}
+        aria-valuenow={Math.round(pct)}
+        aria-valuemin={0}
+        aria-valuemax={100}
         aria-label="Launch timeline progress"
       >
         <div className="absolute inset-y-0 left-0 rounded-full bg-indigo-500/60" style={{ width: `${pct}%` }} />

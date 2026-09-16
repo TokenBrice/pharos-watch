@@ -176,6 +176,8 @@ export function buildCoverageMatrixModel(input: CoverageMatrixModelInput) {
   const totalMcapUsd = rows.reduce((sum, row) => sum + row.marketCapUsd, 0);
   const featureSummaries = COVERAGE_FEATURES.map((feature) => buildCoverageFeatureSummary(feature, rows, totalMcapUsd));
 
+  let totalCount = 0;
+  let sourceDepthMcapUsd = 0;
   let atTargetCount = 0;
   let exactTwoCount = 0;
   let belowTargetCount = 0;
@@ -183,7 +185,12 @@ export function buildCoverageMatrixModel(input: CoverageMatrixModelInput) {
   let exactTwoMcapUsd = 0;
 
   for (const row of rows) {
-    const sourceCount = row.statuses.price.sourceCount ?? 0;
+    const priceStatus = row.statuses.price;
+    if (priceStatus.kind === "data-unavailable" || priceStatus.kind === "price-only") continue;
+
+    totalCount++;
+    sourceDepthMcapUsd += row.marketCapUsd;
+    const sourceCount = priceStatus.sourceCount ?? 0;
     if (sourceCount >= 3) {
       atTargetCount++;
       atTargetMcapUsd += row.marketCapUsd;
@@ -196,15 +203,14 @@ export function buildCoverageMatrixModel(input: CoverageMatrixModelInput) {
     }
   }
 
-  const totalCount = rows.length;
   const sourceDepthProgress = {
     totalCount,
     atTargetCount,
     exactTwoCount,
     belowTargetCount,
-    atTargetPct: totalCount > 0 ? (atTargetCount / totalCount) * 100 : 0,
-    atTargetMcapPct: totalMcapUsd > 0 ? (atTargetMcapUsd / totalMcapUsd) * 100 : null,
-    exactTwoMcapPct: totalMcapUsd > 0 ? (exactTwoMcapUsd / totalMcapUsd) * 100 : null,
+    atTargetPct: totalCount > 0 ? (atTargetCount / totalCount) * 100 : null,
+    atTargetMcapPct: sourceDepthMcapUsd > 0 ? (atTargetMcapUsd / sourceDepthMcapUsd) * 100 : null,
+    exactTwoMcapPct: sourceDepthMcapUsd > 0 ? (exactTwoMcapUsd / sourceDepthMcapUsd) * 100 : null,
   };
 
   const { pricingSources, authoritativeSources } = buildPricingSourceCounts(input.pegSummary.data);

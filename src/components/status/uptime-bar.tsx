@@ -57,11 +57,11 @@ function buildDaySegments(
   // Sort transitions chronologically (oldest first)
   const sorted = [...transitions].sort((a, b) => a.at - b.at);
 
-  // Determine initial status: the state before the oldest transition
-  // That's the `from` of the first transition, or "unknown" if init
+  // The state before an init transition was not observed. Apply its `to`
+  // status only when the transition's day is reached.
   let runningStatus: DaySegment["status"] =
     sorted[0].transitionType === "init"
-      ? (sorted[0].to as DaySegment["status"])
+      ? "unknown"
       : ((sorted[0].from as DaySegment["status"]) ?? "unknown");
 
   let transitionIndex = 0;
