@@ -1,10 +1,13 @@
 import { WORKER_TRACKED_META_BY_ID } from "@shared/lib/stablecoins/worker-runtime-registry";
+import { deleteCache, getCache, setCache } from "../lib/db-cache";
 import { parseJsonObject } from "../lib/json-parse";
 import { logTelegramEvent } from "../lib/telegram/log";
 
 /** The tape projector runs every 30 minutes; two missed slots fail closed. */
 const TAPE_FRESHNESS_SEC = 60 * 60;
 const TAPE_PAGE_LIMIT = 500;
+const FREEZE_ROW_HOLD_KEY = "alert:freeze-tape-row-hold";
+const FREEZE_ROW_HOLD_RETRY_LIMIT = 3;
 
 export interface FreezeAlert {
   stablecoinId: string;
@@ -26,6 +29,11 @@ interface FreezeTapeRow {
 }
 
 interface ProjectTapeRunRow { started_at: number; }
+interface FreezeRowHoldState {
+  rowId: number;
+  attempts: number;
+}
+
 
 type FreezeRowDropReason = "bad-json" | "unknown-coin" | "ambiguous-symbol";
 
@@ -36,6 +44,18 @@ type FreezeRowParseResult =
 type SymbolResolution =
   | { stablecoinId: string }
   | { reason: Exclude<FreezeRowDropReason, "bad-json"> };
+function parseFreezeRowHoldState(value: string): FreezeRowHoldState | null {
+  const parsed = parseJsonObject(value, "telegram freeze row hold state");
+  if (
+    !parsed ||
+    !Number.isSafeInteger(parsed.rowId) ||
+    Number(parsed.rowId) < 1 ||
+    !Number.isSafeInteger(parsed.attempts) ||
+    Number(parsed.attempts) < 1
+  ) return null;
+  return { rowId: Number(parsed.rowId), attempts: Number(parsed.attempts) };
+}
+
 
 function stablecoinIdForSymbol(symbol: string): SymbolResolution {
   const matches = [...WORKER_TRACKED_META_BY_ID.entries()].filter(([, coin]) => coin.symbol === symbol);
@@ -81,26 +101,15 @@ function parseFreezeRow(row: FreezeTapeRow): FreezeRowParseResult {
   };
 }
 
-function logDroppedFreezeRows(droppedByReason: ReadonlyMap<FreezeRowDropReason, number>): void {
-  for (const reason of ["bad-json", "unknown-coin", "ambiguous-symbol"] as const) {
-    const rowCount = droppedByReason.get(reason) ?? 0;
-    if (rowCount === 0) continue;
-    logTelegramEvent({
-      level: "warn",
-      message: "dropped unparseable freeze Tape rows",
-      action: "freeze-row-dropped",
-      module: "telegram-alert-freeze",
-      reason,
-      rowCount,
-    });
-  }
-}
-
-function countDroppedFreezeRow(
-  droppedByReason: Map<FreezeRowDropReason, number>,
-  reason: FreezeRowDropReason,
-): void {
-  droppedByReason.set(reason, (droppedByReason.get(reason) ?? 0) + 1);
+function logDroppedFreezeRow(reason: FreezeRowDropReason): void {
+  logTelegramEvent({
+    level: "warn",
+    message: "held unparseable freeze Tape row for retry",
+    action: "freeze-row-held",
+    module: "telegram-alert-freeze",
+    reason,
+    rowCount: 1,
+  });
 }
 
 export async function loadFreshFreezeAlerts(
@@ -112,6 +121,7 @@ export async function loadFreshFreezeAlerts(
   alerts: FreezeAlert[];
   cursor: number | null;
   droppedUnparsed?: number;
+  deadLetteredUnparsed?: number;
 }> {
   const latestRun = await db.prepare(
     "SELECT started_at FROM cron_runs WHERE job = 'project-tape' AND status = 'ok' ORDER BY started_at DESC, id DESC LIMIT 1",
@@ -136,25 +146,56 @@ export async function loadFreshFreezeAlerts(
   ).bind(cursor ?? 0, TAPE_PAGE_LIMIT).all<FreezeTapeRow>();
   const results = rows.results ?? [];
   const alerts: FreezeAlert[] = [];
-  const droppedByReason = new Map<FreezeRowDropReason, number>();
-  let firstUnparseableId: number | null = null;
+  let unparseable: { id: number; reason: FreezeRowDropReason } | null = null;
   for (const row of results) {
     const parsed = parseFreezeRow(row);
     if ("alert" in parsed) {
       alerts.push(parsed.alert);
       continue;
     }
-    countDroppedFreezeRow(droppedByReason, parsed.reason);
-    if (firstUnparseableId == null && Number.isFinite(Number(row.id))) {
-      firstUnparseableId = Number(row.id);
+    const rowId = Number(row.id);
+    if (Number.isSafeInteger(rowId) && rowId > 0) {
+      unparseable = { id: rowId, reason: parsed.reason };
+      break;
     }
   }
-  const droppedUnparsed = [...droppedByReason.values()].reduce((total, count) => total + count, 0);
-  if (droppedUnparsed > 0) logDroppedFreezeRows(droppedByReason);
-  const nextCursor = firstUnparseableId
-    ?? (results.length > 0 ? Number(results[results.length - 1]!.id) : cursor);
-  return droppedUnparsed > 0
-    ? { state: "ok", alerts, cursor: nextCursor, droppedUnparsed }
-    : { state: "ok", alerts, cursor: nextCursor };
+  if (unparseable == null) {
+    const nextCursor = results.length > 0 ? Number(results[results.length - 1]!.id) : cursor;
+    return { state: "ok", alerts, cursor: nextCursor };
+  }
+
+  logDroppedFreezeRow(unparseable.reason);
+  const cachedHold = await getCache(db, FREEZE_ROW_HOLD_KEY);
+  const previousHold = cachedHold ? parseFreezeRowHoldState(cachedHold.value) : null;
+  const attempts = previousHold?.rowId === unparseable.id ? previousHold.attempts + 1 : 1;
+  if (attempts < FREEZE_ROW_HOLD_RETRY_LIMIT) {
+    await setCache(db, FREEZE_ROW_HOLD_KEY, JSON.stringify({ rowId: unparseable.id, attempts }));
+    return {
+      state: "ok",
+      alerts,
+      cursor: unparseable.id - 1,
+      droppedUnparsed: 1,
+    };
+  }
+
+  await deleteCache(db, FREEZE_ROW_HOLD_KEY);
+  logTelegramEvent({
+    level: "error",
+    message: "dead-lettered unparseable freeze Tape row after retry limit",
+    action: "freeze-row-dead-lettered",
+    module: "telegram-alert-freeze",
+    errorClass: "bad_request",
+    failureKind: "poison-row",
+    reason: unparseable.reason,
+    attempts,
+    rowCount: 1,
+  });
+  return {
+    state: "ok",
+    alerts,
+    cursor: unparseable.id,
+    droppedUnparsed: 1,
+    deadLetteredUnparsed: 1,
+  };
 }
 
