@@ -13,9 +13,10 @@ const ApiRequestAttributionSplitSchema = z.object({
   siteRequests: z.number(),
   externalRequests: z.number(),
   totalRequests: z.number(),
-  /** Percentage points on a 0-100 scale, not a 0-1 ratio. */
-  siteSharePct: z.number(),
-  externalSharePct: z.number(),
+  siteSharePct: z.number()
+    .describe("Percentage points, 0-100 scale (not a 0-1 ratio)"),
+  externalSharePct: z.number()
+    .describe("Percentage points, 0-100 scale (not a 0-1 ratio)"),
 });
 export type ApiRequestAttributionSplit = z.output<typeof ApiRequestAttributionSplitSchema>;
 
@@ -56,8 +57,10 @@ const ApiRequestAttributionKeyedPublicApiSummarySchema = z.object({
   keyedRequests: z.number(),
   unkeyedRequests: z.number(),
   totalRequests: z.number(),
-  keyedSharePct: z.number(),
-  unkeyedSharePct: z.number(),
+  keyedSharePct: z.number()
+    .describe("Percentage points, 0-100 scale (not a 0-1 ratio)"),
+  unkeyedSharePct: z.number()
+    .describe("Percentage points, 0-100 scale (not a 0-1 ratio)"),
   totalKeys: z.number(),
   returnedKeys: z.number(),
   omittedKeys: z.number(),
@@ -77,8 +80,10 @@ const ApiRequestAttributionApiKeyStatSchema = z.object({
   expiresAt: z.number().nullable(),
   rateLimitPerMinute: z.number(),
   requestCount: z.number(),
-  shareOfKeyedRequestsPct: z.number(),
-  shareOfTotalPublicApiRequestsPct: z.number(),
+  shareOfKeyedRequestsPct: z.number()
+    .describe("Percentage points, 0-100 scale (not a 0-1 ratio)"),
+  shareOfTotalPublicApiRequestsPct: z.number()
+    .describe("Percentage points, 0-100 scale (not a 0-1 ratio)"),
 });
 export type ApiRequestAttributionApiKeyStat = z.output<typeof ApiRequestAttributionApiKeyStatSchema>;
 export type ApiRequestConsumerClass = ApiRequestAttributionApiKeyStat["trafficClass"];

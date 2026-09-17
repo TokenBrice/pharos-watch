@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 import { z } from "zod";
 
+import { DigestSafetyMapSummarySchema } from "@shared/types/digest";
+import { ApiRequestAttributionResponseSchema } from "@shared/types/request-source";
 import {
   YIELD_ADAPTER_LIFECYCLE_VALUES,
   YieldHistoryResponseSchema,
@@ -46,11 +48,36 @@ function resolveSchemaTree(
   if (typeof candidate.$ref === "string" && !seenRefs.has(candidate.$ref)) {
     const nextRefs = new Set(seenRefs);
     nextRefs.add(candidate.$ref);
-    return resolveSchemaTree(resolveSchemaRef(candidate, components), components, nextRefs);
+    const resolved = resolveSchemaTree(
+      resolveSchemaRef(candidate, components),
+      components,
+      nextRefs,
+    ) as JsonSchemaObject;
+    const siblings = Object.fromEntries(
+      Object.entries(candidate)
+        .filter(([key]) => key !== "$ref")
+        .map(([key, child]) => [key, resolveSchemaTree(child, components, nextRefs)]),
+    );
+    return { ...resolved, ...siblings };
   }
   return Object.fromEntries(
     Object.entries(candidate).map(([key, child]) => [key, resolveSchemaTree(child, components, seenRefs)]),
   );
+}
+
+function collectPropertySchemas(schema: unknown, propertyName: string): JsonSchemaObject[] {
+  if (Array.isArray(schema)) {
+    return schema.flatMap((child) => collectPropertySchemas(child, propertyName));
+  }
+  if (typeof schema !== "object" || schema === null) {
+    return [];
+  }
+  const candidate = schema as JsonSchemaObject;
+  const properties = candidate.properties as Record<string, unknown> | undefined;
+  return [
+    ...(properties?.[propertyName] ? [properties[propertyName] as JsonSchemaObject] : []),
+    ...Object.values(candidate).flatMap((child) => collectPropertySchemas(child, propertyName)),
+  ];
 }
 
 describe("OpenAPI runtime response contracts", () => {
@@ -185,6 +212,39 @@ describe("OpenAPI runtime response contracts", () => {
       "snapshots-index": "SnapshotsIndexResponse",
       "snapshot-coin": "SnapshotCoinResponse",
     });
+  });
+
+  it("publishes percentage-point scales for every clarified Pct response field", () => {
+    const description = "Percentage points, 0-100 scale (not a 0-1 ratio)";
+    const schemas = document.components.schemas as Record<string, unknown>;
+    const responseFields = [
+      ["DdrResponse", "supplyChange7dPct"],
+      ["DdrResponse", "supplyChange30dPct"],
+    ] as const;
+
+    for (const [schemaName, propertyName] of responseFields) {
+      const matches = collectPropertySchemas(
+        resolveSchemaTree(schemas[schemaName], schemas),
+        propertyName,
+      );
+      expect(matches.length, `${schemaName}.${propertyName}`).toBeGreaterThan(0);
+      expect(matches.map((field) => field.description), `${schemaName}.${propertyName}`)
+        .toEqual(Array(matches.length).fill(description));
+    }
+
+    expect(
+      DigestSafetyMapSummarySchema.shape.tiers.element.shape.sharePct.description,
+    ).toBe(description);
+
+    const attributionFields = [
+      ApiRequestAttributionResponseSchema.shape.totals.shape.siteSharePct,
+      ApiRequestAttributionResponseSchema.shape.totals.shape.externalSharePct,
+      ApiRequestAttributionResponseSchema.shape.keyedPublicApi.shape.keyedSharePct,
+      ApiRequestAttributionResponseSchema.shape.keyedPublicApi.shape.unkeyedSharePct,
+      ApiRequestAttributionResponseSchema.shape.apiKeys.element.shape.shareOfKeyedRequestsPct,
+      ApiRequestAttributionResponseSchema.shape.apiKeys.element.shape.shareOfTotalPublicApiRequestsPct,
+    ];
+    expect(attributionFields.every((field) => field.description === description)).toBe(true);
   });
 
   it("rejects empty converted response schemas with their schema name", () => {

@@ -232,8 +232,8 @@ const DigestSafetyMapTierSchema = z
     range: z.string().trim().min(1),
     count: z.number().int().nonnegative(),
     mcapUsd: z.number().nonnegative(),
-    /** Percentage points on a 0-100 scale, not a 0-1 ratio. */
-    sharePct: z.number().min(0).max(100),
+    sharePct: z.number().min(0).max(100)
+      .describe("Percentage points, 0-100 scale (not a 0-1 ratio)"),
     leaders: z
       .array(
         z
