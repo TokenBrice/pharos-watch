@@ -537,29 +537,30 @@ function scanHereDocs(command: unknown): HereDocScan {
   const lines = String(command ?? "").split(/\r?\n/g);
   const bodies: string[] = [];
   const kept: string[] = [];
-  let body: string[] | null = null;
-  let marker = "";
+  const pending: Array<{ body: string[] | null; marker: string }> = [];
 
   for (const line of lines) {
-    if (marker) {
-      if (line.trim() === marker) {
-        if (body) bodies.push(body.join("\n"));
-        body = null;
-        marker = "";
-      } else if (body) {
-        body.push(line);
+    const active = pending[0];
+    if (active) {
+      if (line.trim() === active.marker) {
+        if (active.body) bodies.push(active.body.join("\n"));
+        pending.shift();
+      } else if (active.body) {
+        active.body.push(line);
       }
       continue;
     }
 
     kept.push(line);
-    const match = line.match(/<<-?\s*(?:(['"])([A-Za-z0-9_.-]+)\1|([A-Za-z0-9_.-]+))/);
-    if (match) {
-      marker = match[2] ?? match[3];
-      body = match[1] ? null : [];
+    for (const match of line.matchAll(/<<-?\s*(?:(['"])([A-Za-z0-9_.-]+)\1|([A-Za-z0-9_.-]+))/g)) {
+      pending.push({
+        body: match[1] ? null : [],
+        marker: match[2] ?? match[3],
+      });
     }
   }
-  if (body) bodies.push(body.join("\n"));
+  const active = pending[0];
+  if (active?.body) bodies.push(active.body.join("\n"));
 
   return { bodies, executableText: kept.join("\n") };
 }

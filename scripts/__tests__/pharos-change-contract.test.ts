@@ -746,6 +746,22 @@ describe("hard-block hook outputs", () => {
     expect(requireBlockingReason(output)).toContain("opaque shell construct");
   });
 
+  it("blocks guarded substitutions in the first of multiple heredocs opened on one line", () => {
+    const output = buildPreToolUseHookOutput({
+      tool_input: {
+        command: [
+          "cat <<FIRST <<SECOND",
+          "$(npx wrangler d1 execute stablecoin-db --remote --command 'DELETE FROM cache')",
+          "FIRST",
+          "benign",
+          "SECOND",
+        ].join("\n"),
+      },
+    });
+
+    expect(requireBlockingReason(output)).toContain("opaque shell construct");
+  });
+
   it("allows help output for deploy-shaped commands", () => {
     const output = buildPreToolUseHookOutput({
       tool_input: {
