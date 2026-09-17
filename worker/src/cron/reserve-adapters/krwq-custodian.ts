@@ -138,8 +138,9 @@ function parseRawAmount(value: unknown, label: string): bigint {
   if (typeof value === "number" && Number.isSafeInteger(value) && value >= 0) {
     return BigInt(value);
   }
+  const normalized = typeof value === "string" ? value.trim() : value;
   return parseDigitString(
-    value,
+    normalized,
     `${ADAPTER_KEY} ${label} is not an unsigned integer${typeof value === "string" ? " string" : ""}: ${String(value)}`,
   );
 }
