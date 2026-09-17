@@ -127,7 +127,15 @@ export async function fetchHistoricalFxRates(
   }
 }
 
-async function fetchHistoricalSecondaryFxDay(date: string, signal?: AbortSignal): Promise<Record<string, number> | null> {
+type HistoricalSecondaryFxDayOutcome =
+  | { kind: "rates"; rates: Record<string, number> }
+  | { kind: "unavailable" }
+  | { kind: "transient" };
+
+async function fetchHistoricalSecondaryFxDay(
+  date: string,
+  signal?: AbortSignal,
+): Promise<HistoricalSecondaryFxDayOutcome> {
   const primaryUrl = `https://cdn.jsdelivr.net/npm/@fawazahmed0/currency-api@${date}/v1/currencies/usd.min.json`;
   const fallbackUrl = `https://${date}.currency-api.pages.dev/v1/currencies/usd.min.json`;
 
@@ -147,7 +155,7 @@ async function fetchHistoricalSecondaryFxDay(date: string, signal?: AbortSignal)
   }
   if (!result?.response.ok) {
     logWorkerEventArgs("lib", "warn", `[backfill-depegs] secondary FX API returned ${result?.response.status ?? "no response"} for ${date}`);
-    return null;
+    return result?.response.status === 404 ? { kind: "unavailable" } : { kind: "transient" };
   }
 
   let raw: unknown;
@@ -156,14 +164,17 @@ async function fetchHistoricalSecondaryFxDay(date: string, signal?: AbortSignal)
   } catch (err) {
     rethrowIfAborted(err, signal);
     logWorkerEventArgs("lib", "warn", `[backfill-depegs] secondary FX returned non-JSON for ${date}`, err);
-    return null;
+    return { kind: "transient" };
   }
   const parsed = SecondaryFxResponseSchema.safeParse(raw);
   if (!parsed.success) {
     logWorkerEventArgs("lib", "warn", `[backfill-depegs] secondary FX validation failed for ${date}: ${parsed.error.message}`);
-    return null;
+    return { kind: "transient" };
   }
-  return parsed.data.usd ?? null;
+  const rates = parsed.data.usd;
+  return rates && Object.keys(rates).length > 0
+    ? { kind: "rates", rates }
+    : { kind: "unavailable" };
 }
 
 export async function fetchHistoricalSecondaryFxRates(
@@ -202,21 +213,24 @@ export async function fetchHistoricalSecondaryFxRates(
     }
 
     const missingDates = wantedDates.filter((date) => !yearCache[date]);
+    let cacheChanged = false;
     for (let i = 0; i < missingDates.length; i += SECONDARY_FX_FETCH_CONCURRENCY) {
       const chunk = missingDates.slice(i, i + SECONDARY_FX_FETCH_CONCURRENCY);
       const fetched = await Promise.all(
         chunk.map(async (date) => [date, await fetchHistoricalSecondaryFxDay(date, signal)] as const),
       );
-      for (const [date, dailyRates] of fetched) {
-        if (dailyRates) {
-          mergeDateRates(yearCache, date, dailyRates);
-        } else {
+      for (const [date, outcome] of fetched) {
+        if (outcome.kind === "rates") {
+          mergeDateRates(yearCache, date, outcome.rates);
+          cacheChanged = true;
+        } else if (outcome.kind === "unavailable") {
           yearCache[date] = {};
+          cacheChanged = true;
         }
       }
     }
 
-    if (missingDates.length > 0) {
+    if (cacheChanged) {
       await setCache(db, cacheKey, JSON.stringify(yearCache));
     }
 

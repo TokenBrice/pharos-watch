@@ -271,6 +271,61 @@ describe("fetchHistoricalSecondaryFxRates", () => {
     expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining("secondary FX validation failed"));
   });
 
+  it("refetches a transiently failed day on the next run", async () => {
+    vi.spyOn(console, "warn").mockImplementation(() => {});
+    mockFetch([
+      { match: "cdn.jsdelivr.net", body: { error: "unavailable" }, status: 503 },
+      { match: ".currency-api.pages.dev", body: { error: "unavailable" }, status: 503 },
+    ], { requireMatch: true });
+    const firstDb = mockD1([
+      {
+        match: "SELECT value, updated_at FROM cache WHERE key = ?",
+        matchBinds: ["fx-history-secondary:2025"],
+        rows: [],
+        first: null,
+      },
+      { match: "INSERT OR REPLACE INTO cache", rows: [] },
+    ]);
+
+    expect(
+      await fetchHistoricalSecondaryFxRates(firstDb, ["ARS"], "2025-06-14", "2025-06-14"),
+    ).toEqual({ ARS: [] });
+    expect(
+      firstDb.getHistory().some((entry) => entry.sql.includes("INSERT OR REPLACE INTO cache")),
+    ).toBe(false);
+
+    mockFetch([
+      {
+        match: "@2025-06-14/v1/currencies/usd.min.json",
+        body: { date: "2025-06-14", usd: { ars: 1_180 } },
+      },
+    ], { requireMatch: true });
+    const secondDb = mockD1([
+      {
+        match: "SELECT value, updated_at FROM cache WHERE key = ?",
+        matchBinds: ["fx-history-secondary:2025"],
+        rows: [],
+        first: null,
+      },
+      { match: "INSERT OR REPLACE INTO cache", rows: [] },
+    ]);
+
+    expect(
+      await fetchHistoricalSecondaryFxRates(secondDb, ["ARS"], "2025-06-14", "2025-06-14"),
+    ).toEqual({
+      ARS: [{
+        timestamp: Math.floor(new Date("2025-06-14T00:00:00Z").getTime() / 1000),
+        rate: 1 / 1_180,
+      }],
+    });
+    const cacheWrite = secondDb.getHistory().find(
+      (entry) => entry.sql.includes("INSERT OR REPLACE INTO cache"),
+    );
+    expect(JSON.parse(cacheWrite?.binds[1] as string)).toEqual({
+      "2025-06-14": { ars: 1_180 },
+    });
+  });
+
   it("persists empty-day markers so permanently missing days are not fetched again", async () => {
     const primary = new Response("missing", { status: 404 });
     const fallback = new Response("missing", { status: 404 });
