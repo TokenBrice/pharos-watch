@@ -2,7 +2,7 @@ import Link from "next/link";
 import { ArrowUpRight } from "lucide-react";
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import { buildStablecoinUrl } from "@shared/lib/urls";
-import { logosById } from "@/lib/logos";
+import { getLogoSrc, logosById } from "@/lib/logos";
 import { SectionHeading, SectionKicker } from "./section-primitives";
 
 interface RelatedCoin {
@@ -36,7 +36,7 @@ export function RelatedCoinsList({
         {coins.map((coin) => {
           const meta = TRACKED_META_BY_ID.get(coin.coinId);
           if (!meta) return null;
-          const logoSrc = logosById[coin.coinId];
+          const logoSrc = getLogoSrc(logosById, coin.coinId);
           return (
             <li key={coin.coinId}>
               <Link

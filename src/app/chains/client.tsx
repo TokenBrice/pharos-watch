@@ -18,7 +18,7 @@ import { formatCompactUsd, formatSignedPercent, getNetColor } from "@shared/lib/
 import { ChainTypeBadge } from "@/components/chain-type-badge";
 import { CHAIN_META } from "@shared/lib/chains";
 import { StablecoinLogo } from "@/components/stablecoin-logo";
-import { logosById } from "@/lib/logos";
+import { getLogoSrc, logosById } from "@/lib/logos";
 import { NauticalChart } from "./nautical-chart";
 import { buildChainHarborEntries, buildChainHarborModelFromEntries, HARBOR_MAX } from "./harbor-map";
 import { nextHarborSweepId } from "./nautical-scene-math";
@@ -261,7 +261,7 @@ export function ChainsLeaderboardClient() {
                 <TableCell className="hidden lg:table-cell">
                   <div className="flex items-center gap-2">
                     <StablecoinLogo
-                      src={logosById[chain.dominantStablecoin.id]}
+                      src={getLogoSrc(logosById, chain.dominantStablecoin.id)}
                       name={chain.dominantStablecoin.symbol}
                       size={18}
                     />

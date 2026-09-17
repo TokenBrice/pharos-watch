@@ -1,6 +1,6 @@
 import type { CSSProperties } from "react";
 import { HEALTH_HEX_FILL, chainAccentHex } from "@/lib/chain-ui";
-import { logosById } from "@/lib/logos";
+import { getLogoSrc, logosById } from "@/lib/logos";
 import type { HealthBand } from "@shared/types/chains";
 import { cargoCapacityForHull, depthLayers, wakeLength } from "./nautical-scene-math";
 import type { ChainHarborEntry } from "./harbor-map";
@@ -185,7 +185,7 @@ export function Ship({
       y: cargoMarkY,
       size,
       clipId: `nc-cargo-${safeId}`,
-      logoPath: logosById[cargo.id],
+      logoPath: getLogoSrc(logosById, cargo.id),
     };
   });
   const cargoTitle = cargoManifest.map((cargo) => `${cargo.symbol} ${cargo.sharePct.toFixed(0)}%`).join(", ");

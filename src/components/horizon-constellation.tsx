@@ -12,7 +12,7 @@ import {
   phaseRingSize,
 } from "@/lib/horizon-constellation-layout";
 import { resolveCompactLogoSrc } from "@/lib/logo-variants";
-import { logosById } from "@/lib/logos";
+import { getLogoSrc, logosById } from "@/lib/logos";
 import { buildStablecoinUrl } from "@shared/lib/urls";
 import { cn } from "@/lib/utils";
 
@@ -27,7 +27,7 @@ const DOT_CLASS =
   "flex items-center justify-center overflow-hidden rounded-full border border-border/50 bg-background/90 text-[9px] font-bold text-muted-foreground shadow-[inset_0_1px_0_oklch(1_0_0_/0.05)] transition-colors group-hover:border-border group-hover:bg-background dark:bg-muted";
 
 function HorizonLogoDot({ coin }: { coin: HorizonPreLaunchCoin }): React.JSX.Element {
-  const logoSrc = resolveCompactLogoSrc(logosById[coin.id], LOGO_INNER);
+  const logoSrc = resolveCompactLogoSrc(getLogoSrc(logosById, coin.id), LOGO_INNER);
   const fallback = (coin.symbol || coin.name).trim().charAt(0).toUpperCase();
 
   return (

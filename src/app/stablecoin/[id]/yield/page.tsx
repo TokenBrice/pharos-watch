@@ -6,7 +6,7 @@ import { hasStaticYieldWorkbench } from "@shared/lib/yield-auto-lending";
 import { Skeleton } from "@/components/ui/skeleton";
 import { buildPageMetadata } from "@/lib/page-metadata";
 import { buildStablecoinUrl } from "@shared/lib/urls";
-import { logosById } from "@/lib/logos";
+import { getLogoSrc, logosById } from "@/lib/logos";
 import { buildStablecoinStaticMeta } from "@/lib/stablecoin-static-meta";
 import YieldAnalysisClient from "@/components/stablecoin-detail/yield-analysis-client";
 
@@ -42,7 +42,7 @@ export default async function StablecoinYieldDetailPage({ params }: { params: Pr
 
   return (
     <Suspense fallback={<Skeleton className="h-[600px] w-full rounded-xl" />}>
-      <YieldAnalysisClient id={id} staticCoin={staticCoin} logoSrc={logosById[coin.id]} />
+      <YieldAnalysisClient id={id} staticCoin={staticCoin} logoSrc={getLogoSrc(logosById, coin.id)} />
     </Suspense>
   );
 }

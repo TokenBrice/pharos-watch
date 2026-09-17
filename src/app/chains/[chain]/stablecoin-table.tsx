@@ -18,7 +18,7 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import type { ChainDetailCoin } from "@shared/types/chains";
 import { trendColor } from "@/lib/chain-ui";
-import { logosById } from "@/lib/logos";
+import { getLogoSrc, logosById } from "@/lib/logos";
 import { buildStablecoinUrl } from "@shared/lib/urls";
 import { cn } from "@/lib/utils";
 
@@ -98,7 +98,7 @@ export function StablecoinTable({
             <TableCell className="tabular-nums text-muted-foreground">{index + 1}</TableCell>
             <TableCell>
               <span className="flex items-center gap-2 font-medium group-hover:text-primary">
-                <StablecoinLogo src={logosById[coin.id]} name={coin.name} size={24} />
+                <StablecoinLogo src={getLogoSrc(logosById, coin.id)} name={coin.name} size={24} />
                 <span className="hidden sm:inline">{coin.name}</span>
                 <span className="text-muted-foreground">({coin.symbol})</span>
                 <ChevronRight className="h-3.5 w-3.5 opacity-0 transition-opacity group-hover:opacity-50" />

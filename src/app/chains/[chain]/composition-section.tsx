@@ -7,7 +7,7 @@ import { formatCompactUsd } from "@shared/lib/format";
 import type { ChainDetailCoin } from "@shared/types/chains";
 import { StablecoinLogo } from "@/components/stablecoin-logo";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { logosById } from "@/lib/logos";
+import { getLogoSrc, logosById } from "@/lib/logos";
 import { buildStablecoinUrl } from "@shared/lib/urls";
 import { cn } from "@/lib/utils";
 import type { ChainRouteViewModel } from "./view-model";
@@ -38,7 +38,7 @@ function CompositionBlock({
       }}
       title={`${coin.name} (${coin.symbol}) - ${(percentage * 100).toFixed(1)}% - Click to view details`}
     >
-      <StablecoinLogo src={logosById[coin.id]} name={coin.name} size={logoSize} />
+      <StablecoinLogo src={getLogoSrc(logosById, coin.id)} name={coin.name} size={logoSize} />
       <span className={cn("mt-1.5 font-semibold", shouldSpan ? "text-base" : "text-sm")}>{coin.symbol}</span>
       <span className={cn("text-muted-foreground", shouldSpan && "text-sm")}>
         {(percentage * 100).toFixed(1)}%
@@ -100,7 +100,7 @@ function CompositionOthersBlock({
             {previewCoins.map((coin) => (
               <div key={coin.id} className="flex items-center justify-between text-xs">
                 <span className="flex items-center gap-1.5">
-                  <StablecoinLogo src={logosById[coin.id]} name={coin.name} size={14} />
+                  <StablecoinLogo src={getLogoSrc(logosById, coin.id)} name={coin.name} size={14} />
                   <span className="text-muted-foreground">{coin.symbol}</span>
                 </span>
                 <span className="font-mono text-muted-foreground">{(coin.chainShare * 100).toFixed(1)}%</span>
@@ -171,7 +171,7 @@ export function CompositionSection({ model }: { model: ChainRouteViewModel }) {
                 href={buildStablecoinUrl(coin.id)}
                 className="pharos-focus-ring inline-flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground"
               >
-                <StablecoinLogo src={logosById[coin.id]} name={coin.name} size={16} />
+                <StablecoinLogo src={getLogoSrc(logosById, coin.id)} name={coin.name} size={16} />
                 <span className="font-medium">{coin.symbol}</span>
                 <span className="tabular-nums">{(coin.chainShare * 100).toFixed(1)}%</span>
               </Link>

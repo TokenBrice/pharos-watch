@@ -18,7 +18,7 @@ import StablecoinDetailClient from "./client";
 import { ExploreNextSection } from "@/components/stablecoin-detail/explore-next-section";
 import { PreLaunchDetail } from "@/components/pre-launch-detail";
 import aiSummaries from "@data/ai-summaries.json";
-import { logosById } from "@/lib/logos";
+import { getLogoSrc, logosById } from "@/lib/logos";
 import { buildPreLaunchStablecoinJsonLd, buildStablecoinDatasetJsonLd } from "@/lib/stablecoin-detail-json-ld";
 import { buildStablecoinStaticMeta, type StablecoinStaticMeta } from "@/lib/stablecoin-static-meta";
 import { deriveDependencies } from "@shared/lib/dependency-derivation";
@@ -212,7 +212,7 @@ export default async function StablecoinDetailPage({ params }: { params: Promise
   if (coin.status === "pre-launch") {
     return (
       <>
-        <PreLaunchDetail coin={coin} logoSrc={logosById[coin.id]} summary={summary} logos={logosById} />
+        <PreLaunchDetail coin={coin} logoSrc={getLogoSrc(logosById, coin.id)} summary={summary} logos={logosById} />
         <BreadcrumbJsonLd
           items={[
             { name: "Home", url: "/" },
@@ -274,7 +274,7 @@ export default async function StablecoinDetailPage({ params }: { params: Promise
         fallback={
           <DetailPageShellFallback
             coin={staticCoin}
-            logoSrc={logosById[coin.id]}
+            logoSrc={getLogoSrc(logosById, coin.id)}
             staticProfileContent={
               <>
                 <StablecoinDetailSeoContent coin={coin} summary={summary} includeHeading={false} />
@@ -290,7 +290,7 @@ export default async function StablecoinDetailPage({ params }: { params: Promise
           coin={clientCoin}
           summary={summary}
           staticCoin={staticCoin}
-          logoSrc={logosById[coin.id]}
+          logoSrc={getLogoSrc(logosById, coin.id)}
           collateralUsageEntries={collateralUsageEntries}
           mechanismBacking={buildMechanismBackingView(id)}
           mechanismCollateralization={buildMechanismCollateralizationView(id)}
@@ -330,7 +330,7 @@ export default async function StablecoinDetailPage({ params }: { params: Promise
         json={safeJsonLd(
             buildStablecoinDatasetJsonLd(coin, {
               dateModified: structuredDataDateModified,
-              logoPath: logosById[coin.id],
+              logoPath: getLogoSrc(logosById, coin.id),
             }),
           )}
       />

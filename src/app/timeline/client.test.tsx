@@ -6,7 +6,7 @@ import type { TapeEvent } from "@shared/types/tape-event";
 
 type UseEventsResult = {
   data: { events: TapeEvent[]; nextCursor: string | null };
-  pages: Array<{ data: { events: TapeEvent[]; nextCursor: string | null; total: number | null }; meta: null }> | undefined;
+  pages: Array<{ data: { events: TapeEvent[]; nextCursor: string | null; droppedRows: number; total: number | null }; meta: null }> | undefined;
   isLoading: boolean;
   error: Error | null;
   meta: null;
@@ -16,6 +16,7 @@ type UseEventsResult = {
   hasNextPage: boolean;
   isFetchingNextPage: boolean;
   total: number | null;
+  droppedRows: number;
 };
 
 type LatestEventsResult = {
@@ -39,6 +40,7 @@ vi.mock("@/hooks/use-events", async () => {
 
 vi.mock("@/lib/logos", () => ({
   logosById: {},
+  getLogoSrc: () => undefined,
 }));
 
 import {
@@ -95,7 +97,7 @@ function mockEvents(events: TapeEvent[], overrides: Partial<UseEventsResult> = {
   const total = overrides.total ?? events.length;
   useEventsMock.mockReturnValue({
     data: { events, nextCursor },
-    pages: [{ data: { events, nextCursor, total }, meta: null }],
+    pages: [{ data: { events, nextCursor, droppedRows: overrides.droppedRows ?? 0, total }, meta: null }],
     isLoading: false,
     error: null,
     meta: null,
@@ -105,6 +107,7 @@ function mockEvents(events: TapeEvent[], overrides: Partial<UseEventsResult> = {
     hasNextPage: false,
     isFetchingNextPage: false,
     total,
+    droppedRows: 0,
     ...overrides,
   });
 }
@@ -300,6 +303,21 @@ describe("TimelineClient", () => {
 
     expect(screen.getByText("Showing 2 of 1,247 events")).toBeTruthy();
     expect(screen.getByText(/Load more \(1,245 remaining\)/)).toBeTruthy();
+  });
+
+  it("marks the total incomplete when API pages reject malformed rows", () => {
+    mockEvents(
+      [
+        makeTapeEvent({ id: "evt-1", title: "Event one" }),
+        makeTapeEvent({ id: "evt-2", title: "Event two", coinId: "usdt-tether" }),
+      ],
+      { total: 5, droppedRows: 3 },
+    );
+
+    render(<TimelineClient />);
+
+    expect(screen.getByText("Showing 2 of 5 events")).toBeTruthy();
+    expect(screen.getByText("Incomplete (3 rows rejected)")).toBeTruthy();
   });
 
   it("collapses a dense yesterday class into a digest row", () => {
