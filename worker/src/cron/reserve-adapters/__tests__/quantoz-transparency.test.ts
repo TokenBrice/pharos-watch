@@ -19,24 +19,26 @@ const QUANTOZ_HTML = `
 `;
 
 /**
- * Live capture of https://www.quantoz.com/transparency on 2026-09-11. Quantoz publishes
- * whole-number percentages, so the real cash/bond split `33% / 66%` sums to 99.
+ * Trimmed live HTML fetched from https://www.quantoz.com/transparency on 2026-09-17.
+ * The content following the final USDQ row intentionally retains the page's unrelated
+ * "100%" claim: it must not be mistaken for part of the final allocation cell.
  */
 const LIVE_QUANTOZ_HTML = `
 <div class="text-style-tagline gradient-normal">UPDATED: AUGUST 30th, 2026</div>
-<div>Reserve Status Overview</div>
+<div class="text-size-large text-weight-semibold">Reserve Status Overview</div>
 <div role="row" class="table5_item">
-  <div role="cell" class="table5_column"><div class="text-weight-medium">EURQ</div></div>
-  <div role="cell" class="table5_column"><div>€4.302.714</div></div>
-  <div role="cell" class="table5_column"><div>100,76%</div></div>
-  <div role="cell" class="table5_column"><div><strong>33% / 66%</strong></div></div>
+  <div role="cell" class="table5_column"><img src="eurq.svg" alt=""><div class="text-weight-medium">EURQ</div></div>
+  <div role="cell" class="table5_column is-width-large"><div>€4.302.714</div></div>
+  <div role="cell" class="table5_column is-width-small"><div>100,76%</div></div>
+  <div role="cell" class="table5_column is-width-large"><div><strong>33% / 66%</strong></div></div>
 </div>
 <div role="row" class="table5_item">
-  <div role="cell" class="table5_column"><div class="text-weight-medium">USDQ</div></div>
-  <div role="cell" class="table5_column"><div>$5.684.016</div></div>
-  <div role="cell" class="table5_column"><div>101,91%</div></div>
-  <div role="cell" class="table5_column"><div><strong>33% / 66%</strong></div></div>
+  <div role="cell" class="table5_column"><img src="usdq.svg" alt=""><div class="text-weight-medium">USDQ</div></div>
+  <div role="cell" class="table5_column is-width-large"><div>$5.684.016</div></div>
+  <div role="cell" class="table5_column is-width-small"><div>101,91%</div></div>
+  <div role="cell" class="table5_column is-width-large"><div><strong>33% / 66%</strong></div></div>
 </div>
+<section><h3>100% Highly Liquid Reserves</h3></section>
 `;
 
 const LIVE_NOW_SEC = Date.UTC(2026, 8, 11) / 1000;
@@ -100,6 +102,16 @@ describe("adaptQuantozTransparency", () => {
   it("throws when the update timestamp is missing", () => {
     expect(() => adaptQuantozTransparency(QUANTOZ_HTML.replace("UPDATED: April 20th, 2026", ""), "EURQ"))
       .toThrow(/layout-changed/);
+  });
+
+  it("rejects a surplus percentage inside the allocation cell", () => {
+    const ambiguousHtml = LIVE_QUANTOZ_HTML.replace(
+      "<strong>33% / 66%</strong>",
+      "<strong>33% / 66% / 1%</strong>",
+    );
+
+    expect(() => adaptQuantozTransparency(ambiguousHtml, "EURQ"))
+      .toThrow("missing, reordered, or extra reserve-allocation percentages");
   });
 });
 describe("fetchQuantozTransparencyReserves", () => {
