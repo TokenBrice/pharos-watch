@@ -112,6 +112,24 @@ describe("handleStablecoinSummary", () => {
     }
   });
 
+  it("preserves unavailable price and provenance as null", async () => {
+    const payload = JSON.parse(makeStablecoinsCacheValue());
+    Object.assign(payload.peggedAssets[0], {
+      price: null,
+      priceSource: null,
+    });
+    const db = mockD1([{ match: "cache", rows: [], first: {
+      value: JSON.stringify(payload), updated_at: Math.floor(Date.now() / 1000),
+    } }]);
+
+    const response = await handleStablecoinSummary(db, "usdt-tether");
+
+    expect(await readJsonResponse(response, 200)).toMatchObject({
+      priceUsd: null,
+      priceSource: null,
+    });
+  });
+
   it("sums already-USD multi-peg balances without price conversion and handles absent monthly history", async () => {
     const payload = JSON.parse(makeStablecoinsCacheValue());
     Object.assign(payload.peggedAssets[0], {
