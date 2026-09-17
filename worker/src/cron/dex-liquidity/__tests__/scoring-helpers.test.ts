@@ -375,11 +375,11 @@ describe("accumulateGlobalAggregate", () => {
     const chains = new Set<string>();
 
     const a = accumulateGlobalAggregate(
-      [makePool({ tvlUsd: 4_500_000, volumeUsd1d: 900_000, volumeUsd7d: 6_300_000 })],
+      [makePool({ chain: "ethereum", tvlUsd: 4_500_000, volumeUsd1d: 900_000, volumeUsd7d: 6_300_000 })],
       protoTvl, chainTvl, protoChainTvl, chains, seenTvl,
     );
     const b = accumulateGlobalAggregate(
-      [makePool({ tvlUsd: 5_000_000, volumeUsd1d: 1_000_000, volumeUsd7d: 7_000_000 })],
+      [makePool({ chain: "ethereum", tvlUsd: 5_000_000, volumeUsd1d: 1_000_000, volumeUsd7d: 7_000_000 })],
       protoTvl, chainTvl, protoChainTvl, chains, seenTvl,
     );
 

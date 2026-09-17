@@ -38,7 +38,7 @@ describe("twitter helpers", () => {
     expect(longWord.endsWith("…")).toBe(true);
   });
 
-  it("prefers the declared lead ticker when it appears, while keeping one cashtag", () => {
+  it("adds the declared lead cashtag while preserving an existing cashtag", () => {
     const result = buildTweetText(
       "",
       "$USDT fell while USDC rose and USDT stabilized.",
@@ -47,8 +47,8 @@ describe("twitter helpers", () => {
       { leadSignalId: "liquidity:usdc", coins: ["USDC", "USDT"] },
     );
 
-    expect(result).toBe("USDT fell while $USDC rose and USDT stabilized.");
-    expect(result.match(/\$(?:USDT|USDC)/g)).toEqual(["$USDC"]);
+    expect(result).toBe("$USDT fell while $USDC rose and USDT stabilized.");
+    expect(result.match(/\$(?:USDT|USDC)/g)).toEqual(["$USDT", "$USDC"]);
   });
 
   it("falls back to the first ticker when the declared lead is absent from the text", () => {

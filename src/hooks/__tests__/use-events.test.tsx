@@ -159,7 +159,7 @@ describe("useEvents", () => {
       { enabled: true },
     );
     const schema = await useRegisteredApiQueryMock.mock.calls[0]?.[0]?.schema();
-    expect(schema.safeParse({ events: [], nextCursor: null, total: null, totalExact: true }).success).toBe(true);
+    expect(schema.safeParse({ events: [], droppedRows: 0, nextCursor: null, total: null, totalExact: true }).success).toBe(true);
     expect(schema.safeParse({ events: [], nextCursor: null }).success).toBe(false);
   });
 });

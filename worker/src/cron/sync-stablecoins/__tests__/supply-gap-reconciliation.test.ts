@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { PeggedAsset } from "../enrich-prices";
 import type * as StablecoinRegistry from "@shared/lib/stablecoins/registry";
+import type * as OnchainSupply from "../supplemental-assets/onchain-supply";
 import { getCirculatingRaw } from "@shared/lib/supply";
 
 const fetchTextWithRetryMock = vi.hoisted(() => vi.fn());
@@ -18,7 +19,8 @@ vi.mock("@shared/lib/stablecoins/registry", async (importOriginal) => {
   return { ...actual, ACTIVE_META_BY_ID };
 });
 
-vi.mock("../supplemental-assets/onchain-supply", () => ({
+vi.mock("../supplemental-assets/onchain-supply", async (importOriginal) => ({
+  ...(await importOriginal<typeof OnchainSupply>()),
   fetchCuratedAggregateOnChainMcap: vi.fn(),
 }));
 

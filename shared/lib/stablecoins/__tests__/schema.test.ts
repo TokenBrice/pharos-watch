@@ -886,11 +886,11 @@ describe("StablecoinMeta schema — variantOf / pegReferenceId coherence (Rule 1
     expect(() => parseStablecoinMetaAssets(json, "fixture")).not.toThrow();
   });
 
-  it("accepts a coin with pegReferenceId only (no variantOf)", () => {
+  it("rejects a coin with pegReferenceId only (no variantOf)", () => {
     const json = [
       makeCoin({ id: "fixture-peg-only", pegReferenceId: "usdt-tether", }),
     ];
-    expect(() => parseStablecoinMetaAssets(json, "fixture")).not.toThrow();
+    expect(() => parseStablecoinMetaAssets(json, "fixture")).toThrow(/pegReferenceId requires variantOf/);
   });
 
   it("rejects a coin where variantOf and pegReferenceId disagree", () => {

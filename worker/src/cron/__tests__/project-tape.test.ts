@@ -25,7 +25,7 @@ const MATCH_SAFETY = "FROM safety_grade_history";
 function baseTables(): MockTableConfig[] {
   return [
     { match: "FROM cache WHERE key", rows: [] },
-    { match: "FROM tape_events WHERE type = ?", rows: [] },
+    { match: "FROM tape_events INDEXED BY idx_tape_source_key", rows: [] },
     { match: MATCH_DEPEG_OPEN_PEAK, rows: [] },
     { match: MATCH_DEPEG_OPENED, rows: [] },
     { match: MATCH_DEPEG_RESOLVED, rows: [] },

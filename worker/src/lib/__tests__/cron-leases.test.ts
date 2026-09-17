@@ -695,7 +695,7 @@ describe("scheduled runtime timeout budgeting", () => {
         job: "snapshot-supply",
         status: "error",
         slot_started_at: runtime.slotStartedAt,
-        error: expect.stringContaining("CronTimeoutError"),
+        error: `Cron job "snapshot-supply" timed out after ${remainingBudgetMs / 1_000}s`,
       }),
     ]);
     const timeoutRun = db.getRuns()[0];

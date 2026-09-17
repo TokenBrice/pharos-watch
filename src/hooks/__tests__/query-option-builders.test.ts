@@ -90,7 +90,6 @@ describe("query option builders", () => {
       "/api/mint-burn-flows?stablecoin=usdc-circle&hours=168",
       expect.objectContaining({ safeParse: expect.any(Function) }),
       expect.objectContaining({ signal: expect.any(AbortSignal) }),
-      3600,
       undefined,
     );
   });

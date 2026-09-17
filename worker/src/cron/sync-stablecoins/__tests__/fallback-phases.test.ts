@@ -227,7 +227,7 @@ describe("CoinGecko fallback phases", () => {
         rows: [],
         first: {
           value: JSON.stringify({ peggedAssets: [previous] }),
-          updated_at: NOW_SEC - 60,
+          updated_at: Math.floor(Date.now() / 1000) - 60,
         },
       },
     ]);
