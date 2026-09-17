@@ -323,7 +323,7 @@ Generated from `public/openapi.json` (`Pharos API` v1.0.0). Total OpenAPI operat
 
 ### `GET /api/events`
 
-Searches the normalized event tape; cursor pagination is preferred for long result sets.
+Searches the normalized event tape; cursor pagination is preferred for long result sets. `droppedRows` is the number of queried database rows rejected because they did not match the response schema; a non-zero value means the returned event set is incomplete, while `total` still counts those queried rows.
 
 - **Operation ID:** `events`
 - **Path:** `/api/events`
@@ -446,7 +446,7 @@ Returns aggregate blacklist counts and exposure totals.
 
 ### `GET /api/depeg-events`
 
-Returns detected depeg incidents with filters for asset, state, and review status.
+Returns detected depeg incidents with filters for asset, state, and review status. The response exposes pagination totals through `total` and optional `totalExact`; it no longer includes an aggregate `counts` field. Clients that need threshold-crossing totals should sum each event&rsquo;s `constituentEventCount` after loading all pages.
 
 - **Operation ID:** `depegEvents`
 - **Path:** `/api/depeg-events`
