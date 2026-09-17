@@ -50,6 +50,19 @@ function extractQuantozTimestamp(html: string): number {
   return timestamp;
 }
 
+function extractDivElement(html: string, start: number, label: string): string {
+  const tags = html.slice(start).matchAll(/<\/?div\b[^>]*>/gi);
+  let depth = 0;
+  for (const match of tags) {
+    const tag = match[0];
+    depth += /^<div\b/i.test(tag) && !/\/>$/.test(tag) ? 1 : -1;
+    if (depth === 0) {
+      return html.slice(start, start + (match.index ?? 0) + tag.length);
+    }
+  }
+  throw htmlLayoutChangedError(ADAPTER_KEY, `unterminated ${label}`);
+}
+
 function extractTokenRow(html: string, token: string): string {
   const tableStart = html.indexOf("Reserve Status Overview");
   if (tableStart < 0) {
@@ -64,8 +77,7 @@ function extractTokenRow(html: string, token: string): string {
   if (rowStart < 0) {
     throw htmlLayoutChangedError(ADAPTER_KEY, `missing ${token} row start`);
   }
-  const nextRow = table.indexOf('<div role="row"', tokenIndex + token.length);
-  return table.slice(rowStart, nextRow < 0 ? table.length : nextRow);
+  return extractDivElement(table, rowStart, `${token} reserve row`);
 }
 
 function extractLabeledRowCells(row: string, token: string): {

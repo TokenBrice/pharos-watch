@@ -36,7 +36,7 @@ interface InfiniFiFarm {
   label: string;
   assetsNormalized: number;
   type: "LIQUID" | "ILLIQUID" | "PROTOCOL";
-  underlyingAssetSymbol: string;
+  underlyingAssetSymbol?: string;
 }
 
 export interface InfiniFiProtocolData {
@@ -69,7 +69,7 @@ const infiniFiFarmSchema = z.object({
   label: z.string().min(1),
   assetsNormalized: z.number().finite().nonnegative(),
   type: z.enum(["LIQUID", "ILLIQUID", "PROTOCOL"]),
-  underlyingAssetSymbol: z.string().min(1),
+  underlyingAssetSymbol: z.string().min(1).optional(),
 });
 
 const infiniFiProtocolDataSchema = z.object({

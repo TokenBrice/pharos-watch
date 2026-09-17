@@ -155,6 +155,26 @@ function routeResponse(overrides: {
           type: "LIQUID",
           underlyingAssetSymbol: "sUSDC",
         },
+        // Live protocol/idle farms omit underlyingAssetSymbol; none contributes
+        // to valued reserve slices while inactive.
+        {
+          name: "MintController",
+          label: "Mint Controller",
+          assetsNormalized: 0,
+          type: "PROTOCOL",
+        },
+        {
+          name: "RedeemController",
+          label: "Redeem Controller",
+          assetsNormalized: 0.000831,
+          type: "PROTOCOL",
+        },
+        {
+          name: "SwapFarm",
+          label: "Multi Farm",
+          assetsNormalized: 0,
+          type: "LIQUID",
+        },
       ],
     },
   };
@@ -459,6 +479,14 @@ describe("fetchInfiniFiReserves", () => {
         routeStatusSource: "onchain",
       });
     }
+  });
+
+  it("accepts live protocol and idle farms without underlying asset symbols", async () => {
+    const { result } = await run();
+
+    expect(result.slices).toEqual([
+      expect.objectContaining({ sourceKey: "infinifi:spark-susdc-refcode" }),
+    ]);
   });
 
   it("fails closed when the upstream payload drops the farm rows", async () => {
