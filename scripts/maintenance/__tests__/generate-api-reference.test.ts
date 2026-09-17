@@ -74,4 +74,11 @@ describe("generate-api-reference", () => {
     expect(block).toContain("| `geckoId` | `string \\| null` |");
     expect(block).toContain("**Capacity-confidence vocabulary:** `live-direct`, `live-proxy`");
   });
+
+  it("preserves depeg counts migration guidance in generated output", () => {
+    const block = renderGeneratedBlock(loadOpenapi());
+
+    expect(block).toContain("it no longer includes an aggregate `counts` field");
+    expect(block).toContain("sum each event&rsquo;s `constituentEventCount` after loading all pages");
+  });
 });

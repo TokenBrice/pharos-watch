@@ -61,7 +61,7 @@ export const CURATED_OPERATION_NOTES: Readonly<Record<string, string>> = {
   stablecoinCharts: "Returns the shared chart series consumed by stablecoin overview surfaces.",
   blacklist: "Returns normalized issuer freeze, unfreeze, blacklist, and destruction events.",
   blacklistSummary: "Returns aggregate blacklist counts and exposure totals.",
-  depegEvents: "Returns detected depeg incidents with filters for asset, state, and review status.",
+  depegEvents: "Returns detected depeg incidents with filters for asset, state, and review status. The response exposes pagination totals through `total` and optional `totalExact`; it no longer includes an aggregate `counts` field. Clients that need threshold-crossing totals should sum each event&rsquo;s `constituentEventCount` after loading all pages.",
   depegResolver: "Returns machine-resolved depeg-duration evidence used by risk surfaces.",
   depegResolverReview: "Returns the reviewer-oriented projection of depeg-duration decisions.",
   pegSummary: "Returns the current cross-market peg-monitoring summary.",
