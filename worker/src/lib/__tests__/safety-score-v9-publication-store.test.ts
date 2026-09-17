@@ -14,6 +14,7 @@ import {
 } from "../safety-score-v9/publication-store";
 import { createLatestSchemaSqlite } from "@shared/test-utils/latest-schema-sqlite";
 import { currentInput } from "./safety-score-v9-publication-store.test-support";
+import { stableJsonStringifyV1 } from "@shared/lib/stable-json";
 
 const databases: DatabaseSync[] = [];
 
@@ -405,5 +406,40 @@ describe("Safety Score V9 publication store", () => {
         },
       },
     );
+  });
+
+  it("loads attempt records persisted before quarantine causes were recorded", async () => {
+    // Production regression: dispatch-telegram-alerts failed every run after
+    // the schema gained a required quarantine message because the stored
+    // last-attempt/last-failed-attempt rows predate it.
+    const { sqlite, db } = database();
+    const legacy = {
+      schemaVersion: 1,
+      attemptedAtSec: 100,
+      outcome: "failed",
+      publicationGenerationId: null,
+      quarantines: [{ assetId: "usdt", code: "fact-build-failed" }],
+      affectedAssetIds: ["usdt"],
+      failure: { stage: "compile", code: "compile_failed", message: "compiler failed" },
+    };
+    sqlite
+      .prepare("INSERT INTO cache (key, value, updated_at) VALUES (?, ?, ?)")
+      .run(
+        SAFETY_SCORE_V9_CACHE_KEYS.failedPublicationAttempt,
+        stableJsonStringifyV1(legacy),
+        100,
+      );
+    await expect(
+      loadSafetyScoreV9FailedPublicationAttempt(db),
+    ).resolves.toMatchObject({
+      outcome: "failed",
+      quarantines: [
+        {
+          assetId: "usdt",
+          code: "fact-build-failed",
+          message: "cause not recorded (legacy record)",
+        },
+      ],
+    });
   });
 });
