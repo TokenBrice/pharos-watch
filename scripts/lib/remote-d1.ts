@@ -50,7 +50,7 @@ function executeSqlFile(
   try {
     const sqlFile = join(tmpDir, "statements.sql");
     // Temp SQL file is created under mkdtempSync() and never leaves this function.
-    writeFileSync(sqlFile, ["BEGIN TRANSACTION;", ...statements, "COMMIT;"].join("\n"));
+    writeFileSync(sqlFile, statements.join("\n"));
     executeWrangler(["d1", "execute", databaseName, `--${options.target}`, "--file", sqlFile, "--json"], options);
   } finally {
     rmSync(tmpDir, { recursive: true, force: true });

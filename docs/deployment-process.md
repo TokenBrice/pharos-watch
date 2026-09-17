@@ -91,7 +91,7 @@ Use `worker/scripts/rebuild-blacklist-current-balances.ts` only after the source
 4. Run the confirmed rebuild. More than 10% provider failures abort before D1 mutation. `--force` bypasses only this failure-rate guard and should be used only after reviewing the provider failures.
 5. Verify current balances, then preview and execute `--clear-writer-pause`. Do not clear the pause after a failed rebuild until the retained rows have been checked.
 
-Active rows stay in place during the rebuild so a transient `provider_failed` result retains the last resolved native/USD amounts and source. Each Wrangler statement chunk is transactional, so a statement failure rolls back that chunk instead of committing a partial delete or insert sequence.
+Active rows stay in place during the rebuild so a transient `provider_failed` result retains the last resolved native/USD amounts and source. Wrangler treats each `--file` import as its own transactional chunk; the helper must not emit explicit `BEGIN TRANSACTION` / `COMMIT` statements because D1 rejects them. A failed chunk rolls back that chunk, but earlier successful chunks remain committed, so inspect the retained rows before retrying or clearing the writer pause.
 
 ## CI Deploy Sequence
 
