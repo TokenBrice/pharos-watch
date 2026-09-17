@@ -606,7 +606,7 @@ export async function fetchEvmEventsIncremental(
     apiError,
     chainHead,
     usedRpcLogs,
-    scannedToBlock: minCoveredScannedToBlock,
+    scannedToBlock: coveredTopicCount < topicHashes.length ? fromBlock - 1 : minCoveredScannedToBlock,
     safeHead,
     incomplete,
     coverageOutcome,

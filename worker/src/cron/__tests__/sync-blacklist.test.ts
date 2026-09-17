@@ -1001,7 +1001,7 @@ describe("syncBlacklist", () => {
     expect(finalization?.binds[11]).toBe("partial");
   });
 
-  it("keeps covered rows and advances a shared Etherscan cursor when one configured topic fails", async () => {
+  it("does not advance a shared Etherscan cursor when one configured topic fails", async () => {
     const db = makeDb();
     const ethereumConfig = CONTRACT_CONFIGS.find((config) => config.chain.chainId === "ethereum");
     expect(ethereumConfig).toBeDefined();
@@ -1050,7 +1050,7 @@ describe("syncBlacklist", () => {
       expect(meta.apiErrors).toBe(1);
       expect(meta.eventsFetched).toBe(1);
       const finalization = findStateFinalization(db, "ethereum-0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48");
-      expect(finalization?.binds[0]).toBe(20_009_925);
+      expect(finalization?.binds[0]).toBe(0);
       expect(finalization?.binds[11]).toBe("missing_topic");
     } finally {
       ethereumConfig.events = previousEvents;
