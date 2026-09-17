@@ -37,9 +37,22 @@ type Spec = {
   reason?: string;
   outcome?: string;
   peg?: number;
+  primarySources?: string[];
+  opposingSources?: string;
 };
 const usdPyth: Partial<StablecoinData> = { geckoId: undefined, price: 1, priceSource: "pyth", priceConfidence: "single-source", priceObservedAt: NOW_SEC - 30, priceUpdatedAt: NOW_SEC - 30, priceSyncedAt: NOW_SEC - 30, consensusSources: ["pyth"], agreeSources: ["pyth"] };
 const brz: Partial<StablecoinData> = { id: "brz-transfero", name: "Brazilian Digital", symbol: "BRZ", geckoId: "brz", pegType: "peggedREAL", price: 0.3 };
+const nativeBrz = (price: number): Partial<StablecoinData> => ({
+  ...brz,
+  price,
+  priceSource: "pyth",
+  priceConfidence: "single-source",
+  priceObservedAt: NOW_SEC - 30,
+  priceUpdatedAt: NOW_SEC - 30,
+  priceSyncedAt: NOW_SEC - 30,
+  consensusSources: ["pyth"],
+  agreeSources: ["pyth"],
+});
 const PLAN_CASES: Spec[] = [
   { label: "rejects an invalid stored peg reference", row: { id: 1, peg_reference: 0 }, kind: "mutate", outcome: "rejected", reason: "invalid-peg-reference:0" },
   { label: "keeps the stored pending peg reference when the refreshed fiat median is thin", row: { id: 2, stablecoin_id: "brz-transfero", symbol: "BRZ", peg_type: "peggedREAL", peg_reference: 0.18765951 }, asset: brz, meta: brlMeta, rates: { peggedREAL: 0.3 }, rateSources: { peggedREAL: "median" }, rateCounts: { peggedREAL: 1 }, kind: "ready", peg: 0.18765951 },
@@ -50,6 +63,8 @@ const PLAN_CASES: Spec[] = [
   { label: "supersedes a pending row when an open event already exists", row: { id: 7 }, open: true, kind: "mutate", outcome: "superseded", reason: "open-event-already-exists" },
   { label: "does not promote before threshold observations span the full window", row: { id: 8, first_seen_at: NOW_SEC - DEPEG_PENDING_MIN_AGE_SEC + 60 }, kind: "wait", reason: "too-young" },
   { label: "retains native-origin state while waiting for independent confirmation", row: { id: 9, stablecoin_id: "brz-transfero", symbol: "BRZ", peg_type: "peggedREAL", first_seen_bps: -242, first_price: 0.18, peg_reference: 1, reason: "large-cap+native-origin" }, asset: { ...brz, price: 0.18, priceSource: "pyth", priceConfidence: "single-source", priceObservedAt: NOW_SEC - 30, priceUpdatedAt: NOW_SEC - 30, priceSyncedAt: NOW_SEC - 30, consensusSources: ["pyth"], agreeSources: ["pyth"] }, meta: brlMeta, rates: { peggedREAL: 0.18765951 }, rateSources: { peggedREAL: "median" }, rateCounts: { peggedREAL: 2 }, kind: "ready", peg: 1 },
+  { label: "credits a fresh independent primary source when a native-origin move persists", row: { id: 11, stablecoin_id: "brz-transfero", symbol: "BRZ", peg_type: "peggedREAL", first_seen_bps: -940, first_price: 0.17, last_seen_bps: -940, last_price: 0.17, peak_seen_bps: -940, peak_price: 0.17, peg_reference: 1, reason: "large-cap+native-origin" }, asset: nativeBrz(0.17), meta: brlMeta, rates: { peggedREAL: 0.18765951 }, rateSources: { peggedREAL: "fx" }, rateCounts: { peggedREAL: 1 }, kind: "ready", peg: 1, primarySources: ["primary:oracle:pyth"] },
+  { label: "records a fresh independent primary source when a native-origin move recovers", row: { id: 12, stablecoin_id: "brz-transfero", symbol: "BRZ", peg_type: "peggedREAL", first_seen_bps: -940, first_price: 0.17, peg_reference: 1, reason: "large-cap+native-origin" }, asset: nativeBrz(0.18765951), meta: brlMeta, rates: { peggedREAL: 0.18765951 }, rateSources: { peggedREAL: "fx" }, rateCounts: { peggedREAL: 1 }, kind: "mutate", outcome: "recovered", reason: "authoritative-primary-recovered", opposingSources: "primary:oracle:pyth+primary:authoritative" },
   { label: "returns a ready plan for an aged pending row", row: { id: 10 }, kind: "ready", peg: 1 },
 ];
 
@@ -79,6 +94,9 @@ describe("buildConfirmationPlan", () => {
       expect(plan.statements).toHaveLength(2);
       await db.batch(plan.statements);
       expect(sqlite.prepare("SELECT outcome, final_decision_reason FROM depeg_pending_outcomes WHERE pending_id = ?").get(input.row.id)).toEqual({ outcome: spec.outcome, final_decision_reason: spec.reason });
+      if (spec.opposingSources) {
+        expect(sqlite.prepare("SELECT opposing_sources FROM depeg_pending_outcomes WHERE pending_id = ?").get(input.row.id)).toEqual({ opposing_sources: spec.opposingSources });
+      }
       expect(sqlite.prepare("SELECT id FROM depeg_pending WHERE id = ?").get(input.row.id)).toBeUndefined();
       return;
     }
@@ -87,6 +105,7 @@ describe("buildConfirmationPlan", () => {
     expect(plan.pegReference).toBe(spec.peg);
     expect(plan.outcomeState.pegReference).toBe(spec.peg);
     expect(plan.age).toBeGreaterThanOrEqual(DEPEG_PENDING_MIN_AGE_SEC);
+    if (spec.primarySources) expect(plan.primaryConfirmationSources).toEqual(spec.primarySources);
     if (input.row.reason?.includes("native-origin")) expect(plan.nativeSourceKey).toBe("native:brl");
   });
 });

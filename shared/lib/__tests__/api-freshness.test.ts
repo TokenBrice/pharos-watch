@@ -6,6 +6,7 @@ import {
   FRESHNESS_SENTINEL_CACHE_KEYS,
   getCacheFreshnessLane,
   isFreshnessWarningHeader,
+  isScheduledRefreshWarning,
 } from "../api-freshness";
 import { CRON_INTERVALS } from "../cron-jobs";
 
@@ -67,5 +68,25 @@ describe("isFreshnessWarningHeader", () => {
     expect(isFreshnessWarningHeader('199 - "Misc warning"')).toBe(false);
     expect(isFreshnessWarningHeader('1100 - "not warn-code 110"')).toBe(false);
     expect(isFreshnessWarningHeader("Response is fresh")).toBe(false);
+  });
+});
+
+describe("isScheduledRefreshWarning", () => {
+  it.each([
+    '110 - "Stablecoin detail cache is stale; refresh scheduled"',
+    '110 - "Stablecoin detail cache is stale; refresh failed"',
+    '199 - "Stablecoin detail cache stale; background refresh queued"',
+    '110 - "STABLECOIN   DETAIL CACHE is\nstale; refresh   scheduled"',
+  ])("recognizes stale detail-cache refresh warnings: %s", (warningHeader) => {
+    expect(isScheduledRefreshWarning(warningHeader)).toBe(true);
+  });
+
+  it.each([
+    '110 - "Stablecoin detail cache is stale"',
+    '110 - "Stablecoin detail cache is fresh; refresh scheduled"',
+    '110 - "Stablecoins cache is stale; refresh scheduled"',
+    '199 - "Unrelated warning"',
+  ])("ignores warnings outside stale detail-cache refreshes: %s", (warningHeader) => {
+    expect(isScheduledRefreshWarning(warningHeader)).toBe(false);
   });
 });
