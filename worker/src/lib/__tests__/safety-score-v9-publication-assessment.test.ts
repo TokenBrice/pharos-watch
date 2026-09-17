@@ -270,7 +270,7 @@ describe("Safety Score V9 publication assessment", () => {
     });
   });
 
-  it("holds fulfilled live-reserve coverage below the calibrated 90% floor", () => {
+  it("holds fulfilled live-reserve coverage below the calibrated 60% floor", () => {
     const assess = (coverageRatio: number) =>
       assessV9Publication({
         inputHealth: {
@@ -282,8 +282,10 @@ describe("Safety Score V9 publication assessment", () => {
         coverageFloors: [],
       });
 
-    expect(assess(0.9).decision).toBe("publish");
-    expect(assess(0.899)).toMatchObject({
+    // Production baseline 2026-09-17: 173/212 admitted (0.816).
+    expect(assess(0.816).decision).toBe("publish");
+    expect(assess(0.6).decision).toBe("publish");
+    expect(assess(0.599)).toMatchObject({
       decision: "hold",
       reasons: [{ code: "live-reserves-coverage-below-floor" }],
     });

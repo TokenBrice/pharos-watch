@@ -106,8 +106,16 @@ export type V9PublicationAssessment =
 /** Minimum share of candidate assets without newly binding producer-failed deterioration. */
 const V9_PRODUCER_FAILURE_MINIMUM_HEALTHY_ASSET_NUMERATOR = 9;
 const V9_PRODUCER_FAILURE_MINIMUM_HEALTHY_ASSET_DENOMINATOR = 10;
-/** Live-reserve publication requires at least 90% of configured independent producers. */
-const V9_LIVE_RESERVE_MINIMUM_COVERAGE_RATIO = 0.9;
+/**
+ * Live-reserve publication requires at least 60% of configured independent
+ * producers to have an admitted snapshot. Calibrated 2026-09-17 against the
+ * production admission map: 173/212 (0.816) admitted; the 39 rejections are
+ * structural (monthly-attestation issuers older than the two-day freshness
+ * window, NAV-composition-unverified funds, undeterminable-freshness vaults),
+ * so a 0.9 floor held every publication. 0.6 still trips on a wholesale
+ * sync/RPC collapse while clearing the measured baseline with headroom.
+ */
+const V9_LIVE_RESERVE_MINIMUM_COVERAGE_RATIO = 0.6;
 
 /**
  * The hold gate compares grades only relatively, so it reads the one grade-rank
