@@ -60,7 +60,7 @@ function statsMatcher(
 
 function slotStatsMatcher(rows: Record<string, unknown>[]): MockTableConfig {
   return {
-    match: "FROM cron_slot_executions",
+    match: "GROUP BY slot_key",
     rows,
     first: rows[0] ?? null,
   };
@@ -401,7 +401,7 @@ describe("runCronDurationWatchdog", () => {
     });
   });
 
-  it("separates publication failures, terminal-accounting gaps, and preserved child success", async () => {
+  it("keeps not-started reconciliation visible without phantom accounting columns", async () => {
     const db = watchdogDb([
       slotStatsMatcher([{
         slot_key: "halfHourlyOffset",
@@ -409,10 +409,6 @@ describe("runCronDurationWatchdog", () => {
         error_slots: 12,
         abandoned_slots: 37,
         not_started_slots: 3,
-        publication_failure_slots: 2,
-        terminal_accounting_unknown_slots: 10,
-        real_child_failure_slots: 1,
-        successful_child_terminal_slots: 24,
         latest_abandoned_at: NOW_SEC - 60,
       }]),
     ]);
@@ -426,16 +422,12 @@ describe("runCronDurationWatchdog", () => {
           scheduleKey: "halfHourlyOffset",
           abandonedSlots: 37,
           notStartedSlots: 3,
-          publicationFailureSlots: 2,
-          terminalAccountingUnknownSlots: 10,
-          realChildFailureSlots: 1,
-          successfulChildTerminalSlots: 24,
         }),
       ]),
     });
   });
 
-  it("executes lifecycle classification against SQLite and fails legacy ambiguity closed", async () => {
+  it("executes lifecycle classification against SQLite with the surviving keys", async () => {
     const { sqlite } = sqliteFixtures.open();
     const insertSlot = sqlite.prepare(
       `INSERT INTO cron_slot_executions (
@@ -452,20 +444,12 @@ describe("runCronDurationWatchdog", () => {
     insertSlot.run("halfHourlyOffset", NOW_SEC - 30, NOW_SEC - 30, NOW_SEC - 30, "degraded", JSON.stringify({
       error: STALE_SLOT_ERROR,
       staleSlotReconciliation: {
-        publicationFailures: 0,
-        terminalAccountingUnknown: 1,
-        realChildFailures: 0,
-        successfulChildTerminals: 0,
         notStartedCronRuns: 0,
       },
     }));
     insertSlot.run("halfHourlyOffset", NOW_SEC - 20, NOW_SEC - 20, NOW_SEC - 20, "error", JSON.stringify({
       error: STALE_SLOT_ERROR,
       staleSlotReconciliation: {
-        publicationFailures: 1,
-        terminalAccountingUnknown: 0,
-        realChildFailures: 0,
-        successfulChildTerminals: 0,
         notStartedCronRuns: 0,
       },
     }));
@@ -476,10 +460,6 @@ describe("runCronDurationWatchdog", () => {
     insertSlot.run("halfHourlyOffset", NOW_SEC - 5, NOW_SEC - 5, NOW_SEC - 5, "error", JSON.stringify({
       error: STALE_SLOT_ERROR,
       staleSlotReconciliation: {
-        publicationFailures: 0,
-        terminalAccountingUnknown: 0,
-        realChildFailures: 0,
-        successfulChildTerminals: 0,
         notStartedCronRuns: 1,
       },
     }));
@@ -493,8 +473,6 @@ describe("runCronDurationWatchdog", () => {
         scheduleKey: "halfHourlyOffset",
         abandonedSlots: 4,
         notStartedSlots: 1,
-        publicationFailureSlots: 1,
-        terminalAccountingUnknownSlots: 2,
       }),
     ]));
   });

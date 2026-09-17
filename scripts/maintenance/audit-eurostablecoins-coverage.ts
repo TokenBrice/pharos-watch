@@ -4,6 +4,7 @@ import { mkdir, readFile, readdir, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { CHAIN_META } from "@shared/lib/chains";
+import { isRecord } from "@shared/lib/type-guards";
 import { isDirectRun } from "../lib/smoke-runtime.mjs";
 
 const DEFAULT_API_URL = "https://www.eurostablecoins.xyz/api/v1/coins";
@@ -72,9 +73,6 @@ Compares Pharos' checked-in EUR stablecoin metadata against eurostablecoins.xyz.
 The script is read-only unless --report is provided.`);
 }
 
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null && !Array.isArray(value);
-}
 
 function normalizeSymbol(value: unknown) {
   return String(value ?? "")

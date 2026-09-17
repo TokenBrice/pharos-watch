@@ -1,7 +1,7 @@
 import type { StablecoinMeta } from "@shared/types/core";
 import type { LiveReservesConfig, LiveReserveWarning } from "@shared/types/live-reserves";
 import { decodeAbiParameters } from "viem/utils";
-import { DECIMALS_SELECTOR, encodeBalanceOfCallData, encodeUint256 } from "../../lib/evm-selectors";
+import { DECIMALS_SELECTOR, TOTAL_SUPPLY_SELECTOR, encodeBalanceOfCallData, encodeUint256 } from "../../lib/evm-selectors";
 import { getPublicRpcUrl, getSecondaryFallbackRpcUrl } from "../../lib/public-rpc-registry";
 import type { AdapterContext, AdapterResult } from "./types";
 import { resolveCoinContractAddress } from "./evm";
@@ -23,6 +23,10 @@ import {
   reserveInfoWarning,
   slicesFromValues,
 } from "./helpers";
+import {
+  ERC4626_CONVERT_TO_ASSETS_SELECTOR as CONVERT_TO_ASSETS_SELECTOR,
+  ERC4626_TOTAL_ASSETS_SELECTOR as TOTAL_ASSETS_SELECTOR,
+} from "./erc4626";
 
 const ADAPTER_KEY = "3jane-usd3";
 const USDC_ADDRESS = "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48";
@@ -33,15 +37,12 @@ const ETHEREUM_RPC_URL = getPublicRpcUrl("ethereum");
 const ETHEREUM_FALLBACK_RPC_URL = getSecondaryFallbackRpcUrl("ethereum");
 
 const NAV_SELECTOR = "0xc1590cd7";
-const TOTAL_ASSETS_SELECTOR = "0x01e1d114";
-const TOTAL_SUPPLY_SELECTOR = "0x18160ddd";
 const BALANCE_OF_WAUSDC_SELECTOR = "0x4251c354";
 const SUPPLIED_WAUSDC_SELECTOR = "0xa9b89c07";
 const GET_MARKET_LIQUIDITY_SELECTOR = "0x59ddbab2";
 const AVAILABLE_WITHDRAW_LIMIT_SELECTOR = "0x04bd4629";
 const MIN_COMMITMENT_TIME_SELECTOR = "0x0517bbab";
 const IS_SHUTDOWN_SELECTOR = "0xbf86d690";
-const CONVERT_TO_ASSETS_SELECTOR = "0x07a2d13a";
 const THREE_JANE_NAV_MISMATCH_HARD_LIMIT = 0.02;
 
 interface ThreeJaneUsd3Snapshot {

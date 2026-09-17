@@ -170,7 +170,7 @@ async function listStaleScheduledSlotExecutions(
   // is owned by a fresh reconciler whose liveness started_at does not measure.
   predicates.push(
     "state IN ('running', 'reconciling')",
-    "(updated_at < ? OR (state = 'running' AND started_at < ?))",
+    "(updated_at <= ? OR (state = 'running' AND started_at <= ?))",
   );
   bindArgs.push(staleBefore, wallDeadBefore, limit);
   const rows = await runWithOverloadRetry(() =>
@@ -267,7 +267,7 @@ async function claimStaleScheduledSlotForReconciliation(
             AND execution_owner = ?
             AND execution_generation = ?
             AND updated_at = ?
-            AND (updated_at < ? OR (state = 'running' AND started_at < ?))`,
+            AND (updated_at <= ? OR (state = 'running' AND started_at <= ?))`,
       )
       .bind(
         reconciliationOwner,

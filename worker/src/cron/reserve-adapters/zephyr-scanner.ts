@@ -3,9 +3,10 @@ import type { LiveReserveWarning, LiveReservesConfig } from "@shared/types/live-
 import type { AdapterContext, AdapterResult } from "./types";
 import {
   buildCoverageShortfallWarnings,
-  decimalNumberFromBigInt,
+  decimalFromDigitString,
   fetchJsonAdapterInput,
   freshnessMetadataFromTimestamp,
+  parseFiniteNumber,
   parsePositiveNumericLike,
   parseTimestampLikeToUnixSeconds,
 } from "./helpers";
@@ -106,21 +107,25 @@ interface ZephyrSnapshotPayload {
 }
 
 function positiveDecimalAtoms(value: unknown, decimals: number): number | null {
-  if (typeof value !== "string" || !/^\d+$/.test(value.trim())) return null;
-  const parsed = decimalNumberFromBigInt(BigInt(value), decimals);
-  return Number.isFinite(parsed) && parsed > 0 ? parsed : null;
+  const parsed = decimalFromDigitString(value, decimals);
+  return parsed != null && parsed > 0 ? parsed : null;
 }
 
 function positiveFixedPoint(value: unknown, decimals: number): number | null {
-  if (typeof value !== "number" || !Number.isFinite(value) || value <= 0) return null;
-  return value / 10 ** decimals;
+  try {
+    return parseFiniteNumber(value, { label: "zephyr-scanner fixed-point value", min: Number.MIN_VALUE })
+      / 10 ** decimals;
+  } catch {
+    return null;
+  }
 }
 
 function requirePositive(value: number | null | undefined, label: string): number {
-  if (typeof value !== "number" || !Number.isFinite(value) || value <= 0) {
+  try {
+    return parseFiniteNumber(value, { label: `zephyr-scanner missing positive ${label}`, min: Number.MIN_VALUE });
+  } catch {
     throw new Error(`zephyr-scanner missing positive ${label}`);
   }
-  return value;
 }
 
 function buildWarnings(collateralizationRatio: number): LiveReserveWarning[] {

@@ -14,6 +14,8 @@ Use the [validation command index](./scripts.md#validation-command-index) for th
 
 Use `package.json` for the full live npm-script list. `scripts/lib/automation-registry.mjs` owns generated artifacts and deploy-impact classification; `scripts/lib/critical-ownership.mts` derives critical source-to-test ownership, while `scripts/lib/critical-test-files.mts` and `scripts/lib/critical-coverage.mjs` consume it for critical-suite membership.
 
+`npm run typecheck:tests` compiles the complete test surface, including every TypeScript and TSX support file under `tests/` rather than only `*.test.*` and `*.spec.*` entrypoints. The lane runs in nightly/manual validation so shared fixtures and helpers cannot accumulate type errors outside Vitest's selected module graph.
+
 `check:doc-symbols`, included by `check:doc-sync`, uses ripgrep when available and falls back to an in-process scan of the same Git-listed source files on minimal CI runners.
 
 `check:verified-doc-links` uses the docs renderer’s Markdown parsing and heading IDs, including repeated punctuation and duplicate headings. It resolves ordinary links and images with optional titles, angle-bracket destinations, and reference definitions, then checks local targets and anchors. A verified doc at or above 400 lines or 50 KB must include a top `> **Agent navigation**` block. (The separate requirement that a doc-ownership reference name a section for such a target is enforced by `scripts/__tests__/doc-ownership-registry.test.ts`, not by this check.)
@@ -211,7 +213,7 @@ export default defineConfig({
 });
 ```
 
-The config also includes a `wasmStubPlugin()` Vite plugin that stubs `.wasm` imports for Node compatibility and resolve aliases for `satori/standalone`, `satori/yoga.wasm`, `@cf-wasm/resvg/workerd`, and `@resvg/resvg-wasm`. The supported test baseline is Node 24 LTS; the `nodeMajor >= 25` branch keeps jsdom as the source of `localStorage` / `sessionStorage` under the wider engine range, and nightly validation runs a non-blocking Node 26 typecheck proof.
+The config also includes a `wasmStubPlugin()` Vite plugin that stubs `.wasm` imports for Node compatibility and resolve aliases for `@data`, `cloudflare:workers`, `satori/standalone`, `satori/yoga.wasm`, `@cf-wasm/resvg/workerd`, and `@resvg/resvg-wasm`. The supported test baseline is Node 24 LTS; the `nodeMajor >= 25` branch keeps jsdom as the source of `localStorage` / `sessionStorage` under the wider engine range, and nightly validation runs a non-blocking Node 26 typecheck proof.
 
 The suite is split into five `test.projects` (all `extends: true` from the root config):
 
@@ -395,6 +397,7 @@ Factory functions that return complete DB rows with sensible defaults. Pass `ove
 | `makeAsset()`                  | DL pegged asset (id, symbol, price, pegType, circulating, chainCirculating)                                            |
 | `makeApiKeyRow()`              | api_keys row                                                                                                           |
 | `makeBlacklistRow()`           | blacklist_events row                                                                                                   |
+| `makeBlacklistReconciliationStatusRow()` | blacklist_reconciliation_status row                                                                                  |
 | `makeDepegRow()`               | depeg_events row                                                                                                       |
 | `makeSupplyRow()`              | supply_history row                                                                                                     |
 | `makeMintBurnRow()`            | mint_burn_events row                                                                                                   |

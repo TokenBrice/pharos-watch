@@ -6,9 +6,9 @@
  * passes operator-specified overrides.
  */
 import {
+  filterUnprojectedTapeEvents,
   getProjectorWatermark,
   insertTapeEvents,
-  loadObservedSourceRowIds,
   setProjectorWatermark,
 } from "../tape-event-store";
 import type { TapeEventInsert } from "../tape-event-types";
@@ -159,10 +159,8 @@ export async function projectStaticCatalogEntries<T>(
   },
   options?: ProjectorOptions,
 ): Promise<ProjectorResult> {
-  const observed = await loadObservedSourceRowIds(db, input.eventType);
-  const events = input.entries
-    .filter((entry) => !observed.has(input.sourceRowId(entry)))
-    .map(input.buildEvent);
+  const candidates = input.entries.map(input.buildEvent);
+  const events = await filterUnprojectedTapeEvents(db, candidates);
   if (events.length === 0) return { projected: 0, advanced: null };
   if (options?.dryRun !== true) await insertTapeEvents(db, events);
   return { projected: events.length, advanced: null };

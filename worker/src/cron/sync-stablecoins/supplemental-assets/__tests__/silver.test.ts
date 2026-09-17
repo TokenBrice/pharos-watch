@@ -15,7 +15,7 @@ afterEach(() => vi.unstubAllGlobals());
 
 describe("silver supplemental supply freshness", () => {
   it.each([
-    { freshSupply: false, freshMcap: false, expected: 0 },
+    { freshSupply: false, freshMcap: false, expected: null },
     { freshSupply: true, freshMcap: false, expected: 3_200 },
     { freshSupply: false, freshMcap: true, expected: 1_000 },
   ])("validates supply and market-cap observations independently: $freshSupply/$freshMcap", async ({ freshSupply, freshMcap, expected }) => {
@@ -28,7 +28,11 @@ describe("silver supplemental supply freshness", () => {
     const [asset] = await fetchSilverTokens({
       "silver-test": { usd_market_cap: 1_000, last_updated_at: freshMcap ? now : stale },
     });
-    expect(asset?.circulating?.peggedSILVER).toBe(expected);
-    expect(asset?.price).toBe(32);
+    if (expected == null) {
+      expect(asset).toBeUndefined();
+    } else {
+      expect(asset?.circulating?.peggedSILVER).toBe(expected);
+      expect(asset?.price).toBe(32);
+    }
   });
 });

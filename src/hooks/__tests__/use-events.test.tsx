@@ -35,12 +35,14 @@ import type { CursorPageFixture } from "./infinite-event-hooks.test-support";
 interface EventsPageFixtureData {
   events: { id: string }[];
   nextCursor: string | null;
+  droppedRows: number;
   total?: number;
 }
 
 const FIRST_PAGE: CursorPageFixture<EventsPageFixtureData> = {
   data: {
     events: [{ id: "evt-1" }, { id: "evt-2" }],
+    droppedRows: 1,
     nextCursor: "cursor-2",
     total: 3,
   },
@@ -50,6 +52,7 @@ const FIRST_PAGE: CursorPageFixture<EventsPageFixtureData> = {
 const TERMINAL_PAGE: CursorPageFixture<EventsPageFixtureData> = {
   data: {
     events: [{ id: "evt-3" }],
+    droppedRows: 2,
     nextCursor: null,
   },
   meta: null,
@@ -88,6 +91,7 @@ describe("useEvents", () => {
     expect(result.current.isFullyLoaded).toBe(true);
     expect(result.current.meta).toEqual({ status: "fresh" });
     expect(result.current.total).toBe(3);
+    expect(result.current.droppedRows).toBe(3);
     // Traversal stops at exhaustion instead of re-firing on every render.
     rerender();
     expect(fetchNextPage).toHaveBeenCalledOnce();
@@ -159,7 +163,7 @@ describe("useEvents", () => {
       { enabled: true },
     );
     const schema = await useRegisteredApiQueryMock.mock.calls[0]?.[0]?.schema();
-    expect(schema.safeParse({ events: [], nextCursor: null, total: null, totalExact: true }).success).toBe(true);
+    expect(schema.safeParse({ events: [], droppedRows: 0, nextCursor: null, total: null, totalExact: true }).success).toBe(true);
     expect(schema.safeParse({ events: [], nextCursor: null }).success).toBe(false);
   });
 });

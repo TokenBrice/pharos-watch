@@ -316,7 +316,7 @@ export async function syncDexDiscovery(
   let coinsCrawled = 0;
   let poolsDiscovered = 0;
   let budgetExhausted = false;
-  let stagingWritesSkippedForBudget = 0;
+  const stagingWritesSkippedForBudget = 0;
   let cleanupSkippedForBudget = false;
   let cleanup: Awaited<ReturnType<typeof cleanupStaging>> | null = null;
   let deploymentOutcomesWritten = 0;
@@ -517,8 +517,10 @@ export async function syncDexDiscovery(
 
         try {
           if (!hasDiscoveryFinalizationWindow(deadlineMs)) {
+            // The provider work already completed, so preserve its staged rows
+            // before reserving the remaining run budget for finalization.
+            await upsertStagedPools(db, result.pools, signal);
             budgetExhausted = true;
-            stagingWritesSkippedForBudget += 1;
             break;
           }
           await upsertStagedPools(db, result.pools, signal);

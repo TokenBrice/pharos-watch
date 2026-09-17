@@ -6,7 +6,6 @@ import {
   ArrowRight,
   Link as LinkIcon,
   Pencil,
-  RotateCcw,
 } from "lucide-react";
 import Link from "next/link";
 import type { SelectorInput, SelectorProfile } from "@shared/lib/selector";
@@ -35,11 +34,6 @@ export interface SelectorSummaryAnswerChip {
   value: string;
 }
 
-export interface SelectorSummarySessionRecovery {
-  message: string;
-  onRestore: () => void;
-  onDismiss?: () => void;
-}
 
 export interface SelectorResultSummaryProps {
   profile: SelectorProfile;
@@ -61,7 +55,6 @@ export interface SelectorResultSummaryProps {
   filterChips?: readonly SelectorSummaryFilterChip[];
   answerChips?: readonly SelectorSummaryAnswerChip[];
   priorityLabels?: readonly string[];
-  sessionRecovery?: SelectorSummarySessionRecovery;
   // Forward-action slot rendered directly under the funnel headline so the next
   // step (Compare these / Compare vs watch-outs) sits above secondary prose
   // rather than below the answer-chip and share-link blocks.
@@ -98,7 +91,6 @@ export function SelectorResultSummary(props: SelectorResultSummaryProps) {
     filterChips = [],
     answerChips = [],
     priorityLabels = [],
-    sessionRecovery,
     compareActionsSlot,
   } = props;
 
@@ -144,33 +136,6 @@ export function SelectorResultSummary(props: SelectorResultSummaryProps) {
 
   return (
     <section aria-labelledby="selector-summary" className="space-y-4">
-      {sessionRecovery ? (
-        <div
-          role="status"
-          className="flex flex-col gap-2 rounded-lg border border-frost-blue/35 bg-frost-blue/[0.06] px-4 py-3 text-sm sm:flex-row sm:items-center sm:justify-between"
-        >
-          <p className="text-foreground">{sessionRecovery.message}</p>
-          <div className="flex flex-wrap gap-2">
-            <button
-              type="button"
-              onClick={sessionRecovery.onRestore}
-              className="pharos-focus-ring inline-flex min-h-10 items-center gap-1.5 rounded-full border border-border/55 px-3 text-xs font-medium text-foreground hover:bg-muted/35"
-            >
-              <RotateCcw className="h-3.5 w-3.5" aria-hidden="true" />
-              Restore result
-            </button>
-            {sessionRecovery.onDismiss ? (
-              <button
-                type="button"
-                onClick={sessionRecovery.onDismiss}
-                className="pharos-focus-ring inline-flex min-h-10 items-center rounded-full border border-border/55 px-3 text-xs font-medium text-foreground hover:bg-muted/35"
-              >
-                Dismiss
-              </button>
-            ) : null}
-          </div>
-        </div>
-      ) : null}
 
       <div className="pharos-subtle-band space-y-3 border border-border/55 p-4 sm:p-5">
         <div className="flex items-start gap-3">

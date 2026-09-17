@@ -6,21 +6,16 @@ import {
   type DexMeasuredExecutionTarget,
 } from "@shared/types/measured-execution";
 import type { ChainRpcConfig } from "../../lib/chain-registry";
-import { throwIfAborted } from "../../lib/abort";
 import {
   fetchEvmMulticall3Aggregate3AtBlock,
-  type EvmMulticall3Call,
   type EvmMulticall3Result,
 } from "../../lib/evm-rpc";
 import {
   DEX_MEASURED_EVM_REQUEST_TIMEOUT_MS,
-  type DexMeasuredExecutionBudgetStopReason,
   type DexMeasuredExecutionRpcBudget,
   type DexMeasuredRawQuotePoint,
 } from "./profiles";
-import { executeAdaptiveMulticall } from "./adaptive-multicall";
 import { getDexMeasuredExecutionDeployment } from "./registry";
-import { mapWithConcurrency } from "../../lib/concurrency";
 import { MAX_UINT256, usdToRawAmount } from "./fixed-point";
 import { executeEvmQuotePlan, materializeEvmQuotePoint } from "./evm-quote-plan";
 
@@ -59,11 +54,6 @@ export interface QuoterV2BatchOutcome {
   failureReason?: string;
 }
 
-interface AdaptiveChunkResult {
-  results: EvmMulticall3Result[];
-  transportFailureLabels: string[];
-  budgetStopReasonsByLabel: Map<string, DexMeasuredExecutionBudgetStopReason>;
-}
 
 function isSlipstreamTarget(target: Pick<DexMeasuredExecutionTarget, "adapterProfileId">): boolean {
   return target.adapterProfileId === AERODROME_SLIPSTREAM_ADAPTER_PROFILE_ID;
@@ -126,51 +116,6 @@ function encodeRequest(request: QuoterV2Request, index: number): EncodedQuoterV2
   }
 }
 
-async function executeAdaptiveChunk(input: {
-  chain: string;
-  calls: readonly EvmMulticall3Call[];
-  blockNumber: number;
-  chainRpcs: Map<string, ChainRpcConfig>;
-  signal?: AbortSignal;
-  rpcBudget?: DexMeasuredExecutionRpcBudget;
-}): Promise<AdaptiveChunkResult> {
-  const result = await executeAdaptiveMulticall<EvmMulticall3Call, EvmMulticall3Result>({
-    chain: input.chain,
-    calls: input.calls,
-    blockNumber: input.blockNumber,
-    signal: input.signal,
-    execute: ({ chain, calls, blockNumber, signal, onBudgetStop }) =>
-      fetchEvmMulticall3Aggregate3AtBlock(chain, calls, blockNumber, {
-        chainRpcs: input.chainRpcs,
-        signal,
-        timeoutMs: DEX_MEASURED_EVM_REQUEST_TIMEOUT_MS,
-        ...(input.rpcBudget ? { deadlineMs: input.rpcBudget.deadlineMs } : {}),
-        ...(input.rpcBudget
-          ? {
-              beforeRequest: () => {
-                const consumed = input.rpcBudget!.tryConsume();
-                const reason = input.rpcBudget!.stopReason;
-                if (!consumed && reason) onBudgetStop?.(reason);
-                return consumed;
-              },
-            }
-          : {}),
-        maxRetries: 0,
-        gas: QUOTER_MULTICALL_GAS,
-        multicallBatchSize: Math.min(QUOTER_MULTICALL_BATCH_SIZE, calls.length),
-      }),
-    failureResult: (call) => ({ label: call.label, success: false, returnData: "0x" }),
-    getLabel: (call) => call.label,
-    ...(input.rpcBudget ? { deadlineMs: input.rpcBudget.deadlineMs, budget: input.rpcBudget } : {}),
-    failedAttemptAccounting: "single-call",
-    unattemptedResult: "failure-result",
-  });
-  return {
-    results: result.results,
-    transportFailureLabels: result.unattemptedLabels,
-    budgetStopReasonsByLabel: result.budgetStopReasonsByLabel,
-  };
-}
 
 function decodePoint(request: EncodedQuoterV2Request, result: EvmMulticall3Result): DexMeasuredRawQuotePoint | null {
   if (!result.success || result.returnData === "0x") return null;
@@ -364,62 +309,95 @@ export async function resolveQuoterV2PoolBindings(input: {
   const outcomes = input.requests.map<QuoterV2PoolBindingOutcome>((request) => ({
     targetId: request.target.targetId,
   }));
-  const valid = encoded.filter((request): request is NonNullable<typeof request> => request != null);
-  const byChain = new Map<string, typeof valid>();
-  for (const request of valid) {
-    const rows = byChain.get(request.target.chain) ?? [];
-    rows.push(request);
-    byChain.set(request.target.chain, rows);
-  }
-
-  await mapWithConcurrency([...byChain], 3, async ([chain, requests]) => {
-    for (let offset = 0; offset < requests.length; offset += QUOTER_MULTICALL_BATCH_SIZE) {
-      throwIfAborted(input.signal);
-      const chunk = requests.slice(offset, offset + QUOTER_MULTICALL_BATCH_SIZE);
-      const execution = await executeAdaptiveChunk({
-        chain,
-        calls: chunk.map((request) => ({
-          label: request.label,
-          target: request.factoryAddress,
-          callData: request.callData,
-          allowFailure: true,
-        })),
-        blockNumber: input.blockNumber,
-        chainRpcs: input.chainRpcs,
-        signal: input.signal,
-        rpcBudget: input.rpcBudget,
-      });
-      const byLabel = new Map(execution.results.map((result) => [result.label, result]));
-      const transportFailures = new Set(execution.transportFailureLabels);
-      for (const request of chunk) {
-        const index = Number.parseInt(request.label.slice(0, request.label.indexOf(":")), 10);
-        const result = byLabel.get(request.label);
-        const resolvedPool = result?.success ? decodeV3FactoryGetPool(result.returnData as `0x${string}`) : null;
-        if (!result || transportFailures.has(request.label) || !resolvedPool) {
-          outcomes[index] = { targetId: request.target.targetId, failureReason: "factory-get-pool-failed" };
-        } else if (resolvedPool !== request.expectedPool) {
-          outcomes[index] = { targetId: request.target.targetId, failureReason: "factory-pool-mismatch" };
-        } else {
-          outcomes[index] = {
-            targetId: request.target.targetId,
-            proof: {
-              factoryAddress: request.factoryAddress,
-              factoryCodeHash: request.factoryCodeHash,
-              resolvedPoolAddress: resolvedPool,
-              callData: request.callData.toLowerCase(),
-              returnData: result.returnData.toLowerCase(),
-            },
-          };
-        }
-      }
-    }
-  });
+  const plans = encoded.flatMap((request, index) =>
+    request
+      ? [{
+          ...request,
+          index,
+          chain: request.target.chain,
+          blockNumber: input.blockNumber,
+          call: {
+            label: request.label,
+            target: request.factoryAddress,
+            callData: request.callData,
+            allowFailure: true,
+          },
+        }]
+      : [],
+  );
   for (let index = 0; index < encoded.length; index++) {
     if (encoded[index] == null) {
-      outcomes[index] = { targetId: input.requests[index]!.target.targetId, failureReason: "invalid-target-pool-id" };
+      outcomes[index] = {
+        targetId: input.requests[index]!.target.targetId,
+        failureReason: "invalid-target-pool-id",
+      };
     }
   }
-  return outcomes;
+  return executeEvmQuotePlan({
+    plans,
+    outcomes,
+    chainRpcs: input.chainRpcs,
+    signal: input.signal,
+    rpcBudget: input.rpcBudget,
+    spec: {
+      batchSize: QUOTER_MULTICALL_BATCH_SIZE,
+      executeMulticall: ({ chain, calls, blockNumber, chainRpcs, signal, rpcBudget, onBudgetStop }) =>
+        fetchEvmMulticall3Aggregate3AtBlock(chain, calls, blockNumber, {
+          chainRpcs,
+          signal,
+          timeoutMs: DEX_MEASURED_EVM_REQUEST_TIMEOUT_MS,
+          ...(rpcBudget ? { deadlineMs: rpcBudget.deadlineMs } : {}),
+          ...(rpcBudget
+            ? {
+                beforeRequest: () => {
+                  const consumed = rpcBudget.tryConsume();
+                  const reason = rpcBudget.stopReason;
+                  if (!consumed && reason) onBudgetStop?.(reason);
+                  return consumed;
+                },
+              }
+            : {}),
+          maxRetries: 0,
+          gas: QUOTER_MULTICALL_GAS,
+          multicallBatchSize: Math.min(QUOTER_MULTICALL_BATCH_SIZE, calls.length),
+        }),
+      adaptive: {
+        failedAttemptAccounting: "single-call",
+        unattemptedResult: "failure-result",
+      },
+      materializeTransportFailure: (request) => ({
+        targetId: request.target.targetId,
+        failureReason: "factory-get-pool-failed",
+      }),
+      resolveResult: (request, result) => {
+        const resolvedPool = result.success
+          ? decodeV3FactoryGetPool(result.returnData as `0x${string}`)
+          : null;
+        if (!resolvedPool) {
+          return {
+            targetId: request.target.targetId,
+            failureReason: "factory-get-pool-failed",
+          };
+        }
+        if (resolvedPool !== request.expectedPool) {
+          return {
+            targetId: request.target.targetId,
+            failureReason: "factory-pool-mismatch",
+          };
+        }
+        return {
+          targetId: request.target.targetId,
+          proof: {
+            factoryAddress: request.factoryAddress,
+            factoryCodeHash: request.factoryCodeHash,
+            resolvedPoolAddress: resolvedPool,
+            callData: request.callData.toLowerCase(),
+            returnData: result.returnData.toLowerCase(),
+          },
+        };
+      },
+    },
+  });
 }
 
 /** Decode-bound proof validation specific to the QuoterV2 adapter. */

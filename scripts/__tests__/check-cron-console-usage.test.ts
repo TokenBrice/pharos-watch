@@ -4,7 +4,6 @@ import { join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 
 import {
-  collectWorkerConsoleFindings,
   collectWorkerConsoleUsage,
   checkCronConsoleUsage,
 } from "../ci/check-cron-console-usage.ts";
@@ -44,20 +43,6 @@ describe("check-cron-console-usage", () => {
     expect(collectWorkerConsoleUsage(["worker/src/api"], root)).toEqual({
       "worker/src/api/example.ts": 1,
     });
-    expect(collectWorkerConsoleFindings(["worker/src/api"], root)).toEqual([
-      {
-        file: "worker/src/api/example.ts",
-        line: 2,
-        text: 'console.warn("raw route warning");',
-        structured: false,
-      },
-      {
-        file: "worker/src/api/example.ts",
-        line: 3,
-        text: 'console.error(JSON.stringify({ ts: "now", scope: "status", level: "error", message: "structured" }));',
-        structured: true,
-      },
-    ]);
   });
 
   it("fails when raw worker console usage rises above the baseline", () => {

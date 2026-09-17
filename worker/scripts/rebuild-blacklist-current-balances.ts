@@ -8,7 +8,7 @@ import { buildChainRpcs } from "../src/lib/chain-registry";
 import { decimalNumberFromBigInt } from "../src/lib/bigint";
 import { encodeBalanceOfCallData } from "../src/lib/evm-selectors";
 import { createBudget, createRateLimiter } from "../src/lib/evm-logs";
-import { fetchEvmTokenCurrentBalance } from "../src/cron/blacklist/balance-providers";
+import { fetchEvmTokenCurrentBalance } from "../src/lib/blacklist/balance-providers";
 import { tronBase58ToHex } from "../src/lib/tron-address";
 import type { BlacklistStablecoin } from "../../shared/types/market";
 import { BLACKLIST_CURRENT_BALANCE_WRITER_PAUSE_KEY } from "../src/lib/blacklist-current-balances";
@@ -198,6 +198,7 @@ export function buildCurrentBalanceMutationStatements(
 ): string[] {
   const activeIds = rowsToWrite.map((row) => sqlString(row.id));
   const staleRowPredicate = activeIds.length > 0 ? ` AND id NOT IN (${activeIds.join(", ")})` : "";
+  // SAFETY: identifiers are fixed; every interpolated value is SQL-quoted by sqlString.
   return [
     // Keep active rows in place so provider_failed upserts can retain their last resolved values.
     // SAFETY: stablecoin/chainId/ids are escaped via sqlString; predicate is built from escaped literals only.
@@ -359,6 +360,7 @@ async function main(argv = process.argv.slice(2)) {
     }
     const pausedAt = Math.floor(Date.now() / 1000);
     const pausePayload = sqlString(JSON.stringify({ reason: SCRIPT_NAME, pausedAt }));
+    // SAFETY: the cache table is fixed and the constant key/payload are SQL-quoted by sqlString.
     const statement = options.armWriterPause
       ? `INSERT OR REPLACE INTO cache (key, value, updated_at) VALUES (${sqlString(BLACKLIST_CURRENT_BALANCE_WRITER_PAUSE_KEY)}, ${pausePayload}, ${pausedAt});`
       // SAFETY: constant key escaped via sqlString.
@@ -372,6 +374,7 @@ async function main(argv = process.argv.slice(2)) {
     return;
   }
 
+  // SAFETY: table/columns are fixed and both CLI-selected filters are SQL-quoted by sqlString.
   const sql = `
     SELECT id, stablecoin, chain_id, chain_name, event_type, address, amount_native, amount_usd_at_event,
            amount_source, amount_status, tx_hash, block_number, timestamp, methodology_version, contract_address,

@@ -191,9 +191,23 @@ describe("EVM blacklist contiguous coverage", () => {
     });
   });
 
-  it("pins the cursor when a required topic has no proven coverage", async () => {
+  it("keeps covered rows without advancing and recovers a missed topic on the next run", async () => {
     vi.mocked(fetchEvmLogsForTopicWithCompleteness)
-      .mockResolvedValueOnce({ logs: [], complete: true, scannedToBlock: 120, calls: 1, maxDepth: 0 })
+      .mockResolvedValueOnce({
+        logs: [{
+          address: "0x" + "44".repeat(20),
+          topics: [TOPIC_A, ADDRESS_WORD],
+          data: "0x",
+          blockNumber: "0x6e",
+          timeStamp: "0x3e8",
+          transactionHash: "0x" + "55".repeat(32),
+          logIndex: "0x0",
+        }],
+        complete: true,
+        scannedToBlock: 120,
+        calls: 1,
+        maxDepth: 0,
+      })
       .mockResolvedValueOnce({
         logs: [],
         complete: false,
@@ -201,11 +215,34 @@ describe("EVM blacklist contiguous coverage", () => {
         calls: 1,
         maxDepth: 0,
         failureReason: "provider-error",
+      })
+      .mockResolvedValueOnce({
+        logs: [],
+        complete: true,
+        scannedToBlock: 120,
+        calls: 1,
+        maxDepth: 0,
+      })
+      .mockResolvedValueOnce({
+        logs: [{
+          address: "0x" + "44".repeat(20),
+          topics: [TOPIC_B, ADDRESS_WORD],
+          data: "0x",
+          blockNumber: "0x73",
+          timeStamp: "0x3e9",
+          transactionHash: "0x" + "66".repeat(32),
+          logIndex: "0x0",
+        }],
+        complete: true,
+        scannedToBlock: 120,
+        calls: 1,
+        maxDepth: 0,
       });
 
-    const result = await fetchEvmEventsIncremental(
+    const config = makeConfig("arbitrum", [TOPIC_A, TOPIC_B]);
+    const firstRun = await fetchEvmEventsIncremental(
       mockD1(),
-      makeConfig("arbitrum", [TOPIC_A, TOPIC_B]),
+      config,
       "key",
       100,
       new Map(),
@@ -216,11 +253,34 @@ describe("EVM blacklist contiguous coverage", () => {
       10_000,
     );
 
-    expect(result).toMatchObject({
-      scannedToBlock: null,
+    expect(firstRun).toMatchObject({
+      scannedToBlock: 99,
       coverageOutcome: "missing_topic",
       coveredTopicCount: 1,
+      maxBlock: 110,
     });
+    expect(firstRun.rows.map((row) => row.block_number)).toEqual([110]);
+
+    const secondRun = await fetchEvmEventsIncremental(
+      mockD1(),
+      config,
+      "key",
+      firstRun.scannedToBlock! + 1,
+      new Map(),
+      makeBudget(),
+      limiter,
+      undefined,
+      undefined,
+      10_000,
+    );
+
+    expect(secondRun).toMatchObject({
+      scannedToBlock: 120,
+      coverageOutcome: "complete",
+      coveredTopicCount: 2,
+      maxBlock: 115,
+    });
+    expect(secondRun.rows.map((row) => row.block_number)).toEqual([115]);
   });
 
   it("stops before the earliest RPC log whose timestamp is unresolved", async () => {

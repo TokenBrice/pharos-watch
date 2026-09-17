@@ -7,10 +7,14 @@ import {
   type IndependentAssuranceReconciliation,
   type IndependentAssuranceReconciliationOptions,
 } from "@shared/lib/independent-assurance";
-import { getLiveReserveAdapterDefinition, parseLiveReserveAdapterParams, type LiveReserveAdapterParamsByKey } from "@shared/lib/live-reserve-adapters";
+import {
+  getLiveReserveAdapterDefinition,
+  parseLiveReserveAdapterParams,
+  type LiveReserveAdapterParamsByKey,
+} from "@shared/lib/live-reserve-adapters";
 import type { ReserveSlice, StablecoinMeta } from "@shared/types/core";
 import type { LiveReservesConfig } from "@shared/types/live-reserves";
-import { normalizeSlices, readHtmlAttribute, stripTags } from "./helpers";
+import { collectPdfAnchors, normalizeSlices } from "./helpers";
 import { fetchBinaryResponseWithRetry, fetchTextResponseWithRetry } from "./request";
 import type { AdapterContext, AdapterFn, AdapterResult } from "./types";
 import { reserveDegradedWarning, reserveInfoWarning } from "./warnings";
@@ -232,24 +236,9 @@ function normalizeUrl(value: string, base: string): string {
 }
 
 function collectReportCandidates(html: string, indexUrl: string, profile: IndependentAssuranceProfile): ReportCandidate[] {
-  const candidates: ReportCandidate[] = [];
-  const anchorRegex = /<a\b[^>]*\bhref\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s>]+))[^>]*>([\s\S]*?)<\/a>/gi;
-  const gatedUrlRegex = /<[^>]+\bdata-gated-url\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s>]+))[^>]*>/gi;
-
-  for (const match of html.matchAll(anchorRegex)) {
-    const href = match[1] ?? match[2] ?? match[3] ?? "";
-    const text = stripTags(match[4] ?? "");
-    if (!/\.pdf(?:[?#]|$)/i.test(href) || !profile.isReportCandidate(href, text)) continue;
-    candidates.push({ url: normalizeUrl(href, indexUrl), text });
-  }
-  for (const match of html.matchAll(gatedUrlRegex)) {
-    const tag = match[0] ?? "";
-    const href = match[1] ?? match[2] ?? match[3] ?? "";
-    const text = readHtmlAttribute(tag, "data-gated-asset") ?? "";
-    if (!/\.pdf(?:[?#]|$)/i.test(href) || !profile.isReportCandidate(href, text)) continue;
-    candidates.push({ url: normalizeUrl(href, indexUrl), text });
-  }
-
+  const candidates = collectPdfAnchors(html)
+    .filter((anchor) => /\.pdf(?:[?#]|$)/i.test(anchor.href) && profile.isReportCandidate(anchor.href, anchor.text))
+    .map((anchor) => ({ url: normalizeUrl(anchor.href, indexUrl), text: anchor.text }));
   const unique = new Map<string, ReportCandidate>();
   for (const candidate of candidates) {
     unique.set(`${candidate.url}\n${candidate.text}`, candidate);
@@ -259,6 +248,16 @@ function collectReportCandidates(html: string, indexUrl: string, profile: Indepe
 
 function parseDiscoveryDate(value: string): string | null {
   const decodedValue = decodeURIComponent(value);
+  const ambiguousNumeric = decodedValue.match(
+    /\b(\d{1,2})[./](\d{1,2})[./](?:19|20)?\d{2}\b/,
+  );
+  if (
+    ambiguousNumeric
+    && Number(ambiguousNumeric[1]) <= 12
+    && Number(ambiguousNumeric[2]) <= 12
+  ) {
+    return null;
+  }
   const shortMonthFirst = decodedValue.match(/\b(\d{1,2})[.]([0-9]{1,2})[.]((?:19|20)?\d{2})\b/);
   if (shortMonthFirst) {
     const month = Number(shortMonthFirst[1]);
@@ -317,13 +316,16 @@ function bytesToHex(bytes: ArrayBuffer): string {
   return Array.from(new Uint8Array(bytes), (value) => value.toString(16).padStart(2, "0")).join("");
 }
 
-async function fetchAndHashPdf(
-  manifest: IndependentAssuranceManifest,
-  reportHosts: readonly string[],
-  signal: AbortSignal,
-  ctx: AdapterContext | undefined,
-): Promise<VerifiedIndependentAssuranceArtifact> {
-  const response = await fetchBinaryResponseWithRetry(manifest.reportUrl, signal, 15_000, ctx, {
+export async function verifyAssurancePdf(args: {
+  manifest: IndependentAssuranceManifest;
+  reportUrl: string;
+  reportHosts: readonly string[];
+  adapterKey: string;
+  signal: AbortSignal;
+  ctx?: AdapterContext;
+  responseHostError?: (host: string) => string;
+}): Promise<VerifiedIndependentAssuranceArtifact> {
+  const response = await fetchBinaryResponseWithRetry(args.reportUrl, args.signal, 15_000, args.ctx, {
     headers: {
       Accept: "application/pdf,application/octet-stream;q=0.9",
       "User-Agent": "Mozilla/5.0 Pharos reserve verifier",
@@ -331,29 +333,29 @@ async function fetchAndHashPdf(
     maxRetries: 0,
     maxResponseBytes: MAX_PDF_BYTES,
   });
-
-  assertAllowedHost(response.finalUrl, reportHosts, "PDF response");
+  const responseHost = requireHttpsUrl(response.finalUrl, "PDF response").hostname.toLowerCase();
+  if (!args.reportHosts.map((host) => host.toLowerCase()).includes(responseHost)) {
+    throw new Error(args.responseHostError?.(responseHost)
+      ?? `${args.adapterKey}: PDF response host ${responseHost} is not in the reviewed allowlist`);
+  }
   const bytes = response.body;
-  if (bytes.length !== manifest.reportByteLength) {
+  if (bytes.length !== args.manifest.reportByteLength) {
     throw new Error(
-      `independent-assurance: PDF byte length ${bytes.length} does not match reviewed ${manifest.reportByteLength}`,
+      `${args.adapterKey}: PDF byte length ${bytes.length} does not match reviewed ${args.manifest.reportByteLength}`,
     );
   }
-
   const contentType = (response.headers.get("content-type") ?? "").toLowerCase();
   const magic = new TextDecoder().decode(bytes.slice(0, PDF_MAGIC.length));
   if (!contentType.startsWith("application/pdf") && magic !== PDF_MAGIC) {
-    throw new Error("independent-assurance: official artifact is not a PDF");
+    throw new Error(`${args.adapterKey}: official artifact is not a PDF`);
   }
-
   const sha256 = bytesToHex(await crypto.subtle.digest("SHA-256", bytes));
-  if (sha256 !== manifest.reportSha256.toLowerCase()) {
-    throw new Error(`independent-assurance: PDF SHA-256 ${sha256} does not match reviewed manifest`);
+  if (sha256 !== args.manifest.reportSha256.toLowerCase()) {
+    throw new Error(`${args.adapterKey}: PDF SHA-256 ${sha256} does not match reviewed manifest`);
   }
-
   return {
-    manifest,
-    sourceTimestamp: independentAssuranceSourceTimestamp(manifest),
+    manifest: args.manifest,
+    sourceTimestamp: independentAssuranceSourceTimestamp(args.manifest),
     responseUrl: response.finalUrl,
     byteLength: bytes.length,
   };
@@ -405,7 +407,14 @@ export async function verifyIndependentAssuranceReport(args: {
     }
   }
 
-  return fetchAndHashPdf(args.manifest, args.reportHosts, args.signal, args.ctx);
+  return verifyAssurancePdf({
+    manifest: args.manifest,
+    reportUrl: args.manifest.reportUrl,
+    reportHosts: args.reportHosts,
+    adapterKey: "independent-assurance",
+    signal: args.signal,
+    ctx: args.ctx,
+  });
 }
 
 /**

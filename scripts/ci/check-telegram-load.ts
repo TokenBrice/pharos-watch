@@ -1,4 +1,4 @@
-import { readdirSync, readFileSync } from "node:fs";
+import { readFileSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { performance } from "node:perf_hooks";
 import { DatabaseSync } from "node:sqlite";
@@ -33,11 +33,15 @@ import {
   TELEGRAM_P95_SEND_LATENCY_MS,
   WATCHER_TARGETS,
   type LoadScenarioResult,
-  type ProductionCalibratedDispatchScenario,
-  type SyntheticFixtureSummary,
   type SyntheticTelegramFixture,
 } from "../lib/telegram-load-scenarios";
-import { parseTelegramLoadTargets, printTelegramLoadReport } from "../lib/telegram-load-report";
+import {
+  parseTelegramLoadTargets,
+  printTelegramLoadReport,
+  type TelegramLoadCheckReport,
+  type TelegramQueryPlanCheckResult as QueryPlanCheckResult,
+  type TelegramStatusPathBudgetResult as StatusPathBudgetResult,
+} from "../lib/telegram-load-report";
 import {
   simulateTelegramRecapLoadScenarios,
   type TelegramRecapLoadScenarioResult,
@@ -49,6 +53,7 @@ import {
   ACTIVE_WATCHER_SQL_CONDITION,
 } from "@shared/lib/telegram-alert-families";
 import { isDirectRun } from "../lib/smoke-runtime.mjs";
+import { getWorkerMigrationFiles } from "../lib/worker-migration-files.mts";
 
 export {
   buildSyntheticTelegramFixture,
@@ -106,59 +111,6 @@ export interface QueryPlanCheckDefinition {
   note?: string;
 }
 
-export interface QueryPlanCheckResult {
-  id: string;
-  category: QueryPlanCheckDefinition["category"];
-  status: QueryPlanStatus;
-  details: string[];
-  missingRequiredDetails: string[];
-  unexpectedFullScanTables: string[];
-  note?: string;
-}
-
-export interface StatusPathBudgetResult {
-  id: string;
-  category: QueryPlanCheckDefinition["category"];
-  status: "ok" | "fail";
-  targetActiveWatchers: number;
-  rowsRead: number;
-  maxRowsRead: number;
-  durationMs: number;
-  maxDurationMs: number;
-  seededRowCounts: Record<string, number>;
-  note?: string;
-}
-
-export interface TelegramLoadCheckReport {
-  assumptions: {
-    freshAttemptsPerRun: number;
-    pendingDrainAttemptsPerRun: number;
-    cronIntervalSeconds: number;
-    dispatchTimeoutSeconds: number;
-    sendLoopSoftDeadlineSeconds: number;
-    telegramBroadcastMessagesPerSecond: number;
-    telegramP95SendLatencyMs: number;
-    effectiveSendMessagesPerSecond: number;
-    d1WriteMsPerMessage: number;
-    pendingTtlSeconds: number;
-    adminPendingTtlSeconds: number;
-    worstCasePlanningDelaySeconds: number;
-    minimumTtlMarginFraction: number;
-    normalSloSeconds: number;
-    spikeMaxSeconds: number;
-    dispatchCpuMs: number;
-    cpuBudgetSafetyFraction: number;
-    cpuBudgetCeilingMs: number;
-    formatCpuMsPerChat: number;
-    sendCpuMsPerMessage: number;
-  };
-  fixtureSummaries: SyntheticFixtureSummary[];
-  scenarios: LoadScenarioResult[];
-  recapScenarios: TelegramRecapLoadScenarioResult[];
-  productionDispatchScenario: ProductionCalibratedDispatchScenario;
-  queryPlans: QueryPlanCheckResult[];
-  statusPathBudgets: StatusPathBudgetResult[];
-}
 
 export function findProductionDispatchBreaches(
   report: TelegramLoadCheckReport,
@@ -626,32 +578,12 @@ export function buildQueryPlanChecks(): QueryPlanCheckDefinition[] {
   ];
 }
 
-// Telegram migrations depend on shared Worker schema (for example effect
-// fencing depends on scheduler tables), so this fixture replays the same full
-// ordered stream as production instead of guessing dependencies by filename.
-// Since the 2026-07-30 squash the full schema lives in 0000_baseline.sql, so
-// the guard requires the baseline plus however many unsquashed migrations exist.
-const MIN_TELEGRAM_PLAN_MIGRATIONS = 1;
-
-function selectTelegramPlanMigrations(migrationsDir: string): string[] {
-  // Mirrors getMigrationFiles() in check-worker-migrations.ts, inlined to
-  // avoid pulling that module's top-level await into this tsx-transformed CLI.
-  return readdirSync(migrationsDir)
-    .filter((file) => file.endsWith(".sql"))
-    .sort();
-}
 
 function createTelegramPlanDatabase(migrationsDir = resolve("worker/migrations")): DatabaseSync {
   const db = new DatabaseSync(":memory:");
-  const migrationFiles = selectTelegramPlanMigrations(migrationsDir);
+  const migrationFiles = getWorkerMigrationFiles(migrationsDir);
   if (!migrationFiles.includes("0000_baseline.sql")) {
     throw new Error("Telegram plan replay requires worker/migrations/0000_baseline.sql.");
-  }
-  if (migrationFiles.length < MIN_TELEGRAM_PLAN_MIGRATIONS) {
-    throw new Error(
-      `Expected at least ${MIN_TELEGRAM_PLAN_MIGRATIONS} Telegram plan migrations, found ${migrationFiles.length}. ` +
-        `Update MIN_TELEGRAM_PLAN_MIGRATIONS in check-telegram-load.ts if this is intentional.`,
-    );
   }
   for (const file of migrationFiles) {
     db.exec(readFileSync(join(migrationsDir, file), "utf8"));

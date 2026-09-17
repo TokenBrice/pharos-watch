@@ -3,7 +3,6 @@ import type { LiveReserveWarning, LiveReservesConfig } from "@shared/types/live-
 import { getCanonicalReserveAssetRisk } from "@shared/lib/reserve-asset-risk";
 import type { AdapterContext, AdapterResult } from "./types";
 import {
-  accumulateBucketedExposure,
   assertFiniteNonNegativeReserveRows,
   buildBucketSlices,
   buildRedemptionSnapshotMetadata,
@@ -13,6 +12,7 @@ import {
   parseTimestampLikeToUnixSeconds,
   reserveInfoWarning,
 } from "./helpers";
+import { accumulateBucketedExposure } from "./classification";
 
 interface FalconBreakdownAsset {
   label: string;

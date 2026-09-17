@@ -8,6 +8,7 @@ import { getAlchemyAuthHeaders } from "../../lib/chain-registry";
 import { fetchErc20TotalSupply } from "./onchain";
 import { fetchJsonPostWithRetry, fetchJsonWithRetry } from "./request";
 import { requireOnchainInput } from "./input-guards";
+import { resolveCoinContractAddress } from "./evm";
 
 type EvmInput = Extract<LiveReserveInput, { kind: "onchain-evm" }>;
 type SolanaInput = Extract<LiveReserveInput, { kind: "onchain-solana" }>;
@@ -158,7 +159,7 @@ export async function probeOnchainTotalSupply(
   fallbackRpcUrl?: string,
 ): Promise<bigint> {
   const onchain = requireOnchainInput(input, adapterName);
-  const contract = coin.contracts?.find((c) => c.chain === onchain.chain)?.address;
+  const contract = resolveCoinContractAddress(coin, onchain.chain);
   if (!contract) {
     throw new Error(`${adapterName} could not find a ${onchain.chain} contract for ${coin.id}`);
   }

@@ -861,7 +861,7 @@ describe("cleanupExpiredPendingAlerts", () => {
     expect(expired).toBe(3);
 
     const history = db.getHistory();
-    const selectCall = history.find((e) => e.sql.includes("FROM telegram_pending_alerts"));
+    const selectCall = history.find((e) => e.sql.includes("SELECT id, chat_id, message_html"));
     expect(selectCall?.sql).toContain("COALESCE(expires_at, created_at + ?) <= ?");
     expect(selectCall?.sql).toContain("LIMIT ?");
     expect(selectCall?.binds).toEqual([
@@ -870,7 +870,9 @@ describe("cleanupExpiredPendingAlerts", () => {
       EXPIRED_PENDING_CLEANUP_BATCH_LIMIT,
     ]);
     expect(selectCall?.binds[selectCall.binds.length - 1]).toBe(EXPIRED_PENDING_CLEANUP_BATCH_LIMIT);
-    const deleteCall = history.find((e) => e.sql.includes("DELETE FROM telegram_pending_alerts"));
+    const deleteCall = history.find((e) =>
+      e.sql.includes("DELETE FROM telegram_pending_alerts") && !e.sql.includes("delivery_state = 'sent'")
+    );
     expect(deleteCall).toBeDefined();
     expect(deleteCall!.binds).toEqual([1, 2, 3]);
   });
@@ -903,7 +905,7 @@ describe("cleanupExpiredPendingAlerts", () => {
 
     expect(await cleanupExpiredPendingAlerts(db, nowSec)).toBe(EXPIRED_PENDING_CLEANUP_BATCH_LIMIT);
 
-    const selectCall = db.getHistory().find((entry) => entry.sql.includes("FROM telegram_pending_alerts"));
+    const selectCall = db.getHistory().find((entry) => entry.sql.includes("SELECT id, chat_id, message_html"));
     expect(selectCall?.binds).toEqual([
       PENDING_TTL_SEC,
       nowSec,

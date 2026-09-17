@@ -40,7 +40,7 @@ export interface DexPriceChallengerPublicationPlan {
   sourceCoverageComplete: boolean;
   shouldPublishSnapshot: boolean;
   skipReason: "incomplete-coverage" | null;
-  payloadStatements: DexPriceChallengerSqlStatement[];
+  payloadRows: unknown[][];
   snapshotStatement: DexPriceChallengerSqlStatement | null;
   cleanupStatements: DexPriceChallengerSqlStatement[];
 }
@@ -57,6 +57,17 @@ export const DEX_PRICE_CHALLENGER_BATCH_SIZE = 25;
 const CHALLENGER_D1_MAX_BOUND_PARAMETERS = 100;
 const CHALLENGER_PAYLOAD_COLUMN_COUNT = 8;
 const CHALLENGER_CLEANUP_ID_BATCH_SIZE = CHALLENGER_D1_MAX_BOUND_PARAMETERS - 1;
+const CHALLENGER_VALUES_TOKEN = "__CHALLENGER_VALUES__";
+export const DEX_PRICE_CHALLENGER_PAYLOAD_INSERT_SQL =
+  `INSERT INTO dex_price_challengers
+    (stablecoin_id, snapshot_at, pool_id, chain, protocol, source_family, price_usd, tvl_usd)
+   VALUES ${CHALLENGER_VALUES_TOKEN}
+   ON CONFLICT(stablecoin_id, snapshot_at, pool_id) DO UPDATE SET
+     chain = excluded.chain,
+     protocol = excluded.protocol,
+     source_family = excluded.source_family,
+     price_usd = excluded.price_usd,
+     tvl_usd = excluded.tvl_usd`;
 
 function chunkRows<T>(rows: readonly T[], chunkSize: number): T[][] {
   const chunks: T[][] = [];
@@ -68,33 +79,32 @@ function chunkRows<T>(rows: readonly T[], chunkSize: number): T[][] {
 
 function prepareMultiRowStatements(
   db: D1Database,
-  sqlPrefix: string,
-  conflictClause: string,
   rows: readonly (readonly unknown[])[],
-  columnCount: number,
 ): D1PreparedStatement[] {
   if (rows.length === 0) return [];
-  if (rows.some((row) => row.length !== columnCount)) {
-    throw new Error(`DEX challenger publication expected ${columnCount} binds per row`);
+  if (rows.some((row) => row.length !== CHALLENGER_PAYLOAD_COLUMN_COUNT)) {
+    throw new Error(
+      `DEX challenger publication expected ${CHALLENGER_PAYLOAD_COLUMN_COUNT} binds per row`,
+    );
   }
 
-  const rowsPerStatement = Math.floor(CHALLENGER_D1_MAX_BOUND_PARAMETERS / columnCount);
+  const rowsPerStatement = Math.floor(
+    CHALLENGER_D1_MAX_BOUND_PARAMETERS / CHALLENGER_PAYLOAD_COLUMN_COUNT,
+  );
   return chunkRows(rows, rowsPerStatement).map((rowChunk) => {
-    const placeholders = `(${new Array(columnCount).fill("?").join(", ")})`;
+    const placeholders = `(${new Array(CHALLENGER_PAYLOAD_COLUMN_COUNT).fill("?").join(", ")})`;
+    const valuesSql = new Array(rowChunk.length).fill(placeholders).join(", ");
     return db
-      .prepare(`${sqlPrefix} VALUES ${new Array(rowChunk.length).fill(placeholders).join(", ")} ${conflictClause}`)
+      .prepare(
+        DEX_PRICE_CHALLENGER_PAYLOAD_INSERT_SQL.replace(
+          CHALLENGER_VALUES_TOKEN,
+          valuesSql,
+        ),
+      )
       .bind(...rowChunk.flat());
   });
 }
 
-/** Return the writable publication sequence with payload rows first and snapshot metadata last. */
-export function getDexPriceChallengerPublicationStatements(
-  plan: DexPriceChallengerPublicationPlan,
-): DexPriceChallengerSqlStatement[] {
-  return plan.snapshotStatement == null
-    ? [...plan.payloadStatements]
-    : [...plan.payloadStatements, plan.snapshotStatement];
-}
 
 function toLowerString(value: string): string {
   return value.trim().toLowerCase();
@@ -109,35 +119,23 @@ export function buildDexPriceChallengerPublicationPlan(
   const sourceCoverageComplete = !!input.sourceCoverageComplete;
   const hasRows = input.rows.length > 0;
 
-  const payloadStatements = input.rows.map((row) => {
+  const payloadRows = input.rows.map((row) => {
     const stablecoin = toLowerString(row.stablecoinId);
     if (stablecoin !== stablecoinId) {
       throw new Error(
         `dex-price-challengers: row stablecoin "${row.stablecoinId}" does not match batch stablecoin "${stablecoinId}"`,
       );
     }
-    return {
-      sql:
-        `INSERT INTO dex_price_challengers
-          (stablecoin_id, snapshot_at, pool_id, chain, protocol, source_family, price_usd, tvl_usd)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-         ON CONFLICT(stablecoin_id, snapshot_at, pool_id) DO UPDATE SET
-           chain = excluded.chain,
-           protocol = excluded.protocol,
-           source_family = excluded.source_family,
-           price_usd = excluded.price_usd,
-           tvl_usd = excluded.tvl_usd`,
-      binds: [
-        stablecoin,
-        snapshotAt,
-        (row.poolId ?? "").trim(),
-        (row.chain ?? "").trim(),
-        (row.protocol ?? "").trim(),
-        (row.sourceFamily ?? "").trim(),
-        row.priceUsd,
-        row.tvlUsd,
-      ],
-    } satisfies DexPriceChallengerSqlStatement;
+    return [
+      stablecoin,
+      snapshotAt,
+      (row.poolId ?? "").trim(),
+      (row.chain ?? "").trim(),
+      (row.protocol ?? "").trim(),
+      (row.sourceFamily ?? "").trim(),
+      row.priceUsd,
+      row.tvlUsd,
+    ];
   });
 
   const snapshotStatement = sourceCoverageComplete
@@ -172,7 +170,7 @@ export function buildDexPriceChallengerPublicationPlan(
     sourceCoverageComplete,
     shouldPublishSnapshot: sourceCoverageComplete,
     skipReason: sourceCoverageComplete ? null : "incomplete-coverage",
-    payloadStatements,
+    payloadRows,
     snapshotStatement,
     cleanupStatements,
   };
@@ -323,20 +321,7 @@ export async function publishDexPriceChallengerSnapshots(
     }
 
     publishedStablecoins++;
-    const payloadRows = plan.payloadStatements.map((statement) => statement.binds);
-    const payloadStatements = prepareMultiRowStatements(
-      db,
-      `INSERT INTO dex_price_challengers
-        (stablecoin_id, snapshot_at, pool_id, chain, protocol, source_family, price_usd, tvl_usd)`,
-      `ON CONFLICT(stablecoin_id, snapshot_at, pool_id) DO UPDATE SET
-         chain = excluded.chain,
-         protocol = excluded.protocol,
-         source_family = excluded.source_family,
-         price_usd = excluded.price_usd,
-         tvl_usd = excluded.tvl_usd`,
-      payloadRows,
-      CHALLENGER_PAYLOAD_COLUMN_COUNT,
-    );
+    const payloadStatements = prepareMultiRowStatements(db, plan.payloadRows);
     for (const statement of payloadStatements) {
       await queuePayloadStatement(statement);
     }

@@ -1,20 +1,34 @@
 import { isRecord } from "@shared/lib/type-guards";
-import type {
-  CanaryStatus,
-  ClassificationWarning,
-  CoinGeckoPriceDiff,
-  HealthResponse,
-  LiquidityHealth,
-  MintBurnReconciliationSummary,
-  PublicationHealth,
-  PriceSourceHealth,
-  ProviderCircuitHealth,
-  ReserveDriftEntry,
-  StatusSectionErrors,
-  TelegramHealthSummary,
-  YieldHealthSummary,
+import {
+  CanaryStatusSchema,
+  ClassificationWarningSchema,
+  CoinGeckoPriceDiffSchema,
+  D1UsageSummarySchema,
+  HealthResponseSchema,
+  LiquidityHealthSchema,
+  MintBurnReconciliationSummarySchema,
+  PublicationHealthSchema,
+  ProviderCircuitHealthSchema,
+  ReserveDriftEntrySchema,
+  YieldHealthSummarySchema,
+  type CanaryStatus,
+  type ClassificationWarning,
+  type CoinGeckoPriceDiff,
+  type HealthResponse,
+  type LiquidityHealth,
+  type MintBurnReconciliationSummary,
+  type PublicationHealth,
+  type PriceSourceHealth,
+  type ProviderCircuitHealth,
+  type ReserveDriftEntry,
+  type StatusSectionErrors,
+  type TelegramHealthSummary,
+  type YieldHealthSummary,
 } from "@shared/types/status";
-import type { D1UsageSummaryWithTableGrowth } from "./d1-usage";
+import {
+  D1TableGrowthSnapshotSchema,
+  type D1UsageSummaryWithTableGrowth,
+} from "./d1-usage";
 import type { RawStatusComputation } from "../status-evaluation";
 import { getCache, setCacheIfNewer } from "../db-cache";
 import { toErrorMessage } from "@shared/lib/error-utils";
@@ -23,6 +37,9 @@ import {
   type StatusLevel,
 } from "../status-reliability-shared";
 import { logWorkerEvent } from "../structured-log";
+import { PriceSourceHealthSchema } from "@shared/types/pricing-source-health";
+import { parseJsonObjectWithSchema } from "../json-parse";
+import { z } from "zod";
 
 export const STATUS_RAW_SNAPSHOT_CACHE_KEY = "status:raw-snapshot:v1";
 export const STATUS_RAW_SNAPSHOT_MAX_AGE_SEC = STATUS_SYSTEM_FRESHNESS_SEC;
@@ -185,16 +202,52 @@ function hasRawStatusShape(value: unknown): value is RawStatusComputation {
 function hasPublicHealthShape(value: unknown): value is HealthResponse {
   if (!isRecord(value)) return false;
   return (
-    isStatusLevel(value.status) &&
-    typeof value.timestamp === "number" &&
-    Number.isFinite(value.timestamp) &&
-    Array.isArray(value.warnings) &&
-    isRecord(value.caches) &&
-    isRecord(value.blacklist) &&
-    isRecord(value.mintBurn) &&
-    isRecord(value.circuits)
+    isStatusLevel(value.status)
+    && typeof value.timestamp === "number"
+    && Number.isFinite(value.timestamp)
+    && Array.isArray(value.warnings)
+    && isRecord(value.caches)
+    && isRecord(value.blacklist)
+    && isRecord(value.mintBurn)
+    && isRecord(value.circuits)
   );
 }
+
+
+const StatusSectionErrorsSchema = z.record(
+  z.string(),
+  z.object({ code: z.string(), message: z.string() }),
+);
+const D1UsageSummaryWithTableGrowthSchema = D1UsageSummarySchema.extend({
+  tableGrowth: D1TableGrowthSnapshotSchema.nullable(),
+});
+const StatusSupplementsSchema = z.object({
+  liquidityHealth: LiquidityHealthSchema.nullable(),
+  yieldHealth: YieldHealthSummarySchema.nullable(),
+  publicationHealth: PublicationHealthSchema.nullable(),
+  providerCircuitHealth: ProviderCircuitHealthSchema.nullable(),
+  canaries: CanaryStatusSchema.nullable(),
+  priceSourceHealth: PriceSourceHealthSchema.nullable(),
+  coingeckoPriceDiff: CoinGeckoPriceDiffSchema.nullable(),
+  d1Usage: D1UsageSummaryWithTableGrowthSchema.nullable(),
+  mintBurnReconciliation: MintBurnReconciliationSummarySchema.nullable(),
+  reserveDrift: z.array(ReserveDriftEntrySchema).optional(),
+  classificationWarnings: z.array(ClassificationWarningSchema).optional(),
+  telegramSummary: HealthResponseSchema.shape.telegramSummary.unwrap(),
+  sectionErrors: StatusSectionErrorsSchema,
+});
+const StatusRawSnapshotPayloadSchema = z.object({
+  version: z.literal(1),
+  producedAt: z.number().finite(),
+  raw: z.custom<RawStatusComputation>(hasRawStatusShape).transform((raw) => ({
+    ...raw,
+    budgetOnlySurfaces: Array.isArray(raw.budgetOnlySurfaces)
+      ? raw.budgetOnlySurfaces
+      : [],
+  })),
+  publicHealth: z.custom<HealthResponse>(hasPublicHealthShape).optional(),
+  supplements: StatusSupplementsSchema.optional(),
+});
 
 export interface StatusRawSnapshotWriteOptions {
   publicHealth?: HealthResponse;
@@ -202,35 +255,7 @@ export interface StatusRawSnapshotWriteOptions {
 }
 
 function parseStatusRawSnapshotPayload(value: string): StatusRawSnapshotPayload | null {
-  try {
-    const parsed = JSON.parse(value);
-    if (!isRecord(parsed)) return null;
-    if (parsed.version !== 1) return null;
-    if (typeof parsed.producedAt !== "number" || !Number.isFinite(parsed.producedAt)) return null;
-    if (!hasRawStatusShape(parsed.raw)) return null;
-    return {
-      version: 1,
-      producedAt: parsed.producedAt,
-      raw: {
-        ...parsed.raw,
-        budgetOnlySurfaces: Array.isArray(parsed.raw.budgetOnlySurfaces)
-          ? parsed.raw.budgetOnlySurfaces as RawStatusComputation["budgetOnlySurfaces"]
-          : [],
-      },
-      publicHealth: parsed.publicHealth == null
-        ? undefined
-        : hasPublicHealthShape(parsed.publicHealth)
-          ? parsed.publicHealth
-          : undefined,
-      supplements: parsed.supplements == null
-        ? undefined
-        : isRecord(parsed.supplements)
-          ? parsed.supplements as unknown as StatusSupplements
-          : undefined,
-    };
-  } catch {
-    return null;
-  }
+  return parseJsonObjectWithSchema(value, StatusRawSnapshotPayloadSchema);
 }
 
 export async function loadStatusRawSnapshot(

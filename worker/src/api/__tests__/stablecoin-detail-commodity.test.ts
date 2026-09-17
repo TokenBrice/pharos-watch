@@ -16,10 +16,36 @@ const fetchJsonWithRetryMock = vi.fn<(
   options?: Record<string, unknown>
 ) => Promise<{ response: Response; body: Record<string, unknown> } | null>>();
 
-vi.mock("../../lib/fetch-retry", () => ({
-  fetchWithRetry: fetchWithRetryMock,
-  fetchJsonWithRetry: fetchJsonWithRetryMock,
-}));
+vi.mock("../../lib/fetch-retry", async (importOriginal) => {
+  const actual = await importOriginal<Record<string, unknown>>();
+  return {
+    ...actual,
+    fetchWithRetry: fetchWithRetryMock,
+    fetchJsonWithRetry: fetchJsonWithRetryMock,
+    fetchJsonWithSchema: async (
+      url: string,
+      schema: {
+        safeParse: (value: unknown) =>
+          | { success: true; data: unknown }
+          | { success: false; error: { message: string } };
+      },
+      init?: RequestInit,
+      retries?: number,
+      options?: Record<string, unknown>,
+    ) => {
+      const result = await fetchJsonWithRetryMock(url, init, retries, options);
+      if (!result) return null;
+      const parsed = schema.safeParse(result.body);
+      return parsed.success
+        ? { success: true, response: result.response, body: parsed.data }
+        : {
+            success: false,
+            response: result.response,
+            failure: { kind: "schema-validation", message: parsed.error.message },
+          };
+    },
+  };
+});
 
 const { fetchCommodityTokens, handleCommodityDetail } = await import("../stablecoin-detail/commodity");
 const config = { stablecoinId: "xaut-tether", geckoId: "tether-gold", protocolSlug: "tether-gold", pegType: "peggedGOLD" };

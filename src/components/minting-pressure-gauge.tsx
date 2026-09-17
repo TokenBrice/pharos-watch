@@ -3,6 +3,8 @@
 import { clamp } from "@shared/lib/math";
 import { getNetPrefix } from "@shared/lib/format";
 import { getLiteralMintingPressureScore } from "@shared/lib/mint-burn-signals";
+import { getMintPressureBand, MINT_PRESSURE_LABELS } from "@shared/lib/classification";
+import { MINT_PRESSURE_STYLES } from "@/lib/severity-colors";
 import { cn } from "@/lib/utils";
 
 /* Figma coin-template semicircular gauge (Mint & Burn Flows card).
@@ -148,69 +150,6 @@ interface MintingPressureGaugeProps {
   className?: string;
 }
 
-interface MintingPressureUi {
-  label: string;
-  badgeClass: string;
-  valueClass: string;
-  panelClass: string;
-}
-
-function getLiteralMintingPressureUi(score: number | null): MintingPressureUi {
-  if (score === null) {
-    return {
-      label: "No activity",
-      badgeClass: "border-border/70 bg-muted/40 text-muted-foreground",
-      valueClass: "text-muted-foreground",
-      panelClass: "border-border/60 bg-background/35",
-    };
-  }
-  if (score >= 35) {
-    return {
-      label: "Mint dominated",
-      badgeClass:
-        "border-emerald-600/30 bg-emerald-500/10 text-emerald-700 dark:border-emerald-500/40 dark:bg-emerald-500/15 dark:text-emerald-300",
-      valueClass: "text-emerald-700 dark:text-emerald-400",
-      panelClass:
-        "border-emerald-600/30 bg-emerald-500/10 dark:border-emerald-500/35 dark:bg-emerald-500/10",
-    };
-  }
-  if (score >= 10) {
-    return {
-      label: "Mint tilt",
-      badgeClass:
-        "border-lime-600/30 bg-lime-500/10 text-lime-700 dark:border-lime-500/40 dark:bg-lime-500/15 dark:text-lime-300",
-      valueClass: "text-lime-700 dark:text-lime-400",
-      panelClass:
-        "border-lime-600/30 bg-lime-500/10 dark:border-lime-500/35 dark:bg-lime-500/10",
-    };
-  }
-  if (score > -10) {
-    return {
-      label: "Balanced",
-      badgeClass: "border-border/70 bg-muted/40 text-foreground",
-      valueClass: "text-foreground",
-      panelClass: "border-border/60 bg-background/40",
-    };
-  }
-  if (score > -35) {
-    return {
-      label: "Burn tilt",
-      badgeClass:
-        "border-amber-600/30 bg-amber-500/10 text-amber-700 dark:border-amber-500/40 dark:bg-amber-500/15 dark:text-amber-300",
-      valueClass: "text-amber-700 dark:text-amber-400",
-      panelClass:
-        "border-amber-600/30 bg-amber-500/10 dark:border-amber-500/35 dark:bg-amber-500/10",
-    };
-  }
-  return {
-    label: "Burn dominated",
-    badgeClass:
-      "border-red-600/30 bg-red-500/10 text-red-700 dark:border-red-500/40 dark:bg-red-500/15 dark:text-red-300",
-    valueClass: "text-red-700 dark:text-red-400",
-    panelClass:
-      "border-red-600/30 bg-red-500/10 dark:border-red-500/35 dark:bg-red-500/10",
-  };
-}
 
 export function MintingPressureGauge({
   mintVolume24hUsd,
@@ -221,7 +160,11 @@ export function MintingPressureGauge({
     mintVolume24hUsd,
     burnVolume24hUsd,
   });
-  const ui = getLiteralMintingPressureUi(score);
+  const pressureBand = getMintPressureBand(score);
+  const ui = {
+    label: MINT_PRESSURE_LABELS[pressureBand],
+    ...MINT_PRESSURE_STYLES[pressureBand],
+  };
   const display = score == null ? null : Math.round(score);
   const knobPct = score == null
     ? null

@@ -12,9 +12,9 @@
  * Pure stdout by default. With --write the digest is also archived to
  * `agents/curation-digest-<date>.md`.
  *
- * Standalone command (`npm run digest:curation`). NOT part of
- * The scheduled full test suite enforces the editorial
- * floors; the digest is the human rollup read on a calendar cadence.
+ * Standalone command (`npm run digest:curation`). NOT part of CI. The
+ * scheduled full test suite enforces the editorial floors; the digest is the
+ * human rollup read on a calendar cadence.
  */
 
 import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";

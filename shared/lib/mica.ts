@@ -19,6 +19,7 @@ interface MicaBadgeStyle extends BadgeStyle {
 
 interface MicaStatusDescriptor {
   badge: MicaBadgeStyle;
+  segmentClass: string;
   description: string;
 }
 
@@ -34,6 +35,7 @@ const MICA_STATUS_DESCRIPTORS = {
       cls: "bg-green-500/10 text-green-700 dark:text-green-400 border-green-500/20",
       textCls: "text-green-700 dark:text-green-400",
     },
+    segmentClass: "bg-green-600",
     description: "Issuer holds an in-effect EMI or credit-institution authorization listed on a competent-authority register.",
   },
   pending: {
@@ -42,6 +44,7 @@ const MICA_STATUS_DESCRIPTORS = {
       cls: "bg-amber-500/10 text-amber-700 dark:text-amber-400 border-amber-500/20",
       textCls: "text-amber-700 dark:text-amber-400",
     },
+    segmentClass: "bg-amber-600",
     description: "Authorization application filed with a competent authority; decision outstanding.",
   },
   transitional: {
@@ -50,6 +53,7 @@ const MICA_STATUS_DESCRIPTORS = {
       cls: "bg-amber-500/10 text-amber-700 dark:text-amber-400 border-amber-500/20",
       textCls: "text-amber-700 dark:text-amber-400",
     },
+    segmentClass: "bg-cyan-600",
     description: "Offered or traded on EU venues under a member-state CASP grandfathering window; no issuer authorization yet.",
   },
   "non-compliant": {
@@ -58,6 +62,7 @@ const MICA_STATUS_DESCRIPTORS = {
       cls: "bg-red-500/10 text-red-700 dark:text-red-400 border-red-500/20",
       textCls: "text-red-700 dark:text-red-400",
     },
+    segmentClass: "bg-red-600",
     description: "In EU scope with no authorization or transitional cover; delisted or restricted on EU venues.",
   },
   "out-of-scope": {
@@ -66,6 +71,7 @@ const MICA_STATUS_DESCRIPTORS = {
       cls: "bg-muted/40 text-muted-foreground border-border/60",
       textCls: "text-muted-foreground",
     },
+    segmentClass: "bg-gray-400 dark:bg-gray-500",
     description: "Not offered to the public or admitted to trading in the EU.",
   },
 } as const satisfies Record<MicaStatus, MicaStatusDescriptor>;
@@ -80,6 +86,8 @@ function projectMicaStatuses<Value>(
 }
 
 export const MICA_STATUS_BADGE_STYLES = projectMicaStatuses((descriptor) => descriptor.badge);
+/** Solid fill classes for compliance distribution segments. */
+export const MICA_STATUS_SEGMENT_CLASSES = projectMicaStatuses((descriptor) => descriptor.segmentClass);
 
 /** Full sentence-form descriptions used in tooltips and copy. */
 export const MICA_STATUS_DESCRIPTIONS = projectMicaStatuses((descriptor) => descriptor.description);

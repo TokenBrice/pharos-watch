@@ -91,7 +91,7 @@ Use `worker/scripts/rebuild-blacklist-current-balances.ts` only after the source
 4. Run the confirmed rebuild. More than 10% provider failures abort before D1 mutation. `--force` bypasses only this failure-rate guard and should be used only after reviewing the provider failures.
 5. Verify current balances, then preview and execute `--clear-writer-pause`. Do not clear the pause after a failed rebuild until the retained rows have been checked.
 
-Active rows stay in place during the rebuild so a transient `provider_failed` result retains the last resolved native/USD amounts and source. Each Wrangler statement chunk is transactional, so a statement failure rolls back that chunk instead of committing a partial delete or insert sequence.
+Active rows stay in place during the rebuild so a transient `provider_failed` result retains the last resolved native/USD amounts and source. Wrangler treats each `--file` import as its own transactional chunk; the helper must not emit explicit `BEGIN TRANSACTION` / `COMMIT` statements because D1 rejects them. A failed chunk rolls back that chunk, but earlier successful chunks remain committed, so inspect the retained rows before retrying or clearing the writer pause.
 
 ## CI Deploy Sequence
 
@@ -179,6 +179,7 @@ These collectors write evidence; exit zero does not certify health, and night-wa
 Repository settings:
 
 - `main` requires pull requests and the aggregate `PR gate` status check, including administrators. The gate accepts the validation matrix selected from `scripts/lib/pr-lanes.mts`: either the full static-plus-four-test-shard path or the focused docs-only path, with optional docs and four-shard touched-critical coverage lanes. A single preparation job installs dependencies and caches the generated workspace for the matrix; preflight always requires the strict pinned PR secret scan.
+- Critical-coverage waiver cohorts are re-reviewed and re-dated quarterly by the owning teams. The completeness gate reports reviews due within 14 days, caps each printed queue at 10 entries plus the remaining count, and fails once any review is more than 30 days overdue.
 - The GitHub `production` environment is restricted to `main` and is attached to the Worker deploy job, the Pages release job, and the manual zone-cache purge job — the three production-mutating jobs.
 - Production-changing workflows share the `production-deploy` concurrency group and do not cancel an active release.
 
@@ -247,8 +248,8 @@ Use dependency maintenance as a dedicated routine, not as incidental churn insid
 
 Current explicitly deferred major cohort:
 
-- `eslint@10` — next review: 2026-08-15
-- `typescript@6` — next review: 2026-08-15
+- `eslint@10` — reviewed 2026-09, still deferred; next review: 2026-12-15
+- `typescript@6` — reviewed 2026-09, still deferred; next review: 2026-12-15
 - `satori@0.33.x` — blocked, not deferred: 0.33 hard-imports `harfbuzzjs`, whose loader reads `self.location`/`__filename` to fetch `hb.wasm` and throws in workerd on the first OG render (`scripts/__tests__/og-worker-runtime.test.ts` returns 500; vercel/satori#796). Dependabot ignores the range; re-test when upstream ships a workerd-compatible loader.
 
 The root `fflate` override pins Satori’s transitive dependency to patched `0.7.5` for [GHSA-px8p-9vwx-vf98](https://github.com/advisories/GHSA-px8p-9vwx-vf98). Keep it until Satori releases a compatible dependency update; the Worker OG renderer uses Satori for font decoding and rendering.

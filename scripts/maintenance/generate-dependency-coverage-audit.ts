@@ -37,10 +37,10 @@ import {
   readRequiredJsonFile,
   resolveGeneratedAt,
   runCoverageAuditCli,
-  runAsMain,
   sortByMarketCapOrRank,
   stringValue,
 } from "../lib/coverage-audit-cli";
+import { runDirectCli } from "../lib/cli-args.mjs";
 import { renderMarkdownRows, type MarkdownAlignment } from "../lib/markdown-report";
 import {
   DEPENDENCY_ADAPTER_MAPPING_REVIEWS,
@@ -1986,4 +1986,6 @@ export async function runCli(
   });
 }
 
-runAsMain(import.meta.url, runCli);
+runDirectCli(import.meta.url, async () => {
+  process.exitCode = await runCli();
+});

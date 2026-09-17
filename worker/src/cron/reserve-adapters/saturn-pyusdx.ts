@@ -1,5 +1,5 @@
 import { parseLiveReserveAdapterParams } from "@shared/lib/live-reserve-adapters";
-import type { ReserveSlice, StablecoinMeta } from "@shared/types/core";
+import type { StablecoinMeta } from "@shared/types/core";
 import type { LiveReservesConfig } from "@shared/types/live-reserves";
 import {
   DECIMALS_SELECTOR,
@@ -8,7 +8,6 @@ import {
   encodeBalanceOfCallData,
 } from "../../lib/evm-selectors";
 import {
-  buildCoverageShortfallWarnings,
   fetchOnchainMulticall3,
   notApplicableFreshnessMetadata,
   requireOnchainInput,
@@ -24,10 +23,10 @@ import {
   readImplementationSlotAddress,
   requireExpectedAddress,
 } from "./onchain-identity";
-import { capacityFromTokenAmounts } from "./slice-math";
 import { ERC4626_TOTAL_ASSETS_SELECTOR } from "./erc4626";
 import { reserveDegradedWarning } from "./warnings";
 import type { AdapterContext, AdapterResult } from "./types";
+import { readWrapperCoverage, wrapperCoverageResult } from "./wrapper-coverage";
 
 const ADAPTER_KEY = "saturn-pyusdx";
 const PYUSDX_SELECTOR = "0xda6b76b8"; // pyusdx()
@@ -122,18 +121,13 @@ export async function fetchSaturnPyusdxReserves(
   }
   const paused = decodeStrictBoolWord(multicallResultByLabel(results, "wrapper-paused"));
 
-  const { capacityUsd, capacityRatioOfSupply, collateralizationRatio } = capacityFromTokenAmounts(
+  const coverage = readWrapperCoverage({
     underlyingBalanceRaw,
     underlyingDecimals,
     totalSupplyRaw,
     wrapperDecimals,
-  );
-
-  const warnings = buildCoverageShortfallWarnings({
-    code: "reserve-undercollateralized",
-    message: (coveragePct) => `Saturn USDat PYUSDx balance covers ${coveragePct}% of USDat supply`,
-    coverageRatio: collateralizationRatio,
   });
+  const warnings = [];
   if (totalSupplyRaw === 0n) {
     warnings.push(
       reserveDegradedWarning(
@@ -155,55 +149,40 @@ export async function fetchSaturnPyusdxReserves(
       ),
     );
   }
-
-  const slice: ReserveSlice = {
-    sourceKey: "saturn-pyusdx:pyusd",
-    name: params.slice.name,
-    pct: 100,
-    risk: params.slice.risk,
-    coinId: params.slice.coinId,
-    depType: params.slice.depType,
-  };
-
-  return {
-    slices: [slice],
-    ...(warnings.length > 0 ? { warnings } : {}),
+  return wrapperCoverageResult({
+    coverage,
+    slice: {
+      sourceKey: "saturn-pyusdx:pyusd",
+      name: params.slice.name,
+      pct: 100,
+      risk: params.slice.risk,
+      coinId: params.slice.coinId,
+      depType: params.slice.depType,
+    },
+    warningMessage: (coveragePct) =>
+      `Saturn USDat PYUSDx balance covers ${coveragePct}% of USDat supply`,
+    warnings,
     metadata: {
       ...notApplicableFreshnessMetadata({ proofKind: "saturn-pyusdx-wrapper-balance" }),
       chain: input.chain,
       wrapperAddress,
       implementationAddress: implementation,
       pyusdxAddress,
-      totalSupplyRaw: totalSupplyRaw.toString(),
-      wrapperDecimals,
-      underlyingBalanceRaw: underlyingBalanceRaw.toString(),
       alternativeAssetsRaw: alternativeAssetsRaw.toString(),
-      underlyingDecimals,
-      ...(collateralizationRatio != null && Number.isFinite(collateralizationRatio)
-        ? { collateralizationRatio }
-        : {}),
-      redemption: {
-        capacityUsd,
-        ...(capacityRatioOfSupply != null ? { capacityRatioOfSupply } : {}),
-        capacityKind: "live-direct" as const,
-        freshnessKind: "same-run-onchain" as const,
-        routeStatus: paused === true
-          ? "paused"
-          : paused === false && capacityUsd > 0
-            ? "open"
-            : "unknown",
-        routeStatusSource: "onchain" as const,
-        ...(paused === true
-          ? { routeStatusReason: "Saturn USDat MultiMint paused() returned true on-chain" }
-          : paused == null
-            ? { routeStatusReason: "Could not verify Saturn USDat MultiMint paused() route status" }
-            : {}),
-        // Reviewed: USDat wrap/unwrap is KYC-gated through the PYUSDx
-        // SwapFacility and the MultiMint retains whitelist controls.
-        holderEligibility: "whitelisted-primary" as const,
-        settlementDelaySec: 0,
-        ...(params.sourceUrls ? { sourceUrls: params.sourceUrls } : {}),
-      },
     },
-  };
+    redemption: {
+      routeStatus: paused === true
+        ? "paused"
+        : paused === false && coverage.capacityUsd > 0
+          ? "open"
+          : "unknown",
+      ...(paused === true
+        ? { routeStatusReason: "Saturn USDat MultiMint paused() returned true on-chain" }
+        : paused == null
+          ? { routeStatusReason: "Could not verify Saturn USDat MultiMint paused() route status" }
+          : {}),
+      holderEligibility: "whitelisted-primary",
+      ...(params.sourceUrls ? { sourceUrls: params.sourceUrls } : {}),
+    },
+  });
 }

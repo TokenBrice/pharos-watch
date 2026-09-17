@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { loadFreshFreezeAlerts } from "../telegram-alert-freeze";
 import { dispatchFreezeAlertOutbox } from "../telegram-freeze-outbox";
 import { createSqliteD1 } from "@shared/test-utils/sqlite-d1";
@@ -20,6 +20,31 @@ function db(rows: unknown[], latestRun: number | null): D1Database {
     },
   });
 }
+function createPoisonFreezeTape() {
+  const sqlite = createLatestSchemaSqlite().sqlite;
+  const now = 2_000_000_000;
+  sqlite.prepare(
+    "INSERT INTO cron_runs (job, started_at, duration_ms, status) VALUES ('project-tape', ?, 1, 'ok')",
+  ).run(now - 5);
+  sqlite.prepare(
+    `INSERT INTO tape_events (
+       event_id, type, severity, ts, title, summary, payload_json,
+       source_table, source_row_id, transition, created_at
+     ) VALUES ('freeze-poison', 'freeze.blocked', 'warning', ?, 'x', 'x', ?,
+       'blacklist_events', 'blacklist-poison', 'opened', ?)`,
+  ).run(
+    now * 1000,
+    JSON.stringify({
+      stablecoin: "NOT_TRACKED",
+      chainName: "Ethereum",
+      sourceEventId: "blacklist-poison",
+    }),
+    now,
+  );
+  const row = sqlite.prepare("SELECT id FROM tape_events WHERE event_id = 'freeze-poison'").get() as { id: number };
+  return { sqlite, database: createSqliteD1(sqlite), now, rowId: row.id };
+}
+
 
 describe("freeze Telegram source gate", () => {
   it("fails closed when the tape projector is stale", async () => {
@@ -59,6 +84,56 @@ describe("freeze Telegram source gate", () => {
     const seeded = await loadFreshFreezeAlerts(db(rows, 3_990), null, 4_000);
     expect(seeded).toEqual({ state: "unseeded", alerts: [], cursor: 501 });
   });
+  it("holds below an unparseable row so the next run retries that row", async () => {
+    const { sqlite, database, now, rowId } = createPoisonFreezeTape();
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    try {
+      const first = await loadFreshFreezeAlerts(database, rowId - 1, now);
+      const retried = await loadFreshFreezeAlerts(database, first.cursor, now + 1);
+
+      expect(first).toMatchObject({ cursor: rowId - 1, droppedUnparsed: 1 });
+      expect(retried).toMatchObject({ cursor: rowId - 1, droppedUnparsed: 1 });
+      expect(JSON.parse(String(sqlite.prepare(
+        "SELECT value FROM cache WHERE key = 'alert:freeze-tape-row-hold'",
+      ).get()?.value))).toEqual({ rowId, attempts: 2 });
+    } finally {
+      warn.mockRestore();
+      sqlite.close();
+    }
+  });
+
+  it("dead-letters a poison row and advances after the bounded retry limit", async () => {
+    const { sqlite, database, now, rowId } = createPoisonFreezeTape();
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const error = vi.spyOn(console, "error").mockImplementation(() => {});
+    try {
+      const first = await loadFreshFreezeAlerts(database, rowId - 1, now);
+      const second = await loadFreshFreezeAlerts(database, first.cursor, now + 1);
+      const escalated = await loadFreshFreezeAlerts(database, second.cursor, now + 2);
+
+      expect(escalated).toMatchObject({
+        cursor: rowId,
+        droppedUnparsed: 1,
+        deadLetteredUnparsed: 1,
+      });
+      expect(sqlite.prepare(
+        "SELECT value FROM cache WHERE key = 'alert:freeze-tape-row-hold'",
+      ).get()).toBeUndefined();
+      expect(error).toHaveBeenCalledOnce();
+      expect(JSON.parse(String(error.mock.calls[0]?.[0]))).toMatchObject({
+        level: "error",
+        action: "freeze-row-dead-lettered",
+        failureKind: "poison-row",
+        reason: "unknown-coin",
+        attempts: 3,
+      });
+    } finally {
+      error.mockRestore();
+      warn.mockRestore();
+      sqlite.close();
+    }
+  });
+
 });
 
 describe("freeze dedicated outbox", () => {

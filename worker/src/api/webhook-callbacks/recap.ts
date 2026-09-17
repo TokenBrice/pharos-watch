@@ -1,12 +1,11 @@
-import { nextIanaLocalHourDueAt } from "@shared/lib/iana-local-time";
 import {
   TELEGRAM_RECAP_PUBLIC_ROLLOUT_POLICY,
   isTelegramRecapAvailableToChat,
 } from "@shared/lib/telegram-recap-rollout";
 import { recordTelegramUsageEvent } from "../../lib/telegram/usage-analytics";
 import {
+  applyRecapPreference,
   getTelegramRecapPreference,
-  setTelegramRecapPreference,
 } from "../../lib/telegram/recap-store";
 import { loadSubscriberByChat, unixNow } from "../telegram-webhook-store";
 import { createTelegramWebhookIntent } from "../telegram-webhook-effect-fence";
@@ -60,41 +59,40 @@ export const handleRecapCallback: CallbackHandler = async ({
     await answerCallback({ text: "Start the bot before configuring recaps." });
     return;
   }
-  // Keep timezone and generation from one row snapshot so a concurrent
-  // preference write cannot publish an obsolete local-time schedule.
-  const timezone = subscriber.timezone ?? null;
-  const expectedPreferenceGeneration = Number(subscriber.preference_generation ?? 0);
-  if (enabled && timezone == null) {
-    await answerCallback({ text: "Set a timezone first with /timezone." });
-    return;
-  }
   const nowSec = unixNow();
-  const nextDueMs = enabled && timezone != null
-    ? nextIanaLocalHourDueAt(nowSec * 1000, timezone, deliveryHourLocal)
-    : null;
-  if (enabled && nextDueMs == null) {
-    await answerCallback({ text: "Could not schedule this timezone." });
-    return;
-  }
+  let operationStatements: D1PreparedStatement[] | undefined;
   try {
-    await planIntent?.(createTelegramWebhookIntent("callback:recap", {
+    const result = await applyRecapPreference(db, {
+      chatId,
+      subscriber,
       enabled,
       deliveryHourLocal,
-      nextDueAt: nextDueMs == null ? null : Math.floor(nextDueMs / 1000),
-    }, "required"));
-    if (!wasMutationApplied) {
-      const operationStatements = prepareMutationAppliedStatement
-        ? [prepareMutationAppliedStatement()]
-        : undefined;
-      const applied = await setTelegramRecapPreference(db, {
-        chatId,
+      nowSec,
+      mutationAlreadyApplied: wasMutationApplied,
+    }, async ({ nextDueAt }) => {
+      await planIntent?.(createTelegramWebhookIntent("callback:recap", {
         enabled,
         deliveryHourLocal,
-        nextDueAt: nextDueMs == null ? null : Math.floor(nextDueMs / 1000),
-        nowSec,
-        expectedPreferenceGeneration,
-      }, { operationStatements });
-      if (!applied) throw new Error("recap preference mutation did not apply");
+        nextDueAt,
+      }, "required"));
+      operationStatements = prepareMutationAppliedStatement
+        ? [prepareMutationAppliedStatement()]
+        : undefined;
+      return { operationStatements };
+    });
+    if (result.kind === "timezone-required") {
+      await answerCallback({ text: "Set a timezone first with /timezone." });
+      return;
+    }
+    if (result.kind === "schedule-failed") {
+      await answerCallback({ text: "Could not schedule this timezone." });
+      return;
+    }
+    if (result.kind === "stale") {
+      await answerCallback({ text: "Could not save the daily recap. Please try again." });
+      return;
+    }
+    if (!wasMutationApplied) {
       if (operationStatements) confirmAtomicMutationApplied?.();
       else await markMutationApplied();
     }

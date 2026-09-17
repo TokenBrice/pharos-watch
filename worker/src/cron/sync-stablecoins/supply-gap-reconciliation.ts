@@ -11,7 +11,7 @@ import { throwIfAborted } from "../../lib/abort";
 import { logWorkerEvent } from "../../lib/structured-log";
 import { validatePricingSourceFreshness } from "../../lib/pricing-source-freshness";
 import type { PeggedAsset } from "./enrich-prices";
-import { fetchCuratedAggregateOnChainMcap } from "./supplemental-assets/onchain-supply";
+import { fetchCuratedAggregateOnChainMcap, toPublicChainCirculating } from "./supplemental-assets/onchain-supply";
 import { toPositiveFiniteNumber } from "./supplemental-assets/shared";
 
 const COINGECKO_GAP_THRESHOLD_RATIO = 1.05;
@@ -436,15 +436,7 @@ async function applyCuratedOnChainSupplyGap(input: {
   input.candidate.asset.chains = buildKnownDisplayChains(input.candidate.asset.id, input.candidate.asset.chains);
 
   if (onChainMcap.chainCirculating) {
-    input.candidate.asset.chainCirculating = Object.fromEntries(
-      Object.entries(onChainMcap.chainCirculating).map(([chainLabel, row]) => [
-        chainLabel,
-        {
-          ...(row.chainId ? { chainId: row.chainId } : {}),
-          current: row.current,
-        },
-      ]),
-    );
+    input.candidate.asset.chainCirculating = toPublicChainCirculating(onChainMcap.chainCirculating);
   }
 
   return onChainMcap.mcap;

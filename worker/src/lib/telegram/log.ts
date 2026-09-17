@@ -53,7 +53,6 @@ export interface TelegramLogEvent {
   pendingEnqueuedCount?: number;
   requestedStablecoinCount?: number;
   presetCount?: number;
-  subscriberRowCount?: number;
   chunkSize?: number;
   updateCount?: number;
   rowCount?: number;
@@ -101,7 +100,6 @@ const ALLOWED_METADATA_KEYS = [
   "pendingEnqueuedCount",
   "requestedStablecoinCount",
   "presetCount",
-  "subscriberRowCount",
   "chunkSize",
   "updateCount",
   "rowCount",

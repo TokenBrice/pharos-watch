@@ -21,6 +21,7 @@ import {
   REDEMPTION_ROUTE_FAMILY_CAPS,
 } from "@shared/lib/redemption-backstop-scoring";
 import { RedemptionCapacityConfidenceSchema } from "@shared/types/redemption";
+import { isRecord } from "@shared/lib/type-guards";
 
 const ROOT = resolve(fileURLToPath(import.meta.url), "../../..");
 const OPENAPI_PATH = resolve(ROOT, "public/openapi.json");
@@ -50,7 +51,7 @@ const SUPPLEMENTAL_ENDPOINT_ORDER = [
 
 /** Hand-authored context, deliberately keyed by the stable OpenAPI operationId. */
 export const CURATED_OPERATION_NOTES: Readonly<Record<string, string>> = {
-  events: "Searches the normalized event tape; cursor pagination is preferred for long result sets.",
+  events: "Searches the normalized event tape; cursor pagination is preferred for long result sets. `droppedRows` is the number of queried database rows rejected because they did not match the response schema; a non-zero value means the returned event set is incomplete, while `total` still counts those queried rows.",
   stablecoins: "Returns the current stablecoin catalogue, prices, supply, chain breakdowns, and FX context.",
   stablecoinStablecoinId: "Returns the full current and historical detail payload for one canonical Pharos stablecoin ID.",
   stablecoinSummaryStablecoinId: "Returns the compact stablecoin projection used by lightweight consumers.",
@@ -60,7 +61,7 @@ export const CURATED_OPERATION_NOTES: Readonly<Record<string, string>> = {
   stablecoinCharts: "Returns the shared chart series consumed by stablecoin overview surfaces.",
   blacklist: "Returns normalized issuer freeze, unfreeze, blacklist, and destruction events.",
   blacklistSummary: "Returns aggregate blacklist counts and exposure totals.",
-  depegEvents: "Returns detected depeg incidents with filters for asset, state, and review status.",
+  depegEvents: "Returns detected depeg incidents with filters for asset, state, and review status. The response exposes pagination totals through `total` and optional `totalExact`; it no longer includes an aggregate `counts` field. Clients that need threshold-crossing totals should sum each event&rsquo;s `constituentEventCount` after loading all pages.",
   depegResolver: "Returns machine-resolved depeg-duration evidence used by risk surfaces.",
   depegResolverReview: "Returns the reviewer-oriented projection of depeg-duration decisions.",
   pegSummary: "Returns the current cross-market peg-monitoring summary.",
@@ -101,9 +102,6 @@ const SUPPLEMENTAL_NOTES: Readonly<Record<(typeof SUPPLEMENTAL_ENDPOINT_ORDER)[n
   "telegram-webhook": "Receives Telegram Bot API updates; callers outside Telegram should not use it.",
 };
 
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return value !== null && typeof value === "object" && !Array.isArray(value);
-}
 export function loadOpenapi(path = OPENAPI_PATH): OpenApiSpec {
   const parsed: unknown = JSON.parse(readFileSync(path, "utf8"));
   if (!isRecord(parsed) || !isRecord(parsed.paths)) throw new Error("openapi.json is missing `paths`");

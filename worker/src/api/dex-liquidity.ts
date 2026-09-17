@@ -4,7 +4,11 @@ import { addFreshnessHeaders } from "../lib/api-freshness";
 import { jsonResponseWithHeaders } from "../lib/api-response";
 import { CACHE_PROFILES } from "../lib/constants";
 import { isMissingTableError } from "../lib/db";
-import { DEX_LIQUIDITY_PUBLISHED_ROW_FILTER } from "../lib/dex-liquidity";
+import {
+  DEX_LIQUIDITY_PUBLISHED_ROW_FILTER,
+  normalizeDexLiquidityEvidence,
+  type DexLiquidityRow,
+} from "../lib/dex-liquidity";
 import { API_FRESHNESS_MAX_AGE_SEC } from "@shared/lib/api-freshness";
 import {
   buildDexLiquidityWarning,
@@ -16,10 +20,8 @@ import {
   type DexLiquidityCronRow,
   type DexDeploymentOutcomeRow,
   type DexHistoryRow,
-  type DexLiquidityRow,
   type DexPriceRow,
 } from "../lib/dex-liquidity-response";
-import { classifyLiquidityEvidence } from "./dex-liquidity-evidence";
 import { toErrorMessage } from "@shared/lib/error-utils";
 
 export const handleDexLiquidity = async (db: D1Database): Promise<Response> => {
@@ -124,14 +126,16 @@ export const handleDexLiquidity = async (db: D1Database): Promise<Response> => {
 
     // Merge DEX price data if available
     const dexPrice = dexPriceById.get(id);
-    const coverageClass = id === "__global__" ? null : (row.coverage_class ?? "legacy");
-    const coverageConfidence = row.coverage_confidence ?? 0.5;
-    const { liquidityEvidenceClass, hasMeasuredLiquidityEvidence, trendworthy } = classifyLiquidityEvidence(
-      currentTvl,
+    const {
       coverageClass,
       coverageConfidence,
-    );
-    const balanceMeasuredTvlUsd = row.balance_measured_tvl_usd ?? 0;
+      liquidityEvidenceClass,
+      hasMeasuredLiquidityEvidence,
+      trendworthy,
+      effectiveTvlUsd,
+      balanceMeasuredTvlUsd,
+      organicMeasuredTvlUsd,
+    } = normalizeDexLiquidityEvidence(row);
     const scoreDetails = normalizeDexScoreDetails(
       row.score_components_json,
       `dex-liquidity:${id}:score_components_json`,
@@ -184,7 +188,7 @@ export const handleDexLiquidity = async (db: D1Database): Promise<Response> => {
         `dex-liquidity:${id}:price_sources_json`,
       ),
       // v2 fields
-      effectiveTvlUsd: row.effective_tvl_usd ?? 0,
+      effectiveTvlUsd,
       avgPoolStress: row.avg_pool_stress ?? null,
       weightedBalanceRatio: row.weighted_balance_ratio ?? null,
       organicFraction: row.organic_fraction ?? null,
@@ -200,7 +204,7 @@ export const handleDexLiquidity = async (db: D1Database): Promise<Response> => {
         `dex-liquidity:${id}:source_mix_json`,
       ),
       balanceMeasuredTvlUsd,
-      organicMeasuredTvlUsd: row.organic_measured_tvl_usd ?? 0,
+      organicMeasuredTvlUsd,
       scoreComponents: scoreDetails.scoreComponents,
       lockedLiquidityPct: row.locked_liquidity_pct ?? null,
       methodologyVersion: row.methodology_version,

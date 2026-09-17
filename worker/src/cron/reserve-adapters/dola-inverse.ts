@@ -5,7 +5,6 @@ import type { LiveReserveWarning, LiveReservesConfig } from "@shared/types/live-
 import { getCanonicalReserveAssetRisk } from "@shared/lib/reserve-asset-risk";
 import type { AdapterContext, AdapterResult } from "./types";
 import {
-  accumulateBucketedExposure,
   decimalNumberFromBigInt,
   fetchJsonAdapterInput,
   makeOnchainCallers,
@@ -17,6 +16,7 @@ import {
   slicesFromValues,
   unverifiedFreshnessMetadata,
 } from "./helpers";
+import { accumulateBucketedExposure } from "./classification";
 import { parseEvmAddressResult } from "./evm";
 import { rethrowIfAborted } from "../../lib/abort";
 import { encodeAddressCallData } from "../../lib/evm-selectors";

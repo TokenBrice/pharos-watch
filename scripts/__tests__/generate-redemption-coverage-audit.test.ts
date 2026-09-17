@@ -89,7 +89,6 @@ describe("generate-redemption-coverage-audit", () => {
     });
 
     expect(audit.summary.activeUnconfigured).toBe(3);
-    expect(audit.summary.activeUnclassified).toBe(0);
     expect(audit.summary.activeDefaultClassified).toBe(0);
     expect(audit.dispositionCounts).toEqual({
       add: 0,

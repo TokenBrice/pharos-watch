@@ -22,20 +22,6 @@ import {
   writeGscUsage,
 } from "../lib/gsc-report.mts";
 
-export {
-  collectInputEntries,
-  compareText,
-  firstNumberToken,
-  findHeader,
-  hasHeader,
-  isDigit,
-  normalizeHeaderName,
-  parseCsv,
-  parseCsvNumber,
-  recordFromCsvRow,
-  stripBom,
-  uniqueHeaders,
-} from "../lib/gsc-report.mts";
 
 const ISSUE_NAME_HEADERS = [
   "Reason",

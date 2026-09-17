@@ -63,6 +63,7 @@ export const DonationsFileSchema = z.object({
 export type FundingChain = z.infer<typeof FundingChainSchema>;
 export type CostCategory = z.infer<typeof CostCategorySchema>;
 export type CostLineItem = z.infer<typeof CostLineItemSchema>;
+export type DonationsFile = z.infer<typeof DonationsFileSchema>;
 
 /**
  * One donation row. Written by the funding-update skill or by hand.

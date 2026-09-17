@@ -271,12 +271,26 @@ export function loadCleanupRowsFromSqlite(dbPath: string): YieldHistoryCleanupRo
 
 export function deleteCleanupRowsFromSqlite(dbPath: string): void {
   const db = new DatabaseSync(dbPath);
+  let transactionStarted = false;
   try {
+    db.exec("BEGIN TRANSACTION;");
+    transactionStarted = true;
     for (const target of listYieldHistoryCleanupTargets()) {
       for (const deleteSql of buildDeleteSql(target)) {
         db.exec(deleteSql);
       }
     }
+    db.exec("COMMIT;");
+    transactionStarted = false;
+  } catch (error) {
+    if (transactionStarted) {
+      try {
+        db.exec("ROLLBACK;");
+      } catch {
+        // Preserve the original deletion error when rollback also fails.
+      }
+    }
+    throw error;
   } finally {
     db.close();
   }

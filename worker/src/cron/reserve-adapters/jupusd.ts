@@ -1,3 +1,4 @@
+import { z } from "zod";
 import { parseLiveReserveAdapterParams } from "@shared/lib/live-reserve-adapters";
 import type { ReserveSlice, StablecoinMeta } from "@shared/types/core";
 import type { LiveReservesConfig, LiveReserveWarning } from "@shared/types/live-reserves";
@@ -38,10 +39,12 @@ interface JupUsdSnapshotPayload {
   }>;
 }
 
-interface JupUsdOraclePayload {
-  ripcord?: boolean;
-  ripcordDetails?: string;
-}
+const JupUsdOraclePayloadSchema = z.object({
+  ripcord: z.boolean(),
+  ripcordDetails: z.string().optional(),
+});
+
+type JupUsdOraclePayload = z.output<typeof JupUsdOraclePayloadSchema>;
 
 interface JupUsdParams {
   snapshotsUrl?: string;
@@ -161,9 +164,11 @@ export function adaptJupUsdData(
   }
 
   const sourceTimestamp = options.sourceTimestamp ?? null;
-  const routeStatus = options.oracle
-    ? options.oracle.ripcord ? "paused" : "open"
-    : options.oracleConfigured ? "unknown" : undefined;
+  const routeStatus = options.oracle?.ripcord === true
+    ? "paused"
+    : options.oracle?.ripcord === false
+      ? "open"
+      : options.oracleConfigured ? "unknown" : undefined;
   const routeStatusReason = options.oracle?.ripcord
     ? (options.oracle.ripcordDetails || "JupUSD oracle reports ripcord mode")
     : options.oracleConfigured && !options.oracle
@@ -257,13 +262,13 @@ export async function fetchJupUsdReserves(
   const [payload, oracle, snapshots] = await Promise.all([
     fetchJupUsdJson<JupUsdDataPayload>("transparency data", input.url, signal, JUPUSD_DATA_BUDGET, ctx),
     params.oracleUrl
-      ? fetchJupUsdJson<JupUsdOraclePayload>(
+      ? fetchJupUsdJson<unknown>(
           "oracle",
           params.oracleUrl,
           signal,
           JUPUSD_ORACLE_BUDGET,
           ctx,
-        ).catch((error) => {
+        ).then((payload) => JupUsdOraclePayloadSchema.parse(payload)).catch((error) => {
           if (signal.aborted) throw error;
           extraWarnings.push(reserveDegradedWarning(
             "jupusd-oracle-unavailable",

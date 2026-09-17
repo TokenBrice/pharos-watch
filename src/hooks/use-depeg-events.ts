@@ -90,7 +90,7 @@ export function useInfiniteDepegEvents({
   });
 
   // Keep page-derived values stable across unrelated rerenders while retaining
-  // the depeg-specific total, pending, and count semantics below.
+  // the depeg-specific total and pending semantics below.
   const pages = query.data?.pages;
   const { events, nextCursor, meta } = useCursorPages<
     DepegEventsResponse["events"][number],
@@ -99,10 +99,9 @@ export function useInfiniteDepegEvents({
   const total = useMemo(() => pages?.[0]?.data.total ?? 0, [pages]);
   const totalExact = useMemo(() => pages?.[0]?.data.totalExact ?? true, [pages]);
   const pending = useMemo(() => pages?.[0]?.data.pending ?? [], [pages]);
-  const counts = useMemo(() => pages?.[0]?.data.counts ?? null, [pages]);
   const data = useMemo(
-    () => ({ events, total, totalExact, nextCursor, pending, counts }),
-    [counts, events, nextCursor, pending, total, totalExact],
+    () => ({ events, total, totalExact, nextCursor, pending }),
+    [events, nextCursor, pending, total, totalExact],
   );
 
   return {

@@ -18,7 +18,7 @@ function anchorageReportCandidate(product: "USAT" | "USDPT") {
   return (href: string): boolean => hrefPattern.test(decodeURIComponent(href));
 }
 
-function anchorageReportDate(product: "USAT" | "USDPT") {
+export function anchorageReportDate(product: "USAT" | "USDPT" | "USDGO") {
   // eslint-disable-next-line security/detect-non-literal-regexp -- product is a fixed 'USAT' | 'USDPT' union, not runtime input.
   const fileNamePattern = new RegExp(`^(\\d{2})[.](\\d{2})[.](\\d{2})_${product}[-_ ]Stablecoin[-_ ]Attestation`, "i");
   return (href: string): string | null => {

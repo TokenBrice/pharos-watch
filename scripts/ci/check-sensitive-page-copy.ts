@@ -15,7 +15,8 @@
 
 import { readFileSync } from "node:fs";
 import { relative } from "node:path";
-import { collectSourceFilesUnderRoot, formatScannedOk, runAsCli } from "../lib/source-files.mts";
+import { collectSourceFilesUnderRoot, formatScannedOk } from "../lib/source-files.mts";
+import { runDirectCli } from "../lib/cli-args.mjs";
 
 interface SensitiveCopyRule {
   id: string;
@@ -52,7 +53,7 @@ export const SENSITIVE_COPY_ROOTS: readonly string[] = [
 ];
 const SOURCE_EXTENSIONS = new Set([".ts", ".tsx", ".css"]);
 
-/** Multi-word by design: code identifiers are camelCase, so these only match prose. */
+/** Most terms are multi-word to avoid camelCase identifiers; `airdrop` is the deliberate single-word exception. */
 export const FORBIDDEN_COPY: readonly SensitiveCopyRule[] = [
   { id: "seed-phrase", terms: ["seed phrase", "recovery phrase", "private key"] },
   { id: "connect-wallet", terms: ["connect wallet", "connect your wallet", "wallet connect"] },
@@ -62,6 +63,33 @@ export const FORBIDDEN_COPY: readonly SensitiveCopyRule[] = [
   { id: "browser-warning-copy", terms: ["dangerous site", "back to safety", "security warning", "fix your browser"] },
   { id: "urgency-pressure", terms: ["urgent action required", "act now to secure"] },
 ];
+
+function normalizeCopy(lines: readonly string[]): { text: string; lines: number[] } {
+  let text = "";
+  const sourceLines: number[] = [];
+  let pendingWhitespaceLine: number | null = null;
+
+  lines.forEach((raw, index) => {
+    const trimmed = raw.trim();
+    if (trimmed.startsWith("//") || trimmed.startsWith("*") || trimmed.startsWith("/*")) return;
+    for (const char of raw.toLowerCase()) {
+      if (/\s/.test(char)) {
+        pendingWhitespaceLine ??= index + 1;
+        continue;
+      }
+      if (pendingWhitespaceLine !== null && text.length > 0) {
+        text += " ";
+        sourceLines.push(pendingWhitespaceLine);
+      }
+      pendingWhitespaceLine = null;
+      text += char;
+      sourceLines.push(index + 1);
+    }
+    pendingWhitespaceLine ??= index + 1;
+  });
+
+  return { text, lines: sourceLines };
+}
 
 export function collectSensitiveCopyFindings(
   roots: readonly string[] = SENSITIVE_COPY_ROOTS,
@@ -73,15 +101,36 @@ export function collectSensitiveCopyFindings(
     for (const file of collectSourceFilesUnderRoot(root, cwd, { extensions: SOURCE_EXTENSIONS })) {
       const rel = relative(cwd, file).replaceAll("\\", "/");
       const lines = readFileSync(file, "utf8").split(/\r?\n/g);
+      const findingKeys = new Set<string>();
       lines.forEach((raw, index) => {
         const text = raw.trim();
         if (text.startsWith("//") || text.startsWith("*") || text.startsWith("/*")) return;
         const haystack = text.toLowerCase();
         for (const rule of FORBIDDEN_COPY) {
           const term = rule.terms.find((candidate) => haystack.includes(candidate));
-          if (term) findings.push({ file: rel, line: index + 1, id: rule.id, term, text });
+          if (!term) continue;
+          findingKeys.add(`${rule.id}\0${term}\0${index + 1}`);
+          findings.push({ file: rel, line: index + 1, id: rule.id, term, text });
         }
       });
+
+      const normalized = normalizeCopy(lines);
+      for (const rule of FORBIDDEN_COPY) {
+        for (const term of rule.terms) {
+          let searchStart = 0;
+          while (searchStart < normalized.text.length) {
+            const matchIndex = normalized.text.indexOf(term, searchStart);
+            if (matchIndex === -1) break;
+            const line = normalized.lines[matchIndex] ?? 1;
+            const key = `${rule.id}\0${term}\0${line}`;
+            if (!findingKeys.has(key)) {
+              findingKeys.add(key);
+              findings.push({ file: rel, line, id: rule.id, term, text: lines[line - 1]!.trim() });
+            }
+            searchStart = matchIndex + term.length;
+          }
+        }
+      }
     }
   }
 
@@ -113,4 +162,6 @@ export function checkSensitivePageCopy({
   return 1;
 }
 
-runAsCli(import.meta.url, () => process.exit(checkSensitivePageCopy()));
+runDirectCli(import.meta.url, () => {
+  process.exit(checkSensitivePageCopy());
+});

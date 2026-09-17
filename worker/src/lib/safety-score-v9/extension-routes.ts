@@ -10,6 +10,7 @@ import { isRedemptionSettlementFaster } from "@shared/lib/redemption-backstop-co
 import { V9_REVIEW_EVIDENCE_MAX_AGE_SEC } from "@shared/lib/safety-score-v9/evidence";
 import { compareText } from "@shared/lib/safety-score-v9/primitives";
 import type { ExitRouteObservation } from "@shared/types/exit-route";
+import { canonicalV9ExecutionCostKey } from "@shared/types/safety-score-v9-fact-primitives";
 import {
   getDexMeasuredExecutionFreshnessMaxSec,
   isDexMeasuredExecutionObservationHistoryMature,
@@ -34,7 +35,14 @@ type TrackedStablecoinValuation = Pick<
 type RedemptionSettlementModel = RedemptionBackstopConfig["settlementModel"];
 type ComposedDexExit = NonNullable<RedemptionBackstopConfig["v9ComposedDexExit"]>;
 
-function capacityPoints(observation: ExitRouteObservation): RouteReview["executionCosts"] {
+export const canonicalExecutionCostKey = canonicalV9ExecutionCostKey;
+function canonicalExecutionCosts(
+  observation: ExitRouteObservation,
+  resolveCostBps: (point: {
+    requestedNotionalUsd: number;
+    maxCostBps: number;
+  }) => number | null | undefined,
+): RouteReview["executionCosts"] {
   const points = observation.capacityCurve ?? [
     {
       requestedNotionalUsd: observation.requestedNotionalUsd,
@@ -49,13 +57,11 @@ function capacityPoints(observation: ExitRouteObservation): RouteReview["executi
     .map((point) => ({
       requestedNotionalUsd: point.requestedNotionalUsd,
       maxCostBps: point.maxCostBps,
-      executionCostBps: point.executionCostBps ?? point.maxCostBps,
+      executionCostBps:
+        point.executionCostBps ?? resolveCostBps(point) ?? point.maxCostBps,
     }))
     .sort((left, right) =>
-      compareText(
-        `${left.maxCostBps}:${left.requestedNotionalUsd}`,
-        `${right.maxCostBps}:${right.requestedNotionalUsd}`,
-      ),
+      compareText(canonicalExecutionCostKey(left), canonicalExecutionCostKey(right)),
     );
 }
 
@@ -465,7 +471,7 @@ function buildDexRouteReview(
         ? [`wrapper:${composedExit.chain}:${composedExit.wrapperContract.toLowerCase()}`]
         : []),
     ],
-    executionCosts: capacityPoints(observation),
+    executionCosts: canonicalExecutionCosts(observation, () => null),
     output: buildOutputReview(fixedInput, observation, fixedInput.dexGenerationId),
     failureDomains: composedExit
       ? [
@@ -673,35 +679,20 @@ function redemptionExecutionCosts(
   observation: ExitRouteObservation,
 ): RouteReview["executionCosts"] {
   const config = getRedemptionBackstopConfig(entry.stablecoinId);
-  const points = observation.capacityCurve ?? [
-    {
-      requestedNotionalUsd: observation.requestedNotionalUsd,
-      maxCostBps: observation.maxCostBps,
-      executableUsd: observation.executableUsd,
-      completionRatio: observation.completionRatio,
-    },
-  ];
-  return points
-    .map((point) => {
-      const reviewedCostBps =
-        observation.executionCostBps ??
-        (config
-          ? resolveV9RedemptionRouteCostBpsAtNotional(config, point.requestedNotionalUsd, entry.feeBps)
-          : entry.feeBps !== null && Number.isFinite(entry.feeBps)
-            ? entry.feeBps
-            : null);
-      return {
-        requestedNotionalUsd: point.requestedNotionalUsd,
-        maxCostBps: point.maxCostBps,
-        executionCostBps: reviewedCostBps ?? point.maxCostBps,
-      };
-    })
-    .sort((left, right) =>
-      compareText(
-        `${left.maxCostBps}:${left.requestedNotionalUsd}`,
-        `${right.maxCostBps}:${right.requestedNotionalUsd}`,
-      ),
-    );
+  return canonicalExecutionCosts(
+    observation,
+    (point) =>
+      observation.executionCostBps ??
+      (config
+        ? resolveV9RedemptionRouteCostBpsAtNotional(
+            config,
+            point.requestedNotionalUsd,
+            entry.feeBps,
+          )
+        : entry.feeBps !== null && Number.isFinite(entry.feeBps)
+          ? entry.feeBps
+          : null),
+  );
 }
 
 function buildRedemptionRouteReview(

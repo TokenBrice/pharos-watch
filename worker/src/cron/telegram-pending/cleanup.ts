@@ -17,6 +17,8 @@ import {
 import { projectRecapPendingTerminalOutcome } from "./recap-terminal";
 
 type ExpiredPendingRow = DeadLetterPendingRow & { expires_at?: number | null };
+export const TELEGRAM_PENDING_SENT_RETENTION_SEC = 24 * 60 * 60;
+
 type PendingAlertAdminFilter = { chatId: string } | { olderThanCutoffSec: number };
 type PendingAlertFilterClause = {
   whereSql:
@@ -322,10 +324,29 @@ export async function clearPendingAlertsForDisabledChat(
   }
 }
 
+async function cleanupAgedSentPendingAlerts(db: D1Database, nowSec: number): Promise<number> {
+  const result = await db
+    .prepare(
+      `DELETE FROM telegram_pending_alerts
+        WHERE id IN (
+          SELECT id
+            FROM telegram_pending_alerts
+           WHERE delivery_state = 'sent'
+             AND COALESCE(delivery_completed_at, updated_at, created_at) <= ?
+           ORDER BY COALESCE(delivery_completed_at, updated_at, created_at) ASC, id ASC
+           LIMIT ?
+        )`,
+    )
+    .bind(nowSec - TELEGRAM_PENDING_SENT_RETENTION_SEC, EXPIRED_PENDING_CLEANUP_BATCH_LIMIT)
+    .run();
+  return Number(result.meta?.changes ?? 0);
+}
+
 export async function cleanupExpiredPendingAlerts(
   db: D1Database,
   nowSec: number,
 ): Promise<number> {
+  const sentRowsDeleted = await cleanupAgedSentPendingAlerts(db, nowSec);
   const expiredRows = await db
     .prepare(
       `SELECT ${PENDING_ALERT_DEAD_LETTER_COLUMN_SQL}, expires_at
@@ -371,8 +392,8 @@ export async function cleanupExpiredPendingAlerts(
         cappedAtLimit: EXPIRED_PENDING_CLEANUP_BATCH_LIMIT,
       });
     }
-    return rows.length;
+    return sentRowsDeleted + rows.length;
   }
 
-  return 0;
+  return sentRowsDeleted;
 }

@@ -5,12 +5,34 @@
  * catalogue and per-entry validator can grow independently of the general
  * smoke runner (fetch/retry plumbing, OG-image checks, scope logic).
  *
- * REDEMPTION_ENUMS mirrors the RedemptionRouteFamily/etc. TypeScript unions in
- * shared/types/redemption. The mirror is hand-maintained: deriving it from the
- * Zod schemas would remove the drift risk entirely and is the better fix.
+ * REDEMPTION_ENUMS is derived from the Zod schemas in shared/types/redemption
+ * so the smoke contract follows the published enum vocabulary automatically.
  */
 
 import { assert } from "./smoke-runtime.mjs";
+import {
+  RedemptionAccessModelSchema,
+  RedemptionCapacityBasisSchema,
+  RedemptionCapacityConfidenceSchema,
+  RedemptionCapacityScoringHorizonSchema,
+  RedemptionCapacitySemanticsSchema,
+  RedemptionDocSourceSupportSchema,
+  RedemptionExecutionModelSchema,
+  RedemptionFeeConfidenceSchema,
+  RedemptionFeeModelKindSchema,
+  RedemptionHolderEligibilitySchema,
+  RedemptionLiveCapacityKindSchema,
+  RedemptionLiveFreshnessKindSchema,
+  RedemptionModelConfidenceSchema,
+  RedemptionOutputAssetTypeSchema,
+  RedemptionResolutionStateSchema,
+  RedemptionRouteExitCorrelationSchema,
+  RedemptionRouteFamilySchema,
+  RedemptionRouteStatusSchema,
+  RedemptionRouteStatusSourceSchema,
+  RedemptionSettlementModelSchema,
+  RedemptionSourceModeSchema,
+} from "@shared/types/redemption";
 
 function isFiniteNumber(value) {
   return typeof value === "number" && Number.isFinite(value);
@@ -44,71 +66,27 @@ function assertHttpUrl(value, pathPrefix) {
 }
 
 export const REDEMPTION_ENUMS = {
-  routeFamily: new Set([
-    "stablecoin-redeem",
-    "basket-redeem",
-    "collateral-redeem",
-    "psm-swap",
-    "queue-redeem",
-    "offchain-issuer",
-  ]),
-  accessModel: new Set(["permissionless-onchain", "whitelisted-onchain", "issuer-api", "manual"]),
-  settlementModel: new Set(["atomic", "immediate", "same-day", "days", "queued"]),
-  executionModel: new Set(["deterministic-onchain", "deterministic-basket", "rules-based-nav", "opaque"]),
-  outputAssetType: new Set(["stable-single", "stable-basket", "bluechip-collateral", "mixed-collateral", "nav"]),
-  sourceMode: new Set(["dynamic", "estimated", "static"]),
-  resolutionState: new Set(["resolved", "missing-cache", "missing-capacity", "failed", "impaired"]),
-  routeStatus: new Set(["open", "degraded", "paused", "cohort-limited", "unknown"]),
-  routeStatusSource: new Set(["static-config", "market-implied", "operator-notice", "protocol-api", "onchain"]),
-  holderEligibility: new Set([
-    "any-holder",
-    "verified-customer",
-    "whitelisted-primary",
-    "pre-incident-holder",
-    "issuer-discretionary",
-    "unknown",
-  ]),
-  capacityConfidence: new Set(["live-direct", "live-proxy", "dynamic", "documented-bound", "heuristic"]),
-  capacityKind: new Set([
-    "live-direct",
-    "live-direct-bounded",
-    "live-queue",
-    "live-proxy-validated",
-    "documented-bound",
-    "documented-eventual",
-    "heuristic",
-  ]),
-  freshnessKind: new Set([
-    "verified-source-timestamp",
-    "same-run-onchain",
-    "same-run-api",
-    "reviewed-static",
-    "unverified",
-  ]),
-  capacityBasis: new Set([
-    "issuer-term-redemption",
-    "full-system-eventual",
-    "daily-limit",
-    "fixed-buffer",
-    "hot-buffer",
-    "psm-balance-share",
-    "strategy-buffer",
-    "live-direct-telemetry",
-    "live-proxy-buffer",
-  ]),
-  capacitySemantics: new Set(["immediate-bounded", "eventual-only"]),
-  capacityScoringHorizon: new Set(["immediate", "daily", "queued", "eventual", "unknown"]),
-  feeConfidence: new Set(["fixed", "formula", "undisclosed-reviewed"]),
-  feeModelKind: new Set(["fixed-bps", "formula", "documented-variable", "undisclosed-reviewed"]),
-  modelConfidence: new Set(["high", "medium", "low"]),
-  routeExitCorrelation: new Set([
-    "independent-issuer-rail",
-    "same-stablecoin-pool-backing",
-    "same-protocol-liquidity",
-    "wrapper-to-parent-dependency",
-    "unknown",
-  ]),
-  docSupport: new Set(["route", "capacity", "fees", "access", "settlement"]),
+  routeFamily: new Set(RedemptionRouteFamilySchema.options),
+  accessModel: new Set(RedemptionAccessModelSchema.options),
+  settlementModel: new Set(RedemptionSettlementModelSchema.options),
+  executionModel: new Set(RedemptionExecutionModelSchema.options),
+  outputAssetType: new Set(RedemptionOutputAssetTypeSchema.options),
+  sourceMode: new Set(RedemptionSourceModeSchema.options),
+  resolutionState: new Set(RedemptionResolutionStateSchema.options),
+  routeStatus: new Set(RedemptionRouteStatusSchema.options),
+  routeStatusSource: new Set(RedemptionRouteStatusSourceSchema.options),
+  holderEligibility: new Set(RedemptionHolderEligibilitySchema.options),
+  capacityConfidence: new Set(RedemptionCapacityConfidenceSchema.options),
+  capacityKind: new Set(RedemptionLiveCapacityKindSchema.options),
+  freshnessKind: new Set(RedemptionLiveFreshnessKindSchema.options),
+  capacityBasis: new Set(RedemptionCapacityBasisSchema.options),
+  capacitySemantics: new Set(RedemptionCapacitySemanticsSchema.options),
+  capacityScoringHorizon: new Set(RedemptionCapacityScoringHorizonSchema.options),
+  feeConfidence: new Set(RedemptionFeeConfidenceSchema.options),
+  feeModelKind: new Set(RedemptionFeeModelKindSchema.options),
+  modelConfidence: new Set(RedemptionModelConfidenceSchema.options),
+  routeExitCorrelation: new Set(RedemptionRouteExitCorrelationSchema.options),
+  docSupport: new Set(RedemptionDocSourceSupportSchema.options),
 };
 
 export function assertRedemptionDocs(docs, pathPrefix) {

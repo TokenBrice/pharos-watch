@@ -30,6 +30,7 @@ import {
   probeTrackedTokenSupply,
 } from "../../reserve-adapters/helpers";
 import { mapWithConcurrency } from "../../../lib/concurrency";
+import type { PeggedAsset } from "../enrich-prices";
 
 export { computeExcludedBalanceAdjustedSupplyRaw };
 
@@ -64,6 +65,21 @@ export interface SingleContractOnChainMcapResult extends OnChainMcapResult {
 
 export function prefersOnChainSupplyMcap(meta: StablecoinMeta): boolean {
   return PREFER_ONCHAIN_SUPPLY_MCAP_IDS.has(meta.id);
+}
+
+/** Convert an internal on-chain result into the stable public chain row shape. */
+export function toPublicChainCirculating(
+  record: OnChainMcapResult["chainCirculating"],
+): NonNullable<PeggedAsset["chainCirculating"]> {
+  return Object.fromEntries(
+    Object.entries(record ?? {}).map(([chainLabel, row]) => [
+      chainLabel,
+      {
+        ...(row.chainId ? { chainId: row.chainId } : {}),
+        current: row.current,
+      },
+    ]),
+  );
 }
 
 function buildEvmProbeInput(chain: string): Extract<LiveReserveInput, { kind: "onchain-evm" }> {

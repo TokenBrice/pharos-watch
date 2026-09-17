@@ -4,6 +4,7 @@ import { parseLiveReserveAdapterParams } from "@shared/lib/live-reserve-adapters
 import type { AdapterContext, AdapterResult } from "./types";
 import {
   fetchJsonAdapterInput,
+  parseFiniteNumber,
   parseTimestampLikeToUnixSeconds,
   reserveInfoWarning,
   slicesFromPercentages,
@@ -38,16 +39,12 @@ interface TetherChainDetail {
   quarantined: number;
 }
 
-/** tether.to reports amounts as a mix of raw numbers and numeric strings across
- *  currencies/chains within the same payload; parse either defensively. */
 function parseAmount(value: unknown): number {
-  if (typeof value === "number") return value;
-  if (typeof value === "string") {
-    const trimmed = value.trim();
-    if (!trimmed) return Number.NaN;
-    return Number(trimmed);
+  try {
+    return parseFiniteNumber(value, { label: "tether amount" });
+  } catch {
+    return Number.NaN;
   }
-  return Number.NaN;
 }
 
 function findEntry(

@@ -4,7 +4,8 @@ import { existsSync } from "node:fs";
 import { isAbsolute, posix, relative, sep } from "node:path";
 import ts from "typescript";
 import { reportViolations } from "../lib/report-violations.mts";
-import { collectSourceFiles, resolveSourceRoot, runAsCli } from "../lib/source-files.mts";
+import { collectSourceFiles, resolveSourceRoot } from "../lib/source-files.mts";
+import { runDirectCli } from "../lib/cli-args.mjs";
 import { parseSourceFile } from "../lib/ts-ast.mts";
 
 const SOURCE_EXTENSIONS = new Set([".js", ".jsx", ".ts", ".tsx"]);
@@ -492,4 +493,6 @@ export function main(argv: readonly string[] = process.argv.slice(2), cwd = proc
   return printTablePrimitiveReport(scanTablePrimitives({ roots: options.roots, cwd }));
 }
 
-runAsCli(import.meta.url, main);
+runDirectCli(import.meta.url, () => {
+  process.exitCode = main();
+});

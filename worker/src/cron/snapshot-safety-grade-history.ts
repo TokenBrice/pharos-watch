@@ -243,12 +243,6 @@ export async function snapshotSafetyGradeHistory(db: D1Database, signal?: AbortS
         continue;
       }
       changed++;
-      if (previousIdentity === null) {
-        suppressedIdentityTransitions++;
-        suppressedTransitions++;
-        changed--;
-        continue;
-      }
       stmts.push(prepareSafetyScoreHistoryV2Write(db, {
         stablecoinId: card.id,
         recordedAt: snapshotDay,

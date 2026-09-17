@@ -3,7 +3,8 @@
 import { readFileSync } from "node:fs";
 import { relative } from "node:path";
 import { runCountRatchet } from "../lib/count-ratchet.mts";
-import { collectSourceFilesUnderRoot, runAsCli } from "../lib/source-files.mts";
+import { collectSourceFilesUnderRoot } from "../lib/source-files.mts";
+import { runDirectCli } from "../lib/cli-args.mjs";
 
 export const DEFAULT_CRON_CONSOLE_ROOTS = ["worker/src/cron", "worker/src/handlers/scheduled.ts"];
 export const DEFAULT_STRUCTURED_LOG_ROOTS = [
@@ -31,12 +32,6 @@ interface ConsoleCall {
   args: string | null;
 }
 
-interface ConsoleFinding {
-  file: string;
-  line: number;
-  text: string;
-  structured: boolean;
-}
 
 interface CheckCronConsoleUsageOptions {
   roots?: readonly string[];
@@ -144,32 +139,6 @@ export function collectWorkerConsoleUsage(
   return Object.fromEntries(Object.entries(counts).sort(([a], [b]) => a.localeCompare(b)));
 }
 
-export function collectWorkerConsoleFindings(
-  roots: readonly string[] = DEFAULT_ROOTS,
-  cwd = process.cwd(),
-): ConsoleFinding[] {
-  const findings: ConsoleFinding[] = [];
-
-  for (const root of roots) {
-    for (const file of collectSourceFilesUnderRoot(root, cwd, {
-      extensions: SOURCE_EXTENSIONS,
-      excludedDirs: EXCLUDED_DIRS,
-    })) {
-      const rel = relative(cwd, file).replaceAll("\\", "/");
-      const source = readFileSync(file, "utf8");
-      for (const call of collectConsoleCalls(source)) {
-        findings.push({
-          file: rel,
-          line: call.line,
-          text: call.text,
-          structured: isStructuredConsoleCall(rel, call.args),
-        });
-      }
-    }
-  }
-
-  return findings.sort((a, b) => a.file.localeCompare(b.file) || a.line - b.line);
-}
 
 export function checkCronConsoleUsage({
   roots = DEFAULT_ROOTS,
@@ -198,4 +167,6 @@ export function checkCronConsoleUsage({
   });
 }
 
-runAsCli(import.meta.url, () => checkCronConsoleUsage({ updateBaseline: process.argv.includes("--update-baseline") }));
+runDirectCli(import.meta.url, () => {
+  process.exitCode = checkCronConsoleUsage({ updateBaseline: process.argv.includes("--update-baseline") });
+});

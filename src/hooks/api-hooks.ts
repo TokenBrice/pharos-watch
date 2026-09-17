@@ -113,7 +113,6 @@ export function createRegisteredApiPollingQueryOptions<T>(
     ? createApiPollingQueryOptionsWithMeta<T>(descriptor.queryKey, descriptor.path, descriptor.producerIntervalMs, {
         ...overrides,
         schema: descriptor.schema,
-        metaMaxAgeSec: descriptor.metaMaxAgeSec,
       })
     : createApiPollingQueryOptions<T>(descriptor.queryKey, descriptor.path, descriptor.producerIntervalMs, {
         ...overrides,

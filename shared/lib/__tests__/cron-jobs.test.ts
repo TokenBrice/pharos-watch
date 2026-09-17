@@ -47,6 +47,7 @@ describe("cron job schedule metadata", () => {
       statusSelfCheckOffset: ["9 * * * *", "24 * * * *", "39 * * * *", "54 * * * *"],
       halfHourlyMintBurnCritical: ["4 * * * *", "34 * * * *"],
       halfHourlyMintBurnExtended: ["18 * * * *", "48 * * * *"],
+      halfHourlyMeasuredExecution: ["5 * * * *", "35 * * * *"],
     } as const;
 
     for (const [scheduleKey, triggerSchedules] of Object.entries(hourlyCpuClassLanes)) {
@@ -68,6 +69,8 @@ describe("cron job schedule metadata", () => {
     expect(CRON_SCHEDULES.halfHourlyMintBurnCritical).toBe("4,34 * * * *");
     expect(CRON_SCHEDULES.halfHourlyMintBurnExtended).toBe("18,48 * * * *");
 
+    expect(CRON_SCHEDULES.halfHourlyMeasuredExecution).toBe("0,30 * * * *");
+
     // Every physical alias must normalize to the logical slot it fired in.
     for (const [key, minute, second] of [
       ["quarterHourly", "45", "03"],
@@ -81,8 +84,8 @@ describe("cron job schedule metadata", () => {
     }
 
     const physicalTriggers = Object.values(CRON_TRIGGER_SCHEDULES).flat();
-    expect(physicalTriggers).toHaveLength(40);
-    expect(CRON_GROWTH_HEADROOM_POLICY.maxPhysicalTriggersBeforeRebalance).toBe(40);
+    expect(physicalTriggers).toHaveLength(41);
+    expect(CRON_GROWTH_HEADROOM_POLICY.maxPhysicalTriggersBeforeRebalance).toBe(41);
   });
 
   it("derives 26/56 minute slots for the DEWS/PSI offset schedule", () => {

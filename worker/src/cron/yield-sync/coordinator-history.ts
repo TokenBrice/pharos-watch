@@ -170,29 +170,9 @@ function createEmptyYieldHistoryEvaluationInputs() {
   };
 }
 
-export function buildYieldHistoryEvaluationInputs(input: {
-  historyRows: YieldHistorySnapshotRow[];
-  prevTvlRows: YieldHistorySnapshotRow[];
-  prevBestRows: YieldHistorySnapshotRow[];
-}): YieldHistoryEvaluationInputs {
-  const maps = createEmptyYieldHistoryEvaluationInputs();
-
-  for (const row of input.historyRows) {
-    classifyHistoryRow(maps, row);
-  }
-
-  for (const row of input.prevTvlRows) {
-    bucketPrevTvlRow(maps, row);
-  }
-
-  for (const row of input.prevBestRows) {
-    recordPrevBestRow(maps, row);
-  }
-
-  for (const [stablecoinId, rows] of maps.bestRowsByCoin) {
-    maps.sourceSwitchCount30dByCoin.set(stablecoinId, countSourceSwitchesWithTail(rows));
-  }
-
+function finalizeYieldHistoryEvaluationInputs(
+  maps: YieldHistoryEvaluationMaps,
+): YieldHistoryEvaluationInputs {
   return {
     sourceHistory: maps.sourceHistory,
     onChainCompatibilityHistoryById: maps.onChainCompatibilityHistoryById,
@@ -206,64 +186,86 @@ export function buildYieldHistoryEvaluationInputs(input: {
   };
 }
 
-export async function buildYieldHistoryEvaluationInputsCooperative(
-  input: {
-    historyRows: YieldHistorySnapshotRow[];
-    prevTvlRows: YieldHistorySnapshotRow[];
-    prevBestRows: YieldHistorySnapshotRow[];
-  },
-  options: BuildYieldHistoryEvaluationInputsCooperativeOptions = {},
-): Promise<YieldHistoryEvaluationInputs> {
-  const yieldEveryRows = Math.max(1, options.yieldEveryRows ?? 1_000);
-  const yieldToEventLoop = options.yieldToEventLoop ?? defaultYieldToEventLoop;
+type YieldHistoryEvaluationInput = {
+  historyRows: YieldHistorySnapshotRow[];
+  prevTvlRows: YieldHistorySnapshotRow[];
+  prevBestRows: YieldHistorySnapshotRow[];
+};
+
+export function buildYieldHistoryEvaluationInputs(
+  input: YieldHistoryEvaluationInput,
+): YieldHistoryEvaluationInputs {
+  return buildYieldHistoryEvaluationInputsCooperative(input, { synchronous: true });
+}
+
+export function buildYieldHistoryEvaluationInputsCooperative(
+  input: YieldHistoryEvaluationInput,
+  options: BuildYieldHistoryEvaluationInputsCooperativeOptions & { synchronous: true },
+): YieldHistoryEvaluationInputs;
+export function buildYieldHistoryEvaluationInputsCooperative(
+  input: YieldHistoryEvaluationInput,
+  options?: BuildYieldHistoryEvaluationInputsCooperativeOptions,
+): Promise<YieldHistoryEvaluationInputs>;
+export function buildYieldHistoryEvaluationInputsCooperative(
+  input: YieldHistoryEvaluationInput,
+  options: BuildYieldHistoryEvaluationInputsCooperativeOptions & { synchronous?: boolean } = {},
+): YieldHistoryEvaluationInputs | Promise<YieldHistoryEvaluationInputs> {
   const maps = createEmptyYieldHistoryEvaluationInputs();
 
-  const checkpoint = async (
-    phase: YieldHistoryInputBuildProgress["phase"],
-    rowsDone: number,
-    rowsTotal: number,
-  ) => {
-    throwIfAborted(options.signal);
-    if (rowsDone === rowsTotal || rowsDone % yieldEveryRows === 0) {
-      await options.onProgress?.({ phase, rowsDone, rowsTotal });
-      await yieldToEventLoop(options.signal);
+  if (options.synchronous) {
+    for (const row of input.historyRows) classifyHistoryRow(maps, row);
+    for (const row of input.prevTvlRows) bucketPrevTvlRow(maps, row);
+    for (const row of input.prevBestRows) recordPrevBestRow(maps, row);
+    for (const [stablecoinId, rows] of maps.bestRowsByCoin) {
+      maps.sourceSwitchCount30dByCoin.set(stablecoinId, countSourceSwitchesWithTail(rows));
     }
-  };
-
-  for (const [index, row] of input.historyRows.entries()) {
-    throwIfAborted(options.signal);
-    classifyHistoryRow(maps, row);
-    await checkpoint("history-rows", index + 1, input.historyRows.length);
+    return finalizeYieldHistoryEvaluationInputs(maps);
   }
 
-  for (const [index, row] of input.prevTvlRows.entries()) {
-    throwIfAborted(options.signal);
-    bucketPrevTvlRow(maps, row);
-    await checkpoint("previous-tvl", index + 1, input.prevTvlRows.length);
-  }
+  return (async () => {
+    const yieldEveryRows = Math.max(1, options.yieldEveryRows ?? 1_000);
+    const yieldToEventLoop = options.yieldToEventLoop ?? defaultYieldToEventLoop;
 
-  for (const [index, row] of input.prevBestRows.entries()) {
-    throwIfAborted(options.signal);
-    recordPrevBestRow(maps, row);
-    await checkpoint("previous-best", index + 1, input.prevBestRows.length);
-  }
+    const checkpoint = async (
+      phase: YieldHistoryInputBuildProgress["phase"],
+      rowsDone: number,
+      rowsTotal: number,
+    ) => {
+      throwIfAborted(options.signal);
+      if (rowsDone === rowsTotal || rowsDone % yieldEveryRows === 0) {
+        await options.onProgress?.({ phase, rowsDone, rowsTotal });
+        await yieldToEventLoop(options.signal);
+      }
+    };
 
-  const bestRowsEntries = [...maps.bestRowsByCoin.entries()];
-  for (const [index, [stablecoinId, rows]] of bestRowsEntries.entries()) {
-    throwIfAborted(options.signal);
-    maps.sourceSwitchCount30dByCoin.set(stablecoinId, countSourceSwitchesWithTail(rows, null, options.signal));
-    await checkpoint("source-switches", index + 1, bestRowsEntries.length);
-  }
+    for (const [index, row] of input.historyRows.entries()) {
+      throwIfAborted(options.signal);
+      classifyHistoryRow(maps, row);
+      await checkpoint("history-rows", index + 1, input.historyRows.length);
+    }
 
-  return {
-    sourceHistory: maps.sourceHistory,
-    onChainCompatibilityHistoryById: maps.onChainCompatibilityHistoryById,
-    legacyDeterministicOnChainHistoryById: maps.legacyDeterministicOnChainHistoryById,
-    legacyHistoryById: maps.legacyHistoryById,
-    prevTvlBySource: maps.prevTvlBySource,
-    legacyPrevTvlById: maps.legacyPrevTvlById,
-    prevBestSourceKeyByCoin: maps.prevBestSourceKeyByCoin,
-    sourceSwitchCount30dByCoin: maps.sourceSwitchCount30dByCoin,
-    bestRowsByCoin: maps.bestRowsByCoin,
-  };
+    for (const [index, row] of input.prevTvlRows.entries()) {
+      throwIfAborted(options.signal);
+      bucketPrevTvlRow(maps, row);
+      await checkpoint("previous-tvl", index + 1, input.prevTvlRows.length);
+    }
+
+    for (const [index, row] of input.prevBestRows.entries()) {
+      throwIfAborted(options.signal);
+      recordPrevBestRow(maps, row);
+      await checkpoint("previous-best", index + 1, input.prevBestRows.length);
+    }
+
+    const bestRowsEntries = [...maps.bestRowsByCoin.entries()];
+    for (const [index, [stablecoinId, rows]] of bestRowsEntries.entries()) {
+      throwIfAborted(options.signal);
+      maps.sourceSwitchCount30dByCoin.set(
+        stablecoinId,
+        countSourceSwitchesWithTail(rows, null, options.signal),
+      );
+      await checkpoint("source-switches", index + 1, bestRowsEntries.length);
+    }
+
+    return finalizeYieldHistoryEvaluationInputs(maps);
+  })();
 }

@@ -55,21 +55,21 @@ describe("parseKinesisResponse", () => {
     });
   });
 
-  it("parses an array and takes the last element", () => {
+  it("parses an array and selects the newest parsed date", () => {
     const data = [
-      { date: "2026-03-22", circulation: 90, mint: 190, redemption: 100 },
       { date: "2026-03-23", circulation: 100, mint: 200, redemption: 100 },
+      { date: "2026-03-22", circulation: 90, mint: 190, redemption: 100 },
     ];
     expect(parseKinesisResponse(data)).toEqual({ circulation: 100, mint: 200, redemption: 100 });
   });
 
-  it("parses a Horizon envelope and takes the last record", () => {
+  it("parses a newest-first Horizon envelope by date", () => {
     expect(
       parseKinesisResponse({
         history_latest_ledger: 42_691_026,
         records: [
-          { date: "2026-03-22T00:00:00Z", circulation: "90", mint: "190", redemption: "100" },
           { date: "2026-03-23T00:00:00Z", circulation: "100", mint: "200", redemption: "100" },
+          { date: "2026-03-22T00:00:00Z", circulation: "90", mint: "190", redemption: "100" },
         ],
       }),
     ).toEqual({ circulation: 100, mint: 200, redemption: 100 });

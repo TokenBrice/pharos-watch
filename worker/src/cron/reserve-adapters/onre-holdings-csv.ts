@@ -221,8 +221,11 @@ function parseAllocationPct(value: string): number | null {
 function parseSnapshotDate(value: string): { unixSec: number; iso: string } | null {
   const match = /^(\d{2})\/(\d{2})\/(\d{4})$/.exec(value.trim());
   if (!match) return null;
+  // The reviewed sheet convention is DD/MM/YYYY. Values where both numeric
+  // components could be a month are not evidence of that convention.
   const day = Number(match[1]);
   const month = Number(match[2]);
+  if (day <= 12 && month <= 12) return null;
   const year = Number(match[3]);
   const timestamp = Date.UTC(year, month - 1, day);
   if (!Number.isFinite(timestamp)) return null;

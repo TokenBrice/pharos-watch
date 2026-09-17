@@ -140,15 +140,16 @@ export async function loadActivePresetFollowers(
     ? []
     : [args.cursor.chatId, args.cursor.chatId, args.cursor.presetId];
   const bounded = args.limit != null || args.cursor != null || chatClause != null;
-  const sql = bounded
-    ? `SELECT preset.chat_id,
+  const followerColumnList = `preset.chat_id,
                 preset.preset_id,
                 subscriber.last_active_at,
                 preset.depeg_worsening_bps_step,
                 subscriber.quiet_hours_enabled,
                 subscriber.quiet_hours_start_utc,
                 subscriber.quiet_hours_end_utc,
-                subscriber.timezone
+                subscriber.timezone,
+                subscriber.preference_generation`;
+  const sql = `SELECT ${followerColumnList}
            FROM telegram_preset_subscriptions preset
            JOIN telegram_subscribers subscriber ON subscriber.chat_id = preset.chat_id
           WHERE preset.${alertColumn} = 1
@@ -156,22 +157,8 @@ export async function loadActivePresetFollowers(
             ${chatClause ? `AND preset.chat_id IN (${chatClause.sql})` : ""}
             AND (subscriber.alert_snooze_until_ts IS NULL OR subscriber.alert_snooze_until_ts <= ?)
             ${cursorPredicate}
-          ORDER BY preset.chat_id ASC, preset.preset_id ASC
-          ${args.limit == null ? "" : "LIMIT ?"}`
-    : `SELECT p.chat_id,
-                p.preset_id,
-                u.last_active_at,
-                p.depeg_worsening_bps_step,
-                u.quiet_hours_enabled,
-                u.quiet_hours_start_utc,
-                u.quiet_hours_end_utc,
-                u.timezone,
-                u.preference_generation
-           FROM telegram_preset_subscriptions p
-          JOIN telegram_subscribers u ON u.chat_id = p.chat_id
-          WHERE p.${alertColumn} = 1
-            AND p.preset_id IN (${presetClause.sql})
-            AND (u.alert_snooze_until_ts IS NULL OR u.alert_snooze_until_ts <= ?)`;
+            ${bounded ? "ORDER BY preset.chat_id ASC, preset.preset_id ASC" : ""}
+            ${args.limit == null ? "" : "LIMIT ?"}`;
   const binds = [
     ...presetClause.binds,
     ...(chatClause?.binds ?? []),

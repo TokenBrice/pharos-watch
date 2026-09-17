@@ -4,12 +4,12 @@ import {
   DDR_FORECAST_READINESS_STRICT_EARLY_LOCK_THRESHOLD,
   DDR_FORECAST_READINESS_VERSION,
 } from "../../methodology-versions/depeg-resolver";
-import type { DdrForecastReadinessInput } from "../forecast-readiness";
 import {
   buildForecastReadinessBackstop,
-  forecastReadinessLockTrigger,
+  evaluateForecastReadinessLock,
   forecastReadinessScore,
   meetsStrictEarlyLockReadiness,
+  type DdrForecastReadinessInput,
 } from "../forecast-readiness";
 
 const benchmarkedHorizon = {
@@ -191,12 +191,50 @@ describe("forecast readiness lock helpers", () => {
   });
 
   it("prioritizes the reached backstop even when strict early readiness is satisfied", () => {
-    expect(forecastReadinessLockTrigger({
+    const backstop = buildForecastReadinessBackstop({
+      startedAt: 100, nowSec: 100 + DDR_FORECAST_READINESS_BACKSTOP_DELAY_SEC,
+    });
+    expect(evaluateForecastReadinessLock({
+      startedAt: 100,
+      nowSec: 100 + DDR_FORECAST_READINESS_BACKSTOP_DELAY_SEC,
       readiness: { score: DDR_FORECAST_READINESS_STRICT_EARLY_LOCK_THRESHOLD + 0.001 },
-      backstop: buildForecastReadinessBackstop({
-        startedAt: 100, nowSec: 100 + DDR_FORECAST_READINESS_BACKSTOP_DELAY_SEC,
-      }),
-    })).toBe("readiness_backstop");
+      backstop,
+    })).toEqual({
+      eligible: true,
+      eligibleAt: 100 + DDR_FORECAST_READINESS_BACKSTOP_DELAY_SEC,
+      policyDelaySec: DDR_FORECAST_READINESS_BACKSTOP_DELAY_SEC,
+      lockTrigger: "readiness_backstop",
+    });
+  });
+
+  it("returns the early-readiness lock timing used by both consumers", () => {
+    const backstop = buildForecastReadinessBackstop({ startedAt: 100, nowSec: 500 });
+    expect(evaluateForecastReadinessLock({
+      startedAt: 100,
+      nowSec: 500,
+      readiness: { score: DDR_FORECAST_READINESS_STRICT_EARLY_LOCK_THRESHOLD + 0.001 },
+      backstop,
+    })).toEqual({
+      eligible: true,
+      eligibleAt: 500,
+      policyDelaySec: 400,
+      lockTrigger: "forecast_readiness",
+    });
+  });
+
+  it("keeps the scheduled backstop when strict early readiness is not met", () => {
+    const backstop = buildForecastReadinessBackstop({ startedAt: 100, nowSec: 500 });
+    expect(evaluateForecastReadinessLock({
+      startedAt: 100,
+      nowSec: 500,
+      readiness: { score: DDR_FORECAST_READINESS_STRICT_EARLY_LOCK_THRESHOLD },
+      backstop,
+    })).toEqual({
+      eligible: false,
+      eligibleAt: 100 + DDR_FORECAST_READINESS_BACKSTOP_DELAY_SEC,
+      policyDelaySec: DDR_FORECAST_READINESS_BACKSTOP_DELAY_SEC,
+      lockTrigger: null,
+    });
   });
 
   it("builds the 72h backstop and separates strict readiness from backstop locking", () => {
@@ -211,17 +249,6 @@ describe("forecast readiness lock helpers", () => {
       backstopAt: 100 + DDR_FORECAST_READINESS_BACKSTOP_DELAY_SEC,
       reached: true,
     });
-    expect(forecastReadinessLockTrigger({
-      readiness: { score: DDR_FORECAST_READINESS_STRICT_EARLY_LOCK_THRESHOLD },
-      backstop,
-    })).toBe("readiness_backstop");
-    expect(forecastReadinessLockTrigger({
-      readiness: { score: DDR_FORECAST_READINESS_STRICT_EARLY_LOCK_THRESHOLD + 0.001 },
-      backstop: { reached: false },
-    })).toBe("forecast_readiness");
-    expect(forecastReadinessLockTrigger({
-      readiness: { score: DDR_FORECAST_READINESS_STRICT_EARLY_LOCK_THRESHOLD },
-      backstop: { reached: false },
-    })).toBe("scheduled_24h");
   });
+
 });

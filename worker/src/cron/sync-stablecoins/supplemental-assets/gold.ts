@@ -1,5 +1,6 @@
 import { logWorkerEventArgs } from "../../../lib/structured-log";
 import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
+import { isDedicatedSingleTokenGoldProtocolSlug } from "@shared/lib/commodity-protocols";
 import { fetchTextWithRetry } from "../../../lib/fetch-retry";
 import { CIRCUIT_SOURCE, DEFILLAMA_API, USER_AGENT } from "../../../lib/constants";
 import { throwIfAborted } from "../../../lib/abort";
@@ -7,7 +8,7 @@ import { recordOutcomeSafe, shouldAttemptFetch } from "../../../lib/circuit-brea
 import type { ChainRpcConfig } from "../../../lib/chain-registry";
 import type { PeggedAsset } from "../enrich-prices";
 import {
-  buildPricedSupplementalAsset,
+  fetchCommodityTokens,
   fetchSupplementalPriceData,
   resolveCuratedAggregateSupplementalSupply,
   resolveSupplementalCoinGeckoMcap,
@@ -17,10 +18,6 @@ import {
 const GOLD_METAS = ACTIVE_STABLECOINS.filter((stablecoin) => stablecoin.flags.pegCurrency === "GOLD");
 // Only these DefiLlama protocol slugs represent one gold token; issuer or
 // protocol umbrella slugs can report an aggregate mcap for multiple products.
-const DEDICATED_SINGLE_TOKEN_GOLD_PROTOCOL_SLUGS = new Set([
-  "tether-gold",
-  "paxos-gold",
-]);
 
 export async function fetchGoldTokens(
   cgData: CoinGeckoMcapData,
@@ -35,7 +32,7 @@ export async function fetchGoldTokens(
     const mcapMap: Record<string, number> = {};
     const mcapSourceById: Record<string, "defillama" | "coingecko-fallback"> = {};
     const tokensWithProtocol = GOLD_METAS.filter((token) =>
-      token.protocolSlug && DEDICATED_SINGLE_TOKEN_GOLD_PROTOCOL_SLUGS.has(token.protocolSlug),
+      token.protocolSlug && isDedicatedSingleTokenGoldProtocolSlug(token.protocolSlug),
     );
     const PROTOCOL_BATCH = 3;
     const protocolsAllowed = tokensWithProtocol.length > 0 && db
@@ -92,27 +89,20 @@ export async function fetchGoldTokens(
       }
     }
 
-    // Commodity upstreams publish an aggregate market cap with no per-chain
-    // split, so curated aggregate probes are the only per-chain supply path
-    // here. Keep them serial: this lane shares the trigger connection pool.
-    const tokens: PeggedAsset[] = [];
-    for (const meta of GOLD_METAS) {
-      const aggregate = await resolveCuratedAggregateSupplementalSupply(meta, priceData, cgData, chainRpcs, signal);
-      const mcap = aggregate?.mcap ?? mcapMap[meta.id] ?? 0;
-      if (!Number.isFinite(mcap) || mcap <= 0) {
-        logWorkerEventArgs("handler", "warn", `[gold] No positive mcap for ${meta.symbol}, skipping`);
-        continue;
-      }
-
-      const token = buildPricedSupplementalAsset(meta, priceData, cgData, {
-        mcap,
-        supplySource: aggregate?.supplySource ?? mcapSourceById[meta.id] ?? "coingecko-fallback",
-        chainCirculating: aggregate?.chainCirculating,
-      });
-      if (token) tokens.push(token);
-    }
-
-    return tokens;
+    // Aggregate probes remain serial inside the shared commodity driver.
+    return fetchCommodityTokens(GOLD_METAS, {
+      logPrefix: "gold",
+      priceData,
+      cgData,
+      resolveSupply: async (meta) => {
+        const aggregate = await resolveCuratedAggregateSupplementalSupply(meta, priceData, cgData, chainRpcs, signal);
+        return {
+          mcap: aggregate?.mcap ?? mcapMap[meta.id] ?? 0,
+          supplySource: aggregate?.supplySource ?? mcapSourceById[meta.id] ?? "coingecko-fallback",
+          chainCirculating: aggregate?.chainCirculating,
+        };
+      },
+    });
   } catch (err) {
     if (signal?.aborted) throw err instanceof Error ? err : new Error(String(err));
     logWorkerEventArgs("handler", "error", "[gold] fetchGoldTokens failed:", err);

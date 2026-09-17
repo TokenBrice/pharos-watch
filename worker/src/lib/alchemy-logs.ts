@@ -1,4 +1,5 @@
 import { ALCHEMY_CHAINS, buildAlchemyRpcUrl, getAlchemyAuthHeaders } from "./chain-registry";
+import { parseQuantityHex } from "./bigint";
 import type { SubrequestBudget } from "./evm-logs";
 import { budgetExhausted } from "./evm-logs";
 import { batchExecute, buildInClause } from "./db";
@@ -720,8 +721,9 @@ async function fetchBlockTimestampBatch(
         continue;
       }
 
-      const ts = parseInt(tsHex, 16);
-      if (Number.isFinite(ts)) {
+      const parsedQuantity = parseQuantityHex(tsHex);
+      const ts = parsedQuantity == null ? null : Number(parsedQuantity);
+      if (ts !== null && Number.isFinite(ts)) {
         // Duplicate IDs are deterministic: the last valid mapping wins.
         timestamps.set(batch[requestIndex]!, ts);
       } else {

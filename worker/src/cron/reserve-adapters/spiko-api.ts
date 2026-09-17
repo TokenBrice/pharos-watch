@@ -5,6 +5,7 @@ import type { AdapterContext, AdapterResult } from "./types";
 import {
   buildCoverageShortfallWarnings,
   fetchJsonWithRetry,
+  parseFiniteNumber,
   parseTimestampLikeToUnixSeconds,
   requireJsonInput,
   verifiedFreshnessMetadata,
@@ -29,11 +30,11 @@ interface SpikoSliceConfig {
 }
 
 function parsePositiveNumber(value: unknown, label: string, shareClassSymbol: string): number {
-  const parsed = typeof value === "string" || typeof value === "number" ? Number(value) : NaN;
-  if (!Number.isFinite(parsed) || parsed <= 0) {
+  try {
+    return parseFiniteNumber(value, { label, min: Number.MIN_VALUE });
+  } catch {
     throw new Error(`Spiko ${shareClassSymbol} totals payload has invalid ${label}`);
   }
-  return parsed;
 }
 
 /**

@@ -14,7 +14,7 @@ import { fileURLToPath } from "node:url";
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "../..");
 const REGISTRY_PATH = "shared/data/safety-score-v9/shock-coverage-measurements-v1.json";
 const POLICY_PATH = "shared/data/safety-score-v9/methodology-policy-candidate-v1.json";
-const REQUIRED_ASSET_IDS = ["bd-basedollar", "lusd-liquity", "bold-liquity"];
+const TARGETS_PATH = "shared/data/safety-score-v9/shock-coverage-targets.json";
 
 // The refresh runs every 48h. Require the newest measurement to be comfortably
 // inside the policy bound so a single failed run still leaves usable slack.
@@ -39,6 +39,10 @@ interface ShockCoverageRegistry {
   measurements?: ShockMeasurement[];
 }
 
+interface ShockCoverageTargetCatalog {
+  assetIds?: unknown;
+}
+
 interface ShockCoveragePolicy {
   semantic?: {
     backing?: {
@@ -56,6 +60,25 @@ interface ShockCoveragePolicy {
 function readJson<T>(relativePath: string): T {
   return JSON.parse(readFileSync(resolve(ROOT, relativePath), "utf8")) as T;
 }
+
+function readRequiredAssetIds(): string[] {
+  const targets = readJson<ShockCoverageTargetCatalog>(TARGETS_PATH);
+  const assetIds = targets?.assetIds;
+  if (
+    !Array.isArray(assetIds) ||
+    assetIds.length === 0 ||
+    assetIds.some((assetId) => typeof assetId !== "string" || assetId.length === 0 || assetId.trim() !== assetId)
+  ) {
+    throw new Error(`${TARGETS_PATH} must declare a non-empty assetIds array of trimmed strings`);
+  }
+  const normalizedAssetIds = assetIds as string[];
+  if (new Set(normalizedAssetIds).size !== normalizedAssetIds.length) {
+    throw new Error(`${TARGETS_PATH} assetIds must not contain duplicates`);
+  }
+  return normalizedAssetIds;
+}
+
+const REQUIRED_ASSET_IDS = readRequiredAssetIds();
 
 function readPolicyMaxAgeSec() {
   const policy = readJson<ShockCoveragePolicy>(POLICY_PATH);

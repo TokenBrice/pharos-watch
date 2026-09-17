@@ -3,7 +3,7 @@ import type { LiveReservesConfig } from "@shared/types/live-reserves";
 import { parseLiveReserveAdapterParams } from "@shared/lib/live-reserve-adapters";
 import type { AdapterContext, AdapterResult } from "./types";
 import { fetchChainlinkNavCore } from "./chainlink-nav-core";
-import { decimalNumberFromBigInt, fetchErc20Balance, fetchJsonWithRetry, requireOnchainInput } from "./helpers";
+import { decimalNumberFromBigInt, fetchErc20Balance, fetchJsonWithRetry, parseFiniteNumber, requireOnchainInput } from "./helpers";
 
 // Superstate's instant-redemption buffer: USDC held by the RedemptionIdle contract on Ethereum.
 const USDC_ETHEREUM_ADDRESS = "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48";
@@ -18,11 +18,11 @@ interface SuperstateLiquidityEntry {
 type SuperstateLiquidityResponse = Record<string, SuperstateLiquidityEntry | undefined>;
 
 function parseAmount(value: unknown, label: string): number {
-  const parsed = typeof value === "number" ? value : Number(value);
-  if (!Number.isFinite(parsed) || parsed < 0) {
+  try {
+    return parseFiniteNumber(value, { label, min: 0 });
+  } catch {
     throw new Error(`superstate-liquidity invalid ${label}`);
   }
-  return parsed;
 }
 
 export function adaptSuperstateLiquidity(

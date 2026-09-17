@@ -20,13 +20,19 @@ export const RESPONSIBILITIES = V9_PUBLIC_EVIDENCE_RESPONSIBILITIES;
 export const SCORE_TOLERANCE = 0.0002;
 export const EXIT_SCORE_TOLERANCE = 0.03;
 export const PUBLIC_SCORE_ROUNDING_HEADROOM = 0.5;
+export const V9_NEUTRAL_CONTROL_SCORE = 95;
 // Validation-only mirrors of policy-owned values: these check published output rather than
 // computing it, so they are deliberately NOT admitted to the policy digest — that would rotate it
 // without changing any score. They should still be derived, because a validator that re-encodes a
 // threshold can reject a correct publication once the policy moves.
-export const C_MINUS_MIN_SCORE =
-  V9_GRADE_THRESHOLDS.find((threshold) => threshold.grade === "C-")?.min ?? 50;
-// Not derivable here without importing the methodology data asset into the public-schema layer.
+const cMinusThreshold = V9_GRADE_THRESHOLDS.find(
+  (threshold) => threshold.grade === "C-",
+);
+if (cMinusThreshold === undefined) {
+  throw new Error("Safety Score v9 grade thresholds must include C-");
+}
+export const C_MINUS_MIN_SCORE = cMinusThreshold.min;
+// Validation-only mirror of policy.semantic.formula.danger.adverseAttributionPegMultiplierFloor.
 // This remains a validation-only mirror; scoring reads the canonical danger floor from the parsed
 // policy envelope, while shared/types stays independent of shared/lib policy loading.
 export const DANGER_PEG_MULTIPLIER_FLOOR = 0.9;

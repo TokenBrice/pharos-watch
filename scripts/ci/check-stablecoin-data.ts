@@ -1,10 +1,10 @@
-import { readFileSync } from "node:fs";
+import { readFileSync, readdirSync } from "node:fs";
 import { join } from "node:path";
 import { z } from "zod";
 import { DEAD_STABLECOINS } from "@shared/lib/dead-stablecoins";
 import { CHAIN_META } from "@shared/lib/chains";
 import { COMMODITY_PEG_CURRENCIES, isCommodityPeg } from "@shared/lib/filter-tags";
-import { hasRuntimeOnchainSupplyPath } from "@shared/lib/onchain-supply-probe";
+import { DEDICATED_SINGLE_TOKEN_GOLD_PROTOCOL_SLUGS, isDedicatedSingleTokenGoldProtocolSlug } from "@shared/lib/commodity-protocols";
 import { CanonicalOrderAssetSchema } from "@shared/lib/stablecoins/schema";
 import { type ListingDecisionRegistry } from "@shared/lib/stablecoins/listing-governance";
 import { isActiveStablecoinMeta, isReadableStablecoinMeta } from "@shared/lib/stablecoins/status";
@@ -12,7 +12,9 @@ import { validateMintBridgeOwnership } from "@shared/lib/stablecoins/mint-bridge
 import { validateVariantRelationships } from "@shared/lib/stablecoins/validate-variants";
 import { findCollateralProseReserveDriftFindings } from "@shared/lib/stablecoins/collateral-prose-reserve-drift";
 import { classifyPegClass, normalizePegTypeFromCurrency } from "@shared/lib/peg-price-bounds";
+import { hasRuntimeOnchainSupplyPath } from "@shared/lib/onchain-supply-probe";
 import type { DeadStablecoin, StablecoinMeta } from "@shared/types";
+import { MANIFEST_SOURCES } from "@shared/data/live-reserves/independent-assurance";
 import listingDecisionsAsset from "@shared/data/stablecoins/listing-decisions.json";
 import { RESERVE_COMPOSITION_TOTAL_TOLERANCE_PCT, validateReserveCompositionTotal } from "@shared/types/reserves";
 import { StablecoinFlagsSchema } from "@shared/types/stablecoin-meta-schemas";
@@ -33,15 +35,21 @@ import {
   type StablecoinSourceEntry,
 } from "../lib/stablecoin-catalog-sources";
 
-const RESERVE_TOTAL_ALLOWLIST = new Set<string>();
+const INDEPENDENT_ASSURANCE_MANIFEST_DIR = "shared/data/live-reserves/independent-assurance";
+const INDEPENDENT_ASSURANCE_MANIFEST_PRODUCTS = new Set(Object.keys(MANIFEST_SOURCES));
+// These product enum members intentionally have no reviewed manifest yet.
+// They remain valid adapter vocabulary, but cannot be referenced by a live
+// independent-assurance config until a manifest is wired.
+const UNWIRED_INDEPENDENT_ASSURANCE_PRODUCTS: Record<string, true> = {
+  TRYB: true,
+  TGBP: true,
+  PGOLD: true,
+  USX: true,
+};
+const BASE58_PATTERN = /^[1-9A-HJ-NP-Za-km-z]+$/;
+const XRPL_COMPOSITE_PATTERN = /^[A-Za-z0-9]{3,40}[.-]r[1-9A-HJ-NP-Za-km-z]{24,34}$/;
+
 const SAFETY_SCORE_V9_PUBLIC_BACKING_COMPONENT_LABEL_MAX_LENGTH = 160;
-// Keep synchronized with DEDICATED_SINGLE_TOKEN_GOLD_PROTOCOL_SLUGS in
-// worker/src/cron/sync-stablecoins/supplemental-assets/gold.ts. This CI script
-// mirrors the small runtime allowlist instead of importing the Worker fetch graph.
-const DEDICATED_SINGLE_TOKEN_GOLD_PROTOCOL_SLUGS = new Set([
-  "tether-gold",
-  "paxos-gold",
-]);
 const ACTIVE_DEAD_LLAMA_ID_OVERLAP_ALLOWLIST = new Set([
   // Kava USDX remains a live tracked feed while the cemetery keeps the 2022
   // UST-collateral depeg incident as a separate historical row.
@@ -189,11 +197,11 @@ function getCommodityOuncesIssue(coin: StablecoinMeta): string | null {
 
 export function getCommodityProtocolSlugIssue(coin: StablecoinMeta): string | null {
   if (!isCommodityPeg(coin.flags.pegCurrency) || !coin.protocolSlug) return null;
-  if (DEDICATED_SINGLE_TOKEN_GOLD_PROTOCOL_SLUGS.has(coin.protocolSlug)) return null;
+  if (isDedicatedSingleTokenGoldProtocolSlug(coin.protocolSlug)) return null;
 
   return (
     `${coin.flags.pegCurrency}-pegged commodity asset has non-dedicated protocolSlug "${coin.protocolSlug}" ` +
-    "(allowlisted for protocol-mcap supply: tether-gold, paxos-gold); the gold supply lane ignores it, " +
+    `(allowlisted for protocol-mcap supply: ${Object.keys(DEDICATED_SINGLE_TOKEN_GOLD_PROTOCOL_SLUGS).join(", ")}); the gold supply lane ignores it, ` +
     "but confirm the slug is intentional for TVL history / selector concentration grouping"
   );
 }
@@ -222,7 +230,7 @@ function getReserveTotalIssue(coin: StablecoinMeta): string | null {
     return "reserve pct total must be greater than 0";
   }
 
-  if (!RESERVE_TOTAL_ALLOWLIST.has(coin.id) && !validateReserveCompositionTotal(coin.reserves, "full")) {
+  if (!validateReserveCompositionTotal(coin.reserves, "full")) {
     return `reserve pct total ${total} is outside 100 +/- ${RESERVE_COMPOSITION_TOTAL_TOLERANCE_PCT}`;
   }
 
@@ -302,6 +310,26 @@ function getReserveDependencyTypeLinkIssues(coin: StablecoinMeta): string[] {
   return issues;
 }
 
+function walkCoinIdParams(
+  value: unknown,
+  path = "liveReservesConfig.params",
+): Array<{ path: string; coinId: string }> {
+  if (Array.isArray(value)) {
+    return value.flatMap((item, index) => walkCoinIdParams(item, `${path}[${index}]`));
+  }
+  if (value === null || typeof value !== "object") return [];
+
+  const references: Array<{ path: string; coinId: string }> = [];
+  for (const [key, child] of Object.entries(value)) {
+    const childPath = `${path}.${key}`;
+    if (key === "coinId" && typeof child === "string") {
+      references.push({ path: childPath, coinId: child });
+    }
+    references.push(...walkCoinIdParams(child, childPath));
+  }
+  return references;
+}
+
 function getReferenceIssues(coin: StablecoinMeta, knownIds: ReadonlySet<string>): string[] {
   const issues: string[] = [];
 
@@ -331,6 +359,28 @@ function getReferenceIssues(coin: StablecoinMeta, knownIds: ReadonlySet<string>)
     }
   }
 
+  if (coin.pegReferenceId && !knownIds.has(coin.pegReferenceId)) {
+    issues.push(`pegReferenceId references unknown stablecoin ID "${coin.pegReferenceId}"`);
+  }
+
+  for (const reference of walkCoinIdParams(coin.liveReservesConfig?.params)) {
+    if (!knownIds.has(reference.coinId)) {
+      issues.push(`${reference.path} references unknown stablecoin ID "${reference.coinId}"`);
+    }
+  }
+
+  const config = coin.liveReservesConfig;
+  if (config?.adapter.endsWith("-independent-assurance")) {
+    const params = config.params as Record<string, unknown> | undefined;
+    const product = params?.product;
+    if (typeof product === "string" && !INDEPENDENT_ASSURANCE_MANIFEST_PRODUCTS.has(product)) {
+      const detail = UNWIRED_INDEPENDENT_ASSURANCE_PRODUCTS[product]
+        ? " is intentionally unwired until a reviewed manifest is added"
+        : " has no manifest imported by independent-assurance/index.ts";
+      issues.push(`liveReservesConfig.params.product "${product}"${detail}`);
+    }
+  }
+
   return issues;
 }
 
@@ -346,6 +396,38 @@ function getReserveReviewDateOrderIssue(coin: StablecoinMeta): string | null {
   return `reserveReview.reviewedAt (${review.reviewedAt}) predates compositionAsOf (${review.compositionAsOf}); the curated reserve composition would be silently discarded`;
 }
 
+function contractDeploymentKey(contract: { chain: string; address: string }): string {
+  const address = CHAIN_META[contract.chain]?.type === "evm"
+    ? contract.address.toLowerCase()
+    : contract.address;
+  return `${contract.chain}:${address}`;
+}
+
+function getContractAddressIssue(chain: string, address: string): string | null {
+  if (CHAIN_META[chain]?.type === "evm") {
+    return /^0x[0-9a-fA-F]{40}$/.test(address) ? null : `has invalid EVM address "${address}"`;
+  }
+  if (chain === "solana") {
+    return address.length >= 32 && address.length <= 44 && BASE58_PATTERN.test(address)
+      ? null
+      : `has invalid Solana base58 address "${address}"`;
+  }
+  if (chain === "xrpl") {
+    return XRPL_COMPOSITE_PATTERN.test(address)
+      ? null
+      : `has invalid XRPL currency.issuer composite address "${address}"`;
+  }
+  if (chain === "tron") {
+    return address.length === 34 && address.startsWith("T") && BASE58_PATTERN.test(address)
+      ? null
+      : `has invalid Tron T-prefixed base58 address "${address}"`;
+  }
+  if (address.length === 0 || /\s/.test(address)) {
+    return `has invalid ${chain} address "${address}" (must be non-empty and whitespace-free)`;
+  }
+  return null;
+}
+
 function getContractDeploymentIssues(coin: StablecoinMeta): string[] {
   const issues: string[] = [];
   const seen = new Map<string, string>();
@@ -358,12 +440,13 @@ function getContractDeploymentIssues(coin: StablecoinMeta): string[] {
       const chainMeta = CHAIN_META[contract.chain];
       if (!chainMeta) {
         issues.push(`${path} uses unknown chain "${contract.chain}"`);
-      } else if (chainMeta.type === "evm" && !/^0x[0-9a-fA-F]{40}$/.test(contract.address)) {
-        issues.push(`${path} has invalid EVM address "${contract.address}"`);
+      }
+      const addressIssue = getContractAddressIssue(contract.chain, contract.address);
+      if (addressIssue) {
+        issues.push(`${path} ${addressIssue}`);
       }
 
-      const addressKey = chainMeta?.type === "evm" ? contract.address.toLowerCase() : contract.address;
-      const key = `${contract.chain}:${addressKey}`;
+      const key = contractDeploymentKey(contract);
       const previousPath = seen.get(key);
       if (previousPath) {
         issues.push(`${path} duplicates ${previousPath} (${key})`);
@@ -465,7 +548,7 @@ function getDeadStablecoinRegistryIssues(deadCoins: readonly DeadStablecoin[]): 
     }
 
     for (const contract of dead.contracts ?? []) {
-      const key = `${contract.chain}:${contract.address.toLowerCase()}`;
+      const key = contractDeploymentKey(contract);
       const existingContract = seenContracts.get(key);
       if (existingContract) {
         issues.push(`duplicate cemetery contract "${key}" found in ${existingContract} and ${dead.id}`);
@@ -527,6 +610,36 @@ function getLogoRegistryIssues(): string[] {
     .map((key) => `${LOGOS_FILE}: raw numeric DefiLlama logo key "${key}" must be migrated to a canonical id`);
 }
 
+function getIndependentAssuranceManifestWiringIssues(): string[] {
+  const diskProducts = readdirSync(INDEPENDENT_ASSURANCE_MANIFEST_DIR)
+    .filter((file) => file.endsWith(".json"))
+    .map((file) => ({ file, product: file.slice(0, -".json".length).toUpperCase() }));
+  const issues: string[] = [];
+
+  for (const { file, product } of diskProducts) {
+    if (!INDEPENDENT_ASSURANCE_MANIFEST_PRODUCTS.has(product)) {
+      issues.push(
+        `${INDEPENDENT_ASSURANCE_MANIFEST_DIR}/${file}: manifest is not imported by independent-assurance/index.ts`,
+      );
+    }
+  }
+  for (const product of INDEPENDENT_ASSURANCE_MANIFEST_PRODUCTS) {
+    if (!diskProducts.some((entry) => entry.product === product)) {
+      issues.push(
+        `${INDEPENDENT_ASSURANCE_MANIFEST_DIR}/index.ts: imports ${product} without a matching JSON manifest`,
+      );
+    }
+  }
+
+  return issues;
+}
+
+export {
+  getContractDeploymentIssues,
+  getIndependentAssuranceManifestWiringIssues,
+  getReferenceIssues,
+};
+
 function runStablecoinDataCheck(): void {
   let canonicalOrder: string[] = [];
   let perCoinEntries: StablecoinSourceEntry[] = [];
@@ -577,6 +690,9 @@ function runStablecoinDataCheck(): void {
     }
 
     for (const issue of getLogoRegistryIssues()) {
+      reportError(issue);
+    }
+    for (const issue of getIndependentAssuranceManifestWiringIssues()) {
       reportError(issue);
     }
 

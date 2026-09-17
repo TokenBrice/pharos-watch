@@ -288,29 +288,28 @@ function buildTicks(points: YieldHistoryChartPoint[], days: number) {
 
   if (days === YIELD_HISTORY_MAX_DAYS) {
     const cursor = new Date(first);
-    cursor.setDate(1);
-    cursor.setHours(0, 0, 0, 0);
+    cursor.setUTCDate(1);
+    cursor.setUTCHours(0, 0, 0, 0);
 
     if (cursor.getTime() < first) {
-      cursor.setMonth(cursor.getMonth() + 1);
+      cursor.setUTCMonth(cursor.getUTCMonth() + 1);
     }
 
     while (cursor.getTime() < last) {
       ticks.add(cursor.getTime());
-      cursor.setMonth(cursor.getMonth() + 1);
+      cursor.setUTCMonth(cursor.getUTCMonth() + 1);
     }
   } else {
     const stepMs = days === 7 ? DAY_MS : 7 * DAY_MS;
-    const cursor = new Date(first);
-    cursor.setHours(0, 0, 0, 0);
+    let cursor = Math.floor(first / DAY_MS) * DAY_MS;
 
-    if (cursor.getTime() < first) {
-      cursor.setTime(cursor.getTime() + stepMs);
+    if (cursor < first) {
+      cursor += stepMs;
     }
 
-    while (cursor.getTime() < last) {
-      ticks.add(cursor.getTime());
-      cursor.setTime(cursor.getTime() + stepMs);
+    while (cursor < last) {
+      ticks.add(cursor);
+      cursor += stepMs;
     }
   }
 

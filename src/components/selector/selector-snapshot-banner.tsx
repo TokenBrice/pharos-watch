@@ -7,15 +7,6 @@ interface SelectorSnapshotBannerProps {
   trust?: "verified" | "unverified";
   capturedAt?: number;
   onCompareToToday?: () => void;
-  comparison?: {
-    status: "idle" | "loading" | "changed" | "unchanged" | "error";
-    summary?: string;
-    deltas?: readonly {
-      label: string;
-      previous: string | number;
-      current: string | number;
-    }[];
-  };
 }
 
 function formatDate(ts: number): string {
@@ -37,7 +28,6 @@ export function SelectorSnapshotBanner({
   trust = "unverified",
   capturedAt,
   onCompareToToday,
-  comparison,
 }: SelectorSnapshotBannerProps) {
   if (mode === "frozen") {
     const verified = trust === "verified";
@@ -45,7 +35,6 @@ export function SelectorSnapshotBanner({
     return (
       <div
         role="status"
-        aria-busy={comparison?.status === "loading" ? "true" : undefined}
         className="flex flex-col gap-3 rounded-lg border border-frost-blue/35 bg-frost-blue/[0.06] px-4 py-3 text-sm"
       >
         <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
@@ -73,33 +62,6 @@ export function SelectorSnapshotBanner({
             </button>
           ) : null}
         </div>
-        {comparison ? (
-          <div className="rounded-md border border-frost-blue/25 bg-background/45 px-3 py-2">
-            <p className="font-medium text-foreground">
-              {comparison.status === "loading"
-                ? "Comparing snapshot to current data..."
-                : comparison.status === "unchanged"
-                  ? "No shortlist changes against today's data."
-                  : comparison.status === "error"
-                    ? "Comparison could not be loaded."
-                    : (comparison.summary ?? "Snapshot differs from today's data.")}
-            </p>
-            {comparison.deltas && comparison.deltas.length > 0 ? (
-              <dl className="mt-2 grid gap-2 sm:grid-cols-2">
-                {comparison.deltas.map((delta) => (
-                  <div key={delta.label} className="min-w-0 rounded border border-border/45 bg-card/40 px-2 py-1">
-                    <dt className="text-[11px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">
-                      {delta.label}
-                    </dt>
-                    <dd className="break-words text-xs text-foreground">
-                      {delta.previous} → {delta.current}
-                    </dd>
-                  </div>
-                ))}
-              </dl>
-            ) : null}
-          </div>
-        ) : null}
       </div>
     );
   }

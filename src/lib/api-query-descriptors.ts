@@ -1,6 +1,5 @@
 import { API_PATHS } from "@shared/lib/api-endpoints/paths";
 import { PER_COIN_CACHE_TTL_SECONDS } from "@shared/lib/api-cache-profiles";
-import { API_FRESHNESS_MAX_AGE_SEC } from "@shared/lib/api-freshness";
 import { DATA_SURFACE_DESCRIPTORS, type YieldHistoryMode } from "@shared/lib/data-surface-descriptors";
 import type { ChainsResponse } from "@shared/types/chains";
 import { PriceConfidenceSchema, PriceObservedAtModeSchema } from "@shared/types/core";
@@ -200,7 +199,6 @@ export const FRONTEND_API_QUERY_DESCRIPTORS = {
       queryKey: DATA_SURFACE_DESCRIPTORS.stablecoins.queryKey,
       path: DATA_SURFACE_DESCRIPTORS.stablecoins.apiPath,
       producerIntervalMs: DATA_SURFACE_PRODUCER_INTERVAL_MS.stablecoins,
-      metaMaxAgeSec: DATA_SURFACE_DESCRIPTORS.stablecoins.endpointMaxAgeSec,
     },
     "meta",
     createLazySchema<StablecoinListResponse>(
@@ -212,7 +210,6 @@ export const FRONTEND_API_QUERY_DESCRIPTORS = {
       queryKey: ["chains"] as const,
       path: API_PATHS.chains(),
       producerIntervalMs: CRON_15MIN,
-      metaMaxAgeSec: API_FRESHNESS_MAX_AGE_SEC.chains,
     },
     "meta",
     createLazySchema<ChainsResponse>(async () => (await import("@shared/types/chains")).ChainsResponseSchema),
@@ -224,7 +221,6 @@ export const FRONTEND_API_QUERY_DESCRIPTORS = {
       queryKey: ["chains", "detail", chainId] as const,
       path: API_PATHS.chainsDetail(chainId),
       producerIntervalMs: CRON_15MIN,
-      metaMaxAgeSec: API_FRESHNESS_MAX_AGE_SEC.chains,
     }),
   ),
   bluechipRatings: defineApiQuery(
@@ -232,7 +228,6 @@ export const FRONTEND_API_QUERY_DESCRIPTORS = {
       queryKey: ["bluechip-ratings"] as const,
       path: API_PATHS.bluechipRatings(),
       producerIntervalMs: CRON_BLUECHIP,
-      metaMaxAgeSec: API_FRESHNESS_MAX_AGE_SEC.bluechip,
     },
     "meta",
     createLazySchema<BluechipRatingsMap>(async () => (await import("@shared/types/market")).BluechipRatingsMapSchema),
@@ -251,7 +246,6 @@ export const FRONTEND_API_QUERY_DESCRIPTORS = {
       queryKey: DATA_SURFACE_DESCRIPTORS.dexLiquidity.queryKey,
       path: DATA_SURFACE_DESCRIPTORS.dexLiquidity.apiPath,
       producerIntervalMs: DATA_SURFACE_PRODUCER_INTERVAL_MS.dexLiquidity,
-      metaMaxAgeSec: DATA_SURFACE_DESCRIPTORS.dexLiquidity.endpointMaxAgeSec,
     },
     "meta",
     createLazySchema<DexLiquidityMap>(async () => (await import("@shared/types/market")).DexLiquidityMapSchema),
@@ -275,7 +269,6 @@ export const FRONTEND_API_QUERY_DESCRIPTORS = {
       queryKey: ["digest-archive"] as const,
       path: API_PATHS.digestArchive(),
       producerIntervalMs: CRON_DAILY_DIGEST,
-      metaMaxAgeSec: API_FRESHNESS_MAX_AGE_SEC.digestArchive,
     },
     "meta",
     createLazySchema<DigestArchiveResponse>(
@@ -320,7 +313,6 @@ export const FRONTEND_API_QUERY_DESCRIPTORS = {
       queryKey: ["blacklist-summary"] as const,
       path: API_PATHS.blacklistSummary(),
       producerIntervalMs: CRON_BLACKLIST,
-      metaMaxAgeSec: API_FRESHNESS_MAX_AGE_SEC.blacklistSummary,
     },
     "meta",
     createLazySchema<BlacklistSummaryResponse>(
@@ -334,7 +326,6 @@ export const FRONTEND_API_QUERY_DESCRIPTORS = {
       queryKey,
       path,
       producerIntervalMs: CRON_BLACKLIST,
-      metaMaxAgeSec: API_FRESHNESS_MAX_AGE_SEC.blacklist,
     }),
   ),
   mintBurnFlows: defineParameterizedApiQuery(
@@ -346,7 +337,6 @@ export const FRONTEND_API_QUERY_DESCRIPTORS = {
       queryKey: ["mint-burn-flows", "all", hours] as const,
       path: API_PATHS.mintBurnFlows(hours !== 24 ? { hours } : undefined),
       producerIntervalMs: CRON_MINT_BURN,
-      metaMaxAgeSec: API_FRESHNESS_MAX_AGE_SEC.mintBurnFlows,
     }),
   ),
   mintBurnFlowsCoin: defineParameterizedApiQuery(
@@ -361,7 +351,6 @@ export const FRONTEND_API_QUERY_DESCRIPTORS = {
         hours: hours !== 24 ? hours : undefined,
       }),
       producerIntervalMs: CRON_MINT_BURN,
-      metaMaxAgeSec: API_FRESHNESS_MAX_AGE_SEC.mintBurnFlows,
     }),
   ),
   mintBurnEvents: defineParameterizedApiQuery(
@@ -389,7 +378,6 @@ export const FRONTEND_API_QUERY_DESCRIPTORS = {
         ] as const,
         path: API_PATHS.mintBurnEvents(Object.fromEntries(params.entries())),
         producerIntervalMs: CRON_MINT_BURN,
-        metaMaxAgeSec: API_FRESHNESS_MAX_AGE_SEC.mintBurnEvents,
       };
     },
   ),
@@ -398,7 +386,6 @@ export const FRONTEND_API_QUERY_DESCRIPTORS = {
       queryKey: ["peg-summary"] as const,
       path: API_PATHS.pegSummary(),
       producerIntervalMs: CRON_15MIN,
-      metaMaxAgeSec: API_FRESHNESS_MAX_AGE_SEC.pegSummary,
     },
     "meta",
     createLazySchema<PegSummaryResponse>(async () => (await import("@shared/types/market")).PegSummaryResponseSchema),
@@ -408,7 +395,6 @@ export const FRONTEND_API_QUERY_DESCRIPTORS = {
       queryKey: DATA_SURFACE_DESCRIPTORS.reportCards.queryKey,
       path: DATA_SURFACE_DESCRIPTORS.reportCards.apiPath,
       producerIntervalMs: DATA_SURFACE_PRODUCER_INTERVAL_MS.reportCards,
-      metaMaxAgeSec: DATA_SURFACE_DESCRIPTORS.reportCards.endpointMaxAgeSec,
     },
     "meta",
     createLazySchema<ReportCardsV9CurrentResponse>(
@@ -420,7 +406,6 @@ export const FRONTEND_API_QUERY_DESCRIPTORS = {
       queryKey: ["depeg-resolver"] as const,
       path: API_PATHS.depegResolver(),
       producerIntervalMs: CRON_15MIN,
-      metaMaxAgeSec: API_FRESHNESS_MAX_AGE_SEC.depegResolver,
     },
     "meta",
     createLazySchema<DdrResponse>(async () => (await import("@shared/types/depeg-resolver")).DdrResponseSchema),
@@ -430,7 +415,6 @@ export const FRONTEND_API_QUERY_DESCRIPTORS = {
       queryKey: ["depeg-resolver-review"] as const,
       path: API_PATHS.depegResolverReview(),
       producerIntervalMs: CRON_15MIN,
-      metaMaxAgeSec: API_FRESHNESS_MAX_AGE_SEC.depegResolverReview,
     },
     "meta",
     createLazySchema<DdrrResponse>(
@@ -442,7 +426,6 @@ export const FRONTEND_API_QUERY_DESCRIPTORS = {
       queryKey: ["redemption-backstops"] as const,
       path: API_PATHS.redemptionBackstops(),
       producerIntervalMs: CRON_RESERVE_SYNC,
-      metaMaxAgeSec: API_FRESHNESS_MAX_AGE_SEC.redemptionBackstops,
     },
     "meta",
     createLazySchema<RedemptionBackstopsResponse>(
@@ -458,7 +441,6 @@ export const FRONTEND_API_QUERY_DESCRIPTORS = {
       queryKey: ["safety-score-history", stablecoinId, days] as const,
       path: API_PATHS.safetyScoreHistory(stablecoinId, days),
       producerIntervalMs: CRON_SAFETY_GRADE_HISTORY,
-      metaMaxAgeSec: CRON_SAFETY_GRADE_HISTORY / 1000,
     }),
   ),
   safetyScoreHistoryV2: defineParameterizedApiQuery(
@@ -470,7 +452,6 @@ export const FRONTEND_API_QUERY_DESCRIPTORS = {
       queryKey: ["safety-score-history-v2", stablecoinId, days] as const,
       path: API_PATHS.safetyScoreHistoryV2(stablecoinId, days),
       producerIntervalMs: CRON_SAFETY_GRADE_HISTORY,
-      metaMaxAgeSec: CRON_SAFETY_GRADE_HISTORY / 1000,
     }),
   ),
   stablecoinCharts: defineApiQuery(
@@ -528,7 +509,6 @@ export const FRONTEND_API_QUERY_DESCRIPTORS = {
       queryKey: DATA_SURFACE_DESCRIPTORS.yieldHistory.buildQueryKey(stablecoinId, days, mode, sourceKey),
       path: DATA_SURFACE_DESCRIPTORS.yieldHistory.buildApiPath(stablecoinId, days, mode, sourceKey),
       producerIntervalMs: DATA_SURFACE_PRODUCER_INTERVAL_MS.yieldHistory,
-      metaMaxAgeSec: DATA_SURFACE_DESCRIPTORS.yieldHistory.endpointMaxAgeSec,
     }),
   ),
   yieldRankings: defineApiQuery(
@@ -536,7 +516,6 @@ export const FRONTEND_API_QUERY_DESCRIPTORS = {
       queryKey: DATA_SURFACE_DESCRIPTORS.yieldRankings.queryKey,
       path: DATA_SURFACE_DESCRIPTORS.yieldRankings.apiPath,
       producerIntervalMs: DATA_SURFACE_PRODUCER_INTERVAL_MS.yieldRankings,
-      metaMaxAgeSec: DATA_SURFACE_DESCRIPTORS.yieldRankings.endpointMaxAgeSec,
     },
     "meta",
     createLazySchema<YieldRankingsResponse>(
@@ -548,7 +527,6 @@ export const FRONTEND_API_QUERY_DESCRIPTORS = {
       queryKey: DATA_SURFACE_DESCRIPTORS.yieldRankings.summaryQueryKey,
       path: DATA_SURFACE_DESCRIPTORS.yieldRankings.summaryApiPath,
       producerIntervalMs: DATA_SURFACE_PRODUCER_INTERVAL_MS.yieldRankings,
-      metaMaxAgeSec: DATA_SURFACE_DESCRIPTORS.yieldRankings.endpointMaxAgeSec,
     },
     "meta",
     createLazySchema<YieldRankingsSummaryResponse>(
@@ -569,7 +547,6 @@ export const FRONTEND_API_QUERY_DESCRIPTORS = {
       queryKey: DATA_SURFACE_DESCRIPTORS.stressSignals.queryKey,
       path: DATA_SURFACE_DESCRIPTORS.stressSignals.apiPath,
       producerIntervalMs: DATA_SURFACE_PRODUCER_INTERVAL_MS.stressSignals,
-      metaMaxAgeSec: DATA_SURFACE_DESCRIPTORS.stressSignals.endpointMaxAgeSec,
     },
     "meta",
     createLazySchema<StressSignalsAllResponse>(
@@ -585,7 +562,6 @@ export const FRONTEND_API_QUERY_DESCRIPTORS = {
       queryKey: ["stress-signals", stablecoinId, days] as const,
       path: API_PATHS.stressSignals(stablecoinId, days),
       producerIntervalMs: DATA_SURFACE_PRODUCER_INTERVAL_MS.stressSignals,
-      metaMaxAgeSec: API_FRESHNESS_MAX_AGE_SEC.stressSignals,
     }),
   ),
   supplyHistory: defineParameterizedApiQuery(

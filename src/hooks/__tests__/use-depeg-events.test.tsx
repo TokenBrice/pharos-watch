@@ -24,7 +24,7 @@ import type { CursorPageFixture } from "./infinite-event-hooks.test-support";
 
 /**
  * Cursor pages as the depeg-events endpoint serves them: the terminal page
- * carries no cursor and omits `pending`/`counts` once nothing is outstanding.
+ * carries no cursor and omits `pending` once nothing is outstanding.
  */
 interface DepegEventsPageFixtureData {
   events: { id: number }[];
@@ -32,7 +32,6 @@ interface DepegEventsPageFixtureData {
   totalExact: boolean;
   nextCursor: string | null;
   pending?: { stablecoinId: string }[];
-  counts?: { incidents: number; thresholdCrossings: number };
 }
 
 const FIRST_PAGE: CursorPageFixture<DepegEventsPageFixtureData> = {
@@ -42,7 +41,6 @@ const FIRST_PAGE: CursorPageFixture<DepegEventsPageFixtureData> = {
     totalExact: false,
     nextCursor: "cursor-2",
     pending: [{ stablecoinId: "coin-a" }],
-    counts: { incidents: 3, thresholdCrossings: 5 },
   },
   meta: { status: "fresh" },
 };
@@ -85,7 +83,6 @@ describe("useInfiniteDepegEvents", () => {
       totalExact: false,
       nextCursor: null,
       pending: [{ stablecoinId: "coin-a" }],
-      counts: { incidents: 3, thresholdCrossings: 5 },
     });
     expect(result.current.loadedCount).toBe(3);
     // An inexact total does not hold completion open once the cursor is exhausted.

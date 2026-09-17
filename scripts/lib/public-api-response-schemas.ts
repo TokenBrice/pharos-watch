@@ -78,7 +78,7 @@ export const StablecoinSummaryResponseSchema = z.object({
   pegType: z.string(),
   pegMechanism: z.string(),
   priceUsd: z.number().nullable(),
-  priceSource: z.string(),
+  priceSource: z.string().nullable(),
   priceConfidence: PriceConfidenceSchema.nullable(),
   supplySource: z.string().nullable(),
   supplyObservedAt: z.number().nullable(),

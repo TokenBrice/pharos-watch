@@ -146,10 +146,4 @@ export function findFrameworkErrorMarker(bodyText) {
   return FRAMEWORK_ERROR_MARKERS.find((marker) => bodyText?.includes(marker)) ?? null;
 }
 
-export function chunkItems(items, workerCount) {
-  if (!Array.isArray(items) || items.length === 0 || workerCount <= 0) return [];
-  const count = Math.min(items.length, workerCount);
-  const chunks = Array.from({ length: count }, () => []);
-  items.forEach((item, index) => chunks[index % count].push(item));
-  return chunks;
-}
+

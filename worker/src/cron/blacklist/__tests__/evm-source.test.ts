@@ -1,6 +1,6 @@
 import { afterEach, describe, it, expect, vi } from "vitest";
 import { encodeAbiParameters } from "viem/utils";
-import { parseEvmLogs } from "../evm-source";
+import { parseEvmLogsWithCoverage } from "../evm-source";
 import { CONTRACT_CONFIGS, type ContractEventConfig } from "../../../lib/blacklist-contracts";
 import {
   createBudget,
@@ -161,7 +161,7 @@ describe("parseEvmLogs", () => {
       logIndex: "0x0",
       timeStamp: "0x65000000",
     }];
-    const rows = parseEvmLogs(USD1_CONFIG, logs);
+    const rows = parseEvmLogsWithCoverage(USD1_CONFIG, logs).rows;
     expect(rows).toHaveLength(1);
     expect(rows[0].address).toBe("0x2222222222222222222222222222222222222222");
     expect(rows[0].stablecoin).toBe("USD1");
@@ -182,7 +182,7 @@ describe("parseEvmLogs", () => {
       logIndex: "0x0",
       timeStamp: "0x65000000",
     }];
-    const rows = parseEvmLogs(USDC_CONFIG, logs);
+    const rows = parseEvmLogsWithCoverage(USDC_CONFIG, logs).rows;
     expect(rows).toHaveLength(1);
     expect(rows[0].address).toBe("0x3333333333333333333333333333333333333333");
   });
@@ -199,7 +199,7 @@ describe("parseEvmLogs", () => {
       timeStamp: "0x65000000",
     }];
 
-    const rows = parseEvmLogs(RLUSD_CONFIG, logs);
+    const rows = parseEvmLogsWithCoverage(RLUSD_CONFIG, logs).rows;
 
     expect(rows).toHaveLength(1);
     expect(rows[0]).toMatchObject({
@@ -223,7 +223,7 @@ describe("parseEvmLogs", () => {
       timeStamp: "0x65000000",
     }];
 
-    const rows = parseEvmLogs(USDTB_CONFIG, logs);
+    const rows = parseEvmLogsWithCoverage(USDTB_CONFIG, logs).rows;
 
     expect(rows).toHaveLength(2);
     expect(rows.map((row) => row.address)).toEqual([firstAddr, secondAddr]);
@@ -248,7 +248,7 @@ describe("parseEvmLogs", () => {
       timeStamp: "0x65000000",
     }];
 
-    const rows = parseEvmLogs(A7A5_CONFIG, logs);
+    const rows = parseEvmLogsWithCoverage(A7A5_CONFIG, logs).rows;
 
     expect(rows).toHaveLength(1);
     expect(rows[0]).toMatchObject({
@@ -280,7 +280,7 @@ describe("parseEvmLogs", () => {
       timeStamp: "0x65000000",
     }];
 
-    const rows = parseEvmLogs(INDEXED_AMOUNT_CONFIG, logs);
+    const rows = parseEvmLogsWithCoverage(INDEXED_AMOUNT_CONFIG, logs).rows;
 
     expect(rows).toHaveLength(1);
     expect(rows[0]).toMatchObject({
@@ -315,7 +315,7 @@ describe("parseEvmLogs", () => {
       timeStamp: "0x65000000",
     }];
 
-    const rows = parseEvmLogs(BUIDL_CONFIG, logs);
+    const rows = parseEvmLogsWithCoverage(BUIDL_CONFIG, logs).rows;
 
     expect(rows).toHaveLength(1);
     expect(rows[0]).toMatchObject({
@@ -329,7 +329,7 @@ describe("parseEvmLogs", () => {
 
   it("keeps rows recoverable when a configured amount data slot is missing", () => {
     const seizedAddr = "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
-    const rows = parseEvmLogs(BUIDL_CONFIG, [{
+    const rows = parseEvmLogsWithCoverage(BUIDL_CONFIG, [{
       address: BUIDL_CONFIG.contractAddress,
       topics: [
         "0x5c719d01bb88860dfca685ad3818d8b61a083caaf8f68abe6fa0fba4e40e33a9",
@@ -340,7 +340,7 @@ describe("parseEvmLogs", () => {
       transactionHash: "0xbuidl-short",
       logIndex: "0x6",
       timeStamp: "0x65000000",
-    }]);
+    }]).rows;
 
     expect(rows).toHaveLength(1);
     expect(rows[0]).toMatchObject({
@@ -353,7 +353,7 @@ describe("parseEvmLogs", () => {
   });
 
   it("skips malformed scalar address data instead of creating a bogus 0x row", () => {
-    const rows = parseEvmLogs(USDC_CONFIG, [{
+    const rows = parseEvmLogsWithCoverage(USDC_CONFIG, [{
       address: USDC_CONFIG.contractAddress,
       topics: ["0xffa4e6181777692565cf28528fc88fd1516ea86b56da075235fa575af6a4b855"],
       data: "0x1234",
@@ -361,7 +361,7 @@ describe("parseEvmLogs", () => {
       transactionHash: "0xshort-address",
       logIndex: "0x7",
       timeStamp: "0x65000000",
-    }]);
+    }]).rows;
 
     expect(rows).toHaveLength(0);
   });
@@ -377,7 +377,7 @@ describe("parseEvmLogs", () => {
     const fromAddress = "0x000000000000000000000000" + "a".repeat(40);
     const toAddress = "0x000000000000000000000000" + "b".repeat(40);
     const config = CONTRACT_CONFIGS.find((c) => c.stablecoinId === "buidl-blackrock" && c.chain.chainId === "ethereum")!;
-    const rows = parseEvmLogs(config, [
+    const rows = parseEvmLogsWithCoverage(config, [
       {
         address: config.contractAddress,
         topics: [seizeTopic, fromAddress, toAddress],
@@ -387,7 +387,7 @@ describe("parseEvmLogs", () => {
         logIndex: "0x0",
         timeStamp: "0x1000",
       },
-    ]);
+    ]).rows;
     expect(rows).toHaveLength(1);
     expect(rows[0].amount_native).toBe(25);
     expect(rows[0].event_type).toBe("destroy");
@@ -444,7 +444,7 @@ describe("wlfi-freeze destroy events", () => {
     const caller = "0x" + "bb".repeat(20);
     const topic0 = "0x76fa81ac53e82d7102caacc3866ae3ca5684caa4c24d995ff4d76ce8a10fbfef";
     const data = encodeAbiParameters([{ type: "uint256" }], [1_000_000_000_000_000_000n]);
-    const rows = parseEvmLogs(usd1Config, [
+    const rows = parseEvmLogsWithCoverage(usd1Config, [
       {
         address: usd1Config.contractAddress,
         topics: [topic0, ("0x" + "0".repeat(24) + caller.slice(2)) as `0x${string}`, ("0x" + "0".repeat(24) + victim.slice(2)) as `0x${string}`],
@@ -454,7 +454,7 @@ describe("wlfi-freeze destroy events", () => {
         logIndex: "0x0",
         timeStamp: "0x1000",
       },
-    ]);
+    ]).rows;
     expect(rows).toHaveLength(1);
     expect(rows[0].event_type).toBe("destroy");
     expect(rows[0].address.toLowerCase()).toBe(victim);
@@ -467,7 +467,7 @@ describe("wlfi-freeze destroy events", () => {
     const to = "0x" + "33".repeat(20);
     const topic0 = "0x10aa54b8d21641b161adf6251c11512c46fcf822feaf6f66057c006dc29def4a";
     const data = encodeAbiParameters([{ type: "uint256" }], [2_000_000_000_000_000_000n]);
-    const rows = parseEvmLogs(usd1Config, [
+    const rows = parseEvmLogsWithCoverage(usd1Config, [
       {
         address: usd1Config.contractAddress,
         topics: [
@@ -482,7 +482,7 @@ describe("wlfi-freeze destroy events", () => {
         logIndex: "0x0",
         timeStamp: "0x1001",
       },
-    ]);
+    ]).rows;
     expect(rows).toHaveLength(1);
     expect(rows[0].event_type).toBe("destroy");
     expect(rows[0].address.toLowerCase()).toBe(from);
@@ -505,16 +505,16 @@ describe("parseEvmLogs branch coverage", () => {
     ["missing timestamp", { timeStamp: undefined }],
     ["unknown topic hash", { topics: ["0x" + "dd".repeat(32)] }],
   ])("skips logs with %s", (_name, overrides) => {
-    expect(parseEvmLogs(USDC_CONFIG, [makeBlacklistLog()])).toHaveLength(1);
-    expect(parseEvmLogs(USDC_CONFIG, [makeBlacklistLog(overrides)])).toEqual([]);
+    expect(parseEvmLogsWithCoverage(USDC_CONFIG, [makeBlacklistLog()]).rows).toHaveLength(1);
+    expect(parseEvmLogsWithCoverage(USDC_CONFIG, [makeBlacklistLog(overrides)]).rows).toEqual([]);
   });
 
   it("handles malformed address array data gracefully", () => {
-    const rows = parseEvmLogs(USDTB_CONFIG, [makeBlacklistLog({
+    const rows = parseEvmLogsWithCoverage(USDTB_CONFIG, [makeBlacklistLog({
       address: USDTB_CONFIG.contractAddress,
       topics: ["0x5444f9841c04ce78987f28701fa07fc4c112840c1c8439e8f52bda50c3788a87"],
       data: "0xdeadbeef",
-    })]);
+    })]).rows;
     expect(rows).toHaveLength(0);
   });
 
@@ -526,7 +526,7 @@ describe("parseEvmLogs branch coverage", () => {
       [{ type: "address[]" }],
       [addresses as `0x${string}`[]],
     );
-    const rows = parseEvmLogs(USDTB_CONFIG, [
+    const rows = parseEvmLogsWithCoverage(USDTB_CONFIG, [
       {
         address: USDTB_CONFIG.contractAddress,
         topics: ["0x5444f9841c04ce78987f28701fa07fc4c112840c1c8439e8f52bda50c3788a87"],
@@ -536,7 +536,7 @@ describe("parseEvmLogs branch coverage", () => {
         logIndex: "0x0",
         timeStamp: "0x61000000",
       },
-    ]);
+    ]).rows;
     expect(rows.length).toBe(500);
   });
 
@@ -562,11 +562,11 @@ describe("parseEvmLogs branch coverage", () => {
     ["zero", "00".repeat(32), "unblacklist"],
     ["high-bit-set", "ff".repeat(32), "blacklist"],
   ] as const)("decodes the %s bool word", (_name, word, eventType) => {
-    const rows = parseEvmLogs(boolConfig, [makeBlacklistLog({
+    const rows = parseEvmLogsWithCoverage(boolConfig, [makeBlacklistLog({
       address: boolConfig.contractAddress,
       topics: [boolTopic, "0x" + "0".repeat(24) + "11".repeat(20)],
       data: "0x" + word,
-    })]);
+    })]).rows;
     expect(rows).toHaveLength(1);
     expect(rows[0]).toMatchObject({
       event_type: eventType,
@@ -582,7 +582,7 @@ describe("parseEvmLogs branch coverage", () => {
     const address = "0x" + "bb".repeat(20);
     const amount = encodeAbiParameters([{ type: "uint256" }], [5_000_000n]);
     const data = "0x" + "0".repeat(24) + address.slice(2) + amount.slice(2);
-    const rows = parseEvmLogs(usdtConfig, [
+    const rows = parseEvmLogsWithCoverage(usdtConfig, [
       {
         address: usdtConfig.contractAddress,
         topics: [destroyTopic],
@@ -592,7 +592,7 @@ describe("parseEvmLogs branch coverage", () => {
         logIndex: "0x0",
         timeStamp: "0x2000",
       },
-    ]);
+    ]).rows;
     expect(rows).toHaveLength(1);
     expect(rows[0].event_type).toBe("destroy");
     expect(rows[0].amount_native).toBe(5);

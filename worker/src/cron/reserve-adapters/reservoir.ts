@@ -3,7 +3,6 @@ import type { LiveReserveWarning, LiveReservesConfig } from "@shared/types/live-
 import type { AdapterContext, AdapterResult } from "./types";
 import {
   buildUnknownExposureWarning,
-  classifyBucketedValues,
   decimalNumberFromBigInt,
   fetchJsonWithRetry,
   makeOnchainCallers,
@@ -11,7 +10,7 @@ import {
   unverifiedFreshnessMetadata,
   requireJsonInputFromConfig,
 } from "./helpers";
-import type { ValueBucketRule } from "./classification";
+import { classifyBucketedValues, type ValueBucketRule } from "./classification";
 import { parseEvmAddressResult } from "./evm";
 import { decodeStrictBoolWord } from "./abi-decode";
 import { PAUSED_SELECTOR } from "../../lib/evm-selectors";

@@ -117,6 +117,7 @@ describe("Horizon pool discovery", () => {
         address: EURC_ADDRESS,
         provider: "horizon",
         status: "failure",
+        retryable: true,
       },
     ]);
     expect(stageContext.pools).toEqual([]);
@@ -141,6 +142,7 @@ describe("Horizon pool discovery", () => {
         address: EURC_ADDRESS,
         provider: "horizon",
         status: "failure",
+        retryable: true,
       },
     ]);
   });

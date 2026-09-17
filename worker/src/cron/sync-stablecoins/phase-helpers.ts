@@ -207,8 +207,11 @@ export async function fillMissingSupplyHistory(
     const circulating = asset.circulating;
     if (!circulating) continue;
 
-    const pegKey = Object.keys(circulating)[0];
-    if (!pegKey) continue;
+    // A total history row can only be assigned without inventing attribution
+    // when the asset has exactly one circulating peg bucket.
+    const pegKeys = Object.keys(circulating);
+    if (pegKeys.length !== 1) continue;
+    const pegKey = pegKeys[0]!;
 
     const currentValue = circulating[pegKey] ?? 0;
     const isReasonable = (value: number) =>

@@ -4,6 +4,7 @@ import { PSI_ELIGIBLE_STABLECOINS, PSI_ELIGIBLE_META_BY_ID } from "@shared/lib/p
 import { DAY_SECONDS } from "@shared/lib/time-constants";
 import { bucketUnixMillisecondsToUtcDay, bucketUnixSecondsToUtcDay } from "@shared/lib/time-buckets";
 import { getCirculatingRaw } from "@shared/lib/supply";
+import { toTokenUnits } from "@shared/lib/math";
 import type { ContractDeployment } from "@shared/types/core";
 import { DEFILLAMA_BASE, DEFILLAMA_API, DEFILLAMA_COINS, USER_AGENT } from "../lib/constants";
 import { fetchCoinGeckoMarketHistory } from "../lib/coingecko-market-history";
@@ -302,11 +303,6 @@ function selectConfiguredHistoricalOnChainContract(
   return contracts?.find((contract) => contract.chain === chain) ?? null;
 }
 
-function rawTokenAmountToNumber(raw: bigint, decimals: number): number | null {
-  const amount = Number(raw) / 10 ** decimals;
-  return Number.isFinite(amount) && amount > 0 ? amount : null;
-}
-
 function getBlockSearchCacheForChain(
   cachesByChain: EvmBlockSearchCacheByChain | undefined,
   chain: string,
@@ -443,7 +439,7 @@ async function runHistoricalEvmSupplyDays(
       continue;
     }
 
-    const supply = rawTokenAmountToNumber(raw, decimals);
+    const supply = toTokenUnits(raw, decimals);
     if (supply == null) {
       supplyMisses += 1;
       continue;

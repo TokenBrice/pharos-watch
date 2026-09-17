@@ -4,6 +4,7 @@ import {
   DdrrResponseRowSchema,
   type DdrrRow,
 } from "@shared/types/depeg-resolver-review";
+import { RatioSchema } from "@shared/types/ratio";
 import {
   coverageRow,
   makePredictionPolicySegment,
@@ -16,7 +17,7 @@ import {
   DDR_OUTCOME_LABELS,
   DDR_VERDICT_LABELS,
   formatMetricPercent,
-  formatPercent,
+  formatReviewerPercent,
   formatDdrSignedDuration,
   getActualOutcome,
   getCoverageMetric,
@@ -123,7 +124,7 @@ describe("DDR review derivations", () => {
     expect(getRowTime(coverageRow)).toBe(7202);
     expect(getSignedDurationError(predictionRow)).toBe(3600);
     expect(getSignedDurationError(noCallRow)).toBeNull();
-    expect(formatPercent(0.5)).toBe("50%");
+    expect(formatReviewerPercent(0.5)).toBe("50%");
     expect(formatMetricPercent(null)).toBe("—");
   });
 
@@ -220,12 +221,12 @@ describe("DDR review derivations", () => {
       ...summarizeDdrrRows([]).headline,
       policyUniverseIncidentCount: 20,
       recoveryLikelihoodScoredCount: 8,
-      predictionRatePct: 0.65,
+      predictionRatePct: RatioSchema.parse(0.65),
       lockedPredictionCount: 9,
       publicationRetryPendingCount: 1,
       publicationFailedCount: 0,
-      noCallRatePct: 0.1,
-      invalidatedPct: 0.05,
+      noCallRatePct: RatioSchema.parse(0.1),
+      invalidatedPct: RatioSchema.parse(0.05),
     };
 
     expect(getCoverageMetric(headline, "scoreableCoveragePct")).toBe(0.4);

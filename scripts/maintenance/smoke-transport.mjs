@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-import { assert, parseCliOptions, parsePositiveInt, readEnvFirst, readPositiveIntEnv } from "../lib/smoke-runtime.mjs";
+import { assert, isDirectRun, parseCliOptions, parsePositiveInt, readEnvFirst, readPositiveIntEnv } from "../lib/smoke-runtime.mjs";
 
 const DEFAULT_TIMEOUT_MS = 12_000;
 const DEFAULT_API_URL = "http://api.pharos.watch/api/health?smoke=transport";
@@ -91,7 +91,9 @@ async function run() {
   console.log("[smoke-transport] All checks passed.");
 }
 
-run().catch((error) => {
-  console.error(`[smoke-transport] FAILED: ${error instanceof Error ? error.message : String(error)}`);
-  process.exit(1);
-});
+if (isDirectRun(import.meta.url, process.argv[1])) {
+  run().catch((error) => {
+    console.error(`[smoke-transport] FAILED: ${error instanceof Error ? error.message : String(error)}`);
+    process.exit(1);
+  });
+}

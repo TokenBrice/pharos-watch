@@ -10,6 +10,7 @@ import {
 } from "./response-body";
 import { redactProviderUrls } from "./safe-error-message";
 import { logWorkerEvent } from "./structured-log";
+import type { z } from "zod";
 
 export const DEFAULT_FETCH_RETRY_MAX_RESPONSE_BYTES = 16 * 1024 * 1024;
 
@@ -33,6 +34,23 @@ export interface FetchWithRetryBodyResult<TResult> {
   response: Response;
   body: TResult;
 }
+
+export interface FetchJsonSchemaFailure {
+  kind: "schema-validation";
+  message: string;
+}
+
+export type FetchJsonWithSchemaResult<TResult> =
+  | {
+    success: true;
+    response: Response;
+    body: TResult;
+  }
+  | {
+    success: false;
+    response: Response;
+    failure: FetchJsonSchemaFailure;
+  };
 
 type FetchWithRetryBodyReader<TResult> = (
   response: Response,
@@ -120,6 +138,33 @@ export async function fetchJsonWithRetry<TResult = unknown>(
     async (response, signal, maxResponseBytes) =>
       await readResponseJsonWithinLimitWithSignal<TResult>(response, maxResponseBytes, signal),
   );
+}
+
+export async function fetchJsonWithSchema<TSchema extends z.ZodType>(
+  url: string,
+  schema: TSchema,
+  opts?: RequestInit,
+  maxRetries = 2,
+  options?: FetchWithRetryOptions,
+): Promise<FetchJsonWithSchemaResult<z.infer<TSchema>> | null> {
+  const result = await fetchJsonWithRetry<unknown>(url, opts, maxRetries, options);
+  if (!result) return null;
+  const parsed = schema.safeParse(result.body);
+  if (!parsed.success) {
+    return {
+      success: false,
+      response: result.response,
+      failure: {
+        kind: "schema-validation",
+        message: parsed.error.message,
+      },
+    };
+  }
+  return {
+    success: true,
+    response: result.response,
+    body: parsed.data,
+  };
 }
 
 export async function fetchTextWithRetry(

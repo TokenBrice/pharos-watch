@@ -10,7 +10,7 @@ import { DailyDigest } from "@/components/daily-digest";
 import { StaleDataBanner } from "@/components/stale-data-banner";
 import { QueryErrorNotice } from "@/components/query-error-notice";
 import { PSI_BAND_CLASSES, type ConditionBand } from "@shared/lib/psi-colors";
-import { formatCurrency, formatLongDate } from "@shared/lib/format";
+import { formatBps, formatCurrency, formatLongDate } from "@shared/lib/format";
 import type { DigestArchiveEntry, DigestRiskSignal } from "@shared/types";
 import {
   buildDigestTriggerRecord,
@@ -47,25 +47,33 @@ function tsToMonthKey(ts: number): string {
 
 function formatMonthLabel(key: string): string {
   const [y, m] = key.split("-");
-  const date = new Date(Number(y), Number(m) - 1);
-  return date.toLocaleDateString("en-US", { month: "long", year: "numeric" });
+  const date = new Date(Date.UTC(Number(y), Number(m) - 1));
+  return date.toLocaleDateString("en-US", { month: "long", year: "numeric", timeZone: "UTC" });
 }
 
 function formatWireDate(ts: number): string {
-  return new Date(ts * 1000).toLocaleDateString("en-US", { day: "numeric", month: "short" }).toUpperCase();
+  return new Date(ts * 1000).toLocaleDateString("en-US", {
+    day: "numeric",
+    month: "short",
+    timeZone: "UTC",
+  }).toUpperCase();
 }
 
 function formatWeeklyMasthead(ts: number): string {
   const d = new Date(ts * 1000);
-  const end = formatLongDate(d);
-  const start = new Date(d.getTime() - 6 * 86400_000).toLocaleDateString("en-US", { month: "long", day: "numeric" });
+  const end = formatLongDate(d, { utc: true });
+  const start = new Date(d.getTime() - 6 * 86400_000).toLocaleDateString("en-US", {
+    month: "long",
+    day: "numeric",
+    timeZone: "UTC",
+  });
   return `${start} – ${end}`;
 }
 
 // Editorial typography imported from @/lib/digest for consistent wire-service aesthetic
 
 function formatArchiveRiskSignal(signal: DigestRiskSignal): string {
-  return `${signal.symbol} ${Math.abs(signal.bps)}bps`;
+  return `${signal.symbol} ${formatBps(Math.abs(signal.bps))}`;
 }
 
 export type DigestArchiveView = "all" | "daily" | "weekly";

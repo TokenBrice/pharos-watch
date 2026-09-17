@@ -8,7 +8,6 @@ import {
   DEPEG_EVENT_MIN_SUPPLY_USD,
   DEPEG_EXTREME_MOVE_BPS,
   DEPEG_PENDING_MIN_AGE_SEC,
-  DEPEG_SECONDARY_THRESHOLD_RATIO,
   getDepegRecoveryThresholdBps,
   getDepegThresholdBps,
   POOL_CHALLENGE_CONFIRM_MIN,
@@ -81,7 +80,6 @@ interface DecisionContext {
   poolRecoveryVetoHighTvl: boolean;
   dexSupportsDirection: boolean;
   dexSupportsExistingDirection: boolean;
-  dexSupportsSecondaryBarDirection: boolean;
   dexSupportsRecovery: boolean;
   primarySupportsRecovery: boolean;
   pendingReason: PendingDepegReason;
@@ -217,13 +215,12 @@ interface DexEvidence {
   poolRecoveryVetoHighTvl: boolean;
   dexSupportsDirection: boolean;
   dexSupportsExistingDirection: boolean;
-  dexSupportsSecondaryBarDirection: boolean;
   dexSupportsRecovery: boolean;
 }
 
 /**
- * Derives the DEX-corroboration signals (direction/secondary-bar/recovery support
- * and the recovery challenge veto) from the trusted DEX price row and protocol sources.
+ * Derives the DEX-corroboration signals (direction/recovery support and the
+ * recovery challenge veto) from the trusted DEX price row and protocol sources.
  */
 function deriveDexEvidence(params: {
   input: DepegAssetDecisionInput;
@@ -238,7 +235,6 @@ function deriveDexEvidence(params: {
   const dexSignal = input.dexRow && isTrustedDexPriceRow(input.dexRow, now, "depeg")
     ? deriveDepegSignal(input.dexRow.dex_price_usd, pegRef)
     : null;
-  const secondaryBar = Math.round(threshold * DEPEG_SECONDARY_THRESHOLD_RATIO);
   const dexDirectionProtocolCount = countDexProtocolCorroborations(input.protocolSources, pegRef, threshold, direction, "confirm");
   const existingDirection = existing?.direction === "above" || existing?.direction === "below"
     ? existing.direction
@@ -250,7 +246,6 @@ function deriveDexEvidence(params: {
     existingDirection,
     "confirm",
   );
-  const dexSecondaryDirectionProtocolCount = countDexProtocolCorroborations(input.protocolSources, pegRef, secondaryBar, direction, "confirm");
   const dexRecoveryProtocolCount = countDexProtocolCorroborations(input.protocolSources, pegRef, recoveryThreshold, direction, "recover");
   const recoveryVetoDirection: DepegDirection = existingDirection;
   const dexRecoveryChallenged = hasRecoveryChallenge(input.challengerPools, pegRef, threshold, recoveryVetoDirection);
@@ -270,11 +265,6 @@ function deriveDexEvidence(params: {
     signalCrossesThreshold(dexSignal, threshold) &&
     signalsShareDirection(dexSignal, existingDirection) &&
     dexExistingDirectionProtocolCount >= DEPEG_DEX_PROTOCOL_CORROBORATION_MIN;
-  const dexSupportsSecondaryBarDirection =
-    dexSignal != null &&
-    signalCrossesThreshold(dexSignal, secondaryBar) &&
-    signalsShareDirection(dexSignal, direction) &&
-    dexSecondaryDirectionProtocolCount >= DEPEG_DEX_PROTOCOL_CORROBORATION_MIN;
   const dexSupportsRecovery =
     dexSignal != null &&
     signalIsWithinThreshold(dexSignal, recoveryThreshold) &&
@@ -291,7 +281,6 @@ function deriveDexEvidence(params: {
     poolRecoveryVetoHighTvl: poolRecoveryVetoEvidence.highTvl,
     dexSupportsDirection,
     dexSupportsExistingDirection,
-    dexSupportsSecondaryBarDirection,
     dexSupportsRecovery,
   };
 }
@@ -371,7 +360,6 @@ function deriveDecisionContext(input: DepegAssetDecisionInput): DecisionContextD
     poolRecoveryVetoHighTvl,
     dexSupportsDirection,
     dexSupportsExistingDirection,
-    dexSupportsSecondaryBarDirection,
     dexSupportsRecovery,
   } = dexEvidence;
   const sourceDepth = getPrimarySourceDepth(asset);
@@ -418,7 +406,6 @@ function deriveDecisionContext(input: DepegAssetDecisionInput): DecisionContextD
       poolRecoveryVetoHighTvl,
       dexSupportsDirection,
       dexSupportsExistingDirection,
-      dexSupportsSecondaryBarDirection,
       dexSupportsRecovery,
       primarySupportsRecovery,
       pendingReason,
@@ -484,7 +471,6 @@ function decideExistingEvent(
     dexRow,
     dexAbsBps,
     dexSupportsDirection,
-    dexSupportsSecondaryBarDirection,
     pendingReason,
   } = ctx;
   const commands: DepegPersistenceCommand[] = [];
@@ -546,7 +532,6 @@ function decideExistingEvent(
     primaryPrice: price,
     primaryTrust,
     dexSupportsDirection,
-    dexSupportsSecondaryBarDirection,
   });
   if (peakUpdate) commands.push(peakUpdate);
 

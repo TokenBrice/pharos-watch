@@ -528,27 +528,45 @@ function commandLooksLikePatchPayload(command: unknown): boolean {
   return commandIsRawPatchPayload(text) || /^apply_patch(?:\s|$)/.test(text);
 }
 
-function stripHereDocBodies(command: unknown): string {
+interface HereDocScan {
+  bodies: string[];
+  executableText: string;
+}
+
+function scanHereDocs(command: unknown): HereDocScan {
   const lines = String(command ?? "").split(/\r?\n/g);
+  const bodies: string[] = [];
   const kept: string[] = [];
-  let marker = "";
+  const pending: Array<{ body: string[] | null; marker: string }> = [];
 
   for (const line of lines) {
-    if (marker) {
-      if (line.trim() === marker) {
-        marker = "";
+    const active = pending[0];
+    if (active) {
+      if (line.trim() === active.marker) {
+        if (active.body) bodies.push(active.body.join("\n"));
+        pending.shift();
+      } else if (active.body) {
+        active.body.push(line);
       }
       continue;
     }
 
     kept.push(line);
-    const match = line.match(/<<-?\s*['"]?([A-Za-z0-9_.-]+)['"]?/);
-    if (match) {
-      marker = match[1];
+    for (const match of line.matchAll(/<<-?\s*(?:(['"])([A-Za-z0-9_.-]+)\1|([A-Za-z0-9_.-]+))/g)) {
+      pending.push({
+        body: match[1] ? null : [],
+        marker: match[2] ?? match[3],
+      });
     }
   }
+  const active = pending[0];
+  if (active?.body) bodies.push(active.body.join("\n"));
 
-  return kept.join("\n");
+  return { bodies, executableText: kept.join("\n") };
+}
+
+function stripHereDocBodies(command: unknown): string {
+  return scanHereDocs(command).executableText;
 }
 
 function getExecutableShellText(command: unknown): string {
@@ -564,15 +582,30 @@ function commandHasBackgroundSeparator(command: unknown): boolean {
   );
 }
 
+function textHasGuardedKeyword(text: string): boolean {
+  const hasRemoteD1Execute = D1_EXECUTE_KEYWORD_RE.test(text) && REMOTE_FLAG_RE.test(text);
+  return (
+    GUARDED_SHELL_KEYWORD_RE.some((keyword) => keyword.test(text)) ||
+    hasRemoteD1Execute ||
+    Boolean(findProtectedLiteralPath(text))
+  );
+}
+
 function commandHasOpaqueGuardedConstruct(command: unknown): boolean {
   const text = getExecutableShellText(command);
+  const hasOpaqueHereDocBody = scanHereDocs(command).bodies.some(
+    (body) => (body.includes("$(") || body.includes("`")) && textHasGuardedKeyword(body),
+  );
   const hasOpaqueConstruct =
     OPAQUE_SHELL_CONSTRUCT_RE.some((construct) => construct.test(text)) ||
     commandHasPipedShell(command) ||
     commandHasXargsShell(command) ||
     commandHasBackgroundSeparator(command);
 
-  return hasOpaqueConstruct && getShellCommandInvocations(command).some(isGuardedShellInvocation);
+  return (
+    hasOpaqueHereDocBody ||
+    (hasOpaqueConstruct && getShellCommandInvocations(command).some(isGuardedShellInvocation))
+  );
 }
 
 function tokenizeShell(command: unknown): string[] {
@@ -1148,13 +1181,7 @@ function isGuardedShellInvocation(invocation: ShellInvocation): boolean {
 }
 
 function commandHasGuardedKeyword(command: unknown): boolean {
-  const text = getExecutableShellText(command);
-  const hasRemoteD1Execute = D1_EXECUTE_KEYWORD_RE.test(text) && REMOTE_FLAG_RE.test(text);
-  return (
-    GUARDED_SHELL_KEYWORD_RE.some((keyword) => keyword.test(text)) ||
-    hasRemoteD1Execute ||
-    Boolean(findProtectedLiteralPath(text))
-  );
+  return textHasGuardedKeyword(getExecutableShellText(command));
 }
 
 function commandHasUnresolvedShellIndirection(command: unknown): boolean {
@@ -1514,6 +1541,7 @@ function stripSqlCommentsAndStrings(sql: string): string {
 function withQueryKeyword(statement: string): string | null {
   let depth = 0;
   let closedCte = false;
+  let queryKeyword: string | null = null;
 
   for (let index = 4; index < statement.length;) {
     const char = statement[index];
@@ -1528,18 +1556,19 @@ function withQueryKeyword(statement: string): string | null {
       index += 1;
       continue;
     }
-    if (depth === 0 && /[A-Za-z]/.test(char)) {
+    if (/[A-Za-z]/.test(char)) {
       let end = index + 1;
       while (end < statement.length && /[A-Za-z]/.test(statement[end])) end += 1;
       const word = statement.slice(index, end).toLowerCase();
-      if (closedCte && (word === "select" || SQL_MUTATING_KEYWORDS.has(word))) return word;
+      if (SQL_MUTATING_KEYWORDS.has(word)) return word;
+      if (depth === 0 && closedCte && word === "select") queryKeyword = word;
       index = end;
       continue;
     }
     index += 1;
   }
 
-  return null;
+  return queryKeyword;
 }
 
 function isReadOnlySql(sql: string): boolean {

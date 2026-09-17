@@ -332,7 +332,7 @@ export function accumulateGlobalAggregate(
 
   for (const pool of pools) {
     const proto = normalizeProtocol(pool.project);
-    const chainKey = pool.chain.toLowerCase();
+    const chainKey = pool.chain;
     const incomingVol7d = pool.volumeUsd7d ?? 0;
     const incomingVol7dMeasured = pool.volumeUsd7d != null;
     const prev = seenPoolTvl.get(pool.poolId);

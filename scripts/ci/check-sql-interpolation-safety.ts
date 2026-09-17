@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 import { reportViolations } from "../lib/report-violations.mts";
 import { scanSourceGate } from "../lib/source-gate.mts";
-import { runAsCli } from "../lib/source-files.mts";
+import { runDirectCli } from "../lib/cli-args.mjs";
 
 export const DEFAULT_SQL_SAFETY_ROOTS = ["worker/src", "worker/scripts", "scripts"];
 export const SQL_INTERPOLATION_PATTERN = /`\s*(?:(?:SELECT|DELETE|UPDATE|INSERT)[^`]*(?:FROM|INTO|UPDATE|JOIN)\s+\$\{|(?:SELECT|DELETE|UPDATE)[^`]*(?:WHERE|AND|OR|SET)\s+[\w.]+\s*=\s*['"]?\$\{)/i;
@@ -35,17 +35,24 @@ export function scanSqlInterpolationSafety(
     scanFile: ({ relativePath, content, root }) => {
       const violations: SqlSafetyViolation[] = [];
       const lines = content.split("\n");
-      for (let index = 0; index < lines.length; index++) {
-        const line = lines[index];
-        if (!SQL_INTERPOLATION_PATTERN.test(line)) continue;
-
-        const context = lines.slice(Math.max(0, index - 5), index + 1).join("\n");
+      // Source is the module-constant SQL_INTERPOLATION_PATTERN; only the global flag is added.
+      // eslint-disable-next-line security/detect-non-literal-regexp
+      const pattern = new RegExp(
+        SQL_INTERPOLATION_PATTERN.source,
+        SQL_INTERPOLATION_PATTERN.flags.includes("g")
+          ? SQL_INTERPOLATION_PATTERN.flags
+          : `${SQL_INTERPOLATION_PATTERN.flags}g`,
+      );
+      for (const match of content.matchAll(pattern)) {
+        const index = match.index;
+        const lineIndex = content.slice(0, index).split("\n").length - 1;
+        const context = lines.slice(Math.max(0, lineIndex - 5), lineIndex + 6).join("\n");
         if (hasSqlSafetySignal(context)) continue;
 
         violations.push({
           file: relativePath,
-          line: index + 1,
-          text: line.trim(),
+          line: lineIndex + 1,
+          text: lines[lineIndex]!.trim(),
           root,
         });
       }
@@ -74,4 +81,6 @@ export function main(argv: readonly string[] = process.argv.slice(2), cwd = proc
   return printSqlInterpolationSafetyReport(report);
 }
 
-runAsCli(import.meta.url, main);
+runDirectCli(import.meta.url, () => {
+  process.exitCode = main();
+});

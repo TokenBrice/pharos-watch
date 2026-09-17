@@ -182,9 +182,9 @@ export async function applyTronLedgerMirrorPass(
 export function deriveSyncBlacklistStatus(
   apiErrors: number,
   runtimeBudgetHit: boolean,
-  _runtimeBudgetContext: SyncBlacklistRuntimeBudgetContext = {},
+  runtimeBudgetContext: SyncBlacklistRuntimeBudgetContext = {},
 ): SyncBlacklistStatus {
-  const errorThreshold = Math.ceil(CONTRACT_CONFIGS.length / 2);
+  const errorThreshold = Math.ceil((runtimeBudgetContext.totalConfigs ?? CONTRACT_CONFIGS.length) / 2);
   if (apiErrors > errorThreshold) return "error";
   if (apiErrors > 0 || runtimeBudgetHit) return "degraded";
   return "ok";

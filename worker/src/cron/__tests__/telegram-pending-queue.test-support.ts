@@ -9,6 +9,7 @@ import { insertTelegramSubscriber, type TelegramSubscriberSeed } from "./telegra
 
 export const DEFAULT_TELEGRAM_PENDING_D1_TABLES: MockTableConfig[] = [
   { match: "WHERE delivery_state = 'sending'", rows: [] },
+  { match: "WHERE delivery_state = 'sent'", rows: [], runMeta: { changes: 0 } },
   { match: "delivery_state = 'sent'", rows: [] },
   { match: "processing_owner = ?", rows: [] },
   { match: "SET attempts = attempts + 1", rows: [] },

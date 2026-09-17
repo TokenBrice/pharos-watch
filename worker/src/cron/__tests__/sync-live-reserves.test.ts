@@ -1190,6 +1190,53 @@ describe("syncLiveReserves", () => {
     });
   });
 
+  it("finalizes breaker outcomes when deferred-tail persistence fails", async () => {
+    const startedMs = Date.now();
+    const clock = vi.spyOn(Date, "now").mockReturnValue(startedMs);
+    mockAdapterRegistry(async () => {
+      clock.mockReturnValue(startedMs + 800);
+      return { slices: [{ name: "Mock Farm", pct: 100, risk: "low" as const }] };
+    });
+
+    const { syncLiveReserves } = await import("../sync-live-reserves");
+    const db = mockD1();
+    const batch = db.batch.bind(db);
+    vi.spyOn(db, "batch").mockImplementation(async (statements) => {
+      const isDeferredTail = statements.some((statement) => {
+        const prepared = statement as unknown as { sql?: string; boundValues?: unknown[] };
+        return prepared.sql?.includes("INSERT INTO reserve_sync_state")
+          && prepared.boundValues?.includes("run-budget-exhausted");
+      });
+      if (isDeferredTail) throw new Error("forced deferred-tail batch failure");
+      return batch(statements);
+    });
+
+    const result = await syncLiveReserves(
+      db,
+      new AbortController().signal,
+      {},
+      undefined,
+      {
+        runBudgetMs: 1_000,
+        adapterTimeoutMs: 100,
+        d1FinalizeTimeoutMs: 100,
+        finalizationMarginMs: 100,
+      },
+    );
+    const metadata = JSON.parse(result?.metadata ?? "{}") as {
+      cursorTailState?: string;
+      cursorTailError?: string;
+      breakerOutcomesRecorded?: number;
+    };
+
+    expect(metadata).toMatchObject({
+      cursorTailState: "incomplete",
+      cursorTailError: "Failed to record deferred reserve tail state: forced deferred-tail batch failure",
+    });
+    expect(metadata.breakerOutcomesRecorded).toBeGreaterThan(0);
+    expect(recordOutcomeSafeMock).toHaveBeenCalled();
+  });
+
   it("defers when remaining budget covers the adapter timeout but not finalize margin", async () => {
     const adapterFetch = mockAdapterRegistry(async () => ({
       slices: [{ name: "Mock Farm", pct: 100, risk: "low" as const }],

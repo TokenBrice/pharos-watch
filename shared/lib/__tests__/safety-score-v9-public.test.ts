@@ -166,6 +166,7 @@ function fixture(assetId: string, options: FixtureOptions): V9PublicCardProjecti
               score: pillars.backing,
               normalizedWeight: 1,
               weightedScore: pillars.backing,
+              effectiveWeight: 1,
               observationState: "known",
               provenance: "curated",
               evidenceRefIds: [],
@@ -398,6 +399,20 @@ describe("Safety Score v9 public projection", () => {
     ]);
     expect(response.resultDigest).toMatch(/^[a-f0-9]{64}$/);
     expect(response.cards.every((card) => card.scoreTrace.schemaVersion === 3)).toBe(true);
+  });
+
+  it("rejects a backing waterfall that does not reconcile to the evaluated pillar", () => {
+    const input = fixture("bad-backing-waterfall", { score: 91.8, grade: "A+" });
+    input.backing = {
+      ...input.backing!,
+      contributions: input.backing!.contributions.map((contribution) => ({
+        ...contribution,
+        effectiveWeight: 0.5,
+      })),
+    };
+    expect(() => projectSafetyScoreV9Card(input)).toThrow(
+      "backing waterfall does not reconcile to its evaluated pillar",
+    );
   });
 
   it("publishes the applied role limit with its exact evidence and failure domains", () => {

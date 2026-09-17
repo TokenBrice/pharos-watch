@@ -10,6 +10,12 @@ import {
 } from "@shared/lib/cron-jobs";
 import { SCHEDULED_SLOT_PLANS } from "@shared/lib/scheduled-runner-registry";
 import { isDirectRun } from "../lib/smoke-runtime.mjs";
+import { parseAssignments } from "../lib/wrangler-toml.mjs";
+import type {
+  CronGrowthTopologyPolicyForCheck,
+  CronJobDefinitionForCheck,
+  ScheduledSlotPlanForCheck,
+} from "../lib/cron-check-types.mts";
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "../..");
 
@@ -21,24 +27,6 @@ const SOURCE_OWNER = {
   slotPlans: "shared/lib/scheduled-runner-registry.ts [SCHEDULED_SLOT_PLANS]",
 } as const;
 
-interface CronJobDefinitionForCheck {
-  job: string;
-}
-
-interface CronConnectionBudgetEntryForCheck {
-  job: string;
-}
-
-interface ScheduledSlotPlanForCheck {
-  schedule?: string;
-  triggerSchedules?: readonly string[];
-  jobChains: readonly (readonly string[])[];
-  budgetOnlyJobs?: readonly string[];
-}
-
-interface CronGrowthTopologyPolicyForCheck {
-  maxPhysicalTriggersBeforeRebalance: number;
-}
 
 export interface CronScheduleSyncReport {
   physicalTriggerLimitExceeded: boolean;
@@ -61,12 +49,14 @@ export interface CronScheduleSyncReport {
 }
 
 export function parseWranglerCronTriggers(wranglerToml: string): string[] {
-  const cronMatches = wranglerToml.match(/crons\s*=\s*\[([\s\S]*?)\]/);
-  if (!cronMatches) {
-    throw new Error("Could not find crons array in wrangler.toml");
+  const cronAssignments = parseAssignments(wranglerToml).filter(
+    ({ key, section }) => key === "crons" && section === "triggers",
+  );
+  if (cronAssignments.length !== 1) {
+    throw new Error("Could not find exactly one [triggers].crons array in wrangler.toml");
   }
 
-  return cronMatches[1].match(/"([^"]+)"/g)?.map((s) => s.replace(/"/g, "")) ?? [];
+  return [...cronAssignments[0].value.matchAll(/"([^"]+)"/g)].map((match) => match[1]);
 }
 
 function keyByExpression(entries: Iterable<readonly [string, string]>): Map<string, string> {
@@ -101,7 +91,7 @@ function getCronScheduleByKey(cronSchedules: Readonly<Record<string, string>>, k
 }
 
 export function evaluateCronScheduleSync(input: {
-  cronConnectionBudgetEntries?: readonly CronConnectionBudgetEntryForCheck[];
+  cronConnectionBudgetEntries?: readonly CronJobDefinitionForCheck[];
   cronJobDefinitions?: readonly CronJobDefinitionForCheck[];
   cronSchedules?: Record<string, string>;
   cronTriggerSchedules?: Readonly<Record<string, readonly string[]>>;

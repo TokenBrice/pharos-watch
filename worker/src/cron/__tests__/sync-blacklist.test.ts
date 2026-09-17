@@ -1048,7 +1048,7 @@ describe("syncBlacklist", () => {
       const meta = JSON.parse(result.metadata);
 
       expect(meta.apiErrors).toBe(1);
-      expect(meta.eventsFetched).toBe(0);
+      expect(meta.eventsFetched).toBe(1);
       const finalization = findStateFinalization(db, "ethereum-0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48");
       expect(finalization?.binds[0]).toBe(0);
       expect(finalization?.binds[11]).toBe("missing_topic");

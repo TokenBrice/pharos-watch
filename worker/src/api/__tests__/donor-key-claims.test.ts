@@ -574,4 +574,29 @@ describe("POST /api/donor-key-claims", () => {
     expect(response.status).toBe(503);
     expect(countApiKeys()).toBe(0);
   });
+
+  it("loads with a malformed ledger and fails only the donor claim route with 503", async () => {
+    vi.resetModules();
+    vi.doMock("@shared/data/funding/donations.json", () => ({
+      default: { last_updated_at: "invalid", donations: [] },
+    }));
+    try {
+      // Dynamic imports are required here to exercise module evaluation after replacing the ledger asset.
+      const malformedLedgerModule = await import("../donor-key-claims");
+      const response = await malformedLedgerModule.handleDonorKeyClaim(
+        db,
+        new Request(CLAIM_URL, { method: "POST" }),
+        { rateLimiter: allowLimiter, pepper: PEPPER },
+        NOW_SEC,
+      );
+
+      expect(response.status).toBe(503);
+      await expect(response.json()).resolves.toEqual({
+        error: "Supporter key claims are temporarily unavailable",
+      });
+      await expect(import("../health")).resolves.toHaveProperty("handleHealth");
+    } finally {
+      vi.doUnmock("@shared/data/funding/donations.json");
+    }
+  });
 });

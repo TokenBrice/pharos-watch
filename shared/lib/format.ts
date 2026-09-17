@@ -266,6 +266,14 @@ export function formatIsoTimestamp(seconds: number): string {
   return new Date(seconds * 1000).toISOString();
 }
 
+/** Format an epoch-seconds timestamp for display with a stable locale and UTC timezone. */
+export function formatDateTimeLocale(epochSec: number): string {
+  if (!Number.isFinite(epochSec)) return "N/A";
+  const date = new Date(epochSec * 1000);
+  if (!Number.isFinite(date.getTime())) return "N/A";
+  return date.toLocaleString("en-US", { timeZone: "UTC" });
+}
+
 export function formatEventDate(timestamp: number): string {
   if (!Number.isFinite(timestamp)) return "N/A";
   const date = new Date(timestamp * 1000);
@@ -444,12 +452,12 @@ export function formatDecimal(value: number, minimumFractionDigits = 2, maximumF
   return formatter.format(value);
 }
 
-/** Format a percentage to fixed decimals with % suffix. Returns "-" for nullish. */
+/** Format a percentage-point value (0-100 scale) to fixed decimals with % suffix. Returns "-" for nullish. */
 export function formatPercent(value: number | null | undefined, decimals = 2): string {
   return isFiniteNumber(value) ? `${value.toFixed(decimals)}%` : "-";
 }
 
-/** Format a signed percentage with +/- prefix and % suffix. Returns `nullFallback` (default "-") for nullish. */
+/** Format a signed percentage-point value (0-100 scale) with +/- prefix and % suffix. Returns `nullFallback` (default "-") for nullish. */
 export function formatSignedPercent(value: number | null | undefined, decimals = 2, nullFallback = "-"): string {
   if (!isFiniteNumber(value)) return nullFallback;
   const sign = value > 0 ? "+" : "";
@@ -491,7 +499,7 @@ export function formatScoreTrimmed(value: number | null | undefined): string {
 
 type ChartDateFormat = "short" | "short-year" | "month-year" | "compact" | "with-time" | "long" | "full";
 
-/** Centralized date formatter for chart axes and tooltips. */
+/** Centralized UTC date formatter for chart axes and tooltips. */
 export function formatChartDate(
   timestamp: number | string,
   format: ChartDateFormat = "short",
@@ -501,14 +509,14 @@ export function formatChartDate(
   if (isNaN(d.getTime())) return String(timestamp);
   switch (format) {
     case "short":
-      return d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+      return d.toLocaleDateString("en-US", { month: "short", day: "numeric", timeZone: "UTC" });
     case "short-year":
-      return d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+      return d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric", timeZone: "UTC" });
     case "month-year":
-      return d.toLocaleDateString("en-US", { month: "short", year: "numeric" });
+      return d.toLocaleDateString("en-US", { month: "short", year: "numeric", timeZone: "UTC" });
     case "compact": {
-      const month = d.toLocaleDateString("en-US", { month: "short" });
-      const year = d.toLocaleDateString("en-US", { year: "2-digit" });
+      const month = d.toLocaleDateString("en-US", { month: "short", timeZone: "UTC" });
+      const year = d.toLocaleDateString("en-US", { year: "2-digit", timeZone: "UTC" });
       return `${month} '${year}`;
     }
     case "with-time":
@@ -517,11 +525,12 @@ export function formatChartDate(
         day: "numeric",
         hour: "numeric",
         hour12: true,
+        timeZone: "UTC",
       });
     case "long":
-      return d.toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" });
+      return d.toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric", timeZone: "UTC" });
     case "full":
-      return d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric", hour: "numeric", minute: "2-digit" });
+      return d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric", hour: "numeric", minute: "2-digit", timeZone: "UTC" });
   }
 }
 

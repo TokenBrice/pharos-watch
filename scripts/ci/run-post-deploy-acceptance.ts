@@ -8,7 +8,7 @@ import {
   selectPostDeployProbes,
   summarizePostDeployAcceptance,
 } from "../lib/post-deploy-acceptance.mts";
-import { runAsCli } from "../lib/source-files.mts";
+import { runDirectCli } from "../lib/cli-args.mjs";
 import { collectWorkerHttpProbes, fetchJsonProbe } from "../lib/worker-http-probes.mts";
 
 export const PAGES_SHELL_URL = "https://stablecoin-dashboard.pages.dev";
@@ -112,7 +112,7 @@ export async function runPostDeployAcceptanceCli(
   return run.exitCode;
 }
 
-runAsCli(import.meta.url, () => {
+runDirectCli(import.meta.url, () => {
   void runPostDeployAcceptanceCli().then(
     (exitCode) => {
       process.exitCode = exitCode;

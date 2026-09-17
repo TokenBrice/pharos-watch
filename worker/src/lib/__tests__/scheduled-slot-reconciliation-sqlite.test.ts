@@ -295,7 +295,7 @@ describe("scheduled slot reconciliation against the current D1 schema", () => {
       {
         job: "cron-slot-sweeper",
         status: "error",
-        error: "Error: sweep failed",
+        error: "sweep failed",
       },
     ]);
     expect(
@@ -309,7 +309,7 @@ describe("scheduled slot reconciliation against the current D1 schema", () => {
       {
         job: "cron-slot-sweeper",
         outcome: "error",
-        error: "Error: sweep failed",
+        error: "sweep failed",
       },
     ]);
   });

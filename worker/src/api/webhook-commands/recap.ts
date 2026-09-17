@@ -1,4 +1,3 @@
-import { nextIanaLocalHourDueAt } from "@shared/lib/iana-local-time";
 import { TELEGRAM_RECAP_DEFAULT_DELIVERY_HOUR_LOCAL } from "@shared/lib/telegram-recap-policy";
 import {
   TELEGRAM_RECAP_PUBLIC_ROLLOUT_POLICY,
@@ -7,8 +6,9 @@ import {
 import { escapeHtml } from "../../lib/telegram";
 import { recordTelegramUsageEvent } from "../../lib/telegram/usage-analytics";
 import {
+  applyRecapPreference,
   getTelegramRecapPreference,
-  setTelegramRecapPreference,
+  type TelegramRecapPreferenceMutationOptions,
 } from "../../lib/telegram/recap-store";
 import { loadSubscriberByChat, unixNow } from "../telegram-webhook-store";
 import {
@@ -121,45 +121,38 @@ export const handleRecap: WebhookCommandHandler = async (ctx, args) => {
     return;
   }
 
-  // Derive the local schedule and generation fence from the same subscriber
-  // snapshot. A timezone or watchlist mutation after this point must make the
-  // recap write fail instead of committing a stale schedule.
   const timezone = subscriber.timezone ?? null;
-  const expectedPreferenceGeneration = Number(subscriber.preference_generation ?? 0);
-  if (enabled && timezone == null) {
+  const nowSec = ctx.operationNowSec ?? unixNow();
+  let operation: TelegramRecapPreferenceMutationOptions | null = null;
+  const result = await applyRecapPreference(ctx.db, {
+    chatId: ctx.chatId,
+    subscriber,
+    enabled,
+    deliveryHourLocal,
+    nowSec,
+    mutationAlreadyApplied: ctx.wasMutationApplied,
+  }, async (scheduled) => {
+    operation = await prepareCommandMutation(ctx, "recap", {
+      enabled,
+      deliveryHourLocal,
+      timezone: scheduled.timezone,
+      nextDueAt: scheduled.nextDueAt,
+    });
+    return operation;
+  });
+  if (result.kind === "timezone-required") {
     await ctx.replyToChat("Set a timezone first with <code>/timezone Europe/Paris</code>, then enable <code>/recap on</code>.");
     return;
   }
-  const nowSec = ctx.operationNowSec ?? unixNow();
-  const nextDueMs = enabled && timezone != null
-    ? nextIanaLocalHourDueAt(nowSec * 1000, timezone, deliveryHourLocal)
-    : null;
-  if (enabled && nextDueMs == null) {
+  if (result.kind === "schedule-failed") {
     await ctx.replyToChat("That timezone cannot schedule a daily recap right now. Set it again with <code>/timezone</code>.");
     return;
   }
-
-  const operation = await prepareCommandMutation(ctx, "recap", {
-    enabled,
-    deliveryHourLocal,
-    timezone,
-    nextDueAt: nextDueMs == null ? null : Math.floor(nextDueMs / 1000),
-  });
-  if (!ctx.wasMutationApplied) {
-    const applied = await setTelegramRecapPreference(ctx.db, {
-      chatId: ctx.chatId,
-      enabled,
-      deliveryHourLocal,
-      nextDueAt: nextDueMs == null ? null : Math.floor(nextDueMs / 1000),
-      nowSec,
-      expectedPreferenceGeneration,
-    }, operation);
-    if (!applied) {
-      await ctx.replyToChat("Could not update the daily recap. Please try again.");
-      return;
-    }
-    confirmCommandMutation(ctx, operation);
+  if (result.kind === "stale" || operation == null) {
+    await ctx.replyToChat("Could not update the daily recap. Please try again.");
+    return;
   }
+  if (!ctx.wasMutationApplied) confirmCommandMutation(ctx, operation);
   await recordTelegramUsageEvent(ctx.db, {
     eventType: "recap_change",
     actionDetail: parsed.kind === "time" ? "hour" : enabled ? "enabled" : "disabled",

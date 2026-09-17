@@ -92,4 +92,20 @@ describe("DEWSBadge", () => {
     // Only velocity is available; supply should not be the top signal
     expect(el.getAttribute("title")).toContain("velocity");
   });
+
+  it("uses the collapsed CALM+WATCH span before canonical alert and warning edges", () => {
+    render(<DEWSBadge score={36} band="ALERT" showBandStrip />);
+    const strip = screen.getByRole("img", { name: "DEWS score 36 of 100" });
+    const bands = Array.from(strip.querySelectorAll("rect")).slice(0, 4);
+
+    expect(bands).toHaveLength(4);
+    expect(Number(bands[0]?.getAttribute("x"))).toBe(0);
+    expect(Number(bands[0]?.getAttribute("width"))).toBeCloseTo(21);
+    expect(Number(bands[1]?.getAttribute("x"))).toBeCloseTo(21.6);
+    expect(Number(bands[1]?.getAttribute("width"))).toBeCloseTo(11.4);
+    expect(Number(bands[2]?.getAttribute("x"))).toBeCloseTo(33.6);
+    expect(Number(bands[2]?.getAttribute("width"))).toBeCloseTo(11.4);
+    expect(Number(bands[3]?.getAttribute("x"))).toBeCloseTo(45.6);
+    expect(Number(bands[3]?.getAttribute("width"))).toBeCloseTo(14.4);
+  });
 });

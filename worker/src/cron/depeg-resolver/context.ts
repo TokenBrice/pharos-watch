@@ -84,6 +84,7 @@ export function emptyDdrLineage(nowSec: number): DdrLineage {
     incidentCount: 0,
     coinCount: 0,
     quarantinedCoins: 0,
+    trainingRowsTruncated: false,
   };
 }
 
@@ -215,7 +216,7 @@ export async function loadDdrContext(
     .prepare(
       "SELECT stablecoin_id, direction, peak_deviation_bps, started_at, ended_at, recovery_price, close_reason " +
         "FROM depeg_events WHERE ended_at IS NOT NULL AND started_at >= ? " +
-        `AND direction IN (${placeholders(directions.length)}) LIMIT ${HISTORICAL_ROW_CAP}`,
+        `AND direction IN (${placeholders(directions.length)}) ORDER BY started_at ASC, id ASC LIMIT ${HISTORICAL_ROW_CAP}`,
     )
     .bind(windowStart, ...directions)
     .all<{
@@ -228,6 +229,7 @@ export async function loadDdrContext(
       close_reason: string | null;
     }>());
   const histRows = histResult.results ?? [];
+  const trainingRowsTruncated = histRows.length === HISTORICAL_ROW_CAP;
   const historical = histRows.map((r) => ({
     stablecoinId: r.stablecoin_id,
     direction: r.direction === "above" ? "above" as const : "below" as const,
@@ -501,6 +503,7 @@ export async function loadDdrContext(
         incidentCount: incidents.length,
         coinCount: new Set(incidents.map((i) => i.stablecoinId)).size,
         quarantinedCoins: quarantined.size,
+        trainingRowsTruncated,
       },
     },
   };

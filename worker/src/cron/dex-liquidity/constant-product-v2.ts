@@ -1,7 +1,6 @@
 import {
   canonicalExitRouteAssetKey,
   canonicalExitRouteChain,
-  canonicalExitRouteScopedId,
 } from "@shared/lib/exit-route-identity";
 import type { DexAmmExecutionModel, DexExecutionCapabilityGate } from "@shared/types/market";
 import { decodeAbiParameters, keccak256 } from "viem/utils";
@@ -15,6 +14,13 @@ import {
   type EvmMulticall3Result,
 } from "../../lib/evm-rpc";
 import { DECIMALS_SELECTOR, encodeAddress, encodeUint256 } from "../../lib/evm-selectors";
+import {
+  asEvmCaptureAddress,
+  decodeEvmCaptureAddress,
+  decodeEvmCaptureBool,
+  decodeEvmCaptureUint256,
+  mapEvmCaptureResults,
+} from "./evm-capture-helpers";
 import { buildPoolFingerprint, normalizeProtocol } from "./pool-helpers";
 import { resolveUniqueTrackedTokenIndex } from "./scoring-helpers";
 import type { EvmV2ExecutionCandidate, LiquidityMetrics, PoolEntry, SymbolLookups } from "./types";
@@ -103,10 +109,6 @@ const DEFAULT_DEPENDENCIES: EvmV2ExecutionDependencies = {
   hashCode: keccak256,
 };
 
-function asEvmAddress(chain: string, value: string | null | undefined): `0x${string}` | null {
-  const normalized = canonicalExitRouteScopedId(chain, value ?? "");
-  return /^0x[a-f0-9]{40}$/.test(normalized) ? (normalized as `0x${string}`) : null;
-}
 
 function isConcentratedOrStableFamily(value: string): boolean {
   return /(v3|v4|concentrated|\bclmm\b|\bcg-cl-|stable)/.test(value.toLowerCase());
@@ -148,9 +150,9 @@ export function buildEvmV2ExecutionCandidate(input: {
   }
 
   if (input.tokenAddresses.length !== 2) return null;
-  const poolAddress = asEvmAddress(chain, input.poolAddress);
-  const token0 = asEvmAddress(chain, input.tokenAddresses[0]);
-  const token1 = asEvmAddress(chain, input.tokenAddresses[1]);
+  const poolAddress = asEvmCaptureAddress(chain, input.poolAddress);
+  const token0 = asEvmCaptureAddress(chain, input.tokenAddresses[0]);
+  const token1 = asEvmCaptureAddress(chain, input.tokenAddresses[1]);
   if (!poolAddress || !token0 || !token1 || token0 === token1) return null;
 
   const symbols = input.tokenSymbols?.length === 2 ? input.tokenSymbols.map((symbol) => symbol.trim()) : [];
@@ -272,26 +274,13 @@ function gateReference(reference: CandidateReference, reason: V2GateReason): voi
 }
 
 function decodeAddressResult(result: EvmMulticall3Result | undefined): `0x${string}` | null {
-  if (!result?.success || !/^0x[0-9a-fA-F]{64}$/.test(result.returnData)) return null;
-  const address = `0x${result.returnData.slice(-40).toLowerCase()}` as `0x${string}`;
-  return /^0x0{40}$/.test(address) ? null : address;
+  const address = decodeEvmCaptureAddress("ethereum", result);
+  return address && !/^0x0{40}$/.test(address) ? address : null;
 }
 
 function decodeDecimalsResult(result: EvmMulticall3Result | undefined): number | null {
-  if (!result?.success || !/^0x[0-9a-fA-F]{64}$/.test(result.returnData)) return null;
-  const value = BigInt(result.returnData);
-  return value <= 255n ? Number(value) : null;
-}
-
-function decodeBoolResult(result: EvmMulticall3Result | undefined): boolean | null {
-  if (!result?.success || !/^0x[0-9a-fA-F]{64}$/.test(result.returnData)) return null;
-  const value = BigInt(result.returnData);
-  return value === 0n ? false : value === 1n ? true : null;
-}
-
-function decodeUint256Result(result: EvmMulticall3Result | undefined): bigint | null {
-  if (!result?.success || !/^0x[0-9a-fA-F]{64}$/.test(result.returnData)) return null;
-  return BigInt(result.returnData);
+  const value = decodeEvmCaptureUint256(result);
+  return value != null && value <= 255n ? Number(value) : null;
 }
 
 function decodeReservesResult(result: EvmMulticall3Result | undefined): [bigint, bigint] | null {
@@ -309,9 +298,6 @@ function decodeReservesResult(result: EvmMulticall3Result | undefined): [bigint,
   }
 }
 
-function resultMap(results: readonly EvmMulticall3Result[]): Map<string, EvmMulticall3Result> {
-  return new Map(results.map((result) => [result.label, result]));
-}
 
 function parseVerifiedPairState(
   probe: PairProbe,
@@ -514,24 +500,20 @@ async function enrichDeployment(input: {
         for (const reference of probe.references) gateReference(reference, "deployment-code-mismatch");
       return;
     }
-  }
-
-  if (input.deployment.binding === "aerodrome-volatile") {
-    const deploymentCalls = [
-      {
-        label: "v2-factory-implementation",
-        target: input.deployment.factoryAddress,
-        callData: AERODROME_IMPLEMENTATION_SELECTOR,
-      },
-      {
-        label: "v2-factory-paused",
-        target: input.deployment.factoryAddress,
-        callData: AERODROME_IS_PAUSED_SELECTOR,
-      },
-    ];
     const rawDeploymentResults = await input.dependencies.fetchMulticall(
       input.deployment.chain,
-      deploymentCalls,
+      [
+        {
+          label: "v2-factory-implementation",
+          target: input.deployment.factoryAddress,
+          callData: AERODROME_IMPLEMENTATION_SELECTOR,
+        },
+        {
+          label: "v2-factory-paused",
+          target: input.deployment.factoryAddress,
+          callData: AERODROME_IS_PAUSED_SELECTOR,
+        },
+      ],
       blockNumber,
       rpcOptions,
     );
@@ -540,14 +522,14 @@ async function enrichDeployment(input: {
         for (const reference of probe.references) gateReference(reference, "incomplete-exact-capture");
       return;
     }
-    const deploymentResults = resultMap(rawDeploymentResults);
+    const deploymentResults = mapEvmCaptureResults(rawDeploymentResults);
     const implementation = decodeAddressResult(deploymentResults.get("v2-factory-implementation"));
     if (implementation !== input.deployment.expectedImplementationAddress) {
       for (const probe of input.probes)
         for (const reference of probe.references) gateReference(reference, "deployment-code-mismatch");
       return;
     }
-    const paused = decodeBoolResult(deploymentResults.get("v2-factory-paused"));
+    const paused = decodeEvmCaptureBool(deploymentResults.get("v2-factory-paused"));
     if (paused == null || paused) {
       const reason: V2GateReason = paused ? "paused-or-swap-disabled" : "incomplete-exact-capture";
       for (const probe of input.probes) for (const reference of probe.references) gateReference(reference, reason);
@@ -600,20 +582,20 @@ async function enrichDeployment(input: {
         for (const reference of probe.references) gateReference(reference, "incomplete-exact-capture");
       continue;
     }
-    const results = resultMap(rawResults);
+    const results = mapEvmCaptureResults(rawResults);
 
     for (let batchIndex = 0; batchIndex < probes.length; batchIndex++) {
       const index = startIndex + batchIndex;
       const probe = probes[batchIndex]!;
       let feeRate: number;
       if (input.deployment.binding === "aerodrome-volatile") {
-        const stable = decodeBoolResult(results.get(`v2-${index}-stable`));
+        const stable = decodeEvmCaptureBool(results.get(`v2-${index}-stable`));
         if (stable == null || stable) {
           const reason: V2GateReason = stable ? "unsupported-invariant" : "incomplete-exact-capture";
           for (const reference of probe.references) gateReference(reference, reason);
           continue;
         }
-        const feeBps = decodeUint256Result(results.get(`v2-${index}-fee`));
+        const feeBps = decodeEvmCaptureUint256(results.get(`v2-${index}-fee`));
         if (feeBps == null || feeBps > AERODROME_MAX_FEE_BPS) {
           for (const reference of probe.references) gateReference(reference, "incomplete-exact-capture");
           continue;

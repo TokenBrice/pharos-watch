@@ -187,7 +187,7 @@ describe("api contract validation policy", () => {
       }),
     );
 
-    const result = await apiFetchWithMeta("/api/chains", z.object({ ok: z.boolean() }), undefined, 600, "warn");
+    const result = await apiFetchWithMeta("/api/chains", z.object({ ok: z.boolean() }), undefined, "warn");
 
     expect(result.meta).toEqual({
       updatedAt: 200,
@@ -650,7 +650,7 @@ describe("api contract validation policy", () => {
       Warning: '110 - "Response is stale (11000s old, max 900s)"',
     }));
 
-    const result = await apiFetchWithMeta("/api/daily-digest", z.object({ ok: z.boolean() }), undefined, 900, "warn");
+    const result = await apiFetchWithMeta("/api/daily-digest", z.object({ ok: z.boolean() }), undefined, "warn");
     expect(result.meta?.warning).toContain("Response is stale");
     expect(result.meta?.status).toBe("fresh");
   });
@@ -660,7 +660,7 @@ describe("api contract validation policy", () => {
       jsonResponse({ ok: true }, 200, { Warning: '110 - "Response is degraded"' }),
     );
 
-    const result = await apiFetchWithMeta("/api/daily-digest", z.object({ ok: z.boolean() }), undefined, 900, "warn");
+    const result = await apiFetchWithMeta("/api/daily-digest", z.object({ ok: z.boolean() }), undefined, "warn");
 
     expect(result.meta).toEqual({
       status: "degraded",
@@ -709,7 +709,7 @@ describe("api contract validation policy", () => {
       }, 200, { Warning: '110 - "Response is degraded (20s old, max 600s)"' }),
     );
 
-    const result = await apiFetchWithMeta("/api/chains", z.object({ ok: z.boolean() }), undefined, 600, "warn");
+    const result = await apiFetchWithMeta("/api/chains", z.object({ ok: z.boolean() }), undefined, "warn");
 
     expect(result.meta).toEqual({
       updatedAt: 200,
@@ -735,7 +735,7 @@ describe("api contract validation policy", () => {
       }, 200, { Warning: '199 - "Latest sync-dex-liquidity run shows medium quality drift"' }),
     );
 
-    const result = await apiFetchWithMeta("/api/dex-liquidity", z.object({ ok: z.boolean() }), undefined, 3600, "warn");
+    const result = await apiFetchWithMeta("/api/dex-liquidity", z.object({ ok: z.boolean() }), undefined, "warn");
 
     expect(result.meta).toEqual({
       updatedAt: 200,
@@ -772,7 +772,6 @@ describe("api contract validation policy", () => {
         }),
       }),
       undefined,
-      3600,
     );
 
     expect(result.data.warning).toContain("freshness lookup failed");
@@ -788,7 +787,7 @@ describe("api contract validation policy", () => {
       jsonResponse({ ok: true }, 200, { "X-Data-Age": "1122" }),
     );
 
-    const result = await apiFetchWithMeta("/api/dex-liquidity", z.object({ ok: z.boolean() }), undefined, 1800);
+    const result = await apiFetchWithMeta("/api/dex-liquidity", z.object({ ok: z.boolean() }), undefined);
     expect(result.meta?.status).toBe("fresh");
     expect(result.meta?.ageSeconds).toBe(1122);
   });
@@ -823,7 +822,7 @@ describe("api contract validation policy", () => {
       jsonResponse({ ok: true }, 200, { Date: "Tue, 23 Jun 2026 10:00:00 GMT", "X-Data-Age": "30" }),
     );
 
-    const result = await apiFetchWithMeta("/api/dex-liquidity", z.object({ ok: z.boolean() }), undefined, 1800);
+    const result = await apiFetchWithMeta("/api/dex-liquidity", z.object({ ok: z.boolean() }), undefined);
 
     expect(result.meta).toEqual({
       updatedAt: Date.parse("2026-06-23T09:59:30.000Z") / 1000,

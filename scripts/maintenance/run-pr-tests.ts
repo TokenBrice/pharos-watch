@@ -11,6 +11,7 @@ import {
   type VitestJsonReport,
 } from "../lib/shard-timings.mts";
 import { hasVitestOption, withCiVitestArgs } from "../lib/vitest-ci-args.mts";
+import { runDirectCli } from "../lib/cli-args.mjs";
 
 interface RunPrTestsOptions {
   argv?: readonly string[];
@@ -97,6 +98,6 @@ export function runPrTests({
   return result.status ?? 1;
 }
 
-if (import.meta.url === `file://${process.argv[1]}`) {
-  process.exit(runPrTests());
-}
+runDirectCli(import.meta.url, () => {
+  process.exitCode = runPrTests();
+});

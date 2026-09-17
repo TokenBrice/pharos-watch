@@ -202,6 +202,10 @@ export function buildOpenApiResponseSchemas(
     reused: "ref",
     metadata: registry,
     uri: (id) => `${OPENAPI_SCHEMA_PREFIX}${id}`,
+    override: ({ zodSchema, jsonSchema }) => {
+      const description = z.globalRegistry.get(zodSchema)?.description;
+      if (description !== undefined) jsonSchema.description = description;
+    },
   });
 
   const sharedDefinitions = (schemas.__shared as { $defs?: Record<string, unknown> } | undefined)?.$defs ?? {};

@@ -44,6 +44,12 @@ export function parseBoundedDecimals(value: unknown): number | null {
   if (typeof value !== "number") return null;
   return Number.isSafeInteger(value) && value >= 0 && value <= MAX_DECIMALS ? value : null;
 }
+export function decimalFromDigitString(value: unknown, decimals: number): number | null {
+  if (typeof value !== "string" || !/^\d+$/.test(value.trim())) return null;
+  const parsed = decimalNumberFromBigInt(BigInt(value), decimals);
+  return Number.isFinite(parsed) ? parsed : null;
+}
+
 
 export function validateDecimals(value: unknown, context = "token decimals"): number {
   const decimals = parseBoundedDecimals(value);

@@ -3,6 +3,7 @@
 import { matchesGlob } from "node:path";
 import { GENERATED_ARTIFACT_REGISTRY } from "../lib/automation-registry.mjs";
 import { collectChangedFiles, collectStagedFiles, parseChangedFileArgs } from "../lib/changed-files.mts";
+import { runDirectCli } from "../lib/cli-args.mjs";
 
 interface GeneratedArtifactDefinition {
   id: string;
@@ -45,6 +46,6 @@ export function runSelector(argv: readonly string[] = process.argv.slice(2), env
   return selectChangedGeneratedArtifactIds(staged ? collectStagedFiles() : collectChangedFiles({ base, head }));
 }
 
-if (import.meta.url === `file://${process.argv[1]}`) {
+runDirectCli(import.meta.url, () => {
   process.stdout.write(`${runSelector().join(",")}\n`);
-}
+});

@@ -36,7 +36,6 @@ export function buildHomepageCriticalViewModel(args: {
 
   return {
     pegScores: tableInputs.pegScores,
-    pegRates: tableInputs.pegRates,
     filteredRowCount,
   };
 }

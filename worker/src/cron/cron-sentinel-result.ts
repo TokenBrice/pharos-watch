@@ -20,6 +20,30 @@ const SOURCES_BY_MODE: Record<CronSentinelMode, readonly CronSentinelRuleSource[
   "reserve-post-sync": ["reserve-post-sync"],
 };
 
+const SOURCE_INTERVAL_SEC: Record<CronSentinelRuleSource, number> = {
+  freshness: 15 * 60,
+  "digest-publication": 15 * 60,
+  growth: 24 * 60 * 60,
+  duration: 24 * 60 * 60,
+  "repair-debt": 24 * 60 * 60,
+  turnover: 30 * 60,
+  "reserve-post-sync": 4 * 60 * 60,
+};
+const SOURCE_STATE_MAX_AGE_SEC = 48 * 60 * 60;
+const SOURCE_STATE_INTERVAL_MULTIPLIER = 2;
+
+function isRetainedSourceStateFresh(
+  source: CronSentinelRuleSource,
+  updatedAt: number,
+  nowSec: number,
+): boolean {
+  const maxAgeSec = Math.min(
+    SOURCE_STATE_MAX_AGE_SEC,
+    SOURCE_INTERVAL_SEC[source] * SOURCE_STATE_INTERVAL_MULTIPLIER,
+  );
+  return Number.isFinite(updatedAt) && nowSec - updatedAt <= maxAgeSec;
+}
+
 function parseMetadata(metadata: string | undefined): unknown {
   if (!metadata) return null;
   try {
@@ -126,6 +150,7 @@ export async function runCronSentinelSources(
   for (const source of allSources) {
     const row = saved.get(`cron-sentinel:source:${source}`);
     if (!row) continue;
+    if (!isRetainedSourceStateFresh(source, row.updatedAt, nowSec)) continue;
     let result: CronResult;
     try {
       result = JSON.parse(row.value) as CronResult;

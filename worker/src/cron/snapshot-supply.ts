@@ -82,6 +82,7 @@ export async function snapshotSupply(
     nowSec: options.nowSec,
     requiredActiveIds: configuredRequiredActiveIds,
     publicationWaivers,
+    maxCacheAgeSec: CACHE_MAX_AGE_SEC,
     assertContinuation: () => throwIfAborted(signal),
     deriveCoverage: (payload, requiredActiveIds, snapshotDate) => {
       const requiredActiveIdSet = new Set(requiredActiveIds);
@@ -173,16 +174,6 @@ export async function snapshotSupply(
     });
   }
 
-  // Verify cache freshness — skip once the cache has missed two producer
-  // intervals, to avoid snapshotting outdated data
-  if (cacheAge > CACHE_MAX_AGE_SEC) {
-    logWorkerEventArgs("handler", "warn", `[snapshot-supply] Cache is ${cacheAge}s old (>${CACHE_MAX_AGE_SEC}s), skipping snapshot`);
-    return createCronResult({
-      status: "degraded",
-      itemCount: 0,
-      metadata: { reason: "cache_stale", cacheAgeSec: cacheAge },
-    });
-  }
   if (cacheAge > CACHE_DEGRADED_AGE_SEC) {
     logWorkerEventArgs("handler", "warn", `[snapshot-supply] Cache is ${cacheAge}s old (>${CACHE_DEGRADED_AGE_SEC}s), proceeding with degraded freshness`);
   }

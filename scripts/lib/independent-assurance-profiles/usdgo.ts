@@ -1,9 +1,5 @@
-import { linePattern, AMOUNT, type CompilerProfile } from "./shared";
+import { linePattern, scheduleAmountPattern, type CompilerProfile } from "./shared";
 
-function usdgoScheduleAmountPattern(schedule: string, label: string): RegExp {
-  // eslint-disable-next-line security/detect-non-literal-regexp -- schedule/label are fixed literals from the reviewed extraction tables below.
-  return new RegExp(`${schedule}[\\s\\S]*?^\\s*${label}\\s+\\$?${AMOUNT}\\s*$`, "im");
-}
 
 export const PROFILE: CompilerProfile = {
   product: "USDGO",
@@ -51,7 +47,7 @@ export const PROFILE: CompilerProfile = {
     { label: "USDGO Morph liabilities", expected: "0", pattern: /^\s*a\.\s+Total USDGO natively minted tokens\s+[0-9][0-9,]*(?:\.[0-9]+)?\s+([0-9][0-9,]*(?:\.[0-9]+)?|-)\s+[0-9][0-9,]*(?:\.[0-9]+)?\s*$/im, },
     // eslint-disable-next-line security/detect-unsafe-regex -- anchored per-line pattern over an offline reviewed PDF text dump; bounded digit runs, no nested quantifier ambiguity.
     { label: "USDGO redeemable token total", expected: "1112640495", pattern: /^\s*Total USDGO redeemable tokens outstanding\s+\$?([0-9][0-9,]*(?:\.[0-9]+)?)(?:\s+\(Schedule I\))?\s*$/im },
-    { label: "USDGO reserve asset total", expected: "1116301304", pattern: usdgoScheduleAmountPattern("Schedule II:", "Total") },
+    { label: "USDGO reserve asset total", expected: "1116301304", pattern: scheduleAmountPattern("Schedule II:", "Total") },
   ],
   reportedAssetTotal: "1116301304",
   computedAssetTotal: "1116301304",

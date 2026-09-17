@@ -1,7 +1,6 @@
 import { createHash } from "node:crypto";
 import { existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
-import { gunzipSync } from "node:zlib";
 
 import {
   assertCliUsage,
@@ -26,8 +25,8 @@ import {
   CAPTURE_SUMMARY_SUFFIX,
   capturePathFromSummary,
   parseMechanismCaptureSummary,
+  resolveCaptureBody,
 } from "../lib/mechanism-measurement/capture-summary";
-import { createR2MeasurementsClient } from "../lib/r2-measurements-client";
 import type { R2MeasurementsClient } from "../lib/r2-measurements-client";
 
 const DEFAULT_OUT_DIR = "shared/data/safety-score-v9/mechanism-measurements";
@@ -210,49 +209,6 @@ async function fetchRawObservation(
   };
 }
 
-const DEFAULT_CAPTURE_CACHE_DIR = resolve(process.cwd(), "agents/.cache/measurements");
-
-function captureHash(bytes: Uint8Array): string {
-  return createHash("sha256").update(bytes).digest("hex");
-}
-
-function decodeCaptureBody(bytes: Uint8Array): Buffer {
-  const body = Buffer.from(bytes);
-  return body[0] === 0x1f && body[1] === 0x8b ? gunzipSync(body) : body;
-}
-
-async function resolveArtifactBytes(path: string, r2Client?: R2MeasurementsClient): Promise<Buffer> {
-  const absolutePath = resolve(path);
-  if (existsSync(absolutePath)) return readFileSync(absolutePath);
-  const summaryPath = absolutePath.endsWith(CAPTURE_SUMMARY_SUFFIX)
-    ? absolutePath
-    : `${absolutePath.slice(0, -".json".length)}${CAPTURE_SUMMARY_SUFFIX}`;
-  if (!existsSync(summaryPath)) {
-    const error = new Error(`Missing protocol API capture or summary: ${absolutePath}`);
-    Object.assign(error, { code: "ENOENT" });
-    throw error;
-  }
-  const summary = parseMechanismCaptureSummary(JSON.parse(readFileSync(summaryPath, "utf8")), summaryPath);
-  const cachePath = resolve(DEFAULT_CAPTURE_CACHE_DIR, `${summary.sha256}.json`);
-  if (existsSync(cachePath)) {
-    const cached = readFileSync(cachePath);
-    if (captureHash(cached) !== summary.sha256) throw new Error(`capture ${summary.sha256} integrity mismatch`);
-    return cached;
-  }
-  const client = r2Client ?? createR2MeasurementsClient();
-  for (const key of [summary.r2Key.replace(/^captures\//u, "pinned/"), summary.r2Key]) {
-    const encoded = await client.get(key);
-    if (!encoded) continue;
-    const body = decodeCaptureBody(encoded);
-    if (captureHash(body) !== summary.sha256) throw new Error(`capture ${summary.sha256} integrity mismatch`);
-    mkdirSync(DEFAULT_CAPTURE_CACHE_DIR, { recursive: true });
-    writeFileSync(cachePath, body);
-    return body;
-  }
-  throw new Error(`capture ${summary.sha256} expired: non-replayable`);
-}
-
-
 function discoverProtocolArtifacts(root: string): string[] {
   const paths: string[] = [];
 
@@ -310,7 +266,11 @@ async function readArtifact(
   }
   let sourceBytes: Buffer;
   try {
-    sourceBytes = await resolveArtifactBytes(absolutePath, r2Client);
+    sourceBytes = await resolveCaptureBody(absolutePath, {
+      missingCaptureLabel: "protocol API",
+      r2Client,
+      rootDir,
+    });
   } catch (error) {
     if (
       summaryOnly &&

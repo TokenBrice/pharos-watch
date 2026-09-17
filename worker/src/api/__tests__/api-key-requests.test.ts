@@ -20,6 +20,7 @@ import { createSqliteD1 } from "@shared/test-utils/sqlite-d1";
 import { createLatestSchemaSqlite } from "@shared/test-utils/latest-schema-sqlite";
 import { makeNoopD1 } from "../../test-helpers/noop-d1";
 import { mockFetch } from "@shared/test-utils/mock-fetch";
+import { pruneOldApiKeyRequestRateLimits } from "../api-key-requests/rate-limit";
 
 function setupSqlite(): DatabaseSync {
   return createLatestSchemaSqlite().sqlite;
@@ -625,6 +626,31 @@ describe("api key self-serve request handlers", () => {
     expect(sqlite.prepare("SELECT reason FROM api_key_self_serve_revocations").get()).toEqual({ reason: "admin_reject" });
     expect(sqlite.prepare("SELECT status FROM api_key_self_serve_email_claims").get()).toEqual({ status: "released" });
   });
+  it("prunes expired request and issuance-limit buckets at the same horizon", async () => {
+    const cutoff = 2_000_000_000 - 2 * 24 * 60 * 60;
+    sqlite.exec(`
+      INSERT INTO api_key_request_rate_limit_v2
+        (scope, subject_hash, bucket_start, count, last_seen_at)
+      VALUES
+        ('submission_ip', 'old-request', ${cutoff - 1}, 1, ${cutoff - 1}),
+        ('submission_ip', 'current-request', ${cutoff}, 1, ${cutoff});
+      INSERT INTO api_key_self_serve_issuance_limits
+        (scope, subject_hash, bucket_start, count, updated_at)
+      VALUES
+        ('submission_ip_daily', 'old-issuance', ${cutoff - 1}, 1, ${cutoff - 1}),
+        ('submission_ip_daily', 'current-issuance', ${cutoff}, 1, ${cutoff});
+    `);
+
+    await pruneOldApiKeyRequestRateLimits(db, cutoff);
+
+    expect(sqlite.prepare(
+      "SELECT subject_hash FROM api_key_request_rate_limit_v2 ORDER BY subject_hash",
+    ).all()).toEqual([{ subject_hash: "current-request" }]);
+    expect(sqlite.prepare(
+      "SELECT subject_hash FROM api_key_self_serve_issuance_limits ORDER BY subject_hash",
+    ).all()).toEqual([{ subject_hash: "current-issuance" }]);
+  });
+
 });
 
 describe("self-serve validation without storage", () => {

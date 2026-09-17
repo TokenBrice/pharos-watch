@@ -16,10 +16,10 @@ import { decodeAbiWordAt, decodeStrictAddressWord, decodeStrictBoolWord, decodeU
 import { fetchOnchainMulticall3 } from "./onchain";
 import type { EvmMulticall3Result } from "../../lib/evm-rpc";
 import type { AdapterContext, AdapterResult } from "./types";
+import { ERC4626_ASSET_SELECTOR } from "./erc4626";
 
 const ADAPTER_KEY = "stoneyield-router-pool";
 
-const ERC4626_ASSET_SELECTOR = "0x38d52e0f";
 const ROUTER_TOTAL_MANAGED_ASSETS_SELECTOR = "0x05b2bfb0";
 const ROUTER_STRATEGIES_SELECTOR = "0xd574ea3d";
 const ROUTER_STRATEGY_COUNT_SELECTOR = "0x22068b44";

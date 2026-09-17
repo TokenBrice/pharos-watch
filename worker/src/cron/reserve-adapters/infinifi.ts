@@ -381,8 +381,16 @@ async function probeInfiniFiRedeemRoute(
   const chain = "ethereum";
   const rpcUrl = getPublicRpcUrl(chain);
   if (!rpcUrl) return null;
+  const probeSignal = AbortSignal.any([signal, AbortSignal.timeout(ROUTE_PROBE_TIMEOUT_MS)]);
   const read = (calls: Parameters<typeof fetchOnchainMulticall3>[0]["calls"]) =>
-    fetchOnchainMulticall3({ calls, chain, signal, ctx, rpcUrl, timeoutMs: ROUTE_PROBE_TIMEOUT_MS });
+    fetchOnchainMulticall3({
+      calls,
+      chain,
+      signal: probeSignal,
+      ctx,
+      rpcUrl,
+      timeoutMs: ROUTE_PROBE_TIMEOUT_MS,
+    });
 
   try {
     const gateway = await executeEvmObservationPlan({
@@ -490,6 +498,14 @@ async function probeInfiniFiRedeemRoute(
       controllerLiquidityUsd: decimalNumberFromBigInt(liquidityRaw, INFINIFI_ASSET_DECIMALS),
     };
   } catch (error) {
+    if (
+      probeSignal.aborted
+      && !signal.aborted
+      && probeSignal.reason instanceof DOMException
+      && probeSignal.reason.name === "TimeoutError"
+    ) {
+      return null;
+    }
     rethrowIfAborted(error, signal);
     return null;
   }

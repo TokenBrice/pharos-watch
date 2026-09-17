@@ -207,6 +207,7 @@ async function loadPublicationLifecycleSurface(
     ${descriptor.expectedRowsColumn} AS expected_rows,
     failure_reason,
     metadata_json`;
+  // SAFETY: descriptor is selected from the closed lifecycle registry; all interpolated identifiers are fixed literals.
   const [latestAttempted, latestPublished, latestFailed] = await Promise.all([
     firstRow(
       db,
@@ -215,6 +216,7 @@ async function loadPublicationLifecycleSurface(
         ORDER BY started_at DESC
         LIMIT 1`,
     ),
+    // SAFETY: descriptor and selectColumns contain only fixed registry-owned identifiers.
     firstRow(
       db,
       `SELECT ${selectColumns}
@@ -223,6 +225,7 @@ async function loadPublicationLifecycleSurface(
         ORDER BY COALESCE(published_at, started_at) DESC, started_at DESC
         LIMIT 1`,
     ),
+    // SAFETY: descriptor and selectColumns contain only fixed registry-owned identifiers.
     firstRow(
       db,
       `SELECT ${selectColumns}

@@ -28,6 +28,7 @@ import {
   GOVERNANCE_LABELS_SHORT,
   MECHANISM_ARCHETYPE_LABELS,
   PEG_METADATA,
+  SAFETY_EVIDENCE_LABELS,
 } from "@shared/lib/classification";
 import { CUSTODY_MODEL_VALUES, GOVERNANCE_TYPE_VALUES, MECHANISM_ARCHETYPE_VALUES } from "@shared/types/core";
 import type { CustodyModel, GovernanceType, MechanismArchetype, PegCurrency, StablecoinStatus } from "@shared/types";
@@ -46,12 +47,6 @@ const BLACKLISTABLE_LABELS: Record<BlacklistableValue, string> = {
   possible: "Possible",
 };
 
-const SAFETY_EVIDENCE_LABELS: Record<SafetyEvidenceValue, string> = {
-  strong: "Strong",
-  adequate: "Adequate",
-  limited: "Limited",
-  nr: "NR",
-};
 
 const CUSTODY_MODEL_LABELS: Record<CustodyModel, string> = {
   onchain: "On-chain",

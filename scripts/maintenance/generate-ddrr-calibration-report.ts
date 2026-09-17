@@ -25,10 +25,10 @@ import {
   parseCoverageAuditCliArgs,
   readRequiredJsonFile,
   resolveGeneratedAt,
-  runAsMain,
   runCoverageAuditCli,
   toPositiveInt,
 } from "../lib/coverage-audit-cli";
+import { runDirectCli } from "../lib/cli-args.mjs";
 import { renderMarkdownRows } from "../lib/markdown-report";
 
 export const DEFAULT_DDRR_CALIBRATION_REPORT_PATH = "agents/ddrr-calibration-report.md";
@@ -1024,4 +1024,6 @@ export async function runCli(
   });
 }
 
-runAsMain(import.meta.url, () => runCli());
+runDirectCli(import.meta.url, async () => {
+  process.exitCode = await runCli();
+});

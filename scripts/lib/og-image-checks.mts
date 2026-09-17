@@ -2,6 +2,7 @@ import { createHash } from "node:crypto";
 import { existsSync, mkdirSync, readFileSync, renameSync, rmSync, unlinkSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import sharp from "sharp";
+import { writeFileResolved } from "./cli-args.mjs";
 
 interface PngComparisonTolerance {
   maxMeanAbsPerChannel: number;
@@ -113,7 +114,7 @@ export function writeFileIfChanged(path: string, contents: string | Uint8Array):
   const next = Buffer.isBuffer(contents) ? contents : Buffer.from(contents);
   const existing = existsSync(path) ? readFileSync(path) : null;
   if (existing?.equals(next)) return false;
-  writeFileSync(path, next);
+  writeFileResolved(path, next);
   return true;
 }
 

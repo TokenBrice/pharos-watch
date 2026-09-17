@@ -41,8 +41,6 @@ export async function refreshBlacklistAmountRepairQueue(db: D1Database, now: num
       `/* blacklist-amount-repair-queue-reconcile-resolved */
        UPDATE blacklist_amount_repair_queue
        SET status = 'resolved',
-           claim_token = NULL,
-           lease_expires_at = NULL,
            last_error_class = NULL,
            completed_at = COALESCE(completed_at, ?),
            updated_at = ?
@@ -59,23 +57,6 @@ export async function refreshBlacklistAmountRepairQueue(db: D1Database, now: num
          )`,
     )
     .bind(now, now)
-    .run();
-
-  await db
-    .prepare(
-      `/* blacklist-amount-repair-queue-release-expired */
-       UPDATE blacklist_amount_repair_queue
-       SET status = 'retry',
-           claim_token = NULL,
-           lease_expires_at = NULL,
-           available_at = MIN(?, updated_at + ?),
-           last_error_class = COALESCE(last_error_class, 'lease_expired'),
-           updated_at = ?
-       WHERE status = 'running'
-         AND lease_expires_at IS NOT NULL
-         AND lease_expires_at <= ?`,
-    )
-    .bind(now + BASE_RETRY_DELAY_SEC, BASE_RETRY_DELAY_SEC, now, now)
     .run();
 }
 
@@ -101,8 +82,6 @@ export function buildBlacklistAmountRepairQueueUpdate(
        SET status = ?,
            attempt_count = attempt_count + 1,
            available_at = ?,
-           claim_token = NULL,
-           lease_expires_at = NULL,
            last_error_class = ?,
            updated_at = ?,
            completed_at = CASE WHEN ? = 1 THEN ? ELSE NULL END

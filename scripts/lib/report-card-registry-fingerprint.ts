@@ -1,3 +1,4 @@
+import { compareCodeUnits } from "@shared/lib/compare";
 import type { ACTIVE_STABLECOINS, FROZEN_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import type { DEAD_STABLECOINS } from "@shared/lib/dead-stablecoins";
 import { sha256Hex } from "@shared/lib/sha256";
@@ -12,8 +13,8 @@ export interface ReportCardRegistryRows {
 export function fingerprintReportCardRegistryRows(rows: ReportCardRegistryRows): string {
   return sha256Hex(stableJsonStringifyV1({
     domain: "report-cards.fixed-input.registry.v1",
-    activeStablecoins: [...rows.activeStablecoins].sort((a, b) => a.id.localeCompare(b.id)),
-    frozenStablecoins: [...rows.frozenStablecoins].sort((a, b) => a.id.localeCompare(b.id)),
-    deadStablecoins: [...rows.deadStablecoins].sort((a, b) => a.id.localeCompare(b.id)),
+    activeStablecoins: [...rows.activeStablecoins].sort((a, b) => compareCodeUnits(a.id, b.id)),
+    frozenStablecoins: [...rows.frozenStablecoins].sort((a, b) => compareCodeUnits(a.id, b.id)),
+    deadStablecoins: [...rows.deadStablecoins].sort((a, b) => compareCodeUnits(a.id, b.id)),
   }));
 }

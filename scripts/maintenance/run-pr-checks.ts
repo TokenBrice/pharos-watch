@@ -12,14 +12,14 @@ import {
   type CommandResult,
   type SpawnCommand,
 } from "../lib/command-runner.mts";
+import { runGateLanes } from "../lib/gate-lanes.mts";
 import {
-  formatFailureTail,
   reportGateResult,
-  type GateLaneReport,
   type GateReport,
   type OutputWriter,
 } from "../lib/report-violations.mts";
 import { buildPrLaneCommandArgs, getPrLane } from "../lib/pr-lanes.mts";
+import { runDirectCli } from "../lib/cli-args.mjs";
 
 const DOC_CHECK_LANES = getPrLane("docs").commands.map((command) => command.id as PrCheckLane);
 const ONE_DAY_MS = 24 * 60 * 60 * 1000;
@@ -241,49 +241,26 @@ async function runPrCheckLanes(
     log: (message: string) => void;
     runCommandImpl: CommandImplementation<SpawnCommand>;
   },
-): Promise<GateLaneReport[]> {
-  const lanes: GateLaneReport[] = commands.map((command) => ({
-    id: command.lane,
-    command: command.cmd,
-    status: "skipped",
-    durationMs: 0,
-    failureTail: "",
-  }));
-  let stopped = false;
-
-  for (const [index, originalCommand] of commands.entries()) {
-    if (stopped) continue;
-    const command: PrCheckCommand = json ? { ...originalCommand, captureOutput: true } : originalCommand;
-    const startedAt = Date.now();
-    log(`[check:pr] ${command.cmd}`);
-    let result: CommandResult;
-    try {
-      result = await runExecutionUnit(createExecutionUnit([command]), {
+): Promise<GateReport["lanes"]> {
+  return runGateLanes(commands, {
+    command: (command) => command.cmd,
+    id: (command) => command.lane,
+    run: (originalCommand) => {
+      const command: PrCheckCommand = json
+        ? { ...originalCommand, captureOutput: true }
+        : originalCommand;
+      log(`[check:pr] ${command.cmd}`);
+      return runExecutionUnit(createExecutionUnit([command]), {
         getCommandEnv: (currentCommand) => ({
           ...(env as Record<string, string>),
           ...currentCommand.extraEnv,
         }),
         reporter: {},
-        runCommandImpl: (currentCommand, extraEnv, options) => runCommandImpl(currentCommand, extraEnv, options),
+        runCommandImpl: (currentCommand, extraEnv, options) =>
+          runCommandImpl(currentCommand, extraEnv, options),
       });
-    } catch (error) {
-      result = {
-        status: 1,
-        aborted: false,
-        output: error instanceof Error ? error.message : String(error),
-      };
-    }
-
-    lanes[index] = {
-      ...lanes[index],
-      durationMs: Math.max(0, Date.now() - startedAt),
-      failureTail: result.status === 0 || result.aborted ? "" : formatFailureTail(result.output),
-      status: result.aborted ? "skipped" : result.status === 0 ? "passed" : "failed",
-    };
-    if (result.status !== 0) stopped = true;
-  }
-
-  return lanes;
+    },
+  });
 }
 
 export async function runPrChecks(
@@ -366,8 +343,6 @@ export async function runPrChecks(
   return report.status === "passed" ? 0 : 1;
 }
 
-if (import.meta.url === `file://${process.argv[1]}`) {
-  runPrChecks().then((status) => {
-    process.exitCode = status;
-  });
-}
+runDirectCli(import.meta.url, async () => {
+  process.exitCode = await runPrChecks();
+});

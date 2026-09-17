@@ -7,7 +7,7 @@ import { errorResponse, jsonResponseWithHeaders, withErrorHandler } from "./api-
 import { validatePayloadWithSchema } from "./api-schema";
 import { IsolateLocalState } from "./isolate-local-state";
 import { toErrorMessage } from "@shared/lib/error-utils";
-import { parseJson } from "./json-parse";
+import { decodeCachedJson, decodeJsonString } from "./cache-json";
 
 const CACHE_JSON_PARSE_FAILURE_COUNTER_MAX_ENTRIES = 256;
 const RESPONSE_READY_CACHE_VERSION = 2;
@@ -23,7 +23,7 @@ const _cacheRead = new IsolateLocalState(() => ({
   jsonParseFailuresByContext: new Map<string, { count: number; lastMessage: string }>(),
 }));
 
-function recordJsonParseFailure(context: string, message: string): void {
+export function recordJsonParseFailure(context: string, message: string): void {
   const counters = _cacheRead.state.jsonParseFailuresByContext;
   const previous = counters.get(context);
   counters.delete(context);
@@ -48,11 +48,16 @@ export function resetCacheJsonParseFailureCountersForTests(): void {
 }
 
 export function safeJsonParse<T>(json: string | null | undefined, fallback: T, context: string): T {
-  const parsed = parseJson(json, {
-    context,
-    onFailure: (failure) => recordJsonParseFailure(context, failure.message),
-  });
-  return parsed.ok ? parsed.value as T : fallback;
+  const decoded = decodeJsonString<unknown, "missing" | "json-parse-failed">(
+    json,
+    {
+      missingReason: "missing",
+      parseErrorReason: "json-parse-failed",
+      normalize: (parsed) => ({ ok: true, payload: parsed }),
+      onParseFailure: ({ message }) => recordJsonParseFailure(context, message),
+    },
+  );
+  return decoded.ok ? decoded.payload as T : fallback;
 }
 
 export type CachedJsonReadResult<T> =
@@ -65,22 +70,30 @@ export function readCachedJson<T>(
   cacheKey: string,
   cached: { value: string } | null,
 ): CachedJsonReadResult<T> {
-  if (!cached) {
+  const context = `${endpoint}:${cacheKey}`;
+  let parseFailureMessage: string | null = null;
+  const decoded = decodeCachedJson<unknown, "missing-cache" | "json-parse-failed">(
+    cached,
+    {
+      missingReason: "missing-cache",
+      parseErrorReason: "json-parse-failed",
+      normalize: (parsed) => ({ ok: true, payload: parsed }),
+      onParseFailure: ({ message }) => {
+        parseFailureMessage = message;
+        recordJsonParseFailure(context, message);
+      },
+    },
+  );
+  if (decoded.ok) {
+    return { status: "ok", data: decoded.payload as T };
+  }
+  if (decoded.reason === "missing-cache") {
     return { status: "missing" };
   }
-
-  const context = `${endpoint}:${cacheKey}`;
-  const parsed = parseJson(cached.value, {
-    context,
-    onFailure: (failure) => recordJsonParseFailure(context, failure.message),
-  });
-  if (parsed.ok) {
-    return { status: "ok", data: parsed.value as T };
-  }
-  {
-    const message = parsed.message;
-    return { status: "malformed", message };
-  }
+  return {
+    status: "malformed",
+    message: parseFailureMessage ?? "Cached JSON parse failed",
+  };
 }
 
 export function readCachedJsonOr503<T>(

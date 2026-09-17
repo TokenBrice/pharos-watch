@@ -62,6 +62,7 @@ function renderPanel(overrides: Partial<PanelProps> = {}): void {
       canMutate={false}
       canReadPortability
       isMutating={false}
+      isWriteLocked={false}
       pendingOperation={null}
       onExport={vi.fn().mockResolvedValue(exportResponse)}
       onPreview={vi.fn()}
@@ -130,6 +131,24 @@ describe("WatchlistPortabilityPanel", () => {
     await waitFor(() => expect(onConfirm).toHaveBeenCalledOnce());
     expect(screen.getByText("Exact replacement preview")).toBeTruthy();
     expect((screen.getByLabelText("Import a portable token") as HTMLTextAreaElement).value).toBe("pw2.import.token");
+  });
+
+  it("disables exact replacement during the server-directed edit lockout", async () => {
+    const onConfirm = vi.fn();
+    renderPanel({
+      state: writableState,
+      canMutate: true,
+      isWriteLocked: true,
+      onPreview: vi.fn().mockResolvedValue(importPreview()),
+      onConfirm,
+    });
+
+    enterImportToken("pw2.import.token");
+    await screen.findByText("Exact replacement preview");
+    fireEvent.click(screen.getByRole("button", { name: "Apply exact replacement" }));
+
+    expect(screen.getByRole("button", { name: "Apply exact replacement" }).hasAttribute("disabled")).toBe(true);
+    expect(onConfirm).not.toHaveBeenCalled();
   });
 
   it("invalidates the preview when the token is edited or the preview is discarded", async () => {

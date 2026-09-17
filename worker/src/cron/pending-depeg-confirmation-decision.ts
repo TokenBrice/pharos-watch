@@ -1,6 +1,6 @@
 import { logWorkerEventArgs } from "../lib/structured-log";
 import type { DepegEvent } from "@shared/types/market";
-import { DEPEG_PENDING_EXPIRY_SEC } from "../lib/constants";
+import { DEPEG_PENDING_EXPIRY_SEC, DEPEG_PENDING_MIN_AGE_SEC } from "../lib/constants";
 import {
   buildInsertDepegEventStmt,
   isExtremeMovePending,
@@ -22,6 +22,8 @@ import {
   pickPeakCandidate,
   type PromotionDecisionInput,
 } from "./pending-depeg-confirmation";
+
+const TEMPORAL_CONFIRMATION_LABEL = `temporal:${Math.round(DEPEG_PENDING_MIN_AGE_SEC / 60)}m`;
 
 export function evaluatePromotionDecision(args: PromotionDecisionInput): D1PreparedStatement[] {
   const { db, plan, evidence, now } = args;
@@ -71,7 +73,7 @@ export function evaluatePromotionDecision(args: PromotionDecisionInput): D1Prepa
       { bps: pendingState.peakSeenBps, price: pendingState.peakPrice },
     );
     const confirmedBy = confirmationSourceList(
-      "temporal:15m",
+      TEMPORAL_CONFIRMATION_LABEL,
       primaryConfirmationSources,
       evidence.offchainStatus === "confirm" ? evidence.offchainSourceKey : null,
       evidence.dexStatus === "confirm" ? evidence.dexConfirmationKeys : [],

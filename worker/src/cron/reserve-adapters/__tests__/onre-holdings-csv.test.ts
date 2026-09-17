@@ -41,6 +41,14 @@ describe("parseOnReSchedule", () => {
     const schedule = parseOnReSchedule(CSV.replace(",Snapshot date,14/08/2026", ""));
     expect(schedule.snapshotDateUnixSec).toBeNull();
   });
+
+  it("rejects an ambiguous numeric snapshot date instead of guessing the convention", () => {
+    const schedule = parseOnReSchedule(CSV.replaceAll("14/08/2026", "08/09/2026"));
+    expect(schedule.snapshotDateUnixSec).toBeNull();
+    expect(adaptOnReSchedule(schedule).metadata).toMatchObject({
+      freshnessMode: "unverified",
+    });
+  });
 });
 
 describe("adaptOnReSchedule", () => {

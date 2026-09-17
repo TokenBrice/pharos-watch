@@ -66,7 +66,7 @@ describe("writeStatusRawSnapshot", () => {
     });
   });
 
-  it("distinguishes missing, unreadable, stale and failed reads without dropping valid raw supplements", async () => {
+  it("distinguishes missing, unreadable, stale and failed snapshot reads", async () => {
     const { db, sqlite } = fixtures.open();
     await expect(loadStatusRawSnapshot(db, NOW, 60)).resolves.toMatchObject({ kind: "missing", updatedAt: null });
     sqlite.prepare("INSERT INTO cache VALUES (?, ?, ?)").run(STATUS_RAW_SNAPSHOT_CACHE_KEY, "{", NOW);
@@ -75,7 +75,7 @@ describe("writeStatusRawSnapshot", () => {
       version: 1, producedAt: NOW, raw: minimalRawStatus(), supplements: "invalid", publicHealth: [],
     }));
     await expect(loadStatusRawSnapshot(db, NOW + 60, 60)).resolves.toMatchObject({
-      kind: "fresh", ageSec: 60, raw: minimalRawStatus(), supplements: undefined, publicHealth: undefined,
+      kind: "unreadable", updatedAt: NOW, ageSec: 60,
     });
     await expect(loadStatusRawSnapshot(db, NOW + 61, 60)).resolves.toMatchObject({ kind: "stale", updatedAt: NOW, ageSec: 61 });
     sqlite.exec("DROP TABLE cache");
@@ -174,6 +174,15 @@ describe("writeStatusRawSnapshot", () => {
       circuits: {},
     };
     const supplements = {
+      liquidityHealth: null,
+      yieldHealth: null,
+      publicationHealth: null,
+      providerCircuitHealth: null,
+      canaries: null,
+      priceSourceHealth: null,
+      coingeckoPriceDiff: null,
+      d1Usage: null,
+      mintBurnReconciliation: null,
       telegramSummary: null,
       sectionErrors: {},
     };

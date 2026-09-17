@@ -66,8 +66,12 @@ for (const config of MINT_BURN_CONFIG_SPECS) {
   }
 }
 for (const config of CONTRACT_CONFIGS) {
-  const id = (config as { stablecoinId?: string }).stablecoinId ?? "";
-  if (FROZEN_IDS.has(id)) {
+  const id = "stablecoinId" in config ? config.stablecoinId : undefined;
+  if (typeof id !== "string" || id.length === 0) {
+    failures.push(
+      "CONTRACT_CONFIGS entry is missing stablecoinId (worker/src/lib/blacklist-contracts.ts) — restore the required registry key",
+    );
+  } else if (FROZEN_IDS.has(id)) {
     failures.push(
       `${id}: still in CONTRACT_CONFIGS (worker/src/lib/blacklist-contracts.ts) — remove per freeze runbook`,
     );

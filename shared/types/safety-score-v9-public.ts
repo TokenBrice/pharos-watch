@@ -27,6 +27,7 @@ import {
   EXIT_SCORE_TOLERANCE,
   isUniqueSorted,
   numbersAgree,
+  V9_NEUTRAL_CONTROL_SCORE,
   PUBLIC_SCORE_ROUNDING_HEADROOM,
   RESPONSIBILITIES,
   SafetyScoreV9AccessPostureSchema,
@@ -52,7 +53,6 @@ export {
 export {
   SafetyScoreV9AccessPostureSchema,
   SafetyScoreV9PillarSchema,
-  V9_BOUNDED_ATTRIBUTION_REASON_CODES,
 } from "./safety-score-v9-public-facts";
 export type { SafetyScoreV9Cap, SafetyScoreV9EvidenceFreshness, SafetyScoreV9NrReason, SafetyScoreV9PublicReason } from "./safety-score-v9-public-facts";
 
@@ -1250,7 +1250,7 @@ const SafetyScoreV9ControlBreakdownSchema = z
     const binding = breakdown.components.filter((component) => component.binding);
     const bindingScoreReconciles =
       binding.length === 0
-        ? numbersAgree(breakdown.evaluatedScore, 95)
+        ? numbersAgree(breakdown.evaluatedScore, V9_NEUTRAL_CONTROL_SCORE)
         : numbersAgree(
             Math.min(...binding.map((component) => component.score)),
             breakdown.evaluatedScore,

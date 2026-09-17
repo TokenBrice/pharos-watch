@@ -1,9 +1,5 @@
 import { describe, expect, it } from "vitest";
-import {
-  buildYieldHistoryEvaluationInputs,
-  buildYieldHistoryEvaluationInputsCooperative,
-  type YieldHistoryInputBuildProgress,
-} from "../yield-sync/coordinator-history";
+import { buildYieldHistoryEvaluationInputs } from "../yield-sync/coordinator-history";
 import type { YieldHistorySnapshotRow } from "../yield-sync/history";
 import { evaluateYieldSources } from "../yield-sync/evaluation";
 import { baseEvaluationInput, resolvedYield } from "./yield-evaluation.test-support";
@@ -270,36 +266,5 @@ describe("yield coordinator history", () => {
     expect(result.sourceSwitchCount30dByCoin.get("parent-coin")).toBe(0);
   });
 
-  it("cooperative input construction matches the synchronous builder", async () => {
-    const input = {
-      historyRows: [
-        row({ stablecoin_id: "coin-a", source_key: "source-a", is_best: 1, recorded_at: 100 }),
-        row({ stablecoin_id: "coin-a", source_key: "source-b", is_best: 1, recorded_at: 200 }),
-        row({ stablecoin_id: "coin-b", source_key: null, data_source: "onchain", exchange_rate: 1.01 }),
-        row({ stablecoin_id: "lusd-liquity", source_key: "bprotocol-lqty-only", data_source: "onchain", exchange_rate: 1.02 }),
-      ],
-      prevTvlRows: [
-        row({ stablecoin_id: "coin-a", source_key: "source-a", source_tvl_usd: 9_000 }),
-        row({ stablecoin_id: "coin-b", source_key: null, source_tvl_usd: 7_000 }),
-      ],
-      prevBestRows: [row({ stablecoin_id: "coin-a", source_key: "source-b", is_best: 1 })],
-    };
-    const progress: YieldHistoryInputBuildProgress[] = [];
-
-    const sync = buildYieldHistoryEvaluationInputs(input);
-    const cooperative = await buildYieldHistoryEvaluationInputsCooperative(input, {
-      yieldEveryRows: 1,
-      onProgress: (snapshot) => {
-        progress.push(snapshot);
-      },
-    });
-
-    expect(cooperative).toEqual(sync);
-    expect(progress[progress.length - 1]).toMatchObject({ rowsDone: 1, rowsTotal: 1 });
-    for (const phase of new Set(progress.map((snapshot) => snapshot.phase))) {
-      const counts = progress.filter((snapshot) => snapshot.phase === phase).map((snapshot) => snapshot.rowsDone);
-      expect(counts).toEqual([...counts].sort((a, b) => a - b));
-    }
-  });
 
 });

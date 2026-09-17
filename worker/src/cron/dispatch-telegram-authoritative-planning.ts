@@ -79,12 +79,12 @@ async function loadPageFanoutInputs(
     context.stablecoinIds,
     {
       loadSubscriberRowsBatch,
-      loadPresetSubscriberRowsBatch: async (_db, _stablecoinIds, type) =>
+      loadPresetSubscribers: async (_db, _stablecoinIds, type, _nowSec, options) =>
         loadTelegramSourcePresetSubscribersForChats(
           context.db,
           context.sourceEventId,
           type,
-          chatIds,
+          options?.chatIds ?? [],
           context.nowSec,
         ),
       loadGlobalSubscriberRows,

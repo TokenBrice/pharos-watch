@@ -320,7 +320,7 @@ describe("dex-liquidity scoring", () => {
       {
         poolId: "ethereum:shared",
         project: "curve",
-        chain: "Ethereum",
+        chain: "ethereum",
         tvlUsd: 100_000,
         symbol: "USDT-USDC",
         volumeUsd1d: 50_000,
@@ -341,7 +341,7 @@ describe("dex-liquidity scoring", () => {
       {
         poolId: "ethereum:sushi-dl",
         project: "sushiswap",
-        chain: "Ethereum",
+        chain: "ethereum",
         tvlUsd: 20_000,
         symbol: "USDT-USDE",
         volumeUsd1d: 5_000,
@@ -352,7 +352,7 @@ describe("dex-liquidity scoring", () => {
       {
         poolId: "ethereum:sushi-cg",
         project: "sushiswap",
-        chain: "Ethereum",
+        chain: "ethereum",
         tvlUsd: 80_000,
         symbol: "USDT-USDC",
         volumeUsd1d: 40_000,
@@ -364,7 +364,7 @@ describe("dex-liquidity scoring", () => {
       {
         poolId: "arbitrum:sushi-gt",
         project: "sushiswap",
-        chain: "Arbitrum",
+        chain: "arbitrum",
         tvlUsd: 70_000,
         symbol: "USDT-USDC",
         volumeUsd1d: 35_000,
@@ -376,7 +376,7 @@ describe("dex-liquidity scoring", () => {
       {
         poolId: "ethereum:bad-ratio",
         project: "curve",
-        chain: "Ethereum",
+        chain: "ethereum",
         tvlUsd: 1_000,
         symbol: "USDT-USDC",
         volumeUsd1d: 100_000,
@@ -387,7 +387,7 @@ describe("dex-liquidity scoring", () => {
       {
         poolId: "base:fake-tvl",
         project: "dnax",
-        chain: "Base",
+        chain: "base",
         tvlUsd: 150_000_000,
         symbol: "USDT-USDC",
         volumeUsd1d: 10_000,
@@ -398,7 +398,7 @@ describe("dex-liquidity scoring", () => {
       ...Array.from({ length: 9 }, (_, index) => ({
         poolId: `ethereum:extra-${index + 1}`,
         project: "curve",
-        chain: "Ethereum",
+        chain: "ethereum",
         tvlUsd: 10_000,
         symbol: `USDT-PAIR-${index + 1}`,
         volumeUsd1d: 30_000 - index * 1_000,
@@ -415,7 +415,7 @@ describe("dex-liquidity scoring", () => {
       {
         poolId: "ethereum:shared",
         project: "curve",
-        chain: "Ethereum",
+        chain: "ethereum",
         tvlUsd: 100_000,
         symbol: "USDC-USDT",
         volumeUsd1d: 50_000,
@@ -426,7 +426,7 @@ describe("dex-liquidity scoring", () => {
       {
         poolId: "base:sushi-unique",
         project: "sushiswap",
-        chain: "Base",
+        chain: "base",
         tvlUsd: 90_000,
         symbol: "USDC-USDE",
         volumeUsd1d: 30_000,
@@ -438,7 +438,7 @@ describe("dex-liquidity scoring", () => {
       {
         poolId: "base:curve-unique",
         project: "curve",
-        chain: "Base",
+        chain: "base",
         tvlUsd: 40_000,
         symbol: "USDC-DAI",
         volumeUsd1d: 10_000,

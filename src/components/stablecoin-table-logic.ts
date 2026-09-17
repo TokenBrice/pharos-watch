@@ -32,6 +32,11 @@ interface SortState {
 }
 
 export type StablecoinTableRowRiskLevel = "depeg" | "poor" | "warning" | "normal";
+/** Return a supply change in percentage points, or null without a positive previous value. */
+export function getSupplyChangePercent(current: number, previous: number): number | null {
+  if (previous <= 0) return null;
+  return ((current - previous) / previous) * 100;
+}
 
 const SORT_KEY_TO_COLUMN: Record<StablecoinTableSortKey, ColumnId> = {
   name: "name",
@@ -153,7 +158,6 @@ interface SortStablecoinsParams {
   filtered: StablecoinData[];
   sort: SortState;
   effectiveSortKey: StablecoinTableSortKey;
-  pegRates: Record<string, number>;
   pegScores?: Map<string, PegSummaryCoin>;
   dexLiquidity?: DexLiquidityMap;
   reportCards?: Record<string, V9SafetyTableRow>;
@@ -173,14 +177,8 @@ export function sortStablecoins({
     name: (r) => r.name.toLowerCase(),
     price: (r) => r.price ?? 0,
     mcap: (r) => getCirculatingRaw(r),
-    change24h: (r) => {
-      const prev = getPrevDayRaw(r);
-      return prev > 0 ? (getCirculatingRaw(r) - prev) / prev : 0;
-    },
-    change7d: (r) => {
-      const prev = getPrevWeekRaw(r);
-      return prev > 0 ? (getCirculatingRaw(r) - prev) / prev : 0;
-    },
+    change24h: (r) => getSupplyChangePercent(getCirculatingRaw(r), getPrevDayRaw(r)) ?? 0,
+    change7d: (r) => getSupplyChangePercent(getCirculatingRaw(r), getPrevWeekRaw(r)) ?? 0,
     stability: (r) => pegScores?.get(r.id)?.pegScore ?? null,
     liquidity: (r) => dexLiquidity?.[r.id]?.liquidityScore ?? null,
     grade: (r) => reportCards?.[r.id]?.score ?? null,
@@ -231,17 +229,15 @@ export function exportStablecoinsCsv(
       {
         header: "24h Change (%)",
         accessor: (row) => {
-          const prev = getPrevDayRaw(row);
-          if (prev <= 0) return null;
-          return Number((((getCirculatingRaw(row) - prev) / prev) * 100).toFixed(2));
+          const change = getSupplyChangePercent(getCirculatingRaw(row), getPrevDayRaw(row));
+          return change == null ? null : Number(change.toFixed(2));
         },
       },
       {
         header: "7d Change (%)",
         accessor: (row) => {
-          const prev = getPrevWeekRaw(row);
-          if (prev <= 0) return null;
-          return Number((((getCirculatingRaw(row) - prev) / prev) * 100).toFixed(2));
+          const change = getSupplyChangePercent(getCirculatingRaw(row), getPrevWeekRaw(row));
+          return change == null ? null : Number(change.toFixed(2));
         },
       },
       { header: "Peg Score", accessor: (row) => pegScores?.get(row.id)?.pegScore ?? null },

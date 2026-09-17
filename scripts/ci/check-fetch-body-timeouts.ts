@@ -1,9 +1,10 @@
 #!/usr/bin/env node
 
-import { existsSync, readFileSync } from "node:fs";
-import { extname, relative, resolve } from "node:path";
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
 import ts from "typescript";
-import { collectSourceFiles, runAsCli } from "../lib/source-files.mts";
+import { collectSourceFilesUnderRoots } from "../lib/source-files.mts";
+import { runDirectCli } from "../lib/cli-args.mjs";
 
 const SOURCE_EXTENSIONS = new Set([".ts", ".tsx"]);
 const DEFAULT_ROOTS = ["worker/src/api", "worker/src/cron", "worker/src/lib"];
@@ -34,22 +35,7 @@ interface FetchBodyTimeoutReport {
   staleDebt: string[];
 }
 
-function normalizeRelPath(path: string): string {
-  return path.replaceAll("\\", "/");
-}
 
-function collectScanFiles(cwd: string, roots: readonly string[]): string[] {
-  const files: string[] = [];
-  for (const root of roots) {
-    const absoluteRoot = resolve(cwd, root);
-    if (!existsSync(absoluteRoot)) continue;
-    files.push(...collectSourceFiles(absoluteRoot, { extensions: SOURCE_EXTENSIONS, excludedDirs: EXCLUDED_DIRS }));
-  }
-  return files
-    .filter((file) => SOURCE_EXTENSIONS.has(extname(file)))
-    .map((file) => normalizeRelPath(relative(cwd, file)))
-    .sort();
-}
 
 export function makeViolationKey(violation: FetchBodyTimeoutViolation): string {
   return `${violation.file}::${violation.assignmentText}::${violation.bodyReadText}`;
@@ -159,7 +145,10 @@ export function scanFetchBodyTimeouts({
   knownDebt?: ReadonlySet<string>;
 } = {}): FetchBodyTimeoutReport {
   const violations: FetchBodyTimeoutViolation[] = [];
-  for (const file of collectScanFiles(cwd, roots)) {
+  for (const file of collectSourceFilesUnderRoots(roots, cwd, {
+    extensions: SOURCE_EXTENSIONS,
+    excludedDirs: EXCLUDED_DIRS,
+  })) {
     const source = readFileSync(resolve(cwd, file), "utf8");
     violations.push(...findFetchBodyTimeoutViolations(source, file));
   }
@@ -201,4 +190,6 @@ export function main(): number {
   return 1;
 }
 
-runAsCli(import.meta.url, main);
+runDirectCli(import.meta.url, () => {
+  process.exitCode = main();
+});

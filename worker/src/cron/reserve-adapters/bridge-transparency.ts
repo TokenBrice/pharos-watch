@@ -4,6 +4,7 @@ import { parseLiveReserveAdapterParams } from "@shared/lib/live-reserve-adapters
 import type { AdapterContext, AdapterResult } from "./types";
 import {
   fetchJsonAdapterInput,
+  parseFiniteNumber,
   parseTimestampLikeToUnixSeconds,
   requireJsonInputFromConfig,
   reserveDegradedWarning,
@@ -67,25 +68,11 @@ const BRIDGE_COMPONENT_CONFIG: Record<string, BridgeComponentConfig> = {
   },
 };
 
-/** Strict amount parser shared by component rows and aggregate fields: finite
- *  numbers pass through, numeric strings are converted (the API serves every
- *  amount as a string), and anything else throws so a malformed payload can
- *  never silently read as zero. */
-function parseStrictAmount(value: unknown, label: string): number {
-  if (typeof value === "number" && Number.isFinite(value)) return value;
-  if (typeof value === "string" && value.trim() !== "" && Number.isFinite(Number(value))) {
-    return Number(value);
-  }
-  throw new Error(`${ADAPTER_KEY} ${label} is not a finite number: ${String(value)}`);
-}
+const parseStrictAmount = (value: unknown, label: string): number =>
+  parseFiniteNumber(value, { label: `${ADAPTER_KEY} ${label}` });
 
-function parseOptionalReportedRatio(value: unknown): number {
-  if (typeof value === "number" && Number.isFinite(value)) return value;
-  if (typeof value === "string" && value.trim() !== "" && Number.isFinite(Number(value))) {
-    return Number(value);
-  }
-  throw new Error(`${ADAPTER_KEY} collateralization_ratio is not a finite number: ${String(value)}`);
-}
+const parseOptionalReportedRatio = (value: unknown): number =>
+  parseFiniteNumber(value, { label: `${ADAPTER_KEY} collateralization_ratio` });
 
 export function adaptBridgeTransparency(payload: BridgeTransparencyPayload, slug: string): AdapterResult {
   if (!Array.isArray(payload.reserves) || payload.reserves.length === 0) {

@@ -126,7 +126,6 @@ describe("frontend API query descriptors", () => {
       responseMode: "static",
     });
     expect(FRONTEND_API_QUERY_DESCRIPTORS.yieldAdapterManifest).not.toHaveProperty("producerIntervalMs");
-    expect(FRONTEND_API_QUERY_DESCRIPTORS.yieldAdapterManifest).not.toHaveProperty("metaMaxAgeSec");
   });
 
   it("aligns PSI and DEWS detail descriptors with their producer intervals", () => {

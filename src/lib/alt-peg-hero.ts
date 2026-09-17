@@ -6,7 +6,7 @@ import type { PegCurrency, StablecoinData } from "@shared/types";
 import { PEG_ANCHORS } from "@/lib/alt-peg-emblems";
 import { arrangeClusterCoins, resolvePackedCoinOverlaps, type PackingInput } from "@/lib/alt-peg-packing";
 import { coinEmblemSize, FIAT_MAP_SIZE_CEIL, SKY_COHORT_SIZE_CEIL } from "@/lib/alt-peg-sizing";
-import { logosById } from "@/lib/logos";
+import { getLogoSrc, logosById } from "@/lib/logos";
 import { buildStablecoinUrl } from "@shared/lib/urls";
 import { compareFiniteDesc } from "@shared/lib/sort";
 
@@ -64,7 +64,7 @@ const SKY_LAYOUT: Record<SkyCohortKind, { cx: number; cy: number; spreadX: numbe
 };
 
 function resolveLogo(coin: StablecoinData): string | undefined {
-  return logosById[coin.id];
+  return getLogoSrc(logosById, coin.id);
 }
 
 function toHeroCoin(coin: StablecoinData, peg: PegCurrency): HeroCoin | null {

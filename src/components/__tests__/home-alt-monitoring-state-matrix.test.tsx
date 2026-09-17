@@ -76,7 +76,6 @@ vi.mock("@/lib/stablecoin-static-data", async (importOriginal) => ({
 vi.mock("@/components/homepage-client-view-model", () => ({
   buildHomepageCriticalViewModel: ({ stablecoinsData }: { stablecoinsData?: { peggedAssets?: unknown[] } }) => ({
     filteredRowCount: stablecoinsData?.peggedAssets?.length ?? 0,
-    pegRates: {},
     pegScores: new Map(),
   }),
   buildHomepageOptionalViewModel: () => ({ dewsRiskLevel: "normal", reportCardMap: {} }),

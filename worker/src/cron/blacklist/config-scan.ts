@@ -127,7 +127,10 @@ function buildEvmScanResult(args: {
   lastCursor: number;
 }): BlacklistScanResult {
   const { result } = args;
-  const nextCursor = result.scannedToBlock != null ? Math.max(args.lastCursor, result.scannedToBlock) : args.lastCursor;
+  const nextCursor =
+    result.coveredTopicCount === result.topicCount && result.scannedToBlock != null
+      ? Math.max(args.lastCursor, result.scannedToBlock)
+      : args.lastCursor;
 
   return {
     rows: result.rows,

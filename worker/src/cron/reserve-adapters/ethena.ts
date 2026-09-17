@@ -16,7 +16,6 @@ import {
   decodeUint8Word,
 } from "./abi-decode";
 import {
-  accumulateBucketedExposure,
   buildBucketSlices,
   buildRedemptionSnapshotMetadata,
   decimalNumberFromBigInt,
@@ -29,6 +28,7 @@ import {
   unverifiedFreshnessMetadata,
   verifiedFreshnessMetadata,
 } from "./helpers";
+import { accumulateBucketedExposure } from "./classification";
 import { buildBrowserHeaders } from "./request";
 
 interface EthenaCollateralRow {

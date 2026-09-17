@@ -103,7 +103,6 @@ export type PresetSubscriberLoadResult =
       resolutionFailures: number;
     }
   | { kind: "query-failed"; error: unknown }
-  | { kind: "resolution-failed" };
 
 export interface FanoutSubscriptionInputs {
   direct: Record<LegacyFanoutAlertType, Map<string, SubscriberRow[]>>;
@@ -121,11 +120,12 @@ interface FanoutSubscriptionLoaders {
     nowSec: number,
     options?: FanoutSubscriberLoadOptions,
   ) => Promise<Map<string, SubscriberRow[]>>;
-  loadPresetSubscriberRowsBatch: (
+  loadPresetSubscribers: (
     db: D1Database,
     stablecoinIds: string[],
     type: PresetFanoutAlertType,
     nowSec: number,
+    options?: FanoutSubscriberLoadOptions,
   ) => Promise<PresetSubscriberLoadResult>;
   loadGlobalSubscriberRows: (
     db: D1Database,
@@ -208,7 +208,7 @@ export async function loadFanoutSubscriptionInputs(
     Promise.all(families.map((spec) => loadFamily(spec, new Map<string, SubscriberRow[]>(), "direct",
       (stablecoinIds) => loaders.loadSubscriberRowsBatch(db, stablecoinIds, spec.family, nowSec, options)))),
     Promise.all(presetFamilies.map((spec) => loadFamily(spec, emptyPresetResult(), "preset",
-      (stablecoinIds) => loaders.loadPresetSubscriberRowsBatch(db, stablecoinIds, spec.presetFamily, nowSec)))),
+      (stablecoinIds) => loaders.loadPresetSubscribers(db, stablecoinIds, spec.presetFamily, nowSec, options)))),
     Promise.all(families.map((spec) => loadFamily(spec, [], "global",
       () => loaders.loadGlobalSubscriberRows(db, spec.family, nowSec, options)))),
     allStablecoinIds.length > 0

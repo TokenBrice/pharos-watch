@@ -216,6 +216,9 @@ export function describeDataCoverageHoldCauses(
     if (reason.code === "redemption-stale") causes.push("Redemption data is behind schedule.");
     if (reason.code === "redemption-unavailable") causes.push("Redemption data is unavailable.");
     if (reason.code === "live-reserves-unavailable") causes.push("Live reserve data is unavailable.");
+    if (reason.code === "live-reserves-coverage-below-floor") {
+      causes.push("Live reserve coverage is below the publication floor.");
+    }
     if (reason.code === "assessment-failed") causes.push("The latest ratings update could not be verified.");
     if (reason.code === "coverage-floor-failed") {
       causes.push(

@@ -19,7 +19,8 @@ import { mechanismDiagramFor } from "../../src/components/stablecoin-detail/mech
 import type { MechanismArchetype } from "@shared/types";
 import { MECHANISM_EXPLAINER_ENTRIES } from "../../src/lib/mechanism-explainer-registry";
 import { escapeXml } from "../lib/og-svg.mts";
-import { runOgStaticCli, runOgStaticMain } from "../lib/og-static-runner.mts";
+import { runDirectCli } from "../lib/cli-args.mjs";
+import { runOgStaticCli } from "../lib/og-static-runner.mts";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = resolve(__dirname, "../..");
@@ -125,4 +126,4 @@ export async function main(): Promise<void> {
   });
 }
 
-runOgStaticMain(import.meta.url, main);
+runDirectCli(import.meta.url, main);

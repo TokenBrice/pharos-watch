@@ -1,6 +1,5 @@
 import {
   decodeAddressWord,
-  decodeBoolWord,
   decodeUintWord,
   normalizeAddress,
   ratioToRounded,
@@ -12,6 +11,7 @@ import {
 } from "../core";
 import type { EnumeratedLiquityV2MeasurementEvidence } from "../schema";
 import type { EnumeratedLiquityV2MeasurementTarget } from "../targets";
+import { LIQUITY_V2_CALLS, readLiquityV2Branch } from "./liquity-v2";
 
 const WAD = 10n ** 18n;
 
@@ -30,8 +30,7 @@ export async function measureEnumeratedLiquityV2(
       await caller.call({
         name: "token.collateralRegistryAddress",
         to: target.contracts.token,
-        signature: "collateralRegistryAddress()",
-        selector: "0x45a74626",
+        ...LIQUITY_V2_CALLS.collateralRegistryAddress,
       }),
       "collateralRegistryAddress",
     );
@@ -48,8 +47,7 @@ export async function measureEnumeratedLiquityV2(
     await caller.call({
       name: "token.totalSupply",
       to: target.contracts.token,
-      signature: "totalSupply()",
-      selector: "0x18160ddd",
+      ...LIQUITY_V2_CALLS.totalSupply,
     }),
     0,
     "totalSupply",
@@ -61,8 +59,7 @@ export async function measureEnumeratedLiquityV2(
     await caller.call({
       name: "registry.totalCollaterals",
       to: registry,
-      signature: "totalCollaterals()",
-      selector: "0x30504b6f",
+      ...LIQUITY_V2_CALLS.totalCollaterals,
     }),
     0,
     "totalCollaterals",
@@ -112,8 +109,7 @@ export async function measureEnumeratedLiquityV2(
       await caller.call({
         name: `registry.getToken(${index})`,
         to: registry,
-        signature: "getToken(uint256)",
-        selector: "0xe4b50cb8",
+        ...LIQUITY_V2_CALLS.getToken,
         args: [BigInt(index)],
       }),
       `getToken ${index}`,
@@ -126,117 +122,77 @@ export async function measureEnumeratedLiquityV2(
       `collateral token ${collateralToken} matches configured branch`,
     );
 
-    const collateralRaw = decodeUintWord(
-      await caller.call({
-        name: `controller[${index}].getEntireBranchColl`,
-        to: controller,
-        signature: "getEntireBranchColl()",
-        selector: "0x3ecaaa3f",
-      }),
-      0,
-      `branch ${index} collateral`,
-    );
-    caller.recordDecoded(collateralRaw.toString());
-    const debtRaw = decodeUintWord(
-      await caller.call({
-        name: `controller[${index}].getEntireBranchDebt`,
-        to: controller,
-        signature: "getEntireBranchDebt()",
-        selector: "0x105b403b",
-      }),
-      0,
-      `branch ${index} debt`,
-    );
-    caller.recordDecoded(debtRaw.toString());
+    let activePool: string | undefined;
+    const {
+      collateral: collateralRaw,
+      debt: debtRaw,
+      price: priceRaw,
+      redeemable,
+      shutdownTime,
+      spDeposits: spDepositsRaw,
+      stabilityPool,
+    } = await readLiquityV2Branch({
+      afterDebt: async (branchDebt) => {
+        if (!expected.activePool) return;
+        activePool = decodeAddressWord(
+          await caller.call({
+            name: `controller[${index}].activePool`,
+            to: controller,
+            ...LIQUITY_V2_CALLS.activePool,
+          }),
+          `branch ${index} activePool`,
+        );
+        caller.recordDecoded(activePool);
+        requireCheck(
+          checks,
+          `branch[${index}].active-pool`,
+          activePool === normalizeAddress(expected.activePool),
+          `active pool ${activePool} matches configured graph`,
+        );
+        const activePoolDebt = decodeUintWord(
+          await caller.call({
+            name: `activePool[${index}].getBoldDebt`,
+            to: activePool,
+            ...LIQUITY_V2_CALLS.getBoldDebt,
+          }),
+          0,
+          `branch ${index} active pool debt`,
+        );
+        caller.recordDecoded(activePoolDebt.toString());
+        requireCheck(
+          checks,
+          `branch[${index}].active-pool-debt`,
+          activePoolDebt === branchDebt,
+          `ActivePool debt ${activePoolDebt} equals controller debt`,
+        );
+      },
+      caller,
+      controller,
+      depositsCall: target.spDeposits,
+      labels: {
+        collateral: `branch ${index} collateral`,
+        debt: `branch ${index} debt`,
+        deposits: `branch ${index} Stability Pool deposits`,
+        price: `branch ${index} price`,
+        redeemable: `branch ${index} redeemable`,
+        shutdownTime: `branch ${index} shutdownTime`,
+        stabilityPool: `branch ${index} stabilityPool`,
+      },
+      names: {
+        collateral: `controller[${index}].getEntireBranchColl`,
+        debt: `controller[${index}].getEntireBranchDebt`,
+        deposits: `stabilityPool[${index}].deposits`,
+        priceAndRedeemability: `controller[${index}].priceAndRedeemability`,
+        shutdownTime: `controller[${index}].shutdownTime`,
+        stabilityPool: `controller[${index}].stabilityPool`,
+      },
+    });
     requireCheck(
       checks,
       `branch[${index}].positive-state`,
       collateralRaw > 0n && debtRaw > 0n,
       `collateral ${collateralRaw} and debt ${debtRaw} are positive`,
     );
-
-    let activePool: string | undefined;
-    if (expected.activePool) {
-      activePool = decodeAddressWord(
-        await caller.call({
-          name: `controller[${index}].activePool`,
-          to: controller,
-          signature: "activePool()",
-          selector: "0x7f7dde4a",
-        }),
-        `branch ${index} activePool`,
-      );
-      caller.recordDecoded(activePool);
-      requireCheck(
-        checks,
-        `branch[${index}].active-pool`,
-        activePool === normalizeAddress(expected.activePool),
-        `active pool ${activePool} matches configured graph`,
-      );
-      const activePoolDebt = decodeUintWord(
-        await caller.call({
-          name: `activePool[${index}].getBoldDebt`,
-          to: activePool,
-          signature: "getBoldDebt()",
-          selector: "0x45507998",
-        }),
-        0,
-        `branch ${index} active pool debt`,
-      );
-      caller.recordDecoded(activePoolDebt.toString());
-      requireCheck(
-        checks,
-        `branch[${index}].active-pool-debt`,
-        activePoolDebt === debtRaw,
-        `ActivePool debt ${activePoolDebt} equals controller debt`,
-      );
-    }
-
-    const stabilityPool = decodeAddressWord(
-      await caller.call({
-        name: `controller[${index}].stabilityPool`,
-        to: controller,
-        signature: "stabilityPool()",
-        selector: "0x048c661d",
-      }),
-      `branch ${index} stabilityPool`,
-    );
-    caller.recordDecoded(stabilityPool);
-    const spDepositsRaw = decodeUintWord(
-      await caller.call({
-        name: `stabilityPool[${index}].deposits`,
-        to: stabilityPool,
-        signature: target.spDeposits.signature,
-        selector: target.spDeposits.selector,
-      }),
-      0,
-      `branch ${index} Stability Pool deposits`,
-    );
-    caller.recordDecoded(spDepositsRaw.toString());
-
-    const shutdownTime = Number(
-      decodeUintWord(
-        await caller.call({
-          name: `controller[${index}].shutdownTime`,
-          to: controller,
-          signature: "shutdownTime()",
-          selector: "0x58569081",
-        }),
-        0,
-        `branch ${index} shutdownTime`,
-      ),
-    );
-    caller.recordDecoded(String(shutdownTime));
-
-    const priceReturn = await caller.call({
-      name: `controller[${index}].priceAndRedeemability`,
-      to: controller,
-      signature: "getUnbackedPortionPriceAndRedeemability()",
-      selector: "0x4ea15f37",
-    });
-    const priceRaw = decodeUintWord(priceReturn, 1, `branch ${index} price`);
-    const redeemable = decodeBoolWord(priceReturn, 2, `branch ${index} redeemable`);
-    caller.recordDecoded(`price=${priceRaw} redeemable=${redeemable}`);
     requireCheck(checks, `branch[${index}].price-positive`, priceRaw > 0n, `protocol price ${priceRaw} is positive`);
 
     if (shutdownTime !== 0 || !redeemable) {

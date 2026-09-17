@@ -4,6 +4,11 @@ import {
   V9ReviewedIncidentRegistrySchema,
   V9ReviewedIncidentSchema,
 } from "../safety-score-v9-incidents";
+import {
+  V9_WRAPPER_LOCAL_FACT_KEYS,
+  V9WrapperLocalFactsSchema,
+} from "../safety-score-v9-wrapper";
+import { V9OperationalResilienceIncidentSchema } from "../safety-score-v9-operational-resilience-primitives";
 
 const BASE_INCIDENT = {
   incidentId: "fixture-control-incident",
@@ -158,5 +163,69 @@ describe("Safety Score v9 reviewed incident schema", () => {
         remediation: { ...BASE_INCIDENT.remediation, state: "in-progress" },
       }).success,
     ).toBe(false);
+  });
+
+  it("enforces operational incident state and resolution dates at the shared primitive", () => {
+    const resolved = {
+      incidentKey: "fixture-outage",
+      name: "Fixture outage",
+      category: "redemption",
+      state: "resolved",
+      occurredAt: "2026-01-01",
+      resolvedAt: "2026-01-02",
+    } as const;
+    expect(V9OperationalResilienceIncidentSchema.safeParse(resolved).success).toBe(true);
+    expect(V9OperationalResilienceIncidentSchema.safeParse({
+      ...resolved,
+      state: "active",
+    }).success).toBe(false);
+    expect(V9OperationalResilienceIncidentSchema.safeParse({
+      ...resolved,
+      resolvedAt: null,
+    }).success).toBe(false);
+  });
+
+  it("rejects a wrapper incident overlay with a non-canonical deployment key", () => {
+    const facts = Object.fromEntries(
+      V9_WRAPPER_LOCAL_FACT_KEYS.map((key) => [
+        key,
+        {
+          disposition: "integration-missing",
+          assessment: null,
+          signals: [`fixture:${key}`],
+          evidenceRefIds: [],
+          ...(key === "measuredUnwind"
+            ? {
+                incidentPostures: [{
+                  incidentId: "fixture-wrapper-incident",
+                  scope: {
+                    kind: "deployment",
+                    deploymentKey: "Ethereum:Fixture",
+                    exposureShare: 1,
+                  },
+                  assessment: "high",
+                  evidenceRefIds: ["fixture-evidence"],
+                }],
+              }
+            : {}),
+        },
+      ]),
+    );
+    expect(V9WrapperLocalFactsSchema.safeParse({
+      schemaVersion: 1,
+      applicability: "wrapper",
+      form: "strategy-vault",
+      formDisposition: "integration-missing",
+      formSignals: ["fixture-wrapper"],
+      formEvidenceRefIds: [],
+      facts,
+      riskTransfer: {
+        disposition: "integration-missing",
+        mechanism: "unknown",
+        maximumParentLossAbsorptionPoints: 0,
+        signals: ["fixture-risk-transfer"],
+        evidenceRefIds: [],
+      },
+    }).success).toBe(false);
   });
 });

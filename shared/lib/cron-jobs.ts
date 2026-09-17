@@ -107,7 +107,7 @@ const CRON_SCHEDULE_DEFINITIONS = {
     // Keep the logical :00/:30 evidence slots, but dispatch five minutes later
     // so this RPC-heavy graph does not overlap the rich quarter-hourly graph in
     // the same warm Worker isolate.
-    triggerSchedules: ["5,35 * * * *"],
+    triggerSchedules: ["5 * * * *", "35 * * * *"],
     ...CRON_SCHEDULE_CADENCES.halfHourlyMeasuredExecution,
   },
   halfHourlyOffset: {
@@ -183,12 +183,15 @@ export const CRON_CONNECTION_BUDGET = {
  * burn cadence for one net expression, bringing the topology to 39. ADR-23
  * pairs the extended mint/burn cadence after same-version production runs
  * proved the same CPU-class fault, bringing the topology to 40 without adding
- * logical work, fetch surface, or connection pressure. The binding constraints
- * remain the fetch-capable-entry and per-trigger connection limits below, plus
+ * logical work, fetch surface, or connection pressure. The P2-09 topology
+ * review applies the same hourly-alias correction to the RPC-heavy measured-
+ * execution lane, bringing the topology to 41 without changing logical work,
+ * fetch surface, or connection pressure. The binding constraints remain the
+ * fetch-capable-entry and per-trigger connection limits below, plus
  * Cloudflare's 250-Cron-Triggers-per-account platform ceiling.
  */
 export const CRON_GROWTH_HEADROOM_POLICY = {
-  maxPhysicalTriggersBeforeRebalance: 40,
+  maxPhysicalTriggersBeforeRebalance: 41,
   // The digest publication watchdog is a one-connection serial sidecar on the
   // existing status lane; admit that reviewed entry without changing trigger
   // topology or the per-trigger peak.

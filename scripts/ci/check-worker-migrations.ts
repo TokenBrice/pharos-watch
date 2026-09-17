@@ -1,9 +1,10 @@
 import { spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
-import { mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { isDirectRun } from "../lib/smoke-runtime.mjs";
+import { getWorkerMigrationFiles } from "../lib/worker-migration-files.mts";
 
 interface ManifestMigrationRow {
   sequence: string;
@@ -78,11 +79,6 @@ export const UNSAFE_ROLLOUT_SAFETY_PATTERNS = Object.freeze([
 ]);
 export const UNSAFE_ROLLOUT_ADD_COLUMN_LABEL = "ALTER TABLE ... ADD COLUMN ... NOT NULL without DEFAULT";
 
-export function getMigrationFiles(migrationsDir: string): string[] {
-  return readdirSync(migrationsDir)
-    .filter((file) => file.endsWith(".sql"))
-    .sort();
-}
 
 export function getMigrationSequenceNumber(file: string): number {
   const match = file.match(/^(\d+)/);
@@ -523,7 +519,7 @@ export async function validateWorkerMigrations({
   includeSchemaFingerprint = false,
   writeSchemaManifest = false,
 }: ValidateWorkerMigrationsOptions = {}): Promise<WorkerMigrationResult> {
-  const migrationFiles = getMigrationFiles(migrationsDir);
+  const migrationFiles = getWorkerMigrationFiles(migrationsDir);
   if (migrationFiles.length === 0) {
     throw new Error(`No migration files found in ${migrationsDir}`);
   }

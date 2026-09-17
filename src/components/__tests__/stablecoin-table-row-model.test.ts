@@ -115,3 +115,20 @@ describe("buildStablecoinTableRowModel peg deviation", () => {
     expect(model.absPegDeviationBps).toBe(expectedAbsDeviationBps);
   });
 });
+
+describe("buildStablecoinTableRowModel supply changes", () => {
+  it("keeps changes null when previous supply is unavailable", () => {
+    const model = buildStablecoinTableRowModel({
+      coin: makeStablecoin({
+        circulating: { peggedUSD: 1_000_000 },
+        circulatingPrevDay: undefined,
+        circulatingPrevWeek: undefined,
+      }),
+      density: "spacious",
+      variant: "default",
+    });
+
+    expect(model.change24h).toBeNull();
+    expect(model.change7d).toBeNull();
+  });
+});

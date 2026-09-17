@@ -10,43 +10,14 @@ import {
   type ExitRouteObservationCoverage,
   type LiquidityPoolSourceFamily,
 } from "@shared/types/market";
+import { CHAIN_META } from "@shared/lib/chains";
+import { canonicalExitRouteChain } from "@shared/lib/exit-route-identity";
 import { toErrorMessage } from "@shared/lib/error-utils";
 
 const TREND_BASELINE_CONFIDENCE_MIN = 0.5;
 const TREND_24H_TOLERANCE_SEC = 12 * 3600;
 const TREND_7D_TOLERANCE_SEC = 36 * 3600;
 
-export interface DexLiquidityRow {
-  stablecoin_id: string;
-  total_tvl_usd: number;
-  total_volume_24h_usd: number;
-  total_volume_7d_usd: number;
-  total_volume_7d_measured?: number | null;
-  pool_count: number;
-  pair_count: number;
-  chain_count: number;
-  protocol_tvl_json: string | null;
-  chain_tvl_json: string | null;
-  top_pools_json: string | null;
-  liquidity_score: number | null;
-  concentration_hhi: number | null;
-  depth_stability: number | null;
-  updated_at: number;
-  effective_tvl_usd: number | null;
-  avg_pool_stress: number | null;
-  weighted_balance_ratio: number | null;
-  organic_fraction: number | null;
-  durability_score: number | null;
-  score_components_json: string | null;
-  locked_liquidity_pct: number | null;
-  coverage_class: string | null;
-  coverage_confidence: number | null;
-  source_mix_json: string | null;
-  balance_measured_tvl_usd: number | null;
-  organic_measured_tvl_usd: number | null;
-  // Column is NOT NULL DEFAULT in D1; no NULL rows remain (verified 2026-08-19).
-  methodology_version: string;
-}
 
 export interface DexHistoryRow {
   stablecoin_id: string;
@@ -224,6 +195,11 @@ function pickAllowedKeys(obj: Record<string, unknown>, allowed: Set<string>): Re
   }
   return out;
 }
+function toChainDisplay(chain: unknown): unknown {
+  if (typeof chain !== "string") return chain;
+  const canonical = canonicalExitRouteChain(chain);
+  return CHAIN_META[canonical]?.name ?? chain;
+}
 
 const ALLOWED_POOL_KEYS = new Set<string>([
   "project",
@@ -278,6 +254,9 @@ export function normalizeTopPools(
     if (!pool || typeof pool !== "object" || Array.isArray(pool)) continue;
     const poolRecord = pool as Record<string, unknown>;
     const cleaned = pickAllowedKeys(poolRecord, ALLOWED_POOL_KEYS);
+    if (typeof poolRecord.chain === "string") {
+      cleaned.chain = toChainDisplay(poolRecord.chain);
+    }
     if (poolRecord.extra && typeof poolRecord.extra === "object" && !Array.isArray(poolRecord.extra)) {
       cleaned.extra = pickAllowedKeys(poolRecord.extra as Record<string, unknown>, ALLOWED_EXTRA_KEYS);
     }

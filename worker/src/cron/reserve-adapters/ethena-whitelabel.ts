@@ -5,6 +5,7 @@ import type { LiveReserveWarning, LiveReservesConfig } from "@shared/types/live-
 import type { AdapterContext, AdapterResult } from "./types";
 import {
   fetchJsonAdapterInput,
+  parseFiniteNumber,
   parseTimestampLikeToUnixSeconds,
   reserveDegradedWarning,
   reserveInfoWarning,
@@ -63,16 +64,8 @@ const ON_CHAIN_ASSET_CONFIG: Record<string, AssetConfig> = {
  *  verified. */
 const OFF_CHAIN_NETWORKS: Record<string, true> = { coinbase_prime: true };
 
-/** Strict amount parser: finite numbers pass through, numeric strings are
- *  converted, and anything else throws so a malformed payload can never
- *  silently read as zero. */
-function parseStrictAmount(value: unknown, label: string): number {
-  if (typeof value === "number" && Number.isFinite(value)) return value;
-  if (typeof value === "string" && value.trim() !== "" && Number.isFinite(Number(value))) {
-    return Number(value);
-  }
-  throw new Error(`ethena-whitelabel ${label} is not a finite number: ${String(value)}`);
-}
+const parseStrictAmount = (value: unknown, label: string): number =>
+  parseFiniteNumber(value, { label: `${ADAPTER_KEY} ${label}` });
 
 export function adaptEthenaWhitelabel(
   payload: EthenaWhitelabelPayload,

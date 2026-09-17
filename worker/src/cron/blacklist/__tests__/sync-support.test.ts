@@ -14,4 +14,8 @@ describe("sync blacklist status derivation", () => {
   ] as const)("classifies %s", (_name, errors, runtimePressure, expected) => {
     expect(deriveSyncBlacklistStatus(errors, runtimePressure)).toBe(expected);
   });
+
+  it("uses the eligible config count for the error threshold", () => {
+    expect(deriveSyncBlacklistStatus(6, false, { totalConfigs: 10 })).toBe("error");
+  });
 });

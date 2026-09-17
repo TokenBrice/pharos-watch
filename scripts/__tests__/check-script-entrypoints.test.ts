@@ -36,6 +36,22 @@ describe("script entrypoint validation", () => {
     expect(collectScriptEntrypoints(workflow, { allowLineBreaks: true })).toEqual([helper]);
   });
 
+  it("forward-scans Node commands after CLI flags", () => {
+    expect(
+      collectScriptEntrypoints(
+        [
+          "node --experimental-strip-types scripts/maintenance/generate-pr-workflow-matrix.ts --preflight",
+          "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/ci/run-gitleaks.ts --range",
+          "node --import tsx scripts/ci/check-unused-code.ts",
+        ].join("\n"),
+      ),
+    ).toEqual([
+      "scripts/maintenance/generate-pr-workflow-matrix.ts",
+      "scripts/ci/run-gitleaks.ts",
+      "scripts/ci/check-unused-code.ts",
+    ]);
+  });
+
   it("reports a missing repo-owned GitHub script target", () => {
     const root = fixtureRoot();
     writeFileSync(

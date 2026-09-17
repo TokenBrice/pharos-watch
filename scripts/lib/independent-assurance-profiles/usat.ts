@@ -1,9 +1,5 @@
-import { AMOUNT, type CompilerProfile } from "./shared";
+import { scheduleAmountPattern, type CompilerProfile } from "./shared";
 
-function usatScheduleAmountPattern(schedule: string, label: string): RegExp {
-  // eslint-disable-next-line security/detect-non-literal-regexp -- schedule/label are fixed literals from the reviewed extraction tables below.
-  return new RegExp(`${schedule}[\\s\\S]*?^\\s*${label}\\s+\\$?${AMOUNT}\\s*$`, "im");
-}
 
 export const PROFILE: CompilerProfile = {
   product: "USAT",
@@ -27,8 +23,8 @@ export const PROFILE: CompilerProfile = {
   conclusion: "unmodified",
   unit: "USD",
   assetRows: [
-    { code: "cash", label: "Cash", pattern: usatScheduleAmountPattern("Schedule II:", "Cash") },
-    { code: "reverse-repo", label: "Reverse repurchase agreements collateralized by U.S. Treasury securities, at fair value", pattern: usatScheduleAmountPattern("Schedule II:", "Reverse repurchase agreements collateralized by U\\.S\\. Treasury securities,") },
+    { code: "cash", label: "Cash", pattern: scheduleAmountPattern("Schedule II:", "Cash") },
+    { code: "reverse-repo", label: "Reverse repurchase agreements collateralized by U.S. Treasury securities, at fair value", pattern: scheduleAmountPattern("Schedule II:", "Reverse repurchase agreements collateralized by U\\.S\\. Treasury securities,") },
   ],
   liabilityRows: [
     // eslint-disable-next-line security/detect-unsafe-regex -- anchored per-line pattern over an offline reviewed PDF text dump; bounded digit runs, no nested quantifier ambiguity.
@@ -51,7 +47,7 @@ export const PROFILE: CompilerProfile = {
   reportedTotals: [
     // eslint-disable-next-line security/detect-unsafe-regex -- anchored per-line pattern over an offline reviewed PDF text dump; bounded digit runs, no nested quantifier ambiguity.
     { label: "USAT redeemable token total", expected: "175245527", pattern: /^\s*Total USAT redeemable tokens outstanding\s+\$?([0-9][0-9,]*(?:\.[0-9]+)?)\s*$/im },
-    { label: "USAT reserve asset total", expected: "175906606", pattern: usatScheduleAmountPattern("Schedule II:", "Total") },
+    { label: "USAT reserve asset total", expected: "175906606", pattern: scheduleAmountPattern("Schedule II:", "Total") },
   ],
   reportedAssetTotal: "175906606",
   computedAssetTotal: "175906606",

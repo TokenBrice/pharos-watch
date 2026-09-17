@@ -139,6 +139,7 @@ export function TimelineClient() {
     meta,
     dataUpdatedAt,
     total,
+    droppedRows,
   } = feed.events;
 
   const interactions = useTimelineFeedInteractions({
@@ -215,6 +216,7 @@ export function TimelineClient() {
       <SummaryBand
         loadedCount={feed.visibleEvents.length}
         totalCount={total}
+        droppedRows={droppedRows}
         openCount={feed.openIncidents.length}
         windowLabel={feedController.windowLabel}
         severityLabel={feedController.severityLabel}

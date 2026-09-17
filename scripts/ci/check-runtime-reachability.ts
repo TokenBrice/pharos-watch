@@ -14,7 +14,7 @@ import {
   type RuntimeReachabilityPolicy,
 } from "../lib/runtime-reachability-policies.mts";
 import { isDirectRun } from "../lib/smoke-runtime.mjs";
-import { collectSourceFiles } from "../lib/source-files.mts";
+import { collectSourceFilesUnderRoots } from "../lib/source-files.mts";
 import { parseSourceFile } from "../lib/ts-ast.mts";
 
 const REPO_ROOT = resolve(import.meta.dirname, "../..");
@@ -64,14 +64,6 @@ function isProductionSourceFile(path: string): boolean {
   return !path.endsWith(".test.ts") && !path.endsWith(".test.tsx");
 }
 
-function collectFiles(root: string, relativeRoot: string): string[] {
-  const absoluteRoot = resolve(root, relativeRoot);
-  if (!existsSync(absoluteRoot) || !statSync(absoluteRoot).isDirectory()) return [];
-  return collectSourceFiles(absoluteRoot, { extensions: SOURCE_EXTENSIONS, excludedDirs: EXCLUDED_DIRS })
-    .map((path) => toRepoPath(root, path))
-    .filter(isProductionSourceFile)
-    .sort();
-}
 
 function hasUseClientDirective(source: string): boolean {
   const withoutBom = source.charCodeAt(0) === 0xfeff ? source.slice(1) : source;
@@ -114,7 +106,10 @@ function scheduledLoaderEntrypoints(root: string, sourcePath: string): string[] 
 function resolveEntrypoints(root: string, selector: EntrypointSelector): string[] {
   if (selector.kind === "paths") return selector.paths.map((path) => toRepoPath(root, path));
   if (selector.kind === "scheduled-loaders") return scheduledLoaderEntrypoints(root, selector.source);
-  const files = collectFiles(root, selector.root);
+  const files = collectSourceFilesUnderRoots([selector.root], root, {
+    extensions: SOURCE_EXTENSIONS,
+    excludedDirs: EXCLUDED_DIRS,
+  }).filter(isProductionSourceFile);
   if (selector.kind === "source-files") return files;
   return files.filter((path) => hasUseClientDirective(readFileSync(resolve(root, path), "utf8")));
 }
@@ -194,7 +189,12 @@ function resolveForbidden(root: string, selector: ForbiddenSelector): ResolvedFo
       prefixes: [...(selector.prefixes ?? [])],
     };
   }
-  const paths = collectFiles(root, selector.root).filter((path) => importsReactOrUsesDomGlobal(resolve(root, path)));
+  const paths = collectSourceFilesUnderRoots([selector.root], root, {
+    extensions: SOURCE_EXTENSIONS,
+    excludedDirs: EXCLUDED_DIRS,
+  })
+    .filter(isProductionSourceFile)
+    .filter((path) => importsReactOrUsesDomGlobal(resolve(root, path)));
   return { allowedImporters: [], paths: new Set(paths), prefixes: [] };
 }
 

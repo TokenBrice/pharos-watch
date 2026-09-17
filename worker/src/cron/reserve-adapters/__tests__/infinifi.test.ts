@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { LIVE_RESERVE_ADAPTER_DEFINITIONS } from "@shared/lib/live-reserve-adapters";
 import { encodeUint256, PAUSED_SELECTOR } from "../../../lib/evm-selectors";
 import {
@@ -475,6 +475,22 @@ describe("fetchInfiniFiReserves", () => {
     expect(result.warnings).toEqual(expect.arrayContaining([
       expect.objectContaining({ code: "infinifi-redemption-route-unreadable", effect: "info" }),
     ]));
+  });
+
+  it("keeps the reserve snapshot when the overall route-probe budget expires", async () => {
+    const timeout = vi.spyOn(AbortSignal, "timeout").mockReturnValue(
+      AbortSignal.abort(new DOMException("route probe timed out", "TimeoutError")),
+    );
+    try {
+      const { result } = await run(infinifiNetwork());
+      expect(result.slices).not.toHaveLength(0);
+      expect(result.metadata).not.toHaveProperty("redemption");
+      expect(result.warnings).toEqual(expect.arrayContaining([
+        expect.objectContaining({ code: "infinifi-redemption-route-unreadable", effect: "info" }),
+      ]));
+    } finally {
+      timeout.mockRestore();
+    }
   });
 
   it("falls back to unverified freshness when the optional rate-history probe has malformed data points", async () => {

@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { getDepegDewsMethodologyVersionAt } from "@shared/lib/methodology-versions/depeg-dews";
 import { type MockD1Database } from "@shared/test-utils/mock-d1";
-import { projectDepegOpened, projectDepegResolved } from "../depeg";
+import { projectDepegOpened, projectDepegPeakWorsened, projectDepegResolved } from "../depeg";
 import { mockTapeD1, tapeCacheWriteBinds, tapeInsertBinds } from "./test-support";
 
 const SEC = 1_700_000_000;
@@ -79,5 +79,36 @@ describe("depeg projector", () => {
       getDepegDewsMethodologyVersionAt(SEC + 900),
     ]);
     expect(tapeCacheWriteBinds(db, "depeg.resolved")[0]?.[1]).toBe(String(SEC + 900));
+  });
+
+  it("paginates peak-worsened scans beyond the per-call limit", async () => {
+    const firstPage = [
+      depegRow({ id: 1, stablecoin_id: "usdt-tether" }),
+      depegRow({ id: 2, stablecoin_id: "usdc-circle" }),
+    ];
+    const secondPage = [
+      depegRow({ id: 3, stablecoin_id: "dai-makerdao" }),
+    ];
+    const db = mockTapeD1([
+      { match: "FROM cache WHERE key", rows: [] },
+      { match: MATCH_DEPEG_EVENTS, matchBinds: [2], rows: firstPage },
+      { match: MATCH_DEPEG_EVENTS, matchBinds: [2, 2], rows: secondPage },
+    ]) as MockD1Database;
+
+    const result = await projectDepegPeakWorsened(db, { maxRows: 2 });
+
+    expect(result).toEqual({ projected: 0, advanced: null });
+    const scans = db.getHistory().filter((entry) => entry.sql.includes(MATCH_DEPEG_EVENTS));
+    expect(scans).toHaveLength(2);
+    expect(scans[1]?.binds).toEqual([2, 2]);
+    const cacheWrites = db
+      .getHistory()
+      .filter((entry) => entry.sql.includes("INSERT OR REPLACE INTO cache")
+        && entry.binds[0] === "tape-projector:peak-worsened-seen");
+    expect(JSON.parse(String(cacheWrites[0]?.binds[1]))).toEqual({
+      "1": 450,
+      "2": 450,
+      "3": 450,
+    });
   });
 });

@@ -231,13 +231,42 @@ describe("fetchJupUsdReserves", () => {
     });
   });
 
-  it("emits no warnings when both snapshots and oracle succeed", async () => {
+  it.each([
+    ["an empty object", {}],
+    ["an error object", { error: "maintenance" }],
+    ["a null ripcord", { ripcord: null }],
+  ])("marks route unknown and degrades for %s oracle response", async (_label, oracle) => {
     const { result } = await runAdapter("jupusd", makeCoin(), {
-      network: network(),
+      network: network({ oracle }),
+      nowSec: 1_776_003_600,
+    });
+
+    expect(result.warnings).toEqual(expect.arrayContaining([
+      expect.objectContaining({
+        code: "jupusd-oracle-unavailable",
+        effect: "degraded",
+      }),
+    ]));
+    expect(result.metadata?.redemption).toMatchObject({
+      routeStatus: "unknown",
+      routeStatusSource: "protocol-api",
+    });
+  });
+
+  it.each([
+    [false, "open"],
+    [true, "paused"],
+  ] as const)("publishes route status %s only from a boolean oracle response", async (ripcord, routeStatus) => {
+    const { result } = await runAdapter("jupusd", makeCoin(), {
+      network: network({ oracle: { ripcord } }),
       nowSec: 1_776_003_600,
     });
 
     expect(result.warnings).toBeUndefined();
+    expect(result.metadata?.redemption).toMatchObject({
+      routeStatus,
+      routeStatusSource: "protocol-api",
+    });
   });
 
   it("takes the newest snapshot timestamp instead of trusting snapshots[0] ordering", async () => {

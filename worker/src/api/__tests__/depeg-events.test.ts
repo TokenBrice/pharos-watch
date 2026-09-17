@@ -13,7 +13,6 @@ describe("handleDepegEvents", () => {
 
   it("returns 200 with events and total", async () => {
     const db = mockD1([
-      { match: "threshold-crossing-count", rows: [{ total: 13 }], first: { total: 13 } },
       { match: "COUNT", rows: [{ total: 1 }] },
       { match: "depeg_events", rows: [row] },
     ]);
@@ -25,7 +24,7 @@ describe("handleDepegEvents", () => {
     };
     expect(body.events).toHaveLength(1);
     expect(body.total).toBe(1);
-    expect(body).toMatchObject({ counts: { incidents: 1, thresholdCrossings: 13 } });
+    expect(body).not.toHaveProperty("counts");
     expect(body.methodology).toHaveProperty("version");
     expect(body.methodology).toHaveProperty("changelogPath");
   });
@@ -238,7 +237,7 @@ describe("handleDepegEvents", () => {
     expect(db.getHistory().some((entry) => entry.sql.includes("COUNT(*) as total"))).toBe(false);
   });
 
-  it("omits incident and crossing counts when the exact total is skipped", async () => {
+  it("does not query or emit derived incident counts", async () => {
     const db = mockD1([
       { match: "depeg_events", rows: [row] },
     ]) as MockD1Database;
@@ -393,7 +392,6 @@ describe("handleDepegEvents", () => {
       },
       { match: "pharos:depeg-events:dex-availability", rows: [] },
       { match: "pharos:depeg-events:pool-availability", rows: [] },
-      { match: "pharos:depeg-events:threshold-crossing-count", rows: [], first: { total: 0 } },
     ]) as MockD1Database;
 
     const res = await handleDepegEvents(

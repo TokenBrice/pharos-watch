@@ -87,7 +87,7 @@ const V9OperationalResilienceReserveReconciliationFactSchema = z
   })
   .strict();
 
-const V9OperationalResilienceIncidentFactSchema = V9OperationalResilienceIncidentSchema.extend(
+const V9OperationalResilienceIncidentFactSchema = V9OperationalResilienceIncidentSchema.safeExtend(
   ClaimEvidenceFields,
 ).strict();
 

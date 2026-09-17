@@ -77,6 +77,7 @@ export function EmptyState({
 interface SummaryBandProps {
   loadedCount: number;
   totalCount: number | null;
+  droppedRows: number;
   openCount: number;
   windowLabel: string;
   severityLabel: string;
@@ -88,7 +89,7 @@ interface SummaryBandProps {
   onTogglePhosphor: () => void;
 }
 
-export function SummaryBand({ loadedCount, totalCount, openCount, windowLabel, severityLabel, dataUpdatedAt, nowMs, lastEventTs, phosphor, showPhosphorToggle, onTogglePhosphor }: SummaryBandProps) {
+export function SummaryBand({ loadedCount, totalCount, droppedRows, openCount, windowLabel, severityLabel, dataUpdatedAt, nowMs, lastEventTs, phosphor, showPhosphorToggle, onTogglePhosphor }: SummaryBandProps) {
   const showsPartial = totalCount != null && totalCount > loadedCount;
   const countNode = showsPartial ? (
     <span className="font-semibold text-foreground">
@@ -108,6 +109,13 @@ export function SummaryBand({ loadedCount, totalCount, openCount, windowLabel, s
     );
   }
   parts.push(countNode);
+  if (droppedRows > 0) {
+    parts.push(
+      <span key="incomplete" className="font-semibold text-amber-700 dark:text-amber-400">
+        Incomplete ({droppedRows.toLocaleString()} {droppedRows === 1 ? "row" : "rows"} rejected)
+      </span>,
+    );
+  }
   parts.push(<span key="window">{windowLabel}</span>);
   parts.push(<span key="severity">{severityLabel}</span>);
   const isFresh = dataUpdatedAt > 0 && nowMs - dataUpdatedAt < TAPE_FRESH_WINDOW_MS;

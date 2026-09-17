@@ -1,4 +1,4 @@
-import { mkdirSync, writeFileSync } from "node:fs";
+import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join, relative } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 
@@ -54,5 +54,18 @@ describe("collectSourceFiles", () => {
       .sort();
 
     expect(files).toEqual(["src/page.ts"]);
+  });
+
+  it("keeps shared TypeScript sources free of raw NUL bytes", () => {
+    const files = collectSourceFiles(join(process.cwd(), "shared"), {
+      extensions: new Set([".ts", ".tsx"]),
+      excludedDirs: new Set(),
+    });
+    const withNul = files
+      .filter((file) => readFileSync(file).includes(0))
+      .map((file) => relative(process.cwd(), file))
+      .sort();
+
+    expect(withNul).toEqual([]);
   });
 });

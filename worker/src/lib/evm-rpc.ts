@@ -3,6 +3,7 @@ import { getAlchemyAuthHeaders, getChainRpc, type ChainRpcConfig } from "./chain
 import { ETHERSCAN_V2_BASE } from "./constants";
 import { encodeAddress, encodeUint256 } from "./evm-selectors";
 import { fetchJsonWithRetry } from "./fetch-retry";
+import { parseQuantityHex } from "./bigint";
 import { rethrowIfAborted } from "./abort";
 import { toErrorMessage } from "@shared/lib/error-utils";
 
@@ -337,9 +338,10 @@ function normalizeJsonRpcQuantityHex(value: string): string | null {
 }
 
 function parseHexInteger(value: string | undefined): number | null {
-  if (typeof value !== "string" || !value.startsWith("0x")) return null;
-  const parsed = Number.parseInt(value, 16);
-  return Number.isFinite(parsed) ? parsed : null;
+  const parsed = parseQuantityHex(value);
+  if (parsed == null) return null;
+  const parsedNumber = Number(parsed);
+  return Number.isFinite(parsedNumber) ? parsedNumber : null;
 }
 
 export function isHexResult(value: string | null | undefined): value is `0x${string}` {

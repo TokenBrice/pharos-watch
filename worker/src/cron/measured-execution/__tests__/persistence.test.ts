@@ -156,6 +156,27 @@ describe("measured execution durable publication", () => {
     await expect(loadLatestPublishedDexMeasuredQuoteEvidence(db)).rejects.toThrow("incomplete");
   });
 
+  it("rejects the same torn terminal row in full and selected evidence scans", async () => {
+    const { db, sqlite } = databases.open();
+    const target = fixtureTarget("ethereum");
+    const published = await publishDexMeasuredTargetInventory({ db, targets: [target], capturedAt: 1_000 });
+    await publishDexMeasuredQuoteGeneration({
+      db,
+      generationId: "torn-quotes",
+      targetGeneration: { ...published, targets: [target], publishedAt: 1_000 },
+      outcomes: [{ target, status: "failed", failureReason: "pool-revert" }],
+      quotedAt: 1_060,
+    });
+    sqlite.prepare(
+      "UPDATE dex_measured_execution_quotes SET status = 'measured', failure_reason = NULL WHERE generation_id = ?",
+    ).run("torn-quotes");
+
+    for (const options of [undefined, { targetIds: [target.targetId] }]) {
+      await expect(loadLatestPublishedDexMeasuredQuoteEvidence(db, undefined, options))
+        .rejects.toThrow("torn terminal identity");
+    }
+  });
+
   it("loads all identities across current keyset pages with deferred profiles", async () => {
     const { db } = databases.open();
     const targets = Array.from({ length: DEX_MEASURED_CURRENT_EVIDENCE_PAGE_SIZE * 2 + 1 }, (_, index) => fixtureTarget(`test-chain-${index}`));
@@ -311,6 +332,47 @@ describe("measured execution last-known-good selection", () => {
       consecutiveSuccessCount: 0,
       latestOperationalFailureAt: 2_010,
     });
+  });
+
+  it("logs an LKG enrichment read failure while returning current evidence", async () => {
+    const measuredTarget = fixtureTarget("ethereum");
+    const { db: currentDb } = evidenceDb({
+      target: measuredTarget,
+      latest: {
+        status: "failed",
+        failureReason: "request-budget-exhausted",
+        profile: null,
+      },
+      historical: [],
+    });
+    const prepareCurrent = currentDb.prepare.bind(currentDb);
+    const db = makeNoopD1({
+      prepare: vi.fn((query: string) => {
+        if (query.includes("SELECT history_generation.generation_id")) {
+          return {
+            bind: () => ({
+              all: async () => {
+                throw new Error("forced LKG D1 read failure");
+              },
+            }),
+          };
+        }
+        return prepareCurrent(query);
+      }),
+    });
+    const consoleWarn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+
+    const evidence = await loadLatestPublishedDexMeasuredQuoteEvidence(db);
+
+    expect(evidence?.byTargetId.get(measuredTarget.targetId)).toMatchObject({
+      status: "failed",
+      failureReason: "request-budget-exhausted",
+      resolution: "latest",
+    });
+    expect(consoleWarn).toHaveBeenCalledWith(
+      expect.stringContaining('"event":"measured_execution.lkg_enrichment_failed"'),
+    );
+    consoleWarn.mockRestore();
   });
 
   it("preserves mature conservative history across a latest operational failure", async () => {

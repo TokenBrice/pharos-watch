@@ -11,7 +11,7 @@ import { SITE_ORIGIN as SITE_URL } from "@shared/lib/runtime-origins";
 import { PRE_LAUNCH_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import { buildStablecoinUrl } from "@shared/lib/urls";
 import { UpcomingClient } from "@/components/upcoming-client";
-import { logosById } from "@/lib/logos";
+import { getLogoSrc, logosById } from "@/lib/logos";
 import aiSummaries from "@data/ai-summaries.json";
 
 // Server-side teaser selection: only the dozen pre-launch texts reach the
@@ -41,7 +41,7 @@ const PRE_LAUNCH_CLIENT_COINS = PRE_LAUNCH_STABLECOINS.map((coin) => ({
 }));
 
 const PRE_LAUNCH_LOGOS = Object.fromEntries(
-  PRE_LAUNCH_STABLECOINS.map((coin) => [coin.id, logosById[coin.id]]),
+  PRE_LAUNCH_STABLECOINS.map((coin) => [coin.id, getLogoSrc(logosById, coin.id)]),
 );
 
 export const metadata: Metadata = buildPageMetadata({

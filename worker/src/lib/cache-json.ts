@@ -1,6 +1,13 @@
+import { toErrorMessage } from "@shared/lib/error-utils";
+
 export interface CachedJsonRow {
   value: string;
-  updatedAt: number;
+  updatedAt?: number;
+}
+
+export interface JsonDecodeParseFailure<R extends string = string> {
+  reason: R;
+  message: string;
 }
 
 interface JsonDecodeOk<T> {
@@ -30,6 +37,7 @@ interface DecodeJsonStringOptions<T, R extends string> {
   missingReason?: R;
   parseErrorReason: R;
   normalize: (parsed: unknown) => JsonNormalizerResult<T, R>;
+  onParseFailure?: (failure: JsonDecodeParseFailure<R>) => void;
 }
 
 function finalizeJsonDecode<T, R extends string>(
@@ -71,7 +79,12 @@ export function decodeJsonString<T, R extends string>(
 
   try {
     return finalizeJsonDecode(updatedAt, options.normalize(JSON.parse(value)));
-  } catch {
+  } catch (error) {
+    const message = toErrorMessage(error);
+    options.onParseFailure?.({
+      reason: options.parseErrorReason,
+      message,
+    });
     return {
       ok: false,
       reason: options.parseErrorReason,
@@ -85,6 +98,7 @@ interface DecodeCachedJsonOptions<T, R extends string> {
   missingReason: R;
   parseErrorReason: R;
   normalize: (parsed: unknown) => JsonNormalizerResult<T, R>;
+  onParseFailure?: (failure: JsonDecodeParseFailure<R>) => void;
 }
 
 export function decodeCachedJson<T, R extends string>(
@@ -96,5 +110,6 @@ export function decodeCachedJson<T, R extends string>(
     missingReason: options.missingReason,
     parseErrorReason: options.parseErrorReason,
     normalize: options.normalize,
+    onParseFailure: options.onParseFailure,
   });
 }

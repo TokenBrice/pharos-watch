@@ -5,6 +5,7 @@ import type { AdapterContext, AdapterResult } from "./types";
 import {
   buildCoverageShortfallWarnings,
   fetchJsonWithRetry,
+  parseFiniteNumber,
   parsePositiveNumericLike,
   slicesFromValues,
   strictAmountParser,
@@ -96,16 +97,11 @@ function readValue(token: NestPositionToken): number {
 }
 
 function readNonNegativeNumericLike(value: unknown, label: string): number {
-  const parsed =
-    typeof value === "number"
-      ? value
-      : typeof value === "string" && value.trim()
-        ? Number(value)
-        : Number.NaN;
-  if (!Number.isFinite(parsed) || parsed < 0) {
+  try {
+    return parseFiniteNumber(value, { label, min: 0 });
+  } catch {
     throw new Error(`nest-vault-positions invalid ${label}`);
   }
-  return parsed;
 }
 
 function readPendingTransactions(

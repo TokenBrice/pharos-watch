@@ -11,6 +11,7 @@ import type {
   V9ValidatedPolicyEnvelope,
 } from "../../types/safety-score-v9";
 import { isDexMeasuredExecutionObservationHistoryMature } from "../../types/measured-execution";
+import { V9_NEUTRAL_CONTROL_SCORE } from "../../types/safety-score-v9-public-facts";
 import { evaluateV9AccessPosture, type V9AccessPostureResult } from "./access-posture";
 import {
   createUnavailableV9BackingResult,
@@ -765,7 +766,8 @@ export function upstreamOracleNavScore(
 ): number | null {
   const localComponentScore = result.control.components.find((component) => component.kind === "oracle")?.score;
   const localScore =
-    localComponentScore ?? (result.control.oracleApplicability === "not-applicable" ? 95 : null);
+    localComponentScore ??
+    (result.control.oracleApplicability === "not-applicable" ? V9_NEUTRAL_CONTROL_SCORE : null);
   const oracleRoleInputs = (result.dependencyInputs.roleInputs ?? []).filter(
     (input) => input.role === "oracle-nav",
   );

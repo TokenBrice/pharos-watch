@@ -5,6 +5,7 @@
  * explicit CoinGecko network mapping and keeps GeckoTerminal for GT-only chains.
  */
 import { createTimeoutSignal } from "@shared/lib/timeout-signal";
+import { isRecord } from "@shared/lib/type-guards";
 import { cgUrl, cgHeaders } from "./coingecko";
 import { fetchWithRetry } from "./fetch-retry";
 import { USER_AGENT } from "./constants";
@@ -63,10 +64,6 @@ export interface CgTokenPoolsResult {
 
 const CG_ONCHAIN_LOOKUP_MISS_STATUSES = new Set([400, 404]);
 const CG_ONCHAIN_DEFAULT_TIMEOUT_MS = 15_000;
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null;
-}
 
 function isStringOrNull(value: unknown): value is string | null {
   return typeof value === "string" || value === null;

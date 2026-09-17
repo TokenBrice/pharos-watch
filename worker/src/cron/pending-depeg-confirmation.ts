@@ -6,7 +6,6 @@ import {
   DEPEG_PENDING_EXPIRY_SEC,
   DEPEG_PENDING_MIN_AGE_SEC,
   DEPEG_PRIMARY_PRICE_MAX_AGE_SEC,
-  DEPEG_SECONDARY_THRESHOLD_RATIO,
   getDepegThresholdBps,
 } from "../lib/constants";
 import {
@@ -123,7 +122,6 @@ export interface ConfirmationPlanReady {
   meta: ReturnType<typeof ACTIVE_META_BY_ID.get>;
   pegReference: number;
   threshold: number;
-  secondaryBar: number;
   nativeSignal: DepegSignal | null;
   nativePegQuote: NativePegQuote | undefined;
   nativeSourceKey: string;
@@ -379,12 +377,11 @@ export function buildConfirmationPlan(input: ConfirmationPlanInput): Confirmatio
   }
 
   const threshold = getDepegThresholdBps(row.peg_type);
-  const secondaryBar = Math.round(threshold * DEPEG_SECONDARY_THRESHOLD_RATIO);
   const primaryTrust = asset ? classifyPrimaryDepegTrust(asset, now) : "unusable";
   const nativeSignal = nativePegQuote ? deriveDepegSignal(nativePegQuote.price, 1) : null;
-  const nativeSecondaryStatus = classifyDirectionalSignal(nativeSignal, secondaryBar, pendingState.direction);
-  const nativePegRecovered = nativeSecondaryStatus === "recover";
-  const nativePegStillDepegged = nativeSecondaryStatus === "confirm";
+  const nativeStatus = classifyDirectionalSignal(nativeSignal, threshold, pendingState.direction);
+  const nativePegRecovered = nativeStatus === "recover";
+  const nativePegStillDepegged = nativeStatus === "confirm";
   const confirmingSources: string[] = [];
   const opposingSources: string[] = [];
   const unavailableSources: string[] = [];
@@ -392,8 +389,7 @@ export function buildConfirmationPlan(input: ConfirmationPlanInput): Confirmatio
   const hardOpposingSources: string[] = [];
   const nativeSourceKey = buildNativeConfirmationKey(nativePegQuote?.pegCurrency ?? meta?.flags.pegCurrency);
   if (nativeSignal != null && !isNativeOrigin) {
-    if (nativeSecondaryStatus === "confirm") addSource(confirmingSources, nativeSourceKey);
-    if (isOpposingConfirmationStatus(nativeSecondaryStatus)) {
+    if (isOpposingConfirmationStatus(nativeStatus)) {
       addSource(opposingSources, nativeSourceKey);
       addSource(hardOpposingSources, nativeSourceKey);
     }
@@ -520,7 +516,6 @@ export function buildConfirmationPlan(input: ConfirmationPlanInput): Confirmatio
     meta,
     pegReference,
     threshold,
-    secondaryBar,
     nativeSignal,
     nativePegQuote,
     nativeSourceKey,

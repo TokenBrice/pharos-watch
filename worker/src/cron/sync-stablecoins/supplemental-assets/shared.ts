@@ -14,7 +14,7 @@ import {
 import { validatePricingSourceFreshness } from "../../../lib/pricing-source-freshness";
 import { DefiLlamaCoinsPriceSchema, type DefiLlamaCoinsPriceResponse } from "../../../lib/upstream-schemas";
 import type { PeggedAsset } from "../enrich-prices";
-import { fetchCuratedAggregateOnChainMcap } from "./onchain-supply";
+import { fetchCuratedAggregateOnChainMcap, toPublicChainCirculating } from "./onchain-supply";
 
 export type CoinGeckoMcapData = Record<string, { usd?: number; usd_market_cap?: number; last_updated_at?: number }>;
 type SupplementalDefiLlamaPriceData = { coins: NonNullable<DefiLlamaCoinsPriceResponse["coins"]> };
@@ -278,19 +278,11 @@ export async function resolveCuratedAggregateSupplementalSupply(
   return {
     mcap: aggregate.mcap,
     supplySource: aggregate.supplySource,
-    chainCirculating: Object.fromEntries(
-      Object.entries(aggregate.chainCirculating ?? {}).map(([chainLabel, row]) => [
-        chainLabel,
-        {
-          ...(row.chainId ? { chainId: row.chainId } : {}),
-          current: row.current,
-        },
-      ]),
-    ),
+    chainCirculating: toPublicChainCirculating(aggregate.chainCirculating),
   };
 }
 
-export function buildPricedSupplementalAsset(
+function buildPricedSupplementalAsset(
   meta: StablecoinMeta,
   priceData: SupplementalDefiLlamaPriceData,
   cgData: CoinGeckoMcapData,
@@ -318,6 +310,36 @@ export function buildPricedSupplementalAsset(
     circulatingPrevWeek: input.circulatingPrevWeek,
     circulatingPrevMonth: input.circulatingPrevMonth,
   });
+}
+
+/**
+ * Build commodity rows serially. Commodity rows fail closed when neither a
+ * curated aggregate nor a trusted upstream source provides positive mcap.
+ */
+export async function fetchCommodityTokens(
+  metas: readonly StablecoinMeta[],
+  options: {
+    logPrefix: string;
+    priceData: SupplementalDefiLlamaPriceData;
+    cgData: CoinGeckoMcapData;
+    resolveSupply: (meta: StablecoinMeta) => Promise<{
+      mcap: number;
+      supplySource: string;
+      chainCirculating?: PeggedAsset["chainCirculating"];
+    }>;
+  },
+): Promise<PeggedAsset[]> {
+  const tokens: PeggedAsset[] = [];
+  for (const meta of metas) {
+    const supply = await options.resolveSupply(meta);
+    if (!Number.isFinite(supply.mcap) || supply.mcap <= 0) {
+      logWorkerEventArgs("handler", "warn", `[${options.logPrefix}] No positive mcap for ${meta.symbol}, skipping`);
+      continue;
+    }
+    const token = buildPricedSupplementalAsset(meta, options.priceData, options.cgData, supply);
+    if (token) tokens.push(token);
+  }
+  return tokens;
 }
 
 export async function fetchSupplementalPriceData(

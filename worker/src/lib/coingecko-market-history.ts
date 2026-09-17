@@ -1,21 +1,16 @@
 import { isCoinGeckoHistoryAllowed } from "./solomon-usdv-identity";
 import { USER_AGENT } from "./constants";
 import { cgHeaders, cgUrl } from "./coingecko";
-import { fetchJsonWithRetry } from "./fetch-retry";
+import { fetchJsonWithSchema } from "./fetch-retry";
+import {
+  CoinGeckoCoinDetailSchema,
+  CoinGeckoMarketChartSchema,
+} from "./external-api-schemas";
 
 export interface CoinGeckoMarketHistorySnapshot {
   marketCaps: [number, number][];
   prices: [number, number][];
   circulatingSupply?: number;
-}
-
-interface CoinGeckoMarketChartPayload {
-  market_caps?: [number, number][];
-  prices?: [number, number][];
-}
-
-interface CoinGeckoCoinDetailPayload {
-  market_data?: { circulating_supply?: number };
 }
 
 interface FetchCoinGeckoMarketHistoryOptions {
@@ -45,40 +40,41 @@ export async function fetchCoinGeckoMarketHistory(
     : `/coins/${geckoId}/market_chart?vs_currency=usd&days=max`;
 
   const [marketChartResult, coinResult] = await Promise.all([
-    fetchJsonWithRetry<CoinGeckoMarketChartPayload>(
+    fetchJsonWithSchema(
       cgUrl(marketChartPath, apiKey),
+      CoinGeckoMarketChartSchema,
       { headers: cgHeaders({ "User-Agent": USER_AGENT }, apiKey), signal: options.signal },
       retryCount,
       retryOptions,
     ),
-    fetchJsonWithRetry<CoinGeckoCoinDetailPayload>(
+    fetchJsonWithSchema(
       cgUrl(
         `/coins/${geckoId}?market_data=true&localization=false&tickers=false&community_data=false&developer_data=false`,
         apiKey,
       ),
+      CoinGeckoCoinDetailSchema,
       { headers: cgHeaders({ "User-Agent": USER_AGENT }, apiKey), signal: options.signal },
       retryCount,
       retryOptions,
     ),
   ]);
 
-  if (!marketChartResult?.response.ok) {
+  if (!marketChartResult?.response.ok || !marketChartResult.success) {
     return null;
   }
 
   const marketChart = marketChartResult.body;
 
   let circulatingSupply: number | undefined;
-  if (coinResult?.response.ok) {
-    const coinData = coinResult.body;
-    circulatingSupply = coinData.market_data?.circulating_supply ?? undefined;
+  if (coinResult?.response.ok && coinResult.success) {
+    circulatingSupply = coinResult.body.market_data?.circulating_supply;
   } else {
     options.onCoinDetailFailure?.(coinResult?.response.status ?? "no-response");
   }
 
   return {
     marketCaps: marketChart.market_caps ?? [],
-    prices: marketChart.prices ?? [],
+    prices: marketChart.prices,
     circulatingSupply,
   };
 }

@@ -385,6 +385,7 @@ describe("digest channel status", () => {
     ["ok+appendix(cemetery=1)", "delivered"],
     ["skipped: already-sent", "delivered"],
     ["failed: Twitter API 503", "retryable"],
+    ["pending", "retryable"],
     ["skipped: circuit-open", "retryable"],
     ["skipped: in-flight", "retryable"],
     ["skipped: stale-safety-identity", "retryable"],

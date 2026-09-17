@@ -5,6 +5,7 @@ import { extname, relative, resolve } from "node:path";
 import { collectSourceFiles } from "../lib/source-files.mts";
 import { splitLines } from "../lib/doc-files.mts";
 import { isDirectRun } from "../lib/smoke-runtime.mjs";
+import { parseAssignments, unquote } from "../lib/wrangler-toml.mjs";
 import {
   getAllEnvBindingKeys,
   renderEnvExample,
@@ -85,11 +86,6 @@ interface EnvInterfaceBinding {
 interface WranglerBinding {
   source: string;
   type: string;
-}
-
-interface TomlSection {
-  label: string;
-  name: string;
 }
 
 function normalizeText(text: string): string {
@@ -186,98 +182,6 @@ export function parseWorkerEnvInterfaceBindings(filePath: string): Map<string, E
   return bindings;
 }
 
-function parseTomlSectionHeader(line: string): TomlSection | null {
-  const content = line.trim().split("#", 1)[0].trim();
-  const isArraySection = content.startsWith("[[") && content.endsWith("]]");
-  const isTableSection = !isArraySection && content.startsWith("[") && content.endsWith("]");
-  if (!isArraySection && !isTableSection) {
-    return null;
-  }
-
-  const name = isArraySection ? content.slice(2, -2) : content.slice(1, -1);
-  if (!isTomlSectionName(name)) {
-    return null;
-  }
-  return {
-    label: isArraySection ? `[[${name}]]` : `[${name}]`,
-    name,
-  };
-}
-
-function isTomlSectionName(name: string): boolean {
-  if (name.length === 0) {
-    return false;
-  }
-  for (const char of name) {
-    const isLower = char >= "a" && char <= "z";
-    const isUpper = char >= "A" && char <= "Z";
-    const isDigit = char >= "0" && char <= "9";
-    if (!isLower && !isUpper && !isDigit && char !== "_" && char !== "." && char !== "-") {
-      return false;
-    }
-  }
-  return true;
-}
-
-function parseTomlKey(line: string): string | null {
-  let cursor = 0;
-  while (cursor < line.length && /\s/u.test(line[cursor])) {
-    cursor += 1;
-  }
-
-  let key = "";
-  while (cursor < line.length) {
-    const char = line[cursor];
-    const isLower = char >= "a" && char <= "z";
-    const isUpper = char >= "A" && char <= "Z";
-    const isDigit = char >= "0" && char <= "9";
-    if (!isLower && !isUpper && !isDigit && char !== "_") {
-      break;
-    }
-    key += char;
-    cursor += 1;
-  }
-  if (key.length === 0) {
-    return null;
-  }
-
-  while (cursor < line.length && /\s/u.test(line[cursor])) {
-    cursor += 1;
-  }
-  return line[cursor] === "=" ? key : null;
-}
-
-function parseTomlStringValue(line: string, key: string): string | null {
-  if (parseTomlKey(line) !== key) {
-    return null;
-  }
-
-  const equalsIndex = line.indexOf("=");
-  if (equalsIndex < 0) {
-    return null;
-  }
-  const value = line.slice(equalsIndex + 1).trimStart();
-  const quote = value[0];
-  if (quote !== "'" && quote !== "\"") {
-    return null;
-  }
-
-  let parsed = "";
-  for (let cursor = 1; cursor < value.length; cursor += 1) {
-    const char = value[cursor];
-    if (char === quote) {
-      return parsed;
-    }
-    if (quote === "\"" && char === "\\" && cursor + 1 < value.length) {
-      cursor += 1;
-      parsed += value[cursor];
-      continue;
-    }
-    parsed += char;
-  }
-  return null;
-}
-
 function addWranglerBinding(
   bindings: Map<string, WranglerBinding>,
   duplicates: Set<string>,
@@ -294,50 +198,31 @@ export function parseWranglerWorkerConfigBindings(source: string) {
   const bindings = new Map<string, WranglerBinding>();
   const duplicates = new Set<string>();
   const unsupported: { key: string; source: string }[] = [];
-  let section: TomlSection | null = null;
 
-  for (const rawLine of splitLines(source)) {
-    const line = rawLine.trim();
-    if (line.length === 0 || line.startsWith("#")) {
-      continue;
-    }
-
-    const nextSection = parseTomlSectionHeader(rawLine);
-    if (nextSection) {
-      section = nextSection;
-      continue;
-    }
-
-    if (!section) {
-      continue;
-    }
-
-    if (section.name === "vars") {
-      const key = parseTomlKey(rawLine);
-      if (key && isEnvKeyCandidate(key)) {
+  for (const assignment of parseAssignments(source)) {
+    const { key, section, value } = assignment;
+    const sourceLabel = section === "vars" ? "[vars]" : `[[${section}]]`;
+    if (section === "vars") {
+      if (isEnvKeyCandidate(key)) {
         addWranglerBinding(bindings, duplicates, key, {
-          source: section.label,
+          source: sourceLabel,
           type: "string",
         });
       }
       continue;
     }
 
-    const bindingSpec = WRANGLER_BINDING_SECTIONS.get(section.name);
-    if (!bindingSpec) {
-      continue;
-    }
+    const bindingSpec = WRANGLER_BINDING_SECTIONS.get(section);
+    if (!bindingSpec || key !== bindingSpec.property) continue;
 
-    const key = parseTomlStringValue(rawLine, bindingSpec.property);
-    if (!key) {
+    const bindingKey = unquote(value);
+    if (!bindingKey) continue;
+    if (!isEnvKeyCandidate(bindingKey)) {
+      unsupported.push({ key: bindingKey, source: sourceLabel });
       continue;
     }
-    if (!isEnvKeyCandidate(key)) {
-      unsupported.push({ key, source: section.label });
-      continue;
-    }
-    addWranglerBinding(bindings, duplicates, key, {
-      source: section.label,
+    addWranglerBinding(bindings, duplicates, bindingKey, {
+      source: sourceLabel,
       type: bindingSpec.type,
     });
   }

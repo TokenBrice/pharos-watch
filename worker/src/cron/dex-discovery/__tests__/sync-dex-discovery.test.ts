@@ -229,7 +229,7 @@ describe("syncDexDiscovery", () => {
     });
   });
 
-  it("returns degraded and skips staging when the finalization tail budget is exhausted", async () => {
+  it("returns degraded and preserves staging when the finalization tail budget is exhausted", async () => {
     vi.mocked(incrementRunSeq).mockResolvedValue(1);
 
     let nowMs = 1_700_000_000_000;
@@ -256,7 +256,11 @@ describe("syncDexDiscovery", () => {
       expect.any(Number),
       undefined,
     );
-    expect(vi.mocked(upsertStagedPools)).not.toHaveBeenCalled();
+    expect(vi.mocked(upsertStagedPools)).toHaveBeenCalledWith(
+      db,
+      [expect.objectContaining({ poolId: "ethereum:0xpool1" })],
+      undefined,
+    );
     expect(vi.mocked(cleanupStaging)).not.toHaveBeenCalled();
 
     const metadata = JSON.parse(result.metadata ?? "{}") as Record<string, unknown>;
@@ -264,7 +268,7 @@ describe("syncDexDiscovery", () => {
       coinsCrawled: 0,
       poolsDiscovered: 0,
       budgetExhausted: true,
-      stagingWritesSkippedForBudget: 1,
+      stagingWritesSkippedForBudget: 0,
       cleanupSkippedForBudget: true,
       finalizationTailBudgetMs: DEX_DISCOVERY_FINALIZATION_TAIL_BUDGET_MS,
       runSeq: 1,

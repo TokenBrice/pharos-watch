@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { compareCodeUnits } from "@shared/lib/compare";
 import { BluechipRatingsMapSchema } from "@shared/types/bluechip";
 import { stableJsonStringifyV1 } from "@shared/lib/depeg-resolver/hash";
 import { deriveReportCardsBaseInputGenerationId } from "@shared/lib/report-cards-base-input-identity";
@@ -56,7 +57,7 @@ const FixedInputPayloadFields = createFixedInputPayloadFields({
       generationId: null,
       updatedAtSec: null,
     },
-    liveReserves: { state: "unavailable" },
+    liveReserves: { state: "unavailable", coverageRatio: null },
   }),
   afterRedemptionBackstopMap: {
     bluechipMap: BluechipRatingsMapSchema,
@@ -330,7 +331,7 @@ export function normalizeFixedInput(value: unknown, navAssetIds?: ReadonlySet<st
     ...normalizeCommonFixedInputRecords(input),
     dexLiqMap: normalizeFixedDexLiquidityMap(input.dexLiqMap),
     redemptionBackstopMap,
-    collateralDriftCoins: [...input.collateralDriftCoins].sort((left, right) => left.id.localeCompare(right.id)),
+    collateralDriftCoins: [...input.collateralDriftCoins].sort((left, right) => compareCodeUnits(left.id, right.id)),
   });
   const normalized = ReportCardsFixedInputSchema.parse({
     ...normalizedPayload,

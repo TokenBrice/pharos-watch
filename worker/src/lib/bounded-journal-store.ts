@@ -185,6 +185,7 @@ export async function loadBoundedJournal<TRecord extends JournalRecord, TProject
   for (const assetChunk of chunks(canonicalAssetIds, D1_BIND_CHUNK_SIZE)) {
     if (assetChunk.length === 0) continue;
     const placeholders = assetChunk.map(() => "?").join(", ");
+    // SAFETY: config.table is internal configuration and the remaining interpolation is generated bind placeholders.
     const rows = await db.prepare(
       `SELECT payload_json
          FROM (

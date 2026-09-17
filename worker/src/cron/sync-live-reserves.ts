@@ -554,17 +554,35 @@ async function runReserveCoinQueue(args: {
         phaseTimings.stages.checkpoint += Date.now() - checkpointStartedMs;
         checkpointBoundaryAdvanced = true;
       }
-      const deferred = await recordDeferredTail(
-        args.db,
-        args.orderedCoins.slice(index),
-        Math.floor(Date.now() / 1000),
-        args.signal,
-      );
-      for (const key of deferred.additionalBreakerKeys) {
-        breakerKeys.add(key);
+      const remainingCoins = args.orderedCoins.slice(index);
+      const attemptedAt = Math.floor(Date.now() / 1000);
+      try {
+        const deferred = await recordDeferredTail(
+          args.db,
+          remainingCoins,
+          attemptedAt,
+          args.signal,
+        );
+        for (const key of deferred.additionalBreakerKeys) {
+          breakerKeys.add(key);
+        }
+        counts.deferredCoins = deferred.counts.deferredCoins;
+        deferredTail = deferred.deferredTail;
+      } catch (error) {
+        for (const remaining of remainingCoins) {
+          breakerKeys.add(breakerKeyForConfig(remaining.liveReservesConfig!));
+        }
+        counts.deferredCoins = remainingCoins.length;
+        deferredTail = {
+          nextCursorStablecoinId: remainingCoins[0]?.id ?? null,
+          cursorTailState: "incomplete",
+          cursorRecordedAt: attemptedAt,
+          cursorTailCompletedAt: null,
+          cursorTailFailedAt: Math.floor(Date.now() / 1000),
+          cursorTailError: toErrorMessage(error),
+          runBudgetTruncationCount: remainingCoins.length > 0 ? 1 : 0,
+        };
       }
-      counts.deferredCoins = deferred.counts.deferredCoins;
-      deferredTail = deferred.deferredTail;
       counts.skipped += counts.deferredCoins;
       counts.deferredSkipped += counts.deferredCoins;
       break;

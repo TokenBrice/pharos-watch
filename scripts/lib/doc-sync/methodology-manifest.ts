@@ -119,10 +119,6 @@ const METHODOLOGY_INFRA_PROVENANCE_FILES = [
   "shared/lib/methodology-versions/base.ts",
 ] as const;
 
-export const METHODOLOGY_DOC_VERSION_CHECKS = METHODOLOGY_MANIFEST.map((entry) => ({
-  file: entry.doc,
-  expectedVersionLabel: entry.expectedLabel,
-}));
 
 function changelogFiles(directory: string): string[] {
   return readdirSync(directory)

@@ -1,5 +1,6 @@
 import type { ContractDeployment } from "@shared/types/core";
 import { isRecord } from "@shared/lib/type-guards";
+import { toTokenUnits } from "@shared/lib/math";
 import {
   ICON_BALANCED_BNUSD_DISCOVERY_ADDRESS as BNUSD_ADDRESS,
   isIconBalancedDiscoveryDeployment,
@@ -134,11 +135,6 @@ function parseScoreAddress(value: unknown): string | null {
   return typeof value === "string" && /^cx[0-9a-f]{40}$/i.test(value) ? value : null;
 }
 
-function decimalAmount(raw: bigint, decimals: number): number | null {
-  const amount = Number(raw) / 10 ** decimals;
-  return Number.isFinite(amount) && amount >= 0 ? amount : null;
-}
-
 function isErrorResponse(response: IconRpcResponse | undefined): boolean {
   return response == null || response.error != null || !Object.prototype.hasOwnProperty.call(response, "result");
 }
@@ -221,10 +217,9 @@ function poolSymbol(stats: IconPoolStats, bnusdIsBase: boolean): { symbol: strin
 }
 
 function poolTvlUsd(stats: IconPoolStats, bnusdIsBase: boolean): number | null {
-  const bnusdAmount = decimalAmount(
-    bnusdIsBase ? stats.base : stats.quote,
-    bnusdIsBase ? stats.baseDecimals : stats.quoteDecimals,
-  );
+  const bnusdRaw = bnusdIsBase ? stats.base : stats.quote;
+  const bnusdDecimals = bnusdIsBase ? stats.baseDecimals : stats.quoteDecimals;
+  const bnusdAmount = bnusdRaw === 0n ? 0 : toTokenUnits(bnusdRaw, bnusdDecimals);
   if (bnusdAmount == null) return null;
   const tvlUsd = bnusdAmount * 2;
   return Number.isFinite(tvlUsd) && tvlUsd >= 0 && tvlUsd <= STAGED_POOL_MAX_TVL_USD ? tvlUsd : null;

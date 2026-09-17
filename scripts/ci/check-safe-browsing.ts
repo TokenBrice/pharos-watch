@@ -9,8 +9,8 @@
  * https://console.cloud.google.com/apis/library/safebrowsing.googleapis.com
  *
  * Threat lists checked: MALWARE, SOCIAL_ENGINEERING (deceptive/phishing),
- * UNWANTED_SOFTWARE, POTENTIALLY_HARMFUL_APPLICATION across WINDOWS / LINUX /
- * OSX / ALL_PLATFORMS for URL targets.
+ * UNWANTED_SOFTWARE, and POTENTIALLY_HARMFUL_APPLICATION with
+ * platformTypes: ANY_PLATFORM (covers all platforms) for URL targets.
  */
 
 const API_KEY = process.env.GOOGLE_SAFE_BROWSING_API_KEY;

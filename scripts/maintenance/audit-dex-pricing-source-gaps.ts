@@ -1,17 +1,18 @@
 #!/usr/bin/env tsx
 
-import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { CURVE_POOL_CONFIGS } from "@shared/lib/curve-pool-configs";
 import { formatDexPricingAuditUsd as formatUsd } from "@shared/lib/format";
 import { getPricingSourceRegistryEntry } from "@shared/lib/pricing-source-registry";
 import { splitCompositePriceSource } from "@shared/lib/pricing-sources";
 import { isRecord, numberValue, stringValue } from "@shared/lib/type-guards";
+import { runDirectCli } from "../lib/cli-args.mjs";
 import {
   circulatingForStablecoinRow,
   parseCoverageAuditCliArgs,
-  runAsMain,
+  readJsonFile,
   runCoverageAuditCli,
+  uniqueStrings,
   type UnknownRecord,
 } from "../lib/coverage-audit-cli";
 
@@ -173,9 +174,6 @@ function unwrapRows(payload: unknown): UnknownRecord[] {
   return asRecordArray(payload);
 }
 
-function uniqueStrings(values: string[]): string[] {
-  return [...new Set(values.map((value) => value.trim()).filter(Boolean))];
-}
 
 function expandedSources(row: DexGapStablecoinRow): string[] {
   const rawSources = [
@@ -546,9 +544,6 @@ export function renderDexPricingSourceGapMarkdown(audit: DexPricingSourceGapAudi
   return `${lines.join("\n")}\n`;
 }
 
-function readJson(path: string): unknown {
-  return JSON.parse(readFileSync(path, "utf8")) as unknown;
-}
 
 export function parseCliArgs(argv: string[]): CliOptions {
   return parseCoverageAuditCliArgs(argv, {
@@ -587,13 +582,13 @@ export async function runCli(argv = process.argv.slice(2), cwd = process.cwd()):
         throw new Error("Usage: audit-dex-pricing-source-gaps.ts (--price-depth <path> | --stablecoins <path>) --dex-prices <path> [--dex-liquidity <path>] [--curve-candidates <path>] [--report <path>] [--json]");
       }
 
-      const stablecoins = normalizeStablecoinRows(readJson(resolve(cwd, stablecoinsPath)));
-      const dexPrices = normalizeDexPriceRows(readJson(resolve(cwd, dexPricesPath)));
+      const stablecoins = normalizeStablecoinRows(readJsonFile(resolve(cwd, stablecoinsPath)));
+      const dexPrices = normalizeDexPriceRows(readJsonFile(resolve(cwd, dexPricesPath)));
       const dexLiquidity = options.dexLiquidityPath
-        ? normalizeDexLiquidityRows(readJson(resolve(cwd, options.dexLiquidityPath)))
+        ? normalizeDexLiquidityRows(readJsonFile(resolve(cwd, options.dexLiquidityPath)))
         : [];
       const curveCandidates = options.curveCandidatesPath
-        ? normalizeCurveCandidates(readJson(resolve(cwd, options.curveCandidatesPath)))
+        ? normalizeCurveCandidates(readJsonFile(resolve(cwd, options.curveCandidatesPath)))
         : [];
 
       return buildDexPricingSourceGapAudit({
@@ -608,4 +603,6 @@ export async function runCli(argv = process.argv.slice(2), cwd = process.cwd()):
   });
 }
 
-runAsMain(import.meta.url, runCli);
+runDirectCli(import.meta.url, async () => {
+  process.exitCode = await runCli();
+});

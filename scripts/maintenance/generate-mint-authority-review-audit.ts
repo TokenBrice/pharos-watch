@@ -5,7 +5,8 @@ import {
   renderMintAuthorityReviewAuditMarkdown,
 } from "../lib/mint-authority-review-audit";
 import { TRACKED_STABLECOINS } from "@shared/lib/stablecoins/registry";
-import { runAsMain, toPositiveInt, writeOutputFile } from "../lib/coverage-audit-cli";
+import { runDirectCli } from "../lib/cli-args.mjs";
+import { toPositiveInt, writeOutputFile } from "../lib/coverage-audit-cli";
 
 type AuditFormat = "markdown" | "json";
 
@@ -151,4 +152,6 @@ export async function runCli(
   return 0;
 }
 
-runAsMain(import.meta.url, runCli);
+runDirectCli(import.meta.url, async () => {
+  process.exitCode = await runCli();
+});

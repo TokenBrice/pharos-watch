@@ -198,12 +198,12 @@ function MarketCells({ row, model }: RowCellsProps) {
       ) : null}
       {row.isVisible("change24h") ? (
         <TableCell className="text-right pharos-numeric text-sm">
-          <span className={getNetColor(model.change24h, {
+          <span className={model.change24h == null ? "text-muted-foreground" : getNetColor(model.change24h, {
             positiveClass: "text-green-700 dark:text-green-400",
             negativeClass: "text-red-700 dark:text-red-400",
             positiveInclusiveZero: true,
           })}>
-            {model.prevDay > 0 ? (
+            {model.change24h != null ? (
               <>{model.change24h >= 0 ? "↑" : "↓"} {formatPercentChange(model.circulating, model.prevDay)}</>
             ) : "—"}
           </span>
@@ -211,12 +211,12 @@ function MarketCells({ row, model }: RowCellsProps) {
       ) : null}
       {row.isVisible("change7d") ? (
         <TableCell className="text-right pharos-numeric text-sm">
-          <span className={getNetColor(model.change7d, {
+          <span className={model.change7d == null ? "text-muted-foreground" : getNetColor(model.change7d, {
             positiveClass: "text-green-700 dark:text-green-400",
             negativeClass: "text-red-700 dark:text-red-400",
             positiveInclusiveZero: true,
           })}>
-            {model.prevWeek > 0 ? (
+            {model.change7d != null ? (
               <>
                 <span className="hidden lg:inline"><MiniSparkline values={model.supplySparklineValues} /></span>
                 {model.change7d >= 0 ? "↑" : "↓"} {formatPercentChange(model.circulating, model.prevWeek)}

@@ -1,5 +1,7 @@
 import { logWorkerEventArgs } from "./structured-log";
-import { getCache, setCache } from "./db-cache";
+import { getCache, setCacheIfNewer } from "./db-cache";
+import { decodeCachedJson } from "./cache-json";
+import { recordJsonParseFailure } from "./api-cache-read";
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import { DAY_SECONDS } from "@shared/lib/time-constants";
 import { bucketUnixSecondsToUtcDay } from "@shared/lib/time-buckets";
@@ -19,10 +21,15 @@ export interface PegAnalyticsCachePayload {
   /** Nav-token-inclusive; consumers filter as needed. */
   pegData: PegSummaryCoin[];
 }
+type PegAnalyticsCacheFailureReason =
+  | "missing-cache"
+  | "stale-cache"
+  | "json-parse-failed"
+  | "invalid-payload";
 
 export type PegAnalyticsCacheLoadResult =
   | { kind: "ok"; payload: PegAnalyticsCachePayload; pegDataById: Map<string, PegSummaryCoin>; updatedAt: number }
-  | { kind: "miss"; reason: "missing-cache" | "stale-cache" | "invalid-payload" };
+  | { kind: "miss"; reason: PegAnalyticsCacheFailureReason };
 
 function isValidPayload(value: unknown): value is PegAnalyticsCachePayload {
   if (!value || typeof value !== "object") return false;
@@ -40,7 +47,8 @@ function isValidPayload(value: unknown): value is PegAnalyticsCachePayload {
 }
 
 export async function writePegAnalyticsCache(db: D1Database, payload: PegAnalyticsCachePayload): Promise<void> {
-  await setCache(db, PEG_ANALYTICS_CACHE_KEY, JSON.stringify(payload));
+  const body = JSON.stringify(payload);
+  await setCacheIfNewer(db, PEG_ANALYTICS_CACHE_KEY, body, payload.computedAtSec);
 }
 
 /**
@@ -88,19 +96,26 @@ export async function loadPegAnalyticsCache(
   const row = await getCache(db, PEG_ANALYTICS_CACHE_KEY);
   if (!row) return { kind: "miss", reason: "missing-cache" };
   if (Date.now() - row.updatedAt * 1000 > maxAgeMs) return { kind: "miss", reason: "stale-cache" };
-
-  let parsed: unknown;
-  try {
-    parsed = JSON.parse(row.value);
-  } catch {
-    return { kind: "miss", reason: "invalid-payload" };
+  const decoded = decodeCachedJson<PegAnalyticsCachePayload, PegAnalyticsCacheFailureReason>(
+    row,
+    {
+      missingReason: "missing-cache",
+      parseErrorReason: "json-parse-failed",
+      normalize: (parsed) =>
+        isValidPayload(parsed)
+          ? { ok: true, payload: parsed }
+          : { ok: false, reason: "invalid-payload" },
+      onParseFailure: ({ message }) => recordJsonParseFailure("peg-analytics:peg-analytics", message),
+    },
+  );
+  if (!decoded.ok) {
+    return { kind: "miss", reason: decoded.reason };
   }
-  if (!isValidPayload(parsed)) return { kind: "miss", reason: "invalid-payload" };
 
   return {
     kind: "ok",
-    payload: parsed,
-    pegDataById: new Map(parsed.pegData.map((entry) => [entry.id, entry])),
-    updatedAt: row.updatedAt,
+    payload: decoded.payload,
+    pegDataById: new Map(decoded.payload.pegData.map((entry) => [entry.id, entry])),
+    updatedAt: decoded.updatedAt ?? row.updatedAt,
   };
 }

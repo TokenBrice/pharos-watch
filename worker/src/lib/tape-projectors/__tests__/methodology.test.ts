@@ -18,7 +18,7 @@ function extractSourceUrlsForType(db: MockD1Database, type: string): Set<unknown
 describe("methodology projector", () => {
   it("uses shared public changelog paths for Liquidity Score and PSI source URLs", async () => {
     const db = mockTapeD1([
-      { match: "FROM tape_events WHERE type = ?", rows: [] },
+      { match: "INDEXED BY idx_tape_source_key", rows: [] },
     ]) as MockD1Database;
 
     await projectMethodologyBumps(db);
@@ -30,5 +30,14 @@ describe("methodology projector", () => {
     expect(psiSourceUrls).toEqual(new Set([PSI_METHODOLOGY_CHANGELOG_PATH]));
     expect(liquiditySourceUrls).not.toContain("/methodology/liquidity-changelog/");
     expect(psiSourceUrls).not.toContain("/methodology/psi-changelog/");
+
+    const reads = db.getHistory()
+      .filter((entry) => entry.sql.includes("FROM tape_events"));
+    expect(reads.length).toBeGreaterThan(0);
+    expect(reads.every((entry) =>
+      entry.sql.includes("INDEXED BY idx_tape_source_key") &&
+      entry.sql.includes("LIMIT 1")
+    )).toBe(true);
+    expect(reads.every((entry) => !entry.sql.includes("WHERE type = ?"))).toBe(true);
   });
 });

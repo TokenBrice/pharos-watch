@@ -1,4 +1,4 @@
-import { getStablecoinTableRowRiskLevel } from "@/components/stablecoin-table-logic";
+import { getStablecoinTableRowRiskLevel, getSupplyChangePercent } from "@/components/stablecoin-table-logic";
 import type { StablecoinTableRowVariant } from "@/components/stablecoin-table-row-types";
 import type { V9SafetyTableRow } from "@/lib/safety-score-v9-consumers";
 import { getResolvedBlacklistStatus } from "@/lib/blacklist-status";
@@ -54,8 +54,8 @@ export function buildStablecoinTableRowModel({
     blacklistStatus: getResolvedBlacklistStatus(coin.id),
     mintAuthorityStatus: resolveMintAuthorityStatus(meta?.mintAuthoritySummary),
     mintAuthorityScore: resolveMintAuthorityScoreDisplay(reportCards?.[coin.id]?.mint),
-    change24h: prevDay > 0 ? ((circulating - prevDay) / prevDay) * 100 : 0,
-    change7d: prevWeek > 0 ? ((circulating - prevWeek) / prevWeek) * 100 : 0,
+    change24h: getSupplyChangePercent(circulating, prevDay),
+    change7d: getSupplyChangePercent(circulating, prevWeek),
     supplySparklineValues: [prevWeek, prevDay, circulating],
     isOverview,
     isCompactDensity: density === "compact",

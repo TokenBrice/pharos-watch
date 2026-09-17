@@ -643,6 +643,9 @@ async function finalizeSentEdition(
       )
       .bind(action.key, action.value, nowSec)
   );
+  const weeklyMetaStatementIndex = claim.row.digest_kind === "weekly"
+    ? statements.length
+    : -1;
   if (claim.row.digest_kind === "weekly") {
     statements.push(
       db
@@ -689,9 +692,14 @@ async function finalizeSentEdition(
       ),
   );
   try {
-    const changed = await executeAtomicBatch(db, statements, { signal });
-    if (changed !== statements.length) {
-      throw new Error(`terminal batch changed ${changed}/${statements.length} rows`);
+    const results = await executeAtomicBatch(db, statements, { signal, returnResults: true });
+    const failedStrictStatementIndex = results.findIndex((result, index) =>
+      index !== weeklyMetaStatementIndex && Number(result.meta?.changes ?? 0) !== 1
+    );
+    if (results.length !== statements.length || failedStrictStatementIndex !== -1) {
+      throw new Error(
+        `terminal batch strict statement failed (${results.length}/${statements.length} results, index ${failedStrictStatementIndex})`,
+      );
     }
   } catch (error) {
     await bestEffortMarkExecutionUnknown(

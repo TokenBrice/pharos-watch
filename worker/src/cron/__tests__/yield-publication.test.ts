@@ -920,7 +920,7 @@ describe("pruneYieldTables", () => {
     }
   });
 
-  it("deletes old null rollout audit rows while retaining inferable trend rows", async () => {
+  it("fails closed for unclassified rows and prunes only persisted audit decisions", async () => {
     const { sqlite, db } = createLatestSchemaSqlite();
     const startSec = Math.floor(FIXED_NOW.getTime() / 1000);
     const oldSec = startSec - 31 * 24 * 60 * 60;
@@ -955,6 +955,8 @@ describe("pruneYieldTables", () => {
       );
       insertDecision.run("g-old-audit", "coin-e", "curated", 0, "[]", oldSec, "audit");
       insertDecision.run("g-old-trend", "coin-f", "curated", 0, "[]", oldSec, "trend");
+      insertDecision.run("g-old-episode", "coin-h", "curated", 0, "[]", oldSec, "episode");
+      insertDecision.run("g-audit-switch", "coin-i", "curated", 1, "[]", oldSec, "audit");
       insertDecision.run("g-recent-null", "coin-g", "curated", 0, "[]", recentSec, null);
       const insertAlternative = sqlite.prepare(
         `INSERT INTO yield_source_decision_alternatives (
@@ -971,12 +973,21 @@ describe("pruneYieldTables", () => {
         .prepare("SELECT generation_id FROM yield_source_decisions ORDER BY generation_id ASC")
         .all()
         .map((row) => (row as { generation_id: string }).generation_id);
-      expect(generations).toEqual(["g-null-anomaly", "g-null-higher", "g-null-switch", "g-old-trend", "g-recent-null"]);
+      expect(generations).toEqual([
+        "g-audit-switch",
+        "g-null-anomaly",
+        "g-null-audit",
+        "g-null-higher",
+        "g-null-switch",
+        "g-old-episode",
+        "g-old-trend",
+        "g-recent-null",
+      ]);
       const alternatives = sqlite
         .prepare("SELECT generation_id FROM yield_source_decision_alternatives ORDER BY generation_id ASC")
         .all()
         .map((row) => (row as { generation_id: string }).generation_id);
-      expect(alternatives).toEqual(["g-null-switch"]);
+      expect(alternatives).toEqual(["g-null-audit", "g-null-switch"]);
     } finally {
       sqlite.close();
     }

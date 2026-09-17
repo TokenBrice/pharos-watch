@@ -33,9 +33,9 @@ const V9AssetQuarantineSchema = z
       "fact-build-failed",
       "fact-validation-failed",
     ]),
+    message: z.string().min(1).max(500),
   })
   .strict();
-
 const V9PublicationAttemptFailureSchema = z
   .object({
     stage: z.enum([
@@ -483,6 +483,7 @@ export async function persistSafetyScoreV9Publication(
     }
   }
 
+
   const cacheStatement = db.prepare(
     `INSERT INTO cache (key, value, updated_at) VALUES (?, ?, ?)
      ON CONFLICT(key) DO UPDATE SET
@@ -510,29 +511,68 @@ export async function persistSafetyScoreV9Publication(
     );
   }
   if (health.status === "held" && health.acceptedAtSec !== null) {
-    // Recheck the retained publication inside the atomic batch. A concurrent
-    // current publication must roll this held attempt back instead of letting
-    // health advance with the identity loaded before the race.
+    // Keep the retained-publication CAS in the same transaction as the sidecar
+    // writes. The guarded health value turns a failed predicate into a NOT NULL
+    // violation so D1 rolls the whole batch back.
     statements.push(
       db
         .prepare(
           `UPDATE cache
-           SET value = CASE WHEN updated_at = ? THEN value ELSE NULL END
-           WHERE key = ?`,
+           SET value = value
+           WHERE key = ? AND updated_at = ?`,
         )
         .bind(
-          health.acceptedAtSec,
           SAFETY_SCORE_V9_CACHE_KEYS.publication,
+          health.acceptedAtSec,
         ),
     );
+    statements.push(
+      db
+        .prepare(
+          `INSERT INTO cache (key, value, updated_at)
+           VALUES (
+             ?,
+             CASE
+               WHEN EXISTS (
+                 SELECT 1 FROM cache
+                 WHERE key = ? AND updated_at = ?
+               )
+               THEN ?
+               ELSE NULL
+             END,
+             ?
+           )
+           ON CONFLICT(key) DO UPDATE SET
+             value = CASE
+               WHEN cache.updated_at < excluded.updated_at
+                 OR (cache.updated_at = excluded.updated_at AND cache.value = excluded.value)
+               THEN excluded.value
+               ELSE NULL
+             END,
+             updated_at = CASE
+               WHEN cache.updated_at < excluded.updated_at
+                 OR (cache.updated_at = excluded.updated_at AND cache.value = excluded.value)
+               THEN excluded.updated_at
+               ELSE -1
+             END`,
+        )
+        .bind(
+          SAFETY_SCORE_V9_CACHE_KEYS.publicationHealth,
+          SAFETY_SCORE_V9_CACHE_KEYS.publication,
+          health.acceptedAtSec,
+          healthValue,
+          input.publicationClockSec,
+        ),
+    );
+  } else {
+    statements.push(
+      cacheStatement.bind(
+        SAFETY_SCORE_V9_CACHE_KEYS.publicationHealth,
+        healthValue,
+        input.publicationClockSec,
+      ),
+    );
   }
-  statements.push(
-    cacheStatement.bind(
-      SAFETY_SCORE_V9_CACHE_KEYS.publicationHealth,
-      healthValue,
-      input.publicationClockSec,
-    ),
-  );
   statements.push(
     cacheStatement.bind(
       SAFETY_SCORE_V9_CACHE_KEYS.publicationAttempt,

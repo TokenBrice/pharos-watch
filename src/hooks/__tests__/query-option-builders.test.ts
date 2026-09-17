@@ -30,19 +30,16 @@ describe("query option builders", () => {
       queryKey: ["report-cards", "v9"],
       path: "/api/report-cards/v9",
       producerIntervalMs: 30 * 60 * 1000,
-      metaMaxAgeSec: 3600,
     });
     expect(FRONTEND_API_QUERY_DESCRIPTORS.safetyScoreHistory("usdc-circle", 3650)).toMatchObject({
       queryKey: ["safety-score-history", "usdc-circle", 3650],
       path: "/api/safety-score-history?stablecoin=usdc-circle&days=3650",
       producerIntervalMs: 24 * 60 * 60 * 1000,
-      metaMaxAgeSec: 24 * 60 * 60,
     });
     expect(FRONTEND_API_QUERY_DESCRIPTORS.safetyScoreHistoryV2("usdc-circle", 3650)).toMatchObject({
       queryKey: ["safety-score-history-v2", "usdc-circle", 3650],
       path: "/api/safety-score-history-v2?stablecoin=usdc-circle&days=3650",
       producerIntervalMs: 24 * 60 * 60 * 1000,
-      metaMaxAgeSec: 24 * 60 * 60,
     });
   });
 
@@ -93,7 +90,6 @@ describe("query option builders", () => {
       "/api/mint-burn-flows?stablecoin=usdc-circle&hours=168",
       expect.objectContaining({ safeParse: expect.any(Function) }),
       expect.objectContaining({ signal: expect.any(AbortSignal) }),
-      3600,
       undefined,
     );
   });

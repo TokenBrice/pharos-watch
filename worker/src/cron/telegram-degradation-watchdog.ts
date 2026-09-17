@@ -7,7 +7,11 @@ import type { CronResult } from "../lib/cron-logger";
 import { createCronResult } from "../lib/cron-result";
 import { logTelegramEvent } from "../lib/telegram/log";
 import { CRON_INTERVALS } from "@shared/lib/cron-jobs";
-import { parseTelegramDispatchCronMetadata } from "@shared/lib/status-metadata";
+import {
+  parseTelegramDispatchCronMetadata,
+  readMetadataNumber,
+  readMetadataRecord,
+} from "@shared/lib/status-metadata";
 import {
   PENDING_DRAIN_TIME_ALERT_SEC,
   PENDING_NEAR_TTL_WINDOW_SEC,
@@ -81,6 +85,47 @@ function emptyOutcome(): WatchdogOutcome {
   return { triggered: false, recovered: false, detail: null };
 }
 
+function logDispatchMetadataWarning(reason: string): void {
+  logTelegramEvent({
+    level: "warn",
+    message: "dispatch metadata unavailable",
+    action: "read-dispatch-metadata",
+    module: "telegram-degradation-watchdog",
+    reason,
+  });
+}
+
+function hasMalformedDispatchCounts(value: unknown): boolean {
+  const record = readMetadataRecord(value);
+  if (!record) return true;
+  const events = readMetadataRecord(record.eventsDetected);
+  if (!events) return true;
+  for (const key of [
+    "dews",
+    "depeg",
+    "depegTriggered",
+    "depegResolved",
+    "depegWorsening",
+    "safety",
+    "launch",
+    "reserve",
+    "freeze",
+    "suppressedMethodologyChanges",
+  ] as const) {
+    if (
+      Object.prototype.hasOwnProperty.call(events, key) &&
+      readMetadataNumber(events[key]) === null
+    ) return true;
+  }
+  for (const key of ["messagesSent", "freshCandidateChats"] as const) {
+    if (
+      Object.prototype.hasOwnProperty.call(record, key) &&
+      readMetadataNumber(record[key]) === null
+    ) return true;
+  }
+  return false;
+}
+
 /**
  * Shared clear-episode logic: mark recovered and unconditionally delete the
  * episode state.
@@ -104,20 +149,22 @@ async function readLatestDispatchMetadata(db: D1Database) {
       .first<{ id: number | string; metadata: string | null }>();
     if (!row?.metadata) return null;
     const parsed = parseJson(row.metadata);
-    if (!parsed.ok) return null;
+    if (!parsed.ok) {
+      logDispatchMetadataWarning("invalid-json");
+      return null;
+    }
     const metadata = parseTelegramDispatchCronMetadata(parsed.value);
-    if (!metadata) return null;
+    if (!metadata) {
+      logDispatchMetadataWarning("invalid-shape");
+      return null;
+    }
     return {
       runIdentity: String(row.id),
       metadata,
+      malformedCounts: hasMalformedDispatchCounts(parsed.value),
     };
   } catch {
-    logTelegramEvent({
-      level: "warn",
-      message: "dispatch metadata unavailable",
-      action: "read-dispatch-metadata",
-      module: "telegram-degradation-watchdog",
-    });
+    logDispatchMetadataWarning("read-failed");
     return null;
   }
 }
@@ -297,10 +344,12 @@ async function evaluateSafetySource(
   return outcome;
 }
 
-function sumEvents(metadata: ReturnType<typeof parseTelegramDispatchCronMetadata>): number {
+function sumEvents(metadata: ReturnType<typeof parseTelegramDispatchCronMetadata>): number | null {
   const events = metadata?.eventsDetected;
-  if (!events) return 0;
-  return (events.dews ?? 0) + (events.depeg ?? 0) + (events.safety ?? 0) + (events.launch ?? 0) + (events.reserve ?? 0);
+  if (!events) return null;
+  const { dews, depeg, safety, launch } = events;
+  if (dews == null || depeg == null || safety == null || launch == null) return null;
+  return dews + depeg + safety + launch + (events.reserve ?? 0) + (events.freeze ?? 0);
 }
 
 async function evaluateZeroSendStreak(
@@ -325,13 +374,29 @@ async function evaluateZeroSendStreak(
     return outcome;
   }
 
-  outcome.evaluated = true;
   const metadata = latestRun.metadata;
+  if (latestRun.malformedCounts) {
+    logDispatchMetadataWarning("malformed-count");
+    outcome.detail = "dispatch metadata unavailable; streak preserved";
+    return outcome;
+  }
 
   const events = sumEvents(metadata);
-  const messagesSent = metadata.messagesSent ?? 0;
-  const freshCandidateChats = metadata.freshCandidateChats ?? 0;
-  const zeroSendRun = events > 0 && messagesSent === 0 && freshCandidateChats > 0;
+  const messagesSent = metadata.messagesSent;
+  if (events == null || messagesSent == null) {
+    logDispatchMetadataWarning("missing-count");
+    outcome.detail = "dispatch metadata unavailable; streak preserved";
+    return outcome;
+  }
+  const freshCandidateChats = metadata.freshCandidateChats;
+  if (events > 0 && messagesSent === 0 && freshCandidateChats == null) {
+    logDispatchMetadataWarning("missing-candidate-count");
+    outcome.detail = "dispatch metadata unavailable; streak preserved";
+    return outcome;
+  }
+  outcome.evaluated = true;
+  const freezeEvents = metadata.eventsDetected?.freeze ?? 0;
+  const zeroSendRun = events > 0 && messagesSent === 0 && ((freshCandidateChats ?? 0) > 0 || freezeEvents > 0);
 
   if (zeroSendRun) {
     const nextStreak = priorStreak + 1;

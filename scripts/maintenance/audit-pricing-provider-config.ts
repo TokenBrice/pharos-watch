@@ -1,4 +1,5 @@
 import { isRecord } from "@shared/lib/type-guards";
+import { runDirectCli } from "../lib/cli-args.mjs";
 import {
   BINANCE_MARKETS,
   BITSTAMP_MARKETS,
@@ -15,6 +16,7 @@ export interface AuditSection {
   checked: number;
   missing: string[];
   notes: string[];
+  skipped?: boolean;
 }
 
 type FetchLike = typeof fetch;
@@ -80,7 +82,8 @@ export async function auditBinance(fetchImpl: FetchLike = fetch): Promise<AuditS
       return {
         provider: "binance",
         ok: true,
-        checked: BINANCE_MARKETS.length,
+        skipped: true,
+        checked: 0,
         missing: [],
         notes: [`Skipped live metadata audit because Binance returned ${error.status} for this runner region`],
       };
@@ -150,7 +153,8 @@ export async function auditBitstamp(fetchImpl: FetchLike = fetch): Promise<Audit
       return {
         provider: "bitstamp",
         ok: true,
-        checked: BITSTAMP_MARKETS.length,
+        skipped: true,
+        checked: 0,
         missing: [],
         notes: [`Skipped live metadata audit because Bitstamp metadata fetch failed from this runner: ${error.message}`],
       };
@@ -284,7 +288,7 @@ export async function auditOptionalSourceShapes(
 }
 
 function printSection(section: AuditSection): void {
-  const status = section.ok ? "OK" : "DRIFT";
+  const status = section.skipped ? "SKIPPED" : section.ok ? "OK" : "DRIFT";
   console.log(`[pricing-provider-audit] ${section.provider}: ${status} (${section.checked} checked)`);
   if (section.missing.length > 0) {
     console.log(`  missing: ${section.missing.join(", ")}`);
@@ -316,8 +320,15 @@ export async function runPricingProviderAudit(
   }
 
   const failed = sections.filter((section) => !section.ok);
+  const skipped = sections.filter((section) => section.skipped);
   if (failed.length > 0) {
     throw new Error(`provider config drift detected: ${failed.map((section) => section.provider).join(", ")}`);
+  }
+  // One skipped provider is one consecutive unverified run for that provider.
+  // Fail immediately so repeated scheduled invocations cannot normalize a skip
+  // as success; a later successful audit resets the sequence by construction.
+  if (skipped.length > 0) {
+    throw new Error(`provider metadata audit skipped without checking markets: ${skipped.map((section) => section.provider).join(", ")}`);
   }
   return sections;
 }
@@ -331,9 +342,7 @@ async function main(): Promise<void> {
   sections.forEach(printSection);
 }
 
-if (process.argv[1]?.endsWith("audit-pricing-provider-config.ts")) {
-  main().catch((error) => {
-    console.error("[pricing-provider-audit] failed:", error instanceof Error ? error.message : error);
-    process.exitCode = 1;
-  });
-}
+runDirectCli(import.meta.url, () => main().catch((error) => {
+  console.error("[pricing-provider-audit] failed:", error instanceof Error ? error.message : error);
+  process.exitCode = 1;
+}));

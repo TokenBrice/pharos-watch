@@ -4,11 +4,9 @@
  * Source: the `*-version.ts` constants in `shared/lib/`. Each domain exposes a
  * changelog of `{ version, title, date, effectiveAt, summary, ... }` entries.
  *
- * Pattern: first-observation. For each domain we read the set of versions
- * already projected (one SELECT per domain) and emit a tape event for every
- * changelog entry whose version is not yet present. Re-running the projector
- * after the initial backfill is a near-no-op (one indexed SELECT per domain
- * plus zero writes when nothing has been published).
+ * Pattern: first-observation. Each bounded changelog is driven through the
+ * static-catalog projector, which probes source identities through the unique
+ * Tape source-key index and emits only entries not yet present.
  *
  * The event type slug is `methodology.bumped:<domain>` per the wire grammar
  * in §3.3 of the implementation plan; `<domain>` is a short lowercase tag.
@@ -42,9 +40,12 @@ import {
   severityForMethodologyBump,
   truncateSummary,
 } from "../tape-event-helpers";
-import { insertTapeEvents } from "../tape-event-store";
 import type { TapeEventInsert } from "../tape-event-types";
-import type { ProjectorOptions, ProjectorResult } from "./types";
+import {
+  projectStaticCatalogEntries,
+  type ProjectorOptions,
+  type ProjectorResult,
+} from "./types";
 
 interface MethodologyDomain {
   /** Short lowercase tag used in the wire slug `methodology.bumped:<domain>`. */
@@ -119,82 +120,64 @@ const METHODOLOGY_DOMAINS: readonly MethodologyDomain[] = [
   },
 ];
 
-async function loadObservedVersions(db: D1Database, type: string): Promise<Set<string>> {
-  const result = await db
-    .prepare(`SELECT source_row_id FROM tape_events WHERE type = ?`)
-    .bind(type)
-    .all<{ source_row_id: string }>();
-  const seen = new Set<string>();
-  for (const row of result.results ?? []) seen.add(row.source_row_id);
-  return seen;
-}
-
-async function projectOneDomain(
-  db: D1Database,
+function buildMethodologyEvent(
   spec: MethodologyDomain,
-  dryRun: boolean,
-): Promise<number> {
+  entry: MethodologyChangelogEntry,
+): TapeEventInsert {
   const type = `methodology.bumped:${spec.domain}`;
-  const observed = await loadObservedVersions(db, type);
-  const events: TapeEventInsert[] = [];
+  const tsSec = Number.isFinite(entry.effectiveAt) && entry.effectiveAt > 0
+    ? entry.effectiveAt
+    : Math.floor(Date.now() / 1000);
+  const tsMs = tsSec * 1000;
+  const transition = "updated";
 
-  for (const entry of spec.changelog) {
-    if (observed.has(entry.version)) continue;
-    const tsSec = Number.isFinite(entry.effectiveAt) && entry.effectiveAt > 0
-      ? entry.effectiveAt
-      : Math.floor(Date.now() / 1000);
-    const tsMs = tsSec * 1000;
-    const sourceRowId = entry.version;
-    const transition = "updated";
-    const severity = severityForMethodologyBump(entry.version);
-
-    events.push({
-      eventId: buildTapeEventId({
-        tsMs,
-        type,
-        sourceTable: `methodology:${spec.domain}`,
-        sourceRowId,
-        transition,
-      }),
+  return {
+    eventId: buildTapeEventId({
+      tsMs,
       type,
-      severity,
-      ts: tsMs,
-      endsAt: null,
-      coinId: null,
-      issuerId: null,
-      pegCurrency: null,
-      chain: null,
-      title: `${spec.label} v${entry.version}: ${entry.title}`,
-      summary: truncateSummary(entry.summary),
-      payload: {
-        domain: spec.domain,
-        version: entry.version,
-        title: entry.title,
-        date: entry.date,
-        effectiveAt: entry.effectiveAt,
-        impact: entry.impact,
-      },
       sourceTable: `methodology:${spec.domain}`,
-      sourceRowId,
+      sourceRowId: entry.version,
       transition,
-      sourceUrl: spec.href,
-      methodologyVersion: entry.version,
-    });
-  }
-
-  if (events.length === 0) return 0;
-  if (!dryRun) await insertTapeEvents(db, events);
-  return events.length;
+    }),
+    type,
+    severity: severityForMethodologyBump(entry.version),
+    ts: tsMs,
+    endsAt: null,
+    coinId: null,
+    issuerId: null,
+    pegCurrency: null,
+    chain: null,
+    title: `${spec.label} v${entry.version}: ${entry.title}`,
+    summary: truncateSummary(entry.summary),
+    payload: {
+      domain: spec.domain,
+      version: entry.version,
+      title: entry.title,
+      date: entry.date,
+      effectiveAt: entry.effectiveAt,
+      impact: entry.impact,
+    },
+    sourceTable: `methodology:${spec.domain}`,
+    sourceRowId: entry.version,
+    transition,
+    sourceUrl: spec.href,
+    methodologyVersion: entry.version,
+  };
 }
 
 export async function projectMethodologyBumps(
   db: D1Database,
   options?: ProjectorOptions,
 ): Promise<ProjectorResult> {
-  const dryRun = options?.dryRun === true;
   let total = 0;
   for (const spec of METHODOLOGY_DOMAINS) {
-    total += await projectOneDomain(db, spec, dryRun);
+    const result = await projectStaticCatalogEntries(db, {
+      eventType: `methodology.bumped:${spec.domain}`,
+      entries: spec.changelog,
+      sourceRowId: (entry) => entry.version,
+      buildEvent: (entry) => buildMethodologyEvent(spec, entry),
+    }, options);
+    total += result.projected;
   }
   return { projected: total, advanced: null };
 }

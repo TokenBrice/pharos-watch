@@ -6,6 +6,17 @@ export function compareText(left: string, right: string): number {
   return left < right ? -1 : left > right ? 1 : 0;
 }
 
+const V9_EXECUTION_COST_KEY_SCALE = 1_000_000;
+
+export function canonicalV9ExecutionCostKey(point: {
+  requestedNotionalUsd: number;
+  maxCostBps: number;
+}): string {
+  const maxCost = Math.round(point.maxCostBps * V9_EXECUTION_COST_KEY_SCALE);
+  const notional = Math.round(point.requestedNotionalUsd * V9_EXECUTION_COST_KEY_SCALE);
+  return `${String(maxCost).padStart(30, "0")}:${String(notional).padStart(40, "0")}`;
+}
+
 export function canonicalArrayBy<T>(schema: z.ZodType<T>, keyOf: (value: T) => string, minLength = 0, duplicateNoun = "key") {
   return z
     .array(schema)
@@ -21,6 +32,8 @@ export function canonicalArrayBy<T>(schema: z.ZodType<T>, keyOf: (value: T) => s
 export function canonicalTextArray(minLength = 0, duplicateNoun = "key") {
   return canonicalArrayBy(CanonicalTextSchema, (value) => value, minLength, duplicateNoun);
 }
+
+export const V9WrapperRiskAssessmentSchema = z.enum(["none", "low", "moderate", "high", "critical"]);
 
 const CanonicalStringArraySchema = canonicalTextArray();
 

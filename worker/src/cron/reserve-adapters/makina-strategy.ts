@@ -25,6 +25,7 @@ import { runAdapterIo } from "./concurrency";
 import { normalizeEvmAddress, resolveCoinContractAddress } from "./evm";
 import { fetchOnchainMulticall3, fetchOnchainUint256 } from "./onchain";
 import { EIP1967_BEACON_SLOT, multicallResultByLabel, runtimeCodeHash } from "./onchain-identity";
+import { ERC4626_CONVERT_TO_ASSETS_SELECTOR as CONVERT_TO_ASSETS_SELECTOR } from "./erc4626";
 
 interface MakinaStrategyEnvelope {
   data?: MakinaStrategyData;
@@ -160,7 +161,6 @@ const FINALIZATION_DELAY_SELECTOR = "0xf9823a5c";
 const NEXT_REQUEST_ID_SELECTOR = "0x6a84a985";
 const LAST_FINALIZED_REQUEST_ID_SELECTOR = "0x667a739e";
 const MIN_REDEEM_AMOUNT_SELECTOR = "0x0912ae6d";
-const CONVERT_TO_ASSETS_SELECTOR = "0x07a2d13a";
 const BEACON_IMPLEMENTATION_SELECTOR = "0x5c60da1b";
 
 function readParams(config: LiveReservesConfig): MakinaStrategyParams {

@@ -111,7 +111,30 @@ export const V9OperationalResilienceIncidentSchema = z
     occurredAt: StrictIsoDateSchema,
     resolvedAt: StrictIsoDateSchema.nullable(),
   })
-  .strict();
+  .strict()
+  .superRefine((incident, ctx) => {
+    if (incident.state === "active" && incident.resolvedAt !== null) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["resolvedAt"],
+        message: "An active incident cannot have a resolution date",
+      });
+    }
+    if (incident.state === "resolved" && incident.resolvedAt === null) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["resolvedAt"],
+        message: "A resolved incident requires a resolution date",
+      });
+    }
+    if (incident.resolvedAt !== null && incident.resolvedAt < incident.occurredAt) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["resolvedAt"],
+        message: "An incident cannot resolve before it occurred",
+      });
+    }
+  });
 
 export type V9OperationalResilienceClaimConfidence = z.infer<
   typeof V9OperationalResilienceClaimConfidenceSchema

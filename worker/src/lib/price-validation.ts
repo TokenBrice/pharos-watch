@@ -496,42 +496,19 @@ export function isReasonablePrice(
   fxRates?: Record<string, number>,
   opts?: PriceReasonablenessOptions,
 ): boolean {
-  if (!Number.isFinite(price) || price <= 0 || price >= MAX_PRICE) return false;
-
   const context = buildPriceValidationContext({
     pegType,
     navToken: opts?.navToken,
     commodityOunces: opts?.commodityOunces,
   });
-
-  if (context.pegClass === "nav") return true;
-  if (!context.pegType) return true;
-
-  if (context.pegType.includes("USD")) {
-    const [min, max] = PEG_HARDCODED_PRICE_BOUNDS.USD;
-    return price > min && price < max;
-  }
-
-  const referencePrice = getReferencePriceForContext(
-    context,
-    fxRates
-      ? {
-          rates: fxRates,
-          type: "fresh",
-          updatedAt: null,
-          updatedAtByPeg: Object.fromEntries(Object.keys(fxRates).map((pegKey) => [pegKey, null])),
-          typeByPeg: Object.fromEntries(Object.keys(fxRates).map((pegKey) => [pegKey, "fresh"])),
-        }
-      : undefined,
-  );
-  if (referencePrice != null && referencePrice > 0) {
-    return price > 0.01 * referencePrice && price < getReferenceUpperBound(context, referencePrice);
-  }
-
-  const hardcodedBounds = getHardcodedBounds(context);
-  if (hardcodedBounds) {
-    return price > hardcodedBounds.min && price < hardcodedBounds.max;
-  }
-
-  return price > 0 && price < MAX_PRICE;
+  const references = fxRates
+    ? {
+        rates: fxRates,
+        type: "fresh" as const,
+        updatedAt: null,
+        updatedAtByPeg: Object.fromEntries(Object.keys(fxRates).map((pegKey) => [pegKey, null])),
+        typeByPeg: Object.fromEntries(Object.keys(fxRates).map((pegKey) => [pegKey, "fresh" as const])),
+      }
+    : undefined;
+  return validatePriceCandidate(price, context, "fallback_enrichment", references).accepted;
 }

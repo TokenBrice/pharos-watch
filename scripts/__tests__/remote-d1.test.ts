@@ -42,8 +42,8 @@ describe("remote-d1 helpers", () => {
       .executeStatements(["SELECT 'first';", "SELECT 'second';", "SELECT 'third';"], "test-remote-d1");
 
     expect(contents).toEqual([
-      "BEGIN TRANSACTION;\nSELECT 'first';\nSELECT 'second';\nCOMMIT;",
-      "BEGIN TRANSACTION;\nSELECT 'third';\nCOMMIT;",
+      "SELECT 'first';\nSELECT 'second';",
+      "SELECT 'third';",
     ]);
     expect(execFileSyncMock).toHaveBeenCalledTimes(2);
     for (const path of files) expect(existsSync(dirname(path))).toBe(false);
@@ -54,7 +54,7 @@ describe("remote-d1 helpers", () => {
     let sqlPath = "";
     execFileSyncMock.mockImplementation((_file, args) => {
       sqlPath = args[args.indexOf("--file") + 1]!;
-      expect(readFileSync(sqlPath, "utf8")).toBe("BEGIN TRANSACTION;\nSELECT 1;\nCOMMIT;");
+      expect(readFileSync(sqlPath, "utf8")).toBe("SELECT 1;");
       throw failure;
     });
     expect(() => createD1Client("stablecoin-db", { batchSize: 1 })

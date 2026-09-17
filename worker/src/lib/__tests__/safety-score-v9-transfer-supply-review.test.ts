@@ -223,7 +223,9 @@ describe("Safety Score V9 transfer-materiality supply partition", () => {
     const materialized = materializeSafetyScoreV9FactSetExtension(replayInput, extension);
     const result = compileSafetyScoreV9FactSetWithIsolationFromValidatedExtension(replayInput, materialized);
 
-    expect(result.quarantines).toEqual([{ assetId, code: "fact-build-failed" }]);
+    expect(result.quarantines).toEqual([
+      { assetId, code: "fact-build-failed", message: expect.any(String) },
+    ]);
   });
 
   it.each([

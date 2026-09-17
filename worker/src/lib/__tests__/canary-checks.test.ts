@@ -84,7 +84,11 @@ function stablecoinsPayload(activeCount = ACTIVE_IDS.size) {
   return JSON.stringify({ peggedAssets: assets });
 }
 
-function gbpCanaryCacheRows(options: { freshRuns?: number; fallback?: boolean } = {}) {
+function gbpCanaryCacheRows(options: {
+  freshRuns?: number;
+  fallback?: boolean;
+  usdRecordDateMissing?: boolean;
+} = {}) {
   const recordDate = new Date((NOW - 24 * 3600) * 1000).toISOString().slice(0, 10);
   const benchmark = (key: "USD" | "GBP", source: string) => ({
     key,
@@ -105,7 +109,10 @@ function gbpCanaryCacheRows(options: { freshRuns?: number; fallback?: boolean } 
       value: JSON.stringify({
         version: 1,
         benchmarks: {
-          USD: benchmark("USD", "fred-dgs3mo"),
+          USD: {
+            ...benchmark("USD", "fred-dgs3mo"),
+            ...(options.usdRecordDateMissing ? { recordDate: null } : {}),
+          },
           GBP: {
             ...benchmark("GBP", "fred-sonia-compounded-index"),
             isFallback: options.fallback ?? false,
@@ -162,8 +169,7 @@ function healthyD1(
     rowCount?: number;
     latestPublishedRows?: number;
     latestGenerationPublishedRows?: number;
-    retainedLegacyRows?: number;
-    retainedOlderPublishedRows?: number;
+    missingGenerationEvidence?: boolean;
     unpublishedRows?: number;
     generationCount?: number;
     globalRows?: number;
@@ -172,6 +178,7 @@ function healthyD1(
     blacklistBalanceNullIdentityRows?: number;
     gbpFreshRuns?: number;
     gbpFallback?: boolean;
+    usdRecordDateMissing?: boolean;
   } = {},
 ) {
   const rowCount = dex.rowCount ?? 408;
@@ -180,9 +187,11 @@ function healthyD1(
   const unpublishedRows = dex.unpublishedRows ?? 0;
   const generationCount = dex.generationCount ?? 1;
   const globalRows = dex.globalRows ?? 1;
-  const generationMetadata = JSON.stringify({
-    activeStablecoinCount: Math.max(0, latestPublishedRows - globalRows),
-  });
+  const generationMetadata = dex.missingGenerationEvidence
+    ? null
+    : JSON.stringify({
+        activeStablecoinCount: Math.max(0, latestPublishedRows - globalRows),
+      });
   const publishedDewsRows = dewsRows();
   return mockD1([
     {
@@ -200,7 +209,7 @@ function healthyD1(
       first: {
         generation_id: "dex-gen-1",
         current_row_count: latestPublishedRows,
-        expected_row_count: latestPublishedRows,
+        expected_row_count: dex.missingGenerationEvidence ? null : latestPublishedRows,
         metadata_json: generationMetadata,
         published_at: NOW - 30,
       },
@@ -210,9 +219,7 @@ function healthyD1(
       match: "canary-dex-latest-generation-summary",
       matchBinds: ["dex-gen-1"],
       first: {
-        latest_generation_rows: latestGenerationPublishedRows,
-        retained_legacy_rows: dex.retainedLegacyRows ?? 0,
-        retained_older_published_rows: dex.retainedOlderPublishedRows ?? 0,
+        live_generation_rows: latestGenerationPublishedRows,
       },
       rows: [],
     },
@@ -220,7 +227,7 @@ function healthyD1(
       match: "canary-dex-global-row",
       first: {
         current_row_count: latestPublishedRows,
-        expected_row_count: latestPublishedRows,
+        expected_row_count: dex.missingGenerationEvidence ? null : latestPublishedRows,
         metadata_json: generationMetadata,
       },
       rows: [],
@@ -243,7 +250,11 @@ function healthyD1(
           updated_at: NOW - 60,
         },
         dewsPointerRow(publishedDewsRows),
-        ...gbpCanaryCacheRows({ freshRuns: dex.gbpFreshRuns, fallback: dex.gbpFallback }),
+        ...gbpCanaryCacheRows({
+          freshRuns: dex.gbpFreshRuns,
+          fallback: dex.gbpFallback,
+          usdRecordDateMissing: dex.usdRecordDateMissing,
+        }),
       ],
     },
     {
@@ -305,9 +316,13 @@ describe("worker data invariant canaries", () => {
     await runCanaryChecks(db, { observedAt: NOW, mode: "status" });
 
     const dexQueries = db.getHistory().filter((entry) => entry.sql.includes("canary-dex-"));
-    expect(dexQueries.length).toBe(4);
-    expect(dexQueries.every((entry) => entry.sql.includes("FROM dex_liquidity_publication_generations"))).toBe(true);
-    expect(dexQueries.some((entry) => /FROM dex_liquidity(?:\s|$)/.test(entry.sql))).toBe(false);
+    expect(dexQueries).toHaveLength(4);
+    expect(dexQueries.filter((entry) =>
+      /FROM dex_liquidity(?:\s|$)/.test(entry.sql)
+    )).toHaveLength(1);
+    expect(dexQueries.filter((entry) =>
+      entry.sql.includes("FROM dex_liquidity_publication_generations")
+    )).toHaveLength(3);
   });
 
   it("flags a seeded null-identity blacklist row", async () => {
@@ -457,16 +472,27 @@ describe("worker data invariant canaries", () => {
     });
   });
 
-  it("accepts retained DEX rows outside the latest published generation", async () => {
+  it("degrades USD when its benchmark record date is missing", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date(NOW * 1000));
+    const summary = await runCanaryChecks(healthyD1({ usdRecordDateMissing: true }), {
+      observedAt: NOW,
+      mode: "status",
+    });
+
+    expect(summary.results.find((result) => result.checkId === "yield-usd-benchmark-current")).toMatchObject({
+      status: "degraded",
+      error: expect.stringContaining("USD benchmark observation is stale"),
+    });
+  });
+
+  it("accepts a live table matching the latest published generation", async () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date(NOW * 1000));
     const summary = await runCanaryChecks(
       healthyD1({
-        rowCount: 377,
         latestPublishedRows: 368,
         latestGenerationPublishedRows: 368,
-        retainedLegacyRows: 4,
-        retainedOlderPublishedRows: 5,
         generationCount: 2,
       }),
       { observedAt: NOW, mode: "status" },
@@ -481,8 +507,6 @@ describe("worker data invariant canaries", () => {
         rowCount: 368,
         latestPublishedRows: 368,
         latestGenerationPublishedRows: 368,
-        retainedLegacyRows: 4,
-        retainedOlderPublishedRows: 5,
       }),
     });
     expect(summary.worstStatus).toBe("ok");
@@ -531,6 +555,21 @@ describe("worker data invariant canaries", () => {
         latestPublishedRows: 368,
         latestGenerationPublishedRows: 367,
       }),
+    });
+  });
+
+  it("degrades when a DEX publication has no global-row evidence", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date(NOW * 1000));
+    const summary = await runCanaryChecks(
+      healthyD1({ missingGenerationEvidence: true }),
+      { observedAt: NOW, mode: "status" },
+    );
+
+    expect(summary.results.find((result) => result.checkId === "dex-liquidity-global-row")).toMatchObject({
+      status: "degraded",
+      severity: "warning",
+      error: "DEX global row evidence is unavailable",
     });
   });
 

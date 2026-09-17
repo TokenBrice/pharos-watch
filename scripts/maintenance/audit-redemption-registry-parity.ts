@@ -1,6 +1,6 @@
 #!/usr/bin/env tsx
 
-import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { mkdirSync, writeFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import {
   REDEMPTION_BACKSTOP_CONFIG_MANIFEST,
@@ -22,6 +22,8 @@ import {
 } from "@shared/lib/redemption-backstop-scoring";
 import type { RedemptionBackstopConfig } from "@shared/lib/redemption-backstop-configs/shared";
 import { resolveStaticCostScore } from "../lib/redemption-audit-helpers";
+import { readJsonFile } from "../lib/catalog-json";
+import { isDirectRun } from "../lib/smoke-runtime.mjs";
 
 const ROOT = process.cwd();
 const SNAPSHOT_SUPPLY_USD = 1_000_000_000;
@@ -163,17 +165,14 @@ function resolveStaticCapacityRatio(config: RedemptionBackstopConfig): number | 
 
 
 function compareSnapshots(beforePath: string, afterPath: string): string[] {
-  const before = toSemanticSnapshot(readJson(beforePath));
-  const after = toSemanticSnapshot(readJson(afterPath));
+  const before = toSemanticSnapshot(readJsonFile(resolve(ROOT, beforePath)));
+  const after = toSemanticSnapshot(readJsonFile(resolve(ROOT, afterPath)));
   return [
     ...compareSection("registry", before.registry, after.registry),
     ...compareSection("staticScores", before.staticScores, after.staticScores),
   ];
 }
 
-function readJson(path: string): unknown {
-  return JSON.parse(readFileSync(resolve(ROOT, path), "utf8"));
-}
 
 function writeJson(path: string, value: unknown): void {
   const resolved = resolve(ROOT, path);
@@ -256,20 +255,22 @@ function rowsByStablecoinId(rows: unknown[]): Map<string, Record<string, unknown
   return result;
 }
 
-const [command, ...args] = process.argv.slice(2);
-if (command === "--snapshot" && args[0]) {
-  writeJson(args[0], buildSnapshot());
-} else if (command === "--compare" && args[0] && args[1]) {
-  const diffs = compareSnapshots(args[0], args[1]);
-  if (diffs.length > 0) {
-    for (const diff of diffs) {
-      console.error(diff);
+if (isDirectRun(import.meta.url, process.argv[1])) {
+  const [command, ...args] = process.argv.slice(2);
+  if (command === "--snapshot" && args[0]) {
+    writeJson(args[0], buildSnapshot());
+  } else if (command === "--compare" && args[0] && args[1]) {
+    const diffs = compareSnapshots(args[0], args[1]);
+    if (diffs.length > 0) {
+      for (const diff of diffs) {
+        console.error(diff);
+      }
+      process.exit(1);
     }
+    console.log("Redemption registry parity snapshots match.");
+  } else {
+    console.error("Usage: tsx scripts/maintenance/audit-redemption-registry-parity.ts --snapshot <path>");
+    console.error("   or: tsx scripts/maintenance/audit-redemption-registry-parity.ts --compare <before.json> <after.json>");
     process.exit(1);
   }
-  console.log("Redemption registry parity snapshots match.");
-} else {
-  console.error("Usage: tsx scripts/maintenance/audit-redemption-registry-parity.ts --snapshot <path>");
-  console.error("   or: tsx scripts/maintenance/audit-redemption-registry-parity.ts --compare <before.json> <after.json>");
-  process.exit(1);
 }

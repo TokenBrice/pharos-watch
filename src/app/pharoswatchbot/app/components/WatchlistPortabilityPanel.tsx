@@ -55,6 +55,7 @@ export function WatchlistPortabilityPanel({
   canMutate,
   canReadPortability,
   isMutating,
+  isWriteLocked,
   pendingOperation,
   onExport,
   onPreview,
@@ -64,6 +65,7 @@ export function WatchlistPortabilityPanel({
   canMutate: boolean;
   canReadPortability: boolean;
   isMutating: boolean;
+  isWriteLocked: boolean;
   pendingOperation: TelegramMiniAppOperation | null;
   onExport: () => Promise<TelegramMiniAppPortabilityResponse | null>;
   onPreview: (token: string) => Promise<TelegramMiniAppPortabilityResponse | null>;
@@ -81,7 +83,7 @@ export function WatchlistPortabilityPanel({
   }, [state.catalog.searchableCoins, state.presets]);
   const resolveLabel = (id: string) => labels.get(id) ?? id;
   const readDisabled = !canReadPortability || isMutating;
-  const writeDisabled = !canMutate || isMutating;
+  const writeDisabled = !canMutate || isMutating || isWriteLocked;
 
   const handleExport = async () => {
     const response = await onExport();

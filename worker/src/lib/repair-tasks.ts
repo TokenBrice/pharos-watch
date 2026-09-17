@@ -917,6 +917,7 @@ async function executeDdrRepair(
         timestamp,
         DDR_REPAIR_RUNNER_CREATED_BY,
       ),
+    // SAFETY: every interpolated WHERE fragment is produced by a fixed internal SQL helper; values use D1 binds.
     db
       .prepare(
         `UPDATE depeg_resolver_incidents AS i

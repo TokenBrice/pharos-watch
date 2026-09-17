@@ -123,9 +123,14 @@ export async function checkApiKeyRequestRateLimit(
   return { allowed, retryAfterSec };
 }
 
-export function pruneOldApiKeyRequestRateLimits(db: RateLimitDb, olderThanSec: number): Promise<void> {
-  return db.prepare("DELETE FROM api_key_request_rate_limit_v2 WHERE bucket_start < ?")
+export async function pruneOldApiKeyRequestRateLimits(
+  db: RateLimitDb,
+  olderThanSec: number,
+): Promise<void> {
+  await db.prepare("DELETE FROM api_key_request_rate_limit_v2 WHERE bucket_start < ?")
     .bind(olderThanSec)
-    .run()
-    .then(() => undefined);
+    .run();
+  await db.prepare("DELETE FROM api_key_self_serve_issuance_limits WHERE bucket_start < ?")
+    .bind(olderThanSec)
+    .run();
 }

@@ -6,7 +6,6 @@ import { resolve } from "node:path";
 import {
   WARM_CACHE_YIELD_CANARY_IDS,
   buildYieldDeepRoutes,
-  chunkItems,
   classifyFirstPartyAsset,
   extractScriptUrls,
   findFrameworkErrorMarker,
@@ -15,8 +14,15 @@ import {
   hasExpectedAssetMime,
   isFatalRuntimeMessage,
 } from "../lib/pages-asset-smoke.mjs";
-import { assert, isDirectRun, readPositiveIntEnv, sleep } from "../lib/smoke-runtime.mjs";
-import { launchChromiumBrowser, loadChromium } from "./smoke-ui.mjs";
+import {
+  assert,
+  chunkRoundRobin,
+  isDirectRun,
+  launchChromiumBrowser,
+  loadChromium,
+  readPositiveIntEnv,
+  sleep,
+} from "../lib/smoke-runtime.mjs";
 
 const ENV_FILE = resolve(".env.local");
 if (existsSync(ENV_FILE)) {
@@ -302,7 +308,7 @@ export async function run() {
   );
   const routeOverride = parseRouteOverride();
   const routes = routeOverride ?? buildYieldDeepRoutes(await fetchTopYieldIds(baseUrl, mode, rankingCount));
-  const routeChunks = chunkItems(routes, workerCount);
+  const routeChunks = chunkRoundRobin(routes, workerCount);
   const warmCacheIds = new Set(WARM_CACHE_YIELD_CANARY_IDS);
 
   console.log(

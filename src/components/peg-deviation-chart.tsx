@@ -9,6 +9,7 @@ import type { TimeRangeOption } from "@/hooks/use-time-range-filter";
 import { CHART_BLUE } from "@/lib/chart-colors";
 import { computePegYAxis, ewma } from "@/lib/peg-chart-math";
 import { formatChartDate } from "@shared/lib/format";
+import { PEG_BAND_BPS, PEG_BAND_HEX, PEG_BAND_LABELS } from "@shared/lib/classification";
 import { AnnotationDensityStrip } from "@/components/chart-primitives/annotations";
 import { DateTooltip, MonoYAxis } from "@/components/chart-primitives/axes";
 import type { ChartDataTableColumn } from "@/components/chart-primitives/data-table";
@@ -41,21 +42,10 @@ const PEG_TABLE_COLUMNS: ChartDataTableColumn<{ ts: number; price: number }>[] =
   },
 ];
 
-const PEG_BAND_BPS = {
-  tight: 25,
-  drift: 50,
-  stress: 100,
-} as const;
-
-const PEG_BAND_HEX = {
-  drift: "#eab308", // yellow-500 — drift outside tight
-  stress: "#f97316", // orange-500 — approaching depeg
-  depeg: "#ef4444", // red-500 — confirmed depeg
-} as const;
-
 function bpsToPrice(bps: number): number {
   return 1 + bps / 10_000;
 }
+
 
 /**
  * `cssColor` is for HTML / `style.color` (uses semantic tokens); `svgColor` is
@@ -68,15 +58,19 @@ function classifyDeviation(bps: number): {
 } {
   const abs = Math.abs(bps);
   if (abs <= PEG_BAND_BPS.tight) {
-    return { label: "in-band", cssColor: "var(--color-muted-foreground)", svgColor: "#94a3b8" };
+    return {
+      label: PEG_BAND_LABELS.inBand,
+      cssColor: "var(--color-muted-foreground)",
+      svgColor: PEG_BAND_HEX.inBand,
+    };
   }
   if (abs <= PEG_BAND_BPS.drift) {
-    return { label: "drift", cssColor: PEG_BAND_HEX.drift, svgColor: PEG_BAND_HEX.drift };
+    return { label: PEG_BAND_LABELS.drift, cssColor: PEG_BAND_HEX.drift, svgColor: PEG_BAND_HEX.drift };
   }
   if (abs <= PEG_BAND_BPS.stress) {
-    return { label: "stressed", cssColor: PEG_BAND_HEX.stress, svgColor: PEG_BAND_HEX.stress };
+    return { label: PEG_BAND_LABELS.stress, cssColor: PEG_BAND_HEX.stress, svgColor: PEG_BAND_HEX.stress };
   }
-  return { label: "depeg", cssColor: PEG_BAND_HEX.depeg, svgColor: PEG_BAND_HEX.depeg };
+  return { label: PEG_BAND_LABELS.depeg, cssColor: PEG_BAND_HEX.depeg, svgColor: PEG_BAND_HEX.depeg };
 }
 
 function makePriceTickFormatter(step: number): (value: number) => string {

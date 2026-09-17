@@ -6,6 +6,7 @@ import {
   loadFreshFxRates,
   loadPreviousStablecoinsById,
   loadReplayPriceCacheForTrustedContinuity,
+  SUPPLEMENTAL_RESTORE_MAX_AGE_SEC,
   type CronResult,
 } from "./shared";
 import {
@@ -40,15 +41,27 @@ export async function restoreFallbackCacheState({
   const { previousAssetsById, cacheState: previousCacheState } = await loadPreviousStablecoinsById(db);
 
   try {
+    const nowSec = Math.floor(Date.now() / 1000);
     for (const asset of assets) {
       const prev = previousAssetsById.get(String(asset.id));
-      if (prev?.chainCirculating) {
+      const observedAt = prev?.supplyObservedAt;
+      if (
+        !prev ||
+        typeof observedAt !== "number" ||
+        !Number.isFinite(observedAt) ||
+        observedAt > nowSec + 60 ||
+        nowSec - observedAt > SUPPLEMENTAL_RESTORE_MAX_AGE_SEC
+      ) {
+        continue;
+      }
+      if (prev.chainCirculating) {
         asset.chainCirculating = prev.chainCirculating;
         asset.chains = prev.chains ?? [];
       }
-      if (prev?.circulatingPrevDay) asset.circulatingPrevDay = prev.circulatingPrevDay;
-      if (prev?.circulatingPrevWeek) asset.circulatingPrevWeek = prev.circulatingPrevWeek;
-      if (prev?.circulatingPrevMonth) asset.circulatingPrevMonth = prev.circulatingPrevMonth;
+      if (prev.circulatingPrevDay) asset.circulatingPrevDay = prev.circulatingPrevDay;
+      if (prev.circulatingPrevWeek) asset.circulatingPrevWeek = prev.circulatingPrevWeek;
+      if (prev.circulatingPrevMonth) asset.circulatingPrevMonth = prev.circulatingPrevMonth;
+      asset.supplyObservedAt = observedAt;
     }
   } catch (error) {
     logWorkerEventArgs("handler", "warn", "[sync-stablecoins] Failed to restore stale cache data:", error);

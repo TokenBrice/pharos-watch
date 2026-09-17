@@ -120,9 +120,9 @@ describe("generateDailyDigest publication contract", () => {
   });
 
   it("skips a recent valid edition but regenerates an unpublishable recent row", async () => {
-    const recent = mockD1([{ match: "SELECT generated_at, digest_text FROM daily_digest ORDER BY generated_at DESC LIMIT 1", rows: [], first: { generated_at: Math.floor(Date.now() / 1000) - 20 * 60, digest_text: "Already generated" } }]);
+    const recent = mockD1([{ match: "SELECT generated_at, digest_text FROM daily_digest\n       WHERE", rows: [], first: { generated_at: Math.floor(Date.now() / 1000) - 20 * 60, digest_text: "Already generated" } }]);
     expect(await invoke(recent)).toMatchObject({ metadata: "skipped: recent digest exists" }); expect(fetchWithRetry).not.toHaveBeenCalled();
-    const malformedDb = makeDailyDigestScenario({ db: { prependTables: [{ match: "SELECT generated_at, digest_text FROM daily_digest ORDER BY generated_at DESC LIMIT 1", rows: [], first: { generated_at: Math.floor(Date.now() / 1000) - 20 * 60, digest_text: "```json" } }] } }).db;
+    const malformedDb = makeDailyDigestScenario({ db: { prependTables: [{ match: "SELECT generated_at, digest_text FROM daily_digest\n       WHERE", rows: [], first: { generated_at: Math.floor(Date.now() / 1000) - 20 * 60, digest_text: "```json" } }] } }).db;
     expect((await invoke(malformedDb)).itemCount).toBe(1); expect(fetchWithRetry).toHaveBeenCalled();
   });
 

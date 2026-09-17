@@ -145,8 +145,10 @@ export const DdrRelatedContextSchema = z.object({
     reason: z.string().nullable(),
     identity: SafetyScorePublicationIdentitySchema.nullable(),
   }).optional(),
-  supplyChange7dPct: z.number().nullable().optional().default(null),
-  supplyChange30dPct: z.number().nullable().optional().default(null),
+  supplyChange7dPct: z.number().nullable().optional().default(null)
+    .describe("Percentage points, 0-100 scale (not a 0-1 ratio)"),
+  supplyChange30dPct: z.number().nullable().optional().default(null)
+    .describe("Percentage points, 0-100 scale (not a 0-1 ratio)"),
   /** Abnormal mint expansion into the break (the USR tell); null when supply coverage is missing. */
   mintSurge: z.boolean().nullable().optional().default(null),
 });
@@ -266,6 +268,7 @@ export const DdrLineageSchema = z.object({
   incidentCount: z.number().int().nonnegative(),
   coinCount: z.number().int().nonnegative(),
   quarantinedCoins: z.number().int().nonnegative(),
+  trainingRowsTruncated: z.boolean().optional(),
 });
 export type DdrLineage = z.infer<typeof DdrLineageSchema>;
 

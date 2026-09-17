@@ -9,7 +9,7 @@ import type { CronResult } from "./shared";
 import { buildSyncMetadata } from "./shared";
 import { reportStablecoinsStage } from "./runtime";
 import type { PeggedAsset } from "./enrich-prices";
-import { fetchCuratedAggregateOnChainMcap } from "./supplemental-assets/onchain-supply";
+import { fetchCuratedAggregateOnChainMcap, toPublicChainCirculating } from "./supplemental-assets/onchain-supply";
 import { buildSupplementalAsset, pegTypeKey, toPositiveFiniteNumber, type CoinGeckoMcapData } from "./supplemental-assets/shared";
 
 interface FallbackStablecoinMetadata {
@@ -148,15 +148,7 @@ export async function overlayFallbackCuratedAggregateSupply(
     const pegKey = pegTypeKey(meta);
     asset.circulating = { [pegKey]: onChainMcap.mcap };
     asset.supplySource = onChainMcap.supplySource;
-    asset.chainCirculating = Object.fromEntries(
-      Object.entries(onChainMcap.chainCirculating).map(([chainLabel, row]) => [
-        chainLabel,
-        {
-          ...(row.chainId ? { chainId: row.chainId } : {}),
-          current: row.current,
-        },
-      ]),
-    );
+    asset.chainCirculating = toPublicChainCirculating(onChainMcap.chainCirculating);
     asset.chains = Object.keys(onChainMcap.chainCirculating);
   }
 }

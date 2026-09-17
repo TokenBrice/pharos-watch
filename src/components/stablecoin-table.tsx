@@ -29,7 +29,6 @@ interface StablecoinTableProps {
   toolbarActions?: ReactNode;
   filterPanel?: ReactNode;
   logos?: Record<string, string>;
-  pegRates?: Record<string, number>;
   searchQuery?: string;
   onSearchChange?: (value: string) => void;
   pegScores?: Map<string, PegSummaryCoin>;
@@ -58,7 +57,6 @@ export function StablecoinTable({
   toolbarActions,
   filterPanel,
   logos,
-  pegRates = {},
   searchQuery,
   onSearchChange,
   pegScores,
@@ -109,7 +107,6 @@ export function StablecoinTable({
     searchQuery,
     sort,
     renderedSet: columns.renderedSet,
-    pegRates,
     pegScores,
     dexLiquidity,
     pinnedStablecoinIds,

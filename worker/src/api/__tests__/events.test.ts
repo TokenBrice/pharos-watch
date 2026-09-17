@@ -1,6 +1,15 @@
 import { readJsonResponse } from "../../test-helpers/__shared/auth";
-import { afterEach, describe, it, expect } from "vitest";
+import { afterEach, describe, it, expect, vi } from "vitest";
 import { mockD1, type MockD1Database } from "@shared/test-utils/mock-d1";
+
+const { logWorkerEventMock } = vi.hoisted(() => ({
+  logWorkerEventMock: vi.fn(),
+}));
+
+vi.mock("../../lib/structured-log", () => ({
+  logWorkerEvent: logWorkerEventMock,
+}));
+
 import { handleEvents } from "../events";
 import {
   SafetyScoreTapeProvenanceSchema,
@@ -10,7 +19,10 @@ import {
 import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
 
 const fixtures = createLatestSchemaFixtureTracker();
-afterEach(() => fixtures.closeAll());
+afterEach(() => {
+  fixtures.closeAll();
+  logWorkerEventMock.mockReset();
+});
 
 function eventDb(rows: Record<string, string | number | null>[]) {
   const { sqlite, db } = fixtures.open();
@@ -118,7 +130,7 @@ describe("handleEvents", () => {
     });
   });
 
-  it("fails closed for malformed V2 score provenance", async () => {
+  it("drops malformed score rows and reports the dropped count", async () => {
     const db = mockD1([
       {
         match: "FROM tape_events",
@@ -148,11 +160,16 @@ describe("handleEvents", () => {
         identity: null,
       }).success,
     ).toBe(false);
-    // Fails closed: the router boundary maps this throw to the JSON 500 pinned by
-    // `router-contract.test.ts`.
-    await expect(handleEvents(db, new URL("https://x/api/events"))).rejects.toThrow(
-      "Invalid score tape event payload",
+    const body = TapeEventsResponseSchema.parse(
+      await readJsonResponse(await handleEvents(db, new URL("https://x/api/events")), 200),
     );
+    expect(body.events).toHaveLength(0);
+    expect(body.droppedRows).toBe(1);
+    expect(logWorkerEventMock).toHaveBeenCalledWith(expect.objectContaining({
+      event: "tape_event_row_dropped",
+      level: "warn",
+      route: "/api/events",
+    }));
   });
 
   it("returns 200 with mapped events and freshness meta", async () => {

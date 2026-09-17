@@ -15,7 +15,11 @@ import {
   loadV9MethodologyPolicy,
   resolveV9ReasonPolicy,
 } from "../safety-score-v9/policy";
-import { V9_BOUNDED_ATTRIBUTION_REASON_CODES } from "../../types/safety-score-v9-public";
+import {
+  C_MINUS_MIN_SCORE,
+  DANGER_PEG_MULTIPLIER_FLOOR,
+  V9_BOUNDED_ATTRIBUTION_REASON_CODES,
+} from "../../types/safety-score-v9-public-facts";
 
 function candidateClone(): V9MethodologyPolicy {
   return structuredClone(V9_CANDIDATE_POLICY_V1.policy);
@@ -75,6 +79,15 @@ describe("Safety Score v9 methodology policy", () => {
     });
     expect(Object.isFrozen(V9_CANDIDATE_POLICY_V1.policy.semantic.formula)).toBe(true);
     expect(Object.isFrozen(V9_CANDIDATE_POLICY_V1.policy.semantic.evidence.evidenceExpiry)).toBe(true);
+  });
+  it("pins public validation mirrors to parsed policy values", () => {
+    const policy = V9_CANDIDATE_POLICY_V1.policy.semantic.formula;
+    expect(C_MINUS_MIN_SCORE).toBe(
+      policy.gradeThresholds.find((threshold) => threshold.grade === "C-")?.minScore,
+    );
+    expect(DANGER_PEG_MULTIPLIER_FLOOR).toBe(
+      policy.danger.adverseAttributionPegMultiplierFloor,
+    );
   });
 
   it("registers the scoped control question reason with the control-scoped-gap ceiling above control-unverified", () => {

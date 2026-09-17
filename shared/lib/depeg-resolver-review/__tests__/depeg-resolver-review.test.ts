@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { DdrHorizon, DdrHorizonCell } from "../../../types/depeg-resolver";
+import { DDRR_REVIEWER_VERSION } from "../../methodology-versions/depeg-resolver";
 import {
-  DDRR_REVIEWER_VERSION,
   DdrrRowSchema,
   type DdrrActualEventInput,
   type DdrrAssessmentInput,

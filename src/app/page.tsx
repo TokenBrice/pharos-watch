@@ -8,7 +8,7 @@ import { buildCollectionItemListJsonLd, buildStablecoinItemListEntries, safeJson
 import { buildPageMetadata } from "@/lib/page-metadata";
 import { SITE_ORIGIN as SITE_URL } from "@shared/lib/runtime-origins";
 import { buildStablecoinUrl } from "@shared/lib/urls";
-import { logosById } from "@/lib/logos";
+import { getLogoSrc, logosById } from "@/lib/logos";
 import { getHomepageHeroSnapshot } from "@/lib/homepage-static-snapshot";
 import {
   CORE_AGGREGATE_STABLECOIN_COUNT,
@@ -38,7 +38,10 @@ export default function HomePage() {
   // Top 20 stablecoins for ItemList schema
   const itemListEntries = buildStablecoinItemListEntries(HOMEPAGE_TOP_CORE_STABLECOINS, {
     resolveUrl: (coin) => `${SITE_URL}${buildStablecoinUrl(coin.id)}`,
-    resolveImage: (coin) => logosById[coin.id] ? `${SITE_URL}${logosById[coin.id]}` : undefined,
+    resolveImage: (coin) => {
+      const logoSrc = getLogoSrc(logosById, coin.id);
+      return logoSrc ? `${SITE_URL}${logoSrc}` : undefined;
+    },
   });
 
   return (

@@ -363,6 +363,7 @@ export async function applyWatchlistImportV2(
     for (let index = 0; index < ids.length; index += chunkSize) {
       const chunk = ids.slice(index, index + chunkSize);
       const placeholders = chunk.map(() => "?").join(", ");
+      // SAFETY: table is a closed literal union, column is selected internally, and values use D1 binds.
       statements.push(db.prepare(`
         DELETE FROM ${table}
          WHERE chat_id = ? AND ${column} IN (${placeholders})

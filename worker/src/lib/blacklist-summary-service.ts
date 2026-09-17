@@ -69,6 +69,8 @@ interface CachedBlacklistSummarySnapshot {
   payload: BlacklistSummaryPayload;
 }
 
+const BLACKLIST_SUMMARY_CURRENT_BALANCE_MAX_AGE_SEC = API_FRESHNESS_MAX_AGE_SEC.blacklistSummary * 2;
+
 type BlacklistChartPoint = { quarter: string; total: number } & Record<BlacklistStablecoin, number>;
 
 function quarterToSortKey(timestamp: number): number {
@@ -559,7 +561,8 @@ async function buildBlacklistSummaryPayload(
       .bind(now - 30 * 86400, now - 86400)
       .first<{ total: number; max_ts: number | null; recent_30d: number; recent_24h: number }>(),
 
-    loadBlacklistCurrentBalanceMap(db),
+    loadBlacklistCurrentBalanceMap(db, now - BLACKLIST_SUMMARY_CURRENT_BALANCE_MAX_AGE_SEC),
+
     queryLatestEventTypeHistory(db),
     queryBlacklistGapMetrics(db, now, {
       producerSnapshotTtlSec: BLACKLIST_GAP_METRICS_PRODUCER_SNAPSHOT_TTL_SEC,
@@ -729,6 +732,12 @@ export const handleBlacklistSummary = async (db: D1Database): Promise<Response> 
     }
 
     const built = await buildBlacklistSummaryPayload(db, now);
+    await writeBlacklistSummarySnapshot(db, {
+      version: BLACKLIST_SUMMARY_SNAPSHOT_CACHE_VERSION,
+      materializedAt: now,
+      freshnessTs: built.freshnessTs,
+      payload: built.payload,
+    });
     return jsonResponseWithHeaders(built.payload, blacklistSummaryHeaders(built.freshnessTs));
   };
 

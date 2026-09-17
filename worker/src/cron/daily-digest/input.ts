@@ -5,6 +5,7 @@ import {
   type DigestSafetyMapCapture,
 } from "@shared/types/digest";
 import { API_FRESHNESS_MAX_AGE_SEC } from "@shared/lib/api-freshness";
+import { isRecord } from "@shared/lib/type-guards";
 import { round1 } from "@shared/lib/math";
 import type { StablecoinData } from "@shared/types/market";
 import { getCirculatingRaw, getPrevWeekRaw } from "@shared/lib/supply";
@@ -82,10 +83,6 @@ export interface DailyDigestInputBuildResult {
     yieldAnomalies: NonNullable<DigestInputData["yieldAnomalies"]>;
     liquidityShifts: NonNullable<DigestInputData["liquidityShifts"]>;
   };
-}
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null;
 }
 
 export function buildDigestSafetyMapCapture(

@@ -136,7 +136,6 @@ describe("data surface descriptors", () => {
     expect(FRONTEND_API_QUERY_DESCRIPTORS.stablecoins.path).toBe("/api/stablecoins");
     expect(FRONTEND_API_QUERY_DESCRIPTORS.stablecoins.queryKey).toEqual(["stablecoins"]);
     expect(FRONTEND_API_QUERY_DESCRIPTORS.stablecoins.producerIntervalMs).toBe(900_000);
-    expect(FRONTEND_API_QUERY_DESCRIPTORS.stablecoins.metaMaxAgeSec).toBe(600);
 
     const withSource = FRONTEND_API_QUERY_DESCRIPTORS.yieldHistory("usdc", 365, "source", "aave-v3");
     const otherSource = FRONTEND_API_QUERY_DESCRIPTORS.yieldHistory("usdc", 365, "source", "compound-v3");
@@ -145,7 +144,6 @@ describe("data surface descriptors", () => {
     expect(withSource.path).toBe("/api/yield-history?stablecoin=usdc&days=365&mode=source&sourceKey=aave-v3");
     expect(withSource.queryKey).toEqual(["yield-history", "usdc", 365, "source", "aave-v3"]);
     expect(withSource.producerIntervalMs).toBe(3_600_000);
-    expect(withSource.metaMaxAgeSec).toBe(3600);
 
     // Distinct arguments must not collide in the React Query cache.
     expect(otherSource.queryKey).not.toEqual(withSource.queryKey);

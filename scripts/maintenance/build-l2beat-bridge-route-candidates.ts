@@ -8,6 +8,7 @@ import {
   type L2BeatBridgeRouteReviewRow,
 } from "@shared/lib/chains/l2beat-audit";
 import { ACTIVE_META_BY_ID, ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
+import { runDirectCli } from "../lib/cli-args.mjs";
 import {
   assertCandidateReportLimitChoice,
   createCandidateReportCliOptions,
@@ -17,7 +18,6 @@ import {
   renderCoverageAuditReport,
   resolveGeneratedAt,
   resolveSelectedStablecoins,
-  runAsMain,
   writeCandidateReportCliOutput,
 } from "../lib/coverage-audit-cli";
 
@@ -116,7 +116,7 @@ export function renderL2BeatBridgeRouteReviewAuditMarkdown(audit: L2BeatBridgeRo
     "",
     "## Operator Notes",
     "",
-    "- Reviewed `bridgeRouteRisk` can affect Safety Score v8.12 through a penalty-only Decentralization blend.",
+    "- Reviewed bridge controls can author `scopedQuestions` that bound Safety Score V9 control-gap ceilings; the v8 Decentralization blend is retired.",
     "- This report is a review queue only. It never mutates stablecoin metadata.",
     "- Strong native or canonical routes never lift a score; missing bridgeRouteRisk remains neutral until reviewed.",
     "",
@@ -149,4 +149,6 @@ export async function runCli(
   return 0;
 }
 
-runAsMain(import.meta.url, runCli);
+runDirectCli(import.meta.url, async () => {
+  process.exitCode = await runCli();
+});

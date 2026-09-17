@@ -223,7 +223,11 @@ describe("Safety Score v9 exact base fact-set adapter — control and wrapper di
     stale.assets[0]!.researchEvidence = [{ evidenceKey: "stale-control-review", sourceId: "fixture.stale-control-review", observedAtSec: 8_000, publishedAtSec: null, url: "https://example.com/stale", contentSha256: "a".repeat(64), confidence: "verified", maxAgeSec: 500 }];
     stale.assets[0]!.componentEvidence = [{ componentKey: "control", evidenceKeys: ["stale-control-review"] }];
     const materialized = materializeSafetyScoreV9FactSetExtension(fixed, stale);
-    expect(compileSafetyScoreV9FactSetWithIsolationFromValidatedExtension(fixed, materialized).quarantines).toEqual([{ assetId: "alpha", code: "fact-build-failed" }]);
+    expect(compileSafetyScoreV9FactSetWithIsolationFromValidatedExtension(fixed, materialized).quarantines).toEqual([{
+      assetId: "alpha",
+      code: "fact-build-failed",
+      message: "Safety Score v9 component alpha:control cannot be known with stale evidence alpha:research:stale-control-review",
+    }]);
   });
 
   it("exports stable reserve exposure identities for exact overlay joins", () => {

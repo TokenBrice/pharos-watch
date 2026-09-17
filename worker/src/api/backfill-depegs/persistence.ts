@@ -35,6 +35,10 @@ export type PersistedBackfillEvent = BackfillEvent & {
   provenance?: BackfillEventProvenanceInput;
 };
 
+export interface BackfillApplyResult {
+  provenanceMismatchCount: number;
+}
+
 export function buildBackfillEventsFingerprint(events: BackfillEvent[]): string {
   return fnv1aHash(JSON.stringify(events.map((event) => ({
     direction: event.direction,

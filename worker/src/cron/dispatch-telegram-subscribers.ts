@@ -1,20 +1,11 @@
 import type { TelegramAlertType } from "@shared/types/status";
 import { buildInClause, chunkArray, D1_MAX_BOUND_PARAMETERS } from "../lib/db";
-import { logTelegramEvent } from "../lib/telegram/log";
 import { GLOBAL_ALERT_COLUMN_BY_TYPE } from "../lib/telegram/broadcast-targets";
-import { listTelegramPresets, type TelegramPresetResolveOptions } from "../lib/telegram/presets";
 import type { SubscriberRow } from "./dispatch-telegram-routing";
 import {
   TELEGRAM_FANOUT_FAMILIES,
   type LegacyFanoutAlertType,
-  type PresetSubscriberLoadResult,
 } from "./dispatch-telegram-alerts-fanout";
-import {
-  loadActivePresetFollowers,
-  projectPresetFollowers,
-  resolvePresetMemberships,
-  type PresetAlertType,
-} from "./telegram-preset-subscriber-store";
 
 function fanoutColumns(key: "directColumn" | "globalColumn" | "overrideColumn") {
   return Object.fromEntries(TELEGRAM_FANOUT_FAMILIES.map((spec) => [spec.family, spec[key]])) as
@@ -308,67 +299,3 @@ export function mergeSubscriberMaps(
   return base;
 }
 
-export async function loadPresetSubscriberRowsBatch(
-  db: D1Database,
-  stablecoinIds: string[],
-  type: PresetAlertType,
-  nowSec: number,
-  options: TelegramPresetResolveOptions = {},
-): Promise<PresetSubscriberLoadResult> {
-  if (stablecoinIds.length === 0) return { kind: "ok", rows: new Map() };
-  const memberships = await resolvePresetMemberships(db, {
-    alertType: type,
-    wantedStablecoinIds: stablecoinIds,
-    nowSec,
-    options,
-  });
-  if (memberships.kind === "query-failed") {
-    logTelegramEvent({
-      level: "warn",
-      message: "dynamic preset query failed",
-      action: "preset-query",
-      module: "dispatch-telegram-subscribers",
-      failureKind: "query-failed",
-      alertType: type,
-      requestedStablecoinCount: stablecoinIds.length,
-    });
-    return { kind: "query-failed", error: memberships.error };
-  }
-  if (memberships.kind === "resolution-failed") {
-    logTelegramEvent({
-      level: "warn",
-      message: "dynamic preset resolution failed",
-      action: "preset-resolution",
-      module: "dispatch-telegram-subscribers",
-      failureKind: "resolution-failed",
-      alertType: type,
-      reason: memberships.reason,
-      presetCount: listTelegramPresets().length,
-      subscriberRowCount: 1,
-      requestedStablecoinCount: stablecoinIds.length,
-    });
-    return { kind: "resolution-failed" };
-  }
-  if (!memberships.hasCandidates || memberships.memberships.length === 0) {
-    return { kind: "ok", rows: new Map() };
-  }
-  const presetIds = [...new Set(memberships.memberships.map((membership) => membership.preset_id))];
-  const followers = await loadActivePresetFollowers(db, {
-    alertType: type,
-    presetIds,
-    nowSec,
-  });
-  if (followers.kind === "query-failed") {
-    logTelegramEvent({
-      level: "warn",
-      message: "dynamic preset query failed",
-      action: "preset-query",
-      module: "dispatch-telegram-subscribers",
-      failureKind: "query-failed",
-      alertType: type,
-      requestedStablecoinCount: stablecoinIds.length,
-    });
-    return { kind: "query-failed", error: followers.error };
-  }
-  return { kind: "ok", rows: projectPresetFollowers(memberships.memberships, followers.followers) };
-}

@@ -1,11 +1,10 @@
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
-import { dirname, isAbsolute, relative, resolve } from "node:path";
-import { toErrorMessage } from "@shared/lib/error-utils";
+import { existsSync, readFileSync } from "node:fs";
+import { isAbsolute, relative, resolve } from "node:path";
 import { getCirculatingRaw } from "@shared/lib/supply";
 import { formatCompactUsdWithOptions } from "@shared/lib/format";
 import { isRecord, numberValue, stringValue } from "@shared/lib/type-guards";
 import { markdownValue, renderMarkdownRows } from "./markdown-report";
-import { isDirectRun } from "./smoke-runtime.mjs";
+import { writeFileResolved } from "./cli-args.mjs";
 
 export { isRecord, markdownValue, numberValue, stringValue };
 
@@ -104,6 +103,10 @@ export function formatUsd(value: number | null): string {
 
 export function readJsonFile(path: string): unknown {
   return JSON.parse(readFileSync(path, "utf8")) as unknown;
+}
+
+export function uniqueStrings(values: readonly string[]): string[] {
+  return [...new Set(values.map((value) => value.trim()).filter(Boolean))];
 }
 
 export async function fetchJson(
@@ -472,10 +475,7 @@ export function buildMarketCapMapFromStablecoins(
 }
 
 export function writeOutputFile(path: string, contents: string, cwd: string = process.cwd()): string {
-  const target = resolve(cwd, path);
-  mkdirSync(dirname(target), { recursive: true });
-  writeFileSync(target, contents, "utf8");
-  return target;
+  return writeFileResolved(path, contents, { cwd });
 }
 
 function assertAdvisoryReportPath(
@@ -505,20 +505,5 @@ function writeAdvisoryReport(
   options: { protectedRoot: string; message: string },
 ): string {
   const target = assertAdvisoryReportPath(cwd, reportPath, options.protectedRoot, options.message);
-  mkdirSync(dirname(target), { recursive: true });
-  writeFileSync(target, contents, "utf8");
-  return target;
-}
-
-export function runAsMain(importMetaUrl: string, runCli: () => Promise<number> | number): void {
-  if (!isDirectRun(importMetaUrl, process.argv[1])) return;
-
-  Promise.resolve().then(runCli)
-    .then((code) => {
-      process.exitCode = code;
-    })
-    .catch((error: unknown) => {
-      console.error(toErrorMessage(error));
-      process.exitCode = 1;
-    });
+  return writeFileResolved(target, contents);
 }

@@ -1,5 +1,5 @@
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
-import { dirname } from "node:path";
+import { existsSync, readFileSync } from "node:fs";
+import { writeFileResolved } from "./cli-args.mjs";
 
 interface GeneratedArtifact {
   path: string;
@@ -38,8 +38,7 @@ export function syncGeneratedArtifacts({
   }
 
   for (const artifact of artifacts) {
-    mkdirSync(dirname(artifact.path), { recursive: true });
-    writeFileSync(artifact.path, artifact.contents, encoding);
+    writeFileResolved(artifact.path, Buffer.from(artifact.contents, encoding));
   }
 
   console.log(writtenMessage);

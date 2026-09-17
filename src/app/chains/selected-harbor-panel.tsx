@@ -1,7 +1,7 @@
 import Image from "next/image";
 import { Anchor, ShipWheel } from "lucide-react";
 import { HEALTH_BADGE_CLASSES, trendColor } from "@/lib/chain-ui";
-import { logosById } from "@/lib/logos";
+import { getLogoSrc, logosById } from "@/lib/logos";
 import { cn } from "@/lib/utils";
 import { formatCompactUsd, formatSignedPercent } from "@shared/lib/format";
 import type { ChainHarborEntry } from "./harbor-map";
@@ -82,7 +82,7 @@ export function SelectedHarborPanel({ entry }: { entry: ChainHarborEntry | null 
         <p className="pharos-kicker">Top cargo marks</p>
         <div className="mt-2 grid gap-2 md:grid-cols-3">
           {topCargos.map((cargo) => {
-            const logoPath = logosById[cargo.id];
+            const logoPath = getLogoSrc(logosById, cargo.id);
             return (
               <div key={`${entry.id}-${cargo.id}`} className="rounded-lg border border-border/60 bg-background/40 p-3">
                 <div className="flex items-center justify-between gap-3">

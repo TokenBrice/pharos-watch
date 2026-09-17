@@ -1,9 +1,10 @@
 #!/usr/bin/env node
 
 import { existsSync, readFileSync } from "node:fs";
-import { extname, relative, resolve } from "node:path";
+import { resolve } from "node:path";
 import { reportViolations } from "../lib/report-violations.mts";
-import { collectSourceFiles, runAsCli } from "../lib/source-files.mts";
+import { collectSourceFilesUnderRoots, normalizeRelPath } from "../lib/source-files.mts";
+import { runDirectCli } from "../lib/cli-args.mjs";
 import {
   PROVIDER_RESILIENCE_REGISTRY,
   REQUIRED_PROVIDER_SURFACE_FAMILIES,
@@ -48,9 +49,6 @@ interface FetchCall {
   text: string;
 }
 
-function normalizeRelPath(path: string): string {
-  return path.replaceAll("\\", "/");
-}
 
 function lineNumberForIndex(source: string, index: number): number {
   return source.slice(0, index).split("\n").length;
@@ -86,18 +84,6 @@ function readRelFile(cwd: string, relPath: string): string {
   return readFileSync(resolve(cwd, relPath), "utf8");
 }
 
-function collectDirectFetchFiles(cwd: string, roots: readonly string[]): string[] {
-  const files: string[] = [];
-  for (const root of roots) {
-    const rootPath = resolve(cwd, root);
-    if (!existsSync(rootPath)) continue;
-    files.push(...collectSourceFiles(rootPath, { extensions: SOURCE_EXTENSIONS, excludedDirs: EXCLUDED_DIRS }));
-  }
-  return files
-    .filter((file) => SOURCE_EXTENSIONS.has(extname(file)))
-    .map((file) => normalizeRelPath(relative(cwd, file)))
-    .sort();
-}
 
 function addViolation(
   violations: ProviderViolation[],
@@ -230,7 +216,10 @@ export function scanProviderResilience({
     }
   }
 
-  for (const relPath of collectDirectFetchFiles(cwd, directFetchRoots)) {
+  for (const relPath of collectSourceFilesUnderRoots(directFetchRoots, cwd, {
+    extensions: SOURCE_EXTENSIONS,
+    excludedDirs: EXCLUDED_DIRS,
+  })) {
     const source = readRelFile(cwd, relPath);
     const calls = findBareFetchCalls(source, relPath);
     if (calls.length === 0) continue;
@@ -272,4 +261,6 @@ export function main(cwd = process.cwd()): number {
   return 0;
 }
 
-runAsCli(import.meta.url, main);
+runDirectCli(import.meta.url, () => {
+  process.exitCode = main();
+});

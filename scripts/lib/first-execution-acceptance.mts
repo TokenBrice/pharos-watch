@@ -1,7 +1,6 @@
 import { readFileSync } from "node:fs";
 import { isRecord } from "@shared/lib/type-guards";
-import { parseStrictCliArgs } from "./cli-args.mjs";
-import { runAsCli } from "./source-files.mts";
+import { parseStrictCliArgs, runDirectCli } from "./cli-args.mjs";
 import type { PostDeployAcceptanceOutcome } from "./post-deploy-acceptance.mts";
 
 export interface FirstExecutionAcceptanceInput {
@@ -90,12 +89,12 @@ export function runFirstExecutionAcceptanceCli(argv: readonly string[]): number 
   return result.outcome === "passed" ? 0 : result.outcome === "failed" ? 1 : 2;
 }
 
-runAsCli(import.meta.url, () => {
+runDirectCli(import.meta.url, () => {
   try {
-    return runFirstExecutionAcceptanceCli(process.argv.slice(2));
+    process.exitCode = runFirstExecutionAcceptanceCli(process.argv.slice(2));
   } catch {
     // JSON parse failures can contain fragments of the saved authenticated response.
     console.error("Acceptance input is invalid or unreadable. Use --help for required arguments.");
-    return 2;
+    process.exitCode = 2;
   }
 });

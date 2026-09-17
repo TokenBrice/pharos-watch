@@ -31,7 +31,8 @@ describe("decodeJsonString", () => {
     });
   });
 
-  it("returns parse-error when JSON is malformed", () => {
+  it("returns parse-error when JSON is malformed and reports the parse failure", () => {
+    const failures: Array<{ reason: string; message: string }> = [];
     const result = decodeJsonString<{ value: number }, "missing" | "json-parse-failed" | "invalid-shape">(
       "{bad-json",
       {
@@ -39,6 +40,7 @@ describe("decodeJsonString", () => {
         missingReason: "missing",
         parseErrorReason: "json-parse-failed",
         normalize: () => ({ ok: true, payload: { value: 0 } }),
+        onParseFailure: (failure) => failures.push(failure),
       },
     );
 
@@ -48,6 +50,9 @@ describe("decodeJsonString", () => {
       payload: null,
       updatedAt: 1_700_000_000,
     });
+    expect(failures).toEqual([
+      { reason: "json-parse-failed", message: expect.any(String) },
+    ]);
   });
 
   it("returns missing reason when value is absent", () => {

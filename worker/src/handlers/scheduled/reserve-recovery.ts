@@ -18,7 +18,7 @@ function normalizeReserveRecoveryMode(value: string | null | undefined): Reserve
 }
 
 const RECOVERY_LEASE_SEC = 15 * 60;
-const RECOVERY_STALE_AFTER_SEC = 2 * 60;
+const RECOVERY_STALE_AFTER_SEC = 5 * 60;
 
 async function runReserveRecovery(runtime: ScheduledRuntimeContext, signal: AbortSignal) {
   const mode = normalizeReserveRecoveryMode(runtime.env.WORKER_RESERVE_RECOVERY_MODE);

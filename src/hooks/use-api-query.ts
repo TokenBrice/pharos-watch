@@ -39,7 +39,6 @@ export interface PollingQueryControlOptions {
 export interface ApiQueryOptions<T> extends PollingQueryControlOptions {
   schema?: SchemaLikeSource<T>;
   fetchInit?: RequestInit;
-  metaMaxAgeSec?: number;
   contractMode?: ApiContractMode;
 }
 
@@ -81,13 +80,12 @@ function createApiQueryFnWithMeta<T>(
   path: string,
   schema?: SchemaLikeSource<T>,
   fetchInit?: RequestInit,
-  metaMaxAgeSec?: number,
   contractMode?: ApiContractMode,
 ): ApiQueryFunction<{ data: T; meta: ApiMeta | null }> {
   return async (context) => {
     const { requestInit, dispose } = mergeFetchInitSignal(fetchInit, context?.signal);
     try {
-      return await apiFetchWithMeta<T>(path, await resolveSchemaLike(schema), requestInit, metaMaxAgeSec, contractMode);
+      return await apiFetchWithMeta<T>(path, await resolveSchemaLike(schema), requestInit, contractMode);
     } finally {
       dispose();
     }
@@ -133,10 +131,9 @@ export function createApiPollingQueryOptionsWithMeta<T>(
   cronInterval: number,
   opts?: ApiQueryOptions<T>,
 ): UseQueryOptions<{ data: T; meta: ApiMeta | null }, Error, { data: T; meta: ApiMeta | null }, readonly unknown[]> {
-  const metaMaxAgeSec = opts?.metaMaxAgeSec ?? Math.max(1, Math.round(cronInterval / 1000));
   return createPollingQueryOptions(
     key,
-    createApiQueryFnWithMeta(path, opts?.schema, opts?.fetchInit, metaMaxAgeSec, opts?.contractMode),
+    createApiQueryFnWithMeta(path, opts?.schema, opts?.fetchInit, opts?.contractMode),
     cronInterval,
     opts,
   );

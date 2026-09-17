@@ -118,6 +118,19 @@ describe("adaptKrwqCustodian", () => {
     expect(result.metadata?.totalReserveUsd).toBeCloseTo(TOTAL_RESERVE_USD, 5);
   });
 
+  it("accepts whitespace-padded issuer raw units", () => {
+    const result = adaptKrwqCustodian(
+      { ...PAYLOAD, usdc: { ...PAYLOAD.usdc, totalAssetsRaw: " 123 " } },
+      { ...ONCHAIN_MATCH, usdc: 123n },
+      SUPPLY,
+      VERIFIED_BINDINGS,
+    );
+
+    expect(result.warnings ?? []).not.toContainEqual(
+      expect.objectContaining({ code: expect.stringMatching(/^krwq-onchain-(?:unverifiable|mismatch)$/) }),
+    );
+  });
+
   it("fails closed on malformed grouped amounts", () => {
     for (const bad of ["1,2,3", "N/A", "", "12,34.5", "1,2345"]) {
       expect(() => adaptKrwqCustodian(

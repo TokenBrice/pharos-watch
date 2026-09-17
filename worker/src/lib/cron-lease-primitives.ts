@@ -162,7 +162,7 @@ async function acquireCronLeaseState(
 }
 
 export async function acquireCronLease(db: D1Database, job: string, owner: string, ttlSec: number): Promise<boolean> {
-  const result = await acquireCronLeaseState(db, job, owner, ttlSec);
+  const result = await runWithOverloadRetry(() => acquireCronLeaseState(db, job, owner, ttlSec), 3);
   return result.acquired;
 }
 
@@ -187,13 +187,16 @@ async function renewCronLeaseState(
 }
 
 export async function renewCronLease(db: D1Database, job: string, owner: string, ttlSec: number): Promise<boolean> {
-  const result = await renewCronLeaseState(db, job, owner, ttlSec);
+  const result = await runWithOverloadRetry(() => renewCronLeaseState(db, job, owner, ttlSec), 3);
   return result.renewed;
 }
 
 /** Release a lease if and only if caller still owns it. */
 export async function releaseCronLease(db: D1Database, job: string, owner: string): Promise<void> {
-  await db.prepare("DELETE FROM cron_leases WHERE job = ? AND lease_owner = ?").bind(job, owner).run();
+  await runWithOverloadRetry(
+    () => db.prepare("DELETE FROM cron_leases WHERE job = ? AND lease_owner = ?").bind(job, owner).run(),
+    3,
+  );
 }
 
 /**
@@ -415,7 +418,7 @@ export async function runCronWithLease<T>(
     await renewalInFlight;
     if (shouldReleaseLease) {
       try {
-        await runWithOverloadRetry(() => releaseCronLease(db, job, owner), 2);
+        await releaseCronLease(db, job, owner);
       } catch (releaseErr) {
         // Best-effort release: lease expiry still guarantees eventual progress.
         logWorkerEventArgs("lib", "error", `[cron-lease] Failed to release lease for ${job}:`, releaseErr);

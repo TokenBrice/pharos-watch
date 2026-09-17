@@ -81,6 +81,7 @@ export const V9PublicationInputHealthSchema = z
     liveReserves: z
       .object({
         state: z.enum(["available", "unavailable"]),
+        coverageRatio: z.number().finite().min(0).max(1).nullable().default(null),
       })
       .strict(),
   })
@@ -105,6 +106,8 @@ export type V9PublicationAssessment =
 /** Minimum share of candidate assets without newly binding producer-failed deterioration. */
 const V9_PRODUCER_FAILURE_MINIMUM_HEALTHY_ASSET_NUMERATOR = 9;
 const V9_PRODUCER_FAILURE_MINIMUM_HEALTHY_ASSET_DENOMINATOR = 10;
+/** Live-reserve publication requires at least 90% of configured independent producers. */
+const V9_LIVE_RESERVE_MINIMUM_COVERAGE_RATIO = 0.9;
 
 /**
  * The hold gate compares grades only relatively, so it reads the one grade-rank
@@ -262,6 +265,13 @@ function inputHealthReasons(
   }
   if (health.liveReserves.state === "unavailable") {
     reasons.push({ code: "live-reserves-unavailable" });
+  }
+  if (
+    health.liveReserves.state === "available" &&
+    health.liveReserves.coverageRatio !== null &&
+    health.liveReserves.coverageRatio < V9_LIVE_RESERVE_MINIMUM_COVERAGE_RATIO
+  ) {
+    reasons.push({ code: "live-reserves-coverage-below-floor" });
   }
   return reasons;
 }

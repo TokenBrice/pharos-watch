@@ -18,6 +18,7 @@ export const V9_PUBLICATION_HOLD_REASON_CODES = [
   "redemption-stale",
   "redemption-unavailable",
   "live-reserves-unavailable",
+  "live-reserves-coverage-below-floor",
   "coverage-floor-failed",
   "producer-failed-downgrade",
   "producer-failed-nr",
@@ -32,6 +33,7 @@ const V9PublicationSimpleHoldReasonSchema = z
       "redemption-stale",
       "redemption-unavailable",
       "live-reserves-unavailable",
+      "live-reserves-coverage-below-floor",
     ]),
   })
   .strict();

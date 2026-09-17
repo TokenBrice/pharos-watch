@@ -82,9 +82,8 @@ interface ReportViolationOptions {
  * `scannedCount` was supplied — scanners with a bespoke OK line simply omit it
  * and print their own — then returns 0.
  *
- * The return value is the intended process exit code, so each caller keeps its
- * own exit convention: `return reportViolations(...)` from a `runAsCli` main,
- * or `process.exit(reportViolations(...))` from a top-level script.
+ * The return value is the intended process exit code, so each caller can assign
+ * it to `process.exitCode` from its direct CLI action.
  *
  * @param {{
  *   label: string,

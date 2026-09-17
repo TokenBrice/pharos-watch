@@ -3,6 +3,11 @@ import { createMockD1Preset, findD1HistoryEntry, type MockD1Database } from "@sh
 import { mockFetch } from "@shared/test-utils/mock-fetch";
 import { mockFetchRetry } from "../../test-helpers/cron";
 import { recordOutcomeSafe, shouldAttemptFetch } from "../../lib/circuit-breaker";
+import {
+  getCacheJsonParseFailureCountersForTests,
+  resetCacheJsonParseFailureCountersForTests,
+} from "../../lib/api-cache-read";
+import { parseBluechipRatingsCache } from "../../lib/bluechip-cache";
 import { BLUECHIP_SLUG_MAP } from "@shared/lib/bluechip-slugs";
 import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
 import { bluechipResponse } from "./sync-bluechip.test-support";
@@ -38,6 +43,7 @@ const getCacheInsert = (db: MockD1Database) => findD1HistoryEntry(db, "INSERT IN
 
 describe("syncBluechip", () => {
   beforeEach(() => {
+    resetCacheJsonParseFailureCountersForTests();
     vi.useFakeTimers();
     vi.setSystemTime(new Date("2026-03-06T12:00:00Z"));
     vi.mocked(shouldAttemptFetch).mockResolvedValue(true);
@@ -50,6 +56,11 @@ describe("syncBluechip", () => {
     fixtures.closeAll();
     delete BLUECHIP_SLUG_MAP.dai;
     delete BLUECHIP_SLUG_MAP.usds;
+  });
+
+  it("records malformed cached ratings JSON through the shared parse-failure counter", () => {
+    expect(parseBluechipRatingsCache("{bad-json", "sync-bluechip:existing-cache")).toEqual({});
+    expect(getCacheJsonParseFailureCountersForTests()["sync-bluechip:existing-cache"]?.count).toBe(1);
   });
 
   it("writes transformed bluechip ratings to cache on happy path", async () => {

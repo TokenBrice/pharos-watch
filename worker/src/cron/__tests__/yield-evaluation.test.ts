@@ -8,7 +8,7 @@ import {
   withYieldBenchmarkStaticMeta,
   type ParsedYieldBenchmarkMeta,
 } from "../yield-sync/benchmarks";
-import { buildHistoryKey, evaluateYieldSources, evaluateYieldSourcesCooperative } from "../yield-sync/evaluation";
+import { buildHistoryKey, evaluateYieldSources } from "../yield-sync/evaluation";
 import type { EvaluateYieldSourcesInput } from "../yield-sync/evaluation";
 import { compareCandidates } from "../yield-sync/evaluation-arbitration";
 import type { ResolvedYield } from "../yield-sync/types";
@@ -201,37 +201,6 @@ const SOURCE_RISK_EVALUATION_SCENARIOS: Record<YieldSourceRiskGoldenCaseId, Sour
 };
 
 describe("evaluateYieldSources", () => {
-  it("cooperative evaluation matches synchronous evaluation and reports progress", async () => {
-    const input = baseEvaluationInput({
-      resolved: [
-        { id: "coin-a", symbol: "A", yield: resolvedYield({ sourceKey: "new-source", currentApy: 8, apyReward: 7 }) },
-        { id: "coin-a", symbol: "A", yield: resolvedYield({ sourceKey: "old-source", currentApy: 3 }) },
-        { id: "coin-b", symbol: "B", yield: resolvedYield({ sourceKey: "stale-source", sourceObservedAt: 1 }) },
-        { id: "coin-c", symbol: "C", yield: resolvedYield({ sourceKey: "invalid-source", currentApy: NaN }) },
-        { id: "coin-d", symbol: "D", yield: resolvedYield({ sourceKey: "valid-source", currentApy: 4 }) },
-      ],
-      prevBestSourceKeyByCoin: new Map([["coin-a", "previous-source"]]),
-      sourceSwitchCount30dByCoin: new Map([["coin-a", 3]]),
-      prevTvlBySource: new Map([[buildHistoryKey("coin-a", "new-source"), 5_000_000]]),
-    });
-    const progress: number[] = [];
-
-    const sync = evaluateYieldSources(input);
-    const cooperative = await evaluateYieldSourcesCooperative(input, {
-      yieldEveryCoins: 1,
-      onProgress: (snapshot) => {
-        progress.push(snapshot.coinsDone);
-      },
-    });
-
-    expect(cooperative).toEqual(sync);
-    expect(sync.rowsRejected).toBeGreaterThan(0);
-    // B2: "previous-source" is not among coin-a's candidates, so the absence is a
-    // fetch gap and no switch is charged.
-    expect(sync.sourceSwitches).toBe(0);
-    expect(progress[progress.length - 1]).toBe(4);
-    expect(progress).toEqual([...progress].sort((a, b) => a - b));
-  });
 
   it("covers source-risk golden rows from evaluation inputs", () => {
     const startSec = 1776729600;

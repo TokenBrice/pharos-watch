@@ -1,5 +1,64 @@
-import type { TelegramLoadCheckReport } from "../ci/check-telegram-load";
+import type {
+  LoadScenarioResult,
+  ProductionCalibratedDispatchScenario,
+  SyntheticFixtureSummary,
+} from "./telegram-load-scenarios";
+import type { TelegramRecapLoadScenarioResult } from "./telegram-recap-load-scenarios";
 import { TELEGRAM_LOAD_GUARD_ASSUMPTIONS } from "@shared/lib/telegram-delivery-policy";
+
+export interface TelegramQueryPlanCheckResult {
+  id: string;
+  category: "fan-out" | "pulse-status" | "pending-drain" | "lifecycle" | "recap-planner";
+  status: "ok" | "review" | "fail";
+  details: string[];
+  missingRequiredDetails: string[];
+  unexpectedFullScanTables: string[];
+  note?: string;
+}
+
+export interface TelegramStatusPathBudgetResult {
+  id: string;
+  category: TelegramQueryPlanCheckResult["category"];
+  status: "ok" | "fail";
+  targetActiveWatchers: number;
+  rowsRead: number;
+  maxRowsRead: number;
+  durationMs: number;
+  maxDurationMs: number;
+  seededRowCounts: Record<string, number>;
+  note?: string;
+}
+
+export interface TelegramLoadCheckReport {
+  assumptions: {
+    freshAttemptsPerRun: number;
+    pendingDrainAttemptsPerRun: number;
+    cronIntervalSeconds: number;
+    dispatchTimeoutSeconds: number;
+    sendLoopSoftDeadlineSeconds: number;
+    telegramBroadcastMessagesPerSecond: number;
+    telegramP95SendLatencyMs: number;
+    effectiveSendMessagesPerSecond: number;
+    d1WriteMsPerMessage: number;
+    pendingTtlSeconds: number;
+    adminPendingTtlSeconds: number;
+    worstCasePlanningDelaySeconds: number;
+    minimumTtlMarginFraction: number;
+    normalSloSeconds: number;
+    spikeMaxSeconds: number;
+    dispatchCpuMs: number;
+    cpuBudgetSafetyFraction: number;
+    cpuBudgetCeilingMs: number;
+    formatCpuMsPerChat: number;
+    sendCpuMsPerMessage: number;
+  };
+  fixtureSummaries: SyntheticFixtureSummary[];
+  scenarios: LoadScenarioResult[];
+  recapScenarios: TelegramRecapLoadScenarioResult[];
+  productionDispatchScenario: ProductionCalibratedDispatchScenario;
+  queryPlans: TelegramQueryPlanCheckResult[];
+  statusPathBudgets: TelegramStatusPathBudgetResult[];
+}
 
 function formatDuration(seconds: number): string {
   if (seconds === 0) return "same run";

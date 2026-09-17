@@ -50,11 +50,11 @@ describe("client registry field contract", () => {
   });
 
   it("projects only the compact listing class from the decision ledger", () => {
-    const { slimCoins } = buildClientRegistryOutput() as { slimCoins: StablecoinClientListMeta[] };
-    expect(slimCoins).toHaveLength(TRACKED_STABLECOINS.length);
-    expect(slimCoins.every((coin) => typeof coin.listingClass === "string")).toBe(true);
-    expect(slimCoins.find((coin) => coin.id === "susds-sky")?.listingClass).toBe("stablecoin-variant");
-    expect(slimCoins.every((coin) => !("priceBasis" in coin) && !("exitMechanism" in coin))).toBe(true);
+    const { listCoins } = buildClientRegistryOutput() as { listCoins: StablecoinClientListMeta[] };
+    expect(listCoins).toHaveLength(TRACKED_STABLECOINS.length);
+    expect(listCoins.every((coin) => typeof coin.listingClass === "string")).toBe(true);
+    expect(listCoins.find((coin) => coin.id === "susds-sky")?.listingClass).toBe("stablecoin-variant");
+    expect(listCoins.every((coin) => !("priceBasis" in coin) && !("exitMechanism" in coin))).toBe(true);
   });
 
   it("keeps evidence-heavy fields out of the list projection", () => {

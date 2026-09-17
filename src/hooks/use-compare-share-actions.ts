@@ -10,6 +10,7 @@ import { formatCurrency, formatNativePrice } from "@shared/lib/format";
 import { getCirculatingRaw, getPrevWeekRaw } from "@shared/lib/supply";
 import { getPegReference } from "@shared/lib/peg-rates";
 import { GOVERNANCE_LABELS_SHORT, BACKING_LABELS_SHORT } from "@shared/lib/classification";
+import { getSupplyChangePercent } from "@/components/stablecoin-table-logic";
 import type { StablecoinData } from "@shared/types";
 import type { ComparisonMeta } from "@/lib/compare-derive";
 
@@ -87,7 +88,7 @@ export function useCompareShareActions({
     const shareCoins: ShareCoinData[] = comparisonCoins.map((coin, index) => {
       const cap = getCirculatingRaw(coin.data);
       const prev = getPrevWeekRaw(coin.data);
-      const weeklyPct = prev > 0 ? ((cap - prev) / prev) * 100 : null;
+      const weeklyPct = getSupplyChangePercent(cap, prev);
       const pegRef = getPegReference(coin.data.pegType, pegRates, coin.meta.commodityOunces);
 
       return {

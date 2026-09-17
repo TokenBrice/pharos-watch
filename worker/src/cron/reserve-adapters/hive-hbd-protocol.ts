@@ -2,7 +2,12 @@ import { parseLiveReserveAdapterParams, type LiveReserveAdapterParamsByKey } fro
 import type { ReserveSlice, StablecoinMeta } from "@shared/types/core";
 import type { LiveReserveWarning, LiveReservesConfig } from "@shared/types/live-reserves";
 import type { AdapterContext, AdapterResult } from "./types";
-import { notApplicableFreshnessMetadata, reserveDegradedWarning, reserveInfoWarning } from "./helpers";
+import {
+  notApplicableFreshnessMetadata,
+  requireRecord as requireObject,
+  reserveDegradedWarning,
+  reserveInfoWarning,
+} from "./helpers";
 import { fetchJsonPostWithRetry } from "./request";
 
 const ADAPTER_KEY = "hive-hbd-protocol";
@@ -82,13 +87,9 @@ interface JsonRpcRequest {
   params: unknown[];
 }
 
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null && !Array.isArray(value);
-}
 
 function requireRecord(value: unknown, label: string): Record<string, unknown> {
-  if (!isRecord(value)) throw new Error(`${ADAPTER_KEY}: ${label} payload is malformed`);
-  return value;
+  return requireObject(value, `${ADAPTER_KEY}: ${label} payload is malformed`);
 }
 
 function requireString(value: unknown, label: string): string {

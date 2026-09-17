@@ -1,9 +1,12 @@
 import type { ReserveSlice, StablecoinMeta } from "@shared/types/core";
+import { toTokenUnits } from "@shared/lib/math";
 import type { LiveReserveWarning, LiveReservesConfig } from "@shared/types/live-reserves";
 import {
   fetchDefiLlamaPrices,
   notApplicableFreshnessMetadata,
+  parseDigitString,
   requireJsonInput,
+  requireRecord as requireObject,
   reserveDegradedWarning,
   reserveInfoWarning,
   slicesFromValues,
@@ -84,22 +87,19 @@ function parseBigmapPointer(storage: Record<string, unknown>, field: string): nu
 }
 
 function parseUnsignedIntegerString(value: unknown, label: string): bigint {
-  if (typeof value !== "string" || !/^[0-9]+$/.test(value)) {
-    throw new Error(`${ADAPTER_KEY}: ${label} is not a non-negative integer string: ${String(value).slice(0, 32)}`);
-  }
-  return BigInt(value);
+  return parseDigitString(
+    value,
+    `${ADAPTER_KEY}: ${label} is not a non-negative integer string: ${String(value).slice(0, 32)}`,
+  );
 }
 
 function requireRecord(value: unknown, label: string): Record<string, unknown> {
-  if (typeof value !== "object" || value === null || Array.isArray(value)) {
-    throw new Error(`${ADAPTER_KEY}: ${label} is not an object`);
-  }
-  return value as Record<string, unknown>;
+  return requireObject(value, `${ADAPTER_KEY}: ${label} is not an object`);
 }
 
 function toTokens(raw: bigint, decimals: number): number {
-  const tokens = Number(raw) / 10 ** decimals;
-  if (!Number.isFinite(tokens)) {
+  const tokens = raw === 0n ? 0 : toTokenUnits(raw, decimals);
+  if (tokens == null) {
     throw new Error(`${ADAPTER_KEY}: token amount overflows the number range`);
   }
   return tokens;

@@ -83,11 +83,15 @@ const textRetryImplementation = fetchTextWithRetryMock.getMockImplementation()!;
 
 // Keep detail tests deterministic and fast: we validate handler behavior,
 // not fetch-retry backoff timing.
-vi.mock("../../lib/fetch-retry", () => ({
-  fetchWithRetry: fetchWithRetryMock,
-  fetchJsonWithRetry: fetchJsonWithRetryMock,
-  fetchTextWithRetry: fetchTextWithRetryMock,
-}));
+vi.mock("../../lib/fetch-retry", async (importOriginal) => {
+  const actual = await importOriginal<Record<string, unknown>>();
+  return {
+    ...actual,
+    fetchWithRetry: fetchWithRetryMock,
+    fetchJsonWithRetry: fetchJsonWithRetryMock,
+    fetchTextWithRetry: fetchTextWithRetryMock,
+  };
+});
 
 const { handleStablecoinDetail, resetStablecoinDetailStateForTests } = await import("../stablecoin-detail");
 

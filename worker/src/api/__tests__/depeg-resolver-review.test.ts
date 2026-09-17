@@ -5,7 +5,7 @@ import {
   DDR_METHODOLOGY_VERSION_LABEL,
   DDRR_REVIEWER_VERSION,
 } from "@shared/lib/methodology-versions/depeg-resolver";
-import { DDRR_REVIEWER_VERSION as DDRR_CACHE_REVIEWER_VERSION, type DdrrResponse, type DdrrRow } from "@shared/types/depeg-resolver-review";
+import { type DdrrResponse, type DdrrRow } from "@shared/types/depeg-resolver-review";
 import { handleDepegResolverReview } from "../depeg-resolver-review";
 import { mockD1 } from "@shared/test-utils/mock-d1";
 import { DDRR_SNAPSHOT_CACHE_GENERATION } from "../../lib/depeg-resolver-review-snapshot-cache";
@@ -65,7 +65,7 @@ function snapshot(computedAt: number, expiresAt: number): LegacyDdrrCachePayload
       expiresAt,
       degraded: false,
       degradedReason: null,
-      reviewerVersion: DDRR_CACHE_REVIEWER_VERSION,
+      reviewerVersion: DDRR_REVIEWER_VERSION,
       publicWarning: "warning",
       assessedEventCount: 1,
       reviewedEventCount: 1,
@@ -192,7 +192,7 @@ describe("handleDepegResolverReview", () => {
             value: JSON.stringify({
               generation: DDRR_SNAPSHOT_CACHE_GENERATION,
               methodologyVersion: DDR_METHODOLOGY_VERSION,
-              reviewerVersion: DDRR_CACHE_REVIEWER_VERSION,
+              reviewerVersion: DDRR_REVIEWER_VERSION,
               payload,
             }),
             updated_at: payload._meta.computedAt,

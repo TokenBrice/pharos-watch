@@ -30,48 +30,14 @@ jobs:
           fetch-depth: 0
           persist-credentials: false
 
+      - uses: $/.github/actions/setup-workspace
+
       - name: Validate target branch ownership
         env:
           ASSET_ID: ${{ matrix.asset }}
           GH_TOKEN: ${{ github.token }}
-        run: |
-          set -euo pipefail
-          BRANCH="automated/protocol-api-mechanism-refresh/${ASSET_ID}"
-          git fetch origin main:refs/remotes/origin/main
-          PR_HISTORY="$(gh pr list --repo "$GITHUB_REPOSITORY" --state all --base main --head "$BRANCH" --limit 100 --json number,state,mergedAt)"
-          OPEN_PR_COUNT="$(jq '[.[] | select(.state == "OPEN")] | length' <<< "$PR_HISTORY")"
-          CLOSED_UNMERGED_COUNT="$(jq '[.[] | select(.state == "CLOSED" and .mergedAt == null)] | length' <<< "$PR_HISTORY")"
+        run: node --import tsx scripts/ci/verify-mechanism-refresh-diff.ts --asset "$ASSET_ID" --stage validate-branch
 
-          set +e
-          git ls-remote --exit-code --heads origin "$BRANCH" >/dev/null
-          REMOTE_STATUS=$?
-          set -e
-          if [ "$REMOTE_STATUS" -eq 2 ]; then
-            if [ "$OPEN_PR_COUNT" -ne 0 ]; then
-              echo "::error title=Inconsistent mechanism refresh branch::${BRANCH} has an open PR but no remote branch."
-              exit 1
-            fi
-            if [ "$CLOSED_UNMERGED_COUNT" -ne 0 ]; then
-              echo "::error title=Closed unmerged mechanism refresh::${BRANCH} has closed-unmerged PR history; refusing to recreate it."
-              exit 1
-            fi
-          elif [ "$REMOTE_STATUS" -ne 0 ]; then
-            echo "::error title=Mechanism refresh branch lookup failed::Could not inspect ${BRANCH}."
-            exit 1
-          elif [ "$OPEN_PR_COUNT" -eq 1 ]; then
-            : "Existing open refresh PR may be updated after trusted capture completes."
-          elif [ "$OPEN_PR_COUNT" -gt 1 ]; then
-            echo "::error title=Ambiguous mechanism refresh PR::${BRANCH} has ${OPEN_PR_COUNT} open PRs."
-            exit 1
-          else
-            git fetch origin "${BRANCH}:refs/remotes/origin/${BRANCH}"
-            if ! git merge-base --is-ancestor "origin/$BRANCH" origin/main; then
-              echo "::error title=Unowned mechanism refresh history::${BRANCH} has unmerged commits but no open PR; refusing to overwrite it."
-              exit 1
-            fi
-          fi
-
-      - uses: $/.github/actions/setup-workspace
 
       - name: Capture protocol API mechanism evidence
         env:
@@ -91,21 +57,7 @@ jobs:
         run: |
           set -euo pipefail
           ROOT="shared/data/safety-score-v9/mechanism-measurements/${ASSET_ID}"
-
-          while IFS=$'\t' read -r status path; do
-            [ -z "$status" ] && continue
-            if [ "$status" != "A" ]; then
-              echo "::error title=Non-append-only mechanism PR::${path} has status ${status}."
-              exit 1
-            fi
-            case "$path" in
-              "$ROOT"/*-protocol-api.json) ;;
-              *)
-                echo "::error title=Unexpected mechanism PR diff::${path} is outside the target artifact set."
-                exit 1
-                ;;
-            esac
-          done < <(git diff --name-status origin/main...HEAD)
+          node --import tsx scripts/ci/verify-mechanism-refresh-diff.ts --asset "$ASSET_ID" --stage verify-diff
 
           CHANGED_PATHS="$({
             git diff --name-only
@@ -183,57 +135,8 @@ jobs:
             cp "$path" "$ARTIFACT_TMP/$path"
           done <<< "$NEW_FILES"
 
-          PR_HISTORY="$(gh pr list --repo "$GITHUB_REPOSITORY" --state all --base main --head "$BRANCH" --limit 100 --json number,state,mergedAt)"
-          OPEN_PR_COUNT="$(jq '[.[] | select(.state == "OPEN")] | length' <<< "$PR_HISTORY")"
-          CLOSED_UNMERGED_COUNT="$(jq '[.[] | select(.state == "CLOSED" and .mergedAt == null)] | length' <<< "$PR_HISTORY")"
-          set +e
-          git ls-remote --exit-code --heads origin "$BRANCH" >/dev/null
-          REMOTE_STATUS=$?
-          set -e
-          if [ "$REMOTE_STATUS" -eq 2 ]; then
-            if [ "$OPEN_PR_COUNT" -ne 0 ]; then
-              echo "::error title=Inconsistent mechanism refresh branch::${BRANCH} has an open PR but no remote branch."
-              exit 1
-            fi
-            if [ "$CLOSED_UNMERGED_COUNT" -ne 0 ]; then
-              echo "::error title=Closed unmerged mechanism refresh::${BRANCH} has closed-unmerged PR history; refusing to recreate it."
-              exit 1
-            fi
-            git checkout -B "$BRANCH" origin/main
-          elif [ "$REMOTE_STATUS" -ne 0 ]; then
-            echo "::error title=Mechanism refresh branch lookup failed::Could not inspect ${BRANCH}."
-            exit 1
-          elif [ "$OPEN_PR_COUNT" -eq 1 ]; then
-            git fetch origin "${BRANCH}:refs/remotes/origin/${BRANCH}"
-            git checkout -B "$BRANCH" "origin/$BRANCH"
-            git rebase origin/main
-          elif [ "$OPEN_PR_COUNT" -gt 1 ]; then
-            echo "::error title=Ambiguous mechanism refresh PR::${BRANCH} has ${OPEN_PR_COUNT} open PRs."
-            exit 1
-          else
-            git fetch origin "${BRANCH}:refs/remotes/origin/${BRANCH}"
-            if git merge-base --is-ancestor "origin/$BRANCH" origin/main; then
-              git checkout -B "$BRANCH" origin/main
-            else
-              echo "::error title=Unowned mechanism refresh history::${BRANCH} has unmerged commits but no open PR; refusing to overwrite it."
-              exit 1
-            fi
-          fi
-
-          while IFS=$'\t' read -r status path; do
-            [ -z "$status" ] && continue
-            if [ "$status" != "A" ]; then
-              echo "::error title=Non-append-only mechanism PR::${path} has status ${status}."
-              exit 1
-            fi
-            case "$path" in
-              "$ROOT"/*-protocol-api.json) ;;
-              *)
-                echo "::error title=Unexpected mechanism PR diff::${path} is outside the target artifact set."
-                exit 1
-                ;;
-            esac
-          done < <(git diff --name-status origin/main...HEAD)
+          node --import tsx scripts/ci/verify-mechanism-refresh-diff.ts --asset "$ASSET_ID" --stage prepare-branch
+          node --import tsx scripts/ci/verify-mechanism-refresh-diff.ts --asset "$ASSET_ID" --stage verify-diff
 
           while IFS= read -r path; do
             [ -z "$path" ] && continue
@@ -246,20 +149,7 @@ jobs:
             -m "chore(v9): refresh ${ASSET_ID} protocol API evidence" \
             -m "Capture append-only producer evidence without changing mechanism overlays or score identity."
 
-          while IFS=$'\t' read -r status path; do
-            [ -z "$status" ] && continue
-            if [ "$status" != "A" ]; then
-              echo "::error title=Non-append-only mechanism PR::${path} has status ${status}."
-              exit 1
-            fi
-            case "$path" in
-              "$ROOT"/*-protocol-api.json) ;;
-              *)
-                echo "::error title=Unexpected mechanism PR diff::${path} is outside the target artifact set."
-                exit 1
-                ;;
-            esac
-          done < <(git diff --name-status origin/main...HEAD)
+          node --import tsx scripts/ci/verify-mechanism-refresh-diff.ts --asset "$ASSET_ID" --stage verify-diff
 
           ARTIFACT_PATH="$(git diff-tree --no-commit-id --name-only -r HEAD -- "$ROOT" | head -n 1)"
           export ARTIFACT_PATH ASSET_ID

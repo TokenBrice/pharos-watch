@@ -257,7 +257,7 @@ export function makeDailyDigestTables(): MockTableConfig[] {
   const first = (match: string, value: Record<string, unknown> | null): MockTableConfig => ({ match, rows: [], first: value });
   return [
     ...makePublishedDewsTables(dewsRows),
-    first("SELECT generated_at, digest_text FROM daily_digest ORDER BY generated_at DESC LIMIT 1", null),
+    first("SELECT generated_at, digest_text FROM daily_digest\n       WHERE", null),
     ...[
       "SELECT digest_title, digest_text, digest_extended, digest_meta FROM daily_digest ORDER BY generated_at DESC LIMIT 5",
       "SELECT digest_title, digest_text, digest_extended, digest_meta, input_data\n       FROM daily_digest",

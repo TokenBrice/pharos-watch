@@ -89,14 +89,14 @@ export async function loadDewsRows(db: D1Database, nowSec: number): Promise<Dews
   });
 }
 
-function parseLaunchSnapshotIds(cached: CachedValue): string[] | null {
+export function parseSnapshotIds(cached: CachedValue): string[] | null {
   if (!cached) return null;
   try {
     const parsed = JSON.parse(cached.value);
     if (!Array.isArray(parsed)) return null;
     return parsed.filter((id): id is string => typeof id === "string");
   } catch {
-    /* expected: corrupted launch snapshot json */
+    /* expected: corrupted snapshot json */
     return null;
   }
 }
@@ -295,7 +295,7 @@ export function buildDispatchSnapshotState(sourceData: DispatchSourceData, nowSe
   // silently absorbed. Preserve the prior launch snapshot so the next healthy
   // run can detect the transition. When there is no parseable prior snapshot
   // we still seed with the current pre-launch set (no transition to lose).
-  const previousLaunchIds = parseLaunchSnapshotIds(sourceData.launchCache);
+  const previousLaunchIds = parseSnapshotIds(sourceData.launchCache);
 
   // Reserve-drift (C123): the four-hourly producer owns a versioned source
   // envelope. A missing, corrupt, stale, or wrong-generation source is never
@@ -312,7 +312,7 @@ export function buildDispatchSnapshotState(sourceData: DispatchSourceData, nowSe
     reserveSourceAssessment.state === "ok" || reserveSourceAssessment.state === "recovering"
       ? (reserveSourceAssessment.envelope?.driftIds ?? null)
       : null;
-  const previousReserveDispatchedIds = parseLaunchSnapshotIds(sourceData.reserveDispatchedCache);
+  const previousReserveDispatchedIds = parseSnapshotIds(sourceData.reserveDispatchedCache);
 
   const mustSeedSnapshots =
     isSnapshotMissingOrStale(sourceData.dewsCache, nowSec) ||

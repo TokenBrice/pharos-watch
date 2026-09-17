@@ -2,7 +2,7 @@
 
 import { appendFileSync, readFileSync } from "node:fs";
 
-import { runAsCli } from "../lib/source-files.mts";
+import { runDirectCli } from "../lib/cli-args.mjs";
 
 export interface WorkerDeploymentVersion {
   percentage?: number;
@@ -154,4 +154,6 @@ export function runWorkerDeploymentVerification(env: NodeJS.ProcessEnv = process
   );
 }
 
-runAsCli(import.meta.url, () => runWorkerDeploymentVerification());
+runDirectCli(import.meta.url, () => {
+  runWorkerDeploymentVerification();
+});

@@ -1,4 +1,5 @@
 import { batchExecute } from "./db";
+import { D1_BATCH_SIZE } from "./constants";
 import { getCache, setCache } from "./db-cache";
 import type { TapeEventInsert, TapeEventRow } from "./tape-event-types";
 
@@ -70,17 +71,39 @@ export async function insertTapeEvents(db: D1Database, events: TapeEventInsert[]
 }
 
 /**
- * Load the set of source_row_ids already projected for a given event type.
- * Used by first-observation projectors to skip already-emitted entries.
+ * Filter a bounded static catalog through the source-key uniqueness index.
+ * Each probe reads at most one index entry, avoiding a scan whose cost grows
+ * with the complete history for an event type.
  */
-export async function loadObservedSourceRowIds(db: D1Database, type: string): Promise<Set<string>> {
-  const result = await db
-    .prepare(`SELECT source_row_id FROM tape_events WHERE type = ?`)
-    .bind(type)
-    .all<{ source_row_id: string }>();
-  const seen = new Set<string>();
-  for (const row of result.results ?? []) seen.add(row.source_row_id);
-  return seen;
+export async function filterUnprojectedTapeEvents(
+  db: D1Database,
+  events: readonly TapeEventInsert[],
+): Promise<TapeEventInsert[]> {
+  if (events.length === 0) return [];
+  const unprojected: TapeEventInsert[] = [];
+  for (let offset = 0; offset < events.length; offset += D1_BATCH_SIZE) {
+    const chunk = events.slice(offset, offset + D1_BATCH_SIZE);
+    const observed = await db.batch(
+      chunk.map((event) =>
+        db
+          .prepare(
+            `SELECT 1 AS observed
+               FROM tape_events INDEXED BY idx_tape_source_key
+              WHERE source_table = ?
+                AND source_row_id = ?
+                AND transition = ?
+              LIMIT 1`,
+          )
+          .bind(event.sourceTable, event.sourceRowId, event.transition),
+      ),
+    );
+    for (let index = 0; index < chunk.length; index += 1) {
+      if ((observed[index]?.results?.length ?? 0) === 0) {
+        unprojected.push(chunk[index]!);
+      }
+    }
+  }
+  return unprojected;
 }
 
 // --- Read path (cursor pagination) ------------------------------------------

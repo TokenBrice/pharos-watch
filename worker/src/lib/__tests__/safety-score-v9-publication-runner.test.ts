@@ -188,6 +188,54 @@ describe("Safety Score V9 publication runner", () => {
     );
   });
 
+
+  it("holds an empty but fulfilled independent live-reserve map", async () => {
+    const { assessV9Publication } = await vi.importActual<
+      typeof import("../safety-score-v9/publication-assessment")
+    >("../safety-score-v9/publication-assessment");
+    mocks.assess.mockImplementation(assessV9Publication);
+    const { baseInputGenerationId: _baseId, ...draft } =
+      createSafetyScoreV9FullRegistryInput();
+    draft.liveReserveMap = {};
+    draft.v9PublicationInputHealth = {
+      dex: {
+        state: "current",
+        generationId: draft.dexGenerationId,
+        updatedAtSec: draft.clockSec,
+      },
+      redemption: {
+        state: "not-applicable",
+        generationId: null,
+        updatedAtSec: null,
+      },
+      liveReserves: { state: "available", coverageRatio: 0 },
+    };
+    const emptyReserveInput = createReportCardsFixedInput(draft);
+    const cards = draft.activeAssetIds.map((id) => makeWorkerV9Card({ id }));
+    mocks.build.mockReturnValue({
+      candidate: makeWorkerSafetyScoreV9Publication({
+        cards,
+        baseInputGenerationId: emptyReserveInput.baseInputGenerationId,
+        publishedAtSec: emptyReserveInput.clockSec,
+        sourceGenerations: { dex: emptyReserveInput.dexGenerationId },
+      }),
+      compilerFactSchemaDigest: "1".repeat(64),
+      producerCapabilityDigest: "2".repeat(64),
+      quarantines: [],
+      quarantineAffectedAssetIds: [],
+      bridgeJoinDiagnostics: [],
+    });
+
+    await expect(
+      runSafetyScoreV9Publication({
+        db: {} as D1Database,
+        fixedInput: emptyReserveInput,
+      }),
+    ).resolves.toMatchObject({
+      status: "held",
+      reasons: [{ code: "live-reserves-coverage-below-floor" }],
+    });
+  });
   it("holds expired measured evidence without replacing accepted grades or alerts, then publishes recovered evidence", async () => {
     const { assessV9Publication } = await vi.importActual<
       typeof import("../safety-score-v9/publication-assessment")
@@ -199,7 +247,7 @@ describe("Safety Score V9 publication runner", () => {
     draft.v9PublicationInputHealth = {
       dex: { state: "current", generationId: draft.dexGenerationId, updatedAtSec: draft.clockSec },
       redemption: { state: "not-applicable", generationId: null, updatedAtSec: null },
-      liveReserves: { state: "available" },
+      liveReserves: { state: "available", coverageRatio: 1 },
     };
     observation.evidenceKind = "measured-executable-depth";
     observation.confidence = "high";
@@ -271,7 +319,7 @@ describe("Safety Score V9 publication runner", () => {
       compilerFactSchemaDigest: "1".repeat(64),
       producerCapabilityDigest: "2".repeat(64),
       quarantines: [
-        { assetId: "alpha", code: "fact-build-failed" },
+        { assetId: "alpha", code: "fact-build-failed", message: "fixture quarantine" },
       ],
       quarantineAffectedAssetIds: ["alpha"],
       bridgeJoinDiagnostics: [],
@@ -421,7 +469,7 @@ describe("Safety Score V9 publication runner", () => {
       compilerFactSchemaDigest: "1".repeat(64),
       producerCapabilityDigest: "2".repeat(64),
       quarantines: [
-        { assetId: "alpha", code: "fact-build-failed" },
+        { assetId: "alpha", code: "fact-build-failed", message: "fixture quarantine" },
       ],
       quarantineAffectedAssetIds: ["alpha"],
       bridgeJoinDiagnostics: [],

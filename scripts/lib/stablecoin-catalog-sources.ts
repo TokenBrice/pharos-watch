@@ -1,6 +1,7 @@
 import { existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import type { StablecoinMeta } from "@shared/types";
+import { compareCodeUnits } from "@shared/lib/compare";
 import {
   findDuplicateStablecoinCatalogIds,
   findStablecoinCatalogInvariantIssues,
@@ -14,6 +15,7 @@ import {
   StablecoinMetaSourceAssetSchema,
   type StablecoinSourceDomain,
 } from "@shared/lib/stablecoins/schema";
+import { formatJson, hasOwnField } from "./catalog-json";
 
 export const STABLECOIN_DATA_DIR = "shared/data/stablecoins";
 // Retired category shards. They were emptied compatibility shells before deletion;
@@ -81,9 +83,6 @@ function formatSchemaIssues(issues: Array<{ message: string; path?: unknown[] }>
     .join("; ");
 }
 
-function formatJson(value: unknown): string {
-  return `${JSON.stringify(value, null, 2)}\n`;
-}
 
 function readJson(relativePath: string, rootDir: string): unknown {
   const absolutePath = resolve(rootDir, relativePath);
@@ -145,9 +144,6 @@ function stablecoinIdFromJsonFileName(fileName: string): string {
   return fileName.slice(0, -".json".length);
 }
 
-function hasOwnField(value: object, field: PropertyKey): boolean {
-  return Object.prototype.hasOwnProperty.call(value, field);
-}
 
 function orderStablecoinMetaFields(meta: StablecoinMeta): StablecoinMeta {
   const source = meta as unknown as Record<string, unknown>;
@@ -187,7 +183,7 @@ function findUnsupportedDomainSourceDirs(rootDir: string): string[] {
   return readdirSync(absoluteDir, { withFileTypes: true })
     .filter((entry) => entry.isDirectory() && !supportedDomains.has(entry.name))
     .map((entry) => `${STABLECOIN_DOMAIN_SOURCE_DIR}/${entry.name}`)
-    .sort((a, b) => a.localeCompare(b));
+    .sort(compareCodeUnits);
 }
 
 function mergeStablecoinSidecars(
@@ -197,7 +193,7 @@ function mergeStablecoinSidecars(
   const patch: Record<string, unknown> = {};
   const patchFields = new Set<keyof StablecoinMeta>();
   const sortedSidecars = [...sidecars].sort((a, b) => (
-    a.domain.localeCompare(b.domain) || a.file.localeCompare(b.file)
+    compareCodeUnits(a.domain, b.domain) || compareCodeUnits(a.file, b.file)
   ));
 
   for (const sidecar of sortedSidecars) {
@@ -273,7 +269,7 @@ export function loadStablecoinDomainSidecarEntries(rootDir = process.cwd()): Sta
 
     return readdirSync(absoluteDir, { withFileTypes: true })
       .filter((entry) => entry.isFile() && entry.name.endsWith(".json"))
-      .sort((a, b) => a.name.localeCompare(b.name))
+      .sort((a, b) => compareCodeUnits(a.name, b.name))
       .map((entry) => {
         const relativePath = `${STABLECOIN_DOMAIN_SOURCE_DIR}/${domain}/${entry.name}`;
         const sidecar = parseDomainSidecar(domain, relativePath, rootDir);
@@ -295,7 +291,7 @@ export function listPerCoinStablecoinSourceFiles(rootDir = process.cwd()): Array
 
   return readdirSync(absoluteDir, { withFileTypes: true })
     .filter((entry) => entry.isFile() && entry.name.endsWith(".json"))
-    .sort((a, b) => a.name.localeCompare(b.name))
+    .sort((a, b) => compareCodeUnits(a.name, b.name))
     .map((entry) => ({
       id: stablecoinIdFromJsonFileName(entry.name),
       file: `${PER_COIN_SOURCE_DIR}/${entry.name}`,
@@ -368,7 +364,7 @@ export function findDuplicateStablecoinIds(entries: StablecoinSourceEntry[]): St
   }
 
   return [...byId.values()]
-    .sort((a, b) => a[0]!.id.localeCompare(b[0]!.id))
+    .sort((a, b) => compareCodeUnits(a[0]!.id, b[0]!.id))
     .map((group) => ({ entries: group, id: group[0]!.id }));
 }
 
@@ -389,15 +385,15 @@ export function findCanonicalOrderIssues(
   });
 
   return {
-    duplicateIds: [...issues.duplicateCanonicalOrderIds].sort((a, b) => a.localeCompare(b)),
-    missingIds: [...issues.missingCanonicalOrderIds].sort((a, b) => a.localeCompare(b)),
-    unknownIds: [...issues.unknownCanonicalOrderIds].sort((a, b) => a.localeCompare(b)),
+    duplicateIds: [...issues.duplicateCanonicalOrderIds].sort(compareCodeUnits),
+    missingIds: [...issues.missingCanonicalOrderIds].sort(compareCodeUnits),
+    unknownIds: [...issues.unknownCanonicalOrderIds].sort(compareCodeUnits),
   };
 }
 
 export function buildGeneratedPerCoinAsset(entries: StablecoinSourceEntry[]): StablecoinMeta[] {
   return [...entries]
-    .sort((a, b) => a.file.localeCompare(b.file))
+    .sort((a, b) => compareCodeUnits(a.file, b.file))
     .map((entry) => entry.coin);
 }
 

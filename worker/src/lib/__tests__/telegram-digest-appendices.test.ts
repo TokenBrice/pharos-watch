@@ -224,6 +224,48 @@ describe("prepareTelegramDigestAppendices", () => {
     ]);
   });
 
+  it("merges a queued tracked addition even when the tracked snapshot already contains it", async () => {
+    mockGetCache.mockImplementation(async (_db: unknown, key: string) => {
+      if (key === "telegram:cemetery-snapshot") {
+        return {
+          value: JSON.stringify([
+            "pusd-palm-usd-2026-01",
+            "eura-angle-eura-2026-03",
+            "usda-angle-usda-2026-03",
+          ]),
+          updatedAt: 1_778_500_000,
+        };
+      }
+      if (key === "telegram:tracked-stablecoins-snapshot") {
+        return {
+          value: JSON.stringify(["usdt-tether", "usdx-example", "eurx-example"]),
+          updatedAt: 1_778_500_000,
+        };
+      }
+      if (key === "telegram:tracked-stablecoins-pending") {
+        return { value: JSON.stringify(["usdx-example"]), updatedAt: 1_778_500_000 };
+      }
+      if (key === "frozen_ids_snapshot") {
+        return { value: JSON.stringify(["dusd-fluid"]), updatedAt: 1_778_500_000 };
+      }
+      return null;
+    });
+
+    const prepared = await prepareTelegramDigestAppendices({} as D1Database);
+
+    expect(prepared.metadata).toMatchObject({
+      trackedDetected: 1,
+      trackedSymbols: ["USDX"],
+    });
+    expect(prepared.appendixHtml).toContain("<code>USDX</code> Example USD");
+    await prepared.commitSuccess();
+    expect(mockSetCache).toHaveBeenCalledWith(
+      {},
+      "telegram:tracked-stablecoins-pending",
+      JSON.stringify([]),
+    );
+  });
+
   it("builds cemetery and tracking appendices, then advances snapshots only after commit", async () => {
     mockGetCache.mockImplementation(async (_db: unknown, key: string) => {
       if (key === "telegram:cemetery-snapshot") {

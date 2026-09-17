@@ -214,10 +214,13 @@ export async function deliverTwitterDigestWithLedger(
   try {
     posted = await post();
   } catch (error) {
-    const definitive = (error as TwitterDeliveryErrorShape | null)?.twitterDeliveryFailureKind === "definitive_failure";
+    const failureKind = (error as TwitterDeliveryErrorShape | null)?.twitterDeliveryFailureKind;
+    const definitive = failureKind === "definitive_failure";
+    const retryable = failureKind === "retryable_failure";
     const terminal: TwitterDigestDeliveryRecord = {
       ...claim.record,
-      state: definitive ? "failed" : "execution_unknown",
+      state: definitive || retryable ? "failed" : "execution_unknown",
+      attempts: retryable ? Math.max(0, claim.record.attempts - 1) : claim.record.attempts,
       updatedAt: nowSec,
       completedAt: nowSec,
       lastError: toErrorMessage(error).slice(0, 300),
@@ -233,7 +236,7 @@ export async function deliverTwitterDigestWithLedger(
       logExecutionUnknown(key, claim.record.attempts, "terminal_state_persistence_lost");
       throw new TwitterDigestLedgerPersistenceError(`Twitter digest terminal state was not confirmed (${key}): ${toErrorMessage(error)}`);
     }
-    if (!definitive) logExecutionUnknown(key, claim.record.attempts, terminal.lastError ?? "unknown");
+    if (!definitive && !retryable) logExecutionUnknown(key, claim.record.attempts, terminal.lastError ?? "unknown");
     throw error;
   }
 

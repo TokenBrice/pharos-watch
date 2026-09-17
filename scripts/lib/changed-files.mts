@@ -46,7 +46,7 @@ export function collectGitPaths(
     const paths = splitNullDelimited(execFile("git", diffArgs, options as { cwd: string; encoding: "utf8" }));
     if (mode.kind === "working" && mode.includeUntracked)
       paths.push(...splitNullDelimited(execFile("git", ["ls-files", "--others", "--exclude-standard", "-z"], options as { cwd: string; encoding: "utf8" })));
-    return normalizeRepoPaths(paths);
+    return [...new Set(normalizeRepoPaths(paths))].sort();
   } catch (error) {
     if (failure === "empty") return [];
     throw error;

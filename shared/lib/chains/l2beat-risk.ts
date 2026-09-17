@@ -1,3 +1,5 @@
+import { hasOwn } from "../has-own";
+
 import {
   L2BEAT_CHAIN_ALIASES,
   L2BEAT_CHAIN_RISK_FIELDS,
@@ -47,10 +49,12 @@ export interface L2BeatChainEnvironmentAssessment {
 }
 
 export function resolveL2BeatProjectId(chainId: string): keyof typeof L2BEAT_CHAIN_RISK_SNAPSHOT | null {
-  if (chainId in L2BEAT_CHAIN_RISK_SNAPSHOT) {
+  if (hasOwn(L2BEAT_CHAIN_RISK_SNAPSHOT, chainId)) {
     return chainId as keyof typeof L2BEAT_CHAIN_RISK_SNAPSHOT;
   }
-  return (L2BEAT_CHAIN_ALIASES as Partial<Record<string, keyof typeof L2BEAT_CHAIN_RISK_SNAPSHOT>>)[chainId] ?? null;
+  return hasOwn(L2BEAT_CHAIN_ALIASES, chainId)
+    ? (L2BEAT_CHAIN_ALIASES as Partial<Record<string, keyof typeof L2BEAT_CHAIN_RISK_SNAPSHOT>>)[chainId] ?? null
+    : null;
 }
 
 function resolveL2BeatSnapshot(

@@ -1,10 +1,8 @@
 import { DatabaseSync } from "node:sqlite";
 import { describe, expect, it } from "vitest";
 import { createLatestSchemaSqlite } from "@shared/test-utils/latest-schema-sqlite";
-import {
-  loadPresetSubscriberRowsBatch,
-  mergeSubscriberMaps,
-} from "../../../cron/dispatch-telegram-subscribers";
+import { mergeSubscriberMaps } from "../../../cron/dispatch-telegram-subscribers";
+import { loadTelegramSourcePresetSubscribersForChats } from "../../../cron/telegram-alert-source-events";
 import type { SubscriberRow } from "../../../cron/dispatch-telegram-routing";
 import { applySubscribeIntent, applyUnsubscribeIntent } from "../presets";
 
@@ -38,20 +36,6 @@ function directRows(sqlite: DatabaseSync, chatId: string): unknown[] {
   ).all(chatId);
 }
 
-function writeStablecoinsCache(sqlite: DatabaseSync, marketCaps: Record<string, number>): void {
-  const value = JSON.stringify({
-    peggedAssets: Object.entries(marketCaps).map(([id, circulating]) => ({
-      id,
-      symbol: id,
-      name: id,
-      circulating: { usd: circulating },
-    })),
-  });
-  sqlite.prepare(
-    `INSERT INTO cache (key, value, updated_at) VALUES ('stablecoins', ?, ?)
-     ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = excluded.updated_at`,
-  ).run(value, NOW);
-}
 
 function subscriberRow(overrides: Partial<SubscriberRow> = {}): SubscriberRow {
   return {
@@ -196,7 +180,7 @@ describe("Telegram direct/preset provenance on the latest schema", () => {
     }
   });
 
-  it("resolves dynamic preset membership from the current cache at dispatch", async () => {
+  it("loads captured preset provenance through the source-scoped dispatch path", async () => {
     const { sqlite, db } = openLatestSchema();
     try {
       insertSubscriber(sqlite, "dynamic");
@@ -205,34 +189,37 @@ describe("Telegram direct/preset provenance on the latest schema", () => {
            chat_id, preset_id, alert_dews, created_at, updated_at
          ) VALUES ('dynamic', 'mcap-ge-1b', 1, ?, ?)`,
       ).run(NOW, NOW);
+      sqlite.prepare(
+        `INSERT INTO telegram_alert_source_resolution_pages (
+           source_event_id, page_key, alert_type, page_index, memberships_resolved,
+           status, created_at, updated_at, completed_at
+         ) VALUES ('source-1', 'dews:0', 'dews', 0, 1, 'complete', ?, ?, ?)`,
+      ).run(NOW, NOW, NOW);
+      sqlite.prepare(
+        `INSERT INTO telegram_alert_source_resolution_memberships (
+           source_event_id, alert_type, preset_id, stablecoin_id, created_at
+         ) VALUES ('source-1', 'dews', 'mcap-ge-1b', 'usdc-circle', ?)`,
+      ).run(NOW);
+      sqlite.prepare(
+        `INSERT INTO telegram_alert_source_resolution_targets (
+           source_event_id, page_key, preset_id, chat_id, created_at
+         ) VALUES ('source-1', 'dews:0', 'mcap-ge-1b', 'dynamic', ?)`,
+      ).run(NOW);
 
-      writeStablecoinsCache(sqlite, {
-        "usdc-circle": 2_000_000_000,
-        "usdt-tether": 500_000_000,
-      });
-      const first = await loadPresetSubscriberRowsBatch(
+      const loaded = await loadTelegramSourcePresetSubscribersForChats(
         db,
-        ["usdc-circle", "usdt-tether"],
+        "source-1",
         "dews",
+        ["dynamic"],
         NOW,
       );
-      expect(first.kind).toBe("ok");
-      if (first.kind !== "ok") return;
-      expect([...first.rows.keys()]).toEqual(["usdc-circle"]);
-
-      writeStablecoinsCache(sqlite, {
-        "usdc-circle": 500_000_000,
-        "usdt-tether": 2_000_000_000,
+      expect(loaded.kind).toBe("ok");
+      if (loaded.kind !== "ok") return;
+      expect([...loaded.rows.keys()]).toEqual(["usdc-circle"]);
+      expect(loaded.rows.get("usdc-circle")?.[0]).toMatchObject({
+        chat_id: "dynamic",
+        hasLocalOverride: false,
       });
-      const second = await loadPresetSubscriberRowsBatch(
-        db,
-        ["usdc-circle", "usdt-tether"],
-        "dews",
-        NOW,
-      );
-      expect(second.kind).toBe("ok");
-      if (second.kind !== "ok") return;
-      expect([...second.rows.keys()]).toEqual(["usdt-tether"]);
       expect(directRows(sqlite, "dynamic")).toEqual([]);
     } finally {
       sqlite.close();

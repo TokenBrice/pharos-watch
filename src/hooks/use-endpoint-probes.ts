@@ -12,7 +12,7 @@ import {
   type EndpointProbeGroup,
 } from "@shared/lib/api-endpoints";
 import { PER_COIN_CACHE_TTL_SECONDS } from "@shared/lib/api-cache-profiles";
-import { isFreshnessWarningHeader } from "@shared/lib/api-freshness";
+import { isFreshnessWarningHeader, isScheduledRefreshWarning } from "@shared/lib/api-freshness";
 import { getBlacklistGapStatus } from "@shared/lib/status-thresholds";
 import type { EndpointProbeResult } from "@shared/types";
 import { usePollingQuery } from "./use-api-query";
@@ -82,7 +82,7 @@ function isSemanticStatus(value: unknown): value is NonNullable<EndpointProbeRes
 function extractFreshnessWarningSemantics(response: Response): Partial<EndpointProbeResult> | null {
   const warning = typeof response.headers?.get === "function" ? response.headers.get("Warning") : null;
   if (!warning) return null;
-  if (warning.trim() === '110 - "Stablecoin detail cache is stale; refresh scheduled"') {
+  if (isScheduledRefreshWarning(warning) && !/\brefresh\s+failed\b/i.test(warning)) {
     const rawDataAge = response.headers.get("X-Data-Age");
     const dataAge = rawDataAge != null && rawDataAge.trim() !== "" ? Number(rawDataAge) : Number.NaN;
     if (

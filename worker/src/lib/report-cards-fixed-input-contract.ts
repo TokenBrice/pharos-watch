@@ -3,6 +3,7 @@ import { Sha256Schema } from "@shared/types/safety-schema-primitives";
 import { PegSummaryCoinSchema } from "@shared/types/market";
 import { RedemptionBackstopMapSchema } from "@shared/types/redemption";
 import { ReserveSliceSchema } from "@shared/types/reserves";
+import { compareCodeUnits } from "@shared/lib/compare";
 import { getCirculatingRaw } from "@shared/lib/supply";
 import { stableJsonStringifyV1 } from "@shared/lib/stable-json";
 import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
@@ -165,7 +166,7 @@ export function createFixedInputPayloadFields<
 }
 
 export function sortedRecord<T>(record: Record<string, T>): Record<string, T> {
-  return Object.fromEntries(Object.entries(record).sort(([left], [right]) => left.localeCompare(right)));
+  return Object.fromEntries(Object.entries(record).sort(([left], [right]) => compareCodeUnits(left, right)));
 }
 
 export function assertSameIds(actual: readonly string[], expected: readonly string[], label: string): void {

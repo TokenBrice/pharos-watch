@@ -130,7 +130,7 @@ export function useEvents(filter: UseEventsFilter = {}, options: UseEventsOption
     maxAutoPages,
   });
 
-  // All five derived values are computed from `query.data?.pages`, which is a
+  // Every derived value is computed from `query.data?.pages`, which is a
   // stable reference across renders within the same TanStack Query cache state.
   // Memoising on `pages` keeps the flattened `events` array (and the returned
   // `data` object) referentially stable, so downstream `useMemo` consumers in
@@ -140,6 +140,10 @@ export function useEvents(filter: UseEventsFilter = {}, options: UseEventsOption
 
   const { events, nextCursor, meta } = useCursorPages<TapeEvent, TapeEventsResponseBody>(pages);
   const total = useMemo(() => pages?.[0]?.data.total ?? null, [pages]);
+  const droppedRows = useMemo(
+    () => pages?.reduce((sum, page) => sum + page.data.droppedRows, 0) ?? 0,
+    [pages],
+  );
   const data = useMemo(() => ({ events, nextCursor }), [events, nextCursor]);
 
   return {
@@ -150,6 +154,7 @@ export function useEvents(filter: UseEventsFilter = {}, options: UseEventsOption
     isFullyLoaded: nextCursor == null,
     meta,
     total,
+    droppedRows,
   };
 }
 

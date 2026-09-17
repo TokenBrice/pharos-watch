@@ -72,7 +72,7 @@ describe("status-metadata", () => {
         depegWorsening: "4", safety: 5, launch: "6", reserve: "7", suppressedMethodologyChanges: "bad" },
     })?.eventsDetected).toEqual({
       dews: 2, depeg: 1, depegTriggered: 3, depegResolved: 0,
-      depegWorsening: 4, safety: 5, launch: 6, reserve: 7, suppressedMethodologyChanges: null,
+      depegWorsening: 4, safety: 5, launch: 6, reserve: 7, freeze: null, suppressedMethodologyChanges: null,
     });
   });
 
@@ -97,7 +97,7 @@ describe("status-metadata", () => {
     });
     expect(metadata?.eventsDetected).toEqual({
       dews: null, depeg: null, depegTriggered: null, depegResolved: null,
-      depegWorsening: null, safety: null, launch: null, reserve: null, suppressedMethodologyChanges: null,
+      depegWorsening: null, safety: null, launch: null, reserve: null, freeze: null, suppressedMethodologyChanges: null,
     });
     expect(metadata?.perAlertType?.dews).toEqual({
       sent: 0, enqueued: 0, failed: 0, blocked: 0, firstSendLatencyMs: null,

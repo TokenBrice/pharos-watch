@@ -1,3 +1,4 @@
+import { assignmentKey, buildAssignmentMap, parseAssignments, unquote } from "../lib/wrangler-toml.mjs";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { isDirectRun } from "../lib/smoke-runtime.mjs";
@@ -30,110 +31,6 @@ export interface WorkerWranglerConfigReport {
 
 interface RuntimeDocsCheckOptions {
   workerInfrastructureDoc?: string;
-}
-
-function stripTomlComment(line: string): string {
-  let inString = false;
-  let escaped = false;
-
-  for (let index = 0; index < line.length; index += 1) {
-    const character = line[index];
-    if (escaped) {
-      escaped = false;
-      continue;
-    }
-    if (character === "\\" && inString) {
-      escaped = true;
-      continue;
-    }
-    if (character === "\"") {
-      inString = !inString;
-      continue;
-    }
-    if (!inString && character === "#") {
-      return line.slice(0, index);
-    }
-  }
-
-  return line;
-}
-
-function countBracketDelta(value: string): number {
-  let delta = 0;
-  let inString = false;
-  let escaped = false;
-
-  for (const character of value) {
-    if (escaped) {
-      escaped = false;
-      continue;
-    }
-    if (character === "\\" && inString) {
-      escaped = true;
-      continue;
-    }
-    if (character === '"') {
-      inString = !inString;
-      continue;
-    }
-    if (!inString && (character === "[" || character === "{")) delta += 1;
-    if (!inString && (character === "]" || character === "}")) delta -= 1;
-  }
-
-  return delta;
-}
-
-function parseAssignments(toml: string): TomlAssignment[] {
-  const assignments: TomlAssignment[] = [];
-  const lines = toml.split(/\r?\n/);
-  let section = "root";
-
-  for (let index = 0; index < lines.length; index += 1) {
-    const uncommented = stripTomlComment(lines[index]);
-    const trimmed = uncommented.trim();
-    const arrayTable = trimmed.startsWith("[[");
-    const tableStart = arrayTable ? 2 : trimmed.startsWith("[") ? 1 : 0;
-    const tableTerminator = arrayTable ? "]]" : "]";
-    const tableEnd = tableStart > 0 ? trimmed.indexOf(tableTerminator, tableStart) : -1;
-    const trailingTableText = tableEnd >= 0 ? trimmed.slice(tableEnd + tableTerminator.length).trim() : "";
-    if (tableEnd >= 0 && (!trailingTableText || trailingTableText.startsWith("#"))) {
-      section = trimmed.slice(tableStart, tableEnd).trim();
-      continue;
-    }
-
-    const assignmentMatch = trimmed.match(/^([A-Za-z0-9_-]+)\s*=\s*(.*)$/);
-    if (!assignmentMatch) continue;
-
-    const [, key] = assignmentMatch;
-    let value = assignmentMatch[2];
-    value = stripTomlComment(value).trim();
-    let bracketDepth = countBracketDelta(value);
-    while (bracketDepth > 0 && index + 1 < lines.length) {
-      index += 1;
-      const nextLine = stripTomlComment(lines[index]);
-      value += `\n${nextLine.trim()}`;
-      bracketDepth += countBracketDelta(nextLine);
-    }
-    assignments.push({ key, section, value });
-  }
-
-  return assignments;
-}
-
-function unquote(value: string | undefined): string | undefined {
-  return value?.trim().match(/^"([^"]*)"/)?.[1];
-}
-
-function assignmentKey(section: string, key: string): string {
-  return `${section}\0${key}`;
-}
-
-function buildAssignmentMap(assignments: TomlAssignment[]): Map<string, string> {
-  const map = new Map<string, string>();
-  for (const assignment of assignments) {
-    map.set(assignmentKey(assignment.section, assignment.key), assignment.value.trim());
-  }
-  return map;
 }
 
 function normalizeDocumentedTomlValue(value: string | undefined): string | undefined {

@@ -63,9 +63,7 @@ interface DexCurrentSummaryRow {
 }
 
 interface DexLatestGenerationSummaryRow {
-  latest_generation_rows: number | null;
-  retained_legacy_rows: number | null;
-  retained_older_published_rows: number | null;
+  live_generation_rows: number | null;
 }
 
 interface DexPublishedGenerationRow {
@@ -266,7 +264,6 @@ async function loadLatestPublishedDexGeneration(db: D1Database): Promise<DexPubl
       .first<DexPublishedGenerationRow>(),
   );
 }
-
 async function loadDexLatestGenerationCurrentSummary(
   db: D1Database,
   generationId: string,
@@ -275,15 +272,14 @@ async function loadDexLatestGenerationCurrentSummary(
     db
       .prepare(
         `SELECT /* canary-dex-latest-generation-summary */
-           COALESCE(current_row_count, 0) AS latest_generation_rows,
-           0 AS retained_legacy_rows,
-           0 AS retained_older_published_rows
-         FROM dex_liquidity_publication_generations
-         WHERE generation_id = ?`,
+           COUNT(*) AS live_generation_rows
+         FROM dex_liquidity
+         WHERE publication_generation_id = ?
+           AND publication_state = 'published'`,
       )
       .bind(generationId)
       .first<DexLatestGenerationSummaryRow>(),
-  )) ?? { latest_generation_rows: 0, retained_legacy_rows: 0, retained_older_published_rows: 0 };
+  )) ?? { live_generation_rows: 0 };
 }
 
 async function checkDexCurrentPublication(db: D1Database) {
@@ -302,8 +298,6 @@ async function checkDexCurrentPublication(db: D1Database) {
       latestPublishedExpectedRows: latestPublished?.expected_row_count ?? null,
       latestPublishedAt: latestPublished?.published_at ?? null,
       latestGenerationPublishedRows: null as number | null,
-      retainedLegacyRows: null as number | null,
-      retainedOlderPublishedRows: null as number | null,
     };
 
     if (rowCount === 0) {
@@ -316,12 +310,8 @@ async function checkDexCurrentPublication(db: D1Database) {
       return skippedResult("no DEX liquidity published generation found", metadata);
     }
     const latestGenerationSummary = await loadDexLatestGenerationCurrentSummary(db, latestPublished.generation_id);
-    const latestGenerationPublishedRows = Number(latestGenerationSummary.latest_generation_rows ?? 0);
-    const retainedLegacyRows = Number(latestGenerationSummary.retained_legacy_rows ?? 0);
-    const retainedOlderPublishedRows = Number(latestGenerationSummary.retained_older_published_rows ?? 0);
+    const latestGenerationPublishedRows = Number(latestGenerationSummary.live_generation_rows ?? 0);
     metadata.latestGenerationPublishedRows = latestGenerationPublishedRows;
-    metadata.retainedLegacyRows = retainedLegacyRows;
-    metadata.retainedOlderPublishedRows = retainedOlderPublishedRows;
 
     if (
       latestPublished.current_row_count != null &&
@@ -355,15 +345,23 @@ async function checkDexGlobalRow(db: D1Database) {
         .first<DexGlobalRow>(),
     );
     const currentRows = Number(row?.current_row_count ?? 0);
-    const expectedRows = Number(row?.expected_row_count ?? currentRows);
+    const expectedRows =
+      typeof row?.expected_row_count === "number" && Number.isFinite(row.expected_row_count)
+        ? row.expected_row_count
+        : null;
     const generationMetadata = parseObjectMetadata(row?.metadata_json);
     const activeRows =
       typeof generationMetadata?.activeStablecoinCount === "number" &&
       Number.isFinite(generationMetadata.activeStablecoinCount)
         ? generationMetadata.activeStablecoinCount
-        : Math.max(0, expectedRows - 1);
-    const globalRows = currentRows > 0 ? currentRows - activeRows : 0;
-    const metadata = { currentRows, globalRows };
+        : null;
+    const metadata = { currentRows, expectedRows, activeRows, globalRows: null as number | null };
+    if (activeRows == null && expectedRows == null) {
+      return degradedResult("DEX global row evidence is unavailable", metadata);
+    }
+    const expectedActiveRows = activeRows ?? Math.max(0, expectedRows! - 1);
+    const globalRows = currentRows > 0 ? currentRows - expectedActiveRows : 0;
+    metadata.globalRows = globalRows;
     if (currentRows === 0) {
       return skippedResult("dex_liquidity has no published current rows", metadata);
     }
@@ -518,55 +516,80 @@ export async function checkReportCardCacheMethodology(db: D1Database) {
   return okResult(metadata);
 }
 
-async function checkGbpBenchmarkCurrent(db: D1Database, observedAt: number) {
+interface BenchmarkCurrentOptions {
+  currency: "GBP" | "USD";
+  streakCacheKey: string;
+  maxFetchAgeSec: number;
+  maxRecordAgeSec: number;
+  requireRecordDate: boolean;
+}
+
+async function checkBenchmarkCurrent(
+  db: D1Database,
+  observedAt: number,
+  options: BenchmarkCurrentOptions,
+) {
   try {
     const ratesCache = await getCache(db, "risk_free_rates");
     if (!ratesCache) {
       return degradedResult("risk-free benchmark registry cache is missing", {
+        currency: options.currency,
         requiredFreshPublications: 2,
       });
     }
     const registry = parseRiskFreeRatesCache(ratesCache.value, ratesCache.updatedAt, observedAt);
-    const gbp = registry?.GBP ?? null;
-    const streakCache = await getCache(db, GBP_BENCHMARK_FRESH_STREAK_CACHE_KEY);
+    const benchmark = registry?.[options.currency] ?? null;
+    const streakCache = await getCache(db, options.streakCacheKey);
     const streak = parseObjectMetadata(streakCache?.value ?? null);
     const consecutiveFreshRuns = typeof streak?.consecutiveFreshRuns === "number"
       && Number.isFinite(streak.consecutiveFreshRuns)
       ? Math.max(0, Math.floor(streak.consecutiveFreshRuns))
       : 0;
-    const fetchedAgeSec = gbp?.fetchedAt != null ? Math.max(0, observedAt - gbp.fetchedAt) : null;
-    const recordDateMs = gbp?.recordDate ? Date.parse(`${gbp.recordDate}T00:00:00Z`) : Number.NaN;
+    const fetchedAgeSec = benchmark?.fetchedAt != null
+      ? Math.max(0, observedAt - benchmark.fetchedAt)
+      : null;
+    const recordDateMs = benchmark?.recordDate
+      ? Date.parse(`${benchmark.recordDate}T00:00:00Z`)
+      : Number.NaN;
     const recordAgeSec = Number.isFinite(recordDateMs)
       ? Math.max(0, observedAt - Math.floor(recordDateMs / 1000))
       : null;
     const metadata = {
-      source: gbp?.source ?? null,
-      recordDate: gbp?.recordDate ?? null,
-      fetchedAt: gbp?.fetchedAt ?? null,
+      currency: options.currency,
+      source: benchmark?.source ?? null,
+      recordDate: benchmark?.recordDate ?? null,
+      fetchedAt: benchmark?.fetchedAt ?? null,
       fetchedAgeSec,
       recordAgeSec,
-      maxFetchAgeSec: GBP_BENCHMARK_MAX_FETCH_AGE_SEC,
-      maxRecordAgeSec: GBP_BENCHMARK_MAX_RECORD_AGE_SEC,
-      isFallback: gbp?.isFallback ?? null,
-      fallbackMode: gbp?.fallbackMode ?? null,
+      maxFetchAgeSec: options.maxFetchAgeSec,
+      maxRecordAgeSec: options.maxRecordAgeSec,
+      isFallback: benchmark?.isFallback ?? null,
+      fallbackMode: benchmark?.fallbackMode ?? null,
       consecutiveFreshRuns,
       requiredFreshPublications: 2,
     };
     const problems: string[] = [];
-    if (!gbp) problems.push("GBP benchmark is missing");
-    if (gbp?.isFallback) problems.push(`GBP benchmark is fallback (${gbp.fallbackMode ?? "unknown"})`);
-    if (!isFreshAt(gbp?.fetchedAt ?? null, observedAt, GBP_BENCHMARK_MAX_FETCH_AGE_SEC)) {
-      problems.push("GBP benchmark fetch is stale");
+    if (!benchmark) problems.push(`${options.currency} benchmark is missing`);
+    if (benchmark?.isFallback) {
+      problems.push(`${options.currency} benchmark is fallback (${benchmark.fallbackMode ?? "unknown"})`);
     }
-    if (!isFreshAt(
-      Number.isFinite(recordDateMs) ? Math.floor(recordDateMs / 1000) : null,
-      observedAt,
-      GBP_BENCHMARK_MAX_RECORD_AGE_SEC,
-    )) {
-      problems.push("GBP benchmark observation is stale");
+    if (!isFreshAt(benchmark?.fetchedAt ?? null, observedAt, options.maxFetchAgeSec)) {
+      problems.push(`${options.currency} benchmark fetch is stale`);
+    }
+    if (
+      (options.requireRecordDate || benchmark?.recordDate != null) &&
+      !isFreshAt(
+        Number.isFinite(recordDateMs) ? Math.floor(recordDateMs / 1000) : null,
+        observedAt,
+        options.maxRecordAgeSec,
+      )
+    ) {
+      problems.push(`${options.currency} benchmark observation is stale`);
     }
     if (consecutiveFreshRuns < 2) {
-      problems.push(`GBP benchmark has ${consecutiveFreshRuns}/2 consecutive fresh publications`);
+      problems.push(
+        `${options.currency} benchmark has ${consecutiveFreshRuns}/2 consecutive fresh publications`,
+      );
     }
     if (problems.length > 0) {
       return degradedResult(problems.join("; "), metadata);
@@ -577,72 +600,24 @@ async function checkGbpBenchmarkCurrent(db: D1Database, observedAt: number) {
   }
 }
 
-/**
- * USD counterpart of `checkGbpBenchmarkCurrent`. USD is the default hurdle and
- * the reference rate every non-USD row is re-based against, and it is produced
- * by the same single daily slot, so this check turns a silent producer stop (or
- * a fall onto the retained/hardcoded rate) into a failed check before the 48h
- * scoring TTL nulls every keyed row.
- */
-async function checkUsdBenchmarkCurrent(db: D1Database, observedAt: number) {
-  try {
-    const ratesCache = await getCache(db, "risk_free_rates");
-    if (!ratesCache) {
-      return degradedResult("risk-free benchmark registry cache is missing", {
-        requiredFreshPublications: 2,
-      });
-    }
-    const registry = parseRiskFreeRatesCache(ratesCache.value, ratesCache.updatedAt, observedAt);
-    const usd = registry?.USD ?? null;
-    const streakCache = await getCache(db, USD_BENCHMARK_FRESH_STREAK_CACHE_KEY);
-    const streak = parseObjectMetadata(streakCache?.value ?? null);
-    const consecutiveFreshRuns = typeof streak?.consecutiveFreshRuns === "number"
-      && Number.isFinite(streak.consecutiveFreshRuns)
-      ? Math.max(0, Math.floor(streak.consecutiveFreshRuns))
-      : 0;
-    const fetchedAgeSec = usd?.fetchedAt != null ? Math.max(0, observedAt - usd.fetchedAt) : null;
-    const recordDateMs = usd?.recordDate ? Date.parse(`${usd.recordDate}T00:00:00Z`) : Number.NaN;
-    const recordAgeSec = Number.isFinite(recordDateMs)
-      ? Math.max(0, observedAt - Math.floor(recordDateMs / 1000))
-      : null;
-    const maxFetchAgeSec = YIELD_BENCHMARK_SCORE_TTL_SEC;
-    const maxRecordAgeSec = YIELD_BENCHMARK_RECORD_MAX_AGE_SEC.USD;
-    const metadata = {
-      source: usd?.source ?? null,
-      recordDate: usd?.recordDate ?? null,
-      fetchedAt: usd?.fetchedAt ?? null,
-      fetchedAgeSec,
-      recordAgeSec,
-      maxFetchAgeSec,
-      maxRecordAgeSec,
-      isFallback: usd?.isFallback ?? null,
-      fallbackMode: usd?.fallbackMode ?? null,
-      consecutiveFreshRuns,
-      requiredFreshPublications: 2,
-    };
-    const problems: string[] = [];
-    if (!usd) problems.push("USD benchmark is missing");
-    if (usd?.isFallback) problems.push(`USD benchmark is fallback (${usd.fallbackMode ?? "unknown"})`);
-    if (!usd || !isFreshAt(usd.fetchedAt ?? null, observedAt, maxFetchAgeSec)) {
-      problems.push("USD benchmark fetch is stale");
-    }
-    if (usd?.recordDate != null && !isFreshAt(
-      Number.isFinite(recordDateMs) ? Math.floor(recordDateMs / 1000) : null,
-      observedAt,
-      maxRecordAgeSec,
-    )) {
-      problems.push("USD benchmark observation is stale");
-    }
-    if (consecutiveFreshRuns < 2) {
-      problems.push(`USD benchmark has ${consecutiveFreshRuns}/2 consecutive fresh publications`);
-    }
-    if (problems.length > 0) {
-      return degradedResult(problems.join("; "), metadata);
-    }
-    return okResult(metadata);
-  } catch (error) {
-    return unavailableResult(error);
-  }
+function checkGbpBenchmarkCurrent(db: D1Database, observedAt: number) {
+  return checkBenchmarkCurrent(db, observedAt, {
+    currency: "GBP",
+    streakCacheKey: GBP_BENCHMARK_FRESH_STREAK_CACHE_KEY,
+    maxFetchAgeSec: GBP_BENCHMARK_MAX_FETCH_AGE_SEC,
+    maxRecordAgeSec: GBP_BENCHMARK_MAX_RECORD_AGE_SEC,
+    requireRecordDate: true,
+  });
+}
+
+function checkUsdBenchmarkCurrent(db: D1Database, observedAt: number) {
+  return checkBenchmarkCurrent(db, observedAt, {
+    currency: "USD",
+    streakCacheKey: USD_BENCHMARK_FRESH_STREAK_CACHE_KEY,
+    maxFetchAgeSec: YIELD_BENCHMARK_SCORE_TTL_SEC,
+    maxRecordAgeSec: YIELD_BENCHMARK_RECORD_MAX_AGE_SEC.USD,
+    requireRecordDate: true,
+  });
 }
 
 const CANARY_CHECKS: readonly CanaryCheckDefinition[] = [

@@ -10,7 +10,7 @@ vi.mock("@shared/lib/stablecoins/client-registry", () => ({
     status: "pre-launch", launchPhase: "announced", expectedLaunchDate: "2027-01-01",
   })),
 }));
-vi.mock("@/lib/logos", () => ({ logosById: {} }));
+vi.mock("@/lib/logos", () => ({ logosById: {}, getLogoSrc: () => undefined }));
 
 describe("UpcomingHorizonHero", () => {
   it("links the exact eight displayed identities and five-coin overflow", () => {

@@ -94,6 +94,7 @@ const TapeEventsResponseMetaSchema = z.object({
 
 export const TapeEventsResponseSchema = z.object({
   events: z.array(TapeEventSchema),
+  droppedRows: z.number().int().nonnegative(),
   nextCursor: z.string().nullable(),
   total: z.number().nullable(),
   totalExact: z.boolean(),

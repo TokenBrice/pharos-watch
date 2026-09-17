@@ -24,7 +24,6 @@
   "worker/src/api/telegram-webhook-parsing.ts": 2,
   "worker/src/api/yield-rankings-cache.ts": 2,
   "worker/src/cron/blacklist/amount-recovery.ts": 2,
-  "worker/src/cron/blacklist/balance-providers.ts": 6,
   "worker/src/cron/blacklist/evm-source.ts": 3,
   "worker/src/cron/blacklist/post-fetch.ts": 2,
   "worker/src/cron/blacklist/sync-support.ts": 2,

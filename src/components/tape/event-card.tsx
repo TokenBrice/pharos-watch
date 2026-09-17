@@ -24,7 +24,7 @@ import {
 } from "lucide-react";
 import { StablecoinLogo } from "@/components/stablecoin-logo";
 import { coinIdBySymbol } from "@/lib/coin-id-by-symbol";
-import { logosById } from "@/lib/logos";
+import { getLogoSrc, logosById } from "@/lib/logos";
 import {
   deviationBgClass,
   deviationColorClass,
@@ -447,7 +447,7 @@ function EventCardImpl({ event, logoSrc, highlighted = false, domId, count = 1 }
   const titleId = `tape-event-${event.id}`;
   const ticker = deriveTicker(event);
   const coinId = deriveCoinId(event);
-  const effectiveLogoSrc = logoSrc ?? (coinId ? logosById[coinId] : undefined);
+  const effectiveLogoSrc = logoSrc ?? (coinId ? getLogoSrc(logosById, coinId) : undefined);
   const rowTint = tapeClassRowBg(event.type);
   const chipTint = tapeClassChipBg(event.type);
   // For coin events the title is redundant with [ticker + type + enrichment];
