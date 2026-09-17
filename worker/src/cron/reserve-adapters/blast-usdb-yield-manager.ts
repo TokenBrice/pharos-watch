@@ -50,9 +50,10 @@ export async function fetchBlastUsdbYieldManagerReserves(
       timeoutMs,
     },
   );
-  const [totalValueRaw, managerDecimals, totalSupplyRaw, supplyDecimals] = await Promise.all([
+  // The yield manager exposes no decimals(); totalValue() is documented as 18-dp USD.
+  // Only the supply token's decimals can be asserted on-chain.
+  const [totalValueRaw, totalSupplyRaw, supplyDecimals] = await Promise.all([
     managerOnchain.uint256(params.yieldManagerAddress, TOTAL_VALUE_SELECTOR),
-    managerOnchain.uint256(params.yieldManagerAddress, DECIMALS_SELECTOR),
     supplyOnchain.uint256(params.supplyTokenAddress, TOTAL_SUPPLY_SELECTOR),
     supplyOnchain.uint256(params.supplyTokenAddress, DECIMALS_SELECTOR),
   ]);
@@ -62,10 +63,8 @@ export async function fetchBlastUsdbYieldManagerReserves(
   if (totalSupplyRaw == null || totalSupplyRaw <= 0n) {
     throw new Error("blast-usdb-yield-manager totalSupply probe failed");
   }
-  if (managerDecimals !== 18n || supplyDecimals !== 18n) {
-    throw new Error(
-      `blast-usdb-yield-manager unexpected decimals (manager ${managerDecimals}, supply ${supplyDecimals})`,
-    );
+  if (supplyDecimals !== 18n) {
+    throw new Error(`blast-usdb-yield-manager unexpected supply decimals (${supplyDecimals})`);
   }
 
   const totalReserveUsd = decimalNumberFromBigInt(totalValueRaw, 18);
