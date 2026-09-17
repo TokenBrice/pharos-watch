@@ -21,7 +21,7 @@ vi.mock("@/lib/horizon-constellation-layout", async (importOriginal) => ({
 vi.mock("@shared/lib/stablecoins/client-registry", () => ({
   CLIENT_TRACKED_STABLECOINS: horizonFixture,
 }));
-vi.mock("@/lib/logos", () => ({ logosById: {} }));
+vi.mock("@/lib/logos", () => ({ logosById: {}, getLogoSrc: () => undefined }));
 
 describe("HomeAltUpcomingHorizonConstellation", () => {
   it("represents thirteen coins as eight dots and an exact five-coin overflow", () => {
