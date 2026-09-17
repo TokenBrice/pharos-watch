@@ -37,7 +37,6 @@ function encodeReadWithAge(value: bigint, age: number): `0x${string}` {
 function buidlNetwork(overrides: {
   value?: bigint;
   age?: number;
-  feedDecimals?: bigint;
   chains?: Record<string, bigint | null>;
 } = {}) {
   const rpc: Record<string, bigint | string | null> = {
@@ -45,7 +44,6 @@ function buidlNetwork(overrides: {
       overrides.value ?? 1_000_000_000_000_000_000n,
       overrides.age ?? NOW_SEC - 60,
     ),
-    [`ethereum:${BUIDL_CONSUMER}:0x313ce567`]: overrides.feedDecimals ?? 18n,
     [`ethereum:${BUIDL_TOKEN}:0x313ce567`]: 6n,
     ...Object.fromEntries(
       Object.entries(overrides.chains ?? BUIDL_CHAIN_SUPPLIES).map(([key, value]) => [`${key}:0x18160ddd`, value]),
@@ -141,13 +139,6 @@ describe("chronicle-nav BUIDL binding", () => {
     })).rejects.toThrow(/stale/);
   });
 
-  it("fails closed when Chronicle feed decimals drift", async () => {
-    await expect(runAdapter("chronicle-nav", "buidl-blackrock", {
-      network: buidlNetwork({ feedDecimals: 8n }),
-      nowSec: NOW_SEC,
-    })).rejects.toThrow(/unexpected feed decimals/);
-  });
-
   it("fails closed when every chain's totalSupply read fails", async () => {
     await expect(runAdapter("chronicle-nav", "buidl-blackrock", {
       network: buidlNetwork({ chains: Object.fromEntries(Object.keys(BUIDL_CHAIN_SUPPLIES).map((key) => [key, null])) }),
@@ -164,7 +155,6 @@ describe("chronicle-nav ACRDX binding", () => {
   it("aggregates the coin's EVM deployments and omits the Solana deployment with an info warning", async () => {
     const acrdx = { network: { rpc: {
       "ethereum:0x9a3bf392f86acd1b1ec07d026b326302eaed7488:0x393e5ede": encodeReadWithAge(1_027_991_334_000_000_000n, NOW_SEC - 60),
-      "ethereum:0x9a3bf392f86acd1b1ec07d026b326302eaed7488:0x313ce567": 18n,
       "ethereum:0x9477724bb54ad5417de8baff29e59df3fb4da74f:0x313ce567": 18n,
       "ethereum:0x9477724bb54ad5417de8baff29e59df3fb4da74f:0x18160ddd": 100_000_000_000_000_000_000n,
       "plume:0x9477724bb54ad5417de8baff29e59df3fb4da74f:0x18160ddd": 20_000_000_000_000_000_000n,

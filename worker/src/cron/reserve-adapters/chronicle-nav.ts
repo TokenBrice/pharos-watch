@@ -212,17 +212,15 @@ export async function fetchChronicleNavReserves(
     fallbackRpcUrl: params.fallbackRpcUrl,
   });
 
-  const [rawReadWithAge, rawFeedDecimals, rawTokenDecimals] = await Promise.all([
+  // Chronicle consumers expose readWithAge() but no decimals(); the feed scale is
+  // the documented CHRONICLE_NAV_DECIMALS constant. Only the token side is probed.
+  const [rawReadWithAge, rawTokenDecimals] = await Promise.all([
     onchain.raw(params.consumerAddress, READ_WITH_AGE_SELECTOR),
-    onchain.uint256(params.consumerAddress, DECIMALS_SELECTOR),
     onchain.uint256(params.tokenAddress, DECIMALS_SELECTOR),
   ]);
 
   if (rawReadWithAge == null) {
     throw new Error("chronicle-nav: readWithAge() call failed");
-  }
-  if (rawFeedDecimals !== BigInt(CHRONICLE_NAV_DECIMALS)) {
-    throw new Error(`chronicle-nav: unexpected feed decimals (${rawFeedDecimals})`);
   }
 
   const { value, age } = decodeChronicleReadWithAge(rawReadWithAge);

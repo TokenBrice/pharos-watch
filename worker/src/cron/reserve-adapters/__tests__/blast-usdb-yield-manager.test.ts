@@ -14,7 +14,6 @@ describe("fetchBlastUsdbYieldManagerReserves", () => {
       network: {
         rpc: {
           [`ethereum:${YIELD_MANAGER}:${TOTAL_VALUE_SELECTOR}`]: 120n * 10n ** 18n,
-          [`ethereum:${YIELD_MANAGER}:${DECIMALS_SELECTOR}`]: 18n,
           [`${USDB}:${TOTAL_SUPPLY_SELECTOR}`]: 100n * 10n ** 18n,
           [`${USDB}:${DECIMALS_SELECTOR}`]: 18n,
         },
@@ -50,7 +49,6 @@ describe("fetchBlastUsdbYieldManagerReserves", () => {
       network: {
         rpc: {
           [`ethereum:${YIELD_MANAGER}:${TOTAL_VALUE_SELECTOR}`]: 98n * 10n ** 18n,
-          [`ethereum:${YIELD_MANAGER}:${DECIMALS_SELECTOR}`]: 18n,
           [`${USDB}:${TOTAL_SUPPLY_SELECTOR}`]: 100n * 10n ** 18n,
           [`${USDB}:${DECIMALS_SELECTOR}`]: 18n,
         },
@@ -68,7 +66,6 @@ describe("fetchBlastUsdbYieldManagerReserves", () => {
       network: {
         rpc: {
           [`ethereum:${YIELD_MANAGER}:${TOTAL_VALUE_SELECTOR}`]: null,
-          [`ethereum:${YIELD_MANAGER}:${DECIMALS_SELECTOR}`]: 18n,
           [`${USDB}:${TOTAL_SUPPLY_SELECTOR}`]: 100n * 10n ** 18n,
           [`${USDB}:${DECIMALS_SELECTOR}`]: 18n,
         },
@@ -77,20 +74,16 @@ describe("fetchBlastUsdbYieldManagerReserves", () => {
     })).rejects.toThrow(/totalValue/);
   });
 
-  it.each([
-    ["manager", 6n, 18n],
-    ["supply", 18n, 6n],
-  ])("fails closed when %s decimals drift", async (_label, managerDecimals, supplyDecimals) => {
+  it("fails closed when supply decimals drift", async () => {
     await expect(runAdapter("blast-usdb-yield-manager", "usdb-blast", {
       network: {
         rpc: {
           [`ethereum:${YIELD_MANAGER}:${TOTAL_VALUE_SELECTOR}`]: 120n * 10n ** 18n,
-          [`ethereum:${YIELD_MANAGER}:${DECIMALS_SELECTOR}`]: managerDecimals,
           [`${USDB}:${TOTAL_SUPPLY_SELECTOR}`]: 100n * 10n ** 18n,
-          [`${USDB}:${DECIMALS_SELECTOR}`]: supplyDecimals,
+          [`${USDB}:${DECIMALS_SELECTOR}`]: 6n,
         },
       },
       nowSec: NOW_SEC,
-    })).rejects.toThrow(/unexpected decimals/);
+    })).rejects.toThrow(/unexpected supply decimals/);
   });
 });
