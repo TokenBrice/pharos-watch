@@ -182,7 +182,7 @@ describe("Safety Score V9 publication store", () => {
     );
   });
 
-  it("rolls back a held attempt when a newer publication wins the race", async () => {
+  it("conflicts when a current publication commits between a held read and final batch", async () => {
     const { sqlite, db } = database();
     const older = makeWorkerSafetyScoreV9Publication({
       publicationGenerationId: "report-cards:v9:older",
@@ -207,17 +207,26 @@ describe("Safety Score V9 publication store", () => {
     }
 
     let raced = false;
+    const installNewerRows = () => {
+      raced = true;
+      for (const row of newerRows) {
+        sqlite
+          .prepare("UPDATE cache SET value = ?, updated_at = ? WHERE key = ?")
+          .run(row.value, row.updated_at, row.key);
+      }
+    };
     const racingDb = {
       ...db,
       batch: async <T = unknown>(statements: D1PreparedStatement[]) => {
-        if (!raced) {
-          raced = true;
-          for (const row of newerRows) {
-            sqlite
-              .prepare("UPDATE cache SET value = ?, updated_at = ? WHERE key = ?")
-              .run(row.value, row.updated_at, row.key);
-          }
+        if (!raced && statements.length === 1) {
+          // Reproduce the regressed split-batch implementation: let its
+          // retained-publication probe pass, then commit the current publication
+          // before its separate health/attempt batch.
+          const results = await db.batch<T>(statements);
+          installNewerRows();
+          return results;
         }
+        if (!raced) installNewerRows();
         return db.batch<T>(statements);
       },
     } as D1Database;
