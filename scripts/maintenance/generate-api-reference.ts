@@ -51,7 +51,7 @@ const SUPPLEMENTAL_ENDPOINT_ORDER = [
 
 /** Hand-authored context, deliberately keyed by the stable OpenAPI operationId. */
 export const CURATED_OPERATION_NOTES: Readonly<Record<string, string>> = {
-  events: "Searches the normalized event tape; cursor pagination is preferred for long result sets.",
+  events: "Searches the normalized event tape; cursor pagination is preferred for long result sets. `droppedRows` is the number of queried database rows rejected because they did not match the response schema; a non-zero value means the returned event set is incomplete, while `total` still counts those queried rows.",
   stablecoins: "Returns the current stablecoin catalogue, prices, supply, chain breakdowns, and FX context.",
   stablecoinStablecoinId: "Returns the full current and historical detail payload for one canonical Pharos stablecoin ID.",
   stablecoinSummaryStablecoinId: "Returns the compact stablecoin projection used by lightweight consumers.",

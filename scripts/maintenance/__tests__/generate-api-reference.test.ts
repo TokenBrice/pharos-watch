@@ -73,6 +73,8 @@ describe("generate-api-reference", () => {
     expect(block).toContain(`"maxAge": ${CACHE_FRESHNESS_LANES.dexLiquidity.availabilityMaxAgeSec}`);
     expect(block).toContain("| `geckoId` | `string \\| null` |");
     expect(block).toContain("**Capacity-confidence vocabulary:** `live-direct`, `live-proxy`");
+    expect(block).toContain("`droppedRows` is the number of queried database rows rejected");
+    expect(block).toContain("`total` still counts those queried rows");
   });
 
   it("preserves depeg counts migration guidance in generated output", () => {
