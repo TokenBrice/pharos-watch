@@ -46,6 +46,9 @@ export function buildDexLiquidityCronMetadata(params: {
   stagedPoolsSkippedByAuthoritativeProtocol: number;
   stagedWritebackRows?: number;
   stagedWritebackSkippedUntrustedIds?: number;
+  registryRowsRead?: number;
+  registryMultiSourcePools?: number;
+  registryFamilyBySource?: Record<string, number>;
   stagedPoolSkipDimensions: Array<{
     reason: string;
     protocol: string;
@@ -104,6 +107,9 @@ export function buildDexLiquidityCronMetadata(params: {
     stagedPoolSkipDimensions: params.stagedPoolSkipDimensions,
     stagedWritebackRows: params.stagedWritebackRows,
     stagedWritebackSkippedUntrustedIds: params.stagedWritebackSkippedUntrustedIds,
+    registryRowsRead: params.registryRowsRead,
+    registryMultiSourcePools: params.registryMultiSourcePools,
+    registryFamilyBySource: params.registryFamilyBySource,
     poolRejections: params.poolRejections,
     poolRejectionMateriality: {
       thresholdTvlUsd: POOL_REJECTION_MATERIAL_TVL_USD,

@@ -44,8 +44,8 @@ export async function loadStagedPoolRecoveryRows(
     ? "pool_id, base_token, quote_token, fee_tier, tvl_usd"
     : "pool_id, base_token, quote_token, tvl_usd";
   const rankOrder = input.withFeeTier
-    ? "(fee_tier IS NOT NULL) DESC, tvl_usd DESC, stablecoin_id"
-    : "tvl_usd DESC, stablecoin_id";
+    ? "(fee_tier IS NOT NULL) DESC, tvl_usd DESC, stablecoin_id, source"
+    : "tvl_usd DESC, stablecoin_id, source";
   const result = await db
     .prepare(
       `SELECT ${selectList}
@@ -55,7 +55,7 @@ export async function loadStagedPoolRecoveryRows(
                   PARTITION BY pool_id
                   ORDER BY ${rankOrder}
                 ) AS candidate_rank
-         FROM dex_pool_staging
+         FROM dex_pool_registry
          WHERE chain = ? AND dex_id = ? AND refreshed_at >= ?
            AND source IN ('cg_onchain', 'gecko_terminal', 'dexscreener')
            AND base_token IS NOT NULL AND quote_token IS NOT NULL

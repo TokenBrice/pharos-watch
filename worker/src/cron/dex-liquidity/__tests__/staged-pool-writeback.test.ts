@@ -4,7 +4,7 @@ import { initMetrics } from "../pool-helpers";
 import { buildPoolFingerprint } from "../pool-normalization";
 import { createKnownPoolIdentityIndex } from "../pool-identity";
 import { mergeStagedPools, type StagedPoolRow } from "../staging-merge";
-import { buildStagedPoolWriteback, filterDiscoveryOwned } from "../staged-pool-writeback";
+import { buildStagedPoolWriteback } from "../staged-pool-writeback";
 import type { LiquidityMetrics, PoolEntry } from "../types";
 import { makeStagedPoolRow } from "./staging-merge.test-support";
 import { makeNoopD1 } from "../../../test-helpers/noop-d1";
@@ -272,48 +272,5 @@ describe("buildStagedPoolWriteback", () => {
     expect(
       buildStagedPoolWriteback(metrics, NOW).pools.map((pool) => pool.poolId),
     ).toEqual([`ethereum:${CURVE_POOL}`]);
-  });
-});
-
-describe("filterDiscoveryOwned", () => {
-  it("drops the live-lane copy of a pool discovery owns and keeps the rest", async () => {
-    const metrics = new Map([
-      [
-        "usdc-circle",
-        makeMetrics("usdc-circle", [
-          // Same pool, both lanes: DL carries no price, so writing its copy back
-          // would relabel the discovery row and null the price it sourced.
-          makePoolEntry(),
-          makePoolEntry({ poolId: `ethereum:${OTHER_POOL}` }),
-        ]),
-      ],
-    ]);
-
-    // Production order: snapshot before the merge, filter after it.
-    const snapshot = buildStagedPoolWriteback(metrics, NOW);
-    const merged = await mergeStagedPools(
-      createMockDb([
-        makeStagedPoolRow({
-          pool_id: `ethereum:${CURVE_POOL}`,
-          stablecoin_id: "usdc-circle",
-          source: "cg_onchain",
-          chain: "ethereum",
-          protocol: "curve",
-          dex_id: "curve",
-          price_usd: 0.9998,
-          refreshed_at: NOW,
-        }),
-      ]),
-      metrics,
-      createKnownPoolIdentityIndex(),
-      NOW,
-    );
-
-    const filtered = filterDiscoveryOwned(snapshot, merged.discoveryOwnedKeys);
-
-    expect(merged.discoveryOwnedKeys).toContain(`usdc-circle\u0000ethereum:${CURVE_POOL}`);
-    expect(filtered.pools.map((pool) => pool.poolId)).toEqual([`ethereum:${OTHER_POOL}`]);
-    expect(filtered.skippedDiscoveryOwned).toBe(1);
-    expect(filtered.skippedUntrustedIds).toBe(0);
   });
 });

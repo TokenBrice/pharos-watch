@@ -11,7 +11,6 @@ import { upsertStagedPools } from "../dex-discovery/persistence";
 import {
   STAGED_WRITEBACK_MIN_REFRESH_GAP_SEC,
   buildStagedPoolWriteback,
-  filterDiscoveryOwned,
 } from "./staged-pool-writeback";
 import { buildSymbolLookups, classifyPoolType, initLiquidityFallbackCounters } from "./pool-helpers";
 import { buildChainAddressKey } from "./token-resolution";
@@ -36,7 +35,7 @@ import {
   loadCurrentDexScoringGenerationId,
   type MeasuredTargetPublicationMode,
 } from "./scoring";
-import { persistScores, writeHistoricalSnapshots } from "./persistence";
+import { buildDexLiquidityPublicationGenerationId, persistScores, writeHistoricalSnapshots } from "./persistence";
 import type { ChainRpcConfig } from "../../lib/chain-registry";
 import { isPreferredDirectApiPool, type DexApiPool } from "../../lib/dex-api-common";
 import { POOL_CHALLENGE_MIN_TVL } from "../../lib/constants";
@@ -827,9 +826,9 @@ async function buildDexLiquidityPoolState(
   });
 
   // Snapshot this run's live-lane observations before the merge: rows the merge
-  // backfills arrive from dex_pool_staging, so writing them back would advance
+  // backfills arrive from dex_pool_registry, so writing them back would advance
   // refreshed_at every hour and no row would ever age out (immortal registry).
-  const stagedWritebackSnapshot = buildStagedPoolWriteback(metrics, ctx.syncStartSec);
+  const stagedWriteback = buildStagedPoolWriteback(metrics, ctx.syncStartSec);
   const staged = await mergeStagedPools(
     ctx.db,
     metrics,
@@ -841,15 +840,6 @@ async function buildDexLiquidityPoolState(
   );
   mergeDexPriceObservationMap(sourceState.priceObservations, staged.priceObservations);
   staged.priceObservations.clear();
-  // Discovery wrote these rows and carries the only price either lane has: the
-  // live-lane copy would relabel them `dl` with `price_usd = NULL` and erase
-  // the observation the merge just sourced.
-  const stagedWriteback = filterDiscoveryOwned(stagedWritebackSnapshot, staged.discoveryOwnedKeys);
-  if (stagedWriteback.skippedDiscoveryOwned > 0) {
-    logWorkerEventArgs("handler", "info",
-      `[dex-liquidity] skipped ${stagedWriteback.skippedDiscoveryOwned} live-lane write-back rows owned by discovery`,
-    );
-  }
   // Best-effort memory only: publication depends on the merge above, so a D1
   // failure here costs durability, not this run's output.
   try {
@@ -860,7 +850,7 @@ async function buildDexLiquidityPoolState(
     rethrowIfAborted(error, ctx.signal);
     logWorkerEventArgs("handler", "warn", JSON.stringify({
       scope: "dex-liquidity",
-      message: "Failed to write live-lane pools back to dex_pool_staging",
+      message: "Failed to write live-lane pools back to dex_pool_registry",
       error: toErrorMessage(error),
       rows: stagedWriteback.pools.length,
     }));
@@ -935,6 +925,9 @@ async function buildDexLiquidityPoolState(
     stagedSkippedByOptionalWildcardIdentityCount: staged.skippedByOptionalWildcardIdentityCount,
     stagedSkippedByAuthoritativeProtocolCount: staged.skippedByAuthoritativeProtocolCount,
     stagedSkipDimensions: staged.skipDimensions,
+    registryRowsRead: staged.registryRowsRead,
+    registryMultiSourcePools: staged.registryMultiSourcePools,
+    registryFamilyBySource: staged.registryFamilyBySource,
     stagedWritebackRows: stagedWriteback.pools.length,
     stagedWritebackSkippedUntrustedIds: stagedWriteback.skippedUntrustedIds,
     directApiIntegration,
@@ -973,6 +966,7 @@ async function scoreDexLiquidityPoolState(
   );
   const analysis = await analyzeDexLiquidityPostScoring({
     db: ctx.db,
+    currentGenerationId: buildDexLiquidityPublicationGenerationId(ctx.syncStartSec),
     scoreResults,
     globalAgg,
     retainedPoolsByStablecoin,
@@ -1280,6 +1274,9 @@ function buildDexLiquidityCronResult(
         stagedPoolsSkippedByOptionalWildcardIdentity: poolState.stagedSkippedByOptionalWildcardIdentityCount,
         stagedPoolsSkippedByAuthoritativeProtocol: poolState.stagedSkippedByAuthoritativeProtocolCount,
         stagedPoolSkipDimensions: poolState.stagedSkipDimensions,
+        registryRowsRead: poolState.registryRowsRead,
+        registryMultiSourcePools: poolState.registryMultiSourcePools,
+        registryFamilyBySource: poolState.registryFamilyBySource,
         stagedWritebackRows: poolState.stagedWritebackRows,
         stagedWritebackSkippedUntrustedIds: poolState.stagedWritebackSkippedUntrustedIds,
         poolRejections: poolState.poolRejections,

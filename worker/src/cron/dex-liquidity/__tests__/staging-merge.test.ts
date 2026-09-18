@@ -179,6 +179,7 @@ describe("mergeStagedPools", () => {
       createMockDb([
         makeRow(correctedPool.toLowerCase(), correctedBase.toLowerCase(), correctedQuote.toLowerCase(), now - 60),
         makeRow(correctedPool, correctedBase, correctedQuote, now),
+        { ...makeRow(correctedPool, correctedBase, correctedQuote, now), source: "dl" },
       ]),
       metrics as never,
       makeKnownPoolIndex(),
@@ -439,7 +440,7 @@ describe("mergeStagedPools", () => {
     expect(result.skippedByUniqueDerivedIdentityCount).toBe(1);
     expect(result.mergedCount).toBe(0);
     expect(metrics.size).toBe(0);
-    expect(result.skipDimensions).toEqual([
+    expect(result.skipDimensions).toEqual(expect.arrayContaining([
       {
         reason: "duplicate_unique_derived_identity",
         protocol: "pancakeswap",
@@ -454,10 +455,10 @@ describe("mergeStagedPools", () => {
         count: 1,
         threshold: STAGED_POOL_CONFIDENCE_HORIZON_HOURS,
       },
-    ]);
+    ]));
   });
 
-  it("skips one staged exact-pool-id pool that uniquely matches an identity-poor DL row", async () => {
+  it("counts a multi-source view once when matching an identity-poor DL row", async () => {
     const now = 1710000000;
     const uniswapV4PoolAddress = "0x5d0ed52610c76d7bf729130ce7ddc0488b2f4bd0a0db1f12adbe6a32deaff893";
     const mockDb = createMockDb([
@@ -479,6 +480,18 @@ describe("mergeStagedPools", () => {
         quote_token: quoteToken,
         price_usd: 1.001,
         discovered_at: now - 3600,
+        refreshed_at: now,
+      }),
+      makeStagedPoolRow({
+        pool_id: `ethereum:${uniswapV4PoolAddress}`,
+        stablecoin_id: "bold-liquity",
+        source: "gecko_terminal",
+        protocol: "uniswap-v4",
+        dex_id: "uniswap-v4-ethereum",
+        fee_tier: null,
+        is_stable: null,
+        base_token: baseToken,
+        quote_token: quoteToken,
         refreshed_at: now,
       }),
     ]);
@@ -585,13 +598,13 @@ describe("mergeStagedPools", () => {
 
   it("surfaces a missing mandatory staging table", async () => {
     const mockDb = createMockDb(async () => {
-      throw new Error("no such table: dex_pool_staging");
+      throw new Error("no such table: dex_pool_registry");
     });
     const metrics = new Map();
     const knownPoolIndex = makeKnownPoolIndex();
     await expect(
       mergeStagedPools(mockDb, metrics, knownPoolIndex, 1710000000),
-    ).rejects.toThrow("no such table: dex_pool_staging");
+    ).rejects.toThrow("no such table: dex_pool_registry");
   });
 
   it("merges GT-style staged pools with confidence decay and GT dex quality", async () => {
@@ -1570,52 +1583,45 @@ describe("mergeStagedPools", () => {
     expect(metrics.get("usdc-circle")?.topPools).toHaveLength(1);
   });
 
-  it("hands the live-lane write-back only the keys discovery owns", async () => {
+  it("resolves two sources to one pool while keeping value family and price provenance independent", async () => {
     const now = 1710000000;
     const metrics = new Map();
-    const cgPoolId = `ethereum:${newPoolAddress}`;
-
     const result = await mergeStagedPools(
       createMockDb([
-        makeStagedPoolRow({
-          pool_id: cgPoolId,
-          stablecoin_id: "usdc-circle",
-          source: "cg_onchain",
-          chain: "ethereum",
-          protocol: "curve",
-          dex_id: "curve",
-          refreshed_at: now,
-        }),
-        // Both live-lane families write staging rows of their own; neither may
-        // be relabelled over the discovery row that carries the price.
-        makeStagedPoolRow({
-          pool_id: `ethereum:${exactPoolAddress}`,
-          stablecoin_id: "usdc-circle",
-          source: "dl",
-          chain: "ethereum",
-          protocol: "uniswap-v3",
-          dex_id: "uniswap-v3",
-          base_token: baseToken,
-          quote_token: quoteToken,
-          refreshed_at: now,
-        }),
-        makeStagedPoolRow({
-          pool_id: `ethereum:${secondExactPoolAddress}`,
-          stablecoin_id: "usdc-circle",
-          source: "direct_api",
-          chain: "ethereum",
-          protocol: "uniswap-v3",
-          dex_id: "uniswap-v3",
-          base_token: quoteToken,
-          quote_token: baseToken,
-          refreshed_at: now,
-        }),
+        makeStagedPoolRow({ source: "dl", tvl_usd: 200_000, price_usd: null, base_token: null, quote_token: null }),
+        makeStagedPoolRow({ source: "cg_onchain", tvl_usd: 100_000, price_usd: 0.999 }),
       ]),
-      metrics as never,
+      metrics,
       makeKnownPoolIndex(),
       now,
     );
+    expect(result.mergedCount).toBe(1);
+    expect(result.skippedCount).toBe(0);
+    expect(metrics.get("usdt-tether").topPools[0]).toMatchObject({ source: "dl", tvlUsd: 200_000 });
+    expect(result.priceObservations.get("usdt-tether")?.[0]).toMatchObject({
+      sourceFamily: "cg_onchain", price: 0.999,
+    });
+    expect(result.registryRowsRead).toBe(2);
+    expect(result.registryMultiSourcePools).toBe(1);
+    expect(result.registryFamilyBySource).toEqual({ dl: 1 });
+  });
 
-    expect(result.discoveryOwnedKeys).toEqual(new Set([`usdc-circle\u0000${cgPoolId}`]));
+  it("applies an authoritative census veto to the whole multi-source view", async () => {
+    const metrics = new Map();
+    const result = await mergeStagedPools(
+      createMockDb([
+        makeStagedPoolRow({ source: "dl", protocol: "pancakeswap", dex_id: "pancakeswap-v3" }),
+        makeStagedPoolRow({ source: "cg_onchain", protocol: "pancakeswap", dex_id: "pancakeswap-v3" }),
+      ]),
+      metrics,
+      makeKnownPoolIndex(),
+      1710000000,
+      undefined,
+      makeAuthoritativeConfirmationIndex([{ protocol: "pancakeswap", chains: ["ethereum"], exactPoolKeys: [] }]),
+    );
+    expect(result.mergedCount).toBe(0);
+    expect(result.skippedByAuthoritativeProtocolCount).toBe(1);
+    expect(result.priceObservations.size).toBe(0);
+    expect(metrics.size).toBe(0);
   });
 });

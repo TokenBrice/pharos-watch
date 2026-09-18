@@ -9,6 +9,22 @@ import type { MethodologyChangelogEntry } from "@shared/lib/methodology-versions
 // are newest-first by version.
 export const LIQUIDITY_SCORE_V6: readonly MethodologyChangelogEntry[] = [
   {
+    version: "6.5",
+    title: "Per-source pool registry",
+    date: "2026-09-18",
+    effectiveAt: 1789776000,
+    summary:
+      "Staged pool memory moves from `dex_pool_staging` — one row per pool per coin carrying a single source, with lanes contending for that row — to `dex_pool_registry` keyed by (stablecoin, pool, source): every lane records its own observation, and the merge resolves one view per pool before scoring — value from the highest-trust observation refreshed within 24 hours (else the freshest observation of any source), family from the value's source, price from the highest-trust priced observation refreshed within 24 hours, and identity metadata (token pair) from any observation within the 14-day horizon, so derived dedupe is lane-symmetric; ownership-by-subtraction is removed.",
+    impact: [
+      "A pool's source family — hence strict-cap treatment, `coverage_class`, and `coverage_confidence` — now follows whichever observation supplies the published value, so on lane handover the family changes with the value instead of being reattributed silently; attribution is single-cause",
+      "Lane-symmetric derived dedupe can now collapse the same physical pool observed by two sources that previously could not match, removing some double counts; the expected net effect on published TVL is a small decrease",
+      "No change to decay, horizon, price-pin, or threshold behaviour: the 14-day confidence horizon, 24-hour price pinning, 15-day deletion, TVL sanity ceiling, and all guards and caps are unchanged, now applied per (coin, pool, source) row",
+      "Publication metadata adds registry counters (`registryRowsRead`, `registryMultiSourcePools`, `registryFamilyBySource`) and hourly per-coin TVL step counters against the previous published generation (`coinTvlStepCount150`, `coinTvlStepCount25`, `coinTvlStepTop`)",
+    ],
+    commits: [],
+    reconstructed: false,
+  },
+  {
     version: "6.4",
     title: "14-day staged pool memory",
     date: "2026-09-10",

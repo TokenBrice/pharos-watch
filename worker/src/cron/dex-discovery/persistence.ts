@@ -15,7 +15,8 @@ import {
   type StagedPool,
 } from "./types";
 
-// Three guards keep a staged row from regressing when writers overlap:
+// Each registry row is keyed by (stablecoin_id, pool_id, source), so lanes cannot overwrite each other.
+// Three guards keep a source's observation from regressing when writers overlap:
 // - monotonic refreshed_at: discovery (:06) can overlap the :10 write-back stage, so a slower
 //   older writer must not clobber a row another writer already refreshed;
 // - no COALESCE on tvl_usd/volume_24h/price_usd: hasValidStagedPoolTvl admits a null tvl, so a
@@ -24,12 +25,11 @@ import {
 //   24 h price pin treat a dead observation as fresh). A null observation must fall out via
 //   hasInvalidTvl in the merge until the pool is genuinely observed again;
 // - minRefreshGapSec: the hourly write-back passes a gap so rows refreshed within it are skipped.
-const STAGING_UPSERT_SQL = `INSERT INTO dex_pool_staging
+const STAGING_UPSERT_SQL = `INSERT INTO dex_pool_registry
   (pool_id, stablecoin_id, source, chain, protocol, dex_id, symbol, tvl_usd, volume_24h, quality_multiplier, pool_type, fee_tier, balance_ratio,
    is_stable, base_token, quote_token, quote_symbol, price_usd, locked_liq_pct, raw_json, discovered_at, refreshed_at)
 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-ON CONFLICT(pool_id, stablecoin_id) DO UPDATE SET
-  source = excluded.source,
+ON CONFLICT(stablecoin_id, pool_id, source) DO UPDATE SET
   chain = excluded.chain,
   protocol = excluded.protocol,
   dex_id = excluded.dex_id,
@@ -48,8 +48,8 @@ ON CONFLICT(pool_id, stablecoin_id) DO UPDATE SET
   locked_liq_pct = excluded.locked_liq_pct,
   raw_json = excluded.raw_json,
   refreshed_at = excluded.refreshed_at
-WHERE excluded.refreshed_at >= dex_pool_staging.refreshed_at
-  AND (? = 0 OR dex_pool_staging.refreshed_at < excluded.refreshed_at - ?)`;
+WHERE excluded.refreshed_at >= dex_pool_registry.refreshed_at
+  AND (? = 0 OR dex_pool_registry.refreshed_at < excluded.refreshed_at - ?)`;
 
 const STAGING_BATCH_SIZE = 50;
 // Rows must outlive the merge horizon by a day so the stale_confidence_zero grace window always finds them.
@@ -83,7 +83,7 @@ const REMAPPABLE_UNSUPPORTED_CHAIN: Readonly<Record<string, true>> = Object.from
 );
 const REMAPPABLE_UNSUPPORTED_CHAIN_IDS = Object.keys(REMAPPABLE_UNSUPPORTED_CHAIN).sort();
 
-// Canonical pool_id shapes observed in dex_pool_staging:
+// Canonical pool_id shapes observed in dex_pool_registry:
 //   "chain:0xhex"                 (EVM, lowercased)
 //   "chain:base58MixedCase"       (Solana et al)
 //   "orderbook:exchangeId:coinId" (synthetic CG-tickers rows)
@@ -114,7 +114,7 @@ function legacyOrderbookPoolId(pool: Pick<StagedPool, "poolId" | "stablecoinId" 
 }
 
 /**
- * Upsert discovered pools into dex_pool_staging.
+ * Upsert discovered pools into dex_pool_registry.
  * Preserves initial discovery timestamp on re-discovery by updating conflicting rows in place.
  * Conflicts never regress a fresher row: the update only applies when the incoming refreshed_at
  * is not older than the stored one, a null tvl/volume overwrites the stored value instead of
@@ -154,7 +154,7 @@ export async function upsertStagedPools(db: D1Database, pools: StagedPool[], sig
     const cleanupPoolId = legacyOrderbookPoolId(pool);
     const cleanupStmt = cleanupPoolId
       ? db
-          .prepare("DELETE FROM dex_pool_staging WHERE stablecoin_id = ? AND source = 'cg_tickers' AND pool_id = ?")
+          .prepare("DELETE FROM dex_pool_registry WHERE stablecoin_id = ? AND source = 'cg_tickers' AND pool_id = ?")
           .bind(pool.stablecoinId, cleanupPoolId)
       : null;
     const insertStmt = db
@@ -368,10 +368,10 @@ export async function cleanupStaging(
     const deleted = await runWithOverloadRetry(
       () => db
         .prepare(
-          `DELETE FROM dex_pool_staging
+          `DELETE FROM dex_pool_registry
             WHERE rowid IN (
               SELECT rowid
-                FROM dex_pool_staging
+                FROM dex_pool_registry
                WHERE refreshed_at < ?
                ORDER BY refreshed_at ASC, rowid ASC
                LIMIT ?
@@ -386,11 +386,11 @@ export async function cleanupStaging(
     const rawJson = await runWithOverloadRetry(
       () => db
         .prepare(
-          `UPDATE dex_pool_staging
+          `UPDATE dex_pool_registry
               SET raw_json = NULL
             WHERE rowid IN (
               SELECT rowid
-                FROM dex_pool_staging
+                FROM dex_pool_registry
                WHERE raw_json IS NOT NULL
                  AND refreshed_at < ?
                ORDER BY refreshed_at ASC, rowid ASC
@@ -408,7 +408,7 @@ export async function cleanupStaging(
         .prepare(
           `SELECT MIN(refreshed_at) AS oldest_remaining_at,
                   MIN(CASE WHEN raw_json IS NOT NULL THEN refreshed_at END) AS oldest_raw_json_remaining_at
-             FROM dex_pool_staging`,
+             FROM dex_pool_registry`,
         )
         .first<{
           oldest_remaining_at: number | null;
