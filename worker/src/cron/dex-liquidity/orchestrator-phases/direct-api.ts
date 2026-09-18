@@ -401,7 +401,9 @@ export function buildDexDirectApiFetchers(params: {
       name: "PancakeSwap",
       circuitKey: CIRCUIT_SOURCE.PANCAKESWAP_API,
       normalizedProtocol: "pancakeswap",
-      supportedChains: ["bsc", "ethereum", "base"],
+      // No `bsc`: the BSC subgraph is not fetched (see fetch-pancakeswap.ts), and
+      // claiming it here would let the census veto every staged BSC Pancake pool.
+      supportedChains: ["ethereum", "base"],
       fn: (signal) => fetchPancakeSwapPools(params.graphApiKey, signal, params.db),
     },
     {

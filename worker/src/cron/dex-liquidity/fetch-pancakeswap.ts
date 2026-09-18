@@ -25,8 +25,12 @@ const HOUR_DATA_BATCH_SIZE = 40;
 const SUBGRAPH_ATTEMPT_TIMEOUT_MS = DIRECT_API_REQUEST_TIMEOUT_MS;
 
 // Keep Pancake coverage on the subgraphs that stay within the worker cron budget reliably.
+// BSC (`Hv1GncLY5docZoGtXjo4kwbTvxm3MAhVZqBZE4sUT9eZ`) is deliberately absent: since
+// 2026-09-04 its head page has never answered inside the 15s attempt budget, so every
+// hourly run burned three attempts for zero pools and kept the whole source degraded,
+// which also withheld PancakeSwap's census authority on Ethereum and Base. BSC
+// PancakeSwap pools still arrive through the CoinGecko onchain and discovery lanes.
 const PANCAKESWAP_V3_SUBGRAPHS: Record<string, { chain: string; subgraphId: string }> = {
-  bsc: { chain: "bsc", subgraphId: "Hv1GncLY5docZoGtXjo4kwbTvxm3MAhVZqBZE4sUT9eZ" },
   ethereum: { chain: "ethereum", subgraphId: "CJYGNhb7RvnhfBDjqpRnD3oxgyhibzc7fkAMa38YV3oS" },
   base: { chain: "base", subgraphId: "BHWNsedAHtmTCzXxCCDfhPmm6iN9rxUhoRHdHKyujic3" },
 };

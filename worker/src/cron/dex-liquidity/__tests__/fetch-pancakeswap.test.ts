@@ -222,7 +222,7 @@ describe("fetchPancakeSwapPools", () => {
 
     const result = await fetchPancakeSwapPools("graph-key");
 
-    // The BSC source failed, while the remaining chain heads completed as valid-empty.
+    // The first chain (Ethereum) failed, while the remaining chain head completed as valid-empty.
     expect(result.ok).toBe(true);
     expect(result.degraded).toBe(true);
     expect(result.errors[0]).toContain("invalid-json");
@@ -247,16 +247,15 @@ describe("fetchPancakeSwapPools", () => {
 
     expect(result).toMatchObject({ ok: true, degraded: true });
     expect(result.pagination?.cursorPersistence).toEqual({
-      attempts: 3,
+      attempts: 2,
       written: 0,
       failures: [
-        { sourceKey: "pancakeswap-v3:bsc", errorClass: "write-failed" },
         { sourceKey: "pancakeswap-v3:ethereum", errorClass: "write-failed" },
         { sourceKey: "pancakeswap-v3:base", errorClass: "write-failed" },
       ],
     });
     expect(result.warnings).toContain(
-      "bsc: pagination cursor persistence failed (write-failed); stored cursor remains retryable",
+      "ethereum: pagination cursor persistence failed (write-failed); stored cursor remains retryable",
     );
   });
 });

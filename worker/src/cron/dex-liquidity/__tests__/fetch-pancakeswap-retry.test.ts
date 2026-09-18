@@ -2,7 +2,6 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { fetchPancakeSwapPools } from "../fetch-pancakeswap";
 import { makeNoopD1 } from "../../../test-helpers/noop-d1";
 
-const BSC_SUBGRAPH_ID = "Hv1GncLY5docZoGtXjo4kwbTvxm3MAhVZqBZE4sUT9eZ";
 const ETHEREUM_SUBGRAPH_ID = "CJYGNhb7RvnhfBDjqpRnD3oxgyhibzc7fkAMa38YV3oS";
 const BASE_SUBGRAPH_ID = "BHWNsedAHtmTCzXxCCDfhPmm6iN9rxUhoRHdHKyujic3";
 const STORED_CURSOR = "250";
@@ -86,16 +85,16 @@ describe("fetchPancakeSwapPools per-attempt retries and chain progress", () => {
   it("retries one timed-out attempt and still returns that chain's pools", async () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date("2026-09-10T12:00:00Z"));
-    let bscHeadAttempts = 0;
+    let ethHeadAttempts = 0;
     vi.stubGlobal("fetch", vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
       const url = typeof input === "string" ? input : input.toString();
       if (String(init?.body).includes("poolHourDatas")) return hourDataResponse();
-      const isBsc = url.includes(BSC_SUBGRAPH_ID);
-      if (isBsc) {
-        bscHeadAttempts += 1;
-        if (bscHeadAttempts === 1) return await hangUntilAbort(init);
+      const isEth = url.includes(ETHEREUM_SUBGRAPH_ID);
+      if (isEth) {
+        ethHeadAttempts += 1;
+        if (ethHeadAttempts === 1) return await hangUntilAbort(init);
       }
-      return poolsResponse(isBsc ? [makePool("0xbsc-pool")] : []);
+      return poolsResponse(isEth ? [makePool("0xeth-pool")] : []);
     }));
 
     const writes: RecordedPaginationWrite[] = [];
@@ -104,13 +103,12 @@ describe("fetchPancakeSwapPools per-attempt retries and chain progress", () => {
     const result = await pending;
 
     // A pre-armed outer abort used to rethrow after attempt 1, so the retry never
-    // ran and BSC reported no pools at all.
-    expect(bscHeadAttempts).toBe(2);
+    // ran and the chain reported no pools at all.
+    expect(ethHeadAttempts).toBe(2);
     expect(result.errors).toEqual([]);
     expect(result.degraded).toBe(false);
-    expect(result.pools.map((pool) => pool.chain)).toEqual(["bsc"]);
+    expect(result.pools.map((pool) => pool.chain)).toEqual(["ethereum"]);
     expect(writes.map((write) => write.sourceKey)).toEqual([
-      "pancakeswap-v3:bsc",
       "pancakeswap-v3:ethereum",
       "pancakeswap-v3:base",
     ]);
@@ -119,15 +117,14 @@ describe("fetchPancakeSwapPools per-attempt retries and chain progress", () => {
   it("keeps healthy chains and persists per-chain progress when one chain fails every attempt", async () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date("2026-09-10T12:00:00Z"));
-    let bscHeadAttempts = 0;
+    let ethHeadAttempts = 0;
     vi.stubGlobal("fetch", vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
       const url = typeof input === "string" ? input : input.toString();
       if (String(init?.body).includes("poolHourDatas")) return hourDataResponse();
-      if (url.includes(BSC_SUBGRAPH_ID)) {
-        bscHeadAttempts += 1;
+      if (url.includes(ETHEREUM_SUBGRAPH_ID)) {
+        ethHeadAttempts += 1;
         return await hangUntilAbort(init);
       }
-      if (url.includes(ETHEREUM_SUBGRAPH_ID)) return poolsResponse([makePool("0xeth-pool")]);
       if (url.includes(BASE_SUBGRAPH_ID)) return poolsResponse([makePool("0xbase-pool")]);
       return poolsResponse([]);
     }));
@@ -137,29 +134,28 @@ describe("fetchPancakeSwapPools per-attempt retries and chain progress", () => {
     await vi.advanceTimersByTimeAsync(60_000);
     const result = await pending;
 
-    expect(bscHeadAttempts).toBe(3);
-    expect(result.pools.map((pool) => pool.chain)).toEqual(["ethereum", "base"]);
+    expect(ethHeadAttempts).toBe(3);
+    expect(result.pools.map((pool) => pool.chain)).toEqual(["base"]);
     expect(result.degraded).toBe(true);
-    expect(result.degradedChains).toEqual(["bsc"]);
-    expect(result.errors.join(" ")).toContain("bsc:");
+    expect(result.degradedChains).toEqual(["ethereum"]);
+    expect(result.errors.join(" ")).toContain("ethereum:");
     expect(result.errors.join(" ")).toContain("timed out");
 
     // Persist diagnostics without skipping the untouched tail after a head failure.
     expect(writes.map((write) => write.sourceKey)).toEqual([
-      "pancakeswap-v3:bsc",
       "pancakeswap-v3:ethereum",
       "pancakeswap-v3:base",
     ]);
     expect(writes[0]).toMatchObject({ cursor: "250", completed: false, pagesFetched: 0 });
-    expect(writes[0]!.diagnostics.join(" ")).toContain("bsc failure:");
-    expect(writes.slice(1).map((write) => write.cursor)).toEqual(["250", "250"]);
+    expect(writes[0]!.diagnostics.join(" ")).toContain("ethereum failure:");
+    expect(writes.slice(1).map((write) => write.cursor)).toEqual(["250"]);
     expect(writes.slice(1).every((write) => write.completed)).toBe(true);
   });
   it("retries a failed tail page instead of skipping its inventory", async () => {
     vi.useFakeTimers();
     vi.stubGlobal("fetch", vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
       if (String(init?.body).includes("poolHourDatas")) return hourDataResponse();
-      if (!String(input).includes(BSC_SUBGRAPH_ID)) return poolsResponse([]);
+      if (!String(input).includes(ETHEREUM_SUBGRAPH_ID)) return poolsResponse([]);
       if (String(init?.body).includes("skip: 0")) return poolsResponse(Array.from({ length: 250 }, (_, i) => makePool(`pool-${i}`)));
       throw new Error("tail unavailable");
     }));
