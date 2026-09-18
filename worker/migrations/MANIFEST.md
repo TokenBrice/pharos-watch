@@ -27,6 +27,7 @@
 | 0238     | `0238_api_key_donor_claims.sql`                           | Add the one-claim-per-wallet supporter API key ledger backing `POST /api/donor-key-claims`. |
 | 0239     | `0239_live_reserve_config_fingerprint.sql`                 | Add nullable configuration fingerprints to reserve composition and attempt state; old Workers remain compatible and new admission rejects unreviewed retained configurations. |
 | 0240     | `0240_yield_retention_indexes.sql`                         | Add the recorded-at alternatives-retention index for deterministic bounded drains. |
+| 0241     | `0241_dex_pool_registry.sql`                              | Add the per-source DEX pool registry and backfill existing staged observations while retaining staging for Worker rollback. |
 
 ## Squashed Individual Migrations (absorbed into the 0000 baseline on 2026-07-30)
 
@@ -324,6 +325,7 @@ Duplicate numeric prefixes 0056 and 0061 existed in the squashed range (0001–0
 - `0236_dex_deployment_attempt_attribution.sql`: roll back by restoring the prior Worker. Keep both nullable attribution columns and the conservative backfill; the prior Worker ignores them, while a forward Worker detects any later legacy `last_crawl_at` write by marker mismatch and fails closed. Removing either column requires a separate coordinated cleanup rollout.
 - `0238_api_key_donor_claims.sql`: do not roll back the Worker to stop claims; set `DONOR_KEY_CLAIMS_OPEN = false` and redeploy, which keeps the donor-tier auth protections (global limiter, no isolate fallback) for keys already issued. Keep the additive table; issued `donor` keys keep authenticating, and dropping it would strand the one-claim-per-wallet fence. Removing it requires a separate coordinated cleanup rollout after every donor key is deactivated.
 - `0240_yield_retention_indexes.sql`: roll back by restoring the prior Worker; keep the additive retention index because it is inert to older Workers and avoids the unbounded alternatives-retention scan. Dropping it requires a separate coordinated cleanup rollout.
+- `0241_dex_pool_registry.sql`: retain both tables. Apply before Worker activation; capture the migration timestamp and a pre-migration D1 Time Travel bookmark. After activation, catch up observations written to `dex_pool_staging` after migration with an explicit-column `INSERT OR IGNORE INTO dex_pool_registry (...) SELECT ... FROM dex_pool_staging WHERE refreshed_at > <migration_unix>`. Roll back the Worker within 72 hours; its staging rows stop refreshing at cutover and new registry-only pools are absent until re-crawled. Past 72 hours, first reverse-copy the newest registry observation per `(stablecoin_id, pool_id)` into staging using `INSERT OR REPLACE`, then restore the prior Worker. Worker rollback does not undo D1; dropping staging requires a separate coordinated cleanup rollout after at least 14 days without rollback.
 
 ## Rollback Procedure
 

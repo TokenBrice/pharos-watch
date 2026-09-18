@@ -66,6 +66,25 @@ describe("hasValidStagedPoolTvl", () => {
 });
 
 describe("upsertStagedPools", () => {
+  it("stores source observations independently without relabeling or clearing another source's price", async () => {
+    const { sqlite, db } = fixtures.open();
+    const nowSec = 1_710_000_000;
+    const pool = stagedPool({ source: "cg_onchain", priceUsd: 1.01, refreshedAt: nowSec });
+
+    await upsertStagedPools(db, [pool]);
+    await upsertStagedPools(db, [
+      { ...pool, source: "dl", priceUsd: null, tvlUsd: 25_000, refreshedAt: nowSec - 60 },
+    ], undefined, { minRefreshGapSec: 4 * 3600 });
+    await upsertStagedPools(db, [
+      { ...pool, priceUsd: 0.5, refreshedAt: nowSec - 120 },
+    ]);
+
+    expect(sqlite.prepare("SELECT source, tvl_usd, price_usd, refreshed_at FROM dex_pool_registry ORDER BY source").all()).toEqual([
+      { source: "cg_onchain", tvl_usd: pool.tvlUsd, price_usd: 1.01, refreshed_at: nowSec },
+      { source: "dl", tvl_usd: 25_000, price_usd: null, refreshed_at: nowSec - 60 },
+    ]);
+  });
+
   it("deletes the same-coin legacy exchange-only orderbook row before upserting suffixed ids", async () => {
     const { sqlite, db } = fixtures.open();
 
@@ -84,7 +103,7 @@ describe("upsertStagedPools", () => {
     ]);
     await upsertStagedPools(db, [pool]);
 
-    expect(sqlite.prepare("SELECT pool_id, stablecoin_id, discovered_at, refreshed_at FROM dex_pool_staging ORDER BY stablecoin_id").all()).toEqual([
+    expect(sqlite.prepare("SELECT pool_id, stablecoin_id, discovered_at, refreshed_at FROM dex_pool_registry ORDER BY stablecoin_id").all()).toEqual([
       { pool_id: "orderbook:kinesis", stablecoin_id: "other-coin", discovered_at: nowSec, refreshed_at: nowSec },
       { pool_id: pool.poolId, stablecoin_id: pool.stablecoinId, discovered_at: nowSec - 100, refreshed_at: nowSec },
     ]);
@@ -100,7 +119,7 @@ describe("upsertStagedPools", () => {
       { ...pool, tvlUsd: 99_000, volume24h: 88_000, priceUsd: 0.5, refreshedAt: nowSec - 10_800 },
     ]);
 
-    expect(sqlite.prepare("SELECT tvl_usd, volume_24h, price_usd, refreshed_at FROM dex_pool_staging").get()).toEqual({
+    expect(sqlite.prepare("SELECT tvl_usd, volume_24h, price_usd, refreshed_at FROM dex_pool_registry").get()).toEqual({
       tvl_usd: 10_000,
       volume_24h: 1_000,
       price_usd: 1,
@@ -116,7 +135,7 @@ describe("upsertStagedPools", () => {
     await upsertStagedPools(db, [pool]);
     await upsertStagedPools(db, [{ ...pool, tvlUsd: null, volume24h: null, refreshedAt: nowSec }]);
 
-    expect(sqlite.prepare("SELECT tvl_usd, volume_24h, refreshed_at FROM dex_pool_staging").get()).toEqual({
+    expect(sqlite.prepare("SELECT tvl_usd, volume_24h, refreshed_at FROM dex_pool_registry").get()).toEqual({
       tvl_usd: null,
       volume_24h: null,
       refreshed_at: nowSec,
@@ -131,7 +150,7 @@ describe("upsertStagedPools", () => {
     await upsertStagedPools(db, [pool]);
     await upsertStagedPools(db, [{ ...pool, priceUsd: null, refreshedAt: nowSec }]);
 
-    expect(sqlite.prepare("SELECT price_usd, refreshed_at FROM dex_pool_staging").get()).toEqual({
+    expect(sqlite.prepare("SELECT price_usd, refreshed_at FROM dex_pool_registry").get()).toEqual({
       price_usd: null,
       refreshed_at: nowSec,
     });
@@ -155,7 +174,7 @@ describe("upsertStagedPools", () => {
       { minRefreshGapSec: 4 * hour },
     );
 
-    expect(sqlite.prepare("SELECT pool_id, tvl_usd, refreshed_at FROM dex_pool_staging ORDER BY pool_id").all()).toEqual([
+    expect(sqlite.prepare("SELECT pool_id, tvl_usd, refreshed_at FROM dex_pool_registry ORDER BY pool_id").all()).toEqual([
       { pool_id: "ethereum:0xfresh", tvl_usd: 10_000, refreshed_at: nowSec - hour },
       { pool_id: "ethereum:0xstale", tvl_usd: 23_000, refreshed_at: nowSec },
     ]);
@@ -169,7 +188,7 @@ describe("upsertStagedPools", () => {
     await upsertStagedPools(db, [pool]);
     await upsertStagedPools(db, [{ ...pool, tvlUsd: 15_000, refreshedAt: nowSec }]);
 
-    expect(sqlite.prepare("SELECT tvl_usd, refreshed_at FROM dex_pool_staging").get()).toEqual({
+    expect(sqlite.prepare("SELECT tvl_usd, refreshed_at FROM dex_pool_registry").get()).toEqual({
       tvl_usd: 15_000,
       refreshed_at: nowSec,
     });
@@ -242,7 +261,7 @@ describe("discovery persistence D1 retry coverage", () => {
   it("keeps staging rows one hour inside the delete TTL and deletes rows one hour past it", async () => {
     const { sqlite, db } = fixtures.open();
     const now = 1_710_000_000;
-    const insert = sqlite.prepare(`INSERT INTO dex_pool_staging
+    const insert = sqlite.prepare(`INSERT INTO dex_pool_registry
       (pool_id, stablecoin_id, source, chain, protocol, symbol, discovered_at, refreshed_at)
       VALUES (?, ?, 'dexscreener', 'ethereum', 'test', 'TEST / USDC', ?, ?)`);
     insert.run("ethereum:0xkeep", "usdc-circle", now, now - STAGING_DELETE_TTL_SEC + 60 * 60);
@@ -251,7 +270,7 @@ describe("discovery persistence D1 retry coverage", () => {
     const cleanup = await cleanupStaging(db, now);
 
     expect(cleanup.deletedRows).toBe(1);
-    expect(sqlite.prepare("SELECT pool_id FROM dex_pool_staging").all()).toEqual([
+    expect(sqlite.prepare("SELECT pool_id FROM dex_pool_registry").all()).toEqual([
       { pool_id: "ethereum:0xkeep" },
     ]);
   });

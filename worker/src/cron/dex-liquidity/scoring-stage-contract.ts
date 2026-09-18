@@ -60,5 +60,8 @@ export interface DexLiquidityPoolState {
    */
   stagedWritebackRows?: number;
   stagedWritebackSkippedUntrustedIds?: number;
+  registryRowsRead?: number;
+  registryMultiSourcePools?: number;
+  registryFamilyBySource?: Record<string, number>;
   directApiIntegration: DirectApiIntegrationResult;
 }

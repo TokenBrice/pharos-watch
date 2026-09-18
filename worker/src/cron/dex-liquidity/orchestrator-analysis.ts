@@ -40,6 +40,12 @@ type TopCoverageRow = {
   effective_tvl_usd?: number | null;
 };
 
+type PreviousCoinTvlRow = {
+  stablecoin_id: string;
+  total_tvl_usd: number;
+  protocol_tvl_json: string | null;
+};
+
 type CoverageClasses = {
   primary: number;
   mixed: number;
@@ -260,6 +266,16 @@ export interface DexLiquidityPostScoreAnalysis {
     valueBaselineGlobalTvl: number | null;
     ignoredPersistedGlobalTvl: number | null;
     nearValueGuard: boolean;
+    coinTvlStepCount150: number;
+    coinTvlStepCount25: number;
+    coinTvlStepTop: Array<{
+      stablecoinId: string;
+      previousTvlUsd: number;
+      currentTvlUsd: number;
+      ratio: number;
+      protocol: string | null;
+      protocolDeltaUsd: number | null;
+    }>;
     currentTop10CoveredTvl: number;
     previousTop10CoveredTvl: number;
     currentTop10GuardTvl: number;
@@ -300,6 +316,7 @@ export interface DexLiquidityPostScoreAnalysis {
 
 export async function analyzeDexLiquidityPostScoring(params: {
   db: D1Database;
+  currentGenerationId?: string;
   scoreResults: Map<string, FullScoreResult>;
   globalAgg: GlobalAgg;
   retainedPoolsByStablecoin: Map<string, LiquidityMetrics["topPools"]>;
@@ -328,6 +345,7 @@ export async function analyzeDexLiquidityPostScoring(params: {
     previousTopCoverageRows,
     previousCronRows,
     previousWatchlistRows,
+    previousCoinTvlRows,
   ] = await Promise.all([
     params.db
       .prepare(
@@ -418,6 +436,25 @@ export async function analyzeDexLiquidityPostScoring(params: {
             balance_measured_tvl_usd: number;
           }>,
         };
+      }),
+    params.db
+      .prepare(
+        `SELECT r.stablecoin_id, r.total_tvl_usd, r.protocol_tvl_json
+         FROM dex_liquidity_run_rows r
+         JOIN dex_liquidity_publication_generations g ON g.generation_id = r.generation_id
+         WHERE g.state = 'published' AND r.stablecoin_id != '__global__'
+           AND r.generation_id = (
+             SELECT generation_id FROM dex_liquidity_publication_generations
+             WHERE state = 'published' AND (? IS NULL OR generation_id != ?)
+             ORDER BY started_at DESC, generation_id DESC
+             LIMIT 1
+           )`,
+      )
+      .bind(params.currentGenerationId ?? null, params.currentGenerationId ?? null)
+      .all<PreviousCoinTvlRow>()
+      .catch((e) => {
+        logWorkerEventArgs("handler", "warn", "[dex-liquidity] Failed to read previous per-coin TVL:", e);
+        return { results: [] as PreviousCoinTvlRow[] };
       }),
   ]);
 
@@ -581,6 +618,60 @@ export async function analyzeDexLiquidityPostScoring(params: {
     }
   }
 
+  let coinTvlStepCount150 = 0;
+  let coinTvlStepCount25 = 0;
+  const coinTvlSteps: DexLiquidityPostScoreAnalysis["sourceCoverage"]["coinTvlStepTop"] = [];
+  for (const previous of previousCoinTvlRows.results ?? []) {
+    const current = params.scoreResults.get(previous.stablecoin_id);
+    if (!current || !isFinitePositive(previous.total_tvl_usd) || !isFiniteNonNegative(current.tvl)) continue;
+    const ratio = current.tvl / previous.total_tvl_usd;
+    if (ratio > 1.5 || ratio < 0.5) coinTvlStepCount150++;
+    if (ratio >= 1.25 || ratio <= 0.8) coinTvlStepCount25++;
+    let protocol: string | null = null;
+    let protocolDeltaUsd: number | null = null;
+    const currentProtocols = preCapStablecoinProtocolTvl.get(previous.stablecoin_id);
+    if (currentProtocols && previous.protocol_tvl_json) {
+      try {
+        const previousProtocols: unknown = JSON.parse(previous.protocol_tvl_json);
+        if (
+          previousProtocols != null &&
+          typeof previousProtocols === "object" &&
+          !Array.isArray(previousProtocols) &&
+          Object.values(previousProtocols).every(isFiniteNonNegative)
+        ) {
+          const baseline = previousProtocols as Record<string, number>;
+          for (const name of new Set([...Object.keys(baseline), ...Object.keys(currentProtocols)])) {
+            const delta = (currentProtocols[name] ?? 0) - (baseline[name] ?? 0);
+            if (
+              protocolDeltaUsd == null ||
+              Math.abs(delta) > Math.abs(protocolDeltaUsd) ||
+              (Math.abs(delta) === Math.abs(protocolDeltaUsd) && name < protocol!)
+            ) {
+              protocol = name;
+              protocolDeltaUsd = delta;
+            }
+          }
+        }
+      } catch {
+        // Missing or malformed historical detail must not discard the total-TVL comparison.
+      }
+    }
+    coinTvlSteps.push({
+      stablecoinId: previous.stablecoin_id,
+      previousTvlUsd: previous.total_tvl_usd,
+      currentTvlUsd: current.tvl,
+      ratio,
+      protocol,
+      protocolDeltaUsd,
+    });
+  }
+  const coinTvlStepTop = coinTvlSteps
+    .sort((left, right) =>
+      Math.abs(right.currentTvlUsd - right.previousTvlUsd) - Math.abs(left.currentTvlUsd - left.previousTvlUsd) ||
+      left.stablecoinId.localeCompare(right.stablecoinId),
+    )
+    .slice(0, 5);
+
   for (const [_stablecoinId, observations] of params.priceObservations) {
     const families = new Set(
       observations
@@ -677,6 +768,9 @@ export async function analyzeDexLiquidityPostScoring(params: {
       valueBaselineGlobalTvl: valueBaseline.valueBaselineGlobalTvl,
       ignoredPersistedGlobalTvl: valueBaseline.ignoredPersistedGlobalTvl,
       nearValueGuard,
+      coinTvlStepCount150,
+      coinTvlStepCount25,
+      coinTvlStepTop,
       currentTop10CoveredTvl,
       previousTop10CoveredTvl,
       currentTop10GuardTvl,

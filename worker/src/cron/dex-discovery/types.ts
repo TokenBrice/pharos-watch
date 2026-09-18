@@ -7,7 +7,7 @@ export const TEZOS_POOL_IDENTITY_REVIEW_VERSION = "tezos-reviewed-v1";
 export const SLIPSTREAM_POOL_IDENTITY_REVIEW_VERSION = "slipstream-factory-v1";
 
 /**
- * Raw pool entry written to dex_pool_staging. Discovery owns its own families;
+ * Raw pool observation written to dex_pool_registry, one row per (stablecoin, pool, source). Discovery owns its own families;
  * `dl` and `direct_api` rows are the live-lane write-back from the `:10`
  * source stage, never discovery output.
  */
@@ -108,7 +108,7 @@ export const STAGED_POOL_DEFAULTS = {
  * revisit tail (p95 in the 7–14 day band on 2026-09-10) so a slow rotating
  * crawl no longer drops pools it simply has not revisited yet.
  */
-const STAGED_POOL_FRESH_HOURS = 24;
+export const STAGED_POOL_FRESH_HOURS = 24;
 export const STAGED_POOL_CONFIDENCE_HORIZON_HOURS = 14 * 24;
 /**
  * Price evidence never inherits the inventory horizon: a staged row older than

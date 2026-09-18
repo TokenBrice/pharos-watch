@@ -45,16 +45,11 @@ export interface StagedPoolWriteback {
   pools: StagedPool[];
   /** Live-lane entries dropped because their id is not a trustworthy exact id. */
   skippedUntrustedIds: number;
-  /**
-   * Live-lane entries dropped because `mergeStagedPools` read the same key from
-   * a discovery source this run. Zero until `filterDiscoveryOwned` runs.
-   */
-  skippedDiscoveryOwned: number;
 }
 
 /**
  * Snapshot this run's live-lane observations (DeFiLlama, direct API, subgraph)
- * for write-back into `dex_pool_staging`, so those pools survive a provider
+ * for write-back into `dex_pool_registry`, so those pools survive a provider
  * outage the same way discovery-sourced pools do.
  *
  * MUST run before `mergeStagedPools`: entries the merge backfills keep
@@ -129,29 +124,5 @@ export function buildStagedPoolWriteback(
     }
   }
 
-  return { pools, skippedUntrustedIds, skippedDiscoveryOwned: 0 };
-}
-
-/**
- * Subtract the keys `mergeStagedPools` read from discovery sources this run.
- *
- * `buildStagedPoolWriteback` cannot do this itself: the snapshot is taken
- * before the merge, and the merge owns the key set. A live-lane copy of a
- * dual-observed pool is the *hollow* one — DeFiLlama carries no prices, so its
- * upsert would relabel the row `dl` with `price_usd = NULL` and delete the
- * discovery price the same run already emitted to `dex_prices`.
- */
-export function filterDiscoveryOwned(
-  writeback: StagedPoolWriteback,
-  ownedKeys: Set<string>,
-): StagedPoolWriteback {
-  const pools = writeback.pools.filter(
-    (pool) => !ownedKeys.has(`${pool.stablecoinId}\u0000${pool.poolId}`),
-  );
-  return {
-    pools,
-    skippedUntrustedIds: writeback.skippedUntrustedIds,
-    skippedDiscoveryOwned:
-      writeback.skippedDiscoveryOwned + (writeback.pools.length - pools.length),
-  };
+  return { pools, skippedUntrustedIds };
 }

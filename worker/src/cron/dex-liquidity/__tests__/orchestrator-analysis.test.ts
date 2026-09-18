@@ -111,6 +111,67 @@ function makeCronMetadata(params: {
 }
 
 describe("analyzeDexLiquidityPostScoring", () => {
+  it("counts published-generation TVL steps at the reviewed bounds and ranks the five largest moves", async () => {
+    const coins = [
+      { id: "surge", previous: 100, current: 400 },
+      { id: "crash", previous: 200, current: 20 },
+      { id: "upper-bound", previous: 100, current: 125 },
+      { id: "lower-bound", previous: 100, current: 80 },
+      { id: "xaut", previous: 100, current: 81 },
+      { id: "dai", previous: 100, current: 91 },
+      { id: "strict-upper", previous: 100, current: 150 },
+      { id: "strict-lower", previous: 100, current: 50 },
+      { id: "zero-baseline", previous: 0, current: 10_000 },
+    ];
+    const db = mockD1([{
+      match: "FROM dex_liquidity_run_rows r",
+      rows: coins.map((coin) => ({
+        stablecoin_id: coin.id,
+        total_tvl_usd: coin.previous,
+        protocol_tvl_json: coin.id === "surge"
+          ? JSON.stringify({ curve: 80, uniswap: 20 })
+          : coin.id === "crash" ? "malformed" : JSON.stringify({ curve: coin.previous }),
+      })),
+    }]);
+    const analysis = await analyzeDexLiquidityPostScoring(makeAnalysisInput({
+      db,
+      currentGenerationId: "current",
+      scoreResults: new Map([
+        ...coins.map((coin): [string, FullScoreResult] => [coin.id, { ...BASE_SCORE_RESULT, tvl: coin.current }]),
+        ["new-coin", { ...BASE_SCORE_RESULT, tvl: 1_000_000 }],
+      ]),
+      retainedPoolsByStablecoin: new Map(coins.map((coin) => [
+        coin.id,
+        coin.id === "surge"
+          ? [makePool({ project: "curve", tvlUsd: 90 }), makePool({ project: "uniswap", tvlUsd: 310 })]
+          : [makePool({ project: "curve", tvlUsd: coin.current })],
+      ])),
+    }));
+
+    expect(analysis.sourceCoverage.coinTvlStepCount150).toBe(2);
+    expect(analysis.sourceCoverage.coinTvlStepCount25).toBe(6);
+    expect(analysis.sourceCoverage.coinTvlStepTop).toEqual([
+      { stablecoinId: "surge", previousTvlUsd: 100, currentTvlUsd: 400, ratio: 4, protocol: "uniswap", protocolDeltaUsd: 290 },
+      { stablecoinId: "crash", previousTvlUsd: 200, currentTvlUsd: 20, ratio: 0.1, protocol: null, protocolDeltaUsd: null },
+      { stablecoinId: "strict-lower", previousTvlUsd: 100, currentTvlUsd: 50, ratio: 0.5, protocol: "curve", protocolDeltaUsd: -50 },
+      { stablecoinId: "strict-upper", previousTvlUsd: 100, currentTvlUsd: 150, ratio: 1.5, protocol: "curve", protocolDeltaUsd: 50 },
+      { stablecoinId: "upper-bound", previousTvlUsd: 100, currentTvlUsd: 125, ratio: 1.25, protocol: "curve", protocolDeltaUsd: 25 },
+    ]);
+  });
+
+  it("keeps TVL step diagnostics empty when the previous published generation cannot be read", async () => {
+    const db = mockD1([{
+      match: "FROM dex_liquidity_run_rows r",
+      rows: [],
+      throwError: new Error("generation read failed"),
+    }]);
+    const analysis = await analyzeDexLiquidityPostScoring(makeAnalysisInput({ db }));
+
+    expect(analysis.sourceCoverage.coinTvlStepCount150).toBe(0);
+    expect(analysis.sourceCoverage.coinTvlStepCount25).toBe(0);
+    expect(analysis.sourceCoverage.coinTvlStepTop).toEqual([]);
+  });
+
   it("treats previous coverage read failures as degraded unavailable state instead of a fake high baseline", async () => {
     const db = mockD1([
       {

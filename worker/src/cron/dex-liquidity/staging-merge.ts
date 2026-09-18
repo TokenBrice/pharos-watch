@@ -31,6 +31,7 @@ import {
   type KnownPoolIdentityIndex,
 } from "./pool-identity";
 import { attachEvmV2CandidateToRetainedPool, buildEvmV2ExecutionCandidate } from "./constant-product-v2";
+import { resolveRegistryPools, type RegistryPoolView } from "./registry-resolver";
 
 export interface StagedPoolRow {
   pool_id: string;
@@ -429,7 +430,7 @@ const STAGED_SOURCE_FAMILY: Record<StagedPool["source"], LiquidityPoolSourceFami
 };
 
 /**
- * Read staged pools from dex_pool_staging that refreshed within
+ * Read staged pools from dex_pool_registry that refreshed within
  * STAGED_POOL_CONFIDENCE_HORIZON_HOURS, convert to pool entries with confidence
  * decay and defaults, and merge into existing metrics. The horizon is inventory
  * memory only: price evidence is separately pinned to
@@ -452,13 +453,9 @@ export async function mergeStagedPools(
   skippedByAuthoritativeProtocolCount: number;
   skipDimensions: StagedPoolSkipDimension[];
   priceObservations: Map<string, DexPriceObs[]>;
-  /**
-   * `${stablecoinId}\u0000${poolId}` for every row this read found under a
-   * discovery source, recorded before any skip or dedupe decision. The
-   * live-lane write-back subtracts it, so a pool both lanes observe keeps its
-   * discovery row — and the price that row carries.
-   */
-  discoveryOwnedKeys: Set<string>;
+  registryRowsRead: number;
+  registryMultiSourcePools: number;
+  registryFamilyBySource: Record<string, number>;
 }> {
   registerRetainedPoolExactStablecoins(knownPoolIndex, metrics);
   const result = await db
@@ -467,7 +464,7 @@ export async function mergeStagedPools(
                        tvl_usd, volume_24h, quality_multiplier, pool_type, fee_tier, balance_ratio, is_stable,
                        base_token, quote_token, quote_symbol, price_usd, locked_liq_pct,
                        raw_json, discovered_at, refreshed_at
-                FROM dex_pool_staging WHERE refreshed_at >= ?`,
+                FROM dex_pool_registry WHERE refreshed_at >= ?`,
     )
     // Fetch a 60s grace beyond the confidence horizon so rows that have just
     // crossed it surface as stagedPoolConfidence === 0 and are recorded under
@@ -477,6 +474,7 @@ export async function mergeStagedPools(
     .bind(nowSec - STAGED_POOL_CONFIDENCE_HORIZON_HOURS * 3600 - 60)
     .all<StagedPoolRow>();
   const rows: Array<StagedPoolRow | undefined> = result.results ?? [];
+  const registryRowsRead = rows.length;
 
   const cgPoolMap = new Map<string, CgNewPool[]>();
   const gtPoolMap = new Map<string, GtNewPool[]>();
@@ -489,17 +487,12 @@ export async function mergeStagedPools(
   const skipDimensions = new Map<string, StagedPoolSkipDimension>();
   const supersededLegacyLowercaseRows = collectSupersededLegacyLowercaseRows(rows);
   const stagedIdentityCountsByStablecoin = new Map<string, StagedPoolIdentityCounts>();
-  const discoveryOwnedKeys = new Set<string>();
+  const observations: StagedPool[] = [];
 
-  for (const row of rows) {
+  for (let rowIndex = 0; rowIndex < rows.length; rowIndex++) {
+    const row = rows[rowIndex];
+    rows[rowIndex] = undefined;
     if (!row) continue;
-    if (row.source !== "dl" && row.source !== "direct_api") {
-      // Discovery owns rows it wrote; the live-lane write-back must not relabel
-      // them `dl` or null the price, so the key is read before any skip.
-      discoveryOwnedKeys.add(
-        `${row.stablecoin_id}\u0000${canonicalExitRouteScopedKey(row.chain, row.pool_id)}`,
-      );
-    }
     if (supersededLegacyLowercaseRows.has(row)) {
       skippedCount++;
       incrementSkipDimension(skipDimensions, "legacy_lowercase_identity_superseded", row);
@@ -516,7 +509,18 @@ export async function mergeStagedPools(
       incrementSkipDimension(skipDimensions, "invalid_tvl", stagedPool, { threshold: STAGED_POOL_MAX_TVL_USD });
       continue;
     }
-
+    observations.push(stagedPool);
+  }
+  rows.length = 0;
+  const views: Array<RegistryPoolView | undefined> = resolveRegistryPools(observations, nowSec);
+  observations.length = 0;
+  let registryMultiSourcePools = 0;
+  const registryFamilyBySource: Record<string, number> = {};
+  for (const view of views) {
+    if (!view) continue;
+    if (view.sources.length >= 2) registryMultiSourcePools++;
+    registryFamilyBySource[view.value.source] = (registryFamilyBySource[view.value.source] ?? 0) + 1;
+    const stagedPool = { ...view.value, ...view.metadata, discoveredAt: view.discoveredAt };
     const entry = buildStagedPoolEntry(stagedPool, nowSec);
     if (entry.confidence <= 0) continue;
     incrementStagedIdentityCounts(stagedIdentityCountsByStablecoin, stagedPool.stablecoinId, entry.identity);
@@ -527,18 +531,20 @@ export async function mergeStagedPools(
     { identity: StagedPoolIdentity; stablecoinIds: Set<string> }
   >();
 
-  for (let rowIndex = 0; rowIndex < rows.length; rowIndex++) {
-    const row = rows[rowIndex];
-    rows[rowIndex] = undefined;
-    if (!row || supersededLegacyLowercaseRows.has(row)) continue;
-
-    const stagedPool = toStagedPool(row);
-    // These validation skips were recorded during the identity-count pass to
-    // preserve existing skip-dimension ordering.
-    if (!stagedPool.poolId || !stagedPool.stablecoinId || hasUnreviewedPoolIdentity(stagedPool) || hasInvalidTvl(stagedPool)) continue;
+  for (let viewIndex = 0; viewIndex < views.length; viewIndex++) {
+    const view = views[viewIndex];
+    views[viewIndex] = undefined;
+    if (!view) continue;
+    const stagedPool = {
+      ...view.value,
+      ...view.metadata,
+      discoveredAt: view.discoveredAt,
+      priceUsd: view.price?.priceUsd ?? view.value.priceUsd,
+    };
 
     const entry = buildStagedPoolEntry(stagedPool, nowSec);
-    const { dexId, poolType, qualityMultiplier, identity, confidence, priceEligible } = entry;
+    const { dexId, poolType, qualityMultiplier, identity, confidence } = entry;
+    const priceEligible = view.price != null;
     const normalizedProtocol = normalizeProtocol(stagedPool.protocol || dexId);
     // Preserve the full suffix after the first colon. Orderbook ids and any colon-bearing
     // native ids stay intact. EVM/base58 addresses are colon-free so this is safe.
@@ -612,7 +618,7 @@ export async function mergeStagedPools(
         poolKey: identity.exactPoolKey ?? undefined,
         derivedMatchKey: identity.derivedMatchKey ?? undefined,
         identityConfidence: identity.exactPoolKey ? "exact" : identity.derivedMatchKey ? "derived_ambiguous" : "none",
-        sourceFamily: stagedPool.source,
+        sourceFamily: view.price!.source,
       });
       stagedPriceObs.set(stagedPool.stablecoinId, obs);
     }
@@ -767,7 +773,7 @@ export async function mergeStagedPools(
           }),
     });
   }
-  rows.length = 0;
+  views.length = 0;
 
   if (uniqueDerivedIdentitySkipped > 0) {
     logWorkerEventArgs("handler", "info", `[dex-liquidity] Skipped ${uniqueDerivedIdentitySkipped} staged pools via unique derived identity`);
@@ -818,6 +824,8 @@ export async function mergeStagedPools(
     skippedByAuthoritativeProtocolCount: authoritativeProtocolSkipped,
     skipDimensions: [...skipDimensions.values()],
     priceObservations: stagedPriceObs,
-    discoveryOwnedKeys,
+    registryRowsRead,
+    registryMultiSourcePools,
+    registryFamilyBySource,
   };
 }

@@ -58,7 +58,9 @@ const phaseFixtures = vi.hoisted(() => {
         skippedByAuthoritativeProtocolCount: 0,
         skipDimensions: [],
         priceObservations: new Map(),
-        discoveryOwnedKeys: new Set<string>(),
+        registryRowsRead: 0,
+        registryMultiSourcePools: 0,
+        registryFamilyBySource: {},
       },
       scores: {
         measuredTargetInventory: { mode: "active", active: [], shadow: [] },
@@ -141,6 +143,7 @@ vi.mock("../dex-liquidity/persistence", () => ({
     generationId: `dex-liquidity-${nowSec}`,
   })),
   writeHistoricalSnapshots: vi.fn(async () => {}),
+  buildDexLiquidityPublicationGenerationId: (startSec: number) => `dex-liquidity-${startSec}`,
 }));
 
 // The stage tables round-trip is covered by dex-liquidity/__tests__/scoring-stage.test.ts
@@ -359,11 +362,11 @@ describe("dex liquidity scoring stage cycle", () => {
 
   it("surfaces a missing mandatory staging table from the producer", async () => {
     vi.mocked(mergeStagedPools).mockRejectedValueOnce(
-      new Error("D1_ERROR: no such table: dex_pool_staging"),
+      new Error("D1_ERROR: no such table: dex_pool_registry"),
     );
 
     await expect(runDexLiquidityScoringCycle(db, "graph-key")).rejects.toThrow(
-      "D1_ERROR: no such table: dex_pool_staging",
+      "D1_ERROR: no such table: dex_pool_registry",
     );
   });
 
@@ -750,7 +753,9 @@ describe("dex liquidity scoring stage cycle", () => {
       skippedByAuthoritativeProtocolCount: 0,
       skipDimensions: [],
       priceObservations: stagedPriceObservations,
-      discoveryOwnedKeys: new Set<string>(),
+      registryRowsRead: 0,
+      registryMultiSourcePools: 0,
+      registryFamilyBySource: {},
     });
     let callsAtTelemetryEntry: number[] | undefined;
     vi.mocked(fetchMajorStablecoinOrderbookDepthSummary).mockImplementationOnce(async () => {
@@ -1002,7 +1007,9 @@ describe("dex liquidity scoring stage cycle", () => {
           skippedByAuthoritativeProtocolCount: 0,
           skipDimensions: [],
           priceObservations: new Map(),
-          discoveryOwnedKeys: new Set<string>(),
+          registryRowsRead: 0,
+          registryMultiSourcePools: 0,
+          registryFamilyBySource: {},
         };
       },
     );
