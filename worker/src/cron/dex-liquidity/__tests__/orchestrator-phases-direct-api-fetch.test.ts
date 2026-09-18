@@ -457,8 +457,8 @@ describe("runDirectApiFetchPhase", () => {
     // Slipstream and CLMM adapters emit a `source` that differs from their
     // normalized protocol; attempted keys must match the counts that
     // `acceptedByProtocolChain` records for the same pools.
-    expect(buildAttemptedProtocolChains(fetchers)).toEqual(expect.arrayContaining([
-      "pancakeswap:bsc",
+    const attempted = buildAttemptedProtocolChains(fetchers);
+    expect(attempted).toEqual(expect.arrayContaining([
       "pancakeswap:ethereum",
       "pancakeswap:base",
       "aerodrome-slipstream:base",
@@ -467,5 +467,8 @@ describe("runDirectApiFetchPhase", () => {
       "orca:solana",
       "uniswap-v3-shadow:bsc",
     ]));
+    // The BSC subgraph is not fetched; claiming it would zero its telemetry
+    // every run and let the census veto staged BSC Pancake pools.
+    expect(attempted).not.toContain("pancakeswap:bsc");
   });
 });
