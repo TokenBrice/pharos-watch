@@ -503,6 +503,7 @@ export function validateAdapterOutput(input: ValidationInput, options?: Validati
 
   const maxSourceAgeSec = options?.maxSourceAgeSec ?? options?.adapter?.validation?.maxSourceAgeSec;
   const policyIsUnverifiedOnly = freshnessPolicyIsUnverifiedOnly(options?.adapter);
+  const freshnessMode = input.metadata?.freshnessMode;
   if (maxSourceAgeSec != null && sourceTimestamp != null) {
     const ageSec = now - sourceTimestamp;
     if (ageSec > maxSourceAgeSec) {
@@ -513,7 +514,7 @@ export function validateAdapterOutput(input: ValidationInput, options?: Validati
         ),
       );
     }
-  } else if (maxSourceAgeSec != null && !policyIsUnverifiedOnly) {
+  } else if (maxSourceAgeSec != null && !policyIsUnverifiedOnly && freshnessMode !== "not-applicable") {
     warnings.push(
       reserveDegradedWarning(
         "stale-source-undeterminable",
@@ -534,7 +535,6 @@ export function validateAdapterOutput(input: ValidationInput, options?: Validati
     );
   }
 
-  const freshnessMode = input.metadata?.freshnessMode;
   const allowedFreshnessModes = options?.adapter?.validation?.allowedFreshnessModes;
   if (
     Array.isArray(allowedFreshnessModes) &&
