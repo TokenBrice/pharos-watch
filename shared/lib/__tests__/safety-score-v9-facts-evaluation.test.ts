@@ -23,6 +23,32 @@ import type { V9AssetFactsV2, V9AssetFactsV3 } from "./safety-score-v9-facts.fix
 import { assuranceStatus, bridgeControl, bridgeSupplyRow, commonDomainFixture, staleBridgeStatus, unresolvedArchetype } from "./safety-score-v9-facts.test-support";
 
 describe("Safety Score v9 fact evaluation", () => {
+  it("keeps floating-point reserve concentration shares within the public percentage contract", () => {
+    const input = coreFixture();
+    const alpha = input.assets.find((asset) => asset.assetId === "alpha")! as unknown as V9AssetFactsV2;
+    const cash = alpha.reserveExposures[0]!;
+    const beta = alpha.reserveExposures[1]!;
+    const sharedCustodian = [{ kind: "reserve-custodian" as const, key: "custodian:shared" }];
+    const betaWeight = 0.11800000000000001;
+    alpha.reserveExposures = [
+      { ...cash, exposureKey: "exposure:base", weight: 0.7020000000000001, failureDomains: sharedCustodian },
+      { ...cash, exposureKey: "exposure:avalanche", weight: 0.17600000000000002, failureDomains: sharedCustodian },
+      { ...beta, weight: betaWeight, failureDomains: sharedCustodian },
+      { ...cash, exposureKey: "exposure:katana", weight: 0.004, failureDomains: sharedCustodian },
+    ];
+    alpha.dependencies.mappedLiveReserveWeight = betaWeight;
+    alpha.dependencies.edges = alpha.dependencies.edges.map((edge) =>
+      edge.dependencyType === "collateral" ? { ...edge, weight: betaWeight } : edge,
+    );
+
+    const evaluated = evaluateV9FactSet(compileNativeV3FactSet(input), V9_CANDIDATE_POLICY_V1);
+    const signal = evaluated.assets
+      .find((asset) => asset.assetId === "alpha")!
+      .scoreInput.pillars.backing.structuralSignals.find((item) => item.kind === "unsafe-backing");
+
+    expect(signal?.materialSharePct).toBe(100);
+  });
+
   it("attributes a missing parent score to the parent's causal NR owner", () => {
     const input = coreFixture();
     const parent = input.assets.find((asset) => asset.assetId === "gamma")! as unknown as V9AssetFactsV2;

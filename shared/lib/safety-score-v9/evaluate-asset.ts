@@ -11,6 +11,7 @@ import type {
   V9ValidatedPolicyEnvelope,
 } from "../../types/safety-score-v9";
 import { isDexMeasuredExecutionObservationHistoryMature } from "../../types/measured-execution";
+import { clampShare } from "../math";
 import { V9_NEUTRAL_CONTROL_SCORE } from "../../types/safety-score-v9-public-facts";
 import { evaluateV9AccessPosture, type V9AccessPostureResult } from "./access-posture";
 import {
@@ -222,7 +223,7 @@ function structuralSignalFromBacking(reason: V9BackingResult["structuralReasons"
     severity: reason.severity,
     reason: `${reason.kind} condition at ${reason.pathKey}.`,
     responsibility: reason.responsibility,
-    ...(reason.materialShare === null ? {} : { materialSharePct: reason.materialShare * 100 }),
+    ...(reason.materialShare === null ? {} : { materialSharePct: clampShare(reason.materialShare) * 100 }),
     economicLossScope: "reserve-claim",
     recoveryPath: "unknown",
     expectedRecoverySec: null,
