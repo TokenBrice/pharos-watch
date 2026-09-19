@@ -636,6 +636,41 @@ describe("evaluateV9Exit", () => {
     expect(material?.capsApplied).not.toContain("immaterial-executable-capacity");
   });
 
+  it("tests materiality before output-value retention", () => {
+    const evaluate = (executableUsd: number, outputValueRetention: number) =>
+      evaluateV9Exit(
+        {
+          circulatingUsd: 1_000_000_000,
+          routes: [
+            route({
+              routeKey: "dex:retained-output",
+              lane: "dex",
+              routeFamily: "dex-amm",
+              evidenceKind: "measured-executable-depth",
+              outputValueRetention,
+              capacityCurve: [
+                {
+                  requestedNotionalUsd: 25_000_000,
+                  maxCostBps: 200,
+                  executableUsd,
+                  completionRatio: executableUsd / 25_000_000,
+                  executionCostBps: 125,
+                },
+              ],
+            }),
+          ],
+        },
+        V9_CANDIDATE_POLICY_V1,
+      ).routes[0];
+
+    expect(evaluate(100_000, 0.9999)).toMatchObject({
+      capsApplied: expect.arrayContaining(["insufficient-completion:50"]),
+    });
+    expect(evaluate(100_000, 0.9999)?.capsApplied).not.toContain("immaterial-executable-capacity");
+    expect(evaluate(99_999, 1)).toMatchObject({ score: 0, capsApplied: ["immaterial-executable-capacity"] });
+    expect(evaluate(100_000, 0)).toMatchObject({ score: 0, capsApplied: ["zero-executable-capacity"] });
+  });
+
   it("does not award a diversification benefit off a zero-capacity independent route", () => {
     const primary = route();
     const zeroCapacityIndependent = route({
