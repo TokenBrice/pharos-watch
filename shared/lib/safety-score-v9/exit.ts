@@ -614,7 +614,7 @@ function evaluateRoute(
     !portfolioReviewed &&
     !hasMaterialExitCapacity(
       {
-        executableCapacityUsd: valuedExecutableUsd,
+        executableCapacityUsd: capacityPoint.executableUsd,
         requestedNotionalUsd: request.requestedNotionalUsd,
       },
       policy,
@@ -685,7 +685,7 @@ function evaluateRoute(
     capsApplied.push("zero-executable-capacity");
   } else if (!hasMaterialExitCapacity(
     {
-      executableCapacityUsd: valuedExecutableUsd,
+      executableCapacityUsd: capacityPoint.executableUsd,
       requestedNotionalUsd: request.requestedNotionalUsd,
     },
     policy,

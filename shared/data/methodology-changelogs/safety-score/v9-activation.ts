@@ -2,6 +2,21 @@ import type { MethodologyChangelogEntry } from "@shared/lib/methodology-versions
 
 export const SAFETY_SCORE_V9: readonly MethodologyChangelogEntry[] = [
   {
+    version: "9.5",
+    title: "Exit materiality uses measured executable notional",
+    date: "2026-09-19",
+    effectiveAt: 1789850801,
+    summary:
+      "The binary $100K exit-materiality gate now tests the producer-measured executable notional before output-value retention. Retention still discounts continuous capacity and output quality, so the correction removes a threshold double-charge without treating aggregate TVL or volume as executable liquidity.",
+    impact: [
+      "A route that demonstrably executes $100K within the reviewed cost bound clears the absolute materiality gate even when a small output-asset deviation values the proceeds just below $100K. Routes below $100K still fail the gate, and an output with zero retained value still scores zero.",
+      "Output-value retention continues to discount completion, capacity interpolation, and output quality. The score therefore still reflects depegged or otherwise impaired proceeds after materiality is established.",
+      "On replay of `agents/v9-captures/capture-20260919-paxg.json` at clock `1789850801`, three grades move: `paxg-paxos` NR -> 65/B-, `susd1plus-lorenzo` 36/F -> 44/D, and `usd1-world-liberty-financial` 48/D -> 56/C. No evidence was added and DEX route coverage remains fail closed.",
+    ],
+    commits: [],
+    reconstructed: false,
+  },
+  {
     version: "9.49",
     title: "Structural dependencies survive live reserve mapping",
     date: "2026-09-10",

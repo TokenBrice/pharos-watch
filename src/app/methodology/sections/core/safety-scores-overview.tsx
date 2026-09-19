@@ -22,6 +22,12 @@ export function SafetyScoresOverview() {
         score and redemption route score describe their own modules; neither is the V9 Exit score.
       </p>
       <p>
+        Since methodology v9.5, the binary $100K materiality gate uses producer-measured executable notional before
+        output-value retention. Retention still discounts continuous capacity and output quality, so impaired proceeds
+        remain penalized without being charged a second time at the threshold. Aggregate TVL and volume still do not
+        substitute for an executable route.
+      </p>
+      <p>
         Since methodology v9.4, a favorable faster-settlement term receives credit only when the exact delay has a
         review date and source; a conservative correction can still lower credit without asserting a favorable
         promise. Curated settlement and cost terms can therefore move Exit in either direction. A route whose
