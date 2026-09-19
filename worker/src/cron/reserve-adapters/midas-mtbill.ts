@@ -53,8 +53,11 @@ export function adaptMidasMtbillTransparency(payload: unknown, nowSec: number, m
   if (exactTotals.some((value) => Math.abs(value - totalMillions) * MILLION > 0.01)) {
     throw new Error("midas-mtbill: assets and equity do not reconcile");
   }
-  const roundedTotals = [reports.assets_by_protocol_chain.equity["('wallet', 'ethereum')"], ...Object.values(reports.asset_values.pv_usd)];
-  if (roundedTotals.some((value) => Math.abs(value - totalMillions) * MILLION > 1_000)) {
+  const roundedPairs = [
+    [reports.assets_by_protocol_chain.equity["('wallet', 'ethereum')"], reports.asset_values.pv_usd.ethereum],
+    [reports.asset_values.pv_usd.total, totalMillions],
+  ];
+  if (roundedPairs.some(([rounded, exact]) => Math.abs(rounded - exact) * MILLION > 1_000)) {
     throw new Error("midas-mtbill: chain totals do not reconcile");
   }
   const totalReserveUsd = totalMillions * MILLION;

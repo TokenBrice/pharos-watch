@@ -25,6 +25,20 @@ describe("mTBILL issuer portfolio", () => {
     expectValidAdapterOutput("midas-mtbill", result, { now });
   });
 
+  it("reconciles each rounded source total against its matching exact scope", () => {
+    const payload = structuredClone(fixture);
+    payload.reports.assets_by_protocol.assets.total = 76.309122;
+    payload.reports.assets_by_protocol.assets.wallet = 76.309122;
+    payload.reports.assets_by_protocol.equity.wallet = 76.309122;
+    payload.reports.assets_by_protocol.equity.total = 76.309122;
+    payload.reports.assets_by_protocol_chain.equity["('total', '')"] = 76.309122;
+    payload.reports.assets_by_protocol_chain.equity["('wallet', 'ethereum')"] = 76.308;
+    payload.reports.asset_values.pv_usd.ethereum = 76.30839;
+    payload.reports.asset_values.pv_usd.total = 76.309;
+
+    expect(() => adaptMidasMtbillTransparency(payload, now)).not.toThrow();
+  });
+
   it.each([
     ["missing date", (x: typeof fixture) => { delete (x as { updatedAt?: string }).updatedAt; }],
     ["stale date", (x: typeof fixture) => { x.updatedAt = "2026-09-01T00:00:00Z"; }],
