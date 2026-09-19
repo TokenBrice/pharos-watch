@@ -39,6 +39,13 @@ describe("validateAdapterOutput redemption telemetry", () => {
     });
   });
 
+  it("does not require a source timestamp for latest-state freshness", () => {
+    expect(validateAdapterOutput(
+      { slices, metadata: { freshnessMode: "not-applicable" } },
+      { maxSourceAgeSec: 3600 },
+    )).toEqual({ valid: true, warnings: [] });
+  });
+
   it.each([
     {
       name: "nested capacity overrides valid legacy capacity", adapter: "gho",
