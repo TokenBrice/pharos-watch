@@ -6,6 +6,18 @@ description: "Weekly release notes for Pharos."
 
 # Changelog
 
+## 2026-09-14 to 2026-09-20
+
+A 128-commit codebase review hardens every Worker boundary, and Safety Score 9.5 rates PAXG on executable notional.
+
+- **Codebase review hardening**: P0 to P4 of the 2026-09-16 review: Zod-validated Worker JSON boundaries, fail-closed depeg, DEWS, status, reserve and pricing paths, bounded retention, guardrails against hidden D1 mutations, and 30 dedup commits.
+- **Safety Score 9.5**: Exit materiality tests measured executable notional before output retention (PAXG NR to 65/B-), a share rounding past 100% no longer halts publication, and the live-reserve coverage floor recalibrates from 90% to 60%.
+- **Pricing 6.22 and 6.23**: CHFm, CADm and COPm recover through guarded Mento quotes and dEURO through its EURC redemption bridge; hourly corroboration runs before publication, and a lone DEX protocol needs an agreeing hard source.
+- **Liquidity Score 6.5**: Staged pool memory becomes a per-source registry, so a pool's family, cap treatment and V9 exit-evidence class no longer depend on which lane carried it this hour; the unresponsive BSC PancakeSwap subgraph is dropped.
+- **Reserve feed campaign**: The 22 degraded or erroring feeds were reworked: CADD moves to the August Baker Tilly report, APX excludes reconciled own claims, OUSG, mTBILL and RLUSD gain dated composition producers, and KRWQ units are corrected.
+- **Mint-burn 6.2 and supply scope**: BUIDL tracks both registered Ethereum share classes, nine incompatible supply definitions are rejected with reasons, EURCV and alUSD scope mismatches are explained, and USDm capacity binds to verified Mento V3 pools.
+- **Release and rendering repairs**: The Pages prerender broken by a null-prototype logo map and the release workflow's invalid job-level env are fixed; dates render in UTC, DEWS visuals follow the canonical ladder, and API schemas state their scales.
+
 ## 2026-09-07 to 2026-09-13
 
 Live reserve sync is rebuilt end to end while a free, keyless Safety Score feed opens on the API.
