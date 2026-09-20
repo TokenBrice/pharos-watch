@@ -8,6 +8,7 @@ const DONATION_STABLECOIN_IDS: Readonly<Record<string, string>> = {
   USDT: "usdt-tether",
   DAI: "dai-makerdao",
   USDGLO: "usdglo-glo",
+  CRVUSD: "crvusd-curve",
 };
 
 /**
