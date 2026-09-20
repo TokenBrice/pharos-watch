@@ -1,5 +1,5 @@
 {
-  "last_updated_at": 1789293123,
+  "last_updated_at": 1789939195,
   "donations": [
     {
       "chain": "ethereum",
@@ -791,6 +791,30 @@
       "asset_symbol": "USDC",
       "amount_decimal": 15,
       "usd_at_receipt": 15,
+      "price_note": "stablecoin-1-to-1"
+    },
+    {
+      "chain": "ethereum",
+      "tx_hash": "0xc33a04e895afe6b0b5dbeea2b70c806ba36fe0fc30568933958c9e8af141eb57",
+      "block_timestamp": 1789335347,
+      "from_address": "0xc4db7cad4bf65695ff2d1edf5718df7f2a03f335",
+      "display": "0xc4db7c...f335",
+      "kind": "community",
+      "asset_symbol": "CRVUSD",
+      "amount_decimal": 10,
+      "usd_at_receipt": 10,
+      "price_note": "stablecoin-1-to-1"
+    },
+    {
+      "chain": "base",
+      "tx_hash": "0xa474aebc2378d5091d14cd6ac3ebc64828d23cc30bc75b6433bce61b63dda706",
+      "block_timestamp": 1789399101,
+      "from_address": "0x839584a151b8867151b0a888c051b0b1cbfc207a",
+      "display": "flowcompass.eth",
+      "kind": "community",
+      "asset_symbol": "USDC",
+      "amount_decimal": 14,
+      "usd_at_receipt": 14,
       "price_note": "stablecoin-1-to-1"
     }
   ]

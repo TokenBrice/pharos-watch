@@ -20,7 +20,7 @@
   "status": "pre-launch",
   "announcedDate": "2026-02",
   "launchPhase": "testnet",
-  "launchPhaseDetail": "Protocol announced with whitepaper published; website live with core metrics showing 'Soon'. Claims audit-first approach but no specific auditor or report confirmed. A public waitlist opened May 21 2026 (waitlist.gyndore.com), reviving social activity after the GitHub repo (last commit Mar 7) and Medium (last post Feb 2) went quiet. A public testnet on Base Sepolia (chain 84532) is open to any EVM wallet using free test assets, running alongside the DropWave points campaign; the testnet was live by August 25 2026, though neither gyndore.com nor Medium records an opening date. The app schedules a Gyndore Liquidity Bootstrapping Event for September 15 2026 to raise launch capital. That event is a capital raise rather than a mainnet date: gyndore.com now lists only the GYND token contract deployed on Base on September 11 2026, the docs audit page names Sherlock but says no reports are published yet, and no gynUSD contract or mainnet date has been published, so Pharos records no expected launch date. Two launch configurations planned: bootstrapping (team admin key for borrow rate, transitioning via one-time fee switch to GYND governance) or GYND-from-day-one.",
+  "launchPhaseDetail": "Protocol announced with whitepaper published; website live with core metrics showing 'Soon'. Claims audit-first approach but no specific auditor or report confirmed. A public waitlist opened May 21 2026 (waitlist.gyndore.com), reviving social activity after the GitHub repo (last commit Mar 7) and Medium (last post Feb 2) went quiet. A public testnet on Base Sepolia (chain 84532) is open to any EVM wallet using free test assets, running alongside the DropWave points campaign; the testnet was live by August 25 2026, though neither gyndore.com nor Medium records an opening date. The Gyndore Liquidity Bootstrapping Event opened on September 15 2026 to raise launch capital and by September 20 the app reported it 100% sold out with bGYND allocations distributed, GYND markets on Hydrex still pending. That event was a capital raise rather than a mainnet date: gyndore.com now lists only the GYND token contract deployed on Base on September 11 2026, the docs audit page names Sherlock but says no reports are published yet, and no gynUSD contract or mainnet date has been published, so Pharos records no expected launch date. Two launch configurations planned: bootstrapping (team admin key for borrow rate, transitioning via one-time fee switch to GYND governance) or GYND-from-day-one.",
   "milestones": [
     {
       "date": "2026-02-02",
@@ -53,8 +53,8 @@
     {
       "date": "2026-09-15",
       "type": "milestone",
-      "title": "Gyndore Liquidity Bootstrapping Event scheduled",
-      "description": "The Gyndore app schedules the Liquidity Bootstrapping Event, a community initiative to raise launch capital, for September 15 2026. It is the project's first dated commitment; mainnet contracts remain unpublished.",
+      "title": "Gyndore Liquidity Bootstrapping Event opens and sells out",
+      "description": "The Gyndore app opened the Liquidity Bootstrapping Event, a capital raise for the GYND launch market and protocol-owned liquidity, on September 15 2026; the DropWave page now reports the allocation 100% sold out and bGYND allocations distributed to nominated wallets, with GYND markets to open on Hydrex at an unannounced date. It was the project's first dated commitment; mainnet gynUSD contracts remain unpublished.",
       "sourceUrl": "https://app.gyndore.com/dropwave"
     }
   ],
