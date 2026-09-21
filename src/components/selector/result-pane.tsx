@@ -71,7 +71,6 @@ export function ResultPane({
   shareFallbackUrl,
   sessionRecovered,
 }: ResultPaneProps) {
-  const logos = logosById;
   const yieldRankings = useYieldRankings();
   const yieldSourceUrls = useMemo(() => {
     const map = new Map<string, string>();

@@ -92,7 +92,6 @@ function normalizeMechanismReview(
   review: V9MechanismRiskReview,
 ): V9MechanismRiskReviewFactV2 {
   const evidenceIds = componentResearchEvidence(context, "mechanism-risk-review");
-  const evidence = context.evidence.get(evidenceIds[0]!)!;
   const normalized = structuredClone(review) as V9MechanismRiskReview;
   const componentGapIds: string[] = [];
   const componentEvidenceIds = new Set<string>();

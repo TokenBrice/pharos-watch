@@ -1,6 +1,6 @@
 /** PSI band colors — single source of truth for hex and Tailwind classes. */
 
-import { PSI_CONDITION_BAND_VALUES, type PsiConditionBand } from "@shared/types/stability";
+import { PSI_CONDITION_BAND_VALUES, type PsiConditionBand } from "../types/stability";
 
 /** The closed band vocabulary lives in the wire contract; this alias keeps lib call sites terse. */
 export type ConditionBand = PsiConditionBand;

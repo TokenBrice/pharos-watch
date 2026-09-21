@@ -14,7 +14,6 @@ import {
   STALE_THRESHOLD_MS,
   SUPPLEMENTAL_SOURCE_STALE_THRESHOLD_MS,
 } from "../../lib/yield-ranking-helpers";
-import { buildHistoryKey } from "../yield-sync/evaluation";
 import { YIELD_BENCHMARK_SCORE_TTL_SEC } from "../yield-sync/benchmarks";
 import {
   buildYieldRankingsPayloadFromEvaluatedSources,

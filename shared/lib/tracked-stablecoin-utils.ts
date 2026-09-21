@@ -1,4 +1,4 @@
-import type { ContractDeployment, StablecoinMeta } from "../types";
+import type { StablecoinMeta } from "../types";
 import {
   ACTIVE_STABLECOINS,
   TRACKED_META_BY_ID,

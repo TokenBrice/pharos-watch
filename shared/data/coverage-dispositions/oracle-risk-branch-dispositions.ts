@@ -24,14 +24,11 @@
  */
 
 /** Branch evidence fields a reviewed disposition may cover. */
-const ORACLE_RISK_BRANCH_DISPOSITION_FIELDS = ["liquidationDelaySec"] as const;
-export type OracleRiskBranchDispositionField = (typeof ORACLE_RISK_BRANCH_DISPOSITION_FIELDS)[number];
+export type OracleRiskBranchDispositionField = "liquidationDelaySec";
 
-const ORACLE_RISK_BRANCH_DISPOSITIONS = ["reviewed-inoperable"] as const;
-export type OracleRiskBranchDisposition = (typeof ORACLE_RISK_BRANCH_DISPOSITIONS)[number];
+export type OracleRiskBranchDisposition = "reviewed-inoperable";
 
-const ORACLE_RISK_BRANCH_DISPOSITION_REASON_CODES = ["liquidation-uncallable-dead-oracle"] as const;
-export type OracleRiskBranchDispositionReasonCode = (typeof ORACLE_RISK_BRANCH_DISPOSITION_REASON_CODES)[number];
+export type OracleRiskBranchDispositionReasonCode = "liquidation-uncallable-dead-oracle";
 
 export interface ReviewedOracleRiskBranchDisposition {
   /** Stablecoin id the branch belongs to. */

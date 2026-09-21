@@ -95,7 +95,6 @@ export async function resolveMetalReferenceRates(
   {
     prevRates,
     commodityPeerMedian,
-    syncStartSec,
     signal,
     validateRate,
   }: {
