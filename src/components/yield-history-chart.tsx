@@ -40,9 +40,7 @@ import {
 const SPIKE_COLOR = "oklch(0.72 0.18 35)";
 const OVERLAY_COLORS = CHART_PALETTE.slice(3);
 
-type NullableBenchmarkYieldHistoryChartProps = Omit<YieldHistoryChartProps, "benchmarkRate"> & {
-  benchmarkRate: number | null;
-};
+type NullableBenchmarkYieldHistoryChartProps = YieldHistoryChartProps;
 
 export function YieldHistoryChart({
   stablecoinId,
@@ -57,10 +55,9 @@ export function YieldHistoryChart({
   externalSourceKey,
   externalSourceKeys,
 }: NullableBenchmarkYieldHistoryChartProps) {
-  const chartModelBenchmarkRate = benchmarkRate ?? medianApy;
   const model = useYieldHistoryChartModel({
     stablecoinId,
-    benchmarkRate: chartModelBenchmarkRate,
+    benchmarkRate,
     benchmarkLabel,
     benchmarkIsFallback,
     medianApy,

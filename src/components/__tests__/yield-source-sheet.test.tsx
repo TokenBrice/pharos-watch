@@ -7,6 +7,7 @@ import { mergeSourceRiskGoldenFixtures } from "@shared/test-utils/yield-source-r
 import { makeAltYieldSource, makeYieldProvenance, makeYieldRanking } from "@shared/test-utils/yield-ranking-fixtures";
 import type { YieldRanking } from "@shared/types";
 import { renderYieldSourceSheet } from "./yield-source-sheet-test-support";
+import { REGISTRY_WITH_EUR } from "./yield-test-support";
 
 vi.mock("@/components/ui/sheet", () => ({
   Sheet: ({ open, children }: { open: boolean; children: React.ReactNode }) => (open ? <div>{children}</div> : null),
@@ -18,8 +19,18 @@ vi.mock("@/components/ui/sheet", () => ({
 }));
 
 vi.mock("@/components/yield-history-chart", () => ({
-  YieldHistoryChart: ({ externalSourceKey }: { externalSourceKey: string }) => (
-    <div data-testid="yield-history-chart">{externalSourceKey}</div>
+  YieldHistoryChart: ({
+    externalSourceKey,
+    benchmarkRate,
+    benchmarkLabel,
+  }: {
+    externalSourceKey: string;
+    benchmarkRate: number | null;
+    benchmarkLabel?: string;
+  }) => (
+    <div data-testid="yield-history-chart" data-benchmark-rate={benchmarkRate} data-benchmark-label={benchmarkLabel}>
+      {externalSourceKey}
+    </div>
   ),
 }));
 
@@ -90,6 +101,22 @@ describe("YieldSourceSheet", () => {
     rerender(<YieldSourceSheet ranking={usdt} logo={undefined} riskFreeRate={0.02} medianApy={0.03} open onOpenChange={vi.fn()} />);
 
     expect(screen.getByTestId("yield-history-chart").textContent).toContain("best-usdt");
+  });
+
+  it("resolves a missing row rate from its registry benchmark for the history chart", () => {
+    renderYieldSourceSheet(
+      {
+        ...makeRanking("eurc", "best-eurc", "alt-eurc"),
+        benchmarkKey: "EUR",
+        benchmarkLabel: "EUR 3M compounded €STR",
+        benchmarkRate: undefined,
+      },
+      { benchmarks: REGISTRY_WITH_EUR },
+    );
+
+    const chart = screen.getByTestId("yield-history-chart");
+    expect(chart.getAttribute("data-benchmark-rate")).toBe("1.94");
+    expect(chart.getAttribute("data-benchmark-label")).toBe("EUR 3M compounded €STR");
   });
 
   it("shows current and previous source identity for source changes", () => {

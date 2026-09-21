@@ -11,7 +11,9 @@ import type { YieldViewModelRow } from "@/lib/yield-view-model";
 import { REGISTRY_WITH_EUR, makeYieldViewModelRow, renderYieldMobileCard, YIELD_TEST_PROVENANCE } from "./yield-test-support";
 
 vi.mock("@/components/yield-history-chart", () => ({
-  YieldHistoryChart: () => <div data-testid="yield-history-chart" />,
+  YieldHistoryChart: ({ benchmarkRate, benchmarkLabel }: { benchmarkRate: number | null; benchmarkLabel?: string }) => (
+    <div data-testid="yield-history-chart" data-benchmark-rate={benchmarkRate} data-benchmark-label={benchmarkLabel} />
+  ),
 }));
 
 const baseRow = makeYieldViewModelRow({
@@ -390,6 +392,13 @@ describe("YieldInstrumentBoard — zone chip benchmark resolution", () => {
     // frame (3.5): a Sweet Spot chip proves the EUR rate was used.
     renderBoard(eurRowWithoutRate(), false, { benchmarks: REGISTRY_WITH_EUR });
     expect(screen.getByText("Sweet Spot")).toBeTruthy();
+  });
+
+  it("uses the same resolved EUR benchmark for the expanded history chart", () => {
+    renderBoard(eurRowWithoutRate(), true, { benchmarks: REGISTRY_WITH_EUR });
+    const chart = screen.getByTestId("yield-history-chart");
+    expect(chart.getAttribute("data-benchmark-rate")).toBe("1.94");
+    expect(chart.getAttribute("data-benchmark-label")).toBe("EUR 3M compounded €STR");
   });
 
   it("still falls back to the risk-free frame when no registry is provided", () => {

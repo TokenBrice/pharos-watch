@@ -3,7 +3,11 @@
 import { useMemo, useState, type Dispatch, type SetStateAction } from "react";
 import { useYieldRankings } from "@/hooks/api-hooks";
 import { useUrlFilters } from "@/hooks/use-url-filters";
-import { resolveYieldDisplayRebaseReferenceRate, getYieldBenchmarkGapReferenceText } from "@/lib/yield-benchmark";
+import {
+  resolveYieldDisplayRebaseReferenceRate,
+  getYieldBenchmarkGapReferenceText,
+  resolveYieldRowBenchmark,
+} from "@/lib/yield-benchmark";
 import { getYieldDataSourceMeta } from "@/lib/yield-data-source";
 import { computePysBreakdown, getPysColor } from "@/lib/yield-constants";
 import { buildYieldSourceExplorerModel, type YieldSourceExplorerModel } from "@/lib/yield-source-explorer-model";
@@ -57,7 +61,7 @@ export interface YieldDetailReadyModel {
   pysColor: string;
   yieldTypeLabel: string;
   yieldTypeBadge: string;
-  benchmarkLabel?: string | null;
+  benchmarkLabel: string;
 }
 
 export type YieldDetailModel =
@@ -116,6 +120,7 @@ export function buildYieldDetailModel(
     ),
     scalingFactor: rankingResponse.scalingFactor,
   };
+  const resolvedBenchmark = resolveYieldRowBenchmark(ranking, rankingResponse.benchmarks, rankingResponse.riskFreeRate);
   const sourceExplorer = buildYieldSourceExplorerModel(ranking);
   const availableSourceKeys = new Set(sourceExplorer.historySources.map((source) => source.sourceKey));
   const validatedSourceKeys = [...requestedSourceKeys].filter((sourceKey) => availableSourceKeys.has(sourceKey));
@@ -124,9 +129,9 @@ export function buildYieldDetailModel(
     status: "ready",
     ranking,
     benchmarkSubtitle: getYieldBenchmarkGapReferenceText(ranking, { includePeriod: false }),
-    benchmarkRate: ranking.benchmarkRate ?? rankingResponse.riskFreeRate ?? null,
+    benchmarkRate: resolvedBenchmark.rate,
     medianApy: rankingResponse.medianApy ?? 0,
-    benchmarkIsFallback: ranking.benchmarkSelectionMode === "fallback-usd" || !!ranking.benchmarkIsFallback,
+    benchmarkIsFallback: resolvedBenchmark.isFallback,
     sourceExplorer,
     sourceDepthLens: sourceExplorer.sourceDepthLens,
     sourceRiskDrivers: sourceExplorer.sourceRiskDrivers,
@@ -141,7 +146,7 @@ export function buildYieldDetailModel(
     pysColor: getPysColor(ranking.pharosYieldScore),
     yieldTypeLabel: YIELD_TYPE_LABELS[ranking.yieldType] ?? ranking.yieldType,
     yieldTypeBadge: YIELD_TYPE_STYLES[ranking.yieldType]?.badge ?? "",
-    benchmarkLabel: ranking.benchmarkLabel,
+    benchmarkLabel: resolvedBenchmark.label,
   };
 }
 

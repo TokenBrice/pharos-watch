@@ -35,13 +35,15 @@ import {
 } from "@/lib/yield-presentation";
 import { formatCurrency, formatPercent } from "@shared/lib/format";
 import { YIELD_TYPE_LABELS, YIELD_TYPE_STYLES } from "@shared/lib/classification";
-import type { YieldRanking } from "@shared/types";
+import type { YieldBenchmarkRegistry, YieldRanking } from "@shared/types";
+import { resolveYieldRowBenchmark } from "@/lib/yield-benchmark";
 
 interface YieldSourceSheetProps {
   ranking: YieldRanking | null;
   logo: string | undefined;
   riskFreeRate: number;
   medianApy: number;
+  benchmarks?: YieldBenchmarkRegistry | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }
@@ -51,10 +53,11 @@ interface YieldSourceSheetBodyProps {
   logo: string | undefined;
   riskFreeRate: number;
   medianApy: number;
+  benchmarks?: YieldBenchmarkRegistry | null;
   onOpenChange: (open: boolean) => void;
 }
 
-function YieldSourceSheetBody({ ranking, logo, riskFreeRate, medianApy, onOpenChange }: YieldSourceSheetBodyProps) {
+function YieldSourceSheetBody({ ranking, logo, riskFreeRate, medianApy, benchmarks, onOpenChange }: YieldSourceSheetBodyProps) {
   const [selectedSourceKey, setSelectedSourceKey] = useState<string | null>(null);
   const [showAllSheetSources, setShowAllSheetSources] = useState(false);
   const chartRef = useRef<HTMLDivElement>(null);
@@ -70,6 +73,7 @@ function YieldSourceSheetBody({ ranking, logo, riskFreeRate, medianApy, onOpenCh
     sourceExplorer.allSources.find((source) => source.sourceKey === effectiveSourceKey) ?? selectedSource;
   const confidenceTier = ranking.provenance?.confidenceTier ?? null;
   const confidenceStyle = confidenceTier ? (YIELD_SOURCE_CONFIDENCE_STYLES[confidenceTier] ?? null) : null;
+  const resolvedBenchmark = resolveYieldRowBenchmark(ranking, benchmarks, riskFreeRate);
   const confidenceLabel = confidenceTier ? (YIELD_SOURCE_CONFIDENCE_DEFINITIONS[confidenceTier]?.label ?? null) : null;
   const calculationMode = ranking.provenance?.calculationMode ?? null;
   const evidenceClass = ranking.provenance?.evidenceClass ?? null;
@@ -334,9 +338,9 @@ function YieldSourceSheetBody({ ranking, logo, riskFreeRate, medianApy, onOpenCh
             </p>
             <YieldHistoryChart
               stablecoinId={ranking.id}
-              benchmarkRate={ranking.benchmarkRate ?? riskFreeRate}
-              benchmarkLabel={ranking.benchmarkLabel}
-              benchmarkIsFallback={ranking.benchmarkSelectionMode === "fallback-usd" || ranking.benchmarkIsFallback}
+              benchmarkRate={resolvedBenchmark.rate}
+              benchmarkLabel={resolvedBenchmark.label}
+              benchmarkIsFallback={resolvedBenchmark.isFallback}
               medianApy={medianApy}
               compact
               availableSources={sourceExplorer.historySources}
@@ -391,6 +395,7 @@ export function YieldSourceSheet({
   logo,
   riskFreeRate,
   medianApy,
+  benchmarks = null,
   open,
   onOpenChange,
 }: YieldSourceSheetProps) {
@@ -404,6 +409,7 @@ export function YieldSourceSheet({
         logo={logo}
         riskFreeRate={riskFreeRate}
         medianApy={medianApy}
+        benchmarks={benchmarks}
         onOpenChange={onOpenChange}
       />
     </Sheet>

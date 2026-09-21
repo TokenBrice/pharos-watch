@@ -561,7 +561,7 @@ export default function YieldAnalysisClient({ id, staticCoin, logoSrc }: YieldAn
           <YieldHistoryChart
             stablecoinId={id}
             benchmarkRate={readyModel.benchmarkRate}
-            benchmarkLabel={ranking.benchmarkLabel}
+            benchmarkLabel={readyModel.benchmarkLabel}
             benchmarkIsFallback={readyModel.benchmarkIsFallback}
             medianApy={readyModel.medianApy}
             availableSources={readyModel.historySources}

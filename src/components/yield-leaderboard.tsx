@@ -41,7 +41,6 @@ import {
 } from "@/components/yield-leaderboard-row-parts";
 import { trackEvent } from "@/lib/analytics";
 import { resolveYieldDisplayRebaseReferenceRate, resolveYieldRowBenchmark } from "@/lib/yield-benchmark";
-import { isYieldBenchmarkFallback } from "@/lib/yield-workbench-row";
 import type { YieldBenchmarkRegistry } from "@shared/types";
 import { downloadCsvWithPreamble, type CsvColumn } from "@/lib/exports/csv";
 import type { YieldViewModelRow } from "@/lib/yield-view-model";
@@ -440,6 +439,7 @@ export function YieldLeaderboard({
         logo={sheetRankingId ? getLogoSrc(logos, sheetRankingId) : undefined}
         riskFreeRate={riskFreeRate}
         medianApy={medianApy}
+        benchmarks={benchmarks}
         open={sheetRankingId !== null}
         onOpenChange={(open) => {
           if (!open) setSheetRankingId(null);
@@ -529,6 +529,7 @@ export function YieldMobileCard({
       ),
     [row, scalingFactor, methodologyVersion, riskFreeRate],
   );
+  const resolvedBenchmark = resolveYieldRowBenchmark(row, benchmarks, riskFreeRate);
 
   return (
     <article
@@ -616,8 +617,7 @@ export function YieldMobileCard({
         <YieldZoneChip
           safetyScore={safetyScore}
           apy30d={row.apy30d}
-          // Row rate -> registry entry for the row's key -> USD frame -> risk-free.
-          benchmarkRate={resolveYieldRowBenchmark(row, benchmarks, riskFreeRate).rate}
+          benchmarkRate={resolvedBenchmark.rate}
         />
         <MobileMetricPill>
           TVL{" "}
@@ -732,9 +732,9 @@ export function YieldMobileCard({
           ) : null}
           <YieldHistoryChart
             stablecoinId={row.id}
-            benchmarkRate={row.benchmarkRate ?? null}
-            benchmarkLabel={row.benchmarkLabel}
-            benchmarkIsFallback={isYieldBenchmarkFallback(row)}
+            benchmarkRate={resolvedBenchmark.rate}
+            benchmarkLabel={resolvedBenchmark.label}
+            benchmarkIsFallback={resolvedBenchmark.isFallback}
             medianApy={medianApy}
             compact
             availableSources={availableSources}

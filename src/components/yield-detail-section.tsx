@@ -150,7 +150,7 @@ export default function YieldDetailSection({ stablecoinId }: YieldDetailSectionP
       stablecoinId={stablecoinId}
       defaultDays={30}
       benchmarkRate={view.benchmarkRate}
-      benchmarkLabel={view.ranking.benchmarkLabel}
+      benchmarkLabel={view.benchmarkLabel}
       benchmarkIsFallback={view.benchmarkIsFallback}
       medianApy={view.medianApy}
       availableSources={view.historySources}
