@@ -784,11 +784,12 @@ describe("adaptAccountableDashboard", () => {
       breakdownCount: 2,
       mappedBucketCount: 1,
       collateralization: 1.083117,
-      collateralizationRatio: 1.083117,
+      reportedCollateralizationRatio: 1.083117,
       signedBucketCount: 1,
       signedBucketNames: ["[Global_Dollar]_USDG_Loop"],
       signedBucketValue: -15725261.164036,
     });
+    expect(result.metadata).not.toHaveProperty("collateralizationRatio");
   });
 
   it("reconciles a timestamped Yuzu exposure split against the nearest contemporaneous timeline total", async () => {
@@ -1306,6 +1307,10 @@ describe("adaptAccountableDashboard collateralization reconciliation", () => {
     };
     expect(reconciliation.grossRatio).toBeCloseTo(0.9435191072, 9);
     expect(reconciliation.netRatio).toBeCloseTo(0.922477, 6);
+    // A reviewed-net basis is reproducible, so the canonical ratio is the derived one and the
+    // issuer headline is not duplicated under a second key.
+    expect(result.metadata?.collateralizationRatio).toBeCloseTo(reconciliation.netRatio, 12);
+    expect(result.metadata?.reportedCollateralizationRatio).toBeUndefined();
     expect(result.metadata?.supplyUsd).toBe(327_073_514.82);
     expect(result.metadata?.protocolOwnedUsd).toBe(88_777_862.88);
   });
@@ -1352,6 +1357,7 @@ describe("adaptAccountableDashboard collateralization reconciliation", () => {
     );
 
     expect(result.metadata?.collateralizationBasis).toBe("gross");
+    expect(result.metadata?.collateralizationRatio).toBeCloseTo(60_607_322.11 / 58_619_735.19, 12);
     expect(result.warnings?.map((warning) => warning.code)).toEqual(["protocol-owned-bucket"]);
     expect(result.metadata?.collateralizationReconciliation).toMatchObject({
       basis: "gross",
@@ -1379,15 +1385,13 @@ describe("adaptAccountableDashboard collateralization reconciliation", () => {
     );
 
     expect(result.metadata?.collateralizationBasis).toBe("unreconciled");
+    expect(result.metadata).not.toHaveProperty("collateralizationRatio");
+    expect(result.metadata?.reportedCollateralizationRatio).toBe(0.75);
     expect(result.warnings).toContainEqual(expect.objectContaining({
       code: "collateralization-unreconciled",
       effect: "degraded",
     }));
-    expect(
-      result.warnings?.find((warning) => warning.code === "reserve-undercollateralized")?.message,
-    ).toBe(
-      "Accountable dashboard reports 75.00% collateralization on an unreconciled denominator (gross reserves/supply 100.00%)",
-    );
+    expect(result.warnings?.some((warning) => warning.code === "reserve-undercollateralized")).toBe(false);
   });
 
   it("leaves the basis underived when the feed publishes no total_supply", () => {
@@ -1408,10 +1412,11 @@ describe("adaptAccountableDashboard collateralization reconciliation", () => {
 
     expect(result.metadata?.collateralizationBasis).toBe("underived");
     expect(result.metadata?.supplyUsd).toBeUndefined();
-    expect(result.warnings?.map((warning) => warning.code)).toEqual(["reserve-undercollateralized"]);
-    expect(
-      result.warnings?.find((warning) => warning.code === "reserve-undercollateralized")?.message,
-    ).toBe("Accountable dashboard reports 90.00% collateralization");
+    // No totals means no reproducible denominator: the issuer headline is published as
+    // reported, and no canonical ratio or coverage warning can claim measured coverage.
+    expect(result.metadata).not.toHaveProperty("collateralizationRatio");
+    expect(result.metadata?.reportedCollateralizationRatio).toBe(0.9);
+    expect(result.warnings).toBeUndefined();
   });
 
   it("rejects a malformed total_supply instead of silently dropping the denominator", () => {
