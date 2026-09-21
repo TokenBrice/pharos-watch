@@ -150,7 +150,8 @@ const EVM_ADDRESS_HEX_RE = /^0x[0-9a-fA-F]{40}$/;
 const EVM_TOPIC_HEX_RE = /^0x[0-9a-fA-F]{64}$/;
 const EVM_HASH_HEX_RE = /^0x[0-9a-fA-F]{64}$/;
 const EVM_QUANTITY_HEX_RE = /^0x[0-9a-fA-F]+$/;
-const EVM_DATA_HEX_RE = /^0x(?:[0-9a-fA-F]{2})*$/;
+/** Etherscan log data is whole ABI words, so the hex body is always even-length. */
+const EVM_DATA_HEX_RE = /^0x[0-9a-fA-F]*$/;
 
 function isEtherscanLogEntry(value: unknown): value is EtherscanLogEntry {
   if (!value || typeof value !== "object") return false;
@@ -162,6 +163,7 @@ function isEtherscanLogEntry(value: unknown): value is EtherscanLogEntry {
     && log.topics.every((topic) => typeof topic === "string" && EVM_TOPIC_HEX_RE.test(topic))
     && typeof log.data === "string"
     && EVM_DATA_HEX_RE.test(log.data)
+    && log.data.length % 2 === 0
     && typeof log.blockNumber === "string"
     && EVM_QUANTITY_HEX_RE.test(log.blockNumber)
     && typeof log.timeStamp === "string"

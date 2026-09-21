@@ -41,10 +41,38 @@ interface KinesisCirculationData {
 
 const INVALID_PAYLOAD_REASON = "invalid-upstream-payload";
 
+function isAsciiDigit(code: number): boolean {
+  return code >= 48 && code <= 57;
+}
+
+function isCanonicalKinesisNumber(value: string): boolean {
+  const decimalIndex = value.indexOf(".");
+  const integerEnd = decimalIndex === -1 ? value.length : decimalIndex;
+  if (integerEnd === 0) return false;
+
+  const firstCode = value.charCodeAt(0);
+  if (firstCode === 48) {
+    if (integerEnd !== 1) return false;
+  } else if (firstCode < 49 || firstCode > 57) {
+    return false;
+  }
+  for (let index = 1; index < integerEnd; index += 1) {
+    if (!isAsciiDigit(value.charCodeAt(index))) return false;
+  }
+
+  if (decimalIndex === -1 || decimalIndex === value.length - 1) {
+    return decimalIndex === -1;
+  }
+  for (let index = decimalIndex + 1; index < value.length; index += 1) {
+    if (!isAsciiDigit(value.charCodeAt(index))) return false;
+  }
+  return true;
+}
+
 function decodeKinesisNumber(value: unknown): number | null {
   if (typeof value === "number") return Number.isFinite(value) ? value : null;
   if (typeof value !== "string" || value.length === 0 || value.trim() !== value) return null;
-  if (!/^(?:0|[1-9]\d*)(?:\.\d+)?$/.test(value)) return null;
+  if (!isCanonicalKinesisNumber(value)) return null;
   const parsed = Number(value);
   return Number.isFinite(parsed) ? parsed : null;
 }

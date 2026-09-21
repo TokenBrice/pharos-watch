@@ -76,6 +76,9 @@ export function severityForScoreDowngrade(prevGrade: string, newGrade: string): 
   return "notice";
 }
 
+const DATE_YEAR_MONTH_RE = /^\d{4}-\d{2}$/;
+const DATE_YEAR_MONTH_DAY_RE = /^\d{4}-\d{2}-\d{2}$/;
+
 /**
  * Parse an exact "YYYY-MM-DD" or "YYYY-MM" date string to epoch-seconds
  * (UTC). Missing days default to the first of the month. Invalid or absent
@@ -83,12 +86,12 @@ export function severityForScoreDowngrade(prevGrade: string, newGrade: string): 
  */
 export function parseDateStringToEpochSec(value: string | undefined | null): number | null {
   if (!value) return null;
-  const match = /^(\d{4})-(\d{2})(?:-(\d{2}))?$/.exec(value);
-  if (!match) return null;
+  const hasDay = DATE_YEAR_MONTH_DAY_RE.test(value);
+  if (!hasDay && !DATE_YEAR_MONTH_RE.test(value)) return null;
 
-  const year = Number(match[1]);
-  const month = Number(match[2]);
-  const day = Number(match[3] ?? "1");
+  const year = Number(value.slice(0, 4));
+  const month = Number(value.slice(5, 7));
+  const day = hasDay ? Number(value.slice(8, 10)) : 1;
   const parsed = new Date(0);
   parsed.setUTCHours(0, 0, 0, 0);
   parsed.setUTCFullYear(year, month - 1, day);

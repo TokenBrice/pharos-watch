@@ -42,6 +42,7 @@ function assertWidenHost(value: string, label: string): void {
 export function fiddIndependentAssuranceProfile(
   viewerUrlPattern: string,
 ): IndependentAssuranceProfile {
+  // eslint-disable-next-line security/detect-non-literal-regexp -- reviewed adapter config from the tracked coin JSON; compiled once when the profile is built, never from user input.
   const viewerPattern = new RegExp(viewerUrlPattern, "i");
   return {
     adapterName: "fidd-independent-assurance",
