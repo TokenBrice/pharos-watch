@@ -3,8 +3,8 @@ import type { BluechipRating, BluechipSmidge } from "@shared/types/market";
 type Category = { translations?: Array<{ summary?: string }> } | null;
 type ApiCoin = {
   grade: BluechipRating["grade"];
-  collateralization?: number;
-  smart_contract_audit?: boolean;
+  collateralization?: number | null;
+  smart_contract_audit?: boolean | null;
   date_of_rating?: string | null;
   date_last_change?: string | null;
 } & Partial<Record<keyof BluechipSmidge, Category>>;

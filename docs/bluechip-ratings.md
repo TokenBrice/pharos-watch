@@ -56,9 +56,9 @@ Each cached map value is a `BluechipRating` (`shared/types/bluechip.ts`, re-expo
 |-------|---------|
 | `grade` | Bluechip letter grade |
 | `slug` | Bluechip report slug |
-| `collateralization` | Numeric collateralization percentage |
-| `smartContractAudit` | Audit-presence boolean from Bluechip |
-| `dateOfRating` | Rating date string |
+| `collateralization` | Numeric collateralization percentage, or `null` when Bluechip does not report it |
+| `smartContractAudit` | Audit-presence boolean from Bluechip, or `null` when it is not reported |
+| `dateOfRating` | Rating date string, or `null` when Bluechip does not report it |
 | `dateLastChange` | Last grade-change date string or `null` |
 | `smidge` | Plain-text summaries for `stability`, `management`, `implementation`, `decentralization`, `governance`, `externals` |
 

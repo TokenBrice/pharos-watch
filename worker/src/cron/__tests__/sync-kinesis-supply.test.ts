@@ -92,6 +92,18 @@ describe("parseKinesisResponse", () => {
   it("returns null when fields are non-numeric", () => {
     expect(parseKinesisResponse({ circulation: "abc", mint: 0, redemption: 0 })).toBeNull();
   });
+  it.each([null, "", " ", true])("rejects missing or non-numeric field %j", (value) => {
+    expect(parseKinesisResponse({ circulation: value, mint: 0, redemption: 0 })).toBeNull();
+  });
+
+  it("accepts numeric zero and canonical zero strings", () => {
+    expect(parseKinesisResponse({ circulation: 0, mint: "0", redemption: 0 })).toEqual({
+      circulation: 0,
+      mint: 0,
+      redemption: 0,
+    });
+  });
+
 });
 
 describe("syncKinesisSupply", () => {
@@ -136,6 +148,7 @@ describe("syncKinesisSupply", () => {
       '{"circulation":100,"mint":"Infinity","redemption":0}',
       '{"circulation":100,"mint":200,"redemption":-1}',
       '{"circulation":100,"mint":200,"redemption":"NaN"}',
+      '{"records":[{"circulation":null,"mint":"","redemption":" "}]}',
       '{"records":[]}',
       'malformed JSON',
     ]) {
@@ -144,7 +157,8 @@ describe("syncKinesisSupply", () => {
       const { db, runFn } = makeDb();
       const result = await syncKinesisSupply(db, new AbortController().signal);
       expect(result.itemCount).toBe(0);
-      expect(result.status).toBe("error");
+      expect(result.status).toBe("degraded");
+      expect(JSON.parse(result.metadata ?? "{}")).toMatchObject({ reason: "invalid-upstream-payload" });
       expect(runFn).not.toHaveBeenCalled();
       expect(vi.mocked(recordOutcomeSafe).mock.calls.map((call) => call[2])).toEqual([false, false]);
     }

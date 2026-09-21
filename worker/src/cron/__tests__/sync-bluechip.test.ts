@@ -62,6 +62,26 @@ describe("syncBluechip", () => {
     expect(parseBluechipRatingsCache("{bad-json", "sync-bluechip:existing-cache")).toEqual({});
     expect(getCacheJsonParseFailureCountersForTests()["sync-bluechip:existing-cache"]?.count).toBe(1);
   });
+  it("retains valid cached ratings when one record is invalid", () => {
+    const valid = {
+      grade: "A",
+      slug: "tether",
+      collateralization: null,
+      smartContractAudit: null,
+      dateOfRating: null,
+      dateLastChange: null,
+      smidge: {
+        stability: null,
+        management: null,
+        implementation: null,
+        decentralization: null,
+        governance: null,
+        externals: null,
+      },
+    };
+    expect(parseBluechipRatingsCache(JSON.stringify({ valid, invalid: null }), "sync-bluechip:test-cache")).toEqual({ valid });
+  });
+
 
   it("writes transformed bluechip ratings to cache on happy path", async () => {
     mockFetch([
@@ -102,6 +122,46 @@ describe("syncBluechip", () => {
     expect(cached["usdc-circle"].grade).toBe("B");
     expect(cached["usdc-circle"].slug).toBe("usdc");
   });
+  it("publishes null when Bluechip omits optional rating fields", async () => {
+    const missing = bluechipResponse();
+    delete missing.data[0]!.collateralization;
+    delete missing.data[0]!.smart_contract_audit;
+    delete missing.data[0]!.date_of_rating;
+    mockFetch([
+      { match: "/coin-data/tether", body: missing },
+      { match: "/coin-data/usdc", body: bluechipResponse() },
+    ]);
+
+    const db = mockD1();
+    const result = await syncBluechip(db);
+
+    expect(result.status).toBeUndefined();
+    const insert = getCacheInsert(db as MockD1Database);
+    const cached = JSON.parse(String(insert?.binds[1])) as Record<string, Record<string, unknown>>;
+    expect(cached["usdt-tether"]).toMatchObject({
+      collateralization: null,
+      smartContractAudit: null,
+      dateOfRating: null,
+    });
+  });
+
+  it("isolates an invalid Bluechip record within a response", async () => {
+    const valid = bluechipResponse({ grade: "B" });
+    mockFetch([
+      { match: "/coin-data/tether", body: { data: [{ grade: "not-a-grade" }, valid.data[0]] } },
+      { match: "/coin-data/usdc", body: bluechipResponse() },
+    ]);
+
+    const db = mockD1();
+    const result = await syncBluechip(db);
+
+    expect(result.status).toBeUndefined();
+    const insert = getCacheInsert(db as MockD1Database);
+    const cached = JSON.parse(String(insert?.binds[1])) as Record<string, { grade: string }>;
+    expect(cached["usdt-tether"]?.grade).toBe("B");
+    expect(cached["usdc-circle"]?.grade).toBe("A");
+  });
+
 
   it("accepts null category blocks from the Bluechip payload", async () => {
     mockFetch([
@@ -154,9 +214,9 @@ describe("syncBluechip", () => {
     expect(result.itemCount).toBe(2);
 
     const insert = getCacheInsert(db as MockD1Database);
-    const cached = JSON.parse(String(insert?.binds[1])) as Record<string, { dateOfRating: string }>;
-    expect(cached["usdt-tether"].dateOfRating).toBe("");
-    expect(cached["usdc-circle"].dateOfRating).toBe("");
+    const cached = JSON.parse(String(insert?.binds[1])) as Record<string, { dateOfRating: string | null }>;
+    expect(cached["usdt-tether"].dateOfRating).toBeNull();
+    expect(cached["usdc-circle"].dateOfRating).toBeNull();
   });
 
   it("returns degraded when bluechip API requests fail", async () => {

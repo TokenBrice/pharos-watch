@@ -145,6 +145,30 @@ describe("ComparisonTable", () => {
     expect(html).toContain("Open Safety Score waterfall for USDT");
     expect(html).toContain("Evidence age stale");
   });
+  it("marks missing Bluechip audit data as not reported", () => {
+    const coin = makeCoin("usdt", "USDT");
+    coin.bluechipRating = {
+      grade: "A",
+      slug: "tether",
+      collateralization: null,
+      smartContractAudit: null,
+      dateOfRating: null,
+      dateLastChange: null,
+      smidge: {
+        stability: null,
+        management: null,
+        implementation: null,
+        decentralization: null,
+        governance: null,
+        externals: null,
+      },
+    };
+    const html = renderToStaticMarkup(<ComparisonTable coins={[coin]} pegRates={PEG_RATES} logos={{}} />);
+
+    expect(html).toContain("A · audit not reported");
+    expect(html).not.toContain("no audit flag");
+  });
+
 
   it("uses the shared horizontally scrollable table foundation", () => {
     const html = renderToStaticMarkup(

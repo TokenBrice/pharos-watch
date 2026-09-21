@@ -39,6 +39,20 @@ interface KinesisCirculationData {
   redemption: number;
 }
 
+const INVALID_PAYLOAD_REASON = "invalid-upstream-payload";
+
+function decodeKinesisNumber(value: unknown): number | null {
+  if (typeof value === "number") return Number.isFinite(value) ? value : null;
+  if (typeof value !== "string" || value.length === 0 || value.trim() !== value) return null;
+  if (!/^(?:0|[1-9]\d*)(?:\.\d+)?$/.test(value)) return null;
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : null;
+}
+
+function isValidKinesisNumber(value: number | null): value is number {
+  return value != null && value >= 0;
+}
+
 function newestDatedRecord(records: unknown[]): unknown {
   let newest: { record: unknown; timestamp: number } | null = null;
   for (const record of records) {
@@ -73,12 +87,12 @@ export function parseKinesisResponse(data: unknown): KinesisCirculationData | nu
 function extractFields(record: unknown): KinesisCirculationData | null {
   if (!record || typeof record !== "object") return null;
   const r = record as Record<string, unknown>;
-  const circulation = Number(r.circulation);
-  const mint = Number(r.mint);
-  const redemption = Number(r.redemption);
-  if (!Number.isFinite(circulation) || circulation < 0) return null;
-  if (!Number.isFinite(mint) || mint < 0) return null;
-  if (!Number.isFinite(redemption) || redemption < 0) return null;
+  const circulation = decodeKinesisNumber(r.circulation);
+  const mint = decodeKinesisNumber(r.mint);
+  const redemption = decodeKinesisNumber(r.redemption);
+  if (!isValidKinesisNumber(circulation)) return null;
+  if (!isValidKinesisNumber(mint)) return null;
+  if (!isValidKinesisNumber(redemption)) return null;
   return { circulation, mint, redemption };
 }
 
@@ -96,7 +110,10 @@ export async function syncKinesisSupply(
   let synced = 0;
   let failed = 0;
   let skipped = 0;
-  const chainResults: Array<{ chain: string; status: string; circulation?: number }> = [];
+  let invalidPayloads = 0;
+  let fetchFailures = 0;
+  let persistenceFailures = 0;
+  const chainResults: Array<{ chain: string; status: string; circulation?: number; reason?: string }> = [];
 
   for (const config of KINESIS_CHAINS) {
     throwIfAborted(signal);
@@ -121,16 +138,29 @@ export async function syncKinesisSupply(
         throw new Error(`HTTP ${result?.response.status ?? "null"}`);
       }
 
-      const fetched = parseKinesisResponse(JSON.parse(result.body));
+      let payload: unknown;
+      try {
+        payload = JSON.parse(result.body);
+      } catch {
+        throw new Error(INVALID_PAYLOAD_REASON);
+      }
+      const fetched = parseKinesisResponse(payload);
       if (!fetched) {
-        throw new Error("Invalid response: could not extract circulation data");
+        throw new Error(INVALID_PAYLOAD_REASON);
       }
       parsed = fetched;
     } catch (err) {
       if (signal.aborted) throw err instanceof Error ? err : new Error(String(err));
+      const invalidPayload = err instanceof Error && err.message === INVALID_PAYLOAD_REASON;
+      if (invalidPayload) invalidPayloads++;
+      else fetchFailures++;
       await recordOutcomeSafe(db, config.circuitSource, false);
       failed++;
-      chainResults.push({ chain: config.chain, status: "error" });
+      chainResults.push({
+        chain: config.chain,
+        status: invalidPayload ? "invalid_payload" : "error",
+        reason: invalidPayload ? INVALID_PAYLOAD_REASON : "upstream-fetch-failed",
+      });
       recordCronFailure("sync-kinesis-supply", err, {
         metadata: { chain: config.chain, stage: "fetch" },
       });
@@ -155,8 +185,9 @@ export async function syncKinesisSupply(
       );
     } catch (err) {
       if (signal.aborted) throw err instanceof Error ? err : new Error(String(err));
+      persistenceFailures++;
       failed++;
-      chainResults.push({ chain: config.chain, status: "d1_error", circulation: parsed.circulation });
+      chainResults.push({ chain: config.chain, status: "d1_error", circulation: parsed.circulation, reason: "d1-write-failed" });
       recordCronFailure("sync-kinesis-supply", err, {
         metadata: { chain: config.chain, stage: "persist" },
       });
@@ -167,11 +198,31 @@ export async function syncKinesisSupply(
     chainResults.push({ chain: config.chain, status: "ok", circulation: parsed.circulation });
   }
 
+  const reason = invalidPayloads > 0
+    ? INVALID_PAYLOAD_REASON
+    : persistenceFailures > 0
+      ? "d1-write-failed"
+      : fetchFailures > 0
+        ? "upstream-fetch-failed"
+        : skipped > 0
+          ? "circuit-open"
+          : undefined;
+  const status = failed === 0
+    ? (skipped > 0 ? "degraded" : "ok")
+    : synced > 0
+      ? "degraded"
+      : invalidPayloads > 0 && fetchFailures === 0 && persistenceFailures === 0
+        ? "degraded"
+        : "error";
   return createCronResult({
     itemCount: synced,
-    status: failed === 0
-      ? (skipped > 0 ? "degraded" : "ok")
-      : (synced > 0 ? "degraded" : "error"),
-    metadata: { synced, failed, skipped, chains: chainResults },
+    status,
+    metadata: {
+      synced,
+      failed,
+      skipped,
+      ...(reason ? { reason } : {}),
+      chains: chainResults,
+    },
   });
 }
