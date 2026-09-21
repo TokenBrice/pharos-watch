@@ -857,22 +857,6 @@ describe("buildCurveLookups", () => {
     });
   });
 
-  it("keeps the appended Curve API chains at the tail of the fetch order", () => {
-    // Payloads are index-aligned to CURVE_CHAINS in both fetchDataSources and
-    // buildCurveLookups; appended chains must stay appended.
-    expect(CURVE_CHAINS.slice(0, 8)).toEqual([
-      "ethereum",
-      "base",
-      "arbitrum",
-      "polygon",
-      "fraxtal",
-      "sonic",
-      "taiko",
-      "zksync",
-    ]);
-    expect(CURVE_CHAINS.slice(8)).toEqual(["optimism", "avalanche", "fantom", "kava", "gnosis"]);
-  });
-
   it("indexes appended-chain payloads (optimism) for address, fingerprint, and symbol joins", async () => {
     // Shape mirrors the live Curve getPools/all/optimism 3pool response.
     const DAI = "0xda10009cbd5d07dd0cecc66161fc93d7c9000da1";

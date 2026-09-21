@@ -222,7 +222,7 @@ describe("hook-free Uniswap V4 measured execution", () => {
       mode: "active",
       scoreEligible: true,
     });
-    expect(getUniswapV4Deployment("base")).toBeNull();
+    expect(getUniswapV4Deployment("base")).toMatchObject({ mode: "shadow", scoreEligible: false });
   });
 
   it("rejects a V4 deployment when pinned PoolManager code differs", async () => {

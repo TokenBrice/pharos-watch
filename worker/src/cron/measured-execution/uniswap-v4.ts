@@ -13,7 +13,7 @@ import {
   type DexMeasuredExecutionTarget,
   type DexMeasuredExecutionUniswapV4PoolProof,
 } from "@shared/types/measured-execution";
-import { UNISWAP_V4_DEPLOYMENT } from "@shared/lib/measured-execution-deployment-policies";
+import { UNISWAP_V4_DEPLOYMENT, UNISWAP_V4_SHADOW_DEPLOYMENTS } from "@shared/lib/measured-execution-deployment-policies";
 import { throwIfAborted } from "../../lib/abort";
 import type { ChainRpcConfig } from "../../lib/chain-registry";
 import {
@@ -52,8 +52,8 @@ const UNISWAP_V4_Q192 = 1n << 192n;
 export interface UniswapV4Deployment {
   adapterProfileId: typeof UNISWAP_V4_ADAPTER_PROFILE_ID;
   protocol: "uniswap-v4";
-  chain: "ethereum";
-  mode: "active";
+  chain: "ethereum" | "bsc" | "base" | "arbitrum" | "polygon";
+  mode: "active" | "shadow";
   scoreEligible: boolean;
   poolManagerAddress: `0x${string}`;
   expectedPoolManagerCodeHash: `0x${string}`;
@@ -70,7 +70,7 @@ export interface UniswapV4Deployment {
  * Runtime hashes were pinned from Ethereum block 25,618,353 on 2026-07-26.
  * The reviewed hook-free Ethereum cohort was activated after three productive
  * production shadow generations and a 129/130 successful latest generation on
- * 2026-08-13. Hooked pools and other deployments remain outside this registry.
+ * 2026-08-13. Other pinned deployments collect shadow evidence only; hooks remain excluded.
  */
 const UNISWAP_V4_DEPLOYMENTS: readonly UniswapV4Deployment[] = [
   {
@@ -86,6 +86,19 @@ const UNISWAP_V4_DEPLOYMENTS: readonly UniswapV4Deployment[] = [
     endpointAddress: UNISWAP_V4_DEPLOYMENT.quoterAddress,
     expectedCodeHash: UNISWAP_V4_DEPLOYMENT.quoterCodeHash,
   },
+  ...UNISWAP_V4_SHADOW_DEPLOYMENTS.map((deployment): UniswapV4Deployment => ({
+    adapterProfileId: deployment.adapterProfileId,
+    protocol: deployment.protocol,
+    chain: deployment.chain,
+    mode: "shadow",
+    scoreEligible: false,
+    poolManagerAddress: deployment.poolManagerAddress,
+    expectedPoolManagerCodeHash: deployment.poolManagerCodeHash,
+    stateViewAddress: deployment.stateViewAddress,
+    expectedStateViewCodeHash: deployment.stateViewCodeHash,
+    endpointAddress: deployment.quoterAddress,
+    expectedCodeHash: deployment.quoterCodeHash,
+  })),
 ] as const;
 
 export function getUniswapV4Deployment(

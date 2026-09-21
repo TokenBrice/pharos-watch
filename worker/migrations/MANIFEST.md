@@ -29,6 +29,7 @@
 | 0240     | `0240_yield_retention_indexes.sql`                         | Add the recorded-at alternatives-retention index for deterministic bounded drains. |
 | 0241     | `0241_dex_pool_registry.sql`                              | Add the per-source DEX pool registry and backfill existing staged observations while retaining staging for Worker rollback. |
 | 0242     | `0242_orca_whirlpool_shadow_quotes.sql`                    | Add isolated native Orca shadow quotes with enforced score ineligibility; no V1 scoring publication. |
+| 0243     | `0243_native_shadow_quote_families.sql`                    | Add family-generic native shadow quotes for Orca and Raydium with enforced score ineligibility; retain the Orca-only store for rollback. |
 
 ## Squashed Individual Migrations (absorbed into the 0000 baseline on 2026-07-30)
 
@@ -221,6 +222,7 @@ Queued 2026-09-09 (`findings/infra-store-api.md` IS6; fresh source search found 
 - `idx_reserve_sync_attempt_history_coin_attempt` — fully shadowed by `idx_reserve_sync_attempt_history_coin_attempt_unique` on the same columns; same reasoning.
 - `idx_reserve_sync_state_last_success_attempt` — no unqualified consumer; every `reserve_sync_state` predicate is `stablecoin_id`-qualified (primary key) or per-coin correlated.
 - `idx_reserve_sync_state_pending_attempt` — no unqualified consumer; same reasoning.
+- `dex_native_shadow_quotes` and `idx_dex_native_shadow_quotes_retention` — superseded by the additive `0243` family-generic store. The four Orca diagnostic rows are intentionally not copied; keep the old store for prior-Worker rollback, then remove only in a separately coordinated cleanup window.
 
 ## Append-only Retention Policy
 
@@ -327,6 +329,7 @@ Duplicate numeric prefixes 0056 and 0061 existed in the squashed range (0001–0
 - `0238_api_key_donor_claims.sql`: do not roll back the Worker to stop claims; set `DONOR_KEY_CLAIMS_OPEN = false` and redeploy, which keeps the donor-tier auth protections (global limiter, no isolate fallback) for keys already issued. Keep the additive table; issued `donor` keys keep authenticating, and dropping it would strand the one-claim-per-wallet fence. Removing it requires a separate coordinated cleanup rollout after every donor key is deactivated.
 - `0240_yield_retention_indexes.sql`: roll back by restoring the prior Worker; keep the additive retention index because it is inert to older Workers and avoids the unbounded alternatives-retention scan. Dropping it requires a separate coordinated cleanup rollout.
 - `0241_dex_pool_registry.sql`: retain both tables. Apply before Worker activation; capture the migration timestamp and a pre-migration D1 Time Travel bookmark. After activation, catch up observations written to `dex_pool_staging` after migration with an explicit-column `INSERT OR IGNORE INTO dex_pool_registry (...) SELECT ... FROM dex_pool_staging WHERE refreshed_at > <migration_unix>`. Roll back the Worker within 72 hours; its staging rows stop refreshing at cutover and new registry-only pools are absent until re-crawled. Past 72 hours, first reverse-copy the newest registry observation per `(stablecoin_id, pool_id)` into staging using `INSERT OR REPLACE`, then restore the prior Worker. Worker rollback does not undo D1; dropping staging requires a separate coordinated cleanup rollout after at least 14 days without rollback.
+- `0243_native_shadow_quote_families.sql`: apply before Worker activation. Both native collectors write the new `dex_native_shadow_quotes_v2` table; the old Orca-only table remains untouched for prior-Worker rollback. Four old diagnostic rows are intentionally not migrated; fresh native evidence repopulates on subsequent cycles. Capture the pre-migration D1 bookmark and deployed Worker version; Worker rollback does not undo either table. No scoring table or publication pointer changes.
 
 ## Rollback Procedure
 

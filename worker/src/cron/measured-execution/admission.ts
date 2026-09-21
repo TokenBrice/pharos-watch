@@ -89,7 +89,7 @@ export function resolveTargetDeployment(target: DexMeasuredExecutionTarget): Tar
     if (!target.poolId.toLowerCase().startsWith(prefix)) return null;
     const endpointAddress = target.poolId.slice(prefix.length).toLowerCase();
     const policy = getCurveStableSwapNgPolicy(target.chain, endpointAddress);
-    return policy?.scoreEligible && policy.mode === "active"
+    return policy
       ? { kind: "curve-stableswap-ng", config: { ...policy, endpointAddress: policy.poolAddress } }
       : null;
   }

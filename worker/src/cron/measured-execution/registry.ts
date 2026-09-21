@@ -22,7 +22,7 @@ export interface DexMeasuredExecutionDeployment {
     | "pancakeswap-v3-quoter-v2"
     | "aerodrome-slipstream-quoter-v2";
   protocol: "uniswap-v3" | "pancakeswap" | "aerodrome-slipstream";
-  chain: "ethereum" | "arbitrum" | "base" | "polygon" | "bsc" | "celo";
+  chain: "ethereum" | "arbitrum" | "base" | "polygon" | "bsc" | "celo" | "xlayer";
   endpointAddress: `0x${string}`;
   expectedCodeHash: `0x${string}`;
   factoryAddress: `0x${string}`;
@@ -154,6 +154,15 @@ const DEX_MEASURED_EXECUTION_DEPLOYMENTS: readonly DexMeasuredExecutionDeploymen
     expectedCodeHash: "0x945e158b4d4b58c41ade0a10f7e6df0a3c631468fcd762eced1b3fe38fe1f812",
     factoryAddress: "0x0bfbcf9fa4f9c56b0f40a671ad40e0805a091865",
     expectedFactoryCodeHash: "0x8191d3ab1d55d3da9822199f28865415c99566b6f1aee4a4b16713f57930678c",
+  },
+  {
+    adapterProfileId: "uniswap-v3-quoter-v2",
+    protocol: "uniswap-v3",
+    chain: "xlayer",
+    endpointAddress: "0xd1b797d92d87b688193a2b976efc8d577d204343",
+    expectedCodeHash: "0xfd872b486699c79a91db9b977e6e271edfed3535fb624a6973bb05d6dac2a277",
+    factoryAddress: "0x4b2ab38dbf28d31d467aa8993f6c2585981d6804",
+    expectedFactoryCodeHash: "0x98cde3564f540d7529feb2c697e2d79b85e3bc864d088ebe09fd5dcfc60a5c0e",
   },
 ] as const;
 

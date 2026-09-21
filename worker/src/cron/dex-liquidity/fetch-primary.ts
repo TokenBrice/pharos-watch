@@ -243,7 +243,7 @@ export async function fetchDataSources(
   // One bounded serial identity request after both DL bodies have been consumed.
   // DL rounds V4 fee metadata (5 pips becomes "0.00%"); UUID joins recover
   // physical pool IDs without guessing fees, ticks, hooks, or pool measurements.
-  if (pools.some((pool) => pool.project === "uniswap-v4" && pool.chain.toLowerCase() === "ethereum")) {
+  if (pools.some((pool) => pool.project === "uniswap-v4")) {
     const identities = await fetchJsonWithRetry<unknown>(
       DEFILLAMA_V4_IDENTITIES_URL,
       { headers: { "User-Agent": USER_AGENT }, signal },

@@ -47,6 +47,8 @@ export interface DexExecutionCapabilityRegistration {
   platform: "evm" | "solana";
   lifecycle: DexExecutionCapabilityLifecycle;
   eligibleChains: readonly string[];
+  /** Collection-only cohorts; never contributes to the scoring denominator. */
+  shadowChains?: readonly string[];
   eligibleDeploymentKeys?: readonly string[];
   freshnessMaxSec: number;
   proofKind: DexExecutionProofKind;
@@ -87,6 +89,7 @@ export const DEX_EXECUTION_CAPABILITY_REGISTRY: readonly DexExecutionCapabilityR
     platform: "evm",
     lifecycle: "active",
     eligibleChains: ["ethereum", "polygon", "arbitrum", "celo"],
+    shadowChains: ["base", "bsc", "xlayer"],
     eligibleDeploymentKeys: ACTIVE_QUOTER_V2_DEPLOYMENT_KEYS,
     proofKind: "evm-state-and-call-proof",
   }),
@@ -117,6 +120,7 @@ export const DEX_EXECUTION_CAPABILITY_REGISTRY: readonly DexExecutionCapabilityR
     platform: "evm",
     lifecycle: "active",
     eligibleChains: ["ethereum"],
+    shadowChains: ["bsc", "base", "arbitrum", "polygon"],
     proofKind: "evm-state-and-call-proof",
   }),
   capabilityRegistration({
@@ -144,6 +148,7 @@ export const DEX_EXECUTION_CAPABILITY_REGISTRY: readonly DexExecutionCapabilityR
     platform: "evm",
     lifecycle: "active",
     eligibleChains: ["ethereum"],
+    shadowChains: ["etherlink"],
     proofKind: "evm-state-and-call-proof",
   }),
   capabilityRegistration({

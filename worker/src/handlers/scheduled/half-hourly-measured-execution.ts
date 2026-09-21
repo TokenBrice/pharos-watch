@@ -6,7 +6,7 @@
  * returned directly so producer history persists the lane diagnostics.
  */
 import { syncDexMeasuredExecution } from "../../cron/measured-execution/sync";
-import { collectWhirlpoolShadowQuotes } from "../../cron/dex-liquidity/solana/whirlpool-shadow";
+import { collectWhirlpoolShadowQuotes, collectRaydiumShadowQuotes } from "../../cron/dex-liquidity/solana/whirlpool-shadow";
 import { throwIfAborted } from "../../lib/abort";
 import type { CronResult } from "../../lib/cron-logger";
 import { toErrorMessage } from "@shared/lib/error-utils";
@@ -37,15 +37,27 @@ export async function runHalfHourlyMeasuredExecutionSlot(runtime: ScheduledRunti
       throwIfAborted(signal);
       // No overlap with the EVM lane: native shadow adds one serialized connection.
       let orcaShadow: unknown;
+      const orcaStartedAt = Date.now();
       try {
         orcaShadow = await collectWhirlpoolShadowQuotes({
           db: runtime.db, signal, ctx: { db: runtime.db, chainRpcs: runtime.chainRpcs },
         });
       } catch (error) {
         throwIfAborted(signal);
-        orcaShadow = { error: toErrorMessage(error).slice(0, 240), scoreEligible: false };
+        orcaShadow = { error: toErrorMessage(error).slice(0, 240), scoreEligible: false, durationMs: Date.now() - orcaStartedAt };
       }
-      return { ...evm, metadata: JSON.stringify({ ...JSON.parse(evm.metadata ?? "{}"), orcaShadow }) };
+      throwIfAborted(signal);
+      let raydiumShadow: unknown;
+      const raydiumStartedAt = Date.now();
+      try {
+        raydiumShadow = await collectRaydiumShadowQuotes({
+          db: runtime.db, signal, ctx: { db: runtime.db, chainRpcs: runtime.chainRpcs },
+        });
+      } catch (error) {
+        throwIfAborted(signal);
+        raydiumShadow = { error: toErrorMessage(error).slice(0, 240), scoreEligible: false, durationMs: Date.now() - raydiumStartedAt };
+      }
+      return { ...evm, metadata: JSON.stringify({ ...JSON.parse(evm.metadata ?? "{}"), orcaShadow, raydiumShadow }) };
     },
   });
 }
