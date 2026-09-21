@@ -5,7 +5,7 @@ import { fileURLToPath } from "node:url";
 import { syncGeneratedArtifacts } from "../lib/generated-artifacts";
 import { assertFullGitHistory } from "../lib/git-history.mts";
 import { loadPerCoinStablecoinEntries, STABLECOIN_DOMAIN_SOURCE_DIR } from "../lib/stablecoin-catalog-sources";
-import { collectStablecoinDetailDates, latestIso } from "../lib/sitemap-source-paths.mts";
+import { collectStablecoinDetailDates, latestIso } from "../lib/sitemap-detail-dates";
 import { CASE_STUDY_LIST } from "../../src/lib/case-studies";
 import { BLOG_POSTS } from "../../src/data/blog";
 import {

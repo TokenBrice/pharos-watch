@@ -1,7 +1,8 @@
 import { join, matchesGlob, resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 import { loadPerCoinStablecoinEntries } from "../lib/stablecoin-catalog-sources";
-import { collectStablecoinDetailDates, SITEMAP_COMMIT_DERIVED_SOURCE_PATHS } from "../lib/sitemap-source-paths.mts";
+import { collectStablecoinDetailDates } from "../lib/sitemap-detail-dates";
+import { SITEMAP_COMMIT_DERIVED_SOURCE_PATHS } from "../lib/sitemap-source-paths.mts";
 
 const REPO_ROOT = resolve(import.meta.dirname, "../..");
 const FLOOR_DATE = "2026-01-01T00:00:00.000Z";
