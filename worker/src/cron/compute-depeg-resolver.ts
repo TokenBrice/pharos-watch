@@ -81,10 +81,11 @@ async function degradedPublicSnapshotFromCache(input: {
     ...cached.payload,
     _meta: {
       ...cached.payload._meta,
-      computedAt: input.nowSec,
       expiresAt: input.nowSec + DDR_SNAPSHOT_TTL_SEC,
       degraded: true,
-      degradedReason: input.reason,
+      degradedReason: "stale-cache",
+      degradedReasonDetail: input.reason,
+      lastRefreshAttemptAt: input.nowSec,
     },
     rows: cached.payload.rows.map((row) => ({
       ...row,

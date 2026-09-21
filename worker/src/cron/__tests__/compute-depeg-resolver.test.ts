@@ -377,9 +377,10 @@ describe("computeDepegResolver", () => {
 
     const payload = readDdrSnapshotPayload(db);
     expect(payload._meta.degraded).toBe(true);
-    expect(payload._meta.degradedReason).toBe("stablecoins-cache-unsafe");
-    expect(payload._meta.computedAt).toBe(NOW_SEC);
-    expect(payload._meta.dataAsOf).toBe(previousSnapshot._meta.dataAsOf);
+    expect(payload._meta.degradedReason).toBe("stale-cache");
+    expect(payload._meta.degradedReasonDetail).toBe("stablecoins-cache-unsafe");
+    expect(payload._meta.lastRefreshAttemptAt).toBe(NOW_SEC);
+    expect(payload._meta.computedAt).toBe(previousSnapshot._meta.computedAt);
     expect(payload.rows).toHaveLength(1);
     expect(payload.rows[0].live).toMatchObject({
       stale: true,
