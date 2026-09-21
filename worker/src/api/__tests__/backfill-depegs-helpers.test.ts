@@ -266,6 +266,44 @@ describe("fetchHistoricalSecondaryFxRates", () => {
     expect(fetchSpy.mock.calls[0]?.[0]).toContain("@2025-06-15/v1/currencies/usd.min.json");
   });
 
+  it.each([
+    ["null-shaped", "null"],
+    ["string-shaped", JSON.stringify("not-a-year-cache")],
+  ] as const)("refetches a %s secondary FX year cache", async (_shape, cachedValue) => {
+    const fetchSpy = mockFetch([
+      {
+        match: "@2025-06-14/v1/currencies/usd.min.json",
+        body: { date: "2025-06-14", usd: { cnh: 7.2 } },
+      },
+    ]);
+    const db = mockD1([
+      {
+        match: "SELECT value, updated_at FROM cache WHERE key = ?",
+        matchBinds: ["fx-history-secondary:2025"],
+        rows: [],
+        first: {
+          value: cachedValue,
+          updated_at: Math.floor(Date.now() / 1000),
+        },
+      },
+      { match: "INSERT OR REPLACE INTO cache", rows: [] },
+    ]);
+
+    const series = await fetchHistoricalSecondaryFxRates(db, ["CNH"], "2025-06-14", "2025-06-14");
+
+    expect(series.CNH).toEqual([
+      {
+        timestamp: Math.floor(new Date("2025-06-14T00:00:00Z").getTime() / 1000),
+        rate: 1 / 7.2,
+      },
+    ]);
+    expect(fetchSpy).toHaveBeenCalledTimes(1);
+    const cacheWrite = db.getHistory().find((entry) => entry.sql.includes("INSERT OR REPLACE INTO cache"));
+    expect(JSON.parse(cacheWrite?.binds[1] as string)).toEqual({
+      "2025-06-14": { cnh: 7.2 },
+    });
+  });
+
   it("drains non-OK secondary FX fallback responses", async () => {
     const primary = new Response(JSON.stringify({ error: "missing" }), { status: 404 });
     const fallback = new Response(JSON.stringify({ error: "missing" }), { status: 404 });

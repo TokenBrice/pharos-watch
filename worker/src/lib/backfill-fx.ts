@@ -15,6 +15,8 @@ import { getCache, setCache } from "./db-cache";
 import { FrankfurterTimeSeriesSchema, SecondaryFxResponseSchema } from "./external-api-schemas";
 import { rethrowIfAborted } from "./abort";
 import { mapWithConcurrency } from "./concurrency";
+import { decodeJsonString } from "./cache-json";
+import { sanitizeFxRates } from "./fx-rate-state";
 import {
   PRIMARY_CURRENCY_TO_PEG,
   PRIMARY_PEG_TYPE_TO_CURRENCY_PAIRS,
@@ -23,6 +25,34 @@ import {
 } from "./fx-config";
 import type { D1Database } from "@cloudflare/workers-types";
 import { fetchCgPriceHistoryHourly, type HistoricalMarketBackfillRange } from "../api/backfill-price-sources";
+
+function isValidSecondaryFxCacheDate(date: string, year: number): boolean {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(date) || !date.startsWith(`${year}-`)) return false;
+  const timestamp = Date.parse(`${date}T00:00:00Z`);
+  return Number.isFinite(timestamp) && new Date(timestamp).toISOString().slice(0, 10) === date;
+}
+
+function normalizeSecondaryFxYearCache(
+  parsed: unknown,
+  year: number,
+): Record<string, Record<string, number>> {
+  if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) return {};
+
+  const normalized: Record<string, Record<string, number>> = {};
+  for (const [date, rawRates] of Object.entries(parsed)) {
+    if (!isValidSecondaryFxCacheDate(date, year)) continue;
+    if (!rawRates || typeof rawRates !== "object" || Array.isArray(rawRates)) continue;
+
+    const rawRateKeys = Object.keys(rawRates);
+    if (rawRateKeys.length === 0) {
+      normalized[date] = {};
+      continue;
+    }
+    const rates = sanitizeFxRates(rawRates);
+    if (Object.keys(rates).length > 0) normalized[date] = rates;
+  }
+  return normalized;
+}
 
 const SECONDARY_FX_FETCH_CONCURRENCY = 6;
 const COMMODITY_MEDIAN_FETCH_CONCURRENCY = 6;
@@ -171,8 +201,8 @@ async function fetchHistoricalSecondaryFxDay(
     logWorkerEventArgs("lib", "warn", `[backfill-depegs] secondary FX validation failed for ${date}: ${parsed.error.message}`);
     return { kind: "transient" };
   }
-  const rates = parsed.data.usd;
-  return rates && Object.keys(rates).length > 0
+  const rates = sanitizeFxRates(parsed.data.usd);
+  return Object.keys(rates).length > 0
     ? { kind: "rates", rates }
     : { kind: "unavailable" };
 }
@@ -203,17 +233,28 @@ export async function fetchHistoricalSecondaryFxRates(
 
     const cacheKey = `fx-history-secondary:${year}`;
     let yearCache: Record<string, Record<string, number>> = {};
+    let cacheChanged = false;
     const cached = await getCache(db, cacheKey);
     if (cached) {
-      try {
-        yearCache = JSON.parse(cached.value) as Record<string, Record<string, number>>;
-      } catch {
-        yearCache = {};
+      const decoded = decodeJsonString<Record<string, Record<string, number>>, "json-parse-failed">(
+        cached.value,
+        {
+          parseErrorReason: "json-parse-failed",
+          normalize: (parsed) => ({
+            ok: true,
+            payload: normalizeSecondaryFxYearCache(parsed, year),
+          }),
+        },
+      );
+      if (decoded.ok) {
+        yearCache = decoded.payload;
+        cacheChanged = JSON.stringify(yearCache) !== cached.value;
+      } else {
+        cacheChanged = true;
       }
     }
 
     const missingDates = wantedDates.filter((date) => !yearCache[date]);
-    let cacheChanged = false;
     for (let i = 0; i < missingDates.length; i += SECONDARY_FX_FETCH_CONCURRENCY) {
       const chunk = missingDates.slice(i, i + SECONDARY_FX_FETCH_CONCURRENCY);
       const fetched = await Promise.all(

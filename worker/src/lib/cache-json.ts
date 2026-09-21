@@ -77,8 +77,9 @@ export function decodeJsonString<T, R extends string>(
     };
   }
 
+  let parsed: unknown;
   try {
-    return finalizeJsonDecode(updatedAt, options.normalize(JSON.parse(value)));
+    parsed = JSON.parse(value);
   } catch (error) {
     const message = toErrorMessage(error);
     options.onParseFailure?.({
@@ -92,6 +93,8 @@ export function decodeJsonString<T, R extends string>(
       updatedAt,
     };
   }
+
+  return finalizeJsonDecode(updatedAt, options.normalize(parsed));
 }
 
 interface DecodeCachedJsonOptions<T, R extends string> {

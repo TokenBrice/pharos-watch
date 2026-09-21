@@ -1,4 +1,6 @@
 import { getCache } from "../../lib/db-cache";
+import { decodeJsonString } from "../../lib/cache-json";
+import { sanitizeFxRates } from "../../lib/fx-rate-state";
 import { logWorkerEvent } from "../../lib/structured-log";
 import type { EnrichmentPassCounts, EnrichmentPassProgress } from "./enrich-prices-fallback";
 
@@ -16,7 +18,37 @@ export async function loadFxRatesForPriceBounds(db?: D1Database): Promise<Record
   if (!db) return undefined;
   try {
     const fxCache = await getCache(db, "fx-rates");
-    return fxCache ? JSON.parse(fxCache.value) : undefined;
+    const decoded = decodeJsonString<Record<string, number>, "missing" | "json-parse-failed" | "invalid-payload">(
+      fxCache?.value,
+      {
+        missingReason: "missing",
+        parseErrorReason: "json-parse-failed",
+        normalize: (parsed) => {
+          const rates = sanitizeFxRates(parsed);
+          if (
+            !parsed
+            || typeof parsed !== "object"
+            || Array.isArray(parsed)
+            || Object.keys(parsed).length === 0
+            || Object.keys(parsed).length !== Object.keys(rates).length
+          ) {
+            return { ok: false, reason: "invalid-payload" };
+          }
+          return { ok: true, payload: rates };
+        },
+        onParseFailure: ({ message }) => {
+          logWorkerEvent({
+            scope: "lib",
+            level: "warn",
+            event: "stablecoin-price-enrichment.fx-rates-load-failed",
+            job: "sync-stablecoins",
+            message: "Failed to load FX rates for stablecoin price bounds",
+            error: message,
+          });
+        },
+      },
+    );
+    return decoded.ok ? decoded.payload : undefined;
   } catch (e) {
     logWorkerEvent({
       scope: "lib",

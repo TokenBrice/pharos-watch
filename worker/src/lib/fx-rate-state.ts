@@ -55,7 +55,7 @@ interface CacheRow {
   updatedAt: number;
 }
 
-function sanitizeFxRates(input: unknown): Record<string, number> {
+export function sanitizeFxRates(input: unknown): Record<string, number> {
   return sanitizeRecordValues(input, (value) => (
     typeof value === "number" && Number.isFinite(value) && value > 0 ? value : undefined
   ));
