@@ -131,7 +131,8 @@ describe("Safety Score V9 score-trace reconciliation", { timeout: 30_000 }, () =
     }).toEqual({
       score: null,
       grade: "NR",
-      totalFactCount: 5,
+      // The unified control predicate removes USDC's false unresolved-control fact.
+      totalFactCount: 4,
       reasonCodes: [
         "insufficient-evidence",
         "missing-peg-input",

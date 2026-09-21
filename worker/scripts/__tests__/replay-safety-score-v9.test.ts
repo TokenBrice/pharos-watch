@@ -132,7 +132,17 @@ describe("Safety Score v9 deterministic replay CLI", () => {
     );
     expect(compiledUsdc.controlStatus.observationState).toBe("known");
     expect(incompleteControls.length).toBeGreaterThan(0);
-    expect(incompleteControls.every((control) => control.status.observationState === "bounded-unknown")).toBe(true);
+    // The sole schema-incomplete control is a zero-share deployment and is therefore resolved as non-binding.
+    expect(incompleteControls).toEqual([
+      expect.objectContaining({
+        economicLossScope: "deployment",
+        materialSupplyShare: 0,
+        status: expect.objectContaining({
+          applicability: expect.objectContaining({ state: "not-applicable" }),
+          observationState: "known",
+        }),
+      }),
+    ]);
   });
 
   it("writes identical canonical output for raw JSON and a cache envelope", async () => {
