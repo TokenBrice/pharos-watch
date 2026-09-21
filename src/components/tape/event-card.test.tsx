@@ -153,6 +153,18 @@ function lifecycleEvent(overrides: Partial<TapeEvent> = {}): TapeEvent {
 }
 
 describe("EventCard enrichment", () => {
+  it.each([
+    ["2026-09-21T00:00:00.000Z", "00:00"],
+    ["2026-09-21T00:59:00.000Z", "00:59"],
+  ])("renders %s with an h23 UTC clock in visible and accessible text", (iso, expected) => {
+    const { container } = render(<EventCard event={makeEvent({ ts: Date.parse(iso) })} />);
+    const time = container.querySelector("time");
+
+    expect(time).not.toBeNull();
+    expect(time?.querySelector(".sr-only")?.textContent).toBe(expected);
+    expect(time?.querySelector('span[aria-hidden="true"]')?.textContent).toBe(expected);
+  });
+
   it("clears the permalink-copy feedback timer on unmount", async () => {
     vi.useFakeTimers();
     stubClipboard(vi.fn().mockResolvedValue(undefined));

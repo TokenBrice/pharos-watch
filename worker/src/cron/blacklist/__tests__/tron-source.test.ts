@@ -16,6 +16,7 @@ import { CONTRACT_CONFIGS } from "../../../lib/blacklist-contracts";
 import { createBudget, type RateLimitedFetch } from "../../../lib/evm-logs";
 import type { ContractEventConfig } from "../../../lib/blacklist-contracts";
 import type { BlacklistRunBudget } from "../../../lib/blacklist/run-budget";
+import * as structuredLog from "../../../lib/structured-log";
 
 function findConfig(stablecoinId: string) {
   const config = CONTRACT_CONFIGS.find((c) => c.stablecoinId === stablecoinId && c.chain.chainId === "tron");
@@ -92,6 +93,29 @@ describe("parseTronEvent", () => {
       result: {},
     });
     expect(row).toBeNull();
+  });
+
+  it("drops and logs a recognized event without an affected address", () => {
+    const log = vi.spyOn(structuredLog, "logWorkerEvent").mockImplementation(() => undefined);
+    const config = findConfig("usdt-tether");
+
+    const row = parseTronEvent(config, {
+      block_number: 401,
+      block_timestamp: 1_700_000_300_000,
+      transaction_id: "tx_missing_address",
+      event_index: 1,
+      event_name: "AddedBlackList",
+      result: {},
+    });
+
+    expect(row).toBeNull();
+    expect(log).toHaveBeenCalledWith(expect.objectContaining({
+      event: "sync_blacklist.trongrid_event_missing_address",
+      metadata: expect.objectContaining({
+        transactionId: "tx_missing_address",
+        eventIndex: 1,
+      }),
+    }));
   });
 
   it("falls back to positional slot 0 when no named key matches", () => {

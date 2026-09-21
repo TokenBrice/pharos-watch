@@ -245,7 +245,15 @@ describe("fetchEvmLogsForTopicWithCompleteness", () => {
 
   it("returns logs on success", async () => {
     const mockLogs = [
-      { address: "0x123", topics: ["0xabc"], data: "0x", blockNumber: "0x1", timeStamp: "1000", transactionHash: "0xhash", logIndex: "0x0" },
+      {
+        address: "0x" + "11".repeat(20),
+        topics: ["0x" + "22".repeat(32)],
+        data: "0x",
+        blockNumber: "0x1",
+        timeStamp: "0x1000",
+        transactionHash: "0x" + "33".repeat(32),
+        logIndex: "0x0",
+      },
     ];
     mockFetch([{ match: () => true, body: { status: "1", message: "OK", result: mockLogs } }]);
 
@@ -255,6 +263,47 @@ describe("fetchEvmLogsForTopicWithCompleteness", () => {
     expect(result.complete).toBe(true);
     expect(result.logs).toHaveLength(1);
     expect(budget.count).toBe(1);
+  });
+
+  it("drops malformed provider peers while retaining valid logs", async () => {
+    const valid = {
+      address: "0x" + "11".repeat(20),
+      topics: ["0x" + "22".repeat(32)],
+      data: "0x",
+      blockNumber: "0x1",
+      timeStamp: "0x1000",
+      transactionHash: "0x" + "33".repeat(32),
+      logIndex: "0x0",
+    };
+    mockFetch([{
+      match: () => true,
+      body: {
+        status: "1",
+        message: "OK",
+        result: [valid, { ...valid, topics: ["not-a-topic"] }],
+      },
+    }]);
+    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+
+    try {
+      const result = await fetchEvmLogsForTopicWithCompleteness(
+        1,
+        "0x123",
+        "0xabc",
+        null,
+        0,
+        100,
+        0,
+        noopLimiter,
+        createBudget(10),
+      );
+      expect(result).toMatchObject({ complete: true, logs: [valid], scannedToBlock: 100 });
+      expect(warnSpy).toHaveBeenCalledWith(
+        expect.stringContaining("etherscan_logs_malformed_entries_dropped"),
+      );
+    } finally {
+      warnSpy.mockRestore();
+    }
   });
 
   it("marks the scan incomplete on HTTP error", async () => {
@@ -307,9 +356,13 @@ describe("fetchEvmLogsForTopicWithCompleteness", () => {
 
   function logAt(block: number, index = 0) {
     return {
-      address: "0x123", topics: ["0xabc"], data: "0x",
-      blockNumber: `0x${block.toString(16)}`, timeStamp: "1000",
-      transactionHash: `0xhash${block}`, logIndex: `0x${index.toString(16)}`,
+      address: "0x" + "11".repeat(20),
+      topics: ["0x" + "22".repeat(32)],
+      data: "0x",
+      blockNumber: `0x${block.toString(16)}`,
+      timeStamp: "0x1000",
+      transactionHash: `0x${(block * 1000 + index).toString(16).padStart(64, "0")}`,
+      logIndex: `0x${index.toString(16)}`,
     };
   }
 

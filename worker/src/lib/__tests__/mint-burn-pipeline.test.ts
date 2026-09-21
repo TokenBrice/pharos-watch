@@ -319,6 +319,44 @@ describe("mint-burn shared pipeline modules", () => {
     expect(vi.mocked(classifyBridgeAwareBurnRows)).toHaveBeenCalledTimes(1);
   });
 
+  it("defers only the malformed transaction-context peer", async () => {
+    vi.mocked(getAlchemyTransactionContextBatchMany).mockResolvedValue(new Map([
+      ["0xmalformed", {
+        tx: { hash: "0xmalformed", to: "0xrouter", input: "0x96f4e9f9" },
+        receipt: { transactionHash: "0xmalformed", to: "0xrouter", logs: {} },
+      }],
+      ["0xeffective", alchemyMockHelpers.makeAlchemyContext("0xeffective")],
+    ] as never));
+    const rows: MintBurnRow[] = [
+      makeRow({ id: "burn-malformed", direction: "burn", tx_hash: "0xmalformed" }),
+      makeRow({ id: "burn-valid", direction: "burn", tx_hash: "0xeffective" }),
+    ];
+
+    const counters = await classifyBridgeBurnRows(
+      rows,
+      makeMintBurnConfig({
+        asset: { contractAddress: "0xdac17f958d2ee523a2206206994597c13d831ec7" },
+        adapter: "transfer-zero-address",
+        bridgeDetection: {
+          protocol: "ccip",
+          knownBridgePoolAddresses: ["0xpool"],
+          knownBridgeRouterAddresses: ["0xrouter"],
+          bridgeSignalTopics: ["0xtopic"],
+          bridgeSignalSelectors: ["0x96f4e9f9"],
+        },
+      }),
+      "https://eth-mainnet.g.alchemy.com/v2/",
+      { count: 0, limit: 200 },
+      new Map(),
+    );
+
+    expect(counters).toMatchObject({
+      effectiveBurns: 1,
+      txContextShortfalls: 1,
+      deferredTxHashes: ["0xmalformed"],
+    });
+  });
+
   it("recomputes only affected hourly buckets", async () => {
     const db = makeDb();
     const rows = [

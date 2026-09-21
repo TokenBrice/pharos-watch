@@ -13,8 +13,12 @@ import { buildTapeEventId, parseDateStringToEpochSec, truncateSummary } from "..
 import type { TapeEventInsert } from "../tape-event-types";
 import { projectStaticCatalogEntries, type ProjectorOptions, type ProjectorResult } from "./types";
 
-function buildEvent(coin: StablecoinMeta): TapeEventInsert {
-  const tsSec = parseDateStringToEpochSec(coin.frozenAt);
+interface DatedFrozenCoin {
+  coin: StablecoinMeta;
+  tsSec: number;
+}
+
+function buildEvent({ coin, tsSec }: DatedFrozenCoin): TapeEventInsert {
   const tsMs = tsSec * 1000;
   const transition = "opened";
   const type = "lifecycle.tracked.frozen";
@@ -62,10 +66,20 @@ export async function projectLifecycleFrozen(
   db: D1Database,
   options?: ProjectorOptions,
 ): Promise<ProjectorResult> {
+  const entries: DatedFrozenCoin[] = [];
+  for (const coin of FROZEN_STABLECOINS) {
+    const tsSec = parseDateStringToEpochSec(coin.frozenAt);
+    if (tsSec == null) {
+      console.warn(`[tape-projector] Skipping frozen stablecoin ${coin.id}: invalid frozenAt ${JSON.stringify(coin.frozenAt)}`);
+      continue;
+    }
+    entries.push({ coin, tsSec });
+  }
+
   return projectStaticCatalogEntries(db, {
     eventType: "lifecycle.tracked.frozen",
-    entries: FROZEN_STABLECOINS,
-    sourceRowId: (coin) => coin.id,
+    entries,
+    sourceRowId: ({ coin }) => coin.id,
     buildEvent,
   }, options);
 }

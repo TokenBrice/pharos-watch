@@ -234,18 +234,35 @@ describe("useFreezeWatchPageController", () => {
     vi.useRealTimers();
   });
 
-  it("clamps page to totalPages when navigating beyond bounds", () => {
-    currentSearch = "?page=99";
-    useBlacklistEventsPageMock.mockReturnValue({
-      data: { events: [], total: 25 },
+  it("normalizes an out-of-range URL and fetches the clamped page before exposing ledger rows", () => {
+    currentSearch = "?page=999";
+    useBlacklistEventsPageMock.mockImplementation((params) => ({
+      data: {
+        events: params.offset === 100 ? [{ id: "evt-final-page" }] : [],
+        total: 120,
+      },
       isLoading: false,
       error: null,
       dataUpdatedAt: 456,
       refetch: vi.fn(),
       meta: { preset: "blacklist" },
-    });
-    const { result } = renderHook(() => useFreezeWatchPageController());
-    expect(result.current.clampedPage).toBe(1);
+    }));
+
+    const { result, rerender } = renderHook(() => useFreezeWatchPageController());
+
+    expect(new URLSearchParams(currentSearch).get("page")).toBe("3");
+    expect(result.current.pageLoading).toBe(true);
+    expect(result.current.events).toEqual([]);
+
+    rerender();
+
+    expect(useBlacklistEventsPageMock).toHaveBeenLastCalledWith(expect.objectContaining({ offset: 100 }));
+    expect(result.current.page).toBe(3);
+    expect(result.current.clampedPage).toBe(3);
+    expect(result.current.events).toEqual([{ id: "evt-final-page" }]);
+    expect(result.current.rangeStart).toBe(101);
+    expect(result.current.rangeEnd).toBe(120);
+    expect(result.current.pageLoading).toBe(false);
   });
 
   it("returns zero range bounds when total is 0", () => {

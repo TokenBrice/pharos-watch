@@ -23,7 +23,9 @@ function getBlacklistNativeFractionDigits(event: BlacklistEvent): 2 | 4 {
 }
 
 export function formatBlacklistNativeAmount(event: BlacklistEvent): string {
-  return event.amountNative!.toLocaleString(undefined, {
+  const amountNative = event.amountNative;
+  if (amountNative == null) return "";
+  return amountNative.toLocaleString(undefined, {
     maximumFractionDigits: getBlacklistNativeFractionDigits(event),
   });
 }
@@ -36,7 +38,7 @@ export function getBlacklistAmountStatusLabel(event: BlacklistEvent): string {
   return AMOUNT_STATUS_LABELS[event.amountStatus] ?? event.amountStatus.replace(/_/g, " ");
 }
 
-export function formatBlacklistAmount(event: BlacklistEvent): string {
+export function formatBlacklistAmountOrStatus(event: BlacklistEvent): string {
   if (event.amountUsdAtEvent != null) return formatCurrency(event.amountUsdAtEvent);
   if (event.amountNative != null && !(event.amountNative === 0 && event.eventType !== "destroy")) {
     return `${formatBlacklistNativeAmount(event)} ${event.stablecoin}`;

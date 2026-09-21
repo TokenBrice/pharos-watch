@@ -7,6 +7,7 @@ import {
   ETHEREUM_CHAIN_ID,
   readCachedFlow,
   readMintBurnCronSnapshot,
+  readMintBurnCronSnapshotResult,
   selectLargestEvents,
 } from "../../lib/mint-burn-flows-service";
 import { MINT_BURN_CONFIGS } from "../../lib/mint-burn-contracts";
@@ -187,6 +188,41 @@ describe("readMintBurnCronSnapshot", () => {
       chainHead: null,
       chainHeads: new Map(),
     });
+  });
+
+  it("preserves a typed D1 snapshot failure and marks coverage unavailable", async () => {
+    const db = mockD1([
+      {
+        match: "SELECT started_at, status, metadata",
+        rows: [],
+        throwError: new Error("D1 snapshot unavailable"),
+      },
+    ]);
+    const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+
+    try {
+      const snapshot = await readMintBurnCronSnapshotResult(db);
+      expect(snapshot.value).toEqual({
+        startedAt: null,
+        status: null,
+        chainHead: null,
+        chainHeads: new Map(),
+      });
+      expect(snapshot.error).toEqual(new Error("D1 snapshot unavailable"));
+
+      const config = MINT_BURN_CONFIGS[0]!;
+      const coverage = buildCoinCoverageMap(
+        1_700_000_000,
+        [],
+        new Map(),
+        snapshot.value.chainHeads,
+        snapshot.error ? "cron-snapshot-unavailable" : null,
+      );
+      expect(coverage.get(config.stablecoinId)?.unavailableReason).toBe("cron-snapshot-unavailable");
+      expect(errorSpy).toHaveBeenCalledWith(expect.stringContaining("cron-snapshot-read-failed"));
+    } finally {
+      errorSpy.mockRestore();
+    }
   });
 });
 

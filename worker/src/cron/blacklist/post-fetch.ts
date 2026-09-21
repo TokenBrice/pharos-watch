@@ -5,7 +5,10 @@ import { D1_BATCH_SIZE } from "../../lib/constants";
 import { buildInClause } from "../../lib/db";
 import { type RateLimitedFetch } from "../../lib/evm-logs";
 import { type ChainRpcConfig } from "../../lib/chain-registry";
-import { syncCurrentBalanceCacheForRows } from "../../lib/blacklist/current-balance-cache";
+import {
+  syncCurrentBalanceCacheForRows,
+  type SyncCurrentBalanceCacheResult,
+} from "../../lib/blacklist/current-balance-cache";
 import { type BlacklistRow, shouldSuppressAsMirrorZero } from "../../lib/blacklist/shared";
 import { enrichRowBalances } from "../../lib/blacklist/amount-recovery";
 import { insertBlacklistRows } from "./persistence";
@@ -28,10 +31,6 @@ export interface BlacklistPostFetchCounters {
   failed: number;
 }
 
-export interface CurrentBalanceCacheCounters {
-  updated: number;
-  failed: number;
-}
 
 interface ProcessFetchedBlacklistRowsOptions {
   db: D1Database;
@@ -138,7 +137,7 @@ export async function processFetchedBlacklistRows(
 ): Promise<{
   insertedRows: number;
   enrichCounters: BlacklistPostFetchCounters;
-  currentBalanceCacheCounters: CurrentBalanceCacheCounters;
+  currentBalanceCacheCounters: SyncCurrentBalanceCacheResult;
 }> {
   const newRows = await filterNewBlacklistRows(options.db, options.rows, options.signal);
   const newRowIds = new Set(newRows.map((row) => row.id));
@@ -183,7 +182,12 @@ export async function processFetchedBlacklistRows(
     return {
       insertedRows: 0,
       enrichCounters: { attempted: 0, succeeded: 0, failed: 0 },
-      currentBalanceCacheCounters: { updated: 0, failed: 0 },
+      currentBalanceCacheCounters: {
+        updated: 0,
+        failed: 0,
+        skippedDueBudget: 0,
+        budgetExhausted: false,
+      },
     };
   }
 

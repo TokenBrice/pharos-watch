@@ -112,23 +112,11 @@ export function getEvmSafeHead(evmChainId: number, chainHead: number): number {
   return Math.max(0, chainHead - Math.ceil(INDEXING_SAFETY_SEC / blockTime));
 }
 
-/** Maximum plausible size of an address[] batch event — well above any real
- * AccountsBlocked or AddedToDenyList batch we've observed (real batches are
- * small, typically <50 addresses). Guards against malformed or adversarial
- * decode explosions. */
-const MAX_DECODED_ADDRESS_ARRAY = 500;
 
 function decodeAddressArrayData(data: string): string[] {
   try {
     const [addresses] = decodeAbiParameters([{ type: "address[]" }], data as `0x${string}`);
-    const result = [...addresses].map((a) => a.toLowerCase());
-    if (result.length > MAX_DECODED_ADDRESS_ARRAY) {
-      logWorkerEventArgs("handler", "warn",
-        `[blacklist] address[] event decoded ${result.length} entries; truncating to ${MAX_DECODED_ADDRESS_ARRAY}`,
-      );
-      return result.slice(0, MAX_DECODED_ADDRESS_ARRAY);
-    }
-    return result;
+    return [...addresses].map((address) => address.toLowerCase());
   } catch (error) {
     logWorkerEventArgs("handler", "warn", "[blacklist] Failed to decode address[] event data:", error);
     return [];

@@ -148,7 +148,12 @@ beforeEach(() => {
   mocks.processFetchedBlacklistRows.mockResolvedValue({
     insertedRows: 0,
     enrichCounters: { attempted: 0, succeeded: 0, failed: 0 },
-    currentBalanceCacheCounters: { updated: 0, failed: 0 },
+    currentBalanceCacheCounters: {
+      updated: 0,
+      failed: 0,
+      skippedDueBudget: 0,
+      budgetExhausted: false,
+    },
   });
 });
 

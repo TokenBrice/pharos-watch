@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo } from "react";
+import { useInfiniteQuery } from "@tanstack/react-query";
 import { API_PATHS } from "@shared/lib/api-endpoints/paths";
 import type { TapeEvent, TapeEventsResponse } from "@shared/types/tape-event";
 import type {
@@ -12,7 +13,8 @@ import { caseStudySlugForEvent } from "@/lib/case-study-client-index";
 import { DAY_MS } from "@/lib/constants";
 import { FRONTEND_API_QUERY_DESCRIPTORS } from "@/lib/api-query-descriptors";
 import { isChartAnnotationsEnabled } from "@/lib/feature-flags";
-import { useRegisteredApiQuery } from "./api-hooks";
+import { useAutoLoadInfinitePages } from "./use-auto-load-infinite-pages";
+import { createApiInfinitePollingQueryOptions } from "./use-api-query";
 
 /**
  * Idea 4 phase 2 — event-annotated price/supply charts.
@@ -40,6 +42,7 @@ export type { ChartAnnotation, ChartAnnotationKind };
 interface UseChartAnnotationsResult {
   data: ChartAnnotation[];
   isLoading: boolean;
+  isTruncated: boolean;
 }
 
 const EMPTY_ANNOTATIONS: ChartAnnotation[] = [];
@@ -47,6 +50,8 @@ const EMPTY_ANNOTATIONS: ChartAnnotation[] = [];
 type TapeEventsResponseBody = Omit<TapeEventsResponse, "_meta">;
 
 const TAPE_EVENTS_LIMIT = 200;
+const ANNOTATION_EVENT_SAFETY_CAP = 2_000;
+const ANNOTATION_MAX_PAGES = Math.ceil(ANNOTATION_EVENT_SAFETY_CAP / TAPE_EVENTS_LIMIT);
 const ANNOTATION_QUERY_BUCKET_MS = 30 * DAY_MS;
 const ANNOTATION_EVENT_TYPES = ["depeg.opened", "depeg.peak_worsened"] as const;
 const ANNOTATION_EVENT_CLASSES = ["methodology"] as const;
@@ -106,12 +111,14 @@ function isTapeSeverityWorthPlotting(s: TapeEvent["severity"]): boolean {
 function buildAnnotationEventsPath(
   stablecoinId: string,
   queryWindow: { since: number; until: number } | null,
+  cursor: string | null,
 ): string {
   const params = new URLSearchParams({
     coin: stablecoinId,
     severityFloor: "warning",
     limit: String(TAPE_EVENTS_LIMIT),
   });
+  if (cursor) params.set("cursor", cursor);
 
   if (queryWindow) {
     params.set("since", String(queryWindow.since));
@@ -138,28 +145,48 @@ export function useChartAnnotations(
   const queryWindow = enabled ? buildAnnotationQueryWindow(fromMs as number, toMs as number) : null;
 
   const path = enabled
-    ? buildAnnotationEventsPath(stablecoinId, queryWindow)
+    ? buildAnnotationEventsPath(stablecoinId, queryWindow, null)
     : API_PATHS.events();
+  const descriptor = FRONTEND_API_QUERY_DESCRIPTORS.chartAnnotationEvents({
+    queryKey: [
+      "events",
+      "chart-annotations",
+      {
+        coin: stablecoinId,
+        since: queryWindow?.since ?? null,
+        until: queryWindow?.until ?? null,
+      },
+    ],
+    path,
+  });
 
-  const query = useRegisteredApiQuery<TapeEventsResponseBody>(
-    FRONTEND_API_QUERY_DESCRIPTORS.chartAnnotationEvents({
-      queryKey: [
-        "events",
-        "chart-annotations",
-        {
-          coin: stablecoinId,
-          since: queryWindow?.since ?? null,
-          until: queryWindow?.until ?? null,
-        },
-      ],
-      path,
-    }),
-    { enabled },
-  );
+  const query = useInfiniteQuery({
+    ...createApiInfinitePollingQueryOptions<TapeEventsResponseBody>(
+      descriptor.queryKey,
+      descriptor.producerIntervalMs,
+      descriptor.schema!,
+      (cursor) => buildAnnotationEventsPath(stablecoinId, queryWindow, cursor),
+      (page) => page.nextCursor,
+    ),
+    enabled,
+  });
+  const pages = query.data?.pages;
+  useAutoLoadInfinitePages({
+    enabled,
+    autoLoadAll: true,
+    error: query.error,
+    fetchNextPage: query.fetchNextPage,
+    hasNextPage: query.hasNextPage,
+    isFetchingNextPage: query.isFetchingNextPage,
+    pageCount: pages?.length,
+    maxAutoPages: ANNOTATION_MAX_PAGES,
+  });
+  const isTruncated =
+    (pages?.length ?? 0) >= ANNOTATION_MAX_PAGES && query.hasNextPage === true;
 
   return useMemo<UseChartAnnotationsResult>(() => {
     if (!enabled) {
-      return { data: EMPTY_ANNOTATIONS, isLoading: false };
+      return { data: EMPTY_ANNOTATIONS, isLoading: false, isTruncated: false };
     }
     const lo = fromMs as number;
     const hi = toMs as number;
@@ -176,23 +203,23 @@ export function useChartAnnotations(
       annotations.push(a);
     }
 
-    if (query.data) {
-      for (const ev of query.data.events) {
-        if (ev.ts < lo || ev.ts > hi) continue;
-        if (!isTapeSeverityWorthPlotting(ev.severity)) continue;
-        const kind = mapWorkerKind(ev.type);
-        if (kind === null) continue;
-        const key = `${kind}|${Math.floor(ev.ts / DAY_MS)}`;
-        if (seen.has(key)) continue;
-        seen.add(key);
-        annotations.push({
-          ts: ev.ts,
-          kind,
-          label: ev.title,
-          severity: severityToBand(ev.severity),
-          href: ev.sourceUrl ?? undefined,
-        });
-      }
+    for (const ev of pages
+      ?.flatMap((page) => page.data.events)
+      .slice(0, ANNOTATION_EVENT_SAFETY_CAP) ?? []) {
+      if (ev.ts < lo || ev.ts > hi) continue;
+      if (!isTapeSeverityWorthPlotting(ev.severity)) continue;
+      const kind = mapWorkerKind(ev.type);
+      if (kind === null) continue;
+      const key = `${kind}|${Math.floor(ev.ts / DAY_MS)}`;
+      if (seen.has(key)) continue;
+      seen.add(key);
+      annotations.push({
+        ts: ev.ts,
+        kind,
+        label: ev.title,
+        severity: severityToBand(ev.severity),
+        href: ev.sourceUrl ?? undefined,
+      });
     }
 
     annotations.sort((a, b) => a.ts - b.ts);
@@ -201,6 +228,6 @@ export function useChartAnnotations(
       const slug = caseStudySlugForEvent(stablecoinId, a.ts);
       return slug ? { ...a, caseStudySlug: slug } : a;
     });
-    return { data: linked, isLoading: query.isLoading };
-  }, [enabled, stablecoinId, fromMs, toMs, query.data, query.isLoading]);
+    return { data: linked, isLoading: query.isLoading, isTruncated };
+  }, [enabled, stablecoinId, fromMs, toMs, pages, query.isLoading, isTruncated]);
 }

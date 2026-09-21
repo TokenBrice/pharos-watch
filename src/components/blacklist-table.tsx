@@ -10,11 +10,11 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { Download, ExternalLink } from "lucide-react";
 import { downloadCsv } from "@/lib/exports/csv";
 import { getNextSortState } from "@/hooks/use-sort";
-import { formatAddress, formatEventDate, formatCurrency } from "@shared/lib/format";
+import { formatAddress, formatEventDate } from "@shared/lib/format";
 import { EVENT_BADGE_STYLES, EVENT_LABELS } from "@shared/lib/classification";
 import type { BlacklistEvent, BlacklistSortDirection, BlacklistSortKey } from "@shared/types";
 import {
-  formatBlacklistAmount,
+  formatBlacklistAmountOrStatus,
   formatBlacklistNativeAmount,
   getBlacklistAmountSourceLabel,
 } from "@/lib/blacklist-event-presentation";
@@ -255,13 +255,7 @@ function BlacklistEventRow({ event: evt, rank }: { event: BlacklistEvent; rank: 
 function BlacklistAmount({ event: evt }: { event: BlacklistEvent }) {
   return (
     <>
-      {evt.amountUsdAtEvent != null
-        ? formatCurrency(evt.amountUsdAtEvent)
-        : evt.amountNative != null && !(evt.amountNative === 0 && evt.eventType !== "destroy")
-          ? formatBlacklistAmount(evt)
-          : evt.amountStatus === "permanently_unavailable"
-            ? "N/A"
-            : "\u2014"}
+      {formatBlacklistAmountOrStatus(evt)}
       <AmountBadges
         event={evt}
         badgeClassName="ml-1 inline-flex cursor-help items-center rounded border border-border px-1 py-0.5 text-[10px] uppercase tracking-wide text-muted-foreground"
@@ -337,13 +331,7 @@ function BlacklistEventCard({ event: evt, rank }: { event: BlacklistEvent; rank:
         <div className="shrink-0 text-right">
           <p className="pharos-kicker">Amount</p>
         <p className="pharos-numeric text-sm font-semibold text-foreground">
-          {evt.amountUsdAtEvent != null
-            ? formatCurrency(evt.amountUsdAtEvent)
-            : evt.amountNative != null && !(evt.amountNative === 0 && evt.eventType !== "destroy")
-              ? formatBlacklistAmount(evt)
-              : evt.amountStatus === "permanently_unavailable"
-                ? "N/A"
-                : "\u2014"}
+          {formatBlacklistAmountOrStatus(evt)}
         </p>
         </div>
       </div>

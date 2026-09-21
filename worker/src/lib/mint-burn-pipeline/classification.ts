@@ -42,16 +42,42 @@ function hasRuntimeWindow(options?: BridgeClassificationOptions): boolean {
 }
 
 function toTxContext(batch: AlchemyTransactionContextBatch): TxContextResolution {
-  if (!batch.tx || !batch.receipt) {
+  const tx = batch.tx as unknown;
+  const receipt = batch.receipt as unknown;
+  if (!tx || typeof tx !== "object" || !receipt || typeof receipt !== "object") {
+    return { context: null, shortfall: true };
+  }
+  const txRecord = tx as Record<string, unknown>;
+  const receiptRecord = receipt as Record<string, unknown>;
+  if (
+    (typeof txRecord.to !== "string" && txRecord.to !== null)
+    || typeof txRecord.input !== "string"
+    || (typeof receiptRecord.to !== "string" && receiptRecord.to !== null)
+    || !Array.isArray(receiptRecord.logs)
+    || !receiptRecord.logs.every((log) => {
+      if (!log || typeof log !== "object") return false;
+      const logRecord = log as Record<string, unknown>;
+      return typeof logRecord.address === "string"
+        && Array.isArray(logRecord.topics)
+        && logRecord.topics.every((topic) => typeof topic === "string");
+    })
+  ) {
     return { context: null, shortfall: true };
   }
 
+  const logTopics: string[] = [];
+  const logAddresses: string[] = [];
+  for (const log of receiptRecord.logs) {
+    const logRecord = log as Record<string, unknown>;
+    logAddresses.push(logRecord.address as string);
+    logTopics.push(...(logRecord.topics as string[]));
+  }
   return {
     context: {
-      to: batch.tx.to ?? batch.receipt.to ?? null,
-      inputSelector: batch.tx.input?.slice(0, 10) ?? null,
-      logTopics: batch.receipt.logs.flatMap((log) => log.topics ?? []),
-      logAddresses: batch.receipt.logs.map((log) => log.address).filter((address): address is string => Boolean(address)),
+      to: typeof txRecord.to === "string" ? txRecord.to : null,
+      inputSelector: txRecord.input.slice(0, 10),
+      logTopics,
+      logAddresses,
     },
     shortfall: false,
   };

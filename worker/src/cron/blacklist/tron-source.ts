@@ -98,6 +98,23 @@ export function parseTronEvent(config: ContractEventConfig, evt: TronEventResult
     evt.result._blackListedUser ||
     evt.result["0"] ||
     "";
+  if (!affectedAddress) {
+    logWorkerEvent({
+      scope: "lib",
+      level: "warn",
+      event: "sync_blacklist.trongrid_event_missing_address",
+      job: "sync-blacklist",
+      provider: "trongrid",
+      message: "Dropped recognized Tron blacklist event without an affected address",
+      metadata: {
+        configKey: config.configKey,
+        eventName: evt.event_name,
+        transactionId: evt.transaction_id,
+        eventIndex: evt.event_index,
+      },
+    });
+    return null;
+  }
   const rawAmountStr = evt.result._balance || evt.result._value || evt.result["1"];
   const amount =
     eventDef.hasAmount && rawAmountStr ? decimalNumberFromBigInt(BigInt(rawAmountStr), config.decimals) : null;

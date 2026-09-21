@@ -146,6 +146,32 @@ export interface EtherscanLogEntry {
   logIndex: string;
 }
 
+const EVM_ADDRESS_HEX_RE = /^0x[0-9a-fA-F]{40}$/;
+const EVM_TOPIC_HEX_RE = /^0x[0-9a-fA-F]{64}$/;
+const EVM_HASH_HEX_RE = /^0x[0-9a-fA-F]{64}$/;
+const EVM_QUANTITY_HEX_RE = /^0x[0-9a-fA-F]+$/;
+const EVM_DATA_HEX_RE = /^0x(?:[0-9a-fA-F]{2})*$/;
+
+function isEtherscanLogEntry(value: unknown): value is EtherscanLogEntry {
+  if (!value || typeof value !== "object") return false;
+  const log = value as Record<string, unknown>;
+  return typeof log.address === "string"
+    && EVM_ADDRESS_HEX_RE.test(log.address)
+    && Array.isArray(log.topics)
+    && log.topics.length > 0
+    && log.topics.every((topic) => typeof topic === "string" && EVM_TOPIC_HEX_RE.test(topic))
+    && typeof log.data === "string"
+    && EVM_DATA_HEX_RE.test(log.data)
+    && typeof log.blockNumber === "string"
+    && EVM_QUANTITY_HEX_RE.test(log.blockNumber)
+    && typeof log.timeStamp === "string"
+    && EVM_QUANTITY_HEX_RE.test(log.timeStamp)
+    && typeof log.transactionHash === "string"
+    && EVM_HASH_HEX_RE.test(log.transactionHash)
+    && typeof log.logIndex === "string"
+    && EVM_QUANTITY_HEX_RE.test(log.logIndex);
+}
+
 export interface EvmLogFetchResult {
   logs: EtherscanLogEntry[];
   complete: boolean;
@@ -211,7 +237,7 @@ export async function fetchEvmLogsForTopicWithCompleteness(
   budget.count++;
   const json = await rateLimit(async () => {
     const timeout = AbortSignal.timeout(timeoutMs);
-    const result = await fetchJsonWithRetry<{ status: string; message: string; result: EtherscanLogEntry[] }>(
+    const result = await fetchJsonWithRetry<{ status: string; message: string; result: unknown }>(
       `${ETHERSCAN_V2_BASE}?${params}`,
       {
         signal: signal ? AbortSignal.any([signal, timeout]) : timeout,
@@ -245,9 +271,20 @@ export async function fetchEvmLogsForTopicWithCompleteness(
     };
   }
 
-  const logs = json.result;
+  const rawLogs = json.result;
+  const logs = rawLogs.filter(isEtherscanLogEntry);
+  if (logs.length !== rawLogs.length) {
+    logWorkerEvent({
+      scope: "lib",
+      level: "warn",
+      event: "etherscan_logs_malformed_entries_dropped",
+      message: "Dropped malformed Etherscan log entries",
+      provider: "etherscan",
+      metadata: { chainId: evmChainId, dropped: rawLogs.length - logs.length, retained: logs.length },
+    });
+  }
 
-  if (logs.length >= ETHERSCAN_MAX_RESULTS) {
+  if (rawLogs.length >= ETHERSCAN_MAX_RESULTS) {
     const mid = Math.floor((fromBlock + toBlock) / 2);
     if (mid === fromBlock) {
       return {

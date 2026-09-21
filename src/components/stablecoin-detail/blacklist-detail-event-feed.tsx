@@ -7,12 +7,11 @@ import { DataTableShell, type DataTableColumn } from "@/components/data-table-sh
 import { useBlacklistEventsPage } from "@/hooks/use-blacklist-events";
 import { EventFeedEmpty, EventFeedSkeleton, EventTransactionCell } from "@/components/event-feed-state";
 import { EVENT_BADGE_STYLES, EVENT_LABELS } from "@shared/lib/classification";
-import { formatAddress, formatCurrency, timeAgo, formatEventDate } from "@shared/lib/format";
+import { formatAddress, timeAgo, formatEventDate } from "@shared/lib/format";
 import type { BlacklistEvent, BlacklistStablecoin } from "@shared/types";
 import {
-  formatBlacklistNativeAmount,
+  formatBlacklistAmountOrStatus,
   getBlacklistAmountSourceLabel,
-  getBlacklistAmountStatusLabel,
 } from "@/lib/blacklist-event-presentation";
 
 const COLUMNS: readonly DataTableColumn[] = [
@@ -33,27 +32,6 @@ function eventBadge(eventType: BlacklistEvent["eventType"]) {
   return {
     label: EVENT_LABELS[eventType],
     className: `${EVENT_BADGE_STYLES[eventType]} text-xs`,
-  };
-}
-
-function formatFeedAmount(evt: BlacklistEvent): { primary: string; detail: string } {
-  if (evt.amountUsdAtEvent != null) {
-    return {
-      primary: formatCurrency(evt.amountUsdAtEvent),
-      detail: getBlacklistAmountSourceLabel(evt),
-    };
-  }
-
-  if (evt.amountNative != null && !(evt.amountNative === 0 && evt.eventType !== "destroy")) {
-    return {
-      primary: `${formatBlacklistNativeAmount(evt)} ${evt.stablecoin}`,
-      detail: getBlacklistAmountSourceLabel(evt),
-    };
-  }
-
-  return {
-    primary: getBlacklistAmountStatusLabel(evt),
-    detail: getBlacklistAmountSourceLabel(evt),
   };
 }
 
@@ -85,7 +63,7 @@ export function BlacklistDetailEventFeed({ symbol, limit = 10 }: Props) {
       >
         {data.events.map((evt) => {
           const badge = eventBadge(evt.eventType);
-          const amount = formatFeedAmount(evt);
+          const amount = formatBlacklistAmountOrStatus(evt);
           return (
             <TableRow key={evt.id}>
               <TableCell className="whitespace-nowrap text-xs" title={formatEventDate(evt.timestamp)}>
@@ -110,9 +88,11 @@ export function BlacklistDetailEventFeed({ symbol, limit = 10 }: Props) {
                 <span
                   className={evt.amountUsdAtEvent == null && evt.amountNative == null ? "text-muted-foreground" : ""}
                 >
-                  {amount.primary}
+                  {amount}
                 </span>
-                <span className="block text-[10px] uppercase tracking-wide text-muted-foreground">{amount.detail}</span>
+                <span className="block text-[10px] uppercase tracking-wide text-muted-foreground">
+                  {getBlacklistAmountSourceLabel(evt)}
+                </span>
               </TableCell>
               <TableCell className="hidden sm:table-cell text-sm">{evt.chainName}</TableCell>
               <EventTransactionCell txHash={evt.txHash} href={evt.explorerTxUrl} />

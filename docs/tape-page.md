@@ -83,7 +83,9 @@ The route is a thin client over `GET /api/events` (handler `worker/src/api/event
 - **Type filters:** `type=foo` matches exactly; `type=foo.*` matches all subtypes; `class=foo` is a shortcut for `type=foo.*`. Both can be passed multiple times.
 - **Freshness:** the response Cache-Control is the `realtime` profile (`public, s-maxage=60, max-age=10`); the freshness budget (`FRESHNESS_MAX_AGE_SEC = 600`, 10 minutes) instead drives `_meta` `{updatedAt, ageSeconds, status}`. The `project-tape` cron lane runs every 30 minutes, so `Warning: 110` fires after roughly 80 minutes absent.
 - **Read boundary:** every queried row is mapped and then validated against the complete `TapeEventSchema` (in `worker/src/lib/tape-event-helpers.ts`) before it is emitted. A row whose stored `payload_json` is not a JSON object, or whose mapped event fails the schema, is quarantined with a named reason in the Worker log (`payload-json-invalid` / `wire-schema-invalid`, plus the failing field paths) and counted in `droppedRows`; it is never published as an event, and the remaining rows are still served. Corrupt JSON is not coerced into an empty payload.
+- **Static-catalog dates:** cemetery and lifecycle projectors accept only round-trip-valid `YYYY-MM` or `YYYY-MM-DD` UTC dates. Missing or calendar-invalid values are logged and skipped; they never become publication-time events.
 - **Hook:** `useEvents()` in `src/hooks/use-events.ts` wraps the infinite-query path; `useLatestEvents()` wraps the single-page latest-N path used by the homepage tape marquee and the permalink buffer.
+- **Chart annotations:** chart hooks follow event cursors across pages up to 2,000 matching tape events per query window. If another cursor remains at that safety cap, the hook publishes `isTruncated: true` instead of silently presenting the capped set as complete.
 
 `/api/events` is allowlisted on the same-origin site-data lane, so the page reads it through `/_site-data/events` from the browser.
 
@@ -96,6 +98,8 @@ The feed is a materialized projection of existing producer tables. The `project-
 DEWS band projection requires durable publication proof. The forward sparse `stress_signals` scan and its prior-band seed join `surface_publication_generations` at `surface = "dews"` and `state = "published"`. Band changes always create a sparse-history row, while unchanged half-hourly samples may be omitted. A partially written generation that fails DEWS row-count validation therefore emits no Tape event and cannot advance either DEWS projector watermark; a later published generation diffs against the last published band rather than the failed intermediate row. The DEWS cache pointer and ledger row commit atomically, while migration `0182` plus runtime pointer reconciliation bootstrap the publication that predates this contract.
 
 Current projector roster (from `TAPE_PROJECTOR_JOBS` in `worker/src/lib/tape-projectors/registry.ts`, consumed by `worker/src/cron/project-tape.ts` and `worker/src/api/backfill-tape.ts`):
+
+Static-catalog source-key probes use the same bounded D1 overload retry as projector inserts, so a transient overload does not turn a valid catalog projection into a failed run.
 
 | Projector                       | Source                                                  | Emits                                                                |
 | ------------------------------- | ------------------------------------------------------- | -------------------------------------------------------------------- |

@@ -1,10 +1,7 @@
-import { logWorkerEventArgs } from "../../lib/structured-log";
 import { CONTRACT_CONFIGS } from "../../lib/blacklist-contracts";
 import { includeActiveTrackedIds } from "../shared/exclude-frozen";
 import { normalizeBlacklistSyncStateKey } from "../../lib/db";
 import { runWithOverloadRetry } from "../../lib/d1-overload-retry";
-import { backfillTronFromLedger } from "../../lib/blacklist/amount-recovery";
-import type { BlacklistRunBudget } from "../../lib/blacklist/run-budget";
 import { inferBlacklistCursorKind, type BlacklistConfigState } from "./state";
 
 type ProcessedRows = {
@@ -17,6 +14,8 @@ type ProcessedRows = {
   currentBalanceCacheCounters: {
     updated: number;
     failed: number;
+    skippedDueBudget: number;
+    budgetExhausted: boolean;
   };
 };
 
@@ -48,6 +47,8 @@ type SyncBlacklistCounters = {
   currentBalanceCacheCounters: {
     updated: number;
     failed: number;
+    skippedDueBudget: number;
+    budgetExhausted: boolean;
   };
 };
 
@@ -137,6 +138,8 @@ export function recordProcessedRows(counters: SyncBlacklistCounters, processed: 
   counters.enrichCounters.failed += processed.enrichCounters.failed;
   counters.currentBalanceCacheCounters.updated += processed.currentBalanceCacheCounters.updated;
   counters.currentBalanceCacheCounters.failed += processed.currentBalanceCacheCounters.failed;
+  counters.currentBalanceCacheCounters.skippedDueBudget += processed.currentBalanceCacheCounters.skippedDueBudget;
+  counters.currentBalanceCacheCounters.budgetExhausted ||= processed.currentBalanceCacheCounters.budgetExhausted;
   counters.totalInsertedRows += processed.insertedRows;
 }
 
@@ -160,24 +163,6 @@ export function recordApiErrorConfig(
   apiErrorConfigs.push(entry);
 }
 
-export async function applyTronLedgerMirrorPass(
-  db: D1Database,
-  phase: "initial" | "post-sync",
-  options: { runBudget?: BlacklistRunBudget; signal?: AbortSignal } = {},
-): Promise<number> {
-  try {
-    const ledgerResult = await backfillTronFromLedger(db, options);
-    if (ledgerResult.updated > 0) {
-      const suffix = phase === "post-sync" ? " after current-balance sync" : "";
-      logWorkerEventArgs("handler", "info", `[sync-blacklist] Tron ledger mirror updated ${ledgerResult.updated} row(s)${suffix}`);
-    }
-    return ledgerResult.updated;
-  } catch (err) {
-    const prefix = phase === "post-sync" ? "Post-sync " : "";
-    logWorkerEventArgs("handler", "warn", `[sync-blacklist] ${prefix}Tron ledger mirror failed:`, err);
-    return 0;
-  }
-}
 
 export function deriveSyncBlacklistStatus(
   apiErrors: number,

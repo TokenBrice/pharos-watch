@@ -77,20 +77,30 @@ export function severityForScoreDowngrade(prevGrade: string, newGrade: string): 
 }
 
 /**
- * Parse a "YYYY-MM-DD" or "YYYY-MM" date string to epoch-seconds (UTC).
- * Missing day defaults to 1, missing month defaults to January.
- * Returns Math.floor(Date.now() / 1000) on invalid input.
+ * Parse an exact "YYYY-MM-DD" or "YYYY-MM" date string to epoch-seconds
+ * (UTC). Missing days default to the first of the month. Invalid or absent
+ * curated dates return null.
  */
-export function parseDateStringToEpochSec(value: string | undefined | null): number {
-  if (!value) return Math.floor(Date.now() / 1000);
-  const segments = value.split("-");
-  const year = Number(segments[0]);
-  const month = Number(segments[1] ?? "1");
-  const day = Number(segments[2] ?? "1");
-  if (!Number.isFinite(year) || !Number.isFinite(month) || !Number.isFinite(day)) {
-    return Math.floor(Date.now() / 1000);
+export function parseDateStringToEpochSec(value: string | undefined | null): number | null {
+  if (!value) return null;
+  const match = /^(\d{4})-(\d{2})(?:-(\d{2}))?$/.exec(value);
+  if (!match) return null;
+
+  const year = Number(match[1]);
+  const month = Number(match[2]);
+  const day = Number(match[3] ?? "1");
+  const parsed = new Date(0);
+  parsed.setUTCHours(0, 0, 0, 0);
+  parsed.setUTCFullYear(year, month - 1, day);
+  const timestampMs = parsed.getTime();
+  if (
+    parsed.getUTCFullYear() !== year ||
+    parsed.getUTCMonth() !== month - 1 ||
+    parsed.getUTCDate() !== day
+  ) {
+    return null;
   }
-  return Math.floor(Date.UTC(year, Math.max(0, month - 1), Math.max(1, day)) / 1000);
+  return Math.floor(timestampMs / 1000);
 }
 
 export function truncateSummary(summary: string): string {

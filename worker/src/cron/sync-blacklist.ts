@@ -12,7 +12,7 @@ import {
   createBlacklistRunBudget,
   type BlacklistRunBudget,
 } from "../lib/blacklist/run-budget";
-import { applyTronLedgerMirrorPass, deriveSyncBlacklistStatus } from "./blacklist/sync-support";
+import { deriveSyncBlacklistStatus } from "./blacklist/sync-support";
 import { toErrorMessage } from "@shared/lib/error-utils";
 import { getOldestBlacklistSuccessAt } from "./blacklist/state";
 import { scanBlacklistConfigs } from "./blacklist/config-scan";
@@ -98,7 +98,6 @@ export async function syncBlacklist(opts: SyncBlacklistOptions): Promise<SyncBla
     etherscanCircuitAllowed,
   } = scan;
   let { runtimeBudgetHit, etherscanCircuitSkips } = scan;
-  let tronLedgerUpdated = 0;
   let producerGapMetricSnapshots = 0;
   let producerSummarySnapshot = false;
   let producerSnapshotSkipped = false;
@@ -136,11 +135,8 @@ export async function syncBlacklist(opts: SyncBlacklistOptions): Promise<SyncBla
     etherscanCircuitSkips++;
     logWorkerEventArgs("handler", "warn", "[sync-blacklist] Etherscan circuit open, skipping EVM amount backfill");
   }
-  tronLedgerUpdated = await applyTronLedgerMirrorPass(db, "post-sync", {
-    runBudget: maintenanceRunBudget,
-    signal,
-  });
   const subrequestBudgetReached = blacklistSubrequestBudgetReached(runBudget);
+  runtimeBudgetHit ||= counters.currentBalanceCacheCounters.budgetExhausted;
   const derivedStatus = deriveSyncBlacklistStatus(apiErrors, runtimeBudgetHit, {
     contractsSkipped,
     totalConfigs: configStates.length,
@@ -258,9 +254,9 @@ export async function syncBlacklist(opts: SyncBlacklistOptions): Promise<SyncBla
         enrichSucceeded: counters.enrichCounters.succeeded,
         enrichFailed: counters.enrichCounters.failed,
         currentBalanceCacheUpdated: counters.currentBalanceCacheCounters.updated,
-        currentBalanceCacheDeleted: counters.currentBalanceCacheCounters.deleted,
         currentBalanceCacheFailed: counters.currentBalanceCacheCounters.failed,
-        tronLedgerUpdated,
+        currentBalanceCacheSkippedDueBudget: counters.currentBalanceCacheCounters.skippedDueBudget,
+        currentBalanceCacheBudgetExhausted: counters.currentBalanceCacheCounters.budgetExhausted,
         producerGapMetricSnapshots,
         producerSummarySnapshot,
         producerSnapshotSkipped,

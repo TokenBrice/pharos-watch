@@ -93,6 +93,8 @@ The producer summary cache is admitted fail-closed against the shared response s
 
 The producer returns `itemCount` as rows actually inserted into `blacklist_events`. Its `eventsFetched` metadata counts parsed rows before `INSERT OR IGNORE` deduplication. The remaining bounded counters and failure samples are defined beside `SyncBlacklistResult` and its metadata assembly in `sync-blacklist.ts`; do not duplicate that key inventory here.
 
+Current-balance cache telemetry preserves the canonical `skippedDueBudget` count and `budgetExhausted` flag; neither is replaced by a synthetic deletion counter.
+
 ### Provider Paths
 
 - Etherscan v2 is an explorer source for supported EVM log scans and a best-effort final historical-call fallback.
@@ -123,11 +125,13 @@ The durable rules are:
 
 1. An event family can read an address or amount from an indexed topic, a fixed ABI data slot, a dynamic address array, or a named Tron result field.
 2. A batch address event expands to one deterministic `blacklist_events` row per affected address.
-3. An emitted destroy/seize amount is preferred. An amountless wipe can use `balanceOf` at `blockNumber - 1` when a historical provider can prove it.
-4. Current Tron account balances belong to the freeze ledger. They must not be presented as fabricated event-time blacklist balances.
-5. Non-USD assets require a fresh coin-specific price-cache conversion before Pharos publishes a USD event or snapshot value.
-6. Circle mirror actions can produce auditable zero-balance EURC rows. `circle_mirror_zero_balance` rows remain stored but are excluded from public events, active records, and frozen-value aggregates.
-7. Seize-only BUIDL coverage records destroy events; it does not create an active blacklist/freeze state.
+3. Oversized batch-address events are never truncated. If a decoded row cannot be persisted completely within the bounded path, coverage is marked incomplete and the cursor cannot advance beyond that block.
+4. Recognized provider events without a non-empty affected address are quarantined instead of creating blank-address history.
+5. An emitted destroy/seize amount is preferred. An amountless wipe can use `balanceOf` at `blockNumber - 1` when a historical provider can prove it.
+6. Current Tron account balances belong to the freeze ledger. They must not be presented as fabricated event-time blacklist balances.
+7. Non-USD assets require a fresh coin-specific price-cache conversion before Pharos publishes a USD event or snapshot value.
+8. Circle mirror actions can produce auditable zero-balance EURC rows. `circle_mirror_zero_balance` rows remain stored but are excluded from public events, active records, and frozen-value aggregates.
+9. Seize-only BUIDL coverage records destroy events; it does not create an active blacklist/freeze state.
 
 Explicit current limitations also remain source-tested:
 
@@ -162,8 +166,9 @@ Active ingestion uses these amount-source meanings:
 
 - `event`: amount emitted by the event.
 - `historical_balance`: amount proven by a historical balance read.
-- `current_balance_snapshot`: Tron freeze-ledger reconciliation, clearly distinguished from historical attribution.
 - `unavailable`: no defensible amount.
+
+`current_balance_snapshot` is retained for legacy read compatibility only. Current snapshots live in `blacklist_current_balances` and are never written into event-time columns.
 
 `derived` and `legacy_migration` are compatibility artifacts, not current ingestion modes. Eligible unresolved rows enter the durable repair queue. Legacy derived-zero rows receive bounded recovery attempts before becoming permanently unavailable. `legacy_migration` records historical amount provenance only; it does not indicate a remaining identity repair.
 

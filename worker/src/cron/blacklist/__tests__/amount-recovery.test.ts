@@ -6,12 +6,10 @@ vi.mock("../../../lib/blacklist/balance-providers", () => ({
 
 import {
   backfillAmounts,
-  backfillTronFromLedger,
   enrichRowBalances,
   extractDestroyAmountFromReceiptLogs,
 } from "../../../lib/blacklist/amount-recovery";
 import { fetchEvmTokenBalance } from "../../../lib/blacklist/balance-providers";
-import { buildBlacklistContractBalanceKey } from "@shared/lib/blacklist";
 import { shouldSuppressAsMirrorZero } from "../../../lib/blacklist/shared";
 import {
   mockD1 as createMockD1,
@@ -124,97 +122,38 @@ describe("enrichRowBalances", () => {
     expect(db.getHistory()[0]?.sql).toContain("AND chain_id != 'tron'");
   });
 
-  it("backfills Tron ledger amounts by current-balance identity id without correlated LOWER scans", async () => {
-    const db = mockD1([
-      {
-        match: "blacklist-tron-ledger-backfill-candidates",
-        rows: [{
-          id: "tron-row-1",
-          stablecoin: "USDT",
-          chain_id: "tron",
-          address: "TBlacklisted",
-          config_key: "tron-contract",
-          contract_address: "TRONCONTRACT",
-        }],
-      },
-      {
-        match: "blacklist-tron-ledger-balance-lookup",
-        rows: [{
-          id: "USDT:tron:troncontract:tron-contract:tblacklisted",
-          amount_native: 25,
-          amount_usd: 25,
-        }],
-      },
-      {
-        match: "blacklist-tron-ledger-backfill-update",
-        rows: [],
-        runMeta: { changes: 1 },
-      },
-    ], { requireMatch: true });
-
-    const result = await backfillTronFromLedger(db);
-
-    expect(result.updated).toBe(1);
-    const history = db.getHistory();
-    const sql = history.map((entry) => entry.sql).join("\n");
-    expect(sql).not.toContain("LOWER(");
-    expect(sql).toContain("FROM blacklist_current_balances");
-    expect(sql).toContain("WHERE id IN");
-    const candidateScan = history.find((entry) => entry.sql.includes("blacklist-tron-ledger-backfill-candidates"));
-    expect(candidateScan?.sql).toContain("LIMIT ?");
-    expect(candidateScan?.binds).toEqual([100]);
-    const lookup = history.find((entry) => entry.sql.includes("blacklist-tron-ledger-balance-lookup"));
-    expect(lookup?.binds).toContain("USDT:tron:troncontract:tron-contract:tblacklisted");
-    const update = history.find((entry) => entry.sql.includes("blacklist-tron-ledger-backfill-update"));
-    expect(update?.binds).toEqual([25, 25, expect.any(Number), "tron-row-1"]);
-  });
-
-  it("commits already-fetched Tron ledger balances when the budget is reached mid-loop", async () => {
-    // 50 candidates -> 100 unique balance ids -> 2 lookup chunks (size 90).
-    const candidates = Array.from({ length: 50 }, (_, i) => ({
-      id: `tron-row-${i}`,
-      stablecoin: "USDT",
+  it("leaves historical Tron event amounts unresolved", async () => {
+    const row = makeRow({
       chain_id: "tron",
-      address: `TBlacklisted${i}`,
-      config_key: "tron-contract",
-      contract_address: "TRONCONTRACT",
-    }));
-    const scopedKey = (c: (typeof candidates)[number]) =>
-      buildBlacklistContractBalanceKey(c.stablecoin as Parameters<typeof buildBlacklistContractBalanceKey>[0], c.chain_id, c.address, c.config_key, c.contract_address);
-    const balanceRows = candidates.map((c) => ({ id: scopedKey(c), amount_native: 7, amount_usd: 7 }));
+      address: "TBlacklisted",
+      amount_source: "unavailable",
+      amount_status: "recoverable_pending",
+    });
+    const config: ContractEventConfig = {
+      ...makeConfig(),
+      stablecoin: "USDT",
+      stablecoinId: "usdt-tether",
+      chain: chainConfig("tron"),
+      contractAddress: "TRONCONTRACT",
+      configKey: "USDT:tron",
+    };
 
-    const db = mockD1([
-      { match: "blacklist-tron-ledger-backfill-candidates", rows: candidates },
-      { match: "blacklist-tron-ledger-balance-lookup", rows: balanceRows },
-      { match: "blacklist-tron-ledger-backfill-update", rows: [], runMeta: { changes: 1 } },
-    ]);
+    const result = await enrichRowBalances({
+      rows: [row],
+      config,
+      etherscanApiKey: null,
+      drpcApiKey: null,
+      etherscanLimiter: async <T>(fn: () => Promise<T>) => fn(),
+      runBudget: makeRunBudget(),
+    });
 
-    // Budget reads as "not reached" until the first balance-lookup query runs,
-    // then flips reached so the second chunk loop iteration breaks.
-    const runBudget = {
-      subrequestBudget: { count: 0, limit: 1000 },
-      minimumConfigWindowMs: 0,
-      get deadlineMs() {
-        const lookupRan = db.getHistory().some((entry) =>
-          entry.sql.includes("blacklist-tron-ledger-balance-lookup"),
-        );
-        return lookupRan ? Date.now() - 1 : Date.now() + 10_000;
-      },
-    } as unknown as BlacklistRunBudget;
-
-    const result = await backfillTronFromLedger(db, { runBudget });
-
-    // Previously returned { updated: 0 }, discarding the first chunk's fetched balances.
-    expect(result.updated).toBeGreaterThan(0);
-    const history = db.getHistory();
-    const lookupCount = history.filter((entry) =>
-      entry.sql.includes("blacklist-tron-ledger-balance-lookup"),
-    ).length;
-    expect(lookupCount).toBe(1); // second chunk skipped after budget reached
-    const updateCount = history.filter((entry) =>
-      entry.sql.includes("blacklist-tron-ledger-backfill-update"),
-    ).length;
-    expect(updateCount).toBeGreaterThan(0); // accumulated matches were committed
+    expect(result).toEqual({ attempted: 0, succeeded: 0, failed: 0 });
+    expect(row).toMatchObject({
+      amount_native: null,
+      amount_usd_at_event: null,
+      amount_source: "unavailable",
+      amount_status: "recoverable_pending",
+    });
   });
 
   it("values rows that already have native amounts without provider calls", async () => {

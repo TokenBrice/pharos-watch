@@ -329,6 +329,10 @@ describe("syncBlacklist", () => {
     expect(meta.apiErrors).toBe(0);
     expect(meta.rowsWritten).toBe(1);
     expect(meta.eventsFetched).toBe(1);
+    expect(meta.currentBalanceCacheSkippedDueBudget).toBe(0);
+    expect(meta.currentBalanceCacheBudgetExhausted).toBe(false);
+    expect(meta).not.toHaveProperty("currentBalanceCacheDeleted");
+    expect(meta).not.toHaveProperty("tronLedgerUpdated");
     // batchExecute should have been called to insert the event row
     expect(batchExecute).toHaveBeenCalled();
   });
@@ -577,7 +581,7 @@ describe("syncBlacklist", () => {
     expect(fetchMock.mock.calls.some(([url]) => String(url).includes("trongrid.io/v1/contracts"))).toBe(false);
   });
 
-  it("reapplies the Tron ledger mirror after refreshing current balances", async () => {
+  it("keeps a historical Tron event unresolved after refreshing its current balance", async () => {
     const { sqlite } = sqliteFixtures.open();
     const history: string[] = [];
     const db = createSqliteD1(sqlite, {
@@ -634,15 +638,16 @@ describe("syncBlacklist", () => {
     await syncBlacklist(buildTestOpts({ db }));
 
     const refreshIndex = history.findIndex((sql) => sql.includes("INSERT INTO blacklist_current_balances"));
-    const mirrorIndex = history.findIndex((sql) => sql.includes("blacklist-tron-ledger-backfill-candidates"));
     expect(refreshIndex).toBeGreaterThanOrEqual(0);
-    expect(mirrorIndex).toBeGreaterThan(refreshIndex);
     expect(sqlite.prepare("SELECT amount_native, amount_usd_at_event, amount_source, amount_status FROM blacklist_events WHERE tx_hash = 'tx-tron-ledger-1'").all()).toEqual([{
-      amount_native: 1, amount_usd_at_event: 1,
-      amount_source: "current_balance_snapshot", amount_status: "resolved",
+      amount_native: null,
+      amount_usd_at_event: null,
+      amount_source: "unavailable",
+      amount_status: "recoverable_pending",
     }]);
     expect(sqlite.prepare("SELECT amount_native, amount_usd FROM blacklist_current_balances WHERE chain_id = 'tron'").all()).toEqual([{
-      amount_native: 1, amount_usd: 1,
+      amount_native: 1,
+      amount_usd: 1,
     }]);
   });
 

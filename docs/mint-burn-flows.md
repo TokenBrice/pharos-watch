@@ -442,10 +442,11 @@ Auth/idempotency, scope parameters, batch progression, counters, and errors are 
 | `degradedSignal`, `degradedStreak`, `coverageRatio` | mixed | Critical-lane health signals |
 | `recalcFailed` | boolean | `true` when `recalcAffectedHours` threw during the run's `finally` block; critical lane downgrades `ok → degraded` when this is set |
 | `recalcError` | string (optional) | Error message captured from the failed recalc call |
-| `nullPriceBacklogRecent` | number | Count of `amount_usd IS NULL` rows inside the 48h auto-heal window still awaiting price resolution |
-| `nullPriceBacklogHistorical` | number | Count of `amount_usd IS NULL` rows older than the auto-heal window (debt that `backfill-mint-burn-prices` must address) |
+| `nullPriceBacklogRecent` | number \| null | Count inside the 48h auto-heal window, or `null` when the backlog read is unavailable |
+| `nullPriceBacklogHistorical` | number \| null | Count of older NULL-valued rows, or `null` when the backlog read is unavailable |
 | `roundtripsBacklogSaturated` | boolean | `true` when the cross-run roundtrip sweep hit its per-run limit and more candidate groups likely remain in the 7-day lookback window |
-| `nullPriceBacklogUnavailable` | boolean | `true` when the retried backlog metadata read failed; backlog counts are unavailable rather than zero |
+| `nullPriceBacklogAvailable` | boolean | `false` when the retried backlog metadata read failed; `nullPriceBacklog` and its count projections are unavailable rather than zero |
+| `nullPriceBacklogError` | string (optional) | Bounded failure detail for an unavailable backlog metadata read |
 | `budgetUsed` | number | Alchemy subrequests consumed by this run (emitted via `withBudgetMetadata`) |
 | `budgetLimit` | number | Global subrequest budget for the run (default 200) |
 

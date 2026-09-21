@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { DatabaseSync } from "node:sqlite";
 import { createSqliteD1 } from "@shared/test-utils/sqlite-d1";
 import {
@@ -6,11 +6,13 @@ import {
   insertTapeEvents,
   queryTapeEvents,
 } from "../tape-event-store";
-import { mapTapeEventRow } from "../tape-event-helpers";
+import { mapTapeEventRow, parseDateStringToEpochSec } from "../tape-event-helpers";
 import type { TapeEventInsert } from "../tape-event-types";
 
 const databases: DatabaseSync[] = [];
 afterEach(() => {
+  vi.useRealTimers();
+  vi.restoreAllMocks();
   for (const sqlite of databases.splice(0)) sqlite.close();
 });
 
@@ -95,7 +97,54 @@ describe("Tape event store static-catalog probes", () => {
     expect(reads.every((sql) => sql.includes("LIMIT 1"))).toBe(true);
     expect(reads.every((sql) => !sql.includes("WHERE type ="))).toBe(true);
   });
+
+  it("retries two overload failures and returns each unprojected event once", async () => {
+    vi.useFakeTimers();
+    vi.spyOn(Math, "random").mockReturnValue(0);
+    const { db } = createTapeDatabase();
+    const observed = event("observed-after-overload");
+    const pending = event("pending-after-overload");
+    await insertTapeEvents(db, [observed]);
+
+    const batch = db.batch.bind(db);
+    let attempts = 0;
+    const retryingDb = new Proxy(db, {
+      get(target, property, receiver) {
+        if (property === "batch") {
+          return async (statements: D1PreparedStatement[]) => {
+            attempts += 1;
+            if (attempts <= 2) {
+              throw new Error("D1_ERROR: D1 DB is overloaded. Requests queued for too long.");
+            }
+            return batch(statements);
+          };
+        }
+        return Reflect.get(target, property, receiver);
+      },
+    });
+
+    const filtering = filterUnprojectedTapeEvents(retryingDb, [observed, pending]);
+    await vi.runAllTimersAsync();
+
+    await expect(filtering).resolves.toEqual([pending]);
+    expect(attempts).toBe(3);
+  });
 });
+
+describe("Curated tape event dates", () => {
+  it("round-trips valid month and day precision in UTC", () => {
+    expect(parseDateStringToEpochSec("2024-02")).toBe(Date.UTC(2024, 1, 1) / 1000);
+    expect(parseDateStringToEpochSec("2024-02-29")).toBe(Date.UTC(2024, 1, 29) / 1000);
+  });
+
+  it.each([undefined, null, "", "24-02-29", "2024-13", "2024-02-31"])(
+    "rejects invalid curated date %j",
+    (value) => {
+      expect(parseDateStringToEpochSec(value)).toBeNull();
+    },
+  );
+});
+
 
 describe("Tape event read boundary", () => {
   it("serves a projector insert through the full wire schema", async () => {

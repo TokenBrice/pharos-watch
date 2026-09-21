@@ -134,12 +134,12 @@ const BUIDL_CONFIG: ContractEventConfig = {
 
 function makeEtherscanLog(blockNumber: number, index: number): EtherscanLogEntry {
   return {
-    address: "0x123",
-    topics: ["0xabc"],
+    address: `0x${"1".repeat(40)}`,
+    topics: [`0x${"a".repeat(64)}`],
     data: "0x",
     blockNumber: `0x${blockNumber.toString(16)}`,
     timeStamp: "0x65000000",
-    transactionHash: `0xhash${index}`,
+    transactionHash: `0x${index.toString(16).padStart(64, "0")}`,
     logIndex: `0x${index.toString(16)}`,
   };
 }
@@ -231,6 +231,28 @@ describe("parseEvmLogs", () => {
       "ethereum-0xusdtb-0x2-0",
       "ethereum-0xusdtb-0x2-1",
     ]);
+  });
+
+  it("preserves every address in a batch larger than 500", () => {
+    const addresses = Array.from(
+      { length: 501 },
+      (_, index) => `0x${(index + 1).toString(16).padStart(40, "0")}` as `0x${string}`,
+    );
+    const rows = parseEvmLogsWithCoverage(USDTB_CONFIG, [{
+      address: USDTB_CONFIG.contractAddress,
+      topics: [USDTB_CONFIG.events[0]!.topicHash],
+      data: encodeAbiParameters([{ type: "address[]" }], [addresses]),
+      blockNumber: "0x1234",
+      transactionHash: "0xusdtb-large-batch",
+      logIndex: "0x2",
+      timeStamp: "0x65000000",
+    }]).rows;
+
+    expect(rows).toHaveLength(501);
+    expect(rows[500]).toMatchObject({
+      id: "ethereum-0xusdtb-large-batch-0x2-500",
+      address: addresses[500],
+    });
   });
 
   it("extracts non-indexed A7A5 destroy address and emitted amount", () => {
@@ -518,27 +540,6 @@ describe("parseEvmLogs branch coverage", () => {
     expect(rows).toHaveLength(0);
   });
 
-  it("caps decoded address[] event to MAX_DECODED_ADDRESS_ARRAY", () => {
-    const addresses = Array.from({ length: 1000 }, (_, i) =>
-      "0x" + (i + 1).toString(16).padStart(40, "0"),
-    );
-    const encoded = encodeAbiParameters(
-      [{ type: "address[]" }],
-      [addresses as `0x${string}`[]],
-    );
-    const rows = parseEvmLogsWithCoverage(USDTB_CONFIG, [
-      {
-        address: USDTB_CONFIG.contractAddress,
-        topics: ["0x5444f9841c04ce78987f28701fa07fc4c112840c1c8439e8f52bda50c3788a87"],
-        data: encoded,
-        blockNumber: "0x1",
-        transactionHash: "0xdead",
-        logIndex: "0x0",
-        timeStamp: "0x61000000",
-      },
-    ]).rows;
-    expect(rows.length).toBe(500);
-  });
 
   const boolTopic = "0xcf3473b85df1594d47b6958f29a32bea0abff9dd68296f7bf33443646793cfd8";
   const boolConfig: ContractEventConfig = {

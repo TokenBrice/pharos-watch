@@ -140,7 +140,7 @@ export function useFreezeWatchPageController() {
   const offset = (page - 1) * pageSize;
   const {
     data: pageData,
-    isLoading: pageLoading,
+    isLoading: pageQueryLoading,
     error: pageError,
     dataUpdatedAt: pageUpdatedAt,
     refetch: refetchPage,
@@ -156,7 +156,6 @@ export function useFreezeWatchPageController() {
     offset,
     includeTotal: true,
   });
-  const events = pageData?.events ?? [];
   const error = summaryError ?? pageError ?? supportStablecoinsError ?? supportReportCardsError;
   const dataUpdatedAt = Math.max(summaryUpdatedAt, pageUpdatedAt);
   const freshnessMeta = summaryMeta ?? pageMeta;
@@ -267,6 +266,12 @@ export function useFreezeWatchPageController() {
   const total = pageData?.total ?? 0;
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
   const clampedPage = Math.min(page, totalPages);
+  const pageIsOutOfRange = pageData != null && page > totalPages;
+  const pageLoading = pageQueryLoading || pageIsOutOfRange;
+  const events = pageIsOutOfRange ? [] : (pageData?.events ?? []);
+  useEffect(() => {
+    if (pageIsOutOfRange) updateFilters({ page: clampedPage });
+  }, [clampedPage, pageIsOutOfRange, updateFilters]);
   const rangeStart = total === 0 ? 0 : (clampedPage - 1) * PAGE_SIZE + 1;
   const rangeEnd = total === 0 ? 0 : Math.min(clampedPage * PAGE_SIZE, total);
 

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { CONTRACT_CONFIGS } from "../../../lib/blacklist-contracts";
-import { deriveSyncBlacklistStatus } from "../sync-support";
+import { deriveSyncBlacklistStatus, recordProcessedRows } from "../sync-support";
 
 const threshold = Math.ceil(CONTRACT_CONFIGS.length / 2);
 
@@ -17,5 +17,38 @@ describe("sync blacklist status derivation", () => {
 
   it("uses the eligible config count for the error threshold", () => {
     expect(deriveSyncBlacklistStatus(6, false, { totalConfigs: 10 })).toBe("error");
+  });
+});
+
+describe("blacklist row counter aggregation", () => {
+  it("preserves current-balance budget exhaustion signals", () => {
+    const counters = {
+      totalInsertedRows: 0,
+      enrichCounters: { attempted: 0, succeeded: 0, failed: 0 },
+      currentBalanceCacheCounters: {
+        updated: 0,
+        failed: 0,
+        skippedDueBudget: 0,
+        budgetExhausted: false,
+      },
+    };
+
+    recordProcessedRows(counters, {
+      insertedRows: 2,
+      enrichCounters: { attempted: 1, succeeded: 0, failed: 1 },
+      currentBalanceCacheCounters: {
+        updated: 1,
+        failed: 0,
+        skippedDueBudget: 3,
+        budgetExhausted: true,
+      },
+    });
+
+    expect(counters.currentBalanceCacheCounters).toEqual({
+      updated: 1,
+      failed: 0,
+      skippedDueBudget: 3,
+      budgetExhausted: true,
+    });
   });
 });

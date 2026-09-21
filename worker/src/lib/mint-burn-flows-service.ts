@@ -104,6 +104,11 @@ export interface MintBurnCronSnapshot {
   chainHeads: Map<string, number>;
 }
 
+export interface MintBurnCronSnapshotResult {
+  value: MintBurnCronSnapshot;
+  error: unknown | null;
+}
+
 export interface FlowAggregate {
   mintVolume: number;
   burnVolume: number;
@@ -419,7 +424,14 @@ export function selectLargestEvents(rows: EventRow[]): Map<string, EventRow> {
   return bestByCoin;
 }
 
-export async function readMintBurnCronSnapshot(db: D1Database, job = MINT_BURN_CRON_JOB): Promise<MintBurnCronSnapshot> {
+function emptyMintBurnCronSnapshot(): MintBurnCronSnapshot {
+  return { startedAt: null, status: null, chainHead: null, chainHeads: new Map() };
+}
+
+export async function readMintBurnCronSnapshotResult(
+  db: D1Database,
+  job = MINT_BURN_CRON_JOB,
+): Promise<MintBurnCronSnapshotResult> {
   try {
     const row = await db
       .prepare(
@@ -433,7 +445,7 @@ export async function readMintBurnCronSnapshot(db: D1Database, job = MINT_BURN_C
       .first<{ started_at: number | null; status: string | null; metadata: string | null }>();
 
     if (!row) {
-      return { startedAt: null, status: null, chainHead: null, chainHeads: new Map() };
+      return { value: emptyMintBurnCronSnapshot(), error: null };
     }
 
     const metadata = parseMintBurnCronMetadata(row.metadata, row.started_at ?? null);
@@ -449,14 +461,30 @@ export async function readMintBurnCronSnapshot(db: D1Database, job = MINT_BURN_C
     }
 
     return {
-      startedAt: row.started_at ?? null,
-      status: row.status ?? null,
-      chainHead: metadata.chainHead,
-      chainHeads: metadata.chainHeads,
+      value: {
+        startedAt: row.started_at ?? null,
+        status: row.status ?? null,
+        chainHead: metadata.chainHead,
+        chainHeads: metadata.chainHeads,
+      },
+      error: null,
     };
-  } catch {
-    return { startedAt: null, status: null, chainHead: null, chainHeads: new Map() };
+  } catch (error) {
+    logWorkerEventArgs(
+      "lib",
+      "error",
+      `[mint-burn-flows] event=cron-snapshot-read-failed job=${job} summary=${toErrorMessage(error)}`,
+      error,
+    );
+    return { value: emptyMintBurnCronSnapshot(), error };
   }
+}
+
+export async function readMintBurnCronSnapshot(
+  db: D1Database,
+  job = MINT_BURN_CRON_JOB,
+): Promise<MintBurnCronSnapshot> {
+  return (await readMintBurnCronSnapshotResult(db, job)).value;
 }
 
 export function buildBaselineMap(
@@ -524,6 +552,7 @@ export function buildCoinCoverageMap(
   firstSeenRows: FirstSeenRow[],
   lastBlocks: Map<string, number>,
   chainHeads: Map<string, number>,
+  unavailableReason: "cron-snapshot-unavailable" | null = null,
 ) {
   const firstSeenMap = new Map<string, number>();
   for (const row of firstSeenRows) {
@@ -552,6 +581,7 @@ export function buildCoinCoverageMap(
     startBlockSource: string;
     startBlockConfidence: "high" | "medium" | "low";
     status: "full" | "partial-history" | "lagging" | "bootstrapping" | "disabled" | "unknown";
+    unavailableReason: "cron-snapshot-unavailable" | null;
   }>();
 
   for (const [stablecoinId, configs] of configsByCoin) {
@@ -635,6 +665,7 @@ export function buildCoinCoverageMap(
       adapterKinds,
       startBlockSource: startBlockSources.length === 1 ? startBlockSources[0]! : "mixed",
       startBlockConfidence,
+      unavailableReason,
       status,
     });
   }

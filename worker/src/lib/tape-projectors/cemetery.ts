@@ -17,8 +17,12 @@ import { buildTapeEventId, parseDateStringToEpochSec, truncateSummary } from "..
 import type { TapeEventInsert } from "../tape-event-types";
 import { projectStaticCatalogEntries, type ProjectorOptions, type ProjectorResult } from "./types";
 
-function buildEvent(entry: CemeteryEntry): TapeEventInsert {
-  const tsSec = parseDateStringToEpochSec(entry.deathDate);
+interface DatedCemeteryEntry {
+  entry: CemeteryEntry;
+  tsSec: number;
+}
+
+function buildEvent({ entry, tsSec }: DatedCemeteryEntry): TapeEventInsert {
   const tsMs = tsSec * 1000;
   const transition = "opened";
   const type = "cemetery.entry.added";
@@ -71,10 +75,20 @@ export async function projectCemeteryEntries(
   db: D1Database,
   options?: ProjectorOptions,
 ): Promise<ProjectorResult> {
+  const entries: DatedCemeteryEntry[] = [];
+  for (const entry of CEMETERY_ENTRIES) {
+    const tsSec = parseDateStringToEpochSec(entry.deathDate);
+    if (tsSec == null) {
+      console.warn(`[tape-projector] Skipping cemetery entry ${entry.id}: invalid deathDate ${JSON.stringify(entry.deathDate)}`);
+      continue;
+    }
+    entries.push({ entry, tsSec });
+  }
+
   return projectStaticCatalogEntries(db, {
     eventType: "cemetery.entry.added",
-    entries: CEMETERY_ENTRIES,
-    sourceRowId: (entry) => entry.id,
+    entries,
+    sourceRowId: ({ entry }) => entry.id,
     buildEvent,
   }, options);
 }
