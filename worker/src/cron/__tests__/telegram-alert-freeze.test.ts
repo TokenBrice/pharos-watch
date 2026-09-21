@@ -274,4 +274,111 @@ describe("freeze dedicated outbox", () => {
       sqlite.close();
     }
   });
+
+  it("records freeze job counters from the authoritative target buckets", async () => {
+    const sqlite = createLatestSchemaSqlite().sqlite;
+    try {
+      const now = 2_000_000_000;
+      sqlite.prepare("INSERT INTO cron_runs (job, started_at, duration_ms, status) VALUES ('project-tape', ?, 1, 'ok')").run(now - 5);
+      sqlite.prepare(
+        `INSERT INTO tape_events (event_id, type, severity, ts, title, summary, payload_json, source_table, source_row_id, transition, created_at)
+         VALUES ('freeze-mixed-baseline', 'freeze.blocked', 'warning', ?, 'x', 'x', ?, 'blacklist_events', 'blacklist-mixed-baseline', 'opened', ?)`,
+      ).run(now * 1000, JSON.stringify({ stablecoin: 'USDC', stablecoinId: 'usdc-circle', chainName: 'Ethereum', sourceEventId: 'blacklist-mixed-baseline' }), now);
+      const db = createSqliteD1(sqlite);
+      await dispatchFreezeAlertOutbox(db, now);
+
+      // Crash-resumable freeze event: the captured cohort already queued three
+      // targets, delivered two, cancelled one, and left two planned — one for a
+      // subscriber that has since left (never queued again) and one for a
+      // remaining subscriber that this resume run queues.
+      sqlite.prepare(
+        `INSERT INTO telegram_freeze_alert_events (
+           source_event_id, tape_event_id, blacklist_event_id, event_type,
+           detected_at, expires_at, payload_json, status, created_at, updated_at, cohort_captured_at
+         ) VALUES ('freeze:freeze-mixed', 'freeze-mixed', 'blacklist-mixed', 'blacklist',
+                   ?, ?, ?, 'planning', ?, ?, ?)`,
+      ).run(
+        now,
+        now + 2 * 60 * 60,
+        JSON.stringify({
+          stablecoinId: 'usdc-circle',
+          symbol: 'USDC',
+          eventType: 'blacklist',
+          chainName: 'Ethereum',
+          amountUsdAtEvent: null,
+          tapeEventId: 'freeze-mixed',
+          sourceEventId: 'blacklist-mixed',
+        }),
+        now,
+        now,
+        now,
+      );
+      sqlite.prepare(
+        `INSERT INTO telegram_subscribers (
+           chat_id, created_at, last_active_at, preference_generation, global_alert_freeze
+         ) VALUES ('1', ?, ?, 1, 1)`,
+      ).run(now, now);
+      const insertFreezeTarget = sqlite.prepare(
+        `INSERT INTO telegram_freeze_alert_targets (
+           source_event_id, target_key, chat_id, preference_generation,
+           pending_dedupe_key, status, created_at
+         ) VALUES ('freeze:freeze-mixed', ?, ?, 1, ?, 'planned', ?)`,
+      );
+      insertFreezeTarget.run('freeze:freeze-mixed:1', '1', 'freeze:freeze-mixed:1', now);
+      insertFreezeTarget.run('freeze:freeze-mixed:8', '8', 'freeze:freeze-mixed:8', now);
+      sqlite.prepare(
+        `INSERT INTO telegram_alert_jobs (
+           job_id, alert_type, source_event_id, severity, created_at, expires_at, status,
+           target_count, sent_count, enqueued_count, failed_count, metadata
+         ) VALUES ('telegram:freeze:freeze-mixed:freeze', 'freeze', 'freeze:freeze-mixed', 'risk', ?, ?, 'discovered', 0, 0, 0, 0, ?)`,
+      ).run(now, now + 2 * 60 * 60, JSON.stringify({ source: 'freeze-outbox' }));
+      const insertJobTarget = sqlite.prepare(
+        `INSERT INTO telegram_alert_job_targets (
+           job_id, target_key, chat_id, chunk_index, alert_type, status,
+           pending_dedupe_key, created_at, cancelled_at
+         ) VALUES ('telegram:freeze:freeze-mixed:freeze', ?, ?, 0, 'freeze', ?, ?, ?, ?)`,
+      );
+      insertJobTarget.run('queued-a', '2', 'queued', 'pending-queued-a', now, null);
+      insertJobTarget.run('queued-b', '3', 'queued', 'pending-queued-b', now, null);
+      insertJobTarget.run('queued-c', '4', 'queued', 'pending-queued-c', now, null);
+      insertJobTarget.run('sent-a', '5', 'sent', 'pending-sent-a', now, null);
+      insertJobTarget.run('sent-b', '6', 'sent', 'pending-sent-b', now, null);
+      insertJobTarget.run('cancelled-a', '7', 'queued', 'pending-cancelled-a', now, now);
+      insertJobTarget.run('straggler-a', '8', 'planned', 'pending-straggler-a', now, null);
+
+      const result = await dispatchFreezeAlertOutbox(db, now + 2);
+      expect(result.queued).toBe(1);
+      const job = sqlite
+        .prepare(
+          `SELECT status, target_count, planned_count, enqueued_count, accepted_count,
+                  sent_count, cancelled_count, failed_count, expired_count, execution_unknown_count, metadata
+             FROM telegram_alert_jobs WHERE job_id = 'telegram:freeze:freeze-mixed:freeze'`,
+        )
+        .get() as Record<string, number | string>;
+      expect(job).toMatchObject({
+        status: 'discovered',
+        target_count: 8,
+        planned_count: 1,
+        enqueued_count: 4,
+        accepted_count: 2,
+        sent_count: 2,
+        cancelled_count: 1,
+        failed_count: 0,
+        expired_count: 0,
+        execution_unknown_count: 0,
+      });
+      expect(JSON.parse(String(job.metadata))).toMatchObject({
+        source: 'freeze-outbox',
+        countersSource: 'authoritative-target-rows',
+      });
+      expect(sqlite.prepare("SELECT status FROM telegram_freeze_alert_targets WHERE chat_id = '1'").get())
+        .toMatchObject({ status: 'queued' });
+      expect(sqlite.prepare("SELECT status FROM telegram_freeze_alert_targets WHERE chat_id = '8'").get())
+        .toMatchObject({ status: 'planned' });
+      expect(sqlite.prepare("SELECT status FROM telegram_freeze_alert_events WHERE source_event_id = 'freeze:freeze-mixed'").get())
+        .toMatchObject({ status: 'queued' });
+    } finally {
+      sqlite.close();
+    }
+  });
 });
