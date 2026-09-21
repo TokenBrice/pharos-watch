@@ -498,14 +498,14 @@ function buildWrapperStructuralDimensions(
         ? reviewedWrapperFact(
             context,
             worstWrapperRisk(leverageFactorObservations.map(({ value }) => leverageFactorAssessment(value))),
-            leverageFactorObservations.map(({ factor }) => `wrapper-leverage-factor:${factor}`),
+            [...new Set(leverageFactorObservations.map(({ factor }) => `wrapper-leverage-factor:${factor}`))],
             reserveEvidenceRefIds,
           )
         : leverageFactors.length > 0
         ? reviewedWrapperFact(
             context,
             "high",
-            leverageFactors.map((factor) => `wrapper-leverage-factor:${factor}`),
+            [...new Set(leverageFactors.map((factor) => `wrapper-leverage-factor:${factor}`))],
             reserveEvidenceRefIds,
           )
         : unavailableWrapperFact(

@@ -117,6 +117,20 @@ describe("buildSafetyScoreV9SupplyReview", () => {
       attributionRejectionCode: "safe-block-unavailable",
     });
 
+    const missingGeneration = {
+      ...base,
+      activeAssetIds: ["wm-m0"],
+      chainCirculatingById: { "wm-m0": {} },
+    } as unknown as ReportCardsFixedInput;
+    expect(diagnose(missingGeneration, "bounded-unknown")).toEqual({
+      state: "generation-outcome-missing",
+      responsibility: "producer-failed",
+      chainRowCount: 0,
+      canonicalizationFailureCount: 0,
+      reviewRouteCount: 2,
+      attributionRejectionCode: null,
+    });
+
     const rejected = {
       ...base,
       activeAssetIds: ["wm-m0"],

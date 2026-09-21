@@ -22,6 +22,9 @@ const ASSET_ID = "usdg-paxos";
 const TRACKING_START_SEC = 1_730_419_200;
 const DIGEST = "a".repeat(64);
 
+// Match the production peg-analytics query's newest-first accumulation order.
+const publicationEvents = () => legacyEvents().sort((left, right) => right.startedAt - left.startedAt);
+
 const pegSummary = (events: readonly DepegEvent[], clockSec: number) =>
   buildPegSummary(events, clockSec, TRACKING_START_SEC, "peg-score:identity-fixture-v1");
 
@@ -109,7 +112,7 @@ function withOneVerifiedReplay(
 
 describe("diagnostic V9 peg provenance identity boundary", () => {
   it("round-trips a compact publication-exact provenance seed and rejects tampering", () => {
-    const events = legacyEvents();
+    const events = publicationEvents();
     const fixedInput = singleAssetFixedInput(events);
     const pegProvenanceById = {
       [ASSET_ID]: summary(events, fixedInput),
@@ -152,7 +155,7 @@ describe("diagnostic V9 peg provenance identity boundary", () => {
   });
 
   it("changes USDG diagnostics without changing score or candidate bytes", async () => {
-    const events = legacyEvents();
+    const events = publicationEvents();
     const base = singleAssetFixedInput(events);
     const legacySummary = summary(events, base);
     const verifiedEvents = withOneVerifiedReplay(events, base.clockSec);
@@ -225,7 +228,7 @@ describe("diagnostic V9 peg provenance identity boundary", () => {
   });
 
   it("rejects raw events and tampered summaries at normalization", () => {
-    const events = legacyEvents();
+    const events = publicationEvents();
     const base = singleAssetFixedInput(events);
     const diagnostic = summary(events, base);
 

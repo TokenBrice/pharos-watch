@@ -110,6 +110,54 @@ describe("Safety Score V9 wrapper fact dispositions", () => {
     });
   });
 
+  it.each([
+    {
+      factors: ["leverage", "leverage"],
+      assessment: "high",
+      signals: ["wrapper-leverage-factor:leverage"],
+    },
+    {
+      factors: ["leverage-factor:1.0", "leverage-factor:2.5", "leverage-factor:2.5"],
+      assessment: "critical",
+      signals: ["wrapper-leverage-factor:leverage-factor:1.0", "wrapper-leverage-factor:leverage-factor:2.5"],
+    },
+  ])("aggregates repeated leverage findings across distinct reserve slices: $factors", ({ factors, assessment, signals }) => {
+    const { fixed, extension, asset } = wrapperFacts("strategy-vault");
+    const context = createAssetBuildContext(
+      fixed,
+      extension,
+      extension.assets.find((candidate) => candidate.assetId === "alpha")!,
+      "a".repeat(64),
+    );
+    const reserveExposures = factors.map((factor, index) => ({
+      ...structuredClone(asset.reserveExposures[0]!),
+      exposureKey: `alpha:reserve:${index}`,
+      riskFactors: [factor],
+      weight: 1 / factors.length,
+    }));
+
+    const facts = buildWrapperLocalFacts(context, {
+      implementation: asset.implementation,
+      dependencies: asset.dependencies,
+      reserveStatus: asset.reserveStatus,
+      reserveExposures,
+      exitStatus: asset.exitStatus,
+      exitRoutes: asset.exitRoutes,
+      controlStatus: asset.controlStatus,
+      controls: asset.controls,
+      economicControlReview: asset.economicControlReview,
+      peg: asset.peg,
+      supply: asset.supply,
+    });
+    if (facts.applicability !== "wrapper") throw new Error("Expected wrapper-local facts");
+
+    expect(facts.facts.leverage).toMatchObject({
+      disposition: "reviewed",
+      assessment,
+      signals,
+    });
+  });
+
   it("preserves a reviewed high rehypothecation finding when allocation review is available", () => {
     const fixed = fixedInputWithTrackedParent();
     const extension = wrapperExtension(fixed, "savings-passthrough");
