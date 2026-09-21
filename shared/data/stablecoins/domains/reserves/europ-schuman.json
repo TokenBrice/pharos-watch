@@ -46,7 +46,7 @@
       },
       {
         "label": "Schuman reserve audits index",
-        "url": "https://schuman.io/reserve-audits/"
+        "url": "https://schuman.io/reserve-attestations/"
       }
     ],
     "rationale": "KPMG S.A. (statutory auditor of Salvus SAS) limited/negative assurance as of 30 June 2026 08:00 UTC (signed 2026-07-03, PDF read this pass; the report states it is neither an audit nor a review and concludes 'no matters to report'): EUR 2,300,280.35 cash and EUR 4,899,995.78 cash equivalents at regulated institutions (Societe Generale EUR 5,204,639.41; Banking Circle EUR 1,995,636.72), totalling EUR 7,200,276.13 against 6,840,292.27 EUROP in circulation across Ethereum/Polygon/Avalanche/Plasma (over-collateralization ~EUR 360k). Note: the headline reserve figure (7,200,276.54) differs from both breakdown tables (7,200,276.13) by EUR 0.41 - an internal inconsistency in the artefact. Cash-equivalent instruments remain undisclosed.",

@@ -183,7 +183,7 @@ export const NON_USD_AND_TOKENIZED_OFFCHAIN_CONFIGS: Record<string, RedemptionBa
     docs: [
       sourceRefRouteCapacity("EUROP white paper", "https://schuman.io/wp-content/uploads/2025/02/EUROP-White-Paper_1.3.pdf"),
       sourceRef("EUROP white paper v1.7", "https://schuman.io/wp-content/uploads/EUROP-White-Paper.pdf", ["fees"]),
-      sourceRef("Schuman reserve audits", "https://schuman.io/reserve-audits/", ["capacity"]),
+      sourceRef("Schuman reserve audits", "https://schuman.io/reserve-attestations/", ["capacity"]),
     ],
   },
   ...expandIds(["eurau-allunity", "chfau-allunity"], allunityBase),

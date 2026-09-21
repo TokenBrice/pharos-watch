@@ -458,11 +458,11 @@ describe("fetchAttestationPdfIndexReserves", () => {
     });
   });
 
-  it("fetches Schuman reserve-audit HTML with the neutral network route", async () => {
+  it("fetches Schuman reserve-attestation HTML with the neutral network route", async () => {
     const html = '<a href="/reports/EUROP_Reserve_Report_31_05_2026.pdf">May 2026 report</a>';
     const network = installAdapterNetwork({
       html: {
-        "https://schuman.io/reserve-audits/": {
+        "https://schuman.io/reserve-attestations/": {
           body: html,
           status: 200,
           headers: { "content-type": "text/html" },
@@ -471,11 +471,11 @@ describe("fetchAttestationPdfIndexReserves", () => {
     });
     const result = await fetchAttestationPdfIndexReserves(
       {} as StablecoinMeta,
-      buildConfig("https://schuman.io/reserve-audits/"),
+      buildConfig("https://schuman.io/reserve-attestations/"),
       new AbortController().signal,
     );
 
-    expect(network.requests).toEqual([{ url: "https://schuman.io/reserve-audits/", method: "GET" }]);
+    expect(network.requests).toEqual([{ url: "https://schuman.io/reserve-attestations/", method: "GET" }]);
     expect(result.metadata).toMatchObject({
       reportDate: "2026-05-31",
       reportPdfPath: "/reports/EUROP_Reserve_Report_31_05_2026.pdf",
