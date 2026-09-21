@@ -104,6 +104,19 @@ paths = [
   '''(?:^|/)\.github/workflows/artifacts/safety-score-missing-data-reviewed-ledger\.json$''',
 ]
 
+# The recorded Orca Whirlpool quote fixture pins the pool and token-mint
+# pubkeys read at slot 449058549. Solana base58 account keys are public on-chain
+# identifiers, exactly like the EVM/Tezos addresses above, but their length and
+# entropy trip the generic-api-key rule. Match only the two recorded keys in that
+# one fixture; any other high-entropy value there still fails the scan.
+[[allowlists]]
+description = "Recorded Orca Whirlpool pool and mint pubkeys in the slot-449058549 quote fixture"
+targetRules = ["generic-api-key"]
+condition = "AND"
+regexTarget = "secret"
+regexes = ['''^(?:2e3WeM4WwdEqwTtRnWN3gJSbhNg1P6Aj2y7kEdfrYbix|6FrrzDk5mQARGc1TDYoyVnSyRdds1t4PbtohCD6p3tgG)$''']
+paths = ['''(?:^|/)worker/src/cron/dex-liquidity/__tests__/fixtures/whirlpool-slot-449058549\.json$''']
+
 # Falcon publishes asset labels such as `ARIA_B71VABWJ_T8GB`. Artifact V2
 # records those labels as allocation `key` values, and the default
 # generic-api-key rule mistakes the high-entropy suffixes for credentials.
