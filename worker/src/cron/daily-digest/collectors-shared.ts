@@ -36,6 +36,12 @@ export interface CollectorContext {
 export interface CollectorResult<T> {
   value: T;
   degradedReasons: string[];
+  /**
+   * Soft findings: the collector ran, but an input was absent or imperfect.
+   * They are named in the persisted digest quality record without marking the
+   * run degraded, which stays reserved for work that did not happen.
+   */
+  qualityReasons?: string[];
 }
 
 export interface SafetyScoresResult {
@@ -45,8 +51,16 @@ export interface SafetyScoresResult {
   safetyContext: DigestSafetyContext;
 }
 
-export function collectorResult<T>(value: T, degradedReasons: readonly string[] = []): CollectorResult<T> {
-  return { value, degradedReasons: [...degradedReasons] };
+export function collectorResult<T>(
+  value: T,
+  degradedReasons: readonly string[] = [],
+  qualityReasons: readonly string[] = [],
+): CollectorResult<T> {
+  return {
+    value,
+    degradedReasons: [...degradedReasons],
+    ...(qualityReasons.length > 0 ? { qualityReasons: [...qualityReasons] } : {}),
+  };
 }
 
 export function collectorOk<T>(value: T): CollectorResult<T> {

@@ -369,9 +369,13 @@ export async function collectMintBurnFlows(
       // Every non-ok gauge outcome carries a machine-readable reason. An
       // absent publication is attributable too: the critical lane publishes
       // every 30 minutes, so a missing row means the producer stopped or the
-      // cache was dropped, not that the section is silently optional.
-      degradedReasons.push(`mint-burn-gauge-${published.reason}`);
-      return collectorResult(undefined, degradedReasons);
+      // cache was dropped, not that the section is silently optional. The
+      // digest still publishes without the section, so absence is a named
+      // quality finding; a broken publication is a collector failure.
+      const reason = `mint-burn-gauge-${published.reason}`;
+      return published.reason === "missing"
+        ? collectorResult(undefined, degradedReasons, [reason])
+        : collectorResult(undefined, [...degradedReasons, reason]);
     }
     const { gauge } = published;
     if (gauge.stale) {

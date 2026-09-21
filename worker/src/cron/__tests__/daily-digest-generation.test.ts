@@ -86,6 +86,7 @@ describe("generateDailyDigest publication contract", () => {
   it("keeps soft quality findings publishable and gates daily mode independently", async () => {
     vi.mocked(fetchWithRetry).mockImplementation(async () => makeStreamResponse(SOFT_WARNING_TEXT));
     const soft = await invoke(); expect(soft.itemCount).toBe(1); expect(soft.status).toBeUndefined(); expect(fetchWithRetry).toHaveBeenCalledTimes(1); expect(postDigestTweet).toHaveBeenCalledTimes(1);
+    expect(bindJson(scenario.db as MockD1Database, 3).dataQuality.degradedSources).toContain("mint-burn-gauge-missing");
     vi.clearAllMocks();
     vi.mocked(fetchWithRetry).mockReset().mockImplementation(async () => makeStreamResponse(withClauseDash(ANTHROPIC_OK_TEXT)));
     const shadowDb = makeDailyDigestScenario({ db: { prependTables: styleGateModeTables({ daily: "shadow", weekly: "enforce" }) } }).db;
