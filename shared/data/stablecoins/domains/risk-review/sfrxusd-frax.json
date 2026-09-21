@@ -18,9 +18,9 @@
   },
   "bridgeRouteRisk": {
     "tier": "external-lock-mint",
-    "summary": "sfrxUSD is native on Ethereum and Fraxtal; 25 other tracked EVM deployments are FraxZero LayerZero OFTs, and Solana, Aptos, and Movement are non-EVM OFT representations with documented direct connectivity to both Fraxtal and Ethereum. Current 2026-08-16 reads confirm the Fraxtal lockbox as the hub peer, the Ethereum lockbox as a canonical-side authorized minter, a common representation ProxyAdmin, and 3-of-6 chain-local OFT owner Safes for the six previously reviewed EVM routes. Frax documents that OFTs burn on the source and mint on the destination through LayerZero, while the lockboxes provide the external-lock route; these representations are not direct Frax balance-sheet liabilities. Endpoint DVN configuration, enforced options, rate limits, and lockbox redemption caps remain unresolved.",
-    "reviewedAt": "2026-08-16",
-    "reviewer": "Codex mint/bridge boundary migration",
+    "summary": "sfrxUSD is native on Ethereum and Fraxtal; 25 other tracked EVM deployments are Frax LayerZero OFTs, and Solana, Aptos, and Movement are non-EVM OFT representations with documented direct connectivity to both Fraxtal and Ethereum. Re-reviewed 2026-09-21: Frax's current crosschain documentation still identifies non-Ethereum/non-Fraxtal assets as OFTs, documents mint-on-receipt and burn-on-send semantics, lists the sfrxUSD OFT and lockbox addresses, and states that each chain is managed by a 3-of-6 multisig. Fraxscan still identifies the Fraxtal sfrxUSD lockbox as a verified proxy and shows recent LayerZero EndpointV2 interactions. Endpoint DVN configuration, enforced options, rate limits, and lockbox redemption caps remain unresolved.",
+    "reviewedAt": "2026-09-21",
+    "reviewer": "Claude curation campaign 2026-09-21 (Ctrl6)",
     "confidence": "verified",
     "protocols": [
       {

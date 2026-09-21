@@ -18,9 +18,9 @@
   },
   "bridgeRouteRisk": {
     "tier": "external-validated-network",
-    "summary": "FUSD has four independently stateful, issuer-native deployments on Ethereum, Avalanche, Sonic, and Monad. Chainlink CCIP BurnMintTokenPools and TokenBridgeSender provide additional cross-chain burn/mint and transfer machinery; their route-scoped controls remain separate from native Mint Authority. The external CCIP messaging and pool validation path, plus shared FinChain EOA and ProxyAdmin failure domains, keep the overall bridge tier at external-validated-network.",
-    "reviewedAt": "2026-08-16",
-    "reviewer": "OpenAI Codex C09 mint-bridge boundary migration",
+    "summary": "FUSD has five independently stateful, issuer-native deployments on Ethereum, Avalanche, Sonic, Monad, and Solana. Chainlink CCIP BurnMintTokenPools and TokenBridgeSender provide additional cross-chain burn/mint and transfer machinery on the EVM deployments; their route-scoped controls remain separate from native Mint Authority. The Solana SPL deployment has an independently observed 1-of-3 mint-authority multisig and holder-freeze authority. The external CCIP messaging and pool validation path, plus shared FinChain EOA and ProxyAdmin failure domains, keep the overall bridge tier at external-validated-network.",
+    "reviewedAt": "2026-09-21",
+    "reviewer": "Claude curation campaign 2026-09-21 (Ctrl8)",
     "confidence": "verified",
     "protocols": [
       {
@@ -159,25 +159,37 @@
       {
         "id": "solana:51tpgun58apNKgrk96xAVUCN5yC7cDzt3EHov9UjBh3Q",
         "destinationChain": "solana",
+        "canonicalChain": "solana",
         "contractAddress": "51tpgun58apNKgrk96xAVUCN5yC7cDzt3EHov9UjBh3Q",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "FinChain's official deployment table identifies this Solana SPL mint and the reviewed Solana token-supply read confirms 9 decimals, but no reviewed source establishes whether it is issuer-native or a supply-conserving bridge representation, its controller, or route scope.",
+        "protocol": "FinChain native SPL issuance",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "single-chain-or-native",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "At finalized Solana slot 449002572, the documented FUSD SPL mint was initialized under the legacy SPL Token program with mint authority Ch1Z9TZK7hiX73HZnhGQygsZ3zr1Rjh8ifspDfAqVRgm and freeze authority E1wYYoH89zYz5vfXFoWBfuvPhzmHCMsJ4WceK4A1WP7C. At slot 449002740, the mint-authority account parsed as an initialized 1-of-3 SPL Token multisig. This is independently stateful native issuance rather than an identified supply-conserving bridge representation.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedBlock": 444308524,
+        "observedAt": "2026-09-21",
+        "observedBlock": 449002740,
+        "controllerChain": "solana",
+        "controllerAddress": "Ch1Z9TZK7hiX73HZnhGQygsZ3zr1Rjh8ifspDfAqVRgm",
+        "failureDomainKeys": [
+          "multisig:solana:Ch1Z9TZK7hiX73HZnhGQygsZ3zr1Rjh8ifspDfAqVRgm",
+          "freeze-authority:solana:E1wYYoH89zYz5vfXFoWBfuvPhzmHCMsJ4WceK4A1WP7C"
+        ],
         "sources": [
           {
-            "label": "FinChain FUSD token docs",
+            "label": "FinChain FUSD token deployments",
             "url": "https://finchain.gitbook.io/finchain-docs/en/fusd/fusd-token"
           },
           {
-            "label": "Solana mainnet FUSD mint supply read",
+            "label": "Solana mainnet finalized mint and authority account reads",
             "url": "https://api.mainnet-beta.solana.com"
+          },
+          {
+            "label": "FUSD Solana mint explorer",
+            "url": "https://solscan.io/token/51tpgun58apNKgrk96xAVUCN5yC7cDzt3EHov9UjBh3Q"
           }
         ]
       }

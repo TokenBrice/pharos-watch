@@ -4,7 +4,7 @@
     "mintPath": "issuer-direct-mint",
     "authorityPosture": "unbounded-reconciled",
     "confidence": "verified",
-    "summary": "FUSD has four canonical issuer-native deployments on Ethereum, Avalanche, Sonic, and Monad. FinChain's gateway retains an admin-only arbitrary local mint path, while CCIP pools and TokenBridgeSender are bridge machinery reviewed under bridgeRouteRisk. One EOA controls every token and gateway DEFAULT_ADMIN role, the issuer-owned pools, and the shared zero-delay ProxyAdmin, so it can grant minters or replace mint-critical logic immediately.",
+    "summary": "FUSD has five canonical issuer-native deployments: four EVM deployments on Ethereum, Avalanche, Sonic, and Monad, plus a Solana SPL mint. FinChain's EVM gateway retains an admin-only arbitrary local mint path, while the Solana mint authority is an initialized 1-of-3 SPL Token multisig. CCIP pools and TokenBridgeSender are bridge machinery reviewed under bridgeRouteRisk. The EVM deployments share one EOA and zero-delay ProxyAdmin; Solana has a distinct directly observed authority set.",
     "controls": [
       {
         "label": "FinChain issuer-operated mint authority",
@@ -31,6 +31,38 @@
           }
         ],
         "evidence": "FinChain documents eligible-customer issuance and redemption through its centralized operating stack. The backend controls an uncapped gateway/admin path and the token role administrator across all four chains, so it can originate additional issuance rather than merely consume a fixed allowance."
+      },
+      {
+        "chain": "solana",
+        "address": "Ch1Z9TZK7hiX73HZnhGQygsZ3zr1Rjh8ifspDfAqVRgm",
+        "label": "FUSD Solana SPL mint-authority multisig",
+        "role": "direct-minter",
+        "authorityType": "multisig",
+        "threshold": 1,
+        "signerCount": 3,
+        "deploymentRefs": [
+          "solana:51tpgun58apNKgrk96xAVUCN5yC7cDzt3EHov9UjBh3Q"
+        ],
+        "directMintAbility": "direct",
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-09-21",
+        "observedBlock": 449002740,
+        "sources": [
+          {
+            "label": "FinChain FUSD token deployments",
+            "url": "https://finchain.gitbook.io/finchain-docs/en/fusd/fusd-token"
+          },
+          {
+            "label": "Solana mainnet finalized mint and authority account reads",
+            "url": "https://api.mainnet-beta.solana.com"
+          },
+          {
+            "label": "FUSD Solana mint explorer",
+            "url": "https://solscan.io/token/51tpgun58apNKgrk96xAVUCN5yC7cDzt3EHov9UjBh3Q"
+          }
+        ],
+        "evidence": "At finalized slot 449002572 the documented FUSD SPL mint returned mintAuthority Ch1Z9TZK7hiX73HZnhGQygsZ3zr1Rjh8ifspDfAqVRgm, freezeAuthority E1wYYoH89zYz5vfXFoWBfuvPhzmHCMsJ4WceK4A1WP7C, 9 decimals, and the legacy SPL Token program owner. At finalized slot 449002740 the mint-authority account parsed as an initialized SPL Token multisig requiring 1 of 3 valid signers: DeSV2k6LkxEWTL4U4FFrd5na8LJWqAMEEy48KMqkkf3j, E1wYYoH89zYz5vfXFoWBfuvPhzmHCMsJ4WceK4A1WP7C, and GmFB41nws8Egtb9mQAqR1i82XPcEJXAzBPZW2t3hsKVr. The authority can mint without a token-level cap."
       },
       {
         "chain": "multichain",
@@ -156,11 +188,15 @@
         {
           "label": "Bermuda Monetary Authority regulated entities",
           "url": "https://www.bma.bm/regulated-entities"
+        },
+        {
+          "label": "Solana mainnet finalized FUSD mint and multisig reads",
+          "url": "https://api.mainnet-beta.solana.com"
         }
       ],
-      "evidence": "Fresh role enumeration at Ethereum block 25770551, Avalanche 92978950, Sonic 77632056, and Monad 96606403 confirms the local gateway is a token MINTER_ROLE member on all four deployments and that the shared FinChain EOA is the sole token and gateway DEFAULT_ADMIN_ROLE holder on each. The verified FUSDGateway zero-destination branch is an admin-only arbitrary local mint, so native issuance remains unbounded; CCIP pools and the current TokenBridgeSender implementation are bridge machinery documented under bridgeRouteRisk. Proxy-slot and owner reads at Ethereum 25770580, Avalanche 92979277, Sonic 77632253, and Monad 96607753 resolve the shared zero-delay ProxyAdmin and the reviewed token, gateway, and sender implementations. Continuous issuer reserve reconciliation and prudential Bermuda supervision remain the reviewed annotations; no independent dated reserve attestation was found.",
-      "reviewer": "OpenAI Codex C09 mint-bridge boundary migration",
-      "reviewedAt": "2026-08-16",
+      "evidence": "Fresh role enumeration at Ethereum block 25770551, Avalanche 92978950, Sonic 77632056, and Monad 96606403 confirms the local gateway is a token MINTER_ROLE member on all four EVM deployments and that the shared FinChain EOA is the sole token and gateway DEFAULT_ADMIN_ROLE holder on each. The verified FUSDGateway zero-destination branch is an admin-only arbitrary local mint, so native EVM issuance remains unbounded; CCIP pools and the current TokenBridgeSender implementation are bridge machinery documented under bridgeRouteRisk. Proxy-slot and owner reads at Ethereum 25770580, Avalanche 92979277, Sonic 77632253, and Monad 96607753 resolve the shared zero-delay ProxyAdmin and the reviewed token, gateway, and sender implementations. On 2026-09-21, finalized Solana reads at slots 449002572 and 449002740 resolved the separate FUSD SPL mint authority as an initialized 1-of-3 multisig with direct uncapped mint authority and identified the freeze authority. Continuous issuer reserve reconciliation and prudential Bermuda supervision remain reviewed annotations; no independent dated reserve attestation was found.",
+      "reviewer": "Claude curation campaign 2026-09-21 (Ctrl8)",
+      "reviewedAt": "2026-09-21",
       "disposition": "scoreable",
       "unresolvedQuestions": []
     },

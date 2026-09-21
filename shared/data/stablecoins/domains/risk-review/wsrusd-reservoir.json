@@ -43,8 +43,8 @@
   "bridgeRouteRisk": {
     "tier": "external-validated-network",
     "summary": "wsrUSD has one native Ethereum ERC-4626 wrapper and 20 reviewed LayerZero/Solana bridge representations. The Ethereum MyOFTAdapter locks the canonical wrapper while LayerZero OFTs burn and mint on remote routes; the shared Reservoir owner can configure peers, delegates, and LayerZero OApp settings. Berachain source/destination peer asymmetry and unresolved endpoint validator configuration keep this bridge review at manual-review confidence, and the adapter lockbox balance must not be added to destination supplies.",
-    "reviewedAt": "2026-08-16",
-    "reviewer": "Codex mint/bridge boundary migration; wsrusd-reservoir finding",
+    "reviewedAt": "2026-09-21",
+    "reviewer": "Claude curation campaign 2026-09-21 (Ctrl7)",
     "confidence": "manual-review",
     "protocols": [
       {
@@ -1169,6 +1169,52 @@
           }
         ],
         "evidence": "At finalized Solana slot 439747243 (2026-08-16T00:40:59Z), the wsrUSD SPL mint had 9 decimals, raw supply 10,000, mint authority ikwucBfDFvoJXimgvNHvxoFE5vZaLKmS8Ja3NqxUbYp, and no freeze authority. The mint-authority account is owned by LayerZero-related program GYdh9iATa8RUVBHSyoxuWyP17v8bmL6VYsM7P4qMFCVq; this is bridge representation machinery and remains separate from the Ethereum native wrapper's Mint Authority."
+      },
+      {
+        "id": "wsrusd-tempo-oft-adapter",
+        "label": "wsrUSD Tempo TIP-20 LayerZero OFT adapter",
+        "routeRefs": [
+          "tempo:0x20c000000000000000000000aeed2ec36a54d0e5"
+        ],
+        "capabilities": [
+          "bridge-mint",
+          "bridge-burn"
+        ],
+        "controllerChain": "tempo",
+        "controllerAddress": "0x31d1a36a59a38c3a72e8d8567f5a98d5c777c98f",
+        "failureDomainKeys": [
+          "protocol:layerzero-oft-v2",
+          "contract:tempo:0x20c000000000000000000000aeed2ec36a54d0e5",
+          "contract:tempo:0x31d1a36a59a38c3a72e8d8567f5a98d5c777c98f"
+        ],
+        "authorityType": "contract",
+        "routeChecks": {
+          "trustedPeerOrRemote": "At Tempo block 40536062 on 2026-09-21, token() on adapter 0x31d1a36a59a38c3a72e8d8567f5a98d5c777c98f returned the tracked wsrUSD TIP-20 token 0x20c000000000000000000000aeed2ec36a54d0e5, and hasRole(adapter, ISSUER_ROLE) on that token returned true. The adapter is therefore the identified route-scoped bridge mint/burn authority rather than an unknown LayerZero protocol placeholder.",
+          "pausersAdminsUpgraders": "The TIP-20 token returned paused() = false and supplyCap() = 2^128-1 at Tempo block 40536062. The adapter has ISSUER_ROLE and can mint the representation up to that effectively unbounded cap. The explorer did not expose a verified adapter owner or upgrade controller and owner() reverted, so no favorable administrator, threshold, or delay assumption is made."
+        },
+        "capDescription": "The Tempo OFT adapter holds the token's ISSUER_ROLE and can mint or burn the Tempo bridge representation. The TIP-20 supply cap is 2^128-1, so the route has no economically meaningful local mint ceiling; supply conservation depends on LayerZero-authenticated remote accounting.",
+        "canRaiseCap": false,
+        "observedAt": "2026-09-21",
+        "observedBlock": 40536062,
+        "sources": [
+          {
+            "label": "Tempo Explorer wsrUSD TIP-20",
+            "url": "https://explore.tempo.xyz/address/0x20c000000000000000000000aeED2eC36A54d0e5"
+          },
+          {
+            "label": "Tempo Explorer wsrUSD OFT adapter",
+            "url": "https://explore.tempo.xyz/address/0x31d1a36a59A38c3A72E8D8567f5a98D5C777C98f"
+          },
+          {
+            "label": "Tempo mainnet RPC role, token, pause, and supply-cap reads",
+            "url": "https://rpc.tempo.xyz"
+          },
+          {
+            "label": "Tempo TIP-20 specification",
+            "url": "https://tempo.xyz/developers/docs/protocol/tip20/spec"
+          }
+        ],
+        "evidence": "Observed 2026-09-21 at Tempo block 40536062: the official Reservoir-listed adapter 0x31d1a36a59a38c3a72e8d8567f5a98d5c777c98f returned token() = 0x20c000000000000000000000aeed2ec36a54d0e5; that TIP-20 token returned ISSUER_ROLE = 0x114e74f6ea3bd819998f78687bfcb11b140da08e9b7d222fa9c1f1ba1f2aa122 and hasRole(adapter, ISSUER_ROLE) = true. paused() was false and supplyCap() was 340282366920938463463374607431768211455. This identifies the contract authority and its effectively unbounded route-local bridge-mint semantics; undisclosed adapter administration remains conservatively uncredited."
       }
     ]
   }

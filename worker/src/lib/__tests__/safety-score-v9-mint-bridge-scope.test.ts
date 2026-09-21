@@ -1160,7 +1160,7 @@ describe("Safety Score v9 Mint Authority / Bridge Risk scope", () => {
     expect(adapted.controls.length).toBeGreaterThan(0);
   });
 
-  it("records the bridge join decision for FUSD's five deployment routes, including its unresolved Solana route", () => {
+  it("records the native bridge join decision for all five reviewed FUSD deployments", () => {
     const profile = fusdRiskReview.bridgeRouteRisk as BridgeRouteRiskProfile;
     const routes = profile.routes ?? [];
     expect(routes).toHaveLength(5);
@@ -1187,7 +1187,7 @@ describe("Safety Score v9 Mint Authority / Bridge Risk scope", () => {
       v9TestClockSec(),
     );
 
-    expect(adapted.review.status.applicability.state).toBe("required");
+    expect(adapted.review.status.applicability.state).toBe("not-applicable");
     expect(adapted.review.diagnostics).toEqual({
       profileRouteCount: 5,
       canonicalSupplyRowCount: 5,
@@ -1198,58 +1198,12 @@ describe("Safety Score v9 Mint Authority / Bridge Risk scope", () => {
         supplyShare: 1,
         complete: true,
       },
-      bridgeClaimControls: ["bridge-meta:fusd-finchain:6eab582043abc2d8dfb6"],
-      applicabilityBranch: "applicable",
-      // The unresolved Solana route keeps this join applicable even though the
-      // fixture supplies native classifications for every selected row.
-      unprovenRouteJoins: [
-        {
-          deploymentRouteKey: "avalanche:0x9f6714c302ffe3c3bafaf2ccb44201ff64f6371c",
-          reviewState: "selected-reviewed",
-          reviewedRouteKind: "native",
-          supplyShare: 0.2,
-          joinedControlKeys: ["bridge-meta:fusd-finchain:fb58c7781c1cd8f9b313"],
-          joinedControlSemanticsResolved: true,
-          joinedControlSupplyShare: 0.2,
-        },
-        {
-          deploymentRouteKey: "ethereum:0x9f6714c302ffe3c3bafaf2ccb44201ff64f6371c",
-          reviewState: "selected-reviewed",
-          reviewedRouteKind: "native",
-          supplyShare: 0.2,
-          joinedControlKeys: ["bridge-meta:fusd-finchain:8ecd81d85544e42fc320"],
-          joinedControlSemanticsResolved: true,
-          joinedControlSupplyShare: 0.2,
-        },
-        {
-          deploymentRouteKey: "monad:0x9f6714c302ffe3c3bafaf2ccb44201ff64f6371c",
-          reviewState: "selected-reviewed",
-          reviewedRouteKind: "native",
-          supplyShare: 0.2,
-          joinedControlKeys: ["bridge-meta:fusd-finchain:c4300a0fa9166b49f358"],
-          joinedControlSemanticsResolved: true,
-          joinedControlSupplyShare: 0.2,
-        },
-        {
-          deploymentRouteKey: "solana:51tpgun58apNKgrk96xAVUCN5yC7cDzt3EHov9UjBh3Q",
-          reviewState: "selected-reviewed",
-          reviewedRouteKind: "native",
-          supplyShare: 0.2,
-          joinedControlKeys: ["bridge-meta:fusd-finchain:6eab582043abc2d8dfb6"],
-          joinedControlSemanticsResolved: false,
-          joinedControlSupplyShare: 0.2,
-        },
-        {
-          deploymentRouteKey: "sonic:0x9f6714c302ffe3c3bafaf2ccb44201ff64f6371c",
-          reviewState: "selected-reviewed",
-          reviewedRouteKind: "native",
-          supplyShare: 0.2,
-          joinedControlKeys: ["bridge-meta:fusd-finchain:73de3b5b7fecf0037809"],
-          joinedControlSemanticsResolved: true,
-          joinedControlSupplyShare: 0.2,
-        },
-      ],
+      bridgeClaimControls: [],
+      applicabilityBranch: "native-only-not-applicable",
+      unprovenRouteJoins: [],
     });
+    expect(adapted.review.routes).toEqual([]);
+    expect(adapted.controls.some((control) => control.capabilities.includes("bridge-mint"))).toBe(true);
   });
 
   it("keeps the FUSD join applicable and names an unmatched raw chain label", () => {
@@ -1300,13 +1254,12 @@ describe("Safety Score v9 Mint Authority / Bridge Risk scope", () => {
       },
       applicabilityBranch: "applicable",
     });
-    // ODR-D5a: the five native rows join bridge controls, and the $1 unmatched
-    // row is at the common-mode floor, so all six are named as unproven with
-    // their deploymentRouteKey — the diagnostic that was previously absent.
+    // The four EVM rows still join CCIP controls. Solana's reviewed native
+    // authority is not a bridge control; the unmatched row remains unproven.
     expect(
       adapted.review.diagnostics?.unprovenRouteJoins.map((row) => row.deploymentRouteKey),
     ).toEqual([
-      ...routes.map((candidate) => candidate.id).sort(),
+      ...routes.filter((candidate) => candidate.destinationChain !== "solana").map((candidate) => candidate.id).sort(),
       "unmatched-chain:fusd-finchain:future-network",
     ].sort());
   });

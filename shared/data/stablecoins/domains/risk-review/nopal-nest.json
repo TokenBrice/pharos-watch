@@ -14,9 +14,9 @@
   },
   "bridgeRouteRisk": {
     "tier": "external-validated-network",
-    "summary": "nOPAL has four reviewed independent native-issuance routes on Ethereum, Plume, BSC, and Plasma; the Plume, BSC, and Plasma rows retain Ethereum as the issuer's primary reference but are canonical native issuance, not peripheral bridge representations. Nest's current registry and nOPAL integration guide identify a Solana LayerZero OFT route via OFT store FmeHf1FQJhXUWHVfLACCHJ8KvAJ7jpiDvukz8ZHP7XLq, authored below alongside two further LayerZero OFT representations established by fresh on-chain reads on 2026-09-05: the World Chain NestShareOFT proxy and the Avalanche deployment whose implementation bytecode is byte-identical to the verified World Chain NestShareOFT implementation apart from the per-chain LayerZero endpoint constant. The Plasma native deployment is live per the issuer registry but dormant, with zero supply at the reviewed block. The peripheral OFT controller identities and proxy/program upgrade authority paths were verified at fixed blocks on 2026-09-05; complete LayerZero peer/DVN configuration, controller signer topology, limits and recovery remain unverified.",
-    "reviewedAt": "2026-09-05",
-    "reviewer": "Codex bridge route review; Kimi P2 control cohort dc-7 (lead pyusd-paypal); FIX2-09 Mint/Bridge boundary migration 2026-08-16; U5 Nest rail closeout 2026-09-05",
+    "summary": "nOPAL has four reviewed independent native-issuance routes on Ethereum, Plume, BSC, and Plasma, plus reviewed LayerZero OFT representations on Solana, World Chain, and Avalanche. The issuer registry and current explorer records identify the exact deployments. Structured controls record the Solana OFT mint-authority/program-admin path and the World Chain/Avalanche owner-controlled bridge-mint, peer-configuration, and upgrade paths. Complete LayerZero DVN configuration, controller key custody, route limits, and recovery remain undisclosed.",
+    "reviewedAt": "2026-09-21",
+    "reviewer": "Claude curation campaign 2026-09-21 (Ctrl4)",
     "confidence": "verified",
     "sources": [
       {
@@ -278,6 +278,136 @@
           "contract:avalanche:0x8faacdc65de5d78975df4f9dc4b6548979ceb23a",
           "contract:avalanche:0x4ac70c01c8a7fa4984c50fe8a503dd70ba7c6cb2"
         ]
+      }
+    ],
+    "controls": [
+      {
+        "id": "nopal-solana-oft-mint-authority",
+        "label": "nOPAL Solana OFT mint authority and program-admin path",
+        "routeRefs": [
+          "solana:GArhnnDj3GYhmQeApKVXaRv4TQFwhPcs3SNF6FXsTeXq"
+        ],
+        "capabilities": [
+          "bridge-mint",
+          "admin",
+          "peer-config",
+          "upgrade"
+        ],
+        "controllerChain": "solana",
+        "controllerAddress": "2Q755RWTf9Wbw3JSY3zwmpLv7k2pfezsTbVmrsMjKoSM",
+        "authorityType": "contract",
+        "timelockDelaySec": 0,
+        "modulesOrGuardsStatus": "not-applicable",
+        "failureDomainKeys": [
+          "protocol:layerzero-v2",
+          "contract:solana:2Q755RWTf9Wbw3JSY3zwmpLv7k2pfezsTbVmrsMjKoSM",
+          "program:solana:ChEfPd3RzLeYiRwp1K9evimmaFSd6DV1S4Mv5q5Aj1th",
+          "account:solana:J9tZ5VVz9qFiz8YQ1ktvkSonXPmVmn8dXefcKgowZw3J"
+        ],
+        "routeChecks": {
+          "trustedPeerOrRemote": "The finalized single-slot account read decoded the exact nOPAL OFTStore and LayerZero endpoint; the OFT program and store govern the mint/burn representation path.",
+          "pausersAdminsUpgraders": "The OFTStore names J9tZ5VVz9qFiz8YQ1ktvkSonXPmVmn8dXefcKgowZw3J as admin, and the program-data account names the same address as immediate program upgrade authority.",
+          "unsupportedReason": "Complete LayerZero peer and DVN configuration, controller signer topology, limits, and recovery were not published."
+        },
+        "observedAt": "2026-09-05",
+        "observedBlock": 444571340,
+        "sources": [
+          {
+            "label": "Nest current nOPAL vault registry",
+            "url": "https://api.nest.credit/v1/vaults/nest-opal-vault"
+          },
+          {
+            "label": "Nest nOPAL integration guide",
+            "url": "https://docs.nest.credit/developers/integration-guides/nopal/"
+          },
+          {
+            "label": "Finalized Solana account reads",
+            "url": "https://api.mainnet-beta.solana.com"
+          }
+        ],
+        "evidence": "At finalized slot 444571340, the exact nOPAL mint authority was 2Q755RWTf9Wbw3JSY3zwmpLv7k2pfezsTbVmrsMjKoSM, the decoded OFTStore bound the mint to LayerZero endpoint 76y77prsiCMvXMjuoZ5VRrhG5qYBrUMYTE5WgHqgjEn6 in native mint/burn mode, and the store/program upgrade authority resolved to J9tZ5VVz9qFiz8YQ1ktvkSonXPmVmn8dXefcKgowZw3J."
+      },
+      {
+        "id": "nopal-worldchain-oft-owner",
+        "label": "nOPAL World Chain OFT owner and proxy administrator",
+        "routeRefs": [
+          "worldchain:0x119dd7daff816f29d7ee47596ae5e4bdc4299165"
+        ],
+        "capabilities": [
+          "bridge-mint",
+          "admin",
+          "peer-config",
+          "upgrade"
+        ],
+        "controllerChain": "worldchain",
+        "controllerAddress": "0x8faacdc65de5d78975df4f9dc4b6548979ceb23a",
+        "authorityType": "timelock",
+        "timelockDelaySec": 172800,
+        "modulesOrGuardsStatus": "not-applicable",
+        "failureDomainKeys": [
+          "protocol:layerzero-v2",
+          "contract:worldchain:0x8faacdc65de5d78975df4f9dc4b6548979ceb23a",
+          "contract:worldchain:0x4ac70c01c8a7fa4984c50fe8a503dd70ba7c6cb2"
+        ],
+        "routeChecks": {
+          "trustedPeerOrRemote": "Block-pinned authorization simulations showed the Nest Timelock can call setPeer on the verified NestShareOFT representation after its 172,800-second minimum delay.",
+          "pausersAdminsUpgraders": "The same Timelock owns ProxyAdmin 0x4ac70c01c8a7fa4984c50fe8a503dd70ba7c6cb2 and can upgrade the proxy after its minimum delay; unrelated callers were rejected.",
+          "unsupportedReason": "Complete LayerZero DVN configuration, route limits, and recovery controls were not published."
+        },
+        "observedAt": "2026-09-05",
+        "observedBlock": 34645982,
+        "sources": [
+          {
+            "label": "World Chain verified nOPAL proxy record",
+            "url": "https://worldchain-mainnet.explorer.alchemy.com/api/v2/addresses/0x119dd7daff816f29d7ee47596ae5e4bdc4299165"
+          },
+          {
+            "label": "Block-pinned World Chain authorization reads",
+            "url": "https://worldchain-mainnet.g.alchemy.com/public"
+          }
+        ],
+        "evidence": "At World Chain block 34645982, owner() and ProxyAdmin.owner() both resolved to Nest Timelock 0x8faacdc65de5d78975df4f9dc4b6548979ceb23a, whose reviewed minimum delay is 172,800 seconds. Calls from that controller to setPeer and upgradeAndCall succeeded in simulation, while an unrelated caller was rejected."
+      },
+      {
+        "id": "nopal-avalanche-oft-owner",
+        "label": "nOPAL Avalanche OFT owner and proxy administrator",
+        "routeRefs": [
+          "avalanche:0x119dd7daff816f29d7ee47596ae5e4bdc4299165"
+        ],
+        "capabilities": [
+          "bridge-mint",
+          "admin",
+          "peer-config",
+          "upgrade"
+        ],
+        "controllerChain": "avalanche",
+        "controllerAddress": "0x8faacdc65de5d78975df4f9dc4b6548979ceb23a",
+        "authorityType": "timelock",
+        "timelockDelaySec": 172800,
+        "modulesOrGuardsStatus": "not-applicable",
+        "failureDomainKeys": [
+          "protocol:layerzero-v2",
+          "contract:avalanche:0x8faacdc65de5d78975df4f9dc4b6548979ceb23a",
+          "contract:avalanche:0x4ac70c01c8a7fa4984c50fe8a503dd70ba7c6cb2"
+        ],
+        "routeChecks": {
+          "trustedPeerOrRemote": "Block-pinned authorization simulations showed the Nest Timelock can call setPeer on the NestShareOFT representation after its 172,800-second minimum delay.",
+          "pausersAdminsUpgraders": "The same Timelock owns ProxyAdmin 0x4ac70c01c8a7fa4984c50fe8a503dd70ba7c6cb2 and can upgrade the proxy after its minimum delay; unrelated callers were rejected.",
+          "unsupportedReason": "Complete LayerZero DVN configuration, route limits, and recovery controls were not published."
+        },
+        "observedAt": "2026-09-05",
+        "observedBlock": 94543958,
+        "sources": [
+          {
+            "label": "Avalanche nOPAL explorer record",
+            "url": "https://snowscan.xyz/address/0x119dd7daff816f29d7ee47596ae5e4bdc4299165"
+          },
+          {
+            "label": "Block-pinned Avalanche authorization reads",
+            "url": "https://api.avax.network/ext/bc/C/rpc"
+          }
+        ],
+        "evidence": "At Avalanche block 94543958, owner() and ProxyAdmin.owner() both resolved to Nest Timelock 0x8faacdc65de5d78975df4f9dc4b6548979ceb23a, whose reviewed minimum delay is 172,800 seconds. Calls from that controller to setPeer and upgradeAndCall succeeded in simulation, while an unrelated caller was rejected."
       }
     ]
   }

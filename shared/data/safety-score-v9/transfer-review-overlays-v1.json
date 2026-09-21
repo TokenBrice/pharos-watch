@@ -607,6 +607,31 @@
           ]
         },
         {
+          "chainId": "plasma",
+          "contractOrTokenId": "0x5d3a1ff2b6bab83b63cd9ad0787074081a52ef34",
+          "scope": "material-bridge",
+          "posture": "permissionless",
+          "evidence": "Reviewed 2026-09-21 at Plasma block 33042050 (09:24:03 UTC; hash 0x51f33ca98394e28f65d931b794ddb669fe114953a792d6888590a015429d3f13). PlasmaScan and Routescan exact-match verify the direct, non-proxy USDeOFT deployment. USDeOFT inherits the ordinary OFT/OpenZeppelin ERC-20 transfer and transferFrom paths; its _debit override applies rate limiting only to cross-chain send, not local holder transfers, and the verified source has no local pause, blacklist, allowlist, seizure or upgrade path. Official Plasma RPC reads pinned to this block returned owner() = 0x2c57434603f21f580c91a3bdc0cc5f3f20278632, a zero EIP-1967 implementation slot, and reverted paused() and isBlacklisted(address) probes. Source review, rather than those absent-selector probes alone, establishes unrestricted local transfers; owner rate-limit and LayerZero configuration authority concerns bridge access instead. The asset-level reviewedAt remains the older existing review date and does not refresh Ethereum or Solana evidence.",
+          "sources": [
+            {
+              "label": "Plasma USDe exact-match verified USDeOFT source",
+              "url": "https://plasmascan.to/address/0x5d3a1ff2b6bab83b63cd9ad0787074081a52ef34#code"
+            },
+            {
+              "label": "Routescan exact Plasma deployment source",
+              "url": "https://api.routescan.io/v2/network/mainnet/evm/9745/etherscan/api?module=contract&action=getsourcecode&address=0x5d3a1ff2b6bab83b63cd9ad0787074081a52ef34"
+            },
+            {
+              "label": "Official Plasma RPC used for block-pinned access probes",
+              "url": "https://rpc.plasma.to"
+            },
+            {
+              "label": "Plasma observation block 33042050",
+              "url": "https://plasmascan.to/block/33042050"
+            }
+          ]
+        },
+        {
           "chainId": "solana",
           "contractOrTokenId": "DEkqHyPN7GMRJ5cArtQFAWefqbZb33Hyf6s5iCwjEonT",
           "scope": "material-bridge",
@@ -4247,6 +4272,35 @@
             {
               "label": "Ethereum public RPC used for the block 25881805 reads",
               "url": "https://ethereum-rpc.publicnode.com"
+            }
+          ]
+        },
+        {
+          "chainId": "sei",
+          "contractOrTokenId": "0xb98b14d316d13f012d52f30a3d46641092ac6944",
+          "scope": "material-bridge",
+          "posture": "restrictable",
+          "evidence": "Reviewed 2026-09-21 at Sei block 233262650 (09:21:59 UTC). SeiScan exact-match verifies the OptimizedTransparentUpgradeableProxy and BridgeableTokenUpgradeable implementation 0x78b57cc8dacd63c16290f136c60b403163b8d89e. Block-pinned implementation()/admin() calls and EIP-1967 slots agree on that implementation and effective immutable ProxyAdmin 0xd25d45c640e25f90d3ab70f69856f5494e9415cd. The verified implementation exposes ordinary ERC-20 transfers, role-gated mint and holder-self burn; paused() and isBlacklisted(address) probes revert. ProxyAdmin owner() is verified TimelockController 0xd08472b9b2e6c3633d9872863e3fde0daad1ef13; getMinDelay() is 43200 seconds, proposer 0x4ea00dc0c2b3933b9b41c6cc372832fe844a89ae has PROPOSER_ROLE, and EXECUTOR_ROLE is open after the delay. The live timelock can replace transfer logic through the only-owner upgrade path, so this deployment is restrictable even though current transfers are open. The asset-level reviewedAt remains the older existing review date; this new deployment observation does not refresh the other deployments.",
+          "sources": [
+            {
+              "label": "Sei syzUSD verified proxy",
+              "url": "https://seiscan.io/address/0xb98b14d316d13f012d52f30a3d46641092ac6944#code"
+            },
+            {
+              "label": "Sei syzUSD verified BridgeableTokenUpgradeable implementation",
+              "url": "https://seiscan.io/address/0x78b57cc8dacd63c16290f136c60b403163b8d89e#code"
+            },
+            {
+              "label": "Sei syzUSD verified ProxyAdmin",
+              "url": "https://seiscan.io/address/0xd25d45c640e25f90d3ab70f69856f5494e9415cd#code"
+            },
+            {
+              "label": "Sei syzUSD verified upgrade TimelockController",
+              "url": "https://seiscan.io/address/0xd08472b9b2e6c3633d9872863e3fde0daad1ef13#code"
+            },
+            {
+              "label": "Sei observation block 233262650",
+              "url": "https://seiscan.io/block/233262650"
             }
           ]
         }

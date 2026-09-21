@@ -8,11 +8,11 @@
     "reviewedAt": "2026-05-12"
   },
   "bridgeRouteRisk": {
-    "tier": "opaque-or-unknown",
-    "summary": "Matrixdock retired Polygon, HashKey Chain and Tron on August 7, 2026 and no longer recognizes balances on those contracts. Six retained deployments keep their existing route reviews; HyperEVM token identity is verified, while its mint/bridge/controller classification remains unresolved.",
-    "reviewedAt": "2026-09-14",
-    "reviewer": "OpenAI Codex deployment retirement and HyperEVM identity review",
-    "confidence": "manual-review",
+    "tier": "external-validated-network",
+    "summary": "Matrixdock retired Polygon, HashKey Chain and Tron on August 7, 2026. Six deployments are issuer-native; the HyperEVM deployment is a verified UUPS MTokenSide representation whose configured messenger mints and burns against cross-chain messages, with LayerZero peer configuration and a four-hour owner delay.",
+    "reviewedAt": "2026-09-21",
+    "reviewer": "Claude curation campaign 2026-09-21 (Ctrl3)",
+    "confidence": "verified",
     "protocols": [
       {
         "source": "docs",
@@ -47,6 +47,18 @@
       {
         "label": "Matrixdock retired networks notice",
         "url": "https://matrixdock.gitbook.io/matrixdock-docs/english/announcements/discontinuation-of-xaum-support-on-polygon-hashkey-chain-and-tron"
+      },
+      {
+        "label": "HyperEVM XAUm proxy and verified implementation",
+        "url": "https://hyperevmscan.io/address/0x14f0dfc32e8af769961b31ba3e89389bd6797652#code"
+      },
+      {
+        "label": "HyperEVM XAUm live proxy reads",
+        "url": "https://hyperevmscan.io/readContract?m=normal&a=0x14f0dfc32e8af769961b31ba3e89389bd6797652&v=0x8a9a4b06a570e59f107859ae1827b17e46567dac"
+      },
+      {
+        "label": "HyperEVM XAUm messenger proxy",
+        "url": "https://hyperevmscan.io/address/0xdb132ebae3fcce50d6c55088f079386dcca8ff24#code"
       }
     ],
     "routes": [
@@ -178,29 +190,141 @@
       },
       {
         "id": "hyperevm:0x14f0dfc32e8af769961b31ba3e89389bd6797652",
+        "sourceChain": "ethereum",
         "destinationChain": "hyperevm",
+        "canonicalChain": "ethereum",
         "contractAddress": "0x14f0dfc32e8af769961b31ba3e89389bd6797652",
-        "protocol": "Matrixdock XAUm HyperEVM deployment; transfer controls unresolved",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Official issuer deployment address matched on HyperEVM chain 999 at block 45888787: name Matrixdock Gold, symbol XAUM, decimals 9. owner() returns 0xb573c94260582f0715fc477928b04a2708dd36d7, but mint, upgrade, bridge messaging and controller constraints were not verified. No native-issuance or bridge-control equivalence is assumed.",
+        "representationId": "xaum-mtoken-side",
+        "protocol": "Matrixdock MTokenSide via LayerZero messenger",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "canonical",
+        "riskTier": "external-validated-network",
+        "semantics": "burn-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "The verified HyperEVM proxy resolves to MTokenSide implementation 0x8a9a4b06a570e59f107859ae1827b17e46567dac. The implementation permits ccReceive minting only from the configured messenger and ccSendToken burns for cross-chain transfer. Live explorer reads on 2026-09-21 returned messenger 0xdb132ebae3fcce50d6c55088f079386dcca8ff24, owner 0xb573c94260582f0715fc477928b04a2708dd36d7, operator/revoker 0x89bb23e4a82e04a253d9f11767fedf321c127799, delay 14,400 seconds, mintBudget 0, and totalSupply 28 XAUm. The verified messenger transaction history identifies LayerZero peer setup and a live LayerZero send.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-09-14",
-        "observedBlock": 45888787,
+        "controllerChain": "hyperevm",
+        "controllerAddress": "0xdb132ebae3fcce50d6c55088f079386dcca8ff24",
+        "failureDomainKeys": [
+          "protocol:matrixdock-mtoken-messaging",
+          "protocol:layerzero",
+          "contract:hyperevm:0xdb132ebae3fcce50d6c55088f079386dcca8ff24",
+          "controller:matrixdock:0xb573c94260582f0715fc477928b04a2708dd36d7"
+        ],
+        "observedAt": "2026-09-21",
         "sources": [
           {
-            "label": "Matrixdock XAUm contract addresses",
+            "label": "Matrixdock XAUm contract addresses and cross-chain contract description",
             "url": "https://matrixdock.gitbook.io/matrixdock-docs/english/gold-token-xaum/smart-contract/contract-address"
           },
           {
-            "label": "HyperEVM official RPC documentation",
-            "url": "https://hyperliquid.gitbook.io/hyperliquid-docs/for-developers/hyperevm"
+            "label": "HyperEVM XAUm proxy and verified MTokenSide implementation",
+            "url": "https://hyperevmscan.io/address/0x14f0dfc32e8af769961b31ba3e89389bd6797652#code"
+          },
+          {
+            "label": "HyperEVM XAUm live proxy reads",
+            "url": "https://hyperevmscan.io/readContract?m=normal&a=0x14f0dfc32e8af769961b31ba3e89389bd6797652&v=0x8a9a4b06a570e59f107859ae1827b17e46567dac"
+          },
+          {
+            "label": "HyperEVM XAUm messenger proxy and LayerZero transaction history",
+            "url": "https://hyperevmscan.io/address/0xdb132ebae3fcce50d6c55088f079386dcca8ff24#code"
           }
         ]
+      }
+    ],
+    "controls": [
+      {
+        "id": "xaum-hyperevm-mtoken-messenger",
+        "label": "XAUm HyperEVM MTokenSide configured messenger",
+        "routeRefs": [
+          "hyperevm:0x14f0dfc32e8af769961b31ba3e89389bd6797652"
+        ],
+        "capabilities": [
+          "bridge-mint",
+          "bridge-burn"
+        ],
+        "controllerChain": "hyperevm",
+        "controllerAddress": "0xdb132ebae3fcce50d6c55088f079386dcca8ff24",
+        "authorityType": "contract",
+        "modulesOrGuardsStatus": "not-applicable",
+        "failureDomainKeys": [
+          "protocol:matrixdock-mtoken-messaging",
+          "protocol:layerzero",
+          "contract:hyperevm:0xdb132ebae3fcce50d6c55088f079386dcca8ff24"
+        ],
+        "routeChecks": {
+          "trustedPeerOrRemote": "The verified messenger history records LayerZero peer configuration and a successful lzSendTokenToChain transaction. The exact remote peer bytes were not needed to identify the active configured messenger.",
+          "caps": "MTokenSide ccReceive spends the cross-chain mint budget. The live token read returned mintBudget 0 and totalSupply 28 XAUm on 2026-09-21.",
+          "pausersAdminsUpgraders": "The token accepts ccReceive only from messenger 0xdb132ebae3fcce50d6c55088f079386dcca8ff24. Matrixdock owner 0xb573c94260582f0715fc477928b04a2708dd36d7 can replace the messenger through the token's four-hour delayed request/effect path."
+        },
+        "capDescription": "Bridge minting is constrained by the MTokenSide mint budget received through the configured messenger; the observed live budget was zero.",
+        "canRaiseCap": true,
+        "bypassSurfaces": [
+          "The Matrixdock owner can replace the messenger and UUPS implementation after the configured four-hour delay.",
+          "LayerZero peer and validation configuration remains part of the messenger failure domain."
+        ],
+        "observedAt": "2026-09-21",
+        "sources": [
+          {
+            "label": "HyperEVM XAUm verified MTokenSide implementation",
+            "url": "https://hyperevmscan.io/address/0x8a9a4b06a570e59f107859ae1827b17e46567dac#code"
+          },
+          {
+            "label": "HyperEVM XAUm live proxy reads",
+            "url": "https://hyperevmscan.io/readContract?m=normal&a=0x14f0dfc32e8af769961b31ba3e89389bd6797652&v=0x8a9a4b06a570e59f107859ae1827b17e46567dac"
+          },
+          {
+            "label": "HyperEVM XAUm messenger proxy and LayerZero transaction history",
+            "url": "https://hyperevmscan.io/address/0xdb132ebae3fcce50d6c55088f079386dcca8ff24#code"
+          }
+        ],
+        "evidence": "On 2026-09-21 the verified MTokenSide ABI showed ccReceive, ccSendToken, mintBudget, setMessenger and delayed UUPS upgrade surfaces. Live proxy reads returned messenger 0xdb132ebae3fcce50d6c55088f079386dcca8ff24, delay 14,400 seconds, mintBudget 0 and owner 0xb573c94260582f0715fc477928b04a2708dd36d7. The messenger's verified history identifies LayerZero peer setup and an executed LayerZero send."
+      },
+      {
+        "id": "xaum-hyperevm-owner-admin",
+        "label": "Matrixdock HyperEVM token and messenger owner",
+        "routeRefs": [
+          "hyperevm:0x14f0dfc32e8af769961b31ba3e89389bd6797652"
+        ],
+        "capabilities": [
+          "upgrade",
+          "admin",
+          "peer-config"
+        ],
+        "controllerChain": "hyperevm",
+        "controllerAddress": "0xb573c94260582f0715fc477928b04a2708dd36d7",
+        "authorityType": "eoa",
+        "timelockDelaySec": 14400,
+        "modulesOrGuardsStatus": "not-applicable",
+        "failureDomainKeys": [
+          "controller:matrixdock:0xb573c94260582f0715fc477928b04a2708dd36d7",
+          "protocol:matrixdock-mtoken-messaging"
+        ],
+        "routeChecks": {
+          "trustedPeerOrRemote": "The owner administers the verified LayerZero messenger and the token's configured messenger address.",
+          "pausersAdminsUpgraders": "Live token reads returned owner 0xb573c94260582f0715fc477928b04a2708dd36d7 and delay 14,400 seconds. The verified implementation exposes delayed messenger replacement and delayed UUPS upgrade paths."
+        },
+        "canRaiseCap": true,
+        "bypassSurfaces": [
+          "The owner can replace token or messenger logic after the four-hour delay and can reconfigure the bridge peer path."
+        ],
+        "observedAt": "2026-09-21",
+        "sources": [
+          {
+            "label": "HyperEVM XAUm verified MTokenSide implementation",
+            "url": "https://hyperevmscan.io/address/0x8a9a4b06a570e59f107859ae1827b17e46567dac#code"
+          },
+          {
+            "label": "HyperEVM XAUm live proxy reads",
+            "url": "https://hyperevmscan.io/readContract?m=normal&a=0x14f0dfc32e8af769961b31ba3e89389bd6797652&v=0x8a9a4b06a570e59f107859ae1827b17e46567dac"
+          },
+          {
+            "label": "HyperEVM XAUm messenger proxy",
+            "url": "https://hyperevmscan.io/address/0xdb132ebae3fcce50d6c55088f079386dcca8ff24#code"
+          }
+        ],
+        "evidence": "Current explorer reads on 2026-09-21 identify the same zero-code Matrixdock owner already reviewed on Ethereum as owner of HyperEVM MTokenSide. The token's live delay is 14,400 seconds, and verified source exposes owner-controlled delayed changes to messenger, operator, revoker, delay, and implementation."
       }
     ]
   }
