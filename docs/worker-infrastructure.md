@@ -848,6 +848,10 @@ Synthetic chronology uses the original evidence clock, not sweep wall time. A st
 | `getPriceCache(db)`           | Returns `Map<assetId, { price, updatedAt }>` from `price_cache` table |
 | `savePriceCache(db, entries)` | Batch upsert into `price_cache`                                       |
 
+### Remote D1 Inspection
+
+Inspect production D1 with `wrangler d1 execute --remote --command "SELECT …"` and never with `--file`: `--file` is submitted through the D1 **import** API, so a read-only probe reports `changed_db: true` and holds a database-level import lock that blocks Worker writes for its duration. `scripts/maintenance/watch-worker-cron.mjs` (`d1Select`) already uses `--command` and is the reference.
+
 ---
 
 ## Cron Job Ownership
