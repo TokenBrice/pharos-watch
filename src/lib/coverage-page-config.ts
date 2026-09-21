@@ -285,6 +285,7 @@ const COVERAGE_BREAKDOWN_TONES: Partial<
     primary: "emerald",
     mixed: "cyan",
     fallback: "amber",
+    legacy: "violet",
     "data-unavailable": "gap",
   },
   reserves: {
@@ -346,6 +347,7 @@ const COVERAGE_BREAKDOWN_TONES: Partial<
   yield: {
     covered: "teal",
     uncovered: "gap",
+    "data-unavailable": "gap",
   },
   flows: {
     full: {

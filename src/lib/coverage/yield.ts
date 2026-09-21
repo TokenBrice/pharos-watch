@@ -48,10 +48,11 @@ function formatYield(
 ): CoverageBreakdownItem[] {
   const availableCount = breakdownMap.get("ranked") ?? 0;
   const noneCount = breakdownMap.get("none") ?? 0;
-  const unavailable = breakdownMap.get("data-unavailable") ?? 0;
+  const unavailable = breakdownMap.get(DATA_UNAVAILABLE_KIND) ?? 0;
   return [
     breakdownItem("covered", "covered", availableCount),
-    breakdownItem("uncovered", "uncovered", noneCount + unavailable),
+    breakdownItem("uncovered", "uncovered", noneCount),
+    breakdownItem(DATA_UNAVAILABLE_KIND, "data n/a", unavailable),
   ];
 }
 

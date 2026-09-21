@@ -309,11 +309,40 @@ describe("buildCoverageMatrixModel", () => {
     });
 
     const summaries = model.featureSummaries;
-    const concentration = (s: (typeof summaries)[number]) => (s.mcapSharePct ?? 0) - s.coveragePct;
+    const knownSummaries = summaries.filter((summary) => summary.coveragePct != null);
+    const concentration = (s: (typeof summaries)[number]) => (s.mcapSharePct ?? 0) - (s.coveragePct ?? 0);
 
-    expect(model.widestFeature?.coveragePct).toBe(Math.max(...summaries.map((s) => s.coveragePct)));
-    expect(model.narrowestFeature?.coveragePct).toBe(Math.min(...summaries.map((s) => s.coveragePct)));
+    expect(model.widestFeature?.coveragePct).toBe(Math.max(...knownSummaries.map((s) => s.coveragePct ?? 0)));
+    expect(model.narrowestFeature?.coveragePct).toBe(Math.min(...knownSummaries.map((s) => s.coveragePct ?? 0)));
     expect(concentration(model.mostConcentratedFeature!)).toBe(Math.max(...summaries.map(concentration)));
+  });
+
+  it("marks coins absent from the stablecoins payload as market-cap unavailable, not $0", () => {
+    const present = CLIENT_TRACKED_META_BY_ID.get("usdc-circle");
+    const absent = CLIENT_TRACKED_META_BY_ID.get("dai-makerdao");
+    expect(present && absent).toBeTruthy();
+
+    const model = buildCoverageMatrixModel({
+      stablecoins: resource({
+        peggedAssets: [{ id: "usdc-circle", circulating: { peggedUSD: 1_000 } }],
+      } as never),
+      pegSummary: resource({ summary: {}, coins: [] } as never),
+      dexLiquidity: resource({} as never),
+      redemptionBackstops: resource({ coins: {} } as never),
+      yieldRankings: resource({ rankings: [] } as never),
+      mintBurnFlows: resource({ gauge: {}, hourly: [], coins: [] } as never),
+      reportCards: resource(makeReportCardsV9Response({ cards: [] })),
+      activeStablecoins: [present!, absent!],
+    });
+
+    expect(model.rows.find((row) => row.id === "usdc-circle")).toMatchObject({
+      marketCapUsd: 1_000,
+      marketCapAvailable: true,
+    });
+    expect(model.rows.find((row) => row.id === "dai-makerdao")).toMatchObject({
+      marketCapUsd: 0,
+      marketCapAvailable: false,
+    });
   });
 
   it("marks redemption coverage as Data n/a when the redemption feed is unavailable", () => {
@@ -347,6 +376,8 @@ describe("buildCoverageMatrixModel", () => {
       available: false,
     });
     expect(model.unavailableFeatures).toEqual(["redemption"]);
+    expect(model.featureSummaries.find((summary) => summary.feature.key === "redemption")?.coveragePct).toBeNull();
+    expect(model.narrowestFeature?.feature.key).not.toBe("redemption");
     expect(model.isInitialDataLoading).toBe(false);
     expect(model.staleQueries.find((query) => query.preset === "redemptionBackstops")).toMatchObject({
       error,

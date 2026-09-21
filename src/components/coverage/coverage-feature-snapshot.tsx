@@ -22,6 +22,7 @@ const BAR_LABELS: Partial<Record<string, string>> = {
   primary: "primary",
   mixed: "mixed",
   fallback: "fallback",
+  legacy: "legacy",
   live: "live",
   "live-configured": "config",
   checking: "check",
@@ -92,7 +93,11 @@ export function CoverageFeatureSnapshotRow({ summary }: CoverageFeatureSnapshotR
   const accent = FEATURE_ACCENT_CLASSES[summary.feature.key];
   const barItems = getStackedBarItems(summary);
   const stackedCount = barItems.reduce((total, item) => total + item.count, 0);
-  const missingCount = Math.max(summary.totalCount - stackedCount, 0);
+  // "Not covered" is derived from what the bar actually stacks: the shared
+  // data-unavailable segment renders its own bucket and must never be
+  // published as a coverage gap.
+  const unavailableCount = barItems.find((item) => item.key === "data-unavailable")?.count ?? 0;
+  const missingCount = Math.max(summary.totalCount - (stackedCount - unavailableCount), 0);
   const missingPct = summary.totalCount > 0 ? (missingCount / summary.totalCount) * 100 : 0;
   const marketCapLabel = summary.mcapSharePct == null ? "n/a" : `${summary.mcapSharePct.toFixed(0)}%`;
   const segmentLabel = [
@@ -199,7 +204,10 @@ export function CoverageFeatureSnapshotRow({ summary }: CoverageFeatureSnapshotR
             <span className="ml-0.5 text-sm font-medium text-muted-foreground">/{summary.totalCount}</span>
           </div>
           <div className="mt-1.5 pharos-kicker">
-            <span className="pharos-numeric">{summary.coveragePct.toFixed(0)}%</span> count
+            <span className="pharos-numeric">
+              {summary.coveragePct == null ? "Data n/a" : `${summary.coveragePct.toFixed(0)}%`}
+            </span>{" "}
+            count
           </div>
         </div>
         <div className="min-w-0 md:text-right">

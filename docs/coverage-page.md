@@ -93,7 +93,7 @@ Additional page-level sources:
 | Page element                                                                               | Source                                                                                                                                |
 | ------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------- |
 | Base coin universe                                                                         | `ACTIVE_STABLECOINS` (the `CLIENT_ACTIVE_STABLECOINS` alias) from `@shared/lib/stablecoins/client-registry`                           |
-| Market-cap weights                                                                         | `/api/stablecoins` via `useStablecoins()`, using `getCirculatingRaw()` on the cached list payload                                     |
+| Market-cap weights                                                                         | `/api/stablecoins` via `useStablecoins()`, using `getCirculatingRawOrNull()` on the cached list payload; a coin absent from the payload is marked market-cap unavailable and never summed as a valid `$0`                              |
 | Peg/backing/governance labels in each row                                                  | `coin.flags.*` from tracked metadata, formatted through `@shared/lib/classification` short-label maps                                 |
 | Pricing-source tiles                                                                       | `usePegSummary().data.coins[].consensusSources`, grouped into market sources vs authoritative overrides in `useCoverageMatrixModel()` |
 | Snapshot insight cards (`Source target`, `Widest reach`, `Tightest reach`, `Cap skew`) | Derived from the same per-feature summaries and per-row source-depth counts used by the feature snapshot rows                         |
@@ -124,7 +124,7 @@ For `Freezable Status`, the headline metric is resolved-status coverage across t
 
 Breakdowns are intentionally dense and should stay short:
 
-- DEX: `primary / mixed / fallback`
+- DEX: `primary / mixed / fallback / legacy / data n/a`
 - Reserve view: `score-grade / configured / checking / curated-validated / proof / curated / estimated`
 - Redemption: `heuristic / resolved / configured / impaired / issuer / psm / queue / collateral / stable / basket / data n/a`
 - Flows: `full / partial / lagging / bootstrapping / unknown / data n/a`
@@ -133,6 +133,10 @@ Breakdowns are intentionally dense and should stay short:
 - MiCA: `authorized / pending / transitional / non-compliant / out-of-scope / not assessed`
 - GENIUS: `ppsi approved / state qualified / filing pending / issuer intent / none found / not applicable / unknown / not assessed`
 - Mint Authority: `no privileged / governed / multisig / issuer/backend / bridge / inherited / unknown / score-hardened / score-governed / score-managed / score-concentrated / score-exposed / score-nr`
+
+### Unavailable versus uncovered
+
+`Data n/a` is neither covered nor uncovered. Rows in that state leave every coverage count and market-cap denominator — feature summaries, headline tiles, quick filters, and the source-depth tiles — and surface only through their own `data n/a` breakdown bucket. A feature whose scoped rows are all `Data n/a` publishes a null coverage percentage and renders `Data n/a` instead of `0%`, and it cannot win the `Widest reach`, `Tightest reach`, or `Cap skew` tiles. Price quick filters (`Weak price`, `2 sources`) likewise require a known consensus-source count; an unobserved or unavailable source depth is not a weak one.
 
 #### Source count enrichment
 

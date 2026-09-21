@@ -524,7 +524,7 @@ describe("coverage helpers", () => {
       }),
     ];
 
-    const summary = buildCoverageFeatureSummary(coverageFeature("dependency"), rows, 200);
+    const summary = buildCoverageFeatureSummary(coverageFeature("dependency"), rows);
 
     expect(summary.breakdown).toContainEqual({ key: "gaps", label: "gaps", count: 1 });
     expect(summary.breakdown).toContainEqual({ key: "data-unavailable", label: "data n/a", count: 1 });
@@ -581,7 +581,7 @@ describe("coverage helpers", () => {
       }),
     ];
 
-    const summary = buildCoverageFeatureSummary(coverageFeature("price"), rows, 1_000);
+    const summary = buildCoverageFeatureSummary(coverageFeature("price"), rows);
 
     // headlineFilter requires sourceCount >= 3; only the tracked three-source row passes.
     expect(summary.availableCount).toBe(1);
@@ -598,7 +598,7 @@ describe("coverage helpers", () => {
   });
 
   it("returns zeroed summaries and a null market-cap share for empty or zero-cap inputs", () => {
-    const empty = buildCoverageFeatureSummary(coverageFeature("price"), [], 0);
+    const empty = buildCoverageFeatureSummary(coverageFeature("price"), []);
 
     expect(empty.availableCount).toBe(0);
     expect(empty.totalCount).toBe(0);
@@ -606,14 +606,10 @@ describe("coverage helpers", () => {
     expect(empty.coveredMcapUsd).toBe(0);
     expect(empty.mcapSharePct).toBeNull();
 
-    const zeroCap = buildCoverageFeatureSummary(
-      coverageFeature("blacklist"),
-      [
-        makeCoverageRow(["freezable", "FRZ"], { marketCapUsd: 0, blacklistStatus: false }),
-        makeCoverageRow(["tracked", "TRK"], { marketCapUsd: 0, blacklistStatus: true }),
-      ],
-      0,
-    );
+    const zeroCap = buildCoverageFeatureSummary(coverageFeature("blacklist"), [
+      makeCoverageRow(["freezable", "FRZ"], { marketCapUsd: 0, blacklistStatus: false }),
+      makeCoverageRow(["tracked", "TRK"], { marketCapUsd: 0, blacklistStatus: true }),
+    ]);
 
     expect(zeroCap.coveragePct).toBe(100);
     expect(zeroCap.mcapSharePct).toBeNull();
@@ -636,7 +632,7 @@ describe("coverage helpers", () => {
       makeCoverageRow(["kept", "KEPT"], { marketCapUsd: 1_000 }),
     ];
 
-    const summary = buildCoverageFeatureSummary(scopedFeature, rows, 10_000);
+    const summary = buildCoverageFeatureSummary(scopedFeature, rows);
 
     expect(summary.availableCount).toBe(1);
     expect(summary.totalCount).toBe(1);
@@ -663,7 +659,7 @@ describe("coverage helpers", () => {
       makeCoverageRow(["fallback", "FALL"], { marketCapUsd: 700, dexCoverageClass: "fallback" }),
     ];
 
-    const summary = buildCoverageFeatureSummary(conflictingFeature, rows, 1_000);
+    const summary = buildCoverageFeatureSummary(conflictingFeature, rows);
 
     expect(summary.availableCount).toBe(1);
     expect(summary.coveragePct).toBe(50);
@@ -692,7 +688,7 @@ describe("coverage helpers", () => {
       }),
     ];
 
-    const summary = buildCoverageFeatureSummary(coverageFeature("mintAuthority"), rows, 1_000);
+    const summary = buildCoverageFeatureSummary(coverageFeature("mintAuthority"), rows);
 
     expect(summary.countLabel).toBe("Reviewed authority");
     expect(summary.availableCount).toBe(1);
@@ -727,8 +723,8 @@ describe("coverage helpers", () => {
       }),
     ];
 
-    const micaSummary = buildCoverageFeatureSummary(coverageFeature("mica"), rows, 1_000);
-    const geniusSummary = buildCoverageFeatureSummary(coverageFeature("genius"), rows, 1_000);
+    const micaSummary = buildCoverageFeatureSummary(coverageFeature("mica"), rows);
+    const geniusSummary = buildCoverageFeatureSummary(coverageFeature("genius"), rows);
 
     expect(micaSummary).toMatchObject({
       countLabel: "Assessed assets",
@@ -798,7 +794,7 @@ describe("coverage helpers", () => {
       }),
     ];
 
-    const summary = buildCoverageFeatureSummary(coverageFeature("price"), rows, 1_000);
+    const summary = buildCoverageFeatureSummary(coverageFeature("price"), rows);
 
     expect(summary.breakdown).toContainEqual({ key: "tracked", label: "tracked", count: 2 });
     expect(summary.breakdown).toContainEqual({ key: "sources-5-plus", label: "5+ sources:", count: 1 });
@@ -834,13 +830,13 @@ describe("coverage helpers", () => {
       }),
     ];
 
-    const summary = buildCoverageFeatureSummary(coverageFeature("reserves"), rows, 1_000);
+    const summary = buildCoverageFeatureSummary(coverageFeature("reserves"), rows);
 
     expect(summary.countLabel).toBe("Score-grade live");
     expect(summary.availableCount).toBe(1);
     expect(summary.totalCount).toBe(4);
     expect(summary.coveragePct).toBe(25);
-    expect(summary.mcapSharePct).toBe(70);
+    expect(summary.mcapSharePct).toBeCloseTo(58.333, 3);
     expect(summary.shareLabel).toBe("Score-grade live reserve market-cap reach");
     expect(summary.coverageLabel).toBe("25% with score-grade live reserves");
     expect(summary.breakdown).toEqual([
@@ -893,13 +889,13 @@ describe("coverage helpers", () => {
       }),
     ];
 
-    const summary = buildCoverageFeatureSummary(coverageFeature("redemption"), rows, 1_000);
+    const summary = buildCoverageFeatureSummary(coverageFeature("redemption"), rows);
 
     expect(summary.countLabel).toBe("Strong coverage");
     expect(summary.availableCount).toBe(2);
     expect(summary.totalCount).toBe(6);
     expect(summary.coveragePct).toBeCloseTo(33.333, 3);
-    expect(summary.mcapSharePct).toBe(80);
+    expect(summary.mcapSharePct).toBeCloseTo(72.727, 3);
     expect(summary.coverageLabel).toBe("33% with strong redemption coverage");
     expect(summary.shareLabel).toBe("Strong redemption market-cap reach");
     expect(summary.breakdown).toEqual([
@@ -936,7 +932,7 @@ describe("coverage helpers", () => {
       }),
     ];
 
-    const summary = buildCoverageFeatureSummary(coverageFeature("blacklist"), rows, 1_500);
+    const summary = buildCoverageFeatureSummary(coverageFeature("blacklist"), rows);
 
     expect(summary.countLabel).toBe("Statuses resolved");
     expect(summary.availableCount).toBe(4);
@@ -952,6 +948,67 @@ describe("coverage helpers", () => {
       { key: "possible", label: "possible", count: 1 },
       { key: "no", label: "no", count: 1 },
     ]);
+  });
+
+  it("publishes Data n/a instead of 0% when every scoped row is data-unavailable", () => {
+    const rows = [
+      makeCoverageRow(["dark", "DARK"], { dataAvailability: { yield: false } }),
+      makeCoverageRow(["darker", "DARK2"], { dataAvailability: { yield: false } }),
+    ];
+
+    const summary = buildCoverageFeatureSummary(coverageFeature("yield"), rows);
+
+    expect(summary.coveragePct).toBeNull();
+    expect(summary.availableCount).toBe(0);
+    expect(summary.totalCount).toBe(0);
+    expect(summary.coveredMcapUsd).toBe(0);
+    expect(summary.mcapSharePct).toBeNull();
+    expect(summary.coverageLabel).toBe("Data n/a");
+    expect(summary.breakdown).toContainEqual({ key: "data-unavailable", label: "data n/a", count: 2 });
+  });
+
+  it("keeps partially unavailable rows out of count and cap denominators", () => {
+    const rows = [
+      makeCoverageRow(["ranked", "RANK"], { hasYieldCoverage: true, marketCapUsd: 300 }),
+      makeCoverageRow(["gap", "GAP"], { marketCapUsd: 100 }),
+      makeCoverageRow(["dark", "DARK"], { dataAvailability: { yield: false }, marketCapUsd: 600 }),
+    ];
+
+    const summary = buildCoverageFeatureSummary(coverageFeature("yield"), rows);
+
+    expect(summary.availableCount).toBe(1);
+    expect(summary.totalCount).toBe(2);
+    expect(summary.coveragePct).toBe(50);
+    expect(summary.mcapSharePct).toBe(75);
+  });
+
+  it("keeps yield data-unavailable rows out of the uncovered bucket", () => {
+    const rows = [
+      makeCoverageRow(["ranked", "RANK"], { hasYieldCoverage: true }),
+      makeCoverageRow(["gap", "GAP"], {}),
+      makeCoverageRow(["dark", "DARK"], { dataAvailability: { yield: false } }),
+    ];
+
+    const summary = buildCoverageFeatureSummary(coverageFeature("yield"), rows);
+
+    expect(summary.breakdown).toEqual([
+      { key: "covered", label: "covered", count: 1 },
+      { key: "uncovered", label: "uncovered", count: 1 },
+      { key: "data-unavailable", label: "data n/a", count: 1 },
+    ]);
+  });
+
+  it("gives legacy DEX rows their own breakdown bucket instead of a coverage gap", () => {
+    const rows = [
+      makeCoverageRow(["legacy", "LEG"], { dexCoverageClass: "legacy" }),
+      makeCoverageRow(["unobserved", "UNOBS"], { dexCoverageClass: "unobserved" }),
+    ];
+
+    const summary = buildCoverageFeatureSummary(coverageFeature("dex"), rows);
+
+    expect(summary.availableCount).toBe(1);
+    expect(summary.totalCount).toBe(2);
+    expect(summary.breakdown).toContainEqual({ key: "legacy", label: "legacy", count: 1 });
   });
 });
 
