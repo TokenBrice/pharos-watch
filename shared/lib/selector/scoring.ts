@@ -54,10 +54,19 @@ export interface ScoreRowResult {
 }
 
 /**
+ * Score ceiling a row with a missing critical slot cannot exceed. Shared with
+ * the snapshot read path (`snapshot-normalize.ts`), which re-derives the same
+ * score for a stored snapshot: a second copy of this number would republish
+ * stored snapshots with a different one (R5).
+ */
+export const MISSING_CRITICAL_SCORE_CAP = 78;
+
+/**
  * Current-generation critical-signal sets, shared with the snapshot read path
- * (`snapshot-normalize.ts`): a missing critical slot caps the score at 78 and
- * adds a `missing-critical-*` confidence reason, so a drift between the write
- * and read copies would republish stored snapshots with different numbers.
+ * (`snapshot-normalize.ts`): a missing critical slot caps the score at
+ * {@link MISSING_CRITICAL_SCORE_CAP} and adds a `missing-critical-*` confidence
+ * reason, so a drift between the write and read copies would republish stored
+ * snapshots with different numbers.
  * Pre-`selector-v2.0` snapshots keep their own versioned sets there.
  */
 export const CRITICAL_SIGNAL_SET_BY_PROFILE: Readonly<Record<SelectorProfile, ReadonlySet<WeightKey>>> = {
@@ -199,7 +208,7 @@ export function scoreRow(
     }
     if (criticalSignals.has(slot.key)) {
       confidenceReasons.add(`missing-critical-${slot.key}`);
-      scoreCap = Math.min(scoreCap, 78);
+      scoreCap = Math.min(scoreCap, MISSING_CRITICAL_SCORE_CAP);
     }
     // Intentional slot shape: sourceRiskInverted has rawValue == null (no
     // sourceRiskScore on the row) but normalizedValue != null because

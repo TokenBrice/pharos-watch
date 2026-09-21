@@ -164,16 +164,25 @@ describe("selectYieldSource ordering", () => {
     }
   });
 
-  it("fails closed when the winning rail has no chain rather than substituting a runner-up", () => {
+  it("degrades one chain-less rail instead of dropping the coin's whole yield coverage", () => {
     const row = makeRow([
       candidate("winner", { chain: null, sourceRiskScore: 1 }),
       candidate("runner-up", { sourceRiskScore: 50 }),
     ]);
-    expect(selectYieldSource(row, lendInput)).toBeNull();
+    expect(selectYieldSource(row, lendInput)?.sourceKey).toBe("runner-up");
     expect(selectYieldSource(makeRow([
       candidate("winner", { sourceRiskScore: 1 }),
       candidate("runner-up", { sourceRiskScore: 50 }),
     ]), lendInput)?.sourceKey).toBe("winner");
+    expect(selectYieldSource(makeRow([candidate("only", { chain: null })]), lendInput)).toBeNull();
+  });
+
+  it("publishes an unsourced venue tier as unknown rather than a measured mid", () => {
+    const selected = selectYieldSource(
+      makeRow([candidate("untiered", { sourceRiskScore: null, venueRiskTier: null })]),
+      lendInput,
+    );
+    expect(selected?.sourceRiskTier).toBeNull();
   });
 
   it("prefers wrapper rails only for wrap, not all or unsupported venue answers", () => {

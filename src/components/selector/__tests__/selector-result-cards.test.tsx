@@ -158,7 +158,7 @@ describe("SelectorShortlistCard", () => {
 });
 
 describe("SelectorLowerRankedRow", () => {
-  it("does not render raw reason keys when prose is unavailable", () => {
+  it("re-derives the curated prose a prose-free snapshot replay carries no text for", () => {
     const entry: SelectorLowerRanked = {
       id: "coin",
       symbol: "COIN",
@@ -171,8 +171,8 @@ describe("SelectorLowerRankedRow", () => {
 
     render(<SelectorLowerRankedRow entry={entry} pegCurrency="USD" />);
 
-    expect(screen.getByText(/COIN needs review/i)).toBeTruthy();
-    expect(screen.getByText(/liquidity reading/i)).toBeTruthy();
+    expect(screen.getByText(/COIN: profile mismatch/i)).toBeTruthy();
+    expect(screen.getByText(/This row missed .*liquidity/i)).toBeTruthy();
     expect(screen.queryByText(/weak-liquidity/i)).toBeNull();
   });
 });

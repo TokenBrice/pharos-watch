@@ -7,8 +7,11 @@ import type {
   YieldSourceCandidate,
 } from "./types";
 
+/** A rail the yield domain resolved to a venue chain, i.e. one it can name. */
+type ResolvedYieldSourceCandidate = YieldSourceCandidate & { chain: string };
+
 interface RankedYieldSourceCandidate {
-  candidate: YieldSourceCandidate;
+  candidate: ResolvedYieldSourceCandidate;
   /** 1 when the candidate satisfies the user's venue answer, 0 otherwise. */
   venueMatch: number;
   risk: number;
@@ -117,7 +120,7 @@ function sourceFreshnessScore(candidate: YieldSourceCandidate): number {
  * decides a rail is one a reader can look up.
  */
 function rankYieldSourceCandidate(
-  candidate: YieldSourceCandidate,
+  candidate: ResolvedYieldSourceCandidate,
   input: SelectorInput,
 ): RankedYieldSourceCandidate {
   return {
@@ -164,7 +167,14 @@ function fallbackYieldSources(row: MergedRow): YieldSourceCandidate[] {
 }
 
 export function selectYieldSource(row: MergedRow, input: SelectorInput): RecommendedSource | null {
-  const candidates = row.yieldSources?.length ? [...row.yieldSources] : fallbackYieldSources(row);
+  const pool = row.yieldSources?.length ? row.yieldSources : fallbackYieldSources(row);
+  // A rail whose venue chain the yield domain never resolved cannot be rendered
+  // as a destination, but it is one rail — not the coin's whole yield coverage.
+  // Filtering before the ranking keeps every resolvable sibling in play instead
+  // of discarding the coin under `missingSignals: ["recommendedSource"]`.
+  const candidates = pool.filter(
+    (candidate): candidate is ResolvedYieldSourceCandidate => candidate.chain != null,
+  );
   if (candidates.length === 0) {
     return null;
   }
@@ -181,7 +191,6 @@ export function selectYieldSource(row: MergedRow, input: SelectorInput): Recomme
     return a.candidate.sourceKey.localeCompare(b.candidate.sourceKey);
   });
   const selected = rankedCandidates[0]!.candidate;
-  if (selected.chain == null) return null;
   return {
     sourceKey: selected.sourceKey,
     protocol: selected.protocol,
@@ -190,7 +199,10 @@ export function selectYieldSource(row: MergedRow, input: SelectorInput): Recomme
     apy30d: selected.apy30d,
     pharosYieldScore: selected.pharosYieldScore,
     sourceTvlUsd: selected.sourceTvlUsd,
-    sourceRiskTier: selected.venueRiskTier ?? "mid",
+    // Unknown stays unknown, here as for `freshness`: an unsourced venue tier
+    // published as `"mid"` is a measurement the registry never made.
+    // `riskTierScore` keeps its neutral 55 for ordering.
+    sourceRiskTier: selected.venueRiskTier,
     // Unknown stays unknown: `sourceFreshnessScore` ranks a missing reading as
     // neutral 50, and rendering `{ 0, 0 }` would print "0s old" for the same row.
     freshness: selected.freshness,

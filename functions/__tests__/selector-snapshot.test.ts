@@ -11,6 +11,7 @@ import {
   computeSelectorSnapshotSid,
   createVerifiedSelectorSnapshot,
   validateSelectorSnapshot,
+  validateVerifiedSelectorSnapshot,
 } from "@shared/lib/selector/snapshot";
 import { SELECTOR_SNAPSHOT_VERIFICATION_KIND } from "@shared/lib/selector/types";
 import {
@@ -502,16 +503,21 @@ describe("selector-snapshot Pages Function", () => {
       expect(response.status).toBe(503);
     });
 
-    it("returns 503 instead of storing caller output when canonical recomputation fails", async () => {
+    it("leaves the daily quota unspent when canonical recomputation fails", async () => {
       recomputeVerifiedSelectorSnapshotMock.mockRejectedValueOnce(new Error("canonical source unavailable"));
-      const env = makeEnv();
+      const db = makeD1();
+      const env = makeEnv({ DB: db });
       const response = await onRequest(
-        snapshotContext(postRequest(buildSelectorSnapshotOutput({ datasetHash: "f".repeat(64) })), env),
+        snapshotContext(postRequest(buildSelectorSnapshotOutput({ datasetHash: "f".repeat(64) }), {
+          ...POST_HEADERS,
+          "CF-Connecting-IP": "203.0.113.90",
+        }), env),
       );
 
       expect(response.status).toBe(503);
       await expect(response.json()).resolves.toEqual({ error: "Canonical selector data temporarily unavailable" });
       expect((env.SELECTOR_SNAPSHOTS as TestKVNamespace).__getStore().size).toBe(0);
+      expect(db.__getQuotaRows().size).toBe(0);
     });
 
     it("returns 503 when the KV write fails", async () => {
@@ -676,7 +682,7 @@ describe("selector-snapshot Pages Function", () => {
       expect(kv.__getPutCalls()).toHaveLength(2);
     });
 
-    it("returns 503 instead of claiming success when the retention extension fails", async () => {
+    it("still serves the validated snapshot when the retention extension fails", async () => {
       const env = makeEnv();
       const kv = env.SELECTOR_SNAPSHOTS as TestKVNamespace;
       const post = await onRequest(snapshotContext(postRequest(buildSelectorSnapshotOutput()), env));
@@ -689,8 +695,10 @@ describe("selector-snapshot Pages Function", () => {
         snapshotContext(getRequest(sid), env),
       );
 
-      expect(get.status).toBe(503);
-      await expect(get.json()).resolves.toEqual({ error: "Snapshot retention could not be extended" });
+      expect(get.status).toBe(200);
+      const validation = validateVerifiedSelectorSnapshot(await get.json());
+      if (!validation.ok) throw new Error("expected the replayed snapshot to validate");
+      expect(computeSelectorSnapshotSid(validation.snapshot)).toBe(sid);
     });
   });
 

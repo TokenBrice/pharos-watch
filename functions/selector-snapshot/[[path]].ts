@@ -223,9 +223,6 @@ async function handlePost(context: SelectorSnapshotContext): Promise<Response> {
     return responseForValidationFailure(inputValidation.error);
   }
 
-  const quotaRejected = await consumeDailyPostQuota(env, ipHash);
-  if (quotaRejected) return quotaRejected;
-
   let snapshot: Awaited<ReturnType<typeof recomputeVerifiedSelectorSnapshot>>;
   try {
     snapshot = await recomputeVerifiedSelectorSnapshot(inputValidation.input, request, env);
@@ -233,6 +230,12 @@ async function handlePost(context: SelectorSnapshotContext): Promise<Response> {
     console.warn("[selector-snapshot] canonical recomputation failure", error);
     return jsonError(503, "Canonical selector data temporarily unavailable");
   }
+
+  // The durable daily counter is charged only once the work it pays for has
+  // succeeded: an upstream outage used to spend a client's daily POSTs on the
+  // retries the outage itself provoked, locking them out for the UTC day.
+  const quotaRejected = await consumeDailyPostQuota(env, ipHash);
+  if (quotaRejected) return quotaRejected;
 
   const sid = computeSelectorSnapshotSid(snapshot);
   const kvKey = `s:${sid}`;
@@ -331,18 +334,24 @@ async function handleGet(context: SelectorSnapshotContext, sid: string): Promise
     // First successful read: extend the unread TTL to the full retention TTL.
     // Re-put the normalized replay snapshot so legacy debug/prose fields are
     // removed while preserving the content-addressed sid contract.
-    try {
-      await env.SELECTOR_SNAPSHOTS.put(kvKey, normalizedStored, {
-        expirationTtl: SELECTOR_SNAPSHOT_TTL_SECONDS,
-        metadata: {
-          extended: true,
-          ...(trust ? { trust } : {}),
-          ...(normalizedSid === sid ? {} : { legacySid: sid }),
-        },
-      });
-    } catch (error) {
+    //
+    // Best effort by construction: the snapshot below was already read, shape
+    // checked and sid-verified, so a transient KV write failure must not throw
+    // it away. Off the response path entirely where `waitUntil` exists.
+    const extendRetention = env.SELECTOR_SNAPSHOTS.put(kvKey, normalizedStored, {
+      expirationTtl: SELECTOR_SNAPSHOT_TTL_SECONDS,
+      metadata: {
+        extended: true,
+        ...(trust ? { trust } : {}),
+        ...(normalizedSid === sid ? {} : { legacySid: sid }),
+      },
+    }).catch((error: unknown) => {
       console.warn("[selector-snapshot] retention extension failure", error);
-      return jsonError(503, "Snapshot retention could not be extended");
+    });
+    if (context.waitUntil) {
+      context.waitUntil(extendRetention);
+    } else {
+      await extendRetention;
     }
   }
 

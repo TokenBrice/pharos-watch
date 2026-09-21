@@ -20,21 +20,6 @@ export { buildOnChainSourceKey } from "../lib/yield-utils";
 export const DETERMINISTIC_APY_SANITY_MAX = 300;
 
 export {
-  classifyYieldSourceFreshness,
-  COMPARISON_ANCHOR_STALE_THRESHOLD_MS,
-  derivePysNullReason,
-  getComparisonAnchorStaleThresholdMs,
-  getRankingStaleThresholdMs,
-  LONG_HORIZON_COMPARISON_ANCHOR_STALE_THRESHOLD_MS,
-  PRICE_DERIVED_STALE_THRESHOLD_MS,
-  RATE_DERIVED_STALE_THRESHOLD_MS,
-  SLOW_NAV_SOURCE_STALE_THRESHOLD_MS,
-  STALE_THRESHOLD_MS,
-  SUPPLEMENTAL_SOURCE_STALE_THRESHOLD_MS,
-  type YieldSourceFreshness,
-} from "../lib/yield-ranking-helpers";
-
-export {
   computePYS,
   PYS_RISK_PENALTY_FLOOR,
   PYS_RISK_PENALTY_EXPONENT,

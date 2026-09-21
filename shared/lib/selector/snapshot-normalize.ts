@@ -9,8 +9,10 @@ import {
   COVERAGE_UNEVEN_FRACTION,
   LOW_CONFIDENCE_THRESHOLD,
 } from "./coverage-policy";
+import { RANK_MARGIN_CROWDED, RANK_MARGIN_NARROW } from "./ranking";
 import {
   CRITICAL_SIGNAL_SET_BY_PROFILE,
+  MISSING_CRITICAL_SCORE_CAP,
   missingSlotRedistributes,
   normalizeSelectorComponentValue,
 } from "./scoring";
@@ -54,6 +56,7 @@ const CURRENT_GENERATION_ENGINE_VERSIONS = new Set<string>([
   "selector-v2.1",
   "selector-v2.2",
   "selector-v2.3",
+  "selector-v2.4",
   SELECTOR_VERSION,
 ]);
 
@@ -249,7 +252,7 @@ function scoreFromComponents(
   const hasMissingCritical = components.some(
     (component) => component.rawValue === null && critical.has(component.key),
   );
-  return round1(Math.min(rawScore, hasMissingCritical ? 78 : 100));
+  return round1(Math.min(rawScore, hasMissingCritical ? MISSING_CRITICAL_SCORE_CAP : 100));
 }
 
 function projectRecommendation(
@@ -362,9 +365,9 @@ function projectRankRobustness(
   const scoreMargin = round1(Math.max(0, recommendation.score - next.score));
   const label = recommendation.rankRobustness?.label === "concentration-adjusted"
     ? "concentration-adjusted"
-    : scoreMargin < 1.5
+    : scoreMargin < RANK_MARGIN_NARROW
       ? "narrow-margin"
-      : scoreMargin < 3
+      : scoreMargin < RANK_MARGIN_CROWDED
         ? "crowded-field"
         : "clear-margin";
   return { label, scoreMargin };

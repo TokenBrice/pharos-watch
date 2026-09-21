@@ -6,7 +6,7 @@ import type { YieldEnvelopeRejection } from "./types";
 import type { YieldSupplementalCacheMeta } from "./state-loading";
 import type { YieldOptionalSourceOutcome } from "./optional-source-runtime";
 import type { YieldRowsWriteStats } from "./publication-atomic-batch";
-import { getComparisonAnchorStaleThresholdMs } from "../yield-helpers";
+import { getComparisonAnchorStaleThresholdMs } from "../../lib/yield-ranking-helpers";
 
 const YIELD_METADATA_EXAMPLE_LIMIT = 25;
 

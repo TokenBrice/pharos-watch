@@ -20,13 +20,15 @@ import { DEFAULT_SAFETY_SCORE, PYS_SCALING_FACTOR } from "../../lib/constants";
 import { isOnChainBootstrapYieldSeed } from "../../lib/yield-utils";
 import { isRealSourceSwitch } from "../../lib/yield-history-ownership-handoffs";
 import { countSourceSwitchesWithTail } from "./coordinator-history";
-import { derivePysNullReasonFromComponents } from "../../lib/yield-ranking-helpers";
 import {
   classifyYieldSourceFreshness,
+  derivePysNullReasonFromComponents,
   getComparisonAnchorStaleThresholdMs,
+  type YieldSourceFreshness,
+} from "../../lib/yield-ranking-helpers";
+import {
   computeYieldStability,
   detectWarningSignals,
-  type YieldSourceFreshness,
 } from "../yield-helpers";
 import type { YieldHistorySnapshotRow } from "./history";
 import { computeTvlWeightedMedianApy } from "./rankings";

@@ -131,74 +131,6 @@ function runEligibilityPhase(
   return { excluded, skippedForCoverage, survivors };
 }
 
-function runScoringPhase(
-  survivors: readonly MergedRow[],
-  input: SelectorInput,
-): ScoringPhase {
-  const excluded: ExclusionRecord[] = [];
-  const skippedForCoverage: SkippedCoin[] = [];
-  const scored: ScoredEntry[] = [];
-  for (const row of survivors) {
-    const result = scoreRow(row, input.profile, input);
-    if (result == null || result.degenerate) {
-      excluded.push({ id: row.id, reason: "coverage-too-thin", severity: "info" });
-      skippedForCoverage.push({
-        id: row.id,
-        symbol: row.symbol,
-        missingSignals: ["every-signal-null"],
-      });
-      continue;
-    }
-    scored.push({
-      row,
-      score: result.score,
-      components: result.components,
-      confidence: result.confidence,
-      confidenceReasons: result.confidenceReasons,
-      redistributedSlots: result.redistributedSlots,
-      recommendedSource: null,
-      perInputStaleness: null,
-      relaxedReason: null,
-    });
-  }
-  return { excluded, skippedForCoverage, scored };
-}
-
-function runYieldSourcePhase(
-  scored: readonly ScoredEntry[],
-  input: SelectorInput,
-): ScoringPhase {
-  if (input.profile !== "yield") {
-    return { excluded: [], skippedForCoverage: [], scored: [...scored] };
-  }
-
-  const excluded: ExclusionRecord[] = [];
-  const skippedForCoverage: SkippedCoin[] = [];
-  const withSources = scored.map((entry) => ({
-    ...entry,
-    recommendedSource: selectYieldSource(entry.row, input),
-  }));
-  const retained: ScoredEntry[] = [];
-  for (const entry of withSources) {
-    if (entry.recommendedSource != null) {
-      retained.push(entry);
-      continue;
-    }
-    excluded.push({
-      id: entry.row.id,
-      reason: "coverage-too-thin",
-      severity: "info",
-      detail: "missing-recommended-source",
-    });
-    skippedForCoverage.push({
-      id: entry.row.id,
-      symbol: entry.row.symbol,
-      missingSignals: ["recommendedSource"],
-    });
-  }
-  return { excluded, skippedForCoverage, scored: retained };
-}
-
 function tradingPerInputStaleness(row: MergedRow): Record<string, number> {
   const ages: Record<string, number> = {};
   if (row.pegSummaryAgeSec != null) ages.pegSummary = row.pegSummaryAgeSec;
@@ -207,15 +139,85 @@ function tradingPerInputStaleness(row: MergedRow): Record<string, number> {
   return ages;
 }
 
-function runTradingStalenessPhase(
-  scored: readonly ScoredEntry[],
+interface ScoredEntryResult {
+  entry: ScoredEntry | null;
+  /** The `skippedForCoverage` signal when the row could not become an entry. */
+  missingSignal: "every-signal-null" | "recommendedSource" | null;
+}
+
+/**
+ * The single `ScoredEntry` constructor. Scoring, the yield rail and the
+ * trading staleness map used to be three passes that each rebuilt the entry,
+ * so a new field had to be added in every one of them.
+ */
+function buildScoredEntry(row: MergedRow, input: SelectorInput): ScoredEntryResult {
+  const result = scoreRow(row, input.profile, input);
+  if (result == null || result.degenerate) {
+    return { entry: null, missingSignal: "every-signal-null" };
+  }
+  const recommendedSource = input.profile === "yield" ? selectYieldSource(row, input) : null;
+  if (input.profile === "yield" && recommendedSource == null) {
+    return { entry: null, missingSignal: "recommendedSource" };
+  }
+  return {
+    entry: {
+      row,
+      score: result.score,
+      components: result.components,
+      confidence: result.confidence,
+      confidenceReasons: result.confidenceReasons,
+      redistributedSlots: result.redistributedSlots,
+      recommendedSource,
+      perInputStaleness: input.profile === "trading" ? tradingPerInputStaleness(row) : null,
+      relaxedReason: null,
+    },
+    missingSignal: null,
+  };
+}
+
+function runScoringPhase(
+  survivors: readonly MergedRow[],
   input: SelectorInput,
-): ScoredEntry[] {
-  if (input.profile !== "trading") return [...scored];
-  return scored.map((entry) => ({
-    ...entry,
-    perInputStaleness: tradingPerInputStaleness(entry.row),
-  }));
+): ScoringPhase {
+  const excluded: ExclusionRecord[] = [];
+  const skippedForCoverage: SkippedCoin[] = [];
+  const railExcluded: ExclusionRecord[] = [];
+  const railSkipped: SkippedCoin[] = [];
+  const scored: ScoredEntry[] = [];
+  for (const row of survivors) {
+    const result = buildScoredEntry(row, input);
+    if (result.entry != null) {
+      scored.push(result.entry);
+      continue;
+    }
+    if (result.missingSignal === "recommendedSource") {
+      railExcluded.push({
+        id: row.id,
+        reason: "coverage-too-thin",
+        severity: "info",
+        detail: "missing-recommended-source",
+      });
+      railSkipped.push({
+        id: row.id,
+        symbol: row.symbol,
+        missingSignals: ["recommendedSource"],
+      });
+      continue;
+    }
+    excluded.push({ id: row.id, reason: "coverage-too-thin", severity: "info" });
+    skippedForCoverage.push({
+      id: row.id,
+      symbol: row.symbol,
+      missingSignals: ["every-signal-null"],
+    });
+  }
+  // Records stay grouped by cause, in the order the two passes emitted them:
+  // every degenerate row, then every row with no resolvable rail.
+  return {
+    excluded: [...excluded, ...railExcluded],
+    skippedForCoverage: [...skippedForCoverage, ...railSkipped],
+    scored,
+  };
 }
 
 function computeCoverageState(
@@ -242,30 +244,6 @@ function relaxedFallbackReason(
   return exclusion.reason;
 }
 
-function toScoredEntry(
-  row: MergedRow,
-  input: SelectorInput,
-): ScoredEntry | null {
-  const result = scoreRow(row, input.profile, input);
-  if (result == null || result.degenerate) return null;
-  const recommendedSource = input.profile === "yield" ? selectYieldSource(row, input) : null;
-  if (input.profile === "yield" && recommendedSource == null) return null;
-  return {
-    row,
-    score: result.score,
-    components: result.components,
-    confidence: result.confidence,
-    confidenceReasons: result.confidenceReasons,
-    redistributedSlots: result.redistributedSlots,
-    recommendedSource,
-    perInputStaleness:
-      input.profile === "trading"
-        ? tradingPerInputStaleness(row)
-        : null,
-    relaxedReason: null,
-  };
-}
-
 function buildRelaxedFallbackEntries(
   universe: readonly MergedRow[],
   input: SelectorInput,
@@ -276,7 +254,7 @@ function buildRelaxedFallbackEntries(
     if (excludedIds.has(row.id)) continue;
     const reason = relaxedFallbackReason(row, input);
     if (reason == null) continue;
-    const entry = toScoredEntry(row, input);
+    const { entry } = buildScoredEntry(row, input);
     if (entry != null) {
       scored.push({
         ...entry,
@@ -356,17 +334,11 @@ export function runSelector(
   const universe = selectUniverse(input, data);
   const eligibility = runEligibilityPhase(universe, input);
   const scoring = runScoringPhase(eligibility.survivors, input);
-  const yieldSources = runYieldSourcePhase(scoring.scored, input);
-  const scored = runTradingStalenessPhase(yieldSources.scored, input);
-  let excluded = [
-    ...eligibility.excluded,
-    ...scoring.excluded,
-    ...yieldSources.excluded,
-  ];
+  const scored = scoring.scored;
+  let excluded = [...eligibility.excluded, ...scoring.excluded];
   const skippedForCoverage = [
     ...eligibility.skippedForCoverage,
     ...scoring.skippedForCoverage,
-    ...yieldSources.skippedForCoverage,
   ];
   const coverageState = computeCoverageState(universe.length, skippedForCoverage);
   const ranked = rankScoredEntries(scored, input);

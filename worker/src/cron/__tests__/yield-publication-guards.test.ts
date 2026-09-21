@@ -7,13 +7,13 @@ import {
 import { computePysRewardShare, derivePysSourceRiskPenalty } from "@shared/lib/yield-scoring";
 
 import {
-  PRICE_DERIVED_STALE_THRESHOLD_MS,
-  STALE_THRESHOLD_MS,
-  SUPPLEMENTAL_SOURCE_STALE_THRESHOLD_MS,
-  SLOW_NAV_SOURCE_STALE_THRESHOLD_MS,
   COMPARISON_ANCHOR_STALE_THRESHOLD_MS,
   LONG_HORIZON_COMPARISON_ANCHOR_STALE_THRESHOLD_MS,
-} from "../yield-helpers";
+  PRICE_DERIVED_STALE_THRESHOLD_MS,
+  SLOW_NAV_SOURCE_STALE_THRESHOLD_MS,
+  STALE_THRESHOLD_MS,
+  SUPPLEMENTAL_SOURCE_STALE_THRESHOLD_MS,
+} from "../../lib/yield-ranking-helpers";
 import { buildHistoryKey } from "../yield-sync/evaluation";
 import { YIELD_BENCHMARK_SCORE_TTL_SEC } from "../yield-sync/benchmarks";
 import {

@@ -42,6 +42,15 @@ export function dedupVariants(
 const MISSING_SELECTOR_GRADE_RANK = 99;
 const SCORE_CLUSTER_WINDOW = 1.5;
 
+/**
+ * Rank-robustness margin bands, shared with the snapshot read path
+ * (`snapshot-normalize.ts`): it re-labels a stored snapshot's margins, so a
+ * second copy of these numbers would republish stored labels that disagree
+ * with the live run's (R5).
+ */
+export const RANK_MARGIN_NARROW = 1.5;
+export const RANK_MARGIN_CROWDED = 3;
+
 function selectorGradeRank(grade: ReportCardGrade | null | undefined): number {
   if (grade == null) return MISSING_SELECTOR_GRADE_RANK;
   return -(getReportCardGradeRank(grade, UNKNOWN_REPORT_CARD_GRADE_RANK) ?? UNKNOWN_REPORT_CARD_GRADE_RANK);
@@ -149,7 +158,7 @@ export function rankRobustnessFor(
   }
   if (!entry || !next) return { label: "clear-margin", scoreMargin: null };
   const margin = round1(Math.max(0, entry.score - next.score));
-  if (margin < SCORE_CLUSTER_WINDOW) return { label: "narrow-margin", scoreMargin: margin };
-  if (margin < 3) return { label: "crowded-field", scoreMargin: margin };
+  if (margin < RANK_MARGIN_NARROW) return { label: "narrow-margin", scoreMargin: margin };
+  if (margin < RANK_MARGIN_CROWDED) return { label: "crowded-field", scoreMargin: margin };
   return { label: "clear-margin", scoreMargin: margin };
 }

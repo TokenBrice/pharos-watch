@@ -22,7 +22,6 @@ import type {
   YieldType,
   YieldVenueRiskTier,
 } from "../../types";
-import type { StablecoinClientMeta } from "../../types/stablecoin-client-meta";
 
 export interface BuildSelectorRowsArgs {
   stablecoinsData: StablecoinListResponse | null;
@@ -98,7 +97,7 @@ export function buildSelectorRows(args: BuildSelectorRowsArgs): BuildSelectorRow
       isYieldBearing: Boolean(meta.flags.yieldBearing),
       pegCurrency: meta.flags.pegCurrency,
       governance: meta.flags.governance,
-      canBeBlacklisted: resolveBlacklistability(meta),
+      canBeBlacklisted: meta.blacklistStatus ?? null,
       mechanismArchetype: resolveMechanismArchetype(meta, CLIENT_ACTIVE_META_BY_ID),
 
       supplyUsd: supplyById.get(id) ?? 0,
@@ -264,10 +263,6 @@ export function buildSelectorRows(args: BuildSelectorRowsArgs): BuildSelectorRow
     datasetHash: sha256Hex(canonicalizeForDatasetHash(datasetContent)),
     methodologyVersions,
   };
-}
-
-function resolveBlacklistability(meta: StablecoinClientMeta): MergedRow["canBeBlacklisted"] {
-  return meta.blacklistStatus ?? null;
 }
 
 function normalizeVenueRiskTier(tier: YieldVenueRiskTier | null | undefined): MergedRow["venueRiskTier"] {

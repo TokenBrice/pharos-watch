@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { COMPARISON_ANCHOR_STALE_THRESHOLD_MS } from "../yield-helpers";
+import { COMPARISON_ANCHOR_STALE_THRESHOLD_MS } from "../../lib/yield-ranking-helpers";
 import { buildHardcodedUsdBenchmark } from "../yield-sync/benchmarks";
 import {
   buildComparisonAnchorFreshnessMeta,

@@ -22,7 +22,10 @@ import {
 } from "../../lib/yield-rank-attribution";
 import { PYS_SCALING_FACTOR } from "../../lib/constants";
 import { resolveYieldSourceUrl } from "../../lib/yield-source-links";
-import { getComparisonAnchorStaleThresholdMs, getRankingStaleThresholdMs } from "../yield-helpers";
+import {
+  getComparisonAnchorStaleThresholdMs,
+  getRankingStaleThresholdMs,
+} from "../../lib/yield-ranking-helpers";
 import { buildHistoryKey, type EvaluatedYieldSource } from "./evaluation";
 import { compareCandidates } from "./evaluation-arbitration";
 import {
