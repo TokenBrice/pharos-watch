@@ -3,6 +3,7 @@ import type { DdrActiveEventInput } from "@shared/lib/depeg-resolver";
 import type { StablecoinMeta } from "@shared/types/core";
 import { mockD1 as createMockD1, type MockTableConfig } from "@shared/test-utils/mock-d1";
 import { buildDewsStablecoinIdsDigest } from "../../../lib/dews-publication-pointer";
+import { D1_MAX_BOUND_PARAMETERS } from "../../../lib/d1-primitives";
 import * as activeSafetyScoreSource from "../../../lib/safety-score-active-source";
 import {
   makeWorkerReportCardsV9Response,
@@ -657,6 +658,30 @@ describe("loadDdrContext", () => {
     expect(result.kind).toBe("ok");
     if (result.kind !== "ok") return;
     expect(result.context.redemptionByCoin.size).toBe(0);
+  });
+
+  it("splits active-coin reads into bind-limit-safe statements during a market-wide depeg", async () => {
+    const rows = Array.from({ length: 150 }, (_, index) => activeRow({
+      id: 1_000 + index,
+      stablecoin_id: `synthetic-${index}`,
+      symbol: `SYN${index}`,
+    }));
+    const db = mockD1([
+      ...publishedDewsConfigs(),
+      stablecoinsCache(NOW_SEC),
+      { match: "FROM redemption_backstop_runs", rows: [] },
+    ]);
+
+    const result = await loadDdrContext(db, rows, NOW_SEC);
+
+    expect(result.kind).toBe("ok");
+    for (const table of ["FROM supply_history", "FROM dex_liquidity WHERE stablecoin_id", "FROM dex_liquidity_history"]) {
+      const statements = db.getHistory().filter((entry) => entry.sql.includes(table));
+      expect(statements.length).toBeGreaterThan(1);
+      for (const statement of statements) {
+        expect(statement.binds.length).toBeLessThanOrEqual(D1_MAX_BOUND_PARAMETERS);
+      }
+    }
   });
 
   it("leaves V9 exit context null-degraded when the published V9 snapshot is held", async () => {

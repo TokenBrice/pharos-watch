@@ -118,6 +118,15 @@ describe("findNearestSupply", () => {
   it("returns null when supply history is empty", () => {
     expect(findNearestSupply([], 1_000)).toBeNull();
   });
+
+  it("returns null once the nearest snapshot is beyond the distance bound", () => {
+    const supply = [{ ts: 1_000, supply: 10 }];
+
+    expect(findNearestSupply(supply, 1_000 + 14 * 86_400)).toBe(10);
+    expect(findNearestSupply(supply, 1_000 + 14 * 86_400 + 1)).toBeNull();
+    expect(findNearestSupply(supply, 1_500, 500)).toBe(10);
+    expect(findNearestSupply(supply, 1_501, 500)).toBeNull();
+  });
 });
 
 describe("buildFxLookup", () => {

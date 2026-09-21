@@ -2,6 +2,21 @@ import type { MethodologyChangelogEntry } from "@shared/lib/methodology-versions
 
 export const STABILITY_INDEX_V3: readonly MethodologyChangelogEntry[] = [
   {
+    version: "3.62",
+    title: "As-of historical supply lookup",
+    date: "2026-09-22",
+    effectiveAt: 1790035200,
+    summary:
+      "The historical replay now reads the most recent supply snapshot at or before the day being rebuilt instead of the nearest snapshot in either direction.",
+    impact: [
+      "A replayed UTC day can no longer take market cap or historical price from a supply snapshot observed after that day",
+      "A day with no snapshot within 14 days before it leaves the coin out of that day's universe instead of borrowing a later observation",
+      "Live 30-minute sampling and daily aggregation are unchanged",
+    ],
+    commits: [],
+    reconstructed: false,
+  },
+  {
     version: "3.61",
     title: "Paired 7-day trend inputs",
     date: "2026-08-22",

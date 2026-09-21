@@ -156,6 +156,9 @@ export function isTrustedDexPriceRow(
   nowSec: number,
   tier: DexPriceTrustTier,
 ): boolean {
+  if (!Number.isSafeInteger(row.updated_at) || row.updated_at > nowSec) return false;
+  if (!Number.isFinite(row.source_total_tvl) || row.source_total_tvl < 0) return false;
+
   const policy = getDexTrustPolicy(tier);
   return (nowSec - row.updated_at) < policy.maxAgeSec && row.source_total_tvl >= policy.minTvlUsd;
 }

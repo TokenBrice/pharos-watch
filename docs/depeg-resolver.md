@@ -101,6 +101,8 @@ Since DDR `4.5`, the published V9 mint posture also supplies the structural auth
 
 Runtime DDR context hydrates those live fields from `stress_signals.signals_json` (DEWS supply and blacklist sub-signals), `dex_liquidity` plus `dex_liquidity_history` (current liquidity score and 7-day / 30-day TVL and volume trends using the same trend baseline selector as `/api/dex-liquidity`), `redemption_backstop_run_rows` (from the latest completed `redemption_backstop_runs` snapshot), mint-burn hourly net inflow where the coin has `MINT_BURN_CONFIGS` coverage, and the published V9 report-card snapshot (safety grade, exit pillar/breakdown, serial dependency graph). A stale, missing, or mismatched V9 safety identity leaves the resolver's safety context explicitly degraded and cannot apply V9 safety/exit anchors; other resolver signals remain available. Every new input null-degrades on read failure rather than silently scoring an absent field.
 
+Every per-coin read in that hydration path (`supply_history`, `mint_burn_hourly`, `dex_liquidity`, `dex_liquidity_history`, and the promoted `depeg_pending_outcomes` confirmation times) is issued in bind-limit-safe chunks through `chunkArray()` + `buildInClause()`, and the chunk results are merged in JS. A market-wide depeg is exactly when the active-coin list exceeds `D1_MAX_BOUND_PARAMETERS`, so an unchunked `IN (…)` would fail every one of those reads and degrade the run at the moment the resolver must publish.
+
 ### Kill signals (terminal pressure)
 
 Each kill signal is rated `elevated` or `severe`; a signal that does not fire is simply absent from the factor list.

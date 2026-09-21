@@ -45,7 +45,7 @@ export const SAFETY_SCORE_METHODOLOGY_VERSION = currentSafetyScoreVersion.curren
 export const SAFETY_SCORE_METHODOLOGY_VERSION_LABEL = methodologyLabel(SAFETY_SCORE_METHODOLOGY_VERSION);
 export const SAFETY_SCORE_METHODOLOGY_CHANGELOG_PATH = "/methodology/scoring-changelog/";
 
-export const PSI_METHODOLOGY_VERSION = "3.61";
+export const PSI_METHODOLOGY_VERSION = "3.62";
 export const PSI_METHODOLOGY_VERSION_LABEL = methodologyLabel(PSI_METHODOLOGY_VERSION);
 export const PSI_METHODOLOGY_CHANGELOG_PATH = "/methodology/stability-index-changelog/";
 

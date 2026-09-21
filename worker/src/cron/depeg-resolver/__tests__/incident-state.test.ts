@@ -1,8 +1,11 @@
 import { describe, expect, it, vi } from "vitest";
 import type { StablecoinMeta } from "@shared/types/core";
+import { mockD1 } from "@shared/test-utils/mock-d1";
+import { D1_MAX_BOUND_PARAMETERS } from "../../../lib/d1-primitives";
 import {
   applyConfirmationTimes,
   ensureCanonicalIncidentsForEvents,
+  loadPendingPromotionConfirmationTimes,
   recordSystemHealthDeferrals,
 } from "../incident-state";
 import { toStructural } from "../utils";
@@ -97,6 +100,40 @@ describe("ensureCanonicalIncidentsForEvents", () => {
     expect(byEventId.has(2)).toBe(false);
   });
 
+});
+
+describe("loadPendingPromotionConfirmationTimes", () => {
+  it("chunks the promoted-outcome read and joins every candidate across chunks", async () => {
+    const events = Array.from({ length: 150 }, (_, index) => makeEventRow({
+      id: 1_000 + index,
+      stablecoin_id: `synthetic-${index}`,
+      symbol: `SYN${index}`,
+      pending_reason: "awaiting-confirmation",
+    }));
+    const db = mockD1([
+      {
+        match: "FROM depeg_pending_outcomes",
+        rows: events.map((event) => ({
+          stablecoin_id: event.stablecoin_id,
+          peg_type: event.peg_type,
+          direction: event.direction,
+          first_seen_at: event.started_at,
+          outcome_at: event.started_at + 600,
+        })),
+      },
+    ]);
+
+    const { byEventId, error } = await loadPendingPromotionConfirmationTimes(db, events);
+
+    expect(error).toBeNull();
+    expect(byEventId.size).toBe(150);
+    const statements = db.getHistory().filter((entry) => entry.sql.includes("FROM depeg_pending_outcomes"));
+    expect(statements.length).toBeGreaterThan(1);
+    for (const statement of statements) {
+      expect(statement.binds.length).toBeLessThanOrEqual(D1_MAX_BOUND_PARAMETERS);
+      expect(statement.binds.every((bind) => typeof bind === "string")).toBe(true);
+    }
+  });
 });
 
 describe("applyConfirmationTimes", () => {

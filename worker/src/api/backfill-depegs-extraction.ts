@@ -1,5 +1,6 @@
 import { DAY_SECONDS } from "@shared/lib/time-constants";
 import { getCirculatingRaw } from "@shared/lib/supply";
+import { MAX_SUPPLY_SNAPSHOT_DISTANCE_SEC } from "@shared/lib/rate-series";
 import { binarySearchNearest } from "../lib/binary-search";
 import { DEPEG_CONFIRMATION_SUPPLY_THRESHOLD, DEPEG_EVENT_MIN_SUPPLY_USD } from "../lib/constants";
 import { deriveDepegSignal } from "../lib/depeg-signals";
@@ -56,10 +57,15 @@ export function parseSupplyData(tokens: SupplyPoint[]): SupplySnapshot[] {
     .sort((a, b) => a.ts - b.ts);
 }
 
-export function findNearestSupply(supplyByDate: SupplySnapshot[], timestamp: number): number | null {
+export function findNearestSupply(
+  supplyByDate: SupplySnapshot[],
+  timestamp: number,
+  maxDistanceSec: number = MAX_SUPPLY_SNAPSHOT_DISTANCE_SEC,
+): number | null {
   if (supplyByDate.length === 0) return null;
   const nearest = binarySearchNearest(supplyByDate, timestamp, (snapshot) => snapshot.ts);
-  return nearest?.supply ?? null;
+  if (!nearest || Math.abs(nearest.ts - timestamp) > maxDistanceSec) return null;
+  return nearest.supply;
 }
 
 export function extractDepegEvents(
