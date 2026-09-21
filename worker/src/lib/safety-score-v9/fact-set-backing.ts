@@ -116,14 +116,21 @@ function normalizeMechanismReview(
   for (const [componentKey, value] of Object.entries(normalized)) {
     if (value === null || typeof value !== "object" || !("status" in value)) continue;
     const fact = value as { status: V9FactStatusV2 };
+    const specificEvidenceKey = `mechanism-risk-review:${componentKey}`;
+    const factEvidenceIds = context.asset.componentEvidence.some(
+      (binding) => binding.componentKey === specificEvidenceKey,
+    )
+      ? componentResearchEvidence(context, specificEvidenceKey)
+      : evidenceIds;
+    const factEvidence = context.evidence.get(factEvidenceIds[0]!)!;
     const original = fact.status;
     if (original.observationState === "known") {
       fact.status = createV9FactStatus({
         applicability: original.applicability,
         observationState: "known",
-        evidenceRefIds: evidenceIds,
+        evidenceRefIds: factEvidenceIds,
       });
-      for (const evidenceId of evidenceIds) componentEvidenceIds.add(evidenceId);
+      for (const evidenceId of factEvidenceIds) componentEvidenceIds.add(evidenceId);
       continue;
     }
     // A missing non-serial component is bounded like a stale or
@@ -151,8 +158,10 @@ function normalizeMechanismReview(
             : (reviewedUnavailableMessage(context, componentKey, original.observationState) ??
               `The ${componentKey} mechanism review is not a current known fact.`),
         evidenceRefIds:
-          original.observationState === "stale" || original.observationState === "bounded-unknown" ? evidenceIds : [],
-        evidenceHistory: evidenceHistoryFor(context, evidenceIds),
+          original.observationState === "stale" || original.observationState === "bounded-unknown"
+            ? factEvidenceIds
+            : [],
+        evidenceHistory: evidenceHistoryFor(context, factEvidenceIds),
       }),
     );
     const applicability =
@@ -161,12 +170,14 @@ function normalizeMechanismReview(
       applicability,
       observationState: original.observationState,
       evidenceRefIds:
-        original.observationState === "stale" || original.observationState === "bounded-unknown" ? evidenceIds : [],
+        original.observationState === "stale" || original.observationState === "bounded-unknown"
+          ? factEvidenceIds
+          : [],
       gapIds: [gapId],
     });
     if (original.observationState === "stale") {
       hasStale = true;
-      if (evidence.freshness.state !== "stale") {
+      if (factEvidence.freshness.state !== "stale") {
         throw new Error(`Mechanism review ${context.asset.assetId}:${componentKey} is stale but its source is current`);
       }
     } else {
@@ -174,7 +185,7 @@ function normalizeMechanismReview(
     }
     componentGapIds.push(gapId);
     if (fact.status.evidenceRefIds.length > 0) {
-      for (const evidenceId of evidenceIds) componentEvidenceIds.add(evidenceId);
+      for (const evidenceId of factEvidenceIds) componentEvidenceIds.add(evidenceId);
     }
   }
 

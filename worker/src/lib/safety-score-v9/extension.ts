@@ -1619,6 +1619,28 @@ export function buildSafetyScoreV9BaselineExtensionFromNormalizedInput(
           maxAgeSec: mechanismOverlayEvidence.maxAgeSec,
         });
       }
+      const assuranceReport = meta.proofOfReserves?.latestReport;
+      const assuranceComponent =
+        archetype === "tbill"
+          ? "lossRecoveryDesign"
+          : archetype === "fiat-cash" || archetype === "commodity-claim"
+            ? "assuranceAndReconciliation"
+            : null;
+      if (mechanismRiskReview && assuranceReport && assuranceComponent) {
+        reviewEvidence.add({
+          componentKeys: [`mechanism-risk-review:${assuranceComponent}`],
+          sourceId: "stablecoin.proof-of-reserves.latest-report",
+          reviewedAt: assuranceReport.publishedAt,
+          observedAt: assuranceReport.periodEnd,
+          publishedAt: assuranceReport.publishedAt,
+          publishedBy: "issuer",
+          confidence: confidenceForResearch(assuranceReport.confidence),
+          sources: assuranceReport.sources,
+          payload: assuranceReport,
+          maxAgeSec:
+            V9_CANDIDATE_POLICY_V1.policy.semantic.evidence.evidenceExpiry.assuranceReportMaxAgeSec,
+        });
+      }
       const reserveClassifications = buildReviewedReserveClassifications(
         reserveRows,
         meta,

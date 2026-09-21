@@ -20,7 +20,7 @@ export const FDUSD_INDEPENDENT_ASSURANCE_PROFILE: IndependentAssuranceProfile = 
   requiredAssetCodes: ["treasury-bills", "fixed-deposits", "custody-cash"],
   classifications: {
     "treasury-bills": {
-      name: "U.S. Treasury Bills (maturities 11-Aug-26 through 22-Sep-26)",
+      name: "U.S. Treasury Bills",
       risk: "very-low",
       assetClass: "treasury-bill",
       issuerOrObligor: "United States Government",

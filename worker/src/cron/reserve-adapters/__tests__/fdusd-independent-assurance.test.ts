@@ -115,6 +115,12 @@ describe("fdusd-independent-assurance (AOGB ISAE 3000 limited assurance)", () =>
     expect(timestamp - Date.parse("2026-08-31T00:00:00Z") / 1000).toBe(25 * 3_600);
   });
 
+  it("keeps maturity dates out of the Treasury slice label", () => {
+    expect(FDUSD_INDEPENDENT_ASSURANCE_PROFILE.classifications["treasury-bills"].name).toBe(
+      "U.S. Treasury Bills",
+    );
+  });
+
   it("selects the reviewed report on the Webflow index and reaches the PDF byte gate", async () => {
     installFetch(indexHtml());
     await expect(verifyIndex()).rejects.toThrow(

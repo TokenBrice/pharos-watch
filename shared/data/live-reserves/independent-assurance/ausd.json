@@ -52,6 +52,7 @@
       "code": "ausd-created-excluded",
       "label": "AUSD Created — minted but not yet distributed to third-party holders, excluded from AUSD in circulation",
       "amount": "24127673",
+      "alreadyNettedIntoAssets": true,
       "treatment": "Excluded from liabilities under the report's circulation criteria: AUSD Created that is solely custodied by the Company is not considered in circulation. Reported total supply 264,873,540 less excluded AUSD Created 24,127,673 equals 240,745,867 in circulation."
     }
   ],

@@ -33,6 +33,7 @@
       "code": "net-cash-receivable",
       "label": "Net cash receivable (payable) due to timing and settlement differences",
       "amount": "-500211.38",
+      "alreadyNettedIntoAssets": true,
       "treatment": "Deducted from gross cash deposits to arrive at the reported Total Reserve"
     }
   ],

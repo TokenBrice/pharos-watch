@@ -2,7 +2,11 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { LIVE_RESERVE_ADAPTER_DEFINITIONS } from "@shared/lib/live-reserve-adapters";
 import { getIndependentAssuranceManifest, reconcileIndependentAssuranceManifest } from "@shared/lib/independent-assurance";
 import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
-import { FIDD_INDEPENDENT_ASSURANCE_PROFILE, fetchFiddIndependentAssuranceReserves } from "../fidd-independent-assurance";
+import {
+  fetchFiddIndependentAssuranceReserves,
+  fiddIndependentAssuranceProfile,
+  fiddReportDate,
+} from "../fidd-independent-assurance";
 import { fetchIndependentAssuranceReserves, verifyIndependentAssuranceReport } from "../independent-assurance";
 import { getReserveAdapter } from "../index";
 import { validateAdapterOutput } from "../validate";
@@ -17,6 +21,7 @@ vi.mock("../independent-assurance", async () => {
 });
 
 const VIEWER_URL = "https://fwc.widen.net/s/drcwdbtqzk/fidelity-digital-assets---fidd-reserve-attestation-report---july26";
+const AUGUST_VIEWER_URL = "https://fwc.widen.net/s/nextreport/fidelity-digital-assets---fidd-reserve-attestation-report---august26";
 const CDN_PDF_URL =
   "https://cf-store.widencdn.net/fwc/1/4/7/147b4558-cc40-4196-b5a8-d5ad517e019a.pdf?response-content-type=application%2Fpdf";
 
@@ -65,10 +70,14 @@ function installFetch(indexHtml: string, viewerHtml: string) {
 }
 
 /** The coin's own reviewed params, so the checks below run the configured allowlist. */
-function fiddParams(): { indexHost: string; reportHosts: readonly string[] } {
+function fiddParams(): { indexHost: string; reportHosts: readonly string[]; viewerUrlPattern: string } {
   const coin = ACTIVE_STABLECOINS.find((candidate) => candidate.id === "fidd-fidelity");
   const params = coin!.liveReservesConfig!.params!;
-  return { indexHost: params.indexHost as string, reportHosts: params.reportHosts as readonly string[] };
+  return {
+    indexHost: params.indexHost as string,
+    reportHosts: params.reportHosts as readonly string[],
+    viewerUrlPattern: params.viewerUrlPattern as string,
+  };
 }
 
 async function verifyIndex(overrides: { reportHosts?: readonly string[] } = {}) {
@@ -79,7 +88,7 @@ async function verifyIndex(overrides: { reportHosts?: readonly string[] } = {}) 
     indexUrl: reviewed.officialIndexUrl,
     indexHost: params.indexHost,
     reportHosts: overrides.reportHosts ?? params.reportHosts,
-    profile: FIDD_INDEPENDENT_ASSURANCE_PROFILE,
+    profile: fiddIndependentAssuranceProfile(params.viewerUrlPattern),
     signal: new AbortController().signal,
   });
 }
@@ -120,6 +129,25 @@ describe("fidd-independent-assurance (PwC FIDD examination)", () => {
     expect(definition.redemptionTelemetry).toEqual({ capacity: "none", fee: "none" });
   });
 
+  it("derives the report year from dated viewer and PDF names", () => {
+    expect(fiddReportDate("https://fwc.widen.net/s/id/report---august26", "")).toBe("2026-08-31");
+    expect(fiddReportDate("https://fwc.widen.net/content/report---january2027.pdf", "")).toBe("2027-01-31");
+  });
+
+  it("selects the newest matching dated viewer link", async () => {
+    installAdapterNetwork({
+      html: {
+        [AUGUST_VIEWER_URL]: viewerFixture().replaceAll("July26", "August26"),
+      },
+    });
+    const profile = fiddIndependentAssuranceProfile(fiddParams().viewerUrlPattern);
+    const prepared = await profile.prepareIndexHtml!(
+      `${indexFixture()}<a href="${AUGUST_VIEWER_URL}">August</a>`,
+      new AbortController().signal,
+    );
+    expect(prepared).toContain("August26.pdf");
+  });
+
   it("resolves the Widen viewer to the reviewed PDF and reaches the byte-verification gate", async () => {
     installFetch(indexFixture(), viewerFixture());
     await expect(verifyIndex()).rejects.toThrow("PDF byte length");
@@ -131,10 +159,10 @@ describe("fidd-independent-assurance (PwC FIDD examination)", () => {
       .rejects.toThrow("cf-store.widencdn.net is not in the reviewed allowlist");
   });
 
-  it("fails closed when the July viewer link is missing from the official index", async () => {
+  it("fails closed when no dated viewer link is present on the official index", async () => {
     installFetch(indexFixture(false), viewerFixture());
     await expect(verifyIndex())
-      .rejects.toThrow("July 2026 Widen viewer link is missing");
+      .rejects.toThrow("no dated attestation viewer link found");
   });
 
   it("fails closed when the viewer page no longer serves a download anchor", async () => {
@@ -154,6 +182,7 @@ describe("fidd-independent-assurance (PwC FIDD examination)", () => {
         profile: "fidd-v1",
         indexHost: "www.fidelitydigitalassets.com",
         reportHosts: ["fwc.widen.net", "cf-store.widencdn.net"],
+        viewerUrlPattern: expect.stringContaining("fidd-reserve-attestation-report"),
       },
     });
     vi.mocked(fetchIndependentAssuranceReserves).mockResolvedValue({
@@ -168,8 +197,17 @@ describe("fidd-independent-assurance (PwC FIDD examination)", () => {
     );
     expect(result.slices.map((slice) => slice.name)).toContain("U.S. Treasury bills");
     expect(vi.mocked(fetchIndependentAssuranceReserves)).toHaveBeenCalledWith(
-      coin!, coin!.liveReservesConfig!, expect.any(AbortSignal), FIDD_INDEPENDENT_ASSURANCE_PROFILE,
-      { product: "FIDD", profile: "fidd-v1", indexHost: "www.fidelitydigitalassets.com", reportHosts: ["fwc.widen.net", "cf-store.widencdn.net"] },
+      coin!,
+      coin!.liveReservesConfig!,
+      expect.any(AbortSignal),
+      expect.objectContaining({ product: "FIDD", reportDateFromCandidate: expect.any(Function) }),
+      expect.objectContaining({
+        product: "FIDD",
+        profile: "fidd-v1",
+        indexHost: "www.fidelitydigitalassets.com",
+        reportHosts: ["fwc.widen.net", "cf-store.widencdn.net"],
+        viewerUrlPattern: expect.stringContaining("fidd-reserve-attestation-report"),
+      }),
       undefined,
     );
 

@@ -7,7 +7,11 @@ import {
 } from "@shared/lib/safety-score-v9/evaluate-set";
 import * as evaluateSetModule from "@shared/lib/safety-score-v9/evaluate-set";
 import { SAFETY_SCORE_METHODOLOGY_VERSION } from "@shared/lib/methodology-versions/constants";
-import { loadV9MethodologyPolicy, V9_CANDIDATE_POLICY_V1 } from "@shared/lib/safety-score-v9/policy";
+import {
+  loadV9CandidateMethodologyPolicy,
+  loadV9MethodologyPolicy,
+  V9_CANDIDATE_POLICY_V1,
+} from "@shared/lib/safety-score-v9/policy";
 import { stableJsonStringifyV1 } from "@shared/lib/stable-json";
 import { SafetyScoreV9ResponseSchema } from "@shared/types/safety-score-v9-public";
 import { describe, expect, it, vi } from "vitest";
@@ -302,8 +306,9 @@ describe("Safety Score v9 publication pipeline", { timeout: V9_EVALUATION_TEST_T
       extension: reviewedExtension(fixedInput),
       publishedAtSec: PUBLISHED_AT_SEC,
     });
-    const strictEvaluation = evaluateV9FactSet(full.compiledFacts, V9_CANDIDATE_POLICY_V1);
-    const trustedEvaluation = evaluateValidatedV9FactSet(full.compiledFacts, V9_CANDIDATE_POLICY_V1);
+    const clockBoundPolicy = loadV9CandidateMethodologyPolicy(fixedInput.clockSec);
+    const strictEvaluation = evaluateV9FactSet(full.compiledFacts, clockBoundPolicy);
+    const trustedEvaluation = evaluateValidatedV9FactSet(full.compiledFacts, clockBoundPolicy);
     const trustedCompilation = compileSafetyScoreV9FactSetFromValidatedExtension(
       full.fixedInput,
       full.extension,
@@ -327,7 +332,7 @@ describe("Safety Score v9 publication pipeline", { timeout: V9_EVALUATION_TEST_T
       bridgeJoinDiagnostics: full.bridgeJoinDiagnostics,
     });
     expect(() =>
-      evaluateValidatedV9FactSet(structuredClone(full.compiledFacts), V9_CANDIDATE_POLICY_V1),
+      evaluateValidatedV9FactSet(structuredClone(full.compiledFacts), clockBoundPolicy),
     ).toThrow("requires an in-process compiled fact set");
     expect(() =>
       compileSafetyScoreV9FactSetFromValidatedExtension(

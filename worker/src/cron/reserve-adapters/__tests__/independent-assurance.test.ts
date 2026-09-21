@@ -43,6 +43,12 @@ const PROFILE: IndependentAssuranceProfile = {
   requiredAssetCodes: [],
   classifications: {},
   isReportCandidate: (_href, text) => /report/i.test(text),
+  reportDateFromCandidate: (href, text) => {
+    const value = `${href} ${text}`;
+    return value.match(/\b\d{4}-\d{2}-\d{2}\b/)?.[0] ??
+      (/\bJuly 2026\b/i.test(value) ? "2026-07-31" : null) ??
+      (/\bJune 2026\b/i.test(value) || /\/reviewed\.pdf$/i.test(href) ? "2026-06-30" : null);
+  },
 };
 
 function manifest(overrides: Partial<IndependentAssuranceManifest> = {}): IndependentAssuranceManifest {
@@ -534,6 +540,29 @@ describe("independent-assurance manifest framework", () => {
     expect(result.collateralizationRatio).toBeGreaterThan(1);
     expect(result.reportedAssetDifference).toBe("0.41");
     expect(IndependentAssuranceManifestSchema.safeParse(base).success).toBe(true);
+  });
+
+  it("requires adjustments to declare that they are already netted into asset rows", () => {
+    const raw = {
+      ...manifest(),
+      adjustments: [{
+        code: "settlement",
+        label: "Settlement difference",
+        amount: "1",
+        treatment: "Already reflected in the reported total",
+      }],
+    };
+    expect(IndependentAssuranceManifestSchema.safeParse(raw).success).toBe(false);
+  });
+
+  it("rejects a zero reported asset total before computing a relative difference", () => {
+    const zeroAssets = manifest({
+      assets: [{ code: "cash", label: "Cash", amount: "0" }],
+      computedAssetTotal: "0",
+      reportedAssetTotal: "0",
+    });
+    expect(() => reconcileIndependentAssuranceManifest(zeroAssets))
+      .toThrow("reported asset total must be greater than zero");
   });
 
   it("rejects an EUROP asset discrepancy outside the reviewed tolerance", () => {

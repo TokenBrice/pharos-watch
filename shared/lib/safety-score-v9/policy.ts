@@ -1,5 +1,8 @@
 import candidatePolicyAsset from "../../data/safety-score-v9/methodology-policy-candidate-v1.json";
-import { CHAIN_MATURITY_ADMITTED_CHAIN_SLUGS } from "../../data/safety-score-v9/chain-maturity-reviews-v1";
+import {
+  CHAIN_MATURITY_POLICY_DEFAULT_EVALUATION_CLOCK_SEC,
+  resolveChainMaturityAdmissionsAt,
+} from "../../data/safety-score-v9/chain-maturity-reviews-v1";
 import {
   V9MethodologyPolicySchema,
   V9ReasonCodeSchema,
@@ -18,12 +21,22 @@ import { compareText, deepFreeze, uniqueSorted } from "./primitives";
 const V9_POLICY_DIGEST_DOMAIN = "safety-score-v9.methodology-policy.v1";
 
 const validatedPolicyEnvelopes = new WeakSet<object>();
+const policyChainMaturityIdentities = new WeakMap<object, V9PolicyChainMaturityIdentity>();
+
+export interface V9PolicyChainMaturityIdentity {
+  readonly schemaVersion: 1;
+  readonly evaluationClockSec: number;
+  readonly matureChains: readonly string[];
+}
 
 function isUnknownRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
-function policyWithRegistryMatureChains(rawPolicy: unknown): unknown {
+function policyWithRegistryMatureChains(
+  rawPolicy: unknown,
+  matureChains: readonly string[],
+): unknown {
   if (!isUnknownRecord(rawPolicy)) return rawPolicy;
   const semantic = rawPolicy.semantic;
   if (!isUnknownRecord(semantic)) return rawPolicy;
@@ -39,7 +52,7 @@ function policyWithRegistryMatureChains(rawPolicy: unknown): unknown {
       throw new Error("Safety Score v9 matureChains must be an array of reviewed chain slugs");
     }
     const authored = uniqueSorted(authoredMatureChains);
-    const reviewed = uniqueSorted(CHAIN_MATURITY_ADMITTED_CHAIN_SLUGS);
+    const reviewed = uniqueSorted(matureChains);
     if (authored.length !== reviewed.length || authored.some((value, index) => value !== reviewed[index])) {
       throw new Error(
         "Safety Score v9 matureChains must derive from chain-maturity-reviews-v1.ts",
@@ -53,7 +66,7 @@ function policyWithRegistryMatureChains(rawPolicy: unknown): unknown {
       ...semantic,
       materiality: {
         ...materiality,
-        matureChains: [...CHAIN_MATURITY_ADMITTED_CHAIN_SLUGS],
+        matureChains: [...matureChains],
       },
     },
   };
@@ -176,15 +189,38 @@ function computeV9PolicySemanticDigest(
 }
 
 /** Parse, cross-validate, digest, and freeze one explicit methodology policy. */
-export function loadV9MethodologyPolicy(rawPolicy: unknown): V9ValidatedPolicyEnvelope {
-  const policy = V9MethodologyPolicySchema.parse(policyWithRegistryMatureChains(rawPolicy));
+export function loadV9MethodologyPolicy(
+  rawPolicy: unknown,
+  evaluationClockSec = CHAIN_MATURITY_POLICY_DEFAULT_EVALUATION_CLOCK_SEC,
+): V9ValidatedPolicyEnvelope {
+  const resolution = resolveChainMaturityAdmissionsAt(evaluationClockSec);
+  const policy = V9MethodologyPolicySchema.parse(
+    policyWithRegistryMatureChains(rawPolicy, resolution.admittedChainSlugs),
+  );
+  const identity = {
+    schemaVersion: 1,
+    evaluationClockSec: resolution.evaluationClockSec,
+    matureChains: [...resolution.admittedChainSlugs],
+  } satisfies V9PolicyChainMaturityIdentity;
   const envelope = {
     policy,
     semanticDigest: computeV9PolicySemanticDigest(policy),
   } satisfies V9ValidatedPolicyEnvelope;
   const frozen = deepFreeze(envelope) as V9ValidatedPolicyEnvelope;
   validatedPolicyEnvelopes.add(frozen);
+  policyChainMaturityIdentities.set(frozen, deepFreeze(identity));
   return frozen;
+}
+
+export function resolveV9PolicyChainMaturityIdentity(
+  envelope: V9ValidatedPolicyEnvelope,
+): V9PolicyChainMaturityIdentity {
+  assertV9ValidatedPolicyEnvelope(envelope);
+  const identity = policyChainMaturityIdentities.get(envelope);
+  if (identity === undefined) {
+    throw new Error("Safety Score v9 policy is missing its chain-maturity resolution identity");
+  }
+  return identity;
 }
 
 export function assertV9ValidatedPolicyEnvelope(
@@ -268,4 +304,10 @@ export function assertV9UnresolvedFactsMatchPolicy(
   }
 }
 
-export const V9_CANDIDATE_POLICY_V1 = loadV9MethodologyPolicy(candidatePolicyAsset);
+export function loadV9CandidateMethodologyPolicy(
+  evaluationClockSec = CHAIN_MATURITY_POLICY_DEFAULT_EVALUATION_CLOCK_SEC,
+): V9ValidatedPolicyEnvelope {
+  return loadV9MethodologyPolicy(candidatePolicyAsset, evaluationClockSec);
+}
+
+export const V9_CANDIDATE_POLICY_V1 = loadV9CandidateMethodologyPolicy();

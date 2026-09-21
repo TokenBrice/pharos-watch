@@ -853,6 +853,7 @@ const V9EvidencePolicySchema = z
         accessReviewMaxAgeSec: z.number().int().positive(),
         researchOverlayMaxAgeSec: z.number().int().positive(),
         mechanismOverlayMaxAgeSec: z.number().int().positive(),
+        assuranceReportMaxAgeSec: z.number().int().positive(),
         issuerAttestedReserveMaxAgeSec: z.number().int().positive(),
         reviewedReserveClassificationMaxAgeSec: z.number().int().positive(),
         reviewedReserveCompositionMaxAgeSec: z.number().int().positive(),

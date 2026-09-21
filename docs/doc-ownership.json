@@ -339,7 +339,8 @@
       ],
       "docs": [
         { "path": "docs/status-dashboard.md", "anchor": "backend-contract-get-apistatus" },
-        { "path": "docs/worker-infrastructure.md", "anchor": "health--status-endpoints" }
+        { "path": "docs/worker-infrastructure.md", "anchor": "health--status-endpoints" },
+        { "path": "docs/runbooks/dated-source-age-caps.md", "anchor": "scheduled-boundaries" }
       ],
       "checks": ["npx vitest run src/lib/status worker/src/lib/status"],
       "rules": ["Status causes, recommended actions, public-health floors, and runbooks must remain aligned."]

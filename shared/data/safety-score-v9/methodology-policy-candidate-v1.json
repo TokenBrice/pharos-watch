@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "policyId": "safety-score-v9",
   "lifecycle": "active",
-  "releaseVersion": "9.8",
+  "releaseVersion": "9.91",
   "semantic": {
     "formula": {
       "pillarWeights": {
@@ -273,6 +273,7 @@
         "accessReviewMaxAgeSec": 31536000,
         "researchOverlayMaxAgeSec": 31536000,
         "mechanismOverlayMaxAgeSec": 31536000,
+        "assuranceReportMaxAgeSec": 8640000,
         "issuerAttestedReserveMaxAgeSec": 31536000,
         "reviewedReserveClassificationMaxAgeSec": 31536000,
         "reviewedReserveCompositionMaxAgeSec": 2678400,

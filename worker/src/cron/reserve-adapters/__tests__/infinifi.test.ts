@@ -128,7 +128,8 @@ function run(network: AdapterNetworkSpec = infinifiNetwork()) {
 }
 
 function routeResponse(overrides: {
-  liquid?: number;
+  liquid?: number | null;
+  illiquid?: number | null;
   supply?: number;
   pendingRedemptions?: number;
 } = {}): InfiniFiProtocolData {
@@ -138,7 +139,12 @@ function routeResponse(overrides: {
       stats: {
         asset: {
           totalTVLAssetNormalized: 100,
-          totalLiquidAssetNormalized: overrides.liquid ?? 35,
+          ...(overrides.liquid !== null
+            ? { totalLiquidAssetNormalized: overrides.liquid ?? 35 }
+            : {}),
+          ...(overrides.illiquid !== null
+            ? { totalIlliquidAssetNormalized: overrides.illiquid ?? 65 }
+            : {}),
           ...(overrides.pendingRedemptions != null
             ? { pendingRedemptionsAssetNormalized: overrides.pendingRedemptions }
             : {}),
@@ -255,7 +261,7 @@ describe("adaptInfiniFi", () => {
       coinId: "usdc-circle",
       depType: "collateral",
     });
-    expect(immediateRedeemableUsd).toBe(0);
+    expect(immediateRedeemableUsd).toBeUndefined();
     expect(supplyUsd).toBeUndefined();
   });
 
@@ -349,10 +355,11 @@ describe("adaptInfiniFi", () => {
     const response: InfiniFiProtocolData = {
       code: "OK",
       data: {
-        stats: { asset: { totalTVLAssetNormalized: 100 } },
+        stats: { asset: { totalTVLAssetNormalized: 105 } },
         farms: [
           { name: "morpho-v2-sentora-pyusd", label: "Sentora PYUSD", assetsNormalized: 30, type: "ILLIQUID", underlyingAssetSymbol: "PYUSD" },
           { name: "morpho-steakUSDCinfinifi", label: "Morpho steakUSDC", assetsNormalized: 25, type: "ILLIQUID", underlyingAssetSymbol: "USDC" },
+          { name: "base-morpho-steakhouse-prime", label: "Steakhouse Prime", assetsNormalized: 5, type: "ILLIQUID", underlyingAssetSymbol: "USDC" },
           { name: "sGHO", label: "Staked GHO", assetsNormalized: 20, type: "LIQUID", underlyingAssetSymbol: "GHO" },
           { name: "maple-farm-syrup", label: "Maple Syrup USDC", assetsNormalized: 15, type: "ILLIQUID", underlyingAssetSymbol: "USDC" },
           { name: "capfarm", label: "Cap stcUSD", assetsNormalized: 5, type: "ILLIQUID", underlyingAssetSymbol: "stcUSD" },
@@ -364,6 +371,7 @@ describe("adaptInfiniFi", () => {
     const { slices } = adaptInfiniFi(response);
     expect(slices.find((s) => s.name === "Sentora PYUSD")).toMatchObject({ coinId: "pyusd-paypal", depType: "collateral" });
     expect(slices.find((s) => s.name === "Morpho steakUSDC")).toMatchObject({ coinId: "usdc-circle", depType: "collateral" });
+    expect(slices.find((s) => s.name === "Steakhouse Prime")).toMatchObject({ coinId: "usdc-circle", depType: "collateral" });
     expect(slices.find((s) => s.name === "Staked GHO")).toMatchObject({ coinId: "sgho-aave", depType: "collateral" });
     expect(slices.find((s) => s.name === "Maple Syrup USDC")).toMatchObject({ coinId: "usdc-circle", depType: "collateral" });
     expect(slices.find((s) => s.name === "Cap stcUSD")).toMatchObject({ coinId: "stcusd-cap", depType: "collateral" });
@@ -419,6 +427,15 @@ describe("fetchInfiniFiReserves", () => {
     });
   });
 
+
+  it("withholds liquid and illiquid capacity when the source fields are absent", async () => {
+    const { result } = await run(infinifiNetwork({
+      payload: routeResponse({ liquid: null, illiquid: null }),
+    }));
+
+    expect(result.metadata).not.toHaveProperty("illiquidReserveUsd");
+    expect(result.metadata).not.toHaveProperty("redemption");
+  });
   it("reports an open route with a zero queue when every on-chain gate reads unpaused", async () => {
     const { result } = await run(infinifiNetwork({ payload: routeResponse({ pendingRedemptions: 0 }) }));
 
@@ -549,7 +566,10 @@ describe("fetchInfiniFiReserves", () => {
       data: {
         ...SAMPLE_RESPONSE.data,
         stats: {
-          asset: { totalTVLAssetNormalized: 100 },
+          asset: {
+            totalTVLAssetNormalized: 100,
+            totalLiquidAssetNormalized: 35,
+          },
           staked: { exchangeRateNormalized: 1.0727142465309754 },
         },
       },

@@ -14,6 +14,7 @@ import {
   buildSafetyScoreV9ReserveClassifications,
   dependencyReserveSlices,
 } from "../safety-score-v9/extension-reserves";
+import { buildSafetyScoreV9MechanismReview } from "../safety-score-v9/extension-mechanism";
 import { createReportCardsFixedInput } from "../report-cards-fixed-input";
 import { makeV9TwoAssetFixedInput } from "../../test-helpers/v9-fixed-input";
 
@@ -846,5 +847,41 @@ describe("buildReviewedReserveClassifications", () => {
       assetClass: null,
       issuerOrObligorKey: null,
     });
+  });
+});
+
+describe("assurance report freshness", () => {
+  it("does not keep an over-age latest report known", () => {
+    const maxAgeSec =
+      V9_CANDIDATE_POLICY_V1.policy.semantic.evidence.evidenceExpiry.assuranceReportMaxAgeSec;
+    const periodEnd = "2026-01-01";
+    const periodEndSec = Date.parse(`${periodEnd}T00:00:00Z`) / 1_000;
+    const fixedInput = makeV9TwoAssetFixedInput({ clockSec: periodEndSec + maxAgeSec + 1 });
+    const review = buildSafetyScoreV9MechanismReview(
+      fixedInput,
+      {
+        id: "alpha",
+        proofOfReserves: {
+          type: "attestation",
+          url: "https://example.com/report",
+          latestReport: {
+            periodEnd,
+            publishedAt: "2026-01-02",
+            assuranceMethod: "examination",
+            scope: "assets-and-liabilities",
+            liabilityReconciliation: "full",
+            reviewer: "fixture",
+            confidence: "verified",
+            sources: [{ label: "Report", url: "https://example.com/report.pdf" }],
+          },
+        },
+      },
+      "fiat-cash",
+    );
+
+    expect(review?.archetype).toBe("fiat-cash");
+    if (!review || review.archetype !== "fiat-cash") throw new Error("expected fiat-cash review");
+    expect(review.assuranceAndReconciliation.status.observationState).toBe("stale");
+    expect(review.assuranceAndReconciliation.quality).toBeNull();
   });
 });

@@ -42,7 +42,7 @@ export interface IndependentAssuranceProfile {
   classifications: Readonly<Record<string, AssuranceSliceClassification>>;
   reconciliation?: IndependentAssuranceReconciliationOptions;
   isReportCandidate: (href: string, text: string) => boolean;
-  reportDateFromCandidate?: (href: string, text: string) => string | null;
+  reportDateFromCandidate: (href: string, text: string) => string | null;
   prepareIndexHtml?: (html: string, signal: AbortSignal, ctx?: AdapterContext) => Promise<string>;
   /**
    * Header overrides for the official index fetch. Publisher WAFs disagree
@@ -59,12 +59,29 @@ export interface IndependentAssuranceProfile {
 
 const formatDate = (year: number, month: number, day: number): string | null =>
   formatValidIsoDate(year, month, day, 2000);
+function audxReportDate(href: string, text: string): string | null {
+  const value = decodeURIComponent(`${href} ${text}`);
+  const iso = value.match(/\b((?:19|20)\d{2})-(\d{1,2})-(\d{1,2})\b/);
+  if (iso) return formatDate(Number(iso[1]), Number(iso[2]), Number(iso[3]));
+  const dayFirst = value.match(
+    /\b(\d{1,2})\s+(January|February|March|April|May|June|July|August|September|October|November|December)\s+((?:19|20)\d{2})\b/i,
+  );
+  if (dayFirst) return formatDate(Number(dayFirst[3]), monthNumberFromLabel(dayFirst[2])!, Number(dayFirst[1]));
+  const monthYear = value.match(
+    /\b(January|February|March|April|May|June|July|August|September|October|November|December)\s+((?:19|20)\d{2})\b/i,
+  );
+  if (!monthYear) return null;
+  const month = monthNumberFromLabel(monthYear[1])!;
+  const year = Number(monthYear[2]);
+  return formatDate(year, month, lastDayOfMonth(year, month)!);
+}
 export const AUDX_INDEPENDENT_ASSURANCE_PROFILE: IndependentAssuranceProfile = {
   adapterName: "audx-independent-assurance", product: "AUDX", profile: "audx-v1", requiredAssetCodes: ["designated-bank-accounts"], classifications: {
     "designated-bank-accounts": { name: "Australian-dollar reserves in designated bank accounts", risk: "very-low", assetClass: "bank-deposit", issuerOrObligor: "Undisclosed Australian financial institutions", riskFactors: ["counterparty", "liquidity", "custody", "concentration"], liquidityHorizon: "unknown" },
   },
   isReportCandidate: (href, text) =>
     !/whitepaper/i.test(`${href} ${text}`) && /report|attestation|audit/i.test(`${href} ${text}`),
+  reportDateFromCandidate: audxReportDate,
 };
 
 function europReportDate(href: string): string | null {
@@ -283,52 +300,6 @@ function collectReportCandidates(html: string, indexUrl: string, profile: Indepe
   return [...unique.values()];
 }
 
-function parseDiscoveryDate(value: string): string | null {
-  const decodedValue = decodeURIComponent(value);
-  const ambiguousNumeric = decodedValue.match(
-    /\b(\d{1,2})[./](\d{1,2})[./](?:19|20)?\d{2}\b/,
-  );
-  if (
-    ambiguousNumeric
-    && Number(ambiguousNumeric[1]) <= 12
-    && Number(ambiguousNumeric[2]) <= 12
-  ) {
-    return null;
-  }
-  const shortMonthFirst = decodedValue.match(/\b(\d{1,2})[.]([0-9]{1,2})[.]((?:19|20)?\d{2})\b/);
-  if (shortMonthFirst) {
-    const month = Number(shortMonthFirst[1]);
-    const day = Number(shortMonthFirst[2]);
-    const year = Number(shortMonthFirst[3].length === 2 ? `20${shortMonthFirst[3]}` : shortMonthFirst[3]);
-    const date = formatValidIsoDate(year, month, day);
-    if (date) return date;
-  }
-  const decoded = decodedValue.replace(/[_./]/g, "-");
-  const iso = decoded.match(/\b((?:19|20)\d{2})-(\d{1,2})-(\d{1,2})\b/);
-  if (iso) return `${iso[1]}-${iso[2].padStart(2, "0")}-${iso[3].padStart(2, "0")}`;
-
-  const dayFirst = decoded.match(/\b(\d{1,2})-(\d{1,2})-((?:19|20)\d{2})\b/);
-  if (dayFirst) return `${dayFirst[3]}-${dayFirst[2].padStart(2, "0")}-${dayFirst[1].padStart(2, "0")}`;
-
-  const namedDay = decoded.match(
-    /\b(\d{1,2})\s+(January|February|March|April|May|June|July|August|September|October|November|December)\s+((?:19|20)\d{2})\b/i,
-  );
-  if (namedDay) {
-    const month = monthNumberFromLabel(namedDay[2])!;
-    return `${namedDay[3]}-${String(month).padStart(2, "0")}-${namedDay[1].padStart(2, "0")}`;
-  }
-
-  const namedMonth = decoded.match(
-    /\b(January|February|March|April|May|June|July|August|September|October|November|December)\s+((?:19|20)\d{2})\b/i,
-  );
-  if (namedMonth) {
-    const month = monthNumberFromLabel(namedMonth[1])!;
-    const lastDay = lastDayOfMonth(Number(namedMonth[2]), month)!;
-    return `${namedMonth[2]}-${String(month).padStart(2, "0")}-${String(lastDay).padStart(2, "0")}`;
-  }
-
-  return null;
-}
 
 async function fetchIndexHtml(
   url: string,
@@ -422,12 +393,10 @@ export async function verifyIndependentAssuranceReport(args: {
     const candidates = collectReportCandidates(discoveryHtml, args.indexUrl, args.profile);
     const manifestUrl = normalizeUrl(args.manifest.reportUrl, args.indexUrl);
     const exact = candidates.filter((candidate) => candidate.url === manifestUrl);
-    const datedCandidates = candidates.map((candidate) => {
-      const date = args.profile.reportDateFromCandidate
-        ? args.profile.reportDateFromCandidate(candidate.url, candidate.text)
-        : parseDiscoveryDate(`${candidate.url} ${candidate.text}`);
-      return { ...candidate, date };
-    });
+    const datedCandidates = candidates.map((candidate) => ({
+      ...candidate,
+      date: args.profile.reportDateFromCandidate(candidate.url, candidate.text),
+    }));
     const ambiguousDate = datedCandidates.some((candidate) => candidate.date == null);
     const latestDate = datedCandidates.reduce<string | null>(
       (latest, candidate) => (candidate.date != null && (latest == null || candidate.date > latest) ? candidate.date : latest),

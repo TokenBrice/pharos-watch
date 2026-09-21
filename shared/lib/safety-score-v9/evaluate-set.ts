@@ -53,7 +53,11 @@ import {
   readCompiledV9FactSetForEvaluation,
   type V9EvaluationFactSetRead,
 } from "./facts";
-import { assertV9ValidatedPolicyEnvelope } from "./policy";
+import {
+  assertV9ValidatedPolicyEnvelope,
+  resolveV9PolicyChainMaturityIdentity,
+  type V9PolicyChainMaturityIdentity,
+} from "./policy";
 import { compareText, deepFreeze, domainKey, uniqueSorted } from "./primitives";
 import { projectV9DependencyScore } from "./score";
 import { computeV9ResultDigest } from "./trace";
@@ -73,6 +77,7 @@ export interface V9EvaluatedSet {
   baseInputGenerationId: string;
   policyId: string;
   policyDigest: string;
+  chainMaturityPolicy: Readonly<V9PolicyChainMaturityIdentity>;
   evaluationBuildDigest: string;
   asOfSec: number;
   sourceGenerations: Readonly<Record<string, string>>;
@@ -1109,6 +1114,7 @@ function evaluatedSetDigestPayload(result: Omit<V9EvaluatedSet, "evaluatedSetDig
     baseInputGenerationId: result.baseInputGenerationId,
     policyId: result.policyId,
     policyDigest: result.policyDigest,
+    chainMaturityPolicy: result.chainMaturityPolicy,
     evaluationBuildDigest: result.evaluationBuildDigest,
     asOfSec: result.asOfSec,
     sourceGenerations: result.sourceGenerations,
@@ -1203,6 +1209,7 @@ function evaluateV9FactSetRead(
     baseInputGenerationId: factSet.baseInputGenerationId,
     policyId: envelope.policy.policyId,
     policyDigest: envelope.semanticDigest,
+    chainMaturityPolicy: resolveV9PolicyChainMaturityIdentity(envelope),
     evaluationBuildDigest: SAFETY_SCORE_V9_EVALUATION_BUILD_DIGEST,
     asOfSec: factSet.asOfSec,
     sourceGenerations: identity.sourceGenerations,

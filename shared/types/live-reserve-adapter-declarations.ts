@@ -1774,14 +1774,15 @@ const agoraAssuranceParamsSchema = z
   })
   .strict();
 
-// FIDD: Fidelity Digital Assets transparency index; runtime resolves the
-// reviewed July Widen viewer link and its original PDF download anchor. The
-// fwc.widen.net PDF URL 303-redirects to the Widen CDN (cf-store.widencdn.net),
-// so reportHosts pins both the download-anchor host and the redirect target.
+// FIDD: Fidelity Digital Assets transparency index; runtime selects the newest
+// dated Widen viewer matching the reviewed config pattern, then follows its
+// original PDF download anchor. The Widen PDF URL redirects to the CDN, so
+// reportHosts pins both the viewer and redirect hosts.
 const fiddAssuranceParamsSchema = z
   .object({
     product: z.literal("FIDD"),
     profile: z.literal("fidd-v1"),
+    viewerUrlPattern: z.string().min(1),
     ...assuranceParamsShape,
   })
   .strict();

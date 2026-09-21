@@ -7,7 +7,10 @@ import {
 } from "@shared/lib/safety-score-v9/evaluate-set";
 import type { V9ExitHolderEligibility } from "@shared/lib/safety-score-v9/exit";
 import { DEX_ROUTE_SOURCE_CAPABILITIES } from "@shared/lib/p4-exit-route-capacity";
-import { assertV9ValidatedPolicyEnvelope, V9_CANDIDATE_POLICY_V1 } from "@shared/lib/safety-score-v9/policy";
+import {
+  assertV9ValidatedPolicyEnvelope,
+  loadV9CandidateMethodologyPolicy,
+} from "@shared/lib/safety-score-v9/policy";
 import { compareText, deepFreeze, domainDigest } from "@shared/lib/safety-score-v9/primitives";
 import { buildSafetyScoreV9Response } from "@shared/lib/safety-score-v9/public";
 import type {
@@ -523,7 +526,7 @@ function buildSafetyScoreV9CandidatePipeline(
     throw new Error("Safety Score v9 publication cannot predate its evidence clock");
   }
 
-  const policy = input.policy ?? V9_CANDIDATE_POLICY_V1;
+  const policy = input.policy ?? loadV9CandidateMethodologyPolicy(fixedInput.clockSec);
   assertV9ValidatedPolicyEnvelope(policy);
   const policyVersion = v9PolicyVersion(policy);
   let extension: SafetyScoreV9FactSetExtensionV2 | null = materializeSafetyScoreV9FactSetExtension(

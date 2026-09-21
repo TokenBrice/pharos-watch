@@ -40,7 +40,7 @@
     "cadence": "ad-hoc",
     "attestorJurisdiction": "Netherlands",
     "attestorLicense": "DNB EMI (MiCAR)",
-    "provider": "Quantoz reserve status overview (static periodic snapshot table shared with EURQ, latest dated 2026-06-30 - not the live dashboard previously recorded)"
+    "provider": "Quantoz reserve status overview (static periodic snapshot table shared with EURQ; not a live reserve feed)"
   },
   "links": [
     {
