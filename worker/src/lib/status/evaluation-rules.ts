@@ -28,6 +28,10 @@ const STATUS_RESERVE_HIGH_DEFERRED_RATIO = 0.25;
 // rows for depeg logic.
 const DEX_DATASET_ENDPOINT_MAX_AGE_SEC = CACHE_FRESHNESS_LANES.dexLiquidity.endpointMaxAgeSec;
 
+// The DEX→DEWS dependency cause fires once the DEX liquidity cache is more than this many
+// availability budgets behind, with DEWS already outside its own published band.
+const DEWS_DOWNSTREAM_DEX_RATIO_GATE = 2;
+
 export interface ReserveCompositionAssessment {
   bootstrap: boolean;
   status: StatusResponse["reserveComposition"]["status"];
@@ -255,14 +259,25 @@ function evaluateDexDiagnostics(input: AvailabilityRuleInput): Partial<StatusRul
       ),
     );
   }
-  if (dexLiquidityCache && dewsCache && !dexLiquidityCache.healthy && !dewsCache.healthy) {
+  const dexLiquidityRatio = dexLiquidityCache != null ? getCacheFreshnessRatio(dexLiquidityCache) : null;
+  if (
+    dexLiquidityCache &&
+    dewsCache &&
+    !dewsCache.healthy &&
+    dexLiquidityRatio != null &&
+    dexLiquidityRatio > DEWS_DOWNSTREAM_DEX_RATIO_GATE
+  ) {
     causes.push(
       makeCause(
         "availability",
         "dews_downstream_of_dex_liquidity",
-        dexLiquidityCache.ageSeconds != null && dexLiquidityCache.ageSeconds > dexLiquidityCache.maxAge ? "warning" : "info",
-        "DEWS freshness is downstream of DEX liquidity; both lanes are unhealthy, so investigate sync-dex-liquidity first.",
-        { metric: "dexLiquidityAgeSeconds", value: dexLiquidityCache.ageSeconds ?? undefined, threshold: dexLiquidityCache.maxAge },
+        "warning",
+        "DEWS freshness is downstream of DEX liquidity; the DEX liquidity dataset is more than twice its availability budget behind and DEWS is unhealthy, so investigate sync-dex-liquidity first.",
+        {
+          metric: "dexLiquidityAgeSeconds",
+          value: dexLiquidityCache.ageSeconds ?? undefined,
+          threshold: dexLiquidityCache.maxAge * DEWS_DOWNSTREAM_DEX_RATIO_GATE,
+        },
       ),
     );
   }

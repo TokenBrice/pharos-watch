@@ -446,18 +446,24 @@ export async function buildCacheStatuses(
         statusFloor = "degraded";
       }
     }
+    const healthyMaxRatio = getCacheHealthyMaxRatio(key);
     if (!caches[key]) {
       const diagnostic = diagnostics.find((entry) => entry.key === key);
       caches[key] = {
         ageSeconds,
         maxAge,
-        healthy: ratio <= getCacheHealthyMaxRatio(key),
+        healthyMaxRatio,
+        healthyMaxAge: maxAge * healthyMaxRatio,
+        healthy: ratio <= healthyMaxRatio,
         ...(freshnessSourceByKey.has(key) ? { freshnessSource: freshnessSourceByKey.get(key) } : {}),
         ...(sentinelValidationReasonByKey.has(key)
           ? { sentinelValidationReason: sentinelValidationReasonByKey.get(key) }
           : {}),
         ...(diagnostic?.warning ? { warning: diagnostic.warning } : {}),
       };
+    } else {
+      // fx-rates publishes a bespoke status object; it still states the band its verdict used.
+      caches[key] = { ...caches[key], healthyMaxRatio, healthyMaxAge: maxAge * healthyMaxRatio };
     }
   }
 

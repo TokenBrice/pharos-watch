@@ -394,6 +394,8 @@ For event-backed domains, `datasetFreshness` follows the writer rather than the 
 
 The `dex_pricing_bridge_stale` diagnostic compares the `dex-liquidity` dataset publication age with its descriptor's endpoint budget (14,400 seconds; the exact boundary remains eligible). Its `dexLiquidityAgeSeconds` metric does not measure individual `dex_prices` observations, whose independent trust window remains 4,500 seconds.
 
+The `dews_downstream_of_dex_liquidity` diagnostic groups the DEX lane's upstream failure under `dews` once the `dews` cache is outside its own published band and the `dex-liquidity` cache is more than twice its availability budget (`maxAge`, 43,200 seconds) behind. It always emits `warning` severity, and a DEX lane inside that multiple stays silent even when both caches are unhealthy.
+
 `dataQuality` now also exposes:
 
 - `stablecoinsCacheStatus`: `ok | degraded | error`
@@ -413,6 +415,9 @@ When one of those best-effort subqueries fails, `/api/status` keeps unaffected s
 Cache freshness for `dex-liquidity`, `yield-data`, and `dews` now prefers producer-owned `cache` sentinels (`freshness:*`) instead of live `MAX(...)` scans over the hot publish tables. If the sentinel is missing during rollout, `/api/status` falls back to the legacy table query; if the lookup itself fails, it can still fall back to the latest successful producer cron timestamp and adds a `cache_freshness_query_failed` info cause instead of auto-promoting the lane to public `stale`.
 
 **Per-cache availability overrides.** Availability ratio bands are the global `>8x` degraded / `>12x` stale by default, except where `STATUS_CACHE_RATIO_OVERRIDES` in `shared/lib/status-thresholds.ts` tightens a specific cache. `yield-data` overrides to `>2x` degraded / `>4x` stale against its post-V9 `sync-yield-data` budget: two missed publishes flip the cache entry to `healthy:false` and degrade both public cache impact and the availability `statusFloor`, while a single missed publish stays healthy. This closes the honesty gap where the global bands let multi-hour-stale yield rankings still read publicly `healthy` even though the admin endpoint-budget lane already flags the lane at 1x. The override is threaded through `getCacheFreshnessStatus`/`getCacheImpactStatus` (public rollup in `shared/lib/public-health.ts`), the worker `buildCacheStatuses` `healthy` and `statusFloor` computation, and the status-page recompute in `src/lib/status/public-status.ts`; all other caches keep the global bands. See `docs/architecture.md` ADR-9.
+The public Cache Freshness table preserves each cache key through classification and labels each row with its resolved degraded/stale ratios, so overridden lanes show `>2x` / `>4x` rather than the global bands.
+
+**Every published cache verdict names its band (R3).** Each `caches[*]` object carries the ceiling its `healthy` boolean was computed against: `healthyMaxRatio` (the resolved `getCacheHealthyMaxRatio` — `12` by default, `2` for `yield-data`) and `healthyMaxAge` (`maxAge × healthyMaxRatio`). For every cache in `/api/health` and `/api/status`, `healthy` is exactly `ageSeconds ≤ healthyMaxAge`, so a row may sit above `maxAge` and still be `healthy`, but never above `healthyMaxAge`.
 
 The public `/api/health` companion endpoint now returns a `warnings` array for these best-effort failures, and the status page model treats that as additional public-health context instead of assuming zero-like data is real.
 

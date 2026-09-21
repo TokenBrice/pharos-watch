@@ -704,4 +704,56 @@ describe("buildCacheStatuses", () => {
     expect(statusFloor).toBe("degraded");
     expect(warnings[0]).toContain("cached fallback FX rates");
   });
+
+  it("publishes the healthy band each cache verdict was measured against", async () => {
+    const now = 1_800_000_000;
+    const db = mockD1([
+      {
+        match: "cache WHERE key IN",
+        rows: [
+          cacheRow("stablecoins", now - 60),
+          cacheRow("stablecoin-charts", now - 60),
+          cacheRow("usds-status", now - 60),
+          cacheRow("fx-rates", now - 60, { peggedEUR: 1.08 }),
+          cacheRow("bluechip-ratings", now - 60),
+          sentinelRow("dex-liquidity", now - 120),
+          // ~2.06x the hourly budget: two missed publishes, past the override ceiling.
+          sentinelRow("yield-data", now - 7_400),
+          // The captured /api/health shape: 1.93x the DEWS budget, still inside its band.
+          sentinelRow("dews", now - 3_473),
+        ],
+      },
+      { match: "GROUP BY job", rows: [] },
+    ]);
+
+    const { caches } = await buildCacheStatuses(db, now);
+
+    expect(caches.dews).toMatchObject({
+      ageSeconds: 3_473,
+      maxAge: 1_800,
+      healthyMaxRatio: 12,
+      healthyMaxAge: 21_600,
+      healthy: true,
+    });
+    expect(caches["yield-data"]).toMatchObject({
+      ageSeconds: 7_400,
+      maxAge: 3_600,
+      healthyMaxRatio: 2,
+      healthyMaxAge: 7_200,
+      healthy: false,
+    });
+
+    const bandMismatches = Object.entries(caches)
+      .filter(([, cache]) => cache.healthyMaxAge !== cache.maxAge * (cache.healthyMaxRatio ?? 0))
+      .map(([key]) => key);
+    const contradictions = Object.entries(caches)
+      .filter(
+        ([, cache]) =>
+          cache.healthy !== (cache.ageSeconds != null && cache.ageSeconds <= (cache.healthyMaxAge ?? 0)),
+      )
+      .map(([key]) => key);
+
+    expect(bandMismatches).toEqual([]);
+    expect(contradictions).toEqual([]);
+  });
 });

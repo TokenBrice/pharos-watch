@@ -132,6 +132,9 @@ export function getCacheRatioThresholds(cacheKey?: string): { degraded: number; 
  * Ratio ceiling for a cache's per-record `healthy` boolean. Overridden caches flip
  * to `healthy:false` once they enter their degraded band (public-unhealthy on real
  * staleness); every other cache keeps the historical "not stale" ceiling.
+ *
+ * The ceiling is published beside the verdict as `healthyMaxRatio`/`healthyMaxAge`
+ * on every cache-status object, so a boolean is never read without its band.
  */
 export function getCacheHealthyMaxRatio(cacheKey?: string): number {
   const override = cacheKey ? STATUS_CACHE_RATIO_OVERRIDES[cacheKey] : undefined;

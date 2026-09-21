@@ -3,6 +3,8 @@ import { z } from "zod";
 export const CacheStatusSchema = z.object({
   ageSeconds: z.number().nullable(),
   maxAge: z.number(),
+  healthyMaxRatio: z.number().optional(),
+  healthyMaxAge: z.number().optional(),
   healthy: z.boolean(),
   freshnessSource: z.enum(["freshness-sentinel", "table-fallback", "cron-fallback"]).optional(),
   sentinelValidationReason: z.string().nullable().optional(),

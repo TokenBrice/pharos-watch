@@ -385,42 +385,49 @@ describe("status cause text", () => {
     ).toBe(false);
   });
 
-  it("groups DEWS stale health downstream of DEX liquidity", () => {
-    const causes = buildAvailabilityCauses({
-      publicHealth: makePublicHealth("healthy", {
-        caches: {
-          "dex-liquidity": {
-            ageSeconds: 8_000,
-            maxAge: 7_200,
-            healthy: false,
+  it("fires the DEWS-downstream cause on the DEX ratio alone, inside the DEX stale band", () => {
+    const causes = buildAvailabilityCauses(
+      makeAvailabilityCauseInput(
+        makePublicHealth("healthy", {
+          caches: {
+            "dex-liquidity": { ageSeconds: 2 * 43_200 + 1, maxAge: 43_200, healthy: true },
+            dews: { ageSeconds: 21_601, maxAge: 1_800, healthy: false },
           },
-          dews: {
-            ageSeconds: 8_100,
-            maxAge: 7_200,
-            healthy: false,
-          },
-        },
-        worstCacheRatio: 1.2,
-      }),
-      availabilityImpactingUnhealthyCrons: 0,
-      watchUnhealthyCrons: 0,
-      degradedCronRuns: 0,
-      cronErrorCount: 0,
-      availabilityImpactingCronErrors: 0,
-      availabilityImpactingConsecutiveCronErrors: 0,
-      cronHistoryQueryFailed: false,
-      cronProgressQueryFailed: false,
-      cronLeaseQueryFailed: false,
-    });
+          worstCacheRatio: 12.1,
+        }),
+      ),
+    );
 
     expect(causes).toContainEqual(
       expect.objectContaining({
         code: "dews_downstream_of_dex_liquidity",
         severity: "warning",
         metric: "dexLiquidityAgeSeconds",
-        value: 8_000,
+        value: 86_401,
+        threshold: 86_400,
       }),
     );
+    expect(
+      causes
+        .filter((cause) => cause.code === "dews_downstream_of_dex_liquidity")
+        .map((cause) => cause.severity),
+    ).toEqual(["warning"]);
+  });
+
+  it("stays silent while DEX liquidity is inside twice its budget, even with both caches unhealthy", () => {
+    const causes = buildAvailabilityCauses(
+      makeAvailabilityCauseInput(
+        makePublicHealth("healthy", {
+          caches: {
+            "dex-liquidity": { ageSeconds: 2 * 43_200, maxAge: 43_200, healthy: false },
+            dews: { ageSeconds: 21_600, maxAge: 1_800, healthy: false },
+          },
+          worstCacheRatio: 12,
+        }),
+      ),
+    );
+
+    expect(causes.some((cause) => cause.code === "dews_downstream_of_dex_liquidity")).toBe(false);
   });
 
   it("gives mint/burn query failure precedence over stale public classification", () => {
