@@ -76,6 +76,7 @@ export interface DeriveModelConfidenceArgs {
   routeStatus?: RedemptionRouteStatus;
   routeStatusSource?: RedemptionRouteStatusSource;
   reviewedAt?: string;
+  capacityUsd?: number | null;
   holderEligibility?: RedemptionHolderEligibility;
   sourceMode?: RedemptionSourceMode;
   freshnessKind?: RedemptionLiveFreshnessKind;
@@ -97,7 +98,11 @@ export function deriveModelConfidenceWithDetails(args: DeriveModelConfidenceArgs
   const details: RedemptionConfidenceDetails = {
     capacityEvidenceQuality: scoreCapacityEvidence(args.capacityConfidence),
     feeEvidenceQuality: scoreFeeEvidence(args.feeConfidence),
-    routeStatusFreshness: scoreRouteStatusFreshness(args.routeStatus, args.routeStatusSource),
+    routeStatusFreshness: scoreRouteStatusFreshness(
+      args.routeStatus,
+      args.routeStatusSource,
+      args.capacityUsd,
+    ),
     holderCohortBreadth: scoreHolderCohortBreadth(args.holderEligibility),
     sourceQuality: scoreSourceQuality(args.sourceMode, args.freshnessKind),
     reviewedDocAgeDays,
@@ -176,8 +181,11 @@ function scoreFeeEvidence(confidence: RedemptionFeeConfidence): number {
 function scoreRouteStatusFreshness(
   routeStatus: RedemptionRouteStatus | undefined,
   routeStatusSource: RedemptionRouteStatusSource | undefined,
+  capacityUsd: number | null | undefined,
 ): number {
-  if (routeStatus === "open" && hasCurrentRouteStatusEvidence(routeStatusSource)) return 100;
+  if (routeStatus === "open" && hasCurrentRouteStatusEvidence(routeStatusSource)) {
+    return capacityUsd != null && capacityUsd > 0 ? 100 : 70;
+  }
   if (routeStatus === "open") return 70;
   if (routeStatus === "unknown") return 30;
   if (routeStatus) return 20;

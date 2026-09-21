@@ -163,8 +163,8 @@ describe("buildLiquityV2RedemptionMetadata", () => {
         capacityUsd: 1250,
         capacityKind: "live-direct-bounded",
         freshnessKind: "same-run-onchain",
-        routeStatus: "open",
-        routeStatusSource: "onchain",
+        routeStatus: "unknown",
+        routeStatusSource: "static-config",
         holderEligibility: "any-holder",
         settlementDelaySec: 0,
         sourceUrls: [
@@ -924,7 +924,8 @@ describe("fetchLiquityV2BranchReserves staged branch reads", () => {
       redemption: {
         capacityUsd: 150,
         feeBps: 70,
-        routeStatus: "open",
+        routeStatus: "unknown",
+        routeStatusSource: "static-config",
       },
       observedBlock: { chain: "ethereum", number: 23_456_789 },
     });

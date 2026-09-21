@@ -326,6 +326,7 @@ export async function buildRedemptionBackstopEntry(
     feeConfidence: staticFields.feeConfidence,
     routeStatus,
     routeStatusSource,
+    capacityUsd: capacity.immediateCapacityUsd,
     reviewedAt: config.reviewedAt,
     holderEligibility,
     sourceMode: capacity.sourceMode,

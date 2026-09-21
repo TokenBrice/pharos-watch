@@ -110,17 +110,19 @@ function buildRedemptionTelemetry(
   const supplyUsd = decimalNumberFromBigInt(totalSupply, rTokenDecimals);
   if (!Number.isFinite(capacityUsd) || !Number.isFinite(supplyUsd)) return undefined;
 
-  const basketSound = fullyCollateralized && basketStatus === COLLATERAL_STATUS_SOUND;
+  const routeOpen = fullyCollateralized
+    && basketStatus === COLLATERAL_STATUS_SOUND
+    && capacityRaw > 0n;
   return {
     capacityUsd,
     ...(supplyUsd > 0 ? { capacityRatioOfSupply: capacityUsd / supplyUsd } : {}),
     capacityKind: "live-direct",
     freshnessKind: "same-run-onchain",
-    routeStatus: basketSound ? "open" : "degraded",
+    routeStatus: routeOpen ? "open" : "degraded",
     routeStatusSource: "onchain",
-    routeStatusReason: basketSound
+    routeStatusReason: routeOpen
       ? `Reserve Protocol RToken redemptionAvailable() throttle read returned ${redemptionAvailable} raw units; capacity is capped by totalSupply() at ${capacityRaw} raw units`
-      : `Reserve Protocol RToken redemptionAvailable() throttle read returned ${redemptionAvailable} raw units, but basket status is ${basketStatus} and fullyCollateralized() is ${fullyCollateralized}`,
+      : `Reserve Protocol RToken redemptionAvailable() throttle read returned ${redemptionAvailable} raw units, while basket status is ${basketStatus} and fullyCollateralized() is ${fullyCollateralized}`,
     holderEligibility: "any-holder",
     settlementDelaySec: 0,
     sourceUrls: [`https://eth.blockscout.com/address/${rTokenAddress}`],

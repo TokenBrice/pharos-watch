@@ -401,6 +401,7 @@ export async function fetchUsddDataPlatformReserves(
         freshnessKind: "same-run-onchain",
         routeStatus: psm.buyEnabled ? "open" : "paused",
         routeStatusSource: "onchain",
+        routeObserved: true,
         routeStatusReason: psm.buyEnabled
           ? `USDD PSM ${USDD_PSM_ADDRESS} read in the same run: gemJoin() is ${USDD_PSM_GEM_JOIN_ADDRESS}, usdd() is ${USDD_PSM_USDD_ADDRESS}, buyEnabled() is 1, tout() is ${psm.feeBps} bps, and USDT balanceOf(gemJoin) is ${psm.capacityRaw} (6 decimals)`
           : `USDD PSM ${USDD_PSM_ADDRESS} buyEnabled() returned 0 in the same run, so the USDD -> USDT exit is disabled`,

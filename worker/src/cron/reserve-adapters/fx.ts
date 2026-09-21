@@ -96,9 +96,9 @@ async function buildFxResult(
             redemption: {
               capacityUsd,
               capacityKind: "live-proxy-validated" as const,
-              freshnessKind: "same-run-api" as const,
-              routeStatus: "open" as const,
-              routeStatusSource: "protocol-api" as const,
+              freshnessKind: "same-run-onchain" as const,
+              routeStatus: "unknown" as const,
+              routeStatusSource: "static-config" as const,
               holderEligibility: "any-holder",
               settlementDelaySec: 0,
               sourceUrls: ["https://fxprotocol.gitbook.io/fx-docs"],

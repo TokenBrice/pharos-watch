@@ -531,6 +531,7 @@ export async function fetchAnzenUsdzReserves(
           ? {
               routeStatus: "open" as const,
               routeStatusSource: "onchain" as const,
+              routeObserved: true as const,
               routeStatusReason:
                 `USDz redeem() read in the same run: reserveUSD() is ${redemption.reserveUsdRaw} and the SPCT pool plus USDz hold ` +
                 `${redemption.spctUsdcRaw} + ${redemption.usdzUsdcRaw} USDC (6 decimals)`,
@@ -538,6 +539,7 @@ export async function fetchAnzenUsdzReserves(
           : redemption.routePaused ? {
               routeStatus: "paused" as const,
               routeStatusSource: "onchain" as const,
+              routeObserved: true as const,
               routeStatusReason: "USDz redemption is blocked by observed on-chain route prerequisites",
             } : {}),
         feeBps: redemption.feeBps,

@@ -95,7 +95,6 @@ interface ProtocolAssetConfig {
 
 interface CollateralPositionsRedemptionOptions {
   sourceUrls?: string[];
-  zeroCapacityRouteStatus?: "paused" | "unknown";
   routeStatusReason?: string;
   telemetryDetails?: Record<string, unknown>;
 }
@@ -385,10 +384,8 @@ export function adaptCollateralPositions(
               capacityUsd: immediateRedeemableUsd,
               capacityKind: "live-direct-bounded" as const,
               freshnessKind: "same-run-onchain" as const,
-              routeStatus: immediateRedeemableUsd > 0
-                ? ("open" as const)
-                : (redemptionOptions.zeroCapacityRouteStatus ?? "paused"),
-              routeStatusSource: "onchain" as const,
+              routeStatus: "unknown" as const,
+              routeStatusSource: "static-config" as const,
               ...(redemptionOptions.routeStatusReason
                 ? { routeStatusReason: redemptionOptions.routeStatusReason }
                 : {}),
@@ -583,7 +580,6 @@ export async function fetchCollateralPositionsApiReserves(
     params.redemptionBridgeBasket && bridgeBasketProbe
       ? {
           sourceUrls: params.redemptionBridgeBasket.sourceUrls,
-          zeroCapacityRouteStatus: "unknown",
           routeStatusReason: bridgeBasketProbe.capacityEur > 0
             ? `All ${bridgeBasketProbe.bridgeInventories.length} configured StablecoinBridge identities passed; summed idle inventory is ${bridgeBasketProbe.capacityEur} EUR`
             : `All ${bridgeBasketProbe.bridgeInventories.length} configured StablecoinBridge identities passed, but summed idle inventory is zero`,

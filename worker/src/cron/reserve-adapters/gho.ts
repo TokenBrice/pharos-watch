@@ -35,52 +35,48 @@ const textDecoder = new TextDecoder();
 
 type FacilitatorRiskBucket = "aave-v3-direct" | "flashminter" | "unknown";
 
-function classifyFacilitatorLabel(label: string): FacilitatorRiskBucket {
-  const normalized = label.toLowerCase();
-  if (normalized.includes("flashmint") || normalized.includes("flash mint")) {
-    return "flashminter";
-  }
-  if (normalized.includes("gsm")) return "unknown";
-  if (
-    normalized.includes("directminter")
-    || normalized.includes("direct minter")
-    || normalized.includes("directfacilitator")
-    || normalized.includes("direct facilitator")
-    || normalized.includes("aave")
-  ) {
-    return "aave-v3-direct";
-  }
-  return "unknown";
+const REVIEWED_FACILITATORS: Readonly<Record<string, {
+  bucket: FacilitatorRiskBucket;
+  issuerOrObligor: string;
+}>> = {
+  "0x5513224daaeabca31af5280727878d52097afa05": {
+    bucket: "aave-v3-direct",
+    issuerOrObligor: "Aave V3 Ethereum Core market",
+  },
+  "0xb639d208bcf0589d54fac24e655c79ec529762b8": {
+    bucket: "flashminter",
+    issuerOrObligor: "Aave GHO flash mint facility",
+  },
+  "0x2bd010ab5393ab51b601b99c4b33ba148d9466e9": {
+    bucket: "aave-v3-direct",
+    issuerOrObligor: "Aave V3 Plasma market",
+  },
+  "0xe9ac5231faecb633da0fe85fcb2785b8363427d2": {
+    bucket: "unknown",
+    issuerOrObligor: "Aave DAO mainnet GHO stability modules",
+  },
+  "0x2ce01c87fec1b71a9041c52caed46fc5f4807285": {
+    bucket: "aave-v3-direct",
+    issuerOrObligor: "Aave V3 Lido market",
+  },
+  "0xe10c78a3ac7f016ed2de1a89c5479b1039eab9ea": {
+    bucket: "aave-v3-direct",
+    issuerOrObligor: "Aave Horizon market",
+  },
+};
+
+function reviewedFacilitator(address: string): {
+  bucket: FacilitatorRiskBucket;
+  issuerOrObligor: string;
+} {
+  return REVIEWED_FACILITATORS[address.toLowerCase()] ?? {
+    bucket: "unknown",
+    issuerOrObligor: "Aave GHO facilitator",
+  };
 }
 
 function riskForFacilitatorBucket(bucket: FacilitatorRiskBucket): ReserveSlice["risk"] {
   return bucket === "aave-v3-direct" ? "medium" : "high";
-}
-
-function issuerForFacilitatorLabel(label: string): string {
-  const normalized = label.toLowerCase();
-  if (normalized.includes("flashmint") || normalized.includes("flash mint")) {
-    return "Aave GHO flash mint facility";
-  }
-  if (normalized.includes("gsm") && normalized.includes("arbitrum")) {
-    return "Aave DAO Arbitrum GHO Reserve and remote GSM";
-  }
-  if (normalized.includes("gsm")) {
-    return "Aave DAO mainnet GHO stability modules";
-  }
-  if (normalized.includes("plasma")) {
-    return "Aave V3 Plasma market";
-  }
-  if (normalized.includes("horizon")) {
-    return "Aave Horizon market";
-  }
-  if (normalized.includes("lido")) {
-    return "Aave V3 Lido market";
-  }
-  if (normalized.includes("core")) {
-    return "Aave V3 Ethereum Core market";
-  }
-  return "Aave GHO facilitator";
 }
 
 interface GhoParams {
@@ -451,15 +447,15 @@ function buildGhoSlices(
     if (facilitatorAllocations.length > 0) {
       for (const { facilitator, share } of facilitatorAllocations) {
         if (share <= 0n) continue;
-        const bucket = classifyFacilitatorLabel(facilitator.label);
-        if (bucket === "unknown") unknownResidualRaw += share;
+        const review = reviewedFacilitator(facilitator.address);
+        if (review.bucket === "unknown") unknownResidualRaw += share;
         values.push({
           sourceKey: `gho:${facilitator.address.toLowerCase()}`,
           name: facilitator.label,
           value: scale18ToUsd(share),
-          risk: riskForFacilitatorBucket(bucket),
+          risk: riskForFacilitatorBucket(review.bucket),
           assetClass: "protocol-position",
-          issuerOrObligor: issuerForFacilitatorLabel(facilitator.label),
+          issuerOrObligor: review.issuerOrObligor,
         });
       }
     }

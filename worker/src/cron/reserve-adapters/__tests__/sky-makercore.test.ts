@@ -19,6 +19,9 @@ const SKY_LITE_PSM_USDC_ADDRESS = "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48";
 const SKY_LITE_PSM_USDC_POCKET = "0x37305b1cd40574E4C5Ce33f8e8306Be057fD7341";
 const GEM_SELECTOR = "0x7bd2bea7";
 const POCKET_SELECTOR = "0xcccef9e2";
+const TIN_SELECTOR = "0x568d4b6f";
+const TOUT_SELECTOR = "0xfae036d5";
+const HALTED_SWAP_FEE = (1n << 256n) - 1n;
 
 function encodeAddressWord(address: string): string {
   return `0x${address.replace(/^0x/, "").toLowerCase().padStart(64, "0")}`;
@@ -26,6 +29,8 @@ function encodeAddressWord(address: string): string {
 interface SkyNetworkOptions {
   capacity?: boolean;
   balance?: bigint;
+  tin?: bigint | null;
+  tout?: bigint | null;
 }
 
 function skyNetwork(groups: SkyGroupResult[], options: SkyNetworkOptions = {}): AdapterNetworkSpec {
@@ -35,6 +40,8 @@ function skyNetwork(groups: SkyGroupResult[], options: SkyNetworkOptions = {}): 
     rpc: {
       [`ethereum:${GEM_SELECTOR}`]: capacityAvailable ? encodeAddressWord(SKY_LITE_PSM_USDC_ADDRESS) : null,
       [`ethereum:${POCKET_SELECTOR}`]: capacityAvailable ? encodeAddressWord(SKY_LITE_PSM_USDC_POCKET) : null,
+      [`ethereum:${TIN_SELECTOR}`]: capacityAvailable ? (options.tin === undefined ? 0n : options.tin) : null,
+      [`ethereum:${TOUT_SELECTOR}`]: capacityAvailable ? (options.tout === undefined ? 0n : options.tout) : null,
       "ethereum:0x70a08231": capacityAvailable ? (options.balance ?? 123_456_000000n) : null,
     },
   };
@@ -339,6 +346,27 @@ describe("fetchSkyMakercoreReserves PSM attribution", () => {
       contract: SKY_LITE_PSM_USDC_ADDRESS,
       selector: "0x70a08231",
     }));
+    expect(network.rpcCalls).toEqual(expect.arrayContaining([
+      expect.objectContaining({ selector: TIN_SELECTOR }),
+      expect.objectContaining({ selector: TOUT_SELECTOR }),
+    ]));
+  });
+
+  it.each([
+    [{ tout: HALTED_SWAP_FEE }, "paused", "onchain"],
+    [{ tin: null }, "unknown", "static-config"],
+  ] as const)("publishes %s LitePSM route evidence without changing capacity", async (
+    networkOptions,
+    routeStatus,
+    routeStatusSource,
+  ) => {
+    const { result } = await runSky(SAMPLE_GROUPS, networkOptions);
+
+    expect(result.metadata?.redemption).toMatchObject({
+      capacityUsd: 123456,
+      routeStatus,
+      routeStatusSource,
+    });
   });
 
   it("falls back without redemption metadata when LitePSM capacity is unavailable", async () => {

@@ -224,8 +224,16 @@ export function adaptJupUsdData(
         capacityKind: "live-direct-bounded",
         freshnessKind: sourceTimestamp != null ? "verified-source-timestamp" : "same-run-api",
         ...(sourceTimestamp != null ? { sourceTimestamp } : {}),
-        ...(routeStatus ? { routeStatus } : {}),
-        ...(routeStatus ? { routeStatusSource: "protocol-api" as const } : {}),
+        ...(routeStatus
+          ? {
+              routeStatus,
+              routeStatusSource: "protocol-api" as const,
+              routeObserved: true as const,
+            }
+          : {
+              routeStatus: "unknown" as const,
+              routeStatusSource: "static-config" as const,
+            }),
         ...(routeStatusReason ? { routeStatusReason } : {}),
         holderEligibility: "whitelisted-primary",
         settlementDelaySec: 0,

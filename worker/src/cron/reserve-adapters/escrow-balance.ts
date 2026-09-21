@@ -114,14 +114,21 @@ async function fetchMultiReadCapacity(
       routeStatusReason: "Configured on-chain redemption pause check returned true",
     };
   }
-  if (capacityUsd > 0) {
+  if (capacityUsd > 0 && params.pauseCheck) {
     return {
       capacityRaw,
       capacityUsd,
       routeStatus: "open",
-      routeStatusReason: params.pauseCheck
-        ? `${params.reads.length} pinned capacity reads succeeded with a positive sum and the on-chain pause check returned false`
-        : `${params.reads.length} pinned capacity reads succeeded with a positive sum`,
+      routeStatusReason:
+        `${params.reads.length} pinned capacity reads succeeded with a positive sum and the on-chain pause check returned false`,
+    };
+  }
+  if (capacityUsd > 0) {
+    return {
+      capacityRaw,
+      capacityUsd,
+      routeStatus: "unknown",
+      routeStatusReason: `${params.reads.length} pinned capacity reads succeeded, but no route gate was observed`,
     };
   }
   return {
@@ -210,7 +217,9 @@ export async function fetchEscrowBalanceReserves(
           capacityKind: supplyUsd == null ? "live-direct" : "live-direct-bounded",
           freshnessKind: "same-run-onchain",
           routeStatus: multiRead.routeStatus,
-          routeStatusSource: "onchain",
+          ...(params.pauseCheck
+            ? { routeStatusSource: "onchain" as const, routeObserved: true as const }
+            : { routeStatusSource: "static-config" as const }),
           routeStatusReason: multiRead.routeStatusReason,
           ...(params.holderEligibility ? { holderEligibility: params.holderEligibility } : {}),
           ...(params.settlementDelaySec != null
@@ -233,7 +242,7 @@ export async function fetchEscrowBalanceReserves(
     throw new Error(`${ADAPTER}: escrow balance is zero for ${coin.id}`);
   }
 
-  let routeStatus: RedemptionRouteStatus = "open";
+  let routeStatus: RedemptionRouteStatus = "unknown";
   if (params.pausedSelector) {
     const pausedRaw = await onchain.uint256(params.contract, params.pausedSelector);
     if (pausedRaw == null) {
@@ -263,7 +272,9 @@ export async function fetchEscrowBalanceReserves(
         capacityKind: supplyUsd == null ? "live-direct" : "live-direct-bounded",
         freshnessKind: "same-run-onchain",
         routeStatus,
-        routeStatusSource: "onchain",
+        ...(params.pausedSelector
+          ? { routeStatusSource: "onchain" as const, routeObserved: true as const }
+          : { routeStatusSource: "static-config" as const }),
         ...(params.holderEligibility ? { holderEligibility: params.holderEligibility } : {}),
         ...(params.settlementDelaySec != null
           ? { settlementDelaySec: params.settlementDelaySec }

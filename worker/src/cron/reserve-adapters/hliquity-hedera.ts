@@ -217,6 +217,7 @@ export function adaptHliquityHederaState(state: HliquityHederaState): AdapterRes
         freshnessKind: "same-run-onchain",
         routeStatus,
         routeStatusSource: "onchain",
+        routeObserved: true,
         ...(routeStatusReason ? { routeStatusReason } : {}),
         holderEligibility: "any-holder",
         settlementDelaySec: 0,

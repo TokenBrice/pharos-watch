@@ -105,7 +105,9 @@ describe("fx", () => {
       },
       redemption: {
         capacityKind: "live-proxy-validated",
-        freshnessKind: "same-run-api",
+        freshnessKind: "same-run-onchain",
+        routeStatus: "unknown",
+        routeStatusSource: "static-config",
       },
     });
     expect(result.metadata?.redemption?.capacityUsd).toBeCloseTo(totalDebtUsd, 6);

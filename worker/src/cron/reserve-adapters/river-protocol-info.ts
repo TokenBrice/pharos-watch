@@ -324,6 +324,7 @@ function buildRiverRedemptionMetadata(
         ? {
             routeStatus: "open" as const,
             routeStatusSource: "onchain" as const,
+            routeObserved: true as const,
             routeStatusReason:
               `Satoshi Protocol redemption read in the same run on ${probedChains.join(", ")}: ` +
               probe.chains
@@ -331,7 +332,10 @@ function buildRiverRedemptionMetadata(
                   `getGlobalSystemBalances() debt ${entry.totalDebtRaw} across ${entry.troveManagerCount} branches`)
                 .join("; "),
           }
-        : {}),
+        : {
+            routeStatus: "unknown" as const,
+            routeStatusSource: "static-config" as const,
+          }),
       ...(probe.feeBps != null ? { feeBps: probe.feeBps } : {}),
       sourceUrls: [RIVER_REDEMPTION_DOC_URL, RIVER_DEPLOYED_CONTRACTS_DOC_URL],
     }),

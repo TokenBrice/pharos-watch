@@ -174,6 +174,9 @@ interface HoneyOptions {
   convertToAssets?: bigint | null;
   factoryShares?: bigint;
   collectedFees?: bigint;
+  factoryPaused?: boolean;
+  globalCap?: bigint;
+  relativeCap?: bigint;
   /** When set, balanceOf(holder) answers per holder via full-calldata keys. */
   assetBalanceByHolder?: (holder: string) => bigint;
 }
@@ -201,15 +204,15 @@ function honeyNetwork(options: HoneyOptions = {}): AdapterNetworkSpec {
     [`${HONEY_FACTORY}:registeredAssets(uint256)`]: (call: AdapterRpcCall) => assets[Number(callArg(call))],
     [`${HONEY_FACTORY}:vaults(address)`]: (call: AdapterRpcCall) =>
       vaultOfAsset[callAddressArg(call).toLowerCase()],
-    [`${HONEY_FACTORY}:paused()`]: 0n,
+    [`${HONEY_FACTORY}:paused()`]: options.factoryPaused ? 1n : 0n,
     [`${HONEY_FACTORY}:forcedBasketMode()`]: 0n,
     [`${HONEY_FACTORY}:isBasketModeEnabled(bool)`]: 0n,
     [`${HONEY_FACTORY}:getWeights()`]: uintArrayResult(Array.from({ length: assetCount }, () => WAD)),
-    [`${HONEY_FACTORY}:globalCap()`]: WAD,
+    [`${HONEY_FACTORY}:globalCap()`]: options.globalCap ?? WAD,
     [`${HONEY_FACTORY}:collectedAssetFees(address)`]: options.collectedFees ?? 0n,
     [`${HONEY_FACTORY}:redeemRates(address)`]: 999_500_000_000_000_000n,
     [`${HONEY_FACTORY}:isPegged(address)`]: 1n,
-    [`${HONEY_FACTORY}:relativeCap(address)`]: WAD,
+    [`${HONEY_FACTORY}:relativeCap(address)`]: options.relativeCap ?? WAD,
   };
   assets.forEach((asset, index) => {
     const vault = vaults[index];
@@ -308,6 +311,45 @@ describe("fetchEvmBranchBalancesReserves", () => {
       feeBps: 5,
     }));
     expect(result.metadata).not.toHaveProperty("redemptionFeeBps");
+  });
+
+  it("publishes observed HoneyFactory closure and guard degradation", async () => {
+    const config = makeBranchConfig([honeyBranch()], {
+      chain: "berachain",
+      params: {
+        redemptionCapacity: {
+          kind: "honey-factory-vaults",
+          factoryAddress: HONEY_FACTORY,
+          expectedHoneyAddress: HONEY_TOKEN,
+          maxAssets: 4,
+          stableAssets: [{ address: HONEY_ASSET, decimals: 6 }],
+          sourceUrls: ["https://docs.berachain.com/general/tokens/honey"],
+        },
+      },
+    });
+
+    const paused = await runBranches(config, honeyNetwork({
+      assetAddresses: [HONEY_ASSET],
+      vaultAddresses: [HONEY_VAULT],
+      factoryPaused: true,
+    }));
+    expect(paused.result.metadata?.redemption).toMatchObject({
+      capacityUsd: 0,
+      routeStatus: "paused",
+      routeStatusSource: "onchain",
+      routeStatusReason: "HoneyFactory paused() returned true",
+    });
+
+    const capGuarded = await runBranches(config, honeyNetwork({
+      assetAddresses: [HONEY_ASSET],
+      vaultAddresses: [HONEY_VAULT],
+      relativeCap: WAD - 1n,
+    }));
+    expect(capGuarded.result.metadata?.redemption).toMatchObject({
+      capacityUsd: 0,
+      routeStatus: "degraded",
+      routeStatusSource: "onchain",
+    });
   });
 
   it.each([

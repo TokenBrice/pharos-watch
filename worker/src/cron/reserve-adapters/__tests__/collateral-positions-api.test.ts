@@ -261,8 +261,8 @@ describe("adaptCollateralPositions", () => {
         capacityUsd: 395_346.145491,
         capacityKind: "live-direct-bounded",
         freshnessKind: "same-run-onchain",
-        routeStatus: "open",
-        routeStatusSource: "onchain",
+        routeStatus: "unknown",
+        routeStatusSource: "static-config",
         holderEligibility: "any-holder",
         settlementDelaySec: 0,
         sourceUrls: ["https://example.com/positions", "https://example.com/prices"],
@@ -270,7 +270,7 @@ describe("adaptCollateralPositions", () => {
     });
   });
 
-  it("marks bridge-backed redemption paused when same-run capacity is zero", () => {
+  it("keeps route status unknown when same-run capacity is zero without a route probe", () => {
     const result = adaptCollateralPositions(
       {
         "0xbtc": {
@@ -290,8 +290,8 @@ describe("adaptCollateralPositions", () => {
 
     expect(result.metadata?.redemption).toMatchObject({
       capacityUsd: 0,
-      routeStatus: "paused",
-      routeStatusSource: "onchain",
+      routeStatus: "unknown",
+      routeStatusSource: "static-config",
     });
   });
 
@@ -466,8 +466,8 @@ describe("fetchCollateralPositionsApiReserves bridge basket", () => {
         eurUsdReferenceSource: DEURO,
         capacityKind: "live-direct-bounded",
         freshnessKind: "same-run-onchain",
-        routeStatus: "open",
-        routeStatusSource: "onchain",
+        routeStatus: "unknown",
+        routeStatusSource: "static-config",
         sourceUrls: expect.arrayContaining(["https://docs.deuro.com/smart-contracts"]),
         bridgeInventories: expect.arrayContaining([
           expect.objectContaining({ label: "EURS", inventoryRaw: "51", inventoryEur: 0.51 }),
@@ -506,7 +506,7 @@ describe("fetchCollateralPositionsApiReserves bridge basket", () => {
       capacityUsd: 0,
       capacityEur: 0,
       routeStatus: "unknown",
-      routeStatusSource: "onchain",
+      routeStatusSource: "static-config",
     });
   });
 

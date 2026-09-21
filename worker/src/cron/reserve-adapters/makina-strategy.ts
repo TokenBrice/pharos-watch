@@ -200,6 +200,7 @@ export function buildMakinaRedemptionMetadata(state: MakinaRedemptionState) {
       queueDepthUsd: state.queueDepthUsd,
       routeStatus: state.whitelistEnabled ? "cohort-limited" : "open",
       routeStatusSource: "onchain",
+      routeObserved: true,
       routeStatusReason: state.whitelistEnabled
         ? "AsyncRedeemer whitelist is enabled; requests and claims are limited to the active allowlist"
         : state.sanctionsCheckEnabled

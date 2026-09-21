@@ -236,6 +236,7 @@ async function fetchMentoBrokerPoolRedemption(
     freshnessKind: "same-run-onchain",
     routeStatus: "open",
     routeStatusSource: "onchain",
+    routeObserved: true,
     holderEligibility: "any-holder",
     settlementDelaySec: 0,
     feeBps: maxFeeBps,
@@ -290,6 +291,7 @@ async function fetchMentoLiquityV2CrRedemption(
     freshnessKind: "same-run-onchain",
     routeStatus,
     routeStatusSource: "onchain",
+    routeObserved: true,
     holderEligibility: "any-holder",
     settlementDelaySec: 0,
     feeBps,
@@ -342,6 +344,7 @@ async function fetchMentoFpmmPoolRedemption(
     freshnessKind: "same-run-onchain",
     routeStatus: "open",
     routeStatusSource: "onchain",
+    routeObserved: true,
     holderEligibility: "any-holder",
     settlementDelaySec: 0,
     feeBps,
@@ -441,6 +444,7 @@ async function fetchMentoFpmmPoolsRedemption(
   return buildRedemptionSnapshotMetadata({
     capacityUsd, capacityKind: "live-direct-bounded", freshnessKind: "same-run-onchain",
     routeStatus: "open", routeStatusSource: "onchain", holderEligibility: "any-holder",
+    routeObserved: true,
     settlementDelaySec: 0, feeBps: maxFeeBps,
     ...(params.sourceUrls ? { sourceUrls: params.sourceUrls } : {}),
   });

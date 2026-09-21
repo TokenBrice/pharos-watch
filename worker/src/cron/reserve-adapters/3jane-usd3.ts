@@ -215,6 +215,7 @@ export function adaptThreeJaneUsd3Snapshot(snapshot: ThreeJaneUsd3Snapshot): Ada
         freshnessKind: "same-run-onchain",
         routeStatus,
         routeStatusSource: "onchain",
+        routeObserved: true,
         routeStatusReason,
         routeStatusReviewedAt: "2026-07-13",
         holderEligibility: "any-holder",

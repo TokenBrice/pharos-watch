@@ -58,11 +58,11 @@ describe("adaptFalconTransparency", () => {
       redemption: {
         capacityUsd: 30,
         capacityRatioOfSupply: 0.3,
-        routeStatus: "open",
-        routeStatusSource: "protocol-api",
         settlementDelaySec: 604800,
       },
     });
+    expect(result.metadata?.redemption).not.toHaveProperty("routeStatus");
+    expect(result.metadata?.redemption).not.toHaveProperty("routeStatusSource");
     // AVAX stays in the high-risk "other" bucket and the unknown-exposure
     // total; discovery is one info warning, and the shared cap decides whether
     // the snapshot degrades.
