@@ -3,20 +3,6 @@ import type { MethodologyChangelogEntry } from "@shared/lib/methodology-versions
 export const SAFETY_SCORE_V9: readonly MethodologyChangelogEntry[] = [
   {
     version: "9.8",
-    title: "Evaluation-build identity covers the live scorer closure",
-    date: "2026-09-21",
-    effectiveAt: 1789976815,
-    summary:
-      "The V9 evaluation-build digest now covers the evaluator's runtime import closure, including the reviewed chain-maturity registry, so replay and publication identity changes whenever deployed score construction changes.",
-    impact: [
-      "The manifest enrolls gap-index, operational-market-depth, unavailability-roots, and chain-maturity-reviews-v1 alongside the existing evaluator inputs.",
-      "This rotation produces evaluationBuildDigest 352f3bd95b7dba8181299f079676087c3d67807fa18e09117ac1c305aef81966; later edits to those score-bearing sources rotate the identity again.",
-    ],
-    commits: [],
-    reconstructed: false,
-  },
-  {
-    version: "9.8",
     title: "Published-fee physical delivery with an unbounded-terms cap",
     date: "2026-09-21",
     effectiveAt: 1789976815,
@@ -26,6 +12,7 @@ export const SAFETY_SCORE_V9: readonly MethodologyChangelogEntry[] = [
       "Unbounded delivery carries an explicit output-quality cap of 55, strictly below bounded physical delivery at 65 and never above fiat-par quality.",
       "Published percentage and flat fees reduce value; unbounded delivery receives no invented USD deduction. Minimum lots still apply and every physical output remains ineligible for same-notional credit.",
       "Historical captures lacking the raw USD-per-troy-ounce reference remain unresolved; closure requires the next peg producer cycle and refreshed redemption observations.",
+      "Evaluation-build identity: the V9 evaluation-build digest now covers the evaluator's runtime import closure — gap-index, operational-market-depth, unavailability-roots and the reviewed chain-maturity registry enroll alongside the existing inputs — producing evaluationBuildDigest 352f3bd95b7dba8181299f079676087c3d67807fa18e09117ac1c305aef81966; later edits to those score-bearing sources rotate the identity again without a methodology bump.",
     ],
     commits: [],
     reconstructed: false,
