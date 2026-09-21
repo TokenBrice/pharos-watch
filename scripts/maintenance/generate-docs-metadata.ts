@@ -19,14 +19,16 @@ function gitLog(args: string[]): string {
   return execFileSync("git", args, { encoding: "utf-8" }).trim();
 }
 
-function getLastGitDate(filePath: string): string {
-  const output = gitLog(["log", "--follow", "-1", "--format=%aI", "--", relative(process.cwd(), filePath)]);
+/** Committer time: `dateModified` is deployment modification time, not author clock time. */
+function getLastCommitDate(filePath: string): string {
+  const output = gitLog(["log", "--follow", "-1", "--format=%cI", "--", relative(process.cwd(), filePath)]);
   if (!output) {
     throw new Error(`[docs-metadata] no git history for ${filePath}`);
   }
   return output;
 }
 
+/** Author time: `dateCreated` is the authored-inception date of the document. */
 function getFirstGitDate(filePath: string): string {
   const output = gitLog(["log", "--follow", "--reverse", "--format=%aI", "--", relative(process.cwd(), filePath)])
     .split(/\r?\n/)
@@ -44,7 +46,7 @@ assertFullGitHistory("docs-metadata");
 for (const doc of PUBLIC_DOCS) {
   const filePath = join(__dirname, "..", "..", "docs", doc.source);
   metadata[doc.slug] = {
-    dateModified: getLastGitDate(filePath),
+    dateModified: getLastCommitDate(filePath),
     dateCreated: getFirstGitDate(filePath),
   };
 }
