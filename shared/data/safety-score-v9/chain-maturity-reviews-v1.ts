@@ -844,7 +844,7 @@ export interface ChainMaturityResolution {
   readonly reviews: readonly ResolvedChainMaturityReview[];
 }
 
-export function resolveChainMaturityReviewsAt(
+function resolveChainMaturityReviewsAt(
   evaluationClockSec = CHAIN_MATURITY_POLICY_DEFAULT_EVALUATION_CLOCK_SEC,
 ): readonly ResolvedChainMaturityReview[] {
   if (!Number.isInteger(evaluationClockSec) || evaluationClockSec < 0) {
@@ -885,32 +885,6 @@ export function resolveChainMaturityAdmissionsAt(
 }
 
 export const CHAIN_MATURITY_ADMITTED_CHAIN_SLUGS = resolveChainMaturityAdmissionsAt().admittedChainSlugs;
-
-export interface ChainMaturityReviewQueueItem {
-  readonly chainSlug: string;
-  readonly gateId: ChainMaturityGateId;
-  readonly url: string;
-  readonly reviewerOutcome: ChainMaturityReviewerOutcome;
-  readonly httpStatus: number | null;
-}
-
-export const CHAIN_MATURITY_REVIEW_QUEUE: readonly ChainMaturityReviewQueueItem[] = CHAIN_MATURITY_REVIEWS_V1
-  .flatMap((review) =>
-    CHAIN_MATURITY_GATE_IDS.flatMap((gateId) =>
-      review.gates[gateId].sources.flatMap((source) =>
-        source.verification?.reviewerOutcome === "supports"
-          ? []
-          : [{
-              chainSlug: review.chainSlug,
-              gateId,
-              url: source.url,
-              reviewerOutcome: source.verification?.reviewerOutcome ?? "unchecked",
-              httpStatus: source.verification?.httpStatus ?? null,
-            }],
-      ),
-    ),
-  )
-  .sort((left, right) => left.chainSlug.localeCompare(right.chainSlug) || left.gateId.localeCompare(right.gateId) || left.url.localeCompare(right.url));
 
 export function chainMaturityReviewForSlug(
   chainSlug: string,

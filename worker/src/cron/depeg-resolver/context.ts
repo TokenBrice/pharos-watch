@@ -90,7 +90,7 @@ export function emptyDdrLineage(nowSec: number): DdrLineage {
   };
 }
 
-export async function queryRows<T>(label: string, query: () => Promise<{ results?: T[] }>): Promise<QueryRowsResult<T>> {
+async function queryRows<T>(label: string, query: () => Promise<{ results?: T[] }>): Promise<QueryRowsResult<T>> {
   try {
     // Transient "D1 DB is overloaded" spikes were converting whole DDR runs
     // into failed cron_runs; these reads are idempotent and retryable.

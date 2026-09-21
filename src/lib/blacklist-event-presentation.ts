@@ -34,7 +34,7 @@ export function getBlacklistAmountSourceLabel(event: BlacklistEvent): string {
   return AMOUNT_SOURCE_LABELS[event.amountSource] ?? event.amountSource.replace(/_/g, " ");
 }
 
-export function getBlacklistAmountStatusLabel(event: BlacklistEvent): string {
+function getBlacklistAmountStatusLabel(event: BlacklistEvent): string {
   return AMOUNT_STATUS_LABELS[event.amountStatus] ?? event.amountStatus.replace(/_/g, " ");
 }
 

@@ -71,10 +71,6 @@ export function getYieldBenchmarkSelectionMode(row: YieldWorkbenchRanking): Yiel
   return row.benchmarkIsFallback ? "fallback-usd" : undefined;
 }
 
-export function isYieldBenchmarkFallback(row: YieldWorkbenchRanking): boolean {
-  return getYieldBenchmarkSelectionMode(row) === "fallback-usd" || row.benchmarkIsFallback === true;
-}
-
 /** A source-risk penalty above this multiplier reads as materially risky on every yield surface. */
 const MATERIAL_SOURCE_RISK_PENALTY = 1.05;
 
