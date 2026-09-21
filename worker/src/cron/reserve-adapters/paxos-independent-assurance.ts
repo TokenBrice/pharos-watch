@@ -17,6 +17,11 @@ export interface PaxosDiscoveryPin {
 
 type PaxosProduct = LiveReserveAdapterParamsByKey["paxos-independent-assurance"]["product"];
 
+function paxosReportDate(product: PaxosProduct, href: string): string | null {
+  const manifest = getIndependentAssuranceManifest(product);
+  return href === manifest.reportUrl ? manifest.reportDate : null;
+}
+
 // Only reviewed products are registered; absent products fail closed.
 const PAXOS_PRODUCTS: Partial<Record<PaxosProduct, { pin: PaxosDiscoveryPin; profile: IndependentAssuranceProfile }>> = {
   PAXG: {
@@ -43,6 +48,7 @@ const PAXOS_PRODUCTS: Partial<Record<PaxosProduct, { pin: PaxosDiscoveryPin; pro
         },
       },
       isReportCandidate: (href) => href === getIndependentAssuranceManifest("PAXG").reportUrl,
+      reportDateFromCandidate: (href) => paxosReportDate("PAXG", href),
     },
   },
   PYUSD: {
@@ -62,6 +68,7 @@ const PAXOS_PRODUCTS: Partial<Record<PaxosProduct, { pin: PaxosDiscoveryPin; pro
         "treasury-bills": { name: "U.S. Treasury bills (remaining maturity at most three months)", risk: "very-low", assetClass: "treasury-bill", issuerOrObligor: "United States Treasury", riskFactors: ["duration", "market", "custody"], liquidityHorizon: "over-seven-days" },
       },
       isReportCandidate: (href) => href === getIndependentAssuranceManifest("PYUSD").reportUrl,
+      reportDateFromCandidate: (href) => paxosReportDate("PYUSD", href),
     },
   },
   USDG: {
@@ -82,6 +89,7 @@ const PAXOS_PRODUCTS: Partial<Record<PaxosProduct, { pin: PaxosDiscoveryPin; pro
         "treasury-bills": { name: "U.S. Treasury bills (remaining maturity at most three months)", risk: "very-low", assetClass: "treasury-bill", issuerOrObligor: "United States Treasury", riskFactors: ["duration", "market", "custody"], liquidityHorizon: "over-seven-days" },
       },
       isReportCandidate: (href) => href === getIndependentAssuranceManifest("USDG").reportUrl,
+      reportDateFromCandidate: (href) => paxosReportDate("USDG", href),
     },
   },
   USDP: {
@@ -100,6 +108,7 @@ const PAXOS_PRODUCTS: Partial<Record<PaxosProduct, { pin: PaxosDiscoveryPin; pro
         "reverse-repo": { name: "Overnight U.S. Treasury reverse repurchase agreements", risk: "very-low", assetClass: "repo", issuerOrObligor: "Undisclosed United States banks; U.S. Treasury collateral", riskFactors: ["counterparty", "custody", "liquidity"], liquidityHorizon: "one-day" },
       },
       isReportCandidate: (href) => href === getIndependentAssuranceManifest("USDP").reportUrl,
+      reportDateFromCandidate: (href) => paxosReportDate("USDP", href),
     },
   },
 };
