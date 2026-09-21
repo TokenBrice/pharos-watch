@@ -328,7 +328,6 @@ describe("RecentFreezesCard authoritative totals", () => {
         "ready",
         {
           stats: {
-            recentCount24h: 201,
             recentFreezeCount24h: 200,
             recentFreezeCount7d: 350,
             recentFreezeAmount24hUsd: 123_456,

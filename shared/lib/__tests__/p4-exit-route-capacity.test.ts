@@ -602,10 +602,11 @@ describe("P4 DEX exit route observations", () => {
 
   it("quarantines a schema-invalid profile instead of aborting the whole assembly", () => {
     const observedAt = 1_752_560_000;
-    const profile = makeMeasuredProfile(observedAt) as unknown as MutableMeasuredProfile;
-    const pool = retainedMeasuredPool(profile as never);
+    const validProfile = makeMeasuredProfile(observedAt);
+    const pool = retainedMeasuredPool(validProfile);
+    const { tokenIn: _tokenIn, ...profile } = validProfile;
+    pool.extra = { ...pool.extra, measuredExecution: profile as never };
     const context = { stablecoinId: "usdc-circle", observedAt, pool };
-    delete (profile as Record<string, unknown>).tokenIn;
 
     expect(() => validateMeasuredExecutionProfile(profile as never, context)).not.toThrow();
     expect(validateMeasuredExecutionProfile(profile as never, context)).toEqual(["invalid-profile-schema"]);

@@ -163,7 +163,10 @@ describe("public API response schemas", () => {
   it("publishes the closed PSI band vocabulary and the route's malformed-row count", () => {
     const psi = documentSchemas().StabilityIndexResponse as {
       required: readonly string[];
-      properties: { current: { anyOf: Array<{ properties: Record<string, Record<string, unknown>> }> } };
+      properties: {
+        current: { anyOf: Array<{ properties: Record<string, Record<string, unknown>> }> };
+        malformedRows: Record<string, unknown>;
+      };
     };
     const current = psi.properties.current.anyOf[0].properties;
 

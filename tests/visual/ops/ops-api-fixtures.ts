@@ -83,6 +83,8 @@ const requestSourceResponse: ApiRequestAttributionResponse = {
 
 const apiKeyRequestsResponse: ApiKeySelfServeRequestAdminListResponse = {
   generatedAt: STATUS_FIXTURE_NOW_SECONDS,
+  total: 1,
+  nextCursor: null,
   requests: [
     {
       requestId: "fixture-request-001",
